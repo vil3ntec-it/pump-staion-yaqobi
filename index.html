@@ -3515,7 +3515,7 @@ function _fbReady() {
     return true;
   } catch(e) { return false; }
 }
-function _syncCode() { return (DB.syncCode || '').trim(); }
+function _syncCode() { return (DB.syncCode || 'pump1').trim(); }
 function saveSyncCode() {
   const v = document.getElementById('sync-station-code').value.trim();
   if (!v) { showToast('کد ایستگاه را وارد کنید', '#e53e3e'); return; }
@@ -3558,6 +3558,7 @@ function syncDownload() {
     .then(snap => {
       if (!snap.exists()) { _setSyncMsg('چیزی روی سرور برای این کد پیدا نشد.', '#d97706'); return; }
       Object.assign(DB, snap.val());
+      DB.syncCode = 'pump1';
       localStorage.setItem('pumpDB', JSON.stringify(DB));
       _dirtySinceUpload = false; // همین الان از سرور آمد، چیزی برای فرستادن نیست
       _setSyncMsg('✅ اطلاعات از سرور دریافت شد.', '#38a169');
@@ -3675,6 +3676,7 @@ function _autoLoadFromFirebaseOnStartup() {
       if (serverTime > localTime) {
         // سرور جدیدتر دارد — همان را بارگذاری کن
         Object.assign(DB, serverData);
+        DB.syncCode = 'pump1';
         try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
         _dirtySinceUpload = false;
         try { updateAll(); } catch(e) {}
