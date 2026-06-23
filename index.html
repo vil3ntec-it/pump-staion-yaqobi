@@ -3591,7 +3591,7 @@ function _markDirtyForAutoSync() {
   _dirtySinceUpload = true;
   _updateAutoSyncBadge();
   // اگر همین الان آنلاین هستیم، چند ثانیه صبر کن (تا چند تغییر پشت‌سرهم یک‌بار بارگذاری شود) و خودکار بفرست
-  if (navigator.onLine) _scheduleAutoSync(4000);
+  if (navigator.onLine) _scheduleAutoSync(1000);
 }
 
 function _scheduleAutoSync(delayMs) {
@@ -3609,7 +3609,7 @@ function _runAutoSync() {
   if (currentRole === 'viewer') return; // نظاره‌گر چیزی برای بارگذاری ندارد
 
   _autoSyncInFlight = true;
-  _setSyncMsg('⏳ اینترنت وصل شد — در حال بارگذاری خودکار اطلاعات آفلاین...', 'var(--accent)');
+  _setSyncMsg('⏳ در حال هم‌زمان‌سازی با سرور...', 'var(--accent)');
   const payload = JSON.parse(JSON.stringify(DB));
   payload.lastSyncUpload = new Date().toISOString();
   _fbDb.ref('stations/' + code).set(payload)
@@ -3618,10 +3618,10 @@ function _runAutoSync() {
       localStorage.setItem('pumpDB', JSON.stringify(DB)); // مستقیم، بدون دوباره dirty کردن
       _dirtySinceUpload = false;
       _autoSyncInFlight = false;
-      _setSyncMsg('✅ اطلاعات آفلاینِ شما خودکار به سرور رسید.', '#38a169');
+      _setSyncMsg('✅ اطلاعات با سرور هم‌زمان شد.', '#38a169');
       _updateSyncLastTime();
       _updateAutoSyncBadge();
-      showTopToast && showTopToast('☁️ اطلاعات آفلاین خودکار به سرور رسید', '#38a169', 3500);
+      showTopToast && showTopToast('☁️ اطلاعات با سرور هم‌زمان شد', '#38a169', 3000);
     })
     .catch(err => {
       _autoSyncInFlight = false;
@@ -3660,21 +3660,31 @@ setInterval(function(){ if (navigator.onLine && _dirtySinceUpload) _runAutoSync(
 // در شروع برنامه آخرین اطلاعات از سرور دریافت می‌شود — بدون نیاز به زدن دکمه.
 function _autoLoadFromFirebaseOnStartup() {
   const code = _syncCode();
-  if (!code) return;
-  if (!_fbReady()) return;
-  if (!navigator.onLine) return;
+  if (!code || !_fbReady() || !navigator.onLine) {
+    // وقتی اینترنت وصل شد دوباره تلاش کن
+    window.addEventListener('online', function _onOnline() {
+      window.removeEventListener('online', _onOnline);
+      setTimeout(_autoLoadFromFirebaseOnStartup, 1000);
+    });
+    return;
+  }
   _fbDb.ref('stations/' + code).get()
     .then(function(snap) {
       if (!snap.exists()) {
-        // سرور خالی است — اطلاعات محلی را آپلود کن
-        if (_dirtySinceUpload || !DB.lastSyncUpload) _runAutoSync();
+        // سرور خالی — اطلاعات محلی را آپلود کن
+        _dirtySinceUpload = true;
+        _runAutoSync();
         return;
       }
       const serverData = snap.val();
       const serverTime = new Date(serverData.lastSyncUpload || 0).getTime();
       const localTime  = new Date(DB.lastSyncUpload  || 0).getTime();
-      if (serverTime > localTime) {
-        // سرور جدیدتر دارد — همان را بارگذاری کن
+      if (localTime >= serverTime) {
+        // لوکال برابر یا جدیدتر است — همیشه آپلود کن تا تغییرات (رمز، تنظیمات، حساب‌ها) به سرور برسند
+        _dirtySinceUpload = true;
+        _runAutoSync();
+      } else {
+        // سرور جدیدتر است — از سرور بارگذاری کن
         Object.assign(DB, serverData);
         DB.syncCode = 'pump1';
         try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
@@ -3683,12 +3693,34 @@ function _autoLoadFromFirebaseOnStartup() {
         try { _updateSyncLastTime(); } catch(e) {}
         try { _updateAutoSyncBadge(); } catch(e) {}
         try { showTopToast('☁️ حساب از سرور به‌روز شد', '#38a169', 3000); } catch(e) {}
-      } else if (_dirtySinceUpload) {
-        // اطلاعات محلی جدیدتر است — آپلود کن
-        _runAutoSync();
       }
+      // پس از اولین sync، listener بلادرنگ را شروع کن
+      _startFirebaseRealtimeListener();
     })
-    .catch(function() {}); // خطای ساکت — برنامه بدون وقفه کار کند
+    .catch(function() { _startFirebaseRealtimeListener(); });
+}
+
+// listener بلادرنگ: هر تغییری در Firebase روی همه دستگاه‌های باز بلافاصله اعمال می‌شود
+function _startFirebaseRealtimeListener() {
+  const code = _syncCode();
+  if (!code || !_fbReady()) return;
+  try {
+    _fbDb.ref('stations/' + code).on('value', function(snap) {
+      if (!snap.exists()) return;
+      const sd = snap.val();
+      const st = new Date(sd.lastSyncUpload || 0).getTime();
+      const lt = new Date(DB.lastSyncUpload  || 0).getTime();
+      if (st > lt) {
+        Object.assign(DB, sd);
+        DB.syncCode = 'pump1';
+        try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
+        _dirtySinceUpload = false;
+        try { updateAll(); } catch(e) {}
+        try { _updateSyncLastTime(); } catch(e) {}
+        try { showTopToast('☁️ تغییرات جدید از سرور دریافت شد', '#38a169', 2500); } catch(e) {}
+      }
+    });
+  } catch(e) {}
 }
 
 // ========== قفل بخش مفاد/ضرر ==========
