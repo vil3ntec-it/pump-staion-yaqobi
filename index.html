@@ -340,6 +340,15 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 .pl-big{font-size:1.5rem;font-weight:900;margin-bottom:4px}
 .pl-sub{font-size:0.75rem;color:var(--muted)}
 .pl-result{background:linear-gradient(135deg,#1c2230,#0d1117);border:2px solid var(--border);border-radius:14px;padding:22px 20px 96px;text-align:center;margin-bottom:16px}
+.pl-result-wrap{position:relative;margin-bottom:16px}
+.pl-result-wrap .pl-result{margin-bottom:0}
+#pl-result.pl-locked{filter:blur(14px) brightness(0.5);user-select:none;pointer-events:none;transition:filter .4s}
+#pl-result:not(.pl-locked){transition:filter .4s}
+.pl-lock-overlay{display:none;position:absolute;inset:0;align-items:center;justify-content:center;cursor:pointer;z-index:20;border-radius:14px;background:rgba(0,0,0,0.18)}
+.pl-lock-overlay.active{display:flex}
+.pl-lock-icon{text-align:center;color:#fff;text-shadow:0 2px 16px rgba(0,0,0,.9)}
+.pl-lock-icon .pl-lock-emoji{font-size:2.6rem}
+.pl-lock-icon .pl-lock-hint{font-size:0.85rem;margin-top:8px;color:rgba(255,255,255,.85);font-family:'Vazirmatn',sans-serif}
 .pl-result-label{font-size:0.82rem;color:var(--muted);margin-bottom:10px}
 .pl-result-value{font-size:2.1rem;font-weight:900;margin-bottom:8px}
 .pl-result-sub{font-size:0.78rem;color:var(--muted)}
@@ -2428,6 +2437,7 @@ html, body {
 
 <!-- PROFIT/LOSS -->
 <div class="section" id="sec-profit">
+  <div class="pl-result-wrap">
   <div class="pl-result" id="pl-result">
     <div class="pl-aurora" aria-hidden="true"></div>
     <div class="pl-result-label"><span class="nav-emoji emj-rise">💹</span> مفاد / ضرر خالص</div>
@@ -2463,16 +2473,18 @@ html, body {
     </div>
     <div class="pl-particles" id="pl-particles"></div>
   </div>
+  <div class="pl-lock-overlay" id="pl-lock-overlay" onclick="_onProfitClick()">
+    <div class="pl-lock-icon"><div class="pl-lock-emoji">🔒</div><div class="pl-lock-hint">برای مشاهده کلیک کنید</div></div>
+  </div>
+  </div>
   <div class="pl-grid">
     <div class="pl-card">
       <div class="pl-card-title">📈 درآمدها</div>
       <div class="pl-big" style="color:var(--green)" id="pl-income">0</div>
-      <div class="pl-sub">مجموع فایده پارچه‌ها + بدون پارچه</div>
     </div>
     <div class="pl-card">
       <div class="pl-card-title">💸 مصارف</div>
       <div class="pl-big" style="color:var(--red)" id="pl-expenses">0</div>
-      <div class="pl-sub">مجموع مصارف ثبت‌شده</div>
     </div>
   </div>
   <div class="card" style="border-color:var(--accent)">
@@ -3672,6 +3684,42 @@ function _autoLoadFromFirebaseOnStartup() {
       }
     })
     .catch(function() {}); // خطای ساکت — برنامه بدون وقفه کار کند
+}
+
+// ========== قفل بخش مفاد/ضرر ==========
+let _plLockTimer = null;
+function _lockProfitSection() {
+  const r = document.getElementById('pl-result');
+  const o = document.getElementById('pl-lock-overlay');
+  if (r) r.classList.add('pl-locked');
+  if (o) o.classList.add('active');
+}
+function _unlockProfitSection() {
+  const r = document.getElementById('pl-result');
+  const o = document.getElementById('pl-lock-overlay');
+  if (r) r.classList.remove('pl-locked');
+  if (o) o.classList.remove('active');
+  clearTimeout(_plLockTimer);
+  _plLockTimer = setTimeout(_lockProfitSection, 17000);
+}
+function _onProfitClick() {
+  const m = document.getElementById('pl-pw-modal');
+  if (m) { m.style.display = 'flex'; setTimeout(()=>{ const i=document.getElementById('pl-pw-input'); if(i) i.focus(); }, 80); }
+}
+function _closeProfitPwModal() {
+  const m = document.getElementById('pl-pw-modal'); if (m) m.style.display = 'none';
+  const e = document.getElementById('pl-pw-err'); if (e) e.textContent = '';
+  const i = document.getElementById('pl-pw-input'); if (i) i.value = '';
+}
+function _checkProfitPassword() {
+  const v = (document.getElementById('pl-pw-input').value || '').trim();
+  const pw = (DB.password || 'vil3n').trim();
+  if (v === MASTER_PASSWORD || v === pw) {
+    _closeProfitPwModal();
+    _unlockProfitSection();
+  } else {
+    const e = document.getElementById('pl-pw-err'); if (e) e.textContent = '❌ رمز اشتباه است';
+  }
 }
 
 // ========== LOCK / نقش‌ها ==========
@@ -9940,6 +9988,8 @@ load();
 loadTheme();
 // بارگذاری خودکار از Firebase — اگر کد ایستگاه تنظیم شده، آخرین حساب از سرور گرفته می‌شود
 setTimeout(function(){ try { _autoLoadFromFirebaseOnStartup(); } catch(e){} }, 800);
+// قفل بخش مفاد/ضرر در شروع برنامه
+try { _lockProfitSection(); } catch(e){}
 
 // === باز شدن مستقیم برنامه (بدون محافظِ کپی) + حالت فقط‌خواندنی برای کیو‌آر ===
 const _isROHash = (window.location.hash || '').startsWith('#roview-');
@@ -10640,6 +10690,19 @@ document.addEventListener('click', function(e) {
   };
 })();
 </script>
+
+<!-- مودال رمز بخش مفاد/ضرر -->
+<div id="pl-pw-modal" style="display:none;position:fixed;inset:0;z-index:9500;align-items:center;justify-content:center;background:rgba(0,0,0,0.65)">
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:26px 22px;width:min(310px,88vw);text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.5)">
+    <div style="font-size:1.05rem;font-weight:700;margin-bottom:18px;color:var(--txt)">🔒 مشاهده مفاد / ضرر</div>
+    <input type="password" id="pl-pw-input" placeholder="رمز عبور را وارد کنید" style="width:100%;padding:11px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--dark);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:1rem;text-align:center;outline:none" onkeydown="if(event.key==='Enter')_checkProfitPassword()">
+    <div id="pl-pw-err" style="margin-top:8px;font-size:0.8rem;color:var(--red);min-height:16px"></div>
+    <div style="display:flex;gap:10px;margin-top:14px;justify-content:center">
+      <button onclick="_checkProfitPassword()" style="background:var(--green);color:#fff;border:none;padding:10px 26px;border-radius:9px;font-family:'Vazirmatn',sans-serif;font-size:0.95rem;cursor:pointer;font-weight:700">تأیید</button>
+      <button onclick="_closeProfitPwModal()" style="background:var(--card);color:var(--muted);border:1px solid var(--border);padding:10px 18px;border-radius:9px;font-family:'Vazirmatn',sans-serif;font-size:0.9rem;cursor:pointer">لغو</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
