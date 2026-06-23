@@ -2984,6 +2984,14 @@ html, body {
     </div>
     <div id="set-ls-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted)"></div>
   </div>
+  <div class="settings-card" id="trash-settings-card" style="border-color:var(--accent)">
+    <div class="settings-title" style="color:var(--accent)">🗑️ سطل زباله</div>
+    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.8">موارد حذف‌شده تا <b style="color:var(--accent)">۱۵ روز</b> در اینجا نگه داشته می‌شوند و پس از آن خودکار پاک می‌شوند. می‌توانید هر مورد را برگردانید یا برای همیشه حذف کنید.</div>
+    <div id="trash-list-body" style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">
+      <div style="text-align:center;padding:18px;color:var(--muted);font-size:0.85rem">بارگذاری...</div>
+    </div>
+    <button onclick="_emptyTrash()" style="padding:7px 18px;border-radius:8px;border:1px solid var(--red);background:transparent;color:var(--red);font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer;font-size:0.85rem">🗑️ خالی کردن سطل زباله</button>
+  </div>
   <div class="settings-card" style="border-color:var(--red)">
     <div class="settings-title" style="color:var(--red)">🗑️ پاک‌سازی داده‌ها</div>
     <div style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;line-height:1.9">برای پاک کردن همهٔ حساب‌ها باید «رمز پاک‌سازی داده‌ها» را وارد کنید. این کار همهٔ حساب‌ها را خالی می‌کند و قابل بازگشت نیست.</div>
@@ -3401,7 +3409,8 @@ const DB = {
   stationAddress: '',
   stationPhone: '',
   unionRatePetrol: 0,
-  unionRateDiesel: 0
+  unionRateDiesel: 0,
+  trash: []
 };
 
 let _hadExistingData = false;
@@ -3444,6 +3453,8 @@ function load() {
   // یکپارچه‌سازی حساب‌های تکراری (از انتقال/کپی/بکاپ/بلوتوث/آپلود) — شناسه ثابت می‌ماند و فقط اطلاعات ادغام می‌شود
   // کد ایستگاه همیشه pump1 — بدون نیاز به تنظیم دستی
   if (!DB.syncCode) { DB.syncCode = 'pump1'; }
+  if (!DB.trash) DB.trash = [];
+  _cleanTrash();
   try { if (dedupAccounts()) save(); } catch(e){}
   // migrate old default passwords → رمز پیش‌فرض جدید vil3n
   if (DB.password === 'vil3ntecit' || DB.password === 'vilentecit' || DB.password === '1234') { DB.password = 'vil3n'; save(); }
@@ -4108,6 +4119,7 @@ function showSection(id, btn) {
     if (currentRole === 'viewer') { showToast('🔒 بخش تنظیمات فقط برای مدیر است', '#e53e3e'); return; }
     fillLowStockSettings();
     fillSyncSettings();
+    try { renderTrashList(); } catch(e) {}
   }
 }
 
@@ -4743,6 +4755,8 @@ function renderDieselLog() {
 }
 function deleteDieselShift(id) {
   if (!confirm('این پارچه دیزل حذف شود؟')) return;
+  const _item = DB.shifts.find(s => s.id === id);
+  if (_item) _addToTrash('diesel', _item);
   DB.shifts = DB.shifts.filter(s => s.id !== id);
   save(); renderDieselLog(); updateBanner();
 }
@@ -4947,11 +4961,15 @@ function printDieselShifts() {
 
 function deleteReport(id) {
   if (!confirm('این گزارش حذف شود؟')) return;
+  const _item = (DB.reports||[]).find(r => String(r.id) === String(id));
+  if (_item) _addToTrash('report', _item);
   DB.reports = DB.reports.filter(r => String(r.id) !== String(id));
   save(); renderLog(); updateReportLabel('petrol'); updateBanner();
 }
 function deleteShift(id) {
   if (!confirm('این پارچه حذف شود؟')) return;
+  const _item = DB.shifts.find(s => s.id === id);
+  if (_item) _addToTrash('shift', _item);
   DB.shifts = DB.shifts.filter(s => s.id !== id);
   save(); renderLog(); updateBanner();
 }
@@ -5515,6 +5533,8 @@ function syncPurchaseToCompany(entry) {
 
 function deletePurchase(id) {
   if (!confirm('این خرید حذف شود؟')) return;
+  const _item = (DB.fuelEntries||[]).find(e => e.id === id);
+  if (_item) _addToTrash('purchase', _item);
   DB.fuelEntries = DB.fuelEntries.filter(e => e.id !== id);
   // ردیف اتومات اضافه‌شده در حساب شرکت (پطرول و دیزل) را هم حذف کن
   (DB.tilCompanies||[]).forEach(c => {
@@ -5587,7 +5607,10 @@ function deletePerson(type, id) {
   if (!confirm('این شخص حذف شود؟')) return;
   const list = type === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const idx = list.findIndex(p => p.id === id);
-  if (idx >= 0) _pushUndo({ kind:'person', subtype:type, index:idx, data: JSON.parse(JSON.stringify(list[idx])) });
+  if (idx >= 0) {
+    _pushUndo({ kind:'person', subtype:type, index:idx, data: JSON.parse(JSON.stringify(list[idx])) });
+    _addToTrash('person', list[idx], type);
+  }
   if (type === 'debt') DB.debtPersons = DB.debtPersons.filter(p => p.id !== id);
   else DB.noinvPersons = DB.noinvPersons.filter(p => p.id !== id);
   save(); renderPersons(type); updateBanner();
@@ -6078,6 +6101,7 @@ function _recalcExpenseTotals() {
 }
 function deleteExpense(i) {
   if (!confirm('این مصرف حذف شود؟')) return;
+  if (DB.expenses[i]) _addToTrash('expense', DB.expenses[i]);
   DB.expenses.splice(i, 1); save(); renderExpenses(); updateBanner();
 }
 
@@ -6520,7 +6544,10 @@ function deleteCompany(id) {
   if (!requireAdmin()) return;
   if (!confirm('این شرکت و همه ردیف‌های آن حذف شود؟')) return;
   const idx = (DB.tilCompanies||[]).findIndex(c => c.id === id);
-  if (idx >= 0) _pushUndo({ kind:'company', index:idx, data: JSON.parse(JSON.stringify(DB.tilCompanies[idx])) });
+  if (idx >= 0) {
+    _pushUndo({ kind:'company', index:idx, data: JSON.parse(JSON.stringify(DB.tilCompanies[idx])) });
+    _addToTrash('company', DB.tilCompanies[idx]);
+  }
   DB.tilCompanies = (DB.tilCompanies||[]).filter(c => c.id !== id);
   save(); renderCompanies(); updateBanner();
   showToast('🗑️ حذف شد — برای بازگردانی Ctrl+Z بزنید', '#d97706');
@@ -8055,6 +8082,7 @@ function _recalcSafeTotals() {
 function deleteSafe(i) {
   if (!confirm('این ردیف حذف شود؟')) return;
   const entry = DB.safeEntries[i];
+  if (entry) _addToTrash('safe', entry);
   // ردیفِ خودکارِ مرتبط در حساب شرکت‌ها هم پاک شود
   if (entry && entry.id) {
     (DB.tilCompanies||[]).forEach(c => {
@@ -8364,6 +8392,7 @@ function updateSarrafiRow(idx, field, val) {
 function deleteSarrafiRow(idx) {
   if (!confirm('این ردیف حذف شود؟')) return;
   const row = sarrafiRows()[idx];
+  if (row) _addToTrash('sarrafi', row);
   // ردیفِ خودکارِ مرتبط در حساب شرکت‌ها هم پاک شود
   if (row && row.id) {
     (DB.tilCompanies || []).forEach(c => {
@@ -9088,7 +9117,10 @@ function saveWaraq() {
 function deleteWaraq(id) {
   if (!confirm('این ورق حذف شود؟')) return;
   const idx = (DB.waraqEntries||[]).findIndex(x => x.id === id);
-  if (idx >= 0) _pushUndo({ kind:'waraq', index:idx, data: JSON.parse(JSON.stringify(DB.waraqEntries[idx])) });
+  if (idx >= 0) {
+    _pushUndo({ kind:'waraq', index:idx, data: JSON.parse(JSON.stringify(DB.waraqEntries[idx])) });
+    _addToTrash('waraq', DB.waraqEntries[idx]);
+  }
   DB.waraqEntries = (DB.waraqEntries||[]).filter(x => x.id !== id);
   save(); renderWaraqList();
   showToast('🗑️ حذف شد — برای بازگردانی Ctrl+Z بزنید', '#d97706');
@@ -9904,6 +9936,144 @@ document.addEventListener('keydown', function(e){
     e.preventDefault();   // جلوگیری از کم/زیاد شدن عدد در لبه‌ها
   }
 });
+
+// ========== TRASH (سطل زباله) ==========
+const _TRASH_DAYS = 15;
+const _TRASH_KIND_LABEL = {
+  person: 'حساب شخصی', company: 'شرکت', waraq: 'ورق',
+  expense: 'مصرف', safe: 'گاوصندوق', sarrafi: 'صرافی',
+  shift: 'پارچه ⛽', diesel: 'پارچه 🟤', report: 'گزارش', purchase: 'خرید تیل'
+};
+function _trashName(item) {
+  const d = item.data;
+  switch (item.kind) {
+    case 'person':  return d.name || 'شخص';
+    case 'company': return d.name || 'شرکت';
+    case 'waraq':   return 'ورق ' + (d.date || '');
+    case 'expense': return d.title || ('مصرف ' + (d.date || ''));
+    case 'safe':    return d.title || ('گاوصندوق ' + (d.date || ''));
+    case 'sarrafi': return d.desc || ('صرافی ' + (d.date || ''));
+    case 'shift':   return 'پارچه ⛽ ' + (d.date || '');
+    case 'diesel':  return 'پارچه 🟤 ' + (d.date || '');
+    case 'report':  return 'گزارش ' + (d.date || '');
+    case 'purchase':return 'خرید ' + (d.fuelType === 'diesel' ? '🟤 ' : '⛽ ') + (d.date || '');
+    default:        return item.kind;
+  }
+}
+function _addToTrash(kind, dataObj, subtype) {
+  if (!DB.trash) DB.trash = [];
+  DB.trash.push({
+    id: 'tr' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    kind, subtype: subtype || null,
+    deletedAt: new Date().toISOString(),
+    data: JSON.parse(JSON.stringify(dataObj))
+  });
+}
+function _cleanTrash() {
+  if (!DB.trash) { DB.trash = []; return; }
+  const cutoff = Date.now() - _TRASH_DAYS * 864e5;
+  DB.trash = DB.trash.filter(item => new Date(item.deletedAt).getTime() > cutoff);
+}
+function _trashDaysLeft(item) {
+  const elapsed = (Date.now() - new Date(item.deletedAt).getTime()) / 864e5;
+  return Math.max(0, Math.ceil(_TRASH_DAYS - elapsed));
+}
+function _restoreFromTrash(trashId) {
+  if (!DB.trash) return;
+  const idx = DB.trash.findIndex(x => x.id === trashId);
+  if (idx < 0) return;
+  const item = DB.trash[idx];
+  const d = item.data;
+  switch (item.kind) {
+    case 'person':
+      if (item.subtype === 'debt') { DB.debtPersons = DB.debtPersons||[]; DB.debtPersons.push(d); }
+      else { DB.noinvPersons = DB.noinvPersons||[]; DB.noinvPersons.push(d); }
+      try { save(); renderPersons(item.subtype); updateBanner(); } catch(e){}
+      break;
+    case 'company':
+      DB.tilCompanies = DB.tilCompanies||[]; DB.tilCompanies.push(d);
+      try { save(); renderCompanies(); updateBanner(); } catch(e){}
+      break;
+    case 'waraq':
+      DB.waraqEntries = DB.waraqEntries||[]; DB.waraqEntries.push(d);
+      try { save(); renderWaraqList(); } catch(e){}
+      break;
+    case 'expense':
+      DB.expenses = DB.expenses||[]; DB.expenses.push(d);
+      try { save(); renderExpenses(); updateBanner(); } catch(e){}
+      break;
+    case 'safe':
+      DB.safeEntries = DB.safeEntries||[]; DB.safeEntries.push(d);
+      try { save(); renderSafe(); updateBanner(); } catch(e){}
+      break;
+    case 'sarrafi':
+      DB.sarrafiRows = DB.sarrafiRows||[]; DB.sarrafiRows.push(d);
+      try { save(); renderSarrafi(); } catch(e){}
+      break;
+    case 'shift': case 'diesel':
+      DB.shifts = DB.shifts||[]; DB.shifts.push(d);
+      try { save(); renderLog(); renderDieselLog(); updateBanner(); } catch(e){}
+      break;
+    case 'report':
+      DB.reports = DB.reports||[]; DB.reports.push(d);
+      try { save(); renderLog(); updateBanner(); } catch(e){}
+      break;
+    case 'purchase':
+      DB.fuelEntries = DB.fuelEntries||[]; DB.fuelEntries.push(d);
+      try { save(); renderStorage(); updateBanner(); } catch(e){}
+      break;
+  }
+  DB.trash.splice(idx, 1);
+  save();
+  showToast('↩️ «' + _trashName(item) + '» بازگشت', '#38a169');
+  renderTrashList();
+}
+function _permDeleteTrashItem(trashId) {
+  if (!DB.trash) return;
+  const item = DB.trash.find(x => x.id === trashId);
+  if (!item) return;
+  if (!confirm('«' + _trashName(item) + '» برای همیشه حذف شود؟')) return;
+  DB.trash = DB.trash.filter(x => x.id !== trashId);
+  save(); renderTrashList();
+  showToast('🗑️ برای همیشه حذف شد', '#e53e3e');
+}
+function _emptyTrash() {
+  if (!DB.trash || !DB.trash.length) { showToast('سطل زباله خالی است', '#718096'); return; }
+  if (!confirm('همه ' + DB.trash.length + ' مورد در سطل زباله برای همیشه حذف شوند؟')) return;
+  DB.trash = []; save(); renderTrashList();
+  showToast('🗑️ سطل زباله خالی شد', '#e53e3e');
+}
+function renderTrashList() {
+  const el = document.getElementById('trash-list-body');
+  if (!el) return;
+  _cleanTrash();
+  const items = (DB.trash || []).slice().sort((a, b) => new Date(b.deletedAt) - new Date(a.deletedAt));
+  if (!items.length) {
+    el.innerHTML = '<div style="text-align:center;padding:18px;color:var(--muted);font-size:0.85rem">سطل زباله خالی است</div>';
+    return;
+  }
+  el.innerHTML = items.map(item => {
+    const label = _TRASH_KIND_LABEL[item.kind] || item.kind;
+    const name = _trashName(item);
+    const days = _trashDaysLeft(item);
+    const delDate = new Date(item.deletedAt).toLocaleDateString('fa-IR');
+    const daysColor = days <= 3 ? 'var(--red)' : days <= 7 ? 'var(--accent)' : 'var(--muted)';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap">
+      <div style="flex:1;min-width:160px">
+        <div style="font-weight:700;font-size:0.9rem">${name}</div>
+        <div style="font-size:0.75rem;color:var(--muted);margin-top:2px">
+          <span style="background:var(--dark);border-radius:4px;padding:1px 6px;margin-left:6px">${label}</span>
+          حذف: ${delDate}
+          <span style="color:${daysColor};margin-right:6px">${days} روز مانده</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button onclick="_restoreFromTrash('${item.id}')" style="padding:5px 12px;border-radius:7px;border:1px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer;font-size:0.82rem">↩️ برگرداندن</button>
+        <button onclick="_permDeleteTrashItem('${item.id}')" style="padding:5px 12px;border-radius:7px;border:1px solid var(--red);background:transparent;color:var(--red);font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer;font-size:0.82rem">🗑️ حذف دائمی</button>
+      </div>
+    </div>`;
+  }).join('');
+}
 
 // ========== UNDO حذف حساب (Ctrl+Z) ==========
 let _undoStack = [];
