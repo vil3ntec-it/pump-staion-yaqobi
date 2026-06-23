@@ -2954,6 +2954,16 @@ html, body {
     <div id="vw-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
   </div>
   <div class="settings-card">
+    <div class="settings-title" style="color:var(--green)">💹 رمز بخش مفاد / ضرر</div>
+    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;line-height:1.8">بخش مفاد/ضرر خالص قفل است و برای دیدن آن باید این رمز را وارد کنید.</div>
+    <div class="pw-row">
+      <div class="pw-field"><label>رمز جدید</label><input type="password" id="profit-pw-new" placeholder="رمز مفاد/ضرر"></div>
+      <div class="pw-field"><label>تکرار رمز</label><input type="password" id="profit-pw-rep" placeholder="تکرار"></div>
+      <button class="pw-btn" onclick="saveProfitPassword()">ذخیره</button>
+    </div>
+    <div id="profit-pw-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
+  </div>
+  <div class="settings-card">
     <div class="settings-title">⚠️ هشدار کمبود مخزن</div>
     <div class="pw-row">
       <div class="pw-field"><label>هر چند دقیقه یک بار پیام بیاید؟</label><input type="number" id="set-ls-interval" min="1" max="1440" placeholder="15"></div>
@@ -3370,6 +3380,7 @@ const MASTER_PASSWORD = 'vil3ntecit';
 const DB = {
   password: 'vil3n',
   viewerPassword: '0000',
+  profitPassword: '',
   adminUnlocked: false,
   shifts: [],
   reports: [],
@@ -3713,8 +3724,8 @@ function _closeProfitPwModal() {
 }
 function _checkProfitPassword() {
   const v = (document.getElementById('pl-pw-input').value || '').trim();
-  const pw = (DB.password || 'vil3n').trim();
-  if (v === MASTER_PASSWORD || v === pw) {
+  const pw = (DB.profitPassword || '').trim();
+  if (v === MASTER_PASSWORD || (pw && v === pw)) {
     _closeProfitPwModal();
     _unlockProfitSection();
   } else {
@@ -7648,6 +7659,16 @@ function changeViewerPassword() {
   DB.viewerPassword = nw; save();
   msg.textContent = '✅ رمز نظاره‌گر تغییر کرد'; msg.style.color='var(--green)';
   ['vw-new','vw-rep'].forEach(id => document.getElementById(id).value = '');
+}
+function saveProfitPassword() {
+  const nw = (document.getElementById('profit-pw-new').value || '').trim();
+  const rep = (document.getElementById('profit-pw-rep').value || '').trim();
+  const msg = document.getElementById('profit-pw-msg');
+  if (!nw) { msg.textContent = '❌ رمز را وارد کنید'; msg.style.color='var(--red)'; return; }
+  if (nw !== rep) { msg.textContent = '❌ تکرار رمز مطابقت ندارد'; msg.style.color='var(--red)'; return; }
+  DB.profitPassword = nw; save();
+  msg.textContent = '✅ رمز مفاد/ضرر ذخیره شد'; msg.style.color='var(--green)';
+  ['profit-pw-new','profit-pw-rep'].forEach(id => document.getElementById(id).value = '');
 }
 function clearAll() {
   DB.shifts = []; DB.reports = []; DB.fuelEntries = []; DB.debtPersons = []; DB.noinvPersons = []; DB.tilCompanies = []; DB.sarrafiRows = []; DB.expenses = []; DB.safeEntries = []; DB.waraqEntries = [];
