@@ -75,7 +75,7 @@ body.viewer-mode .save-btn,
 body.viewer-mode .person-del,
 body.viewer-mode .pw-btn,
 body.viewer-mode .ls-share{display:none !important}
-body.viewer-mode input:not(#lockInput):not(#set-ls-phone),
+body.viewer-mode input:not(#lockInput):not(#set-ls-phone):not(#pl-pw-input),
 body.viewer-mode textarea,
 body.viewer-mode select{pointer-events:none !important}
 body.viewer-mode .ft-opt{pointer-events:none !important;opacity:.85}
@@ -10357,6 +10357,12 @@ document.addEventListener('click', function(e) {
       bar.querySelector('.seg.exp').style.width = (100-ip)+'%';
       leg.innerHTML = '<span><span class="dot" style="background:#37d27e"></span>درآمد <b>'+num(inc)+'</b></span>'
                     + '<span><span class="dot" style="background:#f06565"></span>مصارف <b>'+num(exp)+'</b></span>';
+      // اگر بخش قفل است، blur را روی عناصر تازه‌ساخته هم اعمال کن
+      try {
+        var isLocked = (document.getElementById('pl-result')||{}).classList && document.getElementById('pl-result').classList.contains('pl-locked');
+        if (isLocked) { bar.classList.add('profit-hidden'); leg.classList.add('profit-hidden'); }
+        else { bar.classList.remove('profit-hidden'); leg.classList.remove('profit-hidden'); }
+      } catch(e2) {}
     }catch(e){}
   }
 
