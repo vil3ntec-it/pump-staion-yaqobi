@@ -349,6 +349,8 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 .pl-lock-icon{text-align:center;color:#fff;text-shadow:0 2px 16px rgba(0,0,0,.9)}
 .pl-lock-icon .pl-lock-emoji{font-size:2.6rem}
 .pl-lock-icon .pl-lock-hint{font-size:0.85rem;margin-top:8px;color:rgba(255,255,255,.85);font-family:'Vazirmatn',sans-serif}
+.profit-hidden{filter:blur(10px)!important;user-select:none;pointer-events:none;transition:filter .4s}
+.profit-hidden-inline{filter:blur(8px);user-select:none;display:inline-block;transition:filter .4s}
 .pl-result-label{font-size:0.82rem;color:var(--muted);margin-bottom:10px}
 .pl-result-value{font-size:2.1rem;font-weight:900;margin-bottom:8px}
 .pl-result-sub{font-size:0.78rem;color:var(--muted)}
@@ -2090,7 +2092,7 @@ html, body {
 <div class="top-banner" id="topBanner">
   <div class="tb-item"><div class="tb-label">🛢️ شرکت ها تیل (الباقی)</div><div class="tb-value" style="color:#e9d8fd" id="bn-noinv">0</div></div>
   <div class="tb-item"><div class="tb-label">💰 قرض کل</div><div class="tb-value" style="color:var(--red)" id="bn-debt">0</div></div>
-  <div class="tb-item"><div class="tb-label">📈 مفاد امروز</div><div class="tb-value" style="color:var(--green)" id="bn-profit">0</div></div>
+  <div class="tb-item"><div class="tb-label">📈 مفاد امروز</div><div class="tb-value" style="color:var(--green)"><span id="bn-profit" class="profit-hidden-inline">0</span></div></div>
   <div class="tb-item"><div class="tb-label">💸 مصارف امروز</div><div class="tb-value" style="color:var(--accent)" id="bn-exp">0</div></div>
 </div>
 
@@ -2477,6 +2479,7 @@ html, body {
     <div class="pl-lock-icon"><div class="pl-lock-emoji">🔒</div><div class="pl-lock-hint">برای مشاهده کلیک کنید</div></div>
   </div>
   </div>
+  <div id="pl-grid-wrap">
   <div class="pl-grid">
     <div class="pl-card">
       <div class="pl-card-title">📈 درآمدها</div>
@@ -2486,6 +2489,7 @@ html, body {
       <div class="pl-card-title">💸 مصارف</div>
       <div class="pl-big" style="color:var(--red)" id="pl-expenses">0</div>
     </div>
+  </div>
   </div>
   <div class="card" style="border-color:var(--accent)">
     <div class="card-head"><div class="card-title">🏛️ نرخ اتحادیه</div></div>
@@ -2972,18 +2976,6 @@ html, body {
       <button class="pw-btn" onclick="saveLowStockSettings()">ذخیره</button>
     </div>
     <div id="set-ls-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted)"></div>
-  </div>
-  <div class="settings-card">
-    <div class="settings-title">🔤 اندازه فونت متن</div>
-    <div style="font-size:0.78rem;color:var(--muted);margin-bottom:12px">فقط اندازه نوشته‌ها تغییر می‌کند، کادرها و بخش‌ها دست نمی‌خورند.</div>
-    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-      <span style="font-size:0.78rem;color:var(--label)">کوچک</span>
-      <input type="range" id="font-scale-slider" min="0.8" max="1.5" step="0.05" value="1"
-        style="flex:1;accent-color:var(--accent);min-width:120px" oninput="applyFontScale(this.value)">
-      <span style="font-size:0.78rem;color:var(--label)">بزرگ</span>
-      <span id="font-scale-label" style="font-size:0.82rem;font-weight:700;color:var(--accent);min-width:32px">۱۰۰٪</span>
-      <button class="pw-btn" onclick="resetFontScale()">بازنشانی</button>
-    </div>
   </div>
   <div class="settings-card" style="border-color:var(--red)">
     <div class="settings-title" style="color:var(--red)">🗑️ پاک‌سازی داده‌ها</div>
@@ -3699,17 +3691,30 @@ function _autoLoadFromFirebaseOnStartup() {
 
 // ========== قفل بخش مفاد/ضرر ==========
 let _plLockTimer = null;
+function _profitSensitiveEls() {
+  return [
+    document.getElementById('pl-grid-wrap'),
+    document.getElementById('pl-split'),
+    document.getElementById('pl-split-legend')
+  ].filter(Boolean);
+}
 function _lockProfitSection() {
   const r = document.getElementById('pl-result');
   const o = document.getElementById('pl-lock-overlay');
+  const p = document.getElementById('bn-profit');
   if (r) r.classList.add('pl-locked');
   if (o) o.classList.add('active');
+  if (p) p.classList.add('profit-hidden-inline');
+  _profitSensitiveEls().forEach(el => el.classList.add('profit-hidden'));
 }
 function _unlockProfitSection() {
   const r = document.getElementById('pl-result');
   const o = document.getElementById('pl-lock-overlay');
+  const p = document.getElementById('bn-profit');
   if (r) r.classList.remove('pl-locked');
   if (o) o.classList.remove('active');
+  if (p) p.classList.remove('profit-hidden-inline');
+  _profitSensitiveEls().forEach(el => el.classList.remove('profit-hidden'));
   clearTimeout(_plLockTimer);
   _plLockTimer = setTimeout(_lockProfitSection, 17000);
 }
