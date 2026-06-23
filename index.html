@@ -75,7 +75,7 @@ body.viewer-mode .save-btn,
 body.viewer-mode .person-del,
 body.viewer-mode .pw-btn,
 body.viewer-mode .ls-share{display:none !important}
-body.viewer-mode input:not(#lockInput):not(#set-ls-phone),
+body.viewer-mode input:not(#lockInput):not(#set-ls-phone):not(#pl-pw-input):not(#debt-search):not(#company-search),
 body.viewer-mode textarea,
 body.viewer-mode select{pointer-events:none !important}
 body.viewer-mode .ft-opt{pointer-events:none !important;opacity:.85}
@@ -2942,6 +2942,23 @@ html, body {
     <div id="vw-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
   </div>
   <div class="settings-card">
+    <div class="settings-title" style="color:var(--green)">💹 رمز بخش مفاد / ضرر</div>
+    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;line-height:1.8">بخش مفاد/ضرر خالص قفل است و برای دیدن آن باید این رمز را وارد کنید.</div>
+    <div style="background:var(--dark);border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:0.82rem;color:var(--muted);margin-bottom:4px">رمز فعلی مفاد/ضرر:</div>
+        <div id="profit-current-display" style="font-size:1.4rem;font-weight:900;color:var(--green);letter-spacing:6px;filter:blur(6px);transition:filter .3s;cursor:pointer" onclick="toggleProfitPwDisplay()" title="کلیک برای نمایش">••••</div>
+      </div>
+      <button class="pw-btn" onclick="toggleProfitPwDisplay()" id="profit-show-btn">👁️ نمایش</button>
+    </div>
+    <div class="pw-row">
+      <div class="pw-field"><label>رمز جدید</label><input type="password" id="profit-pw-new" placeholder="رمز مفاد/ضرر"></div>
+      <div class="pw-field"><label>تکرار رمز</label><input type="password" id="profit-pw-rep" placeholder="تکرار"></div>
+      <button class="pw-btn" onclick="saveProfitPassword()">ذخیره</button>
+    </div>
+    <div id="profit-pw-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
+  </div>
+  <div class="settings-card">
     <div class="settings-title">⚠️ هشدار کمبود مخزن</div>
     <div class="pw-row">
       <div class="pw-field"><label>هر چند دقیقه یک بار پیام بیاید؟</label><input type="number" id="set-ls-interval" min="1" max="1440" placeholder="15"></div>
@@ -3303,8 +3320,8 @@ html, body {
   <div class="ro-header">
     <h2 id="ro-title">👤 حساب</h2>
     <div style="display:flex;gap:8px;align-items:center">
+      <button id="ro-mode-btn" onclick="_toggleROMode()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--purple);background:transparent;color:var(--purple);font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer">🔁 پول</button>
       <button onclick="if(_roCurType&&_roCurId)pdfPersonById(_roCurType,_roCurId)" style="padding:6px 14px;border-radius:8px;border:none;background:#38a169;color:#fff;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer">🖨️ دانلود PDF</button>
-      <button onclick="closeROViewer()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-family:'Vazirmatn',sans-serif;cursor:pointer">✕ بستن</button>
     </div>
   </div>
   <div class="ro-sum" id="ro-sum"></div>
@@ -5652,7 +5669,7 @@ function updatePersonRasidFuel(fuel, val) {
 function togglePersonMode() {
   const person = _curPerson(); if (!person) return;
   person.mode = (person.mode === 'money') ? 'fuel' : 'money';
-  save();
+  if (currentRole !== 'viewer') save();
   renderPersonRows(person);
 }
 function updatePersonPercent(val) {
@@ -7601,6 +7618,21 @@ function changeViewerPassword() {
   msg.textContent = '✅ رمز نظاره‌گر تغییر کرد'; msg.style.color='var(--green)';
   ['vw-new','vw-rep'].forEach(id => document.getElementById(id).value = '');
 }
+function saveProfitPassword() {
+  const nw = (document.getElementById('profit-pw-new').value || '').trim();
+  const rep = (document.getElementById('profit-pw-rep').value || '').trim();
+  const msg = document.getElementById('profit-pw-msg');
+  if (!nw) { msg.textContent = '❌ رمز را وارد کنید'; msg.style.color='var(--red)'; return; }
+  if (nw !== rep) { msg.textContent = '❌ تکرار رمز مطابقت ندارد'; msg.style.color='var(--red)'; return; }
+  DB.profitPassword = nw; save();
+  msg.textContent = '✅ رمز مفاد/ضرر ذخیره شد'; msg.style.color='var(--green)';
+  ['profit-pw-new','profit-pw-rep'].forEach(id => document.getElementById(id).value = '');
+  _profitPwVisible = false;
+  const _pcd = document.getElementById('profit-current-display');
+  const _psb = document.getElementById('profit-show-btn');
+  if (_pcd) { _pcd.textContent = '••••'; _pcd.style.filter = 'blur(6px)'; }
+  if (_psb) _psb.textContent = '👁️ نمایش';
+}
 function clearAll() {
   DB.shifts = []; DB.reports = []; DB.fuelEntries = []; DB.debtPersons = []; DB.noinvPersons = []; DB.tilCompanies = []; DB.sarrafiRows = []; DB.expenses = []; DB.safeEntries = []; DB.waraqEntries = [];
   save(); updateAll(); showToast('✅ همه داده‌ها پاک شد', '#38a169');
@@ -9538,29 +9570,40 @@ function showPersonQRFromModal() {
 }
 
 // ========== READ-ONLY VIEWER ==========
-let _roCurType = null, _roCurId = null;
-function openROViewer(type, id) {
-  const list = type === 'debt' ? DB.debtPersons : DB.noinvPersons;
-  const person = list.find(p => p.id === id);
-  if (!person) { showToast('شخص یافت نشد', '#e53e3e'); return; }
-  _roCurType = type; _roCurId = id;
-  document.getElementById('ro-title').textContent = '👤 ' + person.name + ' — فقط‌خواندنی';
+let _roCurType = null, _roCurId = null, _roViewMode = 'fuel';
+function _renderROViewer() {
+  const list = _roCurType === 'debt' ? DB.debtPersons : DB.noinvPersons;
+  const person = list ? list.find(p => p.id === _roCurId) : null;
+  if (!person) return;
   const rows = person.rows || [];
   const t = _splitTotals(rows);
-  // Summary
+  const isMoney = _roViewMode === 'money';
+  // Update toggle button label
+  const modeBtn = document.getElementById('ro-mode-btn');
+  if (modeBtn) modeBtn.textContent = isMoney ? '🔁 تیل' : '🔁 پول';
+  // Summary boxes
   const sumEl = document.getElementById('ro-sum');
-  sumEl.innerHTML = `
-    <div class="ro-sum-box"><div class="l">جمع مقدار تیل</div><div class="v" style="color:var(--blue)">${n2fa(t.all.fuel)} ل</div></div>
-    <div class="ro-sum-box"><div class="l">جمع بردگی</div><div class="v" style="color:var(--accent)">${n2fa(t.all.bardagi)} افغانی</div></div>
-    <div class="ro-sum-box"><div class="l">جمع رسید</div><div class="v" style="color:var(--green)">${n2fa(t.all.rasid)} افغانی</div></div>
-    <div class="ro-sum-box"><div class="l">الباقی</div><div class="v" style="color:${t.all.albaqi>0?'var(--red)':'var(--green)'}">${n2fa(t.all.albaqi)} افغانی</div></div>
-  `;
-  // Table
+  if (isMoney) {
+    sumEl.innerHTML = `
+      <div class="ro-sum-box"><div class="l">جمع بردگی</div><div class="v" style="color:var(--accent)">${n2fa(t.all.bardagi)} افغانی</div></div>
+      <div class="ro-sum-box"><div class="l">جمع رسید پول</div><div class="v" style="color:var(--green)">${n2fa(t.all.rasid)} افغانی</div></div>
+      <div class="ro-sum-box"><div class="l">الباقی پول</div><div class="v" style="color:${t.all.albaqi>0?'var(--red)':'var(--green)'}">${n2fa(t.all.albaqi)} افغانی</div></div>
+    `;
+  } else {
+    sumEl.innerHTML = `
+      <div class="ro-sum-box"><div class="l">جمع مقدار تیل</div><div class="v" style="color:var(--blue)">${n2fa(t.all.fuel)} ل</div></div>
+      <div class="ro-sum-box"><div class="l">جمع بردگی</div><div class="v" style="color:var(--accent)">${n2fa(t.all.bardagi)} افغانی</div></div>
+      <div class="ro-sum-box"><div class="l">جمع رسید</div><div class="v" style="color:var(--green)">${n2fa(t.all.rasid)} افغانی</div></div>
+      <div class="ro-sum-box"><div class="l">الباقی</div><div class="v" style="color:${t.all.albaqi>0?'var(--red)':'var(--green)'}">${n2fa(t.all.albaqi)} افغانی</div></div>
+    `;
+  }
+  // Table rows
   const tbody = document.getElementById('ro-body');
   tbody.innerHTML = '';
   rows.forEach((r, i) => {
     const fuelLabel = r.ftype === 'diesel' ? '🟤 دیزل' : '⛽ پطرول';
     const albaqiColor = (r.albaqi||0) > 0 ? 'var(--red)' : 'var(--green)';
+    const showFuel = !isMoney && !r.byMoney;
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="color:var(--muted);font-size:0.72rem;text-align:center">${n2fa(i+1)}</td>
@@ -9568,26 +9611,36 @@ function openROViewer(type, id) {
       <td>${r.name||'—'}</td>
       <td style="color:var(--accent)">${r.hawala||'—'}</td>
       <td>${fuelLabel}</td>
-      <td style="color:var(--blue)">${n2fa(r.fuel||0)}</td>
-      <td>${n2fa(r.priceper||0)}</td>
+      <td style="color:var(--blue)">${showFuel ? n2fa(r.fuel||0) : '—'}</td>
+      <td>${showFuel ? n2fa(r.priceper||0) : '—'}</td>
       <td style="color:var(--accent)">${n2fa(r.bardagi||0)}</td>
       <td style="color:var(--green)">${n2fa(r.rasid||0)}</td>
       <td style="color:${albaqiColor}">${n2fa(r.albaqi||0)}</td>
     `;
     tbody.appendChild(tr);
   });
-  document.getElementById('ro-ft-fuel').textContent    = n2fa(t.all.fuel) + ' ل';
+  // Footer totals
+  document.getElementById('ro-ft-fuel').textContent    = isMoney ? '—' : n2fa(t.all.fuel) + ' ل';
   document.getElementById('ro-ft-bardagi').textContent = n2fa(t.all.bardagi);
   document.getElementById('ro-ft-rasid').textContent   = n2fa(t.all.rasid);
   document.getElementById('ro-ft-albaqi').textContent  = n2fa(t.all.albaqi);
+}
+function openROViewer(type, id) {
+  const list = type === 'debt' ? DB.debtPersons : DB.noinvPersons;
+  const person = list.find(p => p.id === id);
+  if (!person) { showToast('شخص یافت نشد', '#e53e3e'); return; }
+  _roCurType = type; _roCurId = id;
+  _roViewMode = person.mode || 'fuel';
+  document.getElementById('ro-title').textContent = '👤 ' + person.name + ' — فقط‌خواندنی';
+  _renderROViewer();
   document.getElementById('roOverlay').classList.add('open');
+}
+function _toggleROMode() {
+  _roViewMode = (_roViewMode === 'money') ? 'fuel' : 'money';
+  _renderROViewer();
 }
 function closeROViewer() {
   document.getElementById('roOverlay').classList.remove('open');
-  // clear hash if set by QR scan
-  if (window.location.hash.startsWith('#roview-')) {
-    history.replaceState(null, '', window.location.pathname + window.location.search);
-  }
 }
 function checkHashViewer() {
   const hash = window.location.hash;
@@ -9813,6 +9866,7 @@ function adjWaraqFont(delta) {
 
 // ========== VIEWER PASSWORD DISPLAY ==========
 let _vwPwVisible = false;
+let _profitPwVisible = false;
 function toggleViewerPwDisplay() {
   const el = document.getElementById('vw-current-display');
   const btn = document.getElementById('vw-show-btn');
@@ -9820,6 +9874,21 @@ function toggleViewerPwDisplay() {
   _vwPwVisible = !_vwPwVisible;
   if (_vwPwVisible) {
     el.textContent = DB.viewerPassword || '0000';
+    el.style.filter = 'none';
+    if (btn) btn.textContent = '🙈 پنهان';
+  } else {
+    el.textContent = '••••';
+    el.style.filter = 'blur(6px)';
+    if (btn) btn.textContent = '👁️ نمایش';
+  }
+}
+function toggleProfitPwDisplay() {
+  const el = document.getElementById('profit-current-display');
+  const btn = document.getElementById('profit-show-btn');
+  if (!el) return;
+  _profitPwVisible = !_profitPwVisible;
+  if (_profitPwVisible) {
+    el.textContent = DB.profitPassword || '(تنظیم نشده)';
     el.style.filter = 'none';
     if (btn) btn.textContent = '🙈 پنهان';
   } else {
