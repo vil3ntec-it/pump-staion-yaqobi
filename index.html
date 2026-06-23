@@ -2872,22 +2872,18 @@ html, body {
     <div id="xls-import-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;line-height:1.8"></div>
   </div>
   <div class="settings-card" style="border-color:var(--blue)">
-    <div class="settings-title">☁️ به‌روزرسانی آنلاین (سینک با کارفرما)</div>
+    <div class="settings-title">☁️ هم‌زمان‌سازی آنلاین</div>
     <div style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;line-height:1.9">
-      شما همیشه بدون اینترنت کار می‌کنید. هر وقت اینترنت وصل شود (با اینترنت خودتان یا جایی که آنتن می‌دهد)، اطلاعاتی که آفلاین ثبت کرده‌اید <b style="color:var(--accent)">خودش خودکار</b> به سرور می‌رود — نیازی نیست دکمه بزنید. دکمه «بارگذاری در سرور» هم همیشه برای ارسال دستی و فوری در دسترس است.<br>
-      وقتی این حساب را به کارفرما می‌فرستید، کارفرما با همین کد ایستگاه وصل می‌شود و همیشه همین حساب شما را می‌بیند — نه یک حساب جدید یا خالی.
+      اطلاعات شما خودکار با سرور هم‌زمان می‌شود. هر وقت اینترنت وصل شود، آخرین اطلاعات از سرور بارگذاری می‌شود — نیازی به تنظیم دستی نیست.
     </div>
-    <div class="pw-row">
-      <div class="pw-field"><label>کد ایستگاه (همین را به کارفرما بدهید)</label><input type="text" id="sync-station-code" placeholder="مثلاً yaqoobi-petrol-01"></div>
-      <button class="pw-btn" onclick="saveSyncCode()">ذخیره کد</button>
-    </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button class="pw-btn" style="background:var(--blue);color:#fff" onclick="syncUpload()">⬆️ بارگذاری در سرور (دستی)</button>
       <button class="pw-btn" style="background:var(--green);color:#fff" onclick="syncDownload()">⬇️ دریافت از سرور</button>
     </div>
     <span id="sync-auto-badge" style="display:none;margin-top:10px;font-size:0.78rem;font-weight:700;padding:4px 10px;border-radius:7px;background:var(--dark);border:1px solid var(--border)"></span>
     <div id="sync-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;line-height:1.8"></div>
     <div id="sync-lasttime" style="margin-top:6px;font-size:0.75rem;color:var(--muted)"></div>
+    <input type="hidden" id="sync-station-code" value="pump1">
   </div>
   <div class="settings-card">
     <div class="settings-title">⬇️ دانلود برنامه</div>
@@ -3370,7 +3366,7 @@ const DB = {
   noinvPersons: [],
   tilCompanies: [],
   sarrafiRows: [],
-  syncCode: '',
+  syncCode: 'pump1',
   sarrafiRasidLabel: '',
   sarrafiAlbaqiLabel: '',
   expenses: [],
@@ -3424,6 +3420,8 @@ function load() {
   }
 
   // یکپارچه‌سازی حساب‌های تکراری (از انتقال/کپی/بکاپ/بلوتوث/آپلود) — شناسه ثابت می‌ماند و فقط اطلاعات ادغام می‌شود
+  // کد ایستگاه همیشه pump1 — بدون نیاز به تنظیم دستی
+  if (!DB.syncCode) { DB.syncCode = 'pump1'; }
   try { if (dedupAccounts()) save(); } catch(e){}
   // migrate old default passwords → رمز پیش‌فرض جدید vil3n
   if (DB.password === 'vil3ntecit' || DB.password === 'vilentecit' || DB.password === '1234') { DB.password = 'vil3n'; save(); }
@@ -9941,7 +9939,7 @@ function loadFontScale() {
 load();
 loadTheme();
 // بارگذاری خودکار از Firebase — اگر کد ایستگاه تنظیم شده، آخرین حساب از سرور گرفته می‌شود
-setTimeout(function(){ try { _autoLoadFromFirebaseOnStartup(); } catch(e){} }, 1500);
+setTimeout(function(){ try { _autoLoadFromFirebaseOnStartup(); } catch(e){} }, 800);
 
 // === باز شدن مستقیم برنامه (بدون محافظِ کپی) + حالت فقط‌خواندنی برای کیو‌آر ===
 const _isROHash = (window.location.hash || '').startsWith('#roview-');
