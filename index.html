@@ -3388,24 +3388,41 @@ const DB = {
 
 let _hadExistingData = false;
 function load() {
-  let s = null;
-  try { s = localStorage.getItem('pumpDB'); } catch(e) { /* iOS file:// یا Private Mode */ }
-  // آیا قبلاً روی همین دستگاه/مرورگر داده‌ای ثبت شده بود؟ (برای فعال‌سازی خودکارِ نصب‌های قدیمی)
-  if (s) {
+  let localData = null;
+  try {
+    const s = localStorage.getItem('pumpDB');
+    if (s) localData = JSON.parse(s);
+  } catch(e) {}
+
+  const embedded = (typeof EMBEDDED_DB === 'object' && EMBEDDED_DB) ? EMBEDDED_DB : null;
+
+  // انتخاب داده‌ای که باید بارگذاری شود:
+  // اگر هر دو وجود دارند، جدیدترین (بر اساس زمان آخرین هم‌زمان‌سازی) انتخاب می‌شود
+  // تا فایل کپی‌شده/ارسال‌شده با داده جدیدتر، روی داده قدیمی دستگاه اولویت داشته باشد
+  let dataToUse = null;
+  if (localData && embedded) {
+    const localTime = new Date(localData.lastSyncUpload || 0).getTime();
+    const embeddedTime = new Date(embedded.lastSyncUpload || 0).getTime();
+    dataToUse = embeddedTime > localTime ? embedded : localData;
+  } else {
+    dataToUse = localData || embedded;
+  }
+
+  if (dataToUse) {
     try {
-      const p = JSON.parse(s);
-      if (p && ((p.shifts && p.shifts.length) || (p.debtPersons && p.debtPersons.length) ||
-                (p.noinvPersons && p.noinvPersons.length) || (p.tilCompanies && p.tilCompanies.length) ||
-                (p.sarrafiRows && p.sarrafiRows.length) || (p.expenses && p.expenses.length))) {
+      if ((dataToUse.shifts && dataToUse.shifts.length) || (dataToUse.debtPersons && dataToUse.debtPersons.length) ||
+          (dataToUse.noinvPersons && dataToUse.noinvPersons.length) || (dataToUse.tilCompanies && dataToUse.tilCompanies.length) ||
+          (dataToUse.sarrafiRows && dataToUse.sarrafiRows.length) || (dataToUse.expenses && dataToUse.expenses.length)) {
         _hadExistingData = true;
       }
-    } catch(e){}
+    } catch(e) {}
+    try { Object.assign(DB, dataToUse); } catch(e) {}
+    // اگر داده از EMBEDDED_DB آمد (یا جدیدتر بود)، در localStorage ذخیره کن
+    if (dataToUse === embedded) {
+      try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
+    }
   }
-  if (s) { try { Object.assign(DB, JSON.parse(s)); } catch(e){} }
-  else if (typeof EMBEDDED_DB === 'object' && EMBEDDED_DB) {
-    // فایل دانلود/کپی‌شده همراه خودش حساب دارد → همان حساب بارگذاری می‌شود (نه خالی)
-    try { Object.assign(DB, EMBEDDED_DB); save(); } catch(e){}
-  }
+
   // یکپارچه‌سازی حساب‌های تکراری (از انتقال/کپی/بکاپ/بلوتوث/آپلود) — شناسه ثابت می‌ماند و فقط اطلاعات ادغام می‌شود
   try { if (dedupAccounts()) save(); } catch(e){}
   // migrate old default passwords → رمز پیش‌فرض جدید vil3n
@@ -3623,6 +3640,41 @@ window.addEventListener('offline', function(){
 });
 // محافظ اضافه: هر دو دقیقه یک‌بار هم چک کن (برای حالتی که رویداد online را مرورگر/سیستم نفرستد)
 setInterval(function(){ if (navigator.onLine && _dirtySinceUpload) _runAutoSync(); }, 120000);
+
+// ========== بارگذاری خودکار از Firebase هنگام شروع برنامه ==========
+// روی هر دستگاهی (فلش، ارسال‌شده، دستگاه جدید) که کد ایستگاه داشته باشد،
+// در شروع برنامه آخرین اطلاعات از سرور دریافت می‌شود — بدون نیاز به زدن دکمه.
+function _autoLoadFromFirebaseOnStartup() {
+  const code = _syncCode();
+  if (!code) return;
+  if (!_fbReady()) return;
+  if (!navigator.onLine) return;
+  _fbDb.ref('stations/' + code).get()
+    .then(function(snap) {
+      if (!snap.exists()) {
+        // سرور خالی است — اطلاعات محلی را آپلود کن
+        if (_dirtySinceUpload || !DB.lastSyncUpload) _runAutoSync();
+        return;
+      }
+      const serverData = snap.val();
+      const serverTime = new Date(serverData.lastSyncUpload || 0).getTime();
+      const localTime  = new Date(DB.lastSyncUpload  || 0).getTime();
+      if (serverTime > localTime) {
+        // سرور جدیدتر دارد — همان را بارگذاری کن
+        Object.assign(DB, serverData);
+        try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
+        _dirtySinceUpload = false;
+        try { updateAll(); } catch(e) {}
+        try { _updateSyncLastTime(); } catch(e) {}
+        try { _updateAutoSyncBadge(); } catch(e) {}
+        try { showTopToast('☁️ حساب از سرور به‌روز شد', '#38a169', 3000); } catch(e) {}
+      } else if (_dirtySinceUpload) {
+        // اطلاعات محلی جدیدتر است — آپلود کن
+        _runAutoSync();
+      }
+    })
+    .catch(function() {}); // خطای ساکت — برنامه بدون وقفه کار کند
+}
 
 // ========== LOCK / نقش‌ها ==========
 let currentRole = 'admin';
@@ -9888,6 +9940,8 @@ function loadFontScale() {
 
 load();
 loadTheme();
+// بارگذاری خودکار از Firebase — اگر کد ایستگاه تنظیم شده، آخرین حساب از سرور گرفته می‌شود
+setTimeout(function(){ try { _autoLoadFromFirebaseOnStartup(); } catch(e){} }, 1500);
 
 // === باز شدن مستقیم برنامه (بدون محافظِ کپی) + حالت فقط‌خواندنی برای کیو‌آر ===
 const _isROHash = (window.location.hash || '').startsWith('#roview-');
