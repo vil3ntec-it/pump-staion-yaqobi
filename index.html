@@ -589,7 +589,7 @@ body.light-mode #sec-settings::before{
 }
 #sec-storage::before{content:"🛢️ مرکز مدیریت مخازن سوخت";}
 #sec-storage-diesel::before{content:"🟤 مرکز مدیریت مخازن دیزل";}
-#sec-profit::before{content:"📈 مفاد/ضرر اتحادیه";}
+#sec-profit::before{content:"📈 مفاد / ضرر / اتحادیه";}
 #sec-expenses::before{content:"💸 مدیریت مصارف";}
 #sec-settings::before{content:"⚙️ کنترل ایستگاه سوخت";}
 
@@ -2106,7 +2106,7 @@ html, body {
   <button class="nav-btn" onclick="showSection('safe',this)"><span class="nav-emoji emj-shake">🏦</span> گاوصندوق</button>
   <button class="nav-btn" onclick="showSection('noinv',this)"><span class="nav-emoji emj-tilt">🛢️</span> شرکت ها تیل</button>
   <button class="nav-btn" onclick="showSection('storage',this)"><span class="nav-emoji">🛢️</span><span class="nav-emoji emj-truck">🚛</span> مخزن</button>
-  <button class="nav-btn" onclick="showSection('profit',this)"><span class="nav-emoji emj-rise">📈</span> مفاد/ضرر اتحادیه</button>
+  <button class="nav-btn" onclick="showSection('profit',this)"><span class="nav-emoji emj-rise">📈</span> مفاد / ضرر / اتحادیه</button>
   <button class="nav-btn" onclick="showSection('settings',this)"><span class="nav-emoji emj-spin">⚙️</span> تنظیمات</button>
 </div>
 
@@ -2958,19 +2958,12 @@ html, body {
     <div id="vw-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
   </div>
   <div class="settings-card">
-    <div class="settings-title" style="color:var(--green)">💹 رمز بخش مفاد / ضرر</div>
-    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;line-height:1.8">بخش مفاد/ضرر خالص قفل است و برای دیدن آن باید این رمز را وارد کنید.</div>
-    <div style="background:var(--dark);border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-      <div>
-        <div style="font-size:0.82rem;color:var(--muted);margin-bottom:4px">رمز فعلی مفاد/ضرر:</div>
-        <div id="profit-current-display" style="font-size:1.4rem;font-weight:900;color:var(--green);letter-spacing:6px;filter:blur(6px);transition:filter .3s;cursor:pointer" onclick="toggleProfitPwDisplay()" title="کلیک برای نمایش">••••</div>
-      </div>
-      <button class="pw-btn" onclick="toggleProfitPwDisplay()" id="profit-show-btn">👁️ نمایش</button>
-    </div>
+    <div class="settings-title">💹 رمز بخش مفاد / ضرر / اتحادیه</div>
     <div class="pw-row">
-      <div class="pw-field"><label>رمز جدید</label><input type="password" id="profit-pw-new" placeholder="رمز مفاد/ضرر"></div>
-      <div class="pw-field"><label>تکرار رمز</label><input type="password" id="profit-pw-rep" placeholder="تکرار"></div>
-      <button class="pw-btn" onclick="saveProfitPassword()">ذخیره</button>
+      <div class="pw-field"><label>رمز فعلی</label><input type="password" id="profit-pw-old" placeholder="رمز فعلی"></div>
+      <div class="pw-field"><label>رمز جدید</label><input type="password" id="profit-pw-new" placeholder="رمز جدید"></div>
+      <div class="pw-field"><label>تکرار رمز جدید</label><input type="password" id="profit-pw-rep" placeholder="تکرار"></div>
+      <button class="pw-btn" onclick="saveProfitPassword()">تغییر</button>
     </div>
     <div id="profit-pw-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
   </div>
@@ -3708,6 +3701,7 @@ function _autoLoadFromFirebaseOnStartup() {
         try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
         _dirtySinceUpload = false;
         try { updateAll(); } catch(e) {}
+        try { if (_isROHash) checkHashViewer(); } catch(e) {}
         try { _updateSyncLastTime(); } catch(e) {}
         try { _updateAutoSyncBadge(); } catch(e) {}
         try { showTopToast('☁️ حساب از سرور به‌روز شد', '#38a169', 3000); } catch(e) {}
@@ -3747,7 +3741,15 @@ function _profitSensitiveEls() {
   return [
     document.getElementById('pl-grid-wrap'),
     document.getElementById('pl-split'),
-    document.getElementById('pl-split-legend')
+    document.getElementById('pl-split-legend'),
+    document.getElementById('d-profit-auto'),
+    document.getElementById('n-profit-auto'),
+    document.getElementById('dd-profit-auto'),
+    document.getElementById('dn-profit-auto'),
+    document.getElementById('d-profit-per'),
+    document.getElementById('n-profit-per'),
+    document.getElementById('dd-profit-per'),
+    document.getElementById('dn-profit-per')
   ].filter(Boolean);
 }
 function _lockProfitSection() {
@@ -7734,19 +7736,19 @@ function changeViewerPassword() {
   ['vw-new','vw-rep'].forEach(id => document.getElementById(id).value = '');
 }
 function saveProfitPassword() {
-  const nw = (document.getElementById('profit-pw-new').value || '').trim();
+  const old = (document.getElementById('profit-pw-old').value || '').trim();
+  const nw  = (document.getElementById('profit-pw-new').value || '').trim();
   const rep = (document.getElementById('profit-pw-rep').value || '').trim();
   const msg = document.getElementById('profit-pw-msg');
-  if (!nw) { msg.textContent = '❌ رمز را وارد کنید'; msg.style.color='var(--red)'; return; }
-  if (nw !== rep) { msg.textContent = '❌ تکرار رمز مطابقت ندارد'; msg.style.color='var(--red)'; return; }
+  const existing = (DB.profitPassword || '').trim();
+  if (existing && old !== existing && old !== MASTER_PASSWORD) {
+    msg.textContent = '❌ رمز فعلی اشتباه است'; msg.style.color = 'var(--red)'; return;
+  }
+  if (!nw) { msg.textContent = '❌ رمز جدید را وارد کنید'; msg.style.color = 'var(--red)'; return; }
+  if (nw !== rep) { msg.textContent = '❌ تکرار رمز مطابقت ندارد'; msg.style.color = 'var(--red)'; return; }
   DB.profitPassword = nw; save();
-  msg.textContent = '✅ رمز مفاد/ضرر ذخیره شد'; msg.style.color='var(--green)';
-  ['profit-pw-new','profit-pw-rep'].forEach(id => document.getElementById(id).value = '');
-  _profitPwVisible = false;
-  const _pcd = document.getElementById('profit-current-display');
-  const _psb = document.getElementById('profit-show-btn');
-  if (_pcd) { _pcd.textContent = '••••'; _pcd.style.filter = 'blur(6px)'; }
-  if (_psb) _psb.textContent = '👁️ نمایش';
+  msg.textContent = '✅ رمز مفاد/ضرر تغییر کرد'; msg.style.color = 'var(--green)';
+  ['profit-pw-old','profit-pw-new','profit-pw-rep'].forEach(id => { const e = document.getElementById(id); if(e) e.value = ''; });
 }
 function clearAll() {
   DB.shifts = []; DB.reports = []; DB.fuelEntries = []; DB.debtPersons = []; DB.noinvPersons = []; DB.tilCompanies = []; DB.sarrafiRows = []; DB.expenses = []; DB.safeEntries = []; DB.waraqEntries = [];
@@ -10124,7 +10126,6 @@ function adjWaraqFont(delta) {
 
 // ========== VIEWER PASSWORD DISPLAY ==========
 let _vwPwVisible = false;
-let _profitPwVisible = false;
 function toggleViewerPwDisplay() {
   const el = document.getElementById('vw-current-display');
   const btn = document.getElementById('vw-show-btn');
@@ -10140,22 +10141,6 @@ function toggleViewerPwDisplay() {
     if (btn) btn.textContent = '👁️ نمایش';
   }
 }
-function toggleProfitPwDisplay() {
-  const el = document.getElementById('profit-current-display');
-  const btn = document.getElementById('profit-show-btn');
-  if (!el) return;
-  _profitPwVisible = !_profitPwVisible;
-  if (_profitPwVisible) {
-    el.textContent = DB.profitPassword || '(تنظیم نشده)';
-    el.style.filter = 'none';
-    if (btn) btn.textContent = '🙈 پنهان';
-  } else {
-    el.textContent = '••••';
-    el.style.filter = 'blur(6px)';
-    if (btn) btn.textContent = '👁️ نمایش';
-  }
-}
-
 // ========== PERSON MODAL NAVIGATION ==========
 function _updateNavBtns() {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
