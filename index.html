@@ -2188,16 +2188,15 @@ body[class*="theme-"]{
 .theme-swatch.active{ border-color:var(--accent); box-shadow:0 0 0 2px var(--accent), 0 6px 18px -6px rgba(0,0,0,.5); }
 .theme-swatch.active .ts-name{ color:var(--accent); }
 
-/* ---------- NEW MOTION (spring easing, transform/opacity only) ---------- */
-@keyframes uxSecIn{ from{ opacity:0; transform:translateY(10px) scale(.995); } to{ opacity:1; transform:none; } }
-@keyframes uxRowIn{ from{ opacity:0; transform:translateY(7px); } to{ opacity:1; transform:none; } }
-@keyframes uxModalPop{ from{ opacity:0; transform:scale(.95) translateY(12px); } to{ opacity:1; transform:none; } }
-@keyframes uxOverlayIn{ from{ opacity:0; } to{ opacity:1; } }
+/* ---------- NEW MOTION (transform/opacity only; never gates visibility) ----------
+   IMPORTANT: we intentionally do NOT animate the .section or .modal-overlay/.modal
+   elements themselves. Those toggle display:none<->block, and an opacity:0 entry
+   animation on a display-toggled element can stay stuck invisible on some mobile
+   WebViews — which made sections (e.g. قرض‌داران) and full-screen modals (ورق /
+   شخص) open BLANK. We only animate always-displayed children, like the original
+   app already does, so content can never be hidden by an animation. */
 
-/* section enter transition (fade + small slide) */
-.section.visible{ animation:uxSecIn .42s cubic-bezier(.2,.8,.2,1) both; }
-
-/* staggered settings cards on section enter */
+/* staggered settings cards on section enter (children only — always displayed) */
 .section.visible>.settings-card{ animation:fxRise .5s cubic-bezier(.2,.8,.2,1) both; }
 .section.visible>.settings-card:nth-child(1){ animation-delay:.03s; }
 .section.visible>.settings-card:nth-child(2){ animation-delay:.07s; }
@@ -2214,51 +2213,12 @@ body[class*="theme-"]{
 .add-btn:active,.save-btn:active,.pw-btn:active,.fuel-add-btn:active,.goto-btn:active,.add-row-btn:active,.nav-btn:active{ transform:scale(.96); }
 button:focus-visible,.nav-btn:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:6px; }
 
-/* modal open: scale + fade (low-stock keeps its own richer animation) */
-.modal-overlay.open{ animation:uxOverlayIn .22s ease both; }
-.modal-overlay.open>.modal,
-.modal-overlay.open>.sm-modal:not(.ls-modal){ animation:uxModalPop .32s cubic-bezier(.2,.8,.2,1) both; }
-
-/* one-shot reveal of table rows + list items ONLY on section enter
-   (the .just-entered class is added by JS for ~0.8s after showSection,
-   so editing/filtering which re-renders later never re-animates). */
-.section.just-entered .tbl tbody tr,
-.section.just-entered .xls-tbl tbody tr,
-.section.just-entered .person-card,
-.section.just-entered .pl-card,
-.section.just-entered .exp-card{ animation:uxRowIn .4s cubic-bezier(.2,.8,.2,1) both; }
-.section.just-entered .tbl tbody tr:nth-child(1),
-.section.just-entered .xls-tbl tbody tr:nth-child(1){ animation-delay:.02s; }
-.section.just-entered .tbl tbody tr:nth-child(2),
-.section.just-entered .xls-tbl tbody tr:nth-child(2){ animation-delay:.05s; }
-.section.just-entered .tbl tbody tr:nth-child(3),
-.section.just-entered .xls-tbl tbody tr:nth-child(3){ animation-delay:.08s; }
-.section.just-entered .tbl tbody tr:nth-child(4),
-.section.just-entered .xls-tbl tbody tr:nth-child(4){ animation-delay:.11s; }
-.section.just-entered .tbl tbody tr:nth-child(5),
-.section.just-entered .xls-tbl tbody tr:nth-child(5){ animation-delay:.14s; }
-.section.just-entered .tbl tbody tr:nth-child(6),
-.section.just-entered .xls-tbl tbody tr:nth-child(6){ animation-delay:.17s; }
-.section.just-entered .tbl tbody tr:nth-child(7),
-.section.just-entered .xls-tbl tbody tr:nth-child(7){ animation-delay:.20s; }
-.section.just-entered .tbl tbody tr:nth-child(n+8),
-.section.just-entered .xls-tbl tbody tr:nth-child(n+8){ animation-delay:.22s; }
-
 /* lock screen — subtle focus glow on the password field */
 .lock-box input:focus{ box-shadow:0 0 0 3px rgba(255,180,61,.22), 0 0 18px rgba(255,180,61,.16); }
 
 /* ---------- RESPECT REDUCED MOTION (disable everything new) ---------- */
 @media (prefers-reduced-motion: reduce){
-  .section.visible,
-  .section.visible>.settings-card,
-  .section.just-entered .tbl tbody tr,
-  .section.just-entered .xls-tbl tbody tr,
-  .section.just-entered .person-card,
-  .section.just-entered .pl-card,
-  .section.just-entered .exp-card,
-  .modal-overlay.open,
-  .modal-overlay.open>.modal,
-  .modal-overlay.open>.sm-modal:not(.ls-modal){ animation:none!important; }
+  .section.visible>.settings-card{ animation:none!important; }
   .theme-swatch{ transition:none!important; }
   .theme-swatch:hover,.theme-swatch:active{ transform:none!important; }
 }
@@ -11314,20 +11274,6 @@ document.addEventListener('click', function(e) {
       var nowLight = document.body.classList.contains('light-mode');
       var cur = localStorage.getItem('pumpPalette'); var p = cur ? find(cur) : null;
       if(!p || p.light !== nowLight){ window.applyPalette(nowLight ? 'light-cream' : 'dark-amber'); }
-      return r;
-    };
-  }
-
-  // One-shot reveal of rows/lists when a section is opened (not on
-  // later re-renders/filtering — the class is removed after ~0.8s).
-  if(typeof window.showSection === 'function'){
-    var _origShow = window.showSection;
-    window.showSection = function(id, btn){
-      var r = _origShow.apply(this, arguments);
-      if(!RM){ try{
-        var sec = document.getElementById('sec-'+id);
-        if(sec){ sec.classList.add('just-entered'); setTimeout(function(){ sec.classList.remove('just-entered'); }, 820); }
-      }catch(e){} }
       return r;
     };
   }
