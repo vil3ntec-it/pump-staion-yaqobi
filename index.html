@@ -3309,9 +3309,11 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
       <div class="pm-acct-bar" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
         <span style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap">📒 حساب:</span>
         <select id="pm-acct-select" onchange="switchPersonSub(this.value)" style="flex:1;min-width:110px;max-width:200px;background:var(--dark);border:1px solid var(--border);border-radius:7px;padding:5px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer"></select>
-        <button class="add-btn pm-acct-new" onclick="newPersonSub()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap">➕ حساب جدید</button>
-        <button class="add-btn pm-table-new" onclick="newPersonTable()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap">📋 جدول جدید</button>
-        <button id="pm-acct-del" class="del-btn pm-acct-del" onclick="deletePersonSub()" style="display:none;background:transparent;color:var(--red);border:1px solid var(--red);border-radius:7px;padding:5px 8px;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap">🗑️ حذف</button>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <button class="add-btn pm-acct-new" onclick="newPersonSub()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap">➕ حساب جدید</button>
+          <button class="add-btn pm-table-new" onclick="newPersonTable()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap">📋 جدول جدید</button>
+          <button id="pm-acct-del" class="del-btn pm-acct-del" onclick="deletePersonSub()" style="display:none;background:transparent;color:var(--red);border:1px solid var(--red);border-radius:7px;padding:5px 8px;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap">🗑️ حذف</button>
+        </div>
       </div>
       <div class="pm-filter-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
         <button class="pm-filter-btn active" id="pm-filter-all" onclick="setPersonFilter('all')">📋 همه</button>
@@ -6536,7 +6538,6 @@ function _updatePersonTotals(person) {
 function newPersonTable() {
   const person = _curPerson(); if (!person) return;
   const acct = _acctOf(person);
-  if (!confirm('جدول فعلی آرشیو شده و یک جدول خالی جدید باز می‌شود. ادامه می‌دهید؟')) return;
   if (!Array.isArray(acct.tableHistory)) acct.tableHistory = [];
   // snapshot وضعیت فعلی
   acct.tableHistory.push({
@@ -6551,6 +6552,7 @@ function newPersonTable() {
   acct.rows = [];
   acct.rasidFuelP = 0; acct.rasidFuelD = 0;
   acct.rasidMoneyP = 0; acct.rasidMoneyD = 0;
+  acct.note = '';
   save();
   renderPersonRows(person);
   _renderHistoryPanel(person);
@@ -6656,7 +6658,7 @@ function _renderHistoryPanel(person) {
       </div>`;
     return `<div style="margin-bottom:16px;border:2px solid ${ac};border-radius:13px;overflow:hidden">
       <div style="background:${ac};padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
-        <span style="font-weight:800;font-size:0.82rem;color:#fff">📋 جدول آرشیو — ${h.createdAt||''}</span>
+        <span style="font-weight:800;font-size:0.82rem;color:#fff">📋 ${h.note ? h.note.split('\n')[0].substring(0,45) + ' — ' : ''}${h.createdAt||''}</span>
         <div style="display:flex;align-items:center;gap:6px">
           <span style="font-size:0.72rem;color:rgba(255,255,255,0.85)">${n2fa(rows.length)} ردیف</span>
           <button onclick="deletePersonHistory('${pid}','${h.id}')" style="background:transparent;border:1px solid rgba(255,255,255,0.45);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">🗑️ حذف کل</button>
