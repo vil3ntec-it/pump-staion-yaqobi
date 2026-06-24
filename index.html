@@ -11238,7 +11238,11 @@ document.addEventListener('click', function(e) {
     else { b.classList.remove('light-mode'); localStorage.setItem('pumpTheme','dark'); }
     try{ document.documentElement.style.background = p.html; }catch(e){}
     var tb = document.getElementById('themeBtn'); if(tb) tb.textContent = p.light ? '🌙 تاریک' : '☀️ روشن';
-    if(persist !== false) localStorage.setItem('pumpPalette', id);
+    if(persist !== false){
+      localStorage.setItem('pumpPalette', id);
+      // remember the last choice PER mode so switching day<->night restores it
+      localStorage.setItem(p.light ? 'pumpPaletteLight' : 'pumpPaletteDark', id);
+    }
     markSwatch(id);
   };
 
@@ -11276,8 +11280,9 @@ document.addEventListener('click', function(e) {
     window.toggleTheme = function(){
       var r = _origToggle.apply(this, arguments);
       var nowLight = document.body.classList.contains('light-mode');
-      var cur = localStorage.getItem('pumpPalette'); var p = cur ? find(cur) : null;
-      if(!p || p.light !== nowLight){ window.applyPalette(nowLight ? 'light-cream' : 'dark-amber'); }
+      // restore the LAST palette chosen for this mode (not the default each time)
+      var remembered = localStorage.getItem(nowLight ? 'pumpPaletteLight' : 'pumpPaletteDark');
+      window.applyPalette((remembered && find(remembered)) ? remembered : (nowLight ? 'light-cream' : 'dark-amber'));
       return r;
     };
   }
