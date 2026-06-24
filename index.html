@@ -3289,11 +3289,11 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
     </div>
     <div class="modal-body">
       <div id="pm-bigname" style="text-align:center;font-size:1.9rem;font-weight:900;color:var(--accent);padding:6px 10px;margin-bottom:8px;border-bottom:2px solid var(--border)"></div>
-      <div class="pm-acct-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-        <span style="font-size:0.85rem;color:var(--muted);font-weight:700;white-space:nowrap">📒 حساب:</span>
-        <select id="pm-acct-select" onchange="switchPersonSub(this.value)" style="flex:1;min-width:130px;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer"></select>
-        <button class="add-btn pm-acct-new" onclick="newPersonSub()" style="padding:8px 12px;white-space:nowrap">➕ حساب جدید</button>
-        <button id="pm-acct-del" class="del-btn pm-acct-del" onclick="deletePersonSub()" style="display:none;background:transparent;color:var(--red);border:1px solid var(--red);border-radius:8px;padding:8px 10px;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer;white-space:nowrap">🗑️ حذف این حساب</button>
+      <div class="pm-acct-bar" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+        <span style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap">📒 حساب:</span>
+        <select id="pm-acct-select" onchange="switchPersonSub(this.value)" style="flex:1;min-width:110px;max-width:200px;background:var(--dark);border:1px solid var(--border);border-radius:7px;padding:5px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer"></select>
+        <button class="add-btn pm-acct-new" onclick="newPersonSub()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap">➕ حساب جدید</button>
+        <button id="pm-acct-del" class="del-btn pm-acct-del" onclick="deletePersonSub()" style="display:none;background:transparent;color:var(--red);border:1px solid var(--red);border-radius:7px;padding:5px 8px;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap">🗑️ حذف</button>
       </div>
       <div class="pm-filter-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
         <button class="pm-filter-btn active" id="pm-filter-all" onclick="setPersonFilter('all')">📋 همه</button>
@@ -6508,7 +6508,7 @@ function _postRasidRow(r) {
     date: r.date || persianDate(), name: displayName, hawala: (r.hawala||'').toString(), ftype: ftype,
     fuel: parseFloat(r.fuel)||0, priceper: parseFloat(r.priceper)||0, bardagi, rasid, albaqi: bardagi - rasid,
     src: 'parcha', srcKey: 'parcha|' + r.id
-  });
+  }, (r.account||'') + ' ' + (r.name||''));
   r.posted = true;
   return 'ok';
 }
@@ -9431,7 +9431,7 @@ function saveWaraq() {
           rasid: 0, albaqi: amount,
           src: 'waraq',
           srcKey
-        });
+        }, t.name);
       }
     });
   });
@@ -9733,11 +9733,28 @@ function matchDebtPersonByText(text) {
   });
   return best;
 }
-// قرار دادن یک ردیف در حساب شخص: به‌روزرسانی ردیف هم‌منبع، یا پر کردن اولین ردیف خالی، یا افزودن
-function placePersonRow(person, rowData) {
-  if (!person.rows) person.rows = [];
+// اگر نامِ یک «حساب فرعی» داخل متن (توضیحات ورق/پارچه) باشد، همان ساب‌اکانت را برگردان
+function _subForText(person, text) {
+  if (!person || !Array.isArray(person.subs) || !person.subs.length || !text) return null;
+  const hay = ' ' + normFa(text) + ' ';
+  let best = null, bestLen = 0;
+  person.subs.forEach(s => {
+    const nm = normFa(s.name || '');
+    if (nm && hay.indexOf(nm) !== -1 && nm.length > bestLen) { best = s; bestLen = nm.length; }
+  });
+  return best;
+}
+// قرار دادن یک ردیف در حساب شخص: اگر توضیحات شامل نام یک حساب فرعی باشد به همان می‌رود،
+// وگرنه به حساب اصلی. سپس: به‌روزرسانی ردیف هم‌منبع، یا پر کردن اولین ردیف خالی، یا افزودن.
+function placePersonRow(person, rowData, descText) {
+  const acct = _subForText(person, descText) || person;
+  if (!acct.rows) acct.rows = [];
   if (rowData.srcKey) {
-    const ex = person.rows.find(r => r.srcKey === rowData.srcKey);
+    // اگر همین srcKey در حساب دیگری از همین شخص بود (مثلاً توضیحات عوض شده)، آنجا پاک شود
+    [person].concat(person.subs || []).forEach(a => {
+      if (a !== acct && Array.isArray(a.rows)) a.rows = a.rows.filter(r => r.srcKey !== rowData.srcKey);
+    });
+    const ex = acct.rows.find(r => r.srcKey === rowData.srcKey);
     if (ex) {
       const keepRasid = parseFloat(ex.rasid)||0;   // پرداختی دستی کاربر حفظ شود
       Object.assign(ex, rowData);
@@ -9746,11 +9763,11 @@ function placePersonRow(person, rowData) {
       return ex;
     }
   }
-  const emptyIdx = person.rows.findIndex(r =>
+  const emptyIdx = acct.rows.findIndex(r =>
     !(r.name||'').toString().trim() && !(r.hawala||'').toString().trim() &&
     !(parseFloat(r.fuel)||0) && !(parseFloat(r.bardagi)||0) && !(parseFloat(r.rasid)||0));
-  if (emptyIdx >= 0) { Object.assign(person.rows[emptyIdx], rowData); return person.rows[emptyIdx]; }
-  person.rows.push(rowData);
+  if (emptyIdx >= 0) { Object.assign(acct.rows[emptyIdx], rowData); return acct.rows[emptyIdx]; }
+  acct.rows.push(rowData);
   return rowData;
 }
 // حذف مصرفِ مربوط به یک ردیف ورق (بر اساس srcKey) — برای جابه‌جایی نوع تراکنش
@@ -9765,14 +9782,15 @@ function removePersonRowBySrcKey(srcKey, exceptPersonId) {
     (list||[]).forEach(p => {
       if (exceptPersonId && p.id === exceptPersonId) return;
       if (p.rows) p.rows = p.rows.filter(r => r.srcKey !== srcKey);
+      (p.subs||[]).forEach(s => { if (s.rows) s.rows = s.rows.filter(r => r.srcKey !== srcKey); });
     });
   });
 }
-// آیا همین رسید قبلاً از طریق ورق وارد حساب شده؟ (برای جلوگیری از ثبت دوباره)
+// آیا همین رسید قبلاً از طریق ورق وارد حساب شده؟ (برای جلوگیری از ثبت دوباره) — همهٔ حساب‌ها
 function alreadyReceivedFromWaraq(person, fuel, bardagi, hawala) {
-  if (!person || !person.rows) return false;
+  if (!person) return false;
   const f = parseFloat(fuel)||0, b = Math.round(parseFloat(bardagi)||0), h = (hawala||'').toString().trim();
-  return person.rows.some(r => r.src === 'waraq' &&
+  return _allRows(person).some(r => r.src === 'waraq' &&
     (parseFloat(r.fuel)||0) === f &&
     Math.round(parseFloat(r.bardagi)||0) === b &&
     (h === '' || (r.hawala||'').toString().trim() === h));
