@@ -6560,6 +6560,14 @@ function newPersonTable() {
   }, 80);
   if (typeof showToast === 'function') showToast('✅ جدول جدید ساخته شد — جدول قبلی پایین آرشیو شد', '#38a169');
 }
+function _hPerson(pid) {
+  const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
+  return (list||[]).find(p => p.id === pid);
+}
+function _hEntry(pid, hid) {
+  const person = _hPerson(pid); if (!person) return null;
+  return (_acctOf(person).tableHistory||[]).find(h => h.id === hid) || null;
+}
 function _renderHistoryPanel(person) {
   const wrap = document.getElementById('pm-history-wrap'); if (!wrap || !person) return;
   const acct = _acctOf(person);
@@ -6570,10 +6578,11 @@ function _renderHistoryPanel(person) {
   const rnd = x => Math.round(x * 100) / 100;
   const money = person.mode === 'money';
   const unit = money ? ' افغانی' : ' ل';
-  const cell = (lbl, val, clr) => `<div style="text-align:center"><div style="font-size:0.57rem;color:var(--muted);margin-bottom:1px">${lbl}</div><div style="font-size:0.78rem;font-weight:800;color:${clr}">${n2fa(rnd(val))}<span style="font-size:0.5rem">${unit}</span></div></div>`;
+  const pid = person.id;
   wrap.innerHTML = [...history].reverse().map((h, hi) => {
     const ac = COLORS[hi % COLORS.length];
-    const st = _splitTotals(h.rows || []);
+    const rows = h.rows || [];
+    const st = _splitTotals(rows);
     const pct = parseFloat(h.percent) || 0;
     const rasidP = money ? (parseFloat(h.rasidMoneyP)||0) : (parseFloat(h.rasidFuelP)||0);
     const rasidD = money ? (parseFloat(h.rasidMoneyD)||0) : (parseFloat(h.rasidFuelD)||0);
@@ -6581,53 +6590,131 @@ function _renderHistoryPanel(person) {
     const bordD  = money ? st.diesel.bardagi : st.diesel.fuel;
     const commP = rasidP * pct / 100, commD = rasidD * pct / 100;
     const remP  = rasidP - bordP - commP, remD = rasidD - bordD - commD;
-    const idx = history.length - 1 - hi; // real index for delete
-    return `<div style="margin-bottom:14px;border:2px solid ${ac};border-radius:13px;overflow:hidden">
+    // fuel summary with editable rasid
+    const fuelHtml = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px;border-bottom:1px solid ${ac}33">
+        <div style="border:1px solid #38a16966;border-radius:10px;padding:8px">
+          <div style="font-size:0.7rem;font-weight:800;color:#38a169;margin-bottom:5px;text-align:center">⛽ حساب پطرول</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;text-align:center">
+            <div><div style="font-size:0.54rem;color:var(--muted)">فیصدی ما</div><div style="font-size:0.78rem;font-weight:800;color:var(--purple)">${n2fa(rnd(commP))}</div></div>
+            <div><div style="font-size:0.54rem;color:var(--muted)">رسید</div><input type="number" value="${rasidP||''}" placeholder="0" style="width:100%;background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;font-size:0.78rem;font-weight:800;color:var(--green);font-family:'Vazirmatn',sans-serif" oninput="updateHistoryRasid('${pid}','${h.id}','petrol',this.value)"></div>
+            <div><div style="font-size:0.54rem;color:var(--muted)">برد</div><div style="font-size:0.78rem;font-weight:800;color:var(--accent)">${n2fa(rnd(bordP))}</div></div>
+            <div><div style="font-size:0.54rem;color:var(--muted)">الباقی</div><div style="font-size:0.78rem;font-weight:800;color:var(--blue)">${n2fa(rnd(remP))}</div></div>
+          </div>
+        </div>
+        <div style="border:1px solid #b7791f66;border-radius:10px;padding:8px">
+          <div style="font-size:0.7rem;font-weight:800;color:#d97706;margin-bottom:5px;text-align:center">🟤 حساب دیزل</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;text-align:center">
+            <div><div style="font-size:0.54rem;color:var(--muted)">فیصدی ما</div><div style="font-size:0.78rem;font-weight:800;color:var(--purple)">${n2fa(rnd(commD))}</div></div>
+            <div><div style="font-size:0.54rem;color:var(--muted)">رسید</div><input type="number" value="${rasidD||''}" placeholder="0" style="width:100%;background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;font-size:0.78rem;font-weight:800;color:var(--green);font-family:'Vazirmatn',sans-serif" oninput="updateHistoryRasid('${pid}','${h.id}','diesel',this.value)"></div>
+            <div><div style="font-size:0.54rem;color:var(--muted)">برد</div><div style="font-size:0.78rem;font-weight:800;color:var(--accent)">${n2fa(rnd(bordD))}</div></div>
+            <div><div style="font-size:0.54rem;color:var(--muted)">الباقی</div><div style="font-size:0.78rem;font-weight:800;color:var(--blue)">${n2fa(rnd(remD))}</div></div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:5px 12px;border-bottom:1px solid ${ac}22;display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--dark)">
+        <span style="font-size:0.72rem;color:var(--muted);font-weight:700">فیصدی ٪:</span>
+        <input type="number" value="${pct||''}" placeholder="0" style="width:60px;background:transparent;border:none;border-bottom:1px dashed var(--accent);text-align:center;font-size:0.82rem;font-weight:800;color:var(--accent);font-family:'Vazirmatn',sans-serif" oninput="updateHistoryPercent('${pid}','${h.id}',this.value)">
+        <span style="font-size:0.72rem;color:var(--muted)">جمع برد: <b style="color:var(--accent)">${n2fa(rnd(bordP+bordD))}${unit}</b></span>
+        <span style="font-size:0.72rem;color:var(--muted)">الباقی کل: <b style="color:var(--blue)">${n2fa(rnd(remP+remD))}${unit}</b></span>
+      </div>`;
+    // xls table with editable rows
+    let rowsHtml = rows.map((r, ri) => {
+      const bard = r.byMoney ? (r.bardagi||0) : ((r.fuel||0)*(r.priceper||0));
+      const alb  = bard - (r.rasid||0);
+      return `<tr>
+        <td class="xls-num">${n2fa(ri+1)}</td>
+        <td><input class="xls-in" value="${r.date||''}" onchange="updateHistoryRow('${pid}','${h.id}',${ri},'date',this.value)"></td>
+        <td><input class="xls-in" value="${r.name||''}" placeholder="نام" onchange="updateHistoryRow('${pid}','${h.id}',${ri},'name',this.value)"></td>
+        <td><input class="xls-in" value="${r.hawala||''}" placeholder="حواله" onchange="updateHistoryRow('${pid}','${h.id}',${ri},'hawala',this.value)"></td>
+        <td><input class="xls-in" type="number" value="${r.fuel||''}" placeholder="0" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'fuel',this.value)"></td>
+        <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="0" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'priceper',this.value)"></td>
+        <td><input class="xls-in pm-bardagi-cell" type="number" value="${parseFloat(bard.toFixed(0))||''}" placeholder="0" style="color:var(--accent);font-weight:700" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'bardagi',this.value)"></td>
+        <td><input class="xls-in" type="number" value="${r.rasid||''}" placeholder="0" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'rasid',this.value)"></td>
+        <td><input class="xls-in pm-albaqi-cell" type="number" value="${parseFloat(alb.toFixed(0))}" readonly style="color:${alb>0?'var(--red)':'var(--green)'}"></td>
+        <td><button class="del-btn" onclick="deleteHistoryRow('${pid}','${h.id}',${ri})">🗑️</button></td>
+      </tr>`;
+    }).join('');
+    if (!rowsHtml) rowsHtml = `<tr><td colspan="10" style="text-align:center;padding:12px;color:var(--muted);font-size:0.82rem">هیچ ردیفی ثبت نشده</td></tr>`;
+    const tableHtml = `
+      <div class="xls-wrap" style="margin:8px 10px;border-radius:9px;overflow:hidden">
+        <div style="overflow-x:auto">
+          <table class="xls-tbl" style="min-width:580px">
+            <thead><tr>
+              <th style="min-width:24px">#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th>
+              <th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>الباقی</th><th>حذف</th>
+            </tr></thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>
+      </div>
+      <div style="padding:4px 10px 6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="add-row-btn" style="margin:0" onclick="addHistoryRow('${pid}','${h.id}')">➕ ردیف جدید</button>
+      </div>
+      <div style="padding:0 10px 10px">
+        <textarea placeholder="📝 توضیحات..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.8rem;resize:none;box-sizing:border-box" oninput="updateHistoryNote('${pid}','${h.id}',this.value)">${h.note||''}</textarea>
+      </div>`;
+    return `<div style="margin-bottom:16px;border:2px solid ${ac};border-radius:13px;overflow:hidden">
       <div style="background:${ac};padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
-        <span style="font-weight:800;font-size:0.82rem;color:#fff">📋 جدول آرشیو — ${h.createdAt || ''}</span>
+        <span style="font-weight:800;font-size:0.82rem;color:#fff">📋 جدول آرشیو — ${h.createdAt||''}</span>
         <div style="display:flex;align-items:center;gap:6px">
-          <span style="font-size:0.72rem;color:rgba(255,255,255,0.85)">${n2fa(h.rows.length)} ردیف</span>
-          <button onclick="deletePersonHistory('${person.id}','${h.id}')" style="background:transparent;border:1px solid rgba(255,255,255,0.45);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">🗑️ حذف</button>
+          <span style="font-size:0.72rem;color:rgba(255,255,255,0.85)">${n2fa(rows.length)} ردیف</span>
+          <button onclick="deletePersonHistory('${pid}','${h.id}')" style="background:transparent;border:1px solid rgba(255,255,255,0.45);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">🗑️ حذف کل</button>
         </div>
       </div>
-      <div style="background:var(--dark);padding:8px 10px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px">
-          <div style="border:1px solid #38a16955;border-radius:9px;padding:7px 5px;background:rgba(56,161,105,0.05)">
-            <div style="font-size:0.68rem;font-weight:800;color:#38a169;margin-bottom:5px;text-align:center">⛽ حساب پطرول</div>
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px">
-              ${cell('فیصدی',commP,'var(--purple)')}
-              ${cell('رسید',rasidP,'var(--green)')}
-              ${cell('برد',bordP,'var(--accent)')}
-              ${cell('الباقی',remP,'var(--blue)')}
-            </div>
-          </div>
-          <div style="border:1px solid #b7791f55;border-radius:9px;padding:7px 5px;background:rgba(183,121,31,0.05)">
-            <div style="font-size:0.68rem;font-weight:800;color:#d97706;margin-bottom:5px;text-align:center">🟤 حساب دیزل</div>
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px">
-              ${cell('فیصدی',commD,'var(--purple)')}
-              ${cell('رسید',rasidD,'var(--green)')}
-              ${cell('برد',bordD,'var(--accent)')}
-              ${cell('الباقی',remD,'var(--blue)')}
-            </div>
-          </div>
-        </div>
-        <div style="background:var(--card);border-radius:7px;padding:5px 10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:0.72rem">
-          <span style="color:var(--muted)">فیصدی:</span><span style="font-weight:800;color:var(--accent)">${n2fa(pct)}٪</span>
-          <span style="color:var(--muted)">جمع برد:</span><span style="font-weight:800;color:var(--accent)">${n2fa(rnd(bordP+bordD))}${unit}</span>
-          <span style="color:var(--muted)">جمع الباقی:</span><span style="font-weight:800;color:var(--blue)">${n2fa(rnd(remP+remD))}${unit}</span>
-        </div>
-        ${h.note ? `<div style="margin-top:6px;font-size:0.75rem;color:var(--muted);background:var(--card);border-radius:7px;padding:5px 10px">${h.note}</div>` : ''}
-      </div>
+      <div style="background:var(--dark)">${fuelHtml}${tableHtml}</div>
     </div>`;
   }).join('');
 }
 function deletePersonHistory(pid, hid) {
-  if (!confirm('این آرشیو حذف شود؟')) return;
-  const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
-  const person = (list||[]).find(p => p.id === pid); if (!person) return;
+  if (!confirm('این آرشیو و همه ردیف‌هایش حذف شود؟')) return;
+  const person = _hPerson(pid); if (!person) return;
   const acct = _acctOf(person);
   acct.tableHistory = (acct.tableHistory||[]).filter(h => h.id !== hid);
   save(); _renderHistoryPanel(person);
+}
+function updateHistoryRasid(pid, hid, ftype, value) {
+  const person = _hPerson(pid); if (!person) return;
+  const h = _hEntry(pid, hid); if (!h) return;
+  const money = person.mode === 'money';
+  const v = parseFloat(value) || 0;
+  if (ftype === 'petrol') { if (money) h.rasidMoneyP = v; else h.rasidFuelP = v; }
+  else { if (money) h.rasidMoneyD = v; else h.rasidFuelD = v; }
+  save(); _renderHistoryPanel(person);
+}
+function updateHistoryPercent(pid, hid, value) {
+  const person = _hPerson(pid); if (!person) return;
+  const h = _hEntry(pid, hid); if (!h) return;
+  h.percent = parseFloat(value) || 0;
+  save(); _renderHistoryPanel(person);
+}
+function updateHistoryRow(pid, hid, idx, field, value) {
+  const h = _hEntry(pid, hid); if (!h || !h.rows[idx]) return;
+  h.rows[idx][field] = value; save();
+}
+function calcHistoryRow(pid, hid, idx, field, value) {
+  const person = _hPerson(pid); if (!person) return;
+  const h = _hEntry(pid, hid); if (!h || !h.rows[idx]) return;
+  const r = h.rows[idx];
+  if (field === 'bardagi') { r.byMoney = true; r.bardagi = parseFloat(value)||0; }
+  else { r[field] = parseFloat(value)||0; if (!r.byMoney) r.bardagi = (r.fuel||0)*(r.priceper||0); }
+  r.albaqi = (r.bardagi||0) - (r.rasid||0);
+  save(); _renderHistoryPanel(person);
+}
+function addHistoryRow(pid, hid) {
+  const person = _hPerson(pid); if (!person) return;
+  const h = _hEntry(pid, hid); if (!h) return;
+  h.rows.push({ date: (typeof persianDate==='function'?persianDate():''), name:'', hawala:'', ftype:'petrol', fuel:0, priceper:0, bardagi:0, rasid:0, albaqi:0 });
+  save(); _renderHistoryPanel(person);
+}
+function deleteHistoryRow(pid, hid, idx) {
+  const person = _hPerson(pid); if (!person) return;
+  const h = _hEntry(pid, hid); if (!h) return;
+  h.rows.splice(idx, 1); save(); _renderHistoryPanel(person);
+}
+function updateHistoryNote(pid, hid, value) {
+  const h = _hEntry(pid, hid); if (!h) return;
+  h.note = value; save();
 }
 function deletePersonRow(pid, idx) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
