@@ -6097,6 +6097,7 @@ function addPersonRow() {
   const person = list.find(p => p.id === currentPersonId);
   if (!person) return;
   const ft = (currentPersonFilter === 'diesel') ? 'diesel' : 'petrol';
+  if (!Array.isArray(person.rows)) person.rows = [];
   person.rows.push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, albaqi: 0, byMoney: person.mode === 'money' });
   save(); renderPersonRows(person);
 }
@@ -6118,6 +6119,7 @@ function addPersonRowsBulk() {
   if (n < 1) { showToast('یک عدد معتبر وارد کنید', '#e53e3e'); return; }
   if (n > 200) n = 200;
   const ft = (currentPersonFilter === 'diesel') ? 'diesel' : 'petrol';
+  if (!Array.isArray(person.rows)) person.rows = [];
   for (let k = 0; k < n; k++) {
     person.rows.push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, albaqi: 0, byMoney: person.mode === 'money' });
   }
@@ -8778,6 +8780,8 @@ function ensureWaraqShifts(w) {
   }
   if (!w.day.transactions   || !w.day.transactions.length)   w.day.transactions   = initWaraqTransactions();
   if (!w.night.transactions || !w.night.transactions.length) w.night.transactions = initWaraqTransactions();
+  if (!Array.isArray(w.day.pumps))   w.day.pumps   = [];
+  if (!Array.isArray(w.night.pumps)) w.night.pumps = [];
   if (w.activeShift !== 'night') w.activeShift = 'day';
 }
 
@@ -10468,29 +10472,6 @@ function loadFontScale() {
     };
   }
 });
-
-/* ===== TEMP DIAGNOSTIC — remove after debugging (waraq/debtor bug) ===== */
-window.onerror = function(message, source, lineno, colno, error){
-  try{
-    alert('JS ERROR: ' + message + '\n@ line ' + lineno + ':' + colno +
-          (error && error.stack ? ('\n\n' + error.stack) : ''));
-  }catch(_e){}
-  return false;
-};
-['openWaraqModal','populateWaraqModal','openPersonModal','renderPersonRows','addPersonRow'].forEach(function(fn){
-  var orig = window[fn];
-  if (typeof orig === 'function') {
-    window[fn] = function(){
-      try { return orig.apply(this, arguments); }
-      catch(e){
-        alert('ERR ' + fn + ': ' + (e && e.message ? e.message : e) +
-              (e && e.stack ? ('\n\n' + e.stack) : ''));
-        // not rethrown: keep a single, clear alert that names the exact failing function
-      }
-    };
-  }
-});
-/* ===== /TEMP DIAGNOSTIC ===== */
 
 load();
 loadTheme();
