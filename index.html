@@ -3310,7 +3310,7 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
         <span style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap">📒 حساب:</span>
         <select id="pm-acct-select" onchange="switchPersonSub(this.value)" style="flex:1;min-width:110px;max-width:200px;background:var(--dark);border:1px solid var(--border);border-radius:7px;padding:5px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer"></select>
         <button class="add-btn pm-acct-new" onclick="newPersonSub()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap">➕ حساب جدید</button>
-        <button class="add-btn pm-table-new" onclick="togglePersonTable()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap">📊 جدول جدید</button>
+        <button class="add-btn pm-table-new" onclick="newPersonTable()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap">📋 جدول جدید</button>
         <button id="pm-acct-del" class="del-btn pm-acct-del" onclick="deletePersonSub()" style="display:none;background:transparent;color:var(--red);border:1px solid var(--red);border-radius:7px;padding:5px 8px;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap">🗑️ حذف</button>
       </div>
       <div class="pm-filter-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
@@ -3360,22 +3360,8 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
       </div>
       <div id="pm-stacked-wrap" style="display:none"></div>
 
-      <!-- پانل خلاصه نتایج نهایی — با کلیک «جدول جدید» نمایش داده می‌شود -->
-      <div id="pm-extra-panel" style="display:none;margin-top:14px;border:2px solid #3182ce55;border-radius:14px;overflow:hidden">
-        <div style="background:#3182ce;padding:8px 14px;display:flex;align-items:center;justify-content:space-between">
-          <span style="font-weight:800;font-size:0.86rem;color:#fff">📊 خلاصه نتایج نهایی</span>
-          <button onclick="togglePersonTable()" style="background:transparent;border:1px solid rgba(255,255,255,0.45);border-radius:6px;color:#fff;cursor:pointer;padding:3px 8px;font-size:0.73rem;font-family:'Vazirmatn',sans-serif">✕ بستن</button>
-        </div>
-        <div style="background:var(--dark);padding:10px 12px">
-          <div id="pm-extra-fuel"></div>
-          <div style="margin-top:6px">
-            <div style="font-size:0.7rem;color:var(--muted);margin-bottom:4px;font-weight:700">📝 توضیحات</div>
-            <textarea id="pm-extra-note" placeholder="توضیحات نهایی این حساب..." rows="3"
-              style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.8rem;resize:vertical;box-sizing:border-box"
-              oninput="savePersonExtraNote(this.value)"></textarea>
-          </div>
-        </div>
-      </div>
+      <!-- تاریخچه جداول آرشیو‌شده — هر بار «جدول جدید» کلیک شود یک بلوک اینجا اضافه می‌شود -->
+      <div id="pm-history-wrap" style="display:none;margin-top:14px"></div>
     </div>
   </div>
 </div>
@@ -6101,6 +6087,7 @@ function renderPersonRows(person) {
     tr.innerHTML = `<td colspan="${showFtCol?11:10}" style="text-align:center;padding:16px;color:var(--muted);font-size:0.85rem">${label}</td>`;
     tbody.appendChild(tr);
   }
+  _renderHistoryPanel(person);
 }
 
 // ===== حساب‌های انباشته (stacked view) =====
@@ -6545,74 +6532,102 @@ function _updatePersonTotals(person) {
   setV('pm-ft-bardagi', n2fa(t.all.bardagi));
   setV('pm-ft-rasid', n2fa(t.all.rasid));
   setV('pm-ft-albaqi', n2fa(t.all.albaqi));
-  _renderExtraPanel(person);
 }
-function togglePersonTable() {
-  const panel = document.getElementById('pm-extra-panel');
-  if (!panel) return;
-  const showing = panel.style.display !== 'none';
-  panel.style.display = showing ? 'none' : '';
-  if (!showing) {
-    const person = _curPerson();
-    if (person) { _renderExtraPanel(person); }
-    setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
-  }
-}
-function _renderExtraPanel(person) {
-  const panel = document.getElementById('pm-extra-panel');
-  if (!panel || panel.style.display === 'none') return;
-  const fuelDiv = document.getElementById('pm-extra-fuel');
-  const noteField = document.getElementById('pm-extra-note');
-  if (!fuelDiv || !person) return;
+function newPersonTable() {
+  const person = _curPerson(); if (!person) return;
   const acct = _acctOf(person);
-  const rows = acct.rows || [];
-  const st = _splitTotals(rows);
-  const pct = parseFloat(acct.percent) || 0;
+  if (!confirm('جدول فعلی آرشیو شده و یک جدول خالی جدید باز می‌شود. ادامه می‌دهید؟')) return;
+  if (!Array.isArray(acct.tableHistory)) acct.tableHistory = [];
+  // snapshot وضعیت فعلی
+  acct.tableHistory.push({
+    id: 'h' + Date.now(),
+    createdAt: (typeof persianDate === 'function' ? persianDate() : new Date().toLocaleDateString('fa-IR')),
+    rows: JSON.parse(JSON.stringify(acct.rows || [])),
+    rasidFuelP: acct.rasidFuelP, rasidFuelD: acct.rasidFuelD,
+    rasidMoneyP: acct.rasidMoneyP, rasidMoneyD: acct.rasidMoneyD,
+    percent: acct.percent, note: acct.note || ''
+  });
+  // ریست جدول فعلی
+  acct.rows = [];
+  acct.rasidFuelP = 0; acct.rasidFuelD = 0;
+  acct.rasidMoneyP = 0; acct.rasidMoneyD = 0;
+  save();
+  renderPersonRows(person);
+  _renderHistoryPanel(person);
+  setTimeout(() => {
+    const hw = document.getElementById('pm-history-wrap');
+    if (hw) hw.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 80);
+  if (typeof showToast === 'function') showToast('✅ جدول جدید ساخته شد — جدول قبلی پایین آرشیو شد', '#38a169');
+}
+function _renderHistoryPanel(person) {
+  const wrap = document.getElementById('pm-history-wrap'); if (!wrap || !person) return;
+  const acct = _acctOf(person);
+  const history = acct.tableHistory || [];
+  if (history.length === 0) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+  wrap.style.display = '';
+  const COLORS = ['#3182ce','#38a169','#805ad5','#d97706','#e53e3e','#dd6b20'];
+  const rnd = x => Math.round(x * 100) / 100;
   const money = person.mode === 'money';
   const unit = money ? ' افغانی' : ' ل';
-  const rasidP = money ? (parseFloat(acct.rasidMoneyP)||0) : (parseFloat(acct.rasidFuelP)||0);
-  const rasidD = money ? (parseFloat(acct.rasidMoneyD)||0) : (parseFloat(acct.rasidFuelD)||0);
-  const bordP = money ? st.petrol.bardagi : st.petrol.fuel;
-  const bordD = money ? st.diesel.bardagi : st.diesel.fuel;
-  const commP = rasidP * pct / 100, commD = rasidD * pct / 100;
-  const rnd = x => Math.round(x*100)/100;
-  const remP = rasidP - bordP - commP, remD = rasidD - bordD - commD;
-  const cell = (lbl, val, clr) => `<div style="text-align:center;padding:3px 1px"><div style="font-size:0.57rem;color:var(--muted);margin-bottom:1px">${lbl}</div><div style="font-size:0.8rem;font-weight:800;color:${clr}">${n2fa(rnd(val))}<span style="font-size:0.55rem">${unit}</span></div></div>`;
-  fuelDiv.innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-      <div style="border:1px solid #38a16955;border-radius:10px;padding:8px 6px;background:rgba(56,161,105,0.06)">
-        <div style="font-size:0.72rem;font-weight:800;color:#38a169;margin-bottom:6px;text-align:center">⛽ حساب پطرول</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px">
-          ${cell('فیصدی',commP,'var(--purple)')}
-          ${cell('رسید',rasidP,'var(--green)')}
-          ${cell('برد',bordP,'var(--accent)')}
-          ${cell('الباقی',remP,'var(--blue)')}
+  const cell = (lbl, val, clr) => `<div style="text-align:center"><div style="font-size:0.57rem;color:var(--muted);margin-bottom:1px">${lbl}</div><div style="font-size:0.78rem;font-weight:800;color:${clr}">${n2fa(rnd(val))}<span style="font-size:0.5rem">${unit}</span></div></div>`;
+  wrap.innerHTML = [...history].reverse().map((h, hi) => {
+    const ac = COLORS[hi % COLORS.length];
+    const st = _splitTotals(h.rows || []);
+    const pct = parseFloat(h.percent) || 0;
+    const rasidP = money ? (parseFloat(h.rasidMoneyP)||0) : (parseFloat(h.rasidFuelP)||0);
+    const rasidD = money ? (parseFloat(h.rasidMoneyD)||0) : (parseFloat(h.rasidFuelD)||0);
+    const bordP  = money ? st.petrol.bardagi : st.petrol.fuel;
+    const bordD  = money ? st.diesel.bardagi : st.diesel.fuel;
+    const commP = rasidP * pct / 100, commD = rasidD * pct / 100;
+    const remP  = rasidP - bordP - commP, remD = rasidD - bordD - commD;
+    const idx = history.length - 1 - hi; // real index for delete
+    return `<div style="margin-bottom:14px;border:2px solid ${ac};border-radius:13px;overflow:hidden">
+      <div style="background:${ac};padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
+        <span style="font-weight:800;font-size:0.82rem;color:#fff">📋 جدول آرشیو — ${h.createdAt || ''}</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:0.72rem;color:rgba(255,255,255,0.85)">${n2fa(h.rows.length)} ردیف</span>
+          <button onclick="deletePersonHistory('${person.id}','${h.id}')" style="background:transparent;border:1px solid rgba(255,255,255,0.45);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">🗑️ حذف</button>
         </div>
       </div>
-      <div style="border:1px solid #b7791f55;border-radius:10px;padding:8px 6px;background:rgba(183,121,31,0.06)">
-        <div style="font-size:0.72rem;font-weight:800;color:#d97706;margin-bottom:6px;text-align:center">🟤 حساب دیزل</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px">
-          ${cell('فیصدی',commD,'var(--purple)')}
-          ${cell('رسید',rasidD,'var(--green)')}
-          ${cell('برد',bordD,'var(--accent)')}
-          ${cell('الباقی',remD,'var(--blue)')}
+      <div style="background:var(--dark);padding:8px 10px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px">
+          <div style="border:1px solid #38a16955;border-radius:9px;padding:7px 5px;background:rgba(56,161,105,0.05)">
+            <div style="font-size:0.68rem;font-weight:800;color:#38a169;margin-bottom:5px;text-align:center">⛽ حساب پطرول</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px">
+              ${cell('فیصدی',commP,'var(--purple)')}
+              ${cell('رسید',rasidP,'var(--green)')}
+              ${cell('برد',bordP,'var(--accent)')}
+              ${cell('الباقی',remP,'var(--blue)')}
+            </div>
+          </div>
+          <div style="border:1px solid #b7791f55;border-radius:9px;padding:7px 5px;background:rgba(183,121,31,0.05)">
+            <div style="font-size:0.68rem;font-weight:800;color:#d97706;margin-bottom:5px;text-align:center">🟤 حساب دیزل</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px">
+              ${cell('فیصدی',commD,'var(--purple)')}
+              ${cell('رسید',rasidD,'var(--green)')}
+              ${cell('برد',bordD,'var(--accent)')}
+              ${cell('الباقی',remD,'var(--blue)')}
+            </div>
+          </div>
         </div>
+        <div style="background:var(--card);border-radius:7px;padding:5px 10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:0.72rem">
+          <span style="color:var(--muted)">فیصدی:</span><span style="font-weight:800;color:var(--accent)">${n2fa(pct)}٪</span>
+          <span style="color:var(--muted)">جمع برد:</span><span style="font-weight:800;color:var(--accent)">${n2fa(rnd(bordP+bordD))}${unit}</span>
+          <span style="color:var(--muted)">جمع الباقی:</span><span style="font-weight:800;color:var(--blue)">${n2fa(rnd(remP+remD))}${unit}</span>
+        </div>
+        ${h.note ? `<div style="margin-top:6px;font-size:0.75rem;color:var(--muted);background:var(--card);border-radius:7px;padding:5px 10px">${h.note}</div>` : ''}
       </div>
-    </div>
-    <div style="background:var(--card);border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <span style="font-size:0.73rem;color:var(--muted);font-weight:700">فیصدی ٪:</span>
-      <span style="font-size:0.88rem;font-weight:800;color:var(--accent)">${n2fa(pct)}٪</span>
-      <span style="font-size:0.73rem;color:var(--muted);font-weight:700">جمع کل برد:</span>
-      <span style="font-size:0.88rem;font-weight:800;color:var(--accent)">${n2fa(rnd(bordP+bordD))}${unit}</span>
-      <span style="font-size:0.73rem;color:var(--muted);font-weight:700">جمع الباقی:</span>
-      <span style="font-size:0.88rem;font-weight:800;color:var(--blue)">${n2fa(rnd(remP+remD))}${unit}</span>
     </div>`;
-  if (noteField && document.activeElement !== noteField) noteField.value = acct.extraNote || '';
+  }).join('');
 }
-function savePersonExtraNote(val) {
-  const person = _curPerson(); if (!person) return;
-  _acctOf(person).extraNote = val;
-  save();
+function deletePersonHistory(pid, hid) {
+  if (!confirm('این آرشیو حذف شود؟')) return;
+  const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
+  const person = (list||[]).find(p => p.id === pid); if (!person) return;
+  const acct = _acctOf(person);
+  acct.tableHistory = (acct.tableHistory||[]).filter(h => h.id !== hid);
+  save(); _renderHistoryPanel(person);
 }
 function deletePersonRow(pid, idx) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
@@ -6688,7 +6703,7 @@ function addPersonRowsBulk() {
 function closePersonModal() {
   document.getElementById('personModal').classList.remove('open');
   currentSubId = null;
-  const ep = document.getElementById('pm-extra-panel'); if (ep) ep.style.display = 'none';
+  const hw = document.getElementById('pm-history-wrap'); if (hw) { hw.style.display = 'none'; hw.innerHTML = ''; }
   // پاک‌کردن جستجو و بازگرداندن همه کارت‌ها
   const sd = document.getElementById('debt-search');
   const sn = document.getElementById('noinv-search');
