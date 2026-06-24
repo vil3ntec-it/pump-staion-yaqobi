@@ -2008,6 +2008,242 @@ html, body {
   }
 }
 </style>
+
+<style id="ux-themes-anim">
+/* ============================================================
+   UX THEMES + MOTION — ADDITIVE ONLY. Loaded last in <head> so it
+   wins on equal specificity. No business logic, IDs, data or
+   localStorage keys touched. Themes work by re-pointing the
+   hard-coded "chrome" surfaces to CSS variables that each
+   theme-* class on <body> overrides. When no theme-* class is
+   present (first run), the app looks exactly as before.
+   ============================================================ */
+
+/* ---------- 10 PALETTES (variables only) ---------- */
+/* ===== DARK ===== */
+body.theme-dark-amber{
+  --dark:#0a0e17; --panel:#0e1320; --card:#141b2b; --border:#27314a;
+  --txt:#e9eefb; --muted:#828ea6; --label:#aab6d0; --accent:#ffb43d;
+  --grad-amber:linear-gradient(135deg,#ffd27a 0%,#ffb43d 45%,#f5872b 100%);
+  --on-accent:#1a1102; --hdr-title:#e8a020; --chrome-brd:rgba(200,120,0,.32);
+  --hdr-bg:linear-gradient(90deg,#0e0a05,#1a1008,#0e0a05);
+  --banner-bg:linear-gradient(90deg,#0c0905,#171008,#0c0905);
+  --nav-bg:linear-gradient(90deg,#0b0805,#141008,#0b0805);
+  --app-bg:transparent; --fx-hue:0deg;
+}
+body.theme-dark-emerald{
+  --dark:#08120f; --panel:#0c1814; --card:#102019; --border:#1f3a30;
+  --txt:#e7fbf3; --muted:#7fa597; --label:#a9cbbf; --accent:#2fe39c;
+  --grad-amber:linear-gradient(135deg,#7bf5cf 0%,#2fe39c 45%,#13b07a 100%);
+  --on-accent:#042018; --hdr-title:#34e3a0; --chrome-brd:rgba(47,227,156,.30);
+  --hdr-bg:linear-gradient(90deg,#04140f,#082019,#04140f);
+  --banner-bg:linear-gradient(90deg,#03110d,#071c16,#03110d);
+  --nav-bg:linear-gradient(90deg,#030f0c,#061813,#030f0c);
+  --app-bg:transparent; --fx-hue:95deg;
+}
+body.theme-dark-indigo{
+  --dark:#0a0c1a; --panel:#0e1226; --card:#151a33; --border:#2a3357;
+  --txt:#e9ecff; --muted:#8088b0; --label:#b3bae0; --accent:#8b7bff;
+  --grad-amber:linear-gradient(135deg,#b3a6ff 0%,#8b7bff 45%,#6a4cff 100%);
+  --on-accent:#ffffff; --hdr-title:#a99bff; --chrome-brd:rgba(139,123,255,.34);
+  --hdr-bg:linear-gradient(90deg,#070914,#0e1226,#070914);
+  --banner-bg:linear-gradient(90deg,#060810,#0c1022,#060810);
+  --nav-bg:linear-gradient(90deg,#05070f,#0b0f20,#05070f);
+  --app-bg:transparent; --fx-hue:-30deg;
+}
+body.theme-dark-crimson{
+  --dark:#120a0c; --panel:#1a0e11; --card:#241318; --border:#46232b;
+  --txt:#ffecee; --muted:#b08088; --label:#e0b3ba; --accent:#ff5d62;
+  --grad-amber:linear-gradient(135deg,#ff9a6b 0%,#ff5d62 50%,#e0322f 100%);
+  --on-accent:#ffffff; --hdr-title:#ff7a7e; --chrome-brd:rgba(255,93,98,.32);
+  --hdr-bg:linear-gradient(90deg,#140809,#220e12,#140809);
+  --banner-bg:linear-gradient(90deg,#100708,#1c0c0f,#100708);
+  --nav-bg:linear-gradient(90deg,#0e0607,#190b0d,#0e0607);
+  --app-bg:transparent; --fx-hue:-20deg;
+}
+body.theme-dark-teal{
+  --dark:#071416; --panel:#0a1c1f; --card:#0e262b; --border:#1d4047;
+  --txt:#e4fbff; --muted:#7aa3a9; --label:#a6cdd3; --accent:#22d3ee;
+  --grad-amber:linear-gradient(135deg,#7af0ff 0%,#22d3ee 50%,#0e9bb5 100%);
+  --on-accent:#04222a; --hdr-title:#3fe0f5; --chrome-brd:rgba(34,211,238,.30);
+  --hdr-bg:linear-gradient(90deg,#03131a,#072329,#03131a);
+  --banner-bg:linear-gradient(90deg,#021016,#061d23,#021016);
+  --nav-bg:linear-gradient(90deg,#020e13,#051a20,#020e13);
+  --app-bg:transparent; --fx-hue:150deg;
+}
+/* ===== LIGHT ===== */
+body.theme-light-cream{
+  --dark:#fbf4e7; --panel:#fffdf8; --card:#fff8ec; --border:#e4d4b6;
+  --txt:#241a0c; --muted:#7a6a52; --label:#5a4a30; --accent:#d97706;
+  --grad-amber:linear-gradient(135deg,#ffd27a 0%,#f59e0b 45%,#d97706 100%);
+  --on-accent:#2a1a02; --hdr-title:#ffd060; --chrome-brd:rgba(180,100,0,.35);
+  --hdr-bg:linear-gradient(90deg,#5c3300,#7a4500,#5c3300);
+  --banner-bg:linear-gradient(90deg,#4a2e00,#5c3a00,#4a2e00);
+  --nav-bg:linear-gradient(90deg,#fbf1dc,#fff6e6,#fbf1dc);
+  --app-bg:radial-gradient(ellipse at 20% 0%,rgba(255,200,100,.18),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(200,140,60,.12),transparent 50%),linear-gradient(160deg,#fdf6ec,#f5e8d0 30%,#ede0c4 65%,#e8d8b8);
+  --fx-hue:0deg;
+}
+body.theme-light-mint{
+  --dark:#eef7f1; --panel:#ffffff; --card:#f1faf5; --border:#cfe6d8;
+  --txt:#0f2419; --muted:#5a7a68; --label:#2c4a3a; --accent:#10a05a;
+  --grad-amber:linear-gradient(135deg,#7fe3b0 0%,#10a05a 50%,#0a7a44 100%);
+  --on-accent:#ffffff; --hdr-title:#d6ffe9; --chrome-brd:rgba(16,160,90,.32);
+  --hdr-bg:linear-gradient(90deg,#0a6e3e,#0d8a4f,#0a6e3e);
+  --banner-bg:linear-gradient(90deg,#085f36,#0a7544,#085f36);
+  --nav-bg:linear-gradient(90deg,#e7f6ee,#f2fbf6,#e7f6ee);
+  --app-bg:radial-gradient(ellipse at 20% 0%,rgba(60,200,130,.14),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(40,170,110,.10),transparent 50%),linear-gradient(160deg,#f3fbf6,#e6f6ee 35%,#dcf0e6 70%,#d3ecdf);
+  --fx-hue:95deg;
+}
+body.theme-light-sky{
+  --dark:#eef3fb; --panel:#ffffff; --card:#f1f6fd; --border:#cad9ef;
+  --txt:#0e1f33; --muted:#5a6b85; --label:#27406a; --accent:#2b7fff;
+  --grad-amber:linear-gradient(135deg,#7db4ff 0%,#2b7fff 50%,#1860d0 100%);
+  --on-accent:#ffffff; --hdr-title:#d6e9ff; --chrome-brd:rgba(43,127,255,.32);
+  --hdr-bg:linear-gradient(90deg,#1257a8,#1a6ccd,#1257a8);
+  --banner-bg:linear-gradient(90deg,#0f4d93,#1560b8,#0f4d93);
+  --nav-bg:linear-gradient(90deg,#e7f0fc,#f2f7fe,#e7f0fc);
+  --app-bg:radial-gradient(ellipse at 20% 0%,rgba(80,150,255,.16),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(40,110,220,.10),transparent 50%),linear-gradient(160deg,#f2f7fe,#e6f0fc 35%,#dbe9fa 70%,#d2e3f8);
+  --fx-hue:200deg;
+}
+body.theme-light-peach{
+  --dark:#fdf0ec; --panel:#fffaf8; --card:#fff2ee; --border:#f3d3c7;
+  --txt:#36140c; --muted:#8a6356; --label:#7a3422; --accent:#f2603e;
+  --grad-amber:linear-gradient(135deg,#ffb39a 0%,#f2603e 50%,#d8452a 100%);
+  --on-accent:#ffffff; --hdr-title:#ffe0d6; --chrome-brd:rgba(242,96,62,.32);
+  --hdr-bg:linear-gradient(90deg,#b53a22,#d24a2e,#b53a22);
+  --banner-bg:linear-gradient(90deg,#a8331d,#c44528,#a8331d);
+  --nav-bg:linear-gradient(90deg,#fcebe4,#fff4ef,#fcebe4);
+  --app-bg:radial-gradient(ellipse at 20% 0%,rgba(255,150,110,.18),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(240,120,90,.12),transparent 50%),linear-gradient(160deg,#fff5f1,#ffeae2 35%,#fde0d5 70%,#fbd6c9);
+  --fx-hue:-25deg;
+}
+body.theme-light-slate{
+  --dark:#eef1f5; --panel:#ffffff; --card:#f4f6f9; --border:#d2dae3;
+  --txt:#16202e; --muted:#5c6a7c; --label:#2a3b50; --accent:#3b5e8c;
+  --grad-amber:linear-gradient(135deg,#8aa6c8 0%,#3b5e8c 50%,#27466b 100%);
+  --on-accent:#ffffff; --hdr-title:#cdd9e8; --chrome-brd:rgba(59,94,140,.30);
+  --hdr-bg:linear-gradient(90deg,#27384d,#34495f,#27384d);
+  --banner-bg:linear-gradient(90deg,#223141,#2e4356,#223141);
+  --nav-bg:linear-gradient(90deg,#e9edf2,#f4f7fa,#e9edf2);
+  --app-bg:radial-gradient(ellipse at 20% 0%,rgba(90,120,160,.14),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(70,100,140,.10),transparent 50%),linear-gradient(160deg,#f5f7fa,#eaeef3 35%,#e1e7ee 70%,#d8e0e8);
+  --fx-hue:200deg;
+}
+
+/* ---------- BRIDGE: route hard-coded chrome to the variables above ----------
+   Only active while a theme-* class is present on <body>. */
+body[class*="theme-"]{ background:var(--app-bg)!important; }
+body[class*="theme-"] .header{ background:var(--hdr-bg)!important; border-bottom-color:var(--chrome-brd)!important; }
+body[class*="theme-"] .header-title{ color:var(--hdr-title)!important; }
+body[class*="theme-"] .top-banner{ background:var(--banner-bg)!important; border-bottom-color:var(--chrome-brd)!important; }
+body[class*="theme-"] .nav{ background:var(--nav-bg)!important; border-bottom-color:var(--chrome-brd)!important; }
+body[class*="theme-"] .card,
+body[class*="theme-"] .shift-card,
+body[class*="theme-"] .settings-card,
+body[class*="theme-"] .pl-card,
+body[class*="theme-"] .stat-box,
+body[class*="theme-"] .msumbox,
+body[class*="theme-"] .person-card,
+body[class*="theme-"] .modal,
+body[class*="theme-"] .sm-modal{ border-color:var(--chrome-brd)!important; }
+body[class*="theme-"] .nav-btn.active,
+body[class*="theme-"] .add-btn,
+body[class*="theme-"] .pw-btn,
+body[class*="theme-"] .calc-key.eq,
+body[class*="theme-"] .lock-box button{ color:var(--on-accent)!important; }
+body.light-mode[class*="theme-"] .nav-btn{ color:var(--label)!important; }
+body.light-mode[class*="theme-"] .nav-btn.active{ color:var(--on-accent)!important; }
+body[class*="theme-"] #fxLayer{ filter:hue-rotate(var(--fx-hue,0deg)); }
+
+/* ---------- THEME SWATCH UI (settings card) ---------- */
+.theme-row{ display:flex; gap:10px; flex-wrap:wrap; }
+.theme-swatch{ display:flex; flex-direction:column; align-items:center; gap:6px; padding:8px;
+  border:1.5px solid var(--border); border-radius:12px; background:var(--dark); cursor:pointer;
+  font-family:'Vazirmatn',sans-serif; min-width:84px;
+  transition:transform .16s cubic-bezier(.2,.8,.2,1), border-color .2s, box-shadow .2s; }
+.theme-swatch:hover{ transform:translateY(-3px); border-color:var(--accent); }
+.theme-swatch:active{ transform:scale(.96); }
+.theme-swatch .ts-prev{ position:relative; width:100%; height:34px; border-radius:8px; display:block;
+  overflow:hidden; box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); }
+.theme-swatch .ts-dot{ position:absolute; left:7px; bottom:7px; width:16px; height:16px; border-radius:50%;
+  box-shadow:0 0 0 2px rgba(255,255,255,.25), 0 2px 6px rgba(0,0,0,.4); }
+.theme-swatch .ts-name{ font-size:0.72rem; color:var(--muted); font-weight:600; white-space:nowrap; }
+.theme-swatch.active{ border-color:var(--accent); box-shadow:0 0 0 2px var(--accent), 0 6px 18px -6px rgba(0,0,0,.5); }
+.theme-swatch.active .ts-name{ color:var(--accent); }
+
+/* ---------- NEW MOTION (spring easing, transform/opacity only) ---------- */
+@keyframes uxSecIn{ from{ opacity:0; transform:translateY(10px) scale(.995); } to{ opacity:1; transform:none; } }
+@keyframes uxRowIn{ from{ opacity:0; transform:translateY(7px); } to{ opacity:1; transform:none; } }
+@keyframes uxModalPop{ from{ opacity:0; transform:scale(.95) translateY(12px); } to{ opacity:1; transform:none; } }
+@keyframes uxOverlayIn{ from{ opacity:0; } to{ opacity:1; } }
+
+/* section enter transition (fade + small slide) */
+.section.visible{ animation:uxSecIn .42s cubic-bezier(.2,.8,.2,1) both; }
+
+/* staggered settings cards on section enter */
+.section.visible>.settings-card{ animation:fxRise .5s cubic-bezier(.2,.8,.2,1) both; }
+.section.visible>.settings-card:nth-child(1){ animation-delay:.03s; }
+.section.visible>.settings-card:nth-child(2){ animation-delay:.07s; }
+.section.visible>.settings-card:nth-child(3){ animation-delay:.11s; }
+.section.visible>.settings-card:nth-child(4){ animation-delay:.15s; }
+.section.visible>.settings-card:nth-child(5){ animation-delay:.19s; }
+.section.visible>.settings-card:nth-child(6){ animation-delay:.23s; }
+.section.visible>.settings-card:nth-child(7){ animation-delay:.27s; }
+.section.visible>.settings-card:nth-child(8){ animation-delay:.31s; }
+.section.visible>.settings-card:nth-child(n+9){ animation-delay:.34s; }
+
+/* button micro-interactions: press + clear focus ring */
+.add-btn,.save-btn,.pw-btn{ transition:transform .14s cubic-bezier(.2,.8,.2,1), box-shadow .2s, opacity .2s, background .25s, color .25s; }
+.add-btn:active,.save-btn:active,.pw-btn:active,.fuel-add-btn:active,.goto-btn:active,.add-row-btn:active,.nav-btn:active{ transform:scale(.96); }
+button:focus-visible,.nav-btn:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:6px; }
+
+/* modal open: scale + fade (low-stock keeps its own richer animation) */
+.modal-overlay.open{ animation:uxOverlayIn .22s ease both; }
+.modal-overlay.open>.modal,
+.modal-overlay.open>.sm-modal:not(.ls-modal){ animation:uxModalPop .32s cubic-bezier(.2,.8,.2,1) both; }
+
+/* one-shot reveal of table rows + list items ONLY on section enter
+   (the .just-entered class is added by JS for ~0.8s after showSection,
+   so editing/filtering which re-renders later never re-animates). */
+.section.just-entered .tbl tbody tr,
+.section.just-entered .xls-tbl tbody tr,
+.section.just-entered .person-card,
+.section.just-entered .pl-card,
+.section.just-entered .exp-card{ animation:uxRowIn .4s cubic-bezier(.2,.8,.2,1) both; }
+.section.just-entered .tbl tbody tr:nth-child(1),
+.section.just-entered .xls-tbl tbody tr:nth-child(1){ animation-delay:.02s; }
+.section.just-entered .tbl tbody tr:nth-child(2),
+.section.just-entered .xls-tbl tbody tr:nth-child(2){ animation-delay:.05s; }
+.section.just-entered .tbl tbody tr:nth-child(3),
+.section.just-entered .xls-tbl tbody tr:nth-child(3){ animation-delay:.08s; }
+.section.just-entered .tbl tbody tr:nth-child(4),
+.section.just-entered .xls-tbl tbody tr:nth-child(4){ animation-delay:.11s; }
+.section.just-entered .tbl tbody tr:nth-child(5),
+.section.just-entered .xls-tbl tbody tr:nth-child(5){ animation-delay:.14s; }
+.section.just-entered .tbl tbody tr:nth-child(6),
+.section.just-entered .xls-tbl tbody tr:nth-child(6){ animation-delay:.17s; }
+.section.just-entered .tbl tbody tr:nth-child(7),
+.section.just-entered .xls-tbl tbody tr:nth-child(7){ animation-delay:.20s; }
+.section.just-entered .tbl tbody tr:nth-child(n+8),
+.section.just-entered .xls-tbl tbody tr:nth-child(n+8){ animation-delay:.22s; }
+
+/* lock screen — subtle focus glow on the password field */
+.lock-box input:focus{ box-shadow:0 0 0 3px rgba(255,180,61,.22), 0 0 18px rgba(255,180,61,.16); }
+
+/* ---------- RESPECT REDUCED MOTION (disable everything new) ---------- */
+@media (prefers-reduced-motion: reduce){
+  .section.visible,
+  .section.visible>.settings-card,
+  .section.just-entered .tbl tbody tr,
+  .section.just-entered .xls-tbl tbody tr,
+  .section.just-entered .person-card,
+  .section.just-entered .pl-card,
+  .section.just-entered .exp-card,
+  .modal-overlay.open,
+  .modal-overlay.open>.modal,
+  .modal-overlay.open>.sm-modal:not(.ls-modal){ animation:none!important; }
+  .theme-swatch{ transition:none!important; }
+  .theme-swatch:hover,.theme-swatch:active{ transform:none!important; }
+}
+</style>
 </head>
 <body>
 
@@ -2875,6 +3111,16 @@ html, body {
 
 <!-- SETTINGS -->
 <div class="section" id="sec-settings">
+  <div class="settings-card" id="theme-card" style="border-color:var(--accent)">
+    <div class="settings-title">🎨 تم رنگی</div>
+    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
+      با انتخاب هر تم، حالت روشن یا تاریک به‌طور خودکار فعال می‌شود و رنگ‌بندی کل برنامه تغییر می‌کند. انتخاب شما ذخیره می‌شود و دفعهٔ بعد هم اعمال می‌گردد.
+    </div>
+    <div style="font-size:0.8rem;font-weight:700;color:var(--label);margin-bottom:8px">🌙 تم‌های تاریک</div>
+    <div class="theme-row" id="theme-row-dark"></div>
+    <div style="font-size:0.8rem;font-weight:700;color:var(--label);margin:16px 0 8px">☀️ تم‌های روشن</div>
+    <div class="theme-row" id="theme-row-light"></div>
+  </div>
   <div class="settings-card" style="border-color:var(--green)">
     <div class="settings-title" style="color:var(--green)">📥 وارد کردن حساب قرض‌داران از اکسل</div>
     <div style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;line-height:1.9">
@@ -10969,6 +11215,176 @@ document.addEventListener('click', function(e) {
     </div>
   </div>
 </div>
+
+<script id="ux-themes-anim-js">
+/* ============================================================
+   UX THEMES + MOTION — ADDITIVE JS. Reuses existing globals
+   (toggleTheme, loadTheme, showSection, toEnDigits, pumpTheme).
+   New localStorage key: pumpPalette. The existing pumpTheme key
+   is never removed — it is kept in sync with the chosen palette.
+   ============================================================ */
+(function(){
+  "use strict";
+  var RM = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // id, light?, preview bg, accent dot, <html> background colour
+  var PALETTES = [
+    {id:'dark-amber',   light:false, name:'کهربایی فولادی',    bg:'#0e1320', ac:'#ffb43d', html:'#070a11'},
+    {id:'dark-emerald', light:false, name:'زمردی نفتی',        bg:'#0c1814', ac:'#2fe39c', html:'#040d0a'},
+    {id:'dark-indigo',  light:false, name:'نیلی سلطنتی',       bg:'#0e1226', ac:'#8b7bff', html:'#06070f'},
+    {id:'dark-crimson', light:false, name:'اخگری قرمز',        bg:'#1a0e11', ac:'#ff5d62', html:'#0d0607'},
+    {id:'dark-teal',    light:false, name:'فیروزه‌ای اقیانوس', bg:'#0a1c1f', ac:'#22d3ee', html:'#031013'},
+    {id:'light-cream',  light:true,  name:'کاغذ کرم',          bg:'#fffdf8', ac:'#d97706', html:'#f5e8d0'},
+    {id:'light-mint',   light:true,  name:'مینت روشن',         bg:'#ffffff', ac:'#10a05a', html:'#e6f6ee'},
+    {id:'light-sky',    light:true,  name:'آسمان آبی',         bg:'#ffffff', ac:'#2b7fff', html:'#e6f0fc'},
+    {id:'light-peach',  light:true,  name:'هلویی گرم',         bg:'#fffaf8', ac:'#f2603e', html:'#ffeae2'},
+    {id:'light-slate',  light:true,  name:'خاکستری مدرن',      bg:'#ffffff', ac:'#3b5e8c', html:'#eaeef3'}
+  ];
+  function allClasses(){ return PALETTES.map(function(p){ return 'theme-'+p.id; }); }
+  function find(id){ for(var i=0;i<PALETTES.length;i++){ if(PALETTES[i].id===id) return PALETTES[i]; } return null; }
+
+  // Apply a palette: swaps the body theme class, syncs light-mode +
+  // pumpTheme + themeBtn (without touching their original semantics),
+  // and persists pumpPalette. Mirrors what loadTheme/toggleTheme do.
+  window.applyPalette = function(id, persist){
+    var p = find(id); if(!p) return;
+    var b = document.body;
+    allClasses().forEach(function(c){ b.classList.remove(c); });
+    b.classList.add('theme-'+id);
+    if(p.light){ b.classList.add('light-mode'); localStorage.setItem('pumpTheme','light'); }
+    else { b.classList.remove('light-mode'); localStorage.setItem('pumpTheme','dark'); }
+    try{ document.documentElement.style.background = p.html; }catch(e){}
+    var tb = document.getElementById('themeBtn'); if(tb) tb.textContent = p.light ? '🌙 تاریک' : '☀️ روشن';
+    if(persist !== false) localStorage.setItem('pumpPalette', id);
+    markSwatch(id);
+  };
+
+  function markSwatch(id){
+    var nodes = document.querySelectorAll('.theme-swatch');
+    for(var i=0;i<nodes.length;i++){ nodes[i].classList.toggle('active', nodes[i].getAttribute('data-pal')===id); }
+  }
+
+  function buildSwatches(){
+    var dRow = document.getElementById('theme-row-dark');
+    var lRow = document.getElementById('theme-row-light');
+    if(!dRow || !lRow || dRow.childNodes.length) return;
+    PALETTES.forEach(function(p){
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'theme-swatch'; btn.setAttribute('data-pal', p.id); btn.title = p.name;
+      btn.onclick = function(){ window.applyPalette(p.id); };
+      btn.innerHTML = '<span class="ts-prev" style="background:'+p.bg+'"><span class="ts-dot" style="background:'+p.ac+'"></span></span>'
+                    + '<span class="ts-name">'+p.name+'</span>';
+      (p.light ? lRow : dRow).appendChild(btn);
+    });
+    var cur = localStorage.getItem('pumpPalette'); if(cur) markSwatch(cur);
+  }
+
+  // Apply any saved palette during load (keeps everything in sync).
+  // If none was ever chosen, do nothing so the original default look
+  // is preserved exactly (no theme-* class added).
+  function initPalette(){
+    var saved = localStorage.getItem('pumpPalette');
+    if(saved && find(saved)) window.applyPalette(saved, false);
+  }
+
+  // Keep the existing light/dark toggle button coherent with palettes.
+  if(typeof window.toggleTheme === 'function'){
+    var _origToggle = window.toggleTheme;
+    window.toggleTheme = function(){
+      var r = _origToggle.apply(this, arguments);
+      var nowLight = document.body.classList.contains('light-mode');
+      var cur = localStorage.getItem('pumpPalette'); var p = cur ? find(cur) : null;
+      if(!p || p.light !== nowLight){ window.applyPalette(nowLight ? 'light-cream' : 'dark-amber'); }
+      return r;
+    };
+  }
+
+  // One-shot reveal of rows/lists when a section is opened (not on
+  // later re-renders/filtering — the class is removed after ~0.8s).
+  if(typeof window.showSection === 'function'){
+    var _origShow = window.showSection;
+    window.showSection = function(id, btn){
+      var r = _origShow.apply(this, arguments);
+      if(!RM){ try{
+        var sec = document.getElementById('sec-'+id);
+        if(sec){ sec.classList.add('just-entered'); setTimeout(function(){ sec.classList.remove('just-entered'); }, 820); }
+      }catch(e){} }
+      return r;
+    };
+  }
+
+  /* ---------- COUNT-UP for banner numbers + profit/loss ----------
+     Animates from the previous value to the new one, then restores
+     the EXACT final text the app produced (so formatting/data are
+     never altered). English digits + thousands separators preserved. */
+  function countUp(el, to, prefix, suffix, finalTxt, prev){
+    if(isNaN(prev)) prev = 0;
+    if(prev === to){ el.setAttribute('data-uxval', String(to)); return; }
+    var dur = 620, t0 = null;
+    el._uxAnimating = true;
+    if(el._uxraf) cancelAnimationFrame(el._uxraf);
+    function step(ts){
+      if(t0 === null) t0 = ts;
+      var k = Math.min(1, (ts - t0) / dur);
+      var e = 1 - Math.pow(1 - k, 3); // easeOutCubic
+      var v = Math.round(prev + (to - prev) * e);
+      el.textContent = prefix + Number(v).toLocaleString('en-US') + suffix;
+      if(k < 1){ el._uxraf = requestAnimationFrame(step); }
+      else { el.textContent = finalTxt; el.setAttribute('data-uxval', String(to)); el._uxAnimating = false; }
+    }
+    el._uxraf = requestAnimationFrame(step);
+  }
+
+  function parseNumberText(txt){
+    var en = (typeof toEnDigits === 'function') ? toEnDigits(txt) : String(txt);
+    var m = en.match(/-?[\d,]+(\.\d+)?/);
+    if(!m) return null;
+    return { to: parseFloat(m[0].replace(/,/g,'')), prefix: en.slice(0, m.index), suffix: en.slice(m.index + m[0].length) };
+  }
+
+  // Watch a stable element (banner numbers): animate whenever its
+  // displayed number changes, regardless of which code path set it.
+  function watchNumber(el){
+    if(!el || el._uxwatch || RM) return; el._uxwatch = true;
+    var mo = new MutationObserver(function(){
+      if(el._uxAnimating) return;
+      var ft = el.textContent;
+      var pr = parseNumberText(ft);
+      if(!pr){ el.setAttribute('data-uxval',''); return; }
+      var prev = parseFloat(el.getAttribute('data-uxval'));
+      if(prev === pr.to) return;
+      countUp(el, pr.to, pr.prefix, pr.suffix, ft, prev);
+    });
+    mo.observe(el, {childList:true, characterData:true, subtree:true});
+  }
+
+  // Profit/loss value lives in a container that gets rebuilt; watch
+  // the stable container and animate the value node inside it.
+  function watchPL(){
+    var c = document.getElementById('pl-result'); if(!c || c._uxwatch || RM) return; c._uxwatch = true;
+    var mo = new MutationObserver(function(){
+      var el = c.querySelector('.pl-result-value'); if(!el || el._uxAnimating) return;
+      var ft = el.textContent;
+      var pr = parseNumberText(ft);
+      if(!pr) return;
+      var prev = parseFloat(c.getAttribute('data-uxval'));
+      if(prev === pr.to) return;
+      countUp(el, pr.to, pr.prefix, pr.suffix, ft, prev);
+      c.setAttribute('data-uxval', String(pr.to));
+    });
+    mo.observe(c, {childList:true, characterData:true, subtree:true});
+  }
+
+  function boot(){
+    buildSwatches();
+    initPalette();
+    ['bn-noinv','bn-debt','bn-profit','bn-exp'].forEach(function(id){ watchNumber(document.getElementById(id)); });
+    watchPL();
+  }
+  if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', boot); }
+  else { boot(); }
+})();
+</script>
 
 </body>
 </html>
