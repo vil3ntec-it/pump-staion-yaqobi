@@ -165,7 +165,7 @@ body.viewer-mode .ft-opt{pointer-events:none !important;opacity:.85}
 .person-search-input:focus{outline:none;border-color:var(--accent)}
 .person-search-input::placeholder{color:var(--muted)}
 .sec-font-ctrl{display:inline-flex;align-items:center;gap:4px}
-.sec-font-btn{padding:4px 10px;border:1.5px solid var(--border);border-radius:0;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.88rem;font-weight:700;cursor:pointer;transition:all .2s;line-height:1}
+.sec-font-btn{padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;transition:all .2s;line-height:1}
 .sec-font-btn:hover{border-color:var(--accent);color:var(--accent)}
 .person-del{position:absolute;top:7px;left:7px;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;font-size:0.95rem;transition:all .15s}
 .person-del:hover{background:var(--red);color:#fff;border-color:var(--red)}
@@ -176,7 +176,7 @@ body.viewer-mode .ft-opt{pointer-events:none !important;opacity:.85}
 #personModal .modal{max-width:100%!important;width:100%!important;height:100vh!important;max-height:100vh!important;border-radius:0!important;border:none!important;box-shadow:none!important}
 #companyModal{padding:0;align-items:stretch}
 #companyModal .modal{max-width:100%!important;width:100%!important;height:100vh!important;max-height:100vh!important;border-radius:0!important;border:none!important;box-shadow:none!important}
-.person-nav-btn{padding:8px 18px;border:2px solid var(--border);border-radius:0;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.88rem;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap}
+.person-nav-btn{padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap}
 .person-nav-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent);background:var(--dark)}
 .person-nav-btn:disabled{opacity:.3;cursor:default}
 /* ===== تم هشدار خطر مخزن ===== */
@@ -211,14 +211,14 @@ body.viewer-mode .ft-opt{pointer-events:none !important;opacity:.85}
 .ls-share{flex:1;min-width:130px;padding:11px;border:none;border-radius:10px;font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.88rem;cursor:pointer;box-shadow:0 4px 12px #00000050;transition:transform .12s}
 .ls-share:hover{transform:scale(1.03)}.ls-share:active{transform:scale(.97)}
 .modal{background:var(--panel);border:1.5px solid var(--border);border-radius:16px;width:100%;max-width:820px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
-.modal-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-head{padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .modal-head h2{font-size:1rem;font-weight:700;color:var(--accent)}
-.modal-close{background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer}
-.modal-close:hover{color:var(--red)}
-.modal-summary{display:flex;gap:10px;padding:12px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap}
-.msumbox{flex:1;min-width:100px;background:var(--dark);border-radius:9px;padding:12px;text-align:center}
-.msumbox .ml{font-size:0.85rem;color:var(--muted);margin-bottom:4px}
-.msumbox .mv{font-size:1.2rem;font-weight:800}
+.modal-close{background:transparent;border:1.5px solid var(--red);border-radius:7px;color:var(--red);font-size:0.82rem;font-weight:700;cursor:pointer;padding:5px 9px;line-height:1}
+.modal-close:hover{background:var(--red);color:#fff}
+.modal-summary{display:flex;gap:6px;padding:6px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.msumbox{flex:1;min-width:100px;background:var(--dark);border-radius:9px;padding:6px 10px;text-align:center}
+.msumbox .ml{font-size:0.74rem;color:var(--muted);margin-bottom:2px}
+.msumbox .mv{font-size:0.9rem;font-weight:800}
 .mv.acc{color:var(--accent)}.mv.grn{color:var(--green)}.mv.red{color:var(--red)}.mv.blue{color:var(--blue)}
 .modal-body{flex:1;overflow-y:auto;padding:14px 18px}
 
@@ -297,17 +297,17 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 .ft-opt.active.petrol{background:#38a16922;border-color:var(--green)}
 .ft-opt.active.diesel{background:#b7791f22;border-color:#b7791f}
 /* خلاصه جداگانه پطرول/دیزل */
-.fuel-split{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 18px;border-bottom:1px solid var(--border)}
-.fs-group{background:var(--dark);border-radius:10px;padding:10px 12px;border:1px solid var(--border)}
+.fuel-split{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:7px 12px;border-bottom:1px solid var(--border)}
+.fs-group{background:var(--dark);border-radius:9px;padding:6px 9px;border:1px solid var(--border)}
 .fs-group.petrol{border-color:#38a16955}
 .fs-group.diesel{border-color:#b7791f66}
-.fs-head{font-size:1rem;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.fs-head{font-size:0.82rem;font-weight:800;margin-bottom:4px;display:flex;align-items:center;gap:4px}
 .fs-head.petrol{color:var(--green)}
 .fs-head.diesel{color:#b7791f}
-.fs-rows{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.fs-rows{display:grid;grid-template-columns:1fr 1fr;gap:4px}
 .fs-cell{text-align:center}
-.fs-cell .l{font-size:0.82rem;color:var(--muted);margin-bottom:3px}
-.fs-cell .v{font-size:1.1rem;font-weight:800}
+.fs-cell .l{font-size:0.7rem;color:var(--muted);margin-bottom:2px}
+.fs-cell .v{font-size:0.88rem;font-weight:800}
 @media(max-width:560px){.fuel-split{grid-template-columns:1fr}}
 .add-row-btn{margin-top:9px;display:flex;align-items:center;gap:6px;padding:7px 12px;background:var(--card);border:1px dashed var(--border);border-radius:7px;cursor:pointer;font-family:'Vazirmatn',sans-serif;color:var(--muted);font-size:0.82rem;width:100%;justify-content:center;transition:all .2s}
 .add-row-btn:hover{border-color:var(--accent);color:var(--accent)}
