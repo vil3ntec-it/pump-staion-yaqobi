@@ -2243,6 +2243,16 @@ button:focus-visible,.nav-btn:focus-visible,a:focus-visible,input:focus-visible,
 /* Hide the duplicate big name above the table — the name already shows in the
    modal header. Visual only; the JS that fills it is untouched. */
 #personModal #pm-bigname{ display:none !important; }
+/* pm-acct-bar: fix overlap — reduce large shadow on acct buttons */
+.pm-acct-new, .pm-table-new {
+  box-shadow: 0 2px 8px -2px rgba(255,150,40,.3) !important;
+  transform: none !important;
+}
+.pm-acct-new:hover, .pm-table-new:hover {
+  box-shadow: 0 4px 14px -4px rgba(255,150,40,.5) !important;
+  transform: translateY(-1px) !important;
+}
+.pm-acct-bar { position:relative; z-index:2; background:var(--panel); padding:4px 0; }
 /* let viewers still switch between sub-accounts (read-only browse) */
 body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
 </style>
@@ -3300,6 +3310,7 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
         <span style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap">📒 حساب:</span>
         <select id="pm-acct-select" onchange="switchPersonSub(this.value)" style="flex:1;min-width:110px;max-width:200px;background:var(--dark);border:1px solid var(--border);border-radius:7px;padding:5px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer"></select>
         <button class="add-btn pm-acct-new" onclick="newPersonSub()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap">➕ حساب جدید</button>
+        <button class="add-btn pm-table-new" onclick="togglePersonTable()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap">📊 جدول جدید</button>
         <button id="pm-acct-del" class="del-btn pm-acct-del" onclick="deletePersonSub()" style="display:none;background:transparent;color:var(--red);border:1px solid var(--red);border-radius:7px;padding:5px 8px;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap">🗑️ حذف</button>
       </div>
       <div class="pm-filter-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
@@ -3348,6 +3359,23 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
           oninput="savePersonNote(this.value)"></textarea>
       </div>
       <div id="pm-stacked-wrap" style="display:none"></div>
+
+      <!-- پانل خلاصه نتایج نهایی — با کلیک «جدول جدید» نمایش داده می‌شود -->
+      <div id="pm-extra-panel" style="display:none;margin-top:14px;border:2px solid #3182ce55;border-radius:14px;overflow:hidden">
+        <div style="background:#3182ce;padding:8px 14px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-weight:800;font-size:0.86rem;color:#fff">📊 خلاصه نتایج نهایی</span>
+          <button onclick="togglePersonTable()" style="background:transparent;border:1px solid rgba(255,255,255,0.45);border-radius:6px;color:#fff;cursor:pointer;padding:3px 8px;font-size:0.73rem;font-family:'Vazirmatn',sans-serif">✕ بستن</button>
+        </div>
+        <div style="background:var(--dark);padding:10px 12px">
+          <div id="pm-extra-fuel"></div>
+          <div style="margin-top:6px">
+            <div style="font-size:0.7rem;color:var(--muted);margin-bottom:4px;font-weight:700">📝 توضیحات</div>
+            <textarea id="pm-extra-note" placeholder="توضیحات نهایی این حساب..." rows="3"
+              style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.8rem;resize:vertical;box-sizing:border-box"
+              oninput="savePersonExtraNote(this.value)"></textarea>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -6517,6 +6545,74 @@ function _updatePersonTotals(person) {
   setV('pm-ft-bardagi', n2fa(t.all.bardagi));
   setV('pm-ft-rasid', n2fa(t.all.rasid));
   setV('pm-ft-albaqi', n2fa(t.all.albaqi));
+  _renderExtraPanel(person);
+}
+function togglePersonTable() {
+  const panel = document.getElementById('pm-extra-panel');
+  if (!panel) return;
+  const showing = panel.style.display !== 'none';
+  panel.style.display = showing ? 'none' : '';
+  if (!showing) {
+    const person = _curPerson();
+    if (person) { _renderExtraPanel(person); }
+    setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+  }
+}
+function _renderExtraPanel(person) {
+  const panel = document.getElementById('pm-extra-panel');
+  if (!panel || panel.style.display === 'none') return;
+  const fuelDiv = document.getElementById('pm-extra-fuel');
+  const noteField = document.getElementById('pm-extra-note');
+  if (!fuelDiv || !person) return;
+  const acct = _acctOf(person);
+  const rows = acct.rows || [];
+  const st = _splitTotals(rows);
+  const pct = parseFloat(acct.percent) || 0;
+  const money = person.mode === 'money';
+  const unit = money ? ' افغانی' : ' ل';
+  const rasidP = money ? (parseFloat(acct.rasidMoneyP)||0) : (parseFloat(acct.rasidFuelP)||0);
+  const rasidD = money ? (parseFloat(acct.rasidMoneyD)||0) : (parseFloat(acct.rasidFuelD)||0);
+  const bordP = money ? st.petrol.bardagi : st.petrol.fuel;
+  const bordD = money ? st.diesel.bardagi : st.diesel.fuel;
+  const commP = rasidP * pct / 100, commD = rasidD * pct / 100;
+  const rnd = x => Math.round(x*100)/100;
+  const remP = rasidP - bordP - commP, remD = rasidD - bordD - commD;
+  const cell = (lbl, val, clr) => `<div style="text-align:center;padding:3px 1px"><div style="font-size:0.57rem;color:var(--muted);margin-bottom:1px">${lbl}</div><div style="font-size:0.8rem;font-weight:800;color:${clr}">${n2fa(rnd(val))}<span style="font-size:0.55rem">${unit}</span></div></div>`;
+  fuelDiv.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div style="border:1px solid #38a16955;border-radius:10px;padding:8px 6px;background:rgba(56,161,105,0.06)">
+        <div style="font-size:0.72rem;font-weight:800;color:#38a169;margin-bottom:6px;text-align:center">⛽ حساب پطرول</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px">
+          ${cell('فیصدی',commP,'var(--purple)')}
+          ${cell('رسید',rasidP,'var(--green)')}
+          ${cell('برد',bordP,'var(--accent)')}
+          ${cell('الباقی',remP,'var(--blue)')}
+        </div>
+      </div>
+      <div style="border:1px solid #b7791f55;border-radius:10px;padding:8px 6px;background:rgba(183,121,31,0.06)">
+        <div style="font-size:0.72rem;font-weight:800;color:#d97706;margin-bottom:6px;text-align:center">🟤 حساب دیزل</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px">
+          ${cell('فیصدی',commD,'var(--purple)')}
+          ${cell('رسید',rasidD,'var(--green)')}
+          ${cell('برد',bordD,'var(--accent)')}
+          ${cell('الباقی',remD,'var(--blue)')}
+        </div>
+      </div>
+    </div>
+    <div style="background:var(--card);border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:0.73rem;color:var(--muted);font-weight:700">فیصدی ٪:</span>
+      <span style="font-size:0.88rem;font-weight:800;color:var(--accent)">${n2fa(pct)}٪</span>
+      <span style="font-size:0.73rem;color:var(--muted);font-weight:700">جمع کل برد:</span>
+      <span style="font-size:0.88rem;font-weight:800;color:var(--accent)">${n2fa(rnd(bordP+bordD))}${unit}</span>
+      <span style="font-size:0.73rem;color:var(--muted);font-weight:700">جمع الباقی:</span>
+      <span style="font-size:0.88rem;font-weight:800;color:var(--blue)">${n2fa(rnd(remP+remD))}${unit}</span>
+    </div>`;
+  if (noteField && document.activeElement !== noteField) noteField.value = acct.extraNote || '';
+}
+function savePersonExtraNote(val) {
+  const person = _curPerson(); if (!person) return;
+  _acctOf(person).extraNote = val;
+  save();
 }
 function deletePersonRow(pid, idx) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
@@ -6591,7 +6687,8 @@ function addPersonRowsBulk() {
 }
 function closePersonModal() {
   document.getElementById('personModal').classList.remove('open');
-  currentSubId = null; // ریست حساب فعال هنگام بستن
+  currentSubId = null;
+  const ep = document.getElementById('pm-extra-panel'); if (ep) ep.style.display = 'none';
   // پاک‌کردن جستجو و بازگرداندن همه کارت‌ها
   const sd = document.getElementById('debt-search');
   const sn = document.getElementById('noinv-search');
