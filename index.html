@@ -2222,6 +2222,15 @@ button:focus-visible,.nav-btn:focus-visible,a:focus-visible,input:focus-visible,
   .theme-swatch{ transition:none!important; }
   .theme-swatch:hover,.theme-swatch:active{ transform:none!important; }
 }
+
+/* ---------- PERSON MODAL TWEAKS (requested) ---------- */
+/* Petrol & diesel accounts as full-width horizontal rectangles, with the
+   4 stats (رسید / برد / فیصدی / الباقی) laid out in a single horizontal row. */
+#personModal .fuel-split{ grid-template-columns:1fr !important; }
+#personModal .fs-rows{ grid-template-columns:repeat(4,1fr) !important; }
+/* Hide the duplicate big name above the table — the name already shows in the
+   modal header. Visual only; the JS that fills it is untouched. */
+#personModal #pm-bigname{ display:none !important; }
 </style>
 </head>
 <body>
