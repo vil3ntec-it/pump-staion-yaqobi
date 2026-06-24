@@ -2227,10 +2227,10 @@ button:focus-visible,.nav-btn:focus-visible,a:focus-visible,input:focus-visible,
 /* Petrol & diesel accounts as full-width horizontal rectangles, with the
    4 stats (رسید / برد / فیصدی / الباقی) laid out in a single horizontal row. */
 /* حساب پطرول/دیزل — فشرده و کنار هم */
-#personModal .fuel-split{ grid-template-columns:1fr 1fr !important; padding:4px 10px !important; gap:4px !important; }
-#personModal .fs-group{ padding:4px 7px !important; }
-#personModal .fs-head{ font-size:0.72rem !important; margin-bottom:2px !important; }
-#personModal .fs-rows{ grid-template-columns:1fr 1fr !important; gap:2px !important; }
+#personModal .fuel-split{ grid-template-columns:1fr !important; padding:4px 10px !important; gap:4px !important; }
+#personModal .fs-group{ padding:4px 8px !important; }
+#personModal .fs-head{ font-size:0.75rem !important; margin-bottom:3px !important; }
+#personModal .fs-rows{ grid-template-columns:repeat(4,1fr) !important; gap:3px !important; }
 #personModal .fs-cell .l{ font-size:0.58rem !important; }
 #personModal .fs-cell .v{ font-size:0.8rem !important; }
 /* فیصدی — فشرده */
@@ -6089,16 +6089,20 @@ function _renderStackedAccounts(person) {
   if (!wrap || !person) return;
   const subs = [...(person.subs||[])].reverse();
   const sections = [];
-  subs.forEach(s => sections.push({ acct: s, label: '📄 ' + (s.name||'حساب'), acctId: s.id }));
-  sections.push({ acct: person, label: '📒 حساب اصلی', acctId: '__main__' });
+  subs.forEach(s => sections.push({ acct: s, label: '📄 ' + (s.name||'حساب'), acctId: s.id, isNew: true }));
+  sections.push({ acct: person, label: '📒 حساب اصلی', acctId: '__main__', isNew: false });
+
+  const COLORS = ['#38a169','#3182ce','#805ad5','#d97706','#e53e3e'];
 
   wrap.innerHTML = sections.map((sec, si) => {
     const rows = sec.acct.rows || [];
     const note = sec.acct.note || '';
-    const isFirst = si === 0;
+    const acColor = COLORS[si % COLORS.length];
+    const countId = 'stk-count-' + si;
+
     let rowsHtml = '';
     if (rows.length === 0) {
-      rowsHtml = `<tr><td colspan="11" style="text-align:center;padding:12px;color:var(--muted);font-size:0.82rem">هیچ ردیفی ثبت نشده</td></tr>`;
+      rowsHtml = `<tr><td colspan="11" style="text-align:center;padding:14px;color:var(--muted);font-size:0.82rem">هیچ ردیفی ثبت نشده</td></tr>`;
     } else {
       rows.forEach((r, i) => {
         const bardagi = (r.byMoney?(parseFloat(r.bardagi)||0):(r.fuel||0)*(r.priceper||0)).toFixed(0);
@@ -6120,12 +6124,17 @@ function _renderStackedAccounts(person) {
         </tr>`;
       });
     }
-    return `<div style="margin-bottom:14px;border:1px solid var(--border);border-radius:10px;overflow:hidden">
-      <div style="background:var(--dark);padding:6px 12px;font-weight:700;font-size:0.85rem;display:flex;align-items:center;justify-content:space-between;gap:6px;border-bottom:1px solid var(--border)">
-        <span>${sec.label}</span>
-        <div style="display:flex;gap:5px">
-          <button class="add-row-btn" style="margin:0;font-size:0.72rem" onclick="addRowToAcct('${person.id}','${sec.acctId}')">➕ ردیف</button>
-          <button class="add-row-btn" style="margin:0;font-size:0.72rem;border-color:var(--green);color:var(--green)" onclick="addRowsBulkToAcct('${person.id}','${sec.acctId}')">➕ چندتایی</button>
+
+    return `<div style="margin-bottom:18px;border:2px solid ${acColor};border-radius:12px;overflow:hidden">
+      <div style="background:${acColor}22;border-bottom:2px solid ${acColor};padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap">
+        <span style="font-weight:800;font-size:0.9rem;color:${acColor}">${sec.label} <span style="font-size:0.72rem;opacity:0.7">(${n2fa(rows.length)} ردیف)</span></span>
+        <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
+          <button class="add-row-btn" style="margin:0;font-size:0.72rem;border-color:${acColor};color:${acColor}" onclick="addRowToAcct('${person.id}','${sec.acctId}')">➕ ردیف</button>
+          <div style="display:flex;gap:4px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:3px 6px">
+            <input type="number" id="${countId}" value="10" min="1" max="200" style="width:46px;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:3px 5px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;text-align:center">
+            <button class="add-row-btn" style="margin:0;font-size:0.72rem;border-color:var(--green);color:var(--green)" onclick="addRowsBulkToAcct('${person.id}','${sec.acctId}','${countId}')">➕ چندتایی</button>
+          </div>
+          <button class="add-row-btn" style="margin:0;font-size:0.72rem;border-color:var(--accent);color:var(--accent)" onclick="pdfStackedAcct('${person.id}','${sec.acctId}')">📄 PDF</button>
         </div>
       </div>
       <div class="xls-wrap" style="overflow-x:auto">
@@ -6133,7 +6142,7 @@ function _renderStackedAccounts(person) {
           <th style="min-width:24px">#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th><th>نوع تیل</th><th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>الباقی</th><th>حذف</th>
         </tr></thead><tbody>${rowsHtml}</tbody></table>
       </div>
-      <div style="padding:6px 10px;border-top:1px solid var(--border)">
+      <div style="padding:6px 10px;border-top:1px solid ${acColor}55">
         <textarea placeholder="📝 توضیحات..." rows="2"
           style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:5px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;resize:none;box-sizing:border-box"
           onchange="saveStackedNote('${person.id}','${sec.acctId}',this.value)">${note.replace(/</g,'&lt;')}</textarea>
@@ -6181,15 +6190,152 @@ function addRowToAcct(pid, acctId) {
   acct.rows.push({ date:persianDate(), name:'', hawala:'', ftype:'petrol', fuel:0, priceper:0, bardagi:0, rasid:0, albaqi:0, byMoney:person.mode==='money' });
   save(); _renderStackedAccounts(person); _updatePersonTotals(person);
 }
-function addRowsBulkToAcct(pid, acctId) {
+function addRowsBulkToAcct(pid, acctId, countId) {
   const person = _getStackedPerson(pid); if (!person) return;
   const acct = _getStackedAcct(person, acctId);
-  let n = parseInt(document.getElementById('pm-bulk-count')?.value||'10', 10)||10;
+  const inp = countId ? document.getElementById(countId) : document.getElementById('pm-bulk-count');
+  let n = parseInt(inp?.value||'10', 10)||10;
   if (n<1) n=1; if (n>200) n=200;
   if (!Array.isArray(acct.rows)) acct.rows = [];
   for (let k=0;k<n;k++) acct.rows.push({ date:persianDate(), name:'', hawala:'', ftype:'petrol', fuel:0, priceper:0, bardagi:0, rasid:0, albaqi:0, byMoney:person.mode==='money' });
   save(); _renderStackedAccounts(person); _updatePersonTotals(person);
   showToast('✅ '+n2fa(n)+' ردیف افزوده شد', '#38a169');
+}
+function pdfStackedAcct(pid, acctId) {
+  const person = _getStackedPerson(pid); if (!person) return;
+  const acct = _getStackedAcct(person, acctId);
+  const acctLabel = acctId === '__main__' ? 'حساب اصلی' : (acct.name || 'حساب فرعی');
+  const rows = acct.rows || [];
+  const t = _splitTotals(rows);
+  const money = person.mode === 'money';
+  const pct = parseFloat(acct.percent || person.percent)||0;
+  const unit = money ? 'افغانی' : 'ل';
+  const rasidP = money ? (parseFloat(acct.rasidMoneyP)||0) : (parseFloat(acct.rasidFuelP)||0);
+  const rasidD = money ? (parseFloat(acct.rasidMoneyD)||0) : (parseFloat(acct.rasidFuelD)||0);
+  const bordP = money ? t.petrol.bardagi : t.petrol.fuel;
+  const bordD = money ? t.diesel.bardagi : t.diesel.fuel;
+  const commP = rasidP*pct/100, commD = rasidD*pct/100;
+  const rnd = x => Math.round(x*100)/100;
+  const ft = t.all;
+  const printDate = new Date().toLocaleDateString('fa-IR');
+
+  const tableRows = rows.map((r, i) => {
+    const fuelLabel = r.ftype === 'diesel' ? '🟤 دیزل' : '⛽ پطرول';
+    const albaqiColor = (r.albaqi||0) > 0 ? '#e53e3e' : '#276749';
+    return `<tr>
+      <td style="text-align:center;color:#718096">${i+1}</td>
+      <td>${r.date||'—'}</td>
+      <td>${r.name||'—'}</td>
+      <td style="color:#c07700">${r.hawala||'—'}</td>
+      <td>${fuelLabel}</td>
+      <td style="color:#2b6cb0;font-weight:700">${r.byMoney?'—':n2fa(r.fuel||0)}</td>
+      <td>${r.byMoney?'—':n2fa(r.priceper||0)}</td>
+      <td style="color:#c07700;font-weight:700">${n2fa(r.bardagi||0)}</td>
+      <td style="color:#276749;font-weight:700">${n2fa(r.rasid||0)}</td>
+      <td style="color:${albaqiColor};font-weight:700">${n2fa(r.albaqi||0)}</td>
+    </tr>`;
+  }).join('');
+
+  const noteHtml = acct.note ? `<div style="margin:12px 0;padding:8px 12px;background:#f7fafc;border-right:3px solid #c07700;border-radius:6px;font-size:0.78rem;color:#4a5568">${acct.note.replace(/</g,'&lt;')}</div>` : '';
+
+  const html = `<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>حساب ${person.name} — ${acctLabel} — پمپ یعقوبی</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:13px}
+h1{font-size:1.3rem;font-weight:900;color:#c07700;border-bottom:2px solid #c07700;padding-bottom:8px;margin-bottom:6px}
+h2{font-size:0.95rem;font-weight:700;color:#2d3748;margin-bottom:10px}
+.meta{font-size:0.75rem;color:#718096;margin-bottom:16px}
+.summary{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+.sum-box{flex:1;min-width:110px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center}
+.sum-box .l{font-size:0.65rem;color:#718096;margin-bottom:4px}
+.sum-box .v{font-size:1rem;font-weight:900}
+table{width:100%;border-collapse:collapse;font-size:0.75rem;table-layout:auto}
+th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:right;font-weight:700;border-bottom:2px solid #4a5568;white-space:nowrap}
+td{padding:6px 7px;border-bottom:1px solid #e2e8f0;white-space:normal;word-break:break-word}
+tr:nth-child(even) td{background:#f7fafc}
+tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border-top:2px solid #4a5568}
+.footer{margin-top:16px;font-size:0.68rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
+.split-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.split-box{flex:1;min-width:200px;border:1px solid #e2e8f0;border-radius:8px;padding:10px}
+.petrol-box{border-color:#c07700;background:#fffdf5}
+.diesel-box{border-color:#8B4513;background:#fdf8f0}
+.split-title{font-size:0.78rem;font-weight:700;margin-bottom:8px}
+.petrol-box .split-title{color:#c07700}
+.diesel-box .split-title{color:#8B4513}
+.split-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+@media print{
+  body{padding:6px}
+  @page{margin:0.5cm;size:A4}
+  table{font-size:0.68rem;width:100%}
+  th,td{padding:5px 6px;white-space:normal!important;word-break:break-word}
+  .split-row{page-break-inside:avoid;flex-wrap:wrap}
+  .split-box{min-width:140px}
+  .summary{flex-wrap:wrap}
+  .sum-box{min-width:80px}
+  tr{page-break-inside:avoid}
+  h1{font-size:1rem}
+  .footer{margin-top:8px}
+}
+</style>
+</head>
+<body>
+<h1>⛽ پمپ یعقوبی — ${person.name}</h1>
+<h2>📄 ${acctLabel}</h2>
+<div class="meta">تاریخ چاپ: ${printDate} | قرض‌دار</div>
+<div class="split-row">
+  <div class="split-box petrol-box">
+    <div class="split-title">⛽ حساب پطرول</div>
+    <div class="split-grid">
+      <div class="sum-box"><div class="l">رسید</div><div class="v" style="color:#276749">${n2fa(rnd(rasidP))} ${unit}</div></div>
+      <div class="sum-box"><div class="l">برد</div><div class="v" style="color:#c07700">${n2fa(rnd(bordP))} ${unit}</div></div>
+      <div class="sum-box"><div class="l">فیصدی (${n2fa(pct)}٪)</div><div class="v" style="color:#805ad5">${n2fa(rnd(commP))} ${unit}</div></div>
+      <div class="sum-box"><div class="l">الباقی</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(rasidP-bordP-commP))} ${unit}</div></div>
+    </div>
+  </div>
+  <div class="split-box diesel-box">
+    <div class="split-title">🟤 حساب دیزل</div>
+    <div class="split-grid">
+      <div class="sum-box"><div class="l">رسید</div><div class="v" style="color:#276749">${n2fa(rnd(rasidD))} ${unit}</div></div>
+      <div class="sum-box"><div class="l">برد</div><div class="v" style="color:#c07700">${n2fa(rnd(bordD))} ${unit}</div></div>
+      <div class="sum-box"><div class="l">فیصدی (${n2fa(pct)}٪)</div><div class="v" style="color:#805ad5">${n2fa(rnd(commD))} ${unit}</div></div>
+      <div class="sum-box"><div class="l">الباقی</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(rasidD-bordD-commD))} ${unit}</div></div>
+    </div>
+  </div>
+</div>
+<div class="summary">
+  <div class="sum-box" style="border-color:#276749"><div class="l">جمع بردگی</div><div class="v" style="color:#c07700">${n2fa(rnd(ft.bardagi))}</div></div>
+  <div class="sum-box" style="border-color:#276749"><div class="l">جمع رسید</div><div class="v" style="color:#276749">${n2fa(rnd(ft.rasid))}</div></div>
+  <div class="sum-box" style="border-color:#e53e3e"><div class="l">جمع الباقی</div><div class="v" style="color:#e53e3e">${n2fa(rnd(ft.albaqi))}</div></div>
+  <div class="sum-box" style="border-color:#2b6cb0"><div class="l">تعداد ردیف</div><div class="v" style="color:#2b6cb0">${n2fa(rows.length)}</div></div>
+</div>
+${noteHtml}
+<table>
+  <thead><tr>
+    <th>#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th><th>نوع تیل</th>
+    <th>مقدار</th><th>فی لیتر</th><th>بردگی</th><th>رسید</th><th>الباقی</th>
+  </tr></thead>
+  <tbody>${tableRows||`<tr><td colspan="10" style="text-align:center;padding:20px;color:#718096">هیچ ردیفی ثبت نشده</td></tr>`}</tbody>
+  <tfoot><tr>
+    <td colspan="5" style="text-align:right">جمع</td>
+    <td>${n2fa(ft.fuel)} ل</td>
+    <td>—</td>
+    <td>${n2fa(ft.bardagi)}</td>
+    <td>${n2fa(ft.rasid)}</td>
+    <td>${n2fa(ft.albaqi)}</td>
+  </tr></tfoot>
+</table>
+<div class="footer">پمپ یعقوبی — ${person.name} — ${acctLabel} — این سند به صورت خودکار تولید شده است</div>
+<script>window.onload=function(){window.print();}<\/script>
+</body></html>`;
+
+  const w = window.open('', '_blank', 'width=960,height=720');
+  if (w) { w.document.write(html); w.document.close(); }
+  else showToast('مرورگر پنجره را مسدود کرد. اجازه popup بدهید', '#e53e3e');
 }
 function saveStackedNote(pid, acctId, value) {
   const person = _getStackedPerson(pid); if (!person) return;
