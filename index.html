@@ -2236,6 +2236,8 @@ button:focus-visible,.nav-btn:focus-visible,a:focus-visible,input:focus-visible,
 /* Hide the duplicate big name above the table — the name already shows in the
    modal header. Visual only; the JS that fills it is untouched. */
 #personModal #pm-bigname{ display:none !important; }
+/* let viewers still switch between sub-accounts (read-only browse) */
+body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
 </style>
 </head>
 <body>
@@ -3287,6 +3289,12 @@ button:focus-visible,.nav-btn:focus-visible,a:focus-visible,input:focus-visible,
     </div>
     <div class="modal-body">
       <div id="pm-bigname" style="text-align:center;font-size:1.9rem;font-weight:900;color:var(--accent);padding:6px 10px;margin-bottom:8px;border-bottom:2px solid var(--border)"></div>
+      <div class="pm-acct-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+        <span style="font-size:0.85rem;color:var(--muted);font-weight:700;white-space:nowrap">📒 حساب:</span>
+        <select id="pm-acct-select" onchange="switchPersonSub(this.value)" style="flex:1;min-width:130px;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer"></select>
+        <button class="add-btn pm-acct-new" onclick="newPersonSub()" style="padding:8px 12px;white-space:nowrap">➕ حساب جدید</button>
+        <button id="pm-acct-del" class="del-btn pm-acct-del" onclick="deletePersonSub()" style="display:none;background:transparent;color:var(--red);border:1px solid var(--red);border-radius:8px;padding:8px 10px;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer;white-space:nowrap">🗑️ حذف این حساب</button>
+      </div>
       <div class="pm-filter-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
         <button class="pm-filter-btn active" id="pm-filter-all" onclick="setPersonFilter('all')">📋 همه</button>
         <button class="pm-filter-btn petrol" id="pm-filter-petrol" onclick="setPersonFilter('petrol')">⛽ حساب جداگانه پطرول</button>
@@ -5786,6 +5794,22 @@ function deletePurchase(id) {
 let currentPersonType = 'debt';
 let currentPersonId = null;
 let currentPersonFilter = 'all'; // 'all' | 'petrol' | 'diesel' — نمایش جدول جداگانه پطرول/دیزل
+let currentSubId = null; // null = حساب اصلی؛ در غیر این صورت id یک «حساب جداگانه» داخل همان شخص
+
+// «حساب فعال» = خودِ شخص (حساب اصلی) یا یک ساب‌اکانت از person.subs.
+// هر حساب مستقل است: rows + percent + rasidFuel*/rasidMoney* + moneyDeposit مخصوص خودش.
+function _acctOf(person){
+  if(!person || !currentSubId) return person;
+  var s = (person.subs||[]).find(function(x){ return x && x.id===currentSubId; });
+  return s || person;
+}
+// مجموع ردیف‌های همهٔ حساب‌ها (اصلی + جداگانه) — برای جمع‌های لیست و بنر تا هیچ بدهی پنهان نشود
+function _allRows(person){
+  if(!person) return [];
+  var rows = (person.rows||[]).slice();
+  (person.subs||[]).forEach(function(s){ if(s && Array.isArray(s.rows)) rows = rows.concat(s.rows); });
+  return rows;
+}
 
 function renderPersons(type) {
   const list = type === 'debt' ? DB.debtPersons : DB.noinvPersons;
@@ -5793,7 +5817,7 @@ function renderPersons(type) {
   if (!grid) return;
   grid.innerHTML = '';
   list.forEach(p => {
-    const rows = p.rows || [];
+    const rows = _allRows(p);
     const t = _splitTotals(rows);
     const albaqi  = t.all.albaqi;
     const pBal = t.petrol.albaqi, dBal = t.diesel.albaqi;
@@ -5858,6 +5882,7 @@ function openPersonModal(type, id) {
   currentPersonType = type;
   currentPersonId = id;
   currentPersonFilter = 'all';
+  currentSubId = null; // هر بار از «حساب اصلی» شروع کن
   const list = type === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === id);
   if (!person) return;
@@ -5865,6 +5890,7 @@ function openPersonModal(type, id) {
   document.getElementById('personModalTitle').textContent = '👤 ' + person.name + ' (' + (idx+1) + '/' + list.length + ')';
   const bn = document.getElementById('pm-bigname'); if (bn) bn.textContent = '👤 ' + person.name;
   _updatePersonFilterBtns();
+  _renderSubBar(person);
   renderPersonRows(person);
   document.getElementById('personModal').classList.add('open');
   _updateNavBtns();
@@ -5885,6 +5911,60 @@ function _updatePersonFilterBtns() {
     if (el) el.classList.toggle('active', currentPersonFilter === k);
   });
 }
+// ===== حساب‌های جداگانه داخل یک شخص (هر کدام دفتر مستقل) =====
+function _renderSubBar(person) {
+  const sel = document.getElementById('pm-acct-select');
+  if (!sel || !person) return;
+  const subs = person.subs || [];
+  let html = '<option value="">📒 حساب اصلی</option>';
+  subs.forEach(s => {
+    const nm = (s.name || 'حساب').replace(/</g, '&lt;');
+    html += '<option value="' + s.id + '"' + (s.id === currentSubId ? ' selected' : '') + '>📄 ' + nm + '</option>';
+  });
+  sel.innerHTML = html;
+  sel.value = currentSubId || '';
+  const del = document.getElementById('pm-acct-del');
+  if (del) del.style.display = currentSubId ? '' : 'none';
+}
+function switchPersonSub(id) {
+  currentSubId = id || null;
+  const person = _curPerson(); if (!person) return;
+  currentPersonFilter = 'all';
+  _updatePersonFilterBtns();
+  _renderSubBar(person);
+  renderPersonRows(person);
+}
+function newPersonSub() {
+  const person = _curPerson(); if (!person) return;
+  const name = prompt('نام حساب جدید:');
+  if (!name || !name.trim()) return;
+  if (!Array.isArray(person.subs)) person.subs = [];
+  const sub = { id: 's' + Date.now() + Math.random().toString(36).slice(2, 6), name: name.trim(), rows: [] };
+  person.subs.push(sub);
+  currentSubId = sub.id;
+  save();
+  currentPersonFilter = 'all';
+  _updatePersonFilterBtns();
+  _renderSubBar(person);
+  renderPersonRows(person);
+  if (typeof showToast === 'function') showToast('✅ حساب «' + sub.name + '» ساخته شد', '#38a169');
+}
+function deletePersonSub() {
+  const person = _curPerson(); if (!person || !currentSubId) return;
+  const sub = (person.subs || []).find(s => s.id === currentSubId);
+  if (!sub) return;
+  if (!confirm('حساب «' + (sub.name || '') + '» و همهٔ ردیف‌هایش حذف شود؟')) return;
+  person.subs = (person.subs || []).filter(s => s.id !== currentSubId);
+  currentSubId = null; // برگرد به حساب اصلی
+  save();
+  currentPersonFilter = 'all';
+  _updatePersonFilterBtns();
+  _renderSubBar(person);
+  renderPersonRows(person);
+  renderPersons(currentPersonType);
+  updateBanner();
+  if (typeof showToast === 'function') showToast('🗑️ حساب حذف شد', '#d97706');
+}
 function _splitTotals(rows){
   const z = ()=>({fuel:0,rasid:0,albaqi:0,bardagi:0});
   const t = {petrol:z(), diesel:z(), all:z()};
@@ -5899,7 +5979,8 @@ function _splitTotals(rows){
   return t;
 }
 function renderPersonRows(person) {
-  const rows = person.rows || [];
+  const acct = _acctOf(person);
+  const rows = acct.rows || [];
   _updatePersonTotals(person);
 
   const tbody = document.getElementById('pm-body');
@@ -5966,8 +6047,9 @@ function calcPersonRow(pid, idx, field, value) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === pid);
   if (!person) return;
-  person.rows[idx][field] = parseFloat(value) || 0;
-  const r = person.rows[idx];
+  const acct = _acctOf(person);
+  acct.rows[idx][field] = parseFloat(value) || 0;
+  const r = acct.rows[idx];
   // نوشتن مستقیم در «بردگی» = حالت پولی؛ نوشتن لیتر یا فی = حالت تیل (بردگی = لیتر×فی)
   if (field === 'bardagi') r.byMoney = true;
   else if (field === 'fuel' || field === 'priceper') { if ((r.fuel||0) > 0 || (r.priceper||0) > 0) r.byMoney = false; }
@@ -5983,7 +6065,7 @@ function updatePersonRow(pid, idx, field, value) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === pid);
   if (!person) return;
-  person.rows[idx][field] = value;
+  _acctOf(person).rows[idx][field] = value;
   save();
   _updatePersonTotals(person);
   renderPersons(currentPersonType);
@@ -6008,10 +6090,11 @@ function _curPerson() {
 }
 function updatePersonRasidFuel(fuel, val) {
   const person = _curPerson(); if (!person) return;
+  const acct = _acctOf(person);
   const money = person.mode === 'money';
   const v = parseFloat(val)||0;
-  if (fuel === 'diesel') { if (money) person.rasidMoneyD = v; else person.rasidFuelD = v; }
-  else { if (money) person.rasidMoneyP = v; else person.rasidFuelP = v; }
+  if (fuel === 'diesel') { if (money) acct.rasidMoneyD = v; else acct.rasidFuelD = v; }
+  else { if (money) acct.rasidMoneyP = v; else acct.rasidFuelP = v; }
   save(); _updatePersonTotals(person);
 }
 function togglePersonMode() {
@@ -6022,26 +6105,27 @@ function togglePersonMode() {
 }
 function updatePersonPercent(val) {
   const person = _curPerson(); if (!person) return;
-  person.percent = parseFloat(val)||0;
+  _acctOf(person).percent = parseFloat(val)||0;
   save(); _updatePersonTotals(person);
 }
 function updatePersonMoney(val) {
   const person = _curPerson(); if (!person) return;
-  person.moneyDeposit = parseFloat(val)||0;
+  _acctOf(person).moneyDeposit = parseFloat(val)||0;
   save(); _updatePersonTotals(person);
 }
 function _updatePersonTotals(person) {
-  const rows = person.rows || [];
+  const acct = _acctOf(person);
+  const rows = acct.rows || [];
   const t = _splitTotals(rows);
-  const pct = parseFloat(person.percent)||0;
+  const pct = parseFloat(acct.percent)||0;
   const money = person.mode === 'money';
   const unit = money ? ' افغانی' : ' ل';
   const setV = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
   const setL = (id,txt) => { const el=document.getElementById(id); if(el) el.textContent=txt; };
   const setInput = (id,v) => { const el=document.getElementById(id); if(el && document.activeElement!==el) el.value = (v||v===0)?v:''; };
   // مقدار رسید (ورودی کاربر) — بسته به حالت تیل/پول
-  const rasidP = money ? (parseFloat(person.rasidMoneyP)||0) : (parseFloat(person.rasidFuelP)||0);
-  const rasidD = money ? (parseFloat(person.rasidMoneyD)||0) : (parseFloat(person.rasidFuelD)||0);
+  const rasidP = money ? (parseFloat(acct.rasidMoneyP)||0) : (parseFloat(acct.rasidFuelP)||0);
+  const rasidD = money ? (parseFloat(acct.rasidMoneyD)||0) : (parseFloat(acct.rasidFuelD)||0);
   // برد = مجموع لیتر (حالت تیل) یا مجموع بردگی/پول (حالت پول)
   const bordP = money ? t.petrol.bardagi : t.petrol.fuel;
   const bordD = money ? t.diesel.bardagi : t.diesel.fuel;
@@ -6058,8 +6142,8 @@ function _updatePersonTotals(person) {
   if (modeBtn) modeBtn.textContent = money ? '🔁 تیل' : '🔁 پول';
   setInput('pm-p-rasidfuel', rasidP||'');
   setInput('pm-d-rasidfuel', rasidD||'');
-  setInput('pm-percent', person.percent||'');
-  setInput('pm-money', (person.moneyDeposit!=null && person.moneyDeposit!=='') ? person.moneyDeposit : '');
+  setInput('pm-percent', acct.percent||'');
+  setInput('pm-money', (acct.moneyDeposit!=null && acct.moneyDeposit!=='') ? acct.moneyDeposit : '');
   setV('pm-p-bord', n2fa(rnd(bordP)));
   setV('pm-d-bord', n2fa(rnd(bordD)));
   setV('pm-p-comm', n2fa(rnd(commP)));
@@ -6077,15 +6161,16 @@ function deletePersonRow(pid, idx) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === pid);
   if (!person) return;
-  person.rows.splice(idx, 1);
+  _acctOf(person).rows.splice(idx, 1);
   save(); renderPersonRows(person); renderPersons(currentPersonType); updateBanner();
 }
 function setRowFuel(pid, idx, type) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === pid);
-  if (!person || !person.rows[idx]) return;
+  const acct = person ? _acctOf(person) : null;
+  if (!person || !acct.rows[idx]) return;
   const ft = (type === 'diesel') ? 'diesel' : 'petrol';
-  person.rows[idx].ftype = ft;
+  acct.rows[idx].ftype = ft;
   save();
   if (currentPersonFilter !== 'all') {
     // وقتی فیلتر حساب جداگانه فعال است، ردیف باید بلافاصله به جدول خودش منتقل شود
@@ -6111,17 +6196,19 @@ function addPersonRow() {
   const person = list.find(p => p.id === currentPersonId);
   if (!person) return;
   const ft = (currentPersonFilter === 'diesel') ? 'diesel' : 'petrol';
-  if (!Array.isArray(person.rows)) person.rows = [];
-  person.rows.push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, albaqi: 0, byMoney: person.mode === 'money' });
+  const acct = _acctOf(person);
+  if (!Array.isArray(acct.rows)) acct.rows = [];
+  acct.rows.push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, albaqi: 0, byMoney: person.mode === 'money' });
   save(); renderPersonRows(person);
 }
 function setAllRowsFuel(type) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === currentPersonId);
   if (!person) return;
-  if (!person.rows || !person.rows.length) { showToast('ردیفی وجود ندارد', '#e53e3e'); return; }
+  const acct = _acctOf(person);
+  if (!acct.rows || !acct.rows.length) { showToast('ردیفی وجود ندارد', '#e53e3e'); return; }
   const ft = type === 'diesel' ? 'diesel' : 'petrol';
-  person.rows.forEach(r => r.ftype = ft);
+  acct.rows.forEach(r => r.ftype = ft);
   save(); renderPersonRows(person); renderPersons(currentPersonType);
   showToast(ft==='diesel' ? '✅ همه ردیف‌ها دیزل شد' : '✅ همه ردیف‌ها پطرول شد', ft==='diesel' ? '#b7791f' : '#38a169');
 }
@@ -6133,15 +6220,17 @@ function addPersonRowsBulk() {
   if (n < 1) { showToast('یک عدد معتبر وارد کنید', '#e53e3e'); return; }
   if (n > 200) n = 200;
   const ft = (currentPersonFilter === 'diesel') ? 'diesel' : 'petrol';
-  if (!Array.isArray(person.rows)) person.rows = [];
+  const acct = _acctOf(person);
+  if (!Array.isArray(acct.rows)) acct.rows = [];
   for (let k = 0; k < n; k++) {
-    person.rows.push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, albaqi: 0, byMoney: person.mode === 'money' });
+    acct.rows.push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, albaqi: 0, byMoney: person.mode === 'money' });
   }
   save(); renderPersonRows(person);
   showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
 }
 function closePersonModal() {
   document.getElementById('personModal').classList.remove('open');
+  currentSubId = null; // ریست حساب فعال هنگام بستن
   // پاک‌کردن جستجو و بازگرداندن همه کارت‌ها
   const sd = document.getElementById('debt-search');
   const sn = document.getElementById('noinv-search');
@@ -7292,7 +7381,7 @@ function updateBanner() {
     return a + rows.reduce((b,r)=>b+cmpAlbaqi(r, cr),0);
   }, 0);
   const debtTotal = DB.debtPersons.reduce((a,p) => {
-    const rows = p.rows||[];
+    const rows = _allRows(p);
     return a + rows.reduce((b,r) => b+(r.albaqi||0), 0);
   }, 0);
   const todayProfit = (() => {
@@ -7411,14 +7500,15 @@ function pdfPerson() {
   const person = list.find(p => p.id === id);
   if (!person) return;
   const filter = currentPersonFilter; // 'all' | 'petrol' | 'diesel'
-  const allRows = person.rows || [];
+  const acct = _acctOf(person);
+  const allRows = acct.rows || [];
   const rows = filter === 'all' ? allRows : allRows.filter(r => (r.ftype || 'petrol') === filter);
   const t = _splitTotals(allRows);
   const money = person.mode === 'money';
-  const pct = parseFloat(person.percent)||0;
+  const pct = parseFloat(acct.percent)||0;
   const unit = money ? 'افغانی' : 'ل';
-  const rasidP = money ? (parseFloat(person.rasidMoneyP)||0) : (parseFloat(person.rasidFuelP)||0);
-  const rasidD = money ? (parseFloat(person.rasidMoneyD)||0) : (parseFloat(person.rasidFuelD)||0);
+  const rasidP = money ? (parseFloat(acct.rasidMoneyP)||0) : (parseFloat(acct.rasidFuelP)||0);
+  const rasidD = money ? (parseFloat(acct.rasidMoneyD)||0) : (parseFloat(acct.rasidFuelD)||0);
   const bordP = money ? t.petrol.bardagi : t.petrol.fuel;
   const bordD = money ? t.diesel.bardagi : t.diesel.fuel;
   const commP = rasidP*pct/100, commD = rasidD*pct/100;
@@ -7536,7 +7626,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 ${splitBoxesHtml}
 <div class="summary">
   <div class="sum-box" style="border-color:#c07700"><div class="l">فیصدی ٪</div><div class="v" style="color:#c07700">${n2fa(pct)}٪</div></div>
-  <div class="sum-box" style="border-color:#276749"><div class="l">جمع کل پول</div><div class="v" style="color:#276749">${n2fa(parseFloat(person.moneyDeposit)||0)} افغانی</div></div>
+  <div class="sum-box" style="border-color:#276749"><div class="l">جمع کل پول</div><div class="v" style="color:#276749">${n2fa(parseFloat(acct.moneyDeposit)||0)} افغانی</div></div>
   <div class="sum-box" style="border-color:#2b6cb0"><div class="l">${money?'جمع کل برد پول':'جمع کل برد تیل'}</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(filter==='all'?(bordP+bordD):(filter==='diesel'?bordD:bordP)))} ${unit}</div></div>
 </div>
 <table>
@@ -9762,8 +9852,8 @@ function clearAllPersonRows() {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === currentPersonId);
   if (!person) return;
-  if (!confirm('همه ردیف‌های این شخص پاک شود؟')) return;
-  person.rows = [];
+  if (!confirm('همه ردیف‌های این حساب پاک شود؟')) return;
+  _acctOf(person).rows = [];
   save();
   renderPersonRows(person);
   renderPersons(currentPersonType);
@@ -10477,7 +10567,7 @@ function loadFontScale() {
  'deleteShift','clearLog','confirmAddExpenses','deleteExpense','openAddExpense','openAddSafeBulk','confirmAddSafeBulk','addSafeBulkRow','addSafeBulkRows','addExpenseRowsBulkDirect','addSafeRowDirect','addSafeRowsBulkDirect','toggleCalcSize',
  'addExpenseRow','addExpenseMonth','addExpenseRowToMonth','updateExpense',
  'confirmAddSafe','deleteSafe','openAddSafe','addSafeRow','updateSafeEntry','openAddPerson','clearAll','changePassword',
- 'changeViewerPassword','saveLowStockSettings'].forEach(fn => {
+ 'changeViewerPassword','saveLowStockSettings','newPersonSub','deletePersonSub'].forEach(fn => {
   const orig = window[fn];
   if (typeof orig === 'function') {
     window[fn] = function() {
