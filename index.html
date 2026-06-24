@@ -3275,18 +3275,18 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
       <div class="fs-group petrol">
         <div class="fs-head petrol">⛽ حساب پطرول</div>
         <div class="fs-rows">
+          <div class="fs-cell"><div class="l">فیصدی ما</div><div class="v" style="color:var(--purple)" id="pm-p-comm">0</div></div>
           <div class="fs-cell"><div class="l" id="pm-p-rasid-l">مقدار رسید تیل</div><input type="number" class="v pm-edit" id="pm-p-rasidfuel" placeholder="0" style="color:var(--green);background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;width:100%;font-weight:800" oninput="updatePersonRasidFuel('petrol',this.value)"></div>
           <div class="fs-cell"><div class="l">برد</div><div class="v" style="color:var(--accent)" id="pm-p-bord">0</div></div>
-          <div class="fs-cell"><div class="l">فیصدی ما</div><div class="v" style="color:var(--purple)" id="pm-p-comm">0</div></div>
           <div class="fs-cell"><div class="l" id="pm-p-rem-l">الباقی تیل</div><div class="v" style="color:var(--blue)" id="pm-p-remfuel">0</div></div>
         </div>
       </div>
       <div class="fs-group diesel">
         <div class="fs-head diesel">🟤 حساب دیزل</div>
         <div class="fs-rows">
+          <div class="fs-cell"><div class="l">فیصدی ما</div><div class="v" style="color:var(--purple)" id="pm-d-comm">0</div></div>
           <div class="fs-cell"><div class="l" id="pm-d-rasid-l">مقدار رسید تیل</div><input type="number" class="v pm-edit" id="pm-d-rasidfuel" placeholder="0" style="color:var(--green);background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;width:100%;font-weight:800" oninput="updatePersonRasidFuel('diesel',this.value)"></div>
           <div class="fs-cell"><div class="l">برد</div><div class="v" style="color:var(--accent)" id="pm-d-bord">0</div></div>
-          <div class="fs-cell"><div class="l">فیصدی ما</div><div class="v" style="color:var(--purple)" id="pm-d-comm">0</div></div>
           <div class="fs-cell"><div class="l" id="pm-d-rem-l">الباقی تیل</div><div class="v" style="color:var(--blue)" id="pm-d-remfuel">0</div></div>
         </div>
       </div>
@@ -6013,7 +6013,7 @@ function renderPersonRows(person) {
     if (filterBar) filterBar.style.display = 'none';
     if (addRowArea) addRowArea.style.display = 'none';
     if (noteArea) noteArea.style.display = 'none';
-    if (acctBar) acctBar.style.display = 'none';
+    if (acctBar) acctBar.style.display = '';
     if (stackedWrap) { stackedWrap.style.display = ''; _renderStackedAccounts(person); }
     _updatePersonTotals(person);
     return;
@@ -6101,20 +6101,51 @@ function _renderStackedAccounts(person) {
   if (!wrap || !person) return;
   const subs = [...(person.subs||[])].reverse();
   const sections = [];
-  subs.forEach(s => sections.push({ acct: s, label: '📄 ' + (s.name||'حساب'), acctId: s.id, isNew: true }));
-  sections.push({ acct: person, label: '📒 حساب اصلی', acctId: '__main__', isNew: false });
+  subs.forEach(s => sections.push({ acct: s, label: s.name||'حساب جدید', acctId: s.id }));
+  sections.push({ acct: person, label: 'حساب اصلی', acctId: '__main__' });
 
   const COLORS = ['#38a169','#3182ce','#805ad5','#d97706','#e53e3e'];
+  const rnd = x => Math.round(x*100)/100;
 
-  const topBar = `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;margin-bottom:14px;background:var(--card);border:2px solid var(--border);border-radius:11px;flex-wrap:wrap">
-    <span style="font-weight:800;font-size:0.88rem;color:var(--accent)">📚 حساب‌های چندگانه <span style="font-size:0.72rem;font-weight:500;color:var(--muted)">(${n2fa(sections.length)} حساب)</span></span>
-    <button class="add-btn" style="font-size:0.78rem;padding:5px 12px;white-space:nowrap" onclick="newPersonSub()">➕ حساب جدید</button>
-  </div>`;
-  wrap.innerHTML = topBar + sections.map((sec, si) => {
+  wrap.innerHTML = sections.map((sec, si) => {
     const rows = sec.acct.rows || [];
     const note = sec.acct.note || '';
     const acColor = COLORS[si % COLORS.length];
     const countId = 'stk-count-' + si;
+    const isMain = sec.acctId === '__main__';
+
+    // محاسبات پطرول/دیزل برای این section
+    const st = _splitTotals(rows);
+    const pct = parseFloat(sec.acct.percent || person.percent) || 0;
+    const money = person.mode === 'money';
+    const rasidP = money ? (parseFloat(sec.acct.rasidMoneyP)||0) : (parseFloat(sec.acct.rasidFuelP)||0);
+    const rasidD = money ? (parseFloat(sec.acct.rasidMoneyD)||0) : (parseFloat(sec.acct.rasidFuelD)||0);
+    const bordP = money ? st.petrol.bardagi : st.petrol.fuel;
+    const bordD = money ? st.diesel.bardagi : st.diesel.fuel;
+    const commP = rasidP * pct / 100, commD = rasidD * pct / 100;
+    const remP = rasidP - bordP - commP, remD = rasidD - bordD - commD;
+    const unit = money ? 'افغانی' : 'ل';
+
+    const fuelSplitHtml = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:8px 10px;border-bottom:2px solid ${acColor}44;background:var(--dark)">
+      <div style="border:1px solid #38a16955;border-radius:8px;padding:6px">
+        <div style="font-size:0.68rem;font-weight:800;color:#38a169;margin-bottom:5px">⛽ حساب پطرول</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;text-align:center">
+          <div><div style="font-size:0.55rem;color:var(--muted)">فیصدی ما</div><div style="font-size:0.72rem;font-weight:800;color:var(--purple)">${n2fa(rnd(commP))} ${unit}</div></div>
+          <div><div style="font-size:0.55rem;color:var(--muted)">رسید</div><input type="number" value="${rasidP||''}" placeholder="0" style="font-size:0.72rem;font-weight:800;color:var(--green);background:transparent;border:none;border-bottom:1px dashed #38a169;text-align:center;width:100%;font-family:'Vazirmatn',sans-serif" oninput="updateStackedRasid('${person.id}','${sec.acctId}','petrol',this.value)"></div>
+          <div><div style="font-size:0.55rem;color:var(--muted)">برد</div><div style="font-size:0.72rem;font-weight:800;color:var(--accent)">${n2fa(rnd(bordP))} ${unit}</div></div>
+          <div><div style="font-size:0.55rem;color:var(--muted)">الباقی</div><div style="font-size:0.72rem;font-weight:800;color:var(--blue)">${n2fa(rnd(remP))} ${unit}</div></div>
+        </div>
+      </div>
+      <div style="border:1px solid #b7791f55;border-radius:8px;padding:6px">
+        <div style="font-size:0.68rem;font-weight:800;color:#b7791f;margin-bottom:5px">🟤 حساب دیزل</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;text-align:center">
+          <div><div style="font-size:0.55rem;color:var(--muted)">فیصدی ما</div><div style="font-size:0.72rem;font-weight:800;color:var(--purple)">${n2fa(rnd(commD))} ${unit}</div></div>
+          <div><div style="font-size:0.55rem;color:var(--muted)">رسید</div><input type="number" value="${rasidD||''}" placeholder="0" style="font-size:0.72rem;font-weight:800;color:var(--green);background:transparent;border:none;border-bottom:1px dashed #b7791f;text-align:center;width:100%;font-family:'Vazirmatn',sans-serif" oninput="updateStackedRasid('${person.id}','${sec.acctId}','diesel',this.value)"></div>
+          <div><div style="font-size:0.55rem;color:var(--muted)">برد</div><div style="font-size:0.72rem;font-weight:800;color:var(--accent)">${n2fa(rnd(bordD))} ${unit}</div></div>
+          <div><div style="font-size:0.55rem;color:var(--muted)">الباقی</div><div style="font-size:0.72rem;font-weight:800;color:var(--blue)">${n2fa(rnd(remD))} ${unit}</div></div>
+        </div>
+      </div>
+    </div>`;
 
     let rowsHtml = '';
     if (rows.length === 0) {
@@ -6141,25 +6172,29 @@ function _renderStackedAccounts(person) {
       });
     }
 
-    return `<div style="margin-bottom:18px;border:2px solid ${acColor};border-radius:12px;overflow:hidden">
-      <div style="background:${acColor}22;border-bottom:2px solid ${acColor};padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap">
-        <span style="font-weight:800;font-size:0.9rem;color:${acColor}">${sec.label} <span style="font-size:0.72rem;opacity:0.7">(${n2fa(rows.length)} ردیف)</span></span>
+    return `<div style="margin-bottom:22px;border:2px solid ${acColor};border-radius:14px;overflow:hidden;box-shadow:0 2px 12px ${acColor}22">
+      <div style="background:${acColor};padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap">
+        <div>
+          <span style="font-weight:900;font-size:0.95rem;color:#fff">${isMain ? '📒' : '📄'} ${sec.label}</span>
+          <span style="font-size:0.72rem;color:#ffffffcc;margin-right:6px">(${n2fa(rows.length)} ردیف)</span>
+        </div>
         <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
-          <button class="add-row-btn" style="margin:0;font-size:0.72rem;border-color:${acColor};color:${acColor}" onclick="addRowToAcct('${person.id}','${sec.acctId}')">➕ ردیف</button>
-          <div style="display:flex;gap:4px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:3px 6px">
-            <input type="number" id="${countId}" value="10" min="1" max="200" style="width:46px;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:3px 5px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;text-align:center">
-            <button class="add-row-btn" style="margin:0;font-size:0.72rem;border-color:var(--green);color:var(--green)" onclick="addRowsBulkToAcct('${person.id}','${sec.acctId}','${countId}')">➕ چندتایی</button>
+          <button class="add-row-btn" style="margin:0;font-size:0.72rem;border-color:#fff;color:#fff;background:${acColor}88" onclick="addRowToAcct('${person.id}','${sec.acctId}')">➕ ردیف</button>
+          <div style="display:flex;gap:4px;align-items:center;background:#ffffff22;border:1px solid #ffffff55;border-radius:8px;padding:3px 6px">
+            <input type="number" id="${countId}" value="10" min="1" max="200" style="width:42px;background:#ffffff22;border:none;border-radius:5px;padding:2px 4px;color:#fff;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;text-align:center">
+            <button class="add-row-btn" style="margin:0;font-size:0.72rem;border-color:#fff;color:#fff;background:${acColor}88" onclick="addRowsBulkToAcct('${person.id}','${sec.acctId}','${countId}')">➕ چندتایی</button>
           </div>
-          <button class="add-row-btn" style="margin:0;font-size:0.72rem;border-color:var(--accent);color:var(--accent)" onclick="pdfStackedAcct('${person.id}','${sec.acctId}')">📄 PDF</button>
+          <button class="add-row-btn" style="margin:0;font-size:0.72rem;border-color:#fff;color:#fff;background:${acColor}88" onclick="pdfStackedAcct('${person.id}','${sec.acctId}')">📄 PDF</button>
         </div>
       </div>
+      ${fuelSplitHtml}
       <div class="xls-wrap" style="overflow-x:auto">
         <table class="xls-tbl"><thead><tr>
           <th style="min-width:24px">#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th><th>نوع تیل</th><th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>الباقی</th><th>حذف</th>
         </tr></thead><tbody>${rowsHtml}</tbody></table>
       </div>
-      <div style="padding:6px 10px;border-top:1px solid ${acColor}55">
-        <textarea placeholder="📝 توضیحات..." rows="2"
+      <div style="padding:6px 10px;border-top:1px solid ${acColor}44;background:var(--dark)">
+        <textarea placeholder="📝 توضیحات این حساب..." rows="2"
           style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:5px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;resize:none;box-sizing:border-box"
           onchange="saveStackedNote('${person.id}','${sec.acctId}',this.value)">${note.replace(/</g,'&lt;')}</textarea>
       </div>
@@ -6352,6 +6387,15 @@ ${noteHtml}
   const w = window.open('', '_blank', 'width=960,height=720');
   if (w) { w.document.write(html); w.document.close(); }
   else showToast('مرورگر پنجره را مسدود کرد. اجازه popup بدهید', '#e53e3e');
+}
+function updateStackedRasid(pid, acctId, ftype, value) {
+  const person = _getStackedPerson(pid); if (!person) return;
+  const acct = _getStackedAcct(person, acctId);
+  const money = person.mode === 'money';
+  const v = parseFloat(value) || 0;
+  if (ftype === 'petrol') { if (money) acct.rasidMoneyP = v; else acct.rasidFuelP = v; }
+  else { if (money) acct.rasidMoneyD = v; else acct.rasidFuelD = v; }
+  save(); _updatePersonTotals(person); _renderStackedAccounts(person);
 }
 function saveStackedNote(pid, acctId, value) {
   const person = _getStackedPerson(pid); if (!person) return;
@@ -10923,7 +10967,7 @@ function loadFontScale() {
  'deleteShift','clearLog','confirmAddExpenses','deleteExpense','openAddExpense','openAddSafeBulk','confirmAddSafeBulk','addSafeBulkRow','addSafeBulkRows','addExpenseRowsBulkDirect','addSafeRowDirect','addSafeRowsBulkDirect','toggleCalcSize',
  'addExpenseRow','addExpenseMonth','addExpenseRowToMonth','updateExpense',
  'confirmAddSafe','deleteSafe','openAddSafe','addSafeRow','updateSafeEntry','openAddPerson','clearAll','changePassword',
- 'changeViewerPassword','saveLowStockSettings','newPersonSub','deletePersonSub'].forEach(fn => {
+ 'changeViewerPassword','saveLowStockSettings','newPersonSub','deletePersonSub','updateStackedRasid'].forEach(fn => {
   const orig = window[fn];
   if (typeof orig === 'function') {
     window[fn] = function() {
