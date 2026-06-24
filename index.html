@@ -5922,17 +5922,27 @@ function _updatePersonFilterBtns() {
 // ===== حساب‌های جداگانه داخل یک شخص (هر کدام دفتر مستقل) =====
 function _renderSubBar(person) {
   const sel = document.getElementById('pm-acct-select');
-  if (!sel || !person) return;
+  if (!person) return;
   const subs = person.subs || [];
-  let html = '<option value="">📒 حساب اصلی</option>';
-  subs.forEach(s => {
-    const nm = (s.name || 'حساب').replace(/</g, '&lt;');
-    html += '<option value="' + s.id + '"' + (s.id === currentSubId ? ' selected' : '') + '>📄 ' + nm + '</option>';
-  });
-  sel.innerHTML = html;
-  sel.value = currentSubId || '';
+  // در حالت تک‌حساب (بدون زیرحساب): select مخفی بشه
+  if (sel) {
+    if (subs.length === 0) {
+      sel.style.display = 'none';
+    } else {
+      sel.style.display = '';
+      let html = '<option value="">📒 حساب اصلی</option>';
+      subs.forEach(s => {
+        const nm = (s.name || 'حساب').replace(/</g, '&lt;');
+        html += '<option value="' + s.id + '"' + (s.id === currentSubId ? ' selected' : '') + '>📄 ' + nm + '</option>';
+      });
+      sel.innerHTML = html;
+      sel.value = currentSubId || '';
+    }
+  }
   const del = document.getElementById('pm-acct-del');
   if (del) del.style.display = currentSubId ? '' : 'none';
+  const label = document.querySelector('#personModal .pm-acct-bar > span');
+  if (label) label.style.display = subs.length === 0 ? 'none' : '';
 }
 function switchPersonSub(id) {
   currentSubId = id || null;
@@ -6003,6 +6013,7 @@ function renderPersonRows(person) {
     if (filterBar) filterBar.style.display = 'none';
     if (addRowArea) addRowArea.style.display = 'none';
     if (noteArea) noteArea.style.display = 'none';
+    if (acctBar) acctBar.style.display = 'none';
     if (stackedWrap) { stackedWrap.style.display = ''; _renderStackedAccounts(person); }
     _updatePersonTotals(person);
     return;
@@ -6011,6 +6022,7 @@ function renderPersonRows(person) {
   if (xlsWrap) xlsWrap.style.display = '';
   if (filterBar) filterBar.style.display = '';
   if (addRowArea) addRowArea.style.display = '';
+  if (acctBar) acctBar.style.display = '';
   if (stackedWrap) stackedWrap.style.display = 'none';
   if (noteArea) {
     noteArea.style.display = '';
@@ -6094,7 +6106,11 @@ function _renderStackedAccounts(person) {
 
   const COLORS = ['#38a169','#3182ce','#805ad5','#d97706','#e53e3e'];
 
-  wrap.innerHTML = sections.map((sec, si) => {
+  const topBar = `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;margin-bottom:14px;background:var(--card);border:2px solid var(--border);border-radius:11px;flex-wrap:wrap">
+    <span style="font-weight:800;font-size:0.88rem;color:var(--accent)">📚 حساب‌های چندگانه <span style="font-size:0.72rem;font-weight:500;color:var(--muted)">(${n2fa(sections.length)} حساب)</span></span>
+    <button class="add-btn" style="font-size:0.78rem;padding:5px 12px;white-space:nowrap" onclick="newPersonSub()">➕ حساب جدید</button>
+  </div>`;
+  wrap.innerHTML = topBar + sections.map((sec, si) => {
     const rows = sec.acct.rows || [];
     const note = sec.acct.note || '';
     const acColor = COLORS[si % COLORS.length];
