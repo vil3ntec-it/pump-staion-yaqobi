@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ["main", "claude/animation-theme-settings-1iy2li"]
+    branches: ["main", "claude/animation-theme-settings-1iy2li", "claude/fuel-account-form-layout-vex73y"]
   workflow_dispatch:
 
 permissions:
