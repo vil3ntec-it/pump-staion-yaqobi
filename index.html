@@ -11226,10 +11226,10 @@ document.addEventListener('click', function(e) {
   function allClasses(){ return PALETTES.map(function(p){ return 'theme-'+p.id; }); }
   function find(id){ for(var i=0;i<PALETTES.length;i++){ if(PALETTES[i].id===id) return PALETTES[i]; } return null; }
 
-  // Apply a palette: swaps the body theme class, syncs light-mode +
-  // pumpTheme + themeBtn (without touching their original semantics),
-  // and persists pumpPalette. Mirrors what loadTheme/toggleTheme do.
-  window.applyPalette = function(id, persist){
+  // Visually apply a palette: swaps the body theme class and syncs
+  // light-mode + pumpTheme + themeBtn so the whole UI matches. Also records
+  // the choice as the remembered palette for its mode (dark/light).
+  function applyPaletteVisual(id){
     var p = find(id); if(!p) return;
     var b = document.body;
     allClasses().forEach(function(c){ b.classList.remove(c); });
@@ -11238,17 +11238,39 @@ document.addEventListener('click', function(e) {
     else { b.classList.remove('light-mode'); localStorage.setItem('pumpTheme','dark'); }
     try{ document.documentElement.style.background = p.html; }catch(e){}
     var tb = document.getElementById('themeBtn'); if(tb) tb.textContent = p.light ? '🌙 تاریک' : '☀️ روشن';
-    if(persist !== false){
-      localStorage.setItem('pumpPalette', id);
-      // remember the last choice PER mode so switching day<->night restores it
-      localStorage.setItem(p.light ? 'pumpPaletteLight' : 'pumpPaletteDark', id);
+    localStorage.setItem('pumpPalette', id);
+    localStorage.setItem(p.light ? 'pumpPaletteLight' : 'pumpPaletteDark', id);
+    markSwatches();
+  }
+
+  // Swatch click in Settings: SAVE the choice for its mode (dark or light).
+  // It does NOT switch day/night — that stays controlled by the top button.
+  // It previews immediately only if the picked theme matches the current mode.
+  window.applyPalette = function(id){
+    var p = find(id); if(!p) return;
+    localStorage.setItem(p.light ? 'pumpPaletteLight' : 'pumpPaletteDark', id);
+    var nowLight = document.body.classList.contains('light-mode');
+    if(p.light === nowLight){
+      applyPaletteVisual(id);            // same mode → apply/preview now
+    } else {
+      markSwatches();                    // other mode → just saved for later
+      if(typeof showToast === 'function'){
+        showToast((p.light ? '✅ تم روشن ذخیره شد' : '✅ تم تاریک ذخیره شد') +
+                  ' — با دکمهٔ روشن/تاریک بالا فعال می‌شود', p.ac);
+      }
     }
-    markSwatch(id);
   };
 
-  function markSwatch(id){
+  // Mark the saved dark theme active in the dark row AND the saved light
+  // theme active in the light row (both rows can show their selection).
+  function markSwatches(){
+    var d = localStorage.getItem('pumpPaletteDark');
+    var l = localStorage.getItem('pumpPaletteLight');
     var nodes = document.querySelectorAll('.theme-swatch');
-    for(var i=0;i<nodes.length;i++){ nodes[i].classList.toggle('active', nodes[i].getAttribute('data-pal')===id); }
+    for(var i=0;i<nodes.length;i++){
+      var pid = nodes[i].getAttribute('data-pal'); var pp = find(pid);
+      nodes[i].classList.toggle('active', !!(pp && (pp.light ? pid===l : pid===d)));
+    }
   }
 
   function buildSwatches(){
@@ -11263,26 +11285,29 @@ document.addEventListener('click', function(e) {
                     + '<span class="ts-name">'+p.name+'</span>';
       (p.light ? lRow : dRow).appendChild(btn);
     });
-    var cur = localStorage.getItem('pumpPalette'); if(cur) markSwatch(cur);
+    markSwatches();
   }
 
-  // Apply any saved palette during load (keeps everything in sync).
-  // If none was ever chosen, do nothing so the original default look
-  // is preserved exactly (no theme-* class added).
+  // On load: apply the remembered palette for the CURRENT mode (the mode was
+  // already set by loadTheme from pumpTheme). If none was chosen for this mode,
+  // keep the app's original look (no theme class) but still mark the swatches.
   function initPalette(){
-    var saved = localStorage.getItem('pumpPalette');
-    if(saved && find(saved)) window.applyPalette(saved, false);
+    var nowLight = document.body.classList.contains('light-mode');
+    var remembered = localStorage.getItem(nowLight ? 'pumpPaletteLight' : 'pumpPaletteDark');
+    if(remembered && find(remembered)) applyPaletteVisual(remembered);
+    else markSwatches();
   }
 
-  // Keep the existing light/dark toggle button coherent with palettes.
+  // Top light/dark button: after it flips the mode, apply that mode's
+  // remembered palette (or revert to the original look if none was chosen).
   if(typeof window.toggleTheme === 'function'){
     var _origToggle = window.toggleTheme;
     window.toggleTheme = function(){
       var r = _origToggle.apply(this, arguments);
       var nowLight = document.body.classList.contains('light-mode');
-      // restore the LAST palette chosen for this mode (not the default each time)
       var remembered = localStorage.getItem(nowLight ? 'pumpPaletteLight' : 'pumpPaletteDark');
-      window.applyPalette((remembered && find(remembered)) ? remembered : (nowLight ? 'light-cream' : 'dark-amber'));
+      if(remembered && find(remembered)){ applyPaletteVisual(remembered); }
+      else { allClasses().forEach(function(c){ document.body.classList.remove(c); }); markSwatches(); }
       return r;
     };
   }
