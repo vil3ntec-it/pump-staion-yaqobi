@@ -2228,6 +2228,11 @@ button:focus-visible,.nav-btn:focus-visible,a:focus-visible,input:focus-visible,
    4 stats (رسید / برد / فیصدی / الباقی) laid out in a single horizontal row. */
 #personModal .fuel-split{ grid-template-columns:1fr !important; }
 #personModal .fs-rows{ grid-template-columns:repeat(4,1fr) !important; }
+/* stat order (RTL, right->left): فیصدی، رسید تیل، برد، الباقی */
+#personModal .fs-rows .fs-cell:nth-child(1){ order:2; } /* رسید تیل */
+#personModal .fs-rows .fs-cell:nth-child(2){ order:3; } /* برد */
+#personModal .fs-rows .fs-cell:nth-child(3){ order:1; } /* فیصدی ما (first) */
+#personModal .fs-rows .fs-cell:nth-child(4){ order:4; } /* الباقی تیل */
 /* Hide the duplicate big name above the table — the name already shows in the
    modal header. Visual only; the JS that fills it is untouched. */
 #personModal #pm-bigname{ display:none !important; }
