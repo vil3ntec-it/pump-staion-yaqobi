@@ -3306,14 +3306,12 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
     </div>
     <div class="modal-body">
       <div id="pm-bigname" style="text-align:center;font-size:1.9rem;font-weight:900;color:var(--accent);padding:6px 10px;margin-bottom:8px;border-bottom:2px solid var(--border)"></div>
-      <div class="pm-acct-bar" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
-        <span style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap">📒 حساب:</span>
-        <select id="pm-acct-select" onchange="switchPersonSub(this.value)" style="flex:1;min-width:110px;max-width:200px;background:var(--dark);border:1px solid var(--border);border-radius:7px;padding:5px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer"></select>
-        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-          <button class="add-btn pm-acct-new" onclick="newPersonSub()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap">➕ حساب جدید</button>
-          <button class="add-btn pm-table-new" onclick="newPersonTable()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap">📋 جدول جدید</button>
-          <button id="pm-acct-del" class="del-btn pm-acct-del" onclick="deletePersonSub()" style="display:none;background:transparent;color:var(--red);border:1px solid var(--red);border-radius:7px;padding:5px 8px;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap">🗑️ حذف</button>
-        </div>
+      <div class="pm-acct-bar" style="display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;align-items:center;margin-bottom:8px;padding-bottom:2px">
+        <span style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap;flex-shrink:0">📒 حساب:</span>
+        <select id="pm-acct-select" onchange="switchPersonSub(this.value)" style="flex-shrink:0;min-width:80px;max-width:180px;background:var(--dark);border:1px solid var(--border);border-radius:7px;padding:5px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer"></select>
+        <button class="add-btn pm-acct-new" onclick="newPersonSub()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap;flex-shrink:0">➕ حساب جدید</button>
+        <button class="add-btn pm-table-new" onclick="newPersonTable()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap;flex-shrink:0">📋 جدول جدید</button>
+        <button id="pm-acct-del" class="del-btn pm-acct-del" onclick="deletePersonSub()" style="display:none;flex-shrink:0;background:transparent;color:var(--red);border:1px solid var(--red);border-radius:7px;padding:5px 8px;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap">🗑️ حذف</button>
       </div>
       <div class="pm-filter-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
         <button class="pm-filter-btn active" id="pm-filter-all" onclick="setPersonFilter('all')">📋 همه</button>
@@ -6661,6 +6659,7 @@ function _renderHistoryPanel(person) {
         <span style="font-weight:800;font-size:0.82rem;color:#fff">📋 ${h.note ? h.note.split('\n')[0].substring(0,45) + ' — ' : ''}${h.createdAt||''}</span>
         <div style="display:flex;align-items:center;gap:6px">
           <span style="font-size:0.72rem;color:rgba(255,255,255,0.85)">${n2fa(rows.length)} ردیف</span>
+          <button onclick="pdfPersonHistory('${pid}','${h.id}')" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.5);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">📄 PDF</button>
           <button onclick="deletePersonHistory('${pid}','${h.id}')" style="background:transparent;border:1px solid rgba(255,255,255,0.45);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">🗑️ حذف کل</button>
         </div>
       </div>
@@ -6674,6 +6673,91 @@ function deletePersonHistory(pid, hid) {
   const acct = _acctOf(person);
   acct.tableHistory = (acct.tableHistory||[]).filter(h => h.id !== hid);
   save(); _renderHistoryPanel(person);
+}
+function pdfPersonHistory(pid, hid) {
+  const person = _hPerson(pid); if (!person) return;
+  const h = _hEntry(pid, hid); if (!h) return;
+  const rows = h.rows || [];
+  const money = person.mode === 'money';
+  const pct = parseFloat(h.percent) || 0;
+  const unit = money ? 'افغانی' : 'ل';
+  const rnd = x => Math.round(x * 100) / 100;
+  const rasidP = money ? (parseFloat(h.rasidMoneyP)||0) : (parseFloat(h.rasidFuelP)||0);
+  const rasidD = money ? (parseFloat(h.rasidMoneyD)||0) : (parseFloat(h.rasidFuelD)||0);
+  const st = _splitTotals(rows);
+  const bordP = money ? st.petrol.bardagi : st.petrol.fuel;
+  const bordD = money ? st.diesel.bardagi : st.diesel.fuel;
+  const commP = rasidP*pct/100, commD = rasidD*pct/100;
+  const remP = rasidP-bordP-commP, remD = rasidD-bordD-commD;
+  const title = h.note ? h.note.split('\n')[0].substring(0,50) : ('جدول آرشیو — ' + (h.createdAt||''));
+  const tableRows = rows.map((r,i) => {
+    const bard = r.byMoney ? (r.bardagi||0) : ((r.fuel||0)*(r.priceper||0));
+    const alb = bard - (r.rasid||0);
+    return `<tr>
+      <td style="text-align:center;color:#718096">${i+1}</td>
+      <td>${r.date||'—'}</td><td>${r.name||'—'}</td>
+      <td style="color:#c07700">${r.hawala||'—'}</td>
+      <td style="color:#2b6cb0;font-weight:700">${n2fa(r.fuel||0)}</td>
+      <td>${n2fa(r.priceper||0)}</td>
+      <td style="color:#c07700;font-weight:700">${n2fa(rnd(bard))}</td>
+      <td style="color:#276749;font-weight:700">${n2fa(r.rasid||0)}</td>
+      <td style="color:${alb>0?'#e53e3e':'#276749'};font-weight:700">${n2fa(rnd(alb))}</td>
+    </tr>`;
+  }).join('');
+  const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8">
+<title>${title} — ${person.name}</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:20px;font-size:12px}
+h1{font-size:1.2rem;font-weight:900;color:#c07700;border-bottom:2px solid #c07700;padding-bottom:6px;margin-bottom:4px}
+.meta{font-size:0.7rem;color:#718096;margin-bottom:14px}
+.split-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.split-box{flex:1;min-width:130px;border:1px solid #e2e8f0;border-radius:8px;padding:8px}
+.split-title{font-weight:900;font-size:0.72rem;margin-bottom:6px;color:#4a5568}
+.split-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center}
+.sum-box .l{font-size:0.58rem;color:#718096;margin-bottom:2px}
+.sum-box .v{font-size:0.82rem;font-weight:900}
+.pct-row{font-size:0.72rem;color:#4a5568;margin-bottom:12px;padding:6px 10px;background:#f7fafc;border-radius:6px}
+table{width:100%;border-collapse:collapse;font-size:0.72rem}
+th{background:#2d3748;color:#e2e8f0;padding:6px;text-align:right;font-weight:700;white-space:nowrap}
+td{padding:5px 6px;border-bottom:1px solid #e2e8f0}
+tr:nth-child(even) td{background:#f7fafc}
+.note-box{margin-top:14px;padding:8px 12px;background:#fffbeb;border-right:3px solid #c07700;border-radius:6px;font-size:0.75rem;color:#4a5568}
+.no-print{display:none}
+@media print{@page{margin:12mm}}
+</style></head><body>
+<div class="no-print" style="display:block;margin-bottom:10px"><button onclick="window.print()" style="padding:6px 16px;background:#38a169;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Vazirmatn',sans-serif">📄 ذخیره PDF</button></div>
+<h1>${title}</h1>
+<div class="meta">نام: <b>${person.name}</b> &nbsp;|&nbsp; تاریخ آرشیو: ${h.createdAt||''} &nbsp;|&nbsp; تعداد ردیف: ${n2fa(rows.length)}</div>
+<div class="split-row">
+  <div class="split-box" style="border-color:#38a16966">
+    <div class="split-title">⛽ حساب پطرول</div>
+    <div class="split-grid">
+      <div class="sum-box"><div class="l">رسید</div><div class="v" style="color:#276749">${n2fa(rnd(rasidP))} ${unit}</div></div>
+      <div class="sum-box"><div class="l">برد</div><div class="v" style="color:#c07700">${n2fa(rnd(bordP))} ${unit}</div></div>
+      <div class="sum-box"><div class="l">فیصدی</div><div class="v" style="color:#805ad5">${n2fa(rnd(commP))} ${unit}</div></div>
+      <div class="sum-box"><div class="l">الباقی</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(remP))} ${unit}</div></div>
+    </div>
+  </div>
+  <div class="split-box" style="border-color:#d9770666">
+    <div class="split-title">🟤 حساب دیزل</div>
+    <div class="split-grid">
+      <div class="sum-box"><div class="l">رسید</div><div class="v" style="color:#276749">${n2fa(rnd(rasidD))} ${unit}</div></div>
+      <div class="sum-box"><div class="l">برد</div><div class="v" style="color:#c07700">${n2fa(rnd(bordD))} ${unit}</div></div>
+      <div class="sum-box"><div class="l">فیصدی</div><div class="v" style="color:#805ad5">${n2fa(rnd(commD))} ${unit}</div></div>
+      <div class="sum-box"><div class="l">الباقی</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(remD))} ${unit}</div></div>
+    </div>
+  </div>
+</div>
+<div class="pct-row">فیصدی ٪: <b>${n2fa(pct)}</b> &nbsp;|&nbsp; جمع برد: <b style="color:#c07700">${n2fa(rnd(bordP+bordD))} ${unit}</b> &nbsp;|&nbsp; الباقی کل: <b style="color:#2b6cb0">${n2fa(rnd(remP+remD))} ${unit}</b></div>
+<table><thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th><th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>الباقی</th></tr></thead>
+<tbody>${tableRows||'<tr><td colspan="9" style="text-align:center;padding:12px;color:#718096">هیچ ردیفی ثبت نشده</td></tr>'}</tbody></table>
+${h.note?`<div class="note-box"><b>توضیحات:</b> ${h.note.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>`:''}
+<script>window.onload=function(){window.print()}<\/script>
+</body></html>`;
+  const w = window.open('','_blank');
+  if (w) { w.document.write(html); w.document.close(); }
 }
 function updateHistoryRasid(pid, hid, ftype, value) {
   const person = _hPerson(pid); if (!person) return;
@@ -10738,8 +10822,16 @@ function adjModalFont(delta) {
     if (!modal || !modal.classList.contains('open')) return;
     modal.querySelectorAll('th,td,.xls-in,.xls-calc,.xls-num,.fs-head,.fs-cell .l,.fs-cell .v,.msumbox .ml,.msumbox .mv').forEach(el => {
       if (!el.dataset.origFs) el.dataset.origFs = parseFloat(getComputedStyle(el).fontSize);
-      el.style.fontSize = (parseFloat(el.dataset.origFs) * _modalFontScale) + 'px';
+      el.style.setProperty('font-size', (parseFloat(el.dataset.origFs) * _modalFontScale) + 'px', 'important');
     });
+  });
+  // scale archive sections (inline-styled elements)
+  const hw = document.getElementById('pm-history-wrap');
+  if (hw) hw.querySelectorAll('*').forEach(el => {
+    if (el.style.fontSize) {
+      if (!el.dataset.origFs) el.dataset.origFs = parseFloat(getComputedStyle(el).fontSize);
+      el.style.setProperty('font-size', (parseFloat(el.dataset.origFs) * _modalFontScale) + 'px', 'important');
+    }
   });
   localStorage.setItem('modalFontScale', _modalFontScale);
 }
