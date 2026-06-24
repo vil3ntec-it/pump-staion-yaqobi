@@ -10469,6 +10469,29 @@ function loadFontScale() {
   }
 });
 
+/* ===== TEMP DIAGNOSTIC — remove after debugging (waraq/debtor bug) ===== */
+window.onerror = function(message, source, lineno, colno, error){
+  try{
+    alert('JS ERROR: ' + message + '\n@ line ' + lineno + ':' + colno +
+          (error && error.stack ? ('\n\n' + error.stack) : ''));
+  }catch(_e){}
+  return false;
+};
+['openWaraqModal','populateWaraqModal','openPersonModal','renderPersonRows','addPersonRow'].forEach(function(fn){
+  var orig = window[fn];
+  if (typeof orig === 'function') {
+    window[fn] = function(){
+      try { return orig.apply(this, arguments); }
+      catch(e){
+        alert('ERR ' + fn + ': ' + (e && e.message ? e.message : e) +
+              (e && e.stack ? ('\n\n' + e.stack) : ''));
+        // not rethrown: keep a single, clear alert that names the exact failing function
+      }
+    };
+  }
+});
+/* ===== /TEMP DIAGNOSTIC ===== */
+
 load();
 loadTheme();
 // بارگذاری خودکار از Firebase — اگر کد ایستگاه تنظیم شده، آخرین حساب از سرور گرفته می‌شود
