@@ -2226,13 +2226,20 @@ button:focus-visible,.nav-btn:focus-visible,a:focus-visible,input:focus-visible,
 /* ---------- PERSON MODAL TWEAKS (requested) ---------- */
 /* Petrol & diesel accounts as full-width horizontal rectangles, with the
    4 stats (رسید / برد / فیصدی / الباقی) laid out in a single horizontal row. */
-#personModal .fuel-split{ grid-template-columns:1fr !important; }
-#personModal .fs-rows{ grid-template-columns:repeat(4,1fr) !important; }
-/* stat order (RTL, right->left): فیصدی، رسید تیل، برد، الباقی */
-#personModal .fs-rows .fs-cell:nth-child(1){ order:2; } /* رسید تیل */
-#personModal .fs-rows .fs-cell:nth-child(2){ order:3; } /* برد */
-#personModal .fs-rows .fs-cell:nth-child(3){ order:1; } /* فیصدی ما (first) */
-#personModal .fs-rows .fs-cell:nth-child(4){ order:4; } /* الباقی تیل */
+/* حساب پطرول/دیزل — فشرده و کنار هم */
+#personModal .fuel-split{ grid-template-columns:1fr 1fr !important; padding:4px 10px !important; gap:4px !important; }
+#personModal .fs-group{ padding:4px 7px !important; }
+#personModal .fs-head{ font-size:0.72rem !important; margin-bottom:2px !important; }
+#personModal .fs-rows{ grid-template-columns:1fr 1fr !important; gap:2px !important; }
+#personModal .fs-cell .l{ font-size:0.58rem !important; }
+#personModal .fs-cell .v{ font-size:0.8rem !important; }
+/* فیصدی — فشرده */
+#personModal .modal-summary{ padding:2px 10px !important; }
+#personModal .msumbox{ min-height:unset !important; padding:3px 8px !important; flex-direction:row !important; align-items:center !important; gap:10px !important; justify-content:flex-end !important; }
+#personModal .msumbox .ml{ font-size:0.68rem !important; white-space:nowrap !important; }
+#personModal .msumbox .mv{ font-size:0.85rem !important; width:80px !important; }
+/* دکمه‌های هدر — یک‌شکل و مربع */
+#personModal .modal-head button{ height:32px !important; min-width:32px !important; padding:0 5px !important; font-size:0.72rem !important; border-radius:7px !important; display:inline-flex !important; align-items:center !important; justify-content:center !important; }
 /* Hide the duplicate big name above the table — the name already shows in the
    modal header. Visual only; the JS that fills it is untouched. */
 #personModal #pm-bigname{ display:none !important; }
@@ -3327,12 +3334,7 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
           </tr></tfoot>
         </table>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px;margin-bottom:6px">
-        <span style="font-size:0.78rem;color:var(--muted)">تبدیل یکجا:</span>
-        <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green)" onclick="setAllRowsFuel('petrol')">⛽ همه پطرول</button>
-        <button class="add-row-btn" style="margin:0;border-color:#b7791f;color:#b7791f" onclick="setAllRowsFuel('diesel')">🟤 همه دیزل</button>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px">
+      <div id="pm-add-row-area" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px">
         <button class="add-row-btn" style="margin:0" onclick="addPersonRow()">➕ ردیف جدید</button>
         <div style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
           <span style="font-size:0.78rem;color:var(--muted)">تعداد:</span>
@@ -3340,6 +3342,12 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
           <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green)" onclick="addPersonRowsBulk()">➕ افزودن چندتایی</button>
         </div>
       </div>
+      <div id="pm-note-area" style="margin-top:8px;padding:0 2px">
+        <textarea id="pm-note-field" placeholder="📝 توضیحات حساب..." rows="2"
+          style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.8rem;resize:none;box-sizing:border-box"
+          oninput="savePersonNote(this.value)"></textarea>
+      </div>
+      <div id="pm-stacked-wrap" style="display:none"></div>
     </div>
   </div>
 </div>
@@ -5939,7 +5947,7 @@ function newPersonSub() {
   const name = prompt('نام حساب جدید:');
   if (!name || !name.trim()) return;
   if (!Array.isArray(person.subs)) person.subs = [];
-  const sub = { id: 's' + Date.now() + Math.random().toString(36).slice(2, 6), name: name.trim(), rows: [] };
+  const sub = { id: 's' + Date.now() + Math.random().toString(36).slice(2, 6), name: name.trim(), rows: [], note: '' };
   person.subs.push(sub);
   currentSubId = sub.id;
   save();
@@ -5947,7 +5955,10 @@ function newPersonSub() {
   _updatePersonFilterBtns();
   _renderSubBar(person);
   renderPersonRows(person);
-  if (typeof showToast === 'function') showToast('✅ حساب «' + sub.name + '» ساخته شد', '#38a169');
+  if (typeof showToast === 'function') showToast('✅ حساب «' + sub.name + '» ساخته شد — جدول‌ها انباشته شدند', '#38a169');
+  // scroll stacked wrap to top
+  const sw = document.getElementById('pm-stacked-wrap');
+  if (sw) sw.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function deletePersonSub() {
   const person = _curPerson(); if (!person || !currentSubId) return;
@@ -5979,6 +5990,34 @@ function _splitTotals(rows){
   return t;
 }
 function renderPersonRows(person) {
+  const hasSubs = Array.isArray(person.subs) && person.subs.length > 0;
+  const stackedWrap = document.getElementById('pm-stacked-wrap');
+  const xlsWrap = document.querySelector('#personModal .xls-wrap');
+  const filterBar = document.querySelector('#personModal .pm-filter-bar');
+  const addRowArea = document.getElementById('pm-add-row-area');
+  const noteArea = document.getElementById('pm-note-area');
+  const acctBar = document.querySelector('#personModal .pm-acct-bar');
+
+  if (hasSubs) {
+    if (xlsWrap) xlsWrap.style.display = 'none';
+    if (filterBar) filterBar.style.display = 'none';
+    if (addRowArea) addRowArea.style.display = 'none';
+    if (noteArea) noteArea.style.display = 'none';
+    if (stackedWrap) { stackedWrap.style.display = ''; _renderStackedAccounts(person); }
+    _updatePersonTotals(person);
+    return;
+  }
+  // Single-account mode
+  if (xlsWrap) xlsWrap.style.display = '';
+  if (filterBar) filterBar.style.display = '';
+  if (addRowArea) addRowArea.style.display = '';
+  if (stackedWrap) stackedWrap.style.display = 'none';
+  if (noteArea) {
+    noteArea.style.display = '';
+    const nf = document.getElementById('pm-note-field');
+    if (nf) { const acctN = _acctOf(person); nf.value = acctN.note || ''; }
+  }
+
   const acct = _acctOf(person);
   const rows = acct.rows || [];
   _updatePersonTotals(person);
@@ -6035,6 +6074,134 @@ function renderPersonRows(person) {
     tbody.appendChild(tr);
   }
 }
+
+// ===== حساب‌های انباشته (stacked view) =====
+function _getStackedPerson(pid) {
+  const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
+  return (list||[]).find(p => p.id === pid);
+}
+function _getStackedAcct(person, acctId) {
+  if (!acctId || acctId === '__main__') return person;
+  return (person.subs||[]).find(s => s.id === acctId) || person;
+}
+function _renderStackedAccounts(person) {
+  const wrap = document.getElementById('pm-stacked-wrap');
+  if (!wrap || !person) return;
+  const subs = [...(person.subs||[])].reverse();
+  const sections = [];
+  subs.forEach(s => sections.push({ acct: s, label: '📄 ' + (s.name||'حساب'), acctId: s.id }));
+  sections.push({ acct: person, label: '📒 حساب اصلی', acctId: '__main__' });
+
+  wrap.innerHTML = sections.map((sec, si) => {
+    const rows = sec.acct.rows || [];
+    const note = sec.acct.note || '';
+    const isFirst = si === 0;
+    let rowsHtml = '';
+    if (rows.length === 0) {
+      rowsHtml = `<tr><td colspan="11" style="text-align:center;padding:12px;color:var(--muted);font-size:0.82rem">هیچ ردیفی ثبت نشده</td></tr>`;
+    } else {
+      rows.forEach((r, i) => {
+        const bardagi = (r.byMoney?(parseFloat(r.bardagi)||0):(r.fuel||0)*(r.priceper||0)).toFixed(0);
+        const albaqi = (parseFloat(bardagi)-(r.rasid||0)).toFixed(0);
+        const isP = r.ftype !== 'diesel';
+        const rn = 'sft-' + sec.acctId + '-' + i;
+        rowsHtml += `<tr>
+          <td class="xls-num">${n2fa(i+1)}</td>
+          <td><input class="xls-in" value="${r.date||''}" onchange="updateStackedRow('${person.id}','${sec.acctId}',${i},'date',this.value)"></td>
+          <td><input class="xls-in" value="${(r.name||'').replace(/"/g,'&quot;')}" placeholder="نام" onchange="updateStackedRow('${person.id}','${sec.acctId}',${i},'name',this.value)"></td>
+          <td><input class="xls-in" value="${(r.hawala||'').toString().replace(/"/g,'&quot;')}" placeholder="حواله" style="min-width:80px" onchange="updateStackedRow('${person.id}','${sec.acctId}',${i},'hawala',this.value)"></td>
+          <td><div class="ft-pick"><label class="ft-opt petrol ${isP?'active':''}"><input type="radio" name="${rn}" ${isP?'checked':''} onchange="setStackedRowFuel('${person.id}','${sec.acctId}',${i},'petrol')">⛽</label><label class="ft-opt diesel ${!isP?'active':''}"><input type="radio" name="${rn}" ${!isP?'checked':''} onchange="setStackedRowFuel('${person.id}','${sec.acctId}',${i},'diesel')">🟤</label></div></td>
+          <td><input class="xls-in" type="number" value="${r.fuel||''}" placeholder="0" oninput="calcStackedRow('${person.id}','${sec.acctId}',${i},'fuel',this.value)"></td>
+          <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="0" oninput="calcStackedRow('${person.id}','${sec.acctId}',${i},'priceper',this.value)"></td>
+          <td><input class="xls-in" type="number" value="${parseFloat(bardagi)||''}" placeholder="0" style="color:var(--accent);font-weight:700" oninput="calcStackedRow('${person.id}','${sec.acctId}',${i},'bardagi',this.value)"></td>
+          <td><input class="xls-in" type="number" value="${r.rasid||''}" placeholder="0" oninput="calcStackedRow('${person.id}','${sec.acctId}',${i},'rasid',this.value)"></td>
+          <td><input class="xls-in" type="number" value="${parseFloat(albaqi)}" readonly style="color:${parseFloat(albaqi)>0?'var(--red)':'var(--green)'}"></td>
+          <td><button class="del-btn" onclick="deleteStackedRow('${person.id}','${sec.acctId}',${i})">🗑️</button></td>
+        </tr>`;
+      });
+    }
+    return `<div style="margin-bottom:14px;border:1px solid var(--border);border-radius:10px;overflow:hidden">
+      <div style="background:var(--dark);padding:6px 12px;font-weight:700;font-size:0.85rem;display:flex;align-items:center;justify-content:space-between;gap:6px;border-bottom:1px solid var(--border)">
+        <span>${sec.label}</span>
+        <div style="display:flex;gap:5px">
+          <button class="add-row-btn" style="margin:0;font-size:0.72rem" onclick="addRowToAcct('${person.id}','${sec.acctId}')">➕ ردیف</button>
+          <button class="add-row-btn" style="margin:0;font-size:0.72rem;border-color:var(--green);color:var(--green)" onclick="addRowsBulkToAcct('${person.id}','${sec.acctId}')">➕ چندتایی</button>
+        </div>
+      </div>
+      <div class="xls-wrap" style="overflow-x:auto">
+        <table class="xls-tbl"><thead><tr>
+          <th style="min-width:24px">#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th><th>نوع تیل</th><th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>الباقی</th><th>حذف</th>
+        </tr></thead><tbody>${rowsHtml}</tbody></table>
+      </div>
+      <div style="padding:6px 10px;border-top:1px solid var(--border)">
+        <textarea placeholder="📝 توضیحات..." rows="2"
+          style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:5px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;resize:none;box-sizing:border-box"
+          onchange="saveStackedNote('${person.id}','${sec.acctId}',this.value)">${note.replace(/</g,'&lt;')}</textarea>
+      </div>
+    </div>`;
+  }).join('');
+}
+function updateStackedRow(pid, acctId, idx, field, value) {
+  const person = _getStackedPerson(pid); if (!person) return;
+  const acct = _getStackedAcct(person, acctId);
+  if (!acct.rows || !acct.rows[idx]) return;
+  acct.rows[idx][field] = value;
+  save(); _updatePersonTotals(person); renderPersons(currentPersonType); updateBanner();
+}
+function calcStackedRow(pid, acctId, idx, field, value) {
+  const person = _getStackedPerson(pid); if (!person) return;
+  const acct = _getStackedAcct(person, acctId);
+  if (!acct.rows || !acct.rows[idx]) return;
+  const r = acct.rows[idx];
+  r[field] = parseFloat(value)||0;
+  if (field==='bardagi') r.byMoney=true;
+  else if (field==='fuel'||field==='priceper') { if ((r.fuel||0)>0||(r.priceper||0)>0) r.byMoney=false; }
+  if (!r.byMoney) r.bardagi=(r.fuel||0)*(r.priceper||0);
+  r.albaqi=(parseFloat(r.bardagi)||0)-(r.rasid||0);
+  save(); _updatePersonTotals(person); _renderStackedAccounts(person); renderPersons(currentPersonType); updateBanner();
+}
+function setStackedRowFuel(pid, acctId, idx, ftype) {
+  const person = _getStackedPerson(pid); if (!person) return;
+  const acct = _getStackedAcct(person, acctId);
+  if (!acct.rows||!acct.rows[idx]) return;
+  acct.rows[idx].ftype = ftype;
+  save(); _updatePersonTotals(person); renderPersons(currentPersonType);
+}
+function deleteStackedRow(pid, acctId, idx) {
+  const person = _getStackedPerson(pid); if (!person) return;
+  const acct = _getStackedAcct(person, acctId);
+  if (!acct.rows) return;
+  acct.rows.splice(idx, 1);
+  save(); _updatePersonTotals(person); _renderStackedAccounts(person); renderPersons(currentPersonType); updateBanner();
+}
+function addRowToAcct(pid, acctId) {
+  const person = _getStackedPerson(pid); if (!person) return;
+  const acct = _getStackedAcct(person, acctId);
+  if (!Array.isArray(acct.rows)) acct.rows = [];
+  acct.rows.push({ date:persianDate(), name:'', hawala:'', ftype:'petrol', fuel:0, priceper:0, bardagi:0, rasid:0, albaqi:0, byMoney:person.mode==='money' });
+  save(); _renderStackedAccounts(person); _updatePersonTotals(person);
+}
+function addRowsBulkToAcct(pid, acctId) {
+  const person = _getStackedPerson(pid); if (!person) return;
+  const acct = _getStackedAcct(person, acctId);
+  let n = parseInt(document.getElementById('pm-bulk-count')?.value||'10', 10)||10;
+  if (n<1) n=1; if (n>200) n=200;
+  if (!Array.isArray(acct.rows)) acct.rows = [];
+  for (let k=0;k<n;k++) acct.rows.push({ date:persianDate(), name:'', hawala:'', ftype:'petrol', fuel:0, priceper:0, bardagi:0, rasid:0, albaqi:0, byMoney:person.mode==='money' });
+  save(); _renderStackedAccounts(person); _updatePersonTotals(person);
+  showToast('✅ '+n2fa(n)+' ردیف افزوده شد', '#38a169');
+}
+function saveStackedNote(pid, acctId, value) {
+  const person = _getStackedPerson(pid); if (!person) return;
+  const acct = _getStackedAcct(person, acctId);
+  acct.note = value; save();
+}
+function savePersonNote(value) {
+  const person = _curPerson(); if (!person) return;
+  const acct = _acctOf(person);
+  acct.note = value; save();
+}
+
 // نمایش/مخفی‌کردن ستون «نوع تیل» در سربرگ جدول، بسته به فعال بودن فیلتر حساب جداگانه
 function _togglePmFtColumn(show) {
   const thead = document.querySelector('#pm-tbl thead tr');
@@ -9408,7 +9575,16 @@ function saveWaraq() {
         if (exIdx >= 0) DB.expenses[exIdx] = rec; else DB.expenses.push(rec);
       } else {
         removeWaraqExpense(srcKey);                 // اگر قبلاً مصرف بوده، از مصرف برداشته شود
-        const person = matchDebtPersonByText(t.name);
+        let person = matchDebtPersonByText(t.name);
+        if (!person) {
+          // اگر نام یک حساب فرعی نوشته شده، والدش را پیدا کن
+          const tNorm = normFa(t.name);
+          for (const p of (DB.debtPersons||[])) {
+            if ((p.subs||[]).some(s => { const nm=normFa(s.name||''); return nm && tNorm.indexOf(nm)!==-1; })) {
+              person = p; break;
+            }
+          }
+        }
         if (!person) { removePersonRowBySrcKey(srcKey); return; }
         const ex = extractHawala(t.name);          // شمارهٔ حواله از جمله بیرون کشیده می‌شود
         // نوع تیل (پطرول/دیزل) از روی متن تشخیص داده می‌شود و کلماتِ «دیزل/پطرول» از نامِ نمایشی حذف می‌شوند
