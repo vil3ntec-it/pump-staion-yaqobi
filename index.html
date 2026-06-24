@@ -3306,12 +3306,18 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
     </div>
     <div class="modal-body">
       <div id="pm-bigname" style="text-align:center;font-size:1.9rem;font-weight:900;color:var(--accent);padding:6px 10px;margin-bottom:8px;border-bottom:2px solid var(--border)"></div>
-      <div class="pm-acct-bar" style="display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;align-items:center;margin-bottom:8px;padding-bottom:2px">
-        <span style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap;flex-shrink:0">📒 حساب:</span>
-        <select id="pm-acct-select" onchange="switchPersonSub(this.value)" style="flex-shrink:0;min-width:80px;max-width:180px;background:var(--dark);border:1px solid var(--border);border-radius:7px;padding:5px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer"></select>
-        <button class="add-btn pm-acct-new" onclick="newPersonSub()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap;flex-shrink:0">➕ حساب جدید</button>
-        <button class="add-btn pm-table-new" onclick="newPersonTable()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap;flex-shrink:0">📋 جدول جدید</button>
-        <button id="pm-acct-del" class="del-btn pm-acct-del" onclick="deletePersonSub()" style="display:none;flex-shrink:0;background:transparent;color:var(--red);border:1px solid var(--red);border-radius:7px;padding:5px 8px;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap">🗑️ حذف</button>
+      <div class="pm-acct-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+        <!-- گروه راست: لیبل + dropdown -->
+        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+          <span style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap">📒 حساب:</span>
+          <select id="pm-acct-select" onchange="switchPersonSub(this.value)" style="min-width:80px;max-width:180px;background:var(--dark);border:1px solid var(--border);border-radius:7px;padding:5px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer"></select>
+        </div>
+        <!-- گروه چپ: دکمه‌ها -->
+        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+          <button class="add-btn pm-acct-new" onclick="newPersonSub()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap">➕ حساب جدید</button>
+          <button class="add-btn pm-table-new" onclick="newPersonTable()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap">📋 جدول جدید</button>
+          <button id="pm-acct-del" class="del-btn pm-acct-del" onclick="deletePersonSub()" style="display:none;background:transparent;color:var(--red);border:1px solid var(--red);border-radius:7px;padding:5px 8px;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap">🗑️ حذف</button>
+        </div>
       </div>
       <div class="pm-filter-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
         <button class="pm-filter-btn active" id="pm-filter-all" onclick="setPersonFilter('all')">📋 همه</button>
@@ -6689,7 +6695,7 @@ function pdfPersonHistory(pid, hid) {
   const bordD = money ? st.diesel.bardagi : st.diesel.fuel;
   const commP = rasidP*pct/100, commD = rasidD*pct/100;
   const remP = rasidP-bordP-commP, remD = rasidD-bordD-commD;
-  const title = h.note ? h.note.split('\n')[0].substring(0,50) : ('جدول آرشیو — ' + (h.createdAt||''));
+  const archiveLabel = h.note ? h.note.split('\n')[0].substring(0,50) : ('جدول آرشیو — ' + (h.createdAt||''));
   const tableRows = rows.map((r,i) => {
     const bard = r.byMoney ? (r.bardagi||0) : ((r.fuel||0)*(r.priceper||0));
     const alb = bard - (r.rasid||0);
@@ -6705,7 +6711,7 @@ function pdfPersonHistory(pid, hid) {
     </tr>`;
   }).join('');
   const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8">
-<title>${title} — ${person.name}</title>
+<title>${person.name} — ${archiveLabel}</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -6728,8 +6734,8 @@ tr:nth-child(even) td{background:#f7fafc}
 @media print{@page{margin:12mm}}
 </style></head><body>
 <div class="no-print" style="display:block;margin-bottom:10px"><button onclick="window.print()" style="padding:6px 16px;background:#38a169;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Vazirmatn',sans-serif">📄 ذخیره PDF</button></div>
-<h1>${title}</h1>
-<div class="meta">نام: <b>${person.name}</b> &nbsp;|&nbsp; تاریخ آرشیو: ${h.createdAt||''} &nbsp;|&nbsp; تعداد ردیف: ${n2fa(rows.length)}</div>
+<h1>${person.name}</h1>
+<div class="meta">${archiveLabel} &nbsp;|&nbsp; تاریخ: ${h.createdAt||''} &nbsp;|&nbsp; تعداد ردیف: ${n2fa(rows.length)}</div>
 <div class="split-row">
   <div class="split-box" style="border-color:#38a16966">
     <div class="split-title">⛽ حساب پطرول</div>
