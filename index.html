@@ -6000,7 +6000,6 @@ function _splitTotals(rows){
   return t;
 }
 function renderPersonRows(person) {
-  const hasSubs = Array.isArray(person.subs) && person.subs.length > 0;
   const stackedWrap = document.getElementById('pm-stacked-wrap');
   const xlsWrap = document.querySelector('#personModal .xls-wrap');
   const filterBar = document.querySelector('#personModal .pm-filter-bar');
@@ -6008,17 +6007,6 @@ function renderPersonRows(person) {
   const noteArea = document.getElementById('pm-note-area');
   const acctBar = document.querySelector('#personModal .pm-acct-bar');
 
-  if (hasSubs) {
-    if (xlsWrap) xlsWrap.style.display = 'none';
-    if (filterBar) filterBar.style.display = 'none';
-    if (addRowArea) addRowArea.style.display = 'none';
-    if (noteArea) noteArea.style.display = 'none';
-    if (acctBar) acctBar.style.display = '';
-    if (stackedWrap) { stackedWrap.style.display = ''; _renderStackedAccounts(person); }
-    _updatePersonTotals(person);
-    return;
-  }
-  // Single-account mode
   if (xlsWrap) xlsWrap.style.display = '';
   if (filterBar) filterBar.style.display = '';
   if (addRowArea) addRowArea.style.display = '';
