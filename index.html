@@ -7673,22 +7673,27 @@ function _companyPurchases(company){
   return (DB.fuelEntries || []).filter(e => (e.fuelType||'petrol') === fuel && norm(e.seller) === target);
 }
 
+// همهٔ خریدهای این شرکت (هم پطرول هم دیزل) بر اساس نام فروشنده
+function _companyPurchasesAll(company){
+  if (!company) return [];
+  const norm = (typeof normFa === 'function') ? normFa : (s => String(s||'').toLowerCase().trim());
+  const target = norm(company.name);
+  return (DB.fuelEntries || []).filter(e => norm(e.seller) === target);
+}
+
 // دکمهٔ کوچکِ خریدها داخل حساب — با کلیک یک صفحهٔ جداگانه باز می‌شود (نه کشویی)
 function renderCompanyPurchases(company){
   const cont = document.getElementById('cm-purchases');
   if (!cont) return;
-  const entries = _companyPurchases(company);
-  const color = currentCompanyFuel === 'diesel' ? '#b7791f' : 'var(--accent)';
-  const icon  = currentCompanyFuel === 'diesel' ? '🟤' : '⛽';
-  const label = currentCompanyFuel === 'diesel' ? 'دیزل' : 'پطرول';
-  if (!entries.length){
-    cont.innerHTML = `<span style="display:inline-block;color:var(--muted);padding:8px 16px;font-size:0.82rem;border:1px dashed var(--border);border-radius:999px">📦 خریدِ ${label}ی نیست</span>`;
+  const all = _companyPurchasesAll(company);   // هم پطرول هم دیزل
+  if (!all.length){
+    cont.innerHTML = `<span style="display:inline-block;color:var(--muted);padding:8px 16px;font-size:0.82rem;border:1px dashed var(--border);border-radius:999px">📦 خریدی نیست</span>`;
     return;
   }
-  cont.innerHTML = `<button type="button" onclick="openCompanyPurchases()" style="display:inline-flex;align-items:center;gap:8px;background:var(--dark);border:1.5px solid ${color};border-radius:999px;padding:8px 16px;color:${color};font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">${icon} خریدهای ${label} — ${n2fa(entries.length)} خرید ↗</button>`;
+  cont.innerHTML = `<button type="button" onclick="openCompanyPurchases()" style="display:inline-flex;align-items:center;gap:8px;background:var(--dark);border:1.5px solid var(--accent);border-radius:999px;padding:8px 16px;color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">📦 خریدهای این شرکت — ${n2fa(all.length)} خرید ↗</button>`;
 }
 
-// باز کردن صفحهٔ جداگانهٔ خریدهای همین شرکت (فقط خریدها)
+// باز کردن صفحهٔ جداگانهٔ خریدهای همین شرکت (پطرول + دیزل)
 function openCompanyPurchases(){
   const company = (DB.tilCompanies||[]).find(c => c.id === currentCompanyId);
   if (!company) return;
@@ -7698,19 +7703,12 @@ function openCompanyPurchases(){
 function closeCompanyPurchases(){
   document.getElementById('companyPurchasesModal').classList.remove('open');
 }
-function renderCompanyPurchasesPage(company){
-  const cont = document.getElementById('cmp-body');
-  const titleEl = document.getElementById('cmp-title');
-  if (!cont) return;
-  const entries = _companyPurchases(company);
-  const color = currentCompanyFuel === 'diesel' ? '#b7791f' : 'var(--accent)';
-  const icon  = currentCompanyFuel === 'diesel' ? '🟤' : '⛽';
-  const label = currentCompanyFuel === 'diesel' ? 'دیزل' : 'پطرول';
-  if (titleEl) titleEl.textContent = '📦 خریدهای ' + label + ' — ' + (company.name||'');
-  if (!entries.length){
-    cont.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">هیچ خریدی ثبت نشده</div>';
-    return;
-  }
+// یک بخشِ خرید (پطرول یا دیزل) را با خلاصه و کارت‌ها می‌سازد
+function _companyPurchaseSection(entries, fuel){
+  if (!entries.length) return '';
+  const color = fuel === 'diesel' ? '#b7791f' : 'var(--accent)';
+  const icon  = fuel === 'diesel' ? '🟤' : '⛽';
+  const label = fuel === 'diesel' ? 'دیزل' : 'پطرول';
   let sumAfn = 0, sumUsd = 0, sumLit = 0, cards = '';
   entries.forEach((e, i) => {
     sumAfn += (e.totalAFN||0); sumUsd += (e.totalUSD||0); sumLit += (e.liters||0);
@@ -7738,14 +7736,32 @@ function renderCompanyPurchasesPage(company){
       </div>
     </div>`;
   });
-  cont.innerHTML = `
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-      <span style="font-size:0.8rem;background:var(--dark);border:1px solid ${color};border-radius:9px;padding:7px 12px">تعداد خرید: <b style="color:${color}">${n2fa(entries.length)}</b></span>
-      <span style="font-size:0.8rem;background:var(--dark);border:1px solid ${color};border-radius:9px;padding:7px 12px">جمع لیتر: <b style="color:var(--green)">${n2fa(Math.round(sumLit))}</b></span>
-      <span style="font-size:0.8rem;background:var(--dark);border:1px solid ${color};border-radius:9px;padding:7px 12px">جمع کل دالر: <b style="color:var(--blue)">${n2fa(sumUsd.toFixed(1))} $</b></span>
-      <span style="font-size:0.8rem;background:var(--dark);border:1px solid ${color};border-radius:9px;padding:7px 12px">جمع کل افغانی: <b style="color:${color}">${n2fa(Math.round(sumAfn))}</b></span>
-    </div>
-    ${cards}`;
+  return `
+    <div style="margin-bottom:20px">
+      <div style="font-size:1rem;font-weight:800;color:${color};margin:0 2px 10px">${icon} خریدهای ${label}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <span style="font-size:0.8rem;background:var(--dark);border:1px solid ${color};border-radius:9px;padding:7px 12px">تعداد: <b style="color:${color}">${n2fa(entries.length)}</b></span>
+        <span style="font-size:0.8rem;background:var(--dark);border:1px solid ${color};border-radius:9px;padding:7px 12px">جمع لیتر: <b style="color:var(--green)">${n2fa(Math.round(sumLit))}</b></span>
+        <span style="font-size:0.8rem;background:var(--dark);border:1px solid ${color};border-radius:9px;padding:7px 12px">جمع کل دالر: <b style="color:var(--blue)">${n2fa(sumUsd.toFixed(1))} $</b></span>
+        <span style="font-size:0.8rem;background:var(--dark);border:1px solid ${color};border-radius:9px;padding:7px 12px">جمع کل افغانی: <b style="color:${color}">${n2fa(Math.round(sumAfn))}</b></span>
+      </div>
+      ${cards}
+    </div>`;
+}
+function renderCompanyPurchasesPage(company){
+  const cont = document.getElementById('cmp-body');
+  const titleEl = document.getElementById('cmp-title');
+  if (!cont) return;
+  if (titleEl) titleEl.textContent = '📦 خریدهای ' + (company.name||'');
+  const norm = (typeof normFa === 'function') ? normFa : (s => String(s||'').toLowerCase().trim());
+  const target = norm(company.name);
+  const petrol = (DB.fuelEntries||[]).filter(e => (e.fuelType||'petrol') === 'petrol' && norm(e.seller) === target);
+  const diesel = (DB.fuelEntries||[]).filter(e => (e.fuelType||'petrol') === 'diesel' && norm(e.seller) === target);
+  if (!petrol.length && !diesel.length){
+    cont.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">هیچ خریدی ثبت نشده</div>';
+    return;
+  }
+  cont.innerHTML = _companyPurchaseSection(petrol, 'petrol') + _companyPurchaseSection(diesel, 'diesel');
 }
 
 // «جدول جدید» شرکت — جدول فعلی را آرشیو می‌کند و یک جدول خالی می‌سازد (مثل بخش قرض‌داران، بدون دست‌زدن به آن)
