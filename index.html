@@ -3384,6 +3384,7 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
       <h2 id="companyModalTitle" style="flex:1;text-align:center">🛢️ شرکت</h2>
       <div style="display:flex;align-items:center;gap:6px">
         <button class="add-row-btn" id="cm-fuel-btn" style="margin:0;border-color:#b7791f;color:#b7791f;padding:5px 10px;font-size:0.78rem" onclick="toggleCompanyFuel()">🟤 دیزل</button>
+        <button class="add-row-btn" style="margin:0;border-color:var(--blue);color:var(--blue);padding:5px 10px;font-size:0.78rem" onclick="newCompanyTable()">📋 جدول جدید</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--accent);color:var(--accent);padding:5px 10px;font-size:0.78rem" onclick="renameCurrentCompany()">✏️ تغییر نام</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green);padding:5px 10px;font-size:0.78rem" onclick="pdfCompany()">📄 PDF</button>
         <button class="modal-close" onclick="closeCompanyModal()">✕</button>
@@ -3438,8 +3439,10 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
           <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green)" onclick="addCompanyRowsBulk()">➕ افزودن چندتایی</button>
         </div>
       </div>
-      <!-- کادر خریدهای تیلِ این شرکت (مثل کارت‌های مخزن) -->
+      <!-- کادر خریدهای تیلِ این شرکت (دکمهٔ بازشونده) -->
       <div id="cm-purchases" style="margin-top:18px"></div>
+      <!-- جدول‌های آرشیو‌شدهٔ شرکت — هر بار «جدول جدید» زده شود اینجا اضافه می‌شود -->
+      <div id="cm-history-wrap" style="display:none;margin-top:14px"></div>
     </div>
   </div>
 </div>
@@ -7240,6 +7243,7 @@ function toggleCompanyFuel(){
   _setCompanyTitle(company, idx, companies.length);
   renderCompanyRows(company);
   renderCompanyPurchases(company);
+  _renderCompanyHistoryPanel(company);
 }
 
 function cmpEsc(s){ return String(s==null?'':s).replace(/"/g,'&quot;'); }
@@ -7558,6 +7562,7 @@ function openCompanyModal(id) {
   _setCompanyTitle(company, idx, companies.length);
   renderCompanyRows(company);
   renderCompanyPurchases(company);
+  _renderCompanyHistoryPanel(company);
   document.getElementById('companyModal').classList.add('open');
   _updateCompanyNavBtns();
   if (_modalFontScale !== 1) setTimeout(() => adjModalFont(0), 30);
@@ -7582,6 +7587,7 @@ function navigateCompany(dir) {
   _setCompanyTitle(company, newIdx, companies.length);
   renderCompanyRows(company);
   renderCompanyPurchases(company);
+  _renderCompanyHistoryPanel(company);
   _updateCompanyNavBtns();
 }
 
@@ -7642,7 +7648,15 @@ function _companyPurchases(company){
   return (DB.fuelEntries || []).filter(e => (e.fuelType||'petrol') === fuel && norm(e.seller) === target);
 }
 
-// کارت‌های خرید تیلِ این شرکت — همان قالبِ بخش مخزن، داخل حساب شرکت
+// کادرِ خریدهای تیلِ این شرکت — به‌صورت دکمهٔ بازشونده تا جدول را بزرگ/شلوغ نکند
+let _cmPurchasesOpen = false;
+function toggleCompanyPurchases(){
+  _cmPurchasesOpen = !_cmPurchasesOpen;
+  const box = document.getElementById('cm-purchases-list');
+  if (box) box.style.display = _cmPurchasesOpen ? 'block' : 'none';
+  const ar = document.getElementById('cm-purchases-arrow');
+  if (ar) ar.textContent = _cmPurchasesOpen ? '▲' : '▼';
+}
 function renderCompanyPurchases(company){
   const cont = document.getElementById('cm-purchases');
   if (!cont) return;
@@ -7651,15 +7665,12 @@ function renderCompanyPurchases(company){
   const icon  = currentCompanyFuel === 'diesel' ? '🟤' : '⛽';
   const label = currentCompanyFuel === 'diesel' ? 'دیزل' : 'پطرول';
   if (!entries.length){
-    cont.innerHTML = `<div style="text-align:center;color:var(--muted);padding:18px;font-size:0.82rem;border:1px dashed var(--border);border-radius:12px">هنوز خریدِ ${label}ی برای این شرکت در بخش مخزن ثبت نشده</div>`;
+    cont.innerHTML = `<div style="text-align:center;color:var(--muted);padding:12px;font-size:0.8rem;border:1px dashed var(--border);border-radius:10px">📦 خریدِ ${label}ی برای این شرکت ثبت نشده</div>`;
     return;
   }
-  let html = `<div style="font-size:0.92rem;font-weight:800;color:${color};margin:0 2px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-    <span>${icon} خریدهای ${label} از این شرکت</span>
-    <span style="background:${color};color:#fff;border-radius:7px;padding:1px 11px;font-size:0.8rem">${n2fa(entries.length)} خرید</span>
-  </div>`;
+  let cards = '';
   entries.forEach((e, i) => {
-    html += `
+    cards += `
     <div class="card" style="margin-bottom:10px">
       <div class="card-head" style="padding:10px 14px">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -7683,7 +7694,91 @@ function renderCompanyPurchases(company){
       </div>
     </div>`;
   });
-  cont.innerHTML = html;
+  cont.innerHTML = `
+    <button type="button" id="cm-purchases-toggle" onclick="toggleCompanyPurchases()" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--dark);border:1px solid ${color};border-radius:10px;padding:10px 14px;color:${color};font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.9rem;cursor:pointer">
+      <span>${icon} خریدهای ${label} از این شرکت — ${n2fa(entries.length)} خرید</span>
+      <span id="cm-purchases-arrow">${_cmPurchasesOpen ? '▲' : '▼'}</span>
+    </button>
+    <div id="cm-purchases-list" style="display:${_cmPurchasesOpen ? 'block' : 'none'};margin-top:10px">${cards}</div>`;
+}
+
+// «جدول جدید» شرکت — جدول فعلی را آرشیو می‌کند و یک جدول خالی می‌سازد (مثل بخش قرض‌داران، بدون دست‌زدن به آن)
+function newCompanyTable(){
+  const company = (DB.tilCompanies||[]).find(c => c.id === currentCompanyId);
+  if (!company) return;
+  const rows = _cmpRows(company);
+  if (!rows.length){ if (typeof showToast==='function') showToast('جدول فعلی خالی است', '#e53e3e'); return; }
+  if (!Array.isArray(company.tableHistory)) company.tableHistory = [];
+  company.tableHistory.push({
+    id: 'ch' + Date.now(),
+    createdAt: (typeof persianDate === 'function' ? persianDate() : ''),
+    fuel: currentCompanyFuel,
+    rows: JSON.parse(JSON.stringify(rows))
+  });
+  if (currentCompanyFuel === 'diesel') company.dieselRows = []; else company.rows = [];
+  save();
+  renderCompanyRows(company);
+  renderCompanyPurchases(company);
+  _renderCompanyHistoryPanel(company);
+  setTimeout(() => { const hw = document.getElementById('cm-history-wrap'); if (hw) hw.scrollIntoView({ behavior:'smooth', block:'start' }); }, 80);
+  if (typeof showToast === 'function') showToast('✅ جدول جدید ساخته شد — جدول قبلی پایین آرشیو شد', '#38a169');
+}
+
+// رندر جدول‌های آرشیو‌شدهٔ شرکت (فقط‌خواندنی) زیر مودال
+function _renderCompanyHistoryPanel(company){
+  const wrap = document.getElementById('cm-history-wrap');
+  if (!wrap || !company) return;
+  const history = company.tableHistory || [];
+  if (!history.length){ wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+  wrap.style.display = '';
+  const COLORS = ['#3182ce','#38a169','#805ad5','#d97706','#e53e3e','#dd6b20'];
+  wrap.innerHTML = '<div style="font-size:0.9rem;font-weight:800;color:var(--muted);margin:4px 2px 10px">🗂️ جدول‌های آرشیو‌شده</div>' +
+    [...history].reverse().map((h, hi) => {
+      const ac = COLORS[hi % COLORS.length];
+      const rows = h.rows || [];
+      const sumUsd = rows.reduce((a,r)=>a+cmpTotalUsd(r), 0);
+      const sumAfn = rows.reduce((a,r)=>a+cmpAfnTotal(r), 0);
+      const rate = sumUsd > 0 ? sumAfn / sumUsd : 0;
+      let tTon=0,tUsd=0,tAfn=0,tPoul=0,tAlb=0;
+      const body = rows.map((r,i)=>{
+        const ton=cmpTon(r), tu=cmpTotalUsd(r), ta=cmpAfnTotal(r), poul=cmpPoulAfn(r,rate), ab=cmpAlbaqi(r,rate);
+        tTon+=ton; tUsd+=tu; tAfn+=ta; tPoul+=poul; tAlb+=ab;
+        const kgShow = (r.kg!=null && r.kg!=='' && +r.kg!==0) ? r.kg : (r.ton ? Math.round(parseFloat(r.ton)*1000) : '');
+        return `<tr>
+          <td class="xls-num">${n2fa(i+1)}</td>
+          <td>${cmpEsc(r.date||'')}</td>
+          <td>${cmpEsc(r.name||'')}</td>
+          <td>${kgShow!==''?n2fa(kgShow):''}</td>
+          <td>${n2fa(parseFloat(r.usd)||0)}</td>
+          <td style="color:var(--blue);font-weight:700">${n2fa(tu.toFixed(1))} $</td>
+          <td>${n2fa(parseFloat(r.rate)||0)}</td>
+          <td style="color:var(--accent);font-weight:700">${n2fa(Math.round(ta))}</td>
+          <td style="color:var(--green);font-weight:700">${n2fa(Math.round(poul))}</td>
+          <td style="color:${ab>0?'var(--red)':'var(--green)'};font-weight:700">${n2fa(Math.round(ab))}</td>
+        </tr>`;
+      }).join('');
+      const fuelLabel = h.fuel === 'diesel' ? '🟤 دیزل' : '⛽ پطرول';
+      return `<div style="border:1.5px solid ${ac}66;border-radius:12px;margin-bottom:12px;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:${ac}18">
+          <span style="font-weight:800;color:${ac};font-size:0.85rem">🗂️ جدول ${n2fa(history.length-hi)} — ${fuelLabel}</span>
+          <span style="font-size:0.72rem;color:var(--muted)">${h.createdAt||''}</span>
+          <button class="del-btn" onclick="deleteCompanyTableHistory('${company.id}','${h.id}')">🗑️</button>
+        </div>
+        <div class="xls-wrap"><table class="xls-tbl">
+          <thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>خرید(کیلو)</th><th>قیمت تن($)</th><th style="min-width:90px">کل($)</th><th>نرخ</th><th style="min-width:100px">کل(افغانی)</th><th>رسید</th><th style="min-width:100px">الباقی</th></tr></thead>
+          <tbody>${body}</tbody>
+          <tfoot class="xls-foot"><tr><td colspan="3" style="padding:7px">جمع</td><td>${n2fa(Math.round(tTon*1000))}</td><td></td><td>${n2fa(tUsd.toFixed(1))} $</td><td></td><td>${n2fa(Math.round(tAfn))}</td><td>${n2fa(Math.round(tPoul))}</td><td>${n2fa(Math.round(tAlb))}</td></tr></tfoot>
+        </table></div>
+      </div>`;
+    }).join('');
+}
+function deleteCompanyTableHistory(cid, hid){
+  if (!confirm('این جدول آرشیو حذف شود؟')) return;
+  const c = (DB.tilCompanies||[]).find(x => x.id === cid);
+  if (!c) return;
+  c.tableHistory = (c.tableHistory||[]).filter(h => h.id !== hid);
+  save();
+  _renderCompanyHistoryPanel(c);
 }
 
 function setCompanyPoulCurrency(cid, idx, val) {
