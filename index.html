@@ -7437,7 +7437,6 @@ function renderCompanies() {
       <div class="pname">🛢️ ${c.name}</div>
       <div style="display:flex;justify-content:center;gap:10px;margin:6px 0;flex-wrap:wrap">
         <span style="font-size:0.82rem;font-weight:800;color:var(--blue)">💲 ${n2fa(sumUsd.toFixed(1))} $</span>
-        <span style="font-size:0.82rem;font-weight:800;color:${albaqi>0?'var(--red)':'var(--green)'}">📊 ${n2fa(Math.round(albaqi))} افغ</span>
       </div>
       <div class="pdebt ${settled?'clear':''}">${settled ? '✅ تسویه' : 'الباقی: '+n2fa(Math.round(albaqi))+' افغانی'}</div>
       <div style="display:flex;gap:6px;margin-top:8px">
