@@ -174,8 +174,9 @@ body.viewer-mode .ft-opt{pointer-events:none !important;opacity:.85}
 .modal-overlay.open{display:flex}
 #personModal{padding:0;align-items:stretch}
 #personModal .modal{max-width:100%!important;width:100%!important;height:100vh!important;max-height:100vh!important;border-radius:0!important;border:none!important;box-shadow:none!important}
-#companyModal{padding:0;align-items:stretch}
-#companyModal .modal{max-width:100%!important;width:100%!important;height:100vh!important;max-height:100vh!important;border-radius:0!important;border:none!important;box-shadow:none!important}
+#companyModal,#companyPurchasesModal{padding:0;align-items:stretch}
+#companyModal .modal,#companyPurchasesModal .modal{max-width:100%!important;width:100%!important;height:100vh!important;max-height:100vh!important;border-radius:0!important;border:none!important;box-shadow:none!important}
+#companyPurchasesModal .modal-body{overflow-y:auto}
 .person-nav-btn{padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap}
 .person-nav-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent);background:var(--dark)}
 .person-nav-btn:disabled{opacity:.3;cursor:default}
@@ -3399,12 +3400,13 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
     </div>
     <div id="cm-albaqi-sentence" style="margin:0 14px 12px;padding:14px 16px;border-radius:12px;border:1px solid var(--border);background:var(--card);font-weight:800;font-size:1rem;line-height:1.8;text-align:center">—</div>
     <div class="modal-body">
-      <!-- نوار دکمه‌های کوچک بالای جدول: خریدها + جدول جدید (بدون اسکرول) -->
+      <!-- نوار دکمه‌های کوچک بالای جدول -->
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
         <button type="button" onclick="newCompanyTable()" style="display:inline-flex;align-items:center;gap:7px;background:var(--dark);border:1.5px solid var(--green);border-radius:999px;padding:8px 16px;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">📋 جدول جدید</button>
+        <button type="button" id="cm-del-current-btn" onclick="deleteCurrentCompanyTable(this)" style="display:inline-flex;align-items:center;gap:7px;background:var(--dark);border:1.5px solid var(--red);border-radius:999px;padding:8px 16px;color:var(--red);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">🗑️ حذف این جدول</button>
+        <!-- دکمهٔ کوچکِ خریدها — با کلیک یک صفحهٔ جدا باز می‌شود (نه کشویی) -->
+        <span id="cm-purchases"></span>
       </div>
-      <!-- کادرِ خریدهای تیلِ این شرکت — دکمهٔ کوچک بالای جدول (بدون اسکرول) -->
-      <div id="cm-purchases" style="margin-bottom:14px"></div>
       <div class="xls-wrap">
         <table class="xls-tbl" id="cm-tbl">
           <thead><tr>
@@ -3447,6 +3449,17 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
       <!-- جدول‌های آرشیو‌شدهٔ شرکت — هر بار «جدول جدید» زده شود اینجا اضافه می‌شود -->
       <div id="cm-history-wrap" style="display:none;margin-top:14px"></div>
     </div>
+  </div>
+</div>
+
+<!-- COMPANY PURCHASES MODAL — صفحهٔ جداگانه فقط برای خریدهای یک شرکت -->
+<div class="modal-overlay" id="companyPurchasesModal">
+  <div class="modal">
+    <div class="modal-head" style="gap:10px;flex-wrap:wrap">
+      <h2 id="cmp-title" style="flex:1;text-align:center">📦 خریدها</h2>
+      <button class="modal-close" onclick="closeCompanyPurchases()">✕</button>
+    </div>
+    <div class="modal-body" id="cmp-body"></div>
   </div>
 </div>
 
@@ -5829,11 +5842,17 @@ function deletePurchase(id) {
   });
   save(); renderStorage(); updateBanner();
   if (typeof renderCompanies === 'function') renderCompanies();
-  // اگر حساب شرکت باز است، جدول و کارت‌های خرید را تازه کن
+  // اگر حساب شرکت باز است، جدول و دکمهٔ خرید را تازه کن
   const cmOpen = document.getElementById('companyModal');
   if (cmOpen && cmOpen.classList.contains('open') && currentCompanyId) {
     const c = (DB.tilCompanies||[]).find(x => x.id === currentCompanyId);
     if (c) { renderCompanyRows(c); renderCompanyPurchases(c); }
+  }
+  // اگر صفحهٔ جداگانهٔ خریدها باز است، تازه‌اش کن
+  const cmpOpen = document.getElementById('companyPurchasesModal');
+  if (cmpOpen && cmpOpen.classList.contains('open') && currentCompanyId) {
+    const c = (DB.tilCompanies||[]).find(x => x.id === currentCompanyId);
+    if (c) renderCompanyPurchasesPage(c);
   }
 }
 
@@ -7654,15 +7673,7 @@ function _companyPurchases(company){
   return (DB.fuelEntries || []).filter(e => (e.fuelType||'petrol') === fuel && norm(e.seller) === target);
 }
 
-// کادرِ خریدهای تیلِ این شرکت — به‌صورت دکمهٔ بازشونده تا جدول را بزرگ/شلوغ نکند
-let _cmPurchasesOpen = false;
-function toggleCompanyPurchases(){
-  _cmPurchasesOpen = !_cmPurchasesOpen;
-  const box = document.getElementById('cm-purchases-list');
-  if (box) box.style.display = _cmPurchasesOpen ? 'block' : 'none';
-  const ar = document.getElementById('cm-purchases-arrow');
-  if (ar) ar.textContent = _cmPurchasesOpen ? '▲' : '▼';
-}
+// دکمهٔ کوچکِ خریدها داخل حساب — با کلیک یک صفحهٔ جداگانه باز می‌شود (نه کشویی)
 function renderCompanyPurchases(company){
   const cont = document.getElementById('cm-purchases');
   if (!cont) return;
@@ -7671,11 +7682,36 @@ function renderCompanyPurchases(company){
   const icon  = currentCompanyFuel === 'diesel' ? '🟤' : '⛽';
   const label = currentCompanyFuel === 'diesel' ? 'دیزل' : 'پطرول';
   if (!entries.length){
-    cont.innerHTML = `<div style="display:inline-block;color:var(--muted);padding:7px 14px;font-size:0.78rem;border:1px dashed var(--border);border-radius:999px">📦 خریدِ ${label}ی برای این شرکت ثبت نشده</div>`;
+    cont.innerHTML = `<span style="display:inline-block;color:var(--muted);padding:8px 16px;font-size:0.82rem;border:1px dashed var(--border);border-radius:999px">📦 خریدِ ${label}ی نیست</span>`;
     return;
   }
-  let sumAfn = 0, sumUsd = 0, sumLit = 0;
-  let cards = '';
+  cont.innerHTML = `<button type="button" onclick="openCompanyPurchases()" style="display:inline-flex;align-items:center;gap:8px;background:var(--dark);border:1.5px solid ${color};border-radius:999px;padding:8px 16px;color:${color};font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">${icon} خریدهای ${label} — ${n2fa(entries.length)} خرید ↗</button>`;
+}
+
+// باز کردن صفحهٔ جداگانهٔ خریدهای همین شرکت (فقط خریدها)
+function openCompanyPurchases(){
+  const company = (DB.tilCompanies||[]).find(c => c.id === currentCompanyId);
+  if (!company) return;
+  renderCompanyPurchasesPage(company);
+  document.getElementById('companyPurchasesModal').classList.add('open');
+}
+function closeCompanyPurchases(){
+  document.getElementById('companyPurchasesModal').classList.remove('open');
+}
+function renderCompanyPurchasesPage(company){
+  const cont = document.getElementById('cmp-body');
+  const titleEl = document.getElementById('cmp-title');
+  if (!cont) return;
+  const entries = _companyPurchases(company);
+  const color = currentCompanyFuel === 'diesel' ? '#b7791f' : 'var(--accent)';
+  const icon  = currentCompanyFuel === 'diesel' ? '🟤' : '⛽';
+  const label = currentCompanyFuel === 'diesel' ? 'دیزل' : 'پطرول';
+  if (titleEl) titleEl.textContent = '📦 خریدهای ' + label + ' — ' + (company.name||'');
+  if (!entries.length){
+    cont.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">هیچ خریدی ثبت نشده</div>';
+    return;
+  }
+  let sumAfn = 0, sumUsd = 0, sumLit = 0, cards = '';
   entries.forEach((e, i) => {
     sumAfn += (e.totalAFN||0); sumUsd += (e.totalUSD||0); sumLit += (e.liters||0);
     cards += `
@@ -7703,18 +7739,13 @@ function renderCompanyPurchases(company){
     </div>`;
   });
   cont.innerHTML = `
-    <button type="button" id="cm-purchases-toggle" onclick="toggleCompanyPurchases()" style="display:inline-flex;align-items:center;gap:9px;background:var(--dark);border:1.5px solid ${color};border-radius:999px;padding:8px 16px;color:${color};font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">
-      <span>${icon} خریدهای ${label} — ${n2fa(entries.length)} خرید</span>
-      <span id="cm-purchases-arrow" style="font-size:0.75rem">${_cmPurchasesOpen ? '▲' : '▼'}</span>
-    </button>
-    <div id="cm-purchases-list" style="display:${_cmPurchasesOpen ? 'block' : 'none'};margin-top:12px">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-        <span style="font-size:0.74rem;background:var(--dark);border:1px solid ${color};border-radius:8px;padding:5px 10px">جمع لیتر: <b style="color:var(--green)">${n2fa(Math.round(sumLit))}</b></span>
-        <span style="font-size:0.74rem;background:var(--dark);border:1px solid ${color};border-radius:8px;padding:5px 10px">جمع کل دالر: <b style="color:var(--blue)">${n2fa(sumUsd.toFixed(1))} $</b></span>
-        <span style="font-size:0.74rem;background:var(--dark);border:1px solid ${color};border-radius:8px;padding:5px 10px">جمع کل افغانی: <b style="color:${color}">${n2fa(Math.round(sumAfn))}</b></span>
-      </div>
-      ${cards}
-    </div>`;
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <span style="font-size:0.8rem;background:var(--dark);border:1px solid ${color};border-radius:9px;padding:7px 12px">تعداد خرید: <b style="color:${color}">${n2fa(entries.length)}</b></span>
+      <span style="font-size:0.8rem;background:var(--dark);border:1px solid ${color};border-radius:9px;padding:7px 12px">جمع لیتر: <b style="color:var(--green)">${n2fa(Math.round(sumLit))}</b></span>
+      <span style="font-size:0.8rem;background:var(--dark);border:1px solid ${color};border-radius:9px;padding:7px 12px">جمع کل دالر: <b style="color:var(--blue)">${n2fa(sumUsd.toFixed(1))} $</b></span>
+      <span style="font-size:0.8rem;background:var(--dark);border:1px solid ${color};border-radius:9px;padding:7px 12px">جمع کل افغانی: <b style="color:${color}">${n2fa(Math.round(sumAfn))}</b></span>
+    </div>
+    ${cards}`;
 }
 
 // «جدول جدید» شرکت — جدول فعلی را آرشیو می‌کند و یک جدول خالی می‌سازد (مثل بخش قرض‌داران، بدون دست‌زدن به آن)
@@ -7737,6 +7768,42 @@ function newCompanyTable(){
   _renderCompanyHistoryPanel(company);
   setTimeout(() => { const hw = document.getElementById('cm-history-wrap'); if (hw) hw.scrollIntoView({ behavior:'smooth', block:'start' }); }, 80);
   if (typeof showToast === 'function') showToast('✅ جدول جدید ساخته شد — جدول قبلی پایین آرشیو شد', '#38a169');
+}
+
+// «حذف این جدول» — جدولِ فعلیِ همین شرکت را پاک می‌کند؛ اگر جدولِ قبلی (آرشیو) باشد آن را برمی‌گرداند (لغوِ «جدول جدید»).
+// تأیید دومرحله‌ای است تا در وب‌ویوهایی که confirm ندارند هم کار کند.
+let _cmCurDelArm = false;
+let _cmCurDelTimer = null;
+function deleteCurrentCompanyTable(btn){
+  const company = (DB.tilCompanies||[]).find(c => c.id === currentCompanyId);
+  if (!company) return;
+  if (!_cmCurDelArm){
+    _cmCurDelArm = true;
+    if (btn){ btn.textContent = '✔ تأیید حذف این جدول؟'; btn.style.background = 'var(--red)'; btn.style.color = '#fff'; }
+    if (_cmCurDelTimer) clearTimeout(_cmCurDelTimer);
+    _cmCurDelTimer = setTimeout(()=>{ _cmCurDelArm = false; const b=document.getElementById('cm-del-current-btn'); if(b){ b.textContent='🗑️ حذف این جدول'; b.style.background=''; b.style.color='var(--red)'; } }, 3500);
+    if (typeof showToast === 'function') showToast('برای حذفِ جدولِ فعلی، دوباره بزنید', '#dd6b20');
+    return;
+  }
+  if (_cmCurDelTimer) clearTimeout(_cmCurDelTimer);
+  _cmCurDelArm = false;
+  // آخرین جدولِ آرشیوِ هم‌سوخت را پیدا کن تا برگردانده شود (لغوِ جدول جدید)
+  const hist = company.tableHistory || [];
+  let restoreIdx = -1;
+  for (let i = hist.length - 1; i >= 0; i--){ if ((hist[i].fuel||'petrol') === currentCompanyFuel){ restoreIdx = i; break; } }
+  if (restoreIdx >= 0){
+    const arch = hist[restoreIdx];
+    if (currentCompanyFuel === 'diesel') company.dieselRows = arch.rows || []; else company.rows = arch.rows || [];
+    hist.splice(restoreIdx, 1);
+    if (typeof showToast === 'function') showToast('🗑️ جدولِ فعلی حذف شد — جدولِ قبلی برگشت', '#e53e3e');
+  } else {
+    if (currentCompanyFuel === 'diesel') company.dieselRows = []; else company.rows = [];
+    if (typeof showToast === 'function') showToast('🗑️ جدولِ فعلی پاک شد', '#e53e3e');
+  }
+  save();
+  renderCompanyRows(company);
+  renderCompanyPurchases(company);
+  _renderCompanyHistoryPanel(company);
 }
 
 // رندر جدول‌های آرشیو‌شدهٔ شرکت (فقط‌خواندنی) زیر مودال
