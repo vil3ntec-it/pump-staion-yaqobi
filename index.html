@@ -2526,7 +2526,7 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
         <div class="field-row"><label class="field-label" style="color:var(--green);font-weight:700">💵 پول موجود افغانی — خودکار</label><div class="calc-row" id="dd-available" style="color:var(--green);font-weight:800;font-size:1.05rem">—</div></div>
         <div class="field-row"><label class="field-label">یادداشت</label><input class="field-input" id="dd-note" placeholder="..."></div>
       </div>
-      <div class="shift-footer"><button class="save-btn day" style="background:#b7791f" onclick="saveShift('day','diesel')">💾 ذخیره روزانه دیزل</button></div>
+      <div class="shift-footer" style="display:flex;gap:8px;flex-wrap:wrap"><button class="save-btn day" style="background:#b7791f;flex:1" onclick="saveShift('day','diesel')">💾 ذخیره روزانه دیزل</button><button class="save-btn" style="flex:0 0 auto;background:var(--blue);color:#fff" onclick="newParcha('day','diesel')" title="ثبت پارچهٔ دیزل جدید روز (بدون پاک‌شدن پارچهٔ قبلی)">🆕 پارچهٔ جدید</button></div>
     </div>
     <!-- NIGHT DIESEL -->
     <div class="shift-card">
@@ -2558,7 +2558,7 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
         <div class="field-row"><label class="field-label" style="color:var(--green);font-weight:700">💵 پول موجود افغانی — خودکار</label><div class="calc-row" id="dn-available" style="color:var(--green);font-weight:800;font-size:1.05rem">—</div></div>
         <div class="field-row"><label class="field-label">یادداشت</label><input class="field-input" id="dn-note" placeholder="..."></div>
       </div>
-      <div class="shift-footer"><button class="save-btn night" style="background:#744210" onclick="saveShift('night','diesel')">💾 ذخیره شبانه دیزل</button></div>
+      <div class="shift-footer" style="display:flex;gap:8px;flex-wrap:wrap"><button class="save-btn night" style="background:#744210;flex:1" onclick="saveShift('night','diesel')">💾 ذخیره شبانه دیزل</button><button class="save-btn" style="flex:0 0 auto;background:var(--blue);color:#fff" onclick="newParcha('night','diesel')" title="ثبت پارچهٔ دیزل جدید شب (بدون پاک‌شدن پارچهٔ قبلی)">🆕 پارچهٔ جدید</button></div>
     </div>
   </div>
 
@@ -4668,14 +4668,17 @@ function reapplyUnionRateToPrefix(p) {
   }
 }
 
-// «پارچهٔ جدید» — اجازهٔ ثبت چند پارچه برای یک شیفت در یک روز
+// «پارچهٔ جدید» — اجازهٔ ثبت چند پارچه برای یک شیفت در یک روز (هم پطرول، هم دیزل)
 let _forceNewParcha = { day: false, night: false };
-function newParcha(type) {
+let _forceNewDiesel = { day: false, night: false };
+function newParcha(type, fuel) {
   type = (type === 'night') ? 'night' : 'day';
-  const p = (type === 'day') ? 'd' : 'n';
-  _forceNewParcha[type] = true;
+  const isDiesel = (fuel === 'diesel');
+  const p = isDiesel ? (type === 'day' ? 'dd' : 'dn') : (type === 'day' ? 'd' : 'n');
+  if (isDiesel) _forceNewDiesel[type] = true; else _forceNewParcha[type] = true;
   clearShiftInputs(p);
-  showToast('🆕 پارچهٔ جدید ' + (type==='day'?'روز':'شب') + ' — فرم خالی شد، حالا پر و ذخیره کن', '#2b6cb0');
+  const col = (type === 'day' ? 'روز' : 'شب');
+  showToast('🆕 پارچهٔ ' + (isDiesel ? 'دیزل ' : '') + 'جدید ' + col + ' — فرم خالی شد، حالا پر و ذخیره کن', isDiesel ? '#b7791f' : '#2b6cb0');
 }
 
 function saveShift(type, fuel) {
@@ -4724,11 +4727,13 @@ function saveShift(type, fuel) {
     updateReportLabel('petrol');
     renderLog();
   } else {
-    // دیزل: اگر برای همین شیفت/همین تاریخ قبلاً پارچه‌ای ذخیره شده، همان ردیف به‌روزرسانی شود
-    // (وگرنه هر بار «ذخیره» زدن، یک ردیف تکراری در قرائت پمپ‌های ورق می‌ساخت)
+    // دیزل: به‌صورت پیش‌فرض همان ردیفِ همین شیفت/تاریخ به‌روزرسانی می‌شود تا «ذخیره»های
+    // تکراری (ویرایش) ردیفِ دوتایی در ورق نسازد؛ ولی با دکمهٔ «پارچهٔ جدید» می‌توان چند
+    // پارچهٔ دیزل برای یک روز ثبت کرد (هر کدام یک ردیف جدا در ورق).
     if (!DB.shifts) DB.shifts = [];
     const sameDayDiesel = DB.shifts.filter(s => s.fuel === 'diesel' && s.type === type && s.date === shDate);
-    let rec = sameDayDiesel.length ? sameDayDiesel[sameDayDiesel.length - 1] : null;
+    let rec = (!_forceNewDiesel[type] && sameDayDiesel.length) ? sameDayDiesel[sameDayDiesel.length - 1] : null;
+    _forceNewDiesel[type] = false;
     if (rec) {
       Object.assign(rec, { dateMi: d.mi, dateQa: d.qa, name, start, end, price, profitPer, buyPerLiter, sale, money, debt, available, profit, note });
     } else {
