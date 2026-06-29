@@ -3438,6 +3438,8 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
           <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green)" onclick="addCompanyRowsBulk()">➕ افزودن چندتایی</button>
         </div>
       </div>
+      <!-- کادر خریدهای تیلِ این شرکت (مثل کارت‌های مخزن) -->
+      <div id="cm-purchases" style="margin-top:18px"></div>
     </div>
   </div>
 </div>
@@ -5821,6 +5823,12 @@ function deletePurchase(id) {
   });
   save(); renderStorage(); updateBanner();
   if (typeof renderCompanies === 'function') renderCompanies();
+  // اگر حساب شرکت باز است، جدول و کارت‌های خرید را تازه کن
+  const cmOpen = document.getElementById('companyModal');
+  if (cmOpen && cmOpen.classList.contains('open') && currentCompanyId) {
+    const c = (DB.tilCompanies||[]).find(x => x.id === currentCompanyId);
+    if (c) { renderCompanyRows(c); renderCompanyPurchases(c); }
+  }
 }
 
 // ========== PERSONS (DEBT / NOINV) ==========
@@ -7231,6 +7239,7 @@ function toggleCompanyFuel(){
   _updateCompanyFuelBtn();
   _setCompanyTitle(company, idx, companies.length);
   renderCompanyRows(company);
+  renderCompanyPurchases(company);
 }
 
 function cmpEsc(s){ return String(s==null?'':s).replace(/"/g,'&quot;'); }
@@ -7548,6 +7557,7 @@ function openCompanyModal(id) {
   _updateCompanyFuelBtn();
   _setCompanyTitle(company, idx, companies.length);
   renderCompanyRows(company);
+  renderCompanyPurchases(company);
   document.getElementById('companyModal').classList.add('open');
   _updateCompanyNavBtns();
   if (_modalFontScale !== 1) setTimeout(() => adjModalFont(0), 30);
@@ -7571,6 +7581,7 @@ function navigateCompany(dir) {
   const company = companies[newIdx];
   _setCompanyTitle(company, newIdx, companies.length);
   renderCompanyRows(company);
+  renderCompanyPurchases(company);
   _updateCompanyNavBtns();
 }
 
@@ -7620,6 +7631,59 @@ function renderCompanyRows(company) {
     tbody.appendChild(tr);
   });
   _updateCompanyTotals(company);
+}
+
+// خریدهای تیلِ همین شرکت (از بخش مخزن) را بر اساس نام فروشنده و نوع تیلِ فعال پیدا می‌کند
+function _companyPurchases(company){
+  if (!company) return [];
+  const norm = (typeof normFa === 'function') ? normFa : (s => String(s||'').toLowerCase().trim());
+  const target = norm(company.name);
+  const fuel = currentCompanyFuel === 'diesel' ? 'diesel' : 'petrol';
+  return (DB.fuelEntries || []).filter(e => (e.fuelType||'petrol') === fuel && norm(e.seller) === target);
+}
+
+// کارت‌های خرید تیلِ این شرکت — همان قالبِ بخش مخزن، داخل حساب شرکت
+function renderCompanyPurchases(company){
+  const cont = document.getElementById('cm-purchases');
+  if (!cont) return;
+  const entries = _companyPurchases(company);
+  const color = currentCompanyFuel === 'diesel' ? '#b7791f' : 'var(--accent)';
+  const icon  = currentCompanyFuel === 'diesel' ? '🟤' : '⛽';
+  const label = currentCompanyFuel === 'diesel' ? 'دیزل' : 'پطرول';
+  if (!entries.length){
+    cont.innerHTML = `<div style="text-align:center;color:var(--muted);padding:18px;font-size:0.82rem;border:1px dashed var(--border);border-radius:12px">هنوز خریدِ ${label}ی برای این شرکت در بخش مخزن ثبت نشده</div>`;
+    return;
+  }
+  let html = `<div style="font-size:0.92rem;font-weight:800;color:${color};margin:0 2px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <span>${icon} خریدهای ${label} از این شرکت</span>
+    <span style="background:${color};color:#fff;border-radius:7px;padding:1px 11px;font-size:0.8rem">${n2fa(entries.length)} خرید</span>
+  </div>`;
+  entries.forEach((e, i) => {
+    html += `
+    <div class="card" style="margin-bottom:10px">
+      <div class="card-head" style="padding:10px 14px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-weight:700;color:${color}">${icon} خرید #${n2fa(i+1)}</span>
+          <span style="font-size:0.75rem;color:var(--muted)">📅 ${e.date||'—'}</span>
+          ${e.seller ? `<span style="font-size:0.75rem;color:var(--blue)">👤 ${e.seller}</span>` : ''}
+          ${e.note   ? `<span style="font-size:0.72rem;color:var(--muted);font-style:italic">${e.note}</span>` : ''}
+        </div>
+        <button class="del-btn" style="font-size:1rem;padding:4px 8px" onclick="deletePurchase(${e.id})">🗑️</button>
+      </div>
+      <div style="padding:10px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
+        <div class="stat-box"><div class="stat-label">وزن (کگ)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.kg)}</div></div>
+        <div class="stat-box"><div class="stat-label">وزن (تن)</div><div style="font-weight:800;font-size:0.92rem;color:var(--blue)">${((e.kg||0)/1000).toFixed(3)}</div></div>
+        <div class="stat-box"><div class="stat-label">ثقلت</div><div style="font-weight:800;font-size:0.92rem">${e.density}</div></div>
+        <div class="stat-box"><div class="stat-label">لیتر</div><div style="font-weight:800;font-size:0.92rem;color:var(--green)">${n2fa(Math.round(e.liters||0))}</div></div>
+        <div class="stat-box"><div class="stat-label">فی تن ($)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.priceTon)}</div></div>
+        <div class="stat-box"><div class="stat-label">نرخ دالر</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.usdRate)}</div></div>
+        <div class="stat-box"><div class="stat-label">کل (دالر)</div><div style="font-weight:800;font-size:0.92rem;color:var(--blue)">${n2fa((e.totalUSD||0).toFixed(2))} $</div></div>
+        <div class="stat-box"><div class="stat-label">کل (افغانی)</div><div style="font-weight:800;font-size:0.92rem;color:${color}">${n2fa(Math.round(e.totalAFN||0))}</div></div>
+        <div class="stat-box"><div class="stat-label">فی لیتر (افغانی)</div><div style="font-weight:800;font-size:0.92rem;color:var(--red)">${n2fa((e.perLiter||0).toFixed(1))}</div></div>
+      </div>
+    </div>`;
+  });
+  cont.innerHTML = html;
 }
 
 function setCompanyPoulCurrency(cid, idx, val) {
