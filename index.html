@@ -3384,7 +3384,6 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
       <h2 id="companyModalTitle" style="flex:1;text-align:center">🛢️ شرکت</h2>
       <div style="display:flex;align-items:center;gap:6px">
         <button class="add-row-btn" id="cm-fuel-btn" style="margin:0;border-color:#b7791f;color:#b7791f;padding:5px 10px;font-size:0.78rem" onclick="toggleCompanyFuel()">🟤 دیزل</button>
-        <button class="add-row-btn" style="margin:0;border-color:var(--blue);color:var(--blue);padding:5px 10px;font-size:0.78rem" onclick="newCompanyTable()">📋 جدول جدید</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--accent);color:var(--accent);padding:5px 10px;font-size:0.78rem" onclick="renameCurrentCompany()">✏️ تغییر نام</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green);padding:5px 10px;font-size:0.78rem" onclick="pdfCompany()">📄 PDF</button>
         <button class="modal-close" onclick="closeCompanyModal()">✕</button>
@@ -3400,6 +3399,12 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
     </div>
     <div id="cm-albaqi-sentence" style="margin:0 14px 12px;padding:14px 16px;border-radius:12px;border:1px solid var(--border);background:var(--card);font-weight:800;font-size:1rem;line-height:1.8;text-align:center">—</div>
     <div class="modal-body">
+      <!-- نوار دکمه‌های کوچک بالای جدول: خریدها + جدول جدید (بدون اسکرول) -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+        <button type="button" onclick="newCompanyTable()" style="display:inline-flex;align-items:center;gap:7px;background:var(--dark);border:1.5px solid var(--green);border-radius:999px;padding:8px 16px;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">📋 جدول جدید</button>
+      </div>
+      <!-- کادرِ خریدهای تیلِ این شرکت — دکمهٔ کوچک بالای جدول (بدون اسکرول) -->
+      <div id="cm-purchases" style="margin-bottom:14px"></div>
       <div class="xls-wrap">
         <table class="xls-tbl" id="cm-tbl">
           <thead><tr>
@@ -3439,8 +3444,6 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
           <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green)" onclick="addCompanyRowsBulk()">➕ افزودن چندتایی</button>
         </div>
       </div>
-      <!-- کادر خریدهای تیلِ این شرکت (دکمهٔ بازشونده) -->
-      <div id="cm-purchases" style="margin-top:18px"></div>
       <!-- جدول‌های آرشیو‌شدهٔ شرکت — هر بار «جدول جدید» زده شود اینجا اضافه می‌شود -->
       <div id="cm-history-wrap" style="display:none;margin-top:14px"></div>
     </div>
@@ -7665,7 +7668,7 @@ function renderCompanyPurchases(company){
   const icon  = currentCompanyFuel === 'diesel' ? '🟤' : '⛽';
   const label = currentCompanyFuel === 'diesel' ? 'دیزل' : 'پطرول';
   if (!entries.length){
-    cont.innerHTML = `<div style="text-align:center;color:var(--muted);padding:12px;font-size:0.8rem;border:1px dashed var(--border);border-radius:10px">📦 خریدِ ${label}ی برای این شرکت ثبت نشده</div>`;
+    cont.innerHTML = `<div style="display:inline-block;color:var(--muted);padding:7px 14px;font-size:0.78rem;border:1px dashed var(--border);border-radius:999px">📦 خریدِ ${label}ی برای این شرکت ثبت نشده</div>`;
     return;
   }
   let cards = '';
@@ -7695,11 +7698,11 @@ function renderCompanyPurchases(company){
     </div>`;
   });
   cont.innerHTML = `
-    <button type="button" id="cm-purchases-toggle" onclick="toggleCompanyPurchases()" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--dark);border:1px solid ${color};border-radius:10px;padding:10px 14px;color:${color};font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.9rem;cursor:pointer">
-      <span>${icon} خریدهای ${label} از این شرکت — ${n2fa(entries.length)} خرید</span>
-      <span id="cm-purchases-arrow">${_cmPurchasesOpen ? '▲' : '▼'}</span>
+    <button type="button" id="cm-purchases-toggle" onclick="toggleCompanyPurchases()" style="display:inline-flex;align-items:center;gap:9px;background:var(--dark);border:1.5px solid ${color};border-radius:999px;padding:8px 16px;color:${color};font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">
+      <span>${icon} خریدهای ${label} — ${n2fa(entries.length)} خرید</span>
+      <span id="cm-purchases-arrow" style="font-size:0.75rem">${_cmPurchasesOpen ? '▲' : '▼'}</span>
     </button>
-    <div id="cm-purchases-list" style="display:${_cmPurchasesOpen ? 'block' : 'none'};margin-top:10px">${cards}</div>`;
+    <div id="cm-purchases-list" style="display:${_cmPurchasesOpen ? 'block' : 'none'};margin-top:12px">${cards}</div>`;
 }
 
 // «جدول جدید» شرکت — جدول فعلی را آرشیو می‌کند و یک جدول خالی می‌سازد (مثل بخش قرض‌داران، بدون دست‌زدن به آن)
