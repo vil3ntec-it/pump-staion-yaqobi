@@ -7606,7 +7606,10 @@ function renderCompanyRows(company) {
   rows.forEach(_migrateCompanyRow);
   const convRate = _companyConvRate(company);
   tbody.innerHTML = '';
+  let dispNum = 0;
   rows.forEach((r, i) => {
+    if (r.srcPurchaseId) return;   // خریدِ مخزن فقط در کادرِ «خریدها» دیده می‌شود، نه در جدولِ حساب
+    dispNum++;
     const ton      = cmpTon(r);
     const totalUsd = cmpTotalUsd(r);
     const totalAfn = cmpAfnTotal(r);
@@ -7616,7 +7619,7 @@ function renderCompanyRows(company) {
     const albaqiExtra = showUsdBaqi ? `<div style="font-size:0.72rem;color:var(--blue);font-weight:700;margin-top:2px;white-space:nowrap">${n2fa(albaqiUsdVal.toFixed(1))} $</div>` : '';
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="xls-num">${n2fa(i+1)}</td>
+      <td class="xls-num">${n2fa(dispNum)}</td>
       <td><input class="xls-in" value="${cmpEsc(r.date||'')}" placeholder="تاریخ" onchange="updateCompanyRow('${company.id}',${i},'date',this.value)"></td>
       <td><input class="xls-in" value="${cmpEsc(r.name||'')}" placeholder="نام" onchange="updateCompanyRow('${company.id}',${i},'name',this.value)"></td>
       <td><input class="xls-in" type="number" value="${(r.kg!=null&&r.kg!==''&&+r.kg!==0)?r.kg:(r.ton&&+r.ton!==0?Math.round(parseFloat(r.ton)*1000):'')}" placeholder="" oninput="calcCompanyRow('${company.id}',${i},'kg',this.value)"></td>
@@ -7671,8 +7674,10 @@ function renderCompanyPurchases(company){
     cont.innerHTML = `<div style="display:inline-block;color:var(--muted);padding:7px 14px;font-size:0.78rem;border:1px dashed var(--border);border-radius:999px">📦 خریدِ ${label}ی برای این شرکت ثبت نشده</div>`;
     return;
   }
+  let sumAfn = 0, sumUsd = 0, sumLit = 0;
   let cards = '';
   entries.forEach((e, i) => {
+    sumAfn += (e.totalAFN||0); sumUsd += (e.totalUSD||0); sumLit += (e.liters||0);
     cards += `
     <div class="card" style="margin-bottom:10px">
       <div class="card-head" style="padding:10px 14px">
@@ -7702,7 +7707,14 @@ function renderCompanyPurchases(company){
       <span>${icon} خریدهای ${label} — ${n2fa(entries.length)} خرید</span>
       <span id="cm-purchases-arrow" style="font-size:0.75rem">${_cmPurchasesOpen ? '▲' : '▼'}</span>
     </button>
-    <div id="cm-purchases-list" style="display:${_cmPurchasesOpen ? 'block' : 'none'};margin-top:12px">${cards}</div>`;
+    <div id="cm-purchases-list" style="display:${_cmPurchasesOpen ? 'block' : 'none'};margin-top:12px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <span style="font-size:0.74rem;background:var(--dark);border:1px solid ${color};border-radius:8px;padding:5px 10px">جمع لیتر: <b style="color:var(--green)">${n2fa(Math.round(sumLit))}</b></span>
+        <span style="font-size:0.74rem;background:var(--dark);border:1px solid ${color};border-radius:8px;padding:5px 10px">جمع کل دالر: <b style="color:var(--blue)">${n2fa(sumUsd.toFixed(1))} $</b></span>
+        <span style="font-size:0.74rem;background:var(--dark);border:1px solid ${color};border-radius:8px;padding:5px 10px">جمع کل افغانی: <b style="color:${color}">${n2fa(Math.round(sumAfn))}</b></span>
+      </div>
+      ${cards}
+    </div>`;
 }
 
 // «جدول جدید» شرکت — جدول فعلی را آرشیو می‌کند و یک جدول خالی می‌سازد (مثل بخش قرض‌داران، بدون دست‌زدن به آن)
@@ -7742,13 +7754,15 @@ function _renderCompanyHistoryPanel(company){
       const sumUsd = rows.reduce((a,r)=>a+cmpTotalUsd(r), 0);
       const sumAfn = rows.reduce((a,r)=>a+cmpAfnTotal(r), 0);
       const rate = sumUsd > 0 ? sumAfn / sumUsd : 0;
-      let tTon=0,tUsd=0,tAfn=0,tPoul=0,tAlb=0;
+      let tTon=0,tUsd=0,tAfn=0,tPoul=0,tAlb=0, dispNum=0;
       const body = rows.map((r,i)=>{
         const ton=cmpTon(r), tu=cmpTotalUsd(r), ta=cmpAfnTotal(r), poul=cmpPoulAfn(r,rate), ab=cmpAlbaqi(r,rate);
-        tTon+=ton; tUsd+=tu; tAfn+=ta; tPoul+=poul; tAlb+=ab;
+        tTon+=ton; tUsd+=tu; tAfn+=ta; tPoul+=poul; tAlb+=ab;   // جمع‌ها شاملِ خریدها (برای درستیِ الباقی)
+        if (r.srcPurchaseId) return '';   // خریدِ مخزن در جدول نشان داده نمی‌شود (فقط در کادرِ خریدها)
+        dispNum++;
         const kgShow = (r.kg!=null && r.kg!=='' && +r.kg!==0) ? r.kg : (r.ton ? Math.round(parseFloat(r.ton)*1000) : '');
         return `<tr>
-          <td class="xls-num">${n2fa(i+1)}</td>
+          <td class="xls-num">${n2fa(dispNum)}</td>
           <td>${cmpEsc(r.date||'')}</td>
           <td>${cmpEsc(r.name||'')}</td>
           <td>${kgShow!==''?n2fa(kgShow):''}</td>
@@ -7761,27 +7775,48 @@ function _renderCompanyHistoryPanel(company){
         </tr>`;
       }).join('');
       const fuelLabel = h.fuel === 'diesel' ? '🟤 دیزل' : '⛽ پطرول';
+      const armed = (_cmDelArm === h.id);
       return `<div style="border:1.5px solid ${ac}66;border-radius:12px;margin-bottom:12px;overflow:hidden">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:${ac}18">
           <span style="font-weight:800;color:${ac};font-size:0.85rem">🗂️ جدول ${n2fa(history.length-hi)} — ${fuelLabel}</span>
           <span style="font-size:0.72rem;color:var(--muted)">${h.createdAt||''}</span>
-          <button class="del-btn" onclick="deleteCompanyTableHistory('${company.id}','${h.id}')">🗑️</button>
+          <button class="del-btn" style="${armed?'background:var(--red);color:#fff;':''}white-space:nowrap" onclick="deleteCompanyTableHistory('${company.id}','${h.id}',this)">${armed?'✔ تأیید حذف؟':'🗑️ حذف'}</button>
+        </div>
+        <!-- خلاصهٔ همین جدول آرشیو (مثل کادرهای بالا) -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;padding:8px 12px;background:${ac}0d;border-bottom:1px solid ${ac}33">
+          <span style="font-size:0.72rem;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:4px 9px">جمع کل دالر: <b style="color:var(--blue)">${n2fa(tUsd.toFixed(1))} $</b></span>
+          <span style="font-size:0.72rem;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:4px 9px">جمع کل افغانی: <b style="color:var(--accent)">${n2fa(Math.round(tAfn))}</b></span>
+          <span style="font-size:0.72rem;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:4px 9px">رسید: <b style="color:var(--green)">${n2fa(Math.round(tPoul))}</b></span>
+          <span style="font-size:0.72rem;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:4px 9px">جمع الباقی: <b style="color:${tAlb>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(tAlb))}</b></span>
         </div>
         <div class="xls-wrap"><table class="xls-tbl">
           <thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>خرید(کیلو)</th><th>قیمت تن($)</th><th style="min-width:90px">کل($)</th><th>نرخ</th><th style="min-width:100px">کل(افغانی)</th><th>رسید</th><th style="min-width:100px">الباقی</th></tr></thead>
-          <tbody>${body}</tbody>
+          <tbody>${body || '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:12px">فقط خرید — جزئیات در کادرِ خریدها</td></tr>'}</tbody>
           <tfoot class="xls-foot"><tr><td colspan="3" style="padding:7px">جمع</td><td>${n2fa(Math.round(tTon*1000))}</td><td></td><td>${n2fa(tUsd.toFixed(1))} $</td><td></td><td>${n2fa(Math.round(tAfn))}</td><td>${n2fa(Math.round(tPoul))}</td><td>${n2fa(Math.round(tAlb))}</td></tr></tfoot>
         </table></div>
       </div>`;
     }).join('');
 }
+// حذفِ مطمئنِ جدولِ آرشیو با تأیید دومرحله‌ای (بدون confirm که در بعضی وب‌ویوها باز نمی‌شود)
+let _cmDelArm = null;
+let _cmDelTimer = null;
 function deleteCompanyTableHistory(cid, hid){
-  if (!confirm('این جدول آرشیو حذف شود؟')) return;
   const c = (DB.tilCompanies||[]).find(x => x.id === cid);
   if (!c) return;
+  if (_cmDelArm !== hid){
+    _cmDelArm = hid;
+    _renderCompanyHistoryPanel(c);
+    if (_cmDelTimer) clearTimeout(_cmDelTimer);
+    _cmDelTimer = setTimeout(()=>{ _cmDelArm = null; const cc=(DB.tilCompanies||[]).find(x=>x.id===cid); if (cc) _renderCompanyHistoryPanel(cc); }, 3500);
+    if (typeof showToast === 'function') showToast('برای حذف، دوباره روی «تأیید حذف؟» بزنید', '#dd6b20');
+    return;
+  }
+  if (_cmDelTimer) clearTimeout(_cmDelTimer);
+  _cmDelArm = null;
   c.tableHistory = (c.tableHistory||[]).filter(h => h.id !== hid);
   save();
   _renderCompanyHistoryPanel(c);
+  if (typeof showToast === 'function') showToast('🗑️ جدول آرشیو حذف شد', '#e53e3e');
 }
 
 function setCompanyPoulCurrency(cid, idx, val) {
