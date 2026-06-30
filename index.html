@@ -3669,6 +3669,16 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
 </div>
 
 <script>
+// ========== مدیریت خطاهای ناخواسته: هیچ خطایی برنامه را متوقف نمی‌کند ==========
+window.addEventListener('error', function(e) {
+  console.warn('[پمپ یعقوبی] خطا:', e.message, '| خط:', e.lineno, '| فایل:', e.filename);
+  return false;
+});
+window.addEventListener('unhandledrejection', function(e) {
+  console.warn('[پمپ یعقوبی] خطای async:', e.reason);
+  e.preventDefault();
+});
+
 // ========== STATE ==========
 // رمز اصلی مالک: همیشه برنامه را باز می‌کند و قابل تغییر یا حذف نیست.
 // بدون این رمز (یا رمز مدیر) برنامه به هیچ وجه باز نمی‌شود.
@@ -3701,6 +3711,42 @@ const DB = {
   unionRateDiesel: 0,
   trash: []
 };
+
+// ========== IndexedDB: ذخیره‌سازی بدون محدودیت حجم ==========
+// جایگزین localStorage — بدون سقف ۵ مگابایت، هزاران حساب بدون مشکل ذخیره می‌شوند
+const _IDB = (function() {
+  var _db = null;
+  var NAME = 'pumpYaqobi', STORE = 'data', KEY = 'main', VER = 1;
+  function open() {
+    return new Promise(function(res, rej) {
+      if (_db) { res(_db); return; }
+      var r = indexedDB.open(NAME, VER);
+      r.onupgradeneeded = function(e) { e.target.result.createObjectStore(STORE); };
+      r.onsuccess = function(e) { _db = e.target.result; res(_db); };
+      r.onerror = function() { rej(r.error); };
+    });
+  }
+  return {
+    put: function(data) {
+      return open().then(function(db) {
+        return new Promise(function(res, rej) {
+          var tx = db.transaction(STORE, 'readwrite');
+          tx.objectStore(STORE).put(data, KEY);
+          tx.oncomplete = res; tx.onerror = function() { rej(tx.error); };
+        });
+      }).catch(function() {});
+    },
+    get: function() {
+      return open().then(function(db) {
+        return new Promise(function(res, rej) {
+          var req = db.transaction(STORE, 'readonly').objectStore(STORE).get(KEY);
+          req.onsuccess = function() { res(req.result || null); };
+          req.onerror = function() { rej(req.error); };
+        });
+      }).catch(function() { return null; });
+    }
+  };
+})();
 
 let _hadExistingData = false;
 function load() {
@@ -3747,9 +3793,31 @@ function load() {
   try { if (dedupAccounts()) save(); } catch(e){}
   // migrate old default passwords → رمز پیش‌فرض جدید vil3n
   if (DB.password === 'vil3ntecit' || DB.password === 'vilentecit' || DB.password === '1234') { DB.password = 'vil3n'; save(); }
+  // بارگذاری async از IndexedDB: اگر localStorage پاک شده باشد یا IDB داده‌ای جدیدتر داشته باشد
+  _IDB.get().then(function(idbData) {
+    if (!idbData) { try { _IDB.put(JSON.parse(JSON.stringify(DB))); } catch(e) {} return; }
+    var idbTime = new Date(idbData.lastSyncUpload || 0).getTime();
+    var curTime = new Date(DB.lastSyncUpload || 0).getTime();
+    if (idbTime > curTime) {
+      try { Object.assign(DB, idbData); } catch(e) {}
+      try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
+      try { updateAll(); } catch(e) {}
+      try { showTopToast('💾 داده‌ها از حافظهٔ پشتیبان (IndexedDB) بازیابی شدند', '#38a169', 3000); } catch(e) {}
+    } else {
+      try { _IDB.put(JSON.parse(JSON.stringify(DB))); } catch(e) {}
+    }
+  }).catch(function() {});
 }
 function save() {
-  try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) { /* iOS file:// یا Private Mode */ }
+  var snap = JSON.stringify(DB);
+  try {
+    localStorage.setItem('pumpDB', snap);
+  } catch(e) {
+    // حافظهٔ مرورگر پر شده یا حالت خصوصی — فقط IndexedDB فعال می‌شود
+    try { localStorage.removeItem('pumpDB'); } catch(_) {}
+  }
+  // IndexedDB: بدون محدودیت حجم — همیشه ذخیره می‌شود حتی اگر localStorage پر باشد
+  try { _IDB.put(JSON.parse(snap)); } catch(e) {}
   // علامت‌گذاری: اطلاعات تغییر کرده و هنوز به سرور نرسیده — برای بارگذاری خودکار وقتی نت وصل شد
   try { _markDirtyForAutoSync(); } catch(e){}
 }
@@ -3824,7 +3892,8 @@ function _fbReady() {
 }
 function _syncCode() { return (DB.syncCode || 'pump1').trim(); }
 function saveSyncCode() {
-  const v = document.getElementById('sync-station-code').value.trim();
+  const el = document.getElementById('sync-station-code');
+  const v = el ? el.value.trim() : '';
   if (!v) { showToast('کد ایستگاه را وارد کنید', '#e53e3e'); return; }
   DB.syncCode = v; save();
   showToast('✅ کد ایستگاه ذخیره شد', '#38a169');
@@ -3845,7 +3914,8 @@ function syncUpload() {
   _fbDb.ref('stations/' + code).set(payload)
     .then(() => {
       DB.lastSyncUpload = payload.lastSyncUpload;
-      localStorage.setItem('pumpDB', JSON.stringify(DB));
+      try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
+      try { _IDB.put(JSON.parse(JSON.stringify(DB))); } catch(e) {}
       _dirtySinceUpload = false;
       _setSyncMsg('✅ همین حساب شما در سرور ذخیره شد. کارفرما با کد «' + code + '» همین را می‌بیند.', '#38a169');
       _updateSyncLastTime();
@@ -3866,7 +3936,8 @@ function syncDownload() {
       if (!snap.exists()) { _setSyncMsg('چیزی روی سرور برای این کد پیدا نشد.', '#d97706'); return; }
       Object.assign(DB, snap.val());
       DB.syncCode = 'pump1';
-      localStorage.setItem('pumpDB', JSON.stringify(DB));
+      try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
+      try { _IDB.put(JSON.parse(JSON.stringify(DB))); } catch(e) {}
       _dirtySinceUpload = false; // همین الان از سرور آمد، چیزی برای فرستادن نیست
       _setSyncMsg('✅ اطلاعات از سرور دریافت شد.', '#38a169');
       updateAll();
@@ -4235,7 +4306,7 @@ function isActivated() {
   return true;
 }
 function activateThisCopy() {
-  localStorage.setItem(ACTIVATION_KEY, '1');
+  try { localStorage.setItem(ACTIVATION_KEY, '1'); } catch(e) {}
 }
 let _brokenTaps = 0, _brokenTapTimer = null;
 function _brokenLogoTap() {
@@ -4420,17 +4491,20 @@ function showSection(id, btn) {
 // ========== THEME ==========
 function toggleTheme() {
   const isLight = document.body.classList.toggle('light-mode');
-  document.getElementById('themeBtn').textContent = isLight ? '🌙 تاریک' : '☀️ روشن';
-  localStorage.setItem('pumpTheme', isLight ? 'light' : 'dark');
+  const btn = document.getElementById('themeBtn');
+  if (btn) btn.textContent = isLight ? '🌙 تاریک' : '☀️ روشن';
+  try { localStorage.setItem('pumpTheme', isLight ? 'light' : 'dark'); } catch(e) {}
   document.documentElement.style.background = isLight ? '#f0f4f8' : '#0d1117';
 }
 function loadTheme() {
-  if (localStorage.getItem('pumpTheme') === 'light') {
-    document.body.classList.add('light-mode');
-    const btn = document.getElementById('themeBtn');
-    if (btn) btn.textContent = '🌙 تاریک';
-    document.documentElement.style.background = '#f0f4f8';
-  }
+  try {
+    if (localStorage.getItem('pumpTheme') === 'light') {
+      document.body.classList.add('light-mode');
+      const btn = document.getElementById('themeBtn');
+      if (btn) btn.textContent = '🌙 تاریک';
+      document.documentElement.style.background = '#f0f4f8';
+    }
+  } catch(e) {}
 }
 
 // ========== DATE HELPERS ==========
@@ -5877,12 +5951,30 @@ function _allRows(person){
   return rows;
 }
 
+// ===== صفحه‌بندی حساب‌ها: هزاران حساب بدون کاهش سرعت =====
+const _PERSON_PAGE = 50; // تعداد کارت در هر صفحه
+const _personPages = { debt: 0, noinv: 0 };
+function _goPersonPage(type, page) {
+  _personPages[type] = page;
+  renderPersons(type);
+  try { document.getElementById(type + '-grid').scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch(e) {}
+}
+
 function renderPersons(type) {
   const list = type === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const grid = document.getElementById(type + '-grid');
   if (!grid) return;
-  grid.innerHTML = '';
-  list.forEach(p => {
+
+  const total = list.length;
+  const totalPages = Math.max(1, Math.ceil(total / _PERSON_PAGE));
+  if (_personPages[type] >= totalPages) _personPages[type] = totalPages - 1;
+  if (_personPages[type] < 0) _personPages[type] = 0;
+  const page = _personPages[type];
+  const start = page * _PERSON_PAGE;
+  const pageList = list.slice(start, start + _PERSON_PAGE);
+
+  const frag = document.createDocumentFragment();
+  pageList.forEach(p => {
     const rows = _allRows(p);
     const t = _splitTotals(rows);
     const albaqi  = t.all.albaqi;
@@ -5900,8 +5992,27 @@ function renderPersons(type) {
       <button onclick="event.stopPropagation();showPersonQR('${type}','${p.id}')" style="margin-top:10px;width:100%;padding:6px 8px;border-radius:7px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-size:0.75rem;font-weight:700;cursor:pointer">📲 کیو‌آر کد</button>
     `;
     card.onclick = () => openPersonModal(type, p.id);
-    grid.appendChild(card);
+    frag.appendChild(card);
   });
+  grid.innerHTML = '';
+  grid.appendChild(frag);
+
+  // کنترل صفحه‌بندی — فقط وقتی بیش از یک صفحه داریم
+  const pagerId = type + '-pager';
+  const oldPager = document.getElementById(pagerId);
+  if (oldPager) oldPager.remove();
+  if (totalPages > 1) {
+    const btnS = 'padding:7px 18px;border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--txt);font-family:\'Vazirmatn\',sans-serif;font-size:0.9rem;cursor:pointer;transition:all .2s';
+    const pager = document.createElement('div');
+    pager.id = pagerId;
+    pager.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:12px;padding:14px 0 4px;flex-wrap:wrap';
+    pager.innerHTML = `
+      <button onclick="_goPersonPage('${type}',${page-1})" ${page===0?'disabled style="opacity:0.35;cursor:default"':''} style="${btnS}">‹ قبلی</button>
+      <span style="font-size:0.83rem;color:var(--muted);font-weight:700">صفحهٔ ${n2fa(page+1)} از ${n2fa(totalPages)} &nbsp;|&nbsp; ${n2fa(total)} حساب</span>
+      <button onclick="_goPersonPage('${type}',${page+1})" ${page>=totalPages-1?'disabled style="opacity:0.35;cursor:default"':''} style="${btnS}">بعدی ›</button>
+    `;
+    grid.after(pager);
+  }
 }
 
 function openAddPerson(type) {
@@ -5961,7 +6072,7 @@ function openPersonModal(type, id) {
   document.getElementById('personModal').classList.add('open');
   _updateNavBtns();
   // load saved modal font scale
-  const savedMFS = parseFloat(localStorage.getItem('modalFontScale') || 1);
+  const savedMFS = parseFloat((function(){ try{ return localStorage.getItem('modalFontScale') || 1; }catch(e){ return 1; } })());
   if (savedMFS !== 1) { _modalFontScale = savedMFS; setTimeout(() => adjModalFont(0), 50); }
 }
 function setPersonFilter(f) {
@@ -6947,9 +7058,10 @@ function renderExpenses() {
   const todayTotal = DB.expenses.filter(e => e.date === today).reduce((a,e) => a+e.amount, 0);
   const monthTotal = DB.expenses.filter(e => _monthKey(e.date) === curMonth).reduce((a,e) => a+e.amount, 0);
   const total = DB.expenses.reduce((a,e) => a+e.amount, 0);
-  document.getElementById('exp-today').textContent = n2fa(todayTotal) + ' افغانی';
-  document.getElementById('exp-week').textContent = n2fa(monthTotal) + ' افغانی';
-  document.getElementById('exp-total').textContent = n2fa(total) + ' افغانی';
+  const _expEl = id => document.getElementById(id);
+  if (_expEl('exp-today')) _expEl('exp-today').textContent = n2fa(todayTotal) + ' افغانی';
+  if (_expEl('exp-week')) _expEl('exp-week').textContent = n2fa(monthTotal) + ' افغانی';
+  if (_expEl('exp-total')) _expEl('exp-total').textContent = n2fa(total) + ' افغانی';
   const wrap = document.getElementById('exp-body-wrap');
   if (!wrap) return;
   wrap.innerHTML = '';
@@ -6994,6 +7106,7 @@ function renderExpenses() {
     </div>`;
     wrap.appendChild(section);
     const tbody = document.getElementById('exp-grp-' + k.replace('/','_'));
+    const expFrag = document.createDocumentFragment();
     items.forEach(({ e, idx }, n) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
@@ -7003,8 +7116,9 @@ function renderExpenses() {
         <td><input class="xls-in" type="number" value="${e.amount||''}" placeholder="0" style="color:var(--red)" onchange="updateExpense(${idx},'amount',this.value)"></td>
         <td><input class="xls-in" value="${(e.note||'').replace(/"/g,'&quot;')}" placeholder="..." onchange="updateExpense(${idx},'note',this.value)"></td>
         <td><button class="del-btn" onclick="deleteExpense(${idx})">🗑️</button></td>`;
-      tbody.appendChild(tr);
+      expFrag.appendChild(tr);
     });
+    tbody.appendChild(expFrag);
   });
 }
 // اضافه کردن یک ردیف جدید به مصارف (به ماه فعال یا امروز)
@@ -7412,12 +7526,21 @@ function _findOrCreateCompany(name) {
 // سازگاری با داده‌های قدیمی tilRows
 function tilAlbaqi(r){ return cmpAlbaqi(r); }
 
+let _companyPage = 0;
+function _goCompanyPage(page) { _companyPage = page; renderCompanies(); try { document.getElementById('company-grid').scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch(e) {} }
+
 function renderCompanies() {
   const grid = document.getElementById('company-grid');
   if (!grid) return;
   if (!DB.tilCompanies) DB.tilCompanies = [];
   const q = (document.getElementById('company-search')?.value || '').trim().toLowerCase();
-  const list = q ? DB.tilCompanies.filter(c => c.name.toLowerCase().includes(q)) : DB.tilCompanies;
+  const fullList = q ? DB.tilCompanies.filter(c => (c.name||'').toLowerCase().includes(q)) : DB.tilCompanies;
+  // صفحه‌بندی فقط وقتی جستجو نیست
+  const total = fullList.length;
+  const totalPages = Math.max(1, Math.ceil(total / _PERSON_PAGE));
+  if (_companyPage >= totalPages) _companyPage = totalPages - 1;
+  if (_companyPage < 0) _companyPage = 0;
+  const list = q ? fullList : fullList.slice(_companyPage * _PERSON_PAGE, (_companyPage + 1) * _PERSON_PAGE);
   grid.innerHTML = '';
   list.forEach(c => {
     (c.rows||[]).forEach(_migrateCompanyRow); (c.dieselRows||[]).forEach(_migrateCompanyRow);
@@ -7447,6 +7570,22 @@ function renderCompanies() {
     card.onclick = () => openCompanyModal(c.id);
     grid.appendChild(card);
   });
+  // کنترل صفحه‌بندی شرکت‌ها (فقط زمانی که جستجو نیست)
+  const cpagerId = 'company-pager';
+  const oldCPager = document.getElementById(cpagerId);
+  if (oldCPager) oldCPager.remove();
+  if (!q && totalPages > 1) {
+    const btnS = 'padding:7px 18px;border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--txt);font-family:\'Vazirmatn\',sans-serif;font-size:0.9rem;cursor:pointer;transition:all .2s';
+    const cpager = document.createElement('div');
+    cpager.id = cpagerId;
+    cpager.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:12px;padding:14px 0 4px;flex-wrap:wrap';
+    cpager.innerHTML = `
+      <button onclick="_goCompanyPage(${_companyPage-1})" ${_companyPage===0?'disabled style="opacity:0.35;cursor:default"':''} style="${btnS}">‹ قبلی</button>
+      <span style="font-size:0.83rem;color:var(--muted);font-weight:700">صفحهٔ ${n2fa(_companyPage+1)} از ${n2fa(totalPages)} &nbsp;|&nbsp; ${n2fa(total)} شرکت</span>
+      <button onclick="_goCompanyPage(${_companyPage+1})" ${_companyPage>=totalPages-1?'disabled style="opacity:0.35;cursor:default"':''} style="${btnS}">بعدی ›</button>
+    `;
+    grid.after(cpager);
+  }
   _renderCompanySummary();
   _updateCompanyBanner();
 }
@@ -9133,6 +9272,7 @@ function renderSafe() {
   tbody.innerHTML = '';
   let totalBardagi = 0, totalMandagi = 0;   // مجموع کل
   let mBardagi = 0, mMandagi = 0;           // مجموع ماه فعال
+  const safeFrag = document.createDocumentFragment();
   entries.forEach((e, i) => {
     if (e.type === 'bardagi') totalBardagi += e.amount || 0;
     else totalMandagi += e.amount || 0;
@@ -9149,11 +9289,13 @@ function renderSafe() {
       <td><input class="xls-in" value="${(e.note||'').replace(/"/g,'&quot;')}" placeholder="..." onchange="updateSafeEntry(${i},'note',this.value)"></td>
       <td><button class="del-btn" onclick="deleteSafe(${i})">🗑️</button></td>
     `;
-    tbody.appendChild(tr);
+    safeFrag.appendChild(tr);
   });
+  tbody.appendChild(safeFrag);
   const net = totalBardagi - totalMandagi;
-  document.getElementById('safe-total-bardagi').textContent = n2fa(totalBardagi) + ' افغانی';
-  document.getElementById('safe-total-mandagi').textContent = n2fa(totalMandagi) + ' افغانی';
+  const _sfEl = id => document.getElementById(id);
+  if (_sfEl('safe-total-bardagi')) _sfEl('safe-total-bardagi').textContent = n2fa(totalBardagi) + ' افغانی';
+  if (_sfEl('safe-total-mandagi')) _sfEl('safe-total-mandagi').textContent = n2fa(totalMandagi) + ' افغانی';
   const netEl = document.getElementById('safe-net');
   netEl.textContent = n2fa(Math.abs(net)) + ' افغانی';
   netEl.style.color = net >= 0 ? 'var(--green)' : 'var(--red)';
@@ -11090,11 +11232,11 @@ function adjSecFont(secId, delta) {
     if (!el.dataset.origFs) el.dataset.origFs = parseFloat(getComputedStyle(el).fontSize);
     el.style.fontSize = (parseFloat(el.dataset.origFs) * scale) + 'px';
   });
-  localStorage.setItem('secFont_' + secId, scale);
+  try { localStorage.setItem('secFont_' + secId, scale); } catch(e) {}
 }
 function loadSecFonts() {
   ['shifts','shifts-diesel','debt','noinv','expenses','safe','profit','settings'].forEach(id => {
-    const saved = parseFloat(localStorage.getItem('secFont_' + id) || 0);
+    const saved = parseFloat((function(){ try { return localStorage.getItem('secFont_' + id) || 0; } catch(e){ return 0; } })());
     if (saved && saved !== 1) {
       _secFontScales[id] = saved;
       // delay until section content is rendered
@@ -11123,7 +11265,7 @@ function adjModalFont(delta) {
       el.style.setProperty('font-size', (parseFloat(el.dataset.origFs) * _modalFontScale) + 'px', 'important');
     }
   });
-  localStorage.setItem('modalFontScale', _modalFontScale);
+  try { localStorage.setItem('modalFontScale', _modalFontScale); } catch(e) {}
 }
 
 // ========== EXCEL-LIKE GRID NAVIGATION (ناوبری مکانی بین کادرها) ==========
@@ -11412,7 +11554,7 @@ document.addEventListener('keydown', function(e){
 });
 
 // ========== WARAQ MODAL FONT SCALE ==========
-let _waraqFontScale = parseFloat(localStorage.getItem('waraqFontScale') || 1) || 1;
+let _waraqFontScale = (function(){ try { return parseFloat(localStorage.getItem('waraqFontScale') || 1) || 1; } catch(e){ return 1; } })();
 function adjWaraqFont(delta) {
   _waraqFontScale = Math.min(2.5, Math.max(0.5, _waraqFontScale + delta));
   const modal = document.getElementById('waraqModal');
@@ -11421,7 +11563,7 @@ function adjWaraqFont(delta) {
     if (!el.dataset.origFs) el.dataset.origFs = parseFloat(getComputedStyle(el).fontSize);
     el.style.fontSize = (parseFloat(el.dataset.origFs) * _waraqFontScale) + 'px';
   });
-  localStorage.setItem('waraqFontScale', _waraqFontScale);
+  try { localStorage.setItem('waraqFontScale', _waraqFontScale); } catch(e) {}
 }
 
 // ========== VIEWER PASSWORD DISPLAY ==========
@@ -11516,7 +11658,7 @@ function applyFontScale(val) {
     if (!el.dataset.baseFontSize) el.dataset.baseFontSize = base;
     el.style.fontSize = (base * scale) + 'px';
   });
-  localStorage.setItem('pumpFontScale', val);
+  try { localStorage.setItem('pumpFontScale', val); } catch(e) {}
   const slider = document.getElementById('font-scale-slider');
   if (slider) slider.value = val;
 }
@@ -11524,8 +11666,10 @@ function resetFontScale() {
   applyFontScale(1);
 }
 function loadFontScale() {
-  const saved = localStorage.getItem('pumpFontScale');
-  if (saved) applyFontScale(parseFloat(saved));
+  try {
+    const saved = localStorage.getItem('pumpFontScale');
+    if (saved) applyFontScale(parseFloat(saved));
+  } catch(e) {}
 }
 
 // ========== INIT ==========
@@ -12309,12 +12453,12 @@ document.addEventListener('click', function(e) {
     var b = document.body;
     allClasses().forEach(function(c){ b.classList.remove(c); });
     b.classList.add('theme-'+id);
-    if(p.light){ b.classList.add('light-mode'); localStorage.setItem('pumpTheme','light'); }
-    else { b.classList.remove('light-mode'); localStorage.setItem('pumpTheme','dark'); }
+    if(p.light){ b.classList.add('light-mode'); try{ localStorage.setItem('pumpTheme','light'); }catch(e){} }
+    else { b.classList.remove('light-mode'); try{ localStorage.setItem('pumpTheme','dark'); }catch(e){} }
     try{ document.documentElement.style.background = p.html; }catch(e){}
     var tb = document.getElementById('themeBtn'); if(tb) tb.textContent = p.light ? '🌙 تاریک' : '☀️ روشن';
-    localStorage.setItem('pumpPalette', id);
-    localStorage.setItem(p.light ? 'pumpPaletteLight' : 'pumpPaletteDark', id);
+    try{ localStorage.setItem('pumpPalette', id); }catch(e){}
+    try{ localStorage.setItem(p.light ? 'pumpPaletteLight' : 'pumpPaletteDark', id); }catch(e){}
     markSwatches();
   }
 
@@ -12323,7 +12467,7 @@ document.addEventListener('click', function(e) {
   // It previews immediately only if the picked theme matches the current mode.
   window.applyPalette = function(id){
     var p = find(id); if(!p) return;
-    localStorage.setItem(p.light ? 'pumpPaletteLight' : 'pumpPaletteDark', id);
+    try{ localStorage.setItem(p.light ? 'pumpPaletteLight' : 'pumpPaletteDark', id); }catch(e){}
     var nowLight = document.body.classList.contains('light-mode');
     if(p.light === nowLight){
       applyPaletteVisual(id);            // same mode → apply/preview now
@@ -12339,8 +12483,8 @@ document.addEventListener('click', function(e) {
   // Mark the saved dark theme active in the dark row AND the saved light
   // theme active in the light row (both rows can show their selection).
   function markSwatches(){
-    var d = localStorage.getItem('pumpPaletteDark');
-    var l = localStorage.getItem('pumpPaletteLight');
+    var d = (function(){ try{ return localStorage.getItem('pumpPaletteDark'); }catch(e){ return null; } })();
+    var l = (function(){ try{ return localStorage.getItem('pumpPaletteLight'); }catch(e){ return null; } })();
     var nodes = document.querySelectorAll('.theme-swatch');
     for(var i=0;i<nodes.length;i++){
       var pid = nodes[i].getAttribute('data-pal'); var pp = find(pid);
@@ -12368,7 +12512,7 @@ document.addEventListener('click', function(e) {
   // keep the app's original look (no theme class) but still mark the swatches.
   function initPalette(){
     var nowLight = document.body.classList.contains('light-mode');
-    var remembered = localStorage.getItem(nowLight ? 'pumpPaletteLight' : 'pumpPaletteDark');
+    var remembered = (function(){ try{ return localStorage.getItem(nowLight ? 'pumpPaletteLight' : 'pumpPaletteDark'); }catch(e){ return null; } })();
     if(remembered && find(remembered)) applyPaletteVisual(remembered);
     else markSwatches();
   }
@@ -12380,7 +12524,7 @@ document.addEventListener('click', function(e) {
     window.toggleTheme = function(){
       var r = _origToggle.apply(this, arguments);
       var nowLight = document.body.classList.contains('light-mode');
-      var remembered = localStorage.getItem(nowLight ? 'pumpPaletteLight' : 'pumpPaletteDark');
+      var remembered = (function(){ try{ return localStorage.getItem(nowLight ? 'pumpPaletteLight' : 'pumpPaletteDark'); }catch(e){ return null; } })();
       if(remembered && find(remembered)){ applyPaletteVisual(remembered); }
       else { allClasses().forEach(function(c){ document.body.classList.remove(c); }); markSwatches(); }
       return r;
