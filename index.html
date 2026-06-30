@@ -5864,6 +5864,18 @@ function confirmAddPurchase() {
   renderStorage();
   updateBanner();
   if (typeof renderCompanies === 'function') renderCompanies();
+  // اگر حساب شرکت باز است، جدول و دکمهٔ خرید را تازه کن
+  const _cmOpen = document.getElementById('companyModal');
+  if (_cmOpen && _cmOpen.classList.contains('open') && currentCompanyId) {
+    const _c = (DB.tilCompanies||[]).find(x => x.id === currentCompanyId);
+    if (_c) { renderCompanyRows(_c); renderCompanyPurchases(_c); }
+  }
+  // اگر صفحهٔ جداگانهٔ خریدها باز است، تازه‌اش کن
+  const _cmpOpen = document.getElementById('companyPurchasesModal');
+  if (_cmpOpen && _cmpOpen.classList.contains('open') && currentCompanyId) {
+    const _c2 = (DB.tilCompanies||[]).find(x => x.id === currentCompanyId);
+    if (_c2) renderCompanyPurchasesPage(_c2);
+  }
   // آپدیت فایده فی لیتر در شیفت‌ها
   autoFillProfitPerFromBuy(fuelType);
   showToast(added ? '✅ خرید ثبت شد — در حساب شرکت هم اضافه شد' : '✅ خرید ثبت شد — فایده فی لیتر آپدیت شد', '#38a169');
@@ -7765,8 +7777,8 @@ function renderCompanyRows(company) {
   tbody.innerHTML = '';
   let dispNum = 0;
   rows.forEach((r, i) => {
-    if (r.srcPurchaseId) return;   // خریدِ مخزن فقط در کادرِ «خریدها» دیده می‌شود، نه در جدولِ حساب
     dispNum++;
+    const linked = !!r.srcPurchaseId;
     const ton      = cmpTon(r);
     const totalUsd = cmpTotalUsd(r);
     const totalAfn = cmpAfnTotal(r);
@@ -7774,15 +7786,18 @@ function renderCompanyRows(company) {
     const albaqiUsdVal = cmpAlbaqiUsd(r, convRate);
     const showUsdBaqi = (cmpTotalUsd(r) || cmpPoulUsdPay(r, convRate));
     const albaqiExtra = showUsdBaqi ? `<div style="font-size:0.72rem;color:var(--blue);font-weight:700;margin-top:2px;white-space:nowrap">${n2fa(albaqiUsdVal.toFixed(1))} $</div>` : '';
+    const kgVal = (r.kg!=null&&r.kg!==''&&+r.kg!==0) ? r.kg : (r.ton&&+r.ton!==0 ? Math.round(parseFloat(r.ton)*1000) : '');
+    const roAttr = 'readonly style="opacity:0.75;cursor:default"';
     const tr = document.createElement('tr');
+    if (linked) tr.style.background = 'color-mix(in srgb, var(--dark) 92%, var(--accent) 8%)';
     tr.innerHTML = `
-      <td class="xls-num">${n2fa(dispNum)}</td>
-      <td><input class="xls-in" value="${cmpEsc(r.date||'')}" placeholder="تاریخ" onchange="updateCompanyRow('${company.id}',${i},'date',this.value)"></td>
-      <td><input class="xls-in" value="${cmpEsc(r.name||'')}" placeholder="نام" onchange="updateCompanyRow('${company.id}',${i},'name',this.value)"></td>
-      <td><input class="xls-in" type="number" value="${(r.kg!=null&&r.kg!==''&&+r.kg!==0)?r.kg:(r.ton&&+r.ton!==0?Math.round(parseFloat(r.ton)*1000):'')}" placeholder="" oninput="calcCompanyRow('${company.id}',${i},'kg',this.value)"></td>
-      <td><input class="xls-in sm" type="number" value="${r.usd||''}" placeholder="0" oninput="calcCompanyRow('${company.id}',${i},'usd',this.value)"></td>
+      <td class="xls-num">${n2fa(dispNum)}${linked ? '<div style="font-size:0.6rem;color:var(--accent);line-height:1">📦</div>' : ''}</td>
+      <td><input class="xls-in" value="${cmpEsc(r.date||'')}" placeholder="تاریخ" ${linked ? roAttr : `onchange="updateCompanyRow('${company.id}',${i},'date',this.value)"`}></td>
+      <td><input class="xls-in" value="${cmpEsc(r.name||'')}" placeholder="نام" ${linked ? roAttr : `onchange="updateCompanyRow('${company.id}',${i},'name',this.value)"`}></td>
+      <td><input class="xls-in" type="number" value="${kgVal}" placeholder="" ${linked ? roAttr : `oninput="calcCompanyRow('${company.id}',${i},'kg',this.value)"`}></td>
+      <td><input class="xls-in sm" type="number" value="${r.usd||''}" placeholder="0" ${linked ? roAttr : `oninput="calcCompanyRow('${company.id}',${i},'usd',this.value)"`}></td>
       <td id="cm-tusd-${i}" style="font-weight:800;color:var(--blue);min-width:120px;font-size:1rem">${n2fa(totalUsd.toFixed(1))} $</td>
-      <td><input class="xls-in xs" type="number" value="${r.rate||''}" placeholder="0" oninput="calcCompanyRow('${company.id}',${i},'rate',this.value)"></td>
+      <td><input class="xls-in xs" type="number" value="${r.rate||''}" placeholder="0" ${linked ? roAttr : `oninput="calcCompanyRow('${company.id}',${i},'rate',this.value)"`}></td>
       <td id="cm-tafn-${i}" style="font-weight:800;color:var(--accent);min-width:125px;font-size:1rem">${n2fa(Math.round(totalAfn))}</td>
       <td>
         <div style="display:flex;gap:3px;align-items:center">
@@ -7795,7 +7810,7 @@ function renderCompanyRows(company) {
       </td>
       <td><input class="xls-in xs" type="number" value="${r.payRate||''}" placeholder="0" style="width:50px" oninput="calcCompanyRow('${company.id}',${i},'payRate',this.value)" title="نرخ تبدیل رسید افغانی — فقط برای رسید افغانی"></td>
       <td id="cm-albaqi-${i}" style="font-weight:800;color:${albaqi>0?'var(--red)':'var(--green)'};min-width:120px;font-size:1rem">${n2fa(Math.round(albaqi))}${albaqiExtra}</td>
-      <td><button class="del-btn" onclick="deleteCompanyRow('${company.id}',${i})">🗑️</button></td>
+      <td>${linked ? `<button class="del-btn" onclick="deletePurchase(${r.srcPurchaseId})">🗑️</button>` : `<button class="del-btn" onclick="deleteCompanyRow('${company.id}',${i})">🗑️</button>`}</td>
     `;
     tbody.appendChild(tr);
   });
