@@ -3448,6 +3448,8 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
       </div>
       <!-- جدول‌های آرشیو‌شدهٔ شرکت — هر بار «جدول جدید» زده شود اینجا اضافه می‌شود -->
       <div id="cm-history-wrap" style="display:none;margin-top:14px"></div>
+      <!-- کادر ثابت خریدهای دیزل — همیشه نمایش داده می‌شود -->
+      <div id="cm-diesel-inline" style="margin-top:18px"></div>
     </div>
   </div>
 </div>
@@ -7837,13 +7839,78 @@ function _companyPurchasesAll(company){
 // دکمهٔ کوچکِ خریدها داخل حساب — با کلیک یک صفحهٔ جداگانه باز می‌شود (نه کشویی)
 function renderCompanyPurchases(company){
   const cont = document.getElementById('cm-purchases');
-  if (!cont) return;
-  const all = _companyPurchasesAll(company);   // هم پطرول هم دیزل
-  if (!all.length){
-    cont.innerHTML = `<span style="display:inline-block;color:var(--muted);padding:8px 16px;font-size:0.82rem;border:1px dashed var(--border);border-radius:999px">📦 خریدی نیست</span>`;
-    return;
+  if (cont) {
+    const all = _companyPurchasesAll(company);
+    if (!all.length){
+      cont.innerHTML = `<span style="display:inline-block;color:var(--muted);padding:8px 16px;font-size:0.82rem;border:1px dashed var(--border);border-radius:999px">📦 خریدی نیست</span>`;
+    } else {
+      cont.innerHTML = `<button type="button" onclick="openCompanyPurchases()" style="display:inline-flex;align-items:center;gap:8px;background:var(--dark);border:1.5px solid var(--accent);border-radius:999px;padding:8px 16px;color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">📦 خریدهای این شرکت — ${n2fa(all.length)} خرید ↗</button>`;
+    }
   }
-  cont.innerHTML = `<button type="button" onclick="openCompanyPurchases()" style="display:inline-flex;align-items:center;gap:8px;background:var(--dark);border:1.5px solid var(--accent);border-radius:999px;padding:8px 16px;color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">📦 خریدهای این شرکت — ${n2fa(all.length)} خرید ↗</button>`;
+  // کادر ثابت خریدهای دیزل مستقیم داخل حساب شرکت
+  const dieselBox = document.getElementById('cm-diesel-inline');
+  if (!dieselBox) return;
+  const norm = (typeof normFa === 'function') ? normFa : (s => String(s||'').toLowerCase().trim());
+  const target = norm(company.name);
+  const dieselEntries = (DB.fuelEntries||[]).filter(e => (e.fuelType||'petrol') === 'diesel' && norm(e.seller) === target);
+  const fuelIds = new Set((DB.fuelEntries||[]).map(e => String(e.id)));
+  const dieselManual = (company.dieselRows||[]).filter(r => !r.srcPurchaseId || !fuelIds.has(String(r.srcPurchaseId)));
+  let html = `<div style="border:2px solid #b7791f;border-radius:12px;padding:14px;margin-bottom:4px">
+    <div style="font-size:1rem;font-weight:800;color:#b7791f;margin-bottom:10px">🟤 خریدهای دیزل</div>`;
+  if (!dieselEntries.length && !dieselManual.some(r => { _migrateCompanyRow(r); return cmpTon(r)>0||parseFloat(r.usd)>0; })) {
+    html += `<div style="color:var(--muted);font-size:0.85rem;text-align:center;padding:10px 0">هیچ خرید دیزلی ثبت نشده — برای ثبت از «ثبت خرید تیل» استفاده کن</div>`;
+  } else {
+    let sumLit=0, sumUsd=0, sumAfn=0, cards='', count=0;
+    dieselEntries.forEach((e,i) => {
+      count++; sumLit+=(e.liters||0); sumUsd+=(e.totalUSD||0); sumAfn+=(e.totalAFN||0);
+      cards += `<div class="card" style="margin-bottom:8px">
+        <div class="card-head" style="padding:8px 12px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <span style="font-weight:700;color:#b7791f">🟤 خرید #${n2fa(count)}</span>
+            <span style="font-size:0.75rem;color:var(--muted)">📅 ${e.date||'—'}</span>
+            ${e.note?`<span style="font-size:0.72rem;color:var(--muted);font-style:italic">${e.note}</span>`:''}
+          </div>
+          <button class="del-btn" style="font-size:0.9rem;padding:3px 7px" onclick="deletePurchase(${e.id})">🗑️</button>
+        </div>
+        <div style="padding:8px 12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px">
+          <div class="stat-box"><div class="stat-label">وزن (کگ)</div><div style="font-weight:800;font-size:0.88rem">${n2fa(e.kg)}</div></div>
+          <div class="stat-box"><div class="stat-label">لیتر</div><div style="font-weight:800;font-size:0.88rem;color:var(--green)">${n2fa(Math.round(e.liters||0))}</div></div>
+          <div class="stat-box"><div class="stat-label">فی تن ($)</div><div style="font-weight:800;font-size:0.88rem">${n2fa(e.priceTon)}</div></div>
+          <div class="stat-box"><div class="stat-label">نرخ دالر</div><div style="font-weight:800;font-size:0.88rem">${n2fa(e.usdRate)}</div></div>
+          <div class="stat-box"><div class="stat-label">کل (دالر)</div><div style="font-weight:800;font-size:0.88rem;color:var(--blue)">${n2fa((e.totalUSD||0).toFixed(1))} $</div></div>
+          <div class="stat-box"><div class="stat-label">کل (افغانی)</div><div style="font-weight:800;font-size:0.88rem;color:#b7791f">${n2fa(Math.round(e.totalAFN||0))}</div></div>
+        </div>
+      </div>`;
+    });
+    dieselManual.forEach((r,i) => {
+      _migrateCompanyRow(r);
+      const ton=cmpTon(r), tusd=cmpTotalUsd(r), tafn=cmpAfnTotal(r);
+      if (!ton && !tusd) return;
+      count++;
+      cards += `<div class="card" style="margin-bottom:8px">
+        <div class="card-head" style="padding:8px 12px">
+          <span style="font-weight:700;color:#b7791f">🟤 ردیف #${n2fa(count)}</span>
+          <span style="font-size:0.75rem;color:var(--muted);margin-right:8px">📅 ${r.date||'—'}</span>
+        </div>
+        <div style="padding:8px 12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px">
+          <div class="stat-box"><div class="stat-label">مقدار (تن)</div><div style="font-weight:800;font-size:0.88rem">${n2fa(ton.toFixed(3))}</div></div>
+          <div class="stat-box"><div class="stat-label">فی تن ($)</div><div style="font-weight:800;font-size:0.88rem">${n2fa(parseFloat(r.usd)||0)}</div></div>
+          <div class="stat-box"><div class="stat-label">کل (دالر)</div><div style="font-weight:800;font-size:0.88rem;color:var(--blue)">${n2fa(tusd.toFixed(1))} $</div></div>
+          <div class="stat-box"><div class="stat-label">کل (افغانی)</div><div style="font-weight:800;font-size:0.88rem;color:#b7791f">${n2fa(Math.round(tafn))}</div></div>
+        </div>
+      </div>`;
+    });
+    if (count > 0) {
+      html += `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <span style="font-size:0.8rem;background:var(--dark);border:1px solid #b7791f;border-radius:9px;padding:6px 10px">تعداد: <b style="color:#b7791f">${n2fa(count)}</b></span>
+        <span style="font-size:0.8rem;background:var(--dark);border:1px solid #b7791f;border-radius:9px;padding:6px 10px">جمع لیتر: <b style="color:var(--green)">${n2fa(Math.round(sumLit))}</b></span>
+        <span style="font-size:0.8rem;background:var(--dark);border:1px solid #b7791f;border-radius:9px;padding:6px 10px">جمع دالر: <b style="color:var(--blue)">${n2fa(sumUsd.toFixed(1))} $</b></span>
+        <span style="font-size:0.8rem;background:var(--dark);border:1px solid #b7791f;border-radius:9px;padding:6px 10px">جمع افغانی: <b style="color:#b7791f">${n2fa(Math.round(sumAfn))}</b></span>
+      </div>${cards}`;
+    }
+  }
+  html += '</div>';
+  dieselBox.innerHTML = html;
 }
 
 // باز کردن صفحهٔ جداگانهٔ خریدهای همین شرکت (پطرول + دیزل)
