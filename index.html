@@ -7886,6 +7886,51 @@ function _companyPurchaseSection(entries, fuel){
       ${cards}
     </div>`;
 }
+// ردیف‌های دستی جدول شرکت (بدون مرجع خرید رسمی) را نمایش می‌دهد
+function _companyManualRowSection(rows, fuel){
+  if (!rows || !rows.length) return '';
+  const color = fuel === 'diesel' ? '#b7791f' : 'var(--accent)';
+  const icon  = fuel === 'diesel' ? '🟤' : '⛽';
+  const label = fuel === 'diesel' ? 'دیزل' : 'پطرول';
+  let sumAfn = 0, sumUsd = 0, sumTon = 0, cards = '', count = 0;
+  rows.forEach((r, i) => {
+    _migrateCompanyRow(r);
+    const ton = cmpTon(r);
+    const totalUsd = cmpTotalUsd(r);
+    const totalAfn = cmpAfnTotal(r);
+    if (!ton && !totalUsd) return;
+    count++; sumTon += ton; sumUsd += totalUsd; sumAfn += totalAfn;
+    cards += `
+    <div class="card" style="margin-bottom:10px">
+      <div class="card-head" style="padding:10px 14px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-weight:700;color:${color}">${icon} ردیف #${n2fa(count)}</span>
+          <span style="font-size:0.75rem;color:var(--muted)">📅 ${r.date||'—'}</span>
+          ${r.name ? `<span style="font-size:0.75rem;color:var(--blue)">👤 ${r.name}</span>` : ''}
+        </div>
+      </div>
+      <div style="padding:10px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
+        <div class="stat-box"><div class="stat-label">مقدار (تن)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(ton.toFixed(3))}</div></div>
+        <div class="stat-box"><div class="stat-label">فی تن ($)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(parseFloat(r.usd)||0)}</div></div>
+        <div class="stat-box"><div class="stat-label">نرخ دالر</div><div style="font-weight:800;font-size:0.92rem">${n2fa(parseFloat(r.rate)||0)}</div></div>
+        <div class="stat-box"><div class="stat-label">کل (دالر)</div><div style="font-weight:800;font-size:0.92rem;color:var(--blue)">${n2fa(totalUsd.toFixed(2))} $</div></div>
+        <div class="stat-box"><div class="stat-label">کل (افغانی)</div><div style="font-weight:800;font-size:0.92rem;color:${color}">${n2fa(Math.round(totalAfn))}</div></div>
+      </div>
+    </div>`;
+  });
+  if (!count) return '';
+  return `
+    <div style="margin-bottom:20px">
+      <div style="font-size:1rem;font-weight:800;color:${color};margin:0 2px 10px">${icon} خریدهای ${label}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <span style="font-size:0.8rem;background:var(--dark);border:1px solid ${color};border-radius:9px;padding:7px 12px">تعداد: <b style="color:${color}">${n2fa(count)}</b></span>
+        <span style="font-size:0.8rem;background:var(--dark);border:1px solid ${color};border-radius:9px;padding:7px 12px">جمع (تن): <b style="color:var(--green)">${n2fa(sumTon.toFixed(3))}</b></span>
+        <span style="font-size:0.8rem;background:var(--dark);border:1px solid ${color};border-radius:9px;padding:7px 12px">جمع کل دالر: <b style="color:var(--blue)">${n2fa(sumUsd.toFixed(1))} $</b></span>
+        <span style="font-size:0.8rem;background:var(--dark);border:1px solid ${color};border-radius:9px;padding:7px 12px">جمع کل افغانی: <b style="color:${color}">${n2fa(Math.round(sumAfn))}</b></span>
+      </div>
+      ${cards}
+    </div>`;
+}
 function renderCompanyPurchasesPage(company){
   const cont = document.getElementById('cmp-body');
   const titleEl = document.getElementById('cmp-title');
@@ -7895,11 +7940,17 @@ function renderCompanyPurchasesPage(company){
   const target = norm(company.name);
   const petrol = (DB.fuelEntries||[]).filter(e => (e.fuelType||'petrol') === 'petrol' && norm(e.seller) === target);
   const diesel = (DB.fuelEntries||[]).filter(e => (e.fuelType||'petrol') === 'diesel' && norm(e.seller) === target);
-  if (!petrol.length && !diesel.length){
+  // ردیف‌های دستی که در fuelEntries نیستند (بدون srcPurchaseId یا با ID ناشناس)
+  const fuelIds = new Set((DB.fuelEntries||[]).map(e => String(e.id)));
+  const manualPetrol = (company.rows||[]).filter(r => !r.srcPurchaseId || !fuelIds.has(String(r.srcPurchaseId)));
+  const manualDiesel = (company.dieselRows||[]).filter(r => !r.srcPurchaseId || !fuelIds.has(String(r.srcPurchaseId)));
+  const petrolHtml = _companyPurchaseSection(petrol, 'petrol') + _companyManualRowSection(manualPetrol, 'petrol');
+  const dieselHtml = _companyPurchaseSection(diesel, 'diesel') + _companyManualRowSection(manualDiesel, 'diesel');
+  if (!petrolHtml && !dieselHtml){
     cont.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">هیچ خریدی ثبت نشده</div>';
     return;
   }
-  cont.innerHTML = _companyPurchaseSection(petrol, 'petrol') + _companyPurchaseSection(diesel, 'diesel');
+  cont.innerHTML = petrolHtml + dieselHtml;
 }
 
 // «جدول جدید» شرکت — جدول فعلی را آرشیو می‌کند و یک جدول خالی می‌سازد (مثل بخش قرض‌داران، بدون دست‌زدن به آن)
