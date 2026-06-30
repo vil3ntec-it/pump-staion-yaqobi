@@ -7857,8 +7857,17 @@ function closeCompanyPurchases(){
   document.getElementById('companyPurchasesModal').classList.remove('open');
 }
 // یک بخشِ خرید (پطرول یا دیزل) را با خلاصه و کارت‌ها می‌سازد
-function _companyPurchaseSection(entries, fuel){
-  if (!entries.length) return '';
+function _companyPurchaseSection(entries, fuel, alwaysShow){
+  if (!entries.length) {
+    if (!alwaysShow) return '';
+    const color = fuel === 'diesel' ? '#b7791f' : 'var(--accent)';
+    const icon  = fuel === 'diesel' ? '🟤' : '⛽';
+    const label = fuel === 'diesel' ? 'دیزل' : 'پطرول';
+    return `<div style="margin-bottom:20px;border:2px dashed ${color};border-radius:12px;padding:18px;opacity:0.65">
+      <div style="font-size:1rem;font-weight:800;color:${color};margin-bottom:10px">${icon} خریدهای ${label}</div>
+      <div style="text-align:center;color:var(--muted);font-size:0.85rem;padding:8px 0">هیچ خرید ${label}ی برای این شرکت ثبت نشده</div>
+    </div>`;
+  }
   const color = fuel === 'diesel' ? '#b7791f' : 'var(--accent)';
   const icon  = fuel === 'diesel' ? '🟤' : '⛽';
   const label = fuel === 'diesel' ? 'دیزل' : 'پطرول';
@@ -7959,12 +7968,8 @@ function renderCompanyPurchasesPage(company){
   const fuelIds = new Set((DB.fuelEntries||[]).map(e => String(e.id)));
   const manualPetrol = (company.rows||[]).filter(r => !r.srcPurchaseId || !fuelIds.has(String(r.srcPurchaseId)));
   const manualDiesel = (company.dieselRows||[]).filter(r => !r.srcPurchaseId || !fuelIds.has(String(r.srcPurchaseId)));
-  const petrolHtml = _companyPurchaseSection(petrol, 'petrol') + _companyManualRowSection(manualPetrol, 'petrol');
-  const dieselHtml = _companyPurchaseSection(diesel, 'diesel') + _companyManualRowSection(manualDiesel, 'diesel');
-  if (!petrolHtml && !dieselHtml){
-    cont.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">هیچ خریدی ثبت نشده</div>';
-    return;
-  }
+  const petrolHtml = _companyPurchaseSection(petrol, 'petrol', true) + _companyManualRowSection(manualPetrol, 'petrol');
+  const dieselHtml = _companyPurchaseSection(diesel, 'diesel', true) + _companyManualRowSection(manualDiesel, 'diesel');
   cont.innerHTML = petrolHtml + dieselHtml;
 }
 
