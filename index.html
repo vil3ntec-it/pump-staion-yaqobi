@@ -3312,6 +3312,12 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
       <b>اینجا کار نمی‌کند</b> — فقط شمارهٔ واتساپ با کد کشور بنویسید.
       هر کسی که باید هشدار بگیرد (شما، شریک، راننده)، خودش قدم ۱ تا ۳ را انجام دهد
       و شماره + کدش را اینجا اضافه کنید — پیام به همه می‌رود.
+      <br><br><b style="color:var(--txt)">👥 می‌خواهید پیام مستقیم داخل گروه بیاید؟ (لینک گروه کار نمی‌کند — این ۳ قدم را بروید):</b>
+      <br><b style="color:#25D366">۱)</b> این شماره را مثل یک عضو معمولی به گروه‌تان اضافه کنید: <b dir="ltr" style="color:var(--txt)">+34 621 331 709</b>
+      <br><b style="color:#25D366">۲)</b> داخل خود گروه این پیام را بفرستید (همین‌طور انگلیسی، کپی کنید):
+      <br><b dir="ltr" style="color:var(--txt);background:var(--dark);border-radius:7px;padding:3px 8px;display:inline-block;margin:4px 0">I allow callmebot to send messages to this group</b>
+      <br><b style="color:#25D366">۳)</b> ربات جواب می‌دهد و <b>شناسهٔ گروه</b> (چیزی شبیه <b dir="ltr">123456789-123456@g.us</b>) و <b>کد فعال‌سازی</b> می‌دهد — همان دو را به‌عنوان یک گیرندهٔ جدید در جدول پایین ثبت کنید. از آن به بعد هشدار تیل و حساب‌ها خودکار داخل خود گروه می‌آید ✅
+      <br><span style="font-size:0.8rem">📎 اگر این شماره جواب نداد، شمارهٔ به‌روز را از صفحهٔ <a href="https://www.callmebot.com/whatsapp-group-messages/" target="_blank" style="color:#25D366">گروه در callmebot.com</a> بگیرید.</span>
     </div>
     <div id="wa-targets-body" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -8740,8 +8746,8 @@ function renderWaTargets() {
   }
   body.innerHTML = list.map((t, i) => `
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;border:1px solid var(--border);border-radius:9px;padding:8px">
-      <input class="xls-in" style="flex:1;min-width:110px" placeholder="نام (مثلاً خودم، شریک)" value="${escFa(t.label)}" onchange="updateWaTarget(${i},'label',this.value)">
-      <input class="xls-in" style="flex:1.4;min-width:150px" dir="ltr" placeholder="شمارهٔ واتساپ، مثلاً 93701234567" value="${escFa(t.phone)}" onchange="updateWaTarget(${i},'phone',this.value)">
+      <input class="xls-in" style="flex:1;min-width:110px" placeholder="نام (مثلاً گروه پمپ، خودم)" value="${escFa(t.label)}" onchange="updateWaTarget(${i},'label',this.value)">
+      <input class="xls-in" style="flex:1.4;min-width:150px" dir="ltr" placeholder="شماره (93701234567) یا شناسهٔ گروه (…@g.us)" value="${escFa(t.phone)}" onchange="updateWaTarget(${i},'phone',this.value)">
       <input class="xls-in" style="flex:1;min-width:110px" dir="ltr" placeholder="کد فعال‌سازی" value="${escFa(t.key)}" onchange="updateWaTarget(${i},'key',this.value)">
       <button class="del-btn" onclick="delWaTarget(${i})">🗑️</button>
     </div>`).join('');
