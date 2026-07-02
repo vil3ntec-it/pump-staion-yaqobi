@@ -3211,18 +3211,6 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
     <div style="font-size:0.8rem;font-weight:700;color:var(--label);margin:16px 0 8px">☀️ تم‌های روشن</div>
     <div class="theme-row" id="theme-row-light"></div>
   </div>
-  <div class="settings-card" style="border-color:var(--green)">
-    <div class="settings-title" style="color:var(--green)">📥 وارد کردن حساب قرض‌داران از اکسل</div>
-    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;line-height:1.9">
-      فایل اکسل (xlsx) یا CSV حساب‌ها را انتخاب کنید. برنامه نام هر شخص را جدا می‌خواند و <b style="color:var(--accent)">برای هر شخص حساب جداگانه</b> در بخش «قرض‌داران» می‌سازد. قبل از ثبت، یک پیش‌نمایش نشان داده می‌شود تا ستون‌ها را تأیید کنید.<br>
-      📌 فقط بخش قرض‌داران وارد می‌شود — به ذخیره، مخزن و دیگر بخش‌ها هیچ دستی نمی‌خورد.
-    </div>
-    <input type="file" id="xlsImportFile" accept=".xlsx,.xls,.csv" style="display:none" onchange="xlsHandleFile(event)">
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button class="pw-btn" style="background:var(--green);color:#fff" onclick="document.getElementById('xlsImportFile').click()">📂 انتخاب فایل اکسل / CSV</button>
-    </div>
-    <div id="xls-import-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;line-height:1.8"></div>
-  </div>
   <div class="settings-card" style="border-color:var(--blue)">
     <div class="settings-title">☁️ هم‌زمان‌سازی آنلاین</div>
     <div style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;line-height:1.9">
@@ -3243,17 +3231,6 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
     <button class="pw-btn" style="background:var(--green);color:#fff" onclick="downloadApp()">⬇️ دانلود برنامه (HTML)</button>
     <div style="margin-top:10px;font-size:0.8rem;color:var(--muted);line-height:1.8">📌 فایلِ دانلودشده همین حساب فعلی شما را در خود دارد؛ روی هر دستگاهی که باز یا کپی شود همین حساب را نشان می‌دهد (نه حساب خالی).</div>
     <div id="dl-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
-  </div>
-  <div class="settings-card">
-    <div class="settings-title">🏪 اطلاعات ایستگاه</div>
-    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:12px">این اطلاعات در هدر سایت و صفحه قفل نمایش داده می‌شود.</div>
-    <div class="pw-row">
-      <div class="pw-field"><label>نام ایستگاه</label><input type="text" id="st-name" placeholder="پمپ یعقوبی"></div>
-      <div class="pw-field"><label>آدرس</label><input type="text" id="st-address" placeholder="آدرس ایستگاه"></div>
-      <div class="pw-field"><label>شماره تماس</label><input type="text" id="st-phone" placeholder="مثلاً ۰۷۰۰ ۱۲۳ ۴۵۶۷"></div>
-      <button class="pw-btn" onclick="saveStationInfo()">ذخیره</button>
-    </div>
-    <div id="st-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
   </div>
   <div class="settings-card" id="access-card" style="border-color:var(--green)">
     <div class="settings-title" style="color:var(--green)">🔓 رمز دسترسی کامل</div>
@@ -10446,7 +10423,7 @@ function calcWaraqTotalSales(w) {
 
 function openNewWaraq(shift) {
   const d = allDates ? allDates() : { sh: persianDate() };
-  const stName = document.getElementById('st-name')?.value || '';
+  const stName = document.getElementById('st-name')?.value || DB.stationName || '';
   const w = {
     id: 'wq' + Date.now(),
     date: d.sh || persianDate(),
@@ -11002,7 +10979,7 @@ function syncShiftToWaraq(shift, shiftData, fuel, srcKey) {
   // ورق با تاریخ مشابه را پیدا کن؛ اگر نبود ورق جدید بساز (تاریخ یکی = یک ورق)
   let w = DB.waraqEntries.find(x => x.date === shiftData.savedAt);
   if (!w) {
-    const stName = document.getElementById('st-name')?.value || '';
+    const stName = document.getElementById('st-name')?.value || DB.stationName || '';
     w = {
       id: 'wq' + Date.now(),
       date: shiftData.savedAt,
