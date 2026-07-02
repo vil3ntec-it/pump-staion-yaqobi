@@ -2310,6 +2310,29 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
 @media (max-width: 480px){
   .person-card .pname{ padding: 0 18px; }
 }
+
+/* ===== نوار حساب/فیلتر مودال شخص: همه در یک خط بغل هم ===== */
+/* کشویی دیگر بالای «حساب جدید / جدول جدید» باز نمی‌شود که دست اشتباهی برود؛
+   در صفحهٔ باریک همین خط اسکرول افقی می‌خورد و هرگز به دو خط نمی‌شکند */
+.pm-acct-bar{
+  display:flex;
+  flex-wrap:nowrap;
+  align-items:center;
+  gap:8px;
+  margin-bottom:10px;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+  padding:4px 0 6px;
+}
+.pm-acct-bar .pm-filter-bar{
+  display:flex;
+  flex-wrap:nowrap;
+  align-items:center;
+  gap:6px;
+  flex-shrink:0;
+}
+.pm-acct-bar .pm-filter-btn{ white-space:nowrap; flex-shrink:0; padding:6px 12px; }
 </style>
 </head>
 <body>
@@ -3361,23 +3384,20 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
     </div>
     <div class="modal-body">
       <div id="pm-bigname" style="text-align:center;font-size:1.9rem;font-weight:900;color:var(--accent);padding:6px 10px;margin-bottom:8px;border-bottom:2px solid var(--border)"></div>
-      <div class="pm-acct-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
-        <!-- گروه راست: لیبل + dropdown -->
-        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-          <span style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap">📒 حساب:</span>
-          <select id="pm-acct-select" onchange="switchPersonSub(this.value)" style="min-width:80px;max-width:180px;background:var(--dark);border:1px solid var(--border);border-radius:7px;padding:5px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer"></select>
-        </div>
-        <!-- گروه چپ: دکمه‌ها -->
-        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-          <button class="add-btn pm-acct-new" onclick="newPersonSub()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap">➕ حساب جدید</button>
-          <button class="add-btn pm-table-new" onclick="newPersonTable()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap">📋 جدول جدید</button>
-          <button id="pm-acct-del" class="del-btn pm-acct-del" onclick="deletePersonSub()" style="display:none;background:transparent;color:var(--red);border:1px solid var(--red);border-radius:7px;padding:5px 8px;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap">🗑️ حذف</button>
-        </div>
-      </div>
-      <div class="pm-filter-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-        <button class="pm-filter-btn active" id="pm-filter-all" onclick="setPersonFilter('all')">📋 همه</button>
-        <button class="pm-filter-btn petrol" id="pm-filter-petrol" onclick="setPersonFilter('petrol')">⛽ حساب جداگانه پطرول</button>
-        <button class="pm-filter-btn diesel" id="pm-filter-diesel" onclick="setPersonFilter('diesel')">🟤 حساب جداگانه دیزل</button>
+      <!-- همهٔ ابزارها در «یک خط» کنار هم: کشویی حساب + حساب جدید + جدول جدید + فیلترها.
+           دیگر کشویی بالای دکمه‌ها نیست که دست اشتباهی رویشان برود؛ در صفحهٔ باریک این خط اسکرول افقی می‌خورد و نمی‌شکند -->
+      <div class="pm-acct-bar">
+        <span class="pm-acct-label" style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap;flex-shrink:0">📒 حساب:</span>
+        <select id="pm-acct-select" onchange="switchPersonSub(this.value)" style="min-width:90px;max-width:170px;flex-shrink:0;background:var(--dark);border:1px solid var(--border);border-radius:7px;padding:5px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer"></select>
+        <button class="add-btn pm-acct-new" onclick="newPersonSub()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap;flex-shrink:0">➕ حساب جدید</button>
+        <button class="add-btn pm-table-new" onclick="newPersonTable()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap;flex-shrink:0">📋 جدول جدید</button>
+        <button id="pm-acct-del" class="del-btn pm-acct-del" onclick="deletePersonSub()" style="display:none;background:transparent;color:var(--red);border:1px solid var(--red);border-radius:7px;padding:5px 8px;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">🗑️ حذف</button>
+        <span style="width:1px;height:24px;background:var(--border);flex-shrink:0"></span>
+        <span class="pm-filter-bar">
+          <button class="pm-filter-btn active" id="pm-filter-all" onclick="setPersonFilter('all')">📋 همه</button>
+          <button class="pm-filter-btn petrol" id="pm-filter-petrol" onclick="setPersonFilter('petrol')">⛽ حساب جداگانه پطرول</button>
+          <button class="pm-filter-btn diesel" id="pm-filter-diesel" onclick="setPersonFilter('diesel')">🟤 حساب جداگانه دیزل</button>
+        </span>
       </div>
       <div class="xls-wrap">
         <table class="xls-tbl" id="pm-tbl">
@@ -6212,7 +6232,7 @@ function _renderSubBar(person) {
   }
   const del = document.getElementById('pm-acct-del');
   if (del) del.style.display = currentSubId ? '' : 'none';
-  const label = document.querySelector('#personModal .pm-acct-bar > span');
+  const label = document.querySelector('#personModal .pm-acct-bar .pm-acct-label');
   if (label) label.style.display = subs.length === 0 ? 'none' : '';
 }
 function switchPersonSub(id) {
