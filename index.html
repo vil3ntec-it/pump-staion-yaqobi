@@ -267,16 +267,6 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 /* ── ماشین حساب شناور ── */
 #calcFab{position:fixed;bottom:18px;left:18px;z-index:600;width:54px;height:54px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--accent),#d97706);color:#000;font-size:1.5rem;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;transition:transform .12s}
 #calcFab:hover{transform:scale(1.07)}
-/* 🤖 ربات پمپ — دکمهٔ شناور و پنجرهٔ گفتگو */
-#botFab{position:fixed;bottom:18px;right:18px;z-index:600;width:54px;height:54px;border-radius:50%;border:none;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;font-size:1.5rem;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;transition:transform .12s}
-#botFab:hover{transform:scale(1.07)}
-#botPanel{position:fixed;bottom:84px;right:18px;z-index:601;width:340px;max-width:94vw;height:470px;max-height:78vh;background:var(--panel);border:1.5px solid #25D366;border-radius:18px;box-shadow:0 14px 44px rgba(0,0,0,.6);display:none;flex-direction:column;overflow:hidden}
-#botMsgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
-.bot-bubble{background:var(--card);border:1px solid var(--border);border-radius:12px 12px 12px 3px;padding:9px 12px;font-size:0.83rem;line-height:1.9;max-width:92%;align-self:flex-start;overflow-wrap:break-word}
-.bot-bubble.me{background:#128C7E;color:#fff;border:none;border-radius:12px 12px 3px 12px;align-self:flex-end}
-.bot-bubble a{color:#25D366;word-break:break-all}
-.bot-pick{display:block;width:100%;text-align:right;background:var(--dark);border:1px solid #25D366;color:var(--txt);border-radius:9px;padding:7px 10px;margin-top:6px;font-family:'Vazirmatn',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer}
-.bot-pick:hover{background:#128C7E;color:#fff}
 #calcPanel{position:fixed;bottom:84px;left:18px;z-index:601;width:286px;height:430px;min-width:230px;min-height:340px;max-width:96vw;max-height:90vh;background:var(--panel);border:1.5px solid var(--border);border-radius:18px;box-shadow:0 14px 44px rgba(0,0,0,.6);display:none;flex-direction:column;overflow:auto;resize:both;transition:width .2s,height .2s}
 #calcPanel.large{width:400px;height:580px}
 #calcPanel.open{display:flex}
@@ -2397,22 +2387,6 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
 
 <!-- ماشین حساب شناور (در همهٔ بخش‌ها) -->
 <button id="calcFab" onclick="toggleCalc()" title="ماشین حساب">🧮</button>
-<button id="botFab" onclick="toggleBot()" title="ربات پمپ — نام حساب را بنویس تا خودش به گروه بفرستد">🤖</button>
-<div id="botPanel">
-  <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:linear-gradient(135deg,#128C7E,#075E54);color:#fff">
-    <span style="font-size:1.2rem">🤖</span>
-    <div style="flex:1;min-width:0">
-      <div style="font-weight:800;font-size:0.9rem">ربات پمپ</div>
-      <div style="font-size:0.68rem;opacity:.85">نام حساب را بنویس — خودش خلاصه + لینک را به گروه می‌فرستد</div>
-    </div>
-    <button onclick="toggleBot()" style="background:transparent;border:none;color:#fff;font-size:1rem;cursor:pointer;padding:4px">✕</button>
-  </div>
-  <div id="botMsgs"></div>
-  <div style="display:flex;gap:6px;padding:10px;border-top:1px solid var(--border)">
-    <input id="botInput" placeholder="مثلاً: حاجی احمد — یا بنویس: تیل" style="flex:1;min-width:0;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:9px 11px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.85rem" onkeydown="if(event.key==='Enter')botAsk()">
-    <button onclick="botAsk()" style="background:#25D366;color:#fff;border:none;border-radius:9px;padding:9px 14px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">📤</button>
-  </div>
-</div>
 <div id="calcPanel">
   <div id="calcHead"><span>🧮 ماشین حساب</span><span style="display:flex;gap:8px;align-items:center"><span id="calcSize" onclick="toggleCalcSize()" style="cursor:pointer;color:var(--muted);font-size:1rem" title="بزرگ/کوچک">⤢</span><span id="calcClose" onclick="toggleCalc()">✕</span></span></div>
   <div id="calcExpr"></div>
@@ -3317,21 +3291,27 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
     <div id="set-ls-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted)"></div>
   </div>
   <div class="settings-card" id="wa-bot-card" style="border-color:#25D366">
-    <div class="settings-title" style="color:#25D366">🤖 ربات واتساپ — ارسال خودکار</div>
-    <div style="font-size:0.85rem;color:var(--muted);line-height:2;margin-bottom:12px">
-      با این ربات، پیام‌ها <b style="color:#25D366">خودکار و بدون زدن دکمه</b> به واتساپ می‌روند:
-      وقتی تیل در حال تمام شدن باشد، هشدار خودش به گروه و شماره‌های ثبت‌شده می‌رود؛
-      و داخل هر حساب هم دکمهٔ «📤 واتساپ» هست که خلاصهٔ همان حساب را فوری می‌فرستد.
-      <br>🔧 <b>راه‌اندازی (یک بار، رایگان — سرویس CallMeBot):</b>
-      <br>۱) برای <b>شمارهٔ شخصی</b>: شمارهٔ ربات CallMeBot را از سایت
-      <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank" style="color:#25D366">callmebot.com</a>
-      بگیرید و در واتساپ ذخیره کنید، بعد از همان واتساپ این پیام را به او بفرستید:
-      <b style="color:var(--txt)">I allow callmebot to send me messages</b>
-      — چند لحظه بعد یک <b>apikey</b> (کد چندرقمی) برایتان می‌آید.
-      <br>۲) برای <b>گروه</b>: طبق راهنمای
-      <a href="https://www.callmebot.com/whatsapp-group-messages/" target="_blank" style="color:#25D366">همین صفحه</a>
-      ربات را عضو گروه کنید تا شناسهٔ گروه (مثل <b dir="ltr">123456789-987654@g.us</b>) و apikey بگیرید.
-      <br>۳) شماره/شناسهٔ گروه + apikey را در جدول زیر وارد کنید و «تست ارسال» را بزنید.
+    <div class="settings-title" style="color:#25D366">🤖 هشدار خودکار تیل در واتساپ</div>
+    <div style="font-size:0.87rem;color:var(--muted);line-height:2.1;margin-bottom:12px">
+      وقتی تیل مخزن کم شود، پیام هشدار <b style="color:#25D366">خودش، بدون زدن هیچ دکمه‌ای</b> به واتساپ شما و گروه‌تان می‌رود.
+      <br><br>
+      <b style="color:var(--txt)">📝 راه‌اندازی — فقط یک بار (رایگان):</b>
+      <br><b style="color:#25D366">قدم ۱:</b> این شماره را در گوشی خود ذخیره کنید:
+      <b dir="ltr" style="color:var(--txt)">+34 644 51 95 23</b>
+      <br><b style="color:#25D366">قدم ۲:</b> در واتساپ به همین شماره این جمله را بفرستید
+      (همین‌طور انگلیسی، کپی کنید):
+      <br><b dir="ltr" style="color:var(--txt);background:var(--dark);border-radius:7px;padding:3px 8px;display:inline-block;margin:4px 0">I allow callmebot to send me messages</b>
+      <br><b style="color:#25D366">قدم ۳:</b> چند لحظه بعد جوابی می‌آید که داخلش یک <b>کد چند رقمی</b> است
+      (مثلاً <b dir="ltr">123456</b>) — این «کد فعال‌سازی» شماست.
+      <br><b style="color:#25D366">قدم ۴:</b> پایین، «افزودن گیرنده» را بزنید و
+      <b>شمارهٔ واتساپ خودتان</b> (با کد کشور، مثلاً <b dir="ltr">93701234567</b>) و همان <b>کد</b> را بنویسید.
+      بعد «تست ارسال» را بزنید — اگر پیام تست به واتساپ‌تان آمد، تمام است ✅
+      <br><span style="font-size:0.8rem">📎 اگر شمارهٔ قدم ۱ جواب نداد، شمارهٔ جدید ربات را از سایت <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank" style="color:#25D366">callmebot.com</a> بگیرید.</span>
+      <br><br>
+      ⚠️ <b style="color:var(--red)">توجه:</b> لینک دعوت گروه (chat.whatsapp.com) یا لینک wa.me
+      <b>اینجا کار نمی‌کند</b> — فقط شمارهٔ واتساپ با کد کشور بنویسید.
+      هر کسی که باید هشدار بگیرد (شما، شریک، راننده)، خودش قدم ۱ تا ۳ را انجام دهد
+      و شماره + کدش را اینجا اضافه کنید — پیام به همه می‌رود.
     </div>
     <div id="wa-targets-body" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -4294,7 +4274,6 @@ function tryUnlock() {
     document.getElementById('lockScreen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     const _fabU = document.getElementById('calcFab'); if (_fabU) _fabU.style.display = 'flex';
-    const _botU = document.getElementById('botFab'); if (_botU) _botU.style.display = 'flex';
     document.getElementById('lockInput').value = '';
     document.getElementById('lockErr').innerHTML = '';
     try { updateAll(); } catch(e){}
@@ -8761,14 +8740,23 @@ function renderWaTargets() {
   }
   body.innerHTML = list.map((t, i) => `
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;border:1px solid var(--border);border-radius:9px;padding:8px">
-      <input class="xls-in" style="flex:1;min-width:110px" placeholder="نام (مثلاً گروه پمپ)" value="${escFa(t.label)}" onchange="updateWaTarget(${i},'label',this.value)">
-      <input class="xls-in" style="flex:1.4;min-width:150px" dir="ltr" placeholder="93701234567 یا 12345-678@g.us" value="${escFa(t.phone)}" onchange="updateWaTarget(${i},'phone',this.value)">
-      <input class="xls-in" style="flex:1;min-width:110px" dir="ltr" placeholder="apikey" value="${escFa(t.key)}" onchange="updateWaTarget(${i},'key',this.value)">
+      <input class="xls-in" style="flex:1;min-width:110px" placeholder="نام (مثلاً خودم، شریک)" value="${escFa(t.label)}" onchange="updateWaTarget(${i},'label',this.value)">
+      <input class="xls-in" style="flex:1.4;min-width:150px" dir="ltr" placeholder="شمارهٔ واتساپ، مثلاً 93701234567" value="${escFa(t.phone)}" onchange="updateWaTarget(${i},'phone',this.value)">
+      <input class="xls-in" style="flex:1;min-width:110px" dir="ltr" placeholder="کد فعال‌سازی" value="${escFa(t.key)}" onchange="updateWaTarget(${i},'key',this.value)">
       <button class="del-btn" onclick="delWaTarget(${i})">🗑️</button>
     </div>`).join('');
 }
 function addWaTarget() { _waTargets().push({ label: '', phone: '', key: '' }); save(); renderWaTargets(); }
-function updateWaTarget(i, f, v) { const l = _waTargets(); if (!l[i]) return; l[i][f] = (v||'').trim(); save(); }
+function updateWaTarget(i, f, v) {
+  const l = _waTargets(); if (!l[i]) return;
+  let val = (v||'').trim();
+  if (f === 'phone' && (val.indexOf('/') >= 0 || val.indexOf('http') >= 0 || val.indexOf('wa.me') >= 0 || val.indexOf('chat.whatsapp') >= 0)) {
+    showToast('❌ لینک واتساپ اینجا کار نمی‌کند — فقط شماره با کد کشور بنویسید (مثلاً 93701234567)', '#e53e3e');
+    val = '';
+    renderWaTargets();
+  }
+  l[i][f] = val; save();
+}
 function delWaTarget(i) { const l = _waTargets(); if (!l[i]) return; l.splice(i, 1); save(); renderWaTargets(); }
 // ارسال خودکار به همهٔ گیرنده‌ها — بدون نیاز به باز شدن واتساپ و زدن دکمه
 function waSendAll(text) {
@@ -8819,112 +8807,6 @@ function waSharePerson() {
   txt += '📊 جمع الباقی: ' + n2fa(Math.round(t.all.albaqi)) + ' افغانی';
   _waSendSummary(txt);
 }
-// ========== 🤖 ربات پمپ: نام حساب را بنویس، خودش خلاصه + لینک را به گروه می‌فرستد ==========
-function toggleBot() {
-  const p = document.getElementById('botPanel');
-  if (!p) return;
-  const opening = p.style.display !== 'flex';
-  p.style.display = opening ? 'flex' : 'none';
-  if (opening) {
-    const msgs = document.getElementById('botMsgs');
-    if (msgs && !msgs.children.length) {
-      _botMsg('سلام 👋 نام هر حساب (شخص یا شرکت) را بنویس تا خلاصه‌اش را با لینک، <b>خودکار</b> به گروه واتساپ بفرستم.<br>برای وضعیت مخزن هم بنویس: <b>تیل</b>' +
-        (_waReady() ? '' : '<br>⚠️ هنوز گیرندهٔ واتساپ ثبت نشده — از تنظیمات ← «🤖 ربات واتساپ» گروه را اضافه کن، وگرنه فقط همین‌جا نشان می‌دهم.'));
-    }
-    setTimeout(function(){ const i = document.getElementById('botInput'); if (i) i.focus(); }, 100);
-  }
-}
-function _botMsg(html, me) {
-  const msgs = document.getElementById('botMsgs');
-  if (!msgs) return;
-  const d = document.createElement('div');
-  d.className = 'bot-bubble' + (me ? ' me' : '');
-  d.innerHTML = html;
-  msgs.appendChild(d);
-  msgs.scrollTop = msgs.scrollHeight;
-}
-function _botBase() {
-  return /^http/.test(location.protocol) ? location.href.split('#')[0] : 'https://vil3ntec-it.github.io/pump-staion-yaqobi/';
-}
-// خلاصهٔ حساب شخص + لینک نمایشِ فقط-خواندنی
-function _botPersonText(type, p) {
-  const t = _splitTotals(_allRows(p));
-  let txt = '📒 حساب ' + (p.name||'') + ' — ' + (DB.stationName||'پمپ یعقوبی') + '\n';
-  txt += '📅 ' + persianDate() + '\n';
-  txt += '⛽ الباقی پطرول: ' + n2fa(Math.round(t.petrol.albaqi)) + ' افغانی\n';
-  txt += '🟤 الباقی دیزل: ' + n2fa(Math.round(t.diesel.albaqi)) + ' افغانی\n';
-  txt += '📊 جمع الباقی: ' + n2fa(Math.round(t.all.albaqi)) + ' افغانی\n';
-  txt += '🔗 لینک حساب: ' + _botBase() + '#roview-' + type + '-' + p.id + '-pdf';
-  return txt;
-}
-// خلاصهٔ حساب شرکت (پطرول + دیزل) + لینک
-function _botCompanyText(c) {
-  function tot(rows) {
-    let ton = 0, usd = 0, afn = 0, poul = 0;
-    (rows||[]).forEach(r => { _migrateCompanyRow(r); ton += cmpTon(r); usd += cmpTotalUsd(r); afn += cmpAfnTotal(r); poul += cmpPoulAfn(r); });
-    return { ton, usd, afn, poul, albaqi: afn - poul };
-  }
-  const pt = tot(c.rows), dt = tot(c.dieselRows);
-  let txt = '🛢️ حساب شرکت ' + (c.name||'') + ' — ' + (DB.stationName||'پمپ یعقوبی') + '\n';
-  txt += '📅 ' + persianDate() + '\n';
-  txt += '⛽ پطرول: ' + n2fa(pt.ton.toFixed(1)) + ' تن | ' + n2fa(pt.usd.toFixed(1)) + ' $ | الباقی ' + n2fa(Math.round(pt.albaqi)) + ' افغانی\n';
-  txt += '🟤 دیزل: ' + n2fa(dt.ton.toFixed(1)) + ' تن | ' + n2fa(dt.usd.toFixed(1)) + ' $ | الباقی ' + n2fa(Math.round(dt.albaqi)) + ' افغانی\n';
-  txt += '📊 جمع الباقی: ' + n2fa(Math.round(pt.albaqi + dt.albaqi)) + ' افغانی\n';
-  txt += '🔗 لینک حساب: ' + _botBase() + '#roview-company-' + c.id + '-pdf';
-  return txt;
-}
-function _botStockText() {
-  let txt = '🛢️ وضعیت مخزن — ' + (DB.stationName||'پمپ یعقوبی') + '\n📅 ' + persianDate() + '\n';
-  txt += '⛽ پطرول: ' + n2fa(Math.round(_fuelStock('petrol'))) + ' لیتر\n';
-  txt += '🟤 دیزل: ' + n2fa(Math.round(_fuelStock('diesel'))) + ' لیتر';
-  return txt;
-}
-// تحویل: در گفتگو نشان بده و اگر ربات واتساپ فعال است، خودکار بفرست — بدون هیچ دکمه
-function _botDeliver(text) {
-  _botMsg(escFa(text).replace(/\n/g, '<br>'));
-  if (_waReady() && navigator.onLine) {
-    waSendAll(text);
-    _botMsg('📤 خودکار به واتساپ (گروه و شماره‌ها) فرستاده شد ✅');
-  } else if (!_waReady()) {
-    _botMsg('⚠️ برای ارسال خودکار، از تنظیمات ← «🤖 ربات واتساپ» گروه/شماره اضافه کن. <a href="https://wa.me/?text=' + encodeURIComponent(text) + '" target="_blank">ارسال دستی در واتساپ</a>');
-  } else {
-    _botMsg('📴 اینترنت وصل نیست — وقتی وصل شد دوباره بنویس.');
-  }
-}
-function botPick(kind, id) {
-  let text = null;
-  if (kind === 'company') {
-    const c = (DB.tilCompanies||[]).find(x => x.id === id);
-    if (c) text = _botCompanyText(c);
-  } else {
-    const list = kind === 'debt' ? (DB.debtPersons||[]) : (DB.noinvPersons||[]);
-    const p = list.find(x => x.id === id);
-    if (p) text = _botPersonText(kind, p);
-  }
-  if (text) _botDeliver(text);
-}
-function botAsk() {
-  const inp = document.getElementById('botInput');
-  if (!inp) return;
-  const q = (inp.value||'').trim();
-  if (!q) return;
-  inp.value = '';
-  _botMsg(escFa(q), true);
-  // وضعیت مخزن
-  if (/تیل|مخزن|ذخیره|موجودی/.test(q)) { _botDeliver(_botStockText()); return; }
-  // جستجوی حساب در هر سه بخش
-  const nq = normFa(q);
-  const hits = [];
-  (DB.debtPersons||[]).forEach(p => { if (normFa(p.name).includes(nq)) hits.push({ kind:'debt', id:p.id, name:p.name, icon:'👤' }); });
-  (DB.noinvPersons||[]).forEach(p => { if (normFa(p.name).includes(nq)) hits.push({ kind:'noinv', id:p.id, name:p.name, icon:'👤' }); });
-  (DB.tilCompanies||[]).forEach(c => { if (normFa(c.name).includes(nq)) hits.push({ kind:'company', id:c.id, name:c.name, icon:'🛢️' }); });
-  if (!hits.length) { _botMsg('❌ حسابی به نام «' + escFa(q) + '» پیدا نشد — املای نام را چک کن.'); return; }
-  if (hits.length === 1) { botPick(hits[0].kind, hits[0].id); return; }
-  // چند حساب مشابه: انتخاب با یک کلیک — همان کلیک خودش می‌فرستد
-  _botMsg('🔍 ' + n2fa(hits.length) + ' حساب مشابه پیدا شد — کدام یکی؟' +
-    hits.slice(0, 8).map(h => '<button class="bot-pick" onclick="botPick(\'' + h.kind + '\',\'' + h.id + '\')">' + h.icon + ' ' + escFa(h.name) + '</button>').join(''));
-}
-
 function waShareCompany() {
   const company = (DB.tilCompanies||[]).find(c => c.id === currentCompanyId);
   if (!company) return;
@@ -12155,7 +12037,6 @@ if (_isROHash) {
   const _ls0 = document.getElementById('lockScreen'); if (_ls0) _ls0.style.display = 'flex';
   const _ap0 = document.getElementById('app'); if (_ap0) _ap0.style.display = 'none';
   const _fab0 = document.getElementById('calcFab'); if (_fab0) _fab0.style.display = 'none';
-  const _bot0 = document.getElementById('botFab'); if (_bot0) _bot0.style.display = 'none';
   const _li0 = document.getElementById('lockInput'); if (_li0) setTimeout(() => _li0.focus(), 200);
 }
 _initCalcDrag();
