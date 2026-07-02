@@ -4,8 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>پمپ یعقوبی</title>
+<script>
+// فونت وب به‌صورت غیرمسدودکننده بارگذاری می‌شود:
+// قبلاً @import داخل style بود و با اینترنت ضعیف/قطع، باز شدن برنامه را ده‌ها ثانیه معطل می‌کرد.
+// اگر فونت نیاید، فونت‌های سیستمی (Tahoma و…) جایگزین می‌شوند و برنامه فوراً کار می‌کند.
+(function(){
+  var l = document.createElement('link');
+  l.rel = 'stylesheet';
+  l.href = 'https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;900&display=swap';
+  document.head.appendChild(l);
+})();
+</script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;900&display=swap');
 :root {
   --dark:#0d1117; --panel:#161b22; --card:#1c2230; --border:#2d3748;
   --accent:#f6a623; --green:#38a169; --red:#e53e3e; --blue:#4299e1;
@@ -1028,10 +1038,30 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
   box-shadow:0 0 5px rgba(200,100,0,.05);
 }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+// بارگذاری غیرمسدودکنندهٔ کتابخانه‌های خارجی:
+// قبلاً این چهار اسکریپت جلوی نمایش صفحه را می‌گرفتند — با اینترنت ضعیف یا قطع،
+// برنامه ده‌ها ثانیه صفحهٔ سفید می‌ماند. حالا برنامه فوراً باز می‌شود و کتابخانه‌ها
+// در پس‌زمینه می‌آیند؛ اگر نیامدند (آفلاین) همهٔ استفاده‌ها گارد دارند و برنامه کار می‌کند.
+(function(){
+  function add(src, onload){
+    var s = document.createElement('script');
+    s.src = src; s.async = true;
+    if (onload) s.onload = onload;
+    s.onerror = function(){ console.warn('[پمپ یعقوبی] کتابخانهٔ خارجی بارگذاری نشد (آفلاین؟):', src); };
+    document.head.appendChild(s);
+  }
+  add('https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js');
+  add('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+  // ترتیب Firebase مهم است: اول app بعد database — سپس هم‌زمان‌سازی شروع می‌شود
+  add('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js', function(){
+    add('https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js', function(){
+      window._firebaseLibLoaded = true;
+      if (typeof window._onFirebaseLibReady === 'function') { try { window._onFirebaseLibReady(); } catch(e) {} }
+    });
+  });
+})();
+</script>
 
 <style id="premium-redesign">
 /* ============================================================
@@ -2256,6 +2286,30 @@ button:focus-visible,.nav-btn:focus-visible,a:focus-visible,input:focus-visible,
 .pm-acct-bar { position:relative; z-index:2; background:var(--panel); padding:4px 0; }
 /* let viewers still switch between sub-accounts (read-only browse) */
 body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
+</style>
+<style id="ui-polish">
+/* ===== نظم و ترازبندی کارت‌ها ===== */
+/* نام حساب دیگر زیر دکمهٔ ✕ نمی‌رود و از لبهٔ کارت بیرون نمی‌زند؛ نام‌های بلند می‌شکنند */
+.person-card .pname{
+  padding: 0 24px;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  line-height: 1.35;
+}
+/* کارت‌های یک ردیف هم‌قد می‌شوند و محتوای هر کارت مرتب زیر هم می‌نشیند؛
+   دکمهٔ آخر (کیوآر/PDF/الباقی) همیشه پایین کارت تراز می‌شود تا ردیف‌ها یکدست دیده شوند */
+.persons-grid{ align-items: stretch; }
+.person-card{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.person-card > *{ max-width: 100%; }
+.person-card > :last-child{ margin-top: auto; }
+@media (max-width: 480px){
+  .person-card .pname{ padding: 0 18px; }
+}
 </style>
 </head>
 <body>
@@ -3681,6 +3735,15 @@ window.addEventListener('unhandledrejection', function(e) {
   e.preventDefault();
 });
 
+// امن‌سازی متنِ واردشدهٔ کاربر برای قرارگرفتن داخل HTML:
+// اگر نام/یادداشتی شامل < > " ' & باشد، دیگر جدول/کارت را خراب نمی‌کند
+function escFa(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 // ========== STATE ==========
 // رمز اصلی مالک: همیشه برنامه را باز می‌کند و قابل تغییر یا حذف نیست.
 // بدون این رمز (یا رمز مدیر) برنامه به هیچ وجه باز نمی‌شود.
@@ -4038,7 +4101,9 @@ setInterval(function(){ if (navigator.onLine && _dirtySinceUpload) _runAutoSync(
 // ========== بارگذاری خودکار از Firebase هنگام شروع برنامه ==========
 // روی هر دستگاهی (فلش، ارسال‌شده، دستگاه جدید) که کد ایستگاه داشته باشد،
 // در شروع برنامه آخرین اطلاعات از سرور دریافت می‌شود — بدون نیاز به زدن دکمه.
+let _fbStartupDone = false;
 function _autoLoadFromFirebaseOnStartup() {
+  if (_fbStartupDone) return; // یک‌بار کافی است — از تایمر و onload کتابخانه هر دو صدا می‌خورد
   const code = _syncCode();
   if (!code || !_fbReady() || !navigator.onLine) {
     // وقتی اینترنت وصل شد دوباره تلاش کن
@@ -4048,6 +4113,7 @@ function _autoLoadFromFirebaseOnStartup() {
     });
     return;
   }
+  _fbStartupDone = true;
   _fbDb.ref('stations/' + code).get()
     .then(function(snap) {
       if (!snap.exists()) {
@@ -4882,7 +4948,10 @@ function renderLog() {
 
   const _repPalette = ['#3182ce','#38a169','#d69e2e','#805ad5','#dd6b20','#319795','#e53e3e','#d53f8c'];
 
-  dateOrder.forEach(dateKey => {
+  // رندر محدود: فقط روزهای اخیر ساخته می‌شوند تا بعد از ماه‌ها/سال‌ها کار، صفحه سنگین نشود
+  if (!renderLog._limit) renderLog._limit = 30;
+  const _logMore = dateOrder.length - renderLog._limit;
+  dateOrder.slice(0, renderLog._limit).forEach(dateKey => {
     const reps = byDate[dateKey];
     const firstRep = reps[0];
 
@@ -4950,7 +5019,7 @@ function renderLog() {
           <div style="padding:10px 12px;border-left:1px solid var(--border)">
             <div style="font-size:0.8rem;font-weight:700;color:var(--day);margin-bottom:6px">☀️ شیفت روز</div>
             ${rep.day ? `
-              <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${day.name||'—'}</span>${day.pumpNum?` <span style="background:var(--border);border-radius:4px;padding:1px 6px;font-size:0.7rem;color:var(--accent);font-weight:700">پایه #${n2fa(day.pumpNum)}</span>`:''}</div>
+              <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${escFa(day.name)||'—'}</span>${day.pumpNum?` <span style="background:var(--border);border-radius:4px;padding:1px 6px;font-size:0.7rem;color:var(--accent);font-weight:700">پایه #${n2fa(day.pumpNum)}</span>`:''}</div>
               <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">پایه: <span style="color:var(--txt)">${n2fa(day.start)} → ${n2fa(day.end)}</span></div>
               <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فروش: <span style="color:var(--blue);font-weight:700">${n2fa(day.sale)} ل</span></div>
               <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فی فروش: <span style="color:var(--accent);font-weight:600">${n2fa(day.price||0)} ؋</span></div>
@@ -4960,13 +5029,13 @@ function renderLog() {
               <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فایده کل: <span style="color:var(--green);font-weight:700">${n2fa(day.profit)} افغانی</span></div>
               ${(day.debt||0)>0?`<div style="font-size:0.78rem;color:var(--muted);margin-top:2px">جمله قرض: <span style="color:var(--red);font-weight:700">${n2fa(day.debt)} افغانی</span></div>`:''}
               ${(day.debt||0)>0?`<div style="font-size:0.78rem;font-weight:800;margin-top:4px;padding:3px 7px;background:rgba(56,161,105,.1);border-radius:5px;border:1px solid var(--green)">💵 پول موجود: <span style="color:var(--green)">${n2fa(day.available||0)} افغانی</span></div>`:''}
-              ${day.note?`<div style="font-size:0.72rem;color:var(--muted);margin-top:2px;font-style:italic">${day.note}</div>`:''}
+              ${day.note?`<div style="font-size:0.72rem;color:var(--muted);margin-top:2px;font-style:italic">${escFa(day.note)}</div>`:''}
             ` : '<div style="color:var(--muted);font-size:0.78rem;font-style:italic">ثبت نشده</div>'}
           </div>
           <div style="padding:10px 12px">
             <div style="font-size:0.8rem;font-weight:700;color:#b794f4;margin-bottom:6px">🌙 شیفت شب</div>
             ${rep.night ? `
-              <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${night.name||'—'}</span>${night.pumpNum?` <span style="background:var(--border);border-radius:4px;padding:1px 6px;font-size:0.7rem;color:var(--accent);font-weight:700">پایه #${n2fa(night.pumpNum)}</span>`:''}</div>
+              <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${escFa(night.name)||'—'}</span>${night.pumpNum?` <span style="background:var(--border);border-radius:4px;padding:1px 6px;font-size:0.7rem;color:var(--accent);font-weight:700">پایه #${n2fa(night.pumpNum)}</span>`:''}</div>
               <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">پایه: <span style="color:var(--txt)">${n2fa(night.start)} → ${n2fa(night.end)}</span></div>
               <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فروش: <span style="color:var(--blue);font-weight:700">${n2fa(night.sale)} ل</span></div>
               <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فی فروش: <span style="color:var(--accent);font-weight:600">${n2fa(night.price||0)} ؋</span></div>
@@ -4976,7 +5045,7 @@ function renderLog() {
               <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فایده کل: <span style="color:var(--green);font-weight:700">${n2fa(night.profit)} افغانی</span></div>
               ${(night.debt||0)>0?`<div style="font-size:0.78rem;color:var(--muted);margin-top:2px">جمله قرض: <span style="color:var(--red);font-weight:700">${n2fa(night.debt)} افغانی</span></div>`:''}
               ${(night.debt||0)>0?`<div style="font-size:0.78rem;font-weight:800;margin-top:4px;padding:3px 7px;background:rgba(56,161,105,.1);border-radius:5px;border:1px solid var(--green)">💵 پول موجود: <span style="color:var(--green)">${n2fa(night.available||0)} افغانی</span></div>`:''}
-              ${night.note?`<div style="font-size:0.72rem;color:var(--muted);margin-top:2px;font-style:italic">${night.note}</div>`:''}
+              ${night.note?`<div style="font-size:0.72rem;color:var(--muted);margin-top:2px;font-style:italic">${escFa(night.note)}</div>`:''}
             ` : '<div style="color:var(--muted);font-size:0.78rem;font-style:italic">ثبت نشده</div>'}
           </div>
         </div>
@@ -4998,7 +5067,7 @@ function renderLog() {
         <div style="padding:10px 14px;border-left:1px solid var(--border)">
           <div style="font-size:0.8rem;font-weight:700;color:var(--day);margin-bottom:6px">☀️ شیفت روز (دیزل)</div>
           ${dsl.day ? `
-            <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${dDay.name||'—'}</span></div>
+            <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${escFa(dDay.name)||'—'}</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">پایه: <span style="color:var(--txt)">${n2fa(dDay.start)} → ${n2fa(dDay.end)}</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فروش: <span style="color:var(--blue);font-weight:700">${n2fa(dDay.sale)} ل</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فی فروش: <span style="color:var(--accent);font-weight:600">${n2fa(dDay.price||0)} ؋</span></div>
@@ -5006,13 +5075,13 @@ function renderLog() {
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فایده فی لیتر: <span style="color:var(--green);font-weight:700">${n2fa(dDay.profitPer||0)} ؋</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">پول کل: <span style="color:var(--accent);font-weight:700">${n2fa(dDay.money)} افغانی</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فایده کل: <span style="color:var(--green);font-weight:700">${n2fa(dDay.profit)} افغانی</span></div>
-            ${dDay.note?`<div style="font-size:0.72rem;color:var(--muted);margin-top:2px;font-style:italic">${dDay.note}</div>`:''}
+            ${dDay.note?`<div style="font-size:0.72rem;color:var(--muted);margin-top:2px;font-style:italic">${escFa(dDay.note)}</div>`:''}
           ` : '<div style="color:var(--muted);font-size:0.78rem;font-style:italic">ثبت نشده</div>'}
         </div>
         <div style="padding:10px 14px">
           <div style="font-size:0.8rem;font-weight:700;color:#b794f4;margin-bottom:6px">🌙 شیفت شب (دیزل)</div>
           ${dsl.night ? `
-            <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${dNight.name||'—'}</span></div>
+            <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${escFa(dNight.name)||'—'}</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">پایه: <span style="color:var(--txt)">${n2fa(dNight.start)} → ${n2fa(dNight.end)}</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فروش: <span style="color:var(--blue);font-weight:700">${n2fa(dNight.sale)} ل</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فی فروش: <span style="color:var(--accent);font-weight:600">${n2fa(dNight.price||0)} ؋</span></div>
@@ -5020,7 +5089,7 @@ function renderLog() {
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فایده فی لیتر: <span style="color:var(--green);font-weight:700">${n2fa(dNight.profitPer||0)} ؋</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">پول کل: <span style="color:var(--accent);font-weight:700">${n2fa(dNight.money)} افغانی</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فایده کل: <span style="color:var(--green);font-weight:700">${n2fa(dNight.profit)} افغانی</span></div>
-            ${dNight.note?`<div style="font-size:0.72rem;color:var(--muted);margin-top:2px;font-style:italic">${dNight.note}</div>`:''}
+            ${dNight.note?`<div style="font-size:0.72rem;color:var(--muted);margin-top:2px;font-style:italic">${escFa(dNight.note)}</div>`:''}
           ` : '<div style="color:var(--muted);font-size:0.78rem;font-style:italic">ثبت نشده</div>'}
         </div>
       </div>`;
@@ -5051,6 +5120,14 @@ function renderLog() {
     dateCard.innerHTML = hdrHTML + repsHTML + dieselSection + summarySection;
     container.appendChild(dateCard);
   });
+  if (_logMore > 0) {
+    const moreBtn = document.createElement('button');
+    moreBtn.className = 'goto-btn';
+    moreBtn.style.cssText = 'display:block;margin:4px auto 20px;padding:10px 22px;cursor:pointer';
+    moreBtn.textContent = '📜 نمایش روزهای قدیمی‌تر (' + n2fa(_logMore) + ' روز دیگر)';
+    moreBtn.onclick = function(){ renderLog._limit += 60; renderLog(); };
+    container.appendChild(moreBtn);
+  }
 }
 
 // ========== DIESEL LOG ==========
@@ -5073,7 +5150,10 @@ function renderDieselLog() {
     byDate[k][s.type] = s;
   });
   const dates = Object.keys(byDate).reverse();
-  dates.forEach((dt, gi) => {
+  // رندر محدود مثل گزارش پطرول — روزهای قدیمی‌تر با دکمه باز می‌شوند
+  if (!renderDieselLog._limit) renderDieselLog._limit = 30;
+  const _dslMore = dates.length - renderDieselLog._limit;
+  dates.slice(0, renderDieselLog._limit).forEach((dt, gi) => {
     const day   = byDate[dt].day   || null;
     const night = byDate[dt].night || null;
     const totalSale   = (day?.sale||0)   + (night?.sale||0);
@@ -5090,7 +5170,7 @@ function renderDieselLog() {
         <div style="padding:12px 14px;border-left:1px solid var(--border)">
           <div style="font-size:0.8rem;font-weight:700;color:var(--day);margin-bottom:8px">☀️ شیفت روز</div>
           ${day ? `
-            <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${day.name||'—'}</span></div>
+            <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${escFa(day.name)||'—'}</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">پایه: <span style="color:var(--txt)">${n2fa(day.start)} → ${n2fa(day.end)}</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فروش: <span style="color:var(--blue);font-weight:700">${n2fa(day.sale)} ل</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فی فروش: <span style="color:var(--accent);font-weight:600">${n2fa(day.price||0)} ؋</span></div>
@@ -5098,14 +5178,14 @@ function renderDieselLog() {
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فایده فی لیتر: <span style="color:var(--green);font-weight:700">${n2fa(day.profitPer||0)} ؋</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">پول کل: <span style="color:var(--accent);font-weight:700">${n2fa(day.money)} افغانی</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فایده کل: <span style="color:var(--green);font-weight:700">${n2fa(day.profit)} افغانی</span></div>
-            ${day.note?`<div style="font-size:0.72rem;color:var(--muted);margin-top:3px;font-style:italic">${day.note}</div>`:''}
+            ${day.note?`<div style="font-size:0.72rem;color:var(--muted);margin-top:3px;font-style:italic">${escFa(day.note)}</div>`:''}
             <button class="del-btn" style="margin-top:6px" onclick="deleteDieselShift(${day.id})">🗑️ حذف</button>
           ` : '<div style="color:var(--muted);font-size:0.78rem;font-style:italic">ثبت نشده</div>'}
         </div>
         <div style="padding:12px 14px">
           <div style="font-size:0.8rem;font-weight:700;color:#b794f4;margin-bottom:8px">🌙 شیفت شب</div>
           ${night ? `
-            <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${night.name||'—'}</span></div>
+            <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${escFa(night.name)||'—'}</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">پایه: <span style="color:var(--txt)">${n2fa(night.start)} → ${n2fa(night.end)}</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فروش: <span style="color:var(--blue);font-weight:700">${n2fa(night.sale)} ل</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فی فروش: <span style="color:var(--accent);font-weight:600">${n2fa(night.price||0)} ؋</span></div>
@@ -5113,7 +5193,7 @@ function renderDieselLog() {
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فایده فی لیتر: <span style="color:var(--green);font-weight:700">${n2fa(night.profitPer||0)} ؋</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">پول کل: <span style="color:var(--accent);font-weight:700">${n2fa(night.money)} افغانی</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فایده کل: <span style="color:var(--green);font-weight:700">${n2fa(night.profit)} افغانی</span></div>
-            ${night.note?`<div style="font-size:0.72rem;color:var(--muted);margin-top:3px;font-style:italic">${night.note}</div>`:''}
+            ${night.note?`<div style="font-size:0.72rem;color:var(--muted);margin-top:3px;font-style:italic">${escFa(night.note)}</div>`:''}
             <button class="del-btn" style="margin-top:6px" onclick="deleteDieselShift(${night.id})">🗑️ حذف</button>
           ` : '<div style="color:var(--muted);font-size:0.78rem;font-style:italic">ثبت نشده</div>'}
         </div>
@@ -5127,6 +5207,14 @@ function renderDieselLog() {
     `;
     container.appendChild(card);
   });
+  if (_dslMore > 0) {
+    const moreBtn = document.createElement('button');
+    moreBtn.className = 'goto-btn';
+    moreBtn.style.cssText = 'display:block;margin:4px auto 20px;padding:10px 22px;cursor:pointer';
+    moreBtn.textContent = '📜 نمایش روزهای قدیمی‌تر (' + n2fa(_dslMore) + ' روز دیگر)';
+    moreBtn.onclick = function(){ renderDieselLog._limit += 60; renderDieselLog(); };
+    container.appendChild(moreBtn);
+  }
 }
 function deleteDieselShift(id) {
   if (!confirm('این پارچه دیزل حذف شود؟')) return;
@@ -5780,7 +5868,7 @@ function _renderFuelSection(fuelType, containerId, label) {
           <span style="font-weight:700;color:${color}">${icon} خرید #${n2fa(i+1)}</span>
           <span style="font-size:0.75rem;color:var(--muted)">📅 ${e.date||'—'}</span>
           ${e.seller ? `<span style="font-size:0.75rem;color:var(--blue)">👤 ${e.seller}</span>` : ''}
-          ${e.note   ? `<span style="font-size:0.72rem;color:var(--muted);font-style:italic">${e.note}</span>` : ''}
+          ${e.note   ? `<span style="font-size:0.72rem;color:var(--muted);font-style:italic">${escFa(e.note)}</span>` : ''}
         </div>
         <button class="del-btn" style="font-size:1rem;padding:4px 8px" onclick="deletePurchase(${e.id})">🗑️</button>
       </div>
@@ -5997,7 +6085,7 @@ function renderPersons(type) {
     card.className = 'person-card';
     card.innerHTML = `
       <button class="person-del" onclick="event.stopPropagation();deletePerson('${type}','${p.id}')">✕</button>
-      <div class="pname">${p.name}</div>
+      <div class="pname">${escFa(p.name)}</div>
       <div class="pdebt ${albaqi<=0?'clear':''}">${albaqi<=0 ? '✅ تسویه' : 'الباقی: '+n2fa(albaqi)+' افغانی'}</div>
       <div style="display:flex;gap:10px;margin-top:10px;font-size:0.95rem;font-weight:700;justify-content:center">
         <span style="color:var(--green)">⛽ ${n2fa(pBal)}</span>
@@ -6238,7 +6326,7 @@ function renderPersonRows(person) {
     tr.innerHTML = `
       <td class="xls-num">${n2fa(shown)}</td>
       <td><input class="xls-in" value="${r.date||''}" onchange="updatePersonRow('${person.id}',${i},'date',this.value)"></td>
-      <td><input class="xls-in" value="${r.name||''}" placeholder="نام" onchange="updatePersonRow('${person.id}',${i},'name',this.value)"></td>
+      <td><input class="xls-in" value="${escFa(r.name)}" placeholder="نام" onchange="updatePersonRow('${person.id}',${i},'name',this.value)"></td>
       <td><input class="xls-in" value="${r.hawala||''}" placeholder="حواله" style="min-width:90px" onchange="updatePersonRow('${person.id}',${i},'hawala',this.value)"></td>
       ${ftCell}
       <td><input class="xls-in" type="number" value="${r.fuel||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'fuel',this.value)"></td>
@@ -6448,7 +6536,7 @@ function pdfStackedAcct(pid, acctId) {
     return `<tr>
       <td style="text-align:center;color:#718096">${i+1}</td>
       <td>${r.date||'—'}</td>
-      <td>${r.name||'—'}</td>
+      <td>${escFa(r.name)||'—'}</td>
       <td style="color:#c07700">${r.hawala||'—'}</td>
       <td>${fuelLabel}</td>
       <td style="color:#2b6cb0;font-weight:700">${r.byMoney?'—':n2fa(r.fuel||0)}</td>
@@ -6465,7 +6553,7 @@ function pdfStackedAcct(pid, acctId) {
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>حساب ${person.name} — ${acctLabel} — پمپ یعقوبی</title>
+<title>حساب ${escFa(person.name)} — ${acctLabel} — پمپ یعقوبی</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -6507,7 +6595,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 </style>
 </head>
 <body>
-<h1>⛽ پمپ یعقوبی — ${person.name}</h1>
+<h1>⛽ پمپ یعقوبی — ${escFa(person.name)}</h1>
 <h2>📄 ${acctLabel}</h2>
 <div class="meta">تاریخ چاپ: ${printDate} | قرض‌دار</div>
 <div class="split-row">
@@ -6552,7 +6640,7 @@ ${noteHtml}
     <td>${n2fa(ft.albaqi)}</td>
   </tr></tfoot>
 </table>
-<div class="footer">پمپ یعقوبی — ${person.name} — ${acctLabel} — این سند به صورت خودکار تولید شده است</div>
+<div class="footer">پمپ یعقوبی — ${escFa(person.name)} — ${acctLabel} — این سند به صورت خودکار تولید شده است</div>
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
 
@@ -6794,7 +6882,7 @@ function _renderHistoryPanel(person) {
       return `<tr>
         <td class="xls-num">${n2fa(ri+1)}</td>
         <td><input class="xls-in" value="${r.date||''}" onchange="updateHistoryRow('${pid}','${h.id}',${ri},'date',this.value)"></td>
-        <td><input class="xls-in" value="${r.name||''}" placeholder="نام" onchange="updateHistoryRow('${pid}','${h.id}',${ri},'name',this.value)"></td>
+        <td><input class="xls-in" value="${escFa(r.name)}" placeholder="نام" onchange="updateHistoryRow('${pid}','${h.id}',${ri},'name',this.value)"></td>
         <td><input class="xls-in" value="${r.hawala||''}" placeholder="حواله" onchange="updateHistoryRow('${pid}','${h.id}',${ri},'hawala',this.value)"></td>
         <td><input class="xls-in" type="number" value="${r.fuel||''}" placeholder="0" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'fuel',this.value)"></td>
         <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="0" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'priceper',this.value)"></td>
@@ -6864,7 +6952,7 @@ function pdfPersonHistory(pid, hid) {
     const alb = bard - (r.rasid||0);
     return `<tr>
       <td style="text-align:center;color:#718096">${i+1}</td>
-      <td>${r.date||'—'}</td><td>${r.name||'—'}</td>
+      <td>${r.date||'—'}</td><td>${escFa(r.name)||'—'}</td>
       <td style="color:#c07700">${r.hawala||'—'}</td>
       <td style="color:#2b6cb0;font-weight:700">${n2fa(r.fuel||0)}</td>
       <td>${n2fa(r.priceper||0)}</td>
@@ -6874,7 +6962,7 @@ function pdfPersonHistory(pid, hid) {
     </tr>`;
   }).join('');
   const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8">
-<title>${person.name} — ${archiveLabel}</title>
+<title>${escFa(person.name)} — ${archiveLabel}</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -6897,7 +6985,7 @@ tr:nth-child(even) td{background:#f7fafc}
 @media print{@page{margin:12mm}}
 </style></head><body>
 <div class="no-print" style="display:block;margin-bottom:10px"><button onclick="window.print()" style="padding:6px 16px;background:#38a169;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Vazirmatn',sans-serif">📄 ذخیره PDF</button></div>
-<h1>${person.name}</h1>
+<h1>${escFa(person.name)}</h1>
 <div class="meta">${archiveLabel} &nbsp;|&nbsp; تاریخ: ${h.createdAt||''} &nbsp;|&nbsp; تعداد ردیف: ${n2fa(rows.length)}</div>
 <div class="split-row">
   <div class="split-box" style="border-color:#38a16966">
@@ -7186,9 +7274,9 @@ function renderExpRows() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="xls-num">${i+1}</td>
-      <td><input class="xls-in" value="${r.title||''}" placeholder="مثلاً برق، تیل جنراتور..." oninput="expRows[${i}].title=this.value"></td>
+      <td><input class="xls-in" value="${escFa(r.title)}" placeholder="مثلاً برق، تیل جنراتور..." oninput="expRows[${i}].title=this.value"></td>
       <td><input class="xls-in" type="number" value="${r.amount||''}" placeholder="0" oninput="expRows[${i}].amount=this.value"></td>
-      <td><input class="xls-in" value="${r.note||''}" placeholder="..." oninput="expRows[${i}].note=this.value"></td>
+      <td><input class="xls-in" value="${escFa(r.note)}" placeholder="..." oninput="expRows[${i}].note=this.value"></td>
       <td><button class="del-btn" onclick="removeExpRow(${i})">🗑️</button></td>
     `;
     tbody.appendChild(tr);
@@ -7266,7 +7354,16 @@ function renderRasid() {
     tb.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--muted)">رسیدی ثبت نشده — «➕ ردیف» را بزنید</td></tr>';
     return;
   }
-  rows.forEach((r, i) => {
+  // رندر محدود: ردیف‌های آخر (جدیدتر) نمایش داده می‌شوند؛ قدیمی‌ترها با دکمه باز می‌شوند
+  if (!renderRasid._limit) renderRasid._limit = 200;
+  const _rsStart = Math.max(0, rows.length - renderRasid._limit);
+  if (_rsStart > 0) {
+    const tr0 = document.createElement('tr');
+    tr0.innerHTML = '<td colspan="11" style="text-align:center;padding:8px"><button class="goto-btn" style="cursor:pointer" onclick="renderRasid._limit+=400;renderRasid()">📜 نمایش ' + n2fa(_rsStart) + ' ردیف قدیمی‌تر</button></td>';
+    tb.appendChild(tr0);
+  }
+  rows.slice(_rsStart).forEach((r, _k) => {
+    const i = _rsStart + _k;
     const bardagi = Math.round((parseFloat(r.fuel)||0) * (parseFloat(r.priceper)||0));
     const albaqi = bardagi - (parseFloat(r.rasid)||0);
     r.bardagi = bardagi; r.albaqi = albaqi;
@@ -7571,7 +7668,7 @@ function renderCompanies() {
     card.className = 'person-card';
     card.innerHTML = `
       <button class="person-del" onclick="event.stopPropagation();deleteCompany('${c.id}')">✕</button>
-      <div class="pname">🛢️ ${c.name}</div>
+      <div class="pname">🛢️ ${escFa(c.name)}</div>
       <div style="display:flex;justify-content:center;gap:10px;margin:6px 0;flex-wrap:wrap">
         <span style="font-size:0.82rem;font-weight:800;color:var(--blue)">💲 ${n2fa(sumUsd.toFixed(1))} $</span>
       </div>
@@ -7681,7 +7778,7 @@ function searchCompany(q) {
     const settled=albaqi<=0&&rows.length>0;
     const card=document.createElement('div');
     card.className='person-card';
-    card.innerHTML=`<button class="person-del" onclick="event.stopPropagation();deleteCompany('${c.id}')">✕</button><div class="pname">🛢️ ${c.name}</div><div style="display:flex;justify-content:center;gap:10px;margin:6px 0;flex-wrap:wrap"><span style="font-size:0.82rem;font-weight:800;color:var(--blue)">💲 ${n2fa(sumUsd.toFixed(1))} $</span><span style="font-size:0.82rem;font-weight:800;color:${albaqi>0?'var(--red)':'var(--green)'}">📊 ${n2fa(Math.round(albaqi))} افغ</span></div><div class="pdebt ${settled?'clear':''}">${settled?'✅ تسویه':'الباقی: '+n2fa(Math.round(albaqi))+' افغانی'}</div>`;
+    card.innerHTML=`<button class="person-del" onclick="event.stopPropagation();deleteCompany('${c.id}')">✕</button><div class="pname">🛢️ ${escFa(c.name)}</div><div style="display:flex;justify-content:center;gap:10px;margin:6px 0;flex-wrap:wrap"><span style="font-size:0.82rem;font-weight:800;color:var(--blue)">💲 ${n2fa(sumUsd.toFixed(1))} $</span><span style="font-size:0.82rem;font-weight:800;color:${albaqi>0?'var(--red)':'var(--green)'}">📊 ${n2fa(Math.round(albaqi))} افغ</span></div><div class="pdebt ${settled?'clear':''}">${settled?'✅ تسویه':'الباقی: '+n2fa(Math.round(albaqi))+' افغانی'}</div>`;
     card.onclick=()=>openCompanyModal(c.id);
     grid.appendChild(card);
   });
@@ -7868,7 +7965,7 @@ function renderCompanyPurchases(company){
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             <span style="font-weight:700;color:#b7791f">🟤 خرید #${n2fa(count)}</span>
             <span style="font-size:0.75rem;color:var(--muted)">📅 ${e.date||'—'}</span>
-            ${e.note?`<span style="font-size:0.72rem;color:var(--muted);font-style:italic">${e.note}</span>`:''}
+            ${e.note?`<span style="font-size:0.72rem;color:var(--muted);font-style:italic">${escFa(e.note)}</span>`:''}
           </div>
           <button class="del-btn" style="font-size:0.9rem;padding:3px 7px" onclick="deletePurchase(${e.id})">🗑️</button>
         </div>
@@ -7948,7 +8045,7 @@ function _companyPurchaseSection(entries, fuel, alwaysShow){
           <span style="font-weight:700;color:${color}">${icon} خرید #${n2fa(i+1)}</span>
           <span style="font-size:0.75rem;color:var(--muted)">📅 ${e.date||'—'}</span>
           ${e.seller ? `<span style="font-size:0.75rem;color:var(--blue)">👤 ${e.seller}</span>` : ''}
-          ${e.note   ? `<span style="font-size:0.72rem;color:var(--muted);font-style:italic">${e.note}</span>` : ''}
+          ${e.note   ? `<span style="font-size:0.72rem;color:var(--muted);font-style:italic">${escFa(e.note)}</span>` : ''}
         </div>
         <button class="del-btn" style="font-size:1rem;padding:4px 8px" onclick="deletePurchase(${e.id})">🗑️</button>
       </div>
@@ -7997,7 +8094,7 @@ function _companyManualRowSection(rows, fuel){
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <span style="font-weight:700;color:${color}">${icon} ردیف #${n2fa(count)}</span>
           <span style="font-size:0.75rem;color:var(--muted)">📅 ${r.date||'—'}</span>
-          ${r.name ? `<span style="font-size:0.75rem;color:var(--blue)">👤 ${r.name}</span>` : ''}
+          ${r.name ? `<span style="font-size:0.75rem;color:var(--blue)">👤 ${escFa(r.name)}</span>` : ''}
         </div>
       </div>
       <div style="padding:10px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
@@ -8371,7 +8468,7 @@ function pdfCompany() {
     return `<tr>
       <td style="text-align:center;color:#718096">${i+1}</td>
       <td style="font-weight:700;color:#c07700">${r.date||'—'}</td>
-      <td style="font-weight:700">${r.name||'—'}</td>
+      <td style="font-weight:700">${escFa(r.name)||'—'}</td>
       <td style="color:#2b6cb0;font-weight:700">${n2fa(ton.toFixed(3))} تن</td>
       <td style="color:#276749">${n2fa(r.usd||0)} $/تن</td>
       <td style="color:#2b6cb0;font-weight:700">${n2fa(tusd.toFixed(1))} $</td>
@@ -8383,7 +8480,7 @@ function pdfCompany() {
     </tr>`;
   }).join('');
   const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8">
-<title>${company.name} — شرکت تیل</title>
+<title>${escFa(company.name)} — شرکت تیل</title>
 <style>@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:12px}
 h1{font-size:1.25rem;font-weight:900;color:#805ad5;border-bottom:2px solid #805ad5;padding-bottom:8px;margin-bottom:6px}
@@ -8395,7 +8492,7 @@ td{padding:6px 7px;border-bottom:1px solid #e2e8f0}tr:nth-child(even) td{backgro
 tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px}
 .footer{margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
 @media print{@page{margin:0.5cm;size:A4 landscape}}</style></head><body>
-<h1>🛢️ ${company.name} — حساب شرکت تیل (${fuelLabel})</h1>
+<h1>🛢️ ${escFa(company.name)} — حساب شرکت تیل (${fuelLabel})</h1>
 <div class="meta">تاریخ چاپ: ${d.sh} | ${d.mi}</div>
 <div class="sum-row">
   <div class="sum-box"><div class="l">جمع (تن)</div><div class="v" style="color:#2b6cb0">${n2fa(sumTon.toFixed(2))}</div></div>
@@ -8413,7 +8510,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px}
 <tfoot><tr><td colspan="3">جمع</td><td>${n2fa(sumTon.toFixed(2))} تن</td><td></td>
 <td>${n2fa(sumUsd.toFixed(1))} $</td><td></td><td>${n2fa(Math.round(sumAfn))}</td>
 <td>${n2fa(Math.round(sumPoul))}</td><td>${n2fa(Math.round(sumAlb))}</td><td>${n2fa(sumAlbUsd.toFixed(1))} $</td></tr></tfoot></table>
-<div class="footer">پمپ یعقوبی — ${company.name}</div>
+<div class="footer">پمپ یعقوبی — ${escFa(company.name)}</div>
 <script>window.onload=function(){window.print();}<\/script></body></html>`;
   const w = window.open('', '_blank', 'width=900,height=650');
   if (w) { w.document.write(html); w.document.close(); }
@@ -8738,7 +8835,7 @@ function pdfPerson() {
     return `<tr>
       <td style="text-align:center;color:#718096">${i + 1}</td>
       <td>${r.date || '—'}</td>
-      <td>${r.name || '—'}</td>
+      <td>${escFa(r.name) || '—'}</td>
       <td style="color:#c07700">${r.hawala || '—'}</td>
       ${showFtCol ? `<td>${fuelLabel}</td>` : ''}
       <td style="color:#2b6cb0;font-weight:700">${r.byMoney ? '—' : n2fa(r.fuel || 0)}</td>
@@ -8793,7 +8890,7 @@ function pdfPerson() {
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>حساب ${person.name}${fuelTitle} — پمپ یعقوبی</title>
+<title>حساب ${escFa(person.name)}${fuelTitle} — پمپ یعقوبی</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -8834,7 +8931,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 </style>
 </head>
 <body>
-<h1>⛽ پمپ یعقوبی — حساب ${person.name}${fuelTitle}</h1>
+<h1>⛽ پمپ یعقوبی — حساب ${escFa(person.name)}${fuelTitle}</h1>
 <div class="meta">تاریخ چاپ: ${printDate} | نوع: ${type === 'debt' ? 'قرض‌دار' : 'بدون پارچه'}</div>
 ${splitBoxesHtml}
 <div class="summary">
@@ -8877,9 +8974,9 @@ function pdfExpenses(monthKey) {
   const rowsHtml = expenses.map((e,i) => `<tr>
     <td style="text-align:center;color:#718096">${i+1}</td>
     <td style="font-weight:700;color:#c07700">${e.date||'—'}</td>
-    <td style="font-weight:700">${e.title||'—'}</td>
+    <td style="font-weight:700">${escFa(e.title)||'—'}</td>
     <td style="color:#e53e3e;font-weight:900">${n2fa(e.amount||0)} افغانی</td>
-    <td style="color:#718096">${e.note||'—'}</td>
+    <td style="color:#718096">${escFa(e.note)||'—'}</td>
   </tr>`).join('');
 
   const html = `<!DOCTYPE html>
@@ -9540,9 +9637,9 @@ function _renderSafeBulk() {
         <option value="bardagi" ${r.type==='bardagi'?'selected':''}>💵 بردگی</option>
         <option value="mandagi" ${r.type==='mandagi'?'selected':''}>🏛️ ماندگی</option>
       </select></td>
-      <td><input class="xls-in" value="${r.title||''}" placeholder="نام..." oninput="_safeBulkRows[${i}].title=this.value"></td>
+      <td><input class="xls-in" value="${escFa(r.title)}" placeholder="نام..." oninput="_safeBulkRows[${i}].title=this.value"></td>
       <td><input class="xls-in" type="number" value="${r.amount||''}" placeholder="0" oninput="_safeBulkRows[${i}].amount=this.value"></td>
-      <td><input class="xls-in" value="${r.note||''}" placeholder="..." oninput="_safeBulkRows[${i}].note=this.value"></td>
+      <td><input class="xls-in" value="${escFa(r.note)}" placeholder="..." oninput="_safeBulkRows[${i}].note=this.value"></td>
       <td><button class="del-btn" onclick="_safeBulkRows.splice(${i},1);if(!_safeBulkRows.length){const d=allDates();_safeBulkRows=[{date:d.sh,type:'bardagi',title:'',amount:'',note:''}];}_renderSafeBulk()">🗑️</button></td>
     `;
     tbody.appendChild(tr);
@@ -9656,9 +9753,9 @@ function printSafe(monthKey) {
       <td style="text-align:center;color:#718096">${i+1}</td>
       <td style="font-weight:700;color:#c07700">${e.date||'—'}</td>
       <td><span style="padding:2px 8px;border-radius:4px;font-size:0.65rem;font-weight:700;background:${isBardagi?'#f0fff4':'#ebf8ff'};color:${color}">${isBardagi?'💵 بردگی':'🏛️ ماندگی'}</span></td>
-      <td style="font-weight:700">${e.title||'—'}</td>
+      <td style="font-weight:700">${escFa(e.title)||'—'}</td>
       <td style="color:${color};font-weight:900">${n2fa(e.amount)} افغانی</td>
-      <td style="color:#718096">${e.note||'—'}</td>
+      <td style="color:#718096">${escFa(e.note)||'—'}</td>
     </tr>`;
   }).join('');
 
@@ -10011,7 +10108,7 @@ function printSarrafi() {
     return `<tr>
       <td style="text-align:center;color:#718096">${i+1}</td>
       <td style="font-weight:700;color:#c07700">${r.date||'—'}</td>
-      <td>${r.desc||'—'}</td>
+      <td>${escFa(r.desc)||'—'}</td>
       <td style="font-weight:700">${n2fa(r.amount||0)}</td>
       <td>${sarrafiCurrencyLabel(r.currency)}</td>
       <td>${n2fa(r.rate||0)}</td>
@@ -10216,10 +10313,14 @@ function renderWaraqList() {
   if (!DB.waraqEntries) DB.waraqEntries = [];
   grid.innerHTML = '';
   if (!DB.waraqEntries.length) {
-    grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:0.9rem">هیچ ورقی ثبت نشده — از دکمه بالا ورق جدید اضافه کنید</div>';
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:0.9rem">هیچ ورقی ثبت نشده — از دکمه بالا ورق جدید اضافه کنید</div>';
     return;
   }
-  [...DB.waraqEntries].reverse().forEach(w => {
+  // رندر محدود: ورق‌های اخیر نمایش داده می‌شوند، قدیمی‌ترها با دکمه
+  if (!renderWaraqList._limit) renderWaraqList._limit = 60;
+  const _wqAll = [...DB.waraqEntries].reverse();
+  const _wqMore = _wqAll.length - renderWaraqList._limit;
+  _wqAll.slice(0, renderWaraqList._limit).forEach(w => {
     ensureWaraqShifts(w);
     const d = computeShiftTotals(w.day), n = computeShiftTotals(w.night);
     const totalSales = d.sales + n.sales;
@@ -10232,7 +10333,7 @@ function renderWaraqList() {
     card.innerHTML = `
       <button class="person-del" onclick="event.stopPropagation();deleteWaraq('${w.id}')">✕</button>
       <div class="pname" style="font-size:0.9rem">☀️🌙 ${w.date||'—'}</div>
-      <div style="font-size:0.78rem;color:var(--muted);margin:4px 0">${w.station||''} ${workers?'— '+workers:''}</div>
+      <div style="font-size:0.78rem;color:var(--muted);margin:4px 0">${escFa(w.station)} ${workers?'— '+escFa(workers):''}</div>
       <div class="pdebt">${n2fa(Math.round(totalSales))} افغانی</div>
       <div style="display:flex;gap:8px;margin-top:6px;font-size:0.78rem;font-weight:700;justify-content:center;flex-wrap:wrap">
         <span style="color:var(--red)">قرض: ${n2fa(Math.round(debt))}</span>
@@ -10245,6 +10346,14 @@ function renderWaraqList() {
     card.onclick = () => openWaraqModal(w.id);
     grid.appendChild(card);
   });
+  if (_wqMore > 0) {
+    const moreBtn = document.createElement('button');
+    moreBtn.className = 'goto-btn';
+    moreBtn.style.cssText = 'display:block;margin:4px auto;padding:10px 22px;cursor:pointer;grid-column:1/-1';
+    moreBtn.textContent = '📜 نمایش ورق‌های قدیمی‌تر (' + n2fa(_wqMore) + ' ورق دیگر)';
+    moreBtn.onclick = function(){ renderWaraqList._limit += 120; renderWaraqList(); };
+    grid.appendChild(moreBtn);
+  }
 }
 
 function calcWaraqTotalSales(w) {
@@ -10700,7 +10809,7 @@ function printWaraq() {
       const l = Math.max(0,(p.end||0)-(p.start||0));
       const a = l*(p.pricePerLiter||0);
       const fl = p.fuel==='diesel'?'دیزل':'بطرول';
-      return `<tr><td>${p.num||''}</td><td>${p.worker||'—'}</td><td>${fl}</td><td>${p.note||'—'}</td><td>${p.start||'—'}</td><td>${p.end||'—'}</td><td>${p.pricePerLiter||'—'}</td><td style="font-weight:900">${l}</td><td style="font-weight:900;color:#276749">${Math.round(a)}</td></tr>`;
+      return `<tr><td>${p.num||''}</td><td>${escFa(p.worker)||'—'}</td><td>${fl}</td><td>${escFa(p.note)||'—'}</td><td>${p.start||'—'}</td><td>${p.end||'—'}</td><td>${p.pricePerLiter||'—'}</td><td style="font-weight:900">${l}</td><td style="font-weight:900;color:#276749">${Math.round(a)}</td></tr>`;
     }).join('');
     const ftx = (sd.transactions||[]).filter(t=>(t.name||'').trim()||t.amount);
     const mid = Math.ceil(ftx.length/2);
@@ -10737,7 +10846,7 @@ function printWaraq() {
   const sd = isNight ? w.night : w.day;
   const pdfFs = parseInt(document.getElementById('wq-pdf-fontsize')?.value || '11') || 11;
   const html=`<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><title>ورق ${isNight?'شب':'روز'}</title><style>@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:16px;font-size:${pdfFs}px}h1{font-size:1rem;font-weight:900;text-align:center;border-bottom:2px solid #2b6cb0;padding-bottom:6px;margin-bottom:4px}.meta{font-size:0.7rem;color:#718096;text-align:center;margin-bottom:10px}.sum-row{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}.sum-box{flex:1;min-width:100px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:6px;padding:7px;text-align:center}.sum-box .l{font-size:0.58rem;color:#718096}.sum-box .v{font-size:0.95rem;font-weight:900}table{width:100%;border-collapse:collapse;font-size:0.7rem;margin-bottom:8px}th{background:#2d3748;color:#e2e8f0;padding:5px 6px;text-align:right;font-weight:700;white-space:nowrap}td{padding:4px 6px;border-bottom:1px solid #e2e8f0}tr:nth-child(even) td{background:#f7fafc}tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:5px 6px}.section-title{font-size:0.72rem;font-weight:700;color:#2b6cb0;margin:8px 0 4px}@media print{body{padding:6px}@page{margin:.5cm}}</style></head><body>
-  <h1>${isNight?'🌙 ورق شب':'☀️ ورق روز'} — ${w.station||'پمپ'}</h1>
+  <h1>${isNight?'🌙 ورق شب':'☀️ ورق روز'} — ${escFa(w.station)||'پمپ'}</h1>
   <div class="meta">تاریخ: ${w.date||'—'}</div>
   ${shiftSection(sd, isNight ? '🌙 شیفت شب' : '☀️ شیفت روز', isNight ? '#6b46c1' : '#b7791f')}
   <script>window.onload=function(){window.print()}<\/script></body></html>`;
@@ -11157,7 +11266,7 @@ function openCompanyROViewer(id) {
      <div class="ro-sum-box"><div class="l">الباقی</div><div class="v" style="color:${sumAlb>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(sumAlb))} افغانی</div></div>`;
   const rowsHtml = rows.map((r,i) => {
     const ton=cmpTon(r), tusd=cmpTotalUsd(r), tafn=cmpAfnTotal(r), ab=cmpAlbaqi(r, convRate);
-    return `<tr><td style="text-align:center;color:var(--muted)">${n2fa(i+1)}</td><td>${r.date||'—'}</td><td>${r.name||'—'}</td><td style="color:var(--blue)">${n2fa(ton.toFixed(3))} تن</td><td>${n2fa(r.usd||0)} $</td><td style="color:var(--blue)">${n2fa(tusd.toFixed(1))} $</td><td>${n2fa(r.rate||0)}</td><td style="color:var(--purple)">${n2fa(Math.round(tafn))}</td><td style="color:var(--green)">${n2fa(Math.round(parseFloat(r.poul)||0))}${r.poulCurrency==='usd'?' $':''}</td><td style="color:${ab>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(ab))}</td></tr>`;
+    return `<tr><td style="text-align:center;color:var(--muted)">${n2fa(i+1)}</td><td>${r.date||'—'}</td><td>${escFa(r.name)||'—'}</td><td style="color:var(--blue)">${n2fa(ton.toFixed(3))} تن</td><td>${n2fa(r.usd||0)} $</td><td style="color:var(--blue)">${n2fa(tusd.toFixed(1))} $</td><td>${n2fa(r.rate||0)}</td><td style="color:var(--purple)">${n2fa(Math.round(tafn))}</td><td style="color:var(--green)">${n2fa(Math.round(parseFloat(r.poul)||0))}${r.poulCurrency==='usd'?' $':''}</td><td style="color:${ab>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(ab))}</td></tr>`;
   }).join('');
   document.getElementById('company-ro-table-wrap').innerHTML =
     `<table class="ro-tbl"><thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>تن</th><th>$/تن</th><th>کل $</th><th>نرخ</th><th>کل افغانی</th><th>رسید</th><th>الباقی</th></tr></thead><tbody>${rowsHtml || '<tr><td colspan="10" style="text-align:center;padding:18px;color:var(--muted)">ردیفی نیست</td></tr>'}</tbody></table>`;
@@ -11302,7 +11411,7 @@ function _renderROViewer() {
     tr.innerHTML = `
       <td style="color:var(--muted);font-size:0.72rem;text-align:center">${n2fa(i+1)}</td>
       <td>${r.date||'—'}</td>
-      <td>${r.name||'—'}</td>
+      <td>${escFa(r.name)||'—'}</td>
       <td style="color:var(--accent)">${r.hawala||'—'}</td>
       <td>${fuelLabel}</td>
       <td style="color:var(--blue)">${showFuel ? n2fa(r.fuel||0) : '—'}</td>
@@ -11766,7 +11875,7 @@ function searchPerson(type, query) {
     card.className = 'person-card';
     card.innerHTML = `
       <button class="person-del" onclick="event.stopPropagation();deletePerson('${type}','${p.id}')">✕</button>
-      <div class="pname">${p.name}</div>
+      <div class="pname">${escFa(p.name)}</div>
       <div class="pdebt ${albaqi<=0?'clear':''}">${albaqi<=0 ? '✅ تسویه' : 'الباقی: '+n2fa(albaqi)+' افغانی'}</div>
       <div style="display:flex;gap:8px;margin-top:8px;font-size:0.88rem;font-weight:700;justify-content:center">
         <span style="color:var(--green)">⛽ ${n2fa(pBal)}</span>
@@ -11834,6 +11943,9 @@ load();
 loadTheme();
 // بارگذاری خودکار از Firebase — اگر کد ایستگاه تنظیم شده، آخرین حساب از سرور گرفته می‌شود
 setTimeout(function(){ try { _autoLoadFromFirebaseOnStartup(); } catch(e){} }, 800);
+// کتابخانهٔ Firebase حالا async می‌آید — هر وقت رسید (حتی روی نت کند)، هم‌زمان‌سازی شروع شود
+window._onFirebaseLibReady = function(){ try { _autoLoadFromFirebaseOnStartup(); } catch(e){} };
+if (window._firebaseLibLoaded) { try { _autoLoadFromFirebaseOnStartup(); } catch(e){} }
 // قفل بخش مفاد/ضرر در شروع برنامه
 try { _lockProfitSection(); } catch(e){}
 
@@ -11904,7 +12016,6 @@ document.addEventListener('click', function(e) {
 </script>
 
 <!-- ===== PREMIUM REDESIGN — FX ENGINE (visual only, additive, logic-safe) ===== -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script>
 (function(){
   "use strict";
