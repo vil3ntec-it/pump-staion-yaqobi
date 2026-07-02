@@ -2287,6 +2287,30 @@ button:focus-visible,.nav-btn:focus-visible,a:focus-visible,input:focus-visible,
 /* let viewers still switch between sub-accounts (read-only browse) */
 body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
 </style>
+<style id="ui-polish">
+/* ===== نظم و ترازبندی کارت‌ها ===== */
+/* نام حساب دیگر زیر دکمهٔ ✕ نمی‌رود و از لبهٔ کارت بیرون نمی‌زند؛ نام‌های بلند می‌شکنند */
+.person-card .pname{
+  padding: 0 24px;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  line-height: 1.35;
+}
+/* کارت‌های یک ردیف هم‌قد می‌شوند و محتوای هر کارت مرتب زیر هم می‌نشیند؛
+   دکمهٔ آخر (کیوآر/PDF/الباقی) همیشه پایین کارت تراز می‌شود تا ردیف‌ها یکدست دیده شوند */
+.persons-grid{ align-items: stretch; }
+.person-card{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.person-card > *{ max-width: 100%; }
+.person-card > :last-child{ margin-top: auto; }
+@media (max-width: 480px){
+  .person-card .pname{ padding: 0 18px; }
+}
+</style>
 </head>
 <body>
 
@@ -10289,7 +10313,7 @@ function renderWaraqList() {
   if (!DB.waraqEntries) DB.waraqEntries = [];
   grid.innerHTML = '';
   if (!DB.waraqEntries.length) {
-    grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:0.9rem">هیچ ورقی ثبت نشده — از دکمه بالا ورق جدید اضافه کنید</div>';
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:0.9rem">هیچ ورقی ثبت نشده — از دکمه بالا ورق جدید اضافه کنید</div>';
     return;
   }
   // رندر محدود: ورق‌های اخیر نمایش داده می‌شوند، قدیمی‌ترها با دکمه
