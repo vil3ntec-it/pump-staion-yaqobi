@@ -3313,6 +3313,30 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
     </div>
     <div id="set-ls-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted)"></div>
   </div>
+  <div class="settings-card" id="wa-bot-card" style="border-color:#25D366">
+    <div class="settings-title" style="color:#25D366">🤖 ربات واتساپ — ارسال خودکار</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:2;margin-bottom:12px">
+      با این ربات، پیام‌ها <b style="color:#25D366">خودکار و بدون زدن دکمه</b> به واتساپ می‌روند:
+      وقتی تیل در حال تمام شدن باشد، هشدار خودش به گروه و شماره‌های ثبت‌شده می‌رود؛
+      و داخل هر حساب هم دکمهٔ «📤 واتساپ» هست که خلاصهٔ همان حساب را فوری می‌فرستد.
+      <br>🔧 <b>راه‌اندازی (یک بار، رایگان — سرویس CallMeBot):</b>
+      <br>۱) برای <b>شمارهٔ شخصی</b>: شمارهٔ ربات CallMeBot را از سایت
+      <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank" style="color:#25D366">callmebot.com</a>
+      بگیرید و در واتساپ ذخیره کنید، بعد از همان واتساپ این پیام را به او بفرستید:
+      <b style="color:var(--txt)">I allow callmebot to send me messages</b>
+      — چند لحظه بعد یک <b>apikey</b> (کد چندرقمی) برایتان می‌آید.
+      <br>۲) برای <b>گروه</b>: طبق راهنمای
+      <a href="https://www.callmebot.com/whatsapp-group-messages/" target="_blank" style="color:#25D366">همین صفحه</a>
+      ربات را عضو گروه کنید تا شناسهٔ گروه (مثل <b dir="ltr">123456789-987654@g.us</b>) و apikey بگیرید.
+      <br>۳) شماره/شناسهٔ گروه + apikey را در جدول زیر وارد کنید و «تست ارسال» را بزنید.
+    </div>
+    <div id="wa-targets-body" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="pw-btn" style="background:var(--dark);border:1px solid #25D366;color:#25D366" onclick="addWaTarget()">➕ افزودن گیرنده</button>
+      <button class="pw-btn" style="background:#25D366;color:#fff" onclick="waTestSend()">📤 تست ارسال</button>
+    </div>
+    <div id="wa-bot-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted)"></div>
+  </div>
   <div class="settings-card" id="trash-settings-card" style="border-color:var(--accent)">
     <div class="settings-title" style="color:var(--accent)">🗑️ سطل زباله</div>
     <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.8">موارد حذف‌شده تا <b style="color:var(--accent)">۱۵ روز</b> در اینجا نگه داشته می‌شوند و پس از آن خودکار پاک می‌شوند. می‌توانید هر مورد را برگردانید یا برای همیشه حذف کنید.</div>
@@ -3355,6 +3379,7 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
         <button class="add-row-btn" style="margin:0;border-color:var(--accent);color:var(--accent);padding:5px 10px;font-size:0.78rem" onclick="renameCurrentPerson()">✏️ تغییر اسم</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--red);color:var(--red);padding:5px 10px;font-size:0.78rem" onclick="clearAllPersonRows()">🗑️ پاک همه</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green);padding:5px 10px;font-size:0.78rem" onclick="pdfPerson()">📄 PDF</button>
+        <button class="add-row-btn" style="margin:0;border-color:#25D366;color:#25D366;padding:5px 10px;font-size:0.78rem" onclick="waSharePerson()">📤 واتساپ</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--blue);color:var(--blue);padding:5px 10px;font-size:0.78rem" onclick="showPersonQRFromModal()">📲 کیو‌آر</button>
         <button class="modal-close" onclick="closePersonModal()">✕</button>
       </div>
@@ -3461,6 +3486,7 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
         <button class="add-row-btn" id="cm-fuel-btn" style="margin:0;border-color:#b7791f;color:#b7791f;padding:5px 10px;font-size:0.78rem" onclick="toggleCompanyFuel()">🟤 دیزل</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--accent);color:var(--accent);padding:5px 10px;font-size:0.78rem" onclick="renameCurrentCompany()">✏️ تغییر نام</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green);padding:5px 10px;font-size:0.78rem" onclick="pdfCompany()">📄 PDF</button>
+        <button class="add-row-btn" style="margin:0;border-color:#25D366;color:#25D366;padding:5px 10px;font-size:0.78rem" onclick="waShareCompany()">📤 واتساپ</button>
         <button class="modal-close" onclick="closeCompanyModal()">✕</button>
       </div>
     </div>
@@ -3788,6 +3814,7 @@ const DB = {
   lowStockInterval: 15,
   lowStockThreshold: 500,
   lowStockPhone: '',
+  waTargets: [],
   stationName: 'پمپ یعقوبی',
   stationAddress: '',
   stationPhone: '',
@@ -4571,6 +4598,7 @@ function showSection(id, btn) {
     if (currentRole === 'viewer') { showToast('🔒 بخش تنظیمات فقط برای مدیر است', '#e53e3e'); return; }
     fillLowStockSettings();
     fillSyncSettings();
+    try { renderWaTargets(); } catch(e) {}
     try { renderTrashList(); } catch(e) {}
   }
 }
@@ -5798,6 +5826,7 @@ function checkLowStock() {
   }).join('');
   document.getElementById('lowStockModal').classList.add('open');
   lastLowStockShown = Date.now();
+  try { _waAutoLowStock(); } catch(e) {} // 🤖 ارسال خودکار همان هشدار به واتساپ
   return true;
 }
 
@@ -8709,6 +8738,98 @@ function notifyWhatsapp() {
   const text = encodeURIComponent(_lowStockMessage());
   const url = phone ? `https://wa.me/${phone}?text=${text}` : `https://wa.me/?text=${text}`;
   window.open(url, '_blank');
+}
+
+// ========== 🤖 ربات واتساپ: ارسال کاملاً خودکار (سرویس CallMeBot) ==========
+// هر گیرنده: {label, phone, key} — phone یا شمارهٔ شخصی با کد کشور است یا شناسهٔ گروه (…@g.us)
+function _waTargets() {
+  if (!Array.isArray(DB.waTargets)) DB.waTargets = [];
+  return DB.waTargets;
+}
+function _waReady() { return _waTargets().some(t => (t.phone||'').trim() && (t.key||'').trim()); }
+function renderWaTargets() {
+  const body = document.getElementById('wa-targets-body');
+  if (!body) return;
+  const list = _waTargets();
+  if (!list.length) {
+    body.innerHTML = '<div style="color:var(--muted);font-size:0.83rem;text-align:center;padding:10px;border:1px dashed var(--border);border-radius:9px">هنوز گیرنده‌ای ثبت نشده — «افزودن گیرنده» را بزنید (مثلاً یکی برای گروه، یکی برای شمارهٔ خودتان)</div>';
+    return;
+  }
+  body.innerHTML = list.map((t, i) => `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;border:1px solid var(--border);border-radius:9px;padding:8px">
+      <input class="xls-in" style="flex:1;min-width:110px" placeholder="نام (مثلاً گروه پمپ)" value="${escFa(t.label)}" onchange="updateWaTarget(${i},'label',this.value)">
+      <input class="xls-in" style="flex:1.4;min-width:150px" dir="ltr" placeholder="93701234567 یا 12345-678@g.us" value="${escFa(t.phone)}" onchange="updateWaTarget(${i},'phone',this.value)">
+      <input class="xls-in" style="flex:1;min-width:110px" dir="ltr" placeholder="apikey" value="${escFa(t.key)}" onchange="updateWaTarget(${i},'key',this.value)">
+      <button class="del-btn" onclick="delWaTarget(${i})">🗑️</button>
+    </div>`).join('');
+}
+function addWaTarget() { _waTargets().push({ label: '', phone: '', key: '' }); save(); renderWaTargets(); }
+function updateWaTarget(i, f, v) { const l = _waTargets(); if (!l[i]) return; l[i][f] = (v||'').trim(); save(); }
+function delWaTarget(i) { const l = _waTargets(); if (!l[i]) return; l.splice(i, 1); save(); renderWaTargets(); }
+// ارسال خودکار به همهٔ گیرنده‌ها — بدون نیاز به باز شدن واتساپ و زدن دکمه
+function waSendAll(text) {
+  let sent = 0;
+  _waTargets().forEach(t => {
+    const phone = (t.phone||'').trim(), key = (t.key||'').trim();
+    if (!phone || !key) return;
+    sent++;
+    try {
+      fetch('https://api.callmebot.com/whatsapp.php?phone=' + encodeURIComponent(phone) +
+            '&text=' + encodeURIComponent(text) + '&apikey=' + encodeURIComponent(key),
+            { mode: 'no-cors' }).catch(function(){});
+    } catch(e) {}
+  });
+  return sent;
+}
+function waTestSend() {
+  const msg = document.getElementById('wa-bot-msg');
+  if (!_waReady()) { if (msg) { msg.textContent = '❌ اول حداقل یک گیرنده با شماره و apikey ثبت کنید'; msg.style.color = 'var(--red)'; } return; }
+  if (!navigator.onLine) { if (msg) { msg.textContent = '❌ اینترنت وصل نیست'; msg.style.color = 'var(--red)'; } return; }
+  const n = waSendAll('🤖 تست ربات ' + (DB.stationName || 'پمپ یعقوبی') + ' — ارتباط برقرار است ✅');
+  if (msg) { msg.textContent = '📤 پیام تست به ' + n2fa(n) + ' گیرنده فرستاده شد — چند لحظه بعد واتساپ را ببینید'; msg.style.color = '#25D366'; }
+}
+// هشدار خودکار اتمام تیل: همان لحظه که هشدار داخل برنامه ظاهر می‌شود، پیام هم به واتساپ می‌رود
+// (فاصلهٔ تکرار همان تنظیم «هر چند دقیقه» است — پیام پشت‌سرهم نمی‌رود)
+function _waAutoLowStock() {
+  if (!_waReady() || !navigator.onLine) return;
+  try { waSendAll(_lowStockMessage()); showTopToast('🤖 هشدار تیل خودکار به واتساپ فرستاده شد', '#25D366', 3000); } catch(e) {}
+}
+// خلاصهٔ حساب یک شخص/شرکت را خودکار به واتساپ می‌فرستد
+function _waSendSummary(text) {
+  if (_waReady() && navigator.onLine) {
+    waSendAll(text);
+    showTopToast('📤 حساب به واتساپ فرستاده شد', '#25D366', 3000);
+  } else {
+    // ربات تنظیم نشده — واتساپ با متن آماده باز می‌شود
+    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+  }
+}
+function waSharePerson() {
+  const person = _curPerson && _curPerson();
+  if (!person) return;
+  const t = _splitTotals(_allRows(person));
+  let txt = '📒 حساب ' + (person.name||'') + ' — ' + (DB.stationName||'پمپ یعقوبی') + '\n';
+  txt += '📅 ' + persianDate() + '\n';
+  txt += '⛽ الباقی پطرول: ' + n2fa(Math.round(t.petrol.albaqi)) + ' افغانی\n';
+  txt += '🟤 الباقی دیزل: ' + n2fa(Math.round(t.diesel.albaqi)) + ' افغانی\n';
+  txt += '📊 جمع الباقی: ' + n2fa(Math.round(t.all.albaqi)) + ' افغانی';
+  _waSendSummary(txt);
+}
+function waShareCompany() {
+  const company = (DB.tilCompanies||[]).find(c => c.id === currentCompanyId);
+  if (!company) return;
+  const rows = currentCompanyFuel === 'diesel' ? (company.dieselRows||[]) : (company.rows||[]);
+  let ton = 0, usd = 0, afn = 0, poul = 0;
+  rows.forEach(r => { _migrateCompanyRow(r); ton += cmpTon(r); usd += cmpTotalUsd(r); afn += cmpAfnTotal(r); poul += cmpPoulAfn(r); });
+  const albaqi = afn - poul;
+  let txt = '🛢️ حساب شرکت ' + (company.name||'') + ' — ' + (DB.stationName||'پمپ یعقوبی') + '\n';
+  txt += '📅 ' + persianDate() + ' (' + (currentCompanyFuel === 'diesel' ? 'دیزل' : 'پطرول') + ')\n';
+  txt += '⚖️ جمع مقدار: ' + n2fa(ton.toFixed(1)) + ' تن\n';
+  txt += '💲 جمع دالر: ' + n2fa(usd.toFixed(1)) + ' $\n';
+  txt += '💰 جمع افغانی: ' + n2fa(Math.round(afn)) + '\n';
+  txt += '✅ رسید: ' + n2fa(Math.round(poul)) + ' افغانی\n';
+  txt += '📊 الباقی: ' + n2fa(Math.round(albaqi)) + ' افغانی';
+  _waSendSummary(txt);
 }
 function saveAlertImage() {
   const W = 720, H = 420 + Math.max(0, (lastLowStockData.length - 1)) * 70;
