@@ -1275,6 +1275,10 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter
 .add-row-btn{border-radius:var(--r-sm)!important;border:1px dashed rgba(255,180,61,.35)!important;
   background:rgba(255,255,255,.025)!important;transition:all .2s!important}
 .add-row-btn:hover{background:rgba(255,180,61,.08)!important;border-color:var(--accent)!important;transform:translateY(-1px)}
+/* دکمه‌های سرِ مودال (واتساپ، PDF، تغییر نام، دیزل، ...) — خطِ کامل و رنگِ خودشان، نه خط‌چینِ کم‌رنگ */
+.modal-head .add-row-btn{border-style:solid!important;border-width:1.5px!important;border-color:currentColor!important;
+  background:transparent!important;font-weight:800!important}
+.modal-head .add-row-btn:hover{background:rgba(255,255,255,.09)!important;border-color:currentColor!important}
 .sec-font-btn,.person-nav-btn{border-radius:var(--r-sm)!important;transition:all .2s!important}
 .sec-font-btn:hover,.person-nav-btn:hover:not(:disabled){box-shadow:0 0 14px rgba(255,180,61,.35);transform:translateY(-1px)}
 
@@ -6858,6 +6862,8 @@ function newPersonTable() {
   acct.rasidFuelP = 0; acct.rasidFuelD = 0;
   acct.rasidMoneyP = 0; acct.rasidMoneyD = 0;
   acct.note = '';
+  // کادر توضیحاتِ روی صفحه هم پاک شود تا با جدولِ نو یکی باشد (توضیحات قبلی همراه آرشیو رفت)
+  const nf0 = document.getElementById('pm-note-field'); if (nf0) nf0.value = '';
   save();
   renderPersonRows(person);
   _renderHistoryPanel(person);
@@ -6955,13 +6961,16 @@ function _renderHistoryPanel(person) {
           </table>
         </div>
       </div>
-      <div style="padding:4px 10px 10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <div style="padding:4px 10px 6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <button class="add-row-btn" style="margin:0" onclick="addHistoryRow('${pid}','${h.id}')">➕ ردیف جدید</button>
+      </div>
+      <div style="padding:0 10px 10px">
+        <textarea id="hnb-${h.id}" placeholder="📝 توضیحات این جدول..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.8rem;resize:none;box-sizing:border-box" oninput="updateHistoryNote('${pid}','${h.id}',this.value);var t=document.getElementById('hn-${h.id}');if(t&&t!==document.activeElement)t.value=this.value">${escFa(h.note||'')}</textarea>
       </div>`;
     return `<div style="margin-bottom:16px;border:2px solid ${ac};border-radius:13px;overflow:hidden">
       <div style="background:${ac};padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
         <span style="font-weight:800;font-size:0.82rem;color:#fff;white-space:nowrap">📋 ${h.createdAt||''}</span>
-        <input value="${escFa(h.note||'')}" placeholder="📝 توضیحات این جدول..." oninput="updateHistoryNote('${pid}','${h.id}',this.value)"
+        <input id="hn-${h.id}" value="${escFa(h.note||'')}" placeholder="📝 توضیحات این جدول..." oninput="updateHistoryNote('${pid}','${h.id}',this.value);var t=document.getElementById('hnb-${h.id}');if(t&&t!==document.activeElement)t.value=this.value"
           style="flex:1;min-width:130px;background:rgba(255,255,255,0.16);border:1px dashed rgba(255,255,255,0.6);border-radius:7px;padding:4px 10px;color:#fff;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;box-sizing:border-box">
         <div style="display:flex;align-items:center;gap:6px">
           <span style="font-size:0.72rem;color:rgba(255,255,255,0.85)">${n2fa(rows.length)} ردیف</span>
@@ -8227,7 +8236,7 @@ function _renderCompanyHistoryPanel(company){
       return `<div style="border:1.5px solid ${ac}66;border-radius:12px;margin-bottom:12px;overflow:hidden">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:${ac}18;flex-wrap:wrap">
           <span style="font-weight:800;color:${ac};font-size:0.85rem;white-space:nowrap">🗂️ جدول ${n2fa(history.length-hi)} — ${fuelLabel}</span>
-          <input value="${escFa(h.note||'')}" placeholder="📝 توضیحات این جدول..." oninput="updateCompanyHistoryNote('${company.id}','${h.id}',this.value)"
+          <input id="chn-${h.id}" value="${escFa(h.note||'')}" placeholder="📝 توضیحات این جدول..." oninput="updateCompanyHistoryNote('${company.id}','${h.id}',this.value);var t=document.getElementById('chnb-${h.id}');if(t&&t!==document.activeElement)t.value=this.value"
             style="flex:1;min-width:130px;background:var(--dark);border:1px dashed ${ac}88;border-radius:7px;padding:4px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.75rem;font-weight:700;box-sizing:border-box">
           <span style="font-size:0.72rem;color:var(--muted);white-space:nowrap">${h.createdAt||''}</span>
           <button class="del-btn" style="${armed?'background:var(--red);color:#fff;':''}white-space:nowrap" onclick="deleteCompanyTableHistory('${company.id}','${h.id}',this)">${armed?'✔ تأیید حذف؟':'🗑️ حذف'}</button>
@@ -8244,6 +8253,9 @@ function _renderCompanyHistoryPanel(company){
           <tbody>${body || '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:12px">فقط خرید — جزئیات در کادرِ خریدها</td></tr>'}</tbody>
           <tfoot class="xls-foot"><tr><td colspan="3" style="padding:7px">جمع</td><td>${n2fa(Math.round(tTon*1000))}</td><td></td><td>${n2fa(tUsd.toFixed(1))} $</td><td></td><td>${n2fa(Math.round(tAfn))}</td><td>${n2fa(Math.round(tPoul))}</td><td>${n2fa(Math.round(tAlb))}</td></tr></tfoot>
         </table></div>
+        <div style="padding:8px 10px 10px">
+          <textarea id="chnb-${h.id}" placeholder="📝 توضیحات این جدول..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.8rem;resize:none;box-sizing:border-box" oninput="updateCompanyHistoryNote('${company.id}','${h.id}',this.value);var t=document.getElementById('chn-${h.id}');if(t&&t!==document.activeElement)t.value=this.value">${escFa(h.note||'')}</textarea>
+        </div>
       </div>`;
     }).join('');
 }
