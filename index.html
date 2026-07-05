@@ -3991,7 +3991,20 @@ function load() {
     }
   }).catch(function() {});
 }
+let _saveDebounceTimer = null;
+let _savePending = false;
 function save() {
+  // نوشتن واقعی روی دیسک (localStorage/IndexedDB) با تأخیر کوتاه گروه‌بندی می‌شود
+  // تا هنگام تایپ سریع (هر keystroke) کل دیتابیس بارها سریالایز نشود؛ با ترک صفحه/تب فوراً نوشته می‌شود
+  _savePending = true;
+  clearTimeout(_saveDebounceTimer);
+  _saveDebounceTimer = setTimeout(_flushSave, 400);
+}
+function _flushSave() {
+  clearTimeout(_saveDebounceTimer);
+  _saveDebounceTimer = null;
+  if (!_savePending) return;
+  _savePending = false;
   var snap = JSON.stringify(DB);
   try {
     localStorage.setItem('pumpDB', snap);
@@ -4000,10 +4013,12 @@ function save() {
     try { localStorage.removeItem('pumpDB'); } catch(_) {}
   }
   // IndexedDB: بدون محدودیت حجم — همیشه ذخیره می‌شود حتی اگر localStorage پر باشد
-  try { _IDB.put(JSON.parse(snap)); } catch(e) {}
+  try { _IDB.put(DB); } catch(e) {}
   // علامت‌گذاری: اطلاعات تغییر کرده و هنوز به سرور نرسیده — برای بارگذاری خودکار وقتی نت وصل شد
   try { _markDirtyForAutoSync(); } catch(e){}
 }
+window.addEventListener('beforeunload', _flushSave);
+document.addEventListener('visibilitychange', function() { if (document.visibilityState === 'hidden') _flushSave(); });
 
 // ===== یکپارچه‌سازی حساب‌های تکراری =====
 // نام‌های مشابه (ي/ی، ك/ک، نیم‌فاصله، ارقام، فاصله‌ها) یک حساب در نظر گرفته می‌شوند.
