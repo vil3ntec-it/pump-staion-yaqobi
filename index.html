@@ -5367,7 +5367,9 @@ function pdfDieselShifts() {
         <div class="row"><span class="lbl">فی خرید</span><span class="val red">${s.buyPerLiter?n2fa(s.buyPerLiter.toFixed(1))+' ؋':'—'}</span></div>
         <div class="row"><span class="lbl">فایده / لیتر</span><span class="val green">${n2fa(s.profitPer||0)} ؋</span></div>
         <div class="row"><span class="lbl">پول کل</span><span class="val amber fw9">${n2fa(s.money||0)} افغانی</span></div>
-        <div class="row last"><span class="lbl">فایده کل</span><span class="val green fw9">${n2fa(s.profit||0)} افغانی</span></div>
+        <div class="row${(s.debt||0)>0?'':' last'}"><span class="lbl">فایده کل</span><span class="val green fw9">${n2fa(s.profit||0)} افغانی</span></div>
+        ${(s.debt||0)>0?`<div class="row"><span class="lbl">جمله قرض</span><span class="val red">${n2fa(s.debt)} افغانی</span></div>
+        <div class="row last"><span class="lbl">💵 پول موجود</span><span class="val green fw9">${n2fa(s.available||0)} افغانی</span></div>`:''}
         ${s.note?`<div class="note">${s.note}</div>`:''}
       </div>
     </div>`;
@@ -5579,7 +5581,9 @@ function pdfShifts() {
         <div class="row"><span class="lbl">فی خرید</span><span class="val red">${s.buyPerLiter?n2fa(s.buyPerLiter.toFixed(1))+' ؋':'—'}</span></div>
         <div class="row"><span class="lbl">فایده / لیتر</span><span class="val green">${n2fa(s.profitPer||0)} ؋</span></div>
         <div class="row"><span class="lbl">پول کل</span><span class="val amber fw9">${n2fa(s.money||0)} افغانی</span></div>
-        <div class="row last"><span class="lbl">فایده کل</span><span class="val green fw9">${n2fa(s.profit||0)} افغانی</span></div>
+        <div class="row${(s.debt||0)>0?'':' last'}"><span class="lbl">فایده کل</span><span class="val green fw9">${n2fa(s.profit||0)} افغانی</span></div>
+        ${(s.debt||0)>0?`<div class="row"><span class="lbl">جمله قرض</span><span class="val red">${n2fa(s.debt)} افغانی</span></div>
+        <div class="row last"><span class="lbl">💵 پول موجود</span><span class="val green fw9">${n2fa(s.available||0)} افغانی</span></div>`:''}
         ${s.note?`<div class="note">${s.note}</div>`:''}
       </div>
     </div>`;
@@ -8546,8 +8550,17 @@ function pdfCompany() {
   const sumAfn  = rows.reduce((a,r)=>a+cmpAfnTotal(r),0);
   const convRate = _companyConvRate(company);
   const sumPoul = rows.reduce((a,r)=>a+cmpPoulAfn(r, convRate),0);
-  const sumAlb  = rows.reduce((a,r)=>a+cmpAlbaqi(r, convRate),0);
-  const sumAlbUsd = rows.reduce((a,r)=>a+cmpAlbaqiUsd(r, convRate),0);
+  const sumAlbRaw  = rows.reduce((a,r)=>a+cmpAlbaqi(r, convRate),0);
+  const sumAlbUsdRaw = rows.reduce((a,r)=>a+cmpAlbaqiUsd(r, convRate),0);
+  // همان تفریقِ «دالر گرفته‌شده» که صفحهٔ حساب هم انجام می‌دهد — الباقیِ نهایی یکی باشد
+  const usdReceived = parseFloat(company.usdReceived) || 0;
+  const sumAlbUsd = sumAlbUsdRaw - usdReceived;
+  const sumAlb = sumAlbRaw - (usdReceived * convRate);
+  const statusText = Math.abs(Math.round(sumAlbUsd*10)/10) < 0.5 && Math.abs(Math.round(sumAlb)) < 1
+    ? '✅ حساب با این شرکت تسویه است'
+    : (sumAlbUsd > 0 ? '🔴 این مقدار را به شرکت بدهکارید' : '🟢 این مقدار طلبِ شما از شرکت است');
+  const statusColor = Math.abs(Math.round(sumAlbUsd*10)/10) < 0.5 && Math.abs(Math.round(sumAlb)) < 1
+    ? '#276749' : (sumAlbUsd > 0 ? '#e53e3e' : '#276749');
   const rowsHtml = rows.map((r,i) => {
     const ton=cmpTon(r), tusd=cmpTotalUsd(r), tafn=cmpAfnTotal(r), ab=cmpAlbaqi(r, convRate), abUsd=cmpAlbaqiUsd(r, convRate);
     return `<tr>
@@ -8587,6 +8600,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px}
   <div class="sum-box" style="border-color:${sumAlb>0?'#fc8181':'#9ae6b4'}"><div class="l">الباقی</div><div class="v" style="color:${sumAlb>0?'#e53e3e':'#276749'}">${n2fa(Math.round(sumAlb))}</div></div>
   <div class="sum-box" style="border-color:${sumAlbUsd>0?'#fc8181':'#9ae6b4'}"><div class="l">الباقی دالر ($)</div><div class="v" style="color:${sumAlbUsd>0?'#e53e3e':'#276749'}">${n2fa(sumAlbUsd.toFixed(1))} $</div></div>
 </div>
+<div style="margin-bottom:16px;padding:9px 14px;border-radius:8px;font-weight:700;font-size:0.85rem;border:1.5px solid ${statusColor};background:${statusColor}14;color:${statusColor}">${statusText}</div>
 <table><thead><tr>
   <th>#</th><th>تاریخ</th><th>نام</th><th>خرید به تن</th><th>قیمت تن ($)</th>
   <th>کل ($)</th><th>نرخ</th><th>کل (افغانی)</th><th>رسید</th><th>الباقی</th><th>الباقی ($)</th>
@@ -9038,6 +9052,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 .petrol-box .split-title{color:#c07700}
 .diesel-box .split-title{color:#8B4513}
 .split-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.note-box{margin-top:14px;padding:8px 12px;background:#fffbeb;border-right:3px solid #c07700;border-radius:6px;font-size:0.75rem;color:#4a5568}
 @media print{
   body{padding:6px}
   @page{margin:0.5cm;size:A4}
@@ -9059,7 +9074,6 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 ${splitBoxesHtml}
 <div class="summary">
   <div class="sum-box" style="border-color:#c07700"><div class="l">فیصدی ٪</div><div class="v" style="color:#c07700">${n2fa(pct)}٪</div></div>
-  <div class="sum-box" style="border-color:#276749"><div class="l">جمع کل پول</div><div class="v" style="color:#276749">${n2fa(parseFloat(acct.moneyDeposit)||0)} افغانی</div></div>
   <div class="sum-box" style="border-color:#2b6cb0"><div class="l">${money?'جمع کل برد پول':'جمع کل برد تیل'}</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(filter==='all'?(bordP+bordD):(filter==='diesel'?bordD:bordP)))} ${unit}</div></div>
 </div>
 <table>
@@ -9077,6 +9091,7 @@ ${splitBoxesHtml}
     <td>${n2fa(ft.albaqi)}</td>
   </tr></tfoot>
 </table>
+${(acct.note||'').trim() ? `<div class="note-box"><b>توضیحات:</b> ${escFa(acct.note).replace(/\n/g,'<br>')}</div>` : ''}
 <div class="footer">پمپ یعقوبی — این سند به صورت خودکار تولید شده است</div>
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
@@ -9317,6 +9332,8 @@ function pdfSingleReport(repId) {
         <div style="font-size:0.82rem;color:#9ca3af;margin-bottom:4px">فایده / لیتر: <span style="color:#34d399;font-weight:700">${n2fa(s.profitPer||0)} ؋</span></div>
         <div style="font-size:0.82rem;color:#9ca3af;margin-bottom:4px">پول کل: <span style="color:#fbbf24;font-weight:900">${n2fa(s.money||0)} افغانی</span></div>
         <div style="font-size:0.82rem;color:#9ca3af;margin-bottom:4px">فایده کل: <span style="color:#34d399;font-weight:900">${n2fa(s.profit||0)} افغانی</span></div>
+        ${(s.debt||0)>0?`<div style="font-size:0.82rem;color:#9ca3af;margin-bottom:4px">جمله قرض: <span style="color:#f87171;font-weight:700">${n2fa(s.debt)} افغانی</span></div>
+        <div style="font-size:0.82rem;font-weight:900;margin-bottom:4px;padding:4px 8px;background:#064e3b;border-radius:6px;border:1px solid #065f46">💵 پول موجود: <span style="color:#34d399">${n2fa(s.available||0)} افغانی</span></div>`:''}
         ${s.note?`<div style="font-size:0.75rem;color:#6b7280;margin-top:4px;font-style:italic">${s.note}</div>`:''}
       </div>`;
   }
