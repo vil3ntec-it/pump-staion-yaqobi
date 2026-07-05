@@ -8988,60 +8988,6 @@ function pdfPerson() {
   const colCount = showFtCol ? 10 : 9;
   const ftHeadCols = showFtCol ? '<th>نوع تیل</th>' : '';
 
-  // جدول‌های آرشیوشدهٔ همین حساب (هر بار «جدول جدید» زده شود یکی اینجا اضافه می‌شود) —
-  // چون روی صفحه زیر جدول فعلی دیده می‌شوند، در پی‌دی‌افِ اصلی هم باید بیایند، نه فقط جدول فعلیِ (که ممکن است خالی باشد).
-  const historyHtml = [...(acct.tableHistory||[])].reverse().map(h => {
-    const hRows = h.rows || [];
-    const hPct = parseFloat(h.percent) || 0;
-    const hRasidP = money ? (parseFloat(h.rasidMoneyP)||0) : (parseFloat(h.rasidFuelP)||0);
-    const hRasidD = money ? (parseFloat(h.rasidMoneyD)||0) : (parseFloat(h.rasidFuelD)||0);
-    const hSt = _splitTotals(hRows);
-    const hBordP = money ? hSt.petrol.bardagi : hSt.petrol.fuel;
-    const hBordD = money ? hSt.diesel.bardagi : hSt.diesel.fuel;
-    const hCommP = hRasidP*hPct/100, hCommD = hRasidD*hPct/100;
-    const hRemP = hRasidP-hBordP-hCommP, hRemD = hRasidD-hBordD-hCommD;
-    const hRowsHtml = hRows.map((r,i) => {
-      const bard = r.byMoney ? (r.bardagi||0) : ((r.fuel||0)*(r.priceper||0));
-      const alb = bard - (r.rasid||0);
-      return `<tr>
-        <td style="text-align:center;color:#718096">${i+1}</td>
-        <td>${r.date||'—'}</td><td>${escFa(r.name)||'—'}</td>
-        <td style="color:#c07700">${r.hawala||'—'}</td>
-        <td style="color:#2b6cb0;font-weight:700">${r.byMoney ? '—' : n2fa(r.fuel||0)}</td>
-        <td>${r.byMoney ? '—' : n2fa(r.priceper||0)}</td>
-        <td style="color:#c07700;font-weight:700">${n2fa(rnd(bard))}</td>
-        <td style="color:#276749;font-weight:700">${n2fa(r.rasid||0)}</td>
-        <td style="color:${alb>0?'#e53e3e':'#276749'};font-weight:700">${n2fa(rnd(alb))}</td>
-      </tr>`;
-    }).join('');
-    return `<div style="margin-top:22px;padding-top:14px;border-top:2px dashed #cbd5e0">
-      <h2 style="font-size:1rem;font-weight:900;color:#2b6cb0;margin-bottom:8px">📋 جدول آرشیو — ${h.createdAt||''}</h2>
-      <div class="split-row">
-        <div class="split-box petrol-box"><div class="split-title">⛽ حساب پطرول</div>
-          <div class="split-grid">
-            <div class="sum-box"><div class="l">${rlabel}</div><div class="v" style="color:#276749">${n2fa(rnd(hRasidP))} ${unit}</div></div>
-            <div class="sum-box"><div class="l">برد</div><div class="v" style="color:#c07700">${n2fa(rnd(hBordP))} ${unit}</div></div>
-            <div class="sum-box"><div class="l">فیصدی ما (${n2fa(hPct)}٪)</div><div class="v" style="color:#805ad5">${n2fa(rnd(hCommP))} ${unit}</div></div>
-            <div class="sum-box"><div class="l">${remlabel}</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(hRemP))} ${unit}</div></div>
-          </div>
-        </div>
-        <div class="split-box diesel-box"><div class="split-title">🟤 حساب دیزل</div>
-          <div class="split-grid">
-            <div class="sum-box"><div class="l">${rlabel}</div><div class="v" style="color:#276749">${n2fa(rnd(hRasidD))} ${unit}</div></div>
-            <div class="sum-box"><div class="l">برد</div><div class="v" style="color:#c07700">${n2fa(rnd(hBordD))} ${unit}</div></div>
-            <div class="sum-box"><div class="l">فیصدی ما (${n2fa(hPct)}٪)</div><div class="v" style="color:#805ad5">${n2fa(rnd(hCommD))} ${unit}</div></div>
-            <div class="sum-box"><div class="l">${remlabel}</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(hRemD))} ${unit}</div></div>
-          </div>
-        </div>
-      </div>
-      <table>
-        <thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th><th>مقدار</th><th>فی لیتر</th><th>بردگی</th><th>رسید</th><th>الباقی</th></tr></thead>
-        <tbody>${hRowsHtml || `<tr><td colspan="9" style="text-align:center;padding:16px;color:#718096">هیچ ردیفی ثبت نشده</td></tr>`}</tbody>
-      </table>
-      ${(h.note||'').trim() ? `<div class="note-box"><b>توضیحات:</b> ${escFa(h.note).replace(/\n/g,'<br>')}</div>` : ''}
-    </div>`;
-  }).join('');
-
   // بخش خلاصهٔ پطرول/دیزل: فقط در حالت «همه» هر دو نشان داده شود؛ در حالت فیلترشده فقط همان حساب
   const splitBoxesHtml = filter === 'all' ? `
 <div class="split-row">
@@ -9105,7 +9051,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 .split-title{font-size:0.78rem;font-weight:700;margin-bottom:8px}
 .petrol-box .split-title{color:#c07700}
 .diesel-box .split-title{color:#8B4513}
-.split-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.split-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
 .note-box{margin-top:14px;padding:8px 12px;background:#fffbeb;border-right:3px solid #c07700;border-radius:6px;font-size:0.75rem;color:#4a5568}
 @media print{
   body{padding:6px}
@@ -9146,7 +9092,6 @@ ${splitBoxesHtml}
   </tr></tfoot>
 </table>
 ${(acct.note||'').trim() ? `<div class="note-box"><b>توضیحات:</b> ${escFa(acct.note).replace(/\n/g,'<br>')}</div>` : ''}
-${historyHtml}
 <div class="footer">پمپ یعقوبی — این سند به صورت خودکار تولید شده است</div>
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
