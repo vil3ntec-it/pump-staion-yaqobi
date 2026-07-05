@@ -2344,25 +2344,80 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
 <style id="occasion-themes">
 /* ============================================================
    OCCASION THEMES — ADDITIVE ONLY. A body.occ-* class (auto-applied
-   by the current date, see script near the end of <body>) adds a
-   thin themed strip under the header plus a small emoji badge next
-   to the header title. Pure decoration via a new ::after box and an
-   appended <span> — no existing background/border/business rule is
-   touched, so it layers safely under any color palette. Toggle:
-   Settings → تم رنگی → "تم مناسبتی خودکار".
+   by the current date, see script near the end of <body>) adds:
+     1. a tinted gradient "wash" + halftone-dot texture behind the
+        header and the top stats banner (via ::before overlays —
+        never touches the real background/border, so it layers
+        safely under any color palette),
+     2. one inline-SVG watermark graphic per occasion (ball, lantern
+        + crescent, tulip, pomegranate...) in the header corner,
+     3. a small swaying emoji next to the header title.
+   Everything is pure CSS + hand-written inline SVG (a few hundred
+   bytes each) — no photos/raster assets, so page weight barely
+   moves. Toggle: Settings → تم رنگی → "تم مناسبتی خودکار".
    ============================================================ */
-body.occ-worldcup{ --occ-1:#0f8a3e; --occ-2:#ffffff; --occ-3:#0f8a3e; }
-body.occ-ramadan { --occ-1:#0e8a7a; --occ-2:#ffc94d; --occ-3:#0e8a7a; }
-body.occ-eid-fitr{ --occ-1:#e0a72d; --occ-2:#2fae4e; --occ-3:#e0a72d; }
-body.occ-eid-adha{ --occ-1:#2fae4e; --occ-2:#d4af37; --occ-3:#2fae4e; }
-body.occ-nowruz  { --occ-1:#e85d8a; --occ-2:#4caf50; --occ-3:#e85d8a; }
-body.occ-yalda   { --occ-1:#8a1f3d; --occ-2:#d4af37; --occ-3:#8a1f3d; }
+body.occ-worldcup{
+  --occ-1:#0a3d50; --occ-2:#12805f; --occ-3:#8ed629;
+  --occ-wash:linear-gradient(135deg, rgba(10,61,80,.55), rgba(18,128,95,.42) 55%, rgba(142,214,41,.28));
+}
+body.occ-ramadan{
+  --occ-1:#3a0a19; --occ-2:#7a1530; --occ-3:#e8b23d;
+  --occ-wash:linear-gradient(135deg, rgba(58,10,25,.6), rgba(90,20,40,.48) 55%, rgba(180,120,20,.22));
+}
+body.occ-eid-fitr{
+  --occ-1:#2a3d12; --occ-2:#4a7a1f; --occ-3:#e8c23d;
+  --occ-wash:linear-gradient(135deg, rgba(42,61,18,.5), rgba(74,122,31,.4) 55%, rgba(232,194,61,.26));
+}
+body.occ-eid-adha{
+  --occ-1:#123a2a; --occ-2:#1f7a4a; --occ-3:#d4af37;
+  --occ-wash:linear-gradient(135deg, rgba(18,58,42,.55), rgba(31,122,74,.42) 55%, rgba(212,175,55,.24));
+}
+body.occ-nowruz{
+  --occ-1:#3a1024; --occ-2:#c23d6b; --occ-3:#5fae4c;
+  --occ-wash:linear-gradient(135deg, rgba(58,16,36,.5), rgba(194,61,107,.34) 55%, rgba(95,174,76,.28));
+}
+body.occ-yalda{
+  --occ-1:#1a0508; --occ-2:#7a1530; --occ-3:#d4af37;
+  --occ-wash:linear-gradient(135deg, rgba(26,5,8,.65), rgba(122,21,48,.45) 60%, rgba(212,175,55,.18));
+}
 
+body[class*="occ-"] .header{ overflow:hidden; } /* already position:sticky — a valid containing block */
+body[class*="occ-"] .top-banner{ position:relative; overflow:hidden; }
+body[class*="occ-"] .header::before,
+body[class*="occ-"] .top-banner::before{
+  content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
+  background-image:
+    var(--occ-wash),
+    radial-gradient(circle at 18% 28%, rgba(255,255,255,.14) 0 4%, transparent 5%),
+    radial-gradient(circle at 62% 68%, rgba(255,255,255,.11) 0 3.4%, transparent 4.4%),
+    radial-gradient(circle at 84% 22%, rgba(255,255,255,.10) 0 3%, transparent 4%),
+    radial-gradient(circle at 38% 82%, rgba(255,255,255,.08) 0 3%, transparent 4%);
+  background-size: 100% 100%, 30px 30px, 30px 30px, 30px 30px, 30px 30px;
+}
+body[class*="occ-"] .header > :not(.occ-art),
+body[class*="occ-"] .top-banner > :not(.occ-art){ position:relative; z-index:1; }
 body[class*="occ-"] .header::after{
-  content:''; position:absolute; left:0; right:0; bottom:-2px; height:3px;
-  background:linear-gradient(90deg,var(--occ-1),var(--occ-2),var(--occ-3));
+  content:''; position:absolute; left:0; right:0; bottom:-2px; height:3px; z-index:2;
+  background:linear-gradient(90deg,var(--occ-1),var(--occ-3),var(--occ-1));
   pointer-events:none;
 }
+
+/* large ambient watermark — lives in the roomier stats banner, low opacity
+   so it never fights with the numbers rendered above it (z-index 1) */
+.occ-art{
+  position:absolute; z-index:0; pointer-events:none;
+  top:50%; margin-top:-40px; right:-6px; width:80px; height:80px; opacity:.13;
+  color:var(--occ-3); animation:occDrift 8s ease-in-out infinite;
+}
+.occ-art svg{ width:100%; height:100%; display:block; }
+@media (min-width:769px){ .occ-art{ width:118px; height:118px; margin-top:-59px; right:2%; opacity:.11; } }
+@keyframes occDrift{
+  0%,100%{ transform:translateY(0) rotate(0deg); }
+  50%{ transform:translateY(-5px) rotate(3deg); }
+}
+
+/* small emoji next to the header title — at icon size, the real color emoji
+   reads far more clearly than the hand-drawn line art used for .occ-art */
 .occ-badge{
   display:inline-block; font-size:1.05rem; line-height:1; transform-origin:50% 65%;
   animation:occSway 2.6s ease-in-out infinite;
@@ -2376,7 +2431,7 @@ body[class*="occ-"] .header::after{
   0%,100%{ transform:translateY(0) rotate(0deg); }
   50%{ transform:translateY(-3px) rotate(-8deg); }
 }
-@media (prefers-reduced-motion: reduce){ .occ-badge{ animation:none; } }
+@media (prefers-reduced-motion: reduce){ .occ-badge, .occ-art{ animation:none; } }
 </style>
 </head>
 <body>
@@ -13086,8 +13141,9 @@ document.addEventListener('click', function(e) {
 /* ============================================================
    OCCASION THEMES — ADDITIVE JS. Detects a small set of known
    occasions (World Cup 2026, Ramadan, Eid al-Fitr, Eid al-Adha,
-   Nowruz, Yalda) from the real date and adds a body.occ-* class +
-   a small emoji badge next to the header title (CSS above). Purely
+   Nowruz, Yalda) from the real date and adds a body.occ-* class,
+   a small emoji badge next to the header title, and an inline-SVG
+   watermark graphic in the header corner (CSS above). Purely
    decorative — no data, IDs or existing localStorage keys touched.
    Off switch: localStorage 'pumpOccasionOff' = '1'.
    ============================================================ */
@@ -13113,19 +13169,59 @@ document.addEventListener('click', function(e) {
     } catch(e){ return null; }
   }
 
+  // Hand-drawn, currentColor-only watermark art (no photos/rasters — a few
+  // hundred bytes of inline SVG each). Ball uses computed pentagon/seam
+  // coordinates; crescent + star are the well-known Feather-icon paths.
+  var ART = {
+    ball:
+      '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="3"/>' +
+      '<polygon points="50,38 61.4,46.3 57.05,59.7 42.95,59.7 38.6,46.3" fill="currentColor"/>' +
+      '<path d="M50,38 L50,18 M61.4,46.3 L80.4,40.1 M57.05,59.7 L68.8,75.9 M42.95,59.7 L31.2,75.9 M38.6,46.3 L19.6,40.1" ' +
+      'stroke="currentColor" stroke-width="2.6" fill="none"/>' +
+      '<circle cx="50" cy="16" r="3" fill="currentColor"/><circle cx="82.4" cy="39" r="3" fill="currentColor"/>' +
+      '<circle cx="69.9" cy="77.8" r="3" fill="currentColor"/><circle cx="30.1" cy="77.8" r="3" fill="currentColor"/>' +
+      '<circle cx="17.6" cy="39" r="3" fill="currentColor"/></svg>',
+    crescentStar:
+      '<svg viewBox="0 0 100 100"><path transform="translate(6,6) scale(3.2)" ' +
+      'd="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor"/>' +
+      '<path transform="translate(56,54) scale(1.7)" ' +
+      'd="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z" fill="currentColor"/></svg>',
+    lanternMoon:
+      '<svg viewBox="0 0 100 100"><path d="M30,30 L50,14 L70,30" fill="none" stroke="currentColor" stroke-width="3"/>' +
+      '<rect x="34" y="30" width="32" height="42" rx="5" fill="none" stroke="currentColor" stroke-width="3"/>' +
+      '<path d="M34,80 h32 l-7,14 h-18z" fill="none" stroke="currentColor" stroke-width="3"/>' +
+      '<line x1="50" y1="72" x2="50" y2="80" stroke="currentColor" stroke-width="3"/>' +
+      '<line x1="42" y1="38" x2="42" y2="64" stroke="currentColor" stroke-width="1.6" opacity=".6"/>' +
+      '<line x1="50" y1="38" x2="50" y2="64" stroke="currentColor" stroke-width="1.6" opacity=".6"/>' +
+      '<line x1="58" y1="38" x2="58" y2="64" stroke="currentColor" stroke-width="1.6" opacity=".6"/>' +
+      '<path transform="translate(2,50) scale(1.9)" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor"/></svg>',
+    tulip:
+      '<svg viewBox="0 0 100 100"><line x1="50" y1="52" x2="50" y2="94" stroke="currentColor" stroke-width="3"/>' +
+      '<path d="M50,74 Q32,70 27,88 Q46,88 50,74z" fill="currentColor" opacity=".85"/>' +
+      '<path d="M50,74 Q68,70 73,88 Q54,88 50,74z" fill="currentColor" opacity=".85"/>' +
+      '<path d="M50,20 Q30,26 32,50 Q50,56 50,20z" fill="currentColor"/>' +
+      '<path d="M50,20 Q70,26 68,50 Q50,56 50,20z" fill="currentColor"/>' +
+      '<path d="M50,12 Q40,26 50,46 Q60,26 50,12z" fill="currentColor"/></svg>',
+    pomegranate:
+      '<svg viewBox="0 0 100 100"><circle cx="50" cy="58" r="30" fill="currentColor" opacity=".85"/>' +
+      '<path d="M50,24 l-5,-10 h4 l1,4 l1,-4 h4z" fill="currentColor"/>' +
+      '<circle cx="40" cy="52" r="3" fill="#0000002e"/><circle cx="55" cy="46" r="3" fill="#0000002e"/>' +
+      '<circle cx="61" cy="62" r="3" fill="#0000002e"/><circle cx="44" cy="68" r="3" fill="#0000002e"/></svg>'
+  };
+
   // checked in order — first match wins (ranges don't overlap in practice)
   var OCCASIONS = [
-    { id:'worldcup', name:'جام جهانی فوتبال', icon:'⚽',
+    { id:'worldcup', name:'جام جهانی فوتبال', icon:'⚽', art: ART.ball,
       test: function(now){ return inGregorian(now, '2026-06-11', '2026-07-19'); } },
-    { id:'eid-adha', name:'عید قربان', icon:'🕋',
+    { id:'eid-adha', name:'عید قربان', icon:'🕋', art: ART.crescentStar,
       test: function(now,h){ return !!h && h.m===12 && h.d>=9 && h.d<=13; } },
-    { id:'eid-fitr', name:'عید فطر', icon:'🎉',
+    { id:'eid-fitr', name:'عید فطر', icon:'🎉', art: ART.crescentStar,
       test: function(now,h){ return !!h && h.m===10 && h.d<=3; } },
-    { id:'ramadan', name:'ماه رمضان', icon:'🌙',
+    { id:'ramadan', name:'ماه رمضان', icon:'🌙', art: ART.lanternMoon,
       test: function(now,h){ return !!h && h.m===9; } },
-    { id:'yalda', name:'شب یلدا', icon:'🍉',
+    { id:'yalda', name:'شب یلدا', icon:'🍉', art: ART.pomegranate,
       test: function(now,h,s){ return !!s && ((s.m===9 && s.d===30) || (s.m===10 && s.d===1)); } },
-    { id:'nowruz', name:'نوروز', icon:'🌷',
+    { id:'nowruz', name:'نوروز', icon:'🌷', art: ART.tulip,
       test: function(now,h,s){ return !!s && s.m===1 && s.d<=13; } }
   ];
 
@@ -13141,6 +13237,7 @@ document.addEventListener('click', function(e) {
     var b = document.body;
     OCCASIONS.forEach(function(o){ b.classList.remove('occ-'+o.id); });
     var badge = document.getElementById('occBadge'); if(badge) badge.remove();
+    var art = document.getElementById('occArt'); if(art) art.remove();
   }
 
   function applyOccasion(){
@@ -13149,11 +13246,18 @@ document.addEventListener('click', function(e) {
     var occ = detect(); if(!occ) return;
     document.body.classList.add('occ-'+occ.id);
     var title = document.querySelector('.header-title');
-    if(title){
+    if(title && occ.icon){
       var span = document.createElement('span');
       span.id = 'occBadge'; span.className = 'occ-badge'; span.title = occ.name;
       span.textContent = ' ' + occ.icon;
       title.appendChild(span);
+    }
+    var banner = document.querySelector('.top-banner');
+    if(banner && occ.art){
+      var art = document.createElement('div');
+      art.id = 'occArt'; art.className = 'occ-art'; art.setAttribute('aria-hidden','true');
+      art.innerHTML = occ.art;
+      banner.appendChild(art);
     }
   }
 
