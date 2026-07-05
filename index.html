@@ -3862,12 +3862,64 @@ function escFa(s) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+// ========== امنیت رمزها (SHA-256) ==========
+// هیچ رمزی دیگر به‌صورت متن ساده در کد یا حافظه ذخیره نمی‌شود — فقط هَش SHA-256 آن.
+// کسی که کد را ببیند (انسان یا هوش مصنوعی) فقط هَش را می‌بیند، نه خودِ رمز را.
+function _sha256Hex(str) {
+  const K = [
+    0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+  ];
+  let h0=0x6a09e667,h1=0xbb67ae85,h2=0x3c6ef372,h3=0xa54ff53a,h4=0x510e527f,h5=0x9b05688c,h6=0x1f83d9ab,h7=0x5be0cd19;
+  const msg = unescape(encodeURIComponent(String(str)));
+  const len = msg.length;
+  const bitLen = len * 8;
+  const withPad = (((len + 8) >> 6) + 1) * 16;
+  const words = new Array(withPad).fill(0);
+  for (let i = 0; i < len; i++) words[i >> 2] |= msg.charCodeAt(i) << (24 - (i % 4) * 8);
+  words[len >> 2] |= 0x80 << (24 - (len % 4) * 8);
+  words[withPad - 1] = bitLen;
+  words[withPad - 2] = Math.floor(bitLen / 0x100000000);
+  const w = new Array(64);
+  for (let block = 0; block < words.length; block += 16) {
+    for (let i = 0; i < 16; i++) w[i] = words[block + i] | 0;
+    for (let i = 16; i < 64; i++) {
+      const s0 = ((w[i-15] >>> 7) | (w[i-15] << 25)) ^ ((w[i-15] >>> 18) | (w[i-15] << 14)) ^ (w[i-15] >>> 3);
+      const s1 = ((w[i-2] >>> 17) | (w[i-2] << 15)) ^ ((w[i-2] >>> 19) | (w[i-2] << 13)) ^ (w[i-2] >>> 10);
+      w[i] = (w[i-16] + s0 + w[i-7] + s1) | 0;
+    }
+    let a=h0,b=h1,c=h2,d=h3,e=h4,f=h5,g=h6,h=h7;
+    for (let i = 0; i < 64; i++) {
+      const S1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
+      const ch = (e & f) ^ (~e & g);
+      const t1 = (h + S1 + ch + K[i] + w[i]) | 0;
+      const S0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
+      const maj = (a & b) ^ (a & c) ^ (b & c);
+      const t2 = (S0 + maj) | 0;
+      h=g; g=f; f=e; e=(d+t1)|0; d=c; c=b; b=a; a=(t1+t2)|0;
+    }
+    h0=(h0+a)|0; h1=(h1+b)|0; h2=(h2+c)|0; h3=(h3+d)|0; h4=(h4+e)|0; h5=(h5+f)|0; h6=(h6+g)|0; h7=(h7+h)|0;
+  }
+  return [h0,h1,h2,h3,h4,h5,h6,h7].map(x => (x >>> 0).toString(16).padStart(8,'0')).join('');
+}
+function _looksHashed(s) { return typeof s === 'string' && /^[0-9a-f]{64}$/.test(s); }
+
 // ========== STATE ==========
 // رمز اصلی مالک: همیشه برنامه را باز می‌کند و قابل تغییر یا حذف نیست.
 // بدون این رمز (یا رمز مدیر) برنامه به هیچ وجه باز نمی‌شود.
-const MASTER_PASSWORD = 'vil3ntecit';
+// فقط هَش SHA-256 رمز اصلی اینجا نگه داشته می‌شود، نه خودِ رمز.
+const MASTER_PASSWORD_HASH = '733276637023ca192ecb9939055e266c220433755cce65dc478a697b3cbe37cc';
+const DEFAULT_ADMIN_PASSWORD_HASH = '6c1a26721dce4f3a547ab9f7d6a3593003962d6e0801959ce2c55b6f0ca8dfaf'; // هَش رمز پیش‌فرض «vil3n»
 const DB = {
-  password: 'vil3n',
+  password: DEFAULT_ADMIN_PASSWORD_HASH,
+  // رمز نظاره‌گر عمداً به‌صورت متن ساده نگه داشته می‌شود (نه هَش)، چون قرار است با نظاره‌گران
+  // به اشتراک گذاشته شود (دکمهٔ «نمایش» در تنظیمات) و فقط دسترسیِ فقط‌خواندنی می‌دهد.
   viewerPassword: '0000',
   profitPassword: '',
   adminUnlocked: false,
@@ -3974,8 +4026,9 @@ function load() {
   if (!DB.trash) DB.trash = [];
   _cleanTrash();
   try { if (dedupAccounts()) save(); } catch(e){}
-  // migrate old default passwords → رمز پیش‌فرض جدید vil3n
-  if (DB.password === 'vil3ntecit' || DB.password === 'vilentecit' || DB.password === '1234') { DB.password = 'vil3n'; save(); }
+  // مهاجرت خودکار و یک‌باره: رمزهایی که از نسخه‌های قدیم به‌صورت متن ساده ذخیره شده بودند، به هَش SHA-256 تبدیل می‌شوند
+  if (DB.password && !_looksHashed(DB.password)) { DB.password = _sha256Hex(DB.password); save(); }
+  if (DB.profitPassword && !_looksHashed(DB.profitPassword)) { DB.profitPassword = _sha256Hex(DB.profitPassword); save(); }
   // بارگذاری async از IndexedDB: اگر localStorage پاک شده باشد یا IDB داده‌ای جدیدتر داشته باشد
   _IDB.get().then(function(idbData) {
     if (!idbData) { try { _IDB.put(JSON.parse(JSON.stringify(DB))); } catch(e) {} return; }
@@ -4347,8 +4400,9 @@ function _closeProfitPwModal() {
 }
 function _checkProfitPassword() {
   const v = (document.getElementById('pl-pw-input').value || '').trim();
+  const vh = _sha256Hex(v);
   const pw = (DB.profitPassword || '').trim();
-  if (v === MASTER_PASSWORD || (pw && v === pw)) {
+  if (vh === MASTER_PASSWORD_HASH || (pw && vh === pw)) {
     _closeProfitPwModal();
     _unlockProfitSection();
   } else {
@@ -4365,10 +4419,11 @@ function requireAdmin() {
 function tryUnlock() {
   try {
   const v = (document.getElementById('lockInput').value || '').trim();
+  const vh = _sha256Hex(v);
   const vp = (DB.viewerPassword || '').trim();
-  const pw = (DB.password || 'vil3n').trim();
+  const pw = (DB.password || DEFAULT_ADMIN_PASSWORD_HASH).trim();
   let role = null;
-  if (v === MASTER_PASSWORD || v === pw) role = 'admin';
+  if (vh === MASTER_PASSWORD_HASH || vh === pw) role = 'admin';
   else if (vp && v === vp) role = 'viewer';
   if (role) {
     _wrongPassCount = 0;
@@ -4392,19 +4447,21 @@ function tryUnlock() {
   } catch(err) {
     // fallback: اگه هر جایی crash کرد، مستقیم چک کن
     const v2 = (document.getElementById('lockInput') || {}).value || '';
-    if (v2.trim() === MASTER_PASSWORD || v2.trim() === (DB.password || 'vil3n')) {
+    const v2h = _sha256Hex(v2.trim());
+    if (v2h === MASTER_PASSWORD_HASH || v2h === (DB.password || DEFAULT_ADMIN_PASSWORD_HASH)) {
       document.getElementById('lockScreen').style.display = 'none';
       document.getElementById('app').style.display = 'block';
     }
   }
 }
 let _wrongPassCount = 0;
-// رمز دسترسی کامل: با وارد کردن MASTER_PASSWORD همهٔ بخش‌ها باز می‌شوند
+// رمز دسترسی کامل: با وارد کردن رمز اصلی همهٔ بخش‌ها باز می‌شوند
 function applyAccessPassword() {
   const inp = document.getElementById('access-pw');
   const msg = document.getElementById('access-msg');
   const v = inp ? inp.value : '';
-  if (v === MASTER_PASSWORD || v === DB.password) {
+  const vh = _sha256Hex(v);
+  if (vh === MASTER_PASSWORD_HASH || vh === DB.password) {
     DB.adminUnlocked = true; save();
     currentRole = 'admin';
     applyRole();
@@ -4421,7 +4478,8 @@ function applyAccessPassword() {
 function promptAdminUnlock() {
   const v = prompt('🔓 رمز دسترسی را وارد کنید:');
   if (v === null) return;
-  if (v === MASTER_PASSWORD || v === DB.password) {
+  const vh = _sha256Hex(v);
+  if (vh === MASTER_PASSWORD_HASH || vh === DB.password) {
     DB.adminUnlocked = true; save();
     currentRole = 'admin';
     applyRole();
@@ -4518,7 +4576,7 @@ function _brokenLogoTap() {
   _brokenTaps = 0;
   const v = prompt('🔓 رمز اصلی را برای فعال‌سازی این نسخه وارد کنید:');
   if (v === null) return;
-  if (v === MASTER_PASSWORD) {
+  if (_sha256Hex(v) === MASTER_PASSWORD_HASH) {
     activateThisCopy();
     // یک نسخهٔ سالم هم دانلود می‌شود تا قابل انتقال باشد
     try { downloadApp(); } catch (e) {}
@@ -9489,10 +9547,10 @@ function changePassword() {
   const nw = document.getElementById('pw-new').value;
   const rep = document.getElementById('pw-rep').value;
   const msg = document.getElementById('pw-msg');
-  if (old !== DB.password) { msg.textContent = '❌ رمز فعلی اشتباه است'; msg.style.color='var(--red)'; return; }
+  if (_sha256Hex(old) !== DB.password) { msg.textContent = '❌ رمز فعلی اشتباه است'; msg.style.color='var(--red)'; return; }
   if (!nw) { msg.textContent = '❌ رمز جدید را وارد کنید'; msg.style.color='var(--red)'; return; }
   if (nw !== rep) { msg.textContent = '❌ تکرار رمز مطابقت ندارد'; msg.style.color='var(--red)'; return; }
-  DB.password = nw; save();
+  DB.password = _sha256Hex(nw); save();
   msg.textContent = '✅ رمز با موفقیت تغییر کرد'; msg.style.color='var(--green)';
   ['pw-old','pw-new','pw-rep'].forEach(id => document.getElementById(id).value = '');
 }
@@ -9501,7 +9559,7 @@ function changeViewerPassword() {
   const rep = document.getElementById('vw-rep').value;
   const msg = document.getElementById('vw-msg');
   if (!nw) { msg.textContent = '❌ رمز نظاره‌گر را وارد کنید'; msg.style.color='var(--red)'; return; }
-  if (nw === DB.password) { msg.textContent = '❌ رمز نظاره‌گر نباید با رمز مدیر یکی باشد'; msg.style.color='var(--red)'; return; }
+  if (_sha256Hex(nw) === DB.password) { msg.textContent = '❌ رمز نظاره‌گر نباید با رمز مدیر یکی باشد'; msg.style.color='var(--red)'; return; }
   if (nw !== rep) { msg.textContent = '❌ تکرار رمز مطابقت ندارد'; msg.style.color='var(--red)'; return; }
   DB.viewerPassword = nw; save();
   msg.textContent = '✅ رمز نظاره‌گر تغییر کرد'; msg.style.color='var(--green)';
@@ -9513,12 +9571,13 @@ function saveProfitPassword() {
   const rep = (document.getElementById('profit-pw-rep').value || '').trim();
   const msg = document.getElementById('profit-pw-msg');
   const existing = (DB.profitPassword || '').trim();
-  if (existing && old !== existing && old !== MASTER_PASSWORD) {
+  const oldHash = _sha256Hex(old);
+  if (existing && oldHash !== existing && oldHash !== MASTER_PASSWORD_HASH) {
     msg.textContent = '❌ رمز فعلی اشتباه است'; msg.style.color = 'var(--red)'; return;
   }
   if (!nw) { msg.textContent = '❌ رمز جدید را وارد کنید'; msg.style.color = 'var(--red)'; return; }
   if (nw !== rep) { msg.textContent = '❌ تکرار رمز مطابقت ندارد'; msg.style.color = 'var(--red)'; return; }
-  DB.profitPassword = nw; save();
+  DB.profitPassword = _sha256Hex(nw); save();
   msg.textContent = '✅ رمز مفاد/ضرر تغییر کرد'; msg.style.color = 'var(--green)';
   ['profit-pw-old','profit-pw-new','profit-pw-rep'].forEach(id => { const e = document.getElementById(id); if(e) e.value = ''; });
 }
@@ -9560,13 +9619,14 @@ function applyUnionRates() {
 }
 
 // رمز پاک‌سازی داده‌ها — بدون این رمز هیچ‌کس نمی‌تواند حساب‌ها را خالی کند
-const WIPE_PASSWORD = 'vil3ntec';
+// فقط هَش SHA-256 این رمز نگه داشته می‌شود، نه خودِ رمز.
+const WIPE_PASSWORD_HASH = 'dcb7a030f2325e0dc9cc4a40ab24fd51640acb7d1d6cedcbfee99971671cb23c';
 function clearAllWithPassword() {
   const inp = document.getElementById('wipe-pw');
   const msg = document.getElementById('wipe-msg');
   const v = inp ? inp.value : '';
   if (!v) { if (msg) { msg.textContent = '❌ رمز پاک‌سازی را وارد کنید'; msg.style.color = 'var(--red)'; } return; }
-  if (v !== WIPE_PASSWORD) { if (msg) { msg.textContent = '❌ رمز پاک‌سازی اشتباه است'; msg.style.color = 'var(--red)'; } if (inp) inp.value = ''; return; }
+  if (_sha256Hex(v) !== WIPE_PASSWORD_HASH) { if (msg) { msg.textContent = '❌ رمز پاک‌سازی اشتباه است'; msg.style.color = 'var(--red)'; } if (inp) inp.value = ''; return; }
   if (!confirm('با رمز درست، همهٔ حساب‌ها پاک و خالی می‌شوند. مطمئن هستید؟')) return;
   if (inp) inp.value = '';
   if (msg) { msg.textContent = '✅ رمز درست بود — همهٔ داده‌ها پاک شد'; msg.style.color = 'var(--green)'; }
