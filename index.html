@@ -3453,7 +3453,6 @@ body[class*="occ-"] .header::after{
         <button class="add-row-btn" style="margin:0;border-color:var(--accent);color:var(--accent);padding:5px 10px;font-size:0.78rem" onclick="renameCurrentPerson()">✏️ تغییر اسم</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--red);color:var(--red);padding:5px 10px;font-size:0.78rem" onclick="clearAllPersonRows()">🗑️ پاک همه</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green);padding:5px 10px;font-size:0.78rem" onclick="pdfPerson()">📄 PDF</button>
-        <button class="add-row-btn" style="margin:0;border-color:#25D366;color:#25D366;padding:5px 10px;font-size:0.78rem" onclick="waSharePerson()">📤 واتساپ</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--blue);color:var(--blue);padding:5px 10px;font-size:0.78rem" onclick="showPersonQRFromModal()">📲 کیو‌آر</button>
         <button class="modal-close" onclick="closePersonModal()">✕</button>
       </div>
@@ -3561,7 +3560,6 @@ body[class*="occ-"] .header::after{
         <button class="add-row-btn" id="cm-fuel-btn" style="margin:0;border-color:#b7791f;color:#b7791f;padding:5px 10px;font-size:0.78rem" onclick="toggleCompanyFuel()">🟤 دیزل</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--accent);color:var(--accent);padding:5px 10px;font-size:0.78rem" onclick="renameCurrentCompany()">✏️ تغییر نام</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green);padding:5px 10px;font-size:0.78rem" onclick="pdfCompany()">📄 PDF</button>
-        <button class="add-row-btn" style="margin:0;border-color:#25D366;color:#25D366;padding:5px 10px;font-size:0.78rem" onclick="waShareCompany()">📤 واتساپ</button>
         <button class="modal-close" onclick="closeCompanyModal()">✕</button>
       </div>
     </div>
@@ -6962,17 +6960,18 @@ function _renderHistoryPanel(person) {
   const COLORS = ['#3182ce','#38a169','#805ad5','#d97706','#e53e3e','#dd6b20'];
   const rnd = x => Math.round(x * 100) / 100;
   const money = person.mode === 'money';
-  const unit = money ? ' افغانی' : ' ل';
   const pid = person.id;
   wrap.innerHTML = [...history].reverse().map((h, hi) => {
     const ac = COLORS[hi % COLORS.length];
     const rows = h.rows || [];
     const st = _splitTotals(rows);
     const pct = parseFloat(h.percent) || 0;
-    const rasidP = money ? (parseFloat(h.rasidMoneyP)||0) : (parseFloat(h.rasidFuelP)||0);
-    const rasidD = money ? (parseFloat(h.rasidMoneyD)||0) : (parseFloat(h.rasidFuelD)||0);
-    const bordP  = money ? st.petrol.bardagi : st.petrol.fuel;
-    const bordD  = money ? st.diesel.bardagi : st.diesel.fuel;
+    const hMoney = (h.viewMoney != null) ? h.viewMoney : money;
+    const unit = hMoney ? ' افغانی' : ' ل';
+    const rasidP = hMoney ? (parseFloat(h.rasidMoneyP)||0) : (parseFloat(h.rasidFuelP)||0);
+    const rasidD = hMoney ? (parseFloat(h.rasidMoneyD)||0) : (parseFloat(h.rasidFuelD)||0);
+    const bordP  = hMoney ? st.petrol.bardagi : st.petrol.fuel;
+    const bordD  = hMoney ? st.diesel.bardagi : st.diesel.fuel;
     const commP = rasidP * pct / 100, commD = rasidD * pct / 100;
     const remP  = rasidP - bordP - commP, remD = rasidD - bordD - commD;
     // fuel summary with editable rasid
@@ -7041,9 +7040,12 @@ function _renderHistoryPanel(person) {
       </div>`;
     return `<div style="margin-bottom:16px;border:2px solid ${ac};border-radius:13px;overflow:hidden">
       <div style="background:${ac};padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
-        <span style="font-weight:800;font-size:0.82rem;color:#fff;white-space:nowrap;flex:1">📋 ${h.createdAt||''}</span>
+        <span style="font-weight:800;font-size:0.82rem;color:#fff;white-space:nowrap">📋 ${h.createdAt||''}</span>
+        <input id="hn-${h.id}" value="${escFa(h.headerNote||'')}" placeholder="📝 توضیحات این جدول..." oninput="updateHistoryHeaderNote('${pid}','${h.id}',this.value)"
+          style="flex:1;min-width:130px;background:rgba(255,255,255,0.16);border:1px dashed rgba(255,255,255,0.6);border-radius:7px;padding:4px 10px;color:#fff;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;box-sizing:border-box">
         <div style="display:flex;align-items:center;gap:6px">
           <span style="font-size:0.72rem;color:rgba(255,255,255,0.85)">${n2fa(rows.length)} ردیف</span>
+          <button onclick="toggleHistoryMode('${pid}','${h.id}')" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.5);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">🔁 ${hMoney?'تیل':'پول'}</button>
           <button onclick="pdfPersonHistory('${pid}','${h.id}')" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.5);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">📄 PDF</button>
           <button onclick="deletePersonHistory('${pid}','${h.id}')" style="background:transparent;border:1px solid rgba(255,255,255,0.45);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">🗑️ حذف کل</button>
         </div>
@@ -7063,7 +7065,7 @@ function pdfPersonHistory(pid, hid) {
   const person = _hPerson(pid); if (!person) return;
   const h = _hEntry(pid, hid); if (!h) return;
   const rows = h.rows || [];
-  const money = person.mode === 'money';
+  const money = (h.viewMoney != null) ? h.viewMoney : (person.mode === 'money');
   const pct = parseFloat(h.percent) || 0;
   const unit = money ? 'افغانی' : 'ل';
   const rnd = x => Math.round(x * 100) / 100;
@@ -7119,18 +7121,18 @@ tr:nth-child(even) td{background:#f7fafc}
   <div class="split-box" style="border-color:#38a16966">
     <div class="split-title">⛽ حساب پطرول</div>
     <div class="split-grid">
+      <div class="sum-box"><div class="l">فیصدی</div><div class="v" style="color:#805ad5">${n2fa(rnd(commP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">رسید</div><div class="v" style="color:#276749">${n2fa(rnd(rasidP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">برد</div><div class="v" style="color:#c07700">${n2fa(rnd(bordP))} ${unit}</div></div>
-      <div class="sum-box"><div class="l">فیصدی</div><div class="v" style="color:#805ad5">${n2fa(rnd(commP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">الباقی</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(remP))} ${unit}</div></div>
     </div>
   </div>
   <div class="split-box" style="border-color:#d9770666">
     <div class="split-title">🟤 حساب دیزل</div>
     <div class="split-grid">
+      <div class="sum-box"><div class="l">فیصدی</div><div class="v" style="color:#805ad5">${n2fa(rnd(commD))} ${unit}</div></div>
       <div class="sum-box"><div class="l">رسید</div><div class="v" style="color:#276749">${n2fa(rnd(rasidD))} ${unit}</div></div>
       <div class="sum-box"><div class="l">برد</div><div class="v" style="color:#c07700">${n2fa(rnd(bordD))} ${unit}</div></div>
-      <div class="sum-box"><div class="l">فیصدی</div><div class="v" style="color:#805ad5">${n2fa(rnd(commD))} ${unit}</div></div>
       <div class="sum-box"><div class="l">الباقی</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(remD))} ${unit}</div></div>
     </div>
   </div>
@@ -7138,6 +7140,7 @@ tr:nth-child(even) td{background:#f7fafc}
 <div class="pct-row">فیصدی ٪: <b>${n2fa(pct)}</b> &nbsp;|&nbsp; جمع برد: <b style="color:#c07700">${n2fa(rnd(bordP+bordD))} ${unit}</b> &nbsp;|&nbsp; الباقی کل: <b style="color:#2b6cb0">${n2fa(rnd(remP+remD))} ${unit}</b></div>
 <table><thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th><th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>الباقی</th></tr></thead>
 <tbody>${tableRows||'<tr><td colspan="9" style="text-align:center;padding:12px;color:#718096">هیچ ردیفی ثبت نشده</td></tr>'}</tbody></table>
+${(h.headerNote||'').trim()?`<div class="note-box"><b>توضیحات (نوار عنوان):</b> ${escFa(h.headerNote).replace(/\n/g,'<br>')}</div>`:''}
 ${h.note?`<div class="note-box"><b>توضیحات:</b> ${h.note.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>`:''}
 <script>window.onload=function(){window.print()}<\/script>
 </body></html>`;
@@ -7186,6 +7189,19 @@ function deleteHistoryRow(pid, hid, idx) {
 function updateHistoryNote(pid, hid, value) {
   const h = _hEntry(pid, hid); if (!h) return;
   h.note = value; save();
+}
+// توضیحات مستقل نوار عنوانِ آرشیو — کاملاً جدا از توضیحاتِ زیر جدول (h.note)
+function updateHistoryHeaderNote(pid, hid, value) {
+  const h = _hEntry(pid, hid); if (!h) return;
+  h.headerNote = value; save();
+}
+function toggleHistoryMode(pid, hid) {
+  const h = _hEntry(pid, hid); if (!h) return;
+  const person = _hPerson(pid); if (!person) return;
+  const cur = (h.viewMoney != null) ? h.viewMoney : (person.mode === 'money');
+  h.viewMoney = !cur;
+  save();
+  _renderHistoryPanel(person);
 }
 function deletePersonRow(pid, idx) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
@@ -8850,37 +8866,6 @@ function notifyWhatsapp() {
 
 // چک خودکار مخزن هر ۵ دقیقه — حتی اگر کاربر در بخش مخزن نباشد
 setInterval(function(){ try { checkLowStock(); } catch(e) {} }, 300000);
-// خلاصهٔ حساب یک شخص/شرکت را به واتساپ می‌فرستد (با متن آماده)
-function _waSendSummary(text) {
-  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
-}
-function waSharePerson() {
-  const person = _curPerson && _curPerson();
-  if (!person) return;
-  const t = _splitTotals(_allRows(person));
-  let txt = '📒 حساب ' + (person.name||'') + ' — ' + (DB.stationName||'پمپ یعقوبی') + '\n';
-  txt += '📅 ' + persianDate() + '\n';
-  txt += '⛽ الباقی پطرول: ' + n2fa(Math.round(t.petrol.albaqi)) + ' افغانی\n';
-  txt += '🟤 الباقی دیزل: ' + n2fa(Math.round(t.diesel.albaqi)) + ' افغانی\n';
-  txt += '📊 جمع الباقی: ' + n2fa(Math.round(t.all.albaqi)) + ' افغانی';
-  _waSendSummary(txt);
-}
-function waShareCompany() {
-  const company = (DB.tilCompanies||[]).find(c => c.id === currentCompanyId);
-  if (!company) return;
-  const rows = currentCompanyFuel === 'diesel' ? (company.dieselRows||[]) : (company.rows||[]);
-  let ton = 0, usd = 0, afn = 0, poul = 0;
-  rows.forEach(r => { _migrateCompanyRow(r); ton += cmpTon(r); usd += cmpTotalUsd(r); afn += cmpAfnTotal(r); poul += cmpPoulAfn(r); });
-  const albaqi = afn - poul;
-  let txt = '🛢️ حساب شرکت ' + (company.name||'') + ' — ' + (DB.stationName||'پمپ یعقوبی') + '\n';
-  txt += '📅 ' + persianDate() + ' (' + (currentCompanyFuel === 'diesel' ? 'دیزل' : 'پطرول') + ')\n';
-  txt += '⚖️ جمع مقدار: ' + n2fa(ton.toFixed(1)) + ' تن\n';
-  txt += '💲 جمع دالر: ' + n2fa(usd.toFixed(1)) + ' $\n';
-  txt += '💰 جمع افغانی: ' + n2fa(Math.round(afn)) + '\n';
-  txt += '✅ رسید: ' + n2fa(Math.round(poul)) + ' افغانی\n';
-  txt += '📊 الباقی: ' + n2fa(Math.round(albaqi)) + ' افغانی';
-  _waSendSummary(txt);
-}
 function saveAlertImage() {
   const W = 720, H = 420 + Math.max(0, (lastLowStockData.length - 1)) * 70;
   const c = document.createElement('canvas');
@@ -8990,18 +8975,18 @@ function pdfPerson() {
   <div class="split-box petrol-box">
     <div class="split-title">⛽ حساب پطرول</div>
     <div class="split-grid">
+      <div class="sum-box"><div class="l">فیصدی ما (${n2fa(pct)}٪)</div><div class="v" style="color:#805ad5">${n2fa(rnd(commP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">${rlabel}</div><div class="v" style="color:#276749">${n2fa(rnd(rasidP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">برد</div><div class="v" style="color:#c07700">${n2fa(rnd(bordP))} ${unit}</div></div>
-      <div class="sum-box"><div class="l">فیصدی ما (${n2fa(pct)}٪)</div><div class="v" style="color:#805ad5">${n2fa(rnd(commP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">${remlabel}</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(remP))} ${unit}</div></div>
     </div>
   </div>
   <div class="split-box diesel-box">
     <div class="split-title">🟤 حساب دیزل</div>
     <div class="split-grid">
+      <div class="sum-box"><div class="l">فیصدی ما (${n2fa(pct)}٪)</div><div class="v" style="color:#805ad5">${n2fa(rnd(commD))} ${unit}</div></div>
       <div class="sum-box"><div class="l">${rlabel}</div><div class="v" style="color:#276749">${n2fa(rnd(rasidD))} ${unit}</div></div>
       <div class="sum-box"><div class="l">برد</div><div class="v" style="color:#c07700">${n2fa(rnd(bordD))} ${unit}</div></div>
-      <div class="sum-box"><div class="l">فیصدی ما (${n2fa(pct)}٪)</div><div class="v" style="color:#805ad5">${n2fa(rnd(commD))} ${unit}</div></div>
       <div class="sum-box"><div class="l">${remlabel}</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(remD))} ${unit}</div></div>
     </div>
   </div>
@@ -9010,9 +8995,9 @@ function pdfPerson() {
   <div class="split-box ${filter==='diesel'?'diesel-box':'petrol-box'}">
     <div class="split-title">${filter==='diesel'?'🟤 حساب دیزل':'⛽ حساب پطرول'}</div>
     <div class="split-grid">
+      <div class="sum-box"><div class="l">فیصدی ما (${n2fa(pct)}٪)</div><div class="v" style="color:#805ad5">${n2fa(rnd(filter==='diesel'?commD:commP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">${rlabel}</div><div class="v" style="color:#276749">${n2fa(rnd(filter==='diesel'?rasidD:rasidP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">برد</div><div class="v" style="color:#c07700">${n2fa(rnd(filter==='diesel'?bordD:bordP))} ${unit}</div></div>
-      <div class="sum-box"><div class="l">فیصدی ما (${n2fa(pct)}٪)</div><div class="v" style="color:#805ad5">${n2fa(rnd(filter==='diesel'?commD:commP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">${remlabel}</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(filter==='diesel'?remD:remP))} ${unit}</div></div>
     </div>
   </div>
@@ -9030,7 +9015,8 @@ function pdfPerson() {
 body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:13px}
 h1{font-size:1.3rem;font-weight:900;color:#c07700;border-bottom:2px solid #c07700;padding-bottom:8px;margin-bottom:6px}
 .meta{font-size:0.75rem;color:#718096;margin-bottom:16px}
-.summary{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+.pct-box{display:flex;align-items:center;justify-content:center;gap:10px;background:#fffdf5;border:1px solid #f0dfa8;border-radius:8px;padding:10px;margin-bottom:18px;font-size:0.85rem;color:#4a5568}
+.pct-box b{font-size:1.05rem;color:#c07700}
 .sum-box{flex:1;min-width:110px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center}
 .sum-box .l{font-size:0.65rem;color:#718096;margin-bottom:4px}
 .sum-box .v{font-size:1rem;font-weight:900}
@@ -9068,10 +9054,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 <h1>⛽ پمپ یعقوبی — حساب ${escFa(person.name)}${fuelTitle}</h1>
 <div class="meta">تاریخ چاپ: ${printDate} | نوع: ${type === 'debt' ? 'قرض‌دار' : 'بدون پارچه'}</div>
 ${splitBoxesHtml}
-<div class="summary">
-  <div class="sum-box" style="border-color:#c07700"><div class="l">فیصدی ٪</div><div class="v" style="color:#c07700">${n2fa(pct)}٪</div></div>
-  <div class="sum-box" style="border-color:#2b6cb0"><div class="l">${money?'جمع کل برد پول':'جمع کل برد تیل'}</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(filter==='all'?(bordP+bordD):(filter==='diesel'?bordD:bordP)))} ${unit}</div></div>
-</div>
+<div class="pct-box"><span>فیصدی ٪ (از مقدار رسید تیل کم می‌شود)</span><b>${n2fa(pct)}٪</b></div>
 <table>
   <thead><tr>
     <th>#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th>${ftHeadCols}
