@@ -3411,34 +3411,6 @@ body[class*="occ-"] .header::after{
     </div>
     <div id="set-ls-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted)"></div>
   </div>
-  <div class="settings-card" id="wa-bot-card" style="border-color:#25D366">
-    <div class="settings-title" style="color:#25D366">🤖 هشدار خودکار تیل در واتساپ</div>
-    <div style="font-size:0.9rem;color:var(--muted);line-height:2.2;margin-bottom:12px">
-      وقتی تیل مخزن <b style="color:#25D366">نزدیک حد هشدار یا کمتر</b> شود، پیام <b style="color:#25D366">خودش</b> داخل گروه می‌رود — بدون زدن هیچ دکمه‌ای.
-      <br><br>
-      <b style="color:var(--txt);font-size:0.95rem">📝 فقط ۳ قدم (یک بار انجام می‌دهید):</b>
-      <br><b style="color:#25D366">قدم ۱:</b> این شماره را مثل یک عضو عادی <b>به گروه‌تان اضافه کنید</b>:
-      <b dir="ltr" style="color:var(--txt)">+34 621 331 709</b>
-      <br><b style="color:#25D366">قدم ۲:</b> داخل خود گروه این جمله را بفرستید (کپی کنید، همین‌طور انگلیسی):
-      <br><b dir="ltr" style="color:var(--txt);background:var(--dark);border-radius:7px;padding:4px 10px;display:inline-block;margin:4px 0">I allow callmebot to send messages to this group</b>
-      <br><b style="color:#25D366">قدم ۳:</b> ربات جواب می‌دهد: یک <b>شناسهٔ گروه</b> (شبیه <b dir="ltr">123456789-123456@g.us</b>) و یک <b>کد</b>.
-      همان دو را در کادر پایین بنویسید و <b>«تست ارسال»</b> را بزنید — اگر پیام داخل گروه آمد، تمام است ✅
-      <br><br>
-      <span style="font-size:0.82rem">💬 <b>برای شمارهٔ شخصی هم می‌شود:</b> شمارهٔ
-      <b dir="ltr">+34 644 51 95 23</b> را ذخیره کنید و در چت خصوصی به آن بفرستید:
-      <b dir="ltr">I allow callmebot to send me messages</b> —
-      کدی که آمد (مثل 8726767) + شمارهٔ واتساپ خودتان (مثل 93701234567) را پایین بنویسید.</span>
-      <br><span style="font-size:0.82rem">⚠️ <b style="color:var(--red)">لینک گروه (chat.whatsapp.com) کار نمی‌کند</b> — واتساپ اجازه نمی‌دهد؛ فقط از ۳ قدم بالا شناسه و کد بگیرید.
-      اگر شماره‌ها جواب ندادند، شمارهٔ به‌روز را از
-      <a href="https://www.callmebot.com/whatsapp-group-messages/" target="_blank" style="color:#25D366">callmebot.com</a> بگیرید.</span>
-    </div>
-    <div id="wa-targets-body" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="pw-btn" style="background:var(--dark);border:1px solid #25D366;color:#25D366" onclick="addWaTarget()">➕ افزودن گیرنده</button>
-      <button class="pw-btn" style="background:#25D366;color:#fff" onclick="waTestSend()">📤 تست ارسال</button>
-    </div>
-    <div id="wa-bot-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted)"></div>
-  </div>
   <div class="settings-card" id="trash-settings-card" style="border-color:var(--accent)">
     <div class="settings-title" style="color:var(--accent)">🗑️ سطل زباله</div>
     <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.8">موارد حذف‌شده تا <b style="color:var(--accent)">۱۵ روز</b> در اینجا نگه داشته می‌شوند و پس از آن خودکار پاک می‌شوند. می‌توانید هر مورد را برگردانید یا برای همیشه حذف کنید.</div>
@@ -3917,7 +3889,6 @@ const DB = {
   lowStockInterval: 15,
   lowStockThreshold: 500,
   lowStockPhone: '',
-  waTargets: [],
   stationName: 'پمپ یعقوبی',
   stationAddress: '',
   stationPhone: '',
@@ -4701,7 +4672,6 @@ function showSection(id, btn) {
     if (currentRole === 'viewer') { showToast('🔒 بخش تنظیمات فقط برای مدیر است', '#e53e3e'); return; }
     fillLowStockSettings();
     fillSyncSettings();
-    try { renderWaTargets(); } catch(e) {}
     try { renderTrashList(); } catch(e) {}
   }
 }
@@ -5931,7 +5901,6 @@ function checkLowStock() {
   }).join('');
   document.getElementById('lowStockModal').classList.add('open');
   lastLowStockShown = Date.now();
-  try { _waAutoLowStock(); } catch(e) {} // 🤖 ارسال خودکار همان هشدار به واتساپ
   return true;
 }
 
@@ -8869,102 +8838,11 @@ function notifyWhatsapp() {
   window.open(url, '_blank');
 }
 
-// ========== 🤖 ربات واتساپ: ارسال کاملاً خودکار (سرویس CallMeBot) ==========
-// هر گیرنده: {label, phone, key} — phone یا شمارهٔ شخصی با کد کشور است یا شناسهٔ گروه (…@g.us)
-function _waTargets() {
-  if (!Array.isArray(DB.waTargets)) DB.waTargets = [];
-  return DB.waTargets;
-}
-function _waReady() { return _waTargets().some(t => (t.phone||'').trim() && (t.key||'').trim()); }
-function renderWaTargets() {
-  const body = document.getElementById('wa-targets-body');
-  if (!body) return;
-  const list = _waTargets();
-  if (!list.length) list.push({ label: '', phone: '', key: '' });
-  body.innerHTML = list.map((t, i) => `
-    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;border:1px solid var(--border);border-radius:9px;padding:8px">
-      <input class="xls-in" style="flex:1;min-width:110px" placeholder="نام (مثلاً گروه پمپ، خودم)" value="${escFa(t.label)}" onchange="updateWaTarget(${i},'label',this.value)">
-      <input class="xls-in" style="flex:1.4;min-width:150px" dir="ltr" placeholder="شماره (93701234567) یا شناسهٔ گروه (…@g.us)" value="${escFa(t.phone)}" onchange="updateWaTarget(${i},'phone',this.value)">
-      <input class="xls-in" style="flex:1;min-width:110px" dir="ltr" placeholder="کد فعال‌سازی" value="${escFa(t.key)}" onchange="updateWaTarget(${i},'key',this.value)">
-      <button class="del-btn" onclick="delWaTarget(${i})">🗑️</button>
-    </div>`).join('');
-}
-function addWaTarget() { _waTargets().push({ label: '', phone: '', key: '' }); save(); renderWaTargets(); }
-function updateWaTarget(i, f, v) {
-  const l = _waTargets(); if (!l[i]) return;
-  let val = (v||'').trim();
-  if (f === 'phone' && (val.indexOf('/') >= 0 || val.indexOf('http') >= 0 || val.indexOf('wa.me') >= 0 || val.indexOf('chat.whatsapp') >= 0)) {
-    showToast('❌ لینک واتساپ اینجا کار نمی‌کند — فقط شماره با کد کشور بنویسید (مثلاً 93701234567)', '#e53e3e');
-    val = '';
-    renderWaTargets();
-  }
-  l[i][f] = val; save();
-}
-function delWaTarget(i) { const l = _waTargets(); if (!l[i]) return; l.splice(i, 1); save(); renderWaTargets(); }
-// ارسال خودکار به همهٔ گیرنده‌ها — بدون نیاز به باز شدن واتساپ و زدن دکمه
-function waSendAll(text) {
-  let sent = 0;
-  _waTargets().forEach(t => {
-    const phone = (t.phone||'').trim(), key = (t.key||'').trim();
-    if (!phone || !key) return;
-    sent++;
-    try {
-      fetch('https://api.callmebot.com/whatsapp.php?phone=' + encodeURIComponent(phone) +
-            '&text=' + encodeURIComponent(text) + '&apikey=' + encodeURIComponent(key),
-            { mode: 'no-cors' }).catch(function(){});
-    } catch(e) {}
-  });
-  return sent;
-}
-function waTestSend() {
-  const msg = document.getElementById('wa-bot-msg');
-  if (!_waReady()) { if (msg) { msg.textContent = '❌ اول حداقل یک گیرنده با شماره و apikey ثبت کنید'; msg.style.color = 'var(--red)'; } return; }
-  if (!navigator.onLine) { if (msg) { msg.textContent = '❌ اینترنت وصل نیست'; msg.style.color = 'var(--red)'; } return; }
-  const n = waSendAll('🤖 تست ربات ' + (DB.stationName || 'پمپ یعقوبی') + ' — ارتباط برقرار است ✅');
-  if (msg) { msg.textContent = '📤 پیام تست به ' + n2fa(n) + ' گیرنده فرستاده شد — چند لحظه بعد واتساپ را ببینید'; msg.style.color = '#25D366'; }
-}
-// هشدار خودکار اتمام تیل: همان لحظه که هشدار داخل برنامه ظاهر می‌شود، پیام هم به واتساپ می‌رود
-// (فاصلهٔ تکرار همان تنظیم «هر چند دقیقه» است — پیام پشت‌سرهم نمی‌رود)
-// اگر نت نبود: فقط «آخرین» هشدار نگه داشته می‌شود و وقتی نت وصل شد همان یکی می‌رود —
-// حتی اگر ده بار تیل کم شده باشد، صد تا پیام نمی‌آید. اگر بیشتر از یک روز گذشته باشد، پیامِ کهنه اصلاً نمی‌رود.
-let _waPending = null;
-function _waAutoLowStock() {
-  if (!_waReady()) return;
-  const text = _lowStockMessage();
-  if (navigator.onLine) {
-    try { waSendAll(text); showTopToast('🤖 هشدار تیل خودکار به واتساپ فرستاده شد', '#25D366', 3000); } catch(e) {}
-  } else {
-    _waPending = { text: text, ts: Date.now() };
-    try { DB._waPending = _waPending; save(); } catch(e) {}
-  }
-}
-function _waFlushPending() {
-  const p = _waPending || DB._waPending;
-  if (!p) return;
-  if (!_waReady() || !navigator.onLine) return;
-  // اول پاک می‌شود تا هیچ‌وقت دوبار نرود
-  _waPending = null;
-  if (DB._waPending) { try { delete DB._waPending; save(); } catch(e) {} }
-  if (Date.now() - (p.ts || 0) > 86400000) return; // بیشتر از ۲۴ ساعت گذشته — پیام کهنه نرود
-  try {
-    waSendAll(p.text + '\n(این هشدار وقتی اینترنت نبود ثبت شده بود)');
-    showTopToast('🤖 هشدار تیل (ثبت‌شده در بی‌نتی) به واتساپ فرستاده شد', '#25D366', 3000);
-  } catch(e) {}
-}
-window.addEventListener('online', function(){ setTimeout(_waFlushPending, 2500); });
-setInterval(_waFlushPending, 120000);
 // چک خودکار مخزن هر ۵ دقیقه — حتی اگر کاربر در بخش مخزن نباشد
-// (تکرار پیام را همان تنظیم «هر چند دقیقه یک بار» کنترل می‌کند)
 setInterval(function(){ try { checkLowStock(); } catch(e) {} }, 300000);
-// خلاصهٔ حساب یک شخص/شرکت را خودکار به واتساپ می‌فرستد
+// خلاصهٔ حساب یک شخص/شرکت را به واتساپ می‌فرستد (با متن آماده)
 function _waSendSummary(text) {
-  if (_waReady() && navigator.onLine) {
-    waSendAll(text);
-    showTopToast('📤 حساب به واتساپ فرستاده شد', '#25D366', 3000);
-  } else {
-    // ربات تنظیم نشده — واتساپ با متن آماده باز می‌شود
-    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
-  }
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
 }
 function waSharePerson() {
   const person = _curPerson && _curPerson();
