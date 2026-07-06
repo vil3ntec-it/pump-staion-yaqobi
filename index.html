@@ -2523,9 +2523,9 @@ body[class*="occ-"] .header::after{
   transition:border-color .2s, color .2s, transform .18s;
 }
 .gfx-um-no:hover{ border-color:rgba(255,255,255,.5); color:#fff; transform:translateY(-1px); }
-@media (prefers-reduced-motion: reduce){
-  #gfxUltraConfirmModal .sm-modal, .gfx-confirm-bar, .gfx-um-orb, .gfx-um-yes{ animation:none !important; }
-}
+/* NOTE: no reduced-motion kill here on purpose — the warning popup's
+   animated bars are part of its message and must run in every tier
+   (many Android devices force the reduce hint on via battery saver). */
 </style>
 
 <style id="gfx-tier-performance">
@@ -2779,7 +2779,11 @@ body.gfx-standard .lock-box{
 }
 body.gfx-standard .toast{ -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
 body.gfx-standard .ls-modal{ animation:ls-pop .5s cubic-bezier(.22,.8,.32,1); }
-body.gfx-standard .ls-tape{ animation:ls-stripes 2.2s linear infinite; }
+/* hazard tape crawl — the old ls-stripes keyframes were deleted in an
+   earlier perf pass, so this uses its own keyframes (tape bg is a 45px
+   repeating gradient, so a 45px background shift loops seamlessly) */
+body.gfx-standard .ls-tape{ animation:gfxTapeMove 1.6s linear infinite !important; }
+@keyframes gfxTapeMove{ from{ background-position:0 0; } to{ background-position:45px 0; } }
 
 /* -- 2.6 PROFIT/LOSS: soft glass, linear chart draw, gentle pulse ------
    (number count-up = 620ms, handled by the tier-aware count-up JS) */
@@ -2804,24 +2808,34 @@ body.gfx-standard .tank-card.t-low .tank-body{
   50%    { box-shadow:inset 0 2px 8px rgba(255,255,255,.10), inset 0 -8px 22px rgba(0,0,0,.45), 0 0 18px 2px rgba(229,62,62,.55); }
 }
 
-/* -- 2.8 reduced motion: Standard politely stands down ------------------ */
+/* -- 2.8 OS "reduced motion" hint --------------------------------------
+   Picking Standard (or Ultra) is an EXPLICIT motion opt-in — many Android
+   devices force this hint on via battery saver and it silently froze every
+   animation. Whoever needs zero motion picks Performance. So the base
+   stylesheet's reduce-motion kills are re-asserted OFF for this tier. */
 @media (prefers-reduced-motion: reduce){
-  body.gfx-standard .ls-modal, body.gfx-standard .ls-tape,
-  body.gfx-standard .pl-trend .pl-dot,
-  body.gfx-standard .tank-liquid::after,
-  body.gfx-standard .tank-card.t-low .tank-body{ animation:none !important; }
+  body.gfx-standard .ls-tape{ animation:gfxTapeMove 1.6s linear infinite !important; }
+  body.gfx-standard .ls-bar::after{ animation:ls-sweep 2.6s ease-in-out infinite !important; }
+  body.gfx-standard .ls-icon{ animation:ls-sway 2.6s ease-in-out infinite !important; }
+  body.gfx-standard .tank-liquid{ transition:height 1.15s cubic-bezier(.22,.61,.36,1), background .4s !important; }
+  body.gfx-standard .tank-liquid::after{ animation:tankFlow 5.5s ease-in-out infinite !important; }
+  body.gfx-standard .tank-card.t-low .tank-body{ animation:gfxTankDangerStd 1.6s ease-in-out infinite !important; }
+  body.gfx-standard .tank-chip.low{ animation:tankPulse 1.6s ease-in-out infinite !important; }
+  body.gfx-standard .gfx-confirm-bar{ animation:gfxConfirmBarMove 2.4s linear infinite !important; }
+  body.gfx-standard .gfx-um-orb{ animation:gfxUmOrb 2.6s ease-in-out infinite !important; }
+  body.gfx-standard .pl-trend .pl-line{ stroke-dashoffset:0 !important; }
 }
 </style>
 
 <style id="gfx-tier-ultra">
 /* ╔══════════════════════════════════════════════════════════════════╗
    ║  TIER 3 — ULTRA PREMIUM («فوق‌العاده»)                            ║
-   ║  A completely different, cinematic/luxury theme: animated gold    ║
-   ║  gradients, dynamic lighting that follows the mouse, layered      ║
-   ║  shadows, living liquid fuel tanks (waves + bubbles), Hollywood   ║
-   ║  P&L (neon chart, particles, glow pulses, silky counters), 3-D    ║
-   ║  occasion icons with parallax, plus canvas particles and soft     ║
-   ║  UI sounds driven by the tier engine JS.                          ║
+   ║  A completely different, cinematic/luxury theme. THEME-AWARE:     ║
+   ║  every gradient, glow and border is mixed from the palette's      ║
+   ║  --accent via color-mix(), so picking a different color theme     ║
+   ║  restyles the whole Ultra chrome (static gold fallbacks are       ║
+   ║  declared first for browsers without color-mix support).          ║
+   ║  Fully styled for BOTH dark and light mode.                       ║
    ╚══════════════════════════════════════════════════════════════════╝ */
 
 /* -- 3.1 LIVING BACKGROUND: parallax blobs + canvas embers + hue drift - */
@@ -2830,6 +2844,11 @@ body.gfx-ultra #siteBg{
   -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px);
   filter:blur(26px) brightness(0.20) saturate(1.15);
   transform:scale(1.07);
+}
+/* light mode: bright airy backdrop instead of the dark cinema wash */
+body.gfx-ultra.light-mode #siteBg{
+  background:linear-gradient(135deg, rgba(255,255,255,.65), rgba(255,246,228,.35));
+  filter:blur(26px) brightness(1.04) saturate(1.08);
 }
 body.gfx-ultra #fxLayer{
   display:block !important;
@@ -2840,6 +2859,7 @@ body.gfx-ultra #fxLayer{
   50%    { filter:hue-rotate(calc(var(--fx-hue,0deg) + 26deg)); }
 }
 body.gfx-ultra #fxCanvas{ display:block !important; }
+body.gfx-ultra.light-mode #fxCanvas{ opacity:.5; }
 /* blobs move with the cursor: the FX engine writes --gfx-px/--gfx-py per
    blob (inline transforms are blocked by #perf-fix's !important reset) */
 body.gfx-ultra .fx-aurora{
@@ -2848,37 +2868,74 @@ body.gfx-ultra .fx-aurora{
   transform:translate3d(var(--gfx-px,0px), var(--gfx-py,0px), 0) !important;
   will-change:transform !important;
 }
+body.gfx-ultra.light-mode .fx-aurora{ opacity:.28 !important; }
 body.gfx-ultra .fx-grid{ opacity:.09; }
+body.gfx-ultra.light-mode .fx-grid{ opacity:.05; }
 /* dynamic cursor spotlight (position driven by --gfx-mx/--gfx-my) */
 body.gfx-ultra #fxLayer::after{
   content:""; position:absolute; inset:0; pointer-events:none; z-index:2;
   background:radial-gradient(circle at var(--gfx-mx,50%) var(--gfx-my,50%), rgba(255,180,70,.13), transparent 45%);
+  background:radial-gradient(circle at var(--gfx-mx,50%) var(--gfx-my,50%), color-mix(in srgb, var(--accent) 14%, transparent), transparent 45%);
 }
 
-/* -- 3.2 CINEMATIC CHROME: animated gold gradient, layered depth ------- */
+/* -- 3.2 CINEMATIC CHROME: animated ACCENT gradient, layered depth ----- */
 body.gfx-ultra .header,
 body.gfx-ultra .top-banner{
   background:linear-gradient(110deg,#0c0804,#241402,#3a2405,#241402,#0c0804) !important;
+  background:linear-gradient(110deg,
+    color-mix(in srgb, var(--accent) 10%, #070604),
+    color-mix(in srgb, var(--accent) 26%, #0d0a06),
+    color-mix(in srgb, var(--accent) 44%, #14110a),
+    color-mix(in srgb, var(--accent) 26%, #0d0a06),
+    color-mix(in srgb, var(--accent) 10%, #070604)) !important;
   background-size:300% 100% !important;
   border-color:rgba(255,180,61,.32) !important;
+  border-color:color-mix(in srgb, var(--accent) 40%, transparent) !important;
   animation:gfxUltraChrome 14s ease-in-out infinite;
   box-shadow:0 1px 0 rgba(255,255,255,.05) inset, 0 14px 40px -18px rgba(0,0,0,.8), 0 0 26px -6px rgba(255,150,40,.20) !important;
   -webkit-backdrop-filter:blur(8px) saturate(130%); backdrop-filter:blur(8px) saturate(130%);
 }
+/* light mode: a deep accent-coloured band (matches the app's light chrome) */
+body.gfx-ultra.light-mode .header,
+body.gfx-ultra.light-mode .top-banner{
+  background:linear-gradient(110deg,#3d2200,#5a3200,#6b4200,#5a3200,#3d2200) !important;
+  background:linear-gradient(110deg,
+    color-mix(in srgb, var(--accent) 62%, #171310),
+    color-mix(in srgb, var(--accent) 82%, #241d14),
+    color-mix(in srgb, var(--accent) 62%, #171310)) !important;
+  background-size:300% 100% !important;
+  box-shadow:0 1px 0 rgba(255,255,255,.18) inset, 0 12px 32px -16px rgba(60,40,10,.55) !important;
+}
 body.gfx-ultra .nav{
   background:linear-gradient(110deg,#0a0703,#1d1102,#0a0703) !important;
+  background:linear-gradient(110deg,
+    color-mix(in srgb, var(--accent) 7%, #080604),
+    color-mix(in srgb, var(--accent) 18%, #0e0b07),
+    color-mix(in srgb, var(--accent) 7%, #080604)) !important;
   background-size:300% 100% !important;
   border-bottom-color:rgba(255,180,61,.25) !important;
+  border-bottom-color:color-mix(in srgb, var(--accent) 32%, transparent) !important;
   animation:gfxUltraChrome 18s ease-in-out infinite;
   -webkit-backdrop-filter:blur(8px) saturate(130%); backdrop-filter:blur(8px) saturate(130%);
 }
 body.gfx-ultra.light-mode .nav{
   background:linear-gradient(110deg,#f7ecd8,#fff7e8,#f2e3c8,#fff7e8,#f7ecd8) !important;
-  border-bottom-color:rgba(200,130,20,.4) !important;
+  background:linear-gradient(110deg,
+    color-mix(in srgb, var(--accent) 10%, #fbf6ec),
+    color-mix(in srgb, var(--accent) 4%, #fffdf8),
+    color-mix(in srgb, var(--accent) 10%, #fbf6ec)) !important;
+  background-size:300% 100% !important;
+  border-bottom-color:color-mix(in srgb, var(--accent) 45%, transparent) !important;
 }
 @keyframes gfxUltraChrome{ 0%,100%{ background-position:0% 0; } 50%{ background-position:100% 0; } }
 body.gfx-ultra .header-title{
   background:linear-gradient(90deg,#ffd27a,#ffb43d,#ffefc9,#ffb43d,#ffd27a);
+  background:linear-gradient(90deg,
+    color-mix(in srgb, var(--accent) 45%, #ffffff),
+    var(--accent),
+    color-mix(in srgb, var(--accent) 18%, #ffffff),
+    var(--accent),
+    color-mix(in srgb, var(--accent) 45%, #ffffff));
   background-size:250% 100%;
   -webkit-background-clip:text; background-clip:text;
   -webkit-text-fill-color:transparent;
@@ -2899,8 +2956,16 @@ body.gfx-ultra .nav-btn.active::after{ animation:gfxUltraPulse 1.8s ease-in-out 
   0%,100%{ opacity:1;  box-shadow:0 0 12px rgba(255,160,50,.9); }
   50%    { opacity:.6; box-shadow:0 0 20px rgba(255,160,50,1); }
 }
+/* Ultra-only LIVING nav illustrations (the #uic-* animated symbols are
+   swapped in by the tier engine JS; SMIL keeps them moving inside <use>) */
+body.gfx-ultra .nav .nav-ic{
+  width:1.55em; height:1.55em; vertical-align:-0.38em;
+  filter:drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 35%, transparent));
+}
+body.gfx-ultra .nav-btn:hover .nav-ic{ transform:translateY(-2px) scale(1.18); }
+body.gfx-ultra .nav-btn:hover .nav-ic, body.gfx-ultra .nav-btn.active .nav-ic{ animation:none !important; }
 
-/* -- 3.3 EXCLUSIVE PORTLETS: gold-ring glass, multi-layer shadows ------ */
+/* -- 3.3 EXCLUSIVE PORTLETS: accent-ring glass, multi-layer shadows ---- */
 body.gfx-ultra .card,
 body.gfx-ultra .shift-card,
 body.gfx-ultra .settings-card,
@@ -2911,6 +2976,7 @@ body.gfx-ultra .person-card,
 body.gfx-ultra .tank-card{
   background:linear-gradient(168deg, rgba(34,26,14,.62), rgba(10,8,5,.88)) !important;
   border:1px solid rgba(255,180,61,.24) !important;
+  border-color:color-mix(in srgb, var(--accent) 30%, transparent) !important;
   -webkit-backdrop-filter:blur(14px) saturate(145%); backdrop-filter:blur(14px) saturate(145%);
   box-shadow:
     0 1px 0 rgba(255,255,255,.07) inset,
@@ -2926,6 +2992,7 @@ body.gfx-ultra .pl-card:hover,
 body.gfx-ultra .person-card:hover{
   transform:translateY(-4px) !important;
   border-color:rgba(255,180,61,.55) !important;
+  border-color:color-mix(in srgb, var(--accent) 65%, transparent) !important;
   box-shadow:
     0 1px 0 rgba(255,255,255,.10) inset,
     0 0 0 1px rgba(255,180,61,.14),
@@ -2934,17 +3001,23 @@ body.gfx-ultra .person-card:hover{
 }
 body.gfx-ultra .card-head{
   background:linear-gradient(90deg, rgba(255,180,61,.13), transparent 60%) !important;
+  background:linear-gradient(90deg, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%) !important;
   border-bottom:1px solid rgba(255,180,61,.28) !important;
+  border-bottom:1px solid color-mix(in srgb, var(--accent) 35%, transparent) !important;
 }
+/* light mode: warm ivory glass — .person-card included (it was missing
+   before and rendered as an unreadable dark slab in light mode) */
 body.gfx-ultra.light-mode .card,
 body.gfx-ultra.light-mode .shift-card,
 body.gfx-ultra.light-mode .settings-card,
 body.gfx-ultra.light-mode .pl-card,
 body.gfx-ultra.light-mode .stat-box,
 body.gfx-ultra.light-mode .msumbox,
+body.gfx-ultra.light-mode .person-card,
 body.gfx-ultra.light-mode .tank-card{
-  background:linear-gradient(168deg, rgba(255,252,244,.86), rgba(250,240,220,.93)) !important;
+  background:linear-gradient(168deg, rgba(255,252,244,.88), rgba(250,240,220,.94)) !important;
   border:1px solid rgba(200,130,20,.35) !important;
+  border-color:color-mix(in srgb, var(--accent) 40%, #e8dcc4) !important;
   box-shadow:
     0 1px 0 rgba(255,255,255,.9) inset,
     0 24px 50px -28px rgba(120,80,20,.45),
@@ -2952,32 +3025,43 @@ body.gfx-ultra.light-mode .tank-card{
   -webkit-backdrop-filter:blur(var(--gx-blur,10px)) saturate(140%);
   backdrop-filter:blur(var(--gx-blur,10px)) saturate(140%);
 }
+body.gfx-ultra.light-mode .card-head{
+  background:linear-gradient(90deg, color-mix(in srgb, var(--accent) 12%, #fffaf2), transparent 65%) !important;
+}
 
-/* -- 3.4 EXCLUSIVE TABLES: neon-gold heads, glowing row hover ---------- */
+/* -- 3.4 EXCLUSIVE TABLES: neon accent heads, glowing row hover -------- */
 body.gfx-ultra .tbl th,
 body.gfx-ultra .xls-tbl th,
 body.gfx-ultra .ro-tbl th{
   background:linear-gradient(180deg,#3a2506,#241502) !important;
+  background:linear-gradient(180deg,
+    color-mix(in srgb, var(--accent) 22%, #171004),
+    color-mix(in srgb, var(--accent) 10%, #100b03)) !important;
   color:#ffd27a !important;
+  color:color-mix(in srgb, var(--accent) 45%, #ffe9c0) !important;
   border-bottom:2px solid rgba(255,180,61,.55) !important;
+  border-bottom:2px solid color-mix(in srgb, var(--accent) 60%, transparent) !important;
   text-shadow:0 0 10px rgba(255,180,61,.35) !important;
 }
 body.gfx-ultra .tbl tbody tr:hover td,
 body.gfx-ultra .xls-tbl tbody tr:hover td,
 body.gfx-ultra .ro-tbl tr:hover td{
   background:rgba(255,180,61,.10) !important;
+  background:color-mix(in srgb, var(--accent) 12%, transparent) !important;
   box-shadow:inset 0 0 18px -10px rgba(255,180,61,.4);
 }
 
-/* -- 3.5 EXCLUSIVE BUTTONS: flowing gold gradient + shine sweep -------- */
+/* -- 3.5 EXCLUSIVE BUTTONS: the palette's own flowing gradient --------- */
 body.gfx-ultra .add-btn,
 body.gfx-ultra .btn-ok,
 body.gfx-ultra .fuel-add-btn{
   background:linear-gradient(120deg,#f5872b,#ffb43d,#ffd27a,#ffb43d,#f5872b) !important;
+  background:var(--grad-amber, linear-gradient(120deg,#f5872b,#ffb43d,#ffd27a,#ffb43d,#f5872b)) !important;
   background-size:280% 100% !important;
-  color:#1a1102 !important;
+  color:var(--on-accent,#1a1102) !important;
   animation:gfxBtnFlow 7s ease-in-out infinite;
   box-shadow:0 1px 0 rgba(255,255,255,.35) inset, 0 8px 26px -10px rgba(255,150,40,.55), 0 2px 8px rgba(0,0,0,.4) !important;
+  box-shadow:0 1px 0 rgba(255,255,255,.35) inset, 0 8px 26px -10px color-mix(in srgb, var(--accent) 60%, transparent), 0 2px 8px rgba(0,0,0,.4) !important;
 }
 @keyframes gfxBtnFlow{ 0%,100%{ background-position:0% 0; } 50%{ background-position:100% 0; } }
 body.gfx-ultra .add-btn,
@@ -3010,6 +3094,7 @@ body.gfx-ultra .save-btn:hover,
 body.gfx-ultra .fuel-add-btn:hover{
   transform:translateY(-2px) scale(1.02) !important;
   box-shadow:0 1px 0 rgba(255,255,255,.35) inset, 0 16px 38px -12px rgba(255,150,40,.75), 0 3px 10px rgba(0,0,0,.45) !important;
+  box-shadow:0 1px 0 rgba(255,255,255,.35) inset, 0 16px 38px -12px color-mix(in srgb, var(--accent) 80%, transparent), 0 3px 10px rgba(0,0,0,.45) !important;
 }
 body.gfx-ultra .add-btn:active,
 body.gfx-ultra .btn-ok:active,
@@ -3021,6 +3106,7 @@ body.gfx-ultra .save-btn{ box-shadow:0 8px 26px -10px rgba(255,150,40,.4), 0 2px
 /* -- 3.6 LIVING FUEL TANKS: waves, bubbles, glass caustics, glow ------- */
 body.gfx-ultra .tank-body{
   border-color:rgba(255,200,110,.35) !important;
+  border-color:color-mix(in srgb, var(--accent) 45%, transparent) !important;
   box-shadow:inset 0 2px 10px rgba(255,255,255,.12), inset 0 -10px 26px rgba(0,0,0,.5), 0 0 30px -8px rgba(255,160,50,.35) !important;
 }
 body.gfx-ultra .tank-wave{ display:block; filter:drop-shadow(0 0 8px rgba(255,255,255,.35)); }
@@ -3030,7 +3116,6 @@ body.gfx-ultra .tank-liquid::before{
   background:linear-gradient(90deg, rgba(255,255,255,.26), transparent 35%, transparent 65%, rgba(0,0,0,.22));
 }
 body.gfx-ultra .tank-liquid::after{ animation:tankFlow 3s ease-in-out infinite; }
-/* rising micro-bubbles inside the liquid */
 body.gfx-ultra .tank-bubble{
   display:block; position:absolute; bottom:-8px; width:6px; height:6px; border-radius:50%;
   background:radial-gradient(circle at 35% 30%, rgba(255,255,255,.95), rgba(255,255,255,.2) 60%, transparent 80%);
@@ -3044,7 +3129,6 @@ body.gfx-ultra .tank-bubble{
   88% { opacity:.25; }
   100%{ transform:translateY(-165px) scale(1.15); opacity:0; }
 }
-/* moving glass caustic across the tank */
 body.gfx-ultra .tank-body::after{
   content:""; position:absolute; inset:0; pointer-events:none; z-index:3;
   background:linear-gradient(115deg, transparent 42%, rgba(255,255,255,.10) 50%, transparent 58%);
@@ -3053,7 +3137,6 @@ body.gfx-ultra .tank-body::after{
 }
 @keyframes gfxTankGlass{ 0%,100%{ background-position:130% 0; } 50%{ background-position:-30% 0; } }
 body.gfx-ultra .tank-pct{ text-shadow:0 2px 8px rgba(0,0,0,.7), 0 0 14px rgba(255,255,255,.35); }
-/* danger threshold: red heartbeat glow */
 body.gfx-ultra .tank-card.t-low .tank-body{
   border-color:rgba(229,62,62,.7) !important;
   animation:gfxTankDangerUltra 1.2s ease-in-out infinite;
@@ -3069,12 +3152,16 @@ body.gfx-ultra .tank-card.t-low .tank-body{
 body.gfx-ultra #pl-result{
   background:linear-gradient(158deg, rgba(24,20,10,.6), rgba(8,7,4,.86)) !important;
   border-color:rgba(255,180,61,.3) !important;
+  border-color:color-mix(in srgb, var(--accent) 38%, transparent) !important;
   -webkit-backdrop-filter:blur(16px) saturate(145%); backdrop-filter:blur(16px) saturate(145%);
 }
-/* breathing light pulse layered over the card (avoids !important fights) */
+body.gfx-ultra.light-mode #pl-result{
+  background:linear-gradient(158deg, rgba(255,252,244,.82), rgba(248,238,218,.92)) !important;
+}
 body.gfx-ultra #pl-result::after{
   content:""; position:absolute; inset:-30%; z-index:1; pointer-events:none;
   background:radial-gradient(50% 60% at 50% 38%, rgba(255,180,61,.12), transparent 70%);
+  background:radial-gradient(50% 60% at 50% 38%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%);
   animation:gfxPlPulse 5s ease-in-out infinite;
 }
 body.gfx-ultra #pl-result.pl-profit::after{ background:radial-gradient(50% 60% at 50% 38%, rgba(52,211,153,.16), transparent 70%); }
@@ -3118,7 +3205,6 @@ body.gfx-ultra .occ-badge:hover{
   50%    { transform:perspective(240px) rotateY(16deg) translateY(0); }
   75%    { transform:perspective(240px) rotateY(0deg)  translateY(1px); }
 }
-/* watermark art: layered gold glow + mouse parallax (vars set by JS) */
 body.gfx-ultra .occ-art{
   opacity:.42 !important;
   animation:none;
@@ -3132,7 +3218,7 @@ body.gfx-ultra .occ-art svg{ animation:gfxOccArtFloat 8s ease-in-out infinite; }
   50%    { transform:translateY(-8px) rotate(5deg) scale(1.08); }
 }
 
-/* -- 3.9 CINEMATIC OVERLAYS: modals, lock screen, toasts --------------- */
+/* -- 3.9 CINEMATIC OVERLAYS: modals, lock screen, alerts, toasts ------- */
 body.gfx-ultra .modal-overlay{
   background:rgba(3,4,8,.72) !important;
   -webkit-backdrop-filter:blur(14px) saturate(130%); backdrop-filter:blur(14px) saturate(130%);
@@ -3150,7 +3236,8 @@ body.gfx-ultra .toast{
   box-shadow:0 14px 40px -14px rgba(0,0,0,.8), 0 0 24px -8px rgba(255,150,40,.35);
 }
 body.gfx-ultra .ls-modal{ animation:ls-pop .5s cubic-bezier(.22,.8,.32,1), ls-glow 3s ease-in-out infinite .5s; }
-body.gfx-ultra .ls-tape{ animation:ls-stripes 2.2s linear infinite; }
+body.gfx-ultra .ls-tape{ animation:gfxTapeMove 1.2s linear infinite !important; }
+body.gfx-ultra .ls-bar::after{ animation:ls-sweep 2.2s ease-in-out infinite !important; }
 body.gfx-ultra .lock-box{
   background:rgba(16,21,33,.82) !important;
   -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
@@ -3165,22 +3252,41 @@ body.gfx-ultra .lock-box{
   50%    { box-shadow:0 30px 70px -24px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.08), 0 0 26px 1px rgba(255,180,61,.5); }
 }
 
-/* -- 3.10 reduced motion: Ultra respects the OS setting ---------------- */
+/* -- 3.10 OS "reduced motion" hint --------------------------------------
+   Ultra is an EXPLICIT cinematic opt-in behind a warning popup — battery
+   savers on Android force the reduce hint on and used to silently freeze
+   the whole tier. The base stylesheet's reduce-motion kills are therefore
+   re-asserted OFF for everything that defines this tier. */
 @media (prefers-reduced-motion: reduce){
-  body.gfx-ultra #fxLayer,
-  body.gfx-ultra .header, body.gfx-ultra .top-banner, body.gfx-ultra .nav,
-  body.gfx-ultra .header-title, body.gfx-ultra .ls-brand-icon,
-  body.gfx-ultra .nav-btn.active::after,
-  body.gfx-ultra .add-btn, body.gfx-ultra .btn-ok, body.gfx-ultra .fuel-add-btn,
-  body.gfx-ultra .tank-wave, body.gfx-ultra .tank-bubble, body.gfx-ultra .tank-body::after,
-  body.gfx-ultra .tank-card.t-low .tank-body,
-  body.gfx-ultra #pl-result::after, body.gfx-ultra .pl-aurora,
-  body.gfx-ultra .pl-trend .pl-line, body.gfx-ultra .pl-trend .pl-dot, body.gfx-ultra .pl-arrow,
-  body.gfx-ultra #pl-result .pl-result-value,
-  body.gfx-ultra .occ-badge, body.gfx-ultra .occ-art svg,
-  body.gfx-ultra .modal-overlay.open .modal, body.gfx-ultra .modal-overlay.open .sm-modal,
-  body.gfx-ultra .ls-modal, body.gfx-ultra .ls-tape, body.gfx-ultra .lock-box{ animation:none !important; }
-  body.gfx-ultra .pl-trend .pl-line{ stroke-dashoffset:0 !important; }
+  body.gfx-ultra .ls-tape{ animation:gfxTapeMove 1.2s linear infinite !important; }
+  body.gfx-ultra .ls-bar::after{ animation:ls-sweep 2.2s ease-in-out infinite !important; }
+  body.gfx-ultra .ls-icon{ animation:ls-sway 2.6s ease-in-out infinite !important; }
+  body.gfx-ultra .ls-modal{ animation:ls-pop .5s cubic-bezier(.22,.8,.32,1), ls-glow 3s ease-in-out infinite .5s !important; }
+  body.gfx-ultra .tank-wave.w1{ animation:tankWave 2.4s linear infinite !important; }
+  body.gfx-ultra .tank-wave.w2{ animation:tankWave 3.6s linear infinite reverse !important; }
+  body.gfx-ultra .tank-liquid{ transition:height 1.15s cubic-bezier(.22,.61,.36,1), background .4s !important; }
+  body.gfx-ultra .tank-liquid::after{ animation:tankFlow 3s ease-in-out infinite !important; }
+  body.gfx-ultra .tank-bubble{ animation:gfxTankBubble calc(2.4s + var(--i) * .45s) ease-in infinite !important; }
+  body.gfx-ultra .tank-body::after{ animation:gfxTankGlass 5.5s ease-in-out infinite !important; }
+  body.gfx-ultra .tank-card.t-low .tank-body{ animation:gfxTankDangerUltra 1.2s ease-in-out infinite !important; }
+  body.gfx-ultra .tank-chip.low{ animation:tankPulse 1.6s ease-in-out infinite !important; }
+  body.gfx-ultra .header, body.gfx-ultra .top-banner{ animation:gfxUltraChrome 14s ease-in-out infinite !important; }
+  body.gfx-ultra .nav{ animation:gfxUltraChrome 18s ease-in-out infinite !important; }
+  body.gfx-ultra .header-title{ animation:gfxGoldFlow 6s linear infinite !important; }
+  body.gfx-ultra .add-btn, body.gfx-ultra .btn-ok, body.gfx-ultra .fuel-add-btn{ animation:gfxBtnFlow 7s ease-in-out infinite !important; }
+  body.gfx-ultra .pl-aurora{ animation:plAurora 9s ease-in-out infinite !important; }
+  body.gfx-ultra .pl-particle{ display:block !important; animation:plMoneyUp var(--dur,3.4s) cubic-bezier(.37,0,.24,1) var(--delay,0s) infinite !important; }
+  body.gfx-ultra #pl-result.pl-loss .pl-particle{ animation-name:plMoneyDrop !important; }
+  body.gfx-ultra .pl-trend .pl-dot{ animation:plDotPulse 1.6s ease-in-out infinite !important; }
+  body.gfx-ultra .pl-arrow{ animation:plArrow 1.4s ease-in-out infinite !important; }
+  body.gfx-ultra #pl-result::after{ animation:gfxPlPulse 5s ease-in-out infinite !important; }
+  body.gfx-ultra #pl-result .pl-result-value{ animation:plValueGlow 3.4s ease-in-out infinite !important; }
+  body.gfx-ultra .occ-badge{ animation:gfxOcc3D 5s ease-in-out infinite !important; }
+  body.gfx-ultra .occ-art svg{ animation:gfxOccArtFloat 8s ease-in-out infinite !important; }
+  body.gfx-ultra .modal-overlay.open .modal,
+  body.gfx-ultra .modal-overlay.open .sm-modal{ animation:gfxUltraModalIn .5s cubic-bezier(.16,1,.3,1) both !important; }
+  body.gfx-ultra .gfx-confirm-bar{ animation:gfxConfirmBarMove 2.4s linear infinite !important; }
+  body.gfx-ultra .gfx-um-orb{ animation:gfxUmOrb 2.6s ease-in-out infinite !important; }
 }
 </style>
 </head>
@@ -3287,6 +3393,212 @@ body.gfx-ultra .lock-box{
 </div>
 
 <!-- آیکون‌های خطی متحرک (جایگزین ایموجی بخش‌ها) — بدون فایل خارجی، رنگ از تم -->
+<!-- ═══ ULTRA-ONLY LIVING NAV ILLUSTRATIONS ═══════════════════════════
+     Eleven hand-drawn animated micro-illustrations (SMIL, currentColor)
+     swapped in for the plain #ic-* line icons while Ultra Premium is
+     active (see UltraNavIcons in #gfx-quality-js). SMIL keeps running
+     inside <use> clones, needs no JS per frame, and inherits the nav
+     button's color, so every theme tints them automatically. -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true" id="gfxUltraIconSprite">
+
+  <!-- پارچه‌ها: fabric roll, cloth wave rippling out of it -->
+  <symbol id="uic-shifts" viewBox="0 0 48 48">
+    <g stroke="currentColor" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="36" cy="18" r="8"/>
+      <circle cx="36" cy="18" r="3" opacity=".55"/>
+      <path d="M28 18 C 22 14, 16 22, 10 18 S 4 14, 4 18">
+        <animate attributeName="d" dur="2.6s" repeatCount="indefinite"
+          values="M28 18 C 22 14, 16 22, 10 18 S 4 14, 4 18;
+                  M28 18 C 22 22, 16 14, 10 18 S 4 22, 4 18;
+                  M28 18 C 22 14, 16 22, 10 18 S 4 14, 4 18"/>
+      </path>
+      <path d="M28 26 C 22 22, 16 30, 10 26 S 4 22, 4 26" opacity=".6">
+        <animate attributeName="d" dur="2.6s" begin="-1.3s" repeatCount="indefinite"
+          values="M28 26 C 22 22, 16 30, 10 26 S 4 22, 4 26;
+                  M28 26 C 22 30, 16 22, 10 26 S 4 30, 4 26;
+                  M28 26 C 22 22, 16 30, 10 26 S 4 22, 4 26"/>
+      </path>
+      <path d="M36 26 L36 40 M28 18 L28 34" opacity=".4"/>
+    </g>
+  </symbol>
+
+  <!-- ورق‌های روزانه: paper stack, top sheet flipping up -->
+  <symbol id="uic-waraq" viewBox="0 0 48 48">
+    <g stroke="currentColor" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="10" y="20" width="26" height="20" rx="2.5"/>
+      <path d="M16 27 h14 M16 33 h9" opacity=".55"/>
+      <g>
+        <rect x="10" y="12" width="26" height="6" rx="2"/>
+        <animateTransform attributeName="transform" type="rotate" dur="2.8s" repeatCount="indefinite"
+          calcMode="spline" keySplines=".45 0 .55 1;.45 0 .55 1" keyTimes="0;.5;1"
+          values="0 10 18;-38 10 18;0 10 18"/>
+      </g>
+    </g>
+  </symbol>
+
+  <!-- قرض‌داران: coin with a circular money-flow orbit -->
+  <symbol id="uic-debt" viewBox="0 0 48 48">
+    <g stroke="currentColor" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="24" cy="24" r="8"/>
+      <path d="M24 20 v8 M21 22.5 c0-1.4 6-1.4 6 0 s-6 1.6-6 3 6 1.4 6 0" stroke-width="2" opacity=".8"/>
+      <circle cx="24" cy="24" r="16" stroke-dasharray="7 8" opacity=".55">
+        <animateTransform attributeName="transform" type="rotate" from="0 24 24" to="360 24 24" dur="7s" repeatCount="indefinite"/>
+      </circle>
+      <circle r="2.6" fill="currentColor" stroke="none">
+        <animateMotion dur="3.5s" repeatCount="indefinite" path="M24 8 a16 16 0 1 1 -0.01 0z"/>
+      </circle>
+    </g>
+  </symbol>
+
+  <!-- صرافی: two coins orbiting each other (exchange) -->
+  <symbol id="uic-sarrafi" viewBox="0 0 48 48">
+    <g stroke="currentColor" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 24 h14 M27 20 l4 4 -4 4 M21 28 l-4 -4 4 -4" stroke-width="2.2" opacity=".5"/>
+      <g>
+        <circle cx="24" cy="10" r="6.5"/>
+        <path d="M24 7 v6" stroke-width="2.2"/>
+        <circle cx="24" cy="38" r="6.5"/>
+        <path d="M21 38 h6" stroke-width="2.2"/>
+        <animateTransform attributeName="transform" type="rotate" from="0 24 24" to="360 24 24" dur="5s" repeatCount="indefinite"/>
+      </g>
+    </g>
+  </symbol>
+
+  <!-- مصارف: wallet with coins flowing out + falling spark -->
+  <symbol id="uic-expenses" viewBox="0 0 48 48">
+    <g stroke="currentColor" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="8" y="22" width="26" height="16" rx="3.5"/>
+      <path d="M8 27 h26" opacity=".5"/>
+      <circle cx="28" cy="31" r="1.6" fill="currentColor" stroke="none"/>
+      <circle cx="36" cy="18" r="3.4">
+        <animate attributeName="cy" values="24;10;24" keyTimes="0;.55;1" dur="2.4s" repeatCount="indefinite"/>
+        <animate attributeName="cx" values="32;40;32" keyTimes="0;.55;1" dur="2.4s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0;1;0" keyTimes="0;.4;1" dur="2.4s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="38" cy="20" r="2.2" opacity=".6">
+        <animate attributeName="cy" values="24;12;24" keyTimes="0;.55;1" dur="2.4s" begin="-1.2s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0;.7;0" keyTimes="0;.4;1" dur="2.4s" begin="-1.2s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+  </symbol>
+
+  <!-- رسید پارچه: POS printer, receipt sliding out -->
+  <symbol id="uic-rasid" viewBox="0 0 48 48">
+    <clipPath id="uicRasidClip"><rect x="4" y="23" width="40" height="22"/></clipPath>
+    <g stroke="currentColor" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <g clip-path="url(#uicRasidClip)">
+        <g>
+          <rect x="15" y="24" width="18" height="16" rx="2"/>
+          <path d="M19 29 h10 M19 33 h10 M19 37 h6" stroke-width="2" opacity=".6"/>
+          <animateTransform attributeName="transform" type="translate" dur="3.2s" repeatCount="indefinite"
+            calcMode="spline" keySplines=".3 0 .2 1;.45 0 .55 1" keyTimes="0;.6;1"
+            values="0 -14;0 0;0 -14"/>
+        </g>
+      </g>
+      <rect x="8" y="10" width="32" height="13" rx="3"/>
+      <circle cx="34" cy="16.5" r="1.6" fill="currentColor" stroke="none">
+        <animate attributeName="opacity" values="1;.25;1" dur="1.4s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+  </symbol>
+
+  <!-- گاوصندوق: vault door with spinning handle + blinking lock light -->
+  <symbol id="uic-safe" viewBox="0 0 48 48">
+    <g stroke="currentColor" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="8" y="8" width="32" height="32" rx="5"/>
+      <g>
+        <circle cx="24" cy="24" r="8"/>
+        <path d="M24 16 v5 M24 27 v5 M16 24 h5 M27 24 h5" stroke-width="2.4"/>
+        <animateTransform attributeName="transform" type="rotate" dur="4.5s" repeatCount="indefinite"
+          calcMode="spline" keySplines=".45 0 .55 1;.45 0 .55 1" keyTimes="0;.5;1"
+          values="0 24 24;120 24 24;0 24 24"/>
+      </g>
+      <circle cx="35" cy="13.5" r="1.7" fill="currentColor" stroke="none">
+        <animate attributeName="opacity" values="1;.2;1" dur="2s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+  </symbol>
+
+  <!-- شرکت‌ها تیل: buildings joined by a live data line -->
+  <symbol id="uic-barrel" viewBox="0 0 48 48">
+    <g stroke="currentColor" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="6" y="18" width="13" height="22" rx="1.5"/>
+      <rect x="29" y="10" width="13" height="30" rx="1.5"/>
+      <path d="M9.5 24 h6 M9.5 30 h6 M32.5 16 h6 M32.5 22 h6 M32.5 28 h6" stroke-width="2" opacity=".55"/>
+      <path d="M12 14 C 16 6, 30 4, 36 6" stroke-dasharray="4 5" stroke-width="2.4" opacity=".8">
+        <animate attributeName="stroke-dashoffset" from="18" to="0" dur="1.2s" repeatCount="indefinite"/>
+      </path>
+      <circle r="2.2" fill="currentColor" stroke="none">
+        <animateMotion dur="2.4s" repeatCount="indefinite" path="M12 14 C 16 6, 30 4, 36 6"/>
+        <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.15;.85;1" dur="2.4s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+  </symbol>
+
+  <!-- مخزن: tank with breathing liquid level + rising bubbles -->
+  <symbol id="uic-storage" viewBox="0 0 48 48">
+    <g stroke="currentColor" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="12" y="8" width="24" height="32" rx="6"/>
+      <rect x="16" y="26" width="16" height="10" rx="3" fill="currentColor" stroke="none" opacity=".45">
+        <animate attributeName="y" values="27;21;27" dur="3.6s" repeatCount="indefinite"
+          calcMode="spline" keySplines=".45 0 .55 1;.45 0 .55 1" keyTimes="0;.5;1"/>
+        <animate attributeName="height" values="9;15;9" dur="3.6s" repeatCount="indefinite"
+          calcMode="spline" keySplines=".45 0 .55 1;.45 0 .55 1" keyTimes="0;.5;1"/>
+      </rect>
+      <circle cx="21" cy="32" r="1.5" fill="currentColor" stroke="none">
+        <animate attributeName="cy" values="34;24" dur="1.8s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0;.9;0" dur="1.8s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="27" cy="33" r="1.2" fill="currentColor" stroke="none">
+        <animate attributeName="cy" values="35;25" dur="2.2s" begin="-1s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0;.8;0" dur="2.2s" begin="-1s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+  </symbol>
+
+  <!-- مفاد/ضرر/اتحادیه: rocking balance scale -->
+  <symbol id="uic-profit" viewBox="0 0 48 48">
+    <g stroke="currentColor" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M24 40 h0 M16 40 h16 M24 40 V14" stroke-width="2.6"/>
+      <g>
+        <path d="M8 16 H40"/>
+        <path d="M8 16 l-4 8 a5.5 5.5 0 0 0 11 0 z" stroke-width="2.2"/>
+        <path d="M40 16 l-4 8 a5.5 5.5 0 0 0 11 0 z" stroke-width="2.2" transform="translate(-3 0)"/>
+        <animateTransform attributeName="transform" type="rotate" dur="3.4s" repeatCount="indefinite"
+          calcMode="spline" keySplines=".45 0 .55 1;.45 0 .55 1" keyTimes="0;.5;1"
+          values="-6 24 16;6 24 16;-6 24 16"/>
+      </g>
+      <circle cx="24" cy="14" r="2.4" fill="currentColor" stroke="none"/>
+    </g>
+  </symbol>
+
+  <!-- تنظیمات: futuristic control panel — sliders + spinning ring -->
+  <symbol id="uic-settings" viewBox="0 0 48 48">
+    <g stroke="currentColor" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="6" y="8" width="36" height="32" rx="5"/>
+      <path d="M12 17 h16" stroke-width="2.4" opacity=".55"/>
+      <circle cx="14" cy="17" r="2.8" fill="currentColor" stroke="none">
+        <animate attributeName="cx" values="14;26;14" dur="3s" repeatCount="indefinite"
+          calcMode="spline" keySplines=".45 0 .55 1;.45 0 .55 1" keyTimes="0;.5;1"/>
+      </circle>
+      <path d="M12 25 h16" stroke-width="2.4" opacity=".55"/>
+      <circle cx="24" cy="25" r="2.8" fill="currentColor" stroke="none">
+        <animate attributeName="cx" values="24;14;24" dur="3.6s" begin="-.9s" repeatCount="indefinite"
+          calcMode="spline" keySplines=".45 0 .55 1;.45 0 .55 1" keyTimes="0;.5;1"/>
+      </circle>
+      <path d="M12 33 h16" stroke-width="2.4" opacity=".55"/>
+      <circle cx="18" cy="33" r="2.8" fill="currentColor" stroke="none">
+        <animate attributeName="cx" values="18;25;18" dur="2.6s" begin="-1.6s" repeatCount="indefinite"
+          calcMode="spline" keySplines=".45 0 .55 1;.45 0 .55 1" keyTimes="0;.5;1"/>
+      </circle>
+      <circle cx="36" cy="25" r="4.5" stroke-dasharray="6 4" stroke-width="2.4">
+        <animateTransform attributeName="transform" type="rotate" from="0 36 25" to="360 36 25" dur="3.5s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+  </symbol>
+
+</svg>
+
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
   <symbol id="ic-shifts" viewBox="0 0 24 24"><rect x="5" y="4.5" width="14" height="16.5" rx="2.2"/><path d="M9 4.5V4a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 4v.5"/><path d="M8.5 10h7M8.5 13.5h7M8.5 17h4.5"/></symbol>
   <symbol id="ic-waraq" viewBox="0 0 24 24"><path d="M4.5 19.5l1.1-3.9L16.9 4.3a2 2 0 0 1 2.8 0l.1.1a2 2 0 0 1 0 2.8L8.5 18.5l-4 1z"/><path d="M14.6 6.6l2.9 2.9"/><path d="M12.5 21h8"/></symbol>
@@ -13191,7 +13503,11 @@ document.addEventListener('click', function(e) {
   }
   /* Exposed so #gfx-quality-js can start/stop these purely from the
      mode switch — this file has no idea what the current mode is. */
-  window._gfxStartUltraFx = function(){ if(!reduceMotion){ startParticles(); startParallax(); } };
+  /* NOTE: no reduceMotion gate here — choosing Ultra behind its warning
+     popup is an explicit opt-in, and Android battery savers force the
+     OS reduce-motion hint on, which used to silently disable all of
+     Ultra's signature effects. Performance mode is the zero-motion tier. */
+  window._gfxStartUltraFx = function(){ startParticles(); startParallax(); };
   window._gfxStopUltraFx = function(){ stopParticles(); stopParallax(); };
 
   /* ---------- 4. Safe scroll-reveal (never hides data) ----------
@@ -13820,7 +14136,11 @@ document.addEventListener('click', function(e) {
    ============================================================ */
 (function(){
   "use strict";
-  var RM = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* The count-up animation is gated by the graphics TIER (see countUp),
+     not by the OS reduced-motion hint — Android battery savers force
+     that hint on and used to freeze the counters even in Standard/Ultra.
+     Performance mode is the zero-motion option. */
+  var RM = false;
 
   // id, light?, preview bg, accent dot, <html> background colour
   var PALETTES = [
@@ -14040,12 +14360,13 @@ document.addEventListener('click', function(e) {
     return TIERS.indexOf(v) !== -1 ? v : 'performance';
   }
 
-  /* ---------- TIER 3 MODULE: luxury UI sounds (WebAudio, no files) ----
-     A feather-light hover "tick" and a soft two-note click "pop" —
-     quiet, throttled and low-pass by design so they stay pleasant.
-     The AudioContext is only created on a real user gesture. */
+  /* ---------- TIER 3 MODULE: calm UI sounds (WebAudio, no files) ------
+     No hover sounds at all. A single click sound modeled on the calm
+     Discord-notification feel: two soft rounded notes (G4→D5) through
+     a low-pass filter, very quiet, gently throttled. The AudioContext
+     is only created on a real user gesture. */
   var UltraAudio = (function(){
-    var ctx = null, on = false, lastHover = 0, lastClick = 0;
+    var ctx = null, on = false, lastClick = 0;
     function ac(create){
       if(!ctx && create){
         try{ ctx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ return null; }
@@ -14053,52 +14374,76 @@ document.addEventListener('click', function(e) {
       if(ctx && ctx.state === 'suspended'){ try{ ctx.resume(); }catch(e){} }
       return ctx;
     }
-    function tone(freq, freqEnd, dur, vol, when){
+    /* one rounded, mellow note: sine → low-pass(1100Hz) → soft envelope */
+    function note(freq, dur, vol, when){
       var c = ac(false); if(!c) return;
       var t0 = c.currentTime + (when || 0);
-      var o = c.createOscillator(), g = c.createGain();
+      var o = c.createOscillator(), g = c.createGain(), f = c.createBiquadFilter();
       o.type = 'sine';
       o.frequency.setValueAtTime(freq, t0);
-      if(freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd, t0 + dur);
+      f.type = 'lowpass'; f.frequency.setValueAtTime(1100, t0); f.Q.value = 0.6;
       g.gain.setValueAtTime(0.0001, t0);
-      g.gain.linearRampToValueAtTime(vol, t0 + 0.012);
+      g.gain.linearRampToValueAtTime(vol, t0 + 0.018);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-      o.connect(g); g.connect(c.destination);
-      o.start(t0); o.stop(t0 + dur + 0.05);
+      o.connect(f); f.connect(g); g.connect(c.destination);
+      o.start(t0); o.stop(t0 + dur + 0.06);
     }
-    var HOVER_SEL = 'button, .nav-btn, .gfx-mode-btn, .person-card, .theme-toggle, .lock-btn';
-    function overH(e){
-      var t = e.target && e.target.closest && e.target.closest(HOVER_SEL);
-      if(!t) return;
-      var rel = e.relatedTarget;
-      if(rel && t.contains(rel)) return;             // moving inside the same control
-      var n = Date.now(); if(n - lastHover < 120) return; lastHover = n;
-      tone(1180, 1560, 0.07, 0.012);                 // soft high tick
+    function calmClick(){                            // «دو-دینگ» نرم به سبک دیسکورد
+      note(392.00, 0.16, 0.030, 0);                  // G4
+      note(587.33, 0.22, 0.026, 0.085);              // D5
     }
     function downH(e){
       ac(true);                                      // unlock audio on gesture
       var t = e.target && e.target.closest && e.target.closest('button, .nav-btn, .person-card');
       if(!t) return;
-      var n = Date.now(); if(n - lastClick < 80) return; lastClick = n;
-      tone(660, 880, 0.09, 0.022);                   // velvet click…
-      tone(1320, null, 0.06, 0.010, 0.02);           // …with a tiny sparkle
+      var n = Date.now(); if(n - lastClick < 180) return; lastClick = n;
+      calmClick();
     }
     return {
       start: function(){
         if(on) return; on = true;
-        document.addEventListener('pointerover', overH, true);
         document.addEventListener('pointerdown', downH, true);
       },
       stop: function(){
         if(!on) return; on = false;
-        document.removeEventListener('pointerover', overH, true);
         document.removeEventListener('pointerdown', downH, true);
       },
-      chime: function(){                             // Ultra activation fanfare
+      chime: function(){                             // Ultra activation: gentle rising triad
         ac(true);
-        [523.25, 659.25, 783.99, 1046.5].forEach(function(f, i){ tone(f, null, 0.55, 0.045, i * 0.07); });
+        [392.00, 493.88, 587.33].forEach(function(f, i){ note(f, 0.5, 0.028, i * 0.1); });
       },
-      whoosh: function(){ tone(300, 720, 0.17, 0.028); }
+      whoosh: function(){ note(440, 0.14, 0.014, 0); }
+    };
+  })();
+
+  /* ---------- TIER 3 MODULE: living nav illustrations ----------------
+     Swaps each nav button's static #ic-* line icon for its animated
+     #uic-* twin (SMIL micro-illustrations in #gfxUltraIconSprite) while
+     Ultra is active, and restores the originals on the way out. */
+  var UltraNavIcons = (function(){
+    var swapped = false;
+    function each(fn){
+      var us = document.querySelectorAll('.nav .nav-btn use');
+      for(var i = 0; i < us.length; i++) fn(us[i]);
+    }
+    return {
+      start: function(){
+        if(swapped) return; swapped = true;
+        each(function(u){
+          var h = u.getAttribute('href');
+          if(!h || h.indexOf('#ic-') !== 0) return;
+          if(!document.getElementById('uic-' + h.slice(4))) return;
+          u.setAttribute('data-gfx-orig', h);
+          u.setAttribute('href', '#uic-' + h.slice(4));
+        });
+      },
+      stop: function(){
+        if(!swapped) return; swapped = false;
+        each(function(u){
+          var o = u.getAttribute('data-gfx-orig');
+          if(o){ u.setAttribute('href', o); u.removeAttribute('data-gfx-orig'); }
+        });
+      }
     };
   })();
 
@@ -14155,10 +14500,12 @@ document.addEventListener('click', function(e) {
       if(typeof window._gfxStartUltraFx === 'function') window._gfxStartUltraFx();
       UltraAudio.start();
       OccTilt.start();
+      UltraNavIcons.start();
     } else {
       if(typeof window._gfxStopUltraFx === 'function') window._gfxStopUltraFx();
       UltraAudio.stop();
       OccTilt.stop();
+      UltraNavIcons.stop();
     }
     /* tier-dependent components re-render so the switch changes them
        inside and out (tank bars, profit/loss visuals) */
