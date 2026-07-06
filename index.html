@@ -2114,6 +2114,17 @@ body.gfx-ultra .header,body.gfx-ultra .top-banner,body.gfx-ultra .nav{
 @keyframes gfxUltraSheen{ 0%,100%{ background-position:0% 0; } 50%{ background-position:100% 0; } }
 body.gfx-ultra .header-title, body.gfx-ultra .ls-brand-icon{ animation:gfxUltraGlow 2.6s ease-in-out infinite; }
 @keyframes gfxUltraGlow{ 0%,100%{ filter:drop-shadow(0 2px 10px rgba(255,150,40,.35)); } 50%{ filter:drop-shadow(0 2px 18px rgba(255,170,60,.65)); } }
+/* Standard: subtle hover lift — "modern SaaS" level micro-interaction */
+body.gfx-medium .card,body.gfx-medium .shift-card,body.gfx-medium .settings-card,body.gfx-medium .pl-card,
+body.gfx-medium .person-card{
+  transition:transform .22s cubic-bezier(.2,.8,.2,1),box-shadow .22s,border-color .22s !important;
+}
+body.gfx-medium .card:hover,body.gfx-medium .shift-card:hover,body.gfx-medium .settings-card:hover,
+body.gfx-medium .pl-card:hover,body.gfx-medium .person-card:hover{
+  transform:translateY(-2px) !important;
+  box-shadow:0 10px 22px -12px rgba(0,0,0,.4) !important;
+}
+/* Ultra: stronger lift + amber glow border on top of the Standard base */
 body.gfx-ultra .card,body.gfx-ultra .shift-card,body.gfx-ultra .settings-card,body.gfx-ultra .pl-card,
 body.gfx-ultra .person-card{
   transition:transform .28s cubic-bezier(.2,.8,.2,1),box-shadow .28s,border-color .28s !important;
@@ -2138,6 +2149,40 @@ body.gfx-ultra .add-btn:hover::before,body.gfx-ultra .btn-ok:hover::before,body.
   background-position:-50% 0;
 }
 
+/* Cinematic modal entrance — plays once each time a modal is opened
+   (same display:none→flex trick the existing .ls-modal entrance uses). */
+body.gfx-ultra .modal-overlay.open .modal,body.gfx-ultra .modal-overlay.open .sm-modal{
+  animation:gfxUltraModalIn .5s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes gfxUltraModalIn{
+  0%{ opacity:0; transform:scale(.94) translateY(10px); filter:blur(6px); }
+  100%{ opacity:1; transform:scale(1) translateY(0); filter:blur(0); }
+}
+
+/* Cursor-reactive "dynamic lighting" glow — position driven by
+   --gfx-mx/--gfx-my, updated from startParallax() in the FX engine
+   script. Only exists in Ultra; harmless no-op elsewhere. */
+body.gfx-ultra #fxLayer::after{
+  content:"";
+  position:absolute; inset:0; pointer-events:none; z-index:2;
+  background:radial-gradient(circle at var(--gfx-mx,50%) var(--gfx-my,50%), rgba(255,180,70,.12), transparent 45%);
+}
+
+/* Premium lock-screen treatment — richer entrance + animated gradient
+   border on the login card; the ambient particle/parallax backdrop
+   already shows through here since #fxLayer is built before login. */
+body.gfx-ultra .lock-box{
+  animation:gfxUltraLockIn .8s cubic-bezier(.16,1,.3,1) both, gfxUltraLockBorder 6s ease-in-out infinite;
+}
+@keyframes gfxUltraLockIn{
+  0%{ opacity:0; transform:scale(.92) translateY(18px); }
+  100%{ opacity:1; transform:scale(1) translateY(0); }
+}
+@keyframes gfxUltraLockBorder{
+  0%,100%{ box-shadow:0 30px 70px -24px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.08),0 0 0 1px rgba(255,180,61,.25); }
+  50%{ box-shadow:0 30px 70px -24px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.08),0 0 26px 1px rgba(255,180,61,.5); }
+}
+
 .gfx-mode-btn.active{ color:#fff !important; }
 .gfx-mode-btn[data-gfx="low"].active{ background:var(--green) !important; }
 .gfx-mode-btn[data-gfx="medium"].active{ background:var(--purple) !important; }
@@ -2149,8 +2194,28 @@ body.gfx-ultra .add-btn:hover::before,body.gfx-ultra .btn-ok:hover::before,body.
   body.gfx-ultra .ls-modal,body.gfx-ultra .ls-tape,body.gfx-ultra .pl-trend .pl-dot,
   body.gfx-ultra #pl-result .pl-result-value,body.gfx-ultra #pl-result.pl-loss,
   body.gfx-ultra .tank-liquid::after,body.gfx-ultra .header,body.gfx-ultra .top-banner,body.gfx-ultra .nav,
-  body.gfx-ultra .header-title,body.gfx-ultra .ls-brand-icon,body.gfx-ultra .nav-btn.active::after{ animation:none !important; }
+  body.gfx-ultra .header-title,body.gfx-ultra .ls-brand-icon,body.gfx-ultra .nav-btn.active::after,
+  body.gfx-ultra .modal-overlay.open .modal,body.gfx-ultra .modal-overlay.open .sm-modal,body.gfx-ultra .lock-box{ animation:none !important; }
 }
+
+/* ---------- Performance mode = zero animation, full stop ----------
+   All of these used to run for every visitor regardless of any setting:
+   section reveal fade/slide-in (reveal-fx, fxRise, mpEnter), click ripple,
+   header/top-banner/nav-tab entrance (fxFadeDown, nav-btn), the ambient
+   background layer, and the occasion-theme badge/art (occDrift/occSway,
+   which loop forever). They now only run under Standard (gfx-medium) or
+   Ultra (gfx-medium + gfx-ultra); plain Performance mode (no class) shows
+   content instantly with zero animation and no background layer. */
+body:not(.gfx-medium) #fxLayer{ display:none !important; }
+body:not(.gfx-medium) .reveal-fx{ opacity:1 !important; transform:none !important; transition:none !important; }
+body:not(.gfx-medium) .btn-ripple::after{ display:none !important; animation:none !important; }
+body:not(.gfx-medium) .nav-btn{ animation:none !important; }
+body:not(.gfx-medium) .header,body:not(.gfx-medium) .top-banner{ animation:none !important; }
+body:not(.gfx-medium) .section.visible>.card,body:not(.gfx-medium) .section.visible>.shifts-grid>.shift-card,
+body:not(.gfx-medium) .section.visible>.settings-card,body:not(.gfx-medium) .section.visible>div,
+body:not(.gfx-medium) .section.visible>h2{ animation:none !important; }
+body:not(.gfx-medium) .occ-art,body:not(.gfx-medium) .occ-badge{ animation:none !important; }
+body:not(.gfx-medium) .nav-btn:hover .ia-wobble,body:not(.gfx-medium) .nav-btn.active .ia-wobble{ animation:none !important; }
 </style>
 
 <style id="ux-themes-anim">
@@ -3442,12 +3507,12 @@ body[class*="occ-"] .header::after{
   <div class="settings-card" id="gfx-quality-card" style="border-color:var(--purple)">
     <div class="settings-title">⚡ کیفیت گرافیک</div>
     <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
-      سه حالت دارید: «سبک» بدون هیچ انیمیشنی و سریع‌ترین حالت برای دستگاه‌های ضعیف (پیش‌فرض همه). «متوسط» همان جلوه‌های شیشه‌ای و انیمیشن‌های ملایمی که قبلاً همیشه فعال بودند را برمی‌گرداند. «فوق‌العاده» جذاب‌ترین حالت است — برای کامپیوتر یا گوشی قوی که می‌خواهید صفحه بهترین جلوه‌های بصری را داشته باشد.
+      سه حالت کاملاً مستقل دارید. <b>Performance Mode</b> («سبک»): صفر انیمیشن، صفر افکت سنگین، حداکثر سرعت و کمترین فشار روی باتری/پردازنده — برای لپ‌تاپ و گوشی ضعیف (پیش‌فرض همه). <b>Standard Mode</b> («متوسط»): جلوه‌ی شیشه‌ای، هاور و ترنزیشن‌های ملایم، در حد یک سایت مدرن. <b>Ultra Premium</b> («فوق‌العاده»): همه‌چیز به‌علاوه پس‌زمینه‌ی ذره‌ای تعاملی، پارالاکس همراه با موس، نورپردازی پویا و ترنزیشن سینمایی — برای کامپیوتر یا گوشی قوی.
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button type="button" class="gfx-mode-btn" data-gfx="low" onclick="setGraphicsMode('low')" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🍃 گرافیک سبک<br><span style="font-weight:600;font-size:0.74rem">بدون انیمیشن، سریع‌ترین</span></button>
-      <button type="button" class="gfx-mode-btn" data-gfx="medium" onclick="setGraphicsMode('medium')" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--purple);background:transparent;color:var(--purple);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">✨ گرافیک متوسط<br><span style="font-weight:600;font-size:0.74rem">جلوه‌ی شیشه‌ای و انیمیشن ملایم</span></button>
-      <button type="button" class="gfx-mode-btn" data-gfx="ultra" onclick="setGraphicsMode('ultra')" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🎮 گرافیک فوق‌العاده<br><span style="font-weight:600;font-size:0.74rem">جذاب‌ترین، برای دستگاه قوی</span></button>
+      <button type="button" class="gfx-mode-btn" data-gfx="low" onclick="setGraphicsMode('low')" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🍃 Performance — سبک<br><span style="font-weight:600;font-size:0.74rem">بدون هیچ انیمیشنی، سریع‌ترین</span></button>
+      <button type="button" class="gfx-mode-btn" data-gfx="medium" onclick="setGraphicsMode('medium')" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--purple);background:transparent;color:var(--purple);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">✨ Standard — متوسط<br><span style="font-weight:600;font-size:0.74rem">جلوه‌ی شیشه‌ای و انیمیشن ملایم</span></button>
+      <button type="button" class="gfx-mode-btn" data-gfx="ultra" onclick="setGraphicsMode('ultra')" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🎮 Ultra Premium — فوق‌العاده<br><span style="font-weight:600;font-size:0.74rem">پس‌زمینه تعاملی + پارالاکس، برای دستگاه قوی</span></button>
     </div>
   </div>
   <div class="settings-card" style="border-color:var(--blue)">
@@ -12392,25 +12457,107 @@ document.addEventListener('click', function(e) {
   }
 
   /* ---------- 2. Ember / vapor particle field ----------
-     PERFORMANCE FIX: this used to run requestAnimationFrame forever,
-     redrawing dozens of particles on every single frame, all day,
-     stacked underneath every table/scroll/zoom interaction in the app.
-     That continuous main-thread + GPU cost was a major cause of lag,
-     scroll jank, and zoom crashes — especially on phones. The canvas
-     element is kept (other code may reference it) but the animation
-     loop itself is disabled so it costs nothing while the app is used. */
+     Ultra-Premium-only (see #gfx-quality-js). Plain Canvas2D, no library.
+     Explicitly start/stop-able so switching away from Ultra fully cancels
+     the rAF loop — this used to run forever for everyone and was the
+     original cause of the scroll/zoom lag this app had; now it only runs
+     when the user has explicitly chosen Ultra. */
+  var _pxRAF = null, _pxList = [], _pxResizeHandler = null;
+  function _pxSpawn(w, h){
+    return {
+      x: Math.random() * w,
+      y: h + Math.random() * 80,
+      r: 1 + Math.random() * 2.2,
+      speed: 0.25 + Math.random() * 0.7,
+      drift: (Math.random() - 0.5) * 0.5,
+      alpha: 0.12 + Math.random() * 0.3,
+      warm: Math.random() < 0.55
+    };
+  }
   function startParticles(){
-    return; // disabled for performance — see comment above
+    if(_pxRAF) return; // already running
+    var canvas = document.getElementById('fxCanvas');
+    if(!canvas || !canvas.getContext) return;
+    var ctx = canvas.getContext('2d');
+    if(!ctx) return;
+    function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    resize();
+    _pxResizeHandler = resize;
+    window.addEventListener('resize', _pxResizeHandler);
+    var COUNT = 34;
+    _pxList = [];
+    for(var i = 0; i < COUNT; i++){ _pxList.push(_pxSpawn(canvas.width, canvas.height || window.innerHeight)); }
+    function tick(){
+      if(!document.hidden){
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for(var i = 0; i < _pxList.length; i++){
+          var p = _pxList[i];
+          p.y -= p.speed;
+          p.x += p.drift;
+          if(p.y < -8){
+            var np = _pxSpawn(canvas.width, canvas.height);
+            np.y = canvas.height + 8;
+            _pxList[i] = np;
+            p = np;
+          }
+          ctx.beginPath();
+          ctx.fillStyle = 'rgba(' + (p.warm ? '255,175,90' : '150,120,255') + ',' + p.alpha + ')';
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      _pxRAF = requestAnimationFrame(tick);
+    }
+    _pxRAF = requestAnimationFrame(tick);
+  }
+  function stopParticles(){
+    if(_pxRAF){ cancelAnimationFrame(_pxRAF); _pxRAF = null; }
+    if(_pxResizeHandler){ window.removeEventListener('resize', _pxResizeHandler); _pxResizeHandler = null; }
+    _pxList = [];
+    var canvas = document.getElementById('fxCanvas');
+    if(canvas){
+      var ctx = canvas.getContext && canvas.getContext('2d');
+      if(ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
   }
 
-  /* ---------- 3. GSAP — subtle aurora parallax (decorative only) ----------
-     PERFORMANCE FIX: this fired three GSAP tweens on every single
-     mousemove event, forever, animating the same blurred background
-     blobs. Disabled — the blobs are now static, so this had no visual
-     purpose left and was pure overhead. */
+  /* ---------- 3. Mouse-reactive parallax + dynamic-lighting glow ----------
+     Ultra-Premium-only, vanilla JS (no GSAP, no WebGL). Moves the aurora
+     blobs a few pixels toward the cursor (staggered per blob for depth)
+     and drives a cursor-follow glow via CSS custom properties. Listener
+     is removed and blobs reset when Ultra is switched off. */
+  var _pxMouseHandler = null, _pxParallaxRAF = null;
   function startParallax(){
-    return; // disabled for performance — see comment above
+    if(_pxMouseHandler) return; // already running
+    var blobs = [].slice.call(document.querySelectorAll('.fx-aurora'));
+    var targetX = 0, targetY = 0, curX = 0, curY = 0;
+    _pxMouseHandler = function(e){
+      targetX = (e.clientX / window.innerWidth) * 2 - 1;   // -1..1
+      targetY = (e.clientY / window.innerHeight) * 2 - 1;
+    };
+    window.addEventListener('mousemove', _pxMouseHandler);
+    function tick(){
+      curX += (targetX - curX) * 0.06;
+      curY += (targetY - curY) * 0.06;
+      for(var i = 0; i < blobs.length; i++){
+        var depth = (i + 1) * 7;
+        blobs[i].style.transform = 'translate3d(' + (curX * depth) + 'px,' + (curY * depth) + 'px,0)';
+      }
+      document.documentElement.style.setProperty('--gfx-mx', (50 + curX * 40) + '%');
+      document.documentElement.style.setProperty('--gfx-my', (50 + curY * 40) + '%');
+      _pxParallaxRAF = requestAnimationFrame(tick);
+    }
+    _pxParallaxRAF = requestAnimationFrame(tick);
   }
+  function stopParallax(){
+    if(_pxMouseHandler){ window.removeEventListener('mousemove', _pxMouseHandler); _pxMouseHandler = null; }
+    if(_pxParallaxRAF){ cancelAnimationFrame(_pxParallaxRAF); _pxParallaxRAF = null; }
+    [].slice.call(document.querySelectorAll('.fx-aurora')).forEach(function(b){ b.style.transform = ''; });
+  }
+  /* Exposed so #gfx-quality-js can start/stop these purely from the
+     mode switch — this file has no idea what the current mode is. */
+  window._gfxStartUltraFx = function(){ if(!reduceMotion){ startParticles(); startParallax(); } };
+  window._gfxStopUltraFx = function(){ stopParticles(); stopParallax(); };
 
   /* ---------- 4. Safe scroll-reveal (never hides data) ----------
      Tags only stable structural containers. Triple safety:
@@ -12445,16 +12592,18 @@ document.addEventListener('click', function(e) {
     setTimeout(revealAll, 2200);
   }
 
-  /* ---------- 5. Boot: wait until the app is actually visible ---------- */
+  /* ---------- 5. Boot: wait until the app is actually visible ----------
+     Note: startParticles()/startParallax() are NOT called from here —
+     #gfx-quality-js decides whether Ultra is active and calls
+     window._gfxStartUltraFx() itself once the saved mode is known, to
+     avoid a race between the two scripts' own DOMContentLoaded timing. */
   function boot(){
     buildFx();
-    startParticles();
-    startParallax();
     startReveal();
   }
   function whenAppVisible(){
     var app = document.getElementById('app');
-    buildFx(); startParticles(); startParallax();   // background can run on lock screen too
+    buildFx();   // background layer can exist on lock screen too
     if(app && getComputedStyle(app).display !== 'none'){ startReveal(); return; }
     if(app){
       var mo = new MutationObserver(function(){
@@ -13225,6 +13374,12 @@ document.addEventListener('click', function(e) {
     for(var i=0;i<btns.length;i++){
       btns[i].classList.toggle('active', btns[i].getAttribute('data-gfx') === mode);
     }
+    /* Ultra's interactive canvas particles + mouse parallax only ever run
+       while Ultra is actually selected — switching to Performance/Standard
+       fully stops them (see window._gfxStartUltraFx/_gfxStopUltraFx in the
+       FX engine script), so no background cost lingers after switching away. */
+    if(mode === 'ultra'){ if(typeof window._gfxStartUltraFx === 'function') window._gfxStartUltraFx(); }
+    else { if(typeof window._gfxStopUltraFx === 'function') window._gfxStopUltraFx(); }
   }
   window.setGraphicsMode = function(mode){
     if(MODES.indexOf(mode) === -1) mode = 'low';
