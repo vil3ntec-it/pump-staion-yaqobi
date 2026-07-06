@@ -35,7 +35,10 @@ body.light-mode {
 html{background:#0d1117;min-height:100vh}
 body.light-mode ~ html,body.light-mode+html{background:#f0f4f8}
 body{font-family:'Vazirmatn',sans-serif;background:none;color:var(--txt);min-height:100vh}
-#siteBg{position:fixed;inset:0;z-index:-1;background:linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);filter:blur(24px) brightness(0.22) saturate(0.7);transform:scale(1.06);pointer-events:none}
+/* PERFORMANCE FIX: this full-viewport layer used to run backdrop-filter:blur(20px)
+   AND filter:blur(24px) permanently on every screen size — a constant, expensive
+   full-screen blur. Previously only turned off on mobile; now off everywhere. */
+#siteBg{position:fixed;inset:0;z-index:-1;background:var(--dark);filter:brightness(.22) saturate(.7);pointer-events:none}
 
 
 .lock-screen{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;overflow:hidden}
@@ -198,17 +201,19 @@ body.viewer-mode .ft-opt{pointer-events:none !important;opacity:.85}
   max-width:380px;border:none;border-radius:18px;padding:0;
   background:linear-gradient(160deg,#3b0d0d,#7a1515 55%,#5a0f0f);
   box-shadow:0 0 0 2px #ff3b3b, 0 0 40px #ff000080, 0 18px 50px #000a;
-  animation:ls-pop .5s cubic-bezier(.22,.8,.32,1), ls-glow 3s ease-in-out infinite .5s;
+  animation:ls-pop .5s cubic-bezier(.22,.8,.32,1);
 }
 @keyframes ls-pop{0%{transform:scale(.94) translateY(14px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}
+/* PERFORMANCE FIX: ls-glow/ls-flash animated box-shadow continuously (forces repaint every
+   frame while this modal is open). Kept as static keyframes for compat but no longer wired
+   to run infinitely — see .ls-modal animation above and .ls-tape below. */
 @keyframes ls-glow{0%,100%{box-shadow:0 0 0 2px #ff3b3b,0 0 32px #ff000055,0 18px 50px #000a}50%{box-shadow:0 0 0 2px #ff5c5c,0 0 42px #ff00006e,0 18px 50px #000a}}
 /* نام قبلی، حفظ‌شده برای جاوااسکریپت — اکنون نسخهٔ آرام */
 @keyframes ls-flash{0%,100%{box-shadow:0 0 26px #ff000055}50%{box-shadow:0 0 36px #ff00006e}}
-/* نوار راه‌راه خطر (هاشور زرد/مشکی، حرکت ملایم) */
+/* نوار راه‌راه خطر (هاشور زرد/مشکی، ثابت — بدون انیمیشن برای کاهش فشار روی CPU/GPU) */
 .ls-tape{height:16px;width:100%;
   background:repeating-linear-gradient(45deg,#ffd200 0 16px,#1a1a1a 16px 32px);
-  background-size:45px 45px;animation:ls-stripes 2.2s linear infinite}
-@keyframes ls-stripes{from{background-position:0 0}to{background-position:45px 0}}
+  background-size:45px 45px}
 .ls-inner{padding:20px 22px 22px}
 .ls-icon{font-size:3rem;line-height:1;display:inline-block;animation:ls-sway 2.6s ease-in-out infinite}
 @keyframes ls-sway{0%,100%{transform:rotate(-4deg) translateY(0)}50%{transform:rotate(4deg) translateY(-3px)}}
@@ -807,10 +812,8 @@ body.light-mode .lock-box input{
   overflow:hidden;
   border-radius:20px !important;
   padding:26px 22px 110px !important;
-  background:linear-gradient(158deg, rgba(22,27,38,.55), rgba(11,15,22,.80)) !important;
+  background:linear-gradient(158deg, rgba(22,27,38,.82), rgba(11,15,22,.92)) !important;
   border:1px solid rgba(255,255,255,.10) !important;
-  -webkit-backdrop-filter:blur(14px) saturate(135%);
-  backdrop-filter:blur(14px) saturate(135%);
   box-shadow:
     0 1px 0 rgba(255,255,255,.10) inset,
     0 26px 60px -30px rgba(0,0,0,.85),
@@ -851,7 +854,8 @@ body.light-mode .lock-box input{
 }
 @keyframes plDraw{ to{ stroke-dashoffset:0; } }
 .pl-trend .pl-area{ stroke:none; opacity:1; }
-.pl-trend .pl-dot{ animation:plDotPulse 2.1s ease-in-out infinite; }
+/* PERFORMANCE FIX: plDotPulse animated the SVG r attribute continuously, forcing a
+   layout recalculation every frame. Animation removed; dot keeps its static r from markup. */
 @keyframes plDotPulse{ 0%,100%{ r:3.6; } 50%{ r:6; } }
 
 /* direction arrow near the endpoint */
@@ -874,8 +878,9 @@ body.light-mode .lock-box input{
   font-variant-numeric:tabular-nums;
   color:#f1f5f9 !important;
   text-shadow:0 1px 16px rgba(0,0,0,.45) !important;
-  animation:plValueGlow 5s ease-in-out infinite;
 }
+/* PERFORMANCE FIX: plValueGlow animated filter:brightness() continuously (expensive,
+   non-composited paint on the headline number). Animation removed, kept for compat. */
 @keyframes plValueGlow{ 0%,100%{ filter:brightness(1); } 50%{ filter:brightness(1.07); } }
 #pl-result .pl-result-sub{
   font-size:.82rem; font-weight:700; margin-top:6px; text-shadow:none;
@@ -918,8 +923,9 @@ body.light-mode .lock-box input{
     0 0 0 1px rgba(251,113,133,.10),
     0 26px 70px -32px rgba(136,19,55,.68),
     0 2px 14px rgba(0,0,0,.42) !important;
-  animation:plLossBreathe 4.6s ease-in-out infinite;
 }
+/* PERFORMANCE FIX: plLossBreathe animated box-shadow continuously (forces repaint of the
+   whole profit/loss card every frame). Animation removed, kept for compat. */
 @keyframes plLossBreathe{
   0%,100%{ box-shadow:0 1px 0 rgba(254,205,211,.18) inset, 0 0 0 1px rgba(251,113,133,.10), 0 26px 70px -32px rgba(136,19,55,.6), 0 2px 14px rgba(0,0,0,.42); }
   50%    { box-shadow:0 1px 0 rgba(254,205,211,.22) inset, 0 0 0 1px rgba(251,113,133,.18), 0 26px 82px -30px rgba(136,19,55,.82), 0 2px 14px rgba(0,0,0,.46); }
@@ -1150,7 +1156,6 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter
 /* ---------- 4. HEADER (glass + gradient wordmark) ---------- */
 .header{
   background:linear-gradient(90deg,rgba(10,13,22,.9),rgba(17,22,36,.9),rgba(10,13,22,.9))!important;
-  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
   border-bottom:1px solid rgba(255,180,61,.22)!important;
   box-shadow:0 1px 0 rgba(255,180,61,.18),0 18px 40px -24px rgba(0,0,0,.9)!important;
   animation:fxFadeDown .7s cubic-bezier(.2,.8,.2,1) both}
@@ -1165,7 +1170,6 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter
 /* ---------- 5. TOP BANNER ---------- */
 .top-banner{
   background:linear-gradient(90deg,rgba(12,16,26,.85),rgba(20,17,40,.85),rgba(12,16,26,.85))!important;
-  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
   border-bottom:1px solid rgba(108,76,255,.28)!important;
   animation:fxFadeDown .8s .05s cubic-bezier(.2,.8,.2,1) both}
 .tb-item{position:relative;padding:2px 4px}
@@ -1176,7 +1180,6 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter
 /* ---------- 6. NAV (glass rail, gradient active, lift) ---------- */
 .nav{
   background:linear-gradient(90deg,rgba(11,14,23,.85),rgba(16,20,33,.85),rgba(11,14,23,.85))!important;
-  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
   border-bottom:1px solid rgba(255,180,61,.14)!important;gap:4px!important;padding:8px 12px!important;
   scrollbar-width:none}
 .nav::-webkit-scrollbar{display:none}
@@ -1195,7 +1198,6 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter
 /* ---------- 7. CARDS / PANELS (glassmorphism + lift) ---------- */
 .card,.shift-card,.settings-card,.pl-card{
   background:var(--glass)!important;
-  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
   border:1px solid var(--glass-brd)!important;border-radius:var(--r-lg)!important;
   box-shadow:var(--shadow-1)!important;position:relative;overflow:hidden;
   transition:transform .2s,box-shadow .2s,border-color .2s!important}
@@ -1300,7 +1302,7 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter
   border:1px solid rgba(255,180,61,.18)!important;color:var(--accent)!important;font-weight:800!important}
 
 /* ---------- 12. MODALS ---------- */
-.modal-overlay{background:rgba(4,6,11,.66)!important;backdrop-filter:blur(10px) saturate(120%);-webkit-backdrop-filter:blur(10px) saturate(120%)}
+.modal-overlay{background:rgba(4,6,11,.82)!important}
 .modal{background:linear-gradient(180deg,rgba(20,27,43,.96),rgba(14,19,30,.96))!important}
 .modal-head{background:linear-gradient(180deg,rgba(255,255,255,.03),transparent)!important;
   border-bottom:1px solid rgba(255,180,61,.18)!important}
@@ -1315,7 +1317,7 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter
 .ls-brand-icon{filter:drop-shadow(0 0 26px rgba(255,160,50,.7))!important;animation:fxFloat 4s ease-in-out infinite}
 .ls-brand-sub{color:rgba(255,220,170,.75)!important}
 .lock-box{
-  background:rgba(16,21,33,.82)!important;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  background:rgba(16,21,33,.94)!important;
   border:1px solid rgba(255,180,61,.20)!important;border-radius:20px!important;
   box-shadow:0 30px 70px -24px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.08)!important}
 .lock-box input{border-radius:11px!important;background:rgba(0,0,0,.32)!important;
@@ -1327,7 +1329,7 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter
 .lock-box button:hover{transform:translateY(-2px);filter:brightness(1.05);box-shadow:0 16px 34px -10px rgba(255,150,40,.75)!important;opacity:1!important}
 
 /* ---------- 14. TOAST / SCROLLBAR ---------- */
-.toast{border-radius:12px!important;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+.toast{border-radius:12px!important;
   box-shadow:0 16px 40px -12px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.06)!important}
 *::-webkit-scrollbar{width:11px;height:11px}
 *::-webkit-scrollbar-track{background:transparent}
@@ -1635,8 +1637,6 @@ body.light-mode{
   background:var(--gx-card) !important;
   border:1px solid var(--gx-brd) !important;
   box-shadow:var(--gx-shadow) !important;
-  -webkit-backdrop-filter:blur(var(--gx-blur)) saturate(135%);
-  backdrop-filter:blur(var(--gx-blur)) saturate(135%);
 }
 .card-head{
   background:linear-gradient(180deg, rgba(255,255,255,.04), transparent) !important;
@@ -1713,12 +1713,14 @@ body.light-mode .ro-tbl tr:nth-child(even) td{ background:rgba(150,110,40,.05) !
 .tank-wave{ height:22px !important; top:-16px !important; }
 .tank-wave.w1{ opacity:.95 !important; animation-duration:4s !important; }
 .tank-wave.w2{ opacity:.6 !important; top:-11px !important; animation-duration:6.5s !important; }
-.tank-liquid::after{ /* slow drifting sheen so the fuel looks alive */
+.tank-liquid::after{ /* static sheen so the fuel looks alive, without continuous repaint */
   content:""; position:absolute; inset:0; pointer-events:none;
   background:linear-gradient(115deg, transparent 30%, rgba(255,255,255,.18) 50%, transparent 70%);
   background-size:220% 100%;
-  animation:tankFlow 5.5s ease-in-out infinite;
+  background-position:30% 0;
 }
+/* PERFORMANCE FIX: tankFlow animated background-position continuously (forces repaint
+   every frame). Animation removed, kept for compat. */
 @keyframes tankFlow{ 0%,100%{ background-position:120% 0; } 50%{ background-position:-20% 0; } }
 
 @media (prefers-reduced-motion: reduce){
@@ -2021,6 +2023,9 @@ html, body {
 
 /* دسکتاپ و تبلت بزرگ — نمایش اصلی بدون تغییر */
 @media (min-width: 769px) {
+  html {
+    font-size: 24px !important;
+  }
   .persons-grid {
     grid-template-columns: repeat(auto-fill, 175px) !important;
   }
@@ -2272,7 +2277,7 @@ button:focus-visible,.nav-btn:focus-visible,a:focus-visible,input:focus-visible,
 #personModal .fs-cell .v{ font-size:0.8rem !important; }
 /* فیصدی — فشرده */
 #personModal .modal-summary{ padding:2px 10px !important; }
-#personModal .msumbox{ min-height:unset !important; padding:3px 8px !important; flex-direction:row !important; align-items:center !important; gap:10px !important; justify-content:flex-end !important; }
+#personModal .msumbox{ min-height:unset !important; padding:3px 8px !important; flex-direction:row !important; align-items:center !important; gap:10px !important; justify-content:center !important; }
 #personModal .msumbox .ml{ font-size:0.68rem !important; white-space:nowrap !important; }
 #personModal .msumbox .mv{ font-size:0.85rem !important; width:80px !important; }
 /* دکمه‌های هدر — یک‌شکل و مربع */
