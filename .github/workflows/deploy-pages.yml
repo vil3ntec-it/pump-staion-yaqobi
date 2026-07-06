@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ["main", "claude/animation-theme-settings-1iy2li", "claude/fuel-account-form-layout-vex73y", "claude/fabric-section-bug-9fof37"]
+    branches: ["main", "claude/animation-theme-settings-1iy2li", "claude/fuel-account-form-layout-vex73y", "claude/fabric-section-bug-9fof37", "claude/table-details-modal-sync-pfbnon"]
   workflow_dispatch:
 
 permissions:

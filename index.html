@@ -7149,7 +7149,7 @@ function pdfPersonHistory(pid, hid) {
   const bordD = money ? st.diesel.bardagi : st.diesel.fuel;
   const commP = rasidP*pct/100, commD = rasidD*pct/100;
   const remP = rasidP-bordP-commP, remD = rasidD-bordD-commD;
-  const archiveLabel = h.note ? h.note.split('\n')[0].substring(0,50) : ('جدول آرشیو — ' + (h.createdAt||''));
+  const archiveLabel = h.note ? h.note.split('\n')[0].substring(0,50) : '';
   const tableRows = rows.map((r,i) => {
     const bard = r.byMoney ? (r.bardagi||0) : ((r.fuel||0)*(r.priceper||0));
     const alb = bard - (r.rasid||0);
@@ -7165,7 +7165,7 @@ function pdfPersonHistory(pid, hid) {
     </tr>`;
   }).join('');
   const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8">
-<title>${escFa(person.name)} — ${archiveLabel}</title>
+<title>${escFa(person.name)}${archiveLabel ? ' — ' + archiveLabel : ''}</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -7190,7 +7190,7 @@ tr:nth-child(even) td{background:#f7fafc}
 </style></head><body>
 <div class="no-print" style="display:block;margin-bottom:10px"><button onclick="window.print()" style="padding:6px 16px;background:#38a169;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Vazirmatn',sans-serif">📄 ذخیره PDF</button></div>
 <h1>${escFa(person.name)}</h1>
-<div class="meta">${archiveLabel} &nbsp;|&nbsp; تاریخ: ${h.createdAt||''} &nbsp;|&nbsp; تعداد ردیف: ${n2fa(rows.length)}</div>
+<div class="meta">${archiveLabel ? archiveLabel + ' &nbsp;|&nbsp; ' : ''}تاریخ: ${h.createdAt||''} &nbsp;|&nbsp; تعداد ردیف: ${n2fa(rows.length)}</div>
 <div class="split-row">
   <div class="split-box" style="border-color:#38a16966">
     <div class="split-title">⛽ حساب پطرول</div>
