@@ -2051,6 +2051,108 @@ html, body {
 }
 </style>
 
+<style id="gfx-quality-mode">
+/* ============================================================
+   GRAPHICS QUALITY — ADDITIVE ONLY. Three tiers, "سبک" (low) is the
+   default/lightweight look from the performance fixes above.
+   "متوسط" (medium) adds body.gfx-medium and brings back the glass
+   blur + ambient animations that used to run always. "فوق‌العاده"
+   (ultra) adds body.gfx-ultra (in ADDITION to gfx-medium, see JS)
+   and layers on extra premium hover/shine/glow polish for people on
+   strong devices who want the showiest look. No business logic,
+   IDs, data or localStorage keys used elsewhere are touched — see
+   #gfx-quality-js below.
+   ============================================================ */
+body.gfx-medium #siteBg, body.gfx-ultra #siteBg{
+  background:linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  filter:blur(24px) brightness(0.22) saturate(0.7);
+  transform:scale(1.06);
+}
+body.gfx-medium .ls-modal, body.gfx-ultra .ls-modal{ animation:ls-pop .5s cubic-bezier(.22,.8,.32,1), ls-glow 3s ease-in-out infinite .5s; }
+body.gfx-medium .ls-tape, body.gfx-ultra .ls-tape{ animation:ls-stripes 2.2s linear infinite; }
+body.gfx-medium #pl-result, body.gfx-ultra #pl-result{
+  background:linear-gradient(158deg, rgba(22,27,38,.55), rgba(11,15,22,.80)) !important;
+  -webkit-backdrop-filter:blur(14px) saturate(135%);
+  backdrop-filter:blur(14px) saturate(135%);
+}
+body.gfx-medium .pl-trend .pl-dot, body.gfx-ultra .pl-trend .pl-dot{ animation:plDotPulse 2.1s ease-in-out infinite; }
+body.gfx-medium #pl-result .pl-result-value, body.gfx-ultra #pl-result .pl-result-value{ animation:plValueGlow 5s ease-in-out infinite; }
+body.gfx-medium #pl-result.pl-loss, body.gfx-ultra #pl-result.pl-loss{ animation:plLossBreathe 4.6s ease-in-out infinite; }
+body.gfx-medium .header, body.gfx-ultra .header{ backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px); }
+body.gfx-medium .top-banner, body.gfx-ultra .top-banner{ backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px); }
+body.gfx-medium .nav, body.gfx-ultra .nav{ backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px); }
+body.gfx-medium .card,body.gfx-medium .shift-card,body.gfx-medium .settings-card,body.gfx-medium .pl-card,
+body.gfx-ultra .card,body.gfx-ultra .shift-card,body.gfx-ultra .settings-card,body.gfx-ultra .pl-card{
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+}
+body.gfx-medium .modal-overlay, body.gfx-ultra .modal-overlay{
+  background:rgba(4,6,11,.66)!important;
+  backdrop-filter:blur(10px) saturate(120%);-webkit-backdrop-filter:blur(10px) saturate(120%);
+}
+body.gfx-medium .lock-box, body.gfx-ultra .lock-box{
+  background:rgba(16,21,33,.82)!important;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+}
+body.gfx-medium .toast, body.gfx-ultra .toast{ backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px); }
+body.gfx-medium.light-mode .card, body.gfx-medium.light-mode .shift-card, body.gfx-medium.light-mode .settings-card,
+body.gfx-medium.light-mode .pl-card, body.gfx-medium.light-mode .stat-box, body.gfx-medium.light-mode .msumbox,
+body.gfx-medium.light-mode .tank-card,
+body.gfx-ultra.light-mode .card, body.gfx-ultra.light-mode .shift-card, body.gfx-ultra.light-mode .settings-card,
+body.gfx-ultra.light-mode .pl-card, body.gfx-ultra.light-mode .stat-box, body.gfx-ultra.light-mode .msumbox,
+body.gfx-ultra.light-mode .tank-card{
+  -webkit-backdrop-filter:blur(var(--gx-blur)) saturate(135%);
+  backdrop-filter:blur(var(--gx-blur)) saturate(135%);
+}
+body.gfx-medium .tank-liquid::after, body.gfx-ultra .tank-liquid::after{ animation:tankFlow 5.5s ease-in-out infinite; }
+
+/* ---------- ULTRA-ONLY: extra premium polish on top of medium ---------- */
+body.gfx-ultra .header,body.gfx-ultra .top-banner,body.gfx-ultra .nav{
+  background-size:200% 100% !important;
+  animation:gfxUltraSheen 9s ease-in-out infinite;
+}
+@keyframes gfxUltraSheen{ 0%,100%{ background-position:0% 0; } 50%{ background-position:100% 0; } }
+body.gfx-ultra .header-title, body.gfx-ultra .ls-brand-icon{ animation:gfxUltraGlow 2.6s ease-in-out infinite; }
+@keyframes gfxUltraGlow{ 0%,100%{ filter:drop-shadow(0 2px 10px rgba(255,150,40,.35)); } 50%{ filter:drop-shadow(0 2px 18px rgba(255,170,60,.65)); } }
+body.gfx-ultra .card,body.gfx-ultra .shift-card,body.gfx-ultra .settings-card,body.gfx-ultra .pl-card,
+body.gfx-ultra .person-card{
+  transition:transform .28s cubic-bezier(.2,.8,.2,1),box-shadow .28s,border-color .28s !important;
+}
+body.gfx-ultra .card:hover,body.gfx-ultra .shift-card:hover,body.gfx-ultra .settings-card:hover,
+body.gfx-ultra .pl-card:hover,body.gfx-ultra .person-card:hover{
+  transform:translateY(-3px) !important;
+  box-shadow:0 16px 34px -14px rgba(255,150,40,.35),0 2px 10px rgba(0,0,0,.35) !important;
+  border-color:rgba(255,180,61,.4) !important;
+}
+body.gfx-ultra .nav-btn.active::after{ animation:gfxUltraPulse 1.8s ease-in-out infinite; }
+@keyframes gfxUltraPulse{ 0%,100%{ opacity:1; box-shadow:0 0 12px rgba(255,160,50,.9); } 50%{ opacity:.6; box-shadow:0 0 20px rgba(255,160,50,1); } }
+body.gfx-ultra .add-btn,body.gfx-ultra .btn-ok,body.gfx-ultra .pw-btn,body.gfx-ultra .save-btn{
+  position:relative; overflow:hidden;
+}
+body.gfx-ultra .add-btn::before,body.gfx-ultra .btn-ok::before,body.gfx-ultra .pw-btn::before,body.gfx-ultra .save-btn::before{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(115deg, transparent 40%, rgba(255,255,255,.35) 50%, transparent 60%);
+  background-size:250% 100%; background-position:150% 0; transition:background-position .55s ease;
+}
+body.gfx-ultra .add-btn:hover::before,body.gfx-ultra .btn-ok:hover::before,body.gfx-ultra .pw-btn:hover::before,body.gfx-ultra .save-btn:hover::before{
+  background-position:-50% 0;
+}
+
+.gfx-mode-btn.active{ color:#fff !important; }
+.gfx-mode-btn[data-gfx="low"].active{ background:var(--green) !important; }
+.gfx-mode-btn[data-gfx="medium"].active{ background:var(--purple) !important; }
+.gfx-mode-btn[data-gfx="ultra"].active{ background:var(--grad-amber,var(--accent)) !important; }
+@media (prefers-reduced-motion: reduce){
+  body.gfx-medium .ls-modal,body.gfx-medium .ls-tape,body.gfx-medium .pl-trend .pl-dot,
+  body.gfx-medium #pl-result .pl-result-value,body.gfx-medium #pl-result.pl-loss,
+  body.gfx-medium .tank-liquid::after,
+  body.gfx-ultra .ls-modal,body.gfx-ultra .ls-tape,body.gfx-ultra .pl-trend .pl-dot,
+  body.gfx-ultra #pl-result .pl-result-value,body.gfx-ultra #pl-result.pl-loss,
+  body.gfx-ultra .tank-liquid::after,body.gfx-ultra .header,body.gfx-ultra .top-banner,body.gfx-ultra .nav,
+  body.gfx-ultra .header-title,body.gfx-ultra .ls-brand-icon,body.gfx-ultra .nav-btn.active::after{ animation:none !important; }
+}
+</style>
+
 <style id="ux-themes-anim">
 /* ============================================================
    UX THEMES + MOTION — ADDITIVE ONLY. Loaded last in <head> so it
@@ -3335,6 +3437,17 @@ body[class*="occ-"] .header::after{
         <input type="checkbox" id="occ-auto-toggle" checked onchange="setOccasionAuto(this.checked)">
         🎉 تم مناسبتی خودکار (رمضان، جام جهانی، نوروز، عید و...)
       </label>
+    </div>
+  </div>
+  <div class="settings-card" id="gfx-quality-card" style="border-color:var(--purple)">
+    <div class="settings-title">⚡ کیفیت گرافیک</div>
+    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
+      سه حالت دارید: «سبک» بدون هیچ انیمیشنی و سریع‌ترین حالت برای دستگاه‌های ضعیف (پیش‌فرض همه). «متوسط» همان جلوه‌های شیشه‌ای و انیمیشن‌های ملایمی که قبلاً همیشه فعال بودند را برمی‌گرداند. «فوق‌العاده» جذاب‌ترین حالت است — برای کامپیوتر یا گوشی قوی که می‌خواهید صفحه بهترین جلوه‌های بصری را داشته باشد.
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button type="button" class="gfx-mode-btn" data-gfx="low" onclick="setGraphicsMode('low')" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🍃 گرافیک سبک<br><span style="font-weight:600;font-size:0.74rem">بدون انیمیشن، سریع‌ترین</span></button>
+      <button type="button" class="gfx-mode-btn" data-gfx="medium" onclick="setGraphicsMode('medium')" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--purple);background:transparent;color:var(--purple);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">✨ گرافیک متوسط<br><span style="font-weight:600;font-size:0.74rem">جلوه‌ی شیشه‌ای و انیمیشن ملایم</span></button>
+      <button type="button" class="gfx-mode-btn" data-gfx="ultra" onclick="setGraphicsMode('ultra')" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🎮 گرافیک فوق‌العاده<br><span style="font-weight:600;font-size:0.74rem">جذاب‌ترین، برای دستگاه قوی</span></button>
     </div>
   </div>
   <div class="settings-card" style="border-color:var(--blue)">
@@ -13086,6 +13199,48 @@ document.addEventListener('click', function(e) {
     initPalette();
     ['bn-noinv','bn-debt','bn-profit','bn-exp'].forEach(function(id){ watchNumber(document.getElementById(id)); });
     watchPL();
+  }
+  if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', boot); }
+  else { boot(); }
+})();
+</script>
+
+<script id="gfx-quality-js">
+/* ============================================================
+   GRAPHICS QUALITY — ADDITIVE JS. Own localStorage key
+   ('pumpGfxMode'), does not touch DB/save() or any business logic.
+   'low' (default) = current lightweight look, no animation at all.
+   'medium' = adds body.gfx-medium (glass-blur + the ambient
+   animations that used to always run). 'ultra' = adds BOTH
+   body.gfx-medium and body.gfx-ultra (everything medium has, plus
+   extra premium hover/shine/glow polish) — see #gfx-quality-mode.
+   ============================================================ */
+(function(){
+  "use strict";
+  var MODES = ['low','medium','ultra'];
+  function apply(mode){
+    document.body.classList.toggle('gfx-medium', mode === 'medium' || mode === 'ultra');
+    document.body.classList.toggle('gfx-ultra', mode === 'ultra');
+    var btns = document.querySelectorAll('.gfx-mode-btn');
+    for(var i=0;i<btns.length;i++){
+      btns[i].classList.toggle('active', btns[i].getAttribute('data-gfx') === mode);
+    }
+  }
+  window.setGraphicsMode = function(mode){
+    if(MODES.indexOf(mode) === -1) mode = 'low';
+    try{ localStorage.setItem('pumpGfxMode', mode); }catch(e){}
+    apply(mode);
+    if(typeof showToast === 'function'){
+      var msg = mode === 'ultra' ? '✅ گرافیک فوق‌العاده فعال شد — جذاب‌ترین حالت'
+              : mode === 'medium' ? '✅ گرافیک متوسط فعال شد'
+              : '✅ گرافیک سبک فعال شد — سریع‌تر و خنک‌تر';
+      var color = mode === 'ultra' ? '#ffb43d' : mode === 'medium' ? '#8b7bff' : '#38a169';
+      showToast(msg, color);
+    }
+  };
+  function boot(){
+    var saved = (function(){ try{ return localStorage.getItem('pumpGfxMode'); }catch(e){ return null; } })();
+    apply(MODES.indexOf(saved) !== -1 ? saved : 'low');
   }
   if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', boot); }
   else { boot(); }
