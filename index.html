@@ -2053,254 +2053,6 @@ html, body {
 }
 </style>
 
-<style id="gfx-quality-mode">
-/* ============================================================
-   GRAPHICS QUALITY — ADDITIVE ONLY. Three tiers, "سبک" (low) is the
-   default/lightweight look from the performance fixes above.
-   "متوسط" (medium) adds body.gfx-medium and brings back the glass
-   blur + ambient animations that used to run always. "فوق‌العاده"
-   (ultra) adds body.gfx-ultra (in ADDITION to gfx-medium, see JS)
-   and layers on extra premium hover/shine/glow polish for people on
-   strong devices who want the showiest look. No business logic,
-   IDs, data or localStorage keys used elsewhere are touched — see
-   #gfx-quality-js below.
-   ============================================================ */
-body.gfx-medium #siteBg, body.gfx-ultra #siteBg{
-  background:linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
-  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  filter:blur(24px) brightness(0.22) saturate(0.7);
-  transform:scale(1.06);
-}
-body.gfx-medium .ls-modal, body.gfx-ultra .ls-modal{ animation:ls-pop .5s cubic-bezier(.22,.8,.32,1), ls-glow 3s ease-in-out infinite .5s; }
-body.gfx-medium .ls-tape, body.gfx-ultra .ls-tape{ animation:ls-stripes 2.2s linear infinite; }
-body.gfx-medium #pl-result, body.gfx-ultra #pl-result{
-  background:linear-gradient(158deg, rgba(22,27,38,.55), rgba(11,15,22,.80)) !important;
-  -webkit-backdrop-filter:blur(14px) saturate(135%);
-  backdrop-filter:blur(14px) saturate(135%);
-}
-body.gfx-medium .pl-trend .pl-dot, body.gfx-ultra .pl-trend .pl-dot{ animation:plDotPulse 2.1s ease-in-out infinite; }
-body.gfx-medium #pl-result .pl-result-value, body.gfx-ultra #pl-result .pl-result-value{ animation:plValueGlow 5s ease-in-out infinite; }
-body.gfx-medium #pl-result.pl-loss, body.gfx-ultra #pl-result.pl-loss{ animation:plLossBreathe 4.6s ease-in-out infinite; }
-body.gfx-medium .header, body.gfx-ultra .header{ backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px); }
-body.gfx-medium .top-banner, body.gfx-ultra .top-banner{ backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px); }
-body.gfx-medium .nav, body.gfx-ultra .nav{ backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px); }
-body.gfx-medium .card,body.gfx-medium .shift-card,body.gfx-medium .settings-card,body.gfx-medium .pl-card,
-body.gfx-ultra .card,body.gfx-ultra .shift-card,body.gfx-ultra .settings-card,body.gfx-ultra .pl-card{
-  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
-}
-body.gfx-medium .modal-overlay, body.gfx-ultra .modal-overlay{
-  background:rgba(4,6,11,.66)!important;
-  backdrop-filter:blur(10px) saturate(120%);-webkit-backdrop-filter:blur(10px) saturate(120%);
-}
-body.gfx-medium .lock-box, body.gfx-ultra .lock-box{
-  background:rgba(16,21,33,.82)!important;
-  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-}
-body.gfx-medium .toast, body.gfx-ultra .toast{ backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px); }
-body.gfx-medium.light-mode .card, body.gfx-medium.light-mode .shift-card, body.gfx-medium.light-mode .settings-card,
-body.gfx-medium.light-mode .pl-card, body.gfx-medium.light-mode .stat-box, body.gfx-medium.light-mode .msumbox,
-body.gfx-medium.light-mode .tank-card,
-body.gfx-ultra.light-mode .card, body.gfx-ultra.light-mode .shift-card, body.gfx-ultra.light-mode .settings-card,
-body.gfx-ultra.light-mode .pl-card, body.gfx-ultra.light-mode .stat-box, body.gfx-ultra.light-mode .msumbox,
-body.gfx-ultra.light-mode .tank-card{
-  -webkit-backdrop-filter:blur(var(--gx-blur)) saturate(135%);
-  backdrop-filter:blur(var(--gx-blur)) saturate(135%);
-}
-body.gfx-medium .tank-liquid::after, body.gfx-ultra .tank-liquid::after{ animation:tankFlow 5.5s ease-in-out infinite; }
-
-/* ---------- ULTRA-ONLY: extra premium polish on top of medium ---------- */
-body.gfx-ultra .header,body.gfx-ultra .top-banner,body.gfx-ultra .nav{
-  background-size:200% 100% !important;
-  animation:gfxUltraSheen 9s ease-in-out infinite;
-}
-@keyframes gfxUltraSheen{ 0%,100%{ background-position:0% 0; } 50%{ background-position:100% 0; } }
-body.gfx-ultra .header-title, body.gfx-ultra .ls-brand-icon{ animation:gfxUltraGlow 2.6s ease-in-out infinite; }
-@keyframes gfxUltraGlow{ 0%,100%{ filter:drop-shadow(0 2px 10px rgba(255,150,40,.35)); } 50%{ filter:drop-shadow(0 2px 18px rgba(255,170,60,.65)); } }
-/* Ultra-only fuel tank: livelier wave + glow + real rising bubbles — the
-   fuel visibly "sloshes" instead of Standard's calmer, bubble-free wave. */
-body.gfx-ultra .tank-wave{ filter:drop-shadow(0 0 7px rgba(255,255,255,.3)); }
-body.gfx-ultra .tank-wave.w1{ animation-duration:2.6s !important; }
-body.gfx-ultra .tank-wave.w2{ animation-duration:3.8s !important; }
-body.gfx-ultra .tank-liquid::after{ animation-duration:3s !important; }
-/* Ultra-only profit/loss — noticeably richer than Standard's baseline:
-   faster/bigger aurora glow, punchier arrow, bigger glowing particles. */
-body.gfx-ultra .pl-aurora{ animation-duration:10s; filter:blur(46px); }
-body.gfx-ultra .pl-arrow{ animation-duration:1.6s; filter:drop-shadow(0 0 6px currentColor); }
-body.gfx-ultra .pl-particle{ transform:scale(1.5); filter:drop-shadow(0 0 4px rgba(255,255,255,.55)) !important; }
-/* Ultra-only occasion badge/watermark — the "Hollywood" version: bigger,
-   brighter, glowing, noticeably more animated than Standard's subtle sway. */
-body.gfx-ultra .occ-art{
-  opacity:.34 !important;
-  animation:gfxUltraOccDrift 5s ease-in-out infinite;
-  filter:drop-shadow(0 0 20px var(--occ-3));
-}
-@keyframes gfxUltraOccDrift{
-  0%,100%{ transform:translateY(0) rotate(0deg) scale(1); }
-  50%{ transform:translateY(-10px) rotate(6deg) scale(1.1); }
-}
-body.gfx-ultra .occ-badge{
-  animation:gfxUltraOccBadge 1.8s ease-in-out infinite;
-  filter:drop-shadow(0 0 10px rgba(255,200,80,.85));
-}
-@keyframes gfxUltraOccBadge{
-  0%,100%{ transform:rotate(0) scale(1); }
-  30%{ transform:rotate(-16deg) scale(1.3); }
-  60%{ transform:rotate(12deg) scale(1.18); }
-}
-body.gfx-ultra .tank-bubble{
-  display:block; position:absolute; bottom:-8px; width:6px; height:6px; border-radius:50%;
-  background:radial-gradient(circle at 35% 30%, rgba(255,255,255,.95), rgba(255,255,255,.2) 60%, transparent 80%);
-  box-shadow:0 0 4px rgba(255,255,255,.5);
-  animation:gfxTankBubble calc(2.4s + var(--i) * .45s) ease-in infinite;
-  animation-delay:calc(var(--i) * .4s);
-}
-@keyframes gfxTankBubble{
-  0%{ transform:translateY(0) scale(.55); opacity:0; }
-  12%{ opacity:.9; }
-  88%{ opacity:.25; }
-  100%{ transform:translateY(-165px) scale(1.15); opacity:0; }
-}
-/* Standard: subtle hover lift — "modern SaaS" level micro-interaction */
-body.gfx-medium .card,body.gfx-medium .shift-card,body.gfx-medium .settings-card,body.gfx-medium .pl-card,
-body.gfx-medium .person-card{
-  transition:transform .22s cubic-bezier(.2,.8,.2,1),box-shadow .22s,border-color .22s !important;
-}
-body.gfx-medium .card:hover,body.gfx-medium .shift-card:hover,body.gfx-medium .settings-card:hover,
-body.gfx-medium .pl-card:hover,body.gfx-medium .person-card:hover{
-  transform:translateY(-2px) !important;
-  box-shadow:0 10px 22px -12px rgba(0,0,0,.4) !important;
-}
-/* Ultra: stronger lift + amber glow border on top of the Standard base */
-body.gfx-ultra .card,body.gfx-ultra .shift-card,body.gfx-ultra .settings-card,body.gfx-ultra .pl-card,
-body.gfx-ultra .person-card{
-  transition:transform .28s cubic-bezier(.2,.8,.2,1),box-shadow .28s,border-color .28s !important;
-}
-body.gfx-ultra .card:hover,body.gfx-ultra .shift-card:hover,body.gfx-ultra .settings-card:hover,
-body.gfx-ultra .pl-card:hover,body.gfx-ultra .person-card:hover{
-  transform:translateY(-3px) !important;
-  box-shadow:0 16px 34px -14px rgba(255,150,40,.35),0 2px 10px rgba(0,0,0,.35) !important;
-  border-color:rgba(255,180,61,.4) !important;
-}
-body.gfx-ultra .nav-btn.active::after{ animation:gfxUltraPulse 1.8s ease-in-out infinite; }
-@keyframes gfxUltraPulse{ 0%,100%{ opacity:1; box-shadow:0 0 12px rgba(255,160,50,.9); } 50%{ opacity:.6; box-shadow:0 0 20px rgba(255,160,50,1); } }
-body.gfx-ultra .add-btn,body.gfx-ultra .btn-ok,body.gfx-ultra .pw-btn,body.gfx-ultra .save-btn{
-  position:relative; overflow:hidden;
-}
-body.gfx-ultra .add-btn::before,body.gfx-ultra .btn-ok::before,body.gfx-ultra .pw-btn::before,body.gfx-ultra .save-btn::before{
-  content:""; position:absolute; inset:0; pointer-events:none;
-  background:linear-gradient(115deg, transparent 40%, rgba(255,255,255,.35) 50%, transparent 60%);
-  background-size:250% 100%; background-position:150% 0; transition:background-position .55s ease;
-}
-body.gfx-ultra .add-btn:hover::before,body.gfx-ultra .btn-ok:hover::before,body.gfx-ultra .pw-btn:hover::before,body.gfx-ultra .save-btn:hover::before{
-  background-position:-50% 0;
-}
-
-/* Cinematic modal entrance — plays once each time a modal is opened
-   (same display:none→flex trick the existing .ls-modal entrance uses). */
-body.gfx-ultra .modal-overlay.open .modal,body.gfx-ultra .modal-overlay.open .sm-modal{
-  animation:gfxUltraModalIn .5s cubic-bezier(.16,1,.3,1) both;
-}
-@keyframes gfxUltraModalIn{
-  0%{ opacity:0; transform:scale(.94) translateY(10px); filter:blur(6px); }
-  100%{ opacity:1; transform:scale(1) translateY(0); filter:blur(0); }
-}
-
-/* Cursor-reactive "dynamic lighting" glow — position driven by
-   --gfx-mx/--gfx-my, updated from startParallax() in the FX engine
-   script. Only exists in Ultra; harmless no-op elsewhere. */
-body.gfx-ultra #fxLayer::after{
-  content:"";
-  position:absolute; inset:0; pointer-events:none; z-index:2;
-  background:radial-gradient(circle at var(--gfx-mx,50%) var(--gfx-my,50%), rgba(255,180,70,.12), transparent 45%);
-}
-
-/* Premium lock-screen treatment — richer entrance + animated gradient
-   border on the login card; the ambient particle/parallax backdrop
-   already shows through here since #fxLayer is built before login. */
-body.gfx-ultra .lock-box{
-  animation:gfxUltraLockIn .8s cubic-bezier(.16,1,.3,1) both, gfxUltraLockBorder 6s ease-in-out infinite;
-}
-@keyframes gfxUltraLockIn{
-  0%{ opacity:0; transform:scale(.92) translateY(18px); }
-  100%{ opacity:1; transform:scale(1) translateY(0); }
-}
-@keyframes gfxUltraLockBorder{
-  0%,100%{ box-shadow:0 30px 70px -24px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.08),0 0 0 1px rgba(255,180,61,.25); }
-  50%{ box-shadow:0 30px 70px -24px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.08),0 0 26px 1px rgba(255,180,61,.5); }
-}
-
-/* animated bars on the Ultra confirmation popup */
-.gfx-confirm-bar{
-  position:absolute; left:0; right:0; height:5px;
-  background:linear-gradient(90deg, var(--accent), #ffd27a, var(--purple), var(--accent));
-  background-size:300% 100%;
-  animation:gfxConfirmBarMove 2.2s linear infinite;
-}
-@keyframes gfxConfirmBarMove{ from{ background-position:0% 0; } to{ background-position:300% 0; } }
-#gfxUltraConfirmModal .sm-modal{ animation:gfxUltraModalIn .45s cubic-bezier(.16,1,.3,1) both; }
-
-.gfx-mode-btn.active{ color:#fff !important; }
-.gfx-mode-btn[data-gfx="low"].active{ background:var(--green) !important; }
-.gfx-mode-btn[data-gfx="medium"].active{ background:var(--purple) !important; }
-.gfx-mode-btn[data-gfx="ultra"].active{ background:var(--grad-amber,var(--accent)) !important; }
-@media (prefers-reduced-motion: reduce){
-  body.gfx-medium .ls-modal,body.gfx-medium .ls-tape,body.gfx-medium .pl-trend .pl-dot,
-  body.gfx-medium #pl-result .pl-result-value,body.gfx-medium #pl-result.pl-loss,
-  body.gfx-medium .tank-liquid::after,
-  body.gfx-ultra .ls-modal,body.gfx-ultra .ls-tape,body.gfx-ultra .pl-trend .pl-dot,
-  body.gfx-ultra #pl-result .pl-result-value,body.gfx-ultra #pl-result.pl-loss,
-  body.gfx-ultra .tank-liquid::after,body.gfx-ultra .header,body.gfx-ultra .top-banner,body.gfx-ultra .nav,
-  body.gfx-ultra .header-title,body.gfx-ultra .ls-brand-icon,body.gfx-ultra .nav-btn.active::after,
-  body.gfx-ultra .modal-overlay.open .modal,body.gfx-ultra .modal-overlay.open .sm-modal,body.gfx-ultra .lock-box,
-  body.gfx-ultra .tank-bubble,body.gfx-ultra .occ-art,body.gfx-ultra .occ-badge{ animation:none !important; }
-}
-
-/* ---------- Performance mode = zero animation, full stop ----------
-   All of these used to run for every visitor regardless of any setting:
-   section reveal fade/slide-in (reveal-fx, fxRise, mpEnter), click ripple,
-   header/top-banner/nav-tab entrance (fxFadeDown, nav-btn), the ambient
-   background layer, and the occasion-theme badge/art (occDrift/occSway,
-   which loop forever). They now only run under Standard (gfx-medium) or
-   Ultra (gfx-medium + gfx-ultra); plain Performance mode (no class) shows
-   content instantly with zero animation and no background layer. */
-body:not(.gfx-medium) #fxLayer{ display:none !important; }
-body:not(.gfx-medium) .reveal-fx{ opacity:1 !important; transform:none !important; transition:none !important; }
-body:not(.gfx-medium) .btn-ripple::after{ display:none !important; animation:none !important; }
-body:not(.gfx-medium) .nav-btn{ animation:none !important; }
-body:not(.gfx-medium) .header,body:not(.gfx-medium) .top-banner{ animation:none !important; }
-body:not(.gfx-medium) .section.visible>.card,body:not(.gfx-medium) .section.visible>.shifts-grid>.shift-card,
-body:not(.gfx-medium) .section.visible>.settings-card,body:not(.gfx-medium) .section.visible>div,
-body:not(.gfx-medium) .section.visible>h2{ animation:none !important; }
-body:not(.gfx-medium) .occ-art,body:not(.gfx-medium) .occ-badge{ animation:none !important; }
-/* ---------- Additional gaps found by direct testing: these were STILL
-   running identically in every mode including Performance — profit/loss
-   aurora + arrow + the 18 floating money particles, the fuel-tank liquid
-   wave, the low-stock chip's red pulse, and every nav icon's hover/active
-   animation. All now stop under Performance, all still run under
-   Standard/Ultra exactly as before (Ultra gets extra richness below). ---------- */
-body:not(.gfx-medium) .pl-aurora,
-body:not(.gfx-medium) .pl-arrow,
-body:not(.gfx-medium) .pl-particle,
-body:not(.gfx-medium) .tank-wave,
-body:not(.gfx-medium) .tank-chip.low,
-body:not(.gfx-medium) .nav-btn:hover .ia-wobble, body:not(.gfx-medium) .nav-btn.active .ia-wobble,
-body:not(.gfx-medium) .nav-btn:hover .ia-write,  body:not(.gfx-medium) .nav-btn.active .ia-write,
-body:not(.gfx-medium) .nav-btn:hover .ia-bounce, body:not(.gfx-medium) .nav-btn.active .ia-bounce,
-body:not(.gfx-medium) .nav-btn:hover .ia-flip,   body:not(.gfx-medium) .nav-btn.active .ia-flip,
-body:not(.gfx-medium) .nav-btn:hover .ia-fly,    body:not(.gfx-medium) .nav-btn.active .ia-fly,
-body:not(.gfx-medium) .nav-btn:hover .ia-shake,  body:not(.gfx-medium) .nav-btn.active .ia-shake,
-body:not(.gfx-medium) .nav-btn:hover .ia-tilt,   body:not(.gfx-medium) .nav-btn.active .ia-tilt,
-body:not(.gfx-medium) .nav-btn:hover .ia-pulse,  body:not(.gfx-medium) .nav-btn.active .ia-pulse,
-body:not(.gfx-medium) .nav-btn:hover .ia-rise,   body:not(.gfx-medium) .nav-btn.active .ia-rise,
-body:not(.gfx-medium) .nav-btn:hover .ia-spin,   body:not(.gfx-medium) .nav-btn.active .ia-spin,
-body:not(.gfx-medium) #zodiacHeaderBtn:hover .nav-ic,
-body:not(.gfx-medium) .section.visible .card-title .nav-ic,
-body:not(.gfx-medium) .section.visible .list-title .nav-ic,
-body:not(.gfx-medium) .section.visible .pl-result-label .nav-ic,
-body:not(.gfx-medium) .pl-trend .pl-line
-{ animation:none !important; }
-</style>
-
 <style id="ux-themes-anim">
 /* ============================================================
    UX THEMES + MOTION — ADDITIVE ONLY. Loaded last in <head> so it
@@ -2688,8 +2440,766 @@ body[class*="occ-"] .header::after{
 }
 @media (prefers-reduced-motion: reduce){ .occ-badge, .occ-art{ animation:none; } }
 </style>
+<style id="gfx-tier-shared">
+/* ╔══════════════════════════════════════════════════════════════════╗
+   ║  GRAPHICS TIER SYSTEM — SHARED PIECES                             ║
+   ║  Loaded LAST in <head> so the three tier blocks below always win  ║
+   ║  the cascade (the theme-palette block earlier used to override    ║
+   ║  the old tier styles and flattened the differences).              ║
+   ║                                                                   ║
+   ║  Exactly ONE class is ever on <body>:                             ║
+   ║    body.gfx-performance  → TIER 1 (flat, zero motion)             ║
+   ║    body.gfx-standard     → TIER 2 (glass, gentle motion)          ║
+   ║    body.gfx-ultra        → TIER 3 (cinematic luxury)              ║
+   ║  Each tier block is fully self-contained — no tier inherits       ║
+   ║  another tier's rules.                                            ║
+   ╚══════════════════════════════════════════════════════════════════╝ */
+
+/* ---- mode picker buttons (settings) ---- */
+.gfx-mode-btn.active{ color:#fff !important; }
+.gfx-mode-btn[data-gfx="performance"].active{ background:var(--green) !important; border-color:var(--green) !important; }
+.gfx-mode-btn[data-gfx="standard"].active{ background:var(--purple) !important; border-color:var(--purple) !important; }
+.gfx-mode-btn[data-gfx="ultra"].active{ background:var(--grad-amber,var(--accent)) !important; color:#1a1102 !important; }
+
+/* ---- Ultra warning modal — opens from ANY tier, always looks luxe ---- */
+#gfxUltraConfirmModal{
+  background:rgba(3,4,8,.74) !important;
+  -webkit-backdrop-filter:blur(12px) saturate(125%);
+  backdrop-filter:blur(12px) saturate(125%);
+}
+#gfxUltraConfirmModal .sm-modal{
+  position:relative; overflow:hidden; text-align:center;
+  max-width:400px; padding:26px 22px 24px;
+  background:linear-gradient(168deg, rgba(36,26,12,.96), rgba(12,9,5,.98)) !important;
+  border:1px solid rgba(255,180,61,.38) !important;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.10) inset,
+    0 0 0 1px rgba(255,180,61,.10),
+    0 40px 90px -30px rgba(0,0,0,.95),
+    0 0 60px -18px rgba(255,150,40,.45) !important;
+  animation:gfxUmIn .5s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes gfxUmIn{
+  0%  { opacity:0; transform:scale(.86) translateY(28px); filter:blur(10px); }
+  100%{ opacity:1; transform:scale(1) translateY(0);      filter:blur(0); }
+}
+.gfx-confirm-bar{
+  position:absolute; left:0; right:0; height:4px;
+  background:linear-gradient(90deg,#f5872b,#ffd27a,#8b7bff,#ffd27a,#f5872b);
+  background-size:300% 100%;
+  animation:gfxConfirmBarMove 2.4s linear infinite;
+}
+@keyframes gfxConfirmBarMove{ from{ background-position:0% 0; } to{ background-position:300% 0; } }
+.gfx-um-orb{
+  width:74px; height:74px; margin:2px auto 12px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; font-size:2rem;
+  background:radial-gradient(circle at 32% 28%, rgba(255,220,150,.35), rgba(255,150,40,.12) 55%, transparent 75%);
+  border:1px solid rgba(255,180,61,.45);
+  box-shadow:0 0 30px -6px rgba(255,160,50,.65), 0 1px 0 rgba(255,255,255,.15) inset;
+  animation:gfxUmOrb 2.6s ease-in-out infinite;
+}
+@keyframes gfxUmOrb{
+  0%,100%{ transform:translateY(0);    box-shadow:0 0 24px -8px rgba(255,160,50,.55), 0 1px 0 rgba(255,255,255,.15) inset; }
+  50%    { transform:translateY(-4px); box-shadow:0 0 44px -6px rgba(255,160,50,.85), 0 1px 0 rgba(255,255,255,.15) inset; }
+}
+.gfx-um-title{ margin:0 0 10px; font-size:1.05rem; font-weight:900; color:#ffd27a; text-shadow:0 0 18px rgba(255,180,61,.45); }
+.gfx-um-text{ font-size:.86rem; color:#d8cdb8; line-height:2; margin-bottom:20px; padding:0 4px; }
+.gfx-um-btns{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+.gfx-um-yes{
+  font-family:'Vazirmatn',sans-serif; font-weight:900; font-size:.9rem; cursor:pointer;
+  padding:11px 24px; border-radius:12px; border:none; color:#1a1102;
+  background:linear-gradient(120deg,#f5872b,#ffb43d,#ffd27a,#ffb43d,#f5872b);
+  background-size:280% 100%;
+  animation:gfxConfirmBarMove 4s linear infinite;
+  box-shadow:0 1px 0 rgba(255,255,255,.4) inset, 0 10px 26px -10px rgba(255,150,40,.7);
+  transition:transform .18s cubic-bezier(.2,.8,.2,1), box-shadow .25s;
+}
+.gfx-um-yes:hover{ transform:translateY(-2px) scale(1.03); box-shadow:0 1px 0 rgba(255,255,255,.4) inset, 0 16px 34px -10px rgba(255,150,40,.9); }
+.gfx-um-yes:active{ transform:scale(.96); }
+.gfx-um-no{
+  font-family:'Vazirmatn',sans-serif; font-weight:800; font-size:.88rem; cursor:pointer;
+  padding:11px 22px; border-radius:12px; color:#c9bda5;
+  background:transparent; border:1px solid rgba(255,255,255,.22);
+  transition:border-color .2s, color .2s, transform .18s;
+}
+.gfx-um-no:hover{ border-color:rgba(255,255,255,.5); color:#fff; transform:translateY(-1px); }
+@media (prefers-reduced-motion: reduce){
+  #gfxUltraConfirmModal .sm-modal, .gfx-confirm-bar, .gfx-um-orb, .gfx-um-yes{ animation:none !important; }
+}
+</style>
+
+<style id="gfx-tier-performance">
+/* ╔══════════════════════════════════════════════════════════════════╗
+   ║  TIER 1 — PERFORMANCE («سبک»)                                     ║
+   ║  Fully FLAT design: zero animation, zero transition, no glass,    ║
+   ║  no gradients, no glows, no shadows. Plain tables, static line    ║
+   ║  icons, a plain solid bar for the fuel tanks, a fully static      ║
+   ║  profit/loss card. Maximum speed, minimum battery/CPU.            ║
+   ╚══════════════════════════════════════════════════════════════════╝ */
+
+/* -- 1.1 KILL SWITCH: no motion of any kind, anywhere ---------------- */
+body.gfx-performance *,
+body.gfx-performance *::before,
+body.gfx-performance *::after{
+  animation:none !important;
+  transition:none !important;
+}
+/* single deliberate exception: the Ultra warning popup keeps its
+   entrance (the user summoned it on purpose; it must read as premium) */
+body.gfx-performance #gfxUltraConfirmModal .sm-modal{ animation:gfxUmIn .45s cubic-bezier(.16,1,.3,1) both !important; }
+body.gfx-performance #gfxUltraConfirmModal .gfx-confirm-bar{ animation:gfxConfirmBarMove 2.4s linear infinite !important; }
+body.gfx-performance #gfxUltraConfirmModal .gfx-um-yes{ animation:gfxConfirmBarMove 4s linear infinite !important; }
+
+/* content that scroll-reveal normally fades in: always visible here */
+body.gfx-performance .reveal-fx{ opacity:1 !important; transform:none !important; }
+body.gfx-performance .btn-ripple::after{ display:none !important; }
+
+/* -- 1.2 no ambient background layers at all ------------------------- */
+body.gfx-performance #fxLayer{ display:none !important; }
+
+/* -- 1.3 FLAT chrome: header / banner / nav -------------------------- */
+body.gfx-performance .header,
+body.gfx-performance .nav{
+  background:var(--panel) !important;
+  box-shadow:none !important;
+  -webkit-backdrop-filter:none !important; backdrop-filter:none !important;
+}
+body.gfx-performance .top-banner{
+  background:var(--panel) !important;
+  box-shadow:none !important;
+  -webkit-backdrop-filter:none !important; backdrop-filter:none !important;
+}
+body.gfx-performance.light-mode .header,
+body.gfx-performance.light-mode .top-banner{ background:#4a2e00 !important; }
+body.gfx-performance.light-mode .nav{ background:#faf3e6 !important; }
+body.gfx-performance .header-title{ text-shadow:none !important; filter:none !important; }
+body.gfx-performance #navGlider{ box-shadow:none !important; }
+
+/* -- 1.4 FLAT surfaces: cards / portlets / panels -------------------- */
+body.gfx-performance .card,
+body.gfx-performance .shift-card,
+body.gfx-performance .settings-card,
+body.gfx-performance .pl-card,
+body.gfx-performance .stat-box,
+body.gfx-performance .msumbox,
+body.gfx-performance .person-card,
+body.gfx-performance .tank-card{
+  background:var(--card) !important;
+  border:1px solid var(--border) !important;
+  box-shadow:none !important;
+  -webkit-backdrop-filter:none !important; backdrop-filter:none !important;
+  transform:none !important;
+}
+body.gfx-performance .card-head{ background:var(--panel) !important; border-bottom:1px solid var(--border) !important; }
+/* neon section banners → plain labelled bars */
+body.gfx-performance #sec-storage::before,
+body.gfx-performance #sec-storage-diesel::before,
+body.gfx-performance #sec-profit::before,
+body.gfx-performance #sec-expenses::before,
+body.gfx-performance #sec-settings::before{
+  background:var(--panel) !important;
+  color:var(--accent) !important;
+  border:1px solid var(--border) !important;
+  box-shadow:none !important;
+}
+
+/* -- 1.5 FLAT tables -------------------------------------------------- */
+body.gfx-performance .tbl th,
+body.gfx-performance .xls-tbl th,
+body.gfx-performance .ro-tbl th{
+  background:var(--dark) !important;
+  color:var(--label) !important;
+  border-bottom:1px solid var(--border) !important;
+  text-shadow:none !important;
+}
+body.gfx-performance .tbl tfoot td,
+body.gfx-performance .xls-tbl tfoot td,
+body.gfx-performance .xls-foot td{
+  background:var(--dark) !important;
+  color:var(--txt) !important;
+  border-top:1px solid var(--border) !important;
+}
+body.gfx-performance .tbl-wrap,
+body.gfx-performance .xls-wrap{
+  background:var(--card) !important;
+  border:1px solid var(--border) !important;
+  box-shadow:none !important;
+}
+
+/* -- 1.6 FLAT buttons: solid fills, no glow, no movement ------------- */
+body.gfx-performance button{ box-shadow:none !important; text-shadow:none !important; }
+body.gfx-performance button:hover,
+body.gfx-performance button:active{ transform:none !important; box-shadow:none !important; }
+body.gfx-performance .add-btn,
+body.gfx-performance .fuel-add-btn{ background:var(--accent) !important; }
+body.gfx-performance .save-btn.day{ background:#e0821c !important; }
+body.gfx-performance .save-btn.night{ background:#6b46c1 !important; }
+body.gfx-performance .nav-btn:hover{ transform:none !important; }
+body.gfx-performance .nav-btn .nav-ic{ transform:none !important; }
+/* focus stays visible without a glow ring */
+body.gfx-performance input:focus,
+body.gfx-performance select:focus,
+body.gfx-performance textarea:focus{
+  box-shadow:none !important;
+  border-color:var(--accent) !important;
+  outline:1px solid var(--accent) !important; outline-offset:0;
+}
+
+/* -- 1.7 FLAT modals / lock screen / toasts -------------------------- */
+body.gfx-performance .modal-overlay{
+  background:rgba(0,0,0,.62) !important;
+  -webkit-backdrop-filter:none !important; backdrop-filter:none !important;
+}
+body.gfx-performance .modal,
+body.gfx-performance .sm-modal{ box-shadow:none !important; }
+body.gfx-performance .lock-box{
+  background:var(--panel) !important;
+  box-shadow:none !important;
+  -webkit-backdrop-filter:none !important; backdrop-filter:none !important;
+}
+body.gfx-performance .toast{
+  box-shadow:none !important;
+  -webkit-backdrop-filter:none !important; backdrop-filter:none !important;
+}
+
+/* -- 1.8 PROFIT/LOSS: fully STATIC ------------------------------------
+   No aurora, no particles, no arrow bounce, no counter animation (the
+   count-up JS checks the tier and prints the final number instantly). */
+body.gfx-performance #pl-result{
+  background:var(--card) !important;
+  border:1px solid var(--border) !important;
+  box-shadow:none !important;
+  -webkit-backdrop-filter:none !important; backdrop-filter:none !important;
+}
+body.gfx-performance #pl-result::before{ display:none !important; }
+body.gfx-performance .pl-aurora,
+body.gfx-performance .pl-particles,
+body.gfx-performance .pl-arrow{ display:none !important; }
+body.gfx-performance .pl-trend .pl-line{ stroke-dashoffset:0 !important; filter:none !important; }
+body.gfx-performance .pl-trend .pl-dot{ filter:none !important; }
+body.gfx-performance #pl-result .pl-result-value{ text-shadow:none !important; filter:none !important; }
+
+/* -- 1.9 FUEL TANKS: one plain, solid, static bar ---------------------
+   No waves, no bubbles, no sheen, no fill transition (height snaps).
+   The bar itself still turns red/amber via the status palette. */
+body.gfx-performance .tank-wave,
+body.gfx-performance .tank-bubble{ display:none !important; }
+body.gfx-performance .tank-liquid{ background-image:none !important; }
+body.gfx-performance .tank-liquid::before,
+body.gfx-performance .tank-liquid::after{ display:none !important; }
+body.gfx-performance .tank-body{
+  background:var(--dark) !important;
+  border:1px solid var(--border) !important;
+  box-shadow:none !important;
+  border-radius:12px !important;
+}
+body.gfx-performance .tank-pct{ text-shadow:none !important; }
+
+/* -- 1.10 occasion decor: static line art only, no gradient washes ---- */
+body.gfx-performance .occ-art{ filter:none !important; opacity:.12 !important; transform:none !important; }
+body.gfx-performance .occ-badge{ filter:none !important; transform:none !important; }
+body.gfx-performance .header::before,
+body.gfx-performance .top-banner::before,
+body.gfx-performance .header::after{ display:none !important; }
+</style>
+
+<style id="gfx-tier-standard">
+/* ╔══════════════════════════════════════════════════════════════════╗
+   ║  TIER 2 — STANDARD («متوسط»)                                      ║
+   ║  Modern-SaaS level: standard glassmorphism (backdrop blur),       ║
+   ║  gentle transitions, simple button/card hovers, an ANIMATED       ║
+   ║  fuel progress bar (smooth fill + flowing shimmer + red danger    ║
+   ║  pulse), soft number count-up and linear chart draw for P&L.      ║
+   ║  No liquid physics, no particles, no sounds — those are Ultra.    ║
+   ╚══════════════════════════════════════════════════════════════════╝ */
+
+/* -- 2.1 glass backdrop ------------------------------------------------ */
+body.gfx-standard #siteBg{
+  background:linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+  -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px);
+  filter:blur(24px) brightness(0.22) saturate(0.7);
+  transform:scale(1.06);
+}
+/* ambient layer stays visible but static (blobs are frozen by #perf-fix);
+   the interactive canvas + parallax remain Ultra-only */
+body.gfx-standard #fxLayer{ display:block; }
+
+/* -- 2.2 glass chrome -------------------------------------------------- */
+body.gfx-standard .header{ -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
+body.gfx-standard .top-banner{ -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); }
+body.gfx-standard .nav{ -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); }
+
+/* -- 2.3 glass cards + gentle hover lift ------------------------------- */
+body.gfx-standard .card,
+body.gfx-standard .shift-card,
+body.gfx-standard .settings-card,
+body.gfx-standard .pl-card,
+body.gfx-standard .person-card{
+  -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+  transition:transform .22s cubic-bezier(.2,.8,.2,1), box-shadow .22s, border-color .22s !important;
+}
+body.gfx-standard .card:hover,
+body.gfx-standard .shift-card:hover,
+body.gfx-standard .settings-card:hover,
+body.gfx-standard .pl-card:hover,
+body.gfx-standard .person-card:hover{
+  transform:translateY(-2px) !important;
+  box-shadow:0 10px 22px -12px rgba(0,0,0,.4) !important;
+}
+body.gfx-standard.light-mode .card,
+body.gfx-standard.light-mode .shift-card,
+body.gfx-standard.light-mode .settings-card,
+body.gfx-standard.light-mode .pl-card,
+body.gfx-standard.light-mode .stat-box,
+body.gfx-standard.light-mode .msumbox,
+body.gfx-standard.light-mode .tank-card{
+  -webkit-backdrop-filter:blur(var(--gx-blur,10px)) saturate(135%);
+  backdrop-filter:blur(var(--gx-blur,10px)) saturate(135%);
+}
+
+/* -- 2.4 simple button hovers ------------------------------------------ */
+body.gfx-standard .add-btn:hover,
+body.gfx-standard .save-btn:hover,
+body.gfx-standard .btn-ok:hover,
+body.gfx-standard .pw-btn:hover,
+body.gfx-standard .fuel-add-btn:hover{
+  transform:translateY(-2px) !important;
+  box-shadow:0 8px 20px -8px rgba(255,170,60,.45) !important;
+}
+body.gfx-standard .nav-btn:hover{ transform:translateY(-1px) !important; }
+
+/* -- 2.5 glass overlays ------------------------------------------------- */
+body.gfx-standard .modal-overlay{
+  background:rgba(4,6,11,.66) !important;
+  -webkit-backdrop-filter:blur(10px) saturate(120%); backdrop-filter:blur(10px) saturate(120%);
+}
+body.gfx-standard .lock-box{
+  background:rgba(16,21,33,.82) !important;
+  -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+}
+body.gfx-standard .toast{ -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
+body.gfx-standard .ls-modal{ animation:ls-pop .5s cubic-bezier(.22,.8,.32,1); }
+body.gfx-standard .ls-tape{ animation:ls-stripes 2.2s linear infinite; }
+
+/* -- 2.6 PROFIT/LOSS: soft glass, linear chart draw, gentle pulse ------
+   (number count-up = 620ms, handled by the tier-aware count-up JS) */
+body.gfx-standard #pl-result{
+  background:linear-gradient(158deg, rgba(22,27,38,.55), rgba(11,15,22,.80)) !important;
+  -webkit-backdrop-filter:blur(14px) saturate(135%); backdrop-filter:blur(14px) saturate(135%);
+}
+body.gfx-standard .pl-trend .pl-dot{ animation:plDotPulse 2.1s ease-in-out infinite; }
+
+/* -- 2.7 FUEL TANKS: animated PROGRESS BAR (no liquid physics) ---------
+   Smooth 1.15s fill transition (base), flowing shimmer while idle,
+   and a clear red pulse when stock reaches the danger threshold. */
+body.gfx-standard .tank-wave,
+body.gfx-standard .tank-bubble{ display:none !important; }
+body.gfx-standard .tank-liquid::after{ animation:tankFlow 5.5s ease-in-out infinite; }
+body.gfx-standard .tank-card.t-low .tank-body{
+  border-color:rgba(229,62,62,.6) !important;
+  animation:gfxTankDangerStd 1.6s ease-in-out infinite;
+}
+@keyframes gfxTankDangerStd{
+  0%,100%{ box-shadow:inset 0 2px 8px rgba(255,255,255,.10), inset 0 -8px 22px rgba(0,0,0,.45), 0 0 0 0 rgba(229,62,62,0); }
+  50%    { box-shadow:inset 0 2px 8px rgba(255,255,255,.10), inset 0 -8px 22px rgba(0,0,0,.45), 0 0 18px 2px rgba(229,62,62,.55); }
+}
+
+/* -- 2.8 reduced motion: Standard politely stands down ------------------ */
+@media (prefers-reduced-motion: reduce){
+  body.gfx-standard .ls-modal, body.gfx-standard .ls-tape,
+  body.gfx-standard .pl-trend .pl-dot,
+  body.gfx-standard .tank-liquid::after,
+  body.gfx-standard .tank-card.t-low .tank-body{ animation:none !important; }
+}
+</style>
+
+<style id="gfx-tier-ultra">
+/* ╔══════════════════════════════════════════════════════════════════╗
+   ║  TIER 3 — ULTRA PREMIUM («فوق‌العاده»)                            ║
+   ║  A completely different, cinematic/luxury theme: animated gold    ║
+   ║  gradients, dynamic lighting that follows the mouse, layered      ║
+   ║  shadows, living liquid fuel tanks (waves + bubbles), Hollywood   ║
+   ║  P&L (neon chart, particles, glow pulses, silky counters), 3-D    ║
+   ║  occasion icons with parallax, plus canvas particles and soft     ║
+   ║  UI sounds driven by the tier engine JS.                          ║
+   ╚══════════════════════════════════════════════════════════════════╝ */
+
+/* -- 3.1 LIVING BACKGROUND: parallax blobs + canvas embers + hue drift - */
+body.gfx-ultra #siteBg{
+  background:linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+  -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px);
+  filter:blur(26px) brightness(0.20) saturate(1.15);
+  transform:scale(1.07);
+}
+body.gfx-ultra #fxLayer{
+  display:block !important;
+  animation:gfxHueDrift 36s ease-in-out infinite;
+}
+@keyframes gfxHueDrift{
+  0%,100%{ filter:hue-rotate(var(--fx-hue,0deg)); }
+  50%    { filter:hue-rotate(calc(var(--fx-hue,0deg) + 26deg)); }
+}
+body.gfx-ultra #fxCanvas{ display:block !important; }
+/* blobs move with the cursor: the FX engine writes --gfx-px/--gfx-py per
+   blob (inline transforms are blocked by #perf-fix's !important reset) */
+body.gfx-ultra .fx-aurora{
+  opacity:.5 !important;
+  filter:blur(52px) !important;
+  transform:translate3d(var(--gfx-px,0px), var(--gfx-py,0px), 0) !important;
+  will-change:transform !important;
+}
+body.gfx-ultra .fx-grid{ opacity:.09; }
+/* dynamic cursor spotlight (position driven by --gfx-mx/--gfx-my) */
+body.gfx-ultra #fxLayer::after{
+  content:""; position:absolute; inset:0; pointer-events:none; z-index:2;
+  background:radial-gradient(circle at var(--gfx-mx,50%) var(--gfx-my,50%), rgba(255,180,70,.13), transparent 45%);
+}
+
+/* -- 3.2 CINEMATIC CHROME: animated gold gradient, layered depth ------- */
+body.gfx-ultra .header,
+body.gfx-ultra .top-banner{
+  background:linear-gradient(110deg,#0c0804,#241402,#3a2405,#241402,#0c0804) !important;
+  background-size:300% 100% !important;
+  border-color:rgba(255,180,61,.32) !important;
+  animation:gfxUltraChrome 14s ease-in-out infinite;
+  box-shadow:0 1px 0 rgba(255,255,255,.05) inset, 0 14px 40px -18px rgba(0,0,0,.8), 0 0 26px -6px rgba(255,150,40,.20) !important;
+  -webkit-backdrop-filter:blur(8px) saturate(130%); backdrop-filter:blur(8px) saturate(130%);
+}
+body.gfx-ultra .nav{
+  background:linear-gradient(110deg,#0a0703,#1d1102,#0a0703) !important;
+  background-size:300% 100% !important;
+  border-bottom-color:rgba(255,180,61,.25) !important;
+  animation:gfxUltraChrome 18s ease-in-out infinite;
+  -webkit-backdrop-filter:blur(8px) saturate(130%); backdrop-filter:blur(8px) saturate(130%);
+}
+body.gfx-ultra.light-mode .nav{
+  background:linear-gradient(110deg,#f7ecd8,#fff7e8,#f2e3c8,#fff7e8,#f7ecd8) !important;
+  border-bottom-color:rgba(200,130,20,.4) !important;
+}
+@keyframes gfxUltraChrome{ 0%,100%{ background-position:0% 0; } 50%{ background-position:100% 0; } }
+body.gfx-ultra .header-title{
+  background:linear-gradient(90deg,#ffd27a,#ffb43d,#ffefc9,#ffb43d,#ffd27a);
+  background-size:250% 100%;
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent;
+  animation:gfxGoldFlow 6s linear infinite;
+  filter:drop-shadow(0 2px 12px rgba(255,160,50,.45));
+}
+@keyframes gfxGoldFlow{ to{ background-position:-250% 0; } }
+body.gfx-ultra .ls-brand-icon{ animation:gfxUltraGlow 2.6s ease-in-out infinite; }
+@keyframes gfxUltraGlow{
+  0%,100%{ filter:drop-shadow(0 2px 10px rgba(255,150,40,.35)); }
+  50%    { filter:drop-shadow(0 2px 18px rgba(255,170,60,.65)); }
+}
+body.gfx-ultra #navGlider{ box-shadow:0 0 18px -2px var(--accent), 0 3px 14px -3px var(--accent); }
+body.gfx-ultra .nav-btn{ transition:background .2s, color .2s, box-shadow .2s, transform .18s cubic-bezier(.2,.8,.2,1), text-shadow .2s !important; }
+body.gfx-ultra .nav-btn:hover{ transform:translateY(-2px) !important; text-shadow:0 0 12px rgba(255,180,61,.55); }
+body.gfx-ultra .nav-btn.active::after{ animation:gfxUltraPulse 1.8s ease-in-out infinite; }
+@keyframes gfxUltraPulse{
+  0%,100%{ opacity:1;  box-shadow:0 0 12px rgba(255,160,50,.9); }
+  50%    { opacity:.6; box-shadow:0 0 20px rgba(255,160,50,1); }
+}
+
+/* -- 3.3 EXCLUSIVE PORTLETS: gold-ring glass, multi-layer shadows ------ */
+body.gfx-ultra .card,
+body.gfx-ultra .shift-card,
+body.gfx-ultra .settings-card,
+body.gfx-ultra .pl-card,
+body.gfx-ultra .stat-box,
+body.gfx-ultra .msumbox,
+body.gfx-ultra .person-card,
+body.gfx-ultra .tank-card{
+  background:linear-gradient(168deg, rgba(34,26,14,.62), rgba(10,8,5,.88)) !important;
+  border:1px solid rgba(255,180,61,.24) !important;
+  -webkit-backdrop-filter:blur(14px) saturate(145%); backdrop-filter:blur(14px) saturate(145%);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.07) inset,
+    0 0 0 1px rgba(255,180,61,.05),
+    0 28px 60px -30px rgba(0,0,0,.9),
+    0 10px 34px -20px rgba(255,150,40,.22) !important;
+  transition:transform .3s cubic-bezier(.2,.8,.2,1), box-shadow .3s, border-color .3s !important;
+}
+body.gfx-ultra .card:hover,
+body.gfx-ultra .shift-card:hover,
+body.gfx-ultra .settings-card:hover,
+body.gfx-ultra .pl-card:hover,
+body.gfx-ultra .person-card:hover{
+  transform:translateY(-4px) !important;
+  border-color:rgba(255,180,61,.55) !important;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.10) inset,
+    0 0 0 1px rgba(255,180,61,.14),
+    0 36px 80px -32px rgba(0,0,0,.95),
+    0 18px 50px -18px rgba(255,150,40,.42) !important;
+}
+body.gfx-ultra .card-head{
+  background:linear-gradient(90deg, rgba(255,180,61,.13), transparent 60%) !important;
+  border-bottom:1px solid rgba(255,180,61,.28) !important;
+}
+body.gfx-ultra.light-mode .card,
+body.gfx-ultra.light-mode .shift-card,
+body.gfx-ultra.light-mode .settings-card,
+body.gfx-ultra.light-mode .pl-card,
+body.gfx-ultra.light-mode .stat-box,
+body.gfx-ultra.light-mode .msumbox,
+body.gfx-ultra.light-mode .tank-card{
+  background:linear-gradient(168deg, rgba(255,252,244,.86), rgba(250,240,220,.93)) !important;
+  border:1px solid rgba(200,130,20,.35) !important;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.9) inset,
+    0 24px 50px -28px rgba(120,80,20,.45),
+    0 8px 30px -18px rgba(255,150,40,.25) !important;
+  -webkit-backdrop-filter:blur(var(--gx-blur,10px)) saturate(140%);
+  backdrop-filter:blur(var(--gx-blur,10px)) saturate(140%);
+}
+
+/* -- 3.4 EXCLUSIVE TABLES: neon-gold heads, glowing row hover ---------- */
+body.gfx-ultra .tbl th,
+body.gfx-ultra .xls-tbl th,
+body.gfx-ultra .ro-tbl th{
+  background:linear-gradient(180deg,#3a2506,#241502) !important;
+  color:#ffd27a !important;
+  border-bottom:2px solid rgba(255,180,61,.55) !important;
+  text-shadow:0 0 10px rgba(255,180,61,.35) !important;
+}
+body.gfx-ultra .tbl tbody tr:hover td,
+body.gfx-ultra .xls-tbl tbody tr:hover td,
+body.gfx-ultra .ro-tbl tr:hover td{
+  background:rgba(255,180,61,.10) !important;
+  box-shadow:inset 0 0 18px -10px rgba(255,180,61,.4);
+}
+
+/* -- 3.5 EXCLUSIVE BUTTONS: flowing gold gradient + shine sweep -------- */
+body.gfx-ultra .add-btn,
+body.gfx-ultra .btn-ok,
+body.gfx-ultra .fuel-add-btn{
+  background:linear-gradient(120deg,#f5872b,#ffb43d,#ffd27a,#ffb43d,#f5872b) !important;
+  background-size:280% 100% !important;
+  color:#1a1102 !important;
+  animation:gfxBtnFlow 7s ease-in-out infinite;
+  box-shadow:0 1px 0 rgba(255,255,255,.35) inset, 0 8px 26px -10px rgba(255,150,40,.55), 0 2px 8px rgba(0,0,0,.4) !important;
+}
+@keyframes gfxBtnFlow{ 0%,100%{ background-position:0% 0; } 50%{ background-position:100% 0; } }
+body.gfx-ultra .add-btn,
+body.gfx-ultra .btn-ok,
+body.gfx-ultra .pw-btn,
+body.gfx-ultra .save-btn,
+body.gfx-ultra .fuel-add-btn{
+  position:relative; overflow:hidden;
+  transition:transform .18s cubic-bezier(.2,.8,.2,1), box-shadow .25s !important;
+}
+body.gfx-ultra .add-btn::before,
+body.gfx-ultra .btn-ok::before,
+body.gfx-ultra .pw-btn::before,
+body.gfx-ultra .save-btn::before,
+body.gfx-ultra .fuel-add-btn::before{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(115deg, transparent 40%, rgba(255,255,255,.38) 50%, transparent 60%);
+  background-size:250% 100%; background-position:150% 0;
+  transition:background-position .55s ease;
+}
+body.gfx-ultra .add-btn:hover::before,
+body.gfx-ultra .btn-ok:hover::before,
+body.gfx-ultra .pw-btn:hover::before,
+body.gfx-ultra .save-btn:hover::before,
+body.gfx-ultra .fuel-add-btn:hover::before{ background-position:-50% 0; }
+body.gfx-ultra .add-btn:hover,
+body.gfx-ultra .btn-ok:hover,
+body.gfx-ultra .pw-btn:hover,
+body.gfx-ultra .save-btn:hover,
+body.gfx-ultra .fuel-add-btn:hover{
+  transform:translateY(-2px) scale(1.02) !important;
+  box-shadow:0 1px 0 rgba(255,255,255,.35) inset, 0 16px 38px -12px rgba(255,150,40,.75), 0 3px 10px rgba(0,0,0,.45) !important;
+}
+body.gfx-ultra .add-btn:active,
+body.gfx-ultra .btn-ok:active,
+body.gfx-ultra .pw-btn:active,
+body.gfx-ultra .save-btn:active,
+body.gfx-ultra .fuel-add-btn:active{ transform:scale(.96) !important; }
+body.gfx-ultra .save-btn{ box-shadow:0 8px 26px -10px rgba(255,150,40,.4), 0 2px 8px rgba(0,0,0,.4) !important; }
+
+/* -- 3.6 LIVING FUEL TANKS: waves, bubbles, glass caustics, glow ------- */
+body.gfx-ultra .tank-body{
+  border-color:rgba(255,200,110,.35) !important;
+  box-shadow:inset 0 2px 10px rgba(255,255,255,.12), inset 0 -10px 26px rgba(0,0,0,.5), 0 0 30px -8px rgba(255,160,50,.35) !important;
+}
+body.gfx-ultra .tank-wave{ display:block; filter:drop-shadow(0 0 8px rgba(255,255,255,.35)); }
+body.gfx-ultra .tank-wave.w1{ animation:tankWave 2.4s linear infinite !important; opacity:.95 !important; }
+body.gfx-ultra .tank-wave.w2{ animation:tankWave 3.6s linear infinite reverse !important; opacity:.55 !important; }
+body.gfx-ultra .tank-liquid::before{
+  background:linear-gradient(90deg, rgba(255,255,255,.26), transparent 35%, transparent 65%, rgba(0,0,0,.22));
+}
+body.gfx-ultra .tank-liquid::after{ animation:tankFlow 3s ease-in-out infinite; }
+/* rising micro-bubbles inside the liquid */
+body.gfx-ultra .tank-bubble{
+  display:block; position:absolute; bottom:-8px; width:6px; height:6px; border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, rgba(255,255,255,.95), rgba(255,255,255,.2) 60%, transparent 80%);
+  box-shadow:0 0 4px rgba(255,255,255,.5);
+  animation:gfxTankBubble calc(2.4s + var(--i) * .45s) ease-in infinite;
+  animation-delay:calc(var(--i) * .4s);
+}
+@keyframes gfxTankBubble{
+  0%  { transform:translateY(0) scale(.55);       opacity:0; }
+  12% { opacity:.9; }
+  88% { opacity:.25; }
+  100%{ transform:translateY(-165px) scale(1.15); opacity:0; }
+}
+/* moving glass caustic across the tank */
+body.gfx-ultra .tank-body::after{
+  content:""; position:absolute; inset:0; pointer-events:none; z-index:3;
+  background:linear-gradient(115deg, transparent 42%, rgba(255,255,255,.10) 50%, transparent 58%);
+  background-size:240% 100%;
+  animation:gfxTankGlass 5.5s ease-in-out infinite;
+}
+@keyframes gfxTankGlass{ 0%,100%{ background-position:130% 0; } 50%{ background-position:-30% 0; } }
+body.gfx-ultra .tank-pct{ text-shadow:0 2px 8px rgba(0,0,0,.7), 0 0 14px rgba(255,255,255,.35); }
+/* danger threshold: red heartbeat glow */
+body.gfx-ultra .tank-card.t-low .tank-body{
+  border-color:rgba(229,62,62,.7) !important;
+  animation:gfxTankDangerUltra 1.2s ease-in-out infinite;
+}
+@keyframes gfxTankDangerUltra{
+  0%,100%{ box-shadow:inset 0 2px 10px rgba(255,255,255,.12), inset 0 -10px 26px rgba(0,0,0,.5), 0 0 14px -2px rgba(229,62,62,.45); }
+  50%    { box-shadow:inset 0 2px 10px rgba(255,255,255,.12), inset 0 -10px 26px rgba(0,0,0,.5), 0 0 34px 4px rgba(229,62,62,.8); }
+}
+
+/* -- 3.7 HOLLYWOOD PROFIT & LOSS ---------------------------------------
+   Neon chart draw, glowing particles, breathing light pulses and a
+   silky 1.5s counter (tier-aware count-up JS adds .gfx-count-done). */
+body.gfx-ultra #pl-result{
+  background:linear-gradient(158deg, rgba(24,20,10,.6), rgba(8,7,4,.86)) !important;
+  border-color:rgba(255,180,61,.3) !important;
+  -webkit-backdrop-filter:blur(16px) saturate(145%); backdrop-filter:blur(16px) saturate(145%);
+}
+/* breathing light pulse layered over the card (avoids !important fights) */
+body.gfx-ultra #pl-result::after{
+  content:""; position:absolute; inset:-30%; z-index:1; pointer-events:none;
+  background:radial-gradient(50% 60% at 50% 38%, rgba(255,180,61,.12), transparent 70%);
+  animation:gfxPlPulse 5s ease-in-out infinite;
+}
+body.gfx-ultra #pl-result.pl-profit::after{ background:radial-gradient(50% 60% at 50% 38%, rgba(52,211,153,.16), transparent 70%); }
+body.gfx-ultra #pl-result.pl-loss::after{ background:radial-gradient(50% 60% at 50% 38%, rgba(251,113,133,.15), transparent 70%); }
+@keyframes gfxPlPulse{
+  0%,100%{ opacity:.35; transform:scale(1); }
+  50%    { opacity:1;   transform:scale(1.06); }
+}
+body.gfx-ultra .pl-aurora{ animation-duration:9s; filter:blur(48px); }
+body.gfx-ultra .pl-trend .pl-line{ stroke-width:3.5; animation:plDraw 2.4s cubic-bezier(.66,0,.34,1) forwards; }
+body.gfx-ultra #pl-result.pl-profit .pl-line{ filter:drop-shadow(0 0 6px rgba(16,185,129,.85)) drop-shadow(0 0 18px rgba(16,185,129,.5)); }
+body.gfx-ultra #pl-result.pl-loss .pl-line{ filter:drop-shadow(0 0 6px rgba(244,63,94,.85)) drop-shadow(0 0 18px rgba(244,63,94,.5)); }
+body.gfx-ultra .pl-trend .pl-dot{ animation:plDotPulse 1.6s ease-in-out infinite; }
+body.gfx-ultra .pl-arrow{ font-size:1.2rem; animation-duration:1.4s; filter:drop-shadow(0 0 8px currentColor); }
+body.gfx-ultra .pl-particle{ transform:scale(1.5); filter:drop-shadow(0 0 5px rgba(255,255,255,.6)) !important; }
+body.gfx-ultra #pl-result .pl-result-value{ letter-spacing:.5px; animation:plValueGlow 3.4s ease-in-out infinite; }
+body.gfx-ultra #pl-result .pl-result-value.gfx-count-done{
+  animation:gfxCountFlash .8s cubic-bezier(.2,.8,.2,1) 1, plValueGlow 3.4s ease-in-out .8s infinite;
+}
+@keyframes gfxCountFlash{
+  0%  { filter:brightness(1);   transform:scale(1); }
+  30% { filter:brightness(1.65); transform:scale(1.06); }
+  100%{ filter:brightness(1);   transform:scale(1); }
+}
+
+/* -- 3.8 3-D OCCASION ICONS: gold light, depth, parallax --------------- */
+body.gfx-ultra .occ-badge{
+  animation:gfxOcc3D 5s ease-in-out infinite;
+  filter:drop-shadow(0 4px 4px rgba(0,0,0,.5)) drop-shadow(0 0 12px rgba(255,200,80,.85)) drop-shadow(0 0 30px rgba(255,160,50,.4));
+  transition:transform .25s cubic-bezier(.2,.8,.2,1), filter .25s;
+  cursor:default;
+}
+body.gfx-ultra .occ-badge:hover{
+  animation-play-state:paused;
+  transform:perspective(240px) rotateY(26deg) scale(1.4);
+  filter:drop-shadow(0 6px 6px rgba(0,0,0,.55)) drop-shadow(0 0 18px rgba(255,210,100,1)) drop-shadow(0 0 44px rgba(255,170,60,.6));
+}
+@keyframes gfxOcc3D{
+  0%,100%{ transform:perspective(240px) rotateY(-16deg) translateY(0); }
+  25%    { transform:perspective(240px) rotateY(0deg)  translateY(-2px); }
+  50%    { transform:perspective(240px) rotateY(16deg) translateY(0); }
+  75%    { transform:perspective(240px) rotateY(0deg)  translateY(1px); }
+}
+/* watermark art: layered gold glow + mouse parallax (vars set by JS) */
+body.gfx-ultra .occ-art{
+  opacity:.42 !important;
+  animation:none;
+  transform:perspective(500px) rotateX(var(--occ-rx,0deg)) rotateY(var(--occ-ry,0deg));
+  transition:transform .18s ease-out;
+  filter:drop-shadow(0 6px 10px rgba(0,0,0,.55)) drop-shadow(0 0 16px var(--occ-3,#ffcf73)) drop-shadow(0 0 40px rgba(255,160,50,.35));
+}
+body.gfx-ultra .occ-art svg{ animation:gfxOccArtFloat 8s ease-in-out infinite; }
+@keyframes gfxOccArtFloat{
+  0%,100%{ transform:translateY(0) rotate(0deg) scale(1); }
+  50%    { transform:translateY(-8px) rotate(5deg) scale(1.08); }
+}
+
+/* -- 3.9 CINEMATIC OVERLAYS: modals, lock screen, toasts --------------- */
+body.gfx-ultra .modal-overlay{
+  background:rgba(3,4,8,.72) !important;
+  -webkit-backdrop-filter:blur(14px) saturate(130%); backdrop-filter:blur(14px) saturate(130%);
+}
+body.gfx-ultra .modal-overlay.open .modal,
+body.gfx-ultra .modal-overlay.open .sm-modal{
+  animation:gfxUltraModalIn .5s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes gfxUltraModalIn{
+  0%  { opacity:0; transform:scale(.94) translateY(10px); filter:blur(6px); }
+  100%{ opacity:1; transform:scale(1) translateY(0);      filter:blur(0); }
+}
+body.gfx-ultra .toast{
+  -webkit-backdrop-filter:blur(12px) saturate(130%); backdrop-filter:blur(12px) saturate(130%);
+  box-shadow:0 14px 40px -14px rgba(0,0,0,.8), 0 0 24px -8px rgba(255,150,40,.35);
+}
+body.gfx-ultra .ls-modal{ animation:ls-pop .5s cubic-bezier(.22,.8,.32,1), ls-glow 3s ease-in-out infinite .5s; }
+body.gfx-ultra .ls-tape{ animation:ls-stripes 2.2s linear infinite; }
+body.gfx-ultra .lock-box{
+  background:rgba(16,21,33,.82) !important;
+  -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+  animation:gfxUltraLockIn .8s cubic-bezier(.16,1,.3,1) both, gfxUltraLockBorder 6s ease-in-out infinite;
+}
+@keyframes gfxUltraLockIn{
+  0%  { opacity:0; transform:scale(.92) translateY(18px); }
+  100%{ opacity:1; transform:scale(1) translateY(0); }
+}
+@keyframes gfxUltraLockBorder{
+  0%,100%{ box-shadow:0 30px 70px -24px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.08), 0 0 0 1px rgba(255,180,61,.25); }
+  50%    { box-shadow:0 30px 70px -24px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.08), 0 0 26px 1px rgba(255,180,61,.5); }
+}
+
+/* -- 3.10 reduced motion: Ultra respects the OS setting ---------------- */
+@media (prefers-reduced-motion: reduce){
+  body.gfx-ultra #fxLayer,
+  body.gfx-ultra .header, body.gfx-ultra .top-banner, body.gfx-ultra .nav,
+  body.gfx-ultra .header-title, body.gfx-ultra .ls-brand-icon,
+  body.gfx-ultra .nav-btn.active::after,
+  body.gfx-ultra .add-btn, body.gfx-ultra .btn-ok, body.gfx-ultra .fuel-add-btn,
+  body.gfx-ultra .tank-wave, body.gfx-ultra .tank-bubble, body.gfx-ultra .tank-body::after,
+  body.gfx-ultra .tank-card.t-low .tank-body,
+  body.gfx-ultra #pl-result::after, body.gfx-ultra .pl-aurora,
+  body.gfx-ultra .pl-trend .pl-line, body.gfx-ultra .pl-trend .pl-dot, body.gfx-ultra .pl-arrow,
+  body.gfx-ultra #pl-result .pl-result-value,
+  body.gfx-ultra .occ-badge, body.gfx-ultra .occ-art svg,
+  body.gfx-ultra .modal-overlay.open .modal, body.gfx-ultra .modal-overlay.open .sm-modal,
+  body.gfx-ultra .ls-modal, body.gfx-ultra .ls-tape, body.gfx-ultra .lock-box{ animation:none !important; }
+  body.gfx-ultra .pl-trend .pl-line{ stroke-dashoffset:0 !important; }
+}
+</style>
 </head>
 <body>
+<script id="gfx-tier-boot">
+/* apply the saved graphics tier BEFORE first paint (no flash of the
+   wrong tier). The full engine lives in #gfx-quality-js near the end
+   of <body>; legacy saved values low/medium migrate here too. */
+(function(){
+  var t = 'performance';
+  try{
+    t = localStorage.getItem('pumpGfxMode');
+    t = ({low:'performance', medium:'standard'})[t] || t;
+    if(t !== 'standard' && t !== 'ultra') t = 'performance';
+  }catch(e){ t = 'performance'; }
+  document.body.classList.add('gfx-' + t);
+  window.__gfxTier = t;
+})();
+</script>
 
 <div id="siteBg"></div>
 
@@ -3590,27 +4100,27 @@ body[class*="occ-"] .header::after{
   <div class="settings-card" id="gfx-quality-card" style="border-color:var(--purple)">
     <div class="settings-title">⚡ کیفیت گرافیک</div>
     <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
-      سه حالت کاملاً مستقل دارید. <b>Performance Mode</b> («سبک»): صفر انیمیشن، صفر افکت سنگین، حداکثر سرعت و کمترین فشار روی باتری/پردازنده — برای لپ‌تاپ و گوشی ضعیف (پیش‌فرض همه). <b>Standard Mode</b> («متوسط»): جلوه‌ی شیشه‌ای، هاور و ترنزیشن‌های ملایم، در حد یک سایت مدرن. <b>Ultra Premium</b> («فوق‌العاده»): همه‌چیز به‌علاوه پس‌زمینه‌ی ذره‌ای تعاملی، پارالاکس همراه با موس، نورپردازی پویا و ترنزیشن سینمایی — برای کامپیوتر یا گوشی قوی.
+      سه حالت کاملاً مستقل با سه طراحی از زمین تا آسمان متفاوت. <b>Performance</b> («سبک»): کاملاً فلت — صفر انیمیشن، صفر ترنزیشن، بدون افکت شیشه‌ای؛ جدول‌ها و آیکون‌های ساده و بیشترین سرعت (پیش‌فرض). <b>Standard</b> («متوسط»): گلس‌مورفیزم استاندارد، ترنزیشن‌های ملایم و هاورهای ساده؛ نوار مخازن متحرک با هشدار قرمز. <b>Ultra Premium</b> («فوق‌العاده»): تم لاکچری و سینمایی — گرادینت‌های متحرک، نورپردازی پویا با موس، مخازن با مایع زنده (موج و حباب)، نمودار نئونی با ذرات، آیکون‌های سه‌بعدی مناسبتی و صداهای لوکس رابط کاربری.
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button type="button" class="gfx-mode-btn" data-gfx="low" onclick="setGraphicsMode('low')" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🍃 Performance — سبک<br><span style="font-weight:600;font-size:0.74rem">بدون هیچ انیمیشنی، سریع‌ترین</span></button>
-      <button type="button" class="gfx-mode-btn" data-gfx="medium" onclick="setGraphicsMode('medium')" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--purple);background:transparent;color:var(--purple);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">✨ Standard — متوسط<br><span style="font-weight:600;font-size:0.74rem">جلوه‌ی شیشه‌ای و انیمیشن ملایم</span></button>
-      <button type="button" class="gfx-mode-btn" data-gfx="ultra" onclick="confirmUltraMode()" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🎮 Ultra Premium — فوق‌العاده<br><span style="font-weight:600;font-size:0.74rem">پس‌زمینه تعاملی + پارالاکس، برای دستگاه قوی</span></button>
+      <button type="button" class="gfx-mode-btn" data-gfx="performance" onclick="setGraphicsMode('performance')" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🍃 Performance — سبک<br><span style="font-weight:600;font-size:0.74rem">کاملاً فلت، صفر انیمیشن، سریع‌ترین</span></button>
+      <button type="button" class="gfx-mode-btn" data-gfx="standard" onclick="setGraphicsMode('standard')" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--purple);background:transparent;color:var(--purple);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">✨ Standard — متوسط<br><span style="font-weight:600;font-size:0.74rem">شیشه‌ای با ترنزیشن‌های ملایم</span></button>
+      <button type="button" class="gfx-mode-btn" data-gfx="ultra" onclick="confirmUltraMode()" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🎬 Ultra Premium — فوق‌العاده<br><span style="font-weight:600;font-size:0.74rem">سینمایی: مایع زنده، ذرات نئونی، پارالاکس و صدا</span></button>
     </div>
   </div>
 
-  <!-- تأیید فعال‌سازی گرافیک فوق‌العاده -->
+  <!-- پاپ‌آپ هشدار فعال‌سازی Ultra Premium -->
   <div class="modal-overlay" id="gfxUltraConfirmModal">
-    <div class="sm-modal" style="max-width:380px;text-align:center;position:relative;overflow:hidden;padding-top:22px">
+    <div class="sm-modal">
       <div class="gfx-confirm-bar" style="top:0"></div>
-      <div style="font-size:2.2rem;margin:4px 0 8px">🎮✨</div>
-      <h3 style="margin-bottom:10px;color:var(--accent)">فعال‌سازی گرافیک فوق‌العاده؟</h3>
-      <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:18px;padding:0 6px">
-        این حالت جذاب‌ترین جلوه‌های بصری (پس‌زمینه‌ی تعاملی، پارالاکس، نورپردازی پویا) را روشن می‌کند. روی کامپیوتر یا گوشی <b>قوی</b> نرم و لذت‌بخش است، اما ممکن است روی دستگاه‌های ضعیف باعث کندی یا داغ‌شدن شود. مطمئنید می‌خواهید فعال شود؟
+      <div class="gfx-um-orb" aria-hidden="true">🎬</div>
+      <h3 class="gfx-um-title">فعال‌سازی حالت فوق‌العاده (Ultra Premium)</h3>
+      <div class="gfx-um-text">
+        آیا از فعال‌سازی حالت فوق‌العاده اطمینان دارید؟ این حالت دارای گرافیک سینمایی سنگین است و ممکن است باعث بالا رفتن دمای سیستم یا دستگاه شما شود.
       </div>
-      <div class="sm-btns" style="display:flex;gap:10px;justify-content:center">
-        <button class="btn-ok" onclick="_confirmGfxUltra()">✔ بله، فعال کن</button>
-        <button class="btn-cancel" onclick="closeModal('gfxUltraConfirmModal')">انصراف</button>
+      <div class="gfx-um-btns">
+        <button type="button" class="gfx-um-yes" onclick="_confirmGfxUltra()">✨ تایید و فعال‌سازی</button>
+        <button type="button" class="gfx-um-no" onclick="closeModal('gfxUltraConfirmModal')">انصراف</button>
       </div>
       <div class="gfx-confirm-bar" style="top:auto;bottom:0"></div>
     </div>
@@ -12657,8 +13167,12 @@ document.addEventListener('click', function(e) {
       curX += (targetX - curX) * 0.06;
       curY += (targetY - curY) * 0.06;
       for(var i = 0; i < blobs.length; i++){
+        /* written as CSS vars (not an inline transform) because #perf-fix
+           pins .fx-aurora's transform with !important — the Ultra tier CSS
+           reads these vars back into its own transform declaration. */
         var depth = (i + 1) * 7;
-        blobs[i].style.transform = 'translate3d(' + (curX * depth) + 'px,' + (curY * depth) + 'px,0)';
+        blobs[i].style.setProperty('--gfx-px', (curX * depth) + 'px');
+        blobs[i].style.setProperty('--gfx-py', (curY * depth) + 'px');
       }
       document.documentElement.style.setProperty('--gfx-mx', (50 + curX * 40) + '%');
       document.documentElement.style.setProperty('--gfx-my', (50 + curY * 40) + '%');
@@ -12669,7 +13183,10 @@ document.addEventListener('click', function(e) {
   function stopParallax(){
     if(_pxMouseHandler){ window.removeEventListener('mousemove', _pxMouseHandler); _pxMouseHandler = null; }
     if(_pxParallaxRAF){ cancelAnimationFrame(_pxParallaxRAF); _pxParallaxRAF = null; }
-    [].slice.call(document.querySelectorAll('.fx-aurora')).forEach(function(b){ b.style.transform = ''; });
+    [].slice.call(document.querySelectorAll('.fx-aurora')).forEach(function(b){
+      b.style.removeProperty('--gfx-px');
+      b.style.removeProperty('--gfx-py');
+    });
     _gfxCursorSeen = false;
   }
   /* Exposed so #gfx-quality-js can start/stop these purely from the
@@ -12801,10 +13318,13 @@ document.addEventListener('click', function(e) {
     var liquidGrad = 'linear-gradient(180deg,'+pal.from+','+pal.to+')';
 
     return ''
-      + '<div class="tank-card">'
+      /* t-<status> class drives the tier CSS (red danger pulse in
+         Standard/Ultra); background-color is the flat fallback that
+         Performance mode shows once it strips the gradient image. */
+      + '<div class="tank-card t-'+status+'">'
         + '<div class="tank-visual">'
           + '<div class="tank-body">'
-            + '<div class="tank-liquid" style="background:'+liquidGrad+'">'
+            + '<div class="tank-liquid" style="background-color:'+pal.to+';background-image:'+liquidGrad+'">'
               + '<div class="tank-wave w1"></div>'
               + '<div class="tank-wave w2"></div>'
               + '<span class="tank-bubble" style="--i:0;left:18%"></span>'
@@ -13410,18 +13930,38 @@ document.addEventListener('click', function(e) {
      never altered). English digits + thousands separators preserved. */
   function countUp(el, to, prefix, suffix, finalTxt, prev){
     if(isNaN(prev)) prev = 0;
-    if(prev === to){ el.setAttribute('data-uxval', String(to)); return; }
-    var dur = 620, t0 = null;
+    /* tier-aware counters (see #gfx-quality-js):
+       Performance = no animation at all, the final number is printed
+       instantly; Standard = brisk 620ms easeOutCubic; Ultra = silky
+       1.5s easeOutExpo plus a glow flash (.gfx-count-done) at the end. */
+    var tier = window.__gfxTier || 'performance';
+    if(tier === 'performance' || prev === to){
+      el.textContent = finalTxt;
+      el.setAttribute('data-uxval', String(to));
+      return;
+    }
+    var dur = tier === 'ultra' ? 1500 : 620, t0 = null;
     el._uxAnimating = true;
     if(el._uxraf) cancelAnimationFrame(el._uxraf);
+    function ease(k){
+      if(tier === 'ultra') return k === 1 ? 1 : 1 - Math.pow(2, -10 * k); // easeOutExpo
+      return 1 - Math.pow(1 - k, 3);                                     // easeOutCubic
+    }
     function step(ts){
       if(t0 === null) t0 = ts;
       var k = Math.min(1, (ts - t0) / dur);
-      var e = 1 - Math.pow(1 - k, 3); // easeOutCubic
-      var v = Math.round(prev + (to - prev) * e);
+      var v = Math.round(prev + (to - prev) * ease(k));
       el.textContent = prefix + Number(v).toLocaleString('en-US') + suffix;
       if(k < 1){ el._uxraf = requestAnimationFrame(step); }
-      else { el.textContent = finalTxt; el.setAttribute('data-uxval', String(to)); el._uxAnimating = false; }
+      else {
+        el.textContent = finalTxt; el.setAttribute('data-uxval', String(to)); el._uxAnimating = false;
+        if(tier === 'ultra'){
+          el.classList.remove('gfx-count-done');
+          void el.offsetWidth;
+          el.classList.add('gfx-count-done');
+          setTimeout(function(){ el.classList.remove('gfx-count-done'); }, 900);
+        }
+      }
     }
     el._uxraf = requestAnimationFrame(step);
   }
@@ -13479,110 +14019,196 @@ document.addEventListener('click', function(e) {
 
 <script id="gfx-quality-js">
 /* ============================================================
-   GRAPHICS QUALITY — ADDITIVE JS. Own localStorage key
-   ('pumpGfxMode'), does not touch DB/save() or any business logic.
-   'low' (default) = current lightweight look, no animation at all.
-   'medium' = adds body.gfx-medium (glass-blur + the ambient
-   animations that used to always run). 'ultra' = adds BOTH
-   body.gfx-medium and body.gfx-ultra (everything medium has, plus
-   extra premium hover/shine/glow polish) — see #gfx-quality-mode.
+   GRAPHICS TIER ENGINE — three fully separate tiers.
+     TIER 1  body.gfx-performance  flat, zero motion (default)
+     TIER 2  body.gfx-standard     glass + gentle motion
+     TIER 3  body.gfx-ultra        cinematic luxury: canvas FX,
+                                   mouse parallax, UI sounds,
+                                   3-D occasion parallax
+   Storage: localStorage 'pumpGfxMode' = performance|standard|ultra
+   (legacy values 'low'/'medium' migrate automatically).
+   Exactly ONE gfx-* class is ever on <body>; the matching CSS
+   lives in #gfx-tier-performance / -standard / -ultra at the end
+   of <head>. No business logic, DB or other keys are touched.
    ============================================================ */
 (function(){
   "use strict";
-  var MODES = ['low','medium','ultra'];
-  function apply(mode){
-    document.body.classList.toggle('gfx-medium', mode === 'medium' || mode === 'ultra');
-    document.body.classList.toggle('gfx-ultra', mode === 'ultra');
-    var btns = document.querySelectorAll('.gfx-mode-btn');
-    for(var i=0;i<btns.length;i++){
-      btns[i].classList.toggle('active', btns[i].getAttribute('data-gfx') === mode);
-    }
-    /* Ultra's interactive canvas particles + mouse parallax only ever run
-       while Ultra is actually selected — switching to Performance/Standard
-       fully stops them (see window._gfxStartUltraFx/_gfxStopUltraFx in the
-       FX engine script), so no background cost lingers after switching away. */
-    if(mode === 'ultra'){ if(typeof window._gfxStartUltraFx === 'function') window._gfxStartUltraFx(); }
-    else { if(typeof window._gfxStopUltraFx === 'function') window._gfxStopUltraFx(); }
+  var TIERS = ['performance','standard','ultra'];
+  var LEGACY = { low:'performance', medium:'standard' };
+  function normalize(v){
+    v = LEGACY[v] || v;
+    return TIERS.indexOf(v) !== -1 ? v : 'performance';
   }
+
+  /* ---------- TIER 3 MODULE: luxury UI sounds (WebAudio, no files) ----
+     A feather-light hover "tick" and a soft two-note click "pop" —
+     quiet, throttled and low-pass by design so they stay pleasant.
+     The AudioContext is only created on a real user gesture. */
+  var UltraAudio = (function(){
+    var ctx = null, on = false, lastHover = 0, lastClick = 0;
+    function ac(create){
+      if(!ctx && create){
+        try{ ctx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ return null; }
+      }
+      if(ctx && ctx.state === 'suspended'){ try{ ctx.resume(); }catch(e){} }
+      return ctx;
+    }
+    function tone(freq, freqEnd, dur, vol, when){
+      var c = ac(false); if(!c) return;
+      var t0 = c.currentTime + (when || 0);
+      var o = c.createOscillator(), g = c.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(freq, t0);
+      if(freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd, t0 + dur);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.linearRampToValueAtTime(vol, t0 + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(c.destination);
+      o.start(t0); o.stop(t0 + dur + 0.05);
+    }
+    var HOVER_SEL = 'button, .nav-btn, .gfx-mode-btn, .person-card, .theme-toggle, .lock-btn';
+    function overH(e){
+      var t = e.target && e.target.closest && e.target.closest(HOVER_SEL);
+      if(!t) return;
+      var rel = e.relatedTarget;
+      if(rel && t.contains(rel)) return;             // moving inside the same control
+      var n = Date.now(); if(n - lastHover < 120) return; lastHover = n;
+      tone(1180, 1560, 0.07, 0.012);                 // soft high tick
+    }
+    function downH(e){
+      ac(true);                                      // unlock audio on gesture
+      var t = e.target && e.target.closest && e.target.closest('button, .nav-btn, .person-card');
+      if(!t) return;
+      var n = Date.now(); if(n - lastClick < 80) return; lastClick = n;
+      tone(660, 880, 0.09, 0.022);                   // velvet click…
+      tone(1320, null, 0.06, 0.010, 0.02);           // …with a tiny sparkle
+    }
+    return {
+      start: function(){
+        if(on) return; on = true;
+        document.addEventListener('pointerover', overH, true);
+        document.addEventListener('pointerdown', downH, true);
+      },
+      stop: function(){
+        if(!on) return; on = false;
+        document.removeEventListener('pointerover', overH, true);
+        document.removeEventListener('pointerdown', downH, true);
+      },
+      chime: function(){                             // Ultra activation fanfare
+        ac(true);
+        [523.25, 659.25, 783.99, 1046.5].forEach(function(f, i){ tone(f, null, 0.55, 0.045, i * 0.07); });
+      },
+      whoosh: function(){ tone(300, 720, 0.17, 0.028); }
+    };
+  })();
+
+  /* ---------- TIER 3 MODULE: 3-D parallax tilt for the occasion art --
+     Moving the mouse across the top banner tilts the seasonal artwork
+     in 3-D via the --occ-rx/--occ-ry vars read by #gfx-tier-ultra. */
+  var OccTilt = (function(){
+    var on = false, host = null;
+    function art(){ return document.getElementById('occArt'); }
+    function move(e){
+      var a = art(); if(!a || !host) return;
+      var r = host.getBoundingClientRect();
+      var cx = (e.clientX - r.left) / Math.max(r.width, 1) * 2 - 1;   // -1..1
+      var cy = (e.clientY - r.top) / Math.max(r.height, 1) * 2 - 1;
+      a.style.setProperty('--occ-ry', (cx * 22) + 'deg');
+      a.style.setProperty('--occ-rx', (-cy * 14) + 'deg');
+    }
+    function reset(){
+      var a = art(); if(!a) return;
+      a.style.setProperty('--occ-ry', '0deg');
+      a.style.setProperty('--occ-rx', '0deg');
+    }
+    return {
+      start: function(){
+        if(on) return;
+        host = document.querySelector('.top-banner'); if(!host) return;
+        on = true;
+        host.addEventListener('pointermove', move);
+        host.addEventListener('pointerleave', reset);
+      },
+      stop: function(){
+        if(!on) return; on = false;
+        if(host){ host.removeEventListener('pointermove', move); host.removeEventListener('pointerleave', reset); }
+        reset();
+      }
+    };
+  })();
+
+  /* ---------- tier switch core ---------- */
+  function apply(tier, rerender){
+    var b = document.body;
+    b.classList.toggle('gfx-performance', tier === 'performance');
+    b.classList.toggle('gfx-standard',   tier === 'standard');
+    b.classList.toggle('gfx-ultra',      tier === 'ultra');
+    window.__gfxTier = tier;
+    var btns = document.querySelectorAll('.gfx-mode-btn');
+    for(var i = 0; i < btns.length; i++){
+      btns[i].classList.toggle('active', normalize(btns[i].getAttribute('data-gfx')) === tier);
+    }
+    /* Ultra's engines (canvas particles, mouse parallax, sounds, 3-D
+       occasion tilt) only ever run while Ultra is actually selected —
+       switching away fully stops them, no background cost lingers. */
+    if(tier === 'ultra'){
+      if(typeof window._gfxStartUltraFx === 'function') window._gfxStartUltraFx();
+      UltraAudio.start();
+      OccTilt.start();
+    } else {
+      if(typeof window._gfxStopUltraFx === 'function') window._gfxStopUltraFx();
+      UltraAudio.stop();
+      OccTilt.stop();
+    }
+    /* tier-dependent components re-render so the switch changes them
+       inside and out (tank bars, profit/loss visuals) */
+    if(rerender){
+      try{ if(typeof window.renderFuelTanks === 'function') window.renderFuelTanks(); }catch(e){}
+      try{ if(typeof window.calcPL === 'function' && document.getElementById('pl-net')) window.calcPL(); }catch(e){}
+    }
+  }
+
   window.setGraphicsMode = function(mode){
-    if(MODES.indexOf(mode) === -1) mode = 'low';
-    try{ localStorage.setItem('pumpGfxMode', mode); }catch(e){}
-    apply(mode);
+    var tier = normalize(mode);
+    try{ localStorage.setItem('pumpGfxMode', tier); }catch(e){}
+    apply(tier, true);
     if(typeof showToast === 'function'){
-      var msg = mode === 'ultra' ? '✅ گرافیک فوق‌العاده فعال شد — جذاب‌ترین حالت'
-              : mode === 'medium' ? '✅ گرافیک متوسط فعال شد'
-              : '✅ گرافیک سبک فعال شد — سریع‌تر و خنک‌تر';
-      var color = mode === 'ultra' ? '#ffb43d' : mode === 'medium' ? '#8b7bff' : '#38a169';
+      var msg = tier === 'ultra'    ? '🎬 Ultra Premium فعال شد — گرافیک سینمایی لوکس'
+              : tier === 'standard' ? '✨ Standard فعال شد — شیشه‌ای با انیمیشن ملایم'
+              :                       '🍃 Performance فعال شد — فلت، بدون انیمیشن، فوق سریع';
+      var color = tier === 'ultra' ? '#ffb43d' : tier === 'standard' ? '#8b7bff' : '#38a169';
       showToast(msg, color);
     }
   };
-  function boot(){
-    var saved = (function(){ try{ return localStorage.getItem('pumpGfxMode'); }catch(e){ return null; } })();
-    apply(MODES.indexOf(saved) !== -1 ? saved : 'low');
-  }
-  if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', boot); }
-  else { boot(); }
 
-  /* Ultra Premium needs an explicit "yes, I understand" before it turns on —
-     it's the one mode that can meaningfully load a weak device, so we warn
-     first instead of switching immediately like the other two modes do. */
+  /* Ultra Premium needs an explicit "yes, I understand" before it turns
+     on — it is the one mode that can heat up a weak device, so a luxe
+     warning modal opens first instead of switching immediately. */
   window.confirmUltraMode = function(){
+    if((window.__gfxTier || 'performance') === 'ultra') return;   // already on
     var m = document.getElementById('gfxUltraConfirmModal');
     if(m) m.classList.add('open');
   };
   window._confirmGfxUltra = function(){
     if(typeof closeModal === 'function') closeModal('gfxUltraConfirmModal');
     else { var m = document.getElementById('gfxUltraConfirmModal'); if(m) m.classList.remove('open'); }
-    setGraphicsMode('ultra');
+    window.setGraphicsMode('ultra');
+    UltraAudio.chime();
   };
 
-  /* ---------- Ultra-only sound design ----------
-     Two short synthesized tones (Web Audio oscillators, no audio files):
-     a soft rising chime when Ultra is confirmed, and an even softer
-     "whoosh" tied to the cinematic modal-open animation — which only
-     ever plays under gfx-ultra (see gfxUltraModalIn in #gfx-quality-mode),
-     so no extra mode check is needed here. Both are quiet and brief by
-     design so they never become the "annoying" kind of UI sound. */
-  var _gfxAudioCtx = null;
-  function _gfxAudio(){
-    if(!_gfxAudioCtx){
-      try{ _gfxAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ return null; }
-    }
-    if(_gfxAudioCtx && _gfxAudioCtx.state === 'suspended'){ _gfxAudioCtx.resume(); }
-    return _gfxAudioCtx;
-  }
-  function _gfxTone(freq, start, dur, vol){
-    var ctx = _gfxAudio(); if(!ctx) return;
-    var t0 = ctx.currentTime + start;
-    var osc = ctx.createOscillator(), gain = ctx.createGain();
-    osc.type = 'sine'; osc.frequency.setValueAtTime(freq, t0);
-    gain.gain.setValueAtTime(0.0001, t0);
-    gain.gain.linearRampToValueAtTime(vol, t0 + 0.03);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(t0); osc.stop(t0 + dur + 0.05);
-  }
-  function playUltraChime(){
-    [523.25, 659.25, 783.99].forEach(function(f, i){ _gfxTone(f, i * 0.06, 0.5, 0.05); });
-  }
-  var _gfxLastWhoosh = 0;
-  function playUltraWhoosh(){
-    var now = Date.now(); if(now - _gfxLastWhoosh < 250) return; _gfxLastWhoosh = now;
-    var ctx = _gfxAudio(); if(!ctx) return;
-    var t0 = ctx.currentTime;
-    var osc = ctx.createOscillator(), gain = ctx.createGain();
-    osc.type = 'sine'; osc.frequency.setValueAtTime(320, t0); osc.frequency.exponentialRampToValueAtTime(680, t0 + 0.15);
-    gain.gain.setValueAtTime(0.0001, t0);
-    gain.gain.linearRampToValueAtTime(0.035, t0 + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18);
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(t0); osc.stop(t0 + 0.22);
-  }
+  /* cinematic modal entrance ⇒ soft whoosh (that animation name only
+     exists under body.gfx-ultra, so no extra tier check is needed) */
   document.addEventListener('animationstart', function(e){
-    if(e.animationName === 'gfxUltraModalIn') playUltraWhoosh();
+    if(e.animationName === 'gfxUltraModalIn') UltraAudio.whoosh();
   });
-  var _origConfirmGfxUltra = window._confirmGfxUltra;
-  window._confirmGfxUltra = function(){ _origConfirmGfxUltra(); playUltraChime(); };
+
+  function boot(){
+    var tier = 'performance';
+    try{ tier = normalize(localStorage.getItem('pumpGfxMode')); }catch(e){}
+    apply(tier, false);
+  }
+  if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', boot); }
+  else { boot(); }
 })();
 </script>
 
