@@ -2913,7 +2913,13 @@ body.gfx-ultra .top-banner{
   border-color:color-mix(in srgb, var(--accent) 40%, transparent) !important;
   animation:gfxUltraChrome 14s ease-in-out infinite;
   box-shadow:0 1px 0 rgba(255,255,255,.05) inset, 0 14px 40px -18px rgba(0,0,0,.8), 0 0 26px -6px rgba(255,150,40,.20) !important;
-  -webkit-backdrop-filter:blur(8px) saturate(130%); backdrop-filter:blur(8px) saturate(130%);
+  /* PERFORMANCE: no backdrop-filter here — .header is position:sticky, so a
+     blurred sticky element forces the compositor to re-blur on every scroll
+     frame. That + the animated gradient above was almost certainly the real
+     cause of the reported lag and the blank/unpainted tiles during scroll on
+     real phones (headless CPU throttling never stresses GPU compositing the
+     same way, so it never showed up in this session's testing). The animated
+     gradient alone still reads as "cinematic" without the constant re-blur. */
 }
 /* light mode: a deep accent-coloured band (matches the app's light chrome) */
 body.gfx-ultra.light-mode .header,
@@ -4508,7 +4514,7 @@ body.gfx-ultra .lock-box{
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button type="button" class="gfx-mode-btn" data-gfx="performance" onclick="setGraphicsMode('performance')" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🍃 Performance — سبک<br><span style="font-weight:600;font-size:0.74rem">کاملاً فلت، صفر انیمیشن، سریع‌ترین</span></button>
       <button type="button" class="gfx-mode-btn" data-gfx="standard" onclick="setGraphicsMode('standard')" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--purple);background:transparent;color:var(--purple);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">✨ Standard — متوسط<br><span style="font-weight:600;font-size:0.74rem">شیشه‌ای با ترنزیشن‌های ملایم</span></button>
-      <button type="button" class="gfx-mode-btn" data-gfx="ultra" onclick="confirmUltraMode()" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🎬 Ultra Premium — فوق‌العاده<br><span style="font-weight:600;font-size:0.74rem">سینمایی: مایع زنده، ذرات نئونی، پارالاکس و صدا</span></button>
+      <button type="button" class="gfx-mode-btn" data-gfx="ultra" onclick="confirmUltraMode()" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🎬 Ultra Premium — فوق‌العاده<br><span style="font-weight:600;font-size:0.74rem">سینمایی: مایع زنده، ذرات نئونی، پارالاکس با موس</span></button>
     </div>
   </div>
 
