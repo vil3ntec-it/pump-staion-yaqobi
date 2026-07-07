@@ -2217,7 +2217,7 @@ body[class*="theme-"]{
 .theme-row{ display:flex; gap:10px; flex-wrap:wrap; }
 .theme-swatch{ display:flex; flex-direction:column; align-items:center; gap:6px; padding:8px;
   border:1.5px solid var(--border); border-radius:12px; background:var(--dark); cursor:pointer;
-  font-family:'Vazirmatn',sans-serif; min-width:84px;
+  font-family:'Vazirmatn',sans-serif; width:92px; flex:0 0 92px; box-sizing:border-box;
   transition:transform .16s cubic-bezier(.2,.8,.2,1), border-color .2s, box-shadow .2s; }
 .theme-swatch:hover{ transform:translateY(-3px); border-color:var(--accent); }
 .theme-swatch:active{ transform:scale(.96); }
@@ -2225,7 +2225,8 @@ body[class*="theme-"]{
   overflow:hidden; box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); }
 .theme-swatch .ts-dot{ position:absolute; left:7px; bottom:7px; width:16px; height:16px; border-radius:50%;
   box-shadow:0 0 0 2px rgba(255,255,255,.25), 0 2px 6px rgba(0,0,0,.4); }
-.theme-swatch .ts-name{ font-size:0.72rem; color:var(--muted); font-weight:600; white-space:nowrap; }
+.theme-swatch .ts-name{ font-size:0.72rem; color:var(--muted); font-weight:600; white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; max-width:100%; }
 .theme-swatch.active{ border-color:var(--accent); box-shadow:0 0 0 2px var(--accent), 0 6px 18px -6px rgba(0,0,0,.5); }
 .theme-swatch.active .ts-name{ color:var(--accent); }
 
@@ -2414,7 +2415,11 @@ body[class*="occ-"] .header::after{
   color:var(--occ-3); animation:occDrift 8s ease-in-out infinite;
 }
 .occ-art svg{ width:100%; height:100%; display:block; }
-@media (min-width:769px){ .occ-art{ width:118px; height:118px; margin-top:-59px; right:2%; opacity:.11; } }
+/* sized to fit inside .top-banner's own height (~61px on desktop) — it used
+   to be 118px tall inside a banner with overflow:hidden, so ~half of the
+   artwork was silently clipped away and the seasonal icon never actually
+   read as recognizable art at any graphics tier */
+@media (min-width:769px){ .occ-art{ width:52px; height:52px; margin-top:-26px; right:2%; opacity:.16; } }
 @keyframes occDrift{
   0%,100%{ transform:translateY(0) rotate(0deg); }
   50%{ transform:translateY(-5px) rotate(3deg); }
@@ -14414,32 +14419,58 @@ document.addEventListener('click', function(e) {
   })();
 
   /* ---------- TIER 3 MODULE: living nav illustrations ----------------
-     Swaps each nav button's static #ic-* line icon for its animated
-     #uic-* twin (SMIL micro-illustrations in #gfxUltraIconSprite) while
-     Ultra is active, and restores the originals on the way out. */
+     Swaps a nav button's static #ic-* line icon for its animated #uic-*
+     twin (SMIL micro-illustrations in #gfxUltraIconSprite) — but ONLY for
+     the active section's button, plus whichever button is momentarily
+     hovered. Swapping all ~11 buttons at once meant ~25-30 SMIL timelines
+     running forever in the background, which is what made Ultra mode
+     laggy (and reportedly crash) on real phones; animating just the one
+     or two icons the user is actually looking at keeps the "living icon"
+     feel with a fraction of the cost. */
   var UltraNavIcons = (function(){
-    var swapped = false;
-    function each(fn){
-      var us = document.querySelectorAll('.nav .nav-btn use');
-      for(var i = 0; i < us.length; i++) fn(us[i]);
+    var on = false, hoverH = null, outH = null, observer = null;
+    function use(btn){ return btn.querySelector('use'); }
+    function swapIn(u){
+      var h = u.getAttribute('href');
+      if(!h || h.indexOf('#ic-') !== 0) return;
+      if(!document.getElementById('uic-' + h.slice(4))) return;
+      u.setAttribute('data-gfx-orig', h);
+      u.setAttribute('href', '#uic-' + h.slice(4));
+    }
+    function swapOut(u){
+      var o = u.getAttribute('data-gfx-orig');
+      if(o){ u.setAttribute('href', o); u.removeAttribute('data-gfx-orig'); }
+    }
+    function syncActive(){
+      var btns = document.querySelectorAll('.nav .nav-btn');
+      for(var i = 0; i < btns.length; i++){
+        var u = use(btns[i]); if(!u) continue;
+        if(btns[i].classList.contains('active')) swapIn(u);
+        else if(!btns[i].matches(':hover')) swapOut(u);
+      }
     }
     return {
       start: function(){
-        if(swapped) return; swapped = true;
-        each(function(u){
-          var h = u.getAttribute('href');
-          if(!h || h.indexOf('#ic-') !== 0) return;
-          if(!document.getElementById('uic-' + h.slice(4))) return;
-          u.setAttribute('data-gfx-orig', h);
-          u.setAttribute('href', '#uic-' + h.slice(4));
-        });
+        if(on) return; on = true;
+        syncActive();
+        hoverH = function(e){ var b = e.target.closest && e.target.closest('.nav .nav-btn'); if(b){ var u = use(b); if(u) swapIn(u); } };
+        outH = function(e){ var b = e.target.closest && e.target.closest('.nav .nav-btn'); if(b && !b.classList.contains('active')){ var u = use(b); if(u) swapOut(u); } };
+        document.addEventListener('mouseover', hoverH);
+        document.addEventListener('mouseout', outH);
+        var nav = document.querySelector('.nav');
+        if(nav && typeof MutationObserver === 'function'){
+          observer = new MutationObserver(syncActive);
+          observer.observe(nav, { attributes:true, attributeFilter:['class'], subtree:true });
+        }
       },
       stop: function(){
-        if(!swapped) return; swapped = false;
-        each(function(u){
-          var o = u.getAttribute('data-gfx-orig');
-          if(o){ u.setAttribute('href', o); u.removeAttribute('data-gfx-orig'); }
-        });
+        if(!on) return; on = false;
+        if(hoverH) document.removeEventListener('mouseover', hoverH);
+        if(outH) document.removeEventListener('mouseout', outH);
+        hoverH = outH = null;
+        if(observer){ observer.disconnect(); observer = null; }
+        var us = document.querySelectorAll('.nav .nav-btn use');
+        for(var i = 0; i < us.length; i++) swapOut(us[i]);
       }
     };
   })();
