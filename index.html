@@ -2217,7 +2217,7 @@ body[class*="theme-"]{
 .theme-row{ display:flex; gap:10px; flex-wrap:wrap; }
 .theme-swatch{ display:flex; flex-direction:column; align-items:center; gap:6px; padding:8px;
   border:1.5px solid var(--border); border-radius:12px; background:var(--dark); cursor:pointer;
-  font-family:'Vazirmatn',sans-serif; min-width:84px;
+  font-family:'Vazirmatn',sans-serif; width:92px; flex:0 0 92px; box-sizing:border-box;
   transition:transform .16s cubic-bezier(.2,.8,.2,1), border-color .2s, box-shadow .2s; }
 .theme-swatch:hover{ transform:translateY(-3px); border-color:var(--accent); }
 .theme-swatch:active{ transform:scale(.96); }
@@ -2225,7 +2225,8 @@ body[class*="theme-"]{
   overflow:hidden; box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); }
 .theme-swatch .ts-dot{ position:absolute; left:7px; bottom:7px; width:16px; height:16px; border-radius:50%;
   box-shadow:0 0 0 2px rgba(255,255,255,.25), 0 2px 6px rgba(0,0,0,.4); }
-.theme-swatch .ts-name{ font-size:0.72rem; color:var(--muted); font-weight:600; white-space:nowrap; }
+.theme-swatch .ts-name{ font-size:0.72rem; color:var(--muted); font-weight:600; white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; max-width:100%; }
 .theme-swatch.active{ border-color:var(--accent); box-shadow:0 0 0 2px var(--accent), 0 6px 18px -6px rgba(0,0,0,.5); }
 .theme-swatch.active .ts-name{ color:var(--accent); }
 
@@ -2414,7 +2415,11 @@ body[class*="occ-"] .header::after{
   color:var(--occ-3); animation:occDrift 8s ease-in-out infinite;
 }
 .occ-art svg{ width:100%; height:100%; display:block; }
-@media (min-width:769px){ .occ-art{ width:118px; height:118px; margin-top:-59px; right:2%; opacity:.11; } }
+/* sized to fit inside .top-banner's own height (~61px on desktop) — it used
+   to be 118px tall inside a banner with overflow:hidden, so ~half of the
+   artwork was silently clipped away and the seasonal icon never actually
+   read as recognizable art at any graphics tier */
+@media (min-width:769px){ .occ-art{ width:52px; height:52px; margin-top:-26px; right:2%; opacity:.16; } }
 @keyframes occDrift{
   0%,100%{ transform:translateY(0) rotate(0deg); }
   50%{ transform:translateY(-5px) rotate(3deg); }
@@ -4409,7 +4414,7 @@ body.gfx-ultra .lock-box{
   <div class="settings-card" id="gfx-quality-card" style="border-color:var(--purple)">
     <div class="settings-title">⚡ کیفیت گرافیک</div>
     <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
-      سه حالت کاملاً مستقل با سه طراحی از زمین تا آسمان متفاوت. <b>Performance</b> («سبک»): کاملاً فلت — صفر انیمیشن، صفر ترنزیشن، بدون افکت شیشه‌ای؛ جدول‌ها و آیکون‌های ساده و بیشترین سرعت (پیش‌فرض). <b>Standard</b> («متوسط»): گلس‌مورفیزم استاندارد، ترنزیشن‌های ملایم و هاورهای ساده؛ نوار مخازن متحرک با هشدار قرمز. <b>Ultra Premium</b> («فوق‌العاده»): تم لاکچری و سینمایی — گرادینت‌های متحرک، نورپردازی پویا با موس، مخازن با مایع زنده (موج و حباب)، نمودار نئونی با ذرات، آیکون‌های سه‌بعدی مناسبتی و صداهای لوکس رابط کاربری.
+      سه حالت کاملاً مستقل با سه طراحی از زمین تا آسمان متفاوت. <b>Performance</b> («سبک»): کاملاً فلت — صفر انیمیشن، صفر ترنزیشن، بدون افکت شیشه‌ای؛ جدول‌ها و آیکون‌های ساده و بیشترین سرعت (پیش‌فرض). <b>Standard</b> («متوسط»): گلس‌مورفیزم استاندارد، ترنزیشن‌های ملایم و هاورهای ساده؛ نوار مخازن متحرک با هشدار قرمز. <b>Ultra Premium</b> («فوق‌العاده»): تم لاکچری و سینمایی — گرادینت‌های متحرک، نورپردازی پویا با موس، مخازن با مایع زنده (موج و حباب)، نمودار نئونی با ذرات و آیکون‌های سه‌بعدی مناسبتی.
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button type="button" class="gfx-mode-btn" data-gfx="performance" onclick="setGraphicsMode('performance')" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🍃 Performance — سبک<br><span style="font-weight:600;font-size:0.74rem">کاملاً فلت، صفر انیمیشن، سریع‌ترین</span></button>
@@ -14357,89 +14362,59 @@ document.addEventListener('click', function(e) {
     return TIERS.indexOf(v) !== -1 ? v : 'performance';
   }
 
-  /* ---------- TIER 3 MODULE: calm UI sounds (WebAudio, no files) ------
-     No hover sounds at all. A single click sound modeled on the calm
-     Discord-notification feel: two soft rounded notes (G4→D5) through
-     a low-pass filter, very quiet, gently throttled. The AudioContext
-     is only created on a real user gesture. */
-  var UltraAudio = (function(){
-    var ctx = null, on = false, lastClick = 0;
-    function ac(create){
-      if(!ctx && create){
-        try{ ctx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ return null; }
+  /* ---------- TIER 3 MODULE: living nav illustrations ----------------
+     Swaps a nav button's static #ic-* line icon for its animated #uic-*
+     twin (SMIL micro-illustrations in #gfxUltraIconSprite) — but ONLY for
+     the active section's button, plus whichever button is momentarily
+     hovered. Swapping all ~11 buttons at once meant ~25-30 SMIL timelines
+     running forever in the background, which is what made Ultra mode
+     laggy (and reportedly crash) on real phones; animating just the one
+     or two icons the user is actually looking at keeps the "living icon"
+     feel with a fraction of the cost. */
+  var UltraNavIcons = (function(){
+    var on = false, hoverH = null, outH = null, observer = null;
+    function use(btn){ return btn.querySelector('use'); }
+    function swapIn(u){
+      var h = u.getAttribute('href');
+      if(!h || h.indexOf('#ic-') !== 0) return;
+      if(!document.getElementById('uic-' + h.slice(4))) return;
+      u.setAttribute('data-gfx-orig', h);
+      u.setAttribute('href', '#uic-' + h.slice(4));
+    }
+    function swapOut(u){
+      var o = u.getAttribute('data-gfx-orig');
+      if(o){ u.setAttribute('href', o); u.removeAttribute('data-gfx-orig'); }
+    }
+    function syncActive(){
+      var btns = document.querySelectorAll('.nav .nav-btn');
+      for(var i = 0; i < btns.length; i++){
+        var u = use(btns[i]); if(!u) continue;
+        if(btns[i].classList.contains('active')) swapIn(u);
+        else if(!btns[i].matches(':hover')) swapOut(u);
       }
-      if(ctx && ctx.state === 'suspended'){ try{ ctx.resume(); }catch(e){} }
-      return ctx;
-    }
-    /* one rounded, mellow note: sine → low-pass(1100Hz) → soft envelope */
-    function note(freq, dur, vol, when){
-      var c = ac(false); if(!c) return;
-      var t0 = c.currentTime + (when || 0);
-      var o = c.createOscillator(), g = c.createGain(), f = c.createBiquadFilter();
-      o.type = 'sine';
-      o.frequency.setValueAtTime(freq, t0);
-      f.type = 'lowpass'; f.frequency.setValueAtTime(1100, t0); f.Q.value = 0.6;
-      g.gain.setValueAtTime(0.0001, t0);
-      g.gain.linearRampToValueAtTime(vol, t0 + 0.018);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-      o.connect(f); f.connect(g); g.connect(c.destination);
-      o.start(t0); o.stop(t0 + dur + 0.06);
-    }
-    function calmClick(){                            // «دو-دینگ» نرم به سبک دیسکورد
-      note(392.00, 0.16, 0.030, 0);                  // G4
-      note(587.33, 0.22, 0.026, 0.085);              // D5
-    }
-    function downH(e){
-      ac(true);                                      // unlock audio on gesture
-      var t = e.target && e.target.closest && e.target.closest('button, .nav-btn, .person-card');
-      if(!t) return;
-      var n = Date.now(); if(n - lastClick < 180) return; lastClick = n;
-      calmClick();
     }
     return {
       start: function(){
         if(on) return; on = true;
-        document.addEventListener('pointerdown', downH, true);
+        syncActive();
+        hoverH = function(e){ var b = e.target.closest && e.target.closest('.nav .nav-btn'); if(b){ var u = use(b); if(u) swapIn(u); } };
+        outH = function(e){ var b = e.target.closest && e.target.closest('.nav .nav-btn'); if(b && !b.classList.contains('active')){ var u = use(b); if(u) swapOut(u); } };
+        document.addEventListener('mouseover', hoverH);
+        document.addEventListener('mouseout', outH);
+        var nav = document.querySelector('.nav');
+        if(nav && typeof MutationObserver === 'function'){
+          observer = new MutationObserver(syncActive);
+          observer.observe(nav, { attributes:true, attributeFilter:['class'], subtree:true });
+        }
       },
       stop: function(){
         if(!on) return; on = false;
-        document.removeEventListener('pointerdown', downH, true);
-      },
-      chime: function(){                             // Ultra activation: gentle rising triad
-        ac(true);
-        [392.00, 493.88, 587.33].forEach(function(f, i){ note(f, 0.5, 0.028, i * 0.1); });
-      },
-      whoosh: function(){ note(440, 0.14, 0.014, 0); }
-    };
-  })();
-
-  /* ---------- TIER 3 MODULE: living nav illustrations ----------------
-     Swaps each nav button's static #ic-* line icon for its animated
-     #uic-* twin (SMIL micro-illustrations in #gfxUltraIconSprite) while
-     Ultra is active, and restores the originals on the way out. */
-  var UltraNavIcons = (function(){
-    var swapped = false;
-    function each(fn){
-      var us = document.querySelectorAll('.nav .nav-btn use');
-      for(var i = 0; i < us.length; i++) fn(us[i]);
-    }
-    return {
-      start: function(){
-        if(swapped) return; swapped = true;
-        each(function(u){
-          var h = u.getAttribute('href');
-          if(!h || h.indexOf('#ic-') !== 0) return;
-          if(!document.getElementById('uic-' + h.slice(4))) return;
-          u.setAttribute('data-gfx-orig', h);
-          u.setAttribute('href', '#uic-' + h.slice(4));
-        });
-      },
-      stop: function(){
-        if(!swapped) return; swapped = false;
-        each(function(u){
-          var o = u.getAttribute('data-gfx-orig');
-          if(o){ u.setAttribute('href', o); u.removeAttribute('data-gfx-orig'); }
-        });
+        if(hoverH) document.removeEventListener('mouseover', hoverH);
+        if(outH) document.removeEventListener('mouseout', outH);
+        hoverH = outH = null;
+        if(observer){ observer.disconnect(); observer = null; }
+        var us = document.querySelectorAll('.nav .nav-btn use');
+        for(var i = 0; i < us.length; i++) swapOut(us[i]);
       }
     };
   })();
@@ -14490,17 +14465,15 @@ document.addEventListener('click', function(e) {
     for(var i = 0; i < btns.length; i++){
       btns[i].classList.toggle('active', normalize(btns[i].getAttribute('data-gfx')) === tier);
     }
-    /* Ultra's engines (canvas particles, mouse parallax, sounds, 3-D
-       occasion tilt) only ever run while Ultra is actually selected —
-       switching away fully stops them, no background cost lingers. */
+    /* Ultra's engines (canvas particles, mouse parallax, 3-D occasion
+       tilt) only ever run while Ultra is actually selected — switching
+       away fully stops them, no background cost lingers. */
     if(tier === 'ultra'){
       if(typeof window._gfxStartUltraFx === 'function') window._gfxStartUltraFx();
-      UltraAudio.start();
       OccTilt.start();
       UltraNavIcons.start();
     } else {
       if(typeof window._gfxStopUltraFx === 'function') window._gfxStopUltraFx();
-      UltraAudio.stop();
       OccTilt.stop();
       UltraNavIcons.stop();
     }
@@ -14537,14 +14510,7 @@ document.addEventListener('click', function(e) {
     if(typeof closeModal === 'function') closeModal('gfxUltraConfirmModal');
     else { var m = document.getElementById('gfxUltraConfirmModal'); if(m) m.classList.remove('open'); }
     window.setGraphicsMode('ultra');
-    UltraAudio.chime();
   };
-
-  /* cinematic modal entrance ⇒ soft whoosh (that animation name only
-     exists under body.gfx-ultra, so no extra tier check is needed) */
-  document.addEventListener('animationstart', function(e){
-    if(e.animationName === 'gfxUltraModalIn') UltraAudio.whoosh();
-  });
 
   function boot(){
     var tier = 'performance';
