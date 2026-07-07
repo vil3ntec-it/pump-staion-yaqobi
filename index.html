@@ -3240,6 +3240,23 @@ body.gfx-ultra .occ-art svg{ animation:gfxOccArtFloat 8s ease-in-out infinite; }
   50%    { transform:translateY(-8px) rotate(5deg) scale(1.08); }
 }
 
+/* -- 3.8b TANK HERO WAVE BAND: just a moving wave under the number, NOT a
+   second tank shape (explicit user correction after the mini-gauge dup) --
+   Reuses the exact tankWave keyframe/timing the real tank uses, so it reads
+   as the same "living liquid" family, but it is only a thin decorative band
+   under the big number — Ultra only. */
+.tank-hero-wave{ display:none; }
+body.gfx-ultra .tank-hero-wave{
+  display:block; position:relative; width:100%; height:30px; margin-top:16px;
+  border-radius:8px; overflow:hidden; background:rgba(255,255,255,.05);
+}
+body.gfx-ultra .tank-hero-wave .thw-layer{
+  position:absolute; left:0; top:0; width:200%; height:100%;
+  background-repeat:repeat-x; background-size:50% 100%;
+}
+body.gfx-ultra .tank-hero-wave .thw-layer.w1{ animation:tankWave 4s linear infinite; opacity:.9; }
+body.gfx-ultra .tank-hero-wave .thw-layer.w2{ animation:tankWave 6s linear infinite reverse; opacity:.5; }
+
 /* -- 3.8c ورق‌ها: هر جدول هویت بصری/انیمیشن مخصوص خودش (Standard/Ultra) ---
    آیکون کوچک کنار عنوان هر جدول با ::before روی کانتینر (نه خودِ span که
    textContent اش موقع تعویض روز/شب دوباره نوشته می‌شود) تا هیچ‌وقت پاک نشود.
@@ -7200,6 +7217,9 @@ function _renderFuelSection(fuelType, containerId, label) {
   const icon     = fuelType === 'diesel' ? '🟤' : '⛽';
   const isLow    = (entries.length || totalOut > 0) && current <= lsThreshold();
   const numColor = isLow ? '#ff5252' : color;
+  // رنگ موج زیر عدد — همان خانوادهٔ رنگی مخزن واقعی (نه شکل مخزن، فقط یک
+  // باند موج متحرک زیر عدد، طبق درخواست کاربر: «فقط یک موج زیر عدد بزرگ»)
+  const wavePal = isLow ? '#ff6b6b' : (fuelType==='diesel' ? '#e0a64b' : '#ffcf73');
 
   const cont = document.getElementById(containerId);
   cont.innerHTML = '';
@@ -7218,6 +7238,10 @@ function _renderFuelSection(fuelType, containerId, label) {
     <div style="display:flex;justify-content:center;gap:24px;margin-top:16px;flex-wrap:wrap">
       <div><div style="font-size:0.68rem;color:${isLow?'#ffd6d6':'var(--muted)'}">جمع ورودی</div><div style="font-weight:700;color:${isLow?'#9ae6b4':'var(--green)'}">${n2fa(Math.round(totalIn))} ل</div></div>
       <div><div style="font-size:0.68rem;color:${isLow?'#ffd6d6':'var(--muted)'}">جمع فروش</div><div style="font-weight:700;color:${isLow?'#feb2b2':'var(--red)'}">${n2fa(Math.round(totalOut))} ل</div></div>
+    </div>
+    <div class="tank-hero-wave" aria-hidden="true">
+      <div class="thw-layer w1" style="background-image:linear-gradient(180deg,${wavePal},transparent)"></div>
+      <div class="thw-layer w2" style="background-image:linear-gradient(180deg,${wavePal},transparent)"></div>
     </div>
     ${isLow ? '<div class="ls-tape" style="position:absolute;bottom:0;left:0"></div>' : ''}
   `;
