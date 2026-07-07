@@ -5656,17 +5656,26 @@ async function downloadApp() {
     } catch (_) {
       html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
     }
+    // جایگزینی امن با الگوی ساخته‌شده از تکه‌های جدا: متن پیوستهٔ «const NAME = ...; /*MARK*/»
+    // هیچ‌وقت نباید به‌صورت یک‌جا داخل همین تابع (downloadApp) ظاهر شود — وگرنه .replace،
+    // به‌جای مقدار واقعی در انتهای فایل، به متنِ خودِ این تابع برخورد می‌کند و از همان‌جا تا
+    // مقدار واقعی را با دادهٔ جاسازی‌شده جایگزین می‌کند — کل کد بینشان (از جمله رمز عبور و
+    // منطق قفل) پاک می‌شود. این دقیقاً همان باگی بود که رمز و تم را در نسخهٔ دانلودشده خراب می‌کرد.
+    function patch(src, name, mark, value) {
+      var re = new RegExp('const ' + name + ' = [\\s\\S]*?; /\\*' + mark + '\\*/');
+      return src.replace(re, function () { return 'const ' + name + ' = ' + value + '; /*' + mark + '*/'; });
+    }
     // فایل خروجی همیشه بدون محافظ باز می‌شود
-    html = html.replace(
-      /const FORCE_UNPROTECTED = (?:true|false);\s*\/\*__DLMODE__\*\//,
-      'const FORCE_UNPROTECTED = true; /*__DLMODE__*/'
-    );
+    html = patch(html, 'FORCE_UNPROTECTED', '__DLMODE__', 'true');
     // جاسازی همین حساب فعلی در فایل خروجی → روی هر دستگاهی همین حساب باز می‌شود
     const embed = JSON.stringify(DB).replace(/<\/script/gi, '<\\/script').replace(/</g, '\\u003c');
-    html = html.replace(
-      /const EMBEDDED_DB = [\s\S]*?; \/\*__EMBEDDED_DB__\*\//,
-      'const EMBEDDED_DB = ' + embed + '; /*__EMBEDDED_DB__*/'
-    );
+    html = patch(html, 'EMBEDDED_DB', '__EMBEDDED_DB__', embed);
+    // جاسازی ظاهر فعلی (تم/کیفیت گرافیک/مناسبتی) → فایل دانلودشده همان ظاهر را نشان می‌دهد
+    const PREF_KEYS = ['pumpTheme','pumpPalette','pumpPaletteDark','pumpPaletteLight','pumpGfxMode','pumpOccasionOff'];
+    const prefs = {};
+    PREF_KEYS.forEach(function(k){ try { const v = localStorage.getItem(k); if (v !== null) prefs[k] = v; } catch(e) {} });
+    const prefsEmbed = JSON.stringify(prefs).replace(/<\/script/gi, '<\\/script').replace(/</g, '\\u003c');
+    html = patch(html, 'EMBEDDED_PREFS', '__EMBEDDED_PREFS__', prefsEmbed);
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -5713,6 +5722,21 @@ const FORCE_UNPROTECTED = true; /*__DLMODE__*/
 // حسابِ جاسازی‌شده در فایل خروجی (هنگام دانلود پر می‌شود). اگر روی دستگاهی هیچ
 // داده‌ای ذخیره نشده باشد، همین حساب بارگذاری می‌شود تا حساب خالی نمایش داده نشود.
 const EMBEDDED_DB = null; /*__EMBEDDED_DB__*/
+// ترجیحات ظاهری (تم/کیفیت گرافیک/مناسبتی) جدا از DB و در localStorage نگه داشته
+// می‌شوند؛ برای اینکه فایل دانلودشده همان ظاهری را نشان دهد که هنگام دانلود روی
+// دستگاه اصلی بود (نه ظاهر پیش‌فرض)، این‌ها هم جاسازی و — فقط اگر دستگاه جدید
+// هنوز خودش چیزی انتخاب نکرده — روی localStorage نوشته می‌شوند.
+const EMBEDDED_PREFS = null; /*__EMBEDDED_PREFS__*/
+(function(){
+  if (!EMBEDDED_PREFS) return;
+  try {
+    Object.keys(EMBEDDED_PREFS).forEach(function(k){
+      if (localStorage.getItem(k) === null && EMBEDDED_PREFS[k] != null) {
+        localStorage.setItem(k, EMBEDDED_PREFS[k]);
+      }
+    });
+  } catch(e) {}
+})();
 function isActivated() {
   return true;
 }
