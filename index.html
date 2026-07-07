@@ -2362,105 +2362,6 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
 .pm-acct-bar .pm-filter-btn{ white-space:nowrap; flex-shrink:0; padding:6px 12px; }
 </style>
 
-<style id="occasion-themes">
-/* ============================================================
-   OCCASION THEMES — ADDITIVE ONLY. A body.occ-* class (auto-applied
-   by the current date, see script near the end of <body>) adds:
-     1. a tinted gradient "wash" + halftone-dot texture behind the
-        header and the top stats banner (via ::before overlays —
-        never touches the real background/border, so it layers
-        safely under any color palette),
-     2. one inline-SVG watermark graphic per occasion (ball, lantern
-        + crescent, tulip, pomegranate...) in the header corner,
-     3. a small swaying emoji next to the header title.
-   Everything is pure CSS + hand-written inline SVG (a few hundred
-   bytes each) — no photos/raster assets, so page weight barely
-   moves. Toggle: Settings → تم رنگی → "تم مناسبتی خودکار".
-   ============================================================ */
-body.occ-worldcup{
-  --occ-1:#0a3d50; --occ-2:#12805f; --occ-3:#8ed629;
-  /* was .55/.42/.28 — dominated the header's own amber gradient in
-     Standard/Ultra (Performance hides this wash entirely, which is why the
-     clash only showed in the other two tiers); now a subtle seasonal tint */
-  --occ-wash:linear-gradient(135deg, rgba(10,61,80,.20), rgba(18,128,95,.16) 55%, rgba(142,214,41,.10));
-}
-body.occ-ramadan{
-  --occ-1:#3a0a19; --occ-2:#7a1530; --occ-3:#e8b23d;
-  --occ-wash:linear-gradient(135deg, rgba(58,10,25,.22), rgba(90,20,40,.18) 55%, rgba(180,120,20,.08));
-}
-body.occ-eid-fitr{
-  --occ-1:#2a3d12; --occ-2:#4a7a1f; --occ-3:#e8c23d;
-  --occ-wash:linear-gradient(135deg, rgba(42,61,18,.18), rgba(74,122,31,.15) 55%, rgba(232,194,61,.10));
-}
-body.occ-eid-adha{
-  --occ-1:#123a2a; --occ-2:#1f7a4a; --occ-3:#d4af37;
-  --occ-wash:linear-gradient(135deg, rgba(18,58,42,.20), rgba(31,122,74,.16) 55%, rgba(212,175,55,.09));
-}
-body.occ-nowruz{
-  --occ-1:#3a1024; --occ-2:#c23d6b; --occ-3:#5fae4c;
-  --occ-wash:linear-gradient(135deg, rgba(58,16,36,.18), rgba(194,61,107,.13) 55%, rgba(95,174,76,.10));
-}
-body.occ-yalda{
-  --occ-1:#1a0508; --occ-2:#7a1530; --occ-3:#d4af37;
-  --occ-wash:linear-gradient(135deg, rgba(26,5,8,.24), rgba(122,21,48,.17) 60%, rgba(212,175,55,.07));
-}
-
-body[class*="occ-"] .header{ overflow:hidden; } /* already position:sticky — a valid containing block */
-body[class*="occ-"] .top-banner{ position:relative; overflow:hidden; }
-body[class*="occ-"] .header::before,
-body[class*="occ-"] .top-banner::before{
-  content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
-  background-image:
-    var(--occ-wash),
-    radial-gradient(circle at 18% 28%, rgba(255,255,255,.14) 0 4%, transparent 5%),
-    radial-gradient(circle at 62% 68%, rgba(255,255,255,.11) 0 3.4%, transparent 4.4%),
-    radial-gradient(circle at 84% 22%, rgba(255,255,255,.10) 0 3%, transparent 4%),
-    radial-gradient(circle at 38% 82%, rgba(255,255,255,.08) 0 3%, transparent 4%);
-  background-size: 100% 100%, 30px 30px, 30px 30px, 30px 30px, 30px 30px;
-}
-body[class*="occ-"] .header > :not(.occ-art),
-body[class*="occ-"] .top-banner > :not(.occ-art){ position:relative; z-index:1; }
-body[class*="occ-"] .header::after{
-  content:''; position:absolute; left:0; right:0; bottom:-2px; height:3px; z-index:2;
-  background:linear-gradient(90deg,var(--occ-1),var(--occ-3),var(--occ-1));
-  pointer-events:none;
-}
-
-/* large ambient watermark — lives in the roomier stats banner, low opacity
-   so it never fights with the numbers rendered above it (z-index 1) */
-.occ-art{
-  position:absolute; z-index:0; pointer-events:none;
-  top:50%; margin-top:-40px; right:-6px; width:80px; height:80px; opacity:.13;
-  color:var(--occ-3); animation:occDrift 8s ease-in-out infinite;
-}
-.occ-art svg{ width:100%; height:100%; display:block; }
-/* sized to fit inside .top-banner's own height (~61px on desktop) — it used
-   to be 118px tall inside a banner with overflow:hidden, so ~half of the
-   artwork was silently clipped away and the seasonal icon never actually
-   read as recognizable art at any graphics tier */
-@media (min-width:769px){ .occ-art{ width:52px; height:52px; margin-top:-26px; right:2%; opacity:.16; } }
-@keyframes occDrift{
-  0%,100%{ transform:translateY(0) rotate(0deg); }
-  50%{ transform:translateY(-5px) rotate(3deg); }
-}
-
-/* small emoji next to the header title — at icon size, the real color emoji
-   reads far more clearly than the hand-drawn line art used for .occ-art */
-.occ-badge{
-  display:inline-block; font-size:1.05rem; line-height:1; transform-origin:50% 65%;
-  animation:occSway 2.6s ease-in-out infinite;
-  /* .header-title may use a background-clip:text gradient trick for its own
-     text — reset that here so the emoji isn't clipped to transparent too */
-  background:none!important; -webkit-background-clip:border-box!important; background-clip:border-box!important;
-  -webkit-text-fill-color:initial!important; color:initial;
-  filter:drop-shadow(0 1px 2px rgba(0,0,0,.35));
-}
-@keyframes occSway{
-  0%,100%{ transform:translateY(0) rotate(0deg); }
-  50%{ transform:translateY(-3px) rotate(-8deg); }
-}
-@media (prefers-reduced-motion: reduce){ .occ-badge, .occ-art{ animation:none; } }
-</style>
 <style id="gfx-tier-shared">
 /* ╔══════════════════════════════════════════════════════════════════╗
    ║  GRAPHICS TIER SYSTEM — SHARED PIECES                             ║
@@ -2716,13 +2617,6 @@ body.gfx-performance .tank-body{
   border-radius:12px !important;
 }
 body.gfx-performance .tank-pct{ text-shadow:none !important; }
-
-/* -- 1.10 occasion decor: static line art only, no gradient washes ---- */
-body.gfx-performance .occ-art{ filter:none !important; opacity:.12 !important; transform:none !important; }
-body.gfx-performance .occ-badge{ filter:none !important; transform:none !important; }
-body.gfx-performance .header::before,
-body.gfx-performance .top-banner::before,
-body.gfx-performance .header::after{ display:none !important; }
 </style>
 
 <style id="gfx-tier-standard">
@@ -3218,37 +3112,6 @@ body.gfx-ultra #pl-result .pl-result-value.gfx-count-done{
   100%{ filter:brightness(1);   transform:scale(1); }
 }
 
-/* -- 3.8 3-D OCCASION ICONS: gold light, depth, parallax --------------- */
-body.gfx-ultra .occ-badge{
-  animation:gfxOcc3D 5s ease-in-out infinite;
-  filter:drop-shadow(0 4px 4px rgba(0,0,0,.5)) drop-shadow(0 0 12px rgba(255,200,80,.85)) drop-shadow(0 0 30px rgba(255,160,50,.4));
-  transition:transform .25s cubic-bezier(.2,.8,.2,1), filter .25s;
-  cursor:default;
-}
-body.gfx-ultra .occ-badge:hover{
-  animation-play-state:paused;
-  transform:perspective(240px) rotateY(26deg) scale(1.4);
-  filter:drop-shadow(0 6px 6px rgba(0,0,0,.55)) drop-shadow(0 0 18px rgba(255,210,100,1)) drop-shadow(0 0 44px rgba(255,170,60,.6));
-}
-@keyframes gfxOcc3D{
-  0%,100%{ transform:perspective(240px) rotateY(-16deg) translateY(0); }
-  25%    { transform:perspective(240px) rotateY(0deg)  translateY(-2px); }
-  50%    { transform:perspective(240px) rotateY(16deg) translateY(0); }
-  75%    { transform:perspective(240px) rotateY(0deg)  translateY(1px); }
-}
-body.gfx-ultra .occ-art{
-  opacity:.42 !important;
-  animation:none;
-  transform:perspective(500px) rotateX(var(--occ-rx,0deg)) rotateY(var(--occ-ry,0deg));
-  transition:transform .18s ease-out;
-  filter:drop-shadow(0 6px 10px rgba(0,0,0,.55)) drop-shadow(0 0 16px var(--occ-3,#ffcf73)) drop-shadow(0 0 40px rgba(255,160,50,.35));
-}
-body.gfx-ultra .occ-art svg{ animation:gfxOccArtFloat 8s ease-in-out infinite; }
-@keyframes gfxOccArtFloat{
-  0%,100%{ transform:translateY(0) rotate(0deg) scale(1); }
-  50%    { transform:translateY(-8px) rotate(5deg) scale(1.08); }
-}
-
 /* -- 3.8b TANK HERO WAVE BAND: just a moving wave under the number, NOT a
    second tank shape (explicit user correction after the mini-gauge dup) --
    Reuses the exact tankWave keyframe/timing the real tank uses, so it reads
@@ -3372,8 +3235,6 @@ body.gfx-ultra .lock-box{
   body.gfx-ultra .pl-arrow{ animation:plArrow 1.4s ease-in-out infinite !important; }
   body.gfx-ultra #pl-result::after{ animation:gfxPlPulse 5s ease-in-out infinite !important; }
   body.gfx-ultra #pl-result .pl-result-value{ animation:plValueGlow 3.4s ease-in-out infinite !important; }
-  body.gfx-ultra .occ-badge{ animation:gfxOcc3D 5s ease-in-out infinite !important; }
-  body.gfx-ultra .occ-art svg{ animation:gfxOccArtFloat 8s ease-in-out infinite !important; }
   body.gfx-ultra .modal-overlay.open .modal,
   body.gfx-ultra .modal-overlay.open .sm-modal{ animation:gfxUltraModalIn .5s cubic-bezier(.16,1,.3,1) both !important; }
   body.gfx-ultra .gfx-confirm-bar{ animation:gfxConfirmBarMove 2.4s linear infinite !important; }
@@ -4502,12 +4363,6 @@ body.gfx-ultra .lock-box{
     <div class="theme-row" id="theme-row-dark"></div>
     <div style="font-size:0.8rem;font-weight:700;color:var(--label);margin:16px 0 8px">☀️ تم‌های روشن</div>
     <div class="theme-row" id="theme-row-light"></div>
-    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;font-weight:700;color:var(--label)">
-        <input type="checkbox" id="occ-auto-toggle" checked onchange="setOccasionAuto(this.checked)">
-        🎉 تم مناسبتی خودکار (رمضان، جام جهانی، نوروز، عید و...)
-      </label>
-    </div>
   </div>
   <div class="settings-card" id="gfx-quality-card" style="border-color:var(--purple)">
     <div class="settings-title">⚡ کیفیت گرافیک</div>
@@ -5725,7 +5580,7 @@ async function downloadApp() {
     const embed = JSON.stringify(DB).replace(/<\/script/gi, '<\\/script').replace(/</g, '\\u003c');
     html = patch(html, 'EMBEDDED_DB', '__EMBEDDED_DB__', embed);
     // جاسازی ظاهر فعلی (تم/کیفیت گرافیک/مناسبتی) → فایل دانلودشده همان ظاهر را نشان می‌دهد
-    const PREF_KEYS = ['pumpTheme','pumpPalette','pumpPaletteDark','pumpPaletteLight','pumpGfxMode','pumpOccasionOff'];
+    const PREF_KEYS = ['pumpTheme','pumpPalette','pumpPaletteDark','pumpPaletteLight','pumpGfxMode'];
     const prefs = {};
     PREF_KEYS.forEach(function(k){ try { const v = localStorage.getItem(k); if (v !== null) prefs[k] = v; } catch(e) {} });
     const prefsEmbed = JSON.stringify(prefs).replace(/<\/script/gi, '<\\/script').replace(/</g, '\\u003c');
@@ -14491,8 +14346,7 @@ document.addEventListener('click', function(e) {
      TIER 1  body.gfx-performance  flat, zero motion (default)
      TIER 2  body.gfx-standard     glass + gentle motion
      TIER 3  body.gfx-ultra        cinematic luxury: canvas FX,
-                                   mouse parallax, UI sounds,
-                                   3-D occasion parallax
+                                   mouse parallax, UI sounds
    Storage: localStorage 'pumpGfxMode' = performance|standard|ultra
    (legacy values 'low'/'medium' migrate automatically).
    Exactly ONE gfx-* class is ever on <body>; the matching CSS
@@ -14556,41 +14410,6 @@ document.addEventListener('click', function(e) {
     };
   })();
 
-  /* ---------- TIER 3 MODULE: 3-D parallax tilt for the occasion art --
-     Moving the mouse across the top banner tilts the seasonal artwork
-     in 3-D via the --occ-rx/--occ-ry vars read by #gfx-tier-ultra. */
-  var OccTilt = (function(){
-    var on = false, host = null;
-    function art(){ return document.getElementById('occArt'); }
-    function move(e){
-      var a = art(); if(!a || !host) return;
-      var r = host.getBoundingClientRect();
-      var cx = (e.clientX - r.left) / Math.max(r.width, 1) * 2 - 1;   // -1..1
-      var cy = (e.clientY - r.top) / Math.max(r.height, 1) * 2 - 1;
-      a.style.setProperty('--occ-ry', (cx * 22) + 'deg');
-      a.style.setProperty('--occ-rx', (-cy * 14) + 'deg');
-    }
-    function reset(){
-      var a = art(); if(!a) return;
-      a.style.setProperty('--occ-ry', '0deg');
-      a.style.setProperty('--occ-rx', '0deg');
-    }
-    return {
-      start: function(){
-        if(on) return;
-        host = document.querySelector('.top-banner'); if(!host) return;
-        on = true;
-        host.addEventListener('pointermove', move);
-        host.addEventListener('pointerleave', reset);
-      },
-      stop: function(){
-        if(!on) return; on = false;
-        if(host){ host.removeEventListener('pointermove', move); host.removeEventListener('pointerleave', reset); }
-        reset();
-      }
-    };
-  })();
-
   /* ---------- tier switch core ---------- */
   function apply(tier, rerender){
     var b = document.body;
@@ -14602,16 +14421,14 @@ document.addEventListener('click', function(e) {
     for(var i = 0; i < btns.length; i++){
       btns[i].classList.toggle('active', normalize(btns[i].getAttribute('data-gfx')) === tier);
     }
-    /* Ultra's engines (canvas particles, mouse parallax, 3-D occasion
-       tilt) only ever run while Ultra is actually selected — switching
-       away fully stops them, no background cost lingers. */
+    /* Ultra's engines (canvas particles, mouse parallax) only ever run
+       while Ultra is actually selected — switching away fully stops
+       them, no background cost lingers. */
     if(tier === 'ultra'){
       if(typeof window._gfxStartUltraFx === 'function') window._gfxStartUltraFx();
-      OccTilt.start();
       UltraNavIcons.start();
     } else {
       if(typeof window._gfxStopUltraFx === 'function') window._gfxStopUltraFx();
-      OccTilt.stop();
       UltraNavIcons.stop();
     }
     /* tier-dependent components re-render so the switch changes them
@@ -14653,145 +14470,6 @@ document.addEventListener('click', function(e) {
     var tier = 'performance';
     try{ tier = normalize(localStorage.getItem('pumpGfxMode')); }catch(e){}
     apply(tier, false);
-  }
-  if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', boot); }
-  else { boot(); }
-})();
-</script>
-
-<script>
-/* ============================================================
-   OCCASION THEMES — ADDITIVE JS. Detects a small set of known
-   occasions (World Cup 2026, Ramadan, Eid al-Fitr, Eid al-Adha,
-   Nowruz, Yalda) from the real date and adds a body.occ-* class,
-   a small emoji badge next to the header title, and an inline-SVG
-   watermark graphic in the header corner (CSS above). Purely
-   decorative — no data, IDs or existing localStorage keys touched.
-   Off switch: localStorage 'pumpOccasionOff' = '1'.
-   ============================================================ */
-(function(){
-  "use strict";
-
-  function inGregorian(now, startStr, endStr){
-    var s = new Date(startStr+'T00:00:00'), e = new Date(endStr+'T23:59:59');
-    return now >= s && now <= e;
-  }
-  function hijriParts(now){
-    try{
-      var fmt = new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura', {day:'numeric',month:'numeric',year:'numeric'});
-      var o = {}; fmt.formatToParts(now).forEach(function(p){ if(p.type!=='literal') o[p.type]=p.value; });
-      return { m: parseInt(o.month), d: parseInt(o.day) };
-    } catch(e){ return null; }
-  }
-  function shamsiParts(now){
-    try{
-      var fmt = new Intl.DateTimeFormat('en-US-u-ca-persian', {day:'numeric',month:'numeric',year:'numeric'});
-      var o = {}; fmt.formatToParts(now).forEach(function(p){ if(p.type!=='literal') o[p.type]=p.value; });
-      return { m: parseInt(o.month), d: parseInt(o.day) };
-    } catch(e){ return null; }
-  }
-
-  // Hand-drawn, currentColor-only watermark art (no photos/rasters — a few
-  // hundred bytes of inline SVG each). Ball uses computed pentagon/seam
-  // coordinates; crescent + star are the well-known Feather-icon paths.
-  var ART = {
-    ball:
-      '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="3"/>' +
-      '<polygon points="50,38 61.4,46.3 57.05,59.7 42.95,59.7 38.6,46.3" fill="currentColor"/>' +
-      '<path d="M50,38 L50,18 M61.4,46.3 L80.4,40.1 M57.05,59.7 L68.8,75.9 M42.95,59.7 L31.2,75.9 M38.6,46.3 L19.6,40.1" ' +
-      'stroke="currentColor" stroke-width="2.6" fill="none"/>' +
-      '<circle cx="50" cy="16" r="3" fill="currentColor"/><circle cx="82.4" cy="39" r="3" fill="currentColor"/>' +
-      '<circle cx="69.9" cy="77.8" r="3" fill="currentColor"/><circle cx="30.1" cy="77.8" r="3" fill="currentColor"/>' +
-      '<circle cx="17.6" cy="39" r="3" fill="currentColor"/></svg>',
-    crescentStar:
-      '<svg viewBox="0 0 100 100"><path transform="translate(6,6) scale(3.2)" ' +
-      'd="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor"/>' +
-      '<path transform="translate(56,54) scale(1.7)" ' +
-      'd="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z" fill="currentColor"/></svg>',
-    lanternMoon:
-      '<svg viewBox="0 0 100 100"><path d="M30,30 L50,14 L70,30" fill="none" stroke="currentColor" stroke-width="3"/>' +
-      '<rect x="34" y="30" width="32" height="42" rx="5" fill="none" stroke="currentColor" stroke-width="3"/>' +
-      '<path d="M34,80 h32 l-7,14 h-18z" fill="none" stroke="currentColor" stroke-width="3"/>' +
-      '<line x1="50" y1="72" x2="50" y2="80" stroke="currentColor" stroke-width="3"/>' +
-      '<line x1="42" y1="38" x2="42" y2="64" stroke="currentColor" stroke-width="1.6" opacity=".6"/>' +
-      '<line x1="50" y1="38" x2="50" y2="64" stroke="currentColor" stroke-width="1.6" opacity=".6"/>' +
-      '<line x1="58" y1="38" x2="58" y2="64" stroke="currentColor" stroke-width="1.6" opacity=".6"/>' +
-      '<path transform="translate(2,50) scale(1.9)" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor"/></svg>',
-    tulip:
-      '<svg viewBox="0 0 100 100"><line x1="50" y1="52" x2="50" y2="94" stroke="currentColor" stroke-width="3"/>' +
-      '<path d="M50,74 Q32,70 27,88 Q46,88 50,74z" fill="currentColor" opacity=".85"/>' +
-      '<path d="M50,74 Q68,70 73,88 Q54,88 50,74z" fill="currentColor" opacity=".85"/>' +
-      '<path d="M50,20 Q30,26 32,50 Q50,56 50,20z" fill="currentColor"/>' +
-      '<path d="M50,20 Q70,26 68,50 Q50,56 50,20z" fill="currentColor"/>' +
-      '<path d="M50,12 Q40,26 50,46 Q60,26 50,12z" fill="currentColor"/></svg>',
-    pomegranate:
-      '<svg viewBox="0 0 100 100"><circle cx="50" cy="58" r="30" fill="currentColor" opacity=".85"/>' +
-      '<path d="M50,24 l-5,-10 h4 l1,4 l1,-4 h4z" fill="currentColor"/>' +
-      '<circle cx="40" cy="52" r="3" fill="#0000002e"/><circle cx="55" cy="46" r="3" fill="#0000002e"/>' +
-      '<circle cx="61" cy="62" r="3" fill="#0000002e"/><circle cx="44" cy="68" r="3" fill="#0000002e"/></svg>'
-  };
-
-  // checked in order — first match wins (ranges don't overlap in practice)
-  var OCCASIONS = [
-    { id:'worldcup', name:'جام جهانی فوتبال', icon:'⚽', art: ART.ball,
-      test: function(now){ return inGregorian(now, '2026-06-11', '2026-07-19'); } },
-    { id:'eid-adha', name:'عید قربان', icon:'🕋', art: ART.crescentStar,
-      test: function(now,h){ return !!h && h.m===12 && h.d>=9 && h.d<=13; } },
-    { id:'eid-fitr', name:'عید فطر', icon:'🎉', art: ART.crescentStar,
-      test: function(now,h){ return !!h && h.m===10 && h.d<=3; } },
-    { id:'ramadan', name:'ماه رمضان', icon:'🌙', art: ART.lanternMoon,
-      test: function(now,h){ return !!h && h.m===9; } },
-    { id:'yalda', name:'شب یلدا', icon:'🍉', art: ART.pomegranate,
-      test: function(now,h,s){ return !!s && ((s.m===9 && s.d===30) || (s.m===10 && s.d===1)); } },
-    { id:'nowruz', name:'نوروز', icon:'🌷', art: ART.tulip,
-      test: function(now,h,s){ return !!s && s.m===1 && s.d<=13; } }
-  ];
-
-  function detect(){
-    var now = new Date(), h = hijriParts(now), s = shamsiParts(now);
-    for(var i=0;i<OCCASIONS.length;i++){ if(OCCASIONS[i].test(now,h,s)) return OCCASIONS[i]; }
-    return null;
-  }
-
-  function isOff(){ try{ return localStorage.getItem('pumpOccasionOff')==='1'; }catch(e){ return false; } }
-
-  function clearOccasion(){
-    var b = document.body;
-    OCCASIONS.forEach(function(o){ b.classList.remove('occ-'+o.id); });
-    var badge = document.getElementById('occBadge'); if(badge) badge.remove();
-    var art = document.getElementById('occArt'); if(art) art.remove();
-  }
-
-  function applyOccasion(){
-    clearOccasion();
-    if(isOff()) return;
-    var occ = detect(); if(!occ) return;
-    document.body.classList.add('occ-'+occ.id);
-    var title = document.querySelector('.header-title');
-    if(title && occ.icon){
-      var span = document.createElement('span');
-      span.id = 'occBadge'; span.className = 'occ-badge'; span.title = occ.name;
-      span.textContent = ' ' + occ.icon;
-      title.appendChild(span);
-    }
-    var banner = document.querySelector('.top-banner');
-    if(banner && occ.art){
-      var art = document.createElement('div');
-      art.id = 'occArt'; art.className = 'occ-art'; art.setAttribute('aria-hidden','true');
-      art.innerHTML = occ.art;
-      banner.appendChild(art);
-    }
-  }
-
-  window.setOccasionAuto = function(on){
-    try{ localStorage.setItem('pumpOccasionOff', on ? '' : '1'); }catch(e){}
-    applyOccasion();
-  };
-
-  function boot(){
-    applyOccasion();
-    var chk = document.getElementById('occ-auto-toggle');
-    if(chk) chk.checked = !isOff();
   }
   if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', boot); }
   else { boot(); }
