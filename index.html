@@ -5866,6 +5866,7 @@ function _initCalcDrag() {
 
 // ========== NAV ==========
 function showSection(id, btn) {
+  if (id === 'settings' && currentRole === 'viewer') { showToast('🔒 بخش تنظیمات فقط برای مدیر است', '#e53e3e'); return; }
   document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
   const sec = document.getElementById('sec-' + id);
   if (sec) sec.classList.add('visible');
@@ -5892,7 +5893,6 @@ function showSection(id, btn) {
   if (id === 'waraq') renderWaraqList();
   if (id === 'zodiac') { initDate(); }
   if (id === 'settings') {
-    if (currentRole === 'viewer') { showToast('🔒 بخش تنظیمات فقط برای مدیر است', '#e53e3e'); return; }
     fillLowStockSettings();
     fillSyncSettings();
     try { renderTrashList(); } catch(e) {}
