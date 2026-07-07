@@ -3240,23 +3240,6 @@ body.gfx-ultra .occ-art svg{ animation:gfxOccArtFloat 8s ease-in-out infinite; }
   50%    { transform:translateY(-8px) rotate(5deg) scale(1.08); }
 }
 
-/* -- 3.8b TANK HERO MINI-GAUGE: same visual language as the real tank -----
-   User feedback: a decorative sparkline wasn't what they meant by "give it
-   an animation" — they wanted the "موجودی فعلی مخزن" hero box to actually
-   look like the tank gauge above it (liquid, waves, bubbles), not a chart.
-   Reuses the exact .tank-body/.tank-liquid/.tank-wave/.tank-bubble/.tank-pct
-   classes so all existing tier-gated animations (wave motion, Ultra rising
-   bubbles, danger pulse) apply automatically with zero new CSS for those.
-   Performance/Standard never show it — Ultra only. */
-.tank-hero-gauge{ display:none; }
-body.gfx-ultra .tank-hero-gauge{
-  display:block; position:relative; width:78px; height:104px; margin:16px auto 0;
-}
-body.gfx-ultra .tank-hero-gauge .tank-body{
-  border-radius:16px/20px;
-}
-body.gfx-ultra .tank-hero-gauge .tank-pct{ font-size:1rem; }
-
 /* -- 3.8c ورق‌ها: هر جدول هویت بصری/انیمیشن مخصوص خودش (Standard/Ultra) ---
    آیکون کوچک کنار عنوان هر جدول با ::before روی کانتینر (نه خودِ span که
    textContent اش موقع تعویض روز/شب دوباره نوشته می‌شود) تا هیچ‌وقت پاک نشود.
@@ -7215,17 +7198,8 @@ function _renderFuelSection(fuelType, containerId, label) {
   const totalAFN = entries.reduce((a,e) => a + (e.totalAFN||0), 0);
   const color    = fuelType === 'diesel' ? '#b7791f' : 'var(--accent)';
   const icon     = fuelType === 'diesel' ? '🟤' : '⛽';
-  const th       = lsThreshold();
-  const isLow    = (entries.length || totalOut > 0) && current <= th;
+  const isLow    = (entries.length || totalOut > 0) && current <= lsThreshold();
   const numColor = isLow ? '#ff5252' : color;
-
-  // مینی‌گیج مخزن (فقط Ultra) — همان زبانِ بصریِ مخزن اصلی (مایع/موج/حباب)،
-  // نه یک خط تزئینی جدا؛ درصد از همان ظرفیتی که بالای صفحه استفاده می‌شود.
-  const heroCap = parseFloat(DB['tankCapacity_'+fuelType]) || Math.ceil(Math.max(current, th*4, 1000)/1000)*1000;
-  const heroPct = heroCap > 0 ? Math.max(0, Math.min(100, current/heroCap*100)) : 0;
-  const heroPal = isLow
-    ? { from:'#e53e3e', to:'#9b1c1c', wave:'#ff6b6b' }
-    : (fuelType==='diesel' ? { from:'#b7791f', to:'#6b4410', wave:'#e0a64b' } : { from:'#f6a623', to:'#c77f12', wave:'#ffcf73' });
 
   const cont = document.getElementById(containerId);
   cont.innerHTML = '';
@@ -7244,20 +7218,6 @@ function _renderFuelSection(fuelType, containerId, label) {
     <div style="display:flex;justify-content:center;gap:24px;margin-top:16px;flex-wrap:wrap">
       <div><div style="font-size:0.68rem;color:${isLow?'#ffd6d6':'var(--muted)'}">جمع ورودی</div><div style="font-weight:700;color:${isLow?'#9ae6b4':'var(--green)'}">${n2fa(Math.round(totalIn))} ل</div></div>
       <div><div style="font-size:0.68rem;color:${isLow?'#ffd6d6':'var(--muted)'}">جمع فروش</div><div style="font-weight:700;color:${isLow?'#feb2b2':'var(--red)'}">${n2fa(Math.round(totalOut))} ل</div></div>
-    </div>
-    <div class="tank-hero-gauge" aria-hidden="true">
-      <div class="tank-body">
-        <div class="tank-liquid" style="height:${heroPct}%;background-color:${heroPal.to};background-image:linear-gradient(180deg,${heroPal.from},${heroPal.to})">
-          <div class="tank-wave w1" style="background-image:linear-gradient(180deg,${heroPal.wave},transparent)"></div>
-          <div class="tank-wave w2" style="background-image:linear-gradient(180deg,${heroPal.wave},transparent)"></div>
-          <span class="tank-bubble" style="--i:0;left:18%"></span>
-          <span class="tank-bubble" style="--i:1;left:38%"></span>
-          <span class="tank-bubble" style="--i:2;left:58%"></span>
-          <span class="tank-bubble" style="--i:3;left:74%"></span>
-          <span class="tank-bubble" style="--i:4;left:48%"></span>
-        </div>
-        <div class="tank-pct">${Math.round(heroPct)}٪</div>
-      </div>
     </div>
     ${isLow ? '<div class="ls-tape" style="position:absolute;bottom:0;left:0"></div>' : ''}
   `;
