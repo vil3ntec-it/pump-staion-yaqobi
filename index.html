@@ -2379,27 +2379,30 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
    ============================================================ */
 body.occ-worldcup{
   --occ-1:#0a3d50; --occ-2:#12805f; --occ-3:#8ed629;
-  --occ-wash:linear-gradient(135deg, rgba(10,61,80,.55), rgba(18,128,95,.42) 55%, rgba(142,214,41,.28));
+  /* was .55/.42/.28 — dominated the header's own amber gradient in
+     Standard/Ultra (Performance hides this wash entirely, which is why the
+     clash only showed in the other two tiers); now a subtle seasonal tint */
+  --occ-wash:linear-gradient(135deg, rgba(10,61,80,.20), rgba(18,128,95,.16) 55%, rgba(142,214,41,.10));
 }
 body.occ-ramadan{
   --occ-1:#3a0a19; --occ-2:#7a1530; --occ-3:#e8b23d;
-  --occ-wash:linear-gradient(135deg, rgba(58,10,25,.6), rgba(90,20,40,.48) 55%, rgba(180,120,20,.22));
+  --occ-wash:linear-gradient(135deg, rgba(58,10,25,.22), rgba(90,20,40,.18) 55%, rgba(180,120,20,.08));
 }
 body.occ-eid-fitr{
   --occ-1:#2a3d12; --occ-2:#4a7a1f; --occ-3:#e8c23d;
-  --occ-wash:linear-gradient(135deg, rgba(42,61,18,.5), rgba(74,122,31,.4) 55%, rgba(232,194,61,.26));
+  --occ-wash:linear-gradient(135deg, rgba(42,61,18,.18), rgba(74,122,31,.15) 55%, rgba(232,194,61,.10));
 }
 body.occ-eid-adha{
   --occ-1:#123a2a; --occ-2:#1f7a4a; --occ-3:#d4af37;
-  --occ-wash:linear-gradient(135deg, rgba(18,58,42,.55), rgba(31,122,74,.42) 55%, rgba(212,175,55,.24));
+  --occ-wash:linear-gradient(135deg, rgba(18,58,42,.20), rgba(31,122,74,.16) 55%, rgba(212,175,55,.09));
 }
 body.occ-nowruz{
   --occ-1:#3a1024; --occ-2:#c23d6b; --occ-3:#5fae4c;
-  --occ-wash:linear-gradient(135deg, rgba(58,16,36,.5), rgba(194,61,107,.34) 55%, rgba(95,174,76,.28));
+  --occ-wash:linear-gradient(135deg, rgba(58,16,36,.18), rgba(194,61,107,.13) 55%, rgba(95,174,76,.10));
 }
 body.occ-yalda{
   --occ-1:#1a0508; --occ-2:#7a1530; --occ-3:#d4af37;
-  --occ-wash:linear-gradient(135deg, rgba(26,5,8,.65), rgba(122,21,48,.45) 60%, rgba(212,175,55,.18));
+  --occ-wash:linear-gradient(135deg, rgba(26,5,8,.24), rgba(122,21,48,.17) 60%, rgba(212,175,55,.07));
 }
 
 body[class*="occ-"] .header{ overflow:hidden; } /* already position:sticky — a valid containing block */
