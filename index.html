@@ -3572,7 +3572,7 @@ body.gfx-ultra .lock-box{
 <div class="nav">
   <button class="nav-btn active" onclick="showSection('shifts',this)"><svg class="nav-ic ia-wobble"><use href="#ic-shifts"/></svg> پارچه‌ها</button>
   <button class="nav-btn" onclick="showSection('waraq',this)"><svg class="nav-ic ia-write"><use href="#ic-waraq"/></svg> ورق‌های روزانه</button>
-  <button class="nav-btn" onclick="showSection('debt',this)"><svg class="nav-ic ia-bounce"><use href="#ic-debt"/></svg> قرض‌داران</button>
+  <button class="nav-btn" onclick="showSection('debt',this)"><span class="nav-badge" id="debt-nav-badge" style="display:none"></span><svg class="nav-ic ia-bounce"><use href="#ic-debt"/></svg> قرض‌داران</button>
   <button class="nav-btn" onclick="showSection('debtrasid',this)"><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> رسید قرض‌داران</button>
   <button class="nav-btn" onclick="showSection('sarrafi',this)"><svg class="nav-ic ia-flip"><use href="#ic-sarrafi"/></svg> صرافی</button>
   <button class="nav-btn" onclick="showSection('expenses',this)"><svg class="nav-ic ia-fly"><use href="#ic-expenses"/></svg> مصارف</button>
@@ -7419,6 +7419,36 @@ function _goPersonPage(type, page) {
   try { document.getElementById(type + '-grid').scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch(e) {}
 }
 
+// وضعیت تیل هر قرض‌دار بر اساس پول پیش‌پرداختش:
+// remain = جمع رسید − جمع بردگی → اگر ≤ صفر شد یعنی «تمام شده» (سرخ)،
+// اگر ۲۰٪ یا کمترِ کل رسیدش مانده باشد یعنی «کم مانده» (زرد).
+// کسی که هیچ رسیدی نداده مشمول این هشدار نیست.
+function debtFuelStatus(p) {
+  const t = _splitTotals(_allRows(p)).all;
+  if (!(t.rasid > 0)) return 'none';
+  const remain = t.rasid - t.bardagi;
+  if (remain <= 0) return 'out';
+  if (remain <= t.rasid * 0.2) return 'low';
+  return 'ok';
+}
+// نشان اعلان روی دکمهٔ «قرض‌داران» — مثل نقطهٔ پیامک روی آیکون برنامه
+function updateDebtAlertBadge() {
+  const b = document.getElementById('debt-nav-badge');
+  if (!b) return;
+  let low = 0, out = 0;
+  (DB.debtPersons || []).forEach(p => {
+    const s = debtFuelStatus(p);
+    if (s === 'low') low++; else if (s === 'out') out++;
+  });
+  const n = low + out;
+  if (!n) { b.style.display = 'none'; return; }
+  b.style.display = '';
+  b.textContent = n2fa(n);
+  b.style.background = out ? '#e53e3e' : '#f6c000';
+  b.style.color = out ? '#fff' : '#000';
+  b.style.boxShadow = out ? '0 0 9px rgba(229,62,62,.7)' : '0 0 9px rgba(246,192,0,.7)';
+  b.title = (out ? ('تیل تمام‌شده: ' + n2fa(out)) : '') + (out && low ? ' — ' : '') + (low ? ('تیل کم‌مانده: ' + n2fa(low)) : '');
+}
 function renderPersons(type) {
   const list = type === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const grid = document.getElementById(type + '-grid');
@@ -7438,12 +7468,15 @@ function renderPersons(type) {
     const t = _splitTotals(rows);
     const albaqi  = t.all.albaqi;
     const pBal = t.petrol.albaqi, dBal = t.diesel.albaqi;
+    const st = type === 'debt' ? debtFuelStatus(p) : 'none';
     const card = document.createElement('div');
-    card.className = 'person-card';
+    card.className = 'person-card' + (st==='low' ? ' fuel-low' : st==='out' ? ' fuel-out' : '');
     card.innerHTML = `
       <button class="person-del" onclick="event.stopPropagation();deletePerson('${type}','${p.id}')">✕</button>
+      ${st==='low' ? '<span class="pstatus-dot low" title="تیلش کم مانده"></span>' : st==='out' ? '<span class="pstatus-dot out" title="تیلش تمام شده"></span>' : ''}
       <div class="pname">${escFa(p.name)}</div>
       <div class="pdebt ${albaqi<=0?'clear':''}">${albaqi<=0 ? '✅ تسویه' : 'الباقی: '+n2fa(albaqi)+' افغانی'}</div>
+      ${st==='low' ? '<div class="pstatus-label low">⚠️ تیلش کم مانده</div>' : st==='out' ? '<div class="pstatus-label out">⛔ تیلش تمام شده</div>' : ''}
       <div style="display:flex;gap:10px;margin-top:10px;font-size:0.95rem;font-weight:700;justify-content:center">
         <span style="color:var(--green)">⛽ ${n2fa(pBal)}</span>
         <span style="color:#b7791f">🟤 ${n2fa(dBal)}</span>
@@ -10421,6 +10454,7 @@ function updateBanner() {
   document.getElementById('bn-debt').textContent = n2fa(debtTotal) + ' افغانی';
   document.getElementById('bn-profit').textContent = n2fa(todayProfit) + ' افغانی';
   document.getElementById('bn-exp').textContent = n2fa(todayExp) + ' افغانی';
+  updateDebtAlertBadge();
 }
 
 // ========== SETTINGS ==========
@@ -14990,6 +15024,41 @@ document.addEventListener('click', function(e) {
   .modal-overlay.open .modal{ animation:none!important; }
   #navGlider{ transition:none!important; }
   .person-card:hover{ transform:none!important; }
+}
+
+/* ===== وضعیت تیل قرض‌داران: زرد = کم مانده، سرخ = تمام شده =====
+   (انتخابگر با وزن بالا تا در هر سه Tier گرافیکی — از جمله performance که
+   کارت‌ها را با !important یکدست می‌کند — رنگ وضعیت همیشه دیده شود) */
+body .person-card.fuel-low.fuel-low{
+  border:1.5px solid #e6b800!important;
+  background:color-mix(in srgb, #f6c000 13%, var(--card))!important;
+  box-shadow:0 0 16px -2px rgba(246,192,0,.55)!important;
+}
+body .person-card.fuel-out.fuel-out{
+  border:1.5px solid #e53e3e!important;
+  background:color-mix(in srgb, #e53e3e 14%, var(--card))!important;
+  box-shadow:0 0 16px -2px rgba(229,62,62,.55)!important;
+}
+@keyframes pdotPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
+.pstatus-dot{
+  position:absolute;top:8px;right:8px;width:13px;height:13px;border-radius:50%;
+  animation:pdotPulse 1.6s ease-in-out infinite;
+}
+.pstatus-dot.low{background:#f6c000;box-shadow:0 0 9px #f6c000}
+.pstatus-dot.out{background:#e53e3e;box-shadow:0 0 9px #e53e3e}
+.pstatus-label{margin-top:6px;font-size:0.8rem;font-weight:800}
+.pstatus-label.low{color:#e6b800}
+.pstatus-label.out{color:#e53e3e}
+/* نقطهٔ اعلان روی دکمهٔ قرض‌داران — مثل نشان پیامک روی آیکون برنامه */
+.nav-badge{
+  position:absolute;top:-5px;left:-5px;min-width:19px;height:19px;border-radius:10px;
+  background:#e53e3e;color:#fff;font-size:0.68rem;font-weight:800;line-height:1;
+  display:inline-flex;align-items:center;justify-content:center;padding:0 5px;
+  box-shadow:0 0 9px rgba(229,62,62,.7);z-index:3;pointer-events:none;
+  animation:pdotPulse 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce){
+  .pstatus-dot,.nav-badge{ animation:none!important; }
 }
 </style>
 
