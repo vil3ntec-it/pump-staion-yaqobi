@@ -168,7 +168,7 @@ body.viewer-mode .ft-opt{pointer-events:none !important;opacity:.85}
 .add-btn.purple{background:var(--night);color:#e9d8fd}
 .persons-grid{display:grid;grid-template-columns:repeat(auto-fill,175px);justify-content:start;gap:10px}
 /* بخش‌های دارای کارت حساب تمام‌عرض شوند تا کارت‌ها از راست و در کل صفحه بچینند */
-#sec-debt.section.visible,#sec-noinv.section.visible,#sec-waraq.section.visible,#sec-expenses.section.visible,#sec-debtrasid.section.visible,#sec-debtsum.section.visible{margin-left:calc(48% - 48vw);margin-right:calc(48% - 48vw);padding-left:18px;padding-right:18px;box-sizing:border-box}
+#sec-debt.section.visible,#sec-noinv.section.visible,#sec-waraq.section.visible,#sec-expenses.section.visible,#sec-debtrasid.section.visible,#sec-debtsum.section.visible,#sec-storage.section.visible,#sec-storage-diesel.section.visible,#sec-profit.section.visible,#sec-extraincome.section.visible{margin-left:calc(48% - 48vw);margin-right:calc(48% - 48vw);padding-left:18px;padding-right:18px;box-sizing:border-box}
 .person-card{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:14px 12px;cursor:pointer;transition:all .2s;text-align:center;position:relative}
 .person-card:hover{border-color:var(--accent);transform:translateY(-2px)}
 .person-card .pname{font-size:1.5rem;font-weight:700;margin-bottom:8px}
@@ -1820,7 +1820,11 @@ html, body {
   #sec-waraq.section.visible,
   #sec-expenses.section.visible,
   #sec-debtrasid.section.visible,
-  #sec-debtsum.section.visible {
+  #sec-debtsum.section.visible,
+  #sec-storage.section.visible,
+  #sec-storage-diesel.section.visible,
+  #sec-profit.section.visible,
+  #sec-extraincome.section.visible {
     margin-left: 0 !important;
     margin-right: 0 !important;
     padding-left: 8px !important;
@@ -2041,7 +2045,11 @@ html, body {
   #sec-waraq.section.visible,
   #sec-expenses.section.visible,
   #sec-debtrasid.section.visible,
-  #sec-debtsum.section.visible {
+  #sec-debtsum.section.visible,
+  #sec-storage.section.visible,
+  #sec-storage-diesel.section.visible,
+  #sec-profit.section.visible,
+  #sec-extraincome.section.visible {
     margin-left: calc(48% - 48vw) !important;
     margin-right: calc(48% - 48vw) !important;
     padding-left: 18px !important;
@@ -3723,7 +3731,9 @@ body.gfx-ultra .lock-box{
       <button class="goto-btn" onclick="showSection('shifts')">⛽ رفتن به پطرول</button>
       <button class="goto-btn" style="background:var(--green);color:#fff;border-color:var(--green)" onclick="pdfDieselShifts()">📄 PDF دیزل</button>
     </div>
-    <span>🟤 پارچه‌های دیزل — تاریخ: <span id="todayDate2"></span></span>
+    <span style="display:inline-flex;align-items:center;gap:10px">🟤 پارچه‌های دیزل — تاریخ: <span id="todayDate2"></span>
+      <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('shifts-diesel',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('shifts-diesel',0.08)">A+</button></span>
+    </span>
   </div>
   <div class="shifts-grid">
     <!-- DAY DIESEL -->
@@ -3812,7 +3822,9 @@ body.gfx-ultra .lock-box{
 <div class="section" id="sec-storage">
   <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
     <button class="goto-btn" onclick="showSection('storage-diesel')">🟤 رفتن به مخزن دیزل</button>
-    <span><svg class="nav-ic ia-pulse"><use href="#ic-storage"/></svg> مخزن پطرول</span>
+    <span style="display:inline-flex;align-items:center;gap:10px"><svg class="nav-ic ia-pulse"><use href="#ic-storage"/></svg> مخزن پطرول
+      <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('storage',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('storage',0.08)">A+</button></span>
+    </span>
   </div>
   <div id="tank-petrol" class="tank-wrap"></div>
   <div id="fuel-purchases-list"></div>
@@ -3824,7 +3836,9 @@ body.gfx-ultra .lock-box{
 <div class="section" id="sec-storage-diesel">
   <div class="section-title" style="color:var(--accent);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
     <button class="goto-btn" onclick="showSection('storage')">⛽ رفتن به مخزن پطرول</button>
-    <span>🟤 مخزن دیزل</span>
+    <span style="display:inline-flex;align-items:center;gap:10px">🟤 مخزن دیزل
+      <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('storage-diesel',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('storage-diesel',0.08)">A+</button></span>
+    </span>
   </div>
   <div id="tank-diesel" class="tank-wrap"></div>
   <div id="diesel-purchases-list"></div>
@@ -3957,7 +3971,10 @@ body.gfx-ultra .lock-box{
 <div class="section" id="sec-rasid">
   <div class="card">
     <div class="card-head">
-      <div class="card-title">🧾 رسید پارچه‌ها</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="card-title">🧾 رسید پارچه‌ها</div>
+        <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('rasid',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('rasid',0.08)">A+</button></span>
+      </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
         <button class="add-btn" onclick="addRasidRow()">➕ ردیف</button>
         <input type="number" id="rasid-bulk" min="1" value="5" title="تعداد ردیف" style="width:52px;padding:6px;background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--txt);font-family:'Vazirmatn',sans-serif;text-align:center">
@@ -3981,6 +3998,12 @@ body.gfx-ultra .lock-box{
 
 <!-- PROFIT/LOSS -->
 <div class="section" id="sec-profit">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" style="border-color:var(--green);color:var(--green)" onclick="showSection('extraincome')">🛒 خرید عمده از مشتری</button>
+    <span style="display:inline-flex;align-items:center;gap:10px"><svg class="nav-ic ia-rise"><use href="#ic-profit"/></svg> مفاد / ضرر / اتحادیه
+      <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('profit',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('profit',0.08)">A+</button></span>
+    </span>
+  </div>
   <div class="pl-result-wrap">
   <div class="pl-result" id="pl-result">
     <div class="pl-aurora" aria-hidden="true"></div>
@@ -4049,8 +4072,35 @@ body.gfx-ultra .lock-box{
       </div>
     </div>
   </div>
+  <!-- کادر خرید عمده — با کلیک، صفحهٔ جداگانهٔ آن باز می‌شود تا این بخش بزرگ نشود -->
+  <div class="card" style="cursor:pointer;border-color:var(--green)" onclick="showSection('extraincome')">
+    <div class="card-head">
+      <div class="card-title">🛒 خرید عمده از مشتری (درآمد اضافی)</div>
+      <span style="font-size:0.82rem;font-weight:700;color:var(--green)">باز کردن صفحه ←</span>
+    </div>
+    <div style="padding:12px 14px;font-size:0.8rem;color:var(--muted)">همهٔ خریدهای عمده در صفحهٔ جداگانه ثبت و نگهداری می‌شوند — جمع درآمد اضافی: <b id="ei-profit-sum" style="color:var(--green)">0 افغانی</b></div>
+  </div>
   <div class="card">
-    <div class="card-head"><div class="card-title">🛒 خرید عمده از مشتری (درآمد اضافی)</div></div>
+    <div class="card-head"><div class="card-title">✍️ درآمد و مصرف اضافی دستی</div></div>
+    <div style="padding:14px">
+      <div class="pl-input-row">
+        <div class="pl-field"><label>درآمد اضافی دستی</label><input type="number" id="pl-extra-income" placeholder="0" oninput="calcPL()"></div>
+        <div class="pl-field"><label>مصرف اضافی</label><input type="number" id="pl-extra-exp" placeholder="0" oninput="calcPL()"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- خرید عمده از مشتری (صفحهٔ جداگانه) -->
+<div class="section" id="sec-extraincome">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('profit')">📈 برگشت به مفاد / ضرر</button>
+    <span style="display:inline-flex;align-items:center;gap:10px">🛒 خرید عمده از مشتری (درآمد اضافی)
+      <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('extraincome',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('extraincome',0.08)">A+</button></span>
+    </span>
+  </div>
+  <div class="card">
+    <div class="card-head"><div class="card-title">🛒 ثبت خرید عمده</div></div>
     <div style="padding:14px">
       <div style="font-size:0.76rem;color:var(--muted);margin-bottom:10px;line-height:1.7">یک نفر می‌خواهد تیلش را به تو بفروشد؛ تو عمده می‌گیری. مقدار تیل و فی خرید عمده و نرخ بازار را بنویس — درآمد اضافی = مقدار × (نرخ بازار − فی عمده). با «➕ ثبت» در درآمدها جمع می‌شود.</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;align-items:end">
@@ -4067,10 +4117,6 @@ body.gfx-ultra .lock-box{
           <tbody id="ei-body"></tbody>
           <tfoot><tr style="font-weight:800"><td colspan="5" style="text-align:left">جمع</td><td id="ei-ft-seller" style="color:var(--accent)">0</td><td id="ei-ft-income" style="color:var(--green)">0</td><td></td></tr></tfoot>
         </table>
-      </div>
-      <div class="pl-input-row" style="margin-top:12px">
-        <div class="pl-field"><label>درآمد اضافی دستی</label><input type="number" id="pl-extra-income" placeholder="0" oninput="calcPL()"></div>
-        <div class="pl-field"><label>مصرف اضافی</label><input type="number" id="pl-extra-exp" placeholder="0" oninput="calcPL()"></div>
       </div>
     </div>
   </div>
@@ -5877,6 +5923,7 @@ function showSection(id, btn) {
   if (id === 'shifts-diesel') navId = 'shifts';
   if (id === 'storage-diesel') navId = 'storage';
   if (id === 'debtsum') navId = 'debtrasid';
+  if (id === 'extraincome') navId = 'profit';
   if (btn) {
     btn.classList.add('active');
   } else {
@@ -5884,6 +5931,7 @@ function showSection(id, btn) {
     if (matchBtn) matchBtn.classList.add('active');
   }
   if (id === 'profit') calcPL();
+  if (id === 'extraincome') { renderExtraIncomes(); calcExtraIncome(); }
   if (id === 'storage' || id === 'storage-diesel') { renderStorage(); initAutoProfit(); setTimeout(checkLowStock, 300); }
   if (id === 'expenses') renderExpenses();
   if (id === 'rasid') renderRasid();
@@ -10380,7 +10428,7 @@ function renderExtraIncomes() {
   const list = DB.extraIncomes || [];
   tb.innerHTML = '';
   const setF = (id,v)=>{ const el=document.getElementById(id); if(el) el.textContent = n2fa(v) + ' افغانی'; };
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:14px;color:var(--muted)">موردی ثبت نشده</td></tr>'; setF('ei-ft-seller',0); setF('ei-ft-income',0); return; }
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:14px;color:var(--muted)">موردی ثبت نشده</td></tr>'; setF('ei-ft-seller',0); setF('ei-ft-income',0); setF('ei-profit-sum',0); return; }
   let sumSeller = 0, sumIncome = 0;
   list.forEach((e, i) => {
     const seller = (e.seller != null) ? e.seller : _eiSeller(e.qty, e.buy);
@@ -10390,6 +10438,7 @@ function renderExtraIncomes() {
     tb.appendChild(tr);
   });
   setF('ei-ft-seller', Math.round(sumSeller)); setF('ei-ft-income', Math.round(sumIncome));
+  setF('ei-profit-sum', Math.round(sumIncome));
 }
 
 // ========== PROFIT/LOSS ==========
@@ -13339,7 +13388,7 @@ function adjSecFont(secId, delta) {
   try { localStorage.setItem('secFont_' + secId, scale); } catch(e) {}
 }
 function loadSecFonts() {
-  ['shifts','shifts-diesel','debt','debtrasid','debtsum','noinv','expenses','safe','sarrafi','rasid','storage','storage-diesel','profit','settings'].forEach(id => {
+  ['shifts','shifts-diesel','debt','debtrasid','debtsum','noinv','expenses','safe','sarrafi','rasid','storage','storage-diesel','profit','extraincome','settings'].forEach(id => {
     const saved = parseFloat((function(){ try { return localStorage.getItem('secFont_' + id) || 0; } catch(e){ return 0; } })());
     if (saved && saved !== 1) {
       _secFontScales[id] = saved;
