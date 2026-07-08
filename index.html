@@ -2098,7 +2098,8 @@ body.theme-dark-amber{
   --hdr-bg:linear-gradient(90deg,#0e0a05,#1a1008,#0e0a05) !important;
   --banner-bg:linear-gradient(90deg,#0c0905,#171008,#0c0905) !important;
   --nav-bg:linear-gradient(90deg,#0b0805,#141008,#0b0805) !important;
-  --app-bg:transparent !important; --fx-hue:0deg !important;
+  --app-bg:radial-gradient(ellipse at 20% 0%,rgba(255,170,60,.10),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(255,130,40,.07),transparent 50%),linear-gradient(160deg,#0b0e18,#131120 45%,#171326 75%,#0d0a15) !important;
+  --fx-hue:0deg !important;
 }
 body.theme-dark-emerald{
   --dark:#08120f !important; --panel:#0c1814 !important; --card:#102019 !important; --border:#1f3a30 !important;
@@ -2108,7 +2109,8 @@ body.theme-dark-emerald{
   --hdr-bg:linear-gradient(90deg,#04140f,#082019,#04140f) !important;
   --banner-bg:linear-gradient(90deg,#03110d,#071c16,#03110d) !important;
   --nav-bg:linear-gradient(90deg,#030f0c,#061813,#030f0c) !important;
-  --app-bg:transparent !important; --fx-hue:95deg !important;
+  --app-bg:radial-gradient(ellipse at 20% 0%,rgba(47,227,156,.10),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(19,176,122,.08),transparent 50%),linear-gradient(160deg,#05110d,#081a14 45%,#0b241b 75%,#04100c) !important;
+  --fx-hue:95deg !important;
 }
 body.theme-dark-indigo{
   --dark:#0a0c1a !important; --panel:#0e1226 !important; --card:#151a33 !important; --border:#2a3357 !important;
@@ -2118,7 +2120,8 @@ body.theme-dark-indigo{
   --hdr-bg:linear-gradient(90deg,#070914,#0e1226,#070914) !important;
   --banner-bg:linear-gradient(90deg,#060810,#0c1022,#060810) !important;
   --nav-bg:linear-gradient(90deg,#05070f,#0b0f20,#05070f) !important;
-  --app-bg:transparent !important; --fx-hue:-30deg !important;
+  --app-bg:radial-gradient(ellipse at 20% 0%,rgba(139,123,255,.13),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(106,76,255,.09),transparent 50%),linear-gradient(160deg,#090b18,#0f1228 45%,#161c40 75%,#0a0c1c) !important;
+  --fx-hue:-30deg !important;
 }
 body.theme-dark-crimson{
   --dark:#120a0c !important; --panel:#1a0e11 !important; --card:#241318 !important; --border:#46232b !important;
@@ -2128,7 +2131,8 @@ body.theme-dark-crimson{
   --hdr-bg:linear-gradient(90deg,#140809,#220e12,#140809) !important;
   --banner-bg:linear-gradient(90deg,#100708,#1c0c0f,#100708) !important;
   --nav-bg:linear-gradient(90deg,#0e0607,#190b0d,#0e0607) !important;
-  --app-bg:transparent !important; --fx-hue:-20deg !important;
+  --app-bg:radial-gradient(ellipse at 20% 0%,rgba(255,93,98,.11),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(224,50,47,.08),transparent 50%),linear-gradient(160deg,#130709,#1c0b10 45%,#291017 75%,#0f0608) !important;
+  --fx-hue:-20deg !important;
 }
 body.theme-dark-teal{
   --dark:#071416 !important; --panel:#0a1c1f !important; --card:#0e262b !important; --border:#1d4047 !important;
@@ -2138,7 +2142,8 @@ body.theme-dark-teal{
   --hdr-bg:linear-gradient(90deg,#03131a,#072329,#03131a) !important;
   --banner-bg:linear-gradient(90deg,#021016,#061d23,#021016) !important;
   --nav-bg:linear-gradient(90deg,#020e13,#051a20,#020e13) !important;
-  --app-bg:transparent !important; --fx-hue:150deg !important;
+  --app-bg:radial-gradient(ellipse at 20% 0%,rgba(34,211,238,.11),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(14,155,181,.08),transparent 50%),linear-gradient(160deg,#04141a,#072028 45%,#0a2c36 75%,#031015) !important;
+  --fx-hue:150deg !important;
 }
 /* ===== LIGHT ===== */
 body.theme-light-cream{
@@ -3254,7 +3259,7 @@ body.gfx-ultra .lock-box{
 }
 </style>
 </head>
-<body>
+<body class="nav-sticky">
 <script id="gfx-tier-boot">
 /* apply the saved graphics tier BEFORE first paint (no flash of the
    wrong tier). The full engine lives in #gfx-quality-js near the end
@@ -4472,6 +4477,12 @@ body.gfx-ultra .lock-box{
 
 <!-- SETTINGS -->
 <div class="section" id="sec-settings">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <span></span>
+    <span style="display:inline-flex;align-items:center;gap:10px"><svg class="nav-ic ia-spin"><use href="#ic-settings"/></svg> تنظیمات
+      <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('settings',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('settings',0.08)">A+</button></span>
+    </span>
+  </div>
   <div class="settings-card" id="theme-card" style="border-color:var(--accent)">
     <div class="settings-title">🎨 تم رنگی</div>
     <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
@@ -5927,6 +5938,8 @@ function showSection(id, btn) {
   if (id === 'storage-diesel') navId = 'storage';
   if (id === 'debtsum') navId = 'debtrasid';
   if (id === 'extraincome') navId = 'profit';
+  // نوار بخش‌ها هنگام اسکرول بالا بچسبد — به‌جز ورق، قرض‌داران و شرکت‌ها تیل
+  document.body.classList.toggle('nav-sticky', !(id === 'waraq' || id === 'debt' || id === 'noinv'));
   if (btn) {
     btn.classList.add('active');
   } else {
@@ -13384,7 +13397,7 @@ function adjSecFont(secId, delta) {
   if (!sec) return;
   _secFontScales[secId] = Math.min(2.5, Math.max(0.5, (_secFontScales[secId] || 1) + delta));
   const scale = _secFontScales[secId];
-  sec.querySelectorAll('th,td,.field-label,.field-input,.calc-row,.stat-label,.stat-value,.pname,.pdebt,.xls-in,.xls-calc,.xls-num,.fs-cell .l,.fs-cell .v,.msumbox .ml,.msumbox .mv,.tb-label,.tb-value').forEach(el => {
+  sec.querySelectorAll('th,td,.field-label,.field-input,.calc-row,.stat-label,.stat-value,.pname,.pdebt,.xls-in,.xls-calc,.xls-num,.fs-cell .l,.fs-cell .v,.msumbox .ml,.msumbox .mv,.tb-label,.tb-value,.pl-card-title,.pl-big,.pl-result-label,.pl-result-value,.pl-result-sub,.pl-field label,.ei-in,.tank-head,.tank-current,.tank-chip,.tank-meta div,.tank-cap,.fuel-entry-item,.fuel-total-bar,.settings-title,.pw-field label,.pw-field input,.settings-card > div').forEach(el => {
     if (!el.dataset.origFs) el.dataset.origFs = parseFloat(getComputedStyle(el).fontSize);
     el.style.fontSize = (parseFloat(el.dataset.origFs) * scale) + 'px';
   });
@@ -14776,7 +14789,7 @@ document.addEventListener('click', function(e) {
     b.classList.add('theme-'+id);
     if(p.light){ b.classList.add('light-mode'); try{ localStorage.setItem('pumpTheme','light'); }catch(e){} }
     else { b.classList.remove('light-mode'); try{ localStorage.setItem('pumpTheme','dark'); }catch(e){} }
-    try{ document.documentElement.style.background = p.html; }catch(e){}
+    try{ document.documentElement.style.setProperty('background', p.html, 'important'); }catch(e){}
     var tb = document.getElementById('themeBtn'); if(tb) tb.textContent = p.light ? '🌙 تاریک' : '☀️ روشن';
     try{ localStorage.setItem('pumpPalette', id); }catch(e){}
     try{ localStorage.setItem(p.light ? 'pumpPaletteLight' : 'pumpPaletteDark', id); }catch(e){}
@@ -14789,16 +14802,9 @@ document.addEventListener('click', function(e) {
   window.applyPalette = function(id){
     var p = find(id); if(!p) return;
     try{ localStorage.setItem(p.light ? 'pumpPaletteLight' : 'pumpPaletteDark', id); }catch(e){}
-    var nowLight = document.body.classList.contains('light-mode');
-    if(p.light === nowLight){
-      applyPaletteVisual(id);            // same mode → apply/preview now
-    } else {
-      markSwatches();                    // other mode → just saved for later
-      if(typeof showToast === 'function'){
-        showToast((p.light ? '✅ تم روشن ذخیره شد' : '✅ تم تاریک ذخیره شد') +
-                  ' — با دکمهٔ روشن/تاریک بالا فعال می‌شود', p.ac);
-      }
-    }
+    // همیشه فوراً اعمال شود — اگر تم از حالت مقابل باشد، حالت روشن/تاریک هم خودش عوض می‌شود
+    applyPaletteVisual(id);
+    if(typeof showToast === 'function') showToast('✅ تم «' + p.name + '» اعمال شد', p.ac);
   };
 
   // Mark the saved dark theme active in the dark row AND the saved light
@@ -15220,6 +15226,45 @@ body .person-card.fuel-out.fuel-out{
 #cm-albaqi-status{ font-size:0.74rem!important; font-weight:700!important; }
 /* ستون الباقی جدول شرکت: عدد اصلی و زیرنویس دالر هم‌اندازه با بقیهٔ ستون‌ها */
 #cm-tbl td{ font-size:1rem; }
+
+/* ===== نوشته‌های ریز در کل برنامه کمی بزرگ‌تر و پررنگ‌تر =====
+   هر متنی که با استایل درون‌خطی زیر 0.8rem است، به کف خوانا برسد */
+[style*="font-size:0.5"]{ font-size:0.74rem!important; }
+[style*="font-size:0.6"]{ font-size:0.82rem!important; }
+[style*="font-size:0.7"]{ font-size:0.88rem!important; }
+[style*="font-size:0.8"]{ font-size:0.92rem!important; }
+[style*="font-size:0.5"]:not([style*="font-weight"]),
+[style*="font-size:0.6"]:not([style*="font-weight"]),
+[style*="font-size:0.7"]:not([style*="font-weight"]){ font-weight:600!important; }
+
+/* ===== پس‌زمینهٔ تم‌ها در همهٔ کیفیت‌های گرافیک =====
+   قوانین gfx-performance/standard/ultra با وزن بالاتر، رنگ قهوه‌ای/کهربایی پیش‌فرض را
+   روی هدر و نوار می‌گذاشتند و تم انتخابی دیده نمی‌شد — اینجا با وزن بالاتر و آخرِ فایل،
+   وقتی تمی انتخاب شده باشد همیشه رنگ همان تم اعمال می‌شود */
+body[class*="theme-"].gfx-performance .header,
+body[class*="theme-"].gfx-standard .header,
+body[class*="theme-"].gfx-ultra .header{ background:var(--hdr-bg)!important; }
+body[class*="theme-"].gfx-performance .top-banner,
+body[class*="theme-"].gfx-standard .top-banner,
+body[class*="theme-"].gfx-ultra .top-banner{ background:var(--banner-bg)!important; }
+body[class*="theme-"].gfx-performance .nav,
+body[class*="theme-"].gfx-standard .nav,
+body[class*="theme-"].gfx-ultra .nav{ background:var(--nav-bg)!important; }
+body[class*="theme-"] .nav-btn.active,
+body[class*="theme-"] #navGlider{ background:var(--grad-amber)!important; }
+body[class*="theme-"].gfx-performance{ background:var(--app-bg)!important; }
+body[class*="theme-"].gfx-standard{ background:var(--app-bg)!important; }
+body[class*="theme-"].gfx-ultra{ background:var(--app-bg)!important; }
+
+/* ===== نوار ۱۲ بخش هنگام اسکرول بالای صفحه می‌چسبد و ناپدید نمی‌شود =====
+   (در بخش‌های ورق، قرض‌داران و شرکت‌ها تیل غیرفعال است — با کلاس body کنترل می‌شود) */
+body.nav-sticky .nav{
+  position:sticky; top:0; z-index:250;
+  box-shadow:0 6px 18px -8px rgba(0,0,0,.55);
+}
+/* overflow-x:hidden روی body آن را ظرف اسکرول می‌کند و sticky را نسبت به صفحه می‌شکند؛
+   clip همان بریدن افقی را می‌دهد بدون ساختن ظرف اسکرول */
+body.nav-sticky{ overflow-x:clip!important; overflow-y:visible!important; }
 
 /* ===== اسکرول‌بار در همهٔ بخش‌ها همیشه دیده شود =====
    صفحهٔ کوتاه: دستهٔ اسکرول تمام‌قد و بی‌حرکت می‌ماند (بدنه همیشه ۲px بلندتر از پنجره است)؛
