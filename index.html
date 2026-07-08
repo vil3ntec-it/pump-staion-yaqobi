@@ -2333,7 +2333,12 @@ body.light-mode[class*="theme-"]{
 
 /* ---------- BRIDGE: route hard-coded chrome to the variables above ----------
    Only active while a theme-* class is present on <body>. */
-body[class*="theme-"]{ background:var(--app-bg)!important; }
+/* background-attachment:fixed مهم است — بدون آن، گرادیان روی ارتفاع کل صفحهٔ
+   اسکرول‌شونده (که می‌تواند خیلی درازتر از صفحه‌نمایش کامپیوتر باشد) حساب
+   می‌شد و نوار/لانه‌زنبوری معمولاً بیرون از دیدِ اول صفحه می‌افتاد — یعنی در
+   کامپیوتر (که صفحات درازتری دارد) عملاً هیچ تغییری دیده نمی‌شد. با fixed،
+   طرح همیشه نسبت به خودِ صفحه‌نمایش حساب می‌شود، مستقل از طول محتوا. */
+body[class*="theme-"]{ background:var(--app-bg)!important; background-attachment:fixed!important; }
 body[class*="theme-"] .header{ background:var(--hdr-bg)!important; border-bottom-color:var(--chrome-brd)!important; }
 body[class*="theme-"] .header-title{ color:var(--hdr-title)!important; }
 body[class*="theme-"] .top-banner{ background:var(--banner-bg)!important; border-bottom-color:var(--chrome-brd)!important; }
