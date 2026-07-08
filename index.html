@@ -93,6 +93,53 @@ body.light-mode .lock-box input{background:rgba(255,255,255,.5);border-color:rgb
 .lock-box button{width:100%;padding:12px;background:var(--accent);color:#000;border:none;border-radius:9px;font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:1rem;cursor:pointer;transition:opacity .2s}
 .lock-box button:hover{opacity:.88}
 .lock-err{color:#fc8181;font-size:0.85rem;margin-top:12px;min-height:20px;text-align:center}
+
+/* ===== صفحهٔ ورود — روز: پس‌زمینهٔ گرم روشن + کرهٔ نرم رنگی (بدون عکس، فقط CSS) =====
+   نکته: بخش «LOCK SCREEN (cinematic hero)» پایین‌تر در فایل، بدون توجه به
+   حالت روز/شب، رنگ‌های تیره را !important تحمیل می‌کند؛ همان‌جا هم override
+   می‌شود، ولی اینجا هم با !important و ویژگی بالاتر (body.light-mode) قفل
+   می‌کنیم تا صفحهٔ ورود در روز واقعاً روشن/سفید بماند. */
+body.light-mode .ls-bg{
+  background:linear-gradient(160deg, color-mix(in srgb, var(--accent, #f6a623) 22%, #fdf6e8), color-mix(in srgb, var(--accent, #f6a623) 10%, #fff8ea) 55%, #fffdf8) !important;
+}
+body.light-mode .ls-overlay{ background:none !important; }
+body.light-mode .ls-brand-icon{ filter:drop-shadow(0 2px 14px rgba(0,0,0,.15)) !important; }
+body.light-mode .ls-brand-sub{ color:color-mix(in srgb, var(--accent, #f6a623) 60%, #4a3410) !important; }
+body.light-mode .lock-box{
+  background:rgba(255,255,255,.82) !important;
+  border:1.5px solid rgba(255,255,255,.6) !important;
+  box-shadow:0 20px 60px -20px rgba(120,80,20,.35), inset 0 1px 0 rgba(255,255,255,.6) !important;
+}
+body.light-mode .lock-box input{
+  background:rgba(255,255,255,.65) !important;
+  border:1px solid rgba(0,0,0,.12) !important;
+  color:#2a1a06 !important;
+}
+body.light-mode .lock-box input::placeholder{ color:#8a7658 !important; -webkit-text-fill-color:#8a7658 !important; }
+/* گفتی: کیفیت Standard/Ultra هم صندوق ورود را بدون توجه به روز/شب تیره می‌کردند — همینجا هم روشن بمانند */
+body.gfx-standard.light-mode .lock-box,
+body.gfx-ultra.light-mode .lock-box{
+  background:rgba(255,255,255,.82) !important;
+  border:1.5px solid rgba(255,255,255,.6) !important;
+  box-shadow:0 20px 60px -20px rgba(120,80,20,.35), inset 0 1px 0 rgba(255,255,255,.6) !important;
+}
+body.light-mode .lock-screen>div[style*="rgba(255,255,255,.5)"]{ color:#6b5636 !important; }
+body.light-mode .lock-box>div[style*="rgba(255,255,255,.6)"]{ color:#6b5636 !important; }
+.ls-orb{
+  position:absolute; border-radius:50%; pointer-events:none; z-index:0;
+  background:radial-gradient(circle at 34% 30%, color-mix(in srgb, var(--accent, #f6a623) 65%, #fff8e0), color-mix(in srgb, var(--accent, #f6a623) 38%, #fff) 55%, transparent 74%);
+  opacity:0; display:none;
+}
+body.light-mode .ls-orb{ display:block; opacity:.85; }
+.ls-orb-1{ width:260px; height:260px; top:-6%;  left:-8%;  }
+.ls-orb-2{ width:150px; height:150px; top:62%;  left:82%;  }
+.ls-orb-3{ width:90px;  height:90px;  top:8%;    left:70%;  }
+.ls-orb-4{ width:60px;  height:60px;  top:80%;   left:12%;  }
+.ls-orb-5{ width:190px; height:190px; top:70%;   left:-6%;  }
+body.gfx-standard.light-mode .ls-orb,
+body.gfx-ultra.light-mode .ls-orb{ animation:lsOrbDrift 12s ease-in-out infinite; }
+.ls-orb-2{ animation-delay:-3s; } .ls-orb-3{ animation-delay:-6s; } .ls-orb-4{ animation-delay:-9s; }
+@keyframes lsOrbDrift{ 0%,100%{ transform:translate(0,0); } 50%{ transform:translate(10px,-12px); } }
 @keyframes lsZoom{from{transform:scale(1)}to{transform:scale(1.1)}}
 @keyframes lsFadeDown{from{opacity:0;transform:translateY(-24px)}to{opacity:1;transform:translateY(0)}}
 @keyframes lsFadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
@@ -550,8 +597,12 @@ body.light-mode .top-banner{
   background:linear-gradient(90deg,#4a2e00,#5c3a00,#4a2e00)!important;
   border-bottom:1px solid rgba(220,140,0,.4)!important;
 }
-body.light-mode .tb-label{ color:#c8a060!important; }
-body.light-mode .tb-value{ color:#fff0c0 !important; }
+/* این دو رنگ کرم/طلایی فقط برای ظاهر پیش‌فرض (بدون تم انتخابی) است — نوار
+   آن حالت همیشه تیره بوده. وقتی یک تم انتخاب شده، نوار سفید است و رنگ‌های
+   inline خودِ هر مقدار (قرمز/سبز/رنگ تم) باید دیده شوند، نه این کرم رنگ. */
+body.light-mode:not([class*="theme-"]) .tb-label{ color:#c8a060!important; }
+body.light-mode:not([class*="theme-"]) .tb-value{ color:#fff0c0 !important; }
+body.light-mode[class*="theme-"] .tb-label{ color:var(--muted) !important; }
 
 /* ── NAV ── */
 .nav{
@@ -2259,6 +2310,23 @@ body.theme-light-slate{
   --atmo-beam:rgba(124,77,255,.16); --atmo-geo:rgba(140,100,255,.5);
 }
 
+/* ---------- DAY THEMES STAY WHITE ----------
+   Every day theme's chrome (header/banner/nav) and app background are
+   forced to a clean white base here — the theme's own accent is used only
+   as a thin diagonal ribbon and for text/borders, never as a dark or
+   tinted wash. This block has higher specificity than the per-theme
+   blocks above (body.light-mode[class*="theme-"] beats body.theme-X), so
+   it always wins no matter which day theme is active — "white + accent"
+   (white+red, white+green, ...) for all of them, including Royal Gold. */
+body.light-mode[class*="theme-"]{
+  --dark:#f7f7f9 !important; --panel:#ffffff !important; --card:#ffffff !important;
+  --hdr-bg:linear-gradient(90deg,#ffffff,#ffffff) !important;
+  --banner-bg:linear-gradient(90deg,#ffffff,#ffffff) !important;
+  --nav-bg:linear-gradient(90deg,#ffffff,#ffffff) !important;
+  --hdr-title:var(--accent) !important;
+  --app-bg:linear-gradient(120deg, transparent 46%, color-mix(in srgb, var(--accent) 12%, transparent) 52%, transparent 58%), #ffffff !important;
+}
+
 /* ---------- BRIDGE: route hard-coded chrome to the variables above ----------
    Only active while a theme-* class is present on <body>. */
 body[class*="theme-"]{ background:var(--app-bg)!important; }
@@ -3385,18 +3453,19 @@ body.gfx-ultra.light-mode .daynight-toggle .dn-thumb{ animation:dnThumbGlowUltra
 </style>
 
 <style id="atmo-premium-bg">
-/* ╔══════════════════════════════════════════════════════════════════╗
-   ║  PREMIUM ATMOSPHERE LAYER — additive, theme + tier aware.         ║
-   ║  Consumes each theme's --atmo-beam/--atmo-geo (see the 10-palette ║
-   ║  block above) so the light/geometry colour always matches the    ║
-   ║  active theme automatically, on every page (header, login,       ║
-   ║  ambient background) without any per-page code.                  ║
-   ║    Lite (gfx-performance): untouched — flat, zero extra layers.  ║
-   ║    Standard: a slow ambient light-beam sweep + header sheen.      ║
-   ║    Ultra: same beam, plus soft floating geometry.                 ║
-   ╚══════════════════════════════════════════════════════════════════╝ */
+/* ============================================================
+   PREMIUM ATMOSPHERE LAYER -- additive, theme + tier aware.
+   Consumes each theme's --atmo-geo (see the 10-palette block
+   above) so the geometry colour always matches the active
+   theme automatically (header, app background, login) with no
+   per-page code. Kept deliberately CHEAP: only opacity/transform
+   animate (GPU-composited, no repaint) -- no animated
+   background-position, which caused the earlier Standard/Ultra lag.
+     Lite (gfx-performance): untouched -- flat, zero extra layers.
+     Standard/Ultra: soft floating geometry only, colour-matched.
+   ============================================================ */
 
-/* -- Lite: still themed, still cheap — a static 2-stop gradient instead
+/* -- Lite: still themed, still cheap -- a static 2-stop gradient instead
    of a flat solid panel colour (no blur, no animation, no shadow) ------- */
 body.gfx-performance[class*="theme-"] .header,
 body.gfx-performance[class*="theme-"] .top-banner{
@@ -3406,78 +3475,39 @@ body.gfx-performance[class*="theme-"] .nav{
   background:linear-gradient(90deg, var(--panel), var(--dark)) !important;
 }
 
-/* -- Header: soft ambient light sweep (Standard/Ultra only) ------------- */
-body[class*="theme-"] .header{ position:relative; overflow:hidden; }
-body[class*="theme-"] .header::after{
-  content:""; position:absolute; inset:0; pointer-events:none; opacity:0;
-  background:linear-gradient(115deg, transparent 32%, var(--atmo-beam, rgba(255,255,255,.14)) 50%, transparent 68%);
-  background-size:240% 100%; background-position:160% 0;
-}
-body.gfx-standard[class*="theme-"] .header::after{ opacity:1; animation:atmoHeaderBeam 10s ease-in-out infinite; }
-body.gfx-ultra[class*="theme-"] .header::after{ opacity:1; animation:atmoHeaderBeam 7s ease-in-out infinite; }
-@keyframes atmoHeaderBeam{
-  0%,15% { background-position:160% 0; }
-  50%,65%{ background-position:-60% 0; }
-  100%   { background-position:-60% 0; }
-}
-
-/* -- Ambient app background: soft beam sweep + floating geometry -------- */
-.fx-beam{
-  position:absolute; inset:-20% -20%; pointer-events:none; opacity:0;
-  background:linear-gradient(115deg, transparent 32%, var(--atmo-beam, rgba(255,200,120,.14)) 50%, transparent 68%);
-  background-size:220% 220%; background-position:140% -20%;
-}
-body.gfx-standard .fx-beam{ opacity:1; animation:atmoBeamSweep 13s ease-in-out infinite; }
-body.gfx-ultra .fx-beam{ opacity:1; animation:atmoBeamSweep 9s ease-in-out infinite; }
-@keyframes atmoBeamSweep{ 0%,100%{ background-position:140% -20%; } 50%{ background-position:-40% 40%; } }
-
+/* -- Ambient app background: soft floating geometry (Ultra only) ------- */
 .fx-geo{
   position:absolute; opacity:0; pointer-events:none; will-change:transform;
-  border:1.5px solid var(--atmo-geo, rgba(255,200,120,.5));
+  border:1.5px solid var(--atmo-geo, rgba(255,255,255,.4));
   border-radius:26% 74% 62% 38%/38% 42% 58% 62%;
 }
 .fx-geo-1{ width:130px; height:130px; top:10%; left:6%; }
 .fx-geo-2{ width:88px;  height:88px;  top:62%; left:84%; }
 .fx-geo-3{ width:56px;  height:56px;  top:78%; left:20%; border-radius:50%; }
-body.gfx-ultra .fx-geo{ opacity:.32; animation:atmoGeoFloat 17s ease-in-out infinite; }
-body.gfx-ultra .fx-geo-2{ animation-duration:21s; animation-delay:-5s; }
-body.gfx-ultra .fx-geo-3{ animation-duration:14s; animation-delay:-9s; }
-body.gfx-ultra.light-mode .fx-geo{ opacity:.22; }
+body.gfx-ultra .fx-geo{ opacity:.30; animation:atmoGeoFloat 18s ease-in-out infinite; }
+body.gfx-ultra .fx-geo-2{ animation-duration:22s; animation-delay:-5s; }
+body.gfx-ultra .fx-geo-3{ animation-duration:15s; animation-delay:-9s; }
+body.gfx-ultra.light-mode .fx-geo{ opacity:.20; }
 @keyframes atmoGeoFloat{
   0%,100%{ transform:translate(0,0) rotate(0deg); }
   50%    { transform:translate(16px,-20px) rotate(22deg); }
 }
 
-/* -- Login screen: identical tier language (flat / glow / floating geo) - */
-.lock-screen::before{
-  content:""; position:absolute; inset:-15% -15%; pointer-events:none; z-index:1; opacity:0;
-  background:linear-gradient(115deg, transparent 32%, var(--atmo-beam, rgba(255,200,120,.16)) 50%, transparent 68%);
-  background-size:220% 220%; background-position:140% -20%;
-}
-body.gfx-standard .lock-screen::before{ opacity:1; animation:atmoBeamSweep 13s ease-in-out infinite; }
-body.gfx-ultra .lock-screen::before{ opacity:1; animation:atmoBeamSweep 9s ease-in-out infinite; }
+/* -- Login screen: same floating geometry, colour-matched to the theme -- */
 .lock-screen .ls-geo{
   position:absolute; opacity:0; pointer-events:none; z-index:1; will-change:transform;
-  border:1.5px solid var(--atmo-geo, rgba(255,200,120,.5));
+  border:1.5px solid var(--atmo-geo, rgba(255,255,255,.4));
   border-radius:26% 74% 62% 38%/38% 42% 58% 62%;
 }
 .ls-geo-1{ width:150px; height:150px; top:14%; left:10%; }
 .ls-geo-2{ width:100px; height:100px; top:66%; left:78%; }
 .ls-geo-3{ width:66px;  height:66px;  top:20%; left:76%; border-radius:50%; }
-body.gfx-ultra .lock-screen .ls-geo{ opacity:.34; animation:atmoGeoFloat 18s ease-in-out infinite; }
-body.gfx-ultra .lock-screen .ls-geo-2{ animation-duration:22s; animation-delay:-6s; }
-body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:15s; animation-delay:-10s; }
-
-/* -- Login card: soft glass reflection sheen (Standard/Ultra) ----------- */
-.lock-box{ position:relative; overflow:hidden; }
-.lock-box::after{
-  content:""; position:absolute; inset:0; pointer-events:none; opacity:0;
-  background:linear-gradient(120deg, transparent 40%, var(--atmo-beam, rgba(255,255,255,.12)) 50%, transparent 60%);
-  background-size:240% 240%; background-position:150% -60%;
-}
-body.gfx-standard .lock-box::after,
-body.gfx-ultra .lock-box::after{ opacity:1; animation:atmoBoxSheen 6s ease-in-out infinite; }
-@keyframes atmoBoxSheen{ 0%,20%{ background-position:150% -60%; } 60%,100%{ background-position:-70% 130%; } }
+body.gfx-standard .lock-screen .ls-geo,
+body.gfx-ultra .lock-screen .ls-geo{ opacity:.30; animation:atmoGeoFloat 19s ease-in-out infinite; }
+body.gfx-standard .lock-screen .ls-geo-2,
+body.gfx-ultra .lock-screen .ls-geo-2{ animation-duration:23s; animation-delay:-6s; }
+body.gfx-standard .lock-screen .ls-geo-3,
+body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-10s; }
 </style>
 </head>
 <body class="nav-sticky">
@@ -3503,6 +3533,11 @@ body.gfx-ultra .lock-box::after{ opacity:1; animation:atmoBoxSheen 6s ease-in-ou
 <div class="lock-screen" id="lockScreen">
   <div class="ls-bg"></div>
   <div class="ls-overlay"></div>
+  <div class="ls-orb ls-orb-1" aria-hidden="true"></div>
+  <div class="ls-orb ls-orb-2" aria-hidden="true"></div>
+  <div class="ls-orb ls-orb-3" aria-hidden="true"></div>
+  <div class="ls-orb ls-orb-4" aria-hidden="true"></div>
+  <div class="ls-orb ls-orb-5" aria-hidden="true"></div>
   <div class="ls-geo ls-geo-1" aria-hidden="true"></div>
   <div class="ls-geo ls-geo-2" aria-hidden="true"></div>
   <div class="ls-geo ls-geo-3" aria-hidden="true"></div>
@@ -14271,7 +14306,6 @@ document.addEventListener('click', function(e) {
       '<div class="fx-aurora fx-a2"></div>'+
       '<div class="fx-aurora fx-a3"></div>'+
       '<div class="fx-grid"></div>'+
-      '<div class="fx-beam"></div>'+
       '<canvas id="fxCanvas"></canvas>'+
       '<div class="fx-geo fx-geo-1"></div>'+
       '<div class="fx-geo fx-geo-2"></div>'+
