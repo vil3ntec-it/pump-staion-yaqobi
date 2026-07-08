@@ -1197,6 +1197,13 @@ html{background:#070a11!important}
 
 /* ---------- 2. PREMIUM AMBIENT BACKGROUND — soft mesh, organic drift ---------- */
 #fxLayer{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+/* body has no stacking context of its own, so its own CSS background (the
+   day themes' opaque white+hexagon pattern) paints ABOVE #fxLayer's
+   z-index:-1 content — anything meant to be visible over that background
+   (floating geometry, the hex-glow sweep) lives here instead: z-index:auto
+   (not negative) still keeps it behind real sticky UI (header z-index:100,
+   nav z-index:250) since those explicitly out-rank "auto". */
+#fxLayerTop{position:fixed;inset:0;pointer-events:none;overflow:hidden}
 #fxCanvas{position:absolute;inset:0;width:100%;height:100%;opacity:.9}
 
 /* atmospheric blur wash sitting behind the blobs for extra depth
@@ -2188,7 +2195,7 @@ body.theme-dark-amber{
   --banner-bg:linear-gradient(90deg,#080602,#120c05,#080602) !important;
   --nav-bg:linear-gradient(90deg,#070502,#0f0a04,#070502) !important;
   --app-bg:
-    url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2745.0%27%20height%3D%2778.0%27%20viewBox%3D%270%200%2045.0%2078.0%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-opacity%3D%270.1%27%20stroke-width%3D%271.5%27%3E%3Cpolygon%20points%3D%2722.5%2C-6.5%2045.0%2C6.5%2045.0%2C32.5%2022.5%2C45.5%20-0.0%2C32.5%200.0%2C6.5%27/%3E%3Cpolygon%20points%3D%270.0%2C32.5%2022.5%2C45.5%2022.5%2C71.5%200.0%2C84.5%20-22.5%2C71.5%20-22.5%2C45.5%27/%3E%3Cpolygon%20points%3D%2745.0%2C32.5%2067.5%2C45.5%2067.5%2C71.5%2045.0%2C84.5%2022.5%2C71.5%2022.5%2C45.5%27/%3E%3C/g%3E%3C/svg%3E") repeat 0 0/45px 78px,
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2745.0%27%20height%3D%2778.0%27%20viewBox%3D%270%200%2045.0%2078.0%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-opacity%3D%270.08%27%20stroke-width%3D%271.0%27%3E%3Cpolygon%20points%3D%2722.5%2C-6.5%2045.0%2C6.5%2045.0%2C32.5%2022.5%2C45.5%20-0.0%2C32.5%200.0%2C6.5%27/%3E%3Cpolygon%20points%3D%270.0%2C32.5%2022.5%2C45.5%2022.5%2C71.5%200.0%2C84.5%20-22.5%2C71.5%20-22.5%2C45.5%27/%3E%3Cpolygon%20points%3D%2745.0%2C32.5%2067.5%2C45.5%2067.5%2C71.5%2045.0%2C84.5%2022.5%2C71.5%2022.5%2C45.5%27/%3E%3C/g%3E%3C/svg%3E") repeat 0 0/45px 78px,
     radial-gradient(ellipse at 20% 0%,rgba(255,180,61,.11),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(255,135,43,.08),transparent 50%),linear-gradient(160deg,#080603,#0f0b05 45%,#141005 75%,#080502) !important;
   --fx-hue:0deg !important;
   --atmo-beam:rgba(255,180,61,.16); --atmo-geo:rgba(255,180,61,.5);
@@ -2203,7 +2210,7 @@ body.theme-dark-emerald{
   --banner-bg:linear-gradient(90deg,#03110d,#071c16,#03110d) !important;
   --nav-bg:linear-gradient(90deg,#030f0c,#061813,#030f0c) !important;
   --app-bg:
-    url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2745.0%27%20height%3D%2778.0%27%20viewBox%3D%270%200%2045.0%2078.0%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-opacity%3D%270.1%27%20stroke-width%3D%271.5%27%3E%3Cpolygon%20points%3D%2722.5%2C-6.5%2045.0%2C6.5%2045.0%2C32.5%2022.5%2C45.5%20-0.0%2C32.5%200.0%2C6.5%27/%3E%3Cpolygon%20points%3D%270.0%2C32.5%2022.5%2C45.5%2022.5%2C71.5%200.0%2C84.5%20-22.5%2C71.5%20-22.5%2C45.5%27/%3E%3Cpolygon%20points%3D%2745.0%2C32.5%2067.5%2C45.5%2067.5%2C71.5%2045.0%2C84.5%2022.5%2C71.5%2022.5%2C45.5%27/%3E%3C/g%3E%3C/svg%3E") repeat 0 0/45px 78px,
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2745.0%27%20height%3D%2778.0%27%20viewBox%3D%270%200%2045.0%2078.0%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-opacity%3D%270.08%27%20stroke-width%3D%271.0%27%3E%3Cpolygon%20points%3D%2722.5%2C-6.5%2045.0%2C6.5%2045.0%2C32.5%2022.5%2C45.5%20-0.0%2C32.5%200.0%2C6.5%27/%3E%3Cpolygon%20points%3D%270.0%2C32.5%2022.5%2C45.5%2022.5%2C71.5%200.0%2C84.5%20-22.5%2C71.5%20-22.5%2C45.5%27/%3E%3Cpolygon%20points%3D%2745.0%2C32.5%2067.5%2C45.5%2067.5%2C71.5%2045.0%2C84.5%2022.5%2C71.5%2022.5%2C45.5%27/%3E%3C/g%3E%3C/svg%3E") repeat 0 0/45px 78px,
     radial-gradient(ellipse at 20% 0%,rgba(47,227,156,.10),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(19,176,122,.08),transparent 50%),linear-gradient(160deg,#05110d,#081a14 45%,#0b241b 75%,#04100c) !important;
   --fx-hue:95deg !important;
   --atmo-beam:rgba(47,227,156,.16); --atmo-geo:rgba(47,227,156,.5);
@@ -2218,7 +2225,7 @@ body.theme-dark-teal{
   --banner-bg:linear-gradient(90deg,#021016,#061d23,#021016) !important;
   --nav-bg:linear-gradient(90deg,#020e13,#051a20,#020e13) !important;
   --app-bg:
-    url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2745.0%27%20height%3D%2778.0%27%20viewBox%3D%270%200%2045.0%2078.0%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-opacity%3D%270.1%27%20stroke-width%3D%271.5%27%3E%3Cpolygon%20points%3D%2722.5%2C-6.5%2045.0%2C6.5%2045.0%2C32.5%2022.5%2C45.5%20-0.0%2C32.5%200.0%2C6.5%27/%3E%3Cpolygon%20points%3D%270.0%2C32.5%2022.5%2C45.5%2022.5%2C71.5%200.0%2C84.5%20-22.5%2C71.5%20-22.5%2C45.5%27/%3E%3Cpolygon%20points%3D%2745.0%2C32.5%2067.5%2C45.5%2067.5%2C71.5%2045.0%2C84.5%2022.5%2C71.5%2022.5%2C45.5%27/%3E%3C/g%3E%3C/svg%3E") repeat 0 0/45px 78px,
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2745.0%27%20height%3D%2778.0%27%20viewBox%3D%270%200%2045.0%2078.0%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-opacity%3D%270.08%27%20stroke-width%3D%271.0%27%3E%3Cpolygon%20points%3D%2722.5%2C-6.5%2045.0%2C6.5%2045.0%2C32.5%2022.5%2C45.5%20-0.0%2C32.5%200.0%2C6.5%27/%3E%3Cpolygon%20points%3D%270.0%2C32.5%2022.5%2C45.5%2022.5%2C71.5%200.0%2C84.5%20-22.5%2C71.5%20-22.5%2C45.5%27/%3E%3Cpolygon%20points%3D%2745.0%2C32.5%2067.5%2C45.5%2067.5%2C71.5%2045.0%2C84.5%2022.5%2C71.5%2022.5%2C45.5%27/%3E%3C/g%3E%3C/svg%3E") repeat 0 0/45px 78px,
     radial-gradient(ellipse at 20% 0%,rgba(34,211,238,.11),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(14,155,181,.08),transparent 50%),linear-gradient(160deg,#04141a,#072028 45%,#0a2c36 75%,#031015) !important;
   --fx-hue:150deg !important;
   --atmo-beam:rgba(34,211,238,.16); --atmo-geo:rgba(34,211,238,.5);
@@ -2233,7 +2240,7 @@ body.theme-dark-crimson{
   --banner-bg:linear-gradient(90deg,#100708,#1c0c0f,#100708) !important;
   --nav-bg:linear-gradient(90deg,#0e0607,#190b0d,#0e0607) !important;
   --app-bg:
-    url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2745.0%27%20height%3D%2778.0%27%20viewBox%3D%270%200%2045.0%2078.0%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-opacity%3D%270.1%27%20stroke-width%3D%271.5%27%3E%3Cpolygon%20points%3D%2722.5%2C-6.5%2045.0%2C6.5%2045.0%2C32.5%2022.5%2C45.5%20-0.0%2C32.5%200.0%2C6.5%27/%3E%3Cpolygon%20points%3D%270.0%2C32.5%2022.5%2C45.5%2022.5%2C71.5%200.0%2C84.5%20-22.5%2C71.5%20-22.5%2C45.5%27/%3E%3Cpolygon%20points%3D%2745.0%2C32.5%2067.5%2C45.5%2067.5%2C71.5%2045.0%2C84.5%2022.5%2C71.5%2022.5%2C45.5%27/%3E%3C/g%3E%3C/svg%3E") repeat 0 0/45px 78px,
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2745.0%27%20height%3D%2778.0%27%20viewBox%3D%270%200%2045.0%2078.0%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-opacity%3D%270.08%27%20stroke-width%3D%271.0%27%3E%3Cpolygon%20points%3D%2722.5%2C-6.5%2045.0%2C6.5%2045.0%2C32.5%2022.5%2C45.5%20-0.0%2C32.5%200.0%2C6.5%27/%3E%3Cpolygon%20points%3D%270.0%2C32.5%2022.5%2C45.5%2022.5%2C71.5%200.0%2C84.5%20-22.5%2C71.5%20-22.5%2C45.5%27/%3E%3Cpolygon%20points%3D%2745.0%2C32.5%2067.5%2C45.5%2067.5%2C71.5%2045.0%2C84.5%2022.5%2C71.5%2022.5%2C45.5%27/%3E%3C/g%3E%3C/svg%3E") repeat 0 0/45px 78px,
     radial-gradient(ellipse at 20% 0%,rgba(255,93,98,.11),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(224,50,47,.08),transparent 50%),linear-gradient(160deg,#130709,#1c0b10 45%,#291017 75%,#0f0608) !important;
   --fx-hue:-20deg !important;
   --atmo-beam:rgba(255,93,98,.16); --atmo-geo:rgba(255,93,98,.5);
@@ -2248,7 +2255,7 @@ body.theme-dark-indigo{
   --banner-bg:linear-gradient(90deg,#08090b,#111318,#08090b) !important;
   --nav-bg:linear-gradient(90deg,#07080a,#0d0f13,#07080a) !important;
   --app-bg:
-    url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2745.0%27%20height%3D%2778.0%27%20viewBox%3D%270%200%2045.0%2078.0%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-opacity%3D%270.1%27%20stroke-width%3D%271.5%27%3E%3Cpolygon%20points%3D%2722.5%2C-6.5%2045.0%2C6.5%2045.0%2C32.5%2022.5%2C45.5%20-0.0%2C32.5%200.0%2C6.5%27/%3E%3Cpolygon%20points%3D%270.0%2C32.5%2022.5%2C45.5%2022.5%2C71.5%200.0%2C84.5%20-22.5%2C71.5%20-22.5%2C45.5%27/%3E%3Cpolygon%20points%3D%2745.0%2C32.5%2067.5%2C45.5%2067.5%2C71.5%2045.0%2C84.5%2022.5%2C71.5%2022.5%2C45.5%27/%3E%3C/g%3E%3C/svg%3E") repeat 0 0/45px 78px,
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2745.0%27%20height%3D%2778.0%27%20viewBox%3D%270%200%2045.0%2078.0%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-opacity%3D%270.08%27%20stroke-width%3D%271.0%27%3E%3Cpolygon%20points%3D%2722.5%2C-6.5%2045.0%2C6.5%2045.0%2C32.5%2022.5%2C45.5%20-0.0%2C32.5%200.0%2C6.5%27/%3E%3Cpolygon%20points%3D%270.0%2C32.5%2022.5%2C45.5%2022.5%2C71.5%200.0%2C84.5%20-22.5%2C71.5%20-22.5%2C45.5%27/%3E%3Cpolygon%20points%3D%2745.0%2C32.5%2067.5%2C45.5%2067.5%2C71.5%2045.0%2C84.5%2022.5%2C71.5%2022.5%2C45.5%27/%3E%3C/g%3E%3C/svg%3E") repeat 0 0/45px 78px,
     radial-gradient(ellipse at 20% 0%,rgba(195,203,214,.10),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(160,168,180,.08),transparent 50%),linear-gradient(160deg,#0a0b0e,#101216 45%,#15171d 75%,#0a0b0e) !important;
   --fx-hue:0deg !important;
   --atmo-beam:rgba(200,208,218,.16); --atmo-geo:rgba(205,212,222,.5);
@@ -2329,14 +2336,14 @@ body.theme-light-slate{
    it always wins no matter which day theme is active — "white + accent"
    (white+red, white+green, ...) for all of them, including Royal Gold. */
 body.light-mode[class*="theme-"]{
-  --dark:#f7f7f9 !important; --panel:#ffffff !important; --card:#ffffff !important;
+  --dark:#e9ecf1 !important; --panel:#ffffff !important; --card:#ffffff !important;
   --hdr-bg:linear-gradient(90deg,#ffffff,#ffffff) !important;
   --banner-bg:linear-gradient(90deg,#ffffff,#ffffff) !important;
   --nav-bg:linear-gradient(90deg,#ffffff,#ffffff) !important;
   --hdr-title:var(--accent) !important;
   --app-bg:
-    url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2745.0%27%20height%3D%2778.0%27%20viewBox%3D%270%200%2045.0%2078.0%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%238a94a3%27%20stroke-opacity%3D%270.6%27%20stroke-width%3D%271.5%27%3E%3Cpolygon%20points%3D%2722.5%2C-6.5%2045.0%2C6.5%2045.0%2C32.5%2022.5%2C45.5%20-0.0%2C32.5%200.0%2C6.5%27/%3E%3Cpolygon%20points%3D%270.0%2C32.5%2022.5%2C45.5%2022.5%2C71.5%200.0%2C84.5%20-22.5%2C71.5%20-22.5%2C45.5%27/%3E%3Cpolygon%20points%3D%2745.0%2C32.5%2067.5%2C45.5%2067.5%2C71.5%2045.0%2C84.5%2022.5%2C71.5%2022.5%2C45.5%27/%3E%3C/g%3E%3C/svg%3E") repeat 0 0/45px 78px,
-    #ffffff !important;
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2745.0%27%20height%3D%2778.0%27%20viewBox%3D%270%200%2045.0%2078.0%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%238a94a3%27%20stroke-opacity%3D%270.45%27%20stroke-width%3D%271.0%27%3E%3Cpolygon%20points%3D%2722.5%2C-6.5%2045.0%2C6.5%2045.0%2C32.5%2022.5%2C45.5%20-0.0%2C32.5%200.0%2C6.5%27/%3E%3Cpolygon%20points%3D%270.0%2C32.5%2022.5%2C45.5%2022.5%2C71.5%200.0%2C84.5%20-22.5%2C71.5%20-22.5%2C45.5%27/%3E%3Cpolygon%20points%3D%2745.0%2C32.5%2067.5%2C45.5%2067.5%2C71.5%2045.0%2C84.5%2022.5%2C71.5%2022.5%2C45.5%27/%3E%3C/g%3E%3C/svg%3E") repeat 0 0/45px 78px,
+    #eef1f5 !important;
 }
 
 /* عنوان هدر («⛽ پمپ یعقوبی») در Ultra با یک ترفند gradient-clip-to-text رنگ
@@ -2354,6 +2361,18 @@ body.light-mode[class*="theme-"] .header-title{
 /* «شرکت‌ها تیل (الباقی)» یک رنگ بنفشِ کم‌رنگِ ثابت (برای پس‌زمینهٔ تیره) داشت
    که روی هدر سفید تقریباً دیده نمی‌شد؛ رنگ بنفشِ پررنگ‌تر و خواناتر. */
 body.light-mode[class*="theme-"] #bn-noinv{ color:#7c3aed !important; }
+/* دکمه‌های .goto-btn («PDF همه گزارش‌ها» و مشابه) پیش‌فرض تقریباً شفاف
+   (rgba(255,255,255,.04)!important — برای پس‌زمینهٔ تیره طراحی شده بود) و
+   فقط با هاور رنگ می‌گرفتند؛ روی سفیدِ روز یعنی همیشه بی‌رنگ به‌نظر می‌رسیدند
+   مگر موس رویش برود. حالا همیشه رنگِ تم را دارند، نه فقط روی هاور. */
+body.light-mode[class*="theme-"] .goto-btn{
+  background:color-mix(in srgb, var(--accent) 14%, #ffffff) !important;
+  border-color:color-mix(in srgb, var(--accent) 45%, transparent) !important;
+  color:var(--accent) !important;
+}
+body.light-mode[class*="theme-"] .goto-btn:hover{
+  background:var(--accent) !important; color:#fff !important;
+}
 
 /* ---------- BRIDGE: route hard-coded chrome to the variables above ----------
    Only active while a theme-* class is present on <body>. */
@@ -3541,6 +3560,36 @@ body.gfx-standard .lock-screen .ls-geo-2,
 body.gfx-ultra .lock-screen .ls-geo-2{ animation-duration:23s; animation-delay:-6s; }
 body.gfx-standard .lock-screen .ls-geo-3,
 body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-10s; }
+
+/* -- Hexagon glow sweep (Standard/Ultra only): a soft round light, tinted to
+   the active theme's accent, travels corner-to-corner and lights up the
+   hexagon grid as it passes. transform-only animation (GPU-composited,
+   no repaint) — the earlier background-position sweep caused real lag and
+   was removed; this is the cheap replacement. The hex outline itself is
+   used as a CSS mask, so only the grid LINES light up, not a solid patch. */
+.fx-hexglow-clip{
+  position:absolute; width:320px; height:320px; border-radius:50%; overflow:hidden;
+  pointer-events:none; opacity:0; filter:blur(1px); will-change:transform;
+}
+.fx-hexglow-fill{
+  position:absolute; inset:-50vh -50vw;
+  background:var(--accent,#f6a623);
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2745.0%27%20height%3D%2778.0%27%20viewBox%3D%270%200%2045.0%2078.0%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-width%3D%271.6%27%3E%3Cpolygon%20points%3D%2722.5%2C-6.5%2045.0%2C6.5%2045.0%2C32.5%2022.5%2C45.5%20-0.0%2C32.5%200.0%2C6.5%27/%3E%3Cpolygon%20points%3D%270.0%2C32.5%2022.5%2C45.5%2022.5%2C71.5%200.0%2C84.5%20-22.5%2C71.5%20-22.5%2C45.5%27/%3E%3Cpolygon%20points%3D%2745.0%2C32.5%2067.5%2C45.5%2067.5%2C71.5%2045.0%2C84.5%2022.5%2C71.5%2022.5%2C45.5%27/%3E%3C/g%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2745.0%27%20height%3D%2778.0%27%20viewBox%3D%270%200%2045.0%2078.0%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-width%3D%271.6%27%3E%3Cpolygon%20points%3D%2722.5%2C-6.5%2045.0%2C6.5%2045.0%2C32.5%2022.5%2C45.5%20-0.0%2C32.5%200.0%2C6.5%27/%3E%3Cpolygon%20points%3D%270.0%2C32.5%2022.5%2C45.5%2022.5%2C71.5%200.0%2C84.5%20-22.5%2C71.5%20-22.5%2C45.5%27/%3E%3Cpolygon%20points%3D%2745.0%2C32.5%2067.5%2C45.5%2067.5%2C71.5%2045.0%2C84.5%2022.5%2C71.5%2022.5%2C45.5%27/%3E%3C/g%3E%3C/svg%3E");
+  -webkit-mask-repeat:repeat; mask-repeat:repeat;
+  -webkit-mask-size:45px 78px; mask-size:45px 78px;
+}
+body.gfx-standard .fx-hexglow-clip,
+body.gfx-ultra .fx-hexglow-clip{
+  opacity:.8; box-shadow:0 0 40px 10px var(--accent,#f6a623);
+  animation:hexGlowTravel 11s ease-in-out infinite;
+}
+body.gfx-ultra .fx-hexglow-clip{ animation-duration:8s; }
+@keyframes hexGlowTravel{
+  0%   { transform:translate(-30vw,-30vh); }
+  50%  { transform:translate(calc(100vw + 10vw),calc(100vh + 10vh)); }
+  100% { transform:translate(-30vw,-30vh); }
+}
 </style>
 </head>
 <body class="nav-sticky">
@@ -14340,13 +14389,28 @@ document.addEventListener('click', function(e) {
       '<div class="fx-aurora fx-a3"></div>'+
       '<div class="fx-grid"></div>'+
       '<canvas id="fxCanvas"></canvas>'+
-      '<div class="fx-geo fx-geo-1"></div>'+
-      '<div class="fx-geo fx-geo-2"></div>'+
-      '<div class="fx-geo fx-geo-3"></div>'+
       '<div class="fx-vignette"></div>';
     var siteBg = document.getElementById('siteBg');
     if(siteBg && siteBg.parentNode){ siteBg.parentNode.insertBefore(fx, siteBg.nextSibling); }
     else { document.body.insertBefore(fx, document.body.firstChild); }
+
+    /* <body> has no position/z-index of its own, so it never becomes a
+       stacking context — its own CSS background (the day themes' white +
+       hexagon pattern) paints ABOVE #fxLayer's z-index:-1 content, hiding
+       it completely on every light theme. floating geometry + the hex-glow
+       sweep need to sit above that background, so they get their own
+       normal-stacking (z-index:auto, NOT negative) fixed layer instead. */
+    if(!document.getElementById('fxLayerTop')){
+      var fxTop = document.createElement('div');
+      fxTop.id = 'fxLayerTop';
+      fxTop.setAttribute('aria-hidden','true');
+      fxTop.innerHTML =
+        '<div class="fx-geo fx-geo-1"></div>'+
+        '<div class="fx-geo fx-geo-2"></div>'+
+        '<div class="fx-geo fx-geo-3"></div>'+
+        '<div class="fx-hexglow-clip"><div class="fx-hexglow-fill"></div></div>';
+      fx.parentNode.insertBefore(fxTop, fx.nextSibling);
+    }
   }
 
   /* ---------- 2. Ember / vapor particle field ----------
