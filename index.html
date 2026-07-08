@@ -168,7 +168,7 @@ body.viewer-mode .ft-opt{pointer-events:none !important;opacity:.85}
 .add-btn.purple{background:var(--night);color:#e9d8fd}
 .persons-grid{display:grid;grid-template-columns:repeat(auto-fill,175px);justify-content:start;gap:10px}
 /* بخش‌های دارای کارت حساب تمام‌عرض شوند تا کارت‌ها از راست و در کل صفحه بچینند */
-#sec-debt.section.visible,#sec-noinv.section.visible,#sec-waraq.section.visible,#sec-expenses.section.visible{margin-left:calc(48% - 48vw);margin-right:calc(48% - 48vw);padding-left:18px;padding-right:18px;box-sizing:border-box}
+#sec-debt.section.visible,#sec-noinv.section.visible,#sec-waraq.section.visible,#sec-expenses.section.visible,#sec-debtrasid.section.visible,#sec-debtsum.section.visible{margin-left:calc(48% - 48vw);margin-right:calc(48% - 48vw);padding-left:18px;padding-right:18px;box-sizing:border-box}
 .person-card{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:14px 12px;cursor:pointer;transition:all .2s;text-align:center;position:relative}
 .person-card:hover{border-color:var(--accent);transform:translateY(-2px)}
 .person-card .pname{font-size:1.5rem;font-weight:700;margin-bottom:8px}
@@ -1818,7 +1818,9 @@ html, body {
   #sec-debt.section.visible,
   #sec-noinv.section.visible,
   #sec-waraq.section.visible,
-  #sec-expenses.section.visible {
+  #sec-expenses.section.visible,
+  #sec-debtrasid.section.visible,
+  #sec-debtsum.section.visible {
     margin-left: 0 !important;
     margin-right: 0 !important;
     padding-left: 8px !important;
@@ -2037,7 +2039,9 @@ html, body {
   #sec-debt.section.visible,
   #sec-noinv.section.visible,
   #sec-waraq.section.visible,
-  #sec-expenses.section.visible {
+  #sec-expenses.section.visible,
+  #sec-debtrasid.section.visible,
+  #sec-debtsum.section.visible {
     margin-left: calc(48% - 48vw) !important;
     margin-right: calc(48% - 48vw) !important;
     padding-left: 18px !important;
