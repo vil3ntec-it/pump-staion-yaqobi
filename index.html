@@ -8580,11 +8580,11 @@ function renderExpenses() {
   wrap.innerHTML = '';
   const groups = {};
   DB.expenses.forEach((e, idx) => { const k = _monthKey(e.date); if (!groups[k]) groups[k] = []; groups[k].push({ e, idx }); });
+  // ماه جاری همیشه در فهرست باشد — حتی اگر هنوز مصرفی در آن ثبت نشده
+  if (!groups[curMonth]) groups[curMonth] = [];
   const keys = Object.keys(groups).sort().reverse();
-  if (!keys.length) {
-    wrap.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted)">مصرفی ثبت نشده — با دکمهٔ «ردیف جدید» اضافه کنید</div>';
-    return;
-  }
+  // با شروع ماه جدید، خودکار به ماه جاری برو؛ ماه‌های قبلی در منوی کشویی می‌مانند
+  if (_expLastAutoMonth !== curMonth) { _activeExpenseMonth = curMonth; _expLastAutoMonth = curMonth; }
   if (!_activeExpenseMonth || !keys.includes(_activeExpenseMonth)) {
     _activeExpenseMonth = keys.includes(curMonth) ? curMonth : keys[0];
   }
@@ -8672,6 +8672,7 @@ function addExpenseMonth() {
 }
 // ========== EXPENSES MULTI-ROW ==========
 let _activeExpenseMonth = null;
+let _expLastAutoMonth = null;   // آخرین ماهی که خودکار فعال شد — برای تشخیص شروع ماه جدید
 let expRows = [];
 function openAddExpense() {
   expRows = [{ title: '', amount: '', note: '' }];
@@ -8947,6 +8948,7 @@ function quickAddDebtRasid(rowEl) {
 }
 // وضعیت باز/بستهٔ کادر کشویی هر ماه (کلید: 1405/04)
 let _drOpenMonths = null;
+let _drLastAutoMonth = null;   // آخرین ماهی که خودکار باز شد — برای تشخیص شروع ماه جدید
 function toggleDrMonth(key) {
   if (!_drOpenMonths) _drOpenMonths = {};
   _drOpenMonths[key] = !_drOpenMonths[key];
@@ -8964,14 +8966,21 @@ function renderDebtRasid() {
   const monWrap = document.getElementById('debtrasid-months');
   if (monWrap) {
     monWrap.innerHTML = '';
-    if (!rows.length) {
-      monWrap.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">هنوز رسیدی از این طریق ثبت نشده</div>';
-    } else {
+    {
       // گروه‌بندی رسیدها بر اساس ماه — هر ماه یک کادر کشویی
       const groups = {};
       rows.forEach(r => { const k = _monthKey(r.date); if (!groups[k]) groups[k] = []; groups[k].push(r); });
+      // ماه جاری همیشه کادر خودش را دارد — حتی اگر هنوز رسیدی در آن ثبت نشده
+      const curMonth = _monthKey(persianDate());
+      if (!groups[curMonth]) groups[curMonth] = [];
       const keys = Object.keys(groups).sort().reverse();
-      if (!_drOpenMonths) { _drOpenMonths = {}; if (keys.length) _drOpenMonths[keys[0]] = true; }
+      if (!_drOpenMonths) _drOpenMonths = {};
+      // با شروع ماه جدید، کادر ماه جاری خودکار باز و کادر ماه قبلی بسته می‌شود (در کشویی می‌ماند)
+      if (_drLastAutoMonth !== curMonth) {
+        if (_drLastAutoMonth) delete _drOpenMonths[_drLastAutoMonth];
+        _drOpenMonths[curMonth] = true;
+        _drLastAutoMonth = curMonth;
+      }
       keys.forEach(k => {
         const items = groups[k];
         const monTotal = items.reduce((a,r)=>a+(r.amount||0), 0);
@@ -8996,6 +9005,7 @@ function renderDebtRasid() {
           </div>`;
         monWrap.appendChild(box);
         const tb = box.querySelector('#dr-mon-tb-' + kid);
+        if (!items.length) tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--muted)">در این ماه هنوز رسیدی ثبت نشده</td></tr>';
         items.forEach(r => {
           const tr = document.createElement('tr');
           tr.innerHTML = `
@@ -11215,6 +11225,7 @@ function toggleSafeDropdown() {
 }
 
 let _safeActiveMonth = null;
+let _safeLastAutoMonth = null;   // آخرین ماهی که خودکار فعال شد — برای تشخیص شروع ماه جدید
 function safeMonthKey(dateStr) {
   const p = (dateStr || '').split('/');
   return p.length >= 2 ? p[0] + '/' + p[1] : 'بدون تاریخ';
@@ -11227,6 +11238,8 @@ function renderSafeMonthTabs() {
   const curMonth = safeMonthKey(allDates().sh);
   if (!months.includes(curMonth)) months.push(curMonth);
   months.sort();
+  // با شروع ماه جدید، خودکار به ماه جاری برو؛ ماه‌های قبلی در منوی کشویی می‌مانند
+  if (_safeLastAutoMonth !== curMonth) { _safeActiveMonth = curMonth; _safeLastAutoMonth = curMonth; }
   if (!_safeActiveMonth || !months.includes(_safeActiveMonth)) {
     _safeActiveMonth = months.includes(curMonth) ? curMonth : months[months.length - 1];
   }
