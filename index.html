@@ -7443,9 +7443,9 @@ function debtFuelStatus(p) {
     const eff = 1 - ((parseFloat(a.percent) || 0) / 100);   // سهم کمیشن کم می‌شود
     check((parseFloat(a.rasidFuelP)  || 0) * eff, t.petrol.fuel,    'fuel');
     check((parseFloat(a.rasidFuelD)  || 0) * eff, t.diesel.fuel,    'fuel');
-    check((parseFloat(a.rasidMoneyP) || 0) * eff, t.petrol.bardagi, 'money');
-    check((parseFloat(a.rasidMoneyD) || 0) * eff, t.diesel.bardagi, 'money');
-    check(t.all.rasid, t.all.bardagi, 'money');   // پرداخت‌های داخل جدول
+    // رسیدهای داخل جدول (پول آورده‌شده) هم جزو رسید پول حساب می‌شود — مثل الباقی حساب
+    check((parseFloat(a.rasidMoneyP) || 0) * eff + t.petrol.rasid, t.petrol.bardagi, 'money');
+    check((parseFloat(a.rasidMoneyD) || 0) * eff + t.diesel.rasid, t.diesel.bardagi, 'money');
   });
   return { st: worst, kinds };
 }
@@ -7798,7 +7798,9 @@ function _renderStackedAccounts(person) {
     const bordP = money ? st.petrol.bardagi : st.petrol.fuel;
     const bordD = money ? st.diesel.bardagi : st.diesel.fuel;
     const commP = rasidP * pct / 100, commD = rasidD * pct / 100;
-    const remP = rasidP - bordP - commP, remD = rasidD - bordD - commD;
+    // رسیدهای داخل جدول (پول آورده‌شده) هم در حالت پولی از الباقی کم می‌شود
+    const remP = rasidP + (money ? st.petrol.rasid : 0) - bordP - commP,
+          remD = rasidD + (money ? st.diesel.rasid : 0) - bordD - commD;
     const unit = money ? 'افغانی' : 'ل';
 
     const fuelSplitHtml = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:8px 10px;border-bottom:2px solid ${acColor}44;background:var(--dark)">
@@ -8179,7 +8181,9 @@ function _updatePersonTotals(person) {
   const bordD = money ? t.diesel.bardagi : t.diesel.fuel;
   const commP = rasidP * pct/100, commD = rasidD * pct/100;
   const rnd = x => Math.round(x*100)/100;
-  const remP = rasidP - bordP - commP, remD = rasidD - bordD - commD;
+  // رسیدهای داخل جدول (پول آورده‌شده) هم در حالت پولی از الباقی کم می‌شود
+  const remP = rasidP + (money ? t.petrol.rasid : 0) - bordP - commP,
+        remD = rasidD + (money ? t.diesel.rasid : 0) - bordD - commD;
   // برچسب‌ها بر اساس حالت
   setL('pm-p-rasid-l', money ? 'مقدار رسید پول' : 'مقدار رسید تیل');
   setL('pm-d-rasid-l', money ? 'مقدار رسید پول' : 'مقدار رسید تیل');
@@ -8264,7 +8268,8 @@ function _renderHistoryPanel(person) {
     const bordP  = hMoney ? st.petrol.bardagi : st.petrol.fuel;
     const bordD  = hMoney ? st.diesel.bardagi : st.diesel.fuel;
     const commP = rasidP * pct / 100, commD = rasidD * pct / 100;
-    const remP  = rasidP - bordP - commP, remD = rasidD - bordD - commD;
+    const remP  = rasidP + (hMoney ? st.petrol.rasid : 0) - bordP - commP,
+          remD  = rasidD + (hMoney ? st.diesel.rasid : 0) - bordD - commD;
     // fuel summary with editable rasid
     const fuelHtml = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px;border-bottom:1px solid ${ac}33">
@@ -8366,7 +8371,8 @@ function pdfPersonHistory(pid, hid) {
   const bordP = money ? st.petrol.bardagi : st.petrol.fuel;
   const bordD = money ? st.diesel.bardagi : st.diesel.fuel;
   const commP = rasidP*pct/100, commD = rasidD*pct/100;
-  const remP = rasidP-bordP-commP, remD = rasidD-bordD-commD;
+  const remP = rasidP + (money ? st.petrol.rasid : 0) - bordP - commP,
+        remD = rasidD + (money ? st.diesel.rasid : 0) - bordD - commD;
   const archiveLabel = h.note ? h.note.split('\n')[0].substring(0,50) : '';
   const tableRows = rows.map((r,i) => {
     const bard = r.byMoney ? (r.bardagi||0) : ((r.fuel||0)*(r.priceper||0));
@@ -10627,7 +10633,8 @@ function pdfPerson() {
   const bordD = money ? t.diesel.bardagi : t.diesel.fuel;
   const commP = rasidP*pct/100, commD = rasidD*pct/100;
   const rnd = x => Math.round(x*100)/100;
-  const remP = rasidP-bordP-commP, remD = rasidD-bordD-commD;
+  const remP = rasidP + (money ? t.petrol.rasid : 0) - bordP - commP,
+        remD = rasidD + (money ? t.diesel.rasid : 0) - bordD - commD;
   const rlabel = money ? 'مقدار رسید پول' : 'مقدار رسید تیل';
   const remlabel = money ? 'الباقی پول' : 'الباقی تیل';
   const showFtCol = filter === 'all';
