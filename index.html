@@ -3852,32 +3852,30 @@ body.gfx-ultra .lock-box{
         <div class="card-title">🧾 رسید قرض‌داران</div>
         <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('debtrasid',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('debtrasid',0.08)">A+</button></span>
       </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="add-btn" style="background:var(--blue)" onclick="pdfDebtRasid()">📄 PDF</button>
+        <button class="add-btn" onclick="addDrQuickRow()">➕ افزودن چندتایی</button>
+      </div>
     </div>
     <div style="padding:14px">
-      <div style="font-size:0.74rem;color:var(--muted);margin-bottom:10px;line-height:1.7">نام قرض‌دار را دقیقاً مثل بخش قرض‌داران بنویس و مبلغ رسید را وارد کن — به‌محض تکمیل هر دو، خودکار و با همان تاریخ وارد حساب او می‌شود؛ نیازی به هیچ دکمه‌ای نیست.</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;padding:12px;border:1px dashed var(--accent);border-radius:10px">
-        <input id="dr-quick-date" class="xls-in" style="max-width:110px" placeholder="تاریخ">
-        <input id="dr-quick-name" class="xls-in" style="flex:2;min-width:140px" list="debtrasid-names" placeholder="نام قرض‌دار" onchange="quickAddDebtRasid()" onkeydown="if(event.key==='Enter'){this.blur();}">
-        <input id="dr-quick-note" class="xls-in" style="flex:2;min-width:120px" placeholder="توضیح (اختیاری)">
-        <input id="dr-quick-amount" class="xls-in" type="number" style="max-width:130px" placeholder="مبلغ رسید" onchange="quickAddDebtRasid()" onkeydown="if(event.key==='Enter'){this.blur();}">
-      </div>
-      <div class="tbl-wrap">
-        <table class="tbl" style="font-size:0.8rem">
-          <thead><tr><th>تاریخ</th><th>نام قرض‌دار</th><th>توضیحات</th><th>مبلغ رسید</th><th></th></tr></thead>
-          <tbody id="debtrasid-body"></tbody>
-        </table>
-      </div>
+      <div style="font-size:0.74rem;color:var(--muted);margin-bottom:10px;line-height:1.7">نام قرض‌دار را دقیقاً مثل بخش قرض‌داران بنویس و مبلغ رسید را وارد کن — به‌محض تکمیل هر دو، خودکار و با همان تاریخ وارد حساب او می‌شود؛ نیازی به هیچ دکمه‌ای نیست. با دکمهٔ «افزودن چندتایی» می‌توانید چند ردیف را همزمان باز کنید.</div>
+      <div id="dr-quick-rows"></div>
+      <div id="debtrasid-months"></div>
     </div>
   </div>
 
   <div class="card" style="margin-top:16px">
-    <div class="card-head">
-      <div class="card-title">📊 قرض‌های دسته‌جمعی</div>
+    <div class="card-head" style="cursor:pointer" onclick="toggleDebtSummary()">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="card-title">📊 قرض‌های دسته‌جمعی</div>
+        <span id="debtsum-chevron" style="font-size:0.9rem;color:var(--muted);transition:transform .2s">▼</span>
+      </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input type="search" id="debtsum-search" class="person-search-input" placeholder="🔍 جستجوی نام..." oninput="renderDebtSummary()">
+        <button class="add-btn" style="background:var(--blue)" onclick="event.stopPropagation();pdfDebtSummary()">📄 PDF</button>
+        <button class="add-btn" onclick="event.stopPropagation();addDebtPersonsBulk()">➕ افزودن چندتایی</button>
       </div>
     </div>
-    <div style="padding:14px">
+    <div id="debtsum-wrap" style="padding:14px;display:none">
       <div style="font-size:0.74rem;color:var(--muted);margin-bottom:8px">همهٔ قرض‌داران در یک جدول، هر کدام یک خط — با کلیک روی هر خط، حساب کامل همان شخص باز می‌شود.</div>
       <div class="tbl-wrap">
         <table class="tbl" style="font-size:0.8rem">
@@ -8825,13 +8823,46 @@ function postAllRasid() {
 
 // ========== رسید قرض‌داران (پرداخت نقدی مستقیم به حساب، بدون تیل — کاملاً خودکار، بدون دکمه) ==========
 function ensureDebtRasid() { if (!DB.debtQuickReceipts) DB.debtQuickReceipts = []; return DB.debtQuickReceipts; }
-// به‌محض تکمیل «نام» و «مبلغ» در کادر بالای جدول، این تابع خودکار صدا زده می‌شود (onchange هر دو فیلد)
+// یک ردیف ورود سریع جدید (چندتایی) — هر ردیف مستقل است و به‌محض تکمیل نام+مبلغ خودش ثبت می‌شود
+function addDrQuickRow(focus) {
+  const wrap = document.getElementById('dr-quick-rows');
+  if (!wrap) return null;
+  const div = document.createElement('div');
+  div.className = 'dr-quick-row';
+  div.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:12px;border:1px dashed var(--accent);border-radius:10px';
+  div.innerHTML = `
+    <input class="xls-in dr-q-date" style="max-width:110px" placeholder="تاریخ">
+    <input class="xls-in dr-q-name" style="flex:2;min-width:140px" list="debtrasid-names" placeholder="نام قرض‌دار" onchange="quickAddDebtRasid(this.closest('.dr-quick-row'))" onkeydown="if(event.key==='Enter'){this.blur();}">
+    <input class="xls-in dr-q-note" style="flex:2;min-width:120px" placeholder="توضیح (اختیاری)">
+    <input class="xls-in dr-q-amount" type="number" style="max-width:130px" placeholder="مبلغ رسید" onchange="quickAddDebtRasid(this.closest('.dr-quick-row'))" onkeydown="if(event.key==='Enter'){this.blur();}">
+    <button class="del-btn" title="حذف این ردیف" onclick="removeDrQuickRow(this)">✖</button>
+  `;
+  wrap.appendChild(div);
+  div.querySelector('.dr-q-date').value = persianDate();
+  if (focus !== false) div.querySelector('.dr-q-name').focus();
+  return div;
+}
+function removeDrQuickRow(btn) {
+  const wrap = document.getElementById('dr-quick-rows');
+  const row = btn.closest('.dr-quick-row');
+  if (!wrap || !row) return;
+  // همیشه حداقل یک ردیف ورود باقی بماند
+  if (wrap.querySelectorAll('.dr-quick-row').length <= 1) {
+    row.querySelectorAll('input').forEach(el => { el.value = ''; });
+    row.querySelector('.dr-q-date').value = persianDate();
+    return;
+  }
+  row.remove();
+}
+// به‌محض تکمیل «نام» و «مبلغ» در هر ردیف ورود، این تابع خودکار صدا زده می‌شود (onchange هر دو فیلد)
 // و بدون هیچ دکمه‌ای مستقیم در حساب همان شخص، با همان تاریخ، ثبت می‌کند.
-function quickAddDebtRasid() {
-  const nameEl = document.getElementById('dr-quick-name');
-  const amountEl = document.getElementById('dr-quick-amount');
-  const noteEl = document.getElementById('dr-quick-note');
-  const dateEl = document.getElementById('dr-quick-date');
+function quickAddDebtRasid(rowEl) {
+  if (!rowEl) rowEl = document.querySelector('#dr-quick-rows .dr-quick-row');
+  if (!rowEl) return;
+  const nameEl = rowEl.querySelector('.dr-q-name');
+  const amountEl = rowEl.querySelector('.dr-q-amount');
+  const noteEl = rowEl.querySelector('.dr-q-note');
+  const dateEl = rowEl.querySelector('.dr-q-date');
   if (!nameEl || !amountEl) return;
   const name = nameEl.value.trim();
   const amount = parseFloat(amountEl.value) || 0;
@@ -8855,34 +8886,77 @@ function quickAddDebtRasid() {
   showToast('✅ در حساب ' + person.name + ' ثبت شد', '#38a169');
   nameEl.focus();
 }
+// وضعیت باز/بستهٔ کادر کشویی هر ماه (کلید: 1405/04)
+let _drOpenMonths = null;
+function toggleDrMonth(key) {
+  if (!_drOpenMonths) _drOpenMonths = {};
+  _drOpenMonths[key] = !_drOpenMonths[key];
+  const body = document.getElementById('dr-mon-body-' + key.replace(/\//g,'_'));
+  const chev = document.getElementById('dr-mon-chev-' + key.replace(/\//g,'_'));
+  if (body) body.style.display = _drOpenMonths[key] ? '' : 'none';
+  if (chev) chev.textContent = _drOpenMonths[key] ? '▲' : '▼';
+}
 function renderDebtRasid() {
-  const dateEl = document.getElementById('dr-quick-date');
-  if (dateEl && !dateEl.value) dateEl.value = persianDate();
+  // کادرهای ورود سریع: اگر هنوز ردیفی نیست، یک ردیف باز شود
+  const qwrap = document.getElementById('dr-quick-rows');
+  if (qwrap && !qwrap.querySelector('.dr-quick-row')) addDrQuickRow(false);
+  if (qwrap) qwrap.querySelectorAll('.dr-q-date').forEach(el => { if (!el.value) el.value = persianDate(); });
   const rows = ensureDebtRasid();
-  const tb = document.getElementById('debtrasid-body');
-  if (tb) {
-    tb.innerHTML = '';
+  const monWrap = document.getElementById('debtrasid-months');
+  if (monWrap) {
+    monWrap.innerHTML = '';
     if (!rows.length) {
-      tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">هنوز رسیدی از این طریق ثبت نشده</td></tr>';
+      monWrap.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">هنوز رسیدی از این طریق ثبت نشده</div>';
     } else {
-      rows.forEach((r, i) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${escFa(r.date||'')}</td>
-          <td style="font-weight:700">${escFa(r.account||'')}</td>
-          <td style="color:var(--muted)">${escFa(r.note||'')}</td>
-          <td style="color:var(--green);font-weight:700">${n2fa(r.amount||0)}</td>
-          <td><button class="del-btn" onclick="undoDebtRasid(${i})" title="بازگرداندن از حساب">🗑️</button></td>
-        `;
-        tb.appendChild(tr);
+      // گروه‌بندی رسیدها بر اساس ماه — هر ماه یک کادر کشویی
+      const groups = {};
+      rows.forEach(r => { const k = _monthKey(r.date); if (!groups[k]) groups[k] = []; groups[k].push(r); });
+      const keys = Object.keys(groups).sort().reverse();
+      if (!_drOpenMonths) { _drOpenMonths = {}; if (keys.length) _drOpenMonths[keys[0]] = true; }
+      keys.forEach(k => {
+        const items = groups[k];
+        const monTotal = items.reduce((a,r)=>a+(r.amount||0), 0);
+        const kid = k.replace(/\//g,'_');
+        const open = !!_drOpenMonths[k];
+        const box = document.createElement('div');
+        box.style.cssText = 'margin-bottom:14px;border:1px solid var(--border);border-radius:10px;overflow:hidden';
+        box.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;background:var(--dark);cursor:pointer" onclick="toggleDrMonth('${k}')">
+            <span style="font-weight:800;color:var(--accent)">📅 ${escFa(_monthLabel(k))} <span style="color:var(--muted);font-weight:400;font-size:0.76rem">(${n2fa(items.length)} رسید)</span></span>
+            <span style="display:flex;align-items:center;gap:10px">
+              <button style="background:var(--blue);color:#fff;border:none;border-radius:7px;padding:3px 10px;font-size:0.76rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="event.stopPropagation();pdfDebtRasid('${k}')">📄 PDF</button>
+              <span style="font-size:0.82rem;font-weight:700;color:var(--green)">جمع: ${n2fa(Math.round(monTotal*100)/100)}</span>
+              <span id="dr-mon-chev-${kid}" style="color:var(--muted);font-size:0.85rem">${open?'▲':'▼'}</span>
+            </span>
+          </div>
+          <div id="dr-mon-body-${kid}" class="tbl-wrap" style="margin:0;border:none;border-radius:0;${open?'':'display:none'}">
+            <table class="tbl" style="font-size:0.8rem;margin:0">
+              <thead><tr><th>تاریخ</th><th>نام قرض‌دار</th><th>توضیحات</th><th>مبلغ رسید</th><th></th></tr></thead>
+              <tbody id="dr-mon-tb-${kid}"></tbody>
+            </table>
+          </div>`;
+        monWrap.appendChild(box);
+        const tb = box.querySelector('#dr-mon-tb-' + kid);
+        items.forEach(r => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${escFa(r.date||'')}</td>
+            <td style="font-weight:700">${escFa(r.account||'')}</td>
+            <td style="color:var(--muted)">${escFa(r.note||'')}</td>
+            <td style="color:var(--green);font-weight:700">${n2fa(r.amount||0)}</td>
+            <td><button class="del-btn" onclick="undoDebtRasid('${r.id}')" title="بازگرداندن از حساب">🗑️</button></td>
+          `;
+          tb.appendChild(tr);
+        });
       });
     }
   }
   const dl = document.getElementById('debtrasid-names');
   if (dl) dl.innerHTML = (DB.debtPersons||[]).map(p => `<option value="${escFa(p.name)}">`).join('');
 }
-function undoDebtRasid(i) {
+function undoDebtRasid(id) {
   const rows = ensureDebtRasid();
+  const i = rows.findIndex(r => r.id === id);
   const r = rows[i];
   if (!r) return;
   if (!confirm('این رسید از حساب برداشته شود؟')) return;
@@ -8893,22 +8967,191 @@ function undoDebtRasid(i) {
   if (typeof updateBanner === 'function') updateBanner();
   showToast('↩️ رسید برداشته شد', '#d97706');
 }
+// PDF رسید قرض‌داران — همه یا فقط یک ماه
+function pdfDebtRasid(monthKey) {
+  const d = allDates();
+  let rows = ensureDebtRasid().slice();
+  if (monthKey) rows = rows.filter(r => _monthKey(r.date) === monthKey);
+  const total = rows.reduce((a,r)=>a+(r.amount||0), 0);
+  const rowsHtml = rows.map((r,i) => `<tr>
+    <td style="text-align:center;color:#718096">${n2fa(i+1)}</td>
+    <td style="font-weight:700;color:#c07700">${escFa(r.date||'—')}</td>
+    <td style="font-weight:700">${escFa(r.account||'—')}</td>
+    <td style="color:#718096">${escFa(r.note)||'—'}</td>
+    <td style="color:#38a169;font-weight:900">${n2fa(r.amount||0)} افغانی</td>
+  </tr>`).join('');
+  const title = monthKey ? ('رسید قرض‌داران — ' + _monthLabel(monthKey)) : 'رسید قرض‌داران';
+  const html = `<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>${title} — پمپ یعقوبی</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:12px}
+h1{font-size:1.25rem;font-weight:900;color:#38a169;border-bottom:2px solid #38a169;padding-bottom:8px;margin-bottom:6px}
+.meta{font-size:0.72rem;color:#718096;margin-bottom:14px}
+.sum-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.sum-box{flex:1;min-width:120px;background:#f0fff4;border:1px solid #c6f6d5;border-radius:8px;padding:10px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;gap:4px}
+.sum-box .l{font-size:0.62rem;color:#718096;line-height:1.3}
+.sum-box .v{font-size:1.1rem;font-weight:900;white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:0.72rem;table-layout:auto}
+th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:right;font-weight:700;border-bottom:2px solid #4a5568;white-space:nowrap}
+td{padding:6px 7px;border-bottom:1px solid #e2e8f0;white-space:normal;word-break:break-word}
+tr:nth-child(even) td{background:#f0fff4}
+tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border-top:2px solid #4a5568}
+.footer{margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
+@media print{
+  body{padding:6px}
+  @page{margin:0.5cm;size:A4}
+  table{font-size:0.68rem;width:100%}
+  th,td{padding:5px 6px;white-space:normal!important;word-break:break-word}
+  tr{page-break-inside:avoid}
+  h1{font-size:1rem}
+  .footer{margin-top:8px}
+}
+</style>
+</head>
+<body>
+<h1>🧾 پمپ یعقوبی — ${title}</h1>
+<div class="meta">تاریخ چاپ: ${d.sh} | ${d.mi}</div>
+<div class="sum-row">
+  <div class="sum-box"><div class="l">تعداد رسیدها</div><div class="v" style="color:#718096">${n2fa(rows.length)}</div></div>
+  <div class="sum-box"><div class="l">جمع کل رسیدها</div><div class="v" style="color:#38a169">${n2fa(total)} افغانی</div></div>
+</div>
+<table>
+<thead>
+  <tr><th>#</th><th>تاریخ</th><th>نام قرض‌دار</th><th>توضیحات</th><th>مبلغ رسید</th></tr>
+</thead>
+<tbody>${rowsHtml || '<tr><td colspan="5" style="text-align:center;padding:20px;color:#718096">هیچ رسیدی ثبت نشده</td></tr>'}</tbody>
+<tfoot>
+  <tr><td colspan="4">جمع کل</td><td>${n2fa(total)} افغانی</td></tr>
+</tfoot>
+</table>
+<div class="footer">پمپ یعقوبی — این سند به صورت خودکار تولید شده است</div>
+<script>window.onload=function(){window.print();}<\/script>
+</body></html>`;
+  const w = window.open('', '_blank', 'width=800,height=650');
+  if (w) { w.document.write(html); w.document.close(); }
+  else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
+}
 
 // ========== قرض‌های دسته‌جمعی (خلاصهٔ همهٔ قرض‌داران در یک جدول) ==========
+// کادر کشویی: با کلیک روی سر کادر، جدول باز/بسته می‌شود
+function toggleDebtSummary() {
+  const wrap = document.getElementById('debtsum-wrap');
+  const chev = document.getElementById('debtsum-chevron');
+  if (!wrap) return;
+  const open = wrap.style.display === 'none';
+  wrap.style.display = open ? '' : 'none';
+  if (chev) chev.textContent = open ? '▲' : '▼';
+}
+// افزودن چند قرض‌دار یکجا — نام‌ها را با کاما (،) یا خط جدید جدا کنید
+function addDebtPersonsBulk() {
+  const txt = prompt('نام قرض‌داران را وارد کنید — با کاما (،) یا خط جدید جدا کنید:');
+  if (!txt) return;
+  const names = txt.split(/[,،\n]+/).map(s => s.trim()).filter(Boolean);
+  if (!names.length) return;
+  if (!DB.debtPersons) DB.debtPersons = [];
+  let added = 0, dup = 0;
+  names.forEach(name => {
+    const exist = DB.debtPersons.find(p => normFa(p.name) === normFa(name));
+    if (exist) { dup++; return; }
+    DB.debtPersons.push({ id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7), name, rows: [] });
+    added++;
+  });
+  save();
+  renderDebtRasid(); renderDebtSummary();
+  if (typeof renderPersons === 'function') renderPersons('debt');
+  if (typeof updateBanner === 'function') updateBanner();
+  showToast('✅ افزوده شد: ' + n2fa(added) + (dup ? (' — تکراری: ' + n2fa(dup)) : ''), added ? '#38a169' : '#d97706');
+}
+// PDF قرض‌های دسته‌جمعی
+function pdfDebtSummary() {
+  const d = allDates();
+  const rnd = x => Math.round(x*100)/100;
+  const list = DB.debtPersons || [];
+  let totBardagi = 0, totRasid = 0, totAlbaqi = 0;
+  const rowsHtml = list.map((p,i) => {
+    const t = _splitTotals(_allRows(p)).all;
+    totBardagi += t.bardagi; totRasid += t.rasid; totAlbaqi += t.albaqi;
+    return `<tr>
+      <td style="text-align:center;color:#718096">${n2fa(i+1)}</td>
+      <td style="font-weight:700">${escFa(p.name)}</td>
+      <td style="color:#c07700;font-weight:900">${n2fa(rnd(t.bardagi))}</td>
+      <td style="color:#38a169;font-weight:900">${n2fa(rnd(t.rasid))}</td>
+      <td style="color:${t.albaqi>0?'#e53e3e':'#38a169'};font-weight:900">${n2fa(rnd(t.albaqi))}</td>
+    </tr>`;
+  }).join('');
+  const html = `<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>قرض‌های دسته‌جمعی — پمپ یعقوبی</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:12px}
+h1{font-size:1.25rem;font-weight:900;color:#c07700;border-bottom:2px solid #c07700;padding-bottom:8px;margin-bottom:6px}
+.meta{font-size:0.72rem;color:#718096;margin-bottom:14px}
+.sum-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.sum-box{flex:1;min-width:120px;background:#fffaf0;border:1px solid #feebc8;border-radius:8px;padding:10px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;gap:4px}
+.sum-box .l{font-size:0.62rem;color:#718096;line-height:1.3}
+.sum-box .v{font-size:1.1rem;font-weight:900;white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:0.72rem;table-layout:auto}
+th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:right;font-weight:700;border-bottom:2px solid #4a5568;white-space:nowrap}
+td{padding:6px 7px;border-bottom:1px solid #e2e8f0;white-space:normal;word-break:break-word}
+tr:nth-child(even) td{background:#fffaf0}
+tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border-top:2px solid #4a5568}
+.footer{margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
+@media print{
+  body{padding:6px}
+  @page{margin:0.5cm;size:A4}
+  table{font-size:0.68rem;width:100%}
+  th,td{padding:5px 6px;white-space:normal!important;word-break:break-word}
+  tr{page-break-inside:avoid}
+  h1{font-size:1rem}
+  .footer{margin-top:8px}
+}
+</style>
+</head>
+<body>
+<h1>📊 پمپ یعقوبی — قرض‌های دسته‌جمعی</h1>
+<div class="meta">تاریخ چاپ: ${d.sh} | ${d.mi}</div>
+<div class="sum-row">
+  <div class="sum-box"><div class="l">تعداد قرض‌داران</div><div class="v" style="color:#718096">${n2fa(list.length)}</div></div>
+  <div class="sum-box"><div class="l">جمع بردگی</div><div class="v" style="color:#c07700">${n2fa(rnd(totBardagi))}</div></div>
+  <div class="sum-box"><div class="l">جمع رسید</div><div class="v" style="color:#38a169">${n2fa(rnd(totRasid))}</div></div>
+  <div class="sum-box"><div class="l">الباقی</div><div class="v" style="color:${totAlbaqi>0?'#e53e3e':'#38a169'}">${n2fa(rnd(totAlbaqi))}</div></div>
+</div>
+<table>
+<thead>
+  <tr><th>#</th><th>نام قرض‌دار</th><th>جمع بردگی</th><th>جمع رسید</th><th>الباقی</th></tr>
+</thead>
+<tbody>${rowsHtml || '<tr><td colspan="5" style="text-align:center;padding:20px;color:#718096">هنوز قرض‌داری ثبت نشده</td></tr>'}</tbody>
+<tfoot>
+  <tr><td colspan="2">جمع کل</td><td>${n2fa(rnd(totBardagi))}</td><td>${n2fa(rnd(totRasid))}</td><td>${n2fa(rnd(totAlbaqi))}</td></tr>
+</tfoot>
+</table>
+<div class="footer">پمپ یعقوبی — این سند به صورت خودکار تولید شده است</div>
+<script>window.onload=function(){window.print();}<\/script>
+</body></html>`;
+  const w = window.open('', '_blank', 'width=800,height=650');
+  if (w) { w.document.write(html); w.document.close(); }
+  else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
+}
 function renderDebtSummary() {
   const tb = document.getElementById('debtsum-body');
   if (!tb) return;
   const rnd = x => Math.round(x*100)/100;
   const list = DB.debtPersons || [];
-  const q = normFa((document.getElementById('debtsum-search')||{}).value||'');
-  const filtered = q ? list.filter(p => normFa(p.name).includes(q)) : list;
   tb.innerHTML = '';
   let totBardagi = 0, totRasid = 0, totAlbaqi = 0;
-  if (!filtered.length) {
-    tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">' +
-      (list.length ? 'موردی یافت نشد' : 'هنوز قرض‌داری ثبت نشده') + '</td></tr>';
+  if (!list.length) {
+    tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">هنوز قرض‌داری ثبت نشده</td></tr>';
   } else {
-    filtered.forEach((p, i) => {
+    list.forEach((p, i) => {
       const t = _splitTotals(_allRows(p)).all;
       totBardagi += t.bardagi; totRasid += t.rasid; totAlbaqi += t.albaqi;
       const tr = document.createElement('tr');
