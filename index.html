@@ -2324,7 +2324,11 @@ body.light-mode[class*="theme-"]{
   --banner-bg:linear-gradient(90deg,#ffffff,#ffffff) !important;
   --nav-bg:linear-gradient(90deg,#ffffff,#ffffff) !important;
   --hdr-title:var(--accent) !important;
-  --app-bg:linear-gradient(120deg, transparent 46%, color-mix(in srgb, var(--accent) 12%, transparent) 52%, transparent 58%), #ffffff !important;
+  --app-bg:
+    linear-gradient(115deg, transparent 0%, transparent 34%, color-mix(in srgb, var(--accent) 20%, transparent) 39%, color-mix(in srgb, var(--accent) 92%, #000 8%) 43%, color-mix(in srgb, var(--accent) 35%, #fff 65%) 45.5%, color-mix(in srgb, var(--accent) 92%, #000 8%) 48%, transparent 52%, transparent 61%, color-mix(in srgb, var(--accent) 65%, transparent) 64%, transparent 67%) no-repeat,
+    linear-gradient(90deg, #ffffff 0%, #ffffff 40%, rgba(255,255,255,0) 82%) no-repeat,
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2745.0%27%20height%3D%2778.0%27%20viewBox%3D%270%200%2045.0%2078.0%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%239aa3b0%27%20stroke-opacity%3D%270.55%27%20stroke-width%3D%271.5%27%3E%3Cpolygon%20points%3D%2722.5%2C-6.5%2045.0%2C6.5%2045.0%2C32.5%2022.5%2C45.5%20-0.0%2C32.5%200.0%2C6.5%27/%3E%3Cpolygon%20points%3D%270.0%2C32.5%2022.5%2C45.5%2022.5%2C71.5%200.0%2C84.5%20-22.5%2C71.5%20-22.5%2C45.5%27/%3E%3Cpolygon%20points%3D%2745.0%2C32.5%2067.5%2C45.5%2067.5%2C71.5%2045.0%2C84.5%2022.5%2C71.5%2022.5%2C45.5%27/%3E%3C/g%3E%3C/svg%3E") repeat 0 0/45px 78px,
+    #ffffff !important;
 }
 
 /* ---------- BRIDGE: route hard-coded chrome to the variables above ----------
