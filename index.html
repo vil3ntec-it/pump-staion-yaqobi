@@ -8971,17 +8971,9 @@ function quickAddDebtRasid(rowEl) {
   showToast('✅ در حساب ' + person.name + ' ثبت شد', '#38a169');
   nameEl.focus();
 }
-// وضعیت باز/بستهٔ کادر کشویی هر ماه (کلید: 1405/04)
-let _drOpenMonths = null;
-let _drLastAutoMonth = null;   // آخرین ماهی که خودکار باز شد — برای تشخیص شروع ماه جدید
-function toggleDrMonth(key) {
-  if (!_drOpenMonths) _drOpenMonths = {};
-  _drOpenMonths[key] = !_drOpenMonths[key];
-  const body = document.getElementById('dr-mon-body-' + key.replace(/\//g,'_'));
-  const chev = document.getElementById('dr-mon-chev-' + key.replace(/\//g,'_'));
-  if (body) body.style.display = _drOpenMonths[key] ? '' : 'none';
-  if (chev) chev.textContent = _drOpenMonths[key] ? '▲' : '▼';
-}
+// ماه فعال رسیدها — مثل بخش مصارف با منوی انتخاب ماه
+let _drActiveMonth = null;
+let _drLastAutoMonth = null;   // آخرین ماهی که خودکار فعال شد — برای تشخیص شروع ماه جدید
 function renderDebtRasid() {
   // کادرهای ورود سریع: اگر هنوز ردیفی نیست، یک ردیف باز شود
   const qwrap = document.getElementById('dr-quick-rows');
@@ -8991,59 +8983,57 @@ function renderDebtRasid() {
   const monWrap = document.getElementById('debtrasid-months');
   if (monWrap) {
     monWrap.innerHTML = '';
-    {
-      // گروه‌بندی رسیدها بر اساس ماه — هر ماه یک کادر کشویی
-      const groups = {};
-      rows.forEach(r => { const k = _monthKey(r.date); if (!groups[k]) groups[k] = []; groups[k].push(r); });
-      // ماه جاری همیشه کادر خودش را دارد — حتی اگر هنوز رسیدی در آن ثبت نشده
-      const curMonth = _monthKey(persianDate());
-      if (!groups[curMonth]) groups[curMonth] = [];
-      const keys = Object.keys(groups).sort().reverse();
-      if (!_drOpenMonths) _drOpenMonths = {};
-      // با شروع ماه جدید، کادر ماه جاری خودکار باز و کادر ماه قبلی بسته می‌شود (در کشویی می‌ماند)
-      if (_drLastAutoMonth !== curMonth) {
-        if (_drLastAutoMonth) delete _drOpenMonths[_drLastAutoMonth];
-        _drOpenMonths[curMonth] = true;
-        _drLastAutoMonth = curMonth;
-      }
-      keys.forEach(k => {
-        const items = groups[k];
-        const monTotal = items.reduce((a,r)=>a+(r.amount||0), 0);
-        const kid = k.replace(/\//g,'_');
-        const open = !!_drOpenMonths[k];
-        const box = document.createElement('div');
-        box.style.cssText = 'margin-bottom:14px;border:1px solid var(--border);border-radius:10px;overflow:hidden';
-        box.innerHTML = `
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;background:var(--dark);cursor:pointer" onclick="toggleDrMonth('${k}')">
-            <span style="font-weight:800;color:var(--accent)">📅 ${escFa(_monthLabel(k))} <span style="color:var(--muted);font-weight:400;font-size:0.76rem">(${n2fa(items.length)} رسید)</span></span>
-            <span style="display:flex;align-items:center;gap:10px">
-              <button style="background:var(--blue);color:#fff;border:none;border-radius:7px;padding:3px 10px;font-size:0.76rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="event.stopPropagation();pdfDebtRasid('${k}')">📄 PDF</button>
-              <span style="font-size:0.82rem;font-weight:700;color:var(--green)">جمع: ${n2fa(Math.round(monTotal*100)/100)}</span>
-              <span id="dr-mon-chev-${kid}" style="color:var(--muted);font-size:0.85rem">${open?'▲':'▼'}</span>
-            </span>
-          </div>
-          <div id="dr-mon-body-${kid}" class="tbl-wrap" style="margin:0;border:none;border-radius:0;${open?'':'display:none'}">
-            <table class="tbl" style="font-size:0.8rem;margin:0">
-              <thead><tr><th>تاریخ</th><th>نام قرض‌دار</th><th>توضیحات</th><th>مبلغ رسید</th><th></th></tr></thead>
-              <tbody id="dr-mon-tb-${kid}"></tbody>
-            </table>
-          </div>`;
-        monWrap.appendChild(box);
-        const tb = box.querySelector('#dr-mon-tb-' + kid);
-        if (!items.length) tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--muted)">در این ماه هنوز رسیدی ثبت نشده</td></tr>';
-        items.forEach(r => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${escFa(r.date||'')}</td>
-            <td style="font-weight:700">${escFa(r.account||'')}</td>
-            <td style="color:var(--muted)">${escFa(r.note||'')}</td>
-            <td style="color:var(--green);font-weight:700">${n2fa(r.amount||0)}</td>
-            <td><button class="del-btn" onclick="undoDebtRasid('${r.id}')" title="بازگرداندن از حساب">🗑️</button></td>
-          `;
-          tb.appendChild(tr);
-        });
-      });
+    // گروه‌بندی رسیدها بر اساس ماه — انتخاب ماه با منوی کشویی مثل بخش مصارف
+    const groups = {};
+    rows.forEach(r => { const k = _monthKey(r.date); if (!groups[k]) groups[k] = []; groups[k].push(r); });
+    // ماه جاری همیشه در فهرست باشد — حتی اگر هنوز رسیدی در آن ثبت نشده
+    const curMonth = _monthKey(persianDate());
+    if (!groups[curMonth]) groups[curMonth] = [];
+    const keys = Object.keys(groups).sort().reverse();
+    // با شروع ماه جدید، خودکار به ماه جاری برو؛ ماه‌های قبلی در منو می‌مانند
+    if (_drLastAutoMonth !== curMonth) { _drActiveMonth = curMonth; _drLastAutoMonth = curMonth; }
+    if (!_drActiveMonth || !keys.includes(_drActiveMonth)) {
+      _drActiveMonth = keys.includes(curMonth) ? curMonth : keys[0];
     }
+    const selWrap = document.createElement('div');
+    selWrap.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px';
+    selWrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">📅 انتخاب ماه:</label>
+      <select id="dr-month-select" style="background:var(--card);border:1px solid var(--accent);border-radius:9px;padding:8px 12px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;min-width:150px">
+        ${keys.map(k => `<option value="${k}"${k===_drActiveMonth?' selected':''}>${k}</option>`).join('')}
+      </select>`;
+    monWrap.appendChild(selWrap);
+    selWrap.querySelector('#dr-month-select').onchange = function(){ _drActiveMonth = this.value; renderDebtRasid(); };
+    // جدول ماه فعال — با سربرگ مثل مصارف
+    const items = groups[_drActiveMonth] || [];
+    const monTotal = items.reduce((a,r)=>a+(r.amount||0), 0);
+    const section = document.createElement('div');
+    section.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;background:var(--dark);border-radius:10px 10px 0 0;border:1px solid var(--border);border-bottom:none">
+      <span style="font-weight:800;color:var(--accent)">📅 ${escFa(_monthLabel(_drActiveMonth))} <span style="color:var(--muted);font-weight:400;font-size:0.76rem">(${n2fa(items.length)} رسید)</span></span>
+      <span style="display:flex;align-items:center;gap:10px">
+        <button style="background:var(--blue);color:#fff;border:none;border-radius:7px;padding:3px 10px;font-size:0.76rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="pdfDebtRasid('${_drActiveMonth}')">📄 PDF</button>
+        <span style="font-size:0.82rem;font-weight:700;color:var(--green)">جمع: ${n2fa(Math.round(monTotal*100)/100)}</span>
+      </span>
+    </div>
+    <div class="tbl-wrap" style="margin:0;border-radius:0 0 10px 10px">
+      <table class="tbl" style="font-size:0.8rem;margin:0">
+        <thead><tr><th>تاریخ</th><th>نام قرض‌دار</th><th>توضیحات</th><th>مبلغ رسید</th><th></th></tr></thead>
+        <tbody id="dr-mon-tb"></tbody>
+      </table>
+    </div>`;
+    monWrap.appendChild(section);
+    const tb = section.querySelector('#dr-mon-tb');
+    if (!items.length) tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--muted)">در این ماه هنوز رسیدی ثبت نشده</td></tr>';
+    items.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${escFa(r.date||'')}</td>
+        <td style="font-weight:700">${escFa(r.account||'')}</td>
+        <td style="color:var(--muted)">${escFa(r.note||'')}</td>
+        <td style="color:var(--green);font-weight:700">${n2fa(r.amount||0)}</td>
+        <td><button class="del-btn" onclick="undoDebtRasid('${r.id}')" title="بازگرداندن از حساب">🗑️</button></td>
+      `;
+      tb.appendChild(tr);
+    });
   }
   const dl = document.getElementById('debtrasid-names');
   if (dl) dl.innerHTML = (DB.debtPersons||[]).map(p => `<option value="${escFa(p.name)}">`).join('');
