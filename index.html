@@ -3843,9 +3843,13 @@ body.gfx-ultra .lock-box{
   <div class="persons-grid" id="debt-grid"></div>
 </div>
 
-<!-- رسید قرض‌داران + قرض‌های دسته‌جمعی -->
+<!-- رسید قرض‌داران -->
 <div class="section" id="sec-debtrasid">
   <datalist id="debtrasid-names"></datalist>
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('debtsum')">📊 رفتن به قرض‌های دسته‌جمعی</button>
+    <span><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> رسید قرض‌داران</span>
+  </div>
   <div class="card">
     <div class="card-head">
       <div style="display:flex;align-items:center;gap:10px">
@@ -3854,28 +3858,38 @@ body.gfx-ultra .lock-box{
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <button class="add-btn" style="background:var(--blue)" onclick="pdfDebtRasid()">📄 PDF</button>
-        <button class="add-btn" onclick="addDrQuickRow()">➕ افزودن چندتایی</button>
+        <span style="display:flex;gap:6px;align-items:center;padding:4px 8px;border:1px dashed var(--accent);border-radius:9px">
+          <input type="number" id="dr-multi-count" min="1" max="50" value="5" class="xls-in" style="max-width:64px;text-align:center" placeholder="تعداد">
+          <button class="add-btn" onclick="addDrQuickRows()">➕ افزودن چندتایی</button>
+        </span>
       </div>
     </div>
     <div style="padding:14px">
-      <div style="font-size:0.74rem;color:var(--muted);margin-bottom:10px;line-height:1.7">نام قرض‌دار را دقیقاً مثل بخش قرض‌داران بنویس و مبلغ رسید را وارد کن — به‌محض تکمیل هر دو، خودکار و با همان تاریخ وارد حساب او می‌شود؛ نیازی به هیچ دکمه‌ای نیست. با دکمهٔ «افزودن چندتایی» می‌توانید چند ردیف را همزمان باز کنید.</div>
+      <div style="font-size:0.74rem;color:var(--muted);margin-bottom:10px;line-height:1.7">نام قرض‌دار را دقیقاً مثل بخش قرض‌داران بنویس و مبلغ رسید را وارد کن — به‌محض تکمیل هر دو، خودکار و با همان تاریخ وارد حساب او می‌شود؛ نیازی به هیچ دکمه‌ای نیست. برای باز کردن چند ردیف همزمان، تعداد را در کادر بالا بنویس و «افزودن چندتایی» را بزن.</div>
       <div id="dr-quick-rows"></div>
       <div id="debtrasid-months"></div>
     </div>
   </div>
+</div>
 
-  <div class="card" style="margin-top:16px">
-    <div class="card-head" style="cursor:pointer" onclick="toggleDebtSummary()">
+<!-- قرض‌های دسته‌جمعی (صفحهٔ جداگانه) -->
+<div class="section" id="sec-debtsum">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('debtrasid')">🧾 برگشت به رسید قرض‌داران</button>
+    <span>📊 قرض‌های دسته‌جمعی</span>
+  </div>
+  <div class="card">
+    <div class="card-head">
       <div style="display:flex;align-items:center;gap:10px">
         <div class="card-title">📊 قرض‌های دسته‌جمعی</div>
-        <span id="debtsum-chevron" style="font-size:0.9rem;color:var(--muted);transition:transform .2s">▼</span>
+        <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('debtsum',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('debtsum',0.08)">A+</button></span>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <button class="add-btn" style="background:var(--blue)" onclick="event.stopPropagation();pdfDebtSummary()">📄 PDF</button>
-        <button class="add-btn" onclick="event.stopPropagation();addDebtPersonsBulk()">➕ افزودن چندتایی</button>
+        <button class="add-btn" style="background:var(--blue)" onclick="pdfDebtSummary()">📄 PDF</button>
+        <button class="add-btn" onclick="addDebtPersonsBulk()">➕ افزودن چندتایی</button>
       </div>
     </div>
-    <div id="debtsum-wrap" style="padding:14px;display:none">
+    <div style="padding:14px">
       <div style="font-size:0.74rem;color:var(--muted);margin-bottom:8px">همهٔ قرض‌داران در یک جدول، هر کدام یک خط — با کلیک روی هر خط، حساب کامل همان شخص باز می‌شود.</div>
       <div class="tbl-wrap">
         <table class="tbl" style="font-size:0.8rem">
@@ -5858,6 +5872,7 @@ function showSection(id, btn) {
   let navId = id;
   if (id === 'shifts-diesel') navId = 'shifts';
   if (id === 'storage-diesel') navId = 'storage';
+  if (id === 'debtsum') navId = 'debtrasid';
   if (btn) {
     btn.classList.add('active');
   } else {
@@ -5871,7 +5886,8 @@ function showSection(id, btn) {
   if (id === 'shifts') { renderLog(); }
   if (id === 'shifts-diesel') { renderDieselLog(); }
   if (id === 'debt') renderPersons('debt');
-  if (id === 'debtrasid') { renderDebtRasid(); renderDebtSummary(); }
+  if (id === 'debtrasid') { renderDebtRasid(); }
+  if (id === 'debtsum') { renderDebtSummary(); }
   if (id === 'noinv') renderCompanies();
   if (id === 'safe') renderSafe();
   if (id === 'sarrafi') renderSarrafi();
@@ -8842,6 +8858,16 @@ function addDrQuickRow(focus) {
   if (focus !== false) div.querySelector('.dr-q-name').focus();
   return div;
 }
+// افزودن چند ردیف ورود سریع یکجا — تعداد از کادر عددی کنار دکمه خوانده می‌شود
+function addDrQuickRows() {
+  const cntEl = document.getElementById('dr-multi-count');
+  let n = parseInt(cntEl && cntEl.value) || 1;
+  if (n < 1) n = 1; if (n > 50) n = 50;
+  let first = null;
+  for (let i = 0; i < n; i++) { const row = addDrQuickRow(false); if (!first) first = row; }
+  if (first) { const inp = first.querySelector('.dr-q-name'); if (inp) inp.focus(); }
+  showToast('✅ ' + n2fa(n) + ' ردیف باز شد', '#38a169');
+}
 function removeDrQuickRow(btn) {
   const wrap = document.getElementById('dr-quick-rows');
   const row = btn.closest('.dr-quick-row');
@@ -9037,16 +9063,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
   else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
 }
 
-// ========== قرض‌های دسته‌جمعی (خلاصهٔ همهٔ قرض‌داران در یک جدول) ==========
-// کادر کشویی: با کلیک روی سر کادر، جدول باز/بسته می‌شود
-function toggleDebtSummary() {
-  const wrap = document.getElementById('debtsum-wrap');
-  const chev = document.getElementById('debtsum-chevron');
-  if (!wrap) return;
-  const open = wrap.style.display === 'none';
-  wrap.style.display = open ? '' : 'none';
-  if (chev) chev.textContent = open ? '▲' : '▼';
-}
+// ========== قرض‌های دسته‌جمعی (صفحهٔ جداگانه — خلاصهٔ همهٔ قرض‌داران در یک جدول) ==========
 // افزودن چند قرض‌دار یکجا — نام‌ها را با کاما (،) یا خط جدید جدا کنید
 function addDebtPersonsBulk() {
   const txt = prompt('نام قرض‌داران را وارد کنید — با کاما (،) یا خط جدید جدا کنید:');
@@ -13192,7 +13209,7 @@ function adjSecFont(secId, delta) {
   try { localStorage.setItem('secFont_' + secId, scale); } catch(e) {}
 }
 function loadSecFonts() {
-  ['shifts','shifts-diesel','debt','debtrasid','noinv','expenses','safe','sarrafi','rasid','storage','storage-diesel','profit','settings'].forEach(id => {
+  ['shifts','shifts-diesel','debt','debtrasid','debtsum','noinv','expenses','safe','sarrafi','rasid','storage','storage-diesel','profit','settings'].forEach(id => {
     const saved = parseFloat((function(){ try { return localStorage.getItem('secFont_' + id) || 0; } catch(e){ return 0; } })());
     if (saved && saved !== 1) {
       _secFontScales[id] = saved;
@@ -13700,7 +13717,7 @@ const _stp = document.getElementById('st-phone'); if (_stp) _stp.value = DB.stat
 loadFontScale();
 // اعمال دوبارهٔ اندازهٔ فونت ذخیره‌شده بعد از هر رندر — تا تنظیم A+/A- با رفت‌وآمد بین بخش‌ها یا تایپ از بین نرود
 (function(){
-  const secOfRender = { renderLog:'shifts', renderDieselLog:'shifts-diesel', renderPersons:'debt', renderCompanies:'noinv', renderExpenses:'expenses', renderSafe:'safe', renderSarrafi:'sarrafi' };
+  const secOfRender = { renderLog:'shifts', renderDieselLog:'shifts-diesel', renderPersons:'debt', renderCompanies:'noinv', renderExpenses:'expenses', renderSafe:'safe', renderSarrafi:'sarrafi', renderDebtRasid:'debtrasid', renderDebtSummary:'debtsum' };
   Object.keys(secOfRender).forEach(fn => {
     const orig = window[fn];
     if (typeof orig !== 'function') return;
