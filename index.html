@@ -4072,13 +4072,24 @@ body.gfx-ultra .lock-box{
       </div>
     </div>
   </div>
-  <!-- کادر خرید عمده — با کلیک، صفحهٔ جداگانهٔ آن باز می‌شود تا این بخش بزرگ نشود -->
-  <div class="card" style="cursor:pointer;border-color:var(--green)" onclick="showSection('extraincome')">
+  <!-- فرم ثبت خرید عمده داخل همین بخش — فقط جدولِ خریدهای ثبت‌شده در صفحهٔ جداگانه است -->
+  <div class="card">
     <div class="card-head">
       <div class="card-title">🛒 خرید عمده از مشتری (درآمد اضافی)</div>
-      <span style="font-size:0.82rem;font-weight:700;color:var(--green)">باز کردن صفحه ←</span>
+      <button class="add-btn" style="background:var(--green);color:#fff" onclick="showSection('extraincome')">📋 جدول خریدها ←</button>
     </div>
-    <div style="padding:12px 14px;font-size:0.8rem;color:var(--muted)">همهٔ خریدهای عمده در صفحهٔ جداگانه ثبت و نگهداری می‌شوند — جمع درآمد اضافی: <b id="ei-profit-sum" style="color:var(--green)">0 افغانی</b></div>
+    <div style="padding:14px">
+      <div style="font-size:0.76rem;color:var(--muted);margin-bottom:10px;line-height:1.7">یک نفر می‌خواهد تیلش را به تو بفروشد؛ تو عمده می‌گیری. مقدار تیل و فی خرید عمده و نرخ بازار را بنویس — درآمد اضافی = مقدار × (نرخ بازار − فی عمده). با «➕ ثبت» در درآمدها جمع می‌شود و در صفحهٔ «جدول خریدها» نگهداری می‌شود.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;align-items:end">
+        <div class="pl-field"><label style="font-size:0.82rem;color:var(--txt);font-weight:700">مقدار تیل (لیتر)</label><input class="ei-in" type="number" id="ei-qty" placeholder="0" oninput="calcExtraIncome()"></div>
+        <div class="pl-field"><label style="font-size:0.82rem;color:var(--txt);font-weight:700">فی خرید عمده</label><input class="ei-in" type="number" id="ei-buy" placeholder="0" oninput="calcExtraIncome()"></div>
+        <div class="pl-field"><label style="font-size:0.82rem;color:var(--txt);font-weight:700">نرخ بازار</label><input class="ei-in" type="number" id="ei-market" placeholder="0" oninput="calcExtraIncome()"></div>
+        <div class="pl-field"><label style="color:var(--accent)">پول فروشنده (قابل پرداخت)</label><div class="calc-row" id="ei-seller" style="color:var(--accent);font-weight:800">0 افغانی</div></div>
+        <div class="pl-field"><label style="color:var(--green)">درآمد اضافی</label><div class="calc-row" id="ei-result" style="color:var(--green);font-weight:800">0 افغانی</div></div>
+        <button class="add-btn" style="background:var(--green);color:#fff;height:40px" onclick="addExtraIncome()">➕ ثبت</button>
+      </div>
+      <div style="margin-top:10px;font-size:0.8rem;color:var(--muted)">جمع درآمد اضافی ثبت‌شده: <b id="ei-profit-sum" style="color:var(--green)">0 افغانی</b></div>
+    </div>
   </div>
   <div class="card">
     <div class="card-head"><div class="card-title">✍️ درآمد و مصرف اضافی دستی</div></div>
@@ -4091,27 +4102,19 @@ body.gfx-ultra .lock-box{
   </div>
 </div>
 
-<!-- خرید عمده از مشتری (صفحهٔ جداگانه) -->
+<!-- جدول خریدهای عمده (صفحهٔ جداگانه — فقط جدول) -->
 <div class="section" id="sec-extraincome">
   <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
     <button class="goto-btn" onclick="showSection('profit')">📈 برگشت به مفاد / ضرر</button>
-    <span style="display:inline-flex;align-items:center;gap:10px">🛒 خرید عمده از مشتری (درآمد اضافی)
+    <span style="display:inline-flex;align-items:center;gap:10px">📋 جدول خریدهای عمده از مشتری
       <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('extraincome',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('extraincome',0.08)">A+</button></span>
     </span>
   </div>
   <div class="card">
-    <div class="card-head"><div class="card-title">🛒 ثبت خرید عمده</div></div>
+    <div class="card-head"><div class="card-title">📋 همهٔ خریدهای عمدهٔ ثبت‌شده</div></div>
     <div style="padding:14px">
-      <div style="font-size:0.76rem;color:var(--muted);margin-bottom:10px;line-height:1.7">یک نفر می‌خواهد تیلش را به تو بفروشد؛ تو عمده می‌گیری. مقدار تیل و فی خرید عمده و نرخ بازار را بنویس — درآمد اضافی = مقدار × (نرخ بازار − فی عمده). با «➕ ثبت» در درآمدها جمع می‌شود.</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;align-items:end">
-        <div class="pl-field"><label style="font-size:0.82rem;color:var(--txt);font-weight:700">مقدار تیل (لیتر)</label><input class="ei-in" type="number" id="ei-qty" placeholder="0" oninput="calcExtraIncome()"></div>
-        <div class="pl-field"><label style="font-size:0.82rem;color:var(--txt);font-weight:700">فی خرید عمده</label><input class="ei-in" type="number" id="ei-buy" placeholder="0" oninput="calcExtraIncome()"></div>
-        <div class="pl-field"><label style="font-size:0.82rem;color:var(--txt);font-weight:700">نرخ بازار</label><input class="ei-in" type="number" id="ei-market" placeholder="0" oninput="calcExtraIncome()"></div>
-        <div class="pl-field"><label style="color:var(--accent)">پول فروشنده (قابل پرداخت)</label><div class="calc-row" id="ei-seller" style="color:var(--accent);font-weight:800">0 افغانی</div></div>
-        <div class="pl-field"><label style="color:var(--green)">درآمد اضافی</label><div class="calc-row" id="ei-result" style="color:var(--green);font-weight:800">0 افغانی</div></div>
-        <button class="add-btn" style="background:var(--green);color:#fff;height:40px" onclick="addExtraIncome()">➕ ثبت</button>
-      </div>
-      <div class="tbl-wrap" style="margin-top:12px">
+      <div style="font-size:0.76rem;color:var(--muted);margin-bottom:10px;line-height:1.7">هر خرید عمده‌ای که در بخش مفاد/ضرر ثبت کنی، خودکار اینجا می‌آید.</div>
+      <div class="tbl-wrap">
         <table class="tbl" id="ei-tbl" style="font-size:0.84rem">
           <thead><tr><th>#</th><th>تاریخ</th><th>مقدار</th><th>فی عمده</th><th>نرخ بازار</th><th>پول فروشنده</th><th>درآمد اضافی</th><th></th></tr></thead>
           <tbody id="ei-body"></tbody>
@@ -11326,7 +11329,7 @@ function applyUnionRates() {
 
 // رمز پاک‌سازی داده‌ها — بدون این رمز هیچ‌کس نمی‌تواند حساب‌ها را خالی کند
 // فقط هَش SHA-256 این رمز نگه داشته می‌شود، نه خودِ رمز.
-const WIPE_PASSWORD_HASH = 'dcb7a030f2325e0dc9cc4a40ab24fd51640acb7d1d6cedcbfee99971671cb23c';
+const WIPE_PASSWORD_HASH = 'f3c778aa40ef36243f6265e5e95f5efcaeae4f396a8584986c3af18d773b644e';
 function clearAllWithPassword() {
   const inp = document.getElementById('wipe-pw');
   const msg = document.getElementById('wipe-msg');
