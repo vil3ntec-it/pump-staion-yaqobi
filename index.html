@@ -5888,7 +5888,7 @@ function showSection(id, btn) {
   if (id === 'debt') renderPersons('debt');
   if (id === 'debtrasid') { renderDebtRasid(); }
   if (id === 'debtsum') { renderDebtSummary(); }
-  if (id === 'noinv') renderCompanies();
+  if (id === 'noinv') { try { syncAllPurchasesToCompanies(); } catch(e) {} renderCompanies(); }
   if (id === 'safe') renderSafe();
   if (id === 'sarrafi') renderSarrafi();
   if (id === 'waraq') renderWaraqList();
@@ -7361,6 +7361,26 @@ function syncPurchaseToCompany(entry) {
   if (emptyIdx >= 0) rows[emptyIdx] = newRow;
   else rows.push(newRow);
   return true;
+}
+
+// همگام‌سازی پس‌رو: هر خرید مخزن که هنوز در حساب هیچ شرکتی نیست (خریدهای قدیمی یا جامانده)
+// خودکار به حساب شرکتِ هم‌نام فروشنده اضافه می‌شود — هنگام باز شدن برنامه و بخش شرکت‌ها اجرا می‌شود
+function syncAllPurchasesToCompanies() {
+  const entries = DB.fuelEntries || [];
+  if (!entries.length) return 0;
+  const linkedIds = new Set();
+  (DB.tilCompanies || []).forEach(c => {
+    (c.rows || []).forEach(r => { if (r.srcPurchaseId != null) linkedIds.add(String(r.srcPurchaseId)); });
+    (c.dieselRows || []).forEach(r => { if (r.srcPurchaseId != null) linkedIds.add(String(r.srcPurchaseId)); });
+  });
+  let added = 0;
+  entries.forEach(e => {
+    if (linkedIds.has(String(e.id))) return;
+    if (!(e.seller || '').trim()) return;
+    if (syncPurchaseToCompany(e)) added++;
+  });
+  if (added) save();
+  return added;
 }
 
 function deletePurchase(id) {
@@ -13854,6 +13874,8 @@ window.addEventListener('hashchange', checkHashViewer);
 checkHashViewer();
 // رندر اولیهٔ داده‌ها (پشتِ صفحهٔ قفل آماده می‌شود؛ نمایش و هشدار کمبود پس از ورود با رمز در tryUnlock انجام می‌شود)
 if (isActivated() && !_isROHash) {
+  // خریدهای مخزنی که هنوز به حساب شرکت نرفته‌اند (قدیمی/جامانده) خودکار همگام شوند
+  try { syncAllPurchasesToCompanies(); } catch(e) {}
   updateAll();
 }
 
@@ -15132,6 +15154,29 @@ body .person-card.fuel-out.fuel-out{
 @media (prefers-reduced-motion: reduce){
   .pstatus-dot,.nav-badge{ animation:none!important; }
 }
+
+/* ===== کادرهای خلاصهٔ بالای مودال‌ها: همه هم‌قد، هم‌فونت و هم‌کلفتی ===== */
+.modal-summary{ grid-auto-rows:1fr; }
+.msumbox{ height:100%; }
+.msumbox .ml{ font-size:0.86rem!important; font-weight:700!important; line-height:1.4!important; }
+.msumbox .mv{ font-size:1rem!important; font-weight:800!important; line-height:1.4!important; }
+#cm-total-albaqi-usd{ font-size:0.8rem!important; font-weight:700!important; }
+#cm-albaqi-status{ font-size:0.74rem!important; font-weight:700!important; }
+/* ستون الباقی جدول شرکت: عدد اصلی و زیرنویس دالر هم‌اندازه با بقیهٔ ستون‌ها */
+#cm-tbl td{ font-size:1rem; }
+
+/* ===== پاپ‌آپ هشدار کمبود مخزن: زمینهٔ سیاه، نوشتهٔ سفید — در هر دو تم =====
+   (قبلاً .sm-modal با background:var(--panel) روی گرادیان سرخِ .ls-modal می‌نشست
+   و در تم روشن کل پاپ‌آپ سفید و ناخوانا می‌شد) */
+.sm-modal.ls-modal{
+  background:linear-gradient(160deg,#0d0d0d,#3a0d0d 55%,#0d0d0d)!important;
+  border:none!important;
+  box-shadow:0 0 0 2px #ff3b3b, 0 0 40px #ff000080, 0 18px 50px #000a!important;
+}
+.sm-modal.ls-modal .ls-title{ color:#fff!important; text-shadow:0 1px 8px #ff0000aa!important; }
+.sm-modal.ls-modal .ls-bar{ background:#00000066!important; border-color:#ffffff55!important; color:#fff!important; text-shadow:0 1px 4px #000!important; }
+.sm-modal.ls-modal .ls-note,
+.sm-modal.ls-modal .ls-inner > div[style*="dashed"]{ color:#fff!important; background:#00000055!important; }
 </style>
 
 <script id="motion-pro-js">
