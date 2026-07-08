@@ -2127,17 +2127,20 @@ html, body {
 
 /* ---------- 10 PALETTES (variables only) ---------- */
 /* ===== DARK ===== */
+/* طلای مشکی — Obsidian Gold: نزدیک‌ترین تجربه به یک خودروی لوکس مشکی/طلایی */
 body.theme-dark-amber{
-  --dark:#0a0e17 !important; --panel:#0e1320 !important; --card:#141b2b !important; --border:#27314a !important;
-  --txt:#e9eefb !important; --muted:#828ea6 !important; --label:#aab6d0 !important; --accent:#ffb43d !important;
+  --dark:#0a0806 !important; --panel:#0e0b07 !important; --card:#171208 !important; --border:#3a2c14 !important;
+  --txt:#f5eee0 !important; --muted:#8c8272 !important; --label:#c9bb9c !important; --accent:#ffb43d !important;
   --grad-amber:linear-gradient(135deg,#ffd27a 0%,#ffb43d 45%,#f5872b 100%) !important;
-  --on-accent:#1a1102 !important; --hdr-title:#e8a020 !important; --chrome-brd:rgba(200,120,0,.32) !important;
-  --hdr-bg:linear-gradient(90deg,#0e0a05,#1a1008,#0e0a05) !important;
-  --banner-bg:linear-gradient(90deg,#0c0905,#171008,#0c0905) !important;
-  --nav-bg:linear-gradient(90deg,#0b0805,#141008,#0b0805) !important;
-  --app-bg:radial-gradient(ellipse at 20% 0%,rgba(255,170,60,.10),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(255,130,40,.07),transparent 50%),linear-gradient(160deg,#0b0e18,#131120 45%,#171326 75%,#0d0a15) !important;
+  --on-accent:#1a1102 !important; --hdr-title:#e8a020 !important; --chrome-brd:rgba(200,140,20,.34) !important;
+  --hdr-bg:linear-gradient(90deg,#0a0703,#150f06,#0a0703) !important;
+  --banner-bg:linear-gradient(90deg,#080602,#120c05,#080602) !important;
+  --nav-bg:linear-gradient(90deg,#070502,#0f0a04,#070502) !important;
+  --app-bg:radial-gradient(ellipse at 20% 0%,rgba(255,180,61,.11),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(255,135,43,.08),transparent 50%),linear-gradient(160deg,#080603,#0f0b05 45%,#141005 75%,#080502) !important;
   --fx-hue:0deg !important;
+  --atmo-beam:rgba(255,180,61,.16); --atmo-geo:rgba(255,180,61,.5);
 }
+/* زمرد سایبری — Cyber Emerald: گرافیت تیره + سبز نئون */
 body.theme-dark-emerald{
   --dark:#08120f !important; --panel:#0c1814 !important; --card:#102019 !important; --border:#1f3a30 !important;
   --txt:#e7fbf3 !important; --muted:#7fa597 !important; --label:#a9cbbf !important; --accent:#2fe39c !important;
@@ -2148,29 +2151,9 @@ body.theme-dark-emerald{
   --nav-bg:linear-gradient(90deg,#030f0c,#061813,#030f0c) !important;
   --app-bg:radial-gradient(ellipse at 20% 0%,rgba(47,227,156,.10),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(19,176,122,.08),transparent 50%),linear-gradient(160deg,#05110d,#081a14 45%,#0b241b 75%,#04100c) !important;
   --fx-hue:95deg !important;
+  --atmo-beam:rgba(47,227,156,.16); --atmo-geo:rgba(47,227,156,.5);
 }
-body.theme-dark-indigo{
-  --dark:#0a0c1a !important; --panel:#0e1226 !important; --card:#151a33 !important; --border:#2a3357 !important;
-  --txt:#e9ecff !important; --muted:#8088b0 !important; --label:#b3bae0 !important; --accent:#8b7bff !important;
-  --grad-amber:linear-gradient(135deg,#b3a6ff 0%,#8b7bff 45%,#6a4cff 100%) !important;
-  --on-accent:#ffffff !important; --hdr-title:#a99bff !important; --chrome-brd:rgba(139,123,255,.34) !important;
-  --hdr-bg:linear-gradient(90deg,#070914,#0e1226,#070914) !important;
-  --banner-bg:linear-gradient(90deg,#060810,#0c1022,#060810) !important;
-  --nav-bg:linear-gradient(90deg,#05070f,#0b0f20,#05070f) !important;
-  --app-bg:radial-gradient(ellipse at 20% 0%,rgba(139,123,255,.13),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(106,76,255,.09),transparent 50%),linear-gradient(160deg,#090b18,#0f1228 45%,#161c40 75%,#0a0c1c) !important;
-  --fx-hue:-30deg !important;
-}
-body.theme-dark-crimson{
-  --dark:#120a0c !important; --panel:#1a0e11 !important; --card:#241318 !important; --border:#46232b !important;
-  --txt:#ffecee !important; --muted:#b08088 !important; --label:#e0b3ba !important; --accent:#ff5d62 !important;
-  --grad-amber:linear-gradient(135deg,#ff9a6b 0%,#ff5d62 50%,#e0322f 100%) !important;
-  --on-accent:#ffffff !important; --hdr-title:#ff7a7e !important; --chrome-brd:rgba(255,93,98,.32) !important;
-  --hdr-bg:linear-gradient(90deg,#140809,#220e12,#140809) !important;
-  --banner-bg:linear-gradient(90deg,#100708,#1c0c0f,#100708) !important;
-  --nav-bg:linear-gradient(90deg,#0e0607,#190b0d,#0e0607) !important;
-  --app-bg:radial-gradient(ellipse at 20% 0%,rgba(255,93,98,.11),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(224,50,47,.08),transparent 50%),linear-gradient(160deg,#130709,#1c0b10 45%,#291017 75%,#0f0608) !important;
-  --fx-hue:-20deg !important;
-}
+/* اقیانوس نیمه‌شب — Midnight Ocean: سرمه‌ای تیره + آبی برق‌آسا */
 body.theme-dark-teal{
   --dark:#071416 !important; --panel:#0a1c1f !important; --card:#0e262b !important; --border:#1d4047 !important;
   --txt:#e4fbff !important; --muted:#7aa3a9 !important; --label:#a6cdd3 !important; --accent:#22d3ee !important;
@@ -2181,8 +2164,36 @@ body.theme-dark-teal{
   --nav-bg:linear-gradient(90deg,#020e13,#051a20,#020e13) !important;
   --app-bg:radial-gradient(ellipse at 20% 0%,rgba(34,211,238,.11),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(14,155,181,.08),transparent 50%),linear-gradient(160deg,#04141a,#072028 45%,#0a2c36 75%,#031015) !important;
   --fx-hue:150deg !important;
+  --atmo-beam:rgba(34,211,238,.16); --atmo-geo:rgba(34,211,238,.5);
+}
+/* شب یاقوتی — Crimson Night: مشکی + قرمز تیره، قدرتمند و لوکس */
+body.theme-dark-crimson{
+  --dark:#120a0c !important; --panel:#1a0e11 !important; --card:#241318 !important; --border:#46232b !important;
+  --txt:#ffecee !important; --muted:#b08088 !important; --label:#e0b3ba !important; --accent:#ff5d62 !important;
+  --grad-amber:linear-gradient(135deg,#ff9a6b 0%,#ff5d62 50%,#e0322f 100%) !important;
+  --on-accent:#ffffff !important; --hdr-title:#ff7a7e !important; --chrome-brd:rgba(255,93,98,.32) !important;
+  --hdr-bg:linear-gradient(90deg,#140809,#220e12,#140809) !important;
+  --banner-bg:linear-gradient(90deg,#100708,#1c0c0f,#100708) !important;
+  --nav-bg:linear-gradient(90deg,#0e0607,#190b0d,#0e0607) !important;
+  --app-bg:radial-gradient(ellipse at 20% 0%,rgba(255,93,98,.11),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(224,50,47,.08),transparent 50%),linear-gradient(160deg,#130709,#1c0b10 45%,#291017 75%,#0f0608) !important;
+  --fx-hue:-20deg !important;
+  --atmo-beam:rgba(255,93,98,.16); --atmo-geo:rgba(255,93,98,.5);
+}
+/* نقره‌ای تیتانیوم — Titanium Silver: خاکستری تیتانیومی + نقره‌ای، لاکچری مینیمال */
+body.theme-dark-indigo{
+  --dark:#0d0e12 !important; --panel:#14161c !important; --card:#1b1e26 !important; --border:#343841 !important;
+  --txt:#eef0f3 !important; --muted:#8b909b !important; --label:#c3c8d0 !important; --accent:#c3cbd6 !important;
+  --grad-amber:linear-gradient(135deg,#eef2f6 0%,#c3cbd6 45%,#8f96a3 100%) !important;
+  --on-accent:#12141a !important; --hdr-title:#dfe3e8 !important; --chrome-brd:rgba(195,203,214,.32) !important;
+  --hdr-bg:linear-gradient(90deg,#0a0b0e,#14161b,#0a0b0e) !important;
+  --banner-bg:linear-gradient(90deg,#08090b,#111318,#08090b) !important;
+  --nav-bg:linear-gradient(90deg,#07080a,#0d0f13,#07080a) !important;
+  --app-bg:radial-gradient(ellipse at 20% 0%,rgba(195,203,214,.10),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(160,168,180,.08),transparent 50%),linear-gradient(160deg,#0a0b0e,#101216 45%,#15171d 75%,#0a0b0e) !important;
+  --fx-hue:0deg !important;
+  --atmo-beam:rgba(200,208,218,.16); --atmo-geo:rgba(205,212,222,.5);
 }
 /* ===== LIGHT ===== */
+/* طلای سلطنتی — Royal Gold: هتل لوکس */
 body.theme-light-cream{
   --dark:#fbf4e7 !important; --panel:#fffdf8 !important; --card:#fff8ec !important; --border:#e4d4b6 !important;
   --txt:#241a0c !important; --muted:#7a6a52 !important; --label:#5a4a30 !important; --accent:#d97706 !important;
@@ -2193,7 +2204,9 @@ body.theme-light-cream{
   --nav-bg:linear-gradient(90deg,#fbf1dc,#fff6e6,#fbf1dc) !important;
   --app-bg:radial-gradient(ellipse at 20% 0%,rgba(255,200,100,.18),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(200,140,60,.12),transparent 50%),linear-gradient(160deg,#fdf6ec,#f5e8d0 30%,#ede0c4 65%,#e8d8b8) !important;
   --fx-hue:0deg !important;
+  --atmo-beam:rgba(217,119,6,.16); --atmo-geo:rgba(217,119,6,.5);
 }
+/* زمرد لوکس — Emerald Luxury: طبیعت و تکنولوژی */
 body.theme-light-mint{
   --dark:#eef7f1 !important; --panel:#ffffff !important; --card:#f1faf5 !important; --border:#cfe6d8 !important;
   --txt:#0f2419 !important; --muted:#5a7a68 !important; --label:#2c4a3a !important; --accent:#10a05a !important;
@@ -2204,7 +2217,9 @@ body.theme-light-mint{
   --nav-bg:linear-gradient(90deg,#e7f6ee,#f2fbf6,#e7f6ee) !important;
   --app-bg:radial-gradient(ellipse at 20% 0%,rgba(60,200,130,.14),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(40,170,110,.10),transparent 50%),linear-gradient(160deg,#f3fbf6,#e6f6ee 35%,#dcf0e6 70%,#d3ecdf) !important;
   --fx-hue:95deg !important;
+  --atmo-beam:rgba(16,160,90,.16); --atmo-geo:rgba(16,160,90,.5);
 }
+/* یاقوت کبود سلطنتی — Royal Sapphire: سازمانی و رسمی */
 body.theme-light-sky{
   --dark:#eef3fb !important; --panel:#ffffff !important; --card:#f1f6fd !important; --border:#cad9ef !important;
   --txt:#0e1f33 !important; --muted:#5a6b85 !important; --label:#27406a !important; --accent:#2b7fff !important;
@@ -2215,28 +2230,33 @@ body.theme-light-sky{
   --nav-bg:linear-gradient(90deg,#e7f0fc,#f2f7fe,#e7f0fc) !important;
   --app-bg:radial-gradient(ellipse at 20% 0%,rgba(80,150,255,.16),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(40,110,220,.10),transparent 50%),linear-gradient(160deg,#f2f7fe,#e6f0fc 35%,#dbe9fa 70%,#d2e3f8) !important;
   --fx-hue:200deg !important;
+  --atmo-beam:rgba(43,127,255,.16); --atmo-geo:rgba(43,127,255,.5);
 }
+/* یاقوت اجرایی — Ruby Executive: داشبورد مدیریتی */
 body.theme-light-peach{
-  --dark:#fdf0ec !important; --panel:#fffaf8 !important; --card:#fff2ee !important; --border:#f3d3c7 !important;
-  --txt:#36140c !important; --muted:#8a6356 !important; --label:#7a3422 !important; --accent:#f2603e !important;
-  --grad-amber:linear-gradient(135deg,#ffb39a 0%,#f2603e 50%,#d8452a 100%) !important;
-  --on-accent:#ffffff !important; --hdr-title:#ffe0d6 !important; --chrome-brd:rgba(242,96,62,.32) !important;
-  --hdr-bg:linear-gradient(90deg,#b53a22,#d24a2e,#b53a22) !important;
-  --banner-bg:linear-gradient(90deg,#a8331d,#c44528,#a8331d) !important;
-  --nav-bg:linear-gradient(90deg,#fcebe4,#fff4ef,#fcebe4) !important;
-  --app-bg:radial-gradient(ellipse at 20% 0%,rgba(255,150,110,.18),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(240,120,90,.12),transparent 50%),linear-gradient(160deg,#fff5f1,#ffeae2 35%,#fde0d5 70%,#fbd6c9) !important;
-  --fx-hue:-25deg !important;
+  --dark:#fdf0f1 !important; --panel:#fffafa !important; --card:#fff1f3 !important; --border:#f0c9cf !important;
+  --txt:#33090f !important; --muted:#8a5a60 !important; --label:#7a1f28 !important; --accent:#c81e3a !important;
+  --grad-amber:linear-gradient(135deg,#ff8fa3 0%,#c81e3a 50%,#8e0f26 100%) !important;
+  --on-accent:#ffffff !important; --hdr-title:#ffd9de !important; --chrome-brd:rgba(200,30,58,.32) !important;
+  --hdr-bg:linear-gradient(90deg,#7a0f1e,#960f26,#7a0f1e) !important;
+  --banner-bg:linear-gradient(90deg,#6b0c1a,#850e22,#6b0c1a) !important;
+  --nav-bg:linear-gradient(90deg,#fce7e9,#fff3f4,#fce7e9) !important;
+  --app-bg:radial-gradient(ellipse at 20% 0%,rgba(200,30,58,.16),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(142,15,38,.10),transparent 50%),linear-gradient(160deg,#fff6f6,#ffe9eb 35%,#fddde0 70%,#fbd2d6) !important;
+  --fx-hue:-15deg !important;
+  --atmo-beam:rgba(200,30,58,.16); --atmo-geo:rgba(210,50,70,.5);
 }
+/* بلور آمیتیست — Amethyst Crystal: فوتوریستیک لوکس */
 body.theme-light-slate{
-  --dark:#eef1f5 !important; --panel:#ffffff !important; --card:#f4f6f9 !important; --border:#d2dae3 !important;
-  --txt:#16202e !important; --muted:#5c6a7c !important; --label:#2a3b50 !important; --accent:#3b5e8c !important;
-  --grad-amber:linear-gradient(135deg,#8aa6c8 0%,#3b5e8c 50%,#27466b 100%) !important;
-  --on-accent:#ffffff !important; --hdr-title:#cdd9e8 !important; --chrome-brd:rgba(59,94,140,.30) !important;
-  --hdr-bg:linear-gradient(90deg,#27384d,#34495f,#27384d) !important;
-  --banner-bg:linear-gradient(90deg,#223141,#2e4356,#223141) !important;
-  --nav-bg:linear-gradient(90deg,#e9edf2,#f4f7fa,#e9edf2) !important;
-  --app-bg:radial-gradient(ellipse at 20% 0%,rgba(90,120,160,.14),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(70,100,140,.10),transparent 50%),linear-gradient(160deg,#f5f7fa,#eaeef3 35%,#e1e7ee 70%,#d8e0e8) !important;
-  --fx-hue:200deg !important;
+  --dark:#f4f0fb !important; --panel:#ffffff !important; --card:#f6f2fc !important; --border:#ddd0f2 !important;
+  --txt:#241645 !important; --muted:#6e5c8a !important; --label:#4a2e78 !important; --accent:#7c4dff !important;
+  --grad-amber:linear-gradient(135deg,#c3aaff 0%,#7c4dff 50%,#5a2fe0 100%) !important;
+  --on-accent:#ffffff !important; --hdr-title:#e6d9ff !important; --chrome-brd:rgba(124,77,255,.32) !important;
+  --hdr-bg:linear-gradient(90deg,#3d2170,#4d2b8c,#3d2170) !important;
+  --banner-bg:linear-gradient(90deg,#351d63,#452680,#351d63) !important;
+  --nav-bg:linear-gradient(90deg,#f1eafd,#f9f6fe,#f1eafd) !important;
+  --app-bg:radial-gradient(ellipse at 20% 0%,rgba(124,77,255,.16),transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(90,47,224,.10),transparent 50%),linear-gradient(160deg,#faf8fe,#f0e9fc 35%,#e6d9fa 70%,#dcc9f7) !important;
+  --fx-hue:-60deg !important;
+  --atmo-beam:rgba(124,77,255,.16); --atmo-geo:rgba(140,100,255,.5);
 }
 
 /* ---------- BRIDGE: route hard-coded chrome to the variables above ----------
@@ -3363,6 +3383,102 @@ body.gfx-ultra.light-mode .daynight-toggle .dn-thumb{ animation:dnThumbGlowUltra
   body.gfx-ultra.light-mode .daynight-toggle .dn-thumb{ animation:dnThumbGlowUltraLight 2.6s ease-in-out infinite !important; }
 }
 </style>
+
+<style id="atmo-premium-bg">
+/* ╔══════════════════════════════════════════════════════════════════╗
+   ║  PREMIUM ATMOSPHERE LAYER — additive, theme + tier aware.         ║
+   ║  Consumes each theme's --atmo-beam/--atmo-geo (see the 10-palette ║
+   ║  block above) so the light/geometry colour always matches the    ║
+   ║  active theme automatically, on every page (header, login,       ║
+   ║  ambient background) without any per-page code.                  ║
+   ║    Lite (gfx-performance): untouched — flat, zero extra layers.  ║
+   ║    Standard: a slow ambient light-beam sweep + header sheen.      ║
+   ║    Ultra: same beam, plus soft floating geometry.                 ║
+   ╚══════════════════════════════════════════════════════════════════╝ */
+
+/* -- Lite: still themed, still cheap — a static 2-stop gradient instead
+   of a flat solid panel colour (no blur, no animation, no shadow) ------- */
+body.gfx-performance[class*="theme-"] .header,
+body.gfx-performance[class*="theme-"] .top-banner{
+  background:linear-gradient(90deg, var(--panel), var(--dark), var(--panel)) !important;
+}
+body.gfx-performance[class*="theme-"] .nav{
+  background:linear-gradient(90deg, var(--panel), var(--dark)) !important;
+}
+
+/* -- Header: soft ambient light sweep (Standard/Ultra only) ------------- */
+body[class*="theme-"] .header{ position:relative; overflow:hidden; }
+body[class*="theme-"] .header::after{
+  content:""; position:absolute; inset:0; pointer-events:none; opacity:0;
+  background:linear-gradient(115deg, transparent 32%, var(--atmo-beam, rgba(255,255,255,.14)) 50%, transparent 68%);
+  background-size:240% 100%; background-position:160% 0;
+}
+body.gfx-standard[class*="theme-"] .header::after{ opacity:1; animation:atmoHeaderBeam 10s ease-in-out infinite; }
+body.gfx-ultra[class*="theme-"] .header::after{ opacity:1; animation:atmoHeaderBeam 7s ease-in-out infinite; }
+@keyframes atmoHeaderBeam{
+  0%,15% { background-position:160% 0; }
+  50%,65%{ background-position:-60% 0; }
+  100%   { background-position:-60% 0; }
+}
+
+/* -- Ambient app background: soft beam sweep + floating geometry -------- */
+.fx-beam{
+  position:absolute; inset:-20% -20%; pointer-events:none; opacity:0;
+  background:linear-gradient(115deg, transparent 32%, var(--atmo-beam, rgba(255,200,120,.14)) 50%, transparent 68%);
+  background-size:220% 220%; background-position:140% -20%;
+}
+body.gfx-standard .fx-beam{ opacity:1; animation:atmoBeamSweep 13s ease-in-out infinite; }
+body.gfx-ultra .fx-beam{ opacity:1; animation:atmoBeamSweep 9s ease-in-out infinite; }
+@keyframes atmoBeamSweep{ 0%,100%{ background-position:140% -20%; } 50%{ background-position:-40% 40%; } }
+
+.fx-geo{
+  position:absolute; opacity:0; pointer-events:none; will-change:transform;
+  border:1.5px solid var(--atmo-geo, rgba(255,200,120,.5));
+  border-radius:26% 74% 62% 38%/38% 42% 58% 62%;
+}
+.fx-geo-1{ width:130px; height:130px; top:10%; left:6%; }
+.fx-geo-2{ width:88px;  height:88px;  top:62%; left:84%; }
+.fx-geo-3{ width:56px;  height:56px;  top:78%; left:20%; border-radius:50%; }
+body.gfx-ultra .fx-geo{ opacity:.32; animation:atmoGeoFloat 17s ease-in-out infinite; }
+body.gfx-ultra .fx-geo-2{ animation-duration:21s; animation-delay:-5s; }
+body.gfx-ultra .fx-geo-3{ animation-duration:14s; animation-delay:-9s; }
+body.gfx-ultra.light-mode .fx-geo{ opacity:.22; }
+@keyframes atmoGeoFloat{
+  0%,100%{ transform:translate(0,0) rotate(0deg); }
+  50%    { transform:translate(16px,-20px) rotate(22deg); }
+}
+
+/* -- Login screen: identical tier language (flat / glow / floating geo) - */
+.lock-screen::before{
+  content:""; position:absolute; inset:-15% -15%; pointer-events:none; z-index:1; opacity:0;
+  background:linear-gradient(115deg, transparent 32%, var(--atmo-beam, rgba(255,200,120,.16)) 50%, transparent 68%);
+  background-size:220% 220%; background-position:140% -20%;
+}
+body.gfx-standard .lock-screen::before{ opacity:1; animation:atmoBeamSweep 13s ease-in-out infinite; }
+body.gfx-ultra .lock-screen::before{ opacity:1; animation:atmoBeamSweep 9s ease-in-out infinite; }
+.lock-screen .ls-geo{
+  position:absolute; opacity:0; pointer-events:none; z-index:1; will-change:transform;
+  border:1.5px solid var(--atmo-geo, rgba(255,200,120,.5));
+  border-radius:26% 74% 62% 38%/38% 42% 58% 62%;
+}
+.ls-geo-1{ width:150px; height:150px; top:14%; left:10%; }
+.ls-geo-2{ width:100px; height:100px; top:66%; left:78%; }
+.ls-geo-3{ width:66px;  height:66px;  top:20%; left:76%; border-radius:50%; }
+body.gfx-ultra .lock-screen .ls-geo{ opacity:.34; animation:atmoGeoFloat 18s ease-in-out infinite; }
+body.gfx-ultra .lock-screen .ls-geo-2{ animation-duration:22s; animation-delay:-6s; }
+body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:15s; animation-delay:-10s; }
+
+/* -- Login card: soft glass reflection sheen (Standard/Ultra) ----------- */
+.lock-box{ position:relative; overflow:hidden; }
+.lock-box::after{
+  content:""; position:absolute; inset:0; pointer-events:none; opacity:0;
+  background:linear-gradient(120deg, transparent 40%, var(--atmo-beam, rgba(255,255,255,.12)) 50%, transparent 60%);
+  background-size:240% 240%; background-position:150% -60%;
+}
+body.gfx-standard .lock-box::after,
+body.gfx-ultra .lock-box::after{ opacity:1; animation:atmoBoxSheen 6s ease-in-out infinite; }
+@keyframes atmoBoxSheen{ 0%,20%{ background-position:150% -60%; } 60%,100%{ background-position:-70% 130%; } }
+</style>
 </head>
 <body class="nav-sticky">
 <script id="gfx-tier-boot">
@@ -3387,6 +3503,9 @@ body.gfx-ultra.light-mode .daynight-toggle .dn-thumb{ animation:dnThumbGlowUltra
 <div class="lock-screen" id="lockScreen">
   <div class="ls-bg"></div>
   <div class="ls-overlay"></div>
+  <div class="ls-geo ls-geo-1" aria-hidden="true"></div>
+  <div class="ls-geo ls-geo-2" aria-hidden="true"></div>
+  <div class="ls-geo ls-geo-3" aria-hidden="true"></div>
   <div class="ls-brand">
     <div class="ls-brand-icon">⛽</div>
     <div class="ls-brand-name" id="lsBrandName">پمپ یعقوبی</div>
@@ -14152,7 +14271,11 @@ document.addEventListener('click', function(e) {
       '<div class="fx-aurora fx-a2"></div>'+
       '<div class="fx-aurora fx-a3"></div>'+
       '<div class="fx-grid"></div>'+
+      '<div class="fx-beam"></div>'+
       '<canvas id="fxCanvas"></canvas>'+
+      '<div class="fx-geo fx-geo-1"></div>'+
+      '<div class="fx-geo fx-geo-2"></div>'+
+      '<div class="fx-geo fx-geo-3"></div>'+
       '<div class="fx-vignette"></div>';
     var siteBg = document.getElementById('siteBg');
     if(siteBg && siteBg.parentNode){ siteBg.parentNode.insertBefore(fx, siteBg.nextSibling); }
@@ -14924,16 +15047,16 @@ document.addEventListener('click', function(e) {
 
   // id, light?, preview bg, accent dot, <html> background colour
   var PALETTES = [
-    {id:'dark-amber',   light:false, name:'کهربایی فولادی',    bg:'#0e1320', ac:'#ffb43d', html:'#070a11'},
-    {id:'dark-emerald', light:false, name:'زمردی نفتی',        bg:'#0c1814', ac:'#2fe39c', html:'#040d0a'},
-    {id:'dark-indigo',  light:false, name:'نیلی سلطنتی',       bg:'#0e1226', ac:'#8b7bff', html:'#06070f'},
-    {id:'dark-crimson', light:false, name:'اخگری قرمز',        bg:'#1a0e11', ac:'#ff5d62', html:'#0d0607'},
-    {id:'dark-teal',    light:false, name:'فیروزه‌ای اقیانوس', bg:'#0a1c1f', ac:'#22d3ee', html:'#031013'},
-    {id:'light-cream',  light:true,  name:'کاغذ کرم',          bg:'#fffdf8', ac:'#d97706', html:'#f5e8d0'},
-    {id:'light-mint',   light:true,  name:'مینت روشن',         bg:'#ffffff', ac:'#10a05a', html:'#e6f6ee'},
-    {id:'light-sky',    light:true,  name:'آسمان آبی',         bg:'#ffffff', ac:'#2b7fff', html:'#e6f0fc'},
-    {id:'light-peach',  light:true,  name:'هلویی گرم',         bg:'#fffaf8', ac:'#f2603e', html:'#ffeae2'},
-    {id:'light-slate',  light:true,  name:'خاکستری مدرن',      bg:'#ffffff', ac:'#3b5e8c', html:'#eaeef3'}
+    {id:'dark-amber',   light:false, name:'طلای مشکی (Obsidian Gold)',      bg:'#0b0904', ac:'#ffb43d', html:'#050402'},
+    {id:'dark-emerald', light:false, name:'زمرد سایبری (Cyber Emerald)',    bg:'#0c1814', ac:'#2fe39c', html:'#040d0a'},
+    {id:'dark-teal',    light:false, name:'اقیانوس نیمه‌شب (Midnight Ocean)', bg:'#0a1c1f', ac:'#22d3ee', html:'#031013'},
+    {id:'dark-crimson', light:false, name:'شب یاقوتی (Crimson Night)',      bg:'#1a0e11', ac:'#ff5d62', html:'#0d0607'},
+    {id:'dark-indigo',  light:false, name:'نقره‌ای تیتانیوم (Titanium Silver)', bg:'#14161c', ac:'#c3cbd6', html:'#0a0b0f'},
+    {id:'light-cream',  light:true,  name:'طلای سلطنتی (Royal Gold)',       bg:'#fffdf8', ac:'#d97706', html:'#f5e8d0'},
+    {id:'light-mint',   light:true,  name:'زمرد لوکس (Emerald Luxury)',     bg:'#ffffff', ac:'#10a05a', html:'#e6f6ee'},
+    {id:'light-sky',    light:true,  name:'یاقوت کبود سلطنتی (Royal Sapphire)', bg:'#ffffff', ac:'#2b7fff', html:'#e6f0fc'},
+    {id:'light-peach',  light:true,  name:'یاقوت اجرایی (Ruby Executive)',  bg:'#fffafa', ac:'#c81e3a', html:'#fbdfe4'},
+    {id:'light-slate',  light:true,  name:'بلور آمیتیست (Amethyst Crystal)', bg:'#ffffff', ac:'#7c4dff', html:'#e9e3fb'}
   ];
   function allClasses(){ return PALETTES.map(function(p){ return 'theme-'+p.id; }); }
   function find(id){ for(var i=0;i<PALETTES.length;i++){ if(PALETTES[i].id===id) return PALETTES[i]; } return null; }
