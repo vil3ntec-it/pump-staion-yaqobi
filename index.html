@@ -7419,17 +7419,40 @@ function _goPersonPage(type, page) {
   try { document.getElementById(type + '-grid').scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch(e) {}
 }
 
-// وضعیت تیل هر قرض‌دار بر اساس پول پیش‌پرداختش:
-// remain = جمع رسید − جمع بردگی → اگر ≤ صفر شد یعنی «تمام شده» (سرخ)،
-// اگر ۲۰٪ یا کمترِ کل رسیدش مانده باشد یعنی «کم مانده» (زرد).
-// کسی که هیچ رسیدی نداده مشمول این هشدار نیست.
+// وضعیت هر قرض‌دار — هم تیل هم پول، هر کدام که کم بود:
+// برای هر حساب (اصلی + جداگانه) این معیارها جدا بررسی می‌شوند:
+//   • رسید تیل (لیتر) پطرول/دیزل در برابر لیترِ برده‌شده
+//   • رسید پول پطرول/دیزل در برابر بردگیِ پولی
+//   • پرداخت‌های پولی داخل جدول (ستون رسید) در برابر جمع بردگی
+// هر معیار: باقی‌مانده ≤ صفر → «تمام شده» (سرخ)؛ ≤ ۲۰٪ رسید → «کم مانده» (زرد).
+// بدترین وضعیت برنده است و نوع آن (تیل/پول/هر دو) هم برگردانده می‌شود.
 function debtFuelStatus(p) {
-  const t = _splitTotals(_allRows(p)).all;
-  if (!(t.rasid > 0)) return 'none';
-  const remain = t.rasid - t.bardagi;
-  if (remain <= 0) return 'out';
-  if (remain <= t.rasid * 0.2) return 'low';
-  return 'ok';
+  const rank = { none: 0, ok: 1, low: 2, out: 3 };
+  let worst = 'none', kinds = {};
+  const check = (deposit, used, kind) => {
+    deposit = parseFloat(deposit) || 0;
+    if (deposit <= 0) return;
+    const rem = deposit - (parseFloat(used) || 0);
+    const st = rem <= 0 ? 'out' : (rem <= deposit * 0.2 ? 'low' : 'ok');
+    if (rank[st] > rank[worst]) { worst = st; kinds = {}; if (rank[st] >= 2) kinds[kind] = true; }
+    else if (st === worst && rank[st] >= 2) kinds[kind] = true;
+  };
+  [p, ...(p.subs || [])].forEach(a => {
+    if (!a) return;
+    const t = _splitTotals(a.rows || []);
+    const eff = 1 - ((parseFloat(a.percent) || 0) / 100);   // سهم کمیشن کم می‌شود
+    check((parseFloat(a.rasidFuelP)  || 0) * eff, t.petrol.fuel,    'fuel');
+    check((parseFloat(a.rasidFuelD)  || 0) * eff, t.diesel.fuel,    'fuel');
+    check((parseFloat(a.rasidMoneyP) || 0) * eff, t.petrol.bardagi, 'money');
+    check((parseFloat(a.rasidMoneyD) || 0) * eff, t.diesel.bardagi, 'money');
+    check(t.all.rasid, t.all.bardagi, 'money');   // پرداخت‌های داخل جدول
+  });
+  return { st: worst, kinds };
+}
+// برچسب فارسی نوع کمبود: تیل / پول / هر دو
+function _debtKindLabel(kinds) {
+  const f = kinds && kinds.fuel, m = kinds && kinds.money;
+  return (f && m) ? 'تیل و پولش' : (m ? 'پولش' : 'تیلش');
 }
 // نشان اعلان روی دکمهٔ «قرض‌داران» — مثل نقطهٔ پیامک روی آیکون برنامه
 function updateDebtAlertBadge() {
@@ -7437,7 +7460,7 @@ function updateDebtAlertBadge() {
   if (!b) return;
   let low = 0, out = 0;
   (DB.debtPersons || []).forEach(p => {
-    const s = debtFuelStatus(p);
+    const s = debtFuelStatus(p).st;
     if (s === 'low') low++; else if (s === 'out') out++;
   });
   const n = low + out;
@@ -7447,7 +7470,7 @@ function updateDebtAlertBadge() {
   b.style.background = out ? '#e53e3e' : '#f6c000';
   b.style.color = out ? '#fff' : '#000';
   b.style.boxShadow = out ? '0 0 9px rgba(229,62,62,.7)' : '0 0 9px rgba(246,192,0,.7)';
-  b.title = (out ? ('تیل تمام‌شده: ' + n2fa(out)) : '') + (out && low ? ' — ' : '') + (low ? ('تیل کم‌مانده: ' + n2fa(low)) : '');
+  b.title = (out ? ('تیل/پول تمام‌شده: ' + n2fa(out)) : '') + (out && low ? ' — ' : '') + (low ? ('تیل/پول کم‌مانده: ' + n2fa(low)) : '');
 }
 function renderPersons(type) {
   const list = type === 'debt' ? DB.debtPersons : DB.noinvPersons;
@@ -7468,15 +7491,17 @@ function renderPersons(type) {
     const t = _splitTotals(rows);
     const albaqi  = t.all.albaqi;
     const pBal = t.petrol.albaqi, dBal = t.diesel.albaqi;
-    const st = type === 'debt' ? debtFuelStatus(p) : 'none';
+    const stInfo = type === 'debt' ? debtFuelStatus(p) : { st: 'none', kinds: {} };
+    const st = stInfo.st;
+    const who = _debtKindLabel(stInfo.kinds);
     const card = document.createElement('div');
     card.className = 'person-card' + (st==='low' ? ' fuel-low' : st==='out' ? ' fuel-out' : '');
     card.innerHTML = `
       <button class="person-del" onclick="event.stopPropagation();deletePerson('${type}','${p.id}')">✕</button>
-      ${st==='low' ? '<span class="pstatus-dot low" title="تیلش کم مانده"></span>' : st==='out' ? '<span class="pstatus-dot out" title="تیلش تمام شده"></span>' : ''}
+      ${st==='low' ? `<span class="pstatus-dot low" title="${who} کم مانده"></span>` : st==='out' ? `<span class="pstatus-dot out" title="${who} تمام شده"></span>` : ''}
       <div class="pname">${escFa(p.name)}</div>
       <div class="pdebt ${albaqi<=0?'clear':''}">${albaqi<=0 ? '✅ تسویه' : 'الباقی: '+n2fa(albaqi)+' افغانی'}</div>
-      ${st==='low' ? '<div class="pstatus-label low">⚠️ تیلش کم مانده</div>' : st==='out' ? '<div class="pstatus-label out">⛔ تیلش تمام شده</div>' : ''}
+      ${st==='low' ? `<div class="pstatus-label low">⚠️ ${who} کم مانده</div>` : st==='out' ? `<div class="pstatus-label out">⛔ ${who} تمام شده</div>` : ''}
       <div style="display:flex;gap:10px;margin-top:10px;font-size:0.95rem;font-weight:700;justify-content:center">
         <span style="color:var(--green)">⛽ ${n2fa(pBal)}</span>
         <span style="color:#b7791f">🟤 ${n2fa(dBal)}</span>
