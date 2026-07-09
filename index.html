@@ -3586,14 +3586,17 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
 <script id="gfx-tier-boot">
 /* apply the saved graphics tier BEFORE first paint (no flash of the
    wrong tier). The full engine lives in #gfx-quality-js near the end
-   of <body>; legacy saved values low/medium migrate here too. */
+   of <body>; legacy saved values low/medium migrate here too.
+   No saved preference yet (first visit) now defaults to Standard, not
+   Performance, so the ambient background/lock-screen decoration is on
+   by default; an explicit Performance choice is still honoured. */
 (function(){
-  var t = 'performance';
+  var t = null;
   try{
     t = localStorage.getItem('pumpGfxMode');
     t = ({low:'performance', medium:'standard'})[t] || t;
-    if(t !== 'standard' && t !== 'ultra') t = 'performance';
-  }catch(e){ t = 'performance'; }
+  }catch(e){ t = null; }
+  if(t !== 'performance' && t !== 'standard' && t !== 'ultra') t = 'standard';
   document.body.classList.add('gfx-' + t);
   window.__gfxTier = t;
 })();
@@ -15367,7 +15370,7 @@ document.addEventListener('click', function(e) {
   var LEGACY = { low:'performance', medium:'standard' };
   function normalize(v){
     v = LEGACY[v] || v;
-    return TIERS.indexOf(v) !== -1 ? v : 'performance';
+    return TIERS.indexOf(v) !== -1 ? v : 'standard';
   }
 
   /* ---------- TIER 3 MODULE: living nav illustrations ----------------
@@ -15475,7 +15478,7 @@ document.addEventListener('click', function(e) {
   };
 
   function boot(){
-    var tier = 'performance';
+    var tier = 'standard';
     try{ tier = normalize(localStorage.getItem('pumpGfxMode')); }catch(e){}
     apply(tier, false);
   }
