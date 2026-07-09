@@ -5632,12 +5632,20 @@ function load() {
     // اگر ایستگاه هرگز همگام‌سازی ابری نکرده باشد (رایج‌ترین حالت)، هر دو
     // timestamp صفر می‌مانند و مقایسهٔ بالا هیچ‌وقت تصمیم درستی نمی‌گیرد. این
     // دقیقاً همان لحظه‌ای خطرناک است که localStorage از ظرفیت افتاده و توسط
-    // _flushSave پاک شده (داده‌های سال‌ها جمع‌شده)؛ بدون این خط، شرط بالا false
+    // _flushSave پاک شده (داده‌های سال‌ها جمع‌شده)؛ بدون خط زیر، شرط بالا false
     // می‌شود و شاخهٔ else پایین، نسخهٔ خالیِ فعلی را روی بکاپِ سالمِ IndexedDB
-    // می‌نویسد و داده برای همیشه از دست می‌رود. پس هر وقت نسخهٔ محلی رکورد
-    // کمتری از IndexedDB دارد، صرف‌نظر از timestamp، از IndexedDB بازیابی کن.
-    var localLooksLossy = _dbRecordCount(DB) < _dbRecordCount(idbData);
-    if (idbTime > curTime || localLooksLossy) {
+    // می‌نویسد و داده برای همیشه از دست می‌رود.
+    // مهم: اینجا باید فقط «localStorage کاملاً خالی/گم‌شده» را نشانهٔ آن حادثه
+    // بگیریم، نه هر بار که نسخهٔ محلی رکورد کمتری دارد — چون آن حالت دومی وقتی
+    // هم پیش می‌آید که کاربر عمداً چند حساب را حذف کرده و ذخیرهٔ localStorage
+    // انجام شده ولی IndexedDB هنوز به‌روزرسانی نشده (یک لحظهٔ کوتاه بین دو
+    // نوشتن)؛ اگر آنجا هم IndexedDB را برنده می‌کردیم، حساب‌های تازه‌حذف‌شده
+    // دوباره برمی‌گشتند. localData (بالای همین تابع) دقیقاً همین دو حالت را
+    // از هم جدا می‌کند: در حادثهٔ پر شدن حجم، localStorage.removeItem صدا
+    // خورده و localData همیشه null است؛ در حذفِ عمدی، localStorage هنوز یک
+    // نسخهٔ معتبر (فقط کوچک‌تر) دارد، پس localData خالی نیست.
+    var localStorageWasWipedButIdbHasData = !localData && _dbRecordCount(idbData) > 0;
+    if (idbTime > curTime || localStorageWasWipedButIdbHasData) {
       try { Object.assign(DB, idbData); } catch(e) {}
       try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
       try { updateAll(); } catch(e) {}
