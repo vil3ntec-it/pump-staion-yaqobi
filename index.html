@@ -5567,6 +5567,17 @@ const _IDB = (function() {
   };
 })();
 
+// جمع تقریبیِ تعداد رکوردهای اصلی یک دیتابیس — برای تشخیص اینکه کدام نسخه
+// (localStorage یا نسخهٔ پشتیبانِ IndexedDB) واقعاً «داده‌دارتر» است، وقتی
+// timestamp همزمان‌سازی ابری هیچ‌کدام قابل‌اتکا نیست (پایینتر توضیح داده شده).
+function _dbRecordCount(db) {
+  if (!db) return 0;
+  var n = 0;
+  ['reports','shifts','debtPersons','noinvPersons','tilCompanies','sarrafiRows'].forEach(function(k){
+    if (Array.isArray(db[k])) n += db[k].length;
+  });
+  return n;
+}
 let _hadExistingData = false;
 function load() {
   let localData = null;
@@ -5618,7 +5629,15 @@ function load() {
     if (!idbData) { try { _IDB.put(JSON.parse(JSON.stringify(DB))); } catch(e) {} return; }
     var idbTime = new Date(idbData.lastSyncUpload || 0).getTime();
     var curTime = new Date(DB.lastSyncUpload || 0).getTime();
-    if (idbTime > curTime) {
+    // اگر ایستگاه هرگز همگام‌سازی ابری نکرده باشد (رایج‌ترین حالت)، هر دو
+    // timestamp صفر می‌مانند و مقایسهٔ بالا هیچ‌وقت تصمیم درستی نمی‌گیرد. این
+    // دقیقاً همان لحظه‌ای خطرناک است که localStorage از ظرفیت افتاده و توسط
+    // _flushSave پاک شده (داده‌های سال‌ها جمع‌شده)؛ بدون این خط، شرط بالا false
+    // می‌شود و شاخهٔ else پایین، نسخهٔ خالیِ فعلی را روی بکاپِ سالمِ IndexedDB
+    // می‌نویسد و داده برای همیشه از دست می‌رود. پس هر وقت نسخهٔ محلی رکورد
+    // کمتری از IndexedDB دارد، صرف‌نظر از timestamp، از IndexedDB بازیابی کن.
+    var localLooksLossy = _dbRecordCount(DB) < _dbRecordCount(idbData);
+    if (idbTime > curTime || localLooksLossy) {
       try { Object.assign(DB, idbData); } catch(e) {}
       try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
       try { updateAll(); } catch(e) {}
@@ -5630,6 +5649,7 @@ function load() {
 }
 let _saveDebounceTimer = null;
 let _savePending = false;
+let _quotaWarnedThisSession = false;
 function save() {
   // نوشتن واقعی روی دیسک (localStorage/IndexedDB) با تأخیر کوتاه گروه‌بندی می‌شود
   // تا هنگام تایپ سریع (هر keystroke) کل دیتابیس بارها سریالایز نشود؛ با ترک صفحه/تب فوراً نوشته می‌شود
@@ -5646,8 +5666,15 @@ function _flushSave() {
   try {
     localStorage.setItem('pumpDB', snap);
   } catch(e) {
-    // حافظهٔ مرورگر پر شده یا حالت خصوصی — فقط IndexedDB فعال می‌شود
+    // حافظهٔ مرورگر پر شده یا حالت خصوصی — فقط IndexedDB فعال می‌شود.
+    // داده در IndexedDB (چند خط پایین‌تر) امن می‌ماند، ولی صاحب برنامه باید
+    // بداند که ظرفیت localStorage تمام شده — یک‌بار در هر بازدید هشدار بده
+    // (نه هر بار که save() صدا می‌خورد، که می‌تواند خیلی زیاد باشد).
     try { localStorage.removeItem('pumpDB'); } catch(_) {}
+    if (!_quotaWarnedThisSession) {
+      _quotaWarnedThisSession = true;
+      try { showTopToast('⚠️ حجم ذخیرهٔ محلی مرورگر پر شده — داده در حافظهٔ پشتیبان (IndexedDB) نگه داشته می‌شود، ولی بهتر است هرچه زودتر از «دانلود برنامه» در تنظیمات یک نسخهٔ پشتیبان بگیرید', '#e53e3e', 8000); } catch(_) {}
+    }
   }
   // IndexedDB: بدون محدودیت حجم — همیشه ذخیره می‌شود حتی اگر localStorage پر باشد
   try { _IDB.put(DB); } catch(e) {}
