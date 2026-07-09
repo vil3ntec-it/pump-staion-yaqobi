@@ -5499,7 +5499,7 @@ function _looksHashed(s) { return typeof s === 'string' && /^[0-9a-f]{64}$/.test
 // بدون این رمز (یا رمز مدیر) برنامه به هیچ وجه باز نمی‌شود.
 // فقط هَش SHA-256 رمز اصلی اینجا نگه داشته می‌شود، نه خودِ رمز.
 const MASTER_PASSWORD_HASH = '733276637023ca192ecb9939055e266c220433755cce65dc478a697b3cbe37cc';
-const DEFAULT_ADMIN_PASSWORD_HASH = '6c1a26721dce4f3a547ab9f7d6a3593003962d6e0801959ce2c55b6f0ca8dfaf'; // هَش رمز پیش‌فرض «vil3n»
+const DEFAULT_ADMIN_PASSWORD_HASH = '6c1a26721dce4f3a547ab9f7d6a3593003962d6e0801959ce2c55b6f0ca8dfaf'; // هَش رمز پیش‌فرض — رمز اصلی هرگز اینجا به‌صورت متن ساده نوشته نشود
 const DB = {
   password: DEFAULT_ADMIN_PASSWORD_HASH,
   // رمز نظاره‌گر عمداً به‌صورت متن ساده نگه داشته می‌شود (نه هَش)، چون قرار است با نظاره‌گران
@@ -6000,8 +6000,69 @@ function requireAdmin() {
   if (currentRole === 'viewer') { showToast('🔒 فقط مدیر اجازهٔ تغییر دارد', '#e53e3e'); return false; }
   return true;
 }
+// محافظت در برابر حدس زدن پیاپیِ رمز از صفحهٔ قفل: بعد از چند تلاش غلط، ورودی
+// برای مدتی (رو به افزایش) قفل می‌شود. در localStorage نگه داشته می‌شود تا
+// رفرش کردن صفحه این محدودیت را دور نزند. توجه: این فقط جلوی حدس‌زدن دستی از
+// روی صفحهٔ قفل را می‌گیرد — چون رمز به‌صورت SHA-256 در همین فایل است، کسی
+// که مستقیم از کنسول مرورگر کد اجرا کند همچنان می‌تواند آفلاین حدس بزند؛
+// جلوگیریِ کامل از آن فقط با احراز هویت سمت سرور ممکن است.
+var LOCKOUT_THRESHOLD = 5;
+function _lockoutState() {
+  var count = 0, until = 0;
+  try {
+    count = parseInt(localStorage.getItem('pumpLockFails') || '0', 10) || 0;
+    until = parseInt(localStorage.getItem('pumpLockUntil') || '0', 10) || 0;
+  } catch(e) {}
+  return { count: count, until: until };
+}
+function _lockoutRemaining() {
+  var st = _lockoutState();
+  var remaining = st.until - Date.now();
+  return remaining > 0 ? Math.ceil(remaining / 1000) : 0;
+}
+function _lockoutRegisterFail() {
+  var st = _lockoutState();
+  var count = st.count + 1;
+  var until = 0;
+  if (count >= LOCKOUT_THRESHOLD) {
+    var blocks = Math.floor(count / LOCKOUT_THRESHOLD);
+    var seconds = Math.min(30 * Math.pow(2, blocks - 1), 300); // 30s, 60s, 120s… سقف ۵ دقیقه
+    until = Date.now() + seconds * 1000;
+  }
+  try {
+    localStorage.setItem('pumpLockFails', String(count));
+    localStorage.setItem('pumpLockUntil', String(until));
+  } catch(e) {}
+  return { count: count, until: until };
+}
+function _lockoutReset() {
+  try { localStorage.setItem('pumpLockFails', '0'); localStorage.setItem('pumpLockUntil', '0'); } catch(e) {}
+}
+function _lockoutShow(remaining) {
+  var mm = Math.floor(remaining / 60), ss = remaining % 60;
+  document.getElementById('lockErr').innerHTML =
+    '<div style="line-height:1.7;font-size:0.85rem;color:var(--red)">🔒 به‌خاطر تلاش‌های ناموفق زیاد، ورود موقتاً قفل شده.<br>'+
+    'دوباره امتحان کنید بعد از: <strong id="lockCountdown">'+mm+':'+(ss<10?'0':'')+ss+'</strong></div>';
+  var input = document.getElementById('lockInput');
+  if (input) input.disabled = true;
+  clearTimeout(_lockoutTimer);
+  _lockoutTimer = setInterval(function(){
+    var r = _lockoutRemaining();
+    if (r <= 0) {
+      clearInterval(_lockoutTimer);
+      if (input) input.disabled = false;
+      var errEl = document.getElementById('lockErr'); if (errEl) errEl.innerHTML = '';
+      return;
+    }
+    var el = document.getElementById('lockCountdown');
+    if (el) { var m2=Math.floor(r/60), s2=r%60; el.textContent = m2+':'+(s2<10?'0':'')+s2; }
+  }, 1000);
+}
+var _lockoutTimer = null;
 function tryUnlock() {
   try {
+  var remaining = _lockoutRemaining();
+  if (remaining > 0) { _lockoutShow(remaining); return; }
   const v = (document.getElementById('lockInput').value || '').trim();
   const vh = _sha256Hex(v);
   const vp = (DB.viewerPassword || '').trim();
@@ -6011,6 +6072,7 @@ function tryUnlock() {
   else if (vp && v === vp) role = 'viewer';
   if (role) {
     _wrongPassCount = 0;
+    _lockoutReset();
     if (role === 'admin') { DB.adminUnlocked = true; try { save(); } catch(e){} }
     currentRole = role;
     try { applyRole(); } catch(e){}
@@ -6023,6 +6085,12 @@ function tryUnlock() {
     setTimeout(function(){ try { checkLowStock(); } catch(e){} }, 600);
   } else {
     _wrongPassCount++;
+    var failState = _lockoutRegisterFail();
+    if (failState.until > Date.now()) {
+      _lockoutShow(_lockoutRemaining());
+      document.getElementById('lockInput').value = '';
+      return;
+    }
     document.getElementById('lockErr').innerHTML =
       '<div style="margin-bottom:10px;line-height:1.7;font-size:0.82rem">این برنامه برای شخص خاصی طراحی شد.<br>اگه برنامه رو می‌خواهید برای خود تان، به این شماره پیام دهید:<br><strong style="font-size:1rem;letter-spacing:1px">0792236008</strong></div>' +
       '<button onclick="(function(){var m=encodeURIComponent(\'سلام، میشه در مورد برنامه پمپ بنزین کمک کنید؟\');window.open(\'https://wa.me/93792236008?text=\'+m,\'_blank\')})()" style="background:#25D366;color:#fff;border:none;border-radius:10px;padding:9px 20px;font-size:0.88rem;font-family:\'Vazirmatn\',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-weight:700"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> واتساپ</button>';
@@ -7046,7 +7114,7 @@ function pdfDieselShifts() {
     return `<div class="half">
       <div class="shift-hdr ${hdrClass}">${label}</div>
       <div class="shift-body">
-        <div class="row"><span class="lbl">کارمند</span><span class="val">${s.name||'—'}</span></div>
+        <div class="row"><span class="lbl">کارمند</span><span class="val">${escFa(s.name)||'—'}</span></div>
         <div class="row"><span class="lbl">پایه (شروع ← ختم)</span><span class="val">${n2fa(s.start||0)} ← ${n2fa(s.end||0)} ل</span></div>
         <div class="row"><span class="lbl">فروش</span><span class="val blue">${n2fa(s.sale||0)} ل</span></div>
         <div class="row"><span class="lbl">فی فروش</span><span class="val amber">${n2fa(s.price||0)} ؋</span></div>
@@ -7056,7 +7124,7 @@ function pdfDieselShifts() {
         <div class="row${(s.debt||0)>0?'':' last'}"><span class="lbl">فایده کل</span><span class="val green fw9">${n2fa(s.profit||0)} افغانی</span></div>
         ${(s.debt||0)>0?`<div class="row"><span class="lbl">جمله قرض</span><span class="val red">${n2fa(s.debt)} افغانی</span></div>
         <div class="row last"><span class="lbl">💵 پول موجود</span><span class="val green fw9">${n2fa(s.available||0)} افغانی</span></div>`:''}
-        ${s.note?`<div class="note">${s.note}</div>`:''}
+        ${s.note?`<div class="note">${escFa(s.note)}</div>`:''}
       </div>
     </div>`;
   }
@@ -7260,7 +7328,7 @@ function pdfShifts() {
     return `<div class="half">
       <div class="shift-hdr ${hdrClass}">${label}</div>
       <div class="shift-body">
-        <div class="row"><span class="lbl">کارمند</span><span class="val">${s.name||'—'}</span></div>
+        <div class="row"><span class="lbl">کارمند</span><span class="val">${escFa(s.name)||'—'}</span></div>
         <div class="row"><span class="lbl">پایه (شروع ← ختم)</span><span class="val">${n2fa(s.start||0)} ← ${n2fa(s.end||0)} ل</span></div>
         <div class="row"><span class="lbl">فروش</span><span class="val blue">${n2fa(s.sale||0)} ل</span></div>
         <div class="row"><span class="lbl">فی فروش</span><span class="val amber">${n2fa(s.price||0)} ؋</span></div>
@@ -7270,7 +7338,7 @@ function pdfShifts() {
         <div class="row${(s.debt||0)>0?'':' last'}"><span class="lbl">فایده کل</span><span class="val green fw9">${n2fa(s.profit||0)} افغانی</span></div>
         ${(s.debt||0)>0?`<div class="row"><span class="lbl">جمله قرض</span><span class="val red">${n2fa(s.debt)} افغانی</span></div>
         <div class="row last"><span class="lbl">💵 پول موجود</span><span class="val green fw9">${n2fa(s.available||0)} افغانی</span></div>`:''}
-        ${s.note?`<div class="note">${s.note}</div>`:''}
+        ${s.note?`<div class="note">${escFa(s.note)}</div>`:''}
       </div>
     </div>`;
   }
@@ -7483,10 +7551,10 @@ function printShifts() {
     const tp = (day.profit||0)+(night.profit||0)+(dDay.profit||0)+(dNight.profit||0);
     return `<tr>
       <td>${i+1}</td><td>${rep.date||'—'}</td><td>${rep.dateMi||'—'}</td>
-      <td>${day.name||'—'}</td><td>${n2fa(day.start||0)}</td><td>${n2fa(day.end||0)}</td><td>${n2fa(day.sale||0)}</td><td>${n2fa(day.price||0)}</td><td>${day.buyPerLiter?n2fa(day.buyPerLiter.toFixed(1)):'—'}</td><td>${n2fa(day.profitPer||0)}</td><td>${n2fa(day.money||0)}</td><td>${n2fa(day.profit||0)}</td>
-      <td>${night.name||'—'}</td><td>${n2fa(night.start||0)}</td><td>${n2fa(night.end||0)}</td><td>${n2fa(night.sale||0)}</td><td>${n2fa(night.price||0)}</td><td>${night.buyPerLiter?n2fa(night.buyPerLiter.toFixed(1)):'—'}</td><td>${n2fa(night.profitPer||0)}</td><td>${n2fa(night.money||0)}</td><td>${n2fa(night.profit||0)}</td>
-      <td>${dDay.name||'—'}</td><td>${n2fa(dDay.start||0)}</td><td>${n2fa(dDay.end||0)}</td><td>${n2fa(dDay.sale||0)}</td><td>${n2fa(dDay.price||0)}</td><td>${dDay.buyPerLiter?n2fa(dDay.buyPerLiter.toFixed(1)):'—'}</td><td>${n2fa(dDay.profitPer||0)}</td><td>${n2fa(dDay.money||0)}</td><td>${n2fa(dDay.profit||0)}</td>
-      <td>${dNight.name||'—'}</td><td>${n2fa(dNight.start||0)}</td><td>${n2fa(dNight.end||0)}</td><td>${n2fa(dNight.sale||0)}</td><td>${n2fa(dNight.price||0)}</td><td>${dNight.buyPerLiter?n2fa(dNight.buyPerLiter.toFixed(1)):'—'}</td><td>${n2fa(dNight.profitPer||0)}</td><td>${n2fa(dNight.money||0)}</td><td>${n2fa(dNight.profit||0)}</td>
+      <td>${escFa(day.name)||'—'}</td><td>${n2fa(day.start||0)}</td><td>${n2fa(day.end||0)}</td><td>${n2fa(day.sale||0)}</td><td>${n2fa(day.price||0)}</td><td>${day.buyPerLiter?n2fa(day.buyPerLiter.toFixed(1)):'—'}</td><td>${n2fa(day.profitPer||0)}</td><td>${n2fa(day.money||0)}</td><td>${n2fa(day.profit||0)}</td>
+      <td>${escFa(night.name)||'—'}</td><td>${n2fa(night.start||0)}</td><td>${n2fa(night.end||0)}</td><td>${n2fa(night.sale||0)}</td><td>${n2fa(night.price||0)}</td><td>${night.buyPerLiter?n2fa(night.buyPerLiter.toFixed(1)):'—'}</td><td>${n2fa(night.profitPer||0)}</td><td>${n2fa(night.money||0)}</td><td>${n2fa(night.profit||0)}</td>
+      <td>${escFa(dDay.name)||'—'}</td><td>${n2fa(dDay.start||0)}</td><td>${n2fa(dDay.end||0)}</td><td>${n2fa(dDay.sale||0)}</td><td>${n2fa(dDay.price||0)}</td><td>${dDay.buyPerLiter?n2fa(dDay.buyPerLiter.toFixed(1)):'—'}</td><td>${n2fa(dDay.profitPer||0)}</td><td>${n2fa(dDay.money||0)}</td><td>${n2fa(dDay.profit||0)}</td>
+      <td>${escFa(dNight.name)||'—'}</td><td>${n2fa(dNight.start||0)}</td><td>${n2fa(dNight.end||0)}</td><td>${n2fa(dNight.sale||0)}</td><td>${n2fa(dNight.price||0)}</td><td>${dNight.buyPerLiter?n2fa(dNight.buyPerLiter.toFixed(1)):'—'}</td><td>${n2fa(dNight.profitPer||0)}</td><td>${n2fa(dNight.money||0)}</td><td>${n2fa(dNight.profit||0)}</td>
       <td style="font-weight:700">${n2fa(ts)}</td><td style="font-weight:700">${n2fa(tm)}</td><td style="font-weight:700">${n2fa(tp)}</td>
     </tr>`;
   }).join('');
@@ -10033,7 +10101,7 @@ function _renderCompanySummary() {
     tr.style.cursor = 'pointer';
     tr.innerHTML =
       '<td style="text-align:center;color:var(--muted)">' + n2fa(i+1) + '</td>' +
-      '<td style="font-weight:700">🛢️ ' + (c.name || '—') + '</td>' +
+      '<td style="font-weight:700">🛢️ ' + escFa(c.name || '—') + '</td>' +
       '<td style="color:var(--blue);font-weight:700">' + n2fa(sumUsd.toFixed(1)) + ' $</td>' +
       '<td style="color:' + (sumAlbaqi>0?'var(--red)':'var(--green)') + ';font-weight:700">' + n2fa(Math.round(sumAlbaqi)) + ' افغانی</td>';
     tr.onclick = () => openCompanyModal(c.id);
@@ -11493,7 +11561,7 @@ function pdfSingleReport(repId) {
     return `
       <div style="padding:12px 16px;flex:1;min-width:200px">
         <div style="font-size:0.85rem;font-weight:900;color:${hColor};margin-bottom:10px">${label}</div>
-        <div style="font-size:0.82rem;color:#9ca3af;margin-bottom:4px">کارمند: <span style="color:#f3f4f6;font-weight:700">${s.name||'—'}</span></div>
+        <div style="font-size:0.82rem;color:#9ca3af;margin-bottom:4px">کارمند: <span style="color:#f3f4f6;font-weight:700">${escFa(s.name)||'—'}</span></div>
         <div style="font-size:0.82rem;color:#9ca3af;margin-bottom:4px">پایه: <span style="color:#f3f4f6">${n2fa(s.start||0)} → ${n2fa(s.end||0)} ل</span></div>
         <div style="font-size:0.82rem;color:#9ca3af;margin-bottom:4px">فروش: <span style="color:#60a5fa;font-weight:900">${n2fa(s.sale||0)} ل</span></div>
         <div style="font-size:0.82rem;color:#9ca3af;margin-bottom:4px">فی فروش: <span style="color:#fbbf24;font-weight:700">${n2fa(s.price||0)} ؋</span></div>
@@ -11503,7 +11571,7 @@ function pdfSingleReport(repId) {
         <div style="font-size:0.82rem;color:#9ca3af;margin-bottom:4px">فایده کل: <span style="color:#34d399;font-weight:900">${n2fa(s.profit||0)} افغانی</span></div>
         ${(s.debt||0)>0?`<div style="font-size:0.82rem;color:#9ca3af;margin-bottom:4px">جمله قرض: <span style="color:#f87171;font-weight:700">${n2fa(s.debt)} افغانی</span></div>
         <div style="font-size:0.82rem;font-weight:900;margin-bottom:4px;padding:4px 8px;background:#064e3b;border-radius:6px;border:1px solid #065f46">💵 پول موجود: <span style="color:#34d399">${n2fa(s.available||0)} افغانی</span></div>`:''}
-        ${s.note?`<div style="font-size:0.75rem;color:#6b7280;margin-top:4px;font-style:italic">${s.note}</div>`:''}
+        ${s.note?`<div style="font-size:0.75rem;color:#6b7280;margin-top:4px;font-style:italic">${escFa(s.note)}</div>`:''}
       </div>`;
   }
 
@@ -14356,6 +14424,8 @@ function loadFontScale() {
 
 load();
 loadTheme();
+// اگر صفحه وقتی هنوز قفلِ تلاش‌های ناموفق فعال بود رفرش شود، همان لحظه دوباره نشان داده شود
+(function(){ try { var r = _lockoutRemaining(); if (r > 0) _lockoutShow(r); } catch(e){} })();
 // بارگذاری خودکار از Firebase — اگر کد ایستگاه تنظیم شده، آخرین حساب از سرور گرفته می‌شود
 setTimeout(function(){ try { _autoLoadFromFirebaseOnStartup(); } catch(e){} }, 800);
 // کتابخانهٔ Firebase حالا async می‌آید — هر وقت رسید (حتی روی نت کند)، هم‌زمان‌سازی شروع شود
@@ -15226,7 +15296,8 @@ document.addEventListener('click', function(e) {
     if(btn) btn.disabled = false;
     var names = groups.slice(0,10).map(function(g){
       var bal = g.rows.reduce(function(s,r){ return s + (r.albaqi||0); },0);
-      return '• '+g.name+' <span style="color:var(--muted)">('+g.rows.length+' ردیف، الباقی: '+(typeof n2fa==='function'?n2fa(Math.round(bal)):Math.round(bal))+')</span>';
+      var gName = typeof escFa==='function' ? escFa(g.name) : g.name;
+      return '• '+gName+' <span style="color:var(--muted)">('+g.rows.length+' ردیف، الباقی: '+(typeof n2fa==='function'?n2fa(Math.round(bal)):Math.round(bal))+')</span>';
     }).join('<br>');
     var more = groups.length>10 ? '<br>… و '+(groups.length-10)+' شخص دیگر' : '';
     var modeLbl = perSheet() ? 'هر شیت یک شخص' : 'گروه‌بندی با ستون نام';
