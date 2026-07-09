@@ -1177,17 +1177,24 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
   --glow-amber: 0 0 0 1px rgba(255,180,61,.16), 0 10px 36px -8px rgba(255,140,40,.30);
   --shadow-1: 0 1px 0 rgba(255,255,255,.04) inset, 0 14px 40px -16px rgba(0,0,0,.75);
   --r-lg:18px; --r-md:13px; --r-sm:9px;
+
+  /* hexagon circuit-grid line art, used as a mask so color only ever
+     renders on the hex edges themselves (never as a filled shape) */
+  --hex-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='51.96' height='90' viewBox='0 0 51.96 90'%3E%3Cpath d='M51.96,15 L51.96,45 L25.98,60 L0,45 L0,15 L25.98,0 Z M25.98,60 L25.98,90' fill='none' stroke='white' stroke-width='1.6'/%3E%3C/svg%3E");
+  --hexline-base: rgba(160,196,255,.05);
+  --hexglow-a:#22d3ee; --hexglow-b:#5b8cff; --hexglow-c:#a78bfa;
 }
 html{background:#070a11!important}
 
 /* ---------- 2. PREMIUM AMBIENT BACKGROUND — soft mesh, organic drift ---------- */
-#fxLayer{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
-/* body has no stacking context of its own, so its own CSS background (the
-   day themes' opaque white+hexagon pattern) paints ABOVE #fxLayer's
-   z-index:-1 content — anything meant to be visible over that background
-   (floating geometry, the hex-glow sweep) lives here instead: z-index:auto
-   (not negative) still keeps it behind real sticky UI (header z-index:100,
-   nav z-index:250) since those explicitly out-rank "auto". */
+/* z-index:0, not -1: body has no stacking context of its own, so a
+   NEGATIVE z-index here would fall through to the root stacking context
+   and paint underneath body's own CSS background (the oil/leather wash),
+   making the whole layer invisible. 0 keeps it a normal painted layer that
+   sits in DOM order — #fxLayer is inserted as one of body's first children,
+   so it still paints behind every real UI element that follows it (cards,
+   header z-index:100, nav z-index:250, lock screen z-index:9999, etc.). */
+#fxLayer{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 #fxLayerTop{position:fixed;inset:0;pointer-events:none;overflow:hidden}
 #fxCanvas{position:absolute;inset:0;width:100%;height:100%;opacity:.9}
 
@@ -1224,13 +1231,41 @@ html{background:#070a11!important}
 .fx-a4{width:26vmax;height:26vmax;left:48vmax;top:6vmax;
   background:radial-gradient(ellipse 60% 55% at 45% 40%, rgba(255,210,140,.30), transparent 70%);
   opacity:.30}
-.fx-grid{position:absolute;inset:0;opacity:.06;
-  background-image:linear-gradient(rgba(255,255,255,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.5) 1px,transparent 1px);
-  background-size:54px 54px;-webkit-mask-image:radial-gradient(ellipse at 50% 40%,#000 30%,transparent 78%);mask-image:radial-gradient(ellipse at 50% 40%,#000 30%,transparent 78%)}
+/* hexagon circuit grid — lines sit at near-zero opacity idle; colour only
+   ever appears where the traveling energy layers (::before/::after) cross
+   a line, since every layer here shares the same hex-outline mask. Two
+   independently-timed pseudo-elements (different angle/speed/delay) keep
+   the sweep pattern from ever reading as a single mechanical loop. */
+.fx-grid{position:absolute;inset:-90px -52px;
+  -webkit-mask-image:var(--hex-line);mask-image:var(--hex-line);
+  -webkit-mask-repeat:repeat;mask-repeat:repeat;
+  -webkit-mask-size:51.96px 90px;mask-size:51.96px 90px;
+  background:var(--hexline-base)}
+.fx-grid::before,.fx-grid::after{content:"";position:absolute;inset:0;
+  -webkit-mask-image:var(--hex-line);mask-image:var(--hex-line);
+  -webkit-mask-repeat:repeat;mask-repeat:repeat;
+  -webkit-mask-size:51.96px 90px;mask-size:51.96px 90px;
+  mix-blend-mode:screen}
+.fx-grid::before{
+  background:
+    linear-gradient(115deg,transparent 42%,var(--hexglow-a) 50%,transparent 58%) 0 0/300% 300%,
+    linear-gradient(250deg,transparent 44%,var(--hexglow-c) 50%,transparent 56%) 0 0/210% 210%;
+  animation:hexFlowA 27s ease-in-out infinite}
+.fx-grid::after{
+  background:linear-gradient(245deg,transparent 42%,var(--hexglow-b) 50%,transparent 58%) 0 0/340% 340%;
+  animation:hexFlowB 35s ease-in-out infinite -9s}
+@keyframes hexFlowA{
+  0%{background-position:-40% -20%,130% 120%}
+  100%{background-position:150% 90%,-30% -20%}
+}
+@keyframes hexFlowB{
+  0%{background-position:140% -30%}
+  100%{background-position:-40% 100%}
+}
+body.light-mode .fx-grid::before,body.light-mode .fx-grid::after{mix-blend-mode:multiply}
 .fx-vignette{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,transparent 40%,rgba(4,6,11,.55) 100%)}
 body.light-mode #fxLayer{opacity:.55}
 body.light-mode .fx-vignette{background:radial-gradient(ellipse at 50% 30%,transparent 45%,rgba(120,80,20,.10) 100%)}
-body.light-mode .fx-grid{opacity:.05}
 body.light-mode .fx-atmos{opacity:.35}
 
 /* ---------- 3. TYPOGRAPHY ---------- */
@@ -1438,6 +1473,8 @@ body.light-mode{
   --dark:#fbf4e7!important; --panel:#fffdf8!important; --card:#fff8ec!important;
   --border:#e4d4b6!important; --txt:#241a0c!important; --muted:#7a6a52!important; --label:#5a4a30!important;
   --glass:rgba(255,251,243,.7); --glass-brd:rgba(120,80,20,.16); --hair:rgba(200,120,0,.45);
+  --hexline-base: rgba(150,105,30,.06);
+  --hexglow-a:#f59e0b; --hexglow-b:#eab308; --hexglow-c:#fb923c;
 }
 body.light-mode .header{background:linear-gradient(90deg,rgba(60,34,0,.92),rgba(92,51,0,.92),rgba(60,34,0,.92))!important}
 body.light-mode .header-title{filter:drop-shadow(0 2px 8px rgba(0,0,0,.25))}
@@ -1458,6 +1495,7 @@ body.light-mode *::-webkit-scrollbar-thumb{background:rgba(200,120,0,.4)}
 /* ---------- 17. REDUCED MOTION ---------- */
 @media (prefers-reduced-motion: reduce){
   .fx-aurora,.shift-header::after,.ls-brand-icon{animation:none!important}
+  .fx-grid::before,.fx-grid::after{animation:none!important}
   #fxCanvas{display:none!important}
   .reveal-fx{opacity:1!important;transform:none!important;transition:none!important}
   .nav-btn,.card,.shift-card,.settings-card{animation:none!important}
@@ -1606,7 +1644,6 @@ body.light-mode .fx-a3{ background:
     radial-gradient(ellipse 46% 42% at 66% 64%, rgba(255,170,70,.18), transparent 70%); }
 body.light-mode .fx-a4{ background:radial-gradient(ellipse 60% 55% at 45% 40%, rgba(255,220,160,.28), transparent 70%); }
 body.light-mode .fx-atmos{ opacity:.30; }
-body.light-mode .fx-grid{ opacity:.5; }
 body.light-mode .fx-vignette{ background:radial-gradient(ellipse at 50% 30%,transparent 48%,rgba(150,100,30,.10) 100%); }
 
 /* ---------- 7. LOCK SCREEN polish ---------- */
@@ -2996,8 +3033,6 @@ body.gfx-ultra .fx-aurora{
   will-change:transform !important;
 }
 body.gfx-ultra.light-mode .fx-aurora{ opacity:.28 !important; }
-body.gfx-ultra .fx-grid{ opacity:.09; }
-body.gfx-ultra.light-mode .fx-grid{ opacity:.05; }
 /* dynamic cursor spotlight (position driven by --gfx-mx/--gfx-my) */
 body.gfx-ultra #fxLayer::after{
   content:""; position:absolute; inset:0; pointer-events:none; z-index:2;
