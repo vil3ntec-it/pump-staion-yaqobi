@@ -6708,9 +6708,18 @@ function onPaDateChange() {
 }
 function updateReportLabel(fuel) {
   if (fuel !== 'petrol') return;
-  const cur = getCurrentReport('petrol') || ensureReport('petrol');
+  // فقط برای نمایش برچسب — نباید با ensureReport() یک گزارش خالی بسازد و
+  // save() صدا بزند. updateAll()/updateReportLabel() در همان لحظهٔ باز شدن
+  // صفحه اجرا می‌شود (پشت صفحهٔ قفل، قبل از ورود رمز)، دقیقاً همان لحظه‌ای که
+  // بازیابیِ async از IndexedDB (در load()) هنوز کامل نشده و DB.reports
+  // موقتاً خالی به نظر می‌رسد؛ اگر اینجا ensureReport بسازد و save() کند،
+  // بکاپ سالمِ IndexedDB با این نسخهٔ موقتاً‌خالی جایگزین می‌شود — درست همان
+  // باگِ «از دست رفتن داده» که قبلاً رفع شد، از یک مسیر دیگر. saveShift()
+  // خودش موقع ذخیرهٔ واقعی، ensureReport را جداگانه صدا می‌زند، پس این تابع
+  // نیازی به ساختن گزارش ندارد و فقط می‌خواند.
+  const cur = getCurrentReport('petrol');
   const numEl = document.getElementById('current-report-num');
-  if (numEl) numEl.textContent = cur.reportNum;
+  if (numEl) numEl.textContent = cur ? cur.reportNum : 1;
   // badge visibility
   const dBadge = document.getElementById('d-saved-badge');
   const nBadge = document.getElementById('n-saved-badge');
