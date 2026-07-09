@@ -4523,7 +4523,15 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
     <h3 id="addSafeTitle">➕ ثبت در گاوصندوق</h3>
     <div class="sm-field"><label>تاریخ</label><input id="sf-date" placeholder="تاریخ" onkeydown="if(event.key==='Enter')document.getElementById('sf-title').focus()"></div>
     <div class="sm-field"><label>نام</label><input id="sf-title" placeholder="نام شخص یا شرکت..." onkeydown="if(event.key==='Enter')document.getElementById('sf-amount').focus()"></div>
-    <div class="sm-field"><label>مبلغ (افغانی)</label><input type="number" id="sf-amount" placeholder="0" onkeydown="if(event.key==='Enter')document.getElementById('sf-note').focus()"></div>
+    <div class="sm-field"><label>مبلغ</label>
+      <div style="display:flex;gap:6px">
+        <input type="number" id="sf-amount" placeholder="0" style="flex:1" onkeydown="if(event.key==='Enter')document.getElementById('sf-note').focus()">
+        <select id="sf-currency" style="width:64px">
+          <option value="afn" selected>؋ افغانی</option>
+          <option value="usd">$ دالر</option>
+        </select>
+      </div>
+    </div>
     <div class="sm-field"><label>یادداشت</label><input id="sf-note" placeholder="..." onkeydown="if(event.key==='Enter')confirmAddSafe()"></div>
     <input type="hidden" id="sf-type" value="bardagi">
     <div class="sm-btns">
@@ -11745,21 +11753,36 @@ function addSafeMonth() {
   showToast('✅ ماه ' + _safeActiveMonth + ' باز شد', '#38a169');
 }
 const SAFE_ROWS_PER_BOX = 30; // کادر که پر شد، کادر بعدی خودکار زیرش ساخته می‌شود
+// چند-ارزی: هر ردیف علاوه بر مبلغ، واحد پول خودش را دارد (؋ افغانی یا $ دالر)؛
+// جمع‌ها جدا جدا برای هر ارز نگه‌داشته می‌شوند — تبدیل خودکار با نرخ انجام نمی‌شود
+// تا خطای نرخ ارز باعث اشتباه در حساب نشود.
+function _safeCur(e) { return e && e.currency === 'usd' ? 'usd' : 'afn'; }
+function _safeAddAmt(totals, e) { totals[_safeCur(e)] += e.amount || 0; }
+function fmtSafeTotal(t) {
+  const parts = [];
+  if (t.afn) parts.push(n2fa(t.afn) + ' افغانی');
+  if (t.usd) parts.push('$' + n2fa(t.usd));
+  return parts.length ? parts.join(' + ') : '0 افغانی';
+}
+function fmtSafeNet(t) {
+  const parts = [];
+  if (t.afn || !t.usd) parts.push(n2fa(Math.abs(t.afn)) + ' افغانی');
+  if (t.usd) parts.push('$' + n2fa(Math.abs(t.usd)));
+  return { text: parts.join(' + '), ok: t.afn >= 0 && t.usd >= 0 };
+}
 function renderSafe() {
   const entries = DB.safeEntries || [];
   renderSafeMonthTabs();
   const boxesEl = document.getElementById('safe-boxes');
   if (!boxesEl) return;
   boxesEl.innerHTML = '';
-  let totalBardagi = 0, totalMandagi = 0;   // مجموع کل
-  let mBardagi = 0, mMandagi = 0;           // مجموع ماه فعال
+  let totalBardagi = { afn: 0, usd: 0 }, totalMandagi = { afn: 0, usd: 0 };   // مجموع کل
+  let mBardagi = { afn: 0, usd: 0 }, mMandagi = { afn: 0, usd: 0 };           // مجموع ماه فعال
   const monthRows = [];                     // ردیف‌های ماه فعال، با اندیس اصلی‌شان در DB.safeEntries
   entries.forEach((e, i) => {
-    if (e.type === 'bardagi') totalBardagi += e.amount || 0;
-    else totalMandagi += e.amount || 0;
+    _safeAddAmt(e.type === 'bardagi' ? totalBardagi : totalMandagi, e);
     if (safeMonthKey(e.date) !== _safeActiveMonth) return;
-    if (e.type === 'bardagi') mBardagi += e.amount || 0;
-    else mMandagi += e.amount || 0;
+    _safeAddAmt(e.type === 'bardagi' ? mBardagi : mMandagi, e);
     monthRows.push({ i, e });
   });
   const boxesFrag = document.createDocumentFragment();
@@ -11776,7 +11799,7 @@ function renderSafe() {
             <th>تاریخ شمسی</th>
             <th>نوع</th>
             <th>نام</th>
-            <th>مبلغ (افغانی)</th>
+            <th>مبلغ</th>
             <th>یادداشت</th>
             <th>حذف</th>
           </tr>
@@ -11793,7 +11816,15 @@ function renderSafe() {
         <td><input class="xls-in sm" value="${(e.date||'').replace(/"/g,'&quot;')}" placeholder="تاریخ" onchange="updateSafeEntry(${i},'date',this.value)"></td>
         <td><select class="xls-in" style="min-width:90px;color:${e.type==='bardagi'?'var(--green)':'var(--blue)'};font-weight:700;padding:5px 4px;font-size:0.82rem" onchange="updateSafeEntry(${i},'type',this.value)"><option value="bardagi"${e.type==='bardagi'?' selected':''}>💵 بردگی</option><option value="mandagi"${e.type!=='bardagi'?' selected':''}>🏛️ ماندگی</option></select></td>
         <td><input class="xls-in" value="${(e.title||'').replace(/"/g,'&quot;')}" placeholder="نام" onchange="updateSafeEntry(${i},'title',this.value)"></td>
-        <td><input class="xls-in" type="number" value="${e.amount||''}" placeholder="0" style="color:${e.type==='bardagi'?'var(--green)':'var(--blue)'}" onchange="updateSafeEntry(${i},'amount',this.value)"></td>
+        <td>
+          <div style="display:flex;gap:3px;align-items:center">
+            <input class="xls-in" type="number" value="${e.amount||''}" placeholder="0" style="min-width:55px;color:${e.type==='bardagi'?'var(--green)':'var(--blue)'}" onchange="updateSafeEntry(${i},'amount',this.value)">
+            <select class="xls-in xs" style="padding:5px 2px;min-width:44px" onchange="updateSafeEntry(${i},'currency',this.value)">
+              <option value="afn" ${_safeCur(e)==='usd'?'':'selected'}>؋</option>
+              <option value="usd" ${_safeCur(e)==='usd'?'selected':''}>$</option>
+            </select>
+          </div>
+        </td>
         <td><input class="xls-in" value="${(e.note||'').replace(/"/g,'&quot;')}" placeholder="..." onchange="updateSafeEntry(${i},'note',this.value)"></td>
         <td><button class="del-btn" onclick="deleteSafe(${i})">🗑️</button></td>
       `;
@@ -11803,16 +11834,17 @@ function renderSafe() {
     boxesFrag.appendChild(wrap);
   }
   boxesEl.appendChild(boxesFrag);
-  const net = totalBardagi - totalMandagi;
+  const net = { afn: totalBardagi.afn - totalMandagi.afn, usd: totalBardagi.usd - totalMandagi.usd };
   const _sfEl = id => document.getElementById(id);
-  if (_sfEl('safe-total-bardagi')) _sfEl('safe-total-bardagi').textContent = n2fa(totalBardagi) + ' افغانی';
-  if (_sfEl('safe-total-mandagi')) _sfEl('safe-total-mandagi').textContent = n2fa(totalMandagi) + ' افغانی';
+  if (_sfEl('safe-total-bardagi')) _sfEl('safe-total-bardagi').textContent = fmtSafeTotal(totalBardagi);
+  if (_sfEl('safe-total-mandagi')) _sfEl('safe-total-mandagi').textContent = fmtSafeTotal(totalMandagi);
   const netEl = document.getElementById('safe-net');
-  netEl.textContent = n2fa(Math.abs(net)) + ' افغانی';
-  netEl.style.color = net >= 0 ? 'var(--green)' : 'var(--red)';
-  const mNet = mBardagi - mMandagi;
+  const netFmt = fmtSafeNet(net);
+  netEl.textContent = netFmt.text;
+  netEl.style.color = netFmt.ok ? 'var(--green)' : 'var(--red)';
+  const mNet = { afn: mBardagi.afn - mMandagi.afn, usd: mBardagi.usd - mMandagi.usd };
   const ftEl = document.getElementById('safe-ft-total');
-  if (ftEl) { ftEl.textContent = n2fa(Math.abs(mNet)) + ' افغانی'; ftEl.style.color = mNet>=0?'var(--green)':'var(--red)'; }
+  if (ftEl) { const mNetFmt = fmtSafeNet(mNet); ftEl.textContent = mNetFmt.text; ftEl.style.color = mNetFmt.ok?'var(--green)':'var(--red)'; }
 }
 function openAddSafe(type) {
   document.getElementById('sf-type').value = type;
@@ -11821,6 +11853,7 @@ function openAddSafe(type) {
   document.getElementById('sf-date').value = d.sh;
   document.getElementById('sf-title').value = '';
   document.getElementById('sf-amount').value = '';
+  document.getElementById('sf-currency').value = 'afn';
   document.getElementById('sf-note').value = '';
   document.getElementById('addSafeModal').classList.add('open');
 }
@@ -11828,12 +11861,13 @@ function confirmAddSafe() {
   const d = allDates();
   const title = document.getElementById('sf-title').value.trim();
   const amount = parseFloat(document.getElementById('sf-amount').value) || 0;
+  const currency = document.getElementById('sf-currency').value === 'usd' ? 'usd' : 'afn';
   const note = document.getElementById('sf-note').value.trim();
   const type = document.getElementById('sf-type').value;
   const date = document.getElementById('sf-date').value.trim() || d.sh;
   if (!title || !amount) { showToast('نام و مبلغ را وارد کنید', '#e53e3e'); return; }
   if (!DB.safeEntries) DB.safeEntries = [];
-  const entry = { id: Date.now() + Math.random(), type, title, amount, date, note };
+  const entry = { id: Date.now() + Math.random(), type, title, amount, currency, date, note };
   DB.safeEntries.push(entry);
   // اگر بردگی و نام با شرکت موجود مطابقت داشت، رسید اتوماتیک در حساب شرکت ثبت شود
   if (type === 'bardagi') {
@@ -11869,7 +11903,7 @@ function _syncSafeEntryToCompany(e) {
   const exIdx = targetRows.findIndex(r => r.srcSafeId === e.id);
   if (!amount) { if (exIdx >= 0) targetRows.splice(exIdx, 1); return 'empty'; }
   const _sfLabel = (e.title || '').trim();
-  const newData = { srcSafeId: e.id, date: e.date || '', name: _sfLabel ? ('🏦 ' + _sfLabel + ' از گاوصندوق') : '🏦 از گاوصندوق', ton: 0, usd: 0, rate: 0, poul: amount, poulCurrency: 'afn', note: e.note || '' };
+  const newData = { srcSafeId: e.id, date: e.date || '', name: _sfLabel ? ('🏦 ' + _sfLabel + ' از گاوصندوق') : '🏦 از گاوصندوق', ton: 0, usd: 0, rate: 0, poul: amount, poulCurrency: _safeCur(e), note: e.note || '' };
   if (exIdx >= 0) targetRows[exIdx] = newData;
   else _putReceiptInCompany(targetRows, newData);
   if (typeof renderCompanies === 'function') renderCompanies();
@@ -11962,7 +11996,7 @@ function updateSafeEntry(i, field, val) {
     renderSafe();
   }
   // اتومات: بدون نیاز به زدن دکمهٔ «ثبت»، تغییرات بلافاصله به حساب شرکت هم‌نام منتقل می‌شود
-  if (field === 'title' || field === 'amount' || field === 'type' || field === 'date') {
+  if (field === 'title' || field === 'amount' || field === 'type' || field === 'date' || field === 'currency') {
     const entry = DB.safeEntries[i];
     if (entry.type === 'bardagi') {
       _syncSafeEntryToCompany(entry);
@@ -11982,16 +12016,17 @@ function updateSafeEntry(i, field, val) {
 }
 function _recalcSafeTotals() {
   const entries = DB.safeEntries || [];
-  let totalBardagi = 0, totalMandagi = 0;
-  entries.forEach(e => { if (e.type === 'bardagi') totalBardagi += e.amount || 0; else totalMandagi += e.amount || 0; });
-  const net = totalBardagi - totalMandagi;
+  let totalBardagi = { afn: 0, usd: 0 }, totalMandagi = { afn: 0, usd: 0 };
+  entries.forEach(e => _safeAddAmt(e.type === 'bardagi' ? totalBardagi : totalMandagi, e));
+  const net = { afn: totalBardagi.afn - totalMandagi.afn, usd: totalBardagi.usd - totalMandagi.usd };
   const el = id => document.getElementById(id);
-  if (el('safe-total-bardagi')) el('safe-total-bardagi').textContent = n2fa(totalBardagi) + ' افغانی';
-  if (el('safe-total-mandagi')) el('safe-total-mandagi').textContent = n2fa(totalMandagi) + ' افغانی';
+  if (el('safe-total-bardagi')) el('safe-total-bardagi').textContent = fmtSafeTotal(totalBardagi);
+  if (el('safe-total-mandagi')) el('safe-total-mandagi').textContent = fmtSafeTotal(totalMandagi);
+  const netFmt = fmtSafeNet(net);
   const netEl = el('safe-net');
-  if (netEl) { netEl.textContent = n2fa(Math.abs(net)) + ' افغانی'; netEl.style.color = net >= 0 ? 'var(--green)' : 'var(--red)'; }
+  if (netEl) { netEl.textContent = netFmt.text; netEl.style.color = netFmt.ok ? 'var(--green)' : 'var(--red)'; }
   const ftEl = el('safe-ft-total');
-  if (ftEl) { ftEl.textContent = n2fa(Math.abs(net)) + ' افغانی'; ftEl.style.color = net>=0?'var(--green)':'var(--red)'; }
+  if (ftEl) { ftEl.textContent = netFmt.text; ftEl.style.color = netFmt.ok?'var(--green)':'var(--red)'; }
 }
 function deleteSafe(i) {
   if (!confirm('این ردیف حذف شود؟')) return;
@@ -12014,19 +12049,21 @@ function printSafe(monthKey) {
   const d = allDates();
   let entries = DB.safeEntries || [];
   if (monthKey) entries = entries.filter(e => safeMonthKey(e.date) === monthKey);
-  let tb = 0, tm = 0;
-  entries.forEach(e => { if(e.type==='bardagi') tb+=e.amount||0; else tm+=e.amount||0; });
-  const net = tb - tm;
+  let tbT = { afn: 0, usd: 0 }, tmT = { afn: 0, usd: 0 };
+  entries.forEach(e => _safeAddAmt(e.type==='bardagi' ? tbT : tmT, e));
+  const netT = { afn: tbT.afn - tmT.afn, usd: tbT.usd - tmT.usd };
+  const netFmt = fmtSafeNet(netT);
 
   const rowsHtml = entries.map((e,i) => {
     const isBardagi = e.type === 'bardagi';
     const color = isBardagi ? '#276749' : '#2b6cb0';
+    const amtLabel = _safeCur(e) === 'usd' ? ('$' + n2fa(e.amount)) : (n2fa(e.amount) + ' افغانی');
     return `<tr>
       <td style="text-align:center;color:#718096">${i+1}</td>
       <td style="font-weight:700;color:#c07700">${e.date||'—'}</td>
       <td><span style="padding:2px 8px;border-radius:4px;font-size:0.65rem;font-weight:700;background:${isBardagi?'#f0fff4':'#ebf8ff'};color:${color}">${isBardagi?'💵 بردگی':'🏛️ ماندگی'}</span></td>
       <td style="font-weight:700">${escFa(e.title)||'—'}</td>
-      <td style="color:${color};font-weight:900">${n2fa(e.amount)} افغانی</td>
+      <td style="color:${color};font-weight:900">${amtLabel}</td>
       <td style="color:#718096">${escFa(e.note)||'—'}</td>
     </tr>`;
   }).join('');
@@ -12059,9 +12096,9 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 <h1>🏦 پمپ یعقوبی — ${monthKey ? ('گاوصندوق ماه ' + monthKey) : 'گزارش گاوصندوق'}</h1>
 <div class="meta">تاریخ چاپ: ${d.sh} | ${d.mi} | ${d.qa}</div>
 <div class="sum-row">
-  <div class="sum-box" style="border-color:#276749"><div class="l">💵 جمع بردگی</div><div class="v" style="color:#276749">${n2fa(tb)} افغانی</div></div>
-  <div class="sum-box" style="border-color:#2b6cb0"><div class="l">🏛️ جمع ماندگی</div><div class="v" style="color:#2b6cb0">${n2fa(tm)} افغانی</div></div>
-  <div class="sum-box" style="border-color:${net>=0?'#276749':'#e53e3e'}"><div class="l">🏦 موجودی خالص</div><div class="v" style="color:${net>=0?'#276749':'#e53e3e'}">${n2fa(Math.abs(net))} افغانی</div></div>
+  <div class="sum-box" style="border-color:#276749"><div class="l">💵 جمع بردگی</div><div class="v" style="color:#276749">${fmtSafeTotal(tbT)}</div></div>
+  <div class="sum-box" style="border-color:#2b6cb0"><div class="l">🏛️ جمع ماندگی</div><div class="v" style="color:#2b6cb0">${fmtSafeTotal(tmT)}</div></div>
+  <div class="sum-box" style="border-color:${netFmt.ok?'#276749':'#e53e3e'}"><div class="l">🏦 موجودی خالص</div><div class="v" style="color:${netFmt.ok?'#276749':'#e53e3e'}">${netFmt.text}</div></div>
   <div class="sum-box"><div class="l">تعداد ردیف‌ها</div><div class="v" style="color:#718096">${n2fa(entries.length)}</div></div>
 </div>
 <table>
@@ -12074,7 +12111,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 <tfoot>
   <tr>
     <td colspan="4" style="text-align:right">موجودی خالص</td>
-    <td>${net>=0?'💵':'📉'} ${n2fa(Math.abs(net))} افغانی</td>
+    <td>${netFmt.ok?'💵':'📉'} ${netFmt.text}</td>
     <td></td>
   </tr>
 </tfoot>
