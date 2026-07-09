@@ -1240,28 +1240,18 @@ html{background:#070a11!important}
   -webkit-mask-repeat:repeat;mask-repeat:repeat;
   -webkit-mask-size:51.96px 90px;mask-size:51.96px 90px;
   background:var(--hexline-base)}
-.fx-grid::before,.fx-grid::after{content:"";position:absolute;inset:0;
+.fx-grid::before{content:"";position:absolute;inset:0;
   -webkit-mask-image:var(--hex-line);mask-image:var(--hex-line);
   -webkit-mask-repeat:repeat;mask-repeat:repeat;
   -webkit-mask-size:51.96px 90px;mask-size:51.96px 90px;
-  mix-blend-mode:screen}
-.fx-grid::before{
-  background:
-    linear-gradient(115deg,transparent 42%,var(--hexglow-a) 50%,transparent 58%) 0 0/300% 300%,
-    linear-gradient(250deg,transparent 44%,var(--hexglow-c) 50%,transparent 56%) 0 0/210% 210%;
-  animation:hexFlowA 27s ease-in-out infinite}
-.fx-grid::after{
-  background:linear-gradient(245deg,transparent 42%,var(--hexglow-b) 50%,transparent 58%) 0 0/340% 340%;
-  animation:hexFlowB 35s ease-in-out infinite -9s}
-@keyframes hexFlowA{
-  0%{background-position:-40% -20%,130% 120%}
-  100%{background-position:150% 90%,-30% -20%}
+  mix-blend-mode:screen;
+  background:linear-gradient(135deg,transparent 42%,var(--hexglow-a) 50%,transparent 58%) 0 0/260% 260%;
+  animation:hexFlowCorner 30s linear infinite}
+@keyframes hexFlowCorner{
+  0%{background-position:-70% -70%}
+  100%{background-position:170% 170%}
 }
-@keyframes hexFlowB{
-  0%{background-position:140% -30%}
-  100%{background-position:-40% 100%}
-}
-body.light-mode .fx-grid::before,body.light-mode .fx-grid::after{mix-blend-mode:multiply}
+body.light-mode .fx-grid::before{mix-blend-mode:multiply}
 .fx-vignette{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,transparent 40%,rgba(4,6,11,.55) 100%)}
 body.light-mode #fxLayer{opacity:.55}
 body.light-mode .fx-vignette{background:radial-gradient(ellipse at 50% 30%,transparent 45%,rgba(120,80,20,.10) 100%)}
@@ -1494,7 +1484,7 @@ body.light-mode *::-webkit-scrollbar-thumb{background:rgba(200,120,0,.4)}
 /* ---------- 17. REDUCED MOTION ---------- */
 @media (prefers-reduced-motion: reduce){
   .fx-aurora,.shift-header::after,.ls-brand-icon{animation:none!important}
-  .fx-grid::before,.fx-grid::after{animation:none!important}
+  .fx-grid::before{animation:none!important}
   #fxCanvas{display:none!important}
   .reveal-fx{opacity:1!important;transform:none!important;transition:none!important}
   .nav-btn,.card,.shift-card,.settings-card{animation:none!important}
