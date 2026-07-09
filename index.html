@@ -1180,7 +1180,7 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
   /* hexagon circuit-grid line art, used as a mask so color only ever
      renders on the hex edges themselves (never as a filled shape) */
   --hex-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='51.96' height='90' viewBox='0 0 51.96 90'%3E%3Cpath d='M51.96,15 L51.96,45 L25.98,60 L0,45 L0,15 L25.98,0 Z M25.98,60 L25.98,90' fill='none' stroke='white' stroke-width='1.6'/%3E%3C/svg%3E");
-  --hexline-base: rgba(160,196,255,.05);
+  --hexline-base: rgba(160,196,255,.07);
   --hexglow-a:#22d3ee; --hexglow-b:#5b8cff; --hexglow-c:#a78bfa;
 }
 html{background:#070a11!important}
@@ -1193,8 +1193,16 @@ html{background:#070a11!important}
    sits in DOM order — #fxLayer is inserted as one of body's first children,
    so it still paints behind every real UI element that follows it (cards,
    header z-index:100, nav z-index:250, lock screen z-index:9999, etc.). */
-#fxLayer{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
-#fxLayerTop{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+/* height:100dvh (dynamic viewport height) instead of relying purely on
+   inset:0's implicit sizing — on mobile, the address bar hiding/showing
+   changes the viewport, and without dvh these fixed layers can be sized
+   to the "large" viewport while the visible one is still smaller, which
+   reads as the background grid/blobs jumping the instant a scroll starts.
+   translateZ(0)+will-change promote each layer to its own GPU compositor
+   layer so scrolling never needs to repaint them — the other cause of
+   fixed decoration visibly lagging/sliding during scroll on mobile. */
+#fxLayer{position:fixed;inset:0;height:100dvh;z-index:0;pointer-events:none;overflow:hidden;transform:translateZ(0);will-change:transform}
+#fxLayerTop{position:fixed;inset:0;height:100dvh;pointer-events:none;overflow:hidden;transform:translateZ(0);will-change:transform}
 #fxCanvas{position:absolute;inset:0;width:100%;height:100%;opacity:.9}
 
 /* atmospheric blur wash sitting behind the blobs for extra depth
@@ -1239,19 +1247,38 @@ html{background:#070a11!important}
   -webkit-mask-image:var(--hex-line);mask-image:var(--hex-line);
   -webkit-mask-repeat:repeat;mask-repeat:repeat;
   -webkit-mask-size:51.96px 90px;mask-size:51.96px 90px;
-  background:var(--hexline-base)}
+  background:var(--hexline-base);
+  filter:drop-shadow(0 0 2.5px rgba(91,140,255,.35)) drop-shadow(0 0 7px rgba(34,211,238,.22))}
+/* always-on neon halo — a softly blurred duplicate of the same hex-line
+   mask, tinted with the accent trio, so the grid reads as glowing tube
+   lighting at rest instead of only flashing colour when the travelling
+   sweep (::before) happens to cross a line */
+.fx-grid::after{content:"";position:absolute;inset:0;
+  -webkit-mask-image:var(--hex-line);mask-image:var(--hex-line);
+  -webkit-mask-repeat:repeat;mask-repeat:repeat;
+  -webkit-mask-size:51.96px 90px;mask-size:51.96px 90px;
+  mix-blend-mode:screen;opacity:.4;filter:blur(1.4px);
+  background:linear-gradient(120deg,var(--hexglow-a),var(--hexglow-b) 50%,var(--hexglow-c))}
 .fx-grid::before{content:"";position:absolute;inset:0;
   -webkit-mask-image:var(--hex-line);mask-image:var(--hex-line);
   -webkit-mask-repeat:repeat;mask-repeat:repeat;
   -webkit-mask-size:51.96px 90px;mask-size:51.96px 90px;
   mix-blend-mode:screen;
-  background:linear-gradient(135deg,transparent 42%,var(--hexglow-a) 50%,transparent 58%) 0 0/260% 260%;
+  background:linear-gradient(135deg,transparent 38%,#e0f9ff 46%,var(--hexglow-a) 52%,transparent 62%) 0 0/260% 260%;
   animation:hexFlowCorner 30s linear infinite}
 @keyframes hexFlowCorner{
   0%{background-position:-70% -70%}
   100%{background-position:170% 170%}
 }
-body.light-mode .fx-grid::before{mix-blend-mode:multiply}
+/* light mode had only a dulled multiply sweep and no idle glow at all —
+   swap to darken (keeps saturated colour instead of muddying it against a
+   white/light page) and give it its own deeper, more saturated trio so the
+   halo reads as neon rather than a faint tint. */
+body.light-mode .fx-grid{
+  filter:drop-shadow(0 0 2px rgba(37,99,235,.4)) drop-shadow(0 0 6px rgba(8,145,178,.28))}
+body.light-mode .fx-grid::after{mix-blend-mode:darken;opacity:.55;
+  background:linear-gradient(120deg,#0891b2,#2563eb 50%,#7c3aed)}
+body.light-mode .fx-grid::before{mix-blend-mode:darken}
 .fx-vignette{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,transparent 40%,rgba(4,6,11,.55) 100%)}
 body.light-mode #fxLayer{opacity:.55}
 body.light-mode .fx-vignette{background:radial-gradient(ellipse at 50% 30%,transparent 45%,rgba(120,80,20,.10) 100%)}
@@ -2847,9 +2874,20 @@ body.gfx-standard #siteBg{
   filter:blur(24px) brightness(0.22) saturate(0.7);
   transform:scale(1.06);
 }
-/* ambient layer stays visible but static (blobs are frozen by #perf-fix);
-   the interactive canvas + parallax remain Ultra-only */
+/* ambient layer stays visible and static — no animation/parallax, those
+   remain Ultra-only — but it should still read as soft glowing aurora
+   rather than #perf-fix's flat, hard-edged, un-composited fallback shapes.
+   A *static* blurred layer only costs one paint, not a per-frame one, and
+   giving it its own compositor layer (will-change+translateZ) stops it
+   from visibly lagging behind page content while scrolling on mobile. */
 body.gfx-standard #fxLayer{ display:block; }
+body.gfx-standard .fx-aurora{
+  filter:blur(30px) !important;
+  will-change:transform !important;
+  transform:translateZ(0) !important;
+  opacity:.30 !important;
+}
+body.gfx-standard.light-mode .fx-aurora{ opacity:.13 !important; }
 
 /* -- 2.2 glass chrome -------------------------------------------------- */
 body.gfx-standard .header{ -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
