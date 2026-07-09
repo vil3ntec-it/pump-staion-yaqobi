@@ -1181,7 +1181,12 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
      renders on the hex edges themselves (never as a filled shape) */
   --hex-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='51.96' height='90' viewBox='0 0 51.96 90'%3E%3Cpath d='M51.96,15 L51.96,45 L25.98,60 L0,45 L0,15 L25.98,0 Z M25.98,60 L25.98,90' fill='none' stroke='white' stroke-width='1.6'/%3E%3C/svg%3E");
   --hexline-base: rgba(160,196,255,0);
-  --hexglow-a:#22d3ee; --hexglow-b:#5b8cff; --hexglow-c:#a78bfa;
+  /* tied straight to --accent (not a fixed hue) so the sweep always matches
+     whichever of the 10 palettes is active, exactly — see the counter
+     hue-rotate on .fx-grid::before/::after below for why this can't just
+     rely on #fxLayer's per-theme hue-rotate filter like the rest of the
+     ambient layer does. */
+  --hexglow-a:var(--accent); --hexglow-b:var(--accent); --hexglow-c:var(--accent);
 }
 html{background:#070a11!important}
 
@@ -1250,29 +1255,44 @@ html{background:#070a11!important}
   -webkit-mask-repeat:repeat;mask-repeat:repeat;
   -webkit-mask-size:51.96px 90px;mask-size:51.96px 90px;
   background:var(--hexline-base)}
+/* the travelling beams use vmax (not %) for both background-size and
+   background-position: % is relative to *this element's own box*, which is
+   basically viewport-sized but almost never square (a tall phone in
+   portrait, a wide monitor in landscape) — a 135deg gradient painted onto a
+   non-square percentage tile skews toward whichever side is longer, so the
+   "diagonal" reads as mostly-vertical on a phone and mostly-horizontal on a
+   wide screen. vmax is a single viewport-relative unit, so sizing/moving the
+   tile in vmax keeps it a perfect square on every device, and the 135deg /
+   -125deg angles then trace a true corner-to-corner diagonal everywhere. */
 .fx-grid::before{content:"";position:absolute;inset:0;
   -webkit-mask-image:var(--hex-line);mask-image:var(--hex-line);
   -webkit-mask-repeat:repeat;mask-repeat:repeat;
   -webkit-mask-size:51.96px 90px;mask-size:51.96px 90px;
   mix-blend-mode:screen;
-  background:linear-gradient(135deg,transparent 32%,var(--hexglow-a) 42%,#eafcff 50%,var(--hexglow-a) 58%,transparent 68%) 0 0/240% 240%;
-  filter:drop-shadow(0 0 3px var(--hexglow-a)) drop-shadow(0 0 10px var(--hexglow-a));
+  background:linear-gradient(135deg,transparent 32%,var(--hexglow-a) 42%,#eafcff 50%,var(--hexglow-a) 58%,transparent 68%) 0 0/240vmax 240vmax;
+  /* counter-rotate: #fxLayer (the ancestor) applies filter:hue-rotate(var(--fx-hue))
+     per theme to re-tint the rest of the ambient layer's fixed hardcoded
+     colours. --hexglow-a is var(--accent) already, i.e. already the exact
+     theme colour, so letting that ancestor rotation reach it would rotate
+     it right back OFF the accent. Cancel it out here (-1 * the same value)
+     before it ever gets to the ancestor filter. */
+  filter:hue-rotate(calc(var(--fx-hue,0deg) * -1)) drop-shadow(0 0 3px var(--hexglow-a)) drop-shadow(0 0 10px var(--hexglow-a));
   animation:hexFlowCorner 22s linear infinite}
 .fx-grid::after{content:"";position:absolute;inset:0;
   -webkit-mask-image:var(--hex-line);mask-image:var(--hex-line);
   -webkit-mask-repeat:repeat;mask-repeat:repeat;
   -webkit-mask-size:51.96px 90px;mask-size:51.96px 90px;
   mix-blend-mode:screen;
-  background:linear-gradient(-125deg,transparent 32%,var(--hexglow-c) 42%,#f5f0ff 50%,var(--hexglow-b) 58%,transparent 68%) 0 0/220% 220%;
-  filter:drop-shadow(0 0 3px var(--hexglow-b)) drop-shadow(0 0 9px var(--hexglow-c));
+  background:linear-gradient(-125deg,transparent 32%,var(--hexglow-c) 42%,#f5f0ff 50%,var(--hexglow-b) 58%,transparent 68%) 0 0/220vmax 220vmax;
+  filter:hue-rotate(calc(var(--fx-hue,0deg) * -1)) drop-shadow(0 0 3px var(--hexglow-b)) drop-shadow(0 0 9px var(--hexglow-c));
   animation:hexFlowCorner2 27s linear infinite 4s}
 @keyframes hexFlowCorner{
-  0%{background-position:-70% -70%}
-  100%{background-position:170% 170%}
+  0%{background-position:-70vmax -70vmax}
+  100%{background-position:170vmax 170vmax}
 }
 @keyframes hexFlowCorner2{
-  0%{background-position:170% -70%}
-  100%{background-position:-70% 170%}
+  0%{background-position:170vmax -70vmax}
+  100%{background-position:-70vmax 170vmax}
 }
 /* light mode: screen-blending a near-white "hot core" only works against a
    dark page (screen(black,white)=white); against the light theme's pale
@@ -1280,9 +1300,9 @@ html{background:#070a11!important}
    colour itself, already amber/gold from the light-mode --hexglow-* vars
    below, fully saturated instead of muddied) and drop the white highlight. */
 body.light-mode .fx-grid::before{mix-blend-mode:darken;
-  background:linear-gradient(135deg,transparent 32%,var(--hexglow-a) 44%,var(--hexglow-a) 56%,transparent 68%) 0 0/240% 240%}
+  background:linear-gradient(135deg,transparent 32%,var(--hexglow-a) 44%,var(--hexglow-a) 56%,transparent 68%) 0 0/240vmax 240vmax}
 body.light-mode .fx-grid::after{mix-blend-mode:darken;
-  background:linear-gradient(-125deg,transparent 32%,var(--hexglow-c) 44%,var(--hexglow-c) 56%,transparent 68%) 0 0/220% 220%}
+  background:linear-gradient(-125deg,transparent 32%,var(--hexglow-c) 44%,var(--hexglow-c) 56%,transparent 68%) 0 0/220vmax 220vmax}
 .fx-vignette{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,transparent 40%,rgba(4,6,11,.55) 100%)}
 body.light-mode #fxLayer{opacity:.55}
 body.light-mode .fx-vignette{background:radial-gradient(ellipse at 50% 30%,transparent 45%,rgba(120,80,20,.10) 100%)}
@@ -1494,7 +1514,6 @@ body.light-mode{
   --border:#e4d4b6!important; --txt:#241a0c!important; --muted:#7a6a52!important; --label:#5a4a30!important;
   --glass:rgba(255,251,243,.7); --glass-brd:rgba(120,80,20,.16); --hair:rgba(200,120,0,.45);
   --hexline-base: rgba(150,105,30,0);
-  --hexglow-a:#f59e0b; --hexglow-b:#eab308; --hexglow-c:#fb923c;
 }
 body.light-mode .header{background:linear-gradient(90deg,rgba(60,34,0,.92),rgba(92,51,0,.92),rgba(60,34,0,.92))!important}
 body.light-mode .header-title{filter:drop-shadow(0 2px 8px rgba(0,0,0,.25))}
