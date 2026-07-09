@@ -4916,6 +4916,13 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
     </div>
   </div>
 
+  <div class="settings-card" id="storage-status-card" style="border-color:var(--green)">
+    <div class="settings-title">📊 وضعیت حافظه</div>
+    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
+      این کارت نشان می‌دهد چقدر از حافظهٔ مرورگر برای اطلاعات این برنامه استفاده شده — بدون نیاز به هیچ تنظیمات فنی. اگه یه روز حجم داده زیاد شد، برنامه خودش خودکار مدیریتش می‌کند و به شما هشدار می‌دهد؛ این کارت فقط برای اطلاع شماست.
+    </div>
+    <div id="storage-status-body" style="font-size:0.85rem;line-height:2.1"></div>
+  </div>
   <div class="settings-card" style="border-color:var(--blue)">
     <div class="settings-title">☁️ هم‌زمان‌سازی آنلاین</div>
     <div style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;line-height:1.9">
@@ -6462,6 +6469,7 @@ function showSection(id, btn) {
     fillLowStockSettings();
     fillSyncSettings();
     try { renderTrashList(); } catch(e) {}
+    try { renderStorageStatus(); } catch(e) {}
   }
 }
 
@@ -11121,6 +11129,57 @@ function updateBanner() {
 }
 
 // ========== SETTINGS ==========
+// وضعیت حافظه — فقط نمایشی، هیچ چیزی را تغییر نمی‌دهد. حجم کل دیتابیس این
+// برنامه + تعداد رکورد هر بخش + فضای واقعی مصرف‌شدهٔ مرورگر (از خودِ API
+// مرورگر، navigator.storage.estimate) را به زبان ساده نشان می‌دهد تا صاحب
+// برنامه بدون نیاز به هیچ دانش فنی از وضعیت داده‌هایش مطلع باشد.
+async function renderStorageStatus() {
+  const body = document.getElementById('storage-status-body');
+  if (!body) return;
+  var snap = '';
+  try { snap = JSON.stringify(DB); } catch(e) {}
+  var sizeMB = snap.length / 1048576;
+  var sizeLabel = sizeMB < 1 ? n2fa(Math.round(snap.length / 1024)) + ' کیلوبایت' : n2fa(sizeMB.toFixed(1)) + ' مگابایت';
+
+  var counts = [
+    ['پارچه‌های پطرول', (DB.reports || []).length],
+    ['شیفت‌های دیزل', (DB.shifts || []).length],
+    ['قرض‌داران', (DB.debtPersons || []).length],
+    ['اشخاص بدون پارچه', (DB.noinvPersons || []).length],
+    ['شرکت‌های تیل', (DB.tilCompanies || []).length],
+    ['ردیف‌های صرافی', (DB.sarrafiRows || []).length],
+    ['مصارف', (DB.expenses || []).length],
+    ['ردیف‌های گاوصندوق', (DB.safeEntries || []).length],
+    ['ورق‌های روزانه', (DB.waraqEntries || []).length],
+  ];
+  var countsHTML = counts.filter(function (c) { return c[1] > 0; })
+    .map(function (c) { return c[0] + ': <b>' + n2fa(c[1]) + '</b>'; })
+    .join(' &nbsp;•&nbsp; ');
+  if (!countsHTML) countsHTML = 'هنوز داده‌ای ثبت نشده';
+
+  var quotaHTML = '';
+  try {
+    if (navigator.storage && navigator.storage.estimate) {
+      var est = await navigator.storage.estimate();
+      if (est && est.quota) {
+        var usedMB = est.usage / 1048576;
+        var quotaMB = Math.round(est.quota / 1048576);
+        var pct = Math.min(100, Math.round((est.usage / est.quota) * 100));
+        var color = pct > 80 ? 'var(--red)' : (pct > 50 ? 'var(--accent)' : 'var(--green)');
+        quotaHTML = '<div style="margin-top:10px">فضای کل حافظهٔ این مرورگر برای برنامه: ' +
+          '<b style="color:' + color + '">' + n2fa(usedMB.toFixed(1)) + ' از ' + n2fa(quotaMB) + ' مگابایت</b> استفاده شده (' + n2fa(pct) + '٪)' +
+          '<div style="margin-top:6px;height:8px;border-radius:5px;background:var(--border);overflow:hidden"><div style="height:100%;width:' + pct + '%;background:' + color + ';border-radius:5px"></div></div>' +
+          '<div style="margin-top:6px;font-size:0.76rem;color:var(--muted)">این عدد معمولاً خیلی بزرگ‌تر از حافظهٔ سریعِ اصلی (۵ مگابایت) است — چون شامل حافظهٔ پشتیبانِ خودکار برنامه (IndexedDB) هم می‌شود، که با هزاران حساب هم مشکلی ندارد.</div>' +
+          '</div>';
+      }
+    }
+  } catch (e) {}
+
+  body.innerHTML =
+    '<div>حجم کل دادهٔ ثبت‌شده: <b style="color:var(--accent)">' + sizeLabel + '</b></div>' +
+    '<div style="margin-top:6px">' + countsHTML + '</div>' +
+    quotaHTML;
+}
 function fillLowStockSettings() {
   const i = document.getElementById('set-ls-interval');
   const t = document.getElementById('set-ls-threshold');
