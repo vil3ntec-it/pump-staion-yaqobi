@@ -4497,29 +4497,21 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
           <div class="stat-value" id="safe-net">0</div>
         </div>
       </div>
-      <!-- جدول -->
-      <div class="tbl-wrap" id="safe-print-area">
-        <table class="tbl" id="safe-tbl">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>تاریخ شمسی</th>
-              <th>نوع</th>
-              <th>نام</th>
-              <th>مبلغ (افغانی)</th>
-              <th>یادداشت</th>
-              <th>حذف</th>
-            </tr>
-          </thead>
-          <tbody id="safe-body"></tbody>
-          <tfoot>
-            <tr style="background:var(--dark);font-weight:700">
-              <td colspan="4" style="padding:8px 9px">جمع</td>
-              <td style="padding:8px 9px" id="safe-ft-total">0</td>
-              <td colspan="2"></td>
-            </tr>
-          </tfoot>
-        </table>
+      <!-- جدول: به کادرهای ۳۰ ردیفی تقسیم می‌شود — وقتی کادر فعلی پر شد،
+           renderSafe() خودکار کادر بعدی را زیرش می‌سازد (به ترتیب) -->
+      <div id="safe-print-area">
+        <div id="safe-boxes"></div>
+        <div class="tbl-wrap" style="margin-top:10px">
+          <table class="tbl">
+            <tfoot>
+              <tr style="background:var(--dark);font-weight:700">
+                <td colspan="4" style="padding:8px 9px">جمع</td>
+                <td style="padding:8px 9px" id="safe-ft-total">0</td>
+                <td colspan="2"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -11752,34 +11744,65 @@ function addSafeMonth() {
   renderSafe();
   showToast('✅ ماه ' + _safeActiveMonth + ' باز شد', '#38a169');
 }
+const SAFE_ROWS_PER_BOX = 30; // کادر که پر شد، کادر بعدی خودکار زیرش ساخته می‌شود
 function renderSafe() {
   const entries = DB.safeEntries || [];
   renderSafeMonthTabs();
-  const tbody = document.getElementById('safe-body');
-  if (!tbody) return;
-  tbody.innerHTML = '';
+  const boxesEl = document.getElementById('safe-boxes');
+  if (!boxesEl) return;
+  boxesEl.innerHTML = '';
   let totalBardagi = 0, totalMandagi = 0;   // مجموع کل
   let mBardagi = 0, mMandagi = 0;           // مجموع ماه فعال
-  const safeFrag = document.createDocumentFragment();
+  const monthRows = [];                     // ردیف‌های ماه فعال، با اندیس اصلی‌شان در DB.safeEntries
   entries.forEach((e, i) => {
     if (e.type === 'bardagi') totalBardagi += e.amount || 0;
     else totalMandagi += e.amount || 0;
     if (safeMonthKey(e.date) !== _safeActiveMonth) return;
     if (e.type === 'bardagi') mBardagi += e.amount || 0;
     else mMandagi += e.amount || 0;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td style="text-align:center;color:var(--muted)">${n2fa(i+1)}</td>
-      <td><input class="xls-in sm" value="${(e.date||'').replace(/"/g,'&quot;')}" placeholder="تاریخ" onchange="updateSafeEntry(${i},'date',this.value)"></td>
-      <td><select class="xls-in" style="min-width:90px;color:${e.type==='bardagi'?'var(--green)':'var(--blue)'};font-weight:700;padding:5px 4px;font-size:0.82rem" onchange="updateSafeEntry(${i},'type',this.value)"><option value="bardagi"${e.type==='bardagi'?' selected':''}>💵 بردگی</option><option value="mandagi"${e.type!=='bardagi'?' selected':''}>🏛️ ماندگی</option></select></td>
-      <td><input class="xls-in" value="${(e.title||'').replace(/"/g,'&quot;')}" placeholder="نام" onchange="updateSafeEntry(${i},'title',this.value)"></td>
-      <td><input class="xls-in" type="number" value="${e.amount||''}" placeholder="0" style="color:${e.type==='bardagi'?'var(--green)':'var(--blue)'}" onchange="updateSafeEntry(${i},'amount',this.value)"></td>
-      <td><input class="xls-in" value="${(e.note||'').replace(/"/g,'&quot;')}" placeholder="..." onchange="updateSafeEntry(${i},'note',this.value)"></td>
-      <td><button class="del-btn" onclick="deleteSafe(${i})">🗑️</button></td>
-    `;
-    safeFrag.appendChild(tr);
+    monthRows.push({ i, e });
   });
-  tbody.appendChild(safeFrag);
+  const boxesFrag = document.createDocumentFragment();
+  for (let start = 0; start < monthRows.length; start += SAFE_ROWS_PER_BOX) {
+    const chunk = monthRows.slice(start, start + SAFE_ROWS_PER_BOX);
+    const wrap = document.createElement('div');
+    wrap.className = 'tbl-wrap';
+    if (start > 0) wrap.style.marginTop = '14px';
+    wrap.innerHTML = `
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>تاریخ شمسی</th>
+            <th>نوع</th>
+            <th>نام</th>
+            <th>مبلغ (افغانی)</th>
+            <th>یادداشت</th>
+            <th>حذف</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    `;
+    const tbody = wrap.querySelector('tbody');
+    const rowsFrag = document.createDocumentFragment();
+    chunk.forEach(({ i, e }) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="text-align:center;color:var(--muted)">${n2fa(i+1)}</td>
+        <td><input class="xls-in sm" value="${(e.date||'').replace(/"/g,'&quot;')}" placeholder="تاریخ" onchange="updateSafeEntry(${i},'date',this.value)"></td>
+        <td><select class="xls-in" style="min-width:90px;color:${e.type==='bardagi'?'var(--green)':'var(--blue)'};font-weight:700;padding:5px 4px;font-size:0.82rem" onchange="updateSafeEntry(${i},'type',this.value)"><option value="bardagi"${e.type==='bardagi'?' selected':''}>💵 بردگی</option><option value="mandagi"${e.type!=='bardagi'?' selected':''}>🏛️ ماندگی</option></select></td>
+        <td><input class="xls-in" value="${(e.title||'').replace(/"/g,'&quot;')}" placeholder="نام" onchange="updateSafeEntry(${i},'title',this.value)"></td>
+        <td><input class="xls-in" type="number" value="${e.amount||''}" placeholder="0" style="color:${e.type==='bardagi'?'var(--green)':'var(--blue)'}" onchange="updateSafeEntry(${i},'amount',this.value)"></td>
+        <td><input class="xls-in" value="${(e.note||'').replace(/"/g,'&quot;')}" placeholder="..." onchange="updateSafeEntry(${i},'note',this.value)"></td>
+        <td><button class="del-btn" onclick="deleteSafe(${i})">🗑️</button></td>
+      `;
+      rowsFrag.appendChild(tr);
+    });
+    tbody.appendChild(rowsFrag);
+    boxesFrag.appendChild(wrap);
+  }
+  boxesEl.appendChild(boxesFrag);
   const net = totalBardagi - totalMandagi;
   const _sfEl = id => document.getElementById(id);
   if (_sfEl('safe-total-bardagi')) _sfEl('safe-total-bardagi').textContent = n2fa(totalBardagi) + ' افغانی';
@@ -11934,13 +11957,9 @@ function updateSafeEntry(i, field, val) {
   DB.safeEntries[i][field] = field === 'amount' ? (parseFloat(val)||0) : (val||'').toString().trim();
   save();
   if (field === 'type') {
-    // Update row colors in-place without re-rendering
-    const color = val === 'bardagi' ? 'var(--green)' : 'var(--blue)';
-    const rows = document.getElementById('safe-body').querySelectorAll('tr');
-    if (rows[i]) {
-      const sel = rows[i].querySelector('select.xls-in'); if (sel) sel.style.color = color;
-      const amtInp = rows[i].querySelector('input[type="number"]'); if (amtInp) amtInp.style.color = color;
-    }
+    // بردگی/ماندگی رنگ ردیف را عوض می‌کند؛ چون جدول حالا به چند کادر تقسیم
+    // شده، به‌جای پچ دستیِ DOM، ساده و مطمئن کل جدول را دوباره رسم می‌کنیم
+    renderSafe();
   }
   // اتومات: بدون نیاز به زدن دکمهٔ «ثبت»، تغییرات بلافاصله به حساب شرکت هم‌نام منتقل می‌شود
   if (field === 'title' || field === 'amount' || field === 'type' || field === 'date') {
