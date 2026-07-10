@@ -1338,6 +1338,55 @@ body.hexfx-off .fx-grid{display:none!important}
    (also user-tunable; fallback = deep rainbow). */
 body.light-mode .fx-grid::before{mix-blend-mode:darken;
   background:var(--hexfx-bg-light,linear-gradient(225deg,#e0004f 0%,#e07800 17%,#c7a500 33%,#00a659 50%,#0092c7 67%,#3b55e6 83%,#8f2fd9 100%))}
+/* ---- مدل‌های دیگر نور پس‌زمینه: رعد و برق / ستارهٔ دنباله‌دار ----
+   --hexfx-a/-b/-c (و نسخه‌های -light) سه رنگِ پخش‌شده از رنگ‌بندیِ
+   انتخاب‌شده‌اند که applyHexFx می‌چیند؛ سرعت همان --hexfx-dur مشترک است. */
+.fx-bolts,.fx-stars{position:absolute;inset:0;display:none;pointer-events:none}
+body.hexfx-pattern-bolt .fx-grid{display:none!important}
+body.hexfx-pattern-bolt .fx-bolts{display:block}
+body.hexfx-pattern-stars .fx-grid{display:none!important}
+body.hexfx-pattern-stars .fx-stars{display:block}
+body.hexfx-off .fx-bolts,body.hexfx-off .fx-stars{display:none!important}
+/* رعد و برق: سه آذرخش با رنگ/جا/تاخیر متفاوت، هر کدام در هر دور یک دابل-فلش */
+.fx-bolts i{position:absolute;display:block;opacity:0;
+  background:linear-gradient(180deg,#fff 0%,var(--bolt-c,#9ad8ff) 55%,transparent 97%);
+  -webkit-clip-path:polygon(58% 0,100% 0,52% 42%,78% 42%,18% 100%,38% 54%,8% 54%);
+  clip-path:polygon(58% 0,100% 0,52% 42%,78% 42%,18% 100%,38% 54%,8% 54%);
+  filter:drop-shadow(0 0 6px var(--bolt-c,#9ad8ff)) drop-shadow(0 0 16px var(--bolt-c,#9ad8ff));
+  animation:boltFlash var(--hexfx-dur,6s) linear infinite}
+.fx-bolts .b1{--bolt-c:var(--hexfx-a,#9ad8ff);left:10%;top:-2%;width:110px;height:52vh}
+.fx-bolts .b2{--bolt-c:var(--hexfx-b,#c05bff);left:50%;top:3%;width:78px;height:38vh;animation-delay:calc(var(--hexfx-dur,6s) * -0.62)}
+.fx-bolts .b3{--bolt-c:var(--hexfx-c,#22ccff);right:7%;top:-4%;width:95px;height:58vh;animation-delay:calc(var(--hexfx-dur,6s) * -0.29)}
+body.light-mode .fx-bolts i{background:linear-gradient(180deg,var(--bolt-c,#0077b0) 0%,var(--bolt-c,#0077b0) 55%,transparent 97%)}
+body.light-mode .fx-bolts .b1{--bolt-c:var(--hexfx-a-light,#0077b0)}
+body.light-mode .fx-bolts .b2{--bolt-c:var(--hexfx-b-light,#7a1fd0)}
+body.light-mode .fx-bolts .b3{--bolt-c:var(--hexfx-c-light,#0092c7)}
+@keyframes boltFlash{0%,86%{opacity:0}88%{opacity:1}90%{opacity:.25}93%{opacity:.95}97%,100%{opacity:0}}
+/* ستارهٔ دنباله‌دار: خط نور با سرِ درخشان که از آسمان به سمت پایین-چپ می‌افتد؛
+   rotate(135deg) یعنی translateX در طول همان مسیرِ مورب حرکت می‌کند */
+.fx-stars i{position:absolute;display:block;width:150px;height:2.5px;border-radius:3px;opacity:0;
+  background:linear-gradient(90deg,transparent,var(--star-c,#9ad8ff) 55%,#fff);
+  filter:drop-shadow(0 0 4px var(--star-c,#9ad8ff));
+  transform:rotate(135deg) translateX(-8vmax);
+  animation:starFall var(--hexfx-dur,6s) linear infinite}
+.fx-stars i::after{content:"";position:absolute;right:-3px;top:50%;width:5px;height:5px;margin-top:-2.5px;border-radius:50%;background:#fff;box-shadow:0 0 9px 2px var(--star-c,#9ad8ff)}
+.fx-stars .s1{--star-c:var(--hexfx-a,#9ad8ff);left:62%;top:-4%}
+.fx-stars .s2{--star-c:var(--hexfx-b,#c05bff);left:88%;top:8%;width:120px;animation-delay:calc(var(--hexfx-dur,6s) * -0.2)}
+.fx-stars .s3{--star-c:var(--hexfx-c,#22ccff);left:30%;top:-6%;animation-delay:calc(var(--hexfx-dur,6s) * -0.44)}
+.fx-stars .s4{--star-c:var(--hexfx-a,#9ad8ff);left:97%;top:28%;width:105px;height:2px;animation-delay:calc(var(--hexfx-dur,6s) * -0.58)}
+.fx-stars .s5{--star-c:var(--hexfx-b,#c05bff);left:45%;top:-2%;width:130px;animation-delay:calc(var(--hexfx-dur,6s) * -0.8)}
+body.light-mode .fx-stars i{background:linear-gradient(90deg,transparent,var(--star-c,#0077b0))}
+body.light-mode .fx-stars i::after{background:var(--star-c,#0077b0)}
+body.light-mode .fx-stars .s1,body.light-mode .fx-stars .s4{--star-c:var(--hexfx-a-light,#0077b0)}
+body.light-mode .fx-stars .s2,body.light-mode .fx-stars .s5{--star-c:var(--hexfx-b-light,#7a1fd0)}
+body.light-mode .fx-stars .s3{--star-c:var(--hexfx-c-light,#0092c7)}
+@keyframes starFall{
+  0%{transform:rotate(135deg) translateX(-8vmax);opacity:0}
+  6%{opacity:1}
+  55%{opacity:1}
+  72%{opacity:0}
+  100%{transform:rotate(135deg) translateX(115vmax);opacity:0}
+}
 /* controls of the «نور شش‌ضلعی» settings card */
 .hexfx-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .hexfx-lbl{font-size:0.85rem;font-weight:800;color:var(--txt);min-width:130px}
@@ -1577,7 +1626,7 @@ body.light-mode *::-webkit-scrollbar-thumb{background:rgba(200,120,0,.4)}
 /* ---------- 17. REDUCED MOTION ---------- */
 @media (prefers-reduced-motion: reduce){
   .fx-aurora,.shift-header::after,.ls-brand-icon{animation:none!important}
-  .fx-grid::before,.fx-grid::after{animation:none!important}
+  .fx-grid::before,.fx-grid::after,.fx-bolts i,.fx-stars i{animation:none!important}
   #fxCanvas{display:none!important}
   .reveal-fx{opacity:1!important;transform:none!important;transition:none!important}
   .nav-btn,.card,.shift-card,.settings-card{animation:none!important}
@@ -4921,102 +4970,10 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('settings',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('settings',0.08)">A+</button></span>
     </span>
   </div>
-  <div class="settings-card" id="theme-card" style="border-color:var(--accent)">
-    <div class="settings-title">🎨 تم رنگی</div>
-    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
-      با انتخاب هر تم، حالت روشن یا تاریک به‌طور خودکار فعال می‌شود و رنگ‌بندی کل برنامه تغییر می‌کند. انتخاب شما ذخیره می‌شود و دفعهٔ بعد هم اعمال می‌گردد.
-    </div>
-    <div style="font-size:0.8rem;font-weight:700;color:var(--label);margin-bottom:8px">🌙 تم‌های تاریک</div>
-    <div class="theme-row" id="theme-row-dark"></div>
-    <div style="font-size:0.8rem;font-weight:700;color:var(--label);margin:16px 0 8px">☀️ تم‌های روشن</div>
-    <div class="theme-row" id="theme-row-light"></div>
-  </div>
-  <div class="settings-card" id="hexfx-card" style="border-color:var(--blue)">
-    <div class="settings-title" style="color:var(--blue)">✨ نور شش‌ضلعی پس‌زمینه</div>
-    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
-      همان نوری که روی خط‌های شش‌ضلعی پس‌زمینه حرکت می‌کند — اینجا می‌توانید خاموش/روشنش کنید و رنگ‌بندی، مسیر (از کجا به کجا برود)، نوع آمدن و سرعتش را تغییر دهید. هر تغییری همان لحظه اعمال و ذخیره می‌شود.
-    </div>
-    <div style="display:flex;flex-direction:column;gap:13px">
-      <div class="hexfx-row">
-        <span class="hexfx-lbl">نمایش نور:</span>
-        <button type="button" id="hexfx-on-btn" class="hexfx-toggle" onclick="setHexFx('on',true)">🌟 روشن باشد</button>
-        <button type="button" id="hexfx-off-btn" class="hexfx-toggle" onclick="setHexFx('on',false)">🌑 خاموش باشد</button>
-      </div>
-      <div class="hexfx-row">
-        <span class="hexfx-lbl">رنگ‌بندی:</span>
-        <select id="hexfx-color" class="hexfx-select" onchange="setHexFx('color',this.value)">
-          <option value="rainbow">🌈 هفت‌رنگ (رنگین‌کمان)</option>
-          <option value="theme">🎨 رنگ تمِ فعلی</option>
-          <option value="gold">🟡 طلایی</option>
-          <option value="blue">🔵 آبی</option>
-          <option value="green">🟢 سبز</option>
-          <option value="purple">🟣 بنفش</option>
-          <option value="red">🔴 سرخ</option>
-        </select>
-      </div>
-      <div class="hexfx-row">
-        <span class="hexfx-lbl">مسیر (از کجا به کجا):</span>
-        <select id="hexfx-dir" class="hexfx-select" onchange="setHexFx('dir',this.value)">
-          <option value="tr-bl">↙️ کنج بالا-راست ← کنج پایین-چپ</option>
-          <option value="tl-br">↘️ کنج بالا-چپ ← کنج پایین-راست</option>
-          <option value="br-tl">↖️ کنج پایین-راست ← کنج بالا-چپ</option>
-          <option value="bl-tr">↗️ کنج پایین-چپ ← کنج بالا-راست</option>
-          <option value="r-l">⬅️ از راست به چپ</option>
-          <option value="l-r">➡️ از چپ به راست</option>
-          <option value="t-b">⬇️ از بالا به پایین</option>
-          <option value="b-t">⬆️ از پایین به بالا</option>
-        </select>
-      </div>
-      <div class="hexfx-row">
-        <span class="hexfx-lbl">چطور بیاید:</span>
-        <select id="hexfx-mode" class="hexfx-select" onchange="setHexFx('mode',this.value)">
-          <option value="sweep">جاروبی بیاید و سرِ جایش محو شود</option>
-          <option value="back">جاروبی بیاید و از همان راه برگردد</option>
-          <option value="fade">کل شبکه آرام روشن و خاموش شود</option>
-        </select>
-      </div>
-      <div class="hexfx-row">
-        <span class="hexfx-lbl">سرعت (طول هر دور):</span>
-        <input type="range" id="hexfx-dur" min="3" max="15" step="1" oninput="setHexFx('dur',this.value)">
-        <span id="hexfx-dur-lbl" style="font-size:0.85rem;font-weight:900;color:var(--blue);min-width:70px"></span>
-      </div>
-    </div>
-  </div>
-  <div class="settings-card" id="gfx-quality-card" style="border-color:var(--purple)">
-    <div class="settings-title">⚡ کیفیت گرافیک</div>
-    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
-      سه حالت کاملاً مستقل با سه طراحی از زمین تا آسمان متفاوت. <b>Performance</b> («سبک»): کاملاً فلت — صفر انیمیشن، صفر ترنزیشن، بدون افکت شیشه‌ای؛ جدول‌ها و آیکون‌های ساده و بیشترین سرعت (پیش‌فرض). <b>Standard</b> («متوسط»): گلس‌مورفیزم استاندارد، ترنزیشن‌های ملایم و هاورهای ساده؛ نوار مخازن متحرک با هشدار قرمز. <b>Ultra Premium</b> («فوق‌العاده»): تم لاکچری و سینمایی — گرادینت‌های متحرک، نورپردازی پویا با موس، مخازن با مایع زنده (موج و حباب)، نمودار نئونی با ذرات و آیکون‌های سه‌بعدی مناسبتی.
-    </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button type="button" class="gfx-mode-btn" data-gfx="performance" onclick="setGraphicsMode('performance')" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🍃 Performance — سبک<br><span style="font-weight:600;font-size:0.74rem">کاملاً فلت، صفر انیمیشن، سریع‌ترین</span></button>
-      <button type="button" class="gfx-mode-btn" data-gfx="standard" onclick="setGraphicsMode('standard')" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--purple);background:transparent;color:var(--purple);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">✨ Standard — متوسط<br><span style="font-weight:600;font-size:0.74rem">شیشه‌ای با ترنزیشن‌های ملایم</span></button>
-      <button type="button" class="gfx-mode-btn" data-gfx="ultra" onclick="confirmUltraMode()" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🎬 Ultra Premium — فوق‌العاده<br><span style="font-weight:600;font-size:0.74rem">سینمایی: مایع زنده، ذرات نئونی، پارالاکس با موس</span></button>
-    </div>
-  </div>
-
-  <!-- پاپ‌آپ هشدار فعال‌سازی Ultra Premium -->
-  <div class="modal-overlay" id="gfxUltraConfirmModal">
-    <div class="sm-modal">
-      <div class="gfx-confirm-bar" style="top:0"></div>
-      <div class="gfx-um-orb" aria-hidden="true">🎬</div>
-      <h3 class="gfx-um-title">فعال‌سازی حالت فوق‌العاده (Ultra Premium)</h3>
-      <div class="gfx-um-text">
-        آیا از فعال‌سازی حالت فوق‌العاده اطمینان دارید؟ این حالت دارای گرافیک سینمایی سنگین است و ممکن است باعث بالا رفتن دمای سیستم یا دستگاه شما شود.
-      </div>
-      <div class="gfx-um-btns">
-        <button type="button" class="gfx-um-yes" onclick="_confirmGfxUltra()">✨ تایید و فعال‌سازی</button>
-        <button type="button" class="gfx-um-no" onclick="closeModal('gfxUltraConfirmModal')">انصراف</button>
-      </div>
-      <div class="gfx-confirm-bar" style="top:auto;bottom:0"></div>
-    </div>
-  </div>
-
-  <div class="settings-card" id="storage-status-card" style="border-color:var(--green)">
-    <div class="settings-title">📊 وضعیت حافظه</div>
-    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
-      این کارت نشان می‌دهد چقدر از حافظهٔ مرورگر برای اطلاعات این برنامه استفاده شده — بدون نیاز به هیچ تنظیمات فنی. اگه یه روز حجم داده زیاد شد، برنامه خودش خودکار مدیریتش می‌کند و به شما هشدار می‌دهد؛ این کارت فقط برای اطلاع شماست.
-    </div>
-    <div id="storage-status-body" style="font-size:0.85rem;line-height:2.1"></div>
+  <div class="settings-card" id="appearance-launcher" style="border-color:var(--accent)">
+    <div class="settings-title">🎨 ظاهر و گرافیک</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">تم رنگی، نور پس‌زمینه (شش‌ضلعی / رعد و برق / ستارهٔ دنباله‌دار)، کیفیت گرافیک و وضعیت حافظه — همه در یک صفحهٔ جداگانه تا تنظیمات شلوغ نشود.</div>
+    <button class="pw-btn" style="background:var(--accent);color:#000" onclick="showSection('appearance')">🎨 باز کردن صفحهٔ ظاهر و گرافیک</button>
   </div>
   <div class="settings-card" style="border-color:var(--blue)">
     <div class="settings-title">☁️ هم‌زمان‌سازی آنلاین</div>
@@ -5113,6 +5070,119 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       <button class="add-btn" style="background:var(--red);color:#fff" onclick="clearAllWithPassword()">🗑️ پاک کردن همه</button>
     </div>
     <div id="wipe-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
+  </div>
+</div>
+
+<!-- ظاهر و گرافیک (صفحهٔ جدا — از تنظیمات باز می‌شود) -->
+<div class="section" id="sec-appearance">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('settings')">→ برگشت به تنظیمات</button>
+    <span style="display:inline-flex;align-items:center;gap:10px">🎨 ظاهر و گرافیک</span>
+  </div>
+  <div class="settings-card" id="theme-card" style="border-color:var(--accent)">
+    <div class="settings-title">🎨 تم رنگی</div>
+    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
+      با انتخاب هر تم، حالت روشن یا تاریک به‌طور خودکار فعال می‌شود و رنگ‌بندی کل برنامه تغییر می‌کند. انتخاب شما ذخیره می‌شود و دفعهٔ بعد هم اعمال می‌گردد.
+    </div>
+    <div style="font-size:0.8rem;font-weight:700;color:var(--label);margin-bottom:8px">🌙 تم‌های تاریک</div>
+    <div class="theme-row" id="theme-row-dark"></div>
+    <div style="font-size:0.8rem;font-weight:700;color:var(--label);margin:16px 0 8px">☀️ تم‌های روشن</div>
+    <div class="theme-row" id="theme-row-light"></div>
+  </div>
+  <div class="settings-card" id="hexfx-card" style="border-color:var(--blue)">
+    <div class="settings-title" style="color:var(--blue)">✨ نور پس‌زمینه</div>
+    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
+      نور متحرک پس‌زمینهٔ برنامه — اینجا می‌توانید خاموش/روشنش کنید، مدلش را عوض کنید (شبکهٔ شش‌ضلعی، رعد و برق یا ستارهٔ دنباله‌دار) و رنگ‌بندی، مسیر و سرعتش را تغییر دهید. هر تغییری همان لحظه اعمال و ذخیره می‌شود. (مسیر و «چطور بیاید» فقط برای مدل شش‌ضلعی است.)
+    </div>
+    <div style="display:flex;flex-direction:column;gap:13px">
+      <div class="hexfx-row">
+        <span class="hexfx-lbl">نمایش نور:</span>
+        <button type="button" id="hexfx-on-btn" class="hexfx-toggle" onclick="setHexFx('on',true)">🌟 روشن باشد</button>
+        <button type="button" id="hexfx-off-btn" class="hexfx-toggle" onclick="setHexFx('on',false)">🌑 خاموش باشد</button>
+      </div>
+      <div class="hexfx-row">
+        <span class="hexfx-lbl">مدل نور:</span>
+        <select id="hexfx-pattern" class="hexfx-select" onchange="setHexFx('pattern',this.value)">
+          <option value="hex">⬡ شبکهٔ شش‌ضلعی</option>
+          <option value="bolt">⚡ رعد و برق</option>
+          <option value="stars">☄️ ستاره‌های دنباله‌دار</option>
+        </select>
+      </div>
+      <div class="hexfx-row">
+        <span class="hexfx-lbl">رنگ‌بندی:</span>
+        <select id="hexfx-color" class="hexfx-select" onchange="setHexFx('color',this.value)">
+          <option value="rainbow">🌈 هفت‌رنگ (رنگین‌کمان)</option>
+          <option value="theme">🎨 رنگ تمِ فعلی</option>
+          <option value="gold">🟡 طلایی</option>
+          <option value="blue">🔵 آبی</option>
+          <option value="green">🟢 سبز</option>
+          <option value="purple">🟣 بنفش</option>
+          <option value="red">🔴 سرخ</option>
+        </select>
+      </div>
+      <div class="hexfx-row">
+        <span class="hexfx-lbl">مسیر (از کجا به کجا):</span>
+        <select id="hexfx-dir" class="hexfx-select" onchange="setHexFx('dir',this.value)">
+          <option value="tr-bl">↙️ کنج بالا-راست ← کنج پایین-چپ</option>
+          <option value="tl-br">↘️ کنج بالا-چپ ← کنج پایین-راست</option>
+          <option value="br-tl">↖️ کنج پایین-راست ← کنج بالا-چپ</option>
+          <option value="bl-tr">↗️ کنج پایین-چپ ← کنج بالا-راست</option>
+          <option value="r-l">⬅️ از راست به چپ</option>
+          <option value="l-r">➡️ از چپ به راست</option>
+          <option value="t-b">⬇️ از بالا به پایین</option>
+          <option value="b-t">⬆️ از پایین به بالا</option>
+        </select>
+      </div>
+      <div class="hexfx-row">
+        <span class="hexfx-lbl">چطور بیاید:</span>
+        <select id="hexfx-mode" class="hexfx-select" onchange="setHexFx('mode',this.value)">
+          <option value="sweep">جاروبی بیاید و سرِ جایش محو شود</option>
+          <option value="back">جاروبی بیاید و از همان راه برگردد</option>
+          <option value="fade">کل شبکه آرام روشن و خاموش شود</option>
+        </select>
+      </div>
+      <div class="hexfx-row">
+        <span class="hexfx-lbl">سرعت (طول هر دور):</span>
+        <input type="range" id="hexfx-dur" min="3" max="15" step="1" oninput="setHexFx('dur',this.value)">
+        <span id="hexfx-dur-lbl" style="font-size:0.85rem;font-weight:900;color:var(--blue);min-width:70px"></span>
+      </div>
+    </div>
+  </div>
+  <div class="settings-card" id="gfx-quality-card" style="border-color:var(--purple)">
+    <div class="settings-title">⚡ کیفیت گرافیک</div>
+    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
+      سه حالت کاملاً مستقل با سه طراحی از زمین تا آسمان متفاوت. <b>Performance</b> («سبک»): کاملاً فلت — صفر انیمیشن، صفر ترنزیشن، بدون افکت شیشه‌ای؛ جدول‌ها و آیکون‌های ساده و بیشترین سرعت (پیش‌فرض). <b>Standard</b> («متوسط»): گلس‌مورفیزم استاندارد، ترنزیشن‌های ملایم و هاورهای ساده؛ نوار مخازن متحرک با هشدار قرمز. <b>Ultra Premium</b> («فوق‌العاده»): تم لاکچری و سینمایی — گرادینت‌های متحرک، نورپردازی پویا با موس، مخازن با مایع زنده (موج و حباب)، نمودار نئونی با ذرات و آیکون‌های سه‌بعدی مناسبتی.
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button type="button" class="gfx-mode-btn" data-gfx="performance" onclick="setGraphicsMode('performance')" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🍃 Performance — سبک<br><span style="font-weight:600;font-size:0.74rem">کاملاً فلت، صفر انیمیشن، سریع‌ترین</span></button>
+      <button type="button" class="gfx-mode-btn" data-gfx="standard" onclick="setGraphicsMode('standard')" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--purple);background:transparent;color:var(--purple);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">✨ Standard — متوسط<br><span style="font-weight:600;font-size:0.74rem">شیشه‌ای با ترنزیشن‌های ملایم</span></button>
+      <button type="button" class="gfx-mode-btn" data-gfx="ultra" onclick="confirmUltraMode()" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🎬 Ultra Premium — فوق‌العاده<br><span style="font-weight:600;font-size:0.74rem">سینمایی: مایع زنده، ذرات نئونی، پارالاکس با موس</span></button>
+    </div>
+  </div>
+
+  <!-- پاپ‌آپ هشدار فعال‌سازی Ultra Premium -->
+  <div class="modal-overlay" id="gfxUltraConfirmModal">
+    <div class="sm-modal">
+      <div class="gfx-confirm-bar" style="top:0"></div>
+      <div class="gfx-um-orb" aria-hidden="true">🎬</div>
+      <h3 class="gfx-um-title">فعال‌سازی حالت فوق‌العاده (Ultra Premium)</h3>
+      <div class="gfx-um-text">
+        آیا از فعال‌سازی حالت فوق‌العاده اطمینان دارید؟ این حالت دارای گرافیک سینمایی سنگین است و ممکن است باعث بالا رفتن دمای سیستم یا دستگاه شما شود.
+      </div>
+      <div class="gfx-um-btns">
+        <button type="button" class="gfx-um-yes" onclick="_confirmGfxUltra()">✨ تایید و فعال‌سازی</button>
+        <button type="button" class="gfx-um-no" onclick="closeModal('gfxUltraConfirmModal')">انصراف</button>
+      </div>
+      <div class="gfx-confirm-bar" style="top:auto;bottom:0"></div>
+    </div>
+  </div>
+
+  <div class="settings-card" id="storage-status-card" style="border-color:var(--green)">
+    <div class="settings-title">📊 وضعیت حافظه</div>
+    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
+      این کارت نشان می‌دهد چقدر از حافظهٔ مرورگر برای اطلاعات این برنامه استفاده شده — بدون نیاز به هیچ تنظیمات فنی. اگه یه روز حجم داده زیاد شد، برنامه خودش خودکار مدیریتش می‌کند و به شما هشدار می‌دهد؛ این کارت فقط برای اطلاع شماست.
+    </div>
+    <div id="storage-status-body" style="font-size:0.85rem;line-height:2.1"></div>
   </div>
 </div>
 
@@ -6544,7 +6614,7 @@ function _initCalcDrag() {
 
 // ========== NAV ==========
 function showSection(id, btn) {
-  if (id === 'settings' && currentRole === 'viewer') { showToast('🔒 بخش تنظیمات فقط برای مدیر است', '#e53e3e'); return; }
+  if ((id === 'settings' || id === 'appearance') && currentRole === 'viewer') { showToast('🔒 بخش تنظیمات فقط برای مدیر است', '#e53e3e'); return; }
   document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
   const sec = document.getElementById('sec-' + id);
   if (sec) sec.classList.add('visible');
@@ -6581,7 +6651,11 @@ function showSection(id, btn) {
     fillLowStockSettings();
     fillSyncSettings();
     try { renderTrashList(); } catch(e) {}
+  }
+  // کارت «وضعیت حافظه» حالا در صفحهٔ ظاهر و گرافیک است
+  if (id === 'appearance') {
     try { renderStorageStatus(); } catch(e) {}
+    try { _hexFxSyncUI(_hexFxLoad()); } catch(e) {}
   }
 }
 
@@ -6607,7 +6681,7 @@ function loadTheme() {
 // ========== تنظیمات نور شش‌ضلعی پس‌زمینه ==========
 // همه‌چیز در localStorage (pumpHexFx) نگه داشته می‌شود — جدا از DB، مثل تم.
 // applyHexFx فقط متغیرهای CSS و کلاس‌های body را می‌چیند؛ خود انیمیشن در CSS است.
-const _HEXFX_DEFAULT = { on: true, color: 'rainbow', dir: 'tr-bl', mode: 'sweep', dur: 6 };
+const _HEXFX_DEFAULT = { on: true, pattern: 'hex', color: 'rainbow', dir: 'tr-bl', mode: 'sweep', dur: 6 };
 const _HEXFX_DIRS = {
   'tr-bl': { angle: 225, c0: 'polygon(100% 0,100% 0,100% 0)',          c1: 'polygon(-120% 0,100% 0,100% 220%)' },
   'tl-br': { angle: 135, c0: 'polygon(0 0,0 0,0 0)',                   c1: 'polygon(220% 0,0 0,0 220%)' },
@@ -6645,6 +6719,8 @@ function applyHexFx() {
   b.classList.toggle('hexfx-off', !p.on);
   b.classList.toggle('hexfx-mode-back', p.mode === 'back');
   b.classList.toggle('hexfx-mode-fade', p.mode === 'fade');
+  b.classList.toggle('hexfx-pattern-bolt', p.pattern === 'bolt');
+  b.classList.toggle('hexfx-pattern-stars', p.pattern === 'stars');
   const d = _HEXFX_DIRS[p.dir] || _HEXFX_DIRS['tr-bl'];
   const c = _HEXFX_COLORS[p.color] || _HEXFX_COLORS.rainbow;
   b.style.setProperty('--hexclip-0', d.c0);
@@ -6652,9 +6728,18 @@ function applyHexFx() {
   b.style.setProperty('--hexfx-bg', _hexFxGradient(c.dark, d.angle));
   b.style.setProperty('--hexfx-bg-light', _hexFxGradient(c.light, d.angle));
   b.style.setProperty('--hexfx-dur', (parseFloat(p.dur) || 6) + 's');
+  // سه رنگ پخش‌شده از رنگ‌بندی — برای رعد و برق و ستاره‌های دنباله‌دار
+  const mid = a => a[Math.floor((a.length - 1) / 2)];
+  b.style.setProperty('--hexfx-a', c.dark[0]);
+  b.style.setProperty('--hexfx-b', mid(c.dark));
+  b.style.setProperty('--hexfx-c', c.dark[c.dark.length - 1]);
+  b.style.setProperty('--hexfx-a-light', c.light[0]);
+  b.style.setProperty('--hexfx-b-light', mid(c.light));
+  b.style.setProperty('--hexfx-c-light', c.light[c.light.length - 1]);
   // انیمیشن از نو شروع شود تا مقدار جدیدِ متغیرها همان لحظه دیده شود
-  const g = document.querySelector('.fx-grid');
-  if (g) { g.style.display = 'none'; void g.offsetHeight; g.style.display = ''; }
+  document.querySelectorAll('.fx-grid,.fx-bolts,.fx-stars').forEach(g => {
+    g.style.display = 'none'; void g.offsetHeight; g.style.display = '';
+  });
   _hexFxSyncUI(p);
 }
 function setHexFx(key, val) {
@@ -6669,9 +6754,16 @@ function _hexFxSyncUI(p) {
   if (onB) onB.classList.toggle('active', !!p.on);
   if (offB) offB.classList.toggle('active', !p.on);
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  set('hexfx-pattern', p.pattern || 'hex');
   set('hexfx-color', p.color); set('hexfx-dir', p.dir); set('hexfx-mode', p.mode); set('hexfx-dur', p.dur);
   const l = document.getElementById('hexfx-dur-lbl');
   if (l) l.textContent = n2fa(p.dur) + ' ثانیه';
+  // «مسیر» و «چطور بیاید» فقط برای مدل شش‌ضلعی معنا دارند
+  const isHex = (p.pattern || 'hex') === 'hex';
+  ['hexfx-dir', 'hexfx-mode'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.disabled = !isHex; el.style.opacity = isHex ? '' : '.4'; }
+  });
 }
 
 // ========== DATE HELPERS ==========
@@ -14982,6 +15074,8 @@ document.addEventListener('click', function(e) {
       '<div class="fx-aurora fx-a2"></div>'+
       '<div class="fx-aurora fx-a3"></div>'+
       '<div class="fx-grid"></div>'+
+      '<div class="fx-bolts"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div>'+
+      '<div class="fx-stars"><i class="s1"></i><i class="s2"></i><i class="s3"></i><i class="s4"></i><i class="s5"></i></div>'+
       '<canvas id="fxCanvas"></canvas>'+
       '<div class="fx-vignette"></div>';
     var siteBg = document.getElementById('siteBg');
