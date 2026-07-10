@@ -375,6 +375,21 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 .ro-sum-box{flex:1;min-width:110px;background:var(--card);border-radius:9px;padding:10px;text-align:center}
 .ro-sum-box .l{font-size:0.68rem;color:var(--muted);margin-bottom:3px}
 .ro-sum-box .v{font-size:1rem;font-weight:900}
+/* ── صفحه کارمند (بدون رمز — فقط دیدن) ── */
+.staff-search{width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:1rem;font-weight:700;margin-bottom:8px}
+.staff-search:focus{outline:none;border-color:var(--accent)}
+.staff-count{font-size:0.74rem;color:var(--muted);font-weight:700;margin-bottom:10px}
+.staff-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(235px,1fr));gap:10px}
+.staff-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;cursor:pointer;transition:transform .12s,border-color .12s}
+.staff-card:hover{border-color:var(--accent)}
+.staff-card:active{transform:scale(.98)}
+.staff-card .nm{font-weight:900;font-size:1rem;color:var(--txt);margin-bottom:2px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.staff-card .tp{font-size:0.66rem;font-weight:800;color:var(--muted);background:var(--dark);border:1px solid var(--border);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.staff-badge{display:inline-block;margin-top:6px;padding:3px 10px;border-radius:999px;font-size:0.72rem;font-weight:900}
+.staff-badge.ok{background:#38a16922;color:var(--green);border:1px solid var(--green)}
+.staff-badge.low{background:#f6c00022;color:#f6c000;border:1px solid #f6c000}
+.staff-badge.out{background:#e53e3e22;color:var(--red);border:1px solid var(--red)}
+.staff-row{font-size:0.8rem;font-weight:700;color:var(--muted);margin-top:7px;display:flex;gap:12px;flex-wrap:wrap}
 /* انتخاب نوع تیل (دیزل / پطرول) در هر ردیف */
 .ft-pick{display:flex;flex-direction:column;gap:3px;min-width:74px;padding:3px}
 .ft-opt{display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.88rem;font-weight:700;border-radius:6px;padding:3px 7px;border:1px solid transparent;transition:all .15s;white-space:nowrap}
@@ -1244,32 +1259,25 @@ html{background:#070a11!important}
   background:radial-gradient(ellipse 60% 55% at 45% 40%, rgba(255,210,140,.30), transparent 70%);
   opacity:.30}
 /* hexagon circuit grid — lines are fully invisible at idle (no ambient
-   halo). Colour only ever appears where a travelling light beam crosses a
-   line, since every layer here shares the same hex-outline mask. Two
-   independently-timed beams (different angle/speed/delay, ::before/::after)
-   keep the sweep from ever reading as one mechanical loop. Each beam has a
-   wide full-brightness plateau (not a thin fading streak) plus a drop-shadow
-   bloom, so the lit hexagons read as punchy neon instead of a weak tint. */
+   halo). Instead of two slow independently-timed travelling beams (which
+   read as lights that wander in and take forever to leave), the whole grid
+   now lights up with ONE synchronized sweep: the neon wipes in evenly from
+   the right edge, stays fully lit for ~1.3s, wipes back out the same way it
+   came, rests dark for a moment, and repeats. Both pseudo-layers share the
+   exact same clip-path timing so the light always arrives and leaves
+   together. Drop-shadow bloom keeps the lit hexagons reading as punchy neon
+   (and makes the moving wipe edge glow like a lit front). */
 .fx-grid{position:absolute;inset:-90px -52px;
   -webkit-mask-image:var(--hex-line);mask-image:var(--hex-line);
   -webkit-mask-repeat:repeat;mask-repeat:repeat;
   -webkit-mask-size:51.96px 90px;mask-size:51.96px 90px;
   background:var(--hexline-base)}
-/* the travelling beams use vmax (not %) for both background-size and
-   background-position: % is relative to *this element's own box*, which is
-   basically viewport-sized but almost never square (a tall phone in
-   portrait, a wide monitor in landscape) — a 135deg gradient painted onto a
-   non-square percentage tile skews toward whichever side is longer, so the
-   "diagonal" reads as mostly-vertical on a phone and mostly-horizontal on a
-   wide screen. vmax is a single viewport-relative unit, so sizing/moving the
-   tile in vmax keeps it a perfect square on every device, and the 135deg /
-   -125deg angles then trace a true corner-to-corner diagonal everywhere. */
 .fx-grid::before{content:"";position:absolute;inset:0;
   -webkit-mask-image:var(--hex-line);mask-image:var(--hex-line);
   -webkit-mask-repeat:repeat;mask-repeat:repeat;
   -webkit-mask-size:51.96px 90px;mask-size:51.96px 90px;
   mix-blend-mode:screen;
-  background:linear-gradient(135deg,transparent 32%,var(--hexglow-a) 42%,#eafcff 50%,var(--hexglow-a) 58%,transparent 68%) 0 0/240vmax 240vmax;
+  background:linear-gradient(135deg,var(--hexglow-a) 0%,#eafcff 50%,var(--hexglow-a) 100%);
   /* counter-rotate: #fxLayer (the ancestor) applies filter:hue-rotate(var(--fx-hue))
      per theme to re-tint the rest of the ambient layer's fixed hardcoded
      colours. --hexglow-a is var(--accent) already, i.e. already the exact
@@ -1277,22 +1285,28 @@ html{background:#070a11!important}
      it right back OFF the accent. Cancel it out here (-1 * the same value)
      before it ever gets to the ancestor filter. */
   filter:hue-rotate(calc(var(--fx-hue,0deg) * -1)) drop-shadow(0 0 3px var(--hexglow-a)) drop-shadow(0 0 10px var(--hexglow-a));
-  animation:hexFlowCorner 22s linear infinite}
+  -webkit-clip-path:inset(0 0 0 100%);clip-path:inset(0 0 0 100%);
+  animation:hexWipe 6s ease-in-out infinite}
 .fx-grid::after{content:"";position:absolute;inset:0;
   -webkit-mask-image:var(--hex-line);mask-image:var(--hex-line);
   -webkit-mask-repeat:repeat;mask-repeat:repeat;
   -webkit-mask-size:51.96px 90px;mask-size:51.96px 90px;
   mix-blend-mode:screen;
-  background:linear-gradient(-125deg,transparent 32%,var(--hexglow-c) 42%,#f5f0ff 50%,var(--hexglow-b) 58%,transparent 68%) 0 0/220vmax 220vmax;
+  background:linear-gradient(-125deg,var(--hexglow-c) 0%,#f5f0ff 50%,var(--hexglow-b) 100%);
   filter:hue-rotate(calc(var(--fx-hue,0deg) * -1)) drop-shadow(0 0 3px var(--hexglow-b)) drop-shadow(0 0 9px var(--hexglow-c));
-  animation:hexFlowCorner2 27s linear infinite 4s}
-@keyframes hexFlowCorner{
-  0%{background-position:-70vmax -70vmax}
-  100%{background-position:170vmax 170vmax}
-}
-@keyframes hexFlowCorner2{
-  0%{background-position:170vmax -70vmax}
-  100%{background-position:-70vmax 170vmax}
+  -webkit-clip-path:inset(0 0 0 100%);clip-path:inset(0 0 0 100%);
+  animation:hexWipe 6s ease-in-out infinite}
+/* inset(top right bottom left): animating the LEFT inset 100%→0 reveals the
+   grid from the right edge sweeping leftward (natural for an RTL page), and
+   animating it back 0→100% makes the light retreat toward the same edge.
+   Timeline of the 6s loop: wipe in 1.2s → hold fully lit ~1.3s → wipe back
+   out 1.2s → rest dark ~2.3s. */
+@keyframes hexWipe{
+  0%{-webkit-clip-path:inset(0 0 0 100%);clip-path:inset(0 0 0 100%)}
+  20%{-webkit-clip-path:inset(0 0 0 0%);clip-path:inset(0 0 0 0%)}
+  42%{-webkit-clip-path:inset(0 0 0 0%);clip-path:inset(0 0 0 0%)}
+  62%{-webkit-clip-path:inset(0 0 0 100%);clip-path:inset(0 0 0 100%)}
+  100%{-webkit-clip-path:inset(0 0 0 100%);clip-path:inset(0 0 0 100%)}
 }
 /* light mode: screen-blending a near-white "hot core" only works against a
    dark page (screen(black,white)=white); against the light theme's pale
@@ -1300,9 +1314,9 @@ html{background:#070a11!important}
    colour itself, already amber/gold from the light-mode --hexglow-* vars
    below, fully saturated instead of muddied) and drop the white highlight. */
 body.light-mode .fx-grid::before{mix-blend-mode:darken;
-  background:linear-gradient(135deg,transparent 32%,var(--hexglow-a) 44%,var(--hexglow-a) 56%,transparent 68%) 0 0/240vmax 240vmax}
+  background:linear-gradient(135deg,var(--hexglow-a) 0%,var(--hexglow-a) 100%)}
 body.light-mode .fx-grid::after{mix-blend-mode:darken;
-  background:linear-gradient(-125deg,transparent 32%,var(--hexglow-c) 44%,var(--hexglow-c) 56%,transparent 68%) 0 0/220vmax 220vmax}
+  background:linear-gradient(-125deg,var(--hexglow-c) 0%,var(--hexglow-c) 100%)}
 .fx-vignette{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,transparent 40%,rgba(4,6,11,.55) 100%)}
 body.light-mode #fxLayer{opacity:.55}
 body.light-mode .fx-vignette{background:radial-gradient(ellipse at 50% 30%,transparent 45%,rgba(120,80,20,.10) 100%)}
@@ -3676,6 +3690,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
     <button onclick="tryUnlock()">ورود</button>
     <div class="lock-err" id="lockErr"></div>
     <div style="font-size:0.72rem;color:rgba(255,255,255,.6);margin-top:10px">رمز مدیر یا نظاره‌گر را وارد کنید</div>
+    <button type="button" onclick="openStaffPage()" style="margin-top:14px;width:100%;background:transparent;border:1.5px dashed rgba(255,255,255,.45);color:rgba(255,255,255,.88);border-radius:10px;padding:10px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">👷 صفحه کارمند — دیدن تیل و مخزن (بدون رمز)</button>
   </div>
   <div style="position:relative;z-index:2;margin-top:18px;font-size:0.7rem;color:rgba(255,255,255,.5);text-align:center;line-height:1.9">۱۴۰۵ برای پمپ یعقوبی طراحی شده ـــ تمام حقوق محفوظ است<br>طراحی و توسعه: vil3ntec@gmail.com محمد هارون<br>شماره 0792236008 +93</div>
 </div>
@@ -5382,12 +5397,29 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
 </div>
 
 <!-- READ-ONLY PERSON VIEWER -->
+<!-- STAFF PAGE (صفحه کارمند — بدون رمز، فقط دیدن) — باید قبل از roOverlay باشد تا
+     با کلیک روی هر کارت، نمایشگر فقط‌خواندنیِ شخص روی آن باز شود -->
+<div class="ro-overlay" id="staffOverlay">
+  <div class="ro-header">
+    <h2>👷 صفحه کارمند — فقط دیدن</h2>
+    <button onclick="closeStaffPage()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-family:'Vazirmatn',sans-serif;cursor:pointer">✕ بستن</button>
+  </div>
+  <div class="ro-sum" id="staff-tanks"></div>
+  <div class="ro-body">
+    <input class="staff-search" id="staff-search" placeholder="🔍 نام شخص یا شرکت را بنویسید..." oninput="renderStaffList()">
+    <div class="staff-count" id="staff-count"></div>
+    <div class="staff-grid" id="staff-list"></div>
+    <div style="text-align:center;padding:16px;font-size:0.75rem;color:var(--muted)">🔒 این صفحه فقط‌خواندنی است — هیچ تغییری ذخیره نمی‌شود · برای دیدن جزئیات حساب روی کارت بزنید</div>
+  </div>
+</div>
+
 <div class="ro-overlay" id="roOverlay">
   <div class="ro-header">
     <h2 id="ro-title">👤 حساب</h2>
     <div style="display:flex;gap:8px;align-items:center">
       <button id="ro-mode-btn" onclick="_toggleROMode()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--purple);background:transparent;color:var(--purple);font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer">🔁 پول</button>
       <button onclick="if(_roCurType&&_roCurId)pdfPersonById(_roCurType,_roCurId)" style="padding:6px 14px;border-radius:8px;border:none;background:#38a169;color:#fff;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer">🖨️ دانلود PDF</button>
+      <button onclick="closeROViewer()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-family:'Vazirmatn',sans-serif;cursor:pointer">✕ بستن</button>
     </div>
   </div>
   <div class="ro-sum" id="ro-sum"></div>
@@ -13738,7 +13770,7 @@ function showAccountNotFound() {
   showTopToast('حساب شرکت یا تیلی با این نام پیدا نشد', '#e53e3e', 4000);
 }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function updateAll() { initDate(); updateBanner(); updateReportLabel('petrol'); renderLog(); }
+function updateAll() { initDate(); updateBanner(); updateReportLabel('petrol'); renderLog(); try { _staffRefresh(); } catch(e) {} }
 function initAutoProfit() {
   // وقتی صفحه باز می‌شه، فی خرید ذخیره‌شده رو در label نشون بده
   ['petrol','diesel'].forEach(ft => {
@@ -14031,6 +14063,11 @@ function closeROViewer() {
 }
 function checkHashViewer() {
   const hash = window.location.hash;
+  if (hash === '#staff' || hash === '#karmand') {
+    load(); // مطمئن شویم داده از localStorage خوانده شده
+    openStaffPage();
+    return;
+  }
   if (!hash.startsWith('#roview-')) return;
   // '#roview-' is 8 chars
   let rest = hash.slice(8); // e.g. 'debt-p123' or 'noinv-p123-pdf'
@@ -14050,6 +14087,101 @@ function checkHashViewer() {
   openROViewer(type, id);
   // با اسکن کیو‌آر، پی‌دی‌اف حساب هم خودکار باز می‌شود (در صورت مسدود شدن popup، دکمهٔ PDF در همان صفحه موجود است)
   if (wantPdf) setTimeout(() => pdfPersonById(type, id), 700);
+}
+
+// ========== صفحه کارمند (بدون رمز — فقط دیدن) ==========
+// کارمند پایه بدون رمز فقط می‌بیند: مخزن (پطرول/دیزل) و اینکه هر شخص/شرکت
+// تیل یا پول دارد یا نه. هیچ دکمهٔ تغییری وجود ندارد و هیچ چیزی ذخیره نمی‌شود.
+function openStaffPage() {
+  try { if ((window.location.hash || '') !== '#staff') history.replaceState(null, '', '#staff'); } catch (e) {}
+  renderStaffPage();
+  document.getElementById('staffOverlay').classList.add('open');
+}
+function closeStaffPage() {
+  document.getElementById('staffOverlay').classList.remove('open');
+  try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) {}
+  // اگر برنامهٔ اصلی باز نیست (کارمند بدون رمز آمده بود)، برگرد به صفحهٔ قفل
+  const app = document.getElementById('app');
+  if (!app || app.style.display === 'none') {
+    const ls = document.getElementById('lockScreen');
+    if (ls) ls.style.display = 'flex';
+  }
+}
+// وقتی داده از سرور یا هم‌گام‌سازی تازه شد، صفحهٔ کارمند هم (اگر باز است) تازه شود
+function _staffRefresh() {
+  const el = document.getElementById('staffOverlay');
+  if (el && el.classList.contains('open')) renderStaffPage();
+}
+function renderStaffPage() {
+  const tanksEl = document.getElementById('staff-tanks');
+  if (tanksEl) {
+    const TH = lsThreshold();
+    const tank = (ft, label, icon) => {
+      const c = Math.round(_fuelStock(ft));
+      const low = c <= TH;
+      return `<div class="ro-sum-box"><div class="l">${icon} مخزن ${label} (لیتر)</div>` +
+             `<div class="v" style="color:${low ? 'var(--red)' : 'var(--green)'}">${n2fa(c)}${low ? ' ⚠️' : ''}</div></div>`;
+    };
+    tanksEl.innerHTML = tank('petrol', 'پطرول', '⛽') + tank('diesel', 'دیزل', '🟤');
+  }
+  renderStaffList();
+}
+// باقی‌ماندهٔ تیلِ امانتی هر شخص (رسید تیل منهای برده‌شده، با کسر فیصدی) — به لیتر
+function _staffFuelLeft(p) {
+  let petrol = 0, diesel = 0, hasP = false, hasD = false;
+  [p, ...(p.subs || [])].forEach(a => {
+    if (!a) return;
+    const t = _splitTotals(a.rows || []);
+    const eff = 1 - ((parseFloat(a.percent) || 0) / 100);
+    const rp = (parseFloat(a.rasidFuelP) || 0) * eff;
+    const rd = (parseFloat(a.rasidFuelD) || 0) * eff;
+    if (rp > 0) { hasP = true; petrol += rp - t.petrol.fuel; }
+    if (rd > 0) { hasD = true; diesel += rd - t.diesel.fuel; }
+  });
+  return { petrol, diesel, hasP, hasD };
+}
+function _staffCard(p, type, tlabel) {
+  const t = _splitTotals(_allRows(p));
+  const albaqi = t.all.albaqi;
+  const stInfo = debtFuelStatus(p);
+  const st = stInfo.st;
+  const who = _debtKindLabel(stInfo.kinds);
+  let badge;
+  if (st === 'out')      badge = `<span class="staff-badge out">⛔ ${who} تمام شده</span>`;
+  else if (st === 'low') badge = `<span class="staff-badge low">⚠️ ${who} کم مانده</span>`;
+  else if (st === 'ok')  badge = `<span class="staff-badge ok">✅ تیل/پول دارد</span>`;
+  else badge = albaqi > 0
+    ? `<span class="staff-badge low">💰 الباقی دارد</span>`
+    : `<span class="staff-badge ok">✅ تسویه</span>`;
+  const fl = _staffFuelLeft(p);
+  const rows = [];
+  if (fl.hasP) rows.push(`<span style="color:var(--green)">⛽ باقی تیل پطرول: ${n2fa(Math.round(fl.petrol))} ل</span>`);
+  if (fl.hasD) rows.push(`<span style="color:#b7791f">🟤 باقی تیل دیزل: ${n2fa(Math.round(fl.diesel))} ل</span>`);
+  rows.push(`<span style="color:${albaqi > 0 ? 'var(--red)' : 'var(--green)'}">💰 الباقی پول: ${albaqi <= 0 ? '✅ تسویه' : n2fa(-albaqi) + ' افغانی'}</span>`);
+  return `<div class="staff-card" onclick="openROViewer('${type}','${escFa(p.id)}')">
+    <div class="nm"><span>${escFa(p.name)}</span><span class="tp">${tlabel}</span></div>
+    ${badge}
+    <div class="staff-row">${rows.join('')}</div>
+  </div>`;
+}
+function renderStaffList() {
+  const listEl = document.getElementById('staff-list');
+  if (!listEl) return;
+  const inp = document.getElementById('staff-search');
+  const q = normFa(inp ? inp.value : '');
+  const items = [];
+  (DB.debtPersons  || []).forEach(p => items.push({ p, type: 'debt',  tlabel: 'قرض‌دار' }));
+  (DB.noinvPersons || []).forEach(p => items.push({ p, type: 'noinv', tlabel: 'شرکت تیل' }));
+  const filtered = q ? items.filter(it => normFa(it.p.name).includes(q)) : items;
+  const MAX = 100;
+  const shown = filtered.slice(0, MAX);
+  const cnt = document.getElementById('staff-count');
+  if (cnt) cnt.textContent = !items.length
+    ? 'هنوز هیچ حسابی ثبت نشده است'
+    : !filtered.length
+    ? 'کسی با این نام پیدا نشد'
+    : 'تعداد: ' + n2fa(filtered.length) + (filtered.length > MAX ? ' — فقط ' + n2fa(MAX) + ' مورد اول نشان داده شد؛ نام را جستجو کنید' : '');
+  listEl.innerHTML = shown.map(it => _staffCard(it.p, it.type, it.tlabel)).join('');
 }
 
 // ========== PER-SECTION FONT SCALE ==========
@@ -14539,7 +14671,14 @@ try { _lockProfitSection(); } catch(e){}
 
 // === باز شدن مستقیم برنامه (بدون محافظِ کپی) + حالت فقط‌خواندنی برای کیو‌آر ===
 const _isROHash = (window.location.hash || '').startsWith('#roview-');
-if (_isROHash) {
+const _isStaffHash = /^#(staff|karmand)$/.test(window.location.hash || '');
+if (_isStaffHash) {
+  // صفحه کارمند (بدون رمز): صفحهٔ قفل نمایش داده نمی‌شود؛ checkHashViewer پایین‌تر آن را باز می‌کند
+  const _ls0 = document.getElementById('lockScreen'); if (_ls0) _ls0.style.display = 'none';
+  const _fab0 = document.getElementById('calcFab'); if (_fab0) _fab0.style.display = 'none';
+  currentRole = 'viewer';
+  applyRole();
+} else if (_isROHash) {
   // لینک فقط‌خواندنی (کیو‌آر): مستقیم توسط checkHashViewer باز می‌شود؛ صفحهٔ قفل نمایش داده نمی‌شود
   const _ls0 = document.getElementById('lockScreen'); if (_ls0) _ls0.style.display = 'none';
   currentRole = 'viewer';
