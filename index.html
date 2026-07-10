@@ -356,6 +356,14 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 /* ── ماشین حساب شناور ── */
 #calcFab{position:fixed;bottom:18px;left:18px;z-index:600;width:54px;height:54px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--accent),#d97706);color:#000;font-size:1.5rem;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;transition:transform .12s}
 #calcFab:hover{transform:scale(1.07)}
+/* ── ربات شناور (دستیار) ── */
+#robotFab{position:fixed;bottom:84px;left:18px;z-index:600;width:54px;height:54px;border-radius:50%;border:none;background:linear-gradient(135deg,#22ccff,#2b6cb0);color:#fff;font-size:1.5rem;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;transition:transform .12s}
+#robotFab:hover{transform:scale(1.07)}
+#robotPanel{position:fixed;bottom:148px;left:18px;z-index:610;width:min(330px,calc(100vw - 36px));background:var(--panel);border:1.5px solid var(--blue);border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.5);display:none;overflow:hidden}
+#robotPanel.open{display:block}
+#robotPanel .rb-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--dark);border-bottom:1px solid var(--border);font-weight:900;color:var(--blue)}
+#robotPanel .rb-close{background:transparent;border:none;color:var(--muted);font-size:1rem;cursor:pointer;font-family:'Vazirmatn',sans-serif}
+#robotPanel .rb-body{padding:16px 14px;font-size:0.88rem;color:var(--muted);line-height:2;min-height:90px}
 #calcPanel{position:fixed;bottom:84px;left:18px;z-index:601;width:286px;height:430px;min-width:230px;min-height:340px;max-width:96vw;max-height:90vh;background:var(--panel);border:1.5px solid var(--border);border-radius:18px;box-shadow:0 14px 44px rgba(0,0,0,.6);display:none;flex-direction:column;overflow:auto;resize:both;transition:width .2s,height .2s}
 #calcPanel.large{width:400px;height:580px}
 #calcPanel.open{display:flex}
@@ -403,6 +411,16 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 .staff-badge.low{background:#f6c00022;color:#f6c000;border:1px solid #f6c000}
 .staff-badge.out{background:#e53e3e22;color:var(--red);border:1px solid var(--red)}
 .staff-row{font-size:0.8rem;font-weight:700;color:var(--muted);margin-top:7px;display:flex;gap:12px;flex-wrap:wrap}
+/* جستجوی صوتی صفحه کارمند */
+.staff-mic{width:54px;flex-shrink:0;border-radius:12px;border:1.5px solid var(--blue);background:transparent;color:var(--blue);font-size:1.35rem;cursor:pointer;font-family:'Vazirmatn',sans-serif}
+.staff-mic.listening{background:var(--red);border-color:var(--red);color:#fff;animation:micPulse 1s ease-in-out infinite}
+@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(229,62,62,.55)}50%{box-shadow:0 0 0 12px rgba(229,62,62,0)}}
+/* نمای سادهٔ حساب کارمند: درشت و خوانا */
+.sa-tbl{font-size:1.02rem}
+.sa-tbl th,.sa-tbl td{padding:12px 10px}
+#staffAcctOverlay .ro-sum-box .l{font-size:0.8rem}
+#staffAcctOverlay .ro-sum-box .v{font-size:1.3rem}
+#sa-title{font-size:1.15rem}
 /* انتخاب نوع تیل (دیزل / پطرول) در هر ردیف */
 .ft-pick{display:flex;flex-direction:column;gap:3px;min-width:74px;padding:3px}
 .ft-opt{display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.88rem;font-weight:700;border-radius:6px;padding:3px 7px;border:1px solid transparent;transition:all .15s;white-space:nowrap}
@@ -3837,6 +3855,13 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
 
 <!-- ماشین حساب شناور (در همهٔ بخش‌ها) -->
 <button id="calcFab" onclick="toggleCalc()" title="ماشین حساب">🧮</button>
+
+<!-- ربات شناور دستیار — محتوایش مرحله‌به‌مرحله اضافه می‌شود -->
+<button id="robotFab" onclick="toggleRobot()" title="ربات دستیار">🤖</button>
+<div id="robotPanel">
+  <div class="rb-head"><span>🤖 ربات دستیار</span><button class="rb-close" onclick="toggleRobot()">✕</button></div>
+  <div class="rb-body" id="robot-body">سلام! 👋 من ربات دستیار پمپ هستم.<br>به‌زودی کارهای بیشتری یاد می‌گیرم...</div>
+</div>
 <div id="calcPanel">
   <div id="calcHead"><span>🧮 ماشین حساب</span><span style="display:flex;gap:8px;align-items:center"><span id="calcSize" onclick="toggleCalcSize()" style="cursor:pointer;color:var(--muted);font-size:1rem" title="بزرگ/کوچک">⤢</span><span id="calcClose" onclick="toggleCalc()">✕</span></span></div>
   <div id="calcExpr"></div>
@@ -5606,10 +5631,32 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
   </div>
   <div class="ro-sum" id="staff-tanks"></div>
   <div class="ro-body">
-    <input class="staff-search" id="staff-search" placeholder="🔍 نام قرض‌دار را بنویسید — با پیدا شدن، حسابش خودکار باز می‌شود" oninput="renderStaffList()" onkeydown="if(event.key==='Enter'){const c=document.querySelector('#staff-list .staff-card');if(c)c.click();}">
+    <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:8px">
+      <input class="staff-search" id="staff-search" style="margin-bottom:0;flex:1" placeholder="🔍 نام قرض‌دار را بنویسید یا 🎤 بگویید" oninput="renderStaffList()" onkeydown="if(event.key==='Enter'){const c=document.querySelector('#staff-list .staff-card');if(c)c.click();}">
+      <button type="button" id="staff-mic" class="staff-mic" onclick="staffVoiceSearch()" title="جستجوی صوتی">🎤</button>
+    </div>
     <div class="staff-count" id="staff-count"></div>
     <div class="staff-grid" id="staff-list"></div>
-    <div style="text-align:center;padding:16px;font-size:0.75rem;color:var(--muted)">🔒 این صفحه فقط‌خواندنی است — هیچ چیزی قابل تغییر، اضافه یا حذف نیست · برای دیدن حساب کامل (پطرول/دیزل جدا، PDF، کیو‌آر) روی کارت بزنید</div>
+    <div style="text-align:center;padding:16px;font-size:0.75rem;color:var(--muted)">🔒 این صفحه فقط‌خواندنی است — هیچ چیزی قابل تغییر، اضافه یا حذف نیست · برای دیدن حساب روی کارت بزنید</div>
+  </div>
+</div>
+
+<!-- نمای سادهٔ حساب برای کارمند: فقط نام، جمع‌ها و جدول بردگی/رسید/الباقی -->
+<div class="ro-overlay" id="staffAcctOverlay">
+  <div class="ro-header">
+    <h2 id="sa-title">👤 حساب</h2>
+    <button onclick="closeStaffAcct()" style="padding:8px 18px;border-radius:9px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.95rem;cursor:pointer">→ برگشت</button>
+  </div>
+  <div class="ro-sum" id="sa-sum"></div>
+  <div class="ro-body">
+    <div style="overflow-x:auto">
+      <table class="ro-tbl sa-tbl" id="sa-tbl">
+        <thead><tr><th>#</th><th>تاریخ</th><th>بردگی</th><th>رسید</th><th>الباقی</th></tr></thead>
+        <tbody id="sa-body"></tbody>
+        <tfoot><tr id="sa-foot" style="background:var(--dark);font-weight:900"></tr></tfoot>
+      </table>
+    </div>
+    <div style="text-align:center;padding:16px;font-size:0.8rem;color:var(--muted)">🔒 فقط دیدن — هیچ چیزی تغییر نمی‌کند</div>
   </div>
 </div>
 
@@ -6354,6 +6401,7 @@ function tryUnlock() {
     document.getElementById('lockScreen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     const _fabU = document.getElementById('calcFab'); if (_fabU) _fabU.style.display = 'flex';
+    const _rbU = document.getElementById('robotFab'); if (_rbU) _rbU.style.display = 'flex';
     document.getElementById('lockInput').value = '';
     document.getElementById('lockErr').innerHTML = '';
     try { updateAll(); } catch(e){}
@@ -14503,16 +14551,139 @@ function _staffAcctFuelLeft(a) {
   const rd = (parseFloat(a.rasidFuelD) || 0) * eff;
   return { petrol: rp - t.petrol.fuel, diesel: rd - t.diesel.fuel, hasP: rp > 0, hasD: rd > 0 };
 }
-// باز کردن حساب از صفحهٔ کارمند: مودال کامل شخص (فقط‌خواندنی) و در صورت
-// حساب فرعی، مستقیم رفتن روی همان حساب
+// باز کردن حساب از صفحهٔ کارمند: نمای «خیلی ساده» — فقط نام، جمع‌ها و جدول
+// بردگی/رسید/الباقی؛ بدون هیچ دکمه و تنظیم اضافه (برای کارمندان کم‌سواد)
 function openStaffAccount(pid, subId) {
-  openPersonModal('debt', pid);
-  if (!subId) return;
-  try {
-    const person = (DB.debtPersons || []).find(p => String(p.id) === String(pid));
-    const sub = person && (person.subs || []).find(s => String(s.id) === String(subId));
-    if (sub) switchPersonSub(sub.id);
-  } catch (e) {}
+  const person = (DB.debtPersons || []).find(p => String(p.id) === String(pid));
+  if (!person) return;
+  const sub = subId ? (person.subs || []).find(s => String(s.id) === String(subId)) : null;
+  const a = sub || person;
+  document.getElementById('sa-title').textContent = '👤 ' + person.name + (sub ? ' — ' + (sub.name || 'حساب فرعی') : '');
+  const rows = a.rows || [];
+  const t = _splitTotals(rows);
+  const fl = _staffAcctFuelLeft(a);
+  let sum = `
+    <div class="ro-sum-box"><div class="l">بردگی</div><div class="v" style="color:var(--accent)">${n2fa(t.all.bardagi)}</div></div>
+    <div class="ro-sum-box"><div class="l">رسید</div><div class="v" style="color:var(--green)">${n2fa(t.all.rasid)}</div></div>
+    <div class="ro-sum-box"><div class="l">الباقی</div><div class="v" style="color:${t.all.albaqi > 0 ? 'var(--red)' : 'var(--green)'}">${t.all.albaqi <= 0 ? '✅ تسویه' : n2fa(-t.all.albaqi)}</div></div>`;
+  if (fl.hasP) sum += `<div class="ro-sum-box"><div class="l">⛽ باقی تیل پطرول</div><div class="v" style="color:var(--green)">${n2fa(Math.round(fl.petrol))} ل</div></div>`;
+  if (fl.hasD) sum += `<div class="ro-sum-box"><div class="l">🟤 باقی تیل دیزل</div><div class="v" style="color:#b7791f">${n2fa(Math.round(fl.diesel))} ل</div></div>`;
+  document.getElementById('sa-sum').innerHTML = sum;
+  const tb = document.getElementById('sa-body');
+  tb.innerHTML = rows.map((r, i) => `<tr>
+    <td style="color:var(--muted);text-align:center">${n2fa(i + 1)}</td>
+    <td>${r.date || '—'}</td>
+    <td style="color:var(--accent)">${n2fa(r.bardagi || 0)}</td>
+    <td style="color:var(--green)">${n2fa(r.rasid || 0)}</td>
+    <td style="color:${(r.albaqi || 0) > 0 ? 'var(--red)' : 'var(--green)'}">${n2fa(-(r.albaqi || 0))}</td>
+  </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">هیچ ردیفی ثبت نشده</td></tr>';
+  document.getElementById('sa-foot').innerHTML =
+    `<td colspan="2" style="padding:12px 10px">جمع</td>` +
+    `<td style="color:var(--accent);padding:12px 10px">${n2fa(t.all.bardagi)}</td>` +
+    `<td style="color:var(--green);padding:12px 10px">${n2fa(t.all.rasid)}</td>` +
+    `<td style="color:${t.all.albaqi > 0 ? 'var(--red)' : 'var(--green)'};padding:12px 10px">${n2fa(-t.all.albaqi)}</td>`;
+  document.getElementById('staffAcctOverlay').classList.add('open');
+}
+function closeStaffAcct() {
+  document.getElementById('staffAcctOverlay').classList.remove('open');
+}
+// ربات شناور — باز/بستن پنل (محتوایش بعداً مرحله‌به‌مرحله اضافه می‌شود)
+function toggleRobot() {
+  const p = document.getElementById('robotPanel');
+  if (p) p.classList.toggle('open');
+}
+// ===== جستجوی صوتی صفحهٔ کارمند =====
+// «خیلی دقیق»: چند برداشتِ متن از گفتار گرفته می‌شود، هر کدام با همهٔ نام‌ها
+// (نرمال‌شده + کلمه‌به‌کلمه + فاصلهٔ لِوِنشتاین) نمره می‌گیرد، و فقط وقتی
+// بهترین نتیجه «مطمئن» و از بقیه جلوتر باشد حسابش خودکار باز می‌شود —
+// در غیر این صورت هیچ حسابی به اشتباه باز نمی‌شود و فهرست نشان داده می‌شود.
+function _staffLev(a, b) {
+  const m = a.length, n = b.length;
+  if (!m) return n; if (!n) return m;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[n];
+}
+function _staffSim(a, b) { const L = Math.max(a.length, b.length) || 1; return 1 - _staffLev(a, b) / L; }
+// نرمال‌سازی اضافه برای گفتار: موتور تشخیص گاهی حروف عربی (أ إ آ ة ئ...) می‌نویسد
+function _staffNorm(s) {
+  return normFa(s).replace(/[أإآٱ]/g, 'ا').replace(/ة/g, 'ه').replace(/ؤ/g, 'و').replace(/[ئى]/g, 'ی');
+}
+function _staffScoreName(name, q) {
+  const nName = _staffNorm(name), nQ = _staffNorm(q);
+  if (!nQ || !nName) return 0;
+  if (nName === nQ) return 1;
+  if (nName.includes(nQ) || nQ.includes(nName)) return 0.95;
+  let best = _staffSim(nName, nQ);
+  const qT = nQ.split(' ').filter(Boolean), nT = nName.split(' ').filter(Boolean);
+  if (qT.length && nT.length) {
+    const avg = qT.reduce((s, qt) => s + Math.max.apply(null, nT.map(nt => _staffSim(nt, qt))), 0) / qT.length;
+    best = Math.max(best, avg);
+  }
+  return best;
+}
+function _staffApplyVoice(alts) {
+  const items = [];
+  (DB.debtPersons || []).forEach(p => {
+    items.push({ p, sub: null, label: p.name });
+    (p.subs || []).forEach(s => items.push({ p, sub: s, label: p.name + ' ' + (s.name || 'حساب فرعی') }));
+  });
+  if (!items.length) { showToast('هیچ حسابی ثبت نشده است', '#e53e3e'); return; }
+  // نمرهٔ هر حساب = بهترین نمره میان همهٔ برداشت‌های صوتی
+  const scored = items.map(it => ({
+    it,
+    sc: Math.max.apply(null, alts.map(a => _staffScoreName(it.label, a)))
+  })).sort((x, y) => y.sc - x.sc);
+  const best = scored[0];
+  // برای «مطمئن بودن» فقط با حساب‌های اشخاصِ دیگر مقایسه می‌شود — حساب اصلی و
+  // فرعیِ همان شخص رقیب هم نیستند (نام یکی است؛ بهترینِ همان شخص باز می‌شود)
+  const second = scored.find(s => String(s.it.p.id) !== String(best.it.p.id));
+  const inp = document.getElementById('staff-search');
+  if (best.sc >= 0.72 && (!second || best.sc - second.sc >= 0.12 || best.sc >= 0.93)) {
+    if (inp) inp.value = best.it.p.name + (best.it.sub ? ' ' + (best.it.sub.name || '') : '');
+    _staffAutoKey = String(best.it.p.id) + '|' + (best.it.sub ? String(best.it.sub.id) : '');
+    renderStaffList();
+    openStaffAccount(best.it.p.id, best.it.sub ? best.it.sub.id : '');
+    showToast('🎤 ' + best.it.p.name + (best.it.sub ? ' — ' + (best.it.sub.name || 'حساب فرعی') : ''), '#2b6cb0');
+  } else if (best.sc >= 0.45) {
+    // نامطمئن — به اشتباه هیچ حسابی باز نشود؛ فهرست کامل بماند تا خودش انتخاب کند
+    if (inp) inp.value = '';
+    renderStaffList();
+    showToast('🎤 چند نام نزدیک بود — واضح‌تر بگویید یا از فهرست انتخاب کنید', '#f6c000');
+  } else {
+    if (inp) inp.value = '';
+    renderStaffList();
+    showToast('🎤 «' + (alts[0] || '') + '» پیدا نشد — دوباره بگویید', '#e53e3e');
+  }
+}
+let _staffRec = null, _staffListening = false;
+function staffVoiceSearch() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const btn = document.getElementById('staff-mic');
+  if (!SR) { showToast('🎤 مرورگر شما جستجوی صوتی ندارد', '#e53e3e'); return; }
+  if (_staffListening) { try { _staffRec.stop(); } catch (e) {} return; }
+  const rec = new SR();
+  _staffRec = rec;
+  rec.lang = 'fa-IR'; // نزدیک‌ترین زبانِ پشتیبانی‌شده به دری
+  rec.interimResults = false;
+  rec.maxAlternatives = 5; // چند برداشت — دقت پیدا کردن نام را خیلی بالا می‌برد
+  const done = () => { _staffListening = false; if (btn) { btn.classList.remove('listening'); btn.textContent = '🎤'; } };
+  rec.onstart = () => { _staffListening = true; if (btn) { btn.classList.add('listening'); btn.textContent = '⏺'; } };
+  rec.onend = done;
+  rec.onerror = (e) => {
+    done();
+    showToast(e && e.error === 'not-allowed' ? '🎤 اجازهٔ مایکروفون داده نشد' : '🎤 صدا شناخته نشد — دوباره تلاش کنید', '#e53e3e');
+  };
+  rec.onresult = (ev) => {
+    const alts = [];
+    try { for (let i = 0; i < ev.results[0].length; i++) alts.push(ev.results[0][i].transcript); } catch (e) {}
+    if (alts.length) _staffApplyVoice(alts);
+  };
+  try { rec.start(); } catch (e) { done(); }
 }
 // هر حساب (اصلی یا فرعی) یک کارت جداگانه است — «sub» خالی یعنی حساب اصلی
 function _staffCard(p, sub) {
