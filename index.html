@@ -5577,7 +5577,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
   </div>
   <div class="ro-sum" id="staff-tanks"></div>
   <div class="ro-body">
-    <input class="staff-search" id="staff-search" placeholder="🔍 نام قرض‌دار را بنویسید..." oninput="renderStaffList()">
+    <input class="staff-search" id="staff-search" placeholder="🔍 نام قرض‌دار را بنویسید — با پیدا شدن، حسابش خودکار باز می‌شود" oninput="renderStaffList()" onkeydown="if(event.key==='Enter'){const c=document.querySelector('#staff-list .staff-card');if(c)c.click();}">
     <div class="staff-count" id="staff-count"></div>
     <div class="staff-grid" id="staff-list"></div>
     <div style="text-align:center;padding:16px;font-size:0.75rem;color:var(--muted)">🔒 این صفحه فقط‌خواندنی است — هیچ چیزی قابل تغییر، اضافه یا حذف نیست · برای دیدن حساب کامل (پطرول/دیزل جدا، PDF، کیو‌آر) روی کارت بزنید</div>
@@ -6454,6 +6454,9 @@ function lockApp() {
   document.getElementById('app').style.display = 'none';
   document.getElementById('lockScreen').style.display = 'flex';
   document.getElementById('lockInput').value = '';
+  // قفل کردن یعنی پس گرفتن دسترسی مدیر — وگرنه صفحهٔ کارمند بعد از قفل هنوز با نقش مدیر (قابل ویرایش) باز می‌شد
+  currentRole = 'viewer';
+  try { applyRole(); } catch (e) {}
 }
 
 // ========== محافظت در برابر کپی / فعال‌سازی نسخه ==========
@@ -14359,8 +14362,10 @@ function checkHashViewer() {
 // همهٔ دکمه‌های تغییر مخفی‌اند، ورودی‌ها قفل‌اند و هیچ چیزی ذخیره نمی‌شود.
 function openStaffPage() {
   try { if ((window.location.hash || '') !== '#staff') history.replaceState(null, '', '#staff'); } catch (e) {}
-  // بدون رمز = همیشه نقش نظاره‌گر (تا وقتی مدیر با رمز وارد نشده باشد)
-  if (currentRole !== 'admin') { currentRole = 'viewer'; applyRole(); }
+  // صفحهٔ کارمند همیشه و بدون استثنا فقط‌خواندنی است — حتی اگر مدیر قبلاً وارد
+  // شده باشد، با باز شدن این صفحه نقش به نظاره‌گر برمی‌گردد (مدیر با رمز برمی‌گردد)
+  currentRole = 'viewer';
+  applyRole();
   document.body.classList.add('staff-view');
   renderStaffPage();
   document.getElementById('staffOverlay').classList.add('open');
@@ -14395,24 +14400,32 @@ function renderStaffPage() {
   }
   renderStaffList();
 }
-// باقی‌ماندهٔ تیلِ امانتی هر شخص (رسید تیل منهای برده‌شده، با کسر فیصدی) — به لیتر
-function _staffFuelLeft(p) {
-  let petrol = 0, diesel = 0, hasP = false, hasD = false;
-  [p, ...(p.subs || [])].forEach(a => {
-    if (!a) return;
-    const t = _splitTotals(a.rows || []);
-    const eff = 1 - ((parseFloat(a.percent) || 0) / 100);
-    const rp = (parseFloat(a.rasidFuelP) || 0) * eff;
-    const rd = (parseFloat(a.rasidFuelD) || 0) * eff;
-    if (rp > 0) { hasP = true; petrol += rp - t.petrol.fuel; }
-    if (rd > 0) { hasD = true; diesel += rd - t.diesel.fuel; }
-  });
-  return { petrol, diesel, hasP, hasD };
+// باقی‌ماندهٔ تیلِ امانتیِ «یک حساب» (رسید تیل منهای برده‌شده، با کسر فیصدی) — به لیتر
+function _staffAcctFuelLeft(a) {
+  const t = _splitTotals(a.rows || []);
+  const eff = 1 - ((parseFloat(a.percent) || 0) / 100);
+  const rp = (parseFloat(a.rasidFuelP) || 0) * eff;
+  const rd = (parseFloat(a.rasidFuelD) || 0) * eff;
+  return { petrol: rp - t.petrol.fuel, diesel: rd - t.diesel.fuel, hasP: rp > 0, hasD: rd > 0 };
 }
-function _staffCard(p) {
-  const t = _splitTotals(_allRows(p));
+// باز کردن حساب از صفحهٔ کارمند: مودال کامل شخص (فقط‌خواندنی) و در صورت
+// حساب فرعی، مستقیم رفتن روی همان حساب
+function openStaffAccount(pid, subId) {
+  openPersonModal('debt', pid);
+  if (!subId) return;
+  try {
+    const person = (DB.debtPersons || []).find(p => String(p.id) === String(pid));
+    const sub = person && (person.subs || []).find(s => String(s.id) === String(subId));
+    if (sub) switchPersonSub(sub.id);
+  } catch (e) {}
+}
+// هر حساب (اصلی یا فرعی) یک کارت جداگانه است — «sub» خالی یعنی حساب اصلی
+function _staffCard(p, sub) {
+  const a = sub || p;
+  const t = _splitTotals(a.rows || []);
   const albaqi = t.all.albaqi;
-  const stInfo = debtFuelStatus(p);
+  // وضعیت فقط برای همین حساب (نه جمعِ همهٔ حساب‌های شخص)
+  const stInfo = debtFuelStatus(Object.assign({}, a, { subs: [] }));
   const st = stInfo.st;
   const who = _debtKindLabel(stInfo.kinds);
   let badge;
@@ -14422,35 +14435,57 @@ function _staffCard(p) {
   else badge = albaqi > 0
     ? `<span class="staff-badge low">💰 الباقی دارد</span>`
     : `<span class="staff-badge ok">✅ تسویه</span>`;
-  const fl = _staffFuelLeft(p);
+  const fl = _staffAcctFuelLeft(a);
   const rows = [];
   if (fl.hasP) rows.push(`<span style="color:var(--green)">⛽ باقی تیل پطرول: ${n2fa(Math.round(fl.petrol))} ل</span>`);
   if (fl.hasD) rows.push(`<span style="color:#b7791f">🟤 باقی تیل دیزل: ${n2fa(Math.round(fl.diesel))} ل</span>`);
   rows.push(`<span style="color:${albaqi > 0 ? 'var(--red)' : 'var(--green)'}">💰 الباقی پول: ${albaqi <= 0 ? '✅ تسویه' : n2fa(-albaqi) + ' افغانی'}</span>`);
+  const title = sub ? `${escFa(p.name)} — ${escFa(sub.name || 'حساب فرعی')}` : escFa(p.name);
+  const chip = sub ? 'حساب فرعی' : ((p.subs && p.subs.length) ? 'حساب اصلی' : 'قرض‌دار');
   // مودال کامل شخص (مثل مدیر) باز می‌شود — نقش نظاره‌گر همهٔ تغییرات را قفل می‌کند
-  return `<div class="staff-card" onclick="openPersonModal('debt','${escFa(p.id)}')">
-    <div class="nm"><span>${escFa(p.name)}</span><span class="tp">قرض‌دار</span></div>
+  return `<div class="staff-card" onclick="openStaffAccount('${escFa(p.id)}','${sub ? escFa(String(sub.id)) : ''}')">
+    <div class="nm"><span>${title}</span><span class="tp">${chip}</span></div>
     ${badge}
     <div class="staff-row">${rows.join('')}</div>
   </div>`;
 }
+// وقتی جستجو به یک حساب مشخص برسد، همان حساب خودکار باز می‌شود (یک بار برای هر جستجو)
+let _staffAutoKey = null;
 function renderStaffList() {
   const listEl = document.getElementById('staff-list');
   if (!listEl) return;
   const inp = document.getElementById('staff-search');
   const q = normFa(inp ? inp.value : '');
-  // فقط قرض‌داران — بخش‌های دیگر (شرکت‌ها، مصارف، گاوصندوق...) برای کارمند نیست
-  const all = DB.debtPersons || [];
-  const filtered = q ? all.filter(p => normFa(p.name).includes(q)) : all;
+  // فقط قرض‌داران — و هر حساب فرعی به عنوان یک حساب جداگانه
+  const items = [];
+  (DB.debtPersons || []).forEach(p => {
+    items.push({ p, sub: null, key: normFa(p.name) });
+    (p.subs || []).forEach(s => items.push({ p, sub: s, key: normFa(p.name + ' ' + (s.name || 'حساب فرعی')) }));
+  });
+  const filtered = q ? items.filter(it => it.key.includes(q)) : items;
   const MAX = 100;
   const shown = filtered.slice(0, MAX);
   const cnt = document.getElementById('staff-count');
-  if (cnt) cnt.textContent = !all.length
+  if (cnt) cnt.textContent = !items.length
     ? 'هنوز هیچ قرض‌داری ثبت نشده است'
     : !filtered.length
     ? 'کسی با این نام پیدا نشد'
-    : 'تعداد قرض‌داران: ' + n2fa(filtered.length) + (filtered.length > MAX ? ' — فقط ' + n2fa(MAX) + ' مورد اول نشان داده شد؛ نام را جستجو کنید' : '');
-  listEl.innerHTML = shown.map(p => _staffCard(p)).join('');
+    : 'تعداد حساب‌ها: ' + n2fa(filtered.length) + (filtered.length > MAX ? ' — فقط ' + n2fa(MAX) + ' مورد اول نشان داده شد؛ نام را جستجو کنید' : '');
+  listEl.innerHTML = shown.map(it => _staffCard(it.p, it.sub)).join('');
+  // جستجوی خودکار: اگر نام دقیقاً یکی شد یا فقط یک نتیجه ماند، حسابش باز شود
+  if (q && q.length >= 2) {
+    const exact = filtered.find(it => it.key === q || normFa(it.p.name) === q);
+    const target = exact || (filtered.length === 1 ? filtered[0] : null);
+    if (target) {
+      const k = String(target.p.id) + '|' + (target.sub ? String(target.sub.id) : '');
+      if (_staffAutoKey !== k) {
+        _staffAutoKey = k;
+        openStaffAccount(target.p.id, target.sub ? target.sub.id : '');
+      }
+    }
+  } else {
+    _staffAutoKey = null;
+  }
 }
 
 // ========== PER-SECTION FONT SCALE ==========
