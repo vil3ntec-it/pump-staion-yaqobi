@@ -1301,6 +1301,10 @@ html{background:#070a11!important}
      every theme. The white-ish drop-shadows bloom equally for all colours. */
   filter:hue-rotate(calc(var(--fx-hue,0deg) * -1)) drop-shadow(0 0 4px rgba(255,255,255,.35)) drop-shadow(0 0 9px rgba(255,255,255,.18));
   -webkit-clip-path:var(--hexclip-0,polygon(100% 0,100% 0,100% 0));clip-path:var(--hexclip-0,polygon(100% 0,100% 0,100% 0));
+  /* لایهٔ کامپوزیت جدا — بدون این، انیمیشن clip-path رویِ لایهٔ محتوای صفحه
+     فشار می‌آورد و روی تبلت/موبایل کاشی‌های خالی (مستطیل تیره) هنگام اسکرول
+     دیده می‌شد */
+  transform:translateZ(0);will-change:clip-path,opacity;
   animation:hexSweep var(--hexfx-dur,6s) ease-in-out infinite}
 /* corner sweeps clip with a triangle anchored at the start corner whose free
    vertices slide out past the opposite corner (to -120%/220%, i.e. beyond
@@ -1359,17 +1363,18 @@ body.hexfx-off .fx-bolts,body.hexfx-off .fx-stars{display:none!important}
   -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
   -webkit-mask-size:100% 100%;mask-size:100% 100%;
   background:linear-gradient(180deg,#ffffff 0%,#ffffff 35%,var(--bolt-c,#9ad8ff) 100%);
-  filter:drop-shadow(0 0 3px var(--bolt-c,#9ad8ff)) drop-shadow(0 0 10px var(--bolt-c,#9ad8ff)) drop-shadow(0 0 24px var(--bolt-c,#9ad8ff));
+  filter:drop-shadow(0 0 3px var(--bolt-c,#9ad8ff)) drop-shadow(0 0 12px var(--bolt-c,#9ad8ff));
+  transform:translateZ(0);will-change:opacity;
   animation:boltFlash var(--hexfx-dur,6s) linear infinite}
 /* هشت آذرخش پخش‌شده روی تمام پهنا و ارتفاع صفحه — رنگ‌ها می‌چرخند، تاخیرها
    در طول دور پخش‌اند و چندتایشان آینه‌ای‌اند تا هر بار «یک جای دیگر» بزند */
 .fx-bolts .b1{--bolt-c:var(--hexfx-a,#9ad8ff);left:2%;top:-3%;width:88px;height:52vh}
-.fx-bolts .b2{--bolt-c:var(--hexfx-b,#c05bff);left:15%;top:22%;width:60px;height:38vh;transform:scaleX(-1);animation-delay:calc(var(--hexfx-dur,6s) * -0.13)}
+.fx-bolts .b2{--bolt-c:var(--hexfx-b,#c05bff);left:15%;top:22%;width:60px;height:38vh;transform:scaleX(-1) translateZ(0);animation-delay:calc(var(--hexfx-dur,6s) * -0.13)}
 .fx-bolts .b3{--bolt-c:var(--hexfx-c,#22ccff);left:29%;top:-5%;width:74px;height:60vh;animation-delay:calc(var(--hexfx-dur,6s) * -0.26)}
-.fx-bolts .b4{--bolt-c:var(--hexfx-a,#9ad8ff);left:43%;top:34%;width:56px;height:44vh;transform:scaleX(-1);animation-delay:calc(var(--hexfx-dur,6s) * -0.38)}
+.fx-bolts .b4{--bolt-c:var(--hexfx-a,#9ad8ff);left:43%;top:34%;width:56px;height:44vh;transform:scaleX(-1) translateZ(0);animation-delay:calc(var(--hexfx-dur,6s) * -0.38)}
 .fx-bolts .b5{--bolt-c:var(--hexfx-b,#c05bff);left:55%;top:-2%;width:80px;height:48vh;animation-delay:calc(var(--hexfx-dur,6s) * -0.51)}
 .fx-bolts .b6{--bolt-c:var(--hexfx-c,#22ccff);left:68%;top:28%;width:62px;height:40vh;animation-delay:calc(var(--hexfx-dur,6s) * -0.64)}
-.fx-bolts .b7{--bolt-c:var(--hexfx-a,#9ad8ff);left:80%;top:-4%;width:84px;height:56vh;transform:scaleX(-1);animation-delay:calc(var(--hexfx-dur,6s) * -0.77)}
+.fx-bolts .b7{--bolt-c:var(--hexfx-a,#9ad8ff);left:80%;top:-4%;width:84px;height:56vh;transform:scaleX(-1) translateZ(0);animation-delay:calc(var(--hexfx-dur,6s) * -0.77)}
 .fx-bolts .b8{--bolt-c:var(--hexfx-b,#c05bff);left:91%;top:18%;width:58px;height:42vh;animation-delay:calc(var(--hexfx-dur,6s) * -0.89)}
 /* در تم روشن مغز سفید دیده نمی‌شود — لوله همرنگ خودِ نئون شود */
 body.light-mode .fx-bolts i{background:var(--bolt-c,#0077b0)}
@@ -1383,6 +1388,7 @@ body.light-mode .fx-bolts .b3{--bolt-c:var(--hexfx-c-light,#0092c7)}
   background:linear-gradient(90deg,transparent,var(--star-c,#9ad8ff) 55%,#fff);
   filter:drop-shadow(0 0 4px var(--star-c,#9ad8ff));
   transform:rotate(135deg) translateX(-8vmax);
+  will-change:transform,opacity;
   animation:starFall var(--hexfx-dur,6s) linear infinite}
 .fx-stars i::after{content:"";position:absolute;right:-3px;top:50%;width:5px;height:5px;margin-top:-2.5px;border-radius:50%;background:#fff;box-shadow:0 0 9px 2px var(--star-c,#9ad8ff)}
 .fx-stars .s1{--star-c:var(--hexfx-a,#9ad8ff);left:62%;top:-4%}
@@ -8101,15 +8107,15 @@ function _renderFuelSection(fuelType, containerId, label) {
         <button class="del-btn" style="font-size:1rem;padding:4px 8px" onclick="deletePurchase(${e.id})">🗑️</button>
       </div>
       <div style="padding:10px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
-        <div class="stat-box"><div class="stat-label">وزن (کگ)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.kg)}</div></div>
-        <div class="stat-box"><div class="stat-label">وزن (تن)</div><div style="font-weight:800;font-size:0.92rem;color:var(--blue)">${(e.kg/1000).toFixed(3)}</div></div>
+        <div class="stat-box"><div class="stat-label">وزن (کگ)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.kg||0)}</div></div>
+        <div class="stat-box"><div class="stat-label">وزن (تن)</div><div style="font-weight:800;font-size:0.92rem;color:var(--blue)">${((e.kg||0)/1000).toFixed(3)}</div></div>
         <div class="stat-box"><div class="stat-label">ثقلت</div><div style="font-weight:800;font-size:0.92rem">${e.density != null ? n2fa(e.density) : "—"}</div></div>
-        <div class="stat-box"><div class="stat-label">لیتر</div><div style="font-weight:800;font-size:0.92rem;color:var(--green)">${n2fa(Math.round(e.liters))}</div></div>
-        <div class="stat-box"><div class="stat-label">فی تن ($)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.priceTon)}</div></div>
-        <div class="stat-box"><div class="stat-label">نرخ دالر</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.usdRate)}</div></div>
-        <div class="stat-box"><div class="stat-label">کل (دالر)</div><div style="font-weight:800;font-size:0.92rem;color:var(--blue)">${n2fa(e.totalUSD.toFixed(2))} $</div></div>
-        <div class="stat-box"><div class="stat-label">کل (افغانی)</div><div style="font-weight:800;font-size:0.92rem;color:${color}">${n2fa(Math.round(e.totalAFN))}</div></div>
-        <div class="stat-box"><div class="stat-label">فی لیتر (افغانی)</div><div style="font-weight:800;font-size:0.92rem;color:var(--red)">${n2fa(e.perLiter.toFixed(1))}</div></div>
+        <div class="stat-box"><div class="stat-label">لیتر</div><div style="font-weight:800;font-size:0.92rem;color:var(--green)">${n2fa(Math.round(e.liters||0))}</div></div>
+        <div class="stat-box"><div class="stat-label">فی تن ($)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.priceTon||0)}</div></div>
+        <div class="stat-box"><div class="stat-label">نرخ دالر</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.usdRate||0)}</div></div>
+        <div class="stat-box"><div class="stat-label">کل (دالر)</div><div style="font-weight:800;font-size:0.92rem;color:var(--blue)">${n2fa((e.totalUSD||0).toFixed(2))} $</div></div>
+        <div class="stat-box"><div class="stat-label">کل (افغانی)</div><div style="font-weight:800;font-size:0.92rem;color:${color}">${n2fa(Math.round(e.totalAFN||0))}</div></div>
+        <div class="stat-box"><div class="stat-label">فی لیتر (افغانی)</div><div style="font-weight:800;font-size:0.92rem;color:var(--red)">${n2fa(((e.perLiter != null ? e.perLiter : (e.liters ? (e.totalAFN||0)/e.liters : 0))||0).toFixed(1))}</div></div>
       </div>
     `;
     cont.appendChild(card);
@@ -10713,12 +10719,12 @@ function _companyPurchaseSection(entries, fuel, alwaysShow){
         <button class="del-btn" style="font-size:1rem;padding:4px 8px" onclick="deletePurchase(${e.id})">🗑️</button>
       </div>
       <div style="padding:10px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
-        <div class="stat-box"><div class="stat-label">وزن (کگ)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.kg)}</div></div>
+        <div class="stat-box"><div class="stat-label">وزن (کگ)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.kg||0)}</div></div>
         <div class="stat-box"><div class="stat-label">وزن (تن)</div><div style="font-weight:800;font-size:0.92rem;color:var(--blue)">${((e.kg||0)/1000).toFixed(3)}</div></div>
         <div class="stat-box"><div class="stat-label">ثقلت</div><div style="font-weight:800;font-size:0.92rem">${e.density != null ? n2fa(e.density) : "—"}</div></div>
         <div class="stat-box"><div class="stat-label">لیتر</div><div style="font-weight:800;font-size:0.92rem;color:var(--green)">${n2fa(Math.round(e.liters||0))}</div></div>
-        <div class="stat-box"><div class="stat-label">فی تن ($)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.priceTon)}</div></div>
-        <div class="stat-box"><div class="stat-label">نرخ دالر</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.usdRate)}</div></div>
+        <div class="stat-box"><div class="stat-label">فی تن ($)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.priceTon||0)}</div></div>
+        <div class="stat-box"><div class="stat-label">نرخ دالر</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.usdRate||0)}</div></div>
         <div class="stat-box"><div class="stat-label">کل (دالر)</div><div style="font-weight:800;font-size:0.92rem;color:var(--blue)">${n2fa((e.totalUSD||0).toFixed(2))} $</div></div>
         <div class="stat-box"><div class="stat-label">کل (افغانی)</div><div style="font-weight:800;font-size:0.92rem;color:${color}">${n2fa(Math.round(e.totalAFN||0))}</div></div>
         <div class="stat-box"><div class="stat-label">فی لیتر (افغانی)</div><div style="font-weight:800;font-size:0.92rem;color:var(--red)">${n2fa((e.perLiter||0).toFixed(1))}</div></div>
