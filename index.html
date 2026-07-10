@@ -154,10 +154,21 @@ body.viewer-mode .save-btn,
 body.viewer-mode .person-del,
 body.viewer-mode .pw-btn,
 body.viewer-mode .ls-share{display:none !important}
-body.viewer-mode input:not(#lockInput):not(#set-ls-phone):not(#pl-pw-input):not(#debt-search):not(#company-search),
+body.viewer-mode input:not(#lockInput):not(#set-ls-phone):not(#pl-pw-input):not(#debt-search):not(#company-search):not(#staff-search),
 body.viewer-mode textarea,
 body.viewer-mode select{pointer-events:none !important}
 body.viewer-mode .ft-opt{pointer-events:none !important;opacity:.85}
+/* در حالت نظاره‌گر/کارمند، دکمه‌های «فقط دیدن» مودال شخص (تیل/پول، PDF، کیو‌آر) بمانند —
+   فقط دکمه‌های تغییردهنده (تغییر اسم، پاک همه، ردیف جدید و ...) مخفی می‌شوند.
+   قاعدهٔ دوم لازم است چون در موبایل «#personModal .modal-head button» با !important
+   همهٔ دکمه‌های سربرگ را inline-flex می‌کند و قاعدهٔ عمومی viewer-mode را می‌بَرد */
+body.viewer-mode #personModal .pm-view-ok{display:inline-block !important}
+body.viewer-mode #personModal .modal-head .add-row-btn:not(.pm-view-ok){display:none !important}
+/* کادر «ردیف جدید / افزودن چندتایی» در حالت فقط‌دیدن کلاً پنهان شود (دکمه‌هایش که مخفی شوند فقط یک جعبهٔ خالی می‌ماند) */
+body.viewer-mode #pm-add-row-area{display:none !important}
+/* صفحه کارمند: مودال شخص و کیو‌آر باید روی صفحهٔ کارمند (z-index:10000) باز شوند */
+body.staff-view .modal-overlay{z-index:10010}
+body.staff-view .qr-overlay{z-index:10020}
 
 .main{padding:16px;max-width:1000px;margin:0 auto}
 .section{display:none}.section.visible{display:block}
@@ -5055,11 +5066,11 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       </div>
       <h2 id="personModalTitle" style="flex:1;text-align:center">جزئیات</h2>
       <div style="display:flex;align-items:center;gap:6px">
-        <button class="add-row-btn" id="pm-mode-btn" style="margin:0;border-color:var(--purple);color:var(--purple);padding:5px 10px;font-size:0.78rem" onclick="togglePersonMode()">🔁 پول</button>
+        <button class="add-row-btn pm-view-ok" id="pm-mode-btn" style="margin:0;border-color:var(--purple);color:var(--purple);padding:5px 10px;font-size:0.78rem" onclick="togglePersonMode()">🔁 پول</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--accent);color:var(--accent);padding:5px 10px;font-size:0.78rem" onclick="renameCurrentPerson()">✏️ تغییر اسم</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--red);color:var(--red);padding:5px 10px;font-size:0.78rem" onclick="clearAllPersonRows()">🗑️ پاک همه</button>
-        <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green);padding:5px 10px;font-size:0.78rem" onclick="pdfPerson()">📄 PDF</button>
-        <button class="add-row-btn" style="margin:0;border-color:var(--blue);color:var(--blue);padding:5px 10px;font-size:0.78rem" onclick="showPersonQRFromModal()">📲 کیو‌آر</button>
+        <button class="add-row-btn pm-view-ok" style="margin:0;border-color:var(--green);color:var(--green);padding:5px 10px;font-size:0.78rem" onclick="pdfPerson()">📄 PDF</button>
+        <button class="add-row-btn pm-view-ok" style="margin:0;border-color:var(--blue);color:var(--blue);padding:5px 10px;font-size:0.78rem" onclick="showPersonQRFromModal()">📲 کیو‌آر</button>
         <button class="modal-close" onclick="closePersonModal()">✕</button>
       </div>
     </div>
@@ -5406,10 +5417,10 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
   </div>
   <div class="ro-sum" id="staff-tanks"></div>
   <div class="ro-body">
-    <input class="staff-search" id="staff-search" placeholder="🔍 نام شخص یا شرکت را بنویسید..." oninput="renderStaffList()">
+    <input class="staff-search" id="staff-search" placeholder="🔍 نام قرض‌دار را بنویسید..." oninput="renderStaffList()">
     <div class="staff-count" id="staff-count"></div>
     <div class="staff-grid" id="staff-list"></div>
-    <div style="text-align:center;padding:16px;font-size:0.75rem;color:var(--muted)">🔒 این صفحه فقط‌خواندنی است — هیچ تغییری ذخیره نمی‌شود · برای دیدن جزئیات حساب روی کارت بزنید</div>
+    <div style="text-align:center;padding:16px;font-size:0.75rem;color:var(--muted)">🔒 این صفحه فقط‌خواندنی است — هیچ چیزی قابل تغییر، اضافه یا حذف نیست · برای دیدن حساب کامل (پطرول/دیزل جدا، PDF، کیو‌آر) روی کارت بزنید</div>
   </div>
 </div>
 
@@ -14090,15 +14101,21 @@ function checkHashViewer() {
 }
 
 // ========== صفحه کارمند (بدون رمز — فقط دیدن) ==========
-// کارمند پایه بدون رمز فقط می‌بیند: مخزن (پطرول/دیزل) و اینکه هر شخص/شرکت
-// تیل یا پول دارد یا نه. هیچ دکمهٔ تغییری وجود ندارد و هیچ چیزی ذخیره نمی‌شود.
+// کارمند پایه بدون رمز فقط می‌بیند: مخزن (پطرول/دیزل) و قرض‌داران.
+// با زدن روی هر قرض‌دار، همان مودال کاملِ مدیر باز می‌شود (حساب جداگانه
+// پطرول/دیزل، تیل/پول، PDF، کیو‌آر، حساب‌های فرعی...) اما در نقش نظاره‌گر:
+// همهٔ دکمه‌های تغییر مخفی‌اند، ورودی‌ها قفل‌اند و هیچ چیزی ذخیره نمی‌شود.
 function openStaffPage() {
   try { if ((window.location.hash || '') !== '#staff') history.replaceState(null, '', '#staff'); } catch (e) {}
+  // بدون رمز = همیشه نقش نظاره‌گر (تا وقتی مدیر با رمز وارد نشده باشد)
+  if (currentRole !== 'admin') { currentRole = 'viewer'; applyRole(); }
+  document.body.classList.add('staff-view');
   renderStaffPage();
   document.getElementById('staffOverlay').classList.add('open');
 }
 function closeStaffPage() {
   document.getElementById('staffOverlay').classList.remove('open');
+  document.body.classList.remove('staff-view');
   try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) {}
   // اگر برنامهٔ اصلی باز نیست (کارمند بدون رمز آمده بود)، برگرد به صفحهٔ قفل
   const app = document.getElementById('app');
@@ -14140,7 +14157,7 @@ function _staffFuelLeft(p) {
   });
   return { petrol, diesel, hasP, hasD };
 }
-function _staffCard(p, type, tlabel) {
+function _staffCard(p) {
   const t = _splitTotals(_allRows(p));
   const albaqi = t.all.albaqi;
   const stInfo = debtFuelStatus(p);
@@ -14158,8 +14175,9 @@ function _staffCard(p, type, tlabel) {
   if (fl.hasP) rows.push(`<span style="color:var(--green)">⛽ باقی تیل پطرول: ${n2fa(Math.round(fl.petrol))} ل</span>`);
   if (fl.hasD) rows.push(`<span style="color:#b7791f">🟤 باقی تیل دیزل: ${n2fa(Math.round(fl.diesel))} ل</span>`);
   rows.push(`<span style="color:${albaqi > 0 ? 'var(--red)' : 'var(--green)'}">💰 الباقی پول: ${albaqi <= 0 ? '✅ تسویه' : n2fa(-albaqi) + ' افغانی'}</span>`);
-  return `<div class="staff-card" onclick="openROViewer('${type}','${escFa(p.id)}')">
-    <div class="nm"><span>${escFa(p.name)}</span><span class="tp">${tlabel}</span></div>
+  // مودال کامل شخص (مثل مدیر) باز می‌شود — نقش نظاره‌گر همهٔ تغییرات را قفل می‌کند
+  return `<div class="staff-card" onclick="openPersonModal('debt','${escFa(p.id)}')">
+    <div class="nm"><span>${escFa(p.name)}</span><span class="tp">قرض‌دار</span></div>
     ${badge}
     <div class="staff-row">${rows.join('')}</div>
   </div>`;
@@ -14169,19 +14187,18 @@ function renderStaffList() {
   if (!listEl) return;
   const inp = document.getElementById('staff-search');
   const q = normFa(inp ? inp.value : '');
-  const items = [];
-  (DB.debtPersons  || []).forEach(p => items.push({ p, type: 'debt',  tlabel: 'قرض‌دار' }));
-  (DB.noinvPersons || []).forEach(p => items.push({ p, type: 'noinv', tlabel: 'شرکت تیل' }));
-  const filtered = q ? items.filter(it => normFa(it.p.name).includes(q)) : items;
+  // فقط قرض‌داران — بخش‌های دیگر (شرکت‌ها، مصارف، گاوصندوق...) برای کارمند نیست
+  const all = DB.debtPersons || [];
+  const filtered = q ? all.filter(p => normFa(p.name).includes(q)) : all;
   const MAX = 100;
   const shown = filtered.slice(0, MAX);
   const cnt = document.getElementById('staff-count');
-  if (cnt) cnt.textContent = !items.length
-    ? 'هنوز هیچ حسابی ثبت نشده است'
+  if (cnt) cnt.textContent = !all.length
+    ? 'هنوز هیچ قرض‌داری ثبت نشده است'
     : !filtered.length
     ? 'کسی با این نام پیدا نشد'
-    : 'تعداد: ' + n2fa(filtered.length) + (filtered.length > MAX ? ' — فقط ' + n2fa(MAX) + ' مورد اول نشان داده شد؛ نام را جستجو کنید' : '');
-  listEl.innerHTML = shown.map(it => _staffCard(it.p, it.type, it.tlabel)).join('');
+    : 'تعداد قرض‌داران: ' + n2fa(filtered.length) + (filtered.length > MAX ? ' — فقط ' + n2fa(MAX) + ' مورد اول نشان داده شد؛ نام را جستجو کنید' : '');
+  listEl.innerHTML = shown.map(p => _staffCard(p)).join('');
 }
 
 // ========== PER-SECTION FONT SCALE ==========
@@ -14647,7 +14664,8 @@ function loadFontScale() {
  'deleteShift','clearLog','confirmAddExpenses','deleteExpense','openAddExpense','openAddSafeBulk','confirmAddSafeBulk','addSafeBulkRow','addSafeBulkRows','addExpenseRowsBulkDirect','addSafeRowDirect','addSafeRowsBulkDirect','toggleCalcSize',
  'addExpenseRow','addExpenseMonth','addExpenseRowToMonth','updateExpense',
  'confirmAddSafe','deleteSafe','openAddSafe','addSafeRow','updateSafeEntry','openAddPerson','clearAll','changePassword',
- 'changeViewerPassword','saveLowStockSettings','newPersonSub','deletePersonSub','updateStackedRasid'].forEach(fn => {
+ 'changeViewerPassword','saveLowStockSettings','newPersonSub','deletePersonSub','updateStackedRasid',
+ 'updatePersonRasidFuel','updatePersonPercent','savePersonNote','saveStackedNote','newPersonTable'].forEach(fn => {
   const orig = window[fn];
   if (typeof orig === 'function') {
     window[fn] = function() {
