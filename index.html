@@ -129,7 +129,9 @@ body.light-mode .lock-box>div[style*="rgba(255,255,255,.6)"]{ color:#6b5636 !imp
 @keyframes lsFadeDown{from{opacity:0;transform:translateY(-24px)}to{opacity:1;transform:translateY(0)}}
 @keyframes lsFadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
 
-.header{background:var(--panel);border-bottom:2px solid var(--accent);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+/* سربرگ دیگر sticky نیست — هنگام اسکرول فقط نوار بخش‌ها بالا می‌ماند (body.nav-sticky .nav)؛
+   قبلاً هر دو top:0 می‌چسبیدند و چون سربرگ بلندتر از نوار است، لبهٔ پایینش از زیر نوار بیرون می‌زد */
+.header{background:var(--panel);border-bottom:2px solid var(--accent);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:100}
 .header-title{font-size:1.1rem;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:8px}
 .header-right{display:flex;align-items:center;gap:12px}
 .header-date{font-size:0.8rem;color:var(--muted)}
