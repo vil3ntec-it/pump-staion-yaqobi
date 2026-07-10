@@ -5028,42 +5028,10 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
     </div>
     <div id="access-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
   </div>
-  <div class="settings-card">
-    <div class="settings-title">🔑 تغییر رمز عبور</div>
-    <div class="pw-row">
-      <div class="pw-field"><label>رمز فعلی</label><input type="password" id="pw-old" placeholder="رمز قدیم"></div>
-      <div class="pw-field"><label>رمز جدید</label><input type="password" id="pw-new" placeholder="رمز جدید"></div>
-      <div class="pw-field"><label>تکرار رمز جدید</label><input type="password" id="pw-rep" placeholder="تکرار"></div>
-      <button class="pw-btn" onclick="changePassword()">تغییر</button>
-    </div>
-    <div id="pw-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
-  </div>
-  <div class="settings-card">
-    <div class="settings-title">👁️ رمز نظاره‌گر</div>
-    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:12px">نظاره‌گر فقط می‌تواند اطلاعات را ببیند و هیچ تغییری ایجاد نمی‌تواند.</div>
-    <div style="background:var(--dark);border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-      <div>
-        <div style="font-size:0.82rem;color:var(--muted);margin-bottom:4px">رمز فعلی نظاره‌گر (برای اشتراک‌گذاری):</div>
-        <div id="vw-current-display" style="font-size:1.4rem;font-weight:900;color:var(--accent);letter-spacing:6px;filter:blur(6px);transition:filter .3s;cursor:pointer" onclick="toggleViewerPwDisplay()" title="کلیک برای نمایش">••••</div>
-      </div>
-      <button class="pw-btn" onclick="toggleViewerPwDisplay()" id="vw-show-btn">👁️ نمایش</button>
-    </div>
-    <div class="pw-row">
-      <div class="pw-field"><label>رمز جدید نظاره‌گر</label><input type="password" id="vw-new" placeholder="رمز نظاره‌گر"></div>
-      <div class="pw-field"><label>تکرار رمز</label><input type="password" id="vw-rep" placeholder="تکرار"></div>
-      <button class="pw-btn" onclick="changeViewerPassword()">تغییر</button>
-    </div>
-    <div id="vw-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
-  </div>
-  <div class="settings-card">
-    <div class="settings-title">💹 رمز بخش مفاد / ضرر / اتحادیه</div>
-    <div class="pw-row">
-      <div class="pw-field"><label>رمز فعلی</label><input type="password" id="profit-pw-old" placeholder="رمز فعلی"></div>
-      <div class="pw-field"><label>رمز جدید</label><input type="password" id="profit-pw-new" placeholder="رمز جدید"></div>
-      <div class="pw-field"><label>تکرار رمز جدید</label><input type="password" id="profit-pw-rep" placeholder="تکرار"></div>
-      <button class="pw-btn" onclick="saveProfitPassword()">تغییر</button>
-    </div>
-    <div id="profit-pw-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
+  <div class="settings-card" id="passwords-launcher" style="border-color:var(--purple)">
+    <div class="settings-title" style="color:var(--purple)">🔑 رمزهای بخش‌ها</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">همهٔ رمزها در یک صفحهٔ جداگانه: رمز مدیر، رمز نظاره‌گر، رمز بخش مفاد/ضرر و رمز صفحهٔ کارمند (با کیو‌آر کد صفحهٔ کارمند).</div>
+    <button class="pw-btn" style="background:var(--purple);color:#fff" onclick="showSection('passwords')">🔑 باز کردن صفحهٔ رمزها</button>
   </div>
   <div class="settings-card">
     <div class="settings-title">⚠️ هشدار کمبود مخزن</div>
@@ -5204,6 +5172,64 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       این کارت نشان می‌دهد چقدر از حافظهٔ مرورگر برای اطلاعات این برنامه استفاده شده — بدون نیاز به هیچ تنظیمات فنی. اگه یه روز حجم داده زیاد شد، برنامه خودش خودکار مدیریتش می‌کند و به شما هشدار می‌دهد؛ این کارت فقط برای اطلاع شماست.
     </div>
     <div id="storage-status-body" style="font-size:0.85rem;line-height:2.1"></div>
+  </div>
+</div>
+
+<!-- رمزهای بخش‌ها (صفحهٔ جدا — از تنظیمات باز می‌شود) -->
+<div class="section" id="sec-passwords">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('settings')">→ برگشت به تنظیمات</button>
+    <span style="display:inline-flex;align-items:center;gap:10px">🔑 رمزهای بخش‌ها</span>
+  </div>
+  <div class="settings-card">
+    <div class="settings-title">🔑 تغییر رمز عبور</div>
+    <div class="pw-row">
+      <div class="pw-field"><label>رمز فعلی</label><input type="password" id="pw-old" placeholder="رمز قدیم"></div>
+      <div class="pw-field"><label>رمز جدید</label><input type="password" id="pw-new" placeholder="رمز جدید"></div>
+      <div class="pw-field"><label>تکرار رمز جدید</label><input type="password" id="pw-rep" placeholder="تکرار"></div>
+      <button class="pw-btn" onclick="changePassword()">تغییر</button>
+    </div>
+    <div id="pw-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
+  </div>
+  <div class="settings-card">
+    <div class="settings-title">👁️ رمز نظاره‌گر</div>
+    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:12px">نظاره‌گر فقط می‌تواند اطلاعات را ببیند و هیچ تغییری ایجاد نمی‌تواند.</div>
+    <div style="background:var(--dark);border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:0.82rem;color:var(--muted);margin-bottom:4px">رمز فعلی نظاره‌گر (برای اشتراک‌گذاری):</div>
+        <div id="vw-current-display" style="font-size:1.4rem;font-weight:900;color:var(--accent);letter-spacing:6px;filter:blur(6px);transition:filter .3s;cursor:pointer" onclick="toggleViewerPwDisplay()" title="کلیک برای نمایش">••••</div>
+      </div>
+      <button class="pw-btn" onclick="toggleViewerPwDisplay()" id="vw-show-btn">👁️ نمایش</button>
+    </div>
+    <div class="pw-row">
+      <div class="pw-field"><label>رمز جدید نظاره‌گر</label><input type="password" id="vw-new" placeholder="رمز نظاره‌گر"></div>
+      <div class="pw-field"><label>تکرار رمز</label><input type="password" id="vw-rep" placeholder="تکرار"></div>
+      <button class="pw-btn" onclick="changeViewerPassword()">تغییر</button>
+    </div>
+    <div id="vw-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
+  </div>
+  <div class="settings-card">
+    <div class="settings-title">💹 رمز بخش مفاد / ضرر / اتحادیه</div>
+    <div class="pw-row">
+      <div class="pw-field"><label>رمز فعلی</label><input type="password" id="profit-pw-old" placeholder="رمز فعلی"></div>
+      <div class="pw-field"><label>رمز جدید</label><input type="password" id="profit-pw-new" placeholder="رمز جدید"></div>
+      <div class="pw-field"><label>تکرار رمز جدید</label><input type="password" id="profit-pw-rep" placeholder="تکرار"></div>
+      <button class="pw-btn" onclick="saveProfitPassword()">تغییر</button>
+    </div>
+    <div id="profit-pw-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
+  </div>
+  <div class="settings-card" id="staff-pw-card" style="border-color:var(--blue)">
+    <div class="settings-title" style="color:var(--blue)">👷 رمز صفحهٔ کارمند</div>
+    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;line-height:1.9">
+      اگر رمز بگذارید، صفحهٔ کارمند (دیدن تیل و مخزن) فقط با این رمز باز می‌شود — هم از دکمهٔ صفحهٔ قفل و هم از لینک/کیو‌آر. برای برداشتن رمز، کادر «رمز جدید» را خالی بگذارید و ذخیره کنید. رمز مدیر هم همیشه این صفحه را باز می‌کند.
+    </div>
+    <div class="pw-row">
+      <div class="pw-field"><label>رمز جدید صفحهٔ کارمند</label><input type="password" id="staff-pw-new" placeholder="خالی = بدون رمز"></div>
+      <div class="pw-field"><label>رمز مدیر (برای تایید)</label><input type="password" id="staff-pw-admin" placeholder="رمز مدیر" onkeydown="if(event.key==='Enter')changeStaffPassword()"></div>
+      <button class="pw-btn" onclick="changeStaffPassword()">ذخیره</button>
+    </div>
+    <div id="staff-pw-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
+    <button class="pw-btn" style="margin-top:10px;background:var(--blue);color:#fff" onclick="showStaffQR()">📲 کیو‌آر کد صفحهٔ کارمند</button>
   </div>
 </div>
 
@@ -5573,7 +5599,10 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
 <div class="ro-overlay" id="staffOverlay">
   <div class="ro-header">
     <h2>👷 صفحه کارمند — فقط دیدن</h2>
-    <button onclick="closeStaffPage()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-family:'Vazirmatn',sans-serif;cursor:pointer">✕ بستن</button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button onclick="showStaffQR()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer">📲 کیو‌آر</button>
+      <button onclick="closeStaffPage()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-family:'Vazirmatn',sans-serif;cursor:pointer">✕ بستن</button>
+    </div>
   </div>
   <div class="ro-sum" id="staff-tanks"></div>
   <div class="ro-body">
@@ -5834,6 +5863,7 @@ function load() {
   // مهاجرت خودکار و یک‌باره: رمزهایی که از نسخه‌های قدیم به‌صورت متن ساده ذخیره شده بودند، به هَش SHA-256 تبدیل می‌شوند
   if (DB.password && !_looksHashed(DB.password)) { DB.password = _sha256Hex(DB.password); save(); }
   if (DB.profitPassword && !_looksHashed(DB.profitPassword)) { DB.profitPassword = _sha256Hex(DB.profitPassword); save(); }
+  if (DB.staffPassword && !_looksHashed(DB.staffPassword)) { DB.staffPassword = _sha256Hex(DB.staffPassword); save(); }
   // بارگذاری async از IndexedDB: اگر localStorage پاک شده باشد یا IDB داده‌ای جدیدتر داشته باشد
   _IDB.get().then(function(idbData) {
     if (!idbData) { try { _IDB.put(JSON.parse(JSON.stringify(DB))); } catch(e) {} return; }
@@ -6638,7 +6668,7 @@ function _initCalcDrag() {
 
 // ========== NAV ==========
 function showSection(id, btn) {
-  if ((id === 'settings' || id === 'appearance') && currentRole === 'viewer') { showToast('🔒 بخش تنظیمات فقط برای مدیر است', '#e53e3e'); return; }
+  if ((id === 'settings' || id === 'appearance' || id === 'passwords') && currentRole === 'viewer') { showToast('🔒 بخش تنظیمات فقط برای مدیر است', '#e53e3e'); return; }
   document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
   const sec = document.getElementById('sec-' + id);
   if (sec) sec.classList.add('visible');
@@ -14229,6 +14259,9 @@ function showPersonQR(type, id) {
   const person = list.find(p => p.id === id);
   if (!person) return;
   document.getElementById('qr-person-name').textContent = '📲 ' + person.name;
+  // اگر قبلاً کیو‌آر صفحهٔ کارمند باز شده بود، دکمه/متن مخصوص شخص برگردد
+  const _qpdf = document.getElementById('qr-pdf-btn'); if (_qpdf) _qpdf.style.display = '';
+  const _qdesc = document.querySelector('#qrModal .qr-box p'); if (_qdesc) _qdesc.textContent = 'با اسکن این کد، پی‌دی‌اف حساب شخص باز می‌شود';
   const wrap = document.getElementById('qr-canvas-wrap');
   wrap.innerHTML = '';
   // URL that opens the read-only viewer for this person and auto-brings up the PDF
@@ -14360,7 +14393,67 @@ function checkHashViewer() {
 // با زدن روی هر قرض‌دار، همان مودال کاملِ مدیر باز می‌شود (حساب جداگانه
 // پطرول/دیزل، تیل/پول، PDF، کیو‌آر، حساب‌های فرعی...) اما در نقش نظاره‌گر:
 // همهٔ دکمه‌های تغییر مخفی‌اند، ورودی‌ها قفل‌اند و هیچ چیزی ذخیره نمی‌شود.
+// رمز صفحهٔ کارمند (در «رمزهای بخش‌ها» تنظیم می‌شود). خالی = بدون رمز.
+// رمز مدیر هم همیشه قبول است. در هر بار باز شدنِ صفحه یک بار پرسیده می‌شود.
+let _staffAuthed = false;
+function _staffPassOK() {
+  const ph = (DB.staffPassword || '').trim();
+  if (!ph) return true;
+  if (_staffAuthed) return true;
+  const v = prompt('👷 رمز صفحهٔ کارمند را وارد کنید:');
+  if (v === null) return false;
+  const vh = _sha256Hex(String(v).trim());
+  if (vh === ph || vh === DB.password) { _staffAuthed = true; return true; }
+  try { showToast('❌ رمز صفحهٔ کارمند اشتباه است', '#e53e3e'); } catch (e) { alert('❌ رمز اشتباه است'); }
+  return false;
+}
+function changeStaffPassword() {
+  const nw = (document.getElementById('staff-pw-new').value || '').trim();
+  const adm = (document.getElementById('staff-pw-admin').value || '').trim();
+  const msg = document.getElementById('staff-pw-msg');
+  if (_sha256Hex(adm) !== DB.password) {
+    if (msg) { msg.textContent = '❌ رمز مدیر اشتباه است'; msg.style.color = 'var(--red)'; }
+    return;
+  }
+  DB.staffPassword = nw ? _sha256Hex(nw) : '';
+  save();
+  _staffAuthed = false;
+  if (msg) {
+    msg.textContent = nw ? '✅ رمز صفحهٔ کارمند ذخیره شد' : '✅ رمز برداشته شد — صفحهٔ کارمند بدون رمز باز می‌شود';
+    msg.style.color = 'var(--green)';
+  }
+  document.getElementById('staff-pw-new').value = '';
+  document.getElementById('staff-pw-admin').value = '';
+}
+// کیو‌آر کد لینک صفحهٔ کارمند — برای چاپ/اشتراک با کارمندان
+function showStaffQR() {
+  const wrap = document.getElementById('qr-canvas-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  const baseUrl = /^http/.test(location.protocol) ? window.location.href.split('#')[0] : 'https://vil3ntec-it.github.io/pump-staion-yaqobi/';
+  const url = baseUrl + '#staff';
+  _qrCurrentUrl = url;
+  document.getElementById('qr-person-name').textContent = '👷 صفحهٔ کارمند';
+  const pdfBtn = document.getElementById('qr-pdf-btn'); if (pdfBtn) pdfBtn.style.display = 'none';
+  const desc = document.querySelector('#qrModal .qr-box p'); if (desc) desc.textContent = 'با اسکن این کد، صفحهٔ کارمند (فقط دیدن) باز می‌شود' + ((DB.staffPassword||'').trim() ? ' — رمز صفحهٔ کارمند لازم است' : '');
+  if (typeof QRCode !== 'undefined') {
+    new QRCode(wrap, { text: url, width: 220, height: 220, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+  } else {
+    wrap.innerHTML = '<div style="padding:20px;color:var(--muted);font-size:0.8rem">کتابخانه QR در دسترس نیست</div>';
+  }
+  document.getElementById('qrModal').classList.add('open');
+}
 function openStaffPage() {
+  // رمز صفحهٔ کارمند (اگر تنظیم شده باشد)
+  if (!_staffPassOK()) {
+    try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) {}
+    const app = document.getElementById('app');
+    if (!app || app.style.display === 'none') {
+      const ls = document.getElementById('lockScreen');
+      if (ls) ls.style.display = 'flex';
+    }
+    return;
+  }
   try { if ((window.location.hash || '') !== '#staff') history.replaceState(null, '', '#staff'); } catch (e) {}
   // صفحهٔ کارمند همیشه و بدون استثنا فقط‌خواندنی است — حتی اگر مدیر قبلاً وارد
   // شده باشد، با باز شدن این صفحه نقش به نظاره‌گر برمی‌گردد (مدیر با رمز برمی‌گردد)
@@ -14369,6 +14462,8 @@ function openStaffPage() {
   document.body.classList.add('staff-view');
   renderStaffPage();
   document.getElementById('staffOverlay').classList.add('open');
+  // هشدار کمبود مخزن برای کارمند هم نمایش داده شود
+  try { setTimeout(checkLowStock, 400); } catch (e) {}
 }
 function closeStaffPage() {
   document.getElementById('staffOverlay').classList.remove('open');
@@ -14951,7 +15046,7 @@ function loadFontScale() {
  'deleteShift','clearLog','confirmAddExpenses','deleteExpense','openAddExpense','openAddSafeBulk','confirmAddSafeBulk','addSafeBulkRow','addSafeBulkRows','addExpenseRowsBulkDirect','addSafeRowDirect','addSafeRowsBulkDirect','toggleCalcSize',
  'addExpenseRow','addExpenseMonth','addExpenseRowToMonth','updateExpense',
  'confirmAddSafe','deleteSafe','openAddSafe','addSafeRow','updateSafeEntry','openAddPerson','clearAll','changePassword',
- 'changeViewerPassword','saveLowStockSettings','newPersonSub','deletePersonSub','updateStackedRasid',
+ 'changeViewerPassword','changeStaffPassword','saveLowStockSettings','newPersonSub','deletePersonSub','updateStackedRasid',
  'updatePersonRasidFuel','updatePersonPercent','savePersonNote','saveStackedNote','newPersonTable'].forEach(fn => {
   const orig = window[fn];
   if (typeof orig === 'function') {
