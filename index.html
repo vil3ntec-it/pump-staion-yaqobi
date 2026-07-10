@@ -5660,6 +5660,19 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
   </div>
 </div>
 
+<!-- صفحهٔ قفل کارمند — درست مثل صفحهٔ قفل مدیر، برای رمز صفحهٔ کارمند -->
+<div class="ro-overlay" id="staffLockOverlay" style="align-items:center;justify-content:center;padding:16px">
+  <div class="lock-box">
+    <div style="font-size:2.6rem;margin-bottom:6px">👷</div>
+    <div style="font-size:1rem;font-weight:700;color:var(--accent);margin-bottom:16px">🔒 ورود به صفحهٔ کارمند</div>
+    <input type="password" id="staffLockInput" placeholder="رمز صفحهٔ کارمند" onkeydown="if(event.key==='Enter')tryStaffUnlock()">
+    <button onclick="tryStaffUnlock()">ورود</button>
+    <div class="lock-err" id="staffLockErr"></div>
+    <button onclick="closeStaffLock()" style="background:transparent;border:1.5px dashed rgba(255,255,255,.4);color:rgba(255,255,255,.8);margin-top:6px;font-weight:800;font-size:0.88rem">→ برگشت</button>
+    <div style="font-size:0.72rem;color:var(--muted);margin-top:12px">رمز صفحهٔ کارمند یا رمز مدیر را وارد کنید</div>
+  </div>
+</div>
+
 <div class="ro-overlay" id="roOverlay">
   <div class="ro-header">
     <h2 id="ro-title">👤 حساب</h2>
@@ -14442,18 +14455,39 @@ function checkHashViewer() {
 // پطرول/دیزل، تیل/پول، PDF، کیو‌آر، حساب‌های فرعی...) اما در نقش نظاره‌گر:
 // همهٔ دکمه‌های تغییر مخفی‌اند، ورودی‌ها قفل‌اند و هیچ چیزی ذخیره نمی‌شود.
 // رمز صفحهٔ کارمند (در «رمزهای بخش‌ها» تنظیم می‌شود). خالی = بدون رمز.
-// رمز مدیر هم همیشه قبول است. در هر بار باز شدنِ صفحه یک بار پرسیده می‌شود.
+// رمز مدیر هم همیشه قبول است. صفحهٔ قفلش درست مثل صفحهٔ قفل مدیر است.
 let _staffAuthed = false;
-function _staffPassOK() {
+function openStaffLock() {
+  const o = document.getElementById('staffLockOverlay');
+  const i = document.getElementById('staffLockInput');
+  const e = document.getElementById('staffLockErr');
+  if (e) e.textContent = '';
+  if (i) i.value = '';
+  if (o) o.classList.add('open');
+  if (i) setTimeout(() => i.focus(), 180);
+}
+function tryStaffUnlock() {
+  const i = document.getElementById('staffLockInput');
+  const e = document.getElementById('staffLockErr');
+  const vh = _sha256Hex(((i && i.value) || '').trim());
   const ph = (DB.staffPassword || '').trim();
-  if (!ph) return true;
-  if (_staffAuthed) return true;
-  const v = prompt('👷 رمز صفحهٔ کارمند را وارد کنید:');
-  if (v === null) return false;
-  const vh = _sha256Hex(String(v).trim());
-  if (vh === ph || vh === DB.password) { _staffAuthed = true; return true; }
-  try { showToast('❌ رمز صفحهٔ کارمند اشتباه است', '#e53e3e'); } catch (e) { alert('❌ رمز اشتباه است'); }
-  return false;
+  if (vh === ph || vh === DB.password) {
+    _staffAuthed = true;
+    document.getElementById('staffLockOverlay').classList.remove('open');
+    openStaffPage();
+  } else {
+    if (e) e.textContent = '❌ رمز اشتباه است';
+    if (i) { i.value = ''; i.focus(); }
+  }
+}
+function closeStaffLock() {
+  document.getElementById('staffLockOverlay').classList.remove('open');
+  try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (er) {}
+  const app = document.getElementById('app');
+  if (!app || app.style.display === 'none') {
+    const ls = document.getElementById('lockScreen');
+    if (ls) ls.style.display = 'flex';
+  }
 }
 function changeStaffPassword() {
   const nw = (document.getElementById('staff-pw-new').value || '').trim();
@@ -14492,14 +14526,9 @@ function showStaffQR() {
   document.getElementById('qrModal').classList.add('open');
 }
 function openStaffPage() {
-  // رمز صفحهٔ کارمند (اگر تنظیم شده باشد)
-  if (!_staffPassOK()) {
-    try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) {}
-    const app = document.getElementById('app');
-    if (!app || app.style.display === 'none') {
-      const ls = document.getElementById('lockScreen');
-      if (ls) ls.style.display = 'flex';
-    }
+  // رمز صفحهٔ کارمند (اگر تنظیم شده باشد) — صفحهٔ قفل مخصوص خودش باز می‌شود
+  if ((DB.staffPassword || '').trim() && !_staffAuthed) {
+    openStaffLock();
     return;
   }
   try { if ((window.location.hash || '') !== '#staff') history.replaceState(null, '', '#staff'); } catch (e) {}
@@ -14539,7 +14568,16 @@ function renderStaffPage() {
       return `<div class="ro-sum-box"><div class="l">${icon} مخزن ${label} (لیتر)</div>` +
              `<div class="v" style="color:${low ? 'var(--red)' : 'var(--green)'}">${n2fa(c)}${low ? ' ⚠️' : ''}</div></div>`;
     };
-    tanksEl.innerHTML = tank('petrol', 'پطرول', '⛽') + tank('diesel', 'دیزل', '🟤');
+    // جمع کلِ همهٔ قرض‌داران (حساب اصلی + فرعی‌ها)
+    const g = { bardagi: 0, rasid: 0, albaqi: 0 };
+    (DB.debtPersons || []).forEach(p => {
+      const t = _splitTotals(_allRows(p));
+      g.bardagi += t.all.bardagi; g.rasid += t.all.rasid; g.albaqi += t.all.albaqi;
+    });
+    tanksEl.innerHTML = tank('petrol', 'پطرول', '⛽') + tank('diesel', 'دیزل', '🟤') +
+      `<div class="ro-sum-box"><div class="l">جمع کل بردگی</div><div class="v" style="color:var(--accent)">${n2fa(g.bardagi)}</div></div>` +
+      `<div class="ro-sum-box"><div class="l">جمع کل رسید</div><div class="v" style="color:var(--green)">${n2fa(g.rasid)}</div></div>` +
+      `<div class="ro-sum-box"><div class="l">جمع کل الباقی</div><div class="v" style="color:${g.albaqi > 0 ? 'var(--red)' : 'var(--green)'}">${g.albaqi <= 0 ? '✅ تسویه' : n2fa(-g.albaqi)}</div></div>`;
   }
   renderStaffList();
 }
