@@ -411,6 +411,11 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 .staff-badge.low{background:#f6c00022;color:#f6c000;border:1px solid #f6c000}
 .staff-badge.out{background:#e53e3e22;color:var(--red);border:1px solid var(--red)}
 .staff-row{font-size:0.8rem;font-weight:700;color:var(--muted);margin-top:7px;display:flex;gap:12px;flex-wrap:wrap}
+/* سه کادر مربعی جمعِ هر حساب روی کارت کارمند */
+.staff-mini-sums{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}
+.staff-mini-sums .ms{background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:8px 4px;text-align:center}
+.staff-mini-sums .ms .l{font-size:0.66rem;color:var(--muted);font-weight:700;margin-bottom:3px}
+.staff-mini-sums .ms .v{font-size:0.95rem;font-weight:900}
 /* جستجوی صوتی صفحه کارمند */
 .staff-mic{width:54px;flex-shrink:0;border-radius:12px;border:1.5px solid var(--blue);background:transparent;color:var(--blue);font-size:1.35rem;cursor:pointer;font-family:'Vazirmatn',sans-serif}
 .staff-mic.listening{background:var(--red);border-color:var(--red);color:#fff;animation:micPulse 1s ease-in-out infinite}
@@ -14568,16 +14573,7 @@ function renderStaffPage() {
       return `<div class="ro-sum-box"><div class="l">${icon} مخزن ${label} (لیتر)</div>` +
              `<div class="v" style="color:${low ? 'var(--red)' : 'var(--green)'}">${n2fa(c)}${low ? ' ⚠️' : ''}</div></div>`;
     };
-    // جمع کلِ همهٔ قرض‌داران (حساب اصلی + فرعی‌ها)
-    const g = { bardagi: 0, rasid: 0, albaqi: 0 };
-    (DB.debtPersons || []).forEach(p => {
-      const t = _splitTotals(_allRows(p));
-      g.bardagi += t.all.bardagi; g.rasid += t.all.rasid; g.albaqi += t.all.albaqi;
-    });
-    tanksEl.innerHTML = tank('petrol', 'پطرول', '⛽') + tank('diesel', 'دیزل', '🟤') +
-      `<div class="ro-sum-box"><div class="l">جمع کل بردگی</div><div class="v" style="color:var(--accent)">${n2fa(g.bardagi)}</div></div>` +
-      `<div class="ro-sum-box"><div class="l">جمع کل رسید</div><div class="v" style="color:var(--green)">${n2fa(g.rasid)}</div></div>` +
-      `<div class="ro-sum-box"><div class="l">جمع کل الباقی</div><div class="v" style="color:${g.albaqi > 0 ? 'var(--red)' : 'var(--green)'}">${g.albaqi <= 0 ? '✅ تسویه' : n2fa(-g.albaqi)}</div></div>`;
+    tanksEl.innerHTML = tank('petrol', 'پطرول', '⛽') + tank('diesel', 'دیزل', '🟤');
   }
   renderStaffList();
 }
@@ -14743,14 +14739,19 @@ function _staffCard(p, sub) {
   const rows = [];
   if (fl.hasP) rows.push(`<span style="color:var(--green)">⛽ باقی تیل پطرول: ${n2fa(Math.round(fl.petrol))} ل</span>`);
   if (fl.hasD) rows.push(`<span style="color:#b7791f">🟤 باقی تیل دیزل: ${n2fa(Math.round(fl.diesel))} ل</span>`);
-  rows.push(`<span style="color:${albaqi > 0 ? 'var(--red)' : 'var(--green)'}">💰 الباقی پول: ${albaqi <= 0 ? '✅ تسویه' : n2fa(-albaqi) + ' افغانی'}</span>`);
   const title = sub ? `${escFa(p.name)} — ${escFa(sub.name || 'حساب فرعی')}` : escFa(p.name);
   const chip = sub ? 'حساب فرعی' : ((p.subs && p.subs.length) ? 'حساب اصلی' : 'قرض‌دار');
-  // مودال کامل شخص (مثل مدیر) باز می‌شود — نقش نظاره‌گر همهٔ تغییرات را قفل می‌کند
+  // جمعِ همین حساب — سه کادر مربعی روی خود کارت
+  const sums = `<div class="staff-mini-sums">
+    <div class="ms"><div class="l">بردگی</div><div class="v" style="color:var(--accent)">${n2fa(t.all.bardagi)}</div></div>
+    <div class="ms"><div class="l">رسید</div><div class="v" style="color:var(--green)">${n2fa(t.all.rasid)}</div></div>
+    <div class="ms"><div class="l">الباقی</div><div class="v" style="color:${albaqi > 0 ? 'var(--red)' : 'var(--green)'}">${albaqi <= 0 ? '✅' : n2fa(-albaqi)}</div></div>
+  </div>`;
   return `<div class="staff-card" onclick="openStaffAccount('${escFa(p.id)}','${sub ? escFa(String(sub.id)) : ''}')">
     <div class="nm"><span>${title}</span><span class="tp">${chip}</span></div>
     ${badge}
-    <div class="staff-row">${rows.join('')}</div>
+    ${sums}
+    ${rows.length ? `<div class="staff-row">${rows.join('')}</div>` : ''}
   </div>`;
 }
 // وقتی جستجو به یک حساب مشخص برسد، همان حساب خودکار باز می‌شود (یک بار برای هر جستجو)
