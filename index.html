@@ -1347,17 +1347,30 @@ body.hexfx-pattern-bolt .fx-bolts{display:block}
 body.hexfx-pattern-stars .fx-grid{display:none!important}
 body.hexfx-pattern-stars .fx-stars{display:block}
 body.hexfx-off .fx-bolts,body.hexfx-off .fx-stars{display:none!important}
-/* رعد و برق: سه آذرخش با رنگ/جا/تاخیر متفاوت، هر کدام در هر دور یک دابل-فلش */
+/* رعد و برق نئونی: آذرخش یک شکلِ پُر نیست — یک «لولهٔ نئون» است: خطِ
+   زیگزاگیِ نازک (SVG stroke که به‌صورت ماسک استفاده می‌شود، مثل خود شبکهٔ
+   شش‌ضلعی) با مغزِ سفیدِ داغ و سه لایه هالهٔ رنگی دور خودش. سه آذرخش با
+   رنگ/جا/تاخیر متفاوت، هر کدام در هر دور یک دابل-فلش می‌زنند. */
+.fx-bolts{--bolt-line:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 320'%3E%3Cg fill='none' stroke='white' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath stroke-width='6' d='M70 0 L52 96 L74 104 L44 208 L60 214 L34 320'/%3E%3Cpath stroke-width='3.5' d='M52 96 L24 148'/%3E%3Cpath stroke-width='3.5' d='M44 208 L78 252'/%3E%3C/g%3E%3C/svg%3E")}
 .fx-bolts i{position:absolute;display:block;opacity:0;
-  background:linear-gradient(180deg,#fff 0%,var(--bolt-c,#9ad8ff) 55%,transparent 97%);
-  -webkit-clip-path:polygon(58% 0,100% 0,52% 42%,78% 42%,18% 100%,38% 54%,8% 54%);
-  clip-path:polygon(58% 0,100% 0,52% 42%,78% 42%,18% 100%,38% 54%,8% 54%);
-  filter:drop-shadow(0 0 6px var(--bolt-c,#9ad8ff)) drop-shadow(0 0 16px var(--bolt-c,#9ad8ff));
+  -webkit-mask-image:var(--bolt-line);mask-image:var(--bolt-line);
+  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+  -webkit-mask-size:100% 100%;mask-size:100% 100%;
+  background:linear-gradient(180deg,#ffffff 0%,#ffffff 35%,var(--bolt-c,#9ad8ff) 100%);
+  filter:drop-shadow(0 0 3px var(--bolt-c,#9ad8ff)) drop-shadow(0 0 10px var(--bolt-c,#9ad8ff)) drop-shadow(0 0 24px var(--bolt-c,#9ad8ff));
   animation:boltFlash var(--hexfx-dur,6s) linear infinite}
-.fx-bolts .b1{--bolt-c:var(--hexfx-a,#9ad8ff);left:10%;top:-2%;width:110px;height:52vh}
-.fx-bolts .b2{--bolt-c:var(--hexfx-b,#c05bff);left:50%;top:3%;width:78px;height:38vh;animation-delay:calc(var(--hexfx-dur,6s) * -0.62)}
-.fx-bolts .b3{--bolt-c:var(--hexfx-c,#22ccff);right:7%;top:-4%;width:95px;height:58vh;animation-delay:calc(var(--hexfx-dur,6s) * -0.29)}
-body.light-mode .fx-bolts i{background:linear-gradient(180deg,var(--bolt-c,#0077b0) 0%,var(--bolt-c,#0077b0) 55%,transparent 97%)}
+/* هشت آذرخش پخش‌شده روی تمام پهنا و ارتفاع صفحه — رنگ‌ها می‌چرخند، تاخیرها
+   در طول دور پخش‌اند و چندتایشان آینه‌ای‌اند تا هر بار «یک جای دیگر» بزند */
+.fx-bolts .b1{--bolt-c:var(--hexfx-a,#9ad8ff);left:2%;top:-3%;width:88px;height:52vh}
+.fx-bolts .b2{--bolt-c:var(--hexfx-b,#c05bff);left:15%;top:22%;width:60px;height:38vh;transform:scaleX(-1);animation-delay:calc(var(--hexfx-dur,6s) * -0.13)}
+.fx-bolts .b3{--bolt-c:var(--hexfx-c,#22ccff);left:29%;top:-5%;width:74px;height:60vh;animation-delay:calc(var(--hexfx-dur,6s) * -0.26)}
+.fx-bolts .b4{--bolt-c:var(--hexfx-a,#9ad8ff);left:43%;top:34%;width:56px;height:44vh;transform:scaleX(-1);animation-delay:calc(var(--hexfx-dur,6s) * -0.38)}
+.fx-bolts .b5{--bolt-c:var(--hexfx-b,#c05bff);left:55%;top:-2%;width:80px;height:48vh;animation-delay:calc(var(--hexfx-dur,6s) * -0.51)}
+.fx-bolts .b6{--bolt-c:var(--hexfx-c,#22ccff);left:68%;top:28%;width:62px;height:40vh;animation-delay:calc(var(--hexfx-dur,6s) * -0.64)}
+.fx-bolts .b7{--bolt-c:var(--hexfx-a,#9ad8ff);left:80%;top:-4%;width:84px;height:56vh;transform:scaleX(-1);animation-delay:calc(var(--hexfx-dur,6s) * -0.77)}
+.fx-bolts .b8{--bolt-c:var(--hexfx-b,#c05bff);left:91%;top:18%;width:58px;height:42vh;animation-delay:calc(var(--hexfx-dur,6s) * -0.89)}
+/* در تم روشن مغز سفید دیده نمی‌شود — لوله همرنگ خودِ نئون شود */
+body.light-mode .fx-bolts i{background:var(--bolt-c,#0077b0)}
 body.light-mode .fx-bolts .b1{--bolt-c:var(--hexfx-a-light,#0077b0)}
 body.light-mode .fx-bolts .b2{--bolt-c:var(--hexfx-b-light,#7a1fd0)}
 body.light-mode .fx-bolts .b3{--bolt-c:var(--hexfx-c-light,#0092c7)}
@@ -15074,7 +15087,7 @@ document.addEventListener('click', function(e) {
       '<div class="fx-aurora fx-a2"></div>'+
       '<div class="fx-aurora fx-a3"></div>'+
       '<div class="fx-grid"></div>'+
-      '<div class="fx-bolts"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div>'+
+      '<div class="fx-bolts"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i><i class="b5"></i><i class="b6"></i><i class="b7"></i><i class="b8"></i></div>'+
       '<div class="fx-stars"><i class="s1"></i><i class="s2"></i><i class="s3"></i><i class="s4"></i><i class="s5"></i></div>'+
       '<canvas id="fxCanvas"></canvas>'+
       '<div class="fx-vignette"></div>';
