@@ -116,7 +116,7 @@ body{font-family:'Vazirmatn',sans-serif;background:none;color:var(--txt);min-hei
 
 .ls-brand{position:relative;z-index:2;text-align:center;animation:lsFadeDown 1.2s ease}
 .ls-brand-icon{font-size:3rem;margin-bottom:4px;filter:drop-shadow(0 2px 14px rgba(0,0,0,.9))}
-.ls-brand-name{font-size:2rem;font-weight:900;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.85)}
+.ls-brand-name{font-size:2rem;font-weight:900;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7)}
 .ls-brand-sub{font-size:0.78rem;color:rgba(255,255,255,.7);letter-spacing:3px;margin-top:4px}
 body.light-mode #siteBg{filter:blur(24px) brightness(0.32) saturate(0.7)}
 .lock-box{position:relative;z-index:2;background:rgba(22,27,34,.88);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1.5px solid rgba(255,255,255,.13);border-radius:16px;padding:32px 28px;width:100%;max-width:340px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.55);animation:lsFadeUp 1.2s ease}
@@ -174,6 +174,31 @@ body.light-mode #lsStaffBtn{
 @keyframes lsZoom{from{transform:scale(1)}to{transform:scale(1.1)}}
 @keyframes lsFadeDown{from{opacity:0;transform:translateY(-24px)}to{opacity:1;transform:translateY(0)}}
 @keyframes lsFadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+/* روی کامپیوتر دسکتاپ صفحهٔ قفل خیلی جای خالی اطرافش می‌ماند چون کادر رمز
+   دقیقاً همان اندازهٔ موبایل باقی می‌ماند — این‌جا با اندازهٔ صفحه (کوچک/بزرگ)
+   کادر و نوشته‌ها را متناسب بزرگ‌تر می‌کنیم */
+@media (min-width:769px){
+  .lock-box{ max-width:400px; padding:38px 34px; }
+  .ls-brand-icon{ font-size:3.6rem; }
+  .ls-brand-name{ font-size:2.4rem; }
+  .ls-brand-sub{ font-size:0.85rem; }
+  .lock-box input{ font-size:1.2rem; padding:14px; }
+  .lock-box button{ font-size:1.05rem; padding:14px; }
+  #lsWeekday{ font-size:0.9rem!important; }
+}
+@media (min-width:1400px){
+  .lock-box{ max-width:460px; padding:44px 40px; }
+  .ls-brand-icon{ font-size:4.2rem; }
+  .ls-brand-name{ font-size:2.7rem; }
+  .ls-brand-sub{ font-size:0.92rem; }
+  .lock-box input{ font-size:1.3rem; padding:16px; }
+  .lock-box button{ font-size:1.12rem; padding:16px; }
+  #lsWeekday{ font-size:0.98rem!important; }
+  .ls-geo-1{ width:220px; height:220px; }
+  .ls-geo-2{ width:150px; height:150px; }
+  .ls-geo-3{ width:96px; height:96px; }
+}
 
 /* سربرگ دیگر sticky نیست — هنگام اسکرول فقط نوار بخش‌ها بالا می‌ماند (body.nav-sticky .nav)؛
    قبلاً هر دو top:0 می‌چسبیدند و چون سربرگ بلندتر از نوار است، لبهٔ پایینش از زیر نوار بیرون می‌زد */
@@ -422,7 +447,7 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 .fab-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:999px;background:var(--red);color:#fff;font-size:0.7rem;font-weight:900;display:none;align-items:center;justify-content:center;padding:0 5px;border:2px solid var(--panel)}
 /* resize:both یعنی همان دستهٔ کشیدنیِ گوشهٔ استاندارد مرورگر (مثل تغییر اندازهٔ
    پنجره در ویندوز) — بدون نیاز به کدِ دستیِ کشیدن که ممکن است لرزش/خطا داشته باشد */
-#robotPanel{position:fixed;bottom:calc(148px + var(--kb-offset,0px));left:18px;z-index:10050;width:min(360px,calc(100vw - 24px));height:min(520px,calc(100dvh - 90px - var(--kb-offset,0px)));min-width:260px;min-height:280px;max-width:96vw;max-height:92dvh;background:var(--panel);border:1.5px solid var(--blue);border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.5);display:none;flex-direction:column;overflow:hidden;resize:both;transition:bottom .18s ease}
+#robotPanel{position:fixed;bottom:calc(148px + var(--kb-offset,0px));left:18px;z-index:10050;width:min(360px,calc(100vw - 24px));height:min(520px,calc(100dvh - 90px - var(--kb-offset,0px)));min-width:260px;min-height:280px;max-width:96vw;max-height:92dvh;background:var(--panel);border:1.5px solid var(--blue);border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.5);display:none;flex-direction:column;overflow:hidden;transition:bottom .18s ease}
 #robotPanel.open{display:flex}
 #robotPanel.large{width:min(560px,calc(100vw - 24px));height:min(760px,calc(100dvh - 40px - var(--kb-offset,0px)))}
 #robotPanel .rb-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--dark);border-bottom:1px solid var(--border);font-weight:900;color:var(--blue);cursor:move;user-select:none;-webkit-user-select:none;touch-action:none;flex-shrink:0}
@@ -475,8 +500,11 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 /* دسکتاپ/مانیتور بزرگ: پنل ربات و نوشته‌های چت روی صفحهٔ بزرگ خیلی ریز بودند —
    هم پنل بزرگ‌تر شود هم فونت پیام‌ها/ورودی/تب‌ها */
 @media (min-width: 900px) {
-  #robotPanel{ width:min(460px,calc(100vw - 24px)) !important; height:min(620px,calc(100dvh - 90px - var(--kb-offset,0px))) !important; }
-  #robotPanel.large{ width:min(720px,calc(100vw - 24px)) !important; height:min(820px,calc(100dvh - 40px - var(--kb-offset,0px))) !important; }
+  /* !important عمداً حذف شد — با آن، تغییر اندازهٔ دستیِ پنل (کشیدن از گوشه‌ها،
+     _makeResizable) که روی style.width/height خطی می‌نویسد، همیشه همین‌جا
+     نادیده گرفته می‌شد و پنل روی دسکتاپ اصلاً قابل تغییر اندازه نبود */
+  #robotPanel{ width:min(460px,calc(100vw - 24px)); height:min(620px,calc(100dvh - 90px - var(--kb-offset,0px))); }
+  #robotPanel.large{ width:min(720px,calc(100vw - 24px)); height:min(820px,calc(100dvh - 40px - var(--kb-offset,0px))); }
   .ch-b{ font-size:1rem !important; }
   .ch-comp input[type=text]{ font-size:1rem !important; padding:11px 13px !important; }
   .rb-tab{ font-size:0.88rem !important; }
@@ -516,7 +544,7 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 #lsCalcBtn{position:fixed;bottom:calc(18px + var(--kb-offset,0px));left:18px;z-index:10001;width:50px;height:50px;border-radius:50%;border:1.5px solid rgba(255,255,255,.35);background:rgba(22,27,34,.7);backdrop-filter:blur(8px);color:#ffb340;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.45);transition:bottom .18s ease}
 #lsCalcBtn svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 body.light-mode #lsCalcBtn{background:rgba(255,255,255,.75);color:#b45309;border-color:rgba(0,0,0,.2)}
-#calcPanel{position:fixed;bottom:calc(84px + var(--kb-offset,0px));left:18px;z-index:10060;width:286px;height:430px;min-width:230px;min-height:300px;max-width:96vw;max-height:calc(90dvh - var(--kb-offset,0px));background:var(--panel);border:1.5px solid var(--border);border-radius:18px;box-shadow:0 14px 44px rgba(0,0,0,.6);display:none;flex-direction:column;overflow:hidden;resize:both;transition:bottom .18s ease}
+#calcPanel{position:fixed;bottom:calc(84px + var(--kb-offset,0px));left:18px;z-index:10060;width:286px;height:430px;min-width:230px;min-height:300px;max-width:96vw;max-height:calc(90dvh - var(--kb-offset,0px));background:var(--panel);border:1.5px solid var(--border);border-radius:18px;box-shadow:0 14px 44px rgba(0,0,0,.6);display:none;flex-direction:column;overflow:hidden;transition:bottom .18s ease}
 #calcPanel.large{width:400px;height:580px}
 #calcPanel.open{display:flex}
 #calcHead svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
@@ -1839,6 +1867,35 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter
   box-shadow:0 12px 28px -10px rgba(255,150,40,.6),inset 0 1px 0 rgba(255,255,255,.4)!important;
   transition:transform .2s,box-shadow .2s,filter .2s!important}
 .lock-box button:hover{transform:translateY(-2px);filter:brightness(1.05);box-shadow:0 16px 34px -10px rgba(255,150,40,.75)!important;opacity:1!important}
+
+/* بخش «LOCK SCREEN (cinematic hero)» بالا بدون توجه به حالت روز/شب رنگ‌های
+   تیره را !important تحمیل می‌کرد و رفعِ رنگ حالت روز (بالاترِ فایل، تسک #23)
+   را روی عنوان و کادر رمز خنثی می‌کرد — کادر رمز نیمه‌سیاه روی کارتِ روشن
+   خاکستری دیده می‌شد و متن رمز/جاینگهدار هم خوانا نبود؛ اینجا با specificity
+   برابر ولی به‌عنوان آخرین قاعده، دوباره روشن/خوانا می‌کنیم */
+body.light-mode .ls-brand-name{ color:#2a1a06!important; -webkit-text-fill-color:#2a1a06!important; text-shadow:0 1px 3px rgba(255,255,255,.5)!important; }
+body.light-mode .lock-box input{
+  background:rgba(255,255,255,.75)!important;
+  color:#2a1a06!important; -webkit-text-fill-color:#2a1a06!important;
+  border-color:rgba(0,0,0,.18)!important;
+}
+body.light-mode .lock-box input::placeholder{ color:#8a7658!important; -webkit-text-fill-color:#8a7658!important; }
+
+/* روی دسکتاپ، ماوس روی صفحه ثابت می‌ماند و محتوا زیرش اسکرول می‌شود — یعنی
+   هر کارت/دکمه‌ای که از زیر نشانگر رد شود، لحظه‌ای hover می‌گیرد و افکتِ
+   transform:translateY(...) آن (که برای هاورِ واقعی طراحی شده) اجرا می‌شود؛
+   نتیجه‌اش این بود که با اسکرول تند، بخش‌ها انگار بالا/پایین می‌پرند. روی
+   موبایل/تبلت این مشکل نیست چون لمس، hover دائمی زیر انگشت نمی‌سازد.
+   body.is-scrolling با pointer-events:none موقتاً hover را روی این عناصر
+   خاموش می‌کند تا اسکرول تمام شود، بدون این‌که خودِ افکتِ هاور را حذف کند. */
+body.is-scrolling .card,
+body.is-scrolling .shift-card,
+body.is-scrolling .settings-card,
+body.is-scrolling .pl-card,
+body.is-scrolling .person-card,
+body.is-scrolling .stat-box,
+body.is-scrolling .msumbox,
+body.is-scrolling .nav-btn{ pointer-events:none!important; }
 
 /* ---------- 14. TOAST / SCROLLBAR ---------- */
 .toast{border-radius:12px!important;
@@ -3238,6 +3295,13 @@ body.gfx-performance .tank-body{
   border-radius:12px !important;
 }
 body.gfx-performance .tank-pct{ text-shadow:none !important; }
+/* کارتِ بزرگِ «موجودی فعلی مخزن» (هشدار کمبود) قبلاً حتی در گرافیک سبک هم
+   گرادیان/درخشش/چشمک‌زدن و موجِ متحرک زیرِ عدد را کامل نگه می‌داشت — درست
+   برخلاف بقیهٔ این تب که همه‌چیز را ساده و بی‌حرکت می‌کند؛ همان حالتی که
+   کاربر «باگ» و پرش می‌دید */
+body.gfx-performance .tank-hero-wave{ display:none !important; }
+body.gfx-performance .ls-tape{ display:none !important; animation:none !important; }
+body.gfx-performance [style*="ls-flash"]{ animation:none !important; }
 
 /* -- 1.10 DAY/NIGHT TOGGLE: sky/thumb art stays, decorative bird removed */
 body.gfx-performance .daynight-toggle .dn-bird{ display:none !important; }
@@ -4327,6 +4391,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
   <button class="nav-btn active" onclick="showSection('shifts',this)"><svg class="nav-ic ia-wobble"><use href="#ic-shifts"/></svg> پارچه‌ها</button>
   <button class="nav-btn" onclick="showSection('waraq',this)"><svg class="nav-ic ia-write"><use href="#ic-waraq"/></svg> ورق‌های روزانه</button>
   <button class="nav-btn" onclick="showSection('debt',this)"><span class="nav-badge" id="debt-nav-badge" style="display:none"></span><svg class="nav-ic ia-bounce"><use href="#ic-debt"/></svg> قرض‌داران</button>
+  <button class="nav-btn" onclick="showSection('invoices',this)"><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> ثبت فاکتورها</button>
   <button class="nav-btn" onclick="showSection('debtrasid',this)"><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> رسید قرض‌داران</button>
   <button class="nav-btn" onclick="showSection('sarrafi',this)"><svg class="nav-ic ia-flip"><use href="#ic-sarrafi"/></svg> صرافی</button>
   <button class="nav-btn" onclick="showSection('expenses',this)"><svg class="nav-ic ia-fly"><use href="#ic-expenses"/></svg> مصارف</button>
@@ -4337,7 +4402,6 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
   <button class="nav-btn" onclick="showSection('cameras',this)"><svg class="nav-ic ia-pulse"><use href="#ic-cctv"/></svg> دوربین‌ها</button>
   <button class="nav-btn" onclick="showSection('attendance',this)"><svg class="nav-ic ia-tilt"><use href="#ic-att"/></svg> حاضری و معاش</button>
   <button class="nav-btn" onclick="showSection('profit',this)"><svg class="nav-ic ia-rise"><use href="#ic-profit"/></svg> مفاد / ضرر / اتحادیه</button>
-  <button class="nav-btn" onclick="showSection('invoices',this)"><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> ثبت فاکتورها</button>
   <button class="nav-btn" onclick="showSection('settings',this)"><svg class="nav-ic ia-spin"><use href="#ic-settings"/></svg> تنظیمات</button>
 </div>
 
@@ -8687,6 +8751,11 @@ function _renderFuelSection(fuelType, containerId, label) {
     return DB.shifts.filter(s => (s.fuel||'petrol') === soldKey).reduce((a,s) => a + (s.sale||0), 0);
   })();
   const current  = totalIn - totalOut;
+  // اگر فروش ثبت‌شده بیشتر از خرید ثبت‌شده باشد (مثلاً موجودی اولیه هرگز به‌عنوان
+  // خرید ثبت نشده)، current منفی می‌شود؛ نمایش «−۲۲,۹۰۰ لیتر» به‌عنوان موجودیِ
+  // مخزن گمراه‌کننده است — برای نمایش صفر را کف می‌گذاریم (وضعیت کمبود/تمام‌شده
+  // با همان current واقعی محاسبه می‌شود، فقط عددِ نمایشی منفی نمی‌شود)
+  const currentDisplay = Math.max(0, current);
   const totalUSD = entries.reduce((a,e) => a + (e.totalUSD||0), 0);
   const totalAFN = entries.reduce((a,e) => a + (e.totalAFN||0), 0);
   const color    = fuelType === 'diesel' ? '#b7791f' : 'var(--accent)';
@@ -8708,7 +8777,7 @@ function _renderFuelSection(fuelType, containerId, label) {
   hero.innerHTML = `
     ${isLow ? '<div class="ls-tape" style="position:absolute;top:0;left:0"></div>' : ''}
     <div style="font-size:0.78rem;color:${isLow?'#ffd6d6':'var(--muted)'};margin-bottom:6px">${icon} موجودی فعلی مخزن (${label})</div>
-    <div style="font-size:2.8rem;font-weight:900;color:${numColor};line-height:1">${n2fa(Math.round(current))}</div>
+    <div style="font-size:2.8rem;font-weight:900;color:${numColor};line-height:1">${n2fa(Math.round(currentDisplay))}</div>
     <div style="font-size:1rem;color:${isLow?'#ffd6d6':'var(--muted)'};margin-top:4px">لیتر</div>
     ${isLow ? `<div style="margin-top:12px;background:#00000040;border:1.5px solid #fff8;border-radius:10px;padding:9px 12px;font-size:0.9rem;font-weight:900;color:#fff;text-shadow:0 1px 4px #000">⚠️ ${current<=0 ? 'مخزن تمام شده است!' : 'فقط '+n2fa(Math.round(current))+' لیتر باقی مانده'}</div>` : ''}
     <div style="display:flex;justify-content:center;gap:24px;margin-top:16px;flex-wrap:wrap">
@@ -16685,7 +16754,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.5.0';
+const APP_VERSION = '2.6.0';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -18001,6 +18070,23 @@ document.addEventListener('click', function(e) {
   // موبایل، وقتی نوار آدرس مرورگر پنهان/آشکار می‌شود) --kb-offset لحظه‌ای نوسان
   // کند و دکمه‌های شناور (ماشین‌حساب/ربات) در وسط اسکرول بالا/پایین بپرند.
   vv.addEventListener('resize', sync);
+})();
+</script>
+
+<script id="scrollHoverFixJs">
+(function(){
+  "use strict";
+  // روی دسکتاپ با ماوس، هنگام اسکرولِ سریع، نشانگر ثابت می‌ماند و کارت‌ها/دکمه‌ها
+  // زیرش رد می‌شوند — هرکدام لحظه‌ای hover می‌گیرند و افکتِ translateY(...) طراحی‌شده
+  // برای هاورِ واقعی اجرا می‌شود، که به‌نظر «پرشِ» بخش‌ها هنگام اسکرول می‌رسد.
+  // با اضافه‌کردن body.is-scrolling در حین اسکرول (CSS آن pointer-events را موقتاً
+  // خاموش می‌کند تا hover ثبت نشود) و پاک‌کردنش کمی بعد از توقفِ اسکرول، رفع می‌شود.
+  var t = null;
+  window.addEventListener('scroll', function(){
+    document.body.classList.add('is-scrolling');
+    clearTimeout(t);
+    t = setTimeout(function(){ document.body.classList.remove('is-scrolling'); }, 150);
+  }, { passive: true });
 })();
 </script>
 
