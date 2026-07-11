@@ -1248,7 +1248,7 @@ body.light-mode .lock-box input{
 #pl-result.pl-profit .pl-result-sub{ color:#6ee7b7; }
 #pl-result.pl-profit .pl-result-value{
   color:#eafff6 !important;
-  text-shadow:0 1px 18px rgba(52,211,153,.45), 0 0 2px rgba(0,0,0,.5) !important;
+  text-shadow:0 1px 3px rgba(52,211,153,.35), 0 0 2px rgba(0,0,0,.5) !important;
 }
 #pl-result.pl-profit .pl-line{ stroke:url(#plLineProfit); filter:drop-shadow(0 2px 6px rgba(16,185,129,.45)); }
 #pl-result.pl-profit .pl-area{ fill:url(#plFillProfit); }
@@ -1281,7 +1281,7 @@ body.light-mode .lock-box input{
 #pl-result.pl-loss .pl-result-sub{ color:#fda4af; }
 #pl-result.pl-loss .pl-result-value{
   color:#fff0f1 !important;
-  text-shadow:0 1px 18px rgba(251,113,133,.45), 0 0 2px rgba(0,0,0,.5) !important;
+  text-shadow:0 1px 3px rgba(251,113,133,.35), 0 0 2px rgba(0,0,0,.5) !important;
 }
 #pl-result.pl-loss .pl-line{ stroke:url(#plLineLoss); filter:drop-shadow(0 2px 6px rgba(244,63,94,.45)); }
 #pl-result.pl-loss .pl-area{ fill:url(#plFillLoss); }
@@ -1534,7 +1534,10 @@ html{background:#070a11!important}
      per theme to re-tint the rest of the ambient layer's fixed hardcoded
      colours; cancel it here so the chosen colours keep exactly their hues on
      every theme. The white-ish drop-shadows bloom equally for all colours. */
-  filter:hue-rotate(calc(var(--fx-hue,0deg) * -1)) drop-shadow(0 0 4px rgba(255,255,255,.35)) drop-shadow(0 0 9px rgba(255,255,255,.18));
+  /* drop-shadow() اینجا عمداً حذف شد — چون همراه با انیمیشن clip-path روی این
+     لایهٔ تمام‌صفحه، هر فریم باید دوباره محاسبه شود و باعث گیر/لگ محسوس
+     می‌شد؛ hue-rotate برای درستیِ رنگ در هر تم لازم است و نگه داشته شده */
+  filter:hue-rotate(calc(var(--fx-hue,0deg) * -1));
   -webkit-clip-path:var(--hexclip-0,polygon(100% 0,100% 0,100% 0));clip-path:var(--hexclip-0,polygon(100% 0,100% 0,100% 0));
   /* لایهٔ کامپوزیت جدا — بدون این، انیمیشن clip-path رویِ لایهٔ محتوای صفحه
      فشار می‌آورد و روی تبلت/موبایل کاشی‌های خالی (مستطیل تیره) هنگام اسکرول
@@ -1684,7 +1687,7 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter
 .tb-item{position:relative;padding:2px 4px}
 .tb-item+.tb-item::before{content:"";position:absolute;right:-10px;top:18%;height:64%;width:1px;background:linear-gradient(rgba(255,255,255,0),rgba(255,255,255,.14),rgba(255,255,255,0))}
 .tb-label{letter-spacing:.2px}
-.tb-value{font-weight:900!important;text-shadow:0 0 18px currentColor;filter:saturate(1.1)}
+.tb-value{font-weight:900!important;text-shadow:0 1px 3px rgba(0,0,0,.55);filter:saturate(1.1)}
 
 /* ---------- 6. NAV (glass rail, gradient active, lift) ---------- */
 .nav{
@@ -1729,7 +1732,7 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter
 .stat-box:hover,.msumbox:hover{transform:translateY(-2px);border-color:rgba(255,180,61,.28)!important;
   box-shadow:0 0 0 1px rgba(255,180,61,.12),0 16px 30px -18px rgba(0,0,0,.85)!important}
 .stat-value,.mv{font-weight:900!important}
-.stat-value{text-shadow:0 0 22px rgba(255,180,61,.25)}
+.stat-value{text-shadow:0 1px 3px rgba(0,0,0,.5)}
 
 /* ---------- 8. SHIFT HEADERS (day / night energy) ---------- */
 .shift-header{position:relative;overflow:hidden}
@@ -1982,6 +1985,7 @@ body.light-mode .tank-body{ border-color:rgba(120,80,20,.22);
   pointer-events:none; }
 .tank-th span{ position:absolute; left:-2px; top:-16px; font-size:.6rem; color:rgba(255,255,255,.7);
   background:rgba(0,0,0,.35); padding:1px 5px; border-radius:5px; white-space:nowrap; }
+.tank-th.tank-th-flip span{ top:4px; }
 body.light-mode .tank-th{ border-top-color:rgba(120,80,20,.55); }
 body.light-mode .tank-th span{ color:#7a5012; background:rgba(120,80,20,.10); }
 /* % label centered on tank */
@@ -3041,7 +3045,7 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
   0%,100%{ transform:translateY(0);    box-shadow:0 0 24px -8px rgba(255,160,50,.55), 0 1px 0 rgba(255,255,255,.15) inset; }
   50%    { transform:translateY(-4px); box-shadow:0 0 44px -6px rgba(255,160,50,.85), 0 1px 0 rgba(255,255,255,.15) inset; }
 }
-.gfx-um-title{ margin:0 0 10px; font-size:1.05rem; font-weight:900; color:#ffd27a; text-shadow:0 0 18px rgba(255,180,61,.45); }
+.gfx-um-title{ margin:0 0 10px; font-size:1.05rem; font-weight:900; color:#ffd27a; text-shadow:0 1px 3px rgba(0,0,0,.5); }
 .gfx-um-text{ font-size:.86rem; color:#d8cdb8; line-height:2; margin-bottom:20px; padding:0 4px; }
 .gfx-um-btns{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
 .gfx-um-yes{
@@ -3621,7 +3625,7 @@ body.gfx-ultra .ro-tbl th{
   color:color-mix(in srgb, var(--accent) 45%, #ffe9c0) !important;
   border-bottom:2px solid rgba(255,180,61,.55) !important;
   border-bottom:2px solid color-mix(in srgb, var(--accent) 60%, transparent) !important;
-  text-shadow:0 0 10px rgba(255,180,61,.35) !important;
+  text-shadow:0 1px 2px rgba(0,0,0,.5) !important;
 }
 body.gfx-ultra .tbl tbody tr:hover td,
 body.gfx-ultra .xls-tbl tbody tr:hover td,
@@ -3716,7 +3720,7 @@ body.gfx-ultra .tank-body::after{
   animation:gfxTankGlass 5.5s ease-in-out infinite;
 }
 @keyframes gfxTankGlass{ 0%,100%{ background-position:130% 0; } 50%{ background-position:-30% 0; } }
-body.gfx-ultra .tank-pct{ text-shadow:0 2px 8px rgba(0,0,0,.7), 0 0 14px rgba(255,255,255,.35); }
+body.gfx-ultra .tank-pct{ text-shadow:0 2px 8px rgba(0,0,0,.7); }
 body.gfx-ultra .tank-card.t-low .tank-body{
   border-color:rgba(229,62,62,.7) !important;
   animation:gfxTankDangerUltra 1.2s ease-in-out infinite;
@@ -4333,6 +4337,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
   <button class="nav-btn" onclick="showSection('cameras',this)"><svg class="nav-ic ia-pulse"><use href="#ic-cctv"/></svg> دوربین‌ها</button>
   <button class="nav-btn" onclick="showSection('attendance',this)"><svg class="nav-ic ia-tilt"><use href="#ic-att"/></svg> حاضری و معاش</button>
   <button class="nav-btn" onclick="showSection('profit',this)"><svg class="nav-ic ia-rise"><use href="#ic-profit"/></svg> مفاد / ضرر / اتحادیه</button>
+  <button class="nav-btn" onclick="showSection('invoices',this)"><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> ثبت فاکتورها</button>
   <button class="nav-btn" onclick="showSection('settings',this)"><svg class="nav-ic ia-spin"><use href="#ic-settings"/></svg> تنظیمات</button>
 </div>
 
@@ -5305,6 +5310,17 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
     </div>
     <div class="cam-hint">دوربین‌هایی که مستقیم با سیم (USB) به همین کامپیوتر وصل‌اند این‌جا لیست می‌شوند — مرورگر یک‌بار اجازهٔ دسترسی می‌خواهد.</div>
     <div class="cam-grid" id="local-cam-grid"></div>
+  </div>
+</div>
+
+<!-- ثبت فاکتورها — فعلاً خالی، بعداً تکمیل می‌شود -->
+<div class="section" id="sec-invoices">
+  <div class="section-title">🧾 ثبت فاکتورها</div>
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">🧾 ثبت فاکتورها</div>
+    </div>
+    <div style="padding:22px;text-align:center;color:var(--muted);font-size:0.85rem">این بخش به‌زودی تکمیل می‌شود.</div>
   </div>
 </div>
 
@@ -12235,7 +12251,7 @@ function updateBanner() {
   })();
   const todayExp = DB.expenses.filter(e => e.date === today).reduce((a,e) => a+e.amount, 0);
   document.getElementById('bn-noinv').textContent = n2fa(Math.round(noinvTotal)) + ' افغانی';
-  document.getElementById('bn-debt').textContent = n2fa(debtTotal) + ' افغانی';
+  document.getElementById('bn-debt').textContent = (debtTotal > 0 ? '-' : '') + n2fa(debtTotal) + ' افغانی';
   document.getElementById('bn-profit').textContent = n2fa(todayProfit) + ' افغانی';
   document.getElementById('bn-exp').textContent = n2fa(todayExp) + ' افغانی';
   updateDebtAlertBadge();
@@ -16390,6 +16406,14 @@ let _localCamStreams = {};
 async function refreshLocalCams() {
   const grid = document.getElementById('local-cam-grid');
   if (!grid) return;
+  // این بخش فقط برای دوربین‌های سیمی/USB وصل به کامپیوتر است — روی گوشی، دوربین
+  // جلو/عقب خودِ گوشی هم جزو «دوربین ویدیویی» مرورگر حساب می‌شود و بدون این گارد
+  // به‌جای دوربین‌های مداربسته پمپ، دوربین خودِ گوشی کاربر نمایش داده می‌شد
+  const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+  if (isMobile) {
+    grid.innerHTML = '<div class="cam-note" style="grid-column:1/-1">این بخش فقط دوربین‌های سیمی وصل به کامپیوتر را نشان می‌دهد — از کامپیوتر باز کنید</div>';
+    return;
+  }
   if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
     grid.innerHTML = '<div class="cam-note" style="grid-column:1/-1">این مرورگر از دوربین سیمی پشتیبانی نمی‌کند</div>';
     return;
@@ -16661,7 +16685,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.4.0';
+const APP_VERSION = '2.5.0';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -18021,12 +18045,17 @@ document.addEventListener('click', function(e) {
                   .reduce(function(a,e){ return a+(e.liters||0); },0);
     }catch(e){ current=0; totalIn=0; }
     var totalOut = totalIn - current;
-    var hasData  = totalIn>0 || totalOut>0;
+    // موجودی فعلی هم «داده» حساب شود — وگرنه مخزنی که موجودی دارد ولی از این بخش
+    // خرید ثبت نکرده، خاکستری/بی‌رنگ می‌ماند در حالی که مخزن دیگر رنگ عادی دارد
+    var hasData  = current>0 || totalIn>0 || totalOut>0;
 
     var th  = (typeof lsThreshold==='function') ? lsThreshold() : 500;
     var cap = parseFloat(DB['tankCapacity_'+fuelType]) || defaultCapacity(current, th);
     var pct   = cap>0 ? clamp(current/cap*100, 0, 100) : 0;
     var thPct = cap>0 ? clamp(th/cap*100, 0, 100) : 0;
+    // اگر خط حد هشدار خیلی به بالای مخزن نزدیک باشد، برچسبش با overflow:hidden
+    // مخزن بریده و ناپدید می‌شود — در این حالت برچسب را به پایین خط برمی‌گردانیم
+    var thLabelFlip = thPct > 82;
 
     var status;
     if(!hasData)               status='none';
@@ -18057,7 +18086,7 @@ document.addEventListener('click', function(e) {
               + '<span class="tank-bubble" style="--i:3;left:74%"></span>'
               + '<span class="tank-bubble" style="--i:4;left:48%"></span>'
             + '</div>'
-            + '<div class="tank-th" style="bottom:'+thPct+'%"><span>حد هشدار: '+num(th)+' ل</span></div>'
+            + '<div class="tank-th'+(thLabelFlip?' tank-th-flip':'')+'" style="bottom:'+thPct+'%"><span>حد هشدار: '+num(th)+' ل</span></div>'
             + '<div class="tank-pct">'+Math.round(pct)+'٪</div>'
           + '</div>'
         + '</div>'
