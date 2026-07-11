@@ -5385,16 +5385,222 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
   </div>
 </div>
 
-<!-- ثبت فاکتورها — فعلاً خالی، بعداً تکمیل می‌شود -->
+<!-- ═══════════════ ثبت فاکتورها — فرم رسمی فاکتور + صف تأیید + مهر داینامیک ═══════════════ -->
+<style id="invoice-styles">
+/* ── کارت‌های آماری بالای فرم ── */
+.inv-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin-bottom:18px}
+.inv-stat{position:relative;overflow:hidden;background:var(--card);border:1.5px solid var(--border);border-radius:18px;padding:20px 22px;cursor:pointer;display:flex;align-items:center;gap:16px;box-shadow:0 10px 26px -14px rgba(0,0,0,.45);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;-webkit-tap-highlight-color:transparent}
+.inv-stat:hover{transform:translateY(-3px);box-shadow:0 18px 38px -14px rgba(0,0,0,.55)}
+.inv-stat:active{transform:translateY(-1px)}
+.inv-stat .ic{width:54px;height:54px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:1.7rem;flex-shrink:0}
+.inv-stat.pending{border-color:#d9770666}
+.inv-stat.pending .ic{background:#d9770624}
+.inv-stat.pending:hover{border-color:#d97706}
+.inv-stat.approved{border-color:#38a16966}
+.inv-stat.approved .ic{background:#38a16924}
+.inv-stat.approved:hover{border-color:#38a169}
+.inv-stat .lbl{font-size:.86rem;color:var(--muted);font-weight:700;margin-bottom:3px}
+.inv-stat .cnt{font-size:2rem;font-weight:900;line-height:1.15}
+.inv-stat.pending .cnt{color:#e8930c}
+.inv-stat.approved .cnt{color:var(--green)}
+.inv-stat .go{margin-inline-start:auto;font-size:.72rem;color:var(--muted);white-space:nowrap;display:flex;align-items:center;gap:4px}
+/* ── فرم رسمی فاکتور ── */
+.inv-form-card{background:var(--panel);border:1.5px solid var(--border);border-radius:20px;padding:26px 24px;box-shadow:0 14px 36px -16px rgba(0,0,0,.5);max-width:980px;margin:0 auto}
+.inv-big-title{text-align:center;font-size:1.75rem;font-weight:900;color:var(--accent);letter-spacing:.5px;margin-bottom:2px}
+.inv-big-sub{text-align:center;font-size:.78rem;color:var(--muted);margin-bottom:20px}
+.inv-head-row{display:flex;justify-content:flex-start;align-items:flex-start;gap:18px;flex-wrap:wrap;border-bottom:1.5px dashed var(--border);padding-bottom:16px;margin-bottom:18px}
+.inv-head-meta{display:flex;flex-direction:column;gap:9px;min-width:250px;flex:1}
+.inv-meta-line{display:flex;align-items:center;gap:8px;font-size:.85rem}
+.inv-meta-line .k{color:var(--muted);font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.inv-meta-line .v{font-weight:900;color:var(--txt)}
+.inv-badge{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1.5px solid var(--border);border-radius:9px;padding:5px 12px;font-weight:900;font-size:.9rem}
+.inv-badge.num{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,var(--border))}
+/* ── فیلدهای کارت‌مانند ── */
+.inv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px;margin-bottom:16px}
+.inv-field{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:12px 14px;transition:border-color .16s,box-shadow .16s,transform .16s}
+.inv-field:hover{transform:translateY(-1px)}
+.inv-field:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+.inv-field .fl{display:flex;align-items:center;gap:7px;font-size:.76rem;color:var(--muted);font-weight:700;margin-bottom:8px}
+.inv-in{width:100%;background:transparent;border:none;border-bottom:1.5px dashed var(--border);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:1rem;font-weight:700;padding:5px 2px;outline:none;border-radius:0}
+.inv-in:focus{border-bottom-color:var(--accent)}
+select.inv-in{cursor:pointer}
+select.inv-in option{background:var(--panel);color:var(--txt)}
+.inv-total-line{display:flex;align-items:center;justify-content:space-between;gap:10px;background:color-mix(in srgb,var(--accent) 9%,var(--card));border:1.5px solid color-mix(in srgb,var(--accent) 40%,var(--border));border-radius:14px;padding:13px 16px;margin-bottom:18px;flex-wrap:wrap}
+.inv-total-line .tl{font-size:.85rem;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:7px}
+.inv-total-line .tv{font-size:1.35rem;font-weight:900;color:var(--accent)}
+/* ── دکمه‌ها ── */
+.inv-btn-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.inv-btn{border:none;border-radius:12px;padding:13px 30px;font-family:'Vazirmatn',sans-serif;font-size:1rem;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:transform .15s,box-shadow .15s,filter .15s}
+.inv-btn:hover{transform:translateY(-2px);filter:brightness(1.08)}
+.inv-btn:active{transform:translateY(0)}
+.inv-btn.submit{background:linear-gradient(135deg,var(--green),#276749);color:#fff;box-shadow:0 8px 22px -8px #38a16988}
+.inv-btn.reset{background:var(--card);color:var(--muted);border:1.5px solid var(--border)}
+.inv-btn.reset:hover{color:var(--txt);border-color:var(--muted)}
+body.viewer-mode .inv-admin-only{display:none!important}
+/* ── صفحه‌های لیست (در صف / تایید شده) ── */
+.inv-overlay{position:fixed;inset:0;background:var(--dark);z-index:9500;display:none;flex-direction:column;overflow:hidden}
+.inv-overlay.open{display:flex}
+.inv-ov-head{background:var(--panel);border-bottom:2px solid var(--accent);padding:13px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;flex-shrink:0}
+.inv-ov-title{font-size:1.05rem;font-weight:900;display:flex;align-items:center;gap:8px}
+.inv-ov-body{flex:1;overflow-y:auto;padding:16px;max-width:1050px;margin:0 auto;width:100%;box-sizing:border-box}
+.inv-search-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.inv-search{flex:1;min-width:220px;background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:11px 14px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:.92rem;outline:none}
+.inv-search:focus{border-color:var(--accent)}
+.inv-list{display:flex;flex-direction:column;gap:12px}
+.inv-item{background:var(--card);border:1.5px solid var(--border);border-radius:16px;padding:15px 17px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 8px 20px -12px rgba(0,0,0,.4);transition:transform .16s,border-color .16s,box-shadow .16s}
+.inv-item:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--accent) 55%,var(--border));box-shadow:0 14px 28px -12px rgba(0,0,0,.5)}
+.inv-item .no{width:46px;height:46px;border-radius:12px;background:color-mix(in srgb,var(--accent) 14%,var(--card));border:1.5px solid color-mix(in srgb,var(--accent) 45%,var(--border));color:var(--accent);font-weight:900;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.inv-item .who{flex:1;min-width:150px}
+.inv-item .who .nm{font-weight:900;font-size:1rem}
+.inv-item .who .mt{font-size:.74rem;color:var(--muted);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap}
+.inv-chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:4px 12px;font-size:.74rem;font-weight:900}
+.inv-chip.pending{background:#d9770622;color:#e8930c;border:1px solid #d9770655}
+.inv-chip.approved{background:#38a16922;color:var(--green);border:1px solid #38a16955}
+.inv-item .acts{display:flex;gap:7px;flex-wrap:wrap}
+.inv-act{border:1.5px solid var(--border);background:var(--panel);color:var(--txt);border-radius:9px;padding:7px 13px;font-family:'Vazirmatn',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .14s;display:inline-flex;align-items:center;gap:5px}
+.inv-act:hover{transform:translateY(-1px)}
+.inv-act.ok{border-color:#38a16977;color:var(--green)}
+.inv-act.ok:hover{background:#38a169;color:#fff}
+.inv-act.del{border-color:#e53e3e66;color:var(--red)}
+.inv-act.del:hover{background:#e53e3e;color:#fff}
+.inv-empty{text-align:center;color:var(--muted);padding:46px 14px;font-size:.9rem;background:var(--card);border:1.5px dashed var(--border);border-radius:16px}
+/* ── پیش‌نمایش فاکتور (مودال جزئیات) — باید روی صفحهٔ لیست (z-index:9500) باز شود ── */
+#invDetailModal{z-index:9600}
+.inv-paper{position:relative;background:var(--panel);border:1.5px solid var(--border);border-radius:16px;padding:22px 20px 158px;overflow:hidden}
+.inv-paper-head{text-align:center;border-bottom:2px solid var(--accent);padding-bottom:10px;margin-bottom:14px}
+.inv-paper-head .t{font-size:1.25rem;font-weight:900;color:var(--accent)}
+.inv-paper-head .s{font-size:.7rem;color:var(--muted);margin-top:3px}
+.inv-rows{display:flex;flex-direction:column;gap:9px}
+.inv-row{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 13px;font-size:.88rem;flex-wrap:wrap}
+.inv-row .k{color:var(--muted);font-weight:700;display:flex;align-items:center;gap:6px}
+.inv-row .v{font-weight:900}
+.inv-row .v input,.inv-row .v select{background:transparent;border:none;border-bottom:1.5px dashed var(--border);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:.9rem;font-weight:900;text-align:center;outline:none;max-width:150px}
+/* ── مهر «تانک تیل یعقوبی» — فقط با status=approved رندر می‌شود (داینامیک، نه ثابت در قالب) ── */
+.inv-stamp{position:absolute;bottom:14px;right:18px;width:128px;height:128px;pointer-events:none;user-select:none;transform:rotate(-12deg);opacity:.92;filter:drop-shadow(0 1px 1px rgba(0,0,0,.12))}
+.inv-stamp .c1{position:absolute;inset:0;border:3.5px solid #1d5bd8;border-radius:50%;box-shadow:inset 0 0 0 1.5px #1d5bd833}
+.inv-stamp .c2{position:absolute;inset:9px;border:1.6px dashed #1d5bd8;border-radius:50%}
+.inv-stamp .tx{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#1d5bd8;text-align:center;font-family:'Vazirmatn',sans-serif}
+.inv-stamp .tx .a{font-size:.98rem;font-weight:900;letter-spacing:.5px;line-height:1.35}
+.inv-stamp .tx .b{font-size:.56rem;font-weight:800;opacity:.85;letter-spacing:2px}
+.inv-stamp .tx .st{font-size:.62rem;letter-spacing:4px;opacity:.9}
+@media(max-width:640px){
+  .inv-form-card{padding:18px 13px}
+  .inv-big-title{font-size:1.35rem}
+  .inv-stat{padding:15px 16px}
+  .inv-stat .cnt{font-size:1.6rem}
+  .inv-paper{padding:16px 12px 132px}
+  .inv-stamp{width:104px;height:104px;bottom:10px;right:10px}
+  .inv-stamp .tx .a{font-size:.8rem}
+}
+</style>
+
 <div class="section" id="sec-invoices">
-  <div class="section-title">🧾 ثبت فاکتورها</div>
-  <div class="card">
-    <div class="card-head">
-      <div class="card-title">🧾 ثبت فاکتورها</div>
+  <div class="section-title"><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> ثبت فاکتورها</div>
+
+  <!-- کارت‌های آماری -->
+  <div class="inv-stats">
+    <div class="inv-stat pending" onclick="invOpenList('pending')" role="button" tabindex="0" title="دیدن فاکتورهای در صف">
+      <div class="ic">🟡</div>
+      <div><div class="lbl">فاکتورهای در صف</div><div class="cnt" id="inv-cnt-pending">۰</div></div>
+      <div class="go">مشاهده ←</div>
     </div>
-    <div style="padding:22px;text-align:center;color:var(--muted);font-size:0.85rem">این بخش به‌زودی تکمیل می‌شود.</div>
+    <div class="inv-stat approved" onclick="invOpenList('approved')" role="button" tabindex="0" title="دیدن فاکتورهای تایید شده">
+      <div class="ic">🟢</div>
+      <div><div class="lbl">فاکتورهای تایید شده</div><div class="cnt" id="inv-cnt-approved">۰</div></div>
+      <div class="go">مشاهده ←</div>
+    </div>
+  </div>
+
+  <!-- فرم رسمی فاکتور -->
+  <div class="inv-form-card">
+    <div class="inv-big-title">⛽ فاکتور پمپ یعقوبی</div>
+    <div class="inv-big-sub">فرم رسمی ثبت فاکتور فروش تیل</div>
+
+    <div class="inv-head-row">
+      <div class="inv-head-meta">
+        <div class="inv-meta-line" style="flex-wrap:wrap">
+          <span class="k">👤 نام مشتری:</span>
+          <input class="inv-in" id="inv-customer" placeholder="نام کامل مشتری..." style="flex:1;min-width:170px" autocomplete="off">
+        </div>
+        <div class="inv-meta-line">
+          <span class="k">🔢 شماره فاکتور:</span>
+          <span class="inv-badge num" id="inv-number-badge">—</span>
+          <span style="font-size:.68rem;color:var(--muted)">(خودکار)</span>
+        </div>
+        <div class="inv-meta-line">
+          <span class="k">📅 تاریخ ثبت:</span>
+          <span class="inv-badge" id="inv-date-badge">—</span>
+          <span style="font-size:.68rem;color:var(--muted)">(امروز — خودکار)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="inv-grid">
+      <div class="inv-field">
+        <div class="fl">⛽ نوع تیل</div>
+        <select class="inv-in" id="inv-fuel" onchange="invCalcTotal()">
+          <option value="petrol">⛽ پطرول</option>
+          <option value="diesel">🟤 دیزل</option>
+        </select>
+      </div>
+      <div class="inv-field">
+        <div class="fl">💰 فی خرید هر لیتر (افغانی)</div>
+        <input class="inv-in" id="inv-price" type="number" min="0" step="any" inputmode="decimal" placeholder="0" oninput="invCalcTotal()">
+      </div>
+      <div class="inv-field">
+        <div class="fl">🛢️ مقدار خرید (لیتر)</div>
+        <input class="inv-in" id="inv-liters" type="number" min="0" step="any" inputmode="decimal" placeholder="0" oninput="invCalcTotal()">
+      </div>
+      <div class="inv-field">
+        <div class="fl">🚗 نوع ماشین</div>
+        <input class="inv-in" id="inv-vehicle" type="text" placeholder="مثلاً کرولا، موتر باربری..." autocomplete="off">
+      </div>
+      <div class="inv-field">
+        <div class="fl">📞 شماره تماس</div>
+        <input class="inv-in" id="inv-phone" type="tel" inputmode="tel" placeholder="07xxxxxxxx" autocomplete="off" style="direction:ltr;text-align:right">
+      </div>
+    </div>
+
+    <div class="inv-total-line">
+      <span class="tl">🧮 جمع کل (فی × لیتر):</span>
+      <span class="tv" id="inv-total">۰ افغانی</span>
+    </div>
+
+    <div class="inv-btn-row">
+      <button class="inv-btn submit inv-admin-only" onclick="invSubmit()">✅ ثبت فاکتور</button>
+      <button class="inv-btn reset" onclick="invResetForm()">🔄 پاک کردن فرم</button>
+    </div>
   </div>
 </div>
+
+<!-- صفحهٔ فاکتورهای در صف / تایید شده (مسیرهای #invoices/pending و #invoices/approved) -->
+<div class="inv-overlay" id="invListOverlay">
+  <div class="inv-ov-head">
+    <div class="inv-ov-title" id="inv-ov-title">🟡 فاکتورهای در صف</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span style="font-size:.75rem;color:var(--muted)" id="inv-ov-count"></span>
+      <button class="inv-act" onclick="invCloseList()">✖ بستن</button>
+    </div>
+  </div>
+  <div class="inv-ov-body">
+    <div class="inv-search-row" id="inv-search-row" style="display:none">
+      <input class="inv-search" id="inv-search" placeholder="🔍 جستجو: شماره فاکتور، نام مشتری، شماره تماس یا تاریخ..." oninput="invRenderList()">
+    </div>
+    <div class="inv-list" id="inv-list"></div>
+  </div>
+</div>
+
+<!-- مودال جزئیات / پیش‌نمایش فاکتور -->
+<div class="modal-overlay" id="invDetailModal">
+  <div class="modal" style="max-width:560px;width:96vw;max-height:92dvh;overflow-y:auto">
+    <div class="modal-head" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border)">
+      <b>🧾 جزئیات فاکتور</b>
+      <button class="modal-close" onclick="invCloseDetail()" style="background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer">✖</button>
+    </div>
+    <div style="padding:14px" id="inv-detail-body"></div>
+  </div>
+</div>
+<!-- ═══════════════ پایان ثبت فاکتورها ═══════════════ -->
 
 <div class="section" id="sec-settings">
   <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
@@ -16863,7 +17069,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.7.1';
+const APP_VERSION = '2.8.0';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -19370,6 +19576,432 @@ body{ min-height:calc(100vh + 2px); }
   setTimeout(placeGlider, 60);
   setTimeout(placeGlider, 800);
   document.addEventListener('click', function(){ requestAnimationFrame(placeGlider); }, true);
+})();
+</script>
+
+<script>
+/* ═══════════════════ ماژول ثبت فاکتورها ═══════════════════
+   دیتا در DB.invoices نگه داشته می‌شود (همان دیتابیس برنامه که در localStorage/
+   IndexedDB ذخیره و با Firebase بین همهٔ دستگاه‌ها همگام می‌شود).
+   ستون‌ها: id, invoice_number, customer_name, fuel_type(petrol|diesel),
+   price_per_liter, liters, vehicle_type, phone, status(pending|approved),
+   created_at (ISO خودکار) + date_sh (تاریخ شمسی برای نمایش/جستجو).
+   مهر «تانک تیل یعقوبی» هیچ‌جا ثابت در قالب نیست — فقط وقتی status=approved
+   باشد به‌صورت داینامیک رندر می‌شود (لیست تایید شده، پیش‌نمایش، چاپ/PDF). */
+
+function _invList() {
+  if (!Array.isArray(DB.invoices)) DB.invoices = [];
+  return DB.invoices;
+}
+
+/* ── ضد باگ (۱): خودترمیمی دیتای فاکتورها ──
+   هر بار قبل از رندر اجرا می‌شود: رکورد خراب/ناقص هرگز صفحه را نمی‌شکند —
+   status نامعتبر → pending، شمارهٔ تکراری/گم‌شده → شماره‌گذاری یکتای دوباره،
+   created_at گم‌شده → همین حالا، عددهای خراب → صفر. اگر چیزی ترمیم شد ذخیره می‌شود. */
+function _invSelfCheck() {
+  let fixed = false;
+  if (!Array.isArray(DB.invoices)) { DB.invoices = []; fixed = true; }
+  const seen = {};
+  let maxNo = 0;
+  DB.invoices = DB.invoices.filter(v => v && typeof v === 'object');
+  DB.invoices.forEach(v => {
+    if (!v.id) { v.id = 'inv' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); fixed = true; }
+    if (v.status !== 'pending' && v.status !== 'approved') { v.status = 'pending'; fixed = true; }
+    if (v.fuel_type !== 'petrol' && v.fuel_type !== 'diesel') { v.fuel_type = 'petrol'; fixed = true; }
+    if (!v.created_at) { v.created_at = new Date().toISOString(); fixed = true; }
+    if (!v.date_sh) { try { v.date_sh = allDates().sh; } catch (e) { v.date_sh = ''; } fixed = true; }
+    if (typeof v.customer_name !== 'string') { v.customer_name = String(v.customer_name || ''); fixed = true; }
+    ['price_per_liter', 'liters'].forEach(k => {
+      const n = parseFloat(v[k]);
+      if (!isFinite(n) || n < 0) { v[k] = 0; fixed = true; } else v[k] = n;
+    });
+    const no = parseInt(v.invoice_number, 10);
+    if (!no || no < 1 || seen[no]) { v.invoice_number = 0; fixed = true; } // بعداً شمارهٔ یکتا می‌گیرد
+    else { v.invoice_number = no; seen[no] = true; if (no > maxNo) maxNo = no; }
+  });
+  DB.invoices.forEach(v => { if (!v.invoice_number) { v.invoice_number = ++maxNo; seen[maxNo] = true; } });
+  if (fixed) { try { save(); } catch (e) {} }
+  return fixed;
+}
+
+// شمارهٔ فاکتور بعدی — همیشه یکتا (بزرگ‌ترین شمارهٔ موجود + ۱؛ از ۱ شروع می‌شود)
+function invNextNumber() {
+  return _invList().reduce((m, v) => Math.max(m, parseInt(v.invoice_number, 10) || 0), 0) + 1;
+}
+function _invFuelLabel(ft) { return ft === 'diesel' ? '🟤 دیزل' : '⛽ پطرول'; }
+function _invTotal(v) { return (parseFloat(v.price_per_liter) || 0) * (parseFloat(v.liters) || 0); }
+
+// ── رندر بخش اصلی (کارت‌های آماری + پیش‌پرشدن شماره/تاریخ فرم) ──
+function renderInvoices() {
+  try { _invSelfCheck(); } catch (e) {}
+  const list = _invList();
+  const p = list.filter(v => v.status === 'pending').length;
+  const a = list.filter(v => v.status === 'approved').length;
+  const cp = document.getElementById('inv-cnt-pending');
+  const ca = document.getElementById('inv-cnt-approved');
+  if (cp) cp.textContent = n2fa(p);
+  if (ca) ca.textContent = n2fa(a);
+  const nb = document.getElementById('inv-number-badge');
+  if (nb) nb.textContent = n2fa(invNextNumber());
+  const db = document.getElementById('inv-date-badge');
+  if (db) { try { db.textContent = allDates().sh; } catch (e) { db.textContent = '—'; } }
+  invCalcTotal();
+}
+function invCalcTotal() {
+  const price = parseFloat((document.getElementById('inv-price') || {}).value) || 0;
+  const liters = parseFloat((document.getElementById('inv-liters') || {}).value) || 0;
+  const el = document.getElementById('inv-total');
+  if (el) el.textContent = n2fa(Math.round(price * liters * 100) / 100) + ' افغانی';
+}
+
+// ── ثبت فاکتور (Create) ──
+function invSubmit() {
+  if (!requireAdmin()) return;
+  const name = (document.getElementById('inv-customer').value || '').trim();
+  const fuel = document.getElementById('inv-fuel').value === 'diesel' ? 'diesel' : 'petrol';
+  const price = parseFloat(document.getElementById('inv-price').value);
+  const liters = parseFloat(document.getElementById('inv-liters').value);
+  const vehicle = (document.getElementById('inv-vehicle').value || '').trim();
+  const phone = (document.getElementById('inv-phone').value || '').trim();
+  if (!name) { showToast('❌ نام مشتری را وارد کنید', '#e53e3e'); document.getElementById('inv-customer').focus(); return; }
+  if (!isFinite(price) || price <= 0) { showToast('❌ فی خرید هر لیتر را درست وارد کنید', '#e53e3e'); document.getElementById('inv-price').focus(); return; }
+  if (!isFinite(liters) || liters <= 0) { showToast('❌ مقدار خرید (لیتر) را درست وارد کنید', '#e53e3e'); document.getElementById('inv-liters').focus(); return; }
+  _invSelfCheck();
+  const v = {
+    id: 'inv' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    invoice_number: invNextNumber(),
+    customer_name: name,
+    fuel_type: fuel,
+    price_per_liter: price,
+    liters: liters,
+    vehicle_type: vehicle,
+    phone: phone,
+    status: 'pending',                       // پیش‌فرض: در صف تایید
+    created_at: new Date().toISOString(),    // خودکار
+    date_sh: (function(){ try { return allDates().sh; } catch (e) { return ''; } })()
+  };
+  _invList().push(v);
+  save();
+  renderInvoices();      // کارت «فاکتورهای در صف» به‌روز می‌شود
+  invResetForm(false);
+  showToast('✅ فاکتور شماره ' + n2fa(v.invoice_number) + ' ثبت شد و در صف تایید است', '#38a169');
+}
+function invResetForm(toast) {
+  ['inv-customer', 'inv-price', 'inv-liters', 'inv-vehicle', 'inv-phone'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  const f = document.getElementById('inv-fuel'); if (f) f.value = 'petrol';
+  renderInvoices();
+  if (toast !== false) showToast('🔄 فرم پاک شد', '#4299e1');
+}
+
+// ── صفحه‌های لیست + مسیر (#invoices/pending | #invoices/approved) ──
+let _invView = 'pending';
+function invOpenList(status, skipHash) {
+  _invView = status === 'approved' ? 'approved' : 'pending';
+  const ov = document.getElementById('invListOverlay');
+  const ti = document.getElementById('inv-ov-title');
+  const sr = document.getElementById('inv-search-row');
+  if (ti) ti.textContent = _invView === 'approved' ? '🟢 فاکتورهای تایید شده' : '🟡 فاکتورهای در صف';
+  if (sr) sr.style.display = _invView === 'approved' ? '' : 'none';
+  const s = document.getElementById('inv-search'); if (s) s.value = '';
+  invRenderList();
+  if (ov) ov.classList.add('open');
+  if (!skipHash) { try { if (location.hash !== '#invoices/' + _invView) history.pushState(null, '', '#invoices/' + _invView); } catch (e) {} }
+}
+function invCloseList() {
+  const ov = document.getElementById('invListOverlay');
+  if (ov) ov.classList.remove('open');
+  if ((location.hash || '').startsWith('#invoices/')) {
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  }
+}
+function _invRouteFromHash() {
+  const h = location.hash || '';
+  if (h === '#invoices/pending' || h === '#invoices/approved') {
+    // فقط وقتی برنامه باز (بعد از رمز) است — پشت صفحهٔ قفل چیزی نشان داده نمی‌شود
+    const app = document.getElementById('app');
+    if (app && app.style.display !== 'none') invOpenList(h.split('/')[1], true);
+  } else {
+    const ov = document.getElementById('invListOverlay');
+    if (ov && ov.classList.contains('open')) ov.classList.remove('open');
+  }
+}
+window.addEventListener('hashchange', _invRouteFromHash);
+window.addEventListener('popstate', _invRouteFromHash);
+
+// ── رندر لیست (Read) + جستجو ──
+function invRenderList() {
+  try { _invSelfCheck(); } catch (e) {}
+  const wrap = document.getElementById('inv-list');
+  if (!wrap) return;
+  let rows = _invList().filter(v => v.status === _invView);
+  // جستجو فقط در صفحهٔ تایید شده: شماره فاکتور، نام مشتری، شماره تماس، تاریخ
+  const q = (_invView === 'approved') ? ((document.getElementById('inv-search') || {}).value || '').trim() : '';
+  if (q) {
+    const nq = normFa ? normFa(q) : q.toLowerCase();
+    rows = rows.filter(v =>
+      String(v.invoice_number).indexOf(q) >= 0 ||
+      n2fa(v.invoice_number).indexOf(q) >= 0 ||
+      (normFa ? normFa(v.customer_name || '') : (v.customer_name || '')).indexOf(nq) >= 0 ||
+      String(v.phone || '').indexOf(q) >= 0 ||
+      String(v.phone || '').indexOf(toEnDigits(q)) >= 0 ||
+      String(v.date_sh || '').indexOf(q) >= 0 ||
+      String(v.date_sh || '').indexOf(toEnDigits(q)) >= 0
+    );
+  }
+  rows = rows.slice().sort((a, b) => (b.invoice_number || 0) - (a.invoice_number || 0));
+  const cnt = document.getElementById('inv-ov-count');
+  if (cnt) cnt.textContent = n2fa(rows.length) + ' فاکتور';
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="inv-empty">' + (q ? '🔍 چیزی مطابق جستجو پیدا نشد' : (_invView === 'approved' ? 'هنوز فاکتور تایید شده‌ای نیست' : 'هیچ فاکتوری در صف نیست 🎉')) + '</div>';
+    return;
+  }
+  wrap.innerHTML = rows.map(v => `
+    <div class="inv-item">
+      <div class="no">${n2fa(v.invoice_number)}</div>
+      <div class="who">
+        <div class="nm">${escFa(v.customer_name) || '—'}</div>
+        <div class="mt">
+          <span>${_invFuelLabel(v.fuel_type)}</span>
+          <span>🛢️ ${n2fa(v.liters)} لیتر</span>
+          <span>💰 ${n2fa(Math.round(_invTotal(v)))} افغانی</span>
+          <span>📅 ${escFa(v.date_sh || '') || '—'}</span>
+        </div>
+      </div>
+      <span class="inv-chip ${v.status}">${v.status === 'approved' ? '🟢 تایید شده' : '🟡 در صف'}</span>
+      <div class="acts">
+        <button class="inv-act" onclick="invOpenDetail('${v.id}')">👁️ جزئیات</button>
+        ${v.status === 'pending'
+          ? `<button class="inv-act ok inv-admin-only" onclick="invApprove('${v.id}')">✅ تایید فاکتور</button>`
+          : `<button class="inv-act" onclick="invPrint('${v.id}')">🖨️ چاپ / PDF</button>
+             <button class="inv-act inv-admin-only" onclick="invRevert('${v.id}')">↩️ برگشت به صف</button>`}
+        <button class="inv-act del inv-admin-only" onclick="invDelete('${v.id}')">🗑️ حذف</button>
+      </div>
+    </div>`).join('');
+}
+
+// ── مهر داینامیک — فقط approved (بدون هیچ مهرِ ثابت در قالب) ──
+function invStampHtml(status) {
+  if (status !== 'approved') return '';
+  return `<div class="inv-stamp" aria-hidden="true">
+    <div class="c1"></div><div class="c2"></div>
+    <div class="tx"><span class="st">★ ★ ★</span><span class="a">تانک تیل<br>یعقوبی</span><span class="b">تایید شد</span></div>
+  </div>`;
+}
+
+// ── جزئیات / پیش‌نمایش (Read + Update فیلدها) ──
+let _invDetailId = null;
+function invOpenDetail(id) {
+  _invDetailId = id;
+  invRenderDetail();
+  document.getElementById('invDetailModal').classList.add('open');
+}
+function invCloseDetail() {
+  document.getElementById('invDetailModal').classList.remove('open');
+  _invDetailId = null;
+}
+function invRenderDetail() {
+  const v = _invList().find(x => x.id === _invDetailId);
+  const body = document.getElementById('inv-detail-body');
+  if (!v || !body) { if (body) body.innerHTML = '<div class="inv-empty">فاکتور پیدا نشد</div>'; return; }
+  const admin = (typeof currentRole !== 'undefined' && currentRole !== 'viewer');
+  const created = (function(){ try { return new Date(v.created_at).toLocaleString('fa-IR'); } catch (e) { return v.date_sh || ''; } })();
+  body.innerHTML = `
+    <div class="inv-paper" id="inv-paper">
+      <div class="inv-paper-head">
+        <div class="t">⛽ فاکتور پمپ یعقوبی</div>
+        <div class="s">فاکتور شماره ${n2fa(v.invoice_number)} — ${escFa(v.date_sh || '')}</div>
+      </div>
+      <div class="inv-rows">
+        <div class="inv-row"><span class="k">🔢 شماره فاکتور</span><span class="v" style="color:var(--accent)">${n2fa(v.invoice_number)}</span></div>
+        <div class="inv-row"><span class="k">👤 نام مشتری</span><span class="v">${admin ? `<input id="invd-name" value="${escFa(v.customer_name)}">` : escFa(v.customer_name) || '—'}</span></div>
+        <div class="inv-row"><span class="k">⛽ نوع تیل</span><span class="v">${admin ? `<select id="invd-fuel"><option value="petrol"${v.fuel_type !== 'diesel' ? ' selected' : ''}>⛽ پطرول</option><option value="diesel"${v.fuel_type === 'diesel' ? ' selected' : ''}>🟤 دیزل</option></select>` : _invFuelLabel(v.fuel_type)}</span></div>
+        <div class="inv-row"><span class="k">💰 فی خرید هر لیتر</span><span class="v">${admin ? `<input id="invd-price" type="number" min="0" step="any" value="${v.price_per_liter}">` : n2fa(v.price_per_liter)} افغانی</span></div>
+        <div class="inv-row"><span class="k">🛢️ مقدار خرید</span><span class="v">${admin ? `<input id="invd-liters" type="number" min="0" step="any" value="${v.liters}">` : n2fa(v.liters)} لیتر</span></div>
+        <div class="inv-row"><span class="k">🧮 جمع کل</span><span class="v" style="color:var(--accent)">${n2fa(Math.round(_invTotal(v) * 100) / 100)} افغانی</span></div>
+        <div class="inv-row"><span class="k">🚗 نوع ماشین</span><span class="v">${admin ? `<input id="invd-vehicle" value="${escFa(v.vehicle_type)}">` : escFa(v.vehicle_type) || '—'}</span></div>
+        <div class="inv-row"><span class="k">📞 شماره تماس</span><span class="v" style="direction:ltr">${admin ? `<input id="invd-phone" type="tel" value="${escFa(v.phone)}">` : escFa(v.phone) || '—'}</span></div>
+        <div class="inv-row"><span class="k">🕐 زمان ثبت (خودکار)</span><span class="v" style="font-size:.78rem;color:var(--muted)">${created}</span></div>
+        <div class="inv-row"><span class="k">📌 وضعیت</span><span class="v"><span class="inv-chip ${v.status}">${v.status === 'approved' ? '🟢 تایید شده' : '🟡 در صف تایید'}</span></span></div>
+      </div>
+      ${invStampHtml(v.status)}
+    </div>
+    <div class="inv-btn-row" style="margin-top:14px">
+      ${v.status === 'pending'
+        ? `<button class="inv-btn submit inv-admin-only" onclick="invApprove('${v.id}')">✅ تایید فاکتور</button>`
+        : `<button class="inv-btn reset" onclick="invPrint('${v.id}')">🖨️ چاپ / PDF</button>
+           <button class="inv-btn reset inv-admin-only" onclick="invRevert('${v.id}')">↩️ برگشت به صف</button>`}
+      ${admin ? `<button class="inv-btn reset inv-admin-only" onclick="invSaveEdits('${v.id}')">💾 ذخیره تغییرات</button>` : ''}
+      <button class="inv-btn reset del inv-admin-only" style="color:var(--red);border-color:#e53e3e66" onclick="invDelete('${v.id}')">🗑️ حذف</button>
+    </div>`;
+}
+
+// ── تایید / برگشت / ویرایش / حذف (Update + Delete) ──
+function invApprove(id) {
+  if (!requireAdmin()) return;
+  const v = _invList().find(x => x.id === id);
+  if (!v) return;
+  v.status = 'approved';           // مهر فقط از روی همین مقدار رندر می‌شود
+  v.approved_at = new Date().toISOString();
+  save();
+  renderInvoices(); invRenderList();
+  if (_invDetailId === id) invRenderDetail();
+  showToast('✅ فاکتور شماره ' + n2fa(v.invoice_number) + ' تایید شد — مهر «تانک تیل یعقوبی» ثبت شد', '#38a169');
+}
+function invRevert(id) {
+  if (!requireAdmin()) return;
+  const v = _invList().find(x => x.id === id);
+  if (!v) return;
+  v.status = 'pending';            // مهر خودکار حذف می‌شود (رندر داینامیک از status)
+  delete v.approved_at;
+  save();
+  renderInvoices(); invRenderList();
+  if (_invDetailId === id) invRenderDetail();
+  showToast('↩️ فاکتور به صف تایید برگشت — مهر برداشته شد', '#d97706');
+}
+function invSaveEdits(id) {
+  if (!requireAdmin()) return;
+  const v = _invList().find(x => x.id === id);
+  if (!v) return;
+  const g = i => document.getElementById(i);
+  if (g('invd-name'))    v.customer_name  = (g('invd-name').value || '').trim();
+  if (g('invd-fuel'))    v.fuel_type      = g('invd-fuel').value === 'diesel' ? 'diesel' : 'petrol';
+  if (g('invd-price'))   v.price_per_liter = Math.max(0, parseFloat(g('invd-price').value) || 0);
+  if (g('invd-liters'))  v.liters          = Math.max(0, parseFloat(g('invd-liters').value) || 0);
+  if (g('invd-vehicle')) v.vehicle_type   = (g('invd-vehicle').value || '').trim();
+  if (g('invd-phone'))   v.phone          = (g('invd-phone').value || '').trim();
+  save();
+  renderInvoices(); invRenderList(); invRenderDetail();
+  showToast('💾 تغییرات فاکتور ذخیره شد', '#38a169');
+}
+function invDelete(id) {
+  if (!requireAdmin()) return;
+  const v = _invList().find(x => x.id === id);
+  if (!v) return;
+  if (!confirm('فاکتور شماره ' + n2fa(v.invoice_number) + ' (' + (v.customer_name || '—') + ') حذف شود؟')) return;
+  DB.invoices = _invList().filter(x => x.id !== id);
+  save();
+  renderInvoices(); invRenderList();
+  if (_invDetailId === id) invCloseDetail();
+  showToast('🗑️ فاکتور حذف شد', '#e53e3e');
+}
+
+// ── چاپ / PDF — مهر فقط اگر approved باشد داخل سند می‌آید ──
+function invPrint(id) {
+  const v = _invList().find(x => x.id === id);
+  if (!v) return;
+  const stamp = v.status === 'approved'
+    ? `<div style="position:absolute;bottom:26px;right:34px;width:150px;height:150px;transform:rotate(-12deg);opacity:.9;pointer-events:none">
+         <div style="position:absolute;inset:0;border:4px solid #1d5bd8;border-radius:50%"></div>
+         <div style="position:absolute;inset:11px;border:2px dashed #1d5bd8;border-radius:50%"></div>
+         <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#1d5bd8;text-align:center">
+           <span style="font-size:11px;letter-spacing:4px">★ ★ ★</span>
+           <span style="font-size:19px;font-weight:900;line-height:1.35">تانک تیل<br>یعقوبی</span>
+           <span style="font-size:9px;font-weight:800;letter-spacing:3px;opacity:.85">تایید شد</span>
+         </div>
+       </div>`
+    : '';
+  const html = `<!DOCTYPE html>
+<html lang="fa" dir="rtl"><head><meta charset="UTF-8">
+<title>فاکتور ${v.invoice_number} — پمپ یعقوبی</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Vazirmatn',sans-serif;background:#f3f4f6;color:#1a202c;padding:26px;display:flex;justify-content:center}
+.paper{position:relative;background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.08);width:100%;max-width:640px;padding:30px 30px 190px;overflow:hidden}
+h1{text-align:center;font-size:1.5rem;font-weight:900;color:#c07700;border-bottom:3px solid #c07700;padding-bottom:12px;margin-bottom:6px}
+.sub{text-align:center;font-size:.72rem;color:#718096;margin-bottom:20px}
+.row{display:flex;justify-content:space-between;gap:10px;padding:10px 14px;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:8px;font-size:.9rem}
+.row .k{color:#718096;font-weight:700}.row .v{font-weight:900}
+.row.hl{background:#fffbeb;border-color:#f6ce8b}.row.hl .v{color:#c07700;font-size:1.05rem}
+.footer{margin-top:20px;text-align:center;font-size:.65rem;color:#a0aec0;border-top:1px solid #e2e8f0;padding-top:10px}
+@media print{body{background:#fff;padding:0}.paper{box-shadow:none;border:none;max-width:100%}@page{margin:1cm;size:A4}}
+</style></head><body>
+<div class="paper">
+  <h1>⛽ فاکتور پمپ یعقوبی</h1>
+  <div class="sub">فاکتور رسمی فروش تیل</div>
+  <div class="row"><span class="k">🔢 شماره فاکتور</span><span class="v">${n2fa(v.invoice_number)}</span></div>
+  <div class="row"><span class="k">📅 تاریخ ثبت</span><span class="v">${escFa(v.date_sh || '') || '—'}</span></div>
+  <div class="row"><span class="k">👤 نام مشتری</span><span class="v">${escFa(v.customer_name) || '—'}</span></div>
+  <div class="row"><span class="k">⛽ نوع تیل</span><span class="v">${_invFuelLabel(v.fuel_type)}</span></div>
+  <div class="row"><span class="k">💰 فی خرید هر لیتر</span><span class="v">${n2fa(v.price_per_liter)} افغانی</span></div>
+  <div class="row"><span class="k">🛢️ مقدار خرید</span><span class="v">${n2fa(v.liters)} لیتر</span></div>
+  <div class="row hl"><span class="k">🧮 جمع کل</span><span class="v">${n2fa(Math.round(_invTotal(v) * 100) / 100)} افغانی</span></div>
+  <div class="row"><span class="k">🚗 نوع ماشین</span><span class="v">${escFa(v.vehicle_type) || '—'}</span></div>
+  <div class="row"><span class="k">📞 شماره تماس</span><span class="v" style="direction:ltr">${escFa(v.phone) || '—'}</span></div>
+  ${stamp}
+  <div class="footer">پمپ یعقوبی — این فاکتور به صورت خودکار تولید شده است</div>
+</div>
+<script>window.onload=function(){window.print();}<\/script>
+</body></html>`;
+  const w = window.open('', '_blank', 'width=760,height=850');
+  if (w) { w.document.write(html); w.document.close(); }
+  else showToast('مرورگر پنجره را مسدود کرد. اجازه popup بدهید', '#e53e3e');
+}
+
+/* ── ضد باگ (۲): نگهبان سراسری خطاها ──
+   هر خطای جاوااسکریپت یا Promise جواب‌نگرفته، به‌جای شکستن بی‌صدای صفحه:
+   ۱) در localStorage (pumpErrLog، ۳۰ مورد آخر) با زمان و محل ذخیره می‌شود تا
+      برنامه‌نویس بتواند از کنسول با pumpShowErrors() بخواند؛
+   ۲) حداکثر هر ۳۰ ثانیه یک‌بار یک اعلان کوچک به کاربر نشان می‌دهد؛
+   برنامه به کارش ادامه می‌دهد. */
+(function () {
+  let _lastErrToast = 0;
+  function logErr(kind, msg, src, line) {
+    try {
+      const log = JSON.parse(localStorage.getItem('pumpErrLog') || '[]');
+      log.push({ t: new Date().toISOString(), kind, msg: String(msg).slice(0, 300), src: String(src || '').slice(0, 120), line: line || 0, v: (typeof APP_VERSION !== 'undefined' ? APP_VERSION : '') });
+      while (log.length > 30) log.shift();
+      localStorage.setItem('pumpErrLog', JSON.stringify(log));
+    } catch (e) {}
+    const now = Date.now();
+    if (now - _lastErrToast > 30000) {
+      _lastErrToast = now;
+      try { showToast('⚠️ یک خطای فنی ثبت شد — برنامه به کار ادامه می‌دهد', '#d97706'); } catch (e) {}
+    }
+  }
+  window.addEventListener('error', function (e) {
+    // خطای بارگذاری منابع خارجی (CDN آفلاین) خطای برنامه نیست — رد شود
+    if (e && e.target && (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK' || e.target.tagName === 'IMG')) return;
+    logErr('error', (e && e.message) || 'unknown', e && e.filename, e && e.lineno);
+  }, true);
+  window.addEventListener('unhandledrejection', function (e) {
+    let m = 'promise';
+    try { m = (e.reason && (e.reason.message || String(e.reason))) || 'promise'; } catch (er) {}
+    logErr('promise', m, '', 0);
+  });
+  // برای برنامه‌نویس: دیدن و پاک کردن گزارش خطاها از کنسول
+  window.pumpShowErrors = function () { try { return JSON.parse(localStorage.getItem('pumpErrLog') || '[]'); } catch (e) { return []; } };
+  window.pumpClearErrors = function () { try { localStorage.removeItem('pumpErrLog'); } catch (e) {} return 'پاک شد'; };
+})();
+
+// ── اتصال به چرخهٔ برنامه: باز شدن بخش + به‌روز شدن بعد از sync سرور ──
+(function () {
+  const _origShow2 = window.showSection;
+  if (typeof _origShow2 === 'function') {
+    window.showSection = function (id, btn) {
+      const r = _origShow2.apply(this, arguments);
+      if (id === 'invoices') { try { renderInvoices(); } catch (e) {} }
+      return r;
+    };
+  }
+  const _origUpdateAll = window.updateAll;
+  if (typeof _origUpdateAll === 'function') {
+    window.updateAll = function () {
+      const r = _origUpdateAll.apply(this, arguments);
+      // اگر بخش فاکتورها یا لیستش باز است، بعد از هر تغییر/دریافت از سرور تازه شود
+      try {
+        const sec = document.getElementById('sec-invoices');
+        if (sec && sec.classList.contains('visible')) renderInvoices();
+        const ov = document.getElementById('invListOverlay');
+        if (ov && ov.classList.contains('open')) invRenderList();
+      } catch (e) {}
+      return r;
+    };
+  }
+  try { _invSelfCheck(); } catch (e) {}
+  try { _invRouteFromHash(); } catch (e) {}
 })();
 </script>
 
