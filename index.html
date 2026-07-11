@@ -7503,7 +7503,15 @@ function _calcKeyHandler(e) {
 }
 function toggleCalc() {
   const p = document.getElementById('calcPanel');
-  if (p) p.classList.toggle('open');
+  if (p) {
+    p.classList.toggle('open');
+    // با بسته شدن، هر جابه‌جایی/تغییر اندازهٔ دستی پاک شود تا دفعهٔ بعد
+    // پنل دوباره سر جای استانداردش (لنگرِ پایین-چپ) باز شود
+    if (!p.classList.contains('open')) {
+      p.style.left = ''; p.style.top = ''; p.style.right = ''; p.style.bottom = '';
+      p.style.width = ''; p.style.height = '';
+    }
+  }
   if (!_calcKbAttached) {
     document.addEventListener('keydown', _calcKeyHandler);
     _calcKbAttached = true;
@@ -7582,24 +7590,31 @@ function _initCalcDrag() {
   const panel = document.getElementById('calcPanel');
   const head = document.getElementById('calcHead');
   if (!panel || !head) return;
-  let ox = 0, oy = 0, dragging = false;
+  // جابه‌جایی فقط بعد از کشیدنِ واقعی (بیش از ۶px) شروع می‌شود — قبلاً همان لحظهٔ
+  // لمسِ سر پنل، لنگرِ bottom برداشته می‌شد و با هر تپِ ساده پنل از جای استانداردش
+  // جدا می‌ماند و با باز/بسته شدن کیبورد یا تغییر صفحه، پایین‌تر دیده می‌شد.
+  let ox = 0, oy = 0, sx = 0, sy = 0, pending = false, dragging = false;
   head.addEventListener('pointerdown', e => {
     if (e.target && e.target.closest && e.target.closest('#calcClose,#calcSize')) return;
-    dragging = true;
+    pending = true; dragging = false;
     const r = panel.getBoundingClientRect();
+    sx = e.clientX; sy = e.clientY;
     ox = e.clientX - r.left; oy = e.clientY - r.top;
-    panel.style.bottom = 'auto'; panel.style.right = 'auto';
-    panel.style.top = r.top + 'px'; panel.style.left = r.left + 'px';
     try { head.setPointerCapture(e.pointerId); } catch (_) {}
   });
   head.addEventListener('pointermove', e => {
-    if (!dragging) return;
+    if (!pending) return;
+    if (!dragging) {
+      if (Math.abs(e.clientX - sx) < 6 && Math.abs(e.clientY - sy) < 6) return; // هنوز تپ است
+      dragging = true;
+      panel.style.bottom = 'auto'; panel.style.right = 'auto';
+    }
     let nx = e.clientX - ox, ny = e.clientY - oy;
     nx = Math.max(0, Math.min(window.innerWidth - 56, nx));
     ny = Math.max(0, Math.min(window.innerHeight - 56, ny));
     panel.style.left = nx + 'px'; panel.style.top = ny + 'px';
   });
-  head.addEventListener('pointerup', () => { dragging = false; });
+  head.addEventListener('pointerup', () => { pending = false; dragging = false; });
 }
 
 // ========== NAV ==========
@@ -15879,6 +15894,11 @@ function toggleRobot() {
   const opening = !p.classList.contains('open');
   p.classList.toggle('open');
   if (opening) { rbShowTab(_rbTab || 'qa'); _chatInitListeners(); }
+  else {
+    // با بسته شدن، جابه‌جایی/تغییر اندازهٔ دستی پاک شود — باز شدنِ بعدی سر جای استاندارد
+    p.style.left = ''; p.style.top = ''; p.style.right = ''; p.style.bottom = '';
+    p.style.width = ''; p.style.height = '';
+  }
 }
 function toggleRobotSize() {
   const p = document.getElementById('robotPanel');
@@ -16759,24 +16779,29 @@ function _initRobotDrag() {
   const panel = document.getElementById('robotPanel');
   const head = document.getElementById('robotHead');
   if (!panel || !head) return;
-  let ox = 0, oy = 0, dragging = false;
+  // مثل ماشین‌حساب: تپ ساده روی سر پنل نباید لنگر پایین را بردارد — فقط کشیدن واقعی
+  let ox = 0, oy = 0, sx = 0, sy = 0, pending = false, dragging = false;
   head.addEventListener('pointerdown', e => {
     if (e.target.closest && e.target.closest('button')) return;
-    dragging = true;
+    pending = true; dragging = false;
     const r = panel.getBoundingClientRect();
+    sx = e.clientX; sy = e.clientY;
     ox = e.clientX - r.left; oy = e.clientY - r.top;
-    panel.style.bottom = 'auto'; panel.style.right = 'auto';
-    panel.style.top = r.top + 'px'; panel.style.left = r.left + 'px';
     try { head.setPointerCapture(e.pointerId); } catch (_) {}
   });
   head.addEventListener('pointermove', e => {
-    if (!dragging) return;
+    if (!pending) return;
+    if (!dragging) {
+      if (Math.abs(e.clientX - sx) < 6 && Math.abs(e.clientY - sy) < 6) return;
+      dragging = true;
+      panel.style.bottom = 'auto'; panel.style.right = 'auto';
+    }
     let nx = e.clientX - ox, ny = e.clientY - oy;
     nx = Math.max(0, Math.min(window.innerWidth - 56, nx));
     ny = Math.max(0, Math.min(window.innerHeight - 56, ny));
     panel.style.left = nx + 'px'; panel.style.top = ny + 'px';
   });
-  head.addEventListener('pointerup', () => { dragging = false; });
+  head.addEventListener('pointerup', () => { pending = false; dragging = false; });
 }
 function _makeResizable(id) {
   const panel = document.getElementById(id);
@@ -16786,12 +16811,22 @@ function _makeResizable(id) {
       e.preventDefault(); e.stopPropagation();
       const dir = h.dataset.rz || 'br';
       const r = panel.getBoundingClientRect();
-      panel.style.left = r.left + 'px'; panel.style.top = r.top + 'px';
-      panel.style.right = 'auto'; panel.style.bottom = 'auto';
       const sx = e.clientX, sy = e.clientY;
       const minW = 240, minH = 320;
+      // باگ قبلی: دستگیره‌های نامرئی گوشه‌ها روی کلیدها (مثلاً «=» و «←» ماشین‌حساب
+      // در گوشهٔ پایین-چپ) نشسته بودند و هر «تپ» ساده — که همیشه چند پیکسل لغزش
+      // انگشت دارد — پنل را کمی پایین/چپ/راست می‌کشید و این جابه‌جایی با هر کلیک
+      // جمع می‌شد. حالا تغییر اندازه فقط بعد از کشیدنِ واقعی (بیش از ۷px) شروع
+      // می‌شود و تپِ ساده، کلیک را به همان کلیدِ زیر دستگیره می‌رساند.
+      let started = false;
       function move(ev) {
         const dx = ev.clientX - sx, dy = ev.clientY - sy;
+        if (!started) {
+          if (Math.abs(dx) < 7 && Math.abs(dy) < 7) return; // هنوز تپ است، نه کشیدن
+          started = true;
+          panel.style.left = r.left + 'px'; panel.style.top = r.top + 'px';
+          panel.style.right = 'auto'; panel.style.bottom = 'auto';
+        }
         let W = r.width, H = r.height, L = r.left, T = r.top;
         if (dir.indexOf('r') > -1) W = r.width + dx;
         if (dir.indexOf('l') > -1) W = r.width - dx;
@@ -16804,7 +16839,20 @@ function _makeResizable(id) {
         panel.style.width = W + 'px'; panel.style.height = H + 'px';
         panel.style.left = Math.max(0, L) + 'px'; panel.style.top = Math.max(0, T) + 'px';
       }
-      function up() { document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); }
+      function up(ev) {
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', up);
+        if (!started && ev) {
+          // تپ ساده بود — کلیک را به عنصر زیر دستگیره (کلید ماشین‌حساب/دکمه) برسان
+          try {
+            h.style.pointerEvents = 'none';
+            const under = document.elementFromPoint(ev.clientX, ev.clientY);
+            h.style.pointerEvents = '';
+            const btn = under && under.closest ? under.closest('button,[onclick]') : null;
+            if (btn && btn.click) btn.click();
+          } catch (er) { try { h.style.pointerEvents = ''; } catch (_) {} }
+        }
+      }
       document.addEventListener('pointermove', move);
       document.addEventListener('pointerup', up);
     });
@@ -17129,7 +17177,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.8.1';
+const APP_VERSION = '2.8.2';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -20007,33 +20055,66 @@ function invDelete(id) {
   showToast('🗑️ فاکتور حذف شد', '#e53e3e');
 }
 
-// ── چاپ / PDF — دقیقاً همان برگهٔ فاکتور (قاب، نازل، واترمارک)؛ مهر فقط اگر approved ──
+// ── چاپ / PDF — دو نسخهٔ همان برگهٔ فاکتور (نسخهٔ مشتری + نسخهٔ پمپ) در یک صفحهٔ A4 ──
 function invPrint(id) {
   const v = _invList().find(x => x.id === id);
   if (!v) return;
   // همان CSS و اسپرایت SVG صفحهٔ اصلی به سند چاپ می‌رود تا ظاهر یکسان بماند
   const css = (document.getElementById('invoice-styles') || {}).textContent || '';
   const sprite = (document.getElementById('invp-sprite') || {}).outerHTML || '';
+  const paper = _invPaperHtml(v);
+  const copy = label => `<div class="sheet"><div class="copy-label">${label}</div>${paper}</div>`;
   const html = `<!DOCTYPE html>
 <html lang="fa" dir="rtl"><head><meta charset="UTF-8">
 <title>فاکتور ${v.invoice_number} — پمپ یعقوبی</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;800;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Vazirmatn',sans-serif;background:#eef1f6;padding:24px;display:flex;justify-content:center}
-.print-wrap{width:100%;max-width:680px}
+body{font-family:'Vazirmatn',sans-serif;background:#eef1f6;padding:20px;display:flex;justify-content:center}
+.print-wrap{width:100%;max-width:660px}
 ${css}
-.footer{margin-top:12px;text-align:center;font-size:.65rem;color:#94a3b8}
-@media print{body{background:#fff;padding:0}.invp{box-shadow:none}@page{margin:.8cm;size:A4}}
+/* ── نسخهٔ فشرده برای چاپ: دو فاکتور در یک برگهٔ A4 جا می‌شود ── */
+.invp{padding:7px}
+.invp-frame{padding:10px 14px 106px}
+.invp-frame::before{inset:4px}
+.invp-corner{width:24px;height:24px}
+.invp-nozzle{width:44px;height:44px;top:12px;left:14px}
+.invp-title{font-size:1.18rem;margin:0}
+.invp-sub{font-size:.58rem;letter-spacing:.6px}
+.invp-wave{height:16px;margin:5px auto 8px}
+.invp-meta{gap:5px;margin-bottom:8px}
+.invp-meta-line{font-size:.76rem}
+.invp-meta-line .k .ico{width:15px;height:15px}
+.invp-badge{padding:2px 9px;font-size:.76rem;border-width:1.3px}
+.invp-grid{gap:7px;margin-bottom:8px;grid-template-columns:1fr 1fr}
+.invp-row{padding:5px 10px;border-radius:8px;gap:7px}
+.invp-row .ico{width:17px;height:17px}
+.invp-row .k{font-size:.68rem}
+.invp-row .v,.invp-in{font-size:.8rem}
+.invp-total{padding:6px 12px;border-radius:9px;border-width:1.6px}
+.invp-total .k{font-size:.72rem}
+.invp-total .k .ico{width:16px;height:16px}
+.invp-total .tv{font-size:.95rem}
+.invp-stampbox{width:92px;height:92px;bottom:11px;right:13px}
+.invp-stamp-ph{font-size:.56rem}
+.invp-station{width:150px;bottom:9px;left:11px}
+.sheet{position:relative}
+.copy-label{text-align:center;font-size:.62rem;font-weight:900;color:#12419c;background:#eef4ff;border:1.3px solid #1d5bd8;border-radius:999px;padding:2px 14px;width:fit-content;margin:0 auto 5px}
+.cut-line{display:flex;align-items:center;gap:8px;color:#94a3b8;margin:9px 0;font-size:.7rem}
+.cut-line::before,.cut-line::after{content:"";flex:1;border-top:2px dashed #b6c2d6}
+.footer{margin-top:8px;text-align:center;font-size:.6rem;color:#94a3b8}
+@media print{body{background:#fff;padding:0}.invp{box-shadow:none}.sheet{page-break-inside:avoid}@page{margin:.7cm;size:A4}}
 </style></head><body>
 <div class="print-wrap">
 ${sprite}
-${_invPaperHtml(v)}
+${copy('نسخهٔ مشتری')}
+<div class="cut-line">✂ محل برش</div>
+${copy('نسخهٔ پمپ')}
 <div class="footer">پمپ یعقوبی — این فاکتور به صورت خودکار تولید شده است</div>
 </div>
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
-  const w = window.open('', '_blank', 'width=760,height=880');
+  const w = window.open('', '_blank', 'width=760,height=980');
   if (w) { w.document.write(html); w.document.close(); }
   else showToast('مرورگر پنجره را مسدود کرد. اجازه popup بدهید', '#e53e3e');
 }
