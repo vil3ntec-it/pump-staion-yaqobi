@@ -1,7 +1,7 @@
 // سرویس‌ورکر پمپ یعقوبی — پوستهٔ برنامه (این صفحه + آیکون‌ها) را کش می‌کند تا
 // برنامه بعد از نصب، هم آنلاین و هم کاملاً آفلاین باز شود. نسخهٔ کش را هر بار
 // که APP_VERSION در index.html عوض می‌شود، این‌جا هم عوض کنید تا کش کهنه پاک شود.
-const CACHE_NAME = 'pump-yaqobi-shell-v2.1.0';
+const CACHE_NAME = 'pump-yaqobi-shell-v2.1.1';
 const APP_SHELL = [
   './',
   './index.html',
@@ -41,9 +41,12 @@ self.addEventListener('fetch', event => {
 
   const isAppShellPage = req.mode === 'navigate' || url.pathname.endsWith('/index.html') || url.pathname.endsWith('/');
   if (isAppShellPage) {
-    // صفحهٔ اصلی: اول شبکه (تا همیشه جدیدترین نسخه بیاید)، اگر آفلاین بود از کش
+    // صفحهٔ اصلی: اول شبکه (تا همیشه جدیدترین نسخه بیاید)، اگر آفلاین بود از کش.
+    // cache:'reload' لازم است — بدون آن، fetch ممکن است پاسخِ کهنهٔ کشِ HTTP خودِ
+    // مرورگر را برگرداند و اصلاً به شبکه نرود؛ همین باعث می‌شد میان‌بر/PWA نصب‌شده
+    // بعد از هر آپدیت، نسخهٔ کهنه را نشان بدهد.
     event.respondWith(
-      fetch(req)
+      fetch(req.url, { cache: 'reload' })
         .then(res => {
           const copy = res.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(req, copy)).catch(() => {});

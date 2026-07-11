@@ -19,7 +19,20 @@
 (function(){
   if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
   window.addEventListener('load', function(){
-    navigator.serviceWorker.register('sw.js').catch(function(){});
+    navigator.serviceWorker.register('sw.js').then(function(reg){
+      // هر بار برنامه باز می‌شود (میان‌بر روی صفحهٔ اصلی یا تب مرورگر)، سرویس‌ورکر
+      // چک شود که نسخهٔ تازه‌تری آمده یا نه — وگرنه ممکن است مرورگر تا ۲۴ ساعت
+      // خودش چک نکند و همیشه نسخهٔ کهنه نشان بدهد
+      try { reg.update(); } catch (e) {}
+      // وقتی سرویس‌ورکر تازه کنترل صفحه را گرفت، یک‌بار خودکار رفرش شود تا
+      // کاربر مجبور نباشد خودش دستی رفرش/پاک‌کردن‌کش کند
+      var reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function(){
+        if (reloaded) return;
+        reloaded = true;
+        window.location.reload();
+      });
+    }).catch(function(){});
   });
 })();
 </script>
