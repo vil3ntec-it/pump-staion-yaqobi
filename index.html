@@ -5757,17 +5757,22 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
             <th>فی لیتر</th>
             <th>مقدار بردگی</th>
             <th>رسید</th>
-            <th>الباقی</th>
             <th>حذف</th>
           </tr></thead>
           <tbody id="pm-body"></tbody>
+          <!-- الباقی دیگر ستون جداگانه‌ای در هر ردیف نیست — طبق خواستهٔ کاربر فقط یک‌بار،
+               به‌صورت جمع کل، در همین ردیفِ پایانی جدول دیده می‌شود -->
           <tfoot class="xls-foot"><tr>
             <td colspan="5" style="padding:8px 7px">جمع</td>
             <td class="xls-calc" id="pm-ft-fuel">0</td>
             <td class="xls-calc" id="pm-ft-priceper">—</td>
             <td class="xls-calc" id="pm-ft-bardagi">0</td>
             <td class="xls-calc" id="pm-ft-rasid">0</td>
-            <td class="xls-calc" id="pm-ft-albaqi">0</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td colspan="5" style="padding:8px 7px;font-weight:800">جمع الباقی (بردگی − رسید)</td>
+            <td class="xls-calc" id="pm-ft-albaqi" colspan="4" style="font-weight:800">0</td>
             <td></td>
           </tr></tfoot>
         </table>
@@ -9029,11 +9034,11 @@ function renderPersons(type) {
       <button class="person-del" onclick="event.stopPropagation();deletePerson('${type}','${p.id}')">✕</button>
       ${st==='low' ? `<span class="pstatus-dot low" title="${who} کم مانده"></span>` : st==='out' ? `<span class="pstatus-dot out" title="${who} تمام شده"></span>` : ''}
       <div class="pname">${escFa(p.name)}</div>
-      <div class="pdebt ${albaqi<=0?'clear':''}">${albaqi<=0 ? '✅ تسویه' : 'الباقی: '+n2fa(-albaqi)+' افغانی'}</div>
+      <div class="pdebt ${albaqi<=0?'clear':''}">${albaqi<=0 ? '✅ تسویه' : 'الباقی: '+n2fa(albaqi)+' افغانی'}</div>
       ${st==='low' ? `<div class="pstatus-label low">⚠️ ${who} کم مانده</div>` : st==='out' ? `<div class="pstatus-label out">⛔ ${who} تمام شده</div>` : ''}
       <div style="display:flex;gap:10px;margin-top:10px;font-size:0.95rem;font-weight:700;justify-content:center">
-        <span style="color:var(--green)">⛽ ${n2fa(-pBal)}</span>
-        <span style="color:#b7791f">🟤 ${n2fa(-dBal)}</span>
+        <span style="color:var(--green)">⛽ ${n2fa(pBal)}</span>
+        <span style="color:#b7791f">🟤 ${n2fa(dBal)}</span>
       </div>
       <button onclick="event.stopPropagation();showPersonQR('${type}','${p.id}')" style="margin-top:10px;width:100%;padding:6px 8px;border-radius:7px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-size:0.75rem;font-weight:700;cursor:pointer">📲 کیو‌آر کد</button>
     `;
@@ -9279,7 +9284,6 @@ function renderPersonRows(person) {
       <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'priceper',this.value)"></td>
       <td><input class="xls-in pm-bardagi-cell" type="number" value="${parseFloat(bardagi)||''}" placeholder="0" style="color:var(--accent);font-weight:700" oninput="calcPersonRow('${person.id}',${i},'bardagi',this.value)"></td>
       <td><input class="xls-in" type="number" value="${r.rasid||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasid',this.value)"></td>
-      <td><input class="xls-in pm-albaqi-cell" type="number" value="${-parseFloat(albaqi)}" placeholder="0" style="color:${parseFloat(albaqi)>0?'var(--red)':'var(--green)'}" readonly></td>
       <td><button class="del-btn" onclick="deletePersonRow('${person.id}',${i})">🗑️</button></td>
     `;
     tbody.appendChild(tr);
@@ -9287,7 +9291,7 @@ function renderPersonRows(person) {
   if (shown === 0) {
     const tr = document.createElement('tr');
     const label = currentPersonFilter === 'petrol' ? '⛽ هیچ ردیف پطرولی ثبت نشده' : (currentPersonFilter === 'diesel' ? '🟤 هیچ ردیف دیزلی ثبت نشده' : 'هیچ ردیفی ثبت نشده');
-    tr.innerHTML = `<td colspan="${showFtCol?11:10}" style="text-align:center;padding:16px;color:var(--muted);font-size:0.85rem">${label}</td>`;
+    tr.innerHTML = `<td colspan="${showFtCol?10:9}" style="text-align:center;padding:16px;color:var(--muted);font-size:0.85rem">${label}</td>`;
     tbody.appendChild(tr);
   }
   _renderHistoryPanel(person);
@@ -9658,12 +9662,7 @@ function _updatePersonRowCells(person, idx, r) {
   const row = tbody.querySelector('tr[data-idx="' + idx + '"]');
   if (!row) return;
   const bardagiCell = row.querySelector('.pm-bardagi-cell');
-  const albaqiCell  = row.querySelector('.pm-albaqi-cell');
   if (bardagiCell && document.activeElement !== bardagiCell) bardagiCell.value = r.bardagi || 0;
-  if (albaqiCell) {
-    albaqiCell.value = -(r.albaqi || 0);
-    albaqiCell.style.color = (r.albaqi||0) > 0 ? 'var(--red)' : 'var(--green)';
-  }
 }
 function _curPerson() {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
@@ -9712,9 +9711,10 @@ function _updatePersonTotals(person) {
   const bordD = money ? t.diesel.bardagi : t.diesel.fuel;
   const commP = rasidP * pct/100, commD = rasidD * pct/100;
   const rnd = x => Math.round(x*100)/100;
-  // رسیدهای داخل جدول (پول آورده‌شده) هم در حالت پولی از الباقی کم می‌شود
-  const remP = rasidP + (money ? t.petrol.rasid : 0) - bordP - commP,
-        remD = rasidD + (money ? t.diesel.rasid : 0) - bordD - commD;
+  // الباقی = بردگی − رسید (مثبت یعنی طرف به ما بدهکار است) — رسیدهای داخل جدول
+  // (پول آورده‌شده) هم در حالت پولی از بردگی کم می‌شوند
+  const remP = bordP + commP - rasidP - (money ? t.petrol.rasid : 0),
+        remD = bordD + commD - rasidD - (money ? t.diesel.rasid : 0);
   // برچسب‌ها بر اساس حالت
   setL('pm-p-rasid-l', money ? 'مقدار رسید پول' : 'مقدار رسید تیل');
   setL('pm-d-rasid-l', money ? 'مقدار رسید پول' : 'مقدار رسید تیل');
@@ -9738,7 +9738,7 @@ function _updatePersonTotals(person) {
   setV('pm-ft-fuel', n2fa(t.all.fuel));
   setV('pm-ft-bardagi', n2fa(t.all.bardagi));
   setV('pm-ft-rasid', n2fa(t.all.rasid));
-  setV('pm-ft-albaqi', n2fa(-t.all.albaqi));
+  setV('pm-ft-albaqi', n2fa(t.all.albaqi));
 }
 function newPersonTable() {
   const person = _curPerson(); if (!person) return;
@@ -9834,8 +9834,8 @@ function _renderHistoryPanel(person) {
     const bordP  = hMoney ? st.petrol.bardagi : st.petrol.fuel;
     const bordD  = hMoney ? st.diesel.bardagi : st.diesel.fuel;
     const commP = rasidP * pct / 100, commD = rasidD * pct / 100;
-    const remP  = rasidP + (hMoney ? st.petrol.rasid : 0) - bordP - commP,
-          remD  = rasidD + (hMoney ? st.diesel.rasid : 0) - bordD - commD;
+    const remP  = bordP + commP - rasidP - (hMoney ? st.petrol.rasid : 0),
+          remD  = bordD + commD - rasidD - (hMoney ? st.diesel.rasid : 0);
     // fuel summary with editable rasid
     const fuelHtml = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px;border-bottom:1px solid ${ac}33">
@@ -9861,8 +9861,8 @@ function _renderHistoryPanel(person) {
       <div style="padding:5px 12px;border-bottom:1px solid ${ac}22;display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--dark)">
         <span style="font-size:0.72rem;color:var(--muted);font-weight:700">فیصدی ٪:</span>
         <input type="number" value="${pct||''}" placeholder="0" style="width:60px;background:transparent;border:none;border-bottom:1px dashed var(--accent);text-align:center;font-size:0.82rem;font-weight:800;color:var(--accent);font-family:'Vazirmatn',sans-serif" oninput="updateHistoryPercent('${pid}','${h.id}',this.value)">
-        <span style="font-size:0.72rem;color:var(--muted)">جمع برد: <b style="color:var(--accent)">${n2fa(rnd(bordP+bordD))}${unit}</b></span>
-        <span style="font-size:0.72rem;color:var(--muted)">الباقی کل: <b style="color:var(--blue)">${n2fa(rnd(remP+remD))}${unit}</b></span>
+        <span style="font-size:0.72rem;color:var(--muted)">جمع برد (پطرول+دیزل): <b style="color:var(--accent)">${n2fa(rnd(bordP+bordD))}${hMoney?' افغانی':' لیتر'}</b></span>
+        <span style="font-size:0.72rem;color:var(--muted)">الباقی کل (پطرول+دیزل): <b style="color:var(--blue)">${n2fa(rnd(remP+remD))}${hMoney?' افغانی':' لیتر'}</b></span>
       </div>`;
     // فیلتر پطرول/دیزل این آرشیو — مثل سه دکمهٔ بالای جدول اصلی. اگر کاربر خودش
     // روی همین آرشیو فیلتر نزده باشد (h.viewFilter)، از نوعِ خودِ آرشیو (h.fuel —
@@ -9885,20 +9885,28 @@ function _renderHistoryPanel(person) {
         <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="0" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'priceper',this.value)"></td>
         <td><input class="xls-in pm-bardagi-cell" type="number" value="${parseFloat(bard.toFixed(0))||''}" placeholder="0" style="color:var(--accent);font-weight:700" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'bardagi',this.value)"></td>
         <td><input class="xls-in" type="number" value="${r.rasid||''}" placeholder="0" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'rasid',this.value)"></td>
-        <td><input class="xls-in pm-albaqi-cell" type="number" value="${-parseFloat(alb.toFixed(0))}" readonly style="color:${alb>0?'var(--red)':'var(--green)'}"></td>
         <td><button class="del-btn" onclick="deleteHistoryRow('${pid}','${h.id}',${ri})">🗑️</button></td>
       </tr>`;
     }).join('');
-    if (!rowsHtml) rowsHtml = `<tr><td colspan="10" style="text-align:center;padding:12px;color:var(--muted);font-size:0.82rem">${hFilter==='petrol'?'⛽ هیچ ردیف پطرولی ثبت نشده':(hFilter==='diesel'?'🟤 هیچ ردیف دیزلی ثبت نشده':'هیچ ردیفی ثبت نشده')}</td></tr>`;
+    if (!rowsHtml) rowsHtml = `<tr><td colspan="9" style="text-align:center;padding:12px;color:var(--muted);font-size:0.82rem">${hFilter==='petrol'?'⛽ هیچ ردیف پطرولی ثبت نشده':(hFilter==='diesel'?'🟤 هیچ ردیف دیزلی ثبت نشده':'هیچ ردیفی ثبت نشده')}</td></tr>`;
+    // الباقی دیگر ستون جداگانهٔ هر ردیف نیست — طبق خواستهٔ کاربر فقط یک‌بار، جمع کل
+    // این جدولِ آرشیوشده در پایینِ همان جدول دیده می‌شود (بالای جدول هم در کادرهای
+    // «حساب پطرول/دیزل» بالای همین بلوک هست)
+    const viewAlbaqi = viewRows.reduce((s, x) => s + ((x.r.byMoney ? (x.r.bardagi||0) : ((x.r.fuel||0)*(x.r.priceper||0))) - (x.r.rasid||0)), 0);
     const tableHtml = filterBarHtml + `
       <div class="xls-wrap" style="margin:8px 10px;border-radius:9px;overflow:hidden">
         <div style="overflow-x:auto">
           <table class="xls-tbl" style="min-width:580px">
             <thead><tr>
               <th style="min-width:24px">#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th>
-              <th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>الباقی</th><th>حذف</th>
+              <th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>حذف</th>
             </tr></thead>
             <tbody>${rowsHtml}</tbody>
+            <tfoot class="xls-foot"><tr>
+              <td colspan="6" style="padding:8px 7px;font-weight:800">جمع الباقی همین جدول (بردگی − رسید)</td>
+              <td class="xls-calc" colspan="2" style="font-weight:800;color:${viewAlbaqi>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(viewAlbaqi))}</td>
+              <td></td>
+            </tr></tfoot>
           </table>
         </div>
       </div>
@@ -9947,8 +9955,8 @@ function pdfPersonHistory(pid, hid) {
   const bordP = money ? st.petrol.bardagi : st.petrol.fuel;
   const bordD = money ? st.diesel.bardagi : st.diesel.fuel;
   const commP = rasidP*pct/100, commD = rasidD*pct/100;
-  const remP = rasidP + (money ? st.petrol.rasid : 0) - bordP - commP,
-        remD = rasidD + (money ? st.diesel.rasid : 0) - bordD - commD;
+  const remP = bordP + commP - rasidP - (money ? st.petrol.rasid : 0),
+        remD = bordD + commD - rasidD - (money ? st.diesel.rasid : 0);
   const archiveLabel = h.note ? h.note.split('\n')[0].substring(0,50) : '';
   const tableRows = rows.map((r,i) => {
     const bard = r.byMoney ? (r.bardagi||0) : ((r.fuel||0)*(r.priceper||0));
@@ -10059,7 +10067,12 @@ function calcHistoryRow(pid, hid, idx, field, value) {
 function addHistoryRow(pid, hid) {
   const person = _hPerson(pid); if (!person) return;
   const h = _hEntry(pid, hid); if (!h) return;
-  h.rows.push({ date: (typeof persianDate==='function'?persianDate():''), name:'', hawala:'', ftype:'petrol', fuel:0, priceper:0, bardagi:0, rasid:0, albaqi:0 });
+  // نوع تیلِ ردیف تازه باید همان فیلترِ فعالِ همین آرشیو باشد — وگرنه در «حساب
+  // جداگانه دیزل» ردیف تازه با ftype:'petrol' ساخته می‌شد و همان لحظه از دیدِ
+  // فیلترشده (که فقط دیزل را نشان می‌دهد) بیرون می‌افتاد و دکمه انگار کار نمی‌کرد
+  const activeFilter = h.viewFilter || h.fuel || currentPersonFilter || 'petrol';
+  const ftype = activeFilter === 'diesel' ? 'diesel' : 'petrol';
+  h.rows.push({ date: (typeof persianDate==='function'?persianDate():''), name:'', hawala:'', ftype, fuel:0, priceper:0, bardagi:0, rasid:0, albaqi:0 });
   save(); _renderHistoryPanel(person);
 }
 function deleteHistoryRow(pid, hid, idx) {
@@ -12398,8 +12411,8 @@ function pdfPerson() {
   const bordD = money ? t.diesel.bardagi : t.diesel.fuel;
   const commP = rasidP*pct/100, commD = rasidD*pct/100;
   const rnd = x => Math.round(x*100)/100;
-  const remP = rasidP + (money ? t.petrol.rasid : 0) - bordP - commP,
-        remD = rasidD + (money ? t.diesel.rasid : 0) - bordD - commD;
+  const remP = bordP + commP - rasidP - (money ? t.petrol.rasid : 0),
+        remD = bordD + commD - rasidD - (money ? t.diesel.rasid : 0);
   const rlabel = money ? 'مقدار رسید پول' : 'مقدار رسید تیل';
   const remlabel = money ? 'الباقی پول' : 'الباقی تیل';
   const showFtCol = filter === 'all';
@@ -12418,7 +12431,7 @@ function pdfPerson() {
       <td>${r.byMoney ? '—' : n2fa(r.priceper || 0)}</td>
       <td style="color:#c07700;font-weight:700">${n2fa(r.bardagi || 0)}</td>
       <td style="color:#276749;font-weight:700">${n2fa(r.rasid || 0)}</td>
-      <td style="color:${albaqiColor};font-weight:700">${n2fa(-(r.albaqi || 0))}</td>
+      <td style="color:${albaqiColor};font-weight:700">${n2fa(r.albaqi || 0)}</td>
     </tr>`;
   }).join('');
 
@@ -12525,7 +12538,7 @@ ${splitBoxesHtml}
     <td>—</td>
     <td>${n2fa(ft.bardagi)}</td>
     <td>${n2fa(ft.rasid)}</td>
-    <td>${n2fa(-ft.albaqi)}</td>
+    <td>${n2fa(ft.albaqi)}</td>
   </tr></tfoot>
 </table>
 ${(acct.note||'').trim() ? `<div class="note-box"><b>توضیحات:</b> ${escFa(acct.note).replace(/\n/g,'<br>')}</div>` : ''}
@@ -15089,14 +15102,14 @@ function _renderROViewer() {
     sumEl.innerHTML = `
       <div class="ro-sum-box"><div class="l">جمع بردگی</div><div class="v" style="color:var(--accent)">${n2fa(t.all.bardagi)} افغانی</div></div>
       <div class="ro-sum-box"><div class="l">جمع رسید پول</div><div class="v" style="color:var(--green)">${n2fa(t.all.rasid)} افغانی</div></div>
-      <div class="ro-sum-box"><div class="l">الباقی پول</div><div class="v" style="color:${t.all.albaqi>0?'var(--red)':'var(--green)'}">${n2fa(-t.all.albaqi)} افغانی</div></div>
+      <div class="ro-sum-box"><div class="l">الباقی پول</div><div class="v" style="color:${t.all.albaqi>0?'var(--red)':'var(--green)'}">${n2fa(t.all.albaqi)} افغانی</div></div>
     `;
   } else {
     sumEl.innerHTML = `
       <div class="ro-sum-box"><div class="l">جمع مقدار تیل</div><div class="v" style="color:var(--blue)">${n2fa(t.all.fuel)} ل</div></div>
       <div class="ro-sum-box"><div class="l">جمع بردگی</div><div class="v" style="color:var(--accent)">${n2fa(t.all.bardagi)} افغانی</div></div>
       <div class="ro-sum-box"><div class="l">جمع رسید</div><div class="v" style="color:var(--green)">${n2fa(t.all.rasid)} افغانی</div></div>
-      <div class="ro-sum-box"><div class="l">الباقی</div><div class="v" style="color:${t.all.albaqi>0?'var(--red)':'var(--green)'}">${n2fa(-t.all.albaqi)} افغانی</div></div>
+      <div class="ro-sum-box"><div class="l">الباقی</div><div class="v" style="color:${t.all.albaqi>0?'var(--red)':'var(--green)'}">${n2fa(t.all.albaqi)} افغانی</div></div>
     `;
   }
   // Table rows
@@ -15117,7 +15130,7 @@ function _renderROViewer() {
       <td>${showFuel ? n2fa(r.priceper||0) : '—'}</td>
       <td style="color:var(--accent)">${n2fa(r.bardagi||0)}</td>
       <td style="color:var(--green)">${n2fa(r.rasid||0)}</td>
-      <td style="color:${albaqiColor}">${n2fa(-(r.albaqi||0))}</td>
+      <td style="color:${albaqiColor}">${n2fa(r.albaqi||0)}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -15125,7 +15138,7 @@ function _renderROViewer() {
   document.getElementById('ro-ft-fuel').textContent    = isMoney ? '—' : n2fa(t.all.fuel) + ' ل';
   document.getElementById('ro-ft-bardagi').textContent = n2fa(t.all.bardagi);
   document.getElementById('ro-ft-rasid').textContent   = n2fa(t.all.rasid);
-  document.getElementById('ro-ft-albaqi').textContent  = n2fa(-t.all.albaqi);
+  document.getElementById('ro-ft-albaqi').textContent  = n2fa(t.all.albaqi);
 }
 function openROViewer(type, id) {
   const list = type === 'debt' ? DB.debtPersons : DB.noinvPersons;
@@ -15329,7 +15342,7 @@ function openStaffAccount(pid, subId) {
   let sum = `
     <div class="ro-sum-box"><div class="l">بردگی</div><div class="v" style="color:var(--accent)">${n2fa(t.all.bardagi)}</div></div>
     <div class="ro-sum-box"><div class="l">رسید</div><div class="v" style="color:var(--green)">${n2fa(t.all.rasid)}</div></div>
-    <div class="ro-sum-box"><div class="l">الباقی</div><div class="v" style="color:${t.all.albaqi > 0 ? 'var(--red)' : 'var(--green)'}">${t.all.albaqi <= 0 ? '✅ تسویه' : n2fa(-t.all.albaqi)}</div></div>`;
+    <div class="ro-sum-box"><div class="l">الباقی</div><div class="v" style="color:${t.all.albaqi > 0 ? 'var(--red)' : 'var(--green)'}">${t.all.albaqi <= 0 ? '✅ تسویه' : n2fa(t.all.albaqi)}</div></div>`;
   if (fl.hasP) sum += `<div class="ro-sum-box"><div class="l">⛽ باقی تیل پطرول</div><div class="v" style="color:var(--green)">${n2fa(Math.round(fl.petrol))} ل</div></div>`;
   if (fl.hasD) sum += `<div class="ro-sum-box"><div class="l">🟤 باقی تیل دیزل</div><div class="v" style="color:#b7791f">${n2fa(Math.round(fl.diesel))} ل</div></div>`;
   document.getElementById('sa-sum').innerHTML = sum;
@@ -15339,13 +15352,13 @@ function openStaffAccount(pid, subId) {
     <td>${r.date || '—'}</td>
     <td style="color:var(--accent)">${n2fa(r.bardagi || 0)}</td>
     <td style="color:var(--green)">${n2fa(r.rasid || 0)}</td>
-    <td style="color:${(r.albaqi || 0) > 0 ? 'var(--red)' : 'var(--green)'}">${n2fa(-(r.albaqi || 0))}</td>
+    <td style="color:${(r.albaqi || 0) > 0 ? 'var(--red)' : 'var(--green)'}">${n2fa(r.albaqi || 0)}</td>
   </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">هیچ ردیفی ثبت نشده</td></tr>';
   document.getElementById('sa-foot').innerHTML =
     `<td colspan="2" style="padding:12px 10px">جمع</td>` +
     `<td style="color:var(--accent);padding:12px 10px">${n2fa(t.all.bardagi)}</td>` +
     `<td style="color:var(--green);padding:12px 10px">${n2fa(t.all.rasid)}</td>` +
-    `<td style="color:${t.all.albaqi > 0 ? 'var(--red)' : 'var(--green)'};padding:12px 10px">${n2fa(-t.all.albaqi)}</td>`;
+    `<td style="color:${t.all.albaqi > 0 ? 'var(--red)' : 'var(--green)'};padding:12px 10px">${n2fa(t.all.albaqi)}</td>`;
   document.getElementById('staffAcctOverlay').classList.add('open');
 }
 function closeStaffAcct() {
@@ -16630,7 +16643,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.2.0';
+const APP_VERSION = '2.3.0';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -16986,7 +16999,7 @@ function _staffCard(p, sub) {
   const sums = `<div class="staff-mini-sums">
     <div class="ms"><div class="l">بردگی</div><div class="v" style="color:var(--accent)">${n2fa(t.all.bardagi)}</div></div>
     <div class="ms"><div class="l">رسید</div><div class="v" style="color:var(--green)">${n2fa(t.all.rasid)}</div></div>
-    <div class="ms"><div class="l">الباقی</div><div class="v" style="color:${albaqi > 0 ? 'var(--red)' : 'var(--green)'}">${albaqi <= 0 ? '✅' : n2fa(-albaqi)}</div></div>
+    <div class="ms"><div class="l">الباقی</div><div class="v" style="color:${albaqi > 0 ? 'var(--red)' : 'var(--green)'}">${albaqi <= 0 ? '✅' : n2fa(albaqi)}</div></div>
   </div>`;
   return `<div class="staff-card" onclick="openStaffAccount('${escFa(p.id)}','${sub ? escFa(String(sub.id)) : ''}')">
     <div class="nm"><span>${title}</span><span class="tp">${chip}</span></div>
@@ -17470,10 +17483,10 @@ function searchPerson(type, query) {
     card.innerHTML = `
       <button class="person-del" onclick="event.stopPropagation();deletePerson('${type}','${p.id}')">✕</button>
       <div class="pname">${escFa(p.name)}</div>
-      <div class="pdebt ${albaqi<=0?'clear':''}">${albaqi<=0 ? '✅ تسویه' : 'الباقی: '+n2fa(-albaqi)+' افغانی'}</div>
+      <div class="pdebt ${albaqi<=0?'clear':''}">${albaqi<=0 ? '✅ تسویه' : 'الباقی: '+n2fa(albaqi)+' افغانی'}</div>
       <div style="display:flex;gap:8px;margin-top:8px;font-size:0.88rem;font-weight:700;justify-content:center">
-        <span style="color:var(--green)">⛽ ${n2fa(-pBal)}</span>
-        <span style="color:#b7791f">🟤 ${n2fa(-dBal)}</span>
+        <span style="color:var(--green)">⛽ ${n2fa(pBal)}</span>
+        <span style="color:#b7791f">🟤 ${n2fa(dBal)}</span>
       </div>
       <button onclick="event.stopPropagation();showPersonQR('${type}','${p.id}')" style="margin-top:8px;width:100%;padding:5px 8px;border-radius:7px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-size:0.75rem;font-weight:700;cursor:pointer">📲 کیو‌آر کد</button>
     `;
@@ -17941,8 +17954,11 @@ document.addEventListener('click', function(e) {
     document.documentElement.style.setProperty('--kb-offset', kb + 'px');
   }
   sync();
+  // فقط resize لازم است — باز/بسته‌شدنِ کیبورد یعنی تغییرِ ارتفاعِ ویوپورت.
+  // گوش‌دادن به scroll هم قبلاً باعث می‌شد با هر اسکرولِ معمولی صفحه (مخصوصاً
+  // موبایل، وقتی نوار آدرس مرورگر پنهان/آشکار می‌شود) --kb-offset لحظه‌ای نوسان
+  // کند و دکمه‌های شناور (ماشین‌حساب/ربات) در وسط اسکرول بالا/پایین بپرند.
   vv.addEventListener('resize', sync);
-  vv.addEventListener('scroll', sync);
 })();
 </script>
 
