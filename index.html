@@ -459,6 +459,35 @@ body.light-mode #lsCalcBtn{background:rgba(255,255,255,.75);color:#b45309;border
 .cam-hint{font-size:0.72rem;color:var(--muted);line-height:1.9;margin-bottom:12px}
 body.viewer-mode .cam-admin{display:none !important}
 #camScanVideo{width:100%;max-height:55vh;border-radius:12px;background:#000;display:block}
+/* جداکنندهٔ تاریخ بین پیام‌ها (مثل واتساپ) */
+.ch-day{align-self:center;margin:4px 0}
+.ch-day span{display:inline-block;background:var(--dark);border:1px solid var(--border);color:var(--muted);font-size:0.66rem;font-weight:800;border-radius:999px;padding:3px 12px}
+/* ── حاضری و معاش کارمندان ── */
+.att-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:6px}
+.att-form .sm-field{margin:0}
+.att-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.att-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 14px}
+.att-card .at-nm{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:900;font-size:1rem;margin-bottom:6px}
+.att-chip{display:inline-block;background:var(--dark);border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:0.7rem;font-weight:800;color:var(--muted);margin:2px 0}
+.att-now-row{display:flex;gap:8px;margin:9px 0}
+.att-now-row button{flex:1;padding:9px 6px;border-radius:10px;border:none;font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.85rem;cursor:pointer}
+.att-in-btn{background:var(--green);color:#fff}
+.att-out-btn{background:var(--accent);color:#000}
+.att-tbl{width:100%;border-collapse:collapse;font-size:0.78rem;margin-top:6px}
+.att-tbl th{background:var(--dark);color:var(--muted);font-size:0.68rem;padding:6px 4px;border-bottom:1px solid var(--border)}
+.att-tbl td{padding:5px 4px;border-bottom:1px solid var(--border);text-align:center}
+.att-tbl input[type=time]{background:var(--dark);border:1px solid var(--border);border-radius:7px;color:var(--txt);font-family:'Vazirmatn',sans-serif;padding:3px 5px;font-size:0.76rem;width:86px}
+.att-sum{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:9px}
+.att-sum .as{background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:7px 4px;text-align:center}
+.att-sum .as .l{font-size:0.64rem;color:var(--muted);font-weight:700;margin-bottom:2px}
+.att-sum .as .v{font-size:0.9rem;font-weight:900}
+.att-pay{display:flex;align-items:center;gap:8px;margin-top:9px;flex-wrap:wrap;font-size:0.78rem}
+.att-pay .paid{color:var(--green);font-weight:900}
+.att-pay .unpaid{color:var(--red);font-weight:900}
+.att-pay button{padding:6px 12px;border-radius:8px;border:1px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.75rem;cursor:pointer}
+body.viewer-mode .att-admin{display:none !important}
+/* برچسب نسخهٔ برنامه */
+.app-version{font-size:0.64rem;color:var(--muted);font-weight:700;letter-spacing:.3px;white-space:nowrap}
 #calcHead{cursor:move;padding:11px 15px;background:var(--card);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:0.92rem;color:var(--accent);user-select:none;-webkit-user-select:none;touch-action:none}
 #calcClose{cursor:pointer;color:var(--muted);font-weight:900;font-size:1.05rem;padding:0 4px}
 #calcClose:hover{color:var(--red)}
@@ -3897,6 +3926,8 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
     <div class="ls-brand-icon">⛽</div>
     <div class="ls-brand-name" id="lsBrandName">پمپ یعقوبی</div>
     <div class="ls-brand-sub">© vil3ntec</div>
+    <div id="lsWeekday" style="margin-top:8px;font-size:0.82rem;font-weight:800;color:rgba(255,255,255,.75)"></div>
+    <div style="margin-top:4px"><span class="app-version" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:2px 12px;color:rgba(255,255,255,.7)"></span></div>
   </div>
   <div class="lock-box">
     <div style="font-size:1rem;font-weight:700;color:var(--accent);margin-bottom:16px">🔒 ورود به سیستم</div>
@@ -3944,6 +3975,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       </span>
       <span class="dn-thumb" aria-hidden="true"></span>
     </button>
+    <span class="app-version"></span>
     <span class="role-badge" id="roleBadge" style="background:var(--green)">🛡️ مدیر</span>
     <button class="lock-btn" id="adminUnlockBtn" onclick="promptAdminUnlock()" style="display:none;background:var(--green)">🔓 ورود مدیر</button>
     <button class="lock-btn" id="lockBtn" onclick="lockApp()">🔒 قفل</button>
@@ -4191,6 +4223,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
   <button class="nav-btn" onclick="showSection('noinv',this)"><svg class="nav-ic ia-tilt"><use href="#ic-barrel"/></svg> شرکت ها تیل</button>
   <button class="nav-btn" onclick="showSection('storage',this)"><svg class="nav-ic ia-pulse"><use href="#ic-storage"/></svg> مخزن</button>
   <button class="nav-btn" onclick="showSection('cameras',this)"><svg class="nav-ic ia-pulse"><use href="#ic-cctv"/></svg> دوربین‌ها</button>
+  <button class="nav-btn" onclick="showSection('attendance',this)"><svg class="nav-ic ia-tilt"><use href="#ic-att"/></svg> حاضری و معاش</button>
   <button class="nav-btn" onclick="showSection('profit',this)"><svg class="nav-ic ia-rise"><use href="#ic-profit"/></svg> مفاد / ضرر / اتحادیه</button>
   <button class="nav-btn" onclick="showSection('settings',this)"><svg class="nav-ic ia-spin"><use href="#ic-settings"/></svg> تنظیمات</button>
 </div>
@@ -5070,6 +5103,26 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
 </div>
 
 <!-- SETTINGS -->
+<!-- ATTENDANCE — حاضری، ساعت آمدن/رفتن و معاش کارمندان -->
+<div class="section" id="sec-attendance">
+  <div class="card">
+    <div class="card-head">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="card-title"><svg class="nav-ic"><use href="#ic-att"/></svg> حاضری و معاش کارمندان</div>
+      </div>
+    </div>
+    <div class="att-form att-admin">
+      <div class="sm-field"><label>نام کارمند</label><input id="att-new-name" placeholder="نام و تخلص"></div>
+      <div class="sm-field"><label>ساعت آمدن (شیفت)</label><input id="att-new-in" type="time" value="07:00"></div>
+      <div class="sm-field"><label>ساعت رفتن (شیفت)</label><input id="att-new-out" type="time" value="19:00"></div>
+      <div class="sm-field"><label>معاش ماهانه (افغانی)</label><input id="att-new-salary" type="number" placeholder="مثلاً 15000"></div>
+      <div class="sm-field"><label>روز پرداخت (هر ماه)</label><input id="att-new-payday" type="number" min="1" max="31" placeholder="مثلاً 1"></div>
+    </div>
+    <button class="att-admin" onclick="attAddStaff()" style="margin-bottom:14px;padding:9px 20px;border-radius:10px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer">+ افزودن کارمند</button>
+    <div class="att-grid" id="att-grid"></div>
+  </div>
+</div>
+
 <!-- CCTV — دوربین‌های مداربسته (مدیر + نظاره‌گر) -->
 <div class="section" id="sec-cameras">
   <div class="card">
@@ -5155,6 +5208,14 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       <div style="text-align:center;padding:18px;color:var(--muted);font-size:0.85rem">بارگذاری...</div>
     </div>
     <button onclick="_emptyTrash()" style="padding:7px 18px;border-radius:8px;border:1px solid var(--red);background:transparent;color:var(--red);font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer;font-size:0.85rem">🗑️ خالی کردن سطل زباله</button>
+  </div>
+  <div class="settings-card" id="chat-trash-card" style="border-color:var(--blue)">
+    <div class="settings-title" style="color:var(--blue)">🗑️ سطل آشغال چت گروهی</div>
+    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.8">پیام‌ها، عکس‌ها، ویدیوها و صداهای چت گروهی بعد از <b style="color:var(--blue)">۱۰ روز</b> خودکار به این سطل می‌روند و <b style="color:var(--red)">۱۰ روز بعد</b> برای همیشه از سرور حذف می‌شوند.</div>
+    <div id="chat-trash-body" style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px;max-height:300px;overflow-y:auto">
+      <div style="text-align:center;padding:18px;color:var(--muted);font-size:0.85rem">بارگذاری...</div>
+    </div>
+    <button onclick="chatTrashEmpty()" style="padding:7px 18px;border-radius:8px;border:1px solid var(--red);background:transparent;color:var(--red);font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer;font-size:0.85rem">🗑️ خالی کردن سطل آشغال چت</button>
   </div>
   <div class="settings-card" style="border-color:var(--red)">
     <div class="settings-title" style="color:var(--red)">🗑️ پاک‌سازی داده‌ها</div>
@@ -5339,6 +5400,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
 </div>
 
 <div class="copyright-bar" style="text-align:center;padding:18px 12px 28px;margin-top:18px;border-top:1px solid var(--border);font-size:0.78rem;color:var(--muted);line-height:1.9">
+  <span class="app-version" style="display:inline-block;background:var(--card);border:1px solid var(--border);border-radius:999px;padding:2px 14px;margin-bottom:8px"></span><br>
   ۱۴۰۵ برای پمپ یعقوبی طراحی شده ـــ تمام حقوق محفوظ است<br>
   طراحی و توسعه: <b style="color:var(--accent)">vil3ntec@gmail.com محمد هارون</b><br>
   شماره 0792236008 +93
@@ -5364,6 +5426,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
   <symbol id="ic-cctv" viewBox="0 0 24 24"><rect x="2.5" y="4.8" width="14" height="7.8" rx="2"/><circle cx="12.4" cy="8.7" r="1.7"/><path d="M16.5 7l5-1.8v7l-5-1.8"/><path d="M7 12.6v3.2a2.4 2.4 0 0 0 2.4 2.4h3.1"/></symbol>
   <symbol id="ic-qrscan" viewBox="0 0 24 24"><path d="M8.5 3.5H5.5a2 2 0 0 0-2 2v3M15.5 3.5h3a2 2 0 0 1 2 2v3M8.5 20.5H5.5a2 2 0 0 1-2-2v-3M15.5 20.5h3a2 2 0 0 0 2-2v-3"/><path d="M3.5 12h17"/><rect x="7" y="7" width="4" height="3.4" rx=".7"/><path d="M14 7h3v3.4M7 15.5h3.4M13.5 15.5h.02M16.5 15.5h.5"/></symbol>
   <symbol id="ic-link2" viewBox="0 0 24 24"><path d="M10 14.5l4-5"/><path d="M8.5 9.5L7 11.3a3.6 3.6 0 0 0 .4 5.1 3.6 3.6 0 0 0 5-.3l1.6-1.9"/><path d="M15.5 14.5l1.5-1.8a3.6 3.6 0 0 0-.4-5.1 3.6 3.6 0 0 0-5 .3L10 9.8"/></symbol>
+  <symbol id="ic-att" viewBox="0 0 24 24"><circle cx="9" cy="7.5" r="3.2"/><path d="M3.2 19.5c.7-3.4 3-5.3 5.8-5.3 1.1 0 2.1.3 3 .8"/><circle cx="17" cy="16" r="4.6"/><path d="M17 13.8V16l1.6 1.2"/></symbol>
 </svg>
 
 <!-- ماشین حساب شناور + ربات (بیرون از #app: روی صفحهٔ قفل، صفحهٔ کارمند و نمای کیو‌آر هم کار می‌کنند) -->
@@ -5374,7 +5437,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
 <div id="robotPanel">
   <span class="rz-h tl" data-rz="tl"></span><span class="rz-h tr" data-rz="tr"></span><span class="rz-h bl" data-rz="bl"></span><span class="rz-h br" data-rz="br"></span>
   <div class="rb-head" id="robotHead">
-    <span class="rb-title"><svg><use href="#ic-robot"/></svg> ربات دستیار</span>
+    <span class="rb-title"><svg><use href="#ic-robot"/></svg> ربات دستیار <span class="app-version" style="opacity:.7"></span></span>
     <span style="display:flex;gap:2px;align-items:center">
       <button class="rb-size" onclick="toggleRobotSize()" title="بزرگ/کوچک"><svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round"><use href="#ic-expand"/></svg></button>
       <button class="rb-close" onclick="toggleRobot()" title="بستن">✕</button>
@@ -5399,7 +5462,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
   <!-- ۲) چت گروهی (کارمندان) -->
   <div class="rb-pane" id="rbPane-group">
     <div class="ch-list" id="groupList"></div>
-    <div class="ch-note">برای پرسیدن از ربات در گروه، پیام را با کلمهٔ «ربات» شروع کنید</div>
+    <div class="ch-note">برای پرسیدن از ربات، پیام را با «ربات» شروع کنید · پیام‌ها و عکس/ویدیوها بعد از ۱۰ روز به سطل آشغال و سپس حذف دائم می‌روند</div>
     <div class="ch-comp" id="groupComp">
       <input type="text" id="groupInput" placeholder="پیام به گروه..." onkeydown="if(event.key==='Enter')chatSendText('group')">
       <button class="ch-ib" onclick="chatPickMedia('group','image')" title="فرستادن عکس"><svg><use href="#ic-photo"/></svg></button>
@@ -5839,7 +5902,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
      با کلیک روی هر کارت، نمایشگر فقط‌خواندنیِ شخص روی آن باز شود -->
 <div class="ro-overlay" id="staffOverlay">
   <div class="ro-header">
-    <h2>👷 صفحه کارمند — فقط دیدن</h2>
+    <h2>👷 صفحه کارمند — فقط دیدن <span class="app-version" style="opacity:.75"></span></h2>
     <div style="display:flex;gap:8px;align-items:center">
       <button onclick="showStaffQR()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer">📲 کیو‌آر</button>
       <button onclick="closeStaffPage()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-family:'Vazirmatn',sans-serif;cursor:pointer">✕ بستن</button>
@@ -6656,6 +6719,7 @@ function tryUnlock() {
     if (v2h === MASTER_PASSWORD_HASH || v2h === (DB.password || DEFAULT_ADMIN_PASSWORD_HASH)) {
       document.getElementById('lockScreen').style.display = 'none';
       document.getElementById('app').style.display = 'block';
+      try { _showChatFabs(true); _lsCalcBtnShow(false); _rbSetMode('admin'); } catch (e) {}
     }
   }
 }
@@ -6982,11 +7046,13 @@ function showSection(id, btn) {
   if (id === 'sarrafi') renderSarrafi();
   if (id === 'waraq') renderWaraqList();
   if (id === 'cameras') renderCameras();
+  if (id === 'attendance') renderAttendance();
   if (id === 'zodiac') { initDate(); }
   if (id === 'settings') {
     fillLowStockSettings();
     fillSyncSettings();
     try { renderTrashList(); } catch(e) {}
+    try { renderChatTrash(); } catch(e) {}
   }
   // کارت «وضعیت حافظه» حالا در صفحهٔ ظاهر و گرافیک است
   if (id === 'appearance') {
@@ -7134,8 +7200,12 @@ function initDate() {
   ids.forEach(id => { const el=document.getElementById(id); if(el) el.textContent = d.sh; });
   const paDateEl = document.getElementById('pa-date'); if (paDateEl && !paDateEl.value) paDateEl.value = d.sh;
   const withName = (num, name) => name ? (num + ' ' + name) : num;
+  // روز هفته — در سربرگ و صفحهٔ قفل
+  const weekday = new Date().toLocaleDateString('fa-IR', { weekday: 'long' });
   const hd = document.getElementById('headerDate');
-  if (hd) hd.textContent = withName(d.sh, d.shName);
+  if (hd) hd.textContent = weekday + '، ' + withName(d.sh, d.shName);
+  const lw = document.getElementById('lsWeekday');
+  if (lw) lw.textContent = weekday + ' — ' + d.sh;
   const hm = document.getElementById('headerDateMiladi');
   if (hm) hm.textContent = withName(d.mi, d.miName);
   const hq = document.getElementById('headerDateQamari');
@@ -14899,7 +14969,7 @@ function rbShowTab(tab) {
   if (tab === 'group') {
     _chatInitListeners();
     if (!_chatOnline()) document.getElementById('groupList').innerHTML = '<div class="ch-note" style="padding:20px">برای چت گروهی، اینترنت باید وصل باشد</div>';
-    else { _renderChatList('groupList', _groupMsgs); _chatMarkRead('group'); }
+    else { _renderChatList('groupList', _groupMsgs); if (_rbPaneVisible('group')) _chatMarkRead('group'); }
     if (_chatOnline() && !_chatMe() && _rbMode !== 'person') _chatAskName('group');
   }
   if (tab === 'dm') { _chatInitListeners(); _rbRenderDmPane(); }
@@ -14957,6 +15027,7 @@ function _botAnswer(qRaw) {
   if (has('سلام', 'درود', 'صبح بخیر', 'شب بخیر', 'چطور استی', 'چطوری', 'خوب استی')) return 'سلام! تشکر، خوب هستم. سوال تان را بپرسید.';
   if (has('تشکر', 'مننه', 'ممنون', 'مرسی')) return 'خواهش می‌کنم! اگر سوال دیگری دارید، بپرسید.';
   if (has('خداحافظ', 'به امان خدا', 'خدانگهدار')) return 'به امان خدا! هر وقت سوالی داشتید، همین‌جا هستم.';
+  if (has('ورژن', 'نسخه', 'version')) return 'نسخهٔ برنامه: ' + APP_VERSION;
   if (has('ساعت چند', 'وقت چند', 'ساعت چی')) return 'ساعت حالا: ' + new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
   if (has('تاریخ', 'امروز چندم', 'چند شنبه', 'امروز چه روز')) return 'امروز: ' + new Date().toLocaleDateString('fa-IR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   if (has('ادرس', 'آدرس', 'موقعیت', 'کجاست') && (DB.stationAddress || '').trim()) return 'آدرس پمپ: ' + DB.stationAddress;
@@ -14985,6 +15056,8 @@ function _botAnswer(qRaw) {
   } else {
     // دوربین‌های مداربسته — فقط در سوال‌وجواب و چت گروهی (نه مهمان کیو‌آر)
     if (has('دوربین', 'مداربسته', 'کمره', 'camera', 'cctv')) return _botCameraIntent();
+    // حاضری، شیفت و معاش کارمندان
+    if (has('حاضری', 'شیفت', 'ساعت کار', 'ساعت امدن', 'ساعت آمدن', 'ساعت رفتن', 'معاش', 'حقوق')) return _botAttIntent();
     if (has('مخزن', 'تانک', 'ذخیره', 'باقی تیل', 'چقدر تیل', 'تیل چقدر')) {
       return 'باقی مخزن: پطرول ' + n2fa(Math.round(_fuelStock('petrol'))) + ' لیتر — دیزل ' + n2fa(Math.round(_fuelStock('diesel'))) + ' لیتر';
     }
@@ -15112,6 +15185,8 @@ function _chatInitListeners() {
         if (_rbPaneVisible('dm') && !_rbCurrentDm) _dmRenderThreadList();
         _rbUpdateBadges();
       });
+      // پاکسازی خودکار گروه: پیام‌های کهنه → سطل آشغال → حذف دائم
+      try { _chatRetentionSweep(); } catch (e) {}
     } else if (me) {
       _chatL.dmIdx = true;
       const pk = _peerKey(me.id);
@@ -15215,12 +15290,29 @@ function chatSaveName() {
   showToast('نام ثبت شد: ' + nm, '#38a169');
 }
 // ---- رندر پیام‌ها ----
+// جداکنندهٔ تاریخ بین پیام‌ها — مثل واتساپ: امروز / دیروز / تاریخ کامل با روز هفته
+function _chDayLabel(ts) {
+  const now = new Date(), d = new Date(ts);
+  const diff = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+  if (diff === 0) return 'امروز';
+  if (diff === 1) return 'دیروز';
+  return d.toLocaleDateString('fa-IR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
 function _renderChatList(elId, msgs) {
   const el = document.getElementById(elId);
   if (!el) return;
   const meId = (_chatMe() || {}).id;
-  el.innerHTML = (msgs || []).map(m => _chMsgHtml(m, meId)).join('') ||
-    '<div class="ch-note" style="padding:20px">هنوز پیامی نیست — اولین پیام را بفرستید</div>';
+  let lastDay = '';
+  const html = (msgs || []).map(m => {
+    let sep = '';
+    if (m.ts) {
+      const d = new Date(m.ts);
+      const key = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+      if (key !== lastDay) { lastDay = key; sep = `<div class="ch-day"><span>${_chDayLabel(m.ts)}</span></div>`; }
+    }
+    return sep + _chMsgHtml(m, meId);
+  }).join('');
+  el.innerHTML = html || '<div class="ch-note" style="padding:20px">هنوز پیامی نیست — اولین پیام را بفرستید</div>';
   el.scrollTop = el.scrollHeight;
 }
 function _chMsgHtml(m, meId) {
@@ -15257,7 +15349,7 @@ function _rbRenderDmPane() {
   const peer = _rbActiveDmPeer();
   _ensureDmListener(peer);
   _renderChatList('dmList', _dmMsgCache[peer] || []);
-  _chatMarkRead('dm', peer);
+  if (_rbPaneVisible('dm')) _chatMarkRead('dm', peer);
 }
 function _dmRenderThreadList() {
   const el = document.getElementById('dmThreads');
@@ -15710,6 +15802,232 @@ function _botCameraIntent() {
   const m = document.getElementById('camScanModal');
   if (m) m.addEventListener('click', function (e) { if (e.target === this) camScanStop(); });
 })();
+
+// ========== نسخهٔ برنامه ==========
+// با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
+// صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
+const APP_VERSION = '2.1.0';
+function _stampVersion() {
+  document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
+}
+
+// ========== سطل آشغال چت گروهی: ۱۰ روز → سطل → ۱۰ روز → حذف دائم ==========
+const _CHAT_RETENTION_DAYS = 10;
+function _chatRetentionSweep() {
+  if (_rbMode !== 'admin' || !_chatOnline()) return;
+  let mark = 0;
+  try { mark = +(localStorage.getItem('pumpChatSweep') || 0); } catch (e) {}
+  if (Date.now() - mark < 6 * 3600 * 1000) return; // حداکثر هر ۶ ساعت یک‌بار
+  try { localStorage.setItem('pumpChatSweep', String(Date.now())); } catch (e) {}
+  const cutoff = Date.now() - _CHAT_RETENTION_DAYS * 86400000;
+  const root = _chatRoot();
+  // ۱) پیام‌های گروهی کهنه → سطل آشغال
+  _fbDb.ref(root + 'group').once('value').then(snap => {
+    const ups = {};
+    snap.forEach(ch => {
+      const m = ch.val();
+      if (m && (m.ts || 0) < cutoff) {
+        ups['trash/' + ch.key] = Object.assign({}, m, { trashedAt: Date.now() });
+        ups['group/' + ch.key] = null;
+      }
+    });
+    if (Object.keys(ups).length) return _fbDb.ref(root).update(ups);
+  }).catch(() => {});
+  // ۲) سطل آشغال کهنه → حذف دائم
+  _fbDb.ref(root + 'trash').once('value').then(snap => {
+    const ups = {};
+    snap.forEach(ch => {
+      const m = ch.val();
+      if (m && (m.trashedAt || 0) < cutoff) ups[ch.key] = null;
+    });
+    if (Object.keys(ups).length) return _fbDb.ref(root + 'trash').update(ups);
+  }).catch(() => {});
+}
+function renderChatTrash() {
+  const el = document.getElementById('chat-trash-body');
+  if (!el) return;
+  if (!_chatOnline()) {
+    el.innerHTML = '<div style="text-align:center;padding:18px;color:var(--muted);font-size:0.85rem">برای دیدن سطل آشغال چت، اینترنت لازم است</div>';
+    return;
+  }
+  _fbDb.ref(_chatRoot() + 'trash').once('value').then(snap => {
+    const items = [];
+    snap.forEach(ch => { const m = ch.val(); if (m) items.push(m); });
+    items.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    if (!items.length) {
+      el.innerHTML = '<div style="text-align:center;padding:18px;color:var(--muted);font-size:0.85rem">سطل آشغال چت خالی است</div>';
+      return;
+    }
+    el.innerHTML = items.slice(0, 100).map(m => {
+      const kind = m.k === 'text' ? escFa(String(m.t || '').slice(0, 60)) : (m.k === 'image' ? '🖼 عکس' : m.k === 'audio' ? '🎵 پیام صوتی' : '🎞 ویدیو');
+      const purge = new Date((m.trashedAt || 0) + _CHAT_RETENTION_DAYS * 86400000).toLocaleDateString('fa-IR');
+      const who = escFa(m.f === 'bot' ? 'ربات' : (m.f === 'admin' ? 'میرزا' : m.n || 'بی‌نام'));
+      return `<div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:0.78rem"><b>${who}</b> — ${kind}<div style="font-size:0.68rem;color:var(--muted);margin-top:2px">تاریخ پیام: ${m.ts ? new Date(m.ts).toLocaleDateString('fa-IR') : '—'} · حذف دائم: ${purge}</div></div>`;
+    }).join('');
+  }).catch(() => {
+    el.innerHTML = '<div style="text-align:center;padding:18px;color:var(--muted);font-size:0.85rem">خطا در دریافت — دوباره تلاش کنید</div>';
+  });
+}
+function chatTrashEmpty() {
+  if (!requireAdmin()) return;
+  if (!_chatOnline()) { showToast('برای این کار اینترنت لازم است', '#e53e3e'); return; }
+  if (!confirm('سطل آشغال چت برای همیشه خالی شود؟ (قابل بازگشت نیست)')) return;
+  _fbDb.ref(_chatRoot() + 'trash').remove()
+    .then(() => { showToast('🗑️ سطل آشغال چت خالی شد', '#38a169'); renderChatTrash(); })
+    .catch(() => showToast('خطا — دوباره تلاش کنید', '#e53e3e'));
+}
+
+// ========== حاضری و معاش کارمندان (تایم شیفت) ==========
+// ساعت آمدن/رفتن قراردادی هر کارمند + ثبت حاضری روزانه (آمد/رفت) + جمع
+// روزها و ساعت‌های کار همین ماه + معاش ماهانه، روز پرداخت و وضعیت پرداخت.
+function _attStaff() { if (!Array.isArray(DB.staffMembers)) DB.staffMembers = []; return DB.staffMembers; }
+function _attRows() { if (!Array.isArray(DB.attendance)) DB.attendance = []; return DB.attendance; }
+function _attPays() { if (!Array.isArray(DB.salaryPayments)) DB.salaryPayments = []; return DB.salaryPayments; }
+function _nowHM() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+function _attHours(r) {
+  if (!r.in || !r.out) return 0;
+  const [ih, im] = r.in.split(':').map(Number), [oh, om] = r.out.split(':').map(Number);
+  let mins = (oh * 60 + om) - (ih * 60 + im);
+  if (mins < 0) mins += 24 * 60; // شیفت شب
+  return mins / 60;
+}
+function attAddStaff() {
+  if (!requireAdmin()) return;
+  const name = (document.getElementById('att-new-name').value || '').trim();
+  if (!name) { showToast('نام کارمند را بنویسید', '#e53e3e'); return; }
+  _attStaff().push({
+    id: 's' + Date.now().toString(36),
+    name,
+    shiftIn: document.getElementById('att-new-in').value || '',
+    shiftOut: document.getElementById('att-new-out').value || '',
+    salary: parseFloat(document.getElementById('att-new-salary').value) || 0,
+    payDay: parseInt(document.getElementById('att-new-payday').value) || 1
+  });
+  save();
+  document.getElementById('att-new-name').value = '';
+  document.getElementById('att-new-salary').value = '';
+  renderAttendance();
+  showToast('✅ کارمند اضافه شد', '#38a169');
+}
+function attDeleteStaff(sid) {
+  if (!requireAdmin()) return;
+  const st = _attStaff().find(s => String(s.id) === String(sid));
+  if (!st) return;
+  if (!confirm('کارمند «' + st.name + '» با همهٔ حاضری‌هایش حذف شود؟')) return;
+  DB.staffMembers = _attStaff().filter(s => String(s.id) !== String(sid));
+  DB.attendance = _attRows().filter(r => String(r.sid) !== String(sid));
+  save();
+  renderAttendance();
+}
+function attMark(sid, kind) {
+  if (!requireAdmin()) return;
+  const today = persianDate();
+  let row = _attRows().find(r => String(r.sid) === String(sid) && r.date === today);
+  if (!row) { row = { id: 'a' + Date.now().toString(36), sid, date: today, in: '', out: '' }; _attRows().push(row); }
+  if (row[kind]) { showToast(kind === 'in' ? 'آمدن امروز قبلاً ثبت شده — از جدول قابل تغییر است' : 'رفتن امروز قبلاً ثبت شده — از جدول قابل تغییر است', '#d97706'); return; }
+  row[kind] = _nowHM();
+  save();
+  renderAttendance();
+  showToast(kind === 'in' ? '✅ آمدن ثبت شد: ' + row.in : '✅ رفتن ثبت شد: ' + row.out, '#38a169');
+}
+function attSetTime(rowId, kind, val) {
+  if (currentRole === 'viewer') return;
+  const row = _attRows().find(r => String(r.id) === String(rowId));
+  if (!row) return;
+  row[kind] = val || '';
+  save();
+  renderAttendance();
+}
+function attDeleteRow(rowId) {
+  if (!requireAdmin()) return;
+  DB.attendance = _attRows().filter(r => String(r.id) !== String(rowId));
+  save();
+  renderAttendance();
+}
+function attPaySalary(sid) {
+  if (!requireAdmin()) return;
+  const st = _attStaff().find(s => String(s.id) === String(sid));
+  if (!st) return;
+  const month = _monthKey(persianDate());
+  if (_attPays().some(p => String(p.sid) === String(sid) && p.month === month)) { showToast('معاش این ماه قبلاً ثبت شده', '#d97706'); return; }
+  if (!confirm('پرداخت معاش «' + st.name + '» برای ' + _monthLabel(month) + ' (' + n2fa(st.salary || 0) + ' افغانی) ثبت شود؟')) return;
+  _attPays().push({ sid, month, amount: st.salary || 0, date: persianDate() });
+  save();
+  renderAttendance();
+  showToast('✅ پرداخت معاش ثبت شد', '#38a169');
+}
+function renderAttendance() {
+  const grid = document.getElementById('att-grid');
+  if (!grid) return;
+  const staff = _attStaff();
+  if (!staff.length) {
+    grid.innerHTML = '<div class="cam-note" style="grid-column:1/-1">هنوز کارمندی ثبت نشده — با فورم بالا کارمند اضافه کنید (نام، ساعت آمدن/رفتن، معاش و روز پرداخت)</div>';
+    return;
+  }
+  const today = persianDate();
+  const month = _monthKey(today);
+  grid.innerHTML = staff.map(st => {
+    const rows = _attRows().filter(r => String(r.sid) === String(st.id) && _monthKey(r.date) === month)
+      .sort((a, b) => toEnDigits(b.date).localeCompare(toEnDigits(a.date)));
+    const daysP = rows.filter(r => r.in).length;
+    const hours = rows.reduce((a, r) => a + _attHours(r), 0);
+    const paid = _attPays().find(p => String(p.sid) === String(st.id) && p.month === month);
+    const todayRow = rows.find(r => r.date === today);
+    const tbl = rows.slice(0, 31).map(r => `
+      <tr>
+        <td>${escFa(r.date)}</td>
+        <td><input type="time" value="${escFa(r.in || '')}" onchange="attSetTime('${escFa(String(r.id))}','in',this.value)"></td>
+        <td><input type="time" value="${escFa(r.out || '')}" onchange="attSetTime('${escFa(String(r.id))}','out',this.value)"></td>
+        <td>${_attHours(r) ? n2fa(Math.round(_attHours(r) * 10) / 10) : '—'}</td>
+        <td class="att-admin"><button onclick="attDeleteRow('${escFa(String(r.id))}')" style="background:transparent;border:none;color:var(--red);cursor:pointer;font-size:0.85rem" title="حذف ردیف">✕</button></td>
+      </tr>`).join('');
+    return `<div class="att-card">
+      <div class="at-nm"><span>${escFa(st.name)}</span>
+        <button class="att-admin" onclick="attDeleteStaff('${escFa(String(st.id))}')" style="background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;padding:3px 10px;font-family:'Vazirmatn',sans-serif;font-size:0.72rem">حذف</button>
+      </div>
+      <span class="att-chip">ساعت آمدن: ${escFa(st.shiftIn || '—')}</span>
+      <span class="att-chip">ساعت رفتن: ${escFa(st.shiftOut || '—')}</span>
+      <span class="att-chip">معاش: ${n2fa(st.salary || 0)} افغانی</span>
+      <span class="att-chip">روز پرداخت: ${n2fa(st.payDay || 1)} هر ماه</span>
+      <div class="att-now-row att-admin">
+        <button class="att-in-btn" onclick="attMark('${escFa(String(st.id))}','in')">آمد حالا${todayRow && todayRow.in ? ' ✓ ' + escFa(todayRow.in) : ''}</button>
+        <button class="att-out-btn" onclick="attMark('${escFa(String(st.id))}','out')">رفت حالا${todayRow && todayRow.out ? ' ✓ ' + escFa(todayRow.out) : ''}</button>
+      </div>
+      <div class="att-sum">
+        <div class="as"><div class="l">روزهای حاضر (${escFa(_monthLabel(month))})</div><div class="v" style="color:var(--green)">${n2fa(daysP)}</div></div>
+        <div class="as"><div class="l">جمع ساعت کار</div><div class="v" style="color:var(--blue)">${n2fa(Math.round(hours * 10) / 10)}</div></div>
+        <div class="as"><div class="l">معاش این ماه</div><div class="v" style="color:${paid ? 'var(--green)' : 'var(--red)'}">${paid ? 'پرداخت شد' : 'باقی است'}</div></div>
+      </div>
+      <div class="att-pay">
+        ${paid
+          ? `<span class="paid">✓ معاش ${escFa(_monthLabel(month))} پرداخت شد (${escFa(paid.date)})</span>`
+          : `<span class="unpaid">معاش ${escFa(_monthLabel(month))} هنوز پرداخت نشده — موعد: ${escFa(month)}/${String(st.payDay || 1).padStart(2, '0')}</span><button class="att-admin" onclick="attPaySalary('${escFa(String(st.id))}')">ثبت پرداخت معاش</button>`}
+      </div>
+      ${rows.length ? `<div style="overflow-x:auto"><table class="att-tbl"><thead><tr><th>تاریخ</th><th>آمدن</th><th>رفتن</th><th>ساعت</th><th class="att-admin"></th></tr></thead><tbody>${tbl}</tbody></table></div>` : '<div class="cam-note" style="padding:8px">این ماه هنوز حاضری ثبت نشده</div>'}
+    </div>`;
+  }).join('');
+}
+// ربات → حاضری و معاش
+function _botAttIntent() {
+  const app = document.getElementById('app');
+  if (!(app && app.style.display !== 'none')) return 'بخش «حاضری و معاش» فقط داخل برنامه (مدیر یا نظاره‌گر) است — اول با رمز وارد شوید.';
+  setTimeout(() => {
+    try {
+      const p = document.getElementById('robotPanel');
+      if (p) p.classList.remove('open');
+      showSection('attendance', null);
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      const nb = document.querySelector(`.nav-btn[onclick*="'attendance'"]`);
+      if (nb) nb.classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (e) {}
+  }, 700);
+  const n = _attStaff().length;
+  return 'بخش «حاضری و معاش کارمندان» باز می‌شود' + (n ? ' — ' + n2fa(n) + ' کارمند ثبت شده.' : ' — هنوز کارمندی ثبت نشده؛ از فورم بالا اضافه کنید.');
+}
 // ===== جستجوی صوتی صفحهٔ کارمند =====
 // «خیلی دقیق»: چند برداشتِ متن از گفتار گرفته می‌شود، هر کدام با همهٔ نام‌ها
 // (نرمال‌شده + کلمه‌به‌کلمه + فاصلهٔ لِوِنشتاین) نمره می‌گیرد، و فقط وقتی
@@ -16402,6 +16720,7 @@ if (_isStaffHash) {
 }
 _initCalcDrag();
 try { _initRobotDrag(); _makeResizable('calcPanel'); _makeResizable('robotPanel'); _chatImgLightboxInit(); } catch (e) {}
+try { _stampVersion(); } catch (e) {}
 
 // update station name displays
 const _lbn = document.getElementById('lsBrandName');
