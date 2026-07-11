@@ -200,9 +200,12 @@ body.light-mode #lsStaffBtn{
   .ls-geo-3{ width:96px; height:96px; }
 }
 
-/* سربرگ دیگر sticky نیست — هنگام اسکرول فقط نوار بخش‌ها بالا می‌ماند (body.nav-sticky .nav)؛
-   قبلاً هر دو top:0 می‌چسبیدند و چون سربرگ بلندتر از نوار است، لبهٔ پایینش از زیر نوار بیرون می‌زد */
-.header{background:var(--panel);border-bottom:2px solid var(--accent);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:100}
+/* سربرگ همیشه در بالای صفحه قفل است (position:fixed) — با هیچ مقدار اسکرولی حرکت نمی‌کند.
+   جای خالی‌اش با padding-top روی #app جبران می‌شود (متغیر --header-h با JS از ارتفاع واقعی
+   سربرگ اندازه می‌شود؛ سربرگ در موبایل wrap می‌شود و ارتفاع ثابتی ندارد).
+   z-index:290 → بالای همهٔ محتوا و نوار بخش‌ها (250)، ولی زیر مودال‌ها (300) تا پاپ‌آپ‌ها روی سربرگ باز شوند */
+.header{background:var(--panel);border-bottom:2px solid var(--accent);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:fixed;top:0;left:0;right:0;width:100%;box-sizing:border-box;z-index:290}
+#app{padding-top:var(--header-h,64px)}
 .header-title{font-size:1.1rem;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:8px}
 .header-right{display:flex;align-items:center;gap:12px}
 .header-date{font-size:0.8rem;color:var(--muted)}
@@ -4140,7 +4143,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       <div class="header-date" id="headerDate" style="font-size:0.98rem;font-weight:800;color:var(--txt)"></div>
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end">
         <div class="header-date" id="headerDateMiladi" style="font-size:0.78rem;opacity:.75"></div>
-        <span style="font-size:0.7rem;opacity:.45" aria-hidden="true">•</span>
+        <span class="hdr-date-dot" style="font-size:0.7rem;opacity:.45" aria-hidden="true">•</span>
         <div class="header-date" id="headerDateQamari" style="font-size:0.78rem;opacity:.75"></div>
       </div>
     </div>
@@ -6622,6 +6625,8 @@ function syncUpload() {
   if (!code) { _setSyncMsg('❌ اول کد ایستگاه را ذخیره کنید', '#e53e3e'); return; }
   if (!_fbReady()) { _setSyncMsg('⚠️ سرور آنلاین هنوز وصل نشده — به برنامه‌نویس پیام دهید تا کد سرور را فعال کند.', '#d97706'); return; }
   if (!navigator.onLine) { _setSyncMsg('❌ اینترنت وصل نیست', '#e53e3e'); return; }
+  // محافظ: بارگذاریِ دستیِ یک حسابِ کاملاً خالی (دستگاه تازه) روی سرورِ داده‌دار، حساب اصلی را پاک می‌کند
+  if (_dbRecordCount(DB) === 0 && !confirm('حساب این دستگاه خالی است. با بارگذاری، حسابِ خالی روی سرور نوشته می‌شود و اطلاعات قبلی سرور از بین می‌رود. مطمئن هستید؟')) { _setSyncMsg('بارگذاری لغو شد — اول «دریافت از سرور» را بزنید', '#d97706'); return; }
   clearTimeout(_autoSyncTimer); // بارگذاری دستی در حال انجام است، خودکار دوباره کارش را تکرار نکند
   _setSyncMsg('⏳ در حال بارگذاری...', 'var(--accent)');
   const payload = JSON.parse(JSON.stringify(DB));
@@ -6700,6 +6705,11 @@ function _runAutoSync() {
   if (!code) return;            // کد ایستگاه هنوز ثبت نشده — کاری برای خودکار فرستادن نیست
   if (!_fbReady()) return;      // سرور آنلاین هنوز فعال نشده
   if (currentRole === 'viewer') return; // نظاره‌گر چیزی برای بارگذاری ندارد
+  // محافظ حیاتی (مشکل آیفون/دستگاه تازه): اگر دیتای محلی کاملاً خالی است و هنوز
+  // اولین دریافت از سرور انجام نشده، هرگز آپلود نکن — وگرنه یک دستگاه تازه
+  // (مثلاً Safari آیفون یا شورت‌کات که حافظهٔ جدا دارند) حسابِ خالی خودش را با
+  // timestamp جدید روی سرور می‌نوشت و حساب اصلی همهٔ دستگاه‌ها پاک می‌شد.
+  if (_dbRecordCount(DB) === 0 && !_fbStartupPulled) return;
 
   _autoSyncInFlight = true;
   _setSyncMsg('⏳ در حال هم‌زمان‌سازی با سرور...', 'var(--accent)');
@@ -6752,55 +6762,108 @@ setInterval(function(){ if (navigator.onLine && _dirtySinceUpload) _runAutoSync(
 // روی هر دستگاهی (فلش، ارسال‌شده، دستگاه جدید) که کد ایستگاه داشته باشد،
 // در شروع برنامه آخرین اطلاعات از سرور دریافت می‌شود — بدون نیاز به زدن دکمه.
 let _fbStartupDone = false;
+let _fbStartupPulled = false;  // اولین دریافت موفق از سرور انجام شده؟ (محافظ آپلودِ دیتای خالی)
+let _fbStartupTries = 0;
+function _applyServerData(serverData) {
+  Object.assign(DB, serverData);
+  DB.syncCode = 'pump1';
+  try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
+  try { _IDB.put(JSON.parse(JSON.stringify(DB))); } catch(e) {}
+  _dirtySinceUpload = false;
+  try { updateAll(); } catch(e) {}
+  try { if (_isROHash) checkHashViewer(); } catch(e) {}
+  try { _staffRefresh(); } catch(e) {}
+  try { _updateSyncLastTime(); } catch(e) {}
+  try { _updateAutoSyncBadge(); } catch(e) {}
+}
 function _autoLoadFromFirebaseOnStartup() {
   if (_fbStartupDone) return; // یک‌بار کافی است — از تایمر و onload کتابخانه هر دو صدا می‌خورد
   const code = _syncCode();
-  if (!code || !_fbReady() || !navigator.onLine) {
-    // وقتی اینترنت وصل شد دوباره تلاش کن
-    window.addEventListener('online', function _onOnline() {
-      window.removeEventListener('online', _onOnline);
-      setTimeout(_autoLoadFromFirebaseOnStartup, 1000);
-    });
+  if (!code || !_fbReady()) {
+    // کتابخانهٔ Firebase هنوز نیامده — کمی بعد دوباره (onload کتابخانه هم صدا می‌زند)
+    setTimeout(_autoLoadFromFirebaseOnStartup, 3000);
     return;
   }
-  _fbStartupDone = true;
+  // نکتهٔ مهم iOS: در Safari/شورت‌کات آیفون navigator.onLine گاهی به‌اشتباه false است
+  // و رویداد online هم هرگز نمی‌آید؛ قبلاً همین‌جا دریافتِ حساب از سرور برای همیشه
+  // متوقف می‌شد و آیفون مثل «حساب جدید و خالی» می‌ماند. حالا به آن اتکا نمی‌کنیم —
+  // خودِ درخواست را می‌فرستیم و اگر شکست خورد با فاصلهٔ فزاینده دوباره تلاش می‌کنیم.
+  _fbStartupDone = true; // جلوی اجرای هم‌زمان دوباره — در صورت خطا در catch باز می‌شود
   _fbDb.ref('stations/' + code).get()
     .then(function(snap) {
-      if (!snap.exists()) {
+      _fbStartupPulled = true;
+      const serverData = snap.exists() ? snap.val() : null;
+      if (!serverData) {
         // سرور خالی — اطلاعات محلی را آپلود کن
         _dirtySinceUpload = true;
         _runAutoSync();
+        _startFirebaseRealtimeListener();
         return;
       }
-      const serverData = snap.val();
       const serverTime = new Date(serverData.lastSyncUpload || 0).getTime();
       const localTime  = new Date(DB.lastSyncUpload  || 0).getTime();
-      if (localTime >= serverTime) {
+      // محافظ دستگاه تازه: اگر اینجا (آیفون/مرورگر تازه) هیچ رکوردی نیست ولی سرور
+      // حساب دارد، همیشه از سرور بگیر — حتی اگر timestamp ها قابل اتکا نباشند.
+      const localEmptyServerHasData = _dbRecordCount(DB) === 0 && _dbRecordCount(serverData) > 0;
+      if (localTime >= serverTime && !localEmptyServerHasData) {
         // لوکال برابر یا جدیدتر است — همیشه آپلود کن تا تغییرات (رمز، تنظیمات، حساب‌ها) به سرور برسند
         _dirtySinceUpload = true;
         _runAutoSync();
       } else {
         // سرور جدیدتر است — از سرور بارگذاری کن
-        Object.assign(DB, serverData);
-        DB.syncCode = 'pump1';
-        try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
-        _dirtySinceUpload = false;
-        try { updateAll(); } catch(e) {}
-        try { if (_isROHash) checkHashViewer(); } catch(e) {}
-        try { _updateSyncLastTime(); } catch(e) {}
-        try { _updateAutoSyncBadge(); } catch(e) {}
+        _applyServerData(serverData);
         try { showTopToast('☁️ حساب از سرور به‌روز شد', '#38a169', 3000); } catch(e) {}
       }
       // پس از اولین sync، listener بلادرنگ را شروع کن
       _startFirebaseRealtimeListener();
     })
-    .catch(function() { _startFirebaseRealtimeListener(); });
+    .catch(function() {
+      // شبکه در لحظهٔ باز شدن برنامه ناپایدار بود — دوباره تلاش کن (۵s، ۱۰s، ۲۰s… سقف ۳۰s)
+      _fbStartupDone = false;
+      _fbStartupTries++;
+      var delay = Math.min(5000 * Math.pow(2, Math.max(0, _fbStartupTries - 1)), 30000);
+      setTimeout(_autoLoadFromFirebaseOnStartup, delay);
+      _startFirebaseRealtimeListener();
+    });
 }
-
-// listener بلادرنگ: هر تغییری در Firebase روی همه دستگاه‌های باز بلافاصله اعمال می‌شود
-function _startFirebaseRealtimeListener() {
+// اگر رویداد online آمد و هنوز اولین دریافت انجام نشده، فوراً تلاش کن
+window.addEventListener('online', function(){ if (!_fbStartupDone) setTimeout(_autoLoadFromFirebaseOnStartup, 800); });
+// ===== دریافت مقایسه‌ای هنگام برگشت به برنامه (مخصوص PWA/شورت‌کات آیفون) =====
+// iOS اتصال باز Firebase را در پس‌زمینه می‌کُشد؛ هنگام برگشت، یک‌بار مستقیم چک
+// می‌کنیم که اگر روی دستگاه دیگری چیزی ثبت شده، بلافاصله همین‌جا هم بیاید.
+function _fbPullLatestOnce() {
   const code = _syncCode();
   if (!code || !_fbReady()) return;
+  _fbDb.ref('stations/' + code).get().then(function(snap) {
+    if (!snap.exists()) return;
+    const sd = snap.val();
+    const st = new Date(sd.lastSyncUpload || 0).getTime();
+    const lt = new Date(DB.lastSyncUpload  || 0).getTime();
+    const localEmptyServerHasData = _dbRecordCount(DB) === 0 && _dbRecordCount(sd) > 0;
+    if (st > lt || localEmptyServerHasData) {
+      _applyServerData(sd);
+      try { showTopToast('☁️ تغییرات جدید از سرور دریافت شد', '#38a169', 2500); } catch(e) {}
+    }
+  }).catch(function(){});
+}
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState !== 'visible') return;
+  if (!_fbStartupDone) { try { _autoLoadFromFirebaseOnStartup(); } catch(e) {} return; }
+  try { _fbPullLatestOnce(); } catch(e) {}
+  // تغییرات آفلاین معطل‌مانده هم همین حالا فرستاده شوند
+  if (_dirtySinceUpload && navigator.onLine) _scheduleAutoSync(1200);
+});
+// درخواست ماندگاری حافظهٔ مرورگر — جلوی پاک شدن خودکار localStorage/IndexedDB را
+// (در Chrome/Android) می‌گیرد؛ Safari آن را نادیده می‌گیرد ولی ضرری ندارد.
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function(){}); } catch(e) {}
+
+// listener بلادرنگ: هر تغییری در Firebase روی همه دستگاه‌های باز بلافاصله اعمال می‌شود
+let _fbListenerStarted = false;
+function _startFirebaseRealtimeListener() {
+  if (_fbListenerStarted) return; // با retryهای شروع برنامه چند بار صدا می‌خورد — listener فقط یک‌بار ثبت شود
+  const code = _syncCode();
+  if (!code || !_fbReady()) return;
+  _fbListenerStarted = true;
   try {
     _fbDb.ref('stations/' + code).on('value', function(snap) {
       if (!snap.exists()) return;
@@ -6808,12 +6871,7 @@ function _startFirebaseRealtimeListener() {
       const st = new Date(sd.lastSyncUpload || 0).getTime();
       const lt = new Date(DB.lastSyncUpload  || 0).getTime();
       if (st > lt) {
-        Object.assign(DB, sd);
-        DB.syncCode = 'pump1';
-        try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
-        _dirtySinceUpload = false;
-        try { updateAll(); } catch(e) {}
-        try { _updateSyncLastTime(); } catch(e) {}
+        _applyServerData(sd);
         try { showTopToast('☁️ تغییرات جدید از سرور دریافت شد', '#38a169', 2500); } catch(e) {}
       }
     });
@@ -8675,6 +8733,34 @@ const LOW_STOCK_LITERS = 500;        // پیش‌فرض حد هشدار
 const LOW_STOCK_COOLDOWN = 15;       // پیش‌فرض فاصله (دقیقه)
 let lastLowStockShown = 0;
 let lastLowStockData = [];
+// ===== محدودکنندهٔ پایدار هشدارها: حداکثر ۳ بار در روز، با حداقل ۴ ساعت فاصله =====
+// قبلاً lastLowStockShown فقط در حافظهٔ صفحه بود و با هر بار باز کردن برنامه صفر
+// می‌شد — نتیجه: با «هر بار» ورود به برنامه پاپ‌آپ و پیامِ گروه می‌آمد. حالا زمان و
+// تعداد در localStorage می‌ماند: روزی حداکثر ۳ بار (صبح/چاشت/شام) و نه هر ورود.
+const ALERT_MAX_PER_DAY = 3;
+const ALERT_MIN_GAP_MS = 4 * 60 * 60 * 1000; // ۴ ساعت — سه بار در روزِ بیداری
+function _alertLog() { try { return JSON.parse(localStorage.getItem('pumpAlertLog') || '{}'); } catch (e) { return {}; } }
+function _alertAllowed(kind) {
+  const st = _alertLog()[kind];
+  if (!st) return true;
+  const today = new Date().toDateString();
+  if (st.day === today && (st.count || 0) >= ALERT_MAX_PER_DAY) return false;
+  if (Date.now() - (st.last || 0) < ALERT_MIN_GAP_MS) return false;
+  return true;
+}
+function _alertMark(kind) {
+  const log = _alertLog();
+  const today = new Date().toDateString();
+  const st = (log[kind] && log[kind].day === today) ? log[kind] : { day: today, count: 0, last: 0 };
+  st.day = today; st.count = (st.count || 0) + 1; st.last = Date.now();
+  log[kind] = st;
+  try { localStorage.setItem('pumpAlertLog', JSON.stringify(log)); } catch (e) {}
+}
+function _alertReset(kind) {
+  const log = _alertLog();
+  delete log[kind];
+  try { localStorage.setItem('pumpAlertLog', JSON.stringify(log)); } catch (e) {}
+}
 function lsThreshold() { return parseFloat(DB.lowStockThreshold) || LOW_STOCK_LITERS; }
 function lsInterval()  { return (parseFloat(DB.lowStockInterval) || LOW_STOCK_COOLDOWN) * 60 * 1000; }
 function _fuelStock(fuelType) {
@@ -8690,6 +8776,7 @@ function _fuelStock(fuelType) {
 }
 function checkLowStock() {
   if (Date.now() - lastLowStockShown < lsInterval()) return false;
+  if (!_alertAllowed('lowStock')) return false; // سقف روزانه (۳ بار) — با بستن/بازکردن برنامه صفر نمی‌شود
   const low = [];
   // فقط وقتی برای آن نوع تیل خریدی ثبت شده باشد هشدار بده
   const hasPetrol = DB.fuelEntries.some(e => (e.fuelType||'petrol') === 'petrol');
@@ -8711,6 +8798,7 @@ function checkLowStock() {
   }).join('');
   document.getElementById('lowStockModal').classList.add('open');
   lastLowStockShown = Date.now();
+  _alertMark('lowStock');
   // صدای هشدار + اعلان روی نوار گوشی/کامپیوتر + خبر ربات در «سوال و جواب» —
   // برای همه (مدیر/کارمند) که برنامه باز دارند، چه آنلاین چه آفلاین
   try { _playAlertSound(); } catch (e) {}
@@ -8725,6 +8813,7 @@ function checkLowStock() {
 let lastDebtAlertShown = 0;
 function checkDebtReview() {
   if (Date.now() - lastDebtAlertShown < lsInterval()) return false;
+  if (!_alertAllowed('debtReview')) return false; // سقف روزانه (۳ بار) — مثل هشدار مخزن
   const low = [], out = [];
   (DB.debtPersons || []).forEach(p => {
     const s = debtFuelStatus(p);
@@ -8733,6 +8822,7 @@ function checkDebtReview() {
   });
   if (!low.length && !out.length) return false;
   lastDebtAlertShown = Date.now();
+  _alertMark('debtReview');
   const fmt = (arr, tag) => arr.map(x => '• ' + x.p.name + ' — ' + x.who + ' ' + tag).join('\n');
   const parts = [];
   if (out.length) parts.push(fmt(out, 'تمام شده ⛔'));
@@ -12420,6 +12510,7 @@ function saveLowStockSettings() {
   DB.lowStockPhone = phone;
   save();
   lastLowStockShown = 0; // تا تنظیم جدید فوراً اعمال شود
+  _alertReset('lowStock'); _alertReset('debtReview'); // سقف روزانه هم صفر شود تا حد/فاصلهٔ جدید همین حالا امتحان شود
   msg.textContent = '✅ ذخیره شد — هر ' + n2fa(mins) + ' دقیقه، زیر ' + n2fa(th) + ' لیتر';
   msg.style.color = 'var(--green)';
   if (typeof renderStorage === 'function') renderStorage();
@@ -15291,14 +15382,27 @@ function checkHashViewer() {
   const id   = rest.slice(dashIdx + 1); // person id
   if (!type || !id) return;
   load(); // ensure data from localStorage is loaded
+  // پی‌دی‌افِ خودکار فقط برای «اولین» باز شدن لینک کیو‌آر — نه برای رفرش صفحه.
+  // sessionStorage در همان تب/همان نشست می‌ماند، پس با رفرش دیگر پی‌دی‌اف ناخواسته
+  // باز نمی‌شود؛ اسکنِ تازه (تب جدید) مثل قبل پی‌دی‌اف را خودکار می‌آورد.
+  // همچنین تا وقتی حسابِ شخص از سرور نرسیده، پی‌دی‌اف صدا زده نمی‌شود (قبلاً روی
+  // دستگاهِ اسکن‌کننده با دیتای هنوز-نرسیده اجرا می‌شد و خراب می‌شد) — این تابع بعد از
+  // رسیدن دیتای سرور دوباره صدا می‌خورد و همان موقع پی‌دی‌اف می‌آید.
+  const _pdfOnceKey = 'roPdfShown-' + type + '-' + id;
+  let _pdfAlreadyShown = false;
+  try { _pdfAlreadyShown = sessionStorage.getItem(_pdfOnceKey) === '1'; } catch (e) {}
+  const _list = type === 'company' ? (DB.tilCompanies || []) : (type === 'debt' ? (DB.debtPersons || []) : (DB.noinvPersons || []));
+  const _recordReady = _list.some(p => p && p.id === id);
+  const firePdf = wantPdf && !_pdfAlreadyShown && _recordReady;
+  if (firePdf) { try { sessionStorage.setItem(_pdfOnceKey, '1'); } catch (e) {} }
   if (type === 'company') {
     openCompanyROViewer(id);
-    if (wantPdf) setTimeout(() => pdfCompanyById(id), 700);
+    if (firePdf) setTimeout(() => pdfCompanyById(id), 700);
     return;
   }
   openROViewer(type, id);
   // با اسکن کیو‌آر، پی‌دی‌اف حساب هم خودکار باز می‌شود (در صورت مسدود شدن popup، دکمهٔ PDF در همان صفحه موجود است)
-  if (wantPdf) setTimeout(() => pdfPersonById(type, id), 700);
+  if (firePdf) setTimeout(() => pdfPersonById(type, id), 700);
 }
 
 // ========== صفحه کارمند (بدون رمز — فقط دیدن) ==========
@@ -16759,7 +16863,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.7.0';
+const APP_VERSION = '2.7.1';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -17715,6 +17819,25 @@ if (_isStaffHash) {
 _initCalcDrag();
 try { _initRobotDrag(); _makeResizable('calcPanel'); _makeResizable('robotPanel'); _chatImgLightboxInit(); } catch (e) {}
 try { _stampVersion(); } catch (e) {}
+
+// ===== ارتفاع واقعی سربرگِ ثابت (position:fixed) → متغیر CSS --header-h =====
+// سربرگ در موبایل wrap می‌شود و ارتفاع ثابتی ندارد؛ این متغیر هم padding-top محتوای
+// #app را تنظیم می‌کند (تا چیزی زیر سربرگ پنهان نشود) و هم top نوارِ چسبان بخش‌ها را.
+(function(){
+  var hdr = document.querySelector('.header');
+  if (!hdr) return;
+  function setHeaderH(){
+    var px = hdr.offsetHeight;
+    if (px > 0) document.documentElement.style.setProperty('--header-h', px + 'px');
+  }
+  try { new ResizeObserver(setHeaderH).observe(hdr); }
+  catch(e) { window.addEventListener('resize', setHeaderH); }
+  window.addEventListener('orientationchange', function(){ setTimeout(setHeaderH, 150); });
+  // وقتی #app از display:none درمی‌آید (بعد از ورود با رمز)، ارتفاع دوباره اندازه شود
+  var app = document.getElementById('app');
+  try { if (app) new MutationObserver(setHeaderH).observe(app, { attributes:true, attributeFilter:['style'] }); } catch(e) {}
+  setHeaderH();
+})();
 
 // update station name displays
 const _lbn = document.getElementById('lsBrandName');
@@ -19177,12 +19300,21 @@ body[class*="theme-"].gfx-ultra::before{ background:var(--app-bg)!important; }
 /* ===== نوار ۱۲ بخش هنگام اسکرول بالای صفحه می‌چسبد و ناپدید نمی‌شود =====
    (در بخش‌های ورق، قرض‌داران و شرکت‌ها تیل غیرفعال است — با کلاس body کنترل می‌شود) */
 body.nav-sticky .nav{
-  position:sticky; top:0; z-index:250;
+  /* سربرگ حالا fixed است — نوار بخش‌ها باید زیرِ لبهٔ پایین سربرگ بچسبد نه top:0 (وگرنه زیر سربرگ پنهان می‌شد) */
+  position:sticky; top:var(--header-h,64px); z-index:250;
   box-shadow:0 6px 18px -8px rgba(0,0,0,.55);
 }
 /* overflow-x:hidden روی body آن را ظرف اسکرول می‌کند و sticky را نسبت به صفحه می‌شکند؛
    clip همان بریدن افقی را می‌دهد بدون ساختن ظرف اسکرول */
 body.nav-sticky{ overflow-x:clip!important; overflow-y:visible!important; }
+
+/* ===== تاریخ‌های داخل سربرگ در تم‌های روز (سربرگ روشن/سفید): مشکی کامل #000 =====
+   قبلاً با color:var(--muted) و opacity:.75 (استایل inline) روی سربرگ روشن کم‌رنگ و
+   ناخوانا بودند. !important لازم است چون استایل inline رنگ/شفافیت را ست می‌کند.
+   فقط تم‌های روزِ دارای پالت (سربرگ سفید) — در حالت شب و سربرگ قهوه‌ایِ قدیمی
+   پس‌زمینه تیره است و متن مشکی ناخوانا می‌شد، پس همان رنگ قبلی می‌ماند. */
+body.light-mode[class*="theme-"] .header .header-date{ color:#000 !important; opacity:1 !important; }
+body.light-mode[class*="theme-"] .header .hdr-date-dot{ color:#000 !important; opacity:.8 !important; }
 
 /* ===== اسکرول‌بار در همهٔ بخش‌ها همیشه دیده شود =====
    صفحهٔ کوتاه: دستهٔ اسکرول تمام‌قد و بی‌حرکت می‌ماند (بدنه همیشه ۲px بلندتر از پنجره است)؛
