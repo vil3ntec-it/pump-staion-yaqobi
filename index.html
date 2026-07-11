@@ -414,10 +414,15 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 #calcFab:hover{transform:scale(1.07)}
 #calcFab svg,#robotFab svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 /* ── ربات شناور (دستیار + پیام‌رسان) ── */
-#robotFab{position:fixed;bottom:calc(84px + var(--kb-offset,0px));left:18px;z-index:10040;width:54px;height:54px;border-radius:50%;border:none;background:linear-gradient(135deg,#22ccff,#2b6cb0);color:#fff;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;transition:transform .12s,bottom .18s ease}
+/* overflow:visible لازم است — مرورگر به‌طور پیش‌فرض روی <button> کمی overflow:hidden
+   می‌گذارد و چون علامتِ پیام (.fab-badge) کمی از لبهٔ دکمه بیرون می‌زند (طراحیِ
+   معمولِ نشان‌گر اعلان)، بدون این خط همیشه یک‌ذره‌اش بریده می‌شد و دیده نمی‌شد */
+#robotFab{position:fixed;bottom:calc(84px + var(--kb-offset,0px));left:18px;z-index:10040;width:54px;height:54px;border-radius:50%;border:none;background:linear-gradient(135deg,#22ccff,#2b6cb0);color:#fff;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;transition:transform .12s,bottom .18s ease;overflow:visible}
 #robotFab:hover{transform:scale(1.07)}
 .fab-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:999px;background:var(--red);color:#fff;font-size:0.7rem;font-weight:900;display:none;align-items:center;justify-content:center;padding:0 5px;border:2px solid var(--panel)}
-#robotPanel{position:fixed;bottom:calc(148px + var(--kb-offset,0px));left:18px;z-index:10050;width:min(360px,calc(100vw - 24px));height:min(520px,calc(100dvh - 90px - var(--kb-offset,0px)));min-width:260px;min-height:280px;background:var(--panel);border:1.5px solid var(--blue);border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.5);display:none;flex-direction:column;overflow:hidden;transition:bottom .18s ease}
+/* resize:both یعنی همان دستهٔ کشیدنیِ گوشهٔ استاندارد مرورگر (مثل تغییر اندازهٔ
+   پنجره در ویندوز) — بدون نیاز به کدِ دستیِ کشیدن که ممکن است لرزش/خطا داشته باشد */
+#robotPanel{position:fixed;bottom:calc(148px + var(--kb-offset,0px));left:18px;z-index:10050;width:min(360px,calc(100vw - 24px));height:min(520px,calc(100dvh - 90px - var(--kb-offset,0px)));min-width:260px;min-height:280px;max-width:96vw;max-height:92dvh;background:var(--panel);border:1.5px solid var(--blue);border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.5);display:none;flex-direction:column;overflow:hidden;resize:both;transition:bottom .18s ease}
 #robotPanel.open{display:flex}
 #robotPanel.large{width:min(560px,calc(100vw - 24px));height:min(760px,calc(100dvh - 40px - var(--kb-offset,0px)))}
 #robotPanel .rb-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--dark);border-bottom:1px solid var(--border);font-weight:900;color:var(--blue);cursor:move;user-select:none;-webkit-user-select:none;touch-action:none;flex-shrink:0}
@@ -511,7 +516,7 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 #lsCalcBtn{position:fixed;bottom:calc(18px + var(--kb-offset,0px));left:18px;z-index:10001;width:50px;height:50px;border-radius:50%;border:1.5px solid rgba(255,255,255,.35);background:rgba(22,27,34,.7);backdrop-filter:blur(8px);color:#ffb340;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.45);transition:bottom .18s ease}
 #lsCalcBtn svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 body.light-mode #lsCalcBtn{background:rgba(255,255,255,.75);color:#b45309;border-color:rgba(0,0,0,.2)}
-#calcPanel{position:fixed;bottom:calc(84px + var(--kb-offset,0px));left:18px;z-index:10060;width:286px;height:430px;min-width:230px;min-height:300px;max-width:96vw;max-height:calc(90dvh - var(--kb-offset,0px));background:var(--panel);border:1.5px solid var(--border);border-radius:18px;box-shadow:0 14px 44px rgba(0,0,0,.6);display:none;flex-direction:column;overflow:hidden;transition:bottom .18s ease}
+#calcPanel{position:fixed;bottom:calc(84px + var(--kb-offset,0px));left:18px;z-index:10060;width:286px;height:430px;min-width:230px;min-height:300px;max-width:96vw;max-height:calc(90dvh - var(--kb-offset,0px));background:var(--panel);border:1.5px solid var(--border);border-radius:18px;box-shadow:0 14px 44px rgba(0,0,0,.6);display:none;flex-direction:column;overflow:hidden;resize:both;transition:bottom .18s ease}
 #calcPanel.large{width:400px;height:580px}
 #calcPanel.open{display:flex}
 #calcHead svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
@@ -4049,7 +4054,14 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
 <div id="app" style="display:none">
 
 <div class="header">
-  <div class="header-title">⛽ پمپ یعقوبی</div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <div class="header-title">⛽ پمپ یعقوبی</div>
+    <!-- خارج از header-title عمداً — چون DB.stationName هر بار عوض شود، کدِ ذخیرهٔ
+         تنظیمات innerHTML خودِ header-title را کامل جایگزین می‌کند و اگر این دکمه
+         داخلش بود، با هر تغییر نام ایستگاه ناپدید می‌شد -->
+    <button class="theme-toggle" id="pwaRefreshBtn" onclick="location.reload()" title="تازه‌سازی صفحه (اطلاعات پاک نمی‌شود)" aria-label="تازه‌سازی صفحه" style="padding:5px 9px;border-radius:7px;border:1px solid var(--border);background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.8rem;cursor:pointer">🔄</button>
+  </div>
+  <span class="app-version" style="position:fixed;top:6px;left:50%;transform:translateX(-50%);z-index:150"></span>
   <div class="header-right">
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
       <div class="header-date" id="headerDate" style="font-size:0.98rem;font-weight:800;color:var(--txt)"></div>
@@ -4060,7 +4072,6 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       </div>
     </div>
     <button class="theme-toggle" id="zodiacHeaderBtn" onclick="showSection('zodiac',null);document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'))" title="تقویم و برج فلکی" style="padding:6px 10px;border-radius:7px;border:1px solid var(--border);background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.85rem;cursor:pointer"><svg class="nav-ic ia-tilt"><use href="#ic-moonstar"/></svg></button>
-    <button class="theme-toggle" id="pwaRefreshBtn" onclick="location.reload()" title="تازه‌سازی صفحه (اطلاعات پاک نمی‌شود)" aria-label="تازه‌سازی صفحه" style="padding:6px 10px;border-radius:7px;border:1px solid var(--border);background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.85rem;cursor:pointer">🔄</button>
     <button class="daynight-toggle" id="themeBtn" onclick="toggleTheme()" title="تغییر تم روز/شب" aria-label="تغییر تم روز/شب">
       <span class="dn-sky" aria-hidden="true">
         <span class="dn-stars"><i></i><i></i><i></i><i></i><i></i></span>
@@ -4073,7 +4084,6 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       </span>
       <span class="dn-thumb" aria-hidden="true"></span>
     </button>
-    <span class="app-version"></span>
     <span class="role-badge" id="roleBadge" style="background:var(--green)">🛡️ مدیر</span>
     <button class="lock-btn" id="adminUnlockBtn" onclick="promptAdminUnlock()" style="display:none;background:var(--green)">🔓 ورود مدیر</button>
     <button class="lock-btn" id="lockBtn" onclick="lockApp()">🔒 قفل</button>
@@ -5130,16 +5140,16 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
         <span style="font-size:0.82rem;font-weight:800" id="wq-pump-title">🛢️ قرائت پمپ‌ها — ☀️ روز</span>
         <button onclick="addWaraqPump()" style="padding:3px 12px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:700">➕ افزودن پایه</button>
       </div>
-      <div style="font-size:0.68rem;color:var(--muted);margin-bottom:6px">برای دو پایه در یک شیفت یا تغییر قیمت وسط روز، پایه جدید اضافه کنید و در ستون «توضیح/ساعت» قیمت یا ساعت را بنویسید — هر پایه فی لیتر جدا دارد و قاتی نمی‌شود.</div>
+      <div style="font-size:0.68rem;color:var(--muted);margin-bottom:6px">برای دو پایه در یک شیفت یا تغییر قیمت وسط روز، پایه جدید اضافه کنید — هر پایه فی لیتر جدا دارد و قاتی نمی‌شود.</div>
       <div class="tbl-wrap" style="margin-bottom:10px">
         <table class="tbl" id="wq-pump-tbl" style="font-size:0.95rem">
           <thead><tr>
-            <th>پایه</th><th>نام</th><th>نوع</th><th>توضیح/ساعت</th><th>شروع</th><th>ختم</th><th>فی لیتر</th><th>مقدار (لیتر)</th><th>مبلغ فروش</th><th></th>
+            <th>پایه</th><th>نام</th><th>نوع</th><th>شروع</th><th>ختم</th><th>فی لیتر</th><th>مقدار (لیتر)</th><th>مبلغ فروش</th><th></th>
           </tr></thead>
           <tbody id="wq-pump-body"></tbody>
           <tfoot>
             <tr style="background:var(--dark);font-weight:700">
-              <td colspan="7" style="padding:7px 9px">جمع این شیفت</td>
+              <td colspan="6" style="padding:7px 9px">جمع این شیفت</td>
               <td style="padding:7px 9px" id="wq-total-liters">0</td>
               <td style="padding:7px 9px" id="wq-total-sales">0</td>
               <td></td>
@@ -8548,7 +8558,11 @@ function _playTone(freqs, dur, vol) {
     });
   } catch (e) {}
 }
-function _playChatSound() { _playTone([880, 1320], 0.13, 0.22); }
+// چت تک‌نفره: دو نتِ رو به بالا (زنگ ساده) — چت گروهی: سه نتِ کوتاه‌تر تا صدایش با تک‌نفره اشتباه نشود
+function _playChatSound(isGroup) {
+  if (isGroup) _playTone([660, 660, 990], 0.1, 0.2);
+  else _playTone([880, 1320], 0.13, 0.22);
+}
 function _playAlertSound() { _playTone([523, 392, 523, 659], 0.22, 0.32); }
 // اجازهٔ اعلان — یک‌بار بعد از ورود/باز شدن صفحهٔ کارمند پرسیده می‌شود
 function _requestNotifyPermission() {
@@ -10209,6 +10223,11 @@ function renderExpenses() {
   DB.expenses.forEach((e, idx) => { const k = _monthKey(e.date); if (!groups[k]) groups[k] = []; groups[k].push({ e, idx }); });
   // ماه جاری همیشه در فهرست باشد — حتی اگر هنوز مصرفی در آن ثبت نشده
   if (!groups[curMonth]) groups[curMonth] = [];
+  // داخل هر ماه بر اساس تاریخ مرتب شود — وگرنه مصرفی که از ورق همگام می‌شود همیشه
+  // به‌خاطر push شدنِ آخرِ آرایه، ردیفِ آخر جدول دیده می‌شد نه جای درستش بر اساس تاریخ
+  Object.keys(groups).forEach(k => {
+    groups[k].sort((a, b) => toEnDigits(a.e.date||'').localeCompare(toEnDigits(b.e.date||'')));
+  });
   const keys = Object.keys(groups).sort().reverse();
   // با شروع ماه جدید، خودکار به ماه جاری برو؛ ماه‌های قبلی در منوی کشویی می‌مانند
   if (_expLastAutoMonth !== curMonth) { _activeExpenseMonth = curMonth; _expLastAutoMonth = curMonth; }
@@ -14087,7 +14106,7 @@ function renderWaraqPumps(w) {
   const sd = activeShift(w);
   const pumps = sd.pumps;
   if (!pumps.length) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:14px;color:var(--muted);font-size:0.78rem">پایه‌ای اضافه نشده — از دکمه «➕ افزودن پایه» استفاده کنید</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:14px;color:var(--muted);font-size:0.78rem">پایه‌ای اضافه نشده — از دکمه «➕ افزودن پایه» استفاده کنید</td></tr>';
     return;
   }
   pumps.forEach((p, i) => {
@@ -14096,12 +14115,11 @@ function renderWaraqPumps(w) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="font-weight:700">${n2fa(p.num||i+1)}</td>
-      <td><input class="xls-in" value="${(p.worker||'').replace(/"/g,'&quot;')}" placeholder="نام" oninput="updateWaraqPump(${i},'worker',this.value)"></td>
+      <td><input class="xls-in" style="max-width:110px" value="${(p.worker||'').replace(/"/g,'&quot;')}" placeholder="نام" oninput="updateWaraqPump(${i},'worker',this.value)"></td>
       <td><select class="xls-in" style="min-width:96px;max-width:none;width:100%" onchange="updateWaraqPump(${i},'fuel',this.value)">
         <option value="petrol" ${p.fuel!=='diesel'?'selected':''}>⛽ پطرول</option>
         <option value="diesel" ${p.fuel==='diesel'?'selected':''}>🟤 دیزل</option>
       </select></td>
-      <td><input class="xls-in" value="${(p.note||'').replace(/"/g,'&quot;')}" placeholder="ساعت/قیمت" oninput="updateWaraqPump(${i},'note',this.value)"></td>
       <td><input class="xls-in xs" type="number" value="${p.start||''}" placeholder="0" oninput="updateWaraqPump(${i},'start',this.value)"></td>
       <td><input class="xls-in xs" type="number" value="${p.end||''}" placeholder="0" oninput="updateWaraqPump(${i},'end',this.value)"></td>
       <td><input class="xls-in xs" type="number" value="${p.pricePerLiter||''}" placeholder="0" oninput="updateWaraqPump(${i},'pricePerLiter',this.value)"></td>
@@ -14218,7 +14236,7 @@ function renderWaraqTransactions(w) {
     tr.innerHTML = `
       <td class="xls-num">${n2fa(i+1)}</td>
       <td><input class="xls-in" value="${(t.name||'').replace(/"/g,'&quot;')}" placeholder="نام / توضیح" oninput="updateWaraqTxn(${i},'name',this.value)"></td>
-      <td><select class="xls-in xs" style="min-width:62px" onchange="updateWaraqTxnFuel(${i},this.value)">
+      <td><select class="xls-in" style="min-width:88px;max-width:none;width:100%" onchange="updateWaraqTxnFuel(${i},this.value)">
         <option value="petrol" ${fuel!=='diesel'?'selected':''}>⛽ پطرول</option>
         <option value="diesel" ${fuel==='diesel'?'selected':''}>🟤 دیزل</option>
       </select></td>
@@ -15859,7 +15877,7 @@ function _chatResetListeners() {
 }
 // پیام تازهٔ گروه/تک‌نفره که از خودم نیست: صدا + اعلان روی نوار گوشی/کامپیوتر
 function _chatNotifyIncoming(scope, m) {
-  try { _playChatSound(); } catch (e) {}
+  try { _playChatSound(scope === 'group'); } catch (e) {}
   const who = m.f === 'admin' ? 'میرزا' : (m.f === 'bot' ? 'ربات' : (m.n || 'پیام جدید'));
   const preview = m.del ? 'پیام حذف شد' : (m.k === 'text' ? String(m.t || '').slice(0, 70)
     : m.k === 'audio' ? '🎤 پیام صوتی' : m.k === 'image' ? '🖼️ عکس' : m.k === 'video' ? '🎬 ویدیو' : 'پیام جدید');
@@ -16643,7 +16661,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.3.0';
+const APP_VERSION = '2.4.0';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
