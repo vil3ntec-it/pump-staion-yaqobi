@@ -2,8 +2,27 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>پمپ یعقوبی</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#d97706">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="پمپ یعقوبی">
+<script>
+// نصب روی گوشی/کامپیوتر مثل یک برنامهٔ مستقل (PWA) + کار کردن بدون اینترنت:
+// سرویس‌ورکر پوستهٔ برنامه (همین صفحه + آیکون‌ها) را کش می‌کند تا بدون نیاز
+// به تب مرورگر یا جست‌وجوی گوگل، مستقیم از آیکون روی صفحهٔ اصلی باز شود.
+(function(){
+  if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  });
+})();
+</script>
 <script>
 // فونت وب به‌صورت غیرمسدودکننده بارگذاری می‌شود:
 // قبلاً @import داخل style بود و با اینترنت ضعیف/قطع، باز شدن برنامه را ده‌ها ثانیه معطل می‌کرد.
@@ -362,9 +381,9 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 #robotFab{position:fixed;bottom:84px;left:18px;z-index:10040;width:54px;height:54px;border-radius:50%;border:none;background:linear-gradient(135deg,#22ccff,#2b6cb0);color:#fff;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;transition:transform .12s}
 #robotFab:hover{transform:scale(1.07)}
 .fab-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:999px;background:var(--red);color:#fff;font-size:0.7rem;font-weight:900;display:none;align-items:center;justify-content:center;padding:0 5px;border:2px solid var(--panel)}
-#robotPanel{position:fixed;bottom:148px;left:18px;z-index:10050;width:min(360px,calc(100vw - 24px));height:min(520px,calc(100vh - 90px));min-width:260px;min-height:340px;background:var(--panel);border:1.5px solid var(--blue);border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.5);display:none;flex-direction:column;overflow:hidden}
+#robotPanel{position:fixed;bottom:calc(148px + var(--kb-offset,0px));left:18px;z-index:10050;width:min(360px,calc(100vw - 24px));height:min(520px,calc(100dvh - 90px - var(--kb-offset,0px)));min-width:260px;min-height:280px;background:var(--panel);border:1.5px solid var(--blue);border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.5);display:none;flex-direction:column;overflow:hidden;transition:bottom .18s ease}
 #robotPanel.open{display:flex}
-#robotPanel.large{width:min(560px,calc(100vw - 24px));height:min(760px,calc(100vh - 40px))}
+#robotPanel.large{width:min(560px,calc(100vw - 24px));height:min(760px,calc(100dvh - 40px - var(--kb-offset,0px)))}
 #robotPanel .rb-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--dark);border-bottom:1px solid var(--border);font-weight:900;color:var(--blue);cursor:move;user-select:none;-webkit-user-select:none;touch-action:none;flex-shrink:0}
 #robotPanel .rb-head .rb-title{display:flex;align-items:center;gap:7px}
 #robotPanel .rb-head svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
@@ -396,6 +415,15 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 .ch-sug button{border:1px solid var(--blue);background:transparent;color:var(--blue);border-radius:8px;padding:5px 10px;font-family:'Vazirmatn',sans-serif;font-size:0.74rem;font-weight:800;cursor:pointer}
 .ch-sug button:hover{background:rgba(34,204,255,.12)}
 .ch-note{text-align:center;font-size:0.7rem;color:var(--muted);padding:4px 8px}
+.ch-b .ch-del-btn{position:absolute;top:2px;left:4px;cursor:pointer;opacity:.55;font-size:0.95rem;line-height:1;padding:2px 4px;border-radius:6px;user-select:none}
+.ch-b .ch-del-btn:hover{opacity:1;background:rgba(0,0,0,.12)}
+.ch-b.ch-deleted{opacity:.65;font-style:italic}
+.ch-b.ch-deleted i{font-style:italic;opacity:.85}
+.ch-msg-menu{position:fixed;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 6px 22px rgba(0,0,0,.35);display:flex;flex-direction:column;overflow:hidden;min-width:150px;z-index:99999}
+.ch-msg-menu button{background:transparent;border:none;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;padding:10px 14px;text-align:right;cursor:pointer;display:flex;align-items:center;gap:6px}
+.ch-msg-menu button:hover{background:rgba(127,127,127,.15)}
+.ch-msg-menu button.ch-del-everyone{color:var(--red)}
+.ch-msg-menu button+button{border-top:1px solid var(--border)}
 /* نوار نوشتن پیام */
 .ch-comp{display:flex;gap:6px;align-items:center;padding:8px;border-top:1px solid var(--border);background:var(--dark);flex-shrink:0}
 .ch-comp input[type=text]{flex:1;min-width:0;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 11px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.85rem}
@@ -436,7 +464,7 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 #lsCalcBtn{position:fixed;bottom:18px;left:18px;z-index:10001;width:50px;height:50px;border-radius:50%;border:1.5px solid rgba(255,255,255,.35);background:rgba(22,27,34,.7);backdrop-filter:blur(8px);color:#ffb340;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.45)}
 #lsCalcBtn svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 body.light-mode #lsCalcBtn{background:rgba(255,255,255,.75);color:#b45309;border-color:rgba(0,0,0,.2)}
-#calcPanel{position:fixed;bottom:84px;left:18px;z-index:10060;width:286px;height:430px;min-width:230px;min-height:340px;max-width:96vw;max-height:90vh;background:var(--panel);border:1.5px solid var(--border);border-radius:18px;box-shadow:0 14px 44px rgba(0,0,0,.6);display:none;flex-direction:column;overflow:hidden}
+#calcPanel{position:fixed;bottom:calc(84px + var(--kb-offset,0px));left:18px;z-index:10060;width:286px;height:430px;min-width:230px;min-height:300px;max-width:96vw;max-height:calc(90dvh - var(--kb-offset,0px));background:var(--panel);border:1.5px solid var(--border);border-radius:18px;box-shadow:0 14px 44px rgba(0,0,0,.6);display:none;flex-direction:column;overflow:hidden;transition:bottom .18s ease}
 #calcPanel.large{width:400px;height:580px}
 #calcPanel.open{display:flex}
 #calcHead svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
@@ -493,8 +521,10 @@ body.viewer-mode .att-admin{display:none !important}
 #calcClose:hover{color:var(--red)}
 #calcExpr{padding:8px 16px 0;text-align:left;direction:ltr;font-size:0.82rem;color:var(--muted);min-height:20px;font-family:monospace;word-break:break-all}
 #calcDisplay{padding:2px 16px 10px;text-align:left;direction:ltr;font-family:'Vazirmatn','SF Mono','Consolas',monospace;font-size:2rem;font-weight:900;color:var(--txt);word-break:break-all;letter-spacing:-0.02em;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+#calcPanel.large #calcDisplay{font-size:2.6rem}
 #calcKeys{flex:1;display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:1fr;gap:7px;padding:0 11px 12px}
-.calc-key{border:none;border-radius:12px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:1.15rem;font-weight:800;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;transition:filter .1s}
+.calc-key{border:none;border-radius:12px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:clamp(1.5rem,6.5vw,2.5rem);font-weight:800;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;transition:filter .1s}
+#calcPanel.large .calc-key{font-size:clamp(1.9rem,4.5vw,3rem)}
 .calc-key:hover{filter:brightness(1.18)}
 .calc-key:active{filter:brightness(.9)}
 .calc-key.op{background:rgba(217,119,6,.22);color:var(--accent)}
@@ -630,6 +660,9 @@ body.viewer-mode .att-admin{display:none !important}
 .pw-field label{font-size:0.73rem;color:var(--label)}
 .pw-field input{background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:9px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.9rem}
 .pw-field input:focus{outline:none;border-color:var(--accent)}
+/* رمزهای این برنامه، رمز واقعیِ حساب گوگل/ایمیل نیستند — با text-security به‌جای
+   type=password ماسک می‌شوند تا کروم پیشنهاد «ذخیرهٔ رمز» یا هشدار «نشت رمز» ندهد */
+.pw-mask,input.pw-mask{-webkit-text-security:disc;text-security:disc}
 .pw-btn{padding:9px 20px;background:var(--accent);color:#000;border:none;border-radius:8px;cursor:pointer;font-family:'Vazirmatn',sans-serif;font-weight:700;white-space:nowrap}
 
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);padding:10px 22px;border-radius:9px;font-weight:600;font-size:0.88rem;z-index:9999;transition:transform .3s;pointer-events:none;color:#fff}
@@ -848,6 +881,18 @@ body.light-mode #sec-settings::before{
   color:#ffd060;
   border:1px solid rgba(220,140,0,.5);
   box-shadow:0 0 16px rgba(200,120,0,.2);
+}
+/* وقتی یکی از تم‌های رنگی (شش‌ضلعی/رعد و برق/ستارهٔ دنباله‌دار...) فعال است،
+   این کادرها هم باید هم‌رنگ همان تم شوند نه رنگ ثابت قهوه‌ای/کهربایی */
+body[class*="theme-"] #sec-storage::before,
+body[class*="theme-"] #sec-storage-diesel::before,
+body[class*="theme-"] #sec-profit::before,
+body[class*="theme-"] #sec-expenses::before,
+body[class*="theme-"] #sec-settings::before{
+  background:linear-gradient(90deg, color-mix(in srgb, var(--accent) 20%, var(--panel)), color-mix(in srgb, var(--accent) 34%, var(--panel)), color-mix(in srgb, var(--accent) 20%, var(--panel))) !important;
+  color:var(--accent) !important;
+  border:1px solid color-mix(in srgb, var(--accent) 45%, transparent) !important;
+  box-shadow:0 0 20px color-mix(in srgb, var(--accent) 22%, transparent), inset 0 0 10px color-mix(in srgb, var(--accent) 10%, transparent) !important;
 }
 #sec-storage::before{content:"🛢️ مرکز مدیریت مخازن سوخت";}
 #sec-storage-diesel::before{content:"🟤 مرکز مدیریت مخازن دیزل";}
@@ -3931,7 +3976,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
   </div>
   <div class="lock-box">
     <div style="font-size:1rem;font-weight:700;color:var(--accent);margin-bottom:16px">🔒 ورود به سیستم</div>
-    <input type="password" id="lockInput" placeholder="رمز عبور" onkeydown="if(event.key==='Enter')tryUnlock()">
+    <input type="text" class="pw-mask" id="lockInput" placeholder="رمز عبور" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other" onkeydown="if(event.key==='Enter')tryUnlock()">
     <button onclick="tryUnlock()">ورود</button>
     <div class="lock-err" id="lockErr"></div>
     <div style="font-size:0.72rem;color:rgba(255,255,255,.6);margin-top:10px">رمز مدیر یا نظاره‌گر را وارد کنید</div>
@@ -5181,7 +5226,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       رمز دسترسی را در کادر زیر وارد کنید تا همهٔ بخش‌های برنامه باز و قابل استفاده شوند. این رمز به کسی نمایش داده نمی‌شود.
     </div>
     <div class="pw-row">
-      <div class="pw-field"><label>رمز دسترسی</label><input type="password" id="access-pw" placeholder="رمز دسترسی" onkeydown="if(event.key==='Enter')applyAccessPassword()"></div>
+      <div class="pw-field"><label>رمز دسترسی</label><input type="text" class="pw-mask" id="access-pw" placeholder="رمز دسترسی" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other" onkeydown="if(event.key==='Enter')applyAccessPassword()"></div>
       <button class="pw-btn" onclick="applyAccessPassword()">🔓 باز کردن همه بخش‌ها</button>
     </div>
     <div id="access-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
@@ -5221,7 +5266,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
     <div class="settings-title" style="color:var(--red)">🗑️ پاک‌سازی داده‌ها</div>
     <div style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;line-height:1.9">برای پاک کردن همهٔ حساب‌ها باید «رمز پاک‌سازی داده‌ها» را وارد کنید. این کار همهٔ حساب‌ها را خالی می‌کند و قابل بازگشت نیست.</div>
     <div class="pw-row">
-      <div class="pw-field"><label>رمز پاک‌سازی داده‌ها</label><input type="password" id="wipe-pw" placeholder="رمز پاک‌سازی" onkeydown="if(event.key==='Enter')clearAllWithPassword()"></div>
+      <div class="pw-field"><label>رمز پاک‌سازی داده‌ها</label><input type="text" class="pw-mask" id="wipe-pw" placeholder="رمز پاک‌سازی" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other" onkeydown="if(event.key==='Enter')clearAllWithPassword()"></div>
       <button class="add-btn" style="background:var(--red);color:#fff" onclick="clearAllWithPassword()">🗑️ پاک کردن همه</button>
     </div>
     <div id="wipe-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
@@ -5350,9 +5395,9 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
   <div class="settings-card">
     <div class="settings-title">🔑 تغییر رمز عبور</div>
     <div class="pw-row">
-      <div class="pw-field"><label>رمز فعلی</label><input type="password" id="pw-old" placeholder="رمز قدیم"></div>
-      <div class="pw-field"><label>رمز جدید</label><input type="password" id="pw-new" placeholder="رمز جدید"></div>
-      <div class="pw-field"><label>تکرار رمز جدید</label><input type="password" id="pw-rep" placeholder="تکرار"></div>
+      <div class="pw-field"><label>رمز فعلی</label><input type="text" class="pw-mask" id="pw-old" placeholder="رمز قدیم" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other"></div>
+      <div class="pw-field"><label>رمز جدید</label><input type="text" class="pw-mask" id="pw-new" placeholder="رمز جدید" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other"></div>
+      <div class="pw-field"><label>تکرار رمز جدید</label><input type="text" class="pw-mask" id="pw-rep" placeholder="تکرار" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other"></div>
       <button class="pw-btn" onclick="changePassword()">تغییر</button>
     </div>
     <div id="pw-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
@@ -5368,8 +5413,8 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       <button class="pw-btn" onclick="toggleViewerPwDisplay()" id="vw-show-btn">👁️ نمایش</button>
     </div>
     <div class="pw-row">
-      <div class="pw-field"><label>رمز جدید نظاره‌گر</label><input type="password" id="vw-new" placeholder="رمز نظاره‌گر"></div>
-      <div class="pw-field"><label>تکرار رمز</label><input type="password" id="vw-rep" placeholder="تکرار"></div>
+      <div class="pw-field"><label>رمز جدید نظاره‌گر</label><input type="text" class="pw-mask" id="vw-new" placeholder="رمز نظاره‌گر" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other"></div>
+      <div class="pw-field"><label>تکرار رمز</label><input type="text" class="pw-mask" id="vw-rep" placeholder="تکرار" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other"></div>
       <button class="pw-btn" onclick="changeViewerPassword()">تغییر</button>
     </div>
     <div id="vw-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
@@ -5377,9 +5422,9 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
   <div class="settings-card">
     <div class="settings-title">💹 رمز بخش مفاد / ضرر / اتحادیه</div>
     <div class="pw-row">
-      <div class="pw-field"><label>رمز فعلی</label><input type="password" id="profit-pw-old" placeholder="رمز فعلی"></div>
-      <div class="pw-field"><label>رمز جدید</label><input type="password" id="profit-pw-new" placeholder="رمز جدید"></div>
-      <div class="pw-field"><label>تکرار رمز جدید</label><input type="password" id="profit-pw-rep" placeholder="تکرار"></div>
+      <div class="pw-field"><label>رمز فعلی</label><input type="text" class="pw-mask" id="profit-pw-old" placeholder="رمز فعلی" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other"></div>
+      <div class="pw-field"><label>رمز جدید</label><input type="text" class="pw-mask" id="profit-pw-new" placeholder="رمز جدید" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other"></div>
+      <div class="pw-field"><label>تکرار رمز جدید</label><input type="text" class="pw-mask" id="profit-pw-rep" placeholder="تکرار" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other"></div>
       <button class="pw-btn" onclick="saveProfitPassword()">تغییر</button>
     </div>
     <div id="profit-pw-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
@@ -5390,8 +5435,8 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       اگر رمز بگذارید، صفحهٔ کارمند (دیدن تیل و مخزن) فقط با این رمز باز می‌شود — هم از دکمهٔ صفحهٔ قفل و هم از لینک/کیو‌آر. برای برداشتن رمز، کادر «رمز جدید» را خالی بگذارید و ذخیره کنید. رمز مدیر هم همیشه این صفحه را باز می‌کند.
     </div>
     <div class="pw-row">
-      <div class="pw-field"><label>رمز جدید صفحهٔ کارمند</label><input type="password" id="staff-pw-new" placeholder="خالی = بدون رمز"></div>
-      <div class="pw-field"><label>رمز مدیر (برای تایید)</label><input type="password" id="staff-pw-admin" placeholder="رمز مدیر" onkeydown="if(event.key==='Enter')changeStaffPassword()"></div>
+      <div class="pw-field"><label>رمز جدید صفحهٔ کارمند</label><input type="text" class="pw-mask" id="staff-pw-new" placeholder="خالی = بدون رمز" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other"></div>
+      <div class="pw-field"><label>رمز مدیر (برای تایید)</label><input type="text" class="pw-mask" id="staff-pw-admin" placeholder="رمز مدیر" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other" onkeydown="if(event.key==='Enter')changeStaffPassword()"></div>
       <button class="pw-btn" onclick="changeStaffPassword()">ذخیره</button>
     </div>
     <div id="staff-pw-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
@@ -5444,7 +5489,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
     </span>
   </div>
   <div class="rb-tabs" id="rbTabs">
-    <button class="rb-tab active" id="rbTabBtn-qa" onclick="rbShowTab('qa')"><svg><use href="#ic-ask"/></svg> سوال و جواب</button>
+    <button class="rb-tab active" id="rbTabBtn-qa" onclick="rbShowTab('qa')"><span class="tab-dot" id="rbDot-qa"></span><svg><use href="#ic-ask"/></svg> سوال و جواب</button>
     <button class="rb-tab" id="rbTabBtn-group" onclick="rbShowTab('group')"><span class="tab-dot" id="rbDot-group"></span><svg><use href="#ic-users"/></svg> چت گروهی</button>
     <button class="rb-tab" id="rbTabBtn-dm" onclick="rbShowTab('dm')"><span class="tab-dot" id="rbDot-dm"></span><svg><use href="#ic-user1"/></svg> چت تک‌نفره</button>
   </div>
@@ -5944,7 +5989,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
   <div class="lock-box">
     <div style="font-size:2.6rem;margin-bottom:6px">👷</div>
     <div style="font-size:1rem;font-weight:700;color:var(--accent);margin-bottom:16px">🔒 ورود به صفحهٔ کارمند</div>
-    <input type="password" id="staffLockInput" placeholder="رمز صفحهٔ کارمند" onkeydown="if(event.key==='Enter')tryStaffUnlock()">
+    <input type="text" class="pw-mask" id="staffLockInput" placeholder="رمز صفحهٔ کارمند" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other" onkeydown="if(event.key==='Enter')tryStaffUnlock()">
     <button onclick="tryStaffUnlock()">ورود</button>
     <div class="lock-err" id="staffLockErr"></div>
     <button onclick="closeStaffLock()" style="background:transparent;border:1.5px dashed rgba(255,255,255,.4);color:rgba(255,255,255,.8);margin-top:6px;font-weight:800;font-size:0.88rem">→ برگشت</button>
@@ -8839,6 +8884,7 @@ function confirmAddPerson() {
   renderPersons(currentPersonType);
   showToast('✅ شخص افزوده شد', '#38a169');
   updateBanner();
+  try { _botAnnounce('حساب جدید «' + name + '» ساخته شد.'); } catch (e) {}
 }
 function deletePerson(type, id) {
   if (!confirm('این شخص حذف شود؟')) return;
@@ -8934,6 +8980,7 @@ function newPersonSub() {
   _renderSubBar(person);
   renderPersonRows(person);
   if (typeof showToast === 'function') showToast('✅ حساب «' + sub.name + '» ساخته شد — جدول‌ها انباشته شدند', '#38a169');
+  try { _botAnnounce('حساب فرعی جدید «' + sub.name + '» برای «' + (person.name || '') + '» ساخته شد.'); } catch (e) {}
   // scroll stacked wrap to top
   const sw = document.getElementById('pm-stacked-wrap');
   if (sw) sw.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -10466,6 +10513,7 @@ function addDebtPersonsBulk() {
   if (typeof renderPersons === 'function') renderPersons('debt');
   if (typeof updateBanner === 'function') updateBanner();
   showToast('✅ افزوده شد: ' + n2fa(added) + (dup ? (' — تکراری: ' + n2fa(dup)) : ''), added ? '#38a169' : '#d97706');
+  if (added) { try { _botAnnounce(n2fa(added) + ' حساب قرض‌دار جدید افزوده شد.'); } catch (e) {} }
 }
 // PDF قرض‌های دسته‌جمعی
 function pdfDebtSummary() {
@@ -10921,6 +10969,7 @@ function confirmAddCompany() {
   closeModal('addCompanyModal');
   renderCompanies();
   showToast('✅ شرکت افزوده شد', '#38a169');
+  try { _botAnnounce('حساب شرکت جدید «' + name + '» ساخته شد.'); } catch (e) {}
 }
 
 function deleteCompany(id) {
@@ -14311,13 +14360,13 @@ function extractHawala(text) {
   if (m) return { num: m[1], clean: t.replace(m[0],'').replace(/\s{2,}/g,' ').trim() };
   return { num: '', clean: t.trim() };
 }
-// قرض‌دار را با پیدا کردن نامش در هر جای متن تشخیص می‌دهد (طولانی‌ترین تطبیق برنده)
-function matchDebtPersonByText(text) {
-  if (!DB.debtPersons || !DB.debtPersons.length) return null;
+// شخص را با پیدا کردن نامش در هر جای متن، در یک لیست مشخص تشخیص می‌دهد (طولانی‌ترین تطبیق برنده)
+function matchPersonInListByText(list, text) {
+  if (!list || !list.length) return null;
   const hay = ' ' + normFa(text) + ' ';
   if (hay.trim() === '') return null;
   let best=null, bestLen=0;
-  DB.debtPersons.forEach(p => {
+  list.forEach(p => {
     const name = normFa(p.name);
     if (!name) return;
     let hit = hay.includes(' '+name+' ') || hay.includes(name);
@@ -14328,6 +14377,14 @@ function matchDebtPersonByText(text) {
     if (hit && name.length > bestLen) { best=p; bestLen=name.length; }
   });
   return best;
+}
+// قرض‌دار را با پیدا کردن نامش در هر جای متن تشخیص می‌دهد (طولانی‌ترین تطبیق برنده)
+function matchDebtPersonByText(text) {
+  return matchPersonInListByText(DB.debtPersons, text);
+}
+// جستجوی هر حساب (قرض‌دار یا شرکت تیل) با نام — برای ربات دستیار
+function _botMatchAnyPerson(text) {
+  return matchPersonInListByText(DB.debtPersons, text) || matchPersonInListByText(DB.noinvPersons, text);
 }
 // اگر نامِ یک «حساب فرعی» داخل متن (توضیحات ورق/پارچه) باشد، همان ساب‌اکانت را برگردان
 function _subForText(person, text) {
@@ -14958,6 +15015,7 @@ function toggleRobotSize() {
 }
 function rbShowTab(tab) {
   if (tab === 'group' && _rbMode === 'person') tab = 'qa';
+  if (tab === 'group' && _rbMode === 'staff') tab = 'dm';
   _rbTab = tab;
   ['qa', 'group', 'dm'].forEach(t => {
     const b = document.getElementById('rbTabBtn-' + t);
@@ -14965,7 +15023,7 @@ function rbShowTab(tab) {
     if (b) b.classList.toggle('active', t === tab);
     if (pn) pn.classList.toggle('active', t === tab);
   });
-  if (tab === 'qa') { _qaRender(); }
+  if (tab === 'qa') { _qaUnread = false; _qaRender(); try { _rbUpdateBadges(); } catch (e) {} }
   if (tab === 'group') {
     _chatInitListeners();
     if (!_chatOnline()) document.getElementById('groupList').innerHTML = '<div class="ch-note" style="padding:20px">برای چت گروهی، اینترنت باید وصل باشد</div>';
@@ -14983,9 +15041,10 @@ function _rbSetMode(mode, personCtx) {
   _rbMode = mode; _rbPersonPeer = personCtx || null;
   if (changed) { _chatResetListeners(); _rbCurrentDm = null; }
   const gt = document.getElementById('rbTabBtn-group');
-  if (gt) gt.style.display = mode === 'person' ? 'none' : 'flex';
+  if (gt) gt.style.display = (mode === 'person' || mode === 'staff') ? 'none' : 'flex';
   _qaMsgs = [{ who: 'bot', t: _botGreeting() }];
   if (_rbTab === 'group' && mode === 'person') _rbTab = 'qa';
+  if (_rbTab === 'group' && mode === 'staff') _rbTab = 'dm';
   rbShowTab(_rbTab || 'qa');
   _chatInitListeners();
   _rbUpdateBadges();
@@ -15054,6 +15113,27 @@ function _botAnswer(qRaw) {
       if (has('حساب من', 'جدول', 'ردیف')) return 'جزئیات کامل حساب شما در جدول همین صفحه است — ' + n2fa((p.rows || []).length) + ' ردیف ثبت شده.';
     }
   } else {
+    // سوال دربارهٔ یک حساب مشخص با نام (مثلاً «حساب محمد چند است؟» یا فقط «محمد»)
+    // — قبل از بقیه چون کلمهٔ «قرض» ممکن است داخل چنین سوالی هم باشد
+    const isCountQuery = (has('قرضدار', 'قرض دار') && has('چند', 'تعداد')) || has('قرض کل', 'جمع قرض', 'مجموع قرض');
+    if (!isCountQuery) {
+      const mp = _botMatchAnyPerson(qRaw);
+      if (mp) {
+        const t = _splitTotals(_allRows(mp));
+        const parts = [];
+        parts.push(t.all.albaqi <= 0 ? 'الباقی: تسویه' : 'الباقی: ' + n2fa(Math.round(t.all.albaqi)) + ' افغانی');
+        parts.push('بردگی: ' + n2fa(Math.round(t.all.bardagi)) + ' افغانی');
+        parts.push('رسید: ' + n2fa(Math.round(t.all.rasid)) + ' افغانی');
+        const fl = _staffAcctFuelLeft(mp);
+        if (fl.hasP || fl.hasD) {
+          const fp = [];
+          if (fl.hasP) fp.push('پطرول ' + n2fa(Math.round(fl.petrol)) + ' لیتر');
+          if (fl.hasD) fp.push('دیزل ' + n2fa(Math.round(fl.diesel)) + ' لیتر');
+          parts.push('تیل امانتی باقی: ' + fp.join(' — '));
+        }
+        return '👤 حساب «' + mp.name + '» — ' + parts.join(' — ');
+      }
+    }
     // دوربین‌های مداربسته — فقط در سوال‌وجواب و چت گروهی (نه مهمان کیو‌آر)
     if (has('دوربین', 'مداربسته', 'کمره', 'camera', 'cctv')) return _botCameraIntent();
     // حاضری، شیفت و معاش کارمندان
@@ -15079,6 +15159,16 @@ function _botAnswer(qRaw) {
   }
   if (has('کمک', 'راهنما', 'چه بلدی', 'چی بلدی', 'چه کار', 'چی کار')) return _botHelp();
   return null;
+}
+// اعلان خودکار ربات در «سوال و جواب»: هر حساب/چیز جدیدی که اضافه می‌شود، ربات
+// همان‌جا خبر می‌دهد — چون این کادر کاملاً محلی است (بدون سرور)، چه آنلاین چه
+// آفلاین کار می‌کند و نیازی به اینترنت ندارد.
+let _qaUnread = false;
+function _botAnnounce(text) {
+  _qaMsgs.push({ who: 'bot', t: '📢 ' + text });
+  if (_rbPaneVisible('qa')) { _qaRender(); }
+  else { _qaUnread = true; try { _rbUpdateBadges(); } catch (e) {} }
+  try { showToast('🤖 ' + text, '#4299e1'); } catch (e) {}
 }
 function _qaRender() {
   const el = document.getElementById('qaList');
@@ -15165,16 +15255,25 @@ function _chatResetListeners() {
 function _chatInitListeners() {
   if (!_chatOnline()) return;
   const me = _chatMe();
-  if (!_chatL.group && _rbMode !== 'person') {
+  if (!_chatL.group && _rbMode === 'admin') {
     _chatL.group = true;
     _fbDb.ref(_chatRoot() + 'group').limitToLast(60).on('child_added', snap => {
       const m = snap.val();
       if (!m) return;
+      m._key = snap.key;
       _groupMsgs.push(m);
       if (_groupMsgs.length > 120) _groupMsgs.shift();
       _groupLast = m;
       if (_rbPaneVisible('group')) { _renderChatList('groupList', _groupMsgs); _chatMarkRead('group'); }
       else _rbUpdateBadges();
+    });
+    _fbDb.ref(_chatRoot() + 'group').limitToLast(60).on('child_changed', snap => {
+      const m = snap.val();
+      if (!m) return;
+      m._key = snap.key;
+      const idx = _groupMsgs.findIndex(x => x._key === snap.key);
+      if (idx !== -1) _groupMsgs[idx] = m; else _groupMsgs.push(m);
+      if (_rbPaneVisible('group')) _renderChatList('groupList', _groupMsgs);
     });
   }
   if (!_chatL.dmIdx) {
@@ -15207,9 +15306,19 @@ function _ensureDmListener(peer) {
   _fbDb.ref(_chatRoot() + 'dm/' + peer + '/msgs').limitToLast(60).on('child_added', snap => {
     const m = snap.val();
     if (!m) return;
+    m._key = snap.key;
     _dmMsgCache[peer].push(m);
     if (_rbPaneVisible('dm') && _rbActiveDmPeer() === peer) { _renderChatList('dmList', _dmMsgCache[peer]); _chatMarkRead('dm', peer); }
     else _rbUpdateBadges();
+  });
+  _fbDb.ref(_chatRoot() + 'dm/' + peer + '/msgs').limitToLast(60).on('child_changed', snap => {
+    const m = snap.val();
+    if (!m) return;
+    m._key = snap.key;
+    const arr = _dmMsgCache[peer] || [];
+    const idx = arr.findIndex(x => x._key === snap.key);
+    if (idx !== -1) arr[idx] = m; else arr.push(m);
+    if (_rbPaneVisible('dm') && _rbActiveDmPeer() === peer) _renderChatList('dmList', _dmMsgCache[peer]);
   });
 }
 function _rbActiveDmPeer() {
@@ -15302,30 +15411,80 @@ function _renderChatList(elId, msgs) {
   const el = document.getElementById(elId);
   if (!el) return;
   const meId = (_chatMe() || {}).id;
+  const scope = elId === 'groupList' ? 'group' : 'dm';
+  const peer = scope === 'dm' ? (_rbActiveDmPeer() || '') : '';
+  const hidden = _chatLoadHidden();
+  const visible = (msgs || []).filter(m => !(m._key && hidden.has(m._key)));
   let lastDay = '';
-  const html = (msgs || []).map(m => {
+  const html = visible.map(m => {
     let sep = '';
     if (m.ts) {
       const d = new Date(m.ts);
       const key = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
       if (key !== lastDay) { lastDay = key; sep = `<div class="ch-day"><span>${_chDayLabel(m.ts)}</span></div>`; }
     }
-    return sep + _chMsgHtml(m, meId);
+    return sep + _chMsgHtml(m, meId, scope, peer);
   }).join('');
   el.innerHTML = html || '<div class="ch-note" style="padding:20px">هنوز پیامی نیست — اولین پیام را بفرستید</div>';
   el.scrollTop = el.scrollHeight;
 }
-function _chMsgHtml(m, meId) {
+function _chMsgHtml(m, meId, scope, peer) {
   const cls = m.f === 'bot' ? 'bot' : (m.f === meId ? 'me' : 'other');
   const nm = cls === 'me' ? '' : `<div class="ch-nm">${escFa(m.f === 'bot' ? 'ربات' : (m.f === 'admin' ? 'میرزا' : m.n || ''))}</div>`;
+  const tm = m.ts ? `<div class="ch-tm">${new Date(m.ts).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}</div>` : '';
+  const key = m._key || '';
+  const delBtn = key ? `<span class="ch-del-btn" onclick="_chatOpenMsgMenu(event,'${scope}','${String(peer||'').replace(/'/g,'')}','${key}',${cls === 'me' ? 'true' : 'false'})" title="گزینه‌ها">⋮</span>` : '';
+  if (m.del) {
+    return `<div class="ch-b ${cls} ch-deleted">${nm}<i>🚫 این پیام حذف شد</i>${tm}</div>`;
+  }
   const safeD = (typeof m.d === 'string' && m.d.slice(0, 5) === 'data:') ? escFa(m.d) : '';
   let body = '';
   if (m.k === 'image' && safeD) body = `<img src="${safeD}" alt="عکس">`;
   else if (m.k === 'video' && safeD) body = `<video src="${safeD}" controls playsinline preload="metadata"></video>`;
   else if (m.k === 'audio' && safeD) body = `<audio src="${safeD}" controls preload="metadata"></audio>`;
   else body = escFa(m.t || '').replace(/\n/g, '<br>');
-  const tm = m.ts ? `<div class="ch-tm">${new Date(m.ts).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}</div>` : '';
-  return `<div class="ch-b ${cls}">${nm}${body}${tm}</div>`;
+  return `<div class="ch-b ${cls}">${delBtn}${nm}${body}${tm}</div>`;
+}
+// ---- حذف پیام: برای من (محلی) / برای همه (سرور) ----
+let _chatHiddenIds = null;
+function _chatLoadHidden() {
+  if (_chatHiddenIds) return _chatHiddenIds;
+  try { _chatHiddenIds = new Set(JSON.parse(localStorage.getItem('pumpChatHidden') || '[]')); } catch (e) { _chatHiddenIds = new Set(); }
+  return _chatHiddenIds;
+}
+function _chatSaveHidden() { try { localStorage.setItem('pumpChatHidden', JSON.stringify(Array.from(_chatLoadHidden()))); } catch (e) {} }
+function _chatCloseMsgMenu() { const m = document.getElementById('chMsgMenu'); if (m) m.remove(); }
+function _chatOpenMsgMenu(ev, scope, peer, key, mine) {
+  ev.stopPropagation();
+  _chatCloseMsgMenu();
+  const menu = document.createElement('div');
+  menu.className = 'ch-msg-menu';
+  menu.id = 'chMsgMenu';
+  let html = `<button onclick="_chatHideForMe('${scope}','${peer}','${key}')">🙈 حذف برای من</button>`;
+  if (mine) html += `<button class="ch-del-everyone" onclick="_chatDeleteForEveryone('${scope}','${peer}','${key}')">🗑️ حذف برای همه</button>`;
+  menu.innerHTML = html;
+  document.body.appendChild(menu);
+  const r = ev.target.getBoundingClientRect();
+  const top = Math.min(r.bottom + 4, window.innerHeight - 100);
+  const left = Math.max(8, Math.min(r.left - 60, window.innerWidth - 190));
+  menu.style.top = top + 'px'; menu.style.left = left + 'px';
+  setTimeout(() => document.addEventListener('click', _chatCloseMsgMenu, { once: true }), 0);
+}
+function _chatHideForMe(scope, peer, key) {
+  _chatCloseMsgMenu();
+  _chatLoadHidden().add(key);
+  _chatSaveHidden();
+  if (scope === 'group') _renderChatList('groupList', _groupMsgs);
+  else _renderChatList('dmList', _dmMsgCache[peer] || []);
+  showToast('پیام برای شما حذف شد', '#38a169');
+}
+function _chatDeleteForEveryone(scope, peer, key) {
+  _chatCloseMsgMenu();
+  if (!_chatOnline()) { showToast('برای حذف پیام، اینترنت لازم است', '#e53e3e'); return; }
+  try {
+    const ref = scope === 'group' ? _fbDb.ref(_chatRoot() + 'group/' + key) : _fbDb.ref(_chatRoot() + 'dm/' + peer + '/msgs/' + key);
+    ref.update({ del: true, t: '', d: '' }).catch(() => showToast('خطا در حذف پیام', '#e53e3e'));
+  } catch (e) { showToast('خطا در حذف پیام', '#e53e3e'); }
 }
 // ---- چت تک‌نفره ----
 function _rbRenderDmPane() {
@@ -15390,10 +15549,13 @@ function _rbUpdateBadges() {
     if ((it.ts || 0) > ((marks.dm || {})[p] || 0) && it.from && it.from !== meId) dmUn++;
   });
   count += dmUn;
+  if (_qaUnread) count++;
   const gd = document.getElementById('rbDot-group');
   if (gd) gd.style.display = gUn ? 'block' : 'none';
   const dd = document.getElementById('rbDot-dm');
   if (dd) dd.style.display = dmUn ? 'block' : 'none';
+  const qd = document.getElementById('rbDot-qa');
+  if (qd) qd.style.display = _qaUnread ? 'block' : 'none';
   const b = document.getElementById('rbFabBadge');
   if (b) { b.style.display = count ? 'flex' : 'none'; b.textContent = n2fa(count); }
 }
@@ -17061,6 +17223,25 @@ document.addEventListener('click', function(e) {
 })();
 </script>
 
+<script id="kbOffsetJs">
+(function(){
+  "use strict";
+  // وقتی کیبورد گوشی باز می‌شود، مرورگرهای موبایل ویوپورت را کوچک می‌کنند و
+  // پنل‌های ثابت (ربات/ماشین‌حساب) با پرش ناجور بالا می‌پرند. با گوش‌دادن به
+  // window.visualViewport ارتفاع واقعی کیبورد را حساب و در متغیر --kb-offset
+  // می‌گذاریم تا پنل‌ها با انتقال نرم درست بالای کیبورد بمانند.
+  var vv = window.visualViewport;
+  if(!vv){ return; }
+  function sync(){
+    var kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    document.documentElement.style.setProperty('--kb-offset', kb + 'px');
+  }
+  sync();
+  vv.addEventListener('resize', sync);
+  vv.addEventListener('scroll', sync);
+})();
+</script>
+
 <script id="redesignV3js">
 /* ============================================================
    REDESIGN v3 — ADDITIVE JS. Reuses existing globals
@@ -17608,7 +17789,7 @@ document.addEventListener('click', function(e) {
 <div id="pl-pw-modal" style="display:none;position:fixed;inset:0;z-index:9500;align-items:center;justify-content:center;background:rgba(0,0,0,0.65)">
   <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:26px 22px;width:min(310px,88vw);text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.5)">
     <div style="font-size:1.05rem;font-weight:700;margin-bottom:18px;color:var(--txt)">🔒 مشاهده مفاد / ضرر</div>
-    <input type="password" id="pl-pw-input" placeholder="رمز عبور را وارد کنید" style="width:100%;padding:11px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--dark);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:1rem;text-align:center;outline:none" onkeydown="if(event.key==='Enter')_checkProfitPassword()">
+    <input type="text" class="pw-mask" id="pl-pw-input" placeholder="رمز عبور را وارد کنید" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other" style="width:100%;padding:11px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--dark);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:1rem;text-align:center;outline:none" onkeydown="if(event.key==='Enter')_checkProfitPassword()">
     <div id="pl-pw-err" style="margin-top:8px;font-size:0.8rem;color:var(--red);min-height:16px"></div>
     <div style="display:flex;gap:10px;margin-top:14px;justify-content:center">
       <button onclick="_checkProfitPassword()" style="background:var(--green);color:#fff;border:none;padding:10px 26px;border-radius:9px;font-family:'Vazirmatn',sans-serif;font-size:0.95rem;cursor:pointer;font-weight:700">تأیید</button>
