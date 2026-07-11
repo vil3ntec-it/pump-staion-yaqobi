@@ -11201,13 +11201,21 @@ function _companyPurchasesAll(company){
 }
 
 // دکمهٔ کوچکِ خریدها داخل حساب — با کلیک یک صفحهٔ جداگانه باز می‌شود (نه کشویی)
+// نقطهٔ صفر شمارشِ خریدها برای هر سوخت — با «جدول جدید» جلو کشیده می‌شود تا
+// کادر «خریدهای پطرول/دیزل» هم مثل خودِ جدول از صفر شروع کند (خریدهای قدیم در
+// آرشیو می‌مانند، DB.fuelEntries اصلی هیچ‌وقت پاک نمی‌شود — فقط شمارشِ نمایشی جلو می‌رود)
+function _companyPurchaseCheckpoint(company, fuel){
+  return (company.purchaseCheckpoint && company.purchaseCheckpoint[fuel]) || 0;
+}
 function renderCompanyPurchases(company){
   const cont = document.getElementById('cm-purchases');
   if (cont) {
     const norm = (typeof normFa === 'function') ? normFa : (s => String(s||'').toLowerCase().trim());
     const target = norm(company.name);
-    const nP = (DB.fuelEntries||[]).filter(e => (e.fuelType||'petrol') === 'petrol' && norm(e.seller) === target).length;
-    const nD = (DB.fuelEntries||[]).filter(e => (e.fuelType||'petrol') === 'diesel' && norm(e.seller) === target).length;
+    const cpP = _companyPurchaseCheckpoint(company, 'petrol');
+    const cpD = _companyPurchaseCheckpoint(company, 'diesel');
+    const nP = (DB.fuelEntries||[]).filter(e => (e.fuelType||'petrol') === 'petrol' && norm(e.seller) === target && (e.id||0) > cpP).length;
+    const nD = (DB.fuelEntries||[]).filter(e => (e.fuelType||'petrol') === 'diesel' && norm(e.seller) === target && (e.id||0) > cpD).length;
     // دو دکمهٔ جدا: هر کدام صفحهٔ جداگانهٔ خریدهای همان تیل را باز می‌کند — چیزی زیر جدول نمی‌آید
     cont.innerHTML = `<button type="button" onclick="openCompanyPurchases('petrol')" style="display:inline-flex;align-items:center;gap:8px;background:var(--dark);border:1.5px solid var(--green);border-radius:999px;padding:8px 16px;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">⛽ خریدهای پطرول — ${n2fa(nP)} خرید ↗</button>
       <button type="button" onclick="openCompanyPurchases('diesel')" style="display:inline-flex;align-items:center;gap:8px;background:var(--dark);border:1.5px solid #b7791f;border-radius:999px;padding:8px 16px;color:#b7791f;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">🟤 خریدهای دیزل — ${n2fa(nD)} خرید ↗</button>`;
@@ -11335,8 +11343,10 @@ function renderCompanyPurchasesPage(company, fuel){
   if (titleEl) titleEl.textContent = fuelLbl + ' — ' + (company.name||'');
   const norm = (typeof normFa === 'function') ? normFa : (s => String(s||'').toLowerCase().trim());
   const target = norm(company.name);
-  const petrol = (DB.fuelEntries||[]).filter(e => (e.fuelType||'petrol') === 'petrol' && norm(e.seller) === target);
-  const diesel = (DB.fuelEntries||[]).filter(e => (e.fuelType||'petrol') === 'diesel' && norm(e.seller) === target);
+  const cpP = _companyPurchaseCheckpoint(company, 'petrol');
+  const cpD = _companyPurchaseCheckpoint(company, 'diesel');
+  const petrol = (DB.fuelEntries||[]).filter(e => (e.fuelType||'petrol') === 'petrol' && norm(e.seller) === target && (e.id||0) > cpP);
+  const diesel = (DB.fuelEntries||[]).filter(e => (e.fuelType||'petrol') === 'diesel' && norm(e.seller) === target && (e.id||0) > cpD);
   // ردیف‌های دستی که در fuelEntries نیستند (بدون srcPurchaseId یا با ID ناشناس)
   const fuelIds = new Set((DB.fuelEntries||[]).map(e => String(e.id)));
   const manualPetrol = (company.rows||[]).filter(r => !r.srcPurchaseId || !fuelIds.has(String(r.srcPurchaseId)));
@@ -11357,14 +11367,21 @@ function newCompanyTable(){
   const dieselRows = _cmpRows(company, 'diesel');
   if (!petrolRows.length && !dieselRows.length){ if (typeof showToast==='function') showToast('جدول فعلی خالی است', '#e53e3e'); return; }
   if (!Array.isArray(company.tableHistory)) company.tableHistory = [];
+  if (!company.purchaseCheckpoint) company.purchaseCheckpoint = { petrol: 0, diesel: 0 };
   const createdAt = (typeof persianDate === 'function' ? persianDate() : '');
+  const now = Date.now();
+  // کادرهای «خریدهای پطرول/دیزل» هم مثل جدول از صفر شروع کنند: نقطهٔ شمارش جلو
+  // کشیده می‌شود و روی خودِ جدولِ آرشیوشده هم ثبت می‌شود تا آرشیو، شمارشِ خریدهای
+  // قدیمِ خودش را نشان بدهد (نه صفر)
   if (petrolRows.length) {
-    company.tableHistory.push({ id: 'ch' + Date.now() + 'p', createdAt, fuel: 'petrol', rows: JSON.parse(JSON.stringify(petrolRows)) });
+    company.tableHistory.push({ id: 'ch' + now + 'p', createdAt, fuel: 'petrol', rows: JSON.parse(JSON.stringify(petrolRows)), purchasesAfter: company.purchaseCheckpoint.petrol || 0, purchasesBefore: now });
     company.rows = [];
+    company.purchaseCheckpoint.petrol = now;
   }
   if (dieselRows.length) {
-    company.tableHistory.push({ id: 'ch' + Date.now() + 'd', createdAt, fuel: 'diesel', rows: JSON.parse(JSON.stringify(dieselRows)) });
+    company.tableHistory.push({ id: 'ch' + now + 'd', createdAt, fuel: 'diesel', rows: JSON.parse(JSON.stringify(dieselRows)), purchasesAfter: company.purchaseCheckpoint.diesel || 0, purchasesBefore: now });
     company.dieselRows = [];
+    company.purchaseCheckpoint.diesel = now;
   }
   save();
   renderCompanyRows(company);
@@ -11398,6 +11415,11 @@ function deleteCurrentCompanyTable(btn){
   if (restoreIdx >= 0){
     const arch = hist[restoreIdx];
     if (currentCompanyFuel === 'diesel') company.dieselRows = arch.rows || []; else company.rows = arch.rows || [];
+    // نقطهٔ شمارشِ خریدها هم برگردد به همان‌جایی که قبل از «جدول جدید» بود
+    if (arch.purchasesAfter != null) {
+      if (!company.purchaseCheckpoint) company.purchaseCheckpoint = { petrol: 0, diesel: 0 };
+      company.purchaseCheckpoint[currentCompanyFuel] = arch.purchasesAfter;
+    }
     hist.splice(restoreIdx, 1);
     if (typeof showToast === 'function') showToast('🗑️ جدولِ فعلی حذف شد — جدولِ قبلی برگشت', '#e53e3e');
   } else {
@@ -11447,6 +11469,14 @@ function _renderCompanyHistoryPanel(company){
       }).join('');
       const fuelLabel = h.fuel === 'diesel' ? '🟤 دیزل' : '⛽ پطرول';
       const armed = (_cmDelArm === h.id);
+      // شمارش خریدهای همین جدولِ آرشیوشده (کادر «خریدهای پطرول/دیزل» مالِ همین بازه)
+      let purchBadge = '';
+      if (h.purchasesBefore != null) {
+        const norm = (typeof normFa === 'function') ? normFa : (s => String(s||'').toLowerCase().trim());
+        const target = norm(company.name);
+        const nPurch = (DB.fuelEntries||[]).filter(e => (e.fuelType||'petrol') === (h.fuel||'petrol') && norm(e.seller) === target && (e.id||0) > (h.purchasesAfter||0) && (e.id||0) <= h.purchasesBefore).length;
+        purchBadge = `<span style="font-size:0.72rem;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:4px 9px">خریدهای این جدول: <b style="color:${ac}">${n2fa(nPurch)}</b></span>`;
+      }
       return `<div style="border:1.5px solid ${ac}66;border-radius:12px;margin-bottom:12px;overflow:hidden">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:${ac}18;flex-wrap:wrap">
           <span style="font-weight:800;color:${ac};font-size:0.85rem;white-space:nowrap;flex:1">🗂️ جدول ${n2fa(history.length-hi)} — ${fuelLabel}</span>
@@ -11460,6 +11490,7 @@ function _renderCompanyHistoryPanel(company){
           <span style="font-size:0.72rem;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:4px 9px">جمع کل افغانی: <b style="color:var(--accent)">${n2fa(Math.round(tAfn))}</b></span>
           <span style="font-size:0.72rem;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:4px 9px">رسید: <b style="color:var(--green)">${n2fa(Math.round(tPoul))}</b></span>
           <span style="font-size:0.72rem;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:4px 9px">جمع الباقی: <b style="color:${tAlb>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(tAlb))}</b></span>
+          ${purchBadge}
         </div>
         <div class="xls-wrap"><table class="xls-tbl">
           <thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>خرید(کیلو)</th><th>قیمت تن($)</th><th style="min-width:90px">کل($)</th><th>نرخ</th><th style="min-width:100px">کل(افغانی)</th><th>رسید</th><th style="min-width:100px">الباقی</th></tr></thead>
