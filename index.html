@@ -8498,7 +8498,7 @@ function checkLowStock() {
   // برای همه (مدیر/کارمند) که برنامه باز دارند، چه آنلاین چه آفلاین
   try { _playAlertSound(); } catch (e) {}
   try { _notify('⛽ هشدار مخزن پمپ یعقوبی', low.map(it => it.icon + ' ' + it.label + ': ' + n2fa(it.liters) + ' لیتر').join(' — '), 'low-stock'); } catch (e) {}
-  try { _botAnnounce(_lowStockMessage()); } catch (e) {}
+  try { _botAnnounce(_lowStockMessage(), true); } catch (e) {}
   return true;
 }
 
@@ -8524,7 +8524,7 @@ function checkDebtReview() {
   const notifBody = (out.length ? out.length + ' حساب تمام‌شده' : '') + (out.length && low.length ? ' — ' : '') + (low.length ? low.length + ' حساب کم‌مانده' : '');
   try { _playAlertSound(); } catch (e) {}
   try { _notify('💰 بررسی حساب قرض‌داران', notifBody, 'debt-review'); } catch (e) {}
-  try { _botAnnounce(msg); } catch (e) {}
+  try { _botAnnounce(msg, true); } catch (e) {}
   return true;
 }
 
@@ -11332,26 +11332,31 @@ function renderCompanyPurchasesPage(company, fuel){
   cont.innerHTML = fuel === 'petrol' ? petrolHtml : fuel === 'diesel' ? dieselHtml : (petrolHtml + dieselHtml);
 }
 
-// «جدول جدید» شرکت — جدول فعلی را آرشیو می‌کند و یک جدول خالی می‌سازد (مثل بخش قرض‌داران، بدون دست‌زدن به آن)
+// «جدول جدید» شرکت — هر دو جدولِ همین شرکت (پطرول و دیزل) با هم آرشیو می‌شوند و
+// هر دو تازه شروع می‌شوند — نه فقط جدولِ سوختی که همین الان باز است — چون کادرهای
+// خرید پطرول و دیزل باید با هم یکجا پایین بروند و جدول جدید برای هر دو باشد.
 function newCompanyTable(){
   const company = (DB.tilCompanies||[]).find(c => c.id === currentCompanyId);
   if (!company) return;
-  const rows = _cmpRows(company);
-  if (!rows.length){ if (typeof showToast==='function') showToast('جدول فعلی خالی است', '#e53e3e'); return; }
+  const petrolRows = _cmpRows(company, 'petrol');
+  const dieselRows = _cmpRows(company, 'diesel');
+  if (!petrolRows.length && !dieselRows.length){ if (typeof showToast==='function') showToast('جدول فعلی خالی است', '#e53e3e'); return; }
   if (!Array.isArray(company.tableHistory)) company.tableHistory = [];
-  company.tableHistory.push({
-    id: 'ch' + Date.now(),
-    createdAt: (typeof persianDate === 'function' ? persianDate() : ''),
-    fuel: currentCompanyFuel,
-    rows: JSON.parse(JSON.stringify(rows))
-  });
-  if (currentCompanyFuel === 'diesel') company.dieselRows = []; else company.rows = [];
+  const createdAt = (typeof persianDate === 'function' ? persianDate() : '');
+  if (petrolRows.length) {
+    company.tableHistory.push({ id: 'ch' + Date.now() + 'p', createdAt, fuel: 'petrol', rows: JSON.parse(JSON.stringify(petrolRows)) });
+    company.rows = [];
+  }
+  if (dieselRows.length) {
+    company.tableHistory.push({ id: 'ch' + Date.now() + 'd', createdAt, fuel: 'diesel', rows: JSON.parse(JSON.stringify(dieselRows)) });
+    company.dieselRows = [];
+  }
   save();
   renderCompanyRows(company);
   renderCompanyPurchases(company);
   _renderCompanyHistoryPanel(company);
   setTimeout(() => { const hw = document.getElementById('cm-history-wrap'); if (hw) hw.scrollIntoView({ behavior:'smooth', block:'start' }); }, 80);
-  if (typeof showToast === 'function') showToast('✅ جدول جدید ساخته شد — جدول قبلی پایین آرشیو شد', '#38a169');
+  if (typeof showToast === 'function') showToast('✅ جدول جدید ساخته شد — جدول‌های پطرول و دیزل قبلی پایین آرشیو شدند', '#38a169');
 }
 
 // «حذف این جدول» — جدولِ فعلیِ همین شرکت را پاک می‌کند؛ اگر جدولِ قبلی (آرشیو) باشد آن را برمی‌گرداند (لغوِ «جدول جدید»).
@@ -11431,6 +11436,7 @@ function _renderCompanyHistoryPanel(company){
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:${ac}18;flex-wrap:wrap">
           <span style="font-weight:800;color:${ac};font-size:0.85rem;white-space:nowrap;flex:1">🗂️ جدول ${n2fa(history.length-hi)} — ${fuelLabel}</span>
           <span style="font-size:0.72rem;color:var(--muted);white-space:nowrap">${h.createdAt||''}</span>
+          <button style="white-space:nowrap;border-radius:7px;border:1px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;padding:5px 10px;cursor:pointer" onclick="pdfCompanyHistory('${company.id}','${h.id}')">📄 PDF</button>
           <button class="del-btn" style="${armed?'background:var(--red);color:#fff;':''}white-space:nowrap" onclick="deleteCompanyTableHistory('${company.id}','${h.id}',this)">${armed?'✔ تأیید حذف؟':'🗑️ حذف'}</button>
         </div>
         <!-- خلاصهٔ همین جدول آرشیو (مثل کادرهای بالا) -->
@@ -11730,6 +11736,73 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px}
 <td>${n2fa(sumUsd.toFixed(1))} $</td><td></td><td>${n2fa(Math.round(sumAfn))}</td>
 <td>${n2fa(Math.round(sumPoul))}</td><td>${n2fa(Math.round(sumAlb))}</td><td>${n2fa(sumAlbUsd.toFixed(1))} $</td></tr></tfoot></table>
 <div class="footer">پمپ یعقوبی — ${escFa(company.name)}</div>
+<script>window.onload=function(){window.print();}<\/script></body></html>`;
+  const w = window.open('', '_blank', 'width=900,height=650');
+  if (w) { w.document.write(html); w.document.close(); }
+  else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
+}
+
+// پی‌دی‌اف یک جدولِ آرشیوشدهٔ شرکت (تاریخچه) — همان ستون‌هایی که در کادرِ آرشیو دیده می‌شوند
+function pdfCompanyHistory(companyId, historyId){
+  const company = (DB.tilCompanies||[]).find(c => c.id === companyId);
+  if (!company) return;
+  const h = (company.tableHistory||[]).find(x => x.id === historyId);
+  if (!h) return;
+  const d = allDates();
+  const rows = h.rows || [];
+  const sumUsd0 = rows.reduce((a,r)=>a+cmpTotalUsd(r), 0);
+  const sumAfn0 = rows.reduce((a,r)=>a+cmpAfnTotal(r), 0);
+  const rate = sumUsd0 > 0 ? sumAfn0 / sumUsd0 : 0;
+  let tTon=0,tUsd=0,tAfn=0,tPoul=0,tAlb=0;
+  const rowsHtml = rows.filter(r => !r.srcPurchaseId).map((r,i) => {
+    const ton=cmpTon(r), tu=cmpTotalUsd(r), ta=cmpAfnTotal(r), poul=cmpPoulAfn(r,rate), ab=cmpAlbaqi(r,rate);
+    tTon+=ton; tUsd+=tu; tAfn+=ta; tPoul+=poul; tAlb+=ab;
+    const kgShow = (r.kg!=null && r.kg!=='' && +r.kg!==0) ? r.kg : (r.ton ? Math.round(parseFloat(r.ton)*1000) : '');
+    return `<tr>
+      <td style="text-align:center;color:#718096">${i+1}</td>
+      <td style="font-weight:700;color:#c07700">${r.date||'—'}</td>
+      <td style="font-weight:700">${escFa(r.name)||'—'}</td>
+      <td style="color:#2b6cb0;font-weight:700">${kgShow!==''?n2fa(kgShow):''}</td>
+      <td style="color:#276749">${n2fa(r.usd||0)} $/تن</td>
+      <td style="color:#2b6cb0;font-weight:700">${n2fa(tu.toFixed(1))} $</td>
+      <td>${n2fa(r.rate||0)}</td>
+      <td style="color:#805ad5">${n2fa(Math.round(ta))}</td>
+      <td style="color:#276749;font-weight:700">${n2fa(Math.round(poul))}</td>
+      <td style="color:${ab>0?'#e53e3e':'#276749'};font-weight:700">${n2fa(Math.round(ab))}</td>
+    </tr>`;
+  }).join('');
+  const fuelLabel = h.fuel === 'diesel' ? '🟤 دیزل' : '⛽ پطرول';
+  const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8">
+<title>${escFa(company.name)} — جدول آرشیو‌شده — شرکت تیل</title>
+<style>@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:12px}
+h1{font-size:1.25rem;font-weight:900;color:#805ad5;border-bottom:2px solid #805ad5;padding-bottom:8px;margin-bottom:6px}
+.meta{font-size:0.72rem;color:#718096;margin-bottom:14px}.sum-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.sum-box{flex:1;min-width:110px;background:#faf5ff;border:1px solid #e9d8fd;border-radius:8px;padding:10px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;gap:4px}
+.sum-box .l{font-size:0.62rem;color:#718096;line-height:1.3}.sum-box .v{font-size:1.05rem;font-weight:900;white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:0.72rem}th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:right;font-weight:700}
+td{padding:6px 7px;border-bottom:1px solid #e2e8f0}tr:nth-child(even) td{background:#faf5ff}
+tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px}
+.footer{margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
+@media print{@page{margin:0.5cm;size:A4 landscape}}</style></head><body>
+<h1>🗂️ ${escFa(company.name)} — جدول آرشیو‌شده (${fuelLabel})</h1>
+<div class="meta">تاریخ ساخته‌شدنِ جدول: ${h.createdAt||'—'} | تاریخ چاپ: ${d.sh} | ${d.mi}</div>
+<div class="sum-row">
+  <div class="sum-box"><div class="l">جمع (کیلو)</div><div class="v" style="color:#2b6cb0">${n2fa(Math.round(tTon*1000))}</div></div>
+  <div class="sum-box"><div class="l">جمع کل دالر</div><div class="v" style="color:#276749">${n2fa(tUsd.toFixed(1))} $</div></div>
+  <div class="sum-box"><div class="l">جمع (افغانی)</div><div class="v" style="color:#805ad5">${n2fa(Math.round(tAfn))}</div></div>
+  <div class="sum-box"><div class="l">رسید</div><div class="v" style="color:#276749">${n2fa(Math.round(tPoul))}</div></div>
+  <div class="sum-box" style="border-color:${tAlb>0?'#fc8181':'#9ae6b4'}"><div class="l">الباقی</div><div class="v" style="color:${tAlb>0?'#e53e3e':'#276749'}">${n2fa(Math.round(tAlb))}</div></div>
+</div>
+<table><thead><tr>
+  <th>#</th><th>تاریخ</th><th>نام</th><th>خرید(کیلو)</th><th>قیمت تن ($)</th>
+  <th>کل ($)</th><th>نرخ</th><th>کل (افغانی)</th><th>رسید</th><th>الباقی</th>
+</tr></thead>
+<tbody>${rowsHtml||'<tr><td colspan="10" style="text-align:center;padding:20px;color:#718096">ردیفی نیست</td></tr>'}</tbody>
+<tfoot><tr><td colspan="3">جمع</td><td>${n2fa(Math.round(tTon*1000))}</td><td></td>
+<td>${n2fa(tUsd.toFixed(1))} $</td><td></td><td>${n2fa(Math.round(tAfn))}</td>
+<td>${n2fa(Math.round(tPoul))}</td><td>${n2fa(Math.round(tAlb))}</td></tr></tfoot></table>
+<div class="footer">پمپ یعقوبی — ${escFa(company.name)} — جدول آرشیو‌شده</div>
 <script>window.onload=function(){window.print();}<\/script></body></html>`;
   const w = window.open('', '_blank', 'width=900,height=650');
   if (w) { w.document.write(html); w.document.close(); }
@@ -15079,6 +15152,11 @@ function openStaffAccount(pid, subId) {
 }
 function closeStaffAcct() {
   document.getElementById('staffAcctOverlay').classList.remove('open');
+  // با برگشتن به فهرست، جستجوی قبلی (تایپی یا صوتی) پاک شود تا فهرست کامل دوباره دیده شود
+  const inp = document.getElementById('staff-search');
+  if (inp) inp.value = '';
+  _staffAutoKey = null;
+  try { renderStaffList(); } catch (e) {}
 }
 // ========== ربات دستیار: سوال‌وجواب + چت گروهی + چت تک‌نفره ==========
 // سه کادر: ۱) سوال و جواب (ربات محلی، بدون سرور) ۲) چت گروهی کارمندان
@@ -15120,8 +15198,8 @@ function toggleRobotSize() {
   p.classList.toggle('large');
 }
 function rbShowTab(tab) {
-  if (tab === 'group' && _rbMode === 'person') tab = 'qa';
-  if (tab === 'group' && _rbMode === 'staff') tab = 'dm';
+  // نمای کیو‌آر شخص (مشتری/قرض‌دار): فقط چت تک‌نفره — نه چت گروهی، نه حتی سوال‌وجواب
+  if (_rbMode === 'person' && tab !== 'dm') tab = 'dm';
   _rbTab = tab;
   ['qa', 'group', 'dm'].forEach(t => {
     const b = document.getElementById('rbTabBtn-' + t);
@@ -15147,10 +15225,10 @@ function _rbSetMode(mode, personCtx) {
   _rbMode = mode; _rbPersonPeer = personCtx || null;
   if (changed) { _chatResetListeners(); _rbCurrentDm = null; }
   const gt = document.getElementById('rbTabBtn-group');
-  if (gt) gt.style.display = (mode === 'person' || mode === 'staff') ? 'none' : 'flex';
+  if (gt) gt.style.display = mode === 'person' ? 'none' : 'flex';
+  const qt = document.getElementById('rbTabBtn-qa');
+  if (qt) qt.style.display = mode === 'person' ? 'none' : 'flex';
   _qaMsgs = [{ who: 'bot', t: _botGreeting() }];
-  if (_rbTab === 'group' && mode === 'person') _rbTab = 'qa';
-  if (_rbTab === 'group' && mode === 'staff') _rbTab = 'dm';
   rbShowTab(_rbTab || 'qa');
   _chatInitListeners();
   _rbUpdateBadges();
@@ -15331,6 +15409,54 @@ function _botTryAgentAction(qRaw) {
 
   return false;
 }
+// همان اقدام‌های ایجنت، ولی برای «ربات ...» داخل چت گروهی — به‌جای پوش‌کردن در
+// سوال‌وجواب، متنِ جواب را برمی‌گرداند تا در خودِ چت گروهی فرستاده شود. هیچ کاری
+// (باز کردن/ساختن/حذف/رفتن‌به‌بخش) اجرا نمی‌شود مگر فرستنده خودِ میرزا (مدیر) باشد؛
+// برای بقیهٔ کارمندان، پیام «ربات ...» فقط مثل سوال‌وجواب معمولی جواب داده می‌شود
+// (تابعِ _botAnswer در chatSendText صدا زده می‌شود، نه این تابع).
+function _botTryAgentActionGroup(qRaw) {
+  const q = _botNorm(qRaw);
+  if (!q || _rbMode !== 'admin') return null;
+  const has = (...ws) => ws.some(w => q.includes(w));
+
+  if (has('برو به', 'باز کن صفحه', 'باز کن بخش', 'ببرم به', 'ببر به')) {
+    const sec = _botFindSection(q);
+    if (sec) { try { showSection(sec.id); } catch (e) {} return '✅ رفتم به بخش «' + sec.label + '».'; }
+  }
+
+  if (has('باز کن', 'نشان بده', 'نشانم بده', 'حسابش را ببینم', 'ببینم حساب')) {
+    const p = _botMatchAnyPerson(qRaw);
+    if (p) {
+      const type = (DB.debtPersons || []).some(x => x.id === p.id) ? 'debt' : 'noinv';
+      _botOpenPerson(type, p.id);
+      return '✅ حساب «' + p.name + '» را باز کردم.';
+    }
+  }
+
+  if ((has('بساز') || has('اضافه کن') || has('ایجاد کن') || has('درست کن')) && (has('حساب', 'قرضدار', 'قرض دار', 'شرکت') || has('به نام', 'بنام'))) {
+    const name = _botExtractNewAccountName(qRaw);
+    if (name && name.length >= 2) {
+      const type = has('شرکت') ? 'noinv' : 'debt';
+      const r = _botAddPerson(type, name);
+      _botOpenPerson(type, r.id);
+      return r.existed ? ('این حساب از قبل هست — «' + name + '» را باز کردم.') : ('✅ حساب جدید «' + name + '» ساخته شد.');
+    }
+    return 'اسم حساب را متوجه نشدم — مثلاً بگویید: «ربات یک قرض‌دار جدید بساز به نام احمد»';
+  }
+
+  // حذف: چون این یک دستورِ مستقیم از خودِ میرزاست (نه سوال)، بدون کلیک تاییدی
+  // همین‌جا اجرا می‌شود — ولی همیشه در سطل زباله قابل بازگردانی می‌ماند
+  if (has('حذف کن', 'پاک کن', 'حذفش کن', 'پاکش کن')) {
+    const p = _botMatchAnyPerson(qRaw);
+    if (p) {
+      const type = (DB.debtPersons || []).some(x => x.id === p.id) ? 'debt' : 'noinv';
+      const ok = _botDeletePerson(type, p.id);
+      return ok ? ('🗑️ حساب «' + p.name + '» حذف شد — اگر اشتباه بود، از تنظیمات > سطل زباله بازش گردانید.') : 'این حساب پیدا نشد.';
+    }
+  }
+
+  return null;
+}
 function _botGreeting() {
   const nm = _rbMode === 'person' && _rbPersonPeer ? ' ' + _rbPersonPeer.name : '';
   return 'سلام' + nm + '! من ربات دستیار پمپ هستم. ' + _botHelp();
@@ -15425,11 +15551,16 @@ function _botAnswer(qRaw) {
 // همان‌جا خبر می‌دهد — چون این کادر کاملاً محلی است (بدون سرور)، چه آنلاین چه
 // آفلاین کار می‌کند و نیازی به اینترنت ندارد.
 let _qaUnread = false;
-function _botAnnounce(text) {
+function _botAnnounce(text, toGroup) {
   _qaMsgs.push({ who: 'bot', t: '📢 ' + text });
   if (_rbPaneVisible('qa')) { _qaRender(); }
   else { _qaUnread = true; try { _rbUpdateBadges(); } catch (e) {} }
   try { showToast('🤖 ' + text, '#4299e1'); } catch (e) {}
+  // فقط از دستگاه میرزا در چت گروهی هم فرستاده شود — تا با هر کارمندی که همین لحظه
+  // همین هشدار را محلی تشخیص می‌دهد، پیام چند بار تکراری در گروه نیاید
+  if (toGroup && _rbMode === 'admin' && _chatOnline()) {
+    try { _chatPushRaw('group', { f: 'bot', n: 'ربات', k: 'text', t: text, ts: Date.now() }); } catch (e) {}
+  }
 }
 function _qaRender() {
   const el = document.getElementById('qaList');
@@ -15526,7 +15657,7 @@ function _chatNotifyIncoming(scope, m) {
 function _chatInitListeners() {
   if (!_chatOnline()) return;
   const me = _chatMe();
-  if (!_chatL.group && _rbMode === 'admin') {
+  if (!_chatL.group && _rbMode !== 'person') {
     _chatL.group = true;
     const _groupBootTs = Date.now();
     _fbDb.ref(_chatRoot() + 'group').limitToLast(60).on('child_added', snap => {
@@ -15633,10 +15764,13 @@ function chatSendText(scope) {
   if (!_chatOnline()) { showToast('برای فرستادن پیام، اینترنت لازم است', '#e53e3e'); return; }
   inp.value = '';
   _chatPush(scope, { k: 'text', t: txt });
-  // کادر سوال‌وجواب داخل گروه: پیامی که با «ربات» شروع شود، ربات در گروه جواب می‌دهد
+  // کادر سوال‌وجواب داخل گروه: پیامی که با «ربات» شروع شود، ربات در گروه جواب می‌دهد.
+  // دستورهایی که چیزی می‌سازند/باز می‌کنند/حذف می‌کنند فقط از خودِ میرزا (مدیر)
+  // اجرا می‌شوند؛ برای بقیهٔ کارمندان فقط جواب سوال داده می‌شود، هیچ کاری اجرا نمی‌شود.
   if (scope === 'group' && /^(ربات|بات)\b/.test(_botNorm(txt))) {
     const qq = txt.replace(/^\s*(ربات|بات)\s*[،,:؛]?\s*/, '');
-    const ans = _botAnswer(qq) || ('متوجه سوال نشدم. ' + _botHelp());
+    const actionAns = _botTryAgentActionGroup(qq);
+    const ans = actionAns || _botAnswer(qq) || ('متوجه سوال نشدم. ' + _botHelp());
     setTimeout(() => { try { _chatPushRaw('group', { f: 'bot', n: 'ربات', k: 'text', t: ans, ts: Date.now() }); } catch (e) {} }, 400);
   }
 }
@@ -16542,20 +16676,34 @@ function staffVoiceSearch() {
   const rec = new SR();
   _staffRec = rec;
   rec.lang = 'fa-IR'; // نزدیک‌ترین زبانِ پشتیبانی‌شده به دری
+  rec.continuous = true; // با یک مکث کوتاه قطع نشود — فرصت بیشتر برای گفتن اسم
   rec.interimResults = false;
   rec.maxAlternatives = 5; // چند برداشت — دقت پیدا کردن نام را خیلی بالا می‌برد
-  const done = () => { _staffListening = false; if (btn) { btn.classList.remove('listening'); btn.textContent = '🎤'; } };
-  rec.onstart = () => { _staffListening = true; if (btn) { btn.classList.add('listening'); btn.textContent = '⏺'; } };
-  rec.onend = done;
-  rec.onerror = (e) => {
-    done();
-    showToast(e && e.error === 'not-allowed' ? '🎤 اجازهٔ مایکروفون داده نشد' : '🎤 صدا شناخته نشد — دوباره تلاش کنید', '#e53e3e');
-  };
-  rec.onresult = (ev) => {
+  let lastEv = null, stopTimer = null;
+  const done = () => {
+    _staffListening = false;
+    if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
+    if (btn) { btn.classList.remove('listening'); btn.textContent = '🎤'; }
     const alts = [];
-    try { for (let i = 0; i < ev.results[0].length; i++) alts.push(ev.results[0][i].transcript); } catch (e) {}
+    if (lastEv) {
+      try { for (let r = 0; r < lastEv.results.length; r++) for (let i = 0; i < lastEv.results[r].length; i++) alts.push(lastEv.results[r][i].transcript); } catch (e) {}
+    }
     if (alts.length) _staffApplyVoice(alts);
   };
+  rec.onstart = () => {
+    _staffListening = true;
+    if (btn) { btn.classList.add('listening'); btn.textContent = '⏺'; }
+    // حداکثر ۱۲ ثانیه فرصت صحبت — قبلاً با اولین مکث کوتاه قطع می‌شد
+    stopTimer = setTimeout(() => { try { rec.stop(); } catch (e) {} }, 12000);
+  };
+  rec.onend = done;
+  rec.onerror = (e) => {
+    if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
+    _staffListening = false;
+    if (btn) { btn.classList.remove('listening'); btn.textContent = '🎤'; }
+    showToast(e && e.error === 'not-allowed' ? '🎤 اجازهٔ مایکروفون داده نشد' : '🎤 صدا شناخته نشد — دوباره تلاش کنید', '#e53e3e');
+  };
+  rec.onresult = (ev) => { lastEv = ev; };
   try { rec.start(); } catch (e) { done(); }
 }
 // هر حساب (اصلی یا فرعی) یک کارت جداگانه است — «sub» خالی یعنی حساب اصلی
