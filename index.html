@@ -159,6 +159,18 @@ body.gfx-ultra.light-mode .lock-box{
 }
 body.light-mode .lock-screen>div[style*="rgba(255,255,255,.5)"]{ color:#6b5636 !important; }
 body.light-mode .lock-box>div[style*="rgba(255,255,255,.6)"]{ color:#6b5636 !important; }
+/* روز شنبه/تاریخ و نشان نسخه روی صفحهٔ قفل، و دکمهٔ صفحهٔ کارمند — این‌ها هم
+   رنگ سفیدِ ثابت داشتند که روی پس‌زمینهٔ روشنِ حالت روز اصلاً دیده نمی‌شدند */
+body.light-mode #lsWeekday{ color:#6b5636 !important; }
+body.light-mode .lock-screen .app-version{
+  color:#6b5636 !important;
+  background:rgba(0,0,0,.05) !important;
+  border-color:rgba(0,0,0,.15) !important;
+}
+body.light-mode #lsStaffBtn{
+  color:#6b5636 !important;
+  border-color:rgba(0,0,0,.35) !important;
+}
 @keyframes lsZoom{from{transform:scale(1)}to{transform:scale(1.1)}}
 @keyframes lsFadeDown{from{opacity:0;transform:translateY(-24px)}to{opacity:1;transform:translateY(0)}}
 @keyframes lsFadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
@@ -446,6 +458,17 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 .ch-ib{width:38px;height:38px;flex-shrink:0;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
 .ch-ib svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .ch-ib:hover{color:var(--blue);border-color:var(--blue)}
+/* دسکتاپ/مانیتور بزرگ: پنل ربات و نوشته‌های چت روی صفحهٔ بزرگ خیلی ریز بودند —
+   هم پنل بزرگ‌تر شود هم فونت پیام‌ها/ورودی/تب‌ها */
+@media (min-width: 900px) {
+  #robotPanel{ width:min(460px,calc(100vw - 24px)) !important; height:min(620px,calc(100dvh - 90px - var(--kb-offset,0px))) !important; }
+  #robotPanel.large{ width:min(720px,calc(100vw - 24px)) !important; height:min(820px,calc(100dvh - 40px - var(--kb-offset,0px))) !important; }
+  .ch-b{ font-size:1rem !important; }
+  .ch-comp input[type=text]{ font-size:1rem !important; padding:11px 13px !important; }
+  .rb-tab{ font-size:0.88rem !important; }
+  .ch-nm{ font-size:0.76rem !important; }
+  .ch-note{ font-size:0.78rem !important; }
+}
 .ch-ib.send{background:var(--blue);border-color:var(--blue);color:#fff}
 .ch-ib.rec-on{background:var(--red);border-color:var(--red);color:#fff;animation:micPulse 1s ease-in-out infinite}
 /* فهرست چت‌های تک‌نفره (سمت مدیر) */
@@ -1073,19 +1096,13 @@ button[onclick*="transferBase"]:active{ transform:scale(.92)!important; }
     radial-gradient(ellipse at 50% 30%, rgba(180,90,0,.1), transparent 60%),
     linear-gradient(160deg, #0c0804, #100a05 60%, #0a0603) !important;
 }
-body.light-mode .lock-screen{
-  background:
-    radial-gradient(ellipse at 50% 30%, rgba(220,140,0,.15), transparent 60%),
-    linear-gradient(160deg, #4a2e00, #5c3800, #3d2200) !important;
-}
+/* حالتِ روز: پس‌زمینهٔ روشن/گرم همان چیزی است که کمی بالاتر (body.light-mode .ls-bg
+   و .lock-box) تنظیم شده — این‌جا دیگر با پس‌زمینهٔ تیرهٔ ثابت رویش سوار نمی‌شویم،
+   چون همان تناقض باعث می‌شد صفحهٔ ورود در روز هم تیره بماند و نوشته‌های سفیدِ رویش
+   (نسخه/روز هفته) روی آن پس‌زمینهٔ تیرهِ ناخواسته دیده نشوند */
 .lock-box{
   border:1px solid rgba(200,120,0,.35)!important;
   box-shadow:0 0 50px rgba(200,100,0,.2), 0 0 100px rgba(0,0,0,.8)!important;
-}
-body.light-mode .lock-box{
-  background:#3d2200!important;
-  border:1px solid rgba(220,160,0,.5)!important;
-  box-shadow:0 0 40px rgba(220,140,0,.25)!important;
 }
 /* رمز همیشه سفید و واضح — جلوگیری از خاکستری‌شدنِ نوشتهٔ رمز در موبایل (وب‌کیت) و حالت روشن */
 .lock-box input,
@@ -2757,12 +2774,23 @@ body.light-mode[class*="theme-"] .goto-btn:hover{
 
 /* ---------- BRIDGE: route hard-coded chrome to the variables above ----------
    Only active while a theme-* class is present on <body>. */
-/* background-attachment:fixed مهم است — بدون آن، گرادیان روی ارتفاع کل صفحهٔ
-   اسکرول‌شونده (که می‌تواند خیلی درازتر از صفحه‌نمایش کامپیوتر باشد) حساب
-   می‌شد و نوار/لانه‌زنبوری معمولاً بیرون از دیدِ اول صفحه می‌افتاد — یعنی در
-   کامپیوتر (که صفحات درازتری دارد) عملاً هیچ تغییری دیده نمی‌شد. با fixed،
-   طرح همیشه نسبت به خودِ صفحه‌نمایش حساب می‌شود، مستقل از طول محتوا. */
-body[class*="theme-"]{ background:var(--app-bg)!important; background-attachment:fixed!important; }
+/* گرادیان باید نسبت به خودِ صفحه‌نمایش حساب شود، نه ارتفاع کل صفحهٔ اسکرول‌شونده
+   (که در کامپیوتر می‌تواند خیلی درازتر از صفحه‌نمایش باشد و طرح را بیرون از دید بیندازد).
+   قبلاً این کار با background-attachment:fixed انجام می‌شد، ولی آن روش باعث می‌شد
+   کروم گرادیان را روی هر فریمِ اسکرول دوباره بکشد — در دسکتاپ و به‌خصوص در حالت
+   PWA/شورت‌کات، با اسکرولِ زیاد یک شکاف خالی (بدون رنگ) موقت وسط صفحه ظاهر می‌شد.
+   حالا به‌جای fixed روی خودِ body، یک لایهٔ ::before با position:fixed پشتِ صفحه
+   می‌گذاریم — این لایه را کامپوزیتور مرورگر جدا نگه می‌دارد و نیازی به رنگ‌آمیزیِ
+   دوباره حین اسکرول ندارد، پس هیچ شکافی هنگام اسکرول دیده نمی‌شود. */
+body[class*="theme-"]{ background:none!important; }
+body[class*="theme-"]::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:0;
+  background:var(--app-bg)!important;
+  pointer-events:none;
+}
 body[class*="theme-"] .header{ background:var(--hdr-bg)!important; border-bottom-color:var(--chrome-brd)!important; }
 body[class*="theme-"] .header-title{ color:var(--hdr-title)!important; }
 body[class*="theme-"] .top-banner{ background:var(--banner-bg)!important; border-bottom-color:var(--chrome-brd)!important; }
@@ -3995,7 +4023,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
     <button onclick="tryUnlock()">ورود</button>
     <div class="lock-err" id="lockErr"></div>
     <div style="font-size:0.72rem;color:rgba(255,255,255,.6);margin-top:10px">رمز مدیر یا نظاره‌گر را وارد کنید</div>
-    <button type="button" onclick="openStaffPage()" style="margin-top:14px;width:100%;background:transparent;border:1.5px dashed rgba(255,255,255,.45);color:rgba(255,255,255,.88);border-radius:10px;padding:10px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">👷 صفحه کارمند — دیدن تیل و مخزن (بدون رمز)</button>
+    <button type="button" id="lsStaffBtn" onclick="openStaffPage()" style="margin-top:14px;width:100%;background:transparent;border:1.5px dashed rgba(255,255,255,.45);color:rgba(255,255,255,.88);border-radius:10px;padding:10px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">👷 صفحه کارمند — دیدن تیل و مخزن (بدون رمز)</button>
   </div>
   <div style="position:relative;z-index:2;margin-top:18px;font-size:0.7rem;color:rgba(255,255,255,.5);text-align:center;line-height:1.9">۱۴۰۵ برای پمپ یعقوبی طراحی شده ـــ تمام حقوق محفوظ است<br>طراحی و توسعه: vil3ntec@gmail.com محمد هارون<br>شماره 0792236008 +93</div>
 </div>
@@ -5001,6 +5029,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
   <div class="list-header" style="flex-wrap:wrap;gap:10px">
     <div style="display:flex;align-items:center;gap:10px">
       <div class="list-title"><svg class="nav-ic ia-write"><use href="#ic-waraq"/></svg> ورق‌های روزانه</div>
+      <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('waraq',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('waraq',0.08)">A+</button></span>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <button class="add-btn" onclick="openNewWaraq()">➕ اضافه کردن</button>
@@ -16840,7 +16869,7 @@ function adjSecFont(secId, delta) {
   try { localStorage.setItem('secFont_' + secId, scale); } catch(e) {}
 }
 function loadSecFonts() {
-  ['shifts','shifts-diesel','debt','debtrasid','debtsum','noinv','expenses','safe','sarrafi','rasid','storage','storage-diesel','profit','extraincome','settings'].forEach(id => {
+  ['shifts','shifts-diesel','debt','debtrasid','debtsum','noinv','expenses','safe','sarrafi','rasid','storage','storage-diesel','profit','extraincome','settings','waraq'].forEach(id => {
     const saved = parseFloat((function(){ try { return localStorage.getItem('secFont_' + id) || 0; } catch(e){ return 0; } })());
     if (saved && saved !== 1) {
       _secFontScales[id] = saved;
@@ -17365,7 +17394,7 @@ const _stp = document.getElementById('st-phone'); if (_stp) _stp.value = DB.stat
 loadFontScale();
 // اعمال دوبارهٔ اندازهٔ فونت ذخیره‌شده بعد از هر رندر — تا تنظیم A+/A- با رفت‌وآمد بین بخش‌ها یا تایپ از بین نرود
 (function(){
-  const secOfRender = { renderLog:'shifts', renderDieselLog:'shifts-diesel', renderPersons:'debt', renderCompanies:'noinv', renderExpenses:'expenses', renderSafe:'safe', renderSarrafi:'sarrafi', renderDebtRasid:'debtrasid', renderDebtSummary:'debtsum' };
+  const secOfRender = { renderLog:'shifts', renderDieselLog:'shifts-diesel', renderPersons:'debt', renderCompanies:'noinv', renderExpenses:'expenses', renderSafe:'safe', renderSarrafi:'sarrafi', renderDebtRasid:'debtrasid', renderDebtSummary:'debtsum', renderWaraqList:'waraq' };
   Object.keys(secOfRender).forEach(fn => {
     const orig = window[fn];
     if (typeof orig !== 'function') return;
@@ -18771,9 +18800,15 @@ body[class*="theme-"].gfx-standard .nav,
 body[class*="theme-"].gfx-ultra .nav{ background:var(--nav-bg)!important; }
 body[class*="theme-"] .nav-btn.active,
 body[class*="theme-"] #navGlider{ background:var(--grad-amber)!important; }
-body[class*="theme-"].gfx-performance{ background:var(--app-bg)!important; }
-body[class*="theme-"].gfx-standard{ background:var(--app-bg)!important; }
-body[class*="theme-"].gfx-ultra{ background:var(--app-bg)!important; }
+/* روی خودِ body نه — این‌ها روی ::before (لایهٔ position:fixed پشتِ صفحه) اعمال می‌شوند
+   تا کروم مجبور به رنگ‌آمیزیِ دوبارهٔ گرادیان حین اسکرول نشود (وگرنه در دسکتاپ/PWA
+   با اسکرول زیاد یک شکاف خالی موقت وسط صفحه دیده می‌شد) */
+body[class*="theme-"].gfx-performance{ background:none!important; }
+body[class*="theme-"].gfx-standard{ background:none!important; }
+body[class*="theme-"].gfx-ultra{ background:none!important; }
+body[class*="theme-"].gfx-performance::before,
+body[class*="theme-"].gfx-standard::before,
+body[class*="theme-"].gfx-ultra::before{ background:var(--app-bg)!important; }
 
 /* ===== نوار ۱۲ بخش هنگام اسکرول بالای صفحه می‌چسبد و ناپدید نمی‌شود =====
    (در بخش‌های ورق، قرض‌داران و شرکت‌ها تیل غیرفعال است — با کلاس body کنترل می‌شود) */
