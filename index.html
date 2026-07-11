@@ -116,7 +116,7 @@ body{font-family:'Vazirmatn',sans-serif;background:none;color:var(--txt);min-hei
 
 .ls-brand{position:relative;z-index:2;text-align:center;animation:lsFadeDown 1.2s ease}
 .ls-brand-icon{font-size:3rem;margin-bottom:4px;filter:drop-shadow(0 2px 14px rgba(0,0,0,.9))}
-.ls-brand-name{font-size:2rem;font-weight:900;color:#fff;text-shadow:0 2px 20px rgba(0,0,0,.9),0 0 40px rgba(246,166,35,.4)}
+.ls-brand-name{font-size:2rem;font-weight:900;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.85)}
 .ls-brand-sub{font-size:0.78rem;color:rgba(255,255,255,.7);letter-spacing:3px;margin-top:4px}
 body.light-mode #siteBg{filter:blur(24px) brightness(0.32) saturate(0.7)}
 .lock-box{position:relative;z-index:2;background:rgba(22,27,34,.88);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1.5px solid rgba(255,255,255,.13);border-radius:16px;padding:32px 28px;width:100%;max-width:340px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.55);animation:lsFadeUp 1.2s ease}
@@ -1816,8 +1816,8 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter
 /* ---------- 13. LOCK SCREEN (cinematic hero) ---------- */
 .ls-overlay{background:linear-gradient(180deg,rgba(4,6,12,.72) 0%,rgba(4,6,12,.30) 50%,rgba(4,6,12,.82) 100%)!important}
 .ls-brand-name{
-  background:var(--grad-amber);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-  filter:drop-shadow(0 3px 22px rgba(255,150,40,.55));font-size:2.15rem!important}
+  color:#fff!important;background:none!important;-webkit-text-fill-color:#fff!important;
+  filter:none!important;font-size:2.15rem!important}
 .ls-brand-icon{filter:drop-shadow(0 0 26px rgba(255,160,50,.7))!important;animation:fxFloat 4s ease-in-out infinite}
 .ls-brand-sub{color:rgba(255,220,170,.75)!important}
 .lock-box{
@@ -4454,6 +4454,10 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
     </div>
     <div style="padding:12px" id="log-reports-container"></div>
   </div>
+  <div style="padding:0 2px 12px">
+    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
+    <textarea id="secnote-shifts" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('shifts', this.value)"></textarea>
+  </div>
 </div>
 <div class="section" id="sec-shifts-diesel">
   <div class="section-title" style="color:var(--accent);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
@@ -4546,6 +4550,10 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
     <div style="padding:8px 14px 0;font-size:0.72rem;color:var(--muted)">ℹ️ این پارچه‌ها به صورت اتومات در «گزارش‌های ۲۴ ساعته» (بخش پارچه‌ها) هم نشان داده می‌شوند.</div>
     <div style="padding:12px" id="log-diesel-container"></div>
   </div>
+  <div style="padding:0 2px 12px">
+    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
+    <textarea id="secnote-shifts-diesel" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('shifts-diesel', this.value)"></textarea>
+  </div>
 </div>
 
 <!-- STORAGE (پطرول) -->
@@ -4560,6 +4568,10 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
   <div id="fuel-purchases-list"></div>
   <button class="add-row-btn" style="border-color:var(--green);color:var(--green);margin-bottom:8px" onclick="pdfStorage('petrol')">📄 PDF مخزن پطرول</button>
   <button class="add-row-btn" onclick="openAddPurchase('petrol')" style="margin-bottom:16px">➕ ثبت خرید پطرول</button>
+  <div style="padding:0 2px 12px">
+    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
+    <textarea id="secnote-storage" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('storage', this.value)"></textarea>
+  </div>
 </div>
 
 <!-- STORAGE (دیزل) -->
@@ -4574,6 +4586,10 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
   <div id="diesel-purchases-list"></div>
   <button class="add-row-btn" style="border-color:#276749;color:#276749;margin-bottom:8px" onclick="pdfStorage('diesel')">📄 PDF مخزن دیزل</button>
   <button class="add-row-btn" onclick="openAddPurchase('diesel')" style="margin-bottom:16px;border-color:#b7791f;color:#b7791f">➕ ثبت خرید دیزل</button>
+  <div style="padding:0 2px 12px">
+    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
+    <textarea id="secnote-storage-diesel" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('storage-diesel', this.value)"></textarea>
+  </div>
 </div>
 
 <!-- DEBT -->
@@ -4618,6 +4634,10 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       <div id="debtrasid-months"></div>
     </div>
   </div>
+  <div style="padding:10px 2px 12px">
+    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
+    <textarea id="secnote-debtrasid" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('debtrasid', this.value)"></textarea>
+  </div>
 </div>
 
 <!-- قرض‌های دسته‌جمعی (صفحهٔ جداگانه) -->
@@ -4652,6 +4672,10 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
         </table>
       </div>
     </div>
+  </div>
+  <div style="padding:10px 2px 12px">
+    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
+    <textarea id="secnote-debtsum" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('debtsum', this.value)"></textarea>
   </div>
 </div>
 
@@ -4695,6 +4719,10 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       <div id="exp-body-wrap"></div>
     </div>
   </div>
+  <div style="padding:10px 2px 12px">
+    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
+    <textarea id="secnote-expenses" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('expenses', this.value)"></textarea>
+  </div>
 </div>
 
 <!-- رسید پارچه‌ها -->
@@ -4723,6 +4751,10 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
         </table>
       </div>
     </div>
+  </div>
+  <div style="padding:10px 2px 12px">
+    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
+    <textarea id="secnote-rasid" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('rasid', this.value)"></textarea>
   </div>
 </div>
 
@@ -4907,6 +4939,10 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       </div>
     </div>
   </div>
+  <div style="padding:10px 2px 12px">
+    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
+    <textarea id="secnote-safe" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('safe', this.value)"></textarea>
+  </div>
 </div>
 
 <!-- ADD SAFE MODAL -->
@@ -5031,6 +5067,10 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       </div>
     </div>
   </div>
+  <div style="padding:10px 2px 12px">
+    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
+    <textarea id="secnote-sarrafi" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('sarrafi', this.value)"></textarea>
+  </div>
 </div>
 </div>
 
@@ -5073,11 +5113,16 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
         <span id="waraqModalTitle" style="flex:1;text-align:center;font-size:0.9rem;font-weight:700;color:var(--txt)">📝 ورق روزانه</span>
         <span style="font-size:0.78rem;color:var(--muted);font-weight:700">⛽ فی لیتر: <span id="wq-price-display" style="color:var(--accent)">—</span></span>
       </div>
-      <!-- Info row -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:12px">
-        <div class="sm-field" style="margin:0"><label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px">تاریخ</label><input id="wq-date" class="xls-in" style="width:100%" placeholder="تاریخ شمسی"></div>
-        <div class="sm-field" style="margin:0"><label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px">نام ایستگاه</label><input id="wq-station" class="xls-in" style="width:100%" placeholder="نام ایستگاه"></div>
-        <div class="sm-field" style="margin:0"><label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px">نام کارمند <span id="wq-worker-shift" style="color:var(--accent)">(روز)</span></label><input id="wq-worker" class="xls-in" style="width:100%" placeholder="نام کارمند این شیفت"></div>
+      <!-- Info row — تاریخ جا کمی لازم دارد، پس اندازه‌اش ثابت و کوچک است؛ نام ایستگاه/کارمند جای بیشتری می‌گیرند -->
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        <div class="sm-field" style="margin:0;flex:0 1 140px"><label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px">تاریخ</label><input id="wq-date" class="xls-in" style="width:100%" placeholder="تاریخ شمسی"></div>
+        <div class="sm-field" style="margin:0;flex:1 1 200px"><label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px">نام ایستگاه</label><input id="wq-station" class="xls-in" style="width:100%" placeholder="نام ایستگاه"></div>
+        <div class="sm-field" style="margin:0;flex:1 1 200px"><label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px">نام کارمند <span id="wq-worker-shift" style="color:var(--accent)">(روز)</span></label><input id="wq-worker" class="xls-in" style="width:100%" placeholder="نام کارمند این شیفت"></div>
+      </div>
+      <!-- توضیحات همین ورق — هر ورق (هر تاریخ) یادداشت جداگانهٔ خودش را دارد -->
+      <div style="margin-bottom:12px">
+        <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این ورق</div>
+        <textarea id="wq-note" class="note-field" placeholder="یادداشت شما برای همین ورق..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateWaraqNote(this.value)"></textarea>
       </div>
 
       <!-- Pump table (شیفت فعال) -->
@@ -5089,7 +5134,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       <div class="tbl-wrap" style="margin-bottom:10px">
         <table class="tbl" id="wq-pump-tbl" style="font-size:0.95rem">
           <thead><tr>
-            <th>بایه</th><th>نام</th><th>نوع</th><th>توضیح/ساعت</th><th>شروع</th><th>ختم</th><th>فی لیتر</th><th>مقدار (لیتر)</th><th>مبلغ فروش</th><th></th>
+            <th>پایه</th><th>نام</th><th>نوع</th><th>توضیح/ساعت</th><th>شروع</th><th>ختم</th><th>فی لیتر</th><th>مقدار (لیتر)</th><th>مبلغ فروش</th><th></th>
           </tr></thead>
           <tbody id="wq-pump-body"></tbody>
           <tfoot>
@@ -11261,9 +11306,9 @@ function renderCompanyRows(company) {
       <td><input class="xls-in" value="${cmpEsc(r.name||'')}" placeholder="نام" ${linked ? roAttr : `onchange="updateCompanyRow('${company.id}',${i},'name',this.value)"`}></td>
       <td><input class="xls-in" type="number" value="${kgVal}" placeholder="" ${linked ? roAttr : `oninput="calcCompanyRow('${company.id}',${i},'kg',this.value)"`}></td>
       <td><input class="xls-in sm" type="number" value="${r.usd||''}" placeholder="0" ${linked ? roAttr : `oninput="calcCompanyRow('${company.id}',${i},'usd',this.value)"`}></td>
-      <td id="cm-tusd-${i}" style="font-weight:800;color:var(--blue);min-width:120px;font-size:1rem">${n2fa(totalUsd.toFixed(1))} $</td>
+      <td id="cm-tusd-${i}" style="font-weight:700;color:var(--blue);min-width:120px;font-size:0.92rem">${n2fa(totalUsd.toFixed(1))} $</td>
       <td><input class="xls-in xs" type="number" value="${r.rate||''}" placeholder="0" ${linked ? roAttr : `oninput="calcCompanyRow('${company.id}',${i},'rate',this.value)"`}></td>
-      <td id="cm-tafn-${i}" style="font-weight:800;color:var(--accent);min-width:125px;font-size:1rem">${n2fa(Math.round(totalAfn))}</td>
+      <td id="cm-tafn-${i}" style="font-weight:700;color:var(--accent);min-width:125px;font-size:0.92rem">${n2fa(Math.round(totalAfn))}</td>
       <td>
         <div style="display:flex;gap:3px;align-items:center">
           <input class="xls-in" type="number" value="${r.poul||''}" placeholder="0" style="min-width:55px" oninput="calcCompanyRow('${company.id}',${i},'poul',this.value)">
@@ -11274,7 +11319,7 @@ function renderCompanyRows(company) {
         </div>
       </td>
       <td><input class="xls-in xs" type="number" value="${r.payRate||''}" placeholder="0" style="width:50px" oninput="calcCompanyRow('${company.id}',${i},'payRate',this.value)" title="نرخ تبدیل رسید افغانی — فقط برای رسید افغانی"></td>
-      <td id="cm-albaqi-${i}" style="font-weight:800;color:${albaqi>0?'var(--red)':'var(--green)'};min-width:120px;font-size:1rem">${n2fa(Math.round(albaqi))}${albaqiExtra}</td>
+      <td id="cm-albaqi-${i}" style="font-weight:700;color:${albaqi>0?'var(--red)':'var(--green)'};min-width:120px;font-size:0.92rem">${n2fa(Math.round(albaqi))}${albaqiExtra}</td>
       <td>${linked ? `<button class="del-btn" onclick="deletePurchase(${r.srcPurchaseId})">🗑️</button>` : `<button class="del-btn" onclick="deleteCompanyRow('${company.id}',${i})">🗑️</button>`}</td>
     `;
     tbody.appendChild(tr);
@@ -13496,10 +13541,10 @@ function renderSarrafi() {
         </select>
       </td>
       <td><input class="xls-in xs" type="number" step="0.01" value="${r.rate||''}" placeholder="0" oninput="updateSarrafiRow(${i},'rate',this.value)"></td>
-      <td id="sarrafi-usd-${i}" style="font-weight:800;color:var(--blue);min-width:85px;font-size:1rem">${broken ? n2fa(broken.toFixed(2)) : '—'}</td>
-      <td id="sarrafi-rasid-${i}" style="font-weight:800;color:var(--green);min-width:115px;font-size:1rem">${broken ? n2fa(broken.toFixed(2)) + ' $' : '—'}</td>
+      <td id="sarrafi-usd-${i}" style="font-weight:700;color:var(--blue);min-width:85px;font-size:0.92rem">${broken ? n2fa(broken.toFixed(2)) : '—'}</td>
+      <td id="sarrafi-rasid-${i}" style="font-weight:700;color:var(--green);min-width:115px;font-size:0.92rem">${broken ? n2fa(broken.toFixed(2)) + ' $' : '—'}</td>
       <td><input class="xls-in sm" type="number" value="${r.bardagi||''}" placeholder="0" oninput="updateSarrafiRow(${i},'bardagi',this.value)"></td>
-      <td id="sarrafi-baqi-${i}" style="font-weight:800;color:${baqi>0?'var(--red)':'var(--green)'};min-width:115px;font-size:1rem">${n2fa(Math.round(baqi))}</td>
+      <td id="sarrafi-baqi-${i}" style="font-weight:700;color:${baqi>0?'var(--red)':'var(--green)'};min-width:115px;font-size:0.92rem">${n2fa(Math.round(baqi))}</td>
       <td><button class="del-btn" onclick="deleteSarrafiRow(${i})">🗑️</button></td>
     `;
     tbody.appendChild(tr);
@@ -13999,6 +14044,8 @@ function populateWaraqModal(w) {
   const fsEl = document.getElementById('wq-fabric-debt-shift'); if (fsEl) fsEl.textContent = isNight ? 'شب' : 'روز';
   const stEl = document.getElementById('wq-sum-shift-title'); if (stEl) stEl.textContent = '📊 خلاصه شیفت ' + (isNight?'شب':'روز');
   document.getElementById('waraqModalTitle').textContent = '📝 ورق ' + (w.date||'') + ' — ' + (isNight?'🌙 شب':'☀️ روز');
+  const noteEl = document.getElementById('wq-note');
+  if (noteEl && document.activeElement !== noteEl) noteEl.value = w.note || '';
   // دکمهٔ واحد تغییر شیفت
   const tog = document.getElementById('wq-shift-toggle');
   if (tog) {
@@ -14037,8 +14084,8 @@ function renderWaraqPumps(w) {
     tr.innerHTML = `
       <td style="font-weight:700">${n2fa(p.num||i+1)}</td>
       <td><input class="xls-in" value="${(p.worker||'').replace(/"/g,'&quot;')}" placeholder="نام" oninput="updateWaraqPump(${i},'worker',this.value)"></td>
-      <td><select class="xls-in xs" onchange="updateWaraqPump(${i},'fuel',this.value)">
-        <option value="petrol" ${p.fuel!=='diesel'?'selected':''}>⛽ بطرول</option>
+      <td><select class="xls-in" style="min-width:96px;max-width:none;width:100%" onchange="updateWaraqPump(${i},'fuel',this.value)">
+        <option value="petrol" ${p.fuel!=='diesel'?'selected':''}>⛽ پطرول</option>
         <option value="diesel" ${p.fuel==='diesel'?'selected':''}>🟤 دیزل</option>
       </select></td>
       <td><input class="xls-in" value="${(p.note||'').replace(/"/g,'&quot;')}" placeholder="ساعت/قیمت" oninput="updateWaraqPump(${i},'note',this.value)"></td>
@@ -14053,6 +14100,12 @@ function renderWaraqPumps(w) {
   });
 }
 
+function updateWaraqNote(val) {
+  const w = getActiveWaraq();
+  if (!w) return;
+  w.note = val;
+  save();
+}
 function updateWaraqPump(idx, field, val) {
   const w = getActiveWaraq();
   if (!w) return;
@@ -17005,6 +17058,21 @@ function loadSecFonts() {
   });
 }
 
+// ========== یادداشتِ آزاد هر بخش (زیر جدول‌ها) — هر بخش یادداشت خودش را دارد ==========
+const SECTION_NOTE_KEYS = ['shifts','shifts-diesel','storage','storage-diesel','debtrasid','debtsum','expenses','rasid','safe','sarrafi'];
+function updateSectionNote(key, value) {
+  if (!DB.sectionNotes) DB.sectionNotes = {};
+  DB.sectionNotes[key] = value;
+  save();
+}
+function _loadSectionNotes() {
+  if (!DB.sectionNotes) DB.sectionNotes = {};
+  SECTION_NOTE_KEYS.forEach(key => {
+    const el = document.getElementById('secnote-' + key);
+    if (el && document.activeElement !== el) el.value = DB.sectionNotes[key] || '';
+  });
+}
+
 // ========== فونتِ کادرهای یادداشت/توضیحات — جدا از فونتِ کلی بخش‌ها/مودال ==========
 // با متغیر CSS (--note-font-scale) کار می‌کند، نه اسکن DOM — پس نیازی نیست بعد از
 // هر رندرِ دوبارهٔ آرشیو (که یادداشت‌های تازه می‌سازد) دوباره اجرا شود
@@ -17555,6 +17623,7 @@ loadFontScale();
   });
 })();
 loadSecFonts();
+_loadSectionNotes();
 initDate();
 initAutoProfit();
 applyUnionRates();
