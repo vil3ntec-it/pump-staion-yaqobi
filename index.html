@@ -370,7 +370,16 @@ body.staff-view .qr-overlay{z-index:10020}
 .xls-tbl th{background:var(--dark);padding:9px 8px;text-align:right;color:var(--muted);font-weight:700;border-bottom:2px solid var(--border);border-left:1px solid var(--border);white-space:nowrap}
 .xls-tbl th:last-child{border-left:none}
 .xls-tbl td{border-bottom:1px solid var(--border);border-left:1px solid var(--border);padding:0}
+/* سلول‌هایی که فقط عدد/متنِ نمایشی دارند (نه ورودی) قبلاً padding:0 داشتند و به لبهٔ
+   سلول می‌چسبیدند — ستون‌های کنارشان (که با .xls-in فاصله دارند) خیلی نزدیک‌تر به‌نظر
+   می‌رسیدند. حالا همهٔ سلول‌های بدون ورودی هم همان فاصلهٔ داخلیِ .xls-in را می‌گیرند. */
+.xls-tbl td:not(:has(input)):not(:has(select)){padding:8px 7px}
 .xls-tbl td:last-child{border-left:none}
+/* فونتِ کادرهای یادداشت/توضیحات — جدا از فونتِ کلی هر بخش (adjSecFont) و فونتِ
+   مودال (adjModalFont) — با متغیر CSS چون این کادرها هم در حساب فعلی و هم در هر
+   جدولِ آرشیوشده (که مدام دوباره ساخته می‌شوند) وجود دارند؛ با متغیر ریشه نیازی به
+   اجرای دوباره بعد از هر رندر نیست، همیشه خودکار اعمال می‌شود */
+.note-field{ font-size:calc(0.8rem * var(--note-font-scale, 1)) !important; }
 .xls-tbl tr:last-child td{border-bottom:none}
 .xls-tbl tr:hover td{background:#ffffff05}
 .xls-in{width:100%;background:transparent;border:none;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.92rem;padding:8px 7px;min-width:65px;font-weight:700}
@@ -4051,6 +4060,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       </div>
     </div>
     <button class="theme-toggle" id="zodiacHeaderBtn" onclick="showSection('zodiac',null);document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'))" title="تقویم و برج فلکی" style="padding:6px 10px;border-radius:7px;border:1px solid var(--border);background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.85rem;cursor:pointer"><svg class="nav-ic ia-tilt"><use href="#ic-moonstar"/></svg></button>
+    <button class="theme-toggle" id="pwaRefreshBtn" onclick="location.reload()" title="تازه‌سازی صفحه (اطلاعات پاک نمی‌شود)" aria-label="تازه‌سازی صفحه" style="padding:6px 10px;border-radius:7px;border:1px solid var(--border);background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.85rem;cursor:pointer">🔄</button>
     <button class="daynight-toggle" id="themeBtn" onclick="toggleTheme()" title="تغییر تم روز/شب" aria-label="تغییر تم روز/شب">
       <span class="dn-sky" aria-hidden="true">
         <span class="dn-stars"><i></i><i></i><i></i><i></i><i></i></span>
@@ -5229,6 +5239,18 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
     <div id="cam-net-note"></div>
     <div class="cam-grid" id="cam-grid"></div>
   </div>
+  <div class="card" style="margin-top:14px">
+    <div class="card-head">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="card-title"><svg class="nav-ic"><use href="#ic-cctv"/></svg> دوربین‌های سیمی همین کامپیوتر (وبکم/USB)</div>
+      </div>
+    </div>
+    <div class="cam-add-row">
+      <button onclick="refreshLocalCams()"><svg><use href="#ic-link2"/></svg> بروزرسانی لیست دوربین‌ها</button>
+    </div>
+    <div class="cam-hint">دوربین‌هایی که مستقیم با سیم (USB) به همین کامپیوتر وصل‌اند این‌جا لیست می‌شوند — مرورگر یک‌بار اجازهٔ دسترسی می‌خواهد.</div>
+    <div class="cam-grid" id="local-cam-grid"></div>
+  </div>
 </div>
 
 <div class="section" id="sec-settings">
@@ -5625,7 +5647,8 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       <div style="display:flex;align-items:center;gap:8px">
         <button class="person-nav-btn" id="pm-prev-btn" onclick="navigatePerson(-1)">&#8594; قبلی</button>
         <button class="person-nav-btn" id="pm-next-btn" onclick="navigatePerson(1)">بعدی &#8592;</button>
-        <span class="sec-font-ctrl" style="margin-right:4px"><button class="sec-font-btn" onclick="adjModalFont(-0.08)">A-</button><button class="sec-font-btn" onclick="adjModalFont(0.08)">A+</button></span>
+        <span class="sec-font-ctrl" style="margin-right:4px" title="فونت کلی مودال"><button class="sec-font-btn" onclick="adjModalFont(-0.08)">A-</button><button class="sec-font-btn" onclick="adjModalFont(0.08)">A+</button></span>
+        <span class="sec-font-ctrl" title="فونت کادرهای یادداشت/توضیحات">📝<button class="sec-font-btn" onclick="adjNoteFont(-0.08)">A-</button><button class="sec-font-btn" onclick="adjNoteFont(0.08)">A+</button></span>
       </div>
       <h2 id="personModalTitle" style="flex:1;text-align:center">جزئیات</h2>
       <div style="display:flex;align-items:center;gap:6px">
@@ -5706,8 +5729,8 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       </div>
       <!-- توضیحات حساب بالاتر از دکمه‌های ردیف جدید / افزودن چندتایی -->
       <div id="pm-note-area" style="margin-top:8px;padding:0 2px">
-        <textarea id="pm-note-field" placeholder="📝 توضیحات حساب..." rows="2"
-          style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.8rem;resize:none;box-sizing:border-box"
+        <textarea id="pm-note-field" class="note-field" placeholder="📝 توضیحات حساب..." rows="2"
+          style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box"
           oninput="savePersonNote(this.value)"></textarea>
       </div>
       <div id="pm-add-row-area" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
@@ -5733,7 +5756,8 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       <div style="display:flex;align-items:center;gap:8px">
         <button class="person-nav-btn" id="cm-prev-btn" onclick="navigateCompany(-1)">&#8594; قبلی</button>
         <button class="person-nav-btn" id="cm-next-btn" onclick="navigateCompany(1)">بعدی &#8592;</button>
-        <span class="sec-font-ctrl" style="margin-right:4px"><button class="sec-font-btn" onclick="adjModalFont(-0.08)">A-</button><button class="sec-font-btn" onclick="adjModalFont(0.08)">A+</button></span>
+        <span class="sec-font-ctrl" style="margin-right:4px" title="فونت کلی مودال"><button class="sec-font-btn" onclick="adjModalFont(-0.08)">A-</button><button class="sec-font-btn" onclick="adjModalFont(0.08)">A+</button></span>
+        <span class="sec-font-ctrl" title="فونت کادرهای یادداشت/توضیحات">📝<button class="sec-font-btn" onclick="adjNoteFont(-0.08)">A-</button><button class="sec-font-btn" onclick="adjNoteFont(0.08)">A+</button></span>
       </div>
       <h2 id="companyModalTitle" style="flex:1;text-align:center">🛢️ شرکت</h2>
       <div style="display:flex;align-items:center;gap:6px">
@@ -7143,7 +7167,7 @@ function showSection(id, btn) {
   if (id === 'safe') renderSafe();
   if (id === 'sarrafi') renderSarrafi();
   if (id === 'waraq') renderWaraqList();
-  if (id === 'cameras') renderCameras();
+  if (id === 'cameras') { renderCameras(); refreshLocalCams(); } else { try { stopAllLocalCams(); } catch(e){} }
   if (id === 'attendance') renderAttendance();
   if (id === 'zodiac') { initDate(); }
   if (id === 'settings') {
@@ -8671,7 +8695,7 @@ function _renderFuelSection(fuelType, containerId, label) {
       </div>
       <div style="padding:10px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
         <div class="stat-box"><div class="stat-label">وزن (کگ)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.kg||0)}</div></div>
-        <div class="stat-box"><div class="stat-label">وزن (تن)</div><div style="font-weight:800;font-size:0.92rem;color:var(--blue)">${((e.kg||0)/1000).toFixed(3)}</div></div>
+        <div class="stat-box"><div class="stat-label">وزن (تن)</div><div style="font-weight:800;font-size:0.92rem;color:var(--blue)">${n2fa(((e.kg||0)/1000).toFixed(3))}</div></div>
         <div class="stat-box"><div class="stat-label">ثقلت</div><div style="font-weight:800;font-size:0.92rem">${e.density != null ? n2fa(e.density) : "—"}</div></div>
         <div class="stat-box"><div class="stat-label">لیتر</div><div style="font-weight:800;font-size:0.92rem;color:var(--green)">${n2fa(Math.round(e.liters||0))}</div></div>
         <div class="stat-box"><div class="stat-label">فی تن ($)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.priceTon||0)}</div></div>
@@ -9675,22 +9699,33 @@ function newPersonTable() {
   const person = _curPerson(); if (!person) return;
   const acct = _acctOf(person);
   if (!Array.isArray(acct.tableHistory)) acct.tableHistory = [];
+  const filter = currentPersonFilter || 'all';
+  // اگر «حساب جداگانه پطرول/دیزل» فعال باشد، فقط همان ردیف‌های تیل آرشیو و پاک شوند —
+  // ردیف‌های تیل دیگر دست‌نخورده در جدول فعلی می‌مانند (مثل «جدول جدید» شرکت‌ها که
+  // هر تیل را جدا آرشیو می‌کند؛ وگرنه با فیلترِ فعال، دکمه انگار «هیچ کاری نمی‌کرد»
+  // چون جدولِ دیده‌شده که از قبل فیلتر شده، خالی می‌ماند در حالی که تیل دیگر خاموش پاک می‌شد)
+  const rowsToArchive = filter === 'all' ? (acct.rows || []) : (acct.rows || []).filter(r => (r.ftype || 'petrol') === filter);
+  if (filter !== 'all' && !rowsToArchive.length) { if (typeof showToast === 'function') showToast('جدول فعلی (' + (filter==='petrol'?'پطرول':'دیزل') + ') خالی است', '#e53e3e'); return; }
+  const remainingRows = filter === 'all' ? [] : (acct.rows || []).filter(r => (r.ftype || 'petrol') !== filter);
   // snapshot وضعیت فعلی
   acct.tableHistory.push({
     id: 'h' + Date.now(),
     createdAt: (typeof persianDate === 'function' ? persianDate() : new Date().toLocaleDateString('fa-IR')),
-    rows: JSON.parse(JSON.stringify(acct.rows || [])),
-    rasidFuelP: acct.rasidFuelP, rasidFuelD: acct.rasidFuelD,
-    rasidMoneyP: acct.rasidMoneyP, rasidMoneyD: acct.rasidMoneyD,
+    rows: JSON.parse(JSON.stringify(rowsToArchive)),
+    fuel: filter !== 'all' ? filter : undefined,
+    rasidFuelP: filter === 'diesel' ? acct.rasidFuelP : (filter === 'all' ? acct.rasidFuelP : 0),
+    rasidFuelD: filter === 'petrol' ? acct.rasidFuelD : (filter === 'all' ? acct.rasidFuelD : 0),
+    rasidMoneyP: filter === 'diesel' ? acct.rasidMoneyP : (filter === 'all' ? acct.rasidMoneyP : 0),
+    rasidMoneyD: filter === 'petrol' ? acct.rasidMoneyD : (filter === 'all' ? acct.rasidMoneyD : 0),
     percent: acct.percent, note: acct.note || ''
   });
-  // ریست جدول فعلی
-  acct.rows = [];
-  acct.rasidFuelP = 0; acct.rasidFuelD = 0;
-  acct.rasidMoneyP = 0; acct.rasidMoneyD = 0;
-  acct.note = '';
+  // ریست جدول فعلی (یا فقط بخش فیلترشده)
+  acct.rows = remainingRows;
+  if (filter === 'all' || filter === 'petrol') { acct.rasidFuelP = 0; acct.rasidMoneyP = 0; }
+  if (filter === 'all' || filter === 'diesel') { acct.rasidFuelD = 0; acct.rasidMoneyD = 0; }
+  if (filter === 'all') acct.note = '';
   // کادر توضیحاتِ روی صفحه هم پاک شود تا با جدولِ نو یکی باشد (توضیحات قبلی همراه آرشیو رفت)
-  const nf0 = document.getElementById('pm-note-field'); if (nf0) nf0.value = '';
+  if (filter === 'all') { const nf0 = document.getElementById('pm-note-field'); if (nf0) nf0.value = ''; }
   save();
   renderPersonRows(person);
   _renderHistoryPanel(person);
@@ -9707,6 +9742,30 @@ function _hPerson(pid) {
 function _hEntry(pid, hid) {
   const person = _hPerson(pid); if (!person) return null;
   return (_acctOf(person).tableHistory||[]).find(h => h.id === hid) || null;
+}
+// وقتی کاربر داخل یک ردیفِ آرشیوشده عدد می‌نویسد، _renderHistoryPanel کل جدول‌های
+// آرشیو را دوباره می‌سازد (چون جمع‌های برد/الباقی هر آرشیو باید فوری به‌روز شوند) —
+// این یعنی خودِ اینپوتِ در حال تایپ هم از نو ساخته می‌شود، فوکوس را گم می‌کند و
+// صفحه (که داخل modal-body قابل‌اسکرول است) به بالا می‌پرد. این تابع موقعیتِ اسکرول
+// و فوکوس/مکانِ نشانگر را قبل از رندر ذخیره و بعدش برمی‌گرداند تا تایپ روان بماند.
+function _rerenderHistoryPreserveFocus(person) {
+  const wrap = document.getElementById('pm-history-wrap');
+  const scroller = wrap ? wrap.closest('.modal-body') : null;
+  const scrollTop = scroller ? scroller.scrollTop : null;
+  const active = document.activeElement;
+  let matchAttr = null, selStart = null, selEnd = null;
+  if (active && wrap && wrap.contains(active) && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+    matchAttr = active.getAttribute('oninput') || active.getAttribute('onchange') || null;
+    selStart = active.selectionStart; selEnd = active.selectionEnd;
+  }
+  _renderHistoryPanel(person);
+  if (scroller && scrollTop != null) scroller.scrollTop = scrollTop;
+  if (matchAttr) {
+    const again = document.getElementById('pm-history-wrap');
+    const escAttr = matchAttr.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    const el = again && again.querySelector(`[oninput="${escAttr}"], [onchange="${escAttr}"]`);
+    if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(selStart, selEnd); } catch (e) {} }
+  }
 }
 function _renderHistoryPanel(person) {
   const wrap = document.getElementById('pm-history-wrap'); if (!wrap || !person) return;
@@ -9760,8 +9819,11 @@ function _renderHistoryPanel(person) {
         <span style="font-size:0.72rem;color:var(--muted)">جمع برد: <b style="color:var(--accent)">${n2fa(rnd(bordP+bordD))}${unit}</b></span>
         <span style="font-size:0.72rem;color:var(--muted)">الباقی کل: <b style="color:var(--blue)">${n2fa(rnd(remP+remD))}${unit}</b></span>
       </div>`;
-    // فیلتر پطرول/دیزل این آرشیو — مثل سه دکمهٔ بالای جدول اصلی
-    const hFilter = h.viewFilter || 'all';
+    // فیلتر پطرول/دیزل این آرشیو — مثل سه دکمهٔ بالای جدول اصلی. اگر کاربر خودش
+    // روی همین آرشیو فیلتر نزده باشد (h.viewFilter)، از نوعِ خودِ آرشیو (h.fuel —
+    // وقتی با «حساب جداگانه» ساخته شده) یا فیلترِ فعالِ همین الان (currentPersonFilter)
+    // پیروی می‌کند تا داخل «حساب جداگانه پطرول/دیزل» فقط همان تیل دیده شود، نه همه‌چیز
+    const hFilter = h.viewFilter || h.fuel || currentPersonFilter || 'all';
     const viewRows = rows.map((r, ri) => ({ r, ri })).filter(x => hFilter === 'all' || ((x.r.ftype || 'petrol') === hFilter));
     const fBtn = (f, lbl) => `<button onclick="setHistoryFilter('${pid}','${h.id}','${f}')" style="padding:5px 12px;border-radius:8px;border:1.5px solid ${hFilter===f?'var(--blue)':'var(--border)'};background:${hFilter===f?'var(--blue)':'var(--card)'};color:${hFilter===f?'#fff':'var(--txt)'};font-family:'Vazirmatn',sans-serif;font-size:0.75rem;font-weight:700;cursor:pointer">${lbl}</button>`;
     const filterBarHtml = `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:8px 10px 0">${fBtn('all','📋 همه')}${fBtn('petrol','⛽ حساب جداگانه پطرول')}${fBtn('diesel','🟤 حساب جداگانه دیزل')}</div>`;
@@ -9799,7 +9861,7 @@ function _renderHistoryPanel(person) {
         <button class="add-row-btn" style="margin:0" onclick="addHistoryRow('${pid}','${h.id}')">➕ ردیف جدید</button>
       </div>
       <div style="padding:0 10px 10px">
-        <textarea id="hnb-${h.id}" placeholder="📝 توضیحات این جدول..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.8rem;resize:none;box-sizing:border-box" oninput="updateHistoryNote('${pid}','${h.id}',this.value)">${escFa(h.note||'')}</textarea>
+        <textarea id="hnb-${h.id}" class="note-field" placeholder="📝 توضیحات این جدول..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateHistoryNote('${pid}','${h.id}',this.value)">${escFa(h.note||'')}</textarea>
       </div>`;
     return `<div style="margin-bottom:16px;border:2px solid ${ac};border-radius:13px;overflow:hidden">
       <div style="background:${ac};padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
@@ -9828,7 +9890,7 @@ function pdfPersonHistory(pid, hid) {
   const person = _hPerson(pid); if (!person) return;
   const h = _hEntry(pid, hid); if (!h) return;
   // فیلتر فعال آرشیو (همه/پطرول/دیزل) روی PDF هم اعمال می‌شود
-  const hFilter = h.viewFilter || 'all';
+  const hFilter = h.viewFilter || h.fuel || currentPersonFilter || 'all';
   const rows = (h.rows || []).filter(r => hFilter === 'all' || ((r.ftype || 'petrol') === hFilter));
   const money = (h.viewMoney != null) ? h.viewMoney : (person.mode === 'money');
   const pct = parseFloat(h.percent) || 0;
@@ -9928,13 +9990,13 @@ function updateHistoryRasid(pid, hid, ftype, value) {
   const v = parseFloat(value) || 0;
   if (ftype === 'petrol') { if (money) h.rasidMoneyP = v; else h.rasidFuelP = v; }
   else { if (money) h.rasidMoneyD = v; else h.rasidFuelD = v; }
-  save(); _renderHistoryPanel(person);
+  save(); _rerenderHistoryPreserveFocus(person);
 }
 function updateHistoryPercent(pid, hid, value) {
   const person = _hPerson(pid); if (!person) return;
   const h = _hEntry(pid, hid); if (!h) return;
   h.percent = parseFloat(value) || 0;
-  save(); _renderHistoryPanel(person);
+  save(); _rerenderHistoryPreserveFocus(person);
 }
 function updateHistoryRow(pid, hid, idx, field, value) {
   const h = _hEntry(pid, hid); if (!h || !h.rows[idx]) return;
@@ -9947,7 +10009,7 @@ function calcHistoryRow(pid, hid, idx, field, value) {
   if (field === 'bardagi') { r.byMoney = true; r.bardagi = parseFloat(value)||0; }
   else { r[field] = parseFloat(value)||0; if (!r.byMoney) r.bardagi = (r.fuel||0)*(r.priceper||0); }
   r.albaqi = (r.bardagi||0) - (r.rasid||0);
-  save(); _renderHistoryPanel(person);
+  save(); _rerenderHistoryPreserveFocus(person);
 }
 function addHistoryRow(pid, hid) {
   const person = _hPerson(pid); if (!person) return;
@@ -10877,18 +10939,26 @@ function _findCompanyByName(rawName) {
   const companies = DB.tilCompanies || [];
   if (!companies.length) return null;
   const q = (typeof normFa === 'function' ? normFa(rawName) : String(rawName||'').toLowerCase().trim());
-  if (!q) return null;
+  if (!q || q.length < 2) return null;
   // ۱) تطابق دقیقِ نرمال‌شده
   let m = companies.find(c => normFa(c.name) === q);
   if (m) return m;
-  // ۲) تطابق زیررشته‌ای (نام شرکت داخل متن یا متن داخل نام شرکت) — طولانی‌ترین برنده
+  // ۲) نامِ شرکت با همین متن شروع می‌شود (مثلاً «ح قادر» برای «ح قادر و شیر آقا») —
+  // نزدیک‌ترین به قصد کاربر؛ اگر چند شرکت این‌طور شروع شوند، کوتاه‌ترین (خاص‌ترین) برنده
+  let prefixBest = null, prefixLen = Infinity;
+  companies.forEach(c => {
+    const nm = normFa(c.name);
+    if (nm && nm.length >= 2 && nm.startsWith(q) && nm.length < prefixLen) { prefixBest = c; prefixLen = nm.length; }
+  });
+  if (prefixBest) return prefixBest;
+  // ۳) تطابق زیررشته‌ای (نام شرکت داخل متن یا متن داخل نام شرکت) — طولانی‌ترین برنده
   let best = null, bestLen = 0;
   companies.forEach(c => {
     const nm = normFa(c.name);
     if (nm && nm.length >= 2 && (q.includes(nm) || nm.includes(q)) && nm.length > bestLen) { best = c; bestLen = nm.length; }
   });
   if (best) return best;
-  // ۳) تطابق کلمه‌به‌کلمه (همهٔ کلمات نامِ شرکت در متن باشند)
+  // ۴) تطابق کلمه‌به‌کلمه (همهٔ کلمات نامِ شرکت در متن باشند)
   const hay = ' ' + q + ' ';
   companies.forEach(c => {
     const nm = normFa(c.name);
@@ -11295,7 +11365,7 @@ function _companyPurchaseSection(entries, fuel, alwaysShow){
       </div>
       <div style="padding:10px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
         <div class="stat-box"><div class="stat-label">وزن (کگ)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.kg||0)}</div></div>
-        <div class="stat-box"><div class="stat-label">وزن (تن)</div><div style="font-weight:800;font-size:0.92rem;color:var(--blue)">${((e.kg||0)/1000).toFixed(3)}</div></div>
+        <div class="stat-box"><div class="stat-label">وزن (تن)</div><div style="font-weight:800;font-size:0.92rem;color:var(--blue)">${n2fa(((e.kg||0)/1000).toFixed(3))}</div></div>
         <div class="stat-box"><div class="stat-label">ثقلت</div><div style="font-weight:800;font-size:0.92rem">${e.density != null ? n2fa(e.density) : "—"}</div></div>
         <div class="stat-box"><div class="stat-label">لیتر</div><div style="font-weight:800;font-size:0.92rem;color:var(--green)">${n2fa(Math.round(e.liters||0))}</div></div>
         <div class="stat-box"><div class="stat-label">فی تن ($)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.priceTon||0)}</div></div>
@@ -11527,7 +11597,7 @@ function _renderCompanyHistoryPanel(company){
           <tfoot class="xls-foot"><tr><td colspan="3" style="padding:7px">جمع</td><td>${n2fa(Math.round(tTon*1000))}</td><td></td><td>${n2fa(tUsd.toFixed(1))} $</td><td></td><td>${n2fa(Math.round(tAfn))}</td><td>${n2fa(Math.round(tPoul))}</td><td>${n2fa(Math.round(tAlb))}</td></tr></tfoot>
         </table></div>
         <div style="padding:8px 10px 10px">
-          <textarea id="chnb-${h.id}" placeholder="📝 توضیحات این جدول..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.8rem;resize:none;box-sizing:border-box" oninput="updateCompanyHistoryNote('${company.id}','${h.id}',this.value)">${escFa(h.note||'')}</textarea>
+          <textarea id="chnb-${h.id}" class="note-field" placeholder="📝 توضیحات این جدول..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateCompanyHistoryNote('${company.id}','${h.id}',this.value)">${escFa(h.note||'')}</textarea>
         </div>
       </div>`;
     }).join('');
@@ -13426,10 +13496,10 @@ function renderSarrafi() {
         </select>
       </td>
       <td><input class="xls-in xs" type="number" step="0.01" value="${r.rate||''}" placeholder="0" oninput="updateSarrafiRow(${i},'rate',this.value)"></td>
-      <td id="sarrafi-usd-${i}" style="font-weight:800;color:var(--blue);min-width:85px">${broken ? n2fa(broken.toFixed(2)) : '—'}</td>
-      <td id="sarrafi-rasid-${i}" style="font-weight:800;color:var(--green);min-width:115px">${broken ? n2fa(broken.toFixed(2)) + ' $' : '—'}</td>
+      <td id="sarrafi-usd-${i}" style="font-weight:800;color:var(--blue);min-width:85px;font-size:1rem">${broken ? n2fa(broken.toFixed(2)) : '—'}</td>
+      <td id="sarrafi-rasid-${i}" style="font-weight:800;color:var(--green);min-width:115px;font-size:1rem">${broken ? n2fa(broken.toFixed(2)) + ' $' : '—'}</td>
       <td><input class="xls-in sm" type="number" value="${r.bardagi||''}" placeholder="0" oninput="updateSarrafiRow(${i},'bardagi',this.value)"></td>
-      <td id="sarrafi-baqi-${i}" style="font-weight:800;color:${baqi>0?'var(--red)':'var(--green)'};min-width:115px">${n2fa(Math.round(baqi))}</td>
+      <td id="sarrafi-baqi-${i}" style="font-weight:800;color:${baqi>0?'var(--red)':'var(--green)'};min-width:115px;font-size:1rem">${n2fa(Math.round(baqi))}</td>
       <td><button class="del-btn" onclick="deleteSarrafiRow(${i})">🗑️</button></td>
     `;
     tbody.appendChild(tr);
@@ -16231,6 +16301,61 @@ function renderCameras() {
     </div>`).join('');
   cams.forEach(c => _camMount(c));
 }
+// ---- دوربین‌های سیمی (USB/وبکم) که مستقیم به کامپیوتر وصل‌اند — با getUserMedia ----
+let _localCamStreams = {};
+async function refreshLocalCams() {
+  const grid = document.getElementById('local-cam-grid');
+  if (!grid) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+    grid.innerHTML = '<div class="cam-note" style="grid-column:1/-1">این مرورگر از دوربین سیمی پشتیبانی نمی‌کند</div>';
+    return;
+  }
+  grid.innerHTML = '<div class="cam-note" style="grid-column:1/-1">در حال جستجوی دوربین‌ها…</div>';
+  try {
+    // بدون اجازه، نام دوربین‌ها خالی برمی‌گردد — یک‌بار اجازه می‌گیریم تا لیست کامل شود
+    const tmp = await navigator.mediaDevices.getUserMedia({ video: true });
+    tmp.getTracks().forEach(t => t.stop());
+  } catch (e) { /* کاربر رد کرد یا دوربینی نیست — همچنان با enumerate ادامه می‌دهیم */ }
+  let cams = [];
+  try { cams = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput'); }
+  catch (e) {}
+  if (!cams.length) {
+    grid.innerHTML = '<div class="cam-note" style="grid-column:1/-1">هیچ دوربین سیمی روی این کامپیوتر شناسایی نشد</div>';
+    return;
+  }
+  grid.innerHTML = cams.map((c, i) => `
+    <div class="cam-card">
+      <div class="cam-head"><span>${escFa(c.label || ('دوربین سیمی ' + n2fa(i + 1)))}</span>
+        <span class="cam-actions">
+          <button class="cam-ib" onclick="_localCamToggle('${escFa(c.deviceId)}')" title="پخش/توقف">▶️</button>
+        </span></div>
+      <div class="cam-media" id="local-cam-media-${escFa(c.deviceId)}"></div>
+    </div>`).join('');
+}
+async function _localCamToggle(deviceId) {
+  const box = document.getElementById('local-cam-media-' + deviceId);
+  if (!box) return;
+  if (_localCamStreams[deviceId]) {
+    try { _localCamStreams[deviceId].getTracks().forEach(t => t.stop()); } catch (e) {}
+    delete _localCamStreams[deviceId];
+    box.innerHTML = '';
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: deviceId } } });
+    _localCamStreams[deviceId] = stream;
+    box.innerHTML = '<video autoplay muted playsinline></video>';
+    box.querySelector('video').srcObject = stream;
+  } catch (e) {
+    box.innerHTML = '<div class="cam-note">دسترسی به این دوربین ممکن نشد</div>';
+  }
+}
+function stopAllLocalCams() {
+  Object.keys(_localCamStreams).forEach(id => {
+    try { _localCamStreams[id].getTracks().forEach(t => t.stop()); } catch (e) {}
+  });
+  _localCamStreams = {};
+}
 function _camMount(c) {
   const box = document.getElementById('cam-media-' + c.id);
   if (!box) return;
@@ -16452,7 +16577,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.1.0';
+const APP_VERSION = '2.2.0';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -16637,6 +16762,7 @@ function renderAttendance() {
       <span class="att-chip">ساعت آمدن: ${escFa(st.shiftIn || '—')}</span>
       <span class="att-chip">ساعت رفتن: ${escFa(st.shiftOut || '—')}</span>
       <span class="att-chip">معاش: ${n2fa(st.salary || 0)} افغانی</span>
+      <span class="att-chip">معاش روزانه: ${n2fa(Math.round((st.salary || 0) / 30))} افغانی</span>
       <span class="att-chip">روز پرداخت: ${n2fa(st.payDay || 1)} هر ماه</span>
       <div class="att-now-row att-admin">
         <button class="att-in-btn" onclick="attMark('${escFa(String(st.id))}','in')">آمد حالا${todayRow && todayRow.in ? ' ✓ ' + escFa(todayRow.in) : ''}</button>
@@ -16878,6 +17004,17 @@ function loadSecFonts() {
     }
   });
 }
+
+// ========== فونتِ کادرهای یادداشت/توضیحات — جدا از فونتِ کلی بخش‌ها/مودال ==========
+// با متغیر CSS (--note-font-scale) کار می‌کند، نه اسکن DOM — پس نیازی نیست بعد از
+// هر رندرِ دوبارهٔ آرشیو (که یادداشت‌های تازه می‌سازد) دوباره اجرا شود
+let _noteFontScale = (function(){ try { return parseFloat(localStorage.getItem('noteFontScale') || 1) || 1; } catch(e){ return 1; } })();
+function adjNoteFont(delta) {
+  _noteFontScale = Math.min(2.5, Math.max(0.5, _noteFontScale + delta));
+  document.documentElement.style.setProperty('--note-font-scale', _noteFontScale);
+  try { localStorage.setItem('noteFontScale', _noteFontScale); } catch(e) {}
+}
+if (_noteFontScale !== 1) adjNoteFont(0);
 
 // ========== PERSON / COMPANY MODAL FONT SCALE ==========
 let _modalFontScale = 1;
