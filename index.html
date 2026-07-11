@@ -5246,6 +5246,21 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
     </div>
     <div id="set-ls-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted)"></div>
   </div>
+  <div class="settings-card">
+    <div class="settings-title">💰 بررسی حساب قرض‌داران</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:1.8;margin-bottom:12px">وقتی الباقی یک قرض‌دار از این حد بیشتر شود، ربات با صدا و اعلان روی گوشی/کامپیوتر خبر می‌دهد که باید بررسی شود.</div>
+    <div class="pw-row">
+      <div class="pw-field"><label>حد هشدار (افغانی)</label><input type="number" id="set-debt-threshold" min="1" placeholder="5000"></div>
+      <button class="pw-btn" onclick="saveDebtAlertSettings()">ذخیره</button>
+    </div>
+    <div id="set-debt-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted)"></div>
+  </div>
+  <div class="settings-card">
+    <div class="settings-title">🔔 صدا و اعلان</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:1.8;margin-bottom:12px">برای اینکه هشدار تیل/قرض و پیام‌های چت با صدا و اعلان روی نوار گوشی/کامپیوتر بیایند، باید یک‌بار اجازهٔ اعلان را بدهید.</div>
+    <button class="pw-btn" onclick="_manualEnableNotify()">🔔 فعال‌سازی اعلان‌ها</button>
+    <div id="set-notify-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted)"></div>
+  </div>
   <div class="settings-card" id="trash-settings-card" style="border-color:var(--accent)">
     <div class="settings-title" style="color:var(--accent)">🗑️ سطل زباله</div>
     <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.8">موارد حذف‌شده تا <b style="color:var(--accent)">۱۵ روز</b> در اینجا نگه داشته می‌شوند و پس از آن خودکار پاک می‌شوند. می‌توانید هر مورد را برگردانید یا برای همیشه حذف کنید.</div>
@@ -6146,6 +6161,7 @@ const DB = {
   lowStockInterval: 15,
   lowStockThreshold: 500,
   lowStockPhone: '',
+  debtAlertThreshold: 5000,
   stationName: 'پمپ یعقوبی',
   stationAddress: '',
   stationPhone: '',
@@ -6743,7 +6759,8 @@ function tryUnlock() {
     document.getElementById('lockInput').value = '';
     document.getElementById('lockErr').innerHTML = '';
     try { updateAll(); } catch(e){}
-    setTimeout(function(){ try { checkLowStock(); } catch(e){} }, 600);
+    try { _requestNotifyPermission(); } catch(e){}
+    setTimeout(function(){ try { checkLowStock(); } catch(e){} try { checkDebtReview(); } catch(e){} }, 600);
   } else {
     _wrongPassCount++;
     var failState = _lockoutRegisterFail();
@@ -8395,6 +8412,55 @@ function renderStorage() {
   _renderFuelSection('diesel', 'diesel-purchases-list', 'دیزل');
 }
 
+// ===== صدا + اعلان (نوتیفیکیشن گوشی/کامپیوتر) =====
+// صداها با Web Audio ساخته می‌شوند (بدون فایل صوتی) — صدای پیام چت کوتاه و دو
+// نُتی است، صدای هشدار (تیل/قرض) طولانی‌تر و چهار نُتی تا کاملاً از هم فرق کنند.
+let _alertAudioCtx = null;
+function _alertAudioCtxGet() {
+  if (!_alertAudioCtx) { try { _alertAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
+  return _alertAudioCtx;
+}
+function _playTone(freqs, dur, vol) {
+  const ctx = _alertAudioCtxGet();
+  if (!ctx) return;
+  try {
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    let t = ctx.currentTime;
+    freqs.forEach(f => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.type = 'sine'; osc.frequency.value = f;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(vol || 0.25, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(t); osc.stop(t + dur + 0.05);
+      t += dur * 0.55;
+    });
+  } catch (e) {}
+}
+function _playChatSound() { _playTone([880, 1320], 0.13, 0.22); }
+function _playAlertSound() { _playTone([523, 392, 523, 659], 0.22, 0.32); }
+// اجازهٔ اعلان — یک‌بار بعد از ورود/باز شدن صفحهٔ کارمند پرسیده می‌شود
+function _requestNotifyPermission() {
+  try {
+    if (typeof Notification === 'undefined') return;
+    if (Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+  } catch (e) {}
+}
+// نمایش اعلان روی نوار اعلان‌های گوشی/کامپیوتر — از سرویس‌ورکر استفاده می‌شود
+// (روی اندروید، new Notification مستقیم کار نمی‌کند و باید از سرویس‌ورکر بیاید)
+function _notify(title, body, tag) {
+  try {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    const opts = { body: body || '', icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', tag: tag || 'pump-yaqobi', renotify: true, vibrate: [180, 90, 180] };
+    if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+      navigator.serviceWorker.ready.then(reg => reg.showNotification(title, opts)).catch(() => { try { new Notification(title, opts); } catch (e2) {} });
+    } else {
+      new Notification(title, opts);
+    }
+  } catch (e) {}
+}
+
 // ===== هشدار کمبود مخزن =====
 const LOW_STOCK_LITERS = 500;        // پیش‌فرض حد هشدار
 const LOW_STOCK_COOLDOWN = 15;       // پیش‌فرض فاصله (دقیقه)
@@ -8436,6 +8502,33 @@ function checkLowStock() {
   }).join('');
   document.getElementById('lowStockModal').classList.add('open');
   lastLowStockShown = Date.now();
+  // صدای هشدار + اعلان روی نوار گوشی/کامپیوتر + خبر ربات در «سوال و جواب» —
+  // برای همه (مدیر/کارمند) که برنامه باز دارند، چه آنلاین چه آفلاین
+  try { _playAlertSound(); } catch (e) {}
+  try { _notify('⛽ هشدار مخزن پمپ یعقوبی', low.map(it => it.icon + ' ' + it.label + ': ' + n2fa(it.liters) + ' لیتر').join(' — '), 'low-stock'); } catch (e) {}
+  try { _botAnnounce(_lowStockMessage()); } catch (e) {}
+  return true;
+}
+
+// ===== هشدار بررسی حساب قرض‌داران (الباقی زیاد) =====
+const DEBT_ALERT_AFN = 5000;         // پیش‌فرض حد هشدار (افغانی)
+let lastDebtAlertShown = 0;
+function debtAlertThreshold() { return parseFloat(DB.debtAlertThreshold) || DEBT_ALERT_AFN; }
+function checkDebtReview() {
+  if (Date.now() - lastDebtAlertShown < lsInterval()) return false;
+  const TH = debtAlertThreshold();
+  const list = (DB.debtPersons || []).map(p => ({ p, albaqi: _splitTotals(_allRows(p)).all.albaqi }))
+    .filter(x => x.albaqi > TH)
+    .sort((a, b) => b.albaqi - a.albaqi);
+  if (!list.length) return false;
+  lastDebtAlertShown = Date.now();
+  const top = list.slice(0, 8);
+  const lines = top.map(x => '• ' + x.p.name + ': ' + n2fa(Math.round(x.albaqi)) + ' افغانی');
+  const more = list.length > top.length ? '\n... و ' + n2fa(list.length - top.length) + ' حساب دیگر' : '';
+  const msg = '💰 اطلاعیه پمپ یعقوبی\n' + n2fa(list.length) + ' حساب قرض‌دار بالای ' + n2fa(Math.round(TH)) + ' افغانی الباقی دارند و باید بررسی شوند:\n' + lines.join('\n') + more;
+  try { _playAlertSound(); } catch (e) {}
+  try { _notify('💰 بررسی حساب قرض‌داران', n2fa(list.length) + ' حساب بالای ' + n2fa(Math.round(TH)) + ' افغانی الباقی دارند', 'debt-review'); } catch (e) {}
+  try { _botAnnounce(msg); } catch (e) {}
   return true;
 }
 
@@ -11916,6 +12009,34 @@ function fillLowStockSettings() {
   if (i) i.value = parseFloat(DB.lowStockInterval) || LOW_STOCK_COOLDOWN;
   if (t) t.value = parseFloat(DB.lowStockThreshold) || LOW_STOCK_LITERS;
   if (ph) ph.value = DB.lowStockPhone || '';
+  const dt = document.getElementById('set-debt-threshold');
+  if (dt) dt.value = parseFloat(DB.debtAlertThreshold) || DEBT_ALERT_AFN;
+  const nm = document.getElementById('set-notify-msg');
+  if (nm && typeof Notification !== 'undefined') {
+    nm.textContent = Notification.permission === 'granted' ? '✅ اعلان‌ها فعال است'
+      : Notification.permission === 'denied' ? '❌ اعلان‌ها مسدود است — از تنظیمات مرورگر اجازه بدهید'
+      : 'هنوز فعال نشده';
+  }
+}
+function saveDebtAlertSettings() {
+  const msg = document.getElementById('set-debt-msg');
+  const th = parseFloat(document.getElementById('set-debt-threshold').value);
+  if (!th || th < 1) { msg.textContent = '❌ حد هشدار باید عددی معتبر باشد'; msg.style.color = 'var(--red)'; return; }
+  DB.debtAlertThreshold = th;
+  save();
+  lastDebtAlertShown = 0; // تا تنظیم جدید فوراً اعمال شود
+  msg.textContent = '✅ ذخیره شد — بالای ' + n2fa(th) + ' افغانی';
+  msg.style.color = 'var(--green)';
+}
+function _manualEnableNotify() {
+  const msg = document.getElementById('set-notify-msg');
+  if (typeof Notification === 'undefined') { if (msg) { msg.textContent = '❌ این مرورگر اعلان را پشتیبانی نمی‌کند'; msg.style.color = 'var(--red)'; } return; }
+  if (Notification.permission === 'denied') { if (msg) { msg.textContent = '❌ قبلاً مسدود شده — از تنظیمات مرورگر اجازه بدهید'; msg.style.color = 'var(--red)'; } return; }
+  Notification.requestPermission().then(p => {
+    if (!msg) return;
+    if (p === 'granted') { msg.textContent = '✅ اعلان‌ها فعال شد'; msg.style.color = 'var(--green)'; try { _playAlertSound(); } catch (e) {} }
+    else { msg.textContent = '❌ اجازه داده نشد'; msg.style.color = 'var(--red)'; }
+  }).catch(() => {});
 }
 function saveLowStockSettings() {
   const msg = document.getElementById('set-ls-msg');
@@ -11954,7 +12075,7 @@ function notifyWhatsapp() {
 }
 
 // چک خودکار مخزن هر ۵ دقیقه — حتی اگر کاربر در بخش مخزن نباشد
-setInterval(function(){ try { checkLowStock(); } catch(e) {} }, 300000);
+setInterval(function(){ try { checkLowStock(); } catch(e) {} try { checkDebtReview(); } catch(e) {} }, 300000);
 function saveAlertImage() {
   const W = 720, H = 420 + Math.max(0, (lastLowStockData.length - 1)) * 70;
   const c = document.createElement('canvas');
@@ -14897,7 +15018,8 @@ function openStaffPage() {
   // چت گروهی کارمندان + سوال‌وجواب ربات + ماشین حساب روی صفحهٔ کارمند
   try { _lsCalcBtnShow(false); _showChatFabs(true); _rbSetMode('staff'); } catch (e) {}
   // هشدار کمبود مخزن برای کارمند هم نمایش داده شود
-  try { setTimeout(checkLowStock, 400); } catch (e) {}
+  try { _requestNotifyPermission(); } catch (e) {}
+  try { setTimeout(function(){ try { checkLowStock(); } catch(e){} try { checkDebtReview(); } catch(e){} }, 400); } catch (e) {}
 }
 function closeStaffPage() {
   document.getElementById('staffOverlay').classList.remove('open');
@@ -15252,11 +15374,20 @@ function _chatResetListeners() {
   _chatL = { group: false, dmIdx: false, dm: {} };
   _groupMsgs = []; _groupLast = null; _dmMsgCache = {}; _dmIndex = {};
 }
+// پیام تازهٔ گروه/تک‌نفره که از خودم نیست: صدا + اعلان روی نوار گوشی/کامپیوتر
+function _chatNotifyIncoming(scope, m) {
+  try { _playChatSound(); } catch (e) {}
+  const who = m.f === 'admin' ? 'میرزا' : (m.f === 'bot' ? 'ربات' : (m.n || 'پیام جدید'));
+  const preview = m.del ? 'پیام حذف شد' : (m.k === 'text' ? String(m.t || '').slice(0, 70)
+    : m.k === 'audio' ? '🎤 پیام صوتی' : m.k === 'image' ? '🖼️ عکس' : m.k === 'video' ? '🎬 ویدیو' : 'پیام جدید');
+  try { _notify('💬 ' + who + (scope === 'group' ? ' (چت گروهی)' : ' (چت تک‌نفره)'), preview, scope + '-msg-' + who); } catch (e) {}
+}
 function _chatInitListeners() {
   if (!_chatOnline()) return;
   const me = _chatMe();
   if (!_chatL.group && _rbMode === 'admin') {
     _chatL.group = true;
+    const _groupBootTs = Date.now();
     _fbDb.ref(_chatRoot() + 'group').limitToLast(60).on('child_added', snap => {
       const m = snap.val();
       if (!m) return;
@@ -15264,6 +15395,7 @@ function _chatInitListeners() {
       _groupMsgs.push(m);
       if (_groupMsgs.length > 120) _groupMsgs.shift();
       _groupLast = m;
+      if ((m.ts || 0) > _groupBootTs && m.f !== (_chatMe() || {}).id && !m.del) _chatNotifyIncoming('group', m);
       if (_rbPaneVisible('group')) { _renderChatList('groupList', _groupMsgs); _chatMarkRead('group'); }
       else _rbUpdateBadges();
     });
@@ -15303,11 +15435,13 @@ function _ensureDmListener(peer) {
   if (!peer || _chatL.dm[peer] || !_chatOnline()) return;
   _chatL.dm[peer] = true;
   _dmMsgCache[peer] = _dmMsgCache[peer] || [];
+  const _dmBootTs = Date.now();
   _fbDb.ref(_chatRoot() + 'dm/' + peer + '/msgs').limitToLast(60).on('child_added', snap => {
     const m = snap.val();
     if (!m) return;
     m._key = snap.key;
     _dmMsgCache[peer].push(m);
+    if ((m.ts || 0) > _dmBootTs && m.f !== (_chatMe() || {}).id && !m.del) _chatNotifyIncoming('dm', m);
     if (_rbPaneVisible('dm') && _rbActiveDmPeer() === peer) { _renderChatList('dmList', _dmMsgCache[peer]); _chatMarkRead('dm', peer); }
     else _rbUpdateBadges();
   });
