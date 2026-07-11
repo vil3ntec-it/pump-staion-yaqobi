@@ -1,7 +1,7 @@
 // سرویس‌ورکر پمپ یعقوبی — پوستهٔ برنامه (این صفحه + آیکون‌ها) را کش می‌کند تا
 // برنامه بعد از نصب، هم آنلاین و هم کاملاً آفلاین باز شود. نسخهٔ کش را هر بار
 // که APP_VERSION در index.html عوض می‌شود، این‌جا هم عوض کنید تا کش کهنه پاک شود.
-const CACHE_NAME = 'pump-yaqobi-shell-v2.5.0';
+const CACHE_NAME = 'pump-yaqobi-shell-v2.6.0';
 const APP_SHELL = [
   './',
   './index.html',
@@ -15,9 +15,13 @@ const APP_SHELL = [
 ];
 
 self.addEventListener('install', event => {
+  // cache.addAll همه‌یا‌هیچ است — اگر فقط یکی از آیکون‌ها هنگام نصب (روی نت
+  // ضعیف) نگیرد، کل کش خالی می‌ماند و صفحهٔ اصلی هرگز کش نمی‌شود؛ نتیجه‌اش
+  // این بود که هر بار باز شدن از آیکون، دوباره منتظرِ شبکه می‌ماند. با add
+  // جدا برای هر فایل، شکستِ یکی مانع کش‌شدنِ بقیه (به‌خصوص خودِ index.html) نمی‌شود.
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(APP_SHELL))
+      .then(cache => Promise.all(APP_SHELL.map(url => cache.add(url).catch(() => {}))))
       .then(() => self.skipWaiting())
       .catch(() => {})
   );
@@ -49,11 +53,17 @@ self.addEventListener('fetch', event => {
     // به‌جای شبکهٔ واقعی جواب نگیرد.
     event.respondWith(
       caches.match(req).then(cached => {
-        const networkUpdate = fetch(req.url, { cache: 'reload' }).then(res => {
+        // بدون AbortController، fetch روی شبکهٔ کند/قطع می‌توانست دقیقه‌ها معلق
+        // بماند و باز شدنِ برنامه از آیکون را همان‌قدر عقب بیندازد — وقتی کش
+        // خالی است (اولین نصب یا کش پاک‌شده)، این تنها راه رسیدن به صفحه بود
+        const ctrl = new AbortController();
+        const timeout = setTimeout(() => ctrl.abort(), 4000);
+        const networkUpdate = fetch(req.url, { cache: 'reload', signal: ctrl.signal }).then(res => {
+          clearTimeout(timeout);
           const copy = res.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(req, copy)).catch(() => {});
           return res;
-        }).catch(() => null);
+        }).catch(() => { clearTimeout(timeout); return null; });
         if (cached) return cached; // فوری — networkUpdate در پس‌زمینه ادامه دارد
         return networkUpdate.then(res => res || caches.match('./index.html'));
       })
