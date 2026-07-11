@@ -5247,17 +5247,10 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
     <div id="set-ls-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted)"></div>
   </div>
   <div class="settings-card">
-    <div class="settings-title">💰 بررسی حساب قرض‌داران</div>
-    <div style="font-size:0.85rem;color:var(--muted);line-height:1.8;margin-bottom:12px">وقتی الباقی یک قرض‌دار از این حد بیشتر شود، ربات با صدا و اعلان روی گوشی/کامپیوتر خبر می‌دهد که باید بررسی شود.</div>
-    <div class="pw-row">
-      <div class="pw-field"><label>حد هشدار (افغانی)</label><input type="number" id="set-debt-threshold" min="1" placeholder="5000"></div>
-      <button class="pw-btn" onclick="saveDebtAlertSettings()">ذخیره</button>
-    </div>
-    <div id="set-debt-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted)"></div>
-  </div>
-  <div class="settings-card">
     <div class="settings-title">🔔 صدا و اعلان</div>
-    <div style="font-size:0.85rem;color:var(--muted);line-height:1.8;margin-bottom:12px">برای اینکه هشدار تیل/قرض و پیام‌های چت با صدا و اعلان روی نوار گوشی/کامپیوتر بیایند، باید یک‌بار اجازهٔ اعلان را بدهید.</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:1.8;margin-bottom:12px">
+      برای اینکه هشدار تیل، هشدار قرض‌داران (همان کادر زرد/سرخ لیست قرض‌داران) و پیام‌های چت با صدا و اعلان روی نوار گوشی/کامپیوتر بیایند، باید یک‌بار اجازهٔ اعلان را بدهید. هشدار قرض‌داران خودکار است — نیازی به تنظیم حد نیست.
+    </div>
     <button class="pw-btn" onclick="_manualEnableNotify()">🔔 فعال‌سازی اعلان‌ها</button>
     <div id="set-notify-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted)"></div>
   </div>
@@ -6161,7 +6154,6 @@ const DB = {
   lowStockInterval: 15,
   lowStockThreshold: 500,
   lowStockPhone: '',
-  debtAlertThreshold: 5000,
   stationName: 'پمپ یعقوبی',
   stationAddress: '',
   stationPhone: '',
@@ -8510,24 +8502,28 @@ function checkLowStock() {
   return true;
 }
 
-// ===== هشدار بررسی حساب قرض‌داران (الباقی زیاد) =====
-const DEBT_ALERT_AFN = 5000;         // پیش‌فرض حد هشدار (افغانی)
+// ===== هشدار بررسی حساب قرض‌داران — خودکار، بدون نیاز به حد دستی =====
+// همان وضعیتی که کادر هر قرض‌دار را در لیست «قرض‌داران» زرد (کم‌مانده) یا
+// سرخ (تمام‌شده) می‌کند (debtFuelStatus) — همین‌جا هم برای هشدار استفاده می‌شود.
 let lastDebtAlertShown = 0;
-function debtAlertThreshold() { return parseFloat(DB.debtAlertThreshold) || DEBT_ALERT_AFN; }
 function checkDebtReview() {
   if (Date.now() - lastDebtAlertShown < lsInterval()) return false;
-  const TH = debtAlertThreshold();
-  const list = (DB.debtPersons || []).map(p => ({ p, albaqi: _splitTotals(_allRows(p)).all.albaqi }))
-    .filter(x => x.albaqi > TH)
-    .sort((a, b) => b.albaqi - a.albaqi);
-  if (!list.length) return false;
+  const low = [], out = [];
+  (DB.debtPersons || []).forEach(p => {
+    const s = debtFuelStatus(p);
+    if (s.st === 'out') out.push({ p, who: _debtKindLabel(s.kinds) });
+    else if (s.st === 'low') low.push({ p, who: _debtKindLabel(s.kinds) });
+  });
+  if (!low.length && !out.length) return false;
   lastDebtAlertShown = Date.now();
-  const top = list.slice(0, 8);
-  const lines = top.map(x => '• ' + x.p.name + ': ' + n2fa(Math.round(x.albaqi)) + ' افغانی');
-  const more = list.length > top.length ? '\n... و ' + n2fa(list.length - top.length) + ' حساب دیگر' : '';
-  const msg = '💰 اطلاعیه پمپ یعقوبی\n' + n2fa(list.length) + ' حساب قرض‌دار بالای ' + n2fa(Math.round(TH)) + ' افغانی الباقی دارند و باید بررسی شوند:\n' + lines.join('\n') + more;
+  const fmt = (arr, tag) => arr.map(x => '• ' + x.p.name + ' — ' + x.who + ' ' + tag).join('\n');
+  const parts = [];
+  if (out.length) parts.push(fmt(out, 'تمام شده ⛔'));
+  if (low.length) parts.push(fmt(low, 'کم مانده ⚠️'));
+  const msg = '💰 اطلاعیهٔ پمپ یعقوبی — بررسی حساب قرض‌داران:\n' + parts.join('\n');
+  const notifBody = (out.length ? out.length + ' حساب تمام‌شده' : '') + (out.length && low.length ? ' — ' : '') + (low.length ? low.length + ' حساب کم‌مانده' : '');
   try { _playAlertSound(); } catch (e) {}
-  try { _notify('💰 بررسی حساب قرض‌داران', n2fa(list.length) + ' حساب بالای ' + n2fa(Math.round(TH)) + ' افغانی الباقی دارند', 'debt-review'); } catch (e) {}
+  try { _notify('💰 بررسی حساب قرض‌داران', notifBody, 'debt-review'); } catch (e) {}
   try { _botAnnounce(msg); } catch (e) {}
   return true;
 }
@@ -12009,24 +12005,12 @@ function fillLowStockSettings() {
   if (i) i.value = parseFloat(DB.lowStockInterval) || LOW_STOCK_COOLDOWN;
   if (t) t.value = parseFloat(DB.lowStockThreshold) || LOW_STOCK_LITERS;
   if (ph) ph.value = DB.lowStockPhone || '';
-  const dt = document.getElementById('set-debt-threshold');
-  if (dt) dt.value = parseFloat(DB.debtAlertThreshold) || DEBT_ALERT_AFN;
   const nm = document.getElementById('set-notify-msg');
   if (nm && typeof Notification !== 'undefined') {
     nm.textContent = Notification.permission === 'granted' ? '✅ اعلان‌ها فعال است'
       : Notification.permission === 'denied' ? '❌ اعلان‌ها مسدود است — از تنظیمات مرورگر اجازه بدهید'
       : 'هنوز فعال نشده';
   }
-}
-function saveDebtAlertSettings() {
-  const msg = document.getElementById('set-debt-msg');
-  const th = parseFloat(document.getElementById('set-debt-threshold').value);
-  if (!th || th < 1) { msg.textContent = '❌ حد هشدار باید عددی معتبر باشد'; msg.style.color = 'var(--red)'; return; }
-  DB.debtAlertThreshold = th;
-  save();
-  lastDebtAlertShown = 0; // تا تنظیم جدید فوراً اعمال شود
-  msg.textContent = '✅ ذخیره شد — بالای ' + n2fa(th) + ' افغانی';
-  msg.style.color = 'var(--green)';
 }
 function _manualEnableNotify() {
   const msg = document.getElementById('set-notify-msg');
