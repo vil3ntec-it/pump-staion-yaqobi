@@ -441,6 +441,24 @@ body.light-mode #lsCalcBtn{background:rgba(255,255,255,.75);color:#b45309;border
 #calcPanel.open{display:flex}
 #calcHead svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 #calcHead .ch-t{display:flex;align-items:center;gap:7px}
+/* ── دوربین‌های مداربسته ── */
+.cam-add-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.cam-add-row button{padding:9px 14px;border-radius:10px;border:1.5px solid var(--blue);background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.82rem;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.cam-add-row button:hover{background:rgba(34,204,255,.1)}
+.cam-add-row button svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.cam-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.cam-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.cam-card .cam-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border);font-weight:900;font-size:0.88rem;color:var(--txt)}
+.cam-card .cam-actions{display:flex;gap:5px}
+.cam-ib{width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:0.95rem;display:inline-flex;align-items:center;justify-content:center;font-family:'Vazirmatn',sans-serif}
+.cam-ib:hover{color:var(--blue);border-color:var(--blue)}
+.cam-ib.del:hover{color:var(--red);border-color:var(--red)}
+.cam-media{position:relative;background:#000;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.cam-media video,.cam-media img,.cam-media iframe{width:100%;height:100%;object-fit:contain;border:none;display:block;background:#000}
+.cam-note{color:var(--muted);font-size:0.78rem;padding:14px;text-align:center;line-height:2}
+.cam-hint{font-size:0.72rem;color:var(--muted);line-height:1.9;margin-bottom:12px}
+body.viewer-mode .cam-admin{display:none !important}
+#camScanVideo{width:100%;max-height:55vh;border-radius:12px;background:#000;display:block}
 #calcHead{cursor:move;padding:11px 15px;background:var(--card);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:0.92rem;color:var(--accent);user-select:none;-webkit-user-select:none;touch-action:none}
 #calcClose{cursor:pointer;color:var(--muted);font-weight:900;font-size:1.05rem;padding:0 4px}
 #calcClose:hover{color:var(--red)}
@@ -4172,6 +4190,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
   <button class="nav-btn" onclick="showSection('safe',this)"><svg class="nav-ic ia-shake"><use href="#ic-safe"/></svg> گاوصندوق</button>
   <button class="nav-btn" onclick="showSection('noinv',this)"><svg class="nav-ic ia-tilt"><use href="#ic-barrel"/></svg> شرکت ها تیل</button>
   <button class="nav-btn" onclick="showSection('storage',this)"><svg class="nav-ic ia-pulse"><use href="#ic-storage"/></svg> مخزن</button>
+  <button class="nav-btn" onclick="showSection('cameras',this)"><svg class="nav-ic ia-pulse"><use href="#ic-cctv"/></svg> دوربین‌ها</button>
   <button class="nav-btn" onclick="showSection('profit',this)"><svg class="nav-ic ia-rise"><use href="#ic-profit"/></svg> مفاد / ضرر / اتحادیه</button>
   <button class="nav-btn" onclick="showSection('settings',this)"><svg class="nav-ic ia-spin"><use href="#ic-settings"/></svg> تنظیمات</button>
 </div>
@@ -5051,6 +5070,25 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
 </div>
 
 <!-- SETTINGS -->
+<!-- CCTV — دوربین‌های مداربسته (مدیر + نظاره‌گر) -->
+<div class="section" id="sec-cameras">
+  <div class="card">
+    <div class="card-head">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="card-title"><svg class="nav-ic"><use href="#ic-cctv"/></svg> دوربین‌های مداربسته</div>
+      </div>
+    </div>
+    <div class="cam-add-row cam-admin">
+      <button onclick="camAddManual()"><svg><use href="#ic-link2"/></svg> افزودن با لینک</button>
+      <button onclick="camAddByQRImage()"><svg><use href="#ic-photo"/></svg> افزودن با عکس کیو‌آر</button>
+      <button onclick="camScanStart()"><svg><use href="#ic-qrscan"/></svg> اسکن کیو‌آر با دوربین دستگاه</button>
+    </div>
+    <div class="cam-hint cam-admin">کیو‌آر کدِ روی دوربین یا برنامهٔ آن را اسکن کنید (یا عکسش را بدهید) — لینک داخلش ذخیره می‌شود و تصویر دوربین، وقتی اینترنت (یا شبکهٔ پمپ) وصل باشد، همین‌جا می‌آید. لینک HLS ‏(m3u8)، MJPEG، عکس لحظه‌ای و صفحهٔ وب پشتیبانی می‌شود؛ لینک RTSP در مرورگر مستقیم پخش نمی‌شود.</div>
+    <div id="cam-net-note"></div>
+    <div class="cam-grid" id="cam-grid"></div>
+  </div>
+</div>
+
 <div class="section" id="sec-settings">
   <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
     <span></span>
@@ -5323,6 +5361,9 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
   <symbol id="ic-expand" viewBox="0 0 24 24"><path d="M9 3.5H3.5V9M15 3.5h5.5V9M9 20.5H3.5V15M15 20.5h5.5V15"/></symbol>
   <symbol id="ic-stopcirc" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><rect x="9.2" y="9.2" width="5.6" height="5.6" rx="1" fill="currentColor" stroke="none"/></symbol>
   <symbol id="ic-headset" viewBox="0 0 24 24"><path d="M4.5 13.5V12a7.5 7.5 0 0 1 15 0v1.5"/><rect x="3.5" y="13.5" width="4" height="6" rx="1.6"/><rect x="16.5" y="13.5" width="4" height="6" rx="1.6"/><path d="M19.5 19.5c0 1.7-1.6 2.5-4 2.5"/></symbol>
+  <symbol id="ic-cctv" viewBox="0 0 24 24"><rect x="2.5" y="4.8" width="14" height="7.8" rx="2"/><circle cx="12.4" cy="8.7" r="1.7"/><path d="M16.5 7l5-1.8v7l-5-1.8"/><path d="M7 12.6v3.2a2.4 2.4 0 0 0 2.4 2.4h3.1"/></symbol>
+  <symbol id="ic-qrscan" viewBox="0 0 24 24"><path d="M8.5 3.5H5.5a2 2 0 0 0-2 2v3M15.5 3.5h3a2 2 0 0 1 2 2v3M8.5 20.5H5.5a2 2 0 0 1-2-2v-3M15.5 20.5h3a2 2 0 0 0 2-2v-3"/><path d="M3.5 12h17"/><rect x="7" y="7" width="4" height="3.4" rx=".7"/><path d="M14 7h3v3.4M7 15.5h3.4M13.5 15.5h.02M16.5 15.5h.5"/></symbol>
+  <symbol id="ic-link2" viewBox="0 0 24 24"><path d="M10 14.5l4-5"/><path d="M8.5 9.5L7 11.3a3.6 3.6 0 0 0 .4 5.1 3.6 3.6 0 0 0 5-.3l1.6-1.9"/><path d="M15.5 14.5l1.5-1.8a3.6 3.6 0 0 0-.4-5.1 3.6 3.6 0 0 0-5 .3L10 9.8"/></symbol>
 </svg>
 
 <!-- ماشین حساب شناور + ربات (بیرون از #app: روی صفحهٔ قفل، صفحهٔ کارمند و نمای کیو‌آر هم کار می‌کنند) -->
@@ -5752,6 +5793,30 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
     </div>
   </div>
 </div>
+
+<!-- CAMERA: افزودن دستی / پس از کیو‌آر -->
+<div class="modal-overlay" id="camAddModal">
+  <div class="sm-modal" style="max-width:400px">
+    <h3 style="margin-bottom:12px"><svg class="nav-ic"><use href="#ic-cctv"/></svg> افزودن دوربین</h3>
+    <div class="sm-field"><label>نام دوربین</label><input id="cam-name" placeholder="مثلاً دوربین دخل"></div>
+    <div class="sm-field"><label>لینک تصویر / پخش (از کیو‌آر یا دستی)</label><input id="cam-url" placeholder="http://... یا https://..." dir="ltr" style="direction:ltr;text-align:left"></div>
+    <div class="sm-btns">
+      <button class="btn-ok" onclick="camConfirmAdd()">✔ ذخیره</button>
+      <button class="btn-cancel" onclick="closeModal('camAddModal')">انصراف</button>
+    </div>
+  </div>
+</div>
+
+<!-- CAMERA: اسکن زندهٔ کیو‌آر با دوربین دستگاه -->
+<div class="modal-overlay" id="camScanModal">
+  <div class="sm-modal" style="max-width:440px">
+    <h3 style="margin-bottom:12px"><svg class="nav-ic"><use href="#ic-qrscan"/></svg> اسکن کیو‌آر دوربین</h3>
+    <video id="camScanVideo" autoplay playsinline muted></video>
+    <div id="camScanMsg" class="cam-note">کیو‌آر کد را جلوی دوربین بگیرید...</div>
+    <div class="sm-btns"><button class="btn-cancel" onclick="camScanStop()">بستن</button></div>
+  </div>
+</div>
+<input type="file" id="camQrFile" accept="image/*" style="display:none">
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
@@ -6916,6 +6981,7 @@ function showSection(id, btn) {
   if (id === 'safe') renderSafe();
   if (id === 'sarrafi') renderSarrafi();
   if (id === 'waraq') renderWaraqList();
+  if (id === 'cameras') renderCameras();
   if (id === 'zodiac') { initDate(); }
   if (id === 'settings') {
     fillLowStockSettings();
@@ -14872,8 +14938,8 @@ function _rbPerson() {
 }
 function _botHelp() {
   if (_rbMode === 'person') return 'می‌توانید بپرسید: «الباقی من چند است؟»، «بردگی من؟»، «رسید من؟»، «باقی تیل من؟»، تاریخ و ساعت، یا هر محاسبه (مثلاً ۲۰*۱۵). اگر جواب را ندانستم، پیام تان را به میرزا می‌رسانم.';
-  if (_rbMode === 'admin') return 'می‌توانید بپرسید: «باقی مخزن؟»، «قرض کل؟»، «تعداد قرض‌داران؟»، «مصارف امروز؟»، تاریخ و ساعت، یا هر محاسبه (مثلاً ۲۰*۱۵). پیام‌های کارمندان و مشتریان در «چت تک‌نفره» می‌آید.';
-  return 'می‌توانید بپرسید: «باقی مخزن؟»، «تعداد قرض‌داران؟»، تاریخ و ساعت، یا هر محاسبه (مثلاً ۲۰*۱۵). اگر جواب را ندانستم، پیام تان را به میرزا می‌رسانم.';
+  if (_rbMode === 'admin') return 'می‌توانید بپرسید: «باقی مخزن؟»، «قرض کل؟»، «تعداد قرض‌داران؟»، «مصارف امروز؟»، «دوربین‌ها را نشان بده»، تاریخ و ساعت، یا هر محاسبه (مثلاً ۲۰*۱۵). پیام‌های کارمندان و مشتریان در «چت تک‌نفره» می‌آید.';
+  return 'می‌توانید بپرسید: «باقی مخزن؟»، «تعداد قرض‌داران؟»، «دوربین‌ها را نشان بده»، تاریخ و ساعت، یا هر محاسبه (مثلاً ۲۰*۱۵). اگر جواب را ندانستم، پیام تان را به میرزا می‌رسانم.';
 }
 function _botGreeting() {
   const nm = _rbMode === 'person' && _rbPersonPeer ? ' ' + _rbPersonPeer.name : '';
@@ -14917,6 +14983,8 @@ function _botAnswer(qRaw) {
       if (has('حساب من', 'جدول', 'ردیف')) return 'جزئیات کامل حساب شما در جدول همین صفحه است — ' + n2fa((p.rows || []).length) + ' ردیف ثبت شده.';
     }
   } else {
+    // دوربین‌های مداربسته — فقط در سوال‌وجواب و چت گروهی (نه مهمان کیو‌آر)
+    if (has('دوربین', 'مداربسته', 'کمره', 'camera', 'cctv')) return _botCameraIntent();
     if (has('مخزن', 'تانک', 'ذخیره', 'باقی تیل', 'چقدر تیل', 'تیل چقدر')) {
       return 'باقی مخزن: پطرول ' + n2fa(Math.round(_fuelStock('petrol'))) + ' لیتر — دیزل ' + n2fa(Math.round(_fuelStock('diesel'))) + ' لیتر';
     }
@@ -15397,6 +15465,251 @@ setInterval(function () {
     if (fab && fab.style.display !== 'none' && fab.style.display !== '' && !_chatL.group && !_chatL.dmIdx && _chatOnline()) _chatInitListeners();
   } catch (e) {}
 }, 5000);
+
+// ========== دوربین‌های مداربسته ==========
+// بخش «دوربین‌ها» برای مدیر و نظاره‌گر: دوربین با لینک، عکس کیو‌آر یا اسکن
+// زندهٔ کیو‌آر اضافه می‌شود؛ لینک در DB.cameras ذخیره و با سرور همگام می‌شود
+// و تصویر (HLS/MJPEG/عکس لحظه‌ای/صفحهٔ وب) وقتی اینترنت وصل باشد پخش می‌شود.
+function _cams() { if (!Array.isArray(DB.cameras)) DB.cameras = []; return DB.cameras; }
+function renderCameras() {
+  const grid = document.getElementById('cam-grid');
+  if (!grid) return;
+  const note = document.getElementById('cam-net-note');
+  if (note) note.innerHTML = navigator.onLine ? '' :
+    '<div class="cam-note" style="border:1px dashed var(--border);border-radius:10px;margin-bottom:10px">اینترنت وصل نیست — تصویر دوربین‌ها فقط با اینترنت (یا شبکهٔ محلی پمپ) می‌آید</div>';
+  const cams = _cams();
+  if (!cams.length) {
+    grid.innerHTML = '<div class="cam-note" style="grid-column:1/-1">هنوز دوربینی ثبت نشده — با دکمه‌های بالا، دوربین را با لینک یا کیو‌آر اضافه کنید</div>';
+    return;
+  }
+  grid.innerHTML = cams.map(c => `
+    <div class="cam-card">
+      <div class="cam-head"><span>${escFa(c.name || 'دوربین')}</span>
+        <span class="cam-actions">
+          <button class="cam-ib" onclick="camReload('${escFa(String(c.id))}')" title="تازه کردن تصویر">⟳</button>
+          <button class="cam-ib del cam-admin" onclick="camDelete('${escFa(String(c.id))}')" title="حذف دوربین">✕</button>
+        </span></div>
+      <div class="cam-media" id="cam-media-${escFa(String(c.id))}"></div>
+    </div>`).join('');
+  cams.forEach(c => _camMount(c));
+}
+function _camMount(c) {
+  const box = document.getElementById('cam-media-' + c.id);
+  if (!box) return;
+  const u = String(c.url || '').trim();
+  if (!u) { box.innerHTML = '<div class="cam-note">لینکی ثبت نشده</div>'; return; }
+  if (!navigator.onLine) { box.innerHTML = '<div class="cam-note">اینترنت لازم است</div>'; return; }
+  const eu = escFa(u);
+  if (/^rtsp:/i.test(u)) {
+    box.innerHTML = '<div class="cam-note">لینک RTSP در مرورگر مستقیم پخش نمی‌شود — از دستگاه ضبط (NVR/DVR) لینک HLS یا HTTP بگیرید</div>';
+    return;
+  }
+  if (/\.m3u8(\?|#|$)/i.test(u)) {
+    box.innerHTML = '<video controls autoplay muted playsinline></video>';
+    const v = box.querySelector('video');
+    if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = u; }
+    else _camLoadHls(() => {
+      if (window.Hls && Hls.isSupported()) { const h = new Hls(); h.loadSource(u); h.attachMedia(v); }
+      else { v.src = u; }
+    });
+    return;
+  }
+  if (/\.(mp4|webm|ogv|ogg)(\?|#|$)/i.test(u)) {
+    box.innerHTML = `<video src="${eu}" controls autoplay muted playsinline></video>`;
+    return;
+  }
+  if (/\.(jpe?g|png|gif|webp)(\?|#|$)/i.test(u) || /mjpg|mjpeg|snapshot|faststream|videostream|\/cgi-bin\//i.test(u)) {
+    // عکس لحظه‌ای/MJPEG — با پارامتر زمان، «تازه کردن» همیشه عکس نو می‌آورد
+    const bust = u + (u.indexOf('?') > -1 ? '&' : '?') + '_t=' + Date.now();
+    box.innerHTML = `<img src="${escFa(bust)}" alt="دوربین" onerror="this.outerHTML='<div class=cam-note>تصویر نیامد — لینک یا اتصال را بررسی کنید</div>'">`;
+    return;
+  }
+  // صفحهٔ وب دوربین (پنل خود دوربین/NVR)
+  box.innerHTML = `<iframe src="${eu}" allow="autoplay; fullscreen" referrerpolicy="no-referrer"></iframe>`;
+}
+function _camLoadHls(cb) {
+  if (window.Hls) { cb(); return; }
+  if (window._hlsLoading) { window._hlsLoading.push(cb); return; }
+  window._hlsLoading = [cb];
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.13/hls.min.js';
+  s.onload = s.onerror = () => { (window._hlsLoading || []).forEach(f => { try { f(); } catch (e) {} }); window._hlsLoading = null; };
+  document.head.appendChild(s);
+}
+function camReload(id) {
+  const c = _cams().find(x => String(x.id) === String(id));
+  if (c) _camMount(c);
+}
+function camAddManual() {
+  if (!requireAdmin()) return;
+  const n = document.getElementById('cam-name'); if (n) n.value = '';
+  const u = document.getElementById('cam-url'); if (u) u.value = '';
+  document.getElementById('camAddModal').classList.add('open');
+  if (n) setTimeout(() => n.focus(), 150);
+}
+function camConfirmAdd() {
+  if (!requireAdmin()) return;
+  const name = (document.getElementById('cam-name').value || '').trim();
+  const url = (document.getElementById('cam-url').value || '').trim();
+  if (!url) { showToast('لینک دوربین را بنویسید یا با کیو‌آر بگیرید', '#e53e3e'); return; }
+  _cams().push({ id: 'c' + Date.now().toString(36) + Math.floor(Math.random() * 1e3), name: name || ('دوربین ' + n2fa(_cams().length + 1)), url, addedAt: new Date().toISOString() });
+  save();
+  closeModal('camAddModal');
+  renderCameras();
+  showToast('✅ دوربین ذخیره شد', '#38a169');
+}
+function camDelete(id) {
+  if (!requireAdmin()) return;
+  if (!confirm('این دوربین حذف شود؟')) return;
+  DB.cameras = _cams().filter(c => String(c.id) !== String(id));
+  save();
+  renderCameras();
+}
+// ---- خواندن کیو‌آر: اول BarcodeDetector مرورگر، وگرنه کتابخانهٔ jsQR ----
+function _camLoadJsQR(cb) {
+  if (window.jsQR) { cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js';
+  s.onload = () => cb();
+  s.onerror = () => cb();
+  document.head.appendChild(s);
+}
+function _camDecodeCanvas(canvas, cb) {
+  // BarcodeDetector (اندروید/کروم) — سریع و بدون دانلود
+  if (window.BarcodeDetector) {
+    try {
+      new BarcodeDetector({ formats: ['qr_code'] }).detect(canvas)
+        .then(codes => {
+          if (codes && codes.length && codes[0].rawValue) cb(codes[0].rawValue);
+          else _camDecodeCanvasJsQR(canvas, cb);
+        })
+        .catch(() => _camDecodeCanvasJsQR(canvas, cb));
+      return;
+    } catch (e) {}
+  }
+  _camDecodeCanvasJsQR(canvas, cb);
+}
+function _camDecodeCanvasJsQR(canvas, cb) {
+  _camLoadJsQR(() => {
+    if (!window.jsQR) { cb(null); return; }
+    try {
+      const ctx = canvas.getContext('2d');
+      const d = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(d.data, d.width, d.height);
+      cb(code && code.data ? code.data : null);
+    } catch (e) { cb(null); }
+  });
+}
+function _camQRFound(text) {
+  const t = String(text || '').trim();
+  if (!t) return;
+  const n = document.getElementById('cam-name'); if (n) n.value = '';
+  const u = document.getElementById('cam-url'); if (u) u.value = t;
+  document.getElementById('camAddModal').classList.add('open');
+  if (n) setTimeout(() => n.focus(), 150);
+  showToast('✅ کیو‌آر خوانده شد — نام دوربین را بنویسید و ذخیره کنید', '#38a169');
+}
+// افزودن با عکس کیو‌آر (فایل/گالری یا گرفتن عکس با دوربین گوشی)
+function camAddByQRImage() {
+  if (!requireAdmin()) return;
+  const fi = document.getElementById('camQrFile');
+  if (!fi) return;
+  fi.onchange = function () {
+    const f = fi.files && fi.files[0];
+    fi.value = '';
+    if (!f) return;
+    const img = new Image();
+    const url = URL.createObjectURL(f);
+    img.onload = () => {
+      try {
+        const M = 1200;
+        let w = img.width, h = img.height;
+        if (Math.max(w, h) > M) { const s = M / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        _camDecodeCanvas(c, txt => {
+          if (txt) _camQRFound(txt);
+          else showToast('کیو‌آر در این عکس پیدا نشد — عکس واضح‌تر بگیرید', '#e53e3e');
+        });
+      } catch (e) { URL.revokeObjectURL(url); showToast('عکس خوانده نشد', '#e53e3e'); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); showToast('عکس خوانده نشد', '#e53e3e'); };
+    img.src = url;
+  };
+  fi.click();
+}
+// اسکن زندهٔ کیو‌آر با دوربین دستگاه
+let _camScan = null;
+async function camScanStart() {
+  if (!requireAdmin()) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { showToast('این مرورگر به دوربین دستگاه دسترسی ندارد', '#e53e3e'); return; }
+  const modal = document.getElementById('camScanModal');
+  const video = document.getElementById('camScanVideo');
+  const msg = document.getElementById('camScanMsg');
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    video.srcObject = stream;
+    modal.classList.add('open');
+    if (msg) msg.textContent = 'کیو‌آر کد را جلوی دوربین بگیرید...';
+    const canvas = document.createElement('canvas');
+    let busy = false;
+    _camScan = {
+      stream,
+      timer: setInterval(() => {
+        if (busy || !video.videoWidth) return;
+        busy = true;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        _camDecodeCanvas(canvas, txt => {
+          busy = false;
+          if (txt && _camScan) {
+            camScanStop();
+            _camQRFound(txt);
+          }
+        });
+      }, 500)
+    };
+  } catch (e) { showToast('اجازهٔ دوربین داده نشد', '#e53e3e'); }
+}
+function camScanStop() {
+  if (_camScan) {
+    try { clearInterval(_camScan.timer); } catch (e) {}
+    try { _camScan.stream.getTracks().forEach(t => t.stop()); } catch (e) {}
+    _camScan = null;
+  }
+  const v = document.getElementById('camScanVideo');
+  if (v) v.srcObject = null;
+  document.getElementById('camScanModal').classList.remove('open');
+}
+// ربات → دوربین‌ها: فقط سوال‌وجواب و چت گروهی (نه مهمان کیو‌آر)
+function _botCameraIntent() {
+  const n = _cams().length;
+  const app = document.getElementById('app');
+  const appOpen = app && app.style.display !== 'none';
+  if (!appOpen) return 'دوربین‌های مداربسته فقط داخل برنامه (مدیر یا نظاره‌گر) دیده می‌شوند — اول با رمز وارد شوید، بعد بخش «دوربین‌ها» را باز کنید.';
+  setTimeout(() => {
+    try {
+      const p = document.getElementById('robotPanel');
+      if (p) p.classList.remove('open');
+      showSection('cameras', null);
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      const nb = document.querySelector(`.nav-btn[onclick*="'cameras'"]`);
+      if (nb) nb.classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (e) {}
+  }, 700);
+  return n
+    ? 'بخش دوربین‌های مداربسته باز می‌شود — ' + n2fa(n) + ' دوربین ثبت شده.'
+    : 'بخش دوربین‌های مداربسته باز می‌شود — هنوز دوربینی ثبت نشده؛ با کیو‌آر یا لینک اضافه کنید.';
+}
+// بستن مودال اسکنر با کلیک روی پس‌زمینه هم دوربین دستگاه را خاموش کند
+(function () {
+  const m = document.getElementById('camScanModal');
+  if (m) m.addEventListener('click', function (e) { if (e.target === this) camScanStop(); });
+})();
 // ===== جستجوی صوتی صفحهٔ کارمند =====
 // «خیلی دقیق»: چند برداشتِ متن از گفتار گرفته می‌شود، هر کدام با همهٔ نام‌ها
 // (نرمال‌شده + کلمه‌به‌کلمه + فاصلهٔ لِوِنشتاین) نمره می‌گیرد، و فقط وقتی
