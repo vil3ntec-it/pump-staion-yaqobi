@@ -15173,8 +15173,163 @@ function _rbPerson() {
 }
 function _botHelp() {
   if (_rbMode === 'person') return 'می‌توانید بپرسید: «الباقی من چند است؟»، «بردگی من؟»، «رسید من؟»، «باقی تیل من؟»، تاریخ و ساعت، یا هر محاسبه (مثلاً ۲۰*۱۵). اگر جواب را ندانستم، پیام تان را به میرزا می‌رسانم.';
-  if (_rbMode === 'admin') return 'می‌توانید بپرسید: «باقی مخزن؟»، «قرض کل؟»، «تعداد قرض‌داران؟»، «مصارف امروز؟»، «دوربین‌ها را نشان بده»، تاریخ و ساعت، یا هر محاسبه (مثلاً ۲۰*۱۵). پیام‌های کارمندان و مشتریان در «چت تک‌نفره» می‌آید.';
+  if (_rbMode === 'admin') return 'می‌توانید بپرسید یا بگویید: «باقی مخزن؟»، «حساب فلانی چند است؟»، «حساب فلانی را باز کن»، «یک قرض‌دار جدید بساز به نام فلانی»، «حساب فلانی را حذف کن»، «برو به تنظیمات/مصارف/گاوصندوق/...»، «دوربین‌ها را نشان بده»، یا هر محاسبه (مثلاً ۲۰*۱۵). پیام‌های کارمندان و مشتریان در «چت تک‌نفره» می‌آید.';
+  if (_rbMode === 'staff') return 'می‌توانید بپرسید: «باقی مخزن؟»، «حساب فلانی چند است؟»، «حساب فلانی را باز کن»، «تعداد قرض‌داران؟»، یا هر محاسبه (مثلاً ۲۰*۱۵). اگر جواب را ندانستم، پیام تان را به میرزا می‌رسانم.';
   return 'می‌توانید بپرسید: «باقی مخزن؟»، «تعداد قرض‌داران؟»، «دوربین‌ها را نشان بده»، تاریخ و ساعت، یا هر محاسبه (مثلاً ۲۰*۱۵). اگر جواب را ندانستم، پیام تان را به میرزا می‌رسانم.';
+}
+// ========== ربات به‌عنوان ایجنت: علاوه بر جواب‌دادن، خودش کار را انجام می‌دهد ==========
+// «باز کردن حساب» و «رفتن به بخش» بی‌خطرند و فوری اجرا می‌شوند. «ساختن حساب» فقط
+// برای مدیر است. «حذف حساب» هم فقط برای مدیر است و همیشه اول «مطمئنید؟» می‌پرسد.
+const _BOT_SECTION_MAP = [
+  { id: 'debt', label: 'قرض‌داران', words: ['قرضدار', 'قرض دار', 'قرض‌دار'] },
+  { id: 'noinv', label: 'شرکت‌های تیل', words: ['شرکت تیل', 'شرکت ها', 'شرکتها', 'شرکت'] },
+  { id: 'expenses', label: 'مصارف', words: ['مصارف', 'مصرف ها', 'خرج ها'] },
+  { id: 'storage', label: 'مخزن پطرول', words: ['مخزن پطرول', 'مخزن', 'ذخیره', 'تانک'] },
+  { id: 'storage-diesel', label: 'مخزن دیزل', words: ['مخزن دیزل'] },
+  { id: 'settings', label: 'تنظیمات', words: ['تنظیمات'] },
+  { id: 'safe', label: 'گاوصندوق', words: ['گاوصندوق', 'صندوق'] },
+  { id: 'sarrafi', label: 'صرافی', words: ['صرافی'] },
+  { id: 'waraq', label: 'ورق', words: ['ورق'] },
+  { id: 'cameras', label: 'دوربین‌ها', words: ['دوربین', 'مداربسته', 'کمره'] },
+  { id: 'attendance', label: 'حاضری', words: ['حاضری'] },
+  { id: 'profit', label: 'مفاد/ضرر', words: ['مفاد', 'اتحادیه'] },
+  { id: 'debtrasid', label: 'رسید قرض', words: ['رسید قرض', 'خلاصه قرض'] },
+  { id: 'shifts', label: 'شیفت‌ها', words: ['شیفت'] },
+];
+function _botFindSection(q) {
+  for (const s of _BOT_SECTION_MAP) { if (s.words.some(w => q.includes(w))) return s; }
+  return null;
+}
+function _botExtractNameAfter(text, markers) {
+  const t = String(text || '');
+  for (const m of markers) {
+    const idx = t.indexOf(m);
+    if (idx !== -1) {
+      let rest = t.slice(idx + m.length).trim().replace(/^[:،, ]+/, '');
+      rest = rest.split(/[.!؟?]/)[0].trim();
+      if (rest) return rest;
+    }
+  }
+  return null;
+}
+function _botExtractNewAccountName(qRaw) {
+  const byMarker = _botExtractNameAfter(qRaw, ['به نام', 'بنام', 'به اسم', 'اسمش']);
+  if (byMarker) return byMarker;
+  let t = ' ' + toEnDigits(String(qRaw)) + ' ';
+  ['حساب جدید بساز', 'حساب جدید اضافه کن', 'یک حساب جدید بساز', 'قرض‌دار جدید بساز',
+   'قرضدار جدید بساز', 'شخص جدید بساز', 'حساب جدید', 'قرض‌دار جدید', 'قرضدار جدید',
+   'شرکت جدید', 'شخص جدید', 'بساز', 'اضافه کن', 'ایجاد کن', 'درست کن', 'برایم', 'برام',
+   'یک', 'حساب', 'قرض‌دار', 'قرضدار', 'شرکت', 'جدید'].forEach(w => { t = t.split(w).join(' '); });
+  t = t.replace(/\s+/g, ' ').trim();
+  return t || null;
+}
+function _botAddPerson(type, name) {
+  const list = type === 'debt' ? DB.debtPersons : DB.noinvPersons;
+  const exist = (list || []).find(p => normFa(p.name) === normFa(name));
+  if (exist) return { existed: true, id: exist.id };
+  const rec = { id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7), name, rows: [] };
+  list.push(rec);
+  save();
+  try { renderPersons(type); } catch (e) {}
+  try { updateBanner(); } catch (e) {}
+  return { existed: false, id: rec.id };
+}
+function _botDeletePerson(type, id) {
+  const list = type === 'debt' ? DB.debtPersons : DB.noinvPersons;
+  const idx = list.findIndex(p => p.id === id);
+  if (idx < 0) return false;
+  try { _pushUndo({ kind: 'person', subtype: type, index: idx, data: JSON.parse(JSON.stringify(list[idx])) }); } catch (e) {}
+  try { _addToTrash('person', list[idx], type); } catch (e) {}
+  if (type === 'debt') DB.debtPersons = DB.debtPersons.filter(p => p.id !== id);
+  else DB.noinvPersons = DB.noinvPersons.filter(p => p.id !== id);
+  save();
+  try { renderPersons(type); } catch (e) {}
+  try { updateBanner(); } catch (e) {}
+  return true;
+}
+function _botOpenPerson(type, id) {
+  try {
+    if (_rbMode === 'admin') openPersonModal(type, id);
+    else openROViewer(type, id);
+  } catch (e) {}
+  try { const p = document.getElementById('robotPanel'); if (p) p.classList.remove('open'); } catch (e) {}
+}
+function qaAgentConfirmYes(i) {
+  const m = _qaMsgs[i];
+  if (!m || !m.action) return;
+  m.sug = null;
+  const a = m.action; m.action = null;
+  if (a.type === 'delete_person') {
+    const ok = _botDeletePerson(a.personType, a.id);
+    _qaMsgs.push({ who: 'bot', t: ok ? ('🗑️ حساب «' + a.name + '» حذف شد — اگر اشتباه شد، از تنظیمات > سطل زباله بازش گردانید.') : 'این حساب دیگر پیدا نشد.' });
+  }
+  _qaRender();
+}
+function qaAgentConfirmNo(i) {
+  const m = _qaMsgs[i];
+  if (m) { m.sug = null; m.action = null; }
+  _qaMsgs.push({ who: 'bot', t: 'باشد، کاری نکردم.' });
+  _qaRender();
+}
+function _botTryAgentAction(qRaw) {
+  const q = _botNorm(qRaw);
+  if (!q) return false;
+  const has = (...ws) => ws.some(w => q.includes(w));
+  const isAdmin = _rbMode === 'admin';
+  const canBrowsePersons = _rbMode === 'admin' || _rbMode === 'staff';
+
+  // ۱) رفتن به یک بخش از برنامه (فقط مدیر — چون فقط مدیر منوی کامل بخش‌ها را دارد)
+  if (isAdmin && has('برو به', 'باز کن صفحه', 'باز کن بخش', 'ببرم به', 'ببر به')) {
+    const sec = _botFindSection(q);
+    if (sec) {
+      try { showSection(sec.id); } catch (e) {}
+      try { const p = document.getElementById('robotPanel'); if (p) p.classList.remove('open'); } catch (e) {}
+      _qaMsgs.push({ who: 'bot', t: '✅ رفتم به بخش «' + sec.label + '».' });
+      return true;
+    }
+  }
+
+  // ۲) باز کردن حساب یک شخص با نام
+  if (canBrowsePersons && has('باز کن', 'نشان بده', 'نشانم بده', 'حسابش را ببینم', 'ببینم حساب')) {
+    const p = _botMatchAnyPerson(qRaw);
+    if (p) {
+      const type = (DB.debtPersons || []).some(x => x.id === p.id) ? 'debt' : 'noinv';
+      _botOpenPerson(type, p.id);
+      _qaMsgs.push({ who: 'bot', t: '✅ حساب «' + p.name + '» را باز کردم.' });
+      return true;
+    }
+  }
+
+  // ۳) ساختن حساب جدید (فقط مدیر)
+  if (isAdmin && ((has('بساز') || has('اضافه کن') || has('ایجاد کن') || has('درست کن')) && (has('حساب', 'قرضدار', 'قرض دار', 'شرکت') || has('به نام', 'بنام')))) {
+    const name = _botExtractNewAccountName(qRaw);
+    if (name && name.length >= 2) {
+      const type = has('شرکت') ? 'noinv' : 'debt';
+      const r = _botAddPerson(type, name);
+      _qaMsgs.push({ who: 'bot', t: r.existed ? ('این حساب از قبل هست — «' + name + '» را باز کردم.') : ('✅ حساب جدید «' + name + '» ساخته شد.') });
+      _botOpenPerson(type, r.id);
+      return true;
+    }
+    _qaMsgs.push({ who: 'bot', t: 'اسم حساب را متوجه نشدم — مثلاً بگویید: «یک قرض‌دار جدید بساز به نام احمد»' });
+    return true;
+  }
+
+  // ۴) حذف حساب — فقط مدیر، همیشه با تایید «بله/نی»
+  if (isAdmin && has('حذف کن', 'پاک کن', 'حذفش کن', 'پاکش کن')) {
+    const p = _botMatchAnyPerson(qRaw);
+    if (p) {
+      const type = (DB.debtPersons || []).some(x => x.id === p.id) ? 'debt' : 'noinv';
+      _qaMsgs.push({
+        who: 'bot',
+        t: '⚠️ مطمئنید حساب «' + p.name + '» حذف شود؟ (قابل بازگردانی از سطل زباله است)',
+        sug: 'agentConfirm',
+        action: { type: 'delete_person', personType: type, id: p.id, name: p.name }
+      });
+      return true;
+    }
+  }
+
+  return false;
 }
 function _botGreeting() {
   const nm = _rbMode === 'person' && _rbPersonPeer ? ' ' + _rbPersonPeer.name : '';
@@ -15283,6 +15438,7 @@ function _qaRender() {
     if (m.who === 'me') return `<div class="ch-b me">${escFa(m.t)}</div>`;
     let extra = '';
     if (m.sug === 'mirza') extra = `<div class="ch-sug"><button onclick="qaMirzaYes(${i})">بله، پیام به میرزا برود</button><button onclick="qaMirzaNo(${i})">نی</button></div>`;
+    if (m.sug === 'agentConfirm') extra = `<div class="ch-sug"><button onclick="qaAgentConfirmYes(${i})">بله، حذف کن</button><button onclick="qaAgentConfirmNo(${i})">نی</button></div>`;
     const spk = `<button class="ch-speak" onclick="qaSpeak(${i})" title="خواندن جواب با صدا"><svg><use href="#ic-speaker"/></svg> بشنوید</button>`;
     return `<div class="ch-b bot"><div class="ch-nm">ربات</div>${escFa(m.t).replace(/\n/g, '<br>')}${extra}${spk}</div>`;
   }).join('');
@@ -15294,6 +15450,7 @@ function qaAsk() {
   if (!t) return;
   inp.value = '';
   _qaMsgs.push({ who: 'me', t });
+  if (_botTryAgentAction(t)) { _qaRender(); return; }
   const ans = _botAnswer(t);
   if (ans) _qaMsgs.push({ who: 'bot', t: ans });
   else if (_rbMode === 'admin') _qaMsgs.push({ who: 'bot', t: 'متوجه سوال نشدم. ' + _botHelp() });
