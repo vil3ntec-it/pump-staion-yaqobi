@@ -4149,8 +4149,9 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
 /* عرضِ ستون‌ها بر اساسِ نسبتِ th (table-layout:fixed) و پرکردنِ کاملِ عرض
    (width:100%) تا هم «نام» بی‌جهت غول نشود و هم جدول تمامِ عرض را بگیرد. */
 #pm-tbl, #cm-tbl{ width:100% !important; table-layout:fixed !important; min-width:860px; }
-/* دستهٔ تغییرِ اندازهٔ ستون‌ها (لبهٔ چپِ هر عنوان در حالتِ راست‌به‌چپ) */
-.xls-tbl thead th{ position:relative; }
+/* دستهٔ تغییرِ اندازهٔ ستون‌ها (لبهٔ چپِ هر عنوان در حالتِ راست‌به‌چپ) —
+   برای همهٔ جدول‌های سایت (نه فقط xls-tbl) تا هر ستونی مثل اکسل کشیدنی باشد */
+table thead th{ position:relative; }
 .col-resize-grip{ position:absolute; left:-3px; top:0; width:8px; height:100%; cursor:col-resize; z-index:6; touch-action:none; user-select:none; }
 .col-resize-grip:hover{ background:rgba(255,180,61,.5); }
 /* هدرها: هم‌ارتفاع، هم‌پدینگ، بدون افتادنِ نوشته روی هم */
@@ -5305,17 +5306,8 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
         <span id="waraqModalTitle" style="flex:1;text-align:center;font-size:0.9rem;font-weight:700;color:var(--txt)">📝 ورق روزانه</span>
         <span style="font-size:0.78rem;color:var(--muted);font-weight:700">⛽ فی لیتر: <span id="wq-price-display" style="color:var(--accent)">—</span></span>
       </div>
-      <!-- Info row — تاریخ جا کمی لازم دارد، پس اندازه‌اش ثابت و کوچک است؛ نام ایستگاه/کارمند جای بیشتری می‌گیرند -->
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-        <div class="sm-field" style="margin:0;flex:0 1 140px"><label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px">تاریخ</label><input id="wq-date" class="xls-in" style="width:100%" placeholder="تاریخ شمسی"></div>
-        <div class="sm-field" style="margin:0;flex:1 1 200px"><label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px">نام ایستگاه</label><input id="wq-station" class="xls-in" style="width:100%" placeholder="نام ایستگاه"></div>
-        <div class="sm-field" style="margin:0;flex:1 1 200px"><label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px">نام کارمند <span id="wq-worker-shift" style="color:var(--accent)">(روز)</span></label><input id="wq-worker" class="xls-in" style="width:100%" placeholder="نام کارمند این شیفت"></div>
-      </div>
-      <!-- توضیحات همین ورق — هر ورق (هر تاریخ) یادداشت جداگانهٔ خودش را دارد -->
-      <div style="margin-bottom:12px">
-        <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این ورق</div>
-        <textarea id="wq-note" class="note-field" placeholder="یادداشت شما برای همین ورق..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateWaraqNote(this.value)"></textarea>
-      </div>
+      <!-- کادرهای تاریخ/نام ایستگاه/نام کارمند/توضیحات حذف شدند (اضافه بودند) —
+           تاریخِ ورق خودکار هنگام ساخت ثبت می‌شود و در جدول قرائت پمپ‌ها ستون تاریخ دارد -->
 
       <!-- Pump table (شیفت فعال) -->
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px">
@@ -5324,17 +5316,17 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       </div>
       <div style="font-size:0.68rem;color:var(--muted);margin-bottom:6px">برای دو پایه در یک شیفت یا تغییر قیمت وسط روز، پایه جدید اضافه کنید — هر پایه فی لیتر جدا دارد و قاتی نمی‌شود.</div>
       <div class="tbl-wrap" style="margin-bottom:10px">
-        <table class="tbl" id="wq-pump-tbl" style="font-size:0.95rem;table-layout:fixed;min-width:820px">
+        <table class="tbl" id="wq-pump-tbl" style="font-size:0.95rem;table-layout:fixed;min-width:900px">
           <colgroup>
-            <col style="width:46px"><col><col style="width:110px"><col style="width:100px"><col style="width:100px"><col style="width:60px"><col style="width:98px"><col style="width:114px"><col style="width:46px">
+            <col style="width:46px"><col style="width:98px"><col><col style="width:110px"><col style="width:100px"><col style="width:100px"><col style="width:60px"><col style="width:98px"><col style="width:114px"><col style="width:46px">
           </colgroup>
           <thead><tr>
-            <th>پایه</th><th>نام</th><th>نوع</th><th>شروع</th><th>ختم</th><th>فی لیتر</th><th>مقدار (لیتر)</th><th>مبلغ فروش</th><th></th>
+            <th>پایه</th><th>تاریخ</th><th>نام</th><th>نوع</th><th>شروع</th><th>ختم</th><th>فی لیتر</th><th>مقدار (لیتر)</th><th>مبلغ فروش</th><th></th>
           </tr></thead>
           <tbody id="wq-pump-body"></tbody>
           <tfoot>
             <tr style="background:var(--dark);font-weight:700">
-              <td colspan="6" style="padding:7px 9px">جمع این شیفت</td>
+              <td colspan="7" style="padding:7px 9px">جمع این شیفت</td>
               <td style="padding:7px 9px" id="wq-total-liters">0</td>
               <td style="padding:7px 9px" id="wq-total-sales">0</td>
               <td></td>
@@ -5695,8 +5687,8 @@ body.viewer-mode .inv-admin-only{display:none!important}
           <div id="inv-cust-suggest" style="display:none;font-size:.72rem;margin:-2px 0 4px;padding:7px 11px;border-radius:9px;background:rgba(56,161,105,.12);color:#276749;font-weight:700;line-height:1.7"></div>
           <div class="invp-meta-line">
             <span class="k"><svg class="ico"><use href="#invp-hash"/></svg> شماره فاکتور:</span>
-            <span class="invp-badge" id="inv-number-badge">—</span>
-            <span style="font-size:.66rem;color:#94a3b8" id="inv-number-hint">(خودکار)</span>
+            <input class="invp-in" id="inv-number" type="number" min="1" step="1" inputmode="numeric" placeholder="—" style="max-width:110px;font-weight:900;text-align:center" oninput="this.dataset.userSet='1'" title="خودکار پر می‌شود — قبل از ثبت می‌توانید تغییرش دهید">
+            <span style="font-size:.66rem;color:#94a3b8" id="inv-number-hint">(خودکار — قابل تغییر)</span>
           </div>
           <div class="invp-meta-line">
             <span class="k"><svg class="ico"><use href="#invp-cal"/></svg> تاریخ ثبت:</span>
@@ -5724,6 +5716,12 @@ body.viewer-mode .inv-admin-only{display:none!important}
           <div class="invp-row">
             <svg class="ico"><use href="#invp-car"/></svg><span class="k">نوع ماشین</span>
             <input class="invp-in" id="inv-vehicle" type="text" placeholder="مثلاً کرولا، موتر باربری..." autocomplete="off">
+          </div>
+          <!-- فاکتورِ «فقط مبلغ»: مشتری پول می‌گذارد تا بعداً با نرخ روز تیل ببرد — به عنوان اعتبار (رسید) در حساب او ثبت می‌شود -->
+          <div class="invp-row" style="grid-column:1/-1">
+            <svg class="ico"><use href="#invp-coin"/></svg><span class="k">مبلغ بدون تیل (اعتبار)</span>
+            <input class="invp-in" id="inv-amount" type="number" min="0" step="any" inputmode="decimal" placeholder="0" oninput="invCalcTotal()" title="اگر مشتری فقط پول داده و تیل نبرده، فقط همین کادر را پر کنید — مبلغ به عنوان اعتبار مشتری ذخیره می‌شود">
+            <span style="font-size:.64rem;color:#94a3b8">اگر فقط پول گرفته شده (بدون تیل)، فقط همین کادر را پر کنید</span>
           </div>
           <div class="invp-row" style="grid-column:1/-1">
             <svg class="ico"><use href="#invp-phone"/></svg><span class="k">شماره تماس</span>
@@ -6209,25 +6207,27 @@ body.viewer-mode .inv-admin-only{display:none!important}
     </div>
     <div class="modal-body">
       <div id="pm-bigname" style="text-align:center;font-size:1.9rem;font-weight:900;color:var(--accent);padding:6px 10px;margin-bottom:8px;border-bottom:2px solid var(--border)"></div>
-      <!-- شماره‌های تماسِ شخص — روی خودِ شخص ذخیره می‌شود و در همهٔ حساب‌ها/جدول‌هایش دیده می‌شود -->
-      <div style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:10px;flex-wrap:wrap">
-        <span style="font-size:0.74rem;color:var(--muted);font-weight:700;white-space:nowrap">📞 شماره‌های تماس:</span>
-        <input id="pm-phone" class="pm-edit" placeholder="مثلاً 0700000000 ، 0780000000" autocomplete="off" style="direction:ltr;text-align:center;max-width:300px;flex:1;min-width:180px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.86rem;font-weight:700;padding:7px 10px" oninput="updatePersonPhone(this.value)">
-      </div>
-      <!-- همهٔ ابزارها در «یک خط» کنار هم: کشویی حساب + حساب جدید + جدول جدید + فیلترها.
+      <!-- همهٔ ابزارها در «یک خط» کنار هم: کشویی حساب + حساب جدید + جدول جدید + فیلترها + شماره تماس.
            دیگر کشویی بالای دکمه‌ها نیست که دست اشتباهی رویشان برود؛ در صفحهٔ باریک این خط اسکرول افقی می‌خورد و نمی‌شکند -->
       <div class="pm-acct-bar">
         <span class="pm-acct-label" style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap;flex-shrink:0">📒 حساب:</span>
-        <select id="pm-acct-select" onchange="switchPersonSub(this.value)" style="min-width:90px;max-width:170px;flex-shrink:0;background:var(--dark);border:1px solid var(--border);border-radius:7px;padding:5px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer"></select>
-        <button class="add-btn pm-acct-new" onclick="newPersonSub()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap;flex-shrink:0">➕ حساب جدید</button>
-        <button class="add-btn pm-table-new" onclick="newPersonTable()" style="padding:5px 9px;font-size:0.78rem;white-space:nowrap;flex-shrink:0">📋 جدول جدید</button>
-        <button id="pm-acct-del" class="del-btn pm-acct-del" onclick="deletePersonSub()" style="display:none;background:transparent;color:var(--red);border:1px solid var(--red);border-radius:7px;padding:5px 8px;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">🗑️ حذف</button>
+        <select id="pm-acct-select" onchange="switchPersonSub(this.value)" style="min-width:90px;max-width:170px;flex-shrink:0;background:var(--dark);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;box-sizing:border-box">
+</select>
+        <button class="add-btn pm-acct-new" onclick="newPersonSub()" style="padding:6px 9px;font-size:0.78rem;white-space:nowrap;flex-shrink:0">➕ حساب جدید</button>
+        <button class="add-btn pm-table-new" onclick="newPersonTable()" style="padding:6px 9px;font-size:0.78rem;white-space:nowrap;flex-shrink:0">📋 جدول جدید</button>
+        <button id="pm-acct-del" class="del-btn pm-acct-del" onclick="deletePersonSub()" style="display:none;background:transparent;color:var(--red);border:1px solid var(--red);border-radius:7px;padding:6px 8px;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">🗑️ حذف</button>
         <span style="width:1px;height:24px;background:var(--border);flex-shrink:0"></span>
         <span class="pm-filter-bar">
           <button class="pm-filter-btn active" id="pm-filter-all" onclick="setPersonFilter('all')">📋 همه</button>
           <button class="pm-filter-btn petrol" id="pm-filter-petrol" onclick="setPersonFilter('petrol')">⛽ حساب جداگانه پطرول</button>
           <button class="pm-filter-btn diesel" id="pm-filter-diesel" onclick="setPersonFilter('diesel')">🟤 حساب جداگانه دیزل</button>
         </span>
+        <span style="width:1px;height:24px;background:var(--border);flex-shrink:0"></span>
+        <!-- شماره تماس شخص — هم‌سطح و هم‌اندازه با دکمه‌های حساب جداگانه (روی خودِ شخص ذخیره می‌شود) -->
+        <span style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap;flex-shrink:0">📞 شماره تماس:</span>
+        <input id="pm-phone" class="pm-edit" placeholder="مثلاً 0700000000" autocomplete="off" style="direction:ltr;text-align:center;width:180px;flex-shrink:0;border:1px solid var(--border);border-radius:7px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;padding:6px 10px;box-sizing:border-box" oninput="updatePersonPhone(this.value)">
+        <!-- نرخ هر لیتر فاکتورهای باز — فقط نمایشی، هیچ نقشی در محاسبات جدول ندارد -->
+        <span id="pm-rate-badge" style="display:none;flex-shrink:0;white-space:nowrap;font-size:0.78rem;font-weight:800;border:1px solid var(--border);border-radius:7px;padding:6px 10px;background:var(--dark);color:var(--txt);box-sizing:border-box" title="نرخ هر لیتر از فاکتورهای بازِ این حساب — فقط نمایشی"></span>
       </div>
       <div class="xls-wrap">
         <table class="xls-tbl" id="pm-tbl">
@@ -9713,8 +9713,34 @@ function makeTableResizable(table, storeKey){
   let saved = {};
   try{ saved = JSON.parse(localStorage.getItem('colw_'+storeKey) || '{}'); }catch(e){}
   const ths = table.tHead.rows[0].cells;
+  // اگر جدول colgroup هم‌تعدادِ ستون‌ها دارد (مثل جدول قرائت پمپ)، عرض باید روی
+  // خودِ <col> نوشته شود — در table-layout:fixed عرضِ col بر عرضِ th مقدم است.
+  const colEls = (function(){
+    const c = table.querySelectorAll('colgroup col');
+    return (c.length && c.length === ths.length) ? c : null;
+  })();
+  const setW = function(idx, w){
+    if(colEls && colEls[idx]) colEls[idx].style.width = w + 'px';
+    if(ths[idx]) ths[idx].style.width = w + 'px';
+  };
+  const getW = function(idx){
+    const t = (colEls && colEls[idx]) || ths[idx];
+    return parseInt(t && t.style.width, 10) || 0;
+  };
+  // جدول‌هایی که table-layout ثابت ندارند: قبل از اولین تغییرِ اندازه، عرضِ فعلیِ
+  // همهٔ ستون‌ها ثابت (freeze) می‌شود تا کشیدنِ یک ستون بقیه را به‌هم نریزد — مثل اکسل.
+  // تا وقتی کاربر چیزی نکشیده هیچ تغییری در ظاهر جدول داده نمی‌شود.
+  function freezeCols(){
+    if(table._colFrozen) return;
+    table._colFrozen = true;
+    Array.prototype.forEach.call(ths, function(th, i){
+      const w = Math.round(th.getBoundingClientRect().width);
+      if(w > 15 && !getW(i)) setW(i, w);
+    });
+    try{ if(getComputedStyle(table).tableLayout !== 'fixed') table.style.tableLayout = 'fixed'; }catch(e){}
+  }
   Array.prototype.forEach.call(ths, function(th, idx){
-    if(saved[idx]) th.style.width = saved[idx] + 'px';
+    if(saved[idx]) setW(idx, saved[idx]);
     if(th.querySelector('.col-resize-grip')) return;
     const grip = document.createElement('div');
     grip.className = 'col-resize-grip';
@@ -9725,22 +9751,65 @@ function makeTableResizable(table, storeKey){
       const cx = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
       // راست‌به‌چپ: کشیدنِ لبهٔ چپ به سمتِ چپ، ستون را پهن‌تر می‌کند
       const w = Math.max(36, Math.round(startW - (cx - startX)));
-      th.style.width = w + 'px';
+      setW(idx, w);
     }
     function up(){
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', up);
-      saved[idx] = parseInt(th.style.width, 10) || Math.round(startW);
+      saved[idx] = getW(idx) || Math.round(startW);
       try{ localStorage.setItem('colw_'+storeKey, JSON.stringify(saved)); }catch(e){}
     }
     grip.addEventListener('pointerdown', function(e){
       e.preventDefault(); e.stopPropagation();
+      freezeCols();
       startX = e.clientX; startW = th.getBoundingClientRect().width;
       document.addEventListener('pointermove', move);
       document.addEventListener('pointerup', up);
     });
   });
+  // اگر قبلاً عرضِ ذخیره‌شده دارد، همان چیدمانِ ثابتِ انتخابیِ کاربر برگردد
+  if(Object.keys(saved).length){
+    try{ if(getComputedStyle(table).tableLayout !== 'fixed') table.style.tableLayout = 'fixed'; }catch(e){}
+    table._colFrozen = true;
+  }
 }
+// ── فعال‌سازی تغییر اندازهٔ ستون‌ها برای «همهٔ» جدول‌های سایت (مثل اکسل) ──
+// هر جدولی که سرستون (thead) دارد، در هر بخش/مودالی، دستهٔ کشیدن می‌گیرد.
+// کلید ذخیره: id خود جدول، وگرنه id بخش/مودالِ در برگیرنده + شمارهٔ جدول.
+function initAllTableResizers(root){
+  try{
+    const tables = (root || document).querySelectorAll('table');
+    // جدول شخص/شرکت از قبل با کلیدهای «pm/cm» عرض ذخیره می‌کردند — همان کلیدها
+    // بمانند تا عرض‌های ذخیره‌شدهٔ قبلیِ کاربر از بین نرود
+    const LEGACY_KEYS = { 'pm-tbl': 'pm', 'cm-tbl': 'cm' };
+    Array.prototype.forEach.call(tables, function(t){
+      if(t._resizable || !t.tHead || !t.tHead.rows[0]) return;
+      let key = LEGACY_KEYS[t.id] || t.id;
+      if(!key){
+        const host = t.closest('.section, .modal-overlay, .inv-overlay, .card') || document.body;
+        const all = host.querySelectorAll('table');
+        key = (host.id || host.className.split(' ')[0] || 'tbl') + '-' + Array.prototype.indexOf.call(all, t);
+      }
+      makeTableResizable(t, key);
+    });
+  }catch(e){}
+}
+// جدول‌های داینامیک (هر جا از نو ساخته شوند) خودکار دوباره فعال می‌شوند
+(function(){
+  let _trTimer = null;
+  function schedule(){
+    if(_trTimer) return;
+    _trTimer = setTimeout(function(){ _trTimer = null; initAllTableResizers(); }, 350);
+  }
+  function startObs(){
+    try{
+      new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+    }catch(e){}
+    schedule();
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startObs);
+  else startObs();
+})();
 function openPersonModal(type, id) {
   currentPersonType = type;
   currentPersonId = id;
@@ -9878,7 +9947,6 @@ function renderPersonRows(person) {
 
   const acct = _acctOf(person);
   const rows = acct.rows || [];
-  _updatePersonTotals(person);
 
   const tbody = document.getElementById('pm-body');
   tbody.innerHTML = '';
@@ -9933,6 +10001,10 @@ function renderPersonRows(person) {
     tr.innerHTML = `<td colspan="${showFtCol?11:10}" style="text-align:center;padding:16px;color:var(--muted);font-size:0.85rem">${label}</td>`;
     tbody.appendChild(tr);
   }
+  // جمع‌ها بعد از حلقهٔ ردیف‌ها حساب می‌شوند — حلقه بردگی/الباقیِ هر ردیف را
+  // نرمال و ذخیره می‌کند؛ اگر جمع قبل از آن اجرا شود، بار اولِ باز شدن مودال
+  // فوترِ «جمع بردگی/الباقی» با مقدارهای کهنه (مثلاً صفر) نمایش داده می‌شد
+  _updatePersonTotals(person);
   _renderPendingInvoices(person, xlsWrap);
   _renderHistoryPanel(person);
 }
@@ -9953,8 +10025,8 @@ function _renderPendingInvoices(person, xlsWrap) {
   box.style.cssText = 'margin:10px 0;padding:10px 12px;border:1px dashed var(--accent);border-radius:10px;background:rgba(255,180,61,.06);opacity:.9';
   box.innerHTML = '<div style="font-size:0.78rem;font-weight:800;color:var(--accent);margin-bottom:6px">⏳ فاکتورهای در انتظارِ تایید (هنوز در الباقیِ حساب جمع نشده‌اند — با تایید، خودکار اضافه می‌شوند)</div>' +
     pend.map(v => `<div style="font-size:0.76rem;color:var(--muted);display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px dashed var(--border)">
-        <span>🧾 فاکتور شماره ${n2fa(v.invoice_number)} · ${_invFuelLabel(v.fuel_type)} · ${n2fa(v.liters)} لیتر × ${n2fa(v.price_per_liter)}</span>
-        <b style="color:var(--txt)">${n2fa(Math.round((parseFloat(v.liters)||0)*(parseFloat(v.price_per_liter)||0)))} افغانی</b>
+        <span>🧾 فاکتور شماره ${n2fa(v.invoice_number)} · ${v.by_money ? '💵 فقط مبلغ (اعتبار)' : (_invFuelLabel(v.fuel_type) + ' · ' + n2fa(v.liters) + ' لیتر × ' + n2fa(v.price_per_liter))}</span>
+        <b style="color:var(--txt)">${n2fa(Math.round(_invTotal(v)))} افغانی</b>
       </div>`).join('');
 }
 
@@ -10384,6 +10456,33 @@ function updatePersonPhone(val) {
   person.phone = val;
   if (currentRole !== 'viewer') save();
 }
+// ── کادر نمایشی «نرخ هر لیتر» کنار شماره تماس ──────────────────────────────
+// فقط نمایشی است و هیچ ارتباطی با محاسبات جدول ندارد. نرخ از ردیف‌های فاکتورِ
+// همین حساب می‌آید: فاکتورِ تسویه‌نشده → نرخش نشان داده می‌شود؛ تسویهٔ کامل →
+// حذف؛ فاکتور جدیدتر → جایگزین. با فیلتر «حساب جداگانه پطرول/دیزل» فقط نرخ
+// همان نوع تیل نمایش داده می‌شود.
+function _renderPersonRateBadge(person) {
+  const el = document.getElementById('pm-rate-badge');
+  if (!el) return;
+  const rates = { petrol: 0, diesel: 0 };
+  try {
+    const acct = _acctOf(person);
+    (acct.rows || []).forEach(r => {
+      if (!r || !r.invId) return;                                  // فقط ردیف‌های آمده از فاکتور
+      const price = parseFloat(r.priceper) || 0;
+      if (price <= 0) return;
+      const bard = r.byMoney ? (parseFloat(r.bardagi) || 0) : _fuelBardagi(r);
+      if (bard - (parseFloat(r.rasid) || 0) <= 0) return;          // تسویه شده → نرخ حذف
+      rates[(r.ftype === 'diesel') ? 'diesel' : 'petrol'] = price; // آخرین فاکتور جایگزین می‌شود
+    });
+  } catch (e) {}
+  const parts = [];
+  if ((currentPersonFilter === 'all' || currentPersonFilter === 'petrol') && rates.petrol > 0) parts.push('⛽ پطرول: ' + n2fa(rates.petrol));
+  if ((currentPersonFilter === 'all' || currentPersonFilter === 'diesel') && rates.diesel > 0) parts.push('🟤 دیزل: ' + n2fa(rates.diesel));
+  if (!parts.length) { el.style.display = 'none'; el.textContent = ''; return; }
+  el.style.display = '';
+  el.textContent = 'نرخ هر لیتر — ' + parts.join(' · ');
+}
 function _updatePersonTotals(person) {
   const acct = _acctOf(person);
   const rows = acct.rows || [];
@@ -10450,6 +10549,8 @@ function _updatePersonTotals(person) {
   const ftAlbLbl = document.getElementById('pm-ft-albaqi-lbl');
   if (ftAlbLbl) ftAlbLbl.textContent = netAll < 0 ? 'جمع الباقی — این‌قدر بیشتر برده (بدهکار)'
     : (netAll > 0 ? 'جمع الباقی — این‌قدر مانده / پیش‌پرداخت (طلبکار)' : 'جمع الباقی — تسویه');
+  // کادر نمایشی نرخ هر لیتر (کنار شماره تماس) — فقط نمایشی، بدون اثر بر محاسبات
+  try { _renderPersonRateBadge(person); } catch (e) {}
 }
 function newPersonTable() {
   const person = _curPerson(); if (!person) return;
@@ -14672,7 +14773,7 @@ function addWaraqPump() {
   const w = getActiveWaraq();
   if (!w) return;
   const sd = activeShift(w);
-  sd.pumps.push({ num: sd.pumps.length+1, fuel: 'petrol', note: '', start: 0, end: 0, pricePerLiter: sd.pricePerLiter||0 });
+  sd.pumps.push({ num: sd.pumps.length+1, date: w.date || '', fuel: 'petrol', note: '', start: 0, end: 0, pricePerLiter: sd.pricePerLiter||0 });
   renderWaraqPumps(w);
   calcWaraqSummary(w);
   save();
@@ -14834,9 +14935,10 @@ function populateWaraqModal(w) {
   ensureWaraqShifts(w);
   const sd = activeShift(w);
   const isNight = w.activeShift === 'night';
-  document.getElementById('wq-date').value = w.date || '';
-  document.getElementById('wq-station').value = w.station || '';
-  document.getElementById('wq-worker').value = sd.workerName || '';
+  // کادرهای تاریخ/ایستگاه/کارمند/توضیحات از مودال حذف شده‌اند — اگر روزی برگردند، پر می‌شوند
+  const wqDateEl = document.getElementById('wq-date'); if (wqDateEl) wqDateEl.value = w.date || '';
+  const wqStEl = document.getElementById('wq-station'); if (wqStEl) wqStEl.value = w.station || '';
+  const wqWkEl = document.getElementById('wq-worker'); if (wqWkEl) wqWkEl.value = sd.workerName || '';
   // برچسب‌های شیفت
   const wsEl = document.getElementById('wq-worker-shift'); if (wsEl) wsEl.textContent = isNight ? '(شب)' : '(روز)';
   const ptEl = document.getElementById('wq-pump-title'); if (ptEl) ptEl.textContent = '🛢️ قرائت پمپ‌ها — ' + (isNight?'🌙 شب':'☀️ روز');
@@ -14874,7 +14976,7 @@ function renderWaraqPumps(w) {
   const sd = activeShift(w);
   const pumps = sd.pumps;
   if (!pumps.length) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:14px;color:var(--muted);font-size:0.78rem">پایه‌ای اضافه نشده — از دکمه «➕ افزودن پایه» استفاده کنید</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:14px;color:var(--muted);font-size:0.78rem">پایه‌ای اضافه نشده — از دکمه «➕ افزودن پایه» استفاده کنید</td></tr>';
     return;
   }
   pumps.forEach((p, i) => {
@@ -14883,6 +14985,7 @@ function renderWaraqPumps(w) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="font-weight:700">${n2fa(p.num||i+1)}</td>
+      <td><input class="xls-in" style="width:100%" value="${((p.date!=null?p.date:(w.date||''))+'').replace(/"/g,'&quot;')}" placeholder="تاریخ" oninput="updateWaraqPump(${i},'date',this.value)"></td>
       <td><input class="xls-in" style="width:100%" value="${(p.worker||'').replace(/"/g,'&quot;')}" placeholder="نام" oninput="updateWaraqPump(${i},'worker',this.value)"></td>
       <td><select class="xls-in" style="min-width:96px;max-width:112px;width:104px" onchange="updateWaraqPump(${i},'fuel',this.value)">
         <option value="petrol" ${p.fuel!=='diesel'?'selected':''}>⛽ پطرول</option>
@@ -15183,9 +15286,13 @@ function saveWaraq() {
   const w = getActiveWaraq();
   if (!w) return;
   ensureWaraqShifts(w);
-  w.date = document.getElementById('wq-date').value.trim() || w.date;
-  w.station = document.getElementById('wq-station').value.trim();
-  activeShift(w).workerName = document.getElementById('wq-worker').value.trim();
+  // کادرهای تاریخ/ایستگاه/کارمند از مودال حذف شده‌اند — دادهٔ قبلی ورق دست‌نخورده می‌ماند
+  const svDateEl = document.getElementById('wq-date');
+  if (svDateEl) w.date = svDateEl.value.trim() || w.date;
+  const svStEl = document.getElementById('wq-station');
+  if (svStEl) w.station = svStEl.value.trim();
+  const svWkEl = document.getElementById('wq-worker');
+  if (svWkEl) activeShift(w).workerName = svWkEl.value.trim();
   const avIn2 = document.getElementById('wq-available-from-shift');
   if (avIn2) activeShift(w).availableFromShift = parseFloat(avIn2.value)||0;
 
@@ -17479,7 +17586,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.3';
+const APP_VERSION = '2.9.4';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -18704,18 +18811,25 @@ document.addEventListener('click', function(e) {
     };
     window.addEventListener('mousemove', _pxMouseHandler);
     function tick(){
-      curX += (targetX - curX) * 0.06;
-      curY += (targetY - curY) * 0.06;
-      for(var i = 0; i < blobs.length; i++){
-        /* written as CSS vars (not an inline transform) because #perf-fix
-           pins .fx-aurora's transform with !important — the Ultra tier CSS
-           reads these vars back into its own transform declaration. */
-        var depth = (i + 1) * 7;
-        blobs[i].style.setProperty('--gfx-px', (curX * depth) + 'px');
-        blobs[i].style.setProperty('--gfx-py', (curY * depth) + 'px');
+      /* PERFORMANCE: وقتی نشانگر ثابت است و مقدارها همگرا شده‌اند، نوشتنِ
+         دوبارهٔ CSS varها (که هر بار repaint تمام‌صفحهٔ نورافکنِ #fxLayer::after
+         را می‌طلبید) کاملاً رد می‌شود — حرکتِ زیر یک‌هزارم دیده نمی‌شود و ظاهر
+         مو‌به‌مو همان است؛ فقط مصرفِ CPU/GPU در حالت سکون صفر می‌شود. */
+      var dx = targetX - curX, dy = targetY - curY;
+      if (Math.abs(dx) > 0.0006 || Math.abs(dy) > 0.0006){
+        curX += dx * 0.06;
+        curY += dy * 0.06;
+        for(var i = 0; i < blobs.length; i++){
+          /* written as CSS vars (not an inline transform) because #perf-fix
+             pins .fx-aurora's transform with !important — the Ultra tier CSS
+             reads these vars back into its own transform declaration. */
+          var depth = (i + 1) * 7;
+          blobs[i].style.setProperty('--gfx-px', (curX * depth) + 'px');
+          blobs[i].style.setProperty('--gfx-py', (curY * depth) + 'px');
+        }
+        document.documentElement.style.setProperty('--gfx-mx', (50 + curX * 40) + '%');
+        document.documentElement.style.setProperty('--gfx-my', (50 + curY * 40) + '%');
       }
-      document.documentElement.style.setProperty('--gfx-mx', (50 + curX * 40) + '%');
-      document.documentElement.style.setProperty('--gfx-my', (50 + curY * 40) + '%');
       _pxParallaxRAF = requestAnimationFrame(tick);
     }
     _pxParallaxRAF = requestAnimationFrame(tick);
@@ -19960,6 +20074,45 @@ body{ min-height:calc(100vh + 2px); }
 .sm-modal.ls-modal .ls-inner > div[style*="dashed"]{ color:#fff!important; background:#00000055!important; }
 </style>
 
+<style id="gfx-perf-opt">
+/* ═══════ بهینه‌سازی عملکرد کیفیت‌های Standard/Ultra — فقط کارایی ═══════
+   ظاهر، امکانات و منطق این حالت‌ها هیچ تغییری نمی‌کند؛ فقط:
+   ۱) هنگام اسکرول، انیمیشن‌های «هر-فریم رنگ‌آمیزی» (گرادیان‌های متحرک سربرگ/
+      دکمه‌ها، چرخش رنگ پس‌زمینه، موج/حباب مخزن‌ها و ...) موقتاً pause می‌شوند.
+      body.is-scrolling را اسکریپت موجود scrollHoverFixJs در حین اسکرول ست و
+      ~۱۵۰ms بعد از توقف پاک می‌کند — وسط اسکرول مکثِ یک گرادیانِ آرام قابل
+      دیدن نیست و بعد از توقف دقیقاً از همان‌جا ادامه می‌یابد. نتیجه: اسکرول
+      روان حتی روی کامپیوترهای ضعیف، بدون هیچ تغییری در ظاهر.
+   ۲) لایهٔ #fxLayer که در Ultra انیمیشن hue-rotate دائمی دارد، با will-change
+      به لایهٔ کامپوزیتور می‌رود تا چرخش رنگ روی GPU انجام شود و دیگر کل
+      صفحه را هر فریم دوباره rasterize نکند. */
+body.is-scrolling.gfx-ultra .header,
+body.is-scrolling.gfx-ultra .top-banner,
+body.is-scrolling.gfx-ultra .nav,
+body.is-scrolling.gfx-ultra .header-title,
+body.is-scrolling.gfx-ultra .ls-brand-icon,
+body.is-scrolling.gfx-ultra .nav-btn.active::after,
+body.is-scrolling.gfx-ultra #fxLayer,
+body.is-scrolling.gfx-ultra .add-btn,
+body.is-scrolling.gfx-ultra .btn-ok,
+body.is-scrolling.gfx-ultra .fuel-add-btn,
+body.is-scrolling.gfx-ultra .tank-wave,
+body.is-scrolling.gfx-ultra .tank-bubble,
+body.is-scrolling.gfx-standard .ls-tape,
+body.is-scrolling.gfx-standard .tank-liquid::after,
+body.is-scrolling.gfx-standard .tank-card.t-low .tank-body,
+body.is-scrolling.gfx-standard .pl-trend .pl-dot,
+body.is-scrolling.gfx-standard .pl-dot-halo,
+body.is-scrolling.gfx-standard .daynight-toggle .dn-bird-1,
+body.is-scrolling.gfx-standard .daynight-toggle .dn-bird-2,
+body.is-scrolling.gfx-standard .daynight-toggle .dn-cloud,
+body.is-scrolling.gfx-standard .daynight-toggle .dn-stars i,
+body.is-scrolling.gfx-standard .daynight-toggle .dn-thumb{
+  animation-play-state:paused !important;
+}
+body.gfx-ultra #fxLayer{ will-change:filter; }
+</style>
+
 <script id="motion-pro-js">
 (function(){
   "use strict";
@@ -20094,10 +20247,11 @@ function _invSelfCheck() {
     if (!v.created_at) { v.created_at = new Date().toISOString(); fixed = true; }
     if (!v.date_sh) { try { v.date_sh = allDates().sh; } catch (e) { v.date_sh = ''; } fixed = true; }
     if (typeof v.customer_name !== 'string') { v.customer_name = String(v.customer_name || ''); fixed = true; }
-    ['price_per_liter', 'liters'].forEach(k => {
+    ['price_per_liter', 'liters', 'amount'].forEach(k => {
       const n = parseFloat(v[k]);
-      if (!isFinite(n) || n < 0) { v[k] = 0; fixed = true; } else v[k] = n;
+      if (!isFinite(n) || n < 0) { if (v[k] !== 0) fixed = true; v[k] = 0; } else v[k] = n;
     });
+    if (v.by_money !== true && v.by_money !== undefined && v.by_money !== false) { v.by_money = !!v.by_money; fixed = true; }
     const no = parseInt(v.invoice_number, 10);
     if (!no || no < 1 || seen[no]) { v.invoice_number = 0; fixed = true; } // بعداً شمارهٔ یکتا می‌گیرد
     else { v.invoice_number = no; seen[no] = true; if (no > maxNo) maxNo = no; }
@@ -20112,7 +20266,8 @@ function invNextNumber() {
   return _invList().reduce((m, v) => Math.max(m, parseInt(v.invoice_number, 10) || 0), 0) + 1;
 }
 function _invFuelLabel(ft) { return ft === 'diesel' ? '🟤 دیزل' : '⛽ پطرول'; }
-function _invTotal(v) { return (parseFloat(v.price_per_liter) || 0) * (parseFloat(v.liters) || 0); }
+// فاکتورِ «فقط مبلغ» (by_money): جمع کل = همان مبلغ؛ وگرنه فی × لیتر
+function _invTotal(v) { return v.by_money ? (parseFloat(v.amount) || 0) : (parseFloat(v.price_per_liter) || 0) * (parseFloat(v.liters) || 0); }
 
 // ── رندر بخش اصلی (کارت‌های آماری + پیش‌پرشدن شماره/تاریخ فرم) ──
 function renderInvoices() {
@@ -20124,13 +20279,14 @@ function renderInvoices() {
   const ca = document.getElementById('inv-cnt-approved');
   if (cp) cp.textContent = n2fa(p);
   if (ca) ca.textContent = n2fa(a);
-  const nb = document.getElementById('inv-number-badge');
-  if (nb) nb.textContent = n2fa(invNextNumber());
-  // راهنمای شماره: به‌جای کادرِ قابل‌تغییر، فقط یادآوری می‌کند فاکتور قبلی چه شماره‌ای داشت
+  // شمارهٔ فاکتور: خودکار پر می‌شود ولی قابل ویرایش است — اگر کاربر خودش شماره‌ای
+  // نوشته (dataset.userSet) یا در حال تایپ است، دست نمی‌زنیم
+  const ni = document.getElementById('inv-number');
+  if (ni && ni.dataset.userSet !== '1' && document.activeElement !== ni) ni.value = invNextNumber();
   const nh = document.getElementById('inv-number-hint');
   if (nh) {
     const prev = invNextNumber() - 1;
-    nh.textContent = prev > 0 ? ('خودکار — فاکتور قبلی: شماره ' + n2fa(prev)) : '(اولین فاکتور)';
+    nh.textContent = prev > 0 ? ('خودکار — فاکتور قبلی: شماره ' + n2fa(prev) + ' (قابل تغییر)') : '(اولین فاکتور — قابل تغییر)';
   }
   // تاریخ اتومات پر می‌شود ولی قابل ویرایش است؛ اگر کاربر چیزی نوشته، دست نمی‌زنیم
   const di = document.getElementById('inv-date');
@@ -20169,8 +20325,11 @@ function invPickDebtPerson(pid) {
 function invCalcTotal() {
   const price = parseFloat((document.getElementById('inv-price') || {}).value) || 0;
   const liters = parseFloat((document.getElementById('inv-liters') || {}).value) || 0;
+  const amount = parseFloat((document.getElementById('inv-amount') || {}).value) || 0;
   const el = document.getElementById('inv-total');
-  if (el) el.textContent = n2fa(Math.round(price * liters * 100) / 100) + ' افغانی';
+  // اگر تیل وارد نشده و فقط مبلغ نوشته شده → جمع کل = همان مبلغ (فاکتور اعتباری)
+  const total = (liters > 0 || price > 0 || amount <= 0) ? Math.round(price * liters * 100) / 100 : amount;
+  if (el) el.textContent = n2fa(total) + ' افغانی';
 }
 
 // ── ثبت فاکتور (Create) ──
@@ -20180,19 +20339,35 @@ function invSubmit() {
   const fuel = document.getElementById('inv-fuel').value === 'diesel' ? 'diesel' : 'petrol';
   const price = parseFloat(document.getElementById('inv-price').value);
   const liters = parseFloat(document.getElementById('inv-liters').value);
+  const amount = parseFloat((document.getElementById('inv-amount') || {}).value);
   const vehicle = (document.getElementById('inv-vehicle').value || '').trim();
   const phone = (document.getElementById('inv-phone').value || '').trim();
   if (!name) { showToast('❌ نام مشتری را وارد کنید', '#e53e3e'); document.getElementById('inv-customer').focus(); return; }
-  if (!isFinite(price) || price <= 0) { showToast('❌ فی خرید هر لیتر را درست وارد کنید', '#e53e3e'); document.getElementById('inv-price').focus(); return; }
-  if (!isFinite(liters) || liters <= 0) { showToast('❌ مقدار خرید (لیتر) را درست وارد کنید', '#e53e3e'); document.getElementById('inv-liters').focus(); return; }
+  // حالت «فقط مبلغ»: نه فی نه لیتر وارد شده، فقط مبلغ — به عنوان اعتبار مشتری ثبت می‌شود
+  const byMoney = !(isFinite(liters) && liters > 0) && !(isFinite(price) && price > 0) && isFinite(amount) && amount > 0;
+  if (!byMoney) {
+    if (!isFinite(price) || price <= 0) { showToast('❌ فی خرید هر لیتر را درست وارد کنید (یا فقط کادر «مبلغ بدون تیل» را پر کنید)', '#e53e3e'); document.getElementById('inv-price').focus(); return; }
+    if (!isFinite(liters) || liters <= 0) { showToast('❌ مقدار خرید (لیتر) را درست وارد کنید (یا فقط کادر «مبلغ بدون تیل» را پر کنید)', '#e53e3e'); document.getElementById('inv-liters').focus(); return; }
+  }
   _invSelfCheck();
+  // شمارهٔ فاکتور: قابل ویرایش — خالی/نامعتبر → شمارهٔ خودکار؛ تکراری → خطا
+  const numEl = document.getElementById('inv-number');
+  let invNo = parseInt(typeof toEnDigits === 'function' ? toEnDigits((numEl || {}).value || '') : (numEl || {}).value, 10);
+  if (!isFinite(invNo) || invNo < 1) invNo = invNextNumber();
+  if (_invList().some(x => parseInt(x.invoice_number, 10) === invNo)) {
+    showToast('❌ فاکتور شماره ' + n2fa(invNo) + ' قبلاً ثبت شده — شماره دیگری انتخاب کنید', '#e53e3e');
+    if (numEl) numEl.focus();
+    return;
+  }
   const v = {
     id: 'inv' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-    invoice_number: invNextNumber(),
+    invoice_number: invNo,
     customer_name: name,
     fuel_type: fuel,
-    price_per_liter: price,
-    liters: liters,
+    price_per_liter: byMoney ? 0 : price,
+    liters: byMoney ? 0 : liters,
+    amount: byMoney ? amount : 0,
+    by_money: byMoney,                       // فاکتور «فقط مبلغ» — اعتبار مشتری
     vehicle_type: vehicle,
     phone: phone,
     status: 'pending',                       // پیش‌فرض: در صف تایید
@@ -20207,10 +20382,12 @@ function invSubmit() {
   showToast('✅ فاکتور شماره ' + n2fa(v.invoice_number) + ' ثبت شد و در صف تایید است', '#38a169');
 }
 function invResetForm(toast) {
-  ['inv-customer', 'inv-price', 'inv-liters', 'inv-vehicle', 'inv-phone', 'inv-date'].forEach(id => {
+  ['inv-customer', 'inv-price', 'inv-liters', 'inv-amount', 'inv-vehicle', 'inv-phone', 'inv-date'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   const f = document.getElementById('inv-fuel'); if (f) f.value = 'petrol';
+  // شمارهٔ فاکتور به حالت خودکار برگردد تا دوباره با شمارهٔ بعدی پر شود
+  const ni = document.getElementById('inv-number'); if (ni) { ni.value = ''; delete ni.dataset.userSet; }
   renderInvoices();
   if (toast !== false) showToast('🔄 فرم پاک شد', '#4299e1');
 }
@@ -20283,8 +20460,7 @@ function invRenderList() {
       <div class="who">
         <div class="nm">${escFa(v.customer_name) || '—'}</div>
         <div class="mt">
-          <span>${_invFuelLabel(v.fuel_type)}</span>
-          <span>🛢️ ${n2fa(v.liters)} لیتر</span>
+          ${v.by_money ? '<span>💵 فقط مبلغ (اعتبار)</span>' : `<span>${_invFuelLabel(v.fuel_type)}</span><span>🛢️ ${n2fa(v.liters)} لیتر</span>`}
           <span>💰 ${n2fa(Math.round(_invTotal(v)))} افغانی</span>
           <span>📅 ${escFa(v.date_sh || '') || '—'}</span>
         </div>
@@ -20366,6 +20542,10 @@ function _invPaperHtml(v, opts) {
         </div>
       </div>
       <div class="invp-grid">
+        ${v.by_money ? `
+        <div class="invp-row" style="grid-column:1/-1"><svg class="ico"><use href="#invp-coin"/></svg><span class="k">مبلغ بدون تیل (اعتبار مشتری)</span>
+          ${edit ? `<input class="invp-in" id="invd-amount" type="number" min="0" step="any" value="${parseFloat(v.amount) || 0}">` : `<span class="v">${n2fa(parseFloat(v.amount) || 0)}</span>`}<span style="font-size:.72rem;color:#64748b">افغانی — بعداً با نرخ روز تیل حساب می‌شود</span>
+        </div>` : `
         <div class="invp-row"><svg class="ico"><use href="#invp-pump"/></svg><span class="k">نوع تیل</span>
           ${edit ? `<select class="invp-in" id="invd-fuel"><option value="petrol"${v.fuel_type !== 'diesel' ? ' selected' : ''}>⛽ پطرول</option><option value="diesel"${v.fuel_type === 'diesel' ? ' selected' : ''}>🟤 دیزل</option></select>` : `<span class="v">${_invFuelLabel(v.fuel_type)}</span>`}
         </div>
@@ -20377,13 +20557,13 @@ function _invPaperHtml(v, opts) {
         </div>
         <div class="invp-row"><svg class="ico"><use href="#invp-car"/></svg><span class="k">نوع ماشین</span>
           ${edit ? `<input class="invp-in" id="invd-vehicle" value="${escFa(v.vehicle_type)}">` : `<span class="v">${escFa(v.vehicle_type) || '—'}</span>`}
-        </div>
+        </div>`}
         <div class="invp-row" style="grid-column:1/-1"><svg class="ico"><use href="#invp-phone"/></svg><span class="k">شماره تماس</span>
           ${edit ? `<input class="invp-in" id="invd-phone" type="tel" value="${escFa(v.phone)}" style="direction:ltr;text-align:right">` : `<span class="v" style="direction:ltr">${escFa(v.phone) || '—'}</span>`}
         </div>
       </div>
       <div class="invp-total">
-        <span class="k"><svg class="ico"><use href="#invp-calc"/></svg> جمع کل (فی × لیتر)</span>
+        <span class="k"><svg class="ico"><use href="#invp-calc"/></svg> ${v.by_money ? 'مبلغ (اعتبار مشتری)' : 'جمع کل (فی × لیتر)'}</span>
         <span class="tv">${n2fa(Math.round(_invTotal(v) * 100) / 100)} افغانی</span>
       </div>
       <svg class="invp-station"><use href="#invp-station"/></svg>
@@ -20443,23 +20623,44 @@ function _ensureDebtPersonForInvoice(v) {
   if (v.phone && !(p.phone || '').trim()) p.phone = v.phone;
   return p;
 }
-// با تاییدِ فاکتور، رسیدِ تیل (بردگی) داخلِ حسابِ قرض‌دار ثبت/به‌روز می‌شود.
+// با تاییدِ فاکتور، اطلاعاتِ واقعیِ فاکتور داخلِ حسابِ قرض‌دار ثبت/به‌روز می‌شود:
+//  • عنوان ردیف: «نام مشتری - فاکتور شماره N» (نه فقط «فاکتور شماره N»)
+//  • نمبر حواله: فاکتور حواله ندارد → خالی می‌ماند (قبلاً اشتباهاً شمارهٔ فاکتور می‌نشست)
+//  • فاکتور عادی: نوع/مقدار تیل و فی لیتر → بردگی = لیتر×فی؛ رسید صفر (هیچ مبلغی
+//    به عنوان رسید ثبت نمی‌شود و حساب تسویه‌شده نشان داده نمی‌شود)
+//  • فاکتور «فقط مبلغ» (by_money): پولِ پیش‌پرداختِ مشتری است → در ستون رسید
+//    (اعتبار) ثبت می‌شود تا بعداً با نرخ روز تیل ببرد
 function _invPostToDebt(v) {
   const p = _ensureDebtPersonForInvoice(v);
   if (!Array.isArray(p.rows)) p.rows = [];
+  const credit = !!v.by_money;
   const data = {
     date: v.date_sh || '',
-    name: 'فاکتور شماره ' + n2fa(v.invoice_number) + (v.vehicle_type ? (' — ' + v.vehicle_type) : ''),
-    hawala: String(v.invoice_number || ''),
+    name: ((v.customer_name || '').trim() ? ((v.customer_name || '').trim() + ' - ') : '') +
+          'فاکتور شماره ' + n2fa(v.invoice_number) + (v.vehicle_type ? (' — ' + v.vehicle_type) : ''),
+    hawala: '',
     ftype: v.fuel_type === 'diesel' ? 'diesel' : 'petrol',
-    fuel: parseFloat(v.liters) || 0,
-    priceper: parseFloat(v.price_per_liter) || 0,
-    byMoney: false,
+    fuel: credit ? 0 : (parseFloat(v.liters) || 0),
+    priceper: credit ? 0 : (parseFloat(v.price_per_liter) || 0),
+    byMoney: credit,
     invId: v.id
   };
+  if (credit) {
+    data.bardagi = 0;
+    data.rasid = parseFloat(v.amount) || 0;    // اعتبار واقعی مشتری
+    data.albaqi = -(parseFloat(v.amount) || 0);
+  } else {
+    // بردگی/الباقی همان لحظه ذخیره می‌شود تا جمع‌های حساب (کارت شخص، فوتر جدول)
+    // بدون نیاز به یک‌بار رندرِ جدول هم درست باشند
+    data.bardagi = Math.round(data.fuel * data.priceper);
+  }
   const existing = p.rows.find(r => r.invId === v.id);
-  if (existing) { data.rasid = existing.rasid || 0; Object.assign(existing, data); }
-  else { data.rasid = 0; p.rows.push(data); }
+  if (existing) { if (!credit) data.rasid = existing.rasid || 0; Object.assign(existing, data); }
+  else { if (!credit) data.rasid = 0; p.rows.push(data); }
+  if (!credit) {
+    const row = existing || data;
+    row.albaqi = (parseFloat(row.bardagi) || 0) - (parseFloat(row.rasid) || 0);
+  }
   v.debtPersonId = p.id;
 }
 // با برگرداندنِ فاکتور به صف/حذفِ آن، ردیفِ مرتبط از حساب قرض‌دار پاک می‌شود.
@@ -20482,7 +20683,9 @@ function invApprove(id) {
   save();
   renderInvoices(); invRenderList();
   if (_invDetailId === id) invRenderDetail();
-  showToast('✅ فاکتور شماره ' + n2fa(v.invoice_number) + ' تایید شد و رسیدِ تیل در حساب «' + (v.customer_name || '—') + '» ثبت شد', '#38a169');
+  showToast('✅ فاکتور شماره ' + n2fa(v.invoice_number) + (v.by_money
+    ? (' تایید شد و مبلغ به عنوان اعتبار در حساب «' + (v.customer_name || '—') + '» ثبت شد')
+    : (' تایید شد و در حساب «' + (v.customer_name || '—') + '» ثبت شد')), '#38a169');
 }
 function invRevert(id) {
   if (!requireAdmin()) return;
@@ -20505,6 +20708,7 @@ function invSaveEdits(id) {
   if (g('invd-fuel'))    v.fuel_type      = g('invd-fuel').value === 'diesel' ? 'diesel' : 'petrol';
   if (g('invd-price'))   v.price_per_liter = Math.max(0, parseFloat(g('invd-price').value) || 0);
   if (g('invd-liters'))  v.liters          = Math.max(0, parseFloat(g('invd-liters').value) || 0);
+  if (g('invd-amount'))  v.amount          = Math.max(0, parseFloat(g('invd-amount').value) || 0);
   if (g('invd-vehicle')) v.vehicle_type   = (g('invd-vehicle').value || '').trim();
   if (g('invd-phone'))   v.phone          = (g('invd-phone').value || '').trim();
   // اگر فاکتور قبلاً تایید شده، رسیدِ تیلِ ثبت‌شده در حساب قرض‌دار هم با تغییرات هماهنگ شود
