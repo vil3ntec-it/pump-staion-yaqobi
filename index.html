@@ -4108,6 +4108,41 @@ body.gfx-standard .lock-screen .ls-geo-3,
 body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-10s; }
 
 </style>
+<style id="table-unify">
+/* ╔══════════════════════════════════════════════════════════════════╗
+   ║  یکپارچه‌سازیِ ظاهرِ همهٔ جدول‌ها (فقط CSS — منطق/محاسبات دست‌نخورده) ║
+   ║  این بلاک عمداً آخرِ <head> است تا بر استایل‌های تکراریِ قبلی و     ║
+   ║  لایه‌های گرافیکی غلبه کند و همهٔ جدول‌ها از یک سیستمِ واحد پیروی کنند.║
+   ╚══════════════════════════════════════════════════════════════════╝ */
+.tbl, .xls-tbl, .ro-tbl{ border-collapse:collapse !important; border-spacing:0 !important; }
+/* خطِ عمودیِ جداکننده بین همهٔ ستون‌ها (شبکهٔ اکسل‌مانند) — آخرین ستون بدون خط */
+.tbl th, .tbl td,
+.xls-tbl th, .xls-tbl td,
+.ro-tbl th, .ro-tbl td{
+  border-left:1px solid var(--border) !important;
+  border-right:0 !important;
+  vertical-align:middle !important;
+  text-align:center !important;
+}
+.tbl th:last-child, .tbl td:last-child,
+.xls-tbl th:last-child, .xls-tbl td:last-child,
+.ro-tbl th:last-child, .ro-tbl td:last-child{ border-left:0 !important; }
+/* هدرها: هم‌ارتفاع، هم‌پدینگ، بدون افتادنِ نوشته روی هم */
+.tbl th, .xls-tbl th, .ro-tbl th{
+  padding:9px 8px !important;
+  line-height:1.45 !important;
+  white-space:nowrap !important;
+}
+/* ورودی‌های داخلِ جدول: ارتفاع/پدینگ/فونتِ یکسان و وسط‌چین تا دقیقاً زیر عنوان بیفتند */
+.xls-tbl .xls-in, .tbl .editable{
+  text-align:center !important;
+  padding:8px 6px !important;
+  box-sizing:border-box;
+}
+.xls-num, .xls-calc, .pm-albaqi-cell, .pm-bardagi-cell{ text-align:center !important; }
+/* کارت‌های شخص/شرکت هم‌قد شوند (ستون‌های grid از قبل stretch هستند) */
+.persons-grid .person-card{ height:100% !important; }
+</style>
 </head>
 <body class="nav-sticky">
 <script id="gfx-tier-boot">
@@ -10397,6 +10432,8 @@ function _renderHistoryPanel(person) {
     // پیروی می‌کند تا داخل «حساب جداگانه پطرول/دیزل» فقط همان تیل دیده شود، نه همه‌چیز
     const hFilter = h.viewFilter || h.fuel || currentPersonFilter || 'all';
     const viewRows = rows.map((r, ri) => ({ r, ri })).filter(x => hFilter === 'all' || ((x.r.ftype || 'petrol') === hFilter));
+    // ستون «نوع تیل» فقط وقتی نمایش داده می‌شود که فیلتر روی «همه» است (مثل جدول اصلی)
+    const showFt = hFilter === 'all';
     const fBtn = (f, lbl) => `<button onclick="setHistoryFilter('${pid}','${h.id}','${f}')" style="padding:5px 12px;border-radius:8px;border:1.5px solid ${hFilter===f?'var(--blue)':'var(--border)'};background:${hFilter===f?'var(--blue)':'var(--card)'};color:${hFilter===f?'#fff':'var(--txt)'};font-family:'Vazirmatn',sans-serif;font-size:0.75rem;font-weight:700;cursor:pointer">${lbl}</button>`;
     const filterBarHtml = `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:8px 10px 0">${fBtn('all','📋 همه')}${fBtn('petrol','⛽ حساب جداگانه پطرول')}${fBtn('diesel','🟤 حساب جداگانه دیزل')}</div>`;
     // xls table with editable rows
@@ -10408,6 +10445,10 @@ function _renderHistoryPanel(person) {
         <td><input class="xls-in" value="${r.date||''}" onchange="updateHistoryRow('${pid}','${h.id}',${ri},'date',this.value)"></td>
         <td><input class="xls-in" value="${escFa(r.name)}" placeholder="نام" onchange="updateHistoryRow('${pid}','${h.id}',${ri},'name',this.value)"></td>
         <td><input class="xls-in" value="${r.hawala||''}" placeholder="حواله" onchange="updateHistoryRow('${pid}','${h.id}',${ri},'hawala',this.value)"></td>
+        ${showFt ? `<td><div class="ft-pick">
+          <label class="ft-opt petrol ${(r.ftype!=='diesel')?'active':''}"><input type="radio" name="hft-${h.id}-${ri}" ${(r.ftype!=='diesel')?'checked':''} onchange="setHistoryRowFuel('${pid}','${h.id}',${ri},'petrol')">⛽ پطرول</label>
+          <label class="ft-opt diesel ${(r.ftype==='diesel')?'active':''}"><input type="radio" name="hft-${h.id}-${ri}" ${(r.ftype==='diesel')?'checked':''} onchange="setHistoryRowFuel('${pid}','${h.id}',${ri},'diesel')">🟤 دیزل</label>
+        </div></td>` : ''}
         <td><input class="xls-in" type="number" value="${r.fuel||''}" placeholder="0" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'fuel',this.value)"></td>
         <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="0" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'priceper',this.value)"></td>
         <td><input class="xls-in pm-bardagi-cell" type="number" value="${parseFloat(bard.toFixed(0))||''}" placeholder="0" style="color:var(--accent);font-weight:700" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'bardagi',this.value)"></td>
@@ -10416,19 +10457,19 @@ function _renderHistoryPanel(person) {
         <td><button class="del-btn" onclick="deleteHistoryRow('${pid}','${h.id}',${ri})">🗑️</button></td>
       </tr>`;
     }).join('');
-    if (!rowsHtml) rowsHtml = `<tr><td colspan="10" style="text-align:center;padding:12px;color:var(--muted);font-size:0.82rem">${hFilter==='petrol'?'⛽ هیچ ردیف پطرولی ثبت نشده':(hFilter==='diesel'?'🟤 هیچ ردیف دیزلی ثبت نشده':'هیچ ردیفی ثبت نشده')}</td></tr>`;
+    if (!rowsHtml) rowsHtml = `<tr><td colspan="${showFt?11:10}" style="text-align:center;padding:12px;color:var(--muted);font-size:0.82rem">${hFilter==='petrol'?'⛽ هیچ ردیف پطرولی ثبت نشده':(hFilter==='diesel'?'🟤 هیچ ردیف دیزلی ثبت نشده':'هیچ ردیفی ثبت نشده')}</td></tr>`;
     const viewAlbaqi = viewRows.reduce((s, x) => s + ((x.r.byMoney ? (x.r.bardagi||0) : _fuelBardagi(x.r)) - (x.r.rasid||0)), 0);
     const tableHtml = filterBarHtml + `
       <div class="xls-wrap" style="margin:8px 10px;border-radius:9px;overflow:hidden">
         <div style="overflow-x:auto">
-          <table class="xls-tbl" style="min-width:580px">
+          <table class="xls-tbl" style="min-width:${showFt?660:580}px">
             <thead><tr>
               <th style="min-width:24px">#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th>
-              <th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>الباقی</th><th>حذف</th>
+              ${showFt?'<th>نوع تیل</th>':''}<th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>الباقی</th><th>حذف</th>
             </tr></thead>
             <tbody>${rowsHtml}</tbody>
             <tfoot class="xls-foot"><tr>
-              <td colspan="6" style="padding:8px 7px;font-weight:800">جمع الباقی همین جدول (بردگی − رسید)</td>
+              <td colspan="${showFt?7:6}" style="padding:8px 7px;font-weight:800">جمع الباقی همین جدول (بردگی − رسید)</td>
               <td class="xls-calc" colspan="3" style="font-weight:800;color:${viewAlbaqi>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(viewAlbaqi))}</td>
               <td></td>
             </tr></tfoot>
@@ -10587,6 +10628,13 @@ function calcHistoryRow(pid, hid, idx, field, value) {
   if (field === 'bardagi') { r.byMoney = true; r.bardagi = parseFloat(value)||0; }
   else { r[field] = parseFloat(value)||0; if (!r.byMoney) r.bardagi = _fuelBardagi(r); }
   r.albaqi = (r.bardagi||0) - (r.rasid||0);
+  save(); _rerenderHistoryPreserveFocus(person);
+}
+// نوع تیل (پطرول/دیزل) ردیف‌های جدولِ آرشیو — مثل جدول اصلی
+function setHistoryRowFuel(pid, hid, idx, ftype) {
+  const person = _hPerson(pid); if (!person) return;
+  const h = _hEntry(pid, hid); if (!h || !h.rows[idx]) return;
+  h.rows[idx].ftype = (ftype === 'diesel') ? 'diesel' : 'petrol';
   save(); _rerenderHistoryPreserveFocus(person);
 }
 function addHistoryRow(pid, hid) {
@@ -11064,10 +11112,10 @@ function addDrQuickRow(focus) {
   div.className = 'dr-quick-row';
   div.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:12px;border:1px dashed var(--accent);border-radius:10px';
   div.innerHTML = `
-    <input class="xls-in dr-q-date" style="max-width:110px" placeholder="تاریخ">
-    <input class="xls-in dr-q-name" style="flex:2;min-width:140px" list="debtrasid-names" placeholder="نام قرض‌دار" onchange="quickAddDebtRasid(this.closest('.dr-quick-row'))" onkeydown="if(event.key==='Enter'){this.blur();}">
-    <input class="xls-in dr-q-note" style="flex:2;min-width:120px" placeholder="توضیح (اختیاری)">
-    <input class="xls-in dr-q-amount" type="number" style="max-width:130px" placeholder="مبلغ رسید" onchange="quickAddDebtRasid(this.closest('.dr-quick-row'))" onkeydown="if(event.key==='Enter'){this.blur();}">
+    <input class="xls-in dr-q-date" style="flex:0 0 110px;max-width:110px" placeholder="تاریخ">
+    <input class="xls-in dr-q-name" style="flex:1 1 150px;min-width:130px" list="debtrasid-names" placeholder="نام قرض‌دار" onchange="quickAddDebtRasid(this.closest('.dr-quick-row'))" onkeydown="if(event.key==='Enter'){this.blur();}">
+    <input class="xls-in dr-q-note" style="flex:1 1 150px;min-width:130px" placeholder="توضیح (اختیاری)">
+    <input class="xls-in dr-q-amount" type="number" style="flex:1 1 150px;min-width:130px;border:1.5px solid var(--accent);border-radius:8px;background:var(--card);padding:7px 9px" placeholder="مبلغ رسید" onchange="quickAddDebtRasid(this.closest('.dr-quick-row'))" onkeydown="if(event.key==='Enter'){this.blur();}">
     <button class="del-btn" title="حذف این ردیف" onclick="removeDrQuickRow(this)">✖</button>
   `;
   wrap.appendChild(div);
@@ -17851,6 +17899,15 @@ document.addEventListener('keydown', function(e){
     _toggleControl(el, scope);
     _refocusLater(el);
     return;
+  }
+  // در ورودی‌های متنی (تاریخ، نام، توضیحات…) کلیدهای چپ/راست باید کُرسر را داخلِ
+  // خودِ متن جابه‌جا کنند، نه اینکه فوکوس را بین کادرها بپرانند. قبلاً همین باعث
+  // می‌شد در کادرِ تاریخِ صرافی کلیدها «کار نکنند» و کیبورد بپرد. فقط برای فیلدهای
+  // عددی و منوها ناوبریِ افقی باقی می‌ماند (آن‌جا چپ/راست معنیِ ویرایش ندارد).
+  if (key === 'ArrowLeft' || key === 'ArrowRight') {
+    const textish = el.tagName === 'TEXTAREA' ||
+      (el.tagName === 'INPUT' && /^(text|search|tel|url|email|password|)$/i.test(el.type || ''));
+    if (textish) return;
   }
   const dir = (key === 'ArrowUp') ? 'up' : (key === 'ArrowDown' || key === 'Enter') ? 'down' : (key === 'ArrowLeft') ? 'left' : 'right';
   const best = _pickInDirection(el, dir, _navFocusables(scope));
