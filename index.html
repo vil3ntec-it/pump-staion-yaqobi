@@ -6373,6 +6373,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
 <div class="modal-overlay" id="companyPurchasesModal">
   <div class="modal">
     <div class="modal-head" style="gap:10px;flex-wrap:wrap">
+      <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green);padding:5px 12px;font-size:0.78rem" onclick="pdfCompanyPurchases()">📄 PDF</button>
       <h2 id="cmp-title" style="flex:1;text-align:center">📦 خریدها</h2>
       <button class="modal-close" onclick="closeCompanyPurchases()">✕</button>
     </div>
@@ -9799,12 +9800,16 @@ function initAllTableResizers(root){
     });
   }catch(e){}
 }
-// جدول‌های داینامیک (هر جا از نو ساخته شوند) خودکار دوباره فعال می‌شوند
+// جدول‌های داینامیک (هر جا از نو ساخته شوند) خودکار دوباره فعال می‌شوند.
+// مهم: با requestAnimationFrame — قبل از اولین رسمِ فریمِ بعدی — اجرا می‌شود تا
+// عرضِ ذخیره‌شدهٔ ستون‌ها همان لحظهٔ ساختِ جدول اعمال شود؛ با setTimeout قبلی،
+// جدولِ تازه (مثلاً بعد از عوض کردن ماه) یک لحظه با عرض پیش‌فرض دیده می‌شد و
+// بعد «می‌پرید» به عرض‌هایی که کاربر تنظیم کرده بود.
 (function(){
   let _trTimer = null;
   function schedule(){
     if(_trTimer) return;
-    _trTimer = setTimeout(function(){ _trTimer = null; initAllTableResizers(); }, 350);
+    _trTimer = requestAnimationFrame(function(){ _trTimer = null; initAllTableResizers(); });
   }
   function startObs(){
     try{
@@ -12262,10 +12267,23 @@ function renderCompanyPurchases(company){
 
 // باز کردن صفحهٔ جداگانهٔ خریدهای همین شرکت (پطرول + دیزل)
 let _cmpFuel = null; // فیلتر صفحهٔ خریدها: 'petrol' | 'diesel' | null (هر دو)
+let _cmpHist = null; // وقتی صفحهٔ خریدها از روی «جدول آرشیو» باز شده: بازهٔ خریدها + ردیف‌های همان جدول
 function openCompanyPurchases(fuel){
   const company = (DB.tilCompanies||[]).find(c => c.id === currentCompanyId);
   if (!company) return;
   _cmpFuel = (fuel === 'petrol' || fuel === 'diesel') ? fuel : null;
+  _cmpHist = null;   // نمای زنده — نه آرشیو
+  renderCompanyPurchasesPage(company, _cmpFuel);
+  document.getElementById('companyPurchasesModal').classList.add('open');
+}
+// همان صفحهٔ خریدها ولی برای یک جدولِ آرشیوشده: فقط خریدهای بازهٔ همان جدول
+function openCompanyPurchasesHistory(cid, hid){
+  const company = (DB.tilCompanies||[]).find(c => c.id === cid);
+  if (!company) return;
+  const h = (company.tableHistory||[]).find(x => x.id === hid);
+  if (!h) return;
+  _cmpFuel = (h.fuel === 'diesel') ? 'diesel' : 'petrol';
+  _cmpHist = { after: h.purchasesAfter || 0, before: (h.purchasesBefore != null ? h.purchasesBefore : Number.MAX_SAFE_INTEGER), rows: h.rows || [], createdAt: h.createdAt || '' };
   renderCompanyPurchasesPage(company, _cmpFuel);
   document.getElementById('companyPurchasesModal').classList.add('open');
 }
@@ -12371,27 +12389,112 @@ function _companyManualRowSection(rows, fuel){
       ${cards}
     </div>`;
 }
+// جمع‌آوری دادهٔ صفحهٔ خریدها — هم برای نمایش، هم برای PDF (نمای زنده یا جدول آرشیو)
+function _cmpCollect(company, fuel){
+  const norm = (typeof normFa === 'function') ? normFa : (s => String(s||'').toLowerCase().trim());
+  const target = norm(company.name);
+  const cpP = _companyPurchaseCheckpoint(company, 'petrol');
+  const cpD = _companyPurchaseCheckpoint(company, 'diesel');
+  // نمای آرشیو: فقط خریدهای بازهٔ همان جدول؛ نمای زنده: خریدهای بعد از آخرین «جدول جدید»
+  const inRange = (e, cp) => _cmpHist
+    ? ((e.id||0) > (_cmpHist.after||0) && (e.id||0) <= _cmpHist.before)
+    : ((e.id||0) > cp);
+  const petrol = (DB.fuelEntries||[]).filter(e => (e.fuelType||'petrol') === 'petrol' && norm(e.seller) === target && inRange(e, cpP));
+  const diesel = (DB.fuelEntries||[]).filter(e => (e.fuelType||'petrol') === 'diesel' && norm(e.seller) === target && inRange(e, cpD));
+  // ردیف‌های دستی که در fuelEntries نیستند (بدون srcPurchaseId یا با ID ناشناس) —
+  // در نمای آرشیو از ردیف‌های خودِ همان جدولِ آرشیوشده
+  const fuelIds = new Set((DB.fuelEntries||[]).map(e => String(e.id)));
+  const isManual = r => !r.srcPurchaseId || !fuelIds.has(String(r.srcPurchaseId));
+  const srcP = _cmpHist ? (fuel === 'petrol' ? _cmpHist.rows : []) : (company.rows||[]);
+  const srcD = _cmpHist ? (fuel === 'diesel' ? _cmpHist.rows : []) : (company.dieselRows||[]);
+  return { petrol, diesel, manualPetrol: srcP.filter(isManual), manualDiesel: srcD.filter(isManual) };
+}
 function renderCompanyPurchasesPage(company, fuel){
   const cont = document.getElementById('cmp-body');
   const titleEl = document.getElementById('cmp-title');
   if (!cont) return;
   if (fuel === undefined) fuel = _cmpFuel;
   const fuelLbl = fuel === 'petrol' ? '⛽ خریدهای پطرول' : fuel === 'diesel' ? '🟤 خریدهای دیزل' : '📦 خریدهای';
-  if (titleEl) titleEl.textContent = fuelLbl + ' — ' + (company.name||'');
-  const norm = (typeof normFa === 'function') ? normFa : (s => String(s||'').toLowerCase().trim());
-  const target = norm(company.name);
-  const cpP = _companyPurchaseCheckpoint(company, 'petrol');
-  const cpD = _companyPurchaseCheckpoint(company, 'diesel');
-  const petrol = (DB.fuelEntries||[]).filter(e => (e.fuelType||'petrol') === 'petrol' && norm(e.seller) === target && (e.id||0) > cpP);
-  const diesel = (DB.fuelEntries||[]).filter(e => (e.fuelType||'petrol') === 'diesel' && norm(e.seller) === target && (e.id||0) > cpD);
-  // ردیف‌های دستی که در fuelEntries نیستند (بدون srcPurchaseId یا با ID ناشناس)
-  const fuelIds = new Set((DB.fuelEntries||[]).map(e => String(e.id)));
-  const manualPetrol = (company.rows||[]).filter(r => !r.srcPurchaseId || !fuelIds.has(String(r.srcPurchaseId)));
-  const manualDiesel = (company.dieselRows||[]).filter(r => !r.srcPurchaseId || !fuelIds.has(String(r.srcPurchaseId)));
-  const petrolHtml = _companyPurchaseSection(petrol, 'petrol', true) + _companyManualRowSection(manualPetrol, 'petrol');
-  const dieselHtml = _companyPurchaseSection(diesel, 'diesel', true) + _companyManualRowSection(manualDiesel, 'diesel');
+  if (titleEl) titleEl.textContent = fuelLbl + ' — ' + (company.name||'') + (_cmpHist ? (' — 🗂️ جدول آرشیو' + (_cmpHist.createdAt ? ' (' + _cmpHist.createdAt + ')' : '')) : '');
+  const d = _cmpCollect(company, fuel);
+  const petrolHtml = _companyPurchaseSection(d.petrol, 'petrol', true) + _companyManualRowSection(d.manualPetrol, 'petrol');
+  const dieselHtml = _companyPurchaseSection(d.diesel, 'diesel', true) + _companyManualRowSection(d.manualDiesel, 'diesel');
   // فقط تیل انتخاب‌شده نمایش داده می‌شود؛ بدون فیلتر: هر دو
   cont.innerHTML = fuel === 'petrol' ? petrolHtml : fuel === 'diesel' ? dieselHtml : (petrolHtml + dieselHtml);
+}
+// PDF صفحهٔ خریدها — دقیقاً همان چیزی که در صفحه باز است (پطرول/دیزل، زنده یا جدول آرشیو)
+function pdfCompanyPurchases(){
+  const company = (DB.tilCompanies||[]).find(c => c.id === currentCompanyId);
+  if (!company) return;
+  const fuel = _cmpFuel;
+  const data = _cmpCollect(company, fuel);
+  const dts = (typeof allDates === 'function') ? allDates() : { sh: '', mi: '' };
+  const sec = (entries, manual, f) => {
+    if (!entries.length && !manual.length) return '';
+    const color = f === 'diesel' ? '#b7791f' : '#c07700';
+    const label = f === 'diesel' ? '🟤 خریدهای دیزل' : '⛽ خریدهای پطرول';
+    let out = `<h2 style="font-size:1rem;font-weight:900;color:${color};margin:14px 0 8px">${label}</h2>`;
+    if (entries.length) {
+      let sL=0,sU=0,sA=0;
+      const rows = entries.map((e,i)=>{ sL+=(e.liters||0); sU+=(e.totalUSD||0); sA+=(e.totalAFN||0);
+        return `<tr><td style="text-align:center;color:#718096">${n2fa(i+1)}</td><td>${escFa(e.date||'—')}</td><td>${escFa(e.seller||'—')}</td>
+        <td>${n2fa(e.kg||0)}</td><td>${n2fa(Math.round(e.liters||0))}</td><td>${n2fa(e.priceTon||0)}</td><td>${n2fa(e.usdRate||0)}</td>
+        <td style="font-weight:800">${n2fa((e.totalUSD||0).toFixed(1))} $</td><td style="font-weight:800;color:${color}">${n2fa(Math.round(e.totalAFN||0))}</td>
+        <td>${n2fa((e.perLiter||0).toFixed(1))}</td></tr>`; }).join('');
+      out += `<table><thead><tr><th>#</th><th>تاریخ</th><th>فروشنده</th><th>وزن (کگ)</th><th>لیتر</th><th>فی تن ($)</th><th>نرخ دالر</th><th>کل ($)</th><th>کل (افغانی)</th><th>فی لیتر</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr><td colspan="4">جمع — ${n2fa(entries.length)} خرید</td><td>${n2fa(Math.round(sL))}</td><td></td><td></td><td>${n2fa(sU.toFixed(1))} $</td><td>${n2fa(Math.round(sA))}</td><td></td></tr></tfoot></table>`;
+    }
+    if (manual.length) {
+      let sT=0,sU=0,sA=0,cnt=0,rows='';
+      manual.forEach(r=>{
+        try { _migrateCompanyRow(r); } catch(e){}
+        const ton=cmpTon(r), tu=cmpTotalUsd(r), ta=cmpAfnTotal(r);
+        if (!ton && !tu) return;
+        cnt++; sT+=ton; sU+=tu; sA+=ta;
+        rows += `<tr><td style="text-align:center;color:#718096">${n2fa(cnt)}</td><td>${escFa(r.date||'—')}</td><td>${escFa(r.name||'—')}</td>
+          <td>${n2fa(ton.toFixed(3))}</td><td>${n2fa(parseFloat(r.usd)||0)}</td><td>${n2fa(parseFloat(r.rate)||0)}</td>
+          <td style="font-weight:800">${n2fa(tu.toFixed(1))} $</td><td style="font-weight:800;color:${color}">${n2fa(Math.round(ta))}</td></tr>`;
+      });
+      if (cnt) out += `<h3 style="font-size:0.82rem;font-weight:800;color:#718096;margin:10px 0 6px">ردیف‌های دستی جدول</h3>
+        <table><thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>مقدار (تن)</th><th>فی تن ($)</th><th>نرخ</th><th>کل ($)</th><th>کل (افغانی)</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr><td colspan="3">جمع</td><td>${n2fa(sT.toFixed(3))}</td><td></td><td></td><td>${n2fa(sU.toFixed(1))} $</td><td>${n2fa(Math.round(sA))}</td></tr></tfoot></table>`;
+    }
+    return out;
+  };
+  const bodyHtml = (fuel === 'petrol' ? sec(data.petrol, data.manualPetrol, 'petrol')
+    : fuel === 'diesel' ? sec(data.diesel, data.manualDiesel, 'diesel')
+    : sec(data.petrol, data.manualPetrol, 'petrol') + sec(data.diesel, data.manualDiesel, 'diesel'))
+    || '<div style="text-align:center;color:#718096;padding:20px">هیچ خریدی ثبت نشده</div>';
+  const fuelLbl = fuel === 'petrol' ? 'خریدهای پطرول' : fuel === 'diesel' ? 'خریدهای دیزل' : 'خریدها';
+  const title = fuelLbl + ' — ' + (company.name||'') + (_cmpHist ? (' — جدول آرشیو' + (_cmpHist.createdAt ? ' (' + _cmpHist.createdAt + ')' : '')) : '');
+  const html = `<!DOCTYPE html>
+<html lang="fa" dir="rtl"><head><meta charset="UTF-8">
+<title>${title} — پمپ یعقوبی</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:12px}
+h1{font-size:1.15rem;font-weight:900;color:#c07700;border-bottom:2px solid #c07700;padding-bottom:8px;margin-bottom:6px}
+.meta{font-size:0.72rem;color:#718096;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:0.72rem;margin-bottom:14px}
+th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:right;font-weight:700;border-bottom:2px solid #4a5568;white-space:nowrap}
+td{padding:6px 7px;border-bottom:1px solid #e2e8f0}
+tr:nth-child(even) td{background:#fffaf0}
+tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px;border-top:2px solid #4a5568}
+.footer{margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
+@media print{body{padding:6px}@page{margin:0.5cm;size:A4 landscape}tr{page-break-inside:avoid}h1{font-size:1rem}}
+</style></head><body>
+<h1>📦 پمپ یعقوبی — ${title}</h1>
+<div class="meta">تاریخ چاپ: ${dts.sh} | ${dts.mi||''}</div>
+${bodyHtml}
+<div class="footer">پمپ یعقوبی — این گزارش به صورت خودکار تولید شده است</div>
+<script>window.onload=function(){window.print();}<\/script>
+</body></html>`;
+  const w = window.open('', '_blank', 'width=900,height=980');
+  if (w) { w.document.write(html); w.document.close(); }
+  else if (typeof showToast === 'function') showToast('مرورگر پنجره را مسدود کرد. اجازه popup بدهید', '#e53e3e');
 }
 
 // «جدول جدید» شرکت — هر دو جدولِ همین شرکت (پطرول و دیزل) با هم آرشیو می‌شوند و
@@ -12506,13 +12609,17 @@ function _renderCompanyHistoryPanel(company){
       }).join('');
       const fuelLabel = h.fuel === 'diesel' ? '🟤 دیزل' : '⛽ پطرول';
       const armed = (_cmDelArm === h.id);
-      // شمارش خریدهای همین جدولِ آرشیوشده (کادر «خریدهای پطرول/دیزل» مالِ همین بازه)
+      // کادر «خریدهای پطرول/دیزل» همین جدولِ آرشیوشده — مثل نمای زنده کلیک‌شدنی است
+      // و صفحهٔ خریدهای «همان بازه» را باز می‌کند (خریدهای هر جدول با خودش آرشیو می‌شوند)
       let purchBadge = '';
-      if (h.purchasesBefore != null) {
+      {
         const norm = (typeof normFa === 'function') ? normFa : (s => String(s||'').toLowerCase().trim());
         const target = norm(company.name);
-        const nPurch = (DB.fuelEntries||[]).filter(e => (e.fuelType||'petrol') === (h.fuel||'petrol') && norm(e.seller) === target && (e.id||0) > (h.purchasesAfter||0) && (e.id||0) <= h.purchasesBefore).length;
-        purchBadge = `<span style="font-size:0.72rem;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:4px 9px">خریدهای این جدول: <b style="color:${ac}">${n2fa(nPurch)}</b></span>`;
+        const hBefore = (h.purchasesBefore != null) ? h.purchasesBefore : Number.MAX_SAFE_INTEGER;
+        const nPurch = (DB.fuelEntries||[]).filter(e => (e.fuelType||'petrol') === (h.fuel||'petrol') && norm(e.seller) === target && (e.id||0) > (h.purchasesAfter||0) && (e.id||0) <= hBefore).length;
+        const pbLbl = (h.fuel === 'diesel') ? '🟤 خریدهای دیزل' : '⛽ خریدهای پطرول';
+        const pbColor = (h.fuel === 'diesel') ? '#b7791f' : 'var(--green)';
+        purchBadge = `<button type="button" onclick="openCompanyPurchasesHistory('${company.id}','${h.id}')" style="display:inline-flex;align-items:center;gap:6px;background:var(--dark);border:1.5px solid ${pbColor};border-radius:999px;padding:5px 12px;color:${pbColor};font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.74rem;cursor:pointer">${pbLbl} — ${n2fa(nPurch)} خرید ↗</button>`;
       }
       return `<div style="border:1.5px solid ${ac}66;border-radius:12px;margin-bottom:12px;overflow:hidden">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:${ac}18;flex-wrap:wrap">
@@ -17603,7 +17710,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.5';
+const APP_VERSION = '2.9.6';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
