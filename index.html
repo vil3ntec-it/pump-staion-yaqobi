@@ -11012,15 +11012,16 @@ function updateExpense(i, field, val) {
   updateBanner();
 }
 function _recalcExpenseTotals() {
+  // «مصرف این ماه» و «مصارف کل» فقط ماهِ انتخاب‌شده — تا این تابع (بعد از ویرایشِ
+  // ردیف) دوباره جمعِ ماهِ تقویمی/کلِ همه‌ماه‌ها را ننویسد و ماهِ قبل در ماهِ جدید نیاید
   const today = persianDate();
-  const curMonth = _monthKey(today);
+  const activeMon = (typeof _activeExpenseMonth !== 'undefined' && _activeExpenseMonth) ? _activeExpenseMonth : _monthKey(today);
   const todayTotal = DB.expenses.filter(e => e.date === today).reduce((a,e) => a+e.amount, 0);
-  const monthTotal = DB.expenses.filter(e => _monthKey(e.date) === curMonth).reduce((a,e) => a+e.amount, 0);
-  const total = DB.expenses.reduce((a,e) => a+e.amount, 0);
+  const monthTotal = DB.expenses.filter(e => _monthKey(e.date) === activeMon).reduce((a,e) => a+e.amount, 0);
   const el = id => document.getElementById(id);
   if (el('exp-today')) el('exp-today').textContent = n2fa(todayTotal) + ' افغانی';
   if (el('exp-week')) el('exp-week').textContent = n2fa(monthTotal) + ' افغانی';
-  if (el('exp-total')) el('exp-total').textContent = n2fa(total) + ' افغانی';
+  if (el('exp-total')) el('exp-total').textContent = n2fa(monthTotal) + ' افغانی';
   const grpTotals = {};
   DB.expenses.forEach(e => { const k = _monthKey(e.date); grpTotals[k] = (grpTotals[k]||0) + (e.amount||0); });
   Object.keys(grpTotals).forEach(k => {
@@ -13864,18 +13865,16 @@ function renderSafe() {
     boxesFrag.appendChild(wrap);
   }
   boxesEl.appendChild(boxesFrag);
-  const net = { afn: totalBardagi.afn - totalMandagi.afn, usd: totalBardagi.usd - totalMandagi.usd };
   const _sfEl = id => document.getElementById(id);
-  // «جمع بردگی» و «جمع ماندگی» جمعِ همان ماهِ انتخاب‌شده هستند (مثل بخش مصارف) تا
-  // در ماهِ جدید، اطلاعاتِ ماهِ قبل دیده نشود. «موجودی خالص» عمداً کل می‌ماند چون
-  // موجودیِ واقعیِ صندوق است (جمعِ همهٔ ماه‌ها).
+  const mNet = { afn: mBardagi.afn - mMandagi.afn, usd: mBardagi.usd - mMandagi.usd };
+  // هر سه کادرِ بالا (جمع بردگی/جمع ماندگی/موجودی خالص) فقط ماهِ انتخاب‌شده را نشان
+  // می‌دهند تا هر ماه کاملاً جدا باشد و اطلاعاتِ ماهِ قبل داخلش نیاید.
   if (_sfEl('safe-total-bardagi')) _sfEl('safe-total-bardagi').textContent = fmtSafeTotal(mBardagi);
   if (_sfEl('safe-total-mandagi')) _sfEl('safe-total-mandagi').textContent = fmtSafeTotal(mMandagi);
   const netEl = document.getElementById('safe-net');
-  const netFmt = fmtSafeNet(net);
+  const netFmt = fmtSafeNet(mNet);
   netEl.textContent = netFmt.text;
   netEl.style.color = netFmt.ok ? 'var(--green)' : 'var(--red)';
-  const mNet = { afn: mBardagi.afn - mMandagi.afn, usd: mBardagi.usd - mMandagi.usd };
   const ftEl = document.getElementById('safe-ft-total');
   if (ftEl) { const mNetFmt = fmtSafeNet(mNet); ftEl.textContent = mNetFmt.text; ftEl.style.color = mNetFmt.ok?'var(--green)':'var(--red)'; }
 }
@@ -14048,22 +14047,26 @@ function updateSafeEntry(i, field, val) {
   _recalcSafeTotals();
 }
 function _recalcSafeTotals() {
+  // فقط ماهِ انتخاب‌شده — تا این تابع (که بعد از ویرایشِ ردیف صدا زده می‌شود) دوباره
+  // جمعِ کلِ همهٔ ماه‌ها را روی کادرها ننویسد و اطلاعاتِ ماهِ قبل در ماهِ جدید دیده نشود
   const entries = DB.safeEntries || [];
-  let totalBardagi = { afn: 0, usd: 0 }, totalMandagi = { afn: 0, usd: 0 };
-  entries.forEach(e => _safeAddAmt(e.type === 'bardagi' ? totalBardagi : totalMandagi, e));
-  const net = { afn: totalBardagi.afn - totalMandagi.afn, usd: totalBardagi.usd - totalMandagi.usd };
+  let mBardagi = { afn: 0, usd: 0 }, mMandagi = { afn: 0, usd: 0 };
+  entries.forEach(e => { if (safeMonthKey(e.date) === _safeActiveMonth) _safeAddAmt(e.type === 'bardagi' ? mBardagi : mMandagi, e); });
+  const mNet = { afn: mBardagi.afn - mMandagi.afn, usd: mBardagi.usd - mMandagi.usd };
   const el = id => document.getElementById(id);
-  if (el('safe-total-bardagi')) el('safe-total-bardagi').textContent = fmtSafeTotal(totalBardagi);
-  if (el('safe-total-mandagi')) el('safe-total-mandagi').textContent = fmtSafeTotal(totalMandagi);
-  const netFmt = fmtSafeNet(net);
+  if (el('safe-total-bardagi')) el('safe-total-bardagi').textContent = fmtSafeTotal(mBardagi);
+  if (el('safe-total-mandagi')) el('safe-total-mandagi').textContent = fmtSafeTotal(mMandagi);
+  const netFmt = fmtSafeNet(mNet);
   const netEl = el('safe-net');
   if (netEl) { netEl.textContent = netFmt.text; netEl.style.color = netFmt.ok ? 'var(--green)' : 'var(--red)'; }
   const ftEl = el('safe-ft-total');
   if (ftEl) { ftEl.textContent = netFmt.text; ftEl.style.color = netFmt.ok?'var(--green)':'var(--red)'; }
 }
 function deleteSafe(i) {
-  if (!confirm('این ردیف حذف شود؟')) return;
   const entry = DB.safeEntries[i];
+  // ردیفِ خالی (بدون نام/مبلغ/یادداشت) بدونِ تاییدیه پاک شود؛ فقط ردیفِ دارای داده تایید بخواهد
+  const hasData = entry && ((entry.title||'').trim() || (parseFloat(entry.amount)||0) || (entry.note||'').trim());
+  if (hasData && !confirm('این ردیف حذف شود؟')) return;
   if (entry) _addToTrash('safe', entry);
   // ردیفِ خودکارِ مرتبط در حساب شرکت‌ها هم پاک شود
   if (entry && entry.id) {
@@ -17395,7 +17398,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.0';
+const APP_VERSION = '2.9.1';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -17986,14 +17989,17 @@ document.addEventListener('keydown', function(e){
     _refocusLater(el);
     return;
   }
-  // در ورودی‌های متنی (تاریخ، نام، توضیحات…) کلیدهای چپ/راست باید کُرسر را داخلِ
-  // خودِ متن جابه‌جا کنند، نه اینکه فوکوس را بین کادرها بپرانند. قبلاً همین باعث
-  // می‌شد در کادرِ تاریخِ صرافی کلیدها «کار نکنند» و کیبورد بپرد. فقط برای فیلدهای
-  // عددی و منوها ناوبریِ افقی باقی می‌ماند (آن‌جا چپ/راست معنیِ ویرایش ندارد).
+  // در ورودی‌های متنی، چپ/راست فقط وقتی کُرسر «داخلِ» متن است (نه کلِ متن انتخاب
+  // شده و نه روی لبه) کُرسر را حرکت می‌دهد؛ در غیر این صورت مثل بقیهٔ خانه‌ها بین
+  // کادرها ناوبری می‌کند. این‌طور هم می‌شود وسطِ متن را ویرایش کرد و هم با چپ/راست
+  // به «نوع تیل»، «نمبر حواله» و بقیهٔ ستون‌ها رفت (که قبلاً کلاً غیرفعال شده بود).
   if (key === 'ArrowLeft' || key === 'ArrowRight') {
     const textish = el.tagName === 'TEXTAREA' ||
       (el.tagName === 'INPUT' && /^(text|search|tel|url|email|password|)$/i.test(el.type || ''));
-    if (textish) return;
+    if (textish) {
+      const s = el.selectionStart, e2 = el.selectionEnd, len = (el.value || '').length;
+      if (s === e2 && s > 0 && s < len) return;   // کرسر وسطِ متن → ویرایش، ناوبری نکن
+    }
   }
   const dir = (key === 'ArrowUp') ? 'up' : (key === 'ArrowDown' || key === 'Enter') ? 'down' : (key === 'ArrowLeft') ? 'left' : 'right';
   const best = _pickInDirection(el, dir, _navFocusables(scope));
