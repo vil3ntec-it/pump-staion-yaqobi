@@ -6157,6 +6157,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
           <div class="fs-cell"><div class="l" id="pm-p-rasid-l">مقدار رسید تیل</div><input type="number" class="v pm-edit" id="pm-p-rasidfuel" placeholder="0" style="color:var(--green);background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;width:100%;font-weight:800" oninput="updatePersonRasidFuel('petrol',this.value)"></div>
           <div class="fs-cell"><div class="l">برد</div><div class="v" style="color:var(--accent)" id="pm-p-bord">0</div></div>
           <div class="fs-cell"><div class="l" id="pm-p-rem-l">الباقی تیل</div><div class="v" style="color:var(--blue)" id="pm-p-remfuel">0</div></div>
+          <div class="fs-cell"><div class="l">جمع رسیدِ جدول</div><div class="v" style="color:var(--green)" id="pm-p-rowrasid">0</div></div>
         </div>
       </div>
       <div class="fs-group diesel">
@@ -6166,6 +6167,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
           <div class="fs-cell"><div class="l" id="pm-d-rasid-l">مقدار رسید تیل</div><input type="number" class="v pm-edit" id="pm-d-rasidfuel" placeholder="0" style="color:var(--green);background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;width:100%;font-weight:800" oninput="updatePersonRasidFuel('diesel',this.value)"></div>
           <div class="fs-cell"><div class="l">برد</div><div class="v" style="color:var(--accent)" id="pm-d-bord">0</div></div>
           <div class="fs-cell"><div class="l" id="pm-d-rem-l">الباقی تیل</div><div class="v" style="color:var(--blue)" id="pm-d-remfuel">0</div></div>
+          <div class="fs-cell"><div class="l">جمع رسیدِ جدول</div><div class="v" style="color:var(--green)" id="pm-d-rowrasid">0</div></div>
         </div>
       </div>
     </div>
@@ -6189,6 +6191,9 @@ body.viewer-mode .inv-admin-only{display:none!important}
           <button class="pm-filter-btn diesel" id="pm-filter-diesel" onclick="setPersonFilter('diesel')">🟤 حساب جداگانه دیزل</button>
         </span>
       </div>
+      <!-- جملهٔ خلاصهٔ حساب (بالای جدول): جمع بردگی، جمع رسید و الباقی.
+           پیش‌پرداخت (رسید بیشتر از بردگی) مثبت و سبز، بدهی منفی و سرخ نمایش می‌شود. -->
+      <div id="pm-albaqi-sentence" style="margin:4px 0 10px;padding:10px 14px;border:1.5px solid var(--border);border-radius:12px;background:var(--dark);text-align:center;font-weight:800;font-size:0.9rem;line-height:1.9"></div>
       <div class="xls-wrap">
         <table class="xls-tbl" id="pm-tbl">
           <thead><tr>
@@ -10301,6 +10306,21 @@ function _updatePersonTotals(person) {
   setV('pm-ft-bardagi', n2fa(t.all.bardagi));
   setV('pm-ft-rasid', n2fa(t.all.rasid));
   setV('pm-ft-albaqi', n2fa(t.all.albaqi));
+  // جمعِ رسیدِ ردیف‌های جدول به تفکیک پطرول/دیزل — خودکار در کادرِ هر حساب
+  setV('pm-p-rowrasid', n2fa(rnd(t.petrol.rasid)) + unit);
+  setV('pm-d-rowrasid', n2fa(rnd(t.diesel.rasid)) + unit);
+  // جملهٔ خلاصهٔ الباقی (بالای جدول). طبق نظرِ کاربر: رسیدِ پیش‌پرداخت مثبت،
+  // بدهی (بردگیِ نپرداخته) منفی. net = جمع رسید − جمع بردگی.
+  const sEl = document.getElementById('pm-albaqi-sentence');
+  if (sEl) {
+    const sumBardagi = t.all.bardagi, sumRasid = t.all.rasid;
+    const net = Math.round(sumRasid - sumBardagi);
+    const nm = escFa(person.name || 'شخص');
+    const head = 'جمع بردگی: <b style="color:var(--accent)">' + n2fa(Math.round(sumBardagi)) + '</b> &nbsp;|&nbsp; جمع رسید: <b style="color:var(--green)">' + n2fa(Math.round(sumRasid)) + '</b><br>';
+    if (net > 0) { sEl.style.borderColor = 'var(--green)'; sEl.innerHTML = head + '🟢 پیش‌پرداخت (طلبِ ' + nm + ' از پمپ): <b style="color:var(--green)">' + n2fa(net) + '</b>'; }
+    else if (net < 0) { sEl.style.borderColor = 'var(--red)'; sEl.innerHTML = head + '🔴 الباقی (بدهیِ ' + nm + '): <b style="color:var(--red)">' + n2fa(-net) + '</b>'; }
+    else { sEl.style.borderColor = 'var(--border)'; sEl.innerHTML = head + '✅ تسویه'; }
+  }
 }
 function newPersonTable() {
   const person = _curPerson(); if (!person) return;
@@ -17309,7 +17329,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.8.4';
+const APP_VERSION = '2.8.5';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
