@@ -450,6 +450,11 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 /* جدول قرائت پمپ‌ها: کادرهای ورودی (نام/نوع/ساعت/شروع/ختم/فی‌لیتر) هم‌اندازهٔ بقیهٔ ستون‌ها
    (لیتر/مبلغ فروش) باشند — با inherit، اندازهٔ موبایل و بزرگ‌شدنِ دسکتاپ هر دو خودکار دنبال می‌شود */
 #wq-pump-tbl .xls-in{font-size:inherit!important}
+/* عرض ستون‌های جدول قرائت پمپ‌ها: «شروع/ختم» پهن‌تر تا اعداد ۶–۷ رقمی کامل داخل کادر
+   دیده شوند؛ «فی لیتر» باریک‌تر (عدد کوچک است) و «نوع» هم فشرده — عرضِ آزادشده به
+   شروع/ختم می‌رسد و کادرها با نوشته‌هایشان هم‌اندازه می‌شوند. */
+#wq-pump-tbl .xls-in.wq-se{min-width:94px;max-width:120px;width:110px;text-align:center;padding:6px 6px}
+#wq-pump-tbl .xls-in.wq-fee{min-width:44px;max-width:66px;width:60px;text-align:center;padding:6px 5px}
 .xls-in.box{border:1.5px solid var(--accent);border-radius:8px;background:var(--card);padding:7px 9px}
 .xls-in.box::placeholder{color:var(--muted);font-weight:600;opacity:.75}
 .xls-in:focus{outline:2px solid var(--accent);border-radius:3px;background:#ffffff0a}
@@ -14799,13 +14804,13 @@ function renderWaraqPumps(w) {
     tr.innerHTML = `
       <td style="font-weight:700">${n2fa(p.num||i+1)}</td>
       <td><input class="xls-in" style="max-width:110px" value="${(p.worker||'').replace(/"/g,'&quot;')}" placeholder="نام" oninput="updateWaraqPump(${i},'worker',this.value)"></td>
-      <td><select class="xls-in" style="min-width:96px;max-width:none;width:100%" onchange="updateWaraqPump(${i},'fuel',this.value)">
+      <td><select class="xls-in" style="min-width:96px;max-width:112px;width:104px" onchange="updateWaraqPump(${i},'fuel',this.value)">
         <option value="petrol" ${p.fuel!=='diesel'?'selected':''}>⛽ پطرول</option>
         <option value="diesel" ${p.fuel==='diesel'?'selected':''}>🟤 دیزل</option>
       </select></td>
-      <td><input class="xls-in xs" type="number" value="${p.start||''}" placeholder="0" oninput="updateWaraqPump(${i},'start',this.value)"></td>
-      <td><input class="xls-in xs" type="number" value="${p.end||''}" placeholder="0" oninput="updateWaraqPump(${i},'end',this.value)"></td>
-      <td><input class="xls-in xs" type="number" value="${p.pricePerLiter||''}" placeholder="0" oninput="updateWaraqPump(${i},'pricePerLiter',this.value)"></td>
+      <td><input class="xls-in wq-se" type="number" value="${p.start||''}" placeholder="0" oninput="updateWaraqPump(${i},'start',this.value)"></td>
+      <td><input class="xls-in wq-se" type="number" value="${p.end||''}" placeholder="0" oninput="updateWaraqPump(${i},'end',this.value)"></td>
+      <td><input class="xls-in wq-fee" type="number" value="${p.pricePerLiter||''}" placeholder="0" oninput="updateWaraqPump(${i},'pricePerLiter',this.value)"></td>
       <td id="wqp-l-${i}" style="font-weight:700;color:var(--accent)">${n2fa(liters)}</td>
       <td id="wqp-a-${i}" style="font-weight:700;color:var(--green)">${n2fa(Math.round(amount))}</td>
       <td><button onclick="removeWaraqPump(${i})" title="حذف پایه" style="background:var(--red);color:#fff;border:none;border-radius:5px;padding:3px 7px;cursor:pointer;font-size:0.7rem">✕</button></td>
@@ -19913,6 +19918,47 @@ body{ min-height:calc(100vh + 2px); }
   setTimeout(placeGlider, 60);
   setTimeout(placeGlider, 800);
   document.addEventListener('click', function(){ requestAnimationFrame(placeGlider); }, true);
+
+  // اسکرول افقیِ نوار بخش‌ها با چرخِ موس روی دسکتاپ — اسکرول‌بار مخفی است و موسِ
+  // معمولی فقط عمودی می‌چرخد، پس چرخِ عمودی را به حرکتِ افقیِ نوار تبدیل می‌کنیم.
+  // نکته: نوار RTL است؛ در مرورگرهای مدرن scrollLeft در RTL منفی می‌شود، پس با
+  // «مقدارِ مطلقِ جابه‌جایی» کار می‌کنیم تا در هر دو جهت درست باشد.
+  var _navRTL = getComputedStyle(nav).direction === 'rtl';
+  nav.addEventListener('wheel', function(e){
+    if (nav.scrollWidth <= nav.clientWidth + 1) return; // چیزی برای اسکرول نیست
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; // خودش افقی است؛ دست نزن
+    var step = e.deltaMode === 1 ? e.deltaY * 24 : e.deltaY; // خطی ← پیکسل
+    var max  = nav.scrollWidth - nav.clientWidth;
+    var mag  = Math.abs(nav.scrollLeft);
+    var next = Math.min(max, Math.max(0, mag + step));
+    if (next === mag) return;               // به انتها رسیده — رفتار پیش‌فرض بماند
+    nav.scrollLeft = _navRTL ? -next : next;
+    e.preventDefault();
+  }, { passive:false });
+
+  // کشیدن با موس (درگ) برای رفتن به بخش‌های دیگر — یک راهِ دیگر روی دسکتاپ.
+  var dragging = false, startX = 0, startScroll = 0, moved = 0;
+  nav.addEventListener('pointerdown', function(e){
+    if (e.pointerType === 'touch') return;      // لمسی خودش اسکرول دارد
+    if (nav.scrollWidth <= nav.clientWidth + 1) return;
+    dragging = true; moved = 0;
+    startX = e.clientX; startScroll = nav.scrollLeft;
+  });
+  nav.addEventListener('pointermove', function(e){
+    if (!dragging) return;
+    var dx = e.clientX - startX;
+    moved += Math.abs(dx);
+    nav.scrollLeft = startScroll - dx;
+    if (Math.abs(dx) > 4) e.preventDefault();
+  });
+  function endDrag(){ dragging = false; }
+  nav.addEventListener('pointerup', endDrag);
+  nav.addEventListener('pointercancel', endDrag);
+  nav.addEventListener('pointerleave', endDrag);
+  // اگر کاربر واقعاً کشید (نه کلیک ساده)، کلیکِ ناخواستهٔ دکمه را بگیر
+  nav.addEventListener('click', function(e){
+    if (moved > 6) { e.preventDefault(); e.stopPropagation(); moved = 0; }
+  }, true);
 })();
 </script>
 
