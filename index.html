@@ -6192,17 +6192,17 @@ body.viewer-mode .inv-admin-only{display:none!important}
       <div class="xls-wrap">
         <table class="xls-tbl" id="pm-tbl">
           <thead><tr>
-            <th style="min-width:24px">#</th>
-            <th>تاریخ</th>
-            <th>نام</th>
-            <th>نمبر حواله</th>
+            <th style="width:30px;min-width:24px">#</th>
+            <th style="width:92px;min-width:80px">تاریخ</th>
+            <th style="min-width:150px">نام</th>
+            <th style="width:64px;min-width:52px">نمبر حواله</th>
             <th>نوع تیل</th>
-            <th>مقدار تیل</th>
-            <th>فی لیتر</th>
-            <th>مقدار بردگی</th>
-            <th>رسید</th>
-            <th>الباقی</th>
-            <th>حذف</th>
+            <th style="width:58px;min-width:48px">مقدار تیل</th>
+            <th style="width:58px;min-width:48px">فی لیتر</th>
+            <th style="width:92px;min-width:82px">مقدار بردگی</th>
+            <th style="width:92px;min-width:82px">رسید</th>
+            <th style="width:92px;min-width:82px">الباقی</th>
+            <th style="width:44px">حذف</th>
           </tr></thead>
           <tbody id="pm-body"></tbody>
           <tfoot class="xls-foot"><tr>
@@ -6281,18 +6281,18 @@ body.viewer-mode .inv-admin-only{display:none!important}
       <div class="xls-wrap">
         <table class="xls-tbl" id="cm-tbl">
           <thead><tr>
-            <th style="min-width:24px">#</th>
-            <th>تاریخ</th>
-            <th>نام</th>
-            <th>خرید (کیلو)</th>
-            <th>قیمت تن ($)</th>
-            <th style="min-width:120px">کل ($)</th>
+            <th style="width:30px;min-width:24px">#</th>
+            <th style="width:92px;min-width:80px">تاریخ</th>
+            <th style="min-width:160px">نام</th>
+            <th style="width:100px;min-width:95px">خرید (کیلو)</th>
+            <th style="width:100px;min-width:95px">قیمت تن ($)</th>
+            <th style="width:100px;min-width:95px">کل ($)</th>
             <th style="width:58px;min-width:48px">نرخ</th>
-            <th style="min-width:125px">کل (افغانی)</th>
-            <th style="min-width:110px">رسید</th>
+            <th style="width:100px;min-width:95px">کل (افغانی)</th>
+            <th style="width:100px;min-width:95px">رسید</th>
             <th style="width:60px;min-width:52px;font-size:0.75rem">نرخ پول</th>
-            <th style="min-width:120px">الباقی</th>
-            <th>حذف</th>
+            <th style="width:100px;min-width:95px">الباقی</th>
+            <th style="width:44px">حذف</th>
           </tr></thead>
           <tbody id="cm-body"></tbody>
           <tfoot class="xls-foot"><tr>
@@ -9256,7 +9256,10 @@ function _renderFuelSection(fuelType, containerId, label) {
   if (lastPerLiter) DB['buyPerLiter_' + fuelType] = lastPerLiter;
 
   const moneyBox = document.createElement('div');
-  moneyBox.style.cssText = 'background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:16px';
+  // translateZ(0): لایهٔ پایدارِ کامپوزیتور — روی گرافیکِ «سبک» جعبهٔ «خلاصهٔ پول‌ها»
+  // هنگام اسکرول گاهی سفید/خالی می‌شد و اعداد دیده نمی‌شد (همان باگِ کاشیِ خالی
+  // که برای مخزن/سربرگ هم با همین روش حل شد)
+  moneyBox.style.cssText = 'background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:16px;transform:translateZ(0)';
   moneyBox.innerHTML = `
     <div style="font-size:0.78rem;font-weight:700;color:var(--muted);margin-bottom:10px">💰 خلاصه پول‌ها — ${label}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
@@ -9832,11 +9835,11 @@ function renderPersonRows(person) {
     tr.innerHTML = `
       <td class="xls-num">${n2fa(shown)}</td>
       <td><input class="xls-in" value="${r.date||''}" onchange="updatePersonRow('${person.id}',${i},'date',this.value)"></td>
-      <td><input class="xls-in" value="${escFa(r.name)}" placeholder="نام" onchange="updatePersonRow('${person.id}',${i},'name',this.value)"></td>
-      <td><input class="xls-in" value="${r.hawala||''}" placeholder="حواله" style="min-width:90px" onchange="updatePersonRow('${person.id}',${i},'hawala',this.value)"></td>
+      <td><input class="xls-in" value="${escFa(r.name)}" placeholder="نام" style="min-width:140px" onchange="updatePersonRow('${person.id}',${i},'name',this.value)"></td>
+      <td><input class="xls-in" value="${r.hawala||''}" placeholder="#" inputmode="numeric" style="min-width:48px;max-width:64px" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="updatePersonRow('${person.id}',${i},'hawala',this.value)"></td>
       ${ftCell}
-      <td><input class="xls-in" type="number" value="${r.fuel||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'fuel',this.value)"></td>
-      <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'priceper',this.value)"></td>
+      <td><input class="xls-in" type="number" value="${r.fuel||''}" placeholder="0" style="min-width:46px;max-width:64px" oninput="calcPersonRow('${person.id}',${i},'fuel',this.value)"></td>
+      <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="0" style="min-width:44px;max-width:60px" oninput="calcPersonRow('${person.id}',${i},'priceper',this.value)"></td>
       <td><input class="xls-in pm-bardagi-cell" type="number" value="${parseFloat(bardagi)||''}" placeholder="0" style="color:var(--accent);font-weight:700" oninput="calcPersonRow('${person.id}',${i},'bardagi',this.value)"></td>
       <td><input class="xls-in" type="number" value="${r.rasid||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasid',this.value)"></td>
       <td class="pm-albaqi-cell" style="font-weight:700;color:${((r.rasid||0)-parseFloat(bardagi))<0?'var(--red)':'var(--green)'}">${n2fa((r.rasid||0)-parseFloat(bardagi))}</td>
@@ -11937,12 +11940,12 @@ function renderCompanyRows(company) {
     tr.innerHTML = `
       <td class="xls-num">${n2fa(dispNum)}${linked ? '<div style="font-size:0.6rem;color:var(--accent);line-height:1">📦</div>' : ''}</td>
       <td><input class="xls-in" value="${cmpEsc(r.date||'')}" placeholder="تاریخ" ${linked ? roAttr : `onchange="updateCompanyRow('${company.id}',${i},'date',this.value)"`}></td>
-      <td><input class="xls-in" value="${cmpEsc(r.name||'')}" placeholder="نام" ${linked ? roAttr : `onchange="updateCompanyRow('${company.id}',${i},'name',this.value)"`}></td>
-      <td><input class="xls-in" type="number" value="${kgVal}" placeholder="" ${linked ? roAttr : `oninput="calcCompanyRow('${company.id}',${i},'kg',this.value)"`}></td>
-      <td><input class="xls-in sm" type="number" value="${r.usd||''}" placeholder="0" ${linked ? roAttr : `oninput="calcCompanyRow('${company.id}',${i},'usd',this.value)"`}></td>
-      <td id="cm-tusd-${i}" style="font-weight:700;color:var(--blue);min-width:120px;font-size:0.92rem">${n2fa(totalUsd.toFixed(1))} $</td>
+      <td><input class="xls-in" value="${cmpEsc(r.name||'')}" placeholder="نام" style="min-width:150px" ${linked ? roAttr : `onchange="updateCompanyRow('${company.id}',${i},'name',this.value)"`}></td>
+      <td><input class="xls-in" type="number" value="${kgVal}" placeholder="" style="min-width:80px" ${linked ? roAttr : `oninput="calcCompanyRow('${company.id}',${i},'kg',this.value)"`}></td>
+      <td><input class="xls-in sm" type="number" value="${r.usd||''}" placeholder="0" style="min-width:80px" ${linked ? roAttr : `oninput="calcCompanyRow('${company.id}',${i},'usd',this.value)"`}></td>
+      <td id="cm-tusd-${i}" style="font-weight:700;color:var(--blue);min-width:95px;font-size:0.92rem">${n2fa(totalUsd.toFixed(1))} $</td>
       <td><input class="xls-in xs" type="number" value="${r.rate||''}" placeholder="0" ${linked ? roAttr : `oninput="calcCompanyRow('${company.id}',${i},'rate',this.value)"`}></td>
-      <td id="cm-tafn-${i}" style="font-weight:700;color:var(--accent);min-width:125px;font-size:0.92rem">${n2fa(Math.round(totalAfn))}</td>
+      <td id="cm-tafn-${i}" style="font-weight:700;color:var(--accent);min-width:95px;font-size:0.92rem">${n2fa(Math.round(totalAfn))}</td>
       <td>
         <div style="display:flex;gap:3px;align-items:center">
           <input class="xls-in" type="number" value="${r.poul||''}" placeholder="0" style="min-width:55px" oninput="calcCompanyRow('${company.id}',${i},'poul',this.value)">
@@ -11953,7 +11956,7 @@ function renderCompanyRows(company) {
         </div>
       </td>
       <td><input class="xls-in xs" type="number" value="${r.payRate||''}" placeholder="0" style="width:50px" oninput="calcCompanyRow('${company.id}',${i},'payRate',this.value)" title="نرخ تبدیل رسید افغانی — فقط برای رسید افغانی"></td>
-      <td id="cm-albaqi-${i}" style="font-weight:700;color:${albaqi>0?'var(--red)':'var(--green)'};min-width:120px;font-size:0.92rem">${n2fa(Math.round(albaqi))}${albaqiExtra}</td>
+      <td id="cm-albaqi-${i}" style="font-weight:700;color:${albaqi>0?'var(--red)':'var(--green)'};min-width:95px;font-size:0.92rem">${n2fa(Math.round(albaqi))}${albaqiExtra}</td>
       <td>${linked ? `<button class="del-btn" onclick="deletePurchase(${r.srcPurchaseId})">🗑️</button>` : `<button class="del-btn" onclick="deleteCompanyRow('${company.id}',${i})">🗑️</button>`}</td>
     `;
     tbody.appendChild(tr);
@@ -17326,7 +17329,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.8.6';
+const APP_VERSION = '2.8.7';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
