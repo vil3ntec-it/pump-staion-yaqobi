@@ -217,7 +217,14 @@ body.light-mode #lsStaffBtn{
 /* سربرگ (لوگو/نوار بالایی) دیگر fixed/sticky نیست — بخشی از جریان عادی صفحه است
    و با اولین اسکرول به‌طور کامل از صفحه خارج می‌شود. تنها چیزی که هنگام اسکرول
    می‌چسبد نوار تب‌هاست (.nav، پایین‌تر) نه سربرگ. */
-.header{background:var(--panel);border-bottom:2px solid var(--accent);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;box-sizing:border-box}
+/* transform:translateZ(0) → سربرگ روی لایهٔ کامپوزیتور جداگانهٔ خودش رندر می‌شود.
+   حالا که سربرگ دیگر fixed نیست، بدون این لایهٔ مستقل، ترکیب متن گرادیانی
+   عنوان (-webkit-text-fill-color:transparent + background-clip:text) و
+   گرادیان متحرک تم اولترا هنگام اسکرول روی برخی گوشی‌های اندروید واقعی
+   می‌تواند به‌صورت خالی/نامرئی رندر شود (دقیقاً همان دستهٔ باگِ «کاشی خالی حین
+   اسکرول» که قبلاً در این پروژه برای همین سربرگ مستند شده — نگاه کنید به
+   کامنت gfxUltraChrome). با هدلس/دسکتاپ تکرار نمی‌شود، فقط روی GPU واقعی. */
+.header{background:var(--panel);border-bottom:2px solid var(--accent);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;box-sizing:border-box;transform:translateZ(0)}
 .header-title{font-size:1.1rem;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:8px}
 .header-right{display:flex;align-items:center;gap:12px}
 .header-date{font-size:0.8rem;color:var(--muted)}
