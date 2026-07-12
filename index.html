@@ -3226,6 +3226,16 @@ body.gfx-performance .tank-card{
   -webkit-backdrop-filter:none !important; backdrop-filter:none !important;
   transform:none !important;
 }
+/* مخزن (tank-card) روی گرافیکِ «سبک» گاهی هنگام اسکرول یا بازکردنِ دوبارهٔ صفحه
+   کاملاً سفید/خالی می‌شد و نوشته‌هایش (نامِ مخزن، لیترِ باقی‌مانده، جمع‌ها) دیده
+   نمی‌شد — همان باگِ «کاشیِ خالیِ کامپوزیتور» روی GPUهای واقعیِ اندروید که قبلاً
+   برای سربرگ با translateZ(0) حل شد (کامنت gfxUltraChrome/هدر). چون سبک همهٔ
+   transformها را none می‌کند، این کارت لایهٔ پایدارِ خودش را از دست می‌داد؛ اینجا
+   دوباره یک لایهٔ اختصاصی به آن می‌دهیم بدون اینکه هیچ حرکت/انیمیشنی اضافه شود. */
+body.gfx-performance .tank-card{ transform:translateZ(0) !important; }
+body.gfx-performance .tank-info,
+body.gfx-performance .tank-head,
+body.gfx-performance .tank-current{ transform:translateZ(0); }
 body.gfx-performance .card-head{ background:var(--panel) !important; border-bottom:1px solid var(--border) !important; }
 /* neon section banners → plain labelled bars */
 body.gfx-performance #sec-storage::before,
@@ -5368,6 +5378,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
     <div class="card-head">
       <div style="display:flex;align-items:center;gap:10px">
         <div class="card-title"><svg class="nav-ic"><use href="#ic-att"/></svg> حاضری و معاش کارمندان</div>
+        <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('attendance',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('attendance',0.08)">A+</button></span>
       </div>
     </div>
     <div class="att-form att-admin">
@@ -9761,7 +9772,7 @@ function renderPersonRows(person) {
   let shown = 0;
   rows.forEach((r, i) => {
     // ردیف «پولی» (byMoney): بردگی مستقیم پول است، نه ضربِ لیتر×فی
-    const bardagi = (r.byMoney ? (parseFloat(r.bardagi)||0) : (r.fuel||0) * (r.priceper||0)).toFixed(0);
+    const bardagi = (r.byMoney ? (parseFloat(r.bardagi)||0) : _fuelBardagi(r)).toFixed(0);
     const albaqi  = (parseFloat(bardagi) - (r.rasid||0)).toFixed(0);
     // auto-store calculated values
     if (r.bardagi !== parseFloat(bardagi)) { r.bardagi = parseFloat(bardagi); }
@@ -9874,7 +9885,7 @@ function _renderStackedAccounts(person) {
       rowsHtml = `<tr><td colspan="11" style="text-align:center;padding:14px;color:var(--muted);font-size:0.82rem">هیچ ردیفی ثبت نشده</td></tr>`;
     } else {
       rows.forEach((r, i) => {
-        const bardagi = (r.byMoney?(parseFloat(r.bardagi)||0):(r.fuel||0)*(r.priceper||0)).toFixed(0);
+        const bardagi = (r.byMoney?(parseFloat(r.bardagi)||0):_fuelBardagi(r)).toFixed(0);
         const albaqi = (parseFloat(bardagi)-(r.rasid||0)).toFixed(0);
         const isP = r.ftype !== 'diesel';
         const rn = 'sft-' + sec.acctId + '-' + i;
@@ -9938,7 +9949,7 @@ function calcStackedRow(pid, acctId, idx, field, value) {
   r[field] = parseFloat(value)||0;
   if (field==='bardagi') r.byMoney=true;
   else if (field==='fuel'||field==='priceper') { if ((r.fuel||0)>0||(r.priceper||0)>0) r.byMoney=false; }
-  if (!r.byMoney) r.bardagi=(r.fuel||0)*(r.priceper||0);
+  if (!r.byMoney) r.bardagi=_fuelBardagi(r);
   r.albaqi=(parseFloat(r.bardagi)||0)-(r.rasid||0);
   save(); _updatePersonTotals(person); _renderStackedAccounts(person); renderPersons(currentPersonType); updateBanner();
 }
@@ -10148,7 +10159,7 @@ function calcPersonRow(pid, idx, field, value) {
   // نوشتن مستقیم در «بردگی» = حالت پولی؛ نوشتن لیتر یا فی = حالت تیل (بردگی = لیتر×فی)
   if (field === 'bardagi') r.byMoney = true;
   else if (field === 'fuel' || field === 'priceper') { if ((r.fuel||0) > 0 || (r.priceper||0) > 0) r.byMoney = false; }
-  if (!r.byMoney) r.bardagi = (r.fuel||0) * (r.priceper||0);
+  if (!r.byMoney) r.bardagi = _fuelBardagi(r);
   r.albaqi = (parseFloat(r.bardagi)||0) - (r.rasid||0);
   save();
   _updatePersonRowCells(person, idx, r);
@@ -10390,7 +10401,7 @@ function _renderHistoryPanel(person) {
     const filterBarHtml = `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:8px 10px 0">${fBtn('all','📋 همه')}${fBtn('petrol','⛽ حساب جداگانه پطرول')}${fBtn('diesel','🟤 حساب جداگانه دیزل')}</div>`;
     // xls table with editable rows
     let rowsHtml = viewRows.map(({ r, ri }, vi) => {
-      const bard = r.byMoney ? (r.bardagi||0) : ((r.fuel||0)*(r.priceper||0));
+      const bard = r.byMoney ? (r.bardagi||0) : _fuelBardagi(r);
       const alb  = bard - (r.rasid||0);
       return `<tr>
         <td class="xls-num">${n2fa(vi+1)}</td>
@@ -10406,7 +10417,7 @@ function _renderHistoryPanel(person) {
       </tr>`;
     }).join('');
     if (!rowsHtml) rowsHtml = `<tr><td colspan="10" style="text-align:center;padding:12px;color:var(--muted);font-size:0.82rem">${hFilter==='petrol'?'⛽ هیچ ردیف پطرولی ثبت نشده':(hFilter==='diesel'?'🟤 هیچ ردیف دیزلی ثبت نشده':'هیچ ردیفی ثبت نشده')}</td></tr>`;
-    const viewAlbaqi = viewRows.reduce((s, x) => s + ((x.r.byMoney ? (x.r.bardagi||0) : ((x.r.fuel||0)*(x.r.priceper||0))) - (x.r.rasid||0)), 0);
+    const viewAlbaqi = viewRows.reduce((s, x) => s + ((x.r.byMoney ? (x.r.bardagi||0) : _fuelBardagi(x.r)) - (x.r.rasid||0)), 0);
     const tableHtml = filterBarHtml + `
       <div class="xls-wrap" style="margin:8px 10px;border-radius:9px;overflow:hidden">
         <div style="overflow-x:auto">
@@ -10473,7 +10484,7 @@ function pdfPersonHistory(pid, hid) {
         remD = bordD + commD - rasidD - (money ? st.diesel.rasid : 0);
   const archiveLabel = h.note ? h.note.split('\n')[0].substring(0,50) : '';
   const tableRows = rows.map((r,i) => {
-    const bard = r.byMoney ? (r.bardagi||0) : ((r.fuel||0)*(r.priceper||0));
+    const bard = r.byMoney ? (r.bardagi||0) : _fuelBardagi(r);
     const alb = bard - (r.rasid||0);
     return `<tr>
       <td style="text-align:center;color:#718096">${i+1}</td>
@@ -10574,7 +10585,7 @@ function calcHistoryRow(pid, hid, idx, field, value) {
   const h = _hEntry(pid, hid); if (!h || !h.rows[idx]) return;
   const r = h.rows[idx];
   if (field === 'bardagi') { r.byMoney = true; r.bardagi = parseFloat(value)||0; }
-  else { r[field] = parseFloat(value)||0; if (!r.byMoney) r.bardagi = (r.fuel||0)*(r.priceper||0); }
+  else { r[field] = parseFloat(value)||0; if (!r.byMoney) r.bardagi = _fuelBardagi(r); }
   r.albaqi = (r.bardagi||0) - (r.rasid||0);
   save(); _rerenderHistoryPreserveFocus(person);
 }
@@ -10898,6 +10909,16 @@ function deleteExpense(i) {
 }
 
 // ========== رسید پارچه‌ها ==========
+// بردگی در حالتِ تیل = لیتر × فی. ولی اگر کاربر هنوز فقط یکی از «مقدار تیل» یا
+// «فی لیتر» را نوشته باشد (مثلاً تیل را زده اما فی را هنوز نه)، بردگیِ قبلیِ آن
+// کادر نباید صفر/پاک شود؛ فقط وقتی هر دو موجود باشند ضرب انجام می‌شود. اگر هر دو
+// خالی باشند بردگی صفر می‌شود (ردیفِ پاک).
+function _fuelBardagi(r) {
+  const f = parseFloat(r.fuel) || 0, p = parseFloat(r.priceper) || 0;
+  if (f > 0 && p > 0) return f * p;
+  if (f === 0 && p === 0) return 0;
+  return parseFloat(r.bardagi) || 0;
+}
 function ensureRasid() { if (!DB.parchaReceipts) DB.parchaReceipts = []; return DB.parchaReceipts; }
 function _newRasidRow() {
   return { id: 'pr' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
@@ -10922,7 +10943,7 @@ function renderRasid() {
   }
   rows.slice(_rsStart).forEach((r, _k) => {
     const i = _rsStart + _k;
-    const bardagi = Math.round((parseFloat(r.fuel)||0) * (parseFloat(r.priceper)||0));
+    const bardagi = Math.round(_fuelBardagi(r));
     const albaqi = bardagi - (parseFloat(r.rasid)||0);
     r.bardagi = bardagi; r.albaqi = albaqi;
     const tr = document.createElement('tr');
@@ -10968,7 +10989,7 @@ function calcRasidRow(i, field, val) {
   if (!rows[i]) return;
   rows[i][field] = parseFloat(val) || 0;
   const r = rows[i];
-  const bardagi = Math.round((parseFloat(r.fuel)||0) * (parseFloat(r.priceper)||0));
+  const bardagi = Math.round(_fuelBardagi(r));
   const albaqi = bardagi - (parseFloat(r.rasid)||0);
   r.bardagi = bardagi; r.albaqi = albaqi;
   save();
@@ -10987,7 +11008,7 @@ function _postRasidRow(r) {
   // برمی‌گرداند: 'ok' | 'dup' | 'notfound'
   const person = matchDebtPersonByText(r.account) || matchDebtPersonByText(r.name);
   if (!person) return 'notfound';
-  const bardagi = Math.round((parseFloat(r.fuel)||0) * (parseFloat(r.priceper)||0));
+  const bardagi = Math.round(_fuelBardagi(r));
   if (alreadyReceivedFromWaraq(person, r.fuel, bardagi, r.hawala)) return 'dup';
   const rasid = parseFloat(r.rasid)||0;
   // نوع تیل از متن تشخیص داده می‌شود و کلماتِ «دیزل/پطرول» از نامِ نمایشی حذف می‌شوند
@@ -14192,11 +14213,12 @@ function updateSarrafiRow(idx, field, val) {
     syncSarrafiToCompany(rows[idx]);
   }
   if (field === 'date') {
-    // اگر تاریخِ تازه به ماهِ دیگری تعلق دارد، تبِ ماهِ فعال هم روی همان ماه
-    // سوییچ می‌شود — وگرنه رندر کامل ردیف را از دیدِ تبِ فعلی (که فیلتر می‌کند)
-    // بیرون می‌انداخت و انگار ردیف/کادر پاک شده بود
-    _sarrafiActiveMonth = sarrafiMonthKey(rows[idx].date);
-    renderSarrafi();
+    // نکته: تاریخ با onchange (هنگام خروج از کادر) صدا زده می‌شود. رندر کاملِ
+    // جدول اینجا، کادری را که کاربر تازه لمس کرده بود نابود می‌کرد؛ نتیجه:
+    // کیبورد بسته می‌شد و متن پاک به‌نظر می‌رسید. پس فقط لیستِ ماه‌ها را به‌روز
+    // می‌کنیم (تا اگر ماهِ جدیدی ساخته شد در انتخاب‌گر بیاید) و جدول را بازسازی
+    // نمی‌کنیم؛ ردیف تا سویچِ بعدیِ ماه سرِ جای خودش می‌ماند و داده سالم است.
+    renderSarrafiMonthTabs();
     return;
   }
   // فقط مقدار باقی‌مانده همین ردیف و جمع‌ها را آپدیت کن (بدون رندر کامل، برای سرعت)
@@ -17239,7 +17261,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.8.2';
+const APP_VERSION = '2.8.3';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -17650,14 +17672,14 @@ function adjSecFont(secId, delta) {
   if (!sec) return;
   _secFontScales[secId] = Math.min(2.5, Math.max(0.5, (_secFontScales[secId] || 1) + delta));
   const scale = _secFontScales[secId];
-  sec.querySelectorAll('th,td,.field-label,.field-input,.calc-row,.stat-label,.stat-value,.pname,.pdebt,.xls-in,.xls-calc,.xls-num,.fs-cell .l,.fs-cell .v,.msumbox .ml,.msumbox .mv,.tb-label,.tb-value,.pl-card-title,.pl-big,.pl-result-label,.pl-result-value,.pl-result-sub,.pl-field label,.ei-in,.tank-head,.tank-current,.tank-chip,.tank-meta div,.tank-cap,.fuel-entry-item,.fuel-total-bar,.settings-title,.pw-field label,.pw-field input,.settings-card > div').forEach(el => {
+  sec.querySelectorAll('th,td,.field-label,.field-input,.calc-row,.stat-label,.stat-value,.pname,.pdebt,.xls-in,.xls-calc,.xls-num,.fs-cell .l,.fs-cell .v,.msumbox .ml,.msumbox .mv,.tb-label,.tb-value,.pl-card-title,.pl-big,.pl-result-label,.pl-result-value,.pl-result-sub,.pl-field label,.ei-in,.tank-head,.tank-current,.tank-chip,.tank-meta div,.tank-cap,.fuel-entry-item,.fuel-total-bar,.settings-title,.pw-field label,.pw-field input,.settings-card > div,.att-card,.at-nm,.att-chip,.att-now-row button,.att-sum .l,.att-sum .v,.att-pay,.att-pay button,.att-tbl input,.sm-field label,.sm-field input').forEach(el => {
     if (!el.dataset.origFs) el.dataset.origFs = parseFloat(getComputedStyle(el).fontSize);
     el.style.fontSize = (parseFloat(el.dataset.origFs) * scale) + 'px';
   });
   try { localStorage.setItem('secFont_' + secId, scale); } catch(e) {}
 }
 function loadSecFonts() {
-  ['shifts','shifts-diesel','debt','debtrasid','debtsum','noinv','expenses','safe','sarrafi','rasid','storage','storage-diesel','profit','extraincome','settings','waraq'].forEach(id => {
+  ['shifts','shifts-diesel','debt','debtrasid','debtsum','noinv','expenses','safe','sarrafi','rasid','storage','storage-diesel','profit','extraincome','settings','waraq','attendance'].forEach(id => {
     const saved = parseFloat((function(){ try { return localStorage.getItem('secFont_' + id) || 0; } catch(e){ return 0; } })());
     if (saved && saved !== 1) {
       _secFontScales[id] = saved;
@@ -17749,11 +17771,16 @@ function _pickInDirection(el, dir, cands){
     const cr = c.getBoundingClientRect();
     const ccx = cr.left + cr.width/2, ccy = cr.top + cr.height/2;
     const dx = ccx - cx, dy = ccy - cy;
+    // هم‌راستایی دقیق: مرکزِ کاندید باید داخلِ گسترهٔ محورِ عمود بر جهتِ حرکتِ
+    // فیلدِ فعلی باشد (چپ/راست → مرکزِ عمودیِ کاندید داخلِ ارتفاعِ همین ردیف؛
+    // بالا/پایین → مرکزِ افقیِ کاندید داخلِ عرضِ همین ستون). این سخت‌گیری جلوی
+    // پرشِ کلیدِ چپ/راست به کادرِ یکی-دو ردیف پایین‌تر (که فقط کمی هم‌پوشانی
+    // داشت) را می‌گیرد.
     let valid, primary, secondary, aligned;
-    if (dir === 'up')        { valid = dy < -3; primary = -dy; secondary = Math.abs(dx); aligned = cr.left < r.right && cr.right > r.left; }
-    else if (dir === 'down') { valid = dy > 3;  primary = dy;  secondary = Math.abs(dx); aligned = cr.left < r.right && cr.right > r.left; }
-    else if (dir === 'left') { valid = dx < -3; primary = -dx; secondary = Math.abs(dy); aligned = cr.top < r.bottom && cr.bottom > r.top; }
-    else                     { valid = dx > 3;  primary = dx;  secondary = Math.abs(dy); aligned = cr.top < r.bottom && cr.bottom > r.top; }
+    if (dir === 'up')        { valid = dy < -3; primary = -dy; secondary = Math.abs(dx); aligned = ccx >= r.left && ccx <= r.right; }
+    else if (dir === 'down') { valid = dy > 3;  primary = dy;  secondary = Math.abs(dx); aligned = ccx >= r.left && ccx <= r.right; }
+    else if (dir === 'left') { valid = dx < -3; primary = -dx; secondary = Math.abs(dy); aligned = ccy >= r.top && ccy <= r.bottom; }
+    else                     { valid = dx > 3;  primary = dx;  secondary = Math.abs(dy); aligned = ccy >= r.top && ccy <= r.bottom; }
     if (!valid) continue;
     const score = primary + secondary * 2.2;
     if (score < bestScore) { bestScore = score; best = c; }
@@ -18215,7 +18242,7 @@ const _stp = document.getElementById('st-phone'); if (_stp) _stp.value = DB.stat
 loadFontScale();
 // اعمال دوبارهٔ اندازهٔ فونت ذخیره‌شده بعد از هر رندر — تا تنظیم A+/A- با رفت‌وآمد بین بخش‌ها یا تایپ از بین نرود
 (function(){
-  const secOfRender = { renderLog:'shifts', renderDieselLog:'shifts-diesel', renderPersons:'debt', renderCompanies:'noinv', renderExpenses:'expenses', renderSafe:'safe', renderSarrafi:'sarrafi', renderDebtRasid:'debtrasid', renderDebtSummary:'debtsum', renderWaraqList:'waraq' };
+  const secOfRender = { renderLog:'shifts', renderDieselLog:'shifts-diesel', renderPersons:'debt', renderCompanies:'noinv', renderExpenses:'expenses', renderSafe:'safe', renderSarrafi:'sarrafi', renderDebtRasid:'debtrasid', renderDebtSummary:'debtsum', renderWaraqList:'waraq', renderAttendance:'attendance' };
   Object.keys(secOfRender).forEach(fn => {
     const orig = window[fn];
     if (typeof orig !== 'function') return;
