@@ -100,9 +100,23 @@ body.light-mode .daynight-toggle .dn-bird{opacity:.85}
 .daynight-toggle .dn-thumb{position:absolute;top:2.5px;left:34px;width:23px;height:23px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffffff,#eef3ff 55%,#d8e6ff 100%);box-shadow:0 0 6px 1.5px rgba(255,255,255,.85),0 0 16px 4px rgba(190,210,255,.55),0 1px 2px rgba(0,0,0,.25);transition:left .4s cubic-bezier(.34,1.3,.4,1),background .4s ease,box-shadow .4s ease}
 body.light-mode .daynight-toggle .dn-thumb{left:3px;background:radial-gradient(circle at 35% 30%,#fffef2,#fff6cf 55%,#ffd34d 100%);box-shadow:0 0 7px 2px rgba(255,240,180,.9),0 0 18px 4px rgba(255,210,90,.55),0 1px 2px rgba(120,70,0,.25)}
 *{box-sizing:border-box;margin:0;padding:0}
-html{background:#0d1117;min-height:100vh}
+/* بدون کش‌آمدن/فنری‌شدن (bounce/elastic) در انتهای اسکرول، در کل برنامه.
+   overflow-x:hidden فقط روی html است، نه body — گذاشتنش روی body یک ظرفِ
+   اسکرولِ جدید می‌سازد و sticky (نوار تب‌ها) را نسبت به صفحه می‌شکند؛ body
+   کنترل افقی خودش را جداگانه با overflow-x:clip دارد (پایین‌تر) که این مشکل را ندارد. */
+html{background:#0d1117;min-height:100vh;overflow-x:hidden;overscroll-behavior:none;scroll-behavior:auto}
 body.light-mode ~ html,body.light-mode+html{background:#f0f4f8}
-body{font-family:'Vazirmatn',sans-serif;background:none;color:var(--txt);min-height:100vh}
+body{font-family:'Vazirmatn',sans-serif;background:none;color:var(--txt);min-height:100vh;overscroll-behavior:none}
+/* همان بدون-فنری برای همهٔ ظرف‌های اسکرول‌دار داخل برنامه (جدول‌ها، مودال‌ها،
+   لیست‌های چت، صفحه‌های فاکتور/کارمند/شرکت‌ها) — selectorهای attribute هم
+   ظرف‌های اسکرولِ inline-style را می‌گیرند بدون نیاز به لمس تک‌تکشان */
+.tbl-wrap,.xls-wrap,.modal-body,.ch-list,.ro-body,.inv-ov-body,
+#chat-trash-body,#dmThreads,#company-ro-table-wrap,
+[style*="overflow-y:auto"],[style*="overflow-y: auto"],
+[style*="overflow-x:auto"],[style*="overflow-x: auto"],
+[style*="overflow:auto"],[style*="overflow: auto"]{
+  overscroll-behavior:none;
+}
 /* PERFORMANCE FIX: this full-viewport layer used to run backdrop-filter:blur(20px)
    AND filter:blur(24px) permanently on every screen size — a constant, expensive
    full-screen blur. Previously only turned off on mobile; now off everywhere. */
@@ -200,12 +214,10 @@ body.light-mode #lsStaffBtn{
   .ls-geo-3{ width:96px; height:96px; }
 }
 
-/* سربرگ همیشه در بالای صفحه قفل است (position:fixed) — با هیچ مقدار اسکرولی حرکت نمی‌کند.
-   جای خالی‌اش با padding-top روی #app جبران می‌شود (متغیر --header-h با JS از ارتفاع واقعی
-   سربرگ اندازه می‌شود؛ سربرگ در موبایل wrap می‌شود و ارتفاع ثابتی ندارد).
-   z-index:290 → بالای همهٔ محتوا و نوار بخش‌ها (250)، ولی زیر مودال‌ها (300) تا پاپ‌آپ‌ها روی سربرگ باز شوند */
-.header{background:var(--panel);border-bottom:2px solid var(--accent);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:fixed;top:0;left:0;right:0;width:100%;box-sizing:border-box;z-index:290}
-#app{padding-top:var(--header-h,64px)}
+/* سربرگ (لوگو/نوار بالایی) دیگر fixed/sticky نیست — بخشی از جریان عادی صفحه است
+   و با اولین اسکرول به‌طور کامل از صفحه خارج می‌شود. تنها چیزی که هنگام اسکرول
+   می‌چسبد نوار تب‌هاست (.nav، پایین‌تر) نه سربرگ. */
+.header{background:var(--panel);border-bottom:2px solid var(--accent);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;box-sizing:border-box}
 .header-title{font-size:1.1rem;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:8px}
 .header-right{display:flex;align-items:center;gap:12px}
 .header-date{font-size:0.8rem;color:var(--muted)}
@@ -4137,7 +4149,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
          داخلش بود، با هر تغییر نام ایستگاه ناپدید می‌شد -->
     <button class="theme-toggle" id="pwaRefreshBtn" onclick="location.reload()" title="تازه‌سازی صفحه (اطلاعات پاک نمی‌شود)" aria-label="تازه‌سازی صفحه" style="padding:5px 9px;border-radius:7px;border:1px solid var(--border);background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.8rem;cursor:pointer">🔄</button>
   </div>
-  <span class="app-version" style="position:fixed;top:6px;left:50%;transform:translateX(-50%);z-index:150"></span>
+  <span class="app-version"></span>
   <div class="header-right">
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
       <div class="header-date" id="headerDate" style="font-size:0.98rem;font-weight:800;color:var(--txt)"></div>
@@ -5404,48 +5416,51 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
 .inv-stat.pending .cnt{color:#e8930c}
 .inv-stat.approved .cnt{color:var(--green)}
 .inv-stat .go{margin-inline-start:auto;font-size:.72rem;color:var(--muted);white-space:nowrap;display:flex;align-items:center;gap:4px}
-/* ══ برگهٔ فاکتور چاپی (طرح اختصاصی) — زمینهٔ سفید، قاب آبی، مناسب چاپ ══
-   رنگ‌ها عمداً ثابت‌اند (نه متغیر تم): این یک «برگهٔ کاغذی» است و در تم تیره هم
-   باید مثل کاغذ سفید رسمی دیده شود. */
+/* ══ برگهٔ فاکتور (طرح اختصاصی) ══
+   روی صفحهٔ برنامه: رنگ‌ها از متغیرهای تم می‌آیند — با عوض‌شدن تم/دارک‌مود،
+   رنگ برگهٔ فاکتور هم عوض می‌شود. نسخهٔ چاپ/PDF این متغیرها را خودش با مقدار
+   ثابت سفید/آبی بازتعریف می‌کند (invPrint) تا روی کاغذ همیشه یک ظاهر رسمی و
+   یکنواخت چاپ شود — مستقل از تمی که در همان لحظه روی صفحه فعال است. */
 .inv-form-card{max-width:900px;margin:0 auto}
-.invp{position:relative;background:#fff;color:#0f172a;border-radius:14px;box-shadow:0 18px 44px -18px rgba(0,0,0,.55);overflow:hidden;padding:11px}
-.invp-frame{position:relative;border:2.5px solid #1d5bd8;border-radius:10px;padding:20px 22px 172px;overflow:hidden;background:#fff}
-.invp-frame::before{content:"";position:absolute;inset:5px;border:1px solid #1d5bd85c;border-radius:7px;pointer-events:none}
-.invp-corner{position:absolute;width:38px;height:38px;color:#1d5bd8;pointer-events:none;z-index:2}
+.invp{position:relative;background:var(--card);color:var(--txt);border-radius:14px;box-shadow:0 18px 44px -18px rgba(0,0,0,.55);overflow:hidden;padding:11px}
+.invp-frame{position:relative;border:2.5px solid var(--accent);border-radius:10px;padding:20px 22px 172px;overflow:hidden;background:var(--card)}
+.invp-frame::before{content:"";position:absolute;inset:5px;border:1px solid color-mix(in srgb,var(--accent) 36%,transparent);border-radius:7px;pointer-events:none}
+.invp-corner{position:absolute;width:38px;height:38px;color:var(--accent);pointer-events:none;z-index:2}
 .invp-corner.tl{top:9px;left:9px}
 .invp-corner.tr{top:9px;right:9px;transform:scaleX(-1)}
 .invp-corner.bl{bottom:9px;left:9px;transform:scaleY(-1)}
 .invp-corner.br{bottom:9px;right:9px;transform:scale(-1)}
-.invp-nozzle{position:absolute;top:22px;left:26px;width:72px;height:72px;color:#1d5bd8;opacity:.9;pointer-events:none}
-.invp-title{text-align:center;font-size:1.72rem;font-weight:900;color:#12419c;margin:4px 0 0;letter-spacing:.3px}
-.invp-sub{text-align:center;font-size:.7rem;color:#64748b;font-weight:800;letter-spacing:1px;margin-top:2px}
-.invp-wave{display:block;width:100%;height:30px;margin:8px auto 14px;color:#1d5bd8}
+.invp-nozzle{position:absolute;top:22px;left:26px;width:72px;height:72px;color:var(--accent);opacity:.9;pointer-events:none}
+.invp-title{text-align:center;font-size:1.72rem;font-weight:900;color:var(--accent);margin:4px 0 0;letter-spacing:.3px}
+.invp-sub{text-align:center;font-size:.7rem;color:var(--muted);font-weight:800;letter-spacing:1px;margin-top:2px}
+.invp-wave{display:block;width:100%;height:30px;margin:8px auto 14px;color:var(--accent)}
 .invp-meta{display:flex;flex-direction:column;gap:9px;margin:0 0 16px;max-width:430px}
 .invp-meta-line{display:flex;align-items:center;gap:9px;font-size:.86rem;flex-wrap:wrap}
-.invp-meta-line .k{color:#475569;font-weight:800;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
-.invp-meta-line .k .ico{width:19px;height:19px;color:#1d5bd8}
-.invp-badge{display:inline-flex;align-items:center;gap:6px;background:#eef4ff;border:1.6px solid #1d5bd8;border-radius:9px;padding:4px 13px;font-weight:900;font-size:.9rem;color:#12419c}
+.invp-meta-line .k{color:var(--muted);font-weight:800;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.invp-meta-line .k .ico{width:19px;height:19px;color:var(--accent)}
+.invp-badge{display:inline-flex;align-items:center;gap:6px;background:color-mix(in srgb,var(--accent) 12%,var(--card));border:1.6px solid var(--accent);border-radius:9px;padding:4px 13px;font-weight:900;font-size:.9rem;color:var(--accent)}
 /* auto-fit: در ظرف باریک (مودال جزئیات/موبایل) خودکار یک‌ستونه می‌شود و سرریز نمی‌کند */
 .invp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:11px;margin-bottom:13px}
-.invp-row{display:flex;align-items:center;gap:10px;border:1.5px solid #d6e0f5;background:#f8faff;border-radius:11px;padding:10px 13px;transition:border-color .15s,box-shadow .15s;min-width:0;flex-wrap:wrap}
-.invp-row:focus-within{border-color:#1d5bd8;box-shadow:0 0 0 3px #1d5bd81f}
-.invp-row .ico{width:26px;height:26px;flex-shrink:0;color:#1d5bd8}
-.invp-row .k{font-size:.78rem;color:#475569;font-weight:800;white-space:nowrap}
-.invp-row .v{font-weight:900;color:#0f172a;display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap}
-.invp-in{flex:1;min-width:60px;background:transparent;border:none;border-bottom:1.6px dashed #9db1dd;color:#0f172a;font-family:'Vazirmatn',sans-serif;font-size:.98rem;font-weight:800;padding:4px 2px;outline:none;border-radius:0}
-.invp-in:focus{border-bottom-color:#1d5bd8}
-.invp-in::placeholder{color:#94a3b8;font-weight:500}
+.invp-row{display:flex;align-items:center;gap:10px;border:1.5px solid var(--border);background:color-mix(in srgb,var(--accent) 4%,var(--card));border-radius:11px;padding:10px 13px;transition:border-color .15s,box-shadow .15s;min-width:0;flex-wrap:wrap}
+.invp-row:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 12%,transparent)}
+.invp-row .ico{width:26px;height:26px;flex-shrink:0;color:var(--accent)}
+.invp-row .k{font-size:.78rem;color:var(--muted);font-weight:800;white-space:nowrap}
+.invp-row .v{font-weight:900;color:var(--txt);display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap}
+.invp-in{flex:1;min-width:60px;background:transparent;border:none;border-bottom:1.6px dashed var(--muted);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:.98rem;font-weight:800;padding:4px 2px;outline:none;border-radius:0}
+.invp-in:focus{border-bottom-color:var(--accent)}
+.invp-in::placeholder{color:var(--muted);font-weight:500}
 select.invp-in{cursor:pointer}
-select.invp-in option{background:#fff;color:#0f172a}
-.invp-total{display:flex;align-items:center;gap:10px;background:#eef4ff;border:2px solid #1d5bd8;border-radius:12px;padding:12px 16px;flex-wrap:wrap}
-.invp-total .k{font-size:.85rem;color:#12419c;font-weight:900;display:inline-flex;align-items:center;gap:7px}
-.invp-total .k .ico{width:22px;height:22px;color:#1d5bd8}
-.invp-total .tv{margin-inline-start:auto;font-size:1.3rem;font-weight:900;color:#12419c}
+select.invp-in option{background:var(--card);color:var(--txt)}
+.invp-total{display:flex;align-items:center;gap:10px;background:color-mix(in srgb,var(--accent) 12%,var(--card));border:2px solid var(--accent);border-radius:12px;padding:12px 16px;flex-wrap:wrap}
+.invp-total .k{font-size:.85rem;color:var(--accent);font-weight:900;display:inline-flex;align-items:center;gap:7px}
+.invp-total .k .ico{width:22px;height:22px;color:var(--accent)}
+.invp-total .tv{margin-inline-start:auto;font-size:1.3rem;font-weight:900;color:var(--accent)}
 /* واترمارک محو جایگاه سوخت — پایین سمت چپ */
-.invp-station{position:absolute;bottom:14px;left:16px;width:240px;max-width:46%;color:#1d5bd8;opacity:.08;pointer-events:none;z-index:1}
-/* جای مهر — پایین سمت راست؛ قبل از تایید فقط دایرهٔ نقطه‌چینِ «محل مهر» */
+.invp-station{position:absolute;bottom:14px;left:16px;width:240px;max-width:46%;color:var(--accent);opacity:.08;pointer-events:none;z-index:1}
+/* جای مهر — پایین سمت راست؛ قبل از تایید فقط دایرهٔ نقطه‌چینِ «محل مهر». عمداً
+   خالی می‌ماند (نه در برنامه نه در PDF) چون مهر واقعی/فیزیکی همین‌جا زده می‌شود. */
 .invp-stampbox{position:absolute;bottom:22px;right:26px;width:142px;height:142px;pointer-events:none;z-index:3}
-.invp-stamp-ph{position:absolute;inset:6px;border:2px dashed #c3d0ec;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#b6c5e8;font-size:.72rem;font-weight:800;letter-spacing:1px}
+.invp-stamp-ph{position:absolute;inset:6px;border:2px dashed var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:.72rem;font-weight:800;letter-spacing:1px}
 /* ── دکمه‌ها ── */
 .inv-btn-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
 .inv-btn{border:none;border-radius:12px;padding:13px 30px;font-family:'Vazirmatn',sans-serif;font-size:1rem;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:transform .15s,box-shadow .15s,filter .15s}
@@ -5456,7 +5471,9 @@ select.invp-in option{background:#fff;color:#0f172a}
 .inv-btn.reset:hover{color:var(--txt);border-color:var(--muted)}
 body.viewer-mode .inv-admin-only{display:none!important}
 /* ── صفحه‌های لیست (در صف / تایید شده) ── */
-.inv-overlay{position:fixed;inset:0;background:var(--dark);z-index:9500;display:none;flex-direction:column;overflow:hidden}
+/* z-index بالاتر از ماشین‌حساب/ربات شناور (10040-10060) عمداً است: صفحهٔ فاکتور
+   یک صفحهٔ تمام‌صفحه مستقل است و نباید دکمه/پنل ماشین‌حساب یا ربات رویش بماند */
+.inv-overlay{position:fixed;inset:0;background:var(--dark);z-index:10070;display:none;flex-direction:column;overflow:hidden}
 .inv-overlay.open{display:flex}
 .inv-ov-head{background:var(--panel);border-bottom:2px solid var(--accent);padding:13px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;flex-shrink:0}
 .inv-ov-title{font-size:1.05rem;font-weight:900;display:flex;align-items:center;gap:8px}
@@ -5465,8 +5482,9 @@ body.viewer-mode .inv-admin-only{display:none!important}
 .inv-search{flex:1;min-width:220px;background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:11px 14px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:.92rem;outline:none}
 .inv-search:focus{border-color:var(--accent)}
 .inv-list{display:flex;flex-direction:column;gap:12px}
-.inv-item{background:var(--card);border:1.5px solid var(--border);border-radius:16px;padding:15px 17px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 8px 20px -12px rgba(0,0,0,.4);transition:transform .16s,border-color .16s,box-shadow .16s}
+.inv-item{background:var(--card);border:1.5px solid var(--border);border-radius:16px;padding:15px 17px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 8px 20px -12px rgba(0,0,0,.4);transition:transform .16s,border-color .16s,box-shadow .16s;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .inv-item:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--accent) 55%,var(--border));box-shadow:0 14px 28px -12px rgba(0,0,0,.5)}
+.inv-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .inv-item .no{width:46px;height:46px;border-radius:12px;background:color-mix(in srgb,var(--accent) 14%,var(--card));border:1.5px solid color-mix(in srgb,var(--accent) 45%,var(--border));color:var(--accent);font-weight:900;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
 .inv-item .who{flex:1;min-width:150px}
 .inv-item .who .nm{font-weight:900;font-size:1rem}
@@ -5482,8 +5500,8 @@ body.viewer-mode .inv-admin-only{display:none!important}
 .inv-act.del{border-color:#e53e3e66;color:var(--red)}
 .inv-act.del:hover{background:#e53e3e;color:#fff}
 .inv-empty{text-align:center;color:var(--muted);padding:46px 14px;font-size:.9rem;background:var(--card);border:1.5px dashed var(--border);border-radius:16px}
-/* ── پیش‌نمایش فاکتور (مودال جزئیات) — باید روی صفحهٔ لیست (z-index:9500) باز شود ── */
-#invDetailModal{z-index:9600}
+/* ── پیش‌نمایش فاکتور (مودال جزئیات) — باید روی صفحهٔ لیست (z-index:10070) باز شود ── */
+#invDetailModal{z-index:10080}
 #invDetailModal .modal{background:transparent!important;border:none!important;box-shadow:none!important}
 #invDetailModal .modal-head{background:var(--panel)!important;border-radius:12px 12px 0 0}
 /* ── مهر «تانک تیل یعقوبی» (SVG با افکت جوهر) — فقط با status=approved رندر می‌شود ── */
@@ -18134,25 +18152,6 @@ _initCalcDrag();
 try { _initRobotDrag(); _makeResizable('calcPanel'); _makeResizable('robotPanel'); _chatImgLightboxInit(); } catch (e) {}
 try { _stampVersion(); } catch (e) {}
 
-// ===== ارتفاع واقعی سربرگِ ثابت (position:fixed) → متغیر CSS --header-h =====
-// سربرگ در موبایل wrap می‌شود و ارتفاع ثابتی ندارد؛ این متغیر هم padding-top محتوای
-// #app را تنظیم می‌کند (تا چیزی زیر سربرگ پنهان نشود) و هم top نوارِ چسبان بخش‌ها را.
-(function(){
-  var hdr = document.querySelector('.header');
-  if (!hdr) return;
-  function setHeaderH(){
-    var px = hdr.offsetHeight;
-    if (px > 0) document.documentElement.style.setProperty('--header-h', px + 'px');
-  }
-  try { new ResizeObserver(setHeaderH).observe(hdr); }
-  catch(e) { window.addEventListener('resize', setHeaderH); }
-  window.addEventListener('orientationchange', function(){ setTimeout(setHeaderH, 150); });
-  // وقتی #app از display:none درمی‌آید (بعد از ورود با رمز)، ارتفاع دوباره اندازه شود
-  var app = document.getElementById('app');
-  try { if (app) new MutationObserver(setHeaderH).observe(app, { attributes:true, attributeFilter:['style'] }); } catch(e) {}
-  setHeaderH();
-})();
-
 // update station name displays
 const _lbn = document.getElementById('lsBrandName');
 if (_lbn && DB.stationName) _lbn.textContent = DB.stationName;
@@ -19611,11 +19610,14 @@ body[class*="theme-"].gfx-performance::before,
 body[class*="theme-"].gfx-standard::before,
 body[class*="theme-"].gfx-ultra::before{ background:var(--app-bg)!important; }
 
-/* ===== نوار ۱۲ بخش هنگام اسکرول بالای صفحه می‌چسبد و ناپدید نمی‌شود =====
+/* ===== نوار تب‌ها تنها Header چسبان صفحه است =====
+   سربرگ/لوگو/نوار بالایی fixed نیستند، پس با اولین اسکرول از صفحه خارج می‌شوند؛
+   وقتی نوار تب‌ها به بالای صفحه (top:0) می‌رسد می‌چسبد و تا پایانِ ظرف خودش
+   (کانتینر بخش) با آن می‌ماند، بعد طبیعی اسکرول می‌شود — هیچ Header دیگری
+   روی آن یا زیر آن نمی‌ماند.
    (در بخش‌های ورق، قرض‌داران و شرکت‌ها تیل غیرفعال است — با کلاس body کنترل می‌شود) */
 body.nav-sticky .nav{
-  /* سربرگ حالا fixed است — نوار بخش‌ها باید زیرِ لبهٔ پایین سربرگ بچسبد نه top:0 (وگرنه زیر سربرگ پنهان می‌شد) */
-  position:sticky; top:var(--header-h,64px); z-index:250;
+  position:sticky; top:0; z-index:250;
   box-shadow:0 6px 18px -8px rgba(0,0,0,.55);
 }
 /* overflow-x:hidden روی body آن را ظرف اسکرول می‌کند و sticky را نسبت به صفحه می‌شکند؛
@@ -19866,7 +19868,7 @@ function invRenderList() {
     return;
   }
   wrap.innerHTML = rows.map(v => `
-    <div class="inv-item">
+    <div class="inv-item" role="button" tabindex="0" title="دیدن جزئیات فاکتور" onclick="invOpenDetail('${v.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();invOpenDetail('${v.id}');}">
       <div class="no">${n2fa(v.invoice_number)}</div>
       <div class="who">
         <div class="nm">${escFa(v.customer_name) || '—'}</div>
@@ -19878,8 +19880,7 @@ function invRenderList() {
         </div>
       </div>
       <span class="inv-chip ${v.status}">${v.status === 'approved' ? '🟢 تایید شده' : '🟡 در صف'}</span>
-      <div class="acts">
-        <button class="inv-act" onclick="invOpenDetail('${v.id}')">👁️ جزئیات</button>
+      <div class="acts" onclick="event.stopPropagation()">
         ${v.status === 'pending'
           ? `<button class="inv-act ok inv-admin-only" onclick="invApprove('${v.id}')">✅ تایید فاکتور</button>`
           : `<button class="inv-act" onclick="invPrint('${v.id}')">🖨️ چاپ / PDF</button>
@@ -19917,9 +19918,12 @@ function invStampHtml(status) {
 }
 
 // ── مولد مشترک «برگهٔ فاکتور» — پیش‌نمایش، ویرایش مدیر و چاپ/PDF همه از همین قالب ──
+// opts.forPrint=true: برای PDF/چاپ — مهر دیجیتال هرگز رندر نمی‌شود (حتی اگر تایید شده)،
+// فقط دایرهٔ خالیِ «محل مهر» چاپ می‌شود تا مهر/تاپهٔ واقعی همان‌جا زده شود.
 function _invPaperHtml(v, opts) {
   opts = opts || {};
   const edit = !!opts.edit;
+  const forPrint = !!opts.forPrint;
   const created = (function () { try { return new Date(v.created_at).toLocaleString('fa-IR'); } catch (e) { return v.date_sh || ''; } })();
   const chip = v.status === 'approved'
     ? '<span style="display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 12px;font-size:.72rem;font-weight:900;background:#dcfce7;color:#15803d;border:1px solid #86efac">🟢 تایید شده</span>'
@@ -19973,7 +19977,7 @@ function _invPaperHtml(v, opts) {
         <span class="tv">${n2fa(Math.round(_invTotal(v) * 100) / 100)} افغانی</span>
       </div>
       <svg class="invp-station"><use href="#invp-station"/></svg>
-      <div class="invp-stampbox">${v.status === 'approved' ? invStampHtml(v.status) : '<div class="invp-stamp-ph">محل مهر</div>'}</div>
+      <div class="invp-stampbox">${(!forPrint && v.status === 'approved') ? invStampHtml(v.status) : '<div class="invp-stamp-ph">محل مهر</div>'}</div>
     </div>
   </div>`;
 }
@@ -20059,10 +20063,13 @@ function invDelete(id) {
 function invPrint(id) {
   const v = _invList().find(x => x.id === id);
   if (!v) return;
-  // همان CSS و اسپرایت SVG صفحهٔ اصلی به سند چاپ می‌رود تا ظاهر یکسان بماند
+  // همان CSS و اسپرایت SVG صفحهٔ اصلی به سند چاپ می‌رود تا ظاهر یکسان بماند.
+  // متغیرهای تم اینجا با مقدار ثابت سفید/آبی بازتعریف می‌شوند — نسخهٔ چاپی همیشه
+  // یک برگهٔ رسمی سفید است، مستقل از تم/دارک‌مودِ فعال در همان لحظه روی صفحه.
+  // مهر دیجیتال هم عمداً چاپ نمی‌شود (forPrint) — جای خالی برای مهر/تاپهٔ واقعی می‌ماند.
   const css = (document.getElementById('invoice-styles') || {}).textContent || '';
   const sprite = (document.getElementById('invp-sprite') || {}).outerHTML || '';
-  const paper = _invPaperHtml(v);
+  const paper = _invPaperHtml(v, { forPrint: true });
   const copy = label => `<div class="sheet"><div class="copy-label">${label}</div>${paper}</div>`;
   const html = `<!DOCTYPE html>
 <html lang="fa" dir="rtl"><head><meta charset="UTF-8">
@@ -20070,6 +20077,7 @@ function invPrint(id) {
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;800;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
+:root{--card:#fff;--txt:#0f172a;--accent:#1d5bd8;--border:#d6e0f5;--muted:#64748b;--panel:#f8faff}
 body{font-family:'Vazirmatn',sans-serif;background:#eef1f6;padding:20px;display:flex;justify-content:center}
 .print-wrap{width:100%;max-width:660px}
 ${css}
