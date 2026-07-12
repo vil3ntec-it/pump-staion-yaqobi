@@ -10933,11 +10933,11 @@ function renderRasid() {
       <td><input class="xls-in" value="${(r.account||'').replace(/"/g,'&quot;')}" placeholder="نام حساب" onchange="updateRasid(${i},'account',this.value)"></td>
       <td><input class="xls-in" value="${(r.name||'').replace(/"/g,'&quot;')}" placeholder="توضیح" onchange="updateRasid(${i},'name',this.value)"></td>
       <td><input class="xls-in sm" value="${(r.hawala||'').toString().replace(/"/g,'&quot;')}" placeholder="#" onchange="updateRasid(${i},'hawala',this.value)"></td>
-      <td><input class="xls-in xs" type="number" value="${r.fuel||''}" placeholder="0" onchange="updateRasid(${i},'fuel',this.value)"></td>
-      <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="0" onchange="updateRasid(${i},'priceper',this.value)"></td>
-      <td style="color:var(--accent);font-weight:700">${n2fa(bardagi)}</td>
-      <td><input class="xls-in" type="number" value="${r.rasid||''}" placeholder="0" onchange="updateRasid(${i},'rasid',this.value)"></td>
-      <td style="color:${albaqi>0?'var(--red)':'var(--green)'};font-weight:700">${n2fa(albaqi)}</td>
+      <td><input class="xls-in xs" type="number" value="${r.fuel||''}" placeholder="0" oninput="calcRasidRow(${i},'fuel',this.value)"></td>
+      <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="0" oninput="calcRasidRow(${i},'priceper',this.value)"></td>
+      <td id="rasid-bardagi-${i}" style="color:var(--accent);font-weight:700">${n2fa(bardagi)}</td>
+      <td><input class="xls-in" type="number" value="${r.rasid||''}" placeholder="0" oninput="calcRasidRow(${i},'rasid',this.value)"></td>
+      <td id="rasid-albaqi-${i}" style="color:${albaqi>0?'var(--red)':'var(--green)'};font-weight:700">${n2fa(albaqi)}</td>
       <td style="white-space:nowrap">
         <button onclick="postRasid(${i})" title="ثبت به حساب" style="background:var(--green);color:#fff;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:0.78rem">📥</button>
         <button class="del-btn" onclick="deleteRasid(${i})">🗑️</button>
@@ -10960,6 +10960,22 @@ function updateRasid(i, field, val) {
   if (!rows[i]) return;
   rows[i][field] = (field==='fuel'||field==='priceper'||field==='rasid') ? (parseFloat(val)||0) : val;
   save(); renderRasid();
+}
+// مقدار تیل/فی لیتر/رسید: به‌جای رندر کامل جدول (که هر بار تایپ، فوکوس/کیبورد را
+// می‌شکست و انگار مقدار پاک می‌شد)، فقط بردگی/الباقی همین ردیف آپدیت می‌شود
+function calcRasidRow(i, field, val) {
+  const rows = ensureRasid();
+  if (!rows[i]) return;
+  rows[i][field] = parseFloat(val) || 0;
+  const r = rows[i];
+  const bardagi = Math.round((parseFloat(r.fuel)||0) * (parseFloat(r.priceper)||0));
+  const albaqi = bardagi - (parseFloat(r.rasid)||0);
+  r.bardagi = bardagi; r.albaqi = albaqi;
+  save();
+  const bEl = document.getElementById('rasid-bardagi-' + i);
+  if (bEl) bEl.textContent = n2fa(bardagi);
+  const aEl = document.getElementById('rasid-albaqi-' + i);
+  if (aEl) { aEl.textContent = n2fa(albaqi); aEl.style.color = albaqi > 0 ? 'var(--red)' : 'var(--green)'; }
 }
 function deleteRasid(i) {
   const rows = ensureRasid();
@@ -14175,7 +14191,14 @@ function updateSarrafiRow(idx, field, val) {
   if (field === 'desc' || field === 'amount' || field === 'rate' || field === 'bardagi') {
     syncSarrafiToCompany(rows[idx]);
   }
-  if (field === 'date') { renderSarrafi(); return; } // ممکن است ماه عوض شود
+  if (field === 'date') {
+    // اگر تاریخِ تازه به ماهِ دیگری تعلق دارد، تبِ ماهِ فعال هم روی همان ماه
+    // سوییچ می‌شود — وگرنه رندر کامل ردیف را از دیدِ تبِ فعلی (که فیلتر می‌کند)
+    // بیرون می‌انداخت و انگار ردیف/کادر پاک شده بود
+    _sarrafiActiveMonth = sarrafiMonthKey(rows[idx].date);
+    renderSarrafi();
+    return;
+  }
   // فقط مقدار باقی‌مانده همین ردیف و جمع‌ها را آپدیت کن (بدون رندر کامل، برای سرعت)
   const r = rows[idx];
   const broken = sarrafiBroken(r);
@@ -17714,22 +17737,29 @@ function _navFocusables(scope){
 function _pickInDirection(el, dir, cands){
   const r = el.getBoundingClientRect();
   const cx = r.left + r.width/2, cy = r.top + r.height/2;
+  // اول بین کاندیدهایی که واقعاً هم‌ردیف (چپ/راست) یا هم‌ستون (بالا/پایین) با
+  // فیلد فعلی هستند (هم‌پوشانیِ محور عمود بر جهتِ حرکت) بگرد. اگر یکی پیدا شد،
+  // همیشه همان انتخاب می‌شود — حتی اگر نزدیک‌ترینِ مطلق نباشد — وگرنه کلید چپ/
+  // راست گاهی چند کادر پایین‌تر می‌پرید (نزدیک‌ترین فاصلهٔ اقلیدسی، نه هم‌ردیف).
+  // اگر هیچ کاندیدِ هم‌راستایی نبود، به همان الگوریتمِ نزدیک‌ترینِ قبلی برمی‌گردیم.
   let best = null, bestScore = Infinity;
+  let bestAligned = null, bestAlignedScore = Infinity;
   for (const c of cands){
     if (c === el) continue;
     const cr = c.getBoundingClientRect();
     const ccx = cr.left + cr.width/2, ccy = cr.top + cr.height/2;
     const dx = ccx - cx, dy = ccy - cy;
-    let valid, primary, secondary;
-    if (dir === 'up')        { valid = dy < -3; primary = -dy; secondary = Math.abs(dx); }
-    else if (dir === 'down') { valid = dy > 3;  primary = dy;  secondary = Math.abs(dx); }
-    else if (dir === 'left') { valid = dx < -3; primary = -dx; secondary = Math.abs(dy); }
-    else                     { valid = dx > 3;  primary = dx;  secondary = Math.abs(dy); }
+    let valid, primary, secondary, aligned;
+    if (dir === 'up')        { valid = dy < -3; primary = -dy; secondary = Math.abs(dx); aligned = cr.left < r.right && cr.right > r.left; }
+    else if (dir === 'down') { valid = dy > 3;  primary = dy;  secondary = Math.abs(dx); aligned = cr.left < r.right && cr.right > r.left; }
+    else if (dir === 'left') { valid = dx < -3; primary = -dx; secondary = Math.abs(dy); aligned = cr.top < r.bottom && cr.bottom > r.top; }
+    else                     { valid = dx > 3;  primary = dx;  secondary = Math.abs(dy); aligned = cr.top < r.bottom && cr.bottom > r.top; }
     if (!valid) continue;
     const score = primary + secondary * 2.2;
     if (score < bestScore) { bestScore = score; best = c; }
+    if (aligned && score < bestAlignedScore) { bestAlignedScore = score; bestAligned = c; }
   }
-  return best;
+  return bestAligned || best;
 }
 function _refocusLater(el){
   const td = el.closest('td'), tr = el.closest('tr');
