@@ -453,8 +453,17 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 /* عرض ستون‌های جدول قرائت پمپ‌ها: «شروع/ختم» پهن‌تر تا اعداد ۶–۷ رقمی کامل داخل کادر
    دیده شوند؛ «فی لیتر» باریک‌تر (عدد کوچک است) و «نوع» هم فشرده — عرضِ آزادشده به
    شروع/ختم می‌رسد و کادرها با نوشته‌هایشان هم‌اندازه می‌شوند. */
-#wq-pump-tbl .xls-in.wq-se{min-width:94px;max-width:120px;width:110px;text-align:center;padding:6px 6px}
-#wq-pump-tbl .xls-in.wq-fee{min-width:44px;max-width:66px;width:60px;text-align:center;padding:6px 5px}
+#wq-pump-tbl .xls-in.wq-se{min-width:94px;max-width:none;width:100%;text-align:center;padding:6px 6px}
+#wq-pump-tbl .xls-in.wq-fee{min-width:44px;max-width:none;width:100%;text-align:center;padding:6px 5px}
+/* جدول رسید پارچه: چون عرض ستون‌ها ثابت (table-layout:fixed) و باریک است، سرستون‌های
+   بلند مثل «نمبر حواله» به‌جای بریده‌شدن در دو خط می‌شکنند. */
+.rasid-tbl thead th{white-space:normal;line-height:1.25;vertical-align:middle;padding-left:6px;padding-right:6px}
+.rasid-tbl td{padding-left:6px;padding-right:6px}
+/* گاوصندوق: همهٔ نوشته‌ها وسط‌چین، سرستون بلند در دو خط، ستون تاریخ باریک و نام پهن
+   (با colgroupِ خودِ جدول). */
+.safe-tbl th,.safe-tbl td{text-align:center;vertical-align:middle}
+.safe-tbl .xls-in{text-align:center}
+.safe-tbl thead th{white-space:normal;line-height:1.25}
 .xls-in.box{border:1.5px solid var(--accent);border-radius:8px;background:var(--card);padding:7px 9px}
 .xls-in.box::placeholder{color:var(--muted);font-weight:600;opacity:.75}
 .xls-in:focus{outline:2px solid var(--accent);border-radius:3px;background:#ffffff0a}
@@ -4920,7 +4929,10 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
     <div style="padding:14px">
       <div style="font-size:0.74rem;color:var(--muted);margin-bottom:8px;line-height:1.7">در ستون «به حساب» نام صاحب حساب را بنویس؛ با دکمهٔ 📥 رسید مستقیم وارد حساب همان شخص می‌شود (نیازی به جستجو یا رفتن داخل حساب نیست). اگر همین رسید قبلاً از طریق ورق وارد شده باشد، دوباره ثبت نمی‌شود و پیام «یک بار از طرف ورق رسید شده» می‌آید.</div>
       <div class="tbl-wrap">
-        <table class="tbl" style="font-size:0.8rem">
+        <table class="tbl rasid-tbl" style="font-size:0.8rem;table-layout:fixed;min-width:864px">
+          <colgroup>
+            <col style="width:40px"><col style="width:92px"><col><col><col style="width:74px"><col style="width:76px"><col style="width:58px"><col style="width:92px"><col style="width:84px"><col style="width:92px"><col style="width:78px">
+          </colgroup>
           <thead><tr>
             <th>#</th><th>تاریخ</th><th>به حساب</th><th>نام</th><th>نمبر حواله</th><th>مقدار تیل</th><th>فی لیتر</th><th>بردگی</th><th>رسید</th><th>الباقی</th><th></th>
           </tr></thead>
@@ -5103,10 +5115,13 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
       <div id="safe-print-area">
         <div id="safe-boxes"></div>
         <div class="tbl-wrap" style="margin-top:10px">
-          <table class="tbl">
+          <table class="tbl safe-tbl" style="table-layout:fixed;min-width:700px">
+            <colgroup>
+              <col style="width:36px"><col style="width:100px"><col style="width:104px"><col><col style="width:132px"><col style="width:150px"><col style="width:54px">
+            </colgroup>
             <tfoot>
               <tr style="background:var(--dark);font-weight:700">
-                <td colspan="4" style="padding:8px 9px">جمع</td>
+                <td colspan="4" style="padding:8px 9px">تمام حساب</td>
                 <td style="padding:8px 9px" id="safe-ft-total">0</td>
                 <td colspan="2"></td>
               </tr>
@@ -10240,6 +10255,11 @@ function _togglePmFtColumn(show) {
   const ths = thead.querySelectorAll('th');
   // ستون پنجم (اندیس 4) = «نوع تیل»
   if (ths[4]) ths[4].style.display = show ? '' : 'none';
+  // فوترِ «جمع» هم باید هم‌اندازهٔ ستون‌های باقی‌مانده باشد: در حالت «حساب جداگانه»
+  // ستون «نوع تیل» حذف می‌شود، پس colspanِ «جمع» از ۵ به ۴ کم می‌شود تا ستون‌های
+  // فوتر (مقدار تیل/فی/بردگی/رسید/الباقی) دقیقاً زیر سرستون‌های خودشان بنشینند.
+  const jomCell = document.querySelector('#pm-tbl tfoot tr td:first-child');
+  if (jomCell) jomCell.colSpan = show ? 5 : 4;
 }
 function calcPersonRow(pid, idx, field, value) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
@@ -13818,9 +13838,14 @@ function renderSafe() {
     _safeAddAmt(e.type === 'bardagi' ? mBardagi : mMandagi, e);
     monthRows.push({ i, e });
   });
-  // بر اساس تاریخ مرتب شوند — وگرنه «ماندگی»ِ خودکارِ ورق‌ها (که آخرِ آرایه push
-  // می‌شود) همیشه ردیفِ آخر دیده می‌شد نه سرِ جای درستش بر اساس تاریخ (مثل مصارف)
-  monthRows.sort((a, b) => toEnDigits(a.e.date || '').localeCompare(toEnDigits(b.e.date || '')));
+  // بر اساس تاریخِ عددی (سال×۱۰۰۰۰ + ماه×۱۰۰ + روز) مرتب شوند — مقایسهٔ رشته‌ایِ قبلی
+  // روزهای چندرقمی را غلط می‌چید و «ماندگی»ِ خودکارِ ورق (که آخرِ آرایه push می‌شود)
+  // سرِ جای درستش بر اساس تاریخ نمی‌نشست. ردیف‌های بدون تاریخ آخر می‌آیند.
+  const _safeDateKey = s => {
+    const m = toEnDigits(s || '').match(/(\d+)\D+(\d+)\D+(\d+)/);
+    return m ? ((+m[1]) * 10000 + (+m[2]) * 100 + (+m[3])) : Infinity;
+  };
+  monthRows.sort((a, b) => (_safeDateKey(a.e.date) - _safeDateKey(b.e.date)) || (a.i - b.i));
   const boxesFrag = document.createDocumentFragment();
   for (let start = 0; start < monthRows.length; start += SAFE_ROWS_PER_BOX) {
     const chunk = monthRows.slice(start, start + SAFE_ROWS_PER_BOX);
@@ -13828,11 +13853,14 @@ function renderSafe() {
     wrap.className = 'tbl-wrap';
     if (start > 0) wrap.style.marginTop = '14px';
     wrap.innerHTML = `
-      <table class="tbl">
+      <table class="tbl safe-tbl" style="table-layout:fixed;min-width:700px">
+        <colgroup>
+          <col style="width:36px"><col style="width:100px"><col style="width:104px"><col><col style="width:132px"><col style="width:150px"><col style="width:54px">
+        </colgroup>
         <thead>
           <tr>
             <th>#</th>
-            <th>تاریخ شمسی</th>
+            <th>تاریخ</th>
             <th>نوع</th>
             <th>نام</th>
             <th>مبلغ</th>
@@ -13853,7 +13881,7 @@ function renderSafe() {
         <td><select class="xls-in" style="min-width:90px;color:${e.type==='bardagi'?'var(--green)':'var(--blue)'};font-weight:700;padding:5px 4px;font-size:0.82rem" onchange="updateSafeEntry(${i},'type',this.value)"><option value="bardagi"${e.type==='bardagi'?' selected':''}>💵 بردگی</option><option value="mandagi"${e.type!=='bardagi'?' selected':''}>🏛️ ماندگی</option></select></td>
         <td><input class="xls-in" value="${(e.title||'').replace(/"/g,'&quot;')}" placeholder="نام" onchange="updateSafeEntry(${i},'title',this.value)"></td>
         <td>
-          <div style="display:flex;gap:3px;align-items:center">
+          <div style="display:flex;gap:3px;align-items:center;justify-content:center">
             <input class="xls-in" type="number" value="${e.amount||''}" placeholder="0" style="min-width:55px;color:${e.type==='bardagi'?'var(--green)':'var(--blue)'}" onchange="updateSafeEntry(${i},'amount',this.value)">
             <select class="xls-in xs" style="padding:5px 2px;min-width:44px" onchange="updateSafeEntry(${i},'currency',this.value)">
               <option value="afn" ${_safeCur(e)==='usd'?'':'selected'}>؋</option>
@@ -15227,10 +15255,6 @@ function printWaraq() {
     <table><thead><tr><th>بایه</th><th>نام</th><th>نوع</th><th>توضیح/ساعت</th><th>شروع</th><th>ختم</th><th>فی لیتر</th><th>لیتر</th><th>مبلغ</th></tr></thead>
     <tbody>${pumpRows||'<tr><td colspan="9" style="text-align:center;padding:8px;color:#718096">—</td></tr>'}</tbody>
     <tfoot><tr><td colspan="7">جمع</td><td>${t.petrolL+t.dieselL} لیتر</td><td>${Math.round(t.sales)} افغانی</td></tr></tfoot></table>
-    <div class="sum-row">
-      <div class="sum-box" style="border-color:#276749"><div class="l">💳 قرضِ پارچه</div><div class="v" style="color:#276749">${Math.round(wqr.declared)} افغانی</div></div>
-      <div class="sum-box" style="border-color:${shortageColor}"><div class="l">${shortageLabel}</div><div class="v" style="color:${shortageColor}">${shortageVal} افغانی</div></div>
-    </div>
     <div class="section-title">📋 تراکنش‌ها</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div><table><thead><tr><th>#</th><th>نام</th><th>مقدار تیل</th><th>مبلغ</th><th>نوع</th></tr></thead><tbody>${lTx||'<tr><td colspan="5" style="text-align:center;padding:8px;color:#718096">—</td></tr>'}</tbody></table></div>
@@ -17403,7 +17427,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.1';
+const APP_VERSION = '2.9.2';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -19931,8 +19955,9 @@ body{ min-height:calc(100vh + 2px); }
     var max  = nav.scrollWidth - nav.clientWidth;
     var mag  = Math.abs(nav.scrollLeft);
     var next = Math.min(max, Math.max(0, mag + step));
-    if (next === mag) return;               // به انتها رسیده — رفتار پیش‌فرض بماند
     nav.scrollLeft = _navRTL ? -next : next;
+    // همیشه جلوی اسکرولِ صفحه را بگیر — حتی وقتی به ابتدا/انتهای نوار رسیده‌ایم،
+    // تا چرخِ موس روی نوار هیچ‌وقت کلِ صفحه را بالا/پایین نکشد.
     e.preventDefault();
   }, { passive:false });
 
@@ -19959,6 +19984,29 @@ body{ min-height:calc(100vh + 2px); }
   nav.addEventListener('click', function(e){
     if (moved > 6) { e.preventDefault(); e.stopPropagation(); moved = 0; }
   }, true);
+
+  // کلیدهای فلشِ چپ/راست بخشِ فعال را عوض می‌کنند (نوار RTL است: راست = بخشِ قبلی،
+  // چپ = بخشِ بعدی). فقط وقتی داخل کادرِ ورودی نیستیم و مودالی باز نیست.
+  document.addEventListener('keydown', function(e){
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+    var ae = document.activeElement;
+    if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'SELECT' ||
+               ae.tagName === 'TEXTAREA' || ae.isContentEditable)) return;
+    if (document.querySelector('.modal-overlay.open')) return; // مودال باز است
+    var app = document.getElementById('app');
+    if (app && app.style.display === 'none') return;           // هنوز قفل است
+    var btns = Array.prototype.slice.call(nav.querySelectorAll('.nav-btn'));
+    if (!btns.length) return;
+    var idx = -1;
+    for (var k=0;k<btns.length;k++){ if (btns[k].classList.contains('active')) { idx=k; break; } }
+    if (idx < 0) idx = 0;
+    var nextIdx = (e.key === 'ArrowRight') ? idx - 1 : idx + 1;
+    if (nextIdx < 0 || nextIdx >= btns.length) return;
+    e.preventDefault();
+    btns[nextIdx].click();
+    try { btns[nextIdx].scrollIntoView({ inline:'center', block:'nearest' }); } catch(_){}
+  });
 })();
 </script>
 
