@@ -5479,7 +5479,9 @@ table thead th{ position:relative; }
     <div class="cam-add-row">
       <button onclick="refreshLocalCams()"><svg><use href="#ic-link2"/></svg> بروزرسانی لیست دوربین‌ها</button>
     </div>
-    <div class="cam-hint">دوربین‌هایی که مستقیم با سیم (USB) به همین کامپیوتر وصل‌اند این‌جا لیست می‌شوند — مرورگر یک‌بار اجازهٔ دسترسی می‌خواهد.</div>
+    <div class="cam-hint">دوربین‌هایی که مستقیم با <b>سیم USB</b> به همین کامپیوتر وصل‌اند این‌جا لیست می‌شوند — مرورگر یک‌بار اجازهٔ دسترسی می‌خواهد. بعد از آمدنِ هر دوربین، کیفیت تصویر (۴۸۰p تا 4K) را از کشویی کنارش انتخاب کنید.<br>
+      🔌 <b>چه دوربینی این‌جا می‌آید؟</b> هر دوربینی که با کیبل USB (وبکم یا دوربین USB) به کامپیوتر وصل شود، خودکار شناخته می‌شود.<br>
+      📼 دوربین‌های مداربستهٔ آنالوگ (سیم کواکسیال/BNC به DVR) و دوربین‌های IP (کیبل شبکه LAN به NVR/روتر) مستقیم به کامپیوتر نمی‌آیند — برای آن‌ها از دستگاه ضبط (DVR/NVR) لینک بگیرید و در بخشِ بالای همین صفحه (لینک/کیو‌آر) اضافه کنید، یا با یک مبدل «USB Capture» سیم تصویر را به USB تبدیل کنید تا همین‌جا مثل وبکم دیده شود.</div>
     <div class="cam-grid" id="local-cam-grid"></div>
   </div>
 </div>
@@ -12588,23 +12590,27 @@ function _renderCompanyHistoryPanel(company){
       const sumAfn = rows.reduce((a,r)=>a+cmpAfnTotal(r), 0);
       const rate = sumUsd > 0 ? sumAfn / sumUsd : 0;
       let tTon=0,tUsd=0,tAfn=0,tPoul=0,tAlb=0, dispNum=0;
+      // ردیف‌های جدول آرشیو «قابل ویرایش»اند: تاریخ/نام/کیلو/قیمت تن/نرخ/رسید همانجا
+      // عوض می‌شوند و جمع‌ها بلافاصله دوباره حساب می‌شوند؛ ردیف هم اضافه/حذف می‌شود
       const body = rows.map((r,i)=>{
         const ton=cmpTon(r), tu=cmpTotalUsd(r), ta=cmpAfnTotal(r), poul=cmpPoulAfn(r,rate), ab=cmpAlbaqi(r,rate);
         tTon+=ton; tUsd+=tu; tAfn+=ta; tPoul+=poul; tAlb+=ab;   // جمع‌ها شاملِ خریدها (برای درستیِ الباقی)
         if (r.srcPurchaseId) return '';   // خریدِ مخزن در جدول نشان داده نمی‌شود (فقط در کادرِ خریدها)
         dispNum++;
         const kgShow = (r.kg!=null && r.kg!=='' && +r.kg!==0) ? r.kg : (r.ton ? Math.round(parseFloat(r.ton)*1000) : '');
+        const U = `updateCompanyHistoryRow('${company.id}','${h.id}',${i},`;
         return `<tr>
           <td class="xls-num">${n2fa(dispNum)}</td>
-          <td>${cmpEsc(r.date||'')}</td>
-          <td>${cmpEsc(r.name||'')}</td>
-          <td>${kgShow!==''?n2fa(kgShow):''}</td>
-          <td>${n2fa(parseFloat(r.usd)||0)}</td>
+          <td><input class="xls-in" value="${cmpEsc(r.date||'')}" onchange="${U}'date',this.value)"></td>
+          <td><input class="xls-in" value="${cmpEsc(r.name||'')}" placeholder="نام" onchange="${U}'name',this.value)"></td>
+          <td><input class="xls-in" type="number" value="${kgShow!==''?kgShow:''}" placeholder="0" onchange="${U}'kg',this.value)"></td>
+          <td><input class="xls-in" type="number" value="${parseFloat(r.usd)||''}" placeholder="0" onchange="${U}'usd',this.value)"></td>
           <td style="color:var(--blue);font-weight:700">${n2fa(tu.toFixed(1))} $</td>
-          <td>${n2fa(parseFloat(r.rate)||0)}</td>
+          <td><input class="xls-in" type="number" value="${parseFloat(r.rate)||''}" placeholder="0" onchange="${U}'rate',this.value)"></td>
           <td style="color:var(--accent);font-weight:700">${n2fa(Math.round(ta))}</td>
-          <td style="color:var(--green);font-weight:700">${n2fa(Math.round(poul))}</td>
+          <td><input class="xls-in" type="number" value="${parseFloat(r.poul)||''}" placeholder="0" style="color:var(--green);font-weight:700" onchange="${U}'poul',this.value)"></td>
           <td style="color:${ab>0?'var(--red)':'var(--green)'};font-weight:700">${n2fa(Math.round(ab))}</td>
+          <td><button class="del-btn" onclick="deleteCompanyHistoryRow('${company.id}','${h.id}',${i})">🗑️</button></td>
         </tr>`;
       }).join('');
       const fuelLabel = h.fuel === 'diesel' ? '🟤 دیزل' : '⛽ پطرول';
@@ -12636,16 +12642,52 @@ function _renderCompanyHistoryPanel(company){
           <span style="font-size:0.72rem;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:4px 9px">جمع الباقی: <b style="color:${tAlb>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(tAlb))}</b></span>
           ${purchBadge}
         </div>
-        <div class="xls-wrap"><table class="xls-tbl" style="table-layout:fixed;width:100%;min-width:908px">
-          <thead><tr><th style="width:34px">#</th><th style="width:96px">تاریخ</th><th style="width:150px">نام</th><th style="width:95px">خرید(کیلو)</th><th style="width:95px">قیمت تن($)</th><th style="width:95px">کل($)</th><th style="width:58px">نرخ</th><th style="width:95px">کل(افغانی)</th><th style="width:95px">رسید</th><th style="width:95px">الباقی</th></tr></thead>
-          <tbody>${body || '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:12px">فقط خرید — جزئیات در کادرِ خریدها</td></tr>'}</tbody>
-          <tfoot class="xls-foot"><tr><td colspan="3" style="padding:7px">جمع</td><td>${n2fa(Math.round(tTon*1000))}</td><td></td><td>${n2fa(tUsd.toFixed(1))} $</td><td></td><td>${n2fa(Math.round(tAfn))}</td><td>${n2fa(Math.round(tPoul))}</td><td>${n2fa(Math.round(tAlb))}</td></tr></tfoot>
+        <div class="xls-wrap"><table class="xls-tbl" style="table-layout:fixed;width:100%;min-width:954px">
+          <thead><tr><th style="width:34px">#</th><th style="width:96px">تاریخ</th><th style="width:150px">نام</th><th style="width:95px">خرید(کیلو)</th><th style="width:95px">قیمت تن($)</th><th style="width:95px">کل($)</th><th style="width:58px">نرخ</th><th style="width:95px">کل(افغانی)</th><th style="width:95px">رسید</th><th style="width:95px">الباقی</th><th style="width:46px">حذف</th></tr></thead>
+          <tbody>${body || '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:12px">فقط خرید — جزئیات در کادرِ خریدها</td></tr>'}</tbody>
+          <tfoot class="xls-foot"><tr><td colspan="3" style="padding:7px">جمع</td><td>${n2fa(Math.round(tTon*1000))}</td><td></td><td>${n2fa(tUsd.toFixed(1))} $</td><td></td><td>${n2fa(Math.round(tAfn))}</td><td>${n2fa(Math.round(tPoul))}</td><td>${n2fa(Math.round(tAlb))}</td><td></td></tr></tfoot>
         </table></div>
+        <div style="padding:6px 10px 0">
+          <button class="add-row-btn" style="margin:0;padding:5px 12px;font-size:0.78rem" onclick="addCompanyHistoryRow('${company.id}','${h.id}')">➕ ردیف جدید</button>
+        </div>
         <div style="padding:8px 10px 10px">
           <textarea id="chnb-${h.id}" class="note-field" placeholder="📝 توضیحات این جدول..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateCompanyHistoryNote('${company.id}','${h.id}',this.value)">${escFa(h.note||'')}</textarea>
         </div>
       </div>`;
     }).join('');
+}
+// ── ویرایش ردیف‌های جدولِ آرشیوشدهٔ شرکت (تاریخ/نام/کیلو/قیمت/نرخ/رسید) ──
+function updateCompanyHistoryRow(cid, hid, idx, field, val){
+  const c = (DB.tilCompanies||[]).find(x => x.id === cid);
+  const h = c && (c.tableHistory||[]).find(x => x.id === hid);
+  if (!h || !Array.isArray(h.rows) || !h.rows[idx]) return;
+  const r = h.rows[idx];
+  if (field === 'date' || field === 'name') r[field] = val;
+  else {
+    r[field] = parseFloat(val) || 0;
+    if (field === 'kg') r.ton = '';   // ورودی کیلو است؛ تن خودکار = کیلو ÷ ۱۰۰۰
+  }
+  save();
+  _renderCompanyHistoryPanel(c);   // جمع‌های همان جدول بلافاصله دوباره حساب می‌شوند
+}
+function addCompanyHistoryRow(cid, hid){
+  const c = (DB.tilCompanies||[]).find(x => x.id === cid);
+  const h = c && (c.tableHistory||[]).find(x => x.id === hid);
+  if (!h) return;
+  if (!Array.isArray(h.rows)) h.rows = [];
+  h.rows.push({ date: '', name: '', kg: 0, usd: 0, rate: 0, poul: 0 });
+  save();
+  _renderCompanyHistoryPanel(c);
+}
+function deleteCompanyHistoryRow(cid, hid, idx){
+  const c = (DB.tilCompanies||[]).find(x => x.id === cid);
+  const h = c && (c.tableHistory||[]).find(x => x.id === hid);
+  if (!h || !Array.isArray(h.rows) || !h.rows[idx]) return;
+  const r = h.rows[idx];
+  if ((r.name || r.kg || r.usd || r.poul) && !confirm('این ردیف از جدول آرشیو حذف شود؟')) return;
+  h.rows.splice(idx, 1);
+  save();
+  _renderCompanyHistoryPanel(c);
 }
 // توضیحاتِ جدول آرشیو شرکت — داخل نوار عنوانِ همان جدول نوشته می‌شود
 function updateCompanyHistoryNote(cid, hid, value){
@@ -12872,11 +12914,7 @@ function pdfCompany() {
   const usdReceived = parseFloat(company.usdReceived) || 0;
   const sumAlbUsd = sumAlbUsdRaw - usdReceived;
   const sumAlb = sumAlbRaw - (usdReceived * convRate);
-  const statusText = Math.abs(Math.round(sumAlbUsd*10)/10) < 0.5 && Math.abs(Math.round(sumAlb)) < 1
-    ? '✅ حساب با این شرکت تسویه است'
-    : (sumAlbUsd > 0 ? '🔴 این مقدار را به شرکت بدهکارید' : '🟢 این مقدار طلبِ شما از شرکت است');
-  const statusColor = Math.abs(Math.round(sumAlbUsd*10)/10) < 0.5 && Math.abs(Math.round(sumAlb)) < 1
-    ? '#276749' : (sumAlbUsd > 0 ? '#e53e3e' : '#276749');
+  // خطِ «بدهکارید/طلبکارید» به خواست کاربر از PDF حذف شد — فقط اعداد چاپ می‌شوند
   const rowsHtml = rows.map((r,i) => {
     const ton=cmpTon(r), tusd=cmpTotalUsd(r), tafn=cmpAfnTotal(r), ab=cmpAlbaqi(r, convRate), abUsd=cmpAlbaqiUsd(r, convRate);
     return `<tr>
@@ -12916,7 +12954,6 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px}
   <div class="sum-box" style="border-color:${sumAlb>0?'#fc8181':'#9ae6b4'}"><div class="l">الباقی</div><div class="v" style="color:${sumAlb>0?'#e53e3e':'#276749'}">${n2fa(Math.round(sumAlb))}</div></div>
   <div class="sum-box" style="border-color:${sumAlbUsd>0?'#fc8181':'#9ae6b4'}"><div class="l">الباقی دالر ($)</div><div class="v" style="color:${sumAlbUsd>0?'#e53e3e':'#276749'}">${n2fa(sumAlbUsd.toFixed(1))} $</div></div>
 </div>
-<div style="margin-bottom:16px;padding:9px 14px;border-radius:8px;font-weight:700;font-size:0.85rem;border:1.5px solid ${statusColor};background:${statusColor}14;color:${statusColor}">${statusText}</div>
 <table><thead><tr>
   <th>#</th><th>تاریخ</th><th>نام</th><th>خرید به تن</th><th>قیمت تن ($)</th>
   <th>کل ($)</th><th>نرخ</th><th>کل (افغانی)</th><th>رسید</th><th>الباقی</th><th>الباقی ($)</th>
@@ -17459,7 +17496,16 @@ async function refreshLocalCams() {
   grid.innerHTML = cams.map((c, i) => `
     <div class="cam-card">
       <div class="cam-head"><span>${escFa(c.label || ('دوربین سیمی ' + n2fa(i + 1)))}</span>
-        <span class="cam-actions">
+        <span class="cam-actions" style="display:inline-flex;align-items:center;gap:6px">
+          <select id="local-cam-q-${escFa(c.deviceId)}" onchange="_localCamQualityChange('${escFa(c.deviceId)}')" title="کیفیت تصویر"
+            style="background:var(--dark);border:1px solid var(--border);border-radius:7px;padding:4px 6px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.72rem;font-weight:700;cursor:pointer;max-width:130px">
+            <option value="">کیفیت: خودکار</option>
+            <option value="640x480">SD — ۴۸۰p</option>
+            <option value="1280x720">HD — ۷۲۰p</option>
+            <option value="1920x1080" selected>Full HD — ۱۰۸۰p</option>
+            <option value="2560x1440">2K — ۱۴۴۰p</option>
+            <option value="3840x2160">4K — ۲۱۶۰p</option>
+          </select>
           <button class="cam-ib" onclick="_localCamToggle('${escFa(c.deviceId)}')" title="پخش/توقف">▶️</button>
         </span></div>
       <div class="cam-media" id="local-cam-media-${escFa(c.deviceId)}"></div>
@@ -17475,13 +17521,31 @@ async function _localCamToggle(deviceId) {
     return;
   }
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: deviceId } } });
+    // کیفیت انتخاب‌شده از کشویی همان دوربین — اگر دوربین آن کیفیت را نداشته باشد،
+    // مرورگر خودکار نزدیک‌ترین کیفیت ممکن را می‌دهد (ideal، نه اجباری)
+    const sel = document.getElementById('local-cam-q-' + deviceId);
+    const q = (sel && sel.value) ? sel.value.split('x') : null;
+    const video = { deviceId: { exact: deviceId } };
+    if (q) { video.width = { ideal: parseInt(q[0], 10) }; video.height = { ideal: parseInt(q[1], 10) }; }
+    const stream = await navigator.mediaDevices.getUserMedia({ video });
     _localCamStreams[deviceId] = stream;
-    box.innerHTML = '<video autoplay muted playsinline></video>';
+    box.innerHTML = '<video autoplay muted playsinline></video><div class="cam-note" style="padding:4px 8px;font-size:0.7rem" id="local-cam-res-' + deviceId + '"></div>';
     box.querySelector('video').srcObject = stream;
+    // کیفیت واقعی که دوربین داد نمایش داده می‌شود (ممکن است از انتخاب پایین‌تر باشد)
+    try {
+      const st = stream.getVideoTracks()[0].getSettings();
+      const resEl = document.getElementById('local-cam-res-' + deviceId);
+      if (resEl && st.width) resEl.textContent = '🎞️ کیفیت فعلی: ' + n2fa(st.width) + '×' + n2fa(st.height) + (st.frameRate ? (' — ' + n2fa(Math.round(st.frameRate)) + ' فریم') : '');
+    } catch (e) {}
   } catch (e) {
     box.innerHTML = '<div class="cam-note">دسترسی به این دوربین ممکن نشد</div>';
   }
+}
+// تغییر کیفیت وقتی دوربین در حال پخش است: با همان کیفیت جدید دوباره وصل می‌شود
+async function _localCamQualityChange(deviceId) {
+  if (!_localCamStreams[deviceId]) return;   // پخش نیست — با ▶️ بعدی اعمال می‌شود
+  await _localCamToggle(deviceId);           // توقف
+  await _localCamToggle(deviceId);           // شروع دوباره با کیفیت انتخابی
 }
 function stopAllLocalCams() {
   Object.keys(_localCamStreams).forEach(id => {
@@ -17710,7 +17774,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.6';
+const APP_VERSION = '2.9.7';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
