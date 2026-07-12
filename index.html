@@ -4115,11 +4115,13 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
    ║  لایه‌های گرافیکی غلبه کند و همهٔ جدول‌ها از یک سیستمِ واحد پیروی کنند.║
    ╚══════════════════════════════════════════════════════════════════╝ */
 .tbl, .xls-tbl, .ro-tbl{ border-collapse:collapse !important; border-spacing:0 !important; }
-/* خطِ عمودیِ جداکننده بین همهٔ ستون‌ها (شبکهٔ اکسل‌مانند) — آخرین ستون بدون خط */
+/* خطوطِ شبکه کمی پررنگ‌تر (روی دسکتاپ خیلی کم‌رنگ/نامرئی بودند) — رنگِ خاکستریِ
+   نیمه‌شفاف روی هر دو تمِ روشن و تیره دیده می‌شود */
 .tbl th, .tbl td,
 .xls-tbl th, .xls-tbl td,
 .ro-tbl th, .ro-tbl td{
-  border-left:1px solid var(--border) !important;
+  border-left:1px solid rgba(128,128,128,.42) !important;
+  border-bottom:1px solid rgba(128,128,128,.42) !important;
   border-right:0 !important;
   vertical-align:middle !important;
   text-align:center !important;
@@ -4127,6 +4129,14 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
 .tbl th:last-child, .tbl td:last-child,
 .xls-tbl th:last-child, .xls-tbl td:last-child,
 .ro-tbl th:last-child, .ro-tbl td:last-child{ border-left:0 !important; }
+/* جدول‌های حسابِ شخص و شرکت: عرض بر اساس ستون‌ها (نه کشیده تا تمامِ عرض) تا ستونِ
+   «نام» بی‌جهت بزرگ نشود و بقیه له نشوند. عرضِ دقیقِ هر ستون از th می‌آید و کاربر
+   می‌تواند با دستهٔ کنارِ هر عنوان، خودش آن را تغییر دهد (مثل اکسل). */
+#pm-tbl, #cm-tbl{ width:auto !important; table-layout:fixed; }
+/* دستهٔ تغییرِ اندازهٔ ستون‌ها (لبهٔ چپِ هر عنوان در حالتِ راست‌به‌چپ) */
+.xls-tbl thead th{ position:relative; }
+.col-resize-grip{ position:absolute; left:-3px; top:0; width:8px; height:100%; cursor:col-resize; z-index:6; touch-action:none; user-select:none; }
+.col-resize-grip:hover{ background:rgba(255,180,61,.5); }
 /* هدرها: هم‌ارتفاع، هم‌پدینگ، بدون افتادنِ نوشته روی هم */
 .tbl th, .xls-tbl th, .ro-tbl th{
   padding:9px 8px !important;
@@ -6192,17 +6202,17 @@ body.viewer-mode .inv-admin-only{display:none!important}
       <div class="xls-wrap">
         <table class="xls-tbl" id="pm-tbl">
           <thead><tr>
-            <th style="width:30px;min-width:24px">#</th>
-            <th style="width:92px;min-width:80px">تاریخ</th>
-            <th style="min-width:150px">نام</th>
-            <th style="width:64px;min-width:52px">نمبر حواله</th>
-            <th>نوع تیل</th>
-            <th style="width:58px;min-width:48px">مقدار تیل</th>
-            <th style="width:58px;min-width:48px">فی لیتر</th>
-            <th style="width:92px;min-width:82px">مقدار بردگی</th>
-            <th style="width:92px;min-width:82px">رسید</th>
-            <th style="width:92px;min-width:82px">الباقی</th>
-            <th style="width:44px">حذف</th>
+            <th style="width:34px">#</th>
+            <th style="width:96px">تاریخ</th>
+            <th style="width:150px">نام</th>
+            <th style="width:60px">نمبر حواله</th>
+            <th style="width:100px">نوع تیل</th>
+            <th style="width:56px">مقدار تیل</th>
+            <th style="width:56px">فی لیتر</th>
+            <th style="width:90px">مقدار بردگی</th>
+            <th style="width:90px">رسید</th>
+            <th style="width:90px">الباقی</th>
+            <th style="width:46px">حذف</th>
           </tr></thead>
           <tbody id="pm-body"></tbody>
           <tfoot class="xls-foot"><tr>
@@ -6281,18 +6291,18 @@ body.viewer-mode .inv-admin-only{display:none!important}
       <div class="xls-wrap">
         <table class="xls-tbl" id="cm-tbl">
           <thead><tr>
-            <th style="width:30px;min-width:24px">#</th>
-            <th style="width:92px;min-width:80px">تاریخ</th>
-            <th style="min-width:160px">نام</th>
-            <th style="width:100px;min-width:95px">خرید (کیلو)</th>
-            <th style="width:100px;min-width:95px">قیمت تن ($)</th>
-            <th style="width:100px;min-width:95px">کل ($)</th>
-            <th style="width:58px;min-width:48px">نرخ</th>
-            <th style="width:100px;min-width:95px">کل (افغانی)</th>
-            <th style="width:100px;min-width:95px">رسید</th>
-            <th style="width:60px;min-width:52px;font-size:0.75rem">نرخ پول</th>
-            <th style="width:100px;min-width:95px">الباقی</th>
-            <th style="width:44px">حذف</th>
+            <th style="width:34px">#</th>
+            <th style="width:96px">تاریخ</th>
+            <th style="width:150px">نام</th>
+            <th style="width:95px">خرید (کیلو)</th>
+            <th style="width:95px">قیمت تن ($)</th>
+            <th style="width:95px">کل ($)</th>
+            <th style="width:58px">نرخ</th>
+            <th style="width:95px">کل (افغانی)</th>
+            <th style="width:112px">رسید</th>
+            <th style="width:60px;font-size:0.75rem">نرخ پول</th>
+            <th style="width:95px">الباقی</th>
+            <th style="width:46px">حذف</th>
           </tr></thead>
           <tbody id="cm-body"></tbody>
           <tfoot class="xls-foot"><tr>
@@ -9665,6 +9675,42 @@ function deletePerson(type, id) {
   showToast('🗑️ حذف شد — برای بازگردانی Ctrl+Z بزنید', '#d97706');
 }
 
+// تغییرِ اندازهٔ ستون‌ها با کشیدنِ لبهٔ عنوان (مثل اکسل). عرضِ هر ستون در
+// localStorage ذخیره می‌شود تا بعد از رفرش هم بماند. فقط ظاهر — روی داده اثری ندارد.
+function makeTableResizable(table, storeKey){
+  if(!table || !table.tHead || !table.tHead.rows[0] || table._resizable) return;
+  table._resizable = true;
+  let saved = {};
+  try{ saved = JSON.parse(localStorage.getItem('colw_'+storeKey) || '{}'); }catch(e){}
+  const ths = table.tHead.rows[0].cells;
+  Array.prototype.forEach.call(ths, function(th, idx){
+    if(saved[idx]) th.style.width = saved[idx] + 'px';
+    if(th.querySelector('.col-resize-grip')) return;
+    const grip = document.createElement('div');
+    grip.className = 'col-resize-grip';
+    grip.title = 'برای تغییر عرضِ این ستون بکشید';
+    th.appendChild(grip);
+    let startX = 0, startW = 0;
+    function move(e){
+      const cx = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
+      // راست‌به‌چپ: کشیدنِ لبهٔ چپ به سمتِ چپ، ستون را پهن‌تر می‌کند
+      const w = Math.max(36, Math.round(startW - (cx - startX)));
+      th.style.width = w + 'px';
+    }
+    function up(){
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      saved[idx] = parseInt(th.style.width, 10) || Math.round(startW);
+      try{ localStorage.setItem('colw_'+storeKey, JSON.stringify(saved)); }catch(e){}
+    }
+    grip.addEventListener('pointerdown', function(e){
+      e.preventDefault(); e.stopPropagation();
+      startX = e.clientX; startW = th.getBoundingClientRect().width;
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', up);
+    });
+  });
+}
 function openPersonModal(type, id) {
   currentPersonType = type;
   currentPersonId = id;
@@ -9680,6 +9726,7 @@ function openPersonModal(type, id) {
   _renderSubBar(person);
   renderPersonRows(person);
   document.getElementById('personModal').classList.add('open');
+  makeTableResizable(document.getElementById('pm-tbl'), 'pm');
   _updateNavBtns();
   // load saved modal font scale
   const savedMFS = parseFloat((function(){ try{ return localStorage.getItem('modalFontScale') || 1; }catch(e){ return 1; } })());
@@ -10306,7 +10353,7 @@ function _updatePersonTotals(person) {
   setV('pm-d-comm', n2fa(rnd(commD)));
   // الباقی هر حساب هم مثل ستون/جمع به‌صورت «رسید − برد» نمایش داده می‌شود:
   // پیش‌پرداخت مثبت/سبز، بدهی منفی/سرخ
-  const setRem = (id, v) => { const el = document.getElementById(id); if (el) { el.textContent = n2fa(rnd(-v)); el.style.color = (-v) < 0 ? 'var(--red)' : 'var(--green)'; } };
+  const setRem = (id, v) => { const el = document.getElementById(id); if (el) { const val = rnd(-v) || 0; el.textContent = n2fa(val); el.style.color = val < 0 ? 'var(--red)' : 'var(--green)'; } };
   setRem('pm-p-remfuel', remP);
   setRem('pm-d-remfuel', remD);
   setV('pm-bord-sum', n2fa(rnd(bordP+bordD)) + unit);
@@ -10464,7 +10511,7 @@ function _renderHistoryPanel(person) {
         <td class="xls-num">${n2fa(vi+1)}</td>
         <td><input class="xls-in" value="${r.date||''}" onchange="updateHistoryRow('${pid}','${h.id}',${ri},'date',this.value)"></td>
         <td><input class="xls-in" value="${escFa(r.name)}" placeholder="نام" onchange="updateHistoryRow('${pid}','${h.id}',${ri},'name',this.value)"></td>
-        <td><input class="xls-in" value="${r.hawala||''}" placeholder="حواله" onchange="updateHistoryRow('${pid}','${h.id}',${ri},'hawala',this.value)"></td>
+        <td><input class="xls-in" value="${r.hawala||''}" placeholder="#" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="updateHistoryRow('${pid}','${h.id}',${ri},'hawala',this.value)"></td>
         ${showFt ? `<td><div class="ft-pick">
           <label class="ft-opt petrol ${(r.ftype!=='diesel')?'active':''}"><input type="radio" name="hft-${h.id}-${ri}" ${(r.ftype!=='diesel')?'checked':''} onchange="setHistoryRowFuel('${pid}','${h.id}',${ri},'petrol')">⛽ پطرول</label>
           <label class="ft-opt diesel ${(r.ftype==='diesel')?'active':''}"><input type="radio" name="hft-${h.id}-${ri}" ${(r.ftype==='diesel')?'checked':''} onchange="setHistoryRowFuel('${pid}','${h.id}',${ri},'diesel')">🟤 دیزل</label>
@@ -10473,7 +10520,7 @@ function _renderHistoryPanel(person) {
         <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="0" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'priceper',this.value)"></td>
         <td><input class="xls-in pm-bardagi-cell" type="number" value="${parseFloat(bard.toFixed(0))||''}" placeholder="0" style="color:var(--accent);font-weight:700" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'bardagi',this.value)"></td>
         <td><input class="xls-in" type="number" value="${r.rasid||''}" placeholder="0" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'rasid',this.value)"></td>
-        <td class="pm-albaqi-cell" style="font-weight:700;color:${(-alb)<0?'var(--red)':'var(--green)'}">${n2fa(Math.round(-alb))}</td>
+        <td class="pm-albaqi-cell" style="font-weight:700;color:${(-alb)<0?'var(--red)':'var(--green)'}">${n2fa(Math.round(-alb)||0)}</td>
         <td><button class="del-btn" onclick="deleteHistoryRow('${pid}','${h.id}',${ri})">🗑️</button></td>
       </tr>`;
     }).join('');
@@ -10482,15 +10529,15 @@ function _renderHistoryPanel(person) {
     const tableHtml = filterBarHtml + `
       <div class="xls-wrap" style="margin:8px 10px;border-radius:9px;overflow:hidden">
         <div style="overflow-x:auto">
-          <table class="xls-tbl" style="min-width:${showFt?660:580}px">
+          <table class="xls-tbl" style="table-layout:fixed;width:${showFt?752:652}px;min-width:${showFt?752:652}px">
             <thead><tr>
-              <th style="min-width:24px">#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th>
-              ${showFt?'<th>نوع تیل</th>':''}<th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>الباقی</th><th>حذف</th>
+              <th style="width:34px">#</th><th style="width:96px">تاریخ</th><th style="width:150px">نام</th><th style="width:60px">نمبر حواله</th>
+              ${showFt?'<th style="width:100px">نوع تیل</th>':''}<th style="width:56px">مقدار تیل</th><th style="width:56px">فی لیتر</th><th style="width:90px">مقدار بردگی</th><th style="width:90px">رسید</th><th style="width:90px">الباقی</th><th style="width:46px">حذف</th>
             </tr></thead>
             <tbody>${rowsHtml}</tbody>
             <tfoot class="xls-foot"><tr>
               <td colspan="${showFt?7:6}" style="padding:8px 7px;font-weight:800">جمع الباقی همین جدول (رسید − بردگی)</td>
-              <td class="xls-calc" colspan="3" style="font-weight:800;color:${(-viewAlbaqi)<0?'var(--red)':'var(--green)'}">${n2fa(Math.round(-viewAlbaqi))}</td>
+              <td class="xls-calc" colspan="3" style="font-weight:800;color:${(-viewAlbaqi)<0?'var(--red)':'var(--green)'}">${n2fa(Math.round(-viewAlbaqi)||0)}</td>
               <td></td>
             </tr></tfoot>
           </table>
@@ -10813,6 +10860,11 @@ function renderExpenses() {
   if (!_activeExpenseMonth || !keys.includes(_activeExpenseMonth)) {
     _activeExpenseMonth = keys.includes(curMonth) ? curMonth : keys[0];
   }
+  // «مصرف این ماه» باید جمعِ همان ماهی باشد که در کشوی «انتخاب ماه» انتخاب شده،
+  // نه همیشه ماهِ تقویمیِ جاری — وگرنه وقتی ماهِ جدید (خالی) را می‌بینی، باز هم
+  // جمعِ ماهِ قبل نمایش داده می‌شد و مثل «آمدنِ اطلاعاتِ ماه قبل» دیده می‌شد
+  const _activeMonthTotal = (groups[_activeExpenseMonth] || []).reduce((a, {e}) => a + (e.amount || 0), 0);
+  if (_expEl('exp-week')) _expEl('exp-week').textContent = n2fa(Math.round(_activeMonthTotal)) + ' افغانی';
   const _selWrap = document.createElement('div');
   _selWrap.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px';
   _selWrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">📅 انتخاب ماه:</label>
@@ -11883,6 +11935,7 @@ function openCompanyModal(id) {
   renderCompanyPurchases(company);
   _renderCompanyHistoryPanel(company);
   document.getElementById('companyModal').classList.add('open');
+  makeTableResizable(document.getElementById('cm-tbl'), 'cm');
   _updateCompanyNavBtns();
   if (_modalFontScale !== 1) setTimeout(() => adjModalFont(0), 30);
 }
@@ -17329,7 +17382,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.8.7';
+const APP_VERSION = '2.8.8';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
