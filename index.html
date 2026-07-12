@@ -107,15 +107,24 @@ body.light-mode .daynight-toggle .dn-thumb{left:3px;background:radial-gradient(c
 html{background:#0d1117;min-height:100vh;overflow-x:hidden;overscroll-behavior:none;scroll-behavior:auto}
 body.light-mode ~ html,body.light-mode+html{background:#f0f4f8}
 body{font-family:'Vazirmatn',sans-serif;background:none;color:var(--txt);min-height:100vh;overscroll-behavior:none}
-/* همان بدون-فنری برای همهٔ ظرف‌های اسکرول‌دار داخل برنامه (جدول‌ها، مودال‌ها،
-   لیست‌های چت، صفحه‌های فاکتور/کارمند/شرکت‌ها) — selectorهای attribute هم
-   ظرف‌های اسکرولِ inline-style را می‌گیرند بدون نیاز به لمس تک‌تکشان */
-.tbl-wrap,.xls-wrap,.modal-body,.ch-list,.ro-body,.inv-ov-body,
+/* بدون-فنری برای ظرف‌های واقعاً عمودی‌اسکرول‌دار (مودال‌ها، لیست‌های چت،
+   صفحه‌های فاکتور/کارمند/شرکت‌ها) — اینها ارتفاع محدود دارند و واقعاً کش
+   می‌آمدند، پس overscroll-behavior هر دو محور را می‌بندیم. */
+.modal-body,.ch-list,.ro-body,.inv-ov-body,
 #chat-trash-body,#dmThreads,#company-ro-table-wrap,
-[style*="overflow-y:auto"],[style*="overflow-y: auto"],
+[style*="overflow-y:auto"],[style*="overflow-y: auto"]{
+  overscroll-behavior:none;
+}
+/* ظرف‌های دورِ جدول‌ها (tbl-wrap/xls-wrap و هر overflow-x:auto دیگر) فقط برای
+   اسکرول افقی‌اند و ارتفاعِ محدود ندارند — یعنی هیچ‌وقت واقعاً عمودی اسکرول
+   نمی‌شوند. بستنِ overscroll-behavior هر دو محور رویشان یک باگ جدی می‌ساخت:
+   روی دسکتاپ، چرخ ماوس روی هر جدولی که زیر نشانگر بود دیگر به صفحه منتقل
+   نمی‌شد (فقط بالای سربرگ/نوار تب‌ها اسکرول کار می‌کرد). فقط محور افقی را
+   می‌بندیم تا عمودی همیشه طبیعی به صفحه زنجیر شود. */
+.tbl-wrap,.xls-wrap,
 [style*="overflow-x:auto"],[style*="overflow-x: auto"],
 [style*="overflow:auto"],[style*="overflow: auto"]{
-  overscroll-behavior:none;
+  overscroll-behavior-x:none;
 }
 /* PERFORMANCE FIX: this full-viewport layer used to run backdrop-filter:blur(20px)
    AND filter:blur(24px) permanently on every screen size — a constant, expensive
@@ -6146,11 +6155,10 @@ body.viewer-mode .inv-admin-only{display:none!important}
             <th>فی لیتر</th>
             <th>مقدار بردگی</th>
             <th>رسید</th>
+            <th>الباقی</th>
             <th>حذف</th>
           </tr></thead>
           <tbody id="pm-body"></tbody>
-          <!-- الباقی دیگر ستون جداگانه‌ای در هر ردیف نیست — طبق خواستهٔ کاربر فقط یک‌بار،
-               به‌صورت جمع کل، در همین ردیفِ پایانی جدول دیده می‌شود -->
           <tfoot class="xls-foot"><tr>
             <td colspan="5" style="padding:8px 7px">جمع</td>
             <td class="xls-calc" id="pm-ft-fuel">0</td>
@@ -6158,9 +6166,10 @@ body.viewer-mode .inv-admin-only{display:none!important}
             <td class="xls-calc" id="pm-ft-bardagi">0</td>
             <td class="xls-calc" id="pm-ft-rasid">0</td>
             <td></td>
+            <td></td>
           </tr>
           <tr>
-            <td colspan="5" style="padding:8px 7px;font-weight:800">جمع الباقی (بردگی − رسید)</td>
+            <td colspan="6" style="padding:8px 7px;font-weight:800">جمع الباقی (بردگی − رسید)</td>
             <td class="xls-calc" id="pm-ft-albaqi" colspan="4" style="font-weight:800">0</td>
             <td></td>
           </tr></tfoot>
@@ -9784,6 +9793,7 @@ function renderPersonRows(person) {
       <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'priceper',this.value)"></td>
       <td><input class="xls-in pm-bardagi-cell" type="number" value="${parseFloat(bardagi)||''}" placeholder="0" style="color:var(--accent);font-weight:700" oninput="calcPersonRow('${person.id}',${i},'bardagi',this.value)"></td>
       <td><input class="xls-in" type="number" value="${r.rasid||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasid',this.value)"></td>
+      <td class="pm-albaqi-cell" style="font-weight:700;color:${parseFloat(albaqi)>0?'var(--red)':'var(--green)'}">${n2fa(albaqi)}</td>
       <td><button class="del-btn" onclick="deletePersonRow('${person.id}',${i})">🗑️</button></td>
     `;
     tbody.appendChild(tr);
@@ -9791,7 +9801,7 @@ function renderPersonRows(person) {
   if (shown === 0) {
     const tr = document.createElement('tr');
     const label = currentPersonFilter === 'petrol' ? '⛽ هیچ ردیف پطرولی ثبت نشده' : (currentPersonFilter === 'diesel' ? '🟤 هیچ ردیف دیزلی ثبت نشده' : 'هیچ ردیفی ثبت نشده');
-    tr.innerHTML = `<td colspan="${showFtCol?10:9}" style="text-align:center;padding:16px;color:var(--muted);font-size:0.85rem">${label}</td>`;
+    tr.innerHTML = `<td colspan="${showFtCol?11:10}" style="text-align:center;padding:16px;color:var(--muted);font-size:0.85rem">${label}</td>`;
     tbody.appendChild(tr);
   }
   _renderHistoryPanel(person);
@@ -10163,6 +10173,12 @@ function _updatePersonRowCells(person, idx, r) {
   if (!row) return;
   const bardagiCell = row.querySelector('.pm-bardagi-cell');
   if (bardagiCell && document.activeElement !== bardagiCell) bardagiCell.value = r.bardagi || 0;
+  const albaqiCell = row.querySelector('.pm-albaqi-cell');
+  if (albaqiCell) {
+    const albaqi = (parseFloat(r.bardagi) || 0) - (r.rasid || 0);
+    albaqiCell.textContent = n2fa(albaqi);
+    albaqiCell.style.color = albaqi > 0 ? 'var(--red)' : 'var(--green)';
+  }
 }
 function _curPerson() {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
@@ -10385,13 +10401,11 @@ function _renderHistoryPanel(person) {
         <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="0" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'priceper',this.value)"></td>
         <td><input class="xls-in pm-bardagi-cell" type="number" value="${parseFloat(bard.toFixed(0))||''}" placeholder="0" style="color:var(--accent);font-weight:700" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'bardagi',this.value)"></td>
         <td><input class="xls-in" type="number" value="${r.rasid||''}" placeholder="0" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'rasid',this.value)"></td>
+        <td class="pm-albaqi-cell" style="font-weight:700;color:${alb>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(alb))}</td>
         <td><button class="del-btn" onclick="deleteHistoryRow('${pid}','${h.id}',${ri})">🗑️</button></td>
       </tr>`;
     }).join('');
-    if (!rowsHtml) rowsHtml = `<tr><td colspan="9" style="text-align:center;padding:12px;color:var(--muted);font-size:0.82rem">${hFilter==='petrol'?'⛽ هیچ ردیف پطرولی ثبت نشده':(hFilter==='diesel'?'🟤 هیچ ردیف دیزلی ثبت نشده':'هیچ ردیفی ثبت نشده')}</td></tr>`;
-    // الباقی دیگر ستون جداگانهٔ هر ردیف نیست — طبق خواستهٔ کاربر فقط یک‌بار، جمع کل
-    // این جدولِ آرشیوشده در پایینِ همان جدول دیده می‌شود (بالای جدول هم در کادرهای
-    // «حساب پطرول/دیزل» بالای همین بلوک هست)
+    if (!rowsHtml) rowsHtml = `<tr><td colspan="10" style="text-align:center;padding:12px;color:var(--muted);font-size:0.82rem">${hFilter==='petrol'?'⛽ هیچ ردیف پطرولی ثبت نشده':(hFilter==='diesel'?'🟤 هیچ ردیف دیزلی ثبت نشده':'هیچ ردیفی ثبت نشده')}</td></tr>`;
     const viewAlbaqi = viewRows.reduce((s, x) => s + ((x.r.byMoney ? (x.r.bardagi||0) : ((x.r.fuel||0)*(x.r.priceper||0))) - (x.r.rasid||0)), 0);
     const tableHtml = filterBarHtml + `
       <div class="xls-wrap" style="margin:8px 10px;border-radius:9px;overflow:hidden">
@@ -10399,12 +10413,12 @@ function _renderHistoryPanel(person) {
           <table class="xls-tbl" style="min-width:580px">
             <thead><tr>
               <th style="min-width:24px">#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th>
-              <th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>حذف</th>
+              <th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>الباقی</th><th>حذف</th>
             </tr></thead>
             <tbody>${rowsHtml}</tbody>
             <tfoot class="xls-foot"><tr>
               <td colspan="6" style="padding:8px 7px;font-weight:800">جمع الباقی همین جدول (بردگی − رسید)</td>
-              <td class="xls-calc" colspan="2" style="font-weight:800;color:${viewAlbaqi>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(viewAlbaqi))}</td>
+              <td class="xls-calc" colspan="3" style="font-weight:800;color:${viewAlbaqi>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(viewAlbaqi))}</td>
               <td></td>
             </tr></tfoot>
           </table>
