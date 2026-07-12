@@ -6229,6 +6229,11 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <!-- نرخ هر لیتر فاکتورهای باز — فقط نمایشی، هیچ نقشی در محاسبات جدول ندارد -->
         <span id="pm-rate-badge" style="display:none;flex-shrink:0;white-space:nowrap;font-size:0.78rem;font-weight:800;border:1px solid var(--border);border-radius:7px;padding:6px 10px;background:var(--dark);color:var(--txt);box-sizing:border-box" title="نرخ هر لیتر از فاکتورهای بازِ این حساب — فقط نمایشی"></span>
       </div>
+      <!-- جمع الباقی بالای جدول — همان مقدارِ ردیفِ «جمع الباقی» پایین جدول -->
+      <div id="pm-albaqi-top" style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 6px;padding:8px 12px;border:1px solid var(--border);border-radius:9px;background:var(--dark);font-size:0.85rem;font-weight:800">
+        <span id="pm-albaqi-top-lbl">جمع الباقی</span>
+        <span id="pm-albaqi-top-val">۰</span>
+      </div>
       <div class="xls-wrap">
         <table class="xls-tbl" id="pm-tbl">
           <thead><tr>
@@ -9990,7 +9995,7 @@ function renderPersonRows(person) {
       <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="0" style="min-width:44px;max-width:60px" oninput="calcPersonRow('${person.id}',${i},'priceper',this.value)"></td>
       <td><input class="xls-in pm-bardagi-cell" type="number" value="${parseFloat(bardagi)||''}" placeholder="0" style="color:var(--accent);font-weight:700" oninput="calcPersonRow('${person.id}',${i},'bardagi',this.value)"></td>
       <td><input class="xls-in" type="number" value="${r.rasid||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasid',this.value)"></td>
-      <td class="pm-albaqi-cell" style="font-weight:700;color:var(--accent)">${n2fa(parseFloat(bardagi)||0)}</td>
+      <td class="pm-albaqi-cell"></td>
       <td><button class="del-btn" onclick="deletePersonRow('${person.id}',${i})">🗑️</button></td>
     `;
     tbody.appendChild(tr);
@@ -10416,9 +10421,9 @@ function _updatePersonRowCells(person, idx, r) {
   if (bardagiCell && document.activeElement !== bardagiCell) bardagiCell.value = r.bardagi || 0;
   const albaqiCell = row.querySelector('.pm-albaqi-cell');
   if (albaqiCell) {
-    // الباقیِ هر ردیف = بردگیِ همان ردیف (بدونِ کم‌کردنِ رسید). خالص‌سازی فقط در جمع
-    albaqiCell.textContent = n2fa(parseFloat(r.bardagi) || 0);
-    albaqiCell.style.color = 'var(--accent)';
+    // الباقی جلوی هر ردیف نمایش داده نمی‌شود — فقط «جمع الباقی» بالای جدول و
+    // پایین جدول (خواستهٔ کاربر: عدد ردیف‌به‌ردیف جلو رویش نیاید، جمع شود)
+    albaqiCell.textContent = '';
   }
 }
 function _curPerson() {
@@ -10457,24 +10462,30 @@ function updatePersonPhone(val) {
   if (currentRole !== 'viewer') save();
 }
 // ── کادر نمایشی «نرخ هر لیتر» کنار شماره تماس ──────────────────────────────
-// فقط نمایشی است و هیچ ارتباطی با محاسبات جدول ندارد. نرخ از ردیف‌های فاکتورِ
-// همین حساب می‌آید: فاکتورِ تسویه‌نشده → نرخش نشان داده می‌شود؛ تسویهٔ کامل →
-// حذف؛ فاکتور جدیدتر → جایگزین. با فیلتر «حساب جداگانه پطرول/دیزل» فقط نرخ
-// همان نوع تیل نمایش داده می‌شود.
+// فقط نمایشی است و هیچ ارتباطی با جدول ندارد — نرخ «فقط از خودِ فاکتورها»
+// می‌آید (نه از ستون فی لیترِ جدول؛ تایپ در جدول هیچ اثری روی این کادر ندارد):
+//  • آخرین فاکتورِ تاییدشدهٔ تیلِ همین شخص → نرخ همان نمایش داده می‌شود
+//  • تیلِ آن فاکتور که تمام شد (اعتبارِ «مقدار رسید تیل» مصرف شد) → نرخ حذف
+//  • فاکتور جدید → نرخ جدید جایگزین
+//  • با فیلتر «حساب جداگانه پطرول/دیزل» فقط نرخ همان نوع تیل
 function _renderPersonRateBadge(person) {
   const el = document.getElementById('pm-rate-badge');
   if (!el) return;
   const rates = { petrol: 0, diesel: 0 };
   try {
-    const acct = _acctOf(person);
-    (acct.rows || []).forEach(r => {
-      if (!r || !r.invId) return;                                  // فقط ردیف‌های آمده از فاکتور
-      const price = parseFloat(r.priceper) || 0;
+    const key = _debtNameKey(person.name);
+    (DB.invoices || []).forEach(v => {
+      if (!v || v.status !== 'approved' || v.by_money) return;
+      if (v.debtPersonId !== person.id && _debtNameKey(v.customer_name) !== key) return;
+      const price = parseFloat(v.price_per_liter) || 0;
       if (price <= 0) return;
-      const bard = r.byMoney ? (parseFloat(r.bardagi) || 0) : _fuelBardagi(r);
-      if (bard - (parseFloat(r.rasid) || 0) <= 0) return;          // تسویه شده → نرخ حذف
-      rates[(r.ftype === 'diesel') ? 'diesel' : 'petrol'] = price; // آخرین فاکتور جایگزین می‌شود
+      rates[v.fuel_type === 'diesel' ? 'diesel' : 'petrol'] = price;  // آخرین فاکتور جایگزین می‌شود
     });
+    // تمام‌شدنِ تیلِ فاکتور: اعتبارِ «مقدار رسید تیل» این حساب مصرف شده → نرخ حذف
+    const acct = _acctOf(person);
+    const t = _splitTotals(acct.rows || []);
+    if (((parseFloat(acct.rasidFuelP) || 0) - t.petrol.fuel) <= 0) rates.petrol = 0;
+    if (((parseFloat(acct.rasidFuelD) || 0) - t.diesel.fuel) <= 0) rates.diesel = 0;
   } catch (e) {}
   const parts = [];
   if ((currentPersonFilter === 'all' || currentPersonFilter === 'petrol') && rates.petrol > 0) parts.push('⛽ پطرول: ' + n2fa(rates.petrol));
@@ -10546,9 +10557,15 @@ function _updatePersonTotals(person) {
   const ftAlbEl2 = document.getElementById('pm-ft-albaqi2');
   if (ftAlbEl2) { ftAlbEl2.textContent = n2fa(netAll); ftAlbEl2.style.color = netAll < 0 ? 'var(--red)' : 'var(--green)'; }
   // برچسبِ گویا: منفی = بیشتر برده (بدهکار)، مثبت = مانده/پیش‌پرداخت (طلبکار)
-  const ftAlbLbl = document.getElementById('pm-ft-albaqi-lbl');
-  if (ftAlbLbl) ftAlbLbl.textContent = netAll < 0 ? 'جمع الباقی — این‌قدر بیشتر برده (بدهکار)'
+  const albLblTxt = netAll < 0 ? 'جمع الباقی — این‌قدر بیشتر برده (بدهکار)'
     : (netAll > 0 ? 'جمع الباقی — این‌قدر مانده / پیش‌پرداخت (طلبکار)' : 'جمع الباقی — تسویه');
+  const ftAlbLbl = document.getElementById('pm-ft-albaqi-lbl');
+  if (ftAlbLbl) ftAlbLbl.textContent = albLblTxt;
+  // همان جمع الباقی، بالای جدول هم (خواستهٔ کاربر: یکی اول جدول، یکی زیر جدول)
+  const topLbl = document.getElementById('pm-albaqi-top-lbl');
+  const topVal = document.getElementById('pm-albaqi-top-val');
+  if (topLbl) topLbl.textContent = albLblTxt;
+  if (topVal) { topVal.textContent = n2fa(netAll); topVal.style.color = netAll < 0 ? 'var(--red)' : 'var(--green)'; }
   // کادر نمایشی نرخ هر لیتر (کنار شماره تماس) — فقط نمایشی، بدون اثر بر محاسبات
   try { _renderPersonRateBadge(person); } catch (e) {}
 }
@@ -17586,7 +17603,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.4';
+const APP_VERSION = '2.9.5';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -20623,48 +20640,74 @@ function _ensureDebtPersonForInvoice(v) {
   if (v.phone && !(p.phone || '').trim()) p.phone = v.phone;
   return p;
 }
-// با تاییدِ فاکتور، اطلاعاتِ واقعیِ فاکتور داخلِ حسابِ قرض‌دار ثبت/به‌روز می‌شود:
-//  • عنوان ردیف: «نام مشتری - فاکتور شماره N» (نه فقط «فاکتور شماره N»)
-//  • نمبر حواله: فاکتور حواله ندارد → خالی می‌ماند (قبلاً اشتباهاً شمارهٔ فاکتور می‌نشست)
-//  • فاکتور عادی: نوع/مقدار تیل و فی لیتر → بردگی = لیتر×فی؛ رسید صفر (هیچ مبلغی
-//    به عنوان رسید ثبت نمی‌شود و حساب تسویه‌شده نشان داده نمی‌شود)
-//  • فاکتور «فقط مبلغ» (by_money): پولِ پیش‌پرداختِ مشتری است → در ستون رسید
-//    (اعتبار) ثبت می‌شود تا بعداً با نرخ روز تیل ببرد
+// با تاییدِ فاکتور، اعتبارِ مشتری در حسابِ قرض‌دار ثبت می‌شود:
+//  • فاکتور تیل: مقدار لیترِ فاکتور «خودکار» به کادرِ «مقدار رسید تیل» حسابِ
+//    پطرول/دیزلِ همان شخص اضافه می‌شود (مشتری این‌قدر تیل پیشِ پمپ دارد).
+//    هیچ ردیفی با فی لیتر/مقدار بردگی داخل جدول ساخته نمی‌شود — فی لیتر فقط
+//    در کادرِ نمایشیِ «نرخ هر لیتر» کنار شماره تماس دیده می‌شود.
+//  • فاکتور «فقط مبلغ» (by_money): پولِ پیش‌پرداخت است → در ستون رسیدِ جدول
+//    (رسید پول) ثبت می‌شود تا بعداً با نرخ روز تیل ببرد.
+// آنچه به حساب اضافه شده روی خودِ فاکتور (posted_fuel_rasid) یادداشت می‌شود تا
+// با برگشت/حذف/ویرایشِ فاکتور دقیقاً همان مقدار برگردانده شود.
+function _invUnpostFuelRasid(v) {
+  const m = v && v.posted_fuel_rasid;
+  if (!m) return;
+  const p = (DB.debtPersons || []).find(x => x.id === m.personId);
+  if (p) {
+    if (m.ftype === 'diesel') p.rasidFuelD = Math.max(0, (parseFloat(p.rasidFuelD) || 0) - (parseFloat(m.liters) || 0));
+    else p.rasidFuelP = Math.max(0, (parseFloat(p.rasidFuelP) || 0) - (parseFloat(m.liters) || 0));
+  }
+  delete v.posted_fuel_rasid;
+}
+// ردیفِ مدلِ قدیم (بردگیِ فاکتور) را از همهٔ حساب‌ها برمی‌دارد؛ اگر روی آن ردیف
+// رسیدِ دستی ثبت شده بود، رسیدش به‌صورت یک ردیفِ پولیِ مستقل حفظ می‌شود تا داده‌ای گم نشود.
+function _invDetachOldRows(v) {
+  (DB.debtPersons || []).forEach(p => {
+    if (!Array.isArray(p.rows)) return;
+    const i = p.rows.findIndex(r => r.invId === v.id);
+    if (i < 0) return;
+    const old = p.rows.splice(i, 1)[0];
+    const oldRasid = parseFloat(old && old.rasid) || 0;
+    if (oldRasid > 0 && !v.by_money) {
+      p.rows.push({ date: old.date || '', name: old.name || '', hawala: old.hawala || '',
+        ftype: old.ftype === 'diesel' ? 'diesel' : 'petrol', fuel: 0, priceper: 0,
+        byMoney: true, bardagi: 0, rasid: oldRasid, albaqi: -oldRasid });
+    }
+  });
+}
 function _invPostToDebt(v) {
   const p = _ensureDebtPersonForInvoice(v);
   if (!Array.isArray(p.rows)) p.rows = [];
-  const credit = !!v.by_money;
-  const data = {
-    date: v.date_sh || '',
-    name: ((v.customer_name || '').trim() ? ((v.customer_name || '').trim() + ' - ') : '') +
-          'فاکتور شماره ' + n2fa(v.invoice_number) + (v.vehicle_type ? (' — ' + v.vehicle_type) : ''),
-    hawala: '',
-    ftype: v.fuel_type === 'diesel' ? 'diesel' : 'petrol',
-    fuel: credit ? 0 : (parseFloat(v.liters) || 0),
-    priceper: credit ? 0 : (parseFloat(v.price_per_liter) || 0),
-    byMoney: credit,
-    invId: v.id
-  };
-  if (credit) {
-    data.bardagi = 0;
-    data.rasid = parseFloat(v.amount) || 0;    // اعتبار واقعی مشتری
-    data.albaqi = -(parseFloat(v.amount) || 0);
+  if (v.by_money) {
+    const data = {
+      date: v.date_sh || '',
+      name: ((v.customer_name || '').trim() ? ((v.customer_name || '').trim() + ' - ') : '') +
+            'فاکتور شماره ' + n2fa(v.invoice_number) + (v.vehicle_type ? (' — ' + v.vehicle_type) : ''),
+      hawala: '',
+      ftype: v.fuel_type === 'diesel' ? 'diesel' : 'petrol',
+      fuel: 0, priceper: 0, byMoney: true, invId: v.id,
+      bardagi: 0,
+      rasid: parseFloat(v.amount) || 0,          // اعتبار واقعی مشتری (رسید پول)
+      albaqi: -(parseFloat(v.amount) || 0)
+    };
+    const existing = p.rows.find(r => r.invId === v.id);
+    if (existing) Object.assign(existing, data); else p.rows.push(data);
   } else {
-    // بردگی/الباقی همان لحظه ذخیره می‌شود تا جمع‌های حساب (کارت شخص، فوتر جدول)
-    // بدون نیاز به یک‌بار رندرِ جدول هم درست باشند
-    data.bardagi = Math.round(data.fuel * data.priceper);
-  }
-  const existing = p.rows.find(r => r.invId === v.id);
-  if (existing) { if (!credit) data.rasid = existing.rasid || 0; Object.assign(existing, data); }
-  else { if (!credit) data.rasid = 0; p.rows.push(data); }
-  if (!credit) {
-    const row = existing || data;
-    row.albaqi = (parseFloat(row.bardagi) || 0) - (parseFloat(row.rasid) || 0);
+    // فاکتور تیل → فقط «مقدار رسید تیل» زیاد می‌شود؛ ردیف جدول ساخته نمی‌شود
+    _invUnpostFuelRasid(v);        // تایید/ویرایش دوباره → اول اعتبار قبلی برگردد
+    _invDetachOldRows(v);          // ردیف مدل قدیم اگر مانده بود، برداشته شود
+    const liters = parseFloat(v.liters) || 0;
+    const ft = v.fuel_type === 'diesel' ? 'diesel' : 'petrol';
+    if (ft === 'diesel') p.rasidFuelD = (parseFloat(p.rasidFuelD) || 0) + liters;
+    else p.rasidFuelP = (parseFloat(p.rasidFuelP) || 0) + liters;
+    v.posted_fuel_rasid = { personId: p.id, ftype: ft, liters: liters };
   }
   v.debtPersonId = p.id;
 }
-// با برگرداندنِ فاکتور به صف/حذفِ آن، ردیفِ مرتبط از حساب قرض‌دار پاک می‌شود.
+// با برگرداندنِ فاکتور به صف/حذفِ آن، اثرش از حساب قرض‌دار پاک می‌شود
+// (هم ردیفِ جدول اگر بود، هم اعتبارِ «مقدار رسید تیل»).
 function _invRemoveFromDebt(v) {
+  _invUnpostFuelRasid(v);
   (DB.debtPersons || []).forEach(p => {
     if (Array.isArray(p.rows)) {
       const i = p.rows.findIndex(r => r.invId === v.id);
@@ -20684,8 +20727,8 @@ function invApprove(id) {
   renderInvoices(); invRenderList();
   if (_invDetailId === id) invRenderDetail();
   showToast('✅ فاکتور شماره ' + n2fa(v.invoice_number) + (v.by_money
-    ? (' تایید شد و مبلغ به عنوان اعتبار در حساب «' + (v.customer_name || '—') + '» ثبت شد')
-    : (' تایید شد و در حساب «' + (v.customer_name || '—') + '» ثبت شد')), '#38a169');
+    ? (' تایید شد و مبلغ به عنوان اعتبار (رسید پول) در حساب «' + (v.customer_name || '—') + '» ثبت شد')
+    : (' تایید شد — ' + n2fa(v.liters) + ' لیتر به «مقدار رسید تیل» حساب «' + (v.customer_name || '—') + '» اضافه شد')), '#38a169');
 }
 function invRevert(id) {
   if (!requireAdmin()) return;
@@ -20859,6 +20902,18 @@ ${copy('نسخهٔ پمپ')}
     };
   }
   try { _invSelfCheck(); } catch (e) {}
+  // مهاجرت مدل قدیم → جدید: فاکتورهای تیلِ تاییدشده که هنوز به‌صورت ردیفِ
+  // بردگی در جدول قرض‌دار نشسته‌اند، به «مقدار رسید تیل» منتقل می‌شوند
+  // (ردیف قدیمی برداشته می‌شود؛ اگر رسید دستی داشت، جدا حفظ می‌شود).
+  try {
+    let mig = false;
+    (DB.invoices || []).forEach(v => {
+      if (!v || v.status !== 'approved' || v.by_money || v.posted_fuel_rasid) return;
+      const hasRow = (DB.debtPersons || []).some(p => (p.rows || []).some(r => r && r.invId === v.id));
+      if (hasRow) { try { _invPostToDebt(v); mig = true; } catch (e) {} }
+    });
+    if (mig) { try { save(); } catch (e) {} }
+  } catch (e) {}
   try { _invRouteFromHash(); } catch (e) {}
 })();
 </script>
