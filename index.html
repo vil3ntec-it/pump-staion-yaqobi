@@ -1772,7 +1772,9 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter
 .tb-item{position:relative;padding:2px 4px}
 .tb-item+.tb-item::before{content:"";position:absolute;right:-10px;top:18%;height:64%;width:1px;background:linear-gradient(rgba(255,255,255,0),rgba(255,255,255,.14),rgba(255,255,255,0))}
 .tb-label{letter-spacing:.2px}
-.tb-value{font-weight:900!important;text-shadow:0 1px 3px rgba(0,0,0,.55);filter:saturate(1.1)}
+/* سایهٔ متنِ کادرهای بنر حذف شد (خواستهٔ کاربر: متن بدون سایه، رنگ از تم) */
+.tb-value{font-weight:900!important;text-shadow:none!important;filter:saturate(1.1)}
+.tb-label{text-shadow:none!important}
 
 /* ---------- 6. NAV (glass rail, gradient active, lift) ---------- */
 .nav{
@@ -2869,9 +2871,24 @@ body.theme-light-slate{
    wins no matter which day theme is active. */
 body.light-mode[class*="theme-"]{
   --dark:#e4e7eb !important; --panel:#f6f7f9 !important; --card:#eef0f3 !important;
+  /* سربرگ/نوار بالایی/ناوبری دیگر سفیدِ خالی نیستند — رنگِ ملایمِ خودِ تم را
+     می‌گیرند (خواستهٔ کاربر: پس‌زمینه از تم برنامه). سطح روشن می‌ماند تا
+     متن‌های تیرهٔ حالت روز خوانا بمانند. */
   --hdr-bg:linear-gradient(90deg,#eef0f3,#eef0f3) !important;
+  --hdr-bg:linear-gradient(90deg,
+    color-mix(in srgb, var(--accent) 30%, #ffffff),
+    color-mix(in srgb, var(--accent) 14%, #ffffff),
+    color-mix(in srgb, var(--accent) 30%, #ffffff)) !important;
   --banner-bg:linear-gradient(90deg,#eef0f3,#eef0f3) !important;
+  --banner-bg:linear-gradient(90deg,
+    color-mix(in srgb, var(--accent) 22%, #ffffff),
+    color-mix(in srgb, var(--accent) 10%, #ffffff),
+    color-mix(in srgb, var(--accent) 22%, #ffffff)) !important;
   --nav-bg:linear-gradient(90deg,#eef0f3,#eef0f3) !important;
+  --nav-bg:linear-gradient(90deg,
+    color-mix(in srgb, var(--accent) 16%, #ffffff),
+    color-mix(in srgb, var(--accent) 7%, #ffffff),
+    color-mix(in srgb, var(--accent) 16%, #ffffff)) !important;
   --hdr-title:var(--accent) !important;
   --app-bg:radial-gradient(ellipse at 50% 20%, rgba(255,255,255,.9) 0%, transparent 55%),radial-gradient(ellipse at 50% 100%, rgba(150,150,155,.18) 0%, transparent 60%),linear-gradient(175deg,#eeeeef 0%,#e4e4e6 30%,#dcdce0 65%,#d4d4d8 100%) !important;
 }
@@ -9645,7 +9662,11 @@ function renderPersons(type) {
   pageList.forEach(p => {
     const rows = _allRows(p);
     const t = _splitTotals(rows);
-    const albaqi  = t.all.albaqi;
+    // حساب «واحد تیل»: الباقی روی کارت به لیتر (برد تیل − رسید تیل) — نه مبلغِ لیتر×فی
+    const isMoneyP = p.mode === 'money';
+    const fuelFig = isMoneyP ? null : _debtSumFigures(p);
+    const albaqi  = isMoneyP ? t.all.albaqi : fuelFig.albaqi;
+    const albaqiUnit = isMoneyP ? ' افغانی' : ' لیتر';
     const pBal = t.petrol.albaqi, dBal = t.diesel.albaqi;
     const stInfo = type === 'debt' ? debtFuelStatus(p) : { st: 'none', kinds: {} };
     const st = stInfo.st;
@@ -9656,7 +9677,7 @@ function renderPersons(type) {
       <button class="person-del" onclick="event.stopPropagation();deletePerson('${type}','${p.id}')">✕</button>
       ${st==='low' ? `<span class="pstatus-dot low" title="${who} کم مانده"></span>` : st==='out' ? `<span class="pstatus-dot out" title="${who} تمام شده"></span>` : ''}
       <div class="pname">${escFa(p.name)}</div>
-      <div class="pdebt ${albaqi<=0?'clear':''}">${albaqi<=0 ? '✅ تسویه' : 'الباقی: '+n2fa(albaqi)+' افغانی'}</div>
+      <div class="pdebt ${albaqi<=0?'clear':''}">${albaqi<=0 ? '✅ تسویه' : 'الباقی: '+n2fa(Math.round(albaqi*100)/100)+albaqiUnit}</div>
       ${st==='low' ? `<div class="pstatus-label low">⚠️ ${who} کم مانده</div>` : st==='out' ? `<div class="pstatus-label out">⛔ ${who} تمام شده</div>` : ''}
       <div style="display:flex;gap:10px;margin-top:10px;font-size:0.95rem;font-weight:700;justify-content:center">
         <span style="color:var(--green)">⛽ ${n2fa(pBal)}</span>
@@ -9978,10 +9999,11 @@ function renderPersonRows(person) {
 
   const tbody = document.getElementById('pm-body');
   tbody.innerHTML = '';
-  // ستون «نوع تیل» همیشه نمایش داده می‌شود — حتی در «حساب جداگانه پطرول/دیزل» — تا
-  // چیدمانِ جدول دقیقاً مثل نمای «همه» تمام‌عرض بماند. (حذفِ این ستون در table-layout:
-  // fixed یک ستونِ فانتوم می‌ساخت و جدول را باریک/کج نشان می‌داد.)
-  const showFtCol = true;
+  // ستون «نوع تیل» فقط در نمای «همه» نمایش داده می‌شود — در «حساب جداگانه
+  // پطرول/دیزل» صفحه مخصوص یک نوع تیل است و نمایش دوبارهٔ نوع تیل اضافه و
+  // گیج‌کننده است. (سرستون با _togglePmFtColumn واقعاً از DOM برداشته می‌شود تا
+  // در table-layout:fixed ستونِ فانتوم نسازد و جدول باریک/کج نشود.)
+  const showFtCol = currentPersonFilter === 'all';
   _togglePmFtColumn(showFtCol);
   let shown = 0;
   rows.forEach((r, i) => {
@@ -10051,8 +10073,8 @@ function _renderPendingInvoices(person, xlsWrap) {
   if (!pend.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
   box.style.display = '';
   box.style.cssText = 'margin:10px 0;padding:10px 12px;border:1px dashed var(--accent);border-radius:10px;background:rgba(255,180,61,.06);opacity:.9';
-  box.innerHTML = '<div style="font-size:0.78rem;font-weight:800;color:var(--accent);margin-bottom:6px">⏳ فاکتورهای در انتظارِ تایید (هنوز در الباقیِ حساب جمع نشده‌اند — با تایید، خودکار اضافه می‌شوند)</div>' +
-    pend.map(v => `<div style="font-size:0.76rem;color:var(--muted);display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px dashed var(--border)">
+  box.innerHTML = '<div style="font-size:0.78rem;font-weight:800;color:var(--accent);margin-bottom:6px">⏳ فاکتورهای در انتظارِ تایید (هنوز در الباقیِ حساب جمع نشده‌اند — با تایید، خودکار اضافه می‌شوند · برای باز کردن و تایید، روی فاکتور بزنید)</div>' +
+    pend.map(v => `<div role="button" tabindex="0" title="باز کردن این فاکتور برای تایید" onclick="invOpenDetail('${v.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();invOpenDetail('${v.id}');}" style="font-size:0.76rem;color:var(--muted);display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px dashed var(--border);cursor:pointer">
         <span>🧾 فاکتور شماره ${n2fa(v.invoice_number)} · ${v.by_money ? '💵 فقط مبلغ (اعتبار)' : (_invFuelLabel(v.fuel_type) + ' · ' + n2fa(v.liters) + ' لیتر × ' + n2fa(v.price_per_liter))}</span>
         <b style="color:var(--txt)">${n2fa(Math.round(_invTotal(v)))} افغانی</b>
       </div>`).join('');
@@ -10243,22 +10265,29 @@ function pdfStackedAcct(pid, acctId) {
   const ft = t.all;
   const printDate = new Date().toLocaleDateString('fa-IR');
 
+  // جداسازی کامل واحدها: حساب «واحد پول» فقط ستون‌های پولی، حساب «واحد تیل» فقط لیتر
   const tableRows = rows.map((r, i) => {
     const fuelLabel = r.ftype === 'diesel' ? '🟤 دیزل' : '⛽ پطرول';
     const albaqiColor = (r.albaqi||0) > 0 ? '#e53e3e' : '#276749';
+    const unitCols = money ? `
+      <td style="color:#c07700;font-weight:700">${n2fa(r.bardagi||0)}</td>
+      <td style="color:#276749;font-weight:700">${n2fa(r.rasid||0)}</td>
+      <td style="color:${albaqiColor};font-weight:700">${n2fa(-(r.albaqi||0))}</td>` : `
+      <td style="color:#2b6cb0;font-weight:700">${n2fa(r.fuel||0)} ل</td>`;
     return `<tr>
       <td style="text-align:center;color:#718096">${i+1}</td>
       <td>${r.date||'—'}</td>
       <td>${escFa(r.name)||'—'}</td>
       <td style="color:#c07700">${r.hawala||'—'}</td>
       <td>${fuelLabel}</td>
-      <td style="color:#2b6cb0;font-weight:700">${r.byMoney?'—':n2fa(r.fuel||0)}</td>
-      <td>${r.byMoney?'—':n2fa(r.priceper||0)}</td>
-      <td style="color:#c07700;font-weight:700">${n2fa(r.bardagi||0)}</td>
-      <td style="color:#276749;font-weight:700">${n2fa(r.rasid||0)}</td>
-      <td style="color:${albaqiColor};font-weight:700">${n2fa(-(r.albaqi||0))}</td>
+      ${unitCols}
     </tr>`;
   }).join('');
+  const unitHeadCols = money ? '<th>بردگی</th><th>رسید</th><th>الباقی</th>' : '<th>مقدار تیل (لیتر)</th>';
+  const unitFootCols = money
+    ? `<td>${n2fa(ft.bardagi)}</td><td>${n2fa(ft.rasid)}</td><td>${n2fa(-ft.albaqi)}</td>`
+    : `<td>${n2fa(ft.fuel)} ل</td>`;
+  const colCount = 5 + (money ? 3 : 1);
 
   const noteHtml = acct.note ? `<div style="margin:12px 0;padding:8px 12px;background:#f7fafc;border-right:3px solid #c07700;border-radius:6px;font-size:0.78rem;color:#4a5568">${acct.note.replace(/</g,'&lt;')}</div>` : '';
 
@@ -10332,25 +10361,25 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
   </div>
 </div>
 <div class="summary">
+  ${money ? `
   <div class="sum-box" style="border-color:#276749"><div class="l">جمع بردگی</div><div class="v" style="color:#c07700">${n2fa(rnd(ft.bardagi))}</div></div>
   <div class="sum-box" style="border-color:#276749"><div class="l">جمع رسید</div><div class="v" style="color:#276749">${n2fa(rnd(ft.rasid))}</div></div>
-  <div class="sum-box" style="border-color:#e53e3e"><div class="l">جمع الباقی</div><div class="v" style="color:#e53e3e">${n2fa(rnd(-ft.albaqi))}</div></div>
+  <div class="sum-box" style="border-color:#e53e3e"><div class="l">جمع الباقی</div><div class="v" style="color:#e53e3e">${n2fa(rnd(-ft.albaqi))}</div></div>` : `
+  <div class="sum-box" style="border-color:#276749"><div class="l">جمع تیل (لیتر)</div><div class="v" style="color:#c07700">${n2fa(rnd(ft.fuel))} ل</div></div>
+  <div class="sum-box" style="border-color:#276749"><div class="l">رسید تیل (لیتر)</div><div class="v" style="color:#276749">${n2fa(rnd(rasidP+rasidD))} ل</div></div>
+  <div class="sum-box" style="border-color:#e53e3e"><div class="l">الباقی تیل (لیتر)</div><div class="v" style="color:#e53e3e">${n2fa(rnd(rasidP+rasidD-ft.fuel))} ل</div></div>`}
   <div class="sum-box" style="border-color:#2b6cb0"><div class="l">تعداد ردیف</div><div class="v" style="color:#2b6cb0">${n2fa(rows.length)}</div></div>
 </div>
 ${noteHtml}
 <table>
   <thead><tr>
     <th>#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th><th>نوع تیل</th>
-    <th>مقدار</th><th>فی لیتر</th><th>بردگی</th><th>رسید</th><th>الباقی</th>
+    ${unitHeadCols}
   </tr></thead>
-  <tbody>${tableRows||`<tr><td colspan="10" style="text-align:center;padding:20px;color:#718096">هیچ ردیفی ثبت نشده</td></tr>`}</tbody>
+  <tbody>${tableRows||`<tr><td colspan="${colCount}" style="text-align:center;padding:20px;color:#718096">هیچ ردیفی ثبت نشده</td></tr>`}</tbody>
   <tfoot><tr>
     <td colspan="5" style="text-align:right">جمع</td>
-    <td>${n2fa(ft.fuel)} ل</td>
-    <td>—</td>
-    <td>${n2fa(ft.bardagi)}</td>
-    <td>${n2fa(ft.rasid)}</td>
-    <td>${n2fa(-ft.albaqi)}</td>
+    ${unitFootCols}
   </tr></tfoot>
 </table>
 <div class="footer">پمپ یعقوبی — ${escFa(person.name)} — ${acctLabel} — این سند به صورت خودکار تولید شده است</div>
@@ -10568,27 +10597,34 @@ function _updatePersonTotals(person) {
   setRem('pm-p-remfuel', remP);
   setRem('pm-d-remfuel', remD);
   setV('pm-bord-sum', n2fa(rnd(bordP+bordD)) + unit);
-  // footer جدول (پولی) — بدون تغییر
-  setV('pm-ft-fuel', n2fa(t.all.fuel));
-  setV('pm-ft-bardagi', n2fa(t.all.bardagi));
-  setV('pm-ft-rasid', n2fa(t.all.rasid));
+  // footer جدول — واحد پول و واحد تیل کاملاً جدا:
+  //  • حساب «واحد پول»: فقط جمع‌های پولی (بردگی/رسید/الباقی)؛ جمع لیتر نمایش داده نمی‌شود
+  //  • حساب «واحد تیل»: فقط جمع لیتر؛ مبلغ‌های پولیِ حاصل از لیتر×فی نمایش داده نمی‌شوند
+  setV('pm-ft-fuel', money ? '—' : n2fa(t.all.fuel));
+  setV('pm-ft-bardagi', money ? n2fa(t.all.bardagi) : '—');
+  setV('pm-ft-rasid', money ? n2fa(t.all.rasid) : '—');
   // جمعِ الباقی به‌صورت «رسید − بردگی» (پیش‌پرداخت مثبت/سبز، بدهی منفی/سرخ) —
-  // هم در ستونِ الباقیِ ردیفِ «جمع» و هم در ردیفِ برچسب‌دارِ زیرش
-  const netAll = Math.round(t.all.rasid - t.all.bardagi);
+  // هم در ستونِ الباقیِ ردیفِ «جمع» و هم در ردیفِ برچسب‌دارِ زیرش.
+  // در حالتِ «واحد تیل» همین جمع به لیتر است: رسید تیل − برد تیل
+  const netAll = money
+    ? Math.round(t.all.rasid - t.all.bardagi)
+    : Math.round(((parseFloat(acct.rasidFuelP)||0) + (parseFloat(acct.rasidFuelD)||0) - t.all.fuel) * 100) / 100;
+  const netTxt = n2fa(netAll) + (money ? '' : ' ل');
   const ftAlbEl = document.getElementById('pm-ft-albaqi');
-  if (ftAlbEl) { ftAlbEl.textContent = n2fa(netAll); ftAlbEl.style.color = netAll < 0 ? 'var(--red)' : 'var(--green)'; }
+  if (ftAlbEl) { ftAlbEl.textContent = netTxt; ftAlbEl.style.color = netAll < 0 ? 'var(--red)' : 'var(--green)'; }
   const ftAlbEl2 = document.getElementById('pm-ft-albaqi2');
-  if (ftAlbEl2) { ftAlbEl2.textContent = n2fa(netAll); ftAlbEl2.style.color = netAll < 0 ? 'var(--red)' : 'var(--green)'; }
+  if (ftAlbEl2) { ftAlbEl2.textContent = netTxt; ftAlbEl2.style.color = netAll < 0 ? 'var(--red)' : 'var(--green)'; }
   // برچسبِ گویا: منفی = بیشتر برده (بدهکار)، مثبت = مانده/پیش‌پرداخت (طلبکار)
-  const albLblTxt = netAll < 0 ? 'جمع الباقی — این‌قدر بیشتر برده (بدهکار)'
-    : (netAll > 0 ? 'جمع الباقی — این‌قدر مانده / پیش‌پرداخت (طلبکار)' : 'جمع الباقی — تسویه');
+  const albTag = money ? 'جمع الباقی' : 'جمع الباقی تیل';
+  const albLblTxt = netAll < 0 ? albTag + ' — این‌قدر بیشتر برده (بدهکار)'
+    : (netAll > 0 ? albTag + ' — این‌قدر مانده / پیش‌پرداخت (طلبکار)' : albTag + ' — تسویه');
   const ftAlbLbl = document.getElementById('pm-ft-albaqi-lbl');
   if (ftAlbLbl) ftAlbLbl.textContent = albLblTxt;
   // همان جمع الباقی، بالای جدول هم (خواستهٔ کاربر: یکی اول جدول، یکی زیر جدول)
   const topLbl = document.getElementById('pm-albaqi-top-lbl');
   const topVal = document.getElementById('pm-albaqi-top-val');
   if (topLbl) topLbl.textContent = albLblTxt;
-  if (topVal) { topVal.textContent = n2fa(netAll); topVal.style.color = netAll < 0 ? 'var(--red)' : 'var(--green)'; }
+  if (topVal) { topVal.textContent = netTxt; topVal.style.color = netAll < 0 ? 'var(--red)' : 'var(--green)'; }
   // کادر نمایشی نرخ هر لیتر (کنار شماره تماس) — فقط نمایشی، بدون اثر بر محاسبات
   try { _renderPersonRateBadge(person); } catch (e) {}
 }
@@ -11670,23 +11706,37 @@ function addDebtPersonsBulk() {
   showToast('✅ افزوده شد: ' + n2fa(added) + (dup ? (' — تکراری: ' + n2fa(dup)) : ''), added ? '#38a169' : '#d97706');
   if (added) { try { _botAnnounce(n2fa(added) + ' حساب قرض‌دار جدید افزوده شد.'); } catch (e) {} }
 }
+// جمع‌های نمایشیِ یک قرض‌دار برای «قرض‌های دسته‌جمعی» — بسته به نوع حساب:
+// «واحد پول» → مبالغ پولی؛ «واحد تیل» → لیتر (برد تیل، رسید تیل، الباقی تیل).
+// این دو واحد کاملاً جدا هستند و با هم قاطی نمایش داده نمی‌شوند.
+function _debtSumFigures(p) {
+  const t = _splitTotals(_allRows(p)).all;
+  if (p.mode === 'money') return { money: true, bardagi: t.bardagi, rasid: t.rasid, albaqi: t.albaqi };
+  let rasidL = 0;
+  [p, ...(p.subs || [])].forEach(a => { if (a) rasidL += (parseFloat(a.rasidFuelP) || 0) + (parseFloat(a.rasidFuelD) || 0); });
+  return { money: false, bardagi: t.fuel, rasid: rasidL, albaqi: t.fuel - rasidL };
+}
 // PDF قرض‌های دسته‌جمعی
 function pdfDebtSummary() {
   const d = allDates();
   const rnd = x => Math.round(x*100)/100;
   const list = DB.debtPersons || [];
   let totBardagi = 0, totRasid = 0, totAlbaqi = 0;
+  let totBardagiL = 0, totRasidL = 0, totAlbaqiL = 0, anyFuel = false;
   const rowsHtml = list.map((p,i) => {
-    const t = _splitTotals(_allRows(p)).all;
-    totBardagi += t.bardagi; totRasid += t.rasid; totAlbaqi += t.albaqi;
+    const f = _debtSumFigures(p);
+    if (f.money) { totBardagi += f.bardagi; totRasid += f.rasid; totAlbaqi += f.albaqi; }
+    else { anyFuel = true; totBardagiL += f.bardagi; totRasidL += f.rasid; totAlbaqiL += f.albaqi; }
+    const u = f.money ? '' : ' ل';
     return `<tr>
       <td style="text-align:center;color:#718096">${n2fa(i+1)}</td>
-      <td style="font-weight:700">${escFa(p.name)}</td>
-      <td style="color:#c07700;font-weight:900">${n2fa(rnd(t.bardagi))}</td>
-      <td style="color:#38a169;font-weight:900">${n2fa(rnd(t.rasid))}</td>
-      <td style="color:${t.albaqi>0?'#e53e3e':'#38a169'};font-weight:900">${n2fa(rnd(-t.albaqi))}</td>
+      <td style="font-weight:700">${escFa(p.name)}${f.money ? '' : ' <span style="font-size:0.85em;color:#2b6cb0">(واحد تیل)</span>'}</td>
+      <td style="color:#c07700;font-weight:900">${n2fa(rnd(f.bardagi))}${u}</td>
+      <td style="color:#38a169;font-weight:900">${n2fa(rnd(f.rasid))}${u}</td>
+      <td style="color:${f.albaqi>0?'#e53e3e':'#38a169'};font-weight:900">${n2fa(rnd(-f.albaqi))}${u}</td>
     </tr>`;
   }).join('');
+  const _fSub = v => anyFuel ? `<div style="font-size:0.85em;color:#2b6cb0">${n2fa(rnd(v))} ل</div>` : '';
   const html = `<!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
@@ -11724,9 +11774,9 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 <div class="meta">تاریخ چاپ: ${d.sh} | ${d.mi}</div>
 <div class="sum-row">
   <div class="sum-box"><div class="l">تعداد قرض‌داران</div><div class="v" style="color:#718096">${n2fa(list.length)}</div></div>
-  <div class="sum-box"><div class="l">جمع بردگی</div><div class="v" style="color:#c07700">${n2fa(rnd(totBardagi))}</div></div>
-  <div class="sum-box"><div class="l">جمع رسید</div><div class="v" style="color:#38a169">${n2fa(rnd(totRasid))}</div></div>
-  <div class="sum-box"><div class="l">الباقی</div><div class="v" style="color:${totAlbaqi>0?'#e53e3e':'#38a169'}">${n2fa(rnd(-totAlbaqi))}</div></div>
+  <div class="sum-box"><div class="l">جمع بردگی</div><div class="v" style="color:#c07700">${n2fa(rnd(totBardagi))}${_fSub(totBardagiL)}</div></div>
+  <div class="sum-box"><div class="l">جمع رسید</div><div class="v" style="color:#38a169">${n2fa(rnd(totRasid))}${_fSub(totRasidL)}</div></div>
+  <div class="sum-box"><div class="l">الباقی</div><div class="v" style="color:${totAlbaqi>0?'#e53e3e':'#38a169'}">${n2fa(rnd(-totAlbaqi))}${_fSub(-totAlbaqiL)}</div></div>
 </div>
 <table>
 <thead>
@@ -11734,7 +11784,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 </thead>
 <tbody>${rowsHtml || '<tr><td colspan="5" style="text-align:center;padding:20px;color:#718096">هنوز قرض‌داری ثبت نشده</td></tr>'}</tbody>
 <tfoot>
-  <tr><td colspan="2">جمع کل</td><td>${n2fa(rnd(totBardagi))}</td><td>${n2fa(rnd(totRasid))}</td><td>${n2fa(rnd(-totAlbaqi))}</td></tr>
+  <tr><td colspan="2">جمع کل</td><td>${n2fa(rnd(totBardagi))}${anyFuel?` <span style="font-size:0.85em">| ${n2fa(rnd(totBardagiL))} ل</span>`:''}</td><td>${n2fa(rnd(totRasid))}${anyFuel?` <span style="font-size:0.85em">| ${n2fa(rnd(totRasidL))} ل</span>`:''}</td><td>${n2fa(rnd(-totAlbaqi))}${anyFuel?` <span style="font-size:0.85em">| ${n2fa(rnd(-totAlbaqiL))} ل</span>`:''}</td></tr>
 </tfoot>
 </table>
 <div class="footer">پمپ یعقوبی — این سند به صورت خودکار تولید شده است</div>
@@ -11751,29 +11801,37 @@ function renderDebtSummary() {
   const list = DB.debtPersons || [];
   tb.innerHTML = '';
   let totBardagi = 0, totRasid = 0, totAlbaqi = 0;
+  let totBardagiL = 0, totRasidL = 0, totAlbaqiL = 0, anyFuel = false;
   if (!list.length) {
     tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">هنوز قرض‌داری ثبت نشده</td></tr>';
   } else {
     list.forEach((p, i) => {
-      const t = _splitTotals(_allRows(p)).all;
-      totBardagi += t.bardagi; totRasid += t.rasid; totAlbaqi += t.albaqi;
+      // حساب «واحد تیل» هم دقیقاً مثل «واحد پول» نمایش داده می‌شود — با لیتر
+      const f = _debtSumFigures(p);
+      if (f.money) { totBardagi += f.bardagi; totRasid += f.rasid; totAlbaqi += f.albaqi; }
+      else { anyFuel = true; totBardagiL += f.bardagi; totRasidL += f.rasid; totAlbaqiL += f.albaqi; }
+      const u = f.money ? '' : ' ل';
       const tr = document.createElement('tr');
       tr.style.cursor = 'pointer';
       tr.onclick = () => openPersonModal('debt', p.id);
       tr.innerHTML = `
         <td>${n2fa(i+1)}</td>
-        <td style="font-weight:700">${escFa(p.name)}</td>
-        <td style="color:var(--accent);font-weight:700">${n2fa(rnd(t.bardagi))}</td>
-        <td style="color:var(--green);font-weight:700">${n2fa(rnd(t.rasid))}</td>
-        <td style="color:${t.albaqi>0?'var(--red)':'var(--green)'};font-weight:700">${n2fa(rnd(-t.albaqi))}</td>
+        <td style="font-weight:700">${escFa(p.name)}${f.money ? '' : ' <span style="font-size:0.78em;color:var(--blue);font-weight:700">(واحد تیل)</span>'}</td>
+        <td style="color:var(--accent);font-weight:700">${n2fa(rnd(f.bardagi))}${u}</td>
+        <td style="color:var(--green);font-weight:700">${n2fa(rnd(f.rasid))}${u}</td>
+        <td style="color:${f.albaqi>0?'var(--red)':'var(--green)'};font-weight:700">${n2fa(rnd(-f.albaqi))}${u}</td>
       `;
       tb.appendChild(tr);
     });
   }
-  const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = n2fa(rnd(v)); };
-  setTxt('debtsum-tot-bardagi', totBardagi);
-  setTxt('debtsum-tot-rasid', totRasid);
-  setTxt('debtsum-tot-albaqi', -totAlbaqi);
+  // جمع کل: واحد پول و واحد تیل جدا از هم (قاطی نمی‌شوند)
+  const setTot = (id, v, vL) => {
+    const el = document.getElementById(id); if (!el) return;
+    el.innerHTML = n2fa(rnd(v)) + (anyFuel ? `<div style="font-size:0.82em;color:var(--blue)">${n2fa(rnd(vL))} ل</div>` : '');
+  };
+  setTot('debtsum-tot-bardagi', totBardagi, totBardagiL);
+  setTot('debtsum-tot-rasid', totRasid, totRasidL);
+  setTot('debtsum-tot-albaqi', -totAlbaqi, -totAlbaqiL);
 }
 
 // ========== شرکت ها تیل (حساب جداگانه برای هر شرکت) ==========
@@ -12952,8 +13010,10 @@ function pdfCompany() {
 <style>@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:12px}
 h1{font-size:1.25rem;font-weight:900;color:#805ad5;border-bottom:2px solid #805ad5;padding-bottom:8px;margin-bottom:6px}
-.meta{font-size:0.72rem;color:#718096;margin-bottom:14px}.sum-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
-.sum-box{flex:1;min-width:110px;background:#faf5ff;border:1px solid #e9d8fd;border-radius:8px;padding:10px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;gap:4px}
+.meta{font-size:0.72rem;color:#718096;margin-bottom:14px}
+/* کادرهای خلاصه: شبکهٔ منظم — همه دقیقاً هم‌اندازه (قبلاً flex بود و اندازه‌ها فرق می‌کرد) */
+.sum-row{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:1fr;gap:10px;margin-bottom:16px}
+.sum-box{min-width:0;min-height:74px;background:#faf5ff;border:1px solid #e9d8fd;border-radius:8px;padding:10px;text-align:center;display:flex;flex-direction:column;justify-content:center;gap:4px;box-sizing:border-box}
 .sum-box .l{font-size:0.62rem;color:#718096;line-height:1.3}.sum-box .v{font-size:1.05rem;font-weight:900;white-space:nowrap}
 table{width:100%;border-collapse:collapse;font-size:0.72rem}th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:right;font-weight:700}
 td{padding:6px 7px;border-bottom:1px solid #e2e8f0}tr:nth-child(even) td{background:#faf5ff}
@@ -13020,8 +13080,10 @@ function pdfCompanyHistory(companyId, historyId){
 <style>@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:12px}
 h1{font-size:1.25rem;font-weight:900;color:#805ad5;border-bottom:2px solid #805ad5;padding-bottom:8px;margin-bottom:6px}
-.meta{font-size:0.72rem;color:#718096;margin-bottom:14px}.sum-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
-.sum-box{flex:1;min-width:110px;background:#faf5ff;border:1px solid #e9d8fd;border-radius:8px;padding:10px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;gap:4px}
+.meta{font-size:0.72rem;color:#718096;margin-bottom:14px}
+/* کادرهای خلاصه: شبکهٔ منظم — همه دقیقاً هم‌اندازه */
+.sum-row{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:1fr;gap:10px;margin-bottom:16px}
+.sum-box{min-width:0;min-height:74px;background:#faf5ff;border:1px solid #e9d8fd;border-radius:8px;padding:10px;text-align:center;display:flex;flex-direction:column;justify-content:center;gap:4px;box-sizing:border-box}
 .sum-box .l{font-size:0.62rem;color:#718096;line-height:1.3}.sum-box .v{font-size:1.05rem;font-weight:900;white-space:nowrap}
 table{width:100%;border-collapse:collapse;font-size:0.72rem}th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:right;font-weight:700}
 td{padding:6px 7px;border-bottom:1px solid #e2e8f0}tr:nth-child(even) td{background:#faf5ff}
@@ -13459,27 +13521,34 @@ function pdfPerson() {
   const showFtCol = filter === 'all';
   const fuelTitle = filter === 'petrol' ? ' — حساب جداگانه ⛽ پطرول' : (filter === 'diesel' ? ' — حساب جداگانه 🟤 دیزل' : '');
 
+  // جداسازی کامل واحدها در PDF: حساب «واحد پول» فقط ستون‌های پولی
+  // (بردگی/رسید/الباقی) و حساب «واحد تیل» فقط ستون‌های لیتری (مقدار تیل)
   const tableRows = rows.map((r, i) => {
     const fuelLabel = r.ftype === 'diesel' ? '🟤 دیزل' : '⛽ پطرول';
     const albaqiColor = (r.albaqi || 0) > 0 ? '#e53e3e' : '#276749';
+    const unitCols = money ? `
+      <td style="color:#c07700;font-weight:700">${n2fa(r.bardagi || 0)}</td>
+      <td style="color:#276749;font-weight:700">${n2fa(r.rasid || 0)}</td>
+      <td style="color:${albaqiColor};font-weight:700">${n2fa(r.albaqi || 0)}</td>` : `
+      <td style="color:#2b6cb0;font-weight:700">${n2fa(r.fuel || 0)} ل</td>`;
     return `<tr>
       <td style="text-align:center;color:#718096">${i + 1}</td>
       <td>${r.date || '—'}</td>
       <td>${escFa(r.name) || '—'}</td>
       <td style="color:#c07700">${r.hawala || '—'}</td>
       ${showFtCol ? `<td>${fuelLabel}</td>` : ''}
-      <td style="color:#2b6cb0;font-weight:700">${r.byMoney ? '—' : n2fa(r.fuel || 0)}</td>
-      <td>${r.byMoney ? '—' : n2fa(r.priceper || 0)}</td>
-      <td style="color:#c07700;font-weight:700">${n2fa(r.bardagi || 0)}</td>
-      <td style="color:#276749;font-weight:700">${n2fa(r.rasid || 0)}</td>
-      <td style="color:${albaqiColor};font-weight:700">${n2fa(r.albaqi || 0)}</td>
+      ${unitCols}
     </tr>`;
   }).join('');
 
   // جمع‌های جدول بر اساس ردیف‌های فیلترشده (نه کل)
   const ft = _splitTotals(rows).all;
-  const colCount = showFtCol ? 10 : 9;
+  const colCount = (showFtCol ? 5 : 4) + (money ? 3 : 1);
   const ftHeadCols = showFtCol ? '<th>نوع تیل</th>' : '';
+  const unitHeadCols = money ? '<th>بردگی</th><th>رسید</th><th>الباقی</th>' : '<th>مقدار تیل (لیتر)</th>';
+  const unitFootCols = money
+    ? `<td>${n2fa(ft.bardagi)}</td><td>${n2fa(ft.rasid)}</td><td>${n2fa(ft.albaqi)}</td>`
+    : `<td>${n2fa(ft.fuel)} ل</td>`;
 
   // بخش خلاصهٔ پطرول/دیزل: فقط در حالت «همه» هر دو نشان داده شود؛ در حالت فیلترشده فقط همان حساب
   const splitBoxesHtml = filter === 'all' ? `
@@ -13570,16 +13639,12 @@ ${splitBoxesHtml}
 <table>
   <thead><tr>
     <th>#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th>${ftHeadCols}
-    <th>مقدار</th><th>فی لیتر</th><th>بردگی</th><th>رسید</th><th>الباقی</th>
+    ${unitHeadCols}
   </tr></thead>
   <tbody>${tableRows || `<tr><td colspan="${colCount}" style="text-align:center;padding:20px;color:#718096">هیچ ردیفی ثبت نشده</td></tr>`}</tbody>
   <tfoot><tr>
     <td colspan="${showFtCol?5:4}" style="text-align:right">جمع</td>
-    <td>${n2fa(ft.fuel)} ل</td>
-    <td>—</td>
-    <td>${n2fa(ft.bardagi)}</td>
-    <td>${n2fa(ft.rasid)}</td>
-    <td>${n2fa(ft.albaqi)}</td>
+    ${unitFootCols}
   </tr></tfoot>
 </table>
 ${(acct.note||'').trim() ? `<div class="note-box"><b>توضیحات:</b> ${escFa(acct.note).replace(/\n/g,'<br>')}</div>` : ''}
@@ -15601,6 +15666,7 @@ function printWaraq() {
       <div class="sum-box"><div class="l">🟤 دیزل</div><div class="v">${t.dieselL} لیتر</div></div>
       <div class="sum-box" style="border-color:#805ad5"><div class="l">🟣 مصرف</div><div class="v" style="color:#805ad5">${Math.round(t.expenses)}</div></div>
       <div class="sum-box" style="border-color:#e53e3e"><div class="l">💳 قرض</div><div class="v" style="color:#e53e3e">${Math.round(t.debt)}</div></div>
+      <div class="sum-box" style="border-color:${shortageColor}"><div class="l">${shortageLabel}</div><div class="v" style="color:${shortageColor}">${shortageVal}</div></div>
       <div class="sum-box" style="border-color:#2b6cb0"><div class="l">📊 فروش</div><div class="v" style="color:#2b6cb0">${Math.round(t.sales)}</div></div>
     </div>`;
   };
@@ -16413,30 +16479,61 @@ function openStaffAccount(pid, subId) {
   if (!person) return;
   const sub = subId ? (person.subs || []).find(s => String(s.id) === String(subId)) : null;
   const a = sub || person;
-  document.getElementById('sa-title').textContent = '👤 ' + person.name + (sub ? ' — ' + (sub.name || 'حساب فرعی') : '');
+  // حساب فرعی: فقط نامِ خودِ حساب فرعی نمایش داده می‌شود (نه «اصلی — فرعی») —
+  // نمایش دوتایی شلوغ می‌شد و جستجوی صوتی را هم به مشکل می‌انداخت
+  document.getElementById('sa-title').textContent = '👤 ' + (sub ? (sub.name || 'حساب فرعی') : person.name);
   const rows = a.rows || [];
   const t = _splitTotals(rows);
   const fl = _staffAcctFuelLeft(a);
-  let sum = `
+  // جداسازی کامل واحد پول و واحد تیل: حساب «واحد پول» فقط کادرهای پولی و حساب
+  // «واحد تیل» فقط کادرهای لیتری (دقیقاً هم‌شکل کادرهای پول) نمایش داده می‌شود
+  const money = person.mode === 'money';
+  let sum;
+  if (money) {
+    sum = `
     <div class="ro-sum-box"><div class="l">بردگی</div><div class="v" style="color:var(--accent)">${n2fa(t.all.bardagi)}</div></div>
     <div class="ro-sum-box"><div class="l">رسید</div><div class="v" style="color:var(--green)">${n2fa(t.all.rasid)}</div></div>
     <div class="ro-sum-box"><div class="l">الباقی</div><div class="v" style="color:${t.all.albaqi > 0 ? 'var(--red)' : 'var(--green)'}">${t.all.albaqi <= 0 ? '✅ تسویه' : n2fa(t.all.albaqi)}</div></div>`;
-  if (fl.hasP) sum += `<div class="ro-sum-box"><div class="l">⛽ باقی تیل پطرول</div><div class="v" style="color:var(--green)">${n2fa(Math.round(fl.petrol))} ل</div></div>`;
-  if (fl.hasD) sum += `<div class="ro-sum-box"><div class="l">🟤 باقی تیل دیزل</div><div class="v" style="color:#b7791f">${n2fa(Math.round(fl.diesel))} ل</div></div>`;
+  } else {
+    const rasidL = (parseFloat(a.rasidFuelP) || 0) + (parseFloat(a.rasidFuelD) || 0);
+    const albaqiL = Math.round((t.all.fuel - rasidL) * 100) / 100;
+    sum = `
+    <div class="ro-sum-box"><div class="l">بردگی تیل (لیتر)</div><div class="v" style="color:var(--accent)">${n2fa(t.all.fuel)} ل</div></div>
+    <div class="ro-sum-box"><div class="l">رسید تیل (لیتر)</div><div class="v" style="color:var(--green)">${n2fa(rasidL)} ل</div></div>
+    <div class="ro-sum-box"><div class="l">الباقی تیل (لیتر)</div><div class="v" style="color:${albaqiL > 0 ? 'var(--red)' : 'var(--green)'}">${albaqiL <= 0 ? '✅ تسویه' : n2fa(albaqiL) + ' ل'}</div></div>`;
+    if (fl.hasP) sum += `<div class="ro-sum-box"><div class="l">⛽ باقی تیل پطرول</div><div class="v" style="color:var(--green)">${n2fa(Math.round(fl.petrol))} ل</div></div>`;
+    if (fl.hasD) sum += `<div class="ro-sum-box"><div class="l">🟤 باقی تیل دیزل</div><div class="v" style="color:#b7791f">${n2fa(Math.round(fl.diesel))} ل</div></div>`;
+  }
   document.getElementById('sa-sum').innerHTML = sum;
+  // سرستون و ردیف‌های جدول هم بسته به نوع حساب: پول → فقط مبلغ؛ تیل → فقط لیتر
+  const thd = document.querySelector('#sa-tbl thead tr');
   const tb = document.getElementById('sa-body');
-  tb.innerHTML = rows.map((r, i) => `<tr>
+  if (money) {
+    if (thd) thd.innerHTML = '<th>#</th><th>تاریخ</th><th>بردگی</th><th>رسید</th><th>الباقی</th>';
+    tb.innerHTML = rows.map((r, i) => `<tr>
     <td style="color:var(--muted);text-align:center">${n2fa(i + 1)}</td>
     <td>${r.date || '—'}</td>
     <td style="color:var(--accent)">${n2fa(r.bardagi || 0)}</td>
     <td style="color:var(--green)">${n2fa(r.rasid || 0)}</td>
     <td style="color:${(r.albaqi || 0) > 0 ? 'var(--red)' : 'var(--green)'}">${n2fa(r.albaqi || 0)}</td>
   </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">هیچ ردیفی ثبت نشده</td></tr>';
-  document.getElementById('sa-foot').innerHTML =
-    `<td colspan="2" style="padding:12px 10px">جمع</td>` +
-    `<td style="color:var(--accent);padding:12px 10px">${n2fa(t.all.bardagi)}</td>` +
-    `<td style="color:var(--green);padding:12px 10px">${n2fa(t.all.rasid)}</td>` +
-    `<td style="color:${t.all.albaqi > 0 ? 'var(--red)' : 'var(--green)'};padding:12px 10px">${n2fa(t.all.albaqi)}</td>`;
+    document.getElementById('sa-foot').innerHTML =
+      `<td colspan="2" style="padding:12px 10px">جمع</td>` +
+      `<td style="color:var(--accent);padding:12px 10px">${n2fa(t.all.bardagi)}</td>` +
+      `<td style="color:var(--green);padding:12px 10px">${n2fa(t.all.rasid)}</td>` +
+      `<td style="color:${t.all.albaqi > 0 ? 'var(--red)' : 'var(--green)'};padding:12px 10px">${n2fa(t.all.albaqi)}</td>`;
+  } else {
+    if (thd) thd.innerHTML = '<th>#</th><th>تاریخ</th><th>نوع تیل</th><th>مقدار تیل (لیتر)</th>';
+    tb.innerHTML = rows.map((r, i) => `<tr>
+    <td style="color:var(--muted);text-align:center">${n2fa(i + 1)}</td>
+    <td>${r.date || '—'}</td>
+    <td>${r.ftype === 'diesel' ? '🟤 دیزل' : '⛽ پطرول'}</td>
+    <td style="color:var(--accent)">${n2fa(r.fuel || 0)} ل</td>
+  </tr>`).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">هیچ ردیفی ثبت نشده</td></tr>';
+    document.getElementById('sa-foot').innerHTML =
+      `<td colspan="3" style="padding:12px 10px">جمع</td>` +
+      `<td style="color:var(--accent);padding:12px 10px">${n2fa(t.all.fuel)} ل</td>`;
+  }
   document.getElementById('staffAcctOverlay').classList.add('open');
 }
 function closeStaffAcct() {
@@ -17789,7 +17886,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.8';
+const APP_VERSION = '2.9.9';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -18068,7 +18165,7 @@ function _staffApplyVoice(alts) {
     _staffAutoKey = String(best.it.p.id) + '|' + (best.it.sub ? String(best.it.sub.id) : '');
     renderStaffList();
     openStaffAccount(best.it.p.id, best.it.sub ? best.it.sub.id : '');
-    showToast('🎤 ' + best.it.p.name + (best.it.sub ? ' — ' + (best.it.sub.name || 'حساب فرعی') : ''), '#2b6cb0');
+    showToast('🎤 ' + (best.it.sub ? (best.it.sub.name || 'حساب فرعی') : best.it.p.name), '#2b6cb0');
   } else if (best.sc >= 0.45) {
     // نامطمئن — به اشتباه هیچ حسابی باز نشود؛ فهرست کامل بماند تا خودش انتخاب کند
     if (inp) inp.value = '';
@@ -18139,14 +18236,29 @@ function _staffCard(p, sub) {
   const rows = [];
   if (fl.hasP) rows.push(`<span style="color:var(--green)">⛽ باقی تیل پطرول: ${n2fa(Math.round(fl.petrol))} ل</span>`);
   if (fl.hasD) rows.push(`<span style="color:#b7791f">🟤 باقی تیل دیزل: ${n2fa(Math.round(fl.diesel))} ل</span>`);
-  const title = sub ? `${escFa(p.name)} — ${escFa(sub.name || 'حساب فرعی')}` : escFa(p.name);
+  // حساب فرعی: فقط نام حساب فرعی نمایش داده می‌شود (نام حساب اصلی ابتدای آن تکرار نمی‌شود)
+  const title = sub ? escFa(sub.name || 'حساب فرعی') : escFa(p.name);
   const chip = sub ? 'حساب فرعی' : ((p.subs && p.subs.length) ? 'حساب اصلی' : 'قرض‌دار');
-  // جمعِ همین حساب — سه کادر مربعی روی خود کارت
-  const sums = `<div class="staff-mini-sums">
+  // جمعِ همین حساب — سه کادر مربعی روی خود کارت.
+  // جداسازی واحدها: حساب «واحد پول» کادرهای پولی، حساب «واحد تیل» کادرهای لیتری
+  // (دقیقاً هم‌شکل و هم‌اندازهٔ کادرهای پول)
+  const _money = p.mode === 'money';
+  let sums;
+  if (_money) {
+    sums = `<div class="staff-mini-sums">
     <div class="ms"><div class="l">بردگی</div><div class="v" style="color:var(--accent)">${n2fa(t.all.bardagi)}</div></div>
     <div class="ms"><div class="l">رسید</div><div class="v" style="color:var(--green)">${n2fa(t.all.rasid)}</div></div>
     <div class="ms"><div class="l">الباقی</div><div class="v" style="color:${albaqi > 0 ? 'var(--red)' : 'var(--green)'}">${albaqi <= 0 ? '✅' : n2fa(albaqi)}</div></div>
   </div>`;
+  } else {
+    const rasidL = (parseFloat(a.rasidFuelP) || 0) + (parseFloat(a.rasidFuelD) || 0);
+    const albaqiL = Math.round((t.all.fuel - rasidL) * 100) / 100;
+    sums = `<div class="staff-mini-sums">
+    <div class="ms"><div class="l">بردگی تیل (ل)</div><div class="v" style="color:var(--accent)">${n2fa(t.all.fuel)}</div></div>
+    <div class="ms"><div class="l">رسید تیل (ل)</div><div class="v" style="color:var(--green)">${n2fa(rasidL)}</div></div>
+    <div class="ms"><div class="l">الباقی تیل (ل)</div><div class="v" style="color:${albaqiL > 0 ? 'var(--red)' : 'var(--green)'}">${albaqiL <= 0 ? '✅' : n2fa(albaqiL)}</div></div>
+  </div>`;
+  }
   return `<div class="staff-card" onclick="openStaffAccount('${escFa(p.id)}','${sub ? escFa(String(sub.id)) : ''}')">
     <div class="nm"><span>${title}</span><span class="tp">${chip}</span></div>
     ${badge}
@@ -18646,14 +18758,18 @@ function searchPerson(type, query) {
   matches.forEach(p => {
     const rows = p.rows || [];
     const t = _splitTotals(rows);
-    const albaqi = t.all.albaqi;
+    // حساب «واحد تیل»: الباقی روی کارت به لیتر — مثل فهرست اصلی
+    const isMoneyP = p.mode === 'money';
+    const fuelFig = isMoneyP ? null : _debtSumFigures(p);
+    const albaqi = isMoneyP ? t.all.albaqi : fuelFig.albaqi;
+    const albaqiUnit = isMoneyP ? ' افغانی' : ' لیتر';
     const pBal = t.petrol.albaqi, dBal = t.diesel.albaqi;
     const card = document.createElement('div');
     card.className = 'person-card';
     card.innerHTML = `
       <button class="person-del" onclick="event.stopPropagation();deletePerson('${type}','${p.id}')">✕</button>
       <div class="pname">${escFa(p.name)}</div>
-      <div class="pdebt ${albaqi<=0?'clear':''}">${albaqi<=0 ? '✅ تسویه' : 'الباقی: '+n2fa(albaqi)+' افغانی'}</div>
+      <div class="pdebt ${albaqi<=0?'clear':''}">${albaqi<=0 ? '✅ تسویه' : 'الباقی: '+n2fa(Math.round(albaqi*100)/100)+albaqiUnit}</div>
       <div style="display:flex;gap:8px;margin-top:8px;font-size:0.88rem;font-weight:700;justify-content:center">
         <span style="color:var(--green)">⛽ ${n2fa(pBal)}</span>
         <span style="color:#b7791f">🟤 ${n2fa(dBal)}</span>
@@ -20351,37 +20467,92 @@ body.gfx-weak.gfx-standard #siteBg, body.gfx-weak.gfx-ultra #siteBg{
   backdrop-filter:none !important;
 }
 
-/* ═══ نوشته‌های جدول‌ها در لایت مود و همهٔ تم‌های روز: سیاه و کاملاً خوانا ═══ */
+/* ═══ نوشته‌های جدول‌ها: متن همیشه متضادِ پس‌زمینه (تمِ روشن → متن تیره،
+   تمِ تیره → متن روشن). فقط رنگِ نوشته‌ها عوض می‌شود — پس‌زمینه/تمِ خودِ
+   جدول‌ها دست‌نخورده می‌ماند. ═══ */
 body.light-mode .tbl, body.light-mode .xls-tbl, body.light-mode .ro-tbl{ --muted:#1a1a1a; }
 body.light-mode .tbl th, body.light-mode .xls-tbl th, body.light-mode .ro-tbl th{ color:#000 !important; }
 body.light-mode .tbl td, body.light-mode .xls-tbl td, body.light-mode .ro-tbl td{ color:#000; }
 body.light-mode .xls-in, body.light-mode .tbl .editable{ color:#000; }
 body.light-mode .xls-num{ color:#000; }
-body.light-mode .xls-foot td, body.light-mode .tbl tfoot td{ color:#000; }
+/* فوترِ (ردیف جمعِ) همهٔ جدول‌ها هم مثل سرستون‌ها از تم پیروی می‌کند:
+   روز → تیره؛ شب → روشن. هیچ نوشته‌ای نباید ناخوانا بماند. */
+body.light-mode .xls-foot td, body.light-mode .tbl tfoot td,
+body.light-mode .xls-tbl tfoot td, body.light-mode .ro-tbl tfoot td{ color:#111 !important; }
+body:not(.light-mode) .xls-foot td, body:not(.light-mode) .tbl tfoot td,
+body:not(.light-mode) .xls-tbl tfoot td, body:not(.light-mode) .ro-tbl tfoot td{ color:#f5efe0 !important; }
+/* الترا: سرستونِ جدول‌ها در الترا عمداً پس‌زمینهٔ تیرهٔ خودِ تم را دارد (حتی در
+   حالت روز) — پس متنش باید روشن بماند، نه سیاه؛ جدولْ تمِ خودش را نگه می‌دارد
+   و فقط رنگ نوشته با پس‌زمینه متضاد می‌شود */
+body.light-mode.gfx-ultra .tbl th, body.light-mode.gfx-ultra .xls-tbl th, body.light-mode.gfx-ultra .ro-tbl th{
+  color:#ffd27a !important;
+  color:color-mix(in srgb, var(--accent) 45%, #ffe9c0) !important;
+}
+
+/* ═══ بخش شرکت‌ها: کادرهای خلاصهٔ بالای حساب ═══
+   همهٔ کادرها هم‌اندازه، مربعی و کاملاً تراز — و با فاصلهٔ کافی از دکمهٔ ✕
+   بالای مودال (قبلاً به لبه/دکمه چسبیده بودند) */
+#companyModal .modal-summary{
+  grid-template-columns:repeat(auto-fill,minmax(150px,1fr)) !important;
+  grid-auto-rows:auto !important;
+  gap:10px !important;
+  padding:14px 22px 10px !important;
+  align-items:stretch !important;
+}
+#companyModal .msumbox{
+  aspect-ratio:1/1;
+  min-height:120px !important;
+  width:100%;
+  display:flex !important;
+  flex-direction:column !important;
+  justify-content:center !important;
+  align-items:center !important;
+  box-sizing:border-box !important;
+  margin:0 !important;
+}
 
 /* ═══ سربرگ بالای برنامه — بدون سایه، خوانا و با تمِ جذاب در هر سه کیفیت ═══ */
 .header-date, .hdr-date-dot{ text-shadow:none !important; }
 body:not(.light-mode) .header-date{ color:#e9eef7 !important; opacity:1 !important; }
-/* حالتِ بدون تمِ رنگی: سربرگ/نوار بالایی دیگر بی‌روح نباشد — گرادیان ملایم کهربایی
+/* حالتِ بدون تمِ رنگی: سربرگ/نوار بالایی دیگر سفید/بی‌روح نباشد — رنگ کهرباییِ
+   تمِ برنامه، پررنگ‌تر از قبل تا «سفید» دیده نشود
    (Ultra گرادیان سینماییِ خودش را دارد و دست‌نخورده می‌ماند) */
 body.light-mode:not([class*="theme-"]).gfx-performance .header,
 body.light-mode:not([class*="theme-"]).gfx-standard .header{
-  background:linear-gradient(120deg,#fff6e3,#ffe7bd 45%,#fff2d8 75%,#fff6e3) !important;
-  border-bottom:2px solid #efb54a !important;
+  background:linear-gradient(120deg,#ffe3ae,#ffd087 45%,#ffe9c2 75%,#ffe3ae) !important;
+  border-bottom:2px solid #e09a2d !important;
 }
 body.light-mode:not([class*="theme-"]).gfx-performance .top-banner,
 body.light-mode:not([class*="theme-"]).gfx-standard .top-banner{
-  background:linear-gradient(120deg,#fffdf7,#fff3dc) !important;
-  border-bottom:1px solid #f3cd8a !important;
+  background:linear-gradient(120deg,#ffeecb,#ffe2ab) !important;
+  border-bottom:1px solid #eab35c !important;
 }
+/* روی این پس‌زمینهٔ روشن، عنوان «پمپ یعقوبی» و نوشته‌های کادرهای بنر باید تیره
+   باشند (نه طلاییِ کم‌رنگِ مخصوص زمینهٔ تیره) — بدون هیچ سایه‌ای */
+body.light-mode:not([class*="theme-"]).gfx-performance .header-title,
+body.light-mode:not([class*="theme-"]).gfx-standard .header-title{
+  background:none !important;
+  -webkit-background-clip:initial !important; background-clip:initial !important;
+  -webkit-text-fill-color:currentColor !important;
+  color:#6b3f00 !important;
+  text-shadow:none !important;
+  filter:none !important;
+}
+body.light-mode:not([class*="theme-"]).gfx-performance .tb-label,
+body.light-mode:not([class*="theme-"]).gfx-standard .tb-label{ color:#6b4a12 !important; }
+body.light-mode:not([class*="theme-"]).gfx-performance .tb-value,
+body.light-mode:not([class*="theme-"]).gfx-standard .tb-value{ color:#3a2604 !important; }
+body.light-mode:not([class*="theme-"]).gfx-performance #bn-noinv,
+body.light-mode:not([class*="theme-"]).gfx-standard #bn-noinv{ color:#6d28d9 !important; }
+/* شب بدون تم: همان کهرباییِ گرمِ تمِ برنامه (نه سرمه‌ای بی‌ربط) — متن روشن، بدون سایه */
 body:not(.light-mode):not([class*="theme-"]).gfx-performance .header,
 body:not(.light-mode):not([class*="theme-"]).gfx-standard .header{
-  background:linear-gradient(120deg,#151b26,#232c3d 45%,#1a2230 75%,#151b26) !important;
+  background:linear-gradient(120deg,#171006,#2a1c08 45%,#1e1406 75%,#171006) !important;
   border-bottom:2px solid rgba(255,180,61,.45) !important;
 }
 body:not(.light-mode):not([class*="theme-"]).gfx-performance .top-banner,
 body:not(.light-mode):not([class*="theme-"]).gfx-standard .top-banner{
-  background:linear-gradient(120deg,#121722,#1b2331) !important;
+  background:linear-gradient(120deg,#140e05,#221607) !important;
   border-bottom:1px solid rgba(255,180,61,.25) !important;
 }
 </style>
@@ -20982,6 +21153,9 @@ function invApprove(id) {
   save();
   renderInvoices(); invRenderList();
   if (_invDetailId === id) invRenderDetail();
+  // اگر مودالِ حسابِ شخص پشتِ فاکتور باز است (کلیک از «فاکتورهای در انتظار تایید»)،
+  // همان‌جا هم تازه شود تا فاکتور از صف برود و رسید/الباقی به‌روز دیده شود
+  try { const pm = document.getElementById('personModal'); if (pm && pm.classList.contains('open')) { const p = _curPerson(); if (p) renderPersonRows(p); } } catch (e) {}
   showToast('✅ فاکتور شماره ' + n2fa(v.invoice_number) + (v.by_money
     ? (' تایید شد و مبلغ به عنوان اعتبار (رسید پول) در حساب «' + (v.customer_name || '—') + '» ثبت شد')
     : (' تایید شد — ' + n2fa(v.liters) + ' لیتر به «مقدار رسید تیل» حساب «' + (v.customer_name || '—') + '» اضافه شد')), '#38a169');
@@ -20996,6 +21170,7 @@ function invRevert(id) {
   save();
   renderInvoices(); invRenderList();
   if (_invDetailId === id) invRenderDetail();
+  try { const pm = document.getElementById('personModal'); if (pm && pm.classList.contains('open')) { const p = _curPerson(); if (p) renderPersonRows(p); } } catch (e) {}
   showToast('↩️ فاکتور به صف تایید برگشت — رسیدِ تیل از حساب قرض‌دار برداشته شد', '#d97706');
 }
 function invSaveEdits(id) {
