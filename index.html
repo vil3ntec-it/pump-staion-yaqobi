@@ -9876,6 +9876,35 @@ function makeTableResizable(table, storeKey){
     table._colFrozen = true;
   }
 }
+// ── محافظِ ریشه‌ایِ ستونِ فانتوم — برای همهٔ جدول‌های سایت ──
+// اگر جمعِ colspan یک ردیف از تعدادِ ستون‌های سرستون بیشتر شود (مثلاً وقتی یک
+// ستون مثل «نوع تیل» از سرستون برداشته می‌شود ولی colspan ردیف‌های جمع قدیمی
+// می‌ماند)، مرورگر یک ستونِ اضافهٔ بی‌سرستون می‌سازد؛ در table-layout:fixed
+// (وقتی کاربر عرض ستون‌ها را کشیده و ذخیره شده) همهٔ عرضِ باقی‌مانده به همان
+// ستونِ فانتوم می‌رسد و جدول جمع‌شده/کج دیده می‌شود. این تابع هر ردیفِ
+// پهن‌تر از سرستون را خودکار کوچک می‌کند و با MutationObserver پایین برای
+// هر جدولی در هر بخشی — الان و در آینده — اجرا می‌شود.
+function _fixColspanOverflow(table){
+  try{
+    if(!table || !table.tHead || !table.tHead.rows[0]) return;
+    let cols = 0;
+    Array.prototype.forEach.call(table.tHead.rows[0].cells, function(c){ cols += (c.colSpan||1); });
+    if(!cols) return;
+    Array.prototype.forEach.call(table.rows, function(row){
+      if(row === table.tHead.rows[0]) return;
+      let span = 0;
+      Array.prototype.forEach.call(row.cells, function(c){ span += (c.colSpan||1); });
+      let extra = span - cols;
+      if(extra <= 0) return;
+      // از بزرگ‌ترین colspan همان ردیف کم کن تا هم‌عرضِ سرستون شود
+      const cells = Array.prototype.slice.call(row.cells).sort(function(a,b){ return (b.colSpan||1)-(a.colSpan||1); });
+      for(let i=0; i<cells.length && extra>0; i++){
+        const cut = Math.min(extra, (cells[i].colSpan||1) - 1);
+        if(cut > 0){ cells[i].colSpan = (cells[i].colSpan||1) - cut; extra -= cut; }
+      }
+    });
+  }catch(e){}
+}
 // ── فعال‌سازی تغییر اندازهٔ ستون‌ها برای «همهٔ» جدول‌های سایت (مثل اکسل) ──
 // هر جدولی که سرستون (thead) دارد، در هر بخش/مودالی، دستهٔ کشیدن می‌گیرد.
 // کلید ذخیره: id خود جدول، وگرنه id بخش/مودالِ در برگیرنده + شمارهٔ جدول.
@@ -9886,6 +9915,7 @@ function initAllTableResizers(root){
     // بمانند تا عرض‌های ذخیره‌شدهٔ قبلیِ کاربر از بین نرود
     const LEGACY_KEYS = { 'pm-tbl': 'pm', 'cm-tbl': 'cm' };
     Array.prototype.forEach.call(tables, function(t){
+      _fixColspanOverflow(t);   // محافظ ستون فانتوم — روی هر تغییر DOM دوباره اجرا می‌شود
       if(t._resizable || !t.tHead || !t.tHead.rows[0]) return;
       let key = LEGACY_KEYS[t.id] || t.id;
       if(!key){
@@ -10494,6 +10524,11 @@ function _togglePmFtColumn(show) {
   // فوترِ «جمع» هم هم‌اندازهٔ ستون‌های باقی‌مانده: با نبودِ «نوع تیل» colspan از ۵ به ۴.
   const jomCell = document.querySelector('#pm-tbl tfoot tr td:first-child');
   if (jomCell) jomCell.colSpan = show ? 5 : 4;
+  // ردیفِ «جمع الباقی» زیرِ آن هم باید هم‌ستون شود — اگر جمعِ colspan یک ردیف از
+  // تعدادِ ستون‌های سرستون بیشتر بماند، در table-layout:fixed (وقتی کاربر عرضِ
+  // ستون‌ها را ذخیره کرده) یک ستونِ فانتوم ساخته می‌شود و کلِ جدول جمع/کج می‌شود
+  const albLbl = document.getElementById('pm-ft-albaqi-lbl');
+  if (albLbl) albLbl.colSpan = show ? 6 : 5;
 }
 function calcPersonRow(pid, idx, field, value) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
@@ -10619,25 +10654,26 @@ function _updatePersonTotals(person) {
   const setV = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
   const setL = (id,txt) => { const el=document.getElementById(id); if(el) el.textContent=txt; };
   const setInput = (id,v) => { const el=document.getElementById(id); if(el && document.activeElement!==el) el.value = (v||v===0)?v:''; };
-  // مقدار رسید: در حالتِ پول، رسیدِ هر حساب = جمعِ رسیدِ ردیف‌های همان نوع تیل در
-  // جدول (خودکار — دیگر کادرِ دستیِ جدا لازم نیست؛ همان کادرِ «مقدار رسید پول»
-  // خودکار پر و فقط‌خواندنی می‌شود). در حالتِ تیل، رسیدِ دستیِ لیتری مثل قبل.
-  const rasidP = money ? t.petrol.rasid : (parseFloat(acct.rasidFuelP)||0);
-  const rasidD = money ? t.diesel.rasid : (parseFloat(acct.rasidFuelD)||0);
+  // مقدار رسید: کادرِ دستی در هر دو حالت — حالتِ پول در rasidMoneyP/D و حالتِ تیل
+  // در rasidFuelP/D ذخیره می‌شود (مثل حساب‌های انباشته، PDF و آرشیو). کادر همیشه
+  // قابلِ تایپ است؛ رسیدهای ثبت‌شده در خودِ جدول جداگانه در الباقی حساب می‌شوند.
+  const rasidP = money ? (parseFloat(acct.rasidMoneyP)||0) : (parseFloat(acct.rasidFuelP)||0);
+  const rasidD = money ? (parseFloat(acct.rasidMoneyD)||0) : (parseFloat(acct.rasidFuelD)||0);
   // برد = مجموع لیتر (حالت تیل) یا مجموع بردگی/پول (حالت پول)
   const bordP = money ? t.petrol.bardagi : t.petrol.fuel;
   const bordD = money ? t.diesel.bardagi : t.diesel.fuel;
   const commP = rasidP * pct/100, commD = rasidD * pct/100;
   const rnd = x => Math.round(x*100)/100;
-  // الباقی = برد + فیصدی − رسید (رسید یک‌بار کم می‌شود؛ دیگر دوبار حساب نمی‌شود)
-  const remP = bordP + commP - rasidP,
-        remD = bordD + commD - rasidD;
-  // در حالتِ پول، کادرهای «مقدار رسید» خودکار (فقط‌خواندنی) هستند تا کاربر آن‌ها را
-  // دستی عوض نکند و با جمعِ جدول ناهماهنگ نشوند؛ در حالتِ تیل دوباره قابلِ ویرایش‌اند
+  // الباقی = برد + فیصدی − رسیدِ کادر − (در حالت پول) رسیدهای داخلِ جدول —
+  // همان فرمولِ حساب‌های انباشته و PDF؛ هیچ رسیدی دوبار حساب نمی‌شود
+  const remP = bordP + commP - rasidP - (money ? t.petrol.rasid : 0),
+        remD = bordD + commD - rasidD - (money ? t.diesel.rasid : 0);
+  // کادرهای «مقدار رسید» در هر دو حالت قابلِ ویرایش‌اند (readOnly حالتِ پول برداشته شد —
+  // باعث می‌شد در بخش قرض‌داران هیچ چیزی در کادر نوشته نشود)
   const pRasidEl = document.getElementById('pm-p-rasidfuel');
-  if (pRasidEl) pRasidEl.readOnly = money;
+  if (pRasidEl) pRasidEl.readOnly = false;
   const dRasidEl = document.getElementById('pm-d-rasidfuel');
-  if (dRasidEl) dRasidEl.readOnly = money;
+  if (dRasidEl) dRasidEl.readOnly = false;
   // برچسب‌ها بر اساس حالت
   setL('pm-p-rasid-l', money ? 'مقدار رسید پول' : 'مقدار رسید تیل');
   setL('pm-d-rasid-l', money ? 'مقدار رسید پول' : 'مقدار رسید تیل');
@@ -17968,7 +18004,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.13';
+const APP_VERSION = '2.9.14';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
