@@ -6289,16 +6289,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
             <th style="width:90px">رسید</th>
             <th style="width:90px">الباقی</th>
             <th style="width:46px">حذف</th>
-          </tr>
-          <!-- همان ردیف «جمع» پایین جدول، اول جدول هم — تا بدون اسکرول دیده شود -->
-          <tr class="xls-foot" id="pm-top-sum-row">
-            <td colspan="5" style="padding:8px 7px">جمع</td>
-            <td class="xls-calc" id="pm-ft-fuel-top">0</td>
-            <td class="xls-calc">—</td>
-            <td class="xls-calc" id="pm-ft-bardagi-top">0</td>
-            <td class="xls-calc" id="pm-ft-rasid-top">0</td>
-            <td class="xls-calc" id="pm-ft-albaqi-top" style="font-weight:800">0</td>
-            <td></td>
           </tr></thead>
           <tbody id="pm-body"></tbody>
           <tfoot class="xls-foot"><tr>
@@ -6316,12 +6306,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
             <td></td>
           </tr></tfoot>
         </table>
-      </div>
-      <!-- جمعِ مکملِ هر واحد، زیر کادر جدول: در «واحد تیل» جمع مقدار بردگی (پول)،
-           در «واحد پول» جمع مقدار تیل (لیتر) — فقط نمایشی، بدون اثر بر محاسبات -->
-      <div id="pm-extra-sum" style="display:none;margin-top:6px;padding:8px 12px;border:1px dashed var(--border);border-radius:9px;background:var(--dark);font-size:0.83rem;font-weight:800;justify-content:space-between;align-items:center;gap:10px">
-        <span id="pm-extra-sum-lbl"></span>
-        <span id="pm-extra-sum-val" style="color:var(--accent)"></span>
       </div>
       <!-- توضیحات حساب بالاتر از دکمه‌های ردیف جدید / افزودن چندتایی -->
       <div id="pm-note-area" style="margin-top:8px;padding:0 2px">
@@ -10510,9 +10494,6 @@ function _togglePmFtColumn(show) {
   // فوترِ «جمع» هم هم‌اندازهٔ ستون‌های باقی‌مانده: با نبودِ «نوع تیل» colspan از ۵ به ۴.
   const jomCell = document.querySelector('#pm-tbl tfoot tr td:first-child');
   if (jomCell) jomCell.colSpan = show ? 5 : 4;
-  // ردیفِ «جمع» بالای جدول هم هم‌اندازه شود
-  const jomTop = document.querySelector('#pm-top-sum-row td:first-child');
-  if (jomTop) jomTop.colSpan = show ? 5 : 4;
 }
 function calcPersonRow(pid, idx, field, value) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
@@ -10679,23 +10660,12 @@ function _updatePersonTotals(person) {
   setRem('pm-p-remfuel', remP);
   setRem('pm-d-remfuel', remD);
   setV('pm-bord-sum', n2fa(rnd(bordP+bordD)) + unit);
-  // footer جدول — واحد پول و واحد تیل کاملاً جدا:
-  //  • حساب «واحد پول»: فقط جمع‌های پولی (بردگی/رسید/الباقی)؛ جمع لیتر نمایش داده نمی‌شود
-  //  • حساب «واحد تیل»: فقط جمع لیتر؛ مبلغ‌های پولیِ حاصل از لیتر×فی نمایش داده نمی‌شوند
-  setV('pm-ft-fuel', money ? '—' : n2fa(t.all.fuel));
-  setV('pm-ft-bardagi', money ? n2fa(t.all.bardagi) : '—');
-  setV('pm-ft-rasid', money ? n2fa(t.all.rasid) : '—');
-  // همان جمع‌ها در ردیفِ «جمع» اولِ جدول
-  setV('pm-ft-fuel-top', money ? '—' : n2fa(t.all.fuel));
-  setV('pm-ft-bardagi-top', money ? n2fa(t.all.bardagi) : '—');
-  setV('pm-ft-rasid-top', money ? n2fa(t.all.rasid) : '—');
-  // جمعِ مکمل زیر کادر جدول: واحد تیل → جمع مقدار بردگی (پول)؛ واحد پول → جمع مقدار تیل
-  const exBox = document.getElementById('pm-extra-sum');
-  if (exBox) {
-    exBox.style.display = 'flex';
-    setV('pm-extra-sum-lbl', money ? '🛢️ جمع مقدار تیل (این جدول)' : '💵 جمع مقدار بردگی (این جدول)');
-    setV('pm-extra-sum-val', money ? n2fa(rnd(t.all.fuel)) + ' ل' : n2fa(rnd(t.all.bardagi)) + ' افغانی');
-  }
+  // footer جدول: جمعِ هر ستون در جمعِ خودِ همان ستون — مقدار تیل، مقدار بردگی و
+  // رسید در هر دو حالتِ واحد پول/تیل فقط نمایش داده می‌شوند و هیچ اثری بر
+  // محاسبات (الباقی، کادرهای حساب و …) ندارند
+  setV('pm-ft-fuel', n2fa(t.all.fuel));
+  setV('pm-ft-bardagi', n2fa(t.all.bardagi));
+  setV('pm-ft-rasid', n2fa(t.all.rasid));
   // جمعِ الباقی به‌صورت «رسید − بردگی» (پیش‌پرداخت مثبت/سبز، بدهی منفی/سرخ) —
   // هم در ستونِ الباقیِ ردیفِ «جمع» و هم در ردیفِ برچسب‌دارِ زیرش.
   // در حالتِ «واحد تیل» همین جمع به لیتر است: رسید تیل − برد تیل
@@ -10707,8 +10677,6 @@ function _updatePersonTotals(person) {
   if (ftAlbEl) { ftAlbEl.textContent = netTxt; ftAlbEl.style.color = netAll < 0 ? 'var(--red)' : 'var(--green)'; }
   const ftAlbEl2 = document.getElementById('pm-ft-albaqi2');
   if (ftAlbEl2) { ftAlbEl2.textContent = netTxt; ftAlbEl2.style.color = netAll < 0 ? 'var(--red)' : 'var(--green)'; }
-  const ftAlbTop = document.getElementById('pm-ft-albaqi-top');
-  if (ftAlbTop) { ftAlbTop.textContent = netTxt; ftAlbTop.style.color = netAll < 0 ? 'var(--red)' : 'var(--green)'; }
   // برچسبِ گویا: منفی = بیشتر برده (بدهکار)، مثبت = مانده/پیش‌پرداخت (طلبکار)
   const albTag = money ? 'جمع الباقی' : 'جمع الباقی تیل';
   const albLblTxt = netAll < 0 ? albTag + ' — این‌قدر بیشتر برده (بدهکار)'
@@ -18000,7 +17968,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.12';
+const APP_VERSION = '2.9.13';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
