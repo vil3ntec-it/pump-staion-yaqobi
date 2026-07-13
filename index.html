@@ -4680,12 +4680,32 @@ table thead th{ position:relative; }
       <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('shifts-diesel',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('shifts-diesel',0.08)">A+</button></span>
     </span>
   </div>
-  <div class="shifts-grid">
+  <!-- کارت ورود پارچه دیزل فعلی — هم‌ساختار با پطرول -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-head">
+      <div class="card-title">📝 ثبت پارچه فعلی (دیزل)</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:0.72rem;color:var(--muted)">📅 تاریخ:</span>
+        <input id="pa-date-diesel" placeholder="تاریخ پارچه" style="width:120px;background:var(--dark);border:1px solid var(--border);border-radius:6px;padding:5px 9px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.8rem;text-align:center">
+        <button class="add-btn" style="font-size:0.78rem;padding:6px 14px;background:var(--blue);color:#fff" onclick="newParcha('day','diesel')" title="ثبت پارچهٔ دیزل جدید روز (بدون پاک‌شدن پارچهٔ قبلی)">🆕 پارچهٔ جدید روز</button>
+        <button class="add-btn" style="font-size:0.78rem;padding:6px 14px;background:var(--night);color:#fff" onclick="newParcha('night','diesel')" title="ثبت پارچهٔ دیزل جدید شب (بدون پاک‌شدن پارچهٔ قبلی)">🆕 پارچهٔ جدید شب</button>
+      </div>
+    </div>
+    <div class="shifts-grid" style="padding:14px;margin-bottom:0">
     <!-- DAY DIESEL -->
     <div class="shift-card">
       <div class="shift-header day" style="background:linear-gradient(135deg,#744210,#b7791f)">🟤☀️ شیفت روزانه (دیزل)</div>
       <div class="shift-body">
-        <div class="field-row"><label class="field-label">نام کارمند</label><input class="field-input" id="dd-name" placeholder="نام"></div>
+        <div class="field-row" style="align-items:center">
+          <label class="field-label">نام کارمند</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input class="field-input" id="dd-name" placeholder="نام" style="flex:1">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:52px">
+              <span style="font-size:0.65rem;color:var(--muted);white-space:nowrap">شماره پایه</span>
+              <input class="field-input keep-spin" id="dd-pumpnum" type="number" placeholder="#" style="width:52px;text-align:center;padding:6px 4px;font-weight:700;font-size:0.9rem" oninput="liveWaraqSync('dd')">
+            </div>
+          </div>
+        </div>
         <div class="field-row"><label class="field-label">شروع پایه (لیتر)</label>
           <div style="display:flex;gap:6px;align-items:center">
             <input class="field-input" id="dd-start" type="number" placeholder="0" oninput="calcShift('dd');liveWaraqSync('dd')" style="flex:1">
@@ -4711,13 +4731,22 @@ table thead th{ position:relative; }
         <div class="field-row"><label class="field-label" style="color:var(--green);font-weight:700">💵 پول موجود افغانی — خودکار</label><div class="calc-row" id="dd-available" style="color:var(--green);font-weight:800;font-size:1.05rem">—</div></div>
         <div class="field-row"><label class="field-label">یادداشت</label><input class="field-input" id="dd-note" placeholder="..."></div>
       </div>
-      <div class="shift-footer" style="display:flex;gap:8px;flex-wrap:wrap"><button class="save-btn day" style="background:#b7791f;flex:1" onclick="saveShift('day','diesel')">💾 ذخیره روزانه دیزل</button><button class="save-btn" style="flex:0 0 auto;background:var(--blue);color:#fff" onclick="newParcha('day','diesel')" title="ثبت پارچهٔ دیزل جدید روز (بدون پاک‌شدن پارچهٔ قبلی)">🆕 پارچهٔ جدید</button></div>
+      <div class="shift-footer" style="padding-top:0"><button class="save-btn day" style="background:#b7791f;width:100%" onclick="saveShift('day','diesel')">💾 ذخیره روزانه دیزل</button></div>
     </div>
     <!-- NIGHT DIESEL -->
     <div class="shift-card">
       <div class="shift-header night" style="background:linear-gradient(135deg,#3d2000,#744210)">🟤🌙 شیفت شبانه (دیزل)</div>
       <div class="shift-body">
-        <div class="field-row"><label class="field-label">نام کارمند</label><input class="field-input" id="dn-name" placeholder="نام"></div>
+        <div class="field-row" style="align-items:center">
+          <label class="field-label">نام کارمند</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input class="field-input" id="dn-name" placeholder="نام" style="flex:1">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:52px">
+              <span style="font-size:0.65rem;color:var(--muted);white-space:nowrap">شماره پایه</span>
+              <input class="field-input keep-spin" id="dn-pumpnum" type="number" placeholder="#" style="width:52px;text-align:center;padding:6px 4px;font-weight:700;font-size:0.9rem" oninput="liveWaraqSync('dn')">
+            </div>
+          </div>
+        </div>
         <div class="field-row"><label class="field-label">شروع پایه (لیتر)</label>
           <div style="display:flex;gap:6px;align-items:center">
             <input class="field-input" id="dn-start" type="number" placeholder="0" oninput="calcShift('dn');liveWaraqSync('dn')" style="flex:1">
@@ -4743,8 +4772,9 @@ table thead th{ position:relative; }
         <div class="field-row"><label class="field-label" style="color:var(--green);font-weight:700">💵 پول موجود افغانی — خودکار</label><div class="calc-row" id="dn-available" style="color:var(--green);font-weight:800;font-size:1.05rem">—</div></div>
         <div class="field-row"><label class="field-label">یادداشت</label><input class="field-input" id="dn-note" placeholder="..."></div>
       </div>
-      <div class="shift-footer" style="display:flex;gap:8px;flex-wrap:wrap"><button class="save-btn night" style="background:#744210;flex:1" onclick="saveShift('night','diesel')">💾 ذخیره شبانه دیزل</button><button class="save-btn" style="flex:0 0 auto;background:var(--blue);color:#fff" onclick="newParcha('night','diesel')" title="ثبت پارچهٔ دیزل جدید شب (بدون پاک‌شدن پارچهٔ قبلی)">🆕 پارچهٔ جدید</button></div>
+      <div class="shift-footer" style="padding-top:0"><button class="save-btn night" style="background:#744210;width:100%" onclick="saveShift('night','diesel')">💾 ذخیره شبانه دیزل</button></div>
     </div>
+  </div>
   </div>
 
   <!-- گزارش‌های دیزل -->
@@ -5886,7 +5916,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
   </div>
   <div class="settings-card" style="border-color:var(--red)">
     <div class="settings-title" style="color:var(--red)">🗑️ پاک‌سازی داده‌ها</div>
-    <div style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;line-height:1.9">برای پاک کردن همهٔ حساب‌ها باید «رمز پاک‌سازی داده‌ها» را وارد کنید. این کار همهٔ حساب‌ها را خالی می‌کند و قابل بازگشت نیست.</div>
+    <div style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;line-height:1.9">برای پاک کردن همهٔ اطلاعات باید «رمز پاک‌سازی داده‌ها» را وارد کنید. این کار همهٔ حساب‌ها، پارچه‌ها، فاکتورها، رسیدها، حاضری و معاش، یادداشت‌ها و سطل زباله را خالی می‌کند و قابل بازگشت نیست (رمزها و نام ایستگاه می‌مانند).</div>
     <div class="pw-row">
       <div class="pw-field"><label>رمز پاک‌سازی داده‌ها</label><input type="text" class="pw-mask" id="wipe-pw" placeholder="رمز پاک‌سازی" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other" onkeydown="if(event.key==='Enter')clearAllWithPassword()"></div>
       <button class="add-btn" style="background:var(--red);color:#fff" onclick="clearAllWithPassword()">🗑️ پاک کردن همه</button>
@@ -7112,7 +7142,8 @@ function _runAutoSync() {
   // اولین دریافت از سرور انجام نشده، هرگز آپلود نکن — وگرنه یک دستگاه تازه
   // (مثلاً Safari آیفون یا شورت‌کات که حافظهٔ جدا دارند) حسابِ خالی خودش را با
   // timestamp جدید روی سرور می‌نوشت و حساب اصلی همهٔ دستگاه‌ها پاک می‌شد.
-  if (_dbRecordCount(DB) === 0 && !_fbStartupPulled) return;
+  // پاک‌سازیِ عمدی (wipedAt) استثناست: حالتِ خالی باید آپلود شود تا سرور هم خالی شود
+  if (_dbRecordCount(DB) === 0 && !_fbStartupPulled && !DB.wipedAt) return;
 
   _autoSyncInFlight = true;
   _setSyncMsg('⏳ در حال هم‌زمان‌سازی با سرور...', 'var(--accent)');
@@ -7168,6 +7199,14 @@ let _fbStartupDone = false;
 let _fbStartupPulled = false;  // اولین دریافت موفق از سرور انجام شده؟ (محافظ آپلودِ دیتای خالی)
 let _fbStartupTries = 0;
 function _applyServerData(serverData) {
+  // سرور همیشه یک عکسِ کاملِ دیتابیس است، ولی Firebase آرایه/آبجکتِ خالی را ذخیره
+  // نمی‌کند — پس نبودنِ کلید یعنی آن بخش خالی است. بدون این، «پاک کردن همه» روی یک
+  // دستگاه هرگز به دستگاه‌های دیگر نمی‌رسید و داده‌های قدیمی دوباره برمی‌گشتند.
+  try {
+    Object.keys(_DB_COLLECTIONS).forEach(k => {
+      if (!(k in serverData)) DB[k] = Array.isArray(_DB_COLLECTIONS[k]) ? [] : {};
+    });
+  } catch(e) {}
   Object.assign(DB, serverData);
   DB.syncCode = 'pump1';
   try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
@@ -7207,7 +7246,8 @@ function _autoLoadFromFirebaseOnStartup() {
       const localTime  = new Date(DB.lastSyncUpload  || 0).getTime();
       // محافظ دستگاه تازه: اگر اینجا (آیفون/مرورگر تازه) هیچ رکوردی نیست ولی سرور
       // حساب دارد، همیشه از سرور بگیر — حتی اگر timestamp ها قابل اتکا نباشند.
-      const localEmptyServerHasData = _dbRecordCount(DB) === 0 && _dbRecordCount(serverData) > 0;
+      // wipedAt: اگر اینجا عمداً با «پاک کردن همه» خالی شده، خالی بودن دلیلِ برگرداندن داده از سرور نیست
+      const localEmptyServerHasData = !DB.wipedAt && _dbRecordCount(DB) === 0 && _dbRecordCount(serverData) > 0;
       if (localTime >= serverTime && !localEmptyServerHasData) {
         // لوکال برابر یا جدیدتر است — همیشه آپلود کن تا تغییرات (رمز، تنظیمات، حساب‌ها) به سرور برسند
         _dirtySinceUpload = true;
@@ -7242,7 +7282,7 @@ function _fbPullLatestOnce() {
     const sd = snap.val();
     const st = new Date(sd.lastSyncUpload || 0).getTime();
     const lt = new Date(DB.lastSyncUpload  || 0).getTime();
-    const localEmptyServerHasData = _dbRecordCount(DB) === 0 && _dbRecordCount(sd) > 0;
+    const localEmptyServerHasData = !DB.wipedAt && _dbRecordCount(DB) === 0 && _dbRecordCount(sd) > 0;
     if (st > lt || localEmptyServerHasData) {
       _applyServerData(sd);
       try { showTopToast('☁️ تغییرات جدید از سرور دریافت شد', '#38a169', 2500); } catch(e) {}
@@ -7952,6 +7992,7 @@ function initDate() {
   const ids = ['todayDate','todayDate2'];
   ids.forEach(id => { const el=document.getElementById(id); if(el) el.textContent = d.sh; });
   const paDateEl = document.getElementById('pa-date'); if (paDateEl && !paDateEl.value) paDateEl.value = d.sh;
+  const paDateDsl = document.getElementById('pa-date-diesel'); if (paDateDsl && !paDateDsl.value) paDateDsl.value = d.sh;
   const withName = (num, name) => name ? (num + ' ' + name) : num;
   // روز هفته — در سربرگ و صفحهٔ قفل
   const weekday = new Date().toLocaleDateString('fa-IR', { weekday: 'long' });
@@ -8224,7 +8265,7 @@ function saveShift(type, fuel) {
   const profit = sale * profitPer;
   const available = money - debt;
   const d = allDates();
-  const paDate = (document.getElementById('pa-date')?.value || '').trim();
+  const paDate = (document.getElementById(fuel === 'diesel' ? 'pa-date-diesel' : 'pa-date')?.value || '').trim();
   const shDate = paDate || d.sh;   // تاریخ دستیِ پارچه (اگر نوشته شده باشد)
   const fuelTypeForSave = fuel || 'petrol';
   const buyPerLiter = DB['buyPerLiter_' + fuelTypeForSave] || 0;
@@ -8257,9 +8298,9 @@ function saveShift(type, fuel) {
     let rec = (!_forceNewDiesel[type] && sameDayDiesel.length) ? sameDayDiesel[sameDayDiesel.length - 1] : null;
     _forceNewDiesel[type] = false;
     if (rec) {
-      Object.assign(rec, { dateMi: d.mi, dateQa: d.qa, name, start, end, price, profitPer, buyPerLiter, sale, money, debt, available, profit, note });
+      Object.assign(rec, { dateMi: d.mi, dateQa: d.qa, name, pumpNum, start, end, price, profitPer, buyPerLiter, sale, money, debt, available, profit, note });
     } else {
-      rec = { id: Date.now(), date: shDate, dateMi: d.mi, dateQa: d.qa, type, fuel, name, start, end, price, profitPer, buyPerLiter, sale, money, debt, available, profit, note };
+      rec = { id: Date.now(), date: shDate, dateMi: d.mi, dateQa: d.qa, type, fuel, name, pumpNum, start, end, price, profitPer, buyPerLiter, sale, money, debt, available, profit, note };
       DB.shifts.push(rec);
     }
     srcKey = 'd-' + rec.id + '-' + type;
@@ -8426,7 +8467,7 @@ function renderLog() {
         <div style="padding:10px 14px;border-left:1px solid var(--border)">
           <div style="font-size:0.8rem;font-weight:700;color:var(--day);margin-bottom:6px">☀️ شیفت روز (دیزل)</div>
           ${dsl.day ? `
-            <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${escFa(dDay.name)||'—'}</span></div>
+            <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${escFa(dDay.name)||'—'}</span>${dDay.pumpNum?` <span style="background:var(--border);border-radius:4px;padding:1px 6px;font-size:0.7rem;color:var(--accent);font-weight:700">پایه #${n2fa(dDay.pumpNum)}</span>`:''}</div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">پایه: <span style="color:var(--txt)">${n2fa(dDay.start)} → ${n2fa(dDay.end)}</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فروش: <span style="color:var(--blue);font-weight:700">${n2fa(dDay.sale)} ل</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فی فروش: <span style="color:var(--accent);font-weight:600">${n2fa(dDay.price||0)} ؋</span></div>
@@ -8440,7 +8481,7 @@ function renderLog() {
         <div style="padding:10px 14px">
           <div style="font-size:0.8rem;font-weight:700;color:#b794f4;margin-bottom:6px">🌙 شیفت شب (دیزل)</div>
           ${dsl.night ? `
-            <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${escFa(dNight.name)||'—'}</span></div>
+            <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${escFa(dNight.name)||'—'}</span>${dNight.pumpNum?` <span style="background:var(--border);border-radius:4px;padding:1px 6px;font-size:0.7rem;color:var(--accent);font-weight:700">پایه #${n2fa(dNight.pumpNum)}</span>`:''}</div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">پایه: <span style="color:var(--txt)">${n2fa(dNight.start)} → ${n2fa(dNight.end)}</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فروش: <span style="color:var(--blue);font-weight:700">${n2fa(dNight.sale)} ل</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فی فروش: <span style="color:var(--accent);font-weight:600">${n2fa(dNight.price||0)} ؋</span></div>
@@ -8529,7 +8570,7 @@ function renderDieselLog() {
         <div style="padding:12px 14px;border-left:1px solid var(--border)">
           <div style="font-size:0.8rem;font-weight:700;color:var(--day);margin-bottom:8px">☀️ شیفت روز</div>
           ${day ? `
-            <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${escFa(day.name)||'—'}</span></div>
+            <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${escFa(day.name)||'—'}</span>${day.pumpNum?` <span style="background:var(--border);border-radius:4px;padding:1px 6px;font-size:0.7rem;color:var(--accent);font-weight:700">پایه #${n2fa(day.pumpNum)}</span>`:''}</div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">پایه: <span style="color:var(--txt)">${n2fa(day.start)} → ${n2fa(day.end)}</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فروش: <span style="color:var(--blue);font-weight:700">${n2fa(day.sale)} ل</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فی فروش: <span style="color:var(--accent);font-weight:600">${n2fa(day.price||0)} ؋</span></div>
@@ -8544,7 +8585,7 @@ function renderDieselLog() {
         <div style="padding:12px 14px">
           <div style="font-size:0.8rem;font-weight:700;color:#b794f4;margin-bottom:8px">🌙 شیفت شب</div>
           ${night ? `
-            <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${escFa(night.name)||'—'}</span></div>
+            <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${escFa(night.name)||'—'}</span>${night.pumpNum?` <span style="background:var(--border);border-radius:4px;padding:1px 6px;font-size:0.7rem;color:var(--accent);font-weight:700">پایه #${n2fa(night.pumpNum)}</span>`:''}</div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">پایه: <span style="color:var(--txt)">${n2fa(night.start)} → ${n2fa(night.end)}</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فروش: <span style="color:var(--blue);font-weight:700">${n2fa(night.sale)} ل</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فی فروش: <span style="color:var(--accent);font-weight:600">${n2fa(night.price||0)} ؋</span></div>
@@ -8599,7 +8640,7 @@ function pdfDieselShifts() {
     return `<div class="half">
       <div class="shift-hdr ${hdrClass}">${label}</div>
       <div class="shift-body">
-        <div class="row"><span class="lbl">کارمند</span><span class="val">${escFa(s.name)||'—'}</span></div>
+        <div class="row"><span class="lbl">کارمند</span><span class="val">${escFa(s.name)||'—'}${s.pumpNum?' (پایه #'+n2fa(s.pumpNum)+')':''}</span></div>
         <div class="row"><span class="lbl">پایه (شروع ← ختم)</span><span class="val">${n2fa(s.start||0)} ← ${n2fa(s.end||0)} ل</span></div>
         <div class="row"><span class="lbl">فروش</span><span class="val blue">${n2fa(s.sale||0)} ل</span></div>
         <div class="row"><span class="lbl">فی فروش</span><span class="val amber">${n2fa(s.price||0)} ؋</span></div>
@@ -8813,7 +8854,7 @@ function pdfShifts() {
     return `<div class="half">
       <div class="shift-hdr ${hdrClass}">${label}</div>
       <div class="shift-body">
-        <div class="row"><span class="lbl">کارمند</span><span class="val">${escFa(s.name)||'—'}</span></div>
+        <div class="row"><span class="lbl">کارمند</span><span class="val">${escFa(s.name)||'—'}${s.pumpNum?' (پایه #'+n2fa(s.pumpNum)+')':''}</span></div>
         <div class="row"><span class="lbl">پایه (شروع ← ختم)</span><span class="val">${n2fa(s.start||0)} ← ${n2fa(s.end||0)} ل</span></div>
         <div class="row"><span class="lbl">فروش</span><span class="val blue">${n2fa(s.sale||0)} ل</span></div>
         <div class="row"><span class="lbl">فی فروش</span><span class="val amber">${n2fa(s.price||0)} ؋</span></div>
@@ -14084,9 +14125,39 @@ function saveProfitPassword() {
   msg.textContent = '✅ رمز مفاد/ضرر تغییر کرد'; msg.style.color = 'var(--green)';
   ['profit-pw-old','profit-pw-new','profit-pw-rep'].forEach(id => { const e = document.getElementById(id); if(e) e.value = ''; });
 }
+// همهٔ بخش‌های داده‌ای برنامه با مقدارِ خالی‌شان — هم برای «پاک کردن همه» و هم برای
+// دریافت از سرور (Firebase آرایه/آبجکتِ خالی را ذخیره نمی‌کند؛ نبودنِ کلید یعنی خالی بودن)
+const _DB_COLLECTIONS = {
+  shifts: [], reports: [], fuelEntries: [], debtPersons: [], noinvPersons: [], tilCompanies: [],
+  sarrafiRows: [], expenses: [], safeEntries: [], waraqEntries: [], trash: [], invoices: [],
+  extraIncomes: [], parchaReceipts: [], debtQuickReceipts: [], debtRasidMonths: [],
+  staffMembers: [], attendance: [], salaryPayments: [], cameras: [],
+  sectionNotes: {}, debtAlertState: {}
+};
 function clearAll() {
-  DB.shifts = []; DB.reports = []; DB.fuelEntries = []; DB.debtPersons = []; DB.noinvPersons = []; DB.tilCompanies = []; DB.sarrafiRows = []; DB.expenses = []; DB.safeEntries = []; DB.waraqEntries = [];
-  save(); updateAll(); showToast('✅ همه داده‌ها پاک شد', '#38a169');
+  // «پاک کردن همه» باید واقعاً همه‌چیز را خالی کند — نه فقط حساب‌های اصلی؛ قبلاً
+  // فاکتورها، رسیدها، حاضری/معاش، عواید اضافی، یادداشت‌ها و سطل زباله باقی می‌ماندند
+  Object.keys(_DB_COLLECTIONS).forEach(k => {
+    DB[k] = Array.isArray(_DB_COLLECTIONS[k]) ? [] : {};
+  });
+  DB.unionRatePetrol = 0; DB.unionRateDiesel = 0;
+  DB.buyPerLiter_petrol = 0; DB.buyPerLiter_diesel = 0;
+  // مهر زمانی پاک‌سازی: بدون این، منطقِ «دستگاه خالی + سرور داده دارد» بلافاصله همهٔ
+  // داده‌های قدیمی را از سرور برمی‌گرداند و به نظر می‌رسید پاک‌سازی کار نکرده است
+  DB.wipedAt = new Date().toISOString();
+  DB.lastSyncUpload = DB.wipedAt;
+  // فرم‌های روی صفحه (پارچهٔ پطرول/دیزل، روز/شب) هم خالی شوند
+  ['d','n','dd','dn'].forEach(p => { try { clearShiftInputs(p); } catch(e) {} });
+  save(); _flushSave();
+  // حالتِ خالی همین حالا به سرور برود تا با باز شدن دوبارهٔ برنامه، داده‌ها برنگردند
+  try { _dirtySinceUpload = true; _runAutoSync(); } catch(e) {}
+  updateAll();
+  try { renderDieselLog(); } catch(e) {}
+  try { renderTrashList(); } catch(e) {}
+  try { renderChatTrash(); } catch(e) {}
+  try { applyUnionRates(); } catch(e) {}
+  try { _loadSectionNotes(); } catch(e) {}
+  showToast('✅ همه داده‌ها پاک شد', '#38a169');
 }
 // ========== نرخ اتحادیه → فی لیتر افغانیِ پارچه‌ها ==========
 // نرخ اتحادیه فقط روی «فی لیتر» پارچه می‌نشیند. هیچ ربط مستقیمی به ورق ندارد.
@@ -14130,7 +14201,7 @@ function clearAllWithPassword() {
   const v = inp ? inp.value : '';
   if (!v) { if (msg) { msg.textContent = '❌ رمز پاک‌سازی را وارد کنید'; msg.style.color = 'var(--red)'; } return; }
   if (_sha256Hex(v) !== WIPE_PASSWORD_HASH) { if (msg) { msg.textContent = '❌ رمز پاک‌سازی اشتباه است'; msg.style.color = 'var(--red)'; } if (inp) inp.value = ''; return; }
-  if (!confirm('با رمز درست، همهٔ حساب‌ها پاک و خالی می‌شوند. مطمئن هستید؟')) return;
+  if (!confirm('با رمز درست، همهٔ اطلاعات برنامه (حساب‌ها، پارچه‌ها، فاکتورها، رسیدها، حاضری، یادداشت‌ها و سطل زباله) پاک می‌شود. مطمئن هستید؟')) return;
   if (inp) inp.value = '';
   if (msg) { msg.textContent = '✅ رمز درست بود — همهٔ داده‌ها پاک شد'; msg.style.color = 'var(--green)'; }
   clearAll();
@@ -17875,7 +17946,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.10';
+const APP_VERSION = '2.9.11';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -18392,8 +18463,8 @@ function _pickInDirection(el, dir, cands){
   // همیشه همان انتخاب می‌شود — حتی اگر نزدیک‌ترینِ مطلق نباشد — وگرنه کلید چپ/
   // راست گاهی چند کادر پایین‌تر می‌پرید (نزدیک‌ترین فاصلهٔ اقلیدسی، نه هم‌ردیف).
   // اگر هیچ کاندیدِ هم‌راستایی نبود، به همان الگوریتمِ نزدیک‌ترینِ قبلی برمی‌گردیم.
-  let best = null, bestScore = Infinity;
-  let bestAligned = null, bestAlignedScore = Infinity;
+  let best = null, bestScore = Infinity, bestPrimary = Infinity;
+  let bestAligned = null, bestAlignedScore = Infinity, bestAlignedPrimary = Infinity;
   for (const c of cands){
     if (c === el) continue;
     const cr = c.getBoundingClientRect();
@@ -18411,9 +18482,14 @@ function _pickInDirection(el, dir, cands){
     else                     { valid = dx > 3;  primary = dx;  secondary = Math.abs(dy); aligned = ccy >= r.top && ccy <= r.bottom; }
     if (!valid) continue;
     const score = primary + secondary * 2.2;
-    if (score < bestScore) { bestScore = score; best = c; }
-    if (aligned && score < bestAlignedScore) { bestAlignedScore = score; bestAligned = c; }
+    if (score < bestScore) { bestScore = score; best = c; bestPrimary = primary; }
+    if (aligned && score < bestAlignedScore) { bestAlignedScore = score; bestAligned = c; bestAlignedPrimary = primary; }
   }
+  // بالا/پایین: اگر کاندیدِ هم‌ستون خیلی دورتر از نزدیک‌ترین کاندید باشد، هم‌ستونی
+  // را رها کن و نزدیک‌ترین را بگیر — وگرنه Enter روی کادرِ باریکِ «شماره پایه» به‌جای
+  // «شروع پایه» (که هم‌ستون نیست) به فیلترِ گزارش‌های ۲۴ ساعته در پایینِ صفحه می‌پرید.
+  if ((dir === 'up' || dir === 'down') && bestAligned && best && bestAligned !== best &&
+      bestAlignedPrimary > bestPrimary * 3 + 60) return best;
   return bestAligned || best;
 }
 function _refocusLater(el){
@@ -18799,6 +18875,48 @@ function loadFontScale() {
     if (saved) applyFontScale(parseFloat(saved));
   } catch(e) {}
 }
+
+// ========== نمایش زندهٔ جداکنندهٔ هزارگان (۱,۰۰۰,۰۰۰) هنگام تایپ عدد ==========
+// کادرهای عددی (type=number) نمی‌توانند کاما نشان بدهند؛ موقع تایپ/فوکس، یک برچسب
+// شناور بالای همان کادر عدد را با جداکنندهٔ هزارگان + نامِ مقیاس (هزار/میلیون/میلیارد)
+// نشان می‌دهد تا شمردنِ صفرها لازم نباشد — در همهٔ جدول‌ها و فرم‌ها کار می‌کند.
+(function(){
+  const hint = document.createElement('div');
+  hint.id = 'num-hint';
+  hint.style.cssText = 'position:fixed;display:none;z-index:100000;background:#111827;color:#fbbf24;border:1.5px solid #fbbf24;border-radius:9px;padding:4px 12px;font-family:Vazirmatn,sans-serif;font-size:0.95rem;font-weight:800;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.45);direction:rtl;white-space:nowrap';
+  document.body.appendChild(hint);
+  function scaleWord(v){
+    const a = Math.abs(v);
+    const f = x => { const r = Math.round(x*10)/10; return r % 1 === 0 ? n2fa(Math.round(r)) : String(r); };
+    if (a >= 1e9) return f(v/1e9) + ' میلیارد';
+    if (a >= 1e6) return f(v/1e6) + ' میلیون';
+    if (a >= 1e3) return f(v/1e3) + ' هزار';
+    return '';
+  }
+  function hide(){ hint.style.display = 'none'; }
+  function show(el){
+    if (!(el instanceof HTMLInputElement)) return hide();
+    const numeric = el.type === 'number' || (el.getAttribute('inputmode')||'') === 'numeric';
+    if (!numeric || el.type === 'tel' || el.classList.contains('pw-mask') || /phone/i.test(el.id||'')) return hide();
+    const v = parseFloat(toEnDigits(el.value));
+    if (!isFinite(v) || Math.abs(v) < 1000) return hide();
+    const w = scaleWord(v);
+    hint.textContent = (w ? w + ' — ' : '') + n2fa(v);
+    hint.style.display = 'block';
+    const r = el.getBoundingClientRect();
+    const hr = hint.getBoundingClientRect();
+    let top = r.top - hr.height - 6;
+    if (top < 4) top = r.bottom + 6;
+    let left = r.left + r.width/2 - hr.width/2;
+    left = Math.max(4, Math.min(left, window.innerWidth - hr.width - 4));
+    hint.style.top = top + 'px'; hint.style.left = left + 'px';
+  }
+  document.addEventListener('input',   e => { if (e.target === document.activeElement) show(e.target); }, true);
+  document.addEventListener('focusin', e => show(e.target), true);
+  document.addEventListener('focusout', hide, true);
+  window.addEventListener('scroll', hide, true);
+  window.addEventListener('resize', hide);
+})();
 
 // ========== INIT ==========
 // محافظت نقش نظاره‌گر: همهٔ توابع تغییردهنده برای نظاره‌گر غیرفعال می‌شوند
