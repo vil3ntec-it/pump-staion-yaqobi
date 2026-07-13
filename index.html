@@ -6228,7 +6228,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
           <div class="fs-cell"><div class="l">فیصدی ما</div><div class="v" style="color:var(--purple)" id="pm-p-comm">0</div></div>
           <div class="fs-cell"><div class="l" id="pm-p-rasid-l">مقدار رسید تیل</div><input type="number" class="v pm-edit" id="pm-p-rasidfuel" placeholder="0" style="color:var(--green);background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;width:100%;font-weight:800;font-family:'Vazirmatn',sans-serif" oninput="updatePersonRasidFuel('petrol',this.value)"></div>
           <div class="fs-cell"><div class="l">برد</div><div class="v" style="color:var(--accent)" id="pm-p-bord">0</div></div>
-          <div class="fs-cell"><div class="l" id="pm-p-rem-l">الباقی تیل</div><div class="v" style="color:var(--blue)" id="pm-p-remfuel">0</div></div>
+          <div class="fs-cell"><div class="l" id="pm-p-rem-l">الباقی تیل</div><div class="v" style="color:var(--blue)" id="pm-p-remfuel">0</div><div class="l" id="pm-p-remmoney-l" style="display:none;margin-top:3px">الباقی پول</div><div class="v" id="pm-p-remmoney" style="display:none">0</div></div>
         </div>
       </div>
       <div class="fs-group diesel">
@@ -6237,7 +6237,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
           <div class="fs-cell"><div class="l">فیصدی ما</div><div class="v" style="color:var(--purple)" id="pm-d-comm">0</div></div>
           <div class="fs-cell"><div class="l" id="pm-d-rasid-l">مقدار رسید تیل</div><input type="number" class="v pm-edit" id="pm-d-rasidfuel" placeholder="0" style="color:var(--green);background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;width:100%;font-weight:800;font-family:'Vazirmatn',sans-serif" oninput="updatePersonRasidFuel('diesel',this.value)"></div>
           <div class="fs-cell"><div class="l">برد</div><div class="v" style="color:var(--accent)" id="pm-d-bord">0</div></div>
-          <div class="fs-cell"><div class="l" id="pm-d-rem-l">الباقی تیل</div><div class="v" style="color:var(--blue)" id="pm-d-remfuel">0</div></div>
+          <div class="fs-cell"><div class="l" id="pm-d-rem-l">الباقی تیل</div><div class="v" style="color:var(--blue)" id="pm-d-remfuel">0</div><div class="l" id="pm-d-remmoney-l" style="display:none;margin-top:3px">الباقی پول</div><div class="v" id="pm-d-remmoney" style="display:none">0</div></div>
         </div>
       </div>
     </div>
@@ -6270,11 +6270,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <span style="flex:1"></span>
         <button id="pm-acct-del" class="del-btn pm-acct-del" onclick="deletePersonSub()" style="display:none;background:transparent;color:var(--red);border:1px solid var(--red);border-radius:7px;padding:6px 8px;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">🗑️ حذف</button>
       </div>
-      <!-- جمع الباقی بالای جدول — همان مقدارِ ردیفِ «جمع الباقی» پایین جدول -->
-      <div id="pm-albaqi-top" style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 6px;padding:8px 12px;border:1px solid var(--border);border-radius:9px;background:var(--dark);font-size:0.85rem;font-weight:800">
-        <span id="pm-albaqi-top-lbl">جمع الباقی</span>
-        <span id="pm-albaqi-top-val">۰</span>
-      </div>
       <div class="xls-wrap">
         <table class="xls-tbl" id="pm-tbl">
           <thead><tr>
@@ -6287,6 +6282,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
             <th style="width:56px">فی لیتر</th>
             <th style="width:90px">مقدار بردگی</th>
             <th style="width:90px">رسید</th>
+            <th style="width:90px">رسید تیل</th>
             <th style="width:90px">الباقی</th>
             <th style="width:46px">حذف</th>
           </tr></thead>
@@ -6297,12 +6293,8 @@ body.viewer-mode .inv-admin-only{display:none!important}
             <td class="xls-calc" id="pm-ft-priceper">—</td>
             <td class="xls-calc" id="pm-ft-bardagi">0</td>
             <td class="xls-calc" id="pm-ft-rasid">0</td>
+            <td class="xls-calc" id="pm-ft-rasidfuel">0</td>
             <td class="xls-calc" id="pm-ft-albaqi" style="font-weight:800">0</td>
-            <td></td>
-          </tr>
-          <tr>
-            <td colspan="6" id="pm-ft-albaqi-lbl" style="padding:8px 7px;font-weight:800">جمع الباقی (رسید − بردگی)</td>
-            <td class="xls-calc" id="pm-ft-albaqi2" colspan="4" style="font-weight:800">0</td>
             <td></td>
           </tr></tfoot>
         </table>
@@ -10051,16 +10043,17 @@ function deletePersonSub() {
   if (typeof showToast === 'function') showToast('🗑️ حساب حذف شد', '#d97706');
 }
 function _splitTotals(rows){
-  const z = ()=>({fuel:0,rasid:0,albaqi:0,bardagi:0});
+  const z = ()=>({fuel:0,rasid:0,rasidFuel:0,albaqi:0,bardagi:0});
   const t = {petrol:z(), diesel:z(), all:z()};
   rows.forEach(r=>{
     const k = (r.ftype === 'diesel') ? 'diesel' : 'petrol';
-    t[k].fuel    += (r.fuel||0);
-    t[k].rasid   += (r.rasid||0);
-    t[k].albaqi  += (r.albaqi||0);
-    t[k].bardagi += (r.bardagi||0);
+    t[k].fuel      += (r.fuel||0);
+    t[k].rasid     += (r.rasid||0);
+    t[k].rasidFuel += (r.rasidFuel||0);
+    t[k].albaqi    += (r.albaqi||0);
+    t[k].bardagi   += (r.bardagi||0);
   });
-  ['fuel','rasid','albaqi','bardagi'].forEach(f=>{ t.all[f] = t.petrol[f] + t.diesel[f]; });
+  ['fuel','rasid','rasidFuel','albaqi','bardagi'].forEach(f=>{ t.all[f] = t.petrol[f] + t.diesel[f]; });
   return t;
 }
 function renderPersonRows(person) {
@@ -10093,11 +10086,14 @@ function renderPersonRows(person) {
   // در table-layout:fixed ستونِ فانتوم نسازد و جدول باریک/کج نشود.)
   const showFtCol = currentPersonFilter === 'all';
   _togglePmFtColumn(showFtCol);
+  // در دفتر «واحد تیل» فقط «رسید تیل» الباقی را کم می‌کند (رسید پول دفترِ پول را)؛
+  // در دفتر «واحد پول» مثل قبل رسیدِ پول کم می‌شود
+  const pmMoneyMode = person.mode === 'money';
   let shown = 0;
   rows.forEach((r, i) => {
     // ردیف «پولی» (byMoney): بردگی مستقیم پول است، نه ضربِ لیتر×فی
     const bardagi = (r.byMoney ? (parseFloat(r.bardagi)||0) : _fuelBardagi(r)).toFixed(0);
-    const albaqi  = (parseFloat(bardagi) - (r.rasid||0)).toFixed(0);
+    const albaqi  = (parseFloat(bardagi) - (pmMoneyMode ? (r.rasid||0) : (r.rasidFuel||0))).toFixed(0);
     // auto-store calculated values
     if (r.bardagi !== parseFloat(bardagi)) { r.bardagi = parseFloat(bardagi); }
     if (r.albaqi  !== parseFloat(albaqi))  { r.albaqi  = parseFloat(albaqi); }
@@ -10128,6 +10124,7 @@ function renderPersonRows(person) {
       <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="0" style="min-width:44px;max-width:60px" oninput="calcPersonRow('${person.id}',${i},'priceper',this.value)"></td>
       <td><input class="xls-in pm-bardagi-cell" type="number" value="${parseFloat(bardagi)||''}" placeholder="0" style="color:var(--accent);font-weight:700" oninput="calcPersonRow('${person.id}',${i},'bardagi',this.value)"></td>
       <td><input class="xls-in" type="number" value="${r.rasid||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasid',this.value)"></td>
+      <td><input class="xls-in" type="number" value="${r.rasidFuel||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasidFuel',this.value)"></td>
       <td class="pm-albaqi-cell"></td>
       <td><button class="del-btn" onclick="deletePersonRow('${person.id}',${i})">🗑️</button></td>
     `;
@@ -10136,7 +10133,7 @@ function renderPersonRows(person) {
   if (shown === 0) {
     const tr = document.createElement('tr');
     const label = currentPersonFilter === 'petrol' ? '⛽ هیچ ردیف پطرولی ثبت نشده' : (currentPersonFilter === 'diesel' ? '🟤 هیچ ردیف دیزلی ثبت نشده' : 'هیچ ردیفی ثبت نشده');
-    tr.innerHTML = `<td colspan="${showFtCol?11:10}" style="text-align:center;padding:16px;color:var(--muted);font-size:0.85rem">${label}</td>`;
+    tr.innerHTML = `<td colspan="${showFtCol?12:11}" style="text-align:center;padding:16px;color:var(--muted);font-size:0.85rem">${label}</td>`;
     tbody.appendChild(tr);
   }
   // جمع‌ها بعد از حلقهٔ ردیف‌ها حساب می‌شوند — حلقه بردگی/الباقیِ هر ردیف را
@@ -10302,7 +10299,7 @@ function calcStackedRow(pid, acctId, idx, field, value) {
   if (field==='bardagi') r.byMoney=true;
   else if (field==='fuel'||field==='priceper') { if ((r.fuel||0)>0||(r.priceper||0)>0) r.byMoney=false; }
   if (!r.byMoney) r.bardagi=_fuelBardagi(r);
-  r.albaqi=(parseFloat(r.bardagi)||0)-(r.rasid||0);
+  r.albaqi=(parseFloat(r.bardagi)||0)-(person.mode==='money' ? (r.rasid||0) : (r.rasidFuel||0));
   save(); _updatePersonTotals(person); _renderStackedAccounts(person); renderPersons(currentPersonType); updateBanner();
 }
 function setStackedRowFuel(pid, acctId, idx, ftype) {
@@ -10537,13 +10534,24 @@ function calcPersonRow(pid, idx, field, value) {
   const acct = _acctOf(person);
   const rowsArr = _acctRows(person, acct);
   if (!rowsArr[idx]) return;
+  const prevRasidFuel = parseFloat(rowsArr[idx].rasidFuel) || 0;
   rowsArr[idx][field] = parseFloat(value) || 0;
   const r = rowsArr[idx];
+  // «رسید تیل» (لیتر) به حساب تیلِ همان نوع (پطرول/دیزل) اضافه می‌شود — کاملاً
+  // جدا از رسید پول؛ تفاوت با مقدار قبلی جمع می‌شود تا هنگام تایپ دوبار حساب نشود
+  if (field === 'rasidFuel') {
+    const delta = (parseFloat(value) || 0) - prevRasidFuel;
+    if (delta) {
+      if (r.ftype === 'diesel') acct.rasidFuelD = (parseFloat(acct.rasidFuelD)||0) + delta;
+      else acct.rasidFuelP = (parseFloat(acct.rasidFuelP)||0) + delta;
+    }
+  }
   // نوشتن مستقیم در «بردگی» = حالت پولی؛ نوشتن لیتر یا فی = حالت تیل (بردگی = لیتر×فی)
   if (field === 'bardagi') r.byMoney = true;
   else if (field === 'fuel' || field === 'priceper') { if ((r.fuel||0) > 0 || (r.priceper||0) > 0) r.byMoney = false; }
   if (!r.byMoney) r.bardagi = _fuelBardagi(r);
-  r.albaqi = (parseFloat(r.bardagi)||0) - (r.rasid||0);
+  // الباقی دفتر تیل فقط با «رسید تیل» کم می‌شود؛ دفتر پول مثل قبل با رسید پول
+  r.albaqi = (parseFloat(r.bardagi)||0) - (person.mode === 'money' ? (r.rasid||0) : (r.rasidFuel||0));
   save();
   _updatePersonRowCells(person, idx, r);
   _updatePersonTotals(person);
@@ -10695,6 +10703,18 @@ function _updatePersonTotals(person) {
   const setRem = (id, v) => { const el = document.getElementById(id); if (el) { const val = rnd(-v) || 0; el.textContent = n2fa(val); el.style.color = val < 0 ? 'var(--red)' : 'var(--green)'; } };
   setRem('pm-p-remfuel', remP);
   setRem('pm-d-remfuel', remD);
+  // در حالت «واحد تیل» زیر الباقی تیل، «الباقی پول» هم نمایش داده می‌شود
+  // (بردگی پولی − رسید پول جدول) — فقط نمایشی؛ در حالت پول خودِ کادر پول است
+  const setRemMoney = (fuel, v) => {
+    const lbl = document.getElementById('pm-' + fuel + '-remmoney-l');
+    const el = document.getElementById('pm-' + fuel + '-remmoney');
+    if (!lbl || !el) return;
+    lbl.style.display = money ? 'none' : '';
+    el.style.display = money ? 'none' : '';
+    if (!money) { const val = Math.round(v) || 0; el.textContent = n2fa(val); el.style.color = val < 0 ? 'var(--red)' : 'var(--green)'; }
+  };
+  setRemMoney('p', t.petrol.rasid - t.petrol.bardagi);
+  setRemMoney('d', t.diesel.rasid - t.diesel.bardagi);
   setV('pm-bord-sum', n2fa(rnd(bordP+bordD)) + unit);
   // footer جدول: جمعِ هر ستون در جمعِ خودِ همان ستون — مقدار تیل، مقدار بردگی و
   // رسید در هر دو حالتِ واحد پول/تیل فقط نمایش داده می‌شوند و هیچ اثری بر
@@ -10702,13 +10722,14 @@ function _updatePersonTotals(person) {
   setV('pm-ft-fuel', n2fa(t.all.fuel));
   setV('pm-ft-bardagi', n2fa(t.all.bardagi));
   setV('pm-ft-rasid', n2fa(t.all.rasid));
+  setV('pm-ft-rasidfuel', n2fa(t.all.rasidFuel));
   // جمعِ الباقی به‌صورت «رسید − بردگی» (پیش‌پرداخت مثبت/سبز، بدهی منفی/سرخ) —
-  // هم در ستونِ الباقیِ ردیفِ «جمع» و هم در ردیفِ برچسب‌دارِ زیرش.
-  // در حالتِ «واحد تیل» همین جمع به لیتر است: رسید تیل − برد تیل
+  // در ستونِ الباقیِ ردیفِ «جمع». در حالتِ «واحد تیل» فقط «رسید تیل» کم می‌شود:
+  // رسید تیل − بردگی (رسید پول دیگر الباقی تیل را کم نمی‌کند)
   const netAll = money
     ? Math.round(t.all.rasid - t.all.bardagi)
-    : Math.round(((parseFloat(acct.rasidFuelP)||0) + (parseFloat(acct.rasidFuelD)||0) - t.all.fuel) * 100) / 100;
-  const netTxt = n2fa(netAll) + (money ? '' : ' ل');
+    : Math.round((t.all.rasidFuel - t.all.bardagi) * 100) / 100;
+  const netTxt = n2fa(netAll);
   const ftAlbEl = document.getElementById('pm-ft-albaqi');
   if (ftAlbEl) { ftAlbEl.textContent = netTxt; ftAlbEl.style.color = netAll < 0 ? 'var(--red)' : 'var(--green)'; }
   const ftAlbEl2 = document.getElementById('pm-ft-albaqi2');
@@ -11136,7 +11157,7 @@ function addPersonRow() {
   const person = list.find(p => p.id === currentPersonId);
   if (!person) return;
   const ft = (currentPersonFilter === 'diesel') ? 'diesel' : 'petrol';
-  _acctRows(person).push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, albaqi: 0, byMoney: person.mode === 'money' });
+  _acctRows(person).push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, rasidFuel: 0, albaqi: 0, byMoney: person.mode === 'money' });
   save(); renderPersonRows(person);
 }
 function setAllRowsFuel(type) {
@@ -11160,7 +11181,7 @@ function addPersonRowsBulk() {
   const ft = (currentPersonFilter === 'diesel') ? 'diesel' : 'petrol';
   const rowsArr = _acctRows(person);
   for (let k = 0; k < n; k++) {
-    rowsArr.push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, albaqi: 0, byMoney: person.mode === 'money' });
+    rowsArr.push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, rasidFuel: 0, albaqi: 0, byMoney: person.mode === 'money' });
   }
   save(); renderPersonRows(person);
   showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
@@ -18004,7 +18025,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.14';
+const APP_VERSION = '2.9.15';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
