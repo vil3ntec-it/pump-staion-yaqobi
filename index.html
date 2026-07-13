@@ -4519,9 +4519,13 @@ table thead th{ position:relative; }
   <symbol id="ic-profit" viewBox="0 0 24 24"><path d="M3.5 3.5v15.5a1.5 1.5 0 0 0 1.5 1.5h15.5"/><path d="M7 15.5l4-4.5 3 2.5 5.5-6.5"/><path d="M16 7h3.5v3.5"/></symbol>
   <symbol id="ic-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.5M12 18.7v2.5M2.8 12h2.5M18.7 12h2.5M5.4 5.4l1.8 1.8M16.8 16.8l1.8 1.8M18.6 5.4l-1.8 1.8M7.2 16.8l-1.8 1.8"/></symbol>
   <symbol id="ic-moonstar" viewBox="0 0 24 24"><path d="M19.5 14.2A7.5 7.5 0 1 1 9.8 4.5a6 6 0 0 0 9.7 9.7z"/><path d="M17.5 3.5l.55 1.45L19.5 5.5l-1.45.55L17.5 7.5l-.55-1.45L15.5 5.5l1.45-.55.55-1.45z"/></symbol>
+  <symbol id="ic-dash" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7.5" height="7.5" rx="2"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="2"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="2"/><rect x="13" y="13" width="7.5" height="7.5" rx="2"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24"><path d="M18 10a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6"/><path d="M10.3 20a2 2 0 0 0 3.4 0"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20.5 20.5l-4.8-4.8"/></symbol>
 </svg>
 
 <div class="nav">
+  <button class="nav-btn" onclick="showSection('dashboard',this)"><svg class="nav-ic ia-pulse"><use href="#ic-dash"/></svg> داشبورد</button>
   <button class="nav-btn active" onclick="showSection('shifts',this)"><svg class="nav-ic ia-wobble"><use href="#ic-shifts"/></svg> پارچه‌ها</button>
   <button class="nav-btn" onclick="showSection('waraq',this)"><svg class="nav-ic ia-write"><use href="#ic-waraq"/></svg> ورق‌های روزانه</button>
   <button class="nav-btn" onclick="showSection('debt',this)"><span class="nav-badge" id="debt-nav-badge" style="display:none"></span><svg class="nav-ic ia-bounce"><use href="#ic-debt"/></svg> قرض‌داران</button>
@@ -4540,6 +4544,118 @@ table thead th{ position:relative; }
 </div>
 
 <div class="main">
+
+<!-- ===== داشبورد — فقط نمایشی (Read-Only)؛ هیچ منطق/داده‌ای را تغییر نمی‌دهد ===== -->
+<style id="dash-style">
+/* همهٔ رنگ‌ها از Theme (متغیرهای CSS) گرفته می‌شوند — با تغییر تم، خودکار عوض می‌شوند */
+#sec-dashboard{max-width:1280px;margin:0 auto}
+.dash-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.dash-greet-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.dash-title{font-size:1.5rem;font-weight:900;color:var(--txt);margin:0}
+.dash-greet{font-size:.95rem;font-weight:800;color:var(--accent)}
+.dash-date{font-size:.8rem;color:var(--muted);font-weight:700;margin-top:4px}
+.dh-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.dash-search-wrap{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:999px;padding:9px 14px;min-width:230px;box-shadow:0 6px 18px rgba(0,0,0,.08);transition:border-color .25s,box-shadow .25s}
+.dash-search-wrap:focus-within{border-color:var(--accent);box-shadow:0 6px 22px rgba(0,0,0,.14)}
+.dash-search{flex:1;background:transparent;border:none;outline:none;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:.85rem;min-width:0}
+.ds-ic{width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:1.8;flex-shrink:0}
+.dash-iconbtn{width:42px;height:42px;border-radius:50%;border:1px solid var(--border);background:var(--card);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.08);transition:transform .22s,border-color .22s}
+.dash-iconbtn:hover{transform:translateY(-2px);border-color:var(--accent)}
+.dash-iconbtn svg{width:19px;height:19px;stroke:var(--txt);fill:none;stroke-width:1.7}
+.dash-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--purple));display:inline-flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.14)}
+.dash-avatar svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:1.8}
+.dash-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px}
+.dash-card{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--border);border-radius:22px;padding:20px 22px;box-shadow:0 10px 30px rgba(0,0,0,.10);transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease}
+.dash-card:hover{transform:translateY(-4px);box-shadow:0 16px 38px rgba(0,0,0,.16);border-color:var(--accent)}
+.dash-card::before{content:'';position:absolute;inset-inline-end:0;top:18%;bottom:18%;width:5px;border-radius:99px 0 0 99px;background:linear-gradient(180deg,var(--accent),var(--purple))}
+.dc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
+.dc-ic{width:44px;height:44px;border-radius:14px;background:var(--dark);border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center}
+.dc-ic svg{width:22px;height:22px;stroke:var(--accent);fill:none;stroke-width:1.7}
+.dc-prog{position:relative;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center}
+.dc-prog svg{width:44px;height:44px;transform:rotate(-90deg)}
+.dc-prog circle{fill:none;stroke-width:3.4}
+.dc-prog .tr{stroke:var(--border)}
+.dc-prog .bar{stroke:var(--muted);stroke-linecap:round;transition:stroke-dashoffset .8s ease}
+.dc-prog b{position:absolute;font-size:.56rem;font-weight:800;color:var(--muted)}
+.dc-title{font-size:.82rem;font-weight:700;color:var(--muted)}
+.dc-value{font-size:1.25rem;font-weight:900;color:var(--txt);margin-top:4px}
+.dc-sub{font-size:.68rem;color:var(--muted);margin-top:6px;opacity:.8}
+.dash-mid{display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:stretch}
+.dash-chart-card{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:20px 22px;box-shadow:0 10px 30px rgba(0,0,0,.10);min-width:0}
+.dcc-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.dcc-title{font-size:1rem;font-weight:900;color:var(--txt)}
+.dcc-sub{font-size:.72rem;color:var(--muted);margin-top:3px}
+.dash-tabs{display:flex;gap:6px;background:var(--dark);border:1px solid var(--border);border-radius:999px;padding:4px}
+.dash-tab{border:none;background:transparent;color:var(--muted);font-family:'Vazirmatn',sans-serif;font-size:.8rem;font-weight:800;padding:7px 16px;border-radius:999px;cursor:pointer;transition:background .22s,color .22s}
+.dash-tab:hover{color:var(--txt)}
+.dash-tab.active{background:var(--accent);color:#fff}
+.dash-bars{display:flex;align-items:flex-end;gap:4%;height:240px;padding-top:26px}
+.db-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0;height:100%}
+.db-barwrap{flex:1;width:100%;max-width:34px;display:flex;align-items:flex-end;justify-content:center}
+.db-bar{position:relative;width:100%;height:0;border-radius:10px;background:linear-gradient(180deg,var(--accent) 0%,var(--purple) 160%);transition:height .7s cubic-bezier(.22,.8,.3,1);cursor:pointer}
+.db-bar.alt{opacity:.45}
+.db-bar:hover{opacity:1;filter:brightness(1.12)}
+.db-tip{position:absolute;bottom:calc(100% + 8px);right:50%;transform:translateX(50%);background:var(--panel);color:var(--txt);border:1px solid var(--border);border-radius:9px;padding:4px 10px;font-size:.68rem;font-weight:800;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s;box-shadow:0 8px 20px rgba(0,0,0,.18);z-index:3}
+.db-bar:hover .db-tip{opacity:1}
+.db-lbl{font-size:.66rem;color:var(--muted);font-weight:700;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.dash-hero{position:relative;overflow:hidden;border-radius:26px;padding:26px 20px;background:linear-gradient(160deg,var(--accent),var(--purple) 90%);box-shadow:0 14px 34px rgba(0,0,0,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;min-height:320px}
+.dash-hero::after{content:'';position:absolute;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.12);top:-90px;left:-70px;pointer-events:none}
+.dhero-gauge{position:relative;width:150px;height:84px}
+.dhero-gauge svg{width:150px;height:84px}
+.dhero-gauge path{fill:none;stroke-width:10;stroke-linecap:round}
+.dhero-gauge .tr{stroke:rgba(255,255,255,.25)}
+.dhero-gauge .bar{stroke:#fff;stroke-dasharray:151;stroke-dashoffset:151;transition:stroke-dashoffset .9s ease}
+.dhero-gauge b{position:absolute;bottom:2px;right:50%;transform:translateX(50%);color:#fff;font-size:1.1rem;font-weight:900}
+.dhero-ic{width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center}
+.dhero-ic svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:1.8}
+.dhero-label{color:rgba(255,255,255,.9);font-weight:800;font-size:1rem}
+.dhero-value{color:#fff;font-weight:900;font-size:1.5rem}
+.dhero-sub{color:rgba(255,255,255,.78);font-size:.72rem;max-width:230px;line-height:1.8}
+@media (max-width:1100px){ .dash-cards{grid-template-columns:repeat(2,1fr)} .dash-mid{grid-template-columns:1fr} .dash-hero{min-height:260px} }
+@media (max-width:640px){ .dash-cards{grid-template-columns:1fr} .dash-search-wrap{min-width:0;flex:1} .dash-bars{height:190px;gap:2.5%} .dash-head{align-items:flex-start} }
+</style>
+<div class="section" id="sec-dashboard">
+  <div class="dash-head">
+    <div>
+      <div class="dash-greet-row"><h2 class="dash-title">داشبورد</h2><span class="dash-greet" id="dash-greet">سلام 👋</span></div>
+      <div class="dash-date" id="dash-date"></div>
+    </div>
+    <div class="dh-left">
+      <span class="dash-search-wrap"><svg class="ds-ic"><use href="#ic-search"/></svg><input class="dash-search" placeholder="جستجو..." onkeydown="if(event.key==='Enter')showToast('🔎 جستجوی داشبورد به زودی فعال می‌شود','#d97706')"></span>
+      <button class="dash-iconbtn" title="اعلان‌ها" onclick="showToast('🔔 اعلان تازه‌ای نیست','#38a169')"><svg><use href="#ic-bell"/></svg></button>
+      <span class="dash-avatar" title="پروفایل"><svg><use href="#ic-user1"/></svg></span>
+    </div>
+  </div>
+  <div class="dash-cards">
+    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-shifts"/></svg></span><span class="dc-prog"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>۰٪</b></span></div><div class="dc-title">فروش امروز</div><div class="dc-value">به زودی...</div><div class="dc-sub">نسبت به روز قبل</div></div>
+    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-profit"/></svg></span><span class="dc-prog"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>۰٪</b></span></div><div class="dc-title">مفاد این هفته</div><div class="dc-value">به زودی...</div><div class="dc-sub">نسبت به هفته قبل</div></div>
+    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-debt"/></svg></span><span class="dc-prog"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>۰٪</b></span></div><div class="dc-title">الباقی قرض‌داران</div><div class="dc-value">به زودی...</div><div class="dc-sub">نسبت به ماه قبل</div></div>
+    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-expenses"/></svg></span><span class="dc-prog"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>۰٪</b></span></div><div class="dc-title">مصارف این ماه</div><div class="dc-value">به زودی...</div><div class="dc-sub">نسبت به ماه قبل</div></div>
+    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-safe"/></svg></span><span class="dc-prog"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>۰٪</b></span></div><div class="dc-title">موجودی گاوصندوق</div><div class="dc-value">به زودی...</div><div class="dc-sub">نسبت به هفته قبل</div></div>
+    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-storage"/></svg></span><span class="dc-prog"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>۰٪</b></span></div><div class="dc-title">موجودی مخزن</div><div class="dc-value">به زودی...</div><div class="dc-sub">نسبت به روز قبل</div></div>
+  </div>
+  <div class="dash-mid">
+    <div class="dash-chart-card">
+      <div class="dcc-head">
+        <div><div class="dcc-title">📊 نمودار مفاد</div><div class="dcc-sub">پطرول + دیزل — از گزارش‌های ثبت‌شده (فقط نمایشی)</div></div>
+        <div class="dash-tabs">
+          <button class="dash-tab active" onclick="dashSetRange('day',this)">روز</button>
+          <button class="dash-tab" onclick="dashSetRange('week',this)">هفته</button>
+          <button class="dash-tab" onclick="dashSetRange('month',this)">ماه</button>
+          <button class="dash-tab" onclick="dashSetRange('year',this)">سال</button>
+        </div>
+      </div>
+      <div class="dash-bars" id="dash-bars"></div>
+    </div>
+    <div class="dash-hero">
+      <div class="dhero-gauge"><svg viewBox="0 0 120 66"><path class="tr" d="M12 60 A48 48 0 0 1 108 60"/><path class="bar" d="M12 60 A48 48 0 0 1 108 60"/></svg><b>۰٪</b></div>
+      <div class="dhero-ic"><svg><use href="#ic-profit"/></svg></div>
+      <div class="dhero-label">به زودی...</div>
+      <div class="dhero-value">—</div>
+      <div class="dhero-sub">این کارت در نسخه‌های بعدی با اطلاعات واقعی فعال می‌شود</div>
+    </div>
+  </div>
+</div>
 
 <!-- SHIFTS (پطرول) + گزارش -->
 <div class="section visible" id="sec-shifts">
@@ -7839,6 +7955,7 @@ function showSection(id, btn) {
   if (id === 'cameras') { renderCameras(); refreshLocalCams(); } else { try { stopAllLocalCams(); } catch(e){} }
   if (id === 'attendance') renderAttendance();
   if (id === 'zodiac') { initDate(); }
+  if (id === 'dashboard') { try { renderDashboard(); } catch(e) {} }
   if (id === 'settings') {
     fillLowStockSettings();
     fillSyncSettings();
@@ -7850,6 +7967,84 @@ function showSection(id, btn) {
     try { renderStorageStatus(); } catch(e) {}
     try { _hexFxSyncUI(_hexFxLoad()); } catch(e) {}
   }
+}
+
+// ========== داشبورد — فقط نمایشی (Read-Only) ==========
+// هیچ چیزی را در DB نمی‌نویسد؛ فقط همان داده‌هایی را می‌خواند که سرصفحه
+// (updateBanner) می‌خواند: مفاد پطرول از گزارش‌ها + مفاد دیزل از پارچه‌ها
+let _dashRange = 'day';
+function dashSetRange(r, btn) {
+  _dashRange = r;
+  document.querySelectorAll('.dash-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  _renderDashChart();
+}
+function _dashProfitByDate() {
+  const map = {};
+  (DB.reports || []).forEach(r => {
+    if (!r || r.fuel !== 'petrol' || !r.date) return;
+    map[r.date] = (map[r.date] || 0) + ((r.day?.profit || 0) + (r.night?.profit || 0));
+  });
+  (DB.shifts || []).forEach(s => {
+    if (!s || s.fuel !== 'diesel' || !s.date) return;
+    map[s.date] = (map[s.date] || 0) + (s.profit || 0);
+  });
+  return map;
+}
+function _dashParseDate(d) {
+  const p = toEnDigits(d || '').split('/').map(x => parseInt(x, 10) || 0);
+  return { y: p[0] || 0, m: p[1] || 0, d: p[2] || 0 };
+}
+function _renderDashChart() {
+  const wrap = document.getElementById('dash-bars');
+  if (!wrap) return;
+  const map = _dashProfitByDate();
+  const groups = {};
+  Object.keys(map).forEach(ds => {
+    const p = _dashParseDate(ds);
+    if (!p.y) return;
+    let key, label;
+    if (_dashRange === 'day') { key = p.y * 10000 + p.m * 100 + p.d; label = n2fa(p.m) + '/' + n2fa(p.d); }
+    else if (_dashRange === 'week') { const w = Math.min(5, Math.ceil(p.d / 7)); key = p.y * 1000 + p.m * 10 + w; label = 'هفته ' + n2fa(w) + ' ' + (SHAMSI_MONTHS[p.m - 1] || ''); }
+    else if (_dashRange === 'month') { key = p.y * 100 + p.m; label = (SHAMSI_MONTHS[p.m - 1] || n2fa(p.m)); }
+    else { key = p.y; label = n2fa(p.y); }
+    if (!groups[key]) groups[key] = { label, val: 0, ord: key };
+    groups[key].val += map[ds];
+  });
+  let list = Object.values(groups).sort((a, b) => a.ord - b.ord);
+  const maxBars = _dashRange === 'day' ? 10 : (_dashRange === 'week' ? 8 : (_dashRange === 'month' ? 12 : 6));
+  list = list.slice(-maxBars);
+  if (!list.length) {
+    // هنوز داده‌ای نیست — ساختار آماده است و میله‌های صفر نمایش داده می‌شود
+    const n = _dashRange === 'year' ? 4 : 8;
+    for (let i = 0; i < n; i++) list.push({ label: '—', val: 0 });
+  }
+  const maxV = Math.max(1, ...list.map(g => Math.abs(g.val)));
+  wrap.innerHTML = list.map((g, i) => {
+    const h = Math.round(Math.abs(g.val) / maxV * 100);
+    return `<div class="db-col"><div class="db-barwrap"><div class="db-bar ${i % 2 ? 'alt' : ''}" data-h="${h}"><span class="db-tip">${n2fa(Math.round(g.val))} افغانی</span></div></div><span class="db-lbl">${g.label}</span></div>`;
+  }).join('');
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    wrap.querySelectorAll('.db-bar').forEach(b => { b.style.height = Math.max(3, parseInt(b.getAttribute('data-h'), 10) || 0) + '%'; });
+  }));
+}
+// دایرهٔ درصد تغییر: مثبت=سبز، منفی=سرخ، صفر/بدون داده=خاکستری — رنگ‌ها از Theme
+function _dashSetProgress(el, pct) {
+  const bar = el.querySelector('.bar'), txt = el.querySelector('b');
+  const C = 97.4; // محیط دایره r=15.5
+  const v = Math.max(-100, Math.min(100, Math.round(pct || 0)));
+  const col = v > 0 ? 'var(--green)' : (v < 0 ? 'var(--red)' : 'var(--muted)');
+  if (bar) { bar.style.strokeDasharray = C; bar.style.strokeDashoffset = C - (Math.abs(v) / 100) * C; bar.style.stroke = col; }
+  if (txt) { txt.textContent = (v > 0 ? '+' : '') + n2fa(v) + '٪'; txt.style.color = col; }
+}
+function renderDashboard() {
+  const g = document.getElementById('dash-greet');
+  if (g) { const h = new Date().getHours(); g.textContent = h < 12 ? 'صبح بخیر 👋' : (h < 17 ? 'چاشت بخیر 👋' : 'شب بخیر 👋'); }
+  const d = document.getElementById('dash-date');
+  if (d) { try { const a = allDates(); d.textContent = '📅 امروز: ' + a.sh + ' — ' + a.shName; } catch (e) { d.textContent = '📅 ' + persianDate(); } }
+  // فعلاً داده‌ای برای مقایسه با دورهٔ قبل نیست → ۰٪ خاکستری
+  document.querySelectorAll('#sec-dashboard .dc-prog').forEach(p => _dashSetProgress(p, 0));
+  _renderDashChart();
 }
 
 // ========== THEME ==========
@@ -18034,7 +18229,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.16';
+const APP_VERSION = '2.9.17';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
