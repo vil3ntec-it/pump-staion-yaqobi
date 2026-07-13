@@ -6289,6 +6289,16 @@ body.viewer-mode .inv-admin-only{display:none!important}
             <th style="width:90px">رسید</th>
             <th style="width:90px">الباقی</th>
             <th style="width:46px">حذف</th>
+          </tr>
+          <!-- همان ردیف «جمع» پایین جدول، اول جدول هم — تا بدون اسکرول دیده شود -->
+          <tr class="xls-foot" id="pm-top-sum-row">
+            <td colspan="5" style="padding:8px 7px">جمع</td>
+            <td class="xls-calc" id="pm-ft-fuel-top">0</td>
+            <td class="xls-calc">—</td>
+            <td class="xls-calc" id="pm-ft-bardagi-top">0</td>
+            <td class="xls-calc" id="pm-ft-rasid-top">0</td>
+            <td class="xls-calc" id="pm-ft-albaqi-top" style="font-weight:800">0</td>
+            <td></td>
           </tr></thead>
           <tbody id="pm-body"></tbody>
           <tfoot class="xls-foot"><tr>
@@ -6306,6 +6316,12 @@ body.viewer-mode .inv-admin-only{display:none!important}
             <td></td>
           </tr></tfoot>
         </table>
+      </div>
+      <!-- جمعِ مکملِ هر واحد، زیر کادر جدول: در «واحد تیل» جمع مقدار بردگی (پول)،
+           در «واحد پول» جمع مقدار تیل (لیتر) — فقط نمایشی، بدون اثر بر محاسبات -->
+      <div id="pm-extra-sum" style="display:none;margin-top:6px;padding:8px 12px;border:1px dashed var(--border);border-radius:9px;background:var(--dark);font-size:0.83rem;font-weight:800;justify-content:space-between;align-items:center;gap:10px">
+        <span id="pm-extra-sum-lbl"></span>
+        <span id="pm-extra-sum-val" style="color:var(--accent)"></span>
       </div>
       <!-- توضیحات حساب بالاتر از دکمه‌های ردیف جدید / افزودن چندتایی -->
       <div id="pm-note-area" style="margin-top:8px;padding:0 2px">
@@ -9616,11 +9632,28 @@ function _acctOf(person){
   var s = (person.subs||[]).find(function(x){ return x && x.id===currentSubId; });
   return s || person;
 }
-// مجموع ردیف‌های همهٔ حساب‌ها (اصلی + جداگانه) — برای جمع‌های لیست و بنر تا هیچ بدهی پنهان نشود
+// «واحد پول» و «واحد تیل» دو صفحهٔ کاملاً جدا هستند: هر حالت جدولِ ردیف‌های خودش را
+// دارد و هیچ ربطی به هم ندارند. rows = جدول واحد تیل (همان دادهٔ قدیمی، دست‌نخورده)؛
+// moneyRows = جدول واحد پول. این تابع جدولِ حالتِ فعال را برمی‌گرداند.
+function _acctRows(person, acct){
+  acct = acct || _acctOf(person);
+  if (person && person.mode === 'money') {
+    if (!Array.isArray(acct.moneyRows)) acct.moneyRows = [];
+    return acct.moneyRows;
+  }
+  if (!Array.isArray(acct.rows)) acct.rows = [];
+  return acct.rows;
+}
+// مجموع ردیف‌های همهٔ حساب‌ها (اصلی + جداگانه، هر دو واحد) — برای جمع‌های لیست و بنر تا هیچ بدهی پنهان نشود
 function _allRows(person){
   if(!person) return [];
   var rows = (person.rows||[]).slice();
-  (person.subs||[]).forEach(function(s){ if(s && Array.isArray(s.rows)) rows = rows.concat(s.rows); });
+  if (Array.isArray(person.moneyRows)) rows = rows.concat(person.moneyRows);
+  (person.subs||[]).forEach(function(s){
+    if(!s) return;
+    if(Array.isArray(s.rows)) rows = rows.concat(s.rows);
+    if(Array.isArray(s.moneyRows)) rows = rows.concat(s.moneyRows);
+  });
   return rows;
 }
 
@@ -9653,7 +9686,7 @@ function debtFuelStatus(p) {
   };
   [p, ...(p.subs || [])].forEach(a => {
     if (!a) return;
-    const t = _splitTotals(a.rows || []);
+    const t = _splitTotals((a.rows || []).concat(a.moneyRows || []));
     const eff = 1 - ((parseFloat(a.percent) || 0) / 100);   // سهم کمیشن کم می‌شود
     check((parseFloat(a.rasidFuelP)  || 0) * eff, t.petrol.fuel,    'fuel');
     check((parseFloat(a.rasidFuelD)  || 0) * eff, t.diesel.fuel,    'fuel');
@@ -10036,7 +10069,7 @@ function renderPersonRows(person) {
   }
 
   const acct = _acctOf(person);
-  const rows = acct.rows || [];
+  const rows = _acctRows(person, acct);
 
   const tbody = document.getElementById('pm-body');
   tbody.innerHTML = '';
@@ -10142,7 +10175,7 @@ function _renderStackedAccounts(person) {
   const rnd = x => Math.round(x*100)/100;
 
   wrap.innerHTML = sections.map((sec, si) => {
-    const rows = sec.acct.rows || [];
+    const rows = _acctRows(person, sec.acct);
     const note = sec.acct.note || '';
     const acColor = COLORS[si % COLORS.length];
     const countId = 'stk-count-' + si;
@@ -10240,15 +10273,17 @@ function _renderStackedAccounts(person) {
 function updateStackedRow(pid, acctId, idx, field, value) {
   const person = _getStackedPerson(pid); if (!person) return;
   const acct = _getStackedAcct(person, acctId);
-  if (!acct.rows || !acct.rows[idx]) return;
-  acct.rows[idx][field] = value;
+  const rowsArr = _acctRows(person, acct);
+  if (!rowsArr[idx]) return;
+  rowsArr[idx][field] = value;
   save(); _updatePersonTotals(person); renderPersons(currentPersonType); updateBanner();
 }
 function calcStackedRow(pid, acctId, idx, field, value) {
   const person = _getStackedPerson(pid); if (!person) return;
   const acct = _getStackedAcct(person, acctId);
-  if (!acct.rows || !acct.rows[idx]) return;
-  const r = acct.rows[idx];
+  const rowsArr = _acctRows(person, acct);
+  if (!rowsArr[idx]) return;
+  const r = rowsArr[idx];
   r[field] = parseFloat(value)||0;
   if (field==='bardagi') r.byMoney=true;
   else if (field==='fuel'||field==='priceper') { if ((r.fuel||0)>0||(r.priceper||0)>0) r.byMoney=false; }
@@ -10259,22 +10294,21 @@ function calcStackedRow(pid, acctId, idx, field, value) {
 function setStackedRowFuel(pid, acctId, idx, ftype) {
   const person = _getStackedPerson(pid); if (!person) return;
   const acct = _getStackedAcct(person, acctId);
-  if (!acct.rows||!acct.rows[idx]) return;
-  acct.rows[idx].ftype = ftype;
+  const rowsArr = _acctRows(person, acct);
+  if (!rowsArr[idx]) return;
+  rowsArr[idx].ftype = ftype;
   save(); _updatePersonTotals(person); renderPersons(currentPersonType);
 }
 function deleteStackedRow(pid, acctId, idx) {
   const person = _getStackedPerson(pid); if (!person) return;
   const acct = _getStackedAcct(person, acctId);
-  if (!acct.rows) return;
-  acct.rows.splice(idx, 1);
+  _acctRows(person, acct).splice(idx, 1);
   save(); _updatePersonTotals(person); _renderStackedAccounts(person); renderPersons(currentPersonType); updateBanner();
 }
 function addRowToAcct(pid, acctId) {
   const person = _getStackedPerson(pid); if (!person) return;
   const acct = _getStackedAcct(person, acctId);
-  if (!Array.isArray(acct.rows)) acct.rows = [];
-  acct.rows.push({ date:persianDate(), name:'', hawala:'', ftype:'petrol', fuel:0, priceper:0, bardagi:0, rasid:0, albaqi:0, byMoney:person.mode==='money' });
+  _acctRows(person, acct).push({ date:persianDate(), name:'', hawala:'', ftype:'petrol', fuel:0, priceper:0, bardagi:0, rasid:0, albaqi:0, byMoney:person.mode==='money' });
   save(); _renderStackedAccounts(person); _updatePersonTotals(person);
 }
 function addRowsBulkToAcct(pid, acctId, countId) {
@@ -10283,8 +10317,8 @@ function addRowsBulkToAcct(pid, acctId, countId) {
   const inp = countId ? document.getElementById(countId) : document.getElementById('pm-bulk-count');
   let n = parseInt(inp?.value||'10', 10)||10;
   if (n<1) n=1; if (n>200) n=200;
-  if (!Array.isArray(acct.rows)) acct.rows = [];
-  for (let k=0;k<n;k++) acct.rows.push({ date:persianDate(), name:'', hawala:'', ftype:'petrol', fuel:0, priceper:0, bardagi:0, rasid:0, albaqi:0, byMoney:person.mode==='money' });
+  const rowsArr = _acctRows(person, acct);
+  for (let k=0;k<n;k++) rowsArr.push({ date:persianDate(), name:'', hawala:'', ftype:'petrol', fuel:0, priceper:0, bardagi:0, rasid:0, albaqi:0, byMoney:person.mode==='money' });
   save(); _renderStackedAccounts(person); _updatePersonTotals(person);
   showToast('✅ '+n2fa(n)+' ردیف افزوده شد', '#38a169');
 }
@@ -10292,7 +10326,7 @@ function pdfStackedAcct(pid, acctId) {
   const person = _getStackedPerson(pid); if (!person) return;
   const acct = _getStackedAcct(person, acctId);
   const acctLabel = acctId === '__main__' ? 'حساب اصلی' : (acct.name || 'حساب فرعی');
-  const rows = acct.rows || [];
+  const rows = _acctRows(person, acct);
   const t = _splitTotals(rows);
   const money = person.mode === 'money';
   const pct = parseFloat(acct.percent || person.percent)||0;
@@ -10476,14 +10510,19 @@ function _togglePmFtColumn(show) {
   // فوترِ «جمع» هم هم‌اندازهٔ ستون‌های باقی‌مانده: با نبودِ «نوع تیل» colspan از ۵ به ۴.
   const jomCell = document.querySelector('#pm-tbl tfoot tr td:first-child');
   if (jomCell) jomCell.colSpan = show ? 5 : 4;
+  // ردیفِ «جمع» بالای جدول هم هم‌اندازه شود
+  const jomTop = document.querySelector('#pm-top-sum-row td:first-child');
+  if (jomTop) jomTop.colSpan = show ? 5 : 4;
 }
 function calcPersonRow(pid, idx, field, value) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === pid);
   if (!person) return;
   const acct = _acctOf(person);
-  acct.rows[idx][field] = parseFloat(value) || 0;
-  const r = acct.rows[idx];
+  const rowsArr = _acctRows(person, acct);
+  if (!rowsArr[idx]) return;
+  rowsArr[idx][field] = parseFloat(value) || 0;
+  const r = rowsArr[idx];
   // نوشتن مستقیم در «بردگی» = حالت پولی؛ نوشتن لیتر یا فی = حالت تیل (بردگی = لیتر×فی)
   if (field === 'bardagi') r.byMoney = true;
   else if (field === 'fuel' || field === 'priceper') { if ((r.fuel||0) > 0 || (r.priceper||0) > 0) r.byMoney = false; }
@@ -10499,7 +10538,9 @@ function updatePersonRow(pid, idx, field, value) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === pid);
   if (!person) return;
-  _acctOf(person).rows[idx][field] = value;
+  const _ur = _acctRows(person);
+  if (!_ur[idx]) return;
+  _ur[idx][field] = value;
   save();
   _updatePersonTotals(person);
   renderPersons(currentPersonType);
@@ -10589,7 +10630,7 @@ function _renderPersonRateBadge(person) {
 }
 function _updatePersonTotals(person) {
   const acct = _acctOf(person);
-  const rows = acct.rows || [];
+  const rows = _acctRows(person, acct);
   const t = _splitTotals(rows);
   const pct = parseFloat(acct.percent)||0;
   const money = person.mode === 'money';
@@ -10644,6 +10685,17 @@ function _updatePersonTotals(person) {
   setV('pm-ft-fuel', money ? '—' : n2fa(t.all.fuel));
   setV('pm-ft-bardagi', money ? n2fa(t.all.bardagi) : '—');
   setV('pm-ft-rasid', money ? n2fa(t.all.rasid) : '—');
+  // همان جمع‌ها در ردیفِ «جمع» اولِ جدول
+  setV('pm-ft-fuel-top', money ? '—' : n2fa(t.all.fuel));
+  setV('pm-ft-bardagi-top', money ? n2fa(t.all.bardagi) : '—');
+  setV('pm-ft-rasid-top', money ? n2fa(t.all.rasid) : '—');
+  // جمعِ مکمل زیر کادر جدول: واحد تیل → جمع مقدار بردگی (پول)؛ واحد پول → جمع مقدار تیل
+  const exBox = document.getElementById('pm-extra-sum');
+  if (exBox) {
+    exBox.style.display = 'flex';
+    setV('pm-extra-sum-lbl', money ? '🛢️ جمع مقدار تیل (این جدول)' : '💵 جمع مقدار بردگی (این جدول)');
+    setV('pm-extra-sum-val', money ? n2fa(rnd(t.all.fuel)) + ' ل' : n2fa(rnd(t.all.bardagi)) + ' افغانی');
+  }
   // جمعِ الباقی به‌صورت «رسید − بردگی» (پیش‌پرداخت مثبت/سبز، بدهی منفی/سرخ) —
   // هم در ستونِ الباقیِ ردیفِ «جمع» و هم در ردیفِ برچسب‌دارِ زیرش.
   // در حالتِ «واحد تیل» همین جمع به لیتر است: رسید تیل − برد تیل
@@ -10655,6 +10707,8 @@ function _updatePersonTotals(person) {
   if (ftAlbEl) { ftAlbEl.textContent = netTxt; ftAlbEl.style.color = netAll < 0 ? 'var(--red)' : 'var(--green)'; }
   const ftAlbEl2 = document.getElementById('pm-ft-albaqi2');
   if (ftAlbEl2) { ftAlbEl2.textContent = netTxt; ftAlbEl2.style.color = netAll < 0 ? 'var(--red)' : 'var(--green)'; }
+  const ftAlbTop = document.getElementById('pm-ft-albaqi-top');
+  if (ftAlbTop) { ftAlbTop.textContent = netTxt; ftAlbTop.style.color = netAll < 0 ? 'var(--red)' : 'var(--green)'; }
   // برچسبِ گویا: منفی = بیشتر برده (بدهکار)، مثبت = مانده/پیش‌پرداخت (طلبکار)
   const albTag = money ? 'جمع الباقی' : 'جمع الباقی تیل';
   const albLblTxt = netAll < 0 ? albTag + ' — این‌قدر بیشتر برده (بدهکار)'
@@ -10678,9 +10732,10 @@ function newPersonTable() {
   // ردیف‌های تیل دیگر دست‌نخورده در جدول فعلی می‌مانند (مثل «جدول جدید» شرکت‌ها که
   // هر تیل را جدا آرشیو می‌کند؛ وگرنه با فیلترِ فعال، دکمه انگار «هیچ کاری نمی‌کرد»
   // چون جدولِ دیده‌شده که از قبل فیلتر شده، خالی می‌ماند در حالی که تیل دیگر خاموش پاک می‌شد)
-  const rowsToArchive = filter === 'all' ? (acct.rows || []) : (acct.rows || []).filter(r => (r.ftype || 'petrol') === filter);
+  const srcRows = _acctRows(person, acct);   // جدولِ حالتِ فعال (واحد پول یا واحد تیل)
+  const rowsToArchive = filter === 'all' ? srcRows : srcRows.filter(r => (r.ftype || 'petrol') === filter);
   if (filter !== 'all' && !rowsToArchive.length) { if (typeof showToast === 'function') showToast('جدول فعلی (' + (filter==='petrol'?'پطرول':'دیزل') + ') خالی است', '#e53e3e'); return; }
-  const remainingRows = filter === 'all' ? [] : (acct.rows || []).filter(r => (r.ftype || 'petrol') !== filter);
+  const remainingRows = filter === 'all' ? [] : srcRows.filter(r => (r.ftype || 'petrol') !== filter);
   // snapshot وضعیت فعلی
   acct.tableHistory.push({
     id: 'h' + Date.now(),
@@ -10691,10 +10746,11 @@ function newPersonTable() {
     rasidFuelD: filter === 'petrol' ? acct.rasidFuelD : (filter === 'all' ? acct.rasidFuelD : 0),
     rasidMoneyP: filter === 'diesel' ? acct.rasidMoneyP : (filter === 'all' ? acct.rasidMoneyP : 0),
     rasidMoneyD: filter === 'petrol' ? acct.rasidMoneyD : (filter === 'all' ? acct.rasidMoneyD : 0),
-    percent: acct.percent, note: acct.note || ''
+    percent: acct.percent, note: acct.note || '',
+    unitMode: person.mode === 'money' ? 'money' : 'fuel'
   });
-  // ریست جدول فعلی (یا فقط بخش فیلترشده)
-  acct.rows = remainingRows;
+  // ریست جدول فعلی (یا فقط بخش فیلترشده) — فقط جدولِ حالتِ فعال (پول یا تیل)
+  if (person.mode === 'money') acct.moneyRows = remainingRows; else acct.rows = remainingRows;
   if (filter === 'all' || filter === 'petrol') { acct.rasidFuelP = 0; acct.rasidMoneyP = 0; }
   if (filter === 'all' || filter === 'diesel') { acct.rasidFuelD = 0; acct.rasidMoneyD = 0; }
   if (filter === 'all') acct.note = '';
@@ -11041,16 +11097,16 @@ function deletePersonRow(pid, idx) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === pid);
   if (!person) return;
-  _acctOf(person).rows.splice(idx, 1);
+  _acctRows(person).splice(idx, 1);
   save(); renderPersonRows(person); renderPersons(currentPersonType); updateBanner();
 }
 function setRowFuel(pid, idx, type) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === pid);
-  const acct = person ? _acctOf(person) : null;
-  if (!person || !acct.rows[idx]) return;
+  const rowsArr = person ? _acctRows(person) : null;
+  if (!person || !rowsArr[idx]) return;
   const ft = (type === 'diesel') ? 'diesel' : 'petrol';
-  acct.rows[idx].ftype = ft;
+  rowsArr[idx].ftype = ft;
   save();
   if (currentPersonFilter !== 'all') {
     // وقتی فیلتر حساب جداگانه فعال است، ردیف باید بلافاصله به جدول خودش منتقل شود
@@ -11076,19 +11132,17 @@ function addPersonRow() {
   const person = list.find(p => p.id === currentPersonId);
   if (!person) return;
   const ft = (currentPersonFilter === 'diesel') ? 'diesel' : 'petrol';
-  const acct = _acctOf(person);
-  if (!Array.isArray(acct.rows)) acct.rows = [];
-  acct.rows.push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, albaqi: 0, byMoney: person.mode === 'money' });
+  _acctRows(person).push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, albaqi: 0, byMoney: person.mode === 'money' });
   save(); renderPersonRows(person);
 }
 function setAllRowsFuel(type) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === currentPersonId);
   if (!person) return;
-  const acct = _acctOf(person);
-  if (!acct.rows || !acct.rows.length) { showToast('ردیفی وجود ندارد', '#e53e3e'); return; }
+  const rowsArr = _acctRows(person);
+  if (!rowsArr.length) { showToast('ردیفی وجود ندارد', '#e53e3e'); return; }
   const ft = type === 'diesel' ? 'diesel' : 'petrol';
-  acct.rows.forEach(r => r.ftype = ft);
+  rowsArr.forEach(r => r.ftype = ft);
   save(); renderPersonRows(person); renderPersons(currentPersonType);
   showToast(ft==='diesel' ? '✅ همه ردیف‌ها دیزل شد' : '✅ همه ردیف‌ها پطرول شد', ft==='diesel' ? '#b7791f' : '#38a169');
 }
@@ -11100,10 +11154,9 @@ function addPersonRowsBulk() {
   if (n < 1) { showToast('یک عدد معتبر وارد کنید', '#e53e3e'); return; }
   if (n > 200) n = 200;
   const ft = (currentPersonFilter === 'diesel') ? 'diesel' : 'petrol';
-  const acct = _acctOf(person);
-  if (!Array.isArray(acct.rows)) acct.rows = [];
+  const rowsArr = _acctRows(person);
   for (let k = 0; k < n; k++) {
-    acct.rows.push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, albaqi: 0, byMoney: person.mode === 'money' });
+    rowsArr.push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, albaqi: 0, byMoney: person.mode === 'money' });
   }
   save(); renderPersonRows(person);
   showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
@@ -13543,7 +13596,7 @@ function pdfPerson() {
   if (!person) return;
   const filter = currentPersonFilter; // 'all' | 'petrol' | 'diesel'
   const acct = _acctOf(person);
-  const allRows = acct.rows || [];
+  const allRows = _acctRows(person, acct);
   const rows = filter === 'all' ? allRows : allRows.filter(r => (r.ftype || 'petrol') === filter);
   const t = _splitTotals(allRows);
   const money = person.mode === 'money';
@@ -16115,7 +16168,8 @@ function clearAllPersonRows() {
   const person = list.find(p => p.id === currentPersonId);
   if (!person) return;
   if (!confirm('همه ردیف‌های این حساب پاک شود؟')) return;
-  _acctOf(person).rows = [];
+  const _ca = _acctOf(person);
+  if (person.mode === 'money') _ca.moneyRows = []; else _ca.rows = [];
   save();
   renderPersonRows(person);
   renderPersons(currentPersonType);
@@ -17946,7 +18000,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.11';
+const APP_VERSION = '2.9.12';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -18876,46 +18930,74 @@ function loadFontScale() {
   } catch(e) {}
 }
 
-// ========== نمایش زندهٔ جداکنندهٔ هزارگان (۱,۰۰۰,۰۰۰) هنگام تایپ عدد ==========
-// کادرهای عددی (type=number) نمی‌توانند کاما نشان بدهند؛ موقع تایپ/فوکس، یک برچسب
-// شناور بالای همان کادر عدد را با جداکنندهٔ هزارگان + نامِ مقیاس (هزار/میلیون/میلیارد)
-// نشان می‌دهد تا شمردنِ صفرها لازم نباشد — در همهٔ جدول‌ها و فرم‌ها کار می‌کند.
+// ========== جداکنندهٔ هزارگان داخل خودِ کادرهای عددی (۱,۰۰۰,۰۰۰) ==========
+// کادر type=number نمی‌تواند کاما نشان بدهد؛ پس همهٔ کادرهای عددی (به‌جز «شماره
+// پایه» .keep-spin) به کادر متنی عددی تبدیل می‌شوند و عدد هنگام تایپ همان‌جا
+// داخل خودِ کادر با کاما گروه‌بندی می‌شود. parseFloat/parseInt سراسری کاماپذیر
+// می‌شوند تا هیچ محاسبه‌ای در هیچ‌جای برنامه تغییر نکند.
 (function(){
-  const hint = document.createElement('div');
-  hint.id = 'num-hint';
-  hint.style.cssText = 'position:fixed;display:none;z-index:100000;background:#111827;color:#fbbf24;border:1.5px solid #fbbf24;border-radius:9px;padding:4px 12px;font-family:Vazirmatn,sans-serif;font-size:0.95rem;font-weight:800;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.45);direction:rtl;white-space:nowrap';
-  document.body.appendChild(hint);
-  function scaleWord(v){
-    const a = Math.abs(v);
-    const f = x => { const r = Math.round(x*10)/10; return r % 1 === 0 ? n2fa(Math.round(r)) : String(r); };
-    if (a >= 1e9) return f(v/1e9) + ' میلیارد';
-    if (a >= 1e6) return f(v/1e6) + ' میلیون';
-    if (a >= 1e3) return f(v/1e3) + ' هزار';
-    return '';
+  const _pf = window.parseFloat, _pi = window.parseInt;
+  const _clean = v => typeof v === 'string'
+    ? v.replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - 1776))
+       .replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 1632))
+       .replace(/,/g, '')
+    : v;
+  window.parseFloat = function(v){ return _pf(_clean(v)); };
+  window.parseInt = function(v, r){ return _pi(_clean(v), r); };
+
+  // "1234567.5" → "1,234,567.5" (ارقام فارسی هم به انگلیسی تبدیل می‌شوند)
+  function fmt(raw){
+    let s = _clean(String(raw == null ? '' : raw));
+    if (!s) return '';
+    const neg = s[0] === '-' ? '-' : '';
+    if (neg) s = s.slice(1);
+    s = s.replace(/[^0-9.]/g, '');
+    if (!s) return neg;
+    const di = s.indexOf('.');
+    let intPart = di >= 0 ? s.slice(0, di) : s;
+    const decPart = di >= 0 ? '.' + s.slice(di + 1).replace(/\./g, '') : '';
+    intPart = intPart.replace(/^0+(?=\d)/, '');
+    return neg + intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + decPart;
   }
-  function hide(){ hint.style.display = 'none'; }
-  function show(el){
-    if (!(el instanceof HTMLInputElement)) return hide();
-    const numeric = el.type === 'number' || (el.getAttribute('inputmode')||'') === 'numeric';
-    if (!numeric || el.type === 'tel' || el.classList.contains('pw-mask') || /phone/i.test(el.id||'')) return hide();
-    const v = parseFloat(toEnDigits(el.value));
-    if (!isFinite(v) || Math.abs(v) < 1000) return hide();
-    const w = scaleWord(v);
-    hint.textContent = (w ? w + ' — ' : '') + n2fa(v);
-    hint.style.display = 'block';
-    const r = el.getBoundingClientRect();
-    const hr = hint.getBoundingClientRect();
-    let top = r.top - hr.height - 6;
-    if (top < 4) top = r.bottom + 6;
-    let left = r.left + r.width/2 - hr.width/2;
-    left = Math.max(4, Math.min(left, window.innerWidth - hr.width - 4));
-    hint.style.top = top + 'px'; hint.style.left = left + 'px';
+  function convert(el){
+    if (!el || el.dataset.numfmt === '1' || el.classList.contains('keep-spin')) return;
+    try { el.type = 'text'; } catch(e){ return; }
+    el.setAttribute('inputmode', 'decimal');
+    el.dataset.numfmt = '1';
+    if (el.value) el.value = fmt(el.value);
   }
-  document.addEventListener('input',   e => { if (e.target === document.activeElement) show(e.target); }, true);
-  document.addEventListener('focusin', e => show(e.target), true);
-  document.addEventListener('focusout', hide, true);
-  window.addEventListener('scroll', hide, true);
-  window.addEventListener('resize', hide);
+  function sweep(root){
+    if (!root || !root.querySelectorAll) return;
+    root.querySelectorAll('input[type=number]').forEach(convert);
+  }
+  function onType(el){
+    const v0 = el.value;
+    const caret = el.selectionStart == null ? v0.length : el.selectionStart;
+    let unitsBefore = 0;
+    for (let i = 0; i < caret; i++) if (v0[i] !== ',') unitsBefore++;
+    const f = fmt(v0);
+    if (f === v0) return;
+    el.value = f;
+    let pos = 0, seen = 0;
+    while (pos < f.length && seen < unitsBefore){ if (f[pos] !== ',') seen++; pos++; }
+    try { el.setSelectionRange(pos, pos); } catch(e){}
+  }
+  sweep(document);
+  new MutationObserver(muts => {
+    for (const m of muts) for (const n of m.addedNodes){
+      if (n.nodeType !== 1) continue;
+      if (n.tagName === 'INPUT') { if (n.type === 'number') convert(n); }
+      else sweep(n);
+    }
+  }).observe(document.body, { childList: true, subtree: true });
+  // capture: قبل از هندلرهای خودِ کادر اجرا می‌شود تا آن‌ها همیشه مقدارِ فرمت‌شدهٔ نهایی را ببینند
+  document.addEventListener('input', e => {
+    const el = e.target;
+    if (el && el.dataset && el.dataset.numfmt === '1') onType(el);
+  }, true);
+  // مقدارهایی که با کد (بدون تایپ) در کادر نشسته‌اند، با فوکوس/ترک کادر فرمت شوند
+  document.addEventListener('focusin',  e => { const el = e.target; if (el && el.dataset && el.dataset.numfmt === '1' && el.value) el.value = fmt(el.value); });
+  document.addEventListener('focusout', e => { const el = e.target; if (el && el.dataset && el.dataset.numfmt === '1' && el.value) el.value = fmt(el.value); });
 })();
 
 // ========== INIT ==========
