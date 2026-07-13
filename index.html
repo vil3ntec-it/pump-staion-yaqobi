@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>پمپ یعقوبی</title>
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="favicon.png" type="image/png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.json?v=298">
+<link rel="icon" href="favicon.png?v=298" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=298">
 <meta name="theme-color" content="#d97706">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -645,11 +645,16 @@ body.viewer-mode .att-admin{display:none !important}
 #calcClose{cursor:pointer;color:var(--muted);font-weight:900;font-size:1.05rem;padding:0 4px}
 #calcClose:hover{color:var(--red)}
 #calcExpr{padding:8px 16px 0;text-align:left;direction:ltr;font-size:0.82rem;color:var(--muted);min-height:20px;font-family:monospace;word-break:break-all}
-#calcDisplay{padding:2px 16px 10px;text-align:left;direction:ltr;font-family:'Vazirmatn','SF Mono','Consolas',monospace;font-size:2rem;font-weight:900;color:var(--txt);word-break:break-all;letter-spacing:-0.02em;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
-#calcPanel.large #calcDisplay{font-size:2.6rem}
-#calcKeys{flex:1;display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:1fr;gap:7px;padding:0 11px 12px}
-.calc-key{border:none;border-radius:12px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:clamp(1.5rem,6.5vw,2.5rem);font-weight:800;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;transition:filter .1s}
-#calcPanel.large .calc-key{font-size:clamp(1.9rem,4.5vw,3rem)}
+#calcDisplay{padding:2px 16px 10px;text-align:left;direction:ltr;font-family:'Vazirmatn','SF Mono','Consolas',monospace;font-size:clamp(1.1rem,7cqh,2.1rem);font-weight:900;color:var(--txt);word-break:break-all;letter-spacing:-0.02em;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;max-height:26cqh;overflow-y:auto}
+#calcPanel.large #calcDisplay{font-size:clamp(1.4rem,7cqh,2.6rem)}
+/* چیدمان مثل ماشین حساب ویندوز: ۶ ردیف × ۴ ستون، چپ‌به‌راست، عملگرها ستون راست.
+   اندازهٔ فونت بر اساس اندازهٔ خودِ پنل (cqh) — نه صفحه — تا وقتی پنل کوچک
+   می‌شود دکمه‌ها/اعداد هم کوچک شوند و هیچ‌چیز بیرون نزند یا مخفی نماند */
+#calcPanel{container-type:size}
+#calcKeys{flex:1;min-height:0;display:grid;direction:ltr;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(6,1fr);gap:5px;padding:0 11px 12px}
+.calc-key{border:none;border-radius:9px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:clamp(0.85rem,5.2cqh,1.55rem);font-weight:800;cursor:pointer;padding:0;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center;transition:filter .1s;overflow:hidden}
+.calc-key.fn{color:var(--muted);font-size:clamp(0.75rem,4.2cqh,1.2rem)}
+#calcPanel.large .calc-key{font-size:clamp(1.1rem,5.2cqh,2.1rem)}
 .calc-key:hover{filter:brightness(1.18)}
 .calc-key:active{filter:brightness(.9)}
 .calc-key.op{background:rgba(217,119,6,.22);color:var(--accent)}
@@ -903,7 +908,9 @@ body.light-mode .header{
   border-bottom:2px solid rgba(220,140,0,.5)!important;
 }
 body.light-mode .header-title{ color:#ffd060!important; }
-body.light-mode .header-date{ color:#e8c080!important; }
+/* تاریخ‌های سربرگ: بدون سایه و با رنگ کاملاً خوانا — قبلاً کهربایی کم‌رنگ روی
+   زمینهٔ روشن بود و چشم را اذیت می‌کرد */
+body.light-mode .header-date{ color:#111 !important; opacity:1 !important; text-shadow:none !important; }
 body.light-mode .lock-btn{ background:#4a2e00!important; border-color:#7a5010!important; color:#e8c070!important; }
 
 /* ── TOP BANNER ── */
@@ -5890,7 +5897,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
   <div class="settings-card" id="hexfx-card" style="border-color:var(--blue)">
     <div class="settings-title" style="color:var(--blue)">✨ نور پس‌زمینه</div>
     <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
-      نور متحرک پس‌زمینهٔ برنامه — اینجا می‌توانید خاموش/روشنش کنید، مدلش را عوض کنید (شبکهٔ شش‌ضلعی، رعد و برق یا ستارهٔ دنباله‌دار) و رنگ‌بندی، مسیر و سرعتش را تغییر دهید. هر تغییری همان لحظه اعمال و ذخیره می‌شود. (مسیر و «چطور بیاید» فقط برای مدل شش‌ضلعی است.)
+      نور متحرک پس‌زمینهٔ برنامه — اینجا می‌توانید خاموش/روشنش کنید، مدلش را عوض کنید (رعد و برق یا ستارهٔ دنباله‌دار) و رنگ‌بندی و سرعتش را تغییر دهید. هر تغییری همان لحظه اعمال و ذخیره می‌شود.
     </div>
     <div style="display:flex;flex-direction:column;gap:13px">
       <div class="hexfx-row">
@@ -5901,7 +5908,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
       <div class="hexfx-row">
         <span class="hexfx-lbl">مدل نور:</span>
         <select id="hexfx-pattern" class="hexfx-select" onchange="setHexFx('pattern',this.value)">
-          <option value="hex">⬡ شبکهٔ شش‌ضلعی</option>
           <option value="bolt">⚡ رعد و برق</option>
           <option value="stars">☄️ ستاره‌های دنباله‌دار</option>
         </select>
@@ -5916,27 +5922,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
           <option value="green">🟢 سبز</option>
           <option value="purple">🟣 بنفش</option>
           <option value="red">🔴 سرخ</option>
-        </select>
-      </div>
-      <div class="hexfx-row">
-        <span class="hexfx-lbl">مسیر (از کجا به کجا):</span>
-        <select id="hexfx-dir" class="hexfx-select" onchange="setHexFx('dir',this.value)">
-          <option value="tr-bl">↙️ کنج بالا-راست ← کنج پایین-چپ</option>
-          <option value="tl-br">↘️ کنج بالا-چپ ← کنج پایین-راست</option>
-          <option value="br-tl">↖️ کنج پایین-راست ← کنج بالا-چپ</option>
-          <option value="bl-tr">↗️ کنج پایین-چپ ← کنج بالا-راست</option>
-          <option value="r-l">⬅️ از راست به چپ</option>
-          <option value="l-r">➡️ از چپ به راست</option>
-          <option value="t-b">⬇️ از بالا به پایین</option>
-          <option value="b-t">⬆️ از پایین به بالا</option>
-        </select>
-      </div>
-      <div class="hexfx-row">
-        <span class="hexfx-lbl">چطور بیاید:</span>
-        <select id="hexfx-mode" class="hexfx-select" onchange="setHexFx('mode',this.value)">
-          <option value="sweep">جاروبی بیاید و سرِ جایش محو شود</option>
-          <option value="back">جاروبی بیاید و از همان راه برگردد</option>
-          <option value="fade">کل شبکه آرام روشن و خاموش شود</option>
         </select>
       </div>
       <div class="hexfx-row">
@@ -6140,10 +6125,15 @@ body.viewer-mode .inv-admin-only{display:none!important}
   <div id="calcHead"><span class="ch-t"><svg><use href="#ic-calc"/></svg> ماشین حساب</span><span style="display:flex;gap:8px;align-items:center"><span id="calcSize" onclick="toggleCalcSize()" style="cursor:pointer;color:var(--muted);display:inline-flex" title="بزرگ/کوچک"><svg><use href="#ic-expand"/></svg></span><span id="calcClose" onclick="toggleCalc()">✕</span></span></div>
   <div id="calcExpr"></div>
   <div id="calcDisplay">0</div>
+  <!-- چیدمان دقیقاً مثل ماشین حساب ویندوز (Standard) — رنگ‌ها همان رنگ‌های برنامه -->
   <div id="calcKeys">
+    <button class="calc-key fn" onclick="calcPress('%')">%</button>
+    <button class="calc-key fn" onclick="calcPress('CE')">CE</button>
     <button class="calc-key clr" onclick="calcPress('C')">C</button>
-    <button class="calc-key" onclick="calcPress('(')">(</button>
-    <button class="calc-key" onclick="calcPress(')')">)</button>
+    <button class="calc-key fn" onclick="calcPress('back')">⌫</button>
+    <button class="calc-key fn" onclick="calcPress('(')">(</button>
+    <button class="calc-key fn" onclick="calcPress(')')">)</button>
+    <button class="calc-key fn" onclick="calcPress('sqrt')">√x</button>
     <button class="calc-key op" onclick="calcPress('/')">÷</button>
     <button class="calc-key" onclick="calcPress('7')">7</button>
     <button class="calc-key" onclick="calcPress('8')">8</button>
@@ -6157,9 +6147,9 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <button class="calc-key" onclick="calcPress('2')">2</button>
     <button class="calc-key" onclick="calcPress('3')">3</button>
     <button class="calc-key op" onclick="calcPress('+')">+</button>
+    <button class="calc-key fn" onclick="calcPress('pm')">±</button>
     <button class="calc-key" onclick="calcPress('0')">0</button>
     <button class="calc-key" onclick="calcPress('.')">.</button>
-    <button class="calc-key" onclick="calcPress('back')">←</button>
     <button class="calc-key eq" onclick="calcPress('=')">=</button>
   </div>
 </div>
@@ -6217,7 +6207,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
 </select>
         <button class="add-btn pm-acct-new" onclick="newPersonSub()" style="padding:6px 9px;font-size:0.78rem;white-space:nowrap;flex-shrink:0">➕ حساب جدید</button>
         <button class="add-btn pm-table-new" onclick="newPersonTable()" style="padding:6px 9px;font-size:0.78rem;white-space:nowrap;flex-shrink:0">📋 جدول جدید</button>
-        <button id="pm-acct-del" class="del-btn pm-acct-del" onclick="deletePersonSub()" style="display:none;background:transparent;color:var(--red);border:1px solid var(--red);border-radius:7px;padding:6px 8px;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">🗑️ حذف</button>
         <span style="width:1px;height:24px;background:var(--border);flex-shrink:0"></span>
         <span class="pm-filter-bar">
           <button class="pm-filter-btn active" id="pm-filter-all" onclick="setPersonFilter('all')">📋 همه</button>
@@ -6230,6 +6219,9 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <input id="pm-phone" class="pm-edit" placeholder="مثلاً 0700000000" autocomplete="off" style="direction:ltr;text-align:center;width:180px;flex-shrink:0;border:1px solid var(--border);border-radius:7px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;padding:6px 10px;box-sizing:border-box" oninput="updatePersonPhone(this.value)">
         <!-- نرخ هر لیتر فاکتورهای باز — فقط نمایشی، هیچ نقشی در محاسبات جدول ندارد -->
         <span id="pm-rate-badge" style="display:none;flex-shrink:0;white-space:nowrap;font-size:0.78rem;font-weight:800;border:1px solid var(--border);border-radius:7px;padding:6px 10px;background:var(--dark);color:var(--txt);box-sizing:border-box" title="نرخ هر لیتر از فاکتورهای بازِ این حساب — فقط نمایشی"></span>
+        <!-- دکمهٔ حذف حساب فرعی — آخرِ نوار (سمت چپ) تا وسط دکمه‌های مهم نباشد و اشتباهی زده نشود -->
+        <span style="flex:1"></span>
+        <button id="pm-acct-del" class="del-btn pm-acct-del" onclick="deletePersonSub()" style="display:none;background:transparent;color:var(--red);border:1px solid var(--red);border-radius:7px;padding:6px 8px;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">🗑️ حذف</button>
       </div>
       <!-- جمع الباقی بالای جدول — همان مقدارِ ردیفِ «جمع الباقی» پایین جدول -->
       <div id="pm-albaqi-top" style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 6px;padding:8px 12px;border:1px solid var(--border);border-radius:9px;background:var(--dark);font-size:0.85rem;font-weight:800">
@@ -7625,7 +7617,7 @@ function _calcKeyHandler(e) {
   if (!p || !p.classList.contains('open')) return;
   const t = e.target;
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
-  const map = {'0':'0','1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9','.':'.','+':`+`,'-':'-','*':'*','/':'/','Enter':'=','=':'=','Backspace':'back','Delete':'C','Escape':'C','(':'(',')':`)`};
+  const map = {'0':'0','1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9','.':'.','+':`+`,'-':'-','*':'*','/':'/','%':'%','Enter':'=','=':'=','Backspace':'back','Delete':'CE','Escape':'C','(':'(',')':`)`};
   const k = map[e.key];
   if (k !== undefined) { e.preventDefault(); calcPress(k); }
 }
@@ -7692,12 +7684,24 @@ function _calcRender() {
 function calcPress(k) {
   if (k === 'C') { _calcExpr = ''; _calcRender(); return; }
   if (k === 'back') { _calcExpr = _calcExpr.slice(0, -1); _calcRender(); return; }
+  if (k === 'CE') { _calcExpr = _calcExpr.replace(/[\d.]+$/, ''); _calcRender(); return; }   // فقط عدد فعلی پاک شود (مثل ویندوز)
+  if (k === '%') { _calcExpr = _calcExpr.replace(/([\d.]+)$/, m => String(parseFloat(m) / 100)); _calcRender(); return; }
+  if (k === 'sqrt') { _calcExpr += '√('; _calcRender(); return; }
+  if (k === 'pm') {   // ± مثل ویندوز: علامت عدد فعلی برعکس می‌شود
+    if (/\(-[\d.]+$/.test(_calcExpr)) _calcExpr = _calcExpr.replace(/\(-([\d.]+)$/, '$1');
+    else if (/[\d.]+$/.test(_calcExpr)) _calcExpr = _calcExpr.replace(/([\d.]+)$/, '(-$1');
+    _calcRender(); return;
+  }
   if (k === '=') {
     const disp = document.getElementById('calcDisplay');
     const ex = document.getElementById('calcExpr');
     try {
-      const safe = _calcExpr.replace(/×/g, '*').replace(/÷/g, '/');
-      if (!/^[-0-9+*/().%\s]*$/.test(safe)) throw 0;          // فقط اعداد و عملگرها مجازند
+      let safe = _calcExpr.replace(/×/g, '*').replace(/÷/g, '/');
+      if (!/^[-0-9+*/().%√\s]*$/.test(safe)) throw 0;          // فقط اعداد و عملگرها مجازند
+      // پرانتزهای باز (مثلاً از ± یا √) خودکار بسته می‌شوند
+      const opens = (safe.match(/\(/g) || []).length, closes = (safe.match(/\)/g) || []).length;
+      if (opens > closes) safe += ')'.repeat(opens - closes);
+      safe = safe.replace(/√\(/g, 'Math.sqrt(').replace(/√([\d.]+)/g, 'Math.sqrt($1)');
       let res = Function('"use strict";return (' + (safe || '0') + ')')();
       if (res === Infinity || res === -Infinity || Number.isNaN(res)) throw 0;
       res = Math.round(res * 1e8) / 1e8;
@@ -7817,7 +7821,8 @@ function loadTheme() {
 // ========== تنظیمات نور شش‌ضلعی پس‌زمینه ==========
 // همه‌چیز در localStorage (pumpHexFx) نگه داشته می‌شود — جدا از DB، مثل تم.
 // applyHexFx فقط متغیرهای CSS و کلاس‌های body را می‌چیند؛ خود انیمیشن در CSS است.
-const _HEXFX_DEFAULT = { on: true, pattern: 'hex', color: 'rainbow', dir: 'tr-bl', mode: 'sweep', dur: 6 };
+// مدلِ «شبکهٔ شش‌ضلعی» حذف شد — پیش‌فرض و هر تنظیمِ ذخیره‌شدهٔ قدیمیِ hex به «رعد و برق» می‌رود
+const _HEXFX_DEFAULT = { on: true, pattern: 'bolt', color: 'rainbow', dir: 'tr-bl', mode: 'sweep', dur: 6 };
 const _HEXFX_DIRS = {
   'tr-bl': { angle: 225, c0: 'polygon(100% 0,100% 0,100% 0)',          c1: 'polygon(-120% 0,100% 0,100% 220%)' },
   'tl-br': { angle: 135, c0: 'polygon(0 0,0 0,0 0)',                   c1: 'polygon(220% 0,0 0,0 220%)' },
@@ -7840,8 +7845,11 @@ const _HEXFX_COLORS = {
   red:     { dark: ['#ff2d5e','#ffd0da','#ff7a4d'],  light: ['#c70036','#e0304f','#c74a00'] }
 };
 function _hexFxLoad() {
-  try { return Object.assign({}, _HEXFX_DEFAULT, JSON.parse(localStorage.getItem('pumpHexFx') || '{}')); }
-  catch (e) { return Object.assign({}, _HEXFX_DEFAULT); }
+  let p;
+  try { p = Object.assign({}, _HEXFX_DEFAULT, JSON.parse(localStorage.getItem('pumpHexFx') || '{}')); }
+  catch (e) { p = Object.assign({}, _HEXFX_DEFAULT); }
+  if (p.pattern === 'hex') p.pattern = 'bolt';   // مدل شش‌ضلعی حذف شده
+  return p;
 }
 function _hexFxGradient(cols, angle) {
   const n = cols.length;
@@ -7890,16 +7898,10 @@ function _hexFxSyncUI(p) {
   if (onB) onB.classList.toggle('active', !!p.on);
   if (offB) offB.classList.toggle('active', !p.on);
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
-  set('hexfx-pattern', p.pattern || 'hex');
-  set('hexfx-color', p.color); set('hexfx-dir', p.dir); set('hexfx-mode', p.mode); set('hexfx-dur', p.dur);
+  set('hexfx-pattern', p.pattern || 'bolt');
+  set('hexfx-color', p.color); set('hexfx-dur', p.dur);
   const l = document.getElementById('hexfx-dur-lbl');
   if (l) l.textContent = n2fa(p.dur) + ' ثانیه';
-  // «مسیر» و «چطور بیاید» فقط برای مدل شش‌ضلعی معنا دارند
-  const isHex = (p.pattern || 'hex') === 'hex';
-  ['hexfx-dir', 'hexfx-mode'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) { el.disabled = !isHex; el.style.opacity = isHex ? '' : '.4'; }
-  });
 }
 
 // ========== DATE HELPERS ==========
@@ -9220,18 +9222,32 @@ function checkLowStock() {
 // همان وضعیتی که کادر هر قرض‌دار را در لیست «قرض‌داران» زرد (کم‌مانده) یا
 // سرخ (تمام‌شده) می‌کند (debtFuelStatus) — همین‌جا هم برای هشدار استفاده می‌شود.
 let lastDebtAlertShown = 0;
+// پیامِ هر شخص فقط «یک بار» برای هر تغییرِ وضعیت فرستاده می‌شود — نه در هر باز
+// کردن برنامه و نه جدا روی هر دستگاه. وضعیتِ اعلام‌شده در خودِ دیتابیس
+// (DB.debtAlertState) ذخیره و بین دستگاه‌ها همگام می‌شود:
+//   کم ماند → یک پیام «کم مانده»؛ تمام شد → یک پیام «تمام شده»؛ همین و بس.
+//   دوباره که پر شد، وضعیت پاک می‌شود تا دفعهٔ بعدِ کم‌شدن دوباره (یک بار) خبر بدهد.
 function checkDebtReview() {
-  if (Date.now() - lastDebtAlertShown < lsInterval()) return false;
-  if (!_alertAllowed('debtReview')) return false; // سقف روزانه (۳ بار) — مثل هشدار مخزن
+  if (!DB.debtAlertState || typeof DB.debtAlertState !== 'object') DB.debtAlertState = {};
+  const st8 = DB.debtAlertState;
   const low = [], out = [];
+  const seen = {};
+  let changed = false;
   (DB.debtPersons || []).forEach(p => {
     const s = debtFuelStatus(p);
-    if (s.st === 'out') out.push({ p, who: _debtKindLabel(s.kinds) });
-    else if (s.st === 'low') low.push({ p, who: _debtKindLabel(s.kinds) });
+    seen[p.id] = true;
+    const prev = st8[p.id] || '';
+    if (s.st === 'out') {
+      if (prev !== 'out') { out.push({ p, who: _debtKindLabel(s.kinds) }); st8[p.id] = 'out'; changed = true; }
+    } else if (s.st === 'low') {
+      if (!prev) { low.push({ p, who: _debtKindLabel(s.kinds) }); st8[p.id] = 'low'; changed = true; }
+      else if (prev === 'out') { st8[p.id] = 'low'; changed = true; }  // از تمام‌شده پر شد — بی‌صدا
+    } else if (prev) { delete st8[p.id]; changed = true; }             // پر شد → هشدار بعدی دوباره مجاز
   });
+  Object.keys(st8).forEach(id => { if (!seen[id]) { delete st8[id]; changed = true; } });
+  if (changed) { try { save(); } catch (e) {} }
   if (!low.length && !out.length) return false;
   lastDebtAlertShown = Date.now();
-  _alertMark('debtReview');
   const fmt = (arr, tag) => arr.map(x => '• ' + x.p.name + ' — ' + x.who + ' ' + tag).join('\n');
   const parts = [];
   if (out.length) parts.push(fmt(out, 'تمام شده ⛔'));
@@ -15570,7 +15586,7 @@ function printWaraq() {
     const shortageVal = wqr.shortage > 0 ? Math.round(wqr.shortage) : (wqr.excess > 0 ? Math.round(wqr.excess) : 0);
     const shortageColor = wqr.shortage > 0 ? '#d97706' : '#276749';
     return `
-    <h2 style="font-size:0.92rem;font-weight:900;color:${hdrColor};border-bottom:2px solid ${hdrColor};padding-bottom:4px;margin:14px 0 6px">${label}${sd.workerName?' — کارمند: '+sd.workerName:''}</h2>
+    ${label ? `<h2 style="font-size:0.92rem;font-weight:900;color:${hdrColor};border-bottom:2px solid ${hdrColor};padding-bottom:4px;margin:14px 0 6px">${label}${sd.workerName?' — کارمند: '+sd.workerName:''}</h2>` : (sd.workerName ? `<div style="font-size:0.7rem;color:#718096;margin:6px 0 2px">کارمند: ${escFa(sd.workerName)}</div>` : '')}
     <div class="section-title">🛢️ قرائت پمپ‌ها</div>
     <table><thead><tr><th>بایه</th><th>نام</th><th>نوع</th><th>توضیح/ساعت</th><th>شروع</th><th>ختم</th><th>فی لیتر</th><th>لیتر</th><th>مبلغ</th></tr></thead>
     <tbody>${pumpRows||'<tr><td colspan="9" style="text-align:center;padding:8px;color:#718096">—</td></tr>'}</tbody>
@@ -15592,9 +15608,8 @@ function printWaraq() {
   const sd = isNight ? w.night : w.day;
   const pdfFs = parseInt(document.getElementById('wq-pdf-fontsize')?.value || '11') || 11;
   const html=`<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><title>ورق ${isNight?'شب':'روز'}</title><style>@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:16px;font-size:${pdfFs}px}h1{font-size:1rem;font-weight:900;text-align:center;border-bottom:2px solid #2b6cb0;padding-bottom:6px;margin-bottom:4px}.meta{font-size:0.7rem;color:#718096;text-align:center;margin-bottom:10px}.sum-row{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}.sum-box{flex:1;min-width:100px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:6px;padding:7px;text-align:center}.sum-box .l{font-size:0.58rem;color:#718096}.sum-box .v{font-size:0.95rem;font-weight:900}table{width:100%;border-collapse:collapse;font-size:0.7rem;margin-bottom:8px}th{background:#2d3748;color:#e2e8f0;padding:5px 6px;text-align:right;font-weight:700;white-space:nowrap}td{padding:4px 6px;border-bottom:1px solid #e2e8f0}tr:nth-child(even) td{background:#f7fafc}tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:5px 6px}.section-title{font-size:0.72rem;font-weight:700;color:#2b6cb0;margin:8px 0 4px}@media print{body{padding:6px}@page{margin:.5cm}}</style></head><body>
-  <h1>${isNight?'🌙 ورق شب':'☀️ ورق روز'} — ${escFa(w.station)||'پمپ'}</h1>
-  <div class="meta">تاریخ: ${w.date||'—'}</div>
-  ${shiftSection(sd, isNight ? '🌙 شیفت شب' : '☀️ شیفت روز', isNight ? '#6b46c1' : '#b7791f')}
+  <h1>${isNight?'🌙 ورق شب':'☀️ ورق روز'} — ${escFa(w.station)||'پمپ'} — تاریخ: ${w.date||'—'}</h1>
+  ${shiftSection(sd, '', isNight ? '#6b46c1' : '#b7791f')}
   <script>window.onload=function(){window.print()}<\/script></body></html>`;
   const win=window.open('','_blank','width=900,height=680');
   if(win){win.document.write(html);win.document.close();}else showToast('مرورگر پنجره را مسدود کرد','#e53e3e');
@@ -17774,7 +17789,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.7';
+const APP_VERSION = '2.9.8';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -19992,10 +20007,16 @@ document.addEventListener('click', function(e) {
     }
     /* Ultra's engines (canvas particles, mouse parallax) only ever run
        while Ultra is actually selected — switching away fully stops
-       them, no background cost lingers. */
+       them, no background cost lingers.
+       PERFORMANCE: راه‌اندازیِ موتورهای Ultra (ذرات/پارالاکس/آیکون‌های SMIL)
+       کمی عقب می‌افتد تا اول خودِ صفحه فوری رسم شود — قبلاً همین شروعِ
+       هم‌زمان باعث می‌شد Ultra خیلی دیرتر از دو حالت دیگر بالا بیاید. */
     if(tier === 'ultra'){
-      if(typeof window._gfxStartUltraFx === 'function') window._gfxStartUltraFx();
-      UltraNavIcons.start();
+      setTimeout(function(){
+        if(window.__gfxTier !== 'ultra') return;   // وسطِ تاخیر، حالت عوض شده
+        if(typeof window._gfxStartUltraFx === 'function') window._gfxStartUltraFx();
+        UltraNavIcons.start();
+      }, 400);
     } else {
       if(typeof window._gfxStopUltraFx === 'function') window._gfxStopUltraFx();
       UltraNavIcons.stop();
@@ -20038,6 +20059,14 @@ document.addEventListener('click', function(e) {
   function boot(){
     var tier = 'standard';
     try{ tier = normalize(localStorage.getItem('pumpGfxMode')); }catch(e){}
+    /* دستگاه ضعیف (CPU/RAM کم): کلاس gfx-weak افکت‌های محوِ پشت کارت‌ها را
+       خاموش می‌کند تا Standard/Ultra روی همین دستگاه‌ها هم روان باشند —
+       ظاهر تقریباً یکسان می‌ماند چون پس‌زمینهٔ کارت‌ها تقریباً مات است. */
+    try{
+      if((navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4){
+        document.body.classList.add('gfx-weak');
+      }
+    }catch(e){}
     apply(tier, false);
   }
   if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', boot); }
@@ -20299,6 +20328,62 @@ body.is-scrolling.gfx-standard .daynight-toggle .dn-thumb{
   animation-play-state:paused !important;
 }
 body.gfx-ultra #fxLayer{ will-change:filter; }
+
+/* ═══ دستگاه‌های ضعیف (CPU/RAM کم — body.gfx-weak از JS ست می‌شود) ═══
+   افکتِ محوِ پشتِ کارت‌ها (backdrop-filter) پرهزینه‌ترین بخشِ Standard/Ultra
+   هنگام اسکرول است؛ چون پس‌زمینهٔ کارت‌ها تقریباً مات است، حذفش روی دستگاهِ
+   ضعیف تقریباً دیده نمی‌شود ولی سرعت را چند برابر می‌کند. روی دستگاه‌های
+   قوی همه‌چیز مثل قبل می‌ماند. */
+body.gfx-weak.gfx-ultra .card, body.gfx-weak.gfx-ultra .shift-card,
+body.gfx-weak.gfx-ultra .settings-card, body.gfx-weak.gfx-ultra .pl-card,
+body.gfx-weak.gfx-ultra .stat-box, body.gfx-weak.gfx-ultra .msumbox,
+body.gfx-weak.gfx-ultra .person-card, body.gfx-weak.gfx-ultra .tank-card,
+body.gfx-weak.gfx-ultra .nav, body.gfx-weak.gfx-ultra #pl-result,
+body.gfx-weak.gfx-standard .card, body.gfx-weak.gfx-standard .shift-card,
+body.gfx-weak.gfx-standard .settings-card, body.gfx-weak.gfx-standard .pl-card,
+body.gfx-weak.gfx-standard .stat-box, body.gfx-weak.gfx-standard .msumbox,
+body.gfx-weak.gfx-standard .person-card, body.gfx-weak.gfx-standard .tank-card,
+body.gfx-weak.gfx-standard .header, body.gfx-weak.gfx-standard .top-banner,
+body.gfx-weak.gfx-standard .nav, body.gfx-weak.gfx-standard .toast,
+body.gfx-weak.gfx-standard #pl-result,
+body.gfx-weak.gfx-standard #siteBg, body.gfx-weak.gfx-ultra #siteBg{
+  -webkit-backdrop-filter:none !important;
+  backdrop-filter:none !important;
+}
+
+/* ═══ نوشته‌های جدول‌ها در لایت مود و همهٔ تم‌های روز: سیاه و کاملاً خوانا ═══ */
+body.light-mode .tbl, body.light-mode .xls-tbl, body.light-mode .ro-tbl{ --muted:#1a1a1a; }
+body.light-mode .tbl th, body.light-mode .xls-tbl th, body.light-mode .ro-tbl th{ color:#000 !important; }
+body.light-mode .tbl td, body.light-mode .xls-tbl td, body.light-mode .ro-tbl td{ color:#000; }
+body.light-mode .xls-in, body.light-mode .tbl .editable{ color:#000; }
+body.light-mode .xls-num{ color:#000; }
+body.light-mode .xls-foot td, body.light-mode .tbl tfoot td{ color:#000; }
+
+/* ═══ سربرگ بالای برنامه — بدون سایه، خوانا و با تمِ جذاب در هر سه کیفیت ═══ */
+.header-date, .hdr-date-dot{ text-shadow:none !important; }
+body:not(.light-mode) .header-date{ color:#e9eef7 !important; opacity:1 !important; }
+/* حالتِ بدون تمِ رنگی: سربرگ/نوار بالایی دیگر بی‌روح نباشد — گرادیان ملایم کهربایی
+   (Ultra گرادیان سینماییِ خودش را دارد و دست‌نخورده می‌ماند) */
+body.light-mode:not([class*="theme-"]).gfx-performance .header,
+body.light-mode:not([class*="theme-"]).gfx-standard .header{
+  background:linear-gradient(120deg,#fff6e3,#ffe7bd 45%,#fff2d8 75%,#fff6e3) !important;
+  border-bottom:2px solid #efb54a !important;
+}
+body.light-mode:not([class*="theme-"]).gfx-performance .top-banner,
+body.light-mode:not([class*="theme-"]).gfx-standard .top-banner{
+  background:linear-gradient(120deg,#fffdf7,#fff3dc) !important;
+  border-bottom:1px solid #f3cd8a !important;
+}
+body:not(.light-mode):not([class*="theme-"]).gfx-performance .header,
+body:not(.light-mode):not([class*="theme-"]).gfx-standard .header{
+  background:linear-gradient(120deg,#151b26,#232c3d 45%,#1a2230 75%,#151b26) !important;
+  border-bottom:2px solid rgba(255,180,61,.45) !important;
+}
+body:not(.light-mode):not([class*="theme-"]).gfx-performance .top-banner,
+body:not(.light-mode):not([class*="theme-"]).gfx-standard .top-banner{
+  background:linear-gradient(120deg,#121722,#1b2331) !important;
+  border-bottom:1px solid rgba(255,180,61,.25) !important;
+}
 </style>
 
 <script id="motion-pro-js">
