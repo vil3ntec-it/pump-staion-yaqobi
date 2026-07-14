@@ -11232,15 +11232,17 @@ function _updatePersonTotals(person) {
   let _remMoneyP = 0, _remMoneyD = 0;   // حالتِ تیل → الباقی پول
   let _remFuelAll = 0;                   // حالتِ پول → الباقی تیلِ کل
   if (money) {
-    // واحد پول: موجودی اصلی به افغانی است. موجودی تیل داینامیک از موجودی پول ÷ نرخ
-    // اتحادیه به دست می‌آید، سپس مقدار تیلِ تحویلیِ جدول از آن کم می‌شود — نه از صفر.
-    // برخلافِ حالتِ تیل این‌جا کفِ صفر نمی‌گذاریم: اضافه‌برد باید منفی (بدهی) نشان داده شود.
-    const moneyBalP = rasidP + t.petrol.rasid;   // موجودی پول = رسید پول + رسیدهای داخل جدول
-    const moneyBalD = rasidD + t.diesel.rasid;
-    const fuelBalP = rateP > 0 ? moneyBalP / rateP : 0;   // موجودی تیل معادل
-    const fuelBalD = rateD > 0 ? moneyBalD / rateD : 0;
-    const remFuelP2 = fuelBalP - t.petrol.fuel;   // می‌تواند منفی شود (اضافه‌برد)
-    const remFuelD2 = fuelBalD - t.diesel.fuel;
+    // واحد پول: «الباقی پول» = رسید پول − بردگی (پولی که داده منهای پولی که برده).
+    // «الباقی تیل» = الباقی پول ÷ فیِ خودِ حساب (بردگی ÷ مقدار تیل) — نه نرخ اتحادیه:
+    // «چند افغانی مانده، همان پول چند لیتر تیل می‌خرد». نرخ اتحادیه با فیِ حساب قاتی
+    // نمی‌شود؛ فقط اگر هنوز فی‌ای از ردیف‌ها درنیامده باشد (حسابِ خالی) به آن برمی‌گردیم.
+    // برخلافِ حالتِ تیل کفِ صفر نداریم: اضافه‌برد باید منفی (بدهی) نشان داده شود.
+    const remMoneyBalP = (rasidP + t.petrol.rasid) - t.petrol.bardagi;   // الباقی پول
+    const remMoneyBalD = (rasidD + t.diesel.rasid) - t.diesel.bardagi;
+    const feP = t.petrol.fuel > 0 ? (t.petrol.bardagi / t.petrol.fuel) : rateP;   // فیِ حساب، وگرنه نرخ اتحادیه
+    const feD = t.diesel.fuel > 0 ? (t.diesel.bardagi / t.diesel.fuel) : rateD;
+    const remFuelP2 = feP > 0 ? remMoneyBalP / feP : 0;   // الباقی تیل = الباقی پول ÷ فی
+    const remFuelD2 = feD > 0 ? remMoneyBalD / feD : 0;
     setRemExtra('p', remFuelP2, 'الباقی تیل');
     setRemExtra('d', remFuelD2, 'الباقی تیل');
     _remFuelAll = remFuelP2 + remFuelD2;
@@ -18631,7 +18633,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.27';
+const APP_VERSION = '2.9.28';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
