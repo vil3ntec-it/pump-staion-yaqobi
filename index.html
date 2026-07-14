@@ -3052,6 +3052,16 @@ button:focus-visible,.nav-btn:focus-visible,a:focus-visible,input:focus-visible,
 #personModal .msumbox .mv{ font-size:1.02rem !important; width:90px !important; }
 /* دکمه‌های هدر — یک‌شکل و مربع */
 #personModal .modal-head button{ height:32px !important; min-width:32px !important; padding:0 5px !important; font-size:0.72rem !important; border-radius:7px !important; display:inline-flex !important; align-items:center !important; justify-content:center !important; }
+/* ── مودال شرکت: متنِ کادرهای خلاصه کوچک‌تر + دکمه‌های هدر مربع و بافاصله ── */
+/* (چیدمان/ابعادِ کادرها در بلوکِ #companyModal .modal-summary پایین‌تر تنظیم می‌شود) */
+#companyModal .msumbox .ml{ font-size:0.72rem !important; font-weight:700 !important; margin-bottom:1px !important; line-height:1.25 !important; }
+#companyModal .msumbox .mv{ font-size:0.9rem !important; font-weight:800 !important; line-height:1.25 !important; }
+#companyModal #cm-total-albaqi-usd{ font-size:0.72rem !important; }
+#companyModal #cm-albaqi-status{ font-size:0.62rem !important; margin-top:1px !important; }
+/* دکمه‌های هدر (دیزل/تغییر نام/PDF) — یک‌شکل و مربع، یک‌خطی، با فاصله از دکمهٔ بستن */
+#companyModal .modal-head button{ height:34px !important; min-width:34px !important; padding:0 9px !important; font-size:0.72rem !important; border-radius:9px !important; white-space:nowrap !important; display:inline-flex !important; align-items:center !important; justify-content:center !important; line-height:1.05 !important; }
+#companyModal .modal-head > div:last-of-type{ gap:9px !important; }
+#companyModal .modal-head .modal-close{ margin-inline-start:6px !important; }
 /* Hide the duplicate big name above the table — the name already shows in the
    modal header. Visual only; the JS that fills it is untouched. */
 #personModal #pm-bigname{ display:none !important; }
@@ -13411,7 +13421,16 @@ function _renderCompanyHistoryPanel(company){
           <td style="color:var(--blue);font-weight:700">${n2fa(tu.toFixed(1))} $</td>
           <td><input class="xls-in" type="number" value="${parseFloat(r.rate)||''}" placeholder="0" onchange="${U}'rate',this.value)"></td>
           <td style="color:var(--accent);font-weight:700">${n2fa(Math.round(ta))}</td>
-          <td><input class="xls-in" type="number" value="${parseFloat(r.poul)||''}" placeholder="0" style="color:var(--green);font-weight:700" onchange="${U}'poul',this.value)"></td>
+          <td>
+            <div style="display:flex;gap:3px;align-items:center">
+              <input class="xls-in" type="number" value="${parseFloat(r.poul)||''}" placeholder="0" style="min-width:55px;color:var(--green);font-weight:700" onchange="${U}'poul',this.value)">
+              <select class="xls-in xs" style="padding:6px 2px;min-width:48px" onchange="setCompanyHistoryPoulCurrency('${company.id}','${h.id}',${i},this.value)">
+                <option value="afn" ${r.poulCurrency==='usd'?'':'selected'}>؋</option>
+                <option value="usd" ${r.poulCurrency==='usd'?'selected':''}>$</option>
+              </select>
+            </div>
+          </td>
+          <td><input class="xls-in xs" type="number" value="${parseFloat(r.payRate)||''}" placeholder="0" style="width:50px" onchange="${U}'payRate',this.value)" title="نرخ تبدیل رسید افغانی — فقط برای رسید افغانی"></td>
           <td style="color:${ab>0?'var(--red)':'var(--green)'};font-weight:700">${n2fa(Math.round(ab))}</td>
           <td><button class="del-btn" onclick="deleteCompanyHistoryRow('${company.id}','${h.id}',${i})">🗑️</button></td>
         </tr>`;
@@ -13445,10 +13464,10 @@ function _renderCompanyHistoryPanel(company){
           <span style="font-size:0.72rem;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:4px 9px">جمع الباقی: <b style="color:${tAlb>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(tAlb))}</b></span>
           ${purchBadge}
         </div>
-        <div class="xls-wrap"><table class="xls-tbl" style="table-layout:fixed;width:100%;min-width:954px">
-          <thead><tr><th style="width:34px">#</th><th style="width:96px">تاریخ</th><th style="width:150px">نام</th><th style="width:95px">خرید(کیلو)</th><th style="width:95px">قیمت تن($)</th><th style="width:95px">کل($)</th><th style="width:58px">نرخ</th><th style="width:95px">کل(افغانی)</th><th style="width:95px">رسید</th><th style="width:95px">الباقی</th><th style="width:46px">حذف</th></tr></thead>
-          <tbody>${body || '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:12px">فقط خرید — جزئیات در کادرِ خریدها</td></tr>'}</tbody>
-          <tfoot class="xls-foot"><tr><td colspan="3" style="padding:7px">جمع</td><td>${n2fa(Math.round(tTon*1000))}</td><td></td><td>${n2fa(tUsd.toFixed(1))} $</td><td></td><td>${n2fa(Math.round(tAfn))}</td><td>${n2fa(Math.round(tPoul))}</td><td>${n2fa(Math.round(tAlb))}</td><td></td></tr></tfoot>
+        <div class="xls-wrap"><table class="xls-tbl" style="table-layout:fixed;width:100%;min-width:1031px">
+          <thead><tr><th style="width:34px">#</th><th style="width:96px">تاریخ</th><th style="width:150px">نام</th><th style="width:95px">خرید(کیلو)</th><th style="width:95px">قیمت تن($)</th><th style="width:95px">کل($)</th><th style="width:58px">نرخ</th><th style="width:95px">کل(افغانی)</th><th style="width:112px">رسید</th><th style="width:60px;font-size:0.75rem">نرخ پول</th><th style="width:95px">الباقی</th><th style="width:46px">حذف</th></tr></thead>
+          <tbody>${body || '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:12px">فقط خرید — جزئیات در کادرِ خریدها</td></tr>'}</tbody>
+          <tfoot class="xls-foot"><tr><td colspan="3" style="padding:7px">جمع</td><td>${n2fa(Math.round(tTon*1000))}</td><td></td><td>${n2fa(tUsd.toFixed(1))} $</td><td></td><td>${n2fa(Math.round(tAfn))}</td><td>${n2fa(Math.round(tPoul))}</td><td></td><td>${n2fa(Math.round(tAlb))}</td><td></td></tr></tfoot>
         </table></div>
         <div style="padding:6px 10px 0">
           <button class="add-row-btn" style="margin:0;padding:5px 12px;font-size:0.78rem" onclick="addCompanyHistoryRow('${company.id}','${h.id}')">➕ ردیف جدید</button>
@@ -13465,7 +13484,7 @@ function updateCompanyHistoryRow(cid, hid, idx, field, val){
   const h = c && (c.tableHistory||[]).find(x => x.id === hid);
   if (!h || !Array.isArray(h.rows) || !h.rows[idx]) return;
   const r = h.rows[idx];
-  if (field === 'date' || field === 'name') r[field] = val;
+  if (field === 'date' || field === 'name' || field === 'poulCurrency') r[field] = val;
   else {
     r[field] = parseFloat(val) || 0;
     if (field === 'kg') r.ton = '';   // ورودی کیلو است؛ تن خودکار = کیلو ÷ ۱۰۰۰
@@ -13478,7 +13497,16 @@ function addCompanyHistoryRow(cid, hid){
   const h = c && (c.tableHistory||[]).find(x => x.id === hid);
   if (!h) return;
   if (!Array.isArray(h.rows)) h.rows = [];
-  h.rows.push({ date: '', name: '', kg: 0, usd: 0, rate: 0, poul: 0 });
+  h.rows.push({ date: '', name: '', kg: 0, usd: 0, rate: 0, poul: 0, poulCurrency: 'afn', payRate: 0 });
+  save();
+  _renderCompanyHistoryPanel(c);
+}
+// واحد پولِ رسید در جدولِ آرشیوِ شرکت (؋/$) — مثل جدولِ اصلی
+function setCompanyHistoryPoulCurrency(cid, hid, idx, val){
+  const c = (DB.tilCompanies||[]).find(x => x.id === cid);
+  const h = c && (c.tableHistory||[]).find(x => x.id === hid);
+  if (!h || !Array.isArray(h.rows) || !h.rows[idx]) return;
+  h.rows[idx].poulCurrency = val === 'usd' ? 'usd' : 'afn';
   save();
   _renderCompanyHistoryPanel(c);
 }
@@ -18635,7 +18663,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.30';
+const APP_VERSION = '2.9.31';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -21337,17 +21365,21 @@ body.light-mode.gfx-ultra .tbl th, body.light-mode.gfx-ultra .xls-tbl th, body.l
 /* ═══ بخش شرکت‌ها: کادرهای خلاصهٔ بالای حساب ═══
    همهٔ کادرها هم‌اندازه، مربعی و کاملاً تراز — و با فاصلهٔ کافی از دکمهٔ ✕
    بالای مودال (قبلاً به لبه/دکمه چسبیده بودند) */
+/* کادرهای خلاصهٔ شرکت: فشرده و کم‌ارتفاع (نه مربعِ بزرگ). auto-fit تا در کامپیوتر
+   پهنا کامل پر شود و کادرها گوشهٔ راست با جای خالی نمانند. */
 #companyModal .modal-summary{
-  grid-template-columns:repeat(auto-fill,minmax(150px,1fr)) !important;
+  grid-template-columns:repeat(auto-fit,minmax(120px,1fr)) !important;
   grid-auto-rows:auto !important;
-  gap:10px !important;
-  padding:14px 22px 10px !important;
+  gap:6px !important;
+  padding:6px 12px !important;
   align-items:stretch !important;
 }
 #companyModal .msumbox{
-  aspect-ratio:1/1;
-  min-height:120px !important;
+  aspect-ratio:auto !important;
+  min-height:unset !important;
+  height:auto !important;
   width:100%;
+  padding:6px 8px !important;
   display:flex !important;
   flex-direction:column !important;
   justify-content:center !important;
