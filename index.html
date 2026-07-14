@@ -8100,36 +8100,45 @@ function _dashLastDays(n) {
 }
 const _dashZ = () => ({ a: 0, l: 0, p: 0, c: 0 });   // مبلغ، لیتر، مفاد، تعداد ثبت
 function _dashShell(label, full) { return { label, full, petrol: _dashZ(), diesel: _dashZ(), exp: 0, sin: 0, sout: 0 }; }
-// سطل‌های بازهٔ انتخابی. اندیس ۰ = بازهٔ قبل از پنجره (فقط برای رشدِ ستون اول)
-// روز = ۷ ستون روزهای اخیر · هفته = ۷ ستون هفتگی · ماه = ۱۲ ماهِ سال جاری
-// (ماه‌های نیامده صفر) · سال = ۶ ستون سال
+// روزِ شمسی با فاصلهٔ offset از امروز (منفی=گذشته، ۰=امروز، مثبت=آینده)
+function _dashDayAt(offset) {
+  return _dashParseDate(toEnDigits(new Date(Date.now() + offset * 864e5).toLocaleDateString('fa-IR')));
+}
+// پنجرهٔ «آینده‌نگر» (خواستهٔ کاربر): همیشه از امروز به بعد نمایش داده می‌شود، دوره‌های
+// گذشته نمایش داده نمی‌شوند. اندیس ۰ = دورهٔ درست قبل از پنجره (فقط برای محاسبهٔ رشدِ
+// ستونِ اول). ستون‌های نمایشی = امروز و بعد از آن:
+//   روز = ۷ روزِ آینده (امروز، فردا، پس‌فردا، ۴ روز بعد) · هفته = ۴ هفتهٔ آینده ·
+//   ماه = ۱۲ ماهِ آینده · سال = ۶ سالِ آینده
 function _dashMakeBuckets() {
   const today = _dashParseDate(persianDate());
+  const _yr = y => String(y).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);   // سال بدونِ جداکنندهٔ هزارگان
   const buckets = []; let assign;
   if (_dashRange === 'day') {
-    const days = _dashLastDays(8), idx = {};
-    days.forEach((p, i) => {
-      idx[_dashDayKey(p.y, p.m, p.d)] = i;
-      const lbl = i === days.length - 1 ? 'امروز' : (i === days.length - 2 ? 'دیروز' : n2fa(p.m) + '/' + n2fa(p.d));
+    const idx = {};
+    for (let o = -1; o <= 6; o++) {                 // ‎-۱ (دیروز، پایهٔ رشد) تا ۶ روزِ بعد
+      const p = _dashDayAt(o);
+      idx[_dashDayKey(p.y, p.m, p.d)] = o + 1;
+      const lbl = o === 0 ? 'امروز' : (o === 1 ? 'فردا' : (o === 2 ? 'پس‌فردا' : n2fa(p.m) + '/' + n2fa(p.d)));
       buckets.push(_dashShell(lbl, p.y + '/' + p.m + '/' + p.d));
-    });
+    }
     assign = p => { const i = idx[_dashDayKey(p.y, p.m, p.d)]; return i == null ? -1 : i; };
   } else if (_dashRange === 'week') {
-    const days = _dashLastDays(56), idx = {};   // ۸ پنجرهٔ ۷روزه — اولی فقط برای رشد
-    for (let w = 0; w < 8; w++) {
-      const ch = days.slice(w * 7, w * 7 + 7);
-      ch.forEach(p => idx[_dashDayKey(p.y, p.m, p.d)] = w);
-      const lbl = w === 7 ? 'این هفته' : (w === 6 ? 'هفته قبل' : n2fa(7 - w) + ' هفته قبل');
-      buckets.push(_dashShell(lbl, n2fa(ch[0].m) + '/' + n2fa(ch[0].d) + ' تا ' + n2fa(ch[6].m) + '/' + n2fa(ch[6].d)));
+    const idx = {};
+    for (let wi = 0; wi <= 4; wi++) {               // wi=0 هفتهٔ قبل (پایهٔ رشد)، wi=1 این هفته، تا ۳ هفتهٔ بعد
+      const startOff = -7 + wi * 7;
+      const days = [];
+      for (let d = 0; d < 7; d++) { const p = _dashDayAt(startOff + d); idx[_dashDayKey(p.y, p.m, p.d)] = wi; days.push(p); }
+      const lbl = wi === 1 ? 'این هفته' : (wi === 0 ? 'هفته قبل' : (wi === 2 ? 'هفته بعد' : n2fa(wi - 1) + ' هفته بعد'));
+      buckets.push(_dashShell(lbl, n2fa(days[0].m) + '/' + n2fa(days[0].d) + ' تا ' + n2fa(days[6].m) + '/' + n2fa(days[6].d)));
     }
     assign = p => { const i = idx[_dashDayKey(p.y, p.m, p.d)]; return i == null ? -1 : i; };
   } else if (_dashRange === 'month') {
-    buckets.push(_dashShell(SHAMSI_MONTHS[11], SHAMSI_MONTHS[11] + ' ' + n2fa(today.y - 1)));
-    for (let m = 1; m <= 12; m++) buckets.push(_dashShell(SHAMSI_MONTHS[m - 1], SHAMSI_MONTHS[m - 1] + ' ' + n2fa(today.y)));
-    assign = p => (p.y === today.y ? p.m : (p.y === today.y - 1 && p.m === 12 ? 0 : -1));
+    const mAt = o => { let m = today.m + o, y = today.y; while (m > 12) { m -= 12; y++; } while (m < 1) { m += 12; y--; } return { y, m }; };
+    for (let o = -1; o <= 11; o++) { const mm = mAt(o); const nm = SHAMSI_MONTHS[mm.m - 1]; buckets.push(_dashShell(nm, nm + ' ' + _yr(mm.y))); }
+    assign = p => { for (let o = -1; o <= 11; o++) { const mm = mAt(o); if (p.y === mm.y && p.m === mm.m) return o + 1; } return -1; };
   } else {
-    for (let k = 6; k >= 0; k--) buckets.push(_dashShell(n2fa(today.y - k), 'سال ' + n2fa(today.y - k)));
-    assign = p => { const i = 6 - (today.y - p.y); return (i >= 0 && i <= 6) ? i : -1; };
+    for (let o = -1; o <= 5; o++) buckets.push(_dashShell(_yr(today.y + o), 'سال ' + _yr(today.y + o)));
+    assign = p => { const i = (p.y - today.y) + 1; return (i >= 0 && i <= 6) ? i : -1; };
   }
   return { buckets, assign, today };
 }
@@ -8283,13 +8292,15 @@ function renderDashboard(skipAnim) {
 
   const { buckets } = _dashSeries();
   const disp = buckets.slice(1);
-  const sel = _dashSelIdx == null ? disp.length - 1 : Math.max(0, Math.min(_dashSelIdx, disp.length - 1));
+  // پنجرهٔ آینده‌نگر: ستونِ پیش‌فرضِ انتخاب‌شده «دورهٔ جاری» (امروز/این هفته/…) است که
+  // اولین ستونِ نمایشی است — نه آخرین (که دورترین روزِ آینده و معمولاً خالی است).
+  const sel = _dashSelIdx == null ? 0 : Math.max(0, Math.min(_dashSelIdx, disp.length - 1));
   const selB = disp[sel], prevB = sel === 0 ? buckets[0] : disp[sel - 1];
   const cur = _dashPick(selB), prev = _dashPick(prevB);
-  const isLast = sel === disp.length - 1;
+  const isCur = sel === 0;   // ستونِ دورهٔ جاری
   const rangeWord = { day: 'امروز', week: 'این هفته', month: 'این ماه', year: 'امسال' }[_dashRange];
   const perWord = { day: 'روز قبل', week: 'هفته قبل', month: 'ماه قبل', year: 'سال قبل' }[_dashRange];
-  const bucketWord = isLast ? rangeWord : selB.label;
+  const bucketWord = isCur ? rangeWord : selB.label;
   const prog = (id, pct, tip) => _dashSetProgress(document.getElementById(id), pct, tip);
 
   // ۱) فروش — مبلغ + تفکیک پطرول/دیزل + لیتر
@@ -10682,7 +10693,7 @@ function _renderPendingInvoices(person, xlsWrap) {
   box.style.cssText = 'margin:10px 0;padding:10px 12px;border:1px dashed var(--accent);border-radius:10px;background:rgba(255,180,61,.06);opacity:.9';
   box.innerHTML = '<div style="font-size:0.78rem;font-weight:800;color:var(--accent);margin-bottom:6px">⏳ فاکتورهای در انتظارِ تایید (هنوز در الباقیِ حساب جمع نشده‌اند — با تایید، خودکار اضافه می‌شوند · برای باز کردن و تایید، روی فاکتور بزنید)</div>' +
     pend.map(v => `<div role="button" tabindex="0" title="باز کردن این فاکتور برای تایید" onclick="invOpenDetail('${v.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();invOpenDetail('${v.id}');}" style="font-size:0.76rem;color:var(--muted);display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px dashed var(--border);cursor:pointer">
-        <span>🧾 فاکتور شماره ${n2fa(v.invoice_number)} · ${v.by_money ? '💵 فقط مبلغ (اعتبار)' : (_invFuelLabel(v.fuel_type) + ' · ' + n2fa(v.liters) + ' لیتر × ' + n2fa(v.price_per_liter))}</span>
+        <span>🧾 فاکتور شماره ${n2fa(v.invoice_number)} · ${_invPartsHtml(v)}</span>
         <b style="color:var(--txt)">${n2fa(Math.round(_invTotal(v)))} افغانی</b>
       </div>`).join('');
 }
@@ -14394,34 +14405,36 @@ function pdfPerson() {
   const showFtCol = filter === 'all';
   const fuelTitle = filter === 'petrol' ? ' — حساب جداگانه ⛽ پطرول' : (filter === 'diesel' ? ' — حساب جداگانه 🟤 دیزل' : '');
 
-  // جداسازی کامل واحدها در PDF: حساب «واحد پول» فقط ستون‌های پولی
-  // (بردگی/رسید/الباقی) و حساب «واحد تیل» فقط ستون‌های لیتری (مقدار تیل)
+  // PDF دقیقاً همان جدولِ سایت: همان ستون‌ها، همان ترتیب، همان محاسبات و رنگ‌ها
+  // (باگ ۵). ستون‌ها: # · تاریخ · نام · نمبر حواله · [نوع تیل] · مقدار تیل · فی لیتر ·
+  // مقدار بردگی · رسید · رسید تیل · الباقی — بدونِ حذفِ ستون بر اساس واحد پول/تیل.
   const tableRows = rows.map((r, i) => {
     const fuelLabel = r.ftype === 'diesel' ? '🟤 دیزل' : '⛽ پطرول';
-    const albaqiColor = (r.albaqi || 0) > 0 ? '#e53e3e' : '#276749';
-    const unitCols = money ? `
-      <td style="color:#c07700;font-weight:700">${n2fa(r.bardagi || 0)}</td>
-      <td style="color:#276749;font-weight:700">${n2fa(r.rasid || 0)}</td>
-      <td style="color:${albaqiColor};font-weight:700">${n2fa(r.albaqi || 0)}</td>` : `
-      <td style="color:#2b6cb0;font-weight:700">${n2fa(r.fuel || 0)} ل</td>`;
+    // بردگی مثل خودِ سایت: ردیفِ پولی → مقدارِ بردگیِ دستی، وگرنه مقدار تیل × فی
+    const bardagi = r.byMoney ? (parseFloat(r.bardagi) || 0) : _fuelBardagi(r);
+    const albaqi = bardagi - (parseFloat(r.rasid) || 0);
+    const albaqiColor = albaqi > 0 ? '#e53e3e' : '#276749';
     return `<tr>
-      <td style="text-align:center;color:#718096">${i + 1}</td>
+      <td style="text-align:center;color:#718096">${n2fa(i + 1)}</td>
       <td>${r.date || '—'}</td>
       <td>${escFa(r.name) || '—'}</td>
       <td style="color:#c07700">${r.hawala || '—'}</td>
       ${showFtCol ? `<td>${fuelLabel}</td>` : ''}
-      ${unitCols}
+      <td style="color:#2b6cb0">${(parseFloat(r.fuel)||0) ? n2fa(r.fuel) : '—'}</td>
+      <td>${(parseFloat(r.priceper)||0) ? n2fa(r.priceper) : '—'}</td>
+      <td style="color:#c07700;font-weight:700">${n2fa(Math.round(bardagi))}</td>
+      <td style="color:#276749;font-weight:700">${(parseFloat(r.rasid)||0) ? n2fa(r.rasid) : '—'}</td>
+      <td style="color:#2b6cb0">${(parseFloat(r.rasidFuel)||0) ? n2fa(r.rasidFuel) + ' ل' : '—'}</td>
+      <td style="color:${albaqiColor};font-weight:700">${n2fa(Math.round(albaqi))}</td>
     </tr>`;
   }).join('');
 
-  // جمع‌های جدول بر اساس ردیف‌های فیلترشده (نه کل)
+  // جمع‌های جدول بر اساس ردیف‌های فیلترشده (نه کل) — مثل فوترِ جدولِ سایت
   const ft = _splitTotals(rows).all;
-  const colCount = (showFtCol ? 5 : 4) + (money ? 3 : 1);
+  const colCount = (showFtCol ? 5 : 4) + 6;
   const ftHeadCols = showFtCol ? '<th>نوع تیل</th>' : '';
-  const unitHeadCols = money ? '<th>بردگی</th><th>رسید</th><th>الباقی</th>' : '<th>مقدار تیل (لیتر)</th>';
-  const unitFootCols = money
-    ? `<td>${n2fa(ft.bardagi)}</td><td>${n2fa(ft.rasid)}</td><td>${n2fa(ft.albaqi)}</td>`
-    : `<td>${n2fa(ft.fuel)} ل</td>`;
+  const unitHeadCols = '<th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>رسید تیل</th><th>الباقی</th>';
+  const unitFootCols = `<td>${n2fa(ft.fuel)}</td><td>—</td><td>${n2fa(ft.bardagi)}</td><td>${n2fa(ft.rasid)}</td><td>${n2fa(ft.rasidFuel)}</td><td>${n2fa(ft.albaqi)}</td>`;
 
   // بخش خلاصهٔ پطرول/دیزل: فقط در حالت «همه» هر دو نشان داده شود؛ در حالت فیلترشده فقط همان حساب
   const splitBoxesHtml = filter === 'all' ? `
@@ -18891,7 +18904,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.38';
+const APP_VERSION = '2.9.40';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -21835,7 +21848,17 @@ function invNextNumber() {
 }
 function _invFuelLabel(ft) { return ft === 'diesel' ? '🟤 دیزل' : '⛽ پطرول'; }
 // فاکتورِ «فقط مبلغ» (by_money): جمع کل = همان مبلغ؛ وگرنه فی × لیتر
-function _invTotal(v) { return v.by_money ? (parseFloat(v.amount) || 0) : (parseFloat(v.price_per_liter) || 0) * (parseFloat(v.liters) || 0); }
+// جمعِ کلِ فاکتور = ارزشِ تیل (فی×لیتر) + مبلغِ پول — یک فاکتور می‌تواند هر دو را داشته باشد (باگ ۱۲)
+function _invTotal(v) { return (parseFloat(v.price_per_liter) || 0) * (parseFloat(v.liters) || 0) + (parseFloat(v.amount) || 0); }
+// خلاصهٔ محتوای فاکتور (رسید تیل و/یا رسید پول) — برای نمایش در لیست/جزئیات/صف
+function _invPartsHtml(v) {
+  const liters = parseFloat(v.liters) || 0, amount = parseFloat(v.amount) || 0;
+  const parts = [];
+  if (liters > 0) parts.push('<span>' + _invFuelLabel(v.fuel_type) + '</span><span>🛢️ ' + n2fa(liters) + ' لیتر × ' + n2fa(v.price_per_liter) + '</span>');
+  if (amount > 0) parts.push('<span>💵 ' + n2fa(amount) + ' افغانی' + (liters > 0 ? ' (رسید پول)' : ' (اعتبار)') + '</span>');
+  if (!parts.length) parts.push('<span>—</span>');
+  return parts.join('');
+}
 
 // ── رندر بخش اصلی (کارت‌های آماری + پیش‌پرشدن شماره/تاریخ فرم) ──
 function renderInvoices() {
@@ -21911,12 +21934,18 @@ function invSubmit() {
   const vehicle = (document.getElementById('inv-vehicle').value || '').trim();
   const phone = (document.getElementById('inv-phone').value || '').trim();
   if (!name) { showToast('❌ نام مشتری را وارد کنید', '#e53e3e'); document.getElementById('inv-customer').focus(); return; }
-  // حالت «فقط مبلغ»: نه فی نه لیتر وارد شده، فقط مبلغ — به عنوان اعتبار مشتری ثبت می‌شود
-  const byMoney = !(isFinite(liters) && liters > 0) && !(isFinite(price) && price > 0) && isFinite(amount) && amount > 0;
-  if (!byMoney) {
-    if (!isFinite(price) || price <= 0) { showToast('❌ فی خرید هر لیتر را درست وارد کنید (یا فقط کادر «مبلغ بدون تیل» را پر کنید)', '#e53e3e'); document.getElementById('inv-price').focus(); return; }
-    if (!isFinite(liters) || liters <= 0) { showToast('❌ مقدار خرید (لیتر) را درست وارد کنید (یا فقط کادر «مبلغ بدون تیل» را پر کنید)', '#e53e3e'); document.getElementById('inv-liters').focus(); return; }
+  // باگ ۱۲: فاکتور می‌تواند بخشِ تیل (فی+لیتر → رسید تیل) و بخشِ پول (مبلغ → رسید پول)
+  // را با هم داشته باشد. هر کدام که پر شده لحاظ می‌شود؛ حداقل یکی باید باشد.
+  const hasMoney = isFinite(amount) && amount > 0;
+  const hasFuel  = isFinite(price) && price > 0 && isFinite(liters) && liters > 0;
+  const partialFuel = ((isFinite(price) && price > 0) || (isFinite(liters) && liters > 0)) && !hasFuel;
+  if (partialFuel && !hasMoney) {
+    if (!isFinite(price) || price <= 0) { showToast('❌ فی خرید هر لیتر را درست وارد کنید (یا فقط کادر «مبلغ» را پر کنید)', '#e53e3e'); document.getElementById('inv-price').focus(); return; }
+    showToast('❌ مقدار خرید (لیتر) را درست وارد کنید (یا فقط کادر «مبلغ» را پر کنید)', '#e53e3e'); document.getElementById('inv-liters').focus(); return;
   }
+  if (!hasFuel && !hasMoney) { showToast('❌ فی+لیتر (رسید تیل) یا مبلغ (رسید پول) را وارد کنید', '#e53e3e'); document.getElementById('inv-price').focus(); return; }
+  // «فقط مبلغ» فقط وقتی است که هیچ بخشِ تیلی نباشد — برای مهر/نمایش
+  const byMoney = hasMoney && !hasFuel;
   _invSelfCheck();
   // شمارهٔ فاکتور: قابل ویرایش — خالی/نامعتبر → شمارهٔ خودکار؛ تکراری → خطا
   const numEl = document.getElementById('inv-number');
@@ -21932,9 +21961,9 @@ function invSubmit() {
     invoice_number: invNo,
     customer_name: name,
     fuel_type: fuel,
-    price_per_liter: byMoney ? 0 : price,
-    liters: byMoney ? 0 : liters,
-    amount: byMoney ? amount : 0,
+    price_per_liter: hasFuel ? price : 0,
+    liters: hasFuel ? liters : 0,
+    amount: hasMoney ? amount : 0,           // بخشِ پولِ فاکتور (رسید پول) — می‌تواند همراهِ تیل باشد
     by_money: byMoney,                       // فاکتور «فقط مبلغ» — اعتبار مشتری
     vehicle_type: vehicle,
     phone: phone,
@@ -22028,7 +22057,7 @@ function invRenderList() {
       <div class="who">
         <div class="nm">${escFa(v.customer_name) || '—'}</div>
         <div class="mt">
-          ${v.by_money ? '<span>💵 فقط مبلغ (اعتبار)</span>' : `<span>${_invFuelLabel(v.fuel_type)}</span><span>🛢️ ${n2fa(v.liters)} لیتر</span>`}
+          ${_invPartsHtml(v)}
           <span>💰 ${n2fa(Math.round(_invTotal(v)))} افغانی</span>
           <span>📅 ${escFa(v.date_sh || '') || '—'}</span>
         </div>
@@ -22110,28 +22139,28 @@ function _invPaperHtml(v, opts) {
         </div>
       </div>
       <div class="invp-grid">
-        ${v.by_money ? `
-        <div class="invp-row" style="grid-column:1/-1"><svg class="ico"><use href="#invp-coin"/></svg><span class="k">مبلغ بدون تیل (اعتبار مشتری)</span>
-          ${edit ? `<input class="invp-in" id="invd-amount" type="number" min="0" step="any" value="${parseFloat(v.amount) || 0}">` : `<span class="v">${n2fa(parseFloat(v.amount) || 0)}</span>`}<span style="font-size:.72rem;color:#64748b">افغانی — بعداً با نرخ روز تیل حساب می‌شود</span>
-        </div>` : `
+        <!-- باگ ۱۲: هم بخشِ تیل (فی+لیتر → رسید تیل) و هم بخشِ پول (مبلغ → رسید پول) با هم -->
         <div class="invp-row"><svg class="ico"><use href="#invp-pump"/></svg><span class="k">نوع تیل</span>
           ${edit ? `<select class="invp-in" id="invd-fuel"><option value="petrol"${v.fuel_type !== 'diesel' ? ' selected' : ''}>⛽ پطرول</option><option value="diesel"${v.fuel_type === 'diesel' ? ' selected' : ''}>🟤 دیزل</option></select>` : `<span class="v">${_invFuelLabel(v.fuel_type)}</span>`}
         </div>
         <div class="invp-row"><svg class="ico"><use href="#invp-coin"/></svg><span class="k">فی خرید هر لیتر</span>
           ${edit ? `<input class="invp-in" id="invd-price" type="number" min="0" step="any" value="${v.price_per_liter}">` : `<span class="v">${n2fa(v.price_per_liter)}</span>`}<span style="font-size:.72rem;color:#64748b">افغانی</span>
         </div>
-        <div class="invp-row"><svg class="ico"><use href="#invp-drop"/></svg><span class="k">مقدار خرید</span>
+        <div class="invp-row"><svg class="ico"><use href="#invp-drop"/></svg><span class="k">مقدار خرید (رسید تیل)</span>
           ${edit ? `<input class="invp-in" id="invd-liters" type="number" min="0" step="any" value="${v.liters}">` : `<span class="v">${n2fa(v.liters)}</span>`}<span style="font-size:.72rem;color:#64748b">لیتر</span>
         </div>
         <div class="invp-row"><svg class="ico"><use href="#invp-car"/></svg><span class="k">نوع ماشین</span>
           ${edit ? `<input class="invp-in" id="invd-vehicle" value="${escFa(v.vehicle_type)}">` : `<span class="v">${escFa(v.vehicle_type) || '—'}</span>`}
-        </div>`}
+        </div>
+        <div class="invp-row" style="grid-column:1/-1"><svg class="ico"><use href="#invp-coin"/></svg><span class="k">مبلغ (رسید پول / اعتبار)</span>
+          ${edit ? `<input class="invp-in" id="invd-amount" type="number" min="0" step="any" value="${parseFloat(v.amount) || 0}">` : `<span class="v">${n2fa(parseFloat(v.amount) || 0)}</span>`}<span style="font-size:.72rem;color:#64748b">افغانی — می‌تواند همراهِ تیل باشد یا تنها</span>
+        </div>
         <div class="invp-row" style="grid-column:1/-1"><svg class="ico"><use href="#invp-phone"/></svg><span class="k">شماره تماس</span>
           ${edit ? `<input class="invp-in" id="invd-phone" type="tel" value="${escFa(v.phone)}" style="direction:ltr;text-align:right">` : `<span class="v" style="direction:ltr">${escFa(v.phone) || '—'}</span>`}
         </div>
       </div>
       <div class="invp-total">
-        <span class="k"><svg class="ico"><use href="#invp-calc"/></svg> ${v.by_money ? 'مبلغ (اعتبار مشتری)' : 'جمع کل (فی × لیتر)'}</span>
+        <span class="k"><svg class="ico"><use href="#invp-calc"/></svg> جمع کل فاکتور (تیل + پول)</span>
         <span class="tv">${n2fa(Math.round(_invTotal(v) * 100) / 100)} افغانی</span>
       </div>
       <svg class="invp-station"><use href="#invp-station"/></svg>
@@ -22229,7 +22258,13 @@ function _invDetachOldRows(v) {
 function _invPostToDebt(v) {
   const p = _ensureDebtPersonForInvoice(v);
   if (!Array.isArray(p.rows)) p.rows = [];
-  if (v.by_money) {
+  // باگ ۱۲: یک فاکتور می‌تواند هم «رسید پول» (مبلغ) و هم «رسید تیل» (لیتر) داشته باشد و
+  // هر دو در محاسبات لحاظ شوند. بخشِ پولی → ردیفِ رسیدِ جدول؛ بخشِ تیل → «مقدار رسید تیل».
+  const liters = parseFloat(v.liters) || 0;
+  const amount = parseFloat(v.amount) || 0;
+  // ── بخشِ پولی (رسید پول) ──
+  const existing = p.rows.find(r => r.invId === v.id);
+  if (amount > 0) {
     const data = {
       date: v.date_sh || '',
       name: ((v.customer_name || '').trim() ? ((v.customer_name || '').trim() + ' - ') : '') +
@@ -22238,16 +22273,17 @@ function _invPostToDebt(v) {
       ftype: v.fuel_type === 'diesel' ? 'diesel' : 'petrol',
       fuel: 0, priceper: 0, byMoney: true, invId: v.id,
       bardagi: 0,
-      rasid: parseFloat(v.amount) || 0,          // اعتبار واقعی مشتری (رسید پول)
-      albaqi: -(parseFloat(v.amount) || 0)
+      rasid: amount,                             // اعتبار واقعی مشتری (رسید پول)
+      albaqi: -amount
     };
-    const existing = p.rows.find(r => r.invId === v.id);
     if (existing) Object.assign(existing, data); else p.rows.push(data);
-  } else {
-    // فاکتور تیل → فقط «مقدار رسید تیل» زیاد می‌شود؛ ردیف جدول ساخته نمی‌شود
-    _invUnpostFuelRasid(v);        // تایید/ویرایش دوباره → اول اعتبار قبلی برگردد
-    _invDetachOldRows(v);          // ردیف مدل قدیم اگر مانده بود، برداشته شود
-    const liters = parseFloat(v.liters) || 0;
+  } else if (existing) {
+    // مبلغ حذف شد → ردیفِ پولیِ همین فاکتور هم برداشته شود
+    p.rows.splice(p.rows.indexOf(existing), 1);
+  }
+  // ── بخشِ تیل (مقدار رسید تیل) ──
+  _invUnpostFuelRasid(v);        // تایید/ویرایش دوباره → اول اعتبار تیلِ قبلی برگردد
+  if (liters > 0) {
     const ft = v.fuel_type === 'diesel' ? 'diesel' : 'petrol';
     if (ft === 'diesel') p.rasidFuelD = (parseFloat(p.rasidFuelD) || 0) + liters;
     else p.rasidFuelP = (parseFloat(p.rasidFuelP) || 0) + liters;
@@ -22309,6 +22345,8 @@ function invSaveEdits(id) {
   if (g('invd-amount'))  v.amount          = Math.max(0, parseFloat(g('invd-amount').value) || 0);
   if (g('invd-vehicle')) v.vehicle_type   = (g('invd-vehicle').value || '').trim();
   if (g('invd-phone'))   v.phone          = (g('invd-phone').value || '').trim();
+  // «فقط مبلغ» دوباره از روی محتوای فاکتور محاسبه شود (تیل حذف/اضافه شده باشد) — باگ ۱۲
+  v.by_money = ((parseFloat(v.amount) || 0) > 0) && !((parseFloat(v.price_per_liter) || 0) > 0 && (parseFloat(v.liters) || 0) > 0);
   // اگر فاکتور قبلاً تایید شده، رسیدِ تیلِ ثبت‌شده در حساب قرض‌دار هم با تغییرات هماهنگ شود
   if (v.status === 'approved') { try { _invRemoveFromDebt(v); _invPostToDebt(v); } catch (e) {} }
   save();
