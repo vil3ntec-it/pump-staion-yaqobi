@@ -11228,6 +11228,8 @@ function _updatePersonTotals(person) {
   const _uRateD = parseFloat(DB.unionRateDiesel) || 0;
   const rateP = _uRateP > 0 ? _uRateP : (t.petrol.fuel > 0 ? t.petrol.bardagi / t.petrol.fuel : 0);
   const rateD = _uRateD > 0 ? _uRateD : (t.diesel.fuel > 0 ? t.diesel.bardagi / t.diesel.fuel : 0);
+  // در حالتِ تیل، «الباقی پول»ِ هر حساب این‌جا حساب و برای فوترِ جدول هم استفاده می‌شود
+  let _remMoneyP = 0, _remMoneyD = 0;
   if (money) {
     // واحد پول: موجودی اصلی به افغانی است. موجودی تیل داینامیک از موجودی پول ÷ نرخ
     // اتحادیه به دست می‌آید، سپس مقدار تیلِ تحویلیِ جدول از آن کم می‌شود — نه از صفر.
@@ -11239,10 +11241,15 @@ function _updatePersonTotals(person) {
     setRemExtra('p', fuelBalP - t.petrol.fuel, 'الباقی تیل');
     setRemExtra('d', fuelBalD - t.diesel.fuel, 'الباقی تیل');
   } else {
-    // واحد تیل: موجودی اصلی به لیتر است. معادلِ پول داینامیک = الباقیِ تیل × نرخ اتحادیه
-    // (الباقیِ تیلِ همین حساب = رنگِ منفیِ remP؛ رسید تیل − برد تیل − فیصدی)
-    setRemExtra('p', (-remP) * rateP, 'الباقی پول');
-    setRemExtra('d', (-remD) * rateD, 'الباقی پول');
+    // واحد تیل: «الباقی پول» = ارزشِ پولیِ رسید تیل (رسید تیل × نرخ) منهای مجموعِ بردگیِ
+    // برده‌شده. یعنی الباقی پول فقط با «مقدار بردگی» کم می‌شود، نه با تایپِ خالیِ «مقدار
+    // تیل» (تا فی زده نشود بردگی صفر است و الباقی پول تکان نمی‌خورد). فی فقط نمایشی است.
+    // اگر تیلِ حساب تمام شد (الباقی تیل ≤ ۰) → الباقی پول هم صفر می‌شود.
+    const remFuelP = -remP, remFuelD = -remD;   // الباقی تیلِ همین حساب به لیتر
+    _remMoneyP = remFuelP <= 0 ? 0 : (rasidP * rateP - t.petrol.bardagi);
+    _remMoneyD = remFuelD <= 0 ? 0 : (rasidD * rateD - t.diesel.bardagi);
+    setRemExtra('p', _remMoneyP, 'الباقی پول');
+    setRemExtra('d', _remMoneyD, 'الباقی پول');
   }
   setV('pm-bord-sum', n2fa(rnd(bordP+bordD)) + unit);
   // footer جدول: جمعِ هر ستون در جمعِ خودِ همان ستون — مقدار تیل، مقدار بردگی و
@@ -11262,8 +11269,14 @@ function _updatePersonTotals(person) {
     ftAlbEl.style.color = netAll < 0 ? 'var(--red)' : 'var(--green)';
     if (money) ftAlbEl.textContent = netTxt;
     else {
+      // فوترِ حالتِ تیل هم «الباقی پول» و هم «الباقی تیل» را با برچسبِ روشن نشان می‌دهد
+      // (قبلاً فقط تیل برچسب داشت و پول یک عددِ بی‌نام بود). الباقی پول همان جمعِ کارت‌های
+      // بالا (رسید تیل × نرخ − بردگی) است تا با هدر یکی باشد.
       const netL = Math.round((t.all.rasidFuel - t.all.fuel) * 100) / 100;
-      ftAlbEl.innerHTML = netTxt + '<div style="font-size:0.74rem;font-weight:800;margin-top:2px;white-space:nowrap;color:' + (netL < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی تیل: ' + n2fa(netL) + ' ل</div>';
+      const remMoneyAll = Math.round(_remMoneyP + _remMoneyD);
+      ftAlbEl.innerHTML =
+        '<div style="white-space:nowrap;color:' + (remMoneyAll < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی پول: ' + n2fa(remMoneyAll) + '</div>' +
+        '<div style="font-size:0.74rem;font-weight:800;margin-top:2px;white-space:nowrap;color:' + (netL < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی تیل: ' + n2fa(netL) + ' ل</div>';
     }
   }
   const ftAlbEl2 = document.getElementById('pm-ft-albaqi2');
@@ -11994,15 +12007,12 @@ function deleteExpense(i) {
 }
 
 // ========== رسید پارچه‌ها ==========
-// بردگی در حالتِ تیل = لیتر × فی. ولی اگر کاربر هنوز فقط یکی از «مقدار تیل» یا
-// «فی لیتر» را نوشته باشد (مثلاً تیل را زده اما فی را هنوز نه)، بردگیِ قبلیِ آن
-// کادر نباید صفر/پاک شود؛ فقط وقتی هر دو موجود باشند ضرب انجام می‌شود. اگر هر دو
-// خالی باشند بردگی صفر می‌شود (ردیفِ پاک).
+// بردگی در حالتِ تیل = مقدار تیل × فی — همیشه زنده. اگر فی (یا مقدار تیل) پاک/صفر
+// شود، بردگی هم صفر می‌شود؛ هیچ عددِ کهنه‌ای نگه داشته نمی‌شود (ریشهٔ باگِ «فی را
+// پاک کردم ولی بردگی سرِ جایش ماند»). ردیفِ «پولی» (byMoney) اصلاً این‌جا نمی‌آید.
 function _fuelBardagi(r) {
   const f = parseFloat(r.fuel) || 0, p = parseFloat(r.priceper) || 0;
-  if (f === 0) return 0;               // مقدار تیل خالی/پاک‌شده → بردگی صفر (نه عددِ کهنه)
-  if (p > 0) return f * p;             // بردگی = مقدار تیل × فی (زنده با تغییرِ فی)
-  return parseFloat(r.bardagi) || 0;   // تیل وارد شده ولی فی هنوز نه → مقدار قبلی حفظ شود
+  return f * p;   // فی/مقدار تیلِ خالی → بردگی صفر
 }
 function ensureRasid() { if (!DB.parchaReceipts) DB.parchaReceipts = []; return DB.parchaReceipts; }
 function _newRasidRow() {
@@ -18609,7 +18619,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.24';
+const APP_VERSION = '2.9.25';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
