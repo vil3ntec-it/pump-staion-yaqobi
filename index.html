@@ -4525,8 +4525,8 @@ table thead th{ position:relative; }
 </svg>
 
 <div class="nav">
-  <button class="nav-btn" onclick="showSection('dashboard',this)"><svg class="nav-ic ia-pulse"><use href="#ic-dash"/></svg> داشبورد</button>
-  <button class="nav-btn active" onclick="showSection('shifts',this)"><svg class="nav-ic ia-wobble"><use href="#ic-shifts"/></svg> پارچه‌ها</button>
+  <button class="nav-btn active" onclick="showSection('dashboard',this)"><svg class="nav-ic ia-pulse"><use href="#ic-dash"/></svg> داشبورد</button>
+  <button class="nav-btn" onclick="showSection('shifts',this)"><svg class="nav-ic ia-wobble"><use href="#ic-shifts"/></svg> پارچه‌ها</button>
   <button class="nav-btn" onclick="showSection('waraq',this)"><svg class="nav-ic ia-write"><use href="#ic-waraq"/></svg> ورق‌های روزانه</button>
   <button class="nav-btn" onclick="showSection('debt',this)"><span class="nav-badge" id="debt-nav-badge" style="display:none"></span><svg class="nav-ic ia-bounce"><use href="#ic-debt"/></svg> قرض‌داران</button>
   <button class="nav-btn" onclick="showSection('invoices',this)"><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> ثبت فاکتورها</button>
@@ -4589,15 +4589,29 @@ table thead th{ position:relative; }
 .dash-tab{border:none;background:transparent;color:var(--muted);font-family:'Vazirmatn',sans-serif;font-size:.8rem;font-weight:800;padding:7px 16px;border-radius:999px;cursor:pointer;transition:background .22s,color .22s}
 .dash-tab:hover{color:var(--txt)}
 .dash-tab.active{background:var(--accent);color:#fff}
-.dash-bars{display:flex;align-items:flex-end;gap:4%;height:240px;padding-top:26px}
-.db-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0;height:100%}
-.db-barwrap{flex:1;width:100%;max-width:34px;display:flex;align-items:flex-end;justify-content:center}
-.db-bar{position:relative;width:100%;height:0;border-radius:10px;background:linear-gradient(180deg,var(--accent) 0%,var(--purple) 160%);transition:height .7s cubic-bezier(.22,.8,.3,1);cursor:pointer}
-.db-bar.alt{opacity:.45}
-.db-bar:hover{opacity:1;filter:brightness(1.12)}
-.db-tip{position:absolute;bottom:calc(100% + 8px);right:50%;transform:translateX(50%);background:var(--panel);color:var(--txt);border:1px solid var(--border);border-radius:9px;padding:4px 10px;font-size:.68rem;font-weight:800;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s;box-shadow:0 8px 20px rgba(0,0,0,.18);z-index:3}
-.db-bar:hover .db-tip{opacity:1}
-.db-lbl{font-size:.66rem;color:var(--muted);font-weight:700;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.dash-fuel-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.dash-fuel-btn{border:1.5px solid var(--border);background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:.8rem;font-weight:800;padding:7px 16px;border-radius:999px;cursor:pointer;transition:all .22s;box-shadow:0 4px 14px rgba(0,0,0,.06)}
+.dash-fuel-btn:hover{border-color:var(--accent)}
+.dash-fuel-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.dash-legend{display:flex;gap:14px;font-size:.72rem;color:var(--muted);font-weight:700;align-items:center}
+.dash-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:5px;vertical-align:-1px}
+.dash-legend .lg-amt{background:var(--accent)}
+.dash-legend .lg-lit{background:var(--blue)}
+.dash-bars{display:flex;align-items:flex-end;gap:2.5%;height:240px;padding-top:26px}
+.db-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0;height:100%;cursor:pointer}
+.db-barwrap{position:relative;flex:1;width:100%;max-width:44px;display:flex;align-items:flex-end;justify-content:center;gap:3px}
+.db-bar{width:46%;height:0;border-radius:9px;background:linear-gradient(180deg,var(--accent) 0%,var(--purple) 160%);transition:height .7s cubic-bezier(.22,.8,.3,1),filter .2s}
+.db-bar.lit{background:linear-gradient(180deg,var(--blue) 0%,var(--purple) 160%);opacity:.85}
+.db-col:hover .db-bar{filter:brightness(1.14)}
+.db-col.sel .db-bar{filter:brightness(1.18);box-shadow:0 0 0 1.5px var(--accent)}
+.db-col.sel .db-lbl{color:var(--accent);font-weight:900}
+.db-tip{position:absolute;bottom:calc(100% + 6px);right:50%;transform:translateX(50%);background:var(--panel);color:var(--txt);border:1px solid var(--border);border-radius:9px;padding:4px 10px;font-size:.66rem;font-weight:800;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s;box-shadow:0 8px 20px rgba(0,0,0,.18);z-index:3}
+.db-col:hover .db-tip{opacity:1}
+.db-lbl{font-size:.64rem;color:var(--muted);font-weight:700;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.dash-detail{margin-top:12px;padding:10px 14px;border:1px dashed var(--border);border-radius:12px;background:var(--dark);font-size:.76rem;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.dash-detail b{color:var(--txt)}
+#dash-tank .tank-card{padding:12px;gap:10px;margin-bottom:8px}
+#dash-tank .tank-card .tank-visual{width:92px;flex:0 0 92px;height:168px}
 .dash-hero{position:relative;overflow:hidden;border-radius:26px;padding:26px 20px;background:linear-gradient(160deg,var(--accent),var(--purple) 90%);box-shadow:0 14px 34px rgba(0,0,0,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;min-height:320px}
 .dash-hero::after{content:'';position:absolute;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.12);top:-90px;left:-70px;pointer-events:none}
 .dhero-gauge{position:relative;width:150px;height:84px}
@@ -4614,7 +4628,7 @@ table thead th{ position:relative; }
 @media (max-width:1100px){ .dash-cards{grid-template-columns:repeat(2,1fr)} .dash-mid{grid-template-columns:1fr} .dash-hero{min-height:260px} }
 @media (max-width:640px){ .dash-cards{grid-template-columns:1fr} .dash-search-wrap{min-width:0;flex:1} .dash-bars{height:190px;gap:2.5%} .dash-head{align-items:flex-start} }
 </style>
-<div class="section" id="sec-dashboard">
+<div class="section visible" id="sec-dashboard">
   <div class="dash-head">
     <div>
       <div class="dash-greet-row"><h2 class="dash-title">داشبورد</h2><span class="dash-greet" id="dash-greet">سلام 👋</span></div>
@@ -4626,39 +4640,49 @@ table thead th{ position:relative; }
       <span class="dash-avatar" title="پروفایل"><svg><use href="#ic-user1"/></svg></span>
     </div>
   </div>
+  <div class="dash-fuel-bar">
+    <span style="font-size:.78rem;color:var(--muted);font-weight:700">⛽ نوع سوخت:</span>
+    <button class="dash-fuel-btn active" onclick="dashSetFuel('all',this)">📋 همه</button>
+    <button class="dash-fuel-btn" onclick="dashSetFuel('petrol',this)">⛽ پطرول</button>
+    <button class="dash-fuel-btn" onclick="dashSetFuel('diesel',this)">🟤 دیزل</button>
+  </div>
   <div class="dash-cards">
-    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-shifts"/></svg></span><span class="dc-prog"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>۰٪</b></span></div><div class="dc-title">فروش امروز</div><div class="dc-value">به زودی...</div><div class="dc-sub">نسبت به روز قبل</div></div>
-    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-profit"/></svg></span><span class="dc-prog"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>۰٪</b></span></div><div class="dc-title">مفاد این هفته</div><div class="dc-value">به زودی...</div><div class="dc-sub">نسبت به هفته قبل</div></div>
-    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-debt"/></svg></span><span class="dc-prog"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>۰٪</b></span></div><div class="dc-title">الباقی قرض‌داران</div><div class="dc-value">به زودی...</div><div class="dc-sub">نسبت به ماه قبل</div></div>
-    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-expenses"/></svg></span><span class="dc-prog"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>۰٪</b></span></div><div class="dc-title">مصارف این ماه</div><div class="dc-value">به زودی...</div><div class="dc-sub">نسبت به ماه قبل</div></div>
-    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-safe"/></svg></span><span class="dc-prog"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>۰٪</b></span></div><div class="dc-title">موجودی گاوصندوق</div><div class="dc-value">به زودی...</div><div class="dc-sub">نسبت به هفته قبل</div></div>
-    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-storage"/></svg></span><span class="dc-prog"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>۰٪</b></span></div><div class="dc-title">موجودی مخزن</div><div class="dc-value">به زودی...</div><div class="dc-sub">نسبت به روز قبل</div></div>
+    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-shifts"/></svg></span><span class="dc-prog" id="dcp-sales"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title" id="dct-sales">فروش امروز</div><div class="dc-value" id="dcv-sales">0</div><div class="dc-sub" id="dcs-sales"></div></div>
+    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-profit"/></svg></span><span class="dc-prog" id="dcp-profit"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title" id="dct-profit">مفاد امروز</div><div class="dc-value" id="dcv-profit">0</div><div class="dc-sub" id="dcs-profit"></div></div>
+    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-debt"/></svg></span><span class="dc-prog" id="dcp-debt"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>—</b></span></div><div class="dc-title">الباقی قرض‌داران</div><div class="dc-value" id="dcv-debt">0</div><div class="dc-sub" id="dcs-debt"></div></div>
+    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-expenses"/></svg></span><span class="dc-prog" id="dcp-exp"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title" id="dct-exp">مصارف امروز</div><div class="dc-value" id="dcv-exp">0</div><div class="dc-sub" id="dcs-exp"></div></div>
+    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-safe"/></svg></span><span class="dc-prog" id="dcp-safe"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title">موجودی گاوصندوق</div><div class="dc-value" id="dcv-safe">0</div><div class="dc-sub" id="dcs-safe"></div></div>
+    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-storage"/></svg></span></div><div class="dc-title">موجودی مخزن</div><div id="dash-tank" style="margin-top:8px"></div></div>
   </div>
   <div class="dash-mid">
     <div class="dash-chart-card">
       <div class="dcc-head">
-        <div><div class="dcc-title">📊 نمودار مفاد</div><div class="dcc-sub">پطرول + دیزل — از گزارش‌های ثبت‌شده (فقط نمایشی)</div></div>
-        <div class="dash-tabs">
-          <button class="dash-tab active" onclick="dashSetRange('day',this)">روز</button>
-          <button class="dash-tab" onclick="dashSetRange('week',this)">هفته</button>
-          <button class="dash-tab" onclick="dashSetRange('month',this)">ماه</button>
-          <button class="dash-tab" onclick="dashSetRange('year',this)">سال</button>
+        <div><div class="dcc-title">📊 نمودار فروش</div><div class="dcc-sub" id="dcc-sub">متصل به پارچه‌های ثبت‌شده — روی هر ستون کلیک کنید</div></div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div class="dash-legend"><span><i class="lg-amt"></i>مبلغ (افغانی)</span><span><i class="lg-lit"></i>لیتر</span></div>
+          <div class="dash-tabs">
+            <button class="dash-tab active" onclick="dashSetRange('day',this)">روز</button>
+            <button class="dash-tab" onclick="dashSetRange('week',this)">هفته</button>
+            <button class="dash-tab" onclick="dashSetRange('month',this)">ماه</button>
+            <button class="dash-tab" onclick="dashSetRange('year',this)">سال</button>
+          </div>
         </div>
       </div>
       <div class="dash-bars" id="dash-bars"></div>
+      <div class="dash-detail" id="dash-detail"></div>
     </div>
     <div class="dash-hero">
-      <div class="dhero-gauge"><svg viewBox="0 0 120 66"><path class="tr" d="M12 60 A48 48 0 0 1 108 60"/><path class="bar" d="M12 60 A48 48 0 0 1 108 60"/></svg><b>۰٪</b></div>
+      <div class="dhero-gauge"><svg viewBox="0 0 120 66"><path class="tr" d="M12 60 A48 48 0 0 1 108 60"/><path class="bar" id="dash-hero-arc" d="M12 60 A48 48 0 0 1 108 60"/></svg><b id="dash-hero-pct">0٪</b></div>
       <div class="dhero-ic"><svg><use href="#ic-profit"/></svg></div>
-      <div class="dhero-label">به زودی...</div>
-      <div class="dhero-value">—</div>
-      <div class="dhero-sub">این کارت در نسخه‌های بعدی با اطلاعات واقعی فعال می‌شود</div>
+      <div class="dhero-label" id="dash-hero-label">فروش امروز</div>
+      <div class="dhero-value" id="dash-hero-value">0</div>
+      <div class="dhero-sub" id="dash-hero-sub"></div>
     </div>
   </div>
 </div>
 
 <!-- SHIFTS (پطرول) + گزارش -->
-<div class="section visible" id="sec-shifts">
+<div class="section" id="sec-shifts">
   <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <button class="goto-btn" onclick="showSection('shifts-diesel')">🟤 دیزل</button>
@@ -7969,83 +7993,288 @@ function showSection(id, btn) {
   }
 }
 
-// ========== داشبورد — فقط نمایشی (Read-Only) ==========
-// هیچ چیزی را در DB نمی‌نویسد؛ فقط همان داده‌هایی را می‌خواند که سرصفحه
-// (updateBanner) می‌خواند: مفاد پطرول از گزارش‌ها + مفاد دیزل از پارچه‌ها
-let _dashRange = 'day';
+// ========== داشبورد — متصل به داده‌های واقعی (فقط خواندنی) ==========
+// همهٔ اعداد از همان ساختارهای موجودِ برنامه خوانده می‌شوند و هیچ چیزی نوشته نمی‌شود:
+//   فروش/لیتر/مفاد پطرول ← DB.reports (شیفت‌های day/night: money، sale، profit)
+//   فروش/لیتر/مفاد دیزل ← DB.shifts (money، sale، profit)
+//   مصارف ← DB.expenses · گاوصندوق ← DB.safeEntries · مخزن ← همان کارت بخش مخزن
+let _dashRange = 'day', _dashFuel = 'all', _dashSelIdx = null;
 function dashSetRange(r, btn) {
-  _dashRange = r;
+  _dashRange = r; _dashSelIdx = null;
   document.querySelectorAll('.dash-tab').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  _renderDashChart();
+  renderDashboard();
 }
-function _dashProfitByDate() {
-  const map = {};
-  (DB.reports || []).forEach(r => {
-    if (!r || r.fuel !== 'petrol' || !r.date) return;
-    map[r.date] = (map[r.date] || 0) + ((r.day?.profit || 0) + (r.night?.profit || 0));
-  });
-  (DB.shifts || []).forEach(s => {
-    if (!s || s.fuel !== 'diesel' || !s.date) return;
-    map[s.date] = (map[s.date] || 0) + (s.profit || 0);
-  });
-  return map;
+function dashSetFuel(f, btn) {
+  _dashFuel = f;
+  document.querySelectorAll('.dash-fuel-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderDashboard();
 }
+function dashSelectBar(i) { _dashSelIdx = i; renderDashboard(true); }
 function _dashParseDate(d) {
   const p = toEnDigits(d || '').split('/').map(x => parseInt(x, 10) || 0);
   return { y: p[0] || 0, m: p[1] || 0, d: p[2] || 0 };
 }
-function _renderDashChart() {
-  const wrap = document.getElementById('dash-bars');
-  if (!wrap) return;
-  const map = _dashProfitByDate();
-  const groups = {};
-  Object.keys(map).forEach(ds => {
-    const p = _dashParseDate(ds);
-    if (!p.y) return;
-    let key, label;
-    if (_dashRange === 'day') { key = p.y * 10000 + p.m * 100 + p.d; label = n2fa(p.m) + '/' + n2fa(p.d); }
-    else if (_dashRange === 'week') { const w = Math.min(5, Math.ceil(p.d / 7)); key = p.y * 1000 + p.m * 10 + w; label = 'هفته ' + n2fa(w) + ' ' + (SHAMSI_MONTHS[p.m - 1] || ''); }
-    else if (_dashRange === 'month') { key = p.y * 100 + p.m; label = (SHAMSI_MONTHS[p.m - 1] || n2fa(p.m)); }
-    else { key = p.y; label = n2fa(p.y); }
-    if (!groups[key]) groups[key] = { label, val: 0, ord: key };
-    groups[key].val += map[ds];
-  });
-  let list = Object.values(groups).sort((a, b) => a.ord - b.ord);
-  const maxBars = _dashRange === 'day' ? 10 : (_dashRange === 'week' ? 8 : (_dashRange === 'month' ? 12 : 6));
-  list = list.slice(-maxBars);
-  if (!list.length) {
-    // هنوز داده‌ای نیست — ساختار آماده است و میله‌های صفر نمایش داده می‌شود
-    const n = _dashRange === 'year' ? 4 : 8;
-    for (let i = 0; i < n; i++) list.push({ label: '—', val: 0 });
+const _dashDayKey = (y, m, d) => y * 10000 + m * 100 + d;
+// n روز اخیر شمسی — با همان تقویم fa-IR که persianDate() برای ثبت استفاده می‌کند
+function _dashLastDays(n) {
+  const out = [];
+  for (let k = n - 1; k >= 0; k--) {
+    out.push(_dashParseDate(toEnDigits(new Date(Date.now() - k * 864e5).toLocaleDateString('fa-IR'))));
   }
-  const maxV = Math.max(1, ...list.map(g => Math.abs(g.val)));
-  wrap.innerHTML = list.map((g, i) => {
-    const h = Math.round(Math.abs(g.val) / maxV * 100);
-    return `<div class="db-col"><div class="db-barwrap"><div class="db-bar ${i % 2 ? 'alt' : ''}" data-h="${h}"><span class="db-tip">${n2fa(Math.round(g.val))} افغانی</span></div></div><span class="db-lbl">${g.label}</span></div>`;
-  }).join('');
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    wrap.querySelectorAll('.db-bar').forEach(b => { b.style.height = Math.max(3, parseInt(b.getAttribute('data-h'), 10) || 0) + '%'; });
-  }));
+  return out;
 }
-// دایرهٔ درصد تغییر: مثبت=سبز، منفی=سرخ، صفر/بدون داده=خاکستری — رنگ‌ها از Theme
-function _dashSetProgress(el, pct) {
+const _dashZ = () => ({ a: 0, l: 0, p: 0, c: 0 });   // مبلغ، لیتر، مفاد، تعداد ثبت
+function _dashShell(label, full) { return { label, full, petrol: _dashZ(), diesel: _dashZ(), exp: 0, sin: 0, sout: 0 }; }
+// سطل‌های بازهٔ انتخابی. اندیس ۰ = بازهٔ قبل از پنجره (فقط برای رشدِ ستون اول)
+// روز = ۷ ستون روزهای اخیر · هفته = ۷ ستون هفتگی · ماه = ۱۲ ماهِ سال جاری
+// (ماه‌های نیامده صفر) · سال = ۶ ستون سال
+function _dashMakeBuckets() {
+  const today = _dashParseDate(persianDate());
+  const buckets = []; let assign;
+  if (_dashRange === 'day') {
+    const days = _dashLastDays(8), idx = {};
+    days.forEach((p, i) => {
+      idx[_dashDayKey(p.y, p.m, p.d)] = i;
+      const lbl = i === days.length - 1 ? 'امروز' : (i === days.length - 2 ? 'دیروز' : n2fa(p.m) + '/' + n2fa(p.d));
+      buckets.push(_dashShell(lbl, p.y + '/' + p.m + '/' + p.d));
+    });
+    assign = p => { const i = idx[_dashDayKey(p.y, p.m, p.d)]; return i == null ? -1 : i; };
+  } else if (_dashRange === 'week') {
+    const days = _dashLastDays(56), idx = {};   // ۸ پنجرهٔ ۷روزه — اولی فقط برای رشد
+    for (let w = 0; w < 8; w++) {
+      const ch = days.slice(w * 7, w * 7 + 7);
+      ch.forEach(p => idx[_dashDayKey(p.y, p.m, p.d)] = w);
+      const lbl = w === 7 ? 'این هفته' : (w === 6 ? 'هفته قبل' : n2fa(7 - w) + ' هفته قبل');
+      buckets.push(_dashShell(lbl, n2fa(ch[0].m) + '/' + n2fa(ch[0].d) + ' تا ' + n2fa(ch[6].m) + '/' + n2fa(ch[6].d)));
+    }
+    assign = p => { const i = idx[_dashDayKey(p.y, p.m, p.d)]; return i == null ? -1 : i; };
+  } else if (_dashRange === 'month') {
+    buckets.push(_dashShell(SHAMSI_MONTHS[11], SHAMSI_MONTHS[11] + ' ' + n2fa(today.y - 1)));
+    for (let m = 1; m <= 12; m++) buckets.push(_dashShell(SHAMSI_MONTHS[m - 1], SHAMSI_MONTHS[m - 1] + ' ' + n2fa(today.y)));
+    assign = p => (p.y === today.y ? p.m : (p.y === today.y - 1 && p.m === 12 ? 0 : -1));
+  } else {
+    for (let k = 6; k >= 0; k--) buckets.push(_dashShell(n2fa(today.y - k), 'سال ' + n2fa(today.y - k)));
+    assign = p => { const i = 6 - (today.y - p.y); return (i >= 0 && i <= 6) ? i : -1; };
+  }
+  return { buckets, assign, today };
+}
+// یک منبع دادهٔ مشترک برای همهٔ نمودارها و کارت‌ها — فقط خواندن از DB
+function _dashSeries() {
+  const mk = _dashMakeBuckets();
+  const { buckets, assign } = mk;
+  (DB.reports || []).forEach(r => {
+    if (!r || r.fuel !== 'petrol' || !r.date) return;
+    const i = assign(_dashParseDate(r.date)); if (i < 0) return;
+    [r.day, r.night].forEach(sh => {
+      if (!sh) return;
+      const t = buckets[i].petrol; t.a += sh.money || 0; t.l += sh.sale || 0; t.p += sh.profit || 0; t.c++;
+    });
+  });
+  (DB.shifts || []).forEach(s => {
+    if (!s || s.fuel !== 'diesel' || !s.date) return;
+    const i = assign(_dashParseDate(s.date)); if (i < 0) return;
+    const t = buckets[i].diesel; t.a += s.money || 0; t.l += s.sale || 0; t.p += s.profit || 0; t.c++;
+  });
+  (DB.expenses || []).forEach(e => {
+    if (!e || !e.date) return;
+    const i = assign(_dashParseDate(e.date)); if (i < 0) return;
+    buckets[i].exp += e.amount || 0;
+  });
+  (DB.safeEntries || []).forEach(e => {
+    if (!e || !e.date || e.currency === 'usd') return;   // جریان افغانی؛ دالر فقط در موجودی کل
+    const i = assign(_dashParseDate(e.date)); if (i < 0) return;
+    if (e.type === 'bardagi') buckets[i].sin += e.amount || 0; else buckets[i].sout += e.amount || 0;
+  });
+  return mk;
+}
+// اعمال فیلتر سوخت (همه/پطرول/دیزل) روی یک سطل
+function _dashPick(b) {
+  if (_dashFuel === 'petrol') return { a: b.petrol.a, l: b.petrol.l, p: b.petrol.p, c: b.petrol.c };
+  if (_dashFuel === 'diesel') return { a: b.diesel.a, l: b.diesel.l, p: b.diesel.p, c: b.diesel.c };
+  return { a: b.petrol.a + b.diesel.a, l: b.petrol.l + b.diesel.l, p: b.petrol.p + b.diesel.p, c: b.petrol.c + b.diesel.c };
+}
+// رشد = (فعلی − قبلی) ÷ قبلی × ۱۰۰ — قبلی صفر و فعلی ناصفر → null یعنی «داده کافی نیست»
+function _dashGrowth(cur, prev) {
+  if (!prev) return cur ? null : 0;
+  return Math.round((cur - prev) / prev * 100);
+}
+// دایرهٔ درصد: مثبت=سبز، منفی=سرخ، صفر=خاکستری، null=«—» (داده کافی نیست)
+function _dashSetProgress(el, pct, tip) {
+  if (!el) return;
   const bar = el.querySelector('.bar'), txt = el.querySelector('b');
-  const C = 97.4; // محیط دایره r=15.5
-  const v = Math.max(-100, Math.min(100, Math.round(pct || 0)));
+  const C = 97.4;   // محیط دایره r=15.5
+  if (tip != null) el.title = tip + (pct == null ? ' — داده کافی نیست' : '');
+  if (pct == null) {
+    if (bar) { bar.style.strokeDasharray = C; bar.style.strokeDashoffset = C; }
+    if (txt) { txt.textContent = '—'; txt.style.color = 'var(--muted)'; }
+    return;
+  }
+  const v = Math.max(-999, Math.min(999, Math.round(pct)));
   const col = v > 0 ? 'var(--green)' : (v < 0 ? 'var(--red)' : 'var(--muted)');
-  if (bar) { bar.style.strokeDasharray = C; bar.style.strokeDashoffset = C - (Math.abs(v) / 100) * C; bar.style.stroke = col; }
+  if (bar) { bar.style.strokeDasharray = C; bar.style.strokeDashoffset = C - (Math.min(100, Math.abs(v)) / 100) * C; bar.style.stroke = col; }
   if (txt) { txt.textContent = (v > 0 ? '+' : '') + n2fa(v) + '٪'; txt.style.color = col; }
 }
-function renderDashboard() {
+const _dashFuelWord = () => _dashFuel === 'petrol' ? '⛽ پطرول' : (_dashFuel === 'diesel' ? '🟤 دیزل' : '⛽🟤 هر دو سوخت');
+// جمع الباقی و شمارش‌های قرض‌داران — همان منبع سرصفحه (r.albaqi ردیف‌ها)
+function _dashDebtInfo() {
+  let total = 0;
+  (DB.debtPersons || []).forEach(p => {
+    const t = _splitTotals(_allRows(p));
+    total += _dashFuel === 'petrol' ? t.petrol.albaqi : (_dashFuel === 'diesel' ? t.diesel.albaqi : t.all.albaqi);
+  });
+  let comps = 0;
+  (DB.tilCompanies || []).forEach(c => {
+    try {
+      const rows = [...(c.rows || []), ...(c.dieselRows || [])];
+      const su = rows.reduce((b, r) => b + cmpTotalUsd(r), 0);
+      let cr = (parseFloat(c.usdRate) || 0) || (su > 0 ? rows.reduce((b, r) => b + cmpAfnTotal(r), 0) / su : 0);
+      if (!cr) { for (const r of rows) { const rr = (parseFloat(r.payRate) || 0) || (parseFloat(r.rate) || 0); if (rr) { cr = rr; break; } } }
+      if (rows.reduce((b, r) => b + cmpAlbaqi(r, cr), 0) > 0) comps++;
+    } catch (e) {}
+  });
+  return { total, persons: (DB.debtPersons || []).length, invoices: (DB.invoices || []).length, comps };
+}
+// موجودی کل گاوصندوق (بردگی − ماندگی) به تفکیک ارز — همان جهتِ «موجودی خالص» بخش گاوصندوق
+function _dashSafeBalance() {
+  const t = { afn: 0, usd: 0 };
+  (DB.safeEntries || []).forEach(e => {
+    if (!e) return;
+    t[e.currency === 'usd' ? 'usd' : 'afn'] += (e.type === 'bardagi' ? 1 : -1) * (e.amount || 0);
+  });
+  return t;
+}
+// مجموع مصارف امروز / ۷ روز اخیر / ماه جاری / سال جاری
+function _dashExpQuick() {
+  const today = _dashParseDate(persianDate());
+  const week = {}; _dashLastDays(7).forEach(p => week[_dashDayKey(p.y, p.m, p.d)] = 1);
+  const tKey = _dashDayKey(today.y, today.m, today.d);
+  const q = { day: 0, week: 0, month: 0, year: 0 };
+  (DB.expenses || []).forEach(e => {
+    if (!e || !e.date) return;
+    const p = _dashParseDate(e.date), k = _dashDayKey(p.y, p.m, p.d);
+    const amt = e.amount || 0;
+    if (p.y === today.y) { q.year += amt; if (p.m === today.m) q.month += amt; }
+    if (week[k]) q.week += amt;
+    if (k === tKey) q.day += amt;
+  });
+  return q;
+}
+function _renderDashTank() {
+  const host = document.getElementById('dash-tank'); if (!host) return;
+  if (typeof __renderTanksInto !== 'function') { host.innerHTML = ''; return; }
+  __renderTanksInto(host, _dashFuel === 'all' ? ['petrol', 'diesel'] : [_dashFuel]);
+}
+function _renderDashChart(disp, sel, skipAnim) {
+  const wrap = document.getElementById('dash-bars'); if (!wrap) return;
+  const vals = disp.map(_dashPick);
+  const maxA = Math.max(1, ...vals.map(v => v.a));
+  const maxL = Math.max(1, ...vals.map(v => v.l));
+  wrap.innerHTML = disp.map((b, i) => {
+    const v = vals[i];
+    const ha = Math.round(v.a / maxA * 100), hl = Math.round(v.l / maxL * 100);
+    const tip = `📅 ${b.full} — 💰 ${n2fa(Math.round(v.a))} افغانی · 🛢️ ${n2fa(Math.round(v.l))} ل · 🧾 ${n2fa(v.c)} ثبت`;
+    return `<div class="db-col ${i === sel ? 'sel' : ''}" onclick="dashSelectBar(${i})">
+      <div class="db-barwrap"><span class="db-tip">${tip}</span><div class="db-bar amt" data-h="${ha}"></div><div class="db-bar lit" data-h="${hl}"></div></div>
+      <span class="db-lbl">${b.label}</span></div>`;
+  }).join('');
+  const setH = () => wrap.querySelectorAll('.db-bar').forEach(bar => { bar.style.height = Math.max(2, parseInt(bar.getAttribute('data-h'), 10) || 0) + '%'; });
+  if (skipAnim) setH();
+  else requestAnimationFrame(() => requestAnimationFrame(setH));
+}
+function renderDashboard(skipAnim) {
+  if (!document.getElementById('sec-dashboard')) return;
+  const setT = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
   const g = document.getElementById('dash-greet');
   if (g) { const h = new Date().getHours(); g.textContent = h < 12 ? 'صبح بخیر 👋' : (h < 17 ? 'چاشت بخیر 👋' : 'شب بخیر 👋'); }
-  const d = document.getElementById('dash-date');
-  if (d) { try { const a = allDates(); d.textContent = '📅 امروز: ' + a.sh + ' — ' + a.shName; } catch (e) { d.textContent = '📅 ' + persianDate(); } }
-  // فعلاً داده‌ای برای مقایسه با دورهٔ قبل نیست → ۰٪ خاکستری
-  document.querySelectorAll('#sec-dashboard .dc-prog').forEach(p => _dashSetProgress(p, 0));
-  _renderDashChart();
+  try { const a = allDates(); setT('dash-date', '📅 امروز: ' + a.sh + ' — ' + a.shName); } catch (e) { setT('dash-date', '📅 ' + persianDate()); }
+
+  const { buckets } = _dashSeries();
+  const disp = buckets.slice(1);
+  const sel = _dashSelIdx == null ? disp.length - 1 : Math.max(0, Math.min(_dashSelIdx, disp.length - 1));
+  const selB = disp[sel], prevB = sel === 0 ? buckets[0] : disp[sel - 1];
+  const cur = _dashPick(selB), prev = _dashPick(prevB);
+  const isLast = sel === disp.length - 1;
+  const rangeWord = { day: 'امروز', week: 'این هفته', month: 'این ماه', year: 'امسال' }[_dashRange];
+  const perWord = { day: 'روز قبل', week: 'هفته قبل', month: 'ماه قبل', year: 'سال قبل' }[_dashRange];
+  const bucketWord = isLast ? rangeWord : selB.label;
+  const prog = (id, pct, tip) => _dashSetProgress(document.getElementById(id), pct, tip);
+
+  // ۱) فروش — مبلغ + تفکیک پطرول/دیزل + لیتر
+  setT('dct-sales', 'فروش ' + bucketWord);
+  setT('dcv-sales', n2fa(Math.round(cur.a)) + ' افغانی');
+  setT('dcs-sales', '⛽ ' + n2fa(Math.round(selB.petrol.a)) + ' · 🟤 ' + n2fa(Math.round(selB.diesel.a)) + ' · 🛢️ ' + n2fa(Math.round(cur.l)) + ' لیتر');
+  prog('dcp-sales', _dashGrowth(cur.a, prev.a), 'نسبت به ' + perWord);
+
+  // ۲) مفاد — از همان profit ثبت‌شدهٔ پارچه‌ها
+  setT('dct-profit', 'مفاد ' + bucketWord);
+  setT('dcv-profit', n2fa(Math.round(cur.p)) + ' افغانی');
+  setT('dcs-profit', '⛽ ' + n2fa(Math.round(selB.petrol.p)) + ' · 🟤 ' + n2fa(Math.round(selB.diesel.p)));
+  prog('dcp-profit', _dashGrowth(cur.p, prev.p), 'نسبت به ' + perWord);
+
+  // ۳) قرض‌داران — جمع الباقی + شمارش‌ها
+  const dbt = _dashDebtInfo();
+  setT('dcv-debt', n2fa(Math.round(dbt.total)) + ' افغانی');
+  setT('dcs-debt', '👥 ' + n2fa(dbt.persons) + ' قرض‌دار · 🧾 ' + n2fa(dbt.invoices) + ' فاکتور قرضی · 🏢 ' + n2fa(dbt.comps) + ' شرکت بدهکار');
+  prog('dcp-debt', null, 'مقایسهٔ دوره‌ای برای الباقی تعریف نشده');
+
+  // ۴) مصارف — بازهٔ انتخابی + خلاصهٔ روز/هفته/ماه/سال
+  const q = _dashExpQuick();
+  setT('dct-exp', 'مصارف ' + bucketWord);
+  setT('dcv-exp', n2fa(Math.round(selB.exp)) + ' افغانی');
+  setT('dcs-exp', 'امروز ' + n2fa(Math.round(q.day)) + ' · هفته ' + n2fa(Math.round(q.week)) + ' · ماه ' + n2fa(Math.round(q.month)) + ' · سال ' + n2fa(Math.round(q.year)));
+  prog('dcp-exp', _dashGrowth(selB.exp, prevB.exp), 'نسبت به ' + perWord);
+
+  // ۵) گاوصندوق — موجودی کل + ورود/خروج بازهٔ انتخابی
+  const sb = _dashSafeBalance();
+  setT('dcv-safe', n2fa(Math.round(sb.afn)) + ' افغانی' + (sb.usd ? ' · $' + n2fa(Math.round(sb.usd)) : ''));
+  setT('dcs-safe', 'ورود ' + bucketWord + ': ' + n2fa(Math.round(selB.sin)) + ' · خروج: ' + n2fa(Math.round(selB.sout)));
+  prog('dcp-safe', _dashGrowth(selB.sin - selB.sout, prevB.sin - prevB.sout), 'تغییرات نسبت به ' + perWord);
+
+  // ۶) مخزن — همان کارت واقعی بخش مخزن
+  _renderDashTank();
+
+  // نمودار + جزئیات ستون انتخاب‌شده + کارت بزرگ
+  _renderDashChart(disp, sel, skipAnim);
+  const gPct = _dashGrowth(cur.a, prev.a);
+  const dEl = document.getElementById('dash-detail');
+  if (dEl) {
+    const gTxt = gPct == null ? 'داده کافی نیست' : ((gPct > 0 ? '+' : '') + n2fa(gPct) + '٪');
+    const gCol = (gPct == null || gPct === 0) ? 'var(--muted)' : (gPct > 0 ? 'var(--green)' : 'var(--red)');
+    dEl.innerHTML = `<b>📅 ${selB.full}</b>` +
+      `<span>💰 فروش: <b>${n2fa(Math.round(cur.a))} افغانی</b></span>` +
+      `<span>🛢️ لیتر: <b>${n2fa(Math.round(cur.l))} ل</b> (⛽ ${n2fa(Math.round(selB.petrol.l))} · 🟤 ${n2fa(Math.round(selB.diesel.l))})</span>` +
+      `<span>🧾 تعداد ثبت: <b>${n2fa(cur.c)}</b></span>` +
+      `<span>سوخت: <b>${_dashFuelWord()}</b></span>` +
+      `<span>📈 رشد نسبت به ${perWord}: <b style="color:${gCol}">${gTxt}</b></span>`;
+  }
+  setT('dcc-sub', _dashFuelWord() + ' — روی هر ستون کلیک کنید تا جزئیات و رشد همان بازه بیاید');
+  const arc = document.getElementById('dash-hero-arc');
+  if (arc) arc.style.strokeDashoffset = 151 - (Math.min(100, Math.abs(gPct || 0)) / 100) * 151;
+  setT('dash-hero-pct', gPct == null ? '—' : (gPct > 0 ? '+' : '') + n2fa(gPct) + '٪');
+  setT('dash-hero-label', 'فروش ' + bucketWord + ' — ' + _dashFuelWord());
+  setT('dash-hero-value', n2fa(Math.round(cur.a)) + ' افغانی');
+  setT('dash-hero-sub', '🛢️ ' + n2fa(Math.round(cur.l)) + ' لیتر · 🧾 ' + n2fa(cur.c) + ' ثبت · رشد نسبت به ' + perWord + ': ' + (gPct == null ? 'داده کافی نیست' : (gPct > 0 ? '+' : '') + n2fa(gPct) + '٪'));
 }
+// بروزرسانی زنده: هر تغییری در سیستم از save() می‌گذرد؛ اگر داشبورد باز باشد،
+// نمایش خودکار تازه می‌شود (فقط نمایش — هیچ منطقی عوض نشده)
+let _dashRefreshT = null;
+function _dashQueueRefresh(now) {
+  const sec = document.getElementById('sec-dashboard');
+  if (!sec || !sec.classList.contains('visible')) return;
+  clearTimeout(_dashRefreshT);
+  if (now) { try { renderDashboard(true); } catch (e) {} return; }
+  _dashRefreshT = setTimeout(() => { try { renderDashboard(true); } catch (e) {} }, 500);
+}
+(function () {
+  const _origSave = save;
+  save = function () {
+    const r = _origSave.apply(this, arguments);
+    try { _dashQueueRefresh(); } catch (e) {}
+    return r;
+  };
+})();
 
 // ========== THEME ==========
 function toggleTheme() {
@@ -16348,7 +16577,7 @@ function showAccountNotFound() {
   showTopToast('حساب شرکت یا تیلی با این نام پیدا نشد', '#e53e3e', 4000);
 }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function updateAll() { initDate(); updateBanner(); updateReportLabel('petrol'); renderLog(); try { _staffRefresh(); } catch(e) {} }
+function updateAll() { initDate(); updateBanner(); updateReportLabel('petrol'); renderLog(); try { _staffRefresh(); } catch(e) {} try { _dashQueueRefresh(true); } catch(e) {} }
 function initAutoProfit() {
   // وقتی صفحه باز می‌شه، فی خرید ذخیره‌شده رو در label نشون بده
   ['petrol','diesel'].forEach(ft => {
@@ -18229,7 +18458,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.17';
+const APP_VERSION = '2.9.18';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -19828,6 +20057,24 @@ document.addEventListener('click', function(e) {
     });
   }
   window.renderFuelTanks = renderFuelTanks;
+
+  // برای داشبورد: همان کارت مخزن (همان طراحی/انیمیشن/داده) در هر ظرف دیگر —
+  // فقط یک خروجی اضافه؛ هیچ چیزی در بخش مخزن تغییر نکرده است
+  window.__renderTanksInto = function (host, fuels) {
+    if (!host) return;
+    var list = fuels || ['petrol'];
+    host.innerHTML = list.map(buildTank).join('');
+    requestAnimationFrame(function () {
+      list.forEach(function (f, i) {
+        var liq = host.querySelectorAll('.tank-liquid')[i]; if (!liq) return;
+        var current = 0; try { current = _fuelStock(f); } catch (e) {}
+        var th = (typeof lsThreshold === 'function') ? lsThreshold() : 500;
+        var cap = parseFloat(DB['tankCapacity_' + f]) || defaultCapacity(current, th);
+        liq.style.height = (cap > 0 ? clamp(current / cap * 100, 0, 100) : 0) + '%';
+      });
+      paintWaves();
+    });
+  };
 
   // live-update one tank's fill WITHOUT rebuilding its DOM (keeps keyboard/focus)
   function updateTankFill(fuelType){
