@@ -11204,14 +11204,29 @@ function _updatePersonTotals(person) {
     cell.style.display = '';
     if (cell.parentElement) cell.parentElement.classList.add('has-remmoney');
     const lbl = cell.querySelector('.l'); if (lbl) lbl.textContent = label;
-    const val = Math.round(v) || 0; el.textContent = n2fa(val); el.style.color = val < 0 ? 'var(--red)' : 'var(--green)';
+    const val = rnd(v) || 0; el.textContent = n2fa(val); el.style.color = val < 0 ? 'var(--red)' : 'var(--green)';
   };
+  // نرخ اتحادیهٔ روز (پطرول/دیزل) — پلِ تبدیل پول↔تیل. اگر ثبت نشده باشد، نرخِ
+  // مؤثر از خودِ ردیف‌ها (بردگیِ پولی ÷ لیتر) گرفته می‌شود تا محاسبه خراب نشود.
+  const _uRateP = parseFloat(DB.unionRatePetrol) || 0;
+  const _uRateD = parseFloat(DB.unionRateDiesel) || 0;
+  const rateP = _uRateP > 0 ? _uRateP : (t.petrol.fuel > 0 ? t.petrol.bardagi / t.petrol.fuel : 0);
+  const rateD = _uRateD > 0 ? _uRateD : (t.diesel.fuel > 0 ? t.diesel.bardagi / t.diesel.fuel : 0);
   if (money) {
-    setRemExtra('p', t.petrol.rasidFuel - t.petrol.fuel, 'الباقی تیل');
-    setRemExtra('d', t.diesel.rasidFuel - t.diesel.fuel, 'الباقی تیل');
+    // واحد پول: موجودی اصلی به افغانی است. موجودی تیل داینامیک از موجودی پول ÷ نرخ
+    // اتحادیه به دست می‌آید، سپس مقدار تیلِ تحویلیِ جدول از آن کم می‌شود — نه از صفر.
+    // (باگِ قبلی: rasidFuel(=۰) − fuel → الباقیِ منفی مثل ۱۰۰-)
+    const moneyBalP = rasidP + t.petrol.rasid;   // موجودی پول = رسید پول + رسیدهای داخل جدول
+    const moneyBalD = rasidD + t.diesel.rasid;
+    const fuelBalP = rateP > 0 ? moneyBalP / rateP : 0;   // موجودی تیل معادل
+    const fuelBalD = rateD > 0 ? moneyBalD / rateD : 0;
+    setRemExtra('p', fuelBalP - t.petrol.fuel, 'الباقی تیل');
+    setRemExtra('d', fuelBalD - t.diesel.fuel, 'الباقی تیل');
   } else {
-    setRemExtra('p', t.petrol.rasid - t.petrol.bardagi, 'الباقی پول');
-    setRemExtra('d', t.diesel.rasid - t.diesel.bardagi, 'الباقی پول');
+    // واحد تیل: موجودی اصلی به لیتر است. معادلِ پول داینامیک = الباقیِ تیل × نرخ اتحادیه
+    // (الباقیِ تیلِ همین حساب = رنگِ منفیِ remP؛ رسید تیل − برد تیل − فیصدی)
+    setRemExtra('p', (-remP) * rateP, 'الباقی پول');
+    setRemExtra('d', (-remD) * rateD, 'الباقی پول');
   }
   setV('pm-bord-sum', n2fa(rnd(bordP+bordD)) + unit);
   // footer جدول: جمعِ هر ستون در جمعِ خودِ همان ستون — مقدار تیل، مقدار بردگی و
@@ -18578,7 +18593,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.21';
+const APP_VERSION = '2.9.22';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
