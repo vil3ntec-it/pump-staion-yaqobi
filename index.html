@@ -797,6 +797,11 @@ body.viewer-mode .att-admin{display:none !important}
 
 .toast{position:fixed;bottom:calc(20px + var(--kb-offset,0px));left:50%;transform:translateX(-50%) translateY(80px);padding:10px 22px;border-radius:9px;font-weight:600;font-size:0.88rem;z-index:9999;transition:transform .3s,bottom .18s ease;pointer-events:none;color:#fff}
 .toast.show{transform:translateX(-50%) translateY(0)}
+/* توست‌های کوچکِ هماهنگیِ سرور — گوشهٔ پایین راست، روی هم جمع می‌شوند و خودکار محو می‌شوند */
+.sync-toast-stack{position:fixed;bottom:calc(14px + var(--kb-offset,0px));right:14px;z-index:9998;display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:none;max-width:min(78vw,300px)}
+.sync-toast{padding:7px 13px;border-radius:9px;font-weight:600;font-size:0.76rem;color:#fff;background:#38a169;box-shadow:0 4px 14px rgba(0,0,0,.22);opacity:0;transform:translateY(12px);transition:opacity .25s ease,transform .25s ease;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:flex;align-items:center;gap:6px}
+.sync-toast.show{opacity:.94;transform:translateY(0)}
+.sync-toast .sc-badge{background:rgba(255,255,255,.28);border-radius:20px;min-width:16px;height:16px;padding:0 4px;font-size:0.66rem;display:inline-flex;align-items:center;justify-content:center;font-weight:800}
 /* پیام بالای صفحه (مثلاً: حساب شرکت یا تیلی با این نام پیدا نشد) */
 .top-toast{position:fixed;top:-80px;left:50%;transform:translateX(-50%);padding:12px 26px;border-radius:12px;font-weight:800;font-size:0.92rem;z-index:100000;transition:top .35s cubic-bezier(.2,.9,.3,1.3);pointer-events:none;color:#fff;box-shadow:0 8px 30px rgba(0,0,0,.35);max-width:92vw;text-align:center;white-space:normal;line-height:1.5}
 /* روی top:18px قدیمی، این پیام (مثلاً «نسخهٔ تازه آمد») درست روی تاریخ/نسخهٔ
@@ -4574,8 +4579,10 @@ table thead th{ position:relative; }
 .dash-iconbtn svg{width:19px;height:19px;stroke:var(--txt);fill:none;stroke-width:1.7}
 .dash-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--purple));display:inline-flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.14)}
 .dash-avatar svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:1.8}
-.dash-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px}
-.dash-card{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--border);border-radius:22px;padding:20px 22px;box-shadow:0 10px 30px rgba(0,0,0,.10);transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease}
+/* ۵ کارت آماری هم‌اندازه و هم‌تراز در یک ردیف (repeat(5) به‌جای repeat(3) که ردیفِ
+   دوم را ناهم‌تراز می‌کرد). align-items:stretch تا ارتفاع همه یکی شود. */
+.dash-cards{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:18px;align-items:stretch}
+.dash-card{position:relative;overflow:hidden;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--border);border-radius:22px;padding:20px 22px;box-shadow:0 10px 30px rgba(0,0,0,.10);transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease}
 .dash-card:hover{transform:translateY(-4px);box-shadow:0 16px 38px rgba(0,0,0,.16);border-color:var(--accent)}
 .dash-card::before{content:'';position:absolute;inset-inline-end:0;top:18%;bottom:18%;width:5px;border-radius:99px 0 0 99px;background:linear-gradient(180deg,var(--accent),var(--purple))}
 .dc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
@@ -4641,7 +4648,10 @@ table thead th{ position:relative; }
 .dhero-label{color:rgba(255,255,255,.9);font-weight:800;font-size:1rem}
 .dhero-value{color:#fff;font-weight:900;font-size:1.5rem}
 .dhero-sub{color:rgba(255,255,255,.78);font-size:.72rem;max-width:230px;line-height:1.8}
-@media (max-width:1100px){ .dash-cards{grid-template-columns:repeat(2,1fr)} .dash-mid{grid-template-columns:1fr} .dash-hero{min-height:260px} }
+/* نردبانِ ریسپانسیوِ ۵ کارت: یک ردیفِ ۵‌تاییِ هم‌اندازه در صفحهٔ عریض؛ در صفحهٔ باریک‌تر
+   ۲ ستون و کارتِ پنجم تمام‌عرض تا هیچ‌وقت ردیفِ ناهم‌ترازِ ۳+۲ ساخته نشود. */
+@media (max-width:1150px){ .dash-cards{grid-template-columns:repeat(2,1fr)} .dash-cards .dash-card:last-child{grid-column:1 / -1} }
+@media (max-width:1100px){ .dash-mid{grid-template-columns:1fr} .dash-hero{min-height:260px} }
 @media (min-width:1101px) and (max-width:1500px){ .dash-mid{grid-template-columns:1fr 300px} .dash-mid .dash-hero{grid-column:1 / -1;min-height:auto} }
 /* موبایل: همه‌چیز فشرده تا بدون زوم و اسکرول افقی، چند کارت هم‌زمان دیده شود.
    کارت‌های آماری دو‌ستونه می‌مانند (مثل داشبوردهای واقعی) و کارت مخزن تمام‌عرض */
@@ -5530,6 +5540,9 @@ table thead th{ position:relative; }
       <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('waraq',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('waraq',0.08)">A+</button></span>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select id="wq-month-filter" onchange="setWaraqMonthFilter(this.value)" title="فیلتر بر اساس ماه" style="padding:8px 10px;border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.85rem;cursor:pointer">
+        <option value="">همهٔ ماه‌ها</option>
+      </select>
       <button class="add-btn" onclick="openNewWaraq()">➕ اضافه کردن</button>
     </div>
   </div>
@@ -6781,6 +6794,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 <div class="top-toast" id="topToast"></div>
+<div class="sync-toast-stack" id="syncToastStack"></div>
 
 <!-- QR CODE MODAL -->
 <div class="qr-overlay" id="qrModal">
@@ -7353,7 +7367,7 @@ function _runAutoSync() {
       _setSyncMsg('✅ اطلاعات با سرور هم‌زمان شد.', '#38a169');
       _updateSyncLastTime();
       _updateAutoSyncBadge();
-      showTopToast && showTopToast('☁️ اطلاعات با سرور هم‌زمان شد', '#38a169', 3000);
+      showSyncToast('☁️ با سرور هم‌زمان شد', '#38a169', 3000);
     })
     .catch(err => {
       _autoSyncInFlight = false;
@@ -7480,7 +7494,7 @@ function _fbPullLatestOnce() {
     const localEmptyServerHasData = !DB.wipedAt && _dbRecordCount(DB) === 0 && _dbRecordCount(sd) > 0;
     if (st > lt || localEmptyServerHasData) {
       _applyServerData(sd);
-      try { showTopToast('☁️ تغییرات جدید از سرور دریافت شد', '#38a169', 2500); } catch(e) {}
+      try { showSyncToast('☁️ تغییرات جدید دریافت شد', '#38a169', 2500); } catch(e) {}
     }
   }).catch(function(){});
 }
@@ -7510,7 +7524,7 @@ function _startFirebaseRealtimeListener() {
       const lt = new Date(DB.lastSyncUpload  || 0).getTime();
       if (st > lt) {
         _applyServerData(sd);
-        try { showTopToast('☁️ تغییرات جدید از سرور دریافت شد', '#38a169', 2500); } catch(e) {}
+        try { showSyncToast('☁️ تغییرات جدید دریافت شد', '#38a169', 2500); } catch(e) {}
       }
     });
   } catch(e) {}
@@ -9655,24 +9669,30 @@ function _playTone(freqs, dur, vol) {
   try {
     if (ctx.state === 'suspended') ctx.resume().catch(() => {});
     let t = ctx.currentTime;
+    // موجِ نرم‌تر (مثلثی به‌جای سینوسیِ تیز) + فیلترِ پایین‌گذر تا صدا نرم و بدون تیزیِ
+    // آزاردهنده باشد. حجم پیش‌فرض کم است و رمپِ ورود/خروجِ ملایم دارد.
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 2000;
+    lp.connect(ctx.destination);
     freqs.forEach(f => {
       const osc = ctx.createOscillator(), gain = ctx.createGain();
-      osc.type = 'sine'; osc.frequency.value = f;
+      osc.type = 'triangle'; osc.frequency.value = f;
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(vol || 0.25, t + 0.02);
+      gain.gain.linearRampToValueAtTime(vol || 0.12, t + 0.03);
       gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      osc.connect(gain); gain.connect(ctx.destination);
+      osc.connect(gain); gain.connect(lp);
       osc.start(t); osc.stop(t + dur + 0.05);
-      t += dur * 0.55;
+      t += dur * 0.6;
     });
   } catch (e) {}
 }
-// چت تک‌نفره: دو نتِ رو به بالا (زنگ ساده) — چت گروهی: سه نتِ کوتاه‌تر تا صدایش با تک‌نفره اشتباه نشود
+// صداها نرم، کوتاه و کم‌حجم — بدون تکرارِ آزاردهنده. چت تک‌نفره: دو نتِ ملایمِ رو به بالا؛
+// چت گروهی: دو نتِ کوتاهِ کمی متفاوت تا از تک‌نفره تشخیص داده شود.
 function _playChatSound(isGroup) {
-  if (isGroup) _playTone([660, 660, 990], 0.1, 0.2);
-  else _playTone([880, 1320], 0.13, 0.22);
+  if (isGroup) _playTone([587, 784], 0.09, 0.09);
+  else _playTone([659, 880], 0.1, 0.1);
 }
-function _playAlertSound() { _playTone([523, 392, 523, 659], 0.22, 0.32); }
+function _playAlertSound() { _playTone([523, 659, 784], 0.16, 0.16); }
 // اجازهٔ اعلان — یک‌بار بعد از ورود/باز شدن صفحهٔ کارمند پرسیده می‌شود
 function _requestNotifyPermission() {
   try {
@@ -10799,7 +10819,7 @@ function calcStackedRow(pid, acctId, idx, field, value) {
   const r = rowsArr[idx];
   r[field] = parseFloat(value)||0;
   if (field==='bardagi') r.byMoney=true;
-  else if (field==='fuel'||field==='priceper') { if ((r.fuel||0)>0||(r.priceper||0)>0) r.byMoney=false; }
+  else if (field==='fuel'||field==='priceper') { if ((parseFloat(r.fuel)||0)>0 && (parseFloat(r.priceper)||0)>0) r.byMoney=false; }
   if (!r.byMoney) r.bardagi=_fuelBardagi(r);
   r.albaqi=(parseFloat(r.bardagi)||0)-(r.rasid||0);
   save(); _updatePersonTotals(person); _renderStackedAccounts(person); renderPersons(currentPersonType); updateBanner();
@@ -11092,9 +11112,14 @@ function calcPersonRow(pid, idx, field, value) {
       else acct.rasidFuelP = (parseFloat(acct.rasidFuelP)||0) + delta;
     }
   }
-  // نوشتن مستقیم در «بردگی» = حالت پولی؛ نوشتن لیتر یا فی = حالت تیل (بردگی = لیتر×فی)
+  // نوشتن مستقیم در «بردگی» = حالت پولی؛ نوشتن لیتر + فی = حالت تیل (بردگی = لیتر×فی).
+  // باگ ۴: نوشتنِ تنها «مقدار تیل» (بدون فی) نباید حالتِ ردیف را پولی←تیل کند و
+  // بردگیِ دستیِ کاربر («برد») را صفر کند. ردیف فقط وقتی til-mode می‌شود که هم مقدار
+  // تیل و هم فی وارد شده باشد؛ در غیر این صورت «برد» فقط با تایپِ خودِ کاربر عوض می‌شود.
   if (field === 'bardagi') r.byMoney = true;
-  else if (field === 'fuel' || field === 'priceper') { if ((r.fuel||0) > 0 || (r.priceper||0) > 0) r.byMoney = false; }
+  else if (field === 'fuel' || field === 'priceper') {
+    if ((parseFloat(r.fuel)||0) > 0 && (parseFloat(r.priceper)||0) > 0) r.byMoney = false;
+  }
   if (!r.byMoney) r.bardagi = _fuelBardagi(r);
   // الباقی پولی هر ردیف = بردگی − رسید پول (رسید تیل دفترِ لیتر است و جدا جمع می‌شود)
   r.albaqi = (parseFloat(r.bardagi)||0) - (r.rasid||0);
@@ -11323,8 +11348,11 @@ function _updatePersonTotals(person) {
     const remMoneyBalD = (rasidD + t.diesel.rasid + _rasidFuelMoneyD) - t.diesel.bardagi;
     const feP = _accFeeP > 0 ? _accFeeP : (_blendP > 0 ? _blendP : rateP);   // فیِ حساب، وگرنه نرخِ قفل‌شده، وگرنه اتحادیه
     const feD = _accFeeD > 0 ? _accFeeD : (_blendD > 0 ? _blendD : rateD);
-    const remFuelP2 = feP > 0 ? remMoneyBalP / feP : 0;   // الباقی تیل = الباقی پول ÷ فی
-    const remFuelD2 = feD > 0 ? remMoneyBalD / feD : 0;
+    // باگ ۸: فیصدی (کمیشن) باید روی «الباقی تیل» هم اثر بگذارد، نه فقط «الباقی پول».
+    // «الباقی پول»ِ کارت = ‎-remP = remMoneyBal − کمیشن؛ پس «الباقی تیل» هم از همان
+    // مقدارِ پس از کسرِ فیصدی ÷ فی محاسبه می‌شود تا این دو همیشه با هم Sync باشند.
+    const remFuelP2 = feP > 0 ? (remMoneyBalP - commP) / feP : 0;   // الباقی تیل = (الباقی پول پس از فیصدی) ÷ فی
+    const remFuelD2 = feD > 0 ? (remMoneyBalD - commD) / feD : 0;
     setRemExtra('p', remFuelP2, 'الباقی تیل');
     setRemExtra('d', remFuelD2, 'الباقی تیل');
     _remFuelAll = remFuelP2 + remFuelD2;
@@ -15963,18 +15991,53 @@ function removeWaraqRow() {
   save();
 }
 
+// کلیدِ ماهِ یک ورق از تاریخِ شمسی‌اش («1404/4/23» → «1404/04») — برای فیلترِ کشویی ماه
+function _waraqMonthKey(w) {
+  const parts = toEnDigits(String((w && w.date) || '')).split('/');
+  if (parts.length < 2) return '';
+  const y = parseInt(parts[0], 10), m = parseInt(parts[1], 10);
+  if (!y || !m) return '';
+  return y + '/' + String(m).padStart(2, '0');
+}
+function _waraqMonthLabel(key) {
+  const parts = key.split('/');
+  const m = parseInt(parts[1], 10);
+  // سالِ بدونِ جداکنندهٔ هزارگان (۱۴۰۴ نه ۱،۴۰۴)
+  const yr = String(parts[0]).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+  return (SHAMSI_MONTHS[m - 1] || parts[1]) + ' ' + yr;
+}
+function setWaraqMonthFilter(v) {
+  renderWaraqList._month = v || '';
+  renderWaraqList._limit = 60;
+  renderWaraqList();
+}
 function renderWaraqList() {
   const grid = document.getElementById('waraq-grid');
   if (!grid) return;
   if (!DB.waraqEntries) DB.waraqEntries = [];
   grid.innerHTML = '';
+  // پُر کردنِ کشویِ ماه بر اساس ماه‌های موجود (جدیدترین بالا)
+  const selEl = document.getElementById('wq-month-filter');
+  if (selEl) {
+    const keys = Array.from(new Set((DB.waraqEntries || []).map(_waraqMonthKey).filter(Boolean))).sort().reverse();
+    const cur = renderWaraqList._month || '';
+    selEl.innerHTML = '<option value="">همهٔ ماه‌ها</option>' +
+      keys.map(k => '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + _waraqMonthLabel(k) + '</option>').join('');
+    if (cur && keys.indexOf(cur) === -1) { renderWaraqList._month = ''; }
+  }
   if (!DB.waraqEntries.length) {
     grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:0.9rem">هیچ ورقی ثبت نشده — از دکمه بالا ورق جدید اضافه کنید</div>';
     return;
   }
   // رندر محدود: ورق‌های اخیر نمایش داده می‌شوند، قدیمی‌ترها با دکمه
   if (!renderWaraqList._limit) renderWaraqList._limit = 60;
-  const _wqAll = [...DB.waraqEntries].reverse();
+  const _monthSel = renderWaraqList._month || '';
+  let _wqAll = [...DB.waraqEntries].reverse();
+  if (_monthSel) _wqAll = _wqAll.filter(w => _waraqMonthKey(w) === _monthSel);
+  if (!_wqAll.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:0.9rem">در این ماه ورقی ثبت نشده</div>';
+    return;
+  }
   const _wqMore = _wqAll.length - renderWaraqList._limit;
   _wqAll.slice(0, renderWaraqList._limit).forEach(w => {
     ensureWaraqShifts(w);
@@ -16207,12 +16270,39 @@ function _normalizeWaraqTxns(sd) {
   });
 }
 
+// فهرست نام‌های قبلی برای پیشنهادِ خودکار (Autocomplete) در بخش پارچه‌ها/ورق‌ها —
+// از قرض‌داران، افرادِ بدون پارچه و نام‌هایی که قبلاً در ورق‌ها نوشته شده جمع می‌شود.
+function _waraqNameSuggestions() {
+  const set = new Set();
+  const add = n => { const s = (n || '').trim(); if (s) set.add(s); };
+  (DB.debtPersons || []).forEach(p => add(p && p.name));
+  (DB.noinvPersons || []).forEach(p => add(p && p.name));
+  (DB.waraqEntries || []).forEach(w => {
+    if (!w) return;
+    ['day', 'night'].forEach(sh => {
+      const sd = w[sh];
+      if (sd && Array.isArray(sd.transactions)) sd.transactions.forEach(t => add(t && t.name));
+    });
+    if (Array.isArray(w.transactions)) w.transactions.forEach(t => add(t && t.name));
+  });
+  return Array.from(set).sort((a, b) => a.localeCompare(b, 'fa'));
+}
+function _renderWaraqNamesDatalist() {
+  let dl = document.getElementById('wq-names-dl');
+  if (!dl) {
+    dl = document.createElement('datalist');
+    dl.id = 'wq-names-dl';
+    document.body.appendChild(dl);
+  }
+  dl.innerHTML = _waraqNameSuggestions().map(n => '<option value="' + n.replace(/"/g, '&quot;') + '"></option>').join('');
+}
 function renderWaraqTransactions(w) {
   const leftBody = document.getElementById('wq-trans-body-left');
   const rightBody = document.getElementById('wq-trans-body-right');
   if (!leftBody || !rightBody) return;
   const sd = activeShift(w);
   _normalizeWaraqTxns(sd);
+  try { _renderWaraqNamesDatalist(); } catch (e) {}
   const txns = sd.transactions || [];
   const mid = Math.ceil(txns.length / 2);
   leftBody.innerHTML = '';
@@ -16223,7 +16313,7 @@ function renderWaraqTransactions(w) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="xls-num">${n2fa(i+1)}</td>
-      <td><input class="xls-in" value="${(t.name||'').replace(/"/g,'&quot;')}" placeholder="نام / توضیح" oninput="updateWaraqTxn(${i},'name',this.value)"></td>
+      <td><input class="xls-in" list="wq-names-dl" value="${(t.name||'').replace(/"/g,'&quot;')}" placeholder="نام / توضیح" oninput="updateWaraqTxn(${i},'name',this.value)"></td>
       <td><select class="xls-in" style="min-width:88px;max-width:none;width:100%" onchange="updateWaraqTxnFuel(${i},this.value)">
         <option value="petrol" ${fuel!=='diesel'?'selected':''}>⛽ پطرول</option>
         <option value="diesel" ${fuel==='diesel'?'selected':''}>🟤 دیزل</option>
@@ -16436,6 +16526,11 @@ function saveWaraq() {
         if (exIdx >= 0) DB.expenses[exIdx] = rec; else DB.expenses.push(rec);
       } else {
         removeWaraqExpense(srcKey);                 // اگر قبلاً مصرف بوده، از مصرف برداشته شود
+        const ex = extractHawala(t.name);          // شمارهٔ حواله از جمله بیرون کشیده می‌شود
+        // نوع تیل (پطرول/دیزل) از روی متن تشخیص داده می‌شود و کلماتِ «دیزل/پطرول» از نامِ نمایشی حذف می‌شوند
+        // تا در جدول قرض‌داران «فلانی دیزل/پطرول» نوشته نشود؛ فقط حساب و نوع تیلِ درست انتخاب می‌شود.
+        const ftype = _detectFuelType(t.name);
+        const displayName = _stripFuelWords(ex.clean || name);
         let person = matchDebtPersonByText(t.name);
         if (!person) {
           // اگر نام یک حساب فرعی نوشته شده، والدش را پیدا کن
@@ -16446,12 +16541,22 @@ function saveWaraq() {
             }
           }
         }
+        // هر قرض‌داری که در ورق نوشته می‌شود باید به حساب اختصاصیِ خودش وصل شود؛ اگر
+        // حساب وجود نداشت، همین‌جا ساخته می‌شود (به‌جای دور ریختنِ اطلاعات). نامِ حساب
+        // = نامِ تمیزشده (بدون شمارهٔ حواله و کلماتِ نوع تیل). فقط به همان شخص وصل می‌شود.
+        if (!person) {
+          const acctName = (displayName || name || '').trim();
+          if (acctName) {
+            const key = normFa(acctName);
+            person = (DB.debtPersons||[]).find(p => normFa(p.name) === key);
+            if (!person) {
+              person = { id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7), name: acctName, rows: [] };
+              DB.debtPersons.push(person);
+              try { _botAnnounce('حساب قرض‌دار «' + acctName + '» از ورق ساخته شد.'); } catch (e) {}
+            }
+          }
+        }
         if (!person) { removePersonRowBySrcKey(srcKey); return; }
-        const ex = extractHawala(t.name);          // شمارهٔ حواله از جمله بیرون کشیده می‌شود
-        // نوع تیل (پطرول/دیزل) از روی متن تشخیص داده می‌شود و کلماتِ «دیزل/پطرول» از نامِ نمایشی حذف می‌شوند
-        // تا در جدول قرض‌داران «فلانی دیزل/پطرول» نوشته نشود؛ فقط حساب و نوع تیلِ درست انتخاب می‌شود.
-        const ftype = _detectFuelType(t.name);
-        const displayName = _stripFuelWords(ex.clean || name);
         let fuel = parseFloat(t.liters)||0;
         let priceper, byMoney = false;
         // اگر فقط مبلغ نوشته شده (بدون لیتر/فی) → ردیف پولی، نه «۱ لیتر فی ...»
@@ -16864,6 +16969,35 @@ function showTopToast(msg, bg, duration) {
   t.classList.add('show');
   if (_topToastTimer) clearTimeout(_topToastTimer);
   _topToastTimer = setTimeout(() => t.classList.remove('show'), duration || 4000);
+}
+// توستِ کوچکِ هماهنگیِ سرور — گوشهٔ پایین راست. مزاحمِ کاربر نمی‌شود، خودکار محو
+// می‌شود و اگر همان پیام دوباره بیاید روی هم جمع (شمارنده) می‌شود به‌جای پُر کردنِ صفحه.
+function showSyncToast(msg, bg, duration) {
+  try {
+    const stack = document.getElementById('syncToastStack');
+    if (!stack) { return; }
+    // اگر همین پیام همین حالا روی صفحه است، فقط شمارنده‌اش را زیاد کن (جمع شدن روی هم)
+    const existing = Array.prototype.find.call(stack.children, el => el._msg === msg);
+    if (existing) {
+      existing._count = (existing._count || 1) + 1;
+      const badge = existing.querySelector('.sc-badge');
+      if (badge) badge.textContent = n2fa(existing._count);
+      else { const b = document.createElement('span'); b.className = 'sc-badge'; b.textContent = n2fa(existing._count); existing.appendChild(b); }
+      clearTimeout(existing._timer);
+      existing._timer = setTimeout(() => { existing.classList.remove('show'); setTimeout(() => existing.remove(), 260); }, duration || 3000);
+      return;
+    }
+    const el = document.createElement('div');
+    el.className = 'sync-toast';
+    el._msg = msg; el._count = 1;
+    el.style.background = bg || '#38a169';
+    el.appendChild(document.createTextNode(msg));
+    stack.appendChild(el);
+    // حداکثر ۴ توست هم‌زمان — قدیمی‌ترین حذف می‌شود
+    while (stack.children.length > 4) stack.removeChild(stack.firstChild);
+    requestAnimationFrame(() => el.classList.add('show'));
+    el._timer = setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 260); }, duration || 3000);
+  } catch (e) {}
 }
 // پیام استانداردِ «حساب پیدا نشد» — ۴ ثانیه (بین ۳ تا ۵ ثانیه)
 function showAccountNotFound() {
@@ -18757,7 +18891,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.37';
+const APP_VERSION = '2.9.38';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -18905,10 +19039,29 @@ function attPaySalary(sid) {
   const month = _monthKey(persianDate());
   if (_attPays().some(p => String(p.sid) === String(sid) && p.month === month)) { showToast('معاش این ماه قبلاً ثبت شده', '#d97706'); return; }
   if (!confirm('پرداخت معاش «' + st.name + '» برای ' + _monthLabel(month) + ' (' + n2fa(st.salary || 0) + ' افغانی) ثبت شود؟')) return;
-  _attPays().push({ sid, month, amount: st.salary || 0, date: persianDate() });
+  const payDate = persianDate();
+  const amount = st.salary || 0;
+  _attPays().push({ sid, month, amount, date: payDate });
+  // ثبتِ خودکار در بخش مصرف‌ها — هر ماه رکوردِ مستقل (نام، مبلغ، تاریخ، ماه، توضیح)
+  try {
+    if (!Array.isArray(DB.expenses)) DB.expenses = [];
+    const already = DB.expenses.some(e => e && e.salarySid === sid && e.salaryMonth === month);
+    if (!already) {
+      DB.expenses.push({
+        date: payDate,
+        title: 'معاش ' + st.name,
+        amount,
+        note: 'پرداخت معاش ' + _monthLabel(month),
+        salarySid: sid,
+        salaryMonth: month
+      });
+    }
+  } catch (e) {}
   save();
   renderAttendance();
-  showToast('✅ پرداخت معاش ثبت شد', '#38a169');
+  try { renderExpenses(); } catch (e) {}
+  try { updateBanner(); } catch (e) {}
+  showToast('✅ پرداخت معاش ثبت و در مصرف‌ها ثبت شد', '#38a169');
 }
 function renderAttendance() {
   const grid = document.getElementById('att-grid');
