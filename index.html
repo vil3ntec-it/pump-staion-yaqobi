@@ -4580,7 +4580,7 @@ table thead th{ position:relative; }
 .dc-title{font-size:.82rem;font-weight:700;color:var(--muted)}
 .dc-value{font-size:1.25rem;font-weight:900;color:var(--txt);margin-top:4px}
 .dc-sub{font-size:.68rem;color:var(--muted);margin-top:6px;opacity:.8}
-.dash-mid{display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:stretch}
+.dash-mid{display:grid;grid-template-columns:1fr 300px 320px;gap:16px;align-items:start}
 .dash-chart-card{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:20px 22px;box-shadow:0 10px 30px rgba(0,0,0,.10);min-width:0}
 .dcc-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .dcc-title{font-size:1rem;font-weight:900;color:var(--txt)}
@@ -4628,6 +4628,7 @@ table thead th{ position:relative; }
 .dhero-value{color:#fff;font-weight:900;font-size:1.5rem}
 .dhero-sub{color:rgba(255,255,255,.78);font-size:.72rem;max-width:230px;line-height:1.8}
 @media (max-width:1100px){ .dash-cards{grid-template-columns:repeat(2,1fr)} .dash-mid{grid-template-columns:1fr} .dash-hero{min-height:260px} }
+@media (min-width:1101px) and (max-width:1500px){ .dash-mid{grid-template-columns:1fr 300px} .dash-mid .dash-hero{grid-column:1 / -1;min-height:auto} }
 /* موبایل: همه‌چیز فشرده تا بدون زوم و اسکرول افقی، چند کارت هم‌زمان دیده شود.
    کارت‌های آماری دو‌ستونه می‌مانند (مثل داشبوردهای واقعی) و کارت مخزن تمام‌عرض */
 @media (max-width:640px){
@@ -4696,7 +4697,6 @@ table thead th{ position:relative; }
     <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-debt"/></svg></span><span class="dc-prog" id="dcp-debt"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>—</b></span></div><div class="dc-title">الباقی قرض‌داران</div><div class="dc-value" id="dcv-debt">0</div><div class="dc-sub" id="dcs-debt"></div></div>
     <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-expenses"/></svg></span><span class="dc-prog" id="dcp-exp"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title" id="dct-exp">مصارف امروز</div><div class="dc-value" id="dcv-exp">0</div><div class="dc-sub" id="dcs-exp"></div></div>
     <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-safe"/></svg></span><span class="dc-prog" id="dcp-safe"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title">موجودی گاوصندوق</div><div class="dc-value" id="dcv-safe">0</div><div class="dc-sub" id="dcs-safe"></div></div>
-    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-storage"/></svg></span><button class="dash-tank-toggle" id="dash-tank-toggle" onclick="dashToggleTank()">🔁 دیزل</button></div><div class="dc-title" id="dash-tank-title">موجودی مخزن — ⛽ پطرول</div><div id="dash-tank" style="margin-top:8px"></div></div>
   </div>
   <div class="dash-mid">
     <div class="dash-chart-card">
@@ -4715,6 +4715,7 @@ table thead th{ position:relative; }
       <div class="dash-bars" id="dash-bars"></div>
       <div class="dash-detail" id="dash-detail"></div>
     </div>
+    <div class="dash-card dash-tank-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-storage"/></svg></span><button class="dash-tank-toggle" id="dash-tank-toggle" onclick="dashToggleTank()">🔁 دیزل</button></div><div class="dc-title" id="dash-tank-title">موجودی مخزن — ⛽ پطرول</div><div id="dash-tank" style="margin-top:8px"></div></div>
     <div class="dash-hero">
       <div class="dhero-gauge"><svg viewBox="0 0 120 66"><path class="tr" d="M12 60 A48 48 0 0 1 108 60"/><path class="bar" id="dash-hero-arc" d="M12 60 A48 48 0 0 1 108 60"/></svg><b id="dash-hero-pct">0٪</b></div>
       <div class="dhero-ic"><svg><use href="#ic-profit"/></svg></div>
@@ -6412,7 +6413,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <div class="fs-head petrol">⛽ حساب پطرول</div>
         <div class="fs-rows">
           <div class="fs-cell"><div class="l">فیصدی ما</div><div class="v" style="color:var(--purple)" id="pm-p-comm">0</div></div>
-          <div class="fs-cell"><div class="l" id="pm-p-rasid-l">مقدار رسید تیل</div><input type="number" class="v pm-edit" id="pm-p-rasidfuel" placeholder="0" style="color:var(--green);background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;width:100%;font-weight:800;font-family:'Vazirmatn',sans-serif" oninput="updatePersonRasidFuel('petrol',this.value)"></div>
+          <div class="fs-cell"><div class="l" id="pm-p-rasid-l">مقدار رسید تیل</div><input type="number" class="v pm-edit" id="pm-p-rasidfuel" placeholder="0" style="color:var(--green);background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;width:100%;font-weight:800;font-family:'Vazirmatn',sans-serif" onfocus="personRasidFocus('petrol')" onblur="personRasidBlur()" oninput="updatePersonRasidFuel('petrol',this.value)"></div>
           <div class="fs-cell"><div class="l">برد</div><div class="v" style="color:var(--accent)" id="pm-p-bord">0</div></div>
           <div class="fs-cell"><div class="l" id="pm-p-rem-l">الباقی تیل</div><div class="v" style="color:var(--blue)" id="pm-p-remfuel">0</div></div>
           <div class="fs-cell" id="pm-p-remmoney-cell" style="display:none"><div class="l">الباقی پول</div><div class="v" id="pm-p-remmoney">0</div></div>
@@ -6422,7 +6423,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <div class="fs-head diesel">🟤 حساب دیزل</div>
         <div class="fs-rows">
           <div class="fs-cell"><div class="l">فیصدی ما</div><div class="v" style="color:var(--purple)" id="pm-d-comm">0</div></div>
-          <div class="fs-cell"><div class="l" id="pm-d-rasid-l">مقدار رسید تیل</div><input type="number" class="v pm-edit" id="pm-d-rasidfuel" placeholder="0" style="color:var(--green);background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;width:100%;font-weight:800;font-family:'Vazirmatn',sans-serif" oninput="updatePersonRasidFuel('diesel',this.value)"></div>
+          <div class="fs-cell"><div class="l" id="pm-d-rasid-l">مقدار رسید تیل</div><input type="number" class="v pm-edit" id="pm-d-rasidfuel" placeholder="0" style="color:var(--green);background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;width:100%;font-weight:800;font-family:'Vazirmatn',sans-serif" onfocus="personRasidFocus('diesel')" onblur="personRasidBlur()" oninput="updatePersonRasidFuel('diesel',this.value)"></div>
           <div class="fs-cell"><div class="l">برد</div><div class="v" style="color:var(--accent)" id="pm-d-bord">0</div></div>
           <div class="fs-cell"><div class="l" id="pm-d-rem-l">الباقی تیل</div><div class="v" style="color:var(--blue)" id="pm-d-remfuel">0</div></div>
           <div class="fs-cell" id="pm-d-remmoney-cell" style="display:none"><div class="l">الباقی پول</div><div class="v" id="pm-d-remmoney">0</div></div>
@@ -11086,6 +11087,17 @@ function updatePersonRasidFuel(fuel, val) {
   else { if (money) acct.rasidMoneyP = v; else acct.rasidFuelP = v; }
   save(); _updatePersonTotals(person);
 }
+// موقعِ کلیک روی کادرِ «مقدار رسید» در «واحد پول»، فقط سهمِ رسیدِ دستیِ هدر نشان داده شود
+// (نه جمعِ آن با رسیدهای جدول) تا ویرایش دوباره‌شماری نکند. مقدارِ ذخیره‌شده (rasidMoney)
+// دست‌نخورده و همان رسیدِ دستی می‌ماند؛ فقط نمایش عوض می‌شود.
+function personRasidFocus(fuel){
+  const person=_curPerson(); if(!person||person.mode!=='money') return;
+  const acct=_acctOf(person);
+  const el=document.getElementById(fuel==='diesel'?'pm-d-rasidfuel':'pm-p-rasidfuel');
+  if(el){ const v=parseFloat(fuel==='diesel'?acct.rasidMoneyD:acct.rasidMoneyP)||0; el.value=v||''; }
+}
+// با خروج از کادر، دوباره جمعِ رسید (دستی + رسیدهای جدول) در کادر نوشته شود
+function personRasidBlur(){ const p=_curPerson(); if(p) _updatePersonTotals(p); }
 function togglePersonMode() {
   const person = _curPerson(); if (!person) return;
   person.mode = (person.mode === 'money') ? 'fuel' : 'money';
@@ -11179,8 +11191,12 @@ function _updatePersonTotals(person) {
   setL('pm-bord-sum-l', money ? 'جمع کل برد پول' : 'جمع کل برد تیل');
   const modeBtn = document.getElementById('pm-mode-btn');
   if (modeBtn) modeBtn.textContent = money ? '🔁 تیل' : '🔁 پول';
-  setInput('pm-p-rasidfuel', rasidP||'');
-  setInput('pm-d-rasidfuel', rasidD||'');
+  // در «واحد پول»، کادر «مقدار رسید پول» مجموعِ رسیدِ دستیِ هدر + رسیدهای داخلِ جدول را
+  // نشان می‌دهد تا رسیدی که در جدول زده می‌شود در هدر هم دیده شود (الباقی از قبل آن را کم
+  // می‌کرد). موقعِ ویرایش، onfocus فقط سهمِ دستی را نشان می‌دهد و onblur دوباره جمع را می‌نویسد
+  // تا دوباره‌شماری نشود. در «واحد تیل» مثل قبل فقط مقدار رسید تیلِ دستی نمایش داده می‌شود.
+  setInput('pm-p-rasidfuel', money ? ((rasidP + t.petrol.rasid)||'') : (rasidP||''));
+  setInput('pm-d-rasidfuel', money ? ((rasidD + t.diesel.rasid)||'') : (rasidD||''));
   setInput('pm-percent', acct.percent||'');
   setInput('pm-money', (acct.moneyDeposit!=null && acct.moneyDeposit!=='') ? acct.moneyDeposit : '');
   setV('pm-p-bord', n2fa(rnd(bordP)));
@@ -18593,7 +18609,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.23';
+const APP_VERSION = '2.9.24';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
