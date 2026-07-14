@@ -16554,21 +16554,8 @@ function saveWaraq() {
             }
           }
         }
-        // هر قرض‌داری که در ورق نوشته می‌شود باید به حساب اختصاصیِ خودش وصل شود؛ اگر
-        // حساب وجود نداشت، همین‌جا ساخته می‌شود (به‌جای دور ریختنِ اطلاعات). نامِ حساب
-        // = نامِ تمیزشده (بدون شمارهٔ حواله و کلماتِ نوع تیل). فقط به همان شخص وصل می‌شود.
-        if (!person) {
-          const acctName = (displayName || name || '').trim();
-          if (acctName) {
-            const key = normFa(acctName);
-            person = (DB.debtPersons||[]).find(p => normFa(p.name) === key);
-            if (!person) {
-              person = { id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7), name: acctName, rows: [] };
-              DB.debtPersons.push(person);
-              try { _botAnnounce('حساب قرض‌دار «' + acctName + '» از ورق ساخته شد.'); } catch (e) {}
-            }
-          }
-        }
+        // فقط به حسابِ قرض‌دارِ موجود (اصلی یا فرعی) وصل می‌شود؛ اگر چنین حسابی نبود،
+        // هیچ حسابِ جدیدی ساخته نمی‌شود (خواستهٔ صاحب ریپو) و ردیف در حساب‌ها ثبت نمی‌شود.
         if (!person) { removePersonRowBySrcKey(srcKey); return; }
         let fuel = parseFloat(t.liters)||0;
         let priceper, byMoney = false;
@@ -18904,7 +18891,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.40';
+const APP_VERSION = '2.9.41';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
