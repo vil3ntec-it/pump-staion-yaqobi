@@ -4628,7 +4628,49 @@ table thead th{ position:relative; }
 .dhero-value{color:#fff;font-weight:900;font-size:1.5rem}
 .dhero-sub{color:rgba(255,255,255,.78);font-size:.72rem;max-width:230px;line-height:1.8}
 @media (max-width:1100px){ .dash-cards{grid-template-columns:repeat(2,1fr)} .dash-mid{grid-template-columns:1fr} .dash-hero{min-height:260px} }
-@media (max-width:640px){ .dash-cards{grid-template-columns:1fr} .dash-search-wrap{min-width:0;flex:1} .dash-bars{height:190px;gap:2.5%} .dash-head{align-items:flex-start} }
+/* موبایل: همه‌چیز فشرده تا بدون زوم و اسکرول افقی، چند کارت هم‌زمان دیده شود.
+   کارت‌های آماری دو‌ستونه می‌مانند (مثل داشبوردهای واقعی) و کارت مخزن تمام‌عرض */
+@media (max-width:640px){
+  #sec-dashboard{margin:0}
+  .dash-head{align-items:flex-start;gap:10px;margin-bottom:14px}
+  .dash-title{font-size:1.15rem}
+  .dash-greet{font-size:.78rem}
+  .dash-date{font-size:.7rem}
+  .dash-search-wrap{min-width:0;flex:1;padding:7px 11px}
+  .dash-iconbtn{width:36px;height:36px}
+  .dash-avatar{width:36px;height:36px}
+  .dash-fuel-bar{gap:6px;margin-bottom:12px}
+  .dash-fuel-btn{padding:6px 12px;font-size:.74rem}
+  .dash-cards{grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px}
+  .dash-card{padding:11px 12px;border-radius:16px}
+  .dash-card:last-child{grid-column:1 / -1}
+  .dc-top{margin-bottom:7px}
+  .dc-ic{width:32px;height:32px;border-radius:9px}
+  .dc-ic svg{width:16px;height:16px}
+  .dc-prog,.dc-prog svg{width:32px;height:32px}
+  .dc-prog b{font-size:.5rem}
+  .dc-title{font-size:.7rem}
+  .dc-value{font-size:.92rem;margin-top:3px}
+  .dc-sub{font-size:.56rem;margin-top:4px;line-height:1.5}
+  .dash-chart-card{padding:14px 12px;border-radius:16px}
+  .dcc-title{font-size:.9rem}
+  .dcc-sub{font-size:.62rem}
+  .dash-tabs{padding:3px}
+  .dash-tab{padding:6px 11px;font-size:.72rem}
+  .dash-legend{font-size:.62rem;gap:9px}
+  .dash-bars{height:160px;gap:2%;padding-top:22px}
+  .db-lbl{font-size:.58rem}
+  .dash-detail{font-size:.66rem;gap:9px;padding:8px 10px}
+  .dash-hero{min-height:180px;border-radius:18px;padding:18px 14px}
+  .dhero-value{font-size:1.2rem}
+  .dhero-label{font-size:.85rem}
+}
+@media (max-width:400px){
+  .dash-cards{grid-template-columns:1fr 1fr;gap:8px}
+  .dc-value{font-size:.86rem}
+  .dc-sub{font-size:.52rem}
+  .dash-tab{padding:5px 9px;font-size:.68rem}
+}
 </style>
 <div class="section visible" id="sec-dashboard">
   <div class="dash-head">
@@ -11554,7 +11596,18 @@ function calcHistoryRow(pid, hid, idx, field, value) {
 function setHistoryRowFuel(pid, hid, idx, ftype) {
   const person = _hPerson(pid); if (!person) return;
   const h = _hEntry(pid, hid); if (!h || !h.rows[idx]) return;
-  h.rows[idx].ftype = (ftype === 'diesel') ? 'diesel' : 'petrol';
+  const ft = (ftype === 'diesel') ? 'diesel' : 'petrol';
+  const r = h.rows[idx];
+  const oldFt = (r.ftype === 'diesel') ? 'diesel' : 'petrol';
+  // مثل جدول اصلی: «رسید تیل» ردیف با تغییر نوع تیل بین حساب پطرول/دیزلِ همین آرشیو جابجا شود
+  const rf = parseFloat(r.rasidFuel) || 0;
+  if (rf && oldFt !== ft) {
+    if (oldFt === 'diesel') h.rasidFuelD = (parseFloat(h.rasidFuelD) || 0) - rf;
+    else h.rasidFuelP = (parseFloat(h.rasidFuelP) || 0) - rf;
+    if (ft === 'diesel') h.rasidFuelD = (parseFloat(h.rasidFuelD) || 0) + rf;
+    else h.rasidFuelP = (parseFloat(h.rasidFuelP) || 0) + rf;
+  }
+  r.ftype = ft;
   save(); _rerenderHistoryPreserveFocus(person);
 }
 function addHistoryRow(pid, hid) {
@@ -11571,6 +11624,12 @@ function addHistoryRow(pid, hid) {
 function deleteHistoryRow(pid, hid, idx) {
   const person = _hPerson(pid); if (!person) return;
   const h = _hEntry(pid, hid); if (!h) return;
+  const r = h.rows[idx];
+  const rf = r ? (parseFloat(r.rasidFuel) || 0) : 0;
+  if (rf) {
+    if (r.ftype === 'diesel') h.rasidFuelD = (parseFloat(h.rasidFuelD) || 0) - rf;
+    else h.rasidFuelP = (parseFloat(h.rasidFuelP) || 0) - rf;
+  }
   h.rows.splice(idx, 1); save(); _renderHistoryPanel(person);
 }
 function updateHistoryNote(pid, hid, value) {
@@ -11594,16 +11653,38 @@ function deletePersonRow(pid, idx) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === pid);
   if (!person) return;
-  _acctRows(person).splice(idx, 1);
+  const acct = _acctOf(person);
+  const rowsArr = _acctRows(person, acct);
+  const r = rowsArr[idx];
+  // «رسید تیل» ردیفِ حذف‌شده باید از حساب تیلِ همان نوع کم شود تا عددِ کهنه جا نماند
+  const rf = r ? (parseFloat(r.rasidFuel) || 0) : 0;
+  if (rf && person.mode !== 'money') {
+    if (r.ftype === 'diesel') acct.rasidFuelD = (parseFloat(acct.rasidFuelD) || 0) - rf;
+    else acct.rasidFuelP = (parseFloat(acct.rasidFuelP) || 0) - rf;
+  }
+  rowsArr.splice(idx, 1);
   save(); renderPersonRows(person); renderPersons(currentPersonType); updateBanner();
 }
 function setRowFuel(pid, idx, type) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === pid);
-  const rowsArr = person ? _acctRows(person) : null;
+  const acct = person ? _acctOf(person) : null;
+  const rowsArr = person ? _acctRows(person, acct) : null;
   if (!person || !rowsArr[idx]) return;
   const ft = (type === 'diesel') ? 'diesel' : 'petrol';
-  rowsArr[idx].ftype = ft;
+  const r = rowsArr[idx];
+  const oldFt = (r.ftype === 'diesel') ? 'diesel' : 'petrol';
+  // ریشهٔ باگ: «رسید تیل» این ردیف قبلاً به حساب تیلِ نوعِ قبلی (پطرول/دیزل) اضافه
+  // شده بود؛ با تغییر نوع تیل باید همان مقدار از حساب قبلی کم و به حساب جدید منتقل
+  // شود — وگرنه عدد در حساب اشتباه می‌ماند و به حساب جدید نمی‌رود
+  const rf = parseFloat(r.rasidFuel) || 0;
+  if (rf && oldFt !== ft && person.mode !== 'money') {
+    if (oldFt === 'diesel') acct.rasidFuelD = (parseFloat(acct.rasidFuelD) || 0) - rf;
+    else acct.rasidFuelP = (parseFloat(acct.rasidFuelP) || 0) - rf;
+    if (ft === 'diesel') acct.rasidFuelD = (parseFloat(acct.rasidFuelD) || 0) + rf;
+    else acct.rasidFuelP = (parseFloat(acct.rasidFuelP) || 0) + rf;
+  }
+  r.ftype = ft;
   save();
   if (currentPersonFilter !== 'all') {
     // وقتی فیلتر حساب جداگانه فعال است، ردیف باید بلافاصله به جدول خودش منتقل شود
@@ -18497,7 +18578,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.20';
+const APP_VERSION = '2.9.21';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -18831,18 +18912,22 @@ function staffVoiceSearch() {
 function _staffCard(p, sub) {
   const a = sub || p;
   const t = _splitTotals(a.rows || []);
-  const albaqi = t.all.albaqi;
-  // وضعیت فقط برای همین حساب (نه جمعِ همهٔ حساب‌های شخص)
-  const stInfo = debtFuelStatus(Object.assign({}, a, { subs: [] }));
-  const st = stInfo.st;
-  const who = _debtKindLabel(stInfo.kinds);
-  let badge;
-  if (st === 'out')      badge = `<span class="staff-badge out">⛔ ${who} تمام شده</span>`;
-  else if (st === 'low') badge = `<span class="staff-badge low">⚠️ ${who} کم مانده</span>`;
-  else if (st === 'ok')  badge = `<span class="staff-badge ok">✅ تیل/پول دارد</span>`;
-  else badge = albaqi > 0
-    ? `<span class="staff-badge low">💰 الباقی دارد</span>`
-    : `<span class="staff-badge ok">✅ تسویه</span>`;
+  // برچسب بر اساس «وضعیت واقعی» حساب — نه معیارِ امانتیِ قدیمی که برای قرض‌دار
+  // (بدون رسید) هم اشتباهاً «تمام شده» می‌نوشت:
+  //   الباقی پول = بردگی − رسید پول  → مثبت یعنی بدهکار، منفی یعنی طلب دارد
+  //   الباقی تیل = برد تیل − رسید تیل → مثبت یعنی برد اضافی، منفی یعنی تیل دارد
+  const moneyBal = t.all.albaqi;
+  const _rasidLbadge = (parseFloat(a.rasidFuelP) || 0) + (parseFloat(a.rasidFuelD) || 0);
+  const fuelBal = Math.round((t.all.fuel - _rasidLbadge) * 100) / 100;
+  const _seg = [];
+  if (moneyBal > 0) _seg.push('🛑 بدهکار ' + n2fa(Math.round(moneyBal)) + ' پول');
+  else if (moneyBal < 0) _seg.push('💰 ' + n2fa(Math.round(-moneyBal)) + ' پول دارد');
+  if (fuelBal > 0) _seg.push('🛑 برد اضافی ' + n2fa(fuelBal) + ' ل تیل');
+  else if (fuelBal < 0) _seg.push('🛢️ ' + n2fa(-fuelBal) + ' ل تیل دارد');
+  const _owe = moneyBal > 0 || fuelBal > 0;
+  const badge = !_seg.length
+    ? `<span class="staff-badge ok">✅ تسویه</span>`
+    : `<span class="staff-badge ${_owe ? 'out' : 'ok'}">${_seg.join(' · ')}</span>`;
   const fl = _staffAcctFuelLeft(a);
   const rows = [];
   if (fl.hasP) rows.push(`<span style="color:var(--green)">⛽ باقی تیل پطرول: ${n2fa(Math.round(fl.petrol))} ل</span>`);
@@ -18862,7 +18947,7 @@ function _staffCard(p, sub) {
   const sums = `<div class="staff-mini-sums">
     <div class="ms"><div class="l">💵 بردگی (پول)</div><div class="v" style="color:var(--accent)">${n2fa(t.all.bardagi)}</div></div>
     <div class="ms"><div class="l">💵 رسید (پول)</div><div class="v" style="color:var(--green)">${n2fa(t.all.rasid)}</div></div>
-    <div class="ms"><div class="l">💵 الباقی (پول)</div><div class="v" style="color:${albaqi > 0 ? 'var(--red)' : 'var(--green)'}">${albaqi <= 0 ? '✅' : n2fa(albaqi)}</div></div>
+    <div class="ms"><div class="l">💵 الباقی (پول)</div><div class="v" style="color:${moneyBal > 0 ? 'var(--red)' : 'var(--green)'}">${moneyBal <= 0 ? '✅' : n2fa(moneyBal)}</div></div>
   </div>
   <div class="staff-mini-sums">
     <div class="ms"><div class="l">🛢️ بردگی تیل (ل)</div><div class="v" style="color:var(--accent)">${n2fa(t.all.fuel)}</div>${_fsub(t.petrol.fuel, t.diesel.fuel)}</div>
