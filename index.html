@@ -11984,9 +11984,9 @@ function deleteExpense(i) {
 // خالی باشند بردگی صفر می‌شود (ردیفِ پاک).
 function _fuelBardagi(r) {
   const f = parseFloat(r.fuel) || 0, p = parseFloat(r.priceper) || 0;
-  if (f > 0 && p > 0) return f * p;
-  if (f === 0 && p === 0) return 0;
-  return parseFloat(r.bardagi) || 0;
+  if (f === 0) return 0;               // مقدار تیل خالی/پاک‌شده → بردگی صفر (نه عددِ کهنه)
+  if (p > 0) return f * p;             // بردگی = مقدار تیل × فی (زنده با تغییرِ فی)
+  return parseFloat(r.bardagi) || 0;   // تیل وارد شده ولی فی هنوز نه → مقدار قبلی حفظ شود
 }
 function ensureRasid() { if (!DB.parchaReceipts) DB.parchaReceipts = []; return DB.parchaReceipts; }
 function _newRasidRow() {
@@ -18593,7 +18593,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.22';
+const APP_VERSION = '2.9.23';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
