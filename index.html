@@ -18456,7 +18456,13 @@ async function refreshLocalCams() {
   try { cams = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput'); }
   catch (e) {}
   if (!cams.length) {
-    grid.innerHTML = '<div class="cam-note" style="grid-column:1/-1">هیچ دوربین سیمی روی این کامپیوتر شناسایی نشد</div>';
+    grid.innerHTML = '<div class="cam-note" style="grid-column:1/-1;line-height:1.9">هیچ دوربین سیمی روی این کامپیوتر شناسایی نشد.<br>'
+      + '🔌 اگر دوربین/DVR‌ات با <b>HDMI</b> است: مرورگر نمی‌تواند HDMI را مستقیم بخواند. یک مبدلِ ارزانِ '
+      + '<b>«HDMI to USB Capture»</b> (چند دلار، در بازار کامپیوتر پیدا می‌شود) بین HDMI و پورتِ USB بزن — '
+      + 'بلافاصله همین‌جا مثل وبکم می‌آید و کیفیتش را هم می‌توانی انتخاب کنی.<br>'
+      + '📼 اگر DVR/NVR داری، راهِ بهترش این است که آن را با کیبلِ شبکه به روتر وصل کنی و لینکِ تصویرش '
+      + '(HLS/HTTP) را از بخشِ بالای همین صفحه اضافه کنی.<br>'
+      + '↻ اگر همین حالا مبدل را وصل کردی، دکمهٔ «بروزرسانی لیست دوربین‌ها» را بزن.</div>';
     return;
   }
   grid.innerHTML = cams.map((c, i) => `
@@ -18740,7 +18746,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.35';
+const APP_VERSION = '2.9.36';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
