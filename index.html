@@ -8100,36 +8100,45 @@ function _dashLastDays(n) {
 }
 const _dashZ = () => ({ a: 0, l: 0, p: 0, c: 0 });   // مبلغ، لیتر، مفاد، تعداد ثبت
 function _dashShell(label, full) { return { label, full, petrol: _dashZ(), diesel: _dashZ(), exp: 0, sin: 0, sout: 0 }; }
-// سطل‌های بازهٔ انتخابی. اندیس ۰ = بازهٔ قبل از پنجره (فقط برای رشدِ ستون اول)
-// روز = ۷ ستون روزهای اخیر · هفته = ۷ ستون هفتگی · ماه = ۱۲ ماهِ سال جاری
-// (ماه‌های نیامده صفر) · سال = ۶ ستون سال
+// روزِ شمسی با فاصلهٔ offset از امروز (منفی=گذشته، ۰=امروز، مثبت=آینده)
+function _dashDayAt(offset) {
+  return _dashParseDate(toEnDigits(new Date(Date.now() + offset * 864e5).toLocaleDateString('fa-IR')));
+}
+// پنجرهٔ «آینده‌نگر» (خواستهٔ کاربر): همیشه از امروز به بعد نمایش داده می‌شود، دوره‌های
+// گذشته نمایش داده نمی‌شوند. اندیس ۰ = دورهٔ درست قبل از پنجره (فقط برای محاسبهٔ رشدِ
+// ستونِ اول). ستون‌های نمایشی = امروز و بعد از آن:
+//   روز = ۷ روزِ آینده (امروز، فردا، پس‌فردا، ۴ روز بعد) · هفته = ۴ هفتهٔ آینده ·
+//   ماه = ۱۲ ماهِ آینده · سال = ۶ سالِ آینده
 function _dashMakeBuckets() {
   const today = _dashParseDate(persianDate());
+  const _yr = y => String(y).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);   // سال بدونِ جداکنندهٔ هزارگان
   const buckets = []; let assign;
   if (_dashRange === 'day') {
-    const days = _dashLastDays(8), idx = {};
-    days.forEach((p, i) => {
-      idx[_dashDayKey(p.y, p.m, p.d)] = i;
-      const lbl = i === days.length - 1 ? 'امروز' : (i === days.length - 2 ? 'دیروز' : n2fa(p.m) + '/' + n2fa(p.d));
+    const idx = {};
+    for (let o = -1; o <= 6; o++) {                 // ‎-۱ (دیروز، پایهٔ رشد) تا ۶ روزِ بعد
+      const p = _dashDayAt(o);
+      idx[_dashDayKey(p.y, p.m, p.d)] = o + 1;
+      const lbl = o === 0 ? 'امروز' : (o === 1 ? 'فردا' : (o === 2 ? 'پس‌فردا' : n2fa(p.m) + '/' + n2fa(p.d)));
       buckets.push(_dashShell(lbl, p.y + '/' + p.m + '/' + p.d));
-    });
+    }
     assign = p => { const i = idx[_dashDayKey(p.y, p.m, p.d)]; return i == null ? -1 : i; };
   } else if (_dashRange === 'week') {
-    const days = _dashLastDays(56), idx = {};   // ۸ پنجرهٔ ۷روزه — اولی فقط برای رشد
-    for (let w = 0; w < 8; w++) {
-      const ch = days.slice(w * 7, w * 7 + 7);
-      ch.forEach(p => idx[_dashDayKey(p.y, p.m, p.d)] = w);
-      const lbl = w === 7 ? 'این هفته' : (w === 6 ? 'هفته قبل' : n2fa(7 - w) + ' هفته قبل');
-      buckets.push(_dashShell(lbl, n2fa(ch[0].m) + '/' + n2fa(ch[0].d) + ' تا ' + n2fa(ch[6].m) + '/' + n2fa(ch[6].d)));
+    const idx = {};
+    for (let wi = 0; wi <= 4; wi++) {               // wi=0 هفتهٔ قبل (پایهٔ رشد)، wi=1 این هفته، تا ۳ هفتهٔ بعد
+      const startOff = -7 + wi * 7;
+      const days = [];
+      for (let d = 0; d < 7; d++) { const p = _dashDayAt(startOff + d); idx[_dashDayKey(p.y, p.m, p.d)] = wi; days.push(p); }
+      const lbl = wi === 1 ? 'این هفته' : (wi === 0 ? 'هفته قبل' : (wi === 2 ? 'هفته بعد' : n2fa(wi - 1) + ' هفته بعد'));
+      buckets.push(_dashShell(lbl, n2fa(days[0].m) + '/' + n2fa(days[0].d) + ' تا ' + n2fa(days[6].m) + '/' + n2fa(days[6].d)));
     }
     assign = p => { const i = idx[_dashDayKey(p.y, p.m, p.d)]; return i == null ? -1 : i; };
   } else if (_dashRange === 'month') {
-    buckets.push(_dashShell(SHAMSI_MONTHS[11], SHAMSI_MONTHS[11] + ' ' + n2fa(today.y - 1)));
-    for (let m = 1; m <= 12; m++) buckets.push(_dashShell(SHAMSI_MONTHS[m - 1], SHAMSI_MONTHS[m - 1] + ' ' + n2fa(today.y)));
-    assign = p => (p.y === today.y ? p.m : (p.y === today.y - 1 && p.m === 12 ? 0 : -1));
+    const mAt = o => { let m = today.m + o, y = today.y; while (m > 12) { m -= 12; y++; } while (m < 1) { m += 12; y--; } return { y, m }; };
+    for (let o = -1; o <= 11; o++) { const mm = mAt(o); const nm = SHAMSI_MONTHS[mm.m - 1]; buckets.push(_dashShell(nm, nm + ' ' + _yr(mm.y))); }
+    assign = p => { for (let o = -1; o <= 11; o++) { const mm = mAt(o); if (p.y === mm.y && p.m === mm.m) return o + 1; } return -1; };
   } else {
-    for (let k = 6; k >= 0; k--) buckets.push(_dashShell(n2fa(today.y - k), 'سال ' + n2fa(today.y - k)));
-    assign = p => { const i = 6 - (today.y - p.y); return (i >= 0 && i <= 6) ? i : -1; };
+    for (let o = -1; o <= 5; o++) buckets.push(_dashShell(_yr(today.y + o), 'سال ' + _yr(today.y + o)));
+    assign = p => { const i = (p.y - today.y) + 1; return (i >= 0 && i <= 6) ? i : -1; };
   }
   return { buckets, assign, today };
 }
@@ -8283,13 +8292,15 @@ function renderDashboard(skipAnim) {
 
   const { buckets } = _dashSeries();
   const disp = buckets.slice(1);
-  const sel = _dashSelIdx == null ? disp.length - 1 : Math.max(0, Math.min(_dashSelIdx, disp.length - 1));
+  // پنجرهٔ آینده‌نگر: ستونِ پیش‌فرضِ انتخاب‌شده «دورهٔ جاری» (امروز/این هفته/…) است که
+  // اولین ستونِ نمایشی است — نه آخرین (که دورترین روزِ آینده و معمولاً خالی است).
+  const sel = _dashSelIdx == null ? 0 : Math.max(0, Math.min(_dashSelIdx, disp.length - 1));
   const selB = disp[sel], prevB = sel === 0 ? buckets[0] : disp[sel - 1];
   const cur = _dashPick(selB), prev = _dashPick(prevB);
-  const isLast = sel === disp.length - 1;
+  const isCur = sel === 0;   // ستونِ دورهٔ جاری
   const rangeWord = { day: 'امروز', week: 'این هفته', month: 'این ماه', year: 'امسال' }[_dashRange];
   const perWord = { day: 'روز قبل', week: 'هفته قبل', month: 'ماه قبل', year: 'سال قبل' }[_dashRange];
-  const bucketWord = isLast ? rangeWord : selB.label;
+  const bucketWord = isCur ? rangeWord : selB.label;
   const prog = (id, pct, tip) => _dashSetProgress(document.getElementById(id), pct, tip);
 
   // ۱) فروش — مبلغ + تفکیک پطرول/دیزل + لیتر
@@ -18891,7 +18902,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.38';
+const APP_VERSION = '2.9.39';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
