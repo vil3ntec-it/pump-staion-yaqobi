@@ -12621,11 +12621,16 @@ function renderDebtSummary() {
   if (!list.length) {
     tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">هنوز قرض‌داری ثبت نشده</td></tr>';
   } else {
+    // جمع‌ها روی «همهٔ» قرض‌داران حساب می‌شوند، ولی برای جلوگیری از قفل‌شدن با داده‌های
+    // خیلی بزرگ فقط CAP ردیفِ اول در DOM رندر می‌شود (بقیه در بخش قرض‌داران/جست‌وجو).
+    const CAP = 400;
+    const frag = document.createDocumentFragment();
     list.forEach((p, i) => {
       // حساب «واحد تیل» هم دقیقاً مثل «واحد پول» نمایش داده می‌شود — با لیتر
       const f = _debtSumFigures(p);
       if (f.money) { totBardagi += f.bardagi; totRasid += f.rasid; totAlbaqi += f.albaqi; }
       else { anyFuel = true; totBardagiL += f.bardagi; totRasidL += f.rasid; totAlbaqiL += f.albaqi; }
+      if (i >= CAP) return;
       const u = f.money ? '' : ' ل';
       const tr = document.createElement('tr');
       tr.style.cursor = 'pointer';
@@ -12637,8 +12642,14 @@ function renderDebtSummary() {
         <td style="color:var(--green);font-weight:700">${n2fa(rnd(f.rasid))}${u}</td>
         <td style="color:${f.albaqi>0?'var(--red)':'var(--green)'};font-weight:700">${n2fa(rnd(-f.albaqi))}${u}</td>
       `;
-      tb.appendChild(tr);
+      frag.appendChild(tr);
     });
+    tb.appendChild(frag);
+    if (list.length > CAP) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td colspan="5" style="text-align:center;padding:10px;color:var(--muted)">نمایش ${n2fa(CAP)} از ${n2fa(list.length)} قرض‌دار — جمع‌های پایین شاملِ همه است</td>`;
+      tb.appendChild(tr);
+    }
   }
   // جمع کل: واحد پول و واحد تیل جدا از هم (قاطی نمی‌شوند)
   const setTot = (id, v, vL) => {
@@ -18746,7 +18757,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.36';
+const APP_VERSION = '2.9.37';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
