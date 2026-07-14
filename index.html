@@ -10613,7 +10613,7 @@ function renderPersonRows(person) {
     const tr = document.createElement('tr');
     tr.setAttribute('data-idx', i);
     tr.innerHTML = `
-      <td class="xls-num">${n2fa(shown)}</td>
+      <td class="xls-num" style="cursor:pointer" title="نرخ اتحادیهٔ این ردیف — بزنید تا ببینید/عوض کنید" onclick="rowRateEditor(this,'${person.id}',${i})">${n2fa(shown)}</td>
       <td><input class="xls-in" value="${r.date||''}" onchange="updatePersonRow('${person.id}',${i},'date',this.value)"></td>
       <td><input class="xls-in" value="${escFa(r.name)}" placeholder="نام" style="min-width:140px" onchange="updatePersonRow('${person.id}',${i},'name',this.value)"></td>
       <td><input class="xls-in" value="${r.hawala||''}" placeholder="#" inputmode="numeric" style="min-width:48px;max-width:64px" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="updatePersonRow('${person.id}',${i},'hawala',this.value)"></td>
@@ -11025,6 +11025,48 @@ function _togglePmFtColumn(show) {
   const albLbl = document.getElementById('pm-ft-albaqi-lbl');
   if (albLbl) albLbl.colSpan = show ? 6 : 5;
 }
+// ── قفلِ نرخِ اتحادیه روی هر ردیف ─────────────────────────────────────────────
+// نرخ اتحادیه ثابت نیست؛ برای اینکه تغییرِ نرخ، الباقیِ ردیف‌های قدیمی را جابه‌جا
+// نکند، هر ردیف موقعِ پر شدن نرخِ اتحادیهٔ همان لحظه را روی خودش قفل می‌کند (مخفی).
+// خالی‌شدنِ ردیف → پاک می‌شود تا با پر شدنِ دوباره نرخِ روز را بگیرد. نرخِ دستی
+// (uRateManual) با قفلِ خودکار عوض نمی‌شود.
+function _rowIsFilled(r){ return !!((parseFloat(r.fuel)||0)||(parseFloat(r.priceper)||0)||(parseFloat(r.bardagi)||0)||(parseFloat(r.rasid)||0)||(parseFloat(r.rasidFuel)||0)); }
+function _stampRowUnionRate(r){
+  if (!r) return;
+  if (r.uRateManual === true) return;                 // نرخِ دستی دست‌نخورده می‌ماند
+  if (!_rowIsFilled(r)) { r.uRate = 0; return; }       // ردیفِ خالی → نرخ پاک تا دفعهٔ بعد تازه شود
+  if (!(parseFloat(r.uRate) > 0)) {
+    const u = (r.ftype === 'diesel') ? (parseFloat(DB.unionRateDiesel)||0) : (parseFloat(DB.unionRatePetrol)||0);
+    if (u > 0) r.uRate = u;
+  }
+}
+// نرخِ مؤثرِ یک ردیف برای تبدیلِ پول↔تیل: نرخِ قفل‌شدهٔ ردیف، وگرنه نرخِ اتحادیهٔ زندهٔ روز
+function _rowUnionRate(r){
+  const locked = parseFloat(r && r.uRate) || 0;
+  if (locked > 0) return locked;
+  return (r && r.ftype === 'diesel') ? (parseFloat(DB.unionRateDiesel)||0) : (parseFloat(DB.unionRatePetrol)||0);
+}
+// ویرایشِ دستیِ نرخِ اتحادیهٔ یک ردیف — با کلیک روی ستونِ شماره، همان‌جا کادرِ کوچکِ
+// نرخ باز می‌شود (پیش‌فرض: نرخِ قفل‌شده یا نرخِ اتحادیهٔ روز) و قابلِ تغییر است. بدونِ
+// prompt (که در بعضی وب‌ویوها باز نمی‌شود) — کادرِ درون‌خطی.
+function rowRateEditor(td, pid, idx){
+  const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
+  const person = (list||[]).find(p => p.id === pid); if (!person) return;
+  const r = _acctRows(person)[idx]; if (!r || (td && td.querySelector('input'))) return;
+  const cur = _rowUnionRate(r) || '';
+  td.innerHTML = '<input type="number" value="' + cur + '" title="نرخ اتحادیهٔ همین ردیف" '
+    + 'style="width:46px;padding:2px;font-size:0.7rem;text-align:center;border:1px solid var(--accent);border-radius:5px;background:var(--card);color:var(--txt)" '
+    + 'onclick="event.stopPropagation()">';
+  const inp = td.querySelector('input'); if (!inp) return;
+  inp.focus(); inp.select();
+  const done = () => {
+    const v = parseFloat(inp.value) || 0;
+    if (v > 0) { r.uRate = v; r.uRateManual = true; } else { r.uRate = 0; r.uRateManual = false; }
+    save(); _updatePersonTotals(person); renderPersonRows(person);
+  };
+  inp.addEventListener('blur', done);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); inp.blur(); } });
+}
 function calcPersonRow(pid, idx, field, value) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === pid);
@@ -11052,6 +11094,7 @@ function calcPersonRow(pid, idx, field, value) {
   if (!r.byMoney) r.bardagi = _fuelBardagi(r);
   // الباقی پولی هر ردیف = بردگی − رسید پول (رسید تیل دفترِ لیتر است و جدا جمع می‌شود)
   r.albaqi = (parseFloat(r.bardagi)||0) - (r.rasid||0);
+  _stampRowUnionRate(r);   // نرخِ اتحادیهٔ همین لحظه روی ردیف قفل می‌شود (خواستهٔ کاربر)
   save();
   _updatePersonRowCells(person, idx, r);
   _updatePersonTotals(person);
@@ -11178,35 +11221,31 @@ function _updatePersonTotals(person) {
   // قابلِ تایپ است؛ رسیدهای ثبت‌شده در خودِ جدول جداگانه در الباقی حساب می‌شوند.
   const rasidP = money ? (parseFloat(acct.rasidMoneyP)||0) : (parseFloat(acct.rasidFuelP)||0);
   const rasidD = money ? (parseFloat(acct.rasidMoneyD)||0) : (parseFloat(acct.rasidFuelD)||0);
-  // فیِ خالصِ حساب = فقط از ردیف‌هایی که هم «مقدار تیل» هم «بردگی» دارند (نه ردیف‌های
-  // فقط‌پولی) — تا وقتی هنوز فی زده نشده صفر بماند و «الباقی پول» ثابت بماند (باگِ قبلی).
-  let _fFuelP=0,_fBardP=0,_fFuelD=0,_fBardD=0;
-  if (!money) rows.forEach(r => {
-    const f = parseFloat(r.fuel)||0; if (f<=0) return;
-    const b = parseFloat(r.bardagi)||0;
-    if (r.ftype==='diesel'){ _fFuelD+=f; _fBardD+=b; } else { _fFuelP+=f; _fBardP+=b; }
-  });
-  const _accFeeP = _fFuelP>0 ? (_fBardP/_fFuelP) : 0;
-  const _accFeeD = _fFuelD>0 ? (_fBardD/_fFuelD) : 0;
-  // بردگیِ «فقط‌پولی» = کلِ بردگی منهای بردگیِ ردیف‌های لیتردار. نرخِ تبدیلِ پول→لیتر:
-  // فیِ حساب، وگرنه نرخ اتحادیه (فقط برای تبدیل).
+  // ── تبدیلِ پول↔تیل با نرخِ «قفل‌شدهٔ هر ردیف» (نه نرخِ زندهٔ اتحادیه) ──────────
+  // هر ردیفِ فقط‌پولی/رسید با نرخِ خودش تبدیل می‌شود؛ پس تغییرِ نرخ اتحادیه، ردیف‌های
+  // قدیمی را جابه‌جا نمی‌کند. ردیفِ لیتردار فیِ خودش (بردگی÷لیتر) را دارد.
   const _uRP = parseFloat(DB.unionRatePetrol)||0, _uRD = parseFloat(DB.unionRateDiesel)||0;
-  const _convFeeP = _accFeeP>0 ? _accFeeP : _uRP;
-  const _convFeeD = _accFeeD>0 ? _accFeeD : _uRD;
-  const _moneyBardP = Math.max(0, t.petrol.bardagi - _fBardP);   // بردگیِ فقط‌پولی (افغانی)
-  const _moneyBardD = Math.max(0, t.diesel.bardagi - _fBardD);
-  // در «واحد تیل»: بردگیِ فقط‌پولی و رسیدِ پولیِ جدول هم به لیتر تبدیل و در برد/الباقی
-  // تیل حساب می‌شوند (خواستهٔ کاربر). رسیدِ پولی طلب است، پس از برد کم می‌شود.
-  const _moneyBardLP = _convFeeP>0 ? (_moneyBardP/_convFeeP) : 0;
-  const _moneyBardLD = _convFeeD>0 ? (_moneyBardD/_convFeeD) : 0;
-  const _rasidMoneyLP = _convFeeP>0 ? (t.petrol.rasid/_convFeeP) : 0;
-  const _rasidMoneyLD = _convFeeD>0 ? (t.diesel.rasid/_convFeeD) : 0;
-  // فیِ حالتِ پول (بردگی ÷ لیتر) و معادلِ پولیِ «رسید تیلِ» جدول (لیتر × فی). در «واحد
-  // پول»، رسید تیل طلبِ تیلی است و مثل رسیدِ پول از بدهی کم می‌کند (خواستهٔ کاربر).
-  const _feMoneyP = t.petrol.fuel > 0 ? (t.petrol.bardagi / t.petrol.fuel) : _uRP;
-  const _feMoneyD = t.diesel.fuel > 0 ? (t.diesel.bardagi / t.diesel.fuel) : _uRD;
-  const _rasidFuelMoneyP = (parseFloat(t.petrol.rasidFuel)||0) * _feMoneyP;
-  const _rasidFuelMoneyD = (parseFloat(t.diesel.rasidFuel)||0) * _feMoneyD;
+  let _fFuelP=0,_fBardP=0,_fFuelD=0,_fBardD=0;      // ردیف‌های لیتردار (فیِ حساب)
+  let _moneyBardP=0,_moneyBardLP=0,_moneyBardD=0,_moneyBardLD=0;   // بردگیِ فقط‌پولی → لیتر
+  let _rasidMoneyLP=0,_rasidMoneyLD=0;               // رسیدِ پولی → لیتر
+  let _rasidFuelMoneyP=0,_rasidFuelMoneyD=0;         // رسید تیل → پول
+  rows.forEach(r => {
+    const isD = r.ftype === 'diesel';
+    const f = parseFloat(r.fuel)||0, b = parseFloat(r.bardagi)||0, rs = parseFloat(r.rasid)||0, rf = parseFloat(r.rasidFuel)||0;
+    const rowFee = f > 0 ? (b/f) : _rowUnionRate(r);   // فیِ همین ردیف یا نرخِ قفل‌شدهٔ آن
+    if (f > 0){ if(isD){_fFuelD+=f;_fBardD+=b;} else {_fFuelP+=f;_fBardP+=b;} }
+    else if (b > 0){                                   // ردیفِ فقط‌پولی
+      const L = rowFee>0 ? b/rowFee : 0;
+      if(isD){_moneyBardD+=b;_moneyBardLD+=L;} else {_moneyBardP+=b;_moneyBardLP+=L;}
+    }
+    if (rs > 0 && rowFee > 0){ const L = rs/rowFee; if(isD)_rasidMoneyLD+=L; else _rasidMoneyLP+=L; }
+    if (rf > 0){ const M = rf*rowFee; if(isD)_rasidFuelMoneyD+=M; else _rasidFuelMoneyP+=M; }
+  });
+  const _accFeeP = _fFuelP>0 ? (_fBardP/_fFuelP) : 0;   // فیِ خالصِ حساب (ردیف‌های لیتردار)
+  const _accFeeD = _fFuelD>0 ? (_fBardD/_fFuelD) : 0;
+  // نرخِ مؤثرِ نمایشِ الباقی وقتی فیِ لیتردار نیست (از بردگیِ پولی و معادلِ لیترش)
+  const _blendP = _moneyBardLP>0 ? (_moneyBardP/_moneyBardLP) : 0;
+  const _blendD = _moneyBardLD>0 ? (_moneyBardD/_moneyBardLD) : 0;
   // برد = مجموع لیتر (+ معادلِ لیترِ بردگیِ پولی) در حالت تیل؛ مجموع بردگی/پول در حالت پول
   const bordP = money ? t.petrol.bardagi : (t.petrol.fuel + _moneyBardLP);
   const bordD = money ? t.diesel.bardagi : (t.diesel.fuel + _moneyBardLD);
@@ -11278,8 +11317,8 @@ function _updatePersonTotals(person) {
     // رسید پول + معادلِ پولیِ رسید تیل (طلب) منهای بردگی = الباقی پول
     const remMoneyBalP = (rasidP + t.petrol.rasid + _rasidFuelMoneyP) - t.petrol.bardagi;
     const remMoneyBalD = (rasidD + t.diesel.rasid + _rasidFuelMoneyD) - t.diesel.bardagi;
-    const feP = t.petrol.fuel > 0 ? (t.petrol.bardagi / t.petrol.fuel) : rateP;   // فیِ حساب، وگرنه نرخ اتحادیه
-    const feD = t.diesel.fuel > 0 ? (t.diesel.bardagi / t.diesel.fuel) : rateD;
+    const feP = _accFeeP > 0 ? _accFeeP : (_blendP > 0 ? _blendP : rateP);   // فیِ حساب، وگرنه نرخِ قفل‌شده، وگرنه اتحادیه
+    const feD = _accFeeD > 0 ? _accFeeD : (_blendD > 0 ? _blendD : rateD);
     const remFuelP2 = feP > 0 ? remMoneyBalP / feP : 0;   // الباقی تیل = الباقی پول ÷ فی
     const remFuelD2 = feD > 0 ? remMoneyBalD / feD : 0;
     setRemExtra('p', remFuelP2, 'الباقی تیل');
@@ -11296,8 +11335,8 @@ function _updatePersonTotals(person) {
     // نرخِ نمایشِ الباقی پول: فیِ خالصِ حساب؛ اگر فی نبود ولی بردگیِ پولی برده شده،
     // نرخ اتحادیه (تا پولِ برده‌شده در الباقی پول هم دیده شود)؛ وگرنه ۰ → ارزشِ خامِ
     // رسید تیل نمایش داده می‌شود و با تایپِ «مقدار تیلِ بدون فی» کم نمی‌شود (باگِ قبلی).
-    const _mrP = _accFeeP > 0 ? _accFeeP : (_moneyBardP > 0 ? _convFeeP : 0);
-    const _mrD = _accFeeD > 0 ? _accFeeD : (_moneyBardD > 0 ? _convFeeD : 0);
+    const _mrP = _accFeeP > 0 ? _accFeeP : (_moneyBardP > 0 ? _blendP : 0);
+    const _mrD = _accFeeD > 0 ? _accFeeD : (_moneyBardD > 0 ? _blendD : 0);
     _remMoneyP = _mrP > 0 ? (remFuelP * _mrP) : (rasidP * rateP);
     _remMoneyD = _mrD > 0 ? (remFuelD * _mrD) : (rasidD * rateD);
     setRemExtra('p', _remMoneyP, 'الباقی پول');
@@ -18697,7 +18736,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.33';
+const APP_VERSION = '2.9.34';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
