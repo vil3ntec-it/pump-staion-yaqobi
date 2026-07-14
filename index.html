@@ -11178,15 +11178,37 @@ function _updatePersonTotals(person) {
   // قابلِ تایپ است؛ رسیدهای ثبت‌شده در خودِ جدول جداگانه در الباقی حساب می‌شوند.
   const rasidP = money ? (parseFloat(acct.rasidMoneyP)||0) : (parseFloat(acct.rasidFuelP)||0);
   const rasidD = money ? (parseFloat(acct.rasidMoneyD)||0) : (parseFloat(acct.rasidFuelD)||0);
-  // برد = مجموع لیتر (حالت تیل) یا مجموع بردگی/پول (حالت پول)
-  const bordP = money ? t.petrol.bardagi : t.petrol.fuel;
-  const bordD = money ? t.diesel.bardagi : t.diesel.fuel;
+  // فیِ خالصِ حساب = فقط از ردیف‌هایی که هم «مقدار تیل» هم «بردگی» دارند (نه ردیف‌های
+  // فقط‌پولی) — تا وقتی هنوز فی زده نشده صفر بماند و «الباقی پول» ثابت بماند (باگِ قبلی).
+  let _fFuelP=0,_fBardP=0,_fFuelD=0,_fBardD=0;
+  if (!money) rows.forEach(r => {
+    const f = parseFloat(r.fuel)||0; if (f<=0) return;
+    const b = parseFloat(r.bardagi)||0;
+    if (r.ftype==='diesel'){ _fFuelD+=f; _fBardD+=b; } else { _fFuelP+=f; _fBardP+=b; }
+  });
+  const _accFeeP = _fFuelP>0 ? (_fBardP/_fFuelP) : 0;
+  const _accFeeD = _fFuelD>0 ? (_fBardD/_fFuelD) : 0;
+  // بردگیِ «فقط‌پولی» = کلِ بردگی منهای بردگیِ ردیف‌های لیتردار. نرخِ تبدیلِ پول→لیتر:
+  // فیِ حساب، وگرنه نرخ اتحادیه (فقط برای تبدیل).
+  const _uRP = parseFloat(DB.unionRatePetrol)||0, _uRD = parseFloat(DB.unionRateDiesel)||0;
+  const _convFeeP = _accFeeP>0 ? _accFeeP : _uRP;
+  const _convFeeD = _accFeeD>0 ? _accFeeD : _uRD;
+  const _moneyBardP = Math.max(0, t.petrol.bardagi - _fBardP);   // بردگیِ فقط‌پولی (افغانی)
+  const _moneyBardD = Math.max(0, t.diesel.bardagi - _fBardD);
+  // در «واحد تیل»: بردگیِ فقط‌پولی و رسیدِ پولیِ جدول هم به لیتر تبدیل و در برد/الباقی
+  // تیل حساب می‌شوند (خواستهٔ کاربر). رسیدِ پولی طلب است، پس از برد کم می‌شود.
+  const _moneyBardLP = _convFeeP>0 ? (_moneyBardP/_convFeeP) : 0;
+  const _moneyBardLD = _convFeeD>0 ? (_moneyBardD/_convFeeD) : 0;
+  const _rasidMoneyLP = _convFeeP>0 ? (t.petrol.rasid/_convFeeP) : 0;
+  const _rasidMoneyLD = _convFeeD>0 ? (t.diesel.rasid/_convFeeD) : 0;
+  // برد = مجموع لیتر (+ معادلِ لیترِ بردگیِ پولی) در حالت تیل؛ مجموع بردگی/پول در حالت پول
+  const bordP = money ? t.petrol.bardagi : (t.petrol.fuel + _moneyBardLP);
+  const bordD = money ? t.diesel.bardagi : (t.diesel.fuel + _moneyBardLD);
   const commP = rasidP * pct/100, commD = rasidD * pct/100;
   const rnd = x => Math.round(x*100)/100;
-  // الباقی = برد + فیصدی − رسیدِ کادر − (در حالت پول) رسیدهای داخلِ جدول —
-  // همان فرمولِ حساب‌های انباشته و PDF؛ هیچ رسیدی دوبار حساب نمی‌شود
-  const remP = bordP + commP - rasidP - (money ? t.petrol.rasid : 0),
-        remD = bordD + commD - rasidD - (money ? t.diesel.rasid : 0);
+  // الباقی = برد + فیصدی − رسیدِ کادر − رسیدهای داخلِ جدول (حالت پول: پولی؛ حالت تیل: معادلِ لیتر)
+  const remP = bordP + commP - rasidP - (money ? t.petrol.rasid : _rasidMoneyLP),
+        remD = bordD + commD - rasidD - (money ? t.diesel.rasid : _rasidMoneyLD);
   // کادرهای «مقدار رسید» در هر دو حالت قابلِ ویرایش‌اند (readOnly حالتِ پول برداشته شد —
   // باعث می‌شد در بخش قرض‌داران هیچ چیزی در کادر نوشته نشود)
   const pRasidEl = document.getElementById('pm-p-rasidfuel');
@@ -11264,10 +11286,13 @@ function _updatePersonTotals(person) {
     // تا فی زده نشود (feT=۰) تایپِ «مقدار تیل» نباید پول را کم کند (باگِ قبلی)؛ در آن حالت
     // ارزشِ خامِ رسید تیل به نرخ اتحادیه به‌عنوان تخمین نمایش داده می‌شود و ثابت می‌ماند.
     const remFuelP = -remP, remFuelD = -remD;   // الباقی تیلِ همین حساب به لیتر
-    const feTP = (t.petrol.bardagi > 0 && t.petrol.fuel > 0) ? (t.petrol.bardagi / t.petrol.fuel) : 0;   // فیِ حساب
-    const feTD = (t.diesel.bardagi > 0 && t.diesel.fuel > 0) ? (t.diesel.bardagi / t.diesel.fuel) : 0;
-    _remMoneyP = feTP > 0 ? (remFuelP * feTP) : (rasidP * rateP);
-    _remMoneyD = feTD > 0 ? (remFuelD * feTD) : (rasidD * rateD);
+    // نرخِ نمایشِ الباقی پول: فیِ خالصِ حساب؛ اگر فی نبود ولی بردگیِ پولی برده شده،
+    // نرخ اتحادیه (تا پولِ برده‌شده در الباقی پول هم دیده شود)؛ وگرنه ۰ → ارزشِ خامِ
+    // رسید تیل نمایش داده می‌شود و با تایپِ «مقدار تیلِ بدون فی» کم نمی‌شود (باگِ قبلی).
+    const _mrP = _accFeeP > 0 ? _accFeeP : (_moneyBardP > 0 ? _convFeeP : 0);
+    const _mrD = _accFeeD > 0 ? _accFeeD : (_moneyBardD > 0 ? _convFeeD : 0);
+    _remMoneyP = _mrP > 0 ? (remFuelP * _mrP) : (rasidP * rateP);
+    _remMoneyD = _mrD > 0 ? (remFuelD * _mrD) : (rasidD * rateD);
     setRemExtra('p', _remMoneyP, 'الباقی پول');
     setRemExtra('d', _remMoneyD, 'الباقی پول');
   }
@@ -11296,9 +11321,9 @@ function _updatePersonTotals(person) {
         '<div style="white-space:nowrap;color:' + (netAll < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی پول: ' + netTxt + '</div>' +
         '<div style="font-size:0.74rem;font-weight:800;margin-top:2px;white-space:nowrap;color:' + (remFuelAll < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی تیل: ' + n2fa(remFuelAll) + ' ل</div>';
     } else {
-      // واحد تیل: الباقی پول = جمعِ کارت‌های بالا (رسید تیل × نرخ − بردگی) و الباقی تیل =
-      // جمعِ همین جدول (رسید تیل − مقدار تیل).
-      const netL = Math.round((t.all.rasidFuel - t.all.fuel) * 100) / 100;
+      // واحد تیل: الباقی پول = جمعِ کارت‌های بالا و الباقی تیل = رسید تیل − مقدار تیل، منهای
+      // معادلِ لیترِ بردگیِ پولی و به‌علاوهٔ معادلِ لیترِ رسیدِ پولی (هماهنگ با کارت‌های بالا).
+      const netL = Math.round((t.all.rasidFuel - t.all.fuel - _moneyBardLP - _moneyBardLD + _rasidMoneyLP + _rasidMoneyLD) * 100) / 100;
       const remMoneyAll = Math.round(_remMoneyP + _remMoneyD);
       ftAlbEl.innerHTML =
         '<div style="white-space:nowrap;color:' + (remMoneyAll < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی پول: ' + n2fa(remMoneyAll) + '</div>' +
@@ -18663,7 +18688,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.31';
+const APP_VERSION = '2.9.32';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
