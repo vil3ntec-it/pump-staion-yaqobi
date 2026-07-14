@@ -11150,19 +11150,27 @@ function _updatePersonTotals(person) {
   const setRem = (id, v) => { const el = document.getElementById(id); if (el) { const val = rnd(-v) || 0; el.textContent = n2fa(val); el.style.color = val < 0 ? 'var(--red)' : 'var(--green)'; } };
   setRem('pm-p-remfuel', remP);
   setRem('pm-d-remfuel', remD);
-  // در حالت «واحد تیل» خانهٔ «الباقی پول» (رسید پول − بردگی پولی جدول) کنار بقیهٔ
-  // خانه‌ها افقی نمایش داده می‌شود (ستون پنجم — کادر بلند نمی‌شود)؛ در حالت پول
-  // خودِ کادر الباقی پول است و این خانه مخفی می‌ماند
-  const setRemMoney = (fuel, v) => {
+  // خانهٔ پنجمِ کارت‌های حساب پطرول/دیزل در هر دو حالت نمایش داده می‌شود تا واحد پول
+  // و واحد تیل کاملاً هم‌شکل باشند (کادر بلند نمی‌شود، ستون پنجمِ افقی):
+  //   واحد تیل  → «الباقی پول» (رسید پول − بردگی پولی جدول)
+  //   واحد پول → «الباقی تیل» (رسید تیل − مقدار تیل جدول)
+  // فقط نمایشی — از جمع‌های موجود خوانده می‌شود و روی هیچ محاسبه‌ای اثر ندارد
+  const setRemExtra = (fuel, v, label) => {
     const cell = document.getElementById('pm-' + fuel + '-remmoney-cell');
     const el = document.getElementById('pm-' + fuel + '-remmoney');
     if (!cell || !el) return;
-    cell.style.display = money ? 'none' : '';
-    if (cell.parentElement) cell.parentElement.classList.toggle('has-remmoney', !money);
-    if (!money) { const val = Math.round(v) || 0; el.textContent = n2fa(val); el.style.color = val < 0 ? 'var(--red)' : 'var(--green)'; }
+    cell.style.display = '';
+    if (cell.parentElement) cell.parentElement.classList.add('has-remmoney');
+    const lbl = cell.querySelector('.l'); if (lbl) lbl.textContent = label;
+    const val = Math.round(v) || 0; el.textContent = n2fa(val); el.style.color = val < 0 ? 'var(--red)' : 'var(--green)';
   };
-  setRemMoney('p', t.petrol.rasid - t.petrol.bardagi);
-  setRemMoney('d', t.diesel.rasid - t.diesel.bardagi);
+  if (money) {
+    setRemExtra('p', t.petrol.rasidFuel - t.petrol.fuel, 'الباقی تیل');
+    setRemExtra('d', t.diesel.rasidFuel - t.diesel.fuel, 'الباقی تیل');
+  } else {
+    setRemExtra('p', t.petrol.rasid - t.petrol.bardagi, 'الباقی پول');
+    setRemExtra('d', t.diesel.rasid - t.diesel.bardagi, 'الباقی پول');
+  }
   setV('pm-bord-sum', n2fa(rnd(bordP+bordD)) + unit);
   // footer جدول: جمعِ هر ستون در جمعِ خودِ همان ستون — مقدار تیل، مقدار بردگی و
   // رسید در هر دو حالتِ واحد پول/تیل فقط نمایش داده می‌شوند و هیچ اثری بر
@@ -11354,24 +11362,25 @@ function _renderHistoryPanel(person) {
         <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="0" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'priceper',this.value)"></td>
         <td><input class="xls-in pm-bardagi-cell" type="number" value="${parseFloat(bard.toFixed(0))||''}" placeholder="0" style="color:var(--accent);font-weight:700" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'bardagi',this.value)"></td>
         <td><input class="xls-in" type="number" value="${r.rasid||''}" placeholder="0" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'rasid',this.value)"></td>
+        <td><input class="xls-in" type="number" value="${r.rasidFuel||''}" placeholder="0" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'rasidFuel',this.value)"></td>
         <td class="pm-albaqi-cell" style="font-weight:700;color:var(--accent)">${n2fa(Math.round(bard)||0)}</td>
         <td><button class="del-btn" onclick="deleteHistoryRow('${pid}','${h.id}',${ri})">🗑️</button></td>
       </tr>`;
     }).join('');
-    if (!rowsHtml) rowsHtml = `<tr><td colspan="${showFt?11:10}" style="text-align:center;padding:12px;color:var(--muted);font-size:0.82rem">${hFilter==='petrol'?'⛽ هیچ ردیف پطرولی ثبت نشده':(hFilter==='diesel'?'🟤 هیچ ردیف دیزلی ثبت نشده':'هیچ ردیفی ثبت نشده')}</td></tr>`;
+    if (!rowsHtml) rowsHtml = `<tr><td colspan="${showFt?12:11}" style="text-align:center;padding:12px;color:var(--muted);font-size:0.82rem">${hFilter==='petrol'?'⛽ هیچ ردیف پطرولی ثبت نشده':(hFilter==='diesel'?'🟤 هیچ ردیف دیزلی ثبت نشده':'هیچ ردیفی ثبت نشده')}</td></tr>`;
     const viewAlbaqi = viewRows.reduce((s, x) => s + ((x.r.byMoney ? (x.r.bardagi||0) : _fuelBardagi(x.r)) - (x.r.rasid||0)), 0);
     const tableHtml = filterBarHtml + `
       <div class="xls-wrap" style="margin:8px 10px;border-radius:9px;overflow:hidden">
         <div style="overflow-x:auto">
-          <table class="xls-tbl" style="table-layout:fixed;width:100%;min-width:${showFt?752:652}px">
+          <table class="xls-tbl" style="table-layout:fixed;width:100%;min-width:${showFt?842:742}px">
             <thead><tr>
               <th style="width:34px">#</th><th style="width:96px">تاریخ</th><th style="width:150px">نام</th><th style="width:60px">نمبر حواله</th>
-              ${showFt?'<th style="width:100px">نوع تیل</th>':''}<th style="width:56px">مقدار تیل</th><th style="width:56px">فی لیتر</th><th style="width:90px">مقدار بردگی</th><th style="width:90px">رسید</th><th style="width:90px">الباقی</th><th style="width:46px">حذف</th>
+              ${showFt?'<th style="width:100px">نوع تیل</th>':''}<th style="width:56px">مقدار تیل</th><th style="width:56px">فی لیتر</th><th style="width:90px">مقدار بردگی</th><th style="width:90px">رسید</th><th style="width:90px">رسید تیل</th><th style="width:90px">الباقی</th><th style="width:46px">حذف</th>
             </tr></thead>
             <tbody>${rowsHtml}</tbody>
             <tfoot class="xls-foot"><tr>
               <td colspan="${showFt?7:6}" style="padding:8px 7px;font-weight:800">جمع الباقی همین جدول (رسید − بردگی)</td>
-              <td class="xls-calc" colspan="3" style="font-weight:800;color:${(-viewAlbaqi)<0?'var(--red)':'var(--green)'}">${n2fa(Math.round(-viewAlbaqi)||0)}</td>
+              <td class="xls-calc" colspan="4" style="font-weight:800;color:${(-viewAlbaqi)<0?'var(--red)':'var(--green)'}">${n2fa(Math.round(-viewAlbaqi)||0)}</td>
               <td></td>
             </tr></tfoot>
           </table>
@@ -11526,8 +11535,18 @@ function calcHistoryRow(pid, hid, idx, field, value) {
   const person = _hPerson(pid); if (!person) return;
   const h = _hEntry(pid, hid); if (!h || !h.rows[idx]) return;
   const r = h.rows[idx];
+  const prevRasidFuel = parseFloat(r.rasidFuel) || 0;
   if (field === 'bardagi') { r.byMoney = true; r.bardagi = parseFloat(value)||0; }
   else { r[field] = parseFloat(value)||0; if (!r.byMoney) r.bardagi = _fuelBardagi(r); }
+  // «رسید تیل» آرشیو هم دقیقاً مثل جدول اصلی به رسیدِ حساب تیلِ همین آرشیو (پطرول/دیزل)
+  // به‌صورت تفاضلی اضافه می‌شود — کاملاً جدا از رسید پول
+  if (field === 'rasidFuel') {
+    const delta = (parseFloat(value)||0) - prevRasidFuel;
+    if (delta) {
+      if (r.ftype === 'diesel') h.rasidFuelD = (parseFloat(h.rasidFuelD)||0) + delta;
+      else h.rasidFuelP = (parseFloat(h.rasidFuelP)||0) + delta;
+    }
+  }
   r.albaqi = (r.bardagi||0) - (r.rasid||0);
   save(); _rerenderHistoryPreserveFocus(person);
 }
@@ -11546,7 +11565,7 @@ function addHistoryRow(pid, hid) {
   // فیلترشده (که فقط دیزل را نشان می‌دهد) بیرون می‌افتاد و دکمه انگار کار نمی‌کرد
   const activeFilter = h.viewFilter || h.fuel || currentPersonFilter || 'petrol';
   const ftype = activeFilter === 'diesel' ? 'diesel' : 'petrol';
-  h.rows.push({ date: (typeof persianDate==='function'?persianDate():''), name:'', hawala:'', ftype, fuel:0, priceper:0, bardagi:0, rasid:0, albaqi:0 });
+  h.rows.push({ date: (typeof persianDate==='function'?persianDate():''), name:'', hawala:'', ftype, fuel:0, priceper:0, bardagi:0, rasid:0, rasidFuel:0, albaqi:0 });
   save(); _renderHistoryPanel(person);
 }
 function deleteHistoryRow(pid, hid, idx) {
@@ -18478,7 +18497,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.19';
+const APP_VERSION = '2.9.20';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
