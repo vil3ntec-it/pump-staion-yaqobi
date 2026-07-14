@@ -4610,8 +4610,10 @@ table thead th{ position:relative; }
 .db-lbl{font-size:.64rem;color:var(--muted);font-weight:700;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .dash-detail{margin-top:12px;padding:10px 14px;border:1px dashed var(--border);border-radius:12px;background:var(--dark);font-size:.76rem;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap;align-items:center}
 .dash-detail b{color:var(--txt)}
-#dash-tank .tank-card{padding:12px;gap:10px;margin-bottom:8px}
+#dash-tank .tank-card{padding:12px;gap:10px;margin-bottom:0}
 #dash-tank .tank-card .tank-visual{width:92px;flex:0 0 92px;height:168px}
+.dash-tank-toggle{border:1.5px solid var(--accent);background:var(--card);color:var(--accent);font-family:'Vazirmatn',sans-serif;font-size:.72rem;font-weight:800;padding:5px 12px;border-radius:999px;cursor:pointer;transition:all .22s}
+.dash-tank-toggle:hover{background:var(--accent);color:#fff}
 .dash-hero{position:relative;overflow:hidden;border-radius:26px;padding:26px 20px;background:linear-gradient(160deg,var(--accent),var(--purple) 90%);box-shadow:0 14px 34px rgba(0,0,0,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;min-height:320px}
 .dash-hero::after{content:'';position:absolute;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.12);top:-90px;left:-70px;pointer-events:none}
 .dhero-gauge{position:relative;width:150px;height:84px}
@@ -4652,7 +4654,7 @@ table thead th{ position:relative; }
     <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-debt"/></svg></span><span class="dc-prog" id="dcp-debt"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>—</b></span></div><div class="dc-title">الباقی قرض‌داران</div><div class="dc-value" id="dcv-debt">0</div><div class="dc-sub" id="dcs-debt"></div></div>
     <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-expenses"/></svg></span><span class="dc-prog" id="dcp-exp"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title" id="dct-exp">مصارف امروز</div><div class="dc-value" id="dcv-exp">0</div><div class="dc-sub" id="dcs-exp"></div></div>
     <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-safe"/></svg></span><span class="dc-prog" id="dcp-safe"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title">موجودی گاوصندوق</div><div class="dc-value" id="dcv-safe">0</div><div class="dc-sub" id="dcs-safe"></div></div>
-    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-storage"/></svg></span></div><div class="dc-title">موجودی مخزن</div><div id="dash-tank" style="margin-top:8px"></div></div>
+    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-storage"/></svg></span><button class="dash-tank-toggle" id="dash-tank-toggle" onclick="dashToggleTank()">🔁 دیزل</button></div><div class="dc-title" id="dash-tank-title">موجودی مخزن — ⛽ پطرول</div><div id="dash-tank" style="margin-top:8px"></div></div>
   </div>
   <div class="dash-mid">
     <div class="dash-chart-card">
@@ -8161,10 +8163,28 @@ function _dashExpQuick() {
   });
   return q;
 }
+let _dashTankFuel = 'petrol';   // کارت مخزن همیشه یک مخزن نشان می‌دهد؛ دکمهٔ هدر عوضش می‌کند
+function dashToggleTank() {
+  _dashTankFuel = _dashTankFuel === 'petrol' ? 'diesel' : 'petrol';
+  _renderDashTank();
+}
 function _renderDashTank() {
   const host = document.getElementById('dash-tank'); if (!host) return;
+  // اگر فیلتر کلی سوخت روی پطرول/دیزل باشد همان تعیین‌کننده است؛ در حالت «همه» دکمهٔ
+  // تعویض کارت مخزن انتخاب می‌کند. هر لحظه فقط یک مخزن نمایش داده می‌شود (کادر جمع‌وجور).
+  const f = _dashFuel === 'all' ? _dashTankFuel : _dashFuel;
+  const other = f === 'petrol' ? 'diesel' : 'petrol';
+  const nameOf = x => x === 'petrol' ? '⛽ پطرول' : '🟤 دیزل';
+  const titleEl = document.getElementById('dash-tank-title');
+  if (titleEl) titleEl.textContent = 'موجودی مخزن — ' + nameOf(f);
+  const btn = document.getElementById('dash-tank-toggle');
+  if (btn) {
+    // در حالت «همه» دکمه فعال است و مخزن دیگر را پیشنهاد می‌دهد؛ در فیلتر مشخص، دکمه پنهان
+    if (_dashFuel === 'all') { btn.style.display = ''; btn.textContent = '🔁 ' + (other === 'petrol' ? 'پطرول' : 'دیزل'); }
+    else btn.style.display = 'none';
+  }
   if (typeof __renderTanksInto !== 'function') { host.innerHTML = ''; return; }
-  __renderTanksInto(host, _dashFuel === 'all' ? ['petrol', 'diesel'] : [_dashFuel]);
+  __renderTanksInto(host, [f]);
 }
 function _renderDashChart(disp, sel, skipAnim) {
   const wrap = document.getElementById('dash-bars'); if (!wrap) return;
@@ -18458,7 +18478,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.18';
+const APP_VERSION = '2.9.19';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
