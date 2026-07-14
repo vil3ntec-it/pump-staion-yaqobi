@@ -11228,18 +11228,22 @@ function _updatePersonTotals(person) {
   const _uRateD = parseFloat(DB.unionRateDiesel) || 0;
   const rateP = _uRateP > 0 ? _uRateP : (t.petrol.fuel > 0 ? t.petrol.bardagi / t.petrol.fuel : 0);
   const rateD = _uRateD > 0 ? _uRateD : (t.diesel.fuel > 0 ? t.diesel.bardagi / t.diesel.fuel : 0);
-  // در حالتِ تیل، «الباقی پول»ِ هر حساب این‌جا حساب و برای فوترِ جدول هم استفاده می‌شود
-  let _remMoneyP = 0, _remMoneyD = 0;
+  // «الباقی پول»ِ حالتِ تیل و «الباقی تیل»ِ حالتِ پول — برای فوترِ جدول هم استفاده می‌شوند
+  let _remMoneyP = 0, _remMoneyD = 0;   // حالتِ تیل → الباقی پول
+  let _remFuelAll = 0;                   // حالتِ پول → الباقی تیلِ کل
   if (money) {
     // واحد پول: موجودی اصلی به افغانی است. موجودی تیل داینامیک از موجودی پول ÷ نرخ
     // اتحادیه به دست می‌آید، سپس مقدار تیلِ تحویلیِ جدول از آن کم می‌شود — نه از صفر.
-    // (باگِ قبلی: rasidFuel(=۰) − fuel → الباقیِ منفی مثل ۱۰۰-)
+    // برخلافِ حالتِ تیل این‌جا کفِ صفر نمی‌گذاریم: اضافه‌برد باید منفی (بدهی) نشان داده شود.
     const moneyBalP = rasidP + t.petrol.rasid;   // موجودی پول = رسید پول + رسیدهای داخل جدول
     const moneyBalD = rasidD + t.diesel.rasid;
     const fuelBalP = rateP > 0 ? moneyBalP / rateP : 0;   // موجودی تیل معادل
     const fuelBalD = rateD > 0 ? moneyBalD / rateD : 0;
-    setRemExtra('p', fuelBalP - t.petrol.fuel, 'الباقی تیل');
-    setRemExtra('d', fuelBalD - t.diesel.fuel, 'الباقی تیل');
+    const remFuelP2 = fuelBalP - t.petrol.fuel;   // می‌تواند منفی شود (اضافه‌برد)
+    const remFuelD2 = fuelBalD - t.diesel.fuel;
+    setRemExtra('p', remFuelP2, 'الباقی تیل');
+    setRemExtra('d', remFuelD2, 'الباقی تیل');
+    _remFuelAll = remFuelP2 + remFuelD2;
   } else {
     // واحد تیل: «الباقی پول» = ارزشِ پولیِ رسید تیل (رسید تیل × نرخ) منهای مجموعِ بردگیِ
     // برده‌شده. یعنی الباقی پول فقط با «مقدار بردگی» کم می‌شود، نه با تایپِ خالیِ «مقدار
@@ -11269,11 +11273,17 @@ function _updatePersonTotals(person) {
   const ftAlbEl = document.getElementById('pm-ft-albaqi');
   if (ftAlbEl) {
     ftAlbEl.style.color = netAll < 0 ? 'var(--red)' : 'var(--green)';
-    if (money) ftAlbEl.textContent = netTxt;
-    else {
-      // فوترِ حالتِ تیل هم «الباقی پول» و هم «الباقی تیل» را با برچسبِ روشن نشان می‌دهد
-      // (قبلاً فقط تیل برچسب داشت و پول یک عددِ بی‌نام بود). الباقی پول همان جمعِ کارت‌های
-      // بالا (رسید تیل × نرخ − بردگی) است تا با هدر یکی باشد.
+    // هر دو حالت یک مدل: دو خطِ برچسب‌دار «الباقی پول» و «الباقی تیل».
+    if (money) {
+      // واحد پول: الباقی پول = جمعِ الباقیِ همین جدول (رسید − بردگی) و الباقی تیل = معادلِ
+      // تیلِ کارت‌های بالا. این‌جا کفِ صفر نداریم؛ اضافه‌برد منفی (بدهی) نشان داده می‌شود.
+      const remFuelAll = Math.round((_remFuelAll || 0) * 100) / 100;
+      ftAlbEl.innerHTML =
+        '<div style="white-space:nowrap;color:' + (netAll < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی پول: ' + netTxt + '</div>' +
+        '<div style="font-size:0.74rem;font-weight:800;margin-top:2px;white-space:nowrap;color:' + (remFuelAll < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی تیل: ' + n2fa(remFuelAll) + ' ل</div>';
+    } else {
+      // واحد تیل: الباقی پول = جمعِ کارت‌های بالا (رسید تیل × نرخ − بردگی) و الباقی تیل =
+      // جمعِ همین جدول (رسید تیل − مقدار تیل).
       const netL = Math.round((t.all.rasidFuel - t.all.fuel) * 100) / 100;
       const remMoneyAll = Math.round(_remMoneyP + _remMoneyD);
       ftAlbEl.innerHTML =
@@ -18621,7 +18631,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.26';
+const APP_VERSION = '2.9.27';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
