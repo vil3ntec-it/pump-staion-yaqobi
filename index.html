@@ -11247,15 +11247,17 @@ function _updatePersonTotals(person) {
     setRemExtra('d', remFuelD2, 'الباقی تیل');
     _remFuelAll = remFuelP2 + remFuelD2;
   } else {
-    // واحد تیل: «الباقی پول» = ارزشِ پولیِ رسید تیل (رسید تیل × نرخ) منهای مجموعِ بردگیِ
-    // برده‌شده. یعنی الباقی پول فقط با «مقدار بردگی» کم می‌شود، نه با تایپِ خالیِ «مقدار
-    // تیل» (تا فی زده نشود بردگی صفر است و الباقی پول تکان نمی‌خورد). فی فقط نمایشی است.
-    // اگر تیلِ حساب تمام شد (الباقی تیل ≤ ۰) → الباقی پول هم صفر می‌شود.
-    // الباقی پول هیچ‌وقت منفی نمی‌شود: اگر مجموع بردگی از ارزشِ پولیِ رسید تیل بالا رفت،
-    // به‌جای عددِ منفی، صفر می‌ماند (کفِ صفر). تیل که تمام شد هم صفر.
+    // واحد تیل: «الباقی پول» بر اساس الباقی تیل:
+    //  • الباقی تیل > ۰: پولِ ماندهٔ حساب = رسید تیل × نرخ − بردگی، هیچ‌وقت منفی نمی‌شود
+    //    (کفِ صفر). تایپِ خالیِ «مقدار تیل» تکانش نمی‌دهد چون بردگی تا زدنِ فی صفر است.
+    //  • الباقی تیل = ۰ (تیل تمام): الباقی پول صفر.
+    //  • الباقی تیل < ۰ (اضافه‌برد): بدهیِ منفی نشان داده شود = الباقی تیلِ منفی × فیِ حساب
+    //    (فیِ حساب = بردگی ÷ مقدار تیل، نه نرخ اتحادیه).
     const remFuelP = -remP, remFuelD = -remD;   // الباقی تیلِ همین حساب به لیتر
-    _remMoneyP = remFuelP <= 0 ? 0 : Math.max(0, rasidP * rateP - t.petrol.bardagi);
-    _remMoneyD = remFuelD <= 0 ? 0 : Math.max(0, rasidD * rateD - t.diesel.bardagi);
+    const feTP = t.petrol.fuel > 0 ? (t.petrol.bardagi / t.petrol.fuel) : rateP;   // فیِ حساب
+    const feTD = t.diesel.fuel > 0 ? (t.diesel.bardagi / t.diesel.fuel) : rateD;
+    _remMoneyP = remFuelP > 0 ? Math.max(0, rasidP * rateP - t.petrol.bardagi) : (remFuelP < 0 ? remFuelP * feTP : 0);
+    _remMoneyD = remFuelD > 0 ? Math.max(0, rasidD * rateD - t.diesel.bardagi) : (remFuelD < 0 ? remFuelD * feTD : 0);
     setRemExtra('p', _remMoneyP, 'الباقی پول');
     setRemExtra('d', _remMoneyD, 'الباقی پول');
   }
@@ -18633,7 +18635,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.28';
+const APP_VERSION = '2.9.29';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
