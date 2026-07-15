@@ -3045,9 +3045,9 @@ button:focus-visible,.nav-btn:focus-visible,a:focus-visible,input:focus-visible,
 #personModal .fuel-split{ grid-template-columns:1fr !important; padding:4px 10px !important; gap:4px !important; }
 #personModal .fs-group{ padding:4px 8px !important; }
 #personModal .fs-head{ font-size:0.85rem !important; font-weight:800 !important; margin-bottom:3px !important; }
-#personModal .fs-rows{ grid-template-columns:repeat(5,1fr) !important; gap:3px !important; }
+#personModal .fs-rows{ grid-template-columns:repeat(4,1fr) !important; gap:3px !important; }
 /* در حالت «واحد تیل» خانهٔ «الباقی پول» هم افقی کنار بقیه می‌نشیند تا کادر بلند نشود */
-#personModal .fs-rows.has-remmoney{ grid-template-columns:repeat(6,1fr) !important; }
+#personModal .fs-rows.has-remmoney{ grid-template-columns:repeat(5,1fr) !important; }
 #personModal .fs-cell .l{ font-size:0.76rem !important; font-weight:700 !important; }
 #personModal .fs-cell .v{ font-size:0.95rem !important; }
 /* فیصدی — فشرده، ولی خوانا (برچسب‌ها بزرگ‌تر و پررنگ‌تر برای خوانایی بهتر) */
@@ -4782,7 +4782,7 @@ table thead th{ position:relative; }
           <div class="field-row" style="align-items:center">
             <label class="field-label">نام کارمند</label>
             <div style="display:flex;gap:8px;align-items:center">
-              <input class="field-input" id="d-name" placeholder="نام" style="flex:1">
+              <input class="field-input" id="d-name" placeholder="نام" style="flex:1" list="staff-names-dl" autocomplete="off">
               <div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:52px">
                 <span style="font-size:0.65rem;color:var(--muted);white-space:nowrap">شماره پایه</span>
                 <input class="field-input keep-spin" id="d-pumpnum" type="number" placeholder="#" style="width:52px;text-align:center;padding:6px 4px;font-weight:700;font-size:0.9rem" oninput="liveWaraqSync('d')">
@@ -4824,7 +4824,7 @@ table thead th{ position:relative; }
           <div class="field-row" style="align-items:center">
             <label class="field-label">نام کارمند</label>
             <div style="display:flex;gap:8px;align-items:center">
-              <input class="field-input" id="n-name" placeholder="نام" style="flex:1">
+              <input class="field-input" id="n-name" placeholder="نام" style="flex:1" list="staff-names-dl" autocomplete="off">
               <div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:52px">
                 <span style="font-size:0.65rem;color:var(--muted);white-space:nowrap">شماره پایه</span>
                 <input class="field-input keep-spin" id="n-pumpnum" type="number" placeholder="#" style="width:52px;text-align:center;padding:6px 4px;font-weight:700;font-size:0.9rem" oninput="liveWaraqSync('n')">
@@ -4910,7 +4910,7 @@ table thead th{ position:relative; }
         <div class="field-row" style="align-items:center">
           <label class="field-label">نام کارمند</label>
           <div style="display:flex;gap:8px;align-items:center">
-            <input class="field-input" id="dd-name" placeholder="نام" style="flex:1">
+            <input class="field-input" id="dd-name" placeholder="نام" style="flex:1" list="staff-names-dl" autocomplete="off">
             <div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:52px">
               <span style="font-size:0.65rem;color:var(--muted);white-space:nowrap">شماره پایه</span>
               <input class="field-input keep-spin" id="dd-pumpnum" type="number" placeholder="#" style="width:52px;text-align:center;padding:6px 4px;font-weight:700;font-size:0.9rem" oninput="liveWaraqSync('dd')">
@@ -4951,7 +4951,7 @@ table thead th{ position:relative; }
         <div class="field-row" style="align-items:center">
           <label class="field-label">نام کارمند</label>
           <div style="display:flex;gap:8px;align-items:center">
-            <input class="field-input" id="dn-name" placeholder="نام" style="flex:1">
+            <input class="field-input" id="dn-name" placeholder="نام" style="flex:1" list="staff-names-dl" autocomplete="off">
             <div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:52px">
               <span style="font-size:0.65rem;color:var(--muted);white-space:nowrap">شماره پایه</span>
               <input class="field-input keep-spin" id="dn-pumpnum" type="number" placeholder="#" style="width:52px;text-align:center;padding:6px 4px;font-weight:700;font-size:0.9rem" oninput="liveWaraqSync('dn')">
@@ -6440,7 +6440,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <div class="fs-head petrol">⛽ حساب پطرول</div>
         <div class="fs-rows">
           <div class="fs-cell"><div class="l">فیصدی ما</div><div class="v" style="color:var(--purple)" id="pm-p-comm">0</div></div>
-          <div class="fs-cell"><div class="l">فی هر لیتر</div><div class="v" style="color:var(--accent)" id="pm-p-fee">—</div></div>
           <div class="fs-cell"><div class="l" id="pm-p-rasid-l">مقدار رسید تیل</div><input type="number" class="v pm-edit" id="pm-p-rasidfuel" placeholder="0" style="color:var(--green);background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;width:100%;font-weight:800;font-family:'Vazirmatn',sans-serif" onfocus="personRasidFocus('petrol')" onblur="personRasidBlur()" oninput="updatePersonRasidFuel('petrol',this.value)"></div>
           <div class="fs-cell"><div class="l">برد</div><div class="v" style="color:var(--accent)" id="pm-p-bord">0</div></div>
           <div class="fs-cell"><div class="l" id="pm-p-rem-l">الباقی تیل</div><div class="v" style="color:var(--blue)" id="pm-p-remfuel">0</div></div>
@@ -6451,7 +6450,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <div class="fs-head diesel">🟤 حساب دیزل</div>
         <div class="fs-rows">
           <div class="fs-cell"><div class="l">فیصدی ما</div><div class="v" style="color:var(--purple)" id="pm-d-comm">0</div></div>
-          <div class="fs-cell"><div class="l">فی هر لیتر</div><div class="v" style="color:var(--accent)" id="pm-d-fee">—</div></div>
           <div class="fs-cell"><div class="l" id="pm-d-rasid-l">مقدار رسید تیل</div><input type="number" class="v pm-edit" id="pm-d-rasidfuel" placeholder="0" style="color:var(--green);background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;width:100%;font-weight:800;font-family:'Vazirmatn',sans-serif" onfocus="personRasidFocus('diesel')" onblur="personRasidBlur()" oninput="updatePersonRasidFuel('diesel',this.value)"></div>
           <div class="fs-cell"><div class="l">برد</div><div class="v" style="color:var(--accent)" id="pm-d-bord">0</div></div>
           <div class="fs-cell"><div class="l" id="pm-d-rem-l">الباقی تیل</div><div class="v" style="color:var(--blue)" id="pm-d-remfuel">0</div></div>
@@ -8849,6 +8847,7 @@ function getDieselForDate(dateStr) {
 
 // ========== LOG ==========
 function renderLog() {
+  try { _renderStaffNamesDatalist(); } catch (e) {}   // پیشنهادِ نامِ کارمند برای کادرهای پارچه
   const container = document.getElementById('log-reports-container');
   if (!container) return;
   container.innerHTML = '';
@@ -9056,6 +9055,7 @@ function renderLog() {
 
 // ========== DIESEL LOG ==========
 function renderDieselLog() {
+  try { _renderStaffNamesDatalist(); } catch (e) {}   // پیشنهادِ نامِ کارمند برای کادرهای پارچهٔ دیزل
   const container = document.getElementById('log-diesel-container');
   if (!container) return;
   const filterDate = (document.getElementById('diesel-date-filter')||{}).value || '';
@@ -11309,11 +11309,19 @@ function _updatePersonTotals(person) {
   if (pRasidEl) pRasidEl.readOnly = false;
   const dRasidEl = document.getElementById('pm-d-rasidfuel');
   if (dRasidEl) dRasidEl.readOnly = false;
+  // «فی هر لیتر»ِ مؤثرِ حساب — درست کنارِ برچسبِ «الباقی تیل» به‌صورتِ نامری «(فی X)» نوشته
+  // می‌شود (نه کادرِ جدا). این همان نرخی است که الباقی پول را به الباقی تیل تبدیل می‌کند:
+  // برد ÷ مقدار تیل. چون هر ردیف فیِ متفاوتِ خودش را دارد، این عددِ «اوسط» فقط نمایشی است.
+  const _uP0 = parseFloat(DB.unionRatePetrol)||0, _uD0 = parseFloat(DB.unionRateDiesel)||0;
+  const feeP = _accFeeP > 0 ? _accFeeP : (_blendP > 0 ? _blendP : _uP0);
+  const feeD = _accFeeD > 0 ? _accFeeD : (_blendD > 0 ? _blendD : _uD0);
+  const remFuelLblP = 'الباقی تیل' + (feeP > 0 ? ' (فی ' + n2fa(rnd(feeP)) + ')' : '');
+  const remFuelLblD = 'الباقی تیل' + (feeD > 0 ? ' (فی ' + n2fa(rnd(feeD)) + ')' : '');
   // برچسب‌ها بر اساس حالت
   setL('pm-p-rasid-l', money ? 'مقدار رسید پول' : 'مقدار رسید تیل');
   setL('pm-d-rasid-l', money ? 'مقدار رسید پول' : 'مقدار رسید تیل');
-  setL('pm-p-rem-l', money ? 'الباقی پول' : 'الباقی تیل');
-  setL('pm-d-rem-l', money ? 'الباقی پول' : 'الباقی تیل');
+  setL('pm-p-rem-l', money ? 'الباقی پول' : remFuelLblP);
+  setL('pm-d-rem-l', money ? 'الباقی پول' : remFuelLblD);
   setL('pm-bord-sum-l', money ? 'جمع کل برد پول' : 'جمع کل برد تیل');
   const modeBtn = document.getElementById('pm-mode-btn');
   if (modeBtn) modeBtn.textContent = money ? '🔁 تیل' : '🔁 پول';
@@ -11357,14 +11365,6 @@ function _updatePersonTotals(person) {
   const _uRateD = parseFloat(DB.unionRateDiesel) || 0;
   const rateP = _uRateP > 0 ? _uRateP : (t.petrol.fuel > 0 ? t.petrol.bardagi / t.petrol.fuel : 0);
   const rateD = _uRateD > 0 ? _uRateD : (t.diesel.fuel > 0 ? t.diesel.bardagi / t.diesel.fuel : 0);
-  // «فی هر لیتر»ِ کارت — نرخِ مؤثرِ خودِ حساب که الباقی پول را به الباقی تیل تبدیل می‌کند:
-  // برد ÷ مقدار تیل (فیِ خالصِ ردیف‌های لیتردار)، وگرنه فیِ ردیف‌های فقط‌پولی، وگرنه نرخ
-  // اتحادیه. چون هر ردیف می‌تواند فیِ متفاوتِ خودش را داشته باشد، این عددِ «اوسط» فقط
-  // نمایشی است و هیچ فیِ ردیفی را تغییر نمی‌دهد.
-  const feeP = _accFeeP > 0 ? _accFeeP : (_blendP > 0 ? _blendP : rateP);
-  const feeD = _accFeeD > 0 ? _accFeeD : (_blendD > 0 ? _blendD : rateD);
-  setV('pm-p-fee', feeP > 0 ? n2fa(rnd(feeP)) : '—');
-  setV('pm-d-fee', feeD > 0 ? n2fa(rnd(feeD)) : '—');
   // «الباقی پول»ِ حالتِ تیل و «الباقی تیل»ِ حالتِ پول — برای فوترِ جدول هم استفاده می‌شوند
   let _remMoneyP = 0, _remMoneyD = 0;   // حالتِ تیل → الباقی پول
   let _remFuelAll = 0;                   // حالتِ پول → الباقی تیلِ کل
@@ -11384,8 +11384,8 @@ function _updatePersonTotals(person) {
     // مقدارِ پس از کسرِ فیصدی ÷ فی محاسبه می‌شود تا این دو همیشه با هم Sync باشند.
     const remFuelP2 = feP > 0 ? (remMoneyBalP - commP) / feP : 0;   // الباقی تیل = (الباقی پول پس از فیصدی) ÷ فی
     const remFuelD2 = feD > 0 ? (remMoneyBalD - commD) / feD : 0;
-    setRemExtra('p', remFuelP2, 'الباقی تیل');
-    setRemExtra('d', remFuelD2, 'الباقی تیل');
+    setRemExtra('p', remFuelP2, remFuelLblP);
+    setRemExtra('d', remFuelD2, remFuelLblD);
     _remFuelAll = remFuelP2 + remFuelD2;
   } else {
     // واحد تیل: «الباقی پول» = الباقی تیل × فیِ خودِ حساب — دقیقاً معکوسِ واحد پول
@@ -16309,31 +16309,20 @@ function _normalizeWaraqTxns(sd) {
   });
 }
 
-// فهرست نام‌های قبلی برای پیشنهادِ خودکار (Autocomplete) در بخش پارچه‌ها/ورق‌ها —
-// از قرض‌داران، افرادِ بدون پارچه و نام‌هایی که قبلاً در ورق‌ها نوشته شده جمع می‌شود.
-function _waraqNameSuggestions() {
-  const set = new Set();
-  const add = n => { const s = (n || '').trim(); if (s) set.add(s); };
-  (DB.debtPersons || []).forEach(p => add(p && p.name));
-  (DB.noinvPersons || []).forEach(p => add(p && p.name));
-  (DB.waraqEntries || []).forEach(w => {
-    if (!w) return;
-    ['day', 'night'].forEach(sh => {
-      const sd = w[sh];
-      if (sd && Array.isArray(sd.transactions)) sd.transactions.forEach(t => add(t && t.name));
-    });
-    if (Array.isArray(w.transactions)) w.transactions.forEach(t => add(t && t.name));
-  });
-  return Array.from(set).sort((a, b) => a.localeCompare(b, 'fa'));
-}
-function _renderWaraqNamesDatalist() {
-  let dl = document.getElementById('wq-names-dl');
+// پیشنهادِ خودکارِ نامِ کارمند برای کادرهای «نام کارمند»ِ پارچه‌ها (پطرول/دیزل) —
+// از فهرستِ کارمندانِ بخشِ «حاضری و معاش» (DB.staffMembers) خوانده می‌شود.
+// (قبلاً به‌اشتباه روی کادرِ نامِ تراکنش‌های ورق بود و ناوبری با کلیدها را می‌شکست.)
+function _renderStaffNamesDatalist() {
+  let dl = document.getElementById('staff-names-dl');
   if (!dl) {
     dl = document.createElement('datalist');
-    dl.id = 'wq-names-dl';
+    dl.id = 'staff-names-dl';
     document.body.appendChild(dl);
   }
-  dl.innerHTML = _waraqNameSuggestions().map(n => '<option value="' + n.replace(/"/g, '&quot;') + '"></option>').join('');
+  const names = Array.from(new Set((DB.staffMembers || [])
+    .map(s => (s && s.name || '').trim()).filter(Boolean)))
+    .sort((a, b) => a.localeCompare(b, 'fa'));
+  dl.innerHTML = names.map(n => '<option value="' + n.replace(/"/g, '&quot;') + '"></option>').join('');
 }
 function renderWaraqTransactions(w) {
   const leftBody = document.getElementById('wq-trans-body-left');
@@ -16341,7 +16330,7 @@ function renderWaraqTransactions(w) {
   if (!leftBody || !rightBody) return;
   const sd = activeShift(w);
   _normalizeWaraqTxns(sd);
-  try { _renderWaraqNamesDatalist(); } catch (e) {}
+  // نکته: datalistِ نامِ تراکنش‌های ورق برداشته شد چون ناوبری با کلیدهای جهت‌دار را می‌شکست.
   const txns = sd.transactions || [];
   const mid = Math.ceil(txns.length / 2);
   leftBody.innerHTML = '';
@@ -16352,7 +16341,7 @@ function renderWaraqTransactions(w) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="xls-num">${n2fa(i+1)}</td>
-      <td><input class="xls-in" list="wq-names-dl" value="${(t.name||'').replace(/"/g,'&quot;')}" placeholder="نام / توضیح" oninput="updateWaraqTxn(${i},'name',this.value)"></td>
+      <td><input class="xls-in" value="${(t.name||'').replace(/"/g,'&quot;')}" placeholder="نام / توضیح" oninput="updateWaraqTxn(${i},'name',this.value)"></td>
       <td><select class="xls-in" style="min-width:88px;max-width:none;width:100%" onchange="updateWaraqTxnFuel(${i},this.value)">
         <option value="petrol" ${fuel!=='diesel'?'selected':''}>⛽ پطرول</option>
         <option value="diesel" ${fuel==='diesel'?'selected':''}>🟤 دیزل</option>
@@ -18945,7 +18934,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.44';
+const APP_VERSION = '2.9.45';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -19118,6 +19107,7 @@ function attPaySalary(sid) {
   showToast('✅ پرداخت معاش ثبت و در مصرف‌ها ثبت شد', '#38a169');
 }
 function renderAttendance() {
+  try { _renderStaffNamesDatalist(); } catch (e) {}   // فهرست پیشنهادِ نام‌ها با تغییرِ کارمندان تازه شود
   const grid = document.getElementById('att-grid');
   if (!grid) return;
   const staff = _attStaff();
