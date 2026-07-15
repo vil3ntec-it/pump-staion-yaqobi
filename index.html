@@ -12266,8 +12266,10 @@ function deleteRasid(i) {
 }
 function _postRasidRow(r) {
   // برمی‌گرداند: 'ok' | 'dup' | 'notfound'
-  const person = matchDebtPersonByText(r.account) || matchDebtPersonByText(r.name);
-  if (!person) return 'notfound';
+  // تطبیقِ دوطرفهٔ نام — مثل ورق — تا حتی با نوشتنِ بخشی از نامِ حساب هم پیدا شود
+  const found = findDebtAcctForText((r.account||'') + ' ' + (r.name||''), r.account || r.name);
+  if (!found) return 'notfound';
+  const person = found.person;
   const bardagi = Math.round(_fuelBardagi(r));
   if (alreadyReceivedFromWaraq(person, r.fuel, bardagi, r.hawala)) return 'dup';
   const rasid = parseFloat(r.rasid)||0;
@@ -12278,7 +12280,7 @@ function _postRasidRow(r) {
     date: r.date || persianDate(), name: displayName, hawala: (r.hawala||'').toString(), ftype: ftype,
     fuel: parseFloat(r.fuel)||0, priceper: parseFloat(r.priceper)||0, bardagi, rasid, albaqi: bardagi - rasid,
     src: 'parcha', srcKey: 'parcha|' + r.id
-  }, (r.account||'') + ' ' + (r.name||''));
+  }, (r.account||'') + ' ' + (r.name||''), found.acct);
   r.posted = true;
   return 'ok';
 }
@@ -12293,8 +12295,8 @@ function postRasid(i) {
   save(); renderRasid();
   if (typeof renderPersons === 'function' && currentPersonType === 'debt') renderPersons('debt');
   if (typeof updateBanner === 'function') updateBanner();
-  const person = matchDebtPersonByText(r.account) || matchDebtPersonByText(r.name);
-  showToast('✅ در حساب ' + (person ? person.name : '') + ' ثبت شد', '#38a169');
+  const found = findDebtAcctForText((r.account||'') + ' ' + (r.name||''), r.account || r.name);
+  showToast('✅ در حساب ' + (found ? found.person.name : '') + ' ثبت شد', '#38a169');
 }
 function postAllRasid() {
   const rows = ensureRasid();
@@ -12370,8 +12372,9 @@ function quickAddDebtRasid(rowEl) {
   const name = nameEl.value.trim();
   const amount = parseFloat(amountEl.value) || 0;
   if (!name || !amount) return;   // هنوز هر دو فیلد تکمیل نشده — کاری انجام نشود
-  const person = matchDebtPersonByText(name);
-  if (!person) { showToast('⚠️ حساب «' + name + '» پیدا نشد — اول از بخش قرض‌داران اضافه کنید', '#e53e3e'); return; }
+  const found = findDebtAcctForText(name, name);
+  if (!found) { showToast('⚠️ حساب «' + name + '» پیدا نشد — اول از بخش قرض‌داران اضافه کنید', '#e53e3e'); return; }
+  const person = found.person;
   const date = (dateEl && dateEl.value.trim()) || persianDate();
   const note = (noteEl && noteEl.value.trim()) || '';
   const id = 'dr' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
@@ -12379,7 +12382,7 @@ function quickAddDebtRasid(rowEl) {
     date, name: note || 'رسید', hawala: '',
     fuel: 0, priceper: 0, bardagi: 0, rasid: amount, albaqi: -amount,
     src: 'debtQuick', srcKey: 'debtQuick|' + id
-  }, note);
+  }, note, found.acct);
   ensureDebtRasid().push({ id, date, account: person.name, note, amount });
   save();
   nameEl.value = ''; amountEl.value = ''; if (noteEl) noteEl.value = '';
@@ -16567,19 +16570,13 @@ function saveWaraq() {
         // تا در جدول قرض‌داران «فلانی دیزل/پطرول» نوشته نشود؛ فقط حساب و نوع تیلِ درست انتخاب می‌شود.
         const ftype = _detectFuelType(t.name);
         const displayName = _stripFuelWords(ex.clean || name);
-        let person = matchDebtPersonByText(t.name);
-        if (!person) {
-          // اگر نام یک حساب فرعی نوشته شده، والدش را پیدا کن
-          const tNorm = normFa(t.name);
-          for (const p of (DB.debtPersons||[])) {
-            if ((p.subs||[]).some(s => { const nm=normFa(s.name||''); return nm && tNorm.indexOf(nm)!==-1; })) {
-              person = p; break;
-            }
-          }
-        }
+        // حسابِ قرض‌دارِ درست (اصلی یا فرعی) با تطبیقِ دوطرفهٔ نام پیدا می‌شود — حتی اگر
+        // در ورق فقط بخشی از نامِ حساب نوشته شده باشد (مثلاً «هارون» برای حساب «هارون یعقوبی»).
+        const found = findDebtAcctForText(t.name, displayName);
         // فقط به حسابِ قرض‌دارِ موجود (اصلی یا فرعی) وصل می‌شود؛ اگر چنین حسابی نبود،
         // هیچ حسابِ جدیدی ساخته نمی‌شود (خواستهٔ صاحب ریپو) و ردیف در حساب‌ها ثبت نمی‌شود.
-        if (!person) { removePersonRowBySrcKey(srcKey); return; }
+        if (!found) { removePersonRowBySrcKey(srcKey); return; }
+        const person = found.person;
         let fuel = parseFloat(t.liters)||0;
         let priceper, byMoney = false;
         // اگر فقط مبلغ نوشته شده (بدون لیتر/فی) → ردیف پولی، نه «۱ لیتر فی ...»
@@ -16596,7 +16593,7 @@ function saveWaraq() {
           rasid: 0, albaqi: amount,
           src: 'waraq',
           srcKey
-        }, t.name);
+        }, t.name, found.acct);
       }
     });
   });
@@ -16905,6 +16902,38 @@ function matchPersonInListByText(list, text) {
 function matchDebtPersonByText(text) {
   return matchPersonInListByText(DB.debtPersons, text);
 }
+// حسابِ قرض‌دارِ درست را برای متنِ ورق/پارچه پیدا می‌کند — هم حساب اصلی، هم فرعی.
+// تطبیقِ «کلمه‌ای» و دوطرفه است (نه زیررشتهٔ خام تا «احمد» با «احمدی» قاتی نشود):
+//   ۱) نامِ حساب دقیقاً برابرِ نامِ تایپ‌شده باشد،
+//   ۲) نامِ کاملِ حساب داخلِ متن باشد (متن ⊇ نامِ حساب) — رفتار قبلی،
+//   ۳) نامِ تایپ‌شده زیرمجموعهٔ نامِ حساب باشد (نامِ حساب ⊇ تایپ) —
+//      مثلاً در ورق «هارون» نوشته شود ولی حساب «هارون یعقوبی» باشد (باگِ رفع‌شده:
+//      قبلاً چون نامِ کاملِ حساب در متن نبود، هیچ حسابی پیدا نمی‌شد و ردیف دور ریخته می‌شد).
+// طلانی‌ترین/دقیق‌ترین تطبیق برنده است و حساب فرعی بر اصلی اولویت دارد. برمی‌گرداند
+// { person, acct } که acct یا خودِ شخص است یا یکی از حساب‌های فرعی‌اش.
+function findDebtAcctForText(rawText, cleanName) {
+  const persons = DB.debtPersons || [];
+  if (!persons.length) return null;
+  const rawSet = new Set(normFa(rawText).split(' ').filter(Boolean));
+  const qTokens = normFa(cleanName || rawText).split(' ').filter(x => x.length >= 2);
+  const scoreName = (acctName) => {
+    const an = normFa(acctName);
+    if (!an) return 0;
+    const aTokens = an.split(' ').filter(Boolean);
+    if (!aTokens.length) return 0;
+    if (qTokens.length && aTokens.join(' ') === qTokens.join(' ')) return 3000 + an.length;   // برابر
+    if (aTokens.every(tk => rawSet.has(tk))) return 2000 + an.length;                          // متن ⊇ نامِ حساب
+    if (qTokens.length && qTokens.every(tk => aTokens.includes(tk))) return 1000 + an.length;  // نامِ حساب ⊇ تایپ
+    return 0;
+  };
+  let best = null, bestScore = 0;
+  persons.forEach(p => {
+    // حساب‌های فرعی اول بررسی می‌شوند تا در تساویِ امتیاز، فرعیِ دقیق‌تر برنده شود
+    (p.subs || []).forEach(s => { const sc = scoreName(s.name); if (sc > bestScore) { bestScore = sc; best = { person: p, acct: s }; } });
+    const sc = scoreName(p.name); if (sc > bestScore) { bestScore = sc; best = { person: p, acct: p }; }
+  });
+  return best;
+}
 // جستجوی هر حساب (قرض‌دار یا شرکت تیل) با نام — برای ربات دستیار
 function _botMatchAnyPerson(text) {
   return matchPersonInListByText(DB.debtPersons, text) || matchPersonInListByText(DB.noinvPersons, text);
@@ -16922,8 +16951,10 @@ function _subForText(person, text) {
 }
 // قرار دادن یک ردیف در حساب شخص: اگر توضیحات شامل نام یک حساب فرعی باشد به همان می‌رود،
 // وگرنه به حساب اصلی. سپس: به‌روزرسانی ردیف هم‌منبع، یا پر کردن اولین ردیف خالی، یا افزودن.
-function placePersonRow(person, rowData, descText) {
-  const acct = _subForText(person, descText) || person;
+function placePersonRow(person, rowData, descText, targetAcct) {
+  // اگر حسابِ مقصد صراحتاً داده شده (مثلاً از findDebtAcctForText یک حساب فرعیِ هم‌نام)،
+  // همان استفاده می‌شود؛ وگرنه مثل قبل از روی نامِ حساب فرعی در متن حدس زده می‌شود.
+  const acct = (targetAcct && targetAcct !== person) ? targetAcct : (_subForText(person, descText) || person);
   if (!acct.rows) acct.rows = [];
   if (rowData.srcKey) {
     // اگر همین srcKey در حساب دیگری از همین شخص بود (مثلاً توضیحات عوض شده)، آنجا پاک شود
@@ -18914,7 +18945,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.43';
+const APP_VERSION = '2.9.44';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
