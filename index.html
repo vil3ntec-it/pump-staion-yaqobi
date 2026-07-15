@@ -11184,10 +11184,17 @@ function updatePersonRasidFuel(fuel, val) {
 // (نه جمعِ آن با رسیدهای جدول) تا ویرایش دوباره‌شماری نکند. مقدارِ ذخیره‌شده (rasidMoney)
 // دست‌نخورده و همان رسیدِ دستی می‌ماند؛ فقط نمایش عوض می‌شود.
 function personRasidFocus(fuel){
-  const person=_curPerson(); if(!person||person.mode!=='money') return;
+  const person=_curPerson(); if(!person) return;
   const acct=_acctOf(person);
+  const money = person.mode==='money';
   const el=document.getElementById(fuel==='diesel'?'pm-d-rasidfuel':'pm-p-rasidfuel');
-  if(el){ const v=parseFloat(fuel==='diesel'?acct.rasidMoneyD:acct.rasidMoneyP)||0; el.value=v||''; }
+  if(el){
+    // در هر دو حالت، موقعِ ویرایش فقط سهمِ دستیِ هدر نشان داده می‌شود (نه جمعش با رسیدهای
+    // جدول) تا ویرایش دوباره‌شماری نکند؛ onblur دوباره جمع را می‌نویسد.
+    const v = money ? (parseFloat(fuel==='diesel'?acct.rasidMoneyD:acct.rasidMoneyP)||0)
+                    : (parseFloat(fuel==='diesel'?acct.rasidFuelD:acct.rasidFuelP)||0);
+    el.value=v||'';
+  }
 }
 // با خروج از کادر، دوباره جمعِ رسید (دستی + رسیدهای جدول) در کادر نوشته شود
 function personRasidBlur(){ const p=_curPerson(); if(p) _updatePersonTotals(p); }
@@ -11311,9 +11318,12 @@ function _updatePersonTotals(person) {
   // در «واحد پول»، کادر «مقدار رسید پول» مجموعِ رسیدِ دستیِ هدر + رسیدهای داخلِ جدول را
   // نشان می‌دهد تا رسیدی که در جدول زده می‌شود در هدر هم دیده شود (الباقی از قبل آن را کم
   // می‌کرد). موقعِ ویرایش، onfocus فقط سهمِ دستی را نشان می‌دهد و onblur دوباره جمع را می‌نویسد
-  // تا دوباره‌شماری نشود. در «واحد تیل» مثل قبل فقط مقدار رسید تیلِ دستی نمایش داده می‌شود.
-  setInput('pm-p-rasidfuel', money ? ((rasidP + t.petrol.rasid)||'') : (rasidP||''));
-  setInput('pm-d-rasidfuel', money ? ((rasidD + t.diesel.rasid)||'') : (rasidD||''));
+  // تا دوباره‌شماری نشود. در «واحد تیل» هم به‌همین قرینه، کادر «مقدار رسید تیل» مجموعِ رسیدِ
+  // تیلِ دستیِ هدر + معادلِ لیترِ رسیدهای پولیِ داخلِ جدول را نشان می‌دهد تا پولی که در ستونِ
+  // «رسید» زده شده (و به تیل تبدیل و در «الباقی تیل» دیده می‌شود) در این کادر هم دیده شود
+  // (وگرنه صفر می‌ماند). onfocus فقط سهمِ دستی را نشان می‌دهد و onblur دوباره جمع را می‌نویسد.
+  setInput('pm-p-rasidfuel', money ? ((rasidP + t.petrol.rasid)||'') : (rnd(rasidP + _rasidMoneyLP)||''));
+  setInput('pm-d-rasidfuel', money ? ((rasidD + t.diesel.rasid)||'') : (rnd(rasidD + _rasidMoneyLD)||''));
   setInput('pm-percent', acct.percent||'');
   setInput('pm-money', (acct.moneyDeposit!=null && acct.moneyDeposit!=='') ? acct.moneyDeposit : '');
   setV('pm-p-bord', n2fa(rnd(bordP)));
@@ -11380,8 +11390,11 @@ function _updatePersonTotals(person) {
     // رسید تیل نمایش داده می‌شود و با تایپِ «مقدار تیلِ بدون فی» کم نمی‌شود (باگِ قبلی).
     const _mrP = _accFeeP > 0 ? _accFeeP : (_moneyBardP > 0 ? _blendP : 0);
     const _mrD = _accFeeD > 0 ? _accFeeD : (_moneyBardD > 0 ? _blendD : 0);
-    _remMoneyP = _mrP > 0 ? (remFuelP * _mrP) : (rasidP * rateP);
-    _remMoneyD = _mrD > 0 ? (remFuelD * _mrD) : (rasidD * rateD);
+    // در حالتِ بی‌فی، به‌جز ارزشِ خامِ رسید تیلِ هدر (rasidP×نرخ)، رسیدِ پولیِ جدول
+    // (t.*.rasid) هم باید در «الباقی پول» دیده شود — وگرنه پولی که در ستونِ «رسید» زده
+    // شده (و به تیل تبدیل و در «الباقی تیل» دیده می‌شود) اینجا صفر می‌ماند (باگ).
+    _remMoneyP = _mrP > 0 ? (remFuelP * _mrP) : (rasidP * rateP + t.petrol.rasid);
+    _remMoneyD = _mrD > 0 ? (remFuelD * _mrD) : (rasidD * rateD + t.diesel.rasid);
     setRemExtra('p', _remMoneyP, 'الباقی پول');
     setRemExtra('d', _remMoneyD, 'الباقی پول');
   }
@@ -18891,7 +18904,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.41';
+const APP_VERSION = '2.9.42';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
