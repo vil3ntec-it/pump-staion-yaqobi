@@ -4255,6 +4255,8 @@ table thead th{ position:relative; }
     <div class="lock-err" id="lockErr"></div>
     <div style="font-size:0.72rem;color:rgba(255,255,255,.6);margin-top:10px">رمز مدیر یا نظاره‌گر را وارد کنید</div>
     <button type="button" id="lsStaffBtn" onclick="openStaffPage()" style="margin-top:14px;width:100%;background:transparent;border:1.5px dashed rgba(255,255,255,.45);color:rgba(255,255,255,.88);border-radius:10px;padding:10px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">👷 صفحه کارمند — دیدن تیل و مخزن (بدون رمز)</button>
+    <!-- فقط روی گوشی (اندروید/آیفون) و وقتی برنامه هنوز نصب نشده دیده می‌شود -->
+    <button type="button" id="pwaInstallBtn" onclick="pwaInstall()" style="display:none;margin-top:10px;width:100%;background:rgba(217,119,6,.16);border:1.5px solid rgba(246,166,35,.6);color:#ffd89b;border-radius:10px;padding:10px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">📲 افزودن به صفحهٔ اصلی (شورت‌کات)</button>
   </div>
   <div style="position:relative;z-index:2;margin-top:18px;font-size:0.7rem;color:rgba(255,255,255,.5);text-align:center;line-height:1.9">۱۴۰۵ برای پمپ یعقوبی طراحی شده ـــ تمام حقوق محفوظ است<br>طراحی و توسعه: vil3ntec@gmail.com محمد هارون<br>شماره 0792236008 +93</div>
 </div>
@@ -18934,7 +18936,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.45';
+const APP_VERSION = '2.9.46';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -21543,6 +21545,46 @@ body.nav-sticky .nav{
    clip همان بریدن افقی را می‌دهد بدون ساختن ظرف اسکرول */
 body.nav-sticky{ overflow-x:clip!important; overflow-y:visible!important; }
 
+/* ===== فقط گوشی (≤600px): نوار بخش‌ها شبکه‌ای شود تا همهٔ بخش‌ها یک‌جا دیده شوند =====
+   روی گوشی، ۱۷ دکمهٔ بخش در یک نوارِ اسکرولِ افقی پنهان می‌ماندند و کاربر
+   نمی‌دانست بخش‌های دیگری هم هست. این‌جا نوار را به یک شبکهٔ ۳ ستونه تبدیل
+   می‌کنیم که همهٔ بخش‌ها هم‌زمان دیده شوند (آیکون بالا، متن پایین). چون شبکه
+   بلند می‌شود، روی گوشی sticky را خاموش می‌کنیم تا کل صفحه را نگیرد.
+   تبلت و کامپیوتر (≥601px) هیچ تغییری نمی‌کنند. */
+@media (max-width:600px){
+  body.nav-sticky .nav,
+  .nav{
+    position:static !important;
+    display:grid !important;
+    grid-template-columns:repeat(3,1fr) !important;
+    gap:6px !important;
+    overflow:visible !important;
+    padding:8px !important;
+    box-shadow:none !important;
+  }
+  .nav .nav-btn{
+    width:100% !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    justify-content:center !important;
+    gap:4px !important;
+    white-space:normal !important;
+    text-align:center !important;
+    line-height:1.25 !important;
+    font-size:0.7rem !important;
+    padding:9px 4px !important;
+    min-height:58px !important;
+    flex-shrink:1 !important;
+    transform:none !important;
+  }
+  .nav .nav-btn .nav-ic{ width:1.5em !important; height:1.5em !important; margin:0 !important; vertical-align:middle !important; }
+  /* خط زیرِ دکمهٔ فعال در حالت شبکه به سطر بعدی می‌زد — پس‌زمینهٔ کهربایی
+     خودش دکمهٔ فعال را کاملاً مشخص می‌کند، پس خط را حذف می‌کنیم */
+  .nav .nav-btn.active::after{ display:none !important; }
+  .nav .nav-badge{ top:4px !important; }
+}
+
 /* ===== تاریخ‌های داخل سربرگ در تم‌های روز (سربرگ روشن/سفید): مشکی کامل #000 =====
    قبلاً با color:var(--muted) و opacity:.75 (استایل inline) روی سربرگ روشن کم‌رنگ و
    ناخوانا بودند. !important لازم است چون استایل inline رنگ/شفافیت را ست می‌کند.
@@ -22539,6 +22581,95 @@ ${copy('نسخهٔ پمپ')}
     if (mig) { try { save(); } catch (e) {} }
   } catch (e) {}
   try { _invRouteFromHash(); } catch (e) {}
+})();
+</script>
+
+<script>
+/* ===== شورت‌کات / افزودن به صفحهٔ اصلی (PWA) — مخصوص گوشی =====
+   روی اندروید مرورگر رویداد beforeinstallprompt می‌دهد؛ آن را نگه می‌داریم و با
+   دکمه، پنجرهٔ نصبِ خودِ سیستم را باز می‌کنیم. آیفون/سافاری این رویداد را ندارد،
+   پس راهنمای دستی (اشتراک‌گذاری → افزودن به صفحهٔ اصلی) را نشان می‌دهیم.
+   دکمه فقط روی گوشی و وقتی برنامه هنوز نصب نشده دیده می‌شود؛ تبلت/کامپیوتر نه. */
+(function(){
+  var deferredPrompt = null;
+
+  function isStandalone(){
+    try {
+      return window.matchMedia('(display-mode: standalone)').matches
+        || window.matchMedia('(display-mode: minimal-ui)').matches
+        || window.navigator.standalone === true;
+    } catch(e){ return false; }
+  }
+  function isPhone(){
+    // فقط گوشی — نه تبلت/کامپیوتر. هم‌مرز با استایلِ گوشی (≤600px) و لمسی بودن.
+    try {
+      var narrow = window.matchMedia('(max-width: 600px)').matches;
+      var coarse = window.matchMedia('(pointer: coarse)').matches;
+      var ua = /Android|iPhone|iPod|Mobile/i.test(navigator.userAgent || '');
+      return narrow && (coarse || ua);
+    } catch(e){ return false; }
+  }
+  function isIOS(){
+    var ua = navigator.userAgent || '';
+    return /iPhone|iPod/i.test(ua) || (/iPad/i.test(ua))
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+  function refreshBtn(){
+    var btn = document.getElementById('pwaInstallBtn');
+    if (!btn) return;
+    // روی آیفون همیشه (چون رویداد نصب ندارد) و روی اندروید وقتی رویداد آمده
+    var show = isPhone() && !isStandalone() && (deferredPrompt || isIOS());
+    btn.style.display = show ? 'block' : 'none';
+  }
+
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();          // جلوگیری از نوارِ خودکار — خودمان با دکمه نشان می‌دهیم
+    deferredPrompt = e;
+    refreshBtn();
+  });
+  window.addEventListener('appinstalled', function(){
+    deferredPrompt = null;
+    var btn = document.getElementById('pwaInstallBtn');
+    if (btn) btn.style.display = 'none';
+  });
+  window.addEventListener('resize', refreshBtn);
+  document.addEventListener('DOMContentLoaded', refreshBtn);
+  refreshBtn();
+
+  function showIOSHelp(){
+    if (document.getElementById('pwaIosHelp')) return;
+    var ov = document.createElement('div');
+    ov.id = 'pwaIosHelp';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:100000;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.6);padding:16px;font-family:\'Vazirmatn\',sans-serif';
+    ov.onclick = function(ev){ if (ev.target === ov) ov.remove(); };
+    ov.innerHTML =
+      '<div dir="rtl" style="background:#161b22;border:1px solid #2d3748;border-radius:16px;max-width:420px;width:100%;padding:18px 18px 16px;color:#e2e8f0;box-shadow:0 20px 50px rgba(0,0,0,.6)">' +
+        '<div style="font-size:1.05rem;font-weight:800;color:#f6a623;margin-bottom:12px">📲 افزودن شورت‌کات به صفحهٔ اصلی</div>' +
+        '<div style="font-size:0.9rem;line-height:2;margin-bottom:12px">' +
+          '۱) دکمهٔ <b>اشتراک‌گذاری</b> (مربع با فلش رو به بالا ⬆️) در پایین سافاری را بزنید.<br>' +
+          '۲) کمی پایین بروید و روی <b>«Add to Home Screen / افزودن به صفحهٔ اصلی»</b> بزنید.<br>' +
+          '۳) بالا راست <b>Add / افزودن</b> را بزنید — آیکون برنامه روی صفحهٔ اصلی ساخته می‌شود.' +
+        '</div>' +
+        '<button type="button" style="width:100%;background:var(--accent,#f6a623);color:#1a1102;border:none;border-radius:10px;padding:11px;font-family:\'Vazirmatn\',sans-serif;font-weight:800;font-size:0.9rem;cursor:pointer">فهمیدم</button>' +
+      '</div>';
+    ov.querySelector('button').onclick = function(){ ov.remove(); };
+    document.body.appendChild(ov);
+  }
+
+  window.pwaInstall = function(){
+    if (deferredPrompt){
+      var dp = deferredPrompt;
+      deferredPrompt = null;
+      try {
+        dp.prompt();
+        if (dp.userChoice && dp.userChoice.finally) dp.userChoice.finally(refreshBtn);
+        else refreshBtn();
+      } catch(e){ refreshBtn(); }
+      return;
+    }
+    // آیفون یا هر مرورگری که پنجرهٔ نصب ندارد → راهنمای دستی
+    showIOSHelp();
+  };
 })();
 </script>
 
