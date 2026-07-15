@@ -3045,9 +3045,9 @@ button:focus-visible,.nav-btn:focus-visible,a:focus-visible,input:focus-visible,
 #personModal .fuel-split{ grid-template-columns:1fr !important; padding:4px 10px !important; gap:4px !important; }
 #personModal .fs-group{ padding:4px 8px !important; }
 #personModal .fs-head{ font-size:0.85rem !important; font-weight:800 !important; margin-bottom:3px !important; }
-#personModal .fs-rows{ grid-template-columns:repeat(4,1fr) !important; gap:3px !important; }
+#personModal .fs-rows{ grid-template-columns:repeat(5,1fr) !important; gap:3px !important; }
 /* در حالت «واحد تیل» خانهٔ «الباقی پول» هم افقی کنار بقیه می‌نشیند تا کادر بلند نشود */
-#personModal .fs-rows.has-remmoney{ grid-template-columns:repeat(5,1fr) !important; }
+#personModal .fs-rows.has-remmoney{ grid-template-columns:repeat(6,1fr) !important; }
 #personModal .fs-cell .l{ font-size:0.76rem !important; font-weight:700 !important; }
 #personModal .fs-cell .v{ font-size:0.95rem !important; }
 /* فیصدی — فشرده، ولی خوانا (برچسب‌ها بزرگ‌تر و پررنگ‌تر برای خوانایی بهتر) */
@@ -6440,6 +6440,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <div class="fs-head petrol">⛽ حساب پطرول</div>
         <div class="fs-rows">
           <div class="fs-cell"><div class="l">فیصدی ما</div><div class="v" style="color:var(--purple)" id="pm-p-comm">0</div></div>
+          <div class="fs-cell"><div class="l">فی هر لیتر</div><div class="v" style="color:var(--accent)" id="pm-p-fee">—</div></div>
           <div class="fs-cell"><div class="l" id="pm-p-rasid-l">مقدار رسید تیل</div><input type="number" class="v pm-edit" id="pm-p-rasidfuel" placeholder="0" style="color:var(--green);background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;width:100%;font-weight:800;font-family:'Vazirmatn',sans-serif" onfocus="personRasidFocus('petrol')" onblur="personRasidBlur()" oninput="updatePersonRasidFuel('petrol',this.value)"></div>
           <div class="fs-cell"><div class="l">برد</div><div class="v" style="color:var(--accent)" id="pm-p-bord">0</div></div>
           <div class="fs-cell"><div class="l" id="pm-p-rem-l">الباقی تیل</div><div class="v" style="color:var(--blue)" id="pm-p-remfuel">0</div></div>
@@ -6450,6 +6451,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <div class="fs-head diesel">🟤 حساب دیزل</div>
         <div class="fs-rows">
           <div class="fs-cell"><div class="l">فیصدی ما</div><div class="v" style="color:var(--purple)" id="pm-d-comm">0</div></div>
+          <div class="fs-cell"><div class="l">فی هر لیتر</div><div class="v" style="color:var(--accent)" id="pm-d-fee">—</div></div>
           <div class="fs-cell"><div class="l" id="pm-d-rasid-l">مقدار رسید تیل</div><input type="number" class="v pm-edit" id="pm-d-rasidfuel" placeholder="0" style="color:var(--green);background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;width:100%;font-weight:800;font-family:'Vazirmatn',sans-serif" onfocus="personRasidFocus('diesel')" onblur="personRasidBlur()" oninput="updatePersonRasidFuel('diesel',this.value)"></div>
           <div class="fs-cell"><div class="l">برد</div><div class="v" style="color:var(--accent)" id="pm-d-bord">0</div></div>
           <div class="fs-cell"><div class="l" id="pm-d-rem-l">الباقی تیل</div><div class="v" style="color:var(--blue)" id="pm-d-remfuel">0</div></div>
@@ -11355,6 +11357,14 @@ function _updatePersonTotals(person) {
   const _uRateD = parseFloat(DB.unionRateDiesel) || 0;
   const rateP = _uRateP > 0 ? _uRateP : (t.petrol.fuel > 0 ? t.petrol.bardagi / t.petrol.fuel : 0);
   const rateD = _uRateD > 0 ? _uRateD : (t.diesel.fuel > 0 ? t.diesel.bardagi / t.diesel.fuel : 0);
+  // «فی هر لیتر»ِ کارت — نرخِ مؤثرِ خودِ حساب که الباقی پول را به الباقی تیل تبدیل می‌کند:
+  // برد ÷ مقدار تیل (فیِ خالصِ ردیف‌های لیتردار)، وگرنه فیِ ردیف‌های فقط‌پولی، وگرنه نرخ
+  // اتحادیه. چون هر ردیف می‌تواند فیِ متفاوتِ خودش را داشته باشد، این عددِ «اوسط» فقط
+  // نمایشی است و هیچ فیِ ردیفی را تغییر نمی‌دهد.
+  const feeP = _accFeeP > 0 ? _accFeeP : (_blendP > 0 ? _blendP : rateP);
+  const feeD = _accFeeD > 0 ? _accFeeD : (_blendD > 0 ? _blendD : rateD);
+  setV('pm-p-fee', feeP > 0 ? n2fa(rnd(feeP)) : '—');
+  setV('pm-d-fee', feeD > 0 ? n2fa(rnd(feeD)) : '—');
   // «الباقی پول»ِ حالتِ تیل و «الباقی تیل»ِ حالتِ پول — برای فوترِ جدول هم استفاده می‌شوند
   let _remMoneyP = 0, _remMoneyD = 0;   // حالتِ تیل → الباقی پول
   let _remFuelAll = 0;                   // حالتِ پول → الباقی تیلِ کل
@@ -18904,7 +18914,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.42';
+const APP_VERSION = '2.9.43';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
