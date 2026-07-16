@@ -10629,7 +10629,7 @@ function renderPersonRows(person) {
   let shown = 0;
   rows.forEach((r, i) => {
     // ردیف «پولی» (byMoney): بردگی مستقیم پول است، نه ضربِ لیتر×فی
-    const bardagi = (r.byMoney ? (parseFloat(r.bardagi)||0) : _fuelBardagi(r)).toFixed(0);
+    const bardagi = (r.byMoney ? (parseFloat(r.bardagi)||0) : _personRowBardagi(r)).toFixed(0);
     const albaqi  = (parseFloat(bardagi) - (r.rasid||0)).toFixed(0);
     // auto-store calculated values
     if (r.bardagi !== parseFloat(bardagi)) { r.bardagi = parseFloat(bardagi); }
@@ -10642,6 +10642,9 @@ function renderPersonRows(person) {
 
     const isP = r.ftype !== 'diesel';
     const rn = 'ft-' + person.id + '-' + i;
+    // نرخِ اتحادیهٔ مؤثرِ همین ردیف — به‌عنوان placeholderِ ستونِ «فی لیتر» نمایش داده
+    // می‌شود تا کاربر بداند اگر فی ننویسد، مقدار تیل × همین نرخ = پول می‌شود.
+    const rowUR = Math.round((_rowUnionRate(r)||0)*100)/100;
     const ftCell = showFtCol ? `
       <td>
         <div class="ft-pick">
@@ -10658,7 +10661,7 @@ function renderPersonRows(person) {
       <td><input class="xls-in" value="${r.hawala||''}" placeholder="#" inputmode="numeric" style="min-width:48px;max-width:64px" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="updatePersonRow('${person.id}',${i},'hawala',this.value)"></td>
       ${ftCell}
       <td><input class="xls-in" type="number" value="${r.fuel||''}" placeholder="0" style="min-width:46px;max-width:64px" oninput="calcPersonRow('${person.id}',${i},'fuel',this.value)"></td>
-      <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="0" style="min-width:44px;max-width:60px" oninput="calcPersonRow('${person.id}',${i},'priceper',this.value)"></td>
+      <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="${rowUR||'0'}" title="خالی = نرخِ اتحادیه (${n2fa(rowUR||0)})؛ اگر عدد بنویسی همان قفل می‌شود" style="min-width:44px;max-width:60px" oninput="calcPersonRow('${person.id}',${i},'priceper',this.value)"></td>
       <td><input class="xls-in pm-bardagi-cell" type="number" value="${parseFloat(bardagi)||''}" placeholder="0" style="color:var(--accent);font-weight:700" oninput="calcPersonRow('${person.id}',${i},'bardagi',this.value)"></td>
       <td><input class="xls-in" type="number" value="${r.rasid||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasid',this.value)"></td>
       <td><input class="xls-in" type="number" value="${r.rasidFuel||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasidFuel',this.value)"></td>
@@ -10769,7 +10772,7 @@ function _renderStackedAccounts(person) {
       rowsHtml = `<tr><td colspan="11" style="text-align:center;padding:14px;color:var(--muted);font-size:0.82rem">هیچ ردیفی ثبت نشده</td></tr>`;
     } else {
       rows.forEach((r, i) => {
-        const bardagi = (r.byMoney?(parseFloat(r.bardagi)||0):_fuelBardagi(r)).toFixed(0);
+        const bardagi = (r.byMoney?(parseFloat(r.bardagi)||0):_personRowBardagi(r)).toFixed(0);
         const albaqi = (parseFloat(bardagi)-(r.rasid||0)).toFixed(0);
         const isP = r.ftype !== 'diesel';
         const rn = 'sft-' + sec.acctId + '-' + i;
@@ -10835,7 +10838,8 @@ function calcStackedRow(pid, acctId, idx, field, value) {
   r[field] = parseFloat(value)||0;
   if (field==='bardagi') r.byMoney=true;
   else if (field==='fuel'||field==='priceper') { if ((parseFloat(r.fuel)||0)>0 && (parseFloat(r.priceper)||0)>0) r.byMoney=false; }
-  if (!r.byMoney) r.bardagi=_fuelBardagi(r);
+  _stampRowUnionRate(r);   // قفلِ نرخِ اتحادیهٔ همین لحظه روی ردیف (مثل جدولِ اصلی)
+  if (!r.byMoney) r.bardagi=_personRowBardagi(r);
   r.albaqi=(parseFloat(r.bardagi)||0)-(r.rasid||0);
   save(); _updatePersonTotals(person); _renderStackedAccounts(person); renderPersons(currentPersonType); updateBanner();
 }
@@ -11069,7 +11073,14 @@ function _togglePmFtColumn(show) {
 // نکند، هر ردیف موقعِ پر شدن نرخِ اتحادیهٔ همان لحظه را روی خودش قفل می‌کند (مخفی).
 // خالی‌شدنِ ردیف → پاک می‌شود تا با پر شدنِ دوباره نرخِ روز را بگیرد. نرخِ دستی
 // (uRateManual) با قفلِ خودکار عوض نمی‌شود.
-function _rowIsFilled(r){ return !!((parseFloat(r.fuel)||0)||(parseFloat(r.priceper)||0)||(parseFloat(r.bardagi)||0)||(parseFloat(r.rasid)||0)||(parseFloat(r.rasidFuel)||0)); }
+// بردگیِ ردیفِ تیل (byMoney=false) مشتقِ «مقدار تیل × فی» است، نه یک ورودیِ مستقل؛ پس
+// نشانهٔ «پر بودن» نیست. اگر آن را بشماریم، با خالی‌کردنِ مقدار تیل، ردیف هنوز «پر» دیده
+// می‌شود و نرخِ قفل‌شده پاک نمی‌شود — در حالی که کاربر خواسته با خالی‌شدنِ کادر، نرخِ
+// جدیدِ اتحادیه گرفته شود. فقط بردگیِ ردیفِ پولی (byMoney) ورودیِ مستقل است.
+function _rowIsFilled(r){
+  const bard = r.byMoney ? (parseFloat(r.bardagi)||0) : 0;
+  return !!((parseFloat(r.fuel)||0)||(parseFloat(r.priceper)||0)||bard||(parseFloat(r.rasid)||0)||(parseFloat(r.rasidFuel)||0));
+}
 function _stampRowUnionRate(r){
   if (!r) return;
   if (r.uRateManual === true) return;                 // نرخِ دستی دست‌نخورده می‌ماند
@@ -11084,6 +11095,20 @@ function _rowUnionRate(r){
   const locked = parseFloat(r && r.uRate) || 0;
   if (locked > 0) return locked;
   return (r && r.ftype === 'diesel') ? (parseFloat(DB.unionRateDiesel)||0) : (parseFloat(DB.unionRatePetrol)||0);
+}
+// فیِ مؤثرِ هر ردیفِ حساب برای تبدیلِ «مقدار تیل → پول»: اگر کاربر فیِ دستی در ستونِ
+// «فی لیتر» نوشته باشد همان استفاده می‌شود؛ وگرنه نرخِ اتحادیهٔ قفل‌شدهٔ همان ردیف.
+// این‌طوری تغییرِ نرخِ اتحادیه، بردگیِ ردیف‌های قدیمیِ پرشده را جابه‌جا نمی‌کند و فقط
+// ردیفِ خالی (بی‌فی و بی‌نرخِ قفل‌شده) نرخِ روزِ جدید را می‌گیرد.
+function _personRowFee(r){
+  const p = parseFloat(r && r.priceper) || 0;
+  return p > 0 ? p : _rowUnionRate(r);
+}
+// بردگیِ ردیفِ لیتردار = مقدار تیل × فیِ مؤثر (نرخِ اتحادیهٔ قفل‌شده وقتی فیِ دستی نباشد).
+// خواستهٔ کاربر: در «واحد تیل» با نوشتنِ فقط «مقدار تیل»، پول = مقدار تیل × نرخِ اتحادیه.
+function _personRowBardagi(r){
+  const f = parseFloat(r && r.fuel) || 0;
+  return f > 0 ? f * _personRowFee(r) : 0;
 }
 // ویرایشِ دستیِ نرخِ اتحادیهٔ یک ردیف — با کلیک روی ستونِ شماره، همان‌جا کادرِ کوچکِ
 // نرخ باز می‌شود (پیش‌فرض: نرخِ قفل‌شده یا نرخِ اتحادیهٔ روز) و قابلِ تغییر است. بدونِ
@@ -11135,10 +11160,10 @@ function calcPersonRow(pid, idx, field, value) {
   else if (field === 'fuel' || field === 'priceper') {
     if ((parseFloat(r.fuel)||0) > 0 && (parseFloat(r.priceper)||0) > 0) r.byMoney = false;
   }
-  if (!r.byMoney) r.bardagi = _fuelBardagi(r);
+  _stampRowUnionRate(r);   // اول نرخِ اتحادیهٔ همین لحظه روی ردیف قفل شود تا بردگی با همان حساب شود (خواستهٔ کاربر)
+  if (!r.byMoney) r.bardagi = _personRowBardagi(r);
   // الباقی پولی هر ردیف = بردگی − رسید پول (رسید تیل دفترِ لیتر است و جدا جمع می‌شود)
   r.albaqi = (parseFloat(r.bardagi)||0) - (r.rasid||0);
-  _stampRowUnionRate(r);   // نرخِ اتحادیهٔ همین لحظه روی ردیف قفل می‌شود (خواستهٔ کاربر)
   save();
   _updatePersonRowCells(person, idx, r);
   _updatePersonTotals(person);
@@ -11314,9 +11339,11 @@ function _updatePersonTotals(person) {
   // «فی هر لیتر»ِ مؤثرِ حساب — درست کنارِ برچسبِ «الباقی تیل» به‌صورتِ نامری «(فی X)» نوشته
   // می‌شود (نه کادرِ جدا). این همان نرخی است که الباقی پول را به الباقی تیل تبدیل می‌کند:
   // برد ÷ مقدار تیل. چون هر ردیف فیِ متفاوتِ خودش را دارد، این عددِ «اوسط» فقط نمایشی است.
+  // خواستهٔ کاربر: عددِ «(فی X)» کنارِ «الباقی تیل» باید نرخِ اتحادیه باشد، نه فیِ تایپ‌شده
+  // در ستونِ جدول. پس اول نرخِ اتحادیهٔ روز؛ فقط اگر ثبت نشده باشد به فیِ حساب برمی‌گردد.
   const _uP0 = parseFloat(DB.unionRatePetrol)||0, _uD0 = parseFloat(DB.unionRateDiesel)||0;
-  const feeP = _accFeeP > 0 ? _accFeeP : (_blendP > 0 ? _blendP : _uP0);
-  const feeD = _accFeeD > 0 ? _accFeeD : (_blendD > 0 ? _blendD : _uD0);
+  const feeP = _uP0 > 0 ? _uP0 : (_accFeeP > 0 ? _accFeeP : _blendP);
+  const feeD = _uD0 > 0 ? _uD0 : (_accFeeD > 0 ? _accFeeD : _blendD);
   const remFuelLblP = 'الباقی تیل' + (feeP > 0 ? ' (فی ' + n2fa(rnd(feeP)) + ')' : '');
   const remFuelLblD = 'الباقی تیل' + (feeD > 0 ? ' (فی ' + n2fa(rnd(feeD)) + ')' : '');
   // برچسب‌ها بر اساس حالت
@@ -11600,7 +11627,7 @@ function _renderHistoryPanel(person) {
     const filterBarHtml = `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:8px 10px 0">${fBtn('all','📋 همه')}${fBtn('petrol','⛽ حساب جداگانه پطرول')}${fBtn('diesel','🟤 حساب جداگانه دیزل')}</div>`;
     // xls table with editable rows
     let rowsHtml = viewRows.map(({ r, ri }, vi) => {
-      const bard = r.byMoney ? (r.bardagi||0) : _fuelBardagi(r);
+      const bard = r.byMoney ? (r.bardagi||0) : _personRowBardagi(r);
       const alb  = bard - (r.rasid||0);
       return `<tr>
         <td class="xls-num">${n2fa(vi+1)}</td>
@@ -11621,7 +11648,7 @@ function _renderHistoryPanel(person) {
       </tr>`;
     }).join('');
     if (!rowsHtml) rowsHtml = `<tr><td colspan="${showFt?12:11}" style="text-align:center;padding:12px;color:var(--muted);font-size:0.82rem">${hFilter==='petrol'?'⛽ هیچ ردیف پطرولی ثبت نشده':(hFilter==='diesel'?'🟤 هیچ ردیف دیزلی ثبت نشده':'هیچ ردیفی ثبت نشده')}</td></tr>`;
-    const viewAlbaqi = viewRows.reduce((s, x) => s + ((x.r.byMoney ? (x.r.bardagi||0) : _fuelBardagi(x.r)) - (x.r.rasid||0)), 0);
+    const viewAlbaqi = viewRows.reduce((s, x) => s + ((x.r.byMoney ? (x.r.bardagi||0) : _personRowBardagi(x.r)) - (x.r.rasid||0)), 0);
     const tableHtml = filterBarHtml + `
       <div class="xls-wrap" style="margin:8px 10px;border-radius:9px;overflow:hidden">
         <div style="overflow-x:auto">
@@ -11688,7 +11715,7 @@ function pdfPersonHistory(pid, hid) {
         remD = bordD + commD - rasidD - (money ? st.diesel.rasid : 0);
   const archiveLabel = h.note ? h.note.split('\n')[0].substring(0,50) : '';
   const tableRows = rows.map((r,i) => {
-    const bard = r.byMoney ? (r.bardagi||0) : _fuelBardagi(r);
+    const bard = r.byMoney ? (r.bardagi||0) : _personRowBardagi(r);
     const alb = bard - (r.rasid||0);
     return `<tr>
       <td style="text-align:center;color:#718096">${i+1}</td>
@@ -11790,7 +11817,7 @@ function calcHistoryRow(pid, hid, idx, field, value) {
   const r = h.rows[idx];
   const prevRasidFuel = parseFloat(r.rasidFuel) || 0;
   if (field === 'bardagi') { r.byMoney = true; r.bardagi = parseFloat(value)||0; }
-  else { r[field] = parseFloat(value)||0; if (!r.byMoney) r.bardagi = _fuelBardagi(r); }
+  else { r[field] = parseFloat(value)||0; _stampRowUnionRate(r); if (!r.byMoney) r.bardagi = _personRowBardagi(r); }
   // «رسید تیل» آرشیو هم دقیقاً مثل جدول اصلی به رسیدِ حساب تیلِ همین آرشیو (پطرول/دیزل)
   // به‌صورت تفاضلی اضافه می‌شود — کاملاً جدا از رسید پول
   if (field === 'rasidFuel') {
@@ -14438,8 +14465,8 @@ function pdfPerson() {
   // مقدار بردگی · رسید · رسید تیل · الباقی — بدونِ حذفِ ستون بر اساس واحد پول/تیل.
   const tableRows = rows.map((r, i) => {
     const fuelLabel = r.ftype === 'diesel' ? '🟤 دیزل' : '⛽ پطرول';
-    // بردگی مثل خودِ سایت: ردیفِ پولی → مقدارِ بردگیِ دستی، وگرنه مقدار تیل × فی
-    const bardagi = r.byMoney ? (parseFloat(r.bardagi) || 0) : _fuelBardagi(r);
+    // بردگی مثل خودِ سایت: ردیفِ پولی → مقدارِ بردگیِ دستی، وگرنه مقدار تیل × فی (نرخِ اتحادیهٔ قفل‌شده)
+    const bardagi = r.byMoney ? (parseFloat(r.bardagi) || 0) : _personRowBardagi(r);
     const albaqi = bardagi - (parseFloat(r.rasid) || 0);
     const albaqiColor = albaqi > 0 ? '#e53e3e' : '#276749';
     return `<tr>
@@ -18936,7 +18963,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.46';
+const APP_VERSION = '2.9.47';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -21971,7 +21998,7 @@ function invCustomerSuggest(val) {
   }
   if (hit) {
     let bord = 0;
-    (hit.rows || []).forEach(r => { bord += (r.byMoney ? (parseFloat(r.bardagi) || 0) : _fuelBardagi(r)) - (parseFloat(r.rasid) || 0); });
+    (hit.rows || []).forEach(r => { bord += (r.byMoney ? (parseFloat(r.bardagi) || 0) : _personRowBardagi(r)) - (parseFloat(r.rasid) || 0); });
     box.style.display = '';
     box.innerHTML = '👤 «' + escFa(hit.name) + '» قبلاً حساب قرض‌داری دارد' +
       (hit.phone ? (' · 📞 ' + escFa(hit.phone)) : '') +
