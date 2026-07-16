@@ -2664,6 +2664,102 @@ html, body {
   .fs-head { font-size: 0.72rem !important; }
 }
 
+/* ============================================================
+   موبایل — منوی سه‌نقطه، شیفت‌های فشرده کنار هم، جدول‌های خواناتر
+   (فقط موبایل ≤768px — به نسخهٔ پی‌سی/تبلت دست نمی‌زند)
+   ============================================================ */
+/* حالت پیش‌فرض (دسکتاپ/تبلت): همه چیز مخفی */
+.m-menu-fab{display:none}
+.m-menu-overlay{display:none}
+
+@media (max-width:768px){
+  /* --- نوار افقی بخش‌ها در موبایل مخفی؛ جایش منوی سه‌نقطه --- */
+  .nav{display:none !important}
+
+  /* دکمهٔ شناور سه‌نقطه — بغل پایین‌راست */
+  .m-menu-fab{
+    display:flex;align-items:center;justify-content:center;
+    position:fixed;bottom:calc(20px + var(--kb-offset,0px));right:14px;z-index:9200;
+    width:52px;height:52px;border-radius:50%;border:none;cursor:pointer;
+    background:linear-gradient(135deg,var(--accent),#d97706);color:#000;
+    box-shadow:0 6px 20px rgba(0,0,0,.5);transition:transform .12s,bottom .18s ease;
+  }
+  .m-menu-fab:active{transform:scale(.9)}
+  .m-menu-fab svg{fill:currentColor;stroke:none;width:22px;height:22px}
+
+  /* روکش تیره + کشوی بخش‌ها */
+  .m-menu-overlay{
+    display:block;position:fixed;inset:0;z-index:9500;
+    background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .25s;
+    -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);
+  }
+  .m-menu-overlay.open{opacity:1;pointer-events:auto}
+  .m-menu-panel{
+    position:absolute;top:0;right:0;bottom:0;width:min(82vw,320px);
+    background:var(--panel);border-left:1px solid var(--border);
+    box-shadow:-8px 0 30px rgba(0,0,0,.55);
+    transform:translateX(100%);transition:transform .28s cubic-bezier(.2,.8,.2,1);
+    display:flex;flex-direction:column;
+  }
+  .m-menu-overlay.open .m-menu-panel{transform:translateX(0)}
+  .m-menu-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 18px;border-bottom:1px solid var(--border);
+    font-weight:800;color:var(--accent);font-size:1.05rem;flex-shrink:0;
+  }
+  .m-menu-close{
+    background:var(--card);border:1px solid var(--border);border-radius:9px;
+    color:var(--muted);width:36px;height:36px;cursor:pointer;font-size:1rem;line-height:1;
+  }
+  .m-menu-close:active{transform:scale(.92)}
+  .m-menu-list{
+    flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding:10px;display:flex;flex-direction:column;gap:4px;
+  }
+  .m-menu-item{
+    display:flex;align-items:center;gap:12px;
+    padding:13px 14px;border-radius:11px;border:none;cursor:pointer;
+    background:transparent;color:var(--txt);width:100%;text-align:right;
+    font-family:'Vazirmatn',sans-serif;font-size:1rem;font-weight:600;position:relative;
+  }
+  .m-menu-item .nav-ic{width:1.35em;height:1.35em;flex-shrink:0}
+  .m-menu-item:active{background:var(--card)}
+  .m-menu-item.active{background:var(--accent);color:#000;font-weight:800}
+  .m-menu-item .nav-badge{position:static;margin-right:auto}
+  body.m-menu-lock{overflow:hidden}
+
+  /* --- شیفت روز و شب کنار هم و فشرده (نه یک‌ستونه) --- */
+  .shifts-grid{grid-template-columns:1fr 1fr !important;gap:8px !important;padding:10px !important}
+  .shift-header{padding:8px 9px !important;font-size:0.8rem !important;gap:5px !important}
+  .shift-body{padding:9px 9px !important;gap:7px !important}
+  .field-label{font-size:0.72rem !important;line-height:1.25}
+  .shift-body .field-input{padding:6px 7px !important;font-size:0.82rem !important}
+  .shift-body .calc-row{font-size:0.82rem !important}
+  #d-available,#n-available,
+  .shift-body .calc-row[id$="-available"]{font-size:0.9rem !important}
+  /* دکمه‌های انتقال پایه (← از شب / → به شب ...) کوچک‌تر تا از ستون بیرون نزنند */
+  .shift-body [onclick^="transferBase"]{padding:5px 6px !important;font-size:0.6rem !important;border-radius:6px !important}
+  .shift-body .keep-spin{width:44px !important}
+  .shift-footer .save-btn{font-size:0.82rem !important;padding:9px !important}
+  .shift-body .field-row > div[style*="min-width:52px"]{min-width:44px !important}
+
+  /* --- جدول‌ها خواناتر روی گوشی: اسکرول نرم + سلول‌های جمع‌وجور --- */
+  .tbl-wrap,.xls-wrap{overflow-x:auto !important;-webkit-overflow-scrolling:touch !important;
+    scrollbar-width:thin;border-radius:8px}
+  .tbl th,.tbl td{padding:7px 8px !important;font-size:0.82rem !important}
+  .tbl th{position:sticky;top:0}
+}
+
+@media (max-width:480px){
+  /* شیفت‌ها روی گوشی‌های کوچک باز هم فشرده‌تر ولی همچنان کنار هم */
+  .shifts-grid{gap:6px !important;padding:8px !important}
+  .shift-header{font-size:0.74rem !important;padding:7px !important}
+  .field-label{font-size:0.68rem !important}
+  .shift-body{padding:8px 7px !important;gap:6px !important}
+  .shift-body .field-input{font-size:0.78rem !important;padding:5px 6px !important}
+  .tbl th,.tbl td{padding:6px 6px !important;font-size:0.78rem !important}
+}
+
 /* دسکتاپ و تبلت بزرگ — نمایش اصلی بدون تغییر */
 @media (min-width: 769px) {
   .persons-grid {
@@ -4558,6 +4654,20 @@ table thead th{ position:relative; }
   <button class="nav-btn" onclick="showSection('attendance',this)"><svg class="nav-ic ia-tilt"><use href="#ic-att"/></svg> حاضری و معاش</button>
   <button class="nav-btn" onclick="showSection('profit',this)"><svg class="nav-ic ia-rise"><use href="#ic-profit"/></svg> مفاد / ضرر / اتحادیه</button>
   <button class="nav-btn" onclick="showSection('settings',this)"><svg class="nav-ic ia-spin"><use href="#ic-settings"/></svg> تنظیمات</button>
+</div>
+
+<!-- منوی سه‌نقطهٔ موبایل (بخش‌ها) — فقط در موبایل نمایش داده می‌شود -->
+<button id="mMenuFab" class="m-menu-fab" onclick="toggleMobileMenu()" aria-label="منوی بخش‌ها" title="بخش‌ها">
+  <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.1"/><circle cx="12" cy="12" r="2.1"/><circle cx="12" cy="19" r="2.1"/></svg>
+</button>
+<div id="mMenuOverlay" class="m-menu-overlay" onclick="closeMobileMenu(event)">
+  <div class="m-menu-panel">
+    <div class="m-menu-head">
+      <span>📂 بخش‌ها</span>
+      <button class="m-menu-close" onclick="closeMobileMenu()" aria-label="بستن">✕</button>
+    </div>
+    <div class="m-menu-list" id="mMenuList"></div>
+  </div>
 </div>
 
 <div class="main">
@@ -8066,6 +8176,39 @@ function showSection(id, btn) {
     try { renderStorageStatus(); } catch(e) {}
     try { _hexFxSyncUI(_hexFxLoad()); } catch(e) {}
   }
+  // منوی سه‌نقطهٔ موبایل را بعد از رفتن به بخش ببند
+  try { closeMobileMenu(); } catch(e) {}
+}
+
+// ========== منوی سه‌نقطهٔ موبایل — لیست بخش‌ها از روی همان نوار ناوبری ==========
+// آیتم‌ها از روی .nav-btn ساخته می‌شوند تا همیشه با نوار اصلی هماهنگ بمانند.
+function buildMobileMenu() {
+  const list = document.getElementById('mMenuList');
+  if (!list) return;
+  const btns = document.querySelectorAll('.nav .nav-btn');
+  list.innerHTML = '';
+  btns.forEach(btn => {
+    const item = document.createElement('button');
+    item.className = 'm-menu-item' + (btn.classList.contains('active') ? ' active' : '');
+    item.innerHTML = btn.innerHTML;
+    item.addEventListener('click', () => { btn.click(); closeMobileMenu(); });
+    list.appendChild(item);
+  });
+}
+function toggleMobileMenu() {
+  const ov = document.getElementById('mMenuOverlay');
+  if (!ov) return;
+  if (ov.classList.contains('open')) { closeMobileMenu(); return; }
+  buildMobileMenu();
+  ov.classList.add('open');
+  document.body.classList.add('m-menu-lock');
+}
+function closeMobileMenu(e) {
+  // اگر روی خودِ پنل (نه روکش) کلیک شد، نبند
+  if (e && e.target && e.target.closest && e.target.closest('.m-menu-panel')) return;
+  const ov = document.getElementById('mMenuOverlay');
+  if (ov) ov.classList.remove('open');
+  document.body.classList.remove('m-menu-lock');
 }
 
 // ========== داشبورد — متصل به داده‌های واقعی (فقط خواندنی) ==========
@@ -18972,7 +19115,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.48';
+const APP_VERSION = '2.9.49';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -21588,15 +21731,11 @@ body.nav-sticky{ overflow-x:clip!important; overflow-y:visible!important; }
    بلند می‌شود، روی گوشی sticky را خاموش می‌کنیم تا کل صفحه را نگیرد.
    تبلت و کامپیوتر (≥601px) هیچ تغییری نمی‌کنند. */
 @media (max-width:600px){
+  /* روی موبایل نوار افقی/شبکه‌ای بخش‌ها مخفی است و جایش منوی سه‌نقطه
+     (#mMenuFab) می‌آید — این‌جا فقط مطمئن می‌شویم که در ≤600px هم پنهان بماند */
   body.nav-sticky .nav,
   .nav{
-    position:static !important;
-    display:grid !important;
-    grid-template-columns:repeat(3,1fr) !important;
-    gap:6px !important;
-    overflow:visible !important;
-    padding:8px !important;
-    box-shadow:none !important;
+    display:none !important;
   }
   .nav .nav-btn{
     width:100% !important;
