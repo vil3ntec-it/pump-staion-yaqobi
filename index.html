@@ -11314,7 +11314,6 @@ function _updatePersonTotals(person) {
       const L = rowFee>0 ? b/rowFee : 0;
       if(isD){_moneyBardD+=b;_moneyBardLD+=L;} else {_moneyBardP+=b;_moneyBardLP+=L;}
     }
-    if (rs > 0 && rowFee > 0){ const L = rs/rowFee; if(isD)_rasidMoneyLD+=L; else _rasidMoneyLP+=L; }
     if (rf > 0){ const M = rf*rowFee; if(isD)_rasidFuelMoneyD+=M; else _rasidFuelMoneyP+=M; }
   });
   const _accFeeP = _fFuelP>0 ? (_fBardP/_fFuelP) : 0;   // فیِ خالصِ حساب (ردیف‌های لیتردار)
@@ -11322,6 +11321,17 @@ function _updatePersonTotals(person) {
   // نرخِ مؤثرِ نمایشِ الباقی وقتی فیِ لیتردار نیست (از بردگیِ پولی و معادلِ لیترش)
   const _blendP = _moneyBardLP>0 ? (_moneyBardP/_moneyBardLP) : 0;
   const _blendD = _moneyBardLD>0 ? (_moneyBardD/_moneyBardLD) : 0;
+  // ── تبدیلِ «رسیدِ پول» به لیتر با فیِ مؤثرِ کلِ حساب (نه فیِ هر ردیف) ──────────────
+  // باگ: رسیدِ پول با فیِ ردیفِ خودش به لیتر تبدیل می‌شد؛ اگر کاربر کلِ پول را در یک
+  // ردیف (با فیِ متفاوت) می‌نوشت، معادلِ لیترش غلط درمی‌آمد و الباقی صفر نمی‌شد — حتی
+  // وقتی پولِ داده‌شده دقیقاً برابرِ بردگی بود. رسیدِ پول بدهیِ کلی را کم می‌کند، پس با
+  // همان نرخی که تیلِ حساب «برده شده» (بردگیِ کل ÷ مقدار تیلِ کل) به لیتر تبدیل می‌شود؛
+  // این‌طوری «پولِ داده = پولِ برده» ⇒ الباقی پول و الباقی تیل هر دو صفر می‌شوند.
+  const _uP0e = parseFloat(DB.unionRatePetrol)||0, _uD0e = parseFloat(DB.unionRateDiesel)||0;
+  const _effFeeP = _accFeeP > 0 ? _accFeeP : (_blendP > 0 ? _blendP : _uP0e);
+  const _effFeeD = _accFeeD > 0 ? _accFeeD : (_blendD > 0 ? _blendD : _uD0e);
+  _rasidMoneyLP = _effFeeP > 0 ? (t.petrol.rasid / _effFeeP) : 0;
+  _rasidMoneyLD = _effFeeD > 0 ? (t.diesel.rasid / _effFeeD) : 0;
   // برد = مجموع لیتر (+ معادلِ لیترِ بردگیِ پولی) در حالت تیل؛ مجموع بردگی/پول در حالت پول
   const bordP = money ? t.petrol.bardagi : (t.petrol.fuel + _moneyBardLP);
   const bordD = money ? t.diesel.bardagi : (t.diesel.fuel + _moneyBardLD);
@@ -11424,11 +11434,10 @@ function _updatePersonTotals(person) {
     // تا فی زده نشود (feT=۰) تایپِ «مقدار تیل» نباید پول را کم کند (باگِ قبلی)؛ در آن حالت
     // ارزشِ خامِ رسید تیل به نرخ اتحادیه به‌عنوان تخمین نمایش داده می‌شود و ثابت می‌ماند.
     const remFuelP = -remP, remFuelD = -remD;   // الباقی تیلِ همین حساب به لیتر
-    // نرخِ نمایشِ الباقی پول: فیِ خالصِ حساب؛ اگر فی نبود ولی بردگیِ پولی برده شده،
-    // نرخ اتحادیه (تا پولِ برده‌شده در الباقی پول هم دیده شود)؛ وگرنه ۰ → ارزشِ خامِ
-    // رسید تیل نمایش داده می‌شود و با تایپِ «مقدار تیلِ بدون فی» کم نمی‌شود (باگِ قبلی).
-    const _mrP = _accFeeP > 0 ? _accFeeP : (_moneyBardP > 0 ? _blendP : 0);
-    const _mrD = _accFeeD > 0 ? _accFeeD : (_moneyBardD > 0 ? _blendD : 0);
+    // نرخِ نمایشِ الباقی پول = همان فیِ مؤثرِ حساب که رسیدِ پول با آن به لیتر شد؛ پس
+    // «الباقی پول = الباقی تیل × فی» و «رسیدِ پول ÷ فی = لیتر» با یک نرخِ واحد سازگارند
+    // و اگر پولِ داده = پولِ برده باشد، هر دو صفر می‌شوند (خواستهٔ کاربر).
+    const _mrP = _effFeeP, _mrD = _effFeeD;
     // در حالتِ بی‌فی، به‌جز ارزشِ خامِ رسید تیلِ هدر (rasidP×نرخ)، رسیدِ پولیِ جدول
     // (t.*.rasid) هم باید در «الباقی پول» دیده شود — وگرنه پولی که در ستونِ «رسید» زده
     // شده (و به تیل تبدیل و در «الباقی تیل» دیده می‌شود) اینجا صفر می‌ماند (باگ).
@@ -11466,8 +11475,8 @@ function _updatePersonTotals(person) {
     } else {
       // واحد تیل: الباقی پول = جمعِ کارت‌های بالا و الباقی تیل = رسید تیل − مقدار تیل، منهای
       // معادلِ لیترِ بردگیِ پولی و به‌علاوهٔ معادلِ لیترِ رسیدِ پولی (هماهنگ با کارت‌های بالا).
-      const netL = Math.round((t.all.rasidFuel - t.all.fuel - _moneyBardLP - _moneyBardLD + _rasidMoneyLP + _rasidMoneyLD) * 100) / 100;
-      const remMoneyAll = Math.round(_remMoneyP + _remMoneyD);
+      const netL = (Math.round((t.all.rasidFuel - t.all.fuel - _moneyBardLP - _moneyBardLD + _rasidMoneyLP + _rasidMoneyLD) * 100) / 100) || 0;
+      const remMoneyAll = Math.round(_remMoneyP + _remMoneyD) || 0;   // ‎||0 تا «‎-0» نمایش داده نشود
       ftAlbEl.innerHTML =
         '<div style="white-space:nowrap;color:' + (remMoneyAll < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی پول: ' + n2fa(remMoneyAll) + '</div>' +
         '<div style="font-size:0.74rem;font-weight:800;margin-top:2px;white-space:nowrap;color:' + (netL < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی تیل: ' + n2fa(netL) + ' ل</div>';
@@ -18963,7 +18972,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.47';
+const APP_VERSION = '2.9.48';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
