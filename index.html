@@ -18565,8 +18565,63 @@ function _chatNotifyIncoming(scope, m) {
     : m.k === 'audio' ? '🎤 پیام صوتی' : m.k === 'image' ? '🖼️ عکس' : m.k === 'video' ? '🎬 ویدیو' : 'پیام جدید');
   try { _notify('💬 ' + who + (scope === 'group' ? ' (چت گروهی)' : ' (چت تک‌نفره)'), preview, scope + '-msg-' + who); } catch (e) {}
 }
+// ===== حضور (presence) روی Firebase =====
+// وقتی برنامه باز و آنلاین است، این دستگاه روی مسیرِ presence علامتِ «من اینجا هستم»
+// می‌گذارد. فرستندهٔ پیام قبل از فرستادن اعلانِ بیرونی (ntfy) این علامت را می‌خواند:
+// اگر گیرنده حاضر باشد یعنی اعلانِ داخلِ برنامه (سایت) را می‌بیند، پس اعلانِ ntfy
+// فرستاده نمی‌شود و پیامِ تکراری نمی‌آید. با بسته/فریز شدنِ برنامه، اتصال Firebase
+// قطع می‌شود و onDisconnect علامت را برمی‌دارد؛ از آن لحظه ntfy دوباره می‌رسد.
+const _PRESENCE_FRESH_MS = 120000; // ۲ دقیقه — با ضربانِ هر ۴۵ ثانیه تازه می‌ماند
+let _presenceRef = null, _presenceKeyCur = null, _presenceConnBound = false, _presenceHb = null;
+function _presenceDeviceId() {
+  try {
+    let id = localStorage.getItem('pumpPresenceId');
+    if (!id) { id = 'd' + Math.random().toString(36).slice(2, 10); localStorage.setItem('pumpPresenceId', id); }
+    return id;
+  } catch (e) { return 'd0'; }
+}
+// کلیدِ حضورِ این دستگاه — دقیقاً متناظرِ همان تاپیکِ ntfy که خودش گیرندهٔ آن است:
+//   مدیر (میرزا) → 'admin' · کارمند → 'staff/<شناسهٔ دستگاه>' · مشتری کیو‌آر → 'p/<peer>'
+function _presenceKeyNow() {
+  if (_rbMode === 'person' && _rbPersonPeer) return 'p/' + _peerKey(_rbPersonPeer.peer);
+  if (_rbMode === 'admin') return 'admin';
+  return 'staff/' + _presenceDeviceId();
+}
+function _presenceStart() {
+  try {
+    if (!_chatOnline() || !_fbDb) return;
+    const key = _presenceKeyNow();
+    // نقش عوض شده؟ علامتِ قبلی را بردار تا حضورِ کهنه باقی نماند
+    if (_presenceKeyCur && _presenceKeyCur !== key && _presenceRef) {
+      try { _presenceRef.onDisconnect().cancel(); _presenceRef.remove(); } catch (e) {}
+    }
+    _presenceKeyCur = key;
+    _presenceRef = _fbDb.ref(_chatRoot() + 'presence/' + key);
+    try { _presenceRef.onDisconnect().remove(); _presenceRef.set({ ts: Date.now() }); } catch (e) {}
+    // بعد از هر بار وصل شدنِ دوباره، onDisconnect را از نو مسلح و علامت را تازه کن
+    if (!_presenceConnBound) {
+      _presenceConnBound = true;
+      try {
+        _fbDb.ref('.info/connected').on('value', s => {
+          if (s.val() === true && _presenceRef) {
+            try { _presenceRef.onDisconnect().remove(); _presenceRef.set({ ts: Date.now() }); } catch (e) {}
+          }
+        });
+      } catch (e) {}
+    }
+    if (!_presenceHb) _presenceHb = setInterval(_presenceBeat, 45000);
+  } catch (e) {}
+}
+function _presenceBeat() {
+  try {
+    if (!_chatOnline() || !_fbDb) return;
+    if (_presenceKeyNow() !== _presenceKeyCur) { _presenceStart(); return; }
+    if (_presenceRef) _presenceRef.set({ ts: Date.now() });
+  } catch (e) {}
+}
 function _chatInitListeners() {
   if (!_chatOnline()) return;
+  try { _presenceStart(); } catch (e) {}
   const me = _chatMe();
   if (!_chatL.group && _rbMode !== 'person') {
     _chatL.group = true;
@@ -18685,6 +18740,30 @@ function _extPushRaw(topic, title, message) {
     }).catch(() => {});
   } catch (e) {}
 }
+// اعلانِ بیرونی را فقط وقتی بفرست که گیرنده برنامه‌اش باز نباشد. presenceKey همان
+// کلیدی است که گیرنده هنگام باز بودنِ برنامه روی مسیرِ presence می‌گذارد:
+//   'admin' (میرزا) · 'staff' (هر کارمندی که آنلاین باشد) · 'p/<peer>' (مشتری کیو‌آر)
+// اگر گیرنده حاضر باشد اعلانِ سایت را می‌بیند و ntfy فرستاده نمی‌شود (نبودِ پیامِ تکراری).
+function _extPushAway(presenceKey, topic, title, message) {
+  try {
+    // اگر Firebase در دسترس نیست، محتاطانه اعلانِ بیرونی را بفرست (بهتر از نرسیدن)
+    if (!_chatOnline() || !_fbDb) { _extPushRaw(topic, title, message); return; }
+    const now = Date.now();
+    _fbDb.ref(_chatRoot() + 'presence/' + presenceKey).get().then(snap => {
+      const v = snap.val();
+      let present = false;
+      if (v) {
+        if (presenceKey === 'staff') {
+          // هر یک از کارمندان که برنامه‌اش باز باشد → کافی است
+          present = Object.keys(v).some(k => v[k] && (now - (v[k].ts || 0) < _PRESENCE_FRESH_MS));
+        } else {
+          present = (now - (v.ts || 0) < _PRESENCE_FRESH_MS);
+        }
+      }
+      if (!present) _extPushRaw(topic, title, message);
+    }).catch(() => { _extPushRaw(topic, title, message); });
+  } catch (e) { try { _extPushRaw(topic, title, message); } catch (e2) {} }
+}
 // مسیربندی اعلان‌ها (خواستهٔ صاحب برنامه):
 //   • پیام کارمند/مشتری (گروهی یا به میرزا) → تاپیک میرزا + تاپیک کارمندان
 //   • هشدارهای ربات (مخزن کم، حساب جدید و...) → تاپیک میرزا + تاپیک کارمندان
@@ -18701,15 +18780,15 @@ function _extPushNotify(scope, msg, peer) {
     const preview = msg.k === 'text' ? String(msg.t || '').slice(0, 80) : (msg.k === 'audio' ? '🎤 پیام صوتی' : msg.k === 'image' ? '🖼️ عکس' : '🎬 ویدیو');
     if (scope === 'group') {
       const title = msg.f === 'bot' ? '📢 هشدار پمپ' : '👥 چت گروهی — ' + who;
-      _extPushRaw(base, title, preview);
-      _extPushRaw(base + '-staff', title, preview);
+      _extPushAway('admin', base, title, preview);
+      _extPushAway('staff', base + '-staff', title, preview);
       return;
     }
     if (msg.f === 'admin') {
-      if (peer) _extPushRaw(base + '-p-' + peer, '💬 جواب میرزا — پمپ یعقوبی', preview);
+      if (peer) _extPushAway('p/' + peer, base + '-p-' + peer, '💬 جواب میرزا — پمپ یعقوبی', preview);
       return;
     }
-    _extPushRaw(base, '💬 پیام به میرزا — ' + who, preview);
+    _extPushAway('admin', base, '💬 پیام به میرزا — ' + who, preview);
   } catch (e) {}
 }
 // --- تنظیمات اعلان بیرون از برنامه (کارت در «تنظیمات») ---
@@ -19582,7 +19661,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.56';
+const APP_VERSION = '2.9.57';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
