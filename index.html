@@ -10449,10 +10449,9 @@ function renderPersons(type) {
       </div>
       <button onclick="event.stopPropagation();showPersonQR('${type}','${p.id}')" style="margin-top:10px;width:100%;padding:6px 8px;border-radius:7px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-size:0.75rem;font-weight:700;cursor:pointer">📲 کیو‌آر کد</button>
     `;
-    // خواستهٔ صاحب برنامه: کلیک روی کارت (چپ یا راست) منوی گزینه‌ها را باز می‌کند —
-    // «باز کردن حساب» اولین گزینهٔ همان منو است
-    card.onclick = (ev) => openAcctMenu(ev, 'person', type, p.id);
-    card.oncontextmenu = (ev) => openAcctMenu(ev, 'person', type, p.id);
+    // کلیک معمولی حساب را باز می‌کند؛ راست‌کلیک (یا نگه‌داشتن انگشت) منوی گزینه‌ها را
+    card.onclick = () => openPersonModal(type, p.id);
+    _acctAttachMenu(card, 'person', type, p.id);
     frag.appendChild(card);
   });
   grid.innerHTML = '';
@@ -10518,10 +10517,32 @@ function deletePerson(type, id) {
 }
 
 // ========== منوی گزینه‌های حساب (خواستهٔ صاحب برنامه) ==========
-// با کلیک (چپ یا راست) روی کارتِ هر حساب — قرض‌دار، شخص بدون پارچه یا شرکت تیل —
-// یک منوی کوچک باز می‌شود: باز کردن حساب، فرستادن حساب برای چت گروهی، کیو‌آر کد.
-// گزینه‌های بعدی بعداً به همین منو اضافه می‌شوند.
+// مثل منوی راست‌کلیک ویندوز: با کلیک راست روی کارتِ هر حساب — قرض‌دار، شخص بدون
+// پارچه یا شرکت تیل — (و روی موبایل با نگه‌داشتن انگشت) یک منوی کوچک باز می‌شود:
+// باز کردن حساب، فرستادن حساب برای چت گروهی، کیو‌آر کد. کلیک معمولی مثل همیشه
+// خودِ حساب را باز می‌کند. گزینه‌های بعدی بعداً به همین منو اضافه می‌شوند.
 function _acctMenuClose() { const m = document.getElementById('acctMenu'); if (m) m.remove(); }
+// اتصال منو به یک کارت: راست‌کلیک در کامپیوتر + نگه‌داشتن انگشت (نیم ثانیه) در موبایل
+function _acctAttachMenu(card, kind, type, id) {
+  card.oncontextmenu = ev => openAcctMenu(ev, kind, type, id);
+  let timer = null, sx = 0, sy = 0, fired = false;
+  card.addEventListener('touchstart', ev => {
+    const tc = ev.touches && ev.touches[0];
+    if (!tc) return;
+    sx = tc.clientX; sy = tc.clientY; fired = false;
+    timer = setTimeout(() => {
+      fired = true;
+      openAcctMenu({ preventDefault() {}, stopPropagation() {}, clientX: sx, clientY: sy }, kind, type, id);
+    }, 550);
+  }, { passive: true });
+  card.addEventListener('touchmove', ev => {
+    const tc = ev.touches && ev.touches[0];
+    if (tc && (Math.abs(tc.clientX - sx) > 12 || Math.abs(tc.clientY - sy) > 12)) clearTimeout(timer);
+  }, { passive: true });
+  // اگر منو با نگه‌داشتن باز شد، کلیکِ بعد از برداشتن انگشت نباید حساب را هم باز کند
+  card.addEventListener('touchend', ev => { clearTimeout(timer); if (fired) ev.preventDefault(); }, { passive: false });
+  card.addEventListener('touchcancel', () => clearTimeout(timer), { passive: true });
+}
 function openAcctMenu(ev, kind, type, id) {
   try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
   _acctMenuClose();
@@ -13238,9 +13259,9 @@ function renderCompanies() {
         <button onclick="event.stopPropagation();showCompanyQR('${c.id}')" style="flex:1;padding:5px 6px;border-radius:7px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-size:0.72rem;font-weight:700;cursor:pointer">📲 کیو‌آر</button>
       </div>
     `;
-    // مثل کارت قرض‌داران: کلیک، منوی گزینه‌های حساب را باز می‌کند
-    card.onclick = (ev) => openAcctMenu(ev, 'company', '', c.id);
-    card.oncontextmenu = (ev) => openAcctMenu(ev, 'company', '', c.id);
+    // مثل کارت قرض‌داران: کلیک معمولی حساب را باز می‌کند؛ راست‌کلیک/نگه‌داشتن، منو را
+    card.onclick = () => openCompanyModal(c.id);
+    _acctAttachMenu(card, 'company', '', c.id);
     grid.appendChild(card);
   });
   // کنترل صفحه‌بندی شرکت‌ها (فقط زمانی که جستجو نیست)
@@ -19421,7 +19442,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.52';
+const APP_VERSION = '2.9.53';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
