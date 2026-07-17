@@ -10586,6 +10586,7 @@ function openAcctMenu(ev, kind, type, id) {
   menu.innerHTML =
     `<button onclick="_acctMenuOpen(${args})">📂 باز کردن حساب</button>` +
     `<button onclick="_acctMenuSendGroup(${args})">📤 فرستادن حساب برای گروه</button>` +
+    `<button onclick="_acctMenuWhatsApp(${args})">💬 فرستادن حساب به پی‌وی واتساپ</button>` +
     `<button onclick="_acctMenuQR(${args})">📲 کیو‌آر کد</button>`;
   document.body.appendChild(menu);
   const x = (ev.clientX || 0), y = (ev.clientY || 0);
@@ -10630,6 +10631,39 @@ function _acctSummaryText(kind, type, id) {
   if (fl.hasP) parts.push('⛽ باقی تیل پطرول: ' + n2fa(Math.round(fl.petrol)) + ' لیتر');
   if (fl.hasD) parts.push('🟤 باقی تیل دیزل: ' + n2fa(Math.round(fl.diesel)) + ' لیتر');
   return parts.join(' — ');
+}
+// شمارهٔ ثبت‌شده → قالبِ بین‌المللیِ واتساپ (فقط رقم). اولین شمارهٔ داخل متن گرفته
+// می‌شود؛ ارقام فارسی تبدیل و «۰۰» ابتدای شماره حذف می‌شود؛ «۰» اولِ شمارهٔ افغانی
+// به کُد کشور ۹۳ تبدیل می‌شود (07xxxxxxxx → 937xxxxxxx)
+function _waNumber(phoneRaw) {
+  const m = toEnDigits(String(phoneRaw || '')).match(/\+?\d[\d\s\-]{6,}\d/);
+  if (!m) return '';
+  let n = m[0].replace(/\D/g, '');
+  if (n.indexOf('00') === 0) n = n.slice(2);
+  else if (n.indexOf('0') === 0) n = '93' + n.slice(1);
+  return n.length >= 8 ? n : '';
+}
+// خواستهٔ کاربر: اگر شمارهٔ شخص در حسابش ثبت بود، از منوی راست‌کلیک خلاصهٔ حساب +
+// لینکِ دیدنِ حساب (همان لینکی که کیوآر کد می‌سازد) مستقیم به پی‌ویِ واتساپش برود
+function _acctMenuWhatsApp(kind, type, id) {
+  _acctMenuClose();
+  let phone = '';
+  if (kind === 'company') {
+    const c = (DB.tilCompanies || []).find(x => String(x.id) === String(id));
+    phone = (c && (c.phone || '')) || '';
+  } else {
+    const list = type === 'debt' ? DB.debtPersons : DB.noinvPersons;
+    const p = (list || []).find(x => String(x.id) === String(id));
+    phone = (p && (p.phone || '')) || '';
+  }
+  const num = _waNumber(phone);
+  if (!num) { showToast('📞 برای این حساب شماره‌ای ثبت نشده — داخل حساب، در کادر «شماره تماس» شماره‌اش را بنویسید', '#e53e3e'); return; }
+  const summary = _acctSummaryText(kind, type, id);
+  if (!summary) { showToast('حساب پیدا نشد', '#e53e3e'); return; }
+  const baseUrl = /^http/.test(location.protocol) ? window.location.href.split('#')[0] : 'https://vil3ntec-it.github.io/pump-staion-yaqobi/';
+  const viewUrl = baseUrl + (kind === 'company' ? ('#roview-company-' + id + '-pdf') : ('#roview-' + type + '-' + id + '-pdf'));
+  const msg = '📋 ' + summary + '\n\n📄 برای دیدنِ حساب و پی‌دی‌اف، این لینک را باز کنید (همان لینکِ کیوآر کد):\n' + viewUrl;
+  window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(msg), '_blank');
 }
 function _acctMenuSendGroup(kind, type, id) {
   _acctMenuClose();
@@ -19729,7 +19763,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.64';
+const APP_VERSION = '2.9.65';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
