@@ -10921,6 +10921,8 @@ function renderPersonRows(person) {
   // در table-layout:fixed ستونِ فانتوم نسازد و جدول باریک/کج نشود.)
   const showFtCol = currentPersonFilter === 'all';
   _togglePmFtColumn(showFtCol);
+  const money = person.mode === 'money';
+  _togglePmMoneyCols(money);
   let shown = 0;
   rows.forEach((r, i) => {
     // خوددرمانیِ دادهٔ کهنه: ردیفی که «مقدار تیل» دارد ولی پولی (byMoney) با بردگیِ صفر
@@ -10962,8 +10964,8 @@ function renderPersonRows(person) {
       <td><input class="xls-in" type="number" value="${r.fuel||''}" placeholder="0" style="min-width:46px;max-width:64px" oninput="calcPersonRow('${person.id}',${i},'fuel',this.value)"></td>
       <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="${rowUR||'0'}" title="خالی = نرخِ اتحادیه (${n2fa(rowUR||0)})؛ اگر عدد بنویسی همان قفل می‌شود" style="min-width:44px;max-width:60px" oninput="calcPersonRow('${person.id}',${i},'priceper',this.value)"></td>
       <td><input class="xls-in pm-bardagi-cell" type="number" value="${parseFloat(bardagi)||''}" placeholder="0" style="color:var(--accent);font-weight:700" oninput="calcPersonRow('${person.id}',${i},'bardagi',this.value)"></td>
-      <td><input class="xls-in" type="number" value="${r.rasid||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasid',this.value)"></td>
-      <td><input class="xls-in" type="number" value="${r.rasidFuel||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasidFuel',this.value)"></td>
+      ${money ? `<td><input class="xls-in" type="number" value="${r.rasid||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasid',this.value)"></td>` : ''}
+      ${money ? '' : `<td><input class="xls-in" type="number" value="${r.rasidFuel||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasidFuel',this.value)"></td>`}
       <td class="pm-albaqi-cell"></td>
       <td><button class="del-btn" onclick="deletePersonRow('${person.id}',${i})">🗑️</button></td>
     `;
@@ -10972,7 +10974,7 @@ function renderPersonRows(person) {
   if (shown === 0) {
     const tr = document.createElement('tr');
     const label = currentPersonFilter === 'petrol' ? '⛽ هیچ ردیف پطرولی ثبت نشده' : (currentPersonFilter === 'diesel' ? '🟤 هیچ ردیف دیزلی ثبت نشده' : 'هیچ ردیفی ثبت نشده');
-    tr.innerHTML = `<td colspan="${showFtCol?12:11}" style="text-align:center;padding:16px;color:var(--muted);font-size:0.85rem">${label}</td>`;
+    tr.innerHTML = `<td colspan="${showFtCol?11:10}" style="text-align:center;padding:16px;color:var(--muted);font-size:0.85rem">${label}</td>`;
     tbody.appendChild(tr);
   }
   // جمع‌ها بعد از حلقهٔ ردیف‌ها حساب می‌شوند — حلقه بردگی/الباقیِ هر ردیف را
@@ -11367,6 +11369,30 @@ function _togglePmFtColumn(show) {
   const albLbl = document.getElementById('pm-ft-albaqi-lbl');
   if (albLbl) albLbl.colSpan = show ? 6 : 5;
 }
+// خواستهٔ کاربر: ستونِ واحدِ مقابل از جدول برداشته شود — واحد تیل → ستونِ «رسید»
+// (پولی) حذف؛ واحد پول → ستونِ «رسید تیل» حذف. مثل «نوع تیل»، سرستون و سلولِ
+// فوترش واقعاً از DOM برداشته/برگردانده می‌شوند تا در table-layout:fixed ستونِ
+// فانتوم نسازند. فقط نمایش — دادهٔ ذخیره‌شدهٔ ردیف‌ها دست نمی‌خورد.
+let _pmRasidTh = null, _pmRasidFuelTh = null, _pmFtRasidTd = null, _pmFtRasidFuelTd = null;
+function _togglePmMoneyCols(money) {
+  const thead = document.querySelector('#pm-tbl thead tr');
+  const tfootRow = document.querySelector('#pm-tbl tfoot tr');
+  if (!thead || !tfootRow) return;
+  const findTh = t => Array.prototype.find.call(thead.querySelectorAll('th'), th => th.textContent.trim() === t) || null;
+  if (money) {
+    // واحد پول: «رسید» برگردد، «رسید تیل» برداشته شود
+    if (_pmRasidTh) { thead.insertBefore(_pmRasidTh, findTh('رسید تیل') || findTh('الباقی')); _pmRasidTh = null; }
+    const rft = findTh('رسید تیل'); if (rft) { _pmRasidFuelTh = rft; rft.remove(); }
+    if (_pmFtRasidTd) { tfootRow.insertBefore(_pmFtRasidTd, document.getElementById('pm-ft-rasidfuel') || document.getElementById('pm-ft-albaqi')); _pmFtRasidTd = null; }
+    const ftd = document.getElementById('pm-ft-rasidfuel'); if (ftd) { _pmFtRasidFuelTd = ftd; ftd.remove(); }
+  } else {
+    // واحد تیل: «رسید تیل» برگردد، «رسید» برداشته شود
+    if (_pmRasidFuelTh) { thead.insertBefore(_pmRasidFuelTh, findTh('الباقی')); _pmRasidFuelTh = null; }
+    const rt = findTh('رسید'); if (rt) { _pmRasidTh = rt; rt.remove(); }
+    if (_pmFtRasidFuelTd) { tfootRow.insertBefore(_pmFtRasidFuelTd, document.getElementById('pm-ft-albaqi')); _pmFtRasidFuelTd = null; }
+    const rtd = document.getElementById('pm-ft-rasid'); if (rtd) { _pmFtRasidTd = rtd; rtd.remove(); }
+  }
+}
 // ── قفلِ نرخِ اتحادیه روی هر ردیف ─────────────────────────────────────────────
 // نرخ اتحادیه ثابت نیست؛ برای اینکه تغییرِ نرخ، الباقیِ ردیف‌های قدیمی را جابه‌جا
 // نکند، هر ردیف موقعِ پر شدن نرخِ اتحادیهٔ همان لحظه را روی خودش قفل می‌کند (مخفی).
@@ -11667,21 +11693,12 @@ function _updatePersonTotals(person) {
   if (pRasidEl) pRasidEl.readOnly = false;
   const dRasidEl = document.getElementById('pm-d-rasidfuel');
   if (dRasidEl) dRasidEl.readOnly = false;
-  // «فی هر لیتر»ِ مؤثرِ حساب — درست کنارِ برچسبِ «الباقی تیل» به‌صورتِ نامری «(فی X)» نوشته
-  // می‌شود (نه کادرِ جدا). این همان نرخی است که الباقی پول را به الباقی تیل تبدیل می‌کند:
-  // برد ÷ مقدار تیل. چون هر ردیف فیِ متفاوتِ خودش را دارد، این عددِ «اوسط» فقط نمایشی است.
-  // خواستهٔ کاربر: عددِ «(فی X)» کنارِ «الباقی تیل» باید نرخِ اتحادیه باشد، نه فیِ تایپ‌شده
-  // در ستونِ جدول. پس اول نرخِ اتحادیهٔ روز؛ فقط اگر ثبت نشده باشد به فیِ حساب برمی‌گردد.
-  const _uP0 = parseFloat(DB.unionRatePetrol)||0, _uD0 = parseFloat(DB.unionRateDiesel)||0;
-  const feeP = _uP0 > 0 ? _uP0 : (_accFeeP > 0 ? _accFeeP : _blendP);
-  const feeD = _uD0 > 0 ? _uD0 : (_accFeeD > 0 ? _accFeeD : _blendD);
-  const remFuelLblP = 'الباقی تیل' + (feeP > 0 ? ' (فی ' + n2fa(rnd(feeP)) + ')' : '');
-  const remFuelLblD = 'الباقی تیل' + (feeD > 0 ? ' (فی ' + n2fa(rnd(feeD)) + ')' : '');
+  // خواستهٔ کاربر: پسوندِ «(فی X)» از کنارِ «الباقی تیل» برداشته شد — برچسبِ ساده
   // برچسب‌ها بر اساس حالت
   setL('pm-p-rasid-l', money ? 'مقدار رسید پول' : 'مقدار رسید تیل');
   setL('pm-d-rasid-l', money ? 'مقدار رسید پول' : 'مقدار رسید تیل');
-  setL('pm-p-rem-l', money ? 'الباقی پول' : remFuelLblP);
-  setL('pm-d-rem-l', money ? 'الباقی پول' : remFuelLblD);
+  setL('pm-p-rem-l', money ? 'الباقی پول' : 'الباقی تیل');
+  setL('pm-d-rem-l', money ? 'الباقی پول' : 'الباقی تیل');
   setL('pm-bord-sum-l', money ? 'جمع کل برد پول' : 'جمع کل برد تیل');
   const modeBtn = document.getElementById('pm-mode-btn');
   if (modeBtn) modeBtn.textContent = money ? '🔁 تیل' : '🔁 پول';
@@ -11705,20 +11722,13 @@ function _updatePersonTotals(person) {
   const setRem = (id, v) => { const el = document.getElementById(id); if (el) { const val = rnd(-v) || 0; el.textContent = n2fa(val); el.style.color = val < 0 ? 'var(--red)' : 'var(--green)'; } };
   setRem('pm-p-remfuel', remP);
   setRem('pm-d-remfuel', remD);
-  // خانهٔ پنجمِ کارت‌های حساب پطرول/دیزل در هر دو حالت نمایش داده می‌شود تا واحد پول
-  // و واحد تیل کاملاً هم‌شکل باشند (کادر بلند نمی‌شود، ستون پنجمِ افقی):
-  //   واحد تیل  → «الباقی پول» (رسید پول − بردگی پولی جدول)
-  //   واحد پول → «الباقی تیل» (رسید تیل − مقدار تیل جدول)
-  // فقط نمایشی — از جمع‌های موجود خوانده می‌شود و روی هیچ محاسبه‌ای اثر ندارد
-  const setRemExtra = (fuel, v, label) => {
-    const cell = document.getElementById('pm-' + fuel + '-remmoney-cell');
-    const el = document.getElementById('pm-' + fuel + '-remmoney');
-    if (!cell || !el) return;
-    cell.style.display = '';
-    if (cell.parentElement) cell.parentElement.classList.add('has-remmoney');
-    const lbl = cell.querySelector('.l'); if (lbl) lbl.textContent = label;
-    const val = rnd(v) || 0; el.textContent = n2fa(val); el.style.color = val < 0 ? 'var(--red)' : 'var(--green)';
-  };
+  // خواستهٔ کاربر: خانهٔ پنجمِ تبدیلِ پول↔تیل از کارت‌های پطرول/دیزل حذف شد —
+  // «الباقی پول» در واحد تیل و «الباقی تیل» در واحد پول دیگر نمایش داده نمی‌شوند
+  // (فقط نمایش؛ محاسبات دست نخورده‌اند)
+  ['p','d'].forEach(fu => {
+    const cell = document.getElementById('pm-' + fu + '-remmoney-cell');
+    if (cell){ cell.style.display = 'none'; if (cell.parentElement) cell.parentElement.classList.remove('has-remmoney'); }
+  });
   // نرخ اتحادیهٔ روز (پطرول/دیزل) — پلِ تبدیل پول↔تیل. اگر ثبت نشده باشد، نرخِ
   // مؤثر از خودِ ردیف‌ها (بردگیِ پولی ÷ لیتر) گرفته می‌شود تا محاسبه خراب نشود.
   const _uRateP = parseFloat(DB.unionRatePetrol) || 0;
@@ -11744,8 +11754,6 @@ function _updatePersonTotals(person) {
     // مقدارِ پس از کسرِ فیصدی ÷ فی محاسبه می‌شود تا این دو همیشه با هم Sync باشند.
     const remFuelP2 = feP > 0 ? (remMoneyBalP - commP) / feP : 0;   // الباقی تیل = (الباقی پول پس از فیصدی) ÷ فی
     const remFuelD2 = feD > 0 ? (remMoneyBalD - commD) / feD : 0;
-    setRemExtra('p', remFuelP2, remFuelLblP);
-    setRemExtra('d', remFuelD2, remFuelLblD);
     _remFuelAll = remFuelP2 + remFuelD2;
   } else {
     // واحد تیل: «الباقی پول» = الباقی تیل × فیِ خودِ حساب — دقیقاً معکوسِ واحد پول
@@ -11764,8 +11772,6 @@ function _updatePersonTotals(person) {
     // شده (و به تیل تبدیل و در «الباقی تیل» دیده می‌شود) اینجا صفر می‌ماند (باگ).
     _remMoneyP = _mrP > 0 ? (remFuelP * _mrP) : (rasidP * rateP + t.petrol.rasid);
     _remMoneyD = _mrD > 0 ? (remFuelD * _mrD) : (rasidD * rateD + t.diesel.rasid);
-    setRemExtra('p', _remMoneyP, 'الباقی پول');
-    setRemExtra('d', _remMoneyD, 'الباقی پول');
   }
   setV('pm-bord-sum', n2fa(rnd(bordP+bordD)) + unit);
   // footer جدول: جمعِ هر ستون در جمعِ خودِ همان ستون — مقدار تیل، مقدار بردگی و
@@ -11785,25 +11791,18 @@ function _updatePersonTotals(person) {
   const ftAlbEl = document.getElementById('pm-ft-albaqi');
   if (ftAlbEl) {
     ftAlbEl.style.color = netAll < 0 ? 'var(--red)' : 'var(--green)';
-    // هر دو حالت یک مدل: دو خطِ برچسب‌دار «الباقی پول» و «الباقی تیل».
+    // خواستهٔ کاربر: هر واحد فقط الباقیِ خودِ همان واحد را نشان دهد — تبدیلِ پول↔تیل
+    // از فوتر حذف شد. (بدونِ nowrap تا متن در کادرِ باریکِ ستونِ «الباقی» بریده نشود)
     if (money) {
-      // واحد پول: الباقی پول = جمعِ الباقیِ همین جدول (رسید − بردگی) و الباقی تیل = معادلِ
-      // تیلِ کارت‌های بالا. این‌جا کفِ صفر نداریم؛ اضافه‌برد منفی (بدهی) نشان داده می‌شود.
-      const remFuelAll = Math.round((_remFuelAll || 0) * 100) / 100;
-      // white-space:nowrap در ستونِ ۹۰پیکسلیِ table-layout:fixed متن را از کادر بیرون
-      // می‌زد و بریده/روی ستون‌های کناری نمایش داده می‌شد؛ برچسب و عدد بپیچند تا در کادر بمانند
+      // واحد پول: فقط «الباقی پول» = جمعِ الباقیِ همین جدول (رسید − بردگی)
       ftAlbEl.innerHTML =
-        '<div style="font-size:0.78rem;line-height:1.5;color:' + (netAll < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی پول:<br>' + netTxt + '</div>' +
-        '<div style="font-size:0.74rem;font-weight:800;margin-top:2px;line-height:1.5;color:' + (remFuelAll < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی تیل:<br>' + n2fa(remFuelAll) + ' ل</div>';
+        '<div style="font-size:0.78rem;line-height:1.5;color:' + (netAll < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی پول:<br>' + netTxt + '</div>';
     } else {
-      // واحد تیل: الباقی پول = جمعِ کارت‌های بالا و الباقی تیل = رسید تیل − مقدار تیل، منهای
-      // معادلِ لیترِ بردگیِ پولی و به‌علاوهٔ معادلِ لیترِ رسیدِ پولی (هماهنگ با کارت‌های بالا).
+      // واحد تیل: فقط «الباقی تیل» = رسید تیل − مقدار تیل، منهای معادلِ لیترِ بردگیِ
+      // پولی و به‌علاوهٔ معادلِ لیترِ رسیدِ پولی (هماهنگ با کارت‌های بالا)
       const netL = (Math.round((t.all.rasidFuel - t.all.fuel - _moneyBardLP - _moneyBardLD + _rasidMoneyLP + _rasidMoneyLD) * 100) / 100) || 0;
-      const remMoneyAll = Math.round(_remMoneyP + _remMoneyD) || 0;   // ‎||0 تا «‎-0» نمایش داده نشود
-      // مثل شاخهٔ بالا: بدونِ nowrap تا متن در کادرِ باریکِ ستونِ «الباقی» بریده نشود
       ftAlbEl.innerHTML =
-        '<div style="font-size:0.78rem;line-height:1.5;color:' + (remMoneyAll < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی پول:<br>' + n2fa(remMoneyAll) + '</div>' +
-        '<div style="font-size:0.74rem;font-weight:800;margin-top:2px;line-height:1.5;color:' + (netL < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی تیل:<br>' + n2fa(netL) + ' ل</div>';
+        '<div style="font-size:0.78rem;font-weight:800;line-height:1.5;color:' + (netL < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی تیل:<br>' + n2fa(netL) + ' ل</div>';
     }
   }
   const ftAlbEl2 = document.getElementById('pm-ft-albaqi2');
@@ -19696,7 +19695,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.59';
+const APP_VERSION = '2.9.60';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
