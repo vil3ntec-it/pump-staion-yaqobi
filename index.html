@@ -10923,6 +10923,10 @@ function renderPersonRows(person) {
   _togglePmFtColumn(showFtCol);
   let shown = 0;
   rows.forEach((r, i) => {
+    // خوددرمانیِ دادهٔ کهنه: ردیفی که «مقدار تیل» دارد ولی پولی (byMoney) با بردگیِ صفر
+    // مانده — بردگیِ دستی‌ای در کار نیست، پس ردیفِ تیل است و بردگی‌اش لیتر × فی حساب
+    // شود؛ وگرنه فیِ حساب (بردگی ÷ تیل) خراب و «مقدار رسید تیل» چند برابر نمایش داده می‌شد
+    if (r.byMoney && !(parseFloat(r.bardagi)||0) && (parseFloat(r.fuel)||0) > 0) r.byMoney = false;
     // ردیف «پولی» (byMoney): بردگی مستقیم پول است، نه ضربِ لیتر×فی
     const bardagi = (r.byMoney ? (parseFloat(r.bardagi)||0) : _personRowBardagi(r)).toFixed(0);
     const albaqi  = (parseFloat(bardagi) - (r.rasid||0)).toFixed(0);
@@ -11453,7 +11457,11 @@ function calcPersonRow(pid, idx, field, value) {
   // تیل و هم فی وارد شده باشد؛ در غیر این صورت «برد» فقط با تایپِ خودِ کاربر عوض می‌شود.
   if (field === 'bardagi') r.byMoney = true;
   else if (field === 'fuel' || field === 'priceper') {
-    if ((parseFloat(r.fuel)||0) > 0 && (parseFloat(r.priceper)||0) > 0) r.byMoney = false;
+    // ردیفِ پولی فقط وقتی پولی می‌ماند که واقعاً بردگیِ دستی داشته باشد؛ اگر بردگی
+    // صفر/خالی است (مثلاً یک‌بار تایپ و پاک شده) چیزی برای حفظ‌کردن نیست و نوشتنِ
+    // «مقدار تیل» باید مثل ردیفِ تازه بردگی = لیتر × فی را حساب کند — وگرنه ردیفِ
+    // «لیتردارِ بی‌بردگی» فیِ حساب را خراب و «مقدار رسید تیل» را چند برابر می‌کند
+    if ((parseFloat(r.fuel)||0) > 0 && ((parseFloat(r.priceper)||0) > 0 || !(parseFloat(r.bardagi)||0))) r.byMoney = false;
   }
   _stampRowUnionRate(r);   // اول نرخِ اتحادیهٔ همین لحظه روی ردیف قفل شود تا بردگی با همان حساب شود (خواستهٔ کاربر)
   if (!r.byMoney) r.bardagi = _personRowBardagi(r);
@@ -11603,8 +11611,15 @@ function _updatePersonTotals(person) {
   rows.forEach(r => {
     const isD = r.ftype === 'diesel';
     const f = parseFloat(r.fuel)||0, b = parseFloat(r.bardagi)||0, rs = parseFloat(r.rasid)||0, rf = parseFloat(r.rasidFuel)||0;
-    const rowFee = f > 0 ? (b/f) : _rowUnionRate(r);   // فیِ همین ردیف یا نرخِ قفل‌شدهٔ آن
-    if (f > 0){ if(isD){_fFuelD+=f;_fBardD+=b;} else {_fFuelP+=f;_fBardP+=b;} }
+    // فیِ همین ردیف فقط وقتی از بردگی÷لیتر درمی‌آید که بردگی واقعاً ثبت شده باشد؛
+    // ردیفِ لیتردارِ بی‌بردگی نرخِ قفل‌شدهٔ خودش را دارد. اگر با بردگیِ صفر در فیِ
+    // حساب شمرده شود، فی سقوط می‌کند و رسیدِ پولی به لیترِ چند برابر تبدیل می‌شود
+    // (مثلاً رسید ۹۰هزار با فی ۹۰ باید ۱۰۰۰ لیتر شود، نه ۷۰۰۰)
+    const rowFee = (f > 0 && b > 0) ? (b/f) : _rowUnionRate(r);
+    if (f > 0){
+      const bF = b > 0 ? b : f * rowFee;   // بی‌بردگی → معادلِ نرخِ خودش در فیِ حساب
+      if (bF > 0){ if(isD){_fFuelD+=f;_fBardD+=bF;} else {_fFuelP+=f;_fBardP+=bF;} }
+    }
     else if (b > 0){                                   // ردیفِ فقط‌پولی
       const L = rowFee>0 ? b/rowFee : 0;
       if(isD){_moneyBardD+=b;_moneyBardLD+=L;} else {_moneyBardP+=b;_moneyBardLP+=L;}
@@ -11764,17 +11779,20 @@ function _updatePersonTotals(person) {
       // واحد پول: الباقی پول = جمعِ الباقیِ همین جدول (رسید − بردگی) و الباقی تیل = معادلِ
       // تیلِ کارت‌های بالا. این‌جا کفِ صفر نداریم؛ اضافه‌برد منفی (بدهی) نشان داده می‌شود.
       const remFuelAll = Math.round((_remFuelAll || 0) * 100) / 100;
+      // white-space:nowrap در ستونِ ۹۰پیکسلیِ table-layout:fixed متن را از کادر بیرون
+      // می‌زد و بریده/روی ستون‌های کناری نمایش داده می‌شد؛ برچسب و عدد بپیچند تا در کادر بمانند
       ftAlbEl.innerHTML =
-        '<div style="white-space:nowrap;color:' + (netAll < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی پول: ' + netTxt + '</div>' +
-        '<div style="font-size:0.74rem;font-weight:800;margin-top:2px;white-space:nowrap;color:' + (remFuelAll < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی تیل: ' + n2fa(remFuelAll) + ' ل</div>';
+        '<div style="font-size:0.78rem;line-height:1.5;color:' + (netAll < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی پول:<br>' + netTxt + '</div>' +
+        '<div style="font-size:0.74rem;font-weight:800;margin-top:2px;line-height:1.5;color:' + (remFuelAll < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی تیل:<br>' + n2fa(remFuelAll) + ' ل</div>';
     } else {
       // واحد تیل: الباقی پول = جمعِ کارت‌های بالا و الباقی تیل = رسید تیل − مقدار تیل، منهای
       // معادلِ لیترِ بردگیِ پولی و به‌علاوهٔ معادلِ لیترِ رسیدِ پولی (هماهنگ با کارت‌های بالا).
       const netL = (Math.round((t.all.rasidFuel - t.all.fuel - _moneyBardLP - _moneyBardLD + _rasidMoneyLP + _rasidMoneyLD) * 100) / 100) || 0;
       const remMoneyAll = Math.round(_remMoneyP + _remMoneyD) || 0;   // ‎||0 تا «‎-0» نمایش داده نشود
+      // مثل شاخهٔ بالا: بدونِ nowrap تا متن در کادرِ باریکِ ستونِ «الباقی» بریده نشود
       ftAlbEl.innerHTML =
-        '<div style="white-space:nowrap;color:' + (remMoneyAll < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی پول: ' + n2fa(remMoneyAll) + '</div>' +
-        '<div style="font-size:0.74rem;font-weight:800;margin-top:2px;white-space:nowrap;color:' + (netL < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی تیل: ' + n2fa(netL) + ' ل</div>';
+        '<div style="font-size:0.78rem;line-height:1.5;color:' + (remMoneyAll < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی پول:<br>' + n2fa(remMoneyAll) + '</div>' +
+        '<div style="font-size:0.74rem;font-weight:800;margin-top:2px;line-height:1.5;color:' + (netL < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی تیل:<br>' + n2fa(netL) + ' ل</div>';
     }
   }
   const ftAlbEl2 = document.getElementById('pm-ft-albaqi2');
@@ -12121,7 +12139,13 @@ function calcHistoryRow(pid, hid, idx, field, value) {
   const r = h.rows[idx];
   const prevRasidFuel = parseFloat(r.rasidFuel) || 0;
   if (field === 'bardagi') { r.byMoney = true; r.bardagi = parseFloat(value)||0; }
-  else { r[field] = parseFloat(value)||0; _stampRowUnionRate(r); if (!r.byMoney) r.bardagi = _personRowBardagi(r); }
+  else {
+    r[field] = parseFloat(value)||0;
+    // مثل جدول اصلی: ردیفِ پولیِ بی‌بردگی با نوشتنِ «مقدار تیل» به ردیفِ تیل برمی‌گردد
+    if ((field === 'fuel' || field === 'priceper') &&
+        (parseFloat(r.fuel)||0) > 0 && ((parseFloat(r.priceper)||0) > 0 || !(parseFloat(r.bardagi)||0))) r.byMoney = false;
+    _stampRowUnionRate(r); if (!r.byMoney) r.bardagi = _personRowBardagi(r);
+  }
   // «رسید تیل» آرشیو هم دقیقاً مثل جدول اصلی به رسیدِ حساب تیلِ همین آرشیو (پطرول/دیزل)
   // به‌صورت تفاضلی اضافه می‌شود — کاملاً جدا از رسید پول
   if (field === 'rasidFuel') {
@@ -19661,7 +19685,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.57';
+const APP_VERSION = '2.9.58';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
