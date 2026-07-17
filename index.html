@@ -799,21 +799,26 @@ body.viewer-mode .att-admin{display:none !important}
 .pw-mask,input.pw-mask{-webkit-text-security:disc;text-security:disc}
 .pw-btn{padding:9px 20px;background:var(--accent);color:#000;border:none;border-radius:8px;cursor:pointer;font-family:'Vazirmatn',sans-serif;font-weight:700;white-space:nowrap}
 
-.toast{position:fixed;bottom:calc(20px + var(--kb-offset,0px));left:50%;transform:translateX(-50%) translateY(80px);padding:10px 22px;border-radius:9px;font-weight:600;font-size:0.88rem;z-index:9999;transition:transform .3s,bottom .18s ease;pointer-events:none;color:#fff}
-.toast.show{transform:translateX(-50%) translateY(0)}
+/* موبایل: با viewport-fit=cover پیام پایین زیرِ نوارِ ژست/ناوبری می‌رفت و فقط یک
+   خطِ باریکش دیده می‌شد — env(safe-area-inset-bottom) بالاتر می‌نشاندش. opacity هم
+   موقعِ رفت‌وآمد اضافه شد تا پیامِ نیمه‌بریده در لبهٔ صفحه دیده نشود */
+.toast{position:fixed;bottom:calc(24px + env(safe-area-inset-bottom,0px) + var(--kb-offset,0px));left:50%;transform:translateX(-50%) translateY(140px);opacity:0;padding:10px 22px;border-radius:9px;font-weight:600;font-size:0.88rem;z-index:9999;transition:transform .3s,opacity .3s,bottom .18s ease;pointer-events:none;color:#fff;max-width:92vw;text-align:center;line-height:1.5}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 /* توست‌های کوچکِ هماهنگیِ سرور — گوشهٔ پایین راست، روی هم جمع می‌شوند و خودکار محو می‌شوند */
 .sync-toast-stack{position:fixed;bottom:calc(14px + var(--kb-offset,0px));right:14px;z-index:9998;display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:none;max-width:min(78vw,300px)}
 .sync-toast{padding:7px 13px;border-radius:9px;font-weight:600;font-size:0.76rem;color:#fff;background:#38a169;box-shadow:0 4px 14px rgba(0,0,0,.22);opacity:0;transform:translateY(12px);transition:opacity .25s ease,transform .25s ease;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:flex;align-items:center;gap:6px}
 .sync-toast.show{opacity:.94;transform:translateY(0)}
 .sync-toast .sc-badge{background:rgba(255,255,255,.28);border-radius:20px;min-width:16px;height:16px;padding:0 4px;font-size:0.66rem;display:inline-flex;align-items:center;justify-content:center;font-weight:800}
 /* پیام بالای صفحه (مثلاً: حساب شرکت یا تیلی با این نام پیدا نشد) */
-.top-toast{position:fixed;top:-80px;left:50%;transform:translateX(-50%);padding:12px 26px;border-radius:12px;font-weight:800;font-size:0.92rem;z-index:100000;transition:top .35s cubic-bezier(.2,.9,.3,1.3);pointer-events:none;color:#fff;box-shadow:0 8px 30px rgba(0,0,0,.35);max-width:92vw;text-align:center;white-space:normal;line-height:1.5}
+/* موبایل: opacity موقعِ ورود/خروج تا پیامِ نیمه‌بریده در لبهٔ بالای صفحه دیده نشود؛
+   جای نمایش هم با env(safe-area-inset-top) از نوارِ وضعیت/ناچ پایین‌تر می‌نشیند */
+.top-toast{position:fixed;top:-120px;left:50%;transform:translateX(-50%);opacity:0;padding:12px 26px;border-radius:12px;font-weight:800;font-size:0.92rem;z-index:100000;transition:top .35s cubic-bezier(.2,.9,.3,1.3),opacity .3s;pointer-events:none;color:#fff;box-shadow:0 8px 30px rgba(0,0,0,.35);max-width:92vw;text-align:center;white-space:normal;line-height:1.5}
 /* روی top:18px قدیمی، این پیام (مثلاً «نسخهٔ تازه آمد») درست روی تاریخ/نسخهٔ
    هدر می‌افتاد و آن‌ها را چند ثانیه کامل می‌پوشاند — همان چیزی که هر بار بعد
    از آپدیت، انگار «رنگ تاریخ خراب است» به‌نظر می‌رسید. حالا پایین‌تر از هدر
    می‌نشیند تا هیچ‌وقت رویش نیفتد */
-.top-toast.show{top:84px}
-@media (min-width:769px){ .top-toast.show{top:64px} }
+.top-toast.show{top:calc(84px + env(safe-area-inset-top,0px));opacity:1}
+@media (min-width:769px){ .top-toast.show{top:calc(64px + env(safe-area-inset-top,0px))} }
 
 .type-badge{display:inline-block;padding:2px 9px;border-radius:4px;font-size:0.7rem;font-weight:700}
 .type-badge.rasid{background:#4299e133;color:var(--blue)}
@@ -17390,11 +17395,15 @@ function alreadyReceivedFromWaraq(person, fuel, bardagi, hawala) {
 const QAMARI_MONTHS = ['محرم','صفر','ربیع‌الاول','ربیع‌الثانی','جمادی‌الاول','جمادی‌الثانی','رجب','شعبان','رمضان','شوال','ذی‌القعده','ذی‌الحجه'];
 const SHAMSI_MONTHS = ['حمل','ثور','جوزا','سرطان','اسد','سنبله','میزان','عقرب','قوس','جدی','دلو','حوت'];
 const MILADI_MONTHS = ['جنوری','فبروری','مارچ','اپریل','می','جون','جولای','اگست','سپتمبر','اکتوبر','نومبر','دسمبر'];
+// تایمر ذخیره می‌شود و با هر پیامِ تازه ریست می‌شود — قبلاً تایمرِ پیامِ قبلی، پیامِ
+// تازه را زودتر از موعد می‌بست (وقتی دو پیام پشت‌سرهم می‌آمد، دومی زود گم می‌شد)
+let _toastTimer = null;
 function showToast(msg, bg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.style.background = bg || '#333';
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
+  if (_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 4200);
 }
 // پیام بالای صفحه که بین ۳ تا ۵ ثانیه نمایش داده می‌شود و سپس خودکار ناپدید می‌شود
 let _topToastTimer = null;
@@ -17405,7 +17414,7 @@ function showTopToast(msg, bg, duration) {
   t.style.background = bg || '#e53e3e';
   t.classList.add('show');
   if (_topToastTimer) clearTimeout(_topToastTimer);
-  _topToastTimer = setTimeout(() => t.classList.remove('show'), duration || 4000);
+  _topToastTimer = setTimeout(() => t.classList.remove('show'), duration || 6000);
 }
 // توستِ کوچکِ هماهنگیِ سرور — گوشهٔ پایین راست. مزاحمِ کاربر نمی‌شود، خودکار محو
 // می‌شود و اگر همان پیام دوباره بیاید روی هم جمع (شمارنده) می‌شود به‌جای پُر کردنِ صفحه.
@@ -19720,7 +19729,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.62';
+const APP_VERSION = '2.9.63';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
