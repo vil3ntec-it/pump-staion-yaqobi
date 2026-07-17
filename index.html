@@ -492,16 +492,12 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
    می‌گذارد و چون علامتِ پیام (.fab-badge) کمی از لبهٔ دکمه بیرون می‌زند (طراحیِ
    معمولِ نشان‌گر اعلان)، بدون این خط همیشه یک‌ذره‌اش بریده می‌شد و دیده نمی‌شد */
 #robotFab{position:fixed;bottom:calc(84px + var(--kb-offset,0px));left:18px;z-index:10040;width:54px;height:54px;border-radius:50%;border:none;background:linear-gradient(135deg,#22ccff,#2b6cb0);color:#fff;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;transition:transform .12s,bottom .18s ease;overflow:visible}
-/* دکمهٔ شناور «ابزار» — فقط برای مدیر نمایش داده می‌شود */
-#toolsFab{position:fixed;bottom:calc(150px + var(--kb-offset,0px));left:18px;z-index:10040;width:46px;height:46px;border-radius:50%;border:none;background:linear-gradient(135deg,#9f7aea,#6b46c1);color:#fff;font-size:1.25rem;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;transition:transform .12s,bottom .18s ease}
-#toolsFab:hover{transform:scale(1.07)}
-#toolsModal .tools-panel{border:1px solid var(--border);border-radius:11px;margin-bottom:10px;background:var(--dark);overflow:hidden}
-#toolsModal .tools-panel summary{padding:11px 13px;font-weight:800;font-size:0.88rem;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
-#toolsModal .tools-panel summary::-webkit-details-marker{display:none}
-#toolsModal .tools-panel[open] summary{border-bottom:1px solid var(--border)}
-#toolsModal .tools-body{padding:11px 13px}
-#toolsModal .tools-in{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.85rem;box-sizing:border-box}
-#toolsModal .tools-btn{padding:8px 14px;border:none;border-radius:8px;background:var(--accent);color:#000;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.82rem;cursor:pointer}
+/* ابزارها (اندازه‌گیری مخزن، تخلیهٔ تانکر، قرض کهنه، کمبودی، نرخ) حالا هر کدام
+   صفحهٔ جداگانه در بخش خودشان دارند — این‌ها ورودی/دکمهٔ کوچک همان فرم‌ها است */
+.tools-in{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.85rem;box-sizing:border-box}
+.tools-btn{padding:8px 14px;border:none;border-radius:8px;background:var(--accent);color:#000;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.82rem;cursor:pointer}
+/* کادر ورود به صفحهٔ هر ابزار — همان مدل کادرهای «صفحهٔ بعد» صفحهٔ کارمند */
+.tool-link-card{width:100%;margin-bottom:10px;padding:13px 14px;border-radius:12px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.95rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:right}
 #robotFab:hover{transform:scale(1.07)}
 .fab-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:999px;background:var(--red);color:#fff;font-size:0.7rem;font-weight:900;display:none;align-items:center;justify-content:center;padding:0 5px;border:2px solid var(--panel)}
 /* resize:both یعنی همان دستهٔ کشیدنیِ گوشهٔ استاندارد مرورگر (مثل تغییر اندازهٔ
@@ -5161,6 +5157,9 @@ table thead th{ position:relative; }
     </span>
   </div>
   <div id="tank-petrol" class="tank-wrap"></div>
+  <!-- کادرهای ابزار مخزن — هر کدام یک صفحهٔ جداگانه دارد -->
+  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="showSection('tanker')"><span>🚚 تخلیهٔ تانکر — بارنامه در برابر تحویل</span><span>صفحهٔ بعد ‹</span></button>
+  <button type="button" class="tool-link-card" onclick="showSection('tankdip')"><span>📏 اندازه‌گیری واقعی مخزن — میله‌زنی</span><span>صفحهٔ بعد ‹</span></button>
   <div id="fuel-purchases-list"></div>
   <button class="add-row-btn" style="border-color:var(--green);color:var(--green);margin-bottom:8px" onclick="pdfStorage('petrol')">📄 PDF مخزن پطرول</button>
   <button class="add-row-btn" onclick="openAddPurchase('petrol')" style="margin-bottom:16px">➕ ثبت خرید پطرول</button>
@@ -5179,12 +5178,58 @@ table thead th{ position:relative; }
     </span>
   </div>
   <div id="tank-diesel" class="tank-wrap"></div>
+  <!-- کادرهای ابزار مخزن — هر کدام یک صفحهٔ جداگانه دارد -->
+  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="showSection('tanker')"><span>🚚 تخلیهٔ تانکر — بارنامه در برابر تحویل</span><span>صفحهٔ بعد ‹</span></button>
+  <button type="button" class="tool-link-card" onclick="showSection('tankdip')"><span>📏 اندازه‌گیری واقعی مخزن — میله‌زنی</span><span>صفحهٔ بعد ‹</span></button>
   <div id="diesel-purchases-list"></div>
   <button class="add-row-btn" style="border-color:#276749;color:#276749;margin-bottom:8px" onclick="pdfStorage('diesel')">📄 PDF مخزن دیزل</button>
   <button class="add-row-btn" onclick="openAddPurchase('diesel')" style="margin-bottom:16px;border-color:#b7791f;color:#b7791f">➕ ثبت خرید دیزل</button>
   <div style="padding:0 2px 12px">
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-storage-diesel" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('storage-diesel', this.value)"></textarea>
+  </div>
+</div>
+
+<!-- 🚚 تخلیهٔ تانکر (صفحهٔ جداگانه — از کادر بخش مخزن باز می‌شود) -->
+<div class="section" id="sec-tanker">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('storage')">🛢️ برگشت به مخزن</button>
+    <span>🚚 تخلیهٔ تانکر</span>
+  </div>
+  <div class="card" style="border-color:var(--blue)">
+    <div class="card-head"><div class="card-title">🚚 تخلیهٔ تانکر — بارنامه در برابر تحویل</div></div>
+    <div style="padding:14px">
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.7">لیتر بارنامه و لیتر واقعی تحویل را بنویسید؛ کم‌آمد خودش حساب می‌شود. فقط ثبت است — خرید تیل مثل قبل از بخش خودش ثبت می‌شود.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+        <select id="tk-fuel" class="tools-in"><option value="petrol">⛽ پطرول</option><option value="diesel">🟤 دیزل</option></select>
+        <input type="number" id="tk-manifest" class="tools-in" placeholder="لیتر بارنامه" style="width:105px">
+        <input type="number" id="tk-actual" class="tools-in" placeholder="لیتر تحویل" style="width:105px">
+        <input id="tk-note" class="tools-in" placeholder="نام تانکر/شرکت..." style="flex:1;min-width:110px">
+        <button class="tools-btn" onclick="confirmTankerLog()">✔ ثبت</button>
+      </div>
+      <div id="tk-list" style="font-size:0.82rem"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 📏 اندازه‌گیری واقعی مخزن — میله‌زنی (صفحهٔ جداگانه — از کادر بخش مخزن باز می‌شود) -->
+<div class="section" id="sec-tankdip">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('storage')">🛢️ برگشت به مخزن</button>
+    <span>📏 اندازه‌گیری واقعی مخزن</span>
+  </div>
+  <div class="card" style="border-color:var(--accent)">
+    <div class="card-head"><div class="card-title">📏 اندازه‌گیری واقعی مخزن — میله‌زنی</div></div>
+    <div style="padding:14px">
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.7">عدد واقعی مخزن را بنویسید؛ فرقش با موجودی دفتری (حسابی) نشان داده می‌شود — منفی یعنی کم‌آمد/نشتی. فقط ثبت است و روی هیچ حسابی اثر نمی‌گذارد.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+        <select id="dip-fuel" class="tools-in"><option value="petrol">⛽ پطرول</option><option value="diesel">🟤 دیزل</option></select>
+        <input type="number" id="dip-actual" class="tools-in" placeholder="لیتر واقعی" style="width:110px">
+        <input id="dip-note" class="tools-in" placeholder="یادداشت..." style="flex:1;min-width:110px">
+        <button class="tools-btn" onclick="confirmTankDip()">✔ ثبت</button>
+      </div>
+      <div id="dip-list" style="font-size:0.82rem"></div>
+    </div>
   </div>
 </div>
 
@@ -5210,6 +5255,8 @@ table thead th{ position:relative; }
     <button class="goto-btn" onclick="showSection('debtsum')">📊 رفتن به قرض‌های دسته‌جمعی</button>
     <span><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> رسید قرض‌داران</span>
   </div>
+  <!-- کادر قرض‌های کهنه — صفحهٔ جداگانه -->
+  <button type="button" class="tool-link-card" style="border-color:var(--red);color:var(--red)" onclick="showSection('oldloans')"><span>⏰ قرض‌های کهنه — بی‌حرکت‌ها اول</span><span>صفحهٔ بعد ‹</span></button>
   <div class="card">
     <div class="card-head">
       <div style="display:flex;align-items:center;gap:10px">
@@ -5272,6 +5319,21 @@ table thead th{ position:relative; }
   <div style="padding:10px 2px 12px">
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-debtsum" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('debtsum', this.value)"></textarea>
+  </div>
+</div>
+
+<!-- ⏰ قرض‌های کهنه (صفحهٔ جداگانه — از کادر بخش رسید قرض‌داران باز می‌شود) -->
+<div class="section" id="sec-oldloans">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('debtrasid')">🧾 برگشت به رسید قرض‌داران</button>
+    <span>⏰ قرض‌های کهنه</span>
+  </div>
+  <div class="card" style="border-color:var(--red)">
+    <div class="card-head"><div class="card-title">⏰ قرض‌های کهنه — بی‌حرکت‌ها اول</div></div>
+    <div style="padding:14px">
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.7">بدهکارها به ترتیبِ «چند روز است هیچ ردیف تازه‌ای ندارند». با کلیک روی نام، حساب کاملش باز می‌شود. با دکمهٔ یادآوری، حساب + لینک مستقیم به پی‌وی واتساپش می‌رود (اگر شماره ثبت باشد).</div>
+      <div id="aging-list" style="font-size:0.84rem"></div>
+    </div>
   </div>
 </div>
 
@@ -5433,6 +5495,8 @@ table thead th{ position:relative; }
       </div>
     </div>
   </div>
+  <!-- کادر تاریخچهٔ نرخ اتحادیه — صفحهٔ جداگانه (زیر کادر نرخ اتحادیه) -->
+  <button type="button" class="tool-link-card" onclick="showSection('ratehist')"><span>📈 تاریخچهٔ نرخ اتحادیه — خودکار ثبت می‌شود</span><span>صفحهٔ بعد ‹</span></button>
   <!-- فرم ثبت خرید عمده داخل همین بخش — فقط جدولِ خریدهای ثبت‌شده در صفحهٔ جداگانه است -->
   <div class="card">
     <div class="card-head">
@@ -5482,6 +5546,21 @@ table thead th{ position:relative; }
           <tfoot><tr style="font-weight:800"><td colspan="5" style="text-align:left">جمع</td><td id="ei-ft-seller" style="color:var(--accent)">0</td><td id="ei-ft-income" style="color:var(--green)">0</td><td></td></tr></tfoot>
         </table>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- 📈 تاریخچهٔ نرخ اتحادیه (صفحهٔ جداگانه — از کادر بخش مفاد/ضرر باز می‌شود) -->
+<div class="section" id="sec-ratehist">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('profit')">📈 برگشت به مفاد / ضرر</button>
+    <span>📈 تاریخچهٔ نرخ اتحادیه</span>
+  </div>
+  <div class="card" style="border-color:var(--accent)">
+    <div class="card-head"><div class="card-title">📈 تاریخچهٔ نرخ اتحادیه</div></div>
+    <div style="padding:14px">
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.7">با هر تغییرِ نرخ اتحادیه در بخش مفاد/ضرر، اینجا خودکار ثبت می‌شود.</div>
+      <div id="ratehist-list" style="font-size:0.84rem"></div>
     </div>
   </div>
 </div>
@@ -5846,6 +5925,8 @@ table thead th{ position:relative; }
 <!-- SETTINGS -->
 <!-- ATTENDANCE — حاضری، ساعت آمدن/رفتن و معاش کارمندان -->
 <div class="section" id="sec-attendance">
+  <!-- کادر کمبودی کارمندان — صفحهٔ جداگانه -->
+  <button type="button" class="tool-link-card" style="border-color:var(--red);color:var(--red)" onclick="showSection('staffshort')"><span>👷 کمبودی کارمندان — از ورق‌ها</span><span>صفحهٔ بعد ‹</span></button>
   <div class="card">
     <div class="card-head">
       <div style="display:flex;align-items:center;gap:10px">
@@ -5862,6 +5943,21 @@ table thead th{ position:relative; }
     </div>
     <button class="att-admin" onclick="attAddStaff()" style="margin-bottom:14px;padding:9px 20px;border-radius:10px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer">+ افزودن کارمند</button>
     <div class="att-grid" id="att-grid"></div>
+  </div>
+</div>
+
+<!-- 👷 کمبودی کارمندان (صفحهٔ جداگانه — از کادر بخش حاضری و معاش باز می‌شود) -->
+<div class="section" id="sec-staffshort">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('attendance')">🧑‍💼 برگشت به حاضری و معاش</button>
+    <span>👷 کمبودی کارمندان</span>
+  </div>
+  <div class="card" style="border-color:var(--red)">
+    <div class="card-head"><div class="card-title">👷 کمبودی کارمندان — از ورق‌ها</div></div>
+    <div style="padding:14px">
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.7">جمعِ کمبودی/اضافیِ هر کارمند از همهٔ ورق‌ها (بر اساس نام کارمندِ هر شیفت).</div>
+      <div id="staffshort-list" style="font-size:0.84rem"></div>
+    </div>
   </div>
 </div>
 
@@ -6276,6 +6372,16 @@ body.viewer-mode .inv-admin-only{display:none!important}
     </div>
     <div id="push-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted)"></div>
   </div>
+  <div class="settings-card" id="backup-settings-card" style="border-color:var(--blue)">
+    <div class="settings-title" style="color:var(--blue)">💾 بکاپ حساب‌ها — هر روز خودکار</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">هر روز یک نسخهٔ خودکار داخل خود دستگاه نگه داشته می‌شود (۱۴ روز اخیر). برای امنیت بیشتر، هر چند روز یک‌بار فایل بکاپ را دانلود و جای امن (تلگرام/واتساپ خودتان) بفرستید.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="tools-btn" onclick="downloadBackupNow()">⬇️ دانلود فایل بکاپ</button>
+      <button class="tools-btn" style="background:var(--blue);color:#fff" onclick="document.getElementById('bk-file').click()">📥 بازگردانی از فایل</button>
+      <input type="file" id="bk-file" accept=".json,application/json" style="display:none" onchange="restoreBackupFromFile(this)">
+    </div>
+    <div id="bk-list" style="font-size:0.8rem"></div>
+  </div>
   <div class="settings-card" id="trash-settings-card" style="border-color:var(--accent)">
     <div class="settings-title" style="color:var(--accent)">🗑️ سطل زباله</div>
     <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.8">موارد حذف‌شده تا <b style="color:var(--accent)">۱۵ روز</b> در اینجا نگه داشته می‌شوند و پس از آن خودکار پاک می‌شوند. می‌توانید هر مورد را برگردانید یا برای همیشه حذف کنید.</div>
@@ -6486,7 +6592,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
 <button id="calcFab" onclick="toggleCalc()" title="ماشین حساب"><svg><use href="#ic-calc"/></svg></button>
 <button id="lsCalcBtn" onclick="toggleCalc()" title="ماشین حساب" style="display:none"><svg><use href="#ic-calc"/></svg></button>
 <button id="robotFab" onclick="toggleRobot()" title="ربات دستیار"><svg><use href="#ic-robot"/></svg><span class="fab-badge" id="rbFabBadge"></span></button>
-<button id="toolsFab" onclick="openToolsModal()" title="ابزار: بکاپ، مخزن، تانکر، قرض کهنه، کمبودی، نرخ">🧰</button>
 
 <div id="robotPanel">
   <span class="rz-h tl" data-rz="tl"></span><span class="rz-h tr" data-rz="tr"></span><span class="rz-h bl" data-rz="bl"></span><span class="rz-h br" data-rz="br"></span>
@@ -6958,84 +7063,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
 <input type="file" id="camQrFile" accept="image/*" style="display:none">
 
 <!-- TOAST -->
-<!-- 🧰 مودال ابزار: بکاپ، اندازه‌گیری مخزن، تخلیه تانکر، قرض کهنه، کمبودی کارمند، تاریخچه نرخ -->
-<div class="modal-overlay" id="toolsModal">
-  <div class="modal" style="max-width:640px">
-    <div class="modal-head">
-      <h2>🧰 ابزار</h2>
-      <button class="modal-close" onclick="closeModal('toolsModal')">✕</button>
-    </div>
-    <div style="padding:12px;max-height:76vh;overflow-y:auto">
-
-      <details class="tools-panel" open>
-        <summary><span>💾 بکاپ حساب‌ها</span><span style="font-size:0.7rem;color:var(--muted)">هر روز خودکار</span></summary>
-        <div class="tools-body">
-          <div style="font-size:0.74rem;color:var(--muted);margin-bottom:8px">هر روز یک نسخهٔ خودکار داخل خود دستگاه نگه داشته می‌شود (۱۴ روز اخیر). برای امنیت بیشتر، هر چند روز یک‌بار فایل بکاپ را دانلود و جای امن (تلگرام/واتساپ خودتان) بفرستید.</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-            <button class="tools-btn" onclick="downloadBackupNow()">⬇️ دانلود فایل بکاپ</button>
-            <button class="tools-btn" style="background:var(--blue);color:#fff" onclick="document.getElementById('bk-file').click()">📥 بازگردانی از فایل</button>
-            <input type="file" id="bk-file" accept=".json,application/json" style="display:none" onchange="restoreBackupFromFile(this)">
-          </div>
-          <div id="bk-list" style="font-size:0.78rem"></div>
-        </div>
-      </details>
-
-      <details class="tools-panel">
-        <summary><span>📏 اندازه‌گیری واقعی مخزن</span><span style="font-size:0.7rem;color:var(--muted)">میله‌زنی</span></summary>
-        <div class="tools-body">
-          <div style="font-size:0.74rem;color:var(--muted);margin-bottom:8px">عدد واقعی مخزن را بنویسید؛ فرقش با موجودی دفتری (حسابی) نشان داده می‌شود — منفی یعنی کم‌آمد/نشتی. فقط ثبت است و روی هیچ حسابی اثر نمی‌گذارد.</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-            <select id="dip-fuel" class="tools-in"><option value="petrol">⛽ پطرول</option><option value="diesel">🟤 دیزل</option></select>
-            <input type="number" id="dip-actual" class="tools-in" placeholder="لیتر واقعی" style="width:110px">
-            <input id="dip-note" class="tools-in" placeholder="یادداشت..." style="flex:1;min-width:110px">
-            <button class="tools-btn" onclick="confirmTankDip()">✔ ثبت</button>
-          </div>
-          <div id="dip-list" style="font-size:0.78rem"></div>
-        </div>
-      </details>
-
-      <details class="tools-panel">
-        <summary><span>🚚 تخلیهٔ تانکر</span><span style="font-size:0.7rem;color:var(--muted)">بارنامه در برابر تحویل</span></summary>
-        <div class="tools-body">
-          <div style="font-size:0.74rem;color:var(--muted);margin-bottom:8px">لیتر بارنامه و لیتر واقعی تحویل را بنویسید؛ کم‌آمد خودش حساب می‌شود. فقط ثبت است — خرید تیل مثل قبل از بخش خودش ثبت می‌شود.</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-            <select id="tk-fuel" class="tools-in"><option value="petrol">⛽ پطرول</option><option value="diesel">🟤 دیزل</option></select>
-            <input type="number" id="tk-manifest" class="tools-in" placeholder="لیتر بارنامه" style="width:105px">
-            <input type="number" id="tk-actual" class="tools-in" placeholder="لیتر تحویل" style="width:105px">
-            <input id="tk-note" class="tools-in" placeholder="نام تانکر/شرکت..." style="flex:1;min-width:110px">
-            <button class="tools-btn" onclick="confirmTankerLog()">✔ ثبت</button>
-          </div>
-          <div id="tk-list" style="font-size:0.78rem"></div>
-        </div>
-      </details>
-
-      <details class="tools-panel">
-        <summary><span>⏰ قرض‌های کهنه</span><span style="font-size:0.7rem;color:var(--muted)">بی‌حرکت‌ها اول</span></summary>
-        <div class="tools-body">
-          <div style="font-size:0.74rem;color:var(--muted);margin-bottom:8px">بدهکارها به ترتیبِ «چند روز است هیچ ردیف تازه‌ای ندارند». با دکمهٔ یادآوری، حساب + لینک مستقیم به پی‌وی واتساپش می‌رود (اگر شماره ثبت باشد).</div>
-          <div id="aging-list" style="font-size:0.8rem"></div>
-        </div>
-      </details>
-
-      <details class="tools-panel">
-        <summary><span>👷 کمبودی کارمندان</span><span style="font-size:0.7rem;color:var(--muted)">از ورق‌ها</span></summary>
-        <div class="tools-body">
-          <div style="font-size:0.74rem;color:var(--muted);margin-bottom:8px">جمعِ کمبودی/اضافیِ هر کارمند از همهٔ ورق‌ها (بر اساس نام کارمندِ هر شیفت).</div>
-          <div id="staffshort-list" style="font-size:0.8rem"></div>
-        </div>
-      </details>
-
-      <details class="tools-panel">
-        <summary><span>📈 تاریخچهٔ نرخ اتحادیه</span><span style="font-size:0.7rem;color:var(--muted)">خودکار ثبت می‌شود</span></summary>
-        <div class="tools-body">
-          <div id="ratehist-list" style="font-size:0.8rem"></div>
-        </div>
-      </details>
-
-    </div>
-  </div>
-</div>
-
 <div class="toast" id="toast"></div>
 <div class="top-toast" id="topToast"></div>
 <div class="sync-toast-stack" id="syncToastStack"></div>
@@ -7937,7 +7964,6 @@ function tryUnlock() {
     document.getElementById('app').style.display = 'block';
     const _fabU = document.getElementById('calcFab'); if (_fabU) _fabU.style.display = 'flex';
     const _rbU = document.getElementById('robotFab'); if (_rbU) _rbU.style.display = 'flex';
-    const _tlU = document.getElementById('toolsFab'); if (_tlU) _tlU.style.display = (role === 'admin') ? 'flex' : 'none';
     try { _lsCalcBtnShow(false); _rbSetMode(role === 'admin' ? 'admin' : 'staff'); } catch (e) {}
     document.getElementById('lockInput').value = '';
     document.getElementById('lockErr').innerHTML = '';
@@ -8295,6 +8321,10 @@ function showSection(id, btn) {
   if (id === 'storage-diesel') navId = 'storage';
   if (id === 'debtsum') navId = 'debtrasid';
   if (id === 'extraincome') navId = 'profit';
+  if (id === 'tanker' || id === 'tankdip') navId = 'storage';
+  if (id === 'oldloans') navId = 'debtrasid';
+  if (id === 'staffshort') navId = 'attendance';
+  if (id === 'ratehist') navId = 'profit';
   // نوار بخش‌ها هنگام اسکرول بالا بچسبد — به‌جز ورق، قرض‌داران و شرکت‌ها تیل
   document.body.classList.toggle('nav-sticky', !(id === 'waraq' || id === 'debt' || id === 'noinv'));
   if (btn) {
@@ -8305,6 +8335,11 @@ function showSection(id, btn) {
   }
   if (id === 'profit') calcPL();
   if (id === 'extraincome') { renderExtraIncomes(); calcExtraIncome(); }
+  if (id === 'tanker') { try { _renderTankerPanel(); } catch(e) {} }
+  if (id === 'tankdip') { try { _renderDipPanel(); } catch(e) {} }
+  if (id === 'oldloans') { try { _renderAgingPanel(); } catch(e) {} }
+  if (id === 'staffshort') { try { _renderStaffShortPanel(); } catch(e) {} }
+  if (id === 'ratehist') { try { _renderRateHistPanel(); } catch(e) {} }
   if (id === 'storage' || id === 'storage-diesel') { renderStorage(); initAutoProfit(); setTimeout(checkLowStock, 300); }
   if (id === 'expenses') renderExpenses();
   if (id === 'rasid') renderRasid();
@@ -8324,6 +8359,7 @@ function showSection(id, btn) {
   if (id === 'settings') {
     fillLowStockSettings();
     fillSyncSettings();
+    try { _renderBackupPanel(); } catch(e) {}
     try { renderPushCard(); } catch(e) {}
     try { renderTrashList(); } catch(e) {}
     try { renderChatTrash(); } catch(e) {}
@@ -19975,7 +20011,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.67';
+const APP_VERSION = '2.9.68';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -21229,11 +21265,6 @@ function _renderRateHistPanel() {
       <b style="color:var(--accent)">${n2fa(h.rate)} فی لیتر</b>
       <span style="color:var(--muted)">${n2fa(h.date || '')}</span>
     </div>`).join('') : '<div style="color:var(--muted)">با هر تغییرِ نرخ اتحادیه، اینجا خودکار ثبت می‌شود</div>';
-}
-function openToolsModal() {
-  _renderBackupPanel(); _renderDipPanel(); _renderTankerPanel();
-  _renderAgingPanel(); _renderStaffShortPanel(); _renderRateHistPanel();
-  document.getElementById('toolsModal').classList.add('open');
 }
 
 // ========== INIT ==========
