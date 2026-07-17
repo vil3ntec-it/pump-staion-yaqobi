@@ -492,6 +492,16 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
    می‌گذارد و چون علامتِ پیام (.fab-badge) کمی از لبهٔ دکمه بیرون می‌زند (طراحیِ
    معمولِ نشان‌گر اعلان)، بدون این خط همیشه یک‌ذره‌اش بریده می‌شد و دیده نمی‌شد */
 #robotFab{position:fixed;bottom:calc(84px + var(--kb-offset,0px));left:18px;z-index:10040;width:54px;height:54px;border-radius:50%;border:none;background:linear-gradient(135deg,#22ccff,#2b6cb0);color:#fff;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;transition:transform .12s,bottom .18s ease;overflow:visible}
+/* دکمهٔ شناور «ابزار» — فقط برای مدیر نمایش داده می‌شود */
+#toolsFab{position:fixed;bottom:calc(150px + var(--kb-offset,0px));left:18px;z-index:10040;width:46px;height:46px;border-radius:50%;border:none;background:linear-gradient(135deg,#9f7aea,#6b46c1);color:#fff;font-size:1.25rem;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;transition:transform .12s,bottom .18s ease}
+#toolsFab:hover{transform:scale(1.07)}
+#toolsModal .tools-panel{border:1px solid var(--border);border-radius:11px;margin-bottom:10px;background:var(--dark);overflow:hidden}
+#toolsModal .tools-panel summary{padding:11px 13px;font-weight:800;font-size:0.88rem;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
+#toolsModal .tools-panel summary::-webkit-details-marker{display:none}
+#toolsModal .tools-panel[open] summary{border-bottom:1px solid var(--border)}
+#toolsModal .tools-body{padding:11px 13px}
+#toolsModal .tools-in{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.85rem;box-sizing:border-box}
+#toolsModal .tools-btn{padding:8px 14px;border:none;border-radius:8px;background:var(--accent);color:#000;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.82rem;cursor:pointer}
 #robotFab:hover{transform:scale(1.07)}
 .fab-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:999px;background:var(--red);color:#fff;font-size:0.7rem;font-weight:900;display:none;align-items:center;justify-content:center;padding:0 5px;border:2px solid var(--panel)}
 /* resize:both یعنی همان دستهٔ کشیدنیِ گوشهٔ استاندارد مرورگر (مثل تغییر اندازهٔ
@@ -6476,6 +6486,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
 <button id="calcFab" onclick="toggleCalc()" title="ماشین حساب"><svg><use href="#ic-calc"/></svg></button>
 <button id="lsCalcBtn" onclick="toggleCalc()" title="ماشین حساب" style="display:none"><svg><use href="#ic-calc"/></svg></button>
 <button id="robotFab" onclick="toggleRobot()" title="ربات دستیار"><svg><use href="#ic-robot"/></svg><span class="fab-badge" id="rbFabBadge"></span></button>
+<button id="toolsFab" onclick="openToolsModal()" title="ابزار: بکاپ، مخزن، تانکر، قرض کهنه، کمبودی، نرخ">🧰</button>
 
 <div id="robotPanel">
   <span class="rz-h tl" data-rz="tl"></span><span class="rz-h tr" data-rz="tr"></span><span class="rz-h bl" data-rz="bl"></span><span class="rz-h br" data-rz="br"></span>
@@ -6947,6 +6958,84 @@ body.viewer-mode .inv-admin-only{display:none!important}
 <input type="file" id="camQrFile" accept="image/*" style="display:none">
 
 <!-- TOAST -->
+<!-- 🧰 مودال ابزار: بکاپ، اندازه‌گیری مخزن، تخلیه تانکر، قرض کهنه، کمبودی کارمند، تاریخچه نرخ -->
+<div class="modal-overlay" id="toolsModal">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-head">
+      <h2>🧰 ابزار</h2>
+      <button class="modal-close" onclick="closeModal('toolsModal')">✕</button>
+    </div>
+    <div style="padding:12px;max-height:76vh;overflow-y:auto">
+
+      <details class="tools-panel" open>
+        <summary><span>💾 بکاپ حساب‌ها</span><span style="font-size:0.7rem;color:var(--muted)">هر روز خودکار</span></summary>
+        <div class="tools-body">
+          <div style="font-size:0.74rem;color:var(--muted);margin-bottom:8px">هر روز یک نسخهٔ خودکار داخل خود دستگاه نگه داشته می‌شود (۱۴ روز اخیر). برای امنیت بیشتر، هر چند روز یک‌بار فایل بکاپ را دانلود و جای امن (تلگرام/واتساپ خودتان) بفرستید.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+            <button class="tools-btn" onclick="downloadBackupNow()">⬇️ دانلود فایل بکاپ</button>
+            <button class="tools-btn" style="background:var(--blue);color:#fff" onclick="document.getElementById('bk-file').click()">📥 بازگردانی از فایل</button>
+            <input type="file" id="bk-file" accept=".json,application/json" style="display:none" onchange="restoreBackupFromFile(this)">
+          </div>
+          <div id="bk-list" style="font-size:0.78rem"></div>
+        </div>
+      </details>
+
+      <details class="tools-panel">
+        <summary><span>📏 اندازه‌گیری واقعی مخزن</span><span style="font-size:0.7rem;color:var(--muted)">میله‌زنی</span></summary>
+        <div class="tools-body">
+          <div style="font-size:0.74rem;color:var(--muted);margin-bottom:8px">عدد واقعی مخزن را بنویسید؛ فرقش با موجودی دفتری (حسابی) نشان داده می‌شود — منفی یعنی کم‌آمد/نشتی. فقط ثبت است و روی هیچ حسابی اثر نمی‌گذارد.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+            <select id="dip-fuel" class="tools-in"><option value="petrol">⛽ پطرول</option><option value="diesel">🟤 دیزل</option></select>
+            <input type="number" id="dip-actual" class="tools-in" placeholder="لیتر واقعی" style="width:110px">
+            <input id="dip-note" class="tools-in" placeholder="یادداشت..." style="flex:1;min-width:110px">
+            <button class="tools-btn" onclick="confirmTankDip()">✔ ثبت</button>
+          </div>
+          <div id="dip-list" style="font-size:0.78rem"></div>
+        </div>
+      </details>
+
+      <details class="tools-panel">
+        <summary><span>🚚 تخلیهٔ تانکر</span><span style="font-size:0.7rem;color:var(--muted)">بارنامه در برابر تحویل</span></summary>
+        <div class="tools-body">
+          <div style="font-size:0.74rem;color:var(--muted);margin-bottom:8px">لیتر بارنامه و لیتر واقعی تحویل را بنویسید؛ کم‌آمد خودش حساب می‌شود. فقط ثبت است — خرید تیل مثل قبل از بخش خودش ثبت می‌شود.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+            <select id="tk-fuel" class="tools-in"><option value="petrol">⛽ پطرول</option><option value="diesel">🟤 دیزل</option></select>
+            <input type="number" id="tk-manifest" class="tools-in" placeholder="لیتر بارنامه" style="width:105px">
+            <input type="number" id="tk-actual" class="tools-in" placeholder="لیتر تحویل" style="width:105px">
+            <input id="tk-note" class="tools-in" placeholder="نام تانکر/شرکت..." style="flex:1;min-width:110px">
+            <button class="tools-btn" onclick="confirmTankerLog()">✔ ثبت</button>
+          </div>
+          <div id="tk-list" style="font-size:0.78rem"></div>
+        </div>
+      </details>
+
+      <details class="tools-panel">
+        <summary><span>⏰ قرض‌های کهنه</span><span style="font-size:0.7rem;color:var(--muted)">بی‌حرکت‌ها اول</span></summary>
+        <div class="tools-body">
+          <div style="font-size:0.74rem;color:var(--muted);margin-bottom:8px">بدهکارها به ترتیبِ «چند روز است هیچ ردیف تازه‌ای ندارند». با دکمهٔ یادآوری، حساب + لینک مستقیم به پی‌وی واتساپش می‌رود (اگر شماره ثبت باشد).</div>
+          <div id="aging-list" style="font-size:0.8rem"></div>
+        </div>
+      </details>
+
+      <details class="tools-panel">
+        <summary><span>👷 کمبودی کارمندان</span><span style="font-size:0.7rem;color:var(--muted)">از ورق‌ها</span></summary>
+        <div class="tools-body">
+          <div style="font-size:0.74rem;color:var(--muted);margin-bottom:8px">جمعِ کمبودی/اضافیِ هر کارمند از همهٔ ورق‌ها (بر اساس نام کارمندِ هر شیفت).</div>
+          <div id="staffshort-list" style="font-size:0.8rem"></div>
+        </div>
+      </details>
+
+      <details class="tools-panel">
+        <summary><span>📈 تاریخچهٔ نرخ اتحادیه</span><span style="font-size:0.7rem;color:var(--muted)">خودکار ثبت می‌شود</span></summary>
+        <div class="tools-body">
+          <div id="ratehist-list" style="font-size:0.8rem"></div>
+        </div>
+      </details>
+
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <div class="top-toast" id="topToast"></div>
 <div class="sync-toast-stack" id="syncToastStack"></div>
@@ -7848,6 +7937,7 @@ function tryUnlock() {
     document.getElementById('app').style.display = 'block';
     const _fabU = document.getElementById('calcFab'); if (_fabU) _fabU.style.display = 'flex';
     const _rbU = document.getElementById('robotFab'); if (_rbU) _rbU.style.display = 'flex';
+    const _tlU = document.getElementById('toolsFab'); if (_tlU) _tlU.style.display = (role === 'admin') ? 'flex' : 'none';
     try { _lsCalcBtnShow(false); _rbSetMode(role === 'admin' ? 'admin' : 'staff'); } catch (e) {}
     document.getElementById('lockInput').value = '';
     document.getElementById('lockErr').innerHTML = '';
@@ -15464,6 +15554,7 @@ function _applyRateToShifts(prices, v) {
     }
   });
 }
+let _rateHistTimer = null;
 function setUnionRate(fuel, val) {
   const v = parseFloat(val) || 0;
   if (fuel === 'diesel') {
@@ -15474,6 +15565,24 @@ function setUnionRate(fuel, val) {
     _applyRateToShifts(['d', 'n'], v);     // فی لیتر افغانیِ پطرول (روز/شب)
   }
   save();
+  // تاریخچهٔ نرخ — فقط ثبت (روی هیچ محاسبه‌ای اثر ندارد). با تاخیر ثبت می‌شود تا
+  // موقعِ تایپ، عددهای نیمه‌کاره (۹ → ۹۰) در تاریخچه ننشینند.
+  if (_rateHistTimer) clearTimeout(_rateHistTimer);
+  _rateHistTimer = setTimeout(() => {
+    try {
+      DB.rateHistory = DB.rateHistory || [];
+      const rec = (ft, rate) => {
+        if (!(rate > 0)) return;
+        const lastSame = DB.rateHistory.find(h => h.fuel === ft);
+        if (lastSame && lastSame.rate === rate) return;   // فقط تغییرِ واقعی ثبت شود
+        DB.rateHistory.unshift({ date: persianDate(), fuel: ft, rate });
+      };
+      rec('petrol', parseFloat(DB.unionRatePetrol) || 0);
+      rec('diesel', parseFloat(DB.unionRateDiesel) || 0);
+      if (DB.rateHistory.length > 300) DB.rateHistory.length = 300;
+      save();
+    } catch (e) {}
+  }, 1500);
 }
 function applyUnionRates() {
   const up = document.getElementById('union-petrol');
@@ -19866,7 +19975,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.66';
+const APP_VERSION = '2.9.67';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -20890,6 +20999,243 @@ function loadFontScale() {
   document.addEventListener('focusout', e => { const el = e.target; if (el && el.dataset && el.dataset.numfmt === '1' && el.value) el.value = fmt(el.value); });
 })();
 
+// ═══════════ 🧰 ابزار: بکاپ، مخزن، تانکر، قرض کهنه، کمبودی کارمند، نرخ ═══════════
+// همه افزودنی‌اند: فقط ثبت/نمایش — به هیچ منطقِ حساب موجودی دست نمی‌زنند.
+function _toolsAdminOnly() {
+  if (currentRole !== 'admin') { showToast('🔒 فقط مدیر اجازهٔ این کار را دارد', '#e53e3e'); return false; }
+  return true;
+}
+// ── بکاپ خودکار روزانه در IndexedDB (جدا از localStorage تا با خراب شدنش از بین نرود) ──
+function _bkOpenDb(cb) {
+  try {
+    const rq = indexedDB.open('pumpBackups', 1);
+    rq.onupgradeneeded = e => { try { e.target.result.createObjectStore('snaps', { keyPath: 'day' }); } catch (er) {} };
+    rq.onsuccess = e => cb(e.target.result);
+    rq.onerror = () => {};
+  } catch (e) {}
+}
+function _autoDailyBackup() {
+  try {
+    const day = toEnDigits(persianDate());
+    const data = JSON.stringify(DB);
+    _bkOpenDb(db => {
+      try {
+        const st = db.transaction('snaps', 'readwrite').objectStore('snaps');
+        st.put({ day, at: Date.now(), data });
+        const rq = st.getAllKeys();
+        rq.onsuccess = () => {
+          const keys = (rq.result || []).map(String).sort();
+          if (keys.length > 14) keys.slice(0, keys.length - 14).forEach(k => { try { st.delete(k); } catch (e) {} });
+        };
+      } catch (e) {}
+    });
+  } catch (e) {}
+}
+function downloadBackupNow() {
+  try {
+    const blob = new Blob([JSON.stringify(DB)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'pump-backup-' + toEnDigits(persianDate()).replace(/\//g, '-') + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    showToast('⬇️ فایل بکاپ دانلود شد — جای امن نگهش دارید', '#38a169');
+  } catch (e) { showToast('❌ دانلود نشد', '#e53e3e'); }
+}
+function _bkRestoreData(txt) {
+  let obj; try { obj = JSON.parse(txt); } catch (e) { showToast('❌ فایل بکاپ خراب است', '#e53e3e'); return; }
+  if (!obj || typeof obj !== 'object' || (!obj.debtPersons && !obj.waraqEntries && !obj.safeEntries && !obj.tilCompanies)) {
+    showToast('❌ این فایل بکاپِ این برنامه نیست', '#e53e3e'); return;
+  }
+  if (!confirm('⚠️ همهٔ حساب‌های فعلی با این بکاپ جایگزین شود؟ این کار برگشت ندارد.')) return;
+  try { localStorage.setItem('pumpDB', JSON.stringify(obj)); } catch (e) { showToast('❌ ذخیره نشد', '#e53e3e'); return; }
+  location.reload();
+}
+function restoreBackupFromFile(input) {
+  if (!_toolsAdminOnly()) { if (input) input.value = ''; return; }
+  const f = input && input.files && input.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => _bkRestoreData(String(r.result || ''));
+  r.readAsText(f);
+  input.value = '';
+}
+function restoreSnapshot(day) {
+  if (!_toolsAdminOnly()) return;
+  _bkOpenDb(db => {
+    try {
+      const rq = db.transaction('snaps', 'readonly').objectStore('snaps').get(day);
+      rq.onsuccess = () => { if (rq.result && rq.result.data) _bkRestoreData(rq.result.data); else showToast('بکاپ پیدا نشد', '#e53e3e'); };
+    } catch (e) {}
+  });
+}
+function _renderBackupPanel() {
+  const el = document.getElementById('bk-list');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--muted)">در حال خواندن بکاپ‌ها...</div>';
+  _bkOpenDb(db => {
+    try {
+      const rq = db.transaction('snaps', 'readonly').objectStore('snaps').getAll();
+      rq.onsuccess = () => {
+        const snaps = (rq.result || []).sort((a, b) => String(b.day).localeCompare(String(a.day)));
+        el.innerHTML = snaps.length ? snaps.map(s =>
+          `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px dashed var(--border)">
+            <span>🗓️ ${escFa(String(s.day))}</span>
+            <span style="color:var(--muted);font-size:0.72rem">${n2fa(Math.round((s.data || '').length / 1024))} KB</span>
+            <button class="tools-btn" style="background:transparent;border:1px solid var(--blue);color:var(--blue);padding:4px 10px" onclick="restoreSnapshot('${String(s.day).replace(/'/g, '')}')">↩️ بازگردانی</button>
+          </div>`).join('') : '<div style="color:var(--muted)">هنوز بکاپ خودکاری ساخته نشده — با هر باز شدنِ برنامه ساخته می‌شود</div>';
+      };
+    } catch (e) { el.innerHTML = ''; }
+  });
+}
+// ── کلید عددی تاریخ شمسی برای مقایسهٔ تقریبی (سال×۳۷۲ + ماه×۳۱ + روز) ──
+function _shDateKey(s) {
+  const m = toEnDigits(String(s || '')).match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+  return m ? ((+m[1]) * 372 + (+m[2]) * 31 + (+m[3])) : 0;
+}
+// ── اندازه‌گیری واقعی مخزن (میله‌زنی) ──
+function confirmTankDip() {
+  if (!_toolsAdminOnly()) return;
+  const fuel = (document.getElementById('dip-fuel') || {}).value === 'diesel' ? 'diesel' : 'petrol';
+  const actual = parseFloat((document.getElementById('dip-actual') || {}).value) || 0;
+  if (!actual) { showToast('لیتر واقعی مخزن را بنویسید', '#e53e3e'); return; }
+  const book = Math.round(_fuelStock(fuel));
+  DB.tankDips = DB.tankDips || [];
+  DB.tankDips.unshift({ id: 'dip' + Date.now(), date: persianDate(), fuel, actual, book,
+    note: ((document.getElementById('dip-note') || {}).value || '').trim() });
+  if (DB.tankDips.length > 60) DB.tankDips.length = 60;
+  save();
+  const d = actual - book;
+  showToast(d < 0 ? ('⚠️ ' + n2fa(-d) + ' لیتر کم‌آمد نسبت به دفتر') : ('✅ ثبت شد — فرق: ' + n2fa(d) + ' لیتر'), d < 0 ? '#d97706' : '#38a169');
+  const ia = document.getElementById('dip-actual'); if (ia) ia.value = '';
+  const inn = document.getElementById('dip-note'); if (inn) inn.value = '';
+  _renderDipPanel();
+}
+function deleteTankDip(id) {
+  if (!_toolsAdminOnly()) return;
+  DB.tankDips = (DB.tankDips || []).filter(x => x.id !== id);
+  save(); _renderDipPanel();
+}
+function _renderDipPanel() {
+  const el = document.getElementById('dip-list');
+  if (!el) return;
+  const list = DB.tankDips || [];
+  el.innerHTML = list.length ? list.map(x => {
+    const d = (parseFloat(x.actual) || 0) - (parseFloat(x.book) || 0);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:6px 2px;border-bottom:1px dashed var(--border);flex-wrap:wrap">
+      <span>${x.fuel === 'diesel' ? '🟤' : '⛽'} ${n2fa(x.date || '')}</span>
+      <span>واقعی: <b>${n2fa(x.actual)}</b> · دفتری: ${n2fa(x.book)}</span>
+      <b style="color:${d < 0 ? 'var(--red)' : 'var(--green)'}">${d < 0 ? ('کم‌آمد ' + n2fa(-d)) : ('+' + n2fa(d))} ل</b>
+      ${x.note ? `<span style="color:var(--muted);font-size:0.72rem">${escFa(x.note)}</span>` : ''}
+      <button class="del-btn" onclick="deleteTankDip('${x.id}')">🗑️</button>
+    </div>`;
+  }).join('') : '<div style="color:var(--muted)">هنوز اندازه‌گیری‌ای ثبت نشده</div>';
+}
+// ── تخلیهٔ تانکر ──
+function confirmTankerLog() {
+  if (!_toolsAdminOnly()) return;
+  const fuel = (document.getElementById('tk-fuel') || {}).value === 'diesel' ? 'diesel' : 'petrol';
+  const man = parseFloat((document.getElementById('tk-manifest') || {}).value) || 0;
+  const act = parseFloat((document.getElementById('tk-actual') || {}).value) || 0;
+  if (!man || !act) { showToast('لیتر بارنامه و لیتر تحویل هر دو لازم است', '#e53e3e'); return; }
+  DB.tankerLogs = DB.tankerLogs || [];
+  DB.tankerLogs.unshift({ id: 'tk' + Date.now(), date: persianDate(), fuel, manifest: man, actual: act,
+    note: ((document.getElementById('tk-note') || {}).value || '').trim() });
+  if (DB.tankerLogs.length > 100) DB.tankerLogs.length = 100;
+  save();
+  const d = act - man;
+  showToast(d < 0 ? ('⚠️ ' + n2fa(-d) + ' لیتر کم‌آمدِ تحویل') : '✅ ثبت شد — تحویل کامل', d < 0 ? '#d97706' : '#38a169');
+  ['tk-manifest', 'tk-actual', 'tk-note'].forEach(id => { const i = document.getElementById(id); if (i) i.value = ''; });
+  _renderTankerPanel();
+}
+function deleteTankerLog(id) {
+  if (!_toolsAdminOnly()) return;
+  DB.tankerLogs = (DB.tankerLogs || []).filter(x => x.id !== id);
+  save(); _renderTankerPanel();
+}
+function _renderTankerPanel() {
+  const el = document.getElementById('tk-list');
+  if (!el) return;
+  const list = DB.tankerLogs || [];
+  el.innerHTML = list.length ? list.map(x => {
+    const d = (parseFloat(x.actual) || 0) - (parseFloat(x.manifest) || 0);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:6px 2px;border-bottom:1px dashed var(--border);flex-wrap:wrap">
+      <span>${x.fuel === 'diesel' ? '🟤' : '⛽'} ${n2fa(x.date || '')}${x.note ? ' · ' + escFa(x.note) : ''}</span>
+      <span>بارنامه: ${n2fa(x.manifest)} · تحویل: <b>${n2fa(x.actual)}</b></span>
+      <b style="color:${d < 0 ? 'var(--red)' : 'var(--green)'}">${d < 0 ? ('کم‌آمد ' + n2fa(-d)) : '✅ کامل'}</b>
+      <button class="del-btn" onclick="deleteTankerLog('${x.id}')">🗑️</button>
+    </div>`;
+  }).join('') : '<div style="color:var(--muted)">هنوز تخلیه‌ای ثبت نشده</div>';
+}
+// ── قرض‌های کهنه (بدهکارهای بی‌حرکت) ──
+function _renderAgingPanel() {
+  const el = document.getElementById('aging-list');
+  if (!el) return;
+  const todayK = _shDateKey(persianDate());
+  const rows = [];
+  (DB.debtPersons || []).forEach(p => {
+    const f = _debtSumFigures(p);
+    if (!(f.albaqi > 0)) return;
+    let lastK = 0;
+    _allRows(p).forEach(r => { const k = _shDateKey(r.date); if (k > lastK) lastK = k; });
+    rows.push({ p, f, days: lastK ? Math.max(0, todayK - lastK) : -1 });
+  });
+  rows.sort((a, b) => b.days - a.days);
+  el.innerHTML = rows.length ? rows.map(({ p, f, days }) => {
+    const u = f.money ? '' : ' ل';
+    const hasNum = !!_waNumber(p.phone || '');
+    return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px dashed var(--border);flex-wrap:wrap">
+      <span style="font-weight:700;cursor:pointer" onclick="openPersonModal('debt','${p.id}')">${escFa(p.name)}</span>
+      <b style="color:var(--red)">${n2fa(Math.round(f.albaqi))}${u}</b>
+      <span style="color:${days >= 60 ? 'var(--red)' : (days >= 30 ? 'var(--accent)' : 'var(--muted)')};font-size:0.76rem">${days < 0 ? 'بی‌تاریخ' : ('~' + n2fa(days) + ' روز بی‌حرکت')}</span>
+      ${hasNum ? `<button class="tools-btn" style="background:#25d366;color:#fff;padding:5px 10px" onclick="_acctMenuWhatsApp('person','debt','${p.id}')">💬 یادآوری</button>`
+               : '<span style="color:var(--muted);font-size:0.7rem">📞 بی‌شماره</span>'}
+    </div>`;
+  }).join('') : '<div style="color:var(--muted)">هیچ بدهکاری نیست 🎉</div>';
+}
+// ── کمبودی کارمندان (از همهٔ ورق‌ها) ──
+function _renderStaffShortPanel() {
+  const el = document.getElementById('staffshort-list');
+  if (!el) return;
+  const agg = {};
+  (DB.waraqEntries || []).forEach(w => {
+    ['day', 'night'].forEach(sh => {
+      const sd = w && w[sh];
+      if (!sd) return;
+      let r;
+      try { r = computeWaraqShortage(sd, computeShiftTotals(sd)); } catch (e) { return; }
+      if (!r.shortage && !r.excess && !r.declared) return;   // شیفت خالی شمرده نشود
+      const name = ((sd.workerName || '').trim()) || '— بی‌نام —';
+      const k = normFa(name);
+      if (!agg[k]) agg[k] = { name, shifts: 0, short: 0, excess: 0 };
+      agg[k].shifts++; agg[k].short += r.shortage; agg[k].excess += r.excess;
+    });
+  });
+  const list = Object.values(agg).sort((a, b) => b.short - a.short);
+  el.innerHTML = list.length ? ('<table class="tbl" style="font-size:0.78rem;width:100%"><thead><tr><th>کارمند</th><th>شیفت</th><th>جمع کمبودی</th><th>جمع اضافی</th></tr></thead><tbody>' +
+    list.map(x => `<tr><td style="font-weight:700">${escFa(x.name)}</td><td>${n2fa(x.shifts)}</td>
+      <td style="color:${x.short > 0 ? 'var(--red)' : 'var(--green)'};font-weight:700">${n2fa(Math.round(x.short))}</td>
+      <td style="color:var(--green)">${n2fa(Math.round(x.excess))}</td></tr>`).join('') +
+    '</tbody></table>') : '<div style="color:var(--muted)">هنوز ورقی با کمبودی/اضافی ثبت نشده</div>';
+}
+// ── تاریخچهٔ نرخ اتحادیه (ثبتش داخل setUnionRate است) ──
+function _renderRateHistPanel() {
+  const el = document.getElementById('ratehist-list');
+  if (!el) return;
+  const list = DB.rateHistory || [];
+  el.innerHTML = list.length ? list.map(h =>
+    `<div style="display:flex;justify-content:space-between;padding:5px 2px;border-bottom:1px dashed var(--border)">
+      <span>${h.fuel === 'diesel' ? '🟤 دیزل' : '⛽ پطرول'}</span>
+      <b style="color:var(--accent)">${n2fa(h.rate)} فی لیتر</b>
+      <span style="color:var(--muted)">${n2fa(h.date || '')}</span>
+    </div>`).join('') : '<div style="color:var(--muted)">با هر تغییرِ نرخ اتحادیه، اینجا خودکار ثبت می‌شود</div>';
+}
+function openToolsModal() {
+  _renderBackupPanel(); _renderDipPanel(); _renderTankerPanel();
+  _renderAgingPanel(); _renderStaffShortPanel(); _renderRateHistPanel();
+  document.getElementById('toolsModal').classList.add('open');
+}
+
 // ========== INIT ==========
 // محافظت نقش نظاره‌گر: همهٔ توابع تغییردهنده برای نظاره‌گر غیرفعال می‌شوند
 ['confirmAddPerson','deletePerson','deletePersonRow','setRowFuel','addPersonRow',
@@ -20913,6 +21259,9 @@ function loadFontScale() {
 
 load();
 loadTheme();
+// بکاپ خودکار روزانه: چند ثانیه بعد از باز شدن + هر ۱۰ دقیقه نسخهٔ همان روز تازه می‌شود
+setTimeout(function(){ try { _autoDailyBackup(); } catch(e){} }, 4000);
+setInterval(function(){ try { _autoDailyBackup(); } catch(e){} }, 10 * 60 * 1000);
 try { applyHexFx(); } catch(e) {}
 // اگر صفحه وقتی هنوز قفلِ تلاش‌های ناموفق فعال بود رفرش شود، همان لحظه دوباره نشان داده شود
 (function(){ try { var r = _lockoutRemaining(); if (r > 0) _lockoutShow(r); } catch(e){} })();
