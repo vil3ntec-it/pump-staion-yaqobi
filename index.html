@@ -5747,7 +5747,7 @@ table thead th{ position:relative; }
         <div class="tbl-wrap">
           <table class="tbl" id="wq-trans-tbl-left" style="font-size:0.95rem">
             <thead><tr>
-              <th style="min-width:24px">#</th><th style="min-width:130px">نام</th><th>نوع تیل</th><th>مقدار تیل</th><th>مبلغ</th><th>نوع</th>
+              <th style="min-width:24px">#</th><th style="min-width:130px">نام</th><th>نوع تیل</th><th>مقدار تیل</th><th>مبلغ</th><th>نوع</th><th title="ردیف قرض به کدام دفترِ حساب قرض‌دار برود: واحد تیل یا واحد پول">واحد</th>
             </tr></thead>
             <tbody id="wq-trans-body-left"></tbody>
           </table>
@@ -5755,7 +5755,7 @@ table thead th{ position:relative; }
         <div class="tbl-wrap">
           <table class="tbl" id="wq-trans-tbl-right" style="font-size:0.95rem">
             <thead><tr>
-              <th style="min-width:24px">#</th><th style="min-width:130px">نام</th><th>نوع تیل</th><th>مقدار تیل</th><th>مبلغ</th><th>نوع</th>
+              <th style="min-width:24px">#</th><th style="min-width:130px">نام</th><th>نوع تیل</th><th>مقدار تیل</th><th>مبلغ</th><th>نوع</th><th title="ردیف قرض به کدام دفترِ حساب قرض‌دار برود: واحد تیل یا واحد پول">واحد</th>
             </tr></thead>
             <tbody id="wq-trans-body-right"></tbody>
           </table>
@@ -16723,6 +16723,12 @@ function renderWaraqTransactions(w) {
           <option value="expense" ${t.type==='expense'?'selected':''}>مصرف</option>
         </select>
       </td>
+      <td>
+        <select class="xls-in" style="min-width:52px" title="ردیف قرض به کدام دفترِ حسابِ قرض‌دار برود" onchange="updateWaraqTxn(${i},'unit',this.value)">
+          <option value="fuel" ${(t.unit||'fuel')!=='money'?'selected':''}>تیل</option>
+          <option value="money" ${t.unit==='money'?'selected':''}>پول</option>
+        </select>
+      </td>
     `;
     if (i < mid) leftBody.appendChild(tr);
     else rightBody.appendChild(tr);
@@ -16871,7 +16877,13 @@ function syncWaraqSalesToSafe(w) {
         DB.safeEntries[idx].title = title;
         DB.safeEntries[idx].date = w.date || '';
       } else {
-        DB.safeEntries.push({ id: 'wqsf' + w.id + shift, type: 'mandagi', title, amount: sales, date: w.date || '', note: '', srcKey });
+        // مثل جدول‌های دیگر: اول در اولین خانهٔ خالیِ گاوصندوق می‌نشیند (کادر اول پر
+        // بود → دومی و به همین ترتیب)؛ فقط اگر خانهٔ خالی نبود، ردیفِ نو اضافه می‌شود
+        const rec = { id: 'wqsf' + w.id + shift, type: 'mandagi', title, amount: sales, date: w.date || '', note: '', srcKey };
+        const emptyIdx = DB.safeEntries.findIndex(e => e && !e.srcKey &&
+          !(e.title||'').toString().trim() && !(parseFloat(e.amount)||0) && !(e.note||'').toString().trim());
+        if (emptyIdx >= 0) Object.assign(DB.safeEntries[emptyIdx], rec);
+        else DB.safeEntries.push(rec);
       }
     } else if (idx >= 0) {
       DB.safeEntries.splice(idx, 1);
@@ -16941,6 +16953,8 @@ function saveWaraq() {
         if (fuel > 0) { priceper = amount / fuel; } else { fuel = 0; priceper = 0; byMoney = true; }
         // اگر نام عوض شده و به شخص دیگری خورده، ثبت قبلی این ردیف پاک شود
         removePersonRowBySrcKey(srcKey, person.id);
+        // واحدِ انتخابیِ ردیف (ستون «واحد» ورق): تیل → دفترِ واحد تیل (rows)؛
+        // پول → دفترِ واحد پول (moneyRows). پیش‌فرض مثل قبل تیل است.
         placePersonRow(person, {
           date: w.date,
           name: displayName,
@@ -16951,7 +16965,7 @@ function saveWaraq() {
           rasid: 0, albaqi: amount,
           src: 'waraq',
           srcKey
-        }, t.name, found.acct);
+        }, t.name, found.acct, t.unit === 'money' ? 'money' : 'fuel');
       }
     });
   });
@@ -17309,17 +17323,24 @@ function _subForText(person, text) {
 }
 // قرار دادن یک ردیف در حساب شخص: اگر توضیحات شامل نام یک حساب فرعی باشد به همان می‌رود،
 // وگرنه به حساب اصلی. سپس: به‌روزرسانی ردیف هم‌منبع، یا پر کردن اولین ردیف خالی، یا افزودن.
-function placePersonRow(person, rowData, descText, targetAcct) {
+function placePersonRow(person, rowData, descText, targetAcct, unit) {
   // اگر حسابِ مقصد صراحتاً داده شده (مثلاً از findDebtAcctForText یک حساب فرعیِ هم‌نام)،
   // همان استفاده می‌شود؛ وگرنه مثل قبل از روی نامِ حساب فرعی در متن حدس زده می‌شود.
   const acct = (targetAcct && targetAcct !== person) ? targetAcct : (_subForText(person, descText) || person);
-  if (!acct.rows) acct.rows = [];
+  // واحدِ مقصد: 'money' → دفترِ واحد پول (moneyRows)؛ در غیر این صورت واحد تیل (rows)
+  const useMoney = unit === 'money';
+  if (!Array.isArray(acct.rows)) acct.rows = [];
+  if (useMoney && !Array.isArray(acct.moneyRows)) acct.moneyRows = [];
+  const arr = useMoney ? acct.moneyRows : acct.rows;
   if (rowData.srcKey) {
-    // اگر همین srcKey در حساب دیگری از همین شخص بود (مثلاً توضیحات عوض شده)، آنجا پاک شود
+    // اگر همین srcKey در حساب یا دفترِ دیگری از همین شخص بود (توضیحات یا واحد عوض
+    // شده)، از همه‌جا به‌جز دفترِ مقصد پاک شود تا ردیف دوتا نشود
     [person].concat(person.subs || []).forEach(a => {
-      if (a !== acct && Array.isArray(a.rows)) a.rows = a.rows.filter(r => r.srcKey !== rowData.srcKey);
+      ['rows','moneyRows'].forEach(k => {
+        if (Array.isArray(a[k]) && a[k] !== arr) a[k] = a[k].filter(r => r.srcKey !== rowData.srcKey);
+      });
     });
-    const ex = acct.rows.find(r => r.srcKey === rowData.srcKey);
+    const ex = arr.find(r => r.srcKey === rowData.srcKey);
     if (ex) {
       const keepRasid = parseFloat(ex.rasid)||0;   // پرداختی دستی کاربر حفظ شود
       Object.assign(ex, rowData);
@@ -17328,11 +17349,11 @@ function placePersonRow(person, rowData, descText, targetAcct) {
       return ex;
     }
   }
-  const emptyIdx = acct.rows.findIndex(r =>
+  const emptyIdx = arr.findIndex(r =>
     !(r.name||'').toString().trim() && !(r.hawala||'').toString().trim() &&
     !(parseFloat(r.fuel)||0) && !(parseFloat(r.bardagi)||0) && !(parseFloat(r.rasid)||0));
-  if (emptyIdx >= 0) { Object.assign(acct.rows[emptyIdx], rowData); return acct.rows[emptyIdx]; }
-  acct.rows.push(rowData);
+  if (emptyIdx >= 0) { Object.assign(arr[emptyIdx], rowData); return arr[emptyIdx]; }
+  arr.push(rowData);
   return rowData;
 }
 // حذف مصرفِ مربوط به یک ردیف ورق (بر اساس srcKey) — برای جابه‌جایی نوع تراکنش
@@ -17346,8 +17367,12 @@ function removePersonRowBySrcKey(srcKey, exceptPersonId) {
   [DB.debtPersons, DB.noinvPersons].forEach(list => {
     (list||[]).forEach(p => {
       if (exceptPersonId && p.id === exceptPersonId) return;
-      if (p.rows) p.rows = p.rows.filter(r => r.srcKey !== srcKey);
-      (p.subs||[]).forEach(s => { if (s.rows) s.rows = s.rows.filter(r => r.srcKey !== srcKey); });
+      // هر دو دفتر (واحد تیل و واحد پول) در حساب اصلی و فرعی‌ها پاک می‌شوند
+      [p].concat(p.subs||[]).forEach(a => {
+        ['rows','moneyRows'].forEach(k => {
+          if (Array.isArray(a[k])) a[k] = a[k].filter(r => r.srcKey !== srcKey);
+        });
+      });
     });
   });
 }
@@ -19695,7 +19720,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.61';
+const APP_VERSION = '2.9.62';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
