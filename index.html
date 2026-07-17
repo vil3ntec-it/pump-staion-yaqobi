@@ -6241,6 +6241,25 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <button class="pw-btn" onclick="_manualEnableNotify()">🔔 فعال‌سازی اعلان‌ها</button>
     <div id="set-notify-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted)"></div>
   </div>
+  <div class="settings-card" id="ext-push-card" style="border-color:var(--green)">
+    <div class="settings-title" style="color:var(--green)">📬 اعلان بیرون از برنامه — پیام‌ها حتی وقتی برنامه بسته است</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:2;margin-bottom:12px">
+      با فعال کردن این بخش، هر پیامی که کارمند یا مشتری در چت (گروهی یا چت با میرزا) بفرستد، همان لحظه به‌صورت اعلان به گوشی/کامپیوتر شما می‌رسد — <b>حتی وقتی برنامه کاملاً بسته باشد</b>. این کار از راه سرویس اعلان رایگان <b dir="ltr">ntfy</b> انجام می‌شود.<br>
+      راه‌اندازی (فقط یک بار): <b>۱)</b> دکمهٔ «فعال کردن» را بزنید تا کد اشتراک ساخته شود. <b>۲)</b> روی گوشی، برنامهٔ رایگان <b dir="ltr">ntfy</b> را از گوگل‌پلی یا اپ‌استور نصب کنید — روی کامپیوتر لازم نیست چیزی نصب شود، فقط «باز کردن صفحهٔ اشتراک» را بزنید و اجازهٔ اعلان بدهید. <b>۳)</b> در برنامهٔ ntfy گزینهٔ <b dir="ltr">+ Subscribe to topic</b> را بزنید و کد اشتراک را وارد کنید. <b>۴)</b> با «تست اعلان» مطمئن شوید که می‌رسد.<br>
+      ⚠️ کد اشتراک مثل رمز است — به هیچ‌کس ندهید؛ هر که آن را بداند اعلان پیام‌ها را می‌بیند.
+    </div>
+    <div class="pw-row">
+      <div class="pw-field" style="flex:1"><label>کد اشتراک (تاپیک)</label><input id="push-topic" readonly dir="ltr" style="direction:ltr;text-align:left" placeholder="هنوز ساخته نشده — «فعال کردن» را بزنید"></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <button class="pw-btn" id="push-toggle-btn" onclick="pushToggleEnabled()">📬 فعال کردن</button>
+      <button class="pw-btn" style="background:var(--blue);color:#fff" onclick="pushOpenSubscribe()">🌐 باز کردن صفحهٔ اشتراک</button>
+      <button class="pw-btn" style="background:transparent;border:1px solid var(--border);color:var(--txt)" onclick="pushCopyTopic()">📋 کپی کد</button>
+      <button class="pw-btn" style="background:transparent;border:1px solid var(--green);color:var(--green)" onclick="pushTest()">🔔 تست اعلان</button>
+      <button class="pw-btn" style="background:transparent;border:1px solid var(--accent);color:var(--accent)" onclick="pushNewTopic()">♻️ کد نو</button>
+    </div>
+    <div id="push-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted)"></div>
+  </div>
   <div class="settings-card" id="trash-settings-card" style="border-color:var(--accent)">
     <div class="settings-title" style="color:var(--accent)">🗑️ سطل زباله</div>
     <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.8">موارد حذف‌شده تا <b style="color:var(--accent)">۱۵ روز</b> در اینجا نگه داشته می‌شوند و پس از آن خودکار پاک می‌شوند. می‌توانید هر مورد را برگردانید یا برای همیشه حذف کنید.</div>
@@ -7160,6 +7179,11 @@ const DB = {
   stationPhone: '',
   unionRatePetrol: 0,
   unionRateDiesel: 0,
+  // اعلان بیرون از برنامه (ntfy): با فعال بودن، پیام‌های چت حتی وقتی برنامه بسته
+  // است به دستگاه میرزا می‌رسند. pushTopic مثل رمز است و بین دستگاه‌ها سینک می‌شود
+  // تا دستگاهِ فرستنده بداند اعلان را به کدام کد بفرستد.
+  pushEnabled: false,
+  pushTopic: '',
   trash: []
 };
 
@@ -8199,6 +8223,7 @@ function showSection(id, btn) {
   if (id === 'settings') {
     fillLowStockSettings();
     fillSyncSettings();
+    try { renderPushCard(); } catch(e) {}
     try { renderTrashList(); } catch(e) {}
     try { renderChatTrash(); } catch(e) {}
   }
@@ -18628,6 +18653,7 @@ function _chatPushRaw(scope, msg, peerOpt) {
     if (scope === 'group') {
       _fbDb.ref(_chatRoot() + 'group').push(msg);
       _chatMarkRead('group');
+      _extPushNotify('group', msg);
       return;
     }
     const peer = peerOpt || _rbActiveDmPeer();
@@ -18638,7 +18664,85 @@ function _chatPushRaw(scope, msg, peerOpt) {
     if (msg.f !== 'admin' && msg.f !== 'bot') idx.name = msg.n;
     _fbDb.ref(_chatRoot() + 'dmIndex/' + peer).update(idx);
     _chatMarkRead('dm', peer);
+    _extPushNotify('dm', msg);
   } catch (e) { showToast('خطا در فرستادن پیام', '#e53e3e'); }
+}
+// ========== اعلان بیرون از برنامه (ntfy.sh) ==========
+// برنامه سرور ندارد؛ برای اینکه پیامِ چت حتی وقتی برنامهٔ میرزا کاملاً بسته است
+// به او برسد، دستگاهِ «فرستنده» همان لحظه یک اعلان کوچک به سرویس رایگان ntfy.sh
+// می‌فرستد و گوشی/کامپیوتر میرزا که مشترکِ همان کد (تاپیک) است، اعلان را می‌گیرد.
+// فقط عنوان و پیش‌نمایش کوتاه فرستاده می‌شود — عکس/صدا/ویدیو فقط با برچسب نوع.
+function _extPushNotify(scope, msg) {
+  try {
+    if (!DB.pushEnabled || !(DB.pushTopic || '').trim()) return;
+    if (msg.f === 'admin' || msg.f === 'bot') return; // پیام خودِ میرزا/ربات اعلان نمی‌خواهد
+    const who = msg.n || 'مشتری';
+    const preview = msg.k === 'text' ? String(msg.t || '').slice(0, 80) : (msg.k === 'audio' ? '🎤 پیام صوتی' : msg.k === 'image' ? '🖼️ عکس' : '🎬 ویدیو');
+    const baseUrl = /^http/.test(location.protocol) ? location.href.split('#')[0] : 'https://vil3ntec-it.github.io/pump-staion-yaqobi/';
+    fetch('https://ntfy.sh', {
+      method: 'POST',
+      body: JSON.stringify({
+        topic: DB.pushTopic.trim(),
+        title: scope === 'group' ? '👥 چت گروهی — ' + who : '💬 پیام به میرزا — ' + who,
+        message: preview,
+        click: baseUrl,
+        tags: ['speech_balloon']
+      })
+    }).catch(() => {});
+  } catch (e) {}
+}
+// --- تنظیمات اعلان بیرون از برنامه (کارت در «تنظیمات») ---
+function _pushMsg(t, ok) {
+  const el = document.getElementById('push-msg');
+  if (el) { el.textContent = t; el.style.color = ok ? 'var(--green)' : 'var(--muted)'; }
+}
+function renderPushCard() {
+  const inp = document.getElementById('push-topic');
+  if (inp) inp.value = (DB.pushTopic || '');
+  const btn = document.getElementById('push-toggle-btn');
+  if (btn) {
+    btn.textContent = DB.pushEnabled ? '⏸️ غیرفعال کردن' : '📬 فعال کردن';
+    btn.style.background = DB.pushEnabled ? 'var(--red)' : '';
+    btn.style.color = DB.pushEnabled ? '#fff' : '';
+  }
+  _pushMsg(DB.pushEnabled ? '✅ فعال است — پیام‌های تازهٔ چت به مشترکینِ کد بالا می‌رسد.' : 'غیرفعال است.', DB.pushEnabled);
+}
+function _pushGenTopic() {
+  return 'pump-' + String(_syncCode() || 'pump1').replace(/[^a-zA-Z0-9_-]/g, '') + '-' + Math.random().toString(36).slice(2, 10);
+}
+function pushToggleEnabled() {
+  if (!DB.pushEnabled && !(DB.pushTopic || '').trim()) DB.pushTopic = _pushGenTopic();
+  DB.pushEnabled = !DB.pushEnabled;
+  save();
+  renderPushCard();
+  if (DB.pushEnabled) _pushMsg('✅ فعال شد — حالا در برنامهٔ ntfy مشترکِ کد بالا شوید و «تست اعلان» را بزنید.', true);
+}
+function pushNewTopic() {
+  if (!confirm('کد نو ساخته شود؟ اشتراک قبلی از کار می‌افتد و باید دوباره در ntfy مشترک شوید.')) return;
+  DB.pushTopic = _pushGenTopic();
+  save();
+  renderPushCard();
+  _pushMsg('♻️ کد نو ساخته شد — در ntfy با همین کد دوباره مشترک شوید.', true);
+}
+function pushOpenSubscribe() {
+  const t = (DB.pushTopic || '').trim();
+  if (!t) { _pushMsg('اول «فعال کردن» را بزنید تا کد ساخته شود.'); return; }
+  try { window.open('https://ntfy.sh/' + encodeURIComponent(t), '_blank'); } catch (e) {}
+}
+function pushCopyTopic() {
+  const t = (DB.pushTopic || '').trim();
+  if (!t) { _pushMsg('اول «فعال کردن» را بزنید تا کد ساخته شود.'); return; }
+  try { navigator.clipboard.writeText(t).then(() => _pushMsg('📋 کد کپی شد.', true)); } catch (e) { _pushMsg('کپی نشد — کد را دستی انتخاب و کپی کنید.'); }
+}
+function pushTest() {
+  const t = (DB.pushTopic || '').trim();
+  if (!t) { _pushMsg('اول «فعال کردن» را بزنید تا کد ساخته شود.'); return; }
+  _pushMsg('در حال فرستادن تست...');
+  fetch('https://ntfy.sh', {
+    method: 'POST',
+    body: JSON.stringify({ topic: t, title: '⛽ پمپ یعقوبی — تست', message: 'اعلان بیرون از برنامه درست کار می‌کند ✅', tags: ['tada'] })
+  }).then(r => _pushMsg(r.ok ? '✅ تست فرستاده شد — باید همین حالا روی دستگاهِ مشترک برسد.' : 'خطا در فرستادن — کمی بعد دوباره تلاش کنید.', r.ok))
+    .catch(() => _pushMsg('اینترنت وصل نیست یا سرویس در دسترس نیست.'));
 }
 function chatSendText(scope) {
   const inp = document.getElementById(scope === 'group' ? 'groupInput' : 'dmInput');
@@ -19442,7 +19546,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.53';
+const APP_VERSION = '2.9.54';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
