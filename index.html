@@ -6455,7 +6455,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
 <div id="robotPanel">
   <span class="rz-h tl" data-rz="tl"></span><span class="rz-h tr" data-rz="tr"></span><span class="rz-h bl" data-rz="bl"></span><span class="rz-h br" data-rz="br"></span>
   <div class="rb-head" id="robotHead">
-    <span class="rb-title"><svg><use href="#ic-robot"/></svg> ربات دستیار <span class="app-version" style="opacity:.7"></span></span>
+    <span class="rb-title"><svg><use href="#ic-robot"/></svg> <span id="rbTitleTxt">ربات دستیار</span> <span class="app-version" style="opacity:.7"></span></span>
     <span style="display:flex;gap:2px;align-items:center">
       <button class="rb-size" onclick="toggleRobotSize()" title="بزرگ/کوچک"><svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round"><use href="#ic-expand"/></svg></button>
       <button class="rb-close" onclick="toggleRobot()" title="بستن">✕</button>
@@ -6950,6 +6950,8 @@ body.viewer-mode .inv-admin-only{display:none!important}
   </div>
   <div class="ro-sum" id="staff-tanks"></div>
   <div class="ro-body">
+    <!-- کادر رفتن به صفحهٔ بعد: قرض‌های جمع کل (همان مدل «قرض کل» صفحهٔ اصلی) -->
+    <button type="button" onclick="openStaffSums()" style="width:100%;margin-bottom:10px;padding:13px 14px;border-radius:12px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.95rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between"><span>💰 قرض‌های جمع کل</span><span>صفحهٔ بعد ‹</span></button>
     <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:8px">
       <input class="staff-search" id="staff-search" style="margin-bottom:0;flex:1" placeholder="🔍 نام قرض‌دار را بنویسید یا 🎤 بگویید" oninput="renderStaffList()" onkeydown="if(event.key==='Enter'){const c=document.querySelector('#staff-list .staff-card');if(c)c.click();}">
       <button type="button" id="staff-mic" class="staff-mic" onclick="staffVoiceSearch()" title="جستجوی صوتی">🎤</button>
@@ -6976,6 +6978,18 @@ body.viewer-mode .inv-admin-only{display:none!important}
       </table>
     </div>
     <div style="text-align:center;padding:16px;font-size:0.8rem;color:var(--muted)">🔒 فقط دیدن — هیچ چیزی تغییر نمی‌کند</div>
+  </div>
+</div>
+
+<!-- صفحهٔ بعدِ صفحهٔ کارمند: قرض‌های جمع کل — همان حسابِ «قرض کل» صفحهٔ اصلی -->
+<div class="ro-overlay" id="staffSumOverlay">
+  <div class="ro-header">
+    <h2>💰 قرض‌های جمع کل</h2>
+    <button onclick="closeStaffSums()" style="padding:8px 18px;border-radius:9px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.95rem;cursor:pointer">→ برگشت</button>
+  </div>
+  <div class="ro-sum" id="staff-sums"></div>
+  <div class="ro-body">
+    <div style="text-align:center;padding:16px;font-size:0.8rem;color:var(--muted)">🔒 فقط دیدن — این جمع‌ها همان «قرض کل» صفحهٔ اصلی است و با هر تغییری خودکار تازه می‌شود</div>
   </div>
 </div>
 
@@ -10435,7 +10449,10 @@ function renderPersons(type) {
       </div>
       <button onclick="event.stopPropagation();showPersonQR('${type}','${p.id}')" style="margin-top:10px;width:100%;padding:6px 8px;border-radius:7px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-size:0.75rem;font-weight:700;cursor:pointer">📲 کیو‌آر کد</button>
     `;
-    card.onclick = () => openPersonModal(type, p.id);
+    // خواستهٔ صاحب برنامه: کلیک روی کارت (چپ یا راست) منوی گزینه‌ها را باز می‌کند —
+    // «باز کردن حساب» اولین گزینهٔ همان منو است
+    card.onclick = (ev) => openAcctMenu(ev, 'person', type, p.id);
+    card.oncontextmenu = (ev) => openAcctMenu(ev, 'person', type, p.id);
     frag.appendChild(card);
   });
   grid.innerHTML = '';
@@ -10498,6 +10515,76 @@ function deletePerson(type, id) {
   else DB.noinvPersons = DB.noinvPersons.filter(p => p.id !== id);
   save(); renderPersons(type); updateBanner();
   showToast('🗑️ حذف شد — برای بازگردانی Ctrl+Z بزنید', '#d97706');
+}
+
+// ========== منوی گزینه‌های حساب (خواستهٔ صاحب برنامه) ==========
+// با کلیک (چپ یا راست) روی کارتِ هر حساب — قرض‌دار، شخص بدون پارچه یا شرکت تیل —
+// یک منوی کوچک باز می‌شود: باز کردن حساب، فرستادن حساب برای چت گروهی، کیو‌آر کد.
+// گزینه‌های بعدی بعداً به همین منو اضافه می‌شوند.
+function _acctMenuClose() { const m = document.getElementById('acctMenu'); if (m) m.remove(); }
+function openAcctMenu(ev, kind, type, id) {
+  try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+  _acctMenuClose();
+  const esc = s => String(s).replace(/['"\\]/g, '');
+  const args = `'${esc(kind)}','${esc(type)}','${esc(id)}'`;
+  const menu = document.createElement('div');
+  menu.id = 'acctMenu';
+  menu.className = 'ch-msg-menu';
+  menu.innerHTML =
+    `<button onclick="_acctMenuOpen(${args})">📂 باز کردن حساب</button>` +
+    `<button onclick="_acctMenuSendGroup(${args})">📤 فرستادن حساب برای گروه</button>` +
+    `<button onclick="_acctMenuQR(${args})">📲 کیو‌آر کد</button>`;
+  document.body.appendChild(menu);
+  const x = (ev.clientX || 0), y = (ev.clientY || 0);
+  menu.style.top = Math.max(8, Math.min(y + 4, window.innerHeight - menu.offsetHeight - 10)) + 'px';
+  menu.style.left = Math.max(8, Math.min(x - 80, window.innerWidth - menu.offsetWidth - 10)) + 'px';
+  setTimeout(() => document.addEventListener('click', _acctMenuClose, { once: true }), 0);
+}
+function _acctMenuOpen(kind, type, id) {
+  _acctMenuClose();
+  if (kind === 'company') openCompanyModal(id);
+  else openPersonModal(type, id);
+}
+function _acctMenuQR(kind, type, id) {
+  _acctMenuClose();
+  if (kind === 'company') showCompanyQR(id);
+  else showPersonQR(type, id);
+}
+// متن خلاصهٔ حساب — همان جمع‌هایی که روی کارت/مودال دیده می‌شود؛ فقط خواندنی،
+// هیچ چیزی در حساب تغییر نمی‌کند
+function _acctSummaryText(kind, type, id) {
+  if (kind === 'company') {
+    const c = (DB.tilCompanies || []).find(x => String(x.id) === String(id));
+    if (!c) return null;
+    (c.rows || []).forEach(_migrateCompanyRow); (c.dieselRows || []).forEach(_migrateCompanyRow);
+    const rows = [...(c.rows || []), ...(c.dieselRows || [])];
+    const sumUsd = rows.reduce((a, r) => a + cmpTotalUsd(r), 0);
+    let cr = (parseFloat(c.usdRate) || 0) || (sumUsd > 0 ? rows.reduce((a, r) => a + cmpAfnTotal(r), 0) / sumUsd : 0);
+    if (!cr) { for (const r of rows) { const rr = (parseFloat(r.payRate) || 0) || (parseFloat(r.rate) || 0); if (rr) { cr = rr; break; } } }
+    const albaqi = rows.reduce((a, r) => a + cmpAlbaqi(r, cr), 0);
+    return '🛢️ حساب شرکت «' + c.name + '» — 💲 ' + n2fa(sumUsd.toFixed(1)) + ' دالر — ' +
+      ((albaqi <= 0 && rows.length) ? 'الباقی: ✅ تسویه' : 'الباقی: ' + n2fa(Math.round(albaqi)) + ' افغانی');
+  }
+  const list = kind === 'person' && type === 'debt' ? DB.debtPersons : DB.noinvPersons;
+  const p = (list || []).find(x => String(x.id) === String(id));
+  if (!p) return null;
+  const t = _splitTotals(_allRows(p));
+  const parts = ['👤 حساب «' + p.name + '»'];
+  parts.push('بردگی: ' + n2fa(Math.round(t.all.bardagi)) + ' افغانی');
+  parts.push('رسید: ' + n2fa(Math.round(t.all.rasid)) + ' افغانی');
+  parts.push(t.all.albaqi <= 0 ? 'الباقی: ✅ تسویه' : 'الباقی: ' + n2fa(Math.round(t.all.albaqi)) + ' افغانی');
+  const fl = _staffAcctFuelLeft(p);
+  if (fl.hasP) parts.push('⛽ باقی تیل پطرول: ' + n2fa(Math.round(fl.petrol)) + ' لیتر');
+  if (fl.hasD) parts.push('🟤 باقی تیل دیزل: ' + n2fa(Math.round(fl.diesel)) + ' لیتر');
+  return parts.join(' — ');
+}
+function _acctMenuSendGroup(kind, type, id) {
+  _acctMenuClose();
+  const t = _acctSummaryText(kind, type, id);
+  if (!t) { showToast('حساب پیدا نشد', '#e53e3e'); return; }
+  if (!_chatOnline()) { showToast('برای فرستادن به گروه، اینترنت لازم است', '#e53e3e'); return; }
+  _chatPush('group', { k: 'text', t: '📋 ' + t });
+  showToast('📤 حساب به چت گروهی فرستاده شد', '#38a169');
 }
 
 // تغییرِ اندازهٔ ستون‌ها با کشیدنِ لبهٔ عنوان (مثل اکسل). عرضِ هر ستون در
@@ -13151,7 +13238,9 @@ function renderCompanies() {
         <button onclick="event.stopPropagation();showCompanyQR('${c.id}')" style="flex:1;padding:5px 6px;border-radius:7px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-size:0.72rem;font-weight:700;cursor:pointer">📲 کیو‌آر</button>
       </div>
     `;
-    card.onclick = () => openCompanyModal(c.id);
+    // مثل کارت قرض‌داران: کلیک، منوی گزینه‌های حساب را باز می‌کند
+    card.onclick = (ev) => openAcctMenu(ev, 'company', '', c.id);
+    card.oncontextmenu = (ev) => openAcctMenu(ev, 'company', '', c.id);
     grid.appendChild(card);
   });
   // کنترل صفحه‌بندی شرکت‌ها (فقط زمانی که جستجو نیست)
@@ -17700,6 +17789,32 @@ function closeStaffPage() {
 function _staffRefresh() {
   const el = document.getElementById('staffOverlay');
   if (el && el.classList.contains('open')) renderStaffPage();
+  const so = document.getElementById('staffSumOverlay');
+  if (so && so.classList.contains('open')) renderStaffSums();
+}
+// صفحهٔ بعدِ صفحهٔ کارمند: قرض‌های جمع کل — دقیقاً همان حسابِ «قرض کل» صفحهٔ
+// اصلی (جمع الباقیِ همهٔ قرض‌داران با حساب‌های فرعی) + جمع بردگی و رسید
+function renderStaffSums() {
+  const el = document.getElementById('staff-sums');
+  if (!el) return;
+  let bard = 0, ras = 0, albaqi = 0;
+  (DB.debtPersons || []).forEach(p => {
+    const t = _splitTotals(_allRows(p));
+    bard += t.all.bardagi; ras += t.all.rasid; albaqi += t.all.albaqi;
+  });
+  const box = (l, v, color) => `<div class="ro-sum-box"><div class="l">${l}</div><div class="v" style="color:${color}">${v}</div></div>`;
+  el.innerHTML =
+    box('💰 قرض کل (الباقی همه)', (albaqi > 0 ? '-' : '') + n2fa(Math.round(albaqi)) + ' افغانی', 'var(--red)') +
+    box('💵 جمع بردگی', n2fa(Math.round(bard)) + ' افغانی', 'var(--accent)') +
+    box('💵 جمع رسید', n2fa(Math.round(ras)) + ' افغانی', 'var(--green)') +
+    box('👥 تعداد قرض‌داران', n2fa((DB.debtPersons || []).length) + ' نفر', 'var(--blue)');
+}
+function openStaffSums() {
+  renderStaffSums();
+  document.getElementById('staffSumOverlay').classList.add('open');
+}
+function closeStaffSums() {
+  document.getElementById('staffSumOverlay').classList.remove('open');
 }
 function renderStaffPage() {
   const tanksEl = document.getElementById('staff-tanks');
@@ -17796,6 +17911,12 @@ let _rbCurrentDm = null;        // چت تک‌نفرهٔ باز (سمت مدی�
 let _qaMsgs = [];
 let _qaPendingMirza = null;
 let _pendingSend = null;
+// جواب‌گوی خودکارِ «چت با میرزا» در نمای کیو‌آر: تا وقتی فعال است، پیام‌های مهمان
+// محلی می‌مانند و ربات جای میرزا جواب می‌دهد؛ با درخواستِ خود مهمان (یا جواب دادن
+// خودِ میرزا) کنار می‌رود و پیام‌ها مستقیم به میرزا واگذار می‌شوند. عمداً در جایی
+// ذخیره نمی‌شود تا با بستن و دوباره باز شدن صفحه (اسکن دوبارهٔ کیو‌آر) همین چرخه از نو شروع شود.
+let _personBotActive = true;
+let _personBotMsgs = [];
 let _groupMsgs = [], _groupLast = null;
 let _dmMsgCache = {}, _dmIndex = {};
 let _chatL = { group: false, dmIdx: false, dm: {} };
@@ -17859,6 +17980,20 @@ function _rbSetMode(mode, personCtx) {
   if (gt) gt.style.display = mode === 'person' ? 'none' : 'flex';
   const qt = document.getElementById('rbTabBtn-qa');
   if (qt) qt.style.display = mode === 'person' ? 'none' : 'flex';
+  // نمای کیو‌آر (مشتری): هیچ تب و کلمهٔ «ربات»ی دیده نمی‌شود — فقط «چت با میرزا».
+  // جواب‌گوی خودکار جای میرزا جواب می‌دهد و با هر بار باز شدن صفحه از نو فعال است.
+  const tabsBar = document.getElementById('rbTabs');
+  if (tabsBar) tabsBar.style.display = mode === 'person' ? 'none' : '';
+  const ttl = document.getElementById('rbTitleTxt');
+  if (ttl) ttl.textContent = mode === 'person' ? 'چت با میرزا' : 'ربات دستیار';
+  const fabBtn = document.getElementById('robotFab');
+  if (fabBtn) fabBtn.title = mode === 'person' ? 'چت با میرزا' : 'ربات دستیار';
+  const dmi = document.getElementById('dmInput');
+  if (dmi) dmi.placeholder = mode === 'person' ? 'پیام تان به میرزا...' : 'پیام...';
+  if (mode === 'person' && changed) {
+    _personBotActive = true;
+    _personBotMsgs = [{ f: 'bot', bn: 'میرزا (جواب خودکار)', k: 'text', t: _botGreeting(), ts: Date.now() }];
+  }
   _qaMsgs = [{ who: 'bot', t: _botGreeting() }];
   rbShowTab(_rbTab || 'qa');
   _chatInitListeners();
@@ -17882,7 +18017,7 @@ function _rbPerson() {
 }
 function _botHelp() {
   if (_rbMode === 'person') return 'می‌توانید بپرسید: «الباقی من چند است؟»، «بردگی من؟»، «رسید من؟»، «باقی تیل من؟»، تاریخ و ساعت، یا هر محاسبه (مثلاً ۲۰*۱۵). اگر جواب را ندانستم، پیام تان را به میرزا می‌رسانم.';
-  if (_rbMode === 'admin') return 'می‌توانید بپرسید یا بگویید: «باقی مخزن؟»، «حساب فلانی چند است؟»، «حساب فلانی را باز کن»، «یک قرض‌دار جدید بساز به نام فلانی»، «حساب فلانی را حذف کن»، «برو به تنظیمات/مصارف/گاوصندوق/...»، «دوربین‌ها را نشان بده»، یا هر محاسبه (مثلاً ۲۰*۱۵). پیام‌های کارمندان و مشتریان در «چت تک‌نفره» می‌آید.';
+  if (_rbMode === 'admin') return 'می‌توانید بپرسید یا بگویید: «باقی مخزن؟»، «حساب فلانی چند است؟»، «حساب فلانی را باز کن»، «یک قرض‌دار جدید بساز به نام فلانی»، «حساب فلانی را حذف کن»، «برو به تنظیمات/مصارف/گاوصندوق/...»، «دوربین‌ها را نشان بده»، یا هر محاسبه (مثلاً ۲۰*۱۵). هر چیزی را هم بنویسید «پیدا کن ...» (نام، عدد، حواله، توضیحات...) تا در همهٔ بخش‌های برنامه برای‌تان بگردم — اگر جواب آماده نداشتم، خودم اتومات همه‌جا را جستجو می‌کنم. پیام‌های کارمندان و مشتریان در «چت تک‌نفره» می‌آید.';
   if (_rbMode === 'staff') return 'می‌توانید بپرسید: «باقی مخزن؟»، «حساب فلانی چند است؟»، «حساب فلانی را باز کن»، «تعداد قرض‌داران؟»، یا هر محاسبه (مثلاً ۲۰*۱۵). اگر جواب را ندانستم، پیام تان را به میرزا می‌رسانم.';
   return 'می‌توانید بپرسید: «باقی مخزن؟»، «تعداد قرض‌داران؟»، «دوربین‌ها را نشان بده»، تاریخ و ساعت، یا هر محاسبه (مثلاً ۲۰*۱۵). اگر جواب را ندانستم، پیام تان را به میرزا می‌رسانم.';
 }
@@ -18088,9 +18223,96 @@ function _botTryAgentActionGroup(qRaw) {
 
   return null;
 }
+// ========== جستجوی همه‌چیز (فقط مدیر): هر متن/عدد/نقطه‌ای را در تمام بخش‌ها پیدا می‌کند ==========
+// «پیدا کن ۵۰۰»، «بگرد احمد»، «حواله ۱۲ کجاست» — و اگر هیچ جواب دیگری پیدا نشد،
+// خودِ متنِ سوال هم در کل داده‌ها جستجو می‌شود تا ربات هیچ‌وقت دستِ خالی برنگردد.
+const _BOT_SEARCH_SECTIONS = [
+  { key: 'debtPersons',    label: 'قرض‌داران' },
+  { key: 'noinvPersons',   label: 'اشخاص بدون پارچه' },
+  { key: 'tilCompanies',   label: 'شرکت‌های تیل' },
+  { key: 'expenses',       label: 'مصارف' },
+  { key: 'safeEntries',    label: 'گاوصندوق' },
+  { key: 'sarrafiRows',    label: 'صرافی' },
+  { key: 'waraqEntries',   label: 'ورق روزانه' },
+  { key: 'reports',        label: 'پارچه‌های پطرول' },
+  { key: 'shifts',         label: 'شیفت‌های دیزل' },
+  { key: 'fuelEntries',    label: 'مخزن' },
+  { key: 'staffMembers',   label: 'کارمندان' },
+  { key: 'attendance',     label: 'حاضری' },
+  { key: 'salaryPayments', label: 'پرداخت معاش' },
+  { key: 'cameras',        label: 'دوربین‌ها' },
+  { key: 'trash',          label: 'سطل زباله' },
+];
+const _BOT_FIELD_LABELS = { name: 'نام', hawala: 'حواله', desc: 'توضیحات', note: 'یادداشت', notes: 'یادداشت', date: 'تاریخ', amount: 'مبلغ', bardagi: 'بردگی', rasid: 'رسید', albaqi: 'الباقی', fuel: 'تیل (لیتر)', liters: 'لیتر', price: 'قیمت', rate: 'نرخ', url: 'لینک', phone: 'شماره', in: 'ساعت آمدن', out: 'ساعت رفتن', salary: 'معاش', title: 'عنوان', ftype: 'نوع تیل' };
+function _botSearchTerm(qRaw) {
+  const t = ' ' + _botNorm(qRaw) + ' ';
+  const markers = ['پیدا کن', 'پیداکن', 'جستجو کن', 'جستجو', 'بگرد', 'سرچ کن', 'سرچ', 'کجاست', 'کجا است', 'کجا ثبت'];
+  if (!markers.some(m => t.includes(m))) return null;
+  let s = t;
+  markers.forEach(m => { s = s.split(m).join(' '); });
+  ['برایم', 'برام', 'لطفا', 'در کل برنامه', 'در برنامه', 'همه جا', 'هر جا', 'را', 'رو', 'که'].forEach(w => { s = s.split(' ' + w + ' ').join(' '); });
+  s = s.replace(/\s+/g, ' ').trim();
+  return s || null;
+}
+function _botDeepSearch(qRaw) {
+  const needle = normFa(toEnDigits(String(qRaw || ''))).trim();
+  if (!needle || needle.length < 2) return null;
+  const MAXN = 8;
+  const hits = [];
+  const matchVal = v => {
+    if (v == null) return false;
+    if (typeof v === 'number') return normFa(toEnDigits(String(v))).includes(needle);
+    if (typeof v === 'string' && v.length < 4000 && v.slice(0, 5) !== 'data:') return normFa(toEnDigits(v)).includes(needle);
+    return false;
+  };
+  const recLabel = rec => {
+    for (const k of ['name', 'title', 'date']) { const v = rec && rec[k]; if (v && String(v).trim()) return String(v); }
+    return 'بدون نام';
+  };
+  // در هر رکورد فقط «اولین» فیلدِ دارای نتیجه گزارش می‌شود تا جواب کوتاه بماند
+  const walkRec = rec => {
+    const seen = new Set();
+    const st = [rec];
+    while (st.length) {
+      const o = st.pop();
+      if (!o || typeof o !== 'object' || seen.has(o)) continue;
+      seen.add(o);
+      for (const k in o) {
+        if (!Object.prototype.hasOwnProperty.call(o, k)) continue;
+        const v = o[k];
+        if (v && typeof v === 'object') st.push(v);
+        else if (matchVal(v)) return { field: k, val: v };
+      }
+    }
+    return null;
+  };
+  for (const sec of _BOT_SEARCH_SECTIONS) {
+    const arr = DB[sec.key];
+    if (!Array.isArray(arr)) continue;
+    for (const rec of arr) {
+      if (hits.length >= MAXN) break;
+      let hit = null;
+      try { hit = walkRec(rec); } catch (e) {}
+      if (!hit) continue;
+      let vs = String(hit.val);
+      if (vs.length > 60) {
+        const idx = Math.max(0, normFa(toEnDigits(vs)).indexOf(needle) - 20);
+        vs = (idx > 0 ? '…' : '') + vs.slice(idx, idx + 60) + '…';
+      }
+      hits.push('📍 ' + sec.label + ' › «' + recLabel(rec) + '» — ' + (_BOT_FIELD_LABELS[hit.field] || hit.field) + ': ' + vs);
+    }
+    if (hits.length >= MAXN) break;
+  }
+  if (!hits.length) return null;
+  const more = hits.length >= MAXN ? '\n… شاید موارد بیشتری هم باشد — دقیق‌تر بگویید.' : '';
+  return '🔎 «' + String(qRaw).trim() + '» را این‌جاها پیدا کردم:\n' + hits.map((h, i) => n2fa(i + 1) + ') ' + h).join('\n') + more;
+}
 function _botGreeting() {
-  const nm = _rbMode === 'person' && _rbPersonPeer ? ' ' + _rbPersonPeer.name : '';
-  return 'سلام' + nm + '! من ربات دستیار پمپ هستم. ' + _botHelp();
+  if (_rbMode === 'person') {
+    const nm = _rbPersonPeer ? ' ' + _rbPersonPeer.name : '';
+    return 'سلام' + nm + '! من جواب‌گوی خودکارِ میرزا هستم — سوال‌های حساب تان (الباقی، بردگی، رسید، باقی تیل، ...) را همین‌جا فوری جواب می‌دهم. اگر می‌خواهید خودِ میرزا جواب بدهد، فقط بنویسید: «با میرزا کار دارم».';
+  }
+  return 'سلام! من ربات دستیار پمپ هستم. ' + _botHelp();
 }
 function _botAnswer(qRaw) {
   const q = _botNorm(qRaw);
@@ -18131,6 +18353,11 @@ function _botAnswer(qRaw) {
       if (has('حساب من', 'جدول', 'ردیف')) return 'جزئیات کامل حساب شما در جدول همین صفحه است — ' + n2fa((p.rows || []).length) + ' ردیف ثبت شده.';
     }
   } else {
+    // دستور صریح جستجو (فقط مدیر): «پیدا کن ...»، «بگرد ...»، «... کجاست» — در همهٔ بخش‌ها
+    if (_rbMode === 'admin') {
+      const term = _botSearchTerm(qRaw);
+      if (term) return _botDeepSearch(term) || ('چیزی با «' + term + '» در هیچ بخشی پیدا نشد.');
+    }
     // سوال دربارهٔ یک حساب مشخص با نام (مثلاً «حساب محمد چند است؟» یا فقط «محمد»)
     // — قبل از بقیه چون کلمهٔ «قرض» ممکن است داخل چنین سوالی هم باشد
     const isCountQuery = (has('قرضدار', 'قرض دار') && has('چند', 'تعداد')) || has('قرض کل', 'جمع قرض', 'مجموع قرض');
@@ -18176,6 +18403,9 @@ function _botAnswer(qRaw) {
     }
   }
   if (has('کمک', 'راهنما', 'چه بلدی', 'چی بلدی', 'چه کار', 'چی کار')) return _botHelp();
+  // مدیر: اگر هیچ جواب آماده‌ای نبود، خودِ متن در کل داده‌های برنامه جستجو می‌شود —
+  // حتی یک نقطه یا یک عدد؛ هر جا ثبت شده باشد پیدا می‌شود و ربات دستِ خالی برنمی‌گردد
+  if (_rbMode === 'admin') { const ds = _botDeepSearch(qRaw); if (ds) return ds; }
   return null;
 }
 // اعلان خودکار ربات در «سوال و جواب»: هر حساب/چیز جدیدی که اضافه می‌شود، ربات
@@ -18344,8 +18574,11 @@ function _ensureDmListener(peer) {
     if (!m) return;
     m._key = snap.key;
     _dmMsgCache[peer].push(m);
+    // اگر خودِ میرزا همین حالا جواب داد، جواب‌گوی خودکار خودش کنار می‌رود
+    // (پیام‌های قدیمیِ میرزا از گفتگوهای قبلی حساب نمی‌شوند — فقط پیام تازه)
+    if (_rbMode === 'person' && m.f === 'admin' && (m.ts || 0) > _dmBootTs) _personBotActive = false;
     if ((m.ts || 0) > _dmBootTs && m.f !== (_chatMe() || {}).id && !m.del) _chatNotifyIncoming('dm', m);
-    if (_rbPaneVisible('dm') && _rbActiveDmPeer() === peer) { _renderChatList('dmList', _dmMsgCache[peer]); _chatMarkRead('dm', peer); }
+    if (_rbPaneVisible('dm') && _rbActiveDmPeer() === peer) { _dmRenderList(peer); _chatMarkRead('dm', peer); }
     else _rbUpdateBadges();
   });
   _fbDb.ref(_chatRoot() + 'dm/' + peer + '/msgs').limitToLast(60).on('child_changed', snap => {
@@ -18355,7 +18588,7 @@ function _ensureDmListener(peer) {
     const arr = _dmMsgCache[peer] || [];
     const idx = arr.findIndex(x => x._key === snap.key);
     if (idx !== -1) arr[idx] = m; else arr.push(m);
-    if (_rbPaneVisible('dm') && _rbActiveDmPeer() === peer) _renderChatList('dmList', _dmMsgCache[peer]);
+    if (_rbPaneVisible('dm') && _rbActiveDmPeer() === peer) _dmRenderList(peer);
   });
 }
 function _rbActiveDmPeer() {
@@ -18390,6 +18623,8 @@ function chatSendText(scope) {
   const inp = document.getElementById(scope === 'group' ? 'groupInput' : 'dmInput');
   const txt = (inp && inp.value || '').trim();
   if (!txt) return;
+  // نمای کیو‌آر با جواب‌گوی خودکار فعال: پیام محلی رسیدگی می‌شود (به سرور نمی‌رود)
+  if (scope === 'dm' && _rbMode === 'person' && _personBotActive) { inp.value = ''; _personBotHandle(txt); return; }
   const me = _chatMe();
   if (!me) { _pendingSend = { scope, partial: { k: 'text', t: txt } }; _chatAskName(scope); return; }
   if (!_chatOnline()) { showToast('برای فرستادن پیام، اینترنت لازم است', '#e53e3e'); return; }
@@ -18470,7 +18705,7 @@ function _renderChatList(elId, msgs) {
 }
 function _chMsgHtml(m, meId, scope, peer) {
   const cls = m.f === 'bot' ? 'bot' : (m.f === meId ? 'me' : 'other');
-  const nm = cls === 'me' ? '' : `<div class="ch-nm">${escFa(m.f === 'bot' ? 'ربات' : (m.f === 'admin' ? 'میرزا' : m.n || ''))}</div>`;
+  const nm = cls === 'me' ? '' : `<div class="ch-nm">${escFa(m.f === 'bot' ? (m.bn || 'ربات') : (m.f === 'admin' ? 'میرزا' : m.n || ''))}</div>`;
   const tm = m.ts ? `<div class="ch-tm">${new Date(m.ts).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}</div>` : '';
   const key = m._key || '';
   const delBtn = key ? `<span class="ch-del-btn" onclick="_chatOpenMsgMenu(event,'${scope}','${String(peer||'').replace(/'/g,'')}','${key}',${cls === 'me' ? 'true' : 'false'})" title="گزینه‌ها">⋮</span>` : '';
@@ -18483,7 +18718,9 @@ function _chMsgHtml(m, meId, scope, peer) {
   else if (m.k === 'video' && safeD) body = `<video src="${safeD}" controls playsinline preload="metadata"></video>`;
   else if (m.k === 'audio' && safeD) body = `<audio src="${safeD}" controls preload="metadata"></audio>`;
   else body = escFa(m.t || '').replace(/\n/g, '<br>');
-  return `<div class="ch-b ${cls}">${delBtn}${nm}${body}${tm}</div>`;
+  // دکمه‌های پیشنهادی جواب‌گوی خودکار (فقط پیام‌های محلی نمای کیو‌آر)
+  const sug = m.sug === 'mirzaDm' ? `<div class="ch-sug"><button onclick="dmMirzaYes()">بله، خودِ میرزا جواب بدهد</button><button onclick="dmMirzaNo()">نی</button></div>` : '';
+  return `<div class="ch-b ${cls}">${delBtn}${nm}${body}${sug}${tm}</div>`;
 }
 // ---- حذف پیام: برای من (محلی) / برای همه (سرور) ----
 let _chatHiddenIds = null;
@@ -18543,11 +18780,12 @@ function _rbRenderDmPane() {
     const wn = document.getElementById('dmWithName');
     if (wn) wn.textContent = (_dmIndex[_rbCurrentDm] || {}).name || 'چت';
   }
-  if (!_chatOnline()) { dmList.innerHTML = '<div class="ch-note" style="padding:20px">برای چت، اینترنت باید وصل باشد</div>'; return; }
+  // نمای کیو‌آر با جواب‌گوی خودکار: حتی بدون اینترنت هم چت محلی کار می‌کند
+  if (!_chatOnline() && !(_rbMode === 'person' && _personBotActive)) { dmList.innerHTML = '<div class="ch-note" style="padding:20px">برای چت، اینترنت باید وصل باشد</div>'; return; }
   if (!me) { dmList.innerHTML = '<div class="ch-note" style="padding:12px 8px 4px">پیام شما مستقیم به میرزا می‌رسد</div>'; _chatAskName('dm'); return; }
   const peer = _rbActiveDmPeer();
   _ensureDmListener(peer);
-  _renderChatList('dmList', _dmMsgCache[peer] || []);
+  _dmRenderList(peer);
   if (_rbPaneVisible('dm')) _chatMarkRead('dm', peer);
 }
 function _dmRenderThreadList() {
@@ -18568,6 +18806,57 @@ function _dmRenderThreadList() {
 }
 function dmOpenThread(peer) { _rbCurrentDm = peer; _ensureDmListener(peer); _rbRenderDmPane(); }
 function dmBackToList() { _rbCurrentDm = null; _rbRenderDmPane(); }
+// ---- جواب‌گوی خودکارِ «چت با میرزا» (نمای کیو‌آر) ----
+// رندر فهرست چت تک‌نفره: در نمای کیو‌آر، پیام‌های محلیِ جواب‌گوی خودکار با
+// پیام‌های سرور (خود میرزا) در یک فهرست و به ترتیب زمان نشان داده می‌شوند.
+function _dmRenderList(peer) {
+  if (_rbMode === 'person' && _personBotMsgs.length) {
+    const merged = [].concat(_dmMsgCache[peer] || [], _personBotMsgs).sort((a, b) => (a.ts || 0) - (b.ts || 0));
+    _renderChatList('dmList', merged);
+    return;
+  }
+  _renderChatList('dmList', _dmMsgCache[peer] || []);
+}
+// پیام مهمان در مرحلهٔ جواب‌گوی خودکار: محلی می‌ماند و ربات جای میرزا جواب می‌دهد.
+// برمی‌گرداند true اگر پیام همین‌جا رسیدگی شد (نباید به سرور برود).
+function _personBotHandle(txt) {
+  if (_rbMode !== 'person' || !_personBotActive) return false;
+  const me = _chatMe();
+  _personBotMsgs.push({ f: (me && me.id) || 'guest', k: 'text', t: txt, ts: Date.now() });
+  const q = _botNorm(txt);
+  const wantsMirza = q.includes('میرزا') && !q.includes('میرزا کیست') && !q.includes('میرزا چیست') && !q.includes('میرزا کی است');
+  if (wantsMirza) { _personBotHandoff(); _dmRenderList(_rbActiveDmPeer()); return true; }
+  const ans = _botAnswer(txt);
+  if (ans) _personBotMsgs.push({ f: 'bot', bn: 'میرزا (جواب خودکار)', k: 'text', t: ans, ts: Date.now() });
+  else _personBotMsgs.push({ f: 'bot', bn: 'میرزا (جواب خودکار)', k: 'text', t: 'جواب دقیق این سوال را ندارم — می‌خواهید خودِ میرزا جواب بدهد؟', ts: Date.now(), sug: 'mirzaDm' });
+  _dmRenderList(_rbActiveDmPeer());
+  return true;
+}
+// واگذاری به میرزا: گفتگوی انجام‌شده با جواب‌گوی خودکار یک‌جا برای میرزا فرستاده
+// می‌شود و از این به بعد پیام‌ها مستقیم به خودِ میرزا می‌روند.
+function _personBotHandoff() {
+  if (!_chatOnline()) {
+    _personBotMsgs.push({ f: 'bot', bn: 'میرزا (جواب خودکار)', k: 'text', t: 'اینترنت وصل نیست — پیام به میرزا نمی‌رسد. وقتی نت وصل شد، دوباره بنویسید تا وصل تان کنم.', ts: Date.now() });
+    return false;
+  }
+  _personBotActive = false;
+  const nm = (_rbPersonPeer && _rbPersonPeer.name) || 'مهمان';
+  const transcript = _personBotMsgs.filter(m => m.k === 'text' && m.t).slice(-20)
+    .map(m => (m.f === 'bot' ? 'جواب‌گوی خودکار: ' : nm + ': ') + m.t).join('\n');
+  try { _chatPush('dm', { k: 'text', t: '📨 درخواست صحبت با میرزا — گفتگو با جواب‌گوی خودکار:\n' + transcript }); } catch (e) {}
+  _personBotMsgs.push({ f: 'bot', bn: 'میرزا (جواب خودکار)', k: 'text', t: '✅ پیام‌های شما به میرزا فرستاده شد — از این به بعد مستقیم با خودِ میرزا صحبت می‌کنید و در زودترین فرصت جواب تان را می‌دهد.', ts: Date.now() });
+  return true;
+}
+function dmMirzaYes() {
+  _personBotMsgs.forEach(m => { if (m.sug) m.sug = null; });
+  _personBotHandoff();
+  _dmRenderList(_rbActiveDmPeer());
+}
+function dmMirzaNo() {
+  _personBotMsgs.forEach(m => { if (m.sug) m.sug = null; });
+  _personBotMsgs.push({ f: 'bot', bn: 'میرزا (جواب خودکار)', k: 'text', t: 'خوب است! اگر سوال دیگری دارید، بپرسید.', ts: Date.now() });
+  _dmRenderList(_rbActiveDmPeer());
+}
 // ---- خوانده‌شده‌ها و بج ----
 function _chatReadMarks() { try { return JSON.parse(localStorage.getItem('pumpChatRead') || '{}'); } catch (e) { return {}; } }
 function _chatMarkRead(scope, peer) {
@@ -19132,7 +19421,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.51';
+const APP_VERSION = '2.9.52';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
