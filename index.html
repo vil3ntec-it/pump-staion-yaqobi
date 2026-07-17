@@ -18675,15 +18675,19 @@ function _chatPushRaw(scope, msg, peerOpt) {
 function _extPushNotify(scope, msg) {
   try {
     if (!DB.pushEnabled || !(DB.pushTopic || '').trim()) return;
-    if (msg.f === 'admin' || msg.f === 'bot') return; // پیام خودِ میرزا/ربات اعلان نمی‌خواهد
-    const who = msg.n || 'مشتری';
+    // همهٔ پیام‌ها اعلان می‌فرستند — حتی پیام خودِ میرزا و ربات (خواستهٔ صاحب برنامه:
+    // هیچ پیامی از قلم نیفتد؛ خودِ فرستنده هم اعلانِ پیام خودش را می‌بیند و مطمئن می‌شود کار می‌کند)
+    const who = msg.f === 'admin' ? 'میرزا' : (msg.f === 'bot' ? 'ربات' : (msg.n || 'مشتری'));
     const preview = msg.k === 'text' ? String(msg.t || '').slice(0, 80) : (msg.k === 'audio' ? '🎤 پیام صوتی' : msg.k === 'image' ? '🖼️ عکس' : '🎬 ویدیو');
+    const title = scope === 'group' ? '👥 چت گروهی — ' + who
+      : scope === 'personbot' ? '🤖 سوال از جواب‌گوی خودکار — ' + who
+      : (msg.f === 'admin' ? '💬 جواب میرزا' : '💬 پیام به میرزا — ' + who);
     const baseUrl = /^http/.test(location.protocol) ? location.href.split('#')[0] : 'https://vil3ntec-it.github.io/pump-staion-yaqobi/';
     fetch('https://ntfy.sh', {
       method: 'POST',
       body: JSON.stringify({
         topic: DB.pushTopic.trim(),
-        title: scope === 'group' ? '👥 چت گروهی — ' + who : '💬 پیام به میرزا — ' + who,
+        title: title,
         message: preview,
         click: baseUrl,
         tags: ['speech_balloon']
@@ -18948,6 +18952,9 @@ function _personBotHandle(txt) {
   if (_rbMode !== 'person' || !_personBotActive) return false;
   const me = _chatMe();
   _personBotMsgs.push({ f: (me && me.id) || 'guest', k: 'text', t: txt, ts: Date.now() });
+  // میرزا بی‌خبر نماند: سوالِ مهمان از جواب‌گوی خودکار (که محلی است و به چتِ سرور
+  // نمی‌رود) هم به‌صورت اعلان بیرون از برنامه برایش فرستاده می‌شود
+  try { _extPushNotify('personbot', { f: (me && me.id) || 'guest', n: (_rbPersonPeer && _rbPersonPeer.name) || 'مهمان', k: 'text', t: txt }); } catch (e) {}
   const q = _botNorm(txt);
   const wantsMirza = q.includes('میرزا') && !q.includes('میرزا کیست') && !q.includes('میرزا چیست') && !q.includes('میرزا کی است');
   if (wantsMirza) { _personBotHandoff(); _dmRenderList(_rbActiveDmPeer()); return true; }
@@ -19546,7 +19553,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.54';
+const APP_VERSION = '2.9.55';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
