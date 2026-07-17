@@ -6246,7 +6246,8 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <div style="font-size:0.85rem;color:var(--muted);line-height:2;margin-bottom:12px">
       با فعال کردن این بخش، هر پیامی که کارمند یا مشتری در چت (گروهی یا چت با میرزا) بفرستد، همان لحظه به‌صورت اعلان به گوشی/کامپیوتر شما می‌رسد — <b>حتی وقتی برنامه کاملاً بسته باشد</b>. این کار از راه سرویس اعلان رایگان <b dir="ltr">ntfy</b> انجام می‌شود.<br>
       راه‌اندازی (فقط یک بار): <b>۱)</b> دکمهٔ «فعال کردن» را بزنید تا کد اشتراک ساخته شود. <b>۲)</b> روی گوشی، برنامهٔ رایگان <b dir="ltr">ntfy</b> را از گوگل‌پلی یا اپ‌استور نصب کنید — روی کامپیوتر لازم نیست چیزی نصب شود، فقط «باز کردن صفحهٔ اشتراک» را بزنید و اجازهٔ اعلان بدهید. <b>۳)</b> در برنامهٔ ntfy گزینهٔ <b dir="ltr">+ Subscribe to topic</b> را بزنید و کد اشتراک را وارد کنید. <b>۴)</b> با «تست اعلان» مطمئن شوید که می‌رسد.<br>
-      ⚠️ کد اشتراک مثل رمز است — به هیچ‌کس ندهید؛ هر که آن را بداند اعلان پیام‌ها را می‌بیند.
+      ⚠️ کد اشتراک مثل رمز است — به هیچ‌کس ندهید؛ هر که آن را بداند اعلان پیام‌ها را می‌بیند.<br>
+      👥 <b>کارمندان و مشتریان</b> لازم نیست این کد را داشته باشند: هر کس در پنل چت روی دکمهٔ <b>🔔</b> بالای پنل بزند، مشترکِ اعلان‌های مربوط به خودش می‌شود — کارمندان: چت گروهی و هشدارها؛ مشتری کیو‌آر: فقط جواب‌های میرزا به خودش.
     </div>
     <div class="pw-row">
       <div class="pw-field" style="flex:1"><label>کد اشتراک (تاپیک)</label><input id="push-topic" readonly dir="ltr" style="direction:ltr;text-align:left" placeholder="هنوز ساخته نشده — «فعال کردن» را بزنید"></div>
@@ -6476,6 +6477,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
   <div class="rb-head" id="robotHead">
     <span class="rb-title"><svg><use href="#ic-robot"/></svg> <span id="rbTitleTxt">ربات دستیار</span> <span class="app-version" style="opacity:.7"></span></span>
     <span style="display:flex;gap:2px;align-items:center">
+      <button class="rb-size" onclick="pushSubscribeSelf()" title="اعلان پیام‌ها حتی وقتی برنامه بسته است" style="font-size:0.95rem">🔔</button>
       <button class="rb-size" onclick="toggleRobotSize()" title="بزرگ/کوچک"><svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round"><use href="#ic-expand"/></svg></button>
       <button class="rb-close" onclick="toggleRobot()" title="بستن">✕</button>
     </span>
@@ -18466,7 +18468,9 @@ function _botAnnounce(text, toGroup) {
   // فقط از دستگاه میرزا در چت گروهی هم فرستاده شود — تا با هر کارمندی که همین لحظه
   // همین هشدار را محلی تشخیص می‌دهد، پیام چند بار تکراری در گروه نیاید
   if (toGroup && _rbMode === 'admin' && _chatOnline()) {
-    try { _chatPushRaw('group', { f: 'bot', n: 'ربات', k: 'text', t: text, ts: Date.now() }); } catch (e) {}
+    // alert:true یعنی این پیامِ ربات «هشدار» است (مخزن کم، حساب جدید و...) و باید
+    // اعلان بیرون از برنامه هم بفرستد — جواب‌های معمولی ربات این نشان را ندارند
+    try { _chatPushRaw('group', { f: 'bot', n: 'ربات', k: 'text', t: text, ts: Date.now(), alert: true }); } catch (e) {}
   }
 }
 function _qaRender() {
@@ -18664,7 +18668,7 @@ function _chatPushRaw(scope, msg, peerOpt) {
     if (msg.f !== 'admin' && msg.f !== 'bot') idx.name = msg.n;
     _fbDb.ref(_chatRoot() + 'dmIndex/' + peer).update(idx);
     _chatMarkRead('dm', peer);
-    _extPushNotify('dm', msg);
+    _extPushNotify('dm', msg, peer);
   } catch (e) { showToast('خطا در فرستادن پیام', '#e53e3e'); }
 }
 // ========== اعلان بیرون از برنامه (ntfy.sh) ==========
@@ -18672,27 +18676,40 @@ function _chatPushRaw(scope, msg, peerOpt) {
 // به او برسد، دستگاهِ «فرستنده» همان لحظه یک اعلان کوچک به سرویس رایگان ntfy.sh
 // می‌فرستد و گوشی/کامپیوتر میرزا که مشترکِ همان کد (تاپیک) است، اعلان را می‌گیرد.
 // فقط عنوان و پیش‌نمایش کوتاه فرستاده می‌شود — عکس/صدا/ویدیو فقط با برچسب نوع.
-function _extPushNotify(scope, msg) {
+function _extPushRaw(topic, title, message) {
   try {
-    if (!DB.pushEnabled || !(DB.pushTopic || '').trim()) return;
-    // همهٔ پیام‌ها اعلان می‌فرستند — حتی پیام خودِ میرزا و ربات (خواستهٔ صاحب برنامه:
-    // هیچ پیامی از قلم نیفتد؛ خودِ فرستنده هم اعلانِ پیام خودش را می‌بیند و مطمئن می‌شود کار می‌کند)
-    const who = msg.f === 'admin' ? 'میرزا' : (msg.f === 'bot' ? 'ربات' : (msg.n || 'مشتری'));
-    const preview = msg.k === 'text' ? String(msg.t || '').slice(0, 80) : (msg.k === 'audio' ? '🎤 پیام صوتی' : msg.k === 'image' ? '🖼️ عکس' : '🎬 ویدیو');
-    const title = scope === 'group' ? '👥 چت گروهی — ' + who
-      : scope === 'personbot' ? '🤖 سوال از جواب‌گوی خودکار — ' + who
-      : (msg.f === 'admin' ? '💬 جواب میرزا' : '💬 پیام به میرزا — ' + who);
     const baseUrl = /^http/.test(location.protocol) ? location.href.split('#')[0] : 'https://vil3ntec-it.github.io/pump-staion-yaqobi/';
     fetch('https://ntfy.sh', {
       method: 'POST',
-      body: JSON.stringify({
-        topic: DB.pushTopic.trim(),
-        title: title,
-        message: preview,
-        click: baseUrl,
-        tags: ['speech_balloon']
-      })
+      body: JSON.stringify({ topic: topic, title: title, message: message, click: baseUrl, tags: ['speech_balloon'] })
     }).catch(() => {});
+  } catch (e) {}
+}
+// مسیربندی اعلان‌ها (خواستهٔ صاحب برنامه):
+//   • پیام کارمند/مشتری (گروهی یا به میرزا) → تاپیک میرزا + تاپیک کارمندان
+//   • هشدارهای ربات (مخزن کم، حساب جدید و...) → تاپیک میرزا + تاپیک کارمندان
+//   • جوابِ سوال‌وجوابِ ربات و گفتگوی جواب‌گوی خودکارِ کیو‌آر → هیچ اعلانی
+//   • جواب میرزا در چت تک‌نفره → فقط تاپیک شخصیِ همان طرف (نه چت‌های دیگران)
+// تاپیک‌ها: میرزا = کد اصلی · کارمندان = کد اصلی + «-staff» · هر مشتری = کد اصلی + «-p-» + شناسه‌اش
+function _extPushNotify(scope, msg, peer) {
+  try {
+    if (!DB.pushEnabled) return;
+    const base = (DB.pushTopic || '').trim();
+    if (!base) return;
+    if (msg.f === 'bot' && !msg.alert) return; // جواب معمولی ربات — اعلان نمی‌خواهد
+    const who = msg.f === 'admin' ? 'میرزا' : (msg.f === 'bot' ? 'ربات' : (msg.n || 'مشتری'));
+    const preview = msg.k === 'text' ? String(msg.t || '').slice(0, 80) : (msg.k === 'audio' ? '🎤 پیام صوتی' : msg.k === 'image' ? '🖼️ عکس' : '🎬 ویدیو');
+    if (scope === 'group') {
+      const title = msg.f === 'bot' ? '📢 هشدار پمپ' : '👥 چت گروهی — ' + who;
+      _extPushRaw(base, title, preview);
+      _extPushRaw(base + '-staff', title, preview);
+      return;
+    }
+    if (msg.f === 'admin') {
+      if (peer) _extPushRaw(base + '-p-' + peer, '💬 جواب میرزا — پمپ یعقوبی', preview);
+      return;
+    }
+    _extPushRaw(base, '💬 پیام به میرزا — ' + who, preview);
   } catch (e) {}
 }
 // --- تنظیمات اعلان بیرون از برنامه (کارت در «تنظیمات») ---
@@ -18737,6 +18754,21 @@ function pushCopyTopic() {
   const t = (DB.pushTopic || '').trim();
   if (!t) { _pushMsg('اول «فعال کردن» را بزنید تا کد ساخته شود.'); return; }
   try { navigator.clipboard.writeText(t).then(() => _pushMsg('📋 کد کپی شد.', true)); } catch (e) { _pushMsg('کپی نشد — کد را دستی انتخاب و کپی کنید.'); }
+}
+// دکمهٔ 🔔 سربرگ پنل چت: هر کس (کارمند/مشتری کیو‌آر) با یک بار زدن، مشترکِ
+// تاپیک مربوط به خودش می‌شود تا پیام‌هایش حتی با برنامهٔ بسته برسد.
+// کارمند/هرکه در برنامه است → تاپیک کارمندان (چت گروهی + هشدارها)
+// مشتری کیو‌آر → تاپیک شخصی خودش (فقط جواب‌های میرزا به خودش، نه چت‌های دیگران)
+// مدیر → تاپیک اصلی خودش
+function pushSubscribeSelf() {
+  const base = (DB.pushTopic || '').trim();
+  if (!DB.pushEnabled || !base) { showToast('اعلان بیرون از برنامه هنوز در تنظیمات فعال نشده است', '#e53e3e'); return; }
+  let topic;
+  if (_rbMode === 'person' && _rbPersonPeer) topic = base + '-p-' + _rbPersonPeer.peer;
+  else if (_rbMode === 'admin') topic = base;
+  else topic = base + '-staff';
+  try { window.open('https://ntfy.sh/' + encodeURIComponent(topic), '_blank'); } catch (e) {}
+  try { showTopToast('🔔 در صفحه‌ای که باز شد، اعلان‌ها (Notifications) را فعال کنید — از آن به بعد پیام‌های مربوط به شما حتی وقتی برنامه بسته است می‌رسد', '#2b6cb0', 7000); } catch (e) {}
 }
 function pushTest() {
   const t = (DB.pushTopic || '').trim();
@@ -18952,9 +18984,6 @@ function _personBotHandle(txt) {
   if (_rbMode !== 'person' || !_personBotActive) return false;
   const me = _chatMe();
   _personBotMsgs.push({ f: (me && me.id) || 'guest', k: 'text', t: txt, ts: Date.now() });
-  // میرزا بی‌خبر نماند: سوالِ مهمان از جواب‌گوی خودکار (که محلی است و به چتِ سرور
-  // نمی‌رود) هم به‌صورت اعلان بیرون از برنامه برایش فرستاده می‌شود
-  try { _extPushNotify('personbot', { f: (me && me.id) || 'guest', n: (_rbPersonPeer && _rbPersonPeer.name) || 'مهمان', k: 'text', t: txt }); } catch (e) {}
   const q = _botNorm(txt);
   const wantsMirza = q.includes('میرزا') && !q.includes('میرزا کیست') && !q.includes('میرزا چیست') && !q.includes('میرزا کی است');
   if (wantsMirza) { _personBotHandoff(); _dmRenderList(_rbActiveDmPeer()); return true; }
@@ -19553,7 +19582,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.55';
+const APP_VERSION = '2.9.56';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
