@@ -17979,10 +17979,10 @@ function openStaffAccount(pid, subId) {
   let sum = `
     <div class="ro-sum-box"><div class="l">💵 بردگی (پول)</div><div class="v" style="color:var(--accent)">${n2fa(t.all.bardagi)}</div></div>
     <div class="ro-sum-box"><div class="l">💵 رسید (پول)</div><div class="v" style="color:var(--green)">${n2fa(t.all.rasid)}</div></div>
-    <div class="ro-sum-box"><div class="l">💵 الباقی (پول)</div><div class="v" style="color:${t.all.albaqi > 0 ? 'var(--red)' : 'var(--green)'}">${t.all.albaqi <= 0 ? '✅ تسویه' : n2fa(t.all.albaqi)}</div></div>
+    <div class="ro-sum-box"><div class="l">💵 الباقی (پول)</div><div class="v" style="color:${t.all.albaqi > 0 ? 'var(--red)' : 'var(--green)'}">${t.all.albaqi > 0 ? n2fa(t.all.albaqi) : (t.all.albaqi < 0 ? n2fa(_r2(-t.all.albaqi)) + ' دارد' : '✅ تسویه')}</div></div>
     <div class="ro-sum-box"><div class="l">🛢️ بردگی تیل (لیتر)</div><div class="v" style="color:var(--accent)">${n2fa(t.all.fuel)} ل</div>${_fsub(t.petrol.fuel, t.diesel.fuel)}</div>
     <div class="ro-sum-box"><div class="l">🛢️ رسید تیل (لیتر)</div><div class="v" style="color:var(--green)">${n2fa(rasidL)} ل</div>${_fsub(rasidLP, rasidLD)}</div>
-    <div class="ro-sum-box"><div class="l">🛢️ الباقی تیل (لیتر)</div><div class="v" style="color:${albaqiL > 0 ? 'var(--red)' : 'var(--green)'}">${albaqiL <= 0 ? '✅ تسویه' : n2fa(albaqiL) + ' ل'}</div>${_fsub(t.petrol.fuel - rasidLP, t.diesel.fuel - rasidLD)}</div>`;
+    <div class="ro-sum-box"><div class="l">🛢️ الباقی تیل (لیتر)</div><div class="v" style="color:${albaqiL > 0 ? 'var(--red)' : 'var(--green)'}">${albaqiL > 0 ? n2fa(albaqiL) + ' ل' : (albaqiL < 0 ? n2fa(_r2(-albaqiL)) + ' ل دارد' : '✅ تسویه')}</div>${_fsub(t.petrol.fuel - rasidLP, t.diesel.fuel - rasidLD)}</div>`;
   if (fl.hasP) sum += `<div class="ro-sum-box"><div class="l">⛽ باقی تیل پطرول</div><div class="v" style="color:var(--green)">${n2fa(Math.round(fl.petrol))} ل</div></div>`;
   if (fl.hasD) sum += `<div class="ro-sum-box"><div class="l">🟤 باقی تیل دیزل</div><div class="v" style="color:#b7791f">${n2fa(Math.round(fl.diesel))} ل</div></div>`;
   document.getElementById('sa-sum').innerHTML = sum;
@@ -19729,7 +19729,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.63';
+const APP_VERSION = '2.9.64';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -20118,12 +20118,12 @@ function _staffCard(p, sub) {
   const sums = `<div class="staff-mini-sums">
     <div class="ms"><div class="l">💵 بردگی (پول)</div><div class="v" style="color:var(--accent)">${n2fa(t.all.bardagi)}</div></div>
     <div class="ms"><div class="l">💵 رسید (پول)</div><div class="v" style="color:var(--green)">${n2fa(t.all.rasid)}</div></div>
-    <div class="ms"><div class="l">💵 الباقی (پول)</div><div class="v" style="color:${moneyBal > 0 ? 'var(--red)' : 'var(--green)'}">${moneyBal <= 0 ? '✅' : n2fa(moneyBal)}</div></div>
+    <div class="ms"><div class="l">💵 الباقی (پول)</div><div class="v" style="color:${moneyBal > 0 ? 'var(--red)' : 'var(--green)'}">${moneyBal > 0 ? n2fa(moneyBal) : (moneyBal < 0 ? n2fa(_r2(-moneyBal)) : '✅')}</div></div>
   </div>
   <div class="staff-mini-sums">
     <div class="ms"><div class="l">🛢️ بردگی تیل (ل)</div><div class="v" style="color:var(--accent)">${n2fa(t.all.fuel)}</div>${_fsub(t.petrol.fuel, t.diesel.fuel)}</div>
     <div class="ms"><div class="l">🛢️ رسید تیل (ل)</div><div class="v" style="color:var(--green)">${n2fa(rasidL)}</div>${_fsub(rasidLP, rasidLD)}</div>
-    <div class="ms"><div class="l">🛢️ الباقی تیل (ل)</div><div class="v" style="color:${albaqiL > 0 ? 'var(--red)' : 'var(--green)'}">${albaqiL <= 0 ? '✅' : n2fa(albaqiL)}</div>${_fsub(t.petrol.fuel - rasidLP, t.diesel.fuel - rasidLD)}</div>
+    <div class="ms"><div class="l">🛢️ الباقی تیل (ل)</div><div class="v" style="color:${albaqiL > 0 ? 'var(--red)' : 'var(--green)'}">${albaqiL > 0 ? n2fa(albaqiL) : (albaqiL < 0 ? n2fa(_r2(-albaqiL)) : '✅')}</div>${_fsub(t.petrol.fuel - rasidLP, t.diesel.fuel - rasidLD)}</div>
   </div>`;
   return `<div class="staff-card" onclick="openStaffAccount('${escFa(p.id)}','${sub ? escFa(String(sub.id)) : ''}')">
     <div class="nm"><span>${title}</span><span class="tp">${chip}</span></div>
