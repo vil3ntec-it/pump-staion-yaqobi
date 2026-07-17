@@ -11608,6 +11608,9 @@ function _updatePersonTotals(person) {
   let _moneyBardP=0,_moneyBardLP=0,_moneyBardD=0,_moneyBardLD=0;   // بردگیِ فقط‌پولی → لیتر
   let _rasidMoneyLP=0,_rasidMoneyLD=0;               // رسیدِ پولی → لیتر
   let _rasidFuelMoneyP=0,_rasidFuelMoneyD=0;         // رسید تیل → پول
+  // رسیدِ پولی که روی ردیفِ فی‌دار نشسته، با فیِ قفل‌شدهٔ همان ردیف به لیتر تبدیل
+  // می‌شود؛ فقط رسیدِ ردیف‌های بی‌فی می‌ماند تا بعد از حلقه با فیِ مؤثرِ حساب تبدیل شود
+  let _rasidRowLP=0,_rasidRowLD=0, _rasidLooseP=0,_rasidLooseD=0;
   rows.forEach(r => {
     const isD = r.ftype === 'diesel';
     const f = parseFloat(r.fuel)||0, b = parseFloat(r.bardagi)||0, rs = parseFloat(r.rasid)||0, rf = parseFloat(r.rasidFuel)||0;
@@ -11625,23 +11628,31 @@ function _updatePersonTotals(person) {
       if(isD){_moneyBardD+=b;_moneyBardLD+=L;} else {_moneyBardP+=b;_moneyBardLP+=L;}
     }
     if (rf > 0){ const M = rf*rowFee; if(isD)_rasidFuelMoneyD+=M; else _rasidFuelMoneyP+=M; }
+    if (rs > 0){
+      // فیِ صریحِ همین ردیف: بردگی÷لیتر یا فیِ تایپ‌شده — رسیدِ این ردیف با همین نرخ
+      // قفل می‌شود تا تغییرِ فیِ ردیف‌های «بردگیِ» دیگر، ارزشِ لیتریِ رسید را جابه‌جا
+      // نکند (تیل از هیچ پیدا/غیب نشود)
+      const expFee = (f > 0 && b > 0) ? (b/f) : (parseFloat(r.priceper)||0);
+      if (expFee > 0){ if(isD)_rasidRowLD+=rs/expFee; else _rasidRowLP+=rs/expFee; }
+      else { if(isD)_rasidLooseD+=rs; else _rasidLooseP+=rs; }
+    }
   });
   const _accFeeP = _fFuelP>0 ? (_fBardP/_fFuelP) : 0;   // فیِ خالصِ حساب (ردیف‌های لیتردار)
   const _accFeeD = _fFuelD>0 ? (_fBardD/_fFuelD) : 0;
   // نرخِ مؤثرِ نمایشِ الباقی وقتی فیِ لیتردار نیست (از بردگیِ پولی و معادلِ لیترش)
   const _blendP = _moneyBardLP>0 ? (_moneyBardP/_moneyBardLP) : 0;
   const _blendD = _moneyBardLD>0 ? (_moneyBardD/_moneyBardLD) : 0;
-  // ── تبدیلِ «رسیدِ پول» به لیتر با فیِ مؤثرِ کلِ حساب (نه فیِ هر ردیف) ──────────────
-  // باگ: رسیدِ پول با فیِ ردیفِ خودش به لیتر تبدیل می‌شد؛ اگر کاربر کلِ پول را در یک
-  // ردیف (با فیِ متفاوت) می‌نوشت، معادلِ لیترش غلط درمی‌آمد و الباقی صفر نمی‌شد — حتی
-  // وقتی پولِ داده‌شده دقیقاً برابرِ بردگی بود. رسیدِ پول بدهیِ کلی را کم می‌کند، پس با
-  // همان نرخی که تیلِ حساب «برده شده» (بردگیِ کل ÷ مقدار تیلِ کل) به لیتر تبدیل می‌شود؛
-  // این‌طوری «پولِ داده = پولِ برده» ⇒ الباقی پول و الباقی تیل هر دو صفر می‌شوند.
+  // ── تبدیلِ «رسیدِ پول» به لیتر ─────────────────────────────────────────────────
+  // رسیدی که روی ردیفِ فی‌دار نشسته با نرخِ قفل‌شدهٔ همان ردیف تبدیل شده (در حلقهٔ
+  // بالا)؛ پس تغییرِ فیِ ردیف‌های بردگیِ دیگر «مقدار رسید تیل» را جابه‌جا نمی‌کند و
+  // بعد از تصفیه، با عوض‌کردنِ فیِ یک ردیف تیل از هیچ پیدا نمی‌شود. فقط رسیدِ
+  // ردیف‌های بی‌فی این‌جا با فیِ مؤثرِ کلِ حساب (بردگیِ کل ÷ تیلِ کل) تبدیل می‌شود تا
+  // «پولِ داده = پولِ برده» ⇒ الباقی صفر بماند (اصلاحِ قبلی برای ردیفِ بی‌فی).
   const _uP0e = parseFloat(DB.unionRatePetrol)||0, _uD0e = parseFloat(DB.unionRateDiesel)||0;
   const _effFeeP = _accFeeP > 0 ? _accFeeP : (_blendP > 0 ? _blendP : _uP0e);
   const _effFeeD = _accFeeD > 0 ? _accFeeD : (_blendD > 0 ? _blendD : _uD0e);
-  _rasidMoneyLP = _effFeeP > 0 ? (t.petrol.rasid / _effFeeP) : 0;
-  _rasidMoneyLD = _effFeeD > 0 ? (t.diesel.rasid / _effFeeD) : 0;
+  _rasidMoneyLP = _rasidRowLP + (_effFeeP > 0 ? (_rasidLooseP / _effFeeP) : 0);
+  _rasidMoneyLD = _rasidRowLD + (_effFeeD > 0 ? (_rasidLooseD / _effFeeD) : 0);
   // برد = مجموع لیتر (+ معادلِ لیترِ بردگیِ پولی) در حالت تیل؛ مجموع بردگی/پول در حالت پول
   const bordP = money ? t.petrol.bardagi : (t.petrol.fuel + _moneyBardLP);
   const bordD = money ? t.diesel.bardagi : (t.diesel.fuel + _moneyBardLD);
@@ -19685,7 +19696,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.58';
+const APP_VERSION = '2.9.59';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
