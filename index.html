@@ -525,7 +525,8 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 .rb-pane.active{display:flex}
 /* فهرست پیام‌ها */
 .ch-list{flex:1;overflow-y:auto;padding:12px 10px;display:flex;flex-direction:column;gap:8px;min-height:0}
-.ch-b{max-width:82%;border-radius:14px;padding:8px 11px;font-size:0.85rem;line-height:1.9;word-break:break-word;position:relative}
+/* white-space:pre-line: جواب‌های چندخطی ربات (بردگی/رسید/الباقی هر کدام در یک خط) درست دیده شوند */
+.ch-b{max-width:82%;border-radius:14px;padding:8px 11px;font-size:0.85rem;line-height:1.9;word-break:break-word;position:relative;white-space:pre-line}
 .ch-b.me{align-self:flex-start;background:var(--blue);color:#fff;border-bottom-left-radius:4px}
 .ch-b.other{align-self:flex-end;background:var(--card);color:var(--txt);border:1px solid var(--border);border-bottom-right-radius:4px}
 .ch-b.bot{align-self:flex-end;background:rgba(34,204,255,.1);color:var(--txt);border:1px solid var(--blue);border-bottom-right-radius:4px}
@@ -5260,13 +5261,19 @@ table thead th{ position:relative; }
   <div class="card" style="border-color:var(--accent)">
     <div class="card-head"><div class="card-title">📏 اندازه‌گیری واقعی مخزن — میله‌زنی</div></div>
     <div style="padding:14px">
-      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.7">عدد واقعی مخزن را بنویسید؛ فرقش با موجودی دفتری (حسابی) نشان داده می‌شود — منفی یعنی کم‌آمد/نشتی. فقط ثبت است و روی هیچ حسابی اثر نمی‌گذارد.</div>
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.7">مخزن را انتخاب کنید — ظرفیت و موجودی دفتری خودکار از بخش مخزن‌ها می‌آید (اینجا هیچ‌چیز دوباره تعریف نمی‌شود). فقط لیتر میله‌زنی را بنویسید؛ موجودی واقعی، درصد پر بودن، فضای خالی و ظرفیت قابل دریافت از تانکر خودکار حساب می‌شود.</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-        <select id="dip-fuel" class="tools-in"><option value="petrol">⛽ پطرول</option><option value="diesel">🟤 دیزل</option></select>
-        <input type="number" id="dip-actual" class="tools-in" placeholder="لیتر واقعی" style="width:110px">
-        <input id="dip-note" class="tools-in" placeholder="یادداشت..." style="flex:1;min-width:110px">
+        <select id="dip-fuel" class="tools-in" onchange="dipFuelChanged()"><option value="petrol">⛽ پطرول</option><option value="diesel">🟤 دیزل</option></select>
+        <span style="font-size:0.72rem;color:var(--muted)">مشخصات مخزن (از بخش مخزن‌ها):</span>
+      </div>
+      <div id="dip-tankinfo" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+        <input type="number" id="dip-actual" class="tools-in" placeholder="لیتر میله‌زنی (واقعی)" style="width:150px;font-weight:800" oninput="dipLiveCalc()">
+        <input id="dip-note" class="tools-in" placeholder="توضیحات..." style="flex:1;min-width:110px">
+        <label style="display:inline-flex;gap:6px;align-items:center;font-size:0.76rem;cursor:pointer;color:var(--txt)"><input type="checkbox" id="dip-apply" checked style="accent-color:var(--accent)"> موجودی دفتری مخزن هم با همین عدد برابر شود</label>
         <button class="tools-btn" onclick="confirmTankDip()">✔ ثبت</button>
       </div>
+      <div id="dip-calc" style="margin-bottom:12px"></div>
       <div id="dip-list" style="font-size:0.82rem"></div>
     </div>
   </div>
@@ -7166,6 +7173,9 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <!-- خواستهٔ کاربر: کادر جداگانه برای جدول‌های «واحد پول» و کادر «هر دو واحد» -->
     <button type="button" class="tool-link-card" style="border-color:var(--green);color:var(--green)" onclick="openStaffSums('money')"><span>💵 قرض‌های واحد پول</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
     <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openStaffSums('both')"><span>💰🛢️ قرض‌ها — هر دو واحد در یک کادر</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
+    <!-- خواستهٔ کاربر: کادرهای حساب جداگانهٔ پطرول و دیزل برای مهمان‌های کیو‌آر/کارمند -->
+    <button type="button" class="tool-link-card" onclick="openStaffSums('petrol')"><span>⛽ حساب‌های جداگانهٔ پطرول</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
+    <button type="button" class="tool-link-card" style="border-color:#b7791f;color:#b7791f" onclick="openStaffSums('diesel')"><span>🟤 حساب‌های جداگانهٔ دیزل</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
     <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:8px">
       <input class="staff-search" id="staff-search" style="margin-bottom:0;flex:1" placeholder="🔍 نام قرض‌دار را بنویسید یا 🎤 بگویید" oninput="renderStaffList()" onkeydown="if(event.key==='Enter'){const c=document.querySelector('#staff-list .staff-card');if(c)c.click();}">
       <button type="button" id="staff-mic" class="staff-mic" onclick="staffVoiceSearch()" title="جستجوی صوتی">🎤</button>
@@ -7191,6 +7201,8 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <tfoot><tr id="sa-foot" style="background:var(--dark);font-weight:900"></tr></tfoot>
       </table>
     </div>
+    <!-- جدول‌های آرشیوشدهٔ همین حساب — فقط‌خواندنی، با نام ماه -->
+    <div id="sa-archives"></div>
     <div style="text-align:center;padding:16px;font-size:0.8rem;color:var(--muted)">🔒 فقط دیدن — هیچ چیزی تغییر نمی‌کند</div>
   </div>
 </div>
@@ -7253,9 +7265,13 @@ body.viewer-mode .inv-admin-only{display:none!important}
         </tfoot>
       </table>
     </div>
+    <!-- جدول‌های آرشیوشدهٔ حساب — فقط‌خواندنی، با نام ماه (برای اسکن‌کننده‌های کیو‌آر) -->
+    <div id="ro-archives"></div>
     <div style="text-align:center;padding:16px;font-size:0.75rem;color:var(--muted)">🔒 این صفحه فقط‌خواندنی است — هیچ تغییری ذخیره نمی‌شود</div>
   </div>
 </div>
+<!-- بعد از بستن نمای کیو‌آر، مهمان با این دکمه حساب را دوباره باز می‌کند (قبلاً صفحه خالی می‌ماند) -->
+<button id="roReopenBtn" style="display:none;position:fixed;bottom:26px;right:50%;transform:translateX(50%);z-index:9000;padding:13px 26px;border-radius:999px;border:none;background:var(--accent);color:#000;font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.95rem;cursor:pointer;box-shadow:0 8px 26px rgba(0,0,0,.4)" onclick="this.style.display='none';openROViewer(_roCurType,_roCurId)">↩️ دیدن دوبارهٔ حساب</button>
 
 <!-- READ-ONLY COMPANY VIEWER -->
 <div class="ro-overlay" id="companyRoOverlay">
@@ -8408,7 +8424,7 @@ function showSection(id, btn) {
   if (id === 'profit') calcPL();
   if (id === 'extraincome') { renderExtraIncomes(); calcExtraIncome(); }
   if (id === 'tanker') { try { _renderTankerPanel(); } catch(e) {} }
-  if (id === 'tankdip') { try { _renderDipPanel(); } catch(e) {} }
+  if (id === 'tankdip') { try { _renderDipPanel(); _dipRenderTankInfo(); dipLiveCalc(); } catch(e) {} }
   if (id === 'oldloans') { try { _renderAgingPanel(); } catch(e) {} }
   if (id === 'staffshort') { try { _ssSettleIdx = null; _renderStaffShortPanel(); } catch(e) {} }
   if (id === 'ratehist') { try { _renderRateHistPanel(); } catch(e) {} }
@@ -10262,7 +10278,11 @@ function _fuelStock(fuelType) {
   } else {
     totalOut = DB.shifts.filter(s => (s.fuel||'petrol') === 'diesel').reduce((a,s) => a + (s.sale||0), 0);
   }
-  return totalIn - totalOut;
+  // اصلاح میله‌زنی: وقتی مدیر در صفحهٔ میله‌زنی «برابر شدن موجودی دفتری با عدد واقعی» را
+  // ثبت کند، فرقش اینجا جمع می‌شود تا مخزن/داشبورد/هشدارها همه عدد واقعی را نشان بدهند.
+  const dipAdj = (DB.tankAdjusts || []).filter(a => a && a.fuel === fuelType)
+    .reduce((s, a) => s + (parseFloat(a.liters) || 0), 0);
+  return totalIn - totalOut + dipAdj;
 }
 function checkLowStock() {
   if (Date.now() - lastLowStockShown < lsInterval()) return false;
@@ -10899,21 +10919,25 @@ function _acctSummaryText(kind, type, id) {
     let cr = (parseFloat(c.usdRate) || 0) || (sumUsd > 0 ? rows.reduce((a, r) => a + cmpAfnTotal(r), 0) / sumUsd : 0);
     if (!cr) { for (const r of rows) { const rr = (parseFloat(r.payRate) || 0) || (parseFloat(r.rate) || 0); if (rr) { cr = rr; break; } } }
     const albaqi = rows.reduce((a, r) => a + cmpAlbaqi(r, cr), 0);
-    return '🛢️ حساب شرکت «' + c.name + '» — 💲 ' + n2fa(sumUsd.toFixed(1)) + ' دالر — ' +
-      ((albaqi <= 0 && rows.length) ? 'الباقی: ✅ تسویه' : 'الباقی: ' + n2fa(Math.round(albaqi)) + ' افغانی');
+    return '🛢️ حساب شرکت «' + c.name + '»\n' +
+      '💲 جمع: ' + n2fa(sumUsd.toFixed(1)) + ' دالر\n' +
+      ((albaqi <= 0 && rows.length) ? '✅ الباقی: تسویه' : 'الباقی: ' + n2fa(Math.round(albaqi)) + ' افغانی');
   }
   const list = kind === 'person' && type === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const p = (list || []).find(x => String(x.id) === String(id));
   if (!p) return null;
   const t = _splitTotals(_allRows(p));
+  // خواستهٔ کاربر: هر عدد در یک خط جدا و آخرش وضعیت (بدهکار / حساب دارید / تسویه)
+  const alb = Math.round(t.all.albaqi);
   const parts = ['👤 حساب «' + p.name + '»'];
   parts.push('بردگی: ' + n2fa(Math.round(t.all.bardagi)) + ' افغانی');
   parts.push('رسید: ' + n2fa(Math.round(t.all.rasid)) + ' افغانی');
-  parts.push(t.all.albaqi <= 0 ? 'الباقی: ✅ تسویه' : 'الباقی: ' + n2fa(Math.round(t.all.albaqi)) + ' افغانی');
+  parts.push('الباقی: ' + n2fa(Math.abs(alb)) + ' افغانی');
+  parts.push(alb > 0 ? '🔴 بدهکار هستید' : (alb < 0 ? '🟢 طلبکار هستید — پیش ما حساب دارید' : '✅ حساب تسویه است'));
   const fl = _staffAcctFuelLeft(p);
-  if (fl.hasP) parts.push('⛽ باقی تیل پطرول: ' + n2fa(Math.round(fl.petrol)) + ' لیتر');
-  if (fl.hasD) parts.push('🟤 باقی تیل دیزل: ' + n2fa(Math.round(fl.diesel)) + ' لیتر');
-  return parts.join(' — ');
+  if (fl.hasP) parts.push('⛽ تیل پطرول که دارید: ' + n2fa(Math.round(fl.petrol)) + ' لیتر');
+  if (fl.hasD) parts.push('🟤 تیل دیزل که دارید: ' + n2fa(Math.round(fl.diesel)) + ' لیتر');
+  return parts.join('\n');
 }
 // شمارهٔ ثبت‌شده → قالبِ بین‌المللیِ واتساپ (فقط رقم). اولین شمارهٔ داخل متن گرفته
 // می‌شود؛ ارقام فارسی تبدیل و «۰۰» ابتدای شماره حذف می‌شود؛ «۰» اولِ شمارهٔ افغانی
@@ -18071,6 +18095,48 @@ function _renderROViewer() {
   document.getElementById('ro-ft-bardagi').textContent = n2fa(t.all.bardagi);
   document.getElementById('ro-ft-rasid').textContent   = n2fa(t.all.rasid);
   document.getElementById('ro-ft-albaqi').textContent  = n2fa(t.all.albaqi);
+  // جدول‌های آرشیوشده — فقط‌خواندنی با نام ماه (خواستهٔ کاربر برای اسکن‌کننده‌های کیو‌آر)
+  const arcEl = document.getElementById('ro-archives');
+  if (arcEl) { try { arcEl.innerHTML = _roArchivesHtml(person); } catch (e) { arcEl.innerHTML = ''; } }
+}
+// جدول‌های آرشیو یک حساب برای نماهای فقط‌خواندنی (کیو‌آر و صفحهٔ کارمند) — هیچ ورودی/دکمه‌ای ندارد
+function _roArchivesHtml(acct) {
+  const hist = (acct && acct.tableHistory) || [];
+  if (!hist.length) return '';
+  const blocks = hist.slice().reverse().map(h => {
+    const rows = h.rows || [];
+    const t = _splitTotals(rows);
+    let mon = '';
+    try { mon = _monthLabel(_monthKey(h.createdAt || '')); } catch (e) {}
+    if (!mon || mon === 'بدون تاریخ') mon = 'بی‌تاریخ';
+    const fuelLbl = h.fuel === 'petrol' ? ' — ⛽ پطرول' : (h.fuel === 'diesel' ? ' — 🟤 دیزل' : '');
+    return `<div style="margin-top:14px;border:1px solid var(--border);border-radius:12px;overflow:hidden">
+      <div style="padding:10px 12px;background:var(--dark);font-weight:900;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <span>🗂️ آرشیو ماه ${escFa(mon)}${fuelLbl}</span>
+        <span style="color:var(--muted);font-size:0.72rem;font-weight:700">بسته شده: ${escFa(toEnDigits(String(h.createdAt || '')))} · 🔒 فقط خواندنی</span>
+      </div>
+      <div style="overflow-x:auto"><table class="ro-tbl" style="min-width:560px;width:100%">
+        <thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>تیل (ل)</th><th>بردگی</th><th>رسید</th><th>الباقی</th></tr></thead>
+        <tbody>${rows.map((r, i) => `<tr>
+          <td style="color:var(--muted);text-align:center">${n2fa(i + 1)}</td>
+          <td>${escFa(String(r.date || '—'))}</td>
+          <td>${escFa(r.name || '—')}</td>
+          <td style="color:var(--blue)">${(r.fuel || 0) > 0 ? n2fa(r.fuel) + ' ل' : '—'}</td>
+          <td style="color:var(--accent)">${n2fa(r.bardagi || 0)}</td>
+          <td style="color:var(--green)">${n2fa(r.rasid || 0)}</td>
+          <td style="color:${(r.albaqi || 0) > 0 ? 'var(--red)' : 'var(--green)'}">${n2fa(r.albaqi || 0)}</td>
+        </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:14px">خالی</td></tr>'}</tbody>
+        <tfoot><tr style="background:var(--dark);font-weight:900">
+          <td colspan="3" style="padding:8px 7px">جمع</td>
+          <td style="padding:8px 7px;color:var(--blue)">${n2fa(t.all.fuel)} ل</td>
+          <td style="padding:8px 7px;color:var(--accent)">${n2fa(t.all.bardagi)}</td>
+          <td style="padding:8px 7px;color:var(--green)">${n2fa(t.all.rasid)}</td>
+          <td style="padding:8px 7px;color:${t.all.albaqi > 0 ? 'var(--red)' : 'var(--green)'}">${n2fa(t.all.albaqi)}</td>
+        </tr></tfoot>
+      </table></div>
+    </div>`;
+  }).join('');
+  return `<div style="margin-top:18px"><div style="font-weight:900;font-size:0.95rem">🗂️ جدول‌های آرشیوشده — ماه‌های قبل</div>${blocks}</div>`;
 }
 function openROViewer(type, id) {
   const list = type === 'debt' ? DB.debtPersons : DB.noinvPersons;
@@ -18095,7 +18161,11 @@ function _toggleROMode() {
 function closeROViewer() {
   document.getElementById('roOverlay').classList.remove('open');
   const app = document.getElementById('app');
-  if (!app || app.style.display === 'none') { try { _showChatFabs(false); } catch (e) {} }
+  if (!app || app.style.display === 'none') {
+    try { _showChatFabs(false); } catch (e) {}
+    // مهمان کیو‌آر: بعد از بستن، صفحه خالی می‌ماند — دکمهٔ «دیدن دوباره» نشان داده شود
+    if (_roCurType && _roCurId) { const b = document.getElementById('roReopenBtn'); if (b) b.style.display = 'block'; }
+  }
 }
 function checkHashViewer() {
   const hash = window.location.hash;
@@ -18300,6 +18370,28 @@ function _staffSumsTableHtml(mode) {
     foot = `<tr style="font-weight:800;border-top:2px solid var(--border)"><td colspan="2">جمع کل</td>
       <td style="color:var(--accent);vertical-align:middle">${n2fa(z(mB))}</td><td style="color:var(--green);vertical-align:middle">${n2fa(z(mR))}</td><td style="color:${albColor(mA)};vertical-align:middle">${n2fa(z(-mA))}</td>
       <td style="color:var(--accent);vertical-align:middle">${n2fa(z(fB))} ل</td><td style="color:var(--green);vertical-align:middle">${n2fa(z(fR))} ل</td><td style="color:${albColor(fA)};vertical-align:middle">${n2fa(z(-fA))} ل</td></tr>`;
+  } else if (mode === 'petrol' || mode === 'diesel') {
+    // حساب جداگانهٔ یک نوع تیل — فقط نمایش؛ همان ردیف‌های حساب با فیلتر نوع تیل
+    cols = 6;
+    const lbl = mode === 'petrol' ? '⛽ پطرول' : '🟤 دیزل';
+    head = '<tr><th>#</th><th>نام قرض‌دار</th><th>تیل (لیتر)</th><th>بردگی</th><th>رسید</th><th>الباقی</th></tr>';
+    let sL = 0, sB = 0, sR = 0, sA = 0, n = 0;
+    body = list.map(p => {
+      const u = _splitTotals(_allRows(p))[mode];
+      if (!(u.fuel || u.bardagi || u.rasid || u.albaqi)) return '';
+      n++; sL += u.fuel; sB += u.bardagi; sR += u.rasid; sA += u.albaqi;
+      return `<tr${rowAttr(p)}><td>${n2fa(n)}</td><td style="font-weight:700">${escFa(p.name)}</td>
+        <td style="color:var(--blue);font-weight:700">${n2fa(z(u.fuel))} ل</td>
+        <td style="color:var(--accent);font-weight:700">${n2fa(z(u.bardagi))}</td>
+        <td style="color:var(--green);font-weight:700">${n2fa(z(u.rasid))}</td>
+        <td style="color:${albColor(u.albaqi)};font-weight:700">${n2fa(z(-u.albaqi))}</td></tr>`;
+    }).join('');
+    if (!body) body = `<tr><td colspan="6" style="text-align:center;padding:18px;color:var(--muted)">هیچ حسابِ ${lbl} نیست</td></tr>`;
+    foot = `<tr style="font-weight:800;border-top:2px solid var(--border)"><td colspan="2">جمع کل</td>
+      <td style="color:var(--blue);vertical-align:middle">${n2fa(z(sL))} ل</td>
+      <td style="color:var(--accent);vertical-align:middle">${n2fa(z(sB))}</td>
+      <td style="color:var(--green);vertical-align:middle">${n2fa(z(sR))}</td>
+      <td style="color:${albColor(sA)};vertical-align:middle">${n2fa(z(-sA))}</td></tr>`;
   } else if (mode === 'money') {
     head = '<tr><th>#</th><th>نام قرض‌دار</th><th>جمع بردگی</th><th>جمع رسید</th><th>الباقی</th></tr>';
     let mB = 0, mR = 0, mA = 0, n = 0;
@@ -18356,7 +18448,9 @@ function renderStaffSums(mode) {
     box('👥 تعداد قرض‌داران', n2fa((DB.debtPersons || []).length) + ' نفر', 'var(--blue)');
   const title = document.getElementById('staff-sums-title');
   if (title) title.textContent = _staffSumsMode === 'money' ? '💵 قرض‌های واحد پول'
-    : (_staffSumsMode === 'both' ? '💰🛢️ قرض‌ها — هر دو واحد' : '💰 قرض‌های جمع کل');
+    : (_staffSumsMode === 'both' ? '💰🛢️ قرض‌ها — هر دو واحد'
+    : (_staffSumsMode === 'petrol' ? '⛽ حساب‌های جداگانهٔ پطرول'
+    : (_staffSumsMode === 'diesel' ? '🟤 حساب‌های جداگانهٔ دیزل' : '💰 قرض‌های جمع کل')));
   const wrap = document.getElementById('staff-sums-tbl');
   if (wrap) wrap.innerHTML = _staffSumsTableHtml(_staffSumsMode);
 }
@@ -18440,6 +18534,9 @@ function openStaffAccount(pid, subId) {
     `<td style="color:var(--accent);padding:12px 10px">${n2fa(t.all.bardagi)}</td>` +
     `<td style="color:var(--green);padding:12px 10px">${n2fa(t.all.rasid)}</td>` +
     `<td style="color:${t.all.albaqi > 0 ? 'var(--red)' : 'var(--green)'};padding:12px 10px">${n2fa(t.all.albaqi)}</td>`;
+  // آرشیوهای همین حساب — فقط‌خواندنی با نام ماه
+  const saArc = document.getElementById('sa-archives');
+  if (saArc) { try { saArc.innerHTML = _roArchivesHtml(a); } catch (e) { saArc.innerHTML = ''; } }
   document.getElementById('staffAcctOverlay').classList.add('open');
 }
 function closeStaffAcct() {
@@ -18887,10 +18984,13 @@ function _botAnswer(qRaw) {
     const p = _rbPerson();
     if (p) {
       const t = _splitTotals(p.rows || []);
-      if (has('الباقی', 'باقی مانده', 'قرض من', 'قرضم', 'چقدر بدهکار', 'بدهی')) {
-        return t.all.albaqi <= 0
-          ? 'حساب شما تسویه است — الباقی ندارید.'
-          : 'الباقی حساب شما: ' + n2fa(Math.round(t.all.albaqi)) + ' افغانی';
+      if (has('الباقی', 'باقی مانده', 'قرض من', 'قرضم', 'چقدر بدهکار', 'بدهی', 'حساب من چند', 'حسابم چند')) {
+        const alb = Math.round(t.all.albaqi);
+        // خط‌به‌خط، مثل رسید — و آخرش وضعیت حساب
+        return 'بردگی: ' + n2fa(Math.round(t.all.bardagi)) + ' افغانی\n' +
+          'رسید: ' + n2fa(Math.round(t.all.rasid)) + ' افغانی\n' +
+          'الباقی: ' + n2fa(Math.abs(alb)) + ' افغانی\n' +
+          (alb > 0 ? '🔴 بدهکار هستید' : (alb < 0 ? '🟢 طلبکار هستید — پیش ما حساب دارید' : '✅ حساب شما تسویه است'));
       }
       if (has('بردگی')) return 'جمع بردگی شما: ' + n2fa(Math.round(t.all.bardagi)) + ' افغانی';
       if (has('رسید')) return 'جمع رسید شما: ' + n2fa(Math.round(t.all.rasid)) + ' افغانی';
@@ -18916,18 +19016,17 @@ function _botAnswer(qRaw) {
       const mp = _botMatchAnyPerson(qRaw);
       if (mp) {
         const t = _splitTotals(_allRows(mp));
-        const parts = [];
-        parts.push(t.all.albaqi <= 0 ? 'الباقی: تسویه' : 'الباقی: ' + n2fa(Math.round(t.all.albaqi)) + ' افغانی');
+        const alb = Math.round(t.all.albaqi);
+        // خواستهٔ کاربر: هر عدد در خط جدا و آخرش وضعیت بدهکار/طلبکار
+        const parts = ['👤 حساب «' + mp.name + '»'];
         parts.push('بردگی: ' + n2fa(Math.round(t.all.bardagi)) + ' افغانی');
         parts.push('رسید: ' + n2fa(Math.round(t.all.rasid)) + ' افغانی');
+        parts.push('الباقی: ' + n2fa(Math.abs(alb)) + ' افغانی');
+        parts.push(alb > 0 ? '🔴 بدهکار است' : (alb < 0 ? '🟢 طلبکار است — پیش ما حساب دارد' : '✅ حساب تسویه است'));
         const fl = _staffAcctFuelLeft(mp);
-        if (fl.hasP || fl.hasD) {
-          const fp = [];
-          if (fl.hasP) fp.push('پطرول ' + n2fa(Math.round(fl.petrol)) + ' لیتر');
-          if (fl.hasD) fp.push('دیزل ' + n2fa(Math.round(fl.diesel)) + ' لیتر');
-          parts.push('تیل امانتی باقی: ' + fp.join(' — '));
-        }
-        return '👤 حساب «' + mp.name + '» — ' + parts.join(' — ');
+        if (fl.hasP) parts.push('⛽ تیل پطرول که دارد: ' + n2fa(Math.round(fl.petrol)) + ' لیتر');
+        if (fl.hasD) parts.push('🟤 تیل دیزل که دارد: ' + n2fa(Math.round(fl.diesel)) + ' لیتر');
+        return parts.join('\n');
       }
     }
     // دوربین‌های مداربسته — فقط در سوال‌وجواب و چت گروهی (نه مهمان کیو‌آر)
@@ -20164,7 +20263,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.72';
+const APP_VERSION = '2.9.73';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -21317,28 +21416,98 @@ function _faDateWithWeekday(dateStr) {
   const wd = _faWeekdayOf(d);
   return (wd ? wd + '، ' : '') + escFa(d);
 }
-// ── اندازه‌گیری واقعی مخزن (میله‌زنی) ──
+// ── اندازه‌گیری واقعی مخزن (میله‌زنی) — ماژولار؛ همهٔ مشخصات از __tankInfo (بخش مخزن‌ها) ──
+// TankDip منبع واحدِ محاسبه است؛ در آینده ATG فقط باید actual را به همین ماژول بدهد.
+const TankDip = {
+  ALLOWED_DIFF_PCT: 0.5,   // حد مجاز اختلاف با دفتر: نیم درصد ظرفیت مخزن (حداقل ۵۰ لیتر)
+  info(f) {
+    if (typeof __tankInfo === 'function') return __tankInfo(f);
+    return { fuel: f, label: f === 'diesel' ? 'دیزل' : 'پطرول', icon: f === 'diesel' ? '🟤' : '⛽',
+             book: (typeof _fuelStock === 'function' ? _fuelStock(f) : 0), capacity: 0, capDefined: false, threshold: 500 };
+  },
+  calc(f, actual) {
+    const t = TankDip.info(f);
+    const cap = t.capacity || 0;
+    const pct = cap > 0 ? Math.max(0, Math.min(100, actual / cap * 100)) : 0;
+    const empty = cap > 0 ? Math.max(0, cap - actual) : 0;
+    const diff = Math.round(actual - t.book);
+    const allowed = Math.max(50, Math.round(cap * TankDip.ALLOWED_DIFF_PCT / 100));
+    return { tank: t, actual, pct, empty, receivable: empty, diff, allowed, over: Math.abs(diff) > allowed };
+  }
+};
+function _dipFuel() { return (document.getElementById('dip-fuel') || {}).value === 'diesel' ? 'diesel' : 'petrol'; }
+// مشخصات خودکار مخزن انتخاب‌شده — مستقیم از بخش مخزن‌ها
+function _dipRenderTankInfo() {
+  const el = document.getElementById('dip-tankinfo');
+  if (!el) return;
+  const t = TankDip.info(_dipFuel());
+  const box = (l, v, c) => `<div style="background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:9px 11px"><div style="font-size:0.68rem;color:var(--muted);font-weight:700">${l}</div><div style="font-weight:900;margin-top:3px;color:${c || 'var(--txt)'}">${v}</div></div>`;
+  const bookPct = t.capacity > 0 ? Math.max(0, Math.min(100, t.book / t.capacity * 100)) : 0;
+  el.innerHTML =
+    box(t.icon + ' مخزن', 'مخزن ' + t.label) +
+    box('ظرفیت کل', n2fa(Math.round(t.capacity)) + ' لیتر' + (t.capDefined ? '' : ' (پیش‌فرض)'), 'var(--accent)') +
+    box('موجودی دفتری', n2fa(Math.round(t.book)) + ' لیتر', 'var(--blue)') +
+    box('پر بودن دفتری', n2fa(Math.round(bookPct)) + '٪') +
+    (t.capDefined ? '' : box('⚠️ توجه', 'ظرفیت را در بخش مخزن‌ها بنویسید', 'var(--red)'));
+}
+// محاسبهٔ زنده هنگام تایپ لیتر میله‌زنی — موجودی واقعی، درصد، فضای خالی، ظرفیت قابل دریافت، اختلاف
+function dipLiveCalc() {
+  const el = document.getElementById('dip-calc');
+  if (!el) return;
+  const raw = (document.getElementById('dip-actual') || {}).value;
+  const actual = parseFloat(toEnDigits(String(raw || '')).replace(/[^0-9.]/g, '')) || 0;
+  if (!(actual > 0)) { el.innerHTML = ''; return; }
+  const c = TankDip.calc(_dipFuel(), actual);
+  const box = (l, v, col) => `<div style="background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:9px 11px"><div style="font-size:0.68rem;color:var(--muted);font-weight:700">${l}</div><div style="font-weight:900;margin-top:3px;color:${col || 'var(--txt)'}">${v}</div></div>`;
+  el.innerHTML =
+    `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px">` +
+    box('موجودی واقعی', n2fa(Math.round(actual)) + ' لیتر', 'var(--green)') +
+    box('درصد پر بودن', n2fa(Math.round(c.pct)) + '٪', c.pct >= 90 ? 'var(--red)' : 'var(--green)') +
+    box('فضای خالی', n2fa(Math.round(c.empty)) + ' لیتر') +
+    box('🚚 قابل دریافت از تانکر', n2fa(Math.round(c.receivable)) + ' لیتر', 'var(--blue)') +
+    box('اختلاف با دفتر', (c.diff > 0 ? '+' : '') + n2fa(c.diff) + ' لیتر', c.diff < 0 ? 'var(--red)' : 'var(--green)') +
+    `</div>` +
+    (c.over ? `<div style="margin-top:8px;border:1.5px solid var(--red);color:var(--red);border-radius:10px;padding:9px 12px;font-size:0.8rem;font-weight:800">🚨 اختلاف ${n2fa(Math.abs(c.diff))} لیتر از حد مجاز (${n2fa(c.allowed)} لیتر = ${n2fa(TankDip.ALLOWED_DIFF_PCT)}٪ ظرفیت) بیشتر است — احتمال نشتی، دزدی یا خطای ثبت. بررسی کنید.</div>` : '');
+}
+function dipFuelChanged() { _dipRenderTankInfo(); dipLiveCalc(); }
 function confirmTankDip() {
   if (!_toolsAdminOnly()) return;
-  const fuel = (document.getElementById('dip-fuel') || {}).value === 'diesel' ? 'diesel' : 'petrol';
-  const actual = parseFloat((document.getElementById('dip-actual') || {}).value) || 0;
-  if (!actual) { showToast('لیتر واقعی مخزن را بنویسید', '#e53e3e'); return; }
-  const book = Math.round(_fuelStock(fuel));
+  const fuel = _dipFuel();
+  const actual = parseFloat(toEnDigits(String((document.getElementById('dip-actual') || {}).value || '')).replace(/[^0-9.]/g, '')) || 0;
+  if (!actual) { showToast('لیتر میله‌زنی را بنویسید', '#e53e3e'); return; }
+  const c = TankDip.calc(fuel, actual);
+  const apply = !!((document.getElementById('dip-apply') || {}).checked);
+  const rec = { id: 'dip' + Date.now(), date: persianDate(), at: Date.now(), fuel,
+    actual, book: Math.round(c.tank.book), cap: Math.round(c.tank.capacity),
+    user: currentRole === 'admin' ? 'مدیر' : 'نظاره‌گر',
+    note: ((document.getElementById('dip-note') || {}).value || '').trim() };
+  // به‌روزرسانی موجودی دفتری مخزن: فرق به‌عنوان «اصلاح میله‌زنی» ثبت می‌شود (قابل حذف با خود رکورد)
+  if (apply && c.diff !== 0) {
+    DB.tankAdjusts = DB.tankAdjusts || [];
+    const adj = { id: 'adj' + Date.now(), dipId: rec.id, date: rec.date, at: rec.at, fuel, liters: c.diff };
+    DB.tankAdjusts.push(adj);
+    rec.adjId = adj.id;
+  }
   DB.tankDips = DB.tankDips || [];
-  DB.tankDips.unshift({ id: 'dip' + Date.now(), date: persianDate(), fuel, actual, book,
-    note: ((document.getElementById('dip-note') || {}).value || '').trim() });
+  DB.tankDips.unshift(rec);
   if (DB.tankDips.length > 60) DB.tankDips.length = 60;
   save();
-  const d = actual - book;
-  showToast(d < 0 ? ('⚠️ ' + n2fa(-d) + ' لیتر کم‌آمد نسبت به دفتر') : ('✅ ثبت شد — فرق: ' + n2fa(d) + ' لیتر'), d < 0 ? '#d97706' : '#38a169');
+  if (c.over) showToast('🚨 اختلاف ' + n2fa(Math.abs(c.diff)) + ' لیتر — بیشتر از حد مجاز (' + n2fa(c.allowed) + ' ل)! بررسی کنید', '#e53e3e');
+  else showToast(c.diff < 0 ? ('⚠️ ' + n2fa(-c.diff) + ' لیتر کم‌آمد نسبت به دفتر' + (rec.adjId ? ' — دفتر برابر شد' : '')) : ('✅ ثبت شد — فرق: ' + n2fa(c.diff) + ' لیتر' + (rec.adjId ? ' — دفتر برابر شد' : '')), c.diff < 0 ? '#d97706' : '#38a169');
   const ia = document.getElementById('dip-actual'); if (ia) ia.value = '';
   const inn = document.getElementById('dip-note'); if (inn) inn.value = '';
-  _renderDipPanel();
+  _renderDipPanel(); _dipRenderTankInfo(); dipLiveCalc();
+  // مخزن‌ها و داشبورد با موجودی تازه دیده شوند
+  try { renderFuelTanks(); } catch (e) {}
+  try { checkLowStock(); } catch (e) {}
 }
 function deleteTankDip(id) {
   if (!_toolsAdminOnly()) return;
+  const rec = (DB.tankDips || []).find(x => x.id === id);
+  if (rec && rec.adjId) DB.tankAdjusts = (DB.tankAdjusts || []).filter(a => a.id !== rec.adjId);   // اصلاح دفتر هم برگردد
   DB.tankDips = (DB.tankDips || []).filter(x => x.id !== id);
-  save(); _renderDipPanel();
+  save(); _renderDipPanel(); _dipRenderTankInfo(); dipLiveCalc();
+  try { renderFuelTanks(); } catch (e) {}
 }
 function _renderDipPanel() {
   const el = document.getElementById('dip-list');
@@ -21346,10 +21515,13 @@ function _renderDipPanel() {
   const list = DB.tankDips || [];
   el.innerHTML = list.length ? list.map(x => {
     const d = (parseFloat(x.actual) || 0) - (parseFloat(x.book) || 0);
+    const time = x.at ? new Date(x.at).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }) : '';
     return `<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:6px 2px;border-bottom:1px dashed var(--border);flex-wrap:wrap">
-      <span>${x.fuel === 'diesel' ? '🟤' : '⛽'} ${_faDateWithWeekday(x.date)}</span>
+      <span>${x.fuel === 'diesel' ? '🟤' : '⛽'} ${_faDateWithWeekday(x.date)}${time ? ' · 🕐 ' + time : ''}</span>
       <span>واقعی: <b>${n2fa(x.actual)}</b> · دفتری: ${n2fa(x.book)}</span>
       <b style="color:${d < 0 ? 'var(--red)' : 'var(--green)'}">${d < 0 ? ('کم‌آمد ' + n2fa(-d)) : ('+' + n2fa(d))} ل</b>
+      ${x.adjId ? '<span style="color:var(--blue);font-size:0.7rem;font-weight:800">📌 دفتر برابر شد</span>' : ''}
+      ${x.user ? `<span style="color:var(--muted);font-size:0.7rem">👤 ${escFa(x.user)}</span>` : ''}
       ${x.note ? `<span style="color:var(--muted);font-size:0.72rem">${escFa(x.note)}</span>` : ''}
       <button class="del-btn" onclick="deleteTankDip('${x.id}')">🗑️</button>
     </div>`;
@@ -22405,6 +22577,17 @@ document.addEventListener('click', function(e) {
     try{ save(); }catch(e){}
     // update visuals live; do NOT re-render (re-render would steal the keyboard)
     updateTankFill(fuelType);
+  };
+
+  // خروجی فقط‌خواندنیِ مشخصات مخزن — برای بخش میله‌زنی (و در آینده اتصال ATG).
+  // همه‌چیز از همین بخش مخزن‌ها خوانده می‌شود؛ هیچ ظرفیتی جای دیگر دوباره تعریف نمی‌شود.
+  window.__tankInfo = function (f) {
+    var current = 0; try { current = _fuelStock(f); } catch (e) {}
+    var th = (typeof lsThreshold === 'function') ? lsThreshold() : 500;
+    var cap = parseFloat(DB['tankCapacity_' + f]) || defaultCapacity(current, th);
+    var capDefined = !!parseFloat(DB['tankCapacity_' + f]);
+    return { fuel: f, label: f === 'diesel' ? 'دیزل' : 'پطرول', icon: f === 'diesel' ? '🟤' : '⛽',
+             book: current, capacity: cap, capDefined: capDefined, threshold: th };
   };
 
   /* ---- profit income/expense split bar (added after calcPL) ---- */
