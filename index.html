@@ -8410,7 +8410,7 @@ function showSection(id, btn) {
   if (id === 'tanker') { try { _renderTankerPanel(); } catch(e) {} }
   if (id === 'tankdip') { try { _renderDipPanel(); } catch(e) {} }
   if (id === 'oldloans') { try { _renderAgingPanel(); } catch(e) {} }
-  if (id === 'staffshort') { try { _renderStaffShortPanel(); } catch(e) {} }
+  if (id === 'staffshort') { try { _ssSettleIdx = null; _renderStaffShortPanel(); } catch(e) {} }
   if (id === 'ratehist') { try { _renderRateHistPanel(); } catch(e) {} }
   if (id === 'monthreport') { try { renderMonthReport(); } catch(e) {} }
   if (id === 'storage' || id === 'storage-diesel') { renderStorage(); initAutoProfit(); setTimeout(checkLowStock, 300); }
@@ -20164,7 +20164,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.71';
+const APP_VERSION = '2.9.72';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -21458,7 +21458,13 @@ function _renderStaffShortPanel() {
       <td style="color:var(--blue);font-weight:700">${n2fa(Math.round(x.settled))}</td>
       <td style="font-weight:900;color:${x.remain > 0 ? 'var(--red)' : 'var(--green)'}">${x.remain > 0 ? n2fa(x.remain) : '✅ صفر'}</td>
       <td style="color:var(--green)">${n2fa(Math.round(x.excess))}</td>
-      <td>${x.remain > 0 ? `<button class="tools-btn" style="padding:5px 12px" onclick="settleStaffShort(${i})">💵 تصفیه</button>` : ''}</td>
+      <td>${x.remain > 0 ? (i === _ssSettleIdx
+        ? `<span style="display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <input type="number" id="ss-amt-in" class="tools-in" value="${x.remain}" min="1" inputmode="numeric" style="width:95px;text-align:center;font-weight:800" onkeydown="if(event.key==='Enter')confirmStaffShortSettle(${i})">
+            <button class="tools-btn" style="padding:6px 12px;background:var(--green);color:#fff" onclick="confirmStaffShortSettle(${i})">✔ ثبت</button>
+            <button class="tools-btn" style="padding:6px 10px;background:transparent;border:1px solid var(--border);color:var(--muted)" onclick="_ssSettleIdx=null;_renderStaffShortPanel()">✖</button>
+          </span>`
+        : `<button class="tools-btn" style="padding:5px 12px" onclick="openStaffShortSettle(${i})">💵 تصفیه</button>`) : ''}</td>
     </tr>`).join('')}</tbody>
     <tfoot><tr style="font-weight:900;border-top:2px solid var(--border)">
       <td colspan="2">جمع کل</td>
@@ -21479,18 +21485,27 @@ function _renderStaffShortPanel() {
   </div>` : '';
   el.innerHTML = tbl + hist;
 }
-function settleStaffShort(i) {
+// کادر ورود مبلغ داخل خود جدول باز می‌شود — prompt مرورگر در PWA نصب‌شدهٔ موبایل کار نمی‌کند
+let _ssSettleIdx = null;
+function openStaffShortSettle(i) {
+  if (!_toolsAdminOnly()) return;
+  _ssSettleIdx = i;
+  _renderStaffShortPanel();
+  setTimeout(() => { const el = document.getElementById('ss-amt-in'); if (el) { el.focus(); el.select(); } }, 60);
+}
+function confirmStaffShortSettle(i) {
   if (!_toolsAdminOnly()) return;
   const x = _staffShortRows[i];
-  if (!x || !(x.remain > 0)) return;
-  const v = prompt('مبلغ تصفیهٔ کمبودی «' + x.name + '» — باقی‌مانده: ' + n2fa(x.remain) + ' افغانی', String(x.remain));
-  if (v === null) return;
-  const amount = Math.round(parseFloat(toEnDigits(String(v).trim())) || 0);
-  if (!(amount > 0)) { showToast('مبلغ درست نیست', '#e53e3e'); return; }
-  if (amount > x.remain && !confirm('مبلغ از باقی‌ماندهٔ کمبودی بیشتر است. باز هم ثبت شود؟')) return;
+  const el = document.getElementById('ss-amt-in');
+  if (!x || !el) return;
+  // کاماهای جداکنندهٔ هزارگان (فرمت‌کنندهٔ سراسری ورودی‌ها) حذف شوند تا «5,000» پنج خوانده نشود
+  const amount = Math.round(parseFloat(toEnDigits(String(el.value)).replace(/[^0-9.]/g, '')) || 0);
+  if (!(amount > 0)) { showToast('مبلغ تصفیه را بنویسید', '#e53e3e'); el.focus(); return; }
+  if (amount > x.remain) { showToast('مبلغ از باقی‌مانده (' + n2fa(x.remain) + ') بیشتر است', '#e53e3e'); el.focus(); return; }
   DB.staffShortSettles = DB.staffShortSettles || [];
   DB.staffShortSettles.push({ id: 'ss' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     key: x.key, name: x.name, amount, date: persianDate(), at: Date.now() });
+  _ssSettleIdx = null;
   save();
   _renderStaffShortPanel();
   showToast('✅ تصفیهٔ ' + x.name + ' ثبت شد — ورق‌ها تغییری نمی‌کنند', '#38a169');
