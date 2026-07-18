@@ -1499,6 +1499,182 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
 }
 </style>
 <script>
+/* ============================================================================
+   سرور شخصی (جایگزین فایربیس) — شیم سازگار با Firebase Realtime Database
+   ----------------------------------------------------------------------------
+   اگر آدرس سرور شخصی خودت را این‌جا (یا در localStorage با کلید pumpServerUrl)
+   بگذاری، کل هم‌زمان‌سازی و چت به‌جای فایربیس به سرور تو (WebSocket) می‌رود و
+   محدودیت فضای فایربیس برداشته می‌شود. راهنمای راه‌اندازی: server/README-fa.md
+   اگر خالی بماند، برنامه دقیقاً مثل قبل با فایربیس کار می‌کند (بدون هیچ تغییری).
+
+   روش فعال‌سازی بدون ویرایش این فایل (در کنسول مرورگر):
+     localStorage.setItem('pumpServerUrl',  'wss://YOURNAME.trycloudflare.com');
+     localStorage.setItem('pumpServerToken','رمزِ AUTH_TOKEN سرور');
+     location.reload();
+   ============================================================================ */
+(function(){
+  var SELF_HOST_URL   = '';   // مثال: 'wss://your-name.trycloudflare.com'  (خالی = فایربیس)
+  var SELF_HOST_TOKEN = '';   // همان AUTH_TOKEN سرور
+  try { SELF_HOST_URL   = window.SELF_HOST_URL   || localStorage.getItem('pumpServerUrl')   || SELF_HOST_URL; } catch(e){}
+  try { SELF_HOST_TOKEN = window.SELF_HOST_TOKEN || localStorage.getItem('pumpServerToken') || SELF_HOST_TOKEN; } catch(e){}
+  if (!SELF_HOST_URL) return;              // سرور شخصی فعال نیست → فایربیس عادی بارگذاری می‌شود
+  window.__USE_SELF_HOST__ = true;         // به لودر می‌گوید کتابخانهٔ فایربیس را بارگذاری نکند
+
+  var ws = null, connected = false, wantOpen = true, reconnectDelay = 1000;
+  var pending = {}, idSeq = 0;
+  var subs = {}, subSeq = 0;               // subId -> {path,event,cb,limit,seen,lastValue}
+  var connListeners = [];                  // شنونده‌های .info/connected
+  var outQueue = [];                       // پیام‌های در صف تا زمان اتصال
+  var onDiscRegs = {};                     // path -> {action,value}  (هنگام reconnect دوباره مسلح می‌شود)
+
+  function tailKey(path){ var a = String(path).split('/').filter(Boolean); return a.length ? a[a.length-1] : null; }
+
+  function mkSnap(key, value){
+    return {
+      key: key,
+      val: function(){ return value === undefined ? null : value; },
+      exists: function(){ return value !== undefined && value !== null; },
+      forEach: function(cb){ if (value && typeof value === 'object'){ var ks = Object.keys(value).sort(); for (var i=0;i<ks.length;i++){ if (cb(mkSnap(ks[i], value[ks[i]]))) return true; } } return false; },
+      numChildren: function(){ return (value && typeof value === 'object') ? Object.keys(value).length : 0; },
+      child: function(p){ var v = value; String(p).split('/').filter(Boolean).forEach(function(s){ v = (v && typeof v === 'object') ? v[s] : undefined; }); return mkSnap(tailKey(p), v); }
+    };
+  }
+
+  function sendRaw(msg){ try { ws.send(JSON.stringify(msg)); } catch(e){} }
+
+  function enqueueOrSend(msg){
+    if (connected) { sendRaw(msg); return; }
+    if (msg.op === 'set' || msg.op === 'remove') { // برای یک مسیر فقط آخرین set/remove را نگه دار (جلوگیری از تورم صف)
+      outQueue = outQueue.filter(function(q){ return !((q.op === 'set' || q.op === 'remove') && q.path === msg.path); });
+    }
+    outQueue.push(msg);
+  }
+
+  function doMutation(kind, path, value){
+    return new Promise(function(resolve, reject){
+      var id = ++idSeq; pending[id] = { resolve: resolve, reject: reject };
+      enqueueOrSend({ op: kind, path: path, value: value, id: id });
+    });
+  }
+  function doGet(path){
+    return new Promise(function(resolve, reject){
+      var id = ++idSeq;
+      pending[id] = { resolve: function(m){ resolve(mkSnap(tailKey(path), m.value === null ? undefined : m.value)); }, reject: reject };
+      enqueueOrSend({ op: 'get', path: path, id: id });
+    });
+  }
+  function doPush(path, value){
+    var id = ++idSeq; var thenable = { key: null };
+    var p = new Promise(function(resolve, reject){
+      pending[id] = { resolve: function(m){ thenable.key = m.key || null; resolve(thenable); }, reject: reject };
+    });
+    thenable.then = p.then.bind(p); thenable.catch = p.catch.bind(p);
+    enqueueOrSend({ op: 'push', path: path, value: value, id: id });
+    return thenable;
+  }
+  function doSub(path, event, cb, limit){
+    if (path === '.info/connected' && event === 'value') {
+      connListeners.push(cb);
+      try { cb(mkSnap(null, connected)); } catch(e){}
+      return cb;
+    }
+    var subId = ++subSeq;
+    subs[subId] = { path: path, event: event, cb: cb, limit: limit || 0, seen: {}, lastValue: undefined };
+    if (connected) sendRaw({ op: 'sub', path: path, event: event, subId: subId, limitToLast: limit || 0 });
+    return cb;
+  }
+  function doOff(path, event, cb){
+    if (path === '.info/connected') { connListeners = connListeners.filter(function(c){ return cb ? c !== cb : false; }); return; }
+    for (var id in subs){ var s = subs[id];
+      if (s.path === path && (!event || s.event === event) && (!cb || s.cb === cb)) {
+        if (connected) sendRaw({ op: 'unsub', subId: Number(id) });
+        delete subs[id];
+      }
+    }
+  }
+  function mkOnDisc(path){
+    return {
+      remove: function(){ onDiscRegs[path] = { action: 'remove' }; if (connected) sendRaw({ op: 'onDisc', path: path, action: 'remove' }); return Promise.resolve(); },
+      set: function(value){ onDiscRegs[path] = { action: 'set', value: value }; if (connected) sendRaw({ op: 'onDisc', path: path, action: 'set', value: value }); return Promise.resolve(); },
+      cancel: function(){ delete onDiscRegs[path]; if (connected) sendRaw({ op: 'onDiscCancel', path: path }); return Promise.resolve(); }
+    };
+  }
+  function mkRef(path, query){
+    query = query || {};
+    var ref = {
+      key: tailKey(path),
+      child: function(p){ return mkRef(path + '/' + p, {}); },
+      set: function(v){ return doMutation('set', path, v); },
+      update: function(v){ return doMutation('update', path, v); },
+      remove: function(){ return doMutation('remove', path, null); },
+      push: function(v){ return doPush(path, v); },
+      get: function(){ return doGet(path); },
+      once: function(){ return doGet(path); },
+      on: function(event, cb){ return doSub(path, event, cb, query.limitToLast); },
+      off: function(event, cb){ return doOff(path, event, cb); },
+      limitToLast: function(n){ var q = {}; for (var k in query) q[k] = query[k]; q.limitToLast = n; return mkRef(path, q); },
+      orderByChild: function(){ return ref; },
+      orderByKey: function(){ return ref; },
+      onDisconnect: function(){ return mkOnDisc(path); }
+    };
+    return ref;
+  }
+
+  function dispatchEvent(m){
+    var s = subs[m.subId]; if (!s) return;
+    var value = (m.value === null) ? undefined : m.value;
+    if (s.event === 'value') {
+      var ser = JSON.stringify(m.value === undefined ? null : m.value);
+      if (ser === s.lastValue) return;             // dedup: مقدار عوض نشده
+      s.lastValue = ser;
+      try { s.cb(mkSnap(m.key, value)); } catch(e){}
+    } else if (s.event === 'child_added') {
+      if (s.seen[m.key]) return;                    // قبلاً تحویل داده شده (جلوی تکرار بعد از reconnect)
+      s.seen[m.key] = 1;
+      try { s.cb(mkSnap(m.key, value)); } catch(e){}
+    } else {                                        // child_changed / child_removed
+      if (m.type === 'child_removed') delete s.seen[m.key];
+      try { s.cb(mkSnap(m.key, value)); } catch(e){}
+    }
+  }
+
+  function notifyConn(state){ connListeners.forEach(function(cb){ try { cb(mkSnap(null, state)); } catch(e){} }); }
+
+  function onConnected(){
+    connected = true; reconnectDelay = 1000;
+    for (var pth in onDiscRegs){ sendRaw({ op: 'onDisc', path: pth, action: onDiscRegs[pth].action, value: onDiscRegs[pth].value }); }
+    for (var id in subs){ var s = subs[id]; sendRaw({ op: 'sub', path: s.path, event: s.event, subId: Number(id), limitToLast: s.limit }); }
+    var q = outQueue; outQueue = []; q.forEach(function(msg){ sendRaw(msg); });
+    notifyConn(true);
+  }
+  function onMessage(data){
+    var m; try { m = JSON.parse(data); } catch(e){ return; }
+    if (m.op === 'connected') { onConnected(); return; }
+    if (m.op === 'ack' || m.op === 'result') { var p = pending[m.id]; if (p){ delete pending[m.id]; if (m.op === 'ack' && m.ok === false) p.reject(new Error('op_failed')); else p.resolve(m); } return; }
+    if (m.op === 'event') { dispatchEvent(m); return; }
+    if (m.op === 'error') { console.warn('[سرور شخصی] خطای سرور:', m.msg); return; }
+  }
+  function connect(){
+    if (!wantOpen) return;
+    var url = SELF_HOST_URL + (SELF_HOST_TOKEN ? (SELF_HOST_URL.indexOf('?') >= 0 ? '&' : '?') + 'token=' + encodeURIComponent(SELF_HOST_TOKEN) : '');
+    try { ws = new WebSocket(url); } catch(e){ scheduleReconnect(); return; }
+    ws.onmessage = function(ev){ onMessage(ev.data); };
+    ws.onclose = function(){ connected = false; notifyConn(false); scheduleReconnect(); };
+    ws.onerror = function(){ try { ws.close(); } catch(e){} };
+  }
+  function scheduleReconnect(){ if (!wantOpen) return; setTimeout(function(){ reconnectDelay = Math.min(reconnectDelay * 1.5, 15000); connect(); }, reconnectDelay); }
+
+  var dbInstance = { ref: function(path){ return mkRef(String(path == null ? '' : path), {}); }, goOnline: function(){ wantOpen = true; if (!connected) connect(); }, goOffline: function(){ wantOpen = false; try { ws.close(); } catch(e){} } };
+
+  // نصب آبجکت firebase جعلی — بقیهٔ برنامه بدون هیچ تغییری همین را صدا می‌زند
+  window.firebase = { initializeApp: function(){ return {}; }, database: function(){ return dbInstance; } };
+  connect();
+  window._firebaseLibLoaded = true;
+  if (typeof window._onFirebaseLibReady === 'function') { try { window._onFirebaseLibReady(); } catch(e){} }
+  try { console.log('[پمپ یعقوبی] حالت سرور شخصی فعال شد →', SELF_HOST_URL); } catch(e){}
+})();
+</script>
+<script>
 // بارگذاری غیرمسدودکنندهٔ کتابخانه‌های خارجی:
 // قبلاً این چهار اسکریپت جلوی نمایش صفحه را می‌گرفتند — با اینترنت ضعیف یا قطع،
 // برنامه ده‌ها ثانیه صفحهٔ سفید می‌ماند. حالا برنامه فوراً باز می‌شود و کتابخانه‌ها
@@ -1513,13 +1689,16 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
   }
   add('https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js');
   add('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
-  // ترتیب Firebase مهم است: اول app بعد database — سپس هم‌زمان‌سازی شروع می‌شود
-  add('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js', function(){
-    add('https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js', function(){
-      window._firebaseLibLoaded = true;
-      if (typeof window._onFirebaseLibReady === 'function') { try { window._onFirebaseLibReady(); } catch(e) {} }
+  // اگر سرور شخصی فعال باشد، شیمِ بالا جای فایربیس را گرفته — کتابخانهٔ فایربیس بارگذاری نمی‌شود.
+  if (!window.__USE_SELF_HOST__) {
+    // ترتیب Firebase مهم است: اول app بعد database — سپس هم‌زمان‌سازی شروع می‌شود
+    add('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js', function(){
+      add('https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js', function(){
+        window._firebaseLibLoaded = true;
+        if (typeof window._onFirebaseLibReady === 'function') { try { window._onFirebaseLibReady(); } catch(e) {} }
+      });
     });
-  });
+  }
 })();
 </script>
 
@@ -20577,7 +20756,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.79';
+const APP_VERSION = '2.9.80';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
