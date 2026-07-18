@@ -4754,13 +4754,33 @@ table thead th{ position:relative; }
 .dash-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:5px;vertical-align:-1px}
 .dash-legend .lg-amt{background:var(--accent)}
 .dash-legend .lg-lit{background:var(--blue)}
+.dash-legend .lg-prf{background:var(--green)}
+.dash-legend .lg-exp{background:var(--red)}
+/* نوار هشدارهای داشبورد — فقط وقتی هشداری هست دیده می‌شود */
+.dash-alerts{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.da-chip{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--border);background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:.76rem;font-weight:800;padding:7px 13px;border-radius:999px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.06);transition:transform .18s}
+.da-chip:hover{transform:translateY(-2px)}
+.da-chip.warn{border-color:var(--red);color:var(--red)}
+.da-chip.soft{border-color:var(--accent);color:var(--accent)}
+.da-chip.ok{border-color:var(--green);color:var(--green)}
+/* نمودار روند مفاد/مصارف زیر ستون‌ها */
+.dash-trend-wrap{margin-top:14px;border-top:1px dashed var(--border);padding-top:12px}
+.dash-trend-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.dash-trend-title{font-size:.82rem;font-weight:900;color:var(--txt)}
+#dash-trend{width:100%;height:92px;display:block}
+#dash-trend .tl-grid{stroke:var(--border);stroke-width:.6;opacity:.6}
+#dash-trend .tl-prf{fill:none;stroke:var(--green);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+#dash-trend .tl-prf-area{fill:var(--green);opacity:.12}
+#dash-trend .tl-exp{fill:none;stroke:var(--red);stroke-width:1.6;stroke-dasharray:5 4;stroke-linejoin:round;stroke-linecap:round}
+#dash-trend .tl-dot{fill:var(--green)}
 /* در RTL، ترتیبِ زمانی از راست (جدید) به چپ (قدیمی) باشد: row-reverse تا «امروز/این‌
    هفته/این ماه/امسال» سمتِ راست بیفتد و قدیمی‌ها سمتِ چپ (قبلاً برعکس بود). */
 .dash-bars{display:flex;flex-direction:row-reverse;align-items:flex-end;gap:2.5%;height:240px;padding-top:26px}
 .db-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0;height:100%;cursor:pointer}
 .db-barwrap{position:relative;flex:1;width:100%;max-width:44px;display:flex;align-items:flex-end;justify-content:center;gap:3px}
-.db-bar{width:46%;height:0;border-radius:9px;background:linear-gradient(180deg,var(--accent) 0%,var(--purple) 160%);transition:height .7s cubic-bezier(.22,.8,.3,1),filter .2s}
+.db-bar{width:30%;height:0;border-radius:9px;background:linear-gradient(180deg,var(--accent) 0%,var(--purple) 160%);transition:height .7s cubic-bezier(.22,.8,.3,1),filter .2s}
 .db-bar.lit{background:linear-gradient(180deg,var(--blue) 0%,var(--purple) 160%);opacity:.85}
+.db-bar.prf{background:linear-gradient(180deg,var(--green) 0%,var(--purple) 160%);opacity:.9}
 .db-col:hover .db-bar{filter:brightness(1.14)}
 .db-col.sel .db-bar{filter:brightness(1.18);box-shadow:0 0 0 1.5px var(--accent)}
 .db-col.sel .db-lbl{color:var(--accent);font-weight:900}
@@ -4823,8 +4843,13 @@ table thead th{ position:relative; }
   .dash-tabs{padding:3px}
   .dash-tab{padding:6px 11px;font-size:.72rem}
   .dash-legend{font-size:.62rem;gap:9px}
-  .dash-bars{height:160px;gap:2%;padding-top:22px}
+  /* موبایل: ستون‌ها با پهنای ثابت + اسکرول افقی تا ۱۳ ستونِ حالت «ماه» له نشوند؛
+     چون صفحه RTL است، اسکرول از سمت راست (دورهٔ جاری) شروع می‌شود */
+  .dash-bars{height:160px;gap:8px;padding-top:22px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+  .db-col{flex:0 0 auto;min-width:42px}
   .db-lbl{font-size:.58rem}
+  .da-chip{font-size:.68rem;padding:6px 10px}
+  #dash-trend{height:70px}
   .dash-detail{font-size:.66rem;gap:9px;padding:8px 10px}
   .dash-hero{min-height:180px;border-radius:18px;padding:18px 14px}
   .dhero-value{font-size:1.2rem}
@@ -4844,8 +4869,9 @@ table thead th{ position:relative; }
       <div class="dash-date" id="dash-date"></div>
     </div>
     <div class="dh-left">
-      <span class="dash-search-wrap"><svg class="ds-ic"><use href="#ic-search"/></svg><input class="dash-search" placeholder="جستجو..." onkeydown="if(event.key==='Enter')showToast('🔎 جستجوی داشبورد به زودی فعال می‌شود','#d97706')"></span>
-      <button class="dash-iconbtn" title="اعلان‌ها" onclick="showToast('🔔 اعلان تازه‌ای نیست','#38a169')"><svg><use href="#ic-bell"/></svg></button>
+      <span class="dash-search-wrap"><svg class="ds-ic"><use href="#ic-search"/></svg><input class="dash-search" id="dash-search-in" placeholder="🔍 نام قرض‌دار + Enter" onkeydown="if(event.key==='Enter')dashSearchGo(this.value)"></span>
+      <button class="dash-iconbtn" title="گزارش پایان ماه" onclick="showSection('monthreport')"><svg><use href="#ic-rasid"/></svg></button>
+      <button class="dash-iconbtn" title="اعلان‌ها" onclick="dashBellClick()"><svg><use href="#ic-bell"/></svg></button>
       <span class="dash-avatar" title="پروفایل"><svg><use href="#ic-user1"/></svg></span>
     </div>
   </div>
@@ -4855,6 +4881,8 @@ table thead th{ position:relative; }
     <button class="dash-fuel-btn" onclick="dashSetFuel('petrol',this)">⛽ پطرول</button>
     <button class="dash-fuel-btn" onclick="dashSetFuel('diesel',this)">🟤 دیزل</button>
   </div>
+  <!-- هشدارهای زنده: مخزن کم، قرض‌داران بی‌حرکت، وضعیت بکاپ ابری -->
+  <div class="dash-alerts" id="dash-alerts"></div>
   <div class="dash-cards">
     <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-shifts"/></svg></span><span class="dc-prog" id="dcp-sales"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title" id="dct-sales">فروش امروز</div><div class="dc-value" id="dcv-sales">0</div><div class="dc-sub" id="dcs-sales"></div></div>
     <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-profit"/></svg></span><span class="dc-prog" id="dcp-profit"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title" id="dct-profit">مفاد امروز</div><div class="dc-value" id="dcv-profit">0</div><div class="dc-sub" id="dcs-profit"></div></div>
@@ -4867,7 +4895,7 @@ table thead th{ position:relative; }
       <div class="dcc-head">
         <div><div class="dcc-title">📊 نمودار فروش</div><div class="dcc-sub" id="dcc-sub">متصل به پارچه‌های ثبت‌شده — روی هر ستون کلیک کنید</div></div>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-          <div class="dash-legend"><span><i class="lg-amt"></i>مبلغ (افغانی)</span><span><i class="lg-lit"></i>لیتر</span></div>
+          <div class="dash-legend"><span><i class="lg-amt"></i>مبلغ (افغانی)</span><span><i class="lg-lit"></i>لیتر</span><span><i class="lg-prf"></i>مفاد</span></div>
           <div class="dash-tabs">
             <button class="dash-tab active" onclick="dashSetRange('day',this)">روز</button>
             <button class="dash-tab" onclick="dashSetRange('week',this)">هفته</button>
@@ -4878,6 +4906,13 @@ table thead th{ position:relative; }
       </div>
       <div class="dash-bars" id="dash-bars"></div>
       <div class="dash-detail" id="dash-detail"></div>
+      <div class="dash-trend-wrap">
+        <div class="dash-trend-head">
+          <span class="dash-trend-title">📈 روند مفاد و مصارف</span>
+          <div class="dash-legend"><span><i class="lg-prf"></i>مفاد</span><span><i class="lg-exp"></i>مصارف</span></div>
+        </div>
+        <svg id="dash-trend" viewBox="0 0 300 80" preserveAspectRatio="none"></svg>
+      </div>
     </div>
     <div class="dash-card dash-tank-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-storage"/></svg></span><button class="dash-tank-toggle" id="dash-tank-toggle" onclick="dashToggleTank()">🔁 دیزل</button></div><div class="dc-title" id="dash-tank-title">موجودی مخزن — ⛽ پطرول</div><div id="dash-tank" style="margin-top:8px"></div></div>
     <div class="dash-hero">
@@ -5427,6 +5462,8 @@ table thead th{ position:relative; }
       <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('profit',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('profit',0.08)">A+</button></span>
     </span>
   </div>
+  <!-- کادر گزارش پایان ماه — صفحهٔ جداگانه -->
+  <button type="button" class="tool-link-card" style="border-color:var(--green);color:var(--green)" onclick="showSection('monthreport')"><span>📅 گزارش پایان ماه — فروش، مفاد، مصارف، همه در یک صفحه</span><span>صفحهٔ بعد ‹</span></button>
   <div class="pl-result-wrap">
   <div class="pl-result" id="pl-result">
     <div class="pl-aurora" aria-hidden="true"></div>
@@ -5547,6 +5584,24 @@ table thead th{ position:relative; }
         </table>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- 📅 گزارش پایان ماه (صفحهٔ جداگانه — از کادر بخش مفاد/ضرر و آیکون داشبورد باز می‌شود) -->
+<div class="section" id="sec-monthreport">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('profit')">📈 برگشت به مفاد / ضرر</button>
+    <span>📅 گزارش پایان ماه</span>
+  </div>
+  <div class="card" style="border-color:var(--green)">
+    <div class="card-head">
+      <div class="card-title">📅 گزارش ماه</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="mr-month" class="tools-in" onchange="renderMonthReport()"></select>
+        <button class="add-btn" style="background:var(--blue);color:#fff" onclick="pdfMonthReport()">📄 PDF</button>
+      </div>
+    </div>
+    <div style="padding:14px" id="mr-body"></div>
   </div>
 </div>
 
@@ -6381,6 +6436,16 @@ body.viewer-mode .inv-admin-only{display:none!important}
       <input type="file" id="bk-file" accept=".json,application/json" style="display:none" onchange="restoreBackupFromFile(this)">
     </div>
     <div id="bk-list" style="font-size:0.8rem"></div>
+    <div style="border-top:1px dashed var(--border);margin-top:14px;padding-top:12px">
+      <div style="font-weight:800;color:var(--green);margin-bottom:6px">☁️ بکاپ ابری خودکار — بیرون از دستگاه</div>
+      <div style="font-size:0.82rem;color:var(--muted);line-height:1.9;margin-bottom:10px">هر روز که اینترنت وصل باشد، یک نسخهٔ کامل از حساب‌ها خودکار به سرور آنلاین می‌رود (۳۰ روز اخیر نگه داشته می‌شود). اگر دستگاه گم یا خراب شود، از همین‌جا روی دستگاه نو برمی‌گردد.</div>
+      <div id="cloudbk-status" style="font-size:0.82rem;margin-bottom:10px;color:var(--muted)"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="tools-btn" style="background:var(--green);color:#fff" onclick="_autoCloudBackup(true)">☁️ بکاپ ابری همین حالا</button>
+        <button class="tools-btn" style="background:transparent;border:1px solid var(--blue);color:var(--blue)" onclick="_renderCloudBackupList()">📋 نمایش بکاپ‌های ابری</button>
+      </div>
+      <div id="cloudbk-list" style="font-size:0.8rem"></div>
+    </div>
   </div>
   <div class="settings-card" id="trash-settings-card" style="border-color:var(--accent)">
     <div class="settings-title" style="color:var(--accent)">🗑️ سطل زباله</div>
@@ -7845,6 +7910,8 @@ function _lockProfitSection() {
   if (o) o.classList.add('active');
   if (p) p.classList.add('profit-hidden-inline');
   _profitSensitiveEls().forEach(el => el.classList.add('profit-hidden'));
+  // گزارش ماه هم مفادش را پشت همین قفل نشان می‌دهد — اگر باز است، تازه شود
+  try { const s = document.getElementById('sec-monthreport'); if (s && s.classList.contains('visible')) renderMonthReport(); } catch (e) {}
 }
 function _unlockProfitSection() {
   const r = document.getElementById('pl-result');
@@ -7856,6 +7923,7 @@ function _unlockProfitSection() {
   _profitSensitiveEls().forEach(el => el.classList.remove('profit-hidden'));
   clearTimeout(_plLockTimer);
   _plLockTimer = setTimeout(_lockProfitSection, 17000);
+  try { const s = document.getElementById('sec-monthreport'); if (s && s.classList.contains('visible')) renderMonthReport(); } catch (e) {}
 }
 function _onProfitClick() {
   const m = document.getElementById('pl-pw-modal');
@@ -8324,7 +8392,7 @@ function showSection(id, btn) {
   if (id === 'tanker' || id === 'tankdip') navId = 'storage';
   if (id === 'oldloans') navId = 'debtrasid';
   if (id === 'staffshort') navId = 'attendance';
-  if (id === 'ratehist') navId = 'profit';
+  if (id === 'ratehist' || id === 'monthreport') navId = 'profit';
   // نوار بخش‌ها هنگام اسکرول بالا بچسبد — به‌جز ورق، قرض‌داران و شرکت‌ها تیل
   document.body.classList.toggle('nav-sticky', !(id === 'waraq' || id === 'debt' || id === 'noinv'));
   if (btn) {
@@ -8340,6 +8408,7 @@ function showSection(id, btn) {
   if (id === 'oldloans') { try { _renderAgingPanel(); } catch(e) {} }
   if (id === 'staffshort') { try { _renderStaffShortPanel(); } catch(e) {} }
   if (id === 'ratehist') { try { _renderRateHistPanel(); } catch(e) {} }
+  if (id === 'monthreport') { try { renderMonthReport(); } catch(e) {} }
   if (id === 'storage' || id === 'storage-diesel') { renderStorage(); initAutoProfit(); setTimeout(checkLowStock, 300); }
   if (id === 'expenses') renderExpenses();
   if (id === 'rasid') renderRasid();
@@ -8360,6 +8429,7 @@ function showSection(id, btn) {
     fillLowStockSettings();
     fillSyncSettings();
     try { _renderBackupPanel(); } catch(e) {}
+    try { _renderCloudBackupStatus(); } catch(e) {}
     try { renderPushCard(); } catch(e) {}
     try { renderTrashList(); } catch(e) {}
     try { renderChatTrash(); } catch(e) {}
@@ -8609,12 +8679,13 @@ function _renderDashChart(disp, sel, skipAnim) {
   const vals = disp.map(_dashPick);
   const maxA = Math.max(1, ...vals.map(v => v.a));
   const maxL = Math.max(1, ...vals.map(v => v.l));
+  const maxP = Math.max(1, ...vals.map(v => Math.abs(v.p)));
   wrap.innerHTML = disp.map((b, i) => {
     const v = vals[i];
-    const ha = Math.round(v.a / maxA * 100), hl = Math.round(v.l / maxL * 100);
-    const tip = `📅 ${b.full} — 💰 ${n2fa(Math.round(v.a))} افغانی · 🛢️ ${n2fa(Math.round(v.l))} ل · 🧾 ${n2fa(v.c)} ثبت`;
+    const ha = Math.round(v.a / maxA * 100), hl = Math.round(v.l / maxL * 100), hp = Math.round(Math.abs(v.p) / maxP * 100);
+    const tip = `📅 ${b.full} — 💰 ${n2fa(Math.round(v.a))} افغانی · 🛢️ ${n2fa(Math.round(v.l))} ل · 📈 ${n2fa(Math.round(v.p))} مفاد · 🧾 ${n2fa(v.c)} ثبت`;
     return `<div class="db-col ${i === sel ? 'sel' : ''}" onclick="dashSelectBar(${i})">
-      <div class="db-barwrap"><span class="db-tip">${tip}</span><div class="db-bar amt" data-h="${ha}"></div><div class="db-bar lit" data-h="${hl}"></div></div>
+      <div class="db-barwrap"><span class="db-tip">${tip}</span><div class="db-bar amt" data-h="${ha}"></div><div class="db-bar lit" data-h="${hl}"></div><div class="db-bar prf" data-h="${hp}"></div></div>
       <span class="db-lbl">${b.label}</span></div>`;
   }).join('');
   const setH = () => wrap.querySelectorAll('.db-bar').forEach(bar => { bar.style.height = Math.max(2, parseInt(bar.getAttribute('data-h'), 10) || 0) + '%'; });
@@ -8696,6 +8767,84 @@ function renderDashboard(skipAnim) {
   setT('dash-hero-label', 'فروش ' + bucketWord + ' — ' + _dashFuelWord());
   setT('dash-hero-value', n2fa(Math.round(cur.a)) + ' افغانی');
   setT('dash-hero-sub', '🛢️ ' + n2fa(Math.round(cur.l)) + ' لیتر · 🧾 ' + n2fa(cur.c) + ' ثبت · رشد نسبت به ' + perWord + ': ' + (gPct == null ? 'داده کافی نیست' : (gPct > 0 ? '+' : '') + n2fa(gPct) + '٪'));
+  try { _renderDashAlerts(); } catch (e) {}
+  try { _renderDashTrend(disp); } catch (e) {}
+}
+// ===== هشدارهای زندهٔ داشبورد: مخزن کم، قرض‌داران بی‌حرکت، وضعیت بکاپ ابری =====
+function _staleDebtorsCount(minDays) {
+  const todayK = _shDateKey(persianDate());
+  let n = 0;
+  (DB.debtPersons || []).forEach(p => {
+    try {
+      const f = _debtSumFigures(p);
+      if (!(f.albaqi > 0)) return;
+      let lastK = 0;
+      _allRows(p).forEach(r => { const k = _shDateKey(r.date); if (k > lastK) lastK = k; });
+      const days = lastK ? Math.max(0, todayK - lastK) : minDays;
+      if (days >= minDays) n++;
+    } catch (e) {}
+  });
+  return n;
+}
+function _dashAlertItems() {
+  const items = [];
+  try {
+    [['petrol', '⛽ پطرول', 'storage'], ['diesel', '🟤 دیزل', 'storage-diesel']].forEach(([f, label, secId]) => {
+      const st = Math.round(_fuelStock(f));
+      if (st <= lsThreshold()) items.push({ cls: 'warn', txt: st <= 0 ? ('🚨 مخزن ' + label + ' تمام شده!') : ('⚠️ مخزن ' + label + ' کم است — ' + n2fa(st) + ' لیتر'), go: "showSection('" + secId + "')" });
+    });
+  } catch (e) {}
+  try {
+    const n = _staleDebtorsCount(30);
+    if (n > 0) items.push({ cls: 'soft', txt: '⏰ ' + n2fa(n) + ' قرض‌دار بیش از ۳۰ روز بی‌حرکت', go: "showSection('oldloans')" });
+  } catch (e) {}
+  try {
+    if (currentRole !== 'viewer' && localStorage.getItem('pumpCloudBkDay') !== _cloudBkDayKey())
+      items.push({ cls: 'soft', txt: '☁️ بکاپ ابری امروز هنوز نرفته — برای فرستادن بزنید', go: '_autoCloudBackup(true)' });
+  } catch (e) {}
+  return items;
+}
+function _renderDashAlerts() {
+  const el = document.getElementById('dash-alerts');
+  if (!el) return;
+  const items = _dashAlertItems();
+  el.innerHTML = items.length
+    ? items.map(c => `<button type="button" class="da-chip ${c.cls}" onclick="${c.go}">${c.txt}</button>`).join('')
+    : '<span class="da-chip ok" style="cursor:default">✅ همه‌چیز مرتب است — مخزن، قرض‌داران و بکاپ ابری</span>';
+}
+function dashBellClick() {
+  const items = _dashAlertItems();
+  if (!items.length) { showToast('🔔 اعلان تازه‌ای نیست — همه‌چیز مرتب است', '#38a169'); return; }
+  showToast('🔔 ' + items.map(i => i.txt).join(' · '), '#d97706');
+}
+// جستجوی داشبورد: نام قرض‌دار + Enter → حساب همان شخص باز می‌شود
+function dashSearchGo(q) {
+  q = normFa((q || '').trim());
+  if (!q) { showToast('نام قرض‌دار را بنویسید و Enter بزنید', '#d97706'); return; }
+  const list = DB.debtPersons || [];
+  const p = list.find(x => normFa(x.name || '') === q) || list.find(x => normFa(x.name || '').includes(q));
+  if (p) { openPersonModal('debt', p.id); const i = document.getElementById('dash-search-in'); if (i) i.value = ''; }
+  else showToast('❌ قرض‌داری با این نام پیدا نشد', '#e53e3e');
+}
+// ===== نمودار روند مفاد و مصارف (زیر ستون‌های فروش — همان سطل‌های زمانی) =====
+function _renderDashTrend(disp) {
+  const svg = document.getElementById('dash-trend');
+  if (!svg) return;
+  const n = disp.length;
+  if (n < 2) { svg.innerHTML = ''; return; }
+  const prf = disp.map(b => Math.max(0, _dashPick(b).p));
+  const exp = disp.map(b => Math.max(0, b.exp || 0));
+  const vmax = Math.max(1, ...prf, ...exp);
+  // RTL: ستون شاخص ۰ (دورهٔ جاری) سمت راست — پس x از راست به چپ کم می‌شود
+  const X = i => 296 - (i / (n - 1)) * 292;
+  const Y = v => 74 - (v / vmax) * 64;
+  const pts = arr => arr.map((v, i) => X(i).toFixed(1) + ',' + Y(v).toFixed(1)).join(' ');
+  svg.innerHTML =
+    '<line class="tl-grid" x1="0" y1="26" x2="300" y2="26"/><line class="tl-grid" x1="0" y1="50" x2="300" y2="50"/><line class="tl-grid" x1="0" y1="74" x2="300" y2="74"/>' +
+    `<polygon class="tl-prf-area" points="${X(0).toFixed(1)},74 ${pts(prf)} ${X(n - 1).toFixed(1)},74"/>` +
+    `<polyline class="tl-prf" points="${pts(prf)}"/>` +
+    `<polyline class="tl-exp" points="${pts(exp)}"/>` +
+    `<circle class="tl-dot" cx="${X(0).toFixed(1)}" cy="${Y(prf[0]).toFixed(1)}" r="3"/>`;
 }
 // بروزرسانی زنده: هر تغییری در سیستم از save() می‌گذرد؛ اگر داشبورد باز باشد،
 // نمایش خودکار تازه می‌شود (فقط نمایش — هیچ منطقی عوض نشده)
@@ -20011,7 +20160,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.68';
+const APP_VERSION = '2.9.69';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -21266,6 +21415,232 @@ function _renderRateHistPanel() {
       <span style="color:var(--muted)">${n2fa(h.date || '')}</span>
     </div>`).join('') : '<div style="color:var(--muted)">با هر تغییرِ نرخ اتحادیه، اینجا خودکار ثبت می‌شود</div>';
 }
+// ═══════════ ☁️ بکاپ ابری خودکار (Firebase — جدا از مسیر همگام‌سازی زنده) ═══════════
+// هر روز یک عکسِ کامل از DB در backups/<کد ایستگاه>/<روز> ذخیره می‌شود و ۳۰ روز اخیر می‌ماند.
+// جدا از stations/<کد> است تا اگر دادهٔ خراب همگام شد، نسخه‌های روزهای قبل سالم بمانند.
+function _cloudBkDayKey() {
+  const m = toEnDigits(persianDate()).match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+  return m ? m[1] + '-' + String(+m[2]).padStart(2, '0') + '-' + String(+m[3]).padStart(2, '0') : 'day';
+}
+function _autoCloudBackup(force) {
+  try {
+    if (currentRole === 'viewer') return;
+    if (!navigator.onLine) { if (force) showToast('❌ اینترنت وصل نیست', '#e53e3e'); return; }
+    if (typeof firebase === 'undefined' || !_fbReady()) { if (force) showToast('⚠️ سرور آنلاین هنوز وصل نشده', '#d97706'); return; }
+    const code = _syncCode();
+    if (!code) return;
+    if (_dbRecordCount(DB) === 0) return;   // حسابِ خالی ارزش بکاپ ندارد و بکاپ خوب را هم نمی‌پوشاند (کلید روزانه جداست)
+    const day = _cloudBkDayKey();
+    if (!force && localStorage.getItem('pumpCloudBkDay') === day) return;
+    _fbDb.ref('backups/' + code + '/' + day).set({ at: new Date().toISOString(), day, data: JSON.stringify(DB) })
+      .then(() => {
+        try { localStorage.setItem('pumpCloudBkDay', day); } catch (e) {}
+        _renderCloudBackupStatus();
+        if (force) showToast('☁️ بکاپ ابری فرستاده شد', '#38a169');
+        // نگه‌داری فقط ۳۰ روز اخیر — فهرست روزها در مسیر کوچکِ جدا تا لازم نشود همهٔ بکاپ‌ها دانلود شوند
+        const idxRef = _fbDb.ref('backupsIndex/' + code);
+        idxRef.get().then(snap => {
+          let keys = [];
+          try { const v = snap.val(); keys = Array.isArray(v) ? v : Object.values(v || {}); } catch (e) {}
+          keys = keys.filter(Boolean).map(String);
+          if (!keys.includes(day)) keys.push(day);
+          keys.sort();
+          const extra = keys.length > 30 ? keys.slice(0, keys.length - 30) : [];
+          keys = keys.slice(-30);
+          idxRef.set(keys).catch(() => {});
+          extra.forEach(k => { try { _fbDb.ref('backups/' + code + '/' + k.replace(/[.#$\[\]\/]/g, '')).remove(); } catch (e) {} });
+        }).catch(() => {});
+      })
+      .catch(() => { if (force) showToast('❌ فرستادن بکاپ ابری ناموفق بود', '#e53e3e'); });
+  } catch (e) {}
+}
+function _renderCloudBackupStatus() {
+  const el = document.getElementById('cloudbk-status');
+  if (!el) return;
+  const last = localStorage.getItem('pumpCloudBkDay');
+  const today = _cloudBkDayKey();
+  el.innerHTML = last
+    ? (last === today ? '✅ بکاپ ابری امروز (<b>' + n2fa(last) + '</b>) فرستاده شده' : '⚠️ آخرین بکاپ ابری: <b>' + n2fa(last) + '</b> — امروز هنوز نرفته')
+    : '⚠️ هنوز هیچ بکاپ ابری‌ای از این دستگاه نرفته';
+}
+function _renderCloudBackupList() {
+  const el = document.getElementById('cloudbk-list');
+  if (!el) return;
+  if (!navigator.onLine || typeof firebase === 'undefined' || !_fbReady()) { el.innerHTML = '<div style="color:var(--muted)">برای دیدن فهرست، اینترنت لازم است</div>'; return; }
+  el.innerHTML = '<div style="color:var(--muted)">در حال گرفتن فهرست از سرور...</div>';
+  _fbDb.ref('backupsIndex/' + _syncCode()).get()
+    .then(snap => {
+      let keys = [];
+      try { const v = snap.val(); keys = Array.isArray(v) ? v : Object.values(v || {}); } catch (e) {}
+      keys = keys.filter(Boolean).map(String).sort().reverse();
+      el.innerHTML = keys.length ? keys.map(k =>
+        `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px dashed var(--border)">
+          <span>☁️ ${n2fa(escFa(k))}</span>
+          <button class="tools-btn" style="background:transparent;border:1px solid var(--blue);color:var(--blue);padding:4px 10px" onclick="restoreCloudBackup('${k.replace(/[^0-9\-]/g, '')}')">↩️ بازگردانی</button>
+        </div>`).join('') : '<div style="color:var(--muted)">هنوز بکاپ ابری‌ای روی سرور نیست</div>';
+    })
+    .catch(() => { el.innerHTML = '<div style="color:var(--red)">❌ گرفتن فهرست ناموفق بود</div>'; });
+}
+function restoreCloudBackup(day) {
+  if (!_toolsAdminOnly()) return;
+  if (!navigator.onLine || typeof firebase === 'undefined' || !_fbReady()) { showToast('❌ اینترنت وصل نیست', '#e53e3e'); return; }
+  _fbDb.ref('backups/' + _syncCode() + '/' + day).get()
+    .then(snap => {
+      const v = snap.val();
+      if (v && v.data) _bkRestoreData(v.data);
+      else showToast('بکاپ این روز روی سرور پیدا نشد', '#e53e3e');
+    })
+    .catch(() => showToast('❌ دریافت بکاپ ناموفق بود', '#e53e3e'));
+}
+
+// ═══════════ 📅 گزارش پایان ماه (فقط نمایش — از ثبت‌های موجود جمع می‌شود) ═══════════
+function _mrAllKeys() {
+  const keys = new Set();
+  const add = d => { const k = _monthKey(d || ''); if (k !== 'بدون تاریخ' && /\d/.test(k)) keys.add(k); };
+  (DB.reports || []).forEach(r => r && add(r.date));
+  (DB.shifts || []).forEach(s => s && add(s.date));
+  (DB.expenses || []).forEach(e => e && add(e.date));
+  (DB.extraIncomes || []).forEach(e => e && add(e.date));
+  (DB.fuelEntries || []).forEach(e => e && add(e.date));
+  (DB.debtQuickReceipts || []).forEach(r => r && add(r.date));
+  (DB.safeEntries || []).forEach(e => e && add(e.date));
+  (DB.tankerLogs || []).forEach(t => t && add(t.date));
+  keys.add(_monthKey(persianDate()));
+  return [...keys].sort().reverse();
+}
+function _mrPrevKey(key) {
+  const p = String(key).split('/');
+  let y = parseInt(p[0]) || 0, m = parseInt(p[1]) || 0;
+  m--; if (m < 1) { m = 12; y--; }
+  return y + '/' + String(m).padStart(2, '0');
+}
+function _mrCompute(key) {
+  const inMon = d => _monthKey(d || '') === key;
+  const t = { petrol: { a: 0, l: 0, p: 0, c: 0 }, diesel: { a: 0, l: 0, p: 0, c: 0 }, exp: 0, extra: 0,
+              buyP: { l: 0, a: 0 }, buyD: { l: 0, a: 0 }, rasid: 0, rasidC: 0, sin: 0, sout: 0,
+              tkCount: 0, tkShort: 0 };
+  (DB.reports || []).forEach(r => {
+    if (!r || r.fuel !== 'petrol' || !inMon(r.date)) return;
+    [r.day, r.night].forEach(sh => { if (!sh) return; t.petrol.a += sh.money || 0; t.petrol.l += sh.sale || 0; t.petrol.p += sh.profit || 0; t.petrol.c++; });
+  });
+  (DB.shifts || []).forEach(s => {
+    if (!s || s.fuel !== 'diesel' || !inMon(s.date)) return;
+    t.diesel.a += s.money || 0; t.diesel.l += s.sale || 0; t.diesel.p += s.profit || 0; t.diesel.c++;
+  });
+  (DB.expenses || []).forEach(e => { if (e && inMon(e.date)) t.exp += e.amount || 0; });
+  (DB.extraIncomes || []).forEach(e => { if (e && inMon(e.date)) t.extra += e.amount || 0; });
+  (DB.fuelEntries || []).forEach(e => {
+    if (!e || !inMon(e.date)) return;
+    const b = (e.fuelType || 'petrol') === 'diesel' ? t.buyD : t.buyP;
+    b.l += e.liters || 0; b.a += e.totalAFN || 0;
+  });
+  (DB.debtQuickReceipts || []).forEach(r => { if (r && inMon(r.date)) { t.rasid += r.amount || 0; t.rasidC++; } });
+  (DB.safeEntries || []).forEach(e => {
+    if (!e || e.currency === 'usd' || !inMon(e.date)) return;
+    if (e.type === 'bardagi') t.sin += e.amount || 0; else t.sout += e.amount || 0;
+  });
+  (DB.tankerLogs || []).forEach(x => {
+    if (!x || !inMon(x.date)) return;
+    t.tkCount++;
+    const d = (parseFloat(x.actual) || 0) - (parseFloat(x.manifest) || 0);
+    if (d < 0) t.tkShort += -d;
+  });
+  t.sales = t.petrol.a + t.diesel.a;
+  t.liters = t.petrol.l + t.diesel.l;
+  t.profit = t.petrol.p + t.diesel.p;
+  t.net = t.profit + t.extra - t.exp;
+  return t;
+}
+// مفادِ گزارش ماه پشت همان قفلِ بخش مفاد/ضرر است
+function _mrProfitLocked() {
+  const r = document.getElementById('pl-result');
+  return !!(r && r.classList.contains('pl-locked'));
+}
+function renderMonthReport() {
+  const selEl = document.getElementById('mr-month');
+  const body = document.getElementById('mr-body');
+  if (!selEl || !body) return;
+  const keys = _mrAllKeys();
+  const want = (selEl.value && keys.includes(selEl.value)) ? selEl.value : (keys[0] || _monthKey(persianDate()));
+  selEl.innerHTML = keys.map(k => `<option value="${k}" ${k === want ? 'selected' : ''}>${escFa(_monthLabel(k))}</option>`).join('');
+  const cur = _mrCompute(want), prev = _mrCompute(_mrPrevKey(want));
+  const locked = _mrProfitLocked();
+  const g = (c, p) => {
+    const pct = _dashGrowth(c, p);
+    return pct == null ? '<span style="color:var(--muted)">—</span>'
+      : `<b style="color:${pct > 0 ? 'var(--green)' : (pct < 0 ? 'var(--red)' : 'var(--muted)')}">${pct > 0 ? '+' : ''}${n2fa(pct)}٪</b>`;
+  };
+  const box = (title, val, sub, color) =>
+    `<div style="background:var(--dark);border:1px solid var(--border);border-radius:14px;padding:14px">
+      <div style="font-size:0.74rem;color:var(--muted);font-weight:700">${title}</div>
+      <div style="font-size:1.05rem;font-weight:900;margin-top:5px;color:${color || 'var(--txt)'}">${val}</div>
+      ${sub ? `<div style="font-size:0.7rem;color:var(--muted);margin-top:5px;line-height:1.7">${sub}</div>` : ''}
+    </div>`;
+  const netG = _dashGrowth(cur.net, prev.net);
+  const hero = locked
+    ? `<div onclick="_onProfitClick()" style="background:var(--dark);border:1.5px dashed var(--border);border-radius:16px;padding:22px;text-align:center;margin-bottom:14px;cursor:pointer">
+        <div style="font-size:1.4rem">🔒</div>
+        <div style="font-weight:900;margin-top:6px">نتیجهٔ خالص و مفاد ماه قفل است</div>
+        <div style="font-size:0.75rem;color:var(--muted);margin-top:5px">برای دیدن، رمز بخش مفاد/ضرر را وارد کنید (کلیک کنید)</div>
+      </div>`
+    : `<div style="background:linear-gradient(135deg,${cur.net >= 0 ? '#059669' : '#e11d48'},var(--purple));border-radius:16px;padding:18px;text-align:center;color:#fff;margin-bottom:14px">
+        <div style="font-size:0.85rem;font-weight:800;opacity:.9">نتیجهٔ خالص ${escFa(_monthLabel(want))} — مفاد + درآمد اضافی − مصارف</div>
+        <div style="font-size:1.7rem;font-weight:900;margin-top:6px">${n2fa(Math.round(cur.net))} افغانی</div>
+        <div style="font-size:0.75rem;opacity:.85;margin-top:4px">${cur.net >= 0 ? '✅ مفاد خالص' : '❌ ضرر خالص'} · نسبت به ماه قبل: ${netG == null ? '—' : (netG > 0 ? '+' : '') + n2fa(netG) + '٪'}</div>
+      </div>`;
+  body.innerHTML = hero +
+    `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px">` +
+    box('💰 جمع فروش', n2fa(Math.round(cur.sales)) + ' افغانی', '🛢️ ' + n2fa(Math.round(cur.liters)) + ' لیتر · نسبت به ماه قبل: ' + g(cur.sales, prev.sales)) +
+    box('⛽ فروش پطرول', n2fa(Math.round(cur.petrol.a)) + ' افغانی', n2fa(Math.round(cur.petrol.l)) + ' لیتر · ' + n2fa(cur.petrol.c) + ' پارچه') +
+    box('🟤 فروش دیزل', n2fa(Math.round(cur.diesel.a)) + ' افغانی', n2fa(Math.round(cur.diesel.l)) + ' لیتر · ' + n2fa(cur.diesel.c) + ' پارچه') +
+    box('📈 مفاد ثبت‌شده', locked ? '🔒' : (n2fa(Math.round(cur.profit)) + ' افغانی'), locked ? 'با رمز مفاد/ضرر باز می‌شود' : ('نسبت به ماه قبل: ' + g(cur.profit, prev.profit)), 'var(--green)') +
+    box('🛒 درآمد اضافی', n2fa(Math.round(cur.extra)) + ' افغانی', 'خرید عمده از مشتری') +
+    box('💸 مصارف', n2fa(Math.round(cur.exp)) + ' افغانی', 'نسبت به ماه قبل: ' + g(cur.exp, prev.exp), 'var(--red)') +
+    box('🧾 رسید نقدی قرض‌داران', n2fa(Math.round(cur.rasid)) + ' افغانی', n2fa(cur.rasidC) + ' رسید در این ماه') +
+    box('🛢️ خرید تیل', n2fa(Math.round(cur.buyP.l + cur.buyD.l)) + ' لیتر', '⛽ ' + n2fa(Math.round(cur.buyP.l)) + ' ل · 🟤 ' + n2fa(Math.round(cur.buyD.l)) + ' ل — جمع ' + n2fa(Math.round(cur.buyP.a + cur.buyD.a)) + ' افغانی') +
+    box('🔐 گاوصندوق (افغانی)', 'ورود ' + n2fa(Math.round(cur.sin)), 'خروج ' + n2fa(Math.round(cur.sout))) +
+    box('🚚 تخلیهٔ تانکر', n2fa(cur.tkCount) + ' تخلیه', cur.tkShort ? ('⚠️ جمع کم‌آمد: ' + n2fa(Math.round(cur.tkShort)) + ' لیتر') : 'کم‌آمدی ثبت نشده') +
+    `</div>
+    <div style="font-size:0.72rem;color:var(--muted);margin-top:12px;line-height:1.8">این گزارش فقط نمایش است و از ثبت‌های موجود (پارچه‌ها، مصارف، خریدها، رسیدها، گاوصندوق و تخلیهٔ تانکر) جمع می‌شود — روی هیچ حسابی اثر نمی‌گذارد.</div>`;
+}
+function pdfMonthReport() {
+  if (_mrProfitLocked()) { showToast('🔒 برای PDF، اول قفل مفاد را با رمز باز کنید', '#d97706'); _onProfitClick(); return; }
+  const selEl = document.getElementById('mr-month');
+  const key = (selEl && selEl.value) || _monthKey(persianDate());
+  const cur = _mrCompute(key), prev = _mrCompute(_mrPrevKey(key));
+  const gtxt = (c, p) => { const pct = _dashGrowth(c, p); return pct == null ? '—' : (pct > 0 ? '+' : '') + n2fa(pct) + '٪'; };
+  const row = (l, v, s) => `<tr><td class="l">${l}</td><td class="v">${v}</td><td class="s">${s || ''}</td></tr>`;
+  const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><title>گزارش ماه ${_monthLabel(key)} — پمپ یعقوبی</title><style>
+    body{font-family:'Vazirmatn',Tahoma,sans-serif;background:#fff;color:#111;padding:24px;max-width:760px;margin:0 auto}
+    h1{font-size:1.25rem;text-align:center;margin:0 0 4px}
+    .sub{text-align:center;color:#666;font-size:0.8rem;margin-bottom:18px}
+    .net{border:2px solid ${cur.net >= 0 ? '#059669' : '#e11d48'};color:${cur.net >= 0 ? '#059669' : '#e11d48'};border-radius:12px;padding:14px;text-align:center;font-size:1.15rem;font-weight:900;margin-bottom:18px}
+    table{width:100%;border-collapse:collapse;font-size:0.9rem}
+    td{border:1px solid #ddd;padding:9px 12px}
+    td.l{font-weight:800;width:38%}td.v{font-weight:900}td.s{color:#666;font-size:0.78rem}
+    @media print{body{padding:0}}
+  </style></head><body>
+    <h1>🛢️ پمپ یعقوبی — گزارش پایان ماه</h1>
+    <div class="sub">${_monthLabel(key)} · چاپ: ${n2fa(persianDate())}</div>
+    <div class="net">نتیجهٔ خالص: ${n2fa(Math.round(cur.net))} افغانی — ${cur.net >= 0 ? 'مفاد' : 'ضرر'} (نسبت به ماه قبل: ${gtxt(cur.net, prev.net)})</div>
+    <table>
+      ${row('💰 جمع فروش', n2fa(Math.round(cur.sales)) + ' افغانی', n2fa(Math.round(cur.liters)) + ' لیتر · رشد: ' + gtxt(cur.sales, prev.sales))}
+      ${row('⛽ فروش پطرول', n2fa(Math.round(cur.petrol.a)) + ' افغانی', n2fa(Math.round(cur.petrol.l)) + ' لیتر · ' + n2fa(cur.petrol.c) + ' پارچه')}
+      ${row('🟤 فروش دیزل', n2fa(Math.round(cur.diesel.a)) + ' افغانی', n2fa(Math.round(cur.diesel.l)) + ' لیتر · ' + n2fa(cur.diesel.c) + ' پارچه')}
+      ${row('📈 مفاد ثبت‌شده', n2fa(Math.round(cur.profit)) + ' افغانی', 'رشد: ' + gtxt(cur.profit, prev.profit))}
+      ${row('🛒 درآمد اضافی', n2fa(Math.round(cur.extra)) + ' افغانی', 'خرید عمده از مشتری')}
+      ${row('💸 مصارف', n2fa(Math.round(cur.exp)) + ' افغانی', 'رشد: ' + gtxt(cur.exp, prev.exp))}
+      ${row('🧾 رسید نقدی قرض‌داران', n2fa(Math.round(cur.rasid)) + ' افغانی', n2fa(cur.rasidC) + ' رسید')}
+      ${row('🛢️ خرید تیل', n2fa(Math.round(cur.buyP.l + cur.buyD.l)) + ' لیتر', 'جمع ' + n2fa(Math.round(cur.buyP.a + cur.buyD.a)) + ' افغانی')}
+      ${row('🔐 گاوصندوق (افغانی)', 'ورود ' + n2fa(Math.round(cur.sin)), 'خروج ' + n2fa(Math.round(cur.sout)))}
+      ${row('🚚 تخلیهٔ تانکر', n2fa(cur.tkCount) + ' تخلیه', cur.tkShort ? ('جمع کم‌آمد ' + n2fa(Math.round(cur.tkShort)) + ' لیتر') : 'کم‌آمدی ثبت نشده')}
+    </table>
+  </body></html>`;
+  const w = window.open('', '_blank');
+  if (!w) { showToast('❌ پنجرهٔ چاپ باز نشد — پاپ‌آپ را اجازه دهید', '#e53e3e'); return; }
+  w.document.write(html); w.document.close();
+  setTimeout(() => { try { w.print(); } catch (e) {} }, 400);
+}
 
 // ========== INIT ==========
 // محافظت نقش نظاره‌گر: همهٔ توابع تغییردهنده برای نظاره‌گر غیرفعال می‌شوند
@@ -21293,6 +21668,10 @@ loadTheme();
 // بکاپ خودکار روزانه: چند ثانیه بعد از باز شدن + هر ۱۰ دقیقه نسخهٔ همان روز تازه می‌شود
 setTimeout(function(){ try { _autoDailyBackup(); } catch(e){} }, 4000);
 setInterval(function(){ try { _autoDailyBackup(); } catch(e){} }, 10 * 60 * 1000);
+// بکاپ ابری خودکار: روزی یک‌بار (اولین فرصتی که اینترنت و سرور آماده باشند)
+setTimeout(function(){ try { _autoCloudBackup(); } catch(e){} }, 12000);
+setInterval(function(){ try { _autoCloudBackup(); } catch(e){} }, 60 * 60 * 1000);
+window.addEventListener('online', function(){ setTimeout(function(){ try { _autoCloudBackup(); } catch(e){} }, 6000); });
 try { applyHexFx(); } catch(e) {}
 // اگر صفحه وقتی هنوز قفلِ تلاش‌های ناموفق فعال بود رفرش شود، همان لحظه دوباره نشان داده شود
 (function(){ try { var r = _lockoutRemaining(); if (r > 0) _lockoutShow(r); } catch(e){} })();
