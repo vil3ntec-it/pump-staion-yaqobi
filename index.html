@@ -12172,20 +12172,30 @@ function _updatePersonTotals(person) {
     _remMoneyP = _mrP > 0 ? (remFuelP * _mrP) : (rasidP * rateP + t.petrol.rasid);
     _remMoneyD = _mrD > 0 ? (remFuelD * _mrD) : (rasidD * rateD + t.diesel.rasid);
   }
-  setV('pm-bord-sum', n2fa(rnd(bordP+bordD)) + unit);
+  // ── فوترِ جدول به فیلترِ «حساب جداگانه» احترام بگذارد ──────────────────────────
+  // باگ کاربر: در نمای «حساب جداگانه دیزل»، جمع/الباقیِ ته جدول هنوز ردیفِ پطرول را
+  // نشان می‌داد (و برعکس). tf = فقط جمعِ همان نوع تیلِ فیلترشده؛ در «همه» = کلِ جدول.
+  const _filt = currentPersonFilter;
+  const _incP = _filt !== 'diesel', _incD = _filt !== 'petrol';
+  const tf = _filt === 'petrol' ? t.petrol : (_filt === 'diesel' ? t.diesel : t.all);
+  const _rasidFuelMoneyF = (_incP ? _rasidFuelMoneyP : 0) + (_incD ? _rasidFuelMoneyD : 0);
+  const _moneyBardLF     = (_incP ? _moneyBardLP     : 0) + (_incD ? _moneyBardLD     : 0);
+  const _rasidMoneyLF    = (_incP ? _rasidMoneyLP    : 0) + (_incD ? _rasidMoneyLD    : 0);
+  const _bordSum = (_incP ? bordP : 0) + (_incD ? bordD : 0);
+  setV('pm-bord-sum', n2fa(rnd(_bordSum)) + unit);
   // footer جدول: جمعِ هر ستون در جمعِ خودِ همان ستون — مقدار تیل، مقدار بردگی و
   // رسید در هر دو حالتِ واحد پول/تیل فقط نمایش داده می‌شوند و هیچ اثری بر
   // محاسبات (الباقی، کادرهای حساب و …) ندارند
-  setV('pm-ft-fuel', n2fa(t.all.fuel));
-  setV('pm-ft-bardagi', n2fa(t.all.bardagi));
-  setV('pm-ft-rasid', n2fa(t.all.rasid));
-  setV('pm-ft-rasidfuel', n2fa(t.all.rasidFuel));
+  setV('pm-ft-fuel', n2fa(tf.fuel));
+  setV('pm-ft-bardagi', n2fa(tf.bardagi));
+  setV('pm-ft-rasid', n2fa(tf.rasid));
+  setV('pm-ft-rasidfuel', n2fa(tf.rasidFuel));
   // جمعِ الباقی ستونِ ردیفِ «جمع» به‌صورت «رسید − بردگی» (پیش‌پرداخت مثبت/سبز،
   // بدهی منفی/سرخ) — فقط از خودِ جدول. در حالتِ «واحد تیل» زیرش الباقی تیلِ همین
   // جدول هم به لیتر نوشته می‌شود: رسید تیل − مقدار تیل
   // جمع الباقیِ جدول (رسید − بردگی). در «واحد پول» معادلِ پولیِ «رسید تیلِ» جدول هم
   // طلب است و به رسید اضافه می‌شود (هماهنگ با کارت‌های بالا).
-  const netAll = Math.round(t.all.rasid - t.all.bardagi + (money ? (_rasidFuelMoneyP + _rasidFuelMoneyD) : 0));
+  const netAll = Math.round(tf.rasid - tf.bardagi + (money ? _rasidFuelMoneyF : 0));
   const netTxt = n2fa(netAll);
   const ftAlbEl = document.getElementById('pm-ft-albaqi');
   if (ftAlbEl) {
@@ -12199,7 +12209,7 @@ function _updatePersonTotals(person) {
     } else {
       // واحد تیل: فقط «الباقی تیل» = رسید تیل − مقدار تیل، منهای معادلِ لیترِ بردگیِ
       // پولی و به‌علاوهٔ معادلِ لیترِ رسیدِ پولی (هماهنگ با کارت‌های بالا)
-      const netL = (Math.round((t.all.rasidFuel - t.all.fuel - _moneyBardLP - _moneyBardLD + _rasidMoneyLP + _rasidMoneyLD) * 100) / 100) || 0;
+      const netL = (Math.round((tf.rasidFuel - tf.fuel - _moneyBardLF + _rasidMoneyLF) * 100) / 100) || 0;
       ftAlbEl.innerHTML =
         '<div style="font-size:0.78rem;font-weight:800;line-height:1.5;color:' + (netL < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی تیل:<br>' + n2fa(netL) + ' ل</div>';
     }
@@ -20567,7 +20577,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.78';
+const APP_VERSION = '2.9.79';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
