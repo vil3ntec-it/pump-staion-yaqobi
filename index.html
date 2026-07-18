@@ -7239,7 +7239,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <div style="display:flex;gap:8px;align-items:center">
       <button id="ro-mode-btn" onclick="_toggleROMode()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--purple);background:transparent;color:var(--purple);font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer">🔁 پول</button>
       <button onclick="if(_roCurType&&_roCurId)pdfPersonById(_roCurType,_roCurId)" style="padding:6px 14px;border-radius:8px;border:none;background:#38a169;color:#fff;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer">🖨️ دانلود PDF</button>
-      <button onclick="closeROViewer()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-family:'Vazirmatn',sans-serif;cursor:pointer">✕ بستن</button>
+      <button id="ro-close-btn" onclick="closeROViewer()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-family:'Vazirmatn',sans-serif;cursor:pointer">✕ بستن</button>
     </div>
   </div>
   <div class="ro-sum" id="ro-sum"></div>
@@ -7279,7 +7279,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <h2 id="company-ro-title">🛢️ شرکت</h2>
     <div style="display:flex;gap:8px;align-items:center">
       <button onclick="if(_companyRoId)pdfCompanyById(_companyRoId)" style="padding:6px 14px;border-radius:8px;border:none;background:#38a169;color:#fff;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer">🖨️ دانلود PDF</button>
-      <button onclick="closeCompanyROViewer()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-family:'Vazirmatn',sans-serif;cursor:pointer">✕ بستن</button>
+      <button id="company-ro-close-btn" onclick="closeCompanyROViewer()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-family:'Vazirmatn',sans-serif;cursor:pointer">✕ بستن</button>
     </div>
   </div>
   <div class="ro-sum" id="company-ro-sum"></div>
@@ -17941,6 +17941,12 @@ function openCompanyROViewer(id) {
   const c = (DB.tilCompanies || []).find(x => x.id === id);
   if (!c) { showToast('شرکت یافت نشد', '#e53e3e'); return; }
   _companyRoId = id;
+  // مهمان کیو‌آر شرکت: دکمهٔ ✕ برداشته می‌شود تا در صفحهٔ خالی گیر نکند
+  {
+    const app = document.getElementById('app');
+    const ccb = document.getElementById('company-ro-close-btn');
+    if (ccb) ccb.style.display = (!app || app.style.display === 'none') ? 'none' : '';
+  }
   (c.rows || []).forEach(_migrateCompanyRow); (c.dieselRows || []).forEach(_migrateCompanyRow);
   const rows = [...(c.rows || []), ...(c.dieselRows || [])];
   const sumTon  = rows.reduce((a,r)=>a+cmpTon(r),0);
@@ -18185,7 +18191,11 @@ function openROViewer(type, id) {
   var _rw = document.getElementById('roWaitMsg'); if (_rw) _rw.remove();
   // چت تک‌نفرهٔ صاحب حساب (از کیو‌آر): سوال از ربات + پیام مستقیم به میرزا
   const app = document.getElementById('app');
-  if (!app || app.style.display === 'none') {
+  const isGuest = (!app || app.style.display === 'none');
+  // مهمان کیو‌آر: دکمهٔ ✕ کلاً برداشته می‌شود تا حساب هیچ‌وقت بسته نشود و صفحه خالی نماند
+  const cb = document.getElementById('ro-close-btn');
+  if (cb) cb.style.display = isGuest ? 'none' : '';
+  if (isGuest) {
     try { _showChatFabs(true); _rbSetMode('person', { peer: _peerKey(type + '-' + id), type: type, id: id, name: person.name }); } catch (e) {}
   }
 }
@@ -20298,7 +20308,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.74';
+const APP_VERSION = '2.9.75';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
