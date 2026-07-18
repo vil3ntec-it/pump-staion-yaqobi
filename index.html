@@ -10796,7 +10796,17 @@ function renderPersons(type) {
     const fuelFig = isMoneyP ? null : _debtSumFigures(p);
     const albaqi  = isMoneyP ? t.all.albaqi : fuelFig.albaqi;
     const albaqiUnit = isMoneyP ? ' افغانی' : ' لیتر';
-    const pBal = t.petrol.albaqi, dBal = t.diesel.albaqi;
+    // ⛽/🟤 روی کارت: در واحدِ پول همان الباقیِ پولیِ هر نوع تیل؛ در واحدِ تیل «الباقیِ
+    // لیتر»ِ هر نوع = بردهٔ تیل − رسیدِ تیلِ همان نوع (رسیدهای هدرِ پطرول/دیزل هم کم
+    // می‌شوند) تا رسیدی که کاربر می‌زند، روی کارتِ قرض‌دار هم دیده شود (خواستهٔ کاربر).
+    let pBal, dBal;
+    if (isMoneyP) { pBal = t.petrol.albaqi; dBal = t.diesel.albaqi; }
+    else {
+      let _rLP = 0, _rLD = 0;
+      [p, ...(p.subs || [])].forEach(a => { if (a) { _rLP += parseFloat(a.rasidFuelP) || 0; _rLD += parseFloat(a.rasidFuelD) || 0; } });
+      pBal = Math.round((t.petrol.fuel - _rLP) * 100) / 100;
+      dBal = Math.round((t.diesel.fuel - _rLD) * 100) / 100;
+    }
     const stInfo = type === 'debt' ? debtFuelStatus(p) : { st: 'none', kinds: {} };
     const st = stInfo.st;
     const who = _debtKindLabel(stInfo.kinds);
@@ -11175,8 +11185,20 @@ function openPersonModal(type, id) {
 function setPersonFilter(f) {
   currentPersonFilter = f;
   _updatePersonFilterBtns();
+  _togglePmFuelCards(f);
   const person = _curPerson();
   if (person) renderPersonRows(person);
+}
+// خواستهٔ کاربر: در نمای «حساب جداگانه پطرول» فقط کارتِ پطرول و در «حساب جداگانه
+// دیزل» فقط کارتِ دیزل بالای مودال دیده شود — تا حساب یک نوع تیل داخل نوع دیگر نیاید.
+// فقط نمایش است؛ هیچ محاسبه‌ای عوض نمی‌شود (کارتِ پنهان هم مثل قبل حساب می‌شود).
+function _togglePmFuelCards(filter) {
+  const modal = document.getElementById('personModal');
+  if (!modal) return;
+  const pc = modal.querySelector('.fuel-split .fs-group.petrol');
+  const dc = modal.querySelector('.fuel-split .fs-group.diesel');
+  if (pc) pc.style.display = (filter === 'diesel') ? 'none' : '';
+  if (dc) dc.style.display = (filter === 'petrol') ? 'none' : '';
 }
 function _updatePersonFilterBtns() {
   const ids = { all: 'pm-filter-all', petrol: 'pm-filter-petrol', diesel: 'pm-filter-diesel' };
@@ -11297,6 +11319,7 @@ function renderPersonRows(person) {
   // در table-layout:fixed ستونِ فانتوم نسازد و جدول باریک/کج نشود.)
   const showFtCol = currentPersonFilter === 'all';
   _togglePmFtColumn(showFtCol);
+  _togglePmFuelCards(currentPersonFilter);
   const money = person.mode === 'money';
   _togglePmMoneyCols(money);
   let shown = 0;
@@ -20544,7 +20567,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.77';
+const APP_VERSION = '2.9.78';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -21449,7 +21472,17 @@ function searchPerson(type, query) {
     const fuelFig = isMoneyP ? null : _debtSumFigures(p);
     const albaqi = isMoneyP ? t.all.albaqi : fuelFig.albaqi;
     const albaqiUnit = isMoneyP ? ' افغانی' : ' لیتر';
-    const pBal = t.petrol.albaqi, dBal = t.diesel.albaqi;
+    // ⛽/🟤 روی کارت: در واحدِ پول همان الباقیِ پولیِ هر نوع تیل؛ در واحدِ تیل «الباقیِ
+    // لیتر»ِ هر نوع = بردهٔ تیل − رسیدِ تیلِ همان نوع (رسیدهای هدرِ پطرول/دیزل هم کم
+    // می‌شوند) تا رسیدی که کاربر می‌زند، روی کارتِ قرض‌دار هم دیده شود (خواستهٔ کاربر).
+    let pBal, dBal;
+    if (isMoneyP) { pBal = t.petrol.albaqi; dBal = t.diesel.albaqi; }
+    else {
+      let _rLP = 0, _rLD = 0;
+      [p, ...(p.subs || [])].forEach(a => { if (a) { _rLP += parseFloat(a.rasidFuelP) || 0; _rLD += parseFloat(a.rasidFuelD) || 0; } });
+      pBal = Math.round((t.petrol.fuel - _rLP) * 100) / 100;
+      dBal = Math.round((t.diesel.fuel - _rLD) * 100) / 100;
+    }
     const card = document.createElement('div');
     card.className = 'person-card';
     card.innerHTML = `
