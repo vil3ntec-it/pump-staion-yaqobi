@@ -11603,7 +11603,7 @@ function pdfStackedAcct(pid, acctId) {
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:13px}
+body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:13.5px;font-weight:500}
 h1{font-size:1.3rem;font-weight:900;color:#c07700;border-bottom:2px solid #c07700;padding-bottom:8px;margin-bottom:6px}
 h2{font-size:0.95rem;font-weight:700;color:#2d3748;margin-bottom:10px}
 .meta{font-size:0.75rem;color:#718096;margin-bottom:16px}
@@ -11613,7 +11613,7 @@ h2{font-size:0.95rem;font-weight:700;color:#2d3748;margin-bottom:10px}
 .sum-box .v{font-size:1rem;font-weight:900}
 table{width:100%;border-collapse:collapse;font-size:0.75rem;table-layout:auto}
 th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:right;font-weight:700;border-bottom:2px solid #4a5568;white-space:nowrap}
-td{padding:6px 7px;border-bottom:1px solid #e2e8f0;white-space:normal;word-break:break-word}
+td{padding:6px 7px;border-bottom:1px solid #e2e8f0;white-space:normal;word-break:break-word;font-weight:600;color:#1a202c}
 tr:nth-child(even) td{background:#f7fafc}
 tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border-top:2px solid #4a5568}
 .footer{margin-top:16px;font-size:0.68rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
@@ -11985,7 +11985,7 @@ function _renderPersonRateBadge(person) {
   if ((currentPersonFilter === 'all' || currentPersonFilter === 'diesel') && rates.diesel > 0) parts.push('🟤 دیزل: ' + n2fa(rates.diesel));
   if (!parts.length) { el.style.display = 'none'; el.textContent = ''; return; }
   el.style.display = '';
-  el.textContent = 'نرخ هر لیتر — ' + parts.join(' · ');
+  el.textContent = 'نرخ هر لیتر فاکتور خریداری شده — ' + parts.join(' · ');
 }
 function _updatePersonTotals(person) {
   const acct = _acctOf(person);
@@ -13427,7 +13427,7 @@ h1{font-size:1.25rem;font-weight:900;color:#38a169;border-bottom:2px solid #38a1
 .sum-box .v{font-size:1.1rem;font-weight:900;white-space:nowrap}
 table{width:100%;border-collapse:collapse;font-size:0.72rem;table-layout:auto}
 th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:right;font-weight:700;border-bottom:2px solid #4a5568;white-space:nowrap}
-td{padding:6px 7px;border-bottom:1px solid #e2e8f0;white-space:normal;word-break:break-word}
+td{padding:6px 7px;border-bottom:1px solid #e2e8f0;white-space:normal;word-break:break-word;font-weight:600;color:#1a202c}
 tr:nth-child(even) td{background:#f0fff4}
 tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border-top:2px solid #4a5568}
 .footer{margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
@@ -13536,7 +13536,7 @@ h1{font-size:1.25rem;font-weight:900;color:#c07700;border-bottom:2px solid #c077
 .sum-box .v{font-size:1.1rem;font-weight:900;white-space:nowrap}
 table{width:100%;border-collapse:collapse;font-size:0.72rem;table-layout:auto}
 th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:right;font-weight:700;border-bottom:2px solid #4a5568;white-space:nowrap}
-td{padding:6px 7px;border-bottom:1px solid #e2e8f0;white-space:normal;word-break:break-word}
+td{padding:6px 7px;border-bottom:1px solid #e2e8f0;white-space:normal;word-break:break-word;font-weight:600;color:#1a202c}
 tr:nth-child(even) td{background:#fffaf0}
 tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border-top:2px solid #4a5568}
 .footer{margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
@@ -15444,17 +15444,18 @@ function pdfPerson() {
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:13px}
+body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:13.5px;font-weight:500}
 h1{font-size:1.3rem;font-weight:900;color:#c07700;border-bottom:2px solid #c07700;padding-bottom:8px;margin-bottom:6px}
 .meta{font-size:0.75rem;color:#718096;margin-bottom:16px}
-.pct-box{display:flex;align-items:center;justify-content:center;gap:10px;background:#fffdf5;border:1px solid #f0dfa8;border-radius:8px;padding:10px;margin-bottom:18px;font-size:0.85rem;color:#4a5568}
-.pct-box b{font-size:1.05rem;color:#c07700}
+.pct-corner{display:flex;justify-content:flex-end;margin-bottom:10px}
+.pct-box{display:inline-flex;align-items:center;gap:6px;background:#fffdf5;border:1px solid #f0dfa8;border-radius:6px;padding:3px 9px;font-size:0.62rem;color:#718096;white-space:nowrap}
+.pct-box b{font-size:0.74rem;color:#c07700}
 .sum-box{flex:1;min-width:0;background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:6px 4px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;gap:3px}
 .sum-box .l{font-size:0.56rem;color:#718096;line-height:1.25}
 .sum-box .v{font-size:0.8rem;font-weight:900;white-space:nowrap}
 table{width:100%;border-collapse:collapse;font-size:0.75rem;table-layout:auto}
 th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:right;font-weight:700;border-bottom:2px solid #4a5568;white-space:nowrap}
-td{padding:6px 7px;border-bottom:1px solid #e2e8f0;white-space:normal;word-break:break-word}
+td{padding:6px 7px;border-bottom:1px solid #e2e8f0;white-space:normal;word-break:break-word;font-weight:600;color:#1a202c}
 tr:nth-child(even) td{background:#f7fafc}
 tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border-top:2px solid #4a5568}
 .footer{margin-top:16px;font-size:0.68rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
@@ -15486,7 +15487,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 <h1>⛽ پمپ یعقوبی — حساب ${escFa(person.name)}${fuelTitle}</h1>
 <div class="meta">تاریخ چاپ: ${printDate} | نوع: ${type === 'debt' ? 'قرض‌دار' : 'بدون پارچه'}</div>
 ${splitBoxesHtml}
-<div class="pct-box"><span>فیصدی ٪ (از مقدار رسید تیل کم می‌شود)</span><b>${n2fa(pct)}٪</b></div>
+<div class="pct-corner"><div class="pct-box"><span>فیصدی ٪ (از مقدار رسید تیل کم می‌شود)</span><b>${n2fa(pct)}٪</b></div></div>
 <table>
   <thead><tr>
     <th>#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th>${ftHeadCols}
@@ -15541,7 +15542,7 @@ h1{font-size:1.25rem;font-weight:900;color:#e53e3e;border-bottom:2px solid #e53e
 .sum-box .v{font-size:1.1rem;font-weight:900;white-space:nowrap}
 table{width:100%;border-collapse:collapse;font-size:0.72rem;table-layout:auto}
 th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:right;font-weight:700;border-bottom:2px solid #4a5568;white-space:nowrap}
-td{padding:6px 7px;border-bottom:1px solid #e2e8f0;white-space:normal;word-break:break-word}
+td{padding:6px 7px;border-bottom:1px solid #e2e8f0;white-space:normal;word-break:break-word;font-weight:600;color:#1a202c}
 tr:nth-child(even) td{background:#fff5f5}
 tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border-top:2px solid #4a5568}
 .footer{margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
@@ -17509,7 +17510,14 @@ function saveWaraq() {
     (sd.transactions||[]).forEach((t, i) => {
       const srcKey = w.id + '|' + shift + '|' + i;
       const name = (t.name||'').trim();
-      const amount = Math.round(parseFloat(t.amount)||0);
+      let amount = Math.round(parseFloat(t.amount)||0);
+      let litersFilled = parseFloat(t.liters)||0;
+      // پُرکردنِ دوطرفهٔ تیل↔پول با نرخِ همین ورق (خواستهٔ کاربر):
+      //  • واحدِ تیل ولی فقط «مبلغ» نوشته شده و «مقدار تیل» خالی → مقدار تیل = مبلغ ÷ نرخِ ورق
+      //  • فقط «مقدار تیل» نوشته شده و «مبلغ» خالی → مبلغ = مقدار تیل × نرخِ ورق
+      const _wqRate = _waraqRepPrice(sd, t.fuel === 'diesel' ? 'diesel' : 'petrol');
+      if (amount <= 0 && litersFilled > 0 && _wqRate > 0) amount = Math.round(litersFilled * _wqRate);
+      if (litersFilled <= 0 && amount > 0 && _wqRate > 0 && t.unit !== 'money') litersFilled = amount / _wqRate;
       const type = t.type === 'expense' ? 'expense' : 'debt';
       if (!name || !amount) {
         // ردیف خالی شد → از هر دو بخش پاک شود
@@ -17536,7 +17544,7 @@ function saveWaraq() {
         // هیچ حسابِ جدیدی ساخته نمی‌شود (خواستهٔ صاحب ریپو) و ردیف در حساب‌ها ثبت نمی‌شود.
         if (!found) { removePersonRowBySrcKey(srcKey); return; }
         const person = found.person;
-        let fuel = parseFloat(t.liters)||0;
+        let fuel = litersFilled;
         let priceper, byMoney = false;
         // اگر فقط مبلغ نوشته شده (بدون لیتر/فی) → ردیف پولی، نه «۱ لیتر فی ...»
         if (fuel > 0) { priceper = amount / fuel; } else { fuel = 0; priceper = 0; byMoney = true; }
@@ -20536,7 +20544,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.76';
+const APP_VERSION = '2.9.77';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
