@@ -13979,6 +13979,21 @@ function openCompanyPurchasesHistory(cid, hid){
   renderCompanyPurchasesPage(company, _cmpFuel);
   document.getElementById('companyPurchasesModal').classList.add('open');
 }
+// خریدهای «تیلِ دیگرِ» همان بازهٔ یک جدول آرشیو — اگر جدولِ هم‌زمانِ آن تیل وجود دارد
+// همان باز می‌شود؛ وگرنه خریدهای همان بازهٔ زمانی از آن تیل نشان داده می‌شود
+function openCompanyPurchasesHistoryFuel(cid, hid, fuel){
+  const company = (DB.tilCompanies||[]).find(c => c.id === cid);
+  if (!company) return;
+  const h = (company.tableHistory||[]).find(x => x.id === hid);
+  if (!h) return;
+  const fu = (fuel === 'diesel') ? 'diesel' : 'petrol';
+  const sib = (company.tableHistory||[]).find(x => x.id !== hid && (x.fuel || 'petrol') === fu && x.purchasesBefore === h.purchasesBefore);
+  if (sib) return openCompanyPurchasesHistory(cid, sib.id);
+  _cmpFuel = fu;
+  _cmpHist = { after: h.purchasesAfter || 0, before: (h.purchasesBefore != null ? h.purchasesBefore : Number.MAX_SAFE_INTEGER), rows: [], createdAt: h.createdAt || '' };
+  renderCompanyPurchasesPage(company, _cmpFuel);
+  document.getElementById('companyPurchasesModal').classList.add('open');
+}
 function closeCompanyPurchases(){
   document.getElementById('companyPurchasesModal').classList.remove('open');
 }
@@ -14314,17 +14329,29 @@ function _renderCompanyHistoryPanel(company){
       }).join('');
       const fuelLabel = h.fuel === 'diesel' ? '🟤 دیزل' : '⛽ پطرول';
       const armed = (_cmDelArm === h.id);
-      // کادر «خریدهای پطرول/دیزل» همین جدولِ آرشیوشده — مثل نمای زنده کلیک‌شدنی است
-      // و صفحهٔ خریدهای «همان بازه» را باز می‌کند (خریدهای هر جدول با خودش آرشیو می‌شوند)
+      // کادرهای «خریدهای پطرول» و «خریدهای دیزل» همین جدولِ آرشیوشده — مثل نمای زنده هر دو
+      // دکمه دیده می‌شوند (خواستهٔ کاربر)؛ دکمهٔ تیلِ دیگر، خریدهای همان بازه از آن تیل را باز می‌کند
       let purchBadge = '';
       {
         const norm = (typeof normFa === 'function') ? normFa : (s => String(s||'').toLowerCase().trim());
         const target = norm(company.name);
         const hBefore = (h.purchasesBefore != null) ? h.purchasesBefore : Number.MAX_SAFE_INTEGER;
-        const nPurch = (DB.fuelEntries||[]).filter(e => (e.fuelType||'petrol') === (h.fuel||'petrol') && norm(e.seller) === target && (e.id||0) > (h.purchasesAfter||0) && (e.id||0) <= hBefore).length;
-        const pbLbl = (h.fuel === 'diesel') ? '🟤 خریدهای دیزل' : '⛽ خریدهای پطرول';
-        const pbColor = (h.fuel === 'diesel') ? '#b7791f' : 'var(--green)';
-        purchBadge = `<button type="button" onclick="openCompanyPurchasesHistory('${company.id}','${h.id}')" style="display:inline-flex;align-items:center;gap:6px;background:var(--dark);border:1.5px solid ${pbColor};border-radius:999px;padding:5px 12px;color:${pbColor};font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.74rem;cursor:pointer">${pbLbl} — ${n2fa(nPurch)} خرید ↗</button>`;
+        const countFor = (fu, after, before) => (DB.fuelEntries||[]).filter(e => (e.fuelType||'petrol') === fu && norm(e.seller) === target && (e.id||0) > (after||0) && (e.id||0) <= before).length;
+        const badge = (fu, click, count) => {
+          const lbl = fu === 'diesel' ? '🟤 خریدهای دیزل' : '⛽ خریدهای پطرول';
+          const col = fu === 'diesel' ? '#b7791f' : 'var(--green)';
+          return `<button type="button" onclick="${click}" style="display:inline-flex;align-items:center;gap:6px;background:var(--dark);border:1.5px solid ${col};border-radius:999px;padding:5px 12px;color:${col};font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.74rem;cursor:pointer">${lbl} — ${n2fa(count)} خرید ↗</button>`;
+        };
+        const own = h.fuel === 'diesel' ? 'diesel' : 'petrol';
+        const other = own === 'diesel' ? 'petrol' : 'diesel';
+        // جدولِ هم‌زمانِ تیل دیگر (با «جدول جدید» هر دو با هم آرشیو می‌شوند و purchasesBefore یکی است)
+        const sib = history.find(x => x.id !== h.id && (x.fuel || 'petrol') === other && x.purchasesBefore === h.purchasesBefore);
+        const ownBadge = badge(own, `openCompanyPurchasesHistory('${company.id}','${h.id}')`, countFor(own, h.purchasesAfter || 0, hBefore));
+        const otherCount = sib
+          ? countFor(other, sib.purchasesAfter || 0, (sib.purchasesBefore != null ? sib.purchasesBefore : Number.MAX_SAFE_INTEGER))
+          : countFor(other, h.purchasesAfter || 0, hBefore);
+        const otherBadge = badge(other, `openCompanyPurchasesHistoryFuel('${company.id}','${h.id}','${other}')`, otherCount);
+        purchBadge = own === 'petrol' ? (ownBadge + otherBadge) : (otherBadge + ownBadge);
       }
       return `<div style="border:1.5px solid ${ac}66;border-radius:12px;margin-bottom:12px;overflow:hidden">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:${ac}18;flex-wrap:wrap">
@@ -18110,11 +18137,19 @@ function _roArchivesHtml(acct) {
     try { mon = _monthLabel(_monthKey(h.createdAt || '')); } catch (e) {}
     if (!mon || mon === 'بدون تاریخ') mon = 'بی‌تاریخ';
     const fuelLbl = h.fuel === 'petrol' ? ' — ⛽ پطرول' : (h.fuel === 'diesel' ? ' — 🟤 دیزل' : '');
+    // چهار کادر خلاصه مثل بالای صفحه — برای همین ماه (خواستهٔ کاربر)
+    const sumBox = (l, v, c) => `<div class="ro-sum-box"><div class="l">${l}</div><div class="v" style="color:${c}">${v}</div></div>`;
+    const sums =
+      sumBox('جمع مقدار تیل', n2fa(t.all.fuel) + ' ل', 'var(--blue)') +
+      sumBox('جمع بردگی', n2fa(t.all.bardagi) + ' افغانی', 'var(--accent)') +
+      sumBox('جمع رسید', n2fa(t.all.rasid) + ' افغانی', 'var(--green)') +
+      sumBox('الباقی', n2fa(t.all.albaqi) + ' افغانی', t.all.albaqi > 0 ? 'var(--red)' : 'var(--green)');
     return `<div style="margin-top:14px;border:1px solid var(--border);border-radius:12px;overflow:hidden">
       <div style="padding:10px 12px;background:var(--dark);font-weight:900;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-        <span>🗂️ آرشیو ماه ${escFa(mon)}${fuelLbl}</span>
+        <span>📅 ماه ${escFa(mon)}${fuelLbl}</span>
         <span style="color:var(--muted);font-size:0.72rem;font-weight:700">بسته شده: ${escFa(toEnDigits(String(h.createdAt || '')))} · 🔒 فقط خواندنی</span>
       </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;padding:10px 12px;border-bottom:1px solid var(--border)">${sums}</div>
       <div style="overflow-x:auto"><table class="ro-tbl" style="min-width:560px;width:100%">
         <thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>تیل (ل)</th><th>بردگی</th><th>رسید</th><th>الباقی</th></tr></thead>
         <tbody>${rows.map((r, i) => `<tr>
@@ -18136,7 +18171,7 @@ function _roArchivesHtml(acct) {
       </table></div>
     </div>`;
   }).join('');
-  return `<div style="margin-top:18px"><div style="font-weight:900;font-size:0.95rem">🗂️ جدول‌های آرشیوشده — ماه‌های قبل</div>${blocks}</div>`;
+  return `<div style="margin-top:18px"><div style="font-weight:900;font-size:0.95rem">📅 ماه‌های قبل</div>${blocks}</div>`;
 }
 function openROViewer(type, id) {
   const list = type === 'debt' ? DB.debtPersons : DB.noinvPersons;
@@ -20263,7 +20298,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.73';
+const APP_VERSION = '2.9.74';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
