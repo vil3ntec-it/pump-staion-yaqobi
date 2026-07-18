@@ -15760,7 +15760,7 @@ function setUnionRate(fuel, val) {
         if (!(rate > 0)) return;
         const lastSame = DB.rateHistory.find(h => h.fuel === ft);
         if (lastSame && lastSame.rate === rate) return;   // فقط تغییرِ واقعی ثبت شود
-        DB.rateHistory.unshift({ date: persianDate(), fuel: ft, rate });
+        DB.rateHistory.unshift({ date: persianDate(), at: Date.now(), fuel: ft, rate });
       };
       rec('petrol', parseFloat(DB.unionRatePetrol) || 0);
       rec('diesel', parseFloat(DB.unionRateDiesel) || 0);
@@ -20160,7 +20160,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.69';
+const APP_VERSION = '2.9.70';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -21278,6 +21278,41 @@ function _shDateKey(s) {
   const m = toEnDigits(String(s || '')).match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
   return m ? ((+m[1]) * 372 + (+m[2]) * 31 + (+m[3])) : 0;
 }
+// ── تبدیل تاریخ شمسی به میلادی (الگوریتم استاندارد جلالی) — فقط برای پیدا کردن روز هفته ──
+function _jalToGreg(jy, jm, jd) {
+  jy -= 979; jm -= 1; jd -= 1;
+  let jdn = 365 * jy + Math.floor(jy / 33) * 8 + Math.floor((jy % 33 + 3) / 4);
+  for (let i = 0; i < jm; ++i) jdn += i < 6 ? 31 : 30;
+  jdn += jd;
+  let gdn = jdn + 79;
+  let gy = 1600 + 400 * Math.floor(gdn / 146097); gdn %= 146097;
+  let leap = true;
+  if (gdn >= 36525) { gdn--; gy += 100 * Math.floor(gdn / 36524); gdn %= 36524; if (gdn >= 365) gdn++; else leap = false; }
+  gy += 4 * Math.floor(gdn / 1461); gdn %= 1461;
+  if (gdn >= 366) { leap = false; gdn--; gy += Math.floor(gdn / 365); gdn %= 365; }
+  const gdm = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  let gm = 0;
+  for (; gm < 12 && gdn >= gdm[gm]; gm++) gdn -= gdm[gm];
+  return new Date(gy, gm, gdn + 1);
+}
+// روز هفتهٔ یک تاریخ شمسی («شنبه»، «یکشنبه»...) — تاریخ خراب/خالی ← رشتهٔ خالی
+function _faWeekdayOf(dateStr) {
+  try {
+    const m = toEnDigits(String(dateStr || '')).match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+    if (!m) return '';
+    const g = _jalToGreg(+m[1], +m[2], +m[3]);
+    if (!g || isNaN(g.getTime())) return '';
+    return g.toLocaleDateString('fa-IR', { weekday: 'long' });
+  } catch (e) { return ''; }
+}
+// «شنبه، 1405/4/27» — نمایش یکدستِ تاریخ با روز هفته در لیست‌های ابزار
+// نکته: n2fa مخصوص عدد است و رشتهٔ تاریخ را NaN می‌کند (اشکال قبلی همین بود) — تاریخ همان‌طور که هست نشان داده می‌شود
+function _faDateWithWeekday(dateStr) {
+  const d = String(dateStr || '').trim();
+  if (!d || !/\d/.test(d)) return 'بی‌تاریخ';
+  const wd = _faWeekdayOf(d);
+  return (wd ? wd + '، ' : '') + escFa(d);
+}
 // ── اندازه‌گیری واقعی مخزن (میله‌زنی) ──
 function confirmTankDip() {
   if (!_toolsAdminOnly()) return;
@@ -21308,7 +21343,7 @@ function _renderDipPanel() {
   el.innerHTML = list.length ? list.map(x => {
     const d = (parseFloat(x.actual) || 0) - (parseFloat(x.book) || 0);
     return `<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:6px 2px;border-bottom:1px dashed var(--border);flex-wrap:wrap">
-      <span>${x.fuel === 'diesel' ? '🟤' : '⛽'} ${n2fa(x.date || '')}</span>
+      <span>${x.fuel === 'diesel' ? '🟤' : '⛽'} ${_faDateWithWeekday(x.date)}</span>
       <span>واقعی: <b>${n2fa(x.actual)}</b> · دفتری: ${n2fa(x.book)}</span>
       <b style="color:${d < 0 ? 'var(--red)' : 'var(--green)'}">${d < 0 ? ('کم‌آمد ' + n2fa(-d)) : ('+' + n2fa(d))} ل</b>
       ${x.note ? `<span style="color:var(--muted);font-size:0.72rem">${escFa(x.note)}</span>` : ''}
@@ -21345,7 +21380,7 @@ function _renderTankerPanel() {
   el.innerHTML = list.length ? list.map(x => {
     const d = (parseFloat(x.actual) || 0) - (parseFloat(x.manifest) || 0);
     return `<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:6px 2px;border-bottom:1px dashed var(--border);flex-wrap:wrap">
-      <span>${x.fuel === 'diesel' ? '🟤' : '⛽'} ${n2fa(x.date || '')}${x.note ? ' · ' + escFa(x.note) : ''}</span>
+      <span>${x.fuel === 'diesel' ? '🟤' : '⛽'} ${_faDateWithWeekday(x.date)}${x.note ? ' · ' + escFa(x.note) : ''}</span>
       <span>بارنامه: ${n2fa(x.manifest)} · تحویل: <b>${n2fa(x.actual)}</b></span>
       <b style="color:${d < 0 ? 'var(--red)' : 'var(--green)'}">${d < 0 ? ('کم‌آمد ' + n2fa(-d)) : '✅ کامل'}</b>
       <button class="del-btn" onclick="deleteTankerLog('${x.id}')">🗑️</button>
@@ -21408,12 +21443,14 @@ function _renderRateHistPanel() {
   const el = document.getElementById('ratehist-list');
   if (!el) return;
   const list = DB.rateHistory || [];
-  el.innerHTML = list.length ? list.map(h =>
-    `<div style="display:flex;justify-content:space-between;padding:5px 2px;border-bottom:1px dashed var(--border)">
+  el.innerHTML = list.length ? list.map(h => {
+    const time = h.at ? new Date(h.at).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }) : '';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px dashed var(--border);flex-wrap:wrap">
       <span>${h.fuel === 'diesel' ? '🟤 دیزل' : '⛽ پطرول'}</span>
       <b style="color:var(--accent)">${n2fa(h.rate)} فی لیتر</b>
-      <span style="color:var(--muted)">${n2fa(h.date || '')}</span>
-    </div>`).join('') : '<div style="color:var(--muted)">با هر تغییرِ نرخ اتحادیه، اینجا خودکار ثبت می‌شود</div>';
+      <span style="color:var(--muted)">📅 ${_faDateWithWeekday(h.date)}${time ? ` · 🕐 ${time}` : ''}</span>
+    </div>`;
+  }).join('') : '<div style="color:var(--muted)">با هر تغییرِ نرخ اتحادیه، اینجا خودکار ثبت می‌شود</div>';
 }
 // ═══════════ ☁️ بکاپ ابری خودکار (Firebase — جدا از مسیر همگام‌سازی زنده) ═══════════
 // هر روز یک عکسِ کامل از DB در backups/<کد ایستگاه>/<روز> ذخیره می‌شود و ۳۰ روز اخیر می‌ماند.
