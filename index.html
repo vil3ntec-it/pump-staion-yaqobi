@@ -498,10 +498,11 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 .tools-btn{padding:8px 14px;border:none;border-radius:8px;background:var(--accent);color:#000;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.82rem;cursor:pointer}
 /* کادر ورود به صفحهٔ هر ابزار — پس‌زمینهٔ کارت + سایه تا در تم روشن و تاریک هر دو
    خوب دیده شود (قبلاً transparent بود و فقط یک خط دورش معلوم می‌شد) */
-.tool-link-card{width:100%;margin-bottom:10px;padding:13px 14px;border-radius:12px;border:1.5px solid var(--accent);background:var(--card);color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.95rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:right;box-shadow:0 6px 16px rgba(0,0,0,.12);transition:transform .18s,box-shadow .18s}
+/* خواستهٔ کاربر: کادرهای «صفحهٔ بعد» دیگر تمام‌صفحه نیستند — کوچک و جمع‌وجور مثل دکمهٔ «رفتن به قرض‌های دسته‌جمعی» */
+.tool-link-card{display:inline-flex;width:auto;max-width:100%;margin:0 0 10px 8px;padding:7px 12px;border-radius:10px;border:1.5px solid var(--accent);background:var(--card);color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.8rem;cursor:pointer;align-items:center;justify-content:flex-start;gap:8px;text-align:right;box-shadow:0 3px 8px rgba(0,0,0,.1);transition:transform .18s,box-shadow .18s}
 .tool-link-card:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(0,0,0,.18)}
-.tool-link-card .tlc-go{background:currentColor;border-radius:999px;padding:4px 12px;flex-shrink:0}
-.tool-link-card .tlc-go i{font-style:normal;color:var(--card);font-size:0.78rem;font-weight:900}
+.tool-link-card .tlc-go{background:currentColor;border-radius:999px;padding:3px 9px;flex-shrink:0}
+.tool-link-card .tlc-go i{font-style:normal;color:var(--card);font-size:0.7rem;font-weight:900}
 #robotFab:hover{transform:scale(1.07)}
 .fab-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:999px;background:var(--red);color:#fff;font-size:0.7rem;font-weight:900;display:none;align-items:center;justify-content:center;padding:0 5px;border:2px solid var(--panel)}
 /* resize:both یعنی همان دستهٔ کشیدنیِ گوشهٔ استاندارد مرورگر (مثل تغییر اندازهٔ
@@ -4679,7 +4680,7 @@ table thead th{ position:relative; }
   <button class="nav-btn" onclick="showSection('waraq',this)"><svg class="nav-ic ia-write"><use href="#ic-waraq"/></svg> ورق‌های روزانه</button>
   <button class="nav-btn" onclick="showSection('debt',this)"><span class="nav-badge" id="debt-nav-badge" style="display:none"></span><svg class="nav-ic ia-bounce"><use href="#ic-debt"/></svg> قرض‌داران</button>
   <button class="nav-btn" onclick="showSection('invoices',this)"><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> ثبت فاکتورها</button>
-  <button class="nav-btn" onclick="showSection('debtrasid',this)"><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> رسید قرض‌داران</button>
+  <button class="nav-btn" onclick="showSection('debtrasid',this)"><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> رسید قرض‌داران / چکنه</button>
   <button class="nav-btn" onclick="showSection('sarrafi',this)"><svg class="nav-ic ia-flip"><use href="#ic-sarrafi"/></svg> صرافی</button>
   <button class="nav-btn" onclick="showSection('expenses',this)"><svg class="nav-ic ia-fly"><use href="#ic-expenses"/></svg> مصارف</button>
   <button class="nav-btn" onclick="showSection('rasid',this)"><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> رسید پارچه</button>
@@ -5299,14 +5300,16 @@ table thead th{ position:relative; }
   <datalist id="debtrasid-names"></datalist>
   <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
     <button class="goto-btn" onclick="showSection('debtsum')">📊 رفتن به قرض‌های دسته‌جمعی</button>
-    <span><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> رسید قرض‌داران</span>
+    <span><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> رسید قرض‌داران / چکنه</span>
   </div>
   <!-- کادر قرض‌های کهنه — صفحهٔ جداگانه -->
   <button type="button" class="tool-link-card" style="border-color:var(--red);color:var(--red)" onclick="showSection('oldloans')"><span>⏰ قرض‌های کهنه — بی‌حرکت‌ها اول</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
+  <!-- کادر حساب‌های چکنه — صفحهٔ جداگانه (خواستهٔ کاربر) -->
+  <button type="button" class="tool-link-card" style="border-color:var(--purple);color:var(--purple)" onclick="showSection('chakana')"><span>🧾 حساب‌های چکنه</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
   <div class="card">
     <div class="card-head">
       <div style="display:flex;align-items:center;gap:10px">
-        <div class="card-title">🧾 رسید قرض‌داران</div>
+        <div class="card-title">🧾 رسید قرض‌داران / چکنه</div>
         <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('debtrasid',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('debtrasid',0.08)">A+</button></span>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -5380,6 +5383,34 @@ table thead th{ position:relative; }
       <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.7">بدهکارها به ترتیبِ «چند روز است هیچ ردیف تازه‌ای ندارند». با کلیک روی نام، حساب کاملش باز می‌شود. با دکمهٔ یادآوری، حساب + لینک مستقیم به پی‌وی واتساپش می‌رود (اگر شماره ثبت باشد).</div>
       <div id="aging-list" style="font-size:0.84rem"></div>
     </div>
+  </div>
+</div>
+
+<!-- 🧾 حساب‌های چکنه (صفحهٔ جداگانه — از کادر بخش رسید قرض‌داران باز می‌شود) -->
+<div class="section" id="sec-chakana">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('debtrasid')">🧾 برگشت به رسید قرض‌داران</button>
+    <span>🧾 حساب‌های چکنه</span>
+  </div>
+  <div class="card" style="border-color:var(--purple)">
+    <div class="card-head">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="card-title">🧾 حساب‌های چکنه</div>
+        <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('chakana',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('chakana',0.08)">A+</button></span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="add-btn" style="background:var(--blue)" onclick="pdfChakana(_activeChakanaMonth)">📄 PDF</button>
+        <button class="add-btn" style="background:var(--accent)" onclick="addChakanaMonth()">🗓️ ماه جدید</button>
+      </div>
+    </div>
+    <div style="padding:14px">
+      <div style="font-size:0.74rem;color:var(--muted);margin-bottom:10px;line-height:1.7">فروش چکنه (نقدی/خرد) — هر ردیف: مقدار تیل × فی = مقدار بردگی، و الباقی = بردگی − رسید. مثل «مصارف ماه» کادر کشویی انتخاب ماه دارد و هر ماه جدولِ جدا دارد.</div>
+      <div id="chakana-body-wrap"></div>
+    </div>
+  </div>
+  <div style="padding:10px 2px 12px">
+    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
+    <textarea id="secnote-chakana" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('chakana', this.value)"></textarea>
   </div>
 </div>
 
@@ -6021,7 +6052,7 @@ table thead th{ position:relative; }
   <div class="card" style="border-color:var(--red)">
     <div class="card-head"><div class="card-title">👷 کمبودی کارمندان — از ورق‌ها</div></div>
     <div style="padding:14px">
-      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.7">جمعِ کمبودی/اضافیِ هر کارمند از همهٔ ورق‌ها (بر اساس نام کارمندِ هر شیفت). با دکمهٔ «💵 تصفیه» پرداختِ کمبودی ثبت می‌شود و از باقی‌مانده کم می‌شود — خود ورق‌ها هیچ تغییری نمی‌کنند و هر تصفیه قابل حذف است.</div>
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.7">کمبودی و اضافیِ هر کارمند از همهٔ ورق‌ها (بر اساس نام کارمندِ هر شیفت). 🔴 کمبودی را با «💵 رسید کمبودی» از او می‌گیرید و 🟢 اضافی را با «💸 پرداخت اضافی» به او برمی‌گردانید — خود ورق‌ها هیچ تغییری نمی‌کنند و هر ثبت قابل حذف است.</div>
       <div id="staffshort-list" style="font-size:0.84rem"></div>
     </div>
   </div>
@@ -7168,14 +7199,8 @@ body.viewer-mode .inv-admin-only{display:none!important}
   </div>
   <div class="ro-sum" id="staff-tanks"></div>
   <div class="ro-body">
-    <!-- کادر رفتن به صفحهٔ بعد: قرض‌های جمع کل (همان مدل «قرض کل» صفحهٔ اصلی) -->
-    <button type="button" class="tool-link-card" onclick="openStaffSums('main')"><span>💰 قرض‌های جمع کل</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
-    <!-- خواستهٔ کاربر: کادر جداگانه برای جدول‌های «واحد پول» و کادر «هر دو واحد» -->
-    <button type="button" class="tool-link-card" style="border-color:var(--green);color:var(--green)" onclick="openStaffSums('money')"><span>💵 قرض‌های واحد پول</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
-    <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openStaffSums('both')"><span>💰🛢️ قرض‌ها — هر دو واحد در یک کادر</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
-    <!-- خواستهٔ کاربر: کادرهای حساب جداگانهٔ پطرول و دیزل برای مهمان‌های کیو‌آر/کارمند -->
-    <button type="button" class="tool-link-card" onclick="openStaffSums('petrol')"><span>⛽ حساب‌های جداگانهٔ پطرول</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
-    <button type="button" class="tool-link-card" style="border-color:#b7791f;color:#b7791f" onclick="openStaffSums('diesel')"><span>🟤 حساب‌های جداگانهٔ دیزل</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
+    <!-- خواستهٔ کاربر: کادرهای قرض/پطرول/دیزل از این‌جا برداشته شدند —
+         حالا داخل حساب هر شخص به شکل کادرهای کوچک نمایش داده می‌شوند -->
     <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:8px">
       <input class="staff-search" id="staff-search" style="margin-bottom:0;flex:1" placeholder="🔍 نام قرض‌دار را بنویسید یا 🎤 بگویید" oninput="renderStaffList()" onkeydown="if(event.key==='Enter'){const c=document.querySelector('#staff-list .staff-card');if(c)c.click();}">
       <button type="button" id="staff-mic" class="staff-mic" onclick="staffVoiceSearch()" title="جستجوی صوتی">🎤</button>
@@ -7194,6 +7219,8 @@ body.viewer-mode .inv-admin-only{display:none!important}
   </div>
   <div class="ro-sum" id="sa-sum"></div>
   <div class="ro-body">
+    <!-- خواستهٔ کاربر: کادرهای کوچکِ قرض جمع کل / واحد پول / هر دو واحد / پطرول / دیزل داخل حساب خودِ شخص -->
+    <div id="sa-unit-cards" style="display:flex;flex-wrap:wrap;gap:8px;padding:0 0 10px"></div>
     <div style="overflow-x:auto">
       <table class="ro-tbl sa-tbl" id="sa-tbl">
         <thead><tr><th>#</th><th>تاریخ</th><th>بردگی</th><th>رسید</th><th>الباقی</th></tr></thead>
@@ -7381,6 +7408,7 @@ const DB = {
   sarrafiRasidLabel: '',
   sarrafiAlbaqiLabel: '',
   expenses: [],
+  chakanaRows: [],
   safeEntries: [],
   waraqEntries: [],
   lowStockInterval: 15,
@@ -8411,6 +8439,7 @@ function showSection(id, btn) {
   if (id === 'extraincome') navId = 'profit';
   if (id === 'tanker' || id === 'tankdip') navId = 'storage';
   if (id === 'oldloans') navId = 'debtrasid';
+  if (id === 'chakana') navId = 'debtrasid';
   if (id === 'staffshort') navId = 'attendance';
   if (id === 'ratehist' || id === 'monthreport') navId = 'profit';
   // نوار بخش‌ها هنگام اسکرول بالا بچسبد — به‌جز ورق، قرض‌داران و شرکت‌ها تیل
@@ -8426,6 +8455,7 @@ function showSection(id, btn) {
   if (id === 'tanker') { try { _renderTankerPanel(); } catch(e) {} }
   if (id === 'tankdip') { try { _renderDipPanel(); _dipRenderTankInfo(); dipLiveCalc(); } catch(e) {} }
   if (id === 'oldloans') { try { _renderAgingPanel(); } catch(e) {} }
+  if (id === 'chakana') { try { renderChakana(); } catch(e) {} }
   if (id === 'staffshort') { try { _ssSettleIdx = null; _renderStaffShortPanel(); } catch(e) {} }
   if (id === 'ratehist') { try { _renderRateHistPanel(); } catch(e) {} }
   if (id === 'monthreport') { try { renderMonthReport(); } catch(e) {} }
@@ -12262,7 +12292,12 @@ function _renderHistoryPanel(person) {
     const rasidD = hMoney ? (parseFloat(h.rasidMoneyD)||0) : (parseFloat(h.rasidFuelD)||0);
     const bordP  = hMoney ? st.petrol.bardagi : st.petrol.fuel;
     const bordD  = hMoney ? st.diesel.bardagi : st.diesel.fuel;
-    const commP = rasidP * pct / 100, commD = rasidD * pct / 100;
+    // فیصدی (کمیشن) باید روی «کل رسید» یعنی رسیدِ هدر + رسیدهای داخلِ خودِ جدولِ آرشیو
+    // حساب شود؛ وگرنه اگر رسید فقط در ردیف‌ها زده شده باشد (هدر=۰) تایپِ فیصدی هیچ اثری
+    // نداشت و انگار «خراب/کار نمی‌کند». (بخش قرض‌داران — خواستهٔ کاربر)
+    const rasidRowP = hMoney ? st.petrol.rasid : st.petrol.rasidFuel;
+    const rasidRowD = hMoney ? st.diesel.rasid : st.diesel.rasidFuel;
+    const commP = (rasidP + rasidRowP) * pct / 100, commD = (rasidD + rasidRowD) * pct / 100;
     const remP  = bordP + commP - rasidP - (hMoney ? st.petrol.rasid : 0),
           remD  = bordD + commD - rasidD - (hMoney ? st.diesel.rasid : 0);
     // fuel summary with editable rasid
@@ -12805,6 +12840,159 @@ function addExpenseMonth() {
 // ========== EXPENSES MULTI-ROW ==========
 let _activeExpenseMonth = null;
 let _expLastAutoMonth = null;   // آخرین ماهی که خودکار فعال شد — برای تشخیص شروع ماه جدید
+
+// ========== 🧾 حساب‌های چکنه (فروش نقدی/خرد) ==========
+// هر ردیف: {date, name, fuel, priceper, rasid}. مقدار بردگی = fuel×priceper (خودکار
+// مثل بقیهٔ جدول‌ها)، الباقی = بردگی − رسید. گروه‌بندی ماهانه با کادر کشویی مثل مصارف.
+let _activeChakanaMonth = null;
+let _chakanaLastAutoMonth = null;
+function _chakanaBardagi(e){ return (parseFloat(e.fuel)||0) * (parseFloat(e.priceper)||0); }
+function renderChakana() {
+  const wrap = document.getElementById('chakana-body-wrap');
+  if (!wrap) return;
+  DB.chakanaRows = DB.chakanaRows || [];
+  wrap.innerHTML = '';
+  const today = persianDate();
+  const curMonth = _monthKey(today);
+  const groups = {};
+  DB.chakanaRows.forEach((e, idx) => { const k = _monthKey(e.date); if (!groups[k]) groups[k] = []; groups[k].push({ e, idx }); });
+  if (!groups[curMonth]) groups[curMonth] = [];
+  Object.keys(groups).forEach(k => { groups[k].sort((a, b) => toEnDigits(a.e.date||'').localeCompare(toEnDigits(b.e.date||''))); });
+  const keys = Object.keys(groups).sort().reverse();
+  if (_chakanaLastAutoMonth !== curMonth) { _activeChakanaMonth = curMonth; _chakanaLastAutoMonth = curMonth; }
+  if (!_activeChakanaMonth || !keys.includes(_activeChakanaMonth)) {
+    _activeChakanaMonth = keys.includes(curMonth) ? curMonth : keys[0];
+  }
+  const _selWrap = document.createElement('div');
+  _selWrap.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px';
+  _selWrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">📅 انتخاب ماه:</label>
+    <select id="chakana-month-select" style="background:var(--card);border:1px solid var(--purple);border-radius:9px;padding:8px 12px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;min-width:150px">
+      ${keys.map(k => `<option value="${k}"${k===_activeChakanaMonth?' selected':''}>${k}</option>`).join('')}
+    </select>`;
+  wrap.appendChild(_selWrap);
+  _selWrap.querySelector('#chakana-month-select').onchange = function(){ _activeChakanaMonth = this.value; renderChakana(); };
+  const items = groups[_activeChakanaMonth] || [];
+  const totBord = items.reduce((a,{e})=>a+_chakanaBardagi(e), 0);
+  const totRasid = items.reduce((a,{e})=>a+(parseFloat(e.rasid)||0), 0);
+  const totAlb = totBord - totRasid;
+  const k = _activeChakanaMonth;
+  const kid = String(k).replace('/','_');
+  const section = document.createElement('div');
+  section.style.cssText = 'margin-bottom:18px';
+  section.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--dark);border-radius:10px 10px 0 0;border:1px solid var(--border);border-bottom:none;flex-wrap:wrap;gap:8px">
+      <span style="font-weight:800;color:var(--purple)">📅 ${k}</span>
+      <span style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button style="background:var(--blue);color:#fff;border:none;border-radius:7px;padding:3px 10px;font-size:0.76rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="pdfChakana('${k}')">📄 PDF</button>
+        <button style="background:var(--green);color:#fff;border:none;border-radius:7px;padding:3px 10px;font-size:0.76rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="addChakanaRowToMonth('${k}')">+ ردیف</button>
+        <span style="font-size:0.82rem;font-weight:700;color:${totAlb>0?'var(--red)':'var(--green)'}">الباقی: ${n2fa(Math.round(totAlb))}</span>
+      </span>
+    </div>
+    <div class="tbl-wrap" style="margin:0;border-radius:0 0 10px 10px">
+      <table class="tbl" style="margin:0;font-size:0.8rem">
+        <thead><tr><th>شماره</th><th>تاریخ</th><th>نام</th><th>مقدار تیل</th><th>فی</th><th>مقدار بردگی</th><th>رسید</th><th>الباقی</th><th>حذف</th></tr></thead>
+        <tbody id="chakana-grp-${kid}"></tbody>
+        <tfoot><tr style="background:var(--dark);font-weight:800">
+          <td colspan="5" style="padding:7px 9px">جمع ماه</td>
+          <td style="color:var(--accent);padding:7px 9px">${n2fa(Math.round(totBord))}</td>
+          <td style="color:var(--green);padding:7px 9px">${n2fa(Math.round(totRasid))}</td>
+          <td style="color:${totAlb>0?'var(--red)':'var(--green)'};padding:7px 9px">${n2fa(Math.round(totAlb))}</td>
+          <td></td>
+        </tr></tfoot>
+      </table>
+    </div>`;
+  wrap.appendChild(section);
+  const tbody = document.getElementById('chakana-grp-' + kid);
+  const frag = document.createDocumentFragment();
+  if (!items.length) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td colspan="9" style="text-align:center;padding:14px;color:var(--muted)">در این ماه هنوز چکنه‌ای ثبت نشده — «+ ردیف» را بزنید</td>';
+    frag.appendChild(tr);
+  }
+  items.forEach(({ e, idx }, n) => {
+    const bord = _chakanaBardagi(e);
+    const alb = bord - (parseFloat(e.rasid)||0);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="text-align:center;color:var(--muted)">${n2fa(n+1)}</td>
+      <td><input class="xls-in sm" value="${(e.date||'').toString().replace(/"/g,'&quot;')}" placeholder="تاریخ" onchange="updateChakana(${idx},'date',this.value)"></td>
+      <td><input class="xls-in" value="${(e.name||'').replace(/"/g,'&quot;')}" placeholder="نام" onchange="updateChakana(${idx},'name',this.value)"></td>
+      <td><input class="xls-in" type="number" value="${e.fuel||''}" placeholder="0" oninput="updateChakana(${idx},'fuel',this.value)"></td>
+      <td><input class="xls-in sm" type="number" value="${e.priceper||''}" placeholder="0" oninput="updateChakana(${idx},'priceper',this.value)"></td>
+      <td style="font-weight:700;color:var(--accent)">${n2fa(Math.round(bord))}</td>
+      <td><input class="xls-in" type="number" value="${e.rasid||''}" placeholder="0" style="color:var(--green)" oninput="updateChakana(${idx},'rasid',this.value)"></td>
+      <td style="font-weight:700;color:${alb>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(alb))}</td>
+      <td><button class="del-btn" onclick="deleteChakana(${idx})">🗑️</button></td>`;
+    frag.appendChild(tr);
+  });
+  tbody.appendChild(frag);
+}
+function updateChakana(idx, field, value) {
+  if (typeof requireAdmin === 'function' && !requireAdmin()) return;
+  DB.chakanaRows = DB.chakanaRows || [];
+  if (!DB.chakanaRows[idx]) return;
+  DB.chakanaRows[idx][field] = (field==='fuel'||field==='priceper'||field==='rasid') ? (parseFloat(toEnDigits(String(value)).replace(/[^0-9.]/g,''))||0) : value;
+  save();
+  // فقط ردیف تاریخ می‌تواند گروه‌بندی را عوض کند → رندر کامل؛ بقیه فقط جمع‌ها را عوض می‌کنند
+  if (field === 'date') { renderChakana(); return; }
+  renderChakana();
+}
+function addChakanaRowToMonth(monthKey) {
+  if (typeof requireAdmin === 'function' && !requireAdmin()) return;
+  _activeChakanaMonth = monthKey;
+  DB.chakanaRows = DB.chakanaRows || [];
+  DB.chakanaRows.push({ date: monthKey + '/01', name: '', fuel: 0, priceper: 0, rasid: 0 });
+  save(); renderChakana();
+}
+function addChakanaMonth() {
+  if (typeof requireAdmin === 'function' && !requireAdmin()) return;
+  DB.chakanaRows = DB.chakanaRows || [];
+  const keys = DB.chakanaRows.map(e => _monthKey(e.date)).filter(k => k !== 'بدون تاریخ' && /\d/.test(k));
+  let nextDate;
+  if (keys.length) {
+    const latest = keys.sort().pop();
+    const p = latest.split('/');
+    let yr = parseInt(p[0])||1403, mo = parseInt(p[1])||1;
+    mo++; if (mo > 12) { mo = 1; yr++; }
+    nextDate = yr + '/' + String(mo).padStart(2,'0') + '/01';
+  } else {
+    nextDate = persianDate();
+  }
+  _activeChakanaMonth = nextDate.slice(0, 7);
+  DB.chakanaRows.push({ date: nextDate, name: '', fuel: 0, priceper: 0, rasid: 0 });
+  save(); renderChakana();
+  showToast('✅ جدول ماه ' + nextDate.slice(0,7) + ' باز شد', '#38a169');
+}
+function deleteChakana(idx) {
+  if (typeof requireAdmin === 'function' && !requireAdmin()) return;
+  DB.chakanaRows = DB.chakanaRows || [];
+  if (!DB.chakanaRows[idx]) return;
+  DB.chakanaRows.splice(idx, 1);
+  save(); renderChakana();
+}
+function pdfChakana(monthKey) {
+  DB.chakanaRows = DB.chakanaRows || [];
+  const rows = DB.chakanaRows.filter(e => !monthKey || _monthKey(e.date) === monthKey)
+    .slice().sort((a,b)=>toEnDigits(a.date||'').localeCompare(toEnDigits(b.date||'')));
+  let totB = 0, totR = 0;
+  const body = rows.map((e, i) => {
+    const bord = _chakanaBardagi(e); const alb = bord - (parseFloat(e.rasid)||0);
+    totB += bord; totR += parseFloat(e.rasid)||0;
+    return `<tr><td>${i+1}</td><td>${escFa(e.date)||'—'}</td><td>${escFa(e.name)||'—'}</td><td>${Math.round(parseFloat(e.fuel)||0)}</td><td>${Math.round(parseFloat(e.priceper)||0)}</td><td style="font-weight:900">${Math.round(bord)}</td><td style="color:#276749;font-weight:900">${Math.round(parseFloat(e.rasid)||0)}</td><td style="color:${alb>0?'#c53030':'#276749'};font-weight:900">${Math.round(alb)}</td></tr>`;
+  }).join('') || '<tr><td colspan="8" style="text-align:center;padding:10px;color:#718096">—</td></tr>';
+  const totAlb = totB - totR;
+  const title = monkeyTitle('حساب‌های چکنه', monkeyLabel(monthKey));
+  const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><title>${title}</title><style>@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:16px}h1{font-size:1rem;font-weight:900;text-align:center;border-bottom:2px solid #805ad5;padding-bottom:6px;margin-bottom:10px}table{width:100%;border-collapse:collapse;font-size:0.8rem}th{background:#2d3748;color:#e2e8f0;padding:6px 7px;text-align:right;font-weight:700}td{padding:5px 7px;border-bottom:1px solid #e2e8f0}tr:nth-child(even) td{background:#f7fafc}tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900}@media print{@page{margin:.5cm}}</style></head><body>
+  <h1>🧾 پمپ یعقوبی — ${title}</h1>
+  <table><thead><tr><th>شماره</th><th>تاریخ</th><th>نام</th><th>مقدار تیل</th><th>فی</th><th>مقدار بردگی</th><th>رسید</th><th>الباقی</th></tr></thead>
+  <tbody>${body}</tbody>
+  <tfoot><tr><td colspan="5">جمع</td><td>${Math.round(totB)}</td><td>${Math.round(totR)}</td><td>${Math.round(totAlb)}</td></tr></tfoot></table>
+  <script>window.onload=function(){window.print()}<\/script></body></html>`;
+  const win = window.open('','_blank','width=900,height=680');
+  if (win) { win.document.write(html); win.document.close(); } else showToast('مرورگر پنجره را مسدود کرد','#e53e3e');
+}
+function monkeyLabel(key){ return (key && /\d/.test(key)) ? _monthLabel(key) : ''; }
+function monkeyTitle(base, lbl){ return lbl ? (base + ' — ' + lbl) : base; }
+
 let expRows = [];
 function openAddExpense() {
   expRows = [{ title: '', amount: '', note: '' }];
@@ -15751,9 +15939,9 @@ function saveProfitPassword() {
 // دریافت از سرور (Firebase آرایه/آبجکتِ خالی را ذخیره نمی‌کند؛ نبودنِ کلید یعنی خالی بودن)
 const _DB_COLLECTIONS = {
   shifts: [], reports: [], fuelEntries: [], debtPersons: [], noinvPersons: [], tilCompanies: [],
-  sarrafiRows: [], expenses: [], safeEntries: [], waraqEntries: [], trash: [], invoices: [],
+  sarrafiRows: [], expenses: [], chakanaRows: [], safeEntries: [], waraqEntries: [], trash: [], invoices: [],
   extraIncomes: [], parchaReceipts: [], debtQuickReceipts: [], debtRasidMonths: [],
-  staffMembers: [], attendance: [], salaryPayments: [], cameras: [],
+  staffMembers: [], attendance: [], salaryPayments: [], cameras: [], staffShortSettles: [],
   sectionNotes: {}, debtAlertState: {}
 };
 function clearAll() {
@@ -17424,7 +17612,7 @@ function printWaraq() {
     const shortageVal = wqr.shortage > 0 ? Math.round(wqr.shortage) : (wqr.excess > 0 ? Math.round(wqr.excess) : 0);
     const shortageColor = wqr.shortage > 0 ? '#d97706' : '#276749';
     return `
-    ${label ? `<h2 style="font-size:0.92rem;font-weight:900;color:${hdrColor};border-bottom:2px solid ${hdrColor};padding-bottom:4px;margin:14px 0 6px">${label}${sd.workerName?' — کارمند: '+sd.workerName:''}</h2>` : (sd.workerName ? `<div style="font-size:0.7rem;color:#718096;margin:6px 0 2px">کارمند: ${escFa(sd.workerName)}</div>` : '')}
+    ${label ? `<h2 style="font-size:0.92rem;font-weight:900;color:${hdrColor};border-bottom:2px solid ${hdrColor};padding-bottom:4px;margin:14px 0 6px">${label}${sd.workerName?' — کارمند: '+sd.workerName:''}</h2>` : (sd.workerName ? `<div style="font-size:0.95rem;font-weight:900;color:#1a202c;text-align:right;border-bottom:2px solid #cbd5e0;padding-bottom:5px;margin:0 0 10px">👷 کارمند: ${escFa(sd.workerName)}</div>` : '')}
     <div class="section-title">🛢️ قرائت پمپ‌ها</div>
     <table><thead><tr><th>بایه</th><th>نام</th><th>نوع</th><th>توضیح/ساعت</th><th>شروع</th><th>ختم</th><th>فی لیتر</th><th>لیتر</th><th>مبلغ</th></tr></thead>
     <tbody>${pumpRows||'<tr><td colspan="9" style="text-align:center;padding:8px;color:#718096">—</td></tr>'}</tbody>
@@ -17446,7 +17634,7 @@ function printWaraq() {
   const isNight = w.activeShift === 'night';
   const sd = isNight ? w.night : w.day;
   const pdfFs = parseInt(document.getElementById('wq-pdf-fontsize')?.value || '11') || 11;
-  const html=`<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><title>ورق ${isNight?'شب':'روز'}</title><style>@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:16px;font-size:${pdfFs}px}h1{font-size:1rem;font-weight:900;text-align:center;border-bottom:2px solid #2b6cb0;padding-bottom:6px;margin-bottom:4px}.meta{font-size:0.7rem;color:#718096;text-align:center;margin-bottom:10px}.sum-row{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}.sum-box{flex:1;min-width:100px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:6px;padding:7px;text-align:center}.sum-box .l{font-size:0.58rem;color:#718096}.sum-box .v{font-size:0.95rem;font-weight:900}table{width:100%;border-collapse:collapse;font-size:0.7rem;margin-bottom:8px}th{background:#2d3748;color:#e2e8f0;padding:5px 6px;text-align:right;font-weight:700;white-space:nowrap}td{padding:4px 6px;border-bottom:1px solid #e2e8f0}tr:nth-child(even) td{background:#f7fafc}tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:5px 6px}.section-title{font-size:0.72rem;font-weight:700;color:#2b6cb0;margin:8px 0 4px}@media print{body{padding:6px}@page{margin:.5cm}}</style></head><body>
+  const html=`<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><title>ورق ${isNight?'شب':'روز'}</title><style>@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:16px;font-size:${pdfFs}px}h1{font-size:1rem;font-weight:900;text-align:center;border-bottom:2px solid #2b6cb0;padding-bottom:6px;margin-bottom:4px}.meta{font-size:0.7rem;color:#718096;text-align:center;margin-bottom:10px}.sum-row{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}.sum-box{flex:1;min-width:100px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:6px;padding:7px;text-align:center}.sum-box .l{font-size:0.62rem;color:#718096;font-weight:700}.sum-box .v{font-size:0.95rem;font-weight:900}table{width:100%;border-collapse:collapse;font-size:0.82rem;margin-bottom:8px}th{background:#2d3748;color:#e2e8f0;padding:6px 7px;text-align:right;font-weight:900;white-space:nowrap;font-size:0.82rem}td{padding:6px 7px;border-bottom:1px solid #cbd5e0;font-weight:700;color:#1a202c}tr:nth-child(even) td{background:#f7fafc}tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:6px 7px}.section-title{font-size:0.88rem;font-weight:900;color:#2b6cb0;margin:10px 0 5px}@media print{body{padding:6px}@page{margin:.5cm}}</style></head><body>
   <h1>${isNight?'🌙 ورق شب':'☀️ ورق روز'} — ${escFa(w.station)||'پمپ'} — تاریخ: ${w.date||'—'}</h1>
   ${shiftSection(sd, '', isNight ? '#6b46c1' : '#b7791f')}
   <script>window.onload=function(){window.print()}<\/script></body></html>`;
@@ -18560,6 +18748,45 @@ function openStaffAccount(pid, subId) {
   if (fl.hasP) sum += `<div class="ro-sum-box"><div class="l">⛽ باقی تیل پطرول</div><div class="v" style="color:var(--green)">${n2fa(Math.round(fl.petrol))} ل</div></div>`;
   if (fl.hasD) sum += `<div class="ro-sum-box"><div class="l">🟤 باقی تیل دیزل</div><div class="v" style="color:#b7791f">${n2fa(Math.round(fl.diesel))} ل</div></div>`;
   document.getElementById('sa-sum').innerHTML = sum;
+  // خواستهٔ کاربر: کادرهای کوچکِ «قرض جمع کل / واحد پول / هر دو واحد / پطرول جدا /
+  // دیزل جدا» داخل حسابِ خودِ هر شخص — ارقام فقط از همین حساب (دو دفترِ جدا:
+  // rows = واحد تیل و moneyRows = واحد پول؛ فقط نمایش، بدون اثر بر محاسبات)
+  const ucWrap = document.getElementById('sa-unit-cards');
+  if (ucWrap) {
+    let mB = 0, mR = 0;
+    (a.moneyRows || []).forEach(r => { mB += parseFloat(r.bardagi) || 0; mR += parseFloat(r.rasid) || 0; });
+    mR += (parseFloat(a.rasidMoneyP) || 0) + (parseFloat(a.rasidMoneyD) || 0);
+    const fB2 = t.all.fuel, fR2 = rasidL;
+    const spP = t.petrol, spD = t.diesel;
+    const z = x => _r2(x) || 0;
+    const albC = v => v < 0 ? 'var(--red)' : 'var(--green)';
+    const _ln = (l, v, c) => `<span style="display:flex;justify-content:space-between;gap:6px"><span style="color:var(--muted)">${l}</span><b style="color:${c}">${v}</b></span>`;
+    const _ub = (color, title, lines) => `<div style="flex:1 1 155px;min-width:155px;max-width:240px;border:1.5px solid ${color};border-radius:10px;padding:7px 10px;background:var(--card);box-shadow:0 3px 8px rgba(0,0,0,.08)">
+      <div style="font-size:0.72rem;font-weight:900;color:${color};margin-bottom:4px">${title}</div>
+      <div style="font-size:0.7rem;line-height:1.9">${lines}</div></div>`;
+    const mAlb = mR - mB, fAlb = fR2 - fB2;
+    ucWrap.innerHTML =
+      _ub('var(--accent)', '💰 قرض جمع کل',
+        _ln('الباقی پول', n2fa(z(mAlb)), albC(mAlb)) +
+        _ln('الباقی تیل', n2fa(z(fAlb)) + ' ل', albC(fAlb))) +
+      _ub('var(--green)', '💵 واحد پول',
+        _ln('بردگی', n2fa(z(mB)), 'var(--accent)') +
+        _ln('رسید', n2fa(z(mR)), 'var(--green)') +
+        _ln('الباقی', n2fa(z(mAlb)), albC(mAlb))) +
+      _ub('var(--blue)', '💰🛢️ هر دو واحد',
+        _ln('بردگی پول', n2fa(z(mB)), 'var(--accent)') + _ln('الباقی پول', n2fa(z(mAlb)), albC(mAlb)) +
+        _ln('بردگی تیل', n2fa(z(fB2)) + ' ل', 'var(--accent)') + _ln('الباقی تیل', n2fa(z(fAlb)) + ' ل', albC(fAlb))) +
+      _ub('#38a169', '⛽ حساب جداگانهٔ پطرول',
+        _ln('تیل', n2fa(z(spP.fuel)) + ' ل', 'var(--blue)') +
+        _ln('بردگی', n2fa(z(spP.bardagi)), 'var(--accent)') +
+        _ln('رسید', n2fa(z(spP.rasid)), 'var(--green)') +
+        _ln('الباقی', n2fa(z(-spP.albaqi)), albC(-spP.albaqi))) +
+      _ub('#b7791f', '🟤 حساب جداگانهٔ دیزل',
+        _ln('تیل', n2fa(z(spD.fuel)) + ' ل', 'var(--blue)') +
+        _ln('بردگی', n2fa(z(spD.bardagi)), 'var(--accent)') +
+        _ln('رسید', n2fa(z(spD.rasid)), 'var(--green)') +
+        _ln('الباقی', n2fa(z(-spD.albaqi)), albC(-spD.albaqi)));
+  }
   // جدول: ستون‌های هر دو واحد کنار هم — نوع تیل و لیتر + بردگی/رسید/الباقی پولی
   const thd = document.querySelector('#sa-tbl thead tr');
   const tb = document.getElementById('sa-body');
@@ -18924,6 +19151,7 @@ const _BOT_SEARCH_SECTIONS = [
   { key: 'noinvPersons',   label: 'اشخاص بدون پارچه' },
   { key: 'tilCompanies',   label: 'شرکت‌های تیل' },
   { key: 'expenses',       label: 'مصارف' },
+  { key: 'chakanaRows',    label: 'حساب‌های چکنه' },
   { key: 'safeEntries',    label: 'گاوصندوق' },
   { key: 'sarrafiRows',    label: 'صرافی' },
   { key: 'waraqEntries',   label: 'ورق روزانه' },
@@ -20308,7 +20536,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.75';
+const APP_VERSION = '2.9.76';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -21634,9 +21862,11 @@ function _renderAgingPanel() {
     </div>`;
   }).join('') : '<div style="color:var(--muted)">هیچ بدهکاری نیست 🎉</div>';
 }
-// ── کمبودی کارمندان (از همهٔ ورق‌ها) + تصفیه ──
-// تصفیه فقط یک دفترِ جداگانه است (DB.staffShortSettles) — به خود ورق‌ها دست نمی‌زند؛
-// «باقی‌مانده» = جمع کمبودیِ ورق‌ها − جمع تصفیه‌های ثبت‌شده برای همان کارمند.
+// ── کمبودی/اضافیِ کارمندان (از همهٔ ورق‌ها) + رسید/پرداخت ──
+// دفترِ جداگانه است (DB.staffShortSettles) — به خود ورق‌ها دست نمی‌زند.
+//  • کمبودی = کارمند به پمپ بدهکار است → «رسید کمبودی» از او می‌گیریم (type='short').
+//  • اضافی  = پمپ به کارمند بدهکار است → «پرداخت اضافی» به او می‌دهیم (type='excess').
+// ثبت‌های قدیمیِ بدون type به‌عنوان «رسید کمبودی» شمرده می‌شوند.
 let _staffShortRows = [];
 function _renderStaffShortPanel() {
   const el = document.getElementById('staffshort-list');
@@ -21656,57 +21886,83 @@ function _renderStaffShortPanel() {
     });
   });
   const settles = DB.staffShortSettles || [];
-  const settledOf = k => settles.filter(s => s && s.key === k).reduce((a, s) => a + (parseFloat(s.amount) || 0), 0);
+  const sumOf = (k, type) => settles.filter(s => s && s.key === k && ((s.type || 'short') === type)).reduce((a, s) => a + (parseFloat(s.amount) || 0), 0);
   const list = Object.values(agg).map(x => {
-    x.settled = settledOf(x.key);
-    x.remain = Math.max(0, Math.round(x.short) - Math.round(x.settled));
+    x.paidShort = sumOf(x.key, 'short');
+    x.paidExcess = sumOf(x.key, 'excess');
+    x.remainShort = Math.max(0, Math.round(x.short) - Math.round(x.paidShort));
+    x.remainExcess = Math.max(0, Math.round(x.excess) - Math.round(x.paidExcess));
     return x;
-  }).sort((a, b) => b.remain - a.remain || b.short - a.short);
+  }).sort((a, b) => (b.remainShort + b.remainExcess) - (a.remainShort + a.remainExcess));
   _staffShortRows = list;
-  const totS = list.reduce((a, x) => a + x.short, 0);
-  const totP = list.reduce((a, x) => a + x.settled, 0);
-  const totR = list.reduce((a, x) => a + x.remain, 0);
+  const totShort = list.reduce((a, x) => a + x.remainShort, 0);
+  const totExcess = list.reduce((a, x) => a + x.remainExcess, 0);
+  // راهنمای واضح بالای جدول — کاربر می‌داند با هر کدام چه کند
+  const guide = `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+    <div style="flex:1 1 240px;min-width:220px;border:1.5px solid var(--red);border-radius:10px;padding:8px 11px;background:var(--card)">
+      <div style="font-weight:900;color:var(--red);font-size:0.82rem">🔴 کمبودی = کارمند بدهکار است</div>
+      <div style="font-size:0.74rem;color:var(--muted);line-height:1.7">پول کم آورده — با دکمهٔ «💵 رسید کمبودی» مبلغی که از او می‌گیرید ثبت کنید تا باقی‌ماندهٔ کمبودی کم شود.</div>
+    </div>
+    <div style="flex:1 1 240px;min-width:220px;border:1.5px solid var(--green);border-radius:10px;padding:8px 11px;background:var(--card)">
+      <div style="font-weight:900;color:var(--green);font-size:0.82rem">🟢 اضافی = پمپ بدهکار است</div>
+      <div style="font-size:0.74rem;color:var(--muted);line-height:1.7">پول زیاد داده — با دکمهٔ «💸 پرداخت اضافی» مبلغی که به او برمی‌گردانید ثبت کنید تا باقی‌ماندهٔ اضافی کم شود.</div>
+    </div>
+  </div>`;
+  const actionCell = (x, i) => {
+    // اگر ردیفِ درحال‌ثبت همین است، کادر ورود مبلغ نمایش داده می‌شود
+    if (i === _ssSettleIdx) {
+      const isExc = _ssSettleType === 'excess';
+      const cap = isExc ? x.remainExcess : x.remainShort;
+      return `<span style="display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <input type="number" id="ss-amt-in" class="tools-in" value="${cap}" min="1" inputmode="numeric" style="width:90px;text-align:center;font-weight:800" onkeydown="if(event.key==='Enter')confirmStaffShortSettle(${i})">
+        <button class="tools-btn" style="padding:6px 12px;background:${isExc ? 'var(--green)' : 'var(--red)'};color:#fff" onclick="confirmStaffShortSettle(${i})">✔ ${isExc ? 'پرداخت شد' : 'رسید گرفتم'}</button>
+        <button class="tools-btn" style="padding:6px 10px;background:transparent;border:1px solid var(--border);color:var(--muted)" onclick="_ssSettleIdx=null;_renderStaffShortPanel()">✖</button>
+      </span>`;
+    }
+    const btns = [];
+    if (x.remainShort > 0) btns.push(`<button class="tools-btn" style="padding:5px 11px;background:var(--red);color:#fff" onclick="openStaffShortSettle(${i},'short')">💵 رسید کمبودی</button>`);
+    if (x.remainExcess > 0) btns.push(`<button class="tools-btn" style="padding:5px 11px;background:var(--green);color:#fff" onclick="openStaffShortSettle(${i},'excess')">💸 پرداخت اضافی</button>`);
+    if (!btns.length) return '<span style="color:var(--green);font-weight:800">✅ تسویه شد</span>';
+    return `<span style="display:inline-flex;gap:6px;flex-wrap:wrap">${btns.join('')}</span>`;
+  };
+  const remCell = (val, color, zeroTxt) => `<td style="font-weight:900;color:${val > 0 ? color : 'var(--muted)'}">${val > 0 ? n2fa(val) : zeroTxt}</td>`;
   const tbl = list.length ? `<div class="tbl-wrap"><table class="tbl" style="font-size:0.78rem;width:100%">
-    <thead><tr><th>کارمند</th><th>شیفت</th><th>جمع کمبودی</th><th>تصفیه‌شده</th><th>باقی‌مانده</th><th>جمع اضافی</th><th></th></tr></thead>
+    <thead><tr><th>کارمند</th><th>شیفت</th><th>🔴 کمبودیِ مانده</th><th>🟢 اضافیِ مانده</th><th>عمل</th></tr></thead>
     <tbody>${list.map((x, i) => `<tr>
       <td style="font-weight:700">${escFa(x.name)}</td>
       <td>${n2fa(x.shifts)}</td>
-      <td style="color:${x.short > 0 ? 'var(--red)' : 'var(--green)'};font-weight:700">${n2fa(Math.round(x.short))}</td>
-      <td style="color:var(--blue);font-weight:700">${n2fa(Math.round(x.settled))}</td>
-      <td style="font-weight:900;color:${x.remain > 0 ? 'var(--red)' : 'var(--green)'}">${x.remain > 0 ? n2fa(x.remain) : '✅ صفر'}</td>
-      <td style="color:var(--green)">${n2fa(Math.round(x.excess))}</td>
-      <td>${x.remain > 0 ? (i === _ssSettleIdx
-        ? `<span style="display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap">
-            <input type="number" id="ss-amt-in" class="tools-in" value="${x.remain}" min="1" inputmode="numeric" style="width:95px;text-align:center;font-weight:800" onkeydown="if(event.key==='Enter')confirmStaffShortSettle(${i})">
-            <button class="tools-btn" style="padding:6px 12px;background:var(--green);color:#fff" onclick="confirmStaffShortSettle(${i})">✔ ثبت</button>
-            <button class="tools-btn" style="padding:6px 10px;background:transparent;border:1px solid var(--border);color:var(--muted)" onclick="_ssSettleIdx=null;_renderStaffShortPanel()">✖</button>
-          </span>`
-        : `<button class="tools-btn" style="padding:5px 12px" onclick="openStaffShortSettle(${i})">💵 تصفیه</button>`) : ''}</td>
+      ${remCell(x.remainShort, 'var(--red)', '—')}
+      ${remCell(x.remainExcess, 'var(--green)', '—')}
+      <td>${actionCell(x, i)}</td>
     </tr>`).join('')}</tbody>
     <tfoot><tr style="font-weight:900;border-top:2px solid var(--border)">
       <td colspan="2">جمع کل</td>
-      <td style="color:var(--red)">${n2fa(Math.round(totS))}</td>
-      <td style="color:var(--blue)">${n2fa(Math.round(totP))}</td>
-      <td style="color:${totR > 0 ? 'var(--red)' : 'var(--green)'}">${n2fa(Math.round(totR))}</td>
-      <td></td><td></td>
+      <td style="color:${totShort > 0 ? 'var(--red)' : 'var(--muted)'}">${totShort > 0 ? n2fa(Math.round(totShort)) : '—'}</td>
+      <td style="color:${totExcess > 0 ? 'var(--green)' : 'var(--muted)'}">${totExcess > 0 ? n2fa(Math.round(totExcess)) : '—'}</td>
+      <td></td>
     </tr></tfoot>
   </table></div>` : '<div style="color:var(--muted)">هنوز ورقی با کمبودی/اضافی ثبت نشده</div>';
   const hist = settles.length ? `<div style="margin-top:14px">
-    <div style="font-weight:800;margin-bottom:6px">🧾 تصفیه‌های ثبت‌شده</div>
-    ${settles.slice().sort((a, b) => (b.at || 0) - (a.at || 0)).map(s => `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px dashed var(--border);flex-wrap:wrap">
+    <div style="font-weight:800;margin-bottom:6px">🧾 رسیدها و پرداخت‌های ثبت‌شده</div>
+    ${settles.slice().sort((a, b) => (b.at || 0) - (a.at || 0)).map(s => {
+      const isExc = (s.type || 'short') === 'excess';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px dashed var(--border);flex-wrap:wrap">
       <span style="font-weight:700">${escFa(s.name || '')}</span>
-      <b style="color:var(--blue)">${n2fa(Math.round(parseFloat(s.amount) || 0))}</b>
+      <span style="font-size:0.72rem;font-weight:800;color:${isExc ? 'var(--green)' : 'var(--red)'}">${isExc ? '💸 پرداخت اضافی' : '💵 رسید کمبودی'}</span>
+      <b style="color:${isExc ? 'var(--green)' : 'var(--blue)'}">${n2fa(Math.round(parseFloat(s.amount) || 0))}</b>
       <span style="color:var(--muted);font-size:0.74rem">📅 ${_faDateWithWeekday(s.date)}</span>
       <button class="del-btn" onclick="deleteStaffShortSettle('${s.id}')">🗑️</button>
-    </div>`).join('')}
+    </div>`; }).join('')}
   </div>` : '';
-  el.innerHTML = tbl + hist;
+  el.innerHTML = guide + tbl + hist;
 }
 // کادر ورود مبلغ داخل خود جدول باز می‌شود — prompt مرورگر در PWA نصب‌شدهٔ موبایل کار نمی‌کند
 let _ssSettleIdx = null;
-function openStaffShortSettle(i) {
+let _ssSettleType = 'short';
+function openStaffShortSettle(i, type) {
   if (!_toolsAdminOnly()) return;
   _ssSettleIdx = i;
+  _ssSettleType = (type === 'excess') ? 'excess' : 'short';
   _renderStaffShortPanel();
   setTimeout(() => { const el = document.getElementById('ss-amt-in'); if (el) { el.focus(); el.select(); } }, 60);
 }
@@ -21715,21 +21971,23 @@ function confirmStaffShortSettle(i) {
   const x = _staffShortRows[i];
   const el = document.getElementById('ss-amt-in');
   if (!x || !el) return;
+  const isExc = _ssSettleType === 'excess';
+  const cap = isExc ? x.remainExcess : x.remainShort;
   // کاماهای جداکنندهٔ هزارگان (فرمت‌کنندهٔ سراسری ورودی‌ها) حذف شوند تا «5,000» پنج خوانده نشود
   const amount = Math.round(parseFloat(toEnDigits(String(el.value)).replace(/[^0-9.]/g, '')) || 0);
-  if (!(amount > 0)) { showToast('مبلغ تصفیه را بنویسید', '#e53e3e'); el.focus(); return; }
-  if (amount > x.remain) { showToast('مبلغ از باقی‌مانده (' + n2fa(x.remain) + ') بیشتر است', '#e53e3e'); el.focus(); return; }
+  if (!(amount > 0)) { showToast('مبلغ را بنویسید', '#e53e3e'); el.focus(); return; }
+  if (amount > cap) { showToast('مبلغ از باقی‌مانده (' + n2fa(cap) + ') بیشتر است', '#e53e3e'); el.focus(); return; }
   DB.staffShortSettles = DB.staffShortSettles || [];
   DB.staffShortSettles.push({ id: 'ss' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    key: x.key, name: x.name, amount, date: persianDate(), at: Date.now() });
+    key: x.key, name: x.name, amount, type: _ssSettleType, date: persianDate(), at: Date.now() });
   _ssSettleIdx = null;
   save();
   _renderStaffShortPanel();
-  showToast('✅ تصفیهٔ ' + x.name + ' ثبت شد — ورق‌ها تغییری نمی‌کنند', '#38a169');
+  showToast(isExc ? ('✅ پرداختِ اضافیِ ' + x.name + ' ثبت شد') : ('✅ رسیدِ کمبودیِ ' + x.name + ' ثبت شد'), '#38a169');
 }
 function deleteStaffShortSettle(id) {
   if (!_toolsAdminOnly()) return;
-  if (!confirm('این تصفیه حذف شود؟ باقی‌ماندهٔ کمبودی دوباره بالا می‌رود.')) return;
+  if (!confirm('این مورد حذف شود؟ باقی‌ماندهٔ کمبودی/اضافی دوباره بالا می‌رود.')) return;
   DB.staffShortSettles = (DB.staffShortSettles || []).filter(s => s && s.id !== id);
   save();
   _renderStaffShortPanel();
