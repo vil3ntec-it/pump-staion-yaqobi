@@ -93,6 +93,16 @@ if not defined NODE (
 
 echo Node پیدا شد:
 echo    %NODE%
+echo.
+
+REM --- باز کردن پورت 8787 در فایروال ویندوز (تا گوشی بتواند وصل شود) ---
+REM اگر با دسترسی مدیر اجرا شده باشد، قانون فایروال ساخته می‌شود؛ وگرنه بی‌صدا رد می‌شود.
+netsh advfirewall firewall show rule name="Pump Yaqobi Server 8787" >nul 2>nul
+if errorlevel 1 (
+  netsh advfirewall firewall add rule name="Pump Yaqobi Server 8787" dir=in action=allow protocol=TCP localport=8787 >nul 2>nul
+  if not errorlevel 1 echo [فایروال] پورت 8787 برای اتصال از گوشی باز شد.
+)
+
 echo در حال اجرای سرور ...
 echo (برای توقف، این پنجره را ببند یا Ctrl+C بزن)
 echo.
