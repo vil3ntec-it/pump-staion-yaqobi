@@ -18,6 +18,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 
@@ -430,17 +431,47 @@ async function ensureAuthToken() {
 // ---------------------------------------------------------------------------
 //  راه‌اندازی
 // ---------------------------------------------------------------------------
+// آدرس‌های شبکهٔ محلی (LAN) این کامپیوتر — برای وصل‌شدن از گوشی/دستگاه دیگر
+function lanAddresses() {
+  const out = [];
+  try {
+    const ifaces = os.networkInterfaces();
+    for (const name of Object.keys(ifaces)) {
+      for (const ni of ifaces[name] || []) {
+        if (ni.family === 'IPv4' && !ni.internal) out.push(ni.address);
+      }
+    }
+  } catch (e) { /* بی‌خیال */ }
+  // آی‌پی‌های معمول خانگی را اول بیاور
+  out.sort((a, b) => (b.startsWith('192.168.') - a.startsWith('192.168.')));
+  return out;
+}
+
 async function main() {
   await ensureAuthToken();
   await loadFromDisk();
   httpServer.listen(PORT, () => {
+    const ips = lanAddresses();
     console.log('');
     console.log('==================================================');
     console.log(' ✅ سرور شخصی پمپ یعقوبی بالا آمد');
     console.log('==================================================');
     console.log(' پورت:  ' + PORT);
-    console.log(' تست سلامت در مرورگر:  http://localhost:' + PORT + '/health');
     console.log('');
+    console.log(' 🖥️  روی همین کامپیوتر (تست):');
+    console.log('     http://localhost:' + PORT + '/health');
+    console.log('');
+    if (ips.length) {
+      console.log(' 📱 از گوشی/تبلت (روی همان وای‌فای) — همین را در برنامه بگذار:');
+      for (const ip of ips) {
+        console.log('     آدرس سرور:  ws://' + ip + ':' + PORT);
+        console.log('     تست مرورگر: http://' + ip + ':' + PORT + '/health');
+      }
+      console.log('');
+    } else {
+      console.log(' 📱 برای وصل‌شدن از گوشی، کامپیوتر باید به وای‌فای/شبکه وصل باشد.');
+      console.log('');
+    }
     console.log(' 👇 این «رمز سرور» را در برنامه (فیلد رمز سرور) وارد کنید:');
     console.log('    ' + AUTH_TOKEN);
     console.log('');
