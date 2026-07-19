@@ -25,6 +25,7 @@ import { register as fileRoutes } from './routes/contracts.js';
 import { register as tagRoutes } from './routes/tags.js';
 import { register as searchRoutes } from './routes/search.js';
 import { register as exportRoutes } from './routes/export.js';
+import { register as discoverRoutes } from './routes/discover.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
@@ -53,7 +54,7 @@ const router = createRouter();
 for (const reg of [
   authRoutes, dashboardRoutes, websiteRoutes, domainRoutes, serverRoutes,
   credentialRoutes, backupRoutes, clientRoutes, fileRoutes, tagRoutes,
-  searchRoutes, exportRoutes,
+  searchRoutes, exportRoutes, discoverRoutes,
 ]) reg(router);
 
 // --- سرو کردن فایل‌های ثابت (رابط کاربری) -----------------------------------
