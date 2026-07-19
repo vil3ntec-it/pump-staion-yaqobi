@@ -1517,8 +1517,8 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
   var SELF_HOST_TOKEN = '';   // همان AUTH_TOKEN سرور
   try { SELF_HOST_URL   = window.SELF_HOST_URL   || localStorage.getItem('pumpServerUrl')   || SELF_HOST_URL; } catch(e){}
   try { SELF_HOST_TOKEN = window.SELF_HOST_TOKEN || localStorage.getItem('pumpServerToken') || SELF_HOST_TOKEN; } catch(e){}
-  if (!SELF_HOST_URL) return;              // سرور شخصی فعال نیست → فایربیس عادی بارگذاری می‌شود
-  window.__USE_SELF_HOST__ = true;         // به لودر می‌گوید کتابخانهٔ فایربیس را بارگذاری نکند
+  window.__USE_SELF_HOST__ = true;         // فایربیس کاملاً حذف شده — تنها بک‌اند، سرور شخصی است
+  window.__SELF_HOST_URL__ = SELF_HOST_URL; // اگر خالی باشد، برنامه فقط محلی کار می‌کند (بدون هم‌زمان‌سازی)
 
   var ws = null, connected = false, wantOpen = true, reconnectDelay = 1000;
   var pending = {}, idSeq = 0;
@@ -1668,10 +1668,10 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
 
   // نصب آبجکت firebase جعلی — بقیهٔ برنامه بدون هیچ تغییری همین را صدا می‌زند
   window.firebase = { initializeApp: function(){ return {}; }, database: function(){ return dbInstance; } };
-  connect();
+  if (SELF_HOST_URL) connect();            // فقط وقتی آدرس سرور تنظیم شده باشد وصل شو
   window._firebaseLibLoaded = true;
   if (typeof window._onFirebaseLibReady === 'function') { try { window._onFirebaseLibReady(); } catch(e){} }
-  try { console.log('[پمپ یعقوبی] حالت سرور شخصی فعال شد →', SELF_HOST_URL); } catch(e){}
+  try { console.log(SELF_HOST_URL ? ('[پمپ یعقوبی] سرور شخصی → ' + SELF_HOST_URL) : '[پمپ یعقوبی] سرور شخصی تنظیم نشده — فقط محلی (تنظیمات › هم‌زمان‌سازی)'); } catch(e){}
 })();
 </script>
 <script>
@@ -1689,16 +1689,9 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
   }
   add('https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js');
   add('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
-  // اگر سرور شخصی فعال باشد، شیمِ بالا جای فایربیس را گرفته — کتابخانهٔ فایربیس بارگذاری نمی‌شود.
-  if (!window.__USE_SELF_HOST__) {
-    // ترتیب Firebase مهم است: اول app بعد database — سپس هم‌زمان‌سازی شروع می‌شود
-    add('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js', function(){
-      add('https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js', function(){
-        window._firebaseLibLoaded = true;
-        if (typeof window._onFirebaseLibReady === 'function') { try { window._onFirebaseLibReady(); } catch(e) {} }
-      });
-    });
-  }
+  // فایربیس کاملاً حذف شده — دیگر هیچ کتابخانه‌ای از گوگل بارگذاری نمی‌شود.
+  // بک‌اند برنامه فقط «سرور شخصی» است (شیمِ بالا در index.html). آدرس سرور در
+  // تنظیمات › هم‌زمان‌سازی یا localStorage('pumpServerUrl') تعیین می‌شود.
 })();
 </script>
 
@@ -6586,6 +6579,18 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <div id="sync-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;line-height:1.8"></div>
     <div id="sync-lasttime" style="margin-top:6px;font-size:0.75rem;color:var(--muted)"></div>
     <input type="hidden" id="sync-station-code" value="pump1">
+    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+      <div style="font-size:0.86rem;color:var(--label);margin-bottom:4px;font-weight:700">🖥️ سرور شخصی</div>
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.8">آدرس سرور خودت را این‌جا بگذار تا برنامه به آن وصل شود. اگر خالی بماند، برنامه فقط روی همین دستگاه کار می‌کند (بدون هم‌زمان‌سازی). راهنمای ساخت سرور: پوشهٔ <code>server</code>.</div>
+      <label style="font-size:0.75rem;color:var(--muted)">آدرس سرور</label>
+      <input type="text" id="server-url" placeholder="wss://your-name.trycloudflare.com" autocomplete="off" spellcheck="false" style="width:100%;margin:5px 0 10px;padding:9px 11px;border-radius:8px;border:1px solid var(--border);background:var(--dark);color:var(--txt);direction:ltr;text-align:left;font-size:0.85rem">
+      <label style="font-size:0.75rem;color:var(--muted)">رمز سرور (AUTH_TOKEN)</label>
+      <input type="password" id="server-token" placeholder="رمز سرور" autocomplete="off" style="width:100%;margin:5px 0 12px;padding:9px 11px;border-radius:8px;border:1px solid var(--border);background:var(--dark);color:var(--txt);direction:ltr;text-align:left;font-size:0.85rem">
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="pw-btn" style="background:var(--accent);color:#000" onclick="saveServerConfig()">💾 ذخیره و اتصال</button>
+        <button class="pw-btn" style="background:var(--card);color:var(--muted);border:1px solid var(--border)" onclick="clearServerConfig()">پاک کردن سرور</button>
+      </div>
+    </div>
   </div>
   <div class="settings-card">
     <div class="settings-title">⬇️ دانلود برنامه</div>
@@ -7820,19 +7825,15 @@ function dedupAccounts() {
   return changed;
 }
 
-// ========== SYNC آنلاین (Firebase) ==========
-// نکته فنی: برای فعال شدن این بخش، یک پروژه رایگان در firebase.google.com/console بسازید
-// (Realtime Database, حالت test mode) و چهار مقدار زیر را با مقادیر پروژه خودتان جایگزین کنید.
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDk0mFFucudFf00794pP_uGnhvt7rKU6sw",
-  databaseURL: "https://pump-staion-yaqobi-a6c73-default-rtdb.firebaseio.com",
-  projectId: "pump-staion-yaqobi-a6c73"
-};
+// ========== SYNC آنلاین (سرور شخصی — جایگزین کامل فایربیس) ==========
+// فایربیس از ریشه حذف شده. تنها بک‌اند، «سرور شخصی» است که آدرسش در
+// تنظیمات › هم‌زمان‌سازی (یا localStorage['pumpServerUrl']) تعیین می‌شود.
+// اگر آدرس تنظیم نشده باشد، برنامه فقط محلی کار می‌کند (بدون هم‌زمان‌سازی/چت).
 let _fbApp = null, _fbDb = null;
 function _fbReady() {
-  if (FIREBASE_CONFIG.apiKey === "PASTE_YOUR_API_KEY") return false;
+  if (!window.__SELF_HOST_URL__) return false;   // آدرس سرور شخصی تنظیم نشده → فقط محلی
   try {
-    if (!_fbApp) { _fbApp = firebase.initializeApp(FIREBASE_CONFIG); _fbDb = firebase.database(); }
+    if (!_fbApp) { _fbApp = firebase.initializeApp({}); _fbDb = firebase.database(); }
     return true;
   } catch(e) { return false; }
 }
@@ -7848,10 +7849,30 @@ function _setSyncMsg(txt, color) {
   const el = document.getElementById('sync-msg');
   if (el) { el.textContent = txt; el.style.color = color || 'var(--muted)'; }
 }
+// ذخیرهٔ آدرس سرور شخصی؛ با ذخیره، صفحه دوباره بارگذاری می‌شود تا اتصال برقرار شود.
+function saveServerConfig() {
+  const uEl = document.getElementById('server-url');
+  const tEl = document.getElementById('server-token');
+  const u = uEl ? uEl.value.trim() : '';
+  const t = tEl ? tEl.value.trim() : '';
+  if (!u) { showToast('آدرس سرور را وارد کنید', '#e53e3e'); return; }
+  if (!/^wss?:\/\//i.test(u)) { showToast('آدرس باید با wss:// شروع شود', '#e53e3e'); return; }
+  try {
+    localStorage.setItem('pumpServerUrl', u);
+    if (t) localStorage.setItem('pumpServerToken', t); else localStorage.removeItem('pumpServerToken');
+  } catch(e) {}
+  showToast('✅ ذخیره شد — در حال اتصال دوباره...', '#38a169');
+  setTimeout(function(){ location.reload(); }, 800);
+}
+function clearServerConfig() {
+  if (!confirm('آدرس سرور پاک شود؟ برنامه فقط روی همین دستگاه کار می‌کند (بدون هم‌زمان‌سازی).')) return;
+  try { localStorage.removeItem('pumpServerUrl'); localStorage.removeItem('pumpServerToken'); } catch(e) {}
+  location.reload();
+}
 function syncUpload() {
   const code = _syncCode();
   if (!code) { _setSyncMsg('❌ اول کد ایستگاه را ذخیره کنید', '#e53e3e'); return; }
-  if (!_fbReady()) { _setSyncMsg('⚠️ سرور آنلاین هنوز وصل نشده — به برنامه‌نویس پیام دهید تا کد سرور را فعال کند.', '#d97706'); return; }
+  if (!_fbReady()) { _setSyncMsg('⚠️ آدرس سرور شخصی تنظیم نشده — در تنظیمات › هم‌زمان‌سازی، آدرس سرور را وارد کنید.', '#d97706'); return; }
   if (!navigator.onLine) { _setSyncMsg('❌ اینترنت وصل نیست', '#e53e3e'); return; }
   // محافظ: بارگذاریِ دستیِ یک حسابِ کاملاً خالی (دستگاه تازه) روی سرورِ داده‌دار، حساب اصلی را پاک می‌کند
   if (_dbRecordCount(DB) === 0 && !confirm('حساب این دستگاه خالی است. با بارگذاری، حسابِ خالی روی سرور نوشته می‌شود و اطلاعات قبلی سرور از بین می‌رود. مطمئن هستید؟')) { _setSyncMsg('بارگذاری لغو شد — اول «دریافت از سرور» را بزنید', '#d97706'); return; }
@@ -7874,7 +7895,7 @@ function syncUpload() {
 function syncDownload() {
   const code = _syncCode();
   if (!code) { _setSyncMsg('❌ اول کد ایستگاه را ذخیره کنید', '#e53e3e'); return; }
-  if (!_fbReady()) { _setSyncMsg('⚠️ سرور آنلاین هنوز وصل نشده — به برنامه‌نویس پیام دهید تا کد سرور را فعال کند.', '#d97706'); return; }
+  if (!_fbReady()) { _setSyncMsg('⚠️ آدرس سرور شخصی تنظیم نشده — در تنظیمات › هم‌زمان‌سازی، آدرس سرور را وارد کنید.', '#d97706'); return; }
   if (!navigator.onLine) { _setSyncMsg('❌ اینترنت وصل نیست', '#e53e3e'); return; }
   if (!confirm('اطلاعات فعلی شما با اطلاعات سرور جایگزین می‌شود. ادامه می‌دهید؟')) return;
   clearTimeout(_autoSyncTimer);
@@ -7901,6 +7922,12 @@ function _updateSyncLastTime() {
 function fillSyncSettings() {
   const inp = document.getElementById('sync-station-code');
   if (inp) inp.value = DB.syncCode || '';
+  try {
+    const su = document.getElementById('server-url');
+    if (su) su.value = localStorage.getItem('pumpServerUrl') || '';
+    const st = document.getElementById('server-token');
+    if (st) st.value = localStorage.getItem('pumpServerToken') || '';
+  } catch(e) {}
   _updateSyncLastTime();
   _updateAutoSyncBadge();
 }
@@ -20756,7 +20783,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.80';
+const APP_VERSION = '2.9.81';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }

@@ -1,7 +1,7 @@
 // سرویس‌ورکر پمپ یعقوبی — پوستهٔ برنامه (این صفحه + آیکون‌ها) را کش می‌کند تا
 // برنامه بعد از نصب، هم آنلاین و هم کاملاً آفلاین باز شود. نسخهٔ کش را هر بار
 // که APP_VERSION در index.html عوض می‌شود، این‌جا هم عوض کنید تا کش کهنه پاک شود.
-const CACHE_NAME = 'pump-yaqobi-shell-v2.9.80';
+const CACHE_NAME = 'pump-yaqobi-shell-v2.9.81';
 const APP_SHELL = [
   './',
   './index.html',
@@ -39,8 +39,9 @@ self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  // کتابخانه‌های خارجی (فونت/فایربیس/کیوآر/اکسل) دست‌نخورده از شبکه بروند —
-  // برنامه از قبل برای نبود آن‌ها گارد دارد (بخش‌های مربوطه فقط غیرفعال می‌شوند)
+  // کتابخانه‌های خارجی (فونت/کیوآر/اکسل) دست‌نخورده از شبکه بروند —
+  // برنامه از قبل برای نبود آن‌ها گارد دارد (بخش‌های مربوطه فقط غیرفعال می‌شوند).
+  // نکته: فایربیس کاملاً حذف شده؛ هم‌زمان‌سازی از راه «سرور شخصی» (WebSocket) انجام می‌شود.
   if (url.origin !== self.location.origin) return;
 
   const isAppShellPage = req.mode === 'navigate' || url.pathname.endsWith('/index.html') || url.pathname.endsWith('/');
