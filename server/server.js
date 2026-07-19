@@ -46,7 +46,17 @@ import pg from 'pg';
 // ---------------------------------------------------------------------------
 const PORT = parseInt(process.env.PORT || '8787', 10);
 const AUTH_TOKEN = process.env.AUTH_TOKEN || '';            // رمز اشتراکی؛ خالی یعنی بدون احراز هویت (توصیه نمی‌شود)
-const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/pump_yaqobi';
+// آدرس دیتابیس: یا کلِ DATABASE_URL را بده، یا فقط تکه‌ها را (ساده‌تر — معمولاً فقط DB_PASSWORD کافی است)
+function buildDbUrl() {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+  const host = process.env.DB_HOST || 'localhost';
+  const port = process.env.DB_PORT || '5432';
+  const user = process.env.DB_USER || 'postgres';
+  const pass = process.env.DB_PASSWORD || 'postgres';
+  const name = process.env.DB_NAME || 'pump_yaqobi';
+  return 'postgresql://' + encodeURIComponent(user) + ':' + encodeURIComponent(pass) + '@' + host + ':' + port + '/' + name;
+}
+const DATABASE_URL = buildDbUrl();
 const PERSIST_DEBOUNCE_MS = parseInt(process.env.PERSIST_DEBOUNCE_MS || '400', 10);
 
 // شاخه‌های سطح‌اولی که جداگانه در دیتابیس ذخیره می‌شوند
