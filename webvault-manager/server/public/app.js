@@ -280,12 +280,14 @@ PAGES.dashboard = async function () {
 // ============================================================================
 //  ابزار: سربرگ صفحه با دکمهٔ افزودن
 // ============================================================================
-function pageHead(title, btnLabel, onAdd) {
+function pageHead(title, btnLabel, onAdd, extra = []) {
   const wrap = document.createElement('div');
   wrap.className = 'panel-head';
-  wrap.style.cssText = 'border:1px solid var(--border);border-radius:14px;margin-bottom:16px;background:var(--panel)';
-  wrap.innerHTML = `<h3>${esc(title)}</h3><button class="btn primary" data-add>➕ ${esc(btnLabel)}</button>`;
+  wrap.style.cssText = 'border:1px solid var(--border);border-radius:14px;margin-bottom:16px;background:var(--panel);gap:8px;flex-wrap:wrap';
+  const extraBtns = extra.map((e, i) => `<button class="btn ${e.cls || 'ghost'}" data-extra="${i}">${esc(e.label)}</button>`).join('');
+  wrap.innerHTML = `<h3>${esc(title)}</h3>${extraBtns}<button class="btn primary" data-add>➕ ${esc(btnLabel)}</button>`;
   wrap.querySelector('[data-add]').addEventListener('click', onAdd);
+  extra.forEach((e, i) => wrap.querySelector(`[data-extra="${i}"]`).addEventListener('click', e.handler));
   return wrap;
 }
 
@@ -322,10 +324,68 @@ async function websiteModal(existing) {
   });
 }
 
+// کشف خودکار سایت‌های میزبانی‌شده روی سرور و افزودن آن‌ها
+async function discoverSitesModal(customPath) {
+  openModal('🔍 کشف خودکار سایت‌های سرور', '<div class="empty"><div class="big">⏳</div>در حال اسکن سرور…</div>', { wide: true });
+  let data;
+  try {
+    data = await GET('/discover/sites' + (customPath ? '?path=' + encodeURIComponent(customPath) : ''));
+  } catch (e) { $('#modal .modal-body').innerHTML = `<div class="empty"><div class="big">⚠️</div>${esc(e.message)}</div>`; return; }
+
+  const rootsInfo = `<div style="font-size:12px;color:var(--muted);margin-bottom:12px">پلتفرم: <b>${esc(data.platform)}</b> — مسیرهای اسکن‌شده: <span class="mono">${data.scannedRoots.map(esc).join('، ')}</span></div>`;
+  const pathBar = `<div class="pw-row" style="margin-bottom:14px">
+    <input id="scanPath" class="mono" placeholder="مسیر دلخواه برای اسکن (اختیاری) مثل /var/www یا C:\\xampp\\htdocs" value="${esc(customPath || '')}" />
+    <button class="btn sm ghost" id="rescan">اسکن این مسیر</button></div>`;
+
+  let listHtml;
+  if (!data.sites.length) {
+    listHtml = `<div class="empty"><div class="big">🔍</div>در مسیرهای استاندارد سایتی پیدا نشد.<br>
+      <span style="font-size:13px;color:var(--muted)">اگر سایت‌هایت جای دیگری هستند، مسیرشان را بالا وارد کن و «اسکن این مسیر» را بزن.</span></div>`;
+  } else {
+    listHtml = `<label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer">
+        <input type="checkbox" id="chkAll" checked style="width:auto"> <b>انتخاب همه (${data.sites.length} سایت پیدا شد)</b></label>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;cursor:pointer;color:var(--brand-2)">
+        <input type="checkbox" id="chkServer" checked style="width:auto"> این کامپیوتر را هم به‌عنوان «سرور» اضافه کن</label>
+      <div class="table-wrap"><table><thead><tr><th style="width:36px"></th><th>نام</th><th>CMS</th><th>دامنه</th><th>مسیر روی سرور</th></tr></thead>
+      <tbody>${data.sites.map((s, i) => `<tr>
+        <td><input type="checkbox" class="siteChk" data-i="${i}" checked style="width:auto"></td>
+        <td><b>${esc(s.name)}</b></td><td>${esc(s.cms)}</td>
+        <td class="mono">${esc(s.domain || '—')}</td><td class="mono" style="font-size:12px">${esc(s.path || '—')}</td>
+      </tr>`).join('')}</tbody></table></div>`;
+  }
+
+  $('#modal .modal-body').innerHTML = rootsInfo + pathBar + listHtml;
+  // پاورقی با دکمه‌ها
+  if (!$('#modal .modal-foot')) {
+    const foot = document.createElement('div'); foot.className = 'modal-foot'; $('#modal').appendChild(foot);
+  }
+  $('#modal .modal-foot').innerHTML = data.sites.length
+    ? `<button class="btn primary" id="doImport">➕ افزودن انتخاب‌شده‌ها</button><button class="btn ghost" data-cancel>بستن</button>`
+    : `<button class="btn ghost" data-cancel>بستن</button>`;
+  $('#modal [data-cancel]').addEventListener('click', closeModal);
+  $('#rescan')?.addEventListener('click', () => discoverSitesModal($('#scanPath').value.trim() || undefined));
+  $('#chkAll')?.addEventListener('change', (e) => $$('.siteChk', $('#modal')).forEach((c) => (c.checked = e.target.checked)));
+
+  $('#doImport')?.addEventListener('click', async () => {
+    const chosen = $$('.siteChk', $('#modal')).filter((c) => c.checked).map((c) => data.sites[Number(c.dataset.i)]);
+    if (!chosen.length) { toast('هیچ سایتی انتخاب نشده', 'err'); return; }
+    const addServer = $('#chkServer')?.checked;
+    let server = null;
+    if (addServer) { try { server = await GET('/discover/server-info'); } catch {} }
+    try {
+      const r = await POST('/discover/import', { sites: chosen, addServer, server });
+      closeModal();
+      toast(`✅ ${r.added} سایت اضافه شد${r.skipped ? ` (${r.skipped} تکراری رد شد)` : ''}${r.addedServer ? ' + سرور' : ''}`);
+      navigate('websites');
+    } catch (e) { toast(e.message, 'err'); }
+  });
+}
+
 PAGES.websites = async function () {
   const list = await GET('/websites');
   const c = $('#content'); c.innerHTML = '';
-  c.appendChild(pageHead('مدیریت سایت‌ها', 'سایت جدید', () => websiteModal()));
+  c.appendChild(pageHead('مدیریت سایت‌ها', 'سایت جدید', () => websiteModal(),
+    [{ label: '🔍 کشف خودکار سایت‌ها', cls: 'ghost', handler: () => discoverSitesModal() }]));
   const panel = document.createElement('div'); panel.className = 'panel';
   panel.innerHTML = list.length ? `<div class="table-wrap"><table>
     <thead><tr><th>نام</th><th>آدرس</th><th>وضعیت</th><th>مشتری</th><th>CMS</th><th>قیمت فروش</th><th>تگ‌ها</th><th></th></tr></thead>
@@ -410,19 +470,29 @@ async function serverModal(existing) {
   ];
   const data = { ...(existing || {}) }; delete data.ssh_key;
   entityForm({
-    title: existing ? 'ویرایش سرور' : 'سرور جدید', wide: true, fields, data,
+    title: existing?.id ? 'ویرایش سرور' : 'سرور جدید', wide: true, fields, data,
     onSave: async (p) => {
       p.tags = parseTags(p);
-      if (existing && (p.ssh_key === '' || p.ssh_key == null)) delete p.ssh_key; // دست‌نخورده بماند
-      if (existing) await PUT('/servers/' + existing.id, p); else await POST('/servers', p);
+      if (existing?.id && (p.ssh_key === '' || p.ssh_key == null)) delete p.ssh_key; // دست‌نخورده بماند
+      if (existing?.id) await PUT('/servers/' + existing.id, p); else await POST('/servers', p);
       toast('ذخیره شد');
     },
   });
 }
+// افزودن خودکار همین سرور از روی مشخصات کشف‌شده
+async function autoAddServer() {
+  try {
+    const info = await GET('/discover/server-info');
+    toast(`مشخصات این کامپیوتر شناسایی شد: ${info.name}`);
+    serverModal(info); // بدون id → به‌صورت «سرور جدید» با فیلدهای پرشده باز می‌شود
+  } catch (e) { toast(e.message, 'err'); }
+}
+
 PAGES.servers = async function () {
   const list = await GET('/servers');
   const c = $('#content'); c.innerHTML = '';
-  c.appendChild(pageHead('مدیریت هاست و سرور', 'سرور جدید', () => serverModal()));
+  c.appendChild(pageHead('مدیریت هاست و سرور', 'سرور جدید', () => serverModal(),
+    [{ label: '🖥️ افزودن خودکار این سرور', cls: 'ghost', handler: autoAddServer }]));
   const panel = document.createElement('div'); panel.className = 'panel';
   panel.innerHTML = list.length ? `<div class="table-wrap"><table>
     <thead><tr><th>نام</th><th>ارائه‌دهنده</th><th>IP</th><th>نوع</th><th>سیستم‌عامل</th><th>SSH</th><th>اتصال</th><th></th></tr></thead>
