@@ -4,6 +4,9 @@ data/
 *.log
 *.tmp
 
+# نسخهٔ قابل‌حملِ Node که اسکریپت خودکار دانلود می‌کند (نباید در گیت‌هاب برود)
+node-portable/
+
 # node_modules را نادیده بگیر، ولی «ws» را نگه می‌داریم (vendored) تا نیازی به npm install نباشد
 node_modules/*
 !node_modules/ws
