@@ -1,0 +1,36 @@
+{
+  "name": "webvault-manager-desktop",
+  "version": "1.0.0",
+  "description": "اپلیکیشن دسکتاپ WebVault Manager — پوستهٔ Electron که به سرور خانگی وصل می‌شود",
+  "main": "main.js",
+  "author": "WebVault",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win nsis",
+    "dist:linux": "electron-builder --linux AppImage"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "ir.webvault.manager",
+    "productName": "WebVault Manager",
+    "files": ["main.js", "preload.js", "connect.html", "icon.png"],
+    "win": {
+      "target": ["nsis"],
+      "icon": "icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Utility",
+      "icon": "icon.png"
+    }
+  }
+}

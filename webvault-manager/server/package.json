@@ -1,0 +1,14 @@
+{
+  "name": "webvault-manager-server",
+  "version": "1.0.0",
+  "description": "سرور خانگی WebVault Manager — مدیریت سایت‌ها، دامنه‌ها، سرورها، رمزها و بکاپ‌ها (فقط Node.js، بدون npm install)",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "smoke": "node test/smoke.mjs"
+  },
+  "engines": {
+    "node": ">=22.5"
+  }
+}

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>اتصال به سرور — WebVault</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; height: 100vh; display: grid; place-items: center;
+      font-family: "Segoe UI", Tahoma, sans-serif; direction: rtl;
+      background: radial-gradient(900px 600px at 50% -10%, #17233f 0, #0b0f17 60%); color: #e6ebf5; }
+    .card { width: min(440px, 92vw); background: #151c2c; border: 1px solid #253047;
+      border-radius: 20px; padding: 34px 30px; box-shadow: 0 10px 30px rgba(0,0,0,.35); text-align: center; }
+    .logo { width: 66px; height: 66px; margin: 0 auto 14px; border-radius: 18px; display: grid; place-items: center;
+      font-size: 32px; background: linear-gradient(135deg, #4f8cff, #a274ff); }
+    h1 { font-size: 21px; margin: 6px 0 2px; }
+    p { color: #8b97ad; font-size: 13px; margin: 0 0 22px; }
+    input { width: 100%; background: #111725; border: 1px solid #2f3d59; color: #e6ebf5;
+      padding: 12px 14px; border-radius: 9px; font-size: 15px; text-align: center; direction: ltr; }
+    button { width: 100%; margin-top: 16px; padding: 12px; border: none; border-radius: 9px; cursor: pointer;
+      background: linear-gradient(135deg, #4f8cff, #3f78e6); color: #fff; font-size: 15px; font-weight: 600; }
+    .hint { margin-top: 16px; font-size: 12px; color: #667089; }
+    .err { color: #f2545b; min-height: 18px; margin-top: 10px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">🔐</div>
+    <h1>اتصال به سرور خانگی</h1>
+    <p>آدرس سرور WebVault خود را وارد کنید</p>
+    <input id="url" placeholder="http://192.168.1.20:4600" value="http://192.168.1.20:4600" />
+    <button id="go">اتصال</button>
+    <div class="err" id="err"></div>
+    <div class="hint">این آدرس همان چیزی است که سرور هنگام اجرا چاپ می‌کند.<br>روی همین کامپیوتر معمولاً <b>http://localhost:4600</b></div>
+  </div>
+  <script>
+    const el = (id) => document.getElementById(id);
+    (async () => { const s = await window.webvault.getServer(); if (s) el('url').value = s; })();
+    async function connect() {
+      const url = el('url').value.trim();
+      if (!/^https?:\/\//.test(url)) { el('err').textContent = 'آدرس باید با http:// شروع شود'; return; }
+      try {
+        const res = await fetch(url.replace(/\/+$/, '') + '/api/status', { signal: AbortSignal.timeout(4000) });
+        if (!res.ok) throw new Error();
+        await window.webvault.setServer(url);
+      } catch { el('err').textContent = 'اتصال برقرار نشد — آدرس و روشن‌بودن سرور را بررسی کنید'; }
+    }
+    el('go').addEventListener('click', connect);
+    el('url').addEventListener('keydown', (e) => { if (e.key === 'Enter') connect(); });
+  </script>
+</body>
+</html>
