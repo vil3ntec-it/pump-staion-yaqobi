@@ -1,6 +1,6 @@
 // ============================================================================
 //  سرور شخصی پمپ یعقوبی — جایگزین فایربیس (Realtime Database)
-//  Node.js (built-in http) + WebSocket (ws) + PostgreSQL (pg)
+//  فقط Node.js — بدون نیاز به PostgreSQL و بدون نیاز به npm install
 //
 //  این سرور همان کارهایی را می‌کند که فایربیس Realtime Database می‌کرد:
 //    • ذخیره/خواندن درختِ JSON  (set / get / update / remove / push)
@@ -9,24 +9,26 @@
 //    • .info/connected           (وضعیت اتصال)
 //
 //  کل درختِ داده در حافظه نگه داشته می‌شود (سریع) و هر شاخهٔ سطح‌اول به‌صورت
-//  debounce در PostgreSQL ذخیره می‌شود تا با خاموش/روشن شدن سرور از بین نرود.
+//  یک فایل JSON در پوشهٔ data ذخیره می‌شود تا با خاموش/روشن شدن سرور از بین نرود.
+//  کتابخانهٔ ws همراهِ همین پوشه است (در node_modules) — نیازی به npm install نیست.
 // ============================================================================
 
 import http from 'node:http';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
-import pg from 'pg';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ---------------------------------------------------------------------------
-// خواندن فایل .env (بدون وابستگی) — اگر کنارِ همین فایل باشد
+// خواندن فایل .env (اختیاری) — اگر کنارِ همین فایل باشد
 // ---------------------------------------------------------------------------
 (function loadEnv() {
   try {
-    const dir = path.dirname(fileURLToPath(import.meta.url));
-    const envPath = path.join(dir, '.env');
+    const envPath = path.join(__dirname, '.env');
     if (!fs.existsSync(envPath)) return;
     for (const rawLine of fs.readFileSync(envPath, 'utf8').split(/\r?\n/)) {
       const line = rawLine.trim();
@@ -38,73 +40,29 @@ import pg from 'pg';
       if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) val = val.slice(1, -1);
       if (!(key in process.env)) process.env[key] = val;
     }
-  } catch (e) { /* بی‌خیال؛ از متغیرهای محیطی سیستم استفاده می‌شود */ }
+  } catch (e) { /* بی‌خیال */ }
 })();
 
 // ---------------------------------------------------------------------------
-// تنظیمات (از متغیرهای محیطی؛ راهنما در README-fa.md و فایل .env.example)
+// تنظیمات
 // ---------------------------------------------------------------------------
 const PORT = parseInt(process.env.PORT || '8787', 10);
-const AUTH_TOKEN = process.env.AUTH_TOKEN || '';            // رمز اشتراکی؛ خالی یعنی بدون احراز هویت (توصیه نمی‌شود)
-// آدرس دیتابیس: یا کلِ DATABASE_URL را بده، یا فقط تکه‌ها را (ساده‌تر — معمولاً فقط DB_PASSWORD کافی است)
-function buildDbUrl() {
-  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
-  const host = process.env.DB_HOST || 'localhost';
-  const port = process.env.DB_PORT || '5432';
-  const user = process.env.DB_USER || 'postgres';
-  const pass = process.env.DB_PASSWORD || 'postgres';
-  const name = process.env.DB_NAME || 'pump_yaqobi';
-  return 'postgresql://' + encodeURIComponent(user) + ':' + encodeURIComponent(pass) + '@' + host + ':' + port + '/' + name;
-}
-const DATABASE_URL = buildDbUrl();
 const PERSIST_DEBOUNCE_MS = parseInt(process.env.PERSIST_DEBOUNCE_MS || '400', 10);
-
-// شاخه‌های سطح‌اولی که جداگانه در دیتابیس ذخیره می‌شوند
-const TOP_KEYS_SPECIAL = new Set(['stations', 'chat', 'backups', 'backupsIndex']);
-
-const { Pool, Client } = pg;
-const pool = new Pool({ connectionString: DATABASE_URL });
-
-// اگر دیتابیسِ هدف هنوز ساخته نشده، خودمان می‌سازیمش (تا کاربر مجبور نباشد دستی
-// CREATE DATABASE بزند). به دیتابیسِ پیش‌فرضِ «postgres» وصل می‌شویم و در صورت
-// نبودن، دیتابیس را ایجاد می‌کنیم.
-async function ensureDatabaseExists() {
-  let dbName = 'pump_yaqobi';
-  let adminUrl;
-  try {
-    const u = new URL(DATABASE_URL);
-    dbName = decodeURIComponent(u.pathname.replace(/^\//, '')) || dbName;
-    u.pathname = '/postgres';
-    adminUrl = u.toString();
-  } catch (e) { return; } // اگر URL قابل‌تجزیه نبود، بی‌خیال؛ مسیر عادی خطای واضح می‌دهد
-  const admin = new Client({ connectionString: adminUrl });
-  try {
-    await admin.connect();
-    const r = await admin.query('SELECT 1 FROM pg_database WHERE datname = $1', [dbName]);
-    if (r.rowCount === 0) {
-      await admin.query('CREATE DATABASE "' + dbName.replace(/"/g, '') + '"');
-      console.log('[db] دیتابیس «' + dbName + '» وجود نداشت و ساخته شد.');
-    }
-  } catch (e) {
-    console.warn('[db] ساختِ خودکار دیتابیس ممکن نشد (' + e.message + ') — اگر دیتابیس را دستی ساخته‌اید مشکلی نیست.');
-  } finally {
-    try { await admin.end(); } catch (e) {}
-  }
-}
+const DATA_DIR = path.join(__dirname, 'data');
+let AUTH_TOKEN = process.env.AUTH_TOKEN || '';   // اگر خالی بماند، خودکار ساخته و در data/token.txt ذخیره می‌شود
 
 // ---------------------------------------------------------------------------
 //  درختِ داده در حافظه
 // ---------------------------------------------------------------------------
-const ROOT = {};                 // کل درخت realtime
+const ROOT = {};                  // کل درخت realtime
 const pendingPersist = new Map(); // topKey -> timer
 
-function splitPath(path) {
-  return String(path || '').split('/').filter(seg => seg.length > 0);
+function splitPath(p) {
+  return String(p || '').split('/').filter(seg => seg.length > 0);
 }
 
-// خواندن مقدار در یک مسیر (کپیِ عمیق برنمی‌گرداند؛ فقط برای خواندن استفاده شود)
-function getNode(path) {
-  const segs = splitPath(path);
+function getNode(p) {
+  const segs = splitPath(p);
   let cur = ROOT;
   for (const s of segs) {
     if (cur == null || typeof cur !== 'object') return undefined;
@@ -117,10 +75,9 @@ function deepClone(v) {
   return v === undefined ? undefined : JSON.parse(JSON.stringify(v));
 }
 
-// نوشتن مقدار در مسیر. مقدار null/undefined → حذف آن مسیر.
-function setNode(path, value) {
-  const segs = splitPath(path);
-  if (segs.length === 0) return; // نوشتن روی ریشه پشتیبانی نمی‌شود
+function setNode(p, value) {
+  const segs = splitPath(p);
+  if (segs.length === 0) return;
   let cur = ROOT;
   for (let i = 0; i < segs.length - 1; i++) {
     const s = segs[i];
@@ -128,14 +85,11 @@ function setNode(path, value) {
     cur = cur[s];
   }
   const last = segs[segs.length - 1];
-  if (value === null || value === undefined) {
-    delete cur[last];
-  } else {
-    cur[last] = value;
-  }
+  if (value === null || value === undefined) delete cur[last];
+  else cur[last] = value;
 }
 
-// شناسهٔ push مثل فایربیس: ۲۰ کاراکتر، مرتب بر اساس زمان (لِکسیکوگرافیک = زمانی)
+// شناسهٔ push مثل فایربیس: ۲۰ کاراکتر، مرتب بر اساس زمان
 const PUSH_CHARS = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
 let _lastPushTime = 0;
 let _lastRand = [];
@@ -152,11 +106,16 @@ function genPushId(now = Date.now()) {
 }
 
 // ---------------------------------------------------------------------------
-//  پایداری در PostgreSQL (debounce بر اساس شاخهٔ سطح‌اول)
+//  پایداری در فایل (هر شاخهٔ سطح‌اول = یک فایل JSON در پوشهٔ data)
 // ---------------------------------------------------------------------------
-function topKeyOf(path) {
-  const segs = splitPath(path);
+function topKeyOf(p) {
+  const segs = splitPath(p);
   return segs.length ? segs[0] : null;
+}
+
+function fileForKey(topKey) {
+  const safe = String(topKey).replace(/[^a-zA-Z0-9_-]/g, '_');
+  return path.join(DATA_DIR, safe + '.json');
 }
 
 function schedulePersist(topKey) {
@@ -170,28 +129,37 @@ function schedulePersist(topKey) {
 }
 
 async function persistNow(topKey) {
+  const file = fileForKey(topKey);
   const val = ROOT[topKey];
   if (val === undefined) {
-    await pool.query('DELETE FROM fb_store WHERE k = $1', [topKey]);
-  } else {
-    await pool.query(
-      `INSERT INTO fb_store (k, v, updated_at) VALUES ($1, $2, now())
-       ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v, updated_at = now()`,
-      [topKey, JSON.stringify(val)]
-    );
+    try { await fsp.unlink(file); } catch (e) { /* شاید از قبل نبود */ }
+    return;
   }
+  const tmp = file + '.tmp';
+  await fsp.writeFile(tmp, JSON.stringify(val), 'utf8');
+  await fsp.rename(tmp, file); // نوشتنِ اتمیک (روی ویندوز هم جایگزین می‌کند)
 }
 
-async function loadFromDb() {
-  const { rows } = await pool.query('SELECT k, v FROM fb_store');
-  for (const r of rows) ROOT[r.k] = r.v;
-  console.log(`[db] ${rows.length} شاخه از دیتابیس بازخوانی شد:`, rows.map(r => r.k).join(', ') || '(خالی)');
+async function loadFromDisk() {
+  await fsp.mkdir(DATA_DIR, { recursive: true });
+  let files = [];
+  try { files = await fsp.readdir(DATA_DIR); } catch (e) { return; }
+  const loaded = [];
+  for (const f of files) {
+    if (!f.endsWith('.json')) continue;
+    const key = f.slice(0, -5);
+    try {
+      const txt = await fsp.readFile(path.join(DATA_DIR, f), 'utf8');
+      ROOT[key] = JSON.parse(txt);
+      loaded.push(key);
+    } catch (e) { console.warn('[data] خواندن', f, 'ناموفق:', e.message); }
+  }
+  console.log(`[data] ${loaded.length} شاخه از فایل بازخوانی شد:`, loaded.join(', ') || '(خالی)');
 }
 
 // ---------------------------------------------------------------------------
 //  اشتراک‌ها و ارسال رویدادهای بلادرنگ
 // ---------------------------------------------------------------------------
-// هر اشتراک: { ws, path, event, subId, limit, snapChildren:Map<key,serialized>, snapValue }
 const subscriptions = new Set();
 
 function send(ws, obj) {
@@ -201,24 +169,21 @@ function send(ws, obj) {
 }
 
 function serialize(v) {
-  return v === undefined ? ' undef' : JSON.stringify(v);
+  return v === undefined ? ' undef' : JSON.stringify(v);
 }
 
-// کلیدهای فرزندِ مستقیمِ یک مسیر (مرتب‌شده صعودی = ترتیب زمانیِ pushId)
-function childKeysSorted(path) {
-  const node = getNode(path);
+function childKeysSorted(p) {
+  const node = getNode(p);
   if (node == null || typeof node !== 'object' || Array.isArray(node)) return [];
   return Object.keys(node).sort();
 }
 
-// ارزیابیِ اولیهٔ یک اشتراک هنگام ساخت و ارسال وضعیت فعلی
 function primeSubscription(sub) {
   if (sub.event === 'value') {
     const v = getNode(sub.path);
     sub.snapValue = serialize(v);
     send(sub.ws, { op: 'event', subId: sub.subId, type: 'value', key: lastSeg(sub.path), value: deepClone(v) ?? null });
   } else {
-    // child_*  — وضعیت اولیه را با child_added بفرست
     let keys = childKeysSorted(sub.path);
     if (sub.limit && keys.length > sub.limit) keys = keys.slice(keys.length - sub.limit);
     sub.snapChildren = new Map();
@@ -229,31 +194,24 @@ function primeSubscription(sub) {
         send(sub.ws, { op: 'event', subId: sub.subId, type: 'child_added', key: k, value: deepClone(cv) ?? null });
       }
     }
-    // برای child_changed/child_removed وضعیت اولیه رویداد ندارد، فقط snapshot را نگه می‌داریم
-    if (sub.event !== 'child_added') {
-      // ولی هنوز باید کلیدهای فعلی را بشناسیم؛ snapChildren پر شد. تمام.
-    }
   }
 }
 
-function lastSeg(path) {
-  const segs = splitPath(path);
+function lastSeg(p) {
+  const segs = splitPath(p);
   return segs.length ? segs[segs.length - 1] : null;
 }
 
-// آیا a پیشوندِ مسیرِ b است (یا برابر)؟  segments-based
 function isPrefixOrEqual(aSegs, bSegs) {
   if (aSegs.length > bSegs.length) return false;
   for (let i = 0; i < aSegs.length; i++) if (aSegs[i] !== bSegs[i]) return false;
   return true;
 }
 
-// پس از هر تغییر در مسیرِ changedPath، اشتراک‌های مرتبط را دوباره ارزیابی کن
 function dispatch(changedPath) {
   const cSegs = splitPath(changedPath);
   for (const sub of subscriptions) {
     const sSegs = splitPath(sub.path);
-    // مرتبط بودن: مسیرِ اشتراک و مسیرِ تغییر روی یک خط از ریشه‌اند (یکی پیشوندِ دیگری)
     const related = isPrefixOrEqual(sSegs, cSegs) || isPrefixOrEqual(cSegs, sSegs);
     if (!related) continue;
 
@@ -278,7 +236,6 @@ function reevalChildSub(sub) {
   const prev = sub.snapChildren || new Map();
   const next = new Map();
 
-  // added / changed
   for (const k of keys) {
     const cv = getNode(sub.path + '/' + k);
     const ser = serialize(cv);
@@ -293,7 +250,6 @@ function reevalChildSub(sub) {
       }
     }
   }
-  // removed — فقط وقتی واقعاً از داده حذف شده (نه صرفاً از پنجرهٔ limit خارج شده)
   for (const k of prev.keys()) {
     if (!windowSet.has(k) && !fullSet.has(k)) {
       if (sub.event === 'child_removed') {
@@ -307,28 +263,27 @@ function reevalChildSub(sub) {
 // ---------------------------------------------------------------------------
 //  اجرای mutation ها + پایداری + dispatch
 // ---------------------------------------------------------------------------
-function applyMutation(kind, path, value) {
+function applyMutation(kind, p, value) {
   if (kind === 'set') {
-    setNode(path, value);
-    schedulePersist(topKeyOf(path));
-    dispatch(path);
+    setNode(p, value);
+    schedulePersist(topKeyOf(p));
+    dispatch(p);
   } else if (kind === 'remove') {
-    setNode(path, null);
-    schedulePersist(topKeyOf(path));
-    dispatch(path);
+    setNode(p, null);
+    schedulePersist(topKeyOf(p));
+    dispatch(p);
   } else if (kind === 'update') {
     if (value && typeof value === 'object' && !Array.isArray(value)) {
-      for (const k of Object.keys(value)) setNode(path + '/' + k, value[k]);
-      schedulePersist(topKeyOf(path));
-      // هر فرزند را جدا dispatch کن تا child_changed درست بیفتد
-      for (const k of Object.keys(value)) dispatch(path + '/' + k);
-      dispatch(path);
+      for (const k of Object.keys(value)) setNode(p + '/' + k, value[k]);
+      schedulePersist(topKeyOf(p));
+      for (const k of Object.keys(value)) dispatch(p + '/' + k);
+      dispatch(p);
     }
   } else if (kind === 'push') {
     const key = genPushId();
-    setNode(path + '/' + key, value);
-    schedulePersist(topKeyOf(path));
-    dispatch(path + '/' + key);
+    setNode(p + '/' + key, value);
+    schedulePersist(topKeyOf(p));
+    dispatch(p + '/' + key);
     return key;
   }
 }
@@ -339,10 +294,10 @@ function applyMutation(kind, path, value) {
 function runOnDisconnect(ws) {
   const ops = ws._onDisc;
   if (!ops) return;
-  for (const [path, spec] of ops) {
+  for (const [p, spec] of ops) {
     try {
-      if (spec.action === 'remove') applyMutation('remove', path, null);
-      else if (spec.action === 'set') applyMutation('set', path, spec.value);
+      if (spec.action === 'remove') applyMutation('remove', p, null);
+      else if (spec.action === 'set') applyMutation('set', p, spec.value);
     } catch (e) {}
   }
   ws._onDisc = null;
@@ -366,7 +321,6 @@ wss.on('connection', (ws, req) => {
   ws._authed = AUTH_TOKEN === '';
   ws._onDisc = null;
 
-  // احراز هویت با توکن در query یا هدر
   if (AUTH_TOKEN) {
     try {
       const url = new URL(req.url, 'http://x');
@@ -381,7 +335,6 @@ wss.on('connection', (ws, req) => {
     return;
   }
 
-  // اعلام اتصال موفق → در سمت کلاینت .info/connected = true
   send(ws, { op: 'connected' });
 
   ws.on('message', (raw) => {
@@ -460,34 +413,43 @@ function safeEqual(a, b) {
 }
 
 // ---------------------------------------------------------------------------
+//  رمز خودکار — اگر AUTH_TOKEN تنظیم نشده باشد، یک‌بار می‌سازیم و در فایل نگه می‌داریم
+// ---------------------------------------------------------------------------
+async function ensureAuthToken() {
+  if (AUTH_TOKEN) return;
+  await fsp.mkdir(DATA_DIR, { recursive: true });
+  const tokenFile = path.join(DATA_DIR, 'token.txt');
+  try {
+    const existing = (await fsp.readFile(tokenFile, 'utf8')).trim();
+    if (existing) { AUTH_TOKEN = existing; return; }
+  } catch (e) { /* هنوز ساخته نشده */ }
+  AUTH_TOKEN = crypto.randomBytes(18).toString('hex'); // ۳۶ کاراکتر
+  try { await fsp.writeFile(tokenFile, AUTH_TOKEN, 'utf8'); } catch (e) {}
+}
+
+// ---------------------------------------------------------------------------
 //  راه‌اندازی
 // ---------------------------------------------------------------------------
 async function main() {
-  await ensureDatabaseExists();  // اگر دیتابیس نبود، بساز
-  await pool.query('SELECT 1');  // تست اتصال دیتابیس
-  await ensureSchema();
-  await loadFromDb();
+  await ensureAuthToken();
+  await loadFromDisk();
   httpServer.listen(PORT, () => {
-    console.log(`\n✅ سرور پمپ یعقوبی روی پورت ${PORT} بالا آمد.`);
-    console.log(`   WebSocket: ws://localhost:${PORT}${AUTH_TOKEN ? '?token=***' : ''}`);
-    console.log(`   سلامت:     http://localhost:${PORT}/health`);
-    if (!AUTH_TOKEN) console.log('   ⚠️  AUTH_TOKEN تنظیم نشده — سرور بدون رمز است. برای اینترنت حتماً تنظیمش کنید.');
+    console.log('');
+    console.log('==================================================');
+    console.log(' ✅ سرور شخصی پمپ یعقوبی بالا آمد');
+    console.log('==================================================');
+    console.log(' پورت:  ' + PORT);
+    console.log(' تست سلامت در مرورگر:  http://localhost:' + PORT + '/health');
+    console.log('');
+    console.log(' 👇 این «رمز سرور» را در برنامه (فیلد رمز سرور) وارد کنید:');
+    console.log('    ' + AUTH_TOKEN);
+    console.log('');
+    console.log(' برای توقف سرور، این پنجره را ببندید یا Ctrl+C بزنید.');
+    console.log('==================================================');
     console.log('');
   });
 }
 
-async function ensureSchema() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS fb_store (
-      k TEXT PRIMARY KEY,
-      v JSONB NOT NULL,
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-  `);
-  await pool.query('CREATE INDEX IF NOT EXISTS fb_store_updated_idx ON fb_store (updated_at);');
-}
-
-// ذخیرهٔ نهایی هنگام خاموش شدن تمیز
 async function flushAll() {
   for (const [topKey, t] of pendingPersist) { clearTimeout(t); try { await persistNow(topKey); } catch (e) {} }
   pendingPersist.clear();
@@ -497,6 +459,5 @@ process.on('SIGTERM', async () => { await flushAll(); process.exit(0); });
 
 main().catch(err => {
   console.error('❌ راه‌اندازی سرور شکست خورد:', err.message);
-  console.error('   مطمئن شوید PostgreSQL روشن است و DATABASE_URL درست است.');
   process.exit(1);
 });
