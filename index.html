@@ -1515,6 +1515,22 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
 (function(){
   var SELF_HOST_URL   = '';   // مثال: 'wss://your-name.trycloudflare.com'  (خالی = فایربیس)
   var SELF_HOST_TOKEN = '';   // همان AUTH_TOKEN سرور
+
+  // لینکِ خودکارِ اتصال: مثلاً .../?server=wss://xxx.trycloudflare.com&token=abc
+  // هر کس این لینک را باز کند، بدون نیاز به رفتن به تنظیمات، به همان سرور وصل می‌شود
+  // (یک‌بار در localStorage ذخیره می‌شود؛ دفعات بعد لینک ساده هم کافی است).
+  try {
+    var _qp = new URLSearchParams(location.search);
+    var _qServer = _qp.get('server');
+    if (_qServer) {
+      localStorage.setItem('pumpServerUrl', _qServer);
+      var _qToken = _qp.get('token');
+      if (_qToken) localStorage.setItem('pumpServerToken', _qToken);
+      else localStorage.removeItem('pumpServerToken');
+      history.replaceState(null, '', location.pathname + location.hash);
+    }
+  } catch(e){}
+
   try { SELF_HOST_URL   = window.SELF_HOST_URL   || localStorage.getItem('pumpServerUrl')   || SELF_HOST_URL; } catch(e){}
   try { SELF_HOST_TOKEN = window.SELF_HOST_TOKEN || localStorage.getItem('pumpServerToken') || SELF_HOST_TOKEN; } catch(e){}
   window.__USE_SELF_HOST__ = true;         // فایربیس کاملاً حذف شده — تنها بک‌اند، سرور شخصی است
@@ -6590,6 +6606,10 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <button class="pw-btn" style="background:var(--accent);color:#000" onclick="saveServerConfig()">💾 ذخیره و اتصال</button>
         <button class="pw-btn" style="background:var(--card);color:var(--muted);border:1px solid var(--border)" onclick="clearServerConfig()">پاک کردن سرور</button>
       </div>
+      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px;line-height:1.8">می‌خوای به کسی دیگه لینک بدی که خودش هم به همین سرور وصل بشه، بدون این‌که خودش آدرس/رمز رو وارد کنه؟ این دکمه یک لینک آماده کپی می‌کنه:</div>
+        <button class="pw-btn" style="background:var(--blue);color:#fff" onclick="copyShareLink()">🔗 کپی لینک اتصال خودکار</button>
+      </div>
     </div>
   </div>
   <div class="settings-card">
@@ -7868,6 +7888,19 @@ function clearServerConfig() {
   if (!confirm('آدرس سرور پاک شود؟ برنامه فقط روی همین دستگاه کار می‌کند (بدون هم‌زمان‌سازی).')) return;
   try { localStorage.removeItem('pumpServerUrl'); localStorage.removeItem('pumpServerToken'); } catch(e) {}
   location.reload();
+}
+// لینکی که با باز شدنش، دستگاه گیرنده خودکار به همین سرور شخصی وصل می‌شود
+// (بدون این‌که خودش چیزی در تنظیمات › هم‌زمان‌سازی وارد کند).
+function copyShareLink() {
+  let u = '', t = '';
+  try { u = localStorage.getItem('pumpServerUrl') || ''; t = localStorage.getItem('pumpServerToken') || ''; } catch(e){}
+  if (!u) { showToast('اول آدرس سرور را ذخیره و وصل کنید', '#e53e3e'); return; }
+  const link = location.origin + location.pathname + '?server=' + encodeURIComponent(u) + (t ? '&token=' + encodeURIComponent(t) : '');
+  const done = () => showToast('✅ لینک کپی شد — همین را برای بقیه بفرست', '#38a169');
+  const fail = () => { prompt('این لینک را کپی کن:', link); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(link).then(done).catch(fail);
+  } else fail();
 }
 function syncUpload() {
   const code = _syncCode();
@@ -20783,7 +20816,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.81';
+const APP_VERSION = '2.9.82';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
