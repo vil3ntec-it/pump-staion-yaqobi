@@ -1,4 +1,16 @@
 @echo off
+REM ----------------------------------------------------------------------
+REM  This file re-launches itself inside a window that CANNOT auto-close.
+REM  Double-clicking a .bat normally runs it as "cmd /c", so the window
+REM  disappears the instant the script ends OR crashes - the user never
+REM  gets to read the error. Re-running with "cmd /k" keeps the window
+REM  open no matter what happens inside (success, error, or crash).
+REM ----------------------------------------------------------------------
+if /i not "%~1"=="RUN" (
+  start "Pump Yaqobi Server" cmd /k "%~f0" RUN
+  exit /b
+)
+
 setlocal enabledelayedexpansion
 title Pump Yaqobi Server
 cd /d "%~dp0"
