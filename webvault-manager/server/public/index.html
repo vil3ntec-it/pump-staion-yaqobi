@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0f17" />
+  <title>WebVault Manager — مدیریت سایت‌ها</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- صفحهٔ قفل / ورود -->
+  <div class="lock" id="lockScreen">
+    <div class="lock-card">
+      <div class="lock-logo">🔐</div>
+      <h1>WebVault Manager</h1>
+      <p id="lockSubtitle">در حال بارگذاری…</p>
+      <form id="lockForm" autocomplete="off">
+        <div class="field">
+          <input type="password" id="masterPass" placeholder="رمز اصلی" autocomplete="off" />
+        </div>
+        <div class="field" id="confirmField" style="display:none">
+          <input type="password" id="masterPass2" placeholder="تکرار رمز اصلی" autocomplete="off" />
+        </div>
+        <button class="btn primary" type="submit" id="lockBtn" style="width:100%">باز کردن</button>
+      </form>
+      <p id="lockError" style="color:var(--red);min-height:18px;margin-top:12px"></p>
+    </div>
+  </div>
+
+  <!-- برنامهٔ اصلی -->
+  <div class="app" id="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="mark">🔐</div>
+        <div><b>WebVault</b><span>مدیریت سایت‌ها</span></div>
+      </div>
+      <div class="nav-item" data-route="dashboard"><span class="ico">📊</span> داشبورد</div>
+      <div class="nav-item" data-route="websites"><span class="ico">🌐</span> سایت‌ها</div>
+      <div class="nav-item" data-route="domains"><span class="ico">🔗</span> دامنه‌ها</div>
+      <div class="nav-item" data-route="servers"><span class="ico">🖥️</span> سرورها</div>
+      <div class="nav-item" data-route="passwords"><span class="ico">🗝️</span> رمزها</div>
+      <div class="nav-item" data-route="backups"><span class="ico">💾</span> بکاپ‌ها</div>
+      <div class="nav-item" data-route="clients"><span class="ico">👤</span> مشتری‌ها</div>
+      <div class="nav-item" data-route="files"><span class="ico">📁</span> فایل‌ها</div>
+      <div class="nav-sep"></div>
+      <div class="nav-item" data-route="settings"><span class="ico">⚙️</span> تنظیمات</div>
+      <div class="spacer"></div>
+      <button class="lock-btn" id="lockNowBtn">🔒 قفل کردن برنامه</button>
+    </aside>
+
+    <div class="main">
+      <div class="topbar">
+        <button class="btn icon menu-toggle" id="menuToggle">☰</button>
+        <h2 id="pageTitle">داشبورد</h2>
+        <div class="search-box">
+          <span class="ico">🔍</span>
+          <input type="search" id="globalSearch" placeholder="جستجو در سایت‌ها، دامنه‌ها، مشتری‌ها…" autocomplete="off" />
+          <div class="search-results" id="searchResults"></div>
+        </div>
+      </div>
+      <div class="content" id="content"></div>
+    </div>
+  </div>
+
+  <!-- مودال -->
+  <div class="modal-back" id="modalBack">
+    <div class="modal" id="modal"></div>
+  </div>
+
+  <div class="toasts" id="toasts"></div>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>
