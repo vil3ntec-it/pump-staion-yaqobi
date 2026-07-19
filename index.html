@@ -1513,8 +1513,13 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
      location.reload();
    ============================================================================ */
 (function(){
-  var SELF_HOST_URL   = '';   // مثال: 'wss://your-name.trycloudflare.com'  (خالی = فایربیس)
-  var SELF_HOST_TOKEN = '';   // همان AUTH_TOKEN سرور
+  // پیش‌فرضِ همیشگی: هر کس بدون هیچ تنظیمی سایت را باز کند، خودکار به همین سرور
+  // وصل می‌شود (دقیقاً مثل فایربیس قبلی — یک بک‌اند مشترک برای همه دستگاه‌ها).
+  // نکته‌ی مهم: چون این آدرس از نوع «Cloudflare Quick Tunnel» است، هر بار که
+  // پنجره‌ی cloudflared یا کامپیوتر سرور restart شود، این آدرس عوض می‌شود و
+  // باید همین‌جا با آدرس جدید جایگزین شود، وگرنه هم‌زمان‌سازی خودکار قطع می‌شود.
+  var SELF_HOST_URL   = 'wss://answer-themselves-thirty-soft.trycloudflare.com';
+  var SELF_HOST_TOKEN = '697ca4529008e1e9e48c7b77c0717cb2a4e6';
 
   // لینکِ خودکارِ اتصال: مثلاً .../?server=wss://xxx.trycloudflare.com&token=abc
   // هر کس این لینک را باز کند، بدون نیاز به رفتن به تنظیمات، به همان سرور وصل می‌شود
@@ -20816,7 +20821,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.82';
+const APP_VERSION = '2.9.83';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
