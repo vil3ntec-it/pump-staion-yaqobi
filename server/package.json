@@ -1,7 +1,7 @@
 {
   "name": "pump-yaqobi-server",
-  "version": "1.0.0",
-  "description": "سرور شخصی جایگزین فایربیس برای برنامهٔ پمپ یعقوبی (WebSocket + PostgreSQL)",
+  "version": "2.0.0",
+  "description": "سرور شخصی جایگزین فایربیس برای برنامهٔ پمپ یعقوبی (فقط Node.js — بدون دیتابیس و بدون npm install)",
   "type": "module",
   "main": "server.js",
   "scripts": {
@@ -9,7 +9,6 @@
     "test-client": "node test-client.mjs"
   },
   "dependencies": {
-    "pg": "^8.13.1",
     "ws": "^8.18.0"
   },
   "engines": {

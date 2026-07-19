@@ -1,3 +1,10 @@
-node_modules/
+# داده‌های کاربر و رمز — نباید در گیت‌هاب بروند
+data/
 .env
 *.log
+*.tmp
+
+# node_modules را نادیده بگیر، ولی «ws» را نگه می‌داریم (vendored) تا نیازی به npm install نباشد
+node_modules/*
+!node_modules/ws
+!node_modules/ws/**
