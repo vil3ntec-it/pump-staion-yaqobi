@@ -1,19 +1,29 @@
 @echo off
+setlocal enabledelayedexpansion
+
 REM ----------------------------------------------------------------------
 REM  This file re-launches itself inside a window that CANNOT auto-close.
 REM  Double-clicking a .bat normally runs it as "cmd /c", so the window
 REM  disappears the instant the script ends OR crashes - the user never
 REM  gets to read the error. Re-running with "cmd /k" keeps the window
 REM  open no matter what happens inside (success, error, or crash).
+REM
+REM  NOTE: %~f0 and %~dp0 are captured into plain variables FIRST (outside
+REM  any parenthesized block) and referenced later with !delayed! syntax.
+REM  If the folder is placed somewhere like "New folder (2)\...", the
+REM  parenthesis in the path breaks cmd's block parser when expanded
+REM  directly inside a "( ... )" block - delayed expansion avoids that.
 REM ----------------------------------------------------------------------
+set "SELF=%~f0"
 if /i not "%~1"=="RUN" (
-  start "Pump Yaqobi Server" cmd /k "%~f0" RUN
+  start "Pump Yaqobi Server" cmd /k "!SELF!" RUN
   exit /b
 )
 
-setlocal enabledelayedexpansion
 title Pump Yaqobi Server
 cd /d "%~dp0"
+set "HERE=%~dp0"
+set "PF86=%ProgramFiles(x86)%"
 
 echo ============================================
 echo    Pump Yaqobi - Personal Server
@@ -34,7 +44,7 @@ if not defined NODE (
 
 REM 3) standard install locations
 if not defined NODE if exist "%ProgramFiles%\nodejs\node.exe" set "NODE=%ProgramFiles%\nodejs\node.exe"
-if not defined NODE if exist "%ProgramFiles(x86)%\nodejs\node.exe" set "NODE=%ProgramFiles(x86)%\nodejs\node.exe"
+if not defined NODE if exist "%PF86%\nodejs\node.exe" set "NODE=%PF86%\nodejs\node.exe"
 if not defined NODE if exist "%LOCALAPPDATA%\Programs\nodejs\node.exe" set "NODE=%LOCALAPPDATA%\Programs\nodejs\node.exe"
 
 REM 4) winget links
@@ -57,7 +67,7 @@ if not defined NODE if exist "%ProgramData%\chocolatey\bin\node.exe" set "NODE=%
 
 REM 8) portable version this script downloaded before
 if not defined NODE (
-  for /f "delims=" %%p in ('dir /b /s "%~dp0node-portable\*\node.exe" 2^>nul') do if not defined NODE set "NODE=%%p"
+  for /f "delims=" %%p in ('dir /b /s "!HERE!node-portable\*\node.exe" 2^>nul') do if not defined NODE set "NODE=%%p"
 )
 
 REM 9) drive letter scan
@@ -74,7 +84,7 @@ if not defined NODE (
   echo No problem - downloading a portable copy automatically. No install needed.
   echo.
   call :download_node
-  for /f "delims=" %%p in ('dir /b /s "%~dp0node-portable\*\node.exe" 2^>nul') do if not defined NODE set "NODE=%%p"
+  for /f "delims=" %%p in ('dir /b /s "!HERE!node-portable\*\node.exe" 2^>nul') do if not defined NODE set "NODE=%%p"
 )
 
 if not defined NODE (
@@ -129,18 +139,18 @@ if not exist "%NDIR%" mkdir "%NDIR%"
 
 echo Downloading Node.js (%NPKG%) ... this may take a few minutes.
 curl -L --fail -o "%NZIP%" "%NURL%" 2>nul
-if not exist "%NZIP%" (
-  powershell -NoProfile -Command "try { Invoke-WebRequest -Uri '%NURL%' -OutFile '%NZIP%' } catch { exit 1 }"
+if not exist "!NZIP!" (
+  powershell -NoProfile -Command "try { Invoke-WebRequest -Uri '!NURL!' -OutFile '!NZIP!' } catch { exit 1 }"
 )
-if not exist "%NZIP%" (
+if not exist "!NZIP!" (
   echo [ERROR] Download failed.
   goto :eof
 )
 
 echo Extracting ...
 tar -xf "%NZIP%" -C "%NDIR%" 2>nul
-if not exist "%NDIR%\%NPKG%\node.exe" (
-  powershell -NoProfile -Command "try { Expand-Archive -Force '%NZIP%' '%NDIR%' } catch { exit 1 }"
+if not exist "!NDIR!\%NPKG%\node.exe" (
+  powershell -NoProfile -Command "try { Expand-Archive -Force '!NZIP!' '!NDIR!' } catch { exit 1 }"
 )
 del "%NZIP%" >nul 2>nul
 echo Node.js download complete.
