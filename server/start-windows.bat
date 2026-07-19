@@ -49,7 +49,12 @@ if not defined NODE (
   for /f "delims=" %%p in ('dir /b /s "%LOCALAPPDATA%\fnm_multishells\*\node.exe" 2^>nul') do if not defined NODE set "NODE=%%p"
 )
 
-REM --- 9) جست‌وجوی درایوها (مثل نسخهٔ قبلی، برای اطمینان) ---
+REM --- 9) نسخهٔ «قابل‌حمل» که همین اسکریپت قبلاً دانلود کرده ---
+if not defined NODE (
+  for /f "delims=" %%p in ('dir /b /s "%~dp0node-portable\*\node.exe" 2^>nul') do if not defined NODE set "NODE=%%p"
+)
+
+REM --- 10) جست‌وجوی درایوها (برای اطمینان) ---
 if not defined NODE (
   for %%d in (C D E F G H) do (
     if not defined NODE if exist "%%d:\Program Files\nodejs\node.exe" set "NODE=%%d:\Program Files\nodejs\node.exe"
@@ -58,40 +63,32 @@ if not defined NODE (
 )
 
 REM ------------------------------------------------------------------
-REM  اگر Node پیدا نشد: پیشنهاد نصب خودکار با winget
+REM  اگر Node پیدا نشد: نسخهٔ «قابل‌حمل» را خودکار دانلود کن
+REM  (بدون نصب، بدون دسترسی مدیر — فقط یک‌بار دانلود می‌شود)
 REM ------------------------------------------------------------------
 if not defined NODE (
-  echo [خطا] Node.js پیدا نشد.
+  echo Node.js روی این کامپیوتر پیدا نشد.
+  echo نگران نباش — نسخهٔ «قابل‌حمل» را خودکار دانلود می‌کنم. نیازی به نصب نیست.
   echo.
-  where winget >nul 2>nul
-  if not errorlevel 1 (
-    echo این کامپیوتر winget دارد و می‌تواند Node.js را خودکار نصب کند.
-    set /p ANS="می‌خواهی همین حالا Node.js را خودکار نصب کنم؟ (y = بله) : "
-    if /i "!ANS!"=="y" (
-      echo.
-      echo در حال نصب Node.js LTS ... ممکن است چند دقیقه طول بکشد.
-      winget install -e --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements
-      echo.
-      echo نصب تمام شد. لطفا این پنجره را ببند و «start-windows.bat» را دوباره اجرا کن.
-      echo (اگر باز هم پیدا نشد، کامپیوتر را یک‌بار ری‌استارت کن.)
-      echo.
-      pause
-      exit /b
-    )
-  )
+  call :download_node
+  REM بعد از دانلود، دوباره دنبال node.exe بگرد
+  for /f "delims=" %%p in ('dir /b /s "%~dp0node-portable\*\node.exe" 2^>nul') do if not defined NODE set "NODE=%%p"
+)
+
+if not defined NODE (
   echo.
-  echo لطفا Node.js را از nodejs.org با «فایل نصب‌کننده (Installer)» نصب کن،
-  echo نسخهٔ LTS را انتخاب کن، نصب پیش‌فرض را بزن و بعد کامپیوتر را یک‌بار ری‌استارت کن،
-  echo سپس دوباره این فایل را اجرا کن.
+  echo [خطا] نتوانستم Node.js را خودکار آماده کنم (شاید اینترنت وصل نبود).
   echo.
-  echo اگر می‌دانی node.exe کجاست، به‌جای این فایل می‌توانی در cmd این را بزنی:
-  echo    "مسیر-کامل-node.exe" server.js
+  echo دو راه:
+  echo   ۱) اینترنت را وصل کن و دوباره روی همین فایل دوبار کلیک کن.
+  echo   ۲) یا Node.js را از nodejs.org نسخهٔ LTS نصب کن و دوباره اجرا کن.
   echo.
   pause
   exit /b
 )
 
-echo Node پیدا شد:
+echo.
+echo Node آماده است:
 echo    %NODE%
 echo.
 
@@ -111,3 +108,42 @@ echo.
 echo.
 echo سرور متوقف شد.
 pause
+exit /b
+
+REM ==================================================================
+REM  زیربرنامه: دانلود نسخهٔ قابل‌حمل Node.js (بدون نصب)
+REM ==================================================================
+:download_node
+set "NVER=v20.18.1"
+set "NARCH=x64"
+if /i "%PROCESSOR_ARCHITECTURE%"=="ARM64" set "NARCH=arm64"
+if /i "%PROCESSOR_ARCHITECTURE%"=="x86" set "NARCH=x86"
+set "NPKG=node-%NVER%-win-%NARCH%"
+set "NURL=https://nodejs.org/dist/%NVER%/%NPKG%.zip"
+set "NDIR=%~dp0node-portable"
+set "NZIP=%NDIR%\node.zip"
+
+if not exist "%NDIR%" mkdir "%NDIR%"
+
+echo در حال دانلود Node.js (%NPKG%) ... این ممکن است چند دقیقه طول بکشد.
+REM اول با curl (روی ویندوز ۱۰/۱۱ هست)
+curl -L --fail -o "%NZIP%" "%NURL%" 2>nul
+if not exist "%NZIP%" (
+  REM اگر curl نبود/نشد، با PowerShell
+  powershell -NoProfile -Command "try { Invoke-WebRequest -Uri '%NURL%' -OutFile '%NZIP%' } catch { exit 1 }"
+)
+if not exist "%NZIP%" (
+  echo [خطا] دانلود ناموفق بود.
+  goto :eof
+)
+
+echo در حال باز کردن فایل ...
+REM اول با tar (روی ویندوز ۱۰/۱۱ هست)
+tar -xf "%NZIP%" -C "%NDIR%" 2>nul
+if not exist "%NDIR%\%NPKG%\node.exe" (
+  REM اگر tar نشد، با PowerShell
+  powershell -NoProfile -Command "try { Expand-Archive -Force '%NZIP%' '%NDIR%' } catch { exit 1 }"
+)
+del "%NZIP%" >nul 2>nul
+echo دانلود Node.js تمام شد.
+goto :eof
