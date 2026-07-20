@@ -1,7 +1,7 @@
 // سرویس‌ورکر پمپ یعقوبی — پوستهٔ برنامه (این صفحه + آیکون‌ها) را کش می‌کند تا
 // برنامه بعد از نصب، هم آنلاین و هم کاملاً آفلاین باز شود. نسخهٔ کش را هر بار
 // که APP_VERSION در index.html عوض می‌شود، این‌جا هم عوض کنید تا کش کهنه پاک شود.
-const CACHE_NAME = 'pump-yaqobi-shell-v2.9.83';
+const CACHE_NAME = 'pump-yaqobi-shell-v2.9.84';
 const APP_SHELL = [
   './',
   './index.html',
@@ -39,10 +39,27 @@ self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  // کتابخانه‌های خارجی (فونت/کیوآر/اکسل) دست‌نخورده از شبکه بروند —
-  // برنامه از قبل برای نبود آن‌ها گارد دارد (بخش‌های مربوطه فقط غیرفعال می‌شوند).
-  // نکته: فایربیس کاملاً حذف شده؛ هم‌زمان‌سازی از راه «سرور شخصی» (WebSocket) انجام می‌شود.
-  if (url.origin !== self.location.origin) return;
+  // دارایی‌های ثابتِ CDN (فونتِ وزیرمتن + کتابخانه‌های QR/Excel/jsQR/HLS) را برای
+  // «اجرای کاملِ آفلاین روی همهٔ سیستم‌ها» کش می‌کنیم: بعد از فقط یک‌بار باز شدنِ
+  // آنلاین، دفعه‌های بعد بدون اینترنت هم فونت و این قابلیت‌ها کار می‌کنند (قبلاً
+  // کراس‌اوریجین اصلاً کش نمی‌شد و آفلاین همیشه شکست می‌خورد). استریم‌ها/APIها
+  // (دوربین، ntfy، سرور شخصی/وب‌سوکت) عمداً کش نمی‌شوند تا حجم کش پر نشود.
+  if (url.origin !== self.location.origin) {
+    var CDN = /(^|\.)fonts\.googleapis\.com$|(^|\.)fonts\.gstatic\.com$|(^|\.)cdnjs\.cloudflare\.com$/;
+    if (CDN.test(url.hostname)) {
+      event.respondWith(
+        caches.match(req).then(function(cached){
+          if (cached) return cached;
+          return fetch(req).then(function(res){
+            try { var copy = res.clone(); caches.open(CACHE_NAME).then(function(c){ c.put(req, copy); }).catch(function(){}); } catch(e){}
+            return res;
+          }).catch(function(){ return cached; });   // آفلاین و کش‌نشده → برنامه خودش گارد دارد
+        })
+      );
+    }
+    // بقیهٔ مبداهای خارجی دست‌نخورده از شبکه بروند
+    return;
+  }
 
   const isAppShellPage = req.mode === 'navigate' || url.pathname.endsWith('/index.html') || url.pathname.endsWith('/');
   if (isAppShellPage) {
