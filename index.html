@@ -504,6 +504,8 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 .tool-link-card .tlc-go{background:currentColor;border-radius:999px;padding:3px 9px;flex-shrink:0}
 .tool-link-card .tlc-go i{font-style:normal;color:var(--card);font-size:0.7rem;font-weight:900}
 #robotFab:hover{transform:scale(1.07)}
+#managerFab{position:fixed;bottom:calc(150px + var(--kb-offset,0px));left:18px;z-index:10040;width:54px;height:54px;border-radius:50%;border:none;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;font-size:26px;transition:transform .12s,bottom .18s ease}
+#managerFab:hover{transform:scale(1.07)}
 .fab-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:999px;background:var(--red);color:#fff;font-size:0.7rem;font-weight:900;display:none;align-items:center;justify-content:center;padding:0 5px;border:2px solid var(--panel)}
 /* resize:both یعنی همان دستهٔ کشیدنیِ گوشهٔ استاندارد مرورگر (مثل تغییر اندازهٔ
    پنجره در ویندوز) — بدون نیاز به کدِ دستیِ کشیدن که ممکن است لرزش/خطا داشته باشد */
@@ -4509,7 +4511,8 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
    می‌تواند با دستهٔ کنارِ هر عنوان، خودش آن را تغییر دهد (مثل اکسل). */
 /* عرضِ ستون‌ها بر اساسِ نسبتِ th (table-layout:fixed) و پرکردنِ کاملِ عرض
    (width:100%) تا هم «نام» بی‌جهت غول نشود و هم جدول تمامِ عرض را بگیرد. */
-#pm-tbl, #cm-tbl{ width:100% !important; table-layout:fixed !important; min-width:860px; }
+#pm-tbl{ width:100% !important; table-layout:fixed !important; min-width:940px; }
+#cm-tbl{ width:100% !important; table-layout:fixed !important; min-width:860px; }
 /* دستهٔ تغییرِ اندازهٔ ستون‌ها (لبهٔ چپِ هر عنوان در حالتِ راست‌به‌چپ) —
    برای همهٔ جدول‌های سایت (نه فقط xls-tbl) تا هر ستونی مثل اکسل کشیدنی باشد */
 table thead th{ position:relative; }
@@ -4530,6 +4533,34 @@ table thead th{ position:relative; }
 .xls-num, .xls-calc, .pm-albaqi-cell, .pm-bardagi-cell{ text-align:center !important; }
 /* کارت‌های شخص/شرکت هم‌قد شوند (ستون‌های grid از قبل stretch هستند) */
 .persons-grid .person-card{ height:100% !important; }
+</style>
+<style id="ui-polish-2984">
+/* ══ بهبود ظاهری نسخهٔ 2.9.84 — فقط ظاهر (رنگ/مرز/سایه/نور/هاور)، بدون هیچ تغییرِ منطق یا چیدمان ══ */
+/* کادرها کمی تیره‌تر و مرزها باکیفیت‌تر (فقط تم تاریک؛ تم روشن دست‌نخورده) */
+body:not(.light-mode){ --card:#171d29; --panel:#141a24; --border:#33405a; }
+/* کارت‌ها و مودال‌ها: مرزِ واضح‌تر + سایهٔ نرم + خطِ نوریِ داخلیِ ظریف (glow حرفه‌ای) */
+body:not(.light-mode) .card{ box-shadow:0 6px 22px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.035); }
+body:not(.light-mode) .modal{ box-shadow:0 18px 60px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.04); }
+.card, .modal{ transition:border-color .18s ease, box-shadow .18s ease; }
+body:not(.light-mode) .card-head{ background:linear-gradient(180deg, rgba(255,255,255,.028), rgba(255,255,255,0)); }
+/* جدول‌ها: ظاهر مدرن — سرستونِ گرادیانی، خطوطِ تمیزتر، هاورِ روان */
+body:not(.light-mode) .xls-tbl th{ background:linear-gradient(180deg,#1b2436,#151b28); letter-spacing:.2px; color:var(--label); }
+.xls-tbl td, .xls-tbl th{ transition:background .15s ease; }
+body:not(.light-mode) .xls-tbl tr:hover td{ background:rgba(246,166,35,.055); }
+body:not(.light-mode) .xls-tbl tfoot td{ background:linear-gradient(180deg,#1b2436,#151b28); }
+/* کارت‌های خلاصهٔ حساب (پطرول/دیزل) نورِ داخلیِ ظریف بگیرند */
+body:not(.light-mode) .fs-group{ box-shadow:inset 0 1px 0 rgba(255,255,255,.03), 0 2px 10px rgba(0,0,0,.22); }
+/* دکمه‌ها: هاورِ روان + بالاآمدنِ ملایم */
+.add-row-btn, .nav-btn, .modal-close, .person-nav-btn, .tools-btn{ transition:all .18s ease; }
+.add-row-btn:hover{ transform:translateY(-1px); box-shadow:0 5px 14px rgba(0,0,0,.28); }
+body:not(.light-mode) .nav-btn.active{ box-shadow:0 3px 12px rgba(246,166,35,.32); }
+/* ورودی‌های جدول: حلقهٔ فوکوسِ ظریفِ همرنگِ برند (تایپوگرافیِ تمیزتر) */
+.xls-in:focus, .pm-edit:focus{ outline:none; box-shadow:inset 0 0 0 1.5px var(--accent); border-radius:5px; }
+/* اسکرول‌بارِ ظریف و مدرن در تم تاریک */
+body:not(.light-mode) ::-webkit-scrollbar{ width:10px; height:10px; }
+body:not(.light-mode) ::-webkit-scrollbar-thumb{ background:#2b3548; border-radius:8px; border:2px solid transparent; background-clip:content-box; }
+body:not(.light-mode) ::-webkit-scrollbar-thumb:hover{ background:#3a475e; background-clip:content-box; }
+body:not(.light-mode) ::-webkit-scrollbar-track{ background:transparent; }
 </style>
 </head>
 <body class="nav-sticky">
@@ -6908,6 +6939,42 @@ body.viewer-mode .inv-admin-only{display:none!important}
 <button id="calcFab" onclick="toggleCalc()" title="ماشین حساب"><svg><use href="#ic-calc"/></svg></button>
 <button id="lsCalcBtn" onclick="toggleCalc()" title="ماشین حساب" style="display:none"><svg><use href="#ic-calc"/></svg></button>
 <button id="robotFab" onclick="toggleRobot()" title="ربات دستیار"><svg><use href="#ic-robot"/></svg><span class="fab-badge" id="rbFabBadge"></span></button>
+<button id="managerFab" onclick="openManagerContact()" title="ارتباط سریع با مدیر">💬</button>
+
+<!-- پنل ارتباط با مدیر (واتساپ/تلگرام) — تلاشِ باز شدن داخلِ برنامه + بازکردنِ مطمئن -->
+<div class="modal-overlay" id="managerContactModal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-head">
+      <h2 style="flex:1;text-align:center">💬 ارتباط با مدیر</h2>
+      <button class="modal-close" onclick="closeModal('managerContactModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="mc-admin-cfg" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px">
+        <div style="font-size:0.78rem;font-weight:800;color:var(--accent);margin-bottom:8px">⚙️ تنظیمِ مدیر (فقط مدیر می‌بیند)</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+          <label style="font-size:0.74rem;color:var(--muted);white-space:nowrap">📱 شمارهٔ واتساپ (با کد کشور، بدون + و صفر):</label>
+          <input id="mc-wa-in" placeholder="مثلاً 93792236008" style="direction:ltr;flex:1;min-width:150px;border:1px solid var(--border);border-radius:7px;background:var(--dark);color:var(--txt);font-family:'Vazirmatn',sans-serif;padding:6px 10px" oninput="mcSaveCfg()">
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px">
+          <label style="font-size:0.74rem;color:var(--muted);white-space:nowrap">✈️ یوزرِ تلگرام (بدون @):</label>
+          <input id="mc-tg-in" placeholder="مثلاً manager_username" style="direction:ltr;flex:1;min-width:150px;border:1px solid var(--border);border-radius:7px;background:var(--dark);color:var(--txt);font-family:'Vazirmatn',sans-serif;padding:6px 10px" oninput="mcSaveCfg()">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button id="mc-tab-wa" class="add-row-btn" style="flex:1;margin:0;border-color:#25D366;color:#25D366;font-weight:800" onclick="mcOpen('wa')">🟢 واتساپ</button>
+        <button id="mc-tab-tg" class="add-row-btn" style="flex:1;margin:0;border-color:#2AABEE;color:#2AABEE;font-weight:800" onclick="mcOpen('tg')">🔵 تلگرام</button>
+      </div>
+      <div id="mc-hint" style="font-size:0.74rem;color:var(--muted);line-height:1.7;margin-bottom:8px"></div>
+      <div id="mc-frame-wrap" style="display:none;position:relative;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--dark)">
+        <iframe id="mc-frame" style="width:100%;height:52vh;border:none;background:#fff" referrerpolicy="no-referrer"></iframe>
+      </div>
+      <div id="mc-open-wrap" style="display:none;margin-top:10px;text-align:center">
+        <div style="font-size:0.74rem;color:var(--muted);margin-bottom:8px">اگر داخل برنامه باز نشد (واتساپ/تلگرام به‌دلیل قوانین امنیتیِ خودشان گاهی داخلِ پنجره باز نمی‌شوند)، از دکمهٔ زیر استفاده کنید:</div>
+        <button id="mc-open-btn" class="add-row-btn" style="margin:0;padding:10px 22px;font-size:0.9rem;font-weight:800" onclick="mcOpenExternal()">🚀 باز کردن در پنجرهٔ جدید</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div id="robotPanel">
   <span class="rz-h tl" data-rz="tl"></span><span class="rz-h tr" data-rz="tr"></span><span class="rz-h bl" data-rz="bl"></span><span class="rz-h br" data-rz="br"></span>
@@ -7067,6 +7134,8 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <!-- شماره تماس شخص — هم‌سطح و هم‌اندازه با دکمه‌های حساب جداگانه (روی خودِ شخص ذخیره می‌شود) -->
         <span style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap;flex-shrink:0">📞 شماره تماس:</span>
         <input id="pm-phone" class="pm-edit" placeholder="مثلاً 0700000000" autocomplete="off" style="direction:ltr;text-align:center;width:180px;flex-shrink:0;border:1px solid var(--border);border-radius:7px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;padding:6px 10px;box-sizing:border-box" oninput="updatePersonPhone(this.value)">
+        <!-- مدت زمانِ مشتری بودن — فقط نمایشی (از تاریخِ اولین ثبت حساب) -->
+        <span id="pm-membership" style="display:none;flex-shrink:0;white-space:nowrap;font-size:0.78rem;font-weight:800;border:1px solid var(--green);border-radius:7px;padding:6px 10px;background:var(--dark);color:var(--green);box-sizing:border-box" title="مدت زمانِ مشتری بودن — از تاریخِ اولین ثبتِ حساب"></span>
         <!-- نرخ هر لیتر فاکتورهای باز — فقط نمایشی، هیچ نقشی در محاسبات جدول ندارد -->
         <span id="pm-rate-badge" style="display:none;flex-shrink:0;white-space:nowrap;font-size:0.78rem;font-weight:800;border:1px solid var(--border);border-radius:7px;padding:6px 10px;background:var(--dark);color:var(--txt);box-sizing:border-box" title="نرخ هر لیتر از فاکتورهای بازِ این حساب — فقط نمایشی"></span>
         <!-- دکمهٔ حذف حساب فرعی — آخرِ نوار (سمت چپ) تا وسط دکمه‌های مهم نباشد و اشتباهی زده نشود -->
@@ -7087,6 +7156,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
             <th style="width:90px">رسید</th>
             <th style="width:90px">رسید تیل</th>
             <th style="width:90px">الباقی</th>
+            <th style="width:80px" title="فقط یادداشت — در هیچ محاسبه‌ای استفاده نمی‌شود">فیِ خرید 📝</th>
             <th style="width:46px">حذف</th>
           </tr></thead>
           <tbody id="pm-body"></tbody>
@@ -7098,6 +7168,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
             <td class="xls-calc" id="pm-ft-rasid">0</td>
             <td class="xls-calc" id="pm-ft-rasidfuel">0</td>
             <td class="xls-calc" id="pm-ft-albaqi" style="font-weight:800">0</td>
+            <td></td>
             <td></td>
           </tr></tfoot>
         </table>
@@ -7726,6 +7797,8 @@ function load() {
   if (!DB.trash) DB.trash = [];
   _cleanTrash();
   try { if (dedupAccounts()) save(); } catch(e){}
+  // مهاجرتِ یک‌بارهٔ نرخ‌ها: نرخِ اتحادیه/خودکار از جدول‌های قرض‌داران حذف و به «فیِ دستی» تبدیل می‌شود
+  try { _manualizeDebtorRates(); } catch(e){}
   // مهاجرت خودکار و یک‌باره: رمزهایی که از نسخه‌های قدیم به‌صورت متن ساده ذخیره شده بودند، به هَش SHA-256 تبدیل می‌شوند
   if (DB.password && !_looksHashed(DB.password)) { DB.password = _sha256Hex(DB.password); save(); }
   if (DB.profitPassword && !_looksHashed(DB.profitPassword)) { DB.profitPassword = _sha256Hex(DB.profitPassword); save(); }
@@ -7753,6 +7826,8 @@ function load() {
     var localStorageWasWipedButIdbHasData = !localData && _dbRecordCount(idbData) > 0;
     if (idbTime > curTime || localStorageWasWipedButIdbHasData) {
       try { Object.assign(DB, idbData); } catch(e) {}
+      // دادهٔ بازیابی‌شده ممکن است هنوز نرخِ خودکار داشته باشد → دوباره به فیِ دستی تبدیلش کن
+      try { DB._ratesManualized = false; _manualizeDebtorRates(); } catch(e){}
       try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
       try { updateAll(); } catch(e) {}
       try { showTopToast('💾 داده‌ها از حافظهٔ پشتیبان (IndexedDB) بازیابی شدند', '#38a169', 3000); } catch(e) {}
@@ -7943,6 +8018,7 @@ function syncDownload() {
       if (!snap.exists()) { _setSyncMsg('چیزی روی سرور برای این کد پیدا نشد.', '#d97706'); return; }
       Object.assign(DB, snap.val());
       DB.syncCode = 'pump1';
+      try { DB._ratesManualized = false; _manualizeDebtorRates(); } catch(e){}
       try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
       try { _IDB.put(JSON.parse(JSON.stringify(DB))); } catch(e) {}
       _dirtySinceUpload = false; // همین الان از سرور آمد، چیزی برای فرستادن نیست
@@ -8069,6 +8145,8 @@ function _applyServerData(serverData) {
   } catch(e) {}
   Object.assign(DB, serverData);
   DB.syncCode = 'pump1';
+  // دادهٔ واردشده از سرور ممکن است هنوز ردیف‌های با نرخِ خودکار داشته باشد → به فیِ دستی تبدیلش کن
+  try { DB._ratesManualized = false; _manualizeDebtorRates(); } catch(e){}
   try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
   try { _IDB.put(JSON.parse(JSON.stringify(DB))); } catch(e) {}
   _dirtySinceUpload = false;
@@ -8324,6 +8402,7 @@ function tryUnlock() {
     document.getElementById('app').style.display = 'block';
     const _fabU = document.getElementById('calcFab'); if (_fabU) _fabU.style.display = 'flex';
     const _rbU = document.getElementById('robotFab'); if (_rbU) _rbU.style.display = 'flex';
+    try { _managerFabShow(true); } catch(e){}
     try { _lsCalcBtnShow(false); _rbSetMode(role === 'admin' ? 'admin' : 'staff'); } catch (e) {}
     document.getElementById('lockInput').value = '';
     document.getElementById('lockErr').innerHTML = '';
@@ -9267,6 +9346,85 @@ function _hexFxSyncUI(p) {
 // ========== DATE HELPERS ==========
 function persianDate() {
   return toEnDigits(new Date().toLocaleDateString('fa-IR'));
+}
+// ── تبدیل جلالی↔میلادی (الگوریتم آزموده‌شدهٔ JDF) — برای «مدت عضویت» ─────────────
+function _div(a,b){ return Math.trunc(a/b); }   // برش به‌سمت صفر (مثل parseIntِ الگوریتم JDF) — نه Math.floor
+function _jMonthLen(jy,jm){ if(jm<=6) return 31; if(jm<=11) return 30; return (jal_j2g(jy,12,30).jm===12)?30:29; }
+function jal_g2j(gy,gm,gd){
+  const g_d_m=[0,31,59,90,120,151,181,212,243,273,304,334];
+  let jy=(gy<=1600)?0:979;
+  gy-=(gy<=1600)?621:1600;
+  const gy2=(gm>2)?(gy+1):gy;
+  let days=(365*gy)+_div(gy2+3,4)-_div(gy2+99,100)+_div(gy2+399,400)-80+gd+g_d_m[gm-1];
+  jy+=33*_div(days,12053); days%=12053;
+  jy+=4*_div(days,1461); days%=1461;
+  jy+=_div(days-1,365);
+  if(days>365) days=(days-1)%365;
+  const jm=(days<186)?1+_div(days,31):7+_div(days-186,30);
+  const jd=1+((days<186)?(days%31):((days-186)%30));
+  return { jy:jy, jm:jm, jd:jd };
+}
+function jal_j2g(jy,jm,jd){
+  let gy=(jy<=979)?621:1600;
+  jy-=(jy<=979)?0:979;
+  let days=(365*jy)+(_div(jy,33)*8)+_div((jy%33)+3,4)+78+jd+((jm<7)?(jm-1)*31:((jm-7)*30)+186);
+  gy+=400*_div(days,146097); days%=146097;
+  if(days>36524){ gy+=100*_div(--days,36524); days%=36524; if(days>=365) days++; }
+  gy+=4*_div(days,1461); days%=1461;
+  gy+=_div(days-1,365);
+  if(days>365) days=(days-1)%365;
+  let gd=days+1;
+  const sal_a=[0,31,((gy%4===0&&gy%100!==0)||(gy%400===0))?29:28,31,30,31,30,31,31,30,31,30,31];
+  let gm; for(gm=0;gm<13;gm++){ const v=sal_a[gm]; if(gd<=v) break; gd-=v; }
+  return { gy:gy, gm:gm, gd:gd };
+}
+function _jalaliStrToTs(s){
+  if(!s) return 0;
+  const parts=toEnDigits(String(s)).split(/[\/\-.]/).map(x=>parseInt(x,10));
+  if(parts.length<3 || parts.some(isNaN)) return 0;
+  let [jy,jm,jd]=parts;
+  if(jy<1200||jy>1700||jm<1||jm>12||jd<1||jd>31) return 0;
+  try{ const g=jal_j2g(jy,jm,jd); const t=new Date(g.gy,g.gm-1,g.gd).getTime(); return isNaN(t)?0:t; }catch(e){ return 0; }
+}
+// تاریخِ اولین ثبتِ شخص (مبنای مدت عضویت) — یک‌بار قفل می‌شود تا ثابت بماند
+function _personCreatedTs(person){
+  if(!person) return 0;
+  if(person.createdAt) return person.createdAt;
+  let min=0;
+  const scan=arr=>(arr||[]).forEach(r=>{ const ts=_jalaliStrToTs(r&&r.date); if(ts>0 && (min===0||ts<min)) min=ts; });
+  scan(person.rows); scan(person.moneyRows);
+  (person.subs||[]).forEach(s=>{ if(s){ scan(s.rows); scan(s.moneyRows); } });
+  (person.history||[]).forEach(h=>{ if(h) scan(h.rows); });
+  const ts=min>0?min:Date.now();
+  person.createdAt=ts;
+  try{ if(currentRole!=='viewer') save(); }catch(e){}
+  return ts;
+}
+// متنِ مدت عضویت: «۲ سال و ۴ ماه» / «۸ ماه» / «۱ سال و ۱۷ روز»
+function _membershipText(ts){
+  if(!ts) return '';
+  const now=new Date(), from=new Date(ts);
+  if(from.getTime()>now.getTime()) return 'تازه';
+  const a=jal_g2j(from.getFullYear(), from.getMonth()+1, from.getDate());
+  const b=jal_g2j(now.getFullYear(), now.getMonth()+1, now.getDate());
+  let y=b.jy-a.jy, m=b.jm-a.jm, d=b.jd-a.jd;
+  if(d<0){ m-=1; let pm=b.jm-1, py=b.jy; if(pm<1){ pm=12; py-=1; } d+=_jMonthLen(py,pm); }
+  if(m<0){ y-=1; m+=12; }
+  const parts=[];
+  if(y>0) parts.push(n2fa(y)+' سال');
+  if(m>0) parts.push(n2fa(m)+' ماه');
+  if(d>0) parts.push(n2fa(d)+' روز');
+  if(!parts.length) return 'امروز';
+  return parts.slice(0,2).join(' و ');
+}
+function _renderPersonMembership(person){
+  const el=document.getElementById('pm-membership'); if(!el) return;
+  try{
+    const ts=_personCreatedTs(person);
+    const txt=_membershipText(ts);
+    if(txt){ el.style.display=''; el.textContent='⏳ مشتریِ ما از: '+txt; }
+    else { el.style.display='none'; el.textContent=''; }
+  }catch(e){ el.style.display='none'; }
 }
 function miladiDate() {
   return new Date().toLocaleDateString('en-GB', {day:'2-digit',month:'2-digit',year:'numeric'});
@@ -11113,7 +11271,7 @@ function confirmAddPerson() {
     if (typeof openPersonModal === 'function') openPersonModal(currentPersonType, exist.id);
     return;
   }
-  list.push({ id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7), name, rows: [] });
+  list.push({ id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7), name, rows: [], createdAt: Date.now() });
   save();
   closeModal('addPersonModal');
   renderPersons(currentPersonType);
@@ -11416,6 +11574,7 @@ function openPersonModal(type, id) {
   document.getElementById('personModalTitle').textContent = '👤 ' + person.name + ' (' + (idx+1) + '/' + list.length + ')';
   const bn = document.getElementById('pm-bigname'); if (bn) bn.textContent = '👤 ' + person.name;
   const ph = document.getElementById('pm-phone'); if (ph && document.activeElement !== ph) ph.value = person.phone || '';
+  try { _renderPersonMembership(person); } catch (e) {}
   _updatePersonFilterBtns();
   _renderSubBar(person);
   renderPersonRows(person);
@@ -11586,9 +11745,7 @@ function renderPersonRows(person) {
 
     const isP = r.ftype !== 'diesel';
     const rn = 'ft-' + person.id + '-' + i;
-    // نرخِ اتحادیهٔ مؤثرِ همین ردیف — به‌عنوان placeholderِ ستونِ «فی لیتر» نمایش داده
-    // می‌شود تا کاربر بداند اگر فی ننویسد، مقدار تیل × همین نرخ = پول می‌شود.
-    const rowUR = Math.round((_rowUnionRate(r)||0)*100)/100;
+    // نرخِ خودکار/اتحادیه حذف شد — «فی لیتر» فقط دستی است.
     const ftCell = showFtCol ? `
       <td>
         <div class="ft-pick">
@@ -11599,17 +11756,18 @@ function renderPersonRows(person) {
     const tr = document.createElement('tr');
     tr.setAttribute('data-idx', i);
     tr.innerHTML = `
-      <td class="xls-num" style="cursor:pointer" title="نرخ اتحادیهٔ این ردیف — بزنید تا ببینید/عوض کنید" onclick="rowRateEditor(this,'${person.id}',${i})">${n2fa(shown)}</td>
+      <td class="xls-num" style="cursor:pointer" title="فیِ این ردیف (دستی) — بزنید تا وارد/عوض کنید" onclick="rowRateEditor(this,'${person.id}',${i})">${n2fa(shown)}</td>
       <td><input class="xls-in" value="${r.date||''}" onchange="updatePersonRow('${person.id}',${i},'date',this.value)"></td>
       <td><input class="xls-in" value="${escFa(r.name)}" placeholder="نام" style="min-width:140px" onchange="updatePersonRow('${person.id}',${i},'name',this.value)"></td>
-      <td><input class="xls-in" value="${r.hawala||''}" placeholder="#" inputmode="numeric" style="min-width:48px;max-width:64px" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="updatePersonRow('${person.id}',${i},'hawala',this.value)"></td>
+      <td><input class="xls-in" value="${(r.hawala||'').toString().replace(/"/g,'&quot;')}" placeholder="متن یا عدد" style="min-width:56px;max-width:90px" onchange="updatePersonRow('${person.id}',${i},'hawala',this.value)"></td>
       ${ftCell}
       <td><input class="xls-in" type="number" value="${r.fuel||''}" placeholder="0" style="min-width:46px;max-width:64px" oninput="calcPersonRow('${person.id}',${i},'fuel',this.value)"></td>
-      <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="${rowUR||'0'}" title="خالی = نرخِ اتحادیه (${n2fa(rowUR||0)})؛ اگر عدد بنویسی همان قفل می‌شود" style="min-width:44px;max-width:60px" oninput="calcPersonRow('${person.id}',${i},'priceper',this.value)"></td>
+      <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="0" title="فیِ دستی — اگر خالی باشد بردگیِ پولیِ این ردیف صفر می‌ماند (نرخِ خودکار حذف شده)" style="min-width:44px;max-width:60px" oninput="calcPersonRow('${person.id}',${i},'priceper',this.value)"></td>
       <td><input class="xls-in pm-bardagi-cell" type="number" value="${parseFloat(bardagi)||''}" placeholder="0" style="color:var(--accent);font-weight:700" oninput="calcPersonRow('${person.id}',${i},'bardagi',this.value)"></td>
       ${money ? `<td><input class="xls-in" type="number" value="${r.rasid||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasid',this.value)"></td>` : ''}
       ${money ? '' : `<td><input class="xls-in" type="number" value="${r.rasidFuel||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasidFuel',this.value)"></td>`}
       <td class="pm-albaqi-cell"></td>
+      <td><input class="xls-in" value="${(r.buyFee||'').toString().replace(/"/g,'&quot;')}" placeholder="فی…" title="فقط یادداشت (مثلاً «فی 56») — در هیچ محاسبه‌ای استفاده نمی‌شود" style="min-width:56px;max-width:80px;color:var(--muted)" onchange="updatePersonRow('${person.id}',${i},'buyFee',this.value)"></td>
       <td><button class="del-btn" onclick="deletePersonRow('${person.id}',${i})">🗑️</button></td>
     `;
     tbody.appendChild(tr);
@@ -11617,7 +11775,7 @@ function renderPersonRows(person) {
   if (shown === 0) {
     const tr = document.createElement('tr');
     const label = currentPersonFilter === 'petrol' ? '⛽ هیچ ردیف پطرولی ثبت نشده' : (currentPersonFilter === 'diesel' ? '🟤 هیچ ردیف دیزلی ثبت نشده' : 'هیچ ردیفی ثبت نشده');
-    tr.innerHTML = `<td colspan="${showFtCol?11:10}" style="text-align:center;padding:16px;color:var(--muted);font-size:0.85rem">${label}</td>`;
+    tr.innerHTML = `<td colspan="${showFtCol?12:11}" style="text-align:center;padding:16px;color:var(--muted);font-size:0.85rem">${label}</td>`;
     tbody.appendChild(tr);
   }
   // جمع‌ها بعد از حلقهٔ ردیف‌ها حساب می‌شوند — حلقه بردگی/الباقیِ هر ردیف را
@@ -12049,28 +12207,52 @@ function _rowIsFilled(r){
   const bard = r.byMoney ? (parseFloat(r.bardagi)||0) : 0;
   return !!((parseFloat(r.fuel)||0)||(parseFloat(r.priceper)||0)||bard||(parseFloat(r.rasid)||0)||(parseFloat(r.rasidFuel)||0));
 }
-function _stampRowUnionRate(r){
-  if (!r) return;
-  if (r.uRateManual === true) return;                 // نرخِ دستی دست‌نخورده می‌ماند
-  if (!_rowIsFilled(r)) { r.uRate = 0; return; }       // ردیفِ خالی → نرخ پاک تا دفعهٔ بعد تازه شود
-  if (!(parseFloat(r.uRate) > 0)) {
-    const u = (r.ftype === 'diesel') ? (parseFloat(DB.unionRateDiesel)||0) : (parseFloat(DB.unionRatePetrol)||0);
-    if (u > 0) r.uRate = u;
-  }
-}
-// نرخِ مؤثرِ یک ردیف برای تبدیلِ پول↔تیل: نرخِ قفل‌شدهٔ ردیف، وگرنه نرخِ اتحادیهٔ زندهٔ روز
+// نرخِ اتحادیه دیگر روی ردیف‌های قرض‌داران قفل نمی‌شود (خواستهٔ صریحِ صاحب ریپو ۲۰۲۶):
+// «نرخِ خودکار/اتحادیه از ریشه از جدول‌های قرض‌داران حذف — فقط فیِ دستی». این تابع
+// عمداً کاری نمی‌کند تا هیچ نرخی اتومات روی ردیف ننشیند. (برای سازگاری با فراخوان‌های
+// موجود در calc نگه داشته شده است.)
+function _stampRowUnionRate(r){ /* no-op: نرخِ خودکار حذف شد */ }
+// نرخِ مؤثرِ یک ردیف: فقط فیِ دستیِ همین ردیف. نرخِ اتحادیه/زنده هیچ نقشی ندارد.
+// (سازگاری: نرخِ دستیِ قدیمیِ ردیف — uRate با uRateManual — هم اگر باشد پذیرفته می‌شود
+// چون آن هم دستی بوده؛ مهاجرتِ یک‌باره آن را داخلِ «فی» می‌ریزد.)
 function _rowUnionRate(r){
-  const locked = parseFloat(r && r.uRate) || 0;
-  if (locked > 0) return locked;
-  return (r && r.ftype === 'diesel') ? (parseFloat(DB.unionRateDiesel)||0) : (parseFloat(DB.unionRatePetrol)||0);
-}
-// فیِ مؤثرِ هر ردیفِ حساب برای تبدیلِ «مقدار تیل → پول»: اگر کاربر فیِ دستی در ستونِ
-// «فی لیتر» نوشته باشد همان استفاده می‌شود؛ وگرنه نرخِ اتحادیهٔ قفل‌شدهٔ همان ردیف.
-// این‌طوری تغییرِ نرخِ اتحادیه، بردگیِ ردیف‌های قدیمیِ پرشده را جابه‌جا نمی‌کند و فقط
-// ردیفِ خالی (بی‌فی و بی‌نرخِ قفل‌شده) نرخِ روزِ جدید را می‌گیرد.
-function _personRowFee(r){
   const p = parseFloat(r && r.priceper) || 0;
-  return p > 0 ? p : _rowUnionRate(r);
+  if (p > 0) return p;
+  if (r && r.uRateManual === true){ const u = parseFloat(r.uRate)||0; if (u > 0) return u; }
+  return 0;
+}
+// فیِ مؤثرِ هر ردیف برای تبدیلِ «مقدار تیل → پول» = فقط فیِ دستی (بدون نرخِ اتحادیه/خودکار).
+// اگر فی خالی باشد، بردگیِ پولیِ آن ردیف صفر می‌ماند (خواستهٔ کاربر: نرخ را فقط دستی می‌رساند).
+function _personRowFee(r){
+  return _rowUnionRate(r);
+}
+// مهاجرتِ یک‌باره: نرخِ مؤثرِ فعلیِ هر ردیفِ قرض‌دار (فیِ دستی، وگرنه نرخِ قفل‌شدهٔ قدیمی،
+// وگرنه نرخِ اتحادیهٔ فعلی) داخلِ ستونِ «فی لیتر» به‌صورتِ دستی ذخیره می‌شود. با این کار
+// همهٔ الباقی‌های فعلی دقیقاً همان‌طور که الان دیده می‌شوند حفظ می‌مانند، ولی از این پس
+// هیچ وابستگی‌ای به نرخِ اتحادیه/خودکار باقی نمی‌ماند (فقط عددی که در «فی» نشسته).
+function _manualizeDebtorRates(){
+  if (DB._ratesManualized) return;
+  const uP = parseFloat(DB.unionRatePetrol)||0, uD = parseFloat(DB.unionRateDiesel)||0;
+  const stampRow = r => {
+    if (!r) return;
+    if ((parseFloat(r.priceper)||0) > 0) return;          // فیِ دستی از قبل هست
+    let fee = 0;
+    if (r.uRateManual === true) fee = parseFloat(r.uRate)||0;   // نرخِ دستیِ قدیمی
+    if (!(fee > 0)) fee = parseFloat(r.uRate)||0;               // نرخِ قفل‌شدهٔ خودکارِ قدیمی
+    if (!(fee > 0)) fee = (r.ftype === 'diesel') ? uD : uP;     // وگرنه نرخِ اتحادیهٔ فعلی (همان چیزی که الان نمایش داده می‌شود)
+    if (fee > 0) r.priceper = fee;                             // نرخِ مؤثرِ فعلی → «فیِ دستی»
+  };
+  const eachAcct = a => { if (!a) return; (a.rows||[]).forEach(stampRow); (a.moneyRows||[]).forEach(stampRow); };
+  const eachPerson = p => {
+    if (!p) return;
+    eachAcct(p);
+    (p.subs||[]).forEach(eachAcct);
+    (p.history||[]).forEach(h => (h && h.rows||[]).forEach(stampRow));
+  };
+  (DB.debtPersons||[]).forEach(eachPerson);
+  (DB.noinvPersons||[]).forEach(eachPerson);
+  DB._ratesManualized = true;
+  try { save(); } catch(e) {}
 }
 // بردگیِ ردیفِ لیتردار = مقدار تیل × فیِ مؤثر (نرخِ اتحادیهٔ قفل‌شده وقتی فیِ دستی نباشد).
 // خواستهٔ کاربر: در «واحد تیل» با نوشتنِ فقط «مقدار تیل»، پول = مقدار تیل × نرخِ اتحادیه.
@@ -12078,22 +12260,25 @@ function _personRowBardagi(r){
   const f = parseFloat(r && r.fuel) || 0;
   return f > 0 ? f * _personRowFee(r) : 0;
 }
-// ویرایشِ دستیِ نرخِ اتحادیهٔ یک ردیف — با کلیک روی ستونِ شماره، همان‌جا کادرِ کوچکِ
-// نرخ باز می‌شود (پیش‌فرض: نرخِ قفل‌شده یا نرخِ اتحادیهٔ روز) و قابلِ تغییر است. بدونِ
-// prompt (که در بعضی وب‌ویوها باز نمی‌شود) — کادرِ درون‌خطی.
+// ویرایشِ دستیِ فیِ یک ردیف — با کلیک روی ستونِ شماره، همان‌جا کادرِ کوچکِ فی باز
+// می‌شود و مقدار مستقیم در ستونِ «فی لیتر» (فیِ دستی) ذخیره می‌شود. نرخِ اتحادیه/خودکار
+// دیگر دخالت ندارد. بدونِ prompt (که در بعضی وب‌ویوها باز نمی‌شود) — کادرِ درون‌خطی.
 function rowRateEditor(td, pid, idx){
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = (list||[]).find(p => p.id === pid); if (!person) return;
   const r = _acctRows(person)[idx]; if (!r || (td && td.querySelector('input'))) return;
-  const cur = _rowUnionRate(r) || '';
-  td.innerHTML = '<input type="number" value="' + cur + '" title="نرخ اتحادیهٔ همین ردیف" '
+  const cur = (parseFloat(r.priceper) || 0) || '';
+  td.innerHTML = '<input type="number" value="' + cur + '" title="فیِ همین ردیف (دستی)" '
     + 'style="width:46px;padding:2px;font-size:0.7rem;text-align:center;border:1px solid var(--accent);border-radius:5px;background:var(--card);color:var(--txt)" '
     + 'onclick="event.stopPropagation()">';
   const inp = td.querySelector('input'); if (!inp) return;
   inp.focus(); inp.select();
   const done = () => {
     const v = parseFloat(inp.value) || 0;
-    if (v > 0) { r.uRate = v; r.uRateManual = true; } else { r.uRate = 0; r.uRateManual = false; }
+    r.priceper = v > 0 ? v : 0;
+    r.uRate = 0; r.uRateManual = false;
+    if (!r.byMoney) r.bardagi = _personRowBardagi(r);
+    r.albaqi = (parseFloat(r.bardagi)||0) - (r.rasid||0);
     save(); _updatePersonTotals(person); renderPersonRows(person);
   };
   inp.addEventListener('blur', done);
@@ -12269,10 +12454,9 @@ function _updatePersonTotals(person) {
   // قابلِ تایپ است؛ رسیدهای ثبت‌شده در خودِ جدول جداگانه در الباقی حساب می‌شوند.
   const rasidP = money ? (parseFloat(acct.rasidMoneyP)||0) : (parseFloat(acct.rasidFuelP)||0);
   const rasidD = money ? (parseFloat(acct.rasidMoneyD)||0) : (parseFloat(acct.rasidFuelD)||0);
-  // ── تبدیلِ پول↔تیل با نرخِ «قفل‌شدهٔ هر ردیف» (نه نرخِ زندهٔ اتحادیه) ──────────
-  // هر ردیفِ فقط‌پولی/رسید با نرخِ خودش تبدیل می‌شود؛ پس تغییرِ نرخ اتحادیه، ردیف‌های
-  // قدیمی را جابه‌جا نمی‌کند. ردیفِ لیتردار فیِ خودش (بردگی÷لیتر) را دارد.
-  const _uRP = parseFloat(DB.unionRatePetrol)||0, _uRD = parseFloat(DB.unionRateDiesel)||0;
+  // ── تبدیلِ پول↔تیل فقط با فیِ دستیِ هر ردیف (نرخِ اتحادیه/خودکار حذف شد) ──────────
+  // هر ردیفِ فقط‌پولی/رسید با فیِ دستیِ خودش تبدیل می‌شود؛ ردیفِ لیتردار فیِ خودش
+  // (بردگی÷لیتر) را دارد. اگر ردیفی فی نداشته باشد، بردگیِ پولیِ آن صفر می‌ماند.
   let _fFuelP=0,_fBardP=0,_fFuelD=0,_fBardD=0;      // ردیف‌های لیتردار (فیِ حساب)
   let _moneyBardP=0,_moneyBardLP=0,_moneyBardD=0,_moneyBardLD=0;   // بردگیِ فقط‌پولی → لیتر
   let _rasidMoneyLP=0,_rasidMoneyLD=0;               // رسیدِ پولی → لیتر
@@ -12317,9 +12501,9 @@ function _updatePersonTotals(person) {
   // بعد از تصفیه، با عوض‌کردنِ فیِ یک ردیف تیل از هیچ پیدا نمی‌شود. فقط رسیدِ
   // ردیف‌های بی‌فی این‌جا با فیِ مؤثرِ کلِ حساب (بردگیِ کل ÷ تیلِ کل) تبدیل می‌شود تا
   // «پولِ داده = پولِ برده» ⇒ الباقی صفر بماند (اصلاحِ قبلی برای ردیفِ بی‌فی).
-  const _uP0e = parseFloat(DB.unionRatePetrol)||0, _uD0e = parseFloat(DB.unionRateDiesel)||0;
-  const _effFeeP = _accFeeP > 0 ? _accFeeP : (_blendP > 0 ? _blendP : _uP0e);
-  const _effFeeD = _accFeeD > 0 ? _accFeeD : (_blendD > 0 ? _blendD : _uD0e);
+  // نرخِ اتحادیه دیگر دخالت ندارد: فیِ مؤثر فقط از فیِ دستیِ خودِ ردیف‌ها (لیتردار یا پولی) می‌آید
+  const _effFeeP = _accFeeP > 0 ? _accFeeP : _blendP;
+  const _effFeeD = _accFeeD > 0 ? _accFeeD : _blendD;
   _rasidMoneyLP = _rasidRowLP + (_effFeeP > 0 ? (_rasidLooseP / _effFeeP) : 0);
   _rasidMoneyLD = _rasidRowLD + (_effFeeD > 0 ? (_rasidLooseD / _effFeeD) : 0);
   // برد = مجموع لیتر (+ معادلِ لیترِ بردگیِ پولی) در حالت تیل؛ مجموع بردگی/پول در حالت پول
@@ -12372,12 +12556,10 @@ function _updatePersonTotals(person) {
     const cell = document.getElementById('pm-' + fu + '-remmoney-cell');
     if (cell){ cell.style.display = 'none'; if (cell.parentElement) cell.parentElement.classList.remove('has-remmoney'); }
   });
-  // نرخ اتحادیهٔ روز (پطرول/دیزل) — پلِ تبدیل پول↔تیل. اگر ثبت نشده باشد، نرخِ
-  // مؤثر از خودِ ردیف‌ها (بردگیِ پولی ÷ لیتر) گرفته می‌شود تا محاسبه خراب نشود.
-  const _uRateP = parseFloat(DB.unionRatePetrol) || 0;
-  const _uRateD = parseFloat(DB.unionRateDiesel) || 0;
-  const rateP = _uRateP > 0 ? _uRateP : (t.petrol.fuel > 0 ? t.petrol.bardagi / t.petrol.fuel : 0);
-  const rateD = _uRateD > 0 ? _uRateD : (t.diesel.fuel > 0 ? t.diesel.bardagi / t.diesel.fuel : 0);
+  // نرخِ تبدیلِ پول↔تیل فقط از خودِ ردیف‌ها (بردگیِ فیِ‌دستی ÷ لیتر) گرفته می‌شود —
+  // نرخِ اتحادیه دیگر هیچ نقشی در جدول‌های قرض‌داران ندارد.
+  const rateP = t.petrol.fuel > 0 ? t.petrol.bardagi / t.petrol.fuel : 0;
+  const rateD = t.diesel.fuel > 0 ? t.diesel.bardagi / t.diesel.fuel : 0;
   // «الباقی پول»ِ حالتِ تیل و «الباقی تیل»ِ حالتِ پول — برای فوترِ جدول هم استفاده می‌شوند
   let _remMoneyP = 0, _remMoneyD = 0;   // حالتِ تیل → الباقی پول
   let _remFuelAll = 0;                   // حالتِ پول → الباقی تیلِ کل
@@ -12623,7 +12805,7 @@ function _renderHistoryPanel(person) {
         <td class="xls-num">${n2fa(vi+1)}</td>
         <td><input class="xls-in" value="${r.date||''}" onchange="updateHistoryRow('${pid}','${h.id}',${ri},'date',this.value)"></td>
         <td><input class="xls-in" value="${escFa(r.name)}" placeholder="نام" onchange="updateHistoryRow('${pid}','${h.id}',${ri},'name',this.value)"></td>
-        <td><input class="xls-in" value="${r.hawala||''}" placeholder="#" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="updateHistoryRow('${pid}','${h.id}',${ri},'hawala',this.value)"></td>
+        <td><input class="xls-in" value="${(r.hawala||'').toString().replace(/"/g,'&quot;')}" placeholder="متن یا عدد" onchange="updateHistoryRow('${pid}','${h.id}',${ri},'hawala',this.value)"></td>
         ${showFt ? `<td><div class="ft-pick">
           <label class="ft-opt petrol ${(r.ftype!=='diesel')?'active':''}"><input type="radio" name="hft-${h.id}-${ri}" ${(r.ftype!=='diesel')?'checked':''} onchange="setHistoryRowFuel('${pid}','${h.id}',${ri},'petrol')">⛽ پطرول</label>
           <label class="ft-opt diesel ${(r.ftype==='diesel')?'active':''}"><input type="radio" name="hft-${h.id}-${ri}" ${(r.ftype==='diesel')?'checked':''} onchange="setHistoryRowFuel('${pid}','${h.id}',${ri},'diesel')">🟤 دیزل</label>
@@ -19205,13 +19387,70 @@ function _rbSetMode(mode, personCtx) {
   _rbUpdateBadges();
 }
 function _showChatFabs(on) {
-  ['calcFab', 'robotFab'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = on ? 'flex' : 'none'; });
+  ['calcFab', 'robotFab', 'managerFab'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = on ? 'flex' : 'none'; });
   if (!on) {
     const rp = document.getElementById('robotPanel'); if (rp) rp.classList.remove('open');
     const cp = document.getElementById('calcPanel'); if (cp) cp.classList.remove('open');
   }
 }
 function _lsCalcBtnShow(on) { const el = document.getElementById('lsCalcBtn'); if (el) el.style.display = on ? 'flex' : 'none'; }
+// ── پنل ارتباط با مدیر (واتساپ/تلگرام) ─────────────────────────────────────────
+function _managerFabShow(on){ const el = document.getElementById('managerFab'); if (el) el.style.display = on ? 'flex' : 'none'; }
+let _mcKind = 'wa';
+function _mcWaDigits(){ return (DB.managerWa||'').toString().replace(/[^0-9]/g,''); }
+function _mcTgUser(){ return (DB.managerTg||'').toString().replace(/[^a-zA-Z0-9_]/g,''); }
+function openManagerContact(){
+  const cfg = document.getElementById('mc-admin-cfg');
+  if (cfg) cfg.style.display = (currentRole === 'admin') ? '' : 'none';
+  const waIn = document.getElementById('mc-wa-in'); if (waIn) waIn.value = _mcWaDigits();
+  const tgIn = document.getElementById('mc-tg-in'); if (tgIn) tgIn.value = _mcTgUser();
+  // پنل تازه: قاب و دکمهٔ بازکردن مخفی تا کاربر یکی را انتخاب کند
+  const fw = document.getElementById('mc-frame-wrap'); if (fw) fw.style.display = 'none';
+  const ow = document.getElementById('mc-open-wrap'); if (ow) ow.style.display = 'none';
+  const hint = document.getElementById('mc-hint');
+  if (hint) hint.textContent = 'یکی را انتخاب کنید تا برای تماس با مدیر باز شود.';
+  const m = document.getElementById('managerContactModal'); if (m) m.classList.add('open');
+}
+function mcSaveCfg(){
+  if (currentRole !== 'admin') return;
+  const waIn = document.getElementById('mc-wa-in'); const tgIn = document.getElementById('mc-tg-in');
+  if (waIn) DB.managerWa = waIn.value.replace(/[^0-9]/g,'');
+  if (tgIn) DB.managerTg = tgIn.value.replace(/[^a-zA-Z0-9_]/g,'');
+  try { save(); } catch(e){}
+}
+function _mcExternalUrl(kind){
+  if (kind === 'wa'){ const d = _mcWaDigits(); return d ? ('https://wa.me/' + d) : ''; }
+  const u = _mcTgUser(); return u ? ('https://t.me/' + u) : '';
+}
+function _mcEmbedUrl(kind){
+  if (kind === 'wa'){ const d = _mcWaDigits(); return d ? ('https://web.whatsapp.com/send?phone=' + d) : 'https://web.whatsapp.com/'; }
+  const u = _mcTgUser(); return u ? ('https://t.me/' + u) : 'https://web.telegram.org/';
+}
+function mcOpen(kind){
+  _mcKind = kind;
+  const hasTarget = kind === 'wa' ? !!_mcWaDigits() : !!_mcTgUser();
+  const hint = document.getElementById('mc-hint');
+  if (!hasTarget){
+    if (hint) hint.innerHTML = (currentRole === 'admin')
+      ? '⚠️ هنوز ' + (kind==='wa'?'شمارهٔ واتساپِ':'یوزرِ تلگرامِ') + ' مدیر را وارد نکرده‌اید (بالا).'
+      : '⚠️ مدیر هنوز اطلاعاتِ تماس را ثبت نکرده است.';
+    const fw = document.getElementById('mc-frame-wrap'); if (fw) fw.style.display = 'none';
+    const ow = document.getElementById('mc-open-wrap'); if (ow) ow.style.display = 'none';
+    return;
+  }
+  if (hint) hint.textContent = (kind==='wa'?'واتساپِ':'تلگرامِ') + ' مدیر — تلاش برای باز شدن داخلِ برنامه…';
+  // تلاشِ iframe (ممکن است واتساپ/تلگرام به‌دلیل X-Frame-Options اجازه ندهند)
+  const fw = document.getElementById('mc-frame-wrap');
+  const fr = document.getElementById('mc-frame');
+  if (fw && fr){ fw.style.display = ''; try { fr.src = _mcEmbedUrl(kind); } catch(e){} }
+  // دکمهٔ بازکردنِ مطمئن همیشه نشان داده می‌شود (چون iframe اغلب رد می‌شود)
+  const ow = document.getElementById('mc-open-wrap'); if (ow) ow.style.display = '';
+}
+function mcOpenExternal(){
+  const url = _mcExternalUrl(_mcKind);
+  if (!url){ showToast('اطلاعاتِ تماسِ مدیر ثبت نشده', '#e53e3e'); return; }
+  try { window.open(url, '_blank', 'noopener'); } catch(e){ location.href = url; }
+}
 
 // ---- سوال و جواب (ربات محلی) ----
 function _botNorm(s) { return normFa(String(s || '')).replace(/[؟?!.،,:؛«»()]/g, ' ').replace(/\s+/g, ' ').trim(); }
@@ -20821,7 +21060,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.83';
+const APP_VERSION = '2.9.84';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
