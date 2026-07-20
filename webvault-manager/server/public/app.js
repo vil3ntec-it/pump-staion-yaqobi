@@ -10,6 +10,10 @@ const state = {
   tagFilter: null,
 };
 
+// آدرس سرور خانگی. خالی = همین میزبان (وقتی سرور خودش برنامه را سرو می‌کند).
+// وقتی برنامه به‌صورت فایل/سایت جدا باز شود، از بخش «⚙️ آدرس سرور» تنظیم می‌شود.
+let API_BASE = localStorage.getItem('wv_api_base') || '';
+
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -26,7 +30,7 @@ async function api(method, path, body, opts = {}) {
   const headers = { ...(state.token ? { Authorization: `Bearer ${state.token}` } : {}) };
   let payload = body;
   if (body && !opts.raw) { headers['Content-Type'] = 'application/json'; payload = JSON.stringify(body); }
-  const res = await fetch('/api' + path, { method, headers, body: payload });
+  const res = await fetch(API_BASE + '/api' + path, { method, headers, body: payload });
   if (res.status === 401) { doLock(true); throw new Error('نشست منقضی شد — دوباره وارد شوید'); }
   const ct = res.headers.get('content-type') || '';
   const data = ct.includes('application/json') ? await res.json() : await res.text();
@@ -58,6 +62,41 @@ function resetAutoLock() {
 ['click', 'keydown', 'mousemove', 'touchstart'].forEach((e) =>
   document.addEventListener(e, () => { if (state.token) resetAutoLock(); }, { passive: true }));
 
+// --------------------------- بخش «آدرس سرور خانگی» ---------------------------
+// آدرس سرور دیگر روی صفحهٔ ورود پرسیده نمی‌شود؛ از این پنجرهٔ جدا تنظیم می‌شود
+// (هم از دکمهٔ ⚙️ روی صفحهٔ قفل، هم از صفحهٔ «تنظیمات»).
+function serverConfigModal() {
+  openModal('⚙️ آدرس سرور خانگی', `
+    <p style="color:var(--muted);font-size:13px;margin-top:0">آدرس سروری که روی کامپیوتر خانگی‌ات نصب کرده‌ای را وارد کن. یک‌بار ذخیره می‌شود و دیگر پرسیده نمی‌شود.</p>
+    <div class="field"><label>آدرس سرور</label>
+      <input id="srvUrl" class="mono" style="direction:ltr" placeholder="http://192.168.1.20:4600" value="${esc(API_BASE || '')}" /></div>
+    <p id="srvTest" style="font-size:13px;min-height:20px;margin:4px 2px 0"></p>`, {
+    footer: `<button class="btn primary" id="srvSave">ذخیره و اتصال</button><button class="btn ghost" data-cancel>انصراف</button>`,
+  });
+  $('#modal [data-cancel]').addEventListener('click', closeModal);
+  const trySave = async () => {
+    let u = $('#srvUrl').value.trim().replace(/\/+$/, '');
+    if (u && !/^https?:\/\//.test(u)) { $('#srvTest').innerHTML = '<span style="color:var(--red)">آدرس باید با //:http شروع شود</span>'; return; }
+    $('#srvTest').textContent = 'در حال بررسی اتصال…';
+    const prev = API_BASE; API_BASE = u;
+    try {
+      await GET('/status');
+      localStorage.setItem('wv_api_base', u);
+      toast('آدرس سرور ذخیره شد ✓');
+      closeModal();
+      await initLock();
+      setTimeout(() => $('#masterPass')?.focus(), 60);
+    } catch {
+      API_BASE = prev;
+      $('#srvTest').innerHTML = '<span style="color:var(--red)">اتصال برقرار نشد — آدرس و روشن‌بودن سرور را بررسی کن</span>';
+    }
+  };
+  $('#srvSave').addEventListener('click', trySave);
+  $('#srvUrl').addEventListener('keydown', (e) => { if (e.key === 'Enter') trySave(); });
+  setTimeout(() => $('#srvUrl')?.focus(), 60);
+}
+$('#serverCfgBtn')?.addEventListener('click', serverConfigModal);
+
 // --------------------------- صفحهٔ قفل ---------------------------
 let isSetup = false;
 async function initLock() {
@@ -65,13 +104,22 @@ async function initLock() {
     const st = await GET('/status');
     state.autoLockMin = st.autoLockMinutes || 15;
     isSetup = !st.initialized;
+    $('#lockForm').style.display = 'block';
     $('#lockSubtitle').textContent = isSetup
       ? 'برای شروع، یک «رمز اصلی» قوی تعیین کنید'
       : 'برای دسترسی، رمز اصلی را وارد کنید';
     $('#confirmField').style.display = isSetup ? 'block' : 'none';
     $('#lockBtn').textContent = isSetup ? 'ساخت صندوق' : 'باز کردن';
+    // در حالت اتصال به سرور دور، دکمهٔ «تغییر آدرس» کوچک بماند؛ در حالت میزبانِ خودی پنهان
+    const cfg = $('#serverCfgBtn');
+    if (cfg) { cfg.style.display = API_BASE ? 'block' : 'none'; cfg.textContent = '⚙️ تغییر آدرس سرور'; }
   } catch {
-    $('#lockSubtitle').textContent = 'اتصال به سرور برقرار نشد';
+    // به سرور وصل نیست → به‌جای پرسیدن روی صفحهٔ ورود، کاربر را به بخش تنظیم آدرس بفرست
+    $('#lockForm').style.display = 'none';
+    $('#confirmField').style.display = 'none';
+    $('#lockSubtitle').textContent = 'برای شروع، آدرس سرور خانگی‌ات را تنظیم کن';
+    const cfg = $('#serverCfgBtn');
+    if (cfg) { cfg.style.display = 'block'; cfg.textContent = '⚙️ تنظیم آدرس سرور خانگی'; }
   }
 }
 
@@ -738,7 +786,7 @@ PAGES.files = async function () {
       e.preventDefault();
       // دانلود با هدر توکن → از fetch و blob استفاده می‌کنیم
       try {
-        const res = await fetch(`/api/files/${id}/download`, { headers: { Authorization: `Bearer ${state.token}` } });
+        const res = await fetch(`${API_BASE}/api/files/${id}/download`, { headers: { Authorization: `Bearer ${state.token}` } });
         if (!res.ok) throw new Error('دانلود ناموفق');
         const blob = await res.blob();
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
@@ -755,6 +803,12 @@ PAGES.files = async function () {
 PAGES.settings = async function () {
   const c = $('#content');
   c.innerHTML = `
+    <div class="panel"><div class="panel-head"><h3>🖥️ آدرس سرور خانگی</h3></div><div class="panel-body">
+      <p style="color:var(--muted);font-size:13px;margin-top:0">اینجا آدرس سرورِ کامپیوتر خانگی‌ات را تنظیم می‌کنی — نه روی صفحهٔ ورود.</p>
+      <p style="font-size:13px">آدرس فعلی: <span class="mono" style="direction:ltr">${esc(API_BASE || 'همین میزبان (سرور خودش برنامه را سرو می‌کند)')}</span></p>
+      <button class="btn primary" id="cfgServerBtn">⚙️ تنظیم / تغییر آدرس سرور</button>
+    </div></div>
+
     <div class="panel"><div class="panel-head"><h3>🔒 امنیت</h3></div><div class="panel-body">
       <div class="grid-2">
         <div class="field"><label>قفل خودکار بعد از (دقیقه)</label>
@@ -783,8 +837,10 @@ PAGES.settings = async function () {
     <div class="panel"><div class="panel-head"><h3>🏷️ تگ‌ها</h3></div><div class="panel-body" id="tagCloud"></div></div>
 
     <div class="panel"><div class="panel-head"><h3>ℹ️ درباره</h3></div><div class="panel-body" style="color:var(--muted);font-size:13px">
-      WebVault Manager نسخهٔ ۱.۱ — سرور خانگی، داده‌ها روی همین سرور و رمزنگاری‌شده با AES-256-GCM ذخیره می‌شوند. هنگام ورود، سایت‌های میزبانی‌شده روی این کامپیوتر خودکار کشف و پیشنهاد می‌شوند.
+      WebVault Manager نسخهٔ ۱.۲ — سرور خانگی، داده‌ها روی همین سرور و رمزنگاری‌شده با AES-256-GCM ذخیره می‌شوند. هنگام ورود، سایت‌های میزبانی‌شده روی این کامپیوتر خودکار کشف و پیشنهاد می‌شوند.
     </div></div>`;
+
+  $('#cfgServerBtn')?.addEventListener('click', serverConfigModal);
 
   $('#saveLock').addEventListener('click', async () => {
     const m = Number($('#setLock').value);
@@ -801,7 +857,7 @@ PAGES.settings = async function () {
     const kind = b.dataset.exp;
     let path = kind === 'json' ? '/export/json' : kind === 'json-secrets' ? '/export/json?withSecrets=1' : '/export/' + kind;
     try {
-      const res = await fetch('/api' + path, { headers: { Authorization: `Bearer ${state.token}` } });
+      const res = await fetch(API_BASE + '/api' + path, { headers: { Authorization: `Bearer ${state.token}` } });
       const blob = await res.blob();
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
       a.download = (res.headers.get('content-disposition') || '').match(/filename="?([^"]+)"?/)?.[1] || 'export';
