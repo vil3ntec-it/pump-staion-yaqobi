@@ -3187,6 +3187,49 @@ body.theme-light-slate{
   --fx-hue:-60deg !important;
   --atmo-beam:rgba(124,77,255,.16); --atmo-geo:rgba(140,100,255,.5);
 }
+/* ===== سه مدلِ رنگِ جدید (از پالت‌های کاربر) ===== */
+/* تپهٔ طلایی — Golden Dune: پس‌زمینهٔ کِرِم + نارنجیِ وانیلی (Warm Vanilla) */
+body.theme-golden-dune{
+  --dark:#fff2e2 !important; --panel:#fffaf1 !important; --card:#fff7ea !important; --border:#e7cfa6 !important;
+  --txt:#402c14 !important; --muted:#94764f !important; --label:#6b4f28 !important; --accent:#dfa35e !important;
+  --grad-amber:linear-gradient(135deg,#f2c88f 0%,#dfa35e 50%,#c07f38 100%) !important;
+  --on-accent:#3a2510 !important; --hdr-title:#fff2e2 !important; --chrome-brd:rgba(223,163,94,.42) !important;
+  --hdr-bg:linear-gradient(90deg,#a06a2e,#c0863f,#a06a2e) !important;
+  --banner-bg:linear-gradient(90deg,#8f5d26,#a86f33,#8f5d26) !important;
+  --nav-bg:linear-gradient(90deg,#fbe6cf,#fff5e6,#fbe6cf) !important;
+  --app-bg:radial-gradient(ellipse at 50% 20%, rgba(255,255,255,.9) 0%, transparent 55%),radial-gradient(ellipse at 50% 100%, rgba(150,150,155,.18) 0%, transparent 60%),linear-gradient(175deg,#eeeeef 0%,#e4e4e6 30%,#dcdce0 65%,#d4d4d8 100%) !important;
+  --fx-hue:28deg !important;
+  --atmo-beam:rgba(223,163,94,.18); --atmo-geo:rgba(223,163,94,.5);
+}
+/* شرابیِ کِرِم — Burgundy & Cream Mist: پس‌زمینهٔ کِرِم + شرابیِ عمیق */
+body.theme-burgundy{
+  --dark:#fff3e1 !important; --panel:#fffbf5 !important; --card:#fdf4e8 !important; --border:#e6ccbd !important;
+  --txt:#2a0c0c !important; --muted:#8a5a52 !important; --label:#6f0000 !important; --accent:#8a0d0d !important;
+  --grad-amber:linear-gradient(135deg,#b34a4a 0%,#6f0000 55%,#4d0000 100%) !important;
+  --on-accent:#ffffff !important; --hdr-title:#fff3e1 !important; --chrome-brd:rgba(111,0,0,.4) !important;
+  --hdr-bg:linear-gradient(90deg,#5a0000,#7a0000,#5a0000) !important;
+  --banner-bg:linear-gradient(90deg,#4a0000,#650000,#4a0000) !important;
+  --nav-bg:linear-gradient(90deg,#fbe8d6,#fff6ea,#fbe8d6) !important;
+  --app-bg:radial-gradient(ellipse at 50% 20%, rgba(255,255,255,.9) 0%, transparent 55%),radial-gradient(ellipse at 50% 100%, rgba(150,150,155,.18) 0%, transparent 60%),linear-gradient(175deg,#eeeeef 0%,#e4e4e6 30%,#dcdce0 65%,#d4d4d8 100%) !important;
+  --fx-hue:0deg !important;
+  --atmo-beam:rgba(139,13,13,.18); --atmo-geo:rgba(139,13,13,.5);
+}
+/* اقیانوس عمیق — Deep Ocean & Soft Sand: پس‌زمینهٔ سرمه‌ای + شنیِ نرم (تیره) */
+body.theme-deep-ocean{
+  --dark:#00223f !important; --panel:#012a4a !important; --card:#063a61 !important; --border:#1c5280 !important;
+  --txt:#eef3f8 !important; --muted:#9fb6cc !important; --label:#c9c1b0 !important; --accent:#c9c1b0 !important;
+  --grad-amber:linear-gradient(135deg,#e6e0d2 0%,#c9c1b0 50%,#a89e88 100%) !important;
+  --on-accent:#00223f !important; --hdr-title:#c9c1b0 !important; --chrome-brd:rgba(201,193,176,.34) !important;
+  --hdr-bg:linear-gradient(90deg,#001c35,#013058,#001c35) !important;
+  --banner-bg:linear-gradient(90deg,#00182e,#01294b,#00182e) !important;
+  --nav-bg:linear-gradient(90deg,#001529,#012241,#001529) !important;
+  --app-bg:
+    radial-gradient(ellipse at 50% 8%, rgba(201,193,176,.06) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 100%, rgba(0,0,0,.4) 0%, transparent 60%),
+    linear-gradient(175deg, #013056 0%, #002240 35%, #001a30 70%, #001120 100%) !important;
+  --fx-hue:205deg !important;
+  --atmo-beam:rgba(201,193,176,.16); --atmo-geo:rgba(120,170,220,.5);
+}
 
 /* ---------- DAY THEMES: WHITE CHROME ON A NEUTRAL DARK CANVAS ----------
    Every day theme's chrome (header/banner/nav/cards) stays a clean white/
@@ -3218,6 +3261,17 @@ body.light-mode[class*="theme-"]{
     color-mix(in srgb, var(--accent) 16%, #ffffff)) !important;
   --hdr-title:var(--accent) !important;
   --app-bg:radial-gradient(ellipse at 50% 20%, rgba(255,255,255,.9) 0%, transparent 55%),radial-gradient(ellipse at 50% 100%, rgba(150,150,155,.18) 0%, transparent 60%),linear-gradient(175deg,#eeeeef 0%,#e4e4e6 30%,#dcdce0 65%,#d4d4d8 100%) !important;
+}
+/* پالت‌های کاربر (Golden Dune / Burgundy): پس‌زمینهٔ کِرِمِ گرمِ خودِ پالت به‌جای
+   کانواسِ خنثیِ خاکستری — رنگِ اصلیِ تم در هدر/دکمه/سرستون‌ها همان‌طور خوانا می‌ماند.
+   بعد از بلوکِ بالا آمده تا با تساویِ specificity، همین (متأخرتر) برنده شود. */
+body.light-mode.theme-golden-dune{
+  --dark:#fff2e2 !important; --card:#fff6e8 !important; --panel:#fffaf1 !important;
+  --app-bg:radial-gradient(ellipse at 50% 16%, #fff9ee 0%, transparent 60%),linear-gradient(175deg,#fff2e2 0%,#f6e6cf 55%,#eed9b9 100%) !important;
+}
+body.light-mode.theme-burgundy{
+  --dark:#fff3e1 !important; --card:#fdf3e6 !important; --panel:#fffaf3 !important;
+  --app-bg:radial-gradient(ellipse at 50% 16%, #fffaf2 0%, transparent 60%),linear-gradient(175deg,#fff3e1 0%,#f5e2cf 55%,#ecd3bc 100%) !important;
 }
 
 /* عنوان هدر («⛽ پمپ یعقوبی») در Ultra با یک ترفند gradient-clip-to-text رنگ
@@ -5577,8 +5631,9 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
     <button class="goto-btn" onclick="showSection('debtsum')">📊 رفتن به قرض‌های دسته‌جمعی</button>
     <span><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> رسید قرض‌داران / چکنه</span>
   </div>
-  <!-- کادر قرض‌های کهنه — صفحهٔ جداگانه -->
-  <button type="button" class="tool-link-card" style="border-color:var(--red);color:var(--red)" onclick="showSection('oldloans')"><span>⏰ قرض‌های کهنه — بی‌حرکت‌ها اول</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
+  <!-- کادرهای قرض‌های کهنه — دو صفحهٔ جداگانه: یکی واحد تیل، یکی واحد پول -->
+  <button type="button" class="tool-link-card" style="border-color:var(--red);color:var(--red)" onclick="showSection('oldloans')"><span>⏰ قرض‌های کهنهٔ تیل — بی‌حرکت‌ها اول (واحد تیل)</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
+  <button type="button" class="tool-link-card" style="border-color:var(--green);color:var(--green)" onclick="showSection('oldloansmoney')"><span>💵 قرض‌های کهنهٔ پول — بی‌حرکت‌ها اول (واحد پول)</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
   <!-- کادر حساب‌های چکنه — صفحهٔ جداگانه (خواستهٔ کاربر) -->
   <button type="button" class="tool-link-card" style="border-color:var(--purple);color:var(--purple)" onclick="showSection('chakana')"><span>🧾 حساب‌های چکنه</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
   <div class="card">
@@ -5646,17 +5701,32 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
   </div>
 </div>
 
-<!-- ⏰ قرض‌های کهنه (صفحهٔ جداگانه — از کادر بخش رسید قرض‌داران باز می‌شود) -->
+<!-- ⏰ قرض‌های کهنهٔ تیل (صفحهٔ جداگانه — فقط واحد تیل) -->
 <div class="section" id="sec-oldloans">
   <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
     <button class="goto-btn" onclick="showSection('debtrasid')">🧾 برگشت به رسید قرض‌داران</button>
-    <span>⏰ قرض‌های کهنه</span>
+    <span>⏰ قرض‌های کهنهٔ تیل</span>
   </div>
   <div class="card" style="border-color:var(--red)">
-    <div class="card-head"><div class="card-title">⏰ قرض‌های کهنه — بی‌حرکت‌ها اول</div></div>
+    <div class="card-head"><div class="card-title">⏰ قرض‌های کهنهٔ تیل — بی‌حرکت‌ها اول (فقط واحد تیل)</div></div>
     <div style="padding:14px">
-      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.7">بدهکارها به ترتیبِ «چند روز است هیچ ردیف تازه‌ای ندارند». با کلیک روی نام، حساب کاملش باز می‌شود. با دکمهٔ یادآوری، حساب + لینک مستقیم به پی‌وی واتساپش می‌رود (اگر شماره ثبت باشد).</div>
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.7">فقط قرض‌دارانِ «واحد تیل» — به ترتیبِ «چند روز است هیچ ردیف تازه‌ای ندارند». با کلیک روی نام، حساب کاملش باز می‌شود. با دکمهٔ یادآوری، حساب + لینک مستقیم به پی‌وی واتساپش می‌رود (اگر شماره ثبت باشد).</div>
       <div id="aging-list" style="font-size:0.84rem"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 💵 قرض‌های کهنهٔ پول (صفحهٔ جداگانه — فقط واحد پول، بدون تیل) -->
+<div class="section" id="sec-oldloansmoney">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('debtrasid')">🧾 برگشت به رسید قرض‌داران</button>
+    <span>💵 قرض‌های کهنهٔ پول</span>
+  </div>
+  <div class="card" style="border-color:var(--green)">
+    <div class="card-head"><div class="card-title">💵 قرض‌های کهنهٔ پول — بی‌حرکت‌ها اول (فقط واحد پول)</div></div>
+    <div style="padding:14px">
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.7">فقط کسانی که «پول» قرض‌دارند (واحد پول) — تیل در این لیست نیست. به ترتیبِ «چند روز بی‌حرکت»‌اند. با کلیک روی نام، حساب کاملش باز می‌شود؛ با دکمهٔ یادآوری، لینک واتساپش باز می‌شود.</div>
+      <div id="aging-list-money" style="font-size:0.84rem"></div>
     </div>
   </div>
 </div>
@@ -8813,7 +8883,7 @@ function showSection(id, btn) {
   if (id === 'debtsum') navId = 'debtrasid';
   if (id === 'extraincome') navId = 'profit';
   if (id === 'tanker' || id === 'tankdip') navId = 'storage';
-  if (id === 'oldloans') navId = 'debtrasid';
+  if (id === 'oldloans' || id === 'oldloansmoney') navId = 'debtrasid';
   if (id === 'chakana') navId = 'debtrasid';
   if (id === 'staffshort') navId = 'attendance';
   if (id === 'ratehist' || id === 'monthreport') navId = 'profit';
@@ -8829,7 +8899,8 @@ function showSection(id, btn) {
   if (id === 'extraincome') { renderExtraIncomes(); calcExtraIncome(); }
   if (id === 'tanker') { try { _renderTankerPanel(); } catch(e) {} }
   if (id === 'tankdip') { try { _renderDipPanel(); _dipRenderTankInfo(); dipLiveCalc(); } catch(e) {} }
-  if (id === 'oldloans') { try { _renderAgingPanel(); } catch(e) {} }
+  if (id === 'oldloans') { try { _renderAgingPanel('fuel', 'aging-list'); } catch(e) {} }
+  if (id === 'oldloansmoney') { try { _renderAgingPanel('money', 'aging-list-money'); } catch(e) {} }
   if (id === 'chakana') { try { renderChakana(); } catch(e) {} }
   if (id === 'staffshort') { try { _ssSettleIdx = null; _renderStaffShortPanel(); } catch(e) {} }
   if (id === 'ratehist') { try { _renderRateHistPanel(); } catch(e) {} }
@@ -11535,6 +11606,19 @@ function makeTableResizable(table, storeKey){
   let saved = {};
   try{ saved = JSON.parse(localStorage.getItem('colw_'+storeKey) || '{}'); }catch(e){}
   const ths = table.tHead.rows[0].cells;
+  // کلیدِ پایدارِ هر ستون: بر اساس «نامِ سرستون» (نه شمارهٔ ستون). این‌طوری وقتی
+  // ستون‌ها جابه‌جا/کم‌وزیاد یا با فیلتر ظاهر/پنهان می‌شوند (نوع تیل، رسید، …)،
+  // عرضِ ذخیره‌شده به‌هم نمی‌ریزد و خراب نمی‌شود — ریشهٔ باگِ «اندازه‌ام ثبت نمی‌ماند».
+  const seen = {};
+  const colKey = function(i){
+    let t = (ths[i] && (ths[i].getAttribute('data-colkey') || (ths[i].textContent||'').replace(/[\s‌]+/g,' ').trim())) || '';
+    if(!t) t = 'c' + i;
+    if(seen[t] != null){ t = t + '~' + i; }   // نامِ تکراری → یکتا با شماره
+    seen[t] = i;
+    return t;
+  };
+  const keyOf = [];
+  for(let i=0;i<ths.length;i++) keyOf[i] = colKey(i);
   // اگر جدول colgroup هم‌تعدادِ ستون‌ها دارد (مثل جدول قرائت پمپ)، عرض باید روی
   // خودِ <col> نوشته شود — در table-layout:fixed عرضِ col بر عرضِ th مقدم است.
   const colEls = (function(){
@@ -11562,7 +11646,10 @@ function makeTableResizable(table, storeKey){
     try{ if(getComputedStyle(table).tableLayout !== 'fixed') table.style.tableLayout = 'fixed'; }catch(e){}
   }
   Array.prototype.forEach.call(ths, function(th, idx){
-    if(saved[idx]) setW(idx, saved[idx]);
+    // عرضِ ذخیره‌شده بر اساس «نامِ ستون» اعمال می‌شود؛ اگر نبود، برای سازگاری با
+    // نسخه‌های قبلی، عرضِ ذخیره‌شدهٔ «شماره‌ای» هم پذیرفته می‌شود (یک‌بار مهاجرت).
+    const wSaved = saved[keyOf[idx]] != null ? saved[keyOf[idx]] : saved[idx];
+    if(wSaved) setW(idx, wSaved);
     if(th.querySelector('.col-resize-grip')) return;
     const grip = document.createElement('div');
     grip.className = 'col-resize-grip';
@@ -11578,7 +11665,7 @@ function makeTableResizable(table, storeKey){
     function up(){
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', up);
-      saved[idx] = getW(idx) || Math.round(startW);
+      saved[keyOf[idx]] = getW(idx) || Math.round(startW);
       try{ localStorage.setItem('colw_'+storeKey, JSON.stringify(saved)); }catch(e){}
     }
     grip.addEventListener('pointerdown', function(e){
@@ -21175,7 +21262,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.88';
+const APP_VERSION = '2.9.89';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -22486,14 +22573,17 @@ function _renderTankerPanel() {
   }).join('') : '<div style="color:var(--muted)">هنوز تخلیه‌ای ثبت نشده</div>';
 }
 // ── قرض‌های کهنه (بدهکارهای بی‌حرکت) ──
-function _renderAgingPanel() {
-  const el = document.getElementById('aging-list');
+function _renderAgingPanel(filter, elId) {
+  // filter: 'fuel' = فقط واحد تیل، 'money' = فقط واحد پول، وگرنه همه
+  const el = document.getElementById(elId || 'aging-list');
   if (!el) return;
   const todayK = _shDateKey(persianDate());
   const rows = [];
   (DB.debtPersons || []).forEach(p => {
     const f = _debtSumFigures(p);
     if (!(f.albaqi > 0)) return;
+    if (filter === 'money' && !f.money) return;   // فقط کسانی که «پول» قرض‌دارند
+    if (filter === 'fuel'  &&  f.money) return;    // فقط کسانی که «تیل» قرض‌دارند
     let lastK = 0;
     _allRows(p).forEach(r => { const k = _shDateKey(r.date); if (k > lastK) lastK = k; });
     rows.push({ p, f, days: lastK ? Math.max(0, todayK - lastK) : -1 });
@@ -23969,7 +24059,10 @@ document.addEventListener('click', function(e) {
     {id:'light-mint',   light:true,  name:'زمرد لوکس (Emerald Luxury)',     bg:'#ffffff', ac:'#10a05a', html:'#e6f6ee'},
     {id:'light-sky',    light:true,  name:'یاقوت کبود سلطنتی (Royal Sapphire)', bg:'#ffffff', ac:'#2b7fff', html:'#e6f0fc'},
     {id:'light-peach',  light:true,  name:'یاقوت اجرایی (Ruby Executive)',  bg:'#fffafa', ac:'#c81e3a', html:'#fbdfe4'},
-    {id:'light-slate',  light:true,  name:'بلور آمیتیست (Amethyst Crystal)', bg:'#ffffff', ac:'#7c4dff', html:'#e9e3fb'}
+    {id:'light-slate',  light:true,  name:'بلور آمیتیست (Amethyst Crystal)', bg:'#ffffff', ac:'#7c4dff', html:'#e9e3fb'},
+    {id:'golden-dune',  light:true,  name:'تپهٔ طلایی (Golden Dune)',        bg:'#fff2e2', ac:'#dfa35e', html:'#f7e6cf'},
+    {id:'burgundy',     light:true,  name:'شرابی کِرِم (Burgundy)',          bg:'#fff3e1', ac:'#8a0d0d', html:'#f6e2cf'},
+    {id:'deep-ocean',   light:false, name:'اقیانوس عمیق (Deep Ocean)',       bg:'#063a61', ac:'#c9c1b0', html:'#001120'}
   ];
   function allClasses(){ return PALETTES.map(function(p){ return 'theme-'+p.id; }); }
   function find(id){ for(var i=0;i<PALETTES.length;i++){ if(PALETTES[i].id===id) return PALETTES[i]; } return null; }
