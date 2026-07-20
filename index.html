@@ -4536,7 +4536,7 @@ table thead th{ position:relative; }
 <style id="ui-polish-2984">
 /* ══ بهبود ظاهری نسخهٔ 2.9.84 — فقط ظاهر (رنگ/مرز/سایه/نور/هاور)، بدون هیچ تغییرِ منطق یا چیدمان ══ */
 /* کادرها کمی تیره‌تر و مرزها باکیفیت‌تر (فقط تم تاریک؛ تم روشن دست‌نخورده) */
-body:not(.light-mode){ --card:#171d29; --panel:#141a24; --border:#33405a; }
+body:not(.light-mode){ --card:#141a26; --panel:#111621; --border:#465577; }
 /* کارت‌ها و مودال‌ها: مرزِ واضح‌تر + سایهٔ نرم + خطِ نوریِ داخلیِ ظریف (glow حرفه‌ای) */
 body:not(.light-mode) .card{ box-shadow:0 6px 22px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.035); }
 body:not(.light-mode) .modal{ box-shadow:0 18px 60px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.04); }
@@ -4560,6 +4560,34 @@ body:not(.light-mode) ::-webkit-scrollbar{ width:10px; height:10px; }
 body:not(.light-mode) ::-webkit-scrollbar-thumb{ background:#2b3548; border-radius:8px; border:2px solid transparent; background-clip:content-box; }
 body:not(.light-mode) ::-webkit-scrollbar-thumb:hover{ background:#3a475e; background-clip:content-box; }
 body:not(.light-mode) ::-webkit-scrollbar-track{ background:transparent; }
+
+/* ══ نسخهٔ 2.9.87 — خطِ دورِ همهٔ کادرها و کادرهای هدری واضح‌تر (کیفیت سبک) ══ */
+/* کادرهای اصلی: مرزِ ضخیم‌تر و واضح‌تر تا دورِ هر کادر خوب دیده شود */
+body:not(.light-mode) .card,
+body:not(.light-mode) .modal,
+body:not(.light-mode) .fs-group,
+body:not(.light-mode) .split-box,
+body:not(.light-mode) .person-card,
+body:not(.light-mode) .company-card,
+body:not(.light-mode) .msumbox,
+body:not(.light-mode) .tool-link-card,
+body:not(.light-mode) .tools-in{
+  border-width:1.5px; border-style:solid; border-color:var(--border);
+}
+/* کادرهای هدری (هر سرکادر): خطِ جداکنندهٔ پررنگ‌تر و واضح‌تر */
+body:not(.light-mode) .modal-summary,
+body:not(.light-mode) .list-header,
+body:not(.light-mode) .pm-acct-bar{
+  border-color:var(--border);
+}
+body:not(.light-mode) .card-head,
+body:not(.light-mode) .modal-head{ border-bottom:1.5px solid var(--border); }
+body:not(.light-mode) .fs-head{ border-bottom:1.5px solid var(--border); }
+/* جدول‌ها: خطوطِ سلول‌ها هم واضح‌تر تا مرزبندی تمیز و باکیفیت دیده شود */
+body:not(.light-mode) .xls-tbl th{ border-color:var(--border); border-bottom-width:2px; }
+body:not(.light-mode) .xls-tbl td{ border-color:var(--border); }
+/* نوارِ ناوبری بالای صفحه هم خطِ زیرش واضح‌تر */
+body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:var(--border); }
 </style>
 </head>
 <body class="nav-sticky">
@@ -21147,7 +21175,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.86';
+const APP_VERSION = '2.9.87';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
