@@ -4511,8 +4511,7 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
    می‌تواند با دستهٔ کنارِ هر عنوان، خودش آن را تغییر دهد (مثل اکسل). */
 /* عرضِ ستون‌ها بر اساسِ نسبتِ th (table-layout:fixed) و پرکردنِ کاملِ عرض
    (width:100%) تا هم «نام» بی‌جهت غول نشود و هم جدول تمامِ عرض را بگیرد. */
-#pm-tbl{ width:100% !important; table-layout:fixed !important; min-width:940px; }
-#cm-tbl{ width:100% !important; table-layout:fixed !important; min-width:860px; }
+#pm-tbl, #cm-tbl{ width:100% !important; table-layout:fixed !important; min-width:860px; }
 /* دستهٔ تغییرِ اندازهٔ ستون‌ها (لبهٔ چپِ هر عنوان در حالتِ راست‌به‌چپ) —
    برای همهٔ جدول‌های سایت (نه فقط xls-tbl) تا هر ستونی مثل اکسل کشیدنی باشد */
 table thead th{ position:relative; }
@@ -7134,6 +7133,9 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <!-- شماره تماس شخص — هم‌سطح و هم‌اندازه با دکمه‌های حساب جداگانه (روی خودِ شخص ذخیره می‌شود) -->
         <span style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap;flex-shrink:0">📞 شماره تماس:</span>
         <input id="pm-phone" class="pm-edit" placeholder="مثلاً 0700000000" autocomplete="off" style="direction:ltr;text-align:center;width:180px;flex-shrink:0;border:1px solid var(--border);border-radius:7px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;padding:6px 10px;box-sizing:border-box" oninput="updatePersonPhone(this.value)">
+        <!-- «فیِ خرید» — فقط یادداشتِ دستیِ خودِ شخص، در هیچ محاسبه‌ای نیست (خواستهٔ کاربر: بغلِ کادرِ شمارهٔ مشتری) -->
+        <span style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap;flex-shrink:0">📝 فیِ خرید:</span>
+        <input id="pm-buyfee" class="pm-edit" placeholder="مثلاً فی 56 / 57 / 58" autocomplete="off" title="فقط یادداشت — تیل مشتری با چه فی خریداری شده. در هیچ محاسبه‌ای استفاده نمی‌شود." style="text-align:center;width:200px;flex-shrink:0;border:1px solid var(--border);border-radius:7px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;padding:6px 10px;box-sizing:border-box" oninput="updatePersonBuyFee(this.value)">
         <!-- مدت زمانِ مشتری بودن — فقط نمایشی (از تاریخِ اولین ثبت حساب) -->
         <span id="pm-membership" style="display:none;flex-shrink:0;white-space:nowrap;font-size:0.78rem;font-weight:800;border:1px solid var(--green);border-radius:7px;padding:6px 10px;background:var(--dark);color:var(--green);box-sizing:border-box" title="مدت زمانِ مشتری بودن — از تاریخِ اولین ثبتِ حساب"></span>
         <!-- نرخ هر لیتر فاکتورهای باز — فقط نمایشی، هیچ نقشی در محاسبات جدول ندارد -->
@@ -7156,7 +7158,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
             <th style="width:90px">رسید</th>
             <th style="width:90px">رسید تیل</th>
             <th style="width:90px">الباقی</th>
-            <th style="width:80px" title="فقط یادداشت — در هیچ محاسبه‌ای استفاده نمی‌شود">فیِ خرید 📝</th>
             <th style="width:46px">حذف</th>
           </tr></thead>
           <tbody id="pm-body"></tbody>
@@ -7168,7 +7169,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
             <td class="xls-calc" id="pm-ft-rasid">0</td>
             <td class="xls-calc" id="pm-ft-rasidfuel">0</td>
             <td class="xls-calc" id="pm-ft-albaqi" style="font-weight:800">0</td>
-            <td></td>
             <td></td>
           </tr></tfoot>
         </table>
@@ -7827,7 +7827,7 @@ function load() {
     if (idbTime > curTime || localStorageWasWipedButIdbHasData) {
       try { Object.assign(DB, idbData); } catch(e) {}
       // دادهٔ بازیابی‌شده ممکن است هنوز نرخِ خودکار داشته باشد → دوباره به فیِ دستی تبدیلش کن
-      try { DB._ratesManualized = false; _manualizeDebtorRates(); } catch(e){}
+      try { DB._autoFeesCleared = false; _manualizeDebtorRates(); } catch(e){}
       try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
       try { updateAll(); } catch(e) {}
       try { showTopToast('💾 داده‌ها از حافظهٔ پشتیبان (IndexedDB) بازیابی شدند', '#38a169', 3000); } catch(e) {}
@@ -8018,7 +8018,7 @@ function syncDownload() {
       if (!snap.exists()) { _setSyncMsg('چیزی روی سرور برای این کد پیدا نشد.', '#d97706'); return; }
       Object.assign(DB, snap.val());
       DB.syncCode = 'pump1';
-      try { DB._ratesManualized = false; _manualizeDebtorRates(); } catch(e){}
+      try { DB._autoFeesCleared = false; _manualizeDebtorRates(); } catch(e){}
       try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
       try { _IDB.put(JSON.parse(JSON.stringify(DB))); } catch(e) {}
       _dirtySinceUpload = false; // همین الان از سرور آمد، چیزی برای فرستادن نیست
@@ -8146,7 +8146,7 @@ function _applyServerData(serverData) {
   Object.assign(DB, serverData);
   DB.syncCode = 'pump1';
   // دادهٔ واردشده از سرور ممکن است هنوز ردیف‌های با نرخِ خودکار داشته باشد → به فیِ دستی تبدیلش کن
-  try { DB._ratesManualized = false; _manualizeDebtorRates(); } catch(e){}
+  try { DB._autoFeesCleared = false; _manualizeDebtorRates(); } catch(e){}
   try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
   try { _IDB.put(JSON.parse(JSON.stringify(DB))); } catch(e) {}
   _dirtySinceUpload = false;
@@ -11574,6 +11574,7 @@ function openPersonModal(type, id) {
   document.getElementById('personModalTitle').textContent = '👤 ' + person.name + ' (' + (idx+1) + '/' + list.length + ')';
   const bn = document.getElementById('pm-bigname'); if (bn) bn.textContent = '👤 ' + person.name;
   const ph = document.getElementById('pm-phone'); if (ph && document.activeElement !== ph) ph.value = person.phone || '';
+  const bf = document.getElementById('pm-buyfee'); if (bf && document.activeElement !== bf) bf.value = person.buyFeeNote || '';
   try { _renderPersonMembership(person); } catch (e) {}
   _updatePersonFilterBtns();
   _renderSubBar(person);
@@ -11767,7 +11768,6 @@ function renderPersonRows(person) {
       ${money ? `<td><input class="xls-in" type="number" value="${r.rasid||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasid',this.value)"></td>` : ''}
       ${money ? '' : `<td><input class="xls-in" type="number" value="${r.rasidFuel||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasidFuel',this.value)"></td>`}
       <td class="pm-albaqi-cell"></td>
-      <td><input class="xls-in" value="${(r.buyFee||'').toString().replace(/"/g,'&quot;')}" placeholder="فی…" title="فقط یادداشت (مثلاً «فی 56») — در هیچ محاسبه‌ای استفاده نمی‌شود" style="min-width:56px;max-width:80px;color:var(--muted)" onchange="updatePersonRow('${person.id}',${i},'buyFee',this.value)"></td>
       <td><button class="del-btn" onclick="deletePersonRow('${person.id}',${i})">🗑️</button></td>
     `;
     tbody.appendChild(tr);
@@ -11775,7 +11775,7 @@ function renderPersonRows(person) {
   if (shown === 0) {
     const tr = document.createElement('tr');
     const label = currentPersonFilter === 'petrol' ? '⛽ هیچ ردیف پطرولی ثبت نشده' : (currentPersonFilter === 'diesel' ? '🟤 هیچ ردیف دیزلی ثبت نشده' : 'هیچ ردیفی ثبت نشده');
-    tr.innerHTML = `<td colspan="${showFtCol?12:11}" style="text-align:center;padding:16px;color:var(--muted);font-size:0.85rem">${label}</td>`;
+    tr.innerHTML = `<td colspan="${showFtCol?11:10}" style="text-align:center;padding:16px;color:var(--muted);font-size:0.85rem">${label}</td>`;
     tbody.appendChild(tr);
   }
   // جمع‌ها بعد از حلقهٔ ردیف‌ها حساب می‌شوند — حلقه بردگی/الباقیِ هر ردیف را
@@ -12230,27 +12230,32 @@ function _personRowFee(r){
 // وگرنه نرخِ اتحادیهٔ فعلی) داخلِ ستونِ «فی لیتر» به‌صورتِ دستی ذخیره می‌شود. با این کار
 // همهٔ الباقی‌های فعلی دقیقاً همان‌طور که الان دیده می‌شوند حفظ می‌مانند، ولی از این پس
 // هیچ وابستگی‌ای به نرخِ اتحادیه/خودکار باقی نمی‌ماند (فقط عددی که در «فی» نشسته).
+// خواستهٔ صریحِ صاحب ریپو: ستونِ «فی لیتر» باید خالی بماند تا خودش هر ردیف را دستی
+// بنویسد. نسخهٔ 2.9.84 برای «حفظِ الباقی» نرخِ خودکار را داخلِ «فی لیتر» ریخته بود؛
+// این تابع آن پرشدنِ خودکار را برمی‌گرداند و «فی» را دوباره خالی می‌کند. فیِ دستیِ
+// واقعیِ کاربر (که با نرخِ قفل‌شدهٔ اتحادیه برابر نیست) دست‌نخورده می‌ماند. الباقیِ تیل
+// (لیتری) به «فی» وابسته نیست، پس با خالی‌شدنِ فی، بدهیِ لیتریِ حساب‌ها تغییر نمی‌کند.
 function _manualizeDebtorRates(){
-  if (DB._ratesManualized) return;
-  const uP = parseFloat(DB.unionRatePetrol)||0, uD = parseFloat(DB.unionRateDiesel)||0;
-  const stampRow = r => {
+  if (DB._autoFeesCleared) return;
+  const clearRow = r => {
     if (!r) return;
-    if ((parseFloat(r.priceper)||0) > 0) return;          // فیِ دستی از قبل هست
-    let fee = 0;
-    if (r.uRateManual === true) fee = parseFloat(r.uRate)||0;   // نرخِ دستیِ قدیمی
-    if (!(fee > 0)) fee = parseFloat(r.uRate)||0;               // نرخِ قفل‌شدهٔ خودکارِ قدیمی
-    if (!(fee > 0)) fee = (r.ftype === 'diesel') ? uD : uP;     // وگرنه نرخِ اتحادیهٔ فعلی (همان چیزی که الان نمایش داده می‌شود)
-    if (fee > 0) r.priceper = fee;                             // نرخِ مؤثرِ فعلی → «فیِ دستی»
+    const pp = parseFloat(r.priceper)||0, ur = parseFloat(r.uRate)||0;
+    // ردیفی که فیِ خودکار خورده = فی برابرِ نرخِ قفل‌شده و کاربر خودش دستی واردش نکرده
+    if (pp>0 && ur>0 && pp===ur && r.uRateManual!==true) r.priceper = 0;
+    if (r.uRateManual!==true) r.uRate = 0;   // نرخِ اتحادیهٔ قفل‌شدهٔ قدیمی هم پاک شود
+    if (r.byMoney !== true) r.bardagi = _personRowBardagi(r);   // بردگیِ ذخیره‌شده با فیِ جدید هماهنگ شود
+    r.albaqi = (parseFloat(r.bardagi)||0) - (parseFloat(r.rasid)||0);
   };
-  const eachAcct = a => { if (!a) return; (a.rows||[]).forEach(stampRow); (a.moneyRows||[]).forEach(stampRow); };
+  const eachAcct = a => { if (!a) return; (a.rows||[]).forEach(clearRow); (a.moneyRows||[]).forEach(clearRow); };
   const eachPerson = p => {
     if (!p) return;
     eachAcct(p);
     (p.subs||[]).forEach(eachAcct);
-    (p.history||[]).forEach(h => (h && h.rows||[]).forEach(stampRow));
+    (p.history||[]).forEach(h => (h && h.rows||[]).forEach(clearRow));
   };
   (DB.debtPersons||[]).forEach(eachPerson);
   (DB.noinvPersons||[]).forEach(eachPerson);
+  DB._autoFeesCleared = true;
   DB._ratesManualized = true;
   try { save(); } catch(e) {}
 }
@@ -12404,6 +12409,12 @@ function updatePersonMoney(val) {
 function updatePersonPhone(val) {
   const person = _curPerson(); if (!person) return;
   person.phone = val;
+  if (currentRole !== 'viewer') save();
+}
+// «فیِ خرید» — فقط یادداشتِ دستیِ شخص (بغلِ کادرِ شمارهٔ مشتری). در هیچ محاسبه‌ای نیست.
+function updatePersonBuyFee(val) {
+  const person = _curPerson(); if (!person) return;
+  person.buyFeeNote = val;
   if (currentRole !== 'viewer') save();
 }
 // ── کادر نمایشی «نرخ هر لیتر» کنار شماره تماس ──────────────────────────────
@@ -21060,7 +21071,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.84';
+const APP_VERSION = '2.9.85';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
