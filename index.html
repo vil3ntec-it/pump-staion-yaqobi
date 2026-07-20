@@ -11864,10 +11864,10 @@ function renderPersonRows(person) {
       <td class="xls-num" style="cursor:pointer" title="فیِ این ردیف (دستی) — بزنید تا وارد/عوض کنید" onclick="rowRateEditor(this,'${person.id}',${i})">${n2fa(shown)}</td>
       <td><input class="xls-in" value="${r.date||''}" onchange="updatePersonRow('${person.id}',${i},'date',this.value)"></td>
       <td><input class="xls-in" value="${escFa(r.name)}" placeholder="نام" style="min-width:140px" onchange="updatePersonRow('${person.id}',${i},'name',this.value)"></td>
-      <td><input class="xls-in" value="${(r.hawala||'').toString().replace(/"/g,'&quot;')}" placeholder="متن یا عدد" style="min-width:56px;max-width:90px" onchange="updatePersonRow('${person.id}',${i},'hawala',this.value)"></td>
+      <td><input class="xls-in" value="${(r.hawala||'').toString().replace(/"/g,'&quot;')}" placeholder="متن یا عدد" style="min-width:56px" onchange="updatePersonRow('${person.id}',${i},'hawala',this.value)"></td>
       ${ftCell}
-      <td><input class="xls-in" type="number" value="${r.fuel||''}" placeholder="0" style="min-width:46px;max-width:64px" oninput="calcPersonRow('${person.id}',${i},'fuel',this.value)"></td>
-      <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="0" title="فیِ دستی — اگر خالی باشد بردگیِ پولیِ این ردیف صفر می‌ماند (نرخِ خودکار حذف شده)" style="min-width:44px;max-width:60px" oninput="calcPersonRow('${person.id}',${i},'priceper',this.value)"></td>
+      <td><input class="xls-in" type="number" value="${r.fuel||''}" placeholder="0" style="min-width:46px" oninput="calcPersonRow('${person.id}',${i},'fuel',this.value)"></td>
+      <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="0" title="فیِ دستی — اگر خالی باشد بردگیِ پولیِ این ردیف صفر می‌ماند (نرخِ خودکار حذف شده)" style="min-width:44px" oninput="calcPersonRow('${person.id}',${i},'priceper',this.value)"></td>
       <td><input class="xls-in pm-bardagi-cell" type="number" value="${parseFloat(bardagi)||''}" placeholder="0" style="color:var(--accent);font-weight:700" oninput="calcPersonRow('${person.id}',${i},'bardagi',this.value)"></td>
       ${money ? `<td><input class="xls-in" type="number" value="${r.rasid||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasid',this.value)"></td>` : ''}
       ${money ? '' : `<td><input class="xls-in" type="number" value="${r.rasidFuel||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasidFuel',this.value)"></td>`}
@@ -21175,7 +21175,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.87';
+const APP_VERSION = '2.9.88';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
