@@ -110,6 +110,7 @@ function enterApp() {
   $('#app').classList.add('show');
   resetAutoLock();
   navigate(location.hash.replace('#/', '') || 'dashboard');
+  autoDiscoverOnLogin();
 }
 
 // --------------------------- ناوبری ---------------------------
@@ -324,13 +325,48 @@ async function websiteModal(existing) {
   });
 }
 
+// تشخیص این‌که یک سایتِ کشف‌شده قبلاً در دفتر ثبت شده یا نه (بر اساس نام یا آدرس)
+function buildKnownSet(existing) {
+  const known = new Set();
+  (existing || []).forEach((w) => {
+    if (w.name) known.add(String(w.name).trim().toLowerCase());
+    if (w.url) known.add(String(w.url).trim().toLowerCase());
+  });
+  return known;
+}
+const isKnownSite = (s, known) =>
+  known.has(String(s.name || '').trim().toLowerCase()) ||
+  (s.url && known.has(String(s.url).trim().toLowerCase()));
+
+// کشف خودکار هنگام ورود: خودِ برنامه سرور را اسکن می‌کند و اگر سایت تازه‌ای
+// روی همین کامپیوتر پیدا شد، پنجرهٔ کشف را خودکار می‌آورد (یک‌بار در هر نشست).
+async function autoDiscoverOnLogin() {
+  if (sessionStorage.getItem('wv_auto_discovered')) return;
+  sessionStorage.setItem('wv_auto_discovered', '1');
+  try {
+    const [data, existing] = await Promise.all([GET('/discover/sites'), GET('/websites')]);
+    if (!data.sites || !data.sites.length) return;
+    const known = buildKnownSet(existing);
+    const fresh = data.sites.filter((s) => !isKnownSite(s, known));
+    if (!fresh.length) return;
+    toast(`🔍 ${fresh.length.toLocaleString('fa-IR')} سایت تازه روی این سرور پیدا شد`);
+    discoverSitesModal();
+  } catch { /* اتصال/دسترسی نبود → بی‌صدا رد شو */ }
+}
+
 // کشف خودکار سایت‌های میزبانی‌شده روی سرور و افزودن آن‌ها
 async function discoverSitesModal(customPath) {
   openModal('🔍 کشف خودکار سایت‌های سرور', '<div class="empty"><div class="big">⏳</div>در حال اسکن سرور…</div>', { wide: true });
-  let data;
+  let data, existing;
   try {
-    data = await GET('/discover/sites' + (customPath ? '?path=' + encodeURIComponent(customPath) : ''));
+    [data, existing] = await Promise.all([
+      GET('/discover/sites' + (customPath ? '?path=' + encodeURIComponent(customPath) : '')),
+      GET('/websites'),
+    ]);
   } catch (e) { $('#modal .modal-body').innerHTML = `<div class="empty"><div class="big">⚠️</div>${esc(e.message)}</div>`; return; }
+
+  const known = buildKnownSet(existing);
+  const freshCount = data.sites.filter((s) => !isKnownSite(s, known)).length;
 
   const rootsInfo = `<div style="font-size:12px;color:var(--muted);margin-bottom:12px">پلتفرم: <b>${esc(data.platform)}</b> — مسیرهای اسکن‌شده: <span class="mono">${data.scannedRoots.map(esc).join('، ')}</span></div>`;
   const pathBar = `<div class="pw-row" style="margin-bottom:14px">
@@ -343,15 +379,15 @@ async function discoverSitesModal(customPath) {
       <span style="font-size:13px;color:var(--muted)">اگر سایت‌هایت جای دیگری هستند، مسیرشان را بالا وارد کن و «اسکن این مسیر» را بزن.</span></div>`;
   } else {
     listHtml = `<label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer">
-        <input type="checkbox" id="chkAll" checked style="width:auto"> <b>انتخاب همه (${data.sites.length} سایت پیدا شد)</b></label>
+        <input type="checkbox" id="chkAll" ${freshCount ? 'checked' : ''} style="width:auto"> <b>انتخاب سایت‌های تازه (${freshCount.toLocaleString('fa-IR')} تازه از ${data.sites.length.toLocaleString('fa-IR')} پیداشده)</b></label>
       <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;cursor:pointer;color:var(--brand-2)">
         <input type="checkbox" id="chkServer" checked style="width:auto"> این کامپیوتر را هم به‌عنوان «سرور» اضافه کن</label>
       <div class="table-wrap"><table><thead><tr><th style="width:36px"></th><th>نام</th><th>CMS</th><th>دامنه</th><th>مسیر روی سرور</th></tr></thead>
-      <tbody>${data.sites.map((s, i) => `<tr>
-        <td><input type="checkbox" class="siteChk" data-i="${i}" checked style="width:auto"></td>
-        <td><b>${esc(s.name)}</b></td><td>${esc(s.cms)}</td>
+      <tbody>${data.sites.map((s, i) => { const added = isKnownSite(s, known); return `<tr style="${added ? 'opacity:.55' : ''}">
+        <td><input type="checkbox" class="siteChk" data-i="${i}" data-added="${added ? 1 : 0}" ${added ? '' : 'checked'} style="width:auto"></td>
+        <td><b>${esc(s.name)}</b> ${added ? '<span class="badge active" style="font-size:10px">✓ اضافه شده</span>' : '<span class="badge developing" style="font-size:10px">تازه</span>'}</td><td>${esc(s.cms)}</td>
         <td class="mono">${esc(s.domain || '—')}</td><td class="mono" style="font-size:12px">${esc(s.path || '—')}</td>
-      </tr>`).join('')}</tbody></table></div>`;
+      </tr>`; }).join('')}</tbody></table></div>`;
   }
 
   $('#modal .modal-body').innerHTML = rootsInfo + pathBar + listHtml;
@@ -364,7 +400,8 @@ async function discoverSitesModal(customPath) {
     : `<button class="btn ghost" data-cancel>بستن</button>`;
   $('#modal [data-cancel]').addEventListener('click', closeModal);
   $('#rescan')?.addEventListener('click', () => discoverSitesModal($('#scanPath').value.trim() || undefined));
-  $('#chkAll')?.addEventListener('change', (e) => $$('.siteChk', $('#modal')).forEach((c) => (c.checked = e.target.checked)));
+  // «انتخاب همه» فقط سایت‌های تازه را جابه‌جا می‌کند؛ ثبت‌شده‌ها دست‌نخورده می‌مانند
+  $('#chkAll')?.addEventListener('change', (e) => $$('.siteChk', $('#modal')).forEach((c) => { if (c.dataset.added !== '1') c.checked = e.target.checked; }));
 
   $('#doImport')?.addEventListener('click', async () => {
     const chosen = $$('.siteChk', $('#modal')).filter((c) => c.checked).map((c) => data.sites[Number(c.dataset.i)]);
@@ -746,7 +783,7 @@ PAGES.settings = async function () {
     <div class="panel"><div class="panel-head"><h3>🏷️ تگ‌ها</h3></div><div class="panel-body" id="tagCloud"></div></div>
 
     <div class="panel"><div class="panel-head"><h3>ℹ️ درباره</h3></div><div class="panel-body" style="color:var(--muted);font-size:13px">
-      WebVault Manager نسخهٔ ۱.۰ — سرور خانگی، داده‌ها روی همین سرور و رمزنگاری‌شده با AES-256-GCM ذخیره می‌شوند.
+      WebVault Manager نسخهٔ ۱.۱ — سرور خانگی، داده‌ها روی همین سرور و رمزنگاری‌شده با AES-256-GCM ذخیره می‌شوند. هنگام ورود، سایت‌های میزبانی‌شده روی این کامپیوتر خودکار کشف و پیشنهاد می‌شوند.
     </div></div>`;
 
   $('#saveLock').addEventListener('click', async () => {
