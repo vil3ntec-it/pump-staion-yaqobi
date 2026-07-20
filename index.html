@@ -4614,6 +4614,8 @@ body:not(.light-mode) ::-webkit-scrollbar{ width:10px; height:10px; }
 body:not(.light-mode) ::-webkit-scrollbar-thumb{ background:#2b3548; border-radius:8px; border:2px solid transparent; background-clip:content-box; }
 body:not(.light-mode) ::-webkit-scrollbar-thumb:hover{ background:#3a475e; background-clip:content-box; }
 body:not(.light-mode) ::-webkit-scrollbar-track{ background:transparent; }
+/* صفحه‌های جدولیِ رسید/قرض‌داران تمام‌عرضِ صفحه (نه ۱۰۰۰px وسط) — فقط وقتی آن بخش‌ها بازند */
+body.sec-wide .main{ max-width:none !important; }
 
 /* ══ نسخهٔ 2.9.87 — خطِ دورِ همهٔ کادرها و کادرهای هدری واضح‌تر (کیفیت سبک) ══ */
 /* کادرهای اصلی: مرزِ ضخیم‌تر و واضح‌تر تا دورِ هر کادر خوب دیده شود */
@@ -8889,6 +8891,10 @@ function showSection(id, btn) {
   if (id === 'ratehist' || id === 'monthreport') navId = 'profit';
   // نوار بخش‌ها هنگام اسکرول بالا بچسبد — به‌جز ورق، قرض‌داران و شرکت‌ها تیل
   document.body.classList.toggle('nav-sticky', !(id === 'waraq' || id === 'debt' || id === 'noinv'));
+  // صفحه‌های جدولیِ رسید/قرض‌داران تمام‌عرضِ صفحه شوند (خواستهٔ کاربر: جدول‌هایی که
+  // از کادرها به صفحهٔ جدا می‌روند «تمام صفحه» نبودند). فقط همین صفحه‌ها؛ بقیه ۱۰۰۰px می‌مانند.
+  const _WIDE = ['rasid','debtrasid','chakana','oldloans','oldloansmoney','debtsum'];
+  document.body.classList.toggle('sec-wide', _WIDE.indexOf(id) !== -1);
   if (btn) {
     btn.classList.add('active');
   } else {
@@ -21262,7 +21268,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.89';
+const APP_VERSION = '2.9.90';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
