@@ -5512,10 +5512,34 @@ body:not(.light-mode) ::-webkit-scrollbar-track{ background:transparent; }
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <input type="search" id="debt-search" class="person-search-input" placeholder="🔍 جستجوی نام..." oninput="searchPerson('debt',this.value)">
+      <button class="add-btn" style="border-color:var(--green);color:var(--green)" onclick="openMembershipList()" title="یک صفحهٔ جدا با مدت عضویتِ همهٔ قرض‌داران">⏳ مدت عضویت همه</button>
       <button class="add-btn" onclick="openAddPerson('debt')">➕ افزودن شخص</button>
     </div>
   </div>
   <div class="persons-grid" id="debt-grid"></div>
+</div>
+
+<!-- صفحهٔ جدا: مدت عضویتِ همهٔ قرض‌داران (چند وقت است مشتریِ ما هستند) -->
+<div class="modal-overlay" id="membershipListModal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-head">
+      <h2 style="flex:1;text-align:center">⏳ مدت عضویتِ قرض‌داران</h2>
+      <button class="add-row-btn pm-view-ok" style="margin:0;border-color:var(--green);color:var(--green);padding:5px 10px;font-size:0.78rem" onclick="pdfMembershipList()">📄 PDF</button>
+      <button class="modal-close" onclick="closeModal('membershipListModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="ml-summary" style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;text-align:center"></div>
+      <table class="xls-tbl" style="min-width:0">
+        <thead><tr>
+          <th style="width:40px">#</th>
+          <th>نام قرض‌دار</th>
+          <th style="width:150px">مدت عضویت</th>
+          <th style="width:120px">تاریخ شروع</th>
+        </tr></thead>
+        <tbody id="ml-body"></tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <!-- رسید قرض‌داران -->
@@ -9425,6 +9449,58 @@ function _renderPersonMembership(person){
     if(txt){ el.style.display=''; el.textContent='⏳ مشتریِ ما از: '+txt; }
     else { el.style.display='none'; el.textContent=''; }
   }catch(e){ el.style.display='none'; }
+}
+// تاریخِ شمسیِ یک timestamp به‌صورت رشتهٔ «jy/jm/jd»
+function _jalaliStrFromTs(ts){
+  try{ const d=new Date(ts); const j=jal_g2j(d.getFullYear(), d.getMonth()+1, d.getDate());
+    return j.jy+'/'+String(j.jm).padStart(2,'0')+'/'+String(j.jd).padStart(2,'0'); }catch(e){ return '—'; }
+}
+// دادهٔ «مدت عضویتِ همهٔ قرض‌داران» — قدیمی‌ترین مشتری اول
+function _membershipRows(){
+  const list = (DB.debtPersons||[]).slice();
+  return list.map(p => { const ts=_personCreatedTs(p); return { name:p.name||'—', ts, txt:_membershipText(ts)||'—' }; })
+             .sort((a,b) => a.ts - b.ts);
+}
+// صفحهٔ جدا: مدت عضویتِ همهٔ قرض‌داران (چند وقت است مشتریِ ما هستند)
+function openMembershipList(){
+  const rows = _membershipRows();
+  const body = document.getElementById('ml-body');
+  const sum = document.getElementById('ml-summary');
+  if (sum) sum.textContent = 'مجموعاً ' + n2fa(rows.length) + ' قرض‌دار — از قدیمی‌ترین مشتری به جدیدترین';
+  if (body){
+    body.innerHTML = rows.length
+      ? rows.map((r,i) => `<tr>
+          <td class="xls-num">${n2fa(i+1)}</td>
+          <td style="padding:8px 7px;font-weight:700">${escFa(r.name)}</td>
+          <td style="padding:8px 7px;color:var(--green);font-weight:800">${escFa(r.txt)}</td>
+          <td style="padding:8px 7px;color:var(--muted)" dir="ltr">${escFa(_jalaliStrFromTs(r.ts))}</td>
+        </tr>`).join('')
+      : `<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--muted)">هیچ قرض‌داری ثبت نشده</td></tr>`;
+  }
+  const m = document.getElementById('membershipListModal'); if (m) m.classList.add('open');
+}
+// چاپ/PDF لیست مدت عضویت
+function pdfMembershipList(){
+  const rows = _membershipRows();
+  const today = (typeof persianDate==='function'?persianDate():'');
+  const trs = rows.map((r,i)=>`<tr><td>${n2fa(i+1)}</td><td>${escFa(r.name)}</td><td>${escFa(r.txt)}</td><td dir="ltr">${escFa(_jalaliStrFromTs(r.ts))}</td></tr>`).join('')
+    || `<tr><td colspan="4" style="text-align:center">هیچ قرض‌داری ثبت نشده</td></tr>`;
+  const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><title>مدت عضویت قرض‌داران</title>
+    <style>@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
+    *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:16px}
+    h1{font-size:1.05rem;font-weight:900;text-align:center;border-bottom:2px solid #38a169;padding-bottom:6px;margin-bottom:4px}
+    .meta{font-size:0.72rem;color:#718096;text-align:center;margin-bottom:10px}
+    table{width:100%;border-collapse:collapse;font-size:0.85rem}
+    th{background:#2d3748;color:#e2e8f0;padding:7px;text-align:right;font-weight:900}
+    td{padding:6px 7px;border-bottom:1px solid #cbd5e0;font-weight:700}
+    tr:nth-child(even) td{background:#f7fafc}@media print{@page{margin:.5cm}}</style></head><body>
+    <h1>⏳ مدت عضویتِ قرض‌داران</h1><div class="meta">تاریخ چاپ: ${n2fa(today)} — مجموعاً ${n2fa(rows.length)} قرض‌دار (قدیمی‌ترین اول)</div>
+    <table><thead><tr><th>#</th><th>نام قرض‌دار</th><th>مدت عضویت</th><th>تاریخ شروع</th></tr></thead><tbody>${trs}</tbody></table>
+    </body></html>`;
+  const w = window.open('', '_blank');
+  if (!w){ showToast('❌ پنجرهٔ چاپ باز نشد — پاپ‌آپ را اجازه دهید', '#e53e3e'); return; }
+  w.document.write(html); w.document.close();
+  setTimeout(()=>{ try{ w.print(); }catch(e){} }, 400);
 }
 function miladiDate() {
   return new Date().toLocaleDateString('en-GB', {day:'2-digit',month:'2-digit',year:'numeric'});
@@ -21071,7 +21147,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.85';
+const APP_VERSION = '2.9.86';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
