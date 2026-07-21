@@ -7201,36 +7201,34 @@ body.viewer-mode .inv-admin-only{display:none!important}
 <button id="robotFab" onclick="toggleRobot()" title="ربات دستیار"><svg><use href="#ic-robot"/></svg><span class="fab-badge" id="rbFabBadge"></span></button>
 <button id="managerFab" onclick="openManagerContact()" title="ارتباط سریع با مدیر">💬</button>
 
+<!-- صفحهٔ مهمانِ گفتگو با میرزا (با اسکنِ کیو‌آر یا لینکِ اختصاصی #mirza باز می‌شود) -->
+<div id="mirzaGuestScreen" style="display:none;position:fixed;inset:0;z-index:400;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:linear-gradient(160deg,#0d1117,#161b22);color:#e6edf3;font-family:'Vazirmatn',sans-serif;text-align:center;padding:24px">
+  <div style="font-size:3rem">💬</div>
+  <div style="font-weight:900;font-size:1.35rem">گفتگو با میرزا</div>
+  <div style="font-size:0.9rem;color:#8b949e;max-width:340px;line-height:1.95">این گفتگو مخصوصِ شماست و خصوصی می‌ماند. پیام‌تان را بنویسید؛ به‌زودی پاسخ می‌گیرید. با اسکنِ دوباره یا همین لینک، به همین گفتگو برمی‌گردید.</div>
+  <button onclick="_mirzaGuestOpenChat()" style="background:#238636;color:#fff;border:none;border-radius:12px;padding:12px 26px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:1rem;cursor:pointer">✍️ باز کردن گفتگو</button>
+  <button onclick="_mirzaGuestPDF()" style="background:transparent;color:#58a6ff;border:1px solid #58a6ff;border-radius:10px;padding:9px 20px;font-family:'Vazirmatn',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer">📄 PDF گفتگو</button>
+</div>
+
 <!-- پنل ارتباط با مدیر (واتساپ/تلگرام) — تلاشِ باز شدن داخلِ برنامه + بازکردنِ مطمئن -->
 <div class="modal-overlay" id="managerContactModal">
   <div class="modal" style="max-width:560px">
     <div class="modal-head">
-      <h2 style="flex:1;text-align:center">💬 ارتباط با مدیر</h2>
+      <h2 style="flex:1;text-align:center">💬 گفتگو با میرزا</h2>
       <button class="modal-close" onclick="closeModal('managerContactModal')">✕</button>
     </div>
     <div class="modal-body">
-      <div id="mc-admin-cfg" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px">
-        <div style="font-size:0.78rem;font-weight:800;color:var(--accent);margin-bottom:8px">⚙️ تنظیمِ مدیر (فقط مدیر می‌بیند)</div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-          <label style="font-size:0.74rem;color:var(--muted);white-space:nowrap">📱 شمارهٔ واتساپ (با کد کشور، بدون + و صفر):</label>
-          <input id="mc-wa-in" placeholder="مثلاً 93792236008" style="direction:ltr;flex:1;min-width:150px;border:1px solid var(--border);border-radius:7px;background:var(--dark);color:var(--txt);font-family:'Vazirmatn',sans-serif;padding:6px 10px" oninput="mcSaveCfg()">
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px">
-          <label style="font-size:0.74rem;color:var(--muted);white-space:nowrap">✈️ یوزرِ تلگرام (بدون @):</label>
-          <input id="mc-tg-in" placeholder="مثلاً manager_username" style="direction:ltr;flex:1;min-width:150px;border:1px solid var(--border);border-radius:7px;background:var(--dark);color:var(--txt);font-family:'Vazirmatn',sans-serif;padding:6px 10px" oninput="mcSaveCfg()">
-        </div>
+      <div style="font-size:0.82rem;color:var(--muted);line-height:1.9;margin-bottom:14px;text-align:center">
+        این کیو‌آر را به مشتری نشان دهید یا چاپ کنید. هر کسی آن را اسکن کند، یک <b>گفتگوی خصوصیِ جداگانه</b> با «میرزا» باز می‌کند؛ پیام‌هایش فقط برای خودش و شما دیده می‌شود و با اسکنِ دوباره یا لینکِ اختصاصی، همان گفتگو ادامه می‌یابد.
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:10px">
-        <button id="mc-tab-wa" class="add-row-btn" style="flex:1;margin:0;border-color:#25D366;color:#25D366;font-weight:800" onclick="mcOpen('wa')">🟢 واتساپ</button>
-        <button id="mc-tab-tg" class="add-row-btn" style="flex:1;margin:0;border-color:#2AABEE;color:#2AABEE;font-weight:800" onclick="mcOpen('tg')">🔵 تلگرام</button>
+      <div id="mc-qr-wrap" style="display:flex;justify-content:center;margin-bottom:16px"></div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-bottom:6px;text-align:center">لینکِ گفتگو با میرزا:</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
+        <input id="mc-link" readonly dir="ltr" style="flex:1;min-width:0;border:1px solid var(--border);border-radius:8px;background:var(--dark);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.8rem;padding:8px 10px;text-align:center" onclick="this.select()">
+        <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green);font-weight:800;white-space:nowrap" onclick="_mirzaCopyLink()">📋 کپی</button>
       </div>
-      <div id="mc-hint" style="font-size:0.74rem;color:var(--muted);line-height:1.7;margin-bottom:8px"></div>
-      <div id="mc-frame-wrap" style="display:none;position:relative;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--dark)">
-        <iframe id="mc-frame" style="width:100%;height:52vh;border:none;background:#fff" referrerpolicy="no-referrer"></iframe>
-      </div>
-      <div id="mc-open-wrap" style="display:none;margin-top:10px;text-align:center">
-        <div style="font-size:0.74rem;color:var(--muted);margin-bottom:8px">اطلاعاتِ تماس را کپی کنید و خودتان در واتساپ/تلگرام پیام دهید (برنامه مستقیم واتساپ/تلگرام را باز نمی‌کند):</div>
-        <button id="mc-open-btn" class="add-row-btn" style="margin:0;padding:10px 22px;font-size:0.9rem;font-weight:800" onclick="mcOpenExternal()">📋 کپی اطلاعات تماس</button>
+      <div style="text-align:center">
+        <button class="add-row-btn" style="margin:0;border-color:var(--blue);color:var(--blue);font-weight:800;padding:9px 22px" onclick="_mirzaPrintQR()">🖨️ چاپ کیو‌آر</button>
       </div>
     </div>
   </div>
@@ -19755,6 +19753,10 @@ function closeROViewer() {
 }
 function checkHashViewer() {
   const hash = window.location.hash;
+  if (hash === '#mirza' || /^#mirza-[0-9a-fA-F]{16,64}$/.test(hash)) {
+    _openMirzaGuest(hash);
+    return;
+  }
   if (hash === '#staff' || hash === '#karmand') {
     load(); // مطمئن شویم داده از localStorage خوانده شده
     openStaffPage();
@@ -20280,62 +20282,110 @@ function _showChatFabs(on) {
   }
 }
 function _lsCalcBtnShow(on) { const el = document.getElementById('lsCalcBtn'); if (el) el.style.display = on ? 'flex' : 'none'; }
-// ── پنل ارتباط با مدیر (واتساپ/تلگرام) ─────────────────────────────────────────
+// ── ارتباط با مدیر: کیو‌آرِ داینامیکِ گفتگو با «میرزا» (جایگزینِ کاملِ واتساپ/تلگرام) ──
 function _managerFabShow(on){ const el = document.getElementById('managerFab'); if (el) el.style.display = on ? 'flex' : 'none'; }
-let _mcKind = 'wa';
-function _mcWaDigits(){ return (DB.managerWa||'').toString().replace(/[^0-9]/g,''); }
-function _mcTgUser(){ return (DB.managerTg||'').toString().replace(/[^a-zA-Z0-9_]/g,''); }
-function openManagerContact(){
-  const cfg = document.getElementById('mc-admin-cfg');
-  if (cfg) cfg.style.display = (currentRole === 'admin') ? '' : 'none';
-  const waIn = document.getElementById('mc-wa-in'); if (waIn) waIn.value = _mcWaDigits();
-  const tgIn = document.getElementById('mc-tg-in'); if (tgIn) tgIn.value = _mcTgUser();
-  // پنل تازه: قاب و دکمهٔ بازکردن مخفی تا کاربر یکی را انتخاب کند
-  const fw = document.getElementById('mc-frame-wrap'); if (fw) fw.style.display = 'none';
-  const ow = document.getElementById('mc-open-wrap'); if (ow) ow.style.display = 'none';
-  const hint = document.getElementById('mc-hint');
-  if (hint) hint.textContent = 'یکی را انتخاب کنید تا برای تماس با مدیر باز شود.';
-  const m = document.getElementById('managerContactModal'); if (m) m.classList.add('open');
-}
-function mcSaveCfg(){
-  if (currentRole !== 'admin') return;
-  const waIn = document.getElementById('mc-wa-in'); const tgIn = document.getElementById('mc-tg-in');
-  if (waIn) DB.managerWa = waIn.value.replace(/[^0-9]/g,'');
-  if (tgIn) DB.managerTg = tgIn.value.replace(/[^a-zA-Z0-9_]/g,'');
-  try { save(); } catch(e){}
-}
-function _mcExternalUrl(kind){
-  if (kind === 'wa'){ const d = _mcWaDigits(); return d ? ('https://wa.me/' + d) : ''; }
-  const u = _mcTgUser(); return u ? ('https://t.me/' + u) : '';
-}
-function _mcEmbedUrl(kind){
-  if (kind === 'wa'){ const d = _mcWaDigits(); return d ? ('https://web.whatsapp.com/send?phone=' + d) : 'https://web.whatsapp.com/'; }
-  const u = _mcTgUser(); return u ? ('https://t.me/' + u) : 'https://web.telegram.org/';
-}
-function mcOpen(kind){
-  _mcKind = kind;
-  const hasTarget = kind === 'wa' ? !!_mcWaDigits() : !!_mcTgUser();
-  const hint = document.getElementById('mc-hint');
-  if (!hasTarget){
-    if (hint) hint.innerHTML = (currentRole === 'admin')
-      ? '⚠️ هنوز ' + (kind==='wa'?'شمارهٔ واتساپِ':'یوزرِ تلگرامِ') + ' مدیر را وارد نکرده‌اید (بالا).'
-      : '⚠️ مدیر هنوز اطلاعاتِ تماس را ثبت نکرده است.';
-    const fw = document.getElementById('mc-frame-wrap'); if (fw) fw.style.display = 'none';
-    const ow = document.getElementById('mc-open-wrap'); if (ow) ow.style.display = 'none';
-    return;
+// آدرسِ پایه (بدون هش)
+function _mirzaBase(){ return /^http/.test(location.protocol) ? (location.origin + location.pathname) : 'https://vil3ntec-it.github.io/pump-staion-yaqobi/'; }
+// توکنِ امنِ ۱۲۸بیتی (غیرقابل‌حدس) — با crypto؛ در نبودِ crypto یک fallback
+function _mirzaNewToken(){
+  try {
+    const a = new Uint8Array(16); (window.crypto || crypto).getRandomValues(a);
+    return Array.prototype.map.call(a, b => ('0' + b.toString(16)).slice(-2)).join('');
+  } catch(e){
+    return (Date.now().toString(16) + Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2)).replace(/[^0-9a-f]/g,'').slice(0, 32);
   }
-  // خواستهٔ کاربر: واتساپ/تلگرام مستقیم باز نشود (روی بعضی دستگاه‌ها بلاک می‌شود).
-  // به‌جای iframe و بازکردنِ بیرونی، اطلاعاتِ تماسِ مدیر نمایش داده می‌شود تا کپی شود.
-  const val = kind==='wa' ? _mcWaDigits() : ('@' + _mcTgUser());
-  if (hint) hint.innerHTML = (kind==='wa'?'شمارهٔ واتساپِ':'یوزرِ تلگرامِ') + ' مدیر: <b dir="ltr" style="font-size:1.05rem;letter-spacing:.5px">' + val + '</b><br>این را کپی کنید و خودتان در ' + (kind==='wa'?'واتساپ':'تلگرام') + ' پیام دهید.';
-  const fw = document.getElementById('mc-frame-wrap'); if (fw) fw.style.display = 'none';
-  const ow = document.getElementById('mc-open-wrap'); if (ow) ow.style.display = '';
 }
-function mcOpenExternal(){
-  // به‌جای باز کردنِ اپ، اطلاعاتِ تماس کپی می‌شود.
-  const val = _mcKind==='wa' ? _mcWaDigits() : _mcTgUser();
-  if (!val){ showToast('اطلاعاتِ تماسِ مدیر ثبت نشده', '#e53e3e'); return; }
-  _copyShareText(val, '📋 کپی شد — خودتان در واتساپ/تلگرام پیام دهید');
+// توکنِ همین دستگاه — اگر نبود یک‌بار ساخته و دائمی ذخیره می‌شود (بازگشت به همان گفتگو)
+function _mirzaMyToken(){
+  let t = '';
+  try { t = localStorage.getItem('mirzaGuestToken') || ''; } catch(e){}
+  if (!/^[0-9a-f]{16,64}$/.test(t)) { t = _mirzaNewToken(); try { localStorage.setItem('mirzaGuestToken', t); } catch(e){} }
+  return t;
+}
+function _mirzaGenericLink(){ return _mirzaBase() + '#mirza'; }
+function _mirzaTokenLink(tok){ return _mirzaBase() + '#mirza-' + tok; }
+// پنلِ مدیر: کیو‌آرِ عمومی + لینک را نشان می‌دهد (این را چاپ/نمایش می‌دهید تا مشتری اسکن کند)
+function openManagerContact(){
+  const m = document.getElementById('managerContactModal'); if (!m) return;
+  const link = _mirzaGenericLink();
+  const inp = document.getElementById('mc-link'); if (inp) inp.value = link;
+  const wrap = document.getElementById('mc-qr-wrap');
+  if (wrap){
+    wrap.innerHTML = '';
+    if (typeof QRCode !== 'undefined') {
+      new QRCode(wrap, { text: link, width: 220, height: 220, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+    } else {
+      wrap.innerHTML = '<div style="padding:20px;color:var(--muted);font-size:0.8rem">کتابخانه QR در دسترس نیست</div>';
+    }
+  }
+  m.classList.add('open');
+}
+function _mirzaCopyLink(){
+  const inp = document.getElementById('mc-link');
+  const link = (inp && inp.value) || _mirzaGenericLink();
+  _copyShareText(link, '📋 لینکِ گفتگو با میرزا کپی شد');
+}
+function _mirzaPrintQR(){
+  const wrap = document.getElementById('mc-qr-wrap');
+  const img = wrap && (wrap.querySelector('img') || wrap.querySelector('canvas'));
+  let src = '';
+  try { src = img ? (img.tagName === 'IMG' ? img.src : img.toDataURL('image/png')) : ''; } catch(e){}
+  const link = _mirzaGenericLink();
+  const w = window.open('', '_blank');
+  if (!w) { showToast('اجازهٔ بازکردنِ پنجرهٔ چاپ داده نشد', '#e53e3e'); return; }
+  w.document.write('<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>گفتگو با میرزا</title></head><body style="font-family:Tahoma,sans-serif;text-align:center;padding:30px">'
+    + '<h2>💬 گفتگو با میرزا</h2><p style="color:#555">این کد را اسکن کنید تا گفتگوی خصوصی با میرزا باز شود.</p>'
+    + (src ? '<img src="' + src + '" style="width:300px;height:300px">' : '')
+    + '<p dir="ltr" style="font-size:12px;color:#888;word-break:break-all">' + link + '</p></body></html>');
+  w.document.close(); setTimeout(function(){ try { w.print(); } catch(e){} }, 400);
+}
+// ── مهمانِ کیو‌آر: ورود به گفتگوی خصوصی با میرزا (خصوصی، دائمی، با همان توکن برمی‌گردد) ──
+function _openMirzaGuest(hash){
+  hash = hash || window.location.hash || '';
+  let tok = '';
+  const mm = /^#mirza-([0-9a-fA-F]{16,64})$/.exec(hash);
+  if (mm) { tok = mm[1].toLowerCase(); try { localStorage.setItem('mirzaGuestToken', tok); } catch(e){} }
+  else { tok = _mirzaMyToken(); }               // ورودِ عمومی (#mirza): توکنِ همین دستگاه
+  // آدرس را به لینکِ اختصاصی به‌روز کن تا رفرش/بوکمارک همان گفتگو را باز کند (شناسهٔ جدید ساخته نشود)
+  try { if (location.hash !== '#mirza-' + tok) history.replaceState(null, '', '#mirza-' + tok); } catch(e){}
+  try { load(); } catch(e){}
+  const ls = document.getElementById('lockScreen'); if (ls) ls.style.display = 'none';
+  const ap = document.getElementById('app'); if (ap) ap.style.display = 'none';
+  const scr = document.getElementById('mirzaGuestScreen'); if (scr) scr.style.display = 'flex';
+  try { _lsCalcBtnShow(false); } catch(e){}
+  currentRole = 'viewer';
+  try { applyRole(); } catch(e){}
+  const shortId = tok.slice(0, 6);
+  try {
+    _showChatFabs(true);
+    _managerFabShow(false);                     // مهمان دکمهٔ «ارتباط با مدیر» را لازم ندارد
+    _rbSetMode('person', { peer: _peerKey('guest_' + tok), type: 'guest', id: tok, name: 'مهمان ' + shortId });
+    const rp = document.getElementById('robotPanel'); if (rp && !rp.classList.contains('open')) toggleRobot();
+  } catch(e){}
+}
+function _mirzaGuestOpenChat(){
+  try {
+    const rp = document.getElementById('robotPanel');
+    if (rp && !rp.classList.contains('open')) toggleRobot();
+    else rbShowTab('dm');
+  } catch(e){}
+}
+// PDF گفتگو: فقط پیام‌های همین کاربر (از گفتگوی رندرشدهٔ خودش) — دادهٔ کسی دیگر داخلش نیست
+function _mirzaGuestPDF(){
+  const list = document.getElementById('dmList');
+  const items = [];
+  if (list) Array.prototype.forEach.call(list.children, function(el){
+    const t = (el.innerText || '').trim();
+    if (t) items.push(t.replace(/&/g,'&amp;').replace(/</g,'&lt;'));
+  });
+  if (!items.length){ showToast('هنوز گفتگویی برای PDF نیست', '#718096'); return; }
+  const w = window.open('', '_blank');
+  if (!w) { showToast('اجازهٔ بازکردنِ پنجرهٔ چاپ داده نشد', '#e53e3e'); return; }
+  w.document.write('<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>گفتگو با میرزا</title></head><body style="font-family:Tahoma,sans-serif;padding:24px">'
+    + '<h2 style="text-align:center">💬 گفتگو با میرزا</h2>'
+    + items.map(function(t){ return '<div style="border-bottom:1px solid #eee;padding:9px 4px;white-space:pre-wrap;line-height:1.7">' + t + '</div>'; }).join('')
+    + '</body></html>');
+  w.document.close(); setTimeout(function(){ try { w.print(); } catch(e){} }, 400);
 }
 
 // ---- سوال و جواب (ربات محلی) ----
@@ -21953,7 +22003,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.109';
+const APP_VERSION = '2.9.110';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -23700,7 +23750,14 @@ try { _lockProfitSection(); } catch(e){}
 // === باز شدن مستقیم برنامه (بدون محافظِ کپی) + حالت فقط‌خواندنی برای کیو‌آر ===
 const _isROHash = (window.location.hash || '').startsWith('#roview-');
 const _isStaffHash = /^#(staff|karmand)$/.test(window.location.hash || '');
-if (_isStaffHash) {
+const _isMirzaHash = (window.location.hash || '').indexOf('#mirza') === 0;
+if (_isMirzaHash) {
+  // مهمانِ گفتگو با میرزا: صفحهٔ قفل نمایش داده نمی‌شود؛ checkHashViewer پایین‌تر گفتگو را باز می‌کند
+  const _ls0 = document.getElementById('lockScreen'); if (_ls0) _ls0.style.display = 'none';
+  const _fab0 = document.getElementById('calcFab'); if (_fab0) _fab0.style.display = 'none';
+  currentRole = 'viewer';
+  applyRole();
+} else if (_isStaffHash) {
   // صفحه کارمند (بدون رمز): صفحهٔ قفل نمایش داده نمی‌شود؛ checkHashViewer پایین‌تر آن را باز می‌کند
   const _ls0 = document.getElementById('lockScreen'); if (_ls0) _ls0.style.display = 'none';
   const _fab0 = document.getElementById('calcFab'); if (_fab0) _fab0.style.display = 'none';
@@ -23809,7 +23866,7 @@ applyUnionRates();
 window.addEventListener('hashchange', checkHashViewer);
 checkHashViewer();
 // رندر اولیهٔ داده‌ها (پشتِ صفحهٔ قفل آماده می‌شود؛ نمایش و هشدار کمبود پس از ورود با رمز در tryUnlock انجام می‌شود)
-if (isActivated() && !_isROHash) {
+if (isActivated() && !_isROHash && !_isMirzaHash) {
   // خریدهای مخزنی که هنوز به حساب شرکت نرفته‌اند (قدیمی/جامانده) خودکار همگام شوند
   try { syncAllPurchasesToCompanies(); } catch(e) {}
   updateAll();
