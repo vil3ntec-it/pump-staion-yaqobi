@@ -12117,6 +12117,15 @@ function initAllTableResizers(root){
     if(f.s) el.style.setProperty('font-size', f.s + 'px', 'important');
     if(f.a) el.style.textAlign = f.a;
   }
+  // ستونِ «فی لیتر» جدول قرض‌داران باید همیشه هم‌فونتِ بقیهٔ جدول بماند (خواستهٔ کاربر) —
+  // اندازهٔ سلولیِ ذخیره‌شده (که با جابه‌جاییِ ستون/ردیفِ فیلترها ممکن است جایش هم عوض شود)
+  // رویش اعمال نمی‌شود؛ رنگ و چینش سرِ جایشان هستند
+  function fmtFor(table, target, f){
+    if(f && f.s && table && table.id === 'pm-tbl' && target && target.classList && target.classList.contains('sm')){
+      f = Object.assign({}, f); delete f.s;
+    }
+    return f;
+  }
   // اعمالِ دوبارهٔ فرمت‌های ذخیره‌شده بعد از هر رندرِ جدول (از initAllTableResizers صدا زده می‌شود)
   function applyCellFormatting(table, key){
     if(!table || !key) return;
@@ -12126,7 +12135,7 @@ function initAllTableResizers(root){
     Object.keys(map).forEach(function(k){
       const i = k.lastIndexOf(':');
       const cell = selCellEl(table, k.slice(0, i), +k.slice(i + 1));
-      if(cell) applyStyle(cellTarget(cell), map[k]);
+      if(cell){ const t = cellTarget(cell); applyStyle(t, fmtFor(table, t, map[k])); }
     });
   }
   window._applyCellFormatting = applyCellFormatting;
@@ -12158,7 +12167,7 @@ function initAllTableResizers(root){
       if(patch.c === null){ t.style.color = ''; colorKids(t, ''); }
       if(patch.s === null) t.style.removeProperty('font-size');
       if(patch.a === null) t.style.textAlign = '';
-      applyStyle(t, next);
+      applyStyle(t, fmtFor(table, t, next));
     });
     saveFmt(key, map);
   }
@@ -21939,7 +21948,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.103';
+const APP_VERSION = '2.9.104';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -26520,24 +26529,32 @@ ${copy('نسخهٔ پمپ')}
     }
   }
 
+  // رفتن به بخش — بعد از رها شدنِ Ctrl/Shift، تا عددهای چندرقمی (مثل ۱۲) هم کار کنند
+  function _kbGotoSection(buf){
+    if (document.querySelector('.modal-overlay.open')) return;
+    var n = (buf === '0') ? 10 : (parseInt(buf, 10) || 0);
+    var btns = document.querySelectorAll('.nav .nav-btn');
+    var btn = btns[n - 1];
+    if (!btn) return;
+    btn.click();
+    try { btn.scrollIntoView({ inline:'center', block:'nearest' }); } catch(_){}
+  }
+
+  var sectBuf = '';
   document.addEventListener('keydown', function(e){
     if (_kbLocked()) return;
-    if (_kbTyping()) { ctrlBuf = ''; shiftBuf = ''; return; }
     var d = _kbDigit(e);
     if (d === null) return;
-    // ۱) Ctrl+Shift+عدد → بخش اصلی (۱ = اولین دکمهٔ منو … ۰ = دهمین)
+    // ۱) Ctrl+Shift+عدد → فقط جمع می‌شود (چندرقمی مثل ۱۲)؛ رفتن به بخش بعد از رها کردن کلیدها
     if (e.ctrlKey && e.shiftKey && !e.altKey){
       e.preventDefault();
       ctrlBuf = ''; shiftBuf = '';
-      if (document.querySelector('.modal-overlay.open')) return;
-      var btns = document.querySelectorAll('.nav .nav-btn');
-      var idx = (d === '0') ? 9 : (parseInt(d, 10) - 1);
-      if (btns[idx]){
-        btns[idx].click();
-        try { btns[idx].scrollIntoView({ inline:'center', block:'nearest' }); } catch(_){}
-      }
+      if (sectBuf.length < 2) sectBuf += d;
       return;
     }
+    // داخل کادرهای متنی فقط وقتی جدولِ شخص/شرکت باز است میانبرها فعال‌اند — Ctrl/Shift+عدد
+    // با preventDefault چیزی داخل کادر تایپ نمی‌کند، پس با ورودِ عادیِ اعداد تداخلی نیست
+    if (_kbTyping() && !_kbCtx()){ ctrlBuf = ''; shiftBuf = ''; return; }
     // ۲) Ctrl + عدد → فقط جمع می‌شود؛ عمل فقط بعد از رها کردن Ctrl
     if (e.ctrlKey && !e.altKey && !e.metaKey){
       e.preventDefault();                            // جلوی میانبرِ تبِ مرورگر
@@ -26552,16 +26569,23 @@ ${copy('نسخهٔ پمپ')}
   });
 
   document.addEventListener('keyup', function(e){
+    if (e.key !== 'Control' && e.key !== 'Shift') return;
+    // اول بافرِ بخش — با رها شدنِ هر کدام از Ctrl/Shift همان‌جا می‌رود
+    if (sectBuf){
+      var s = sectBuf; sectBuf = ''; ctrlBuf = ''; shiftBuf = '';
+      _kbGotoSection(s);
+      return;
+    }
     if (e.key === 'Control'){
       var nA = parseInt(ctrlBuf, 10) || 0; ctrlBuf = '';
       if (nA) _kbAddRows(nA);
-    } else if (e.key === 'Shift'){
+    } else {
       var nD = parseInt(shiftBuf, 10) || 0; shiftBuf = '';
       if (nD) _kbDelRows(nD);
     }
   });
   // اگر پنجره وسطِ کار فوکس را از دست داد (Alt+Tab و …) بافر پاک شود تا عملِ ناخواسته نشود
-  window.addEventListener('blur', function(){ ctrlBuf = ''; shiftBuf = ''; });
+  window.addEventListener('blur', function(){ ctrlBuf = ''; shiftBuf = ''; sectBuf = ''; });
 })();
 </script>
 
