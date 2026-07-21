@@ -369,7 +369,7 @@ body.staff-view .qr-overlay{z-index:10020}
 .person-del:hover{background:var(--red);color:#fff;border-color:var(--red)}
 /* شمارهٔ کارت — همان عددی که با Alt+عدد آن حساب باز می‌شود. فقط خودِ عدد، پایینِ کارت
    (زیر دکمهٔ کیوآر)، بدون دایره و بدون پس‌زمینه — خواستهٔ کاربر */
-.acct-num-badge{position:absolute;left:0;right:0;bottom:2px;margin:0 auto;text-align:center;background:none;box-shadow:none;border:none;border-radius:0;padding:0;color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.9rem;line-height:1;pointer-events:none;z-index:3}
+.acct-num-badge{position:absolute;left:0;right:0;bottom:8px;margin:0 auto;text-align:center;background:none;box-shadow:none;border:none;border-radius:0;padding:0;color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.95rem;line-height:1;pointer-events:none;z-index:3}
 
 .modal-overlay{position:fixed;inset:0;background:#000b;z-index:300;display:none;align-items:center;justify-content:center;padding:12px}
 .modal-overlay.open{display:flex}
@@ -4626,7 +4626,9 @@ table thead th:first-child .col-resize-grip{ display:none; }
 }
 .xls-num, .xls-calc, .pm-albaqi-cell, .pm-bardagi-cell{ text-align:center !important; }
 /* کارت‌های شخص/شرکت هم‌قد شوند (ستون‌های grid از قبل stretch هستند) */
-.persons-grid .person-card{ height:100% !important; }
+/* padding-bottom اضافه تا شمارهٔ کفِ کارت هیچ‌وقت روی دکمهٔ کیوآر نیفتد (حتی وقتی کارت
+   به‌خاطر خطِ «تیلش تمام شده» بلندتر است و دکمه پایین‌تر می‌رود) */
+.persons-grid .person-card{ height:100% !important; padding-bottom:30px !important; }
 </style>
 <style id="ui-polish-2984">
 /* ══ بهبود ظاهری نسخهٔ 2.9.84 — فقط ظاهر (رنگ/مرز/سایه/نور/هاور)، بدون هیچ تغییرِ منطق یا چیدمان ══ */
@@ -21951,7 +21953,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.107';
+const APP_VERSION = '2.9.108';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -26625,8 +26627,10 @@ ${copy('نسخهٔ پمپ')}
       return;
     }
     if (e.key !== 'Control' && e.key !== 'Shift') return;
-    // اول بافرِ بخش — با رها شدنِ هر کدام از Ctrl/Shift همان‌جا می‌رود
+    // بخش (Ctrl+Shift+عدد): فقط وقتی «هر دو» کلید رها شدند اجرا شود — تا عددِ چندرقمی
+    // (۱۱، ۱۲، …) کامل خوانده شود و با رها شدنِ زودترِ یکی از کلیدها، عددِ ناقص نپرد.
     if (sectBuf){
+      if (e.ctrlKey || e.shiftKey) return;   // هنوز یکی پایین است → صبر کن
       var s = sectBuf; sectBuf = ''; ctrlBuf = ''; shiftBuf = '';
       _kbGotoSection(s);
       return;
