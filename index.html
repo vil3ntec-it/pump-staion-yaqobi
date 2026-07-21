@@ -563,7 +563,18 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 .cellfmt-menu .cfm-btn:hover{background:rgba(127,127,127,.18)}
 .cellfmt-menu .cfm-hint{font-size:0.72rem;color:var(--muted);font-weight:700;justify-content:flex-start}
 /* سلولِ انتخاب‌شده برای فرمت‌دهیِ چندتایی (Ctrl/Shift+کلیک) — فقط علامتِ بصری، روی داده اثر ندارد */
-.tbl td.cfm-sel, .xls-tbl td.cfm-sel, .ro-tbl td.cfm-sel{background:rgba(49,130,206,.22)!important;outline:1.5px solid var(--blue);outline-offset:-1.5px}
+.tbl td.cfm-sel, .xls-tbl td.cfm-sel, .ro-tbl td.cfm-sel,
+.tbl th.cfm-sel, .xls-tbl th.cfm-sel, .ro-tbl th.cfm-sel{background:rgba(49,130,206,.22)!important;outline:1.5px solid var(--blue);outline-offset:-1.5px}
+/* موسِ اکسل‌مانند: روی سلول‌های جدول علامتِ جمعِ سفید (cell)، روی نوشته/ورودی‌ها موسِ عادی */
+.tbl td,.tbl th,.xls-tbl td,.xls-tbl th,.ro-tbl td,.ro-tbl th{cursor:cell}
+.tbl td input,.tbl td textarea,.xls-tbl td input,.xls-tbl td textarea,.ro-tbl td input,.ro-tbl td textarea{cursor:text}
+.tbl td button,.tbl th button,.xls-tbl td button,.xls-tbl th button,.ro-tbl td button,.ro-tbl th button,
+.tbl td select,.xls-tbl td select,.ro-tbl td select,.tbl td a,.xls-tbl td a,.ro-tbl td a{cursor:pointer}
+/* نوارِ جمعِ انتخاب — مثل نوار وضعیت اکسل وقتی چند سلول انتخاب شده */
+#cfm-sumbar{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99998;display:none;align-items:center;gap:7px;background:var(--card);border:1.5px solid var(--blue);border-radius:999px;padding:8px 18px;font-family:'Vazirmatn',sans-serif;font-size:0.82rem;font-weight:700;color:var(--txt);box-shadow:0 10px 28px rgba(0,0,0,.28);pointer-events:none;white-space:nowrap}
+#cfm-sumbar b{color:var(--blue);font-weight:900}
+#cfm-sumbar span{color:var(--muted)}
+body.cfm-noselect, body.cfm-noselect *{user-select:none!important}
 /* نوار نوشتن پیام */
 .ch-comp{display:flex;gap:6px;align-items:center;padding:8px;border-top:1px solid var(--border);background:var(--dark);flex-shrink:0}
 .ch-comp input[type=text]{flex:1;min-width:0;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 11px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.85rem}
@@ -5102,6 +5113,19 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
 /* در RTL، ترتیبِ زمانی از راست (جدید) به چپ (قدیمی) باشد: row-reverse تا «امروز/این‌
    هفته/این ماه/امسال» سمتِ راست بیفتد و قدیمی‌ها سمتِ چپ (قبلاً برعکس بود). */
 .dash-bars{display:flex;flex-direction:row-reverse;align-items:flex-end;gap:2.5%;height:240px;padding:26px 12px 12px;background:var(--dark);border:1px solid var(--border);border-radius:14px}
+/* در تم‌های روشن --dark تقریباً هم‌رنگِ پس‌زمینه است و کادرِ نمودار «گم» می‌شد — با
+   color-mix از رنگِ متن، در هر تمی پس‌زمینه/حاشیه/خط‌کشِ نمودار همیشه دیده می‌شود */
+@supports (background: color-mix(in srgb, red 50%, blue)){
+  .dash-bars{
+    background:
+      repeating-linear-gradient(to top,
+        transparent 0 47px,
+        color-mix(in srgb, var(--txt) 10%, transparent) 47px 48px)
+      color-mix(in srgb, var(--txt) 6%, var(--card));
+    border-color:color-mix(in srgb, var(--txt) 20%, transparent);
+  }
+  .dash-chart-card{border-color:color-mix(in srgb, var(--txt) 18%, transparent)}
+}
 .db-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0;height:100%;cursor:pointer}
 .db-barwrap{position:relative;flex:1;width:100%;max-width:44px;display:flex;align-items:flex-end;justify-content:center;gap:3px}
 .db-bar{width:30%;height:0;border-radius:9px;background:linear-gradient(180deg,var(--accent) 0%,var(--purple) 160%);transition:height .7s cubic-bezier(.22,.8,.3,1),filter .2s}
@@ -5117,8 +5141,13 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
 .db-lbl{font-size:.62rem;color:var(--muted);font-weight:700;max-width:100%;text-align:center;line-height:1.2;word-break:break-word;overflow-wrap:anywhere}
 .dash-detail{margin-top:12px;padding:10px 14px;border:1px dashed var(--border);border-radius:12px;background:var(--dark);font-size:.76rem;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap;align-items:center}
 .dash-detail b{color:var(--txt)}
-#dash-tank .tank-card{padding:12px;gap:10px;margin-bottom:0}
-#dash-tank .tank-card .tank-visual{width:92px;flex:0 0 92px;height:168px}
+/* کارت مخزن هم‌قدِ ستونِ نمودار کش می‌آید و خودِ مخزن جای خالیِ پایین را پر می‌کند —
+   قبلاً ارتفاعِ مخزن ثابت بود و پایینِ کارت خالی می‌ماند */
+.dash-tank-card #dash-tank{flex:1;display:flex;flex-direction:column}
+#dash-tank .tank-card{padding:12px;gap:10px;margin-bottom:0;flex:1}
+#dash-tank .tank-card .tank-visual{width:92px;flex:0 0 92px;height:auto;min-height:168px}
+/* کارت‌های آماری و مخزن با کلیک به بخشِ خودشان می‌روند */
+.dash-cards .dash-card,.dash-tank-card{cursor:pointer}
 .dash-tank-toggle{border:1.5px solid var(--accent);background:var(--card);color:var(--accent);font-family:'Vazirmatn',sans-serif;font-size:.72rem;font-weight:800;padding:5px 12px;border-radius:999px;cursor:pointer;transition:all .22s}
 .dash-tank-toggle:hover{background:var(--accent);color:#fff}
 .dash-hero{position:relative;overflow:hidden;border-radius:26px;padding:26px 20px;background:linear-gradient(160deg,var(--accent),var(--purple) 90%);box-shadow:0 14px 34px rgba(0,0,0,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;min-height:320px}
@@ -5210,11 +5239,11 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
   <!-- هشدارهای زنده: مخزن کم، قرض‌داران بی‌حرکت، وضعیت بکاپ ابری -->
   <div class="dash-alerts" id="dash-alerts"></div>
   <div class="dash-cards">
-    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-shifts"/></svg></span><span class="dc-prog" id="dcp-sales"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title" id="dct-sales">فروش امروز</div><div class="dc-value" id="dcv-sales">0</div><div class="dc-sub" id="dcs-sales"></div></div>
-    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-profit"/></svg></span><span class="dc-prog" id="dcp-profit"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title" id="dct-profit">مفاد امروز</div><div class="dc-value" id="dcv-profit">0</div><div class="dc-sub" id="dcs-profit"></div></div>
-    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-debt"/></svg></span><span class="dc-prog" id="dcp-debt"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>—</b></span></div><div class="dc-title">الباقی قرض‌داران</div><div class="dc-value" id="dcv-debt">0</div><div class="dc-sub" id="dcs-debt"></div></div>
-    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-expenses"/></svg></span><span class="dc-prog" id="dcp-exp"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title" id="dct-exp">مصارف امروز</div><div class="dc-value" id="dcv-exp">0</div><div class="dc-sub" id="dcs-exp"></div></div>
-    <div class="dash-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-safe"/></svg></span><span class="dc-prog" id="dcp-safe"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title">موجودی گاوصندوق</div><div class="dc-value" id="dcv-safe">0</div><div class="dc-sub" id="dcs-safe"></div></div>
+    <div class="dash-card" title="رفتن به پارچه‌ها" onclick="showSection('shifts')"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-shifts"/></svg></span><span class="dc-prog" id="dcp-sales"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title" id="dct-sales">فروش امروز</div><div class="dc-value" id="dcv-sales">0</div><div class="dc-sub" id="dcs-sales"></div></div>
+    <div class="dash-card" title="رفتن به مفاد / ضرر" onclick="showSection('profit')"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-profit"/></svg></span><span class="dc-prog" id="dcp-profit"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title" id="dct-profit">مفاد امروز</div><div class="dc-value" id="dcv-profit">0</div><div class="dc-sub" id="dcs-profit"></div></div>
+    <div class="dash-card" title="رفتن به قرض‌داران" onclick="showSection('debt')"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-debt"/></svg></span><span class="dc-prog" id="dcp-debt"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>—</b></span></div><div class="dc-title">الباقی قرض‌داران</div><div class="dc-value" id="dcv-debt">0</div><div class="dc-sub" id="dcs-debt"></div></div>
+    <div class="dash-card" title="رفتن به مصارف" onclick="showSection('expenses')"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-expenses"/></svg></span><span class="dc-prog" id="dcp-exp"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title" id="dct-exp">مصارف امروز</div><div class="dc-value" id="dcv-exp">0</div><div class="dc-sub" id="dcs-exp"></div></div>
+    <div class="dash-card" title="رفتن به گاوصندوق" onclick="showSection('safe')"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-safe"/></svg></span><span class="dc-prog" id="dcp-safe"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title">موجودی گاوصندوق</div><div class="dc-value" id="dcv-safe">0</div><div class="dc-sub" id="dcs-safe"></div></div>
   </div>
   <div class="dash-mid">
     <div class="dash-chart-card">
@@ -5240,8 +5269,8 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
         <svg id="dash-trend" viewBox="0 0 300 80" preserveAspectRatio="none"></svg>
       </div>
     </div>
-    <div class="dash-card dash-tank-card"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-storage"/></svg></span><button class="dash-tank-toggle" id="dash-tank-toggle" onclick="dashToggleTank()">🔁 دیزل</button></div><div class="dc-title" id="dash-tank-title">موجودی مخزن — ⛽ پطرول</div><div id="dash-tank" style="margin-top:8px"></div></div>
-    <div class="dash-hero">
+    <div class="dash-card dash-tank-card" title="رفتن به مخزن" onclick="if(!event.target.closest('button,input,select'))showSection((_dashFuel==='all'?_dashTankFuel:_dashFuel)==='diesel'?'storage-diesel':'storage')"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-storage"/></svg></span><button class="dash-tank-toggle" id="dash-tank-toggle" onclick="dashToggleTank()">🔁 دیزل</button></div><div class="dc-title" id="dash-tank-title">موجودی مخزن — ⛽ پطرول</div><div id="dash-tank" style="margin-top:8px"></div></div>
+    <div class="dash-hero" title="رفتن به پارچه‌ها" style="cursor:pointer" onclick="showSection('shifts')">
       <div class="dhero-gauge"><svg viewBox="0 0 120 66"><path class="tr" d="M12 60 A48 48 0 0 1 108 60"/><path class="bar" id="dash-hero-arc" d="M12 60 A48 48 0 0 1 108 60"/></svg><b id="dash-hero-pct">0٪</b></div>
       <div class="dhero-ic"><svg><use href="#ic-profit"/></svg></div>
       <div class="dhero-label" id="dash-hero-label">فروش امروز</div>
@@ -11787,12 +11816,15 @@ function makeTableResizable(table, storeKey){
     grip.className = 'col-resize-grip';
     grip.title = 'برای تغییر عرضِ این ستون بکشید';
     th.appendChild(grip);
-    let startX = 0, startW = 0;
+    let startX = 0, startW = 0, startTW = 0;
     function move(e){
       const cx = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
       // راست‌به‌چپ: کشیدنِ لبهٔ چپ به سمتِ چپ، ستون را پهن‌تر می‌کند
       const w = Math.max(36, Math.round(startW - (cx - startX)));
       setW(idx, w);
+      // عرضِ کلِ جدول هم با همان اختلاف به‌روز شود تا فقط همین ستون تغییر کند و
+      // مرورگر عرضِ بقیهٔ ستون‌ها را دوباره پخش نکند
+      if(startTW) table.style.width = Math.max(36, Math.round(startTW - startW + w)) + 'px';
     }
     function up(){
       document.removeEventListener('pointermove', move);
@@ -11803,7 +11835,19 @@ function makeTableResizable(table, storeKey){
     grip.addEventListener('pointerdown', function(e){
       e.preventDefault(); e.stopPropagation();
       freezeCols();
-      startX = e.clientX; startW = th.getBoundingClientRect().width;
+      // ریشهٔ باگِ «ستون هنگامِ کشیدن خلافِ جهتِ موس می‌پرد»: جدول width:100% داشت و
+      // مرورگر در table-layout:fixed عرض‌ها را نسبت به کلِ جدول دوباره توزیع می‌کرد.
+      // این‌جا عرضِ رندرشدهٔ همین لحظهٔ همهٔ ستون‌ها قفل و عرضِ جدول پیکسلی می‌شود تا
+      // در طولِ کشیدن فقط همین یک ستون جابه‌جا شود — مثل اکسل.
+      startTW = 0;
+      Array.prototype.forEach.call(ths, function(t2, i){
+        const w2 = Math.round(t2.getBoundingClientRect().width);
+        if(w2 > 0) setW(i, w2);
+        startTW += w2;
+      });
+      try{ if(getComputedStyle(table).tableLayout !== 'fixed') table.style.tableLayout = 'fixed'; }catch(e2){}
+      if(startTW > 0) table.style.width = startTW + 'px';
+      startX = e.clientX; startW = getW(idx) || th.getBoundingClientRect().width;
       document.addEventListener('pointermove', move);
       document.addEventListener('pointerup', up);
     });
@@ -11905,41 +11949,80 @@ function initAllTableResizers(root){
   // می‌شود (مثل اکسل). کلیکِ سادهٔ بدون کلید — همان رفتارِ عادیِ فوکوس/تایپ — دست‌نخورده
   // می‌ماند تا هیچ‌وقت جلوی ویرایشِ عادیِ کادرها را نگیرد.
   let selTable = null, selSet = new Set(), selAnchor = null;
-  function selCellEl(table, ri, ci){
-    const body = table.tBodies && table.tBodies[0];
-    const row = body && body.rows[ri];
+  // وضعیتِ «انتخابِ کشیدنی» مثل اکسل (موس پایین + کشیدن روی سلول‌ها)
+  let dragFrom = null, dragOn = false, dragX = 0, dragY = 0, dragEndAt = 0;
+  // مرجعِ ردیف: شمارهٔ ردیفِ بدنه ('3')، سرستون ('h0') یا ردیفِ جمع/فوتر ('f0') — تا
+  // رنگ/فونتِ «نوشته‌ها»ی سرستون و ردیفِ جمع هم مثل سلول‌های بدنه با کلیک راست عوض شود
+  function selCellEl(table, ref, ci){
+    const s = String(ref);
+    let row = null;
+    if(s.charAt(0) === 'h') row = table.tHead && table.tHead.rows[+s.slice(1) || 0];
+    else if(s.charAt(0) === 'f') row = table.tFoot && table.tFoot.rows[+s.slice(1) || 0];
+    else { const body = table.tBodies && table.tBodies[0]; row = body && body.rows[+s]; }
     return row && row.cells[ci];
   }
-  function clearSelection(){
-    if(selTable) selSet.forEach(function(k){
-      const p = k.split(':'); const cell = selCellEl(selTable, +p[0], +p[1]);
-      if(cell) cell.classList.remove('cfm-sel');
+  function eachSelCell(fn){
+    if(!selTable) return;
+    selSet.forEach(function(k){
+      const i = k.lastIndexOf(':');
+      const cell = selCellEl(selTable, k.slice(0, i), +k.slice(i + 1));
+      if(cell) fn(cell, k);
     });
+  }
+  function clearSelection(){
+    eachSelCell(function(cell){ cell.classList.remove('cfm-sel'); });
     selTable = null; selSet = new Set(); selAnchor = null;
+    updateSumBar();
   }
   function selToggle(info){
     if(selTable && selTable !== info.table) clearSelection();
     selTable = info.table;
-    const k = info.rowIdx + ':' + info.colIdx;
+    const k = info.rowRef + ':' + info.colIdx;
     if(selSet.has(k)){ selSet.delete(k); info.cell.classList.remove('cfm-sel'); }
     else { selSet.add(k); info.cell.classList.add('cfm-sel'); }
+    updateSumBar();
   }
   function selRange(fromInfo, toInfo){
+    // بازهٔ مستطیلی فقط بینِ ردیف‌های بدنه معنا دارد؛ سرستون/فوتر → همان تک‌سلول
+    if(!fromInfo.isBody || !toInfo.isBody){ selToggle(toInfo); return; }
     if(selTable && selTable !== fromInfo.table) clearSelection();
     selTable = fromInfo.table;
-    selSet.forEach(function(k){
-      const p = k.split(':'); const cell = selCellEl(selTable, +p[0], +p[1]);
-      if(cell) cell.classList.remove('cfm-sel');
-    });
+    eachSelCell(function(cell){ cell.classList.remove('cfm-sel'); });
     selSet = new Set();
-    const r1 = Math.min(fromInfo.rowIdx, toInfo.rowIdx), r2 = Math.max(fromInfo.rowIdx, toInfo.rowIdx);
+    const r1 = Math.min(+fromInfo.rowRef, +toInfo.rowRef), r2 = Math.max(+fromInfo.rowRef, +toInfo.rowRef);
     const c1 = Math.min(fromInfo.colIdx, toInfo.colIdx), c2 = Math.max(fromInfo.colIdx, toInfo.colIdx);
     for(let ri=r1; ri<=r2; ri++){
       for(let ci=c1; ci<=c2; ci++){
-        const cell = selCellEl(selTable, ri, ci); if(!cell) continue;
+        const cell = selCellEl(selTable, String(ri), ci); if(!cell) continue;
         selSet.add(ri+':'+ci); cell.classList.add('cfm-sel');
       }
     }
+    updateSumBar();
+  }
+  // ── نوارِ جمعِ انتخاب (مثل نوار وضعیت اکسل): جمع و تعدادِ سلول‌های انتخاب‌شده ──
+  function cellNum(cell){
+    const inp = cell.querySelector('input,textarea');
+    let t = String((inp ? inp.value : cell.textContent) || '').trim();
+    if(!t) return null;
+    try{ t = toEnDigits(t); }catch(e){}
+    t = t.replace(/[,٬\s]/g, '');
+    const m = t.match(/-?\d+(\.\d+)?/);
+    return m ? parseFloat(m[0]) : null;
+  }
+  function updateSumBar(){
+    let bar = document.getElementById('cfm-sumbar');
+    if(selSet.size < 2 || !selTable){ if(bar) bar.style.display = 'none'; return; }
+    let sum = 0, cnt = 0, nums = 0;
+    eachSelCell(function(cell){
+      cnt++;
+      const v = cellNum(cell);
+      if(v != null){ sum += v; nums++; }
+    });
+    if(!bar){ bar = document.createElement('div'); bar.id = 'cfm-sumbar'; document.body.appendChild(bar); }
+    const fmt = function(x){ try{ return n2fa(Math.round(x * 100) / 100); }catch(e){ return String(x); } };
+    bar.innerHTML = '🧮 جمع: <b>' + fmt(sum) + '</b><span>·</span>تعداد: <b>' + fmt(cnt) + '</b>' +
+      (nums !== cnt ? '<span>·</span>سلولِ عددی: <b>' + fmt(nums) + '</b>' : '');
+    bar.style.display = 'flex';
   }
   function closeMenu(){ if(menuEl){ menuEl.remove(); menuEl = null; } document.removeEventListener('click', onDocClick, true); }
   function onDocClick(e){ if(menuEl && !menuEl.contains(e.target)) closeMenu(); }
@@ -11951,12 +12034,22 @@ function initAllTableResizers(root){
     const table = startEl.closest('table');
     if(!cell || !table) return null;
     const row = cell.closest('tr');
-    const body = table.tBodies && table.tBodies[0];
-    if(!body || !row || row.parentNode !== body) return null;   // فقط ردیف‌های بدنه — نه هدر/فوتر
-    const rowIdx = Array.prototype.indexOf.call(body.rows, row);
+    if(!row) return null;
+    let rowRef = null, isBody = false;
+    if(table.tHead && row.parentNode === table.tHead){
+      rowRef = 'h' + Array.prototype.indexOf.call(table.tHead.rows, row);
+    } else if(table.tFoot && row.parentNode === table.tFoot){
+      rowRef = 'f' + Array.prototype.indexOf.call(table.tFoot.rows, row);
+    } else {
+      const body = table.tBodies && table.tBodies[0];
+      if(!body || row.parentNode !== body) return null;
+      const ri = Array.prototype.indexOf.call(body.rows, row);
+      if(ri < 0) return null;
+      rowRef = String(ri); isBody = true;
+    }
     const colIdx = Array.prototype.indexOf.call(row.cells, cell);
-    if(rowIdx < 0 || colIdx < 0) return null;
-    return { table, cell, rowIdx, colIdx };
+    if(colIdx < 0) return null;
+    return { table, cell, rowRef, colIdx, isBody };
   }
   function loadFmt(key){ try{ return JSON.parse(localStorage.getItem('cellFmt_'+key) || '{}'); }catch(e){ return {}; } }
   function saveFmt(key, map){ try{ localStorage.setItem('cellFmt_'+key, JSON.stringify(map)); }catch(e){} }
@@ -11965,6 +12058,14 @@ function initAllTableResizers(root){
     el.style.color = f.c || '';
     el.style.fontSize = f.s ? (f.s+'px') : '';
     el.style.textAlign = f.a || '';
+    // «نوشته‌ها»ی داخل سلول (span/b/…) اغلب رنگِ inline خودشان را دارند و رنگِ td را
+    // می‌پوشانند — رنگِ انتخابی روی خودِ آن‌ها هم بنشیند (ورودی‌ها/دکمه‌ها دست‌نخورده)
+    if(el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA' && el.tagName !== 'SELECT'){
+      Array.prototype.forEach.call(el.querySelectorAll('span,b,strong,i,em,small,div,a'), function(ch){
+        if(ch.closest('button') || ch.classList.contains('col-resize-grip')) return;
+        ch.style.color = f.c || '';
+      });
+    }
   }
   // اعمالِ دوبارهٔ فرمت‌های ذخیره‌شده بعد از هر رندرِ جدول (از initAllTableResizers صدا زده می‌شود)
   function applyCellFormatting(table, key){
@@ -11972,12 +12073,10 @@ function initAllTableResizers(root){
     table._cellFmtKey = key;
     const map = loadFmt(key);
     if(!Object.keys(map).length) return;
-    const body = table.tBodies && table.tBodies[0]; if(!body) return;
     Object.keys(map).forEach(function(k){
-      const parts = k.split(':'); const ri = +parts[0], ci = +parts[1];
-      const row = body.rows[ri]; if(!row) return;
-      const cell = row.cells[ci]; if(!cell) return;
-      applyStyle(cellTarget(cell), map[k]);
+      const i = k.lastIndexOf(':');
+      const cell = selCellEl(table, k.slice(0, i), +k.slice(i + 1));
+      if(cell) applyStyle(cellTarget(cell), map[k]);
     });
   }
   window._applyCellFormatting = applyCellFormatting;
@@ -11986,7 +12085,7 @@ function initAllTableResizers(root){
     const key = table._cellFmtKey; if(!key) return;
     const map = loadFmt(key);
     infos.forEach(function(info){
-      const k = info.rowIdx + ':' + info.colIdx;
+      const k = info.rowRef + ':' + info.colIdx;
       const next = Object.assign({}, map[k] || {}, patch);
       Object.keys(next).forEach(function(kk){ if(next[kk] == null) delete next[kk]; });
       if(Object.keys(next).length) map[k] = next; else delete map[k];
@@ -12034,6 +12133,8 @@ function initAllTableResizers(root){
     setTimeout(function(){ document.addEventListener('click', onDocClick, true); }, 0);
   }
   document.addEventListener('click', function(e){
+    // کلیکی که بلافاصله بعد از «کشیدنِ انتخاب» می‌آید، نباید انتخاب را بپراند
+    if(Date.now() - dragEndAt < 250) return;
     const cellEl = e.target.closest(CELL_SEL);
     if(!cellEl){ if(selSet.size) clearSelection(); return; }
     if(!(e.ctrlKey || e.metaKey || e.shiftKey)){
@@ -12046,6 +12147,38 @@ function initAllTableResizers(root){
     if(e.shiftKey && selAnchor && selAnchor.table === info.table) selRange(selAnchor, info);
     else { selToggle(info); selAnchor = info; }
   });
+  // ── انتخابِ کشیدنی مثل اکسل: موس را روی سلول‌ها پایین نگه دارید و بکشید ──
+  // از روی ورودی/دکمه شروع نمی‌شود تا تایپ و انتخابِ متنِ داخلِ کادرها دست‌نخورده بماند.
+  document.addEventListener('pointerdown', function(e){
+    if(e.pointerType && e.pointerType !== 'mouse') return;   // لمس/قلم → اسکرولِ عادیِ موبایل دست‌نخورده بماند
+    if(e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    if(e.target.closest('input,textarea,select,button,a,.col-resize-grip')) return;
+    const cellEl = e.target.closest(CELL_SEL); if(!cellEl) return;
+    const info = rowColOf(cellEl);
+    if(!info || !info.isBody) return;
+    dragFrom = info; dragOn = false; dragX = e.clientX; dragY = e.clientY;
+  });
+  document.addEventListener('pointermove', function(e){
+    if(!dragFrom) return;
+    if(!dragOn){
+      if(Math.abs(e.clientX - dragX) < 5 && Math.abs(e.clientY - dragY) < 5) return;
+      dragOn = true;
+      document.body.classList.add('cfm-noselect');
+      try{ window.getSelection().removeAllRanges(); }catch(err){}
+    }
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const cellEl = el && el.closest ? el.closest(CELL_SEL) : null;
+    if(!cellEl) return;
+    const info = rowColOf(cellEl);
+    if(!info || !info.isBody || info.table !== dragFrom.table) return;
+    selRange(dragFrom, info);
+    selAnchor = dragFrom;
+  });
+  document.addEventListener('pointerup', function(){
+    if(dragOn) dragEndAt = Date.now();
+    dragFrom = null; dragOn = false;
+    document.body.classList.remove('cfm-noselect');
+  });
   document.addEventListener('contextmenu', function(e){
     const cellEl = e.target.closest(CELL_SEL);
     if(!cellEl) return;
@@ -12053,13 +12186,14 @@ function initAllTableResizers(root){
     if(!info || !info.table._cellFmtKey) return;   // جدول‌هایی که هنوز کلید ندارند (خارج از initAllTableResizers) دست‌نخورده بمانند
     e.preventDefault();
     let infos;
-    if(selTable === info.table && selSet.size > 1 && selSet.has(info.rowIdx+':'+info.colIdx)){
+    if(selTable === info.table && selSet.size > 1 && selSet.has(info.rowRef+':'+info.colIdx)){
       // سلولِ کلیک‌شده جزوِ انتخابِ چندتایی است → فرمت روی همهٔ انتخاب یک‌جا اعمال شود
       infos = [];
       selSet.forEach(function(k){
-        const p = k.split(':'); const ri = +p[0], ci = +p[1];
-        const cell = selCellEl(info.table, ri, ci);
-        if(cell) infos.push({ table: info.table, cell, rowIdx: ri, colIdx: ci });
+        const i2 = k.lastIndexOf(':');
+        const ref = k.slice(0, i2), ci = +k.slice(i2 + 1);
+        const cell = selCellEl(info.table, ref, ci);
+        if(cell) infos.push({ table: info.table, cell, rowRef: ref, colIdx: ci });
       });
     } else {
       infos = [info];
@@ -13882,6 +14016,8 @@ function renderChakana() {
       <span style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <button style="background:var(--blue);color:#fff;border:none;border-radius:7px;padding:3px 10px;font-size:0.76rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="pdfChakana('${k}')">📄 PDF</button>
         <button style="background:var(--green);color:#fff;border:none;border-radius:7px;padding:3px 10px;font-size:0.76rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="addChakanaRowToMonth('${k}')">+ ردیف</button>
+        <input id="ck-bulk-${kid}" type="number" value="5" min="1" max="50" title="تعداد ردیف برای افزودنِ چندتایی" style="width:52px;text-align:center;padding:3px 6px;border:1px solid var(--border);border-radius:7px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.76rem;font-weight:700">
+        <button style="background:linear-gradient(135deg,#f6a623,#c97d00);color:#fff;border:none;border-radius:7px;padding:3px 10px;font-size:0.76rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="addChakanaRowsBulk('${k}')">++ چندتایی</button>
         <span id="ck-hdralb-${kid}" style="font-size:0.82rem;font-weight:700;color:${totAlb>0?'var(--red)':'var(--green)'}">الباقی: ${n2fa(Math.round(totAlb))}</span>
       </span>
     </div>
@@ -13976,6 +14112,19 @@ function addChakanaRowToMonth(monthKey) {
   DB.chakanaRows = DB.chakanaRows || [];
   DB.chakanaRows.push({ date: monthKey + '/01', name: '', fuel: 0, priceper: 0, rasid: 0 });
   save(); renderChakana();
+}
+// افزودنِ چندتاییِ ردیف به جدولِ چکنهٔ همان ماه — مثل «++ چندتایی» مودالِ مصارف
+function addChakanaRowsBulk(monthKey) {
+  if (typeof requireAdmin === 'function' && !requireAdmin()) return;
+  const inp = document.getElementById('ck-bulk-' + String(monthKey).replace('/','_'));
+  let n = parseInt(toEnDigits(String(inp && inp.value || '')), 10) || 0;
+  if (n < 1) { showToast('یک عدد معتبر وارد کنید', '#e53e3e'); return; }
+  if (n > 50) n = 50;
+  _activeChakanaMonth = monthKey;
+  DB.chakanaRows = DB.chakanaRows || [];
+  for (let i = 0; i < n; i++) DB.chakanaRows.push({ date: monthKey + '/01', name: '', fuel: 0, priceper: 0, rasid: 0 });
+  save(); renderChakana();
+  showToast('✅ ' + n + ' ردیف افزوده شد', '#38a169');
 }
 function addChakanaMonth() {
   if (typeof requireAdmin === 'function' && !requireAdmin()) return;
@@ -21692,7 +21841,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.96';
+const APP_VERSION = '2.9.97';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
