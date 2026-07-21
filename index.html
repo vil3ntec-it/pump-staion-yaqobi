@@ -7205,9 +7205,19 @@ body.viewer-mode .inv-admin-only{display:none!important}
 <div id="mirzaGuestScreen" style="display:none;position:fixed;inset:0;z-index:400;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:linear-gradient(160deg,#0d1117,#161b22);color:#e6edf3;font-family:'Vazirmatn',sans-serif;text-align:center;padding:24px">
   <div style="font-size:3rem">💬</div>
   <div style="font-weight:900;font-size:1.35rem">گفتگو با میرزا</div>
-  <div style="font-size:0.9rem;color:#8b949e;max-width:340px;line-height:1.95">این گفتگو مخصوصِ شماست و خصوصی می‌ماند. پیام‌تان را بنویسید؛ به‌زودی پاسخ می‌گیرید. با اسکنِ دوباره یا همین لینک، به همین گفتگو برمی‌گردید.</div>
-  <button onclick="_mirzaGuestOpenChat()" style="background:#238636;color:#fff;border:none;border-radius:12px;padding:12px 26px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:1rem;cursor:pointer">✍️ باز کردن گفتگو</button>
-  <button onclick="_mirzaGuestPDF()" style="background:transparent;color:#58a6ff;border:1px solid #58a6ff;border-radius:10px;padding:9px 20px;font-family:'Vazirmatn',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer">📄 PDF گفتگو</button>
+  <!-- ابتدا نام گرفته می‌شود تا مدیر بداند طرفِ گفتگو کیست -->
+  <div id="mirzaNameBox" style="display:none;flex-direction:column;align-items:center;gap:12px;width:100%;max-width:340px">
+    <div style="font-size:0.9rem;color:#8b949e;line-height:1.95">برای شروعِ گفتگو، لطفاً نام‌تان را بنویسید:</div>
+    <input id="mirzaNameInput" placeholder="نام و تخلص" autocomplete="name" onkeydown="if(event.key==='Enter')_mirzaGuestSetName()" style="width:100%;box-sizing:border-box;text-align:center;border:1px solid #30363d;border-radius:10px;background:#0d1117;color:#e6edf3;font-family:'Vazirmatn',sans-serif;font-size:1rem;padding:11px 14px;outline:none">
+    <button onclick="_mirzaGuestSetName()" style="background:#238636;color:#fff;border:none;border-radius:12px;padding:12px 26px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:1rem;cursor:pointer">شروع گفتگو ✍️</button>
+  </div>
+  <!-- بعد از ثبتِ نام: خوش‌آمد + دکمه‌ها -->
+  <div id="mirzaChatBox" style="display:none;flex-direction:column;align-items:center;gap:16px">
+    <div style="font-size:0.95rem;color:#e6edf3">خوش آمدید، <b id="mirzaGuestNameLbl"></b> 👋</div>
+    <div style="font-size:0.88rem;color:#8b949e;max-width:340px;line-height:1.95">این گفتگو مخصوصِ شماست و خصوصی می‌ماند. با اسکنِ دوباره یا همین لینک، به همین گفتگو برمی‌گردید.</div>
+    <button onclick="_mirzaGuestOpenChat()" style="background:#238636;color:#fff;border:none;border-radius:12px;padding:12px 26px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:1rem;cursor:pointer">✍️ باز کردن گفتگو</button>
+    <button onclick="_mirzaGuestPDF()" style="background:transparent;color:#58a6ff;border:1px solid #58a6ff;border-radius:10px;padding:9px 20px;font-family:'Vazirmatn',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer">📄 PDF گفتگو</button>
+  </div>
 </div>
 
 <!-- پنل ارتباط با مدیر (واتساپ/تلگرام) — تلاشِ باز شدن داخلِ برنامه + بازکردنِ مطمئن -->
@@ -11683,7 +11693,7 @@ function openAcctMenu(ev, kind, type, id) {
   menu.innerHTML =
     `<button onclick="_acctMenuOpen(${args})">📂 باز کردن حساب</button>` +
     `<button onclick="_acctMenuSendGroup(${args})">📤 فرستادن حساب برای گروه</button>` +
-    `<button onclick="_acctMenuWhatsApp(${args})">💬 فرستادن حساب به پی‌وی واتساپ</button>` +
+    `<button onclick="_acctMenuCopyLink(${args})">🔗 کپی لینکِ حساب (برای فرستادن در چت)</button>` +
     `<button onclick="_acctMenuQR(${args})">📲 کیو‌آر کد</button>`;
   document.body.appendChild(menu);
   const x = (ev.clientX || 0), y = (ev.clientY || 0);
@@ -11766,6 +11776,16 @@ function _acctMenuWhatsApp(kind, type, id) {
   const msg = '📋 ' + summary + '\n\n📄 برای دیدنِ حساب و پی‌دی‌اف، این لینک را باز کنید (همان لینکِ کیوآر کد):\n' + viewUrl;
   // خواستهٔ کاربر: باز نکردنِ مستقیمِ واتساپ — متنِ حساب کپی می‌شود تا خودتان بفرستید.
   _copyShareText(msg, '📋 حساب کپی شد — در پی‌ویِ واتساپ/تلگرامِ شخص بفرستید');
+}
+// راست‌کلیک روی حساب → کپیِ «لینکِ دیدنِ حساب» (همان لینکِ کیوآر) تا در چتِ میرزا برای شخص بفرستید.
+// نیازی به ثبتِ شماره ندارد؛ فقط لینک (+ خلاصهٔ کوتاه) کپی می‌شود. هیچ‌چیزی در حساب تغییر نمی‌کند.
+function _acctMenuCopyLink(kind, type, id) {
+  _acctMenuClose();
+  const baseUrl = /^http/.test(location.protocol) ? window.location.href.split('#')[0] : 'https://vil3ntec-it.github.io/pump-staion-yaqobi/';
+  const viewUrl = baseUrl + (kind === 'company' ? ('#roview-company-' + id + '-pdf') : ('#roview-' + type + '-' + id + '-pdf'));
+  const summary = _acctSummaryText(kind, type, id);
+  const msg = (summary ? ('📋 ' + summary + '\n\n') : '') + '📄 برای دیدنِ حساب و پی‌دی‌اف، این لینک را باز کنید:\n' + viewUrl;
+  _copyShareText(msg, '🔗 لینکِ حساب کپی شد — در چتِ میرزا برای شخص بفرستید');
 }
 function _acctMenuSendGroup(kind, type, id) {
   _acctMenuClose();
@@ -20340,12 +20360,14 @@ function _mirzaPrintQR(){
   w.document.close(); setTimeout(function(){ try { w.print(); } catch(e){} }, 400);
 }
 // ── مهمانِ کیو‌آر: ورود به گفتگوی خصوصی با میرزا (خصوصی، دائمی، با همان توکن برمی‌گردد) ──
+let _mirzaGuestToken = '';
 function _openMirzaGuest(hash){
   hash = hash || window.location.hash || '';
   let tok = '';
   const mm = /^#mirza-([0-9a-fA-F]{16,64})$/.exec(hash);
   if (mm) { tok = mm[1].toLowerCase(); try { localStorage.setItem('mirzaGuestToken', tok); } catch(e){} }
   else { tok = _mirzaMyToken(); }               // ورودِ عمومی (#mirza): توکنِ همین دستگاه
+  _mirzaGuestToken = tok;
   // آدرس را به لینکِ اختصاصی به‌روز کن تا رفرش/بوکمارک همان گفتگو را باز کند (شناسهٔ جدید ساخته نشود)
   try { if (location.hash !== '#mirza-' + tok) history.replaceState(null, '', '#mirza-' + tok); } catch(e){}
   try { load(); } catch(e){}
@@ -20355,11 +20377,33 @@ function _openMirzaGuest(hash){
   try { _lsCalcBtnShow(false); } catch(e){}
   currentRole = 'viewer';
   try { applyRole(); } catch(e){}
-  const shortId = tok.slice(0, 6);
+  // ابتدا نام: اگر قبلاً ثبت شده (همین دستگاه) مستقیم وارد گفتگو می‌شود، وگرنه فرمِ نام
+  let savedName = '';
+  try { savedName = (localStorage.getItem('mirzaGuestName') || '').trim(); } catch(e){}
+  if (savedName) _mirzaGuestStart(tok, savedName);
+  else _mirzaShowNameGate();
+}
+function _mirzaShowNameGate(){
+  const nb = document.getElementById('mirzaNameBox'); if (nb) nb.style.display = 'flex';
+  const cb = document.getElementById('mirzaChatBox'); if (cb) cb.style.display = 'none';
+  setTimeout(function(){ const i = document.getElementById('mirzaNameInput'); if (i) { try { i.focus(); } catch(e){} } }, 200);
+}
+function _mirzaGuestSetName(){
+  const i = document.getElementById('mirzaNameInput');
+  const nm = ((i && i.value) || '').trim();
+  if (nm.length < 2) { showToast('لطفاً نام‌تان را بنویسید', '#e53e3e'); if (i) try { i.focus(); } catch(e){} return; }
+  try { localStorage.setItem('mirzaGuestName', nm); } catch(e){}
+  _mirzaGuestStart(_mirzaGuestToken || _mirzaMyToken(), nm);
+}
+function _mirzaGuestStart(tok, name){
+  const nb = document.getElementById('mirzaNameBox'); if (nb) nb.style.display = 'none';
+  const cb = document.getElementById('mirzaChatBox'); if (cb) cb.style.display = 'flex';
+  const lbl = document.getElementById('mirzaGuestNameLbl'); if (lbl) lbl.textContent = name;
   try {
     _showChatFabs(true);
     _managerFabShow(false);                     // مهمان دکمهٔ «ارتباط با مدیر» را لازم ندارد
-    _rbSetMode('person', { peer: _peerKey('guest_' + tok), type: 'guest', id: tok, name: 'مهمان ' + shortId });
+    // نام در peerِ گفتگو می‌نشیند تا مدیر بداند طرفِ گفتگو کیست
+    _rbSetMode('person', { peer: _peerKey('guest_' + tok), type: 'guest', id: tok, name: name });
     const rp = document.getElementById('robotPanel'); if (rp && !rp.classList.contains('open')) toggleRobot();
   } catch(e){}
 }
@@ -22003,7 +22047,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.110';
+const APP_VERSION = '2.9.111';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
