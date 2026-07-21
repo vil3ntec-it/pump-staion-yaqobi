@@ -367,6 +367,8 @@ body.staff-view .qr-overlay{z-index:10020}
 .sec-font-btn:hover{border-color:var(--accent);color:var(--accent)}
 .person-del{position:absolute;top:7px;left:7px;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;font-size:0.95rem;transition:all .15s}
 .person-del:hover{background:var(--red);color:#fff;border-color:var(--red)}
+/* شمارهٔ کنارِ کارت — همان عددی که با Alt+عدد آن حساب باز می‌شود (روی لبهٔ چپِ کارت، وسط) */
+.acct-num-badge{position:absolute;left:7px;top:50%;transform:translateY(-50%);min-width:24px;height:24px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;background:var(--accent);color:#1a1205;border-radius:12px;font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.9rem;line-height:1;box-shadow:0 1px 5px rgba(0,0,0,.35);pointer-events:none;z-index:3}
 
 .modal-overlay{position:fixed;inset:0;background:#000b;z-index:300;display:none;align-items:center;justify-content:center;padding:12px}
 .modal-overlay.open{display:flex}
@@ -21948,7 +21950,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.104';
+const APP_VERSION = '2.9.105';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -26540,7 +26542,46 @@ ${copy('نسخهٔ پمپ')}
     try { btn.scrollIntoView({ inline:'center', block:'nearest' }); } catch(_){}
   }
 
-  var sectBuf = '';
+  // Alt + عدد → باز کردنِ حسابِ شمارهٔ N در همان بخشی که کاربر باز کرده (قرض‌داران یا شرکت‌ها).
+  // شماره‌ها همان عددهای کنارِ کارت‌ها هستند (به ترتیبِ نمایش). عددِ چندرقمی (۱۱، ۱۲…) هم
+  // با رها کردن Alt کار می‌کند؛ فقط روی بخشِ باز اثر دارد و اگر شماره وجود نداشته باشد کاری نمی‌کند.
+  function _kbGridOfSection(){
+    var sec = document.querySelector('.section.visible');
+    if (!sec) return null;
+    if (sec.id === 'sec-debt') return document.getElementById('debt-grid');
+    if (sec.id === 'sec-noinv') return document.getElementById('company-grid');
+    return null;
+  }
+  function _kbOpenAccount(n){
+    if (n < 1) return;
+    if (document.querySelector('.modal-overlay.open')) return;   // مودالی باز است → دست نزن
+    var grid = _kbGridOfSection();
+    if (!grid) return;
+    var cards = grid.querySelectorAll('.person-card');
+    var card = cards[n - 1];
+    if (card) card.click();   // click همان openPersonModal/openCompanyModal را صدا می‌زند
+  }
+  // شماره‌گذاریِ کارت‌ها به ترتیبِ نمایش — یک نقطهٔ واحد؛ با هر رندر/جستجو خودکار تازه می‌شود
+  function _numberCards(grid){
+    if (!grid) return;
+    var kids = grid.children, num = 0;
+    for (var i = 0; i < kids.length; i++){
+      var card = kids[i];
+      if (!card.classList || !card.classList.contains('person-card')) continue;
+      num++;
+      var b = card.querySelector(':scope > .acct-num-badge');
+      if (!b){ b = document.createElement('span'); b.className = 'acct-num-badge'; card.appendChild(b); }
+      b.textContent = n2fa(num);
+    }
+  }
+  ['debt-grid','company-grid'].forEach(function(id){
+    var grid = document.getElementById(id);
+    if (!grid) return;
+    _numberCards(grid);
+    try { new MutationObserver(function(){ _numberCards(grid); }).observe(grid, { childList: true }); } catch(_){}
+  });
+
+  var sectBuf = '', altBuf = '';
   document.addEventListener('keydown', function(e){
     if (_kbLocked()) return;
     var d = _kbDigit(e);
@@ -26550,6 +26591,13 @@ ${copy('نسخهٔ پمپ')}
       e.preventDefault();
       ctrlBuf = ''; shiftBuf = '';
       if (sectBuf.length < 2) sectBuf += d;
+      return;
+    }
+    // Alt + عدد → فقط جمع می‌شود (چندرقمی مثل ۱۱)؛ باز کردنِ حساب بعد از رها کردن Alt.
+    // Alt چیزی داخل کادر تایپ نمی‌کند، پس حتی با فوکوس داخل جستجو هم بی‌تداخل کار می‌کند.
+    if (e.altKey && !e.ctrlKey && !e.metaKey){
+      e.preventDefault();
+      if (altBuf.length < 3) altBuf += d;
       return;
     }
     // داخل کادرهای متنی فقط وقتی جدولِ شخص/شرکت باز است میانبرها فعال‌اند — Ctrl/Shift+عدد
@@ -26569,6 +26617,12 @@ ${copy('نسخهٔ پمپ')}
   });
 
   document.addEventListener('keyup', function(e){
+    // Alt رها شد → حسابِ شمارهٔ واردشده باز شود
+    if (e.key === 'Alt'){
+      var nO = parseInt(altBuf, 10) || 0; altBuf = '';
+      if (nO) _kbOpenAccount(nO);
+      return;
+    }
     if (e.key !== 'Control' && e.key !== 'Shift') return;
     // اول بافرِ بخش — با رها شدنِ هر کدام از Ctrl/Shift همان‌جا می‌رود
     if (sectBuf){
@@ -26585,7 +26639,7 @@ ${copy('نسخهٔ پمپ')}
     }
   });
   // اگر پنجره وسطِ کار فوکس را از دست داد (Alt+Tab و …) بافر پاک شود تا عملِ ناخواسته نشود
-  window.addEventListener('blur', function(){ ctrlBuf = ''; shiftBuf = ''; sectBuf = ''; });
+  window.addEventListener('blur', function(){ ctrlBuf = ''; shiftBuf = ''; sectBuf = ''; altBuf = ''; });
 })();
 </script>
 
