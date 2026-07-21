@@ -7347,7 +7347,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
       <div class="fs-group petrol">
         <div class="fs-head petrol">⛽ حساب پطرول</div>
         <div class="fs-rows">
-          <div class="fs-cell"><div class="l">فیصدی ما</div><div class="v" style="color:var(--purple)" id="pm-p-comm">0</div></div>
+          <div class="fs-cell"><div class="l" id="pm-p-comm-l">فیصدی ما</div><div class="v" style="color:var(--purple)" id="pm-p-comm">0</div></div>
           <div class="fs-cell"><div class="l" id="pm-p-rasid-l">مقدار رسید تیل</div><input type="number" class="v pm-edit" id="pm-p-rasidfuel" placeholder="0" style="color:var(--green);background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;width:100%;font-weight:800;font-family:'Vazirmatn',sans-serif" onfocus="personRasidFocus('petrol')" onblur="personRasidBlur()" oninput="updatePersonRasidFuel('petrol',this.value)"></div>
           <div class="fs-cell"><div class="l">برد</div><div class="v" style="color:var(--accent)" id="pm-p-bord">0</div></div>
           <div class="fs-cell"><div class="l" id="pm-p-rem-l">الباقی تیل</div><div class="v" style="color:var(--blue)" id="pm-p-remfuel">0</div></div>
@@ -7357,7 +7357,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
       <div class="fs-group diesel">
         <div class="fs-head diesel">🟤 حساب دیزل</div>
         <div class="fs-rows">
-          <div class="fs-cell"><div class="l">فیصدی ما</div><div class="v" style="color:var(--purple)" id="pm-d-comm">0</div></div>
+          <div class="fs-cell"><div class="l" id="pm-d-comm-l">فیصدی ما</div><div class="v" style="color:var(--purple)" id="pm-d-comm">0</div></div>
           <div class="fs-cell"><div class="l" id="pm-d-rasid-l">مقدار رسید تیل</div><input type="number" class="v pm-edit" id="pm-d-rasidfuel" placeholder="0" style="color:var(--green);background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;width:100%;font-weight:800;font-family:'Vazirmatn',sans-serif" onfocus="personRasidFocus('diesel')" onblur="personRasidBlur()" oninput="updatePersonRasidFuel('diesel',this.value)"></div>
           <div class="fs-cell"><div class="l">برد</div><div class="v" style="color:var(--accent)" id="pm-d-bord">0</div></div>
           <div class="fs-cell"><div class="l" id="pm-d-rem-l">الباقی تیل</div><div class="v" style="color:var(--blue)" id="pm-d-remfuel">0</div></div>
@@ -11949,6 +11949,15 @@ function initAllTableResizers(root){
       try { if (window._applyCellFormatting) window._applyCellFormatting(t, key); } catch(e){}
     });
     try { if (window._cfmAfterRender) window._cfmAfterRender(); } catch(e){}
+    // اندازهٔ فونتِ A+/A− مودالِ شخص/شرکت روی ردیف‌های تازه‌ساخته هم همین‌جا — قبل از
+    // رسمِ فریم — دوباره اعمال می‌شود تا سلول‌ها یک لحظه کوچک/بزرگ نشوند و بعد از هر
+    // ویرایش/تغییرِ واحد اندازه‌ها ثابت بمانند (رفعِ «پرشِ اندازهٔ سلول‌ها»)
+    try {
+      if (typeof _modalFontScale !== 'undefined' && _modalFontScale !== 1 && typeof adjModalFont === 'function') {
+        const _pmEl = document.getElementById('personModal'), _cmEl = document.getElementById('companyModal');
+        if ((_pmEl && _pmEl.classList.contains('open')) || (_cmEl && _cmEl.classList.contains('open'))) adjModalFont(0);
+      }
+    } catch(e){}
   }catch(e){}
 }
 // جدول‌های داینامیک (هر جا از نو ساخته شوند) خودکار دوباره فعال می‌شوند.
@@ -12306,7 +12315,8 @@ function openPersonModal(type, id) {
   _updateNavBtns();
   // load saved modal font scale
   const savedMFS = parseFloat((function(){ try{ return localStorage.getItem('modalFontScale') || 1; }catch(e){ return 1; } })());
-  if (savedMFS !== 1) { _modalFontScale = savedMFS; setTimeout(() => adjModalFont(0), 50); }
+  // بدونِ setTimeout — اعمالِ همان لحظه، تا موقعِ بازشدنِ حساب اندازه‌ها یک لحظه نپرد
+  if (savedMFS !== 1) { _modalFontScale = savedMFS; adjModalFont(0); }
 }
 function setPersonFilter(f) {
   currentPersonFilter = f;
@@ -13259,6 +13269,9 @@ function _updatePersonTotals(person) {
   setL('pm-d-rasid-l', money ? 'مقدار رسید پول' : 'مقدار رسید تیل');
   setL('pm-p-rem-l', money ? 'الباقی پول' : 'الباقی تیل');
   setL('pm-d-rem-l', money ? 'الباقی پول' : 'الباقی تیل');
+  // خواستهٔ کاربر: «فیصدی ما (۶٪)» — درصدِ واقعیِ همین حساب داینامیک داخل پرانتز
+  setL('pm-p-comm-l', 'فیصدی ما (' + n2fa(rnd(pct)) + '٪)');
+  setL('pm-d-comm-l', 'فیصدی ما (' + n2fa(rnd(pct)) + '٪)');
   setL('pm-bord-sum-l', money ? 'جمع کل برد پول' : 'جمع کل برد تیل');
   const modeBtn = document.getElementById('pm-mode-btn');
   if (modeBtn) modeBtn.textContent = money ? '🔁 تیل' : '🔁 پول';
@@ -15291,7 +15304,8 @@ function openCompanyModal(id) {
   document.getElementById('companyModal').classList.add('open');
   makeTableResizable(document.getElementById('cm-tbl'), 'cm');
   _updateCompanyNavBtns();
-  if (_modalFontScale !== 1) setTimeout(() => adjModalFont(0), 30);
+  // بدونِ setTimeout — اعمالِ همان لحظه، تا موقعِ بازشدنِ حساب اندازه‌ها یک لحظه نپرد
+  if (_modalFontScale !== 1) adjModalFont(0);
 }
 
 function _updateCompanyNavBtns() {
@@ -21924,7 +21938,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.101';
+const APP_VERSION = '2.9.102';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -23714,6 +23728,35 @@ if (_isStaffHash) {
 _initCalcDrag();
 try { _initRobotDrag(); _makeResizable('calcPanel'); _makeResizable('robotPanel'); _chatImgLightboxInit(); } catch (e) {}
 try { _stampVersion(); } catch (e) {}
+
+// ── ترمیمِ یک‌بارهٔ نسخهٔ 2.9.102 ────────────────────────────────────────────────
+// ۱) ردیف‌های رسیدِ پولیِ فاکتورها که در نسخه‌های قبل اشتباهاً داخلِ دفترِ «واحد تیل»
+//    (rows) نشسته بودند، به دفترِ «واحد پول» (moneyRows) منتقل می‌شوند — این ردیف‌ها
+//    باعث می‌شدند «مقدار رسید تیل» بدونِ ثبتِ کاربر عدد بگیرد. فقط ردیف‌های خودِ
+//    فاکتور (invId دار، پولی، بدون لیتر) جابه‌جا می‌شوند؛ هیچ دادهٔ دیگری دست نمی‌خورد.
+// ۲) عرض‌های ذخیره‌شدهٔ ستون‌ها که با باگِ جابه‌جاییِ ایندکسِ نسخه‌های قبل روی ستونِ
+//    اشتباه ثبت شده بودند یک‌بار پاک می‌شوند تا جدول‌ها به اندازهٔ استانداردشان برگردند.
+try {
+  if (!localStorage.getItem('pumpFix29102')) {
+    let _mvCount = 0;
+    ((DB.debtPersons || []).concat(DB.noinvPersons || [])).forEach(function(p){
+      if (!p || !Array.isArray(p.rows)) return;
+      for (let i = p.rows.length - 1; i >= 0; i--) {
+        const r = p.rows[i];
+        if (r && r.invId && r.byMoney === true && !(parseFloat(r.fuel) || 0)) {
+          p.rows.splice(i, 1);
+          if (!Array.isArray(p.moneyRows)) p.moneyRows = [];
+          if (!p.moneyRows.some(function(x){ return x && x.invId === r.invId; })) p.moneyRows.push(r);
+          _mvCount++;
+        }
+      }
+    });
+    if (_mvCount) { try { save(); } catch (e2) {} }
+    Object.keys(localStorage).filter(function(k){ return k.indexOf('colw_') === 0; })
+      .forEach(function(k){ try { localStorage.removeItem(k); } catch (e3) {} });
+    localStorage.setItem('pumpFix29102', '1');
+  }
+} catch (e) {}
 
 // update station name displays
 const _lbn = document.getElementById('lsBrandName');
@@ -26027,11 +26070,21 @@ function _invPostToDebt(v) {
   const liters = parseFloat(v.liters) || 0;
   const amount = parseFloat(v.amount) || 0;
   // ── بخشِ پولی (رسید پول) ──
-  // ردیفِ رسیدِ پولی باید در دفترِ فعالِ همین حساب ثبت شود: اگر حساب روی «واحد پول»
-  // است در moneyRows، وگرنه در rows (همان رفتار قبلی) — وگرنه در حساب‌های واحد پول
-  // این رسید در جدولِ فعال دیده نمی‌شد.
-  const targetArr = _acctRows(p, p);
-  const existing = targetArr.find(r => r.invId === v.id);
+  // «فاکتور پول فقط در واحد پول»: ردیفِ رسیدِ پولیِ فاکتور همیشه در دفترِ moneyRows
+  // ثبت می‌شود — نه در دفترِ واحدِ تیل (rows). قبلاً به دفترِ «فعال» می‌رفت و اگر حساب
+  // روی واحد تیل بود، رسیدِ پولی واردِ جدولِ تیل می‌شد و «مقدار رسید تیل» بی‌جهت
+  // عدد می‌گرفت (باگِ «فاکتور پول وارد واحد تیل می‌شود»). اگر ردیفِ همین فاکتور از
+  // نسخه‌های قبل در دفترِ تیل مانده باشد، همین‌جا به واحدِ پول منتقل می‌شود.
+  if (!Array.isArray(p.moneyRows)) p.moneyRows = [];
+  const targetArr = p.moneyRows;
+  let existing = targetArr.find(r => r.invId === v.id);
+  if (Array.isArray(p.rows)) {
+    const iOld = p.rows.findIndex(r => r.invId === v.id);
+    if (iOld >= 0) {
+      const movedRow = p.rows.splice(iOld, 1)[0];
+      if (!existing) { targetArr.push(movedRow); existing = movedRow; }
+    }
+  }
   if (amount > 0) {
     const data = {
       date: v.date_sh || '',
