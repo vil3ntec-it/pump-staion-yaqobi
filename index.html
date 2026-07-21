@@ -99,7 +99,7 @@ body.light-mode .daynight-toggle .dn-bird{opacity:.85}
 /* دستهٔ نورانی (خورشید/ماهِ اصلی) که بین دو طرف می‌لغزد و کمی نور به کنارِ خودش می‌ریزد */
 .daynight-toggle .dn-thumb{position:absolute;top:2.5px;left:34px;width:23px;height:23px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffffff,#eef3ff 55%,#d8e6ff 100%);box-shadow:0 0 6px 1.5px rgba(255,255,255,.85),0 0 16px 4px rgba(190,210,255,.55),0 1px 2px rgba(0,0,0,.25);transition:left .4s cubic-bezier(.34,1.3,.4,1),background .4s ease,box-shadow .4s ease}
 body.light-mode .daynight-toggle .dn-thumb{left:3px;background:radial-gradient(circle at 35% 30%,#fffef2,#fff6cf 55%,#ffd34d 100%);box-shadow:0 0 7px 2px rgba(255,240,180,.9),0 0 18px 4px rgba(255,210,90,.55),0 1px 2px rgba(120,70,0,.25)}
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 /* بدون کش‌آمدن/فنری‌شدن (bounce/elastic) در انتهای اسکرول، در کل برنامه.
    overflow-x:hidden فقط روی html است، نه body — گذاشتنش روی body یک ظرفِ
    اسکرولِ جدید می‌سازد و sticky (نوار تب‌ها) را نسبت به صفحه می‌شکند؛ body
@@ -2094,9 +2094,11 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter
 .goto-btn{background:rgba(255,255,255,.04)!important;border:1px solid rgba(255,180,61,.28)!important}
 .goto-btn:hover{transform:translateY(-2px);background:var(--grad-amber)!important;color:#1a1102!important;
   box-shadow:0 10px 22px -10px rgba(255,150,40,.7)!important}
-.add-row-btn{border-radius:var(--r-sm)!important;border:1px dashed rgba(255,180,61,.35)!important;
-  background:rgba(255,255,255,.025)!important;transition:all .2s!important}
-.add-row-btn:hover{background:rgba(255,180,61,.08)!important;border-color:var(--accent)!important;transform:translateY(-1px)}
+/* حاشیه و پس‌زمینهٔ کارتی و تم‌آگاه تا این دکمه‌ها در تم‌های روشن روی پس‌زمینه گم نشوند
+   (border-color از inline/پایه ارث می‌برد: مثلاً دکمهٔ PDF سبز می‌ماند) */
+.add-row-btn{border-radius:var(--r-sm)!important;border-width:1.5px!important;border-style:dashed!important;
+  background:var(--card)!important;transition:all .2s!important}
+.add-row-btn:hover{background:var(--panel)!important;border-color:var(--accent)!important;transform:translateY(-1px)}
 /* دکمه‌های سرِ مودال (واتساپ، PDF، تغییر نام، دیزل، ...) — خطِ کامل و رنگِ خودشان، نه خط‌چینِ کم‌رنگ */
 .modal-head .add-row-btn{border-style:solid!important;border-width:1.5px!important;border-color:currentColor!important;
   background:transparent!important;font-weight:800!important}
@@ -5051,7 +5053,7 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
 .dc-value{font-size:1.25rem;font-weight:900;color:var(--txt);margin-top:4px}
 .dc-sub{font-size:.68rem;color:var(--muted);margin-top:6px;opacity:.8}
 .dash-mid{display:grid;grid-template-columns:1fr 300px 320px;gap:16px;align-items:stretch}
-.dash-chart-card{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:20px 22px;box-shadow:0 10px 30px rgba(0,0,0,.10);min-width:0}
+.dash-chart-card{background:var(--card);border:1.5px solid var(--border);border-radius:22px;padding:20px 22px;box-shadow:0 10px 30px rgba(0,0,0,.10);min-width:0}
 .dcc-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .dcc-title{font-size:1rem;font-weight:900;color:var(--txt)}
 .dcc-sub{font-size:.72rem;color:var(--muted);margin-top:3px}
@@ -5088,7 +5090,7 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
 #dash-trend .tl-dot{fill:var(--green)}
 /* در RTL، ترتیبِ زمانی از راست (جدید) به چپ (قدیمی) باشد: row-reverse تا «امروز/این‌
    هفته/این ماه/امسال» سمتِ راست بیفتد و قدیمی‌ها سمتِ چپ (قبلاً برعکس بود). */
-.dash-bars{display:flex;flex-direction:row-reverse;align-items:flex-end;gap:2.5%;height:240px;padding-top:26px}
+.dash-bars{display:flex;flex-direction:row-reverse;align-items:flex-end;gap:2.5%;height:240px;padding:26px 12px 12px;background:var(--dark);border:1px solid var(--border);border-radius:14px}
 .db-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0;height:100%;cursor:pointer}
 .db-barwrap{position:relative;flex:1;width:100%;max-width:44px;display:flex;align-items:flex-end;justify-content:center;gap:3px}
 .db-bar{width:30%;height:0;border-radius:9px;background:linear-gradient(180deg,var(--accent) 0%,var(--purple) 160%);transition:height .7s cubic-bezier(.22,.8,.3,1),filter .2s}
@@ -5712,7 +5714,7 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
   <div class="card" style="border-color:var(--red)">
     <div class="card-head"><div class="card-title">⏰ قرض‌های کهنهٔ تیل — بی‌حرکت‌ها اول (فقط واحد تیل)</div></div>
     <div style="padding:14px">
-      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.7">فقط قرض‌دارانِ «واحد تیل» — به ترتیبِ «چند روز است هیچ ردیف تازه‌ای ندارند». با کلیک روی نام، حساب کاملش باز می‌شود. با دکمهٔ یادآوری، حساب + لینک مستقیم به پی‌وی واتساپش می‌رود (اگر شماره ثبت باشد).</div>
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.7">فقط قرض‌دارانِ «واحد تیل» — به ترتیبِ «چند روز است هیچ ردیف تازه‌ای ندارند». با کلیک روی نام، حساب کاملش باز می‌شود. با دکمهٔ یادآوری، حساب + لینک شخص کپی می‌شود تا خودتان در واتساپ/تلگرام بفرستید (اگر شماره ثبت باشد).</div>
       <div id="aging-list" style="font-size:0.84rem"></div>
     </div>
   </div>
@@ -5727,7 +5729,7 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
   <div class="card" style="border-color:var(--green)">
     <div class="card-head"><div class="card-title">💵 قرض‌های کهنهٔ پول — بی‌حرکت‌ها اول (فقط واحد پول)</div></div>
     <div style="padding:14px">
-      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.7">فقط کسانی که «پول» قرض‌دارند (واحد پول) — تیل در این لیست نیست. به ترتیبِ «چند روز بی‌حرکت»‌اند. با کلیک روی نام، حساب کاملش باز می‌شود؛ با دکمهٔ یادآوری، لینک واتساپش باز می‌شود.</div>
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.7">فقط کسانی که «پول» قرض‌دارند (واحد پول) — تیل در این لیست نیست. به ترتیبِ «چند روز بی‌حرکت»‌اند. با کلیک روی نام، حساب کاملش باز می‌شود؛ با دکمهٔ یادآوری، حسابش کپی می‌شود تا خودتان در واتساپ/تلگرام بفرستید.</div>
       <div id="aging-list-money" style="font-size:0.84rem"></div>
     </div>
   </div>
@@ -6741,6 +6743,49 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">تم رنگی، نور پس‌زمینه (شش‌ضلعی / رعد و برق / ستارهٔ دنباله‌دار)، کیفیت گرافیک و وضعیت حافظه — همه در یک صفحهٔ جداگانه تا تنظیمات شلوغ نشود.</div>
     <button class="pw-btn" style="background:var(--accent);color:#000" onclick="showSection('appearance')">🎨 باز کردن صفحهٔ ظاهر و گرافیک</button>
   </div>
+  <div class="settings-card" id="serverservices-launcher" style="border-color:var(--blue)">
+    <div class="settings-title" style="color:var(--blue)">🖥️ خدمات سرور</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">هم‌زمان‌سازی آنلاین، سرور شخصی، دانلود برنامهٔ سرور و بکاپ خودکار حساب‌ها (هر روز) — همه در یک صفحهٔ جداگانه.</div>
+    <button class="pw-btn" style="background:var(--blue);color:#fff" onclick="showSection('serverservices')">🖥️ باز کردن خدمات سرور</button>
+  </div>
+  <div class="settings-card" id="notifications-launcher" style="border-color:var(--green)">
+    <div class="settings-title" style="color:var(--green)">🔔 اعلان‌ها</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">پیام‌های اعلان (صدا و اعلان) و اعلان بیرون از برنامه — همه در یک صفحهٔ جداگانه.</div>
+    <button class="pw-btn" style="background:var(--green);color:#fff" onclick="showSection('notifications')">🔔 باز کردن اعلان‌ها</button>
+  </div>
+  <div class="settings-card" id="alerts-launcher" style="border-color:var(--accent)">
+    <div class="settings-title" style="color:var(--accent)">⚠️ هشدارها</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">هشدار کمبود مخزن (تیل) — تنظیم حد هشدار و بازهٔ پیام، در یک صفحهٔ جداگانه.</div>
+    <button class="pw-btn" style="background:var(--accent);color:#000" onclick="showSection('alerts')">⚠️ باز کردن هشدارها</button>
+  </div>
+  <div class="settings-card" id="datamgmt-launcher" style="border-color:var(--red)">
+    <div class="settings-title" style="color:var(--red)">🗂️ مدیریت داده‌ها</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">سطل زباله، سطل آشغال چت گروهی و پاک‌سازی داده‌ها — همه در یک صفحهٔ جداگانه.</div>
+    <button class="pw-btn" style="background:var(--red);color:#fff" onclick="showSection('datamgmt')">🗂️ باز کردن مدیریت داده‌ها</button>
+  </div>
+  <div class="settings-card" id="access-card" style="border-color:var(--green)">
+    <div class="settings-title" style="color:var(--green)">🔓 رمز دسترسی کامل</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:2;margin-bottom:12px">
+      رمز دسترسی را در کادر زیر وارد کنید تا همهٔ بخش‌های برنامه باز و قابل استفاده شوند. این رمز به کسی نمایش داده نمی‌شود.
+    </div>
+    <div class="pw-row">
+      <div class="pw-field"><label>رمز دسترسی</label><input type="text" class="pw-mask" id="access-pw" placeholder="رمز دسترسی" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other" onkeydown="if(event.key==='Enter')applyAccessPassword()"></div>
+      <button class="pw-btn" onclick="applyAccessPassword()">🔓 باز کردن همه بخش‌ها</button>
+    </div>
+    <div id="access-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
+  </div>
+  <div class="settings-card" id="passwords-launcher" style="border-color:var(--purple)">
+    <div class="settings-title" style="color:var(--purple)">🔑 رمزهای بخش‌ها</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">همهٔ رمزها در یک صفحهٔ جداگانه: رمز مدیر، رمز نظاره‌گر، رمز بخش مفاد/ضرر و رمز صفحهٔ کارمند (با کیو‌آر کد صفحهٔ کارمند).</div>
+    <button class="pw-btn" style="background:var(--purple);color:#fff" onclick="showSection('passwords')">🔑 باز کردن صفحهٔ رمزها</button>
+  </div>
+</div>
+
+<div class="section" id="sec-serverservices">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('settings')">→ برگشت به تنظیمات</button>
+    <span style="display:inline-flex;align-items:center;gap:10px">🖥️ خدمات سرور</span>
+  </div>
   <div class="settings-card" style="border-color:var(--blue)">
     <div class="settings-title">☁️ هم‌زمان‌سازی آنلاین</div>
     <div style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;line-height:1.9">
@@ -6778,31 +6823,32 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <div style="margin-top:10px;font-size:0.8rem;color:var(--muted);line-height:1.8">📌 فایلِ دانلودشده همین حساب فعلی شما را در خود دارد؛ روی هر دستگاهی که باز یا کپی شود همین حساب را نشان می‌دهد (نه حساب خالی).</div>
     <div id="dl-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
   </div>
-  <div class="settings-card" id="access-card" style="border-color:var(--green)">
-    <div class="settings-title" style="color:var(--green)">🔓 رمز دسترسی کامل</div>
-    <div style="font-size:0.85rem;color:var(--muted);line-height:2;margin-bottom:12px">
-      رمز دسترسی را در کادر زیر وارد کنید تا همهٔ بخش‌های برنامه باز و قابل استفاده شوند. این رمز به کسی نمایش داده نمی‌شود.
+  <div class="settings-card" id="backup-settings-card" style="border-color:var(--blue)">
+    <div class="settings-title" style="color:var(--blue)">💾 بکاپ حساب‌ها — هر روز خودکار</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">هر روز یک نسخهٔ خودکار داخل خود دستگاه نگه داشته می‌شود (۱۴ روز اخیر). برای امنیت بیشتر، هر چند روز یک‌بار فایل بکاپ را دانلود و جای امن (تلگرام/واتساپ خودتان) بفرستید.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="tools-btn" onclick="downloadBackupNow()">⬇️ دانلود فایل بکاپ</button>
+      <button class="tools-btn" style="background:var(--blue);color:#fff" onclick="document.getElementById('bk-file').click()">📥 بازگردانی از فایل</button>
+      <input type="file" id="bk-file" accept=".json,application/json" style="display:none" onchange="restoreBackupFromFile(this)">
     </div>
-    <div class="pw-row">
-      <div class="pw-field"><label>رمز دسترسی</label><input type="text" class="pw-mask" id="access-pw" placeholder="رمز دسترسی" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other" onkeydown="if(event.key==='Enter')applyAccessPassword()"></div>
-      <button class="pw-btn" onclick="applyAccessPassword()">🔓 باز کردن همه بخش‌ها</button>
+    <div id="bk-list" style="font-size:0.8rem"></div>
+    <div style="border-top:1px dashed var(--border);margin-top:14px;padding-top:12px">
+      <div style="font-weight:800;color:var(--green);margin-bottom:6px">☁️ بکاپ ابری خودکار — بیرون از دستگاه</div>
+      <div style="font-size:0.82rem;color:var(--muted);line-height:1.9;margin-bottom:10px">هر روز که اینترنت وصل باشد، یک نسخهٔ کامل از حساب‌ها خودکار به سرور آنلاین می‌رود (۳۰ روز اخیر نگه داشته می‌شود). اگر دستگاه گم یا خراب شود، از همین‌جا روی دستگاه نو برمی‌گردد.</div>
+      <div id="cloudbk-status" style="font-size:0.82rem;margin-bottom:10px;color:var(--muted)"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="tools-btn" style="background:var(--green);color:#fff" onclick="_autoCloudBackup(true)">☁️ بکاپ ابری همین حالا</button>
+        <button class="tools-btn" style="background:transparent;border:1px solid var(--blue);color:var(--blue)" onclick="_renderCloudBackupList()">📋 نمایش بکاپ‌های ابری</button>
+      </div>
+      <div id="cloudbk-list" style="font-size:0.8rem"></div>
     </div>
-    <div id="access-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
   </div>
-  <div class="settings-card" id="passwords-launcher" style="border-color:var(--purple)">
-    <div class="settings-title" style="color:var(--purple)">🔑 رمزهای بخش‌ها</div>
-    <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">همهٔ رمزها در یک صفحهٔ جداگانه: رمز مدیر، رمز نظاره‌گر، رمز بخش مفاد/ضرر و رمز صفحهٔ کارمند (با کیو‌آر کد صفحهٔ کارمند).</div>
-    <button class="pw-btn" style="background:var(--purple);color:#fff" onclick="showSection('passwords')">🔑 باز کردن صفحهٔ رمزها</button>
-  </div>
-  <div class="settings-card">
-    <div class="settings-title">⚠️ هشدار کمبود مخزن</div>
-    <div class="pw-row">
-      <div class="pw-field"><label>هر چند دقیقه یک بار پیام بیاید؟</label><input type="number" id="set-ls-interval" min="1" max="1440" placeholder="15"></div>
-      <div class="pw-field"><label>حد هشدار (لیتر)</label><input type="number" id="set-ls-threshold" min="1" placeholder="500"></div>
-      <div class="pw-field"><label>شماره واتساپ (اختیاری، با کد کشور)</label><input id="set-ls-phone" placeholder="مثلاً 93701234567"></div>
-      <button class="pw-btn" onclick="saveLowStockSettings()">ذخیره</button>
-    </div>
-    <div id="set-ls-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted)"></div>
+</div>
+
+<div class="section" id="sec-notifications">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('settings')">→ برگشت به تنظیمات</button>
+    <span style="display:inline-flex;align-items:center;gap:10px">🔔 اعلان‌ها</span>
   </div>
   <div class="settings-card">
     <div class="settings-title">🔔 صدا و اعلان</div>
@@ -6832,25 +6878,29 @@ body.viewer-mode .inv-admin-only{display:none!important}
     </div>
     <div id="push-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted)"></div>
   </div>
-  <div class="settings-card" id="backup-settings-card" style="border-color:var(--blue)">
-    <div class="settings-title" style="color:var(--blue)">💾 بکاپ حساب‌ها — هر روز خودکار</div>
-    <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">هر روز یک نسخهٔ خودکار داخل خود دستگاه نگه داشته می‌شود (۱۴ روز اخیر). برای امنیت بیشتر، هر چند روز یک‌بار فایل بکاپ را دانلود و جای امن (تلگرام/واتساپ خودتان) بفرستید.</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-      <button class="tools-btn" onclick="downloadBackupNow()">⬇️ دانلود فایل بکاپ</button>
-      <button class="tools-btn" style="background:var(--blue);color:#fff" onclick="document.getElementById('bk-file').click()">📥 بازگردانی از فایل</button>
-      <input type="file" id="bk-file" accept=".json,application/json" style="display:none" onchange="restoreBackupFromFile(this)">
+</div>
+
+<div class="section" id="sec-alerts">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('settings')">→ برگشت به تنظیمات</button>
+    <span style="display:inline-flex;align-items:center;gap:10px">⚠️ هشدارها</span>
+  </div>
+  <div class="settings-card">
+    <div class="settings-title">⚠️ هشدار کمبود مخزن</div>
+    <div class="pw-row">
+      <div class="pw-field"><label>هر چند دقیقه یک بار پیام بیاید؟</label><input type="number" id="set-ls-interval" min="1" max="1440" placeholder="15"></div>
+      <div class="pw-field"><label>حد هشدار (لیتر)</label><input type="number" id="set-ls-threshold" min="1" placeholder="500"></div>
+      <div class="pw-field"><label>شماره واتساپ (اختیاری، با کد کشور)</label><input id="set-ls-phone" placeholder="مثلاً 93701234567"></div>
+      <button class="pw-btn" onclick="saveLowStockSettings()">ذخیره</button>
     </div>
-    <div id="bk-list" style="font-size:0.8rem"></div>
-    <div style="border-top:1px dashed var(--border);margin-top:14px;padding-top:12px">
-      <div style="font-weight:800;color:var(--green);margin-bottom:6px">☁️ بکاپ ابری خودکار — بیرون از دستگاه</div>
-      <div style="font-size:0.82rem;color:var(--muted);line-height:1.9;margin-bottom:10px">هر روز که اینترنت وصل باشد، یک نسخهٔ کامل از حساب‌ها خودکار به سرور آنلاین می‌رود (۳۰ روز اخیر نگه داشته می‌شود). اگر دستگاه گم یا خراب شود، از همین‌جا روی دستگاه نو برمی‌گردد.</div>
-      <div id="cloudbk-status" style="font-size:0.82rem;margin-bottom:10px;color:var(--muted)"></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-        <button class="tools-btn" style="background:var(--green);color:#fff" onclick="_autoCloudBackup(true)">☁️ بکاپ ابری همین حالا</button>
-        <button class="tools-btn" style="background:transparent;border:1px solid var(--blue);color:var(--blue)" onclick="_renderCloudBackupList()">📋 نمایش بکاپ‌های ابری</button>
-      </div>
-      <div id="cloudbk-list" style="font-size:0.8rem"></div>
-    </div>
+    <div id="set-ls-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted)"></div>
+  </div>
+</div>
+
+<div class="section" id="sec-datamgmt">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('settings')">→ برگشت به تنظیمات</button>
+    <span style="display:inline-flex;align-items:center;gap:10px">🗂️ مدیریت داده‌ها</span>
   </div>
   <div class="settings-card" id="trash-settings-card" style="border-color:var(--accent)">
     <div class="settings-title" style="color:var(--accent)">🗑️ سطل زباله</div>
@@ -6878,6 +6928,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <div id="wipe-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
   </div>
 </div>
+
 
 <!-- ظاهر و گرافیک (صفحهٔ جدا — از تنظیمات باز می‌شود) -->
 <div class="section" id="sec-appearance">
@@ -7092,8 +7143,8 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <iframe id="mc-frame" style="width:100%;height:52vh;border:none;background:#fff" referrerpolicy="no-referrer"></iframe>
       </div>
       <div id="mc-open-wrap" style="display:none;margin-top:10px;text-align:center">
-        <div style="font-size:0.74rem;color:var(--muted);margin-bottom:8px">اگر داخل برنامه باز نشد (واتساپ/تلگرام به‌دلیل قوانین امنیتیِ خودشان گاهی داخلِ پنجره باز نمی‌شوند)، از دکمهٔ زیر استفاده کنید:</div>
-        <button id="mc-open-btn" class="add-row-btn" style="margin:0;padding:10px 22px;font-size:0.9rem;font-weight:800" onclick="mcOpenExternal()">🚀 باز کردن در پنجرهٔ جدید</button>
+        <div style="font-size:0.74rem;color:var(--muted);margin-bottom:8px">اطلاعاتِ تماس را کپی کنید و خودتان در واتساپ/تلگرام پیام دهید (برنامه مستقیم واتساپ/تلگرام را باز نمی‌کند):</div>
+        <button id="mc-open-btn" class="add-row-btn" style="margin:0;padding:10px 22px;font-size:0.9rem;font-weight:800" onclick="mcOpenExternal()">📋 کپی اطلاعات تماس</button>
       </div>
     </div>
   </div>
@@ -8106,6 +8157,16 @@ function copyShareLink() {
     navigator.clipboard.writeText(link).then(done).catch(fail);
   } else fail();
 }
+// کپیِ متن در کلیپ‌بورد (جایگزینِ باز کردنِ مستقیمِ واتساپ/تلگرام روی دستگاه‌هایی که
+// اجازهٔ باز شدن نمی‌دهند). هیچ اپلیکیشنِ بیرونی اجرا نمی‌شود — فقط کپی + پیام راهنما.
+function _copyShareText(text, okMsg) {
+  const done = () => { try { showToast(okMsg || '📋 کپی شد', '#38a169'); } catch(e){} };
+  const fail = () => { try { prompt('این را کپی کنید:', text); } catch(e){} };
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done).catch(fail);
+    else fail();
+  } catch(e) { fail(); }
+}
 function syncUpload() {
   const code = _syncCode();
   if (!code) { _setSyncMsg('❌ اول کد ایستگاه را ذخیره کنید', '#e53e3e'); return; }
@@ -8532,6 +8593,9 @@ function tryUnlock() {
     document.getElementById('lockErr').innerHTML = '';
     try { updateAll(); } catch(e){}
     try { _requestNotifyPermission(); } catch(e){}
+    // حضور (presence) را همین لحظهٔ ورود ثبت کن تا فرستنده‌ها بدانند کاربر «داخل
+    // برنامه» است و اعلان بیرونی (ntfy) برایش نفرستند — بدون منتظر ماندنِ حلقهٔ ۵ ثانیه‌ای.
+    try { _chatInitListeners(); } catch(e){}
     setTimeout(function(){ try { checkLowStock(); } catch(e){} try { checkDebtReview(); } catch(e){} }, 600);
   } else {
     _wrongPassCount++;
@@ -8543,7 +8607,7 @@ function tryUnlock() {
     }
     document.getElementById('lockErr').innerHTML =
       '<div style="margin-bottom:10px;line-height:1.7;font-size:0.82rem">این برنامه برای شخص خاصی طراحی شد.<br>اگه برنامه رو می‌خواهید برای خود تان، به این شماره پیام دهید:<br><strong style="font-size:1rem;letter-spacing:1px">0792236008</strong></div>' +
-      '<button onclick="(function(){var m=encodeURIComponent(\'سلام، میشه در مورد برنامه پمپ بنزین کمک کنید؟\');window.open(\'https://wa.me/93792236008?text=\'+m,\'_blank\')})()" style="background:#25D366;color:#fff;border:none;border-radius:10px;padding:9px 20px;font-size:0.88rem;font-family:\'Vazirmatn\',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-weight:700"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> واتساپ</button>';
+      '<button onclick="_copyShareText(\'0792236008\',\'📋 شماره کپی شد — در واتساپ/تلگرام پیام دهید\')" style="background:#25D366;color:#fff;border:none;border-radius:10px;padding:9px 20px;font-size:0.88rem;font-family:\'Vazirmatn\',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-weight:700">📋 کپی شمارهٔ تماس</button>';
     document.getElementById('lockInput').value = '';
   }
   } catch(err) {
@@ -8593,8 +8657,8 @@ function promptAdminUnlock() {
   }
 }
 function contactWhatsApp() {
-  const msg = encodeURIComponent('سلام میشه در مورد برنامه توضیح دهید');
-  window.open('https://wa.me/93792236008?text=' + msg, '_blank');
+  // به‌جای باز کردنِ مستقیمِ واتساپ (که روی بعضی دستگاه‌ها بلاک می‌شود)، شماره کپی می‌شود.
+  _copyShareText('0792236008', '📋 شمارهٔ تماس کپی شد — خودتان در واتساپ/تلگرام پیام دهید');
 }
 // دانلود برنامه: همیشه نسخهٔ کامل و بدون محافظ، همراه با «همین حسابِ فعلی»
 // تا روی هر دستگاهی که باز/کپی/ارسال شود، همین حساب نمایش داده شود (نه حساب خالی).
@@ -8874,7 +8938,7 @@ function _initCalcDrag() {
 
 // ========== NAV ==========
 function showSection(id, btn) {
-  if ((id === 'settings' || id === 'appearance' || id === 'passwords') && currentRole === 'viewer') { showToast('🔒 بخش تنظیمات فقط برای مدیر است', '#e53e3e'); return; }
+  if ((id === 'settings' || id === 'appearance' || id === 'passwords' || id === 'serverservices' || id === 'notifications' || id === 'alerts' || id === 'datamgmt') && currentRole === 'viewer') { showToast('🔒 بخش تنظیمات فقط برای مدیر است', '#e53e3e'); return; }
   document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
   const sec = document.getElementById('sec-' + id);
   if (sec) sec.classList.add('visible');
@@ -8933,6 +8997,22 @@ function showSection(id, btn) {
     try { _renderBackupPanel(); } catch(e) {}
     try { _renderCloudBackupStatus(); } catch(e) {}
     try { renderPushCard(); } catch(e) {}
+    try { renderTrashList(); } catch(e) {}
+    try { renderChatTrash(); } catch(e) {}
+  }
+  // صفحه‌های جدا که از تنظیمات باز می‌شوند — همان رندرهای مربوطه اجرا شوند
+  if (id === 'serverservices') {
+    try { fillSyncSettings(); } catch(e) {}
+    try { _renderBackupPanel(); } catch(e) {}
+    try { _renderCloudBackupStatus(); } catch(e) {}
+  }
+  if (id === 'notifications') {
+    try { renderPushCard(); } catch(e) {}
+  }
+  if (id === 'alerts') {
+    try { fillLowStockSettings(); } catch(e) {}
+  }
+  if (id === 'datamgmt') {
     try { renderTrashList(); } catch(e) {}
     try { renderChatTrash(); } catch(e) {}
   }
@@ -9592,7 +9672,7 @@ function pdfMembershipList(){
     || `<tr><td colspan="4" style="text-align:center">هیچ قرض‌داری ثبت نشده</td></tr>`;
   const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><title>مدت عضویت قرض‌داران</title>
     <style>@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
-    *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:16px}
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:16px}
     h1{font-size:1.05rem;font-weight:900;text-align:center;border-bottom:2px solid #38a169;padding-bottom:6px;margin-bottom:4px}
     .meta{font-size:0.72rem;color:#718096;text-align:center;margin-bottom:10px}
     table{width:100%;border-collapse:collapse;font-size:0.85rem}
@@ -10324,7 +10404,7 @@ function pdfDieselShifts() {
 
   const css = `
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:'Vazirmatn',sans-serif;background:#111827;color:#f3f4f6;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .page{padding:18px;display:flex;flex-direction:column;gap:12px}
 .page.break{page-break-after:always;break-after:page}
@@ -10442,7 +10522,7 @@ function printDieselShifts() {
   const totalProfit = shifts.reduce((a,s)=>a+(s.profit||0),0);
   const win = window.open('','_blank');
   win.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>گزارش دیزل</title>
-  <style>body{font-family:'Tahoma',sans-serif;padding:20px;font-size:10px}h2{text-align:center}
+  <style>body{font-family:'Tahoma',sans-serif;padding:20px;font-size:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}h2{text-align:center}
   table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:3px 5px;text-align:right;white-space:nowrap}
   th{background:#f0f0f0}.day-th{background:#fff3e0}.night-th{background:#ede7f6}.total-th{background:#e8f5e9}
   .foot td{background:#e8e8e8;font-weight:700}@media print{.no-print{display:none}}</style></head><body>
@@ -10590,7 +10670,7 @@ function pdfShifts() {
 
   const css = `
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:'Vazirmatn',sans-serif;background:#111827;color:#f3f4f6;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .page-row{display:block}
 .page{padding:12px 14px;display:flex;flex-direction:column;gap:8px;border:1px solid #374151;border-radius:10px;background:#161e2e;margin-bottom:10px;page-break-inside:avoid;break-inside:avoid}
@@ -10740,7 +10820,7 @@ function printShifts() {
   win.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
   <title>گزارش پارچه‌ها — پمپ یعقوبی</title>
   <style>
-    body{font-family:'Tahoma',sans-serif;padding:20px;color:#111;font-size:11px}
+    body{font-family:'Tahoma',sans-serif;padding:20px;color:#111;font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     h2{text-align:center;margin-bottom:4px;font-size:15px}
     .dates{text-align:center;color:#555;font-size:10px;margin-bottom:12px}
     table{width:100%;border-collapse:collapse}
@@ -11593,7 +11673,8 @@ function _acctMenuWhatsApp(kind, type, id) {
   const baseUrl = /^http/.test(location.protocol) ? window.location.href.split('#')[0] : 'https://vil3ntec-it.github.io/pump-staion-yaqobi/';
   const viewUrl = baseUrl + (kind === 'company' ? ('#roview-company-' + id + '-pdf') : ('#roview-' + type + '-' + id + '-pdf'));
   const msg = '📋 ' + summary + '\n\n📄 برای دیدنِ حساب و پی‌دی‌اف، این لینک را باز کنید (همان لینکِ کیوآر کد):\n' + viewUrl;
-  window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(msg), '_blank');
+  // خواستهٔ کاربر: باز نکردنِ مستقیمِ واتساپ — متنِ حساب کپی می‌شود تا خودتان بفرستید.
+  _copyShareText(msg, '📋 حساب کپی شد — در پی‌ویِ واتساپ/تلگرامِ شخص بفرستید');
 }
 function _acctMenuSendGroup(kind, type, id) {
   _acctMenuClose();
@@ -12140,7 +12221,7 @@ function calcStackedRow(pid, acctId, idx, field, value) {
   _stampRowUnionRate(r);   // قفلِ نرخِ اتحادیهٔ همین لحظه روی ردیف (مثل جدولِ اصلی)
   if (!r.byMoney) r.bardagi=_personRowBardagi(r);
   r.albaqi=(parseFloat(r.bardagi)||0)-(r.rasid||0);
-  save(); _updatePersonTotals(person); _renderStackedAccounts(person); renderPersons(currentPersonType); updateBanner();
+  save(); _updatePersonTotals(person); _rerenderStackedPreserveFocus(person); renderPersons(currentPersonType); updateBanner();
 }
 function setStackedRowFuel(pid, acctId, idx, ftype) {
   const person = _getStackedPerson(pid); if (!person) return;
@@ -12224,7 +12305,7 @@ function pdfStackedAcct(pid, acctId) {
 <title>حساب ${escFa(person.name)} — ${acctLabel} — پمپ یعقوبی</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:13.5px;font-weight:500}
 h1{font-size:1.3rem;font-weight:900;color:#c07700;border-bottom:2px solid #c07700;padding-bottom:8px;margin-bottom:6px}
 h2{font-size:0.95rem;font-weight:700;color:#2d3748;margin-bottom:10px}
@@ -12938,6 +13019,27 @@ function _rerenderHistoryPreserveFocus(person) {
     if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(selStart, selEnd); } catch (e) {} }
   }
 }
+// همان تکنیکِ حفظ فوکوس، برای حساب‌های دسته‌جمعی (pm-stacked-wrap) — تا هنگام تایپ
+// در سلول‌های آن جدول کیبورد/فوکوس نپرد.
+function _rerenderStackedPreserveFocus(person) {
+  const wrap = document.getElementById('pm-stacked-wrap');
+  const scroller = wrap ? wrap.closest('.modal-body') : null;
+  const scrollTop = scroller ? scroller.scrollTop : null;
+  const active = document.activeElement;
+  let matchAttr = null, selStart = null, selEnd = null;
+  if (active && wrap && wrap.contains(active) && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+    matchAttr = active.getAttribute('oninput') || active.getAttribute('onchange') || null;
+    selStart = active.selectionStart; selEnd = active.selectionEnd;
+  }
+  _renderStackedAccounts(person);
+  if (scroller && scrollTop != null) scroller.scrollTop = scrollTop;
+  if (matchAttr) {
+    const again = document.getElementById('pm-stacked-wrap');
+    const escAttr = matchAttr.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    const el = again && again.querySelector(`[oninput="${escAttr}"], [onchange="${escAttr}"]`);
+    if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(selStart, selEnd); } catch (e) {} }
+  }
+}
 function _renderHistoryPanel(person) {
   const wrap = document.getElementById('pm-history-wrap'); if (!wrap || !person) return;
   const acct = _acctOf(person);
@@ -13112,7 +13214,7 @@ function pdfPersonHistory(pid, hid) {
 <title>${escFa(person.name)}${archiveLabel ? ' — ' + archiveLabel : ''}</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:20px;font-size:12px}
 h1{font-size:1.2rem;font-weight:900;color:#c07700;border-bottom:2px solid #c07700;padding-bottom:6px;margin-bottom:4px}
 .meta{font-size:0.7rem;color:#718096;margin-bottom:14px}
@@ -13551,7 +13653,7 @@ function renderChakana() {
       <span style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <button style="background:var(--blue);color:#fff;border:none;border-radius:7px;padding:3px 10px;font-size:0.76rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="pdfChakana('${k}')">📄 PDF</button>
         <button style="background:var(--green);color:#fff;border:none;border-radius:7px;padding:3px 10px;font-size:0.76rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="addChakanaRowToMonth('${k}')">+ ردیف</button>
-        <span style="font-size:0.82rem;font-weight:700;color:${totAlb>0?'var(--red)':'var(--green)'}">الباقی: ${n2fa(Math.round(totAlb))}</span>
+        <span id="ck-hdralb-${kid}" style="font-size:0.82rem;font-weight:700;color:${totAlb>0?'var(--red)':'var(--green)'}">الباقی: ${n2fa(Math.round(totAlb))}</span>
       </span>
     </div>
     <div class="tbl-wrap" style="margin:0;border-radius:0 0 10px 10px">
@@ -13560,9 +13662,9 @@ function renderChakana() {
         <tbody id="chakana-grp-${kid}"></tbody>
         <tfoot><tr style="background:var(--dark);font-weight:800">
           <td colspan="5" style="padding:7px 9px">جمع ماه</td>
-          <td style="color:var(--accent);padding:7px 9px">${n2fa(Math.round(totBord))}</td>
-          <td style="color:var(--green);padding:7px 9px">${n2fa(Math.round(totRasid))}</td>
-          <td style="color:${totAlb>0?'var(--red)':'var(--green)'};padding:7px 9px">${n2fa(Math.round(totAlb))}</td>
+          <td id="ck-totbord-${kid}" style="color:var(--accent);padding:7px 9px">${n2fa(Math.round(totBord))}</td>
+          <td id="ck-totrasid-${kid}" style="color:var(--green);padding:7px 9px">${n2fa(Math.round(totRasid))}</td>
+          <td id="ck-totalb-${kid}" style="color:${totAlb>0?'var(--red)':'var(--green)'};padding:7px 9px">${n2fa(Math.round(totAlb))}</td>
           <td></td>
         </tr></tfoot>
       </table>
@@ -13585,9 +13687,9 @@ function renderChakana() {
       <td><input class="xls-in" value="${(e.name||'').replace(/"/g,'&quot;')}" placeholder="نام" onchange="updateChakana(${idx},'name',this.value)"></td>
       <td><input class="xls-in" type="number" value="${e.fuel||''}" placeholder="0" oninput="updateChakana(${idx},'fuel',this.value)"></td>
       <td><input class="xls-in sm" type="number" value="${e.priceper||''}" placeholder="0" oninput="updateChakana(${idx},'priceper',this.value)"></td>
-      <td style="font-weight:700;color:var(--accent)">${n2fa(Math.round(bord))}</td>
+      <td id="ck-bord-${idx}" style="font-weight:700;color:var(--accent)">${n2fa(Math.round(bord))}</td>
       <td><input class="xls-in" type="number" value="${e.rasid||''}" placeholder="0" style="color:var(--green)" oninput="updateChakana(${idx},'rasid',this.value)"></td>
-      <td style="font-weight:700;color:${alb>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(alb))}</td>
+      <td id="ck-alb-${idx}" style="font-weight:700;color:${alb>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(alb))}</td>
       <td><button class="del-btn" onclick="deleteChakana(${idx})">🗑️</button></td>`;
     frag.appendChild(tr);
   });
@@ -13599,9 +13701,34 @@ function updateChakana(idx, field, value) {
   if (!DB.chakanaRows[idx]) return;
   DB.chakanaRows[idx][field] = (field==='fuel'||field==='priceper'||field==='rasid') ? (parseFloat(toEnDigits(String(value)).replace(/[^0-9.]/g,''))||0) : value;
   save();
-  // فقط ردیف تاریخ می‌تواند گروه‌بندی را عوض کند → رندر کامل؛ بقیه فقط جمع‌ها را عوض می‌کنند
+  // فقط ردیف تاریخ می‌تواند گروه‌بندی را عوض کند → رندر کامل.
   if (field === 'date') { renderChakana(); return; }
-  renderChakana();
+  // نام با onchange (روی blur) می‌آید؛ نیازی به بازسازی نیست.
+  if (field === 'name') return;
+  // فیلدهای عددی با oninput می‌آیند: فقط سلول‌های محاسباتی به‌روزرسانی می‌شوند تا
+  // جدول بازسازی نشود و فوکوس/کیبورد هنگام تایپ نپرد (ریشهٔ اصلیِ پرشِ کیبورد).
+  _chakanaUpdateComputed(idx);
+}
+// به‌روزرسانیِ بردگی/الباقیِ یک ردیف + جمع‌های ماه، بدون بازسازیِ جدول (حفظ فوکوس)
+function _chakanaUpdateComputed(idx) {
+  const rows = DB.chakanaRows || [];
+  const e = rows[idx];
+  if (!e) return;
+  const bord = _chakanaBardagi(e);
+  const alb = bord - (parseFloat(e.rasid)||0);
+  const bEl = document.getElementById('ck-bord-'+idx); if (bEl) bEl.textContent = n2fa(Math.round(bord));
+  const aEl = document.getElementById('ck-alb-'+idx); if (aEl) { aEl.textContent = n2fa(Math.round(alb)); aEl.style.color = alb>0?'var(--red)':'var(--green)'; }
+  const k = _monthKey(e.date);
+  const kid = String(k).replace('/','_');
+  let tb = 0, tr = 0;
+  rows.forEach(r => { if (_monthKey(r.date) === k) { tb += _chakanaBardagi(r); tr += (parseFloat(r.rasid)||0); } });
+  const ta = tb - tr;
+  const albCol = ta>0?'var(--red)':'var(--green)';
+  const setTxt = (id, txt, col) => { const el = document.getElementById(id); if (el) { el.textContent = txt; if (col) el.style.color = col; } };
+  setTxt('ck-totbord-'+kid, n2fa(Math.round(tb)));
+  setTxt('ck-totrasid-'+kid, n2fa(Math.round(tr)));
+  setTxt('ck-totalb-'+kid, n2fa(Math.round(ta)), albCol);
+  setTxt('ck-hdralb-'+kid, 'الباقی: '+n2fa(Math.round(ta)), albCol);
 }
 function addChakanaRowToMonth(monthKey) {
   if (typeof requireAdmin === 'function' && !requireAdmin()) return;
@@ -13648,7 +13775,7 @@ function pdfChakana(monthKey) {
   }).join('') || '<tr><td colspan="8" style="text-align:center;padding:10px;color:#718096">—</td></tr>';
   const totAlb = totB - totR;
   const title = monkeyTitle('حساب‌های چکنه', monkeyLabel(monthKey));
-  const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><title>${title}</title><style>@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:16px}h1{font-size:1rem;font-weight:900;text-align:center;border-bottom:2px solid #805ad5;padding-bottom:6px;margin-bottom:10px}table{width:100%;border-collapse:collapse;font-size:0.8rem}th{background:#2d3748;color:#e2e8f0;padding:6px 7px;text-align:right;font-weight:700}td{padding:5px 7px;border-bottom:1px solid #e2e8f0}tr:nth-child(even) td{background:#f7fafc}tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900}@media print{@page{margin:.5cm}}</style></head><body>
+  const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><title>${title}</title><style>@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:16px}h1{font-size:1rem;font-weight:900;text-align:center;border-bottom:2px solid #805ad5;padding-bottom:6px;margin-bottom:10px}table{width:100%;border-collapse:collapse;font-size:0.8rem}th{background:#2d3748;color:#e2e8f0;padding:6px 7px;text-align:right;font-weight:700}td{padding:5px 7px;border-bottom:1px solid #e2e8f0}tr:nth-child(even) td{background:#f7fafc}tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900}@media print{@page{margin:.5cm}}</style></head><body>
   <h1>🧾 پمپ یعقوبی — ${title}</h1>
   <table><thead><tr><th>شماره</th><th>تاریخ</th><th>نام</th><th>مقدار تیل</th><th>فی</th><th>مقدار بردگی</th><th>رسید</th><th>الباقی</th></tr></thead>
   <tbody>${body}</tbody>
@@ -14084,7 +14211,7 @@ function pdfDebtRasid(monthKey) {
 <title>${title} — پمپ یعقوبی</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:12px}
 h1{font-size:1.25rem;font-weight:900;color:#38a169;border-bottom:2px solid #38a169;padding-bottom:8px;margin-bottom:6px}
 .meta{font-size:0.72rem;color:#718096;margin-bottom:14px}
@@ -14193,7 +14320,7 @@ function pdfDebtSummary() {
 <title>قرض‌های دسته‌جمعی — پمپ یعقوبی</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:12px}
 h1{font-size:1.25rem;font-weight:900;color:#c07700;border-bottom:2px solid #c07700;padding-bottom:8px;margin-bottom:6px}
 .meta{font-size:0.72rem;color:#718096;margin-bottom:14px}
@@ -15036,7 +15163,7 @@ function pdfCompanyPurchases(){
 <title>${title} — پمپ یعقوبی</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:12px}
 h1{font-size:1.15rem;font-weight:900;color:#c07700;border-bottom:2px solid #c07700;padding-bottom:8px;margin-bottom:6px}
 .meta{font-size:0.72rem;color:#718096;margin-bottom:14px}
@@ -15524,7 +15651,7 @@ function pdfCompany() {
   const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8">
 <title>${escFa(company.name)} — شرکت تیل</title>
 <style>@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
-*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:12px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:12px}
 h1{font-size:1.25rem;font-weight:900;color:#805ad5;border-bottom:2px solid #805ad5;padding-bottom:8px;margin-bottom:6px}
 .meta{font-size:0.72rem;color:#718096;margin-bottom:14px}
 /* کادرهای خلاصه: شبکهٔ منظم — همه دقیقاً هم‌اندازه (قبلاً flex بود و اندازه‌ها فرق می‌کرد) */
@@ -15594,7 +15721,7 @@ function pdfCompanyHistory(companyId, historyId){
   const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8">
 <title>${escFa(company.name)} — جدول آرشیو‌شده — شرکت تیل</title>
 <style>@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
-*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:12px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:12px}
 h1{font-size:1.25rem;font-weight:900;color:#805ad5;border-bottom:2px solid #805ad5;padding-bottom:8px;margin-bottom:6px}
 .meta{font-size:0.72rem;color:#718096;margin-bottom:14px}
 /* کادرهای خلاصه: شبکهٔ منظم — همه دقیقاً هم‌اندازه */
@@ -15947,10 +16074,8 @@ function _lowStockMessage() {
   return txt;
 }
 function notifyWhatsapp() {
-  const phone = (DB.lowStockPhone || '').replace(/[^\d]/g,'');
-  const text = encodeURIComponent(_lowStockMessage());
-  const url = phone ? `https://wa.me/${phone}?text=${text}` : `https://wa.me/?text=${text}`;
-  window.open(url, '_blank');
+  // خواستهٔ کاربر: باز نکردنِ مستقیمِ واتساپ — متنِ هشدار کپی می‌شود تا خودتان بفرستید.
+  _copyShareText(_lowStockMessage(), '📋 پیام هشدار کپی شد — در واتساپ/تلگرام بفرستید');
 }
 
 // چک خودکار مخزن هر ۵ دقیقه — حتی اگر کاربر در بخش مخزن نباشد
@@ -16110,7 +16235,7 @@ function pdfPerson() {
 <title>حساب ${escFa(person.name)}${fuelTitle} — پمپ یعقوبی</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:13.5px;font-weight:500}
 h1{font-size:1.3rem;font-weight:900;color:#c07700;border-bottom:2px solid #c07700;padding-bottom:8px;margin-bottom:6px}
 .meta{font-size:0.75rem;color:#718096;margin-bottom:16px}
@@ -16199,7 +16324,7 @@ function pdfExpenses(monthKey) {
 <title>مصارف — پمپ یعقوبی</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:12px}
 h1{font-size:1.25rem;font-weight:900;color:#e53e3e;border-bottom:2px solid #e53e3e;padding-bottom:8px;margin-bottom:6px}
 .meta{font-size:0.72rem;color:#718096;margin-bottom:14px}
@@ -16301,7 +16426,7 @@ function pdfStorage(fuelType) {
 
   const css = `
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:'Vazirmatn',sans-serif;background:#111827;color:#f3f4f6;padding:18px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .save-wrap{position:fixed;top:12px;left:12px;z-index:999}
 .save-wrap button{padding:8px 18px;background:${color};color:#000;border:none;border-radius:8px;font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.9rem;cursor:pointer}
@@ -16420,7 +16545,7 @@ function pdfSingleReport(repId) {
 <title>گزارش #${rep.reportNum||'—'} — ${rep.date||''}</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:'Vazirmatn',sans-serif;background:#111827;color:#f3f4f6;padding:20px;font-size:13px;
   -webkit-print-color-adjust:exact;print-color-adjust:exact}
 .page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
@@ -17107,7 +17232,7 @@ function printSafe(monthKey) {
 <title>گاوصندوق — پمپ یعقوبی</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:12px}
 h1{font-size:1.25rem;font-weight:900;color:#2b6cb0;border-bottom:2px solid #2b6cb0;padding-bottom:8px;margin-bottom:6px}
 .meta{font-size:0.72rem;color:#718096;margin-bottom:14px}
@@ -17473,7 +17598,7 @@ function printSarrafi() {
   const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8">
 <title>صرافی — ${_sarrafiActiveMonth} — پمپ یعقوبی</title>
 <style>@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
-*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:12px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:12px}
 h1{font-size:1.25rem;font-weight:900;color:#2b6cb0;border-bottom:2px solid #2b6cb0;padding-bottom:8px;margin-bottom:6px}
 .meta{font-size:0.72rem;color:#718096;margin-bottom:14px}
 .sum-row{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
@@ -18309,7 +18434,7 @@ function printWaraq() {
   const isNight = w.activeShift === 'night';
   const sd = isNight ? w.night : w.day;
   const pdfFs = parseInt(document.getElementById('wq-pdf-fontsize')?.value || '11') || 11;
-  const html=`<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><title>ورق ${isNight?'شب':'روز'}</title><style>@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:16px;font-size:${pdfFs}px}h1{font-size:1rem;font-weight:900;text-align:center;border-bottom:2px solid #2b6cb0;padding-bottom:6px;margin-bottom:4px}.meta{font-size:0.7rem;color:#718096;text-align:center;margin-bottom:10px}.sum-row{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}.sum-box{flex:1;min-width:100px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:6px;padding:7px;text-align:center}.sum-box .l{font-size:0.62rem;color:#718096;font-weight:700}.sum-box .v{font-size:0.95rem;font-weight:900}table{width:100%;border-collapse:collapse;font-size:0.82rem;margin-bottom:8px}th{background:#2d3748;color:#e2e8f0;padding:6px 7px;text-align:right;font-weight:900;white-space:nowrap;font-size:0.82rem}td{padding:6px 7px;border-bottom:1px solid #cbd5e0;font-weight:700;color:#1a202c}tr:nth-child(even) td{background:#f7fafc}tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:6px 7px}.section-title{font-size:0.88rem;font-weight:900;color:#2b6cb0;margin:10px 0 5px}@media print{body{padding:6px}@page{margin:.5cm}}</style></head><body>
+  const html=`<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><title>ورق ${isNight?'شب':'روز'}</title><style>@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:16px;font-size:${pdfFs}px}h1{font-size:1rem;font-weight:900;text-align:center;border-bottom:2px solid #2b6cb0;padding-bottom:6px;margin-bottom:4px}.meta{font-size:0.7rem;color:#718096;text-align:center;margin-bottom:10px}.sum-row{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}.sum-box{flex:1;min-width:100px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:6px;padding:7px;text-align:center}.sum-box .l{font-size:0.62rem;color:#718096;font-weight:700}.sum-box .v{font-size:0.95rem;font-weight:900}table{width:100%;border-collapse:collapse;font-size:0.82rem;margin-bottom:8px}th{background:#2d3748;color:#e2e8f0;padding:6px 7px;text-align:right;font-weight:900;white-space:nowrap;font-size:0.82rem}td{padding:6px 7px;border-bottom:1px solid #cbd5e0;font-weight:700;color:#1a202c}tr:nth-child(even) td{background:#f7fafc}tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:6px 7px}.section-title{font-size:0.88rem;font-weight:900;color:#2b6cb0;margin:10px 0 5px}@media print{body{padding:6px}@page{margin:.5cm}}</style></head><body>
   <h1>${isNight?'🌙 ورق شب':'☀️ ورق روز'} — ${escFa(w.station)||'پمپ'} — تاریخ: ${w.date||'—'}</h1>
   ${shiftSection(sd, '', isNight ? '#6b46c1' : '#b7791f')}
   <script>window.onload=function(){window.print()}<\/script></body></html>`;
@@ -19646,18 +19771,18 @@ function mcOpen(kind){
     const ow = document.getElementById('mc-open-wrap'); if (ow) ow.style.display = 'none';
     return;
   }
-  if (hint) hint.textContent = (kind==='wa'?'واتساپِ':'تلگرامِ') + ' مدیر — تلاش برای باز شدن داخلِ برنامه…';
-  // تلاشِ iframe (ممکن است واتساپ/تلگرام به‌دلیل X-Frame-Options اجازه ندهند)
-  const fw = document.getElementById('mc-frame-wrap');
-  const fr = document.getElementById('mc-frame');
-  if (fw && fr){ fw.style.display = ''; try { fr.src = _mcEmbedUrl(kind); } catch(e){} }
-  // دکمهٔ بازکردنِ مطمئن همیشه نشان داده می‌شود (چون iframe اغلب رد می‌شود)
+  // خواستهٔ کاربر: واتساپ/تلگرام مستقیم باز نشود (روی بعضی دستگاه‌ها بلاک می‌شود).
+  // به‌جای iframe و بازکردنِ بیرونی، اطلاعاتِ تماسِ مدیر نمایش داده می‌شود تا کپی شود.
+  const val = kind==='wa' ? _mcWaDigits() : ('@' + _mcTgUser());
+  if (hint) hint.innerHTML = (kind==='wa'?'شمارهٔ واتساپِ':'یوزرِ تلگرامِ') + ' مدیر: <b dir="ltr" style="font-size:1.05rem;letter-spacing:.5px">' + val + '</b><br>این را کپی کنید و خودتان در ' + (kind==='wa'?'واتساپ':'تلگرام') + ' پیام دهید.';
+  const fw = document.getElementById('mc-frame-wrap'); if (fw) fw.style.display = 'none';
   const ow = document.getElementById('mc-open-wrap'); if (ow) ow.style.display = '';
 }
 function mcOpenExternal(){
-  const url = _mcExternalUrl(_mcKind);
-  if (!url){ showToast('اطلاعاتِ تماسِ مدیر ثبت نشده', '#e53e3e'); return; }
-  try { window.open(url, '_blank', 'noopener'); } catch(e){ location.href = url; }
+  // به‌جای باز کردنِ اپ، اطلاعاتِ تماس کپی می‌شود.
+  const val = _mcKind==='wa' ? _mcWaDigits() : _mcTgUser();
+  if (!val){ showToast('اطلاعاتِ تماسِ مدیر ثبت نشده', '#e53e3e'); return; }
+  _copyShareText(val, '📋 کپی شد — خودتان در واتساپ/تلگرام پیام دهید');
 }
 
 // ---- سوال و جواب (ربات محلی) ----
@@ -20226,6 +20351,13 @@ function _presenceBeat() {
     if (_presenceRef) _presenceRef.set({ ts: Date.now() });
   } catch (e) {}
 }
+// وقتی کاربر دوباره به برنامه برمی‌گردد (تب فعال شد یا پنجره فوکوس گرفت)، علامتِ
+// حضور را فوراً تازه کن تا در فاصلهٔ بین دو ضربان، «حاضر» شناخته شود و اعلانِ
+// بیرونیِ تکراری برایش فرستاده نشود.
+try {
+  document.addEventListener('visibilitychange', function(){ if (!document.hidden) { try { _presenceStart(); } catch(e){} } });
+  window.addEventListener('focus', function(){ try { _presenceStart(); } catch(e){} });
+} catch (e) {}
 function _chatInitListeners() {
   if (!_chatOnline()) return;
   try { _presenceStart(); } catch (e) {}
@@ -21268,7 +21400,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.90';
+const APP_VERSION = '2.9.91';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -22947,7 +23079,7 @@ function pdfMonthReport() {
   const gtxt = (c, p) => { const pct = _dashGrowth(c, p); return pct == null ? '—' : (pct > 0 ? '+' : '') + n2fa(pct) + '٪'; };
   const row = (l, v, s) => `<tr><td class="l">${l}</td><td class="v">${v}</td><td class="s">${s || ''}</td></tr>`;
   const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><title>گزارش ماه ${_monthLabel(key)} — پمپ یعقوبی</title><style>
-    body{font-family:'Vazirmatn',Tahoma,sans-serif;background:#fff;color:#111;padding:24px;max-width:760px;margin:0 auto}
+    body{font-family:'Vazirmatn',Tahoma,sans-serif;background:#fff;color:#111;padding:24px;max-width:760px;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     h1{font-size:1.25rem;text-align:center;margin:0 0 4px}
     .sub{text-align:center;color:#666;font-size:0.8rem;margin-bottom:18px}
     .net{border:2px solid ${cur.net >= 0 ? '#059669' : '#e11d48'};color:${cur.net >= 0 ? '#059669' : '#e11d48'};border-radius:12px;padding:14px;text-align:center;font-size:1.15rem;font-weight:900;margin-bottom:18px}
@@ -25491,7 +25623,7 @@ function invPrint(id) {
 <title>فاکتور ${v.invoice_number} — پمپ یعقوبی</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;800;900&display=swap');
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 :root{--card:#fff;--txt:#0f172a;--accent:#1d5bd8;--border:#d6e0f5;--muted:#64748b;--panel:#f8faff}
 body{font-family:'Vazirmatn',sans-serif;background:#eef1f6;padding:20px;display:flex;justify-content:center}
 .print-wrap{width:100%;max-width:660px}
