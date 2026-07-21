@@ -4605,6 +4605,8 @@ table thead th{ position:relative; }
 /* دستهٔ تغییرِ عرض روی لبهٔ «راستِ» هر ستون است (خواستهٔ کاربر): مثلاً برای ستونِ
    «الباقی» همان خطِ جداکنندهٔ سمتِ راستِ خودش را بگیرید — نه لبهٔ سمتِ «حذف» */
 .col-resize-grip{ position:absolute; right:-3px; top:0; width:8px; height:100%; cursor:col-resize; z-index:6; touch-action:none; user-select:none; }
+/* لبهٔ بیرونیِ راستِ جدول خطِ بینِ دو ستون نیست — دسته‌اش بی‌کاره است و پنهان می‌شود */
+table thead th:first-child .col-resize-grip{ display:none; }
 .col-resize-grip:hover{ background:rgba(255,180,61,.5); }
 /* هدرها: هم‌ارتفاع، هم‌پدینگ، بدون افتادنِ نوشته روی هم */
 .tbl th, .xls-tbl th, .ro-tbl th{
@@ -11835,53 +11837,51 @@ function makeTableResizable(table, storeKey){
     grip.className = 'col-resize-grip';
     grip.title = 'برای تغییر عرضِ این ستون بکشید';
     th.appendChild(grip);
-    let startX = 0, startW = 0, startTW = 0, dIdx = idx, dKey = keyOf[idx];
+    // «تغییرِ اندازهٔ جفتی» مثل اکسل/گریدها: دسته همان خطِ بینِ دو ستون است؛ کشیدنش
+    // یک ستون را بزرگ و همسایهٔ سمتِ راستش را همان‌قدر کوچک می‌کند. عرضِ کلِ جدول
+    // هیچ‌وقت عوض نمی‌شود → نه «جای خالی» کنارِ جدول می‌آید، نه ستونی خلافِ جهتِ
+    // موس می‌پرد — خطِ زیرِ دست دقیقاً با موس جابه‌جا می‌شود.
+    let startX = 0, startW = 0, dIdx = idx, dKey = keyOf[idx], pIdx = -1, pKey = '', pStartW = 0;
     function move(e){
       const cx = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
-      // خواستهٔ کاربر: کشیدن به سمتِ «راست» = پهن‌تر، به «چپ» = باریک‌تر
-      const w = Math.max(36, Math.round(startW + (cx - startX)));
-      setW(dIdx, w);
-      // عرضِ کلِ جدول هم با همان اختلاف به‌روز شود تا فقط همین ستون تغییر کند و
-      // مرورگر عرضِ بقیهٔ ستون‌ها را دوباره پخش نکند. با important، چون بعضی جدول‌ها
-      // (pm-tbl/cm-tbl) در CSS «width:100% !important» دارند که عرضِ inline عادی را می‌خورد
-      if(startTW) table.style.setProperty('width', Math.max(36, Math.round(startTW - startW + w)) + 'px', 'important');
+      if(pIdx < 0) return;
+      // کشیدن به راست = این ستون پهن‌تر و همسایهٔ راستی باریک‌تر؛ به چپ برعکس
+      let d = cx - startX;
+      d = Math.max(36 - startW, Math.min(d, pStartW - 36));
+      setW(dIdx, Math.round(startW + d));
+      setW(pIdx, Math.round(pStartW - d));
     }
     function up(){
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', up);
       saved[dKey] = getW(dIdx) || Math.round(startW);
+      if(pIdx >= 0 && pKey) saved[pKey] = getW(pIdx) || Math.round(pStartW);
       try{ localStorage.setItem('colw_'+storeKey, JSON.stringify(saved)); }catch(e){}
     }
+    const nameKeyOf = function(el, i){
+      return (el.getAttribute('data-colkey') || (el.textContent||'').replace(/[\s‌]+/g,' ').trim()) || ('c' + i);
+    };
     grip.addEventListener('pointerdown', function(e){
       e.preventDefault(); e.stopPropagation();
       freezeCols();
-      // ریشهٔ باگِ «الباقی را نمی‌توانم بزرگ کنم / از لبهٔ حذف بزرگ‌وکوچک می‌شود»:
-      // ایندکسِ ستون موقعِ ساختِ دسته‌ها ثابت گرفته می‌شد، ولی سرستونِ برخی جدول‌ها
-      // (مثل حساب شخص با ستونِ «نوع تیل») بعداً ستون کم/زیاد می‌کند و همان ایندکسِ
-      // کهنه، ستونِ بغلی را تغییر می‌داد. حالا ایندکس و کلیدِ ذخیره همین لحظه از
-      // روی خودِ سرستونِ زیرِ دسته پیدا می‌شود.
+      // ایندکس و کلیدِ ستون همین لحظه از روی خودِ سرستونِ زیرِ دسته پیدا می‌شود —
+      // سرستونِ برخی جدول‌ها (مثل حساب شخص) بعداً ستون کم/زیاد می‌کند و ایندکسِ
+      // کهنه ستونِ بغلی را تغییر می‌داد (باگِ «الباقی از لبهٔ حذف بزرگ‌وکوچک می‌شد»)
       dIdx = Array.prototype.indexOf.call(ths, th); if(dIdx < 0) dIdx = idx;
-      dKey = (th.getAttribute('data-colkey') || (th.textContent||'').replace(/[\s‌]+/g,' ').trim()) || ('c' + dIdx);
-      // ریشهٔ باگِ «ستون هنگامِ کشیدن خلافِ جهتِ موس می‌پرد»: جدول width:100% داشت و
-      // مرورگر در table-layout:fixed عرض‌ها را نسبت به کلِ جدول دوباره توزیع می‌کرد.
-      // این‌جا عرضِ رندرشدهٔ همین لحظهٔ همهٔ ستون‌ها قفل و عرضِ جدول پیکسلی می‌شود تا
-      // در طولِ کشیدن فقط همین یک ستون جابه‌جا شود — مثل اکسل.
-      startTW = 0;
+      dKey = nameKeyOf(th, dIdx);
+      pIdx = dIdx - 1;   // همسایهٔ سمتِ راست (ستونِ قبلی در DOM = راست‌تر در RTL)
+      if(pIdx < 0) return;   // لبهٔ بیرونیِ جدول — این‌جا خطِ بینِ دو ستون نیست
+      pKey = nameKeyOf(ths[pIdx], pIdx);
+      // عرضِ رندرشدهٔ همین لحظهٔ همهٔ ستون‌ها پیکسلی قفل می‌شود تا جمعِ ستون‌ها با
+      // عرضِ جدول (width:100%) برابر بماند و مرورگر چیزی را دوباره پخش نکند
       Array.prototype.forEach.call(ths, function(t2, i){
         const w2 = Math.round(t2.getBoundingClientRect().width);
         if(w2 > 0) setW(i, w2);
-        startTW += w2;
       });
       try{ if(getComputedStyle(table).tableLayout !== 'fixed') table.style.tableLayout = 'fixed'; }catch(e2){}
-      if(startTW > 0){
-        // important لازم است: pm-tbl/cm-tbl در CSS «width:100% !important» و min-width دارند
-        // که عرضِ پیکسلیِ عادی را بی‌اثر می‌کرد و ستون‌ها موقعِ کشیدن دوباره پخش می‌شدند
-        table.style.setProperty('width', startTW + 'px', 'important');
-        table.style.setProperty('min-width', '0', 'important');
-      }
-      // اگر جدول از ظرفش پهن‌تر شد، ظرف اسکرول بخورد نه این‌که ستون‌ها بریده شوند
-      try{ const wr = table.closest('.xls-wrap,.tbl-wrap'); if(wr) wr.style.overflowX = 'auto'; }catch(e3){}
-      startX = e.clientX; startW = getW(dIdx) || th.getBoundingClientRect().width;
+      startX = e.clientX;
+      startW = getW(dIdx) || th.getBoundingClientRect().width;
+      pStartW = getW(pIdx) || ths[pIdx].getBoundingClientRect().width;
       document.addEventListener('pointermove', move);
       document.addEventListener('pointerup', up);
     });
@@ -21924,7 +21924,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.100';
+const APP_VERSION = '2.9.101';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
