@@ -21950,7 +21950,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.105';
+const APP_VERSION = '2.9.106';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -26640,6 +26640,44 @@ ${copy('نسخهٔ پمپ')}
   });
   // اگر پنجره وسطِ کار فوکس را از دست داد (Alt+Tab و …) بافر پاک شود تا عملِ ناخواسته نشود
   window.addEventListener('blur', function(){ ctrlBuf = ''; shiftBuf = ''; sectBuf = ''; altBuf = ''; });
+
+  // ═══ Ctrl/Cmd + P → پی‌دی‌افِ همان جایی که کاربر داخلش است (نه بخشِ دیگر) ═══
+  // اولویت با مودالِ باز (حساب شخص/شرکت) است؛ وگرنه پی‌دی‌افِ بخشِ دیده‌شده. جایی که
+  // پی‌دی‌اف ندارد دست نمی‌زنیم و پرینتِ خودِ مرورگر مثل قبل کار می‌کند.
+  var _pdfBySection = {
+    'sec-shifts':         function(){ pdfShifts(); },
+    'sec-shifts-diesel':  function(){ pdfDieselShifts(); },
+    'sec-storage':        function(){ pdfStorage('petrol'); },
+    'sec-storage-diesel': function(){ pdfStorage('diesel'); },
+    'sec-debtrasid':      function(){ pdfDebtRasid(typeof _drActiveMonth !== 'undefined' ? _drActiveMonth : null); },
+    'sec-debtsum':        function(){ pdfDebtSummary(); },
+    'sec-chakana':        function(){ pdfChakana(typeof _activeChakanaMonth !== 'undefined' ? _activeChakanaMonth : null); },
+    'sec-expenses':       function(){ pdfExpenses(typeof _activeExpenseMonth !== 'undefined' ? _activeExpenseMonth : null); },
+    'sec-monthreport':    function(){ pdfMonthReport(); },
+    'sec-safe':           function(){ printSafe(typeof _safeActiveMonth !== 'undefined' ? _safeActiveMonth : null); },
+    'sec-sarrafi':        function(){ printSarrafi(); }
+  };
+  function _kbPdfAction(){
+    var pm = document.getElementById('personModal');
+    if (pm && pm.classList.contains('open')) return function(){ pdfPerson(); };
+    var cm = document.getElementById('companyModal');
+    if (cm && cm.classList.contains('open')) return function(){ pdfCompany(); };
+    // مودالِ دیگری باز است (ورق، کیوآر، …) → پی‌دی‌افِ بخشِ پشتش را نگیر
+    if (document.querySelector('.modal-overlay.open')) return null;
+    var sec = document.querySelector('.section.visible');
+    if (!sec) return null;
+    return _pdfBySection[sec.id] || null;
+  }
+  document.addEventListener('keydown', function(e){
+    if (_kbLocked()) return;
+    var isP = (e.code === 'KeyP') || e.key === 'p' || e.key === 'P';
+    if (!isP) return;
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
+    var act = _kbPdfAction();
+    if (!act) return;                 // اینجا پی‌دی‌اف ندارد → پرینتِ مرورگر مثل قبل
+    e.preventDefault();
+    try { act(); } catch(err){ try { showToast('❌ پی‌دی‌افِ این بخش گرفته نشد', '#e53e3e'); } catch(_){} }
+  });
 })();
 </script>
 
