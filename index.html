@@ -6223,10 +6223,37 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
       <select id="wq-month-filter" onchange="setWaraqMonthFilter(this.value)" title="فیلتر بر اساس ماه" style="padding:8px 10px;border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.85rem;cursor:pointer">
         <option value="">همهٔ ماه‌ها</option>
       </select>
+      <button class="add-btn" style="border-color:var(--green);color:var(--green)" onclick="openPumpHistory()" title="تاریخچهٔ شروع/ختمِ همهٔ پایه‌ها با تاریخ و روز هفته">🕘 تاریخچهٔ پایه‌ها</button>
       <button class="add-btn" onclick="openNewWaraq()">➕ اضافه کردن</button>
     </div>
   </div>
   <div class="persons-grid" id="waraq-grid"></div>
+</div>
+
+<!-- صفحهٔ جدا: تاریخچهٔ شروع/ختمِ همهٔ پایه‌ها (کدام تاریخ/روز هفته بوده) — کلیک روی هر ردیف همان ورق را باز می‌کند -->
+<div class="modal-overlay" id="pumpHistoryModal">
+  <div class="modal" style="max-width:760px">
+    <div class="modal-head">
+      <h2 style="flex:1;text-align:center">🕘 تاریخچهٔ شروع/ختمِ پایه‌ها</h2>
+      <button class="modal-close" onclick="closeModal('pumpHistoryModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="ph-summary" style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;text-align:center"></div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-bottom:8px;text-align:center">روی هر ردیف کلیک کنید تا همان ورق باز شود</div>
+      <div class="xls-wrap"><table class="xls-tbl" style="min-width:0">
+        <thead><tr>
+          <th>تاریخ</th>
+          <th style="width:64px">شیفت</th>
+          <th style="width:50px">پایه</th>
+          <th style="width:60px">نوع</th>
+          <th style="width:80px">شروع</th>
+          <th style="width:80px">ختم</th>
+          <th>کارمند</th>
+        </tr></thead>
+        <tbody id="ph-body"></tbody>
+      </table></div>
+    </div>
+  </div>
 </div>
 
 <!-- WARAQ MODAL (full-screen) -->
@@ -18065,6 +18092,58 @@ function renderWaraqList() {
   }
 }
 
+// ── تاریخچهٔ شروع/ختمِ همهٔ پایه‌ها (همهٔ ورق‌ها، هر دو شیفت) — فقط نمایشی و پیوند به همان ورق ──
+// هر «پایه» در sd.pumps یک قرائتِ شروع/ختم است؛ این‌جا از همهٔ ورق‌ها (روز+شب) جمع و با
+// تاریخِ درست (کلید عددی، نه رشته‌ای) مرتب می‌شوند تا جدیدترین اول دیده شود.
+function _pumpHistoryRows() {
+  const out = [];
+  (DB.waraqEntries || []).forEach(w => {
+    if (!w) return;
+    ensureWaraqShifts(w);
+    ['day', 'night'].forEach(shift => {
+      const sd = w[shift];
+      if (!sd || !Array.isArray(sd.pumps)) return;
+      sd.pumps.forEach(p => {
+        if (!p) return;
+        if (!(parseFloat(p.start) || 0) && !(parseFloat(p.end) || 0)) return;   // پایهٔ کاملاً خالی نشان داده نشود
+        out.push({
+          wid: w.id, shift, date: p.date || w.date || '', num: p.num || 0,
+          fuel: p.fuel === 'diesel' ? 'دیزل' : 'پطرول',
+          start: parseFloat(p.start) || 0, end: parseFloat(p.end) || 0,
+          worker: sd.workerName || ''
+        });
+      });
+    });
+  });
+  out.sort((a, b) => _dateSortKey(b.date) - _dateSortKey(a.date));   // جدیدترین اول
+  return out;
+}
+function openPumpHistory() {
+  const rows = _pumpHistoryRows();
+  const body = document.getElementById('ph-body');
+  const sum = document.getElementById('ph-summary');
+  if (sum) sum.textContent = 'مجموعاً ' + n2fa(rows.length) + ' پایه — جدیدترین اول';
+  if (body) {
+    body.innerHTML = rows.length
+      ? rows.map(r => `<tr role="button" tabindex="0" title="باز کردنِ همین ورق" style="cursor:pointer" onclick="openPumpHistoryEntry('${r.wid}','${r.shift}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openPumpHistoryEntry('${r.wid}','${r.shift}')}">
+          <td style="font-weight:700">${_faDateWithWeekday(r.date)}</td>
+          <td>${r.shift === 'night' ? '🌙 شب' : '☀️ روز'}</td>
+          <td>${n2fa(r.num)}</td>
+          <td>${r.fuel}</td>
+          <td style="color:var(--green);font-weight:800">${n2fa(r.start)}</td>
+          <td style="color:var(--red);font-weight:800">${n2fa(r.end)}</td>
+          <td>${escFa(r.worker) || '—'}</td>
+        </tr>`).join('')
+      : `<tr><td colspan="7" style="text-align:center;padding:18px;color:var(--muted)">هنوز هیچ پایه‌ای با شروع/ختم ثبت نشده</td></tr>`;
+  }
+  const m = document.getElementById('pumpHistoryModal'); if (m) m.classList.add('open');
+}
+// از تاریخچه، کلیک روی یک ردیف → بستنِ این صفحه و بازکردنِ همان ورق روی همان شیفتی که پایه در آن ثبت شده
+function openPumpHistoryEntry(wid, shift) {
+  closeModal('pumpHistoryModal');
+  openWaraqModal(wid);
+  if (shift === 'night' || shift === 'day') switchWaraqShift(shift);
+}
 function calcWaraqTotalSales(w) {
   ensureWaraqShifts(w);
   return computeShiftTotals(w.day).sales + computeShiftTotals(w.night).sales;
@@ -21600,7 +21679,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.93';
+const APP_VERSION = '2.9.94';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
