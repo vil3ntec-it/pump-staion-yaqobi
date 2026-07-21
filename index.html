@@ -4602,7 +4602,9 @@ body.gfx-ultra .lock-screen .ls-geo-3{ animation-duration:16s; animation-delay:-
 /* دستهٔ تغییرِ اندازهٔ ستون‌ها (لبهٔ چپِ هر عنوان در حالتِ راست‌به‌چپ) —
    برای همهٔ جدول‌های سایت (نه فقط xls-tbl) تا هر ستونی مثل اکسل کشیدنی باشد */
 table thead th{ position:relative; }
-.col-resize-grip{ position:absolute; left:-3px; top:0; width:8px; height:100%; cursor:col-resize; z-index:6; touch-action:none; user-select:none; }
+/* دستهٔ تغییرِ عرض روی لبهٔ «راستِ» هر ستون است (خواستهٔ کاربر): مثلاً برای ستونِ
+   «الباقی» همان خطِ جداکنندهٔ سمتِ راستِ خودش را بگیرید — نه لبهٔ سمتِ «حذف» */
+.col-resize-grip{ position:absolute; right:-3px; top:0; width:8px; height:100%; cursor:col-resize; z-index:6; touch-action:none; user-select:none; }
 .col-resize-grip:hover{ background:rgba(255,180,61,.5); }
 /* هدرها: هم‌ارتفاع، هم‌پدینگ، بدون افتادنِ نوشته روی هم */
 .tbl th, .xls-tbl th, .ro-tbl th{
@@ -11795,11 +11797,19 @@ function makeTableResizable(table, storeKey){
     const c = table.querySelectorAll('colgroup col');
     return (c.length && c.length === ths.length) ? c : null;
   })();
+  // colهای colgroup هر بار تازه خوانده می‌شوند — سرستونِ برخی جدول‌ها بعداً ستون
+  // کم/زیاد می‌کند و مرجعِ کهنه به ستونِ اشتباه می‌رسید
+  const colsOf = function(){
+    const c = table.querySelectorAll('colgroup col');
+    return (c.length && c.length === ths.length) ? c : null;
+  };
   const setW = function(idx, w){
+    const colEls = colsOf();
     if(colEls && colEls[idx]) colEls[idx].style.width = w + 'px';
     if(ths[idx]) ths[idx].style.width = w + 'px';
   };
   const getW = function(idx){
+    const colEls = colsOf();
     const t = (colEls && colEls[idx]) || ths[idx];
     return parseInt(t && t.style.width, 10) || 0;
   };
@@ -11825,25 +11835,33 @@ function makeTableResizable(table, storeKey){
     grip.className = 'col-resize-grip';
     grip.title = 'برای تغییر عرضِ این ستون بکشید';
     th.appendChild(grip);
-    let startX = 0, startW = 0, startTW = 0;
+    let startX = 0, startW = 0, startTW = 0, dIdx = idx, dKey = keyOf[idx];
     function move(e){
       const cx = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
-      // راست‌به‌چپ: کشیدنِ لبهٔ چپ به سمتِ چپ، ستون را پهن‌تر می‌کند
-      const w = Math.max(36, Math.round(startW - (cx - startX)));
-      setW(idx, w);
+      // خواستهٔ کاربر: کشیدن به سمتِ «راست» = پهن‌تر، به «چپ» = باریک‌تر
+      const w = Math.max(36, Math.round(startW + (cx - startX)));
+      setW(dIdx, w);
       // عرضِ کلِ جدول هم با همان اختلاف به‌روز شود تا فقط همین ستون تغییر کند و
-      // مرورگر عرضِ بقیهٔ ستون‌ها را دوباره پخش نکند
-      if(startTW) table.style.width = Math.max(36, Math.round(startTW - startW + w)) + 'px';
+      // مرورگر عرضِ بقیهٔ ستون‌ها را دوباره پخش نکند. با important، چون بعضی جدول‌ها
+      // (pm-tbl/cm-tbl) در CSS «width:100% !important» دارند که عرضِ inline عادی را می‌خورد
+      if(startTW) table.style.setProperty('width', Math.max(36, Math.round(startTW - startW + w)) + 'px', 'important');
     }
     function up(){
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', up);
-      saved[keyOf[idx]] = getW(idx) || Math.round(startW);
+      saved[dKey] = getW(dIdx) || Math.round(startW);
       try{ localStorage.setItem('colw_'+storeKey, JSON.stringify(saved)); }catch(e){}
     }
     grip.addEventListener('pointerdown', function(e){
       e.preventDefault(); e.stopPropagation();
       freezeCols();
+      // ریشهٔ باگِ «الباقی را نمی‌توانم بزرگ کنم / از لبهٔ حذف بزرگ‌وکوچک می‌شود»:
+      // ایندکسِ ستون موقعِ ساختِ دسته‌ها ثابت گرفته می‌شد، ولی سرستونِ برخی جدول‌ها
+      // (مثل حساب شخص با ستونِ «نوع تیل») بعداً ستون کم/زیاد می‌کند و همان ایندکسِ
+      // کهنه، ستونِ بغلی را تغییر می‌داد. حالا ایندکس و کلیدِ ذخیره همین لحظه از
+      // روی خودِ سرستونِ زیرِ دسته پیدا می‌شود.
+      dIdx = Array.prototype.indexOf.call(ths, th); if(dIdx < 0) dIdx = idx;
+      dKey = (th.getAttribute('data-colkey') || (th.textContent||'').replace(/[\s‌]+/g,' ').trim()) || ('c' + dIdx);
       // ریشهٔ باگِ «ستون هنگامِ کشیدن خلافِ جهتِ موس می‌پرد»: جدول width:100% داشت و
       // مرورگر در table-layout:fixed عرض‌ها را نسبت به کلِ جدول دوباره توزیع می‌کرد.
       // این‌جا عرضِ رندرشدهٔ همین لحظهٔ همهٔ ستون‌ها قفل و عرضِ جدول پیکسلی می‌شود تا
@@ -11855,8 +11873,15 @@ function makeTableResizable(table, storeKey){
         startTW += w2;
       });
       try{ if(getComputedStyle(table).tableLayout !== 'fixed') table.style.tableLayout = 'fixed'; }catch(e2){}
-      if(startTW > 0) table.style.width = startTW + 'px';
-      startX = e.clientX; startW = getW(idx) || th.getBoundingClientRect().width;
+      if(startTW > 0){
+        // important لازم است: pm-tbl/cm-tbl در CSS «width:100% !important» و min-width دارند
+        // که عرضِ پیکسلیِ عادی را بی‌اثر می‌کرد و ستون‌ها موقعِ کشیدن دوباره پخش می‌شدند
+        table.style.setProperty('width', startTW + 'px', 'important');
+        table.style.setProperty('min-width', '0', 'important');
+      }
+      // اگر جدول از ظرفش پهن‌تر شد، ظرف اسکرول بخورد نه این‌که ستون‌ها بریده شوند
+      try{ const wr = table.closest('.xls-wrap,.tbl-wrap'); if(wr) wr.style.overflowX = 'auto'; }catch(e3){}
+      startX = e.clientX; startW = getW(dIdx) || th.getBoundingClientRect().width;
       document.addEventListener('pointermove', move);
       document.addEventListener('pointerup', up);
     });
@@ -21899,7 +21924,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.99';
+const APP_VERSION = '2.9.100';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
