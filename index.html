@@ -336,8 +336,8 @@ body.staff-view .qr-overlay{z-index:10020}
 
 .tbl-wrap{overflow-x:auto}
 .tbl{width:100%;border-collapse:collapse;font-size:0.95rem}
-.tbl th{background:var(--dark);padding:9px 10px;text-align:right;color:var(--muted);font-weight:700;white-space:nowrap;border-bottom:1px solid var(--border)}
-.tbl td{padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;vertical-align:middle}
+.tbl th{background:var(--dark);padding:9px 10px;text-align:center;color:var(--muted);font-weight:700;white-space:nowrap;border-bottom:1px solid var(--border)}
+.tbl td{padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;vertical-align:middle;text-align:center}
 .tbl tr:last-child td{border-bottom:none}
 .tbl .editable{background:transparent;border:none;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.95rem;width:100%;min-width:70px;padding:3px 5px}
 .tbl .editable:focus{outline:2px solid var(--accent);border-radius:4px;background:#ffffff0a}
@@ -427,9 +427,9 @@ body.staff-view .qr-overlay{z-index:10020}
 
 .xls-wrap{border:1px solid var(--border);border-radius:9px;overflow:hidden}
 .xls-tbl{width:100%;border-collapse:collapse;font-size:0.92rem}
-.xls-tbl th{background:var(--dark);padding:9px 8px;text-align:right;color:var(--muted);font-weight:700;border-bottom:2px solid var(--border);border-left:1px solid var(--border);white-space:nowrap}
+.xls-tbl th{background:var(--dark);padding:9px 8px;text-align:center;color:var(--muted);font-weight:700;border-bottom:2px solid var(--border);border-left:1px solid var(--border);white-space:nowrap}
 .xls-tbl th:last-child{border-left:none}
-.xls-tbl td{border-bottom:1px solid var(--border);border-left:1px solid var(--border);padding:0}
+.xls-tbl td{border-bottom:1px solid var(--border);border-left:1px solid var(--border);padding:0;text-align:center}
 /* سلول‌هایی که فقط عدد/متنِ نمایشی دارند (نه ورودی) قبلاً padding:0 داشتند و به لبهٔ
    سلول می‌چسبیدند — ستون‌های کنارشان (که با .xls-in فاصله دارند) خیلی نزدیک‌تر به‌نظر
    می‌رسیدند. حالا همهٔ سلول‌های بدون ورودی هم همان فاصلهٔ داخلیِ .xls-in را می‌گیرند. */
@@ -439,10 +439,10 @@ body.staff-view .qr-overlay{z-index:10020}
    مودال (adjModalFont) — با متغیر CSS چون این کادرها هم در حساب فعلی و هم در هر
    جدولِ آرشیوشده (که مدام دوباره ساخته می‌شوند) وجود دارند؛ با متغیر ریشه نیازی به
    اجرای دوباره بعد از هر رندر نیست، همیشه خودکار اعمال می‌شود */
-.note-field{ font-size:calc(0.8rem * var(--note-font-scale, 1)) !important; }
+.note-field{ font-size:calc(0.8rem * var(--note-font-scale, 1)) !important; font-weight:700 !important; }
 .xls-tbl tr:last-child td{border-bottom:none}
 .xls-tbl tr:hover td{background:#ffffff05}
-.xls-in{width:100%;background:transparent;border:none;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.92rem;padding:8px 7px;min-width:65px;font-weight:700}
+.xls-in{width:100%;background:transparent;border:none;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.92rem;padding:8px 7px;min-width:65px;font-weight:700;text-align:center}
 /* حذف فلش‌های کم/زیاد عدد از همه کادرها به‌جز شماره پایه (.keep-spin) */
 input[type=number]{-moz-appearance:textfield}
 input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
@@ -553,6 +553,14 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 .ch-msg-menu button:hover{background:rgba(127,127,127,.15)}
 .ch-msg-menu button.ch-del-everyone{color:var(--red)}
 .ch-msg-menu button+button{border-top:1px solid var(--border)}
+/* منوی کلیک‌راستِ فرمت‌دهیِ سلول‌های جدول (رنگ/فونت/چینش) — مثل اکسل */
+.cellfmt-menu{position:fixed;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 6px 22px rgba(0,0,0,.35);padding:8px;display:flex;flex-direction:column;gap:7px;z-index:99999;font-family:'Vazirmatn',sans-serif}
+.cellfmt-menu .cfm-row{display:flex;gap:5px;align-items:center;justify-content:center}
+.cellfmt-menu .cfm-swatch{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border);cursor:pointer;padding:0}
+.cellfmt-menu .cfm-swatch:hover{transform:scale(1.15)}
+.cellfmt-menu .cfm-reset{background:var(--dark)!important;color:var(--txt);font-size:0.68rem;display:flex;align-items:center;justify-content:center}
+.cellfmt-menu .cfm-btn{background:var(--dark);border:1px solid var(--border);border-radius:7px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.8rem;padding:6px 10px;cursor:pointer;flex:1}
+.cellfmt-menu .cfm-btn:hover{background:rgba(127,127,127,.18)}
 /* نوار نوشتن پیام */
 .ch-comp{display:flex;gap:6px;align-items:center;padding:8px;border-top:1px solid var(--border);background:var(--dark);flex-shrink:0}
 .ch-comp input[type=text]{flex:1;min-width:0;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 11px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.85rem}
@@ -685,9 +693,9 @@ body.viewer-mode .att-admin{display:none !important}
 .ro-header h2{font-size:1rem;font-weight:900;color:var(--accent)}
 .ro-body{flex:1;overflow-y:auto;padding:14px}
 .ro-tbl{width:100%;border-collapse:collapse;font-size:0.78rem}
-.ro-tbl th{background:var(--dark);padding:8px 7px;text-align:right;color:var(--muted);font-weight:700;border-bottom:2px solid var(--border);border-left:1px solid var(--border);white-space:nowrap}
+.ro-tbl th{background:var(--dark);padding:8px 7px;text-align:center;color:var(--muted);font-weight:700;border-bottom:2px solid var(--border);border-left:1px solid var(--border);white-space:nowrap}
 .ro-tbl th:last-child{border-left:none}
-.ro-tbl td{border-bottom:1px solid var(--border);border-left:1px solid var(--border);padding:7px 8px;font-weight:700;white-space:nowrap;color:var(--txt)}
+.ro-tbl td{border-bottom:1px solid var(--border);border-left:1px solid var(--border);padding:7px 8px;font-weight:700;white-space:nowrap;color:var(--txt);text-align:center}
 .ro-tbl td:last-child{border-left:none}
 .ro-tbl tr:last-child td{border-bottom:none}
 .ro-tbl tr:nth-child(even) td{background:#ffffff05}
@@ -9556,6 +9564,13 @@ function _hexFxSyncUI(p) {
 function persianDate() {
   return toEnDigits(new Date().toLocaleDateString('fa-IR'));
 }
+// کلیدِ عددیِ تاریخ برای مرتب‌سازیِ درست: سال×۱۰۰۰۰ + ماه×۱۰۰ + روز — مقایسهٔ رشته‌ای
+// خام (localeCompare) روزهای تک‌رقمی را غلط می‌چید (مثلاً «۵» رشته‌ای بزرگ‌تر از «۱۲» است)
+// و هر ردیفی که در روز تک‌رقمیِ ماه ثبت می‌شد به‌جای جایگاهِ زمانی‌اش گم می‌شد.
+function _dateSortKey(s) {
+  const m = toEnDigits(s || '').match(/(\d+)\D+(\d+)\D+(\d+)/);
+  return m ? ((+m[1]) * 10000 + (+m[2]) * 100 + (+m[3])) : Infinity;
+}
 // ── تبدیل جلالی↔میلادی (الگوریتم آزموده‌شدهٔ JDF) — برای «مدت عضویت» ─────────────
 function _div(a,b){ return Math.trunc(a/b); }   // برش به‌سمت صفر (مثل parseIntِ الگوریتم JDF) — نه Math.floor
 function _jMonthLen(jy,jm){ if(jm<=6) return 31; if(jm<=11) return 30; return (jal_j2g(jy,12,30).jm===12)?30:29; }
@@ -11817,6 +11832,7 @@ function initAllTableResizers(root){
         key = (host.id || host.className.split(' ')[0] || 'tbl') + '-' + Array.prototype.indexOf.call(all, t);
       }
       makeTableResizable(t, key);
+      try { if (window._applyCellFormatting) window._applyCellFormatting(t, key); } catch(e){}
     });
   }catch(e){}
 }
@@ -11839,6 +11855,110 @@ function initAllTableResizers(root){
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startObs);
   else startObs();
+})();
+// ── فرمت‌دهیِ سلول‌های جدول با کلیک راست (رنگ متن/اندازهٔ فونت/چینش) — مثل اکسل ──
+// کاملاً ظاهری است: فقط استایلِ inline روی همان سلول اعمال و در localStorage (جدا از
+// DB برنامه) ذخیره می‌شود؛ به هیچ داده/محاسبه‌ای دست نمی‌زند. کلیدِ جدول همان کلیدی‌ست
+// که initAllTableResizers برای ذخیرهٔ عرضِ ستون‌ها می‌سازد (همان جدول = همان کلید).
+(function(){
+  const PALETTE = ['#e53e3e','#dd6b20','#d69e2e','#38a169','#3182ce','#805ad5','#ffffff','#1a202c'];
+  let menuEl = null;
+  function closeMenu(){ if(menuEl){ menuEl.remove(); menuEl = null; } document.removeEventListener('click', onDocClick, true); }
+  function onDocClick(e){ if(menuEl && !menuEl.contains(e.target)) closeMenu(); }
+  // اگر سلول ورودی/انتخابی دارد همان هدف است (چون رنگ/فونتِ خودش را جدا از td تعیین
+  // می‌کند)، وگرنه خودِ td/th
+  function cellTarget(cell){ return cell.querySelector('input,textarea,select') || cell; }
+  function rowColOf(startEl){
+    const cell = startEl.closest('td,th');
+    const table = startEl.closest('table');
+    if(!cell || !table) return null;
+    const row = cell.closest('tr');
+    const body = table.tBodies && table.tBodies[0];
+    if(!body || !row || row.parentNode !== body) return null;   // فقط ردیف‌های بدنه — نه هدر/فوتر
+    const rowIdx = Array.prototype.indexOf.call(body.rows, row);
+    const colIdx = Array.prototype.indexOf.call(row.cells, cell);
+    if(rowIdx < 0 || colIdx < 0) return null;
+    return { table, cell, rowIdx, colIdx };
+  }
+  function loadFmt(key){ try{ return JSON.parse(localStorage.getItem('cellFmt_'+key) || '{}'); }catch(e){ return {}; } }
+  function saveFmt(key, map){ try{ localStorage.setItem('cellFmt_'+key, JSON.stringify(map)); }catch(e){} }
+  function applyStyle(el, f){
+    if(!el) return;
+    el.style.color = f.c || '';
+    el.style.fontSize = f.s ? (f.s+'px') : '';
+    el.style.textAlign = f.a || '';
+  }
+  // اعمالِ دوبارهٔ فرمت‌های ذخیره‌شده بعد از هر رندرِ جدول (از initAllTableResizers صدا زده می‌شود)
+  function applyCellFormatting(table, key){
+    if(!table || !key) return;
+    table._cellFmtKey = key;
+    const map = loadFmt(key);
+    if(!Object.keys(map).length) return;
+    const body = table.tBodies && table.tBodies[0]; if(!body) return;
+    Object.keys(map).forEach(function(k){
+      const parts = k.split(':'); const ri = +parts[0], ci = +parts[1];
+      const row = body.rows[ri]; if(!row) return;
+      const cell = row.cells[ci]; if(!cell) return;
+      applyStyle(cellTarget(cell), map[k]);
+    });
+  }
+  window._applyCellFormatting = applyCellFormatting;
+  function setFmt(info, patch){
+    const key = info.table._cellFmtKey; if(!key) return;
+    const map = loadFmt(key);
+    const k = info.rowIdx + ':' + info.colIdx;
+    const next = Object.assign({}, map[k] || {}, patch);
+    Object.keys(next).forEach(function(kk){ if(next[kk] == null) delete next[kk]; });
+    if(Object.keys(next).length) map[k] = next; else delete map[k];
+    saveFmt(key, map);
+    applyStyle(cellTarget(info.cell), next);
+  }
+  function fontSizeOf(el){
+    return (el.style.fontSize && parseFloat(el.style.fontSize)) || parseFloat(getComputedStyle(el).fontSize) || 14;
+  }
+  function openMenu(x, y, info){
+    closeMenu();
+    menuEl = document.createElement('div');
+    menuEl.className = 'cellfmt-menu';
+    menuEl.innerHTML =
+      '<div class="cfm-row cfm-colors">' + PALETTE.map(function(c){ return '<button type="button" class="cfm-swatch" data-c="'+c+'" style="background:'+c+'"></button>'; }).join('') +
+        '<button type="button" class="cfm-swatch cfm-reset" data-c="" title="رنگ پیش‌فرض">✕</button></div>' +
+      '<div class="cfm-row">' +
+        '<button type="button" class="cfm-btn" data-act="size-" title="فونت کوچک‌تر">A−</button>' +
+        '<button type="button" class="cfm-btn" data-act="size+" title="فونت بزرگ‌تر">A+</button>' +
+        '<button type="button" class="cfm-btn" data-act="size0" title="اندازهٔ پیش‌فرض">↺</button></div>' +
+      '<div class="cfm-row">' +
+        '<button type="button" class="cfm-btn" data-act="align-right" title="راست‌چین">➡</button>' +
+        '<button type="button" class="cfm-btn" data-act="align-center" title="وسط‌چین">↔</button>' +
+        '<button type="button" class="cfm-btn" data-act="align-left" title="چپ‌چین">⬅</button></div>';
+    document.body.appendChild(menuEl);
+    const mw = menuEl.offsetWidth || 170, mh = menuEl.offsetHeight || 110;
+    menuEl.style.left = Math.max(4, Math.min(x, window.innerWidth - mw - 8)) + 'px';
+    menuEl.style.top = Math.max(4, Math.min(y, window.innerHeight - mh - 8)) + 'px';
+    menuEl.addEventListener('click', function(e){
+      const sw = e.target.closest('.cfm-swatch');
+      if(sw){ setFmt(info, { c: sw.getAttribute('data-c') || null }); closeMenu(); return; }
+      const btn = e.target.closest('.cfm-btn'); if(!btn) return;
+      const act = btn.getAttribute('data-act');
+      const el = cellTarget(info.cell);
+      if(act === 'size-') setFmt(info, { s: Math.max(9, Math.round(fontSizeOf(el) - 1)) });
+      else if(act === 'size+') setFmt(info, { s: Math.min(28, Math.round(fontSizeOf(el) + 1)) });
+      else if(act === 'size0') setFmt(info, { s: null });
+      else if(act === 'align-right') setFmt(info, { a: 'right' });
+      else if(act === 'align-center') setFmt(info, { a: 'center' });
+      else if(act === 'align-left') setFmt(info, { a: 'left' });
+      closeMenu();
+    });
+    setTimeout(function(){ document.addEventListener('click', onDocClick, true); }, 0);
+  }
+  document.addEventListener('contextmenu', function(e){
+    const cellEl = e.target.closest('.tbl td, .tbl th, .xls-tbl td, .xls-tbl th, .ro-tbl td, .ro-tbl th');
+    if(!cellEl) return;
+    const info = rowColOf(cellEl);
+    if(!info || !info.table._cellFmtKey) return;   // جدول‌هایی که هنوز کلید ندارند (خارج از initAllTableResizers) دست‌نخورده بمانند
+    e.preventDefault();
+    openMenu(e.clientX, e.clientY, info);
+  });
 })();
 function openPersonModal(type, id) {
   currentPersonType = type;
@@ -12189,7 +12309,7 @@ function _renderStackedAccounts(person) {
       </div>
       ${fuelSplitHtml}
       <div class="xls-wrap" style="overflow-x:auto">
-        <table class="xls-tbl"><thead><tr>
+        <table class="xls-tbl" id="stacked-tbl-${person.id}-${sec.acctId}"><thead><tr>
           <th style="min-width:24px">#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th><th>نوع تیل</th><th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>الباقی</th><th>حذف</th>
         </tr></thead><tbody>${rowsHtml}</tbody></table>
       </div>
@@ -13134,7 +13254,7 @@ function _renderHistoryPanel(person) {
     const tableHtml = filterBarHtml + `
       <div class="xls-wrap" style="margin:8px 10px;border-radius:9px;overflow:hidden">
         <div style="overflow-x:auto">
-          <table class="xls-tbl" style="table-layout:fixed;width:100%;min-width:${showFt?752:652}px">
+          <table class="xls-tbl" id="hist-tbl-${pid}-${h.id}" style="table-layout:fixed;width:100%;min-width:${showFt?752:652}px">
             <thead><tr>
               <th style="width:34px">#</th><th style="width:96px">تاریخ</th><th style="width:150px">نام</th><th style="width:60px">نمبر حواله</th>
               ${showFt?'<th style="width:100px">نوع تیل</th>':''}<th style="width:56px">مقدار تیل</th><th style="width:56px">فی لیتر</th><th style="width:90px">مقدار بردگی</th>${hMoney?'<th style="width:90px">رسید</th>':'<th style="width:90px">رسید تیل</th>'}<th style="width:90px">الباقی</th><th style="width:46px">حذف</th>
@@ -13509,7 +13629,7 @@ function renderExpenses() {
   // داخل هر ماه بر اساس تاریخ مرتب شود — وگرنه مصرفی که از ورق همگام می‌شود همیشه
   // به‌خاطر push شدنِ آخرِ آرایه، ردیفِ آخر جدول دیده می‌شد نه جای درستش بر اساس تاریخ
   Object.keys(groups).forEach(k => {
-    groups[k].sort((a, b) => toEnDigits(a.e.date||'').localeCompare(toEnDigits(b.e.date||'')));
+    groups[k].sort((a, b) => _dateSortKey(a.e.date) - _dateSortKey(b.e.date));
   });
   const keys = Object.keys(groups).sort().reverse();
   // با شروع ماه جدید، خودکار به ماه جاری برو؛ ماه‌های قبلی در منوی کشویی می‌مانند
@@ -13626,7 +13746,7 @@ function renderChakana() {
   const groups = {};
   DB.chakanaRows.forEach((e, idx) => { const k = _monthKey(e.date); if (!groups[k]) groups[k] = []; groups[k].push({ e, idx }); });
   if (!groups[curMonth]) groups[curMonth] = [];
-  Object.keys(groups).forEach(k => { groups[k].sort((a, b) => toEnDigits(a.e.date||'').localeCompare(toEnDigits(b.e.date||''))); });
+  Object.keys(groups).forEach(k => { groups[k].sort((a, b) => _dateSortKey(a.e.date) - _dateSortKey(b.e.date)); });
   const keys = Object.keys(groups).sort().reverse();
   if (_chakanaLastAutoMonth !== curMonth) { _activeChakanaMonth = curMonth; _chakanaLastAutoMonth = curMonth; }
   if (!_activeChakanaMonth || !keys.includes(_activeChakanaMonth)) {
@@ -13766,7 +13886,7 @@ function deleteChakana(idx) {
 function pdfChakana(monthKey) {
   DB.chakanaRows = DB.chakanaRows || [];
   const rows = DB.chakanaRows.filter(e => !monthKey || _monthKey(e.date) === monthKey)
-    .slice().sort((a,b)=>toEnDigits(a.date||'').localeCompare(toEnDigits(b.date||'')));
+    .slice().sort((a,b)=>_dateSortKey(a.date) - _dateSortKey(b.date));
   let totB = 0, totR = 0;
   const body = rows.map((e, i) => {
     const bord = _chakanaBardagi(e); const alb = bord - (parseFloat(e.rasid)||0);
@@ -15350,7 +15470,7 @@ function _renderCompanyHistoryPanel(company){
           <span style="font-size:0.72rem;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:4px 9px">جمع الباقی: <b style="color:${tAlb>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(tAlb))}</b></span>
           ${purchBadge}
         </div>
-        <div class="xls-wrap"><table class="xls-tbl" style="table-layout:fixed;width:100%;min-width:1031px">
+        <div class="xls-wrap"><table class="xls-tbl" id="chist-tbl-${company.id}-${h.id}" style="table-layout:fixed;width:100%;min-width:1031px">
           <thead><tr><th style="width:34px">#</th><th style="width:96px">تاریخ</th><th style="width:150px">نام</th><th style="width:95px">خرید(کیلو)</th><th style="width:95px">قیمت تن($)</th><th style="width:95px">کل($)</th><th style="width:58px">نرخ</th><th style="width:95px">کل(افغانی)</th><th style="width:112px">رسید</th><th style="width:60px;font-size:0.75rem">نرخ پول</th><th style="width:95px">الباقی</th><th style="width:46px">حذف</th></tr></thead>
           <tbody>${body || '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:12px">فقط خرید — جزئیات در کادرِ خریدها</td></tr>'}</tbody>
           <tfoot class="xls-foot"><tr><td colspan="3" style="padding:7px">جمع</td><td>${n2fa(Math.round(tTon*1000))}</td><td></td><td>${n2fa(tUsd.toFixed(1))} $</td><td></td><td>${n2fa(Math.round(tAfn))}</td><td>${n2fa(Math.round(tPoul))}</td><td></td><td>${n2fa(Math.round(tAlb))}</td><td></td></tr></tfoot>
@@ -21400,7 +21520,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.91';
+const APP_VERSION = '2.9.92';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -25503,7 +25623,11 @@ function _invPostToDebt(v) {
   const liters = parseFloat(v.liters) || 0;
   const amount = parseFloat(v.amount) || 0;
   // ── بخشِ پولی (رسید پول) ──
-  const existing = p.rows.find(r => r.invId === v.id);
+  // ردیفِ رسیدِ پولی باید در دفترِ فعالِ همین حساب ثبت شود: اگر حساب روی «واحد پول»
+  // است در moneyRows، وگرنه در rows (همان رفتار قبلی) — وگرنه در حساب‌های واحد پول
+  // این رسید در جدولِ فعال دیده نمی‌شد.
+  const targetArr = _acctRows(p, p);
+  const existing = targetArr.find(r => r.invId === v.id);
   if (amount > 0) {
     const data = {
       date: v.date_sh || '',
@@ -25516,10 +25640,10 @@ function _invPostToDebt(v) {
       rasid: amount,                             // اعتبار واقعی مشتری (رسید پول)
       albaqi: -amount
     };
-    if (existing) Object.assign(existing, data); else p.rows.push(data);
+    if (existing) Object.assign(existing, data); else targetArr.push(data);
   } else if (existing) {
     // مبلغ حذف شد → ردیفِ پولیِ همین فاکتور هم برداشته شود
-    p.rows.splice(p.rows.indexOf(existing), 1);
+    targetArr.splice(targetArr.indexOf(existing), 1);
   }
   // ── بخشِ تیل (مقدار رسید تیل) ──
   _invUnpostFuelRasid(v);        // تایید/ویرایش دوباره → اول اعتبار تیلِ قبلی برگردد
@@ -25536,10 +25660,14 @@ function _invPostToDebt(v) {
 function _invRemoveFromDebt(v) {
   _invUnpostFuelRasid(v);
   (DB.debtPersons || []).forEach(p => {
-    if (Array.isArray(p.rows)) {
-      const i = p.rows.findIndex(r => r.invId === v.id);
-      if (i >= 0) p.rows.splice(i, 1);
-    }
+    // ردیفِ رسیدِ پولی ممکن است در rows یا moneyRows باشد (بسته به واحدِ فعالِ حساب
+    // در لحظهٔ ثبت) — هر دو دفتر چک می‌شوند تا چیزی جا نماند.
+    ['rows', 'moneyRows'].forEach(k => {
+      if (Array.isArray(p[k])) {
+        const i = p[k].findIndex(r => r.invId === v.id);
+        if (i >= 0) p[k].splice(i, 1);
+      }
+    });
   });
 }
 
