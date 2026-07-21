@@ -21953,7 +21953,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.108';
+const APP_VERSION = '2.9.109';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -22773,16 +22773,9 @@ function _doUndo(){
     showToast('↩️ ورق بازگشت', '#38a169');
   }
 }
-document.addEventListener('keydown', function(e){
-  if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z' || e.code === 'KeyZ')){
-    const a = document.activeElement;
-    // اگر در حال تایپ در یک کادر هستیم، Ctrl+Z برای متن باشد
-    if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA') && !a.readOnly && !a.disabled) return;
-    if (!_undoStack.length) return;
-    e.preventDefault();
-    _doUndo();
-  }
-});
+// نکته: هندلرِ قدیمیِ Ctrl+Z (بازگرداندنِ فقط حساب‌های حذف‌شده از _undoStack) حذف شد؛
+// حالا undo/redoِ سراسری (Ctrl+Z/Ctrl+X) در ماژول میانبرها همهٔ تغییرها را پوشش می‌دهد.
+// _pushUndo/_doUndo برای سازگاری باقی مانده‌اند ولی دیگر به Ctrl+Z وصل نیستند.
 
 // ========== WARAQ MODAL FONT SCALE ==========
 let _waraqFontScale = (function(){ try { return parseFloat(localStorage.getItem('waraqFontScale') || 1) || 1; } catch(e){ return 1; } })();
@@ -26465,20 +26458,39 @@ ${copy('نسخهٔ پمپ')}
     if (fa >= 0) return String(fa);
     return null;
   }
-  // فقط جدولی که همین حالا جلوی کاربر باز است — هیچ جدول دیگری دست نمی‌خورد
+  // بخش‌هایی (غیر از مودال شخص/شرکت) که جدولِ ردیفی دارند: افزودن با تابعِ خودِ همان بخش،
+  // و حذف با «کلیکِ دکمهٔ حذفِ آخرین ردیفِ نمایش‌داده‌شده» تا دقیقاً منطق/سینک/تریشِ خودِ بخش
+  // اجرا شود و چیزی نشکند. del = بخشی از onclick دکمهٔ حذفِ هر ردیف برای پیدا کردنش.
+  var _SECT = {
+    'sec-expenses': { add:function(){ addExpenseRow(); },     del:'deleteExpense(' },
+    'sec-sarrafi':  { add:function(){ addSarrafiRow(); },     del:'deleteSarrafiRow(' },
+    'sec-safe':     { add:function(){ addSafeRowDirect(); },  del:'deleteSafe(' },
+    'sec-rasid':    { add:function(){ addRasidRow(); },       del:'deleteRasid(' },
+    'sec-chakana':  { add:function(){ addChakanaRowToMonth((typeof _activeChakanaMonth!=='undefined' && _activeChakanaMonth) ? _activeChakanaMonth : _monthKey(persianDate())); }, del:'deleteChakana(' }
+  };
+  // بافتِ جدولِ فعال — همان جدولی که جلوی کاربر است. هیچ جدول/بخشِ دیگری دست نمی‌خورد.
   function _kbCtx(){
     if (document.body.classList.contains('viewer-mode')) return null;
     var pm = document.getElementById('personModal');
-    if (pm && pm.classList.contains('open')) return 'person';
+    if (pm && pm.classList.contains('open')) return { kind:'person' };
     var cm = document.getElementById('companyModal');
-    if (cm && cm.classList.contains('open')) return 'company';
+    if (cm && cm.classList.contains('open')) return { kind:'company' };
+    var wm = document.getElementById('waraqModal');
+    if (wm && wm.classList.contains('open')) return { kind:'waraq' };
+    var sec = document.querySelector('.section.visible');
+    if (sec && _SECT[sec.id]) return { kind:'section', id:sec.id, def:_SECT[sec.id] };
     return null;
+  }
+  // موقعِ حذفِ گروهی، پرسش‌های confirm خودِ بخش‌ها را «بله» بگیر تا پنجره باز نشود و کار نخوابد
+  function _kbNoConfirm(fn){
+    var oc = window.confirm; window.confirm = function(){ return true; };
+    try { fn(); } finally { window.confirm = oc; }
   }
 
   function _kbAddRows(n){
     var ctx = _kbCtx();
     if (!ctx || n < 1) return;
-    if (ctx === 'person'){
+    if (ctx.kind === 'person'){
       var list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
       var person = (list || []).find(function(p){ return p.id === currentPersonId; });
       if (!person) return;
@@ -26489,7 +26501,7 @@ ${copy('نسخهٔ پمپ')}
         rowsArr.push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, rasidFuel: 0, albaqi: 0, byMoney: person.mode === 'money' });
       save(); renderPersonRows(person);
       showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
-    } else {
+    } else if (ctx.kind === 'company'){
       var company = (DB.tilCompanies || []).find(function(c){ return c.id === currentCompanyId; });
       if (!company) return;
       if (n > 100) n = 100;
@@ -26498,13 +26510,21 @@ ${copy('نسخهٔ پمپ')}
         rows.push({ name: '', date: persianDate(), ton: 0, usd: 0, rate: 0, poul: 0, poulCurrency: 'afn' });
       save(); renderCompanyRows(company);
       showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
+    } else if (ctx.kind === 'waraq'){
+      if (n > 200) n = 200;
+      for (var w = 0; w < n; w++) { try { addWaraqRow(); } catch(e){} }
+      showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
+    } else if (ctx.kind === 'section'){
+      if (n > 200) n = 200;
+      for (var s = 0; s < n; s++) { try { ctx.def.add(); } catch(e){} }
+      showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
     }
   }
 
   function _kbDelRows(n){
     var ctx = _kbCtx();
     if (!ctx || n < 1) return;
-    if (ctx === 'person'){
+    if (ctx.kind === 'person'){
       var list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
       var person = (list || []).find(function(p){ return p.id === currentPersonId; });
       if (!person) return;
@@ -26523,13 +26543,29 @@ ${copy('نسخهٔ پمپ')}
       }
       save(); renderPersonRows(person); renderPersons(currentPersonType); updateBanner();
       showToast('🗑️ ' + n2fa(n) + ' ردیف حذف شد', '#e53e3e');
-    } else {
+    } else if (ctx.kind === 'company'){
       var company = (DB.tilCompanies || []).find(function(c){ return c.id === currentCompanyId; });
       if (!company) return;
       var rows = _cmpRows(company);
       if (!rows || rows.length < n) return;         // ردیفِ کافی نیست → هیچ کاری نکن
       rows.length -= n;
       save(); renderCompanyRows(company); _updateCompanyBanner(); updateBanner();
+      showToast('🗑️ ' + n2fa(n) + ' ردیف حذف شد', '#e53e3e');
+    } else if (ctx.kind === 'waraq'){
+      // removeWaraqRow خودش آخرین ردیف را می‌بردارد و حداقل یک ردیف نگه می‌دارد
+      _kbNoConfirm(function(){ for (var w = 0; w < n; w++) { try { removeWaraqRow(); } catch(e){} } });
+    } else if (ctx.kind === 'section'){
+      var sec = document.getElementById(ctx.id);
+      if (!sec) return;
+      var sel = '[onclick*="' + ctx.def.del + '"]';
+      if (sec.querySelectorAll(sel).length < n) return;   // ردیفِ کافی نیست → هیچ کاری نکن
+      _kbNoConfirm(function(){
+        for (var i = 0; i < n; i++){
+          var b = sec.querySelectorAll(sel);   // بعد از هر حذف دوباره بخوان (جدول از نو رندر می‌شود)
+          if (!b.length) break;
+          try { b[b.length - 1].click(); } catch(e){ break; }   // آخرین ردیفِ نمایش‌داده‌شده
+        }
+      });
       showToast('🗑️ ' + n2fa(n) + ' ردیف حذف شد', '#e53e3e');
     }
   }
@@ -26682,6 +26718,94 @@ ${copy('نسخهٔ پمپ')}
     if (!act) return;                 // اینجا پی‌دی‌اف ندارد → پرینتِ مرورگر مثل قبل
     e.preventDefault();
     try { act(); } catch(err){ try { showToast('❌ پی‌دی‌افِ این بخش گرفته نشد', '#e53e3e'); } catch(_){} }
+  });
+
+  // ═══ Undo / Redo سراسری مثل اکسل — Ctrl+Z برگشت به عقب، Ctrl+X برگشت به جلو ═══
+  // یک «تاریخچهٔ عکس‌فوری» از کلِ دیتابیس نگه می‌داریم؛ هر تغییری که save() صدا بزند،
+  // بعد از کمی مکث یک عکس ثبت می‌شود (تایپِ پشت‌سرهم یک قدم می‌شود، مثل اکسل). undo/redo
+  // فقط عکس را برمی‌گرداند و صفحه را از نو رندر می‌کند — هیچ منطقِ محاسباتی‌ای دست نمی‌خورد.
+  var _hist = [], _hi = -1, _histRestoring = false, _histTimer = null;
+  function _dbJson(){ try { return JSON.stringify(DB); } catch(e){ return null; } }
+  function _histSeed(){ var j = _dbJson(); if (j == null) return; _hist = [j]; _hi = 0; }
+  function _histNote(){
+    if (_histRestoring) return;
+    clearTimeout(_histTimer);
+    _histTimer = setTimeout(_histCommit, 500);
+  }
+  function _histCommit(){
+    if (_histRestoring) return;
+    var j = _dbJson(); if (j == null) return;
+    if (_hi < 0){ _hist = [j]; _hi = 0; return; }
+    if (_hist[_hi] === j) return;                 // تغییری نبوده
+    _hist = _hist.slice(0, _hi + 1);              // شاخهٔ «جلو» پاک می‌شود (مثل اکسل)
+    _hist.push(j);
+    if (_hist.length > 30) _hist.shift();   // سقفِ تاریخچه — مصرفِ حافظه کنترل شود (موبایل)
+    _hi = _hist.length - 1;
+  }
+  function _histApply(){
+    var obj; try { obj = JSON.parse(_hist[_hi]); } catch(e){ return; }
+    _histRestoring = true;
+    clearTimeout(_histTimer);
+    try {
+      // DB یک const است → در جا خالی و از عکس پر می‌شود (هویتِ شیء حفظ می‌شود)
+      Object.keys(DB).forEach(function(k){ delete DB[k]; });
+      Object.keys(obj).forEach(function(k){ DB[k] = obj[k]; });
+      save();
+      _histRerender();
+    } catch(e){}
+    _histRestoring = false;
+  }
+  function _histRerender(){
+    try { updateBanner(); } catch(e){}
+    var pm = document.getElementById('personModal');
+    if (pm && pm.classList.contains('open')){
+      try {
+        var list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
+        var p = (list || []).find(function(x){ return x.id === currentPersonId; });
+        if (p) renderPersonRows(p); else closePersonModal();
+      } catch(e){}
+    }
+    var cm = document.getElementById('companyModal');
+    if (cm && cm.classList.contains('open')){
+      try {
+        var c = (DB.tilCompanies || []).find(function(x){ return x.id === currentCompanyId; });
+        if (c) renderCompanyRows(c); else closeCompanyModal();
+      } catch(e){}
+    }
+    var wm = document.getElementById('waraqModal');
+    if (wm && wm.classList.contains('open')){
+      try { var w = getActiveWaraq(); if (w){ renderWaraqTransactions(w); calcWaraqSummary(w); } } catch(e){}
+    }
+    var sec = document.querySelector('.section.visible');
+    if (sec){ try { showSection(sec.id.replace(/^sec-/, '')); } catch(e){} }
+  }
+  function _histUndo(){
+    if (_hi <= 0){ try { showToast('چیزی برای برگشت به عقب نیست', '#718096'); } catch(e){} return; }
+    _hi--; _histApply();
+    try { showToast('↩️ برگشت به عقب', '#3182ce'); } catch(e){}
+  }
+  function _histRedo(){
+    if (_hi >= _hist.length - 1){ try { showToast('چیزی برای برگشت به جلو نیست', '#718096'); } catch(e){} return; }
+    _hi++; _histApply();
+    try { showToast('↪️ برگشت به جلو', '#3182ce'); } catch(e){}
+  }
+  // save() را می‌پوشانیم تا هر تغییری در تاریخچه ثبت شود (خودِ save دست‌نخورده اجرا می‌شود)
+  if (typeof window.save === 'function'){
+    var _origSave = window.save;
+    window.save = function(){ var r = _origSave.apply(this, arguments); _histNote(); return r; };
+  }
+  _histSeed();
+  document.addEventListener('keydown', function(e){
+    if (_kbLocked()) return;
+    var isZ = (e.code === 'KeyZ') || e.key === 'z' || e.key === 'Z';
+    var isX = (e.code === 'KeyX') || e.key === 'x' || e.key === 'X';
+    if (!(isZ || isX)) return;
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
+    // داخلِ کادرِ متنی در حال تایپ: Ctrl+Z = undo متن و Ctrl+X = cut متن (طبیعیِ مرورگر)
+    var a = document.activeElement;
+    if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable) && !a.readOnly && !a.disabled) return;
+    e.preventDefault();
+    if (isZ) _histUndo(); else _histRedo();
   });
 })();
 </script>
