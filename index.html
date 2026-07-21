@@ -6232,7 +6232,7 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
 
 <!-- صفحهٔ جدا: تاریخچهٔ شروع/ختمِ همهٔ پایه‌ها (کدام تاریخ/روز هفته بوده) — کلیک روی هر ردیف همان ورق را باز می‌کند -->
 <div class="modal-overlay" id="pumpHistoryModal">
-  <div class="modal" style="max-width:760px">
+  <div class="modal" style="max-width:100%;width:100%;height:100vh;max-height:100vh;border-radius:0;border:none;display:flex;flex-direction:column">
     <div class="modal-head">
       <h2 style="flex:1;text-align:center">🕘 تاریخچهٔ شروع/ختمِ پایه‌ها</h2>
       <button class="modal-close" onclick="closeModal('pumpHistoryModal')">✕</button>
@@ -21679,7 +21679,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.94';
+const APP_VERSION = '2.9.95';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
