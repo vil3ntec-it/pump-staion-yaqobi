@@ -3457,8 +3457,9 @@ button:focus-visible,.nav-btn:focus-visible,a:focus-visible,input:focus-visible,
 #personModal .fs-rows{ grid-template-columns:repeat(4,1fr) !important; gap:3px !important; }
 /* در حالت «واحد تیل» خانهٔ «الباقی پول» هم افقی کنار بقیه می‌نشیند تا کادر بلند نشود */
 #personModal .fs-rows.has-remmoney{ grid-template-columns:repeat(5,1fr) !important; }
-#personModal .fs-cell .l{ font-size:0.76rem !important; font-weight:700 !important; }
-#personModal .fs-cell .v{ font-size:0.95rem !important; }
+/* هدرهای بالای مودال قرض‌داران: جا زیاد دارند — نوشته‌ها کلفت‌تر و بزرگ‌تر تا خوانا باشند */
+#personModal .fs-cell .l{ font-size:1rem !important; font-weight:900 !important; }
+#personModal .fs-cell .v{ font-size:1.2rem !important; font-weight:900 !important; }
 /* فیصدی — فشرده، ولی خوانا (برچسب‌ها بزرگ‌تر و پررنگ‌تر برای خوانایی بهتر) */
 #personModal .modal-summary{ padding:2px 10px !important; }
 #personModal .msumbox{ min-height:unset !important; padding:4px 8px !important; flex-direction:row !important; align-items:center !important; gap:10px !important; justify-content:center !important; }
@@ -21938,7 +21939,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.102';
+const APP_VERSION = '2.9.103';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -25233,6 +25234,9 @@ body .person-card.fuel-out.fuel-out{
 #cm-albaqi-status{ font-size:0.74rem!important; font-weight:700!important; }
 /* ستون الباقی جدول شرکت: عدد اصلی و زیرنویس دالر هم‌اندازه با بقیهٔ ستون‌ها */
 #cm-tbl td{ font-size:1rem; }
+/* کادرهای جدول شرکت‌ها کمی کوتاه بودند — بلندتر تا راحت‌تر دیده و کلیک شوند */
+#cm-tbl .xls-in{ padding-top:12px; padding-bottom:12px; }
+#cm-tbl td:not(:has(input)):not(:has(select)){ padding-top:12px; padding-bottom:12px; }
 
 /* ===== نوشته‌های ریز در کل برنامه کمی بزرگ‌تر و پررنگ‌تر =====
    هر متنی که با استایل درون‌خطی زیر 0.8rem است، به کف خوانا برسد */
@@ -26415,6 +26419,149 @@ ${copy('نسخهٔ پمپ')}
     // آیفون یا هر مرورگری که پنجرهٔ نصب ندارد → راهنمای دستی
     showIOSHelp();
   };
+})();
+</script>
+
+<script>
+/* ═══════════════════ میانبرهای صفحه‌کلید ═══════════════════
+   ۱) Ctrl+Shift+عدد → رفتن به بخش اصلی با همان شماره (به ترتیب واقعیِ منوی بالا؛ ۰ = دهمین)
+   ۲) نگه‌داشتن Ctrl و تایپ عدد (حتی چندرقمی) → تا وقتی Ctrl رها نشده هیچ عملی انجام نمی‌شود؛
+      با رها کردن Ctrl دقیقاً همان تعداد ردیف به جدولِ بازِ جلوی کاربر (مودال شخص/شرکت) اضافه می‌شود.
+   ۳) نگه‌داشتن Shift و تایپ عدد → با رها کردن Shift همان تعداد ردیف از آخرِ همان جدول حذف می‌شود؛
+      اگر ردیفِ کافی نباشد هیچ کاری نمی‌شود (نه خطا، نه حذفِ ناقص).
+   داخل کادرهای متنی کلاً غیرفعال است تا با تایپِ اعداد تداخل نکند. */
+(function(){
+  var ctrlBuf = '', shiftBuf = '';
+
+  function _kbTyping(){
+    var a = document.activeElement;
+    return !!(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT' || a.isContentEditable));
+  }
+  function _kbLocked(){
+    var app = document.getElementById('app');
+    return !app || app.style.display === 'none';
+  }
+  // رقمِ کلید — با Shift مقدارِ e.key عوض می‌شود (! @ …)، پس e.code مبناست؛ رقم فارسی هم پذیرفته می‌شود
+  function _kbDigit(e){
+    var m = /^(?:Digit|Numpad)([0-9])$/.exec(e.code || '');
+    if (m) return m[1];
+    var k = e.key || '';
+    if (/^[0-9]$/.test(k)) return k;
+    var fa = '۰۱۲۳۴۵۶۷۸۹'.indexOf(k);
+    if (fa >= 0) return String(fa);
+    return null;
+  }
+  // فقط جدولی که همین حالا جلوی کاربر باز است — هیچ جدول دیگری دست نمی‌خورد
+  function _kbCtx(){
+    if (document.body.classList.contains('viewer-mode')) return null;
+    var pm = document.getElementById('personModal');
+    if (pm && pm.classList.contains('open')) return 'person';
+    var cm = document.getElementById('companyModal');
+    if (cm && cm.classList.contains('open')) return 'company';
+    return null;
+  }
+
+  function _kbAddRows(n){
+    var ctx = _kbCtx();
+    if (!ctx || n < 1) return;
+    if (ctx === 'person'){
+      var list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
+      var person = (list || []).find(function(p){ return p.id === currentPersonId; });
+      if (!person) return;
+      if (n > 200) n = 200;
+      var ft = (currentPersonFilter === 'diesel') ? 'diesel' : 'petrol';
+      var rowsArr = _acctRows(person);
+      for (var k = 0; k < n; k++)
+        rowsArr.push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, rasidFuel: 0, albaqi: 0, byMoney: person.mode === 'money' });
+      save(); renderPersonRows(person);
+      showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
+    } else {
+      var company = (DB.tilCompanies || []).find(function(c){ return c.id === currentCompanyId; });
+      if (!company) return;
+      if (n > 100) n = 100;
+      var rows = _cmpRows(company);
+      for (var j = 0; j < n; j++)
+        rows.push({ name: '', date: persianDate(), ton: 0, usd: 0, rate: 0, poul: 0, poulCurrency: 'afn' });
+      save(); renderCompanyRows(company);
+      showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
+    }
+  }
+
+  function _kbDelRows(n){
+    var ctx = _kbCtx();
+    if (!ctx || n < 1) return;
+    if (ctx === 'person'){
+      var list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
+      var person = (list || []).find(function(p){ return p.id === currentPersonId; });
+      if (!person) return;
+      var acct = _acctOf(person);
+      var rowsArr = _acctRows(person, acct);
+      if (!rowsArr || rowsArr.length < n) return;   // ردیفِ کافی نیست → هیچ کاری نکن
+      for (var k = 0; k < n; k++){
+        var r = rowsArr[rowsArr.length - 1];
+        // مثل deletePersonRow: «رسید تیل» ردیفِ حذف‌شده باید از حساب تیلِ همان نوع کم شود
+        var rf = r ? (parseFloat(r.rasidFuel) || 0) : 0;
+        if (rf && person.mode !== 'money'){
+          if (r.ftype === 'diesel') acct.rasidFuelD = (parseFloat(acct.rasidFuelD) || 0) - rf;
+          else acct.rasidFuelP = (parseFloat(acct.rasidFuelP) || 0) - rf;
+        }
+        rowsArr.pop();
+      }
+      save(); renderPersonRows(person); renderPersons(currentPersonType); updateBanner();
+      showToast('🗑️ ' + n2fa(n) + ' ردیف حذف شد', '#e53e3e');
+    } else {
+      var company = (DB.tilCompanies || []).find(function(c){ return c.id === currentCompanyId; });
+      if (!company) return;
+      var rows = _cmpRows(company);
+      if (!rows || rows.length < n) return;         // ردیفِ کافی نیست → هیچ کاری نکن
+      rows.length -= n;
+      save(); renderCompanyRows(company); _updateCompanyBanner(); updateBanner();
+      showToast('🗑️ ' + n2fa(n) + ' ردیف حذف شد', '#e53e3e');
+    }
+  }
+
+  document.addEventListener('keydown', function(e){
+    if (_kbLocked()) return;
+    if (_kbTyping()) { ctrlBuf = ''; shiftBuf = ''; return; }
+    var d = _kbDigit(e);
+    if (d === null) return;
+    // ۱) Ctrl+Shift+عدد → بخش اصلی (۱ = اولین دکمهٔ منو … ۰ = دهمین)
+    if (e.ctrlKey && e.shiftKey && !e.altKey){
+      e.preventDefault();
+      ctrlBuf = ''; shiftBuf = '';
+      if (document.querySelector('.modal-overlay.open')) return;
+      var btns = document.querySelectorAll('.nav .nav-btn');
+      var idx = (d === '0') ? 9 : (parseInt(d, 10) - 1);
+      if (btns[idx]){
+        btns[idx].click();
+        try { btns[idx].scrollIntoView({ inline:'center', block:'nearest' }); } catch(_){}
+      }
+      return;
+    }
+    // ۲) Ctrl + عدد → فقط جمع می‌شود؛ عمل فقط بعد از رها کردن Ctrl
+    if (e.ctrlKey && !e.altKey && !e.metaKey){
+      e.preventDefault();                            // جلوی میانبرِ تبِ مرورگر
+      if (ctrlBuf.length < 3) ctrlBuf += d;
+      return;
+    }
+    // ۳) Shift + عدد → فقط جمع می‌شود؛ عمل فقط بعد از رها کردن Shift
+    if (e.shiftKey && !e.altKey && !e.metaKey){
+      e.preventDefault();
+      if (shiftBuf.length < 3) shiftBuf += d;
+    }
+  });
+
+  document.addEventListener('keyup', function(e){
+    if (e.key === 'Control'){
+      var nA = parseInt(ctrlBuf, 10) || 0; ctrlBuf = '';
+      if (nA) _kbAddRows(nA);
+    } else if (e.key === 'Shift'){
+      var nD = parseInt(shiftBuf, 10) || 0; shiftBuf = '';
+      if (nD) _kbDelRows(nD);
+    }
+  });
+  // اگر پنجره وسطِ کار فوکس را از دست داد (Alt+Tab و …) بافر پاک شود تا عملِ ناخواسته نشود
+  window.addEventListener('blur', function(){ ctrlBuf = ''; shiftBuf = ''; });
 })();
 </script>
 
