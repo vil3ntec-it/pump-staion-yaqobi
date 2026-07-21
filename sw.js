@@ -1,7 +1,7 @@
 // سرویس‌ورکر پمپ یعقوبی — پوستهٔ برنامه (این صفحه + آیکون‌ها) را کش می‌کند تا
 // برنامه بعد از نصب، هم آنلاین و هم کاملاً آفلاین باز شود. نسخهٔ کش را هر بار
 // که APP_VERSION در index.html عوض می‌شود، این‌جا هم عوض کنید تا کش کهنه پاک شود.
-const CACHE_NAME = 'pump-yaqobi-shell-v2.9.103';
+const CACHE_NAME = 'pump-yaqobi-shell-v2.9.104';
 const APP_SHELL = [
   './',
   './index.html',
