@@ -565,11 +565,17 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 /* سلولِ انتخاب‌شده برای فرمت‌دهیِ چندتایی (Ctrl/Shift+کلیک) — فقط علامتِ بصری، روی داده اثر ندارد */
 .tbl td.cfm-sel, .xls-tbl td.cfm-sel, .ro-tbl td.cfm-sel,
 .tbl th.cfm-sel, .xls-tbl th.cfm-sel, .ro-tbl th.cfm-sel{background:rgba(49,130,206,.22)!important;outline:1.5px solid var(--blue);outline-offset:-1.5px}
-/* موسِ اکسل‌مانند: روی سلول‌های جدول علامتِ جمعِ سفید (cell)، روی نوشته/ورودی‌ها موسِ عادی */
-.tbl td,.tbl th,.xls-tbl td,.xls-tbl th,.ro-tbl td,.ro-tbl th{cursor:cell}
-.tbl td input,.tbl td textarea,.xls-tbl td input,.xls-tbl td textarea,.ro-tbl td input,.ro-tbl td textarea{cursor:text}
+/* موسِ اکسل‌مانند: روی همهٔ سلول‌های جدول علامتِ جمعِ سفید (cell) — کادرهای تایپی هم تا
+   وقتی فوکوس نگرفته‌اند همان علامتِ جمع را دارند و بعد از کلیک، موسِ متن می‌شود */
+.tbl td,.tbl th,.xls-tbl td,.xls-tbl th,.ro-tbl td,.ro-tbl th{cursor:cell;user-select:none;-webkit-user-select:none}
+.tbl td input:not(:focus),.tbl td textarea:not(:focus),.xls-tbl td input:not(:focus),.xls-tbl td textarea:not(:focus),.ro-tbl td input:not(:focus),.ro-tbl td textarea:not(:focus){cursor:cell}
+.tbl td input:focus,.tbl td textarea:focus,.xls-tbl td input:focus,.xls-tbl td textarea:focus,.ro-tbl td input:focus,.ro-tbl td textarea:focus{cursor:text}
+/* متنِ داخلِ کادرهای تایپی مثل قبل قابل‌انتخاب بماند (user-select سلول‌ها به آن‌ها نرسد) */
+.tbl td input,.tbl td textarea,.xls-tbl td input,.xls-tbl td textarea,.ro-tbl td input,.ro-tbl td textarea{user-select:text;-webkit-user-select:text}
 .tbl td button,.tbl th button,.xls-tbl td button,.xls-tbl th button,.ro-tbl td button,.ro-tbl th button,
-.tbl td select,.xls-tbl td select,.ro-tbl td select,.tbl td a,.xls-tbl td a,.ro-tbl td a{cursor:pointer}
+.tbl td select,.xls-tbl td select,.ro-tbl td select,.tbl td a,.xls-tbl td a,.ro-tbl td a,
+.tbl td label,.xls-tbl td label,.ro-tbl td label,
+.tbl td input[type="radio"],.tbl td input[type="checkbox"],.xls-tbl td input[type="radio"],.xls-tbl td input[type="checkbox"],.ro-tbl td input[type="radio"],.ro-tbl td input[type="checkbox"]{cursor:pointer}
 /* نوارِ جمعِ انتخاب — مثل نوار وضعیت اکسل وقتی چند سلول انتخاب شده */
 #cfm-sumbar{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99998;display:none;align-items:center;gap:7px;background:var(--card);border:1.5px solid var(--blue);border-radius:999px;padding:8px 18px;font-family:'Vazirmatn',sans-serif;font-size:0.82rem;font-weight:700;color:var(--txt);box-shadow:0 10px 28px rgba(0,0,0,.28);pointer-events:none;white-space:nowrap}
 #cfm-sumbar b{color:var(--blue);font-weight:900}
@@ -12053,19 +12059,24 @@ function initAllTableResizers(root){
   }
   function loadFmt(key){ try{ return JSON.parse(localStorage.getItem('cellFmt_'+key) || '{}'); }catch(e){ return {}; } }
   function saveFmt(key, map){ try{ localStorage.setItem('cellFmt_'+key, JSON.stringify(map)); }catch(e){} }
+  // «نوشته‌ها»ی داخل سلول (span/b/…) اغلب رنگِ inline خودشان را دارند و رنگِ td را
+  // می‌پوشانند — رنگِ انتخابی روی خودِ آن‌ها هم بنشیند (ورودی‌ها/دکمه‌ها دست‌نخورده)
+  function colorKids(el, c){
+    if(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT') return;
+    Array.prototype.forEach.call(el.querySelectorAll('span,b,strong,i,em,small,div,a'), function(ch){
+      if(ch.closest('button') || ch.classList.contains('col-resize-grip')) return;
+      ch.style.color = c;
+    });
+  }
   function applyStyle(el, f){
     if(!el) return;
-    el.style.color = f.c || '';
-    el.style.fontSize = f.s ? (f.s+'px') : '';
-    el.style.textAlign = f.a || '';
-    // «نوشته‌ها»ی داخل سلول (span/b/…) اغلب رنگِ inline خودشان را دارند و رنگِ td را
-    // می‌پوشانند — رنگِ انتخابی روی خودِ آن‌ها هم بنشیند (ورودی‌ها/دکمه‌ها دست‌نخورده)
-    if(el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA' && el.tagName !== 'SELECT'){
-      Array.prototype.forEach.call(el.querySelectorAll('span,b,strong,i,em,small,div,a'), function(ch){
-        if(ch.closest('button') || ch.classList.contains('col-resize-grip')) return;
-        ch.style.color = f.c || '';
-      });
-    }
+    // فقط ویژگی‌هایی که در فرمت هست دست بخورد — پاک‌کردنِ بقیه، اندازهٔ فونتِ A+/A−
+    // مودال یا رنگ‌های خودِ برنامه را می‌پراند (باگِ «با کلیک روی رنگ، نوشته کوچک می‌شد»)
+    if(f.c){ el.style.color = f.c; colorKids(el, f.c); }
+    // A+/A− مودالِ شخص/شرکت فونت را با !important می‌گذارد — اندازهٔ انتخابیِ کاربر
+    // هم باید با همان قدرت بنشیند وگرنه اثر نمی‌کند
+    if(f.s) el.style.setProperty('font-size', f.s + 'px', 'important');
+    if(f.a) el.style.textAlign = f.a;
   }
   // اعمالِ دوبارهٔ فرمت‌های ذخیره‌شده بعد از هر رندرِ جدول (از initAllTableResizers صدا زده می‌شود)
   function applyCellFormatting(table, key){
@@ -12089,7 +12100,12 @@ function initAllTableResizers(root){
       const next = Object.assign({}, map[k] || {}, patch);
       Object.keys(next).forEach(function(kk){ if(next[kk] == null) delete next[kk]; });
       if(Object.keys(next).length) map[k] = next; else delete map[k];
-      applyStyle(cellTarget(info.cell), next);
+      const t = cellTarget(info.cell);
+      // «بازگشت به پیش‌فرض» (مقدارِ null در patch): همان ویژگی صریحاً پاک شود
+      if(patch.c === null){ t.style.color = ''; colorKids(t, ''); }
+      if(patch.s === null) t.style.removeProperty('font-size');
+      if(patch.a === null) t.style.textAlign = '';
+      applyStyle(t, next);
     });
     saveFmt(key, map);
   }
@@ -12135,6 +12151,9 @@ function initAllTableResizers(root){
   document.addEventListener('click', function(e){
     // کلیکی که بلافاصله بعد از «کشیدنِ انتخاب» می‌آید، نباید انتخاب را بپراند
     if(Date.now() - dragEndAt < 250) return;
+    // کلیک روی خودِ منوی فرمت هم انتخاب را نگه دارد — تا بعد از رنگ بشود وسط‌چین/فونت
+    // را هم روی همان انتخاب زد (مثل اکسل)
+    if(e.target.closest('.cellfmt-menu')) return;
     const cellEl = e.target.closest(CELL_SEL);
     if(!cellEl){ if(selSet.size) clearSelection(); return; }
     if(!(e.ctrlKey || e.metaKey || e.shiftKey)){
@@ -12148,36 +12167,51 @@ function initAllTableResizers(root){
     else { selToggle(info); selAnchor = info; }
   });
   // ── انتخابِ کشیدنی مثل اکسل: موس را روی سلول‌ها پایین نگه دارید و بکشید ──
-  // از روی ورودی/دکمه شروع نمی‌شود تا تایپ و انتخابِ متنِ داخلِ کادرها دست‌نخورده بماند.
+  // شروع از روی کادرهای تایپی هم مجاز است، اما انتخاب فقط وقتی فعال می‌شود که موس به
+  // «سلولِ دیگری» برسد — تا کلیک/تایپ/انتخابِ متنِ داخلِ خودِ کادر دست‌نخورده بماند.
+  function endDrag(){
+    if(dragOn) dragEndAt = Date.now();
+    dragFrom = null; dragOn = false;
+    document.body.classList.remove('cfm-noselect');
+  }
   document.addEventListener('pointerdown', function(e){
     if(e.pointerType && e.pointerType !== 'mouse') return;   // لمس/قلم → اسکرولِ عادیِ موبایل دست‌نخورده بماند
     if(e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
-    if(e.target.closest('input,textarea,select,button,a,.col-resize-grip')) return;
+    if(e.target.closest('select,button,a,label,.col-resize-grip,input[type="radio"],input[type="checkbox"]')) return;
     const cellEl = e.target.closest(CELL_SEL); if(!cellEl) return;
     const info = rowColOf(cellEl);
     if(!info || !info.isBody) return;
+    info.fromInput = !!e.target.closest('input,textarea');
     dragFrom = info; dragOn = false; dragX = e.clientX; dragY = e.clientY;
+    // شروع از جای غیرتایپی (متنِ ساده/حاشیهٔ سلول): جلوی انتخابِ متنیِ آبیِ مرورگر که
+    // «همه‌چیز را می‌گرفت» گرفته شود؛ روی کادرِ تایپی preventDefault نمی‌کنیم تا فوکوس نپرد
+    if(!info.fromInput) e.preventDefault();
   });
   document.addEventListener('pointermove', function(e){
     if(!dragFrom) return;
-    if(!dragOn){
-      if(Math.abs(e.clientX - dragX) < 5 && Math.abs(e.clientY - dragY) < 5) return;
-      dragOn = true;
-      document.body.classList.add('cfm-noselect');
-      try{ window.getSelection().removeAllRanges(); }catch(err){}
-    }
+    if(!(e.buttons & 1)){ endDrag(); return; }   // دکمه رها شده ولی pointerup به ما نرسیده (خارجِ پنجره)
     const el = document.elementFromPoint(e.clientX, e.clientY);
     const cellEl = el && el.closest ? el.closest(CELL_SEL) : null;
     if(!cellEl) return;
     const info = rowColOf(cellEl);
     if(!info || !info.isBody || info.table !== dragFrom.table) return;
+    if(!dragOn){
+      // از روی کادرِ تایپی: فقط وقتی واردِ سلولِ دیگری شد انتخاب فعال شود
+      if(dragFrom.fromInput && info.rowRef === dragFrom.rowRef && info.colIdx === dragFrom.colIdx) return;
+      if(!dragFrom.fromInput && Math.abs(e.clientX - dragX) < 5 && Math.abs(e.clientY - dragY) < 5) return;
+      dragOn = true;
+      document.body.classList.add('cfm-noselect');
+      try{ if(document.activeElement && dragFrom.fromInput) document.activeElement.blur(); }catch(err){}
+      try{ window.getSelection().removeAllRanges(); }catch(err){}
+    }
     selRange(dragFrom, info);
     selAnchor = dragFrom;
   });
-  document.addEventListener('pointerup', function(){
-    if(dragOn) dragEndAt = Date.now();
-    dragFrom = null; dragOn = false;
-    document.body.classList.remove('cfm-noselect');
+  document.addEventListener('pointerup', endDrag);
+  document.addEventListener('pointercancel', endDrag);
+  // در حینِ کشیدنِ انتخاب، هیچ انتخابِ متنی‌ای شروع نشود
+  document.addEventListener('selectstart', function(e){
+    if(dragOn) e.preventDefault();
   });
   document.addEventListener('contextmenu', function(e){
     const cellEl = e.target.closest(CELL_SEL);
@@ -21841,7 +21875,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.97';
+const APP_VERSION = '2.9.98';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
