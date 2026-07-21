@@ -442,7 +442,7 @@ body.staff-view .qr-overlay{z-index:10020}
 .note-field{ font-size:calc(0.8rem * var(--note-font-scale, 1)) !important; font-weight:700 !important; }
 .xls-tbl tr:last-child td{border-bottom:none}
 .xls-tbl tr:hover td{background:#ffffff05}
-.xls-in{width:100%;background:transparent;border:none;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.92rem;padding:8px 7px;min-width:65px;font-weight:700;text-align:center}
+.xls-in{width:100%;background:transparent;border:none;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.92rem;padding:8px 7px;min-width:65px;font-weight:700}
 /* حذف فلش‌های کم/زیاد عدد از همه کادرها به‌جز شماره پایه (.keep-spin) */
 input[type=number]{-moz-appearance:textfield}
 input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
@@ -561,6 +561,9 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 .cellfmt-menu .cfm-reset{background:var(--dark)!important;color:var(--txt);font-size:0.68rem;display:flex;align-items:center;justify-content:center}
 .cellfmt-menu .cfm-btn{background:var(--dark);border:1px solid var(--border);border-radius:7px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.8rem;padding:6px 10px;cursor:pointer;flex:1}
 .cellfmt-menu .cfm-btn:hover{background:rgba(127,127,127,.18)}
+.cellfmt-menu .cfm-hint{font-size:0.72rem;color:var(--muted);font-weight:700;justify-content:flex-start}
+/* سلولِ انتخاب‌شده برای فرمت‌دهیِ چندتایی (Ctrl/Shift+کلیک) — فقط علامتِ بصری، روی داده اثر ندارد */
+.tbl td.cfm-sel, .xls-tbl td.cfm-sel, .ro-tbl td.cfm-sel{background:rgba(49,130,206,.22)!important;outline:1.5px solid var(--blue);outline-offset:-1.5px}
 /* نوار نوشتن پیام */
 .ch-comp{display:flex;gap:6px;align-items:center;padding:8px;border-top:1px solid var(--border);background:var(--dark);flex-shrink:0}
 .ch-comp input[type=text]{flex:1;min-width:0;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 11px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.85rem}
@@ -11824,14 +11827,20 @@ function initAllTableResizers(root){
     const LEGACY_KEYS = { 'pm-tbl': 'pm', 'cm-tbl': 'cm' };
     Array.prototype.forEach.call(tables, function(t){
       _fixColspanOverflow(t);   // محافظ ستون فانتوم — روی هر تغییر DOM دوباره اجرا می‌شود
-      if(t._resizable || !t.tHead || !t.tHead.rows[0]) return;
+      if(!t.tHead || !t.tHead.rows[0]) return;
       let key = LEGACY_KEYS[t.id] || t.id;
       if(!key){
         const host = t.closest('.section, .modal-overlay, .inv-overlay, .card') || document.body;
         const all = host.querySelectorAll('table');
         key = (host.id || host.className.split(' ')[0] || 'tbl') + '-' + Array.prototype.indexOf.call(all, t);
       }
-      makeTableResizable(t, key);
+      // makeTableResizable فقط یک‌بار لازم است (دستهٔ کشیدن یک‌بار ساخته شود) — همان
+      // پرچمِ _resizable خودش این را کنترل می‌کند. اما فرمت‌دهیِ سلول‌ها (رنگ/فونت/چینش)
+      // باید هر بار دوباره اعمال شود، چون جدول‌هایی مثل حساب شخص/شرکت (pm-tbl/cm-tbl)
+      // خودِ <table> عوض نمی‌شود ولی ردیف‌های داخلش با هر ویرایش از نو ساخته می‌شوند —
+      // اگر این‌جا هم پشتِ همان پرچم گیت می‌شد، بعد از اولین رندر رنگِ ذخیره‌شده روی
+      // ردیفِ تازه‌ساخته دیگر برنمی‌گشت (باگِ «رنگ عوض نمی‌کند»).
+      if(!t._resizable) makeTableResizable(t, key);
       try { if (window._applyCellFormatting) window._applyCellFormatting(t, key); } catch(e){}
     });
   }catch(e){}
@@ -11862,7 +11871,49 @@ function initAllTableResizers(root){
 // که initAllTableResizers برای ذخیرهٔ عرضِ ستون‌ها می‌سازد (همان جدول = همان کلید).
 (function(){
   const PALETTE = ['#e53e3e','#dd6b20','#d69e2e','#38a169','#3182ce','#805ad5','#ffffff','#1a202c'];
+  const CELL_SEL = '.tbl td, .tbl th, .xls-tbl td, .xls-tbl th, .ro-tbl td, .ro-tbl th';
   let menuEl = null;
+  // انتخابِ چندسلولی برای فرمت‌دهیِ یک‌جا: با Ctrl/Cmd+کلیک هر سلول به انتخاب اضافه/کم
+  // می‌شود، با Shift+کلیک یک بازهٔ مستطیلی از آخرین سلولِ کلیک‌شده تا این‌جا انتخاب
+  // می‌شود (مثل اکسل). کلیکِ سادهٔ بدون کلید — همان رفتارِ عادیِ فوکوس/تایپ — دست‌نخورده
+  // می‌ماند تا هیچ‌وقت جلوی ویرایشِ عادیِ کادرها را نگیرد.
+  let selTable = null, selSet = new Set(), selAnchor = null;
+  function selCellEl(table, ri, ci){
+    const body = table.tBodies && table.tBodies[0];
+    const row = body && body.rows[ri];
+    return row && row.cells[ci];
+  }
+  function clearSelection(){
+    if(selTable) selSet.forEach(function(k){
+      const p = k.split(':'); const cell = selCellEl(selTable, +p[0], +p[1]);
+      if(cell) cell.classList.remove('cfm-sel');
+    });
+    selTable = null; selSet = new Set(); selAnchor = null;
+  }
+  function selToggle(info){
+    if(selTable && selTable !== info.table) clearSelection();
+    selTable = info.table;
+    const k = info.rowIdx + ':' + info.colIdx;
+    if(selSet.has(k)){ selSet.delete(k); info.cell.classList.remove('cfm-sel'); }
+    else { selSet.add(k); info.cell.classList.add('cfm-sel'); }
+  }
+  function selRange(fromInfo, toInfo){
+    if(selTable && selTable !== fromInfo.table) clearSelection();
+    selTable = fromInfo.table;
+    selSet.forEach(function(k){
+      const p = k.split(':'); const cell = selCellEl(selTable, +p[0], +p[1]);
+      if(cell) cell.classList.remove('cfm-sel');
+    });
+    selSet = new Set();
+    const r1 = Math.min(fromInfo.rowIdx, toInfo.rowIdx), r2 = Math.max(fromInfo.rowIdx, toInfo.rowIdx);
+    const c1 = Math.min(fromInfo.colIdx, toInfo.colIdx), c2 = Math.max(fromInfo.colIdx, toInfo.colIdx);
+    for(let ri=r1; ri<=r2; ri++){
+      for(let ci=c1; ci<=c2; ci++){
+        const cell = selCellEl(selTable, ri, ci); if(!cell) continue;
+        selSet.add(ri+':'+ci); cell.classList.add('cfm-sel');
+      }
+    }
+  }
   function closeMenu(){ if(menuEl){ menuEl.remove(); menuEl = null; } document.removeEventListener('click', onDocClick, true); }
   function onDocClick(e){ if(menuEl && !menuEl.contains(e.target)) closeMenu(); }
   // اگر سلول ورودی/انتخابی دارد همان هدف است (چون رنگ/فونتِ خودش را جدا از td تعیین
@@ -11903,24 +11954,28 @@ function initAllTableResizers(root){
     });
   }
   window._applyCellFormatting = applyCellFormatting;
-  function setFmt(info, patch){
-    const key = info.table._cellFmtKey; if(!key) return;
+  // اعمالِ یک تغییر روی یک یا چند سلول با هم — یک ذخیرهٔ localStorage برای همهٔ سلول‌ها
+  function setFmtMulti(table, infos, patch){
+    const key = table._cellFmtKey; if(!key) return;
     const map = loadFmt(key);
-    const k = info.rowIdx + ':' + info.colIdx;
-    const next = Object.assign({}, map[k] || {}, patch);
-    Object.keys(next).forEach(function(kk){ if(next[kk] == null) delete next[kk]; });
-    if(Object.keys(next).length) map[k] = next; else delete map[k];
+    infos.forEach(function(info){
+      const k = info.rowIdx + ':' + info.colIdx;
+      const next = Object.assign({}, map[k] || {}, patch);
+      Object.keys(next).forEach(function(kk){ if(next[kk] == null) delete next[kk]; });
+      if(Object.keys(next).length) map[k] = next; else delete map[k];
+      applyStyle(cellTarget(info.cell), next);
+    });
     saveFmt(key, map);
-    applyStyle(cellTarget(info.cell), next);
   }
   function fontSizeOf(el){
     return (el.style.fontSize && parseFloat(el.style.fontSize)) || parseFloat(getComputedStyle(el).fontSize) || 14;
   }
-  function openMenu(x, y, info){
+  function openMenu(x, y, table, infos){
     closeMenu();
     menuEl = document.createElement('div');
     menuEl.className = 'cellfmt-menu';
-    menuEl.innerHTML =
+    const hint = infos.length > 1 ? ('<div class="cfm-row cfm-hint">🔗 ' + infos.length + ' سلولِ انتخاب‌شده</div>') : '';
+    menuEl.innerHTML = hint +
       '<div class="cfm-row cfm-colors">' + PALETTE.map(function(c){ return '<button type="button" class="cfm-swatch" data-c="'+c+'" style="background:'+c+'"></button>'; }).join('') +
         '<button type="button" class="cfm-swatch cfm-reset" data-c="" title="رنگ پیش‌فرض">✕</button></div>' +
       '<div class="cfm-row">' +
@@ -11937,27 +11992,52 @@ function initAllTableResizers(root){
     menuEl.style.top = Math.max(4, Math.min(y, window.innerHeight - mh - 8)) + 'px';
     menuEl.addEventListener('click', function(e){
       const sw = e.target.closest('.cfm-swatch');
-      if(sw){ setFmt(info, { c: sw.getAttribute('data-c') || null }); closeMenu(); return; }
+      if(sw){ setFmtMulti(table, infos, { c: sw.getAttribute('data-c') || null }); closeMenu(); return; }
       const btn = e.target.closest('.cfm-btn'); if(!btn) return;
       const act = btn.getAttribute('data-act');
-      const el = cellTarget(info.cell);
-      if(act === 'size-') setFmt(info, { s: Math.max(9, Math.round(fontSizeOf(el) - 1)) });
-      else if(act === 'size+') setFmt(info, { s: Math.min(28, Math.round(fontSizeOf(el) + 1)) });
-      else if(act === 'size0') setFmt(info, { s: null });
-      else if(act === 'align-right') setFmt(info, { a: 'right' });
-      else if(act === 'align-center') setFmt(info, { a: 'center' });
-      else if(act === 'align-left') setFmt(info, { a: 'left' });
+      const el = cellTarget(infos[0].cell);
+      if(act === 'size-') setFmtMulti(table, infos, { s: Math.max(9, Math.round(fontSizeOf(el) - 1)) });
+      else if(act === 'size+') setFmtMulti(table, infos, { s: Math.min(28, Math.round(fontSizeOf(el) + 1)) });
+      else if(act === 'size0') setFmtMulti(table, infos, { s: null });
+      else if(act === 'align-right') setFmtMulti(table, infos, { a: 'right' });
+      else if(act === 'align-center') setFmtMulti(table, infos, { a: 'center' });
+      else if(act === 'align-left') setFmtMulti(table, infos, { a: 'left' });
       closeMenu();
     });
     setTimeout(function(){ document.addEventListener('click', onDocClick, true); }, 0);
   }
+  document.addEventListener('click', function(e){
+    const cellEl = e.target.closest(CELL_SEL);
+    if(!cellEl){ if(selSet.size) clearSelection(); return; }
+    if(!(e.ctrlKey || e.metaKey || e.shiftKey)){
+      if(selSet.size) clearSelection();
+      return;   // کلیکِ سادهٔ روی سلول → همان رفتارِ عادیِ فوکوس/تایپِ کادر، دست‌نخورده
+    }
+    const info = rowColOf(cellEl);
+    if(!info) return;
+    e.preventDefault();
+    if(e.shiftKey && selAnchor && selAnchor.table === info.table) selRange(selAnchor, info);
+    else { selToggle(info); selAnchor = info; }
+  });
   document.addEventListener('contextmenu', function(e){
-    const cellEl = e.target.closest('.tbl td, .tbl th, .xls-tbl td, .xls-tbl th, .ro-tbl td, .ro-tbl th');
+    const cellEl = e.target.closest(CELL_SEL);
     if(!cellEl) return;
     const info = rowColOf(cellEl);
     if(!info || !info.table._cellFmtKey) return;   // جدول‌هایی که هنوز کلید ندارند (خارج از initAllTableResizers) دست‌نخورده بمانند
     e.preventDefault();
-    openMenu(e.clientX, e.clientY, info);
+    let infos;
+    if(selTable === info.table && selSet.size > 1 && selSet.has(info.rowIdx+':'+info.colIdx)){
+      // سلولِ کلیک‌شده جزوِ انتخابِ چندتایی است → فرمت روی همهٔ انتخاب یک‌جا اعمال شود
+      infos = [];
+      selSet.forEach(function(k){
+        const p = k.split(':'); const ri = +p[0], ci = +p[1];
+        const cell = selCellEl(info.table, ri, ci);
+        if(cell) infos.push({ table: info.table, cell, rowIdx: ri, colIdx: ci });
+      });
+    } else {
+      infos = [info];
+    }
+    openMenu(e.clientX, e.clientY, info.table, infos);
   });
 })();
 function openPersonModal(type, id) {
@@ -21520,7 +21600,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.92';
+const APP_VERSION = '2.9.93';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
