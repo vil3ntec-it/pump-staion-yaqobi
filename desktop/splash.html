@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>در حال بارگذاری…</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; }
+  html, body { width: 100%; height: 100%; overflow: hidden; }
+  body {
+    font-family: "Segoe UI", Tahoma, sans-serif;
+    background: radial-gradient(120% 120% at 50% 0%, #16233b 0%, #0b0f17 60%, #070a11 100%);
+    color: #e8eef7;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100vh; gap: 18px;
+    border: 1px solid rgba(255,179,0,.18);
+  }
+  .logo {
+    width: 108px; height: 108px; border-radius: 26px; object-fit: cover;
+    box-shadow: 0 12px 40px rgba(0,0,0,.55), 0 0 0 1px rgba(255,179,0,.25);
+    animation: pop .7s cubic-bezier(.2,.9,.25,1.15);
+  }
+  .title { font-size: 1.5rem; font-weight: 800; letter-spacing: .5px;
+    background: linear-gradient(90deg, #ffd166, #ffb300); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sub { font-size: .82rem; color: #9fb0c7; margin-top: -6px; }
+  .bar { width: 240px; height: 6px; border-radius: 99px; background: rgba(255,255,255,.08); overflow: hidden; margin-top: 6px; }
+  .bar > i { display: block; height: 100%; width: 40%; border-radius: 99px;
+    background: linear-gradient(90deg, #ffb300, #ff8a00); animation: slide 1.15s ease-in-out infinite; }
+  .loading { font-size: .75rem; color: #7f90a8; margin-top: 2px; }
+  .ver { position: absolute; bottom: 12px; font-size: .68rem; color: #55647d; }
+  @keyframes slide { 0% { margin-left: -45%; } 100% { margin-left: 105%; } }
+  @keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+</style>
+</head>
+<body>
+  <img class="logo" src="build/icon.png" alt="" onerror="this.style.display='none'">
+  <div class="title">پمپ یعقوبی</div>
+  <div class="sub">نرم‌افزار مدیریت پمپ بنزین</div>
+  <div class="bar"><i></i></div>
+  <div class="loading">در حال بارگذاری…</div>
+  <div class="ver">نسخهٔ دسکتاپ</div>
+</body>
+</html>

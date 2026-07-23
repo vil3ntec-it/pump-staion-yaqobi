@@ -1,0 +1,52 @@
+name: ساخت برنامهٔ کامپیوتری (ویندوز)
+
+# نصب‌کنندهٔ ویندوز (.exe) را می‌سازد و به‌صورت یک Release قابل‌دانلود منتشر می‌کند.
+# اجرا: از تب Actions دکمهٔ «Run workflow» را بزنید، یا یک تگ با پیشوند desktop-v پوش کنید.
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'desktop-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: دریافت کد
+        uses: actions/checkout@v4
+
+      - name: نصب Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: نصب وابستگی‌ها
+        working-directory: desktop
+        run: npm install
+
+      - name: ساخت نصب‌کنندهٔ ویندوز
+        working-directory: desktop
+        run: npm run dist:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: بارگذاری فایل نصب به‌عنوان Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PumpYaqobi-Windows-Setup
+          path: desktop/dist/*.exe
+          if-no-files-found: error
+
+      - name: انتشار در Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-latest
+          name: برنامهٔ کامپیوتری پمپ یعقوبی (آخرین نسخه)
+          body: |
+            نصب‌کنندهٔ ویندوز برنامهٔ پمپ یعقوبی.
+            فایل `PumpYaqobi-Setup-*.exe` را دانلود و اجرا کنید؛ هنگام نصب می‌توانید درایو و مسیر نصب را انتخاب کنید.
+          files: desktop/dist/*.exe
+          make_latest: true
