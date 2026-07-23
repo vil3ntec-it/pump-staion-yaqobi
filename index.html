@@ -22047,7 +22047,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.111';
+const APP_VERSION = '2.9.112';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -22464,15 +22464,25 @@ function renderStaffList() {
     (p.subs || []).forEach(s => items.push({ p, sub: s, key: normFa(p.name + ' ' + (s.name || 'حساب فرعی')) }));
   });
   const filtered = q ? items.filter(it => it.key.includes(q)) : items;
-  const MAX = 100;
-  const shown = filtered.slice(0, MAX);
+  // نمایش تدریجی (مثل بقیهٔ لیست‌ها): هیچ سقفی روی تعداد حساب‌ها نیست — فقط برای
+  // سرعت، اول ۱۰۰ مورد رندر می‌شود و با دکمهٔ «بیشتر» بقیه هم بارگذاری می‌شوند.
+  // با هر تغییرِ عبارتِ جستجو، شمارش از نو شروع می‌شود.
+  if (renderStaffList._lastQ !== q) { renderStaffList._limit = 100; renderStaffList._lastQ = q; }
+  if (!renderStaffList._limit) renderStaffList._limit = 100;
+  const LIMIT = renderStaffList._limit;
+  const shown = filtered.slice(0, LIMIT);
   const cnt = document.getElementById('staff-count');
   if (cnt) cnt.textContent = !items.length
     ? 'هنوز هیچ قرض‌داری ثبت نشده است'
     : !filtered.length
     ? 'کسی با این نام پیدا نشد'
-    : 'تعداد حساب‌ها: ' + n2fa(filtered.length) + (filtered.length > MAX ? ' — فقط ' + n2fa(MAX) + ' مورد اول نشان داده شد؛ نام را جستجو کنید' : '');
-  listEl.innerHTML = shown.map(it => _staffCard(it.p, it.sub)).join('');
+    : 'تعداد حساب‌ها: ' + n2fa(filtered.length) + (filtered.length > LIMIT ? ' — ' + n2fa(LIMIT) + ' مورد نشان داده شده' : '');
+  let _staffHtml = shown.map(it => _staffCard(it.p, it.sub)).join('');
+  if (filtered.length > LIMIT) {
+    const _rem = filtered.length - LIMIT;
+    _staffHtml += '<button type="button" class="goto-btn" style="grid-column:1/-1;width:100%;padding:12px;margin-top:6px" onclick="renderStaffList._limit += 200; renderStaffList();">📜 نمایش ' + n2fa(_rem) + ' حساب دیگر</button>';
+  }
+  listEl.innerHTML = _staffHtml;
   // جستجوی خودکار: اگر نام دقیقاً یکی شد یا فقط یک نتیجه ماند، حسابش باز شود
   if (q && q.length >= 2) {
     const exact = filtered.find(it => it.key === q || normFa(it.p.name) === q);
