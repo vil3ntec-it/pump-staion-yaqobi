@@ -1,0 +1,51 @@
+{
+  "name": "pump-yaqobi-desktop",
+  "version": "1.0.0",
+  "description": "برنامهٔ کامپیوتری پمپ یعقوبی — پوستهٔ Electron که خودِ برنامه را به‌صورت محلی و آفلاین اجرا می‌کند (بدون محدودیت حجم مرورگر)",
+  "main": "main.js",
+  "author": "پمپ یعقوبی",
+  "license": "MIT",
+  "scripts": {
+    "prepare-app": "node scripts/prepare.js",
+    "start": "npm run prepare-app && electron .",
+    "dist:win": "npm run prepare-app && electron-builder --win nsis",
+    "dist:linux": "npm run prepare-app && electron-builder --linux AppImage"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "ir.yaqobi.pump",
+    "productName": "Pump Yaqobi",
+    "artifactName": "PumpYaqobi-Setup-${version}.${ext}",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "splash.html",
+      "app/**/*"
+    ],
+    "win": {
+      "target": ["nsis"],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "پمپ یعقوبی"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Office",
+      "icon": "build/icon.png"
+    }
+  }
+}
