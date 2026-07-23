@@ -20,6 +20,7 @@
     "productName": "Pump Yaqobi",
     "artifactName": "PumpYaqobi-Setup-${version}.${ext}",
     "publish": null,
+    "asar": false,
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -27,8 +28,11 @@
     "files": [
       "main.js",
       "preload.js",
+      "preload-server.js",
       "splash.html",
-      "app/**/*"
+      "server-panel.html",
+      "app/**/*",
+      "srv/**/*"
     ],
     "win": {
       "target": ["nsis"],
