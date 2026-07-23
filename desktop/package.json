@@ -19,6 +19,7 @@
     "appId": "ir.yaqobi.pump",
     "productName": "Pump Yaqobi",
     "artifactName": "PumpYaqobi-Setup-${version}.${ext}",
+    "publish": null,
     "directories": {
       "output": "dist",
       "buildResources": "build"
