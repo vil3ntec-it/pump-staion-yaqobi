@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>سرور خانگی</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Tahoma, sans-serif;
+    background: radial-gradient(120% 120% at 50% 0%, #16233b 0%, #0b0f17 70%);
+    color: #e8eef7; padding: 20px; min-height: 100vh; font-size: 14px; line-height: 1.7;
+  }
+  h1 { font-size: 1.3rem; margin-bottom: 4px; color: #ffd166; }
+  .muted { color: #9fb0c7; font-size: .82rem; margin-bottom: 16px; }
+  .status { display: flex; align-items: center; gap: 8px; font-weight: 700; margin-bottom: 14px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: #e05353; box-shadow: 0 0 8px #e05353; }
+  .dot.on { background: #38d17a; box-shadow: 0 0 10px #38d17a; }
+  button.big {
+    width: 100%; padding: 15px; border: 0; border-radius: 12px; font-size: 1.05rem; font-weight: 800;
+    cursor: pointer; font-family: inherit; color: #fff; transition: filter .15s; margin-bottom: 18px;
+  }
+  button.big:hover { filter: brightness(1.1); }
+  .start { background: linear-gradient(90deg, #2f9e57, #38d17a); }
+  .stop { background: linear-gradient(90deg, #b0392f, #e05353); }
+  .card { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+  .label { font-size: .78rem; color: #9fb0c7; margin-bottom: 4px; }
+  .val { display: flex; align-items: center; gap: 8px; }
+  .val code { flex: 1; background: #0b0f17; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; padding: 8px 10px;
+    font-family: Consolas, monospace; font-size: .9rem; color: #ffd166; word-break: break-all; direction: ltr; text-align: left; }
+  .copy { background: #2b3a52; color: #cfe0f5; border: 0; border-radius: 8px; padding: 8px 12px; cursor: pointer; font-family: inherit; font-size: .8rem; white-space: nowrap; }
+  .copy:hover { background: #3a4d6b; }
+  .hint { font-size: .82rem; color: #9fb0c7; background: rgba(56,209,122,.08); border: 1px solid rgba(56,209,122,.25); border-radius: 10px; padding: 12px; margin-top: 6px; }
+  .hint b { color: #cbe8d6; }
+  .off-note { font-size: .84rem; color: #9fb0c7; }
+  ol { padding-right: 18px; }
+  ol li { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+  <h1>🖥️ سرور خانگی</h1>
+  <div class="muted">این کامپیوتر را به سرورِ مرکزیِ داده تبدیل کن. بقیهٔ دستگاه‌ها (گوشی، سایت، کامپیوترهای دیگر) با آدرس و رمزِ زیر به آن وصل می‌شوند و همه‌چیز زنده سینک می‌شود.</div>
+
+  <div class="status"><span class="dot" id="dot"></span><span id="statusText">در حال بررسی…</span></div>
+
+  <button class="big start" id="toggleBtn">روشن کردن سرور روی این کامپیوتر</button>
+
+  <div id="info" style="display:none">
+    <div class="card">
+      <div class="label">آدرس سرور (برای دستگاه‌های روی همین وای‌فای/شبکه)</div>
+      <div id="addrList"></div>
+    </div>
+    <div class="card">
+      <div class="label">رمز سرور (این را هم در همان دستگاه‌ها وارد کن)</div>
+      <div class="val"><code id="token">—</code><button class="copy" data-copy="token">کپی</button></div>
+    </div>
+    <div class="hint">
+      در <b>هر دستگاه دیگر</b> برو به: <b>تنظیمات › هم‌زمان‌سازی › سرور شخصی</b>، آدرس بالا و رمز را بگذار و «ذخیره و اتصال» بزن.
+      <br>• برنامهٔ همین کامپیوتر خودکار وصل شد.
+      <br>• برای دسترسی از <b>بیرون شبکه</b> (سایت روی دامنه) به تونل اینترنتی نیاز است — بگو تا راه بیندازیم.
+    </div>
+  </div>
+
+  <div id="offNote" class="off-note" style="display:none">
+    سرور خاموش است. تا وقتی این برنامه باز و سرور روشن باشد، بقیهٔ دستگاه‌ها می‌توانند وصل شوند و داده رد و بدل شود.
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let running = false;
+
+    function render(info) {
+      running = !!info.running;
+      $('dot').className = 'dot' + (running ? ' on' : '');
+      $('statusText').textContent = running ? 'سرور روشن است ✅' : 'سرور خاموش است';
+      $('toggleBtn').textContent = running ? 'خاموش کردن سرور' : 'روشن کردن سرور روی این کامپیوتر';
+      $('toggleBtn').className = 'big ' + (running ? 'stop' : 'start');
+      $('info').style.display = running ? 'block' : 'none';
+      $('offNote').style.display = running ? 'none' : 'block';
+      if (running) {
+        $('token').textContent = info.token || '—';
+        const ips = (info.ips && info.ips.length) ? info.ips : ['localhost'];
+        $('addrList').innerHTML = ips.map(ip => {
+          const url = 'ws://' + ip + ':' + info.port;
+          return '<div class="val" style="margin-bottom:8px"><code>' + url + '</code>' +
+                 '<button class="copy" data-copy="' + url + '">کپی</button></div>';
+        }).join('');
+      }
+    }
+
+    async function refresh() { render(await window.pumpServer.info()); }
+
+    $('toggleBtn').onclick = async () => {
+      $('toggleBtn').disabled = true;
+      render(running ? await window.pumpServer.stop() : await window.pumpServer.start());
+      $('toggleBtn').disabled = false;
+    };
+
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.copy');
+      if (!btn) return;
+      let text = btn.getAttribute('data-copy');
+      if (text === 'token') text = $('token').textContent;
+      window.pumpServer.copy(text);
+      const old = btn.textContent; btn.textContent = 'کپی شد ✓';
+      setTimeout(() => { btn.textContent = old; }, 1200);
+    });
+
+    refresh();
+  </script>
+</body>
+</html>

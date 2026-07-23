@@ -49,7 +49,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // ---------------------------------------------------------------------------
 const PORT = parseInt(process.env.PORT || '8787', 10);
 const PERSIST_DEBOUNCE_MS = parseInt(process.env.PERSIST_DEBOUNCE_MS || '400', 10);
-const DATA_DIR = path.join(__dirname, 'data');
+// مسیر ذخیرهٔ داده: به‌صورت پیش‌فرض کنار همین فایل، ولی اگر DATA_DIR در محیط تعیین
+// شده باشد (مثلاً وقتی سرور داخل برنامهٔ دسکتاپ اجرا می‌شود و باید در پوشهٔ
+// قابل‌نوشتنِ کاربر بنویسد) همان استفاده می‌شود.
+const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(__dirname, 'data');
 let AUTH_TOKEN = process.env.AUTH_TOKEN || '';   // اگر خالی بماند، خودکار ساخته و در data/token.txt ذخیره می‌شود
 
 // ---------------------------------------------------------------------------

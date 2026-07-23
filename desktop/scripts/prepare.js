@@ -26,4 +26,21 @@ if (fs.existsSync(iconsSrc)) {
   fs.cpSync(iconsSrc, path.join(appDir, 'icons'), { recursive: true });
 }
 
-console.log('✓ فایل‌های برنامه در desktop/app آماده شد.');
+// ---------------------------------------------------------------------------
+// جاسازیِ «سرور خانگی» داخل برنامه: server.js + کتابخانهٔ ws + package.json
+// (بدون پوشهٔ data، بدون node-portable و بدون فایل‌های تست) تا برنامهٔ دسکتاپ
+// بتواند خودش سرور را با یک کلیک اجرا کند — بدون نیاز به zip و bat جداگانه.
+// ---------------------------------------------------------------------------
+const srvOut = path.resolve(__dirname, '..', 'srv');
+fs.rmSync(srvOut, { recursive: true, force: true });
+fs.mkdirSync(srvOut, { recursive: true });
+const srvSrc = path.join(repoRoot, 'server');
+for (const f of ['server.js', 'package.json']) {
+  const s = path.join(srvSrc, f);
+  if (fs.existsSync(s)) fs.copyFileSync(s, path.join(srvOut, f));
+}
+// فقط node_modules (کتابخانهٔ ws) کپی می‌شود؛ data/node-portable/تست‌ها لازم نیستند
+const nmSrc = path.join(srvSrc, 'node_modules');
+if (fs.existsSync(nmSrc)) fs.cpSync(nmSrc, path.join(srvOut, 'node_modules'), { recursive: true });
+
+console.log('✓ فایل‌های برنامه در desktop/app و سرور در desktop/srv آماده شد.');
