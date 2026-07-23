@@ -29,9 +29,11 @@ jobs:
 
       - name: ساخت نصب‌کنندهٔ ویندوز
         working-directory: desktop
-        run: npm run dist:win
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # انتشار توسط خودِ electron-builder خاموش است (publish never)؛ انتشار Release
+        # را در مرحلهٔ جداگانهٔ پایین با action-gh-release انجام می‌دهیم.
+        run: |
+          npm run prepare-app
+          npx electron-builder --win nsis --publish never
 
       - name: بارگذاری فایل نصب به‌عنوان Artifact
         uses: actions/upload-artifact@v4
