@@ -28,11 +28,8 @@
     "files": [
       "main.js",
       "preload.js",
-      "preload-server.js",
       "splash.html",
-      "server-panel.html",
-      "app/**/*",
-      "srv/**/*"
+      "app/**/*"
     ],
     "win": {
       "target": ["nsis"],

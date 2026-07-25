@@ -11796,27 +11796,107 @@ function _acctMenuSendGroup(kind, type, id) {
   showToast('📤 حساب به چت گروهی فرستاده شد', '#38a169');
 }
 
+// کلیدِ پایدارِ هر ستون: بر اساس «نامِ سرستون» (نه شمارهٔ ستون). این‌طوری وقتی
+// ستون‌ها جابه‌جا/کم‌وزیاد یا با فیلتر ظاهر/پنهان می‌شوند (نوع تیل، رسید، …)،
+// عرضِ ذخیره‌شده به‌هم نمی‌ریزد و خراب نمی‌شود — ریشهٔ باگِ «اندازه‌ام ثبت نمی‌ماند».
+// چون کلید «نامِ ستون» است، جدول‌های هم‌خانواده (جدولِ اصلی و جدول‌های آرشیوش) با یک
+// کلیدِ ذخیرهٔ مشترک دقیقاً هم‌اندازه می‌شوند، حتی اگر ستون‌هایشان یکی کم/زیاد باشد.
+function _colKeysOfTable(table){
+  const out = [];
+  if(!table || !table.tHead || !table.tHead.rows[0]) return out;
+  const ths = table.tHead.rows[0].cells;
+  const seen = {};
+  for(let i=0;i<ths.length;i++){
+    let t = (ths[i] && (ths[i].getAttribute('data-colkey') || (ths[i].textContent||'').replace(/[\s‌]+/g,' ').trim())) || '';
+    if(!t) t = 'c' + i;
+    if(seen[t] != null){ t = t + '~' + i; }   // نامِ تکراری → یکتا با شماره
+    seen[t] = i;
+    out.push(t);
+  }
+  return out;
+}
+// عرضِ اولیهٔ ستون‌ها (همان چیزی که در خودِ HTML نوشته شده) یک‌بار نگه داشته می‌شود تا
+// بتوان قبل از اندازه‌گیری به چیدمانِ طبیعی برگشت و اندازهٔ واقعیِ ستون‌های بدونِ تنظیم
+// را خواند — بدون این کار، اندازه‌گیریِ دوم روی اعدادِ کِش‌آمدهٔ دفعهٔ قبل انجام می‌شد.
+function _rememberOrigColW(table){
+  try{
+    if(!table || !table.tHead || !table.tHead.rows[0]) return;
+    Array.prototype.forEach.call(table.tHead.rows[0].cells, function(th){
+      if(th._origW == null) th._origW = th.style.width || '';
+    });
+    Array.prototype.forEach.call(table.querySelectorAll('colgroup col'), function(c){
+      if(c._origW == null) c._origW = c.style.width || '';
+    });
+  }catch(e){}
+}
+// اعمالِ عرض‌های ذخیره‌شده روی یک جدول. هم موقعِ ساخته‌شدنِ جدول صدا زده می‌شود و هم
+// بعد از هر کشیدن، روی «همهٔ جدول‌های هم‌کلید» — تا جدولِ آرشیوِ تازه‌ساخته و جدولِ
+// اصلی همیشه یک اندازه بمانند (باگِ «آرشیوِ جدید هم‌اندازهٔ قبلی نیست»).
+function _applySavedColWidths(table){
+  try{
+    if(!table || !table._colwKey || !table.tHead || !table.tHead.rows[0]) return;
+    let saved = {};
+    try{ saved = JSON.parse(localStorage.getItem('colw_'+table._colwKey) || '{}'); }catch(e){}
+    if(!Object.keys(saved).length) return;
+    _rememberOrigColW(table);
+    const ths = table.tHead.rows[0].cells;
+    const keys = _colKeysOfTable(table);
+    const cols = table.querySelectorAll('colgroup col');
+    const colEls = (cols.length && cols.length === ths.length) ? cols : null;
+    // ۱) برگشت به چیدمانِ طبیعیِ خودِ جدول تا عرضِ واقعیِ ستون‌هایی که کاربر تنظیمشان
+    //    نکرده خوانده شود (وگرنه اندازه‌گیری روی عددهای کِش‌آمدهٔ قبلی انجام می‌شد)
+    table.style.tableLayout = '';
+    for(let i=0;i<ths.length;i++){
+      ths[i].style.width = ths[i]._origW || '';
+      if(colEls && colEls[i]) colEls[i].style.width = colEls[i]._origW || '';
+    }
+    const tW = Math.round(table.getBoundingClientRect().width);
+    const target = [];
+    for(let i=0;i<ths.length;i++){
+      const s = saved[keys[i]] != null ? saved[keys[i]] : saved[i];
+      target[i] = s ? Math.round(s) : Math.round(ths[i].getBoundingClientRect().width);
+    }
+    // ۲) جمعِ ستون‌ها باید دقیقاً برابرِ عرضِ خودِ جدول شود؛ وگرنه در table-layout:fixed
+    //    مرورگر همهٔ ستون‌ها را نسبتی بزرگ/کوچک می‌کند و جدولِ آرشیو با جدولِ اصلی
+    //    هم‌اندازه در نمی‌آید. اختلاف به «ستونِ کِشسان» (پهن‌ترین ستون، معمولاً «نام»)
+    //    می‌رود — دقیقاً همان کاری که خودِ مرورگر در چیدمانِ خودکار می‌کند.
+    if(tW > 0){
+      let sum = 0; for(let i=0;i<target.length;i++) sum += target[i];
+      const diff = tW - sum;
+      if(diff && target.length){
+        let fi = 0; for(let i=1;i<target.length;i++) if(target[i] > target[fi]) fi = i;
+        target[fi] = Math.max(36, target[fi] + diff);
+      }
+    }
+    // ۳) اعمال
+    for(let i=0;i<ths.length;i++){
+      if(!target[i]) continue;
+      if(colEls && colEls[i]) colEls[i].style.width = target[i] + 'px';
+      ths[i].style.width = target[i] + 'px';
+    }
+    try{ if(getComputedStyle(table).tableLayout !== 'fixed') table.style.tableLayout = 'fixed'; }catch(e){}
+    table._colFrozen = true;
+  }catch(e){}
+}
+// بعد از هر کشیدن، بقیهٔ جدول‌هایی که همین کلیدِ عرض را دارند هم فوری هم‌اندازه شوند
+function _syncColWidthSiblings(storeKey, except){
+  try{
+    Array.prototype.forEach.call(document.querySelectorAll('table'), function(t){
+      if(t !== except && t._colwKey === storeKey) _applySavedColWidths(t);
+    });
+  }catch(e){}
+}
 // تغییرِ اندازهٔ ستون‌ها با کشیدنِ لبهٔ عنوان (مثل اکسل). عرضِ هر ستون در
 // localStorage ذخیره می‌شود تا بعد از رفرش هم بماند. فقط ظاهر — روی داده اثری ندارد.
 function makeTableResizable(table, storeKey){
   if(!table || !table.tHead || !table.tHead.rows[0] || table._resizable) return;
   table._resizable = true;
+  table._colwKey = storeKey;
   let saved = {};
   try{ saved = JSON.parse(localStorage.getItem('colw_'+storeKey) || '{}'); }catch(e){}
   const ths = table.tHead.rows[0].cells;
-  // کلیدِ پایدارِ هر ستون: بر اساس «نامِ سرستون» (نه شمارهٔ ستون). این‌طوری وقتی
-  // ستون‌ها جابه‌جا/کم‌وزیاد یا با فیلتر ظاهر/پنهان می‌شوند (نوع تیل، رسید، …)،
-  // عرضِ ذخیره‌شده به‌هم نمی‌ریزد و خراب نمی‌شود — ریشهٔ باگِ «اندازه‌ام ثبت نمی‌ماند».
-  const seen = {};
-  const colKey = function(i){
-    let t = (ths[i] && (ths[i].getAttribute('data-colkey') || (ths[i].textContent||'').replace(/[\s‌]+/g,' ').trim())) || '';
-    if(!t) t = 'c' + i;
-    if(seen[t] != null){ t = t + '~' + i; }   // نامِ تکراری → یکتا با شماره
-    seen[t] = i;
-    return t;
-  };
-  const keyOf = [];
-  for(let i=0;i<ths.length;i++) keyOf[i] = colKey(i);
+  const keyOf = _colKeysOfTable(table);
+  _rememberOrigColW(table);   // عرضِ دست‌نخوردهٔ HTML — قبل از هر تغییری
   // اگر جدول colgroup هم‌تعدادِ ستون‌ها دارد (مثل جدول قرائت پمپ)، عرض باید روی
   // خودِ <col> نوشته شود — در table-layout:fixed عرضِ col بر عرضِ th مقدم است.
   const colEls = (function(){
@@ -11854,8 +11934,8 @@ function makeTableResizable(table, storeKey){
   Array.prototype.forEach.call(ths, function(th, idx){
     // عرضِ ذخیره‌شده بر اساس «نامِ ستون» اعمال می‌شود؛ اگر نبود، برای سازگاری با
     // نسخه‌های قبلی، عرضِ ذخیره‌شدهٔ «شماره‌ای» هم پذیرفته می‌شود (یک‌بار مهاجرت).
-    const wSaved = saved[keyOf[idx]] != null ? saved[keyOf[idx]] : saved[idx];
-    if(wSaved) setW(idx, wSaved);
+    // خودِ اعمالِ عرض‌ها پایین با _applySavedColWidths انجام می‌شود (یک مسیرِ واحد
+    // برای همهٔ جدول‌ها) تا جمعِ ستون‌ها هم با عرضِ جدول میزان شود.
     if(th.querySelector('.col-resize-grip')) return;
     const grip = document.createElement('div');
     grip.className = 'col-resize-grip';
@@ -11880,14 +11960,29 @@ function makeTableResizable(table, storeKey){
       document.removeEventListener('pointerup', up);
       saved[dKey] = getW(dIdx) || Math.round(startW);
       if(pIdx >= 0 && pKey) saved[pKey] = getW(pIdx) || Math.round(pStartW);
+      // عرضِ «همهٔ» ستون‌ها ذخیره می‌شود، نه فقط دوتای کشیده‌شده — وگرنه جمعِ ستون‌ها
+      // در جدولِ دیگری که همین تنظیم را می‌گیرد با عرضِ جدول نمی‌خواند و مرورگر
+      // همه را نسبتی بزرگ می‌کرد (باگِ «جدولِ آرشیو درشت‌تر از جدولِ اصلی»).
+      const allKeys = _colKeysOfTable(table);
+      for(let i=0;i<ths.length;i++){
+        const w = getW(i) || Math.round(ths[i].getBoundingClientRect().width);
+        if(w > 0) saved[allKeys[i]] = w;
+      }
       try{ localStorage.setItem('colw_'+storeKey, JSON.stringify(saved)); }catch(e){}
+      // همهٔ جدول‌های هم‌کلید (جدولِ اصلی و آرشیوهایش) همین لحظه هم‌اندازه شوند —
+      // خودِ جدولِ زیرِ دست هم، تا جمعِ ستون‌هایش با عرضش میزان شود و نپرد
+      _syncColWidthSiblings(storeKey, null);
     }
     const nameKeyOf = function(el, i){
-      return (el.getAttribute('data-colkey') || (el.textContent||'').replace(/[\s‌]+/g,' ').trim()) || ('c' + i);
+      const ks = _colKeysOfTable(table);
+      return ks[i] || (el.getAttribute('data-colkey') || (el.textContent||'').replace(/[\s‌]+/g,' ').trim()) || ('c' + i);
     };
     grip.addEventListener('pointerdown', function(e){
       e.preventDefault(); e.stopPropagation();
       freezeCols();
+      // تازه‌ترین عرض‌های ذخیره‌شده خوانده شود تا کشیدن در یک جدول، تنظیمِ جدولِ
+      // هم‌کلیدِ دیگر را با یک تصویرِ کهنه پاک نکند
+      try{ saved = JSON.parse(localStorage.getItem('colw_'+storeKey) || '{}') || {}; }catch(e2){}
       // ایندکس و کلیدِ ستون همین لحظه از روی خودِ سرستونِ زیرِ دسته پیدا می‌شود —
       // سرستونِ برخی جدول‌ها (مثل حساب شخص) بعداً ستون کم/زیاد می‌کند و ایندکسِ
       // کهنه ستونِ بغلی را تغییر می‌داد (باگِ «الباقی از لبهٔ حذف بزرگ‌وکوچک می‌شد»)
@@ -11911,10 +12006,7 @@ function makeTableResizable(table, storeKey){
     });
   });
   // اگر قبلاً عرضِ ذخیره‌شده دارد، همان چیدمانِ ثابتِ انتخابیِ کاربر برگردد
-  if(Object.keys(saved).length){
-    try{ if(getComputedStyle(table).tableLayout !== 'fixed') table.style.tableLayout = 'fixed'; }catch(e){}
-    table._colFrozen = true;
-  }
+  if(Object.keys(saved).length) _applySavedColWidths(table);
 }
 // ── محافظِ ریشه‌ایِ ستونِ فانتوم — برای همهٔ جدول‌های سایت ──
 // اگر جمعِ colspan یک ردیف از تعدادِ ستون‌های سرستون بیشتر شود (مثلاً وقتی یک
@@ -11969,7 +12061,12 @@ function initAllTableResizers(root){
       // خودِ <table> عوض نمی‌شود ولی ردیف‌های داخلش با هر ویرایش از نو ساخته می‌شوند —
       // اگر این‌جا هم پشتِ همان پرچم گیت می‌شد، بعد از اولین رندر رنگِ ذخیره‌شده روی
       // ردیفِ تازه‌ساخته دیگر برنمی‌گشت (باگِ «رنگ عوض نمی‌کند»).
-      if(!t._resizable) makeTableResizable(t, key);
+      // کلیدِ «عرضِ ستون‌ها» می‌تواند بینِ چند جدولِ هم‌خانواده مشترک باشد (data-colw-key):
+      // جدولِ اصلیِ حساب و همهٔ جدول‌های آرشیوشده‌اش یک تنظیمِ عرض دارند تا آرشیوِ تازه
+      // دقیقاً هم‌اندازهٔ جدولِ قبلی بیاید. کلیدِ «فرمتِ سلول» (رنگ/فونت) عمداً همان کلیدِ
+      // خودِ جدول می‌ماند تا رنگِ یک جدول روی جدول‌های دیگر نیفتد.
+      const wKey = t.getAttribute('data-colw-key') || key;
+      if(!t._resizable) makeTableResizable(t, wKey);
       try { if (window._applyCellFormatting) window._applyCellFormatting(t, key); } catch(e){}
     });
     try { if (window._cfmAfterRender) window._cfmAfterRender(); } catch(e){}
@@ -12676,7 +12773,7 @@ function _renderStackedAccounts(person) {
       </div>
       ${fuelSplitHtml}
       <div class="xls-wrap" style="overflow-x:auto">
-        <table class="xls-tbl" id="stacked-tbl-${person.id}-${sec.acctId}"><thead><tr>
+        <table class="xls-tbl" id="stacked-tbl-${person.id}-${sec.acctId}" data-colw-key="pm"><thead><tr>
           <th style="min-width:24px">#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th><th>نوع تیل</th><th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>الباقی</th><th>حذف</th>
         </tr></thead><tbody>${rowsHtml}</tbody></table>
       </div>
@@ -13624,7 +13721,7 @@ function _renderHistoryPanel(person) {
     const tableHtml = filterBarHtml + `
       <div class="xls-wrap" style="margin:8px 10px;border-radius:9px;overflow:hidden">
         <div style="overflow-x:auto">
-          <table class="xls-tbl" id="hist-tbl-${pid}-${h.id}" style="table-layout:fixed;width:100%;min-width:${showFt?752:652}px">
+          <table class="xls-tbl" id="hist-tbl-${pid}-${h.id}" data-colw-key="pm" style="table-layout:fixed;width:100%;min-width:${showFt?752:652}px">
             <thead><tr>
               <th style="width:34px">#</th><th style="width:96px">تاریخ</th><th style="width:150px">نام</th><th style="width:60px">نمبر حواله</th>
               ${showFt?'<th style="width:100px">نوع تیل</th>':''}<th style="width:56px">مقدار تیل</th><th style="width:56px">فی لیتر</th><th style="width:90px">مقدار بردگی</th>${hMoney?'<th style="width:90px">رسید</th>':'<th style="width:90px">رسید تیل</th>'}<th style="width:90px">الباقی</th><th style="width:46px">حذف</th>
@@ -15869,8 +15966,8 @@ function _renderCompanyHistoryPanel(company){
           <span style="font-size:0.72rem;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:4px 9px">جمع الباقی: <b style="color:${tAlb>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(tAlb))}</b></span>
           ${purchBadge}
         </div>
-        <div class="xls-wrap"><table class="xls-tbl" id="chist-tbl-${company.id}-${h.id}" style="table-layout:fixed;width:100%;min-width:1031px">
-          <thead><tr><th style="width:34px">#</th><th style="width:96px">تاریخ</th><th style="width:150px">نام</th><th style="width:95px">خرید(کیلو)</th><th style="width:95px">قیمت تن($)</th><th style="width:95px">کل($)</th><th style="width:58px">نرخ</th><th style="width:95px">کل(افغانی)</th><th style="width:112px">رسید</th><th style="width:60px;font-size:0.75rem">نرخ پول</th><th style="width:95px">الباقی</th><th style="width:46px">حذف</th></tr></thead>
+        <div class="xls-wrap"><table class="xls-tbl" id="chist-tbl-${company.id}-${h.id}" data-colw-key="cm" style="table-layout:fixed;width:100%;min-width:1031px">
+          <thead><tr><th style="width:34px">#</th><th style="width:96px">تاریخ</th><th style="width:150px">نام</th><th style="width:95px" data-colkey="خرید (کیلو)">خرید(کیلو)</th><th style="width:95px" data-colkey="قیمت تن ($)">قیمت تن($)</th><th style="width:95px" data-colkey="کل ($)">کل($)</th><th style="width:58px">نرخ</th><th style="width:95px" data-colkey="کل (افغانی)">کل(افغانی)</th><th style="width:112px">رسید</th><th style="width:60px;font-size:0.75rem">نرخ پول</th><th style="width:95px">الباقی</th><th style="width:46px">حذف</th></tr></thead>
           <tbody>${body || '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:12px">فقط خرید — جزئیات در کادرِ خریدها</td></tr>'}</tbody>
           <tfoot class="xls-foot"><tr><td colspan="3" style="padding:7px">جمع</td><td>${n2fa(Math.round(tTon*1000))}</td><td></td><td>${n2fa(tUsd.toFixed(1))} $</td><td></td><td>${n2fa(Math.round(tAfn))}</td><td>${n2fa(Math.round(tPoul))}</td><td></td><td>${n2fa(Math.round(tAlb))}</td><td></td></tr></tfoot>
         </table></div>
@@ -22047,7 +22144,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.112';
+const APP_VERSION = '2.9.113';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
