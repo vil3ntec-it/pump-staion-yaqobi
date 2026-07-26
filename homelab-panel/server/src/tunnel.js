@@ -367,21 +367,10 @@ export async function namedSetup({ hostname, name = 'pump-yaqobi' }) {
     await fsp.copyFile(homeCred, credFile);
   }
 
-  const targetPort = config.siteSync.port || config.port;
-  const yml = [
-    `tunnel: ${uuid}`,
-    `credentials-file: ${credFile.replaceAll('\\', '/')}`,
-    'ingress:',
-    `  - hostname: ${host}`,
-    `    service: http://127.0.0.1:${targetPort}`,
-    '  - service: http_status:404',
-    '',
-  ].join('\n');
-  await fsp.writeFile(CONFIG_FILE, yml, 'utf8');
-
   setSetting('tunnel_mode', 'named');
   setSetting('tunnel_hostname', host);
   setSetting('tunnel_name', name);
+  await writeIngress(uuid, credFile);
   logEvent('info', 'panel', `آدرس ثابت ساخته شد: ${host}`);
 
   stopTunnel();
@@ -417,7 +406,99 @@ export async function tokenSetup({ token, hostname }) {
   return { ok: true, hostname: host, status: st.status };
 }
 
+/** همهٔ زیردامنه‌هایی که به این تونل وصل‌اند */
+export function routedHostnames() {
+  const main = getSetting('tunnel_hostname', null);
+  const extra = getSetting('tunnel_hostnames', []) || [];
+  const list = [];
+  if (main) list.push({ hostname: main, port: config.siteSync.port || config.port, main: true });
+  for (const item of extra) {
+    if (item?.hostname && item.hostname !== main) {
+      list.push({ hostname: item.hostname, port: Number(item.port) || config.port, main: false });
+    }
+  }
+  return list;
+}
+
+/** فایل config.yml را با همهٔ زیردامنه‌ها بازنویسی می‌کند */
+async function writeIngress(uuid, credFile) {
+  const lines = [`tunnel: ${uuid}`, `credentials-file: ${credFile.replaceAll('\\', '/')}`, 'ingress:'];
+  for (const r of routedHostnames()) {
+    lines.push(`  - hostname: ${r.hostname}`);
+    lines.push(`    service: http://127.0.0.1:${r.port}`);
+  }
+  lines.push('  - service: http_status:404', '');
+  await fsp.writeFile(CONFIG_FILE, lines.join('\n'), 'utf8');
+}
+
+function readTunnelIdFromConfig() {
+  try {
+    const m = fs.readFileSync(CONFIG_FILE, 'utf8').match(/^tunnel:\s*(\S+)/m);
+    return m ? m[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+function readCredFromConfig() {
+  try {
+    const m = fs.readFileSync(CONFIG_FILE, 'utf8').match(/^credentials-file:\s*(.+)$/m);
+    return m ? m[1].trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * یک زیردامنهٔ دیگر به همین تونل وصل می‌کند — برای سایت‌های بعدی.
+ * نه دانلود دوباره، نه ورود دوباره؛ فقط یک رکورد DNS و یک خط در config.
+ */
+export async function addHostname({ hostname, port }) {
+  const host = String(hostname || '').trim().toLowerCase();
+  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(host)) return { ok: false, error: 'invalid_hostname' };
+  const targetPort = Number(port) || config.port;
+
+  const name = getSetting('tunnel_name', 'pump');
+  const uuid = readTunnelIdFromConfig();
+  const credFile = readCredFromConfig();
+  if (!uuid || !credFile) return { ok: false, error: 'no_permanent_tunnel' };
+  if (!findCert()) return { ok: false, error: 'not_logged_in' };
+
+  await ensureBinary();
+
+  const routed = await runCf(['tunnel', 'route', 'dns', '--overwrite-dns', name, host]);
+  if (!routed.ok && !/already exists|record with the same/i.test(routed.output)) {
+    return { ok: false, error: 'dns_failed', detail: routed.output.slice(-400) };
+  }
+
+  const extra = (getSetting('tunnel_hostnames', []) || []).filter((x) => x?.hostname !== host);
+  extra.push({ hostname: host, port: targetPort });
+  setSetting('tunnel_hostnames', extra);
+
+  await writeIngress(uuid, credFile);
+  logEvent('info', 'panel', `زیردامنهٔ ${host} به تونل وصل شد (پورت ${targetPort})`);
+
+  stopTunnel();
+  await startTunnel({});
+  return { ok: true, hostname: host, port: targetPort, hostnames: routedHostnames() };
+}
+
+export async function removeHostname(hostname) {
+  const host = String(hostname || '').trim().toLowerCase();
+  const extra = (getSetting('tunnel_hostnames', []) || []).filter((x) => x?.hostname !== host);
+  setSetting('tunnel_hostnames', extra);
+  const uuid = readTunnelIdFromConfig();
+  const credFile = readCredFromConfig();
+  if (uuid && credFile) {
+    await writeIngress(uuid, credFile);
+    stopTunnel();
+    await startTunnel({});
+  }
+  return { ok: true, hostnames: routedHostnames() };
+}
+
 export async function namedReset() {
+  setSetting('tunnel_hostnames', []);
   setSetting('tunnel_token', null);
   setSetting('tunnel_mode', 'quick');
   setSetting('tunnel_hostname', null);

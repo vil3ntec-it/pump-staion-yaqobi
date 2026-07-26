@@ -21,6 +21,9 @@ import {
   namedSetup,
   namedReset,
   tokenSetup,
+  addHostname,
+  removeHostname,
+  routedHostnames,
 } from '../tunnel.js';
 
 const router = Router();
@@ -105,6 +108,7 @@ router.get('/', async (req, res) => {
     dedicatedPort: config.siteSync.port || null,
     tunnel,
     named: namedConfig(),
+    hostnames: routedHostnames(),
     tunnelAutostart: getSetting('tunnel_autostart', true) !== false,
     siteUrl: siteUrl(),
     siteLink: link,
@@ -203,6 +207,22 @@ router.post('/tunnel/token', async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// افزودن زیردامنهٔ تازه به همان تونل — برای سایت‌های بعدی
+router.post('/tunnel/hostname', async (req, res) => {
+  const { hostname, port } = req.body || {};
+  try {
+    const result = await addHostname({ hostname, port });
+    if (!result.ok) return res.status(400).json(result);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.delete('/tunnel/hostname', async (req, res) => {
+  res.json(await removeHostname(req.query.hostname));
 });
 
 router.post('/tunnel/named/reset', async (req, res) => {

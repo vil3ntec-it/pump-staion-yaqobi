@@ -204,6 +204,7 @@ export type SiteServerInfo = {
     mode: 'quick' | 'named' | 'token';
     hasToken: boolean;
   };
+  hostnames: { hostname: string; port: number; main: boolean }[];
   tunnelAutostart: boolean;
   siteUrl: string;
   siteLink: string | null;
