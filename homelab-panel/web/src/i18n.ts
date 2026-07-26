@@ -199,6 +199,22 @@ const fa = {
   oneClickLink: 'لینک یک‌کلیکی برای دستگاه‌ها',
   tunnelAddressChanges:
     'با هر بار خاموش و روشن شدن سرور، این آدرس عوض می‌شود؛ در آن صورت دوباره همین لینک را از اینجا بردارید.',
+  permanentTitle: 'آدرس ثابت — مثل فایربیس',
+  permanentIntro:
+    'با آدرس ثابت دیگر لازم نیست هیچ لینکی پخش کنید: یک‌بار آدرس در خودِ سایت می‌نشیند و از آن به بعد هر کسی سایت را باز کند، خودکار به همین سرور وصل می‌شود — دقیقاً مدل فایربیس.',
+  permanentActive: 'آدرس ثابت فعال است',
+  permanentStep1: 'گام ۱ — ورود به حساب Cloudflare (یک‌بار)',
+  permanentStep1Hint:
+    'روی دکمه بزنید؛ یک آدرس می‌آید که باید در مرورگر باز کنید و دامنه‌تان را تایید کنید.',
+  permanentLogin: 'ورود به Cloudflare',
+  permanentOpenLink: 'این آدرس را باز کنید و دامنه را تایید کنید',
+  permanentLoggedIn: 'وارد شده‌اید ✓',
+  permanentStep2: 'گام ۲ — انتخاب زیردامنه',
+  permanentStep2Hint: 'مثلاً sync.example.com — همین برای همیشه آدرس سرور شما می‌شود.',
+  permanentCreate: 'ساخت آدرس ثابت',
+  permanentDone: 'آدرس ثابت ساخته شد',
+  permanentPutInSite: 'حالا این دو مقدار را یک‌بار در فایل سایت بگذارید (SELF_HOST_URL و SELF_HOST_TOKEN):',
+  permanentReset: 'برگشت به آدرس موقت',
 
   loading: 'در حال بارگذاری…',
   retry: 'تلاش دوباره',
@@ -407,6 +423,21 @@ const en: Dict = {
   oneClickLink: 'One-click link for devices',
   tunnelAddressChanges:
     'This address changes every time the server restarts; grab the fresh link from here when that happens.',
+  permanentTitle: 'Permanent address — the Firebase model',
+  permanentIntro:
+    'With a permanent address you never share a link: the address goes into the site once, and from then on anyone who opens the site connects automatically — exactly the Firebase model.',
+  permanentActive: 'Permanent address is active',
+  permanentStep1: 'Step 1 — sign in to Cloudflare (once)',
+  permanentStep1Hint: 'Press the button; a URL appears that you open in a browser to authorise your domain.',
+  permanentLogin: 'Sign in to Cloudflare',
+  permanentOpenLink: 'Open this URL and authorise the domain',
+  permanentLoggedIn: 'Signed in ✓',
+  permanentStep2: 'Step 2 — pick a subdomain',
+  permanentStep2Hint: 'e.g. sync.example.com — this becomes your server address forever.',
+  permanentCreate: 'Create permanent address',
+  permanentDone: 'Permanent address created',
+  permanentPutInSite: 'Now put these two values into the site once (SELF_HOST_URL and SELF_HOST_TOKEN):',
+  permanentReset: 'Back to temporary address',
 
   loading: 'Loading…',
   retry: 'Retry',
