@@ -1,7 +1,7 @@
 // سرویس‌ورکر پمپ یعقوبی — پوستهٔ برنامه (این صفحه + آیکون‌ها) را کش می‌کند تا
 // برنامه بعد از نصب، هم آنلاین و هم کاملاً آفلاین باز شود. نسخهٔ کش را هر بار
 // که APP_VERSION در index.html عوض می‌شود، این‌جا هم عوض کنید تا کش کهنه پاک شود.
-const CACHE_NAME = 'pump-yaqobi-shell-v2.9.122';
+const CACHE_NAME = 'pump-yaqobi-shell-v2.9.123';
 const APP_SHELL = [
   './',
   './index.html',
@@ -80,6 +80,18 @@ self.addEventListener('fetch', event => {
           clearTimeout(timeout);
           const copy = res.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(req, copy)).catch(() => {});
+          // نسخهٔ تازه در کش نشست — همین حالا به خودِ برنامه خبر بده تا کاربر
+          // بتواند با یک زدن آن را بیاورد (قبلاً باید برنامه را می‌بست و باز
+          // می‌کرد و اصلاً نمی‌دانست نسخهٔ تازه‌ای آمده است).
+          try {
+            res.clone().text().then(txt => {
+              const m = txt.match(/const\s+APP_VERSION\s*=\s*['"]([0-9.]+)['"]/);
+              if (!m) return;
+              self.clients.matchAll({ includeUncontrolled: true }).then(cs => {
+                cs.forEach(c => { try { c.postMessage({ type: 'app-version', version: m[1] }); } catch (e) {} });
+              });
+            }).catch(() => {});
+          } catch (e) {}
           return res;
         }).catch(() => { clearTimeout(timeout); return null; });
         if (cached) return cached; // فوری — networkUpdate در پس‌زمینه ادامه دارد

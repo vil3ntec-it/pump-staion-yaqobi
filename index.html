@@ -547,6 +547,10 @@ html.kb-open #calcPanel{bottom:calc(8px + var(--kb-offset,0px))}
 .ch-b .ch-tk{font-size:0.62rem;line-height:1}
 .ch-b .ch-tk.ok{font-weight:900;opacity:.95}
 .ch-b .ch-tk.pend{opacity:.95}
+/* نوارِ «نسخهٔ تازه آمد» — پایینِ صفحه، روی همه‌چیز */
+#appUpdBar{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:100000;background:var(--panel);border:1.5px solid var(--green);color:var(--txt);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;font-family:'Vazirmatn',sans-serif;font-size:0.82rem;font-weight:800;box-shadow:0 12px 34px -10px rgba(0,0,0,.8);max-width:94vw}
+#appUpdBar button{border:none;border-radius:9px;padding:7px 14px;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:900;cursor:pointer;background:var(--green);color:#fff}
+#appUpdBar button.later{background:transparent;border:1px solid var(--border);color:var(--muted)}
 /* نوارِ وضعیتِ اتصال بالای چت */
 .rb-net{padding:6px 10px;font-size:0.72rem;font-weight:800;text-align:center;line-height:1.7;border-bottom:1px solid var(--border)}
 .rb-net.off{background:rgba(217,119,6,.16);color:#e8930c}
@@ -22695,6 +22699,36 @@ try {
   else setTimeout(deskUpdInit, 0);
 } catch (e) {}
 
+/* ── همان خبرِ آپدیت، این‌بار در مرورگر و گوشی ───────────────────────────────
+   سرویس‌ورکر نسخهٔ تازه را در پس‌زمینه می‌گیرد؛ تا حالا کاربر خبر نداشت و باید
+   برنامه را می‌بست و باز می‌کرد. حالا همان لحظه یک نوارِ «نسخهٔ تازه آمد — بزنید
+   تا بیاید» می‌آید و با یک زدن نسخهٔ تازه بالا می‌آید. ── */
+let _swNewVersion = null;
+function pumpApplyWebUpdate() {
+  try { save(); } catch (e) {}
+  try { _chatOutboxSave(); _chatCacheSaveNow(); } catch (e) {}
+  setTimeout(() => { try { location.reload(); } catch (e) {} }, 250);
+}
+try {
+  if (navigator.serviceWorker) {
+    navigator.serviceWorker.addEventListener('message', ev => {
+      const d = ev && ev.data;
+      if (!d || d.type !== 'app-version' || !d.version) return;
+      if (d.version === APP_VERSION || _swNewVersion === d.version) return;
+      _swNewVersion = d.version;
+      try {
+        const el = document.createElement('div');
+        el.id = 'appUpdBar';
+        el.innerHTML = '🎉 نسخهٔ تازهٔ برنامه (' + d.version + ') آماده است' +
+          '<button onclick="pumpApplyWebUpdate()">آپدیت کن</button>' +
+          '<button class="later" onclick="this.parentNode.remove()">بعداً</button>';
+        document.getElementById('appUpdBar')?.remove();
+        document.body.appendChild(el);
+      } catch (e) {}
+    });
+  }
+} catch (e) {}
+
 // صفِ پیام‌ها مستقل از باز بودنِ پنجرهٔ چت کار می‌کند: همین که برنامه باز شود،
 // هر پیامی که از سیزنِ قبلی در صف مانده خودکار فرستاده می‌شود (مثل واتساپ).
 try {
@@ -23047,7 +23081,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.122';
+const APP_VERSION = '2.9.123';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
