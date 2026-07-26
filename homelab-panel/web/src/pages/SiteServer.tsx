@@ -372,8 +372,17 @@ function PermanentAddress({ data, onChanged }: { data: SiteServerInfo; onChanged
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [cfToken, setCfToken] = useState('');
+  const [commands, setCommands] = useState<string[]>([]);
 
   const active = data.tunnel.permanent && Boolean(data.tunnel.hostname);
+
+  // دستورهای دستی را از سرور می‌گیریم (مسیر دقیق cloudflared در همان کامپیوتر)
+  useEffect(() => {
+    api<{ commands: string[] }>('/api/site-server/tunnel/named/commands')
+      .then((r) => setCommands(r.commands))
+      .catch(() => setCommands([]));
+  }, [data.tunnel.installed, data.named.hostname]);
 
   // بعد از باز کردن لینک ورود، منتظر می‌مانیم تا Cloudflare اجازه را ثبت کند
   useEffect(() => {
@@ -482,44 +491,59 @@ var SELF_HOST_TOKEN = '${token ?? '…'}';`}
         </>
       ) : (
         <>
-          {/* گام ۱ */}
-          <div className="mb-4">
-            <p className="mb-1 text-sm font-medium">{t('permanentStep1')}</p>
-            <p className="mb-2 text-[11px] text-ink-muted">{t('permanentStep1Hint')}</p>
+          {/* راه رایگان — بدون کارت بانکی */}
+          <div className="mb-5 rounded-xl border border-line p-3.5" style={{ background: 'var(--surface-0)' }}>
+            <p className="mb-1 text-sm font-semibold">{t('freeWayTitle')}</p>
+            <p className="mb-3 text-[11px] leading-relaxed text-ink-soft">{t('freeWayIntro')}</p>
+
             {loggedIn ? (
               <Badge tone="good">{t('permanentLoggedIn')}</Badge>
             ) : (
-              <>
-                <button className="btn btn-primary btn-sm" disabled={busy} onClick={startLogin}>
-                  {busy && <Spinner />}
-                  {t('permanentLogin')}
-                </button>
-                {loginUrl && (
-                  <div className="mt-2">
-                    <p className="mb-1 text-[11px] text-ink-muted">{t('permanentOpenLink')}</p>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <code
-                        className="min-w-0 flex-1 break-all rounded-xl border border-line px-3 py-2 font-mono text-[11px]"
-                        style={{ background: 'var(--surface-0)' }}
-                        dir="ltr"
-                      >
-                        {loginUrl}
-                      </code>
-                      <CopyButton value={loginUrl} />
-                      <a className="btn btn-sm" href={loginUrl} target="_blank" rel="noreferrer">
-                        {t('open')}
-                      </a>
-                    </div>
-                  </div>
-                )}
-              </>
+              <button className="btn btn-primary btn-sm" disabled={busy} onClick={startLogin}>
+                {busy && <Spinner />}
+                {t('permanentLogin')}
+              </button>
             )}
-          </div>
 
-          {/* گام ۲ */}
-          <div>
-            <p className="mb-1 text-sm font-medium">{t('permanentStep2')}</p>
-            <p className="mb-2 text-[11px] text-ink-muted">{t('permanentStep2Hint')}</p>
+            {loginUrl && (
+              <div className="mt-2">
+                <p className="mb-1 text-[11px] text-ink-muted">{t('permanentOpenLink')}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <code
+                    className="min-w-0 flex-1 break-all rounded-xl border border-line px-3 py-2 font-mono text-[11px]"
+                    style={{ background: 'var(--surface-2)' }}
+                    dir="ltr"
+                  >
+                    {loginUrl}
+                  </code>
+                  <CopyButton value={loginUrl} />
+                  <a className="btn btn-sm" href={loginUrl} target="_blank" rel="noreferrer">
+                    {t('open')}
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {/* همیشه در دسترس: دستورهای دستی */}
+            {commands.length > 0 && (
+              <div className="mt-3">
+                <p className="mb-1 text-[11px] font-medium text-ink-soft">{t('manualCommands')}</p>
+                <pre
+                  className="overflow-x-auto rounded-xl border border-line p-3 font-mono text-[11px] leading-relaxed"
+                  style={{ background: 'var(--surface-2)' }}
+                  dir="ltr"
+                >
+                  {commands.join('\n')}
+                </pre>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  <CopyButton value={commands.join('\n')} />
+                  <span className="text-[11px] text-ink-muted">{t('manualHint')}</span>
+                </div>
+              </div>
+            )}
+
+            <label className="label mt-4">{t('permanentStep2')}</label>
+            <p className="mb-1.5 text-[11px] text-ink-muted">{t('permanentStep2Hint')}</p>
             <div className="flex flex-wrap items-center gap-2">
               <input
                 className="input max-w-xs"
@@ -538,6 +562,72 @@ var SELF_HOST_TOKEN = '${token ?? '…'}';`}
               </button>
             </div>
           </div>
+
+          {/* راه دوم: توکن از داشبورد (کارت بانکی می‌خواهد) */}
+          <div className="mb-5 rounded-xl border border-line p-3.5" style={{ background: 'var(--surface-0)' }}>
+            <p className="mb-2 text-sm font-semibold">{t('tokenWay')}</p>
+            <ol className="mb-3 space-y-1 text-[11px] leading-relaxed text-ink-soft">
+              <li>{t('tokenStep1')}</li>
+              <li>{t('tokenStep2')}</li>
+              <li>{t('tokenStep3', { port: data.dedicatedPort || 4701 })}</li>
+              <li>{t('tokenStep4')}</li>
+            </ol>
+            <a
+              className="btn btn-sm mb-3"
+              href="https://one.dash.cloudflare.com/?to=/:account/networks/tunnels"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Globe className="h-3.5 w-3.5" />
+              one.dash.cloudflare.com
+            </a>
+
+            <label className="label">{t('tokenLabel')}</label>
+            <textarea
+              className="input h-20 font-mono text-[11px]"
+              dir="ltr"
+              placeholder="eyJhIjoiXXXXXXXX…"
+              value={cfToken}
+              onChange={(e) => setCfToken(e.target.value)}
+            />
+            <label className="label mt-3">{t('permanentStep2')}</label>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                className="input max-w-xs"
+                dir="ltr"
+                placeholder="sync.example.com"
+                value={hostname}
+                onChange={(e) => setHostname(e.target.value)}
+              />
+              <button
+                className="btn btn-primary"
+                disabled={busy || !cfToken.trim() || !hostname.trim()}
+                onClick={async () => {
+                  setBusy(true);
+                  setError(null);
+                  try {
+                    await api('/api/site-server/tunnel/token', {
+                      body: { token: cfToken.trim(), hostname: hostname.trim() },
+                    });
+                    setCfToken('');
+                    toast(t('tokenSaved'));
+                    onChanged();
+                  } catch (e) {
+                    const code = e instanceof ApiError ? e.code : 'error';
+                    setError(
+                      code === 'invalid_token' || code === 'invalid_hostname' ? t(code as never) : code
+                    );
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                {busy && <Spinner />}
+                {t('tokenSave')}
+              </button>
+            </div>
+          </div>
+
 
           {error && (
             <p

@@ -68,7 +68,7 @@ export function publicState() {
     restarts: state.restarts,
     mode: getSetting('tunnel_mode', 'quick'),
     hostname: getSetting('tunnel_hostname', null),
-    permanent: getSetting('tunnel_mode', 'quick') === 'named',
+    permanent: ['named', 'token'].includes(getSetting('tunnel_mode', 'quick')),
     installed: Boolean(state.binary),
     binary: state.binary,
     log: state.lastLines.slice(-12),
@@ -194,6 +194,23 @@ function extractTunnelUrl(line, custom) {
 const CF_DIR = path.join(config.dataDir, 'cloudflared');
 const CERT_FILE = path.join(CF_DIR, 'cert.pem');
 const CONFIG_FILE = path.join(CF_DIR, 'config.yml');
+// اگر کاربر خودش در ترمینال «cloudflared tunnel login» زده باشد، گواهی اینجاست
+const HOME_CERT = path.join(os.homedir(), '.cloudflared', 'cert.pem');
+
+/** گواهی ورود را از هر جا که باشد پیدا می‌کند و در پوشهٔ پنل کپی می‌گیرد */
+function findCert() {
+  if (fs.existsSync(CERT_FILE)) return CERT_FILE;
+  if (fs.existsSync(HOME_CERT)) {
+    try {
+      fs.mkdirSync(CF_DIR, { recursive: true });
+      fs.copyFileSync(HOME_CERT, CERT_FILE);
+      return CERT_FILE;
+    } catch {
+      return HOME_CERT;
+    }
+  }
+  return null;
+}
 
 function runCf(args, { timeout = 120000, onLine } = {}) {
   return new Promise((resolve) => {
@@ -230,11 +247,13 @@ function runCf(args, { timeout = 120000, onLine } = {}) {
 
 export function namedConfig() {
   return {
-    loggedIn: fs.existsSync(CERT_FILE),
+    loggedIn: Boolean(findCert()),
     configured: fs.existsSync(CONFIG_FILE),
     hostname: getSetting('tunnel_hostname', null),
     tunnelName: getSetting('tunnel_name', null),
     mode: getSetting('tunnel_mode', 'quick'),
+    // خودِ توکن هرگز بیرون نمی‌رود — فقط اینکه تنظیم شده یا نه
+    hasToken: Boolean(getSetting('tunnel_token', null)),
   };
 }
 
@@ -242,7 +261,7 @@ export function namedConfig() {
 export async function namedLoginStart() {
   await ensureBinary();
   await fsp.mkdir(CF_DIR, { recursive: true });
-  if (fs.existsSync(CERT_FILE)) return { alreadyLoggedIn: true, url: null };
+  if (findCert()) return { alreadyLoggedIn: true, url: null };
 
   return new Promise((resolve) => {
     let settled = false;
@@ -256,7 +275,10 @@ export async function namedLoginStart() {
     const onData = (chunk) => {
       const text = chunk.toString();
       pushLine(text.trim().slice(0, 200));
-      const match = text.match(/https:\/\/dash\.cloudflare\.com\/\S+/);
+      // cloudflared ممکن است آدرس را با قالب‌های مختلف چاپ کند
+      const match =
+        text.match(/https:\/\/dash\.cloudflare\.com\/\S+/) ||
+        text.match(/https:\/\/[a-z0-9.-]*cloudflare[a-z0-9.-]*\/\S*argotunnel\S*/i);
       if (match && !settled) {
         settled = true;
         resolve({ alreadyLoggedIn: false, url: match[0].replace(/[.,)\]]+$/, '') });
@@ -274,21 +296,27 @@ export async function namedLoginStart() {
     setTimeout(() => {
       if (!settled) {
         settled = true;
-        resolve({ alreadyLoggedIn: false, url: null, error: 'cloudflared پاسخی نداد' });
+        resolve({
+          alreadyLoggedIn: Boolean(findCert()),
+          url: null,
+          error: 'cloudflared آدرس ورود را چاپ نکرد',
+          log: state.lastLines.slice(-8),
+          manualCommand: `"${state.binary}" tunnel login`,
+        });
       }
-    }, 30000).unref?.();
+    }, 60000).unref?.();
   });
 }
 
 export function namedLoginDone() {
-  return fs.existsSync(CERT_FILE);
+  return Boolean(findCert());
 }
 
 /** گام ۲: ساخت تونل و وصل کردن زیردامنه — بعد از آن آدرس برای همیشه ثابت است */
 export async function namedSetup({ hostname, name = 'pump-yaqobi' }) {
   const host = String(hostname || '').trim().toLowerCase();
   if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(host)) return { ok: false, error: 'invalid_hostname' };
-  if (!fs.existsSync(CERT_FILE)) return { ok: false, error: 'not_logged_in' };
+  if (!findCert()) return { ok: false, error: 'not_logged_in' };
 
   await ensureBinary();
 
@@ -343,7 +371,36 @@ export async function namedSetup({ hostname, name = 'pump-yaqobi' }) {
   return { ok: true, hostname: host, tunnelId: uuid };
 }
 
+/**
+ * راهِ ساده‌تر: توکنِ تونل را از داشبورد Cloudflare بردارید و اینجا بچسبانید.
+ * (Zero Trust ← Networks ← Tunnels ← Create a tunnel ← Cloudflared)
+ * زیردامنه هم در همان داشبورد به این تونل وصل می‌شود (Public Hostname).
+ */
+export async function tokenSetup({ token, hostname }) {
+  const clean = String(token || '').trim();
+  const host = String(hostname || '').trim().toLowerCase();
+  // توکن تونل یک رشتهٔ base64 بلند است
+  if (clean.length < 40 || /\s/.test(clean)) return { ok: false, error: 'invalid_token' };
+  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(host)) return { ok: false, error: 'invalid_hostname' };
+
+  try {
+    await ensureBinary();
+  } catch (e) {
+    return { ok: false, error: 'cloudflared_missing', detail: e.message };
+  }
+
+  setSetting('tunnel_token', clean);
+  setSetting('tunnel_hostname', host);
+  setSetting('tunnel_mode', 'token');
+  logEvent('info', 'panel', `تونل با توکن تنظیم شد — آدرس ثابت: ${host}`);
+
+  stopTunnel();
+  const st = await startTunnel({});
+  return { ok: true, hostname: host, status: st.status };
+}
+
 export async function namedReset() {
+  setSetting('tunnel_token', null);
   setSetting('tunnel_mode', 'quick');
   setSetting('tunnel_hostname', null);
   stopTunnel();
@@ -378,17 +435,22 @@ export async function startTunnel({ port } = {}) {
   // HLP_TUNNEL_CMD برای حالت‌های خاص: اگر کسی تونل دیگری دارد یا در آزمون‌ها.
   // مقدارش با کاما جدا می‌شود و {port} با پورت مقصد جایگزین می‌شود.
   const custom = process.env.HLP_TUNNEL_CMD;
-  const named = !custom && getSetting('tunnel_mode', 'quick') === 'named' && fs.existsSync(CONFIG_FILE);
-  const namedHost = named ? getSetting('tunnel_hostname', null) : null;
+  const mode = getSetting('tunnel_mode', 'quick');
+  const tunnelToken = mode === 'token' ? getSetting('tunnel_token', null) : null;
+  const named = !custom && mode === 'named' && fs.existsSync(CONFIG_FILE);
+  // در هر دو حالتِ آدرسِ ثابت، زیردامنه از قبل معلوم است
+  const namedHost = custom ? null : named || tunnelToken ? getSetting('tunnel_hostname', null) : null;
 
   const [command, args] = custom
     ? (() => {
         const parts = custom.split(',').map((p) => p.trim().replaceAll('{port}', String(targetPort)));
         return [parts[0], parts.slice(1)];
       })()
-    : named
-      ? [state.binary, ['tunnel', '--no-autoupdate', '--config', CONFIG_FILE, 'run']]
-      : [
+    : tunnelToken
+      ? [state.binary, ['tunnel', '--no-autoupdate', 'run', '--token', tunnelToken]]
+      : named
+        ? [state.binary, ['tunnel', '--no-autoupdate', '--config', CONFIG_FILE, 'run']]
+        : [
           state.binary,
           ['tunnel', '--no-autoupdate', '--url', `http://127.0.0.1:${targetPort}`, '--loglevel', 'info'],
         ];

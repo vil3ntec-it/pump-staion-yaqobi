@@ -142,7 +142,7 @@ try {
 
   console.log('\n── سرور سایت ──');
   await page.click('a[href="/site-server"]');
-  await page.waitForSelector('text=آدرس سرور', { timeout: 8000 });
+  await page.waitForSelector('h2:has-text("آدرس سرور")', { timeout: 10000 });
   check('آدرس ws:// نمایش داده می‌شود', (await page.locator('text=ws://').count()) > 0);
   await page.click('button:has-text("نمایش رمز")');
   await page.waitForTimeout(600);
