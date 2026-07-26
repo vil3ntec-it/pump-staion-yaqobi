@@ -26,11 +26,29 @@ function binaryName() {
   return process.platform === 'win32' ? 'cloudflared.exe' : 'cloudflared';
 }
 
+/**
+ * معماری واقعی ویندوز — نه معماری خودِ Node.
+ * اگر Node سی‌ودو بیتی روی ویندوز ۶۴ بیتی اجرا شود، process.arch می‌گوید ia32
+ * ولی ویندوز ۶۴ بیتی است. متغیر PROCESSOR_ARCHITEW6432 دقیقاً همین را می‌گوید.
+ */
+function windowsArch() {
+  const real = (process.env.PROCESSOR_ARCHITEW6432 || process.env.PROCESSOR_ARCHITECTURE || '').toUpperCase();
+  if (real === 'ARM64') return 'arm64';
+  if (real === 'AMD64') return 'amd64';
+  if (real === 'X86') return '386';
+  // اگر متغیر نبود، از خودِ Node بپرس
+  if (process.arch === 'arm64') return 'arm64';
+  if (process.arch === 'ia32') return '386';
+  return 'amd64';
+}
+
 function downloadUrl() {
-  const arch = process.arch === 'arm64' ? 'arm64' : process.arch === 'arm' ? 'arm' : 'amd64';
   const base = 'https://github.com/cloudflare/cloudflared/releases/latest/download/';
-  if (process.platform === 'win32') return `${base}cloudflared-windows-${arch === 'arm64' ? 'arm64' : 'amd64'}.exe`;
-  if (process.platform === 'darwin') return `${base}cloudflared-darwin-${arch}.tgz`;
+  if (process.platform === 'win32') return `${base}cloudflared-windows-${windowsArch()}.exe`;
+  if (process.platform === 'darwin') {
+    return `${base}cloudflared-darwin-${process.arch === 'arm64' ? 'arm64' : 'amd64'}.tgz`;
+  }
+  const arch = process.arch === 'arm64' ? 'arm64' : process.arch === 'arm' ? 'arm' : 'amd64';
   return `${base}cloudflared-linux-${arch}`;
 }
 
