@@ -27,6 +27,9 @@ jobs:
         uses: actions/configure-pages@v5
         with:
           enablement: true
+      # پنل سرور خانگی یک برنامهٔ محلی است و نباید روی سایت منتشر شود
+      - name: حذف پنل سرور خانگی از خروجی سایت
+        run: rm -rf homelab-panel
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:

@@ -1,0 +1,25 @@
+{
+  "name": "homelab-panel-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backend of the home server management panel (Express + Socket.IO + SQLite)",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/index.js",
+    "test": "node test/smoke.mjs",
+    "test:ui": "node test/ui.mjs"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "socket.io": "^4.8.1",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.49.1"
+  },
+  "engines": {
+    "node": ">=22.13"
+  }
+}
