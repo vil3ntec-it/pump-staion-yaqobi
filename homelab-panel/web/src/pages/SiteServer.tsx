@@ -373,6 +373,8 @@ function PermanentAddress({ data, onChanged }: { data: SiteServerInfo; onChanged
   const [error, setError] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [cfToken, setCfToken] = useState('');
+  const [newHost, setNewHost] = useState('');
+  const [newPort, setNewPort] = useState('');
   const [commands, setCommands] = useState<string[]>([]);
 
   const active = data.tunnel.permanent && Boolean(data.tunnel.hostname);
@@ -456,6 +458,87 @@ function PermanentAddress({ data, onChanged }: { data: SiteServerInfo; onChanged
 {`var SELF_HOST_URL   = 'wss://${data.tunnel.hostname}';
 var SELF_HOST_TOKEN = '${token ?? '…'}';`}
           </pre>
+          {/* سایت‌های دیگر روی همین تونل — بدون تکرار هیچ مرحله‌ای */}
+          <div className="mt-5 rounded-xl border border-line p-3.5" style={{ background: 'var(--surface-0)' }}>
+            <p className="mb-1 text-sm font-semibold">{t('moreSites')}</p>
+            <p className="mb-3 text-[11px] leading-relaxed text-ink-soft">{t('moreSitesHint')}</p>
+
+            {data.hostnames.filter((h) => !h.main).length ? (
+              <ul className="mb-3 divide-y divide-line">
+                {data.hostnames
+                  .filter((h) => !h.main)
+                  .map((h) => (
+                    <li key={h.hostname} className="flex items-center justify-between gap-3 py-2">
+                      <span className="truncate font-mono text-xs" dir="ltr">
+                        {h.hostname} → localhost:{h.port}
+                      </span>
+                      <button
+                        className="btn btn-sm"
+                        onClick={async () => {
+                          await api(`/api/site-server/tunnel/hostname?hostname=${encodeURIComponent(h.hostname)}`, {
+                            method: 'DELETE',
+                          });
+                          onChanged();
+                        }}
+                      >
+                        {t('delete')}
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+            ) : (
+              <p className="mb-3 text-[11px] text-ink-muted">{t('noExtraHostnames')}</p>
+            )}
+
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="min-w-0 flex-1">
+                <label className="label">{t('domain')}</label>
+                <input
+                  className="input"
+                  dir="ltr"
+                  placeholder="shop.example.com"
+                  value={newHost}
+                  onChange={(e) => setNewHost(e.target.value)}
+                />
+              </div>
+              <div className="w-28">
+                <label className="label">{t('hostnamePort')}</label>
+                <input
+                  className="input tnum"
+                  dir="ltr"
+                  inputMode="numeric"
+                  placeholder="8100"
+                  value={newPort}
+                  onChange={(e) => setNewPort(e.target.value)}
+                />
+              </div>
+              <button
+                className="btn btn-primary"
+                disabled={busy || !newHost.trim() || !newPort.trim()}
+                onClick={async () => {
+                  setBusy(true);
+                  setError(null);
+                  try {
+                    await api('/api/site-server/tunnel/hostname', {
+                      body: { hostname: newHost.trim(), port: Number(newPort) },
+                    });
+                    setNewHost('');
+                    setNewPort('');
+                    toast(t('saved'));
+                    onChanged();
+                  } catch (e) {
+                    setError(e instanceof ApiError ? e.code : t('error'));
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                {busy && <Spinner />}
+                {t('addHostname')}
+              </button>
+            </div>
+          </div>
+
           <div className="mt-2 flex flex-wrap gap-2">
             {!token && (
               <button

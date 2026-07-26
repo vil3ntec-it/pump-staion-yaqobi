@@ -215,6 +215,12 @@ const fa = {
   permanentDone: 'آدرس ثابت ساخته شد',
   permanentPutInSite: 'حالا این دو مقدار را یک‌بار در فایل سایت بگذارید (SELF_HOST_URL و SELF_HOST_TOKEN):',
   permanentReset: 'برگشت به آدرس موقت',
+  moreSites: 'سایت‌های دیگر روی همین تونل',
+  moreSitesHint:
+    'برای هر سایت دیگری که می‌خواهی روی اینترنت باشد، فقط یک زیردامنه و پورتش را بنویس. نه دانلود دوباره، نه ورود دوباره.',
+  addHostname: 'وصل کردن',
+  hostnamePort: 'پورت سایت',
+  noExtraHostnames: 'هنوز زیردامنهٔ دیگری وصل نشده.',
   tokenWay: 'راه دوم: توکن از داشبورد Cloudflare (این راه کارت بانکی می‌خواهد)',
   freeWayTitle: 'راه رایگان — بدون کارت بانکی',
   freeWayIntro:
@@ -453,6 +459,12 @@ const en: Dict = {
   permanentDone: 'Permanent address created',
   permanentPutInSite: 'Now put these two values into the site once (SELF_HOST_URL and SELF_HOST_TOKEN):',
   permanentReset: 'Back to temporary address',
+  moreSites: 'Other sites on the same tunnel',
+  moreSitesHint:
+    'For any other site you want on the internet, just enter a subdomain and its port. No new download, no new sign-in.',
+  addHostname: 'Connect',
+  hostnamePort: 'Site port',
+  noExtraHostnames: 'No other subdomains connected yet.',
   tokenWay: 'Second way: token from the Cloudflare dashboard (this one asks for a card)',
   freeWayTitle: 'Free way — no payment card',
   freeWayIntro:
