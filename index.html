@@ -1556,6 +1556,24 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
   var SELF_HOST_URL   = 'wss://sync.yaqobipump.top';
   var SELF_HOST_TOKEN = '3b1379be26f61b2f8e460dbccee01ff70364';
 
+  // اگر آدرسِ داخلیِ سایت عوض شده باشد، آدرسِ ذخیره‌شدهٔ قدیمی روی این دستگاه باید
+  // کنار برود؛ وگرنه دستگاهی که یک‌بار دستی آدرس ذخیره کرده، آدرس تازه را هرگز
+  // نمی‌گیرد و بی‌صدا از هم‌زمان‌سازی می‌افتد.
+  try {
+    if (localStorage.getItem('pumpServerBuiltin') !== SELF_HOST_URL) {
+      localStorage.removeItem('pumpServerUrl');
+      localStorage.removeItem('pumpServerToken');
+      localStorage.setItem('pumpServerBuiltin', SELF_HOST_URL);
+    }
+    // صفحه‌ای که با https باز شده حق ندارد به ws:// وصل شود (قانون مرورگر)،
+    // پس آدرس ناامنِ ذخیره‌شده فقط باعث قطع بی‌صدای هم‌زمان‌سازی می‌شود.
+    var _saved = localStorage.getItem('pumpServerUrl');
+    if (_saved && location.protocol === 'https:' && /^ws:\/\//i.test(_saved)) {
+      localStorage.removeItem('pumpServerUrl');
+      localStorage.removeItem('pumpServerToken');
+    }
+  } catch(e){}
+
   // لینکِ خودکارِ اتصال: مثلاً .../?server=wss://xxx.trycloudflare.com&token=abc
   // هر کس این لینک را باز کند، بدون نیاز به رفتن به تنظیمات، به همان سرور وصل می‌شود
   // (یک‌بار در localStorage ذخیره می‌شود؛ دفعات بعد لینک ساده هم کافی است).
@@ -1575,6 +1593,7 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
   try { SELF_HOST_TOKEN = window.SELF_HOST_TOKEN || localStorage.getItem('pumpServerToken') || SELF_HOST_TOKEN; } catch(e){}
   window.__USE_SELF_HOST__ = true;         // فایربیس کاملاً حذف شده — تنها بک‌اند، سرور شخصی است
   window.__SELF_HOST_URL__ = SELF_HOST_URL; // اگر خالی باشد، برنامه فقط محلی کار می‌کند (بدون هم‌زمان‌سازی)
+  window.__SELF_HOST_TOKEN__ = SELF_HOST_TOKEN; // برای نمایش در تنظیمات › هم‌زمان‌سازی
 
   var ws = null, connected = false, wantOpen = true, reconnectDelay = 1000;
   var pending = {}, idSeq = 0;
@@ -8232,8 +8251,14 @@ function saveServerConfig() {
   showToast('✅ ذخیره شد — در حال اتصال دوباره...', '#38a169');
   setTimeout(function(){ location.reload(); }, 800);
 }
+// پاک کردن آدرسِ دستی؛ بعد از آن، آدرسِ داخلیِ خودِ سایت دوباره به کار می‌افتد
+// (نه «بدون هم‌زمان‌سازی» — این دکمه راهِ برگشت به حالت پیش‌فرضِ درست است).
 function clearServerConfig() {
-  if (!confirm('آدرس سرور پاک شود؟ برنامه فقط روی همین دستگاه کار می‌کند (بدون هم‌زمان‌سازی).')) return;
+  const builtin = window.__SELF_HOST_URL__ || '';
+  const msg = builtin
+    ? 'آدرس دستی پاک شود و به آدرس پیش‌فرض سایت برگردیم؟\n\n' + builtin
+    : 'آدرس سرور پاک شود؟ برنامه فقط روی همین دستگاه کار می‌کند (بدون هم‌زمان‌سازی).';
+  if (!confirm(msg)) return;
   try { localStorage.removeItem('pumpServerUrl'); localStorage.removeItem('pumpServerToken'); } catch(e) {}
   location.reload();
 }
@@ -8242,6 +8267,8 @@ function clearServerConfig() {
 function copyShareLink() {
   let u = '', t = '';
   try { u = localStorage.getItem('pumpServerUrl') || ''; t = localStorage.getItem('pumpServerToken') || ''; } catch(e){}
+  // اگر آدرس دستی نیست، آدرسِ داخلیِ سایت را بگذار — همان هم وصل است
+  if (!u) { u = window.__SELF_HOST_URL__ || ''; t = window.__SELF_HOST_TOKEN__ || ''; }
   if (!u) { showToast('اول آدرس سرور را ذخیره و وصل کنید', '#e53e3e'); return; }
   const link = location.origin + location.pathname + '?server=' + encodeURIComponent(u) + (t ? '&token=' + encodeURIComponent(t) : '');
   const done = () => showToast('✅ لینک کپی شد — همین را برای بقیه بفرست', '#38a169');
@@ -8315,10 +8342,13 @@ function fillSyncSettings() {
   const inp = document.getElementById('sync-station-code');
   if (inp) inp.value = DB.syncCode || '';
   try {
+    // آدرسِ واقعیِ در حال استفاده را نشان بده — چه دستی ذخیره شده باشد و چه
+    // آدرسِ داخلیِ خودِ سایت. اگر فقط آدرس دستی را نشان بدهیم، کاربرِ وصل
+    // کادر را خالی می‌بیند و فکر می‌کند سرور تنظیم نشده.
     const su = document.getElementById('server-url');
-    if (su) su.value = localStorage.getItem('pumpServerUrl') || '';
+    if (su) su.value = localStorage.getItem('pumpServerUrl') || window.__SELF_HOST_URL__ || '';
     const st = document.getElementById('server-token');
-    if (st) st.value = localStorage.getItem('pumpServerToken') || '';
+    if (st) st.value = localStorage.getItem('pumpServerToken') || window.__SELF_HOST_TOKEN__ || '';
   } catch(e) {}
   _updateSyncLastTime();
   _updateAutoSyncBadge();
@@ -22143,7 +22173,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.115';
+const APP_VERSION = '2.9.116';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
