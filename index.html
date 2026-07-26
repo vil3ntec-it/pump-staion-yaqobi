@@ -542,7 +542,15 @@ html.kb-open #calcPanel{bottom:calc(8px + var(--kb-offset,0px))}
 .ch-b.other{align-self:flex-end;background:var(--card);color:var(--txt);border:1px solid var(--border);border-bottom-right-radius:4px}
 .ch-b.bot{align-self:flex-end;background:rgba(34,204,255,.1);color:var(--txt);border:1px solid var(--blue);border-bottom-right-radius:4px}
 .ch-b .ch-nm{font-size:0.68rem;font-weight:900;opacity:.85;margin-bottom:2px}
-.ch-b .ch-tm{font-size:0.6rem;opacity:.6;margin-top:3px;text-align:left;direction:ltr}
+.ch-b .ch-tm{font-size:0.6rem;opacity:.6;margin-top:3px;text-align:left;direction:ltr;display:flex;gap:4px;align-items:center}
+/* علامتِ رسیدنِ پیام (مثل واتساپ): 🕐 هنوز در صف · ✓ رسیده به سرور */
+.ch-b .ch-tk{font-size:0.62rem;line-height:1}
+.ch-b .ch-tk.ok{font-weight:900;opacity:.95}
+.ch-b .ch-tk.pend{opacity:.95}
+/* نوارِ وضعیتِ اتصال بالای چت */
+.rb-net{padding:6px 10px;font-size:0.72rem;font-weight:800;text-align:center;line-height:1.7;border-bottom:1px solid var(--border)}
+.rb-net.off{background:rgba(217,119,6,.16);color:#e8930c}
+.rb-net.snd{background:rgba(56,161,105,.16);color:var(--green)}
 .ch-b img{max-width:100%;border-radius:9px;display:block;cursor:pointer}
 .ch-b video{max-width:100%;border-radius:9px;display:block}
 .ch-b audio{max-width:100%;width:210px;display:block}
@@ -1625,10 +1633,57 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
 
   var ws = null, connected = false, wantOpen = true, reconnectDelay = 1000;
   var pending = {}, idSeq = 0;
-  var subs = {}, subSeq = 0;               // subId -> {path,event,cb,limit,seen,lastValue}
+  var subs = {}, subSeq = 0;               // subId -> {path,event,cb,limit,seen,seenOrder,lastValue}
   var connListeners = [];                  // شنونده‌های .info/connected
   var outQueue = [];                       // پیام‌های در صف تا زمان اتصال
   var onDiscRegs = {};                     // path -> {action,value}  (هنگام reconnect دوباره مسلح می‌شود)
+
+  /* ── صفِ پایدارِ نوشتن‌ها (مثل واتساپ) ────────────────────────────────────────
+     هر نوشتنی که موقعِ قطع بودنِ سرور انجام شود، نه‌تنها در حافظه بلکه روی خودِ
+     دستگاه (localStorage) هم می‌ماند؛ پس با بستنِ برنامه/خاموش شدنِ گوشی هم گم
+     نمی‌شود و به‌محضِ وصل شدنِ دوباره، به ترتیب فرستاده می‌شود.
+     سقف‌ها عمدی‌اند: صف هرگز بی‌نهایت بزرگ نمی‌شود، پس حافظه/فضای دستگاه هیچ‌وقت
+     پر نمی‌شود، حتی اگر سرور ماه‌ها قطع بماند. ── */
+  var OUTQ_KEY    = 'pumpOutQueue';
+  var OUTQ_MAX    = 500;                   // حداکثر تعداد عملیاتِ در صف
+  var OUTQ_BYTES  = 2000000;               // حداکثر حجمِ ذخیره‌شده روی دستگاه (~۲MB)
+  var GET_TTL_MS  = 45000;                 // خواندنِ در صف بعد از این مدت رها می‌شود
+  var netListeners = [];                   // شنوندگانِ وضعیتِ اتصال/صف (رابط کاربری)
+  var hbTimer = null, hbWaitTimer = null;  // ضربانِ زنده‌بودنِ اتصال
+
+  function isMutation(m){ return m && (m.op === 'set' || m.op === 'update' || m.op === 'remove' || m.op === 'push'); }
+
+  function outqPersist(){
+    try {
+      var keep = outQueue.filter(isMutation);
+      var out = [], bytes = 0;
+      for (var i = keep.length - 1; i >= 0; i--) {   // از تازه‌ترین به کهنه‌ترین تا سقف حجم
+        var s = '';
+        try { s = JSON.stringify(keep[i]); } catch(e){ continue; }
+        if (!s || s.length > OUTQ_BYTES) continue;   // یک آیتمِ غول‌پیکر (ویدیو): فقط در حافظه
+        if (bytes + s.length > OUTQ_BYTES) break;
+        bytes += s.length; out.push(keep[i]);
+      }
+      out.reverse();
+      localStorage.setItem(OUTQ_KEY, JSON.stringify(out));
+    } catch(e){ try { localStorage.removeItem(OUTQ_KEY); } catch(e2){} }
+  }
+  function outqRestore(){
+    try {
+      var arr = JSON.parse(localStorage.getItem(OUTQ_KEY) || '[]');
+      if (!Array.isArray(arr)) return;
+      arr.forEach(function(m){
+        if (m && typeof m === 'object' && isMutation(m) && typeof m.path === 'string') {
+          m.id = ++idSeq;                  // شناسهٔ تازه (پاسخ‌های سیزنِ قبلی دیگر معنا ندارند)
+          outQueue.push(m);
+        }
+      });
+    } catch(e){}
+  }
+  function notifyNet(){
+    var st = { connected: connected, queued: outQueue.filter(isMutation).length };
+    netListeners.forEach(function(cb){ try { cb(st); } catch(e){} });
+  }
 
   function tailKey(path){ var a = String(path).split('/').filter(Boolean); return a.length ? a[a.length-1] : null; }
 
@@ -1643,14 +1698,38 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     };
   }
 
-  function sendRaw(msg){ try { ws.send(JSON.stringify(msg)); } catch(e){} }
+  function sendRaw(msg){
+    try {
+      if (!ws || ws.readyState !== 1) { if (isMutation(msg)) { outQueue.push(msg); outqPersist(); } return; }
+      ws.send(JSON.stringify(msg));
+    } catch(e){ if (isMutation(msg)) { outQueue.push(msg); outqPersist(); } }
+  }
 
   function enqueueOrSend(msg){
-    if (connected) { sendRaw(msg); return; }
+    if (connected && ws && ws.readyState === 1) { sendRaw(msg); return; }
     if (msg.op === 'set' || msg.op === 'remove') { // برای یک مسیر فقط آخرین set/remove را نگه دار (جلوگیری از تورم صف)
       outQueue = outQueue.filter(function(q){ return !((q.op === 'set' || q.op === 'remove') && q.path === msg.path); });
     }
+    if (msg.op === 'get') msg._qts = Date.now();   // خواندنِ در صف عمرِ محدود دارد
     outQueue.push(msg);
+    // سقفِ صف: کهنه‌ترین‌ها کنار می‌روند تا حافظه هرگز بی‌نهایت رشد نکند
+    if (outQueue.length > OUTQ_MAX) {
+      var drop = outQueue.splice(0, outQueue.length - OUTQ_MAX);
+      drop.forEach(function(m){ var p = pending[m.id]; if (p) { delete pending[m.id]; try { p.reject(new Error('queue_overflow')); } catch(e){} } });
+    }
+    if (isMutation(msg)) { outqPersist(); notifyNet(); }
+  }
+  // خواندن‌های کهنهٔ در صف را رها کن (وگرنه promise هایشان تا ابد باز می‌ماند)
+  function sweepQueuedGets(){
+    var now = Date.now(), keep = [];
+    outQueue.forEach(function(m){
+      if (m.op === 'get' && m._qts && now - m._qts > GET_TTL_MS) {
+        var p = pending[m.id]; if (p) { delete pending[m.id]; try { p.reject(new Error('offline')); } catch(e){} }
+        return;
+      }
+      keep.push(m);
+    });
+    outQueue = keep;
   }
 
   function doMutation(kind, path, value){
@@ -1682,7 +1761,7 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
       return cb;
     }
     var subId = ++subSeq;
-    subs[subId] = { path: path, event: event, cb: cb, limit: limit || 0, seen: {}, lastValue: undefined };
+    subs[subId] = { path: path, event: event, cb: cb, limit: limit || 0, seen: {}, seenOrder: [], lastValue: undefined };
     if (connected) sendRaw({ op: 'sub', path: path, event: event, subId: subId, limitToLast: limit || 0 });
     return cb;
   }
@@ -1733,7 +1812,13 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
       try { s.cb(mkSnap(m.key, value)); } catch(e){}
     } else if (s.event === 'child_added') {
       if (s.seen[m.key]) return;                    // قبلاً تحویل داده شده (جلوی تکرار بعد از reconnect)
-      s.seen[m.key] = 1;
+      s.seen[m.key] = 1; s.seenOrder.push(m.key);
+      // سقفِ حافظهٔ «دیده‌شده‌ها»: در یک برنامهٔ همیشه‌باز با میلیون‌ها پیام، این
+      // نقشه بدونِ سقف تا بی‌نهایت رشد می‌کرد و سرانجام تب را می‌کشت.
+      if (s.seenOrder.length > 4000) {
+        var cut = s.seenOrder.splice(0, s.seenOrder.length - 2000);
+        for (var ci = 0; ci < cut.length; ci++) delete s.seen[cut[ci]];
+      }
       try { s.cb(mkSnap(m.key, value)); } catch(e){}
     } else {                                        // child_changed / child_removed
       if (m.type === 'child_removed') delete s.seen[m.key];
@@ -1747,27 +1832,100 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     connected = true; reconnectDelay = 1000;
     for (var pth in onDiscRegs){ sendRaw({ op: 'onDisc', path: pth, action: onDiscRegs[pth].action, value: onDiscRegs[pth].value }); }
     for (var id in subs){ var s = subs[id]; sendRaw({ op: 'sub', path: s.path, event: s.event, subId: Number(id), limitToLast: s.limit }); }
+    sweepQueuedGets();
     var q = outQueue; outQueue = []; q.forEach(function(msg){ sendRaw(msg); });
-    notifyConn(true);
+    outqPersist();
+    startHeartbeat();
+    notifyConn(true); notifyNet();
   }
   function onMessage(data){
     var m; try { m = JSON.parse(data); } catch(e){ return; }
     if (m.op === 'connected') { onConnected(); return; }
-    if (m.op === 'ack' || m.op === 'result') { var p = pending[m.id]; if (p){ delete pending[m.id]; if (m.op === 'ack' && m.ok === false) p.reject(new Error('op_failed')); else p.resolve(m); } return; }
+    if (m.op === 'ack' || m.op === 'result') {
+      var p = pending[m.id];
+      if (p){
+        delete pending[m.id];
+        // این عملیات جواب گرفت — اگر هنوز نسخه‌ای از آن در صف مانده بود، برداشته شود
+        var before = outQueue.length;
+        outQueue = outQueue.filter(function(q){ return q.id !== m.id; });
+        if (outQueue.length !== before) outqPersist();
+        if (m.op === 'ack' && m.ok === false) p.reject(new Error('op_failed')); else p.resolve(m);
+        notifyNet();
+      }
+      return;
+    }
     if (m.op === 'event') { dispatchEvent(m); return; }
     if (m.op === 'error') { console.warn('[سرور شخصی] خطای سرور:', m.msg); return; }
   }
-  function connect(){
-    if (!wantOpen) return;
-    var url = SELF_HOST_URL + (SELF_HOST_TOKEN ? (SELF_HOST_URL.indexOf('?') >= 0 ? '&' : '?') + 'token=' + encodeURIComponent(SELF_HOST_TOKEN) : '');
-    try { ws = new WebSocket(url); } catch(e){ scheduleReconnect(); return; }
-    ws.onmessage = function(ev){ onMessage(ev.data); };
-    ws.onclose = function(){ connected = false; notifyConn(false); scheduleReconnect(); };
-    ws.onerror = function(){ try { ws.close(); } catch(e){} };
+  // ضربانِ زنده‌بودن: روی موبایل، سوکت گاهی بی‌صدا می‌میرد و onclose هرگز نمی‌آید؛
+  // بدون این، برنامه ساعت‌ها خیال می‌کند وصل است و پیام‌ها در هوا گم می‌شوند.
+  function startHeartbeat(){
+    stopHeartbeat();
+    hbTimer = setInterval(function(){
+      if (!connected || !ws || ws.readyState !== 1) return;
+      var id = ++idSeq;
+      pending[id] = { resolve: function(){ if (hbWaitTimer) { clearTimeout(hbWaitTimer); hbWaitTimer = null; } }, reject: function(){} };
+      sendRaw({ op: 'get', path: '.hb', id: id });
+      if (!hbWaitTimer) hbWaitTimer = setTimeout(function(){
+        hbWaitTimer = null; delete pending[id];
+        try { ws.close(); } catch(e){}          // جواب نداد → اتصال مرده است، از نو وصل شو
+      }, 15000);
+    }, 30000);
   }
-  function scheduleReconnect(){ if (!wantOpen) return; setTimeout(function(){ reconnectDelay = Math.min(reconnectDelay * 1.5, 15000); connect(); }, reconnectDelay); }
+  function stopHeartbeat(){
+    if (hbTimer) { clearInterval(hbTimer); hbTimer = null; }
+    if (hbWaitTimer) { clearTimeout(hbWaitTimer); hbWaitTimer = null; }
+  }
+  function onDisconnected(){
+    connected = false;
+    stopHeartbeat();
+    // هر عملیاتی که منتظرِ جواب بود، جوابش هرگز نمی‌آید: promise ها را ببند تا نه
+    // حافظه نشت کند و نه فرستنده تا ابد منتظر بماند. نوشتن‌ها دوباره فرستاده می‌شوند.
+    var ids = Object.keys(pending);
+    for (var i = 0; i < ids.length; i++) {
+      var p = pending[ids[i]]; delete pending[ids[i]];
+      try { p.reject(new Error('disconnected')); } catch(e){}
+    }
+    notifyConn(false); notifyNet();
+  }
+  function connect(){
+    if (!wantOpen || !SELF_HOST_URL) return;
+    if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;   // از قبل در حالِ اتصال/وصل
+    var url = SELF_HOST_URL + (SELF_HOST_TOKEN ? (SELF_HOST_URL.indexOf('?') >= 0 ? '&' : '?') + 'token=' + encodeURIComponent(SELF_HOST_TOKEN) : '');
+    var sock;
+    try { sock = new WebSocket(url); } catch(e){ scheduleReconnect(); return; }
+    ws = sock;
+    sock.onmessage = function(ev){ if (ws === sock) onMessage(ev.data); };
+    sock.onclose = function(){ if (ws !== sock) return; onDisconnected(); scheduleReconnect(); };
+    sock.onerror = function(){ try { sock.close(); } catch(e){} };
+  }
+  var reconnTimer = null;
+  function scheduleReconnect(){
+    if (!wantOpen || reconnTimer) return;
+    reconnTimer = setTimeout(function(){ reconnTimer = null; reconnectDelay = Math.min(reconnectDelay * 1.5, 15000); connect(); }, reconnectDelay);
+  }
+  function connectNow(){                      // تلاشِ فوری (برگشتِ اینترنت / باز شدنِ دوبارهٔ برنامه)
+    if (connected) return;
+    if (reconnTimer) { clearTimeout(reconnTimer); reconnTimer = null; }
+    reconnectDelay = 1000; connect();
+  }
+  try {
+    window.addEventListener('online',  connectNow);
+    window.addEventListener('focus',   connectNow);
+    document.addEventListener('visibilitychange', function(){ if (!document.hidden) connectNow(); });
+  } catch(e){}
 
-  var dbInstance = { ref: function(path){ return mkRef(String(path == null ? '' : path), {}); }, goOnline: function(){ wantOpen = true; if (!connected) connect(); }, goOffline: function(){ wantOpen = false; try { ws.close(); } catch(e){} } };
+  outqRestore();                              // صفِ سیزنِ قبلی (اگر برنامه بسته شده بود)
+
+  var dbInstance = { ref: function(path){ return mkRef(String(path == null ? '' : path), {}); }, goOnline: function(){ wantOpen = true; connectNow(); }, goOffline: function(){ wantOpen = false; stopHeartbeat(); try { ws.close(); } catch(e){} } };
+
+  // رابطِ وضعیتِ شبکه برای بقیهٔ برنامه (نوارِ «در صف» در چت و…)
+  window.__pumpNet__ = {
+    connected: function(){ return connected; },
+    queued: function(){ return outQueue.filter(isMutation).length; },
+    onChange: function(cb){ if (typeof cb === 'function') { netListeners.push(cb); try { cb({ connected: connected, queued: outQueue.filter(isMutation).length }); } catch(e){} } },
+    reconnect: connectNow
+  };
 
   // نصب آبجکت firebase جعلی — بقیهٔ برنامه بدون هیچ تغییری همین را صدا می‌زند
   window.firebase = { initializeApp: function(){ return {}; }, database: function(){ return dbInstance; } };
@@ -7320,6 +7478,8 @@ body.viewer-mode .inv-admin-only{display:none!important}
       <button class="rb-close" onclick="toggleRobot()" title="بستن">✕</button>
     </span>
   </div>
+  <!-- نوارِ وضعیتِ اتصال/صف — مثل واتساپ: پیام گم نمی‌شود، فقط در صف می‌ماند -->
+  <div class="rb-net" id="rbNetBar" style="display:none"></div>
   <div class="rb-tabs" id="rbTabs">
     <button class="rb-tab active" id="rbTabBtn-qa" onclick="rbShowTab('qa')"><span class="tab-dot" id="rbDot-qa"></span><svg><use href="#ic-ask"/></svg> سوال و جواب</button>
     <button class="rb-tab" id="rbTabBtn-group" onclick="rbShowTab('group')"><span class="tab-dot" id="rbDot-group"></span><svg><use href="#ic-users"/></svg> چت گروهی</button>
@@ -11911,9 +12071,8 @@ function _acctMenuSendGroup(kind, type, id) {
   _acctMenuClose();
   const t = _acctSummaryText(kind, type, id);
   if (!t) { showToast('حساب پیدا نشد', '#e53e3e'); return; }
-  if (!_chatOnline()) { showToast('برای فرستادن به گروه، اینترنت لازم است', '#e53e3e'); return; }
   _chatPush('group', { k: 'text', t: '📋 ' + t });
-  showToast('📤 حساب به چت گروهی فرستاده شد', '#38a169');
+  showToast(_chatNetUp() ? '📤 حساب به چت گروهی فرستاده شد' : '🕐 در صف — با وصل شدنِ سرور به گروه می‌رود', _chatNetUp() ? '#38a169' : '#d97706');
 }
 
 // کلیدِ پایدارِ هر ستون: بر اساس «نامِ سرستون» (نه شمارهٔ ستون). این‌طوری وقتی
@@ -20512,6 +20671,10 @@ let _chatL = { group: false, dmIdx: false, dm: {} };
 function _chatRoot() { return 'chat/' + _syncCode().replace(/[.#$\[\]\/]/g, '_') + '/'; }
 function _peerKey(s) { return String(s).replace(/[.#$\[\]\/]/g, '_'); }
 function _chatOnline() { return navigator.onLine && typeof firebase !== 'undefined' && _fbReady(); }
+// آیا همین لحظه سوکتِ سرور واقعاً وصل است؟ (فرقش با _chatOnline: این «اتصالِ زنده»
+// را می‌گوید، نه فقط تنظیم بودنِ آدرس). فرستادنِ پیام به این وابسته نیست — پیام
+// همیشه در صف می‌نشیند — فقط متنِ پیغام‌ها با آن انتخاب می‌شود.
+function _chatNetUp() { try { return !!(window.__pumpNet__ && window.__pumpNet__.connected()); } catch (e) { return false; } }
 function _chatMe() {
   if (_rbMode === 'person' && _rbPersonPeer) return { id: _rbPersonPeer.peer, name: _rbPersonPeer.name, kind: 'person' };
   if (_rbMode === 'admin') return { id: 'admin', name: 'میرزا', kind: 'admin' };
@@ -20550,9 +20713,10 @@ function rbShowTab(tab) {
   if (tab === 'qa') { _qaUnread = false; _qaRender(); try { _rbUpdateBadges(); } catch (e) {} }
   if (tab === 'group') {
     _chatInitListeners();
-    if (!_chatOnline()) document.getElementById('groupList').innerHTML = '<div class="ch-note" style="padding:20px">برای چت گروهی، اینترنت باید وصل باشد</div>';
-    else { _renderChatList('groupList', _groupMsgs); if (_rbPaneVisible('group')) _chatMarkRead('group'); }
-    if (_chatOnline() && !_chatMe() && _rbMode !== 'person') _chatAskName('group');
+    // حتی با سرورِ قطع هم گفتگو باز می‌شود: تاریخچهٔ محلی + پیام‌های در صف
+    _renderChatList('groupList', _groupMsgs);
+    if (_rbPaneVisible('group')) _chatMarkRead('group');
+    if (!_chatMe() && _rbMode !== 'person') _chatAskName('group');
   }
   if (tab === 'dm') { _chatInitListeners(); _rbRenderDmPane(); }
 }
@@ -21189,11 +21353,12 @@ function qaMirzaYes(i) {
   const m = _qaMsgs[i];
   if (!m || !m.q) return;
   m.sug = null;
-  if (!_chatOnline()) { _qaMsgs.push({ who: 'bot', t: 'اینترنت وصل نیست — پیام به میرزا نمی‌رسد. وقتی نت وصل شد، دوباره تلاش کنید.' }); _qaRender(); return; }
   const me = _chatMe();
   if (!me) { _qaPendingMirza = m.q; _qaRender(); rbShowTab('dm'); return; }
   _chatPush('dm', { k: 'text', t: 'سوال از ربات: ' + m.q });
-  _qaMsgs.push({ who: 'bot', t: 'پیام شما به میرزا فرستاده شد — در زودترین فرصت جواب شما را خواهیم داد. جواب میرزا در بخش «چت تک‌نفره» می‌آید.' });
+  _qaMsgs.push({ who: 'bot', t: _chatNetUp()
+    ? 'پیام شما به میرزا فرستاده شد — در زودترین فرصت جواب شما را خواهیم داد. جواب میرزا در بخش «چت تک‌نفره» می‌آید.'
+    : '🕐 پیام شما در صف ثبت شد — به‌محضِ وصل شدنِ سرور خودکار به میرزا می‌رسد (لازم نیست دوباره بنویسید).' });
   _qaRender();
 }
 function qaMirzaNo(i) {
@@ -21242,6 +21407,7 @@ function _chatResetListeners() {
   } catch (e) {}
   _chatL = { group: false, dmIdx: false, dm: {} };
   _groupMsgs = []; _groupLast = null; _dmMsgCache = {}; _dmIndex = {};
+  _chatCacheSeeded = false;          // تاریخچهٔ محلی دوباره خوانده شود
 }
 // پیام تازهٔ گروه/تک‌نفره که از خودم نیست: صدا + اعلان روی نوار گوشی/کامپیوتر
 function _chatNotifyIncoming(scope, m) {
@@ -21313,7 +21479,12 @@ try {
   window.addEventListener('focus', function(){ try { _presenceStart(); } catch(e){} });
 } catch (e) {}
 function _chatInitListeners() {
-  if (!_chatOnline()) return;
+  // حتی وقتی سرور قطع است، تاریخچهٔ محلی خوانده و شنونده‌ها ثبت می‌شوند؛ شنونده‌ها
+  // خودشان با وصل شدنِ دوباره از نو مسلح می‌شوند (لایهٔ سرور شخصی این کار را می‌کند).
+  _chatCacheSeed();
+  try { _chatFlushOutbox(); } catch (e) {}
+  try { _chatUpdateNetUi(); } catch (e) {}
+  if (!_fbReady()) return;
   try { _presenceStart(); } catch (e) {}
   const me = _chatMe();
   if (!_chatL.group && _rbMode !== 'person') {
@@ -21323,9 +21494,9 @@ function _chatInitListeners() {
       const m = snap.val();
       if (!m) return;
       m._key = snap.key;
-      _groupMsgs.push(m);
-      if (_groupMsgs.length > 120) _groupMsgs.shift();
-      _groupLast = m;
+      _chatMergeMsg(_groupMsgs, m);
+      _chatCacheSave();
+      _groupLast = _groupMsgs[_groupMsgs.length - 1] || m;
       if ((m.ts || 0) > _groupBootTs && m.f !== (_chatMe() || {}).id && !m.del) _chatNotifyIncoming('group', m);
       if (_rbPaneVisible('group')) { _renderChatList('groupList', _groupMsgs); _chatMarkRead('group'); }
       else _rbUpdateBadges();
@@ -21334,8 +21505,8 @@ function _chatInitListeners() {
       const m = snap.val();
       if (!m) return;
       m._key = snap.key;
-      const idx = _groupMsgs.findIndex(x => x._key === snap.key);
-      if (idx !== -1) _groupMsgs[idx] = m; else _groupMsgs.push(m);
+      _chatMergeMsg(_groupMsgs, m);
+      _chatCacheSave();
       if (_rbPaneVisible('group')) _renderChatList('groupList', _groupMsgs);
     });
   }
@@ -21344,6 +21515,7 @@ function _chatInitListeners() {
       _chatL.dmIdx = true;
       _fbDb.ref(_chatRoot() + 'dmIndex').on('value', snap => {
         _dmIndex = snap.val() || {};
+        _chatCacheSave();
         if (_rbPaneVisible('dm') && !_rbCurrentDm) _dmRenderThreadList();
         _rbUpdateBadges();
       });
@@ -21363,7 +21535,7 @@ function _chatInitListeners() {
   if (_rbMode !== 'admin' && me) _ensureDmListener(_peerKey(me.id));
 }
 function _ensureDmListener(peer) {
-  if (!peer || _chatL.dm[peer] || !_chatOnline()) return;
+  if (!peer || _chatL.dm[peer] || !_fbReady()) return;
   _chatL.dm[peer] = true;
   _dmMsgCache[peer] = _dmMsgCache[peer] || [];
   const _dmBootTs = Date.now();
@@ -21371,7 +21543,8 @@ function _ensureDmListener(peer) {
     const m = snap.val();
     if (!m) return;
     m._key = snap.key;
-    _dmMsgCache[peer].push(m);
+    _chatMergeMsg(_dmMsgCache[peer], m);
+    _chatCacheSave();
     // اگر خودِ میرزا همین حالا جواب داد، جواب‌گوی خودکار خودش کنار می‌رود
     // (پیام‌های قدیمیِ میرزا از گفتگوهای قبلی حساب نمی‌شوند — فقط پیام تازه)
     if (_rbMode === 'person' && m.f === 'admin' && (m.ts || 0) > _dmBootTs) _personBotActive = false;
@@ -21383,9 +21556,9 @@ function _ensureDmListener(peer) {
     const m = snap.val();
     if (!m) return;
     m._key = snap.key;
-    const arr = _dmMsgCache[peer] || [];
-    const idx = arr.findIndex(x => x._key === snap.key);
-    if (idx !== -1) arr[idx] = m; else arr.push(m);
+    _dmMsgCache[peer] = _dmMsgCache[peer] || [];
+    _chatMergeMsg(_dmMsgCache[peer], m);
+    _chatCacheSave();
     if (_rbPaneVisible('dm') && _rbActiveDmPeer() === peer) _dmRenderList(peer);
   });
 }
@@ -21397,28 +21570,234 @@ function _rbActiveDmPeer() {
 function _chatPush(scope, partial) {
   const me = _chatMe();
   if (!me) { _pendingSend = { scope, partial }; _chatAskName(scope); return; }
-  if (!_chatOnline()) { showToast('برای فرستادن پیام، اینترنت لازم است', '#e53e3e'); return; }
   _chatPushRaw(scope, Object.assign({ f: me.id, n: me.name, ts: Date.now() }, partial));
 }
 function _chatPushRaw(scope, msg, peerOpt) {
+  return _chatQueueSend(scope, msg, peerOpt);
+}
+
+/* ============================================================================
+   صفِ پیام‌ها — همان مدلِ واتساپ
+   ----------------------------------------------------------------------------
+   پیام هر لحظه (حتی وقتی سرور قطع است یا اینترنت نیست) نوشته و فرستاده می‌شود:
+     ۱) فوراً در گفتگو با علامتِ 🕐 دیده می‌شود (هیچ‌وقت گم یا «رد» نمی‌شود)،
+     ۲) روی خودِ دستگاه ذخیره می‌شود — با بستنِ برنامه یا خاموش شدنِ گوشی هم می‌ماند،
+     ۳) به‌محضِ وصل شدنِ سرور، به ترتیب فرستاده می‌شود و علامتش ✓ می‌شود.
+   کلیدِ هر پیام روی خودِ دستگاه ساخته می‌شود (همان قالبِ ۲۰ کاراکتریِ سرور، مرتب
+   بر اساس زمان)؛ پس اگر جوابِ سرور در راه گم شود و پیام دوباره فرستاده شود،
+   همان کلید دوباره نوشته می‌شود و پیامِ تکراری هرگز ساخته نمی‌شود.
+   ============================================================================ */
+const _CHAT_OUTBOX_KEY = 'pumpChatOutbox';
+const _CHAT_OUTBOX_MAX = 300;               // سقفِ صف — حافظه هیچ‌وقت بی‌نهایت رشد نمی‌کند
+let _chatOutbox = null, _chatFlushTimer = null, _chatNetState = { connected: false, queued: 0 };
+
+const _PUSH_CHARS = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
+let _lastKeyTime = 0, _lastKeyRand = [];
+function _chatNewKey() {
+  let now = Date.now();
+  const dup = (now === _lastKeyTime);
+  _lastKeyTime = now;
+  const ts = new Array(8);
+  for (let i = 7; i >= 0; i--) { ts[i] = _PUSH_CHARS.charAt(now % 64); now = Math.floor(now / 64); }
+  let id = ts.join('');
+  if (!dup) { for (let i = 0; i < 12; i++) _lastKeyRand[i] = Math.floor(Math.random() * 64); }
+  else { let i = 11; for (; i >= 0 && _lastKeyRand[i] === 63; i--) _lastKeyRand[i] = 0; _lastKeyRand[i]++; }
+  for (let i = 0; i < 12; i++) id += _PUSH_CHARS.charAt(_lastKeyRand[i]);
+  return id;
+}
+function _chatOutboxLoad() {
+  if (_chatOutbox) return _chatOutbox;
   try {
-    if (scope === 'group') {
-      _fbDb.ref(_chatRoot() + 'group').push(msg);
-      _chatMarkRead('group');
-      _extPushNotify('group', msg);
-      return;
+    const a = JSON.parse(localStorage.getItem(_CHAT_OUTBOX_KEY) || '[]');
+    _chatOutbox = Array.isArray(a) ? a.filter(x => x && x.key && x.msg && x.scope) : [];
+  } catch (e) { _chatOutbox = []; }
+  _chatOutbox.forEach(it => { it.sending = false; it.nextTry = 0; });
+  return _chatOutbox;
+}
+function _chatOutboxSave() {
+  const box = _chatOutboxLoad();
+  for (let i = 0; i < 8; i++) {
+    const keep = box.filter(it => !it.nostore).map(it => ({ key: it.key, scope: it.scope, peer: it.peer, root: it.root, msg: it.msg, ts: it.ts, tries: it.tries || 0 }));
+    try { localStorage.setItem(_CHAT_OUTBOX_KEY, JSON.stringify(keep)); return; }
+    catch (e) {
+      // فضای دستگاه پر شد: سنگین‌ترین رسانه از حافظهٔ دائمی کنار می‌رود ولی تا وقتی
+      // برنامه باز است در صف می‌ماند و فرستاده می‌شود (پیام‌های متنی هرگز قربانی نمی‌شوند).
+      const heavy = box.filter(it => !it.nostore && it.msg && typeof it.msg.d === 'string')
+        .sort((a, b) => b.msg.d.length - a.msg.d.length)[0];
+      if (heavy) heavy.nostore = 1;
+      else { try { localStorage.removeItem(_CHAT_OUTBOX_KEY); } catch (e2) {} return; }
     }
-    const peer = peerOpt || _rbActiveDmPeer();
-    if (!peer) return;
-    _fbDb.ref(_chatRoot() + 'dm/' + peer + '/msgs').push(msg);
-    const preview = msg.k === 'text' ? String(msg.t || '').slice(0, 40)
-      : (msg.k === 'acct' ? ('حساب ' + (msg.nm || '')) : msg.k === 'audio' ? 'پیام صوتی' : msg.k === 'image' ? 'عکس' : 'ویدیو');
-    const idx = { ts: msg.ts, last: preview, from: msg.f };
-    if (msg.f !== 'admin' && msg.f !== 'bot') idx.name = msg.n;
-    _fbDb.ref(_chatRoot() + 'dmIndex/' + peer).update(idx);
-    _chatMarkRead('dm', peer);
-    _extPushNotify('dm', msg, peer);
-  } catch (e) { showToast('خطا در فرستادن پیام', '#e53e3e'); }
+  }
+}
+// افزودن پیام به صف — همیشه موفق است (مگر صف پر باشد)
+function _chatQueueSend(scope, msg, peerOpt) {
+  const box = _chatOutboxLoad();
+  const peer = scope === 'dm' ? (peerOpt || _rbActiveDmPeer() || '') : '';
+  if (scope === 'dm' && !peer) return null;
+  if (box.length >= _CHAT_OUTBOX_MAX) { showToast('صفِ پیام‌ها پر است — تا وصل شدنِ سرور صبر کنید', '#e53e3e'); return null; }
+  if (!msg.ts) msg.ts = Date.now();
+  const item = { key: _chatNewKey(), scope, peer, root: _chatRoot(), msg, ts: msg.ts, tries: 0 };
+  box.push(item);
+  _chatOutboxSave();
+  _chatRenderScope(scope, peer);            // فوراً با علامتِ 🕐 دیده می‌شود
+  _chatFlushOutbox();
+  _chatUpdateNetUi();
+  return item;
+}
+function _chatOutboxDrop(item) {
+  const box = _chatOutboxLoad();
+  const i = box.indexOf(item);
+  if (i !== -1) box.splice(i, 1);
+  _chatOutboxSave();
+  _chatUpdateNetUi();
+}
+// فرستادنِ یک پیامِ در صف. با کلیدِ ثابتِ خودِ پیام (set به‌جای push) — پس تلاشِ
+// دوباره هرگز پیامِ تکراری نمی‌سازد.
+function _chatSendItem(it) {
+  it.sending = true;
+  it.tries = (it.tries || 0) + 1;
+  const root = it.root || _chatRoot();
+  const path = it.scope === 'group' ? (root + 'group/' + it.key) : (root + 'dm/' + it.peer + '/msgs/' + it.key);
+  let p;
+  try { p = _fbDb.ref(path).set(it.msg); } catch (e) { p = Promise.reject(e); }
+  Promise.resolve(p).then(() => {
+    it.sending = false;
+    const msg = it.msg;
+    try {
+      if (it.scope === 'dm') {
+        const preview = msg.k === 'text' ? String(msg.t || '').slice(0, 40)
+          : (msg.k === 'acct' ? ('حساب ' + (msg.nm || '')) : msg.k === 'audio' ? 'پیام صوتی' : msg.k === 'image' ? 'عکس' : 'ویدیو');
+        const idx = { ts: msg.ts, last: preview, from: msg.f };
+        if (msg.f !== 'admin' && msg.f !== 'bot') idx.name = msg.n;
+        try { _fbDb.ref(root + 'dmIndex/' + it.peer).update(idx).catch(() => {}); } catch (e) {}
+        _chatMarkRead('dm', it.peer);
+      } else _chatMarkRead('group');
+      _extPushNotify(it.scope, msg, it.peer || undefined);
+    } catch (e) {}
+    // پیام در حافظهٔ محلی هم بنشیند تا حتی اگر شنوندهٔ این گفتگو باز نباشد، از
+    // فهرست ناپدید نشود (رویدادِ سرور همان کلید را دارد، پس تکراری نمی‌شود).
+    try { _chatLocalInsert(it.scope, it.peer, Object.assign({ _key: it.key }, msg)); } catch (e) {}
+    _chatOutboxDrop(it);
+    _chatRenderScope(it.scope, it.peer);
+  }).catch(() => {
+    it.sending = false;
+    it.nextTry = Date.now() + Math.min(30000, 1000 * Math.pow(2, Math.min(it.tries, 5)));
+    _chatOutboxSave();
+    _chatRenderScope(it.scope, it.peer);
+    _chatUpdateNetUi();
+  });
+}
+function _chatFlushOutbox() {
+  const box = _chatOutboxLoad();
+  if (!box.length) { _chatStopFlushTimer(); _chatUpdateNetUi(); return; }
+  _chatStartFlushTimer();
+  if (!_fbReady() || !(window.__pumpNet__ && window.__pumpNet__.connected())) { _chatUpdateNetUi(); return; }
+  let inflight = box.filter(it => it.sending).length;
+  const now = Date.now();
+  for (const it of box) {
+    if (inflight >= 3) break;
+    if (it.sending || (it.nextTry && now < it.nextTry)) continue;
+    inflight++;
+    _chatSendItem(it);
+  }
+  _chatUpdateNetUi();
+}
+function _chatStartFlushTimer() { if (!_chatFlushTimer) _chatFlushTimer = setInterval(_chatFlushOutbox, 4000); }
+function _chatStopFlushTimer() { if (_chatFlushTimer) { clearInterval(_chatFlushTimer); _chatFlushTimer = null; } }
+// پیام‌های در صفِ یک گفتگو، به شکلِ پیامِ عادی (برای نمایش با علامتِ 🕐)
+function _chatPendingFor(scope, peer) {
+  return _chatOutboxLoad()
+    .filter(it => it.scope === scope && (scope === 'group' || it.peer === peer))
+    .map(it => Object.assign({}, it.msg, { _key: it.key, _pending: true, _failed: (it.tries || 0) > 3 }));
+}
+function _chatRenderScope(scope, peer) {
+  try {
+    if (scope === 'group') { if (_rbPaneVisible('group')) _renderChatList('groupList', _groupMsgs); }
+    else if (_rbPaneVisible('dm') && _rbActiveDmPeer() === peer) _dmRenderList(peer);
+  } catch (e) {}
+}
+// نوارِ وضعیت بالای چت: «آفلاین — n پیام در صف» / «در حالِ فرستادن…»
+function _chatUpdateNetUi() {
+  const bar = document.getElementById('rbNetBar');
+  if (!bar) return;
+  const q = _chatOutboxLoad().length;
+  const on = !!(window.__pumpNet__ && window.__pumpNet__.connected());
+  if (on && !q) { bar.style.display = 'none'; return; }
+  bar.style.display = 'block';
+  if (!on) {
+    bar.className = 'rb-net off';
+    bar.textContent = q ? ('📴 سرور وصل نیست — ' + n2fa(q) + ' پیام در صف است و به‌محضِ وصل شدن فرستاده می‌شود')
+                        : '📴 سرور وصل نیست — هرچه بنویسید در صف می‌ماند و بعداً فرستاده می‌شود';
+  } else {
+    bar.className = 'rb-net snd';
+    bar.textContent = '📤 در حالِ فرستادنِ ' + n2fa(q) + ' پیام...';
+  }
+}
+try {
+  if (window.__pumpNet__) window.__pumpNet__.onChange(st => {
+    _chatNetState = st;
+    _chatUpdateNetUi();
+    if (st.connected) { try { _chatFlushOutbox(); } catch (e) {} }
+  });
+  // چند تبِ باز از یک دستگاه: صف مشترک است — تغییرِ تبِ دیگر همین‌جا هم دیده شود
+  window.addEventListener('storage', e => {
+    if (e && e.key === _CHAT_OUTBOX_KEY) { _chatOutbox = null; _chatOutboxLoad(); _chatUpdateNetUi(); }
+  });
+} catch (e) {}
+
+/* ── حافظهٔ محلیِ گفتگوها ────────────────────────────────────────────────────
+   آخرین پیام‌های هر گفتگو روی دستگاه می‌ماند؛ پس با نبودِ اینترنت هم چت باز
+   می‌شود و تاریخچه دیده می‌شود (مثل واتساپ). حجم سقف دارد: عکس/ویدیوهای سنگین
+   از حافظهٔ محلی کنار می‌روند و با وصل شدن دوباره از سرور می‌آیند. ── */
+const _CHAT_CACHE_KEY = 'pumpChatCache';
+const _CHAT_CACHE_BYTES = 1200000;
+const _CHAT_THREAD_CAP = 120;               // سقفِ پیام در حافظهٔ هر گفتگو
+let _chatCacheTimer = null, _chatCacheSeeded = false;
+function _chatMergeMsg(arr, m, cap) {
+  if (!arr) return;
+  const i = arr.findIndex(x => x._key === m._key);
+  if (i !== -1) arr[i] = m; else arr.push(m);
+  arr.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  if (arr.length > (cap || _CHAT_THREAD_CAP)) arr.splice(0, arr.length - (cap || _CHAT_THREAD_CAP));
+}
+function _chatLocalInsert(scope, peer, m) {
+  if (scope === 'group') { _chatMergeMsg(_groupMsgs, m); _groupLast = m; }
+  else { _dmMsgCache[peer] = _dmMsgCache[peer] || []; _chatMergeMsg(_dmMsgCache[peer], m); }
+  _chatCacheSave();
+}
+function _chatCacheSeed() {
+  if (_chatCacheSeeded) return;
+  _chatCacheSeeded = true;
+  try {
+    const c = JSON.parse(localStorage.getItem(_CHAT_CACHE_KEY) || 'null');
+    if (!c || c.code !== _syncCode()) return;
+    if (Array.isArray(c.group) && !_groupMsgs.length) { _groupMsgs = c.group.slice(-_CHAT_THREAD_CAP); _groupLast = _groupMsgs[_groupMsgs.length - 1] || null; }
+    if (c.dm && typeof c.dm === 'object') Object.keys(c.dm).forEach(p => { if (!_dmMsgCache[p]) _dmMsgCache[p] = (c.dm[p] || []).slice(-_CHAT_THREAD_CAP); });
+    if (c.idx && typeof c.idx === 'object' && !Object.keys(_dmIndex || {}).length) _dmIndex = c.idx;
+  } catch (e) {}
+}
+function _chatCacheSave() {
+  if (_chatCacheTimer) clearTimeout(_chatCacheTimer);
+  _chatCacheTimer = setTimeout(_chatCacheSaveNow, 1500);
+}
+function _chatCacheSaveNow() {
+  _chatCacheTimer = null;
+  try {
+    const strip = m => { const c = Object.assign({}, m); if (typeof c.d === 'string') { delete c.d; c.dn = 1; } return c; };
+    const pack = (arr, n) => (arr || []).slice(-n);
+    const build = (n, stripMedia) => {
+      const d = { v: 1, code: _syncCode(), group: pack(_groupMsgs, n), dm: {}, idx: _dmIndex || {} };
+      Object.keys(_dmMsgCache || {}).slice(-40).forEach(p => { d.dm[p] = pack(_dmMsgCache[p], n); });
+      if (stripMedia) { d.group = d.group.map(strip); Object.keys(d.dm).forEach(p => { d.dm[p] = d.dm[p].map(strip); }); }
+      return JSON.stringify(d);
+    };
+    let s = build(60, false);
+    if (s.length > _CHAT_CACHE_BYTES) s = build(60, true);
+    if (s.length > _CHAT_CACHE_BYTES) s = build(25, true);
+    localStorage.setItem(_CHAT_CACHE_KEY, s);
+  } catch (e) {
+    try { localStorage.removeItem(_CHAT_CACHE_KEY); } catch (e2) {}
+  }
 }
 // ========== اعلان بیرون از برنامه (ntfy.sh) ==========
 // برنامه سرور ندارد؛ برای اینکه پیامِ چت حتی وقتی برنامهٔ میرزا کاملاً بسته است
@@ -21562,7 +21941,6 @@ function chatSendText(scope) {
   if (scope === 'dm' && _rbMode === 'person' && _personBotActive) { inp.value = ''; _personBotHandle(txt); return; }
   const me = _chatMe();
   if (!me) { _pendingSend = { scope, partial: { k: 'text', t: txt } }; _chatAskName(scope); return; }
-  if (!_chatOnline()) { showToast('برای فرستادن پیام، اینترنت لازم است', '#e53e3e'); return; }
   inp.value = '';
   _chatPush(scope, { k: 'text', t: txt });
   // کادر سوال‌وجواب داخل گروه: پیامی که با «ربات» شروع شود، ربات در گروه جواب می‌دهد.
@@ -21627,6 +22005,15 @@ function _renderChatList(elId, msgs) {
   const scope = elId === 'groupList' ? 'group' : 'dm';
   const peer = scope === 'dm' ? (_rbActiveDmPeer() || '') : '';
   const hidden = _chatLoadHidden();
+  // پیام‌های در صف (هنوز نرسیده به سرور) هم دیده می‌شوند — با علامتِ 🕐 و سرِ جای
+  // زمانیِ خودشان. اگر پیامی از سرور با همان کلید آمده باشد، نسخهٔ در صف کنار می‌رود.
+  let all = (msgs || []).slice();
+  try {
+    const keys = new Set(all.map(m => m._key));
+    _chatPendingFor(scope, peer).forEach(p => { if (!keys.has(p._key)) all.push(p); });
+    all.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  } catch (e) {}
+  msgs = all;
   const visible = (msgs || []).filter(m => !(m._key && hidden.has(m._key)));
   let lastDay = '';
   const html = visible.map(m => {
@@ -21644,7 +22031,14 @@ function _renderChatList(elId, msgs) {
 function _chMsgHtml(m, meId, scope, peer) {
   const cls = m.f === 'bot' ? 'bot' : (m.f === meId ? 'me' : 'other');
   const nm = cls === 'me' ? '' : `<div class="ch-nm">${escFa(m.f === 'bot' ? (m.bn || 'ربات') : (m.f === 'admin' ? 'میرزا' : m.n || ''))}</div>`;
-  const tm = m.ts ? `<div class="ch-tm">${new Date(m.ts).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}</div>` : '';
+  // علامتِ رسیدن (مثل واتساپ): 🕐 در صف · ✓ رسیده به سرور
+  const tick = cls === 'me'
+    ? (m._pending
+        ? `<span class="ch-tk pend" title="${m._failed ? 'هنوز فرستاده نشده — خودکار دوباره تلاش می‌شود' : 'در صف — با وصل شدنِ سرور فرستاده می‌شود'}">🕐</span>`
+        : '<span class="ch-tk ok" title="رسید">✓</span>')
+    : '';
+  const tmTxt = m.ts ? new Date(m.ts).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }) : '';
+  const tm = (tmTxt || tick) ? `<div class="ch-tm">${tick}${tmTxt}</div>` : '';
   const key = m._key || '';
   const delBtn = key ? `<span class="ch-del-btn" onclick="_chatOpenMsgMenu(event,'${scope}','${String(peer||'').replace(/'/g,'')}','${key}',${cls === 'me' ? 'true' : 'false'})" title="گزینه‌ها">⋮</span>` : '';
   if (m.del) {
@@ -21655,6 +22049,9 @@ function _chMsgHtml(m, meId, scope, peer) {
   if (m.k === 'image' && safeD) body = `<img src="${safeD}" alt="عکس">`;
   else if (m.k === 'video' && safeD) body = `<video src="${safeD}" controls playsinline preload="metadata"></video>`;
   else if (m.k === 'audio' && safeD) body = `<audio src="${safeD}" controls preload="metadata"></audio>`;
+  // رسانه‌ای که برای صرفه‌جویی در حافظهٔ دستگاه محلی نگه داشته نشده — با وصل شدن می‌آید
+  else if (!safeD && m.dn && (m.k === 'image' || m.k === 'video' || m.k === 'audio'))
+    body = `<i style="opacity:.8">${m.k === 'image' ? '🖼️ عکس' : m.k === 'video' ? '🎬 ویدیو' : '🎤 پیام صوتی'} — برای دیدن، به سرور وصل شوید</i>`;
   else if (m.k === 'acct' && m.u) body = _chAcctCardHtml(m);
   else body = _chLinkify(escFa(m.t || '')).replace(/\n/g, '<br>');
   // دکمه‌های پیشنهادی جواب‌گوی خودکار (فقط پیام‌های محلی نمای کیو‌آر)
@@ -21769,12 +22166,11 @@ function dmSendAccount(i) {
   const r = (window.__dmAcctRows || [])[i];
   if (!r) return;
   document.getElementById('dmAcctPicker')?.remove();
-  if (!_chatOnline()) { showToast('برای فرستادن پیام، اینترنت لازم است', '#e53e3e'); return; }
   const url = _acctViewUrl(r.kind, r.type, r.id);
   // یک «کادرِ حساب» فرستاده می‌شود که طرف با یک زدن حسابش را می‌بیند. متنِ لینک هم
   // داخلش می‌ماند تا اگر برنامهٔ طرف نسخهٔ کهنه بود، باز هم لینک به دستش برسد.
   _chatPush('dm', { k: 'acct', nm: r.name, u: url, t: '📄 حساب ' + r.name + '\n' + url });
-  showToast('✅ کادرِ حساب فرستاده شد', '#38a169');
+  showToast(_chatNetUp() ? '✅ کادرِ حساب فرستاده شد' : '🕐 در صف — با وصل شدنِ سرور فرستاده می‌شود', _chatNetUp() ? '#38a169' : '#d97706');
 }
 
 // ---- حذف پیام: برای من (محلی) / برای همه (سرور) ----
@@ -21812,10 +22208,23 @@ function _chatHideForMe(scope, peer, key) {
 }
 function _chatDeleteForEveryone(scope, peer, key) {
   _chatCloseMsgMenu();
-  if (!_chatOnline()) { showToast('برای حذف پیام، اینترنت لازم است', '#e53e3e'); return; }
+  // پیامی که هنوز در صف است اصلاً به سرور نرفته — همان‌جا لغو می‌شود
+  const box = _chatOutboxLoad();
+  const q = box.find(it => it.key === key);
+  if (q) {
+    box.splice(box.indexOf(q), 1);
+    _chatOutboxSave();
+    _chatRenderScope(scope, peer);
+    _chatUpdateNetUi();
+    showToast('پیامِ در صف لغو شد', '#38a169');
+    return;
+  }
+  if (!_fbReady()) { showToast('سرور تنظیم نشده — حذف ممکن نیست', '#e53e3e'); return; }
   try {
+    // با سرورِ قطع هم دستورِ حذف در صف می‌ماند و با وصل شدن اجرا می‌شود
     const ref = scope === 'group' ? _fbDb.ref(_chatRoot() + 'group/' + key) : _fbDb.ref(_chatRoot() + 'dm/' + peer + '/msgs/' + key);
-    ref.update({ del: true, t: '', d: '' }).catch(() => showToast('خطا در حذف پیام', '#e53e3e'));
+    ref.update({ del: true, t: '', d: '' }).catch(() => {});
+    if (!_chatNetUp()) showToast('🕐 حذف در صف — با وصل شدنِ سرور انجام می‌شود', '#d97706');
   } catch (e) { showToast('خطا در حذف پیام', '#e53e3e'); }
 }
 // ---- چت تک‌نفره ----
@@ -21835,8 +22244,6 @@ function _rbRenderDmPane() {
     const wn = document.getElementById('dmWithName');
     if (wn) wn.textContent = (_dmIndex[_rbCurrentDm] || {}).name || 'چت';
   }
-  // نمای کیو‌آر با جواب‌گوی خودکار: حتی بدون اینترنت هم چت محلی کار می‌کند
-  if (!_chatOnline() && !(_rbMode === 'person' && _personBotActive)) { dmList.innerHTML = '<div class="ch-note" style="padding:20px">برای چت، اینترنت باید وصل باشد</div>'; return; }
   if (!me) { dmList.innerHTML = '<div class="ch-note" style="padding:12px 8px 4px">پیام شما مستقیم به میرزا می‌رسد</div>'; _chatAskName('dm'); return; }
   const peer = _rbActiveDmPeer();
   _ensureDmListener(peer);
@@ -21846,10 +22253,14 @@ function _rbRenderDmPane() {
 function _dmRenderThreadList() {
   const el = document.getElementById('dmThreads');
   if (!el) return;
-  if (!_chatOnline()) { el.innerHTML = '<div class="ch-note" style="padding:22px 10px">برای چت، اینترنت باید وصل باشد</div>'; return; }
   const marks = _chatReadMarks();
   const peers = Object.keys(_dmIndex || {}).sort((a, b) => ((_dmIndex[b] || {}).ts || 0) - ((_dmIndex[a] || {}).ts || 0));
-  if (!peers.length) { el.innerHTML = '<div class="ch-note" style="padding:22px 10px">هنوز چتی شروع نشده — وقتی کارمند یا مشتری پیام بفرستد، اینجا می‌آید</div>'; return; }
+  if (!peers.length) {
+    el.innerHTML = '<div class="ch-note" style="padding:22px 10px">' + (_chatNetUp()
+      ? 'هنوز چتی شروع نشده — وقتی کارمند یا مشتری پیام بفرستد، اینجا می‌آید'
+      : 'سرور وصل نیست — به‌محضِ وصل شدن، همهٔ چت‌ها همین‌جا می‌آیند') + '</div>';
+    return;
+  }
   el.innerHTML = peers.map(p => {
     const it = _dmIndex[p] || {};
     const unread = (it.ts || 0) > ((marks.dm || {})[p] || 0) && it.from !== 'admin';
@@ -21890,16 +22301,14 @@ function _personBotHandle(txt) {
 // واگذاری به میرزا: گفتگوی انجام‌شده با جواب‌گوی خودکار یک‌جا برای میرزا فرستاده
 // می‌شود و از این به بعد پیام‌ها مستقیم به خودِ میرزا می‌روند.
 function _personBotHandoff() {
-  if (!_chatOnline()) {
-    _personBotMsgs.push({ f: 'bot', bn: 'میرزا (جواب خودکار)', k: 'text', t: 'اینترنت وصل نیست — پیام به میرزا نمی‌رسد. وقتی نت وصل شد، دوباره بنویسید تا وصل تان کنم.', ts: Date.now() });
-    return false;
-  }
   _personBotActive = false;
   const nm = (_rbPersonPeer && _rbPersonPeer.name) || 'مهمان';
   const transcript = _personBotMsgs.filter(m => m.k === 'text' && m.t).slice(-20)
     .map(m => (m.f === 'bot' ? 'جواب‌گوی خودکار: ' : nm + ': ') + m.t).join('\n');
   try { _chatPush('dm', { k: 'text', t: '📨 درخواست صحبت با میرزا — گفتگو با جواب‌گوی خودکار:\n' + transcript }); } catch (e) {}
-  _personBotMsgs.push({ f: 'bot', bn: 'میرزا (جواب خودکار)', k: 'text', t: '✅ پیام‌های شما به میرزا فرستاده شد — از این به بعد مستقیم با خودِ میرزا صحبت می‌کنید و در زودترین فرصت جواب تان را می‌دهد.', ts: Date.now() });
+  _personBotMsgs.push({ f: 'bot', bn: 'میرزا (جواب خودکار)', k: 'text', t: _chatNetUp()
+    ? '✅ پیام‌های شما به میرزا فرستاده شد — از این به بعد مستقیم با خودِ میرزا صحبت می‌کنید و در زودترین فرصت جواب تان را می‌دهد.'
+    : '🕐 پیام‌های شما ثبت شد و در صف است — به‌محضِ وصل شدنِ سرور خودکار به میرزا می‌رسد. از این به بعد مستقیم با خودِ میرزا صحبت می‌کنید.', ts: Date.now() });
   return true;
 }
 function dmMirzaYes() {
@@ -21947,7 +22356,6 @@ function _rbUpdateBadges() {
 function chatPickMedia(scope, kind) {
   const me = _chatMe();
   if (!me) { _chatAskName(scope); return; }
-  if (!_chatOnline()) { showToast('برای فرستادن، اینترنت لازم است', '#e53e3e'); return; }
   const fi = document.getElementById('chatFileInput');
   if (!fi) return;
   fi.accept = kind === 'image' ? 'image/*' : 'video/*';
@@ -21993,7 +22401,6 @@ async function chatToggleRec(scope) {
   if (_recState) { try { _recState.rec.stop(); } catch (e) {} return; }
   const me = _chatMe();
   if (!me) { _chatAskName(scope); return; }
-  if (!_chatOnline()) { showToast('برای پیام صوتی، اینترنت لازم است', '#e53e3e'); return; }
   if (!navigator.mediaDevices || !window.MediaRecorder) { showToast('این مرورگر ضبط صدا ندارد', '#e53e3e'); return; }
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -22128,9 +22535,16 @@ function _makeResizable(id) {
 setInterval(function () {
   try {
     const fab = document.getElementById('robotFab');
-    if (fab && fab.style.display !== 'none' && fab.style.display !== '' && !_chatL.group && !_chatL.dmIdx && _chatOnline()) _chatInitListeners();
+    if (fab && fab.style.display !== 'none' && fab.style.display !== '' && !_chatL.group && !_chatL.dmIdx && _fbReady()) _chatInitListeners();
   } catch (e) {}
 }, 5000);
+// صفِ پیام‌ها مستقل از باز بودنِ پنجرهٔ چت کار می‌کند: همین که برنامه باز شود،
+// هر پیامی که از سیزنِ قبلی در صف مانده خودکار فرستاده می‌شود (مثل واتساپ).
+try {
+  const _obBoot = function () { try { _chatOutboxLoad(); _chatFlushOutbox(); _chatUpdateNetUi(); } catch (e) {} };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _obBoot);
+  else setTimeout(_obBoot, 0);
+} catch (e) {}
 
 // ========== دوربین‌های مداربسته ==========
 // بخش «دوربین‌ها» برای مدیر و نظاره‌گر: دوربین با لینک، عکس کیو‌آر یا اسکن
@@ -22476,7 +22890,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.120';
+const APP_VERSION = '2.9.121';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }

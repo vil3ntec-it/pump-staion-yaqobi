@@ -49,6 +49,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // ---------------------------------------------------------------------------
 const PORT = parseInt(process.env.PORT || '8787', 10);
 const PERSIST_DEBOUNCE_MS = parseInt(process.env.PERSIST_DEBOUNCE_MS || '400', 10);
+// سقفِ عقب‌افتادنِ ذخیره روی دیسک: با ترافیکِ پیوسته، debounce تنها هر بار از نو
+// شروع می‌شد و ذخیره تا آرام شدنِ کار عقب می‌افتاد (خطرِ از دست رفتنِ داده هنگام
+// قطع برق). حالا حداکثر هر ۵ ثانیه به‌زور ذخیره می‌شود.
+const PERSIST_MAX_DELAY_MS = parseInt(process.env.PERSIST_MAX_DELAY_MS || '5000', 10);
+// بزرگ‌ترین پیامی که از یک کلاینت پذیرفته می‌شود (ویدیوی چت حداکثر ۴MB است)
+const MAX_PAYLOAD_BYTES = parseInt(process.env.MAX_PAYLOAD_BYTES || String(12 * 1024 * 1024), 10);
 // مسیر ذخیرهٔ داده: به‌صورت پیش‌فرض کنار همین فایل، ولی اگر DATA_DIR در محیط تعیین
 // شده باشد (مثلاً وقتی سرور داخل برنامهٔ دسکتاپ اجرا می‌شود و باید در پوشهٔ
 // قابل‌نوشتنِ کاربر بنویسد) همان استفاده می‌شود.
@@ -60,6 +66,7 @@ let AUTH_TOKEN = process.env.AUTH_TOKEN || '';   // اگر خالی بماند،
 // ---------------------------------------------------------------------------
 const ROOT = {};                  // کل درخت realtime
 const pendingPersist = new Map(); // topKey -> timer
+const persistSince = new Map();   // topKey -> زمانِ اولین تغییرِ ذخیره‌نشده
 
 function splitPath(p) {
   return String(p || '').split('/').filter(seg => seg.length > 0);
@@ -79,18 +86,63 @@ function deepClone(v) {
   return v === undefined ? undefined : JSON.parse(JSON.stringify(v));
 }
 
+/* ── فهرستِ مرتبِ کلیدهای هر مسیر ─────────────────────────────────────────────
+   قبلاً برای هر پیامِ تازه، کلِ کلیدهای آن مسیر دوباره Object.keys و sort می‌شد.
+   با ۲۰ هزار پیام در یک چت، هر پیامِ تازه یعنی مرتب کردنِ ۲۰ هزار کلید — سرور
+   زیر بار می‌خوابید. حالا فهرستِ مرتب یک‌بار ساخته می‌شود و با هر افزودن/حذف
+   فقط همان یک کلید در جای درستش جا داده می‌شود (جستجوی دودویی).
+   نتیجه: سرعت دیگر به اندازهٔ تاریخچه وابسته نیست. ── */
+const sortedCache = new Map();     // 'a/b/c' -> کلیدهای مرتبِ فرزندان
+
+function normPath(p) { return splitPath(p).join('/'); }
+function bsearch(arr, k) {         // اندیسِ k یا اندیسِ جای درستِ آن (منفی-۱)
+  let lo = 0, hi = arr.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (arr[mid] === k) return mid;
+    if (arr[mid] < k) lo = mid + 1; else hi = mid - 1;
+  }
+  return -lo - 1;
+}
+function sortedHas(arr, k) { return bsearch(arr, k) >= 0; }
+function sortedAdd(parent, key) {
+  const arr = sortedCache.get(parent);
+  if (!arr) return;
+  const i = bsearch(arr, key);
+  if (i < 0) arr.splice(-i - 1, 0, key);
+}
+function sortedRemove(parent, key) {
+  const arr = sortedCache.get(parent);
+  if (!arr) return;
+  const i = bsearch(arr, key);
+  if (i >= 0) arr.splice(i, 1);
+}
+
 function setNode(p, value) {
   const segs = splitPath(p);
   if (segs.length === 0) return;
   let cur = ROOT;
+  let prefix = '';                                  // مسیرِ خودِ cur
   for (let i = 0; i < segs.length - 1; i++) {
     const s = segs[i];
-    if (cur[s] == null || typeof cur[s] !== 'object') cur[s] = {};
+    if (cur[s] == null || typeof cur[s] !== 'object') {
+      const existed = Object.prototype.hasOwnProperty.call(cur, s);
+      cur[s] = {};
+      if (!existed) sortedAdd(prefix, s);
+      else sortedCache.delete(prefix ? prefix + '/' + s : s);   // نوعِ گره عوض شد
+    }
+    prefix = prefix ? prefix + '/' + s : s;
     cur = cur[s];
   }
   const last = segs[segs.length - 1];
-  if (value === null || value === undefined) delete cur[last];
-  else cur[last] = value;
+  const had = Object.prototype.hasOwnProperty.call(cur, last);
+  if (value === null || value === undefined) {
+    if (had) { delete cur[last]; sortedRemove(prefix, last); sortedCache.delete(prefix ? prefix + '/' + last : last); }
+  } else {
+    cur[last] = value;
+    if (!had) sortedAdd(prefix, last);
+    sortedCache.delete(prefix ? prefix + '/' + last : last);     // فرزندانِ خودِ این گره عوض شدند
+  }
 }
 
 // شناسهٔ push مثل فایربیس: ۲۰ کاراکتر، مرتب بر اساس زمان
@@ -124,11 +176,15 @@ function fileForKey(topKey) {
 
 function schedulePersist(topKey) {
   if (!topKey) return;
+  if (!persistSince.has(topKey)) persistSince.set(topKey, Date.now());
+  const waited = Date.now() - persistSince.get(topKey);
   if (pendingPersist.has(topKey)) clearTimeout(pendingPersist.get(topKey));
+  const delay = Math.max(0, Math.min(PERSIST_DEBOUNCE_MS, PERSIST_MAX_DELAY_MS - waited));
   const t = setTimeout(() => {
     pendingPersist.delete(topKey);
+    persistSince.delete(topKey);
     persistNow(topKey).catch(err => console.error('[persist]', topKey, err.message));
-  }, PERSIST_DEBOUNCE_MS);
+  }, delay);
   pendingPersist.set(topKey, t);
 }
 
@@ -158,6 +214,7 @@ async function loadFromDisk() {
       loaded.push(key);
     } catch (e) { console.warn('[data] خواندن', f, 'ناموفق:', e.message); }
   }
+  sortedCache.clear();   // درخت مستقیم جایگزین شد → کشِ کلیدها از نو ساخته شود
   console.log(`[data] ${loaded.length} شاخه از فایل بازخوانی شد:`, loaded.join(', ') || '(خالی)');
 }
 
@@ -177,9 +234,14 @@ function serialize(v) {
 }
 
 function childKeysSorted(p) {
+  const np = normPath(p);
+  const hit = sortedCache.get(np);
+  if (hit) return hit;
   const node = getNode(p);
   if (node == null || typeof node !== 'object' || Array.isArray(node)) return [];
-  return Object.keys(node).sort();
+  const keys = Object.keys(node).sort();
+  sortedCache.set(np, keys);
+  return keys;
 }
 
 function primeSubscription(sub) {
@@ -214,29 +276,33 @@ function isPrefixOrEqual(aSegs, bSegs) {
 
 function dispatch(changedPath) {
   const cSegs = splitPath(changedPath);
-  for (const sub of subscriptions) {
-    const sSegs = splitPath(sub.path);
-    const related = isPrefixOrEqual(sSegs, cSegs) || isPrefixOrEqual(cSegs, sSegs);
-    if (!related) continue;
+  try {
+    for (const sub of subscriptions) {
+      const sSegs = sub.segs || (sub.segs = splitPath(sub.path));   // یک‌بار حساب، نه هر پیام
+      const related = isPrefixOrEqual(sSegs, cSegs) || isPrefixOrEqual(cSegs, sSegs);
+      if (!related) continue;
 
-    if (sub.event === 'value') {
-      const v = getNode(sub.path);
-      const ser = serialize(v);
-      if (ser !== sub.snapValue) {
-        sub.snapValue = ser;
-        send(sub.ws, { op: 'event', subId: sub.subId, type: 'value', key: lastSeg(sub.path), value: deepClone(v) ?? null });
+      if (sub.event === 'value') {
+        const v = getNode(sub.path);
+        const ser = serialize(v);
+        if (ser !== sub.snapValue) {
+          sub.snapValue = ser;
+          send(sub.ws, { op: 'event', subId: sub.subId, type: 'value', key: lastSeg(sub.path), value: deepClone(v) ?? null });
+        }
+      } else {
+        reevalChildSub(sub);
       }
-    } else {
-      reevalChildSub(sub);
     }
+  } catch (e) {
+    console.error('[dispatch]', e && e.message);   // یک اشتراکِ خراب نباید کلِ سرور را بخواباند
   }
 }
 
 function reevalChildSub(sub) {
-  let keys = childKeysSorted(sub.path);
-  const fullSet = new Set(keys);
-  if (sub.limit && keys.length > sub.limit) keys = keys.slice(keys.length - sub.limit);
-  const windowSet = new Set(keys);
+  // all: فهرستِ مرتبِ همهٔ فرزندان (از کش، بدون مرتب‌سازی دوباره)
+  // keys: فقط پنجرهٔ موردِ اشتراک (مثلاً ۶۰ پیام آخر) — کارِ واقعی همیشه کوچک می‌ماند
+  const all = childKeysSorted(sub.path);
+  const keys = (sub.limit && all.length > sub.limit) ? all.slice(all.length - sub.limit) : all;
   const prev = sub.snapChildren || new Map();
   const next = new Map();
 
@@ -255,7 +321,7 @@ function reevalChildSub(sub) {
     }
   }
   for (const k of prev.keys()) {
-    if (!windowSet.has(k) && !fullSet.has(k)) {
+    if (!next.has(k) && !sortedHas(all, k)) {       // واقعاً پاک شده (نه فقط از پنجره بیرون رفته)
       if (sub.event === 'child_removed') {
         send(sub.ws, { op: 'event', subId: sub.subId, type: 'child_removed', key: k, value: null });
       }
@@ -319,7 +385,8 @@ const httpServer = http.createServer((req, res) => {
   res.writeHead(404); res.end('not found');
 });
 
-const wss = new WebSocketServer({ server: httpServer });
+// maxPayload: یک کلاینتِ خراب/بدخواه نتواند با یک فریمِ غول‌پیکر حافظهٔ سرور را پر کند
+const wss = new WebSocketServer({ server: httpServer, maxPayload: MAX_PAYLOAD_BYTES });
 
 wss.on('connection', (ws, req) => {
   ws._authed = AUTH_TOKEN === '';
@@ -345,7 +412,12 @@ wss.on('connection', (ws, req) => {
     let m;
     try { m = JSON.parse(raw.toString()); } catch (e) { return; }
     if (!m || typeof m !== 'object') return;
-    handleMessage(ws, m);
+    // هیچ پیامِ خرابی نباید سرور را بخواباند — خطا فقط ثبت می‌شود و کار ادامه می‌یابد
+    try { handleMessage(ws, m); }
+    catch (e) {
+      console.error('[handleMessage]', m && m.op, e && e.message);
+      try { send(ws, { op: 'ack', id: m.id, ok: false }); } catch (e2) {}
+    }
   });
 
   ws.on('close', () => {
@@ -487,7 +559,21 @@ async function main() {
 async function flushAll() {
   for (const [topKey, t] of pendingPersist) { clearTimeout(t); try { await persistNow(topKey); } catch (e) {} }
   pendingPersist.clear();
+  persistSince.clear();
 }
+
+// ---------------------------------------------------------------------------
+//  سرور هرگز نباید بمیرد: هر خطای پیش‌بینی‌نشده ثبت می‌شود و کار ادامه می‌یابد.
+//  (قبلاً یک خطای ساده در یک درخواست، کلِ سرور — و در نتیجه چت و هم‌زمان‌سازیِ
+//  همهٔ دستگاه‌ها — را می‌خواباند تا وقتی کسی دستی روشنش کند.)
+// ---------------------------------------------------------------------------
+process.on('uncaughtException', (err) => {
+  console.error('[خطای پیش‌بینی‌نشده]', err && err.stack || err);
+  flushAll().catch(() => {});
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[promise رهاشده]', reason && reason.stack || reason);
+});
 process.on('SIGINT', async () => { console.log('\n[خاموش‌سازی] ذخیرهٔ نهایی...'); await flushAll(); process.exit(0); });
 process.on('SIGTERM', async () => { await flushAll(); process.exit(0); });
 
