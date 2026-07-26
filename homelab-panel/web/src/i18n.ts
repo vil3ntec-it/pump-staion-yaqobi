@@ -199,6 +199,10 @@ const fa = {
   oneClickLink: 'لینک یک‌کلیکی برای دستگاه‌ها',
   tunnelAddressChanges:
     'با هر بار خاموش و روشن شدن سرور، این آدرس عوض می‌شود؛ در آن صورت دوباره همین لینک را از اینجا بردارید.',
+  siteAddress: 'آدرس سایت',
+  siteAddressHint:
+    'لینک یک‌کلیکی با این آدرس ساخته می‌شود. اگر دامنهٔ سایت را عوض کردید، آدرس تازه را اینجا بگذارید.',
+  invalidSiteUrl: 'آدرس معتبر نیست — باید با https:// شروع شود',
   permanentTitle: 'آدرس ثابت — مثل فایربیس',
   permanentIntro:
     'با آدرس ثابت دیگر لازم نیست هیچ لینکی پخش کنید: یک‌بار آدرس در خودِ سایت می‌نشیند و از آن به بعد هر کسی سایت را باز کند، خودکار به همین سرور وصل می‌شود — دقیقاً مدل فایربیس.',
@@ -444,6 +448,10 @@ const en: Dict = {
   oneClickLink: 'One-click link for devices',
   tunnelAddressChanges:
     'This address changes every time the server restarts; grab the fresh link from here when that happens.',
+  siteAddress: 'Site address',
+  siteAddressHint:
+    'The one-click link is built from this address. If your site moves to another domain, put the new address here.',
+  invalidSiteUrl: 'Invalid address — it must start with https://',
   permanentTitle: 'Permanent address — the Firebase model',
   permanentIntro:
     'With a permanent address you never share a link: the address goes into the site once, and from then on anyone who opens the site connects automatically — exactly the Firebase model.',
