@@ -16,7 +16,7 @@ import path from 'node:path';
 import https from 'node:https';
 import os from 'node:os';
 import { config } from './config.js';
-import { logEvent } from './db.js';
+import { logEvent, getSetting, setSetting } from './db.js';
 
 export const tunnelEvents = new EventEmitter();
 
@@ -66,6 +66,9 @@ export function publicState() {
     error: state.error,
     startedAt: state.startedAt,
     restarts: state.restarts,
+    mode: getSetting('tunnel_mode', 'quick'),
+    hostname: getSetting('tunnel_hostname', null),
+    permanent: getSetting('tunnel_mode', 'quick') === 'named',
     installed: Boolean(state.binary),
     binary: state.binary,
     log: state.lastLines.slice(-12),
@@ -179,6 +182,177 @@ function extractTunnelUrl(line, custom) {
   return null;
 }
 
+// ---------------------------------------------------------------------------
+//  آدرس ثابت (تونل نام‌دار) — مدل فایربیس
+//
+//  تونل رایگانِ سریع هر بار آدرس تازه می‌دهد، پس نمی‌شود آن را یک‌بار در سایت
+//  گذاشت. با «تونل نام‌دار» یک زیردامنهٔ خودتان (مثل sync.example.com) برای همیشه
+//  به همین سرور وصل می‌شود؛ آن وقت آدرس یک‌بار در سایت می‌نشیند و دیگر عوض نمی‌شود.
+//
+//  راه‌اندازی یک‌بار است: ورود به حساب Cloudflare ← ساخت تونل ← وصل کردن زیردامنه.
+// ---------------------------------------------------------------------------
+const CF_DIR = path.join(config.dataDir, 'cloudflared');
+const CERT_FILE = path.join(CF_DIR, 'cert.pem');
+const CONFIG_FILE = path.join(CF_DIR, 'config.yml');
+
+function runCf(args, { timeout = 120000, onLine } = {}) {
+  return new Promise((resolve) => {
+    const proc = spawn(state.binary, args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
+      env: { ...process.env, TUNNEL_ORIGIN_CERT: CERT_FILE },
+    });
+    let output = '';
+    const onData = (chunk) => {
+      const text = chunk.toString();
+      output += text;
+      for (const line of text.split(/\r?\n/)) {
+        if (line.trim()) onLine?.(line.trim());
+      }
+    };
+    proc.stdout.on('data', onData);
+    proc.stderr.on('data', onData);
+    const timer = setTimeout(() => {
+      try {
+        proc.kill();
+      } catch { /* بسته شده */ }
+    }, timeout);
+    proc.on('exit', (code) => {
+      clearTimeout(timer);
+      resolve({ ok: code === 0, code, output });
+    });
+    proc.on('error', (e) => {
+      clearTimeout(timer);
+      resolve({ ok: false, code: -1, output: output + e.message });
+    });
+  });
+}
+
+export function namedConfig() {
+  return {
+    loggedIn: fs.existsSync(CERT_FILE),
+    configured: fs.existsSync(CONFIG_FILE),
+    hostname: getSetting('tunnel_hostname', null),
+    tunnelName: getSetting('tunnel_name', null),
+    mode: getSetting('tunnel_mode', 'quick'),
+  };
+}
+
+/** گام ۱: ورود به حساب Cloudflare — آدرسی برمی‌گرداند که کاربر باید باز کند */
+export async function namedLoginStart() {
+  await ensureBinary();
+  await fsp.mkdir(CF_DIR, { recursive: true });
+  if (fs.existsSync(CERT_FILE)) return { alreadyLoggedIn: true, url: null };
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const proc = spawn(state.binary, ['tunnel', 'login'], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
+      env: { ...process.env, TUNNEL_ORIGIN_CERT: CERT_FILE },
+    });
+    loginProc = proc;
+
+    const onData = (chunk) => {
+      const text = chunk.toString();
+      pushLine(text.trim().slice(0, 200));
+      const match = text.match(/https:\/\/dash\.cloudflare\.com\/\S+/);
+      if (match && !settled) {
+        settled = true;
+        resolve({ alreadyLoggedIn: false, url: match[0].replace(/[.,)\]]+$/, '') });
+      }
+    };
+    proc.stdout.on('data', onData);
+    proc.stderr.on('data', onData);
+    proc.on('exit', () => {
+      loginProc = null;
+      if (!settled) {
+        settled = true;
+        resolve({ alreadyLoggedIn: fs.existsSync(CERT_FILE), url: null });
+      }
+    });
+    setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        resolve({ alreadyLoggedIn: false, url: null, error: 'cloudflared پاسخی نداد' });
+      }
+    }, 30000).unref?.();
+  });
+}
+
+export function namedLoginDone() {
+  return fs.existsSync(CERT_FILE);
+}
+
+/** گام ۲: ساخت تونل و وصل کردن زیردامنه — بعد از آن آدرس برای همیشه ثابت است */
+export async function namedSetup({ hostname, name = 'pump-yaqobi' }) {
+  const host = String(hostname || '').trim().toLowerCase();
+  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(host)) return { ok: false, error: 'invalid_hostname' };
+  if (!fs.existsSync(CERT_FILE)) return { ok: false, error: 'not_logged_in' };
+
+  await ensureBinary();
+
+  // اگر تونل با همین نام از قبل هست، دوباره ساخته نمی‌شود
+  const created = await runCf(['tunnel', 'create', name]);
+  const already = /already exists/i.test(created.output);
+  if (!created.ok && !already) {
+    return { ok: false, error: 'create_failed', detail: created.output.slice(-400) };
+  }
+
+  const listed = await runCf(['tunnel', 'list', '--output', 'json']);
+  let uuid = null;
+  try {
+    uuid = (JSON.parse(listed.output.slice(listed.output.indexOf('[')))?.find((t) => t.name === name) || {}).id;
+  } catch { /* از خروجی ساخت می‌خوانیم */ }
+  if (!uuid) {
+    const m = created.output.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+    uuid = m ? m[0] : null;
+  }
+  if (!uuid) return { ok: false, error: 'tunnel_id_not_found', detail: created.output.slice(-400) };
+
+  const routed = await runCf(['tunnel', 'route', 'dns', '--overwrite-dns', name, host]);
+  if (!routed.ok && !/already exists|record with the same/i.test(routed.output)) {
+    return { ok: false, error: 'dns_failed', detail: routed.output.slice(-400) };
+  }
+
+  const credFile = path.join(CF_DIR, `${uuid}.json`);
+  const homeCred = path.join(os.homedir(), '.cloudflared', `${uuid}.json`);
+  if (!fs.existsSync(credFile) && fs.existsSync(homeCred)) {
+    await fsp.copyFile(homeCred, credFile);
+  }
+
+  const targetPort = config.siteSync.port || config.port;
+  const yml = [
+    `tunnel: ${uuid}`,
+    `credentials-file: ${credFile.replaceAll('\\', '/')}`,
+    'ingress:',
+    `  - hostname: ${host}`,
+    `    service: http://127.0.0.1:${targetPort}`,
+    '  - service: http_status:404',
+    '',
+  ].join('\n');
+  await fsp.writeFile(CONFIG_FILE, yml, 'utf8');
+
+  setSetting('tunnel_mode', 'named');
+  setSetting('tunnel_hostname', host);
+  setSetting('tunnel_name', name);
+  logEvent('info', 'panel', `آدرس ثابت ساخته شد: ${host}`);
+
+  stopTunnel();
+  await startTunnel({});
+  return { ok: true, hostname: host, tunnelId: uuid };
+}
+
+export async function namedReset() {
+  setSetting('tunnel_mode', 'quick');
+  setSetting('tunnel_hostname', null);
+  stopTunnel();
+  await fsp.rm(CONFIG_FILE, { force: true });
+  return startTunnel({});
+}
+
+let loginProc = null;
+
 export async function startTunnel({ port } = {}) {
   if (child) return publicState();
   stopping = false;
@@ -204,17 +378,31 @@ export async function startTunnel({ port } = {}) {
   // HLP_TUNNEL_CMD برای حالت‌های خاص: اگر کسی تونل دیگری دارد یا در آزمون‌ها.
   // مقدارش با کاما جدا می‌شود و {port} با پورت مقصد جایگزین می‌شود.
   const custom = process.env.HLP_TUNNEL_CMD;
+  const named = !custom && getSetting('tunnel_mode', 'quick') === 'named' && fs.existsSync(CONFIG_FILE);
+  const namedHost = named ? getSetting('tunnel_hostname', null) : null;
+
   const [command, args] = custom
     ? (() => {
         const parts = custom.split(',').map((p) => p.trim().replaceAll('{port}', String(targetPort)));
         return [parts[0], parts.slice(1)];
       })()
-    : [
-        state.binary,
-        ['tunnel', '--no-autoupdate', '--url', `http://127.0.0.1:${targetPort}`, '--loglevel', 'info'],
-      ];
+    : named
+      ? [state.binary, ['tunnel', '--no-autoupdate', '--config', CONFIG_FILE, 'run']]
+      : [
+          state.binary,
+          ['tunnel', '--no-autoupdate', '--url', `http://127.0.0.1:${targetPort}`, '--loglevel', 'info'],
+        ];
 
-  child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+  child = spawn(command, args, {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: true,
+    env: { ...process.env, TUNNEL_ORIGIN_CERT: CERT_FILE },
+  });
+
+  // در حالت آدرس ثابت، آدرس از قبل معلوم است — فقط منتظر برقراری اتصال می‌مانیم
+  if (namedHost) {
+    setStatus('starting', { url: null, error: null });
+  }
 
   const onData = (chunk) => {
     const text = chunk.toString();
@@ -222,7 +410,15 @@ export async function startTunnel({ port } = {}) {
       const line = raw.trim();
       if (!line) continue;
       pushLine(line);
-      const found = extractTunnelUrl(line, Boolean(custom));
+      // حالت آدرس ثابت: به‌محض ثبت اتصال، همان زیردامنه آدرس ماست
+      if (namedHost && !state.url && /Registered tunnel connection|Connection .* registered/i.test(line)) {
+        setStatus('running', { url: `https://${namedHost}`, startedAt: Date.now(), error: null });
+        console.log(`[tunnel] آدرس ثابت فعال شد: https://${namedHost}`);
+        logEvent('info', 'panel', `تونل با آدرس ثابت فعال شد: ${namedHost}`);
+        continue;
+      }
+
+      const found = namedHost ? null : extractTunnelUrl(line, Boolean(custom));
       if (found && !state.url) {
         setStatus('running', { url: found, startedAt: Date.now(), error: null });
         console.log(`[tunnel] آدرس عمومی آماده شد: ${found}`);

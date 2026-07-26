@@ -1,7 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Database, Eye, EyeOff, Globe, Info, Link2, Plug, Power, PowerOff, RefreshCw, RotateCw, TriangleAlert } from 'lucide-react';
+import {
+  Anchor,
+  Database,
+  Eye,
+  EyeOff,
+  Globe,
+  Info,
+  Link2,
+  Plug,
+  Power,
+  PowerOff,
+  RefreshCw,
+  RotateCw,
+  TriangleAlert,
+} from 'lucide-react';
 import { useApp } from '../app-context';
-import { api } from '../api';
+import { api, ApiError } from '../api';
 import type { SiteServerInfo } from '../types';
 import { Badge, Card, ConfirmDialog, CopyButton, Empty, Loading, Spinner, toast } from '../components/ui';
 import { bytes, dateTime, ltr } from '../format';
@@ -56,6 +70,9 @@ export default function SiteServer() {
 
       {/* ------------------ اتصال از اینترنت: مهم‌ترین بخش صفحه ------------------ */}
       <InternetAccess data={data} onChanged={load} />
+
+      {/* آدرس ثابت — تا سایت یک‌بار تنظیم شود و برای همیشه کار کند */}
+      <PermanentAddress data={data} onChanged={load} />
 
       <Card
         title={t('serverAddress')}
@@ -337,6 +354,203 @@ function InternetAccess({ data, onChanged }: { data: SiteServerInfo; onChanged: 
             <p className="mt-1.5">{t('tunnelHint')}</p>
           </div>
         </div>
+      )}
+    </Card>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   آدرس ثابت — مدل فایربیس
+   با تونل نام‌دار Cloudflare یک زیردامنهٔ خودِ کاربر برای همیشه به این سرور وصل
+   می‌شود. آن وقت آدرس یک‌بار در سایت می‌نشیند و دیگر هیچ لینکی لازم نیست.
+--------------------------------------------------------------------------- */
+function PermanentAddress({ data, onChanged }: { data: SiteServerInfo; onChanged: () => void }) {
+  const { t } = useApp();
+  const [hostname, setHostname] = useState(data.named.hostname || '');
+  const [loginUrl, setLoginUrl] = useState<string | null>(null);
+  const [loggedIn, setLoggedIn] = useState(data.named.loggedIn);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+
+  const active = data.tunnel.permanent && Boolean(data.tunnel.hostname);
+
+  // بعد از باز کردن لینک ورود، منتظر می‌مانیم تا Cloudflare اجازه را ثبت کند
+  useEffect(() => {
+    if (!loginUrl || loggedIn) return;
+    const timer = setInterval(async () => {
+      try {
+        const res = await api<{ loggedIn: boolean }>('/api/site-server/tunnel/named/login-status');
+        if (res.loggedIn) {
+          setLoggedIn(true);
+          setLoginUrl(null);
+        }
+      } catch { /* هنوز */ }
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [loginUrl, loggedIn]);
+
+  async function startLogin() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await api<{ alreadyLoggedIn: boolean; url: string | null; error?: string }>(
+        '/api/site-server/tunnel/named/login',
+        { method: 'POST' }
+      );
+      if (res.alreadyLoggedIn) setLoggedIn(true);
+      else if (res.url) setLoginUrl(res.url);
+      else setError(res.error || t('error'));
+    } catch (e) {
+      setError(e instanceof ApiError ? e.code : t('error'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function createPermanent() {
+    setBusy(true);
+    setError(null);
+    try {
+      await api('/api/site-server/tunnel/named/setup', { body: { hostname: hostname.trim() } });
+      const tk = await api<{ token: string }>('/api/site-server/token');
+      setToken(tk.token);
+      toast(t('permanentDone'));
+      onChanged();
+    } catch (e) {
+      setError(e instanceof ApiError ? `${e.code}${e.message ? ` — ${e.message}` : ''}` : t('error'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card title={t('permanentTitle')} icon={<Anchor className="h-4 w-4" />}>
+      <p className="mb-4 text-xs leading-relaxed text-ink-soft">{t('permanentIntro')}</p>
+
+      {active ? (
+        <>
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <Badge tone="good">{t('permanentActive')}</Badge>
+            <code className="font-mono text-sm" dir="ltr">
+              wss://{data.tunnel.hostname}
+            </code>
+            <CopyButton value={`wss://${data.tunnel.hostname}`} />
+          </div>
+
+          <p className="label mt-4">{t('permanentPutInSite')}</p>
+          <pre
+            className="overflow-x-auto rounded-xl border border-line p-3 font-mono text-[11px] leading-relaxed"
+            style={{ background: 'var(--surface-0)' }}
+            dir="ltr"
+          >
+{`var SELF_HOST_URL   = 'wss://${data.tunnel.hostname}';
+var SELF_HOST_TOKEN = '${token ?? '…'}';`}
+          </pre>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {!token && (
+              <button
+                className="btn btn-sm"
+                onClick={async () => {
+                  try {
+                    const tk = await api<{ token: string }>('/api/site-server/token');
+                    setToken(tk.token);
+                  } catch {
+                    toast(t('error'), 'bad');
+                  }
+                }}
+              >
+                <Eye className="h-3.5 w-3.5" />
+                {t('showToken')}
+              </button>
+            )}
+            {token && (
+              <CopyButton
+                value={`var SELF_HOST_URL   = 'wss://${data.tunnel.hostname}';\nvar SELF_HOST_TOKEN = '${token}';`}
+              />
+            )}
+            <button
+              className="btn btn-sm"
+              onClick={async () => {
+                await api('/api/site-server/tunnel/named/reset', { method: 'POST' });
+                onChanged();
+              }}
+            >
+              {t('permanentReset')}
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          {/* گام ۱ */}
+          <div className="mb-4">
+            <p className="mb-1 text-sm font-medium">{t('permanentStep1')}</p>
+            <p className="mb-2 text-[11px] text-ink-muted">{t('permanentStep1Hint')}</p>
+            {loggedIn ? (
+              <Badge tone="good">{t('permanentLoggedIn')}</Badge>
+            ) : (
+              <>
+                <button className="btn btn-primary btn-sm" disabled={busy} onClick={startLogin}>
+                  {busy && <Spinner />}
+                  {t('permanentLogin')}
+                </button>
+                {loginUrl && (
+                  <div className="mt-2">
+                    <p className="mb-1 text-[11px] text-ink-muted">{t('permanentOpenLink')}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <code
+                        className="min-w-0 flex-1 break-all rounded-xl border border-line px-3 py-2 font-mono text-[11px]"
+                        style={{ background: 'var(--surface-0)' }}
+                        dir="ltr"
+                      >
+                        {loginUrl}
+                      </code>
+                      <CopyButton value={loginUrl} />
+                      <a className="btn btn-sm" href={loginUrl} target="_blank" rel="noreferrer">
+                        {t('open')}
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* گام ۲ */}
+          <div>
+            <p className="mb-1 text-sm font-medium">{t('permanentStep2')}</p>
+            <p className="mb-2 text-[11px] text-ink-muted">{t('permanentStep2Hint')}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                className="input max-w-xs"
+                dir="ltr"
+                placeholder="sync.example.com"
+                value={hostname}
+                onChange={(e) => setHostname(e.target.value)}
+              />
+              <button
+                className="btn btn-primary"
+                disabled={busy || !loggedIn || !hostname.trim()}
+                onClick={createPermanent}
+              >
+                {busy && <Spinner />}
+                {t('permanentCreate')}
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <p
+              className="mt-3 rounded-xl px-3 py-2 text-xs"
+              style={{
+                background: 'color-mix(in srgb, var(--status-critical) 12%, transparent)',
+                color: 'var(--status-critical)',
+              }}
+            >
+              {error}
+            </p>
+          )}
+        </>
       )}
     </Card>
   );

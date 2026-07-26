@@ -10,7 +10,17 @@ import { getSiteSync } from '../state.js';
 import { config } from '../config.js';
 import { readInterfaces, readPublicIp } from '../metrics/network.js';
 import { getSetting, setSetting, logEvent } from '../db.js';
-import { publicState, startTunnel, stopTunnel, tunnelWss } from '../tunnel.js';
+import {
+  publicState,
+  startTunnel,
+  stopTunnel,
+  tunnelWss,
+  namedConfig,
+  namedLoginStart,
+  namedLoginDone,
+  namedSetup,
+  namedReset,
+} from '../tunnel.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -93,6 +103,7 @@ router.get('/', async (req, res) => {
     publicIp: await readPublicIp(),
     dedicatedPort: config.siteSync.port || null,
     tunnel,
+    named: namedConfig(),
     tunnelAutostart: getSetting('tunnel_autostart', true) !== false,
     siteUrl: siteUrl(),
     siteLink: link,
@@ -133,6 +144,42 @@ router.post('/tunnel/stop', (req, res) => {
 
 router.get('/tunnel', (req, res) => {
   res.json({ ...publicState(), autostart: getSetting('tunnel_autostart', true) !== false });
+});
+
+// ------------------ آدرس ثابت (مدل فایربیس) — راه‌اندازی یک‌باره ------------------
+router.get('/tunnel/named', (req, res) => {
+  res.json(namedConfig());
+});
+
+// گام ۱: ورود به حساب Cloudflare — آدرسی برمی‌گردد که کاربر باید در مرورگر باز کند
+router.post('/tunnel/named/login', async (req, res) => {
+  try {
+    const result = await namedLoginStart();
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.get('/tunnel/named/login-status', (req, res) => {
+  res.json({ loggedIn: namedLoginDone() });
+});
+
+// گام ۲: ساخت تونل و وصل کردن زیردامنه — بعد از این، آدرس برای همیشه ثابت است
+router.post('/tunnel/named/setup', async (req, res) => {
+  const hostname = String(req.body?.hostname || '').trim();
+  try {
+    const result = await namedSetup({ hostname });
+    if (!result.ok) return res.status(400).json(result);
+    logEvent('info', 'panel', `آدرس ثابت سرور: ${result.hostname}`);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/tunnel/named/reset', async (req, res) => {
+  res.json(await namedReset());
 });
 
 // آدرس سایتی که لینک یک‌کلیکی با آن ساخته می‌شود
