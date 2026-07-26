@@ -8361,8 +8361,14 @@ function fillSyncSettings() {
 let _dirtySinceUpload = false;
 let _autoSyncTimer = null;
 let _autoSyncInFlight = false;
+let _applyingServerData = false;   // تا وقتی روشن است، ذخیره‌ها «تغییر کاربر» حساب نمی‌شوند
 
 function _markDirtyForAutoSync() {
+  // داده‌ای که همین حالا از سرور آمد، «تغییرِ تازهٔ کاربر» نیست. بدون این محافظ،
+  // اعمالِ دادهٔ سرور یک ذخیرهٔ محلی می‌سازد، آن ذخیره دوباره آپلود می‌شود، آپلود
+  // زمانِ سرور را جلو می‌برد، listener آن را «تغییر جدید» می‌بیند و دوباره اعمال
+  // می‌کند — حلقه‌ای بی‌پایان که هر ثانیه تکرار می‌شد.
+  if (_applyingServerData) return;
   _dirtySinceUpload = true;
   _updateAutoSyncBadge();
   // اگر همین الان آنلاین هستیم، چند ثانیه صبر کن (تا چند تغییر پشت‌سرهم یک‌بار بارگذاری شود) و خودکار بفرست
@@ -8443,6 +8449,8 @@ let _fbStartupDone = false;
 let _fbStartupPulled = false;  // اولین دریافت موفق از سرور انجام شده؟ (محافظ آپلودِ دیتای خالی)
 let _fbStartupTries = 0;
 function _applyServerData(serverData) {
+  _applyingServerData = true;
+  try {
   // سرور همیشه یک عکسِ کاملِ دیتابیس است، ولی Firebase آرایه/آبجکتِ خالی را ذخیره
   // نمی‌کند — پس نبودنِ کلید یعنی آن بخش خالی است. بدون این، «پاک کردن همه» روی یک
   // دستگاه هرگز به دستگاه‌های دیگر نمی‌رسید و داده‌های قدیمی دوباره برمی‌گشتند.
@@ -8462,7 +8470,14 @@ function _applyServerData(serverData) {
   try { if (_isROHash) checkHashViewer(); } catch(e) {}
   try { _staffRefresh(); } catch(e) {}
   try { _updateSyncLastTime(); } catch(e) {}
-  try { _updateAutoSyncBadge(); } catch(e) {}
+  } finally {
+    // ذخیره‌های معطل‌ماندهٔ همین اعمال را همین‌جا و زیرِ همین پرچم بنویس، وگرنه
+    // ۴۰۰ میلی‌ثانیه بعد بیرون از پرچم نوشته می‌شوند و دوباره حلقه راه می‌افتد.
+    try { _flushSave(); } catch(e) {}
+    _applyingServerData = false;
+    _dirtySinceUpload = false;
+    try { _updateAutoSyncBadge(); } catch(e) {}
+  }
 }
 function _autoLoadFromFirebaseOnStartup() {
   if (_fbStartupDone) return; // یک‌بار کافی است — از تایمر و onload کتابخانه هر دو صدا می‌خورد
@@ -8730,7 +8745,7 @@ function tryUnlock() {
     }
     document.getElementById('lockErr').innerHTML =
       '<div style="margin-bottom:10px;line-height:1.7;font-size:0.82rem">این برنامه برای شخص خاصی طراحی شد.<br>اگه برنامه رو می‌خواهید برای خود تان، به این شماره پیام دهید:<br><strong style="font-size:1rem;letter-spacing:1px">0792236008</strong></div>' +
-      '<button onclick="_copyShareText(\'0792236008\',\'📋 شماره کپی شد — در واتساپ/تلگرام پیام دهید\')" style="background:#25D366;color:#fff;border:none;border-radius:10px;padding:9px 20px;font-size:0.88rem;font-family:\'Vazirmatn\',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-weight:700">📋 کپی شمارهٔ تماس</button>';
+      '<button onclick="contactWhatsApp()" style="background:#25D366;color:#fff;border:none;border-radius:10px;padding:9px 20px;font-size:0.88rem;font-family:\'Vazirmatn\',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-weight:700">📲 پیام در واتساپ</button>';
     document.getElementById('lockInput').value = '';
   }
   } catch(err) {
@@ -8779,9 +8794,22 @@ function promptAdminUnlock() {
     showToast('❌ رمز اشتباه است', '#e53e3e');
   }
 }
+// اول واتساپ را باز کن؛ اگر مرورگر جلویش را گرفت، همان راهِ قبلی (کپی کردن).
+// قبلاً فقط کپی می‌شد چون باز کردن روی بعضی دستگاه‌ها بلاک می‌شد — ولی روی
+// دستگاه‌هایی که بلاک نمی‌شود، کپی کردن یک قدمِ اضافیِ بی‌دلیل بود.
+function _openWhatsApp(phone, text, copyMsg) {
+  var num = _waNumber(phone);
+  if (num) {
+    var url = 'https://wa.me/' + num + (text ? '?text=' + encodeURIComponent(text) : '');
+    var win = null;
+    try { win = window.open(url, '_blank', 'noopener'); } catch(e) {}
+    if (win) return true;
+  }
+  _copyShareText(text || phone, copyMsg || '📋 کپی شد — در واتساپ/تلگرام بفرستید');
+  return false;
+}
 function contactWhatsApp() {
-  // به‌جای باز کردنِ مستقیمِ واتساپ (که روی بعضی دستگاه‌ها بلاک می‌شود)، شماره کپی می‌شود.
-  _copyShareText('0792236008', '📋 شمارهٔ تماس کپی شد — خودتان در واتساپ/تلگرام پیام دهید');
+  _openWhatsApp('0792236008', '', '📋 شمارهٔ تماس کپی شد — خودتان در واتساپ/تلگرام پیام دهید');
 }
 // دانلود برنامه: همیشه نسخهٔ کامل و بدون محافظ، همراه با «همین حسابِ فعلی»
 // تا روی هر دستگاهی که باز/کپی/ارسال شود، همین حساب نمایش داده شود (نه حساب خالی).
@@ -22173,7 +22201,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.116';
+const APP_VERSION = '2.9.117';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
