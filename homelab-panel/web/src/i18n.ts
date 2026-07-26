@@ -179,6 +179,13 @@ const fa = {
   reads: 'خواندن',
   writes: 'نوشتن',
   whereToPut: 'در سایت: تنظیمات ← هم‌زمان‌سازی ← سرور شخصی',
+  lanOnlyTitle: 'این آدرس فقط داخل شبکهٔ خانگی کار می‌کند',
+  lanOnlyBody:
+    'آدرس ws:// با IP خانگی (مثل 192.168.x.x) فقط از دستگاه‌هایی که به همین وای‌فای وصل‌اند در دسترس است. از موبایل با اینترنت همراه یا از جای دیگر، این آدرس اصلاً پیدا نمی‌شود.',
+  tunnelHint:
+    'و اگر سایت را با آدرس https باز می‌کنید، مرورگر اصلاً اجازهٔ ws:// نمی‌دهد — باید wss:// باشد. برای هر دو مشکل، یک تونل (مثل Cloudflare Tunnel) بسازید و آدرس wss:// آن را در سایت بگذارید.',
+  dedicatedPortNote:
+    'پورت {port} فقط سرورِ سایت را سرو می‌کند (بدون پنل). برای اتصال از اینترنت همین را تونل کنید، نه پورت پنل را.',
 
   loading: 'در حال بارگذاری…',
   retry: 'تلاش دوباره',
@@ -367,6 +374,13 @@ const en: Dict = {
   reads: 'Reads',
   writes: 'Writes',
   whereToPut: 'In the site: Settings → Sync → Personal server',
+  lanOnlyTitle: 'This address only works inside your home network',
+  lanOnlyBody:
+    'A ws:// address with a home IP (like 192.168.x.x) is only reachable from devices on the same Wi-Fi. From mobile data or anywhere else, this address does not exist.',
+  tunnelHint:
+    'And if you open the site over https, the browser blocks ws:// entirely — it must be wss://. A tunnel (e.g. Cloudflare Tunnel) solves both: use its wss:// address in the site.',
+  dedicatedPortNote:
+    'Port {port} serves only the site server (no panel). Tunnel that one for internet access, not the panel port.',
 
   loading: 'Loading…',
   retry: 'Retry',

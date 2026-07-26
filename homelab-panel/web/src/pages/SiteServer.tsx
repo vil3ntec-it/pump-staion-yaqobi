@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Database, Eye, EyeOff, Info, Link2, Plug, RefreshCw, RotateCw } from 'lucide-react';
+import { Database, Eye, EyeOff, Info, Link2, Plug, RefreshCw, RotateCw, TriangleAlert } from 'lucide-react';
 import { useApp } from '../app-context';
 import { api } from '../api';
 import type { SiteServerInfo } from '../types';
@@ -53,6 +53,18 @@ export default function SiteServer() {
           {t('refresh')}
         </button>
       </div>
+
+      {/* مهم‌ترین نکته‌ای که کاربر باید بداند، نه پنهان در راهنما */}
+      <Card>
+        <div className="flex items-start gap-2.5">
+          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--status-warning)' }} />
+          <div className="text-xs leading-relaxed text-ink-soft">
+            <p className="mb-1 font-semibold text-ink">{t('lanOnlyTitle')}</p>
+            <p>{t('lanOnlyBody')}</p>
+            <p className="mt-1.5">{t('tunnelHint')}</p>
+          </div>
+        </div>
+      </Card>
 
       <Card
         title={t('serverAddress')}
@@ -121,6 +133,12 @@ export default function SiteServer() {
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           {t('rotateWarn')}
         </p>
+        {data.dedicatedPort && (
+          <p className="mt-2 flex items-start gap-1.5 text-[11px] text-ink-muted">
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            {t('dedicatedPortNote', { port: data.dedicatedPort })}
+          </p>
+        )}
       </Card>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
