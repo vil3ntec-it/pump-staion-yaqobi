@@ -514,6 +514,11 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
    پنجره در ویندوز) — بدون نیاز به کدِ دستیِ کشیدن که ممکن است لرزش/خطا داشته باشد */
 #robotPanel{position:fixed;bottom:calc(148px + var(--kb-offset,0px));left:18px;z-index:10050;width:min(360px,calc(100vw - 24px));height:min(520px,calc(100dvh - 90px - var(--kb-offset,0px)));min-width:260px;min-height:280px;max-width:96vw;max-height:92dvh;background:var(--panel);border:1.5px solid var(--blue);border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.5);display:none;flex-direction:column;overflow:hidden;transition:bottom .18s ease}
 #robotPanel.open{display:flex}
+/* با کیبوردِ باز، لنگرِ ۱۴۸px (که پنل را بالای دکمه‌های شناور نگه می‌دارد) پنل را
+   چنان بالا می‌بُرد که سرش از صفحه بیرون می‌زد و نصفِ گفتگو دیده نمی‌شد. وقتی
+   کیبورد باز است دکمه‌های شناور اهمیتی ندارند، پس پنل می‌چسبد بالای کیبورد. */
+html.kb-open #robotPanel{bottom:calc(8px + var(--kb-offset,0px))}
+html.kb-open #calcPanel{bottom:calc(8px + var(--kb-offset,0px))}
 #robotPanel.large{width:min(560px,calc(100vw - 24px));height:min(760px,calc(100dvh - 40px - var(--kb-offset,0px)))}
 #robotPanel .rb-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--dark);border-bottom:1px solid var(--border);font-weight:900;color:var(--blue);cursor:move;user-select:none;-webkit-user-select:none;touch-action:none;flex-shrink:0}
 #robotPanel .rb-head .rb-title{display:flex;align-items:center;gap:7px}
@@ -547,10 +552,23 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 .ch-sug button{border:1px solid var(--blue);background:transparent;color:var(--blue);border-radius:8px;padding:5px 10px;font-family:'Vazirmatn',sans-serif;font-size:0.74rem;font-weight:800;cursor:pointer}
 .ch-sug button:hover{background:rgba(34,204,255,.12)}
 .ch-note{text-align:center;font-size:0.7rem;color:var(--muted);padding:4px 8px}
-.ch-b .ch-del-btn{position:absolute;top:2px;left:4px;cursor:pointer;opacity:.55;font-size:0.95rem;line-height:1;padding:2px 4px;border-radius:6px;user-select:none}
-.ch-b .ch-del-btn:hover{opacity:1;background:rgba(0,0,0,.12)}
+/* سه‌نقطهٔ گزینه‌های پیام: قبلاً یک نشانهٔ ۲۰px بود که روی گوشی نه دیده می‌شد نه
+   زده می‌شد. حالا یک هدفِ لمسیِ کاملِ ۳۴px با پس‌زمینهٔ همیشه‌دیدنی است. */
+.ch-b .ch-del-btn{position:absolute;top:1px;left:1px;cursor:pointer;opacity:.85;font-size:1.25rem;line-height:1;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border-radius:9px;user-select:none;-webkit-user-select:none;background:rgba(0,0,0,.16);-webkit-tap-highlight-color:transparent}
+.ch-b .ch-del-btn:hover,.ch-b .ch-del-btn:active{opacity:1;background:rgba(0,0,0,.32)}
 .ch-b.ch-deleted{opacity:.65;font-style:italic}
 .ch-b.ch-deleted i{font-style:italic;opacity:.85}
+/* انتخاب‌گرِ حساب برای فرستادن لینک و کیو‌آر در چت تک‌نفره */
+.dm-acct-ov{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.dm-acct-box{width:min(420px,94vw);max-height:min(70dvh,560px);background:var(--panel);border:1.5px solid var(--blue);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;font-family:'Vazirmatn',sans-serif}
+.dm-acct-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--dark);border-bottom:1px solid var(--border);color:var(--blue)}
+.dm-acct-head button{background:transparent;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:4px 8px}
+.dm-acct-box>input{margin:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:16px;outline:none}
+.dm-acct-box>input:focus{border-color:var(--blue)}
+.dm-acct-list{flex:1;overflow-y:auto;padding:0 10px 12px;display:flex;flex-direction:column;gap:6px;min-height:0}
+.dm-acct-row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 13px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.92rem;cursor:pointer;text-align:right;min-height:46px}
+.dm-acct-row:hover,.dm-acct-row:active{border-color:var(--blue);color:var(--blue)}
+.dm-acct-row i{font-style:normal;font-size:0.74rem;color:var(--muted);flex-shrink:0}
 .ch-msg-menu{position:fixed;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 6px 22px rgba(0,0,0,.35);display:flex;flex-direction:column;overflow:hidden;min-width:150px;z-index:99999}
 .ch-msg-menu button{background:transparent;border:none;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;padding:10px 14px;text-align:right;cursor:pointer;display:flex;align-items:center;gap:6px}
 .ch-msg-menu button:hover{background:rgba(127,127,127,.15)}
@@ -589,7 +607,9 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 body.cfm-noselect, body.cfm-noselect *{user-select:none!important}
 /* نوار نوشتن پیام */
 .ch-comp{display:flex;gap:6px;align-items:center;padding:8px;border-top:1px solid var(--border);background:var(--dark);flex-shrink:0}
-.ch-comp input[type=text]{flex:1;min-width:0;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 11px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.85rem}
+/* فونت ۱۶px عمدی است: سافاریِ آیفون هر ورودیِ کوچک‌تر از ۱۶px را با فوکوس خودکار
+   زوم می‌کند و همان زوم، لبه‌های پنل و دکمهٔ فرستادن را از صفحه بیرون می‌انداخت. */
+.ch-comp input[type=text]{flex:1;min-width:0;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 11px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:16px}
 .ch-comp input[type=text]:focus{outline:none;border-color:var(--blue)}
 .ch-ib{width:38px;height:38px;flex-shrink:0;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
 .ch-ib svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
@@ -625,7 +645,7 @@ body.cfm-noselect, body.cfm-noselect *{user-select:none!important}
 /* فرم نام (بار اول برای کارمند) */
 .ch-name-form{padding:16px 14px;display:flex;flex-direction:column;gap:9px}
 .ch-name-form label{font-size:0.8rem;color:var(--muted);font-weight:700}
-.ch-name-form input{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.9rem}
+.ch-name-form input{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:16px}
 .ch-name-form button{background:var(--blue);border:none;border-radius:10px;color:#fff;font-family:'Vazirmatn',sans-serif;font-weight:900;padding:10px;cursor:pointer}
 /* دستگیره‌های گوشه برای بزرگ/کوچک کردن پنل‌ها (کامپیوتر و موبایل) */
 .rz-h{position:absolute;width:20px;height:20px;z-index:5;touch-action:none}
@@ -7226,7 +7246,8 @@ body.viewer-mode .inv-admin-only{display:none!important}
   <!-- ابتدا نام گرفته می‌شود تا مدیر بداند طرفِ گفتگو کیست -->
   <div id="mirzaNameBox" style="display:none;flex-direction:column;align-items:center;gap:12px;width:100%;max-width:340px">
     <div style="font-size:0.9rem;color:#8b949e;line-height:1.95">برای شروعِ گفتگو، لطفاً نام‌تان را بنویسید:</div>
-    <input id="mirzaNameInput" placeholder="نام و تخلص" autocomplete="name" onkeydown="if(event.key==='Enter')_mirzaGuestSetName()" style="width:100%;box-sizing:border-box;text-align:center;border:1px solid #30363d;border-radius:10px;background:#0d1117;color:#e6edf3;font-family:'Vazirmatn',sans-serif;font-size:1rem;padding:11px 14px;outline:none">
+    <input id="mirzaNameInput" placeholder="نام و تخلص" autocomplete="name" onkeydown="if(event.key==='Enter')document.getElementById('mirzaOrgInput').focus()" style="width:100%;box-sizing:border-box;text-align:center;border:1px solid #30363d;border-radius:10px;background:#0d1117;color:#e6edf3;font-family:'Vazirmatn',sans-serif;font-size:16px;padding:11px 14px;outline:none">
+    <input id="mirzaOrgInput" placeholder="نام شرکت یا ارگان (اگر دارید)" autocomplete="organization" onkeydown="if(event.key==='Enter')_mirzaGuestSetName()" style="width:100%;box-sizing:border-box;text-align:center;border:1px solid #30363d;border-radius:10px;background:#0d1117;color:#e6edf3;font-family:'Vazirmatn',sans-serif;font-size:16px;padding:11px 14px;outline:none">
     <button onclick="_mirzaGuestSetName()" style="background:#238636;color:#fff;border:none;border-radius:12px;padding:12px 26px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:1rem;cursor:pointer">شروع گفتگو ✍️</button>
   </div>
   <!-- بعد از ثبتِ نام: خوش‌آمد + دکمه‌ها -->
@@ -7291,7 +7312,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
   <!-- ۲) چت گروهی (کارمندان) -->
   <div class="rb-pane" id="rbPane-group">
     <div class="ch-list" id="groupList"></div>
-    <div class="ch-note">برای پرسیدن از ربات، پیام را با «ربات» شروع کنید · پیام‌ها و عکس/ویدیوها بعد از ۱۰ روز به سطل آشغال و سپس حذف دائم می‌روند</div>
+    <div class="ch-note">برای پرسیدن از ربات، پیام را با <b>/بات</b> یا «ربات» شروع کنید — مثلاً «/بات باقی مخزن؟» · پیام‌ها و عکس/ویدیوها بعد از ۱۰ روز به سطل آشغال و سپس حذف دائم می‌روند</div>
     <div class="ch-comp" id="groupComp">
       <input type="text" id="groupInput" placeholder="پیام به گروه..." onkeydown="if(event.key==='Enter')chatSendText('group')">
       <button class="ch-ib" onclick="chatPickMedia('group','image')" title="فرستادن عکس"><svg><use href="#ic-photo"/></svg></button>
@@ -7314,6 +7335,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <input type="text" id="dmInput" placeholder="پیام..." onkeydown="if(event.key==='Enter')chatSendText('dm')">
         <button class="ch-ib" onclick="chatPickMedia('dm','image')" title="فرستادن عکس"><svg><use href="#ic-photo"/></svg></button>
         <button class="ch-ib" id="dmRecBtn" onclick="chatToggleRec('dm')" title="پیام صوتی"><svg><use href="#ic-mic2"/></svg></button>
+        <button class="ch-ib" id="dmAcctBtn" onclick="dmOpenAcctPicker()" title="فرستادن لینک و کیو‌آرِ حساب"><svg><use href="#ic-qrscan"/></svg></button>
         <button class="ch-ib send" onclick="chatSendText('dm')" title="فرستادن"><svg><use href="#ic-send"/></svg></button>
       </div>
     </div>
@@ -20532,9 +20554,12 @@ function _openMirzaGuest(hash){
   currentRole = 'viewer';
   try { applyRole(); } catch(e){}
   // ابتدا نام: اگر قبلاً ثبت شده (همین دستگاه) مستقیم وارد گفتگو می‌شود، وگرنه فرمِ نام
-  let savedName = '';
-  try { savedName = (localStorage.getItem('mirzaGuestName') || '').trim(); } catch(e){}
-  if (savedName) _mirzaGuestStart(tok, savedName);
+  let savedName = '', savedOrg = '';
+  try {
+    savedName = (localStorage.getItem('mirzaGuestName') || '').trim();
+    savedOrg  = (localStorage.getItem('mirzaGuestOrg')  || '').trim();
+  } catch(e){}
+  if (savedName) _mirzaGuestStart(tok, savedOrg ? (savedName + ' — ' + savedOrg) : savedName);
   else _mirzaShowNameGate();
 }
 function _mirzaShowNameGate(){
@@ -20546,8 +20571,16 @@ function _mirzaGuestSetName(){
   const i = document.getElementById('mirzaNameInput');
   const nm = ((i && i.value) || '').trim();
   if (nm.length < 2) { showToast('لطفاً نام‌تان را بنویسید', '#e53e3e'); if (i) try { i.focus(); } catch(e){} return; }
-  try { localStorage.setItem('mirzaGuestName', nm); } catch(e){}
-  _mirzaGuestStart(_mirzaGuestToken || _mirzaMyToken(), nm);
+  // نام ارگان اختیاری است؛ اگر بود، کنار نام می‌نشیند تا مدیر در فهرست چت‌ها
+  // بداند طرفِ گفتگو از کدام شرکت/ارگان است.
+  const o = document.getElementById('mirzaOrgInput');
+  const org = ((o && o.value) || '').trim();
+  const full = org ? (nm + ' — ' + org) : nm;
+  try {
+    localStorage.setItem('mirzaGuestName', nm);
+    if (org) localStorage.setItem('mirzaGuestOrg', org); else localStorage.removeItem('mirzaGuestOrg');
+  } catch(e){}
+  _mirzaGuestStart(_mirzaGuestToken || _mirzaMyToken(), full);
 }
 function _mirzaGuestStart(tok, name){
   const nb = document.getElementById('mirzaNameBox'); if (nb) nb.style.display = 'none';
@@ -21413,8 +21446,11 @@ function chatSendText(scope) {
   // کادر سوال‌وجواب داخل گروه: پیامی که با «ربات» شروع شود، ربات در گروه جواب می‌دهد.
   // دستورهایی که چیزی می‌سازند/باز می‌کنند/حذف می‌کنند فقط از خودِ میرزا (مدیر)
   // اجرا می‌شوند؛ برای بقیهٔ کارمندان فقط جواب سوال داده می‌شود، هیچ کاری اجرا نمی‌شود.
-  if (scope === 'group' && /^(ربات|بات)\b/.test(_botNorm(txt))) {
-    const qq = txt.replace(/^\s*(ربات|بات)\s*[،,:؛]?\s*/, '');
+  // «\b» بعد از حرف فارسی هرگز match نمی‌شود (در جاوااسکریپت فقط حروف ASCII را
+  // مرزِ کلمه می‌شناسد)، پس این شرط همیشه false بود و ربات در گروه اصلاً جواب
+  // نمی‌داد. با lookahead درست شد و «/بات» هم پذیرفته می‌شود.
+  if (scope === 'group' && /^\/?\s*(ربات|بات)(?=\s|$)/.test(_botNorm(txt))) {
+    const qq = txt.replace(/^\s*\/?\s*(ربات|بات)\s*[،,:؛]?\s*/, '');
     const actionAns = _botTryAgentActionGroup(qq);
     const ans = actionAns || _botAnswer(qq) || ('متوجه سوال نشدم. ' + _botHelp());
     setTimeout(() => { try { _chatPushRaw('group', { f: 'bot', n: 'ربات', k: 'text', t: ans, ts: Date.now() }); } catch (e) {} }, 400);
@@ -21502,6 +21538,87 @@ function _chMsgHtml(m, meId, scope, peer) {
   const sug = m.sug === 'mirzaDm' ? `<div class="ch-sug"><button onclick="dmMirzaYes()">بله، خودِ میرزا جواب بدهد</button><button onclick="dmMirzaNo()">نی</button></div>` : '';
   return `<div class="ch-b ${cls}">${delBtn}${nm}${body}${sug}${tm}</div>`;
 }
+/* ============================================================================
+   فرستادنِ لینک + کیو‌آرِ حساب داخلِ چت تک‌نفره
+   میرزا از همان نوارِ نوشتن، حسابِ هر قرض‌دار یا شرکتی را انتخاب می‌کند و لینکِ
+   دیدنِ حساب به‌همراه کیو‌آرش برای طرف فرستاده می‌شود — بدون رفتن به بخش دیگر.
+   ============================================================================ */
+function _acctViewUrl(kind, type, id) {
+  const baseUrl = /^http/.test(location.protocol)
+    ? window.location.href.split('#')[0]
+    : 'https://vil3ntec-it.github.io/pump-staion-yaqobi/';
+  return baseUrl + (kind === 'company' ? ('#roview-company-' + id + '-pdf') : ('#roview-' + type + '-' + id + '-pdf'));
+}
+// کیو‌آر را به عکس (data:) تبدیل می‌کند تا مثل هر عکسِ دیگری در چت فرستاده شود
+function _acctQrDataUrl(url) {
+  if (typeof QRCode === 'undefined') return '';
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;left:-9999px;top:0';
+  document.body.appendChild(box);
+  let out = '';
+  try {
+    new QRCode(box, { text: url, width: 320, height: 320, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+    const cv = box.querySelector('canvas');
+    if (cv) out = cv.toDataURL('image/png');
+    else { const im = box.querySelector('img'); if (im && im.src.slice(0, 5) === 'data:') out = im.src; }
+  } catch (e) {}
+  box.remove();
+  return out;
+}
+function _acctPickerRows() {
+  const rows = [];
+  (DB.debtPersons  || []).forEach(p => rows.push({ kind: 'person',  type: 'debt',  id: p.id, name: p.name || 'بی‌نام', tag: 'قرض‌دار' }));
+  (DB.noinvPersons || []).forEach(p => rows.push({ kind: 'person',  type: 'noinv', id: p.id, name: p.name || 'بی‌نام', tag: 'بدون فاکتور' }));
+  (DB.tilCompanies || []).forEach(c => rows.push({ kind: 'company', type: 'company', id: c.id, name: c.name || 'بی‌نام', tag: 'شرکت' }));
+  return rows;
+}
+function dmOpenAcctPicker() {
+  if (!_rbActiveDmPeer()) { showToast('اول یک گفتگو را باز کنید', '#e53e3e'); return; }
+  const rows = _acctPickerRows();
+  if (!rows.length) { showToast('هنوز قرض‌دار یا شرکتی ثبت نشده', '#e53e3e'); return; }
+  document.getElementById('dmAcctPicker')?.remove();
+  const ov = document.createElement('div');
+  ov.id = 'dmAcctPicker';
+  ov.className = 'dm-acct-ov';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  ov.innerHTML =
+    '<div class="dm-acct-box">' +
+      '<div class="dm-acct-head"><b>فرستادن حساب</b>' +
+        '<button onclick="document.getElementById(\'dmAcctPicker\').remove()">✕</button></div>' +
+      '<input id="dmAcctSearch" placeholder="جستجوی نام..." oninput="_dmAcctFilter(this.value)">' +
+      '<div class="dm-acct-list" id="dmAcctList">' +
+        rows.map((r, i) =>
+          `<button class="dm-acct-row" data-nm="${escFa(r.name)}" onclick="dmSendAccount(${i})">` +
+            `<span>${escFa(r.name)}</span><i>${escFa(r.tag)}</i></button>`).join('') +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(ov);
+  window.__dmAcctRows = rows;
+  setTimeout(() => { try { document.getElementById('dmAcctSearch').focus(); } catch (e) {} }, 120);
+}
+function _dmAcctFilter(q) {
+  const t = _botNorm(q || '');
+  document.querySelectorAll('#dmAcctList .dm-acct-row').forEach(b => {
+    b.style.display = (!t || _botNorm(b.dataset.nm || '').indexOf(t) >= 0) ? '' : 'none';
+  });
+}
+function dmSendAccount(i) {
+  const r = (window.__dmAcctRows || [])[i];
+  if (!r) return;
+  document.getElementById('dmAcctPicker')?.remove();
+  if (!_chatOnline()) { showToast('برای فرستادن پیام، اینترنت لازم است', '#e53e3e'); return; }
+  const url = _acctViewUrl(r.kind, r.type, r.id);
+  _chatPush('dm', { k: 'text', t: '📄 حساب ' + r.name + '\n' + url });
+  const qr = _acctQrDataUrl(url);
+  if (qr) {
+    setTimeout(() => { try { _chatPush('dm', { k: 'image', d: qr }); } catch (e) {} }, 300);
+    showToast('✅ لینک و کیو‌آرِ حساب فرستاده شد', '#38a169');
+  } else {
+    // کتابخانهٔ کیو‌آر از اینترنت می‌آید؛ اگر نیامده باشد، لینک به‌تنهایی کار می‌کند
+    showToast('✅ لینک فرستاده شد — کیو‌آر آماده نبود', '#d97706');
+  }
+}
+
 // ---- حذف پیام: برای من (محلی) / برای همه (سرور) ----
 let _chatHiddenIds = null;
 function _chatLoadHidden() {
@@ -22201,7 +22318,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.117';
+const APP_VERSION = '2.9.118';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -24390,6 +24507,9 @@ document.addEventListener('click', function(e) {
   function sync(){
     var kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
     document.documentElement.style.setProperty('--kb-offset', kb + 'px');
+    // پنل‌های شناور با کیبوردِ باز باید لنگرِ دیگری بگیرند، وگرنه سرشان از صفحه
+    // بیرون می‌زند. آستانهٔ ۸۰px تا نوسانِ نوار آدرسِ مرورگر «کیبورد» حساب نشود.
+    document.documentElement.classList.toggle('kb-open', kb > 80);
   }
   sync();
   // فقط resize لازم است — باز/بسته‌شدنِ کیبورد یعنی تغییرِ ارتفاعِ ویوپورت.
