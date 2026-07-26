@@ -6320,10 +6320,27 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
         <option value="">همهٔ ماه‌ها</option>
       </select>
       <button class="add-btn" style="border-color:var(--green);color:var(--green)" onclick="openPumpHistory()" title="تاریخچهٔ شروع/ختمِ همهٔ پایه‌ها با تاریخ و روز هفته">🕘 تاریخچهٔ پایه‌ها</button>
-      <button class="add-btn" onclick="openNewWaraq()">➕ اضافه کردن</button>
+      <button class="add-btn" onclick="openWaraqDatePicker()">➕ اضافه کردن</button>
     </div>
   </div>
   <div class="persons-grid" id="waraq-grid"></div>
+</div>
+
+<!-- ساختِ ورق با تاریخِ دلخواه: تاریخ را می‌نویسید — اگر ورقِ همان تاریخ باشد همان باز
+     می‌شود، اگر نباشد ورقِ تازهٔ همان تاریخ ساخته می‌شود (هیچ ورقِ تکراری) -->
+<div class="modal-overlay" id="waraqDateModal">
+  <div class="sm-modal">
+    <h3>📝 ورق با تاریخ</h3>
+    <div class="sm-field">
+      <label>تاریخ ورق (شمسی)</label>
+      <input id="wq-new-date" placeholder="1405/5/4" inputmode="numeric" onkeydown="if(event.key==='Enter')confirmWaraqDate()" oninput="_wqDateHint()">
+    </div>
+    <div id="wq-new-date-hint" style="font-size:0.76rem;color:var(--muted);margin:-4px 0 8px;min-height:18px"></div>
+    <div class="sm-btns">
+      <button class="btn-ok" onclick="confirmWaraqDate()">✔ باز کردن</button>
+      <button class="btn-cancel" onclick="closeModal('waraqDateModal')">انصراف</button>
+    </div>
+  </div>
 </div>
 
 <!-- صفحهٔ جدا: تاریخچهٔ شروع/ختمِ همهٔ پایه‌ها (کدام تاریخ/روز هفته بوده) — کلیک روی هر ردیف همان ورق را باز می‌کند -->
@@ -9223,12 +9240,18 @@ function buildMobileMenu() {
     list.appendChild(item);
   });
 }
+// قفلِ اسکرول هنگام باز بودنِ کشو: قفل باید روی خودِ ظرفِ اسکرول (html) باشد، نه
+// فقط body — وگرنه صفحهٔ پشتِ منو می‌لغزید و با بستنِ منو به جای قبلی برنمی‌گشت.
+// جای اسکرول هم نگه داشته و موقعِ بستن دقیقاً برگردانده می‌شود تا صفحه نپرد.
+let _mMenuScrollY = 0;
 function toggleMobileMenu() {
   const ov = document.getElementById('mMenuOverlay');
   if (!ov) return;
   if (ov.classList.contains('open')) { closeMobileMenu(); return; }
   buildMobileMenu();
   ov.classList.add('open');
+  _mMenuScrollY = window.scrollY || window.pageYOffset || 0;
+  document.documentElement.classList.add('m-menu-lock');
   document.body.classList.add('m-menu-lock');
 }
 function closeMobileMenu(e) {
@@ -9236,7 +9259,15 @@ function closeMobileMenu(e) {
   if (e && e.target && e.target.closest && e.target.closest('.m-menu-panel')) return;
   const ov = document.getElementById('mMenuOverlay');
   if (ov) ov.classList.remove('open');
+  const wasLocked = document.documentElement.classList.contains('m-menu-lock');
+  document.documentElement.classList.remove('m-menu-lock');
   document.body.classList.remove('m-menu-lock');
+  // اگر مرورگر با برداشتنِ قفل، اسکرول را جابه‌جا کرد، همان‌جای قبلی برگردانده شود.
+  // «instant» لازم است چون scroll-behavior صفحه smooth است و پرشِ برگشت دیده می‌شد.
+  if (wasLocked && Math.abs((window.scrollY || 0) - _mMenuScrollY) > 1) {
+    try { window.scrollTo({ top: _mMenuScrollY, left: 0, behavior: 'instant' }); }
+    catch (e) { try { window.scrollTo(0, _mMenuScrollY); } catch (e2) {} }
+  }
 }
 
 // ========== داشبورد — متصل به داده‌های واقعی (فقط خواندنی) ==========
@@ -18487,6 +18518,15 @@ function removeWaraqRow() {
 }
 
 // کلیدِ ماهِ یک ورق از تاریخِ شمسی‌اش («1404/4/23» → «1404/04») — برای فیلترِ کشویی ماه
+// ── یک تاریخ = یک ورق ─────────────────────────────────────────────────────────
+// مقایسهٔ رشته‌ایِ خامِ تاریخ («۱۴۰۵/۰۵/۰۴» با «1405/5/4») ورقِ موجود را پیدا نمی‌کرد و
+// یک ورقِ تکراری برای همان روز ساخته می‌شد. این‌جا تاریخ به کلیدِ عددی تبدیل و با آن
+// مقایسه می‌شود، پس هر تاریخ همیشه دقیقاً یک ورق دارد.
+function _findWaraqByDate(date) {
+  const k = _dateSortKey(date);
+  if (!isFinite(k)) return null;
+  return (DB.waraqEntries || []).find(w => w && _dateSortKey(w.date) === k) || null;
+}
 function _waraqMonthKey(w) {
   const parts = toEnDigits(String((w && w.date) || '')).split('/');
   if (parts.length < 2) return '';
@@ -18627,12 +18667,21 @@ function calcWaraqTotalSales(w) {
   return computeShiftTotals(w.day).sales + computeShiftTotals(w.night).sales;
 }
 
-function openNewWaraq(shift) {
+function openNewWaraq(shift, dateOpt) {
   const d = allDates ? allDates() : { sh: persianDate() };
+  const wantDate = (dateOpt != null && String(dateOpt).trim()) ? String(dateOpt).trim() : (d.sh || persianDate());
+  // ورقِ همان تاریخ اگر از قبل هست، همان باز شود — ورقِ تکراری ساخته نمی‌شود
+  const exist = _findWaraqByDate(wantDate);
+  if (exist) {
+    if (shift === 'night' || shift === 'day') { ensureWaraqShifts(exist); exist.activeShift = shift; }
+    openWaraqModal(exist.id);
+    showTopToast('📝 ورقِ ' + wantDate + ' از قبل وجود داشت — همان ورق باز شد', '#d97706', 4000);
+    return;
+  }
   const stName = document.getElementById('st-name')?.value || DB.stationName || '';
   const w = {
     id: 'wq' + Date.now(),
-    date: d.sh || persianDate(),
+    date: wantDate,
     station: stName,
     activeShift: (shift==='night') ? 'night' : 'day',
     day: initShiftData(),
@@ -18647,6 +18696,34 @@ function openNewWaraq(shift) {
   renderWaraqList();
   populateWaraqModal(w);
   document.getElementById('waraqModal').classList.add('open');
+}
+
+// ── ساختن/باز کردنِ ورق با تاریخِ دلخواه ──────────────────────────────────────
+// تاریخ را می‌نویسید؛ اگر ورقِ آن تاریخ باشد همان باز می‌شود، اگر نباشد ورقِ همان
+// تاریخ ساخته می‌شود. هر ورق فقط دادهٔ تاریخِ خودش را دارد.
+function openWaraqDatePicker() {
+  const inp = document.getElementById('wq-new-date');
+  if (inp) inp.value = persianDate();
+  _wqDateHint();
+  document.getElementById('waraqDateModal').classList.add('open');
+  setTimeout(() => { try { inp.focus(); inp.select(); } catch (e) {} }, 80);
+}
+function _wqDateHint() {
+  const hint = document.getElementById('wq-new-date-hint');
+  const val = (document.getElementById('wq-new-date')?.value || '').trim();
+  if (!hint) return;
+  if (!val) { hint.textContent = 'مثال: 1405/5/4'; hint.style.color = 'var(--muted)'; return; }
+  if (!isFinite(_dateSortKey(val))) { hint.textContent = '⚠️ تاریخ را مثل 1405/5/4 بنویسید'; hint.style.color = 'var(--red)'; return; }
+  const ex = _findWaraqByDate(val);
+  if (ex) { hint.textContent = '📂 ورقِ این تاریخ از قبل هست — همان باز می‌شود'; hint.style.color = 'var(--accent)'; }
+  else { hint.textContent = '🆕 ورقِ تازه برای این تاریخ ساخته می‌شود'; hint.style.color = 'var(--green)'; }
+}
+function confirmWaraqDate() {
+  const val = (document.getElementById('wq-new-date')?.value || '').trim();
+  if (!val) { showToast('تاریخ را بنویسید', '#e53e3e'); return; }
+  if (!isFinite(_dateSortKey(val))) { showToast('تاریخ را مثل 1405/5/4 بنویسید', '#e53e3e'); return; }
+  closeModal('waraqDateModal');
+  openNewWaraq(null, val);
 }
 
 function openWaraqModal(id) {
@@ -18806,7 +18883,15 @@ function _waraqTxnAmount(sd, t) {
 // یک‌بار پرچم‌گذاری ردیف‌های قدیمی: مبلغِ آلوده با نرخ اتحادیه را خودکار می‌شناسد و با فیِ درست بازحساب می‌کند
 function _normalizeWaraqTxns(sd) {
   (sd.transactions || []).forEach(t => {
-    if (t.amountAuto === true || t.amountAuto === false) return;
+    // مبلغِ خودکار همیشه = «مقدار تیلِ همین ردیف × نرخِ همین ورق». اگر نرخ بعداً
+    // (مثلاً فردا با ثبتِ پارچهٔ همان تاریخ) به ورق برسد، مبلغِ ذخیره‌شده هم همان
+    // موقع به‌روز می‌شود. مبلغی که کاربر دستی نوشته (amountAuto=false) دست‌نخورده می‌ماند.
+    if (t.amountAuto === true) {
+      const f = (t.fuel === 'diesel') ? 'diesel' : 'petrol';
+      t.amount = Math.round((parseFloat(t.liters) || 0) * _waraqRepPrice(sd, f));
+      return;
+    }
+    if (t.amountAuto === false) return;
     const fuel = (t.fuel === 'diesel') ? 'diesel' : 'petrol';
     const liters = parseFloat(t.liters) || 0;
     const stored = parseFloat(t.amount) || 0;
@@ -19160,9 +19245,11 @@ function printWaraq() {
       const fl = p.fuel==='diesel'?'دیزل':'بطرول';
       return `<tr><td>${p.num||''}</td><td>${escFa(p.worker)||'—'}</td><td>${fl}</td><td>${escFa(p.note)||'—'}</td><td>${p.start||'—'}</td><td>${p.end||'—'}</td><td>${p.pricePerLiter||'—'}</td><td style="font-weight:900">${l}</td><td style="font-weight:900;color:#276749">${Math.round(a)}</td></tr>`;
     }).join('');
-    const ftx = (sd.transactions||[]).filter(t=>(t.name||'').trim()||t.amount);
+    // مبلغ دقیقاً همان چیزی که در خودِ ورق دیده می‌شود (خودکار = مقدار تیل × نرخِ ورق)
+    const _amt = tx => Math.round(_waraqTxnAmount(sd, tx)) || 0;
+    const ftx = (sd.transactions||[]).filter(t=>(t.name||'').trim()||_amt(t));
     const mid = Math.ceil(ftx.length/2);
-    const mk = (t,i,off)=>`<tr><td>${i+1+off}</td><td>${escFa(t.name)||'—'}</td><td>${t.liters||'—'}</td><td style="font-weight:700;color:${t.type==='debt'?'#e53e3e':'#805ad5'}">${Math.round(t.amount)||'—'}</td><td style="font-size:0.6rem">${t.type==='debt'?'قرض':'مصرف'}</td></tr>`;
+    const mk = (t,i,off)=>`<tr><td>${i+1+off}</td><td>${escFa(t.name)||'—'}</td><td>${t.liters||'—'}</td><td style="font-weight:700;color:${t.type==='debt'?'#e53e3e':'#805ad5'}">${_amt(t)||'—'}</td><td style="font-size:0.6rem">${t.type==='debt'?'قرض':'مصرف'}</td></tr>`;
     const lTx = ftx.slice(0,mid).map((t,i)=>mk(t,i,0)).join('');
     const rTx = ftx.slice(mid).map((t,i)=>mk(t,i,mid)).join('');
     const shortageLabel = wqr.shortage > 0 ? '⚠️ کمبودی' : (wqr.excess > 0 ? '✅ اضافی' : '✅ بدون کمبود');
@@ -19215,8 +19302,11 @@ function liveWaraqSync(p) {
   const available = money - debt;
 
   if (!DB.waraqEntries) DB.waraqEntries = [];
-  const todayDate = (typeof persianDate === 'function') ? persianDate() : '';
-  let w = DB.waraqEntries.find(x => x.date === todayDate);
+  // تاریخِ همین پارچه (اگر دستی نوشته شده) وگرنه امروز — دادهٔ هر تاریخ به ورقِ
+  // همان تاریخ می‌رود، حتی اگر آن ورق از قبل (مثلاً دیروز برای فردا) ساخته شده باشد
+  const _paDate = (document.getElementById(fuel === 'diesel' ? 'pa-date-diesel' : 'pa-date')?.value || '').trim();
+  const todayDate = _paDate || ((typeof persianDate === 'function') ? persianDate() : '');
+  let w = _findWaraqByDate(todayDate);
   if (!w) return;
   ensureWaraqShifts(w);
   const sd = getShift(w, shift);
@@ -19263,8 +19353,10 @@ function liveWaraqSync(p) {
 // ========== اتومات ورق از پارچه ==========
 function syncShiftToWaraq(shift, shiftData, fuel, srcKey) {
   if (!DB.waraqEntries) DB.waraqEntries = [];
-  // ورق با تاریخ مشابه را پیدا کن؛ اگر نبود ورق جدید بساز (تاریخ یکی = یک ورق)
-  let w = DB.waraqEntries.find(x => x.date === shiftData.savedAt);
+  // ورق با تاریخ مشابه را پیدا کن؛ اگر نبود ورق جدید بساز (تاریخ یکی = یک ورق).
+  // مقایسه با کلیدِ عددیِ تاریخ است، پس ورقی که از قبل برای همین تاریخ ساخته شده
+  // (مثلاً دیروز برای فردا، همراه قرض‌هایش) پیدا می‌شود و ورقِ تازه ساخته نمی‌شود.
+  let w = _findWaraqByDate(shiftData.savedAt);
   if (!w) {
     const stName = document.getElementById('st-name')?.value || DB.stationName || '';
     w = {
@@ -19305,6 +19397,15 @@ function syncShiftToWaraq(shift, shiftData, fuel, srcKey) {
   // پول موجودی پارچه (دستی) → باکس «پول موجودی پارچه» در ورق
   if ((shiftData.availMan||0) > 0) sd.fabricAvailable = shiftData.availMan;
   if ((shiftData.available||0) > 0) sd.availableFromShift = (sd.availableFromShift||0) + (shiftData.available||0);
+  // نرخِ تازه رسید → مبلغِ ردیف‌های قرض/مصرفِ همین ورق (مقدار تیل × نرخ) دوباره
+  // حساب می‌شود؛ و اگر همین ورق باز است، همان لحظه روی صفحه هم به‌روز می‌شود
+  _normalizeWaraqTxns(sd);
+  if (currentWaraqId === w.id) {
+    try {
+      if (w.activeShift === shift) { renderWaraqPumps(w); renderWaraqTransactions(w); }
+      calcWaraqSummary(w);
+    } catch (e) {}
+  }
   syncWaraqSalesToSafe(w);
   save();
 }
@@ -22375,7 +22476,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.119';
+const APP_VERSION = '2.9.120';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -24644,6 +24745,10 @@ document.addEventListener('click', function(e) {
   if(!vv){ return; }
   function sync(){
     var kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    // اختلافِ کمِ ارتفاع مالِ نوارِ آدرسِ مرورگر است، نه کیبورد. قبلاً همین اختلاف
+    // (تا ~۱۰۰px) به‌عنوان کیبورد حساب می‌شد و سه کادرِ شناور بی‌دلیل بالا می‌ماندند و
+    // با هر باز/بسته‌شدنِ نوارِ آدرس می‌پریدند. همان آستانهٔ ۸۰px پایین، این‌جا هم.
+    if (kb < 80) kb = 0;
     document.documentElement.style.setProperty('--kb-offset', kb + 'px');
     // پنل‌های شناور با کیبوردِ باز باید لنگرِ دیگری بگیرند، وگرنه سرشان از صفحه
     // بیرون می‌زند. آستانهٔ ۸۰px تا نوسانِ نوار آدرسِ مرورگر «کیبورد» حساب نشود.
@@ -25879,6 +25984,55 @@ body{ min-height:calc(100vh + 2px); }
 .sm-modal.ls-modal .ls-bar{ background:#00000066!important; border-color:#ffffff55!important; color:#fff!important; text-shadow:0 1px 4px #000!important; }
 .sm-modal.ls-modal .ls-note,
 .sm-modal.ls-modal .ls-inner > div[style*="dashed"]{ color:#fff!important; background:#00000055!important; }
+
+/* ═══════════ رفع باگ‌های اسکرولِ موبایل — فقط رفتار، ظاهر دست‌نخورده ═══════════
+   ۱) «صفحه با رسیدن به آخرِ اسکرول دوباره به بالا می‌پرد»:
+      بدنه دست‌کم به اندازهٔ 100vh نگه داشته می‌شد. روی گوشی 100vh یعنی ارتفاعِ صفحه
+      *وقتی نوار آدرس جمع است*؛ پس در حالت عادی صفحه همیشه به‌اندازهٔ نوار آدرس
+      اسکرولِ ساختگی داشت. تا کاربر اسکرول می‌کرد نوار آدرس جمع می‌شد، فضای دیده‌شده
+      بزرگ‌تر از محتوا می‌شد و مرورگر اسکرول را به صفر برمی‌گرداند — همان «پرش به بالا».
+      100svh همیشه ارتفاعِ کوچکِ ویوپورت است، پس این اضافهٔ ساختگی و پرشش از بین می‌رود.
+      (مرورگرهای بدون پشتیبانی svh این خط را نادیده می‌گیرند و مثل قبل کار می‌کنند.)
+   ۲) قفلِ اسکرول هنگام باز بودنِ منو روی خودِ ظرفِ اسکرول (html) گذاشته می‌شود، نه
+      فقط body — وگرنه قفل عملاً کار نمی‌کرد و صفحهٔ پشتِ منو می‌لغزید/می‌پرید.
+   ۳) پایینِ صفحه پشتِ نوارِ سیستم/ایماییِ گوشی نماند (env(safe-area-inset-bottom)).
+      روی دستگاه‌های بدون این حاشیه مقدارش صفر است، پس هیچ چیز جابه‌جا نمی‌شود. */
+@media (max-width:768px){
+  html{ min-height:100svh; }
+  body{ min-height:100svh; }
+
+  /* قفلِ اسکرولِ صفحه هنگام باز بودنِ کشوی بخش‌ها — بدون پرش */
+  html.m-menu-lock{ overflow:hidden!important; }
+  .m-menu-overlay{ overscroll-behavior:contain; }
+  .m-menu-list{
+    overscroll-behavior:contain;
+    padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));
+  }
+
+  /* آخرین ردیف/دکمهٔ هر صفحه زیرِ نوارِ پایینِ گوشی پنهان نشود
+     (۸px همان فاصلهٔ فعلی است؛ فقط حاشیهٔ امنِ دستگاه به آن اضافه می‌شود) */
+  .main{ padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))!important; }
+  .copyright-bar{ padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))!important; }
+
+  /* کادرهای شناور (چت/ربات/ماشین‌حساب) هم بالای همان نوار بنشینند */
+  #calcFab,#lsCalcBtn{ bottom:calc(18px + env(safe-area-inset-bottom,0px) + var(--kb-offset,0px)); }
+  #robotFab{ bottom:calc(84px + env(safe-area-inset-bottom,0px) + var(--kb-offset,0px)); }
+  #managerFab{ bottom:calc(150px + env(safe-area-inset-bottom,0px) + var(--kb-offset,0px)); }
+}
+
+/* ۴) روی لمسی، «is-scrolling» نباید کلیک را ببلعد:
+   این قاعده برای رفعِ hoverِ اشتباهِ ماوس در دسکتاپ ساخته شده بود، ولی روی گوشی
+   باعث می‌شد تا ۱۵۰ms بعد از هر اسکرول، زدنِ کارت‌ها و دکمه‌ها بی‌اثر باشد. */
+@media (hover:none){
+  body.is-scrolling .card,
+  body.is-scrolling .shift-card,
+  body.is-scrolling .settings-card,
+  body.is-scrolling .pl-card,
+  body.is-scrolling .person-card,
+  body.is-scrolling .stat-box,
+  body.is-scrolling .msumbox,
+  body.is-scrolling .nav-btn{ pointer-events:auto!important; }
+}
 </style>
 
 <style id="gfx-perf-opt">
