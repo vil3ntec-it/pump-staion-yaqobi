@@ -181,7 +181,8 @@ export type DashboardData = {
 export type SiteServerInfo = {
   enabled: boolean;
   port: number;
-  addresses: { label: string; host: string; ws: string; http: string }[];
+  addresses: { label: string; host: string; ws: string; http: string; scope?: string }[];
+  dedicatedPort: number | null;
   tokenPreview: string | null;
   stats: {
     connections: number;

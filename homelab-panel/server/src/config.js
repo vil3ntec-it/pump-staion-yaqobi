@@ -65,6 +65,9 @@ export const config = {
   // سرورِ سایتِ پمپ یعقوبی (پروتکل realtime) روی همین پورت سوار می‌شود
   siteSync: {
     enabled: (process.env.HLP_SITESYNC ?? '1') !== '0',
+    // پورت دومِ اختیاری که **فقط** سرورِ سایت را سرو می‌کند (بدون پنل و بدون API).
+    // برای وقتی که می‌خواهید از اینترنت (تونل) وصل شوید ولی خودِ پنل بیرون نرود.
+    port: num(process.env.HLP_SITESYNC_PORT, 0),
     dataDir: path.resolve(
       process.env.HLP_SITESYNC_DATA_DIR ||
         path.join(process.env.HLP_DATA_DIR || path.join(SERVER_ROOT, 'data'), 'site-sync')

@@ -14,15 +14,22 @@ const router = Router();
 router.use(requireAuth);
 
 function addresses(req) {
-  const port = config.port;
+  const port = config.siteSync.port || config.port;
   const list = [];
-  list.push({ label: 'همین کامپیوتر', host: 'localhost', ws: `ws://localhost:${port}`, http: `http://localhost:${port}` });
+  list.push({
+    label: 'همین کامپیوتر',
+    host: 'localhost',
+    ws: `ws://localhost:${port}`,
+    http: `http://localhost:${port}`,
+    scope: 'local',
+  });
   for (const iface of readInterfaces()) {
     list.push({
       label: `شبکهٔ خانگی (${iface.name})`,
       host: iface.address,
       ws: `ws://${iface.address}:${port}`,
       http: `http://${iface.address}:${port}`,
+      scope: 'lan',
     });
   }
   // آدرسی که خودِ مرورگر با آن به پنل وصل شده — مطمئن‌ترین گزینه
@@ -33,6 +40,7 @@ function addresses(req) {
       host: hostHeader,
       ws: `ws://${hostHeader}:${port}`,
       http: `http://${hostHeader}:${port}`,
+      scope: 'lan',
     });
   }
   return list;
@@ -51,6 +59,8 @@ router.get('/', async (req, res) => {
     branches: sync.branches(),
     dataDir: config.siteSync.dataDir,
     publicIp: await readPublicIp(),
+    // پورت جداگانه‌ای که فقط سرورِ سایت را سرو می‌کند (اگر تنظیم شده باشد)
+    dedicatedPort: config.siteSync.port || null,
     howTo: {
       fa: 'در سایت: تنظیمات ← هم‌زمان‌سازی ← سرور شخصی. «آدرس سرور» و «رمز سرور» زیر را وارد کنید.',
     },

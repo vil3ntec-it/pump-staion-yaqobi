@@ -135,6 +135,28 @@ if (config.siteSync.enabled) {
   });
 }
 
+// ۲.۵) پورت دومِ اختیاری — فقط سرورِ سایت، بدون پنل و بدون API
+// برای وقتی که می‌خواهید از اینترنت (مثلاً Cloudflare Tunnel) وصل شوید ولی
+// فایل‌منیجر و کنترل پروسه‌های پنل به بیرون درز نکند.
+let syncOnlyServer = null;
+if (siteSync && config.siteSync.port && config.siteSync.port !== config.port) {
+  syncOnlyServer = http.createServer((req, res) => {
+    const pathname = (req.url || '/').split('?')[0];
+    if (pathname === '/health' || pathname === '/') {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ ok: true, service: 'pump-yaqobi-server', mode: 'sync-only', time: new Date().toISOString() }));
+      return;
+    }
+    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('not found');
+  });
+  syncOnlyServer.on('upgrade', (req, socket, head) => siteSync.handleUpgrade(req, socket, head));
+  syncOnlyServer.on('error', (e) => {
+    console.error(`❌ پورت سرورِ سایت (${config.siteSync.port}) بالا نیامد: ${e.message}`);
+    logEvent('error', 'panel', `پورت سرورِ سایت بالا نیامد: ${e.message}`);
+  });
+}
+
 // ۳) معیارهای زنده
 // روی ویندوز یک پروسهٔ PowerShell دائمی به‌جای ده‌ها بار باز و بسته کردن آن
 startWinSampler();
@@ -158,6 +180,10 @@ async function main() {
 
   await autostartAll();
 
+  if (syncOnlyServer) {
+    syncOnlyServer.listen(config.siteSync.port, config.host);
+  }
+
   httpServer.listen(config.port, config.host, () => {
     const ips = readInterfaces().map((i) => i.address);
     const name = getSetting('server_name', null);
@@ -169,9 +195,17 @@ async function main() {
     for (const ip of ips) console.log(`  از شبکهٔ خانگی:          http://${ip}:${config.port}`);
     console.log('');
     if (siteSync) {
-      console.log('  🔗 سرورِ سایت (همین پورت) — این‌ها را در خودِ سایت وارد کنید:');
-      console.log(`     آدرس سرور:  ws://${ips[0] || 'localhost'}:${config.port}`);
+      console.log('  🔗 سرورِ سایت — این‌ها را در خودِ سایت وارد کنید:');
+      console.log(`     آدرس سرور:  ws://${ips[0] || 'localhost'}:${config.port}   (فقط داخل همین شبکهٔ خانگی)`);
       console.log(`     رمز سرور:   ${siteSync.getToken()}`);
+      if (syncOnlyServer) {
+        console.log('');
+        console.log(`     پورت جداگانهٔ سرورِ سایت (بدون پنل): ${config.siteSync.port}`);
+        console.log(`     برای اتصال از اینترنت همین پورت را تونل کنید، نه پورت پنل را.`);
+      }
+      console.log('');
+      console.log('  ℹ️  اگر سایت را با آدرس https باز می‌کنید، آدرس ws:// کار نمی‌کند؛');
+      console.log('     مرورگر جلویش را می‌گیرد. آنجا باید wss:// داشته باشید (تونل).');
       console.log('');
     }
     console.log(`  پوشهٔ داده:  ${config.dataDir}`);
@@ -198,6 +232,9 @@ async function shutdown(signal) {
   clearInterval(housekeeping);
   stopCollector();
   stopWinSampler();
+  try {
+    syncOnlyServer?.close();
+  } catch { /* بسته شده */ }
   try {
     await stopAll();
   } catch { /* بی‌خیال */ }
