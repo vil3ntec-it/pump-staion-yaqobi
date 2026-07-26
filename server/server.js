@@ -53,8 +53,9 @@ const PERSIST_DEBOUNCE_MS = parseInt(process.env.PERSIST_DEBOUNCE_MS || '400', 1
 // شروع می‌شد و ذخیره تا آرام شدنِ کار عقب می‌افتاد (خطرِ از دست رفتنِ داده هنگام
 // قطع برق). حالا حداکثر هر ۵ ثانیه به‌زور ذخیره می‌شود.
 const PERSIST_MAX_DELAY_MS = parseInt(process.env.PERSIST_MAX_DELAY_MS || '5000', 10);
-// بزرگ‌ترین پیامی که از یک کلاینت پذیرفته می‌شود (ویدیوی چت حداکثر ۴MB است)
-const MAX_PAYLOAD_BYTES = parseInt(process.env.MAX_PAYLOAD_BYTES || String(12 * 1024 * 1024), 10);
+// بزرگ‌ترین پیامی که از یک کلاینت پذیرفته می‌شود — با سقفِ ۲۴MB رسانه در چت
+// (که با base64 حدود ۳۲MB می‌شود) جا دارد و باز هم جلوی فریمِ غول‌پیکر را می‌گیرد
+const MAX_PAYLOAD_BYTES = parseInt(process.env.MAX_PAYLOAD_BYTES || String(64 * 1024 * 1024), 10);
 // مسیر ذخیرهٔ داده: به‌صورت پیش‌فرض کنار همین فایل، ولی اگر DATA_DIR در محیط تعیین
 // شده باشد (مثلاً وقتی سرور داخل برنامهٔ دسکتاپ اجرا می‌شود و باید در پوشهٔ
 // قابل‌نوشتنِ کاربر بنویسد) همان استفاده می‌شود.

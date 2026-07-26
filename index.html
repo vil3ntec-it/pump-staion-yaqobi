@@ -572,6 +572,11 @@ html.kb-open #calcPanel{bottom:calc(8px + var(--kb-offset,0px))}
    زده می‌شد. حالا یک هدفِ لمسیِ کاملِ ۳۴px با پس‌زمینهٔ همیشه‌دیدنی است. */
 .ch-b .ch-del-btn{position:absolute;top:1px;left:1px;cursor:pointer;opacity:.85;font-size:1.25rem;line-height:1;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border-radius:9px;user-select:none;-webkit-user-select:none;background:rgba(0,0,0,.16);-webkit-tap-highlight-color:transparent}
 .ch-b .ch-del-btn:hover,.ch-b .ch-del-btn:active{opacity:1;background:rgba(0,0,0,.32)}
+/* راهروِ دکمهٔ ⋮: پیامِ کوتاه («سلام») از خودِ دکمه کوچک‌تر بود و دکمه تمامِ متن را
+   می‌پوشاند. حالا متن همیشه کنارِ دکمه می‌نشیند، نه زیرِ آن. */
+.ch-b.menu-gutter{padding-left:42px;min-height:38px}
+.ch-b.menu-gutter .ch-del-btn{background:transparent}
+.ch-b.menu-gutter .ch-del-btn:hover,.ch-b.menu-gutter .ch-del-btn:active{background:rgba(0,0,0,.22)}
 .ch-b.ch-deleted{opacity:.65;font-style:italic}
 .ch-b.ch-deleted i{font-style:italic;opacity:.85}
 /* انتخاب‌گرِ حساب برای فرستادن لینک و کیو‌آر در چت تک‌نفره */
@@ -7046,6 +7051,23 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <span style="display:inline-flex;align-items:center;gap:10px"><svg class="nav-ic ia-spin"><use href="#ic-settings"/></svg> تنظیمات
       <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('settings',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('settings',0.08)">A+</button></span>
     </span>
+  </div>
+  <!-- آپدیتِ برنامهٔ کامپیوتری — فقط در نسخهٔ دسکتاپ دیده می‌شود -->
+  <div class="settings-card" id="desktop-update-card" style="border-color:var(--green);display:none">
+    <div class="settings-title" style="color:var(--green)">⬇️ آپدیت برنامه</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:10px">
+      برنامهٔ کامپیوتری خودش نسخهٔ تازه را از سایت می‌گیرد — دیگر لازم نیست برای هر تغییرِ کوچک برنامه را از نو نصب کنید.
+    </div>
+    <div id="desk-upd-state" style="font-size:0.88rem;font-weight:800;line-height:1.9;margin-bottom:10px">…</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="pw-btn" style="background:var(--blue);color:#fff" onclick="deskUpdCheck(true)">🔄 بررسی نسخهٔ تازه</button>
+      <button class="pw-btn" id="desk-upd-go" style="background:var(--green);color:#fff;display:none" onclick="deskUpdDownload()">⬇️ آپدیت کن</button>
+      <button class="pw-btn" id="desk-upd-apply" style="background:var(--accent);color:#000;display:none" onclick="deskUpdApply()">✅ سوار کردنِ نسخهٔ تازه</button>
+    </div>
+    <div style="font-size:0.74rem;color:var(--muted);line-height:1.8;margin-top:10px">
+      اگر نسخهٔ تازه مشکلی داشت، برنامه خودکار به نسخهٔ سالمِ قبلی برمی‌گردد.
+      <button class="pw-btn" style="padding:4px 10px;font-size:0.72rem;background:transparent;border:1px solid var(--border);color:var(--muted)" onclick="deskUpdRollback()">↩️ برگشت به نسخهٔ همراهِ نصب</button>
+    </div>
   </div>
   <div class="settings-card" id="appearance-launcher" style="border-color:var(--accent)">
     <div class="settings-title">🎨 ظاهر و گرافیک</div>
@@ -21367,18 +21389,45 @@ function qaMirzaNo(i) {
   _qaMsgs.push({ who: 'bot', t: 'خوب است! اگر سوال دیگری داشتید، بپرسید.' });
   _qaRender();
 }
+/* ── صدا در نسخهٔ کامپیوتری ──────────────────────────────────────────────────
+   ضبطِ صدا (پیام صوتی) در برنامهٔ کامپیوتری کار می‌کند، ولی «تبدیل صدا به متن»
+   (جستجوی صوتی و پرسیدن با صدا) موتورِ گوگل را لازم دارد که فقط داخلِ مرورگر
+   هست — پوستهٔ دسکتاپ آن را ندارد. به‌جای اینکه دکمه بی‌صدا هیچ کاری نکند،
+   همین را روشن می‌گوییم و با یک زدن همان صفحه را در مرورگر باز می‌کنیم. ── */
+const _SITE_URL = 'https://yaqobipump.top/';
+function _voiceEngineMissing(errCode) {
+  if (!window.pumpDesktop) return false;
+  return !errCode || errCode === 'network' || errCode === 'service-not-allowed' || errCode === 'not-allowed' || errCode === 'audio-capture';
+}
+function _voiceOpenInBrowser() {
+  try {
+    if (window.pumpDesktop && window.pumpDesktop.openExternal) window.pumpDesktop.openExternal(_SITE_URL);
+    else window.open(_SITE_URL, '_blank');
+  } catch (e) {}
+}
+function _voiceNotSupportedToast() {
+  try {
+    showTopToast('🎤 تبدیلِ صدا به متن در برنامهٔ کامپیوتری نیست — برای جستجوی صوتی همین سایت را در مرورگر باز کنید (ضبطِ پیام صوتی در چت کار می‌کند)', '#d97706', 7000);
+  } catch (e) { showToast('🎤 جستجوی صوتی فقط در مرورگر کار می‌کند', '#d97706'); }
+  if (window.pumpDesktop && confirm('جستجوی صوتی فقط در مرورگر کار می‌کند.\nهمین حالا سایت در مرورگر باز شود؟')) _voiceOpenInBrowser();
+}
 let _qaRec = null, _qaListening = false;
 function qaVoiceAsk() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const btn = document.getElementById('qaMicBtn');
-  if (!SR) { showToast('مرورگر شما ورودی صوتی ندارد', '#e53e3e'); return; }
+  if (!SR) { if (window.pumpDesktop) { _voiceNotSupportedToast(); return; } showToast('مرورگر شما ورودی صوتی ندارد', '#e53e3e'); return; }
   if (_qaListening) { try { _qaRec.stop(); } catch (e) {} return; }
   const rec = new SR();
   _qaRec = rec; rec.lang = 'fa-IR'; rec.interimResults = false; rec.maxAlternatives = 1;
   const done = () => { _qaListening = false; if (btn) btn.classList.remove('rec-on'); };
   rec.onstart = () => { _qaListening = true; if (btn) btn.classList.add('rec-on'); };
   rec.onend = done;
-  rec.onerror = () => { done(); showToast('صدا شناخته نشد — دوباره تلاش کنید', '#e53e3e'); };
+  rec.onerror = (e) => {
+    done();
+    const code = e && e.error;
+    if (_voiceEngineMissing(code)) { _voiceNotSupportedToast(); return; }
+    showToast('صدا شناخته نشد — دوباره تلاش کنید', '#e53e3e');
+  };
   rec.onresult = ev => { try { const t = ev.results[0][0].transcript; const i = document.getElementById('qaInput'); if (i) i.value = t; qaAsk(); } catch (e) {} };
   try { rec.start(); } catch (e) { done(); }
 }
@@ -21588,7 +21637,11 @@ function _chatPushRaw(scope, msg, peerOpt) {
    همان کلید دوباره نوشته می‌شود و پیامِ تکراری هرگز ساخته نمی‌شود.
    ============================================================================ */
 const _CHAT_OUTBOX_KEY = 'pumpChatOutbox';
-const _CHAT_OUTBOX_MAX = 300;               // سقفِ صف — حافظه هیچ‌وقت بی‌نهایت رشد نمی‌کند
+const _CHAT_OUTBOX_MAX = 1000;              // سقفِ صف — حافظه هیچ‌وقت بی‌نهایت رشد نمی‌کند
+// بزرگ‌ترین رسانه‌ای که در چت فرستاده می‌شود (سقفِ سرور از این بزرگ‌تر است تا
+// تبدیل به base64 هم جا شود). این عدد فقط جلوی گیر کردنِ فرستادن روی اینترنتِ
+// ضعیف را می‌گیرد، نه محدودیتِ فضای سرور.
+const _CHAT_MAX_MEDIA = 24 * 1024 * 1024;
 let _chatOutbox = null, _chatFlushTimer = null, _chatNetState = { connected: false, queued: 0 };
 
 const _PUSH_CHARS = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
@@ -22041,7 +22094,12 @@ function _chMsgHtml(m, meId, scope, peer) {
   const tm = (tmTxt || tick) ? `<div class="ch-tm">${tick}${tmTxt}</div>` : '';
   const key = m._key || '';
   const delBtn = key ? `<span class="ch-del-btn" onclick="_chatOpenMsgMenu(event,'${scope}','${String(peer||'').replace(/'/g,'')}','${key}',${cls === 'me' ? 'true' : 'false'})" title="گزینه‌ها">⋮</span>` : '';
-  if (m.del) {
+  // پیامِ کوتاه («سلام») کوچک‌تر از خودِ دکمهٔ ⋮ بود و دکمه تمامِ متن را می‌پوشاند.
+  // حالا برای دکمه یک راهروِ جدا باز می‌شود و متن هرگز زیرِ آن نمی‌رود. روی
+  // عکس/ویدیو/صدا همان حالتِ روی‌هم می‌ماند (آن‌جا جای کافی هست).
+  const isMedia = (m.k === 'image' || m.k === 'video' || m.k === 'audio') && typeof m.d === 'string' && m.d.slice(0, 5) === 'data:';
+  const menuCls = key ? (isMedia ? ' menu-over' : ' menu-gutter') : '';
+  if (m.del) {   // پیامِ حذف‌شده دکمهٔ گزینه ندارد، پس راهروِ خالی هم نمی‌خواهد
     return `<div class="ch-b ${cls} ch-deleted">${nm}<i>🚫 این پیام حذف شد</i>${tm}</div>`;
   }
   const safeD = (typeof m.d === 'string' && m.d.slice(0, 5) === 'data:') ? escFa(m.d) : '';
@@ -22056,7 +22114,7 @@ function _chMsgHtml(m, meId, scope, peer) {
   else body = _chLinkify(escFa(m.t || '')).replace(/\n/g, '<br>');
   // دکمه‌های پیشنهادی جواب‌گوی خودکار (فقط پیام‌های محلی نمای کیو‌آر)
   const sug = m.sug === 'mirzaDm' ? `<div class="ch-sug"><button onclick="dmMirzaYes()">بله، خودِ میرزا جواب بدهد</button><button onclick="dmMirzaNo()">نی</button></div>` : '';
-  return `<div class="ch-b ${cls}">${delBtn}${nm}${body}${sug}${tm}</div>`;
+  return `<div class="ch-b ${cls}${menuCls}">${delBtn}${nm}${body}${sug}${tm}</div>`;
 }
 /* ── لینکِ حساب داخلِ چت: کادرِ زدنی، نه متنِ خشک ────────────────────────────
    قبلاً لینکِ حساب فقط یک متن بود؛ طرف رویش می‌زد و هیچ اتفاقی نمی‌افتاد (چون
@@ -22369,7 +22427,7 @@ function chatPickMedia(scope, kind) {
         _chatPush(scope, { k: 'image', d });
       });
     } else {
-      if (f.size > 4 * 1024 * 1024) { showToast('ویدیو خیلی بزرگ است — حداکثر ۴ مگابایت', '#e53e3e'); return; }
+      if (f.size > _CHAT_MAX_MEDIA) { showToast('ویدیو خیلی بزرگ است — حداکثر ' + Math.round(_CHAT_MAX_MEDIA / 1048576) + ' مگابایت', '#e53e3e'); return; }
       const fr = new FileReader();
       fr.onload = () => _chatPush(scope, { k: 'video', d: fr.result });
       fr.readAsDataURL(f);
@@ -22382,14 +22440,19 @@ function _chatCompressImage(file, cb) {
   const url = URL.createObjectURL(file);
   img.onload = () => {
     try {
-      const M = 900;
+      // اندازه و کیفیتِ عکس بالا رفت (قبلاً ۹۰۰ پیکسل و کیفیت ۰٫۷۲ بود و نوشتهٔ
+      // روی رسید/فاکتور در عکس خوانده نمی‌شد). عکس‌های خیلی بزرگ باز هم کوچک
+      // می‌شوند تا فرستادنشان روی اینترنتِ ضعیف گیر نکند.
+      const M = 1800;
       let w = img.width, h = img.height;
       if (Math.max(w, h) > M) { const s = M / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
       const c = document.createElement('canvas');
       c.width = w; c.height = h;
-      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      const cx = c.getContext('2d');
+      cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high';
+      cx.drawImage(img, 0, 0, w, h);
       URL.revokeObjectURL(url);
-      cb(c.toDataURL('image/jpeg', 0.72));
+      cb(c.toDataURL('image/jpeg', 0.88));
     } catch (e) { URL.revokeObjectURL(url); cb(null); }
   };
   img.onerror = () => { URL.revokeObjectURL(url); cb(null); };
@@ -22416,12 +22479,13 @@ async function chatToggleRec(scope) {
       if (btn) { btn.classList.remove('rec-on'); btn.innerHTML = '<svg><use href="#ic-mic2"/></svg>'; }
       const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' });
       if (blob.size < 900) { showToast('صدا ضبط نشد — دوباره تلاش کنید', '#e53e3e'); return; }
-      if (blob.size > 4 * 1024 * 1024) { showToast('پیام صوتی خیلی طولانی است', '#e53e3e'); return; }
+      if (blob.size > _CHAT_MAX_MEDIA) { showToast('پیام صوتی خیلی طولانی است', '#e53e3e'); return; }
       const fr = new FileReader();
       fr.onload = () => _chatPush(scope, { k: 'audio', d: fr.result });
       fr.readAsDataURL(blob);
     };
-    _recState = { scope, rec, timer: setTimeout(() => { try { rec.stop(); } catch (e) {} }, 60000) };
+    // سقفِ زمانِ ضبط از ۱ دقیقه به ۵ دقیقه رفت
+    _recState = { scope, rec, timer: setTimeout(() => { try { rec.stop(); } catch (e) {} }, 300000) };
     rec.start();
     if (btn) { btn.classList.add('rec-on'); btn.innerHTML = '<svg><use href="#ic-stopcirc"/></svg>'; }
     showToast('در حال ضبط صدا — دوباره بزنید تا فرستاده شود', '#2b6cb0');
@@ -22538,6 +22602,99 @@ setInterval(function () {
     if (fab && fab.style.display !== 'none' && fab.style.display !== '' && !_chatL.group && !_chatL.dmIdx && _fbReady()) _chatInitListeners();
   } catch (e) {}
 }, 5000);
+/* ============================================================================
+   آپدیتِ داخلِ برنامهٔ کامپیوتری
+   ----------------------------------------------------------------------------
+   در نسخهٔ دسکتاپ (Electron)، پوستهٔ برنامه نسخهٔ تازهٔ سایت را می‌گیرد و همین‌جا
+   سوار می‌کند — بدونِ نصبِ دوباره. در مرورگر این بخش اصلاً دیده نمی‌شود (آن‌جا
+   Service Worker خودش نسخهٔ تازه را می‌آورد).
+   ============================================================================ */
+let _deskUpdLatest = null, _deskUpdReady = false;
+function _deskUpdSet(txt, color) {
+  const el = document.getElementById('desk-upd-state');
+  if (el) { el.textContent = txt; el.style.color = color || 'var(--muted)'; }
+}
+function _deskUpdBtns(showGo, showApply) {
+  const g = document.getElementById('desk-upd-go');
+  const a = document.getElementById('desk-upd-apply');
+  if (g) g.style.display = showGo ? '' : 'none';
+  if (a) a.style.display = showApply ? '' : 'none';
+}
+async function deskUpdInit() {
+  if (!window.pumpDesktop) return;
+  const card = document.getElementById('desktop-update-card');
+  if (card) card.style.display = '';
+  try {
+    const info = await window.pumpDesktop.info();
+    _deskUpdSet('نسخهٔ فعلی برنامه: ' + (info.current || APP_VERSION) + (info.usingUpdate ? ' (آپدیت‌شده)' : ''), 'var(--txt)');
+  } catch (e) { _deskUpdSet('نسخهٔ فعلی برنامه: ' + APP_VERSION, 'var(--txt)'); }
+  try {
+    window.pumpDesktop.onUpdateAvailable(info => {
+      _deskUpdLatest = info && info.latest;
+      _deskUpdBtns(true, false);
+      _deskUpdSet('🎉 نسخهٔ ' + _deskUpdLatest + ' آماده است (نسخهٔ شما: ' + (info.current || APP_VERSION) + ')', 'var(--green)');
+      try { showTopToast('🎉 نسخهٔ تازهٔ برنامه (' + _deskUpdLatest + ') آماده است — تنظیمات › آپدیت برنامه', '#38a169', 8000); } catch (e) {}
+    });
+    window.pumpDesktop.onOpenPanel(() => { try { showSection('settings'); } catch (e) {} deskUpdCheck(true); });
+  } catch (e) {}
+}
+async function deskUpdCheck(loud) {
+  if (!window.pumpDesktop) return;
+  _deskUpdSet('در حال بررسی…');
+  let r;
+  try { r = await window.pumpDesktop.check(); } catch (e) { r = { ok: false, error: String(e && e.message || e) }; }
+  if (!r.ok) {
+    _deskUpdSet('❌ بررسی نشد — اینترنت وصل نیست یا سایت در دسترس نیست', 'var(--red)');
+    if (loud) showToast('اینترنت وصل نیست — بعداً دوباره تلاش کنید', '#e53e3e');
+    return;
+  }
+  if (!r.hasUpdate) {
+    _deskUpdBtns(false, false);
+    _deskUpdSet('✅ برنامه به‌روز است (نسخهٔ ' + r.current + ')', 'var(--green)');
+    if (loud) showToast('✅ برنامه به‌روز است', '#38a169');
+    return;
+  }
+  _deskUpdLatest = r.latest;
+  _deskUpdBtns(true, false);
+  _deskUpdSet('🎉 نسخهٔ ' + r.latest + ' آماده است (نسخهٔ شما: ' + r.current + ')', 'var(--green)');
+}
+async function deskUpdDownload() {
+  if (!window.pumpDesktop) return;
+  _deskUpdSet('در حال گرفتنِ نسخهٔ تازه…');
+  _deskUpdBtns(false, false);
+  let r;
+  try { r = await window.pumpDesktop.download(); } catch (e) { r = { ok: false, error: String(e && e.message || e) }; }
+  if (!r.ok) {
+    _deskUpdBtns(true, false);
+    _deskUpdSet('❌ گرفتنِ نسخهٔ تازه نشد — اینترنت را بررسی کنید', 'var(--red)');
+    showToast('آپدیت گرفته نشد — اینترنت وصل نیست', '#e53e3e');
+    return;
+  }
+  if (!r.hasUpdate) { _deskUpdSet('✅ برنامه از قبل به‌روز است (نسخهٔ ' + r.current + ')', 'var(--green)'); return; }
+  _deskUpdReady = true;
+  _deskUpdBtns(false, true);
+  _deskUpdSet('✅ نسخهٔ ' + r.latest + ' گرفته شد — دکمهٔ «سوار کردن» را بزنید', 'var(--green)');
+  showToast('✅ نسخهٔ ' + r.latest + ' آماده شد', '#38a169');
+}
+async function deskUpdApply() {
+  if (!window.pumpDesktop || !_deskUpdReady) return;
+  // ذخیرهٔ نهایی پیش از بارگذاری دوباره، تا هیچ تغییرِ ثبت‌نشده‌ای از دست نرود
+  try { save(); } catch (e) {}
+  try { _chatOutboxSave(); _chatCacheSaveNow(); } catch (e) {}
+  showToast('در حال سوار کردنِ نسخهٔ تازه…', '#2b6cb0');
+  setTimeout(() => { try { window.pumpDesktop.apply(); } catch (e) {} }, 400);
+}
+async function deskUpdRollback() {
+  if (!window.pumpDesktop) return;
+  if (!confirm('برنامه به نسخه‌ای که همراهِ نصب آمده برگردد؟')) return;
+  try { save(); } catch (e) {}
+  try { await window.pumpDesktop.rollback(); } catch (e) {}
+}
+try {
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', deskUpdInit);
+  else setTimeout(deskUpdInit, 0);
+} catch (e) {}
+
 // صفِ پیام‌ها مستقل از باز بودنِ پنجرهٔ چت کار می‌کند: همین که برنامه باز شود،
 // هر پیامی که از سیزنِ قبلی در صف مانده خودکار فرستاده می‌شود (مثل واتساپ).
 try {
@@ -22890,7 +23047,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.121';
+const APP_VERSION = '2.9.122';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -23205,7 +23362,7 @@ let _staffRec = null, _staffListening = false;
 function staffVoiceSearch() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const btn = document.getElementById('staff-mic');
-  if (!SR) { showToast('🎤 مرورگر شما جستجوی صوتی ندارد', '#e53e3e'); return; }
+  if (!SR) { if (window.pumpDesktop) { _voiceNotSupportedToast(); return; } showToast('🎤 مرورگر شما جستجوی صوتی ندارد', '#e53e3e'); return; }
   if (_staffListening) { try { _staffRec.stop(); } catch (e) {} return; }
   const rec = new SR();
   _staffRec = rec;
@@ -23235,7 +23392,9 @@ function staffVoiceSearch() {
     if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
     _staffListening = false;
     if (btn) { btn.classList.remove('listening'); btn.textContent = '🎤'; }
-    showToast(e && e.error === 'not-allowed' ? '🎤 اجازهٔ مایکروفون داده نشد' : '🎤 صدا شناخته نشد — دوباره تلاش کنید', '#e53e3e');
+    const code = e && e.error;
+    if (_voiceEngineMissing(code)) { _voiceNotSupportedToast(); return; }
+    showToast(code === 'not-allowed' ? '🎤 اجازهٔ مایکروفون داده نشد' : '🎤 صدا شناخته نشد — دوباره تلاش کنید', '#e53e3e');
   };
   rec.onresult = (ev) => { lastEv = ev; };
   try { rec.start(); } catch (e) { done(); }
