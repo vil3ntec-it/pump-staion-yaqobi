@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Database, Eye, EyeOff, Info, Link2, Plug, RefreshCw, RotateCw, TriangleAlert } from 'lucide-react';
+import { Database, Eye, EyeOff, Globe, Info, Link2, Plug, Power, PowerOff, RefreshCw, RotateCw, TriangleAlert } from 'lucide-react';
 import { useApp } from '../app-context';
 import { api } from '../api';
 import type { SiteServerInfo } from '../types';
-import { Badge, Card, ConfirmDialog, CopyButton, Empty, Loading, toast } from '../components/ui';
+import { Badge, Card, ConfirmDialog, CopyButton, Empty, Loading, Spinner, toast } from '../components/ui';
 import { bytes, dateTime, ltr } from '../format';
 
 /* ---------------------------------------------------------------------------
@@ -54,17 +54,8 @@ export default function SiteServer() {
         </button>
       </div>
 
-      {/* مهم‌ترین نکته‌ای که کاربر باید بداند، نه پنهان در راهنما */}
-      <Card>
-        <div className="flex items-start gap-2.5">
-          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--status-warning)' }} />
-          <div className="text-xs leading-relaxed text-ink-soft">
-            <p className="mb-1 font-semibold text-ink">{t('lanOnlyTitle')}</p>
-            <p>{t('lanOnlyBody')}</p>
-            <p className="mt-1.5">{t('tunnelHint')}</p>
-          </div>
-        </div>
-      </Card>
+      {/* ------------------ اتصال از اینترنت: مهم‌ترین بخش صفحه ------------------ */}
+      <InternetAccess data={data} onChanged={load} />
 
       <Card
         title={t('serverAddress')}
@@ -210,6 +201,143 @@ function Stat({ label, value }: { label: string; value: string }) {
     <Card>
       <p className="text-[11px] text-ink-muted">{label}</p>
       <p className="tnum mt-1 text-2xl font-semibold">{value}</p>
+    </Card>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   اتصال از اینترنت — همان چیزی که باعث می‌شود سایت روی همهٔ دستگاه‌ها کار کند.
+   تونل خودش بالا می‌آید؛ کاربر فقط لینک یا QR را به دستگاه‌ها می‌دهد.
+--------------------------------------------------------------------------- */
+function InternetAccess({ data, onChanged }: { data: SiteServerInfo; onChanged: () => void }) {
+  const { t, socket } = useApp();
+  const [tunnel, setTunnel] = useState(data.tunnel);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => setTunnel(data.tunnel), [data.tunnel]);
+
+  // وضعیت تونل زنده می‌آید (دانلود، بالا آمدن، خطا)
+  useEffect(() => {
+    if (!socket) return;
+    const onTunnel = (payload: SiteServerInfo['tunnel']) => setTunnel(payload);
+    socket.on('tunnel', onTunnel);
+    return () => {
+      socket.off('tunnel', onTunnel);
+    };
+  }, [socket]);
+
+  const running = tunnel.status === 'running' && Boolean(tunnel.wss);
+  const busyState = tunnel.status === 'installing' || tunnel.status === 'starting';
+
+  async function toggle() {
+    setBusy(true);
+    try {
+      await api(`/api/site-server/tunnel/${running || busyState ? 'stop' : 'start'}`, { method: 'POST' });
+      setTimeout(onChanged, 1200);
+    } catch {
+      toast(t('error'), 'bad');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card
+      title={t('internetAccess')}
+      icon={<Globe className="h-4 w-4" />}
+      action={
+        <button className={`btn btn-sm ${running ? '' : 'btn-primary'}`} disabled={busy} onClick={toggle}>
+          {running || busyState ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
+          {running || busyState ? t('turnOff') : t('turnOn')}
+        </button>
+      }
+    >
+      {/* وضعیت */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {running ? (
+          <Badge tone="good">{t('tunnelRunning')}</Badge>
+        ) : tunnel.status === 'installing' ? (
+          <Badge tone="info">{t('tunnelInstalling')}</Badge>
+        ) : tunnel.status === 'starting' ? (
+          <Badge tone="info">{t('tunnelStarting')}</Badge>
+        ) : tunnel.status === 'error' ? (
+          <Badge tone="bad">{t('tunnelError')}</Badge>
+        ) : (
+          <Badge>{t('tunnelOff')}</Badge>
+        )}
+        {busyState && <Spinner className="text-ink-muted" />}
+      </div>
+
+      {tunnel.error && (
+        <p
+          className="mb-3 rounded-xl px-3 py-2 text-xs"
+          style={{
+            background: 'color-mix(in srgb, var(--status-critical) 12%, transparent)',
+            color: 'var(--status-critical)',
+          }}
+        >
+          {tunnel.error}
+        </p>
+      )}
+
+      {running && data.siteLink ? (
+        <>
+          <p className="mb-3 text-xs leading-relaxed text-ink-soft">{t('oneClickIntro')}</p>
+
+          <div className="flex flex-col gap-4 sm:flex-row">
+            {data.siteLinkQr && (
+              <div
+                className="mx-auto w-40 shrink-0 rounded-xl border border-line bg-white p-2"
+                // QR از سرور به‌صورت SVG می‌آید
+                dangerouslySetInnerHTML={{ __html: data.siteLinkQr }}
+              />
+            )}
+
+            <div className="min-w-0 flex-1">
+              <p className="label">{t('oneClickLink')}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <code
+                  className="min-w-0 flex-1 break-all rounded-xl border border-line px-3 py-2 font-mono text-[11px]"
+                  style={{ background: 'var(--surface-0)' }}
+                  dir="ltr"
+                >
+                  {data.siteLink}
+                </code>
+                <CopyButton value={data.siteLink} />
+                <a className="btn btn-sm" href={data.siteLink} target="_blank" rel="noreferrer">
+                  {t('open')}
+                </a>
+              </div>
+
+              <p className="label mt-4">{t('serverAddress')}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <code
+                  className="min-w-0 flex-1 truncate rounded-xl border border-line px-3 py-2 font-mono text-xs"
+                  style={{ background: 'var(--surface-0)' }}
+                  dir="ltr"
+                >
+                  {tunnel.wss}
+                </code>
+                <CopyButton value={tunnel.wss || ''} />
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-4 flex items-start gap-1.5 text-[11px] text-ink-muted">
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            {t('tunnelAddressChanges')}
+          </p>
+        </>
+      ) : (
+        <div className="flex items-start gap-2.5">
+          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--status-warning)' }} />
+          <div className="text-xs leading-relaxed text-ink-soft">
+            <p className="mb-1 font-semibold text-ink">{t('lanOnlyTitle')}</p>
+            <p>{t('lanOnlyBody')}</p>
+            <p className="mt-1.5">{t('tunnelHint')}</p>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

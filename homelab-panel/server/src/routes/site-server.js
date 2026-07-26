@@ -1,17 +1,25 @@
 // ---------------------------------------------------------------------------
-// «سرور سایت» — همان سرور شخصیِ برنامهٔ پمپ یعقوبی که روی همین پنل سوار است.
+// «سرور سایت» — همان سرور شخصیِ برنامهٔ پمپ یعقوبی که روی همین پنل است.
 // این صفحه دقیقاً همان چیزی را می‌دهد که در سایت لازم است:
-//     آدرس سرور (ws://...)  +  رمز سرور
+//     آدرس سرور  +  رمز سرور  +  یک «لینک یک‌کلیکی» برای همهٔ دستگاه‌ها
 // ---------------------------------------------------------------------------
 import { Router } from 'express';
+import QRCode from 'qrcode';
 import { requireAuth } from '../auth.js';
 import { getSiteSync } from '../state.js';
 import { config } from '../config.js';
 import { readInterfaces, readPublicIp } from '../metrics/network.js';
-import { logEvent } from '../db.js';
+import { getSetting, setSetting, logEvent } from '../db.js';
+import { publicState, startTunnel, stopTunnel, tunnelWss } from '../tunnel.js';
 
 const router = Router();
 router.use(requireAuth);
+
+const DEFAULT_SITE_URL = 'https://yaqobipump.top';
+
+function siteUrl() {
+  return String(getSetting('site_url', DEFAULT_SITE_URL) || DEFAULT_SITE_URL).replace(/\/+$/, '');
+}
 
 function addresses(req) {
   const port = config.siteSync.port || config.port;
@@ -32,7 +40,6 @@ function addresses(req) {
       scope: 'lan',
     });
   }
-  // آدرسی که خودِ مرورگر با آن به پنل وصل شده — مطمئن‌ترین گزینه
   const hostHeader = String(req.headers.host || '').split(':')[0];
   if (hostHeader && !list.some((a) => a.host === hostHeader)) {
     list.unshift({
@@ -46,10 +53,35 @@ function addresses(req) {
   return list;
 }
 
+/** لینکی که هر دستگاهی باز کند، سایت خودش را به این سرور وصل می‌کند */
+function buildSiteLink(token) {
+  const wss = tunnelWss();
+  if (!wss || !token) return null;
+  return `${siteUrl()}/?server=${encodeURIComponent(wss)}&token=${encodeURIComponent(token)}`;
+}
+
+async function qrFor(text) {
+  if (!text) return null;
+  try {
+    return await QRCode.toString(text, {
+      type: 'svg',
+      margin: 1,
+      errorCorrectionLevel: 'M',
+      color: { dark: '#000000', light: '#ffffff' },
+    });
+  } catch {
+    return null;
+  }
+}
+
 router.get('/', async (req, res) => {
   const sync = getSiteSync();
   if (!sync) return res.json({ enabled: false });
+
   const token = sync.getToken();
+  const tunnel = publicState();
+  const link = buildSiteLink(token);
+
   res.json({
     enabled: true,
     port: config.port,
@@ -59,8 +91,12 @@ router.get('/', async (req, res) => {
     branches: sync.branches(),
     dataDir: config.siteSync.dataDir,
     publicIp: await readPublicIp(),
-    // پورت جداگانه‌ای که فقط سرورِ سایت را سرو می‌کند (اگر تنظیم شده باشد)
     dedicatedPort: config.siteSync.port || null,
+    tunnel,
+    tunnelAutostart: getSetting('tunnel_autostart', true) !== false,
+    siteUrl: siteUrl(),
+    siteLink: link,
+    siteLinkQr: await qrFor(link),
     howTo: {
       fa: 'در سایت: تنظیمات ← هم‌زمان‌سازی ← سرور شخصی. «آدرس سرور» و «رمز سرور» زیر را وارد کنید.',
     },
@@ -80,7 +116,31 @@ router.post('/rotate-token', async (req, res) => {
   if (!sync) return res.status(404).json({ error: 'disabled' });
   const token = await sync.rotateToken();
   logEvent('warn', 'panel', 'رمز سرور سایت عوض شد — باید در خودِ سایت هم بروزرسانی شود');
-  res.json({ ok: true, token });
+  res.json({ ok: true, token, siteLink: buildSiteLink(token) });
+});
+
+// ------------------------------ تونل اینترنتی ------------------------------
+router.post('/tunnel/start', async (req, res) => {
+  setSetting('tunnel_autostart', true);
+  const result = await startTunnel({});
+  res.json(result);
+});
+
+router.post('/tunnel/stop', (req, res) => {
+  setSetting('tunnel_autostart', false);
+  res.json(stopTunnel());
+});
+
+router.get('/tunnel', (req, res) => {
+  res.json({ ...publicState(), autostart: getSetting('tunnel_autostart', true) !== false });
+});
+
+// آدرس سایتی که لینک یک‌کلیکی با آن ساخته می‌شود
+router.put('/site-url', (req, res) => {
+  const url = String(req.body?.siteUrl || '').trim();
+  if (!/^https?:\/\/[^\s/]+/i.test(url)) return res.status(400).json({ error: 'invalid_url' });
+  setSetting('site_url', url.replace(/\/+$/, ''));
+  res.json({ ok: true, siteUrl: siteUrl() });
 });
 
 export default router;

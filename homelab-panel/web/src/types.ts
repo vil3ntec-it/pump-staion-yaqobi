@@ -183,6 +183,20 @@ export type SiteServerInfo = {
   port: number;
   addresses: { label: string; host: string; ws: string; http: string; scope?: string }[];
   dedicatedPort: number | null;
+  tunnel: {
+    status: 'stopped' | 'installing' | 'starting' | 'running' | 'error';
+    url: string | null;
+    wss: string | null;
+    error: string | null;
+    startedAt: number | null;
+    restarts: number;
+    installed: boolean;
+    log: string[];
+  };
+  tunnelAutostart: boolean;
+  siteUrl: string;
+  siteLink: string | null;
+  siteLinkQr: string | null;
   tokenPreview: string | null;
   stats: {
     connections: number;

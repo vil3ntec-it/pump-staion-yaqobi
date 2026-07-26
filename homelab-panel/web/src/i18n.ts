@@ -186,6 +186,19 @@ const fa = {
     'و اگر سایت را با آدرس https باز می‌کنید، مرورگر اصلاً اجازهٔ ws:// نمی‌دهد — باید wss:// باشد. برای هر دو مشکل، یک تونل (مثل Cloudflare Tunnel) بسازید و آدرس wss:// آن را در سایت بگذارید.',
   dedicatedPortNote:
     'پورت {port} فقط سرورِ سایت را سرو می‌کند (بدون پنل). برای اتصال از اینترنت همین را تونل کنید، نه پورت پنل را.',
+  internetAccess: 'اتصال از اینترنت — برای همهٔ دستگاه‌ها',
+  turnOn: 'روشن کردن',
+  turnOff: 'خاموش کردن',
+  tunnelRunning: 'فعال — از هر جای دنیا در دسترس',
+  tunnelInstalling: 'در حال دانلود ابزار تونل (فقط بار اول)…',
+  tunnelStarting: 'در حال بالا آمدن…',
+  tunnelError: 'مشکل در تونل',
+  tunnelOff: 'خاموش',
+  oneClickIntro:
+    'این لینک را روی هر دستگاهی باز کنید (یا QR را اسکن کنید) — سایت خودش به همین سرور وصل می‌شود و همهٔ دستگاه‌ها یک اطلاعات مشترک می‌بینند. نیازی به وارد کردن دستی آدرس و رمز نیست.',
+  oneClickLink: 'لینک یک‌کلیکی برای دستگاه‌ها',
+  tunnelAddressChanges:
+    'با هر بار خاموش و روشن شدن سرور، این آدرس عوض می‌شود؛ در آن صورت دوباره همین لینک را از اینجا بردارید.',
 
   loading: 'در حال بارگذاری…',
   retry: 'تلاش دوباره',
@@ -381,6 +394,19 @@ const en: Dict = {
     'And if you open the site over https, the browser blocks ws:// entirely — it must be wss://. A tunnel (e.g. Cloudflare Tunnel) solves both: use its wss:// address in the site.',
   dedicatedPortNote:
     'Port {port} serves only the site server (no panel). Tunnel that one for internet access, not the panel port.',
+  internetAccess: 'Internet access — for every device',
+  turnOn: 'Turn on',
+  turnOff: 'Turn off',
+  tunnelRunning: 'Active — reachable from anywhere',
+  tunnelInstalling: 'Downloading the tunnel tool (first run only)…',
+  tunnelStarting: 'Starting…',
+  tunnelError: 'Tunnel problem',
+  tunnelOff: 'Off',
+  oneClickIntro:
+    'Open this link on any device (or scan the QR) — the site configures itself and connects to this server, so every device shares the same data. No manual address or password needed.',
+  oneClickLink: 'One-click link for devices',
+  tunnelAddressChanges:
+    'This address changes every time the server restarts; grab the fresh link from here when that happens.',
 
   loading: 'Loading…',
   retry: 'Retry',
