@@ -191,7 +191,7 @@ export type SiteServerInfo = {
     startedAt: number | null;
     restarts: number;
     installed: boolean;
-    mode: 'quick' | 'named';
+    mode: 'quick' | 'named' | 'token';
     hostname: string | null;
     permanent: boolean;
     log: string[];
@@ -201,7 +201,8 @@ export type SiteServerInfo = {
     configured: boolean;
     hostname: string | null;
     tunnelName: string | null;
-    mode: 'quick' | 'named';
+    mode: 'quick' | 'named' | 'token';
+    hasToken: boolean;
   };
   tunnelAutostart: boolean;
   siteUrl: string;

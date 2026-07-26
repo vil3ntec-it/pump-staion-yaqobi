@@ -20,6 +20,7 @@ import {
   namedLoginDone,
   namedSetup,
   namedReset,
+  tokenSetup,
 } from '../tunnel.js';
 
 const router = Router();
@@ -151,6 +152,20 @@ router.get('/tunnel/named', (req, res) => {
   res.json(namedConfig());
 });
 
+// دستورهای دستی — همیشه کار می‌کنند، حتی اگر دکمه‌ها به مشکل بخورند
+router.get('/tunnel/named/commands', (req, res) => {
+  const bin = publicState().binary || 'cloudflared';
+  const host = getSetting('tunnel_hostname', null) || 'sync.example.com';
+  res.json({
+    binary: bin,
+    commands: [
+      `"${bin}" tunnel login`,
+      `"${bin}" tunnel create pump`,
+      `"${bin}" tunnel route dns pump ${host}`,
+    ],
+  });
+});
+
 // گام ۱: ورود به حساب Cloudflare — آدرسی برمی‌گردد که کاربر باید در مرورگر باز کند
 router.post('/tunnel/named/login', async (req, res) => {
   try {
@@ -172,6 +187,18 @@ router.post('/tunnel/named/setup', async (req, res) => {
     const result = await namedSetup({ hostname });
     if (!result.ok) return res.status(400).json(result);
     logEvent('info', 'panel', `آدرس ثابت سرور: ${result.hostname}`);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ساده‌ترین راه: توکنِ تونل از داشبورد Cloudflare
+router.post('/tunnel/token', async (req, res) => {
+  const { token, hostname } = req.body || {};
+  try {
+    const result = await tokenSetup({ token, hostname });
+    if (!result.ok) return res.status(400).json(result);
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: e.message });
