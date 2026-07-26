@@ -4,9 +4,18 @@
 import { Server } from 'socket.io';
 import { verifyToken } from './auth.js';
 import { processEvents } from './sites/process.js';
-import { getHistory } from './metrics/index.js';
+import { getHistory, setViewers } from './metrics/index.js';
 import { listSites } from './sites/registry.js';
 import { getSiteSync } from './state.js';
+
+// تبی که پشت پنجره رفته «بیننده» حساب نمی‌شود؛ سرور برای آن کاری انجام نمی‌دهد
+function countViewers(io) {
+  let n = 0;
+  for (const socket of io.of('/').sockets.values()) {
+    if (socket.data.active !== false) n++;
+  }
+  setViewers(n);
+}
 
 export function attachRealtime(httpServer) {
   const io = new Server(httpServer, {
@@ -23,7 +32,17 @@ export function attachRealtime(httpServer) {
   });
 
   io.on('connection', (socket) => {
+    socket.data.active = true;
+    countViewers(io);
     socket.emit('history', getHistory());
+
+    // مرورگر وقتی تب را پنهان می‌کند خبر می‌دهد تا سرور بی‌جهت کار نکند
+    socket.on('viewer', (active) => {
+      socket.data.active = active !== false;
+      countViewers(io);
+    });
+
+    socket.on('disconnect', () => countViewers(io));
 
     socket.on('watch:site', (slug) => {
       if (typeof slug !== 'string') return;
@@ -55,9 +74,10 @@ export async function broadcastMetrics(io, snapshot) {
   if (!io) return;
   io.emit('metrics', snapshot);
 
-  // خلاصهٔ سبک از سایت‌ها و سرور سایت (هر ۵ چرخه یک‌بار کافی است)
-  broadcastMetrics.tick = (broadcastMetrics.tick || 0) + 1;
-  if (broadcastMetrics.tick % 5 === 0) {
+  // خلاصهٔ سایت‌ها گران‌تر است (تست پورت هر سایت)، پس خیلی کم‌تر فرستاده می‌شود
+  broadcastMetrics.lastSites = broadcastMetrics.lastSites || 0;
+  if (Date.now() - broadcastMetrics.lastSites > 20000) {
+    broadcastMetrics.lastSites = Date.now();
     try {
       const sites = await listSites({ withSize: false });
       const sync = getSiteSync();

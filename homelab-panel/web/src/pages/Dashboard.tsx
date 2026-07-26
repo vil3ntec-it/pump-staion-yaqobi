@@ -29,6 +29,8 @@ export default function Dashboard() {
   useEffect(() => {
     let alive = true;
     const load = async () => {
+      // وقتی تب پنهان است بی‌جهت به سرور فشار نمی‌آوریم
+      if (document.visibilityState !== 'visible') return;
       try {
         const d = await api<DashboardData>('/api/dashboard');
         if (alive) {
@@ -40,10 +42,13 @@ export default function Dashboard() {
       }
     };
     load();
-    const timer = setInterval(load, 15000); // اطلاعات غیرلحظه‌ای (سایت‌ها، خطاها)
+    // اطلاعات غیرلحظه‌ای (سایت‌ها، خطاها) — معیارها خودشان از سوکت می‌آیند
+    const timer = setInterval(load, 60000);
+    document.addEventListener('visibilitychange', load);
     return () => {
       alive = false;
       clearInterval(timer);
+      document.removeEventListener('visibilitychange', load);
     };
   }, []);
 

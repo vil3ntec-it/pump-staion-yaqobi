@@ -6,7 +6,9 @@ import net from 'node:net';
 import fsp from 'node:fs/promises';
 import https from 'node:https';
 import http from 'node:http';
+// powershell فقط برای Gateway استفاده می‌شود که هر ۵ دقیقه یک‌بار خوانده می‌شود
 import { run, powershell } from '../lib/exec.js';
+import { winSample } from './win-sampler.js';
 import { config } from '../config.js';
 
 const isLinux = process.platform === 'linux';
@@ -75,23 +77,9 @@ async function counters() {
   }
 
   if (isWin) {
-    const r = await powershell(
-      'Get-NetAdapterStatistics | Select-Object ReceivedBytes,SentBytes | ConvertTo-Json -Compress'
-    );
-    if (!r.ok || !r.stdout.trim()) return null;
-    try {
-      let parsed = JSON.parse(r.stdout);
-      if (!Array.isArray(parsed)) parsed = [parsed];
-      let rx = 0;
-      let tx = 0;
-      for (const a of parsed) {
-        rx += Number(a.ReceivedBytes || 0);
-        tx += Number(a.SentBytes || 0);
-      }
-      return { rx, tx };
-    } catch {
-      return null;
-    }
+    // از نمونه‌بردارِ همیشه‌روشن خوانده می‌شود، نه با باز کردن PowerShell تازه
+    const sample = winSample();
+    return sample?.net ?? null;
   }
 
   if (isMac) {
@@ -148,7 +136,7 @@ export async function readThroughput() {
 let gatewayCache = { at: 0, value: null };
 
 export async function readGateway() {
-  if (Date.now() - gatewayCache.at < 30000) return gatewayCache.value;
+  if (Date.now() - gatewayCache.at < 5 * 60 * 1000) return gatewayCache.value;
   let gw = null;
 
   if (isLinux) {
@@ -216,7 +204,7 @@ export function tcpPing(hostPort, timeout = 3000) {
 let pingCache = { at: 0, value: null };
 
 export async function readPing() {
-  if (Date.now() - pingCache.at < 5000) return pingCache.value;
+  if (Date.now() - pingCache.at < 20000) return pingCache.value;
   const ms = await tcpPing(config.pingTarget);
   pingCache = { at: Date.now(), value: { target: config.pingTarget, ms } };
   return pingCache.value;
