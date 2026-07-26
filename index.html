@@ -796,6 +796,28 @@ body.viewer-mode .att-admin{display:none !important}
 .staff-mini-sums .ms .v{font-size:0.95rem;font-weight:900}
 /* جستجوی صوتی صفحه کارمند */
 .staff-mic{width:54px;flex-shrink:0;border-radius:12px;border:1.5px solid var(--blue);background:transparent;color:var(--blue);font-size:1.35rem;cursor:pointer;font-family:'Vazirmatn',sans-serif}
+/* «کدام‌شان بود؟» — وقتی موتورِ آفلاین مطمئن نیست */
+.vx-ask{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:100001;background:var(--panel);border:1.5px solid var(--blue);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:7px;min-width:min(320px,92vw);max-width:94vw;font-family:'Vazirmatn',sans-serif;box-shadow:0 14px 40px -12px rgba(0,0,0,.85)}
+.vx-ask .vx-ask-t{font-size:0.82rem;font-weight:900;color:var(--blue);text-align:center;margin-bottom:2px}
+.vx-ask button{border:1px solid var(--border);background:var(--card);color:var(--txt);border-radius:10px;padding:9px 12px;font-family:'Vazirmatn',sans-serif;font-size:0.86rem;font-weight:800;cursor:pointer;text-align:center}
+.vx-ask button:hover{border-color:var(--blue);color:var(--blue)}
+.vx-ask button.vx-no{background:transparent;color:var(--muted);font-weight:700}
+/* صفحهٔ «آموزش صدا» */
+.vx-ov{position:fixed;inset:0;z-index:100002;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:14px}
+.vx-box{width:min(520px,96vw);max-height:min(80dvh,700px);background:var(--panel);border:1.5px solid var(--blue);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;font-family:'Vazirmatn',sans-serif}
+.vx-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border-bottom:1px solid var(--border)}
+.vx-head b{color:var(--blue);font-size:1rem}
+.vx-head button{background:transparent;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer}
+.vx-note{font-size:0.76rem;color:var(--muted);line-height:1.9;padding:10px 14px;border-bottom:1px solid var(--border)}
+.vx-box input.vx-find{margin:10px 14px;padding:9px 11px;border-radius:10px;border:1px solid var(--border);background:var(--dark);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.86rem}
+.vx-list{flex:1;overflow-y:auto;padding:0 10px 12px}
+.vx-row{display:flex;align-items:center;gap:8px;padding:9px 8px;border-bottom:1px solid var(--border)}
+.vx-row .vx-nm{flex:1;min-width:0;font-size:0.9rem;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vx-row .vx-cnt{font-size:0.72rem;color:var(--muted);white-space:nowrap}
+.vx-row .vx-cnt.on{color:var(--green);font-weight:900}
+.vx-row button{border-radius:9px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-size:1.05rem;cursor:pointer;width:42px;height:38px;font-family:'Vazirmatn',sans-serif}
+.vx-row button.rec{background:var(--red);border-color:var(--red);color:#fff;animation:micPulse 1s ease-in-out infinite}
+.vx-row button.vx-del{border-color:var(--border);color:var(--muted);font-size:0.9rem}
 .staff-mic.listening{background:var(--red);border-color:var(--red);color:#fff;animation:micPulse 1s ease-in-out infinite}
 @keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(229,62,62,.55)}50%{box-shadow:0 0 0 12px rgba(229,62,62,0)}}
 /* نمای سادهٔ حساب کارمند: درشت و خوانا */
@@ -8006,6 +8028,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:8px">
       <input class="staff-search" id="staff-search" style="margin-bottom:0;flex:1" placeholder="🔍 نام قرض‌دار را بنویسید یا 🎤 بگویید" oninput="renderStaffList()" onkeydown="if(event.key==='Enter'){const c=document.querySelector('#staff-list .staff-card');if(c)c.click();}">
       <button type="button" id="staff-mic" class="staff-mic" onclick="staffVoiceSearch()" title="جستجوی صوتی">🎤</button>
+      <button type="button" id="staff-teach" class="staff-mic" onclick="vxOpenTeach()" title="آموزش صدا — برای کار کردنِ جستجوی صوتی بدون اینترنت">🎓</button>
     </div>
     <div class="staff-count" id="staff-count"></div>
     <div class="staff-grid" id="staff-list"></div>
@@ -20574,6 +20597,9 @@ function _staffAcctFuelLeft(a) {
 function openStaffAccount(pid, subId) {
   const person = (DB.debtPersons || []).find(p => String(p.id) === String(pid));
   if (!person) return;
+  // اگر همین حالا با صدا دنبالِ نام بودید و خودتان روی نام زدید، برنامه از همین
+  // انتخاب یاد می‌گیرد و دفعهٔ بعد صدای شما را می‌شناسد (بدون هیچ تنظیمی)
+  try { _vxLearnFromTap(pid, subId); } catch (e) {}
   const sub = subId ? (person.subs || []).find(s => String(s.id) === String(subId)) : null;
   const a = sub || person;
   // حساب فرعی: فقط نامِ خودِ حساب فرعی نمایش داده می‌شود (نه «اصلی — فرعی») —
@@ -21393,14 +21419,16 @@ function qaMirzaNo(i) {
   _qaMsgs.push({ who: 'bot', t: 'خوب است! اگر سوال دیگری داشتید، بپرسید.' });
   _qaRender();
 }
-/* ── صدا در نسخهٔ کامپیوتری ──────────────────────────────────────────────────
-   ضبطِ صدا (پیام صوتی) در برنامهٔ کامپیوتری کار می‌کند، ولی «تبدیل صدا به متن»
-   (جستجوی صوتی و پرسیدن با صدا) موتورِ گوگل را لازم دارد که فقط داخلِ مرورگر
-   هست — پوستهٔ دسکتاپ آن را ندارد. به‌جای اینکه دکمه بی‌صدا هیچ کاری نکند،
-   همین را روشن می‌گوییم و با یک زدن همان صفحه را در مرورگر باز می‌کنیم. ── */
+/* ── صدا وقتی موتورِ آنلاین نیست ──────────────────────────────────────────────
+   دو کارِ صوتی در برنامه هست و سرنوشتشان فرق می‌کند:
+   ۱) «جستجوی نام با صدا» → موتورِ آفلاینِ خودِ برنامه آن را انجام می‌دهد؛ بدون
+      اینترنت و بدون سرور کار می‌کند (بخشِ 🎤 موتورِ صدای آفلاین در همین فایل).
+   ۲) «پرسیدنِ سوالِ آزاد از ربات با صدا» → این یکی جمله‌های آزاد است و موتورِ
+      گوگل را لازم دارد؛ بدونِ اینترنت (و در پوستهٔ دسکتاپ) در دسترس نیست.
+   پس فقط برای موردِ دوم پیغام می‌دهیم — نه برای جستجوی نام. ── */
 const _SITE_URL = 'https://yaqobipump.top/';
 function _voiceEngineMissing(errCode) {
-  if (!window.pumpDesktop) return false;
+  if (!window.pumpDesktop && navigator.onLine) return false;
   return !errCode || errCode === 'network' || errCode === 'service-not-allowed' || errCode === 'not-allowed' || errCode === 'audio-capture';
 }
 function _voiceOpenInBrowser() {
@@ -21411,9 +21439,8 @@ function _voiceOpenInBrowser() {
 }
 function _voiceNotSupportedToast() {
   try {
-    showTopToast('🎤 تبدیلِ صدا به متن در برنامهٔ کامپیوتری نیست — برای جستجوی صوتی همین سایت را در مرورگر باز کنید (ضبطِ پیام صوتی در چت کار می‌کند)', '#d97706', 7000);
-  } catch (e) { showToast('🎤 جستجوی صوتی فقط در مرورگر کار می‌کند', '#d97706'); }
-  if (window.pumpDesktop && confirm('جستجوی صوتی فقط در مرورگر کار می‌کند.\nهمین حالا سایت در مرورگر باز شود؟')) _voiceOpenInBrowser();
+    showTopToast('🎤 پرسیدنِ سوالِ آزاد با صدا اینترنت می‌خواهد. ولی «جستجوی نام با صدا» در صفحهٔ کارمند بدونِ اینترنت هم کار می‌کند — یک‌بار با دکمهٔ 🎓 نام‌ها را بگویید.', '#d97706', 8000);
+  } catch (e) { showToast('🎤 پرسیدن با صدا اینترنت می‌خواهد', '#d97706'); }
 }
 let _qaRec = null, _qaListening = false;
 function qaVoiceAsk() {
@@ -23081,7 +23108,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.123';
+const APP_VERSION = '2.9.124';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -23392,11 +23419,493 @@ function _staffApplyVoice(alts) {
     showToast('🎤 «' + (alts[0] || '') + '» پیدا نشد — دوباره بگویید', '#e53e3e');
   }
 }
+/* ============================================================================
+   🎤 موتورِ صدای آفلاین — بدون سرور، بدون اینترنت، بدون دانلودِ هیچ فایلی
+   ----------------------------------------------------------------------------
+   موتورِ صدای گوگل (همان که تا حالا استفاده می‌شد) صدا را به سرورهای گوگل
+   می‌فرستد؛ پس بدون اینترنت اصلاً کار نمی‌کند و در برنامهٔ کامپیوتری هم نیست.
+   ولی جستجوی صوتیِ این برنامه یک کارِ مشخص دارد: از میانِ «فهرستِ نام‌های خودِ
+   برنامه» آن نامی را پیدا کند که گفته شده — و برای این کار به موتورِ غول‌پیکر
+   نیازی نیست.
+
+   روش (همان روشِ کلاسیک و آزموده‌شدهٔ تشخیصِ کلمهٔ تکی، تمامش روی خودِ دستگاه):
+     صدا → بریدنِ سکوت → ویژگی‌های MFCC (+دلتا) → مقایسهٔ DTW با صداهای ثبت‌شده
+
+   یادگیری بدونِ زحمت: هر بار که با صدا نام را پیدا نکرد و شما خودتان روی نام
+   زدید، همان صدا برای آن نام ثبت می‌شود. دفعهٔ بعد خودش می‌شناسد. دکمهٔ 🎓 هم
+   برای ثبتِ یک‌جای نام‌ها هست.
+   ============================================================================ */
+const _VX_SR = 16000, _VX_FRAME = 400, _VX_HOP = 160, _VX_NFFT = 512, _VX_MEL = 26, _VX_CEP = 13;
+const _VX_KEY = 'pumpVoiceTpl';
+const _VX_MAX_PER_NAME = 3;          // بیشتر از این لازم نیست؛ حافظه هم بی‌جهت پر نمی‌شود
+const _VX_MAX_BYTES = 1400000;       // سقفِ کلِ صداهای ثبت‌شده روی دستگاه (~۱٫۴ مگابایت)
+const _VX_ACCEPT = 2.1;              // بیشتر از این فاصله یعنی «نشناختم»
+const _VX_MARGIN = 1.12;             // نفر اول باید دستِ‌کم این‌قدر از نفر دوم نزدیک‌تر باشد
+
+// ── FFT رادیکس-۲ (درجا) ──
+function _vxFft(re, im) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) { const tr = re[i]; re[i] = re[j]; re[j] = tr; const ti = im[i]; im[i] = im[j]; im[j] = ti; }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = -2 * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let cr = 1, ci = 0;
+      for (let k = 0; k < len / 2; k++) {
+        const ur = re[i + k], ui = im[i + k];
+        const vr = re[i + k + len / 2] * cr - im[i + k + len / 2] * ci;
+        const vi = re[i + k + len / 2] * ci + im[i + k + len / 2] * cr;
+        re[i + k] = ur + vr; im[i + k] = ui + vi;
+        re[i + k + len / 2] = ur - vr; im[i + k + len / 2] = ui - vi;
+        const ncr = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = ncr;
+      }
+    }
+  }
+}
+let _vxMelBank = null;
+function _vxGetMelBank() {
+  if (_vxMelBank) return _vxMelBank;
+  const hz2mel = f => 1127 * Math.log(1 + f / 700), mel2hz = m => 700 * (Math.exp(m / 1127) - 1);
+  const lo = hz2mel(100), hi = hz2mel(7000), pts = [];
+  for (let i = 0; i < _VX_MEL + 2; i++) pts.push(Math.floor((_VX_NFFT + 1) * mel2hz(lo + (hi - lo) * i / (_VX_MEL + 1)) / _VX_SR));
+  const bank = [];
+  for (let m = 1; m <= _VX_MEL; m++) {
+    const f0 = pts[m - 1], f1 = pts[m], f2 = pts[m + 1], idx = [], w = [];
+    for (let k = f0; k < f1; k++) { idx.push(k); w.push((k - f0) / Math.max(1, f1 - f0)); }
+    for (let k = f1; k <= f2; k++) { idx.push(k); w.push((f2 - k) / Math.max(1, f2 - f1)); }
+    bank.push({ idx, w });
+  }
+  _vxMelBank = bank;
+  return bank;
+}
+// بریدنِ سکوتِ اول و آخر (و تشخیصِ اینکه اصلاً چیزی گفته شده یا نه)
+function _vxTrim(pcm) {
+  const win = 320, n = Math.floor(pcm.length / win);
+  if (n < 3) return null;
+  const en = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    let s = 0;
+    for (let k = 0; k < win; k++) { const v = pcm[i * win + k]; s += v * v; }
+    en[i] = Math.sqrt(s / win);
+  }
+  const sorted = Array.from(en).sort((a, b) => a - b);
+  const floor = sorted[Math.floor(n * 0.1)] || 0, peak = sorted[n - 1] || 0;
+  if (peak < 0.008) return null;                       // چیزی گفته نشد
+  const th = Math.max(floor * 2.5, peak * 0.12);
+  let a = -1, b = -1;
+  for (let i = 0; i < n; i++) if (en[i] >= th) { if (a < 0) a = i; b = i; }
+  if (a < 0 || b - a < 2) return null;                 // خیلی کوتاه
+  const pad = 5;
+  return pcm.subarray(Math.max(0, (a - pad) * win), Math.min(pcm.length, (b + 1 + pad) * win));
+}
+// PCM ۱۶ کیلوهرتز → ویژگی‌ها (MFCC + دلتا، نرمال‌شده، فشرده در یک بایت)
+function _vxFeatures(pcmRaw) {
+  const pcm = _vxTrim(pcmRaw);
+  if (!pcm || pcm.length < _VX_FRAME * 3) return null;
+  const x = new Float32Array(pcm.length);
+  x[0] = pcm[0];
+  for (let i = 1; i < pcm.length; i++) x[i] = pcm[i] - 0.97 * pcm[i - 1];   // پیش‌تاکید
+  const nFrames = 1 + Math.floor((x.length - _VX_FRAME) / _VX_HOP);
+  if (nFrames < 4) return null;
+  const bank = _vxGetMelBank(), win = new Float32Array(_VX_FRAME);
+  for (let i = 0; i < _VX_FRAME; i++) win[i] = 0.54 - 0.46 * Math.cos(2 * Math.PI * i / (_VX_FRAME - 1));
+  const feats = [], re = new Float32Array(_VX_NFFT), im = new Float32Array(_VX_NFFT);
+  for (let f = 0; f < nFrames; f++) {
+    re.fill(0); im.fill(0);
+    const off = f * _VX_HOP;
+    for (let i = 0; i < _VX_FRAME; i++) re[i] = x[off + i] * win[i];
+    _vxFft(re, im);
+    const half = _VX_NFFT / 2, pow = new Float32Array(half + 1);
+    for (let k = 0; k <= half; k++) pow[k] = (re[k] * re[k] + im[k] * im[k]) / _VX_NFFT;
+    const mel = new Float32Array(_VX_MEL);
+    for (let m = 0; m < _VX_MEL; m++) {
+      let s = 0;
+      const B = bank[m];
+      for (let i = 0; i < B.idx.length; i++) { const k = B.idx[i]; if (k < pow.length) s += pow[k] * B.w[i]; }
+      mel[m] = Math.log(s + 1e-10);
+    }
+    const c = new Float32Array(_VX_CEP);
+    for (let j = 0; j < _VX_CEP; j++) {
+      let s = 0;
+      for (let m = 0; m < _VX_MEL; m++) s += mel[m] * Math.cos(Math.PI * j * (m + 0.5) / _VX_MEL);
+      c[j] = s;
+    }
+    feats.push(c);
+  }
+  // نرمال‌سازیِ میانگین/واریانس: تفاوتِ مایکروفون و بلندیِ صدا خنثی می‌شود
+  const cep = _VX_CEP, mean = new Float32Array(cep), std = new Float32Array(cep), N = feats.length;
+  feats.forEach(c => { for (let j = 0; j < cep; j++) mean[j] += c[j]; });
+  for (let j = 0; j < cep; j++) mean[j] /= N;
+  feats.forEach(c => { for (let j = 0; j < cep; j++) { const d = c[j] - mean[j]; std[j] += d * d; } });
+  for (let j = 0; j < cep; j++) std[j] = Math.sqrt(std[j] / N) || 1;
+  const norm = [];
+  for (let i = 0; i < N; i++) {
+    const c = new Float32Array(cep);
+    for (let j = 0; j < cep; j++) c[j] = (feats[i][j] - mean[j]) / std[j];
+    norm.push(c);
+  }
+  // «دلتا» = حرکتِ صدا در زمان — دو نام با مصوت‌های همانند از همین جدا می‌شوند
+  const dim = cep * 2, out = new Int8Array(N * dim);
+  const q = v => Math.max(-127, Math.min(127, Math.round(v * 24)));
+  for (let i = 0; i < N; i++) {
+    const p2 = norm[Math.max(0, i - 2)], p1 = norm[Math.max(0, i - 1)];
+    const n1 = norm[Math.min(N - 1, i + 1)], n2 = norm[Math.min(N - 1, i + 2)];
+    for (let j = 0; j < cep; j++) {
+      out[i * dim + j] = q(norm[i][j]);
+      out[i * dim + cep + j] = q((2 * (n2[j] - p2[j]) + (n1[j] - p1[j])) / 10 * 2.2);
+    }
+  }
+  return { n: N, dim, d: out };
+}
+// فاصلهٔ DTW (کِشسان در زمان — تندتر یا کندتر گفتن مهم نیست)
+function _vxDtw(A, B) {
+  const n = A.n, m = B.n, dim = A.dim;
+  if (!n || !m || A.dim !== B.dim) return Infinity;
+  const band = Math.max(12, Math.abs(n - m) + 8), INF = 1e18;
+  let prev = new Float64Array(m + 1).fill(INF), cur = new Float64Array(m + 1);
+  prev[0] = 0;
+  for (let i = 1; i <= n; i++) {
+    cur.fill(INF);
+    const jlo = Math.max(1, i - band), jhi = Math.min(m, i + band);
+    for (let j = jlo; j <= jhi; j++) {
+      let s = 0;
+      const ai = (i - 1) * dim, bj = (j - 1) * dim;
+      for (let k = 0; k < dim; k++) { const d = (A.d[ai + k] - B.d[bj + k]) / 24; s += d * d; }
+      const best = Math.min(prev[j], Math.min(cur[j - 1], prev[j - 1]));
+      cur[j] = Math.sqrt(s) + (best === INF ? 0 : best);
+    }
+    const t = prev; prev = cur; cur = t;
+  }
+  return prev[m] >= INF ? Infinity : prev[m] / (n + m);
+}
+
+// ── انبارِ صداهای ثبت‌شده (روی خودِ دستگاه) ──
+function _vxB64(int8) {
+  let s = '';
+  const u = new Uint8Array(int8.buffer, int8.byteOffset, int8.length);
+  for (let i = 0; i < u.length; i += 8192) s += String.fromCharCode.apply(null, u.subarray(i, i + 8192));
+  return btoa(s);
+}
+function _vxUnB64(b64) {
+  const bin = atob(b64), u = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  return new Int8Array(u.buffer);
+}
+let _vxStore = null;
+function _vxLoad() {
+  if (_vxStore) return _vxStore;
+  try {
+    const raw = JSON.parse(localStorage.getItem(_VX_KEY) || 'null');
+    _vxStore = (raw && raw.t && typeof raw.t === 'object') ? raw : { v: 1, t: {} };
+  } catch (e) { _vxStore = { v: 1, t: {} }; }
+  return _vxStore;
+}
+function _vxSave() {
+  const st = _vxLoad();
+  for (let attempt = 0; attempt < 10; attempt++) {
+    try {
+      const s = JSON.stringify(st);
+      if (s.length > _VX_MAX_BYTES) throw new Error('too big');
+      localStorage.setItem(_VX_KEY, s);
+      return true;
+    } catch (e) {
+      // جا کم آمد → کهنه‌ترین صدای ثبت‌شده کنار می‌رود (نه همهٔ آن نام)
+      let oldKey = null, oldIdx = -1, oldTs = Infinity;
+      Object.keys(st.t).forEach(k => (st.t[k].s || []).forEach((sm, i) => {
+        if ((sm.ts || 0) < oldTs) { oldTs = sm.ts || 0; oldKey = k; oldIdx = i; }
+      }));
+      if (oldKey === null) { try { localStorage.removeItem(_VX_KEY); } catch (e2) {} return false; }
+      st.t[oldKey].s.splice(oldIdx, 1);
+      if (!st.t[oldKey].s.length) delete st.t[oldKey];
+    }
+  }
+  return false;
+}
+function _vxEnroll(key, name, feat) {
+  if (!key || !feat) return false;
+  const st = _vxLoad();
+  const e = st.t[key] || (st.t[key] = { nm: name || '', s: [] });
+  e.nm = name || e.nm;
+  e.s.push({ n: feat.n, dim: feat.dim, b: _vxB64(feat.d), ts: Date.now() });
+  if (e.s.length > _VX_MAX_PER_NAME) e.s.shift();      // تازه‌ترین‌ها می‌مانند
+  return _vxSave();
+}
+function _vxForget(key) {
+  const st = _vxLoad();
+  if (st.t[key]) { delete st.t[key]; _vxSave(); return true; }
+  return false;
+}
+function _vxCount(key) { const e = _vxLoad().t[key]; return e ? (e.s || []).length : 0; }
+function _vxTotal() { return Object.keys(_vxLoad().t).length; }
+// مقایسهٔ صدای گفته‌شده با همهٔ صداهای ثبت‌شده
+function _vxMatch(feat) {
+  const st = _vxLoad(), out = [];
+  Object.keys(st.t).forEach(k => {
+    const e = st.t[k];
+    let best = Infinity;
+    (e.s || []).forEach(sm => {
+      try {
+        const d = _vxDtw(feat, { n: sm.n, dim: sm.dim || 26, d: _vxUnB64(sm.b) });
+        if (d < best) best = d;
+      } catch (err) {}
+    });
+    if (best < Infinity) out.push({ key: k, nm: e.nm || '', d: best });
+  });
+  return out.sort((a, b) => a.d - b.d);
+}
+
+// ── ضبط از مایکروفون (خودش با سکوت تمام می‌شود) ──
+let _vxStopFn = null, _vxBusy = false;
+function _vxSupported() {
+  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && (window.AudioContext || window.webkitAudioContext));
+}
+function _vxDownTo16k(chunks, srcRate, total) {
+  const all = new Float32Array(total);
+  let o = 0;
+  chunks.forEach(c => { all.set(c, o); o += c.length; });
+  if (Math.abs(srcRate - _VX_SR) < 1) return all;
+  const ratio = srcRate / _VX_SR, n = Math.floor(all.length / ratio), out = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const a = i * ratio, i0 = Math.floor(a), i1 = Math.min(all.length - 1, i0 + 1);
+    // میانگینِ پنجرهٔ کوچک = فیلترِ ساده تا صدای تیز نویز نشود
+    const w = Math.max(1, Math.floor(ratio));
+    let s = 0, c = 0;
+    for (let k = 0; k < w && i0 + k < all.length; k++) { s += all[i0 + k]; c++; }
+    out[i] = c > 1 ? s / c : (all[i0] + (all[i1] - all[i0]) * (a - i0));
+  }
+  return out;
+}
+function _vxRecord(maxMs, onLevel) {
+  maxMs = maxMs || 5000;
+  return new Promise((resolve, reject) => {
+    if (!_vxSupported()) { reject(new Error('no-mic')); return; }
+    navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
+      .then(stream => {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        const ac = new AC();
+        const src = ac.createMediaStreamSource(stream);
+        const proc = ac.createScriptProcessor(2048, 1, 1);
+        const mute = ac.createGain(); mute.gain.value = 0;      // صدا از بلندگو پخش نشود
+        const chunks = [];
+        let total = 0, speech = false, sil = 0, done = false;
+        const startedAt = Date.now();
+        const finish = () => {
+          if (done) return;
+          done = true; _vxStopFn = null; _vxBusy = false;
+          try { proc.disconnect(); src.disconnect(); mute.disconnect(); } catch (e) {}
+          try { stream.getTracks().forEach(t => t.stop()); } catch (e) {}
+          const rate = ac.sampleRate;
+          try { ac.close(); } catch (e) {}
+          resolve(_vxDownTo16k(chunks, rate, total));
+        };
+        proc.onaudioprocess = ev => {
+          if (done) return;
+          const inp = ev.inputBuffer.getChannelData(0);
+          chunks.push(new Float32Array(inp)); total += inp.length;
+          let s = 0;
+          for (let i = 0; i < inp.length; i++) s += inp[i] * inp[i];
+          const rms = Math.sqrt(s / inp.length);
+          if (onLevel) { try { onLevel(rms); } catch (e) {} }
+          const frameMs = inp.length * 1000 / ac.sampleRate;
+          if (rms > 0.02) { speech = true; sil = 0; }
+          else if (speech) { sil += frameMs; if (sil > 600) finish(); }        // ۰٫۶ ثانیه سکوت بعد از حرف
+          if (Date.now() - startedAt > maxMs) finish();
+        };
+        src.connect(proc); proc.connect(mute); mute.connect(ac.destination);
+        _vxBusy = true; _vxStopFn = finish;
+      })
+      .catch(err => { _vxBusy = false; reject(err); });
+  });
+}
+// ── کلیدِ هر حساب برای انبارِ صدا ──
+function _vxKeyOf(pid, sid) { return 'p' + pid + (sid ? '|s' + sid : ''); }
+
+/* ── صفحهٔ «آموزش صدا» (دکمهٔ 🎓) ────────────────────────────────────────────
+   فهرستِ همهٔ حساب‌ها با یک دکمهٔ ضبط جلوی هرکدام. یک‌بار نام را می‌گویید و از
+   آن به بعد جستجوی صوتی برای آن نام، بدونِ اینترنت و بدونِ سرور، کار می‌کند. ── */
+function _vxRows() {
+  const rows = [];
+  (DB.debtPersons || []).forEach(p => {
+    rows.push({ key: _vxKeyOf(p.id, ''), nm: p.name || 'بی‌نام' });
+    (p.subs || []).forEach(sb => rows.push({ key: _vxKeyOf(p.id, sb.id), nm: (p.name || '') + ' — ' + (sb.name || 'حساب فرعی') }));
+  });
+  return rows;
+}
+function vxOpenTeach() {
+  document.getElementById('vxTeach')?.remove();
+  const rows = _vxRows();
+  const ov = document.createElement('div');
+  ov.id = 'vxTeach';
+  ov.className = 'vx-ov';
+  ov.onclick = e => { if (e.target === ov) vxCloseTeach(); };
+  ov.innerHTML =
+    '<div class="vx-box">' +
+      '<div class="vx-head"><b>🎓 آموزش صدا</b><button onclick="vxCloseTeach()">✕</button></div>' +
+      '<div class="vx-note">جلوی هر نام دکمهٔ 🎤 را بزنید و همان نام را <b>یک‌بار</b> بگویید. از آن به بعد جستجوی صوتی برای آن نام <b>بدون اینترنت و بدون سرور</b> کار می‌کند. ' +
+        'اگر نامی را دو-سه بار (با صداهای مختلف) ثبت کنید، بهتر می‌شناسد.</div>' +
+      '<input class="vx-find" id="vxFind" placeholder="🔍 جستجوی نام..." oninput="vxRenderTeach()">' +
+      '<div class="vx-list" id="vxList"></div>' +
+    '</div>';
+  document.body.appendChild(ov);
+  window.__vxRows = rows;
+  vxRenderTeach();
+}
+function vxCloseTeach() { if (_vxStopFn) { try { _vxStopFn(); } catch (e) {} } document.getElementById('vxTeach')?.remove(); }
+function vxRenderTeach() {
+  const el = document.getElementById('vxList');
+  if (!el) return;
+  const q = _botNorm((document.getElementById('vxFind') || {}).value || '');
+  const rows = (window.__vxRows || []).filter(r => !q || _botNorm(r.nm).indexOf(q) >= 0);
+  if (!rows.length) { el.innerHTML = '<div class="ch-note" style="padding:18px">نامی پیدا نشد</div>'; return; }
+  el.innerHTML = rows.slice(0, 300).map(r => {
+    const c = _vxCount(r.key);
+    return `<div class="vx-row" id="vxrow-${escFa(r.key)}">` +
+      `<span class="vx-nm">${escFa(r.nm)}</span>` +
+      `<span class="vx-cnt ${c ? 'on' : ''}">${c ? '✅ ' + n2fa(c) + ' صدا' : 'ثبت نشده'}</span>` +
+      (c ? `<button class="vx-del" onclick="vxForgetOne('${escFa(r.key)}')" title="پاک کردنِ صداهای این نام">🗑️</button>` : '') +
+      `<button id="vxrec-${escFa(r.key)}" onclick="vxTeachOne('${escFa(r.key)}')" title="ضبط صدا">🎤</button>` +
+      `</div>`;
+  }).join('');
+}
+async function vxTeachOne(key) {
+  if (_vxBusy) { if (_vxStopFn) _vxStopFn(); return; }
+  if (!_vxSupported()) { showToast('🎤 این دستگاه مایکروفون ندارد', '#e53e3e'); return; }
+  const btn = document.getElementById('vxrec-' + key);
+  const row = (window.__vxRows || []).find(r => r.key === key);
+  if (btn) { btn.classList.add('rec'); btn.textContent = '⏺'; }
+  let pcm = null;
+  try { pcm = await _vxRecord(4000); }
+  catch (e) {
+    if (btn) { btn.classList.remove('rec'); btn.textContent = '🎤'; }
+    showToast(e && e.name === 'NotAllowedError' ? '🎤 اجازهٔ مایکروفون داده نشد' : '🎤 مایکروفون باز نشد', '#e53e3e');
+    return;
+  }
+  if (btn) { btn.classList.remove('rec'); btn.textContent = '🎤'; }
+  const feat = _vxFeatures(pcm);
+  if (!feat) { showToast('🎤 چیزی شنیده نشد — دوباره و بلندتر بگویید', '#e53e3e'); return; }
+  const okSaved = _vxEnroll(key, row ? row.nm : '', feat);
+  vxRenderTeach();
+  showToast(okSaved ? '✅ ثبت شد' : '⚠️ جای ذخیره کم است — چند صدای کهنه پاک شد', okSaved ? '#38a169' : '#d97706');
+}
+function vxForgetOne(key) {
+  _vxForget(key);
+  vxRenderTeach();
+  showToast('🗑️ صداهای این نام پاک شد', '#38a169');
+}
+
 let _staffRec = null, _staffListening = false;
+/* ── جستجوی صوتی: اول موتورِ آنلاین (اگر باشد)، وگرنه موتورِ آفلاینِ خودمان ──
+   با اینترنت: موتورِ گوگل (بدونِ نیاز به ثبتِ صدا، برای هر نامی).
+   بدونِ اینترنت / در برنامهٔ کامپیوتری: موتورِ آفلاینِ همین برنامه — از روی
+   صداهایی که خودتان ثبت کرده‌اید (یا برنامه در حین کار یاد گرفته). ── */
+function _vxOnlineEngineOk() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  return !!SR && navigator.onLine && !window.pumpDesktop && !_vxForceOffline;
+}
+let _vxForceOffline = false;          // اگر موتورِ آنلاین یک‌بار شکست بخورد، دیگر معطلش نمی‌شویم
+let _vxPendingTeach = null;           // آخرین صدای گفته‌شده که هنوز نامش معلوم نیست
 function staffVoiceSearch() {
+  if (!_vxOnlineEngineOk()) { _vxOfflineSearch(); return; }
+  _staffVoiceOnline();
+}
+// ── جستجوی صوتیِ آفلاین ──
+async function _vxOfflineSearch() {
+  const btn = document.getElementById('staff-mic');
+  if (_vxBusy) { if (_vxStopFn) _vxStopFn(); return; }        // زدنِ دوباره = پایانِ ضبط
+  if (!_vxSupported()) { showToast('🎤 این دستگاه مایکروفون ندارد', '#e53e3e'); return; }
+  if (btn) { btn.classList.add('listening'); btn.textContent = '⏺'; }
+  showToast('🎤 نام را بگویید...', '#2b6cb0');
+  let pcm = null;
+  try { pcm = await _vxRecord(5000); }
+  catch (e) {
+    if (btn) { btn.classList.remove('listening'); btn.textContent = '🎤'; }
+    showToast(e && e.name === 'NotAllowedError' ? '🎤 اجازهٔ مایکروفون داده نشد' : '🎤 مایکروفون باز نشد', '#e53e3e');
+    return;
+  }
+  if (btn) { btn.classList.remove('listening'); btn.textContent = '🎤'; }
+  const feat = _vxFeatures(pcm);
+  if (!feat) { showToast('🎤 چیزی شنیده نشد — نزدیک‌تر و بلندتر بگویید', '#e53e3e'); return; }
+  _vxPendingTeach = { feat, ts: Date.now() };                  // اگر خودتان نام را بزنید، همین صدا ثبت می‌شود
+  if (!_vxTotal()) {
+    showTopToast('🎤 هنوز هیچ صدایی ثبت نشده. نام را از فهرست بزنید — همین صدای شما برای آن نام ثبت می‌شود و دفعهٔ بعد خودش می‌شناسد (یا دکمهٔ 🎓 را بزنید).', '#d97706', 8000);
+    return;
+  }
+  const res = _vxMatch(feat).filter(r => _vxLiveKey(r.key));   // نام‌های پاک‌شده کنار می‌روند
+  if (!res.length) { showToast('🎤 نشناختم — نام را بزنید تا یاد بگیرم', '#f6c000'); return; }
+  const best = res[0], second = res[1];
+  const sure = best.d <= _VX_ACCEPT && (!second || second.d / best.d >= _VX_MARGIN);
+  if (sure) {
+    _vxOpenKey(best.key);
+    _vxPendingTeach = null;
+    showToast('🎤 ' + (best.nm || ''), '#2b6cb0');
+    return;
+  }
+  _vxAskWhich(res.slice(0, 3));      // مطمئن نیستم → همان چند نامِ نزدیک را نشان بده
+}
+// آیا این کلیدِ صدا هنوز به یک حسابِ موجود اشاره می‌کند؟
+function _vxLiveKey(key) {
+  const m = /^p([^|]+)(?:\|s(.+))?$/.exec(key || '');
+  if (!m) return null;
+  const p = (DB.debtPersons || []).find(x => String(x.id) === m[1]);
+  if (!p) return null;
+  if (!m[2]) return { p, sub: null };
+  const sub = (p.subs || []).find(x => String(x.id) === m[2]);
+  return sub ? { p, sub } : null;
+}
+function _vxOpenKey(key) {
+  const t = _vxLiveKey(key);
+  if (!t) return false;
+  const inp = document.getElementById('staff-search');
+  if (inp) inp.value = t.p.name + (t.sub ? ' ' + (t.sub.name || '') : '');
+  _staffAutoKey = String(t.p.id) + '|' + (t.sub ? String(t.sub.id) : '');
+  renderStaffList();
+  openStaffAccount(t.p.id, t.sub ? t.sub.id : '');
+  return true;
+}
+// «کدام‌شان بود؟» — هم کار راه می‌افتد، هم برنامه از انتخابِ شما یاد می‌گیرد
+function _vxAskWhich(list) {
+  document.getElementById('vxAsk')?.remove();
+  const box = document.createElement('div');
+  box.id = 'vxAsk';
+  box.className = 'vx-ask';
+  box.innerHTML = '<div class="vx-ask-t">🎤 مطمئن نیستم — کدام‌شان بود؟</div>' +
+    list.map(r => {
+      const t = _vxLiveKey(r.key);
+      const nm = t ? (t.p.name + (t.sub ? ' — ' + (t.sub.name || 'حساب فرعی') : '')) : (r.nm || '');
+      return `<button onclick="_vxPick('${String(r.key).replace(/'/g, '')}')">${escFa(nm)}</button>`;
+    }).join('') +
+    '<button class="vx-no" onclick="document.getElementById(\'vxAsk\').remove()">هیچ‌کدام</button>';
+  document.body.appendChild(box);
+  setTimeout(() => { document.getElementById('vxAsk')?.remove(); }, 15000);
+}
+function _vxPick(key) {
+  document.getElementById('vxAsk')?.remove();
+  const t = _vxLiveKey(key);
+  if (t && _vxPendingTeach && Date.now() - _vxPendingTeach.ts < 60000) {
+    _vxEnroll(key, t.p.name + (t.sub ? ' ' + (t.sub.name || '') : ''), _vxPendingTeach.feat);
+    _vxPendingTeach = null;
+    showToast('🎓 صدای شما برای این نام ثبت شد', '#38a169');
+  }
+  _vxOpenKey(key);
+}
+// یادگیریِ خودکار: اگر بعد از حرف زدن خودتان روی نام زدید، همان صدا ثبت می‌شود
+function _vxLearnFromTap(pid, sid) {
+  if (!_vxPendingTeach || Date.now() - _vxPendingTeach.ts > 60000) { _vxPendingTeach = null; return; }
+  const key = _vxKeyOf(pid, sid);
+  const t = _vxLiveKey(key);
+  if (!t) { _vxPendingTeach = null; return; }
+  _vxEnroll(key, t.p.name + (t.sub ? ' ' + (t.sub.name || '') : ''), _vxPendingTeach.feat);
+  _vxPendingTeach = null;
+  showToast('🎓 صدای شما برای «' + t.p.name + '» ثبت شد — دفعهٔ بعد خودش می‌شناسد', '#38a169');
+}
+function _staffVoiceOnline() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const btn = document.getElementById('staff-mic');
-  if (!SR) { if (window.pumpDesktop) { _voiceNotSupportedToast(); return; } showToast('🎤 مرورگر شما جستجوی صوتی ندارد', '#e53e3e'); return; }
+  if (!SR) { _vxOfflineSearch(); return; }
   if (_staffListening) { try { _staffRec.stop(); } catch (e) {} return; }
   const rec = new SR();
   _staffRec = rec;
@@ -23427,7 +23936,13 @@ function staffVoiceSearch() {
     _staffListening = false;
     if (btn) { btn.classList.remove('listening'); btn.textContent = '🎤'; }
     const code = e && e.error;
-    if (_voiceEngineMissing(code)) { _voiceNotSupportedToast(); return; }
+    // موتورِ گوگل نشد (نت قطع است یا در دسترس نیست) → موتورِ آفلاینِ خودمان
+    if (code === 'network' || code === 'service-not-allowed' || !navigator.onLine) {
+      _vxForceOffline = true;
+      showToast('🎤 موتورِ آنلاین در دسترس نیست — با صدای ثبت‌شدهٔ خودتان ادامه می‌دهیم', '#d97706');
+      setTimeout(_vxOfflineSearch, 300);
+      return;
+    }
     showToast(code === 'not-allowed' ? '🎤 اجازهٔ مایکروفون داده نشد' : '🎤 صدا شناخته نشد — دوباره تلاش کنید', '#e53e3e');
   };
   rec.onresult = (ev) => { lastEv = ev; };
