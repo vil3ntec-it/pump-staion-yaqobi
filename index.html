@@ -552,6 +552,14 @@ html.kb-open #calcPanel{bottom:calc(8px + var(--kb-offset,0px))}
 .ch-sug button{border:1px solid var(--blue);background:transparent;color:var(--blue);border-radius:8px;padding:5px 10px;font-family:'Vazirmatn',sans-serif;font-size:0.74rem;font-weight:800;cursor:pointer}
 .ch-sug button:hover{background:rgba(34,204,255,.12)}
 .ch-note{text-align:center;font-size:0.7rem;color:var(--muted);padding:4px 8px}
+/* کادرِ «حسابِ فرستاده‌شده» — میرزا حسابِ شخص را می‌فرستد و طرف با یک زدن روی همین
+   کادر، حسابش را همان‌جا در برنامه می‌بیند (نه لینکِ خشکِ غیرقابل‌کلیک) */
+.ch-acct{display:block;width:100%;text-align:right;background:var(--card);border:1.5px solid var(--green);border-radius:12px;padding:10px 12px;cursor:pointer;font-family:'Vazirmatn',sans-serif;color:var(--txt);white-space:normal;-webkit-tap-highlight-color:transparent}
+.ch-acct:hover,.ch-acct:active{background:rgba(56,161,105,.12)}
+.ch-acct .ch-acct-t{font-weight:900;font-size:0.9rem;color:var(--green);margin-bottom:2px}
+.ch-acct .ch-acct-s{font-size:0.72rem;color:var(--muted);line-height:1.7;margin-bottom:7px}
+.ch-acct .ch-acct-go{display:inline-block;background:var(--green);color:#fff;border-radius:9px;padding:6px 14px;font-size:0.78rem;font-weight:900}
+.ch-b a.ch-link{color:inherit;text-decoration:underline;word-break:break-all}
 /* سه‌نقطهٔ گزینه‌های پیام: قبلاً یک نشانهٔ ۲۰px بود که روی گوشی نه دیده می‌شد نه
    زده می‌شد. حالا یک هدفِ لمسیِ کاملِ ۳۴px با پس‌زمینهٔ همیشه‌دیدنی است. */
 .ch-b .ch-del-btn{position:absolute;top:1px;left:1px;cursor:pointer;opacity:.85;font-size:1.25rem;line-height:1;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border-radius:9px;user-select:none;-webkit-user-select:none;background:rgba(0,0,0,.16);-webkit-tap-highlight-color:transparent}
@@ -5809,7 +5817,8 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
     <span>⏰ قرض‌های کهنهٔ تیل</span>
   </div>
   <div class="card" style="border-color:var(--red)">
-    <div class="card-head"><div class="card-title">⏰ قرض‌های کهنهٔ تیل — بی‌حرکت‌ها اول (فقط واحد تیل)</div></div>
+    <div class="card-head"><div class="card-title">⏰ قرض‌های کهنهٔ تیل — بی‌حرکت‌ها اول (فقط واحد تیل)</div>
+      <button class="add-btn" style="background:var(--blue);color:#fff" onclick="pdfOldLoans('fuel')">📄 PDF</button></div>
     <div style="padding:14px">
       <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.7">فقط قرض‌دارانِ «واحد تیل» — به ترتیبِ «چند روز است هیچ ردیف تازه‌ای ندارند». با کلیک روی نام، حساب کاملش باز می‌شود. با دکمهٔ یادآوری، حساب + لینک شخص کپی می‌شود تا خودتان در واتساپ/تلگرام بفرستید (اگر شماره ثبت باشد).</div>
       <div id="aging-list" style="font-size:0.84rem"></div>
@@ -5824,7 +5833,8 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
     <span>💵 قرض‌های کهنهٔ پول</span>
   </div>
   <div class="card" style="border-color:var(--green)">
-    <div class="card-head"><div class="card-title">💵 قرض‌های کهنهٔ پول — بی‌حرکت‌ها اول (فقط واحد پول)</div></div>
+    <div class="card-head"><div class="card-title">💵 قرض‌های کهنهٔ پول — بی‌حرکت‌ها اول (فقط واحد پول)</div>
+      <button class="add-btn" style="background:var(--blue);color:#fff" onclick="pdfOldLoans('money')">📄 PDF</button></div>
     <div style="padding:14px">
       <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.7">فقط کسانی که «پول» قرض‌دارند (واحد پول) — تیل در این لیست نیست. به ترتیبِ «چند روز بی‌حرکت»‌اند. با کلیک روی نام، حساب کاملش باز می‌شود؛ با دکمهٔ یادآوری، حسابش کپی می‌شود تا خودتان در واتساپ/تلگرام بفرستید.</div>
       <div id="aging-list-money" style="font-size:0.84rem"></div>
@@ -7335,7 +7345,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <input type="text" id="dmInput" placeholder="پیام..." onkeydown="if(event.key==='Enter')chatSendText('dm')">
         <button class="ch-ib" onclick="chatPickMedia('dm','image')" title="فرستادن عکس"><svg><use href="#ic-photo"/></svg></button>
         <button class="ch-ib" id="dmRecBtn" onclick="chatToggleRec('dm')" title="پیام صوتی"><svg><use href="#ic-mic2"/></svg></button>
-        <button class="ch-ib" id="dmAcctBtn" onclick="dmOpenAcctPicker()" title="فرستادن لینک و کیو‌آرِ حساب"><svg><use href="#ic-qrscan"/></svg></button>
+        <button class="ch-ib" id="dmAcctBtn" style="display:none" onclick="dmOpenAcctPicker()" title="فرستادن حساب برای این شخص (فقط میرزا)"><svg><use href="#ic-qrscan"/></svg></button>
         <button class="ch-ib send" onclick="chatSendText('dm')" title="فرستادن"><svg><use href="#ic-send"/></svg></button>
       </div>
     </div>
@@ -19810,6 +19820,9 @@ function showPersonQRFromModal() {
 
 // ========== READ-ONLY VIEWER ==========
 let _roCurType = null, _roCurId = null, _roViewMode = 'fuel';
+// وقتی حسابی از داخلِ چت باز می‌شود، گفتگوی جاری نباید عوض شود (وگرنه مشتری از
+// چتِ خودش با میرزا پرت می‌شد به گفتگوی حسابِ فرستاده‌شده)
+let _roKeepChat = false;
 function _renderROViewer() {
   const list = _roCurType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list ? list.find(p => p.id === _roCurId) : null;
@@ -19931,7 +19944,10 @@ function openROViewer(type, id) {
   const cb = document.getElementById('ro-close-btn');
   if (cb) cb.style.display = isGuest ? 'none' : '';
   if (isGuest) {
-    try { _showChatFabs(true); _rbSetMode('person', { peer: _peerKey(type + '-' + id), type: type, id: id, name: person.name }); } catch (e) {}
+    try {
+      _showChatFabs(true);
+      if (!_roKeepChat) _rbSetMode('person', { peer: _peerKey(type + '-' + id), type: type, id: id, name: person.name });
+    } catch (e) {}
   }
 }
 function _toggleROMode() {
@@ -20461,6 +20477,9 @@ function _rbSetMode(mode, personCtx) {
   if (fabBtn) fabBtn.title = mode === 'person' ? 'چت با میرزا' : 'ربات دستیار';
   const dmi = document.getElementById('dmInput');
   if (dmi) dmi.placeholder = mode === 'person' ? 'پیام تان به میرزا...' : 'پیام...';
+  // دکمهٔ «فرستادن حساب» فقط برای میرزا — مشتری و کارمند آن را نمی‌بینند
+  const acb = document.getElementById('dmAcctBtn');
+  if (acb) acb.style.display = mode === 'admin' ? '' : 'none';
   if (mode === 'person' && changed) {
     _personBotActive = true;
     _personBotMsgs = [{ f: 'bot', bn: 'میرزا (جواب خودکار)', k: 'text', t: _botGreeting(), ts: Date.now() }];
@@ -21291,7 +21310,8 @@ function _chatPushRaw(scope, msg, peerOpt) {
     const peer = peerOpt || _rbActiveDmPeer();
     if (!peer) return;
     _fbDb.ref(_chatRoot() + 'dm/' + peer + '/msgs').push(msg);
-    const preview = msg.k === 'text' ? String(msg.t || '').slice(0, 40) : (msg.k === 'audio' ? 'پیام صوتی' : msg.k === 'image' ? 'عکس' : 'ویدیو');
+    const preview = msg.k === 'text' ? String(msg.t || '').slice(0, 40)
+      : (msg.k === 'acct' ? ('حساب ' + (msg.nm || '')) : msg.k === 'audio' ? 'پیام صوتی' : msg.k === 'image' ? 'عکس' : 'ویدیو');
     const idx = { ts: msg.ts, last: preview, from: msg.f };
     if (msg.f !== 'admin' && msg.f !== 'bot') idx.name = msg.n;
     _fbDb.ref(_chatRoot() + 'dmIndex/' + peer).update(idx);
@@ -21350,7 +21370,8 @@ function _extPushNotify(scope, msg, peer) {
     if (!base) return;
     if (msg.f === 'bot' && !msg.alert) return; // جواب معمولی ربات — اعلان نمی‌خواهد
     const who = msg.f === 'admin' ? 'میرزا' : (msg.f === 'bot' ? 'ربات' : (msg.n || 'مشتری'));
-    const preview = msg.k === 'text' ? String(msg.t || '').slice(0, 80) : (msg.k === 'audio' ? '🎤 پیام صوتی' : msg.k === 'image' ? '🖼️ عکس' : '🎬 ویدیو');
+    const preview = msg.k === 'text' ? String(msg.t || '').slice(0, 80)
+      : (msg.k === 'acct' ? ('📄 حساب ' + (msg.nm || '')) : msg.k === 'audio' ? '🎤 پیام صوتی' : msg.k === 'image' ? '🖼️ عکس' : '🎬 ویدیو');
     if (scope === 'group') {
       const title = msg.f === 'bot' ? '📢 هشدار پمپ' : '👥 چت گروهی — ' + who;
       _extPushAway('admin', base, title, preview);
@@ -21533,37 +21554,70 @@ function _chMsgHtml(m, meId, scope, peer) {
   if (m.k === 'image' && safeD) body = `<img src="${safeD}" alt="عکس">`;
   else if (m.k === 'video' && safeD) body = `<video src="${safeD}" controls playsinline preload="metadata"></video>`;
   else if (m.k === 'audio' && safeD) body = `<audio src="${safeD}" controls preload="metadata"></audio>`;
-  else body = escFa(m.t || '').replace(/\n/g, '<br>');
+  else if (m.k === 'acct' && m.u) body = _chAcctCardHtml(m);
+  else body = _chLinkify(escFa(m.t || '')).replace(/\n/g, '<br>');
   // دکمه‌های پیشنهادی جواب‌گوی خودکار (فقط پیام‌های محلی نمای کیو‌آر)
   const sug = m.sug === 'mirzaDm' ? `<div class="ch-sug"><button onclick="dmMirzaYes()">بله، خودِ میرزا جواب بدهد</button><button onclick="dmMirzaNo()">نی</button></div>` : '';
   return `<div class="ch-b ${cls}">${delBtn}${nm}${body}${sug}${tm}</div>`;
 }
+/* ── لینکِ حساب داخلِ چت: کادرِ زدنی، نه متنِ خشک ────────────────────────────
+   قبلاً لینکِ حساب فقط یک متن بود؛ طرف رویش می‌زد و هیچ اتفاقی نمی‌افتاد (چون
+   آدرس همان صفحه است و فقط «#» عوض می‌شد، مرورگر صفحه را دوباره باز نمی‌کرد).
+   حالا: (۱) میرزا یک کادرِ حساب می‌فرستد که با یک زدن باز می‌شود، (۲) لینک‌های
+   متنیِ قدیمی هم قابلِ زدن شده‌اند و همان‌جا در برنامه حساب را باز می‌کنند. */
+function _chAcctCardHtml(m) {
+  const nm = escFa(m.nm || m.t || 'حساب');
+  const u = escFa(String(m.u || '').replace(/'/g, '%27'));
+  return `<div class="ch-acct" onclick="openSharedAcct('${u}')">` +
+    `<div class="ch-acct-t">📄 حساب ${nm}</div>` +
+    `<div class="ch-acct-s">این کادر را بزنید تا حساب‌تان باز شود — داخلش دکمهٔ پی‌دی‌اف هم هست</div>` +
+    `<span class="ch-acct-go">👁️ دیدن حساب</span></div>`;
+}
+// متنِ (از قبل escape‌شدهٔ) پیام → لینک‌های داخلش زدنی می‌شوند
+function _chLinkify(escaped) {
+  return String(escaped || '').replace(/https?:\/\/[^\s<"']+/g,
+    u => `<a class="ch-link" href="${u}" target="_blank" rel="noopener" onclick="return _chatLinkTap(event,this.href)">${u}</a>`);
+}
+function _chatLinkTap(ev, url) {
+  if (!/#roview-/.test(String(url || ''))) return true;   // لینکِ معمولی: مثل همیشه
+  try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+  openSharedAcct(url);
+  return false;
+}
+// باز کردنِ حسابی که در چت فرستاده شده — بدون بستن/عوض‌شدنِ گفتگوی خودِ شخص
+function openSharedAcct(url) {
+  let raw = String(url || '');
+  try { raw = decodeURIComponent(raw); } catch (e) {}
+  const i = raw.indexOf('#roview-');
+  if (i < 0) { try { window.open(raw, '_blank'); } catch (e) {} return; }
+  const base = raw.slice(0, i);
+  const here = window.location.href.split('#')[0];
+  // اگر لینک از یک آدرسِ دیگر است (مثلاً دامنهٔ قدیمی)، همان‌طور در تبِ تازه باز شود
+  if (base && base !== here) { try { window.open(raw, '_blank'); } catch (e) {} return; }
+  let rest = raw.slice(i + 8);
+  if (rest.endsWith('-pdf')) rest = rest.slice(0, -4);
+  const d = rest.indexOf('-');
+  if (d < 0) return;
+  const type = rest.slice(0, d), id = rest.slice(d + 1);
+  if (!type || !id) return;
+  try { const p = document.getElementById('robotPanel'); if (p) p.classList.remove('open'); } catch (e) {}
+  _roKeepChat = true;   // گفتگوی باز نباید عوض شود
+  try {
+    if (type === 'company') openCompanyROViewer(id);
+    else openROViewer(type, id);
+  } finally { _roKeepChat = false; }
+}
 /* ============================================================================
-   فرستادنِ لینک + کیو‌آرِ حساب داخلِ چت تک‌نفره
-   میرزا از همان نوارِ نوشتن، حسابِ هر قرض‌دار یا شرکتی را انتخاب می‌کند و لینکِ
-   دیدنِ حساب به‌همراه کیو‌آرش برای طرف فرستاده می‌شود — بدون رفتن به بخش دیگر.
+   فرستادنِ حساب داخلِ چت تک‌نفره — فقط میرزا
+   میرزا از همان نوارِ نوشتن، حسابِ هر قرض‌دار یا شرکتی را انتخاب می‌کند و یک
+   «کادرِ حساب» برای طرف فرستاده می‌شود که با یک زدن باز می‌شود. این دکمه برای
+   مشتری و کارمند اصلاً دیده نمی‌شود.
    ============================================================================ */
 function _acctViewUrl(kind, type, id) {
   const baseUrl = /^http/.test(location.protocol)
     ? window.location.href.split('#')[0]
     : 'https://vil3ntec-it.github.io/pump-staion-yaqobi/';
   return baseUrl + (kind === 'company' ? ('#roview-company-' + id + '-pdf') : ('#roview-' + type + '-' + id + '-pdf'));
-}
-// کیو‌آر را به عکس (data:) تبدیل می‌کند تا مثل هر عکسِ دیگری در چت فرستاده شود
-function _acctQrDataUrl(url) {
-  if (typeof QRCode === 'undefined') return '';
-  const box = document.createElement('div');
-  box.style.cssText = 'position:fixed;left:-9999px;top:0';
-  document.body.appendChild(box);
-  let out = '';
-  try {
-    new QRCode(box, { text: url, width: 320, height: 320, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
-    const cv = box.querySelector('canvas');
-    if (cv) out = cv.toDataURL('image/png');
-    else { const im = box.querySelector('img'); if (im && im.src.slice(0, 5) === 'data:') out = im.src; }
-  } catch (e) {}
-  box.remove();
-  return out;
 }
 function _acctPickerRows() {
   const rows = [];
@@ -21572,7 +21626,14 @@ function _acctPickerRows() {
   (DB.tilCompanies || []).forEach(c => rows.push({ kind: 'company', type: 'company', id: c.id, name: c.name || 'بی‌نام', tag: 'شرکت' }));
   return rows;
 }
+// فرستادنِ حساب فقط کارِ میرزاست — مشتری/کارمند این کادر را نه می‌بیند نه می‌تواند باز کند
+function _acctSendAllowed() {
+  if (_rbMode === 'admin') return true;
+  showToast('فرستادنِ حساب فقط از طرف میرزاست', '#e53e3e');
+  return false;
+}
 function dmOpenAcctPicker() {
+  if (!_acctSendAllowed()) return;
   if (!_rbActiveDmPeer()) { showToast('اول یک گفتگو را باز کنید', '#e53e3e'); return; }
   const rows = _acctPickerRows();
   if (!rows.length) { showToast('هنوز قرض‌دار یا شرکتی ثبت نشده', '#e53e3e'); return; }
@@ -21603,20 +21664,16 @@ function _dmAcctFilter(q) {
   });
 }
 function dmSendAccount(i) {
+  if (!_acctSendAllowed()) return;
   const r = (window.__dmAcctRows || [])[i];
   if (!r) return;
   document.getElementById('dmAcctPicker')?.remove();
   if (!_chatOnline()) { showToast('برای فرستادن پیام، اینترنت لازم است', '#e53e3e'); return; }
   const url = _acctViewUrl(r.kind, r.type, r.id);
-  _chatPush('dm', { k: 'text', t: '📄 حساب ' + r.name + '\n' + url });
-  const qr = _acctQrDataUrl(url);
-  if (qr) {
-    setTimeout(() => { try { _chatPush('dm', { k: 'image', d: qr }); } catch (e) {} }, 300);
-    showToast('✅ لینک و کیو‌آرِ حساب فرستاده شد', '#38a169');
-  } else {
-    // کتابخانهٔ کیو‌آر از اینترنت می‌آید؛ اگر نیامده باشد، لینک به‌تنهایی کار می‌کند
-    showToast('✅ لینک فرستاده شد — کیو‌آر آماده نبود', '#d97706');
-  }
+  // یک «کادرِ حساب» فرستاده می‌شود که طرف با یک زدن حسابش را می‌بیند. متنِ لینک هم
+  // داخلش می‌ماند تا اگر برنامهٔ طرف نسخهٔ کهنه بود، باز هم لینک به دستش برسد.
+  _chatPush('dm', { k: 'acct', nm: r.name, u: url, t: '📄 حساب ' + r.name + '\n' + url });
+  showToast('✅ کادرِ حساب فرستاده شد', '#38a169');
 }
 
 // ---- حذف پیام: برای من (محلی) / برای همه (سرور) ----
@@ -22318,7 +22375,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.118';
+const APP_VERSION = '2.9.119';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -23632,10 +23689,9 @@ function _renderTankerPanel() {
   }).join('') : '<div style="color:var(--muted)">هنوز تخلیه‌ای ثبت نشده</div>';
 }
 // ── قرض‌های کهنه (بدهکارهای بی‌حرکت) ──
-function _renderAgingPanel(filter, elId) {
+// ردیف‌های «قرض کهنه» — هم برای نمایش در صفحه، هم برای پی‌دی‌اف (یک محاسبه، دو مصرف)
+function _agingRows(filter) {
   // filter: 'fuel' = فقط واحد تیل، 'money' = فقط واحد پول، وگرنه همه
-  const el = document.getElementById(elId || 'aging-list');
-  if (!el) return;
   const todayK = _shDateKey(persianDate());
   const rows = [];
   (DB.debtPersons || []).forEach(p => {
@@ -23648,6 +23704,12 @@ function _renderAgingPanel(filter, elId) {
     rows.push({ p, f, days: lastK ? Math.max(0, todayK - lastK) : -1 });
   });
   rows.sort((a, b) => b.days - a.days);
+  return rows;
+}
+function _renderAgingPanel(filter, elId) {
+  const el = document.getElementById(elId || 'aging-list');
+  if (!el) return;
+  const rows = _agingRows(filter);
   el.innerHTML = rows.length ? rows.map(({ p, f, days }) => {
     const u = f.money ? '' : ' ل';
     const hasNum = !!_waNumber(p.phone || '');
@@ -23659,6 +23721,82 @@ function _renderAgingPanel(filter, elId) {
                : '<span style="color:var(--muted);font-size:0.7rem">📞 بی‌شماره</span>'}
     </div>`;
   }).join('') : '<div style="color:var(--muted)">هیچ بدهکاری نیست 🎉</div>';
+}
+// ── پی‌دی‌افِ قرض‌های کهنه (همان لیستِ خودِ صفحه: تیل یا پول) ──
+function pdfOldLoans(filter) {
+  const isMoney = filter === 'money';
+  const d = allDates();
+  const rows = _agingRows(filter);
+  const unit = isMoney ? 'افغانی' : 'لیتر';
+  const color = isMoney ? '#38a169' : '#e53e3e';
+  const tot = rows.reduce((a, r) => a + r.f.albaqi, 0);
+  const stale30 = rows.filter(r => r.days >= 30).length;
+  const stale60 = rows.filter(r => r.days >= 60).length;
+  const rowsHtml = rows.map(({ p, f, days }, i) => {
+    const dc = days >= 60 ? '#e53e3e' : (days >= 30 ? '#c07700' : '#718096');
+    return `<tr>
+      <td style="text-align:center;color:#718096">${n2fa(i + 1)}</td>
+      <td style="font-weight:700">${escFa(p.name)}</td>
+      <td style="color:#e53e3e;font-weight:900">${n2fa(Math.round(f.albaqi))}${isMoney ? '' : ' ل'}</td>
+      <td style="color:${dc};font-weight:800">${days < 0 ? 'بی‌تاریخ' : n2fa(days) + ' روز'}</td>
+      <td style="direction:ltr;text-align:right">${escFa(p.phone || '—')}</td>
+    </tr>`;
+  }).join('');
+  const html = `<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>قرض‌های کهنهٔ ${isMoney ? 'پول' : 'تیل'} — پمپ یعقوبی</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:12px}
+h1{font-size:1.25rem;font-weight:900;color:${color};border-bottom:2px solid ${color};padding-bottom:8px;margin-bottom:6px}
+.meta{font-size:0.72rem;color:#718096;margin-bottom:14px;line-height:1.8}
+.sum-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.sum-box{flex:1;min-width:120px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;gap:4px}
+.sum-box .l{font-size:0.62rem;color:#718096;line-height:1.3}
+.sum-box .v{font-size:1.1rem;font-weight:900;white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:0.72rem;table-layout:auto}
+th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:right;font-weight:700;border-bottom:2px solid #4a5568;white-space:nowrap}
+td{padding:6px 7px;border-bottom:1px solid #e2e8f0;white-space:normal;word-break:break-word;font-weight:600;color:#1a202c}
+tr:nth-child(even) td{background:#f7fafc}
+tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px;border-top:2px solid #4a5568}
+.footer{margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
+@media print{
+  body{padding:6px}
+  @page{margin:0.5cm;size:A4}
+  th,td{padding:5px 6px;white-space:normal!important;word-break:break-word}
+  tr{page-break-inside:avoid}
+  h1{font-size:1rem}
+  .footer{margin-top:8px}
+}
+</style>
+</head>
+<body>
+<h1>${isMoney ? '💵' : '⏰'} پمپ یعقوبی — قرض‌های کهنهٔ ${isMoney ? 'پول (واحد پول)' : 'تیل (واحد تیل)'}</h1>
+<div class="meta">تاریخ چاپ: ${d.sh} | ${d.mi}<br>به ترتیبِ «چند روز است هیچ ردیف تازه‌ای ندارند» — بی‌حرکت‌ها اول</div>
+<div class="sum-row">
+  <div class="sum-box"><div class="l">تعداد بدهکاران</div><div class="v" style="color:#718096">${n2fa(rows.length)}</div></div>
+  <div class="sum-box"><div class="l">جمع الباقی (${unit})</div><div class="v" style="color:#e53e3e">${n2fa(Math.round(tot))}</div></div>
+  <div class="sum-box"><div class="l">بیشتر از ۳۰ روز بی‌حرکت</div><div class="v" style="color:#c07700">${n2fa(stale30)}</div></div>
+  <div class="sum-box"><div class="l">بیشتر از ۶۰ روز بی‌حرکت</div><div class="v" style="color:#e53e3e">${n2fa(stale60)}</div></div>
+</div>
+<table>
+<thead>
+  <tr><th>#</th><th>نام قرض‌دار</th><th>الباقی (${unit})</th><th>بی‌حرکت</th><th>شماره تماس</th></tr>
+</thead>
+<tbody>${rowsHtml || '<tr><td colspan="5" style="text-align:center;padding:20px;color:#718096">هیچ بدهکاری نیست 🎉</td></tr>'}</tbody>
+<tfoot>
+  <tr><td colspan="2">جمع کل</td><td>${n2fa(Math.round(tot))}${isMoney ? '' : ' ل'}</td><td colspan="2"></td></tr>
+</tfoot>
+</table>
+<div class="footer">پمپ یعقوبی — این سند به صورت خودکار تولید شده است</div>
+<script>window.onload=function(){window.print();}<\/script>
+</body></html>`;
+  const w = window.open('', '_blank', 'width=800,height=650');
+  if (w) { w.document.write(html); w.document.close(); }
+  else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
 }
 // ── کمبودی/اضافیِ کارمندان (از همهٔ ورق‌ها) + رسید/پرداخت ──
 // دفترِ جداگانه است (DB.staffShortSettles) — به خود ورق‌ها دست نمی‌زند.
