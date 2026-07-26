@@ -9,11 +9,13 @@
     "start": "node --disable-warning=ExperimentalWarning src/index.js",
     "test": "node test/smoke.mjs",
     "test:ui": "node test/ui.mjs",
-    "test:perf": "node test/perf.mjs"
+    "test:perf": "node test/perf.mjs",
+    "test:tunnel": "node test/tunnel.mjs"
   },
   "dependencies": {
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
+    "qrcode": "^1.5.4",
     "socket.io": "^4.8.1",
     "ws": "^8.18.0"
   },

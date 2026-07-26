@@ -21,6 +21,7 @@ import { startWinSampler, stopWinSampler } from './metrics/win-sampler.js';
 import { readInterfaces } from './metrics/network.js';
 import { autostartAll } from './sites/registry.js';
 import { stopAll } from './sites/process.js';
+import { startTunnel, stopTunnel, tunnelEvents } from './tunnel.js';
 
 import authRoutes from './routes/auth.js';
 import dashboardRoutes from './routes/dashboard.js';
@@ -157,6 +158,13 @@ if (siteSync && config.siteSync.port && config.siteSync.port !== config.port) {
   });
 }
 
+// وضعیت تونل به‌صورت زنده به پنل فرستاده می‌شود
+tunnelEvents.on('change', (payload) => {
+  try {
+    getIo()?.emit('tunnel', payload);
+  } catch { /* هنوز کسی وصل نیست */ }
+});
+
 // ۳) معیارهای زنده
 // روی ویندوز یک پروسهٔ PowerShell دائمی به‌جای ده‌ها بار باز و بسته کردن آن
 startWinSampler();
@@ -213,6 +221,18 @@ async function main() {
     console.log('==============================================================');
     console.log('');
     logEvent('info', 'panel', `پنل روی پورت ${config.port} اجرا شد`);
+
+    // تونل اینترنتی: به‌صورت پیش‌فرض روشن است تا سایت از هر دستگاهی وصل شود.
+    // برای خاموش کردن، در پنل دکمه‌اش را بزنید یا HLP_TUNNEL=0 بگذارید.
+    const tunnelWanted =
+      (process.env.HLP_TUNNEL ?? '1') !== '0' && getSetting('tunnel_autostart', true) !== false;
+    if (siteSync && tunnelWanted) {
+      startTunnel({}).then((st) => {
+        if (st.status === 'error') {
+          console.log(`  ⚠️  تونل اینترنتی بالا نیامد: ${st.error}`);
+        }
+      });
+    }
   });
 
   httpServer.on('error', (e) => {
@@ -232,6 +252,9 @@ async function shutdown(signal) {
   clearInterval(housekeeping);
   stopCollector();
   stopWinSampler();
+  try {
+    stopTunnel();
+  } catch { /* بسته شده */ }
   try {
     syncOnlyServer?.close();
   } catch { /* بسته شده */ }
