@@ -230,8 +230,11 @@ function InternetAccess({ data, onChanged }: { data: SiteServerInfo; onChanged: 
   const { t, socket } = useApp();
   const [tunnel, setTunnel] = useState(data.tunnel);
   const [busy, setBusy] = useState(false);
+  const [siteUrl, setSiteUrl] = useState(data.siteUrl);
+  const [savingUrl, setSavingUrl] = useState(false);
 
   useEffect(() => setTunnel(data.tunnel), [data.tunnel]);
+  useEffect(() => setSiteUrl(data.siteUrl), [data.siteUrl]);
 
   // وضعیت تونل زنده می‌آید (دانلود، بالا آمدن، خطا)
   useEffect(() => {
@@ -255,6 +258,25 @@ function InternetAccess({ data, onChanged }: { data: SiteServerInfo; onChanged: 
       toast(t('error'), 'bad');
     } finally {
       setBusy(false);
+    }
+  }
+
+  // آدرس سایت — اگر دامنه عوض شود، لینک یک‌کلیکی باید به آدرس تازه برود
+  async function saveSiteUrl() {
+    const value = siteUrl.trim();
+    if (!/^https?:\/\/[^\s/]+/i.test(value)) {
+      toast(t('invalidSiteUrl'), 'bad');
+      return;
+    }
+    setSavingUrl(true);
+    try {
+      await api('/api/site-server/site-url', { method: 'PUT', body: { siteUrl: value } });
+      toast(t('saved'), 'good');
+      onChanged();
+    } catch {
+      toast(t('error'), 'bad');
+    } finally {
+      setSavingUrl(false);
     }
   }
 
@@ -337,6 +359,28 @@ function InternetAccess({ data, onChanged }: { data: SiteServerInfo; onChanged: 
                 </code>
                 <CopyButton value={tunnel.wss || ''} />
               </div>
+            </div>
+          </div>
+
+          <div className="mt-4 border-t border-line pt-4">
+            <p className="label">{t('siteAddress')}</p>
+            <p className="mb-2 text-[11px] leading-relaxed text-ink-muted">{t('siteAddressHint')}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                className="input min-w-0 flex-1 font-mono text-xs"
+                dir="ltr"
+                value={siteUrl}
+                onChange={(e) => setSiteUrl(e.target.value)}
+                placeholder="https://example.com"
+              />
+              <button
+                className="btn btn-sm btn-primary"
+                disabled={savingUrl || siteUrl.trim() === data.siteUrl}
+                onClick={saveSiteUrl}
+              >
+                {savingUrl ? <Spinner /> : null}
+                {t('save')}
+              </button>
             </div>
           </div>
 

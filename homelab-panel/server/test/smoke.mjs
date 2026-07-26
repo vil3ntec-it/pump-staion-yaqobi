@@ -288,6 +288,17 @@ async function main() {
   check('آدرس‌های اتصال ساخته شده', r.json?.addresses?.some((a) => a.ws.startsWith('ws://')));
   check('رمز به‌صورت پنهان نمایش داده می‌شود', typeof r.json?.tokenPreview === 'string' && r.json.tokenPreview.includes('•'));
 
+  // آدرس سایت — قابل تغییر، چون ممکن است دامنه عوض شود
+  check('آدرس سایت برگردانده می‌شود', /^https?:\/\//i.test(r.json?.siteUrl || ''));
+  const oldSiteUrl = r.json.siteUrl;
+  r = await api('PUT', '/api/site-server/site-url', { siteUrl: 'https://dolatipump.top/' });
+  check('آدرس سایت عوض می‌شود', r.status === 200 && r.json?.siteUrl === 'https://dolatipump.top');
+  r = await api('PUT', '/api/site-server/site-url', { siteUrl: 'salam' });
+  check('آدرس بی‌اعتبار رد می‌شود', r.status === 400);
+  r = await api('GET', '/api/site-server');
+  check('آدرس تازه ذخیره مانده', r.json?.siteUrl === 'https://dolatipump.top');
+  await api('PUT', '/api/site-server/site-url', { siteUrl: oldSiteUrl });
+
   r = await api('GET', '/api/site-server/token');
   const syncToken = r.json?.token;
   check('رمز کامل قابل دریافت است', typeof syncToken === 'string' && syncToken.length > 20);
