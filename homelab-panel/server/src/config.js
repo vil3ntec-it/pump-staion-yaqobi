@@ -83,4 +83,15 @@ export function ensureDirs() {
   for (const dir of [config.dataDir, paths.sitesData, paths.uploads, config.siteSync.dataDir]) {
     fs.mkdirSync(dir, { recursive: true });
   }
+
+  // ریشهٔ سایت‌ها هم بار اول ساخته می‌شود تا «افزودن سایت» از همان ابتدا کار کند.
+  // اگر اجازهٔ ساخت نبود (مثلاً /sites روی لینوکس بدون sudo) فقط هشدار می‌دهیم.
+  try {
+    fs.mkdirSync(config.sitesRoot, { recursive: true });
+  } catch (e) {
+    console.warn(
+      `⚠️  پوشهٔ سایت‌ها ساخته نشد: ${config.sitesRoot} (${e.code})\n` +
+        '   یا خودتان آن را بسازید، یا در فایل .env مسیر دیگری در HLP_SITES_ROOT بگذارید.'
+    );
+  }
 }

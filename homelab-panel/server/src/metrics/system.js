@@ -5,7 +5,9 @@
 import os from 'node:os';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
-import { run, powershell } from '../lib/exec.js';
+import path from 'node:path';
+import { run } from '../lib/exec.js';
+import { winSample } from './win-sampler.js';
 
 const isLinux = process.platform === 'linux';
 const isWin = process.platform === 'win32';
@@ -137,34 +139,19 @@ async function statfsInfo(mount) {
   }
 }
 
-export async function readDisks() {
+// فضای دیسک تقریباً ثابت است؛ خواندنش هر ۲ ثانیه فقط پردازنده را مشغول می‌کند
+const DISK_CACHE_MS = 30000;
+let diskCache = { at: 0, value: null };
+
+export async function readDisks({ force = false } = {}) {
+  if (!force && diskCache.value && Date.now() - diskCache.at < DISK_CACHE_MS) return diskCache.value;
+
   const disks = [];
 
   if (isWin) {
-    const r = await powershell(
-      "Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | Select-Object DeviceID,Size,FreeSpace,VolumeName,FileSystem | ConvertTo-Json -Compress"
-    );
-    if (r.ok && r.stdout.trim()) {
-      try {
-        let parsed = JSON.parse(r.stdout);
-        if (!Array.isArray(parsed)) parsed = [parsed];
-        for (const d of parsed) {
-          const total = Number(d.Size || 0);
-          const free = Number(d.FreeSpace || 0);
-          if (!total) continue;
-          disks.push({
-            mount: d.DeviceID,
-            device: d.DeviceID,
-            fs: d.FileSystem || null,
-            label: d.VolumeName || null,
-            total,
-            free,
-            used: total - free,
-            usage: Math.round(((total - free) / total) * 1000) / 10,
-          });
-        }
-      } catch { /* پارس نشد */ }
-    }
+    // از نمونه‌بردارِ همیشه‌روشن خوانده می‌شود — بدون باز کردن PowerShell تازه
+    const sample = winSample();
+    if (sample?.disk?.length) disks.push(...sample.disk);
   } else {
     const mounts = isLinux ? await linuxMounts() : [{ device: null, mount: '/', fs: null }];
     if (isMac) {
@@ -217,13 +204,16 @@ export async function readDisks() {
     { total: 0, used: 0, free: 0 }
   );
 
-  return {
+  const value = {
     disks: uniq,
     total: totals.total,
     used: totals.used,
     free: totals.free,
     usage: totals.total > 0 ? Math.round((totals.used / totals.total) * 1000) / 10 : 0,
   };
+  // روی ویندوز تا اولین نمونهٔ سنجشگر نرسیده، نتیجهٔ خالی را کش نمی‌کنیم
+  diskCache = { at: isWin && !uniq.length ? 0 : Date.now(), value };
+  return value;
 }
 
 // ---------------------------------------------------------------------------
@@ -280,31 +270,19 @@ async function linuxTemps() {
   return out;
 }
 
+const TEMP_CACHE_MS = 15000;
 let tempCache = { at: 0, value: null };
 
 export async function readTemperature() {
-  // دما کند خوانده می‌شود؛ هر ۵ ثانیه کافی است
-  if (Date.now() - tempCache.at < 5000) return tempCache.value;
+  // خواندن دما گران است (فایل‌های sysfs یا WMI)؛ هر ۱۵ ثانیه کافی است
+  if (Date.now() - tempCache.at < TEMP_CACHE_MS) return tempCache.value;
 
   let sensors = [];
   if (isLinux) {
     sensors = await linuxTemps();
   } else if (isWin) {
-    const r = await powershell(
-      "Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature -ErrorAction SilentlyContinue | Select-Object InstanceName,CurrentTemperature | ConvertTo-Json -Compress"
-    );
-    if (r.ok && r.stdout.trim()) {
-      try {
-        let parsed = JSON.parse(r.stdout);
-        if (!Array.isArray(parsed)) parsed = [parsed];
-        for (const z of parsed) {
-          // مقدار به دهم کلوین است
-          const celsius = Number(z.CurrentTemperature) / 10 - 273.15;
-          if (!Number.isFinite(celsius) || celsius <= 0 || celsius > 150) continue;
-          sensors.push({ label: String(z.InstanceName || 'ThermalZone'), celsius: Math.round(celsius * 10) / 10 });
-        }
-      } catch { /* پارس نشد */ }
-    }
+    // از نمونه‌بردارِ همیشه‌روشن — بدون باز کردن PowerShell تازه
+    sensors = winSample()?.temp ?? [];
   }
 
   const value = sensors.length
@@ -336,26 +314,32 @@ export function readHost() {
   };
 }
 
+// پوشه‌هایی که ده‌ها هزار فایل دارند و شمردنشان فقط دیسک و پردازنده را می‌سوزاند
+const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'dist', '.cache', 'vendor', '.venv']);
+
 // اندازهٔ پوشه (واقعی) — برای «حجم فایل‌های سایت»
-export async function dirSize(dir, { maxEntries = 200000 } = {}) {
+export async function dirSize(dir, { maxEntries = 60000 } = {}) {
   let total = 0;
   let files = 0;
   let newest = 0;
+  let skipped = 0;
   const stack = [dir];
   while (stack.length) {
     const cur = stack.pop();
     let entries;
     try {
+      // نوعِ فایل از خودِ readdir می‌آید، پس برای هر فایل یک stat جدا لازم نیست
       entries = await fsp.readdir(cur, { withFileTypes: true });
     } catch {
       continue;
     }
     for (const e of entries) {
-      if (files > maxEntries) return { bytes: total, files, newest, truncated: true };
-      const full = `${cur}/${e.name}`;
+      if (files > maxEntries) return { bytes: total, files, newest, skipped, truncated: true };
+      const full = path.join(cur, e.name);
       if (e.isDirectory()) {
-        if (e.name === 'node_modules' || e.name === '.git') {
-          // این پوشه‌ها هم شمرده می‌شوند ولی سریع‌تر: فقط اندازه، بدون پیمایش عمیق نمادها
+        if (SKIP_DIRS.has(e.name)) {
+          skipped++;
+          continue;
         }
         stack.push(full);
       } else if (e.isFile()) {
@@ -368,7 +352,7 @@ export async function dirSize(dir, { maxEntries = 200000 } = {}) {
       }
     }
   }
-  return { bytes: total, files, newest, truncated: false };
+  return { bytes: total, files, newest, skipped, truncated: false };
 }
 
 export function pathExists(p) {

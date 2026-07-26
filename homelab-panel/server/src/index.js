@@ -17,6 +17,7 @@ import { setSiteSync, setIo, getIo } from './state.js';
 import { createSiteSync } from './sitesync/index.js';
 import { attachRealtime, broadcastMetrics } from './realtime.js';
 import { startCollector, stopCollector } from './metrics/index.js';
+import { startWinSampler, stopWinSampler } from './metrics/win-sampler.js';
 import { readInterfaces } from './metrics/network.js';
 import { autostartAll } from './sites/registry.js';
 import { stopAll } from './sites/process.js';
@@ -135,6 +136,8 @@ if (config.siteSync.enabled) {
 }
 
 // ۳) معیارهای زنده
+// روی ویندوز یک پروسهٔ PowerShell دائمی به‌جای ده‌ها بار باز و بسته کردن آن
+startWinSampler();
 startCollector((snapshot) => {
   broadcastMetrics(getIo(), snapshot);
 });
@@ -194,6 +197,7 @@ async function shutdown(signal) {
   console.log(`\n[خاموش‌سازی] ${signal} — ذخیرهٔ نهایی...`);
   clearInterval(housekeeping);
   stopCollector();
+  stopWinSampler();
   try {
     await stopAll();
   } catch { /* بی‌خیال */ }

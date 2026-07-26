@@ -155,8 +155,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
     });
     s.on('sites', (payload: { sites: Site[] }) => setSites(payload.sites));
+
+    // وقتی تب پشت پنجره می‌رود به سرور خبر می‌دهیم تا بی‌جهت کار نکند
+    // (روی کامپیوتر ضعیف تفاوتش محسوس است)
+    const reportVisibility = () => s.emit('viewer', document.visibilityState === 'visible');
+    document.addEventListener('visibilitychange', reportVisibility);
+    s.on('connect', reportVisibility);
+
     setSocket(s);
     return () => {
+      document.removeEventListener('visibilitychange', reportVisibility);
       s.close();
     };
   }, [authed]);
