@@ -1,0 +1,15 @@
+# وابستگی‌های نصبی — هرگز داخل گیت نروند (با npm install ساخته می‌شوند)
+node_modules/
+**/node_modules/
+
+# خروجی‌های ساخت
+desktop/dist/
+desktop/app/
+dist/
+build/
+
+# فایل‌های موقت سیستم
+.DS_Store
+Thumbs.db
+*.log
+undefined/
