@@ -8391,10 +8391,17 @@ const _IDB = (function() {
 // جمع تقریبیِ تعداد رکوردهای اصلی یک دیتابیس — برای تشخیص اینکه کدام نسخه
 // (localStorage یا نسخهٔ پشتیبانِ IndexedDB) واقعاً «داده‌دارتر» است، وقتی
 // timestamp همزمان‌سازی ابری هیچ‌کدام قابل‌اتکا نیست (پایینتر توضیح داده شده).
+// نکتهٔ مهم (رفعِ باگِ از دست رفتنِ داده): این فهرست باید همهٔ دفترهای اصلی را
+// داشته باشد. پیش از این «ورق‌ها، مصارف، گاوصندوق، خریدهای مخزن، فاکتورها،
+// حاضری» در آن نبودند؛ ایستگاهی که دادهٔ اصلی‌اش ورق و گاوصندوق است، وقتی
+// localStorage از ظرفیت می‌افتاد این شمارنده صفر می‌شد، بازیابی از IndexedDB
+// اجرا نمی‌شد و همهٔ سال‌ها داده از بین می‌رفت.
 function _dbRecordCount(db) {
   if (!db) return 0;
   var n = 0;
-  ['reports','shifts','debtPersons','noinvPersons','tilCompanies','sarrafiRows'].forEach(function(k){
+  ['reports','shifts','debtPersons','noinvPersons','tilCompanies','sarrafiRows',
+   'waraqEntries','expenses','safeEntries','fuelEntries','invoices','attendance',
+   'staffMembers','debtRasidRows','chakanaRows'].forEach(function(k){
     if (Array.isArray(db[k])) n += db[k].length;
   });
   return n;
@@ -19233,10 +19240,13 @@ function openPumpHistory() {
   const rows = _pumpHistoryRows();
   const body = document.getElementById('ph-body');
   const sum = document.getElementById('ph-summary');
-  if (sum) sum.textContent = 'مجموعاً ' + n2fa(rows.length) + ' پایه — جدیدترین اول';
+  const PH_CAP = 800;   // بیش از این، DOM سنگین و اسکرول کند می‌شود
+  const shown = rows.slice(0, PH_CAP);
+  if (sum) sum.textContent = 'مجموعاً ' + n2fa(rows.length) + ' پایه — جدیدترین اول'
+    + (rows.length > PH_CAP ? ' (تازه‌ترین ' + n2fa(PH_CAP) + ' تا نشان داده می‌شود)' : '');
   if (body) {
-    body.innerHTML = rows.length
-      ? rows.map(r => `<tr role="button" tabindex="0" title="باز کردنِ همین ورق" style="cursor:pointer" onclick="openPumpHistoryEntry('${r.wid}','${r.shift}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openPumpHistoryEntry('${r.wid}','${r.shift}')}">
+    body.innerHTML = shown.length
+      ? shown.map(r => `<tr role="button" tabindex="0" title="باز کردنِ همین ورق" style="cursor:pointer" onclick="openPumpHistoryEntry('${r.wid}','${r.shift}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openPumpHistoryEntry('${r.wid}','${r.shift}')}">
           <td style="font-weight:700">${_faDateWithWeekday(r.date)}</td>
           <td>${escFa(r.worker) || '—'}</td>
           <td>${r.shift === 'night' ? '🌙 شب' : '☀️ روز'}</td>
@@ -23636,7 +23646,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.131';
+const APP_VERSION = '2.9.132';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -25275,14 +25285,26 @@ function _jalToGreg(jy, jm, jd) {
   return new Date(gy, gm, gdn + 1);
 }
 // روز هفتهٔ یک تاریخ شمسی («شنبه»، «یکشنبه»...) — تاریخ خراب/خالی ← رشتهٔ خالی
+// نکتهٔ کارایی: toLocaleDateString هر بار یک قالب‌بندِ Intl می‌سازد و بسیار کند است.
+// در «تاریخچهٔ پایه‌ها» با ۵ سال داده، ۲۱٬۹۰۰ بار صدا زدنِ آن ۷ ثانیه صفحه را قفل
+// می‌کرد. حالا نامِ روز از خودِ getDay خوانده می‌شود (همان خروجیِ fa-IR) و نتیجهٔ
+// هر تاریخ یک‌بار کش می‌شود — تاریخ‌ها در جدول‌ها بارها تکرار می‌شوند.
+const _FA_WEEKDAYS = ['یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه', 'شنبه'];
+const _wdCache = Object.create(null);
 function _faWeekdayOf(dateStr) {
+  const key = String(dateStr || '');
+  const hit = _wdCache[key];
+  if (hit !== undefined) return hit;
+  let res = '';
   try {
-    const m = toEnDigits(String(dateStr || '')).match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
-    if (!m) return '';
-    const g = _jalToGreg(+m[1], +m[2], +m[3]);
-    if (!g || isNaN(g.getTime())) return '';
-    return g.toLocaleDateString('fa-IR', { weekday: 'long' });
-  } catch (e) { return ''; }
+    const m = toEnDigits(key).match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+    if (m) {
+      const g = _jalToGreg(+m[1], +m[2], +m[3]);
+      if (g && !isNaN(g.getTime())) res = _FA_WEEKDAYS[g.getDay()] || '';
+    }
+  } catch (e) { res = ''; }
+  _wdCache[key] = res;
+  return res;
 }
 // «شنبه، 1405/4/27» — نمایش یکدستِ تاریخ با روز هفته در لیست‌های ابزار
 // نکته: n2fa مخصوص عدد است و رشتهٔ تاریخ را NaN می‌کند (اشکال قبلی همین بود) — تاریخ همان‌طور که هست نشان داده می‌شود
