@@ -19291,7 +19291,23 @@ function updateWaraqTxn(idx, field, val) {
   // مبلغی که کاربر دستی می‌نویسد، دیگر خودکار بازحساب نمی‌شود
   if (field === 'amount') sd.transactions[idx].amountAuto = ((parseFloat(val)||0) > 0) ? false : true;
   calcWaraqSummary(w);
+  // «واحد» و «نوع» انتخابی‌اند: همان لحظه به حسابِ شخص هم برسند
+  if (field === 'unit' || field === 'type') _waraqTxnUnitChanged(w, sd.transactions[idx], field, val);
   save();
+}
+
+// وقتی ستونِ «واحد» (تیل/پول) یا «نوع» (قرض/مصرف) یا «نوع تیل» عوض می‌شود، حسابِ
+// قرض‌دار همان لحظه به‌روز می‌شود. پیش از این فقط دکمهٔ «✔ ذخیره ورق» این کار را
+// می‌کرد؛ اگر کاربر بعد از ذخیره واحد را روی «پول» می‌گذاشت، ردیف در دفترِ «واحد تیل»
+// می‌ماند — با لیتری که از تقسیمِ مبلغ بر نرخِ ورق ساخته شده بود (مثلاً ۲۰٬۰۰۰ ÷ ۹۰).
+function _waraqTxnUnitChanged(w, t, field, val) {
+  syncWaraqTxnsToPersons(w);
+  if (typeof renderPersons === 'function') renderPersons('debt');
+  if (typeof renderExpenses === 'function') renderExpenses();
+  if (field === 'unit' && (t.name||'').trim() && (parseFloat(t.amount)||0)) {
+    showToast(val === 'money' ? '💵 به دفترِ «واحد پول» منتقل شد — بدون لیتر و فی'
+                              : '⛽ به دفترِ «واحد تیل» منتقل شد', '#3182ce');
+  }
 }
 
 // تغییر نوع تیل یک ردیف تراکنش — اگر مبلغ خودکار بود، با فی همان نوع تیل دوباره حساب می‌شود
@@ -19312,6 +19328,9 @@ function updateWaraqTxnFuel(idx, val) {
     if (amtEl) amtEl.value = amount || '';
   }
   calcWaraqSummary(w);
+  // نوع تیل هم روی ردیفِ حسابِ شخص می‌نشیند (پطرول/دیزل) — همان لحظه به‌روز شود
+  syncWaraqTxnsToPersons(w);
+  if (typeof renderPersons === 'function') renderPersons('debt');
   save();
 }
 
@@ -19459,9 +19478,27 @@ function saveWaraq() {
   const avIn2 = document.getElementById('wq-available-from-shift');
   if (avIn2) activeShift(w).availableFromShift = parseFloat(avIn2.value)||0;
 
+  syncWaraqTxnsToPersons(w);
+
+  syncWaraqSalesToSafe(w);
+  save();
+  closeModal('waraqModal');
+  renderWaraqList();
+  if (typeof renderExpenses === 'function') renderExpenses();
+  if (typeof renderPersons === 'function') renderPersons('debt');
+  updateBanner();
+  showToast('✅ ورق ذخیره شد', '#38a169');
+}
+
+// Sync تراکنش‌های ورق → قرض/مصرف با srcKey؛ تغییر نوع، ثبت قبلی را از بخش دیگر برمی‌دارد.
+// از دو جا صدا زده می‌شود: دکمهٔ «✔ ذخیره ورق»، و همان لحظه‌ای که ستونِ «واحد»/«نوع»/«نوع تیل»
+// عوض می‌شود — وگرنه ردیف تا فشردنِ دوبارهٔ «ذخیره ورق» در دفترِ قبلی (مثلاً واحد تیل،
+// با لیترِ حساب‌شده از مبلغ) کهنه می‌ماند و کاربر فکر می‌کند انتخابِ «پول» کار نکرده.
+function syncWaraqTxnsToPersons(w) {
+  if (!w) return;
+  ensureWaraqShifts(w);
   if (!DB.expenses) DB.expenses = [];
   if (!DB.debtPersons) DB.debtPersons = [];
-  // Sync تراکنش‌ها → قرض/مصرف با srcKey؛ تغییر نوع، ثبت قبلی را از بخش دیگر برمی‌دارد
   ['day','night'].forEach(shift => {
     const sd = w[shift];
     (sd.transactions||[]).forEach((t, i) => {
@@ -19523,15 +19560,6 @@ function saveWaraq() {
       }
     });
   });
-
-  syncWaraqSalesToSafe(w);
-  save();
-  closeModal('waraqModal');
-  renderWaraqList();
-  if (typeof renderExpenses === 'function') renderExpenses();
-  if (typeof renderPersons === 'function') renderPersons('debt');
-  updateBanner();
-  showToast('✅ ورق ذخیره شد', '#38a169');
 }
 
 function deleteWaraq(id) {
@@ -23223,7 +23251,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.125';
+const APP_VERSION = '2.9.126';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -25621,6 +25649,49 @@ try {
     Object.keys(localStorage).filter(function(k){ return k.indexOf('colw_') === 0; })
       .forEach(function(k){ try { localStorage.removeItem(k); } catch (e3) {} });
     localStorage.setItem('pumpFix29102', '1');
+  }
+} catch (e) {}
+
+// ── ترمیمِ یک‌بارهٔ نسخهٔ 2.9.126 ────────────────────────────────────────────────
+// ردیف‌هایی که در ورق واحدشان «پول» است ولی در دفترِ «واحد تیل» (rows) نشسته‌اند، به
+// دفترِ «واحد پول» (moneyRows) برمی‌گردند و لیتر/فیِ ساختگی‌شان پاک می‌شود. این‌ها
+// وقتی درست می‌شدند که کاربر بعد از ذخیرهٔ ورق واحد را روی «پول» می‌گذاشت: تا فشردنِ
+// دوبارهٔ «✔ ذخیره ورق» ردیف در دفترِ تیل می‌ماند و مقدار تیلش «مبلغ ÷ نرخِ ورق» بود
+// (مثلاً ۲۰٬۰۰۰ ÷ ۹۰ = ۲۲۲٫۲۲۲ لیتر). فقط ردیف‌های src='waraq' بررسی می‌شوند و مبلغِ
+// بردگی/رسید دست نمی‌خورد — فقط دفتر عوض می‌شود و لیتر/فی صفر می‌شود.
+try {
+  if (!localStorage.getItem('pumpFix29126')) {
+    const moneyKeys = new Set();
+    (DB.waraqEntries || []).forEach(function(w){
+      if (!w) return;
+      ['day','night'].forEach(function(sh){
+        const sd = w[sh];
+        ((sd && sd.transactions) || []).forEach(function(t, i){
+          if (t && t.unit === 'money') moneyKeys.add(w.id + '|' + sh + '|' + i);
+        });
+      });
+    });
+    let _fx = 0;
+    if (moneyKeys.size) {
+      ((DB.debtPersons || []).concat(DB.noinvPersons || [])).forEach(function(p){
+        if (!p) return;
+        [p].concat(p.subs || []).forEach(function(a){
+          if (!a || !Array.isArray(a.rows)) return;
+          for (let i = a.rows.length - 1; i >= 0; i--) {
+            const r = a.rows[i];
+            if (!r || r.src !== 'waraq' || !moneyKeys.has(r.srcKey)) continue;
+            a.rows.splice(i, 1);
+            r.fuel = 0; r.priceper = 0; r.byMoney = true;
+            r.albaqi = (parseFloat(r.bardagi) || 0) - (parseFloat(r.rasid) || 0);
+            if (!Array.isArray(a.moneyRows)) a.moneyRows = [];
+            if (!a.moneyRows.some(function(x){ return x && x.srcKey === r.srcKey; })) a.moneyRows.push(r);
+            _fx++;
+          }
+        });
+      });
+    }
+    if (_fx) { try { save(); } catch (e2) {} }
+    localStorage.setItem('pumpFix29126', '1');
   }
 } catch (e) {}
 
