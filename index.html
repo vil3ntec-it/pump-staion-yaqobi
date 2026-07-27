@@ -11826,8 +11826,8 @@ function _acctRows(person, acct){
   if (!Array.isArray(acct.rows)) acct.rows = [];
   return acct.rows;
 }
-// مجموع ردیف‌های همهٔ حساب‌ها (اصلی + جداگانه، هر دو واحد) — برای جمع‌های لیست و بنر تا هیچ بدهی پنهان نشود
-function _allRows(person){
+// مجموع ردیف‌های خامِ همهٔ حساب‌ها (اصلی + جداگانه، هر دو دفتر) — بدون هیچ دستکاری
+function _allRowsRaw(person){
   if(!person) return [];
   var rows = (person.rows||[]).slice();
   if (Array.isArray(person.moneyRows)) rows = rows.concat(person.moneyRows);
@@ -11835,6 +11835,24 @@ function _allRows(person){
     if(!s) return;
     if(Array.isArray(s.rows)) rows = rows.concat(s.rows);
     if(Array.isArray(s.moneyRows)) rows = rows.concat(s.moneyRows);
+  });
+  return rows;
+}
+// «از تیل داخل تیل، از پول داخل پول» (خواستهٔ صاحب ریپو): لیترِ ردیف‌های دفترِ
+// «واحد پول» فقط مدرکِ همان ردیف است و نباید در هیچ جمعِ لیتری بنشیند — وگرنه
+// روی کارتِ قرض‌دار «الباقی ۳۲۲٫۲۲ لیتر» دیده می‌شد که ۱۰۰ لیترِ دفترِ تیل بود
+// به‌علاوهٔ ۲۲۲٫۲۲ لیترِ ردیفی که در دفترِ پول نشسته بود.
+// پس ردیف‌های دفترِ پول با یک کپیِ بی‌لیتر برگردانده می‌شوند: مبلغ‌هایشان
+// (بردگی/رسید/الباقی) دست‌نخورده در جمع‌های پولی می‌مانند و هیچ بدهی پنهان نمی‌شود.
+function _noFuel(r){ return Object.assign({}, r, { fuel: 0, rasidFuel: 0 }); }
+function _allRows(person){
+  if(!person) return [];
+  var rows = (person.rows||[]).slice();
+  if (Array.isArray(person.moneyRows)) rows = rows.concat(person.moneyRows.map(_noFuel));
+  (person.subs||[]).forEach(function(s){
+    if(!s) return;
+    if(Array.isArray(s.rows)) rows = rows.concat(s.rows);
+    if(Array.isArray(s.moneyRows)) rows = rows.concat(s.moneyRows.map(_noFuel));
   });
   return rows;
 }
@@ -11868,7 +11886,8 @@ function debtFuelStatus(p) {
   };
   [p, ...(p.subs || [])].forEach(a => {
     if (!a) return;
-    const t = _splitTotals((a.rows || []).concat(a.moneyRows || []));
+    // لیترِ ردیف‌های دفترِ پول در «تیلِ مصرف‌شده» شمرده نمی‌شود (دو دفتر جدا)
+    const t = _splitTotals((a.rows || []).concat((a.moneyRows || []).map(_noFuel)));
     const eff = 1 - ((parseFloat(a.percent) || 0) / 100);   // سهم کمیشن کم می‌شود
     check((parseFloat(a.rasidFuelP)  || 0) * eff, t.petrol.fuel,    'fuel');
     check((parseFloat(a.rasidFuelD)  || 0) * eff, t.diesel.fuel,    'fuel');
@@ -19984,7 +20003,8 @@ function removePersonRowBySrcKey(srcKey, exceptPersonId) {
 function alreadyReceivedFromWaraq(person, fuel, bardagi, hawala) {
   if (!person) return false;
   const f = parseFloat(fuel)||0, b = Math.round(parseFloat(bardagi)||0), h = (hawala||'').toString().trim();
-  return _allRows(person).some(r => r.src === 'waraq' &&
+  // این‌جا لیترِ واقعیِ ردیف‌ها لازم است (تشخیصِ تکراری) — پس نسخهٔ خام
+  return _allRowsRaw(person).some(r => r.src === 'waraq' &&
     (parseFloat(r.fuel)||0) === f &&
     Math.round(parseFloat(r.bardagi)||0) === b &&
     (h === '' || (r.hawala||'').toString().trim() === h));
@@ -23257,7 +23277,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.127';
+const APP_VERSION = '2.9.128';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
