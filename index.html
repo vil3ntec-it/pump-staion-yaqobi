@@ -855,8 +855,34 @@ body.viewer-mode .att-admin{display:none !important}
 .fs-cell .l{font-size:0.82rem;font-weight:700;color:var(--muted);margin-bottom:2px}
 .fs-cell .v{font-size:0.96rem;font-weight:800}
 @media(max-width:560px){.fuel-split{grid-template-columns:1fr}}
-.add-row-btn{margin-top:9px;display:flex;align-items:center;gap:6px;padding:7px 12px;background:var(--card);border:1px dashed var(--border);border-radius:7px;cursor:pointer;font-family:'Vazirmatn',sans-serif;color:var(--muted);font-size:0.82rem;width:100%;justify-content:center;transition:all .2s}
+/* translateZ(0): لایهٔ پایدارِ کامپوزیتور — روی بعضی وب‌ویوهای اندروید این دکمه‌ها
+   (مثلاً «➕ ثبت خرید» در بخش مخزن) هنگام اسکرول خالی/نامرئی می‌شدند؛ همان درمانی
+   که برای کارت‌های مخزن و سربرگ هم به کار رفته است. */
+.add-row-btn{margin-top:9px;display:flex;align-items:center;gap:6px;padding:9px 12px;background:var(--card);border:1px dashed var(--border);border-radius:7px;cursor:pointer;font-family:'Vazirmatn',sans-serif;color:var(--muted);font-size:0.82rem;width:100%;justify-content:center;transition:all .2s;transform:translateZ(0);min-height:38px}
 .add-row-btn:hover{border-color:var(--accent);color:var(--accent)}
+/* 🕘 بخش تاریخچه‌ها */
+.hc-chips{display:flex;flex-wrap:wrap;gap:6px}
+.hc-chip{padding:7px 12px;border-radius:999px;border:1.5px solid var(--border);background:var(--card);color:var(--muted);
+  font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;transition:all .18s;
+  -webkit-tap-highlight-color:transparent;transform:translateZ(0)}
+.hc-chip:hover{color:var(--txt)}
+.hc-chip.on{background:var(--dark);font-weight:900}
+.hc-day{margin:14px 0 6px;font-size:0.76rem;font-weight:900;color:var(--accent);padding-right:4px}
+.hc-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;background:var(--card);
+  border:1px solid var(--border);border-radius:11px;padding:9px 12px;margin-bottom:6px;transform:translateZ(0)}
+.hc-main{min-width:0;flex:1 1 auto}
+.hc-t{font-size:0.85rem;font-weight:800;color:var(--txt);word-break:break-word}
+.hc-d{font-size:0.72rem;color:var(--muted);margin-top:2px;word-break:break-word}
+.hc-side{display:flex;flex-direction:column;align-items:flex-start;gap:3px;flex:0 0 auto;text-align:left}
+.hc-amt{font-size:0.9rem;font-weight:900;white-space:nowrap;direction:ltr}
+.hc-tag{font-size:0.64rem;font-weight:800;white-space:nowrap;opacity:.9}
+
+/* کارِ اصلیِ بخش (مثل «➕ ثبت خرید» در مخزن): توپر و پررنگ. پیش از این کرمِ کم‌رنگ
+   روی پس‌زمینهٔ کرمِ تمِ روشن بود و کاربر اصلاً نمی‌دیدش. */
+.add-row-btn.strong{background:var(--accent);color:#1a1102;border:1.5px solid var(--accent);border-style:solid;font-weight:900;font-size:0.9rem;min-height:44px;box-shadow:0 4px 12px -6px rgba(200,120,0,.7)}
+.add-row-btn.strong:hover{background:var(--accent)!important;color:#1a1102!important;filter:brightness(1.06)}
+.add-row-btn.strong-diesel{background:#b7791f;border-color:#b7791f;color:#fff8ec}
+.add-row-btn.strong-diesel:hover{background:#b7791f!important;color:#fff8ec!important}
 
 .pm-filter-btn{padding:8px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--card);color:var(--muted);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;transition:all .2s}
 .pm-filter-btn:hover{border-color:var(--accent);color:var(--accent)}
@@ -5298,6 +5324,7 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
   <button class="nav-btn" onclick="showSection('attendance',this)"><svg class="nav-ic ia-tilt"><use href="#ic-att"/></svg> حاضری و معاش</button>
   <button class="nav-btn" onclick="showSection('profit',this)"><svg class="nav-ic ia-rise"><use href="#ic-profit"/></svg> مفاد / ضرر / اتحادیه</button>
   <button class="nav-btn" onclick="showSection('settings',this)"><svg class="nav-ic ia-spin"><use href="#ic-settings"/></svg> تنظیمات</button>
+  <button class="nav-btn" onclick="showSection('history',this)">🕘 تاریخچه‌ها</button>
 </div>
 
 <!-- کشوی منوی بخش‌ها (با دکمهٔ سه‌نقطهٔ داخل سربرگ باز می‌شود) -->
@@ -5826,9 +5853,10 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
   <!-- کادرهای ابزار مخزن — هر کدام یک صفحهٔ جداگانه دارد -->
   <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="showSection('tanker')"><span>🚚 تخلیهٔ تانکر — بارنامه در برابر تحویل</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
   <button type="button" class="tool-link-card" onclick="showSection('tankdip')"><span>📏 اندازه‌گیری واقعی مخزن — میله‌زنی</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
+  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('storage')"><span>🕘 تاریخچهٔ خریدهای مخزن</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
   <div id="fuel-purchases-list"></div>
   <button class="add-row-btn" style="border-color:var(--green);color:var(--green);margin-bottom:8px" onclick="pdfStorage('petrol')">📄 PDF مخزن پطرول</button>
-  <button class="add-row-btn" onclick="openAddPurchase('petrol')" style="margin-bottom:16px">➕ ثبت خرید پطرول</button>
+  <button class="add-row-btn strong" onclick="openAddPurchase('petrol')" style="margin-bottom:16px">➕ ثبت خرید پطرول</button>
   <div style="padding:0 2px 12px">
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-storage" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('storage', this.value)"></textarea>
@@ -5847,9 +5875,10 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
   <!-- کادرهای ابزار مخزن — هر کدام یک صفحهٔ جداگانه دارد -->
   <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="showSection('tanker')"><span>🚚 تخلیهٔ تانکر — بارنامه در برابر تحویل</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
   <button type="button" class="tool-link-card" onclick="showSection('tankdip')"><span>📏 اندازه‌گیری واقعی مخزن — میله‌زنی</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
+  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('storage')"><span>🕘 تاریخچهٔ خریدهای مخزن</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
   <div id="diesel-purchases-list"></div>
   <button class="add-row-btn" style="border-color:#276749;color:#276749;margin-bottom:8px" onclick="pdfStorage('diesel')">📄 PDF مخزن دیزل</button>
-  <button class="add-row-btn" onclick="openAddPurchase('diesel')" style="margin-bottom:16px;border-color:#b7791f;color:#b7791f">➕ ثبت خرید دیزل</button>
+  <button class="add-row-btn strong strong-diesel" onclick="openAddPurchase('diesel')" style="margin-bottom:16px">➕ ثبت خرید دیزل</button>
   <div style="padding:0 2px 12px">
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-storage-diesel" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('storage-diesel', this.value)"></textarea>
@@ -5934,9 +5963,9 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
       <table class="xls-tbl" style="min-width:0">
         <thead><tr>
           <th style="width:40px">#</th>
+          <th style="width:120px">تاریخ شروع</th>
           <th>نام قرض‌دار</th>
           <th style="width:150px">مدت عضویت</th>
-          <th style="width:120px">تاریخ شروع</th>
         </tr></thead>
         <tbody id="ml-body"></tbody>
       </table>
@@ -6338,6 +6367,7 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
         <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('safe',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('safe',0.08)">A+</button></span>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <button class="add-btn" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('safe')" title="تاریخچهٔ همهٔ بردگی/ماندگی‌ها با تاریخ و روز هفته">🕘 تاریخچه</button>
         <button class="add-btn" onclick="addSafeRowDirect()">+ ردیف</button>
         <input type="number" id="safe-bulk-count" min="1" value="3" style="width:52px;padding:6px;background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--txt);font-family:'Vazirmatn',sans-serif;text-align:center">
         <button class="add-btn" onclick="addSafeRowsBulkDirect()">++ چندتایی</button>
@@ -6458,6 +6488,7 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
         <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('sarrafi',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('sarrafi',0.08)">A+</button></span>
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <button class="add-btn" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('sarrafi')" title="تاریخچهٔ رسیدها و بردگی‌ها با تاریخ و روز هفته">🕘 تاریخچه</button>
         <button class="add-btn" onclick="addSarrafiRow()">➕ ردیف جدید</button>
         <div style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
           <span style="font-size:0.78rem;color:var(--muted)">تعداد:</span>
@@ -6585,14 +6616,15 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
       <div id="ph-summary" style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;text-align:center"></div>
       <div style="font-size:0.72rem;color:var(--muted);margin-bottom:8px;text-align:center">روی هر ردیف کلیک کنید تا همان ورق باز شود</div>
       <div class="xls-wrap"><table class="xls-tbl" style="min-width:0">
+        <!-- خواستهٔ کاربر: نامِ کارمند بینِ «تاریخ» و «شیفت» بنشیند -->
         <thead><tr>
           <th>تاریخ</th>
+          <th>کارمند</th>
           <th style="width:64px">شیفت</th>
           <th style="width:50px">پایه</th>
           <th style="width:60px">نوع</th>
           <th style="width:80px">شروع</th>
           <th style="width:80px">ختم</th>
-          <th>کارمند</th>
         </tr></thead>
         <tbody id="ph-body"></tbody>
       </table></div>
@@ -7112,6 +7144,25 @@ body.viewer-mode .inv-admin-only{display:none!important}
   </div>
 </div>
 <!-- ═══════════════ پایان ثبت فاکتورها ═══════════════ -->
+
+<!-- 🕘 تاریخچه‌ها — همهٔ تاریخچه‌های بخش‌های مختلف در یک جا (فقط نمایش) -->
+<div class="section" id="sec-history">
+  <div class="section-title" style="color:var(--accent);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <span style="display:inline-flex;align-items:center;gap:10px">🕘 تاریخچه‌ها
+      <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('history',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('history',0.08)">A+</button></span>
+    </span>
+  </div>
+  <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.8">
+    هر چیزی که در بخش‌های مختلف ثبت شده، این‌جا با تاریخ و روز هفته و از تازه به کهنه چیده شده است — فقط برای دیدن؛ هیچ چیزی از این‌جا عوض یا پاک نمی‌شود.
+  </div>
+  <div id="hc-chips" class="hc-chips"></div>
+  <div id="hc-summary" style="font-size:0.8rem;color:var(--muted);margin:10px 0;text-align:center"></div>
+  <div id="hc-list"></div>
+  <div style="padding:0 2px 12px">
+    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
+    <textarea id="secnote-history" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('history', this.value)"></textarea>
+  </div>
+</div>
 
 <div class="section" id="sec-settings">
   <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
@@ -9388,6 +9439,204 @@ function _initCalcDrag() {
 }
 
 // ========== NAV ==========
+
+/* ============================================================================
+   🕘 تاریخچه‌ها — همهٔ تاریخچه‌های بخش‌های مختلف در یک جا
+   فقط خواندنی: از همان دادهٔ موجودِ هر بخش ساخته می‌شود و هیچ چیزی را عوض یا
+   ذخیره نمی‌کند. منطقِ هیچ بخشی دست نخورده است.
+   ========================================================================== */
+const HC_KINDS = [
+  { k:'safe',     lbl:'🏦 گاوصندوق',     color:'var(--green)'  },
+  { k:'sarrafi',  lbl:'💱 صرافی',        color:'var(--blue)'   },
+  { k:'storage',  lbl:'🛢️ مخزن',         color:'var(--accent)' },
+  { k:'debt',     lbl:'👥 قرض‌داران',    color:'var(--red)'    },
+  { k:'company',  lbl:'🏭 شرکت‌های تیل', color:'#b7791f'       },
+  { k:'expense',  lbl:'💸 مصارف',        color:'var(--purple)' },
+  { k:'waraq',    lbl:'📝 ورق‌ها',       color:'var(--blue)'   },
+  { k:'invoice',  lbl:'🧾 فاکتورها',     color:'var(--green)'  },
+  { k:'shift',    lbl:'📋 پارچه‌ها',     color:'var(--accent)' },
+  { k:'attend',   lbl:'🕒 حاضری',        color:'var(--purple)' }
+];
+let _hcKind = 'all';
+function setHistoryKind(k) { _hcKind = k; renderHistoryCenter(); }
+// از هر بخش، رفتن به تاریخچهٔ همان بخش
+function openSectionHistory(k) { _hcKind = k || 'all'; showSection('history'); }
+
+function _hcItem(kind, date, title, detail, amount, unit, tone) {
+  return { kind: kind, date: date || '', title: title || '', detail: detail || '',
+           amount: amount, unit: unit || '', tone: tone || '', key: _dateSortKey(date) };
+}
+
+function _hcFeed(kind) {
+  const out = [];
+  const want = function (k) { return kind === 'all' || kind === k; };
+
+  if (want('safe')) (DB.safeEntries || []).forEach(function (e) {
+    if (!e) return;
+    const amt = parseFloat(e.amount) || 0;
+    if (!amt && !(e.title || '').trim()) return;
+    const isIn = e.type !== 'mandagi';
+    out.push(_hcItem('safe', e.date, e.title || (isIn ? 'بردگی' : 'ماندگی'),
+      (isIn ? '⬅️ بردگی' : '➡️ ماندگی') + (e.note ? ' · ' + e.note : ''),
+      Math.round(amt), ' افغانی', isIn ? 'in' : 'out'));
+  });
+
+  if (want('sarrafi')) (DB.sarrafiRows || []).forEach(function (r) {
+    if (!r) return;
+    const broken = (typeof sarrafiBroken === 'function') ? sarrafiBroken(r) : 0;
+    const bard = parseFloat(r.bardagi) || 0;
+    const amt = parseFloat(r.amount) || 0;
+    if (!broken && !bard && !amt && !(r.desc || '').trim()) return;
+    const cur = r.currency === 'kaldar' ? 'کالدار' : (r.currency === 'afghani' ? 'افغانی' : 'تومان');
+    // رسید (شکسته‌شده به دالر) و بردگی — هر کدام با تاریخ و روز هفتهٔ همان ردیف
+    if (broken) out.push(_hcItem('sarrafi', r.date, r.desc || 'صرافی',
+      '💵 رسید — ' + n2fa(amt) + ' ' + cur + (r.rate ? ' · نرخ ' + n2fa(r.rate) : ''),
+      Number(broken.toFixed(2)), ' $', 'in'));
+    if (bard) out.push(_hcItem('sarrafi', r.date, r.desc || 'صرافی', '📤 بردگی', bard, ' $', 'out'));
+    if (!broken && !bard && amt) out.push(_hcItem('sarrafi', r.date, r.desc || 'صرافی',
+      'بدون نرخ', amt, ' ' + cur, ''));
+  });
+
+  if (want('storage')) (DB.fuelEntries || []).forEach(function (e) {
+    if (!e) return;
+    out.push(_hcItem('storage', e.date,
+      (e.fuelType === 'diesel' ? '🟤 خرید دیزل' : '⛽ خرید پطرول') + (e.seller ? ' — ' + e.seller : ''),
+      n2fa(Math.round(e.liters || 0)) + ' لیتر · ' + n2fa((e.totalUSD || 0).toFixed(1)) + ' $'
+        + (e.perLiter ? ' · فی لیتر ' + n2fa((e.perLiter || 0).toFixed(1)) : ''),
+      Math.round(e.totalAFN || 0), ' افغانی', 'out'));
+  });
+
+  if (want('debt')) (DB.debtPersons || []).forEach(function (p) {
+    if (!p) return;
+    [p].concat(p.subs || []).forEach(function (a) {
+      if (!a) return;
+      [['rows', false], ['moneyRows', true]].forEach(function (pair) {
+        (a[pair[0]] || []).forEach(function (r) {
+          if (!r) return;
+          const bard = r.byMoney ? (parseFloat(r.bardagi) || 0)
+            : ((parseFloat(r.fuel) || 0) * (parseFloat(r.priceper) || 0));
+          const rasid = parseFloat(r.rasid) || 0;
+          const lit = parseFloat(r.fuel) || 0;
+          if (!bard && !rasid && !lit) return;
+          const who = p.name + (a !== p ? ' › ' + (a.name || '') : '');
+          const bits = [];
+          if (lit) bits.push('🛢️ ' + n2fa(lit) + ' لیتر' + (r.priceper ? ' × فی ' + n2fa(r.priceper) : ''));
+          if (rasid) bits.push('💵 رسید ' + n2fa(Math.round(rasid)));
+          bits.push(pair[1] ? 'واحد پول' : 'واحد تیل');
+          out.push(_hcItem('debt', r.date, who + (r.name ? ' — ' + r.name : ''),
+            bits.join(' · '), Math.round(bard), ' افغانی', 'out'));
+        });
+      });
+      (a.tableHistory || []).forEach(function (h) {
+        if (!h) return;
+        out.push(_hcItem('debt', h.createdAt, '📋 آرشیو حساب ' + p.name,
+          n2fa((h.rows || []).length) + ' ردیف بایگانی شد' + (h.headerNote ? ' · ' + h.headerNote : ''),
+          null, '', ''));
+      });
+    });
+  });
+
+  if (want('company')) (DB.tilCompanies || []).forEach(function (c) {
+    if (!c) return;
+    [].concat(c.rows || [], c.dieselRows || []).forEach(function (r) {
+      if (!r) return;
+      const usd = (typeof cmpTotalUsd === 'function') ? cmpTotalUsd(r) : 0;
+      const poul = parseFloat(r.poul) || 0;
+      if (!usd && !poul) return;
+      out.push(_hcItem('company', r.date, c.name + (r.name ? ' — ' + r.name : ''),
+        (usd ? '📦 ' + n2fa(usd.toFixed(1)) + ' $' : '') + (poul ? (usd ? ' · ' : '') + '💵 رسید ' + n2fa(poul) : ''),
+        Math.round((typeof cmpAfnTotal === 'function') ? cmpAfnTotal(r) : 0), ' افغانی', usd ? 'out' : 'in'));
+    });
+  });
+
+  if (want('expense')) (DB.expenses || []).forEach(function (e) {
+    if (!e) return;
+    out.push(_hcItem('expense', e.date, e.title || 'مصرف', e.note || '',
+      Math.round(parseFloat(e.amount) || 0), ' افغانی', 'out'));
+  });
+
+  if (want('waraq')) (DB.waraqEntries || []).forEach(function (w) {
+    if (!w) return;
+    let pumps = 0, txns = 0;
+    ['day', 'night'].forEach(function (sh) {
+      const sd = w[sh]; if (!sd) return;
+      pumps += (sd.pumps || []).length;
+      txns += (sd.transactions || []).filter(function (t) { return t && (t.name || '').trim(); }).length;
+    });
+    out.push(_hcItem('waraq', w.date, '📝 ورق ' + (w.date || ''),
+      n2fa(pumps) + ' پایه · ' + n2fa(txns) + ' تراکنش', null, '', ''));
+  });
+
+  if (want('invoice')) (DB.invoices || []).forEach(function (v) {
+    if (!v) return;
+    out.push(_hcItem('invoice', v.date, '🧾 فاکتور ' + (v.customer || v.name || ''), v.note || '',
+      Math.round(parseFloat(v.total != null ? v.total : v.amount) || 0), ' افغانی', 'in'));
+  });
+
+  if (want('shift')) (DB.shifts || []).forEach(function (sh) {
+    if (!sh) return;
+    out.push(_hcItem('shift', sh.date, '📋 پارچه ' + (sh.fuel === 'diesel' ? '🟤 دیزل' : '⛽ پطرول'),
+      (sh.workerName ? '👤 ' + sh.workerName : ''),
+      Math.round(parseFloat(sh.sales != null ? sh.sales : sh.total) || 0), ' افغانی', 'in'));
+  });
+
+  if (want('attend')) (DB.attendance || []).forEach(function (a) {
+    if (!a) return;
+    out.push(_hcItem('attend', a.date, '🕒 ' + (a.name || 'حاضری'),
+      a.status || (a.present ? 'حاضر' : ''), null, '', ''));
+  });
+
+  // تازه‌ترین اول؛ بی‌تاریخ‌ها ته فهرست
+  out.sort(function (x, y) {
+    const kx = isFinite(x.key) ? x.key : -1, ky = isFinite(y.key) ? y.key : -1;
+    return ky - kx;
+  });
+  return out;
+}
+
+function renderHistoryCenter() {
+  const chips = document.getElementById('hc-chips');
+  const list = document.getElementById('hc-list');
+  const sum = document.getElementById('hc-summary');
+  if (!list) return;
+  if (chips) {
+    const all = [{ k: 'all', lbl: '📚 همه', color: 'var(--accent)' }].concat(HC_KINDS);
+    chips.innerHTML = all.map(function (c) {
+      const on = _hcKind === c.k;
+      return '<button class="hc-chip' + (on ? ' on' : '') + '"'
+        + (on ? ' style="border-color:' + c.color + ';color:' + c.color + '"' : '')
+        + ' onclick="setHistoryKind(\'' + c.k + '\')">' + c.lbl + '</button>';
+    }).join('');
+  }
+  const rows = _hcFeed(_hcKind);
+  const meta = function (k) { return HC_KINDS.filter(function (x) { return x.k === k; })[0] || {}; };
+  if (sum) sum.textContent = rows.length ? 'مجموعاً ' + n2fa(rows.length) + ' ردیف — از تازه به کهنه' : '';
+  if (!rows.length) {
+    list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:26px;font-size:0.86rem">هنوز چیزی در این بخش ثبت نشده</div>';
+    return;
+  }
+  let lastDate = ' ';
+  const CAP = 600;
+  list.innerHTML = rows.slice(0, CAP).map(function (r) {
+    let head = '';
+    if (r.date !== lastDate) {
+      lastDate = r.date;
+      head = '<div class="hc-day">' + (r.date ? escFa(_faDateWithWeekday(r.date)) : 'بی‌تاریخ') + '</div>';
+    }
+    const col = meta(r.kind).color || 'var(--muted)';
+    const amt = (r.amount == null || r.amount === '') ? ''
+      : '<span class="hc-amt" style="color:' + (r.tone === 'in' ? 'var(--green)' : (r.tone === 'out' ? 'var(--accent)' : 'var(--txt)')) + '">'
+        + n2fa(r.amount) + r.unit + '</span>';
+    return head + '<div class="hc-row" style="border-right:3px solid ' + col + '">'
+      + '<div class="hc-main"><div class="hc-t">' + escFa(r.title) + '</div>'
+      + (r.detail ? '<div class="hc-d">' + escFa(r.detail) + '</div>' : '') + '</div>'
+      + '<div class="hc-side">' + amt
+      + '<span class="hc-tag" style="color:' + col + '">' + (meta(r.kind).lbl || r.kind) + '</span>'
+      + '</div></div>';
+  }).join('') + (rows.length > CAP
+    ? '<div style="text-align:center;color:var(--muted);padding:12px;font-size:0.78rem">… ' + n2fa(rows.length - CAP) + ' ردیفِ قدیمی‌تر نشان داده نشد</div>' : '');
+}
+
 function showSection(id, btn) {
   if ((id === 'settings' || id === 'appearance' || id === 'passwords' || id === 'serverservices' || id === 'notifications' || id === 'alerts' || id === 'datamgmt') && currentRole === 'viewer') { showToast('🔒 بخش تنظیمات فقط برای مدیر است', '#e53e3e'); return; }
   document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
@@ -9437,6 +9686,7 @@ function showSection(id, btn) {
   if (id === 'noinv') { try { syncAllPurchasesToCompanies(); } catch(e) {} renderCompanies(); }
   if (id === 'safe') renderSafe();
   if (id === 'sarrafi') renderSarrafi();
+  if (id === 'history') { try { renderHistoryCenter(); } catch(e) {} }
   if (id === 'waraq') renderWaraqList();
   if (id === 'cameras') { renderCameras(); refreshLocalCams(); } else { try { stopAllLocalCams(); } catch(e){} }
   if (id === 'attendance') renderAttendance();
@@ -10128,9 +10378,9 @@ function openMembershipList(){
     body.innerHTML = rows.length
       ? rows.map((r,i) => `<tr>
           <td class="xls-num">${n2fa(i+1)}</td>
+          <td style="padding:8px 7px;color:var(--muted)" dir="ltr">${escFa(_jalaliStrFromTs(r.ts))}</td>
           <td style="padding:8px 7px;font-weight:700">${escFa(r.name)}</td>
           <td style="padding:8px 7px;color:var(--green);font-weight:800">${escFa(r.txt)}</td>
-          <td style="padding:8px 7px;color:var(--muted)" dir="ltr">${escFa(_jalaliStrFromTs(r.ts))}</td>
         </tr>`).join('')
       : `<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--muted)">هیچ قرض‌داری ثبت نشده</td></tr>`;
   }
@@ -10172,7 +10422,7 @@ function _pdfDoc(html) {
 function pdfMembershipList(){
   const rows = _membershipRows();
   const today = (typeof persianDate==='function'?persianDate():'');
-  const trs = rows.map((r,i)=>`<tr><td>${n2fa(i+1)}</td><td>${escFa(r.name)}</td><td>${escFa(r.txt)}</td><td dir="ltr">${escFa(_jalaliStrFromTs(r.ts))}</td></tr>`).join('')
+  const trs = rows.map((r,i)=>`<tr><td>${n2fa(i+1)}</td><td dir="ltr">${escFa(_jalaliStrFromTs(r.ts))}</td><td>${escFa(r.name)}</td><td>${escFa(r.txt)}</td></tr>`).join('')
     || `<tr><td colspan="4" style="text-align:center">هیچ قرض‌داری ثبت نشده</td></tr>`;
   const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><title>مدت عضویت قرض‌داران</title>
     <style>@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
@@ -10184,7 +10434,7 @@ function pdfMembershipList(){
     td{padding:6px 7px;border-bottom:1px solid #cbd5e0;font-weight:700}
     tr:nth-child(even) td{background:#f7fafc}@media print{@page{margin:.5cm}}</style></head><body>
     <h1>⏳ مدت عضویتِ قرض‌داران</h1><div class="meta">تاریخ چاپ: ${n2fa(today)} — مجموعاً ${n2fa(rows.length)} قرض‌دار (قدیمی‌ترین اول)</div>
-    <table><thead><tr><th>#</th><th>نام قرض‌دار</th><th>مدت عضویت</th><th>تاریخ شروع</th></tr></thead><tbody>${trs}</tbody></table>
+    <table><thead><tr><th>#</th><th>تاریخ شروع</th><th>نام قرض‌دار</th><th>مدت عضویت</th></tr></thead><tbody>${trs}</tbody></table>
     </body></html>`;
   const w = window.open('', '_blank');
   if (!w){ showToast('❌ پنجرهٔ چاپ باز نشد — پاپ‌آپ را اجازه دهید', '#e53e3e'); return; }
@@ -11805,9 +12055,11 @@ function syncAllPurchasesToCompanies() {
     (c.rows || []).forEach(r => { if (r.srcPurchaseId != null) linkedIds.add(String(r.srcPurchaseId)); });
     (c.dieselRows || []).forEach(r => { if (r.srcPurchaseId != null) linkedIds.add(String(r.srcPurchaseId)); });
   });
+  const unlinked = new Set((DB.purchaseUnlinked || []).map(String));
   let added = 0;
   entries.forEach(e => {
     if (linkedIds.has(String(e.id))) return;
+    if (unlinked.has(String(e.id))) return;   // کاربر دستی از حساب شرکت پاکش کرده
     if (!(e.seller || '').trim()) return;
     if (syncPurchaseToCompany(e)) added++;
   });
@@ -11815,16 +12067,14 @@ function syncAllPurchasesToCompanies() {
   return added;
 }
 
+// خواستهٔ صاحب ریپو: حذفِ خریدِ مخزن و حذفِ ردیفِ حساب شرکت از هم جدا شدند —
+// هر کدام باید دستی و جداگانه پاک شوند. حذف از مخزن دیگر حساب شرکت را دست نمی‌زند
+// (ردیفِ شرکت می‌ماند تا اگر بدهیِ شرکت هنوز پابرجاست، از حساب غیب نشود).
 function deletePurchase(id) {
-  if (!confirm('این خرید حذف شود؟')) return;
+  if (!confirm('این خرید از مخزن حذف شود؟\n\n(ردیفِ همین خرید در حساب شرکت دست‌نخورده می‌ماند — اگر آن را هم نمی‌خواهید، از داخل حساب شرکت جداگانه پاکش کنید.)')) return;
   const _item = (DB.fuelEntries||[]).find(e => e.id === id);
   if (_item) _addToTrash('purchase', _item);
   DB.fuelEntries = DB.fuelEntries.filter(e => e.id !== id);
-  // ردیف اتومات اضافه‌شده در حساب شرکت (پطرول و دیزل) را هم حذف کن
-  (DB.tilCompanies||[]).forEach(c => {
-    c.rows = (c.rows||[]).filter(r => r.srcPurchaseId !== id);
-    c.dieselRows = (c.dieselRows||[]).filter(r => r.srcPurchaseId !== id);
-  });
   save(); renderStorage(); updateBanner();
   if (typeof renderCompanies === 'function') renderCompanies();
   // اگر حساب شرکت باز است، جدول و دکمهٔ خرید را تازه کن
@@ -13977,6 +14227,8 @@ function newPersonTable() {
     rasidMoneyP: filter === 'diesel' ? acct.rasidMoneyP : (filter === 'all' ? acct.rasidMoneyP : 0),
     rasidMoneyD: filter === 'petrol' ? acct.rasidMoneyD : (filter === 'all' ? acct.rasidMoneyD : 0),
     percent: acct.percent, note: acct.note || '',
+    // «فیِ خرید» (یادداشتِ دستی) هم با آرشیو می‌رود تا در آرشیو هم همان‌جا دیده شود
+    buyFeeNote: person.buyFeeNote || '',
     unitMode: person.mode === 'money' ? 'money' : 'fuel'
   });
   // ریست جدول فعلی (یا فقط بخش فیلترشده) — فقط جدولِ حالتِ فعال (پول یا تیل)
@@ -14064,6 +14316,8 @@ function _renderHistoryPanel(person) {
     const st = _splitTotals(rows);
     const pct = parseFloat(h.percent) || 0;
     const hMoney = (h.viewMoney != null) ? h.viewMoney : money;
+    // آرشیوهای قدیمی «فیِ خرید» را ذخیره نکرده‌اند — از خودِ شخص نشان داده می‌شود
+    const hBuyFee = (h.buyFeeNote != null) ? h.buyFeeNote : (person.buyFeeNote || '');
     const unit = hMoney ? ' افغانی' : ' ل';
     const rasidP = hMoney ? (parseFloat(h.rasidMoneyP)||0) : (parseFloat(h.rasidFuelP)||0);
     const rasidD = hMoney ? (parseFloat(h.rasidMoneyD)||0) : (parseFloat(h.rasidFuelD)||0);
@@ -14100,6 +14354,10 @@ function _renderHistoryPanel(person) {
         </div>
       </div>
       <div style="padding:5px 12px;border-bottom:1px solid ${ac}22;display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--dark)">
+        <span style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap">📝 فیِ خرید:</span>
+        <input value="${escFa(hBuyFee)}" placeholder="مثلاً فی 56 / 57 / 58" title="فقط یادداشت — در هیچ محاسبه‌ای استفاده نمی‌شود"
+          style="width:170px;text-align:center;border:1px solid var(--border);border-radius:7px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.76rem;font-weight:700;padding:4px 8px;box-sizing:border-box"
+          oninput="updateHistoryBuyFee('${pid}','${h.id}',this.value)">
         <span style="font-size:0.72rem;color:var(--muted);font-weight:700">فیصدی ٪:</span>
         <input type="number" value="${pct||''}" placeholder="0" style="width:60px;background:transparent;border:none;border-bottom:1px dashed var(--accent);text-align:center;font-size:0.82rem;font-weight:800;color:var(--accent);font-family:'Vazirmatn',sans-serif" oninput="updateHistoryPercent('${pid}','${h.id}',this.value)">
         <span style="font-size:0.72rem;color:var(--muted)">جمع برد (پطرول+دیزل): <b style="color:var(--accent)">${n2fa(rnd(bordP+bordD))}${hMoney?' افغانی':' لیتر'}</b></span>
@@ -14177,6 +14435,12 @@ function _renderHistoryPanel(person) {
       <div style="background:var(--dark)">${fuelHtml}${tableHtml}</div>
     </div>`;
   }).join('');
+}
+// ویرایشِ «فیِ خرید»ِ یک آرشیو — فقط یادداشت، در هیچ محاسبه‌ای نیست
+function updateHistoryBuyFee(pid, hid, val) {
+  const h = _hEntry(pid, hid); if (!h) return;
+  h.buyFeeNote = val;
+  save();
 }
 function deletePersonHistory(pid, hid) {
   if (!confirm('این آرشیو و همه ردیف‌هایش حذف شود؟')) return;
@@ -15929,7 +16193,7 @@ function renderCompanyRows(company) {
       </td>
       <td><input class="xls-in xs" type="number" value="${r.payRate||''}" placeholder="0" style="width:50px" oninput="calcCompanyRow('${company.id}',${i},'payRate',this.value)" title="نرخ تبدیل رسید افغانی — فقط برای رسید افغانی"></td>
       <td id="cm-albaqi-${i}" style="font-weight:700;color:${albaqi>0?'var(--red)':'var(--green)'};min-width:95px;font-size:0.92rem">${n2fa(Math.round(albaqi))}${albaqiExtra}</td>
-      <td>${linked ? `<button class="del-btn" onclick="deletePurchase(${r.srcPurchaseId})">🗑️</button>` : `<button class="del-btn" onclick="deleteCompanyRow('${company.id}',${i})">🗑️</button>`}</td>
+      <td><button class="del-btn" onclick="deleteCompanyRow('${company.id}',${i})" title="${linked ? 'فقط همین ردیفِ حساب پاک می‌شود — خریدِ مخزن سرِ جایش می‌ماند' : 'حذف این ردیف'}">🗑️</button></td>
     `;
     tbody.appendChild(tr);
   });
@@ -16636,7 +16900,18 @@ function addCompanyRowsBulk() {
 function deleteCompanyRow(cid, idx) {
   const company = (DB.tilCompanies||[]).find(c => c.id === cid);
   if (!company) return;
-  if (!confirm('این ردیف حذف شود؟')) return;
+  const row = _cmpRows(company)[idx];
+  const linked = row && row.srcPurchaseId != null;
+  if (!confirm(linked
+      ? 'این ردیف از حساب شرکت حذف شود؟\n\n(خودِ خرید در بخش مخزن دست‌نخورده می‌ماند — اگر آن را هم نمی‌خواهید، از بخش مخزن جداگانه پاکش کنید.)'
+      : 'این ردیف حذف شود؟')) return;
+  // ردیفِ آمده از خریدِ مخزن که دستی پاک می‌شود، نباید با هم‌زمان‌سازیِ خودکار
+  // دوباره برگردد — شمارهٔ خرید در فهرستِ «دستی جدا شده» ثبت می‌شود
+  if (linked) {
+    if (!Array.isArray(DB.purchaseUnlinked)) DB.purchaseUnlinked = [];
+    const k = String(row.srcPurchaseId);
+    if (DB.purchaseUnlinked.indexOf(k) < 0) DB.purchaseUnlinked.push(k);
+  }
   _cmpRows(company).splice(idx, 1);
   save(); renderCompanyRows(company); _updateCompanyBanner(); updateBanner();
 }
@@ -18946,12 +19221,12 @@ function openPumpHistory() {
     body.innerHTML = rows.length
       ? rows.map(r => `<tr role="button" tabindex="0" title="باز کردنِ همین ورق" style="cursor:pointer" onclick="openPumpHistoryEntry('${r.wid}','${r.shift}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openPumpHistoryEntry('${r.wid}','${r.shift}')}">
           <td style="font-weight:700">${_faDateWithWeekday(r.date)}</td>
+          <td>${escFa(r.worker) || '—'}</td>
           <td>${r.shift === 'night' ? '🌙 شب' : '☀️ روز'}</td>
           <td>${n2fa(r.num)}</td>
           <td>${r.fuel}</td>
           <td style="color:var(--green);font-weight:800">${n2fa(r.start)}</td>
           <td style="color:var(--red);font-weight:800">${n2fa(r.end)}</td>
-          <td>${escFa(r.worker) || '—'}</td>
         </tr>`).join('')
       : `<tr><td colspan="7" style="text-align:center;padding:18px;color:var(--muted)">هنوز هیچ پایه‌ای با شروع/ختم ثبت نشده</td></tr>`;
   }
@@ -23344,7 +23619,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.129';
+const APP_VERSION = '2.9.130';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
