@@ -861,12 +861,10 @@ body.viewer-mode .att-admin{display:none !important}
 .add-row-btn{margin-top:9px;display:flex;align-items:center;gap:6px;padding:9px 12px;background:var(--card);border:1px dashed var(--border);border-radius:7px;cursor:pointer;font-family:'Vazirmatn',sans-serif;color:var(--muted);font-size:0.82rem;width:100%;justify-content:center;transition:all .2s;transform:translateZ(0);min-height:38px}
 .add-row-btn:hover{border-color:var(--accent);color:var(--accent)}
 /* 🕘 بخش تاریخچه‌ها */
-.hc-chips{display:flex;flex-wrap:wrap;gap:6px}
-.hc-chip{padding:7px 12px;border-radius:999px;border:1.5px solid var(--border);background:var(--card);color:var(--muted);
-  font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;transition:all .18s;
-  -webkit-tap-highlight-color:transparent;transform:translateZ(0)}
-.hc-chip:hover{color:var(--txt)}
-.hc-chip.on{background:var(--dark);font-weight:900}
+.hc-card{margin-bottom:8px;align-items:center;width:100%;display:flex!important;justify-content:space-between;gap:10px}
+.hc-card-main{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;text-align:right}
+.hc-card-t{font-weight:900;font-size:0.9rem}
+.hc-card-s{font-weight:700;font-size:0.7rem;color:var(--muted)}
 .hc-day{margin:14px 0 6px;font-size:0.76rem;font-weight:900;color:var(--accent);padding-right:4px}
 .hc-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;background:var(--card);
   border:1px solid var(--border);border-radius:11px;padding:9px 12px;margin-bottom:6px;transform:translateZ(0)}
@@ -7153,15 +7151,24 @@ body.viewer-mode .inv-admin-only{display:none!important}
     </span>
   </div>
   <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.8">
-    هر چیزی که در بخش‌های مختلف ثبت شده، این‌جا با تاریخ و روز هفته و از تازه به کهنه چیده شده است — فقط برای دیدن؛ هیچ چیزی از این‌جا عوض یا پاک نمی‌شود.
+    هر بخش تاریخچهٔ خودش را دارد — روی کادرِ هر کدام بزنید تا صفحهٔ خودش باز شود.
+    همه‌جا با تاریخ و روز هفته و از تازه به کهنه چیده شده است؛ فقط برای دیدن، هیچ چیزی عوض یا پاک نمی‌شود.
   </div>
-  <div id="hc-chips" class="hc-chips"></div>
-  <div id="hc-summary" style="font-size:0.8rem;color:var(--muted);margin:10px 0;text-align:center"></div>
-  <div id="hc-list"></div>
+  <div id="hc-cards"></div>
   <div style="padding:0 2px 12px">
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-history" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('history', this.value)"></textarea>
   </div>
+</div>
+
+<!-- 🕘 صفحهٔ تاریخچهٔ یک بخشِ مشخص — فقط ردیف‌های همان بخش -->
+<div class="section" id="sec-historyview">
+  <div class="section-title" style="color:var(--accent);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('history')">→ برگشت به تاریخچه‌ها</button>
+    <span id="hv-title" style="display:inline-flex;align-items:center;gap:10px">🕘 تاریخچه</span>
+  </div>
+  <div id="hv-summary" style="font-size:0.8rem;color:var(--muted);margin:6px 0 10px;text-align:center"></div>
+  <div id="hv-list"></div>
 </div>
 
 <div class="section" id="sec-settings">
@@ -9458,9 +9465,9 @@ const HC_KINDS = [
   { k:'attend',   lbl:'🕒 حاضری',        color:'var(--purple)' }
 ];
 let _hcKind = 'all';
-function setHistoryKind(k) { _hcKind = k; renderHistoryCenter(); }
+function setHistoryKind(k) { _hcKind = k; renderHistoryView(); }
 // از هر بخش، رفتن به تاریخچهٔ همان بخش
-function openSectionHistory(k) { _hcKind = k || 'all'; showSection('history'); }
+function openSectionHistory(k) { _hcKind = k || 'safe'; showSection('historyview'); }
 
 function _hcItem(kind, date, title, detail, amount, unit, tone) {
   return { kind: kind, date: date || '', title: title || '', detail: detail || '',
@@ -9595,27 +9602,38 @@ function _hcFeed(kind) {
 }
 
 function renderHistoryCenter() {
-  const chips = document.getElementById('hc-chips');
-  const list = document.getElementById('hc-list');
-  const sum = document.getElementById('hc-summary');
+  const wrap = document.getElementById('hc-cards');
+  if (!wrap) return;
+  // برای هر بخش یک کادرِ جدا با شمارِ ردیف‌ها و تازه‌ترین تاریخش
+  wrap.innerHTML = HC_KINDS.map(function (c) {
+    const rows = _hcFeed(c.k);
+    const last = rows.length ? (rows[0].date || '') : '';
+    const sub = rows.length
+      ? n2fa(rows.length) + ' ردیف' + (last ? ' · تازه‌ترین: ' + _faDateWithWeekday(last) : '')
+      : 'هنوز چیزی ثبت نشده';
+    return '<button type="button" class="tool-link-card hc-card" style="border-color:' + c.color + ';color:' + c.color + '"'
+      + ' onclick="openSectionHistory(\'' + c.k + '\')">'
+      + '<span class="hc-card-main"><span class="hc-card-t">' + c.lbl + '</span>'
+      + '<span class="hc-card-s">' + escFa(sub) + '</span></span>'
+      + '<span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>';
+  }).join('');
+}
+
+// صفحهٔ تاریخچهٔ یک بخشِ مشخص — فقط ردیف‌های همان بخش، بدون هیچ انتخاب‌گر
+function renderHistoryView() {
+  const list = document.getElementById('hv-list');
+  const sum = document.getElementById('hv-summary');
+  const ttl = document.getElementById('hv-title');
   if (!list) return;
-  if (chips) {
-    const all = [{ k: 'all', lbl: '📚 همه', color: 'var(--accent)' }].concat(HC_KINDS);
-    chips.innerHTML = all.map(function (c) {
-      const on = _hcKind === c.k;
-      return '<button class="hc-chip' + (on ? ' on' : '') + '"'
-        + (on ? ' style="border-color:' + c.color + ';color:' + c.color + '"' : '')
-        + ' onclick="setHistoryKind(\'' + c.k + '\')">' + c.lbl + '</button>';
-    }).join('');
-  }
+  const meta = HC_KINDS.filter(function (x) { return x.k === _hcKind; })[0] || { lbl: '🕘 تاریخچه', color: 'var(--accent)' };
+  if (ttl) { ttl.textContent = '🕘 تاریخچهٔ ' + meta.lbl.replace(/^\S+\s/, ''); ttl.style.color = meta.color; }
   const rows = _hcFeed(_hcKind);
-  const meta = function (k) { return HC_KINDS.filter(function (x) { return x.k === k; })[0] || {}; };
   if (sum) sum.textContent = rows.length ? 'مجموعاً ' + n2fa(rows.length) + ' ردیف — از تازه به کهنه' : '';
   if (!rows.length) {
     list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:26px;font-size:0.86rem">هنوز چیزی در این بخش ثبت نشده</div>';
     return;
   }
-  let lastDate = ' ';
+  let lastDate = ' ';
   const CAP = 600;
   list.innerHTML = rows.slice(0, CAP).map(function (r) {
     let head = '';
@@ -9623,16 +9641,13 @@ function renderHistoryCenter() {
       lastDate = r.date;
       head = '<div class="hc-day">' + (r.date ? escFa(_faDateWithWeekday(r.date)) : 'بی‌تاریخ') + '</div>';
     }
-    const col = meta(r.kind).color || 'var(--muted)';
     const amt = (r.amount == null || r.amount === '') ? ''
       : '<span class="hc-amt" style="color:' + (r.tone === 'in' ? 'var(--green)' : (r.tone === 'out' ? 'var(--accent)' : 'var(--txt)')) + '">'
         + n2fa(r.amount) + r.unit + '</span>';
-    return head + '<div class="hc-row" style="border-right:3px solid ' + col + '">'
+    return head + '<div class="hc-row" style="border-right:3px solid ' + meta.color + '">'
       + '<div class="hc-main"><div class="hc-t">' + escFa(r.title) + '</div>'
       + (r.detail ? '<div class="hc-d">' + escFa(r.detail) + '</div>' : '') + '</div>'
-      + '<div class="hc-side">' + amt
-      + '<span class="hc-tag" style="color:' + col + '">' + (meta(r.kind).lbl || r.kind) + '</span>'
-      + '</div></div>';
+      + '<div class="hc-side">' + amt + '</div></div>';
   }).join('') + (rows.length > CAP
     ? '<div style="text-align:center;color:var(--muted);padding:12px;font-size:0.78rem">… ' + n2fa(rows.length - CAP) + ' ردیفِ قدیمی‌تر نشان داده نشد</div>' : '');
 }
@@ -9653,6 +9668,7 @@ function showSection(id, btn) {
   if (id === 'chakana') navId = 'debtrasid';
   if (id === 'staffshort') navId = 'attendance';
   if (id === 'ratehist' || id === 'monthreport') navId = 'profit';
+  if (id === 'historyview') navId = 'history';
   // نوار بخش‌ها هنگام اسکرول بالا بچسبد — به‌جز ورق، قرض‌داران و شرکت‌ها تیل
   document.body.classList.toggle('nav-sticky', !(id === 'waraq' || id === 'debt' || id === 'noinv'));
   // صفحه‌های جدولیِ رسید/قرض‌داران تمام‌عرضِ صفحه شوند (خواستهٔ کاربر: جدول‌هایی که
@@ -9687,6 +9703,7 @@ function showSection(id, btn) {
   if (id === 'safe') renderSafe();
   if (id === 'sarrafi') renderSarrafi();
   if (id === 'history') { try { renderHistoryCenter(); } catch(e) {} }
+  if (id === 'historyview') { try { renderHistoryView(); } catch(e) {} }
   if (id === 'waraq') renderWaraqList();
   if (id === 'cameras') { renderCameras(); refreshLocalCams(); } else { try { stopAllLocalCams(); } catch(e){} }
   if (id === 'attendance') renderAttendance();
@@ -23619,7 +23636,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.130';
+const APP_VERSION = '2.9.131';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
