@@ -537,12 +537,18 @@ html.kb-open #calcPanel{bottom:calc(8px + var(--kb-offset,0px))}
 /* فهرست پیام‌ها */
 .ch-list{flex:1;overflow-y:auto;padding:12px 10px;display:flex;flex-direction:column;gap:8px;min-height:0}
 /* white-space:pre-line: جواب‌های چندخطی ربات (بردگی/رسید/الباقی هر کدام در یک خط) درست دیده شوند */
-.ch-b{max-width:82%;border-radius:14px;padding:8px 11px;font-size:0.85rem;line-height:1.9;word-break:break-word;position:relative;white-space:pre-line}
+/* کادرِ پیام: دکمهٔ ⋮ یک آیتمِ واقعیِ کنارِ متن است، نه راهروِ ۴۲پیکسلیِ خالی —
+   قبلاً پیامِ کوتاه («سلام») در یک ستونِ باریکِ کنارِ دکمه فشرده و حرف‌حرف می‌شکست */
+.ch-b{max-width:82%;min-width:92px;border-radius:14px;padding:7px 10px;font-size:0.85rem;line-height:1.85;word-break:break-word;position:relative;display:flex;align-items:flex-start;gap:5px}
+.ch-b .ch-c{flex:1 1 auto;min-width:0;white-space:pre-line}
 .ch-b.me{align-self:flex-start;background:var(--blue);color:#fff;border-bottom-left-radius:4px}
 .ch-b.other{align-self:flex-end;background:var(--card);color:var(--txt);border:1px solid var(--border);border-bottom-right-radius:4px}
 .ch-b.bot{align-self:flex-end;background:rgba(34,204,255,.1);color:var(--txt);border:1px solid var(--blue);border-bottom-right-radius:4px}
 .ch-b .ch-nm{font-size:0.68rem;font-weight:900;opacity:.85;margin-bottom:2px}
-.ch-b .ch-tm{font-size:0.6rem;opacity:.6;margin-top:3px;text-align:left;direction:ltr;display:flex;gap:4px;align-items:center}
+/* ساعت مثل واتساپ کنارِ آخرین خطِ متن می‌نشیند (float)، نه در یک خطِ جدا — پیامِ
+   کوتاه دیگر یک کادرِ بلندِ سه‌خطی نمی‌شود */
+.ch-b .ch-tm{float:left;font-size:0.6rem;opacity:.6;direction:ltr;display:inline-flex;gap:4px;align-items:center;margin:5px 0 0 0;padding-right:10px;white-space:nowrap}
+.ch-b .ch-c::after{content:'';display:block;clear:both}
 /* علامتِ رسیدنِ پیام (مثل واتساپ): 🕐 هنوز در صف · ✓ رسیده به سرور */
 .ch-b .ch-tk{font-size:0.62rem;line-height:1}
 .ch-b .ch-tk.ok{font-weight:900;opacity:.95}
@@ -572,17 +578,19 @@ html.kb-open #calcPanel{bottom:calc(8px + var(--kb-offset,0px))}
 .ch-acct .ch-acct-s{font-size:0.72rem;color:var(--muted);line-height:1.7;margin-bottom:7px}
 .ch-acct .ch-acct-go{display:inline-block;background:var(--green);color:#fff;border-radius:9px;padding:6px 14px;font-size:0.78rem;font-weight:900}
 .ch-b a.ch-link{color:inherit;text-decoration:underline;word-break:break-all}
-/* سه‌نقطهٔ گزینه‌های پیام: قبلاً یک نشانهٔ ۲۰px بود که روی گوشی نه دیده می‌شد نه
-   زده می‌شد. حالا یک هدفِ لمسیِ کاملِ ۳۴px با پس‌زمینهٔ همیشه‌دیدنی است. */
-.ch-b .ch-del-btn{position:absolute;top:1px;left:1px;cursor:pointer;opacity:.85;font-size:1.25rem;line-height:1;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border-radius:9px;user-select:none;-webkit-user-select:none;background:rgba(0,0,0,.16);-webkit-tap-highlight-color:transparent}
-.ch-b .ch-del-btn:hover,.ch-b .ch-del-btn:active{opacity:1;background:rgba(0,0,0,.32)}
-/* راهروِ دکمهٔ ⋮: پیامِ کوتاه («سلام») از خودِ دکمه کوچک‌تر بود و دکمه تمامِ متن را
-   می‌پوشاند. حالا متن همیشه کنارِ دکمه می‌نشیند، نه زیرِ آن. */
-.ch-b.menu-gutter{padding-left:42px;min-height:38px}
-.ch-b.menu-gutter .ch-del-btn{background:transparent}
-.ch-b.menu-gutter .ch-del-btn:hover,.ch-b.menu-gutter .ch-del-btn:active{background:rgba(0,0,0,.22)}
-.ch-b.ch-deleted{opacity:.65;font-style:italic}
+/* دکمهٔ گزینه‌های پیام (⋮): یک آیتمِ کنارِ متن با هدفِ لمسیِ کافی. سطحِ لمسی با
+   ::before به ۳۴px بزرگ می‌شود بی‌آنکه فضای کادر را بگیرد. */
+.ch-b .ch-del-btn{order:2;flex:0 0 auto;align-self:flex-start;position:relative;cursor:pointer;opacity:.6;font-size:1.05rem;line-height:1;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;user-select:none;-webkit-user-select:none;background:transparent;-webkit-tap-highlight-color:transparent;margin:-1px -3px 0 -2px}
+.ch-b .ch-del-btn::before{content:'';position:absolute;inset:-6px}
+.ch-b .ch-del-btn:hover,.ch-b .ch-del-btn:active{opacity:1;background:rgba(0,0,0,.22)}
+/* روی عکس/ویدیو/صدا دکمه روی خودِ رسانه شناور می‌ماند تا عرضِ رسانه کم نشود */
+.ch-b.menu-over .ch-del-btn{position:absolute;top:3px;left:3px;z-index:2;opacity:.9;background:rgba(0,0,0,.3);color:#fff;margin:0}
+.ch-b.menu-over .ch-c{padding-top:0}
+.ch-b.ch-deleted{opacity:.65;font-style:italic;min-width:0}
 .ch-b.ch-deleted i{font-style:italic;opacity:.85}
+/* پیامی که «فقط برای من» پنهان شده — سرِ جایش می‌ماند تا اگر اشتباه زده شده،
+   بشود برگرداند یا «حذف برای همه» را زد */
+.ch-b.ch-hidden{opacity:.6;font-style:italic;min-width:0;background:var(--card)!important;color:var(--muted)!important;border:1px dashed var(--border)!important}
 /* انتخاب‌گرِ حساب برای فرستادن لینک و کیو‌آر در چت تک‌نفره */
 .dm-acct-ov{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px}
 .dm-acct-box{width:min(420px,94vw);max-height:min(70dvh,560px);background:var(--panel);border:1.5px solid var(--blue);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;font-family:'Vazirmatn',sans-serif}
@@ -10128,6 +10136,38 @@ function openMembershipList(){
   }
   const m = document.getElementById('membershipListModal'); if (m) m.classList.add('open');
 }
+// ── همهٔ PDF/چاپ‌ها روی هر دستگاه درست دیده شوند ─────────────────────────────
+// صفحه‌های PDF با document.write ساخته می‌شوند و هیچ‌کدام <meta viewport> نداشتند؛
+// مرورگرِ گوشی آن‌ها را با عرضِ پیش‌فرضِ دسکتاپ (۹۸۰px) می‌چید و بعد کوچک می‌کرد —
+// نتیجه یک ستونِ ریزِ گوشهٔ صفحه بود که هیچ خوانده نمی‌شد.
+// این تابع به هر صفحهٔ PDF، viewport و یک استایلِ واکنش‌گرا اضافه می‌کند. استایل فقط
+// روی «صفحه» (screen) اثر دارد؛ خروجیِ چاپ/کاغذ دست‌نخورده می‌ماند.
+function _pdfDoc(html) {
+  const s = String(html || '');
+  if (!s || /name=["']?viewport/i.test(s)) return s;
+  const inject =
+    '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<style>@media screen{' +
+      'html{-webkit-text-size-adjust:100%}' +
+      'body{max-width:1000px;margin:0 auto}' +
+      'table{max-width:100%}' +
+    '}' +
+    '@media screen and (max-width:820px){' +
+      'body{padding:10px 8px!important}' +
+      // min-width های ثابتِ جدول‌ها روی گوشی برداشته می‌شوند تا جدول تمام‌عرض شود
+      'table{min-width:0!important;width:100%!important;font-size:0.86rem!important;table-layout:auto!important}' +
+      'th,td{padding:6px 5px!important;white-space:normal!important;word-break:break-word;overflow-wrap:anywhere}' +
+      'h1{font-size:1.05rem!important}' +
+      '.sum-row,.sum-box{flex-wrap:wrap}' +
+    '}</style>';
+  // بعد از <meta charset> تزریق می‌شود تا charset از ۱۰۲۴ بایتِ اول بیرون نیفتد
+  const mCharset = s.match(/<meta[^>]+charset[^>]*>/i);
+  if (mCharset) return s.replace(mCharset[0], mCharset[0] + inject);
+  const mHead = s.match(/<head[^>]*>/i);
+  if (mHead) return s.replace(mHead[0], mHead[0] + inject);
+  return s;
+}
+
 // چاپ/PDF لیست مدت عضویت
 function pdfMembershipList(){
   const rows = _membershipRows();
@@ -10148,7 +10188,7 @@ function pdfMembershipList(){
     </body></html>`;
   const w = window.open('', '_blank');
   if (!w){ showToast('❌ پنجرهٔ چاپ باز نشد — پاپ‌آپ را اجازه دهید', '#e53e3e'); return; }
-  w.document.write(html); w.document.close();
+  w.document.write(_pdfDoc(html)); w.document.close();
   setTimeout(()=>{ try{ w.print(); }catch(e){} }, 400);
 }
 function miladiDate() {
@@ -10962,7 +11002,7 @@ ${dates.length ? summaryPage + pages : '<div style="text-align:center;padding:40
 </body></html>`;
 
   const w = window.open('', '_blank', 'width=900,height=750');
-  if (w) { w.document.write(html); w.document.close(); }
+  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
   else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
 }
 
@@ -10985,7 +11025,7 @@ function printDieselShifts() {
   const totalMoney  = shifts.reduce((a,s)=>a+(s.money||0),0);
   const totalProfit = shifts.reduce((a,s)=>a+(s.profit||0),0);
   const win = window.open('','_blank');
-  win.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>گزارش دیزل</title>
+  win.document.write(_pdfDoc(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>گزارش دیزل</title>
   <style>body{font-family:'Tahoma',sans-serif;padding:20px;font-size:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}h2{text-align:center}
   table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:3px 5px;text-align:right;white-space:nowrap}
   th{background:#f0f0f0}.day-th{background:#fff3e0}.night-th{background:#ede7f6}.total-th{background:#e8f5e9}
@@ -11007,7 +11047,7 @@ function printDieselShifts() {
     </tr>
   </thead><tbody>${rows||'<tr><td colspan="22" style="text-align:center">خالی</td></tr>'}</tbody>
   <tfoot><tr class="foot"><td colspan="19">جمع کل</td><td></td><td>${n2fa(totalMoney)}</td><td>${n2fa(totalProfit)}</td></tr></tfoot>
-  </table></body></html>`);
+  </table></body></html>`));
   win.document.close();
   setTimeout(()=>win.print(),400);
 }
@@ -11246,7 +11286,7 @@ ${reports.length ? summaryPage + pages : '<div style="text-align:center;padding:
 </body></html>`;
 
   const w = window.open('', '_blank', 'width=950,height=800');
-  if (w) { w.document.write(html); w.document.close(); }
+  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
   else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
 }
 
@@ -11281,7 +11321,7 @@ function printShifts() {
     return a+((r.day?.profit||0)+(r.night?.profit||0)+(dsl.day?.profit||0)+(dsl.night?.profit||0));
   },0);
   const win = window.open('','_blank');
-  win.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
+  win.document.write(_pdfDoc(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
   <title>گزارش پارچه‌ها — پمپ یعقوبی</title>
   <style>
     body{font-family:'Tahoma',sans-serif;padding:20px;color:#111;font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -11320,7 +11360,7 @@ function printShifts() {
     </thead>
     <tbody>${rows||'<tr><td colspan="42" style="text-align:center">خالی</td></tr>'}</tbody>
     <tfoot><tr class="foot"><td colspan="39">جمع کل</td><td></td><td>${n2fa(totalMoney)}</td><td>${n2fa(totalProfit)}</td></tr></tfoot>
-  </table></body></html>`);
+  </table></body></html>`));
   win.document.close();
   setTimeout(()=>win.print(),400);
 }
@@ -13359,7 +13399,7 @@ ${noteHtml}
 </body></html>`;
 
   const w = window.open('', '_blank', 'width=960,height=720');
-  if (w) { w.document.write(html); w.document.close(); }
+  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
   else showToast('مرورگر پنجره را مسدود کرد. اجازه popup بدهید', '#e53e3e');
 }
 function updateStackedRasid(pid, acctId, ftype, value) {
@@ -14233,7 +14273,7 @@ ${h.note?`<div class="note-box"><b>توضیحات:</b> ${h.note.replace(/</g,'&l
 <script>window.onload=function(){window.print()}<\/script>
 </body></html>`;
   const w = window.open('','_blank');
-  if (w) { w.document.write(html); w.document.close(); }
+  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
 }
 // فیلتر پطرول/دیزل جدول آرشیو — روی نمایش و PDF همان آرشیو اثر می‌کند
 function setHistoryFilter(pid, hid, f) {
@@ -14778,7 +14818,7 @@ function pdfChakana(monthKey) {
   <tfoot><tr><td colspan="5">جمع</td><td>${Math.round(totB)}</td><td>${Math.round(totR)}</td><td>${Math.round(totAlb)}</td></tr></tfoot></table>
   <script>window.onload=function(){window.print()}<\/script></body></html>`;
   const win = window.open('','_blank','width=900,height=680');
-  if (win) { win.document.write(html); win.document.close(); } else showToast('مرورگر پنجره را مسدود کرد','#e53e3e');
+  if (win) { win.document.write(_pdfDoc(html)); win.document.close(); } else showToast('مرورگر پنجره را مسدود کرد','#e53e3e');
 }
 function monkeyLabel(key){ return (key && /\d/.test(key)) ? _monthLabel(key) : ''; }
 function monkeyTitle(base, lbl){ return lbl ? (base + ' — ' + lbl) : base; }
@@ -15252,7 +15292,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
   const w = window.open('', '_blank', 'width=800,height=650');
-  if (w) { w.document.write(html); w.document.close(); }
+  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
   else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
 }
 
@@ -15363,7 +15403,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
   const w = window.open('', '_blank', 'width=800,height=650');
-  if (w) { w.document.write(html); w.document.close(); }
+  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
   else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
 }
 function renderDebtSummary() {
@@ -16179,7 +16219,7 @@ ${bodyHtml}
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
   const w = window.open('', '_blank', 'width=900,height=980');
-  if (w) { w.document.write(html); w.document.close(); }
+  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
   else if (typeof showToast === 'function') showToast('مرورگر پنجره را مسدود کرد. اجازه popup بدهید', '#e53e3e');
 }
 
@@ -16681,7 +16721,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px}
 <div class="footer">پمپ یعقوبی — ${escFa(company.name)}</div>
 <script>window.onload=function(){window.print();}<\/script></body></html>`;
   const w = window.open('', '_blank', 'width=900,height=650');
-  if (w) { w.document.write(html); w.document.close(); }
+  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
   else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
 }
 
@@ -16750,7 +16790,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px}
 <div class="footer">پمپ یعقوبی — ${escFa(company.name)} — جدول آرشیو‌شده</div>
 <script>window.onload=function(){window.print();}<\/script></body></html>`;
   const w = window.open('', '_blank', 'width=900,height=650');
-  if (w) { w.document.write(html); w.document.close(); }
+  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
   else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
 }
 
@@ -17294,7 +17334,7 @@ ${(acct.note||'').trim() ? `<div class="note-box"><b>توضیحات:</b> ${escFa
 </body></html>`;
 
   const w = window.open('', '_blank', 'width=960,height=720');
-  if (w) { w.document.write(html); w.document.close(); }
+  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
   else showToast('مرورگر پنجره را مسدود کرد. اجازه popup بدهید', '#e53e3e');
 }
 
@@ -17370,7 +17410,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 </body></html>`;
 
   const w = window.open('', '_blank', 'width=800,height=650');
-  if (w) { w.document.write(html); w.document.close(); }
+  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
   else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
 }
 
@@ -17493,7 +17533,7 @@ ${itemsHtml || '<div style="text-align:center;padding:20px;color:#6b7280">هیچ
 </body></html>`;
 
   const w = window.open('', '_blank', 'width=900,height=750');
-  if (w) { w.document.write(html); w.document.close(); }
+  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
   else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
 }
 
@@ -17666,7 +17706,7 @@ body{font-family:'Vazirmatn',sans-serif;background:#111827;color:#f3f4f6;padding
 </body></html>`;
 
   const w = window.open('', '_blank', 'width=880,height=750');
-  if (w) { w.document.write(html); w.document.close(); }
+  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
   else showToast('مرورگر پنجره را مسدود کرد — اجازه popup بدهید', '#e53e3e');
 }
 
@@ -18275,7 +18315,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 </body></html>`;
 
   const w = window.open('', '_blank', 'width=960,height=720');
-  if (w) { w.document.write(html); w.document.close(); }
+  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
   else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
 }
 
@@ -18622,7 +18662,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px}
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
   const w = window.open('', '_blank', 'width=960,height=720');
-  if (w) { w.document.write(html); w.document.close(); }
+  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
   else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
 }
 
@@ -19659,7 +19699,7 @@ function printWaraq() {
   ${shiftSection(sd, '', isNight ? '#6b46c1' : '#b7791f')}
   <script>window.onload=function(){window.print()}<\/script></body></html>`;
   const win=window.open('','_blank','width=900,height=680');
-  if(win){win.document.write(html);win.document.close();}else showToast('مرورگر پنجره را مسدود کرد','#e53e3e');
+  if(win){win.document.write(_pdfDoc(html));win.document.close();}else showToast('مرورگر پنجره را مسدود کرد','#e53e3e');
 }
 
 // ========== لایو سینک پارچه به ورق ==========
@@ -21034,10 +21074,10 @@ function _mirzaPrintQR(){
   const link = _mirzaGenericLink();
   const w = window.open('', '_blank');
   if (!w) { showToast('اجازهٔ بازکردنِ پنجرهٔ چاپ داده نشد', '#e53e3e'); return; }
-  w.document.write('<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>گفتگو با میرزا</title></head><body style="font-family:Tahoma,sans-serif;text-align:center;padding:30px">'
+  w.document.write(_pdfDoc('<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>گفتگو با میرزا</title></head><body style="font-family:Tahoma,sans-serif;text-align:center;padding:30px">'
     + '<h2>💬 گفتگو با میرزا</h2><p style="color:#555">این کد را اسکن کنید تا گفتگوی خصوصی با میرزا باز شود.</p>'
     + (src ? '<img src="' + src + '" style="width:300px;height:300px">' : '')
-    + '<p dir="ltr" style="font-size:12px;color:#888;word-break:break-all">' + link + '</p></body></html>');
+    + '<p dir="ltr" style="font-size:12px;color:#888;word-break:break-all">' + link + '</p></body></html>'));
   w.document.close(); setTimeout(function(){ try { w.print(); } catch(e){} }, 400);
 }
 // ── مهمانِ کیو‌آر: ورود به گفتگوی خصوصی با میرزا (خصوصی، دائمی، با همان توکن برمی‌گردد) ──
@@ -21117,10 +21157,10 @@ function _mirzaGuestPDF(){
   if (!items.length){ showToast('هنوز گفتگویی برای PDF نیست', '#718096'); return; }
   const w = window.open('', '_blank');
   if (!w) { showToast('اجازهٔ بازکردنِ پنجرهٔ چاپ داده نشد', '#e53e3e'); return; }
-  w.document.write('<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>گفتگو با میرزا</title></head><body style="font-family:Tahoma,sans-serif;padding:24px">'
+  w.document.write(_pdfDoc('<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>گفتگو با میرزا</title></head><body style="font-family:Tahoma,sans-serif;padding:24px">'
     + '<h2 style="text-align:center">💬 گفتگو با میرزا</h2>'
     + items.map(function(t){ return '<div style="border-bottom:1px solid #eee;padding:9px 4px;white-space:pre-wrap;line-height:1.7">' + t + '</div>'; }).join('')
-    + '</body></html>');
+    + '</body></html>'));
   w.document.close(); setTimeout(function(){ try { w.print(); } catch(e){} }, 400);
 }
 
@@ -22267,7 +22307,9 @@ function _renderChatList(elId, msgs) {
     all.sort((a, b) => (a.ts || 0) - (b.ts || 0));
   } catch (e) {}
   msgs = all;
-  const visible = (msgs || []).filter(m => !(m._key && hidden.has(m._key)));
+  // پیامِ «حذف برای من» پاک نمی‌شود؛ فقط علامت می‌خورد تا به‌صورت یک نوارِ کوچک
+  // بماند و راهِ برگرداندن/«حذف برای همه» بسته نشود (اگر دستِ کاربر اشتباه خورد)
+  const visible = (msgs || []).map(m => (m && m._key && hidden.has(m._key)) ? Object.assign({}, m, { _hidden: true }) : m);
   let lastDay = '';
   const html = visible.map(m => {
     let sep = '';
@@ -22293,14 +22335,20 @@ function _chMsgHtml(m, meId, scope, peer) {
   const tmTxt = m.ts ? new Date(m.ts).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }) : '';
   const tm = (tmTxt || tick) ? `<div class="ch-tm">${tick}${tmTxt}</div>` : '';
   const key = m._key || '';
-  const delBtn = key ? `<span class="ch-del-btn" onclick="_chatOpenMsgMenu(event,'${scope}','${String(peer||'').replace(/'/g,'')}','${key}',${cls === 'me' ? 'true' : 'false'})" title="گزینه‌ها">⋮</span>` : '';
-  // پیامِ کوتاه («سلام») کوچک‌تر از خودِ دکمهٔ ⋮ بود و دکمه تمامِ متن را می‌پوشاند.
-  // حالا برای دکمه یک راهروِ جدا باز می‌شود و متن هرگز زیرِ آن نمی‌رود. روی
-  // عکس/ویدیو/صدا همان حالتِ روی‌هم می‌ماند (آن‌جا جای کافی هست).
+  const mineFlag = cls === 'me' ? 'true' : 'false';
+  const safePeer = String(peer || '').replace(/'/g, '');
+  const delBtn = key ? `<span class="ch-del-btn" onclick="_chatOpenMsgMenu(event,'${scope}','${safePeer}','${key}',${mineFlag})" title="گزینه‌ها">⋮</span>` : '';
+  // متن و نام و ساعت داخل یک ستونِ خودش می‌نشینند و دکمهٔ ⋮ کنارشان — پیامِ کوتاه
+  // دیگر در یک ستونِ باریک حرف‌حرف نمی‌شکند. روی رسانه دکمه شناور می‌ماند.
   const isMedia = (m.k === 'image' || m.k === 'video' || m.k === 'audio') && typeof m.d === 'string' && m.d.slice(0, 5) === 'data:';
-  const menuCls = key ? (isMedia ? ' menu-over' : ' menu-gutter') : '';
-  if (m.del) {   // پیامِ حذف‌شده دکمهٔ گزینه ندارد، پس راهروِ خالی هم نمی‌خواهد
-    return `<div class="ch-b ${cls} ch-deleted">${nm}<i>🚫 این پیام حذف شد</i>${tm}</div>`;
+  const menuCls = key && isMedia ? ' menu-over' : '';
+  // پیامی که کاربر «فقط برای من» پنهان کرده: پاک نمی‌شود، یک نوارِ کوچک می‌ماند تا
+  // اگر دستش خورده باشد بتواند برگرداند یا «حذف برای همه» را بزند
+  if (m._hidden) {
+    return `<div class="ch-b ${cls} ch-hidden">${delBtn}<div class="ch-c"><i>🙈 برای شما پنهان شد</i>${tm}</div></div>`;
+  }
+  if (m.del) {   // پیامِ حذف‌شده دکمهٔ گزینه ندارد
+    return `<div class="ch-b ${cls} ch-deleted"><div class="ch-c">${nm}<i>🚫 این پیام حذف شد</i>${tm}</div></div>`;
   }
   const safeD = (typeof m.d === 'string' && m.d.slice(0, 5) === 'data:') ? escFa(m.d) : '';
   let body = '';
@@ -22314,7 +22362,7 @@ function _chMsgHtml(m, meId, scope, peer) {
   else body = _chLinkify(escFa(m.t || '')).replace(/\n/g, '<br>');
   // دکمه‌های پیشنهادی جواب‌گوی خودکار (فقط پیام‌های محلی نمای کیو‌آر)
   const sug = m.sug === 'mirzaDm' ? `<div class="ch-sug"><button onclick="dmMirzaYes()">بله، خودِ میرزا جواب بدهد</button><button onclick="dmMirzaNo()">نی</button></div>` : '';
-  return `<div class="ch-b ${cls}${menuCls}">${delBtn}${nm}${body}${sug}${tm}</div>`;
+  return `<div class="ch-b ${cls}${menuCls}">${delBtn}<div class="ch-c">${nm}${body}${sug}${tm}</div></div>`;
 }
 /* ── لینکِ حساب داخلِ چت: کادرِ زدنی، نه متنِ خشک ────────────────────────────
    قبلاً لینکِ حساب فقط یک متن بود؛ طرف رویش می‌زد و هیچ اتفاقی نمی‌افتاد (چون
@@ -22446,7 +22494,12 @@ function _chatOpenMsgMenu(ev, scope, peer, key, mine) {
   const menu = document.createElement('div');
   menu.className = 'ch-msg-menu';
   menu.id = 'chMsgMenu';
-  let html = `<button onclick="_chatHideForMe('${scope}','${peer}','${key}')">🙈 حذف برای من</button>`;
+  // اگر پیام از قبل «برای من» پنهان شده، به‌جای همان گزینه دکمهٔ «برگرداندن» می‌آید —
+  // و «حذف برای همه» همچنان در دسترس است تا دستِ اشتباه راهِ برگشت را نبندد
+  const isHidden = _chatLoadHidden().has(key);
+  let html = isHidden
+    ? `<button onclick="_chatUnhideForMe('${scope}','${peer}','${key}')">↩️ برگرداندن</button>`
+    : `<button onclick="_chatHideForMe('${scope}','${peer}','${key}')">🙈 حذف برای من</button>`;
   if (mine) html += `<button class="ch-del-everyone" onclick="_chatDeleteForEveryone('${scope}','${peer}','${key}')">🗑️ حذف برای همه</button>`;
   menu.innerHTML = html;
   document.body.appendChild(menu);
@@ -22456,16 +22509,30 @@ function _chatOpenMsgMenu(ev, scope, peer, key, mine) {
   menu.style.top = top + 'px'; menu.style.left = left + 'px';
   setTimeout(() => document.addEventListener('click', _chatCloseMsgMenu, { once: true }), 0);
 }
+function _chatRefreshAfterHide(scope, peer) {
+  if (scope === 'group') _renderChatList('groupList', _groupMsgs);
+  else _renderChatList('dmList', _dmMsgCache[peer] || []);
+}
 function _chatHideForMe(scope, peer, key) {
   _chatCloseMsgMenu();
   _chatLoadHidden().add(key);
   _chatSaveHidden();
-  if (scope === 'group') _renderChatList('groupList', _groupMsgs);
-  else _renderChatList('dmList', _dmMsgCache[peer] || []);
-  showToast('پیام برای شما حذف شد', '#38a169');
+  _chatRefreshAfterHide(scope, peer);
+  showToast('🙈 برای شما پنهان شد — با ⋮ می‌توانید برگردانید', '#38a169');
+}
+// برگرداندنِ پیامی که اشتباهی «برای من» پنهان شده
+function _chatUnhideForMe(scope, peer, key) {
+  _chatCloseMsgMenu();
+  _chatLoadHidden().delete(key);
+  _chatSaveHidden();
+  _chatRefreshAfterHide(scope, peer);
+  showToast('↩️ پیام برگشت', '#38a169');
 }
 function _chatDeleteForEveryone(scope, peer, key) {
   _chatCloseMsgMenu();
+  // اگر قبلاً «برای من» پنهان شده بود، علامتِ پنهان برداشته می‌شود تا به‌جای نوارِ
+  // «پنهان شد»، همان «🚫 این پیام حذف شد» دیده شود
+  if (_chatLoadHidden().delete(key)) _chatSaveHidden();
   // پیامی که هنوز در صف است اصلاً به سرور نرفته — همان‌جا لغو می‌شود
   const box = _chatOutboxLoad();
   const q = box.find(it => it.key === key);
@@ -23277,7 +23344,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.128';
+const APP_VERSION = '2.9.129';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -25187,7 +25254,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px;border-top
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
   const w = window.open('', '_blank', 'width=800,height=650');
-  if (w) { w.document.write(html); w.document.close(); }
+  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
   else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
 }
 // ── کمبودی/اضافیِ کارمندان (از همهٔ ورق‌ها) + رسید/پرداخت ──
@@ -25557,7 +25624,7 @@ function pdfMonthReport() {
   </body></html>`;
   const w = window.open('', '_blank');
   if (!w) { showToast('❌ پنجرهٔ چاپ باز نشد — پاپ‌آپ را اجازه دهید', '#e53e3e'); return; }
-  w.document.write(html); w.document.close();
+  w.document.write(_pdfDoc(html)); w.document.close();
   setTimeout(() => { try { w.print(); } catch (e) {} }, 400);
 }
 
@@ -28297,7 +28364,7 @@ ${copy('نسخهٔ پمپ')}
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
   const w = window.open('', '_blank', 'width=760,height=980');
-  if (w) { w.document.write(html); w.document.close(); }
+  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
   else showToast('مرورگر پنجره را مسدود کرد. اجازه popup بدهید', '#e53e3e');
 }
 
