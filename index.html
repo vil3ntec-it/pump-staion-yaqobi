@@ -19542,6 +19542,12 @@ function syncWaraqTxnsToPersons(w) {
         let priceper, byMoney = false;
         // اگر فقط مبلغ نوشته شده (بدون لیتر/فی) → ردیف پولی، نه «۱ لیتر فی ...»
         if (fuel > 0) { priceper = amount / fuel; } else { fuel = 0; priceper = 0; byMoney = true; }
+        // در «واحد پول» پول حرفِ آخر را می‌زند: الباقی از خودِ مبلغ حساب می‌شود، نه از
+        // لیتر × فی. ولی اگر همان معامله تیل بوده، لیتر و فی هم همراهِ ردیف به دفترِ
+        // واحد پول می‌روند و در ستون‌های «مقدار تیل» و «فی لیتر» دیده می‌شوند — مدرکِ
+        // این‌که حساب چطور به این رقم رسیده. (ردیفِ پولِ خالی همچنان بی‌لیتر و بی‌فی
+        // می‌ماند؛ لیتر از تقسیمِ مبلغ بر نرخِ ورق ساخته نمی‌شود.)
+        if (t.unit === 'money') byMoney = true;
         // اگر نام عوض شده و به شخص دیگری خورده، ثبت قبلی این ردیف پاک شود
         removePersonRowBySrcKey(srcKey, person.id);
         // واحدِ انتخابیِ ردیف (ستون «واحد» ورق): تیل → دفترِ واحد تیل (rows)؛
@@ -23251,7 +23257,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.126';
+const APP_VERSION = '2.9.127';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -25652,46 +25658,66 @@ try {
   }
 } catch (e) {}
 
-// ── ترمیمِ یک‌بارهٔ نسخهٔ 2.9.126 ────────────────────────────────────────────────
-// ردیف‌هایی که در ورق واحدشان «پول» است ولی در دفترِ «واحد تیل» (rows) نشسته‌اند، به
-// دفترِ «واحد پول» (moneyRows) برمی‌گردند و لیتر/فیِ ساختگی‌شان پاک می‌شود. این‌ها
-// وقتی درست می‌شدند که کاربر بعد از ذخیرهٔ ورق واحد را روی «پول» می‌گذاشت: تا فشردنِ
-// دوبارهٔ «✔ ذخیره ورق» ردیف در دفترِ تیل می‌ماند و مقدار تیلش «مبلغ ÷ نرخِ ورق» بود
-// (مثلاً ۲۰٬۰۰۰ ÷ ۹۰ = ۲۲۲٫۲۲۲ لیتر). فقط ردیف‌های src='waraq' بررسی می‌شوند و مبلغِ
-// بردگی/رسید دست نمی‌خورد — فقط دفتر عوض می‌شود و لیتر/فی صفر می‌شود.
+// ── ترمیمِ یک‌بارهٔ نسخهٔ 2.9.127 ────────────────────────────────────────────────
+// ردیف‌هایی که در ورق واحدشان «پول» است، سرِ جای درستشان می‌نشینند:
+//   • از دفترِ «واحد تیل» (rows) به دفترِ «واحد پول» (moneyRows) منتقل می‌شوند.
+//   • پول حرفِ آخر را می‌زند (byMoney=true) تا الباقی از خودِ مبلغ حساب شود.
+//   • لیتر و فی از خودِ ردیفِ ورق برمی‌گردند: اگر در ورق لیتر نوشته شده بود همان لیتر
+//     و فیِ واقعی (مبلغ ÷ لیتر) به‌عنوان مدرک می‌ماند؛ اگر پولِ خالی بوده، لیتر و فی
+//     صفر می‌شود — چون قبلاً از «مبلغ ÷ نرخِ ورق» لیترِ ساختگی ساخته می‌شد
+//     (مثلاً ۲۰٬۰۰۰ ÷ ۹۰ = ۲۲۲٫۲۲۲ لیتر).
+// فقط ردیف‌های src='waraq' بررسی می‌شوند و مبلغِ بردگی/رسید هرگز دست نمی‌خورد.
 try {
-  if (!localStorage.getItem('pumpFix29126')) {
-    const moneyKeys = new Set();
+  if (!localStorage.getItem('pumpFix29127')) {
+    const moneyTx = {};
     (DB.waraqEntries || []).forEach(function(w){
       if (!w) return;
       ['day','night'].forEach(function(sh){
         const sd = w[sh];
         ((sd && sd.transactions) || []).forEach(function(t, i){
-          if (t && t.unit === 'money') moneyKeys.add(w.id + '|' + sh + '|' + i);
+          if (t && t.unit === 'money') moneyTx[w.id + '|' + sh + '|' + i] = t;
         });
       });
     });
+    // لیتر/فیِ درستِ یک ردیفِ پولی از روی همان تراکنشِ ورق
+    const fixRow = function(r, t){
+      const liters = parseFloat(t && t.liters) || 0;
+      const bard = parseFloat(r.bardagi) || 0;
+      r.byMoney = true;
+      r.fuel = liters > 0 ? liters : 0;
+      r.priceper = (liters > 0 && bard > 0) ? (bard / liters) : 0;
+      r.albaqi = bard - (parseFloat(r.rasid) || 0);
+    };
     let _fx = 0;
-    if (moneyKeys.size) {
+    if (Object.keys(moneyTx).length) {
       ((DB.debtPersons || []).concat(DB.noinvPersons || [])).forEach(function(p){
         if (!p) return;
         [p].concat(p.subs || []).forEach(function(a){
-          if (!a || !Array.isArray(a.rows)) return;
-          for (let i = a.rows.length - 1; i >= 0; i--) {
-            const r = a.rows[i];
-            if (!r || r.src !== 'waraq' || !moneyKeys.has(r.srcKey)) continue;
-            a.rows.splice(i, 1);
-            r.fuel = 0; r.priceper = 0; r.byMoney = true;
-            r.albaqi = (parseFloat(r.bardagi) || 0) - (parseFloat(r.rasid) || 0);
-            if (!Array.isArray(a.moneyRows)) a.moneyRows = [];
-            if (!a.moneyRows.some(function(x){ return x && x.srcKey === r.srcKey; })) a.moneyRows.push(r);
-            _fx++;
+          if (!a) return;
+          // ۱) ردیف‌هایی که هنوز در دفترِ تیل مانده‌اند → به دفترِ پول
+          if (Array.isArray(a.rows)) {
+            for (let i = a.rows.length - 1; i >= 0; i--) {
+              const r = a.rows[i];
+              if (!r || r.src !== 'waraq' || !moneyTx[r.srcKey]) continue;
+              a.rows.splice(i, 1);
+              fixRow(r, moneyTx[r.srcKey]);
+              if (!Array.isArray(a.moneyRows)) a.moneyRows = [];
+              if (!a.moneyRows.some(function(x){ return x && x.srcKey === r.srcKey; })) a.moneyRows.push(r);
+              _fx++;
+            }
           }
+          // ۲) ردیف‌هایی که در دفترِ پول هستند ولی لیتر/فیِ کهنه دارند (چه ساختگی از
+          //    نسخه‌های قبل، چه پاک‌شده در ترمیمِ 2.9.126) → از روی خودِ ورق درست شوند
+          (a.moneyRows || []).forEach(function(r){
+            if (!r || r.src !== 'waraq' || !moneyTx[r.srcKey]) return;
+            fixRow(r, moneyTx[r.srcKey]);
+            _fx++;
+          });
         });
       });
     }
     if (_fx) { try { save(); } catch (e2) {} }
-    localStorage.setItem('pumpFix29126', '1');
+    localStorage.setItem('pumpFix29127', '1');
   }
 } catch (e) {}
 
