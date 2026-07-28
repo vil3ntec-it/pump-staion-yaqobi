@@ -161,13 +161,98 @@ export async function addSite({ rootPath, name, domain, port, kind, startCommand
 
   ensureWorkspace(slug);
   const site = getSiteBySlug(slug);
-  // پوشهٔ اختصاصیِ دادهٔ همین سایت داخل پوشهٔ سرور — از همان لحظهٔ افزودن
-  await ensureSiteDataFolder(site);
-
   if (site.domain) attachDomain(site.id, site.domain);
 
+  // پوشهٔ داده، رمز، دامنه و آدرس اینترنتی — همه خودکار، از همان لحظهٔ افزودن
+  const provisioned = await provisionSite(site);
+
   logEvent('info', 'panel', `سایت «${site.name}» از مسیر ${resolved} اضافه شد`, site.id);
-  return { ok: true, site };
+  return { ok: true, site: getSite(site.id), provisioned };
+}
+
+// --------------------------- راه‌اندازیِ خودکار -----------------------------
+//  با افزودن یک سایت، خودش همه‌چیزش را می‌گیرد: پوشهٔ داده، رمز، پورت، دامنه و
+//  آدرس اینترنتی. کاربر نباید هیچ‌کدام را دستی تنظیم کند.
+// ---------------------------------------------------------------------------
+
+/** برچسبِ امن برای DNS از روی نام سایت (حروف فارسی در دامنه کار نمی‌کند) */
+function dnsLabel(site) {
+  const label = String(site.slug || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+  return label || `site-${site.id}`;
+}
+
+/**
+ * دامنهٔ پایه‌ای که زیردامنهٔ هر سایت از آن ساخته می‌شود.
+ * یا خودتان در تنظیمات می‌گذارید، یا از روی آدرس ثابتِ تونل حدس زده می‌شود
+ * (مثلاً sync.yaqobipump.top ← yaqobipump.top).
+ */
+export function baseDomain() {
+  const explicit = normalizeDomain(getSetting('sites_base_domain', null));
+  if (explicit) return explicit;
+  const host = normalizeDomain(getSetting('tunnel_hostname', null));
+  if (!host) return null;
+  const parts = host.split('.');
+  return parts.length > 2 ? parts.slice(1).join('.') : host;
+}
+
+/** زیردامنه‌ای که هنوز مالِ سایت دیگری نیست */
+function freeSubdomain(site, zone) {
+  const label = dnsLabel(site);
+  for (let n = 1; n <= 20; n++) {
+    const candidate = normalizeDomain(`${n === 1 ? label : `${label}-${n}`}.${zone}`);
+    if (!candidate) return null;
+    const owner = db.prepare('SELECT site_id FROM domains WHERE name = ?').get(candidate);
+    if (!owner || owner.site_id === site.id || owner.site_id == null) return candidate;
+  }
+  return null;
+}
+
+/** آیا اجازه داریم تونل بالا بیاوریم؟ (در آزمون‌ها و حالت آفلاین خاموش است) */
+function tunnelAllowed() {
+  return (process.env.HLP_TUNNEL ?? '1') !== '0';
+}
+
+/**
+ * همهٔ کارهای راه‌اندازیِ یک سایتِ تازه — خودکار.
+ * اگر دامنهٔ پایه دارید، زیردامنهٔ خودِ سایت ساخته و وصل می‌شود؛ اگر نه، یک
+ * آدرس اینترنتیِ مستقل برایش بالا می‌آید تا از همان لحظه در دسترس باشد.
+ */
+export async function provisionSite(site, { auto } = {}) {
+  const enabled = auto ?? getSetting('site_autosetup', true) !== false;
+  const report = { domain: null, tunnel: null, dataDir: null };
+
+  const store = await ensureSiteDataFolder(site);
+  report.dataDir = store?.dataDir ?? null;
+  if (!enabled) return report;
+
+  const zone = baseDomain();
+  if (!site.domain && zone) {
+    const candidate = freeSubdomain(site, zone);
+    if (candidate) {
+      const attached = attachDomain(site.id, candidate);
+      if (attached.ok) {
+        report.domain = candidate;
+        logEvent('info', 'panel', `دامنهٔ ${candidate} خودکار برای سایت «${site.name}» ساخته شد`, site.id);
+        const { syncTunnelRoutes } = await import('../tunnel.js');
+        syncTunnelRoutes().catch(() => {});
+      }
+    }
+  }
+
+  // بدون دامنهٔ پایه، آدرس اینترنتیِ مستقلِ خودِ سایت
+  if (!report.domain && !site.domain && site.port && tunnelAllowed()) {
+    const { startSiteTunnel } = await import('../site-tunnels.js');
+    startSiteTunnel(site).catch((e) =>
+      logEvent('error', 'panel', `آدرس اینترنتی سایت ${site.name} بالا نیامد: ${e.message}`, site.id)
+    );
+    report.tunnel = 'starting';
+  }
+
+  return report;
 }
 
 /**

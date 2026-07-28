@@ -35,8 +35,15 @@ import settingsRoutes from './routes/settings.js';
 import siteServerRoutes from './routes/site-server.js';
 
 const PUBLIC_DIR = path.join(SERVER_ROOT, 'public');
+const PID_FILE = path.join(config.dataDir, 'panel.pid');
 
 ensureDirs();
+
+// شمارهٔ پروسه روی دیسک می‌ماند تا اسکریپت‌های سرویس (وقتی پنجره‌ای باز نیست)
+// بتوانند همین سرور را پیدا و متوقف کنند.
+try {
+  fs.writeFileSync(PID_FILE, String(process.pid), 'utf8');
+} catch { /* اگر ننوشت، فقط توقفِ خودکار سخت‌تر می‌شود */ }
 
 const app = express();
 app.disable('x-powered-by');
@@ -279,6 +286,9 @@ async function shutdown(signal) {
   } catch { /* بی‌خیال */ }
   try {
     db.close();
+  } catch { /* بی‌خیال */ }
+  try {
+    fs.rmSync(PID_FILE, { force: true });
   } catch { /* بی‌خیال */ }
   httpServer.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 3000).unref();

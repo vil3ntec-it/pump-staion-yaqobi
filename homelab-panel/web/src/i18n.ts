@@ -239,6 +239,14 @@ const fa = {
   onlineViaPort: 'پورت محلی',
   onlineViaPublic: 'آدرس اینترنتی',
   onlineVia: 'از راه',
+
+  // ---- راه‌اندازی خودکار سایت تازه ----
+  autoSetup: 'راه‌اندازی خودکار سایت تازه',
+  autoSetupHint:
+    'با افزودن هر سایت، خودش پوشهٔ دادهٔ جدا، رمز، پورت، دامنه و آدرس اینترنتی می‌گیرد — بدون هیچ تنظیم دستی.',
+  baseDomain: 'دامنهٔ پایه برای سایت‌ها',
+  baseDomainHint:
+    'زیردامنهٔ هر سایت از روی همین ساخته می‌شود (مثلاً سایت «فروشگاه» ← shop.yaqobipump.top). خالی بگذارید تا به‌جایش هر سایت آدرس تونل مستقل بگیرد.',
   permanentTitle: 'آدرس ثابت — مثل فایربیس',
   permanentIntro:
     'با آدرس ثابت دیگر لازم نیست هیچ لینکی پخش کنید: یک‌بار آدرس در خودِ سایت می‌نشیند و از آن به بعد هر کسی سایت را باز کند، خودکار به همین سرور وصل می‌شود — دقیقاً مدل فایربیس.',
@@ -521,6 +529,13 @@ const en: Dict = {
   onlineViaPort: 'local port',
   onlineViaPublic: 'internet address',
   onlineVia: 'via',
+
+  autoSetup: 'Set up new sites automatically',
+  autoSetupHint:
+    'Every site you add gets its own data folder, password, port, domain and internet address by itself — nothing to configure by hand.',
+  baseDomain: 'Base domain for sites',
+  baseDomainHint:
+    'Each site gets a subdomain of this (a site named "shop" becomes shop.yaqobipump.top). Leave it empty and each site gets its own tunnel address instead.',
   permanentTitle: 'Permanent address — the Firebase model',
   permanentIntro:
     'With a permanent address you never share a link: the address goes into the site once, and from then on anyone who opens the site connects automatically — exactly the Firebase model.',

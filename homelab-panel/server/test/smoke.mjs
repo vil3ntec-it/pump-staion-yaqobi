@@ -41,6 +41,7 @@ const child = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', 
     HLP_DATA_DIR: dataDir,
     HLP_SITES_ROOT: sitesRoot,
     HLP_METRICS_INTERVAL: '700',
+    HLP_TUNNEL: '0',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 });

@@ -22,7 +22,7 @@ const tmp = await fsp.mkdtemp(path.join(os.tmpdir(), 'hlp-multi-'));
 const dataDir = path.join(tmp, 'data');
 const sitesRoot = path.join(tmp, 'sites');
 
-for (const name of ['alpha', 'beta']) {
+for (const name of ['alpha', 'beta', 'alpha2']) {
   fs.mkdirSync(path.join(sitesRoot, name), { recursive: true });
   fs.writeFileSync(path.join(sitesRoot, name, 'index.html'), `<h1>${name}</h1>`, 'utf8');
 }
@@ -312,6 +312,34 @@ async function main() {
   check('هر سایت وضعیت تونل خودش را دارد', withTunnel === true);
   const addrs = (await api('GET', `/api/sites/${alpha.id}/server`)).json?.addresses || [];
   check('آدرس اتصال هر سایت شامل نام خودش است', addrs.every((a) => a.ws.includes(`site=${alpha.slug}`)));
+
+  console.log('\n── افزودن سایت: همه‌چیزش خودکار ثبت می‌شود ──');
+  // دامنهٔ پایه را می‌گذاریم؛ از این به بعد هر سایت تازه زیردامنهٔ خودش را می‌گیرد
+  r = await api('PUT', '/api/settings', { sitesBaseDomain: 'yaqobipump.top' });
+  check('دامنهٔ پایه ذخیره شد', r.status === 200);
+  r = await api('GET', '/api/settings');
+  check('راه‌اندازی خودکار روشن است', r.json?.settings?.siteAutoSetup === true);
+  check('دامنهٔ پایه برگشت داده می‌شود', r.json?.settings?.sitesBaseDomain === 'yaqobipump.top');
+
+  r = await api('POST', '/api/sites/create', { name: 'Karkhane', kind: 'static' });
+  const auto = r.json?.site;
+  check('سایت تازه ساخته شد', Boolean(auto?.id));
+  check('دامنه‌اش خودکار ساخته شد', auto?.domain === 'karkhane.yaqobipump.top', String(auto?.domain));
+  check('پورت خودکار گرفت', Number.isFinite(auto?.port));
+
+  r = await api('GET', `/api/sites/${auto.id}`);
+  const autoInfo = r.json?.site;
+  check('پوشهٔ دادهٔ اختصاصی‌اش خودکار ساخته شد', fs.existsSync(autoInfo?.dataDir || ''), String(autoInfo?.dataDir));
+  check('رمز اختصاصی‌اش ساخته شد', Boolean((await api('GET', `/api/sites/${auto.id}/server/token`)).json?.token));
+
+  r = await api('GET', '/api/domains');
+  const autoDomain = r.json?.domains?.find((d) => d.name === 'karkhane.yaqobipump.top');
+  check('دامنه در بخش دامنه‌ها هم خودکار ثبت شد', autoDomain?.siteName === 'Karkhane');
+
+  // سایت دوم با همان نام نباید دامنهٔ سایت اول را بدزدد
+  r = await api('POST', '/api/sites', { path: path.join(sitesRoot, 'alpha2'), name: 'Karkhane' });
+  const twin = r.json?.site;
+  check('سایت هم‌نام هم دامنهٔ جدا می‌گیرد', Boolean(twin?.domain) && twin.domain !== auto.domain, String(twin?.domain));
 
   console.log('\n── حذف سایت، دادهٔ سایت‌های دیگر را نمی‌برد ──');
   await api('DELETE', `/api/sites/${alpha.id}`);
