@@ -18672,6 +18672,9 @@ let _quotaWarnedThisSession = false;
 // سقفِ کشِ localStorage (خودِ مرورگر حدود ۵ مگابایت می‌دهد) — بالاتر از این فقط
 // IndexedDB می‌نویسیم. این «محدودیتِ برنامه» نیست؛ فقط مرزِ کشِ سریع است.
 const _LS_CACHE_MAX = 4 * 1024 * 1024;
+let _lsCacheOff = false;      // داده از سقفِ کش بزرگ‌تر شده؟
+let _lsCacheProbe = 0;        // هر چند ذخیره یک‌بار دوباره بسنج
+let _lastSnapLen = 0;         // اندازهٔ تقریبیِ آخرین رشته‌سازی
 // نوشتنِ کشِ localStorage: اگر جا شد بنویس، اگر نشد نسخهٔ کهنه را پاک کن تا
 // هرگز با _rev قدیمی‌اش بر IndexedDB غلبه نکند.
 function _writeLsCache(snap) {
@@ -18699,8 +18702,15 @@ function _flushSave() {
   // می‌شود، اگر نشد بی‌سر و صدا رد می‌شویم و نسخهٔ کهنه‌اش پاک می‌شود تا هرگز
   // بر IndexedDB غلبه نکند. شمارندهٔ _rev می‌گوید کدام نسخه تازه‌تر است.
   DB._rev = (parseInt(DB._rev, 10) || 0) + 1;
-  var snap = JSON.stringify(DB);
-  _writeLsCache(snap);
+  // رشته‌سازیِ کلِ دیتابیس گران است (در ۲۰ سال داده ~۲۳۰ms). اگر از قبل معلوم
+  // شده که داده از سقفِ کش بزرگ‌تر است، دیگر برای کش رشته نمی‌سازیم؛ فقط هر ۴۰
+  // ذخیره یک‌بار دوباره می‌سنجیم تا اگر داده کوچک شد کش برگردد.
+  if (!_lsCacheOff || (++_lsCacheProbe % 40 === 0)) {
+    var snap = JSON.stringify(DB);
+    _lastSnapLen = snap.length;
+    _lsCacheOff = snap.length > _LS_CACHE_MAX;
+    _writeLsCache(snap);
+  }
   try { _IDB.put(DB); } catch(e) {}
   // علامت‌گذاری: اطلاعات تغییر کرده و هنوز به سرور نرسیده — برای بارگذاری خودکار وقتی نت وصل شد
   try { _markDirtyForAutoSync(); } catch(e){}
@@ -18925,7 +18935,17 @@ function _markDirtyForAutoSync() {
   _dirtySinceUpload = true;
   _updateAutoSyncBadge();
   // اگر همین الان آنلاین هستیم، چند ثانیه صبر کن (تا چند تغییر پشت‌سرهم یک‌بار بارگذاری شود) و خودکار بفرست
-  if (navigator.onLine) _scheduleAutoSync(1000);
+  if (navigator.onLine) _scheduleAutoSync(_autoSyncDelay());
+}
+// هر بار هم‌زمان‌سازی، کلِ حساب روی سرور نوشته می‌شود. با بزرگ شدنِ حساب،
+// فرستادنِ آن هر ثانیه هم اینترنت را می‌بلعد هم سرور را. پس فاصله با حجم بالا
+// می‌رود: حسابِ کوچک تقریباً فوری، حسابِ بزرگ هر نیم دقیقه.
+function _autoSyncDelay() {
+  const mb = (_lastSnapLen || 0) / 1048576;
+  if (mb < 2) return 1000;
+  if (mb < 6) return 5000;
+  if (mb < 15) return 15000;
+  return 30000;
 }
 
 function _scheduleAutoSync(delayMs) {
@@ -18955,7 +18975,11 @@ function _runAutoSync() {
   _fbDb.ref('stations/' + code).set(payload)
     .then(() => {
       DB.lastSyncUpload = payload.lastSyncUpload;
-      localStorage.setItem('pumpDB', JSON.stringify(DB)); // مستقیم، بدون دوباره dirty کردن
+      // با _writeLsCache — پیش از این مستقیم صدا می‌شد و وقتی حساب از سقفِ کش
+      // بزرگ‌تر می‌شد خطای سهمیه می‌داد؛ آن خطا زنجیره را به catch می‌انداخت، پس
+      // _dirtySinceUpload صفر نمی‌شد و برنامه کلِ حساب را هر ۱۵ ثانیه تا ابد
+      // دوباره آپلود می‌کرد (با پیامِ «ناموفق»، در حالی که واقعاً موفق بوده).
+      _writeLsCache();
       _dirtySinceUpload = false;
       _autoSyncInFlight = false;
       _setSyncMsg('✅ اطلاعات با سرور هم‌زمان شد.', '#38a169');
@@ -33837,7 +33861,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.134';
+const APP_VERSION = '2.9.135';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
