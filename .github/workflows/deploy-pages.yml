@@ -23,13 +23,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      # enablement: true تنظیماتِ Pages را در هر دیپلوی بازنویسی می‌کند؛ Pages
+      # از قبل روشن است، پس دست نمی‌زنیم تا دامنهٔ اختصاصی (CNAME) و گواهی https
+      # آن هرگز از تنظیمات پاک نشود.
       - name: Setup Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
       # پنل سرور خانگی یک برنامهٔ محلی است و نباید روی سایت منتشر شود
       - name: حذف پنل سرور خانگی از خروجی سایت
         run: rm -rf homelab-panel
+      # بدون فایل CNAME، گیت‌هاب دامنهٔ اختصاصی را کنار می‌گذارد و سایت با خطای
+      # گواهی (ERR_CERT_COMMON_NAME_INVALID) بالا می‌آید. پس اگر نبود، همین‌جا
+      # می‌ایستیم — نه این که سایت را خراب منتشر کنیم.
+      - name: بررسی وجود دامنهٔ اختصاصی (CNAME)
+        run: |
+          test -s CNAME || { echo "::error::فایل CNAME نیست یا خالی است — دامنهٔ اختصاصی پاک می‌شود"; exit 1; }
+          echo "دامنهٔ اختصاصی: $(cat CNAME)"
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
