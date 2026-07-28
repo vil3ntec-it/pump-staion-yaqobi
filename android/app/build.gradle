@@ -1,0 +1,31 @@
+plugins { id 'com.android.application' }
+
+android {
+  namespace 'top.yaqobipump.app'
+  compileSdk 34
+
+  defaultConfig {
+    applicationId "top.yaqobipump.app"
+    minSdk 23
+    targetSdk 34
+    versionCode 1
+    versionName "2.9.136"
+  }
+
+  buildTypes {
+    release {
+      minifyEnabled false
+      // امضای دیباگ تا فایل بدونِ کلیدِ اختصاصی هم نصب‌شدنی باشد
+      signingConfig signingConfigs.debug
+    }
+  }
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+}
+
+dependencies {
+  implementation 'androidx.appcompat:appcompat:1.7.0'
+  implementation 'androidx.webkit:webkit:1.11.0'
+}

@@ -18302,7 +18302,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:8px">
       <input class="staff-search" id="staff-search" style="margin-bottom:0;flex:1" placeholder="🔍 نام قرض‌دار را بنویسید یا 🎤 بگویید" oninput="renderStaffList()" onkeydown="if(event.key==='Enter'){const c=document.querySelector('#staff-list .staff-card');if(c)c.click();}">
       <button type="button" id="staff-mic" class="staff-mic" onclick="staffVoiceSearch()" title="جستجوی صوتی">🎤</button>
-      <button type="button" id="staff-teach" class="staff-mic" onclick="vxOpenTeach()" title="آموزش صدا — برای کار کردنِ جستجوی صوتی بدون اینترنت">🎓</button>
     </div>
     <div class="staff-count" id="staff-count"></div>
     <div class="staff-grid" id="staff-list"></div>
@@ -33861,7 +33860,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.135';
+const APP_VERSION = '2.9.136';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -34155,17 +34154,21 @@ function _staffApplyVoice(alts) {
   // فرعیِ همان شخص رقیب هم نیستند (نام یکی است؛ بهترینِ همان شخص باز می‌شود)
   const second = scored.find(s => String(s.it.p.id) !== String(best.it.p.id));
   const inp = document.getElementById('staff-search');
-  if (best.sc >= 0.72 && (!second || best.sc - second.sc >= 0.12 || best.sc >= 0.93)) {
+  // نمرهٔ بالا به‌تنهایی کافی نیست: اگر دو نفر تقریباً هم‌نمره باشند (مثلاً گفتنِ
+  // «احمد» با دو حسابِ «احمدشاه» و «احمد ولی») نباید حدس بزند — باید بپرسد.
+  const clear = !second || (best.sc - second.sc) >= 0.08;
+  if (best.sc >= 0.72 && clear) {
     if (inp) inp.value = best.it.p.name + (best.it.sub ? ' ' + (best.it.sub.name || '') : '');
     _staffAutoKey = String(best.it.p.id) + '|' + (best.it.sub ? String(best.it.sub.id) : '');
     renderStaffList();
     openStaffAccount(best.it.p.id, best.it.sub ? best.it.sub.id : '');
     showToast('🎤 ' + (best.it.sub ? (best.it.sub.name || 'حساب فرعی') : best.it.p.name), '#2b6cb0');
-  } else if (best.sc >= 0.45) {
-    // نامطمئن — به اشتباه هیچ حسابی باز نشود؛ فهرست کامل بماند تا خودش انتخاب کند
+  } else if (best.sc >= 0.35) {
+    // نامطمئن — به‌جای پاک کردنِ همه‌چیز، همان چند نامِ نزدیک را زدنی نشان بده
+    // تا با یک زدن حسابش باز شود (خواستهٔ کاربر: «اسمش را گرفتم، برود در حسابش»)
     if (inp) inp.value = '';
     renderStaffList();
-    showToast('🎤 چند نام نزدیک بود — واضح‌تر بگویید یا از فهرست انتخاب کنید', '#f6c000');
+    _staffAskWhich(scored.filter(x => x.sc >= 0.3).slice(0, 4));
   } else {
     if (inp) inp.value = '';
     renderStaffList();
@@ -34584,7 +34587,7 @@ async function _vxOfflineSearch() {
   if (!feat) { showToast('🎤 چیزی شنیده نشد — نزدیک‌تر و بلندتر بگویید', '#e53e3e'); return; }
   _vxPendingTeach = { feat, ts: Date.now() };                  // اگر خودتان نام را بزنید، همین صدا ثبت می‌شود
   if (!_vxTotal()) {
-    showTopToast('🎤 هنوز هیچ صدایی ثبت نشده. نام را از فهرست بزنید — همین صدای شما برای آن نام ثبت می‌شود و دفعهٔ بعد خودش می‌شناسد (یا دکمهٔ 🎓 را بزنید).', '#d97706', 8000);
+    showTopToast('🎤 بدونِ اینترنت، بارِ اول نام را از فهرست بزنید — همین صدای شما ثبت می‌شود و از دفعهٔ بعد خودش می‌شناسد.', '#d97706', 6000);
     return;
   }
   const res = _vxMatch(feat).filter(r => _vxLiveKey(r.key));   // نام‌های پاک‌شده کنار می‌روند
@@ -34620,6 +34623,34 @@ function _vxOpenKey(key) {
   return true;
 }
 // «کدام‌شان بود؟» — هم کار راه می‌افتد، هم برنامه از انتخابِ شما یاد می‌گیرد
+// «کدام‌شان بود؟» برای مسیرِ آنلاین — یک زدن، حساب باز می‌شود
+function _staffAskWhich(scored) {
+  document.getElementById('vxAsk')?.remove();
+  if (!scored || !scored.length) { showToast('🎤 نشناختم — دوباره و واضح‌تر بگویید', '#f6c000'); return; }
+  const box = document.createElement('div');
+  box.id = 'vxAsk';
+  box.className = 'vx-ask';
+  box.innerHTML = '<div class="vx-ask-t">🎤 کدام‌شان بود؟</div>' +
+    scored.map(x => {
+      const nm = x.it.p.name + (x.it.sub ? ' — ' + (x.it.sub.name || 'حساب فرعی') : '');
+      return '<button onclick="_staffPick(\'' + String(x.it.p.id).replace(/'/g, '') + '\',\''
+        + (x.it.sub ? String(x.it.sub.id).replace(/'/g, '') : '') + '\')">' + escFa(nm) + '</button>';
+    }).join('') +
+    '<button class="vx-no" onclick="document.getElementById(\'vxAsk\').remove()">هیچ‌کدام</button>';
+  document.body.appendChild(box);
+  setTimeout(() => { document.getElementById('vxAsk')?.remove(); }, 15000);
+}
+function _staffPick(pid, sid) {
+  document.getElementById('vxAsk')?.remove();
+  const p = (DB.debtPersons || []).find(x => String(x.id) === String(pid));
+  if (!p) return;
+  const inp = document.getElementById('staff-search');
+  const sub = sid ? (p.subs || []).find(x => String(x.id) === String(sid)) : null;
+  if (inp) inp.value = p.name + (sub ? ' ' + (sub.name || '') : '');
+  _staffAutoKey = String(p.id) + '|' + (sid || '');
+  renderStaffList();
+  openStaffAccount(p.id, sid || '');
+}
 function _vxAskWhich(list) {
   document.getElementById('vxAsk')?.remove();
   const box = document.createElement('div');
