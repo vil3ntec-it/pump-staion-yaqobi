@@ -78,11 +78,24 @@ export type HistoryPoint = {
   temp: number | null;
 };
 
+export type SiteTunnel = {
+  slug: string;
+  port: number | null;
+  status: 'stopped' | 'installing' | 'starting' | 'running' | 'error';
+  url: string | null;
+  error: string | null;
+  startedAt: number | null;
+  restarts: number;
+  wanted?: boolean;
+  log?: string[];
+};
+
 export type Site = {
   id: number;
   slug: string;
   name: string;
   domain: string | null;
+  domains: string[];
   path: string;
   pathExists: boolean;
   port: number | null;
@@ -91,6 +104,8 @@ export type Site = {
   autostart: boolean;
   enabled: boolean;
   online: boolean;
+  onlineVia: 'process' | 'port' | 'public' | null;
+  httpStatus: number | null;
   managed: boolean;
   process: { pid: number; startedAt: number; uptimeSeconds: number; restarts: number } | null;
   sizeBytes: number | null;
@@ -98,8 +113,24 @@ export type Site = {
   lastModified: number | null;
   errorCount: number;
   workspace: string;
+  dataDir: string | null;
+  dataBytes: number | null;
+  dataBranches: number | null;
+  liveConnections: number | null;
+  publicUrls: string[];
+  tunnel: SiteTunnel;
+  url: string | null;
   createdAt: number;
   updatedAt: number;
+};
+
+export type SiteServerBox = {
+  slug: string;
+  dataDir: string;
+  tokenPreview: string | null;
+  addresses: { label: string; ws: string }[];
+  branches: { key: string; children: number; bytes: number }[];
+  stats: { liveConnections: number; reads: number; writes: number; branches: number };
 };
 
 export type Domain = {
@@ -204,7 +235,16 @@ export type SiteServerInfo = {
     mode: 'quick' | 'named' | 'token';
     hasToken: boolean;
   };
-  hostnames: { hostname: string; port: number; main: boolean }[];
+  hostnames: { hostname: string; port: number; main: boolean; source?: string; site?: string; slug?: string }[];
+  stores: {
+    key: string;
+    label: string;
+    main: boolean;
+    dataDir: string;
+    diskBytes: number;
+    liveConnections: number;
+    branches: { key: string; children: number; bytes: number }[];
+  }[];
   tunnelAutostart: boolean;
   siteUrl: string;
   siteLink: string | null;

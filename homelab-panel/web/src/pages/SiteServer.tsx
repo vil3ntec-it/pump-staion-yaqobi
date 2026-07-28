@@ -4,6 +4,7 @@ import {
   Database,
   Eye,
   EyeOff,
+  FolderTree,
   Globe,
   Info,
   Link2,
@@ -175,6 +176,32 @@ export default function SiteServer() {
           {data.dataDir}
         </p>
       </Card>
+
+      {/* پوشهٔ دادهٔ هر سایت — جدا از هم، تا هیچ‌چیز قاطی نشود */}
+      {data.stores && data.stores.length > 1 && (
+        <Card title={t('perSiteStores')} icon={<FolderTree className="h-4 w-4" />}>
+          <p className="mb-3 text-[11px] leading-relaxed text-ink-muted">{t('perSiteStoresHint')}</p>
+          <ul className="divide-y divide-line">
+            {data.stores.map((s) => (
+              <li key={s.key} className="flex flex-wrap items-center gap-2 py-2.5">
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-1.5 truncate text-sm font-medium">
+                    {s.main ? t('mainStore') : s.label}
+                    {s.main && <Badge tone="info">{t('mainStore')}</Badge>}
+                  </p>
+                  <p className="truncate font-mono text-[11px] text-ink-muted" dir="ltr" title={s.dataDir}>
+                    {s.dataDir}
+                  </p>
+                </div>
+                <span className="tnum shrink-0 text-xs text-ink-soft">
+                  {ltr(`${s.branches.length} · ${bytes(s.diskBytes)}`)}
+                </span>
+                {s.liveConnections > 0 && <Badge tone="good">{s.liveConnections}</Badge>}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {data.stats.clients.length > 0 && (
         <Card title={t('liveConnections')} icon={<Plug className="h-4 w-4" />}>
@@ -362,28 +389,6 @@ function InternetAccess({ data, onChanged }: { data: SiteServerInfo; onChanged: 
             </div>
           </div>
 
-          <div className="mt-4 border-t border-line pt-4">
-            <p className="label">{t('siteAddress')}</p>
-            <p className="mb-2 text-[11px] leading-relaxed text-ink-muted">{t('siteAddressHint')}</p>
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                className="input min-w-0 flex-1 font-mono text-xs"
-                dir="ltr"
-                value={siteUrl}
-                onChange={(e) => setSiteUrl(e.target.value)}
-                placeholder="https://example.com"
-              />
-              <button
-                className="btn btn-sm btn-primary"
-                disabled={savingUrl || siteUrl.trim() === data.siteUrl}
-                onClick={saveSiteUrl}
-              >
-                {savingUrl ? <Spinner /> : null}
-                {t('save')}
-              </button>
-            </div>
-          </div>
-
           <p className="mt-4 flex items-start gap-1.5 text-[11px] text-ink-muted">
             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             {t('tunnelAddressChanges')}
@@ -399,6 +404,29 @@ function InternetAccess({ data, onChanged }: { data: SiteServerInfo; onChanged: 
           </div>
         </div>
       )}
+
+      {/* آدرس سایت همیشه قابل نوشتن است — چه تونل روشن باشد چه خاموش */}
+      <div className="mt-4 border-t border-line pt-4">
+        <p className="label">{t('siteAddress')}</p>
+        <p className="mb-2 text-[11px] leading-relaxed text-ink-muted">{t('siteAddressHint')}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            className="input min-w-0 flex-1 font-mono text-xs"
+            dir="ltr"
+            value={siteUrl}
+            onChange={(e) => setSiteUrl(e.target.value)}
+            placeholder="https://example.com"
+          />
+          <button
+            className="btn btn-sm btn-primary"
+            disabled={savingUrl || !siteUrl.trim() || siteUrl.trim() === data.siteUrl}
+            onClick={saveSiteUrl}
+          >
+            {savingUrl ? <Spinner /> : null}
+            {t('save')}
+          </button>
+        </div>
+      </div>
     </Card>
   );
 }
@@ -513,20 +541,26 @@ var SELF_HOST_TOKEN = '${token ?? '…'}';`}
                   .filter((h) => !h.main)
                   .map((h) => (
                     <li key={h.hostname} className="flex items-center justify-between gap-3 py-2">
-                      <span className="truncate font-mono text-xs" dir="ltr">
+                      <span className="min-w-0 truncate font-mono text-xs" dir="ltr">
                         {h.hostname} → localhost:{h.port}
+                        {h.site ? ` (${h.site})` : ''}
                       </span>
-                      <button
-                        className="btn btn-sm"
-                        onClick={async () => {
-                          await api(`/api/site-server/tunnel/hostname?hostname=${encodeURIComponent(h.hostname)}`, {
-                            method: 'DELETE',
-                          });
-                          onChanged();
-                        }}
-                      >
-                        {t('delete')}
-                      </button>
+                      {h.source === 'site' ? (
+                        // از بخش «دامنه‌ها» می‌آید؛ آنجا هم عوض می‌شود
+                        <Badge tone="info">{t('connectedSite')}</Badge>
+                      ) : (
+                        <button
+                          className="btn btn-sm"
+                          onClick={async () => {
+                            await api(`/api/site-server/tunnel/hostname?hostname=${encodeURIComponent(h.hostname)}`, {
+                              method: 'DELETE',
+                            });
+                            onChanged();
+                          }}
+                        >
+                          {t('delete')}
+                        </button>
+                      )}
                     </li>
                   ))}
               </ul>

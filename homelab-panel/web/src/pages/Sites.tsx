@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Database,
   ExternalLink,
+  Eye,
   FolderPlus,
+  Globe,
   HardDrive,
   Play,
   Plus,
@@ -13,11 +16,24 @@ import {
   Settings2,
   Square,
   Trash2,
+  X,
 } from 'lucide-react';
 import { useApp } from '../app-context';
 import { api, ApiError } from '../api';
-import type { Site } from '../types';
-import { Badge, Card, ConfirmDialog, Empty, Field, Loading, Modal, StatusDot, toast } from '../components/ui';
+import type { Site, SiteServerBox, SiteTunnel } from '../types';
+import {
+  Badge,
+  Card,
+  ConfirmDialog,
+  CopyButton,
+  Empty,
+  Field,
+  Loading,
+  Modal,
+  Spinner,
+  StatusDot,
+  toast,
+} from '../components/ui';
 import { bytes, dateTime } from '../format';
 
 type Discovered = {
@@ -30,7 +46,7 @@ type Discovered = {
 };
 
 export default function Sites() {
-  const { t, lang, sites: liveSites } = useApp();
+  const { t, lang, socket, sites: liveSites } = useApp();
   const [sites, setSites] = useState<Site[] | null>(null);
   const [sitesRoot, setSitesRoot] = useState('');
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -59,10 +75,41 @@ export default function Sites() {
       const map = new Map(liveSites.map((s) => [s.id, s]));
       return prev.map((s) => {
         const live = map.get(s.id);
-        return live ? { ...s, online: live.online, managed: live.managed, process: live.process } : s;
+        return live
+          ? { ...s, online: live.online, onlineVia: live.onlineVia, managed: live.managed, process: live.process }
+          : s;
       });
     });
   }, [liveSites]);
+
+  // آدرس اینترنتی هر سایت به‌محض آماده شدن، بدون Refresh دیده می‌شود
+  useEffect(() => {
+    if (!socket) return;
+    const onTunnel = (payload: SiteTunnel) => {
+      setSites((prev) =>
+        prev
+          ? prev.map((s) => (s.slug === payload.slug ? { ...s, tunnel: { ...s.tunnel, ...payload } } : s))
+          : prev
+      );
+    };
+    socket.on('site:tunnel', onTunnel);
+    return () => {
+      socket.off('site:tunnel', onTunnel);
+    };
+  }, [socket]);
+
+  async function toggleTunnel(site: Site) {
+    const on = site.tunnel?.status !== 'stopped';
+    setBusyId(site.id);
+    try {
+      await api(`/api/sites/${site.id}/tunnel/${on ? 'stop' : 'start'}`, { method: 'POST' });
+      await load();
+    } catch (e) {
+      toast(e instanceof ApiError && e.code === 'no_port' ? t('siteTunnelNoPort') : t('error'), 'bad');
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   async function act(site: Site, action: 'start' | 'stop' | 'restart') {
     setBusyId(site.id);
@@ -121,11 +168,23 @@ export default function Sites() {
                     {site.path}
                   </p>
                 </div>
-                <StatusDot online={site.online} label={site.online ? t('online') : t('offline')} />
+                <div className="shrink-0 text-end">
+                  <StatusDot online={site.online} label={site.online ? t('online') : t('offline')} />
+                  {site.online && site.onlineVia && (
+                    <p className="mt-0.5 text-[10px] text-ink-muted">
+                      {t('onlineVia')}{' '}
+                      {site.onlineVia === 'public'
+                        ? t('onlineViaPublic')
+                        : site.onlineVia === 'port'
+                          ? t('onlineViaPort')
+                          : t('onlineViaProcess')}
+                    </p>
+                  )}
+                </div>
               </div>
 
               <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-                <Row label={t('domain')} value={site.domain || '—'} />
+                <Row label={t('domain')} value={site.domains?.length ? site.domains.join(' · ') : '—'} />
                 <Row label={t('port')} value={site.port ? String(site.port) : '—'} mono />
                 <Row label={t('size')} value={bytes(site.sizeBytes)} />
                 <Row label={t('lastUpdate')} value={dateTime(site.lastModified, lang)} />
@@ -136,12 +195,25 @@ export default function Sites() {
                 {site.managed && <Badge tone="good">{t('running')}</Badge>}
                 {!site.pathExists && <Badge tone="bad">{t('pathMissing')}</Badge>}
                 {site.errorCount > 0 && <Badge tone="warn">{`${site.errorCount} ${t('errors')}`}</Badge>}
+                {site.dataBranches ? (
+                  <Badge>
+                    <Database className="h-3 w-3" />
+                    {bytes(site.dataBytes)}
+                  </Badge>
+                ) : null}
               </div>
+
+              {/* آدرس اینترنتیِ مخصوص همین سایت */}
+              <SiteAddress site={site} busy={busyId === site.id} onToggle={() => toggleTunnel(site)} />
 
               <div className="mt-4 flex flex-wrap gap-1.5 border-t border-line pt-3">
                 <a
                   className="btn btn-sm"
-                  href={site.port ? `http://${location.hostname}:${site.port}` : `http://${site.domain}`}
+                  href={
+                    site.port
+                      ? `http://${location.hostname}:${site.port}`
+                      : site.publicUrls?.[0] || `https://${site.domain}`
+                  }
                   target="_blank"
                   rel="noreferrer"
                   aria-disabled={!site.port && !site.domain}
@@ -203,6 +275,55 @@ export default function Sites() {
           await load();
         }}
       />
+    </div>
+  );
+}
+
+/* --------------------- آدرس اینترنتیِ اختصاصیِ هر سایت ---------------------
+   تونلِ اصلی فقط سرورِ داده را بیرون می‌برد. اینجا هر سایت — جدا از بقیه —
+   آدرس https خودش را می‌گیرد، تا چند سایت با هم آدرس داشته باشند.
+--------------------------------------------------------------------------- */
+function SiteAddress({ site, busy, onToggle }: { site: Site; busy: boolean; onToggle: () => void }) {
+  const { t } = useApp();
+  const tunnel = site.tunnel || { status: 'stopped', url: null, error: null };
+  const on = tunnel.status !== 'stopped';
+  const starting = tunnel.status === 'installing' || tunnel.status === 'starting';
+
+  return (
+    <div className="mt-3 rounded-xl border border-line p-2.5" style={{ background: 'var(--surface-0)' }}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="flex items-center gap-1.5 text-[11px] font-medium text-ink-soft">
+          <Globe className="h-3.5 w-3.5" />
+          {t('siteInternetAddress')}
+        </p>
+        <button className={`btn btn-sm ${on ? '' : 'btn-primary'}`} disabled={busy} onClick={onToggle}>
+          {busy || starting ? <Spinner /> : null}
+          {on ? t('siteTunnelOff') : t('siteTunnelOn')}
+        </button>
+      </div>
+
+      {tunnel.url ? (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <code
+            className="min-w-0 flex-1 truncate rounded-lg border border-line px-2 py-1.5 font-mono text-[11px]"
+            dir="ltr"
+          >
+            {tunnel.url}
+          </code>
+          <CopyButton value={tunnel.url} />
+          <a className="btn btn-sm" href={tunnel.url} target="_blank" rel="noreferrer">
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </div>
+      ) : tunnel.error ? (
+        <p className="mt-1.5 text-[11px]" style={{ color: 'var(--status-critical)' }}>
+          {tunnel.error}
+        </p>
+      ) : (
+        <p className="mt-1.5 text-[11px] leading-relaxed text-ink-muted">
+          {site.port ? t('siteTunnelHint') : t('siteTunnelNoPort')}
+        </p>
+      )}
     </div>
   );
 }
@@ -547,7 +668,6 @@ function SiteSettingsModal({
 }) {
   const { t } = useApp();
   const [name, setName] = useState(site.name);
-  const [domain, setDomain] = useState(site.domain || '');
   const [port, setPort] = useState(site.port ? String(site.port) : '');
   const [startCommand, setStartCommand] = useState(site.startCommand || '');
   const [autostart, setAutostart] = useState(site.autostart);
@@ -571,7 +691,7 @@ function SiteSettingsModal({
     try {
       await api(`/api/sites/${site.id}`, {
         method: 'PUT',
-        body: { name, domain, port: port ? Number(port) : null, startCommand, autostart },
+        body: { name, port: port ? Number(port) : null, startCommand, autostart },
       });
       const env: Record<string, string> = {};
       for (const line of envText.split('\n')) {
@@ -609,17 +729,18 @@ function SiteSettingsModal({
         </>
       }
     >
-      <Field label={t('name')}>
-        <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
-      </Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label={t('domain')}>
-          <input className="input" value={domain} onChange={(e) => setDomain(e.target.value)} />
+        <Field label={t('name')}>
+          <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
         <Field label={t('port')}>
           <input className="input tnum" value={port} onChange={(e) => setPort(e.target.value)} inputMode="numeric" />
         </Field>
       </div>
+
+      {/* دامنه‌ها — چندتایی، و هر کدام مستقل جدا می‌شود */}
+      <SiteDomains site={site} onDone={onDone} />
+
       <Field label={t('startCommand')} hint="${PORT}">
         <input className="input font-mono text-xs" value={startCommand} onChange={(e) => setStartCommand(e.target.value)} />
       </Field>
@@ -640,10 +761,189 @@ function SiteSettingsModal({
         />
         {t('autostart')}
       </label>
+      {/* پوشه و رمزِ دادهٔ اختصاصی همین سایت */}
+      <SiteDataFolder site={site} />
+
       <p className="mt-4 flex items-center gap-1.5 truncate font-mono text-[11px] text-ink-muted">
         <HardDrive className="h-3.5 w-3.5 shrink-0" />
         {site.workspace}
       </p>
     </Modal>
+  );
+}
+
+/* ------------------------- دامنه‌های یک سایت -------------------------------
+   یک سایت می‌تواند چند دامنه داشته باشد؛ دامنه‌ای که اینجا اضافه شود واقعاً در
+   جدول دامنه‌ها می‌نشیند و مسیرهای تونل هم خودکار به همان سایت می‌روند.
+--------------------------------------------------------------------------- */
+function SiteDomains({ site, onDone }: { site: Site; onDone: () => Promise<void> }) {
+  const { t } = useApp();
+  const [list, setList] = useState<string[]>(site.domains || []);
+  const [value, setValue] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function add() {
+    const domain = value.trim();
+    if (!domain) return;
+    setBusy(true);
+    try {
+      const res = await api<{ domains: string[] }>(`/api/sites/${site.id}/domains`, { body: { domain } });
+      setList(res.domains);
+      setValue('');
+      await onDone();
+      toast(t('saved'));
+    } catch (e) {
+      toast(e instanceof ApiError && e.code === 'invalid_domain' ? t('invalidDomain') : t('error'), 'bad');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(domain: string) {
+    setBusy(true);
+    try {
+      const res = await api<{ domains: string[] }>(
+        `/api/sites/${site.id}/domains?domain=${encodeURIComponent(domain)}`,
+        { method: 'DELETE' }
+      );
+      setList(res.domains);
+      await onDone();
+    } catch {
+      toast(t('error'), 'bad');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mb-4">
+      <p className="label">{t('siteDomains')}</p>
+      <p className="mb-2 text-[11px] leading-relaxed text-ink-muted">{t('siteDomainsHint')}</p>
+
+      {list.length ? (
+        <ul className="mb-2 space-y-1.5">
+          {list.map((d, i) => (
+            <li
+              key={d}
+              className="flex items-center gap-2 rounded-xl border border-line px-2.5 py-1.5"
+              style={{ background: 'var(--surface-0)' }}
+            >
+              <Globe className="h-3.5 w-3.5 shrink-0 text-ink-muted" />
+              <span className="min-w-0 flex-1 truncate font-mono text-xs" dir="ltr">
+                {d}
+              </span>
+              {i === 0 && <Badge tone="info">{t('primaryDomain')}</Badge>}
+              <button className="btn btn-sm" disabled={busy} onClick={() => remove(d)} title={t('removeDomain')}>
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mb-2 text-[11px] text-ink-muted">{t('noDomainsYet')}</p>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          className="input min-w-0 flex-1 font-mono text-xs"
+          dir="ltr"
+          placeholder="example.com"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              add();
+            }
+          }}
+        />
+        <button className="btn btn-sm btn-primary" disabled={busy || !value.trim()} onClick={add}>
+          {busy && <Spinner />}
+          {t('addDomainToSite')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* --------------------- پوشهٔ دادهٔ اختصاصیِ یک سایت -------------------------
+   آدرس و رمزی که باید در خودِ آن سایت وارد شود تا دادهٔ آن در پوشهٔ خودش
+   بنشیند و با هیچ سایت دیگری قاطی نشود.
+--------------------------------------------------------------------------- */
+function SiteDataFolder({ site }: { site: Site }) {
+  const { t } = useApp();
+  const [box, setBox] = useState<SiteServerBox | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    api<SiteServerBox>(`/api/sites/${site.id}/server`)
+      .then(setBox)
+      .catch(() => setBox(null));
+  }, [site.id]);
+
+  if (!box) return null;
+  const address = box.addresses[1]?.ws || box.addresses[0]?.ws || '';
+
+  return (
+    <div className="mt-4 rounded-xl border border-line p-3" style={{ background: 'var(--surface-0)' }}>
+      <p className="flex items-center gap-1.5 text-sm font-semibold">
+        <Database className="h-4 w-4" />
+        {t('siteDataTitle')}
+      </p>
+      <p className="mb-3 mt-1 text-[11px] leading-relaxed text-ink-muted">{t('siteDataHint')}</p>
+
+      <p className="label">{t('siteDataAddress')}</p>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <code className="min-w-0 flex-1 truncate rounded-lg border border-line px-2 py-1.5 font-mono text-[11px]" dir="ltr">
+          {address}
+        </code>
+        <CopyButton value={address} />
+      </div>
+
+      <p className="label">{t('siteDataToken')}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <code className="min-w-0 flex-1 truncate rounded-lg border border-line px-2 py-1.5 font-mono text-[11px]" dir="ltr">
+          {token ?? box.tokenPreview ?? '—'}
+        </code>
+        {token ? (
+          <CopyButton value={token} />
+        ) : (
+          <button
+            className="btn btn-sm"
+            onClick={async () => {
+              try {
+                setToken((await api<{ token: string }>(`/api/sites/${site.id}/server/token`)).token);
+              } catch {
+                toast(t('error'), 'bad');
+              }
+            }}
+          >
+            <Eye className="h-3.5 w-3.5" />
+            {t('showToken')}
+          </button>
+        )}
+        <button
+          className="btn btn-sm"
+          onClick={async () => {
+            try {
+              const res = await api<{ token: string }>(`/api/sites/${site.id}/server/rotate-token`, {
+                method: 'POST',
+              });
+              setToken(res.token);
+              toast(t('saved'));
+            } catch {
+              toast(t('error'), 'bad');
+            }
+          }}
+        >
+          <RotateCw className="h-3.5 w-3.5" />
+          {t('rotateToken')}
+        </button>
+      </div>
+
+      <p className="mt-3 truncate font-mono text-[11px] text-ink-muted" dir="ltr" title={box.dataDir}>
+        {box.dataDir}
+      </p>
+    </div>
   );
 }

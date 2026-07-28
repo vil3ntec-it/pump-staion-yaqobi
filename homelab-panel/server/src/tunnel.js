@@ -16,7 +16,7 @@ import path from 'node:path';
 import https from 'node:https';
 import os from 'node:os';
 import { config } from './config.js';
-import { logEvent, getSetting, setSetting } from './db.js';
+import { db, logEvent, getSetting, setSetting } from './db.js';
 
 export const tunnelEvents = new EventEmitter();
 
@@ -143,6 +143,11 @@ function download(url, dest, { redirects = 0 } = {}) {
     req.on('timeout', () => req.destroy(new Error('timeout')));
     req.on('error', reject);
   });
+}
+
+/** مسیر cloudflaredِ آماده — تونل‌های هر سایت هم از همین یکی استفاده می‌کنند */
+export function binaryPath() {
+  return state.binary;
 }
 
 export async function ensureBinary() {
@@ -406,18 +411,105 @@ export async function tokenSetup({ token, hostname }) {
   return { ok: true, hostname: host, status: st.status };
 }
 
+/**
+ * دامنه‌هایی که در بخش «دامنه‌ها» به یک سایت وصل شده‌اند.
+ * همین جدول تعیین می‌کند هر دامنه به کدام سایت برود؛ پس اگر دامنه را به سایتِ
+ * دیگری وصل کنید، فقط کافی است همین فهرست دوباره نوشته شود.
+ */
+function domainRoutes() {
+  try {
+    return db
+      .prepare(
+        `SELECT d.name AS hostname, s.port AS port, s.name AS siteName, s.slug AS slug
+           FROM domains d JOIN sites s ON s.id = d.site_id
+          WHERE s.port IS NOT NULL AND s.enabled = 1
+          ORDER BY d.name COLLATE NOCASE`
+      )
+      .all();
+  } catch {
+    return []; // جدول هنوز ساخته نشده
+  }
+}
+
 /** همهٔ زیردامنه‌هایی که به این تونل وصل‌اند */
 export function routedHostnames() {
   const main = getSetting('tunnel_hostname', null);
   const extra = getSetting('tunnel_hostnames', []) || [];
   const list = [];
-  if (main) list.push({ hostname: main, port: config.siteSync.port || config.port, main: true });
+  const seen = new Set();
+
+  if (main) {
+    list.push({ hostname: main, port: config.siteSync.port || config.port, main: true, source: 'main' });
+    seen.add(main);
+  }
+
+  // دامنه‌های وصل‌شده به سایت‌ها — خودکار، بدون این که کاربر پورت را دستی بنویسد
+  for (const row of domainRoutes()) {
+    const host = String(row.hostname || '').toLowerCase();
+    if (!host || seen.has(host)) continue;
+    seen.add(host);
+    list.push({
+      hostname: host,
+      port: Number(row.port),
+      main: false,
+      source: 'site',
+      site: row.siteName,
+      slug: row.slug,
+    });
+  }
+
+  // زیردامنه‌هایی که دستی اضافه شده‌اند
   for (const item of extra) {
-    if (item?.hostname && item.hostname !== main) {
-      list.push({ hostname: item.hostname, port: Number(item.port) || config.port, main: false });
+    const host = String(item?.hostname || '').toLowerCase();
+    if (!host || seen.has(host)) continue;
+    seen.add(host);
+    list.push({ hostname: host, port: Number(item.port) || config.port, main: false, source: 'manual' });
+  }
+
+  return list;
+}
+
+/**
+ * بعد از هر تغییر در دامنه‌ها: فایلِ مسیرها دوباره نوشته و تونل تازه می‌شود.
+ * اگر دامنه‌ای تازه است، رکورد DNS‌اش هم یک‌بار ساخته می‌شود.
+ */
+export async function syncTunnelRoutes({ restart = true } = {}) {
+  const uuid = readTunnelIdFromConfig();
+  const credFile = readCredFromConfig();
+  const mode = getSetting('tunnel_mode', 'quick');
+  if (mode !== 'named' || !uuid || !credFile) {
+    // حالت سریع یا توکنی: مسیرها اینجا نگه‌داری نمی‌شوند
+    return { ok: true, applied: false, hostnames: routedHostnames() };
+  }
+
+  const name = getSetting('tunnel_name', 'pump');
+  const alreadyRouted = new Set(getSetting('tunnel_routed_dns', []) || []);
+  const failures = [];
+
+  if (findCert()) {
+    try {
+      await ensureBinary();
+      for (const route of routedHostnames()) {
+        if (route.main || alreadyRouted.has(route.hostname)) continue;
+        const routed = await runCf(['tunnel', 'route', 'dns', '--overwrite-dns', name, route.hostname]);
+        if (routed.ok || /already exists|record with the same/i.test(routed.output)) {
+          alreadyRouted.add(route.hostname);
+        } else {
+          failures.push({ hostname: route.hostname, detail: routed.output.slice(-200) });
+        }
+      }
+      setSetting('tunnel_routed_dns', [...alreadyRouted]);
+    } catch (e) {
+      failures.push({ hostname: '*', detail: e.message });
     }
   }
-  return list;
+
+  await writeIngress(uuid, credFile);
+  if (restart) {
+    stopTunnel();
+    await startTunnel({});
+  }
+  return { ok: !failures.length, applied: true, failures, hostnames: routedHostnames() };
 }
 
 /** فایل config.yml را با همهٔ زیردامنه‌ها بازنویسی می‌کند */

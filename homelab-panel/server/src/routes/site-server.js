@@ -98,6 +98,8 @@ router.get('/', async (req, res) => {
 
   res.json({
     enabled: true,
+    // پوشهٔ دادهٔ هر سایت، جدا از بقیه
+    stores: sync.list ? sync.list() : [],
     port: config.port,
     addresses: addresses(req),
     tokenPreview: token ? `${token.slice(0, 4)}${'•'.repeat(Math.max(0, token.length - 8))}${token.slice(-4)}` : null,

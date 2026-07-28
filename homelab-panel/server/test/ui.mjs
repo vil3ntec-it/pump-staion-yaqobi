@@ -120,11 +120,42 @@ try {
   const online = await page.locator('text=آنلاین').count();
   check('بعد از اجرا وضعیت آنلاین شد', online > 0);
 
+  check(
+    'هر سایت کارت آدرس اینترنتی خودش را دارد',
+    (await page.locator('text=آدرس اینترنتی این سایت').count()) > 0
+  );
+
   await page.click('button:has-text("لاگ‌ها")');
   await page.waitForSelector('h3:has-text("لاگ‌ها —")', { timeout: 8000 });
   await page.waitForSelector('pre', { timeout: 8000 });
   check('لاگ اختصاصی سایت باز شد', (await page.locator('pre >> text=static server listening').count()) > 0);
   await page.keyboard.press('Escape');
+
+  // ---- دامنه و پوشهٔ دادهٔ اختصاصی، در تنظیمات همان سایت ----
+  await page.click('button:has-text("تنظیمات")');
+  await page.waitForSelector('h3:has-text("تنظیمات —")', { timeout: 8000 });
+  check('بخش دامنه‌های سایت دیده می‌شود', await page.locator('text=دامنه‌های این سایت').first().isVisible());
+  check(
+    'پوشهٔ دادهٔ اختصاصی سایت نشان داده می‌شود',
+    await page.locator('text=پوشهٔ دادهٔ اختصاصی').first().isVisible()
+  );
+
+  await page.fill('input[placeholder="example.com"]', 'shop.yaqobipump.top');
+  await page.click('button:has-text("افزودن دامنه")');
+  await page.waitForSelector('text=shop.yaqobipump.top', { timeout: 8000 });
+  check('دامنه برای سایت نوشته شد', true);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(800);
+
+  // ---- همان دامنه، سایتِ دیگر ----
+  await page.click('a[href="/domains"]');
+  await page.waitForSelector('td:has-text("shop.yaqobipump.top")', { timeout: 10000 });
+  const siteSelect = page.locator('table select').first();
+  check('در بخش دامنه‌ها می‌شود سایت مقصد را عوض کرد', (await siteSelect.count()) > 0);
+  const options = await siteSelect.locator('option').allTextContents();
+  check('سایت‌ها در فهرست انتخاب هستند', options.some((o) => o.includes('shop')), options.join('|'));
+  await page.click('a[href="/sites"]');
+  await page.waitForTimeout(800);
 
   console.log('\n── مانیتورینگ ──');
   await page.click('a[href="/monitoring"]');

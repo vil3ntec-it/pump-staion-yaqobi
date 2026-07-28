@@ -19,9 +19,10 @@ import { attachRealtime, broadcastMetrics } from './realtime.js';
 import { startCollector, stopCollector } from './metrics/index.js';
 import { startWinSampler, stopWinSampler } from './metrics/win-sampler.js';
 import { readInterfaces } from './metrics/network.js';
-import { autostartAll } from './sites/registry.js';
+import { autostartAll, ensureAllSiteWorkspaces } from './sites/registry.js';
 import { stopAll } from './sites/process.js';
 import { startTunnel, stopTunnel, tunnelEvents } from './tunnel.js';
+import { siteTunnelEvents, stopAllSiteTunnels } from './site-tunnels.js';
 
 import authRoutes from './routes/auth.js';
 import dashboardRoutes from './routes/dashboard.js';
@@ -165,6 +166,13 @@ tunnelEvents.on('change', (payload) => {
   } catch { /* هنوز کسی وصل نیست */ }
 });
 
+// آدرس اینترنتیِ هر سایت هم به‌محض آماده شدن در پنل دیده می‌شود
+siteTunnelEvents.on('change', (payload) => {
+  try {
+    getIo()?.emit('site:tunnel', payload);
+  } catch { /* هنوز کسی وصل نیست */ }
+});
+
 // ۳) معیارهای زنده
 // روی ویندوز یک پروسهٔ PowerShell دائمی به‌جای ده‌ها بار باز و بسته کردن آن
 startWinSampler();
@@ -184,6 +192,10 @@ async function main() {
     await siteSync.ensureToken();
     const loaded = await siteSync.loadFromDisk();
     if (loaded.length) console.log(`[site-server] ${loaded.length} شاخهٔ داده بازخوانی شد: ${loaded.join(', ')}`);
+    // پوشهٔ اختصاصی هر سایت: هم آن‌هایی که روی دیسک هستند، هم سایت‌های ثبت‌شده
+    await siteSync.loadAll();
+    const ensured = await ensureAllSiteWorkspaces();
+    if (ensured.length) console.log(`[site-server] پوشهٔ اختصاصی ${ensured.length} سایت آماده است`);
   }
 
   await autostartAll();
@@ -254,6 +266,7 @@ async function shutdown(signal) {
   stopWinSampler();
   try {
     stopTunnel();
+    stopAllSiteTunnels();
   } catch { /* بسته شده */ }
   try {
     syncOnlyServer?.close();

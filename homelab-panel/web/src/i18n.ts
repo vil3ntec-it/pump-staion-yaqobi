@@ -203,6 +203,42 @@ const fa = {
   siteAddressHint:
     'لینک یک‌کلیکی با این آدرس ساخته می‌شود. اگر دامنهٔ سایت را عوض کردید، آدرس تازه را اینجا بگذارید.',
   invalidSiteUrl: 'آدرس معتبر نیست — باید با https:// شروع شود',
+
+  // ---- دامنه‌های هر سایت ----
+  siteDomains: 'دامنه‌های این سایت',
+  siteDomainsHint:
+    'هر سایت می‌تواند چند دامنه داشته باشد. اولین دامنه، دامنهٔ اصلی است. برای بردن یک دامنه روی سایت دیگر، در بخش «دامنه‌ها» سایتِ مقصد را عوض کنید.',
+  addDomainToSite: 'افزودن دامنه',
+  removeDomain: 'جدا کردن',
+  noDomainsYet: 'هنوز دامنه‌ای وصل نشده',
+  invalidDomain: 'دامنه معتبر نیست — مثل example.com بنویسید',
+  primaryDomain: 'اصلی',
+  moveDomain: 'انتقال به سایت دیگر',
+  domainMoved: 'دامنه به سایت تازه منتقل شد',
+  renameDomain: 'تغییر نام دامنه',
+  notConnected: 'به هیچ سایتی وصل نیست',
+
+  // ---- آدرس اینترنتی هر سایت ----
+  siteInternetAddress: 'آدرس اینترنتی این سایت',
+  siteTunnelHint:
+    'با روشن کردنش، همین سایت (نه بقیه) آدرس https مستقلِ خودش را می‌گیرد و از هر جای دنیا باز می‌شود.',
+  siteTunnelOn: 'گرفتن آدرس اینترنتی',
+  siteTunnelOff: 'قطع آدرس اینترنتی',
+  siteTunnelNoPort: 'اول برای این سایت یک پورت بگذارید',
+
+  // ---- پوشه و سرور دادهٔ هر سایت ----
+  siteDataTitle: 'پوشهٔ دادهٔ اختصاصی',
+  siteDataHint:
+    'دادهٔ این سایت در پوشهٔ خودش، با رمز خودش ذخیره می‌شود؛ هیچ‌وقت با دادهٔ سایت‌های دیگر قاطی نمی‌شود.',
+  siteDataAddress: 'آدرس سرور برای همین سایت',
+  siteDataToken: 'رمز مخصوص همین سایت',
+  perSiteStores: 'پوشهٔ دادهٔ سایت‌ها',
+  perSiteStoresHint: 'هر سایت پوشهٔ جدای خودش را دارد — این‌ها روی دیسک واقعاً از هم جدا هستند.',
+  mainStore: 'سرور اصلی',
+  onlineViaProcess: 'پروسهٔ همین پنل',
+  onlineViaPort: 'پورت محلی',
+  onlineViaPublic: 'آدرس اینترنتی',
+  onlineVia: 'از راه',
   permanentTitle: 'آدرس ثابت — مثل فایربیس',
   permanentIntro:
     'با آدرس ثابت دیگر لازم نیست هیچ لینکی پخش کنید: یک‌بار آدرس در خودِ سایت می‌نشیند و از آن به بعد هر کسی سایت را باز کند، خودکار به همین سرور وصل می‌شود — دقیقاً مدل فایربیس.',
@@ -452,6 +488,39 @@ const en: Dict = {
   siteAddressHint:
     'The one-click link is built from this address. If your site moves to another domain, put the new address here.',
   invalidSiteUrl: 'Invalid address — it must start with https://',
+
+  siteDomains: 'Domains of this site',
+  siteDomainsHint:
+    'A site can have several domains; the first one is the primary. To send a domain to another site, change its site in the Domains page.',
+  addDomainToSite: 'Add domain',
+  removeDomain: 'Detach',
+  noDomainsYet: 'No domain attached yet',
+  invalidDomain: 'Invalid domain — write it like example.com',
+  primaryDomain: 'primary',
+  moveDomain: 'Move to another site',
+  domainMoved: 'Domain now points at the new site',
+  renameDomain: 'Rename domain',
+  notConnected: 'Not attached to any site',
+
+  siteInternetAddress: 'Internet address of this site',
+  siteTunnelHint:
+    'Turn it on and this site (only this one) gets its own https address, reachable from anywhere.',
+  siteTunnelOn: 'Get an internet address',
+  siteTunnelOff: 'Drop the internet address',
+  siteTunnelNoPort: 'Give this site a port first',
+
+  siteDataTitle: 'Its own data folder',
+  siteDataHint:
+    "This site's data lives in its own folder with its own password — never mixed with the other sites.",
+  siteDataAddress: 'Server address for this site',
+  siteDataToken: 'Password for this site only',
+  perSiteStores: 'Per-site data folders',
+  perSiteStoresHint: 'Every site has its own folder — genuinely separate on disk.',
+  mainStore: 'Main server',
+  onlineViaProcess: 'process on this panel',
+  onlineViaPort: 'local port',
+  onlineViaPublic: 'internet address',
+  onlineVia: 'via',
   permanentTitle: 'Permanent address — the Firebase model',
   permanentIntro:
     'With a permanent address you never share a link: the address goes into the site once, and from then on anyone who opens the site connects automatically — exactly the Firebase model.',
