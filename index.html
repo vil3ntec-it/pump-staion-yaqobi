@@ -18658,7 +18658,7 @@ function load() {
       try { Object.assign(DB, idbData); } catch(e) {}
       // دادهٔ بازیابی‌شده ممکن است هنوز نرخِ خودکار داشته باشد → دوباره به فیِ دستی تبدیلش کن
       try { DB._autoFeesCleared = false; _manualizeDebtorRates(); } catch(e){}
-      try { var _s2 = JSON.stringify(DB); if (_s2.length <= _LS_CACHE_MAX) localStorage.setItem('pumpDB', _s2); } catch(e) {}
+      _writeLsCache();
       try { updateAll(); } catch(e) {}
       try { showTopToast('💾 داده‌ها از حافظهٔ پشتیبان (IndexedDB) بازیابی شدند', '#38a169', 3000); } catch(e) {}
     } else {
@@ -18672,6 +18672,15 @@ let _quotaWarnedThisSession = false;
 // سقفِ کشِ localStorage (خودِ مرورگر حدود ۵ مگابایت می‌دهد) — بالاتر از این فقط
 // IndexedDB می‌نویسیم. این «محدودیتِ برنامه» نیست؛ فقط مرزِ کشِ سریع است.
 const _LS_CACHE_MAX = 4 * 1024 * 1024;
+// نوشتنِ کشِ localStorage: اگر جا شد بنویس، اگر نشد نسخهٔ کهنه را پاک کن تا
+// هرگز با _rev قدیمی‌اش بر IndexedDB غلبه نکند.
+function _writeLsCache(snap) {
+  try {
+    if (typeof snap !== 'string') snap = JSON.stringify(DB);
+    if (snap.length <= _LS_CACHE_MAX) localStorage.setItem('pumpDB', snap);
+    else localStorage.removeItem('pumpDB');
+  } catch (e) { try { localStorage.removeItem('pumpDB'); } catch (_) {} }
+}
 function save() {
   // نوشتن واقعی روی دیسک (localStorage/IndexedDB) با تأخیر کوتاه گروه‌بندی می‌شود
   // تا هنگام تایپ سریع (هر keystroke) کل دیتابیس بارها سریالایز نشود؛ با ترک صفحه/تب فوراً نوشته می‌شود
@@ -18691,13 +18700,7 @@ function _flushSave() {
   // بر IndexedDB غلبه نکند. شمارندهٔ _rev می‌گوید کدام نسخه تازه‌تر است.
   DB._rev = (parseInt(DB._rev, 10) || 0) + 1;
   var snap = JSON.stringify(DB);
-  if (snap.length <= _LS_CACHE_MAX) {
-    try { localStorage.setItem('pumpDB', snap); }
-    catch(e) { try { localStorage.removeItem('pumpDB'); } catch(_) {} }
-  } else {
-    // بزرگ‌تر از کشِ مرورگر — دیگر تلاش هم نمی‌کنیم (خطای سهمیه بی‌فایده است)
-    try { localStorage.removeItem('pumpDB'); } catch(_) {}
-  }
+  _writeLsCache(snap);
   try { _IDB.put(DB); } catch(e) {}
   // علامت‌گذاری: اطلاعات تغییر کرده و هنوز به سرور نرسیده — برای بارگذاری خودکار وقتی نت وصل شد
   try { _markDirtyForAutoSync(); } catch(e){}
@@ -18846,7 +18849,8 @@ function syncUpload() {
   _fbDb.ref('stations/' + code).set(payload)
     .then(() => {
       DB.lastSyncUpload = payload.lastSyncUpload;
-      try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
+      DB._rev = (parseInt(DB._rev, 10) || 0) + 1;
+      _writeLsCache();
       try { _IDB.put(JSON.parse(JSON.stringify(DB))); } catch(e) {}
       _dirtySinceUpload = false;
       _setSyncMsg('✅ همین حساب شما در سرور ذخیره شد. کارفرما با کد «' + code + '» همین را می‌بیند.', '#38a169');
@@ -18866,10 +18870,14 @@ function syncDownload() {
   _fbDb.ref('stations/' + code).get()
     .then(snap => {
       if (!snap.exists()) { _setSyncMsg('چیزی روی سرور برای این کد پیدا نشد.', '#d97706'); return; }
+      var _prevRev = parseInt(DB._rev, 10) || 0;
       Object.assign(DB, snap.val());
       DB.syncCode = 'pump1';
+      // دادهٔ تازه‌آمدهٔ سرور باید از هر نسخهٔ محلی (کش یا IndexedDB) تازه‌تر شمرده
+      // شود، وگرنه با باز شدنِ بعدی ممکن بود نسخهٔ کهنهٔ محلی رویش بنشیند
+      DB._rev = Math.max(_prevRev, parseInt(DB._rev, 10) || 0) + 1;
       try { DB._autoFeesCleared = false; _manualizeDebtorRates(); } catch(e){}
-      try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
+      _writeLsCache();
       try { _IDB.put(JSON.parse(JSON.stringify(DB))); } catch(e) {}
       _dirtySinceUpload = false; // همین الان از سرور آمد، چیزی برای فرستادن نیست
       _setSyncMsg('✅ اطلاعات از سرور دریافت شد.', '#38a169');
@@ -33829,7 +33837,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.133';
+const APP_VERSION = '2.9.134';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
