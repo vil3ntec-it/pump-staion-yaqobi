@@ -1,434 +1,177 @@
 // ---------------------------------------------------------------------------
-//  سرورِ سایتِ پمپ یعقوبی — همان پروتکل realtime (جایگزین فایربیس)
-//  اینجا به‌صورت یک ماژول روی همان HTTP سرورِ پنل سوار می‌شود، تا آدرسِ پنل
-//  عیناً به‌عنوان «آدرس سرور» در خودِ سایت قابل استفاده باشد:
-//        ws://<آدرس پنل>:<پورت پنل>
-//  پروتکل ذره‌ای تغییر نکرده تا سایت بدون هیچ دست‌کاری با آن کار کند.
+//  سرورِ سایت‌ها — یک پوشهٔ جدا برای دادهٔ هر سایت
+//
+//  قبلاً همهٔ سایت‌ها در یک درختِ داده می‌نوشتند و اطلاعاتشان با هم قاطی می‌شد.
+//  حالا هر سایت «دفترِ» خودش را دارد:
+//
+//      data/site-sync/                ← دفترِ اصلی (سایتِ پمپ یعقوبی، مثل قبل)
+//      data/site-sync/sites/<slug>/   ← دفترِ اختصاصی هر سایتِ دیگر
+//          ├── token.txt              رمزِ همان سایت (فقط همین سایت با آن وصل می‌شود)
+//          └── <شاخه>.json            دادهٔ همان سایت
+//
+//  سایت هنگام اتصال خودش را معرفی می‌کند:
+//      wss://…/?site=<slug>&token=<رمزِ همان سایت>
+//  اگر ?site= نداشته باشد، از روی رمز پیدا می‌شود؛ پس سایت‌های قدیمی که فقط
+//  رمز می‌فرستند بدون هیچ تغییری کار می‌کنند.
 // ---------------------------------------------------------------------------
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { WebSocketServer } from 'ws';
+import { createStore } from './store.js';
 
-const PERSIST_DEBOUNCE_MS = 400;
+export const MAIN_KEY = 'main';
+
+/** نامِ پوشه‌ای امن از روی slug — تا هیچ‌کس از پوشهٔ خودش بیرون نزند */
+export function safeKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9؀-ۿ_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 64);
+}
 
 export function createSiteSync({ dataDir, token = '' }) {
-  fs.mkdirSync(dataDir, { recursive: true });
+  const sitesDir = path.join(dataDir, 'sites');
+  fs.mkdirSync(sitesDir, { recursive: true });
 
-  const ROOT = {};
-  const pendingPersist = new Map();
-  const subscriptions = new Set();
-  const clients = new Set();
-  let AUTH_TOKEN = token;
-  const stats = { connections: 0, messages: 0, writes: 0, reads: 0, lastActivity: null, rejected: 0 };
+  /** key → store */
+  const stores = new Map();
+  const main = createStore({ key: MAIN_KEY, label: 'سرور اصلی', dataDir, token });
+  stores.set(MAIN_KEY, main);
 
-  // ------------------------------ درخت داده -------------------------------
-  const splitPath = (p) => String(p || '').split('/').filter((s) => s.length > 0);
+  const dirFor = (key) => (key === MAIN_KEY ? dataDir : path.join(sitesDir, key));
 
-  function getNode(p) {
-    let cur = ROOT;
-    for (const s of splitPath(p)) {
-      if (cur == null || typeof cur !== 'object') return undefined;
-      cur = cur[s];
-    }
-    return cur;
+  // ------------------------------ دفترها ----------------------------------
+  /** پوشه و رمزِ اختصاصی یک سایت را می‌سازد (اگر نبود) و دفترش را برمی‌گرداند */
+  async function ensureTenant(slug, { label } = {}) {
+    const key = safeKey(slug);
+    if (!key || key === MAIN_KEY) return main;
+    const existing = stores.get(key);
+    if (existing) return existing;
+
+    const store = createStore({ key, label: label || key, dataDir: dirFor(key) });
+    stores.set(key, store);
+    await store.ensureToken();
+    await store.loadFromDisk();
+    return store;
   }
 
-  const deepClone = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
-
-  function setNode(p, value) {
-    const segs = splitPath(p);
-    if (!segs.length) return;
-    let cur = ROOT;
-    for (let i = 0; i < segs.length - 1; i++) {
-      const s = segs[i];
-      if (cur[s] == null || typeof cur[s] !== 'object') cur[s] = {};
-      cur = cur[s];
-    }
-    const last = segs[segs.length - 1];
-    if (value === null || value === undefined) delete cur[last];
-    else cur[last] = value;
+  function tenant(slug) {
+    const key = safeKey(slug);
+    return stores.get(key === MAIN_KEY || !key ? MAIN_KEY : key) || null;
   }
 
-  // شناسهٔ push مثل فایربیس (۲۰ کاراکتر، مرتب بر اساس زمان)
-  const PUSH_CHARS = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
-  let _lastPushTime = 0;
-  const _lastRand = [];
-  function genPushId(now = Date.now()) {
-    const dup = now === _lastPushTime;
-    _lastPushTime = now;
-    const ts = new Array(8);
-    for (let i = 7; i >= 0; i--) {
-      ts[i] = PUSH_CHARS.charAt(now % 64);
-      now = Math.floor(now / 64);
+  /** پوشهٔ سایت را با دادهٔ داخلش پاک می‌کند — فقط وقتی خودِ سایت حذف می‌شود */
+  async function removeTenant(slug) {
+    const key = safeKey(slug);
+    if (!key || key === MAIN_KEY) return false;
+    const store = stores.get(key);
+    if (store) {
+      await store.flush().catch(() => {});
+      store.closeClients();
+      stores.delete(key);
     }
-    let id = ts.join('');
-    if (!dup) {
-      for (let i = 0; i < 12; i++) _lastRand[i] = Math.floor(Math.random() * 64);
-    } else {
-      let i = 11;
-      for (; i >= 0 && _lastRand[i] === 63; i--) _lastRand[i] = 0;
-      _lastRand[i]++;
-    }
-    for (let i = 0; i < 12; i++) id += PUSH_CHARS.charAt(_lastRand[i]);
-    return id;
+    await fsp.rm(dirFor(key), { recursive: true, force: true });
+    return true;
   }
 
-  // ------------------------------- پایداری --------------------------------
-  const topKeyOf = (p) => splitPath(p)[0] ?? null;
-  const fileForKey = (k) => path.join(dataDir, String(k).replace(/[^a-zA-Z0-9_-]/g, '_') + '.json');
-
-  function schedulePersist(topKey) {
-    if (!topKey) return;
-    if (pendingPersist.has(topKey)) clearTimeout(pendingPersist.get(topKey));
-    pendingPersist.set(
-      topKey,
-      setTimeout(() => {
-        pendingPersist.delete(topKey);
-        persistNow(topKey).catch(() => {});
-      }, PERSIST_DEBOUNCE_MS)
-    );
-  }
-
-  async function persistNow(topKey) {
-    const file = fileForKey(topKey);
-    const val = ROOT[topKey];
-    if (val === undefined) {
-      try {
-        await fsp.unlink(file);
-      } catch { /* شاید از قبل نبود */ }
-      return;
-    }
-    const tmp = file + '.tmp';
-    await fsp.writeFile(tmp, JSON.stringify(val), 'utf8');
-    await fsp.rename(tmp, file);
-  }
-
-  async function loadFromDisk() {
-    let files = [];
-    try {
-      files = await fsp.readdir(dataDir);
-    } catch {
-      return [];
-    }
+  /** همهٔ پوشه‌هایی که از قبل روی دیسک هستند را بازمی‌خواند */
+  async function loadAll() {
     const loaded = [];
-    for (const f of files) {
-      if (!f.endsWith('.json')) continue;
-      try {
-        ROOT[f.slice(0, -5)] = JSON.parse(await fsp.readFile(path.join(dataDir, f), 'utf8'));
-        loaded.push(f.slice(0, -5));
-      } catch { /* فایل خراب — رد شو */ }
+    let entries = [];
+    try {
+      entries = await fsp.readdir(sitesDir, { withFileTypes: true });
+    } catch { /* هنوز هیچ سایتی نیست */ }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const key = safeKey(entry.name);
+      if (!key || stores.has(key)) continue;
+      await ensureTenant(key);
+      loaded.push(key);
     }
     return loaded;
   }
 
-  // ------------------------------ رویدادها --------------------------------
-  const send = (ws, obj) => {
-    if (ws.readyState === ws.OPEN) {
-      try {
-        ws.send(JSON.stringify(obj));
-      } catch { /* اتصال بسته شد */ }
-    }
-  };
-  const serialize = (v) => (v === undefined ? ' undef' : JSON.stringify(v));
-  const lastSeg = (p) => splitPath(p).at(-1) ?? null;
-
-  function childKeysSorted(p) {
-    const node = getNode(p);
-    if (node == null || typeof node !== 'object' || Array.isArray(node)) return [];
-    return Object.keys(node).sort();
-  }
-
-  function primeSubscription(sub) {
-    if (sub.event === 'value') {
-      const v = getNode(sub.path);
-      sub.snapValue = serialize(v);
-      send(sub.ws, { op: 'event', subId: sub.subId, type: 'value', key: lastSeg(sub.path), value: deepClone(v) ?? null });
-    } else {
-      let keys = childKeysSorted(sub.path);
-      if (sub.limit && keys.length > sub.limit) keys = keys.slice(keys.length - sub.limit);
-      sub.snapChildren = new Map();
-      for (const k of keys) {
-        const cv = getNode(sub.path + '/' + k);
-        sub.snapChildren.set(k, serialize(cv));
-        if (sub.event === 'child_added') {
-          send(sub.ws, { op: 'event', subId: sub.subId, type: 'child_added', key: k, value: deepClone(cv) ?? null });
-        }
-      }
-    }
-  }
-
-  function isPrefixOrEqual(a, b) {
-    if (a.length > b.length) return false;
-    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
-    return true;
-  }
-
-  function reevalChildSub(sub) {
-    let keys = childKeysSorted(sub.path);
-    const fullSet = new Set(keys);
-    if (sub.limit && keys.length > sub.limit) keys = keys.slice(keys.length - sub.limit);
-    const windowSet = new Set(keys);
-    const prev = sub.snapChildren || new Map();
-    const next = new Map();
-
-    for (const k of keys) {
-      const cv = getNode(sub.path + '/' + k);
-      const ser = serialize(cv);
-      next.set(k, ser);
-      if (!prev.has(k)) {
-        if (sub.event === 'child_added') {
-          send(sub.ws, { op: 'event', subId: sub.subId, type: 'child_added', key: k, value: deepClone(cv) ?? null });
-        }
-      } else if (prev.get(k) !== ser && sub.event === 'child_changed') {
-        send(sub.ws, { op: 'event', subId: sub.subId, type: 'child_changed', key: k, value: deepClone(cv) ?? null });
-      }
-    }
-    for (const k of prev.keys()) {
-      if (!windowSet.has(k) && !fullSet.has(k) && sub.event === 'child_removed') {
-        send(sub.ws, { op: 'event', subId: sub.subId, type: 'child_removed', key: k, value: null });
-      }
-    }
-    sub.snapChildren = next;
-  }
-
-  function dispatch(changedPath) {
-    const cSegs = splitPath(changedPath);
-    for (const sub of subscriptions) {
-      const sSegs = splitPath(sub.path);
-      if (!isPrefixOrEqual(sSegs, cSegs) && !isPrefixOrEqual(cSegs, sSegs)) continue;
-      if (sub.event === 'value') {
-        const v = getNode(sub.path);
-        const ser = serialize(v);
-        if (ser !== sub.snapValue) {
-          sub.snapValue = ser;
-          send(sub.ws, { op: 'event', subId: sub.subId, type: 'value', key: lastSeg(sub.path), value: deepClone(v) ?? null });
-        }
-      } else {
-        reevalChildSub(sub);
-      }
-    }
-  }
-
-  function applyMutation(kind, p, value) {
-    stats.writes++;
-    if (kind === 'set' || kind === 'remove') {
-      setNode(p, kind === 'remove' ? null : value);
-      schedulePersist(topKeyOf(p));
-      dispatch(p);
-    } else if (kind === 'update') {
-      if (value && typeof value === 'object' && !Array.isArray(value)) {
-        for (const k of Object.keys(value)) setNode(p + '/' + k, value[k]);
-        schedulePersist(topKeyOf(p));
-        for (const k of Object.keys(value)) dispatch(p + '/' + k);
-        dispatch(p);
-      }
-    } else if (kind === 'push') {
-      const key = genPushId();
-      setNode(p + '/' + key, value);
-      schedulePersist(topKeyOf(p));
-      dispatch(p + '/' + key);
-      return key;
-    }
-  }
-
-  function runOnDisconnect(ws) {
-    const ops = ws._onDisc;
-    if (!ops) return;
-    for (const [p, spec] of ops) {
-      try {
-        if (spec.action === 'remove') applyMutation('remove', p, null);
-        else if (spec.action === 'set') applyMutation('set', p, spec.value);
-      } catch { /* بی‌خیال */ }
-    }
-    ws._onDisc = null;
-  }
-
-  function handleMessage(ws, m) {
-    stats.messages++;
-    stats.lastActivity = Date.now();
-    switch (m.op) {
-      case 'get':
-        stats.reads++;
-        send(ws, { op: 'result', id: m.id, value: deepClone(getNode(m.path)) ?? null });
-        break;
-      case 'set':
-        applyMutation('set', m.path, m.value);
-        send(ws, { op: 'ack', id: m.id, ok: true });
-        break;
-      case 'update':
-        applyMutation('update', m.path, m.value);
-        send(ws, { op: 'ack', id: m.id, ok: true });
-        break;
-      case 'remove':
-        applyMutation('remove', m.path, null);
-        send(ws, { op: 'ack', id: m.id, ok: true });
-        break;
-      case 'push':
-        send(ws, { op: 'ack', id: m.id, ok: true, key: applyMutation('push', m.path, m.value) });
-        break;
-      case 'sub': {
-        const sub = {
-          ws,
-          path: m.path,
-          event: m.event,
-          subId: m.subId,
-          limit: m.limitToLast || 0,
-          snapChildren: null,
-          snapValue: undefined,
-        };
-        subscriptions.add(sub);
-        primeSubscription(sub);
-        break;
-      }
-      case 'unsub':
-        for (const sub of [...subscriptions]) {
-          if (sub.ws === ws && sub.subId === m.subId) subscriptions.delete(sub);
-        }
-        break;
-      case 'onDisc':
-        if (!ws._onDisc) ws._onDisc = new Map();
-        ws._onDisc.set(m.path, { action: m.action, value: m.value });
-        break;
-      case 'onDiscCancel':
-        if (ws._onDisc) ws._onDisc.delete(m.path);
-        break;
-      default:
-        break;
-    }
-  }
-
-  function safeEqual(a, b) {
-    const ba = Buffer.from(String(a || ''));
-    const bb = Buffer.from(String(b || ''));
-    if (ba.length !== bb.length) return false;
-    try {
-      return crypto.timingSafeEqual(ba, bb);
-    } catch {
-      return false;
-    }
-  }
-
-  // ------------------------------ WebSocket -------------------------------
+  // ------------------------------ اتصال‌ها ---------------------------------
   const wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 * 1024 });
 
-  wss.on('connection', (ws, req) => {
-    let authed = AUTH_TOKEN === '';
-    if (AUTH_TOKEN) {
-      try {
-        const url = new URL(req.url, 'http://x');
-        const t =
-          url.searchParams.get('token') ||
-          String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-        authed = safeEqual(t, AUTH_TOKEN);
-      } catch {
-        authed = false;
-      }
-    }
-
-    if (!authed) {
-      stats.rejected++;
-      send(ws, { op: 'error', msg: 'auth_failed' });
-      ws.close();
-      return;
-    }
-
-    ws._onDisc = null;
-    ws._connectedAt = Date.now();
-    ws._remote = req.socket.remoteAddress;
-    clients.add(ws);
-    stats.connections++;
-    stats.lastActivity = Date.now();
-    send(ws, { op: 'connected' });
-
-    ws.on('message', (raw) => {
-      let m;
-      try {
-        m = JSON.parse(raw.toString());
-      } catch {
-        return;
-      }
-      if (m && typeof m === 'object') handleMessage(ws, m);
-    });
-
-    ws.on('close', () => {
-      runOnDisconnect(ws);
-      for (const sub of [...subscriptions]) if (sub.ws === ws) subscriptions.delete(sub);
-      clients.delete(ws);
-    });
-    ws.on('error', () => {});
-  });
-
-  // ------------------------------- عمومی ---------------------------------
-  async function ensureToken() {
-    if (AUTH_TOKEN) return AUTH_TOKEN;
-    const tokenFile = path.join(dataDir, 'token.txt');
+  /** تصمیم می‌گیرد این اتصال به کدام دفتر تعلق دارد */
+  function route(req) {
+    let url = null;
     try {
-      const existing = (await fsp.readFile(tokenFile, 'utf8')).trim();
-      if (existing) {
-        AUTH_TOKEN = existing;
-        return AUTH_TOKEN;
-      }
-    } catch { /* هنوز ساخته نشده */ }
-    AUTH_TOKEN = crypto.randomBytes(18).toString('hex');
-    await fsp.writeFile(tokenFile, AUTH_TOKEN, 'utf8');
-    return AUTH_TOKEN;
-  }
+      url = new URL(req.url, 'http://x');
+    } catch { /* مسیر خراب */ }
 
-  async function rotateToken() {
-    AUTH_TOKEN = crypto.randomBytes(18).toString('hex');
-    await fsp.writeFile(path.join(dataDir, 'token.txt'), AUTH_TOKEN, 'utf8');
-    for (const ws of [...clients]) {
-      try {
-        ws.close();
-      } catch { /* بی‌خیال */ }
+    const token =
+      url?.searchParams.get('token') ||
+      String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    const wanted = url?.searchParams.get('site') || url?.searchParams.get('tenant') || null;
+
+    // ۱) سایت خودش را معرفی کرده — همان دفتر، با رمزِ همان دفتر
+    if (wanted) {
+      const store = tenant(wanted);
+      if (!store) return { store: null, reason: 'unknown_site' };
+      return store.acceptsToken(token) ? { store } : { store, reason: 'auth_failed' };
     }
-    return AUTH_TOKEN;
-  }
 
-  async function flush() {
-    for (const [k, t] of pendingPersist) {
-      clearTimeout(t);
-      try {
-        await persistNow(k);
-      } catch { /* بی‌خیال */ }
+    // ۲) بدون معرفی: رمز خودش می‌گوید مالِ کدام سایت است (سازگاری با نسخه‌های قبل)
+    for (const store of stores.values()) {
+      if (store.acceptsToken(token)) return { store };
     }
-    pendingPersist.clear();
+    return { store: main, reason: 'auth_failed' };
   }
 
-  function branches() {
-    return Object.keys(ROOT).map((key) => {
-      let bytes = 0;
-      try {
-        bytes = fs.statSync(fileForKey(key)).size;
-      } catch { /* هنوز روی دیسک نیست */ }
-      const node = ROOT[key];
+  function handleUpgrade(req, socket, head) {
+    wss.handleUpgrade(req, socket, head, (ws) => {
+      const { store, reason } = route(req);
+      if (reason || !store) return (store || main).reject(ws, reason || 'auth_failed');
+      store.handleConnection(ws, req);
+    });
+  }
+
+  // ------------------------------- گزارش -----------------------------------
+  function list() {
+    return [...stores.values()].map((store) => {
+      const snap = store.snapshot();
       return {
-        key,
-        children: node && typeof node === 'object' ? Object.keys(node).length : 0,
-        bytes,
+        key: store.key,
+        label: store.label,
+        main: store.key === MAIN_KEY,
+        dataDir: store.dataDir,
+        branches: store.branches(),
+        diskBytes: store.diskBytes(),
+        liveConnections: snap.liveConnections,
+        lastActivity: snap.lastActivity,
+        reads: snap.reads,
+        writes: snap.writes,
       };
     });
   }
 
   return {
     wss,
-    handleUpgrade(req, socket, head) {
-      wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+    handleUpgrade,
+    ensureTenant,
+    removeTenant,
+    tenant,
+    loadAll,
+    list,
+    keys: () => [...stores.keys()],
+    dirFor,
+    sitesDir,
+
+    // دفترِ اصلی — همان رفتار قبلی، تا هیچ‌جای پنل و خودِ سایت نشکند
+    ensureToken: () => main.ensureToken(),
+    rotateToken: () => main.rotateToken(),
+    getToken: () => main.getToken(),
+    loadFromDisk: () => main.loadFromDisk(),
+    branches: () => main.branches(),
+    snapshot: () => main.snapshot(),
+
+    async flush() {
+      for (const store of stores.values()) await store.flush().catch(() => {});
     },
-    ensureToken,
-    rotateToken,
-    getToken: () => AUTH_TOKEN,
-    loadFromDisk,
-    flush,
-    branches,
-    snapshot: () => ({
-      ...stats,
-      liveConnections: clients.size,
-      subscriptions: subscriptions.size,
-      branches: Object.keys(ROOT).length,
-      clients: [...clients].map((ws) => ({ since: ws._connectedAt, remote: ws._remote })),
-    }),
   };
 }

@@ -13,9 +13,17 @@ import {
   describeSite,
   siteSize,
   invalidateSizeCache,
+  attachDomain,
+  detachDomain,
+  domainsForSite,
+  ensureSiteDataFolder,
 } from '../sites/registry.js';
 import { startSite, stopSite, restartSite, tailLog, clearLog } from '../sites/process.js';
 import { readSiteConfig, writeSiteConfig, workspacePaths } from '../sites/workspace.js';
+import { startSiteTunnel, stopSiteTunnel, restartSiteTunnel, siteTunnelState } from '../site-tunnels.js';
+import { syncTunnelRoutes } from '../tunnel.js';
+import { getSiteSync } from '../state.js';
+import { readInterfaces } from '../metrics/network.js';
 import { db, logEvent } from '../db.js';
 import { config } from '../config.js';
 
@@ -48,10 +56,23 @@ router.post('/create', async (req, res) => {
   res.json(result);
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
+  const before = getSite(req.params.id);
   const result = updateSite(req.params.id, req.body || {});
-  if (!result.ok) return res.status(404).json(result);
+  if (!result.ok) {
+    return res.status(result.error === 'invalid_domain' ? 400 : 404).json(result);
+  }
   invalidateSizeCache(result.site.slug);
+
+  // پورت یا دامنه عوض شده؟ مسیرهای اینترنتی هم باید همان‌جا برود
+  if (before && before.port !== result.site.port) {
+    if (siteTunnelState(result.site.slug).status !== 'stopped') {
+      restartSiteTunnel(result.site).catch(() => {});
+    }
+  }
+  if (result.domainChanged || before?.port !== result.site.port) {
+    syncTunnelRoutes().catch(() => {});
+  }
   res.json(result);
 });
 
@@ -121,6 +142,105 @@ router.put('/:id/config', (req, res) => {
   const next = { ...current, ...req.body, env, updatedAt: Date.now() };
   writeSiteConfig(site.slug, next);
   res.json({ ok: true, config: next });
+});
+
+// ------------------------------- دامنه‌ها ----------------------------------
+// یک سایت می‌تواند چند دامنه داشته باشد، و هر دامنه هر وقت بخواهید به سایت
+// دیگری منتقل می‌شود — بدون این که چیزی دستی در فایل‌ها عوض شود.
+router.get('/:id/domains', (req, res) => {
+  const site = getSite(req.params.id);
+  if (!site) return res.status(404).json({ error: 'not_found' });
+  res.json({ domains: domainsForSite(site.id).map((d) => d.name), primary: site.domain });
+});
+
+router.post('/:id/domains', async (req, res) => {
+  const site = getSite(req.params.id);
+  if (!site) return res.status(404).json({ error: 'not_found' });
+  const result = attachDomain(site.id, req.body?.domain);
+  if (!result.ok) return res.status(400).json(result);
+  syncTunnelRoutes().catch(() => {});
+  res.json({ ...result, domains: domainsForSite(site.id).map((d) => d.name) });
+});
+
+router.delete('/:id/domains', async (req, res) => {
+  const site = getSite(req.params.id);
+  if (!site) return res.status(404).json({ error: 'not_found' });
+  const result = detachDomain(site.id, req.query.domain);
+  if (!result.ok) return res.status(404).json(result);
+  syncTunnelRoutes().catch(() => {});
+  res.json({ ...result, domains: domainsForSite(site.id).map((d) => d.name) });
+});
+
+// --------------------- سرورِ اختصاصیِ داده برای هر سایت ---------------------
+// هر سایت پوشه و رمزِ خودش را دارد؛ این‌ها همان چیزهایی است که باید در خودِ
+// سایت وارد شود تا دادهٔ آن سایت جدا از بقیه ذخیره شود.
+function siteServerAddresses(slug) {
+  const port = config.siteSync.port || config.port;
+  const query = `?site=${encodeURIComponent(slug)}`;
+  const list = [{ label: 'همین کامپیوتر', ws: `ws://localhost:${port}${query}` }];
+  for (const iface of readInterfaces()) {
+    list.push({ label: `شبکهٔ خانگی (${iface.name})`, ws: `ws://${iface.address}:${port}${query}` });
+  }
+  return list;
+}
+
+router.get('/:id/server', async (req, res) => {
+  const site = getSite(req.params.id);
+  if (!site) return res.status(404).json({ error: 'not_found' });
+  const store = await ensureSiteDataFolder(site);
+  if (!store) return res.status(404).json({ error: 'disabled' });
+
+  const token = store.getToken();
+  res.json({
+    slug: site.slug,
+    dataDir: store.dataDir,
+    tokenPreview: token
+      ? `${token.slice(0, 4)}${'•'.repeat(Math.max(0, token.length - 8))}${token.slice(-4)}`
+      : null,
+    addresses: siteServerAddresses(site.slug),
+    branches: store.branches(),
+    stats: store.snapshot(),
+  });
+});
+
+router.get('/:id/server/token', async (req, res) => {
+  const site = getSite(req.params.id);
+  if (!site) return res.status(404).json({ error: 'not_found' });
+  const store = await ensureSiteDataFolder(site);
+  if (!store) return res.status(404).json({ error: 'disabled' });
+  logEvent('warn', 'panel', `رمز دادهٔ سایت «${site.name}» توسط «${req.user.username}» دیده شد`, site.id);
+  res.json({ token: store.getToken() });
+});
+
+router.post('/:id/server/rotate-token', async (req, res) => {
+  const site = getSite(req.params.id);
+  if (!site) return res.status(404).json({ error: 'not_found' });
+  const store = await ensureSiteDataFolder(site);
+  if (!store) return res.status(404).json({ error: 'disabled' });
+  const token = await store.rotateToken();
+  logEvent('warn', 'panel', `رمز دادهٔ سایت «${site.name}» عوض شد`, site.id);
+  res.json({ ok: true, token });
+});
+
+// ----------------------- آدرس اینترنتیِ اختصاصیِ سایت -----------------------
+router.post('/:id/tunnel/start', async (req, res) => {
+  const site = getSite(req.params.id);
+  if (!site) return res.status(404).json({ error: 'not_found' });
+  const result = await startSiteTunnel(site);
+  if (!result.ok) return res.status(400).json(result);
+  res.json(result);
+});
+
+router.post('/:id/tunnel/stop', (req, res) => {
+  const site = getSite(req.params.id);
+  if (!site) return res.status(404).json({ error: 'not_found' });
+  res.json(stopSiteTunnel(site.slug));
+});
+
+router.get('/:id/tunnel', (req, res) => {
+  const site = getSite(req.params.id);
+  if (!site) return res.status(404).json({ error: 'not_found' });
+  res.json(siteTunnelState(site.slug));
 });
 
 // محاسبهٔ دوبارهٔ حجم فایل‌ها (واقعی، با پیمایش پوشه)

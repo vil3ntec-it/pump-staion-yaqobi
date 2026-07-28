@@ -3,6 +3,8 @@ import { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { db, logEvent } from '../db.js';
 import { checkDomain } from '../lib/domain-check.js';
+import { normalizeDomain } from '../sites/registry.js';
+import { syncTunnelRoutes } from '../tunnel.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -51,37 +53,97 @@ router.get('/', (req, res) => {
   res.json({ domains: db.prepare(listQuery).all().map(rowToApi) });
 });
 
+/** دامنهٔ اصلیِ هر سایت را با جدول دامنه‌ها هم‌خط نگه می‌دارد */
+function refreshPrimaryDomain(siteId) {
+  if (!siteId) return;
+  const site = db.prepare('SELECT id, domain FROM sites WHERE id = ?').get(Number(siteId));
+  if (!site) return;
+  const own = db
+    .prepare('SELECT name FROM domains WHERE site_id = ? ORDER BY name COLLATE NOCASE')
+    .all(site.id)
+    .map((r) => r.name);
+  const next = own.includes(site.domain) ? site.domain : (own[0] ?? null);
+  if (next !== site.domain) {
+    db.prepare('UPDATE sites SET domain = ?, updated_at = ? WHERE id = ?').run(next, Date.now(), site.id);
+  }
+}
+
 router.post('/', (req, res) => {
-  const name = String(req.body?.name || '').trim().toLowerCase();
-  if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(name)) return res.status(400).json({ error: 'invalid_domain' });
+  const name = normalizeDomain(req.body?.name);
+  if (!name) return res.status(400).json({ error: 'invalid_domain' });
   const exists = db.prepare('SELECT id FROM domains WHERE name = ?').get(name);
   if (exists) return res.status(409).json({ error: 'already_exists' });
+  const siteId = req.body?.siteId ? Number(req.body.siteId) : null;
   db.prepare('INSERT INTO domains(name, site_id, note, created_at) VALUES(?, ?, ?, ?)').run(
     name,
-    req.body?.siteId ? Number(req.body.siteId) : null,
+    siteId,
     req.body?.note || null,
     Date.now()
   );
+  refreshPrimaryDomain(siteId);
   logEvent('info', 'panel', `دامنهٔ ${name} اضافه شد`);
+  syncTunnelRoutes().catch(() => {});
   res.json({ ok: true, domain: rowToApi(db.prepare(oneQuery).get(name)) });
 });
 
+/**
+ * تغییر دامنه: هم می‌شود سایتِ مقصد را عوض کرد (همین دامنه، سایتِ دیگر)،
+ * هم خودِ نامِ دامنه را. بعدش مسیرهای تونل هم خودکار بازنویسی می‌شود.
+ */
 router.put('/:id', (req, res) => {
   const row = db.prepare('SELECT * FROM domains WHERE id = ?').get(Number(req.params.id));
   if (!row) return res.status(404).json({ error: 'not_found' });
-  db.prepare('UPDATE domains SET site_id = ?, note = ? WHERE id = ?').run(
-    req.body?.siteId ? Number(req.body.siteId) : null,
+
+  let name = row.name;
+  if ('name' in (req.body || {})) {
+    const next = normalizeDomain(req.body.name);
+    if (!next) return res.status(400).json({ error: 'invalid_domain' });
+    if (next !== row.name) {
+      const clash = db.prepare('SELECT id FROM domains WHERE name = ? AND id <> ?').get(next, row.id);
+      if (clash) return res.status(409).json({ error: 'already_exists' });
+      name = next;
+    }
+  }
+
+  const siteId =
+    'siteId' in (req.body || {})
+      ? req.body.siteId
+        ? Number(req.body.siteId)
+        : null
+      : row.site_id;
+
+  db.prepare('UPDATE domains SET name = ?, site_id = ?, note = ? WHERE id = ?').run(
+    name,
+    siteId,
     req.body?.note ?? row.note,
     row.id
   );
-  res.json({ ok: true });
+
+  // اگر دامنه از سایتی به سایت دیگر رفت، هر دو طرف باید بروز شوند
+  refreshPrimaryDomain(row.site_id);
+  refreshPrimaryDomain(siteId);
+
+  if (name !== row.name || siteId !== row.site_id) {
+    const to = siteId ? db.prepare('SELECT name FROM sites WHERE id = ?').get(siteId)?.name : null;
+    logEvent(
+      'info',
+      'panel',
+      to ? `دامنهٔ ${name} از این پس به سایت «${to}» می‌رود` : `دامنهٔ ${name} به هیچ سایتی وصل نیست`,
+      siteId
+    );
+    syncTunnelRoutes().catch(() => {});
+  }
+
+  res.json({ ok: true, domain: rowToApi(db.prepare(oneQuery).get(name)) });
 });
 
 router.delete('/:id', (req, res) => {
   const row = db.prepare('SELECT * FROM domains WHERE id = ?').get(Number(req.params.id));
   if (!row) return res.status(404).json({ error: 'not_found' });
   db.prepare('DELETE FROM domains WHERE id = ?').run(row.id);
+  refreshPrimaryDomain(row.site_id);
   logEvent('warn', 'panel', `دامنهٔ ${row.name} حذف شد`);
+  syncTunnelRoutes().catch(() => {});
   res.json({ ok: true });
 });
 

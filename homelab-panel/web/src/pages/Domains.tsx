@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Globe, Plus, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
+import { Globe, Pencil, Plus, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
 import { useApp } from '../app-context';
 import { api, ApiError } from '../api';
 import type { Domain, Site } from '../types';
@@ -13,6 +13,7 @@ export default function Domains() {
   const [addOpen, setAddOpen] = useState(false);
   const [checking, setChecking] = useState<number | 'all' | null>(null);
   const [deleteFor, setDeleteFor] = useState<Domain | null>(null);
+  const [renameFor, setRenameFor] = useState<Domain | null>(null);
 
   const load = useCallback(async () => {
     const [d, s] = await Promise.all([
@@ -48,6 +49,19 @@ export default function Domains() {
       toast(t('error'), 'bad');
     } finally {
       setChecking(null);
+    }
+  }
+
+  /** همان دامنه، سایتِ دیگر — بدون حذف و ساخت دوباره */
+  async function repoint(domain: Domain, value: string) {
+    const siteId = value ? Number(value) : null;
+    if (siteId === domain.siteId) return;
+    try {
+      await api(`/api/domains/${domain.id}`, { method: 'PUT', body: { siteId } });
+      await load();
+      toast(t('domainMoved'));
+    } catch {
+      toast(t('error'), 'bad');
     }
   }
 
@@ -132,11 +146,29 @@ export default function Domains() {
                     <td className="px-3 py-2.5">
                       <Expiry ts={d.registrationExpiresAt} days={d.registrationDaysLeft} lang={lang} t={t} />
                     </td>
-                    <td className="px-3 py-2.5 text-xs">{d.siteName || '—'}</td>
+                    <td className="px-3 py-2.5">
+                      {/* همین دامنه، سایتِ دیگر — فقط با عوض کردن همین انتخاب */}
+                      <select
+                        className="input !py-1 text-xs"
+                        value={d.siteId ?? ''}
+                        onChange={(e) => repoint(d, e.target.value)}
+                      >
+                        <option value="">{t('notConnected')}</option>
+                        {sites.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                            {s.port ? ` · ${s.port}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
                     <td className="px-3 py-2.5">
                       <div className="flex gap-1.5">
                         <button className="btn btn-sm" disabled={checking === d.id} onClick={() => check(d.id)}>
                           <RefreshCw className={`h-3.5 w-3.5 ${checking === d.id ? 'animate-spin' : ''}`} />
+                        </button>
+                        <button className="btn btn-sm" onClick={() => setRenameFor(d)} title={t('renameDomain')}>
+                          <Pencil className="h-3.5 w-3.5" />
                         </button>
                         <button className="btn btn-sm" onClick={() => setDeleteFor(d)}>
                           <Trash2 className="h-3.5 w-3.5" />
@@ -152,6 +184,9 @@ export default function Domains() {
       )}
 
       <AddDomainModal open={addOpen} onClose={() => setAddOpen(false)} onDone={load} sites={sites} />
+      {renameFor && (
+        <RenameDomainModal domain={renameFor} onClose={() => setRenameFor(null)} onDone={load} />
+      )}
       <ConfirmDialog
         open={Boolean(deleteFor)}
         danger
@@ -191,6 +226,63 @@ function Expiry({
       <span className="tnum text-xs">{dateOnly(ts, lang)}</span>
       <Badge tone={tone as any}>{days != null && days < 0 ? t('expired') : t('daysLeft', { n: days ?? 0 })}</Badge>
     </div>
+  );
+}
+
+/** تغییر نامِ خودِ دامنه — بدون این که وصل بودنش به سایت از دست برود */
+function RenameDomainModal({
+  domain,
+  onClose,
+  onDone,
+}: {
+  domain: Domain;
+  onClose: () => void;
+  onDone: () => Promise<void>;
+}) {
+  const { t } = useApp();
+  const [name, setName] = useState(domain.name);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={t('renameDomain')}
+      footer={
+        <>
+          <button className="btn" onClick={onClose}>
+            {t('cancel')}
+          </button>
+          <button
+            className="btn btn-primary"
+            disabled={busy || !name.trim() || name.trim() === domain.name}
+            onClick={async () => {
+              setBusy(true);
+              setError(null);
+              try {
+                await api(`/api/domains/${domain.id}`, { method: 'PUT', body: { name: name.trim() } });
+                await onDone();
+                onClose();
+                toast(t('saved'));
+              } catch (e) {
+                const code = e instanceof ApiError ? e.code : 'error';
+                setError(code === 'invalid_domain' ? t('invalidDomain') : code);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {t('save')}
+          </button>
+        </>
+      }
+    >
+      <Field label={t('domain')}>
+        <input className="input font-mono" dir="ltr" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+      </Field>
+      {error && <p className="text-xs" style={{ color: 'var(--status-critical)' }}>{error}</p>}
+    </Modal>
   );
 }
 
