@@ -10,9 +10,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
+import android.app.Activity;
 
 /**
  * پوستهٔ اندرویدِ برنامهٔ پمپ.
@@ -21,7 +19,7 @@ import androidx.core.app.ActivityCompat;
  * assets بار می‌شود — پس بدونِ اینترنت هم کامل کار می‌کند و هیچ نوارِ آدرس یا
  * سربرگِ مرورگری بالای صفحه دیده نمی‌شود.
  */
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
 
   private WebView web;
   private static final int MIC_REQ = 4711;
@@ -59,16 +57,11 @@ public class MainActivity extends AppCompatActivity {
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
         && checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-      ActivityCompat.requestPermissions(this, new String[]{ Manifest.permission.RECORD_AUDIO }, MIC_REQ);
+      requestPermissions(new String[]{ Manifest.permission.RECORD_AUDIO }, MIC_REQ);
     }
 
     // برنامه از داخلِ خودِ فایلِ نصب بار می‌شود — نه از اینترنت
     web.loadUrl("file:///android_asset/www/index.html");
-  }
-
-  @Override
-  public void onRequestPermissionsResult(int req, @NonNull String[] p, @NonNull int[] r) {
-    super.onRequestPermissionsResult(req, p, r);
   }
 
   /** دکمهٔ برگشتِ گوشی، داخلِ خودِ برنامه عقب برود، نه اینکه برنامه بسته شود. */
