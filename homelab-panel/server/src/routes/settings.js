@@ -8,6 +8,7 @@ import { pipeline } from 'node:stream/promises';
 import { requireAuth } from '../auth.js';
 import { allSettings, getSetting, setSetting, logEvent } from '../db.js';
 import { config, paths } from '../config.js';
+import { normalizeDomain } from '../sites/registry.js';
 
 const router = Router();
 
@@ -56,6 +57,9 @@ router.get('/', (req, res) => {
       scanRoots: s.scan_roots ?? null,
       extraFileRoots: s.extra_file_roots ?? [],
       hasLogo: Boolean(logoFile()),
+      // راه‌اندازی خودکار سایت تازه: دامنه، پوشهٔ داده و آدرس اینترنتی
+      siteAutoSetup: s.site_autosetup !== false,
+      sitesBaseDomain: s.sites_base_domain ?? null,
     },
     paths: {
       dataDir: config.dataDir,
@@ -86,6 +90,16 @@ router.put('/', (req, res) => {
       'extra_file_roots',
       body.extraFileRoots.filter((r) => typeof r === 'string' && r.trim()).map((r) => path.resolve(r.trim()))
     );
+  }
+  if (typeof body.siteAutoSetup === 'boolean') setSetting('site_autosetup', body.siteAutoSetup);
+  if ('sitesBaseDomain' in body) {
+    const raw = String(body.sitesBaseDomain ?? '').trim();
+    if (!raw) setSetting('sites_base_domain', null);
+    else {
+      const clean = normalizeDomain(raw);
+      if (!clean) return res.status(400).json({ error: 'invalid_domain' });
+      setSetting('sites_base_domain', clean);
+    }
   }
   logEvent('info', 'panel', 'تنظیمات پنل بروزرسانی شد');
   res.json({ ok: true });

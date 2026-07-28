@@ -53,6 +53,7 @@ const server = spawn(
       HLP_DATA_DIR: path.join(tmp, 'data'),
       HLP_SITES_ROOT: sitesRoot,
       HLP_METRICS_INTERVAL: '700',
+    HLP_TUNNEL: '0',
     },
     stdio: 'ignore',
   }
@@ -135,9 +136,12 @@ try {
   await page.click('button:has-text("تنظیمات")');
   await page.waitForSelector('h3:has-text("تنظیمات —")', { timeout: 8000 });
   check('بخش دامنه‌های سایت دیده می‌شود', await page.locator('text=دامنه‌های این سایت').first().isVisible());
+  // این بخش بعد از یک درخواست به سرور می‌آید، پس منتظرش می‌مانیم
+  await page.waitForSelector('text=پوشهٔ دادهٔ اختصاصی', { timeout: 10000 });
+  check('پوشهٔ دادهٔ اختصاصی سایت نشان داده می‌شود', true);
   check(
-    'پوشهٔ دادهٔ اختصاصی سایت نشان داده می‌شود',
-    await page.locator('text=پوشهٔ دادهٔ اختصاصی').first().isVisible()
+    'مسیر پوشهٔ دادهٔ سایت نوشته شده',
+    (await page.locator('text=site-sync').count()) > 0
   );
 
   await page.fill('input[placeholder="example.com"]', 'shop.yaqobipump.top');
@@ -194,6 +198,11 @@ try {
   console.log('\n── پوسته و زبان ──');
   await page.click('a[href="/settings"]');
   await page.waitForSelector('text=پوسته', { timeout: 8000 });
+  check(
+    'تنظیم راه‌اندازی خودکار سایت دیده می‌شود',
+    await page.locator('text=راه‌اندازی خودکار سایت تازه').first().isVisible()
+  );
+  check('کادر دامنهٔ پایه دیده می‌شود', await page.locator('input[placeholder="yaqobipump.top"]').isVisible());
   await page.click('button:has-text("روشن")');
   await page.waitForTimeout(500);
   check('پوستهٔ روشن اعمال شد', (await page.getAttribute('html', 'data-theme')) === 'light');

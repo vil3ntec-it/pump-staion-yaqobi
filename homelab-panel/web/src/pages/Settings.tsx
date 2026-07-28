@@ -14,6 +14,8 @@ type SettingsPayload = {
     scanRoots: string[] | null;
     extraFileRoots: string[];
     hasLogo: boolean;
+    siteAutoSetup: boolean;
+    sitesBaseDomain: string | null;
   };
   paths: { dataDir: string; sitesRoot: string; uploads: string };
   system: { hostname: string; platform: string; node: string; panelPort: number };
@@ -25,6 +27,8 @@ export default function Settings() {
   const [serverName, setServerName] = useState('');
   const [scanRoots, setScanRoots] = useState('');
   const [extraRoots, setExtraRoots] = useState('');
+  const [autoSetup, setAutoSetup] = useState(true);
+  const [baseDomain, setBaseDomain] = useState('');
   const [busy, setBusy] = useState(false);
   const [logoVersion, setLogoVersion] = useState(0);
   const logoRef = useRef<HTMLInputElement>(null);
@@ -39,6 +43,8 @@ export default function Settings() {
       setServerName(res.settings.serverName);
       setScanRoots((res.settings.scanRoots || []).join('\n'));
       setExtraRoots((res.settings.extraFileRoots || []).join('\n'));
+      setAutoSetup(res.settings.siteAutoSetup !== false);
+      setBaseDomain(res.settings.sitesBaseDomain || '');
     });
     api<{ sessions: any[] }>('/api/auth/me').then((r) => setSessions(r.sessions));
   }, []);
@@ -56,12 +62,14 @@ export default function Settings() {
           theme,
           scanRoots: scanRoots.split('\n').map((s) => s.trim()).filter(Boolean),
           extraFileRoots: extraRoots.split('\n').map((s) => s.trim()).filter(Boolean),
+          siteAutoSetup: autoSetup,
+          sitesBaseDomain: baseDomain.trim(),
         },
       });
       await refreshPublic();
       toast(t('saved'));
-    } catch {
-      toast(t('error'), 'bad');
+    } catch (e) {
+      toast(e instanceof ApiError && e.code === 'invalid_domain' ? t('invalidDomain') : t('error'), 'bad');
     } finally {
       setBusy(false);
     }
@@ -148,6 +156,36 @@ export default function Settings() {
             onChange={(e) => setExtraRoots(e.target.value)}
           />
         </Field>
+
+        {/* راه‌اندازی خودکار سایت تازه */}
+        <div className="mb-4 rounded-xl border border-line p-3" style={{ background: 'var(--surface-0)' }}>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 accent-[var(--series-1)]"
+              checked={autoSetup}
+              onChange={(e) => setAutoSetup(e.target.checked)}
+            />
+            <span>
+              {t('autoSetup')}
+              <span className="mt-0.5 block text-[11px] font-normal leading-relaxed text-ink-muted">
+                {t('autoSetupHint')}
+              </span>
+            </span>
+          </label>
+
+          <div className="mt-3">
+            <label className="label">{t('baseDomain')}</label>
+            <p className="mb-1.5 text-[11px] leading-relaxed text-ink-muted">{t('baseDomainHint')}</p>
+            <input
+              className="input font-mono text-xs"
+              dir="ltr"
+              placeholder="yaqobipump.top"
+              value={baseDomain}
+              onChange={(e) => setBaseDomain(e.target.value)}
+            />
+          </div>
+        </div>
 
         <button className="btn btn-primary" disabled={busy} onClick={save}>
           <Save className="h-3.5 w-3.5" />
