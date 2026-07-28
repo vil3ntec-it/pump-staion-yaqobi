@@ -25,7 +25,6 @@ android {
   }
 }
 
-dependencies {
-  implementation 'androidx.appcompat:appcompat:1.7.0'
-  implementation 'androidx.webkit:webkit:1.11.0'
-}
+// هیچ وابستگیِ بیرونی لازم نیست — فقط WebView خودِ اندروید.
+// (androidx/kotlin برداشته شد چون نسخه‌هایشان با هم تضاد داشت و ساخت را می‌شکست)
+dependencies { }
