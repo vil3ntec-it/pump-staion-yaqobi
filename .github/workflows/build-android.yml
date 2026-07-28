@@ -1,0 +1,77 @@
+name: ساخت برنامهٔ اندروید (APK)
+
+# فایل نصبِ اندروید (.apk) را می‌سازد و در Releases می‌گذارد.
+# اجرا: از تب Actions دکمهٔ «Run workflow» را بزنید.
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'android-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: دریافت کد
+        uses: actions/checkout@v4
+
+      - name: نصب جاوا ۱۷
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: آماده‌سازی Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: گذاشتنِ خودِ برنامه داخلِ فایل نصب
+        run: |
+          mkdir -p android/app/src/main/assets/www
+          cp index.html sw.js manifest.json favicon.png android/app/src/main/assets/www/
+          cp -r icons android/app/src/main/assets/www/ || true
+          echo "محتوای بسته‌شده:"; ls -la android/app/src/main/assets/www/
+
+      - name: ساختِ آیکون‌های برنامه
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick
+          for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+            n=${d%%:*}; px=${d##*:}
+            mkdir -p android/app/src/main/res/mipmap-$n
+            convert icons/icon-512.png -resize ${px}x${px} android/app/src/main/res/mipmap-$n/ic_launcher.png
+          done
+
+      - name: ساختِ APK
+        working-directory: android
+        run: |
+          gradle wrapper --gradle-version 8.7
+          ./gradlew assembleRelease --no-daemon
+
+      - name: نام‌گذاری فایل
+        run: |
+          mkdir -p out
+          cp android/app/build/outputs/apk/release/*.apk "out/PumpYaqobi-$(date +%Y%m%d).apk"
+          ls -la out/
+
+      - name: بارگذاری به‌عنوان Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PumpYaqobi-Android-APK
+          path: out/*.apk
+          if-no-files-found: error
+
+      - name: انتشار در Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-latest
+          name: برنامهٔ اندروید پمپ یعقوبی (آخرین نسخه)
+          body: |
+            فایل نصبِ اندروید. روی گوشی دانلود و باز کنید.
+
+            بار اول اندروید می‌گوید «نصب از منبع ناشناس» — اجازه بدهید.
+            خودِ برنامه داخلِ همین فایل است، پس بدون اینترنت هم کار می‌کند و
+            هیچ نوارِ آدرس یا سربرگِ مرورگر بالای صفحه نمی‌آید.
+          files: out/*.apk
+          make_latest: false
