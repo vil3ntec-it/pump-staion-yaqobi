@@ -17,8 +17,12 @@ import https from 'node:https';
 import os from 'node:os';
 import { config } from './config.js';
 import { db, logEvent, getSetting, setSetting } from './db.js';
+import { isProtectedHost } from './protected-hosts.js';
 
 export const tunnelEvents = new EventEmitter();
+
+/** دامنه‌های قُرقی که گزارششان یک‌بار نوشته شده (تا هر sync دوباره ننویسد) */
+const protectedLogged = new Set();
 
 const BIN_DIR = path.join(config.dataDir, 'bin');
 
@@ -339,6 +343,10 @@ export function namedLoginDone() {
 export async function namedSetup({ hostname, name = 'pump-yaqobi' }) {
   const host = String(hostname || '').trim().toLowerCase();
   if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(host)) return { ok: false, error: 'invalid_hostname' };
+  if (isProtectedHost(host)) {
+    logEvent('warn', 'panel', `دامنهٔ ${host} قُرق است و به تونل وصل نشد (رکورد DNS سایت عمومی دست‌نخورده ماند)`);
+    return { ok: false, error: 'protected_hostname' };
+  }
   if (!findCert()) return { ok: false, error: 'not_logged_in' };
 
   await ensureBinary();
@@ -431,8 +439,8 @@ function domainRoutes() {
   }
 }
 
-/** همهٔ زیردامنه‌هایی که به این تونل وصل‌اند */
-export function routedHostnames() {
+/** همهٔ نامزدهای مسیر — پیش از کنار گذاشتنِ دامنه‌های قُرق */
+function candidateHostnames() {
   const main = getSetting('tunnel_hostname', null);
   const extra = getSetting('tunnel_hostnames', []) || [];
   const list = [];
@@ -470,6 +478,23 @@ export function routedHostnames() {
 }
 
 /**
+ * همهٔ زیردامنه‌هایی که به این تونل وصل‌اند.
+ * دامنه‌های قُرق (protected-hosts.js) بیرون می‌مانند: نه رکورد DNS‌شان بازنویسی
+ * می‌شود و نه در ingress تونل می‌نشینند — تا سایتِ عمومی روی GitHub Pages
+ * دست‌نخورده بماند.
+ */
+export function routedHostnames() {
+  return candidateHostnames().filter((r) => !isProtectedHost(r.hostname));
+}
+
+/** دامنه‌های قُرقی که با وجودِ وصل بودن به سایت، عمداً به تونل نرفته‌اند */
+export function skippedProtectedHostnames() {
+  return candidateHostnames()
+    .filter((r) => isProtectedHost(r.hostname))
+    .map((r) => r.hostname);
+}
+
+/**
  * بعد از هر تغییر در دامنه‌ها: فایلِ مسیرها دوباره نوشته و تونل تازه می‌شود.
  * اگر دامنه‌ای تازه است، رکورد DNS‌اش هم یک‌بار ساخته می‌شود.
  */
@@ -485,6 +510,18 @@ export async function syncTunnelRoutes({ restart = true } = {}) {
   const name = getSetting('tunnel_name', 'pump');
   const alreadyRouted = new Set(getSetting('tunnel_routed_dns', []) || []);
   const failures = [];
+
+  // دامنه‌های قُرق: یک‌بار در گزارش بنویس تا معلوم باشد چرا به تونل نرفته‌اند
+  const skipped = skippedProtectedHostnames();
+  for (const host of skipped) {
+    if (protectedLogged.has(host)) continue;
+    protectedLogged.add(host);
+    logEvent(
+      'warn',
+      'panel',
+      `دامنهٔ ${host} قُرق است: رکورد DNS آن بازنویسی نشد تا سایت عمومی روی GitHub Pages نخوابد`
+    );
+  }
 
   if (findCert()) {
     try {
@@ -509,7 +546,7 @@ export async function syncTunnelRoutes({ restart = true } = {}) {
     stopTunnel();
     await startTunnel({});
   }
-  return { ok: !failures.length, applied: true, failures, hostnames: routedHostnames() };
+  return { ok: !failures.length, applied: true, failures, skippedProtected: skipped, hostnames: routedHostnames() };
 }
 
 /** فایل config.yml را با همهٔ زیردامنه‌ها بازنویسی می‌کند */
@@ -548,6 +585,10 @@ function readCredFromConfig() {
 export async function addHostname({ hostname, port }) {
   const host = String(hostname || '').trim().toLowerCase();
   if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(host)) return { ok: false, error: 'invalid_hostname' };
+  if (isProtectedHost(host)) {
+    logEvent('warn', 'panel', `دامنهٔ ${host} قُرق است و به تونل وصل نشد (رکورد DNS سایت عمومی دست‌نخورده ماند)`);
+    return { ok: false, error: 'protected_hostname' };
+  }
   const targetPort = Number(port) || config.port;
 
   const name = getSetting('tunnel_name', 'pump');
