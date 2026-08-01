@@ -26,12 +26,13 @@ import { getSiteSync } from '../state.js';
 import { readInterfaces } from '../metrics/network.js';
 import { db, logEvent } from '../db.js';
 import { config } from '../config.js';
+import { sitesRoot } from '../sites/root.js';
 
 const router = Router();
 router.use(requireAuth);
 
 router.get('/', async (req, res) => {
-  res.json({ sites: await listSites(), sitesRoot: config.sitesRoot });
+  res.json({ sites: await listSites(), sitesRoot: sitesRoot() });
 });
 
 router.get('/:id', async (req, res) => {

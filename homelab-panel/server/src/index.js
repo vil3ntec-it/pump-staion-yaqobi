@@ -20,6 +20,7 @@ import { startCollector, stopCollector } from './metrics/index.js';
 import { startWinSampler, stopWinSampler } from './metrics/win-sampler.js';
 import { readInterfaces } from './metrics/network.js';
 import { autostartAll, ensureAllSiteWorkspaces, ensureMainSite } from './sites/registry.js';
+import { sitesRoot, ensureSitesRoot } from './sites/root.js';
 import { stopAll } from './sites/process.js';
 import { startTunnel, stopTunnel, tunnelEvents } from './tunnel.js';
 import { versionInfo, versionLine } from './version.js';
@@ -216,6 +217,7 @@ async function main() {
     }
   }
 
+  ensureSitesRoot();
   await autostartAll();
 
   if (syncOnlyServer) {
@@ -248,7 +250,7 @@ async function main() {
       console.log('');
     }
     console.log(`  پوشهٔ داده:  ${config.dataDir}`);
-    console.log(`  ریشهٔ سایت‌ها: ${config.sitesRoot}`);
+    console.log(`  ریشهٔ سایت‌ها: ${sitesRoot()}`);
     console.log('==============================================================');
     console.log('');
     logEvent('info', 'panel', `پنل روی پورت ${config.port} اجرا شد`);

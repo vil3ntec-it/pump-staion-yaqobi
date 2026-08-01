@@ -7,6 +7,7 @@ import { pipeline } from 'node:stream/promises';
 import { requireAuth } from '../auth.js';
 import { resolveSafe, rootsWithMeta } from '../lib/safe-path.js';
 import { config } from '../config.js';
+import { sitesRoot } from '../sites/root.js';
 import { logEvent } from '../db.js';
 import { invalidateSizeCache } from '../sites/registry.js';
 
@@ -26,11 +27,11 @@ function fail(res, code, error, extra = {}) {
 }
 
 router.get('/roots', (req, res) => {
-  res.json({ roots: rootsWithMeta(), sitesRoot: config.sitesRoot });
+  res.json({ roots: rootsWithMeta(), sitesRoot: sitesRoot() });
 });
 
 router.get('/list', async (req, res) => {
-  const safe = resolveSafe(req.query.path || config.sitesRoot);
+  const safe = resolveSafe(req.query.path || sitesRoot());
   if (!safe.ok) return fail(res, 403, safe.error, { roots: safe.roots });
   let entries;
   try {
@@ -224,7 +225,7 @@ router.delete('/', async (req, res) => {
 });
 
 router.get('/search', async (req, res) => {
-  const safe = resolveSafe(req.query.path || config.sitesRoot);
+  const safe = resolveSafe(req.query.path || sitesRoot());
   if (!safe.ok) return fail(res, 403, safe.error);
   const q = String(req.query.q || '').trim().toLowerCase();
   if (q.length < 2) return fail(res, 400, 'query_too_short');

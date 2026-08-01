@@ -245,6 +245,10 @@ const fa = {
   repairStarted: 'در حال بازسازی تونل…',
   panelVersion: 'نسخهٔ پنل',
   runningFrom: 'اجرا از مسیر',
+  sitesRootHint:
+    'پوشهٔ هر سایت اینجا ساخته می‌شود. می‌توانید هر جای درایو بگذاریدش — اگر نبود، ساخته می‌شود.',
+  putNextToServer: 'کنارِ خودِ سرور بگذار',
+  folderNotCreated: 'این پوشه ساخته نشد — مسیر یا دسترسی را بررسی کنید',
   autoSetup: 'راه‌اندازی خودکار سایت تازه',
   autoSetupHint:
     'با افزودن هر سایت، خودش پوشهٔ دادهٔ جدا، رمز، پورت، دامنه و آدرس اینترنتی می‌گیرد — بدون هیچ تنظیم دستی.',
@@ -538,6 +542,10 @@ const en: Dict = {
   repairStarted: 'Rebuilding the tunnel…',
   panelVersion: 'Panel version',
   runningFrom: 'Running from',
+  sitesRootHint:
+    "Each site's folder is created here. Put it anywhere on the drive — it is created if missing.",
+  putNextToServer: 'Put it next to the server',
+  folderNotCreated: 'That folder could not be created — check the path or permissions',
   autoSetup: 'Set up new sites automatically',
   autoSetupHint:
     'Every site you add gets its own data folder, password, port, domain and internet address by itself — nothing to configure by hand.',

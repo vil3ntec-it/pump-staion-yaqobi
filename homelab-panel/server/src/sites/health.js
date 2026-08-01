@@ -74,7 +74,15 @@ function headCheck(url, timeout = REMOTE_TIMEOUT_MS) {
   });
 }
 
-/** نتیجهٔ کش‌شدهٔ تستِ اینترنتی؛ اگر کهنه باشد در پس‌زمینه تازه می‌شود */
+/**
+ * نتیجهٔ کش‌شدهٔ تستِ اینترنتی.
+ *
+ * مهم: فهرست سایت‌ها هرگز منتظر شبکه نمی‌ماند. اگر دامنه‌ای جواب ندهد یا اصلاً
+ * وجود نداشته باشد، هر بررسی چند ثانیه طول می‌کشد و صفحه را کند می‌کند؛ برای
+ * همین بررسی در پس‌زمینه انجام می‌شود و صفحه با آخرین نتیجهٔ موجود پر می‌شود.
+ * چند ثانیه بعد (چرخهٔ بعدیِ بروزرسانی) وضعیت درست نشان داده می‌شود.
+ * فقط جایی که صریحاً wait خواسته شود، منتظر می‌ماند.
+ */
 function remoteStatus(url, { wait }) {
   const cached = remoteCache.get(url);
   const fresh = cached && Date.now() - cached.at < REMOTE_TTL_MS;
@@ -86,12 +94,12 @@ function remoteStatus(url, { wait }) {
       remoteCache.set(url, value);
       return value;
     });
+    pending.catch(() => {});
     remoteCache.set(url, { ...(cached || { at: 0, online: false, status: null }), pending });
-    // بار اول چیزی برای نشان دادن نداریم، پس منتظر می‌مانیم
-    if (!cached || wait) return pending;
+    if (wait) return pending;
   }
 
-  return Promise.resolve(cached);
+  return Promise.resolve(cached || { at: 0, online: false, status: null });
 }
 
 export function forgetHealth(url) {

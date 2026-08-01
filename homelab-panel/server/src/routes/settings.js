@@ -9,6 +9,7 @@ import { requireAuth } from '../auth.js';
 import { allSettings, getSetting, setSetting, logEvent } from '../db.js';
 import { config, paths } from '../config.js';
 import { versionInfo } from '../version.js';
+import { sitesRoot, setSitesRoot, NEXT_TO_SERVER } from '../sites/root.js';
 import { normalizeDomain } from '../sites/registry.js';
 
 const router = Router();
@@ -64,7 +65,9 @@ router.get('/', (req, res) => {
     },
     paths: {
       dataDir: config.dataDir,
-      sitesRoot: config.sitesRoot,
+      sitesRoot: sitesRoot(),
+      sitesRootDefault: config.sitesRoot,
+      sitesRootNextToServer: NEXT_TO_SERVER,
       uploads: paths.uploads,
     },
     system: {
@@ -79,7 +82,7 @@ router.get('/', (req, res) => {
   });
 });
 
-router.put('/', (req, res) => {
+router.put('/', async (req, res) => {
   const body = req.body || {};
   if (typeof body.serverName === 'string' && body.serverName.trim()) {
     setSetting('server_name', body.serverName.trim().slice(0, 60));
@@ -94,6 +97,10 @@ router.put('/', (req, res) => {
       'extra_file_roots',
       body.extraFileRoots.filter((r) => typeof r === 'string' && r.trim()).map((r) => path.resolve(r.trim()))
     );
+  }
+  if ('sitesRoot' in body) {
+    const moved = await setSitesRoot(body.sitesRoot);
+    if (!moved.ok) return res.status(400).json(moved);
   }
   if (typeof body.siteAutoSetup === 'boolean') setSetting('site_autosetup', body.siteAutoSetup);
   if ('sitesBaseDomain' in body) {
