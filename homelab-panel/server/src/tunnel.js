@@ -67,6 +67,10 @@ const state = {
 };
 
 let child = null;
+// هر بار که تونل از نو اجرا می‌شود این عدد بالا می‌رود. پروسهٔ قدیمی که دارد
+// می‌میرد نباید وضعیتِ پروسهٔ تازه را خراب کند — وگرنه پنل «مشکل در تونل»
+// نشان می‌دهد در حالی که تونل واقعاً بالاست.
+let generation = 0;
 let stopping = false;
 let restartTimer = null;
 
@@ -824,11 +828,15 @@ export async function startTunnel({ port } = {}) {
           ['tunnel', '--no-autoupdate', '--url', `http://127.0.0.1:${targetPort}`, '--loglevel', 'info'],
         ];
 
+  const myGeneration = ++generation;
+  const isCurrent = () => myGeneration === generation;
+
   child = spawn(command, args, {
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true,
     env: { ...process.env, TUNNEL_ORIGIN_CERT: CERT_FILE },
   });
+  const myChild = child;
 
   // در حالت آدرس ثابت، آدرس از قبل معلوم است — فقط منتظر برقراری اتصال می‌مانیم
   if (namedHost) {
@@ -836,6 +844,7 @@ export async function startTunnel({ port } = {}) {
   }
 
   const onData = (chunk) => {
+    if (!isCurrent()) return;
     const text = chunk.toString();
     for (const raw of text.split(/\r?\n/)) {
       const line = raw.trim();
@@ -863,13 +872,15 @@ export async function startTunnel({ port } = {}) {
   child.stderr.on('data', onData); // cloudflared بیشتر روی stderr می‌نویسد
 
   child.on('error', (e) => {
+    if (!isCurrent()) return; // مالِ اجرای قبلی است
     setStatus('error', { error: e.message });
     logEvent('error', 'panel', `تونل اجرا نشد: ${e.message}`);
     child = null;
   });
 
   child.on('exit', (code) => {
-    child = null;
+    if (!isCurrent()) return; // اجرای تازه‌تری جایش را گرفته
+    if (child === myChild) child = null;
     if (stopping) {
       setStatus('stopped', { url: null });
       return;
@@ -904,6 +915,7 @@ export async function startTunnel({ port } = {}) {
 
 export function stopTunnel() {
   stopping = true;
+  generation++; // هر چه از این به بعد از پروسهٔ قبلی برسد، نادیده گرفته می‌شود
   clearTimeout(restartTimer);
   if (child) {
     try {
