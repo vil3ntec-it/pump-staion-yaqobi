@@ -14,6 +14,7 @@ import {
   RefreshCw,
   RotateCw,
   TriangleAlert,
+  Wrench,
 } from 'lucide-react';
 import { useApp } from '../app-context';
 import { api, ApiError } from '../api';
@@ -335,15 +336,52 @@ function InternetAccess({ data, onChanged }: { data: SiteServerInfo; onChanged: 
       </div>
 
       {tunnel.error && (
-        <p
+        <div
           className="mb-3 rounded-xl px-3 py-2 text-xs"
           style={{
             background: 'color-mix(in srgb, var(--status-critical) 12%, transparent)',
             color: 'var(--status-critical)',
           }}
         >
-          {tunnel.error}
-        </p>
+          <p>{tunnel.error}</p>
+
+          {/* دلیل واقعی، نه فقط «کد ۱» */}
+          {tunnel.diagnosis?.problems?.length ? (
+            <ul className="mt-1.5 list-disc space-y-0.5 ps-4">
+              {tunnel.diagnosis.problems.map((p) => (
+                <li key={p.code}>{p.message}</li>
+              ))}
+            </ul>
+          ) : null}
+
+          {tunnel.diagnosis?.lastError && (
+            <p className="mt-1.5 break-all font-mono text-[10px] opacity-80" dir="ltr">
+              {tunnel.diagnosis.lastError}
+            </p>
+          )}
+
+          {tunnel.diagnosis?.problems?.some((p) => p.fixable) && (
+            <button
+              className="btn btn-sm mt-2"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  await api('/api/site-server/tunnel/repair', { method: 'POST' });
+                  toast(t('repairStarted'));
+                  setTimeout(onChanged, 2000);
+                } catch (e) {
+                  toast(e instanceof ApiError ? e.code : t('error'), 'bad');
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              <Wrench className="h-3.5 w-3.5" />
+              {t('repairTunnel')}
+            </button>
+          )}
+        </div>
       )}
 
       {running && data.siteLink ? (

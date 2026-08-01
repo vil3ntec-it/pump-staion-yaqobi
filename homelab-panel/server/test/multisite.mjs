@@ -341,6 +341,34 @@ async function main() {
   const twin = r.json?.site;
   check('سایت هم‌نام هم دامنهٔ جدا می‌گیرد', Boolean(twin?.domain) && twin.domain !== auto.domain, String(twin?.domain));
 
+  console.log('\n── سایتِ خودم و دامنه‌اش خودکار ثبت می‌شوند ──');
+  // فقط آدرس سایت را می‌دهیم؛ نه سایتی دستی می‌سازیم، نه دامنه‌ای
+  r = await api('PUT', '/api/site-server/site-url', { siteUrl: 'https://yaqobipump.top' });
+  check('آدرس سایت ذخیره شد', r.status === 200);
+  check('سایت خودکار ثبت شد', r.json?.registered?.ok === true, JSON.stringify(r.json?.registered));
+
+  r = await api('GET', '/api/domains');
+  const mine = r.json?.domains?.find((d) => d.name === 'yaqobipump.top');
+  check('دامنه‌ام خودکار در بخش دامنه‌ها آمد', Boolean(mine), JSON.stringify(r.json?.domains?.map((d) => d.name)));
+  check('و به سایت خودش وصل است', Boolean(mine?.siteName), String(mine?.siteName));
+
+  r = await api('GET', '/api/sites');
+  const mainSite = r.json?.sites?.find((s) => s.domains?.includes('yaqobipump.top'));
+  check('سایتم خودکار در بخش سایت‌ها آمد', Boolean(mainSite), String(mainSite?.name));
+  check('به‌عنوان سایتِ اصلی علامت خورده', mainSite?.isMainSite === true);
+  check('پوشه‌اش ساخته شد', Boolean(mainSite?.path) && fs.existsSync(mainSite.path), String(mainSite?.path));
+  check(
+    'دادهٔ سایتِ اصلی همان دفترِ اصلی است (پوشهٔ دوم نمی‌سازد)',
+    Boolean(mainSite?.dataDir) && !mainSite.dataDir.includes(path.join('site-sync', 'sites')),
+    String(mainSite?.dataDir)
+  );
+
+  // دوباره صدا زدن نباید سایت تکراری بسازد
+  const before = (await api('GET', '/api/sites')).json?.sites?.length;
+  await api('PUT', '/api/site-server/site-url', { siteUrl: 'https://yaqobipump.top' });
+  const after = (await api('GET', '/api/sites')).json?.sites?.length;
+  check('دوباره اجرا شدن، سایت تکراری نمی‌سازد', before === after, `${before} → ${after}`);
+
   console.log('\n── حذف سایت، دادهٔ سایت‌های دیگر را نمی‌برد ──');
   await api('DELETE', `/api/sites/${alpha.id}`);
   check('پوشهٔ دادهٔ سایتِ حذف‌شده پاک شد', !fs.existsSync(alphaSrv.dataDir));

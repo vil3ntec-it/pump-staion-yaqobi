@@ -241,6 +241,8 @@ const fa = {
   onlineVia: 'از راه',
 
   // ---- راه‌اندازی خودکار سایت تازه ----
+  repairTunnel: 'تلاش برای درست کردن خودکار',
+  repairStarted: 'در حال بازسازی تونل…',
   panelVersion: 'نسخهٔ پنل',
   runningFrom: 'اجرا از مسیر',
   autoSetup: 'راه‌اندازی خودکار سایت تازه',
@@ -532,6 +534,8 @@ const en: Dict = {
   onlineViaPublic: 'internet address',
   onlineVia: 'via',
 
+  repairTunnel: 'Try to fix it automatically',
+  repairStarted: 'Rebuilding the tunnel…',
   panelVersion: 'Panel version',
   runningFrom: 'Running from',
   autoSetup: 'Set up new sites automatically',

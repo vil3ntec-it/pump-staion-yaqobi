@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
-import { db, logEvent, getSetting } from '../db.js';
+import { db, logEvent, getSetting, setSetting } from '../db.js';
 import { config } from '../config.js';
 import { detectProject, defaultScanRoots } from './detect.js';
 import { ensureWorkspace, removeWorkspace, slugify, workspacePaths } from './workspace.js';
@@ -263,7 +263,70 @@ export async function provisionSite(site, { auto } = {}) {
 export async function ensureSiteDataFolder(site) {
   const sync = getSiteSync();
   if (!sync?.ensureTenant) return null;
+  // سایتِ اصلی دادهٔ خودش را در دفترِ اصلی دارد؛ دفترِ دوم برایش ساخته نمی‌شود
+  if (mainSiteId() === site.id) return sync.tenant?.('main') ?? null;
   return sync.ensureTenant(site.slug, { label: site.name });
+}
+
+// ------------------- ثبتِ خودکارِ سایتِ اصلی (پمپ یعقوبی) -------------------
+//  وقتی سرور را به سایت می‌دهید، خودِ آن سایت و دامنه‌اش هم باید در پنل دیده
+//  شوند — نه اینکه دستی اضافه‌شان کنید. این کار همین را انجام می‌دهد:
+//      • یک سایت برای خودِ برنامهٔ پمپ ساخته می‌شود
+//      • دامنهٔ سایت و زیردامنهٔ تونل در بخش «دامنه‌ها» ثبت می‌شوند
+//      • پوشه‌اش زیر ریشهٔ سایت‌ها ساخته می‌شود تا در فایل‌منیجر هم باشد
+//  دادهٔ این سایت همان دفترِ اصلی است، پس پوشهٔ تازه‌ای برایش ساخته نمی‌شود.
+// ---------------------------------------------------------------------------
+export const MAIN_SITE_SETTING = 'main_site_id';
+
+export function mainSiteId() {
+  const raw = getSetting(MAIN_SITE_SETTING, null);
+  return raw ? Number(raw) : null;
+}
+
+export async function ensureMainSite({ siteUrl, tunnelHostname } = {}) {
+  const url = String(siteUrl || getSetting('site_url', '') || '').trim();
+  const primary = normalizeDomain(url);
+  const extra = normalizeDomain(tunnelHostname || getSetting('tunnel_hostname', null));
+  if (!primary && !extra) return { ok: false, error: 'no_domain' };
+
+  let site = mainSiteId() ? getSite(mainSiteId()) : null;
+
+  if (!site) {
+    // شاید از قبل با همین دامنه ساخته شده باشد
+    if (primary) {
+      const owner = db.prepare('SELECT site_id FROM domains WHERE name = ?').get(primary);
+      if (owner?.site_id) site = getSite(owner.site_id);
+    }
+  }
+
+  if (!site) {
+    const label = primary || extra;
+    const dir = path.join(config.sitesRoot, slugify(label.split('.')[0]) || 'main-site');
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+    } catch { /* اگر نشد، سایت بدون پوشه ثبت می‌شود */ }
+
+    const added = await addSite({
+      rootPath: fs.existsSync(dir) ? dir : config.sitesRoot,
+      name: label,
+      kind: 'external', // روی هاست دیگری بالاست، نه روی این کامپیوتر
+      domain: primary || extra,
+    });
+    if (!added.ok) return added;
+    site = added.site;
+    // پورتِ محلی ندارد؛ آنلاین بودنش از روی خودِ دامنه فهمیده می‌شود
+    db.prepare('UPDATE sites SET port = NULL, updated_at = ? WHERE id = ?').run(Date.now(), site.id);
+    setSetting(MAIN_SITE_SETTING, site.id);
+    logEvent('info', 'panel', `سایت «${label}» خودکار در پنل ثبت شد`, site.id);
+  }
+
+  setSetting(MAIN_SITE_SETTING, site.id);
+  // هر دو دامنه به همین سایت وصل می‌شوند
+  for (const name of [primary, extra]) {
+    if (name) attachDomain(site.id, name);
+  }
+
+  return { ok: true, site: getSite(site.id), domains: domainsForSite(site.id).map((d) => d.name) };
 }
 
 /** هنگام بالا آمدن سرور: هر سایتِ ثبت‌شده پوشه و رمزِ خودش را داشته باشد */
@@ -468,10 +531,12 @@ export async function describeSite(site, { withSize = true } = {}) {
   ];
   const health = await checkSiteOnline(site, { urls: publicUrls });
 
-  // پوشهٔ دادهٔ اختصاصی همین سایت داخل پوشهٔ سرور
+  // پوشهٔ دادهٔ اختصاصی همین سایت داخل پوشهٔ سرور.
+  // سایتِ اصلی (خودِ برنامهٔ پمپ) از همان دفترِ اصلی استفاده می‌کند.
   const sync = getSiteSync();
-  const store = sync?.tenant?.(site.slug);
-  const ownStore = store && store.key === site.slug ? store : null;
+  const isMain = mainSiteId() === site.id;
+  const store = sync?.tenant?.(isMain ? 'main' : site.slug);
+  const ownStore = isMain ? store : store && store.key === site.slug ? store : null;
 
   let lastModified = size?.newest || null;
   if (!lastModified) {
@@ -510,6 +575,7 @@ export async function describeSite(site, { withSize = true } = {}) {
     errorCount: errors,
     workspace: ws.base,
     // پوشهٔ دادهٔ اختصاصیِ همین سایت داخل پوشهٔ سرور
+    isMainSite: isMain,
     dataDir: ownStore?.dataDir ?? (sync?.dirFor ? sync.dirFor(site.slug) : null),
     dataBytes: ownStore ? ownStore.diskBytes() : null,
     dataBranches: ownStore ? ownStore.branches().length : null,
