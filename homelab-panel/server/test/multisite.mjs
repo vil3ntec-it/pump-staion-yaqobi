@@ -145,7 +145,7 @@ function probeHealth(url) {
       const { checkSiteOnline } = await import(${JSON.stringify(
         path.join(import.meta.dirname, '..', 'src', 'sites', 'health.js')
       )});
-      const res = await checkSiteOnline({ slug: 'probe', port: null }, { urls: [${JSON.stringify(url)}] });
+      const res = await checkSiteOnline({ slug: 'probe', port: null }, { urls: [${JSON.stringify(url)}], wait: true });
       console.log('RESULT' + JSON.stringify(res));
     `;
     const proc = spawn(process.execPath, ['--input-type=module', '--eval', code], {
@@ -368,6 +368,38 @@ async function main() {
   await api('PUT', '/api/site-server/site-url', { siteUrl: 'https://yaqobipump.top' });
   const after = (await api('GET', '/api/sites')).json?.sites?.length;
   check('دوباره اجرا شدن، سایت تکراری نمی‌سازد', before === after, `${before} → ${after}`);
+
+  console.log('\n── ریشهٔ سایت‌ها از داخل پنل جابه‌جا می‌شود ──');
+  const newRoot = path.join(tmp, 'drive2', 'my-sites');
+  r = await api('PUT', '/api/settings', { sitesRoot: newRoot });
+  check('ریشهٔ تازه پذیرفته شد', r.status === 200, r.text.slice(0, 120));
+  check('پوشهٔ ریشه واقعاً روی دیسک ساخته شد', fs.existsSync(newRoot));
+
+  r = await api('GET', '/api/settings');
+  check('پنل ریشهٔ تازه را گزارش می‌کند', r.json?.paths?.sitesRoot === newRoot, String(r.json?.paths?.sitesRoot));
+  check('پیشنهادِ «کنار سرور» هم داده می‌شود', Boolean(r.json?.paths?.sitesRootNextToServer));
+
+  r = await api('POST', '/api/sites/create', { name: 'Anbar', kind: 'static' });
+  const inNewRoot = r.json?.site;
+  check(
+    'سایت تازه داخل ریشهٔ تازه ساخته شد',
+    String(inNewRoot?.root_path || '').startsWith(newRoot),
+    String(inNewRoot?.root_path)
+  );
+  check('فایلش هم واقعاً آنجاست', fs.existsSync(path.join(newRoot, 'anbar', 'index.html')));
+
+  r = await api('GET', '/api/sites');
+  check('فهرست سایت‌ها ریشهٔ تازه را نشان می‌دهد', r.json?.sitesRoot === newRoot);
+
+  // مسیری که نمی‌شود پوشه ساخت (زیرِ یک فایل) — باید سریع و تمیز رد شود
+  const aFile = path.join(tmp, 'not-a-folder.txt');
+  fs.writeFileSync(aFile, 'x', 'utf8');
+  const started = Date.now();
+  r = await api('PUT', '/api/settings', { sitesRoot: path.join(aFile, 'sub') });
+  check('ریشهٔ ناممکن رد می‌شود', r.status === 400, String(r.status));
+  check('و سرور را قفل نمی‌کند', Date.now() - started < 6000, `${Date.now() - started}ms`);
+  r = await api('GET', '/api/settings');
+  check('ریشه بعد از رد شدن دست‌نخورده مانده', r.json?.paths?.sitesRoot === newRoot);
 
   console.log('\n── حذف سایت، دادهٔ سایت‌های دیگر را نمی‌برد ──');
   await api('DELETE', `/api/sites/${alpha.id}`);

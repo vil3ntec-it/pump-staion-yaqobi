@@ -6,6 +6,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { db, logEvent, getSetting, setSetting } from '../db.js';
 import { config } from '../config.js';
+import { sitesRoot } from './root.js';
 import { detectProject, defaultScanRoots } from './detect.js';
 import { ensureWorkspace, removeWorkspace, slugify, workspacePaths } from './workspace.js';
 import { isRunning, processInfo, probePort, stopSite } from './process.js';
@@ -301,13 +302,13 @@ export async function ensureMainSite({ siteUrl, tunnelHostname } = {}) {
 
   if (!site) {
     const label = primary || extra;
-    const dir = path.join(config.sitesRoot, slugify(label.split('.')[0]) || 'main-site');
+    const dir = path.join(sitesRoot(), slugify(label.split('.')[0]) || 'main-site');
     try {
       fs.mkdirSync(dir, { recursive: true });
     } catch { /* اگر نشد، سایت بدون پوشه ثبت می‌شود */ }
 
     const added = await addSite({
-      rootPath: fs.existsSync(dir) ? dir : config.sitesRoot,
+      rootPath: fs.existsSync(dir) ? dir : sitesRoot(),
       name: label,
       kind: 'external', // روی هاست دیگری بالاست، نه روی این کامپیوتر
       domain: primary || extra,
@@ -417,7 +418,7 @@ export async function removeSite(id, { deleteWorkspace = true } = {}) {
 export async function createSiteFolder({ name, kind = 'static', domain, port }) {
   const clean = slugify(name);
   if (!clean) return { ok: false, error: 'bad_name' };
-  const dir = path.join(config.sitesRoot, clean);
+  const dir = path.join(sitesRoot(), clean);
   if (fs.existsSync(dir)) return { ok: false, error: 'folder_exists' };
 
   fs.mkdirSync(dir, { recursive: true });
@@ -433,7 +434,7 @@ export async function createSiteFolder({ name, kind = 'static', domain, port }) 
 
 // ------------------------------ کشف خودکار --------------------------------
 export async function discoverSites({ roots } = {}) {
-  const scanRoots = (roots?.length ? roots : getSetting('scan_roots', null) || defaultScanRoots(config.sitesRoot))
+  const scanRoots = (roots?.length ? roots : getSetting('scan_roots', null) || defaultScanRoots(sitesRoot()))
     .map((r) => path.resolve(r))
     .filter((r, i, arr) => arr.indexOf(r) === i);
 

@@ -5,12 +5,13 @@
 import path from 'node:path';
 import fs from 'node:fs';
 import { config, paths } from '../config.js';
+import { sitesRoot } from '../sites/root.js';
 import { listSitesRaw } from '../sites/registry.js';
 import { getSetting } from '../db.js';
 
 export function allowedRoots() {
   const roots = new Set();
-  roots.add(config.sitesRoot);
+  roots.add(sitesRoot());
   roots.add(paths.sitesData);
   for (const s of listSitesRaw()) roots.add(s.root_path);
   for (const extra of getSetting('extra_file_roots', []) || []) {
@@ -38,6 +39,6 @@ export function rootsWithMeta() {
   return allowedRoots().map((r) => ({
     path: r,
     exists: fs.existsSync(r),
-    label: r === config.sitesRoot ? 'sites-root' : r === paths.sitesData ? 'panel-data' : 'site',
+    label: r === sitesRoot() ? 'sites-root' : r === paths.sitesData ? 'panel-data' : 'site',
   }));
 }

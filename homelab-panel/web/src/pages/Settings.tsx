@@ -17,7 +17,13 @@ type SettingsPayload = {
     siteAutoSetup: boolean;
     sitesBaseDomain: string | null;
   };
-  paths: { dataDir: string; sitesRoot: string; uploads: string };
+  paths: {
+    dataDir: string;
+    sitesRoot: string;
+    sitesRootDefault: string;
+    sitesRootNextToServer: string;
+    uploads: string;
+  };
   system: {
     hostname: string;
     platform: string;
@@ -37,6 +43,7 @@ export default function Settings() {
   const [extraRoots, setExtraRoots] = useState('');
   const [autoSetup, setAutoSetup] = useState(true);
   const [baseDomain, setBaseDomain] = useState('');
+  const [sitesRootValue, setSitesRootValue] = useState('');
   const [busy, setBusy] = useState(false);
   const [logoVersion, setLogoVersion] = useState(0);
   const logoRef = useRef<HTMLInputElement>(null);
@@ -53,6 +60,7 @@ export default function Settings() {
       setExtraRoots((res.settings.extraFileRoots || []).join('\n'));
       setAutoSetup(res.settings.siteAutoSetup !== false);
       setBaseDomain(res.settings.sitesBaseDomain || '');
+      setSitesRootValue(res.paths.sitesRoot);
     });
     api<{ sessions: any[] }>('/api/auth/me').then((r) => setSessions(r.sessions));
   }, []);
@@ -72,12 +80,17 @@ export default function Settings() {
           extraFileRoots: extraRoots.split('\n').map((s) => s.trim()).filter(Boolean),
           siteAutoSetup: autoSetup,
           sitesBaseDomain: baseDomain.trim(),
+          sitesRoot: sitesRootValue.trim(),
         },
       });
       await refreshPublic();
       toast(t('saved'));
     } catch (e) {
-      toast(e instanceof ApiError && e.code === 'invalid_domain' ? t('invalidDomain') : t('error'), 'bad');
+      const code = e instanceof ApiError ? e.code : '';
+      toast(
+        code === 'invalid_domain' ? t('invalidDomain') : code === 'cannot_create' ? t('folderNotCreated') : t('error'),
+        'bad'
+      );
     } finally {
       setBusy(false);
     }
@@ -163,6 +176,23 @@ export default function Settings() {
             value={extraRoots}
             onChange={(e) => setExtraRoots(e.target.value)}
           />
+        </Field>
+
+        {/* کجای درایو، پوشهٔ هر سایت ساخته شود */}
+        <Field label={t('sitesRoot')} hint={t('sitesRootHint')}>
+          <input
+            className="input font-mono text-xs"
+            dir="ltr"
+            value={sitesRootValue}
+            onChange={(e) => setSitesRootValue(e.target.value)}
+          />
+          <button
+            type="button"
+            className="btn btn-sm mt-2"
+            onClick={() => setSitesRootValue(data.paths.sitesRootNextToServer)}
+          >
+            {t('putNextToServer')}
+          </button>
         </Field>
 
         {/* راه‌اندازی خودکار سایت تازه */}
