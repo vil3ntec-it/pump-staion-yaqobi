@@ -16086,7 +16086,7 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
 <!-- 🚚 تخلیهٔ تانکر (صفحهٔ جداگانه — از کادر بخش مخزن باز می‌شود) -->
 <div class="section" id="sec-tanker">
   <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-    <button class="goto-btn" onclick="showSection('storage')">🛢️ برگشت به مخزن</button>
+    <button class="goto-btn" data-backfor="storage" onclick="backFromSection(this)">🛢️ برگشت به مخزن</button>
     <span>🚚 تخلیهٔ تانکر</span>
   </div>
   <div class="card" style="border-color:var(--blue)">
@@ -16108,7 +16108,7 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
 <!-- 📏 اندازه‌گیری واقعی مخزن — میله‌زنی (صفحهٔ جداگانه — از کادر بخش مخزن باز می‌شود) -->
 <div class="section" id="sec-tankdip">
   <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-    <button class="goto-btn" onclick="showSection('storage')">🛢️ برگشت به مخزن</button>
+    <button class="goto-btn" data-backfor="storage" onclick="backFromSection(this)">🛢️ برگشت به مخزن</button>
     <span>📏 اندازه‌گیری واقعی مخزن</span>
   </div>
   <div class="card" style="border-color:var(--accent)">
@@ -17413,7 +17413,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
 <!-- 🕘 صفحهٔ تاریخچهٔ یک بخشِ مشخص — فقط ردیف‌های همان بخش -->
 <div class="section" id="sec-historyview">
   <div class="section-title" style="color:var(--accent);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-    <button class="goto-btn" onclick="showSection('history')">→ برگشت به تاریخچه‌ها</button>
+    <button class="goto-btn" data-backfor="history" onclick="backFromSection(this)">→ برگشت به تاریخچه‌ها</button>
     <span id="hv-title" style="display:inline-flex;align-items:center;gap:10px">🕘 تاریخچه</span>
   </div>
   <!-- کشویِ ماه و سال — تا جدولِ تاریخچه خیلی بزرگ نشود و ماه‌ها قاطی نشوند -->
@@ -20075,11 +20075,59 @@ function renderHistoryView() {
     ? '<div style="text-align:center;color:var(--muted);padding:12px;font-size:0.78rem">… ' + n2fa(rows.length - CAP) + ' ردیفِ قدیمی‌تر نشان داده نشد — با کشویِ ماه، ماهِ دلخواه را انتخاب کنید</div>' : '');
 }
 
+// ══════ دکمه‌های «برگشت» که به بخشِ آمده‌ازش برمی‌گردند ══════
+// بعضی صفحه‌ها از چند جا باز می‌شوند (مثلاً تاریخچهٔ فاکتورها هم از خودِ فاکتورها،
+// هم از صفحهٔ تاریخچه‌ها). قبلاً دکمهٔ برگشت همیشه به یک جای ثابت می‌رفت.
+// حالا بخشِ مبدأ به‌خاطر سپرده می‌شود و دکمه هم متنش را با همان بخش تازه می‌کند.
+const _SEC_ORIGIN = {};
+const _SEC_LABEL = {
+  dashboard: '🏠 داشبورد', shifts: '⛽ پارچهٔ پطرول', 'shifts-diesel': '🟤 پارچهٔ دیزل',
+  storage: '🛢️ مخزن پطرول', 'storage-diesel': '🟤 مخزن دیزل', tanker: '🚚 تخلیهٔ تانکر',
+  tankdip: '📏 میله‌زنی مخزن', debt: '👥 قرض‌داران', debtrasid: '🧾 رسید قرض‌داران',
+  debtsum: '📊 دسته‌جمعی (تیل)', debtsummoney: '💵 دسته‌جمعی (پول)',
+  oldloans: '⏰ قرض‌های کهنه (تیل)', oldloansmoney: '💵 قرض‌های کهنه (پول)',
+  chakana: '🧾 چکنه', noinv: '🏭 شرکت‌های تیل', expenses: '💸 مصارف', rasid: '🧾 فاکتورهای رسید',
+  profit: '📈 مفاد / ضرر', extraincome: '➕ درآمد اضافی', monthreport: '📅 گزارش ماهانه',
+  ratehist: '📈 تاریخچهٔ نرخ', safe: '🏦 گاوصندوق', sarrafi: '💱 صرافی', waraq: '📝 ورق روزانه',
+  attendance: '🧑‍💼 حاضری و معاش', staffshort: '👷 کمبودی کارمندان', invoices: '🧾 فاکتورها',
+  history: '🕘 تاریخچه‌ها', settings: '⚙️ تنظیمات'
+};
+function _secLabel(id) {
+  if (_SEC_LABEL[id]) return _SEC_LABEL[id];
+  const nb = document.querySelector('.nav-btn[onclick*="showSection(\'' + id + '\'"]');
+  const t = nb ? (nb.textContent || '').trim() : '';
+  return t || 'بخشِ قبلی';
+}
+// متنِ دکمه‌های برگشتِ همین بخش را با بخشِ مبدأ هماهنگ کن
+function _syncBackButtons(sec, id) {
+  const btns = sec.querySelectorAll('button[data-backfor]');
+  for (let i = 0; i < btns.length; i++) {
+    const fb = btns[i].getAttribute('data-backfor');
+    const from = _SEC_ORIGIN[id] && document.getElementById('sec-' + _SEC_ORIGIN[id]) ? _SEC_ORIGIN[id] : fb;
+    btns[i].textContent = '→ برگشت به ' + _secLabel(from);
+  }
+}
+// کلیکِ دکمهٔ برگشت — به بخشِ مبدأ، وگرنه به بخشِ پیش‌فرضِ همان دکمه
+function backFromSection(btn) {
+  const sec = btn.closest ? btn.closest('.section') : null;
+  const id = sec ? sec.id.replace(/^sec-/, '') : '';
+  const fb = btn.getAttribute('data-backfor') || 'dashboard';
+  const from = _SEC_ORIGIN[id];
+  showSection((from && document.getElementById('sec-' + from)) ? from : fb);
+}
 function showSection(id, btn) {
   if ((id === 'settings' || id === 'appearance' || id === 'passwords' || id === 'serverservices' || id === 'notifications' || id === 'alerts' || id === 'datamgmt') && currentRole === 'viewer') { showToast('🔒 بخش تنظیمات فقط برای مدیر است', '#e53e3e'); return; }
+  // از کدام بخش به این بخش آمدیم — تا دکمهٔ «برگشت» دقیقاً به همان‌جا برگردد
+  // (خواستهٔ صاحب ریپو: «از هر بخشی رفتم تو، به همان بخش پس بیایم»)
+  {
+    const _prev = document.querySelector('.section.visible');
+    const _prevId = _prev ? _prev.id.replace(/^sec-/, '') : '';
+    if (_prevId && _prevId !== id) _SEC_ORIGIN[id] = _prevId;
+  }
   document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
   const sec = document.getElementById('sec-' + id);
   if (sec) sec.classList.add('visible');
+  if (sec) _syncBackButtons(sec, id);
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   let navId = id;
   if (id === 'shifts-diesel') navId = 'shifts';
@@ -34306,7 +34354,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.140';
+const APP_VERSION = '2.9.141';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
