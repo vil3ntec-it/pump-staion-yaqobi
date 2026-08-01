@@ -1,0 +1,72 @@
+name: بستهٔ آمادهٔ پنل سرور خانگی (ZIP)
+
+# پنل را با وابستگی‌های نصب‌شده بسته‌بندی می‌کند تا روی سرور خانگی فقط
+# باز شود و اجرا — بدون npm install و بدون نیاز به اینترنت.
+# اجرا: از تب Actions دکمهٔ «Run workflow» را بزنید.
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'panel-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-zip:
+    runs-on: ubuntu-latest
+    steps:
+      - name: دریافت کد
+        uses: actions/checkout@v4
+
+      - name: نصب Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: ساختِ رابط کاربری
+        working-directory: homelab-panel/web
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+
+      - name: نصب وابستگی‌های سرور (فقط اجرایی)
+        working-directory: homelab-panel/server
+        run: npm install --omit=dev --no-audit --no-fund
+
+      - name: بسته‌بندی
+        run: |
+          rm -rf homelab-panel/server/data homelab-panel/web/node_modules \
+                 homelab-panel/web/dist homelab-panel/web/tsconfig.tsbuildinfo
+          mkdir -p out
+          zip -rq "out/PanelServerKhanegi-$(date +%Y%m%d).zip" homelab-panel
+          ls -lh out/
+
+      - name: بارگذاری به‌عنوان Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PanelServerKhanegi
+          path: out/*.zip
+          if-no-files-found: error
+
+      - name: انتشار در Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: panel-latest
+          name: پنل سرور خانگی (آخرین نسخه)
+          body: |
+            بستهٔ آمادهٔ پنل — وابستگی‌ها از قبل داخلش هست، پس بدون اینترنت هم بالا می‌آید.
+
+            **پنل یک فایل نیست که دوبار کلیک شود؛ یک سرور است.**
+
+            ۱. زیپ را باز کنید و وارد پوشهٔ `homelab-panel/server` شوید.
+            ۲. ویندوز: روی `service-windows.bat` دوبار کلیک کنید.
+               لینوکس/مک: `./service-linux.sh install`
+            ۳. مرورگر خودش باز می‌شود؛ اگر نشد: http://localhost:4700
+
+            با بسته شدنِ ترمینال خاموش نمی‌شود و با روشن شدنِ کامپیوتر خودش بالا می‌آید.
+
+            اگر از نسخهٔ قبلی استفاده می‌کردید، پوشهٔ `server/data` قدیمی را داخل
+            `server` این نسخه کپی کنید تا حساب کاربری و دادهٔ سایت‌ها حفظ شود.
+          files: out/*.zip
+          make_latest: false

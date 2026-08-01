@@ -93,6 +93,7 @@ do_start() {
   if have_systemd && [ -f "$UNIT" ]; then
     systemctl --user start "$NAME.service"
     echo "✅ اجرا شد."
+    show_address
     return
   fi
   if pid="$(running_pid)"; then
@@ -106,12 +107,31 @@ do_start() {
   else
     nohup node --disable-warning=ExperimentalWarning src/index.js >> "$LOGFILE" 2>&1 < /dev/null &
   fi
-  sleep 2
-  if pid="$(running_pid)"; then
+  # بار اول ساختِ دیتابیس و پوشه‌ها چند ثانیه طول می‌کشد؛ صبر می‌کنیم
+  local pid=""
+  for _ in $(seq 1 30); do
+    sleep 1
+    if pid="$(running_pid)"; then break; fi
+  done
+
+  if [ -n "$pid" ]; then
     echo "✅ اجرا شد (PID $pid). می‌توانید این پنجره را ببندید."
+    show_address
   else
     echo "⚠️  بالا نیامد؛ لاگ را ببینید: $LOGFILE"
+    [ -f "$LOGFILE" ] && tail -n 15 "$LOGFILE"
   fi
+}
+
+# پنل یک فایل نیست که باز شود؛ در مرورگر دیده می‌شود
+show_address() {
+  local port="${HLP_PORT:-4700}"
+  echo
+  echo "  ============================================================"
+  echo "    پنل را در مرورگر باز کنید:"
+  echo "        http://localhost:$port"
+  echo "  ============================================================"
+  echo
 }
 
 do_stop() {
