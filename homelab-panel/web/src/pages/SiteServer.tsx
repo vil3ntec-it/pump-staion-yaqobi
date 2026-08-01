@@ -539,7 +539,10 @@ function PermanentAddress({ data, onChanged }: { data: SiteServerInfo; onChanged
       toast(t('permanentDone'));
       onChanged();
     } catch (e) {
-      setError(e instanceof ApiError ? `${e.code}${e.message ? ` — ${e.message}` : ''}` : t('error'));
+      // اگر سرور توضیح داده، همان را نشان بده — نه تکرارِ کد
+      setError(
+        e instanceof ApiError ? (e.message && e.message !== e.code ? e.message : e.code) : t('error')
+      );
     } finally {
       setBusy(false);
     }

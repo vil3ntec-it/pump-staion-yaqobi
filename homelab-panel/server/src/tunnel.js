@@ -278,10 +278,11 @@ function runCf(args, { timeout = 120000, onLine } = {}) {
  * پنل کپی می‌گیرد. اگر این فایل نباشد، cloudflared فوراً با کد ۱ می‌میرد و
  * هیچ توضیحی هم در پنل دیده نمی‌شد.
  */
-async function ensureCredFile(uuid) {
+async function ensureCredFile(uuid, name = null) {
   const target = path.join(CF_DIR, `${uuid}.json`);
   if (fs.existsSync(target)) return target;
 
+  // ۱) شاید cloudflared آن را جای دیگری گذاشته باشد
   const candidates = [
     path.join(os.homedir(), '.cloudflared', `${uuid}.json`),
     path.join(process.cwd(), `${uuid}.json`),
@@ -297,6 +298,21 @@ async function ensureCredFile(uuid) {
       return candidate; // کپی نشد، ولی خودش هست
     }
   }
+
+  // ۲) تونل از قبل ساخته شده بود؟ آن وقت «tunnel create» فایل اعتبار را دوباره
+  //    نمی‌نویسد و اگر فایل قبلی گم شده باشد هیچ‌جا پیدا نمی‌شود. اینجا آن را
+  //    برای همان تونلِ موجود دوباره می‌گیریم — بدون ساختن تونل تازه.
+  const tunnelRef = name || uuid;
+  try {
+    await fsp.mkdir(CF_DIR, { recursive: true });
+    const got = await runCf(['tunnel', 'token', '--cred-file', target, tunnelRef], { timeout: 60000 });
+    if (fs.existsSync(target)) {
+      logEvent('info', 'panel', 'فایل اعتبارِ تونل دوباره از Cloudflare گرفته شد');
+      return target;
+    }
+    if (got.output) pushLine(`tunnel token: ${got.output.trim().slice(-200)}`);
+  } catch { /* پایین‌تر جواب می‌دهیم */ }
+
   return null;
 }
 
@@ -351,7 +367,7 @@ export async function repairTunnel() {
   const uuid = readTunnelIdFromConfig();
   if (!uuid) return { ok: false, error: 'no_permanent_tunnel' };
 
-  const cred = await ensureCredFile(uuid);
+  const cred = await ensureCredFile(uuid, getSetting('tunnel_name', 'pump'));
   if (!cred) {
     return {
       ok: false,
@@ -470,14 +486,34 @@ export async function namedSetup({ hostname, name = 'pump-yaqobi' }) {
   }
 
   // فایلِ اعتبارِ تونل — اگر پیدا نشود، cloudflared بی‌صدا با کد ۱ می‌میرد
-  const credFile = await ensureCredFile(uuid);
+  let credFile = await ensureCredFile(uuid, name);
+
+  // آخرین راه: تونلِ قدیمی را دور می‌ریزیم و از نو می‌سازیم تا فایل اعتبار
+  // تازه نوشته شود. تونل مالِ خودِ پنل است، پس چیزی از دست نمی‌رود.
+  if (!credFile && already) {
+    logEvent('warn', 'panel', `تونل «${name}» بدون فایل اعتبار بود — از نو ساخته می‌شود`);
+    await runCf(['tunnel', 'cleanup', name]);
+    const removed = await runCf(['tunnel', 'delete', '-f', name]);
+    if (removed.ok || /deleted/i.test(removed.output)) {
+      const rebuilt = await runCf(['tunnel', 'create', name]);
+      const m = rebuilt.output.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+      if (m) {
+        uuid = m[0];
+        credFile = await ensureCredFile(uuid, name);
+        // تونل تازه است، پس رکورد DNS باید دوباره به آن اشاره کند
+        if (credFile) await runCf(['tunnel', 'route', 'dns', '--overwrite-dns', name, host]);
+      }
+    }
+  }
+
   if (!credFile) {
     return {
       ok: false,
       error: 'credentials_not_found',
       detail:
-        `فایلِ اعتبارِ تونل (${uuid}.json) پیدا نشد. ` +
-        `در ترمینال این را بزنید: "${state.binary}" tunnel create ${name}`,
+        `فایلِ اعتبارِ تونل (${uuid}.json) نه پیدا شد و نه ساخته شد. ` +
+        `در ترمینال این دو را بزنید: "${state.binary}" tunnel delete -f ${name}  و بعد  ` +
+        `"${state.binary}" tunnel create ${name}`,
     };
   }
 
