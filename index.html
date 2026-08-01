@@ -1739,17 +1739,33 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
   // وصل می‌شود (دقیقاً مثل فایربیس قبلی — یک بک‌اند مشترک برای همه دستگاه‌ها).
   // این آدرس یک «تونل نام‌دار» روی دامنهٔ خودمان است، نه Quick Tunnel؛ پس با
   // restart شدن سرور یا cloudflared عوض نمی‌شود و همیشه همین می‌ماند.
-  var SELF_HOST_URL   = 'wss://sync.yaqobipump.top';
-  var SELF_HOST_TOKEN = '3b1379be26f61b2f8e460dbccee01ff70364';
+  var BUILTIN_URL   = 'wss://sync.yaqobipump.top';
+  var BUILTIN_TOKEN = '3b1379be26f61b2f8e460dbccee01ff70364';
+  var SELF_HOST_URL   = BUILTIN_URL;
+  var SELF_HOST_TOKEN = BUILTIN_TOKEN;
+  // «خانهٔ اول»: هر دستگاهِ تازه/پاک‌شده از این‌جا شروع می‌کند، پس نشانیِ سرورِ
+  // مشترک هم همیشه روی همین نگه داشته می‌شود تا دستگاهِ ریست‌شده دوباره پیدایش کند.
+  window.__BUILTIN_SERVER__ = { url: BUILTIN_URL, token: BUILTIN_TOKEN };
+
+  var CFG_PATH   = 'appConfig/server';   // نشانیِ سرورِ مشترکِ همهٔ دستگاه‌ها (روی خودِ سرور)
+  var CFG_TS_KEY = 'pumpServerCfgTs';    // زمانِ تنظیمی که این دستگاه پذیرفته
+  var CFG_BAD_KEY= 'pumpServerCfgBad';   // تنظیمی که وصل نشد — دوباره امتحان نشود
+
+  function _lsGet(k){ try { return localStorage.getItem(k) || ''; } catch(e){ return ''; } }
+  function _lsSet(k,v){ try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch(e){} }
+  function cfgTs(){ return parseInt(_lsGet(CFG_TS_KEY), 10) || 0; }
 
   // اگر آدرسِ داخلیِ سایت عوض شده باشد، آدرسِ ذخیره‌شدهٔ قدیمی روی این دستگاه باید
   // کنار برود؛ وگرنه دستگاهی که یک‌بار دستی آدرس ذخیره کرده، آدرس تازه را هرگز
-  // نمی‌گیرد و بی‌صدا از هم‌زمان‌سازی می‌افتد.
+  // نمی‌گیرد و بی‌صدا از هم‌زمان‌سازی می‌افتد. (نشانیِ مشترک بعد از وصل شدن به
+  // سرورِ پیش‌فرض دوباره خودکار می‌آید — پس چیزی برای همیشه گم نمی‌شود.)
   try {
-    if (localStorage.getItem('pumpServerBuiltin') !== SELF_HOST_URL) {
+    if (localStorage.getItem('pumpServerBuiltin') !== BUILTIN_URL) {
       localStorage.removeItem('pumpServerUrl');
       localStorage.removeItem('pumpServerToken');
-      localStorage.setItem('pumpServerBuiltin', SELF_HOST_URL);
+      localStorage.removeItem(CFG_TS_KEY);
+      localStorage.removeItem(CFG_BAD_KEY);
+      localStorage.setItem('pumpServerBuiltin', BUILTIN_URL);
     }
     // صفحه‌ای که با https باز شده حق ندارد به ws:// وصل شود (قانون مرورگر)،
     // پس آدرس ناامنِ ذخیره‌شده فقط باعث قطع بی‌صدای هم‌زمان‌سازی می‌شود.
@@ -1757,12 +1773,14 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     if (_saved && location.protocol === 'https:' && /^ws:\/\//i.test(_saved)) {
       localStorage.removeItem('pumpServerUrl');
       localStorage.removeItem('pumpServerToken');
+      localStorage.removeItem(CFG_TS_KEY);
     }
   } catch(e){}
 
   // لینکِ خودکارِ اتصال: مثلاً .../?server=wss://xxx.trycloudflare.com&token=abc
   // هر کس این لینک را باز کند، بدون نیاز به رفتن به تنظیمات، به همان سرور وصل می‌شود
   // (یک‌بار در localStorage ذخیره می‌شود؛ دفعات بعد لینک ساده هم کافی است).
+  // این آدرس «تازه‌ترین تنظیم» شمرده می‌شود، پس از همین دستگاه به بقیه هم پخش می‌شود.
   try {
     var _qp = new URLSearchParams(location.search);
     var _qServer = _qp.get('server');
@@ -1771,6 +1789,8 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
       var _qToken = _qp.get('token');
       if (_qToken) localStorage.setItem('pumpServerToken', _qToken);
       else localStorage.removeItem('pumpServerToken');
+      localStorage.setItem(CFG_TS_KEY, String(Date.now()));
+      localStorage.removeItem(CFG_BAD_KEY);
       history.replaceState(null, '', location.pathname + location.hash);
     }
   } catch(e){}
@@ -1986,6 +2006,7 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     var q = outQueue; outQueue = []; q.forEach(function(msg){ sendRaw(msg); });
     outqPersist();
     startHeartbeat();
+    cfgOnConnected();                        // اتصالِ تازه سالم است → نگهبانِ «برگشت به آدرس قبلی» خاموش
     notifyConn(true); notifyNet();
   }
   function onMessage(data){
@@ -2076,6 +2097,187 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     onChange: function(cb){ if (typeof cb === 'function') { netListeners.push(cb); try { cb({ connected: connected, queued: outQueue.filter(isMutation).length }); } catch(e){} } },
     reconnect: connectNow
   };
+
+  /* ── نشانیِ سرورِ مشترکِ همهٔ دستگاه‌ها ───────────────────────────────────────
+     چیزی که کاربر خواست: وقتی روی یک دستگاه آدرس و رمزِ سرور را می‌گذارم، بقیهٔ
+     دستگاه‌ها هم خودشان همان سرور را بگیرند — و اگر صفحه/برنامه ریست شد، باز هم
+     همان سرور برگردد.
+
+     چطور کار می‌کند: خودِ آدرسِ سرور مثلِ یک دادهٔ معمولی روی سرور ذخیره می‌شود
+     (مسیرِ appConfig/server = {url, token, ts}). هر دستگاه به این مسیر گوش می‌دهد؛
+     هر وقت تنظیمی با زمانِ تازه‌تر از تنظیمِ خودش دید، همان لحظه به آن سرور کوچ
+     می‌کند. برعکسش هم هست: دستگاهی که تنظیمِ تازه‌تری دارد، آن را روی سروری که
+     به آن وصل است می‌نویسد. پس همهٔ دستگاه‌ها به تازه‌ترین تنظیم می‌رسند.
+
+     یک نسخه هم همیشه روی سرورِ پیش‌فرضِ سایت نگه داشته می‌شود؛ دستگاهی که پاک/ریست
+     شده از آن‌جا شروع می‌کند و نشانیِ سرورِ واقعی را همان‌جا پیدا می‌کند.
+
+     محافظ‌ها: (۱) اگر آدرسِ تازه اصلاً وصل نشد، دستگاه خودکار به آدرسِ قبلیِ سالم
+     برمی‌گردد و آن تنظیمِ خراب را دیگر امتحان نمی‌کند — یک آدرسِ اشتباه نمی‌تواند
+     همهٔ دستگاه‌ها را از کار بیندازد. (۲) تنظیمِ تکراری هیچ کوچ/حلقه‌ای نمی‌سازد. ── */
+  var cfgSwitchTimer = null, cfgPrev = null, cfgMirrored = false;
+
+  function cfgLocal(){
+    var u = _lsGet('pumpServerUrl'), t = _lsGet('pumpServerToken'), ts = cfgTs();
+    if (!u) { u = BUILTIN_URL; t = BUILTIN_TOKEN; }
+    return { url: u, token: t, ts: ts };
+  }
+  function cfgSameAsNow(c){ return c.url === SELF_HOST_URL && (c.token || '') === (SELF_HOST_TOKEN || ''); }
+  function cfgValid(v){ return v && typeof v === 'object' && typeof v.url === 'string' && /^wss?:\/\/[^\s]+$/i.test(v.url) && !(location.protocol === 'https:' && /^ws:\/\//i.test(v.url)); }
+
+  function cfgStoreLocal(url, token, ts){
+    if (url === BUILTIN_URL && (token || '') === BUILTIN_TOKEN) {   // برگشت به پیش‌فرضِ سایت
+      _lsSet('pumpServerUrl', ''); _lsSet('pumpServerToken', '');
+    } else {
+      _lsSet('pumpServerUrl', url); _lsSet('pumpServerToken', token || '');
+    }
+    _lsSet(CFG_TS_KEY, ts ? String(ts) : '');
+  }
+  function cfgUseNow(url, token){
+    SELF_HOST_URL = url; SELF_HOST_TOKEN = token || '';
+    window.__SELF_HOST_URL__ = SELF_HOST_URL;
+    window.__SELF_HOST_TOKEN__ = SELF_HOST_TOKEN;
+  }
+  function cfgNote(txt, color){
+    try { if (typeof window.showToast === 'function') window.showToast(txt, color); } catch(e){}
+    try { console.log('[پمپ یعقوبی] ' + txt); } catch(e){}
+  }
+
+  // کوچ به آدرسِ تازه + نگهبان: اگر تا ۲۵ ثانیه وصل نشد، به آدرسِ قبلیِ سالم برگرد
+  function cfgSwitchTo(url, token, ts){
+    cfgPrev = { url: SELF_HOST_URL, token: SELF_HOST_TOKEN };
+    cfgStoreLocal(url, token, ts);
+    cfgUseNow(url, token);
+    cfgMirrored = false;
+    cfgDropSocket();
+    connectNow();
+    if (cfgSwitchTimer) clearTimeout(cfgSwitchTimer);
+    cfgSwitchTimer = setTimeout(function(){
+      cfgSwitchTimer = null;
+      if (connected || !cfgPrev) return;
+      _lsSet(CFG_BAD_KEY, String(ts));            // این تنظیم خراب است — دوباره سراغش نرو
+      // یک پله جلوتر از تنظیمِ خراب می‌ایستیم: با وصل شدنِ دوباره، همین آدرسِ سالم
+      // روی سرور نوشته می‌شود و بقیهٔ دستگاه‌ها هم از آدرسِ خراب برمی‌گردند.
+      cfgStoreLocal(cfgPrev.url, cfgPrev.token, ts + 1);
+      cfgUseNow(cfgPrev.url, cfgPrev.token);
+      cfgPrev = null;
+      cfgDropSocket();
+      connectNow();
+      cfgNote('سرورِ تازه جواب نداد — به سرور قبلی برگشتیم', '#d97706');
+    }, 25000);
+    cfgNote('🔄 سرورِ مشترک عوض شد — در حال اتصال به ' + url, '#3182ce');
+  }
+
+  // بستنِ سوکتِ فعلی و رها کردنِ همهٔ منتظرها (سوکتِ کهنه دیگر هیچ کاری نمی‌کند)
+  function cfgDropSocket(){
+    var old = ws; ws = null;
+    try { if (old) old.close(); } catch(e){}
+    if (connected) onDisconnected(); else connected = false;
+  }
+
+  function cfgOnConnected(){
+    if (cfgSwitchTimer) { clearTimeout(cfgSwitchTimer); cfgSwitchTimer = null; }
+    cfgPrev = null;
+    // خواندنِ مستقیم (نه فقط اشتراک): بعد از هر اتصال، تنظیمِ این سرور دوباره سنجیده
+    // شود — اشتراک برای «مقدارِ تکراری» رویداد نمی‌دهد و ممکن بود از دستش بدهیم.
+    try { doGet(CFG_PATH).then(cfgOnRemote).catch(function(){}); } catch(e){}
+  }
+
+  // نوشتنِ تنظیم روی سروری که همین حالا به آن وصلیم
+  function cfgPublishHere(c){
+    try { doMutation('set', CFG_PATH, { url: c.url, token: c.token || '', ts: c.ts }).catch(function(){}); } catch(e){}
+  }
+
+  // نوشتنِ تنظیم روی یک سرورِ دیگر با یک اتصالِ کوتاهِ یک‌بارمصرف (بدون دست زدن به اتصالِ اصلی)
+  function cfgPublishTo(url, token, c){
+    return new Promise(function(resolve){
+      if (!cfgValid({ url: url })) { resolve(false); return; }
+      var sock, done = false, timer = null;
+      function finish(ok){
+        if (done) return; done = true;
+        if (timer) clearTimeout(timer);
+        try { if (sock) sock.close(); } catch(e){}
+        resolve(ok);
+      }
+      try { sock = new WebSocket(url + (token ? ((url.indexOf('?') >= 0 ? '&' : '?') + 'token=' + encodeURIComponent(token)) : '')); }
+      catch(e){ resolve(false); return; }
+      timer = setTimeout(function(){ finish(false); }, 12000);
+      sock.onmessage = function(ev){
+        var m; try { m = JSON.parse(ev.data); } catch(e){ return; }
+        if (m.op === 'connected') { try { sock.send(JSON.stringify({ op: 'set', path: CFG_PATH, value: { url: c.url, token: c.token || '', ts: c.ts }, id: 1 })); } catch(e){ finish(false); } return; }
+        if (m.op === 'ack') finish(m.ok !== false);
+        if (m.op === 'error') finish(false);
+      };
+      sock.onerror = function(){ finish(false); };
+      sock.onclose = function(){ finish(false); };
+    });
+  }
+
+  // آزمایشِ آدرس/رمز پیش از ذخیره: فقط وصل می‌شود و می‌بندد (هیچ چیزی نمی‌نویسد)
+  function cfgProbe(url, token){
+    return new Promise(function(resolve){
+      if (!cfgValid({ url: url })) { resolve(false); return; }
+      var sock, done = false, timer = null;
+      function finish(ok){ if (done) return; done = true; if (timer) clearTimeout(timer); try { if (sock) sock.close(); } catch(e){} resolve(ok); }
+      try { sock = new WebSocket(url + (token ? ((url.indexOf('?') >= 0 ? '&' : '?') + 'token=' + encodeURIComponent(token)) : '')); }
+      catch(e){ resolve(false); return; }
+      timer = setTimeout(function(){ finish(false); }, 12000);
+      sock.onmessage = function(ev){ var m; try { m = JSON.parse(ev.data); } catch(e){ return; } if (m.op === 'connected') finish(true); if (m.op === 'error') finish(false); };
+      sock.onerror = function(){ finish(false); };
+      sock.onclose = function(){ finish(false); };
+    });
+  }
+
+  // چیزی که از سرور رسید: تازه‌تر از مالِ ما بود → بپذیر و کوچ کن؛ کهنه‌تر بود → مالِ ما را بنویس
+  function cfgOnRemote(snap){
+    var v = null; try { v = snap.val(); } catch(e){}
+    var local = cfgLocal();
+    var rTs = (v && parseInt(v.ts, 10)) || 0;
+    var bad  = parseInt(_lsGet(CFG_BAD_KEY), 10) || 0;
+    if (cfgValid(v) && rTs > local.ts && rTs !== bad) {
+      if (cfgSameAsNow(v)) { cfgStoreLocal(v.url, v.token, rTs); return; }  // همین سروریم، فقط زمان را به‌روز کن
+      cfgSwitchTo(v.url, v.token || '', rTs);
+      return;
+    }
+    if (local.ts && rTs < local.ts) cfgPublishHere(local);   // تنظیمِ تازه‌ترِ ما → روی این سرور هم ثبت شود
+    cfgMirrorToBuiltin(local);
+  }
+
+  // یک نسخه از تنظیم روی سرورِ پیش‌فرضِ سایت هم بماند تا دستگاهِ ریست‌شده پیدایش کند
+  function cfgMirrorToBuiltin(c){
+    if (cfgMirrored || !c.ts) return;
+    if (c.url === BUILTIN_URL) { cfgMirrored = true; return; }   // همین‌جاییم، نیازی نیست
+    cfgMirrored = true;
+    cfgPublishTo(BUILTIN_URL, BUILTIN_TOKEN, c);
+  }
+
+  // پخشِ تنظیمِ تازه به همهٔ دستگاه‌ها: هم روی سرورِ فعلی، هم روی سرورِ تازه، هم روی پیش‌فرضِ سایت
+  function cfgBroadcast(c){
+    c.ts = c.ts || Date.now();
+    cfgPublishHere(c);
+    var targets = [{ u: c.url, t: c.token }];
+    if (SELF_HOST_URL && SELF_HOST_URL !== c.url) targets.push({ u: SELF_HOST_URL, t: SELF_HOST_TOKEN });
+    if (BUILTIN_URL !== c.url && BUILTIN_URL !== SELF_HOST_URL) targets.push({ u: BUILTIN_URL, t: BUILTIN_TOKEN });
+    return Promise.all(targets.map(function(x){ return cfgPublishTo(x.u, x.t, c); }))
+      .then(function(res){ return { ok: !!res[0], results: res }; });
+  }
+
+  // رابطِ بیرونی برای تنظیمات › هم‌زمان‌سازی
+  window.__pumpServerCfg__ = {
+    builtin: function(){ return { url: BUILTIN_URL, token: BUILTIN_TOKEN }; },
+    current: function(){ return { url: SELF_HOST_URL, token: SELF_HOST_TOKEN, ts: cfgTs() }; },
+    probe: cfgProbe,
+    apply: function(url, token){                       // ذخیرهٔ محلی + پخش به همه
+      var c = { url: url, token: token || '', ts: Date.now() };
+      _lsSet(CFG_BAD_KEY, '');
+      var p = cfgBroadcast(c);            // پخش در پس‌زمینه (اولین کار: نوشتن روی سرورِ فعلی)
+      if (cfgSameAsNow(c)) cfgStoreLocal(c.url, c.token, c.ts);
+      else cfgSwitchTo(c.url, c.token, c.ts);          // اتصال بدونِ معطلی عوض می‌شود
+      return p;
+    }
+  };
+
+  if (SELF_HOST_URL) doSub(CFG_PATH, 'value', cfgOnRemote);   // با هر اتصال دوباره مسلح می‌شود
 
   // نصب آبجکت firebase جعلی — بقیهٔ برنامه بدون هیچ تغییری همین را صدا می‌زند
   window.firebase = { initializeApp: function(){ return {}; }, database: function(){ return dbInstance; } };
@@ -17509,7 +17711,8 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <input type="hidden" id="sync-station-code" value="pump1">
     <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
       <div style="font-size:0.86rem;color:var(--label);margin-bottom:4px;font-weight:700">🖥️ سرور شخصی</div>
-      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.8">آدرس سرور خودت را این‌جا بگذار تا برنامه به آن وصل شود. اگر خالی بماند، برنامه فقط روی همین دستگاه کار می‌کند (بدون هم‌زمان‌سازی). راهنمای ساخت سرور: پوشهٔ <code>server</code>.</div>
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.8">آدرس سرور خودت را این‌جا بگذار تا برنامه به آن وصل شود. راهنمای ساخت سرور: پوشهٔ <code>server</code>.</div>
+      <div style="font-size:0.78rem;color:var(--green);margin-bottom:10px;line-height:1.8">✅ کافی است روی <b>یک</b> دستگاه ذخیره کنی: همین آدرس و رمز خودکار روی همهٔ دستگاه‌های دیگر هم می‌نشیند و آن‌ها هم به همین سرور وصل می‌شوند. اگر برنامه ریست یا پاک شود، باز هم خودش همین سرور را پیدا می‌کند.</div>
       <label style="font-size:0.75rem;color:var(--muted)">آدرس سرور</label>
       <input type="text" id="server-url" placeholder="wss://your-name.trycloudflare.com" autocomplete="off" spellcheck="false" style="width:100%;margin:5px 0 10px;padding:9px 11px;border-radius:8px;border:1px solid var(--border);background:var(--dark);color:var(--txt);direction:ltr;text-align:left;font-size:0.85rem">
       <label style="font-size:0.75rem;color:var(--muted)">رمز سرور (AUTH_TOKEN)</label>
@@ -18870,7 +19073,9 @@ function _setSyncMsg(txt, color) {
   const el = document.getElementById('sync-msg');
   if (el) { el.textContent = txt; el.style.color = color || 'var(--muted)'; }
 }
-// ذخیرهٔ آدرس سرور شخصی؛ با ذخیره، صفحه دوباره بارگذاری می‌شود تا اتصال برقرار شود.
+// ذخیرهٔ آدرس سرور شخصی. آدرس فقط روی همین دستگاه نمی‌ماند: روی خودِ سرور ثبت
+// می‌شود تا بقیهٔ دستگاه‌ها هم خودکار به همین سرور کوچ کنند، و یک نسخه روی سرورِ
+// پیش‌فرضِ سایت هم می‌ماند تا دستگاهِ ریست‌شده دوباره همین را پیدا کند.
 function saveServerConfig() {
   const uEl = document.getElementById('server-url');
   const tEl = document.getElementById('server-token');
@@ -18878,23 +19083,49 @@ function saveServerConfig() {
   const t = tEl ? tEl.value.trim() : '';
   if (!u) { showToast('آدرس سرور را وارد کنید', '#e53e3e'); return; }
   if (!/^wss?:\/\//i.test(u)) { showToast('آدرس باید با wss:// شروع شود', '#e53e3e'); return; }
-  try {
-    localStorage.setItem('pumpServerUrl', u);
-    if (t) localStorage.setItem('pumpServerToken', t); else localStorage.removeItem('pumpServerToken');
-  } catch(e) {}
-  showToast('✅ ذخیره شد — در حال اتصال دوباره...', '#38a169');
-  setTimeout(function(){ location.reload(); }, 800);
+  const cfg = window.__pumpServerCfg__;
+  if (!cfg) {   // نباید پیش بیاید؛ ولی اگر شیم بار نشده بود، دست‌کم همین دستگاه تنظیم شود
+    try {
+      localStorage.setItem('pumpServerUrl', u);
+      if (t) localStorage.setItem('pumpServerToken', t); else localStorage.removeItem('pumpServerToken');
+    } catch(e) {}
+    showToast('✅ ذخیره شد — در حال اتصال دوباره...', '#38a169');
+    setTimeout(function(){ location.reload(); }, 800);
+    return;
+  }
+  _setSyncMsg('⏳ در حال آزمایشِ سرور...', 'var(--accent)');
+  cfg.probe(u, t).then(function(ok){
+    // اگر جواب نداد، نه این دستگاه و نه بقیه نباید به یک آدرسِ خراب کوچ کنند
+    if (!ok && !confirm('این آدرس/رمز جواب نداد (شاید سرور خاموش است یا رمز درست نیست).\n\nباز هم ذخیره شود؟')) {
+      _setSyncMsg('ذخیره نشد — آدرس یا رمز جواب نداد', '#e53e3e');
+      return;
+    }
+    _setSyncMsg('⏳ در حال اعلام به همهٔ دستگاه‌ها...', 'var(--accent)');
+    cfg.apply(u, t).then(function(){
+      showToast('✅ ذخیره شد — بقیهٔ دستگاه‌ها هم خودکار به همین سرور وصل می‌شوند', '#38a169');
+      _setSyncMsg('✅ این سرور برای همهٔ دستگاه‌ها ثبت شد.', '#38a169');
+      setTimeout(function(){ location.reload(); }, 1200);
+    });
+  });
 }
 // پاک کردن آدرسِ دستی؛ بعد از آن، آدرسِ داخلیِ خودِ سایت دوباره به کار می‌افتد
 // (نه «بدون هم‌زمان‌سازی» — این دکمه راهِ برگشت به حالت پیش‌فرضِ درست است).
+// این هم مثل ذخیره به همهٔ دستگاه‌ها اعلام می‌شود، وگرنه همین دستگاه یک لحظه بعد
+// دوباره آدرسِ مشترکِ قبلی را از سرور می‌گرفت و به آن برمی‌گشت.
 function clearServerConfig() {
-  const builtin = window.__SELF_HOST_URL__ || '';
-  const msg = builtin
-    ? 'آدرس دستی پاک شود و به آدرس پیش‌فرض سایت برگردیم؟\n\n' + builtin
-    : 'آدرس سرور پاک شود؟ برنامه فقط روی همین دستگاه کار می‌کند (بدون هم‌زمان‌سازی).';
-  if (!confirm(msg)) return;
-  try { localStorage.removeItem('pumpServerUrl'); localStorage.removeItem('pumpServerToken'); } catch(e) {}
-  location.reload();
+  const cfg = window.__pumpServerCfg__;
+  const builtin = cfg ? cfg.builtin() : { url: window.__SELF_HOST_URL__ || '', token: '' };
+  if (!confirm('آدرس دستی پاک شود و همهٔ دستگاه‌ها به سرور پیش‌فرض سایت برگردند؟\n\n' + (builtin.url || '—'))) return;
+  if (!cfg) {
+    try { localStorage.removeItem('pumpServerUrl'); localStorage.removeItem('pumpServerToken'); } catch(e) {}
+    location.reload();
+    return;
+  }
+  _setSyncMsg('⏳ در حال برگرداندن همهٔ دستگاه‌ها به سرور پیش‌فرض...', 'var(--accent)');
+  cfg.apply(builtin.url, builtin.token).then(function(){
+    showToast('✅ به سرور پیش‌فرض برگشتیم', '#38a169');
+    setTimeout(function(){ location.reload(); }, 1200);
+  });
 }
 // لینکی که با باز شدنش، دستگاه گیرنده خودکار به همین سرور شخصی وصل می‌شود
 // (بدون این‌که خودش چیزی در تنظیمات › هم‌زمان‌سازی وارد کند).
@@ -34354,7 +34585,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.141';
+const APP_VERSION = '2.9.142';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
