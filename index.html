@@ -1802,6 +1802,7 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
   window.__SELF_HOST_TOKEN__ = SELF_HOST_TOKEN; // برای نمایش در تنظیمات › هم‌زمان‌سازی
 
   var ws = null, connected = false, wantOpen = true, reconnectDelay = 1000;
+  var lastAuthFail = false;                // آخرین بار سرور رمز را رد کرد؟
   var pending = {}, idSeq = 0;
   var subs = {}, subSeq = 0;               // subId -> {path,event,cb,limit,seen,seenOrder,lastValue}
   var connListeners = [];                  // شنونده‌های .info/connected
@@ -2004,7 +2005,7 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
   function notifyConn(state){ connListeners.forEach(function(cb){ try { cb(mkSnap(null, state)); } catch(e){} }); }
 
   function onConnected(){
-    connected = true; reconnectDelay = 1000;
+    connected = true; reconnectDelay = 1000; lastAuthFail = false;
     for (var pth in onDiscRegs){ sendRaw({ op: 'onDisc', path: pth, action: onDiscRegs[pth].action, value: onDiscRegs[pth].value }); }
     for (var id in subs){ var s = subs[id]; sendRaw({ op: 'sub', path: s.path, event: s.event, subId: Number(id), limitToLast: s.limit }); }
     sweepQueuedGets();
@@ -2036,7 +2037,7 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
       // رمزِ این آدرس قبول نشد: هرچه تلاش کنیم باز رد می‌شویم. پس همین حالا (نه یک
       // دقیقهٔ بعد) برو سراغ سرورهای دیگری که می‌شناسیم. بدونِ این، دستگاه با یک
       // رمزِ غلط تا ابد پشتِ در می‌ماند و کاربر فقط می‌بیند «وصل نیست».
-      if (m.msg === 'auth_failed') { cfgLastOk = 0; cfgRescueAt = 0; try { cfgRescue(); } catch(e){} }
+      if (m.msg === 'auth_failed') { lastAuthFail = true; cfgLastOk = 0; cfgRescueAt = 0; try { cfgRescue(); } catch(e){} }
       return;
     }
   }
@@ -2108,7 +2109,12 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     connected: function(){ return connected; },
     queued: function(){ return outQueue.filter(isMutation).length; },
     onChange: function(cb){ if (typeof cb === 'function') { netListeners.push(cb); try { cb({ connected: connected, queued: outQueue.filter(isMutation).length }); } catch(e){} } },
-    reconnect: connectNow
+    reconnect: connectNow,
+    // چرا وصل نیستیم؟ 'auth' یعنی سرور هست ولی رمز را قبول نکرد (رمزِ سرور عوض شده)،
+    // 'unreachable' یعنی اصلاً جوابی نمی‌آید. این دو تا درمانِ کاملاً متفاوتی دارند و
+    // اگر به کاربر یک پیامِ سربسته بدهیم، ساعت‌ها دنبالِ چیز اشتباه می‌گردد.
+    reason: function(){ return connected ? '' : (lastAuthFail ? 'auth' : 'unreachable'); },
+    url: function(){ return SELF_HOST_URL; }
   };
 
   /* ── نشانیِ سرورِ مشترکِ همهٔ دستگاه‌ها ───────────────────────────────────────
@@ -31552,7 +31558,7 @@ function showTopToast(msg, bg, duration) {
       + 'font-weight:700;text-align:center;padding:7px 10px;line-height:1.7;box-shadow:0 2px 10px rgba(0,0,0,.35)';
     const btn = 'margin:0 4px;padding:2px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.5);'
       + 'background:transparent;color:#fff;font-family:inherit;font-weight:700;cursor:pointer';
-    _bar.innerHTML = '⚠️ به سرور وصل نیست — چیزی که می‌بینید ممکن است کاملِ حساب نباشد.'
+    _bar.innerHTML = '<span id="net-offline-title">⚠️ به سرور وصل نیست — چیزی که می‌بینید ممکن است کاملِ حساب نباشد.</span>'
       + '<div style="font-size:0.7rem;font-weight:400;opacity:.85;direction:ltr" id="net-offline-url"></div>'
       + '<button id="net-retry" style="' + btn + '">تلاش دوباره</button>'
       + '<button id="net-builtin" style="' + btn + '">سرور پیش‌فرض برنامه</button>';
@@ -31566,8 +31572,16 @@ function showTopToast(msg, bg, duration) {
   function show(on){
     const b = bar(); if (!b) return;
     b.style.display = on ? 'block' : 'none';
-    // آدرسی که دارد تلاش می‌کند، جلوی چشم باشد؛ وقتی مشکل را می‌گویی معلوم است کجاست
-    if (on) { const u = b.querySelector('#net-offline-url'); if (u) u.textContent = window.__SELF_HOST_URL__ || ''; }
+    if (!on) return;
+    // آدرسی که دارد تلاش می‌کند + دلیلِ واقعی، جلوی چشم باشد
+    let reason = 'unreachable';
+    try { reason = window.__pumpNet__.reason(); } catch(e){}
+    const t = b.querySelector('#net-offline-title');
+    if (t) t.textContent = (reason === 'auth')
+      ? '⚠️ سرور هست ولی رمزش را قبول نکرد — رمزِ سرور عوض شده است.'
+      : '⚠️ به سرور وصل نیست — چیزی که می‌بینید ممکن است کاملِ حساب نباشد.';
+    const u = b.querySelector('#net-offline-url');
+    if (u) u.textContent = (window.__SELF_HOST_URL__ || '') + (reason === 'auth' ? '  (رمز رد شد)' : '');
   }
   function tick(){
     let ok = true;
@@ -31952,7 +31966,14 @@ function _roArchivesHtml(acct) {
 function openROViewer(type, id) {
   const list = type === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === id);
-  if (!person) { showToast('شخص یافت نشد', '#e53e3e'); return; }
+  if (!person) {
+    // تا وقتی حساب از سرور نرسیده، «شخص یافت نشد» حرفِ درستی نیست و آدم را گمراه
+    // می‌کند؛ صفحهٔ انتظار خودش دلیلِ واقعی را می‌گوید و با رسیدنِ داده دوباره باز می‌شود.
+    let waiting = false;
+    try { waiting = !!document.getElementById('roWaitMsg') || !window.__pumpNet__.connected(); } catch(e){}
+    if (!waiting) showToast('شخص یافت نشد', '#e53e3e');
+    return;
+  }
   _roCurType = type; _roCurId = id;
   _roViewMode = person.mode || 'fuel';
   document.getElementById('ro-title').textContent = '👤 ' + person.name + ' — فقط‌خواندنی';
@@ -34848,7 +34869,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.146';
+const APP_VERSION = '2.9.147';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -37259,10 +37280,23 @@ if (_isMirzaHash) {
     w.style.cssText = 'position:fixed;inset:0;z-index:9000;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;background:#0d1117;color:#e6edf3;font-family:Vazirmatn,Tahoma,sans-serif;text-align:center;padding:20px';
     w.innerHTML = '<div style="font-size:2.4rem">⏳</div><div style="font-weight:800;font-size:1.05rem">در حال دریافت حساب از سرور...</div><div style="font-size:0.85rem;color:#8b949e">اینترنت باید وصل باشد — چند لحظه صبر کنید</div>';
     document.body.appendChild(w);
+    // بعد از ۱۵ ثانیه دلیلِ واقعی را بگو، نه یک پیامِ سربسته: «اینترنت را چک کنید»
+    // وقتی مشکل از رمزِ سرور است، آدم را ساعت‌ها دنبالِ چیز اشتباه می‌فرستد.
     setTimeout(function(){
       var w2 = document.getElementById('roWaitMsg');
-      if (w2) w2.innerHTML = '<div style="font-size:2.4rem">📴</div><div style="font-weight:800;font-size:1.05rem">حساب هنوز نرسید</div><div style="font-size:0.85rem;color:#8b949e">اینترنت را چک کنید و صفحه را دوباره باز کنید</div>';
-    }, 30000);
+      if (!w2) return;
+      var reason = 'unreachable', url = '';
+      try { if (window.__pumpNet__.connected()) return; reason = window.__pumpNet__.reason(); url = window.__pumpNet__.url(); } catch(e){}
+      var head = (reason === 'auth')
+        ? ['🔑', 'رمزِ سرور قبول نشد', 'سرور بالاست ولی رمزش عوض شده — به مسئولِ برنامه بگویید']
+        : (navigator.onLine === false
+            ? ['📴', 'اینترنتِ این دستگاه وصل نیست', 'اینترنت را روشن کنید و صفحه را دوباره باز کنید']
+            : ['🛑', 'سرور جواب نمی‌دهد', 'اینترنتِ شما وصل است ولی سرورِ برنامه در دسترس نیست']);
+      w2.innerHTML = '<div style="font-size:2.4rem">' + head[0] + '</div>'
+        + '<div style="font-weight:800;font-size:1.05rem">' + head[1] + '</div>'
+        + '<div style="font-size:0.85rem;color:#8b949e">' + head[2] + '</div>'
+        + '<div style="font-size:0.7rem;color:#6e7681;direction:ltr;margin-top:4px">' + escFa(url) + '</div>';
+    }, 15000);
   })();
 } else {
   // نسخهٔ معتبر: همیشه ابتدا صفحهٔ قفل (رمز عبور) نمایش داده می‌شود تا حساب‌ها محافظت شوند
