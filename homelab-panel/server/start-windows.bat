@@ -3,6 +3,9 @@ REM Home server panel launcher (Windows)
 setlocal
 cd /d "%~dp0"
 
+set "PANEL_PORT=4700"
+if not "%HLP_PORT%"=="" set "PANEL_PORT=%HLP_PORT%"
+
 where node >nul 2>nul
 if errorlevel 1 (
   echo.
@@ -23,6 +26,21 @@ if not exist node_modules (
     exit /b 1
   )
 )
+
+echo.
+echo   ============================================================
+echo     The panel is NOT a file you open by double-clicking.
+echo     It runs here, and you view it in your browser at:
+echo.
+echo         http://localhost:%PANEL_PORT%
+echo.
+echo     The browser will open by itself in a few seconds.
+echo     Keep this window open. To stop the panel, press Ctrl+C.
+echo   ============================================================
+echo.
+
+REM مرورگر چند ثانیه بعد باز می‌شود — وقتی سرور بالا آمده باشد
+start "" /min cmd /c "timeout /t 4 /nobreak >nul & start """" http://localhost:%PANEL_PORT%"
 
 node --disable-warning=ExperimentalWarning src\index.js
 pause

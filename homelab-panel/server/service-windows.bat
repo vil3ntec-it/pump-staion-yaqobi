@@ -18,6 +18,8 @@ set "TASK=PumpYaqobiPanel"
 set "HERE=%~dp0"
 if "%HERE:~-1%"=="\" set "HERE=%HERE:~0,-1%"
 set "PIDFILE=%HERE%\data\panel.pid"
+set "PANEL_PORT=4700"
+if not "%HLP_PORT%"=="" set "PANEL_PORT=%HLP_PORT%"
 
 set "ACTION=%~1"
 if "%ACTION%"=="" set "ACTION=install"
@@ -54,17 +56,33 @@ if "%RUNNING%"=="1" (
 )
 echo   Starting the panel in the background...
 start "" wscript.exe "%HERE%\run-hidden.vbs"
-REM چند ثانیه فرصت بده تا بالا بیاید و فایل PID را بنویسد
-for /l %%i in (1,1,20) do (
+REM بار اول ساختِ دیتابیس و پوشه‌ها چند ثانیه طول می‌کشد؛ صبر می‌کنیم
+for /l %%i in (1,1,30) do (
   timeout /t 1 /nobreak >nul
-  if exist "%PIDFILE%" goto :started
+  call :isrunning
+  if "!RUNNING!"=="1" goto :started
 )
 :started
 call :isrunning
 if "%RUNNING%"=="1" (
-  echo   [OK] Running ^(PID !PID!^). You can close this window - it keeps running.
+  echo.
+  echo   ============================================================
+  echo     [OK] The panel is running in the background ^(PID !PID!^).
+  echo.
+  echo     Open it in your browser at:
+  echo         http://localhost:%PANEL_PORT%
+  echo.
+  echo     You can close this window - the panel keeps running,
+  echo     and it comes back by itself every time you log in.
+  echo   ============================================================
+  echo.
+  start "" http://localhost:%PANEL_PORT%
 ) else (
   echo   [!] Did not come up yet. Check data\panel.log
+  if exist "%HERE%\data\panel.log" (
+    echo   --- last lines of data\panel.log ---
+    powershell -NoProfile -Command "Get-Content '%HERE%\data\panel.log' -Tail 15" 2>nul
+  )
 )
 goto :done
 
