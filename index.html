@@ -2031,7 +2031,14 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
       return;
     }
     if (m.op === 'event') { dispatchEvent(m); return; }
-    if (m.op === 'error') { console.warn('[سرور شخصی] خطای سرور:', m.msg); return; }
+    if (m.op === 'error') {
+      console.warn('[سرور شخصی] خطای سرور:', m.msg);
+      // رمزِ این آدرس قبول نشد: هرچه تلاش کنیم باز رد می‌شویم. پس همین حالا (نه یک
+      // دقیقهٔ بعد) برو سراغ سرورهای دیگری که می‌شناسیم. بدونِ این، دستگاه با یک
+      // رمزِ غلط تا ابد پشتِ در می‌ماند و کاربر فقط می‌بیند «وصل نیست».
+      if (m.msg === 'auth_failed') { cfgLastOk = 0; cfgRescueAt = 0; try { cfgRescue(); } catch(e){} }
+      return;
+    }
   }
   // ضربانِ زنده‌بودن: روی موبایل، سوکت گاهی بی‌صدا می‌میرد و onclose هرگز نمی‌آید؛
   // بدون این، برنامه ساعت‌ها خیال می‌کند وصل است و پیام‌ها در هوا گم می‌شوند.
@@ -2277,32 +2284,43 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
   function cfgHomes(){
     var out = [{ url: BUILTIN_URL, token: BUILTIN_TOKEN }];
     cfgKnown().forEach(function(x){ if (x.url !== BUILTIN_URL) out.push(x); });
-    return out.filter(function(x){ return x.url !== SELF_HOST_URL && !cfgDeadUrls[x.url]; });
+    // «همین آدرس با رمزِ دیگر» هم یک نامزدِ جداست: اگر آدرس درست ولی رمز خراب باشد،
+    // باید بتوانیم با رمزِ درستِ داخلِ برنامه دوباره امتحان کنیم، وگرنه دستگاه با
+    // یک رمزِ غلط تا ابد پشتِ در می‌ماند.
+    return out.filter(function(x){
+      if (cfgDeadUrls[x.url] && x.url !== BUILTIN_URL) return false;
+      return !(x.url === SELF_HOST_URL && (x.token || '') === (SELF_HOST_TOKEN || ''));
+    });
   }
 
   function cfgRescue(){
     if (!wantOpen || connected) return;
     try { if (navigator.onLine === false) return; } catch(e){}
-    if (Date.now() - cfgLastOk < 60000) return;          // هنوز فرصت بده خودش وصل شود
-    if (Date.now() - cfgRescueAt < 120000) return;       // هر دو دقیقه یک‌بار، نه بیشتر
+    if (Date.now() - cfgLastOk < 25000) return;          // ۲۵ ثانیه فرصت بده خودش وصل شود
+    if (Date.now() - cfgRescueAt < 60000) return;        // هر یک دقیقه یک‌بار، نه بیشتر
     var homes = cfgHomes();
     if (!homes.length) return;
     cfgRescueAt = Date.now();
-    var dead = SELF_HOST_URL;
-    // یکی‌یکی از سرورهایی که می‌شناسیم می‌پرسیم «سرورِ درست کدام است؟»؛ اولی که
-    // جواب داد کافی است. اگر خودش هم نشانی‌ای ثبت نداشت، خودِ همان به کار می‌آید.
-    (function tryNext(i){
-      if (i >= homes.length || connected || SELF_HOST_URL !== dead) return;
-      cfgFetchFrom(homes[i].url, homes[i].token).then(function(r){
-        if (connected || SELF_HOST_URL !== dead) return;
-        if (!r || !r.reachable) { tryNext(i + 1); return; }
-        if (dead) cfgDeadUrls[dead] = 1;
+    var dead = SELF_HOST_URL, deadTok = SELF_HOST_TOKEN;
+    // همهٔ سرورهایی که می‌شناسیم را با هم صدا می‌زنیم (نه یکی‌یکی با ۱۲ ثانیه انتظار)
+    // و اولی که جواب داد برنده است — کاربر نباید دقیقه‌ها پشتِ در بماند.
+    var done = false;
+    homes.forEach(function(h){
+      cfgFetchFrom(h.url, h.token).then(function(r){
+        if (done || connected || SELF_HOST_URL !== dead) return;
+        if (!r || !r.reachable) return;
+        done = true;
+        if (dead && !(h.url === dead && (h.token || '') !== (deadTok || ''))) cfgDeadUrls[dead] = 1;
         var v = r.cfg;
-        var target = (cfgValid(v) && v.url !== dead && !cfgDeadUrls[v.url]) ? v : { url: homes[i].url, token: homes[i].token, ts: 0 };
+        var good = cfgValid(v) && !cfgDeadUrls[v.url] && !(v.url === dead && (v.token || '') === (deadTok || ''));
+        // نشانیِ ثبت‌شده‌ای که رمز ندارد ولی آدرسش همان سرورِ داخلیِ برنامه است:
+        // رمزِ داخلیِ خودمان را بگذار، وگرنه همه با رمزِ خالی پشتِ در می‌مانند.
+        if (good && v.url === BUILTIN_URL && !v.token) v = { url: BUILTIN_URL, token: BUILTIN_TOKEN, ts: v.ts };
+        var target = good ? v : { url: h.url, token: h.token, ts: 0 };
         var ts = Math.max(cfgTs(), parseInt(target.ts, 10) || 0);
         cfgSwitchTo(target.url, target.token || '', ts, true);
       });
-    })(0);
+    });
   }
   try { setInterval(cfgRescue, 20000); } catch(e){}
 
@@ -2362,6 +2380,17 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     builtin: function(){ return { url: BUILTIN_URL, token: BUILTIN_TOKEN }; },
     current: function(){ return { url: SELF_HOST_URL, token: SELF_HOST_TOKEN, ts: cfgTs() }; },
     probe: cfgProbe,
+    // دکمهٔ نجاتِ دستی: هر آدرسِ دستی/خرابی را دور بریز و برگرد به سرورِ داخلیِ
+    // خودِ برنامه با رمزِ خودش. هیچ داده‌ای پاک نمی‌شود، فقط نشانیِ سرور.
+    resetToBuiltin: function(){
+      _lsSet('pumpServerUrl', ''); _lsSet('pumpServerToken', '');
+      _lsSet(CFG_TS_KEY, ''); _lsSet(CFG_BAD_KEY, ''); _lsSet(KNOWN_KEY, '');
+      cfgDeadUrls = {}; cfgSeenTs = 0; cfgLastOk = Date.now(); cfgRescueAt = 0;
+      cfgUseNow(BUILTIN_URL, BUILTIN_TOKEN);
+      cfgDropSocket();
+      connectNow();
+      cfgNote('🔄 برگشت به سرورِ داخلیِ برنامه: ' + BUILTIN_URL, '#3182ce');
+    },
     apply: function(url, token){                       // ذخیرهٔ محلی + پخش به همه
       var c = { url: url, token: token || '', ts: cfgNewTs() };
       _lsSet(CFG_BAD_KEY, '');
@@ -31521,14 +31550,25 @@ function showTopToast(msg, bg, duration) {
     _bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;display:none;'
       + 'background:#7c2d12;color:#fff;font-family:Vazirmatn,sans-serif;font-size:0.8rem;'
       + 'font-weight:700;text-align:center;padding:7px 10px;line-height:1.7;box-shadow:0 2px 10px rgba(0,0,0,.35)';
-    _bar.innerHTML = '⚠️ به سرور وصل نیست — چیزی که می‌بینید ممکن است کاملِ حساب نباشد. '
-      + '<button style="margin:0 6px;padding:2px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.5);'
-      + 'background:transparent;color:#fff;font-family:inherit;font-weight:700;cursor:pointer">تلاش دوباره</button>';
-    _bar.querySelector('button').onclick = function(){ try { window.__pumpNet__.reconnect(); } catch(e){} };
+    const btn = 'margin:0 4px;padding:2px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.5);'
+      + 'background:transparent;color:#fff;font-family:inherit;font-weight:700;cursor:pointer';
+    _bar.innerHTML = '⚠️ به سرور وصل نیست — چیزی که می‌بینید ممکن است کاملِ حساب نباشد.'
+      + '<div style="font-size:0.7rem;font-weight:400;opacity:.85;direction:ltr" id="net-offline-url"></div>'
+      + '<button id="net-retry" style="' + btn + '">تلاش دوباره</button>'
+      + '<button id="net-builtin" style="' + btn + '">سرور پیش‌فرض برنامه</button>';
+    _bar.querySelector('#net-retry').onclick = function(){ try { window.__pumpNet__.reconnect(); } catch(e){} };
+    _bar.querySelector('#net-builtin').onclick = function(){
+      try { window.__pumpServerCfg__.resetToBuiltin(); } catch(e){}
+    };
     try { document.body.appendChild(_bar); } catch(e){ _bar = null; }
     return _bar;
   }
-  function show(on){ const b = bar(); if (b) b.style.display = on ? 'block' : 'none'; }
+  function show(on){
+    const b = bar(); if (!b) return;
+    b.style.display = on ? 'block' : 'none';
+    // آدرسی که دارد تلاش می‌کند، جلوی چشم باشد؛ وقتی مشکل را می‌گویی معلوم است کجاست
+    if (on) { const u = b.querySelector('#net-offline-url'); if (u) u.textContent = window.__SELF_HOST_URL__ || ''; }
+  }
   function tick(){
     let ok = true;
     try { ok = window.__pumpNet__ ? window.__pumpNet__.connected() : true; } catch(e){}
@@ -34808,7 +34848,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.145';
+const APP_VERSION = '2.9.146';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
