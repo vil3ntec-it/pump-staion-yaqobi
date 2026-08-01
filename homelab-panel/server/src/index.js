@@ -22,6 +22,7 @@ import { readInterfaces } from './metrics/network.js';
 import { autostartAll, ensureAllSiteWorkspaces } from './sites/registry.js';
 import { stopAll } from './sites/process.js';
 import { startTunnel, stopTunnel, tunnelEvents } from './tunnel.js';
+import { versionInfo, versionLine } from './version.js';
 import { siteTunnelEvents, stopAllSiteTunnels } from './site-tunnels.js';
 
 import authRoutes from './routes/auth.js';
@@ -71,6 +72,10 @@ app.get('/health', (req, res) => {
     ok: true,
     service: 'pump-yaqobi-server',
     panel: 'homelab-panel',
+    // با باز کردن همین آدرس معلوم می‌شود کدام نسخه واقعاً بالاست
+    version: versionInfo.version,
+    build: versionInfo.build,
+    root: versionInfo.root,
     time: new Date().toISOString(),
   });
 });
@@ -217,6 +222,7 @@ async function main() {
     console.log('');
     console.log('==============================================================');
     console.log('  ✅ پنل مدیریت سرور خانگی بالا آمد' + (name ? ` — ${name}` : ''));
+    console.log(`  ${versionLine()}`);
     console.log('==============================================================');
     console.log(`  پنل روی این کامپیوتر:   http://localhost:${config.port}`);
     for (const ip of ips) console.log(`  از شبکهٔ خانگی:          http://${ip}:${config.port}`);

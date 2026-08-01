@@ -54,6 +54,24 @@ if "%RUNNING%"=="1" (
   echo   Already running ^(PID !PID!^).
   goto :done
 )
+
+REM اگر نسخهٔ دیگری از قبل روی همین پورت باشد، نسخهٔ اینجا بالا نمی‌آید و در
+REM مرورگر همان قدیمی دیده می‌شود — پس صریح خبر می‌دهیم.
+set "OTHER="
+for /f "usebackq delims=" %%r in (`powershell -NoProfile -Command ^
+  "try { (Invoke-RestMethod -Uri 'http://127.0.0.1:%PANEL_PORT%/health' -TimeoutSec 3).root } catch { '' }" 2^>nul`) do set "OTHER=%%r"
+if not "!OTHER!"=="" if /i not "!OTHER!"=="%HERE%" (
+  echo.
+  echo   [!] Another panel is already running on port %PANEL_PORT%:
+  echo         !OTHER!
+  echo       Until you stop it, THIS copy will not start and your browser
+  echo       will keep showing the OLD version.
+  echo.
+  echo       Stop it with:  "!OTHER!\service-windows.bat" stop
+  echo.
+  pause
+  exit /b 1
+)
 echo   Starting the panel in the background...
 start "" wscript.exe "%HERE%\run-hidden.vbs"
 REM بار اول ساختِ دیتابیس و پوشه‌ها چند ثانیه طول می‌کشد؛ صبر می‌کنیم

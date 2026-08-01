@@ -8,6 +8,7 @@ import { pipeline } from 'node:stream/promises';
 import { requireAuth } from '../auth.js';
 import { allSettings, getSetting, setSetting, logEvent } from '../db.js';
 import { config, paths } from '../config.js';
+import { versionInfo } from '../version.js';
 import { normalizeDomain } from '../sites/registry.js';
 
 const router = Router();
@@ -71,6 +72,9 @@ router.get('/', (req, res) => {
       platform: process.platform,
       node: process.version,
       panelPort: config.port,
+      panelVersion: versionInfo.version,
+      panelBuild: versionInfo.build,
+      panelRoot: versionInfo.root,
     },
   });
 });

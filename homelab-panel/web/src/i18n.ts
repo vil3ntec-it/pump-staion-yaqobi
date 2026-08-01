@@ -241,6 +241,8 @@ const fa = {
   onlineVia: 'از راه',
 
   // ---- راه‌اندازی خودکار سایت تازه ----
+  panelVersion: 'نسخهٔ پنل',
+  runningFrom: 'اجرا از مسیر',
   autoSetup: 'راه‌اندازی خودکار سایت تازه',
   autoSetupHint:
     'با افزودن هر سایت، خودش پوشهٔ دادهٔ جدا، رمز، پورت، دامنه و آدرس اینترنتی می‌گیرد — بدون هیچ تنظیم دستی.',
@@ -530,6 +532,8 @@ const en: Dict = {
   onlineViaPublic: 'internet address',
   onlineVia: 'via',
 
+  panelVersion: 'Panel version',
+  runningFrom: 'Running from',
   autoSetup: 'Set up new sites automatically',
   autoSetupHint:
     'Every site you add gets its own data folder, password, port, domain and internet address by itself — nothing to configure by hand.',
