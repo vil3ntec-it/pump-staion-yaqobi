@@ -88,8 +88,33 @@ do_install() {
   fi
 }
 
+# اگر نسخهٔ دیگری از قبل روی همین پورت بالا باشد، نسخهٔ تازه بالا نمی‌آید و
+# کاربر در مرورگر همان قدیمی را می‌بیند. اینجا صریح خبر می‌دهیم.
+warn_if_other_panel() {
+  local port="${HLP_PORT:-4700}"
+  local health
+  health="$(curl -fsS --max-time 3 "http://127.0.0.1:$port/health" 2>/dev/null || true)"
+  [ -n "$health" ] || return 0
+
+  local root
+  root="$(printf '%s' "$health" | sed -n 's/.*"root":"\([^"]*\)".*/\1/p')"
+  [ "$root" = "$HERE" ] && return 0
+
+  echo
+  echo "  ⚠️  یک پنلِ دیگر از قبل روی پورت $port در حال اجراست:"
+  echo "        $root"
+  echo "      تا آن را نبندید، نسخهٔ اینجا بالا نمی‌آید و در مرورگر همان"
+  echo "      نسخهٔ قدیمی را می‌بینید."
+  echo
+  echo "      برای بستنش:  $root/service-linux.sh stop"
+  echo "      یا این نسخه را روی پورت دیگری اجرا کنید:  HLP_PORT=4800 $0 start"
+  echo
+  return 1
+}
+
 do_start() {
   need_node
+  warn_if_other_panel || return 1
   if have_systemd && [ -f "$UNIT" ]; then
     systemctl --user start "$NAME.service"
     echo "✅ اجرا شد."

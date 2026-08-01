@@ -18,7 +18,15 @@ type SettingsPayload = {
     sitesBaseDomain: string | null;
   };
   paths: { dataDir: string; sitesRoot: string; uploads: string };
-  system: { hostname: string; platform: string; node: string; panelPort: number };
+  system: {
+    hostname: string;
+    platform: string;
+    node: string;
+    panelPort: number;
+    panelVersion: string | null;
+    panelBuild: string | null;
+    panelRoot: string | null;
+  };
 };
 
 export default function Settings() {
@@ -286,6 +294,12 @@ export default function Settings() {
         <dl className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
           <Row label={t('dataDir')} value={data.paths.dataDir} />
           <Row label={t('sitesRoot')} value={data.paths.sitesRoot} />
+          {/* نسخهٔ همین سرورِ در حال اجرا — تا معلوم باشد نسخهٔ تازه بالاست یا قدیمی */}
+          <Row
+            label={t('panelVersion')}
+            value={`${data.system.panelVersion ?? '—'}${data.system.panelBuild ? ` · ${data.system.panelBuild}` : ''}`}
+          />
+          {data.system.panelRoot && <Row label={t('runningFrom')} value={data.system.panelRoot} />}
           <Row label="hostname" value={data.system.hostname} />
           <Row label="Node.js" value={data.system.node} />
           <Row label={t('port')} value={String(data.system.panelPort)} />
