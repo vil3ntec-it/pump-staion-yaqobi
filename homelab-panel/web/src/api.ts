@@ -68,7 +68,10 @@ export async function api<T = any>(url: string, options: Options = {}): Promise<
     json = null;
   }
 
-  if (!res.ok) throw new ApiError(res.status, json?.error || 'request_failed', json?.message);
+  if (!res.ok) {
+    // detail توضیحِ خواندنیِ سرور است؛ بدون آن کاربر فقط یک کد می‌بیند
+    throw new ApiError(res.status, json?.error || 'request_failed', json?.detail || json?.message);
+  }
   return json as T;
 }
 
