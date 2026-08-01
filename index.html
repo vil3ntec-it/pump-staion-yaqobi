@@ -19774,6 +19774,14 @@ function _hcDateLabel(dateStr) {
   const wk = (isFinite(day) && day > 0) ? (' · هفتهٔ ' + _faNumPlain(Math.floor((day - 1) / 7) + 1) + 'مِ ماه') : '';
   return _faDateWithWeekday(s) + wk;
 }
+// همان برچسب، برای سربرگِ جدول‌های آرشیو (حسابِ قرض‌دار، شرکت تیل، ماه‌های بسته‌شده).
+// خواستهٔ کاربر: «در همهٔ تاریخچه‌ها تاریخ و کدوم هفته بوده نوشته باشد». اگر تاریخ
+// نداشت، رشتهٔ خالی برمی‌گردد تا سربرگ مثل قبل بی‌نوشته بماند (نه «بی‌تاریخ»).
+function _archDateLabel(dateStr) {
+  const s = String(dateStr == null ? '' : dateStr).trim();
+  if (!s || !/\d/.test(s)) return '';
+  try { return _hcDateLabel(s); } catch (e) { return s; }
+}
 // چند روز از یک تاریخِ شمسی گذشته (برای «چند وقت است برده») — منفی = بی‌تاریخ
 function _hcDaysSince(dateStr) {
   const ts = _jalaliStrToTs(dateStr);
@@ -24866,7 +24874,7 @@ function _renderHistoryPanel(person) {
       </div>`;
     return `<div style="margin-bottom:16px;border:2px solid ${ac};border-radius:13px;overflow:hidden">
       <div style="background:${ac};padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
-        <span style="font-weight:800;font-size:0.82rem;color:#fff;white-space:nowrap">📋 ${h.createdAt||''}</span>
+        <span style="font-weight:800;font-size:0.82rem;color:#fff;white-space:nowrap">📋 ${escFa(_archDateLabel(h.createdAt) || (h.createdAt||''))}</span>
         <input id="hn-${h.id}" value="${escFa(h.headerNote||'')}" placeholder="📝 توضیحات این جدول..." oninput="updateHistoryHeaderNote('${pid}','${h.id}',this.value)"
           style="flex:1;min-width:130px;background:rgba(255,255,255,0.16);border:1px dashed rgba(255,255,255,0.6);border-radius:7px;padding:4px 10px;color:#fff;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;box-sizing:border-box">
         <div style="display:flex;align-items:center;gap:6px">
@@ -24989,7 +24997,7 @@ tr:nth-child(even) td{background:#f7fafc}
 </style></head><body>
 <div class="no-print" style="display:block;margin-bottom:10px"><button onclick="window.print()" style="padding:6px 16px;background:#38a169;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Vazirmatn',sans-serif">📄 ذخیره PDF</button></div>
 <h1>${escFa(person.name)}${hFilter==='petrol' ? ' — ⛽ حساب جداگانه پطرول' : (hFilter==='diesel' ? ' — 🟤 حساب جداگانه دیزل' : '')}</h1>
-<div class="meta">${archiveLabel ? archiveLabel + ' &nbsp;|&nbsp; ' : ''}تاریخ: ${h.createdAt||''} &nbsp;|&nbsp; تعداد ردیف: ${n2fa(rows.length)}</div>
+<div class="meta">${archiveLabel ? archiveLabel + ' &nbsp;|&nbsp; ' : ''}تاریخ: ${escFa(_archDateLabel(h.createdAt) || (h.createdAt||''))} &nbsp;|&nbsp; تعداد ردیف: ${n2fa(rows.length)}</div>
 <div class="split-row">
   ${hFilter !== 'diesel' ? `<div class="split-box" style="border-color:#38a16966">
     <div class="split-title">⛽ حساب پطرول</div>
@@ -25237,11 +25245,10 @@ function _monthKey(dateStr) {
   if (p.length >= 2) return p[0] + '/' + String(parseInt(p[1])||0).padStart(2,'0');
   return 'بدون تاریخ';
 }
-function _monthLabel(key) {
-  const p = key.split('/');
-  if (p.length === 2) { const m = parseInt(p[1])||0; return (SHAMSI_MONTHS[m-1]||'') + ' ' + p[0]; }
-  return key;
-}
+// برچسبِ ماه — همیشه با سال و با ارقام فارسی («اسد ۱۴۰۵»). خواستهٔ کاربر: هر جا ماه
+// هست سال هم کنارش باشد. این تابع به _monthLabelFa واگذار می‌شود تا کشوی گزارش
+// ماهانه، حاضری/معاش و PDFها هم دقیقاً همان برچسبِ بقیهٔ بخش‌ها را نشان بدهند.
+function _monthLabel(key) { return _monthLabelFa(key); }
 // ارقام فارسی بدون جداکنندهٔ هزارگان (سال ۱۴۰۵ نه ۱٬۴۰۵)
 function _faNumPlain(s) { return String(s == null ? '' : s).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]); }
 // برچسبِ ماه با سال، برای همهٔ کشوها و سربرگ‌های ماهانه: «سرطان ۱۴۰۵ (۱۴۰۵/۰۴)»
@@ -26925,7 +26932,7 @@ function renderCompanyPurchasesPage(company, fuel){
   if (!cont) return;
   if (fuel === undefined) fuel = _cmpFuel;
   const fuelLbl = fuel === 'petrol' ? '⛽ خریدهای پطرول' : fuel === 'diesel' ? '🟤 خریدهای دیزل' : '📦 خریدهای';
-  if (titleEl) titleEl.textContent = fuelLbl + ' — ' + (company.name||'') + (_cmpHist ? (' — 🗂️ جدول آرشیو' + (_cmpHist.createdAt ? ' (' + _cmpHist.createdAt + ')' : '')) : '');
+  if (titleEl) titleEl.textContent = fuelLbl + ' — ' + (company.name||'') + (_cmpHist ? (' — 🗂️ جدول آرشیو' + (_cmpHist.createdAt ? ' (' + (_archDateLabel(_cmpHist.createdAt) || _cmpHist.createdAt) + ')' : '')) : '');
   const d = _cmpCollect(company, fuel);
   const petrolHtml = _companyPurchaseSection(d.petrol, 'petrol', true) + _companyManualRowSection(d.manualPetrol, 'petrol');
   const dieselHtml = _companyPurchaseSection(d.diesel, 'diesel', true) + _companyManualRowSection(d.manualDiesel, 'diesel');
@@ -26978,7 +26985,7 @@ function pdfCompanyPurchases(){
     : sec(data.petrol, data.manualPetrol, 'petrol') + sec(data.diesel, data.manualDiesel, 'diesel'))
     || '<div style="text-align:center;color:#718096;padding:20px">هیچ خریدی ثبت نشده</div>';
   const fuelLbl = fuel === 'petrol' ? 'خریدهای پطرول' : fuel === 'diesel' ? 'خریدهای دیزل' : 'خریدها';
-  const title = fuelLbl + ' — ' + (company.name||'') + (_cmpHist ? (' — جدول آرشیو' + (_cmpHist.createdAt ? ' (' + _cmpHist.createdAt + ')' : '')) : '');
+  const title = fuelLbl + ' — ' + (company.name||'') + (_cmpHist ? (' — جدول آرشیو' + (_cmpHist.createdAt ? ' (' + (_archDateLabel(_cmpHist.createdAt) || _cmpHist.createdAt) + ')' : '')) : '');
   const html = `<!DOCTYPE html>
 <html lang="fa" dir="rtl"><head><meta charset="UTF-8">
 <title>${title} — پمپ یعقوبی</title>
@@ -27160,7 +27167,7 @@ function _renderCompanyHistoryPanel(company){
       return `<div style="border:1.5px solid ${ac}66;border-radius:12px;margin-bottom:12px;overflow:hidden">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:${ac}18;flex-wrap:wrap">
           <span style="font-weight:800;color:${ac};font-size:0.85rem;white-space:nowrap;flex:1">🗂️ جدول ${n2fa(history.length-hi)} — ${fuelLabel}</span>
-          <span style="font-size:0.72rem;color:var(--muted);white-space:nowrap">${h.createdAt||''}</span>
+          <span style="font-size:0.72rem;color:var(--muted);white-space:nowrap">${escFa(_archDateLabel(h.createdAt) || (h.createdAt||''))}</span>
           <button style="white-space:nowrap;border-radius:7px;border:1px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;padding:5px 10px;cursor:pointer" onclick="pdfCompanyHistory('${company.id}','${h.id}')">📄 PDF</button>
           <button class="del-btn" style="${armed?'background:var(--red);color:#fff;':''}white-space:nowrap" onclick="deleteCompanyTableHistory('${company.id}','${h.id}',this)">${armed?'✔ تأیید حذف؟':'🗑️ حذف'}</button>
         </div>
@@ -27578,7 +27585,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px}
 .footer{margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
 @media print{@page{margin:0.5cm;size:A4 landscape}}</style></head><body>
 <h1>🗂️ ${escFa(company.name)} — جدول آرشیو‌شده (${fuelLabel})</h1>
-<div class="meta">تاریخ ساخته‌شدنِ جدول: ${h.createdAt||'—'} | تاریخ چاپ: ${d.sh} | ${d.mi}</div>
+<div class="meta">تاریخ ساخته‌شدنِ جدول: ${escFa(_archDateLabel(h.createdAt) || (h.createdAt||'—'))} | تاریخ چاپ: ${d.sh} | ${d.mi}</div>
 <div class="sum-row">
   <div class="sum-box"><div class="l">جمع (کیلو)</div><div class="v" style="color:#2b6cb0">${n2fa(Math.round(tTon*1000))}</div></div>
   <div class="sum-box"><div class="l">جمع کل دالر</div><div class="v" style="color:#276749">${n2fa(tUsd.toFixed(1))} $</div></div>
@@ -31319,7 +31326,7 @@ function _roArchivesHtml(acct) {
     return `<div style="margin-top:14px;border:1px solid var(--border);border-radius:12px;overflow:hidden">
       <div style="padding:10px 12px;background:var(--dark);font-weight:900;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
         <span>📅 ماه ${escFa(mon)}${fuelLbl}</span>
-        <span style="color:var(--muted);font-size:0.72rem;font-weight:700">بسته شده: ${escFa(toEnDigits(String(h.createdAt || '')))} · 🔒 فقط خواندنی</span>
+        <span style="color:var(--muted);font-size:0.72rem;font-weight:700">بسته شده: ${escFa(_archDateLabel(h.createdAt) || toEnDigits(String(h.createdAt || '')))} · 🔒 فقط خواندنی</span>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;padding:10px 12px;border-bottom:1px solid var(--border)">${sums}</div>
       <div style="overflow-x:auto"><table class="ro-tbl" style="min-width:560px;width:100%">
@@ -34244,7 +34251,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.138';
+const APP_VERSION = '2.9.139';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -36492,7 +36499,8 @@ function renderMonthReport() {
   if (!selEl || !body) return;
   const keys = _mrAllKeys();
   const want = (selEl.value && keys.includes(selEl.value)) ? selEl.value : (keys[0] || _monthKey(persianDate()));
-  selEl.innerHTML = keys.map(k => `<option value="${k}" ${k === want ? 'selected' : ''}>${escFa(_monthLabel(k))}</option>`).join('');
+  // مثل بقیهٔ کشوهای ماه: «اسد ۱۴۰۵ — ۱۴۰۵/۰۵» تا ماه‌های سال‌های مختلف قاطی نشوند
+  selEl.innerHTML = keys.map(k => `<option value="${k}" ${k === want ? 'selected' : ''}>${escFa(_monthOptionLabel(k))}</option>`).join('');
   const cur = _mrCompute(want), prev = _mrCompute(_mrPrevKey(want));
   const locked = _mrProfitLocked();
   const g = (c, p) => {
