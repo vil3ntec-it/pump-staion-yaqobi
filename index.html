@@ -942,6 +942,16 @@ body.viewer-mode .att-admin{display:none !important}
 .add-row-btn.strong:hover{background:var(--accent)!important;color:#1a1102!important;filter:brightness(1.06)}
 .add-row-btn.strong-diesel{background:#b7791f;border-color:#b7791f;color:#fff8ec}
 .add-row-btn.strong-diesel:hover{background:#b7791f!important;color:#fff8ec!important}
+/* نوار دکمه‌های مخزن (ثبت خرید + PDF) — هم بالای فهرست خریدها هم پایینش تکرار
+   می‌شود تا با زیاد شدنِ خریدها گم نشوند (خواستهٔ کاربر). */
+.storage-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 14px}
+.storage-actions .add-row-btn{margin-top:0;flex:1 1 190px;width:auto}
+/* شش هدرِ خلاصهٔ جدول‌های آرشیوِ شرکت — همان شش کادرِ بالای بخش، با دادهٔ خودِ آرشیو */
+.cm-hist-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:7px;padding:9px 12px}
+.cm-hist-sum .cmhs-box{display:flex;flex-direction:column;gap:2px;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:6px 9px;min-width:0}
+.cm-hist-sum .cmhs-box i{font-style:normal;font-size:0.66rem;color:var(--muted);font-weight:700;line-height:1.25}
+.cm-hist-sum .cmhs-box b{font-size:0.85rem;font-weight:900;line-height:1.3;word-break:break-word}
+.cm-hist-sum .cmhs-box small{font-size:0.68rem;font-weight:700;color:var(--muted)}
 
 .pm-filter-btn{padding:8px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--card);color:var(--muted);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;transition:all .2s}
 .pm-filter-btn:hover{border-color:var(--accent);color:var(--accent)}
@@ -16026,9 +16036,17 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
   <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="showSection('tanker')"><span>🚚 تخلیهٔ تانکر — بارنامه در برابر تحویل</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
   <button type="button" class="tool-link-card" onclick="showSection('tankdip')"><span>📏 اندازه‌گیری واقعی مخزن — میله‌زنی</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
   <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('storage')"><span>🕘 تاریخچهٔ خریدهای مخزن</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
+  <!-- دکمه‌های «ثبت خرید» و «PDF» بالای فهرست خریدها هستند (باگ گم‌شدنشان): وقتی
+       خریدها زیاد می‌شد این دو دکمه ته صفحه می‌افتادند و پیدا نمی‌شدند. -->
+  <div class="storage-actions">
+    <button class="add-row-btn strong" onclick="openAddPurchase('petrol')">➕ ثبت خرید پطرول</button>
+    <button class="add-row-btn" style="border-color:var(--green);color:var(--green)" onclick="pdfStorage('petrol')">📄 PDF مخزن پطرول</button>
+  </div>
   <div id="fuel-purchases-list"></div>
-  <button class="add-row-btn" style="border-color:var(--green);color:var(--green);margin-bottom:8px" onclick="pdfStorage('petrol')">📄 PDF مخزن پطرول</button>
-  <button class="add-row-btn strong" onclick="openAddPurchase('petrol')" style="margin-bottom:16px">➕ ثبت خرید پطرول</button>
+  <div class="storage-actions">
+    <button class="add-row-btn strong" onclick="openAddPurchase('petrol')">➕ ثبت خرید پطرول</button>
+    <button class="add-row-btn" style="border-color:var(--green);color:var(--green)" onclick="pdfStorage('petrol')">📄 PDF مخزن پطرول</button>
+  </div>
   <div style="padding:0 2px 12px">
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-storage" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('storage', this.value)"></textarea>
@@ -16048,9 +16066,15 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
   <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="showSection('tanker')"><span>🚚 تخلیهٔ تانکر — بارنامه در برابر تحویل</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
   <button type="button" class="tool-link-card" onclick="showSection('tankdip')"><span>📏 اندازه‌گیری واقعی مخزن — میله‌زنی</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
   <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('storage')"><span>🕘 تاریخچهٔ خریدهای مخزن</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
+  <div class="storage-actions">
+    <button class="add-row-btn strong strong-diesel" onclick="openAddPurchase('diesel')">➕ ثبت خرید دیزل</button>
+    <button class="add-row-btn" style="border-color:#276749;color:#276749" onclick="pdfStorage('diesel')">📄 PDF مخزن دیزل</button>
+  </div>
   <div id="diesel-purchases-list"></div>
-  <button class="add-row-btn" style="border-color:#276749;color:#276749;margin-bottom:8px" onclick="pdfStorage('diesel')">📄 PDF مخزن دیزل</button>
-  <button class="add-row-btn strong strong-diesel" onclick="openAddPurchase('diesel')" style="margin-bottom:16px">➕ ثبت خرید دیزل</button>
+  <div class="storage-actions">
+    <button class="add-row-btn strong strong-diesel" onclick="openAddPurchase('diesel')">➕ ثبت خرید دیزل</button>
+    <button class="add-row-btn" style="border-color:#276749;color:#276749" onclick="pdfStorage('diesel')">📄 PDF مخزن دیزل</button>
+  </div>
   <div style="padding:0 2px 12px">
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-storage-diesel" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('storage-diesel', this.value)"></textarea>
@@ -16157,6 +16181,7 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
   <button type="button" class="tool-link-card" style="border-color:var(--green);color:var(--green)" onclick="showSection('oldloansmoney')"><span>💵 قرض‌های کهنهٔ پول — بی‌حرکت‌ها اول (واحد پول)</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
   <!-- کادر حساب‌های چکنه — صفحهٔ جداگانه (خواستهٔ کاربر) -->
   <button type="button" class="tool-link-card" style="border-color:var(--purple);color:var(--purple)" onclick="showSection('chakana')"><span>🧾 حساب‌های چکنه</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
+  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('rasid')"><span>🕘 تاریخچهٔ رسیدها — با تاریخ و روز هفته</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
   <div class="card">
     <div class="card-head">
       <div style="display:flex;align-items:center;gap:10px">
@@ -16183,34 +16208,37 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
   </div>
 </div>
 
-<!-- قرض‌های دسته‌جمعی (صفحهٔ جداگانه) -->
+<!-- قرض‌های دسته‌جمعی — واحد تیل (صفحهٔ جداگانه) -->
 <div class="section" id="sec-debtsum">
   <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
     <button class="goto-btn" onclick="showSection('debtrasid')">🧾 برگشت به رسید قرض‌داران</button>
-    <span>📊 قرض‌های دسته‌جمعی</span>
+    <span>⛽ قرض‌های دسته‌جمعی — واحد تیل</span>
   </div>
+  <!-- واحد پول صفحهٔ کاملاً جدا دارد تا پول و تیل یک‌جا قاطی نشوند (خواستهٔ کاربر) -->
+  <button type="button" class="tool-link-card" style="border-color:var(--green);color:var(--green)" onclick="showSection('debtsummoney')"><span>💵 قرض‌های دسته‌جمعی — واحد پول</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
   <div class="card">
     <div class="card-head">
       <div style="display:flex;align-items:center;gap:10px">
-        <div class="card-title">📊 قرض‌های دسته‌جمعی</div>
+        <div class="card-title">⛽ قرض‌های دسته‌جمعی — واحد تیل</div>
         <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('debtsum',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('debtsum',0.08)">A+</button></span>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <button class="add-btn" style="background:var(--blue)" onclick="pdfDebtSummary()">📄 PDF</button>
+        <button class="add-btn" style="background:var(--blue)" onclick="pdfDebtSummary('fuel')">📄 PDF</button>
         <button class="add-btn" onclick="addDebtPersonsBulk()">➕ افزودن چندتایی</button>
       </div>
     </div>
     <div style="padding:14px">
-      <div style="font-size:0.74rem;color:var(--muted);margin-bottom:8px">همهٔ قرض‌داران در یک جدول، هر کدام یک خط — با کلیک روی هر خط، حساب کامل همان شخص باز می‌شود.</div>
+      <div style="font-size:0.74rem;color:var(--muted);margin-bottom:8px">فقط قرض‌دارانِ «واحد تیل» — هر کدام یک خط. با کلیک روی هر خط، حساب کامل همان شخص باز می‌شود. ستونِ آخر می‌گوید چند وقت است قرض‌دار است.</div>
       <div class="tbl-wrap">
         <table class="tbl" style="font-size:0.8rem">
-          <thead><tr><th>#</th><th>نام قرض‌دار</th><th>جمع بردگی</th><th>جمع رسید</th><th>الباقی</th></tr></thead>
+          <thead><tr><th>#</th><th>نام قرض‌دار</th><th>جمع بردگی</th><th>جمع رسید</th><th>الباقی</th><th>چند وقت قرض‌دار</th></tr></thead>
           <tbody id="debtsum-body"></tbody>
           <tfoot><tr style="font-weight:800;border-top:2px solid var(--border)">
             <td colspan="2">جمع کل</td>
             <td style="color:var(--accent)" id="debtsum-tot-bardagi">0</td>
             <td style="color:var(--green)" id="debtsum-tot-rasid">0</td>
             <td id="debtsum-tot-albaqi">0</td>
+            <td></td>
           </tr></tfoot>
         </table>
       </div>
@@ -16219,6 +16247,45 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
   <div style="padding:10px 2px 12px">
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-debtsum" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('debtsum', this.value)"></textarea>
+  </div>
+</div>
+
+<!-- قرض‌های دسته‌جمعی — واحد پول (صفحهٔ کاملاً جدا) -->
+<div class="section" id="sec-debtsummoney">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('debtsum')">⛽ برگشت به واحد تیل</button>
+    <span>💵 قرض‌های دسته‌جمعی — واحد پول</span>
+  </div>
+  <div class="card" style="border-color:var(--green)">
+    <div class="card-head">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="card-title">💵 قرض‌های دسته‌جمعی — واحد پول</div>
+        <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('debtsummoney',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('debtsummoney',0.08)">A+</button></span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="add-btn" style="background:var(--blue)" onclick="pdfDebtSummary('money')">📄 PDF</button>
+      </div>
+    </div>
+    <div style="padding:14px">
+      <div style="font-size:0.74rem;color:var(--muted);margin-bottom:8px">فقط قرض‌دارانِ «واحد پول» (افغانی) — تیل در این صفحه نیست. ستونِ آخر می‌گوید چند وقت است قرض‌دار است.</div>
+      <div class="tbl-wrap">
+        <table class="tbl" style="font-size:0.8rem">
+          <thead><tr><th>#</th><th>نام قرض‌دار</th><th>جمع بردگی</th><th>جمع رسید</th><th>الباقی</th><th>چند وقت قرض‌دار</th></tr></thead>
+          <tbody id="debtsummoney-body"></tbody>
+          <tfoot><tr style="font-weight:800;border-top:2px solid var(--border)">
+            <td colspan="2">جمع کل</td>
+            <td style="color:var(--accent)" id="debtsummoney-tot-bardagi">0</td>
+            <td style="color:var(--green)" id="debtsummoney-tot-rasid">0</td>
+            <td id="debtsummoney-tot-albaqi">0</td>
+            <td></td>
+          </tr></tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div style="padding:10px 2px 12px">
+    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
+    <textarea id="secnote-debtsummoney" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('debtsummoney', this.value)"></textarea>
   </div>
 </div>
 
@@ -16260,6 +16327,7 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
     <button class="goto-btn" onclick="showSection('debtrasid')">🧾 برگشت به رسید قرض‌داران</button>
     <span>🧾 حساب‌های چکنه</span>
   </div>
+  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('chakana')"><span>🕘 تاریخچهٔ چکنه — با تاریخ، روز هفته و مدتِ برد</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
   <div class="card" style="border-color:var(--purple)">
     <div class="card-head">
       <div style="display:flex;align-items:center;gap:10px">
@@ -16839,12 +16907,12 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
       </div>
       <div style="font-size:0.68rem;color:var(--muted);margin-bottom:6px">برای دو پایه در یک شیفت یا تغییر قیمت وسط روز، پایه جدید اضافه کنید — هر پایه فی لیتر جدا دارد و قاتی نمی‌شود.</div>
       <div class="tbl-wrap" style="margin-bottom:10px">
-        <table class="tbl" id="wq-pump-tbl" style="font-size:0.95rem;table-layout:fixed;min-width:900px">
+        <table class="tbl" id="wq-pump-tbl" style="font-size:0.95rem;table-layout:fixed;min-width:1010px">
           <colgroup>
-            <col style="width:46px"><col style="width:98px"><col><col style="width:110px"><col style="width:100px"><col style="width:100px"><col style="width:60px"><col style="width:98px"><col style="width:114px"><col style="width:46px">
+            <col style="width:46px"><col style="width:98px"><col><col style="width:110px"><col style="width:100px"><col style="width:100px"><col style="width:60px"><col style="width:98px"><col style="width:114px"><col style="width:110px"><col style="width:46px">
           </colgroup>
           <thead><tr>
-            <th>پایه</th><th>تاریخ</th><th>نام</th><th>نوع</th><th>شروع</th><th>ختم</th><th>فی لیتر</th><th>مقدار (لیتر)</th><th>مبلغ فروش</th><th></th>
+            <th>پایه</th><th>تاریخ</th><th>نام</th><th>نوع</th><th>شروع</th><th>ختم</th><th>فی لیتر</th><th>مقدار (لیتر)</th><th>مبلغ فروش</th><th title="قرضِ همین کارمند/پایه — همان «جمله قرض» پارچه">جمله قرض</th><th></th>
           </tr></thead>
           <tbody id="wq-pump-body"></tbody>
           <tfoot>
@@ -16852,11 +16920,14 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
               <td colspan="7" style="padding:7px 9px">جمع این شیفت</td>
               <td style="padding:7px 9px" id="wq-total-liters">0</td>
               <td style="padding:7px 9px" id="wq-total-sales">0</td>
+              <td style="padding:7px 9px;color:var(--red)" id="wq-total-debt">0</td>
               <td></td>
             </tr>
           </tfoot>
         </table>
       </div>
+      <!-- قرضِ هر کارمند در همین ورق (از ستون «جمله قرض» پایه‌ها) + جمله -->
+      <div id="wq-worker-debts" style="margin-bottom:12px"></div>
 
 
       <!-- Transactions table (شیفت فعال) -->
@@ -17150,6 +17221,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
 
 <div class="section" id="sec-invoices">
   <div class="section-title"><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> ثبت فاکتورها</div>
+  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('invoice')"><span>🕘 تاریخچهٔ فاکتورها — با تاریخ و روز هفته</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
 
   <!-- کارت‌های آماری -->
   <div class="inv-stats">
@@ -17341,6 +17413,8 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <button class="goto-btn" onclick="showSection('history')">→ برگشت به تاریخچه‌ها</button>
     <span id="hv-title" style="display:inline-flex;align-items:center;gap:10px">🕘 تاریخچه</span>
   </div>
+  <!-- کشویِ ماه و سال — تا جدولِ تاریخچه خیلی بزرگ نشود و ماه‌ها قاطی نشوند -->
+  <div id="hv-month-wrap" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 10px"></div>
   <div id="hv-summary" style="font-size:0.8rem;color:var(--muted);margin:6px 0 10px;text-align:center"></div>
   <div id="hv-list"></div>
 </div>
@@ -19675,6 +19749,8 @@ const HC_KINDS = [
   { k:'sarrafi',  lbl:'💱 صرافی',        color:'var(--blue)'   },
   { k:'storage',  lbl:'🛢️ مخزن',         color:'var(--accent)' },
   { k:'debt',     lbl:'👥 قرض‌داران',    color:'var(--red)'    },
+  { k:'rasid',    lbl:'🧾 رسیدهای قرض‌داران', color:'var(--green)' },
+  { k:'chakana',  lbl:'🧾 چکنه',         color:'var(--purple)' },
   { k:'company',  lbl:'🏭 شرکت‌های تیل', color:'#b7791f'       },
   { k:'expense',  lbl:'💸 مصارف',        color:'var(--purple)' },
   { k:'waraq',    lbl:'📝 ورق‌ها',       color:'var(--blue)'   },
@@ -19683,9 +19759,33 @@ const HC_KINDS = [
   { k:'attend',   lbl:'🕒 حاضری',        color:'var(--purple)' }
 ];
 let _hcKind = 'all';
+let _hcMonth = '';     // فیلترِ ماه/سالِ صفحهٔ تاریخچه ('' = همهٔ ماه‌ها)
 function setHistoryKind(k) { _hcKind = k; renderHistoryView(); }
+function setHistoryMonth(v) { _hcMonth = v || ''; renderHistoryView(); }
 // از هر بخش، رفتن به تاریخچهٔ همان بخش
-function openSectionHistory(k) { _hcKind = k || 'safe'; showSection('historyview'); }
+function openSectionHistory(k) { _hcKind = k || 'safe'; _hcMonth = ''; showSection('historyview'); }
+
+// «تاریخ + روز هفته + هفتهٔ چندمِ ماه» — خواستهٔ کاربر: در همهٔ تاریخچه‌ها نوشته شود
+function _hcDateLabel(dateStr) {
+  const s = String(dateStr || '').trim();
+  if (!s || !/\d/.test(s)) return 'بی‌تاریخ';
+  const parts = toEnDigits(s).split('/');
+  const day = parseInt(parts[2], 10);
+  const wk = (isFinite(day) && day > 0) ? (' · هفتهٔ ' + _faNumPlain(Math.floor((day - 1) / 7) + 1) + 'مِ ماه') : '';
+  return _faDateWithWeekday(s) + wk;
+}
+// چند روز از یک تاریخِ شمسی گذشته (برای «چند وقت است برده») — منفی = بی‌تاریخ
+function _hcDaysSince(dateStr) {
+  const ts = _jalaliStrToTs(dateStr);
+  if (!ts) return -1;
+  return Math.max(0, Math.floor((Date.now() - ts) / 86400000));
+}
+function _hcAgoText(dateStr) {
+  const d = _hcDaysSince(dateStr);
+  if (d < 0) return '';
+  if (d === 0) return 'همین امروز';
+  return n2fa(d) + ' روز گذشته';
+}
 
 function _hcItem(kind, date, title, detail, amount, unit, tone) {
   return { kind: kind, date: date || '', title: title || '', detail: detail || '',
@@ -19761,6 +19861,33 @@ function _hcFeed(kind) {
     });
   });
 
+  // 🧾 رسیدهای قرض‌داران (بخش «رسید قرض‌داران») — خواستهٔ کاربر: تاریخچهٔ خودش را داشته باشد
+  if (want('rasid')) (DB.debtQuickReceipts || []).forEach(function (r) {
+    if (!r) return;
+    const amt = Math.round(parseFloat(r.amount) || 0);
+    if (!amt && !(r.account || '').trim()) return;
+    out.push(_hcItem('rasid', r.date, '🧾 رسید — ' + (r.account || '—'),
+      (r.note || '') || 'رسید نقدیِ قرض‌دار', amt, ' افغانی', 'in'));
+  });
+
+  // 🧾 چکنه — با «چند وقت است که برده شده» (خواستهٔ کاربر)
+  if (want('chakana')) (DB.chakanaRows || []).forEach(function (e) {
+    if (!e) return;
+    const bord = (typeof _chakanaBardagi === 'function') ? _chakanaBardagi(e) : 0;
+    const rasid = parseFloat(e.rasid) || 0;
+    const lit = parseFloat(e.fuel) || 0;
+    if (!bord && !rasid && !lit && !(e.name || '').trim()) return;
+    const alb = bord - rasid;
+    const bits = [];
+    if (lit) bits.push('🛢️ ' + n2fa(lit) + ' لیتر' + (e.priceper ? ' × فی ' + n2fa(e.priceper) : ''));
+    if (rasid) bits.push('💵 رسید ' + n2fa(Math.round(rasid)));
+    bits.push('الباقی ' + n2fa(Math.round(alb)));
+    const ago = _hcAgoText(e.date);
+    if (ago) bits.push('⏳ مدت برد: ' + ago);
+    out.push(_hcItem('chakana', e.date, '🧾 چکنه — ' + ((e.name || '').trim() || 'بی‌نام'),
+      bits.join(' · '), Math.round(bord), ' افغانی', alb > 0 ? 'out' : 'in'));
+  });
+
   if (want('company')) (DB.tilCompanies || []).forEach(function (c) {
     if (!c) return;
     [].concat(c.rows || [], c.dieselRows || []).forEach(function (r) {
@@ -19792,24 +19919,65 @@ function _hcFeed(kind) {
       n2fa(pumps) + ' پایه · ' + n2fa(txns) + ' تراکنش', null, '', ''));
   });
 
+  // 🧾 فاکتورها — نام فیلدهای واقعیِ فاکتور (date_sh / customer_name / ...)؛ پیش از این
+  // نام‌های اشتباه خوانده می‌شد و همهٔ ردیف‌ها «بی‌تاریخ» و بی‌مبلغ دیده می‌شدند.
   if (want('invoice')) (DB.invoices || []).forEach(function (v) {
     if (!v) return;
-    out.push(_hcItem('invoice', v.date, '🧾 فاکتور ' + (v.customer || v.name || ''), v.note || '',
-      Math.round(parseFloat(v.total != null ? v.total : v.amount) || 0), ' افغانی', 'in'));
+    const lit = parseFloat(v.liters) || 0;
+    const per = parseFloat(v.price_per_liter) || 0;
+    const money = parseFloat(v.amount) || 0;
+    const total = (lit * per) + money;
+    const st = v.status === 'approved' ? '✅ تایید شده' : (v.status === 'rejected' ? '❌ رد شده' : '🟡 در صف');
+    const bits = [st];
+    if (lit) bits.push('🛢️ ' + n2fa(lit) + ' لیتر' + (per ? ' × فی ' + n2fa(per) : '') + ((v.fuel_type === 'diesel') ? ' (دیزل)' : ' (پطرول)'));
+    if (money) bits.push('💵 مبلغ ' + n2fa(Math.round(money)));
+    if (v.vehicle_type) bits.push('🚚 ' + v.vehicle_type);
+    out.push(_hcItem('invoice', v.date_sh || v.date || '',
+      '🧾 فاکتور ' + n2fa(v.invoice_number || '') + ' — ' + (v.customer_name || v.customer || '—'),
+      bits.join(' · '), Math.round(total), ' افغانی', 'in'));
   });
 
-  if (want('shift')) (DB.shifts || []).forEach(function (sh) {
-    if (!sh) return;
-    out.push(_hcItem('shift', sh.date, '📋 پارچه ' + (sh.fuel === 'diesel' ? '🟤 دیزل' : '⛽ پطرول'),
-      (sh.workerName ? '👤 ' + sh.workerName : ''),
-      Math.round(parseFloat(sh.sales != null ? sh.sales : sh.total) || 0), ' افغانی', 'in'));
-  });
+  // 📋 پارچه‌ها — هم دیزل (DB.shifts) و هم پطرول (DB.reports با دو شیفت روز/شب).
+  // پیش از این نام فیلدها اشتباه بود (workerName/sales) و ردیف‌ها بی‌تاریخ و صفر بودند.
+  if (want('shift')) {
+    (DB.shifts || []).forEach(function (sh) {
+      if (!sh) return;
+      const bits = [];
+      if (sh.name) bits.push('👤 ' + sh.name);
+      bits.push(sh.type === 'night' ? '🌙 شب' : '☀️ روز');
+      if (sh.sale) bits.push('🛢️ ' + n2fa(Math.round(sh.sale)) + ' لیتر');
+      out.push(_hcItem('shift', sh.date, '📋 پارچه ' + (sh.fuel === 'diesel' ? '🟤 دیزل' : '⛽ پطرول'),
+        bits.join(' · '), Math.round(parseFloat(sh.money) || 0), ' افغانی', 'in'));
+    });
+    (DB.reports || []).forEach(function (rep) {
+      if (!rep) return;
+      [['day', '☀️ روز'], ['night', '🌙 شب']].forEach(function (pair) {
+        const sh = rep[pair[0]];
+        if (!sh) return;
+        const bits = [];
+        if (sh.name) bits.push('👤 ' + sh.name);
+        bits.push(pair[1]);
+        if (sh.sale) bits.push('🛢️ ' + n2fa(Math.round(sh.sale)) + ' لیتر');
+        out.push(_hcItem('shift', rep.date, '📋 پارچه ⛽ پطرول',
+          bits.join(' · '), Math.round(parseFloat(sh.money) || 0), ' افغانی', 'in'));
+      });
+    });
+  }
 
-  if (want('attend')) (DB.attendance || []).forEach(function (a) {
-    if (!a) return;
-    out.push(_hcItem('attend', a.date, '🕒 ' + (a.name || 'حاضری'),
-      a.status || (a.present ? 'حاضر' : ''), null, '', ''));
-  });
+  // 🕒 حاضری — نامِ کارمند از DB.staffMembers خوانده می‌شود (رکورد حاضری فقط sid دارد)
+  if (want('attend')) {
+    const staffById = {};
+    (DB.staffMembers || []).forEach(function (st) { if (st) staffById[String(st.id)] = st.name || ''; });
+    (DB.attendance || []).forEach(function (a) {
+      if (!a) return;
+      const nm = staffById[String(a.sid)] || a.name || 'کارمند';
+      const bits = [];
+      if (a.in) bits.push('🟢 آمدن ' + a.in);
+      if (a.out) bits.push('🔴 رفتن ' + a.out);
+      if (a.note) bits.push(a.note);
+      out.push(_hcItem('attend', a.date, '🕒 ' + nm, bits.join(' · ') || 'حاضری', null, '', ''));
+    });
+  }
 
   // تازه‌ترین اول؛ بی‌تاریخ‌ها ته فهرست
   out.sort(function (x, y) {
@@ -19827,7 +19995,7 @@ function renderHistoryCenter() {
     const rows = _hcFeed(c.k);
     const last = rows.length ? (rows[0].date || '') : '';
     const sub = rows.length
-      ? n2fa(rows.length) + ' ردیف' + (last ? ' · تازه‌ترین: ' + _faDateWithWeekday(last) : '')
+      ? n2fa(rows.length) + ' ردیف' + (last ? ' · تازه‌ترین: ' + _hcDateLabel(last) : '')
       : 'هنوز چیزی ثبت نشده';
     return '<button type="button" class="tool-link-card hc-card" style="border-color:' + c.color + ';color:' + c.color + '"'
       + ' onclick="openSectionHistory(\'' + c.k + '\')">'
@@ -19837,18 +20005,42 @@ function renderHistoryCenter() {
   }).join('');
 }
 
-// صفحهٔ تاریخچهٔ یک بخشِ مشخص — فقط ردیف‌های همان بخش، بدون هیچ انتخاب‌گر
+// صفحهٔ تاریخچهٔ یک بخشِ مشخص — فقط ردیف‌های همان بخش، با کشویِ ماه/سال
 function renderHistoryView() {
   const list = document.getElementById('hv-list');
   const sum = document.getElementById('hv-summary');
   const ttl = document.getElementById('hv-title');
+  const monWrap = document.getElementById('hv-month-wrap');
   if (!list) return;
   const meta = HC_KINDS.filter(function (x) { return x.k === _hcKind; })[0] || { lbl: '🕘 تاریخچه', color: 'var(--accent)' };
   if (ttl) { ttl.textContent = '🕘 تاریخچهٔ ' + meta.lbl.replace(/^\S+\s/, ''); ttl.style.color = meta.color; }
-  const rows = _hcFeed(_hcKind);
-  if (sum) sum.textContent = rows.length ? 'مجموعاً ' + n2fa(rows.length) + ' ردیف — از تازه به کهنه' : '';
+  const all = _hcFeed(_hcKind);
+  // کشویِ «ماه و سال» تا جدول خیلی بزرگ نشود و ماه‌ها قاطی نشوند (خواستهٔ کاربر)
+  const months = [];
+  const seen = {};
+  all.forEach(function (r) {
+    const k = _monthKey(r.date || '');
+    if (!/\d/.test(k) || seen[k]) return;
+    seen[k] = 1; months.push(k);
+  });
+  months.sort().reverse();
+  if (_hcMonth && months.indexOf(_hcMonth) === -1) _hcMonth = '';
+  if (monWrap) {
+    monWrap.innerHTML = months.length
+      ? '<label style="font-size:0.8rem;color:var(--muted);font-weight:700">📅 ماه و سال:</label>'
+        + '<select id="hv-month" onchange="setHistoryMonth(this.value)" style="background:var(--card);border:1px solid ' + meta.color + ';border-radius:9px;padding:7px 12px;color:var(--txt);font-family:\'Vazirmatn\',sans-serif;font-size:0.86rem;font-weight:700;cursor:pointer;min-width:180px">'
+        + '<option value="">همهٔ ماه‌ها</option>'
+        + months.map(function (k) { return '<option value="' + k + '"' + (k === _hcMonth ? ' selected' : '') + '>' + escFa(_monthOptionLabel(k)) + '</option>'; }).join('')
+        + '</select>'
+      : '';
+  }
+  const rows = _hcMonth ? all.filter(function (r) { return _monthKey(r.date || '') === _hcMonth; }) : all;
+  if (sum) sum.textContent = rows.length
+    ? 'مجموعاً ' + n2fa(rows.length) + ' ردیف' + (_hcMonth ? ' در ' + _monthLabelFa(_hcMonth) : '') + ' — از تازه به کهنه'
+    : '';
   if (!rows.length) {
-    list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:26px;font-size:0.86rem">هنوز چیزی در این بخش ثبت نشده</div>';
+    list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:26px;font-size:0.86rem">'
+      + (_hcMonth ? 'در این ماه چیزی ثبت نشده' : 'هنوز چیزی در این بخش ثبت نشده') + '</div>';
     return;
   }
   let lastDate = ' ';
@@ -19857,17 +20049,19 @@ function renderHistoryView() {
     let head = '';
     if (r.date !== lastDate) {
       lastDate = r.date;
-      head = '<div class="hc-day">' + (r.date ? escFa(_faDateWithWeekday(r.date)) : 'بی‌تاریخ') + '</div>';
+      head = '<div class="hc-day">' + escFa(_hcDateLabel(r.date)) + '</div>';
     }
     const amt = (r.amount == null || r.amount === '') ? ''
       : '<span class="hc-amt" style="color:' + (r.tone === 'in' ? 'var(--green)' : (r.tone === 'out' ? 'var(--accent)' : 'var(--txt)')) + '">'
         + n2fa(r.amount) + r.unit + '</span>';
+    // تاریخ و روز هفته روی خودِ هر ردیف هم نوشته می‌شود (خواستهٔ کاربر)
+    const stamp = '<div class="hc-d" style="opacity:.85">📅 ' + escFa(_hcDateLabel(r.date)) + '</div>';
     return head + '<div class="hc-row" style="border-right:3px solid ' + meta.color + '">'
       + '<div class="hc-main"><div class="hc-t">' + escFa(r.title) + '</div>'
-      + (r.detail ? '<div class="hc-d">' + escFa(r.detail) + '</div>' : '') + '</div>'
+      + (r.detail ? '<div class="hc-d">' + escFa(r.detail) + '</div>' : '') + stamp + '</div>'
       + '<div class="hc-side">' + amt + '</div></div>';
   }).join('') + (rows.length > CAP
-    ? '<div style="text-align:center;color:var(--muted);padding:12px;font-size:0.78rem">… ' + n2fa(rows.length - CAP) + ' ردیفِ قدیمی‌تر نشان داده نشد</div>' : '');
+    ? '<div style="text-align:center;color:var(--muted);padding:12px;font-size:0.78rem">… ' + n2fa(rows.length - CAP) + ' ردیفِ قدیمی‌تر نشان داده نشد — با کشویِ ماه، ماهِ دلخواه را انتخاب کنید</div>' : '');
 }
 
 function showSection(id, btn) {
@@ -19879,7 +20073,7 @@ function showSection(id, btn) {
   let navId = id;
   if (id === 'shifts-diesel') navId = 'shifts';
   if (id === 'storage-diesel') navId = 'storage';
-  if (id === 'debtsum') navId = 'debtrasid';
+  if (id === 'debtsum' || id === 'debtsummoney') navId = 'debtrasid';
   if (id === 'extraincome') navId = 'profit';
   if (id === 'tanker' || id === 'tankdip') navId = 'storage';
   if (id === 'oldloans' || id === 'oldloansmoney') navId = 'debtrasid';
@@ -19891,7 +20085,7 @@ function showSection(id, btn) {
   document.body.classList.toggle('nav-sticky', !(id === 'waraq' || id === 'debt' || id === 'noinv'));
   // صفحه‌های جدولیِ رسید/قرض‌داران تمام‌عرضِ صفحه شوند (خواستهٔ کاربر: جدول‌هایی که
   // از کادرها به صفحهٔ جدا می‌روند «تمام صفحه» نبودند). فقط همین صفحه‌ها؛ بقیه ۱۰۰۰px می‌مانند.
-  const _WIDE = ['rasid','debtrasid','chakana','oldloans','oldloansmoney','debtsum'];
+  const _WIDE = ['rasid','debtrasid','chakana','oldloans','oldloansmoney','debtsum','debtsummoney'];
   document.body.classList.toggle('sec-wide', _WIDE.indexOf(id) !== -1);
   if (btn) {
     btn.classList.add('active');
@@ -19916,7 +20110,8 @@ function showSection(id, btn) {
   if (id === 'shifts-diesel') { renderDieselLog(); }
   if (id === 'debt') renderPersons('debt');
   if (id === 'debtrasid') { renderDebtRasid(); }
-  if (id === 'debtsum') { renderDebtSummary(); }
+  if (id === 'debtsum') { renderDebtSummary('fuel'); }
+  if (id === 'debtsummoney') { renderDebtSummary('money'); }
   if (id === 'noinv') { try { syncAllPurchasesToCompanies(); } catch(e) {} renderCompanies(); }
   if (id === 'safe') renderSafe();
   if (id === 'sarrafi') renderSarrafi();
@@ -24133,6 +24328,17 @@ function _curPerson() {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   return (list||[]).find(p => p.id === currentPersonId);
 }
+// اگر مودالِ حسابِ یک شخص باز است، جدول/جمع‌ها/آرشیوش را دوباره بساز — برای وقتی که
+// دادهٔ همان شخص از جای دیگری (مثلاً تغییرِ «واحد» در ورق) عوض می‌شود.
+function _refreshOpenPersonModal() {
+  const m = document.getElementById('personModal');
+  if (!m || !m.classList.contains('open')) return;
+  const person = _curPerson();
+  if (!person) return;
+  try { renderPersonRows(person); } catch (e) {}
+  try { _updatePersonTotals(person); } catch (e) {}
+  try { _renderHistoryPanel(person); } catch (e) {}
+}
 function updatePersonRasidFuel(fuel, val) {
   const person = _curPerson(); if (!person) return;
   const acct = _acctOf(person);
@@ -24665,6 +24871,7 @@ function _renderHistoryPanel(person) {
           style="flex:1;min-width:130px;background:rgba(255,255,255,0.16);border:1px dashed rgba(255,255,255,0.6);border-radius:7px;padding:4px 10px;color:#fff;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;box-sizing:border-box">
         <div style="display:flex;align-items:center;gap:6px">
           <span style="font-size:0.72rem;color:rgba(255,255,255,0.85)">${n2fa(rows.length)} ردیف</span>
+          <button onclick="restorePersonHistory('${pid}','${h.id}')" title="ردیف‌های این جدول دوباره داخل حسابِ خودِ شخص بیایند" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.5);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">↩️ برگشت به حساب</button>
           <button onclick="toggleHistoryMode('${pid}','${h.id}')" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.5);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">🔁 ${hMoney?'تیل':'پول'}</button>
           <button onclick="pdfPersonHistory('${pid}','${h.id}')" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.5);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">📄 PDF</button>
           <button onclick="deletePersonHistory('${pid}','${h.id}')" style="background:transparent;border:1px solid rgba(255,255,255,0.45);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">🗑️ حذف کل</button>
@@ -24686,6 +24893,42 @@ function deletePersonHistory(pid, hid) {
   const acct = _acctOf(person);
   acct.tableHistory = (acct.tableHistory||[]).filter(h => h.id !== hid);
   save(); _renderHistoryPanel(person);
+}
+// ↩️ برگشتِ یک جدولِ آرشیو به خودِ حسابِ شخص (باگِ گزارش‌شده: ردیف‌هایی که باید به
+// حساب طرف برمی‌گشتند، داخل بخش تاریخچه/آرشیو می‌ماندند). ردیف‌ها به همان دفتری
+// برمی‌گردند که از آن آرشیو شده بودند (واحد تیل یا واحد پول) و رسیدهای هدرِ همان
+// آرشیو هم به حساب اضافه می‌شوند؛ بعد آن آرشیو برداشته می‌شود.
+function restorePersonHistory(pid, hid) {
+  const person = _hPerson(pid); if (!person) return;
+  const acct = _acctOf(person);
+  const h = (acct.tableHistory || []).find(x => x.id === hid);
+  if (!h) return;
+  const rows = h.rows || [];
+  const toMoney = (h.unitMode === 'money');
+  const unitTxt = toMoney ? 'واحد پول' : 'واحد تیل';
+  if (!confirm('ردیف‌های این جدولِ آرشیو (' + n2fa(rows.length) + ' ردیف) به حسابِ «' + person.name + '» در «' + unitTxt + '» برگردانده شود؟')) return;
+  const key = toMoney ? 'moneyRows' : 'rows';
+  if (!Array.isArray(acct[key])) acct[key] = [];
+  // ردیف‌های تکراری (همان srcKey) دوباره اضافه نشوند
+  const have = new Set(acct[key].map(r => r && r.srcKey).filter(Boolean));
+  const back = rows.filter(r => !(r && r.srcKey && have.has(r.srcKey)));
+  acct[key] = acct[key].concat(JSON.parse(JSON.stringify(back)));
+  // رسیدهای هدرِ آرشیو به رسیدهای همین حساب اضافه می‌شوند
+  const add = (k, v) => { const n = parseFloat(v) || 0; if (n) acct[k] = (parseFloat(acct[k]) || 0) + n; };
+  add('rasidFuelP', h.rasidFuelP); add('rasidFuelD', h.rasidFuelD);
+  add('rasidMoneyP', h.rasidMoneyP); add('rasidMoneyD', h.rasidMoneyD);
+  if (h.percent != null && !(parseFloat(acct.percent) || 0)) acct.percent = h.percent;
+  if ((h.note || '').trim()) acct.note = ((acct.note || '') + (acct.note ? '\n' : '') + h.note).trim();
+  acct.tableHistory = (acct.tableHistory || []).filter(x => x.id !== hid);
+  // اگر حساب در واحدِ دیگری باز است، به همان واحدی برو که ردیف‌ها برگشتند
+  person.mode = toMoney ? 'money' : 'fuel';
+  save();
+  renderPersonRows(person);
+  _updatePersonTotals(person);
+  _renderHistoryPanel(person);
+  if (typeof renderPersons === 'function') renderPersons(currentPersonType);
+  if (typeof updateBanner === 'function') updateBanner();
+  if (typeof showToast === 'function') showToast('↩️ ' + n2fa(back.length) + ' ردیف به حسابِ ' + person.name + ' (' + unitTxt + ') برگشت', '#38a169');
 }
 function pdfPersonHistory(pid, hid) {
   const person = _hPerson(pid); if (!person) return;
@@ -24999,6 +25242,24 @@ function _monthLabel(key) {
   if (p.length === 2) { const m = parseInt(p[1])||0; return (SHAMSI_MONTHS[m-1]||'') + ' ' + p[0]; }
   return key;
 }
+// ارقام فارسی بدون جداکنندهٔ هزارگان (سال ۱۴۰۵ نه ۱٬۴۰۵)
+function _faNumPlain(s) { return String(s == null ? '' : s).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]); }
+// برچسبِ ماه با سال، برای همهٔ کشوها و سربرگ‌های ماهانه: «سرطان ۱۴۰۵ (۱۴۰۵/۰۴)»
+// خواستهٔ کاربر: هر جا ماه هست، سال هم کنارش نوشته شود تا ماه‌های سال‌های مختلف قاطی نشوند.
+function _monthLabelFa(key) {
+  const p = String(key == null ? '' : key).split('/');
+  if (p.length === 2 && /\d/.test(p[0])) {
+    const m = parseInt(p[1]) || 0;
+    return (SHAMSI_MONTHS[m - 1] || p[1]) + ' ' + _faNumPlain(p[0]);
+  }
+  return String(key == null ? '' : key);
+}
+// همان برچسب + کلیدِ عددی برای وضوح بیشتر در کشوها
+function _monthOptionLabel(key) {
+  const lbl = _monthLabelFa(key);
+  const raw = _faNumPlain(key);
+  return lbl === raw ? lbl : (lbl + ' — ' + raw);
+}
 function renderExpenses() {
   const today = persianDate();
   const curMonth = _monthKey(today);
@@ -25037,8 +25298,8 @@ function renderExpenses() {
   const _selWrap = document.createElement('div');
   _selWrap.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px';
   _selWrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">📅 انتخاب ماه:</label>
-    <select id="exp-month-select" style="background:var(--card);border:1px solid var(--accent);border-radius:9px;padding:8px 12px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;min-width:150px">
-      ${keys.map(k => `<option value="${k}"${k===_activeExpenseMonth?' selected':''}>${k}</option>`).join('')}
+    <select id="exp-month-select" style="background:var(--card);border:1px solid var(--accent);border-radius:9px;padding:8px 12px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;min-width:180px">
+      ${keys.map(k => `<option value="${k}"${k===_activeExpenseMonth?' selected':''}>${escFa(_monthOptionLabel(k))}</option>`).join('')}
     </select>`;
   wrap.appendChild(_selWrap);
   _selWrap.querySelector('#exp-month-select').onchange = function(){ _activeExpenseMonth = this.value; renderExpenses(); };
@@ -25049,7 +25310,7 @@ function renderExpenses() {
     const section = document.createElement('div');
     section.style.cssText = 'margin-bottom:18px';
     section.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--dark);border-radius:10px 10px 0 0;border:1px solid var(--border);border-bottom:none">
-      <span style="font-weight:800;color:var(--accent)">📅 ${k}</span>
+      <span style="font-weight:800;color:var(--accent)">📅 ${escFa(_monthOptionLabel(k))}</span>
       <span style="display:flex;align-items:center;gap:10px">
         <button style="background:var(--blue);color:#fff;border:none;border-radius:7px;padding:3px 10px;font-size:0.76rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="pdfExpenses('${k}')">📄 PDF</button>
         <button style="background:var(--green);color:#fff;border:none;border-radius:7px;padding:3px 10px;font-size:0.76rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="addExpenseRowToMonth('${k}')">+ ردیف</button>
@@ -25114,7 +25375,7 @@ function addExpenseMonth() {
   _activeExpenseMonth = nextDate.slice(0, 7);
   DB.expenses.push({ date: nextDate, title: '', amount: 0, note: '' });
   save(); renderExpenses(); updateBanner();
-  showToast('✅ جدول ماه ' + nextDate.slice(0,7) + ' باز شد', '#38a169');
+  showToast('✅ جدول ماه ' + _monthLabelFa(nextDate.slice(0,7)) + ' باز شد', '#38a169');
 }
 // ========== EXPENSES MULTI-ROW ==========
 let _activeExpenseMonth = null;
@@ -25147,8 +25408,8 @@ function renderChakana() {
   const _selWrap = document.createElement('div');
   _selWrap.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px';
   _selWrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">📅 انتخاب ماه:</label>
-    <select id="chakana-month-select" style="background:var(--card);border:1px solid var(--purple);border-radius:9px;padding:8px 12px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;min-width:150px">
-      ${keys.map(k => `<option value="${k}"${k===_activeChakanaMonth?' selected':''}>${k}</option>`).join('')}
+    <select id="chakana-month-select" style="background:var(--card);border:1px solid var(--purple);border-radius:9px;padding:8px 12px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;min-width:180px">
+      ${keys.map(k => `<option value="${k}"${k===_activeChakanaMonth?' selected':''}>${escFa(_monthOptionLabel(k))}</option>`).join('')}
     </select>`;
   wrap.appendChild(_selWrap);
   _selWrap.querySelector('#chakana-month-select').onchange = function(){ _activeChakanaMonth = this.value; renderChakana(); };
@@ -25161,7 +25422,7 @@ function renderChakana() {
   const section = document.createElement('div');
   section.style.cssText = 'margin-bottom:18px';
   section.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--dark);border-radius:10px 10px 0 0;border:1px solid var(--border);border-bottom:none;flex-wrap:wrap;gap:8px">
-      <span style="font-weight:800;color:var(--purple)">📅 ${k}</span>
+      <span style="font-weight:800;color:var(--purple)">📅 ${escFa(_monthOptionLabel(k))}</span>
       <span style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <button style="background:var(--blue);color:#fff;border:none;border-radius:7px;padding:3px 10px;font-size:0.76rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="pdfChakana('${k}')">📄 PDF</button>
         <button style="background:var(--green);color:#fff;border:none;border-radius:7px;padding:3px 10px;font-size:0.76rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="addChakanaRowToMonth('${k}')">+ ردیف</button>
@@ -25292,7 +25553,7 @@ function addChakanaMonth() {
   _activeChakanaMonth = nextDate.slice(0, 7);
   DB.chakanaRows.push({ date: nextDate, name: '', fuel: 0, priceper: 0, rasid: 0 });
   save(); renderChakana();
-  showToast('✅ جدول ماه ' + nextDate.slice(0,7) + ' باز شد', '#38a169');
+  showToast('✅ جدول ماه ' + _monthLabelFa(nextDate.slice(0,7)) + ' باز شد', '#38a169');
 }
 function deleteChakana(idx) {
   if (typeof requireAdmin === 'function' && !requireAdmin()) return;
@@ -25322,7 +25583,7 @@ function pdfChakana(monthKey) {
   const win = window.open('','_blank','width=900,height=680');
   if (win) { win.document.write(_pdfDoc(html)); win.document.close(); } else showToast('مرورگر پنجره را مسدود کرد','#e53e3e');
 }
-function monkeyLabel(key){ return (key && /\d/.test(key)) ? _monthLabel(key) : ''; }
+function monkeyLabel(key){ return (key && /\d/.test(key)) ? _monthLabelFa(key) : ''; }
 function monkeyTitle(base, lbl){ return lbl ? (base + ' — ' + lbl) : base; }
 
 let expRows = [];
@@ -25619,7 +25880,7 @@ function quickAddDebtRasid(rowEl) {
   ensureDebtRasid().push({ id, date, account: person.name, note, amount });
   save();
   nameEl.value = ''; amountEl.value = ''; if (noteEl) noteEl.value = '';
-  renderDebtRasid(); renderDebtSummary();
+  renderDebtRasid(); renderDebtSummary('fuel'); renderDebtSummary('money');
   if (typeof renderPersons === 'function' && currentPersonType === 'debt') renderPersons('debt');
   if (typeof updateBanner === 'function') updateBanner();
   showToast('✅ در حساب ' + person.name + ' ثبت شد', '#38a169');
@@ -25647,7 +25908,7 @@ function addDebtRasidMonth() {
   if (!DB.debtRasidMonths.includes(newKey)) DB.debtRasidMonths.push(newKey);
   _drActiveMonth = newKey;
   save(); renderDebtRasid();
-  showToast('✅ ماه ' + newKey + ' باز شد', '#38a169');
+  showToast('✅ ماه ' + _monthLabelFa(newKey) + ' باز شد', '#38a169');
 }
 function renderDebtRasid() {
   // کادرهای ورود سریع: اگر هنوز ردیفی نیست، یک ردیف باز شود
@@ -25676,12 +25937,12 @@ function renderDebtRasid() {
     const selWrap = document.createElement('div');
     selWrap.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px';
     selWrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">📅 انتخاب ماه:</label>
-      <select id="dr-month-select" style="background:var(--card);border:1px solid var(--accent);border-radius:9px;padding:8px 12px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;min-width:150px">
-        ${keys.map(k => `<option value="${k}"${k===_drActiveMonth?' selected':''}>${k}</option>`).join('')}
+      <select id="dr-month-select" style="background:var(--card);border:1px solid var(--accent);border-radius:9px;padding:8px 12px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;min-width:180px">
+        ${keys.map(k => `<option value="${k}"${k===_drActiveMonth?' selected':''}>${escFa(_monthOptionLabel(k))}</option>`).join('')}
       </select>
       <button class="add-btn" style="background:var(--blue);color:#fff" onclick="addDebtRasidMonth()">📅 ماه جدید</button>
       <button style="background:var(--blue);color:#fff;border:none;border-radius:7px;padding:8px 12px;font-size:0.8rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="pdfDebtRasid('${_drActiveMonth}')">📄 PDF ماه</button>
-      <span style="font-size:0.85rem;font-weight:700;color:var(--green)">جمع ${escFa(_monthLabel(_drActiveMonth))}: ${n2fa(Math.round(monTotal*100)/100)}</span>`;
+      <span style="font-size:0.85rem;font-weight:700;color:var(--green)">جمع ${escFa(_monthLabelFa(_drActiveMonth))}: ${n2fa(Math.round(monTotal*100)/100)}</span>`;
     monWrap.appendChild(selWrap);
     selWrap.querySelector('#dr-month-select').onchange = function(){ _drActiveMonth = this.value; renderDebtRasid(); };
     // جدول ماه فعال — بدون نوار اضافه، مثل بخش مصارف
@@ -25723,7 +25984,7 @@ function undoDebtRasid(id) {
   if (!confirm('این رسید از حساب برداشته شود؟')) return;
   removePersonRowBySrcKey('debtQuick|' + r.id);
   rows.splice(i, 1);
-  save(); renderDebtRasid(); renderDebtSummary();
+  save(); renderDebtRasid(); renderDebtSummary('fuel'); renderDebtSummary('money');
   if (typeof renderPersons === 'function' && currentPersonType === 'debt') renderPersons('debt');
   if (typeof updateBanner === 'function') updateBanner();
   showToast('↩️ رسید برداشته شد', '#d97706');
@@ -25814,7 +26075,7 @@ function addDebtPersonsBulk() {
     added++;
   });
   save();
-  renderDebtRasid(); renderDebtSummary();
+  renderDebtRasid(); renderDebtSummary('fuel'); renderDebtSummary('money');
   if (typeof renderPersons === 'function') renderPersons('debt');
   if (typeof updateBanner === 'function') updateBanner();
   showToast('✅ افزوده شد: ' + n2fa(added) + (dup ? (' — تکراری: ' + n2fa(dup)) : ''), added ? '#38a169' : '#d97706');
@@ -25831,31 +26092,37 @@ function _debtSumFigures(p) {
   return { money: false, bardagi: t.fuel, rasid: rasidL, albaqi: t.fuel - rasidL };
 }
 // PDF قرض‌های دسته‌جمعی
-function pdfDebtSummary() {
+function pdfDebtSummary(kind) {
+  // دو PDF کاملاً جدا: «واحد تیل» و «واحد پول» — هرگز قاطی نمی‌شوند
+  const money = kind === 'money';
+  const unitTitle = money ? 'واحد پول' : 'واحد تیل';
+  const u = money ? '' : ' ل';
   const d = allDates();
   const rnd = x => Math.round(x*100)/100;
-  const list = DB.debtPersons || [];
+  const list = (DB.debtPersons || []).filter(p => {
+    const f = _debtSumFigures(p);
+    return money ? f.money : !f.money;
+  });
   let totBardagi = 0, totRasid = 0, totAlbaqi = 0;
-  let totBardagiL = 0, totRasidL = 0, totAlbaqiL = 0, anyFuel = false;
   const rowsHtml = list.map((p,i) => {
     const f = _debtSumFigures(p);
-    if (f.money) { totBardagi += f.bardagi; totRasid += f.rasid; totAlbaqi += f.albaqi; }
-    else { anyFuel = true; totBardagiL += f.bardagi; totRasidL += f.rasid; totAlbaqiL += f.albaqi; }
-    const u = f.money ? '' : ' ل';
+    totBardagi += f.bardagi; totRasid += f.rasid; totAlbaqi += f.albaqi;
+    const age = _debtAgeInfo(p);
+    const owes = f.albaqi > 0;
     return `<tr>
       <td style="text-align:center;color:#718096">${n2fa(i+1)}</td>
-      <td style="font-weight:700">${escFa(p.name)}${f.money ? '' : ' <span style="font-size:0.85em;color:#2b6cb0">(واحد تیل)</span>'}</td>
+      <td style="font-weight:700">${escFa(p.name)}</td>
       <td style="color:#c07700;font-weight:900">${n2fa(rnd(f.bardagi)||0)}${u}</td>
       <td style="color:#38a169;font-weight:900">${n2fa(rnd(f.rasid)||0)}${u}</td>
-      <td style="color:${f.albaqi>0?'#e53e3e':'#38a169'};font-weight:900">${n2fa(rnd(-f.albaqi)||0)}${u}</td>
+      <td style="color:${owes?'#e53e3e':'#38a169'};font-weight:900">${n2fa(rnd(-f.albaqi)||0)}${u}</td>
+      <td style="font-weight:700;color:${owes && age.days>=180 ? '#e53e3e' : '#718096'}">${owes ? escFa(age.txt) + (age.from ? ' (از ' + escFa(age.from) + ')' : '') : 'تسویه'}</td>
     </tr>`;
   }).join('');
-  const _fSub = v => anyFuel ? `<div style="font-size:0.85em;color:#2b6cb0">${n2fa(rnd(v)||0)} ل</div>` : '';
   const html = `<!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>قرض‌های دسته‌جمعی — پمپ یعقوبی</title>
+<title>قرض‌های دسته‌جمعی (${unitTitle}) — پمپ یعقوبی</title>
 <style>
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -25884,21 +26151,21 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 </style>
 </head>
 <body>
-<h1>📊 پمپ یعقوبی — قرض‌های دسته‌جمعی</h1>
+<h1>📊 پمپ یعقوبی — قرض‌های دسته‌جمعی (${unitTitle})</h1>
 <div class="meta">تاریخ چاپ: ${d.sh} | ${d.mi}</div>
 <div class="sum-row">
   <div class="sum-box"><div class="l">تعداد قرض‌داران</div><div class="v" style="color:#718096">${n2fa(list.length)}</div></div>
-  <div class="sum-box"><div class="l">جمع بردگی</div><div class="v" style="color:#c07700">${n2fa(rnd(totBardagi))}${_fSub(totBardagiL)}</div></div>
-  <div class="sum-box"><div class="l">جمع رسید</div><div class="v" style="color:#38a169">${n2fa(rnd(totRasid))}${_fSub(totRasidL)}</div></div>
-  <div class="sum-box"><div class="l">الباقی</div><div class="v" style="color:${totAlbaqi>0?'#e53e3e':'#38a169'}">${n2fa(rnd(-totAlbaqi))}${_fSub(-totAlbaqiL)}</div></div>
+  <div class="sum-box"><div class="l">جمع بردگی</div><div class="v" style="color:#c07700">${n2fa(rnd(totBardagi))}${u}</div></div>
+  <div class="sum-box"><div class="l">جمع رسید</div><div class="v" style="color:#38a169">${n2fa(rnd(totRasid))}${u}</div></div>
+  <div class="sum-box"><div class="l">الباقی</div><div class="v" style="color:${totAlbaqi>0?'#e53e3e':'#38a169'}">${n2fa(rnd(-totAlbaqi))}${u}</div></div>
 </div>
 <table>
 <thead>
-  <tr><th>#</th><th>نام قرض‌دار</th><th>جمع بردگی</th><th>جمع رسید</th><th>الباقی</th></tr>
+  <tr><th>#</th><th>نام قرض‌دار</th><th>جمع بردگی</th><th>جمع رسید</th><th>الباقی</th><th>چند وقت قرض‌دار</th></tr>
 </thead>
-<tbody>${rowsHtml || '<tr><td colspan="5" style="text-align:center;padding:20px;color:#718096">هنوز قرض‌داری ثبت نشده</td></tr>'}</tbody>
+<tbody>${rowsHtml || '<tr><td colspan="6" style="text-align:center;padding:20px;color:#718096">در این واحد قرض‌داری ثبت نشده</td></tr>'}</tbody>
 <tfoot>
-  <tr><td colspan="2">جمع کل</td><td>${n2fa(rnd(totBardagi))}${anyFuel?` <span style="font-size:0.85em">| ${n2fa(rnd(totBardagiL))} ل</span>`:''}</td><td>${n2fa(rnd(totRasid))}${anyFuel?` <span style="font-size:0.85em">| ${n2fa(rnd(totRasidL))} ل</span>`:''}</td><td>${n2fa(rnd(-totAlbaqi))}${anyFuel?` <span style="font-size:0.85em">| ${n2fa(rnd(-totAlbaqiL))} ل</span>`:''}</td></tr>
+  <tr><td colspan="2">جمع کل</td><td>${n2fa(rnd(totBardagi))}${u}</td><td>${n2fa(rnd(totRasid))}${u}</td><td>${n2fa(rnd(-totAlbaqi))}${u}</td><td></td></tr>
 </tfoot>
 </table>
 <div class="footer">پمپ یعقوبی — این سند به صورت خودکار تولید شده است</div>
@@ -25908,64 +26175,79 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
   if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
   else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
 }
-function renderDebtSummary() {
-  const tb = document.getElementById('debtsum-body');
+// «چند وقت است قرض‌دار است» — از قدیمی‌ترین ردیفِ تاریخ‌دارِ حساب حساب می‌شود.
+// برمی‌گرداند { txt, days, from } — days = تعداد روز از اولین قرض تا امروز.
+function _debtAgeInfo(p) {
+  let minTs = 0, minStr = '';
+  _allRows(p).forEach(r => {
+    const ts = _jalaliStrToTs(r && r.date);
+    if (ts > 0 && (minTs === 0 || ts < minTs)) { minTs = ts; minStr = r.date; }
+  });
+  if (!minTs) return { txt: 'بی‌تاریخ', days: -1, from: '' };
+  const days = Math.max(0, Math.floor((Date.now() - minTs) / 86400000));
+  return { txt: _membershipText(minTs) || 'امروز', days, from: minStr };
+}
+function renderDebtSummary(kind) {
+  // kind: 'money' = صفحهٔ واحد پول، وگرنه صفحهٔ واحد تیل. دو صفحهٔ کاملاً جدا هستند
+  // تا پول و تیل هرگز در یک جدول قاطی نشوند (خواستهٔ کاربر).
+  const money = kind === 'money';
+  const pfx = money ? 'debtsummoney' : 'debtsum';
+  const tb = document.getElementById(pfx + '-body');
   if (!tb) return;
   const rnd = x => Math.round(x*100)/100;
-  const list = DB.debtPersons || [];
+  const all = DB.debtPersons || [];
+  const list = all.filter(p => {
+    const f = _debtSumFigures(p);
+    return money ? f.money : !f.money;
+  });
   tb.innerHTML = '';
   let totBardagi = 0, totRasid = 0, totAlbaqi = 0;
-  let totBardagiL = 0, totRasidL = 0, totAlbaqiL = 0, anyFuel = false, anyMoney = false;
   if (!list.length) {
-    tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">هنوز قرض‌داری ثبت نشده</td></tr>';
+    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted)">' +
+      (money ? 'هیچ قرض‌دارِ «واحد پول» ثبت نشده' : 'هیچ قرض‌دارِ «واحد تیل» ثبت نشده') + '</td></tr>';
   } else {
     // جمع‌ها روی «همهٔ» قرض‌داران حساب می‌شوند، ولی برای جلوگیری از قفل‌شدن با داده‌های
     // خیلی بزرگ فقط CAP ردیفِ اول در DOM رندر می‌شود (بقیه در بخش قرض‌داران/جست‌وجو).
     const CAP = 400;
     const frag = document.createDocumentFragment();
+    const u = money ? '' : ' ل';
     list.forEach((p, i) => {
-      // حساب «واحد تیل» هم دقیقاً مثل «واحد پول» نمایش داده می‌شود — با لیتر
       const f = _debtSumFigures(p);
-      if (f.money) { anyMoney = true; totBardagi += f.bardagi; totRasid += f.rasid; totAlbaqi += f.albaqi; }
-      else { anyFuel = true; totBardagiL += f.bardagi; totRasidL += f.rasid; totAlbaqiL += f.albaqi; }
+      totBardagi += f.bardagi; totRasid += f.rasid; totAlbaqi += f.albaqi;
       if (i >= CAP) return;
-      const u = f.money ? '' : ' ل';
+      const age = _debtAgeInfo(p);
+      const owes = f.albaqi > 0;
+      const ageColor = !owes ? 'var(--muted)' : (age.days >= 180 ? 'var(--red)' : (age.days >= 60 ? 'var(--accent)' : 'var(--muted)'));
       const tr = document.createElement('tr');
       tr.style.cursor = 'pointer';
       tr.onclick = () => openPersonModal('debt', p.id);
       tr.innerHTML = `
         <td>${n2fa(i+1)}</td>
-        <td style="font-weight:700">${escFa(p.name)}${f.money ? '' : ' <span style="font-size:0.78em;color:var(--blue);font-weight:700">(واحد تیل)</span>'}</td>
+        <td style="font-weight:700">${escFa(p.name)}</td>
         <td style="color:var(--accent);font-weight:700">${n2fa(rnd(f.bardagi)||0)}${u}</td>
         <td style="color:var(--green);font-weight:700">${n2fa(rnd(f.rasid)||0)}${u}</td>
-        <td style="color:${f.albaqi>0?'var(--red)':'var(--green)'};font-weight:700">${n2fa(rnd(-f.albaqi)||0)}${u}</td>
+        <td style="color:${owes?'var(--red)':'var(--green)'};font-weight:700">${n2fa(rnd(-f.albaqi)||0)}${u}</td>
+        <td style="color:${ageColor};font-weight:700;white-space:nowrap">${owes ? escFa(age.txt) : '✅ تسویه'}${owes && age.from ? `<div style="font-size:0.72em;color:var(--muted)">از ${escFa(age.from)}</div>` : ''}</td>
       `;
       frag.appendChild(tr);
     });
     tb.appendChild(frag);
     if (list.length > CAP) {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td colspan="5" style="text-align:center;padding:10px;color:var(--muted)">نمایش ${n2fa(CAP)} از ${n2fa(list.length)} قرض‌دار — جمع‌های پایین شاملِ همه است</td>`;
+      tr.innerHTML = `<td colspan="6" style="text-align:center;padding:10px;color:var(--muted)">نمایش ${n2fa(CAP)} از ${n2fa(list.length)} قرض‌دار — جمع‌های پایین شاملِ همه است</td>`;
       tb.appendChild(tr);
     }
   }
-  // جمع کل: واحد پول و واحد تیل جدا از هم (قاطی نمی‌شوند). فقط واحدی نوشته می‌شود
-  // که واقعاً حسابی دارد — قبلاً وقتی همهٔ حساب‌ها تیلی بودند، یک «۰»ِ پولیِ اضافه
-  // بالای عددِ لیتر می‌نشست و کادرِ «جمع کل» دوخطه/ناتراز و زشت دیده می‌شد.
-  // ‎||0 هم «‎-0» را از نمایش می‌اندازد. سلول‌ها vertical-align:middle تا هم‌قد بنشینند.
-  const setTot = (id, v, vL) => {
+  const setTot = (id, v) => {
     const el = document.getElementById(id); if (!el) return;
     el.style.verticalAlign = 'middle';
-    const parts = [];
-    if (anyMoney || !anyFuel) parts.push(n2fa(rnd(v)||0));
-    if (anyFuel) parts.push(`<div style="${anyMoney ? 'font-size:0.82em;' : ''}color:var(--blue)">${n2fa(rnd(vL)||0)} ل</div>`);
-    el.innerHTML = parts.join('');
+    el.innerHTML = n2fa(rnd(v)||0) + (money ? '' : ' ل');
   };
-  const _lblTd = document.querySelector('#sec-debtsum tfoot td');
+  const _lblTd = document.querySelector('#sec-' + pfx + ' tfoot td');
   if (_lblTd) _lblTd.style.verticalAlign = 'middle';
-  setTot('debtsum-tot-bardagi', totBardagi, totBardagiL);
-  setTot('debtsum-tot-rasid', totRasid, totRasidL);
-  setTot('debtsum-tot-albaqi', -totAlbaqi, -totAlbaqiL);
+  setTot(pfx + '-tot-bardagi', totBardagi);
+  setTot(pfx + '-tot-rasid', totRasid);
+  setTot(pfx + '-tot-albaqi', -totAlbaqi);
 }
 
 // ========== شرکت ها تیل (حساب جداگانه برای هر شرکت) ==========
@@ -26815,12 +27097,13 @@ function _renderCompanyHistoryPanel(company){
       const sumUsd = rows.reduce((a,r)=>a+cmpTotalUsd(r), 0);
       const sumAfn = rows.reduce((a,r)=>a+cmpAfnTotal(r), 0);
       const rate = sumUsd > 0 ? sumAfn / sumUsd : 0;
-      let tTon=0,tUsd=0,tAfn=0,tPoul=0,tAlb=0, dispNum=0;
+      let tTon=0,tUsd=0,tAfn=0,tPoul=0,tAlb=0,tAlbUsd=0, dispNum=0;
       // ردیف‌های جدول آرشیو «قابل ویرایش»اند: تاریخ/نام/کیلو/قیمت تن/نرخ/رسید همانجا
       // عوض می‌شوند و جمع‌ها بلافاصله دوباره حساب می‌شوند؛ ردیف هم اضافه/حذف می‌شود
       const body = rows.map((r,i)=>{
         const ton=cmpTon(r), tu=cmpTotalUsd(r), ta=cmpAfnTotal(r), poul=cmpPoulAfn(r,rate), ab=cmpAlbaqi(r,rate);
         tTon+=ton; tUsd+=tu; tAfn+=ta; tPoul+=poul; tAlb+=ab;   // جمع‌ها شاملِ خریدها (برای درستیِ الباقی)
+        tAlbUsd += cmpAlbaqiUsd(r, rate);
         if (r.srcPurchaseId) return '';   // خریدِ مخزن در جدول نشان داده نمی‌شود (فقط در کادرِ خریدها)
         dispNum++;
         const kgShow = (r.kg!=null && r.kg!=='' && +r.kg!==0) ? r.kg : (r.ton ? Math.round(parseFloat(r.ton)*1000) : '');
@@ -26881,14 +27164,17 @@ function _renderCompanyHistoryPanel(company){
           <button style="white-space:nowrap;border-radius:7px;border:1px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;padding:5px 10px;cursor:pointer" onclick="pdfCompanyHistory('${company.id}','${h.id}')">📄 PDF</button>
           <button class="del-btn" style="${armed?'background:var(--red);color:#fff;':''}white-space:nowrap" onclick="deleteCompanyTableHistory('${company.id}','${h.id}',this)">${armed?'✔ تأیید حذف؟':'🗑️ حذف'}</button>
         </div>
-        <!-- خلاصهٔ همین جدول آرشیو (مثل کادرهای بالا) -->
-        <div style="display:flex;gap:8px;flex-wrap:wrap;padding:8px 12px;background:${ac}0d;border-bottom:1px solid ${ac}33">
-          <span style="font-size:0.72rem;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:4px 9px">جمع کل دالر: <b style="color:var(--blue)">${n2fa(tUsd.toFixed(1))} $</b></span>
-          <span style="font-size:0.72rem;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:4px 9px">جمع کل افغانی: <b style="color:var(--accent)">${n2fa(Math.round(tAfn))}</b></span>
-          <span style="font-size:0.72rem;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:4px 9px">رسید: <b style="color:var(--green)">${n2fa(Math.round(tPoul))}</b></span>
-          <span style="font-size:0.72rem;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:4px 9px">جمع الباقی: <b style="color:${tAlb>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(tAlb))}</b></span>
-          ${purchBadge}
+        <!-- خلاصهٔ همین جدول آرشیو — دقیقاً همان شش هدرِ بالای بخش، ولی با اطلاعاتِ
+             خودِ همین آرشیو (خواستهٔ کاربر) -->
+        <div class="cm-hist-sum" style="background:${ac}0d;border-bottom:1px solid ${ac}33">
+          <span class="cmhs-box"><i>جمع مقدار</i><b style="color:var(--blue)">${n2fa(Math.round(tTon*1000))} کیلو<small> (${n2fa(tTon.toFixed(2))} تن)</small></b></span>
+          <span class="cmhs-box"><i>جمع کل دالر</i><b style="color:var(--blue)">${n2fa(tUsd.toFixed(1))} $</b></span>
+          <span class="cmhs-box"><i>باقی‌مانده دالر ($)</i><b style="color:${tAlbUsd>=0?'var(--green)':'var(--red)'}">${n2fa(tAlbUsd.toFixed(1))} $</b></span>
+          <span class="cmhs-box"><i>جمع کل (افغانی)</i><b style="color:var(--accent)">${n2fa(Math.round(tAfn))}</b></span>
+          <span class="cmhs-box"><i>رسید</i><b style="color:var(--green)">${n2fa(Math.round(tPoul))}</b></span>
+          <span class="cmhs-box"><i>جمع الباقی</i><b style="color:${tAlb>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(tAlb))}<small style="color:${tAlbUsd>=0?'var(--green)':'var(--red)'}"> · ${n2fa(tAlbUsd.toFixed(1))} $</small></b></span>
         </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 12px;background:${ac}0d;border-bottom:1px solid ${ac}33">${purchBadge}</div>
         <div class="xls-wrap"><table class="xls-tbl" id="chist-tbl-${company.id}-${h.id}" data-colw-key="cm" style="table-layout:fixed;width:100%;min-width:1031px">
           <thead><tr><th style="width:34px">#</th><th style="width:96px">تاریخ</th><th style="width:150px">نام</th><th style="width:95px" data-colkey="خرید (کیلو)">خرید(کیلو)</th><th style="width:95px" data-colkey="قیمت تن ($)">قیمت تن($)</th><th style="width:95px" data-colkey="کل ($)">کل($)</th><th style="width:58px">نرخ</th><th style="width:95px" data-colkey="کل (افغانی)">کل(افغانی)</th><th style="width:112px">رسید</th><th style="width:60px;font-size:0.75rem">نرخ پول</th><th style="width:95px">الباقی</th><th style="width:46px">حذف</th></tr></thead>
           <tbody>${body || '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:12px">فقط خرید — جزئیات در کادرِ خریدها</td></tr>'}</tbody>
@@ -27043,6 +27329,11 @@ function _updateCompanyTotals(company) {
   set('cm-total-usd',    n2fa(sumUsd.toFixed(1)) + ' $');
   set('cm-total-afn',    n2fa(Math.round(sumAfn)) + ' افغانی');
   set('cm-total-poul',   n2fa(Math.round(sumPoul)) + ' افغانی');
+  // «جمع مقدار» و «رسید» با واحدِ روشن — تا شش کادرِ بالا هرکدام یک چیزِ مشخص بگویند
+  const _usdRecvNow = parseFloat(company.usdReceived) || 0;
+  const _poulBox = document.getElementById('cm-total-poul');
+  if (_poulBox) _poulBox.innerHTML = n2fa(Math.round(sumPoul)) + ' افغانی'
+    + (_usdRecvNow ? '<div style="font-size:0.72rem;color:var(--blue);font-weight:700;margin-top:2px">+ ' + n2fa(_usdRecvNow.toFixed(1)) + ' $ دالرِ گرفته‌شده</div>' : '');
   set('cm-ft-ton',    n2fa(Math.round(sumTon*1000)));
   set('cm-ft-usd',    n2fa(sumUsd.toFixed(1)) + ' $');
   set('cm-ft-afn',    n2fa(Math.round(sumAfn)));
@@ -27064,7 +27355,10 @@ function _updateCompanyTotals(company) {
   // جمع الباقی = الباقیِ نهاییِ افغانی (و معادلِ دالریِ آن کنارش)؛ هر دو یک چیز را می‌گویند
   const albaqiAfn = Math.round(afnAfterUsd);
   set('cm-total-albaqi', n2fa(albaqiAfn) + ' افغانی');
-  set('cm-ft-albaqi', n2fa(albaqiAfn));
+  // پایینِ ستونِ «الباقی» باید دقیقاً جمعِ همان ستون باشد؛ کادرِ بالا الباقیِ نهایی
+  // (بعد از کم‌کردنِ دالرِ گرفته‌شده) را می‌گوید — قبلاً هر دو یک عدد بودند و جمعِ
+  // ستون با ردیف‌های بالایش نمی‌خواند.
+  set('cm-ft-albaqi', n2fa(Math.round(sumAlb)));
   const albEl = document.getElementById('cm-total-albaqi');
   if (albEl) albEl.style.color = albaqiAfn > 0 ? 'var(--red)' : (albaqiAfn < 0 ? 'var(--green)' : 'var(--muted)');
   _updateCompanySentence(usdRemaining, albaqiAfn);
@@ -29678,7 +29972,8 @@ function renderWaraqPumps(w) {
   const sd = activeShift(w);
   const pumps = sd.pumps;
   if (!pumps.length) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:14px;color:var(--muted);font-size:0.78rem">پایه‌ای اضافه نشده — از دکمه «➕ افزودن پایه» استفاده کنید</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:14px;color:var(--muted);font-size:0.78rem">پایه‌ای اضافه نشده — از دکمه «➕ افزودن پایه» استفاده کنید</td></tr>';
+    _renderWaraqWorkerDebts(sd);
     return;
   }
   pumps.forEach((p, i) => {
@@ -29698,10 +29993,40 @@ function renderWaraqPumps(w) {
       <td><input class="xls-in wq-fee" type="number" value="${p.pricePerLiter||''}" placeholder="0" oninput="updateWaraqPump(${i},'pricePerLiter',this.value)"></td>
       <td id="wqp-l-${i}" style="font-weight:700;color:var(--accent)">${n2fa(liters)}</td>
       <td id="wqp-a-${i}" style="font-weight:700;color:var(--green)">${n2fa(Math.round(amount))}</td>
+      <td><input class="xls-in" type="number" value="${p.debt||''}" placeholder="0" title="قرضِ همین کارمند/پایه" style="color:var(--red);font-weight:700" oninput="updateWaraqPump(${i},'debt',this.value)"></td>
       <td><button onclick="removeWaraqPump(${i})" title="حذف پایه" style="background:var(--red);color:#fff;border:none;border-radius:5px;padding:3px 7px;cursor:pointer;font-size:0.7rem">✕</button></td>
     `;
     tbody.appendChild(tr);
   });
+  _renderWaraqWorkerDebts(sd);
+}
+
+// «قرضِ هر کارمند» در همین ورق: پایه‌های هم‌نام با هم جمع می‌شوند و جمله هم زیرش
+// نوشته می‌شود (خواستهٔ کاربر: مقدار قرضِ هر کارمندِ پایه در ورق و جمله).
+function _renderWaraqWorkerDebts(sd) {
+  const box = document.getElementById('wq-worker-debts');
+  if (!box) return;
+  const map = new Map();
+  let total = 0;
+  ((sd && sd.pumps) || []).forEach((p, i) => {
+    const d = parseFloat(p.debt) || 0;
+    if (!d) return;
+    const nm = (p.worker || '').trim() || ('پایهٔ ' + (p.num || (i + 1)));
+    map.set(nm, (map.get(nm) || 0) + d);
+    total += d;
+  });
+  if (!map.size) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = '';
+  const chips = [...map.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([nm, v]) => `<span style="display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--border);border-radius:999px;padding:5px 12px;font-size:0.78rem;font-weight:700">
+      👷 ${escFa(nm)} <b style="color:var(--red)">${n2fa(Math.round(v))}</b></span>`).join('');
+  box.innerHTML = `<div style="background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:9px 11px">
+      <div style="font-size:0.78rem;font-weight:800;color:var(--accent);margin-bottom:7px">💳 قرضِ هر کارمند در این شیفت</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">${chips}
+        <span style="display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1.5px solid var(--red);border-radius:999px;padding:5px 12px;font-size:0.78rem;font-weight:900">جمله <b style="color:var(--red)">${n2fa(Math.round(total))}</b> افغانی</span>
+      </div>
+    </div>`;
 }
 
 function updateWaraqNote(val) {
@@ -29715,7 +30040,7 @@ function updateWaraqPump(idx, field, val) {
   if (!w) return;
   const sd = activeShift(w);
   if (!sd.pumps[idx]) return;
-  if (field === 'start' || field === 'end' || field === 'pricePerLiter') sd.pumps[idx][field] = parseFloat(val) || 0;
+  if (field === 'start' || field === 'end' || field === 'pricePerLiter' || field === 'debt') sd.pumps[idx][field] = parseFloat(toEnDigits(String(val)).replace(/[^0-9.\-]/g, '')) || 0;
   else sd.pumps[idx][field] = val;
   if (field === 'pricePerLiter' && (parseFloat(val)||0) > 0) {
     const pFuel = sd.pumps[idx].fuel || 'petrol';
@@ -29737,6 +30062,7 @@ function updateWaraqPump(idx, field, val) {
     if (lEl) lEl.textContent = n2fa(liters);
     if (aEl) aEl.textContent = n2fa(Math.round(amount));
   }
+  if (field === 'debt' || field === 'worker') { try { _renderWaraqWorkerDebts(sd); } catch (e) {} }
   calcWaraqSummary(w);
   save();
 }
@@ -29879,6 +30205,9 @@ function _waraqTxnUnitChanged(w, t, field, val) {
   syncWaraqTxnsToPersons(w);
   if (typeof renderPersons === 'function') renderPersons('debt');
   if (typeof renderExpenses === 'function') renderExpenses();
+  // اگر حسابِ همان شخص همین حالا باز است، جدول و جمع‌هایش هم فوری تازه شوند —
+  // وگرنه تا بستن و باز کردنِ دوبارهٔ حساب، «انگار هیچ چیز عوض نشده» دیده می‌شد.
+  try { _refreshOpenPersonModal(); } catch (e) {}
   if (field === 'unit' && (t.name||'').trim() && (parseFloat(t.amount)||0)) {
     showToast(val === 'money' ? '💵 به دفترِ «واحد پول» منتقل شد — بدون لیتر و فی'
                               : '⛽ به دفترِ «واحد تیل» منتقل شد', '#3182ce');
@@ -29981,6 +30310,8 @@ function calcWaraqSummary(w) {
   set('wq-sum-total', n2fa(Math.round(cur.sales)) + ' افغانی');
   set('wq-total-liters', n2fa(cur.petrolL + cur.dieselL) + ' لیتر');
   set('wq-total-sales', n2fa(Math.round(cur.sales)) + ' افغانی');
+  // جملهٔ «جمله قرض»ِ پایه‌ها (قرضِ کارمندان) — ستون تازهٔ جدول قرائت پمپ‌ها
+  set('wq-total-debt', n2fa(Math.round(cur.declaredDebt || 0)));
   syncWaraqSalesToSafe(w);
   const detailEl = document.getElementById('wq-shortage-detail');
   if (detailEl) {
@@ -30076,10 +30407,14 @@ function syncWaraqTxnsToPersons(w) {
   if (!DB.debtPersons) DB.debtPersons = [];
   ['day','night'].forEach(shift => {
     const sd = w[shift];
+    // مبلغِ ذخیره‌شده اول با همان قاعدهٔ نمایشِ ورق تازه می‌شود؛ وگرنه مبلغی که در
+    // ورق دیده می‌شود با مبلغی که به حسابِ قرض‌دار می‌رفت یکی نبود (و گاهی ردیف با
+    // مبلغِ صفرِ کهنه از حساب پاک می‌شد).
+    try { _normalizeWaraqTxns(sd); } catch (e) {}
     (sd.transactions||[]).forEach((t, i) => {
       const srcKey = w.id + '|' + shift + '|' + i;
       const name = (t.name||'').trim();
-      let amount = Math.round(parseFloat(t.amount)||0);
+      let amount = Math.round(_waraqTxnAmount(sd, t) || 0);
       let litersFilled = parseFloat(t.liters)||0;
       // پُرکردنِ دوطرفهٔ تیل↔پول با نرخِ همین ورق (خواستهٔ کاربر):
       //  • واحدِ تیل ولی فقط «مبلغ» نوشته شده و «مقدار تیل» خالی → مقدار تیل = مبلغ ÷ نرخِ ورق
@@ -30168,6 +30503,22 @@ function printWaraq() {
   const w = getActiveWaraq();
   if (!w) return;
   ensureWaraqShifts(w);
+  // خلاصهٔ «قرضِ هر کارمند» برای PDF — همان چیزی که روی صفحه دیده می‌شود
+  const workerDebtHtml = (sd) => {
+    const map = new Map();
+    let total = 0;
+    ((sd && sd.pumps) || []).forEach((p, i) => {
+      const d = parseFloat(p.debt) || 0;
+      if (!d) return;
+      const nm = (p.worker || '').trim() || ('پایهٔ ' + (p.num || (i + 1)));
+      map.set(nm, (map.get(nm) || 0) + d); total += d;
+    });
+    if (!map.size) return '';
+    const items = [...map.entries()].sort((a, b) => b[1] - a[1])
+      .map(([nm, v]) => `<span style="border:1px solid #cbd5e0;border-radius:9px;padding:3px 8px;margin:0 4px 4px 0;display:inline-block">👷 ${escFa(nm)}: <b style="color:#c53030">${Math.round(v)}</b></span>`).join('');
+    return `<div style="margin:6px 0 10px;font-size:0.72rem">💳 قرضِ هر کارمند: ${items}
+      <span style="border:1.5px solid #c53030;border-radius:9px;padding:3px 8px;display:inline-block;font-weight:900">جمله: ${Math.round(total)} افغانی</span></div>`;
+  };
   const shiftSection = (sd, label, hdrColor) => {
     const t = computeShiftTotals(sd);
     const wqr = computeWaraqShortage(sd, t);
@@ -30175,7 +30526,7 @@ function printWaraq() {
       const l = Math.max(0,(p.end||0)-(p.start||0));
       const a = l*(p.pricePerLiter||0);
       const fl = p.fuel==='diesel'?'دیزل':'بطرول';
-      return `<tr><td>${p.num||''}</td><td>${escFa(p.worker)||'—'}</td><td>${fl}</td><td>${escFa(p.note)||'—'}</td><td>${p.start||'—'}</td><td>${p.end||'—'}</td><td>${p.pricePerLiter||'—'}</td><td style="font-weight:900">${l}</td><td style="font-weight:900;color:#276749">${Math.round(a)}</td></tr>`;
+      return `<tr><td>${p.num||''}</td><td>${escFa(p.worker)||'—'}</td><td>${fl}</td><td>${escFa(p.note)||'—'}</td><td>${p.start||'—'}</td><td>${p.end||'—'}</td><td>${p.pricePerLiter||'—'}</td><td style="font-weight:900">${l}</td><td style="font-weight:900;color:#276749">${Math.round(a)}</td><td style="font-weight:900;color:#c53030">${Math.round(parseFloat(p.debt)||0)||'—'}</td></tr>`;
     }).join('');
     // مبلغ دقیقاً همان چیزی که در خودِ ورق دیده می‌شود (خودکار = مقدار تیل × نرخِ ورق)
     const _amt = tx => Math.round(_waraqTxnAmount(sd, tx)) || 0;
@@ -30190,9 +30541,10 @@ function printWaraq() {
     return `
     ${label ? `<h2 style="font-size:0.92rem;font-weight:900;color:${hdrColor};border-bottom:2px solid ${hdrColor};padding-bottom:4px;margin:14px 0 6px">${label}${sd.workerName?' — کارمند: '+sd.workerName:''}</h2>` : (sd.workerName ? `<div style="font-size:0.95rem;font-weight:900;color:#1a202c;text-align:right;border-bottom:2px solid #cbd5e0;padding-bottom:5px;margin:0 0 10px">👷 کارمند: ${escFa(sd.workerName)}</div>` : '')}
     <div class="section-title">🛢️ قرائت پمپ‌ها</div>
-    <table><thead><tr><th>بایه</th><th>نام</th><th>نوع</th><th>توضیح/ساعت</th><th>شروع</th><th>ختم</th><th>فی لیتر</th><th>لیتر</th><th>مبلغ</th></tr></thead>
-    <tbody>${pumpRows||'<tr><td colspan="9" style="text-align:center;padding:8px;color:#718096">—</td></tr>'}</tbody>
-    <tfoot><tr><td colspan="7">جمع</td><td>${t.petrolL+t.dieselL} لیتر</td><td>${Math.round(t.sales)} افغانی</td></tr></tfoot></table>
+    <table><thead><tr><th>بایه</th><th>نام</th><th>نوع</th><th>توضیح/ساعت</th><th>شروع</th><th>ختم</th><th>فی لیتر</th><th>لیتر</th><th>مبلغ</th><th>جمله قرض</th></tr></thead>
+    <tbody>${pumpRows||'<tr><td colspan="10" style="text-align:center;padding:8px;color:#718096">—</td></tr>'}</tbody>
+    <tfoot><tr><td colspan="7">جمع</td><td>${t.petrolL+t.dieselL} لیتر</td><td>${Math.round(t.sales)} افغانی</td><td>${Math.round(t.declaredDebt||0)} افغانی</td></tr></tfoot></table>
+    ${workerDebtHtml(sd)}
     <div class="section-title">📋 تراکنش‌ها</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div><table><thead><tr><th>#</th><th>نام</th><th>مقدار تیل</th><th>مبلغ</th><th>نوع</th></tr></thead><tbody>${lTx||'<tr><td colspan="5" style="text-align:center;padding:8px;color:#718096">—</td></tr>'}</tbody></table></div>
@@ -30424,11 +30776,18 @@ function normFa(s) {
     .replace(/\s+/g,' ')
     .toLowerCase().trim();
 }
-// شمارهٔ حواله را از داخل متن بیرون می‌کشد و متن را بدون آن برمی‌گرداند
+// شمارهٔ حواله را از داخل متن بیرون می‌کشد و متن را بدون آن برمی‌گرداند.
+// «بدون حواله» هم یک حواله است: اگر در ورق نوشته شود «احمد بدون حواله»، ستونِ
+// «نمبر حواله»ی حسابِ قرض‌دار «بدون حواله» می‌گیرد (نه خالی) و همین عبارت از نامِ
+// نمایشی برداشته می‌شود — وگرنه ردیف در حواله‌ها اصلاً دیده نمی‌شد.
+const NO_HAWALA = 'بدون حواله';
 function extractHawala(text) {
   const t = toEnDigits(String(text||''));
   const m = t.match(/حواله\s*(?:نمبر|شماره)?\s*[:#]?\s*(\d+)/);
   if (m) return { num: m[1], clean: t.replace(m[0],'').replace(/\s{2,}/g,' ').trim() };
+  // «بدون حواله» / «بی حواله» / «بدون نمبر حواله» / «حواله ندارد»
+  const nm = t.match(/(?:بدون|بی[ ‌]?)\s*(?:نمبر|شماره)?\s*حواله|حواله\s*(?:ای)?\s*(?:ندار[دم]|نیست|نداره)/);
+  if (nm) return { num: NO_HAWALA, clean: t.replace(nm[0],'').replace(/\s{2,}/g,' ').trim() };
   return { num: '', clean: t.trim() };
 }
 // شخص را با پیدا کردن نامش در هر جای متن، در یک لیست مشخص تشخیص می‌دهد (طولانی‌ترین تطبیق برنده)
@@ -30513,19 +30872,36 @@ function placePersonRow(person, rowData, descText, targetAcct, unit) {
   const arr = useMoney ? acct.moneyRows : acct.rows;
   if (rowData.srcKey) {
     // اگر همین srcKey در حساب یا دفترِ دیگری از همین شخص بود (توضیحات یا واحد عوض
-    // شده)، از همه‌جا به‌جز دفترِ مقصد پاک شود تا ردیف دوتا نشود
+    // شده)، از همه‌جا به‌جز دفترِ مقصد پاک شود تا ردیف دوتا نشود. رسیدِ دستیِ کاربر
+    // از دفترِ قبلی برداشته و به دفترِ تازه منتقل می‌شود — وگرنه با عوض کردنِ
+    // «واحد» در ورق (تیل ↔ پول) پرداختیِ همان ردیف از بین می‌رفت و کاربر فکر
+    // می‌کرد حسابِ طرف اصلاً عوض نشده / خراب شده.
+    let movedRasid = 0, movedRasidFuel = 0;
     [person].concat(person.subs || []).forEach(a => {
       ['rows','moneyRows'].forEach(k => {
-        if (Array.isArray(a[k]) && a[k] !== arr) a[k] = a[k].filter(r => r.srcKey !== rowData.srcKey);
+        if (!Array.isArray(a[k]) || a[k] === arr) return;
+        a[k].forEach(r => {
+          if (r.srcKey !== rowData.srcKey) return;
+          movedRasid = movedRasid || (parseFloat(r.rasid) || 0);
+          movedRasidFuel = movedRasidFuel || (parseFloat(r.rasidFuel) || 0);
+        });
+        a[k] = a[k].filter(r => r.srcKey !== rowData.srcKey);
       });
     });
     const ex = arr.find(r => r.srcKey === rowData.srcKey);
     if (ex) {
-      const keepRasid = parseFloat(ex.rasid)||0;   // پرداختی دستی کاربر حفظ شود
+      const keepRasid = (parseFloat(ex.rasid)||0) || movedRasid;   // پرداختی دستی کاربر حفظ شود
+      const keepRasidFuel = (parseFloat(ex.rasidFuel)||0) || movedRasidFuel;
       Object.assign(ex, rowData);
       ex.rasid = keepRasid;
+      if (keepRasidFuel) ex.rasidFuel = keepRasidFuel;
       ex.albaqi = (parseFloat(ex.bardagi)||0) - keepRasid;
       return ex;
+    }
+    if (movedRasid || movedRasidFuel) {
+      rowData.rasid = movedRasid;
+      if (movedRasidFuel) rowData.rasidFuel = movedRasidFuel;
+      rowData.albaqi = (parseFloat(rowData.bardagi)||0) - movedRasid;
     }
   }
   const emptyIdx = arr.findIndex(r =>
@@ -33860,7 +34236,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.136';
+const APP_VERSION = '2.9.137';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -34848,7 +35224,7 @@ function adjSecFont(secId, delta) {
   try { localStorage.setItem('secFont_' + secId, scale); } catch(e) {}
 }
 function loadSecFonts() {
-  ['shifts','shifts-diesel','debt','debtrasid','debtsum','noinv','expenses','safe','sarrafi','rasid','storage','storage-diesel','profit','extraincome','settings','waraq','attendance'].forEach(id => {
+  ['shifts','shifts-diesel','debt','debtrasid','debtsum','debtsummoney','noinv','expenses','safe','sarrafi','rasid','storage','storage-diesel','profit','extraincome','settings','waraq','attendance'].forEach(id => {
     const saved = parseFloat((function(){ try { return localStorage.getItem('secFont_' + id) || 0; } catch(e){ return 0; } })());
     if (saved && saved !== 1) {
       _secFontScales[id] = saved;
