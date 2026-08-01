@@ -2116,7 +2116,12 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
      محافظ‌ها: (۱) اگر آدرسِ تازه اصلاً وصل نشد، دستگاه خودکار به آدرسِ قبلیِ سالم
      برمی‌گردد و آن تنظیمِ خراب را دیگر امتحان نمی‌کند — یک آدرسِ اشتباه نمی‌تواند
      همهٔ دستگاه‌ها را از کار بیندازد. (۲) تنظیمِ تکراری هیچ کوچ/حلقه‌ای نمی‌سازد. ── */
-  var cfgSwitchTimer = null, cfgPrev = null, cfgMirrored = false;
+  var cfgSwitchTimer = null, cfgPrev = null, cfgMirrored = false, cfgSeenTs = 0;
+
+  // شمارهٔ تنظیمِ تازه: باید از هر چه تا حالا دیده‌ایم بزرگ‌تر باشد. اگر فقط
+  // Date.now() می‌گذاشتیم، دستگاهی که ساعتش جلو است یک شمارهٔ آینده می‌نوشت و
+  // بعد از آن هیچ دستگاهِ دیگری نمی‌توانست سرور را عوض کند.
+  function cfgNewTs(){ return Math.max(Date.now(), cfgSeenTs + 1, cfgTs() + 1); }
 
   function cfgLocal(){
     var u = _lsGet('pumpServerUrl'), t = _lsGet('pumpServerToken'), ts = cfgTs();
@@ -2284,6 +2289,7 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     var local = cfgLocal();
     var rTs = (v && parseInt(v.ts, 10)) || 0;
     var bad  = parseInt(_lsGet(CFG_BAD_KEY), 10) || 0;
+    if (rTs > cfgSeenTs) cfgSeenTs = rTs;      // تنظیمِ بعدی باید از این هم جلوتر باشد
     if (cfgValid(v) && cfgDeadUrls[v.url]) return;           // این آدرس همین حالا مرده شناخته شد
     if (cfgValid(v) && rTs > local.ts && rTs !== bad) {
       if (cfgSameAsNow(v)) { cfgStoreLocal(v.url, v.token, rTs); return; }  // همین سروریم، فقط زمان را به‌روز کن
@@ -2319,7 +2325,7 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     current: function(){ return { url: SELF_HOST_URL, token: SELF_HOST_TOKEN, ts: cfgTs() }; },
     probe: cfgProbe,
     apply: function(url, token){                       // ذخیرهٔ محلی + پخش به همه
-      var c = { url: url, token: token || '', ts: Date.now() };
+      var c = { url: url, token: token || '', ts: cfgNewTs() };
       _lsSet(CFG_BAD_KEY, '');
       var p = cfgBroadcast(c);            // پخش در پس‌زمینه (اولین کار: نوشتن روی سرورِ فعلی)
       if (cfgSameAsNow(c)) cfgStoreLocal(c.url, c.token, c.ts);
@@ -17755,7 +17761,9 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button class="pw-btn" style="background:var(--blue);color:#fff" onclick="syncUpload()">⬆️ بارگذاری در سرور (دستی)</button>
       <button class="pw-btn" style="background:var(--green);color:#fff" onclick="syncDownload()">⬇️ دریافت از سرور</button>
+      <button class="pw-btn" style="background:var(--card);color:var(--txt);border:1px solid var(--border)" onclick="syncDiagnose()">🔎 وضعیت هم‌زمان‌سازی</button>
     </div>
+    <div id="sync-diag" style="margin-top:10px;font-size:0.8rem;line-height:2;color:var(--muted)"></div>
     <span id="sync-auto-badge" style="display:none;margin-top:10px;font-size:0.78rem;font-weight:700;padding:4px 10px;border-radius:7px;background:var(--dark);border:1px solid var(--border)"></span>
     <div id="sync-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;line-height:1.8"></div>
     <div id="sync-lasttime" style="margin-top:6px;font-size:0.75rem;color:var(--muted)"></div>
@@ -19214,9 +19222,11 @@ function syncUpload() {
   _setSyncMsg('⏳ در حال بارگذاری...', 'var(--accent)');
   const payload = JSON.parse(JSON.stringify(DB));
   payload.lastSyncUpload = new Date().toISOString();
-  _fbDb.ref('stations/' + code).set(payload)
+  _nextSeq(code)
+    .then(seq => { payload._seq = seq; return _fbDb.ref('stations/' + code).set(payload); })
     .then(() => {
       DB.lastSyncUpload = payload.lastSyncUpload;
+      DB._seq = payload._seq;
       DB._rev = (parseInt(DB._rev, 10) || 0) + 1;
       _writeLsCache();
       try { _IDB.put(JSON.parse(JSON.stringify(DB))); } catch(e) {}
@@ -19241,6 +19251,7 @@ function syncDownload() {
       var _prevRev = parseInt(DB._rev, 10) || 0;
       Object.assign(DB, snap.val());
       DB.syncCode = 'pump1';
+      DB._seq = _seqOf(snap.val());
       // دادهٔ تازه‌آمدهٔ سرور باید از هر نسخهٔ محلی (کش یا IndexedDB) تازه‌تر شمرده
       // شود، وگرنه با باز شدنِ بعدی ممکن بود نسخهٔ کهنهٔ محلی رویش بنشیند
       DB._rev = Math.max(_prevRev, parseInt(DB._rev, 10) || 0) + 1;
@@ -19254,6 +19265,45 @@ function syncDownload() {
       _updateAutoSyncBadge();
     })
     .catch(err => _setSyncMsg('❌ خطا در دریافت: ' + err.message, '#e53e3e'));
+}
+/* ── وضعیت هم‌زمان‌سازی: به‌جای حدس زدن، همین را روی هر دستگاه بزن و مقایسه کن ──
+   نشان می‌دهد این دستگاه به کدام سرور وصل است، شمارهٔ نوبتِ خودش و سرور چند است،
+   و چند رکورد این‌جا و چند رکورد روی سرور هست. اگر دو دستگاه «سرور» یا «کد ایستگاه»
+   متفاوتی نشان دادند، ریشهٔ یکی‌نبودن همان است. ── */
+function syncDiagnose() {
+  const box = document.getElementById('sync-diag');
+  if (!box) return;
+  const code = _syncCode();
+  const url = (window.__SELF_HOST_URL__ || '(تنظیم نشده)');
+  const online = (function(){ try { return window.__pumpNet__.connected(); } catch(e){ return null; } })();
+  const L = [];
+  L.push('🖥️ سرورِ این دستگاه: <span style="direction:ltr;display:inline-block">' + url + '</span>');
+  L.push('🔌 وضعیت اتصال: ' + (online === null ? '؟' : (online ? '<b style="color:var(--green)">وصل</b>' : '<b style="color:var(--red)">قطع</b>')));
+  L.push('🏷️ کد ایستگاه: ' + code);
+  L.push('🔢 شمارهٔ نوبتِ این دستگاه: ' + _seqOf(DB));
+  L.push('📦 رکوردهای این دستگاه: ' + _dbRecordCount(DB));
+  box.innerHTML = L.join('<br>') + '<br>⏳ در حال خواندن از سرور...';
+  if (!_fbReady()) { box.innerHTML = L.join('<br>') + '<br>❌ سرور تنظیم نشده'; return; }
+  _fbDb.ref('stations/' + code).get().then(function(snap){
+    const sd = snap.exists() ? snap.val() : null;
+    if (!sd) { box.innerHTML = L.join('<br>') + '<br>⚠️ روی این سرور برای کد «' + code + '» هیچ حسابی نیست.'; return; }
+    L.push('🔢 شمارهٔ نوبتِ سرور: ' + _seqOf(sd));
+    L.push('📦 رکوردهای سرور: ' + _dbRecordCount(sd));
+    L.push('🕓 آخرین بارگذاری روی سرور: ' + (sd.lastSyncUpload ? new Date(sd.lastSyncUpload).toLocaleString('fa-IR') : '—'));
+    L.push('🔑 رمز مدیرِ سرور و این دستگاه: ' + ((sd.password || '') === (DB.password || '') ? '<b style="color:var(--green)">یکی است</b>' : '<b style="color:var(--red)">یکی نیست</b>'));
+    let verdict;
+    if (_serverIsNewer(sd)) verdict = '⬇️ سرور تازه‌تر است — همین حالا از سرور گرفته می‌شود.';
+    else if (_seqOf(DB) > _seqOf(sd)) verdict = '⬆️ این دستگاه تازه‌تر است — تغییراتش به سرور می‌رود.';
+    else verdict = '✅ این دستگاه و سرور دقیقاً یکی هستند.';
+    // ساعتِ دستگاه: با شمارندهٔ نوبت دیگر اثری در تصمیم ندارد، ولی اگر خیلی پرت باشد بهتر است بداند
+    const skew = Date.now() - _tsOf(sd);
+    let clock = '';
+    if (sd.lastSyncUpload && skew < -120000) clock = '<br>⚠️ ساعتِ این دستگاه حدود ' + Math.round(-skew / 60000) + ' دقیقه <b>عقب‌تر</b> از آخرین نوشتهٔ سرور است.';
+    box.innerHTML = L.join('<br>') + '<br><br>' + verdict + clock;
+    if (_serverIsNewer(sd)) _applyServerData(sd);
+  }).catch(function(e){
+    box.innerHTML = L.join('<br>') + '<br>❌ خواندن از سرور نشد: ' + (e && e.message ? e.message : 'خطا');
+  });
 }
 function _updateSyncLastTime() {
   const el = document.getElementById('sync-lasttime');
@@ -19325,14 +19375,18 @@ function _runAutoSync() {
   // timestamp جدید روی سرور می‌نوشت و حساب اصلی همهٔ دستگاه‌ها پاک می‌شد.
   // پاک‌سازیِ عمدی (wipedAt) استثناست: حالتِ خالی باید آپلود شود تا سرور هم خالی شود
   if (_dbRecordCount(DB) === 0 && !_fbStartupPulled && !DB.wipedAt) return;
+  // سوکت قطع است: نوشتن را در صف نگذار (با شمارهٔ کهنه روی کارِ تازهٔ بقیه می‌نشیند)
+  if (!_syncSocketReady()) { _scheduleAutoSync(8000); return; }
 
   _autoSyncInFlight = true;
   _setSyncMsg('⏳ در حال هم‌زمان‌سازی با سرور...', 'var(--accent)');
   const payload = JSON.parse(JSON.stringify(DB));
   payload.lastSyncUpload = new Date().toISOString();
-  _fbDb.ref('stations/' + code).set(payload)
+  _nextSeq(code)
+    .then(seq => { payload._seq = seq; return _fbDb.ref('stations/' + code).set(payload); })
     .then(() => {
       DB.lastSyncUpload = payload.lastSyncUpload;
+      DB._seq = payload._seq;
       // با _writeLsCache — پیش از این مستقیم صدا می‌شد و وقتی حساب از سقفِ کش
       // بزرگ‌تر می‌شد خطای سهمیه می‌داد؛ آن خطا زنجیره را به catch می‌انداخت، پس
       // _dirtySinceUpload صفر نمی‌شد و برنامه کلِ حساب را هر ۱۵ ثانیه تا ابد
@@ -19383,6 +19437,43 @@ setInterval(function(){ if (navigator.onLine && _dirtySinceUpload) _runAutoSync(
 let _fbStartupDone = false;
 let _fbStartupPulled = false;  // اولین دریافت موفق از سرور انجام شده؟ (محافظ آپلودِ دیتای خالی)
 let _fbStartupTries = 0;
+
+/* ── «کدام نسخه تازه‌تر است؟» دیگر با ساعتِ دستگاه تصمیم گرفته نمی‌شود ──────────
+   ریشهٔ این‌که گوشی و کامپیوتر هیچ‌وقت یکی نمی‌شدند همین بود: تازه‌بودن با
+   lastSyncUpload سنجیده می‌شد و آن را هر دستگاه با ساعتِ خودش می‌نوشت. اگر ساعتِ
+   دو دستگاه یکی نبود (که تقریباً هیچ‌وقت دقیقاً یکی نیست):
+     • دستگاهی که ساعتش جلوتر بود، نوشته‌اش همیشه «تازه‌تر» دیده می‌شد و هر بار که
+       باز می‌شد کلِ حسابِ خودش را روی سرور می‌نوشت و کارِ دستگاه دیگر را پاک می‌کرد؛
+     • دستگاهی که ساعتش عقب‌تر بود، هر چه می‌نوشت از نظر بقیه «کهنه» بود و نادیده
+       گرفته می‌شد — حتی عوض کردنِ رمز. برای همین رمزها هم یکی نمی‌شدند.
+   حالا شمارندهٔ نوبت (_seq) روی خودِ سرور می‌نشیند: هر بارگذاری، شمارهٔ سرور را
+   می‌خواند و یکی جلوتر می‌نویسد. همهٔ دستگاه‌ها یک شمارنده را می‌بینند، پس ساعتِ
+   کسی دیگر در کار نیست. (lastSyncUpload فقط برای نمایش به کاربر باقی می‌ماند.) ── */
+function _seqOf(o){ return parseInt(o && o._seq, 10) || 0; }
+function _tsOf(o){ return new Date((o && o.lastSyncUpload) || 0).getTime() || 0; }
+function _serverIsNewer(sd){
+  const ss = _seqOf(sd), ls = _seqOf(DB);
+  if (ss || ls) return ss > ls;              // شمارنده در کار است → ساعت بی‌ربط
+  return _tsOf(sd) > _tsOf(DB);              // سازگاری با نسخه‌هایی که هنوز شمارنده ندارند
+}
+function _localIsNewerOrSame(sd){
+  const ss = _seqOf(sd), ls = _seqOf(DB);
+  if (ss || ls) return ls >= ss;
+  return _tsOf(DB) >= _tsOf(sd);
+}
+// شمارهٔ نوبتِ بعدی را از خودِ سرور بگیر (اگر نشد، دستِ‌کم یکی جلوتر از مالِ خودمان)
+function _nextSeq(code){
+  try {
+    return _fbDb.ref('stations/' + code + '/_seq').get()
+      .then(function(s){ return Math.max(parseInt(s && s.val(), 10) || 0, _seqOf(DB)) + 1; })
+      .catch(function(){ return _seqOf(DB) + 1; });
+  } catch(e) { return Promise.resolve(_seqOf(DB) + 1); }
+}
+// وقتی سوکت قطع است، نوشتنِ کلِ حساب در صف می‌ماند و بعداً — با شمارهٔ کهنه — روی
+// کارِ تازهٔ بقیه می‌نشیند. پس در حالت قطع اصلاً بارگذاری نمی‌کنیم و صبر می‌کنیم.
+function _syncSocketReady(){
+  try { return !window.__pumpNet__ || window.__pumpNet__.connected(); } catch(e) { return true; }
+}
 function _applyServerData(serverData) {
   _applyingServerData = true;
   try {
@@ -19396,6 +19487,7 @@ function _applyServerData(serverData) {
   } catch(e) {}
   Object.assign(DB, serverData);
   DB.syncCode = 'pump1';
+  DB._seq = _seqOf(serverData);   // شمارندهٔ این دستگاه دقیقاً همانِ سرور شود
   // دادهٔ واردشده از سرور ممکن است هنوز ردیف‌های با نرخِ خودکار داشته باشد → به فیِ دستی تبدیلش کن
   try { DB._autoFeesCleared = false; _manualizeDebtorRates(); } catch(e){}
   try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
@@ -19438,13 +19530,11 @@ function _autoLoadFromFirebaseOnStartup() {
         _startFirebaseRealtimeListener();
         return;
       }
-      const serverTime = new Date(serverData.lastSyncUpload || 0).getTime();
-      const localTime  = new Date(DB.lastSyncUpload  || 0).getTime();
       // محافظ دستگاه تازه: اگر اینجا (آیفون/مرورگر تازه) هیچ رکوردی نیست ولی سرور
-      // حساب دارد، همیشه از سرور بگیر — حتی اگر timestamp ها قابل اتکا نباشند.
+      // حساب دارد، همیشه از سرور بگیر.
       // wipedAt: اگر اینجا عمداً با «پاک کردن همه» خالی شده، خالی بودن دلیلِ برگرداندن داده از سرور نیست
       const localEmptyServerHasData = !DB.wipedAt && _dbRecordCount(DB) === 0 && _dbRecordCount(serverData) > 0;
-      if (localTime >= serverTime && !localEmptyServerHasData) {
+      if (_localIsNewerOrSame(serverData) && !localEmptyServerHasData) {
         // لوکال برابر یا جدیدتر است — همیشه آپلود کن تا تغییرات (رمز، تنظیمات، حساب‌ها) به سرور برسند
         _dirtySinceUpload = true;
         _runAutoSync();
@@ -19467,6 +19557,23 @@ function _autoLoadFromFirebaseOnStartup() {
 }
 // اگر رویداد online آمد و هنوز اولین دریافت انجام نشده، فوراً تلاش کن
 window.addEventListener('online', function(){ if (!_fbStartupDone) setTimeout(_autoLoadFromFirebaseOnStartup, 800); });
+// به‌محضِ برقرار شدنِ دوبارهٔ سوکت: اول ببین سرور چه دارد، بعد تغییرات معطلِ خودت را بفرست
+// فقط «لحظهٔ وصل شدن» مهم است. این شنونده با هر پیامِ شبکه (هر ack) صدا می‌خورد؛
+// اگر هر بار زمان‌بندی را از نو بچینیم، تایمرِ بارگذاری هیچ‌وقت به سر نمی‌رسد و
+// هیچ چیزی به سرور نمی‌رود.
+try {
+  let _netWasConnected = null;
+  window.__pumpNet__.onChange(function(st){
+    if (!st) return;
+    const nowConn = !!st.connected;
+    if (nowConn === _netWasConnected) return;
+    _netWasConnected = nowConn;
+    if (!nowConn) return;
+    if (!_fbStartupDone) { try { _autoLoadFromFirebaseOnStartup(); } catch(e){} return; }
+    try { _fbPullLatestOnce(); } catch(e){}
+    if (_dirtySinceUpload) _scheduleAutoSync(2000);
+  });
+} catch(e){}
 // ===== دریافت مقایسه‌ای هنگام برگشت به برنامه (مخصوص PWA/شورت‌کات آیفون) =====
 // iOS اتصال باز Firebase را در پس‌زمینه می‌کُشد؛ هنگام برگشت، یک‌بار مستقیم چک
 // می‌کنیم که اگر روی دستگاه دیگری چیزی ثبت شده، بلافاصله همین‌جا هم بیاید.
@@ -19476,10 +19583,8 @@ function _fbPullLatestOnce() {
   _fbDb.ref('stations/' + code).get().then(function(snap) {
     if (!snap.exists()) return;
     const sd = snap.val();
-    const st = new Date(sd.lastSyncUpload || 0).getTime();
-    const lt = new Date(DB.lastSyncUpload  || 0).getTime();
     const localEmptyServerHasData = !DB.wipedAt && _dbRecordCount(DB) === 0 && _dbRecordCount(sd) > 0;
-    if (st > lt || localEmptyServerHasData) {
+    if (_serverIsNewer(sd) || localEmptyServerHasData) {
       _applyServerData(sd);
       try { showSyncToast('☁️ تغییرات جدید دریافت شد', '#38a169', 2500); } catch(e) {}
     }
@@ -19507,9 +19612,7 @@ function _startFirebaseRealtimeListener() {
     _fbDb.ref('stations/' + code).on('value', function(snap) {
       if (!snap.exists()) return;
       const sd = snap.val();
-      const st = new Date(sd.lastSyncUpload || 0).getTime();
-      const lt = new Date(DB.lastSyncUpload  || 0).getTime();
-      if (st > lt) {
+      if (_serverIsNewer(sd)) {
         _applyServerData(sd);
         try { showSyncToast('☁️ تغییرات جدید دریافت شد', '#38a169', 2500); } catch(e) {}
       }
@@ -34636,7 +34739,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.143';
+const APP_VERSION = '2.9.144';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
