@@ -93,6 +93,7 @@ export function publicState() {
     permanent: ['named', 'token'].includes(getSetting('tunnel_mode', 'quick')),
     installed: Boolean(state.binary),
     binary: state.binary,
+    diagnosis: state.diagnosis || null,
     log: state.lastLines.slice(-12),
   };
 }
@@ -272,6 +273,100 @@ function runCf(args, { timeout = 120000, onLine } = {}) {
   });
 }
 
+/**
+ * فایلِ اعتبارِ تونل را هرجا که cloudflared گذاشته باشد پیدا می‌کند و در پوشهٔ
+ * پنل کپی می‌گیرد. اگر این فایل نباشد، cloudflared فوراً با کد ۱ می‌میرد و
+ * هیچ توضیحی هم در پنل دیده نمی‌شد.
+ */
+async function ensureCredFile(uuid) {
+  const target = path.join(CF_DIR, `${uuid}.json`);
+  if (fs.existsSync(target)) return target;
+
+  const candidates = [
+    path.join(os.homedir(), '.cloudflared', `${uuid}.json`),
+    path.join(process.cwd(), `${uuid}.json`),
+    path.join(config.dataDir, `${uuid}.json`),
+  ];
+  for (const candidate of candidates) {
+    if (!fs.existsSync(candidate)) continue;
+    try {
+      await fsp.mkdir(CF_DIR, { recursive: true });
+      await fsp.copyFile(candidate, target);
+      return target;
+    } catch {
+      return candidate; // کپی نشد، ولی خودش هست
+    }
+  }
+  return null;
+}
+
+/**
+ * چرا تونل بالا نمی‌آید؟ — بررسی واقعیِ پیش‌نیازها.
+ * به‌جای «کد ۱»، همان چیزی را می‌گوید که باید درست شود.
+ */
+export function tunnelDiagnosis() {
+  const mode = getSetting('tunnel_mode', 'quick');
+  const problems = [];
+
+  if (mode === 'named') {
+    if (!findCert()) {
+      problems.push({
+        code: 'not_logged_in',
+        message: 'به حساب Cloudflare وارد نشده‌اید (فایل cert.pem نیست).',
+      });
+    }
+    if (!fs.existsSync(CONFIG_FILE)) {
+      problems.push({ code: 'no_config', message: 'فایل پیکربندی تونل ساخته نشده است.' });
+    } else {
+      const cred = readCredFromConfig();
+      if (!cred) {
+        problems.push({ code: 'no_credentials_line', message: 'در پیکربندی، مسیر فایل اعتبار نوشته نشده.' });
+      } else if (!fs.existsSync(cred)) {
+        problems.push({
+          code: 'credentials_missing',
+          message: `فایل اعتبارِ تونل سرِ جایش نیست: ${cred}`,
+          fixable: true,
+        });
+      }
+    }
+  }
+
+  if (mode === 'token' && !getSetting('tunnel_token', null)) {
+    problems.push({ code: 'no_token', message: 'توکن تونل ذخیره نشده است.' });
+  }
+
+  // آخرین خطی که خودِ cloudflared به‌عنوان خطا چاپ کرده
+  const cfError = [...state.lastLines]
+    .reverse()
+    .find((line) => /error|failed|cannot|unable|no such file|not found/i.test(line));
+
+  return { mode, ok: problems.length === 0, problems, lastError: cfError || null };
+}
+
+/**
+ * تلاش برای درست کردنِ خودکارِ خرابیِ رایج: فایل اعتبار جابه‌جا شده.
+ * مسیرش را دوباره پیدا می‌کند و پیکربندی را بازنویسی می‌کند.
+ */
+export async function repairTunnel() {
+  const uuid = readTunnelIdFromConfig();
+  if (!uuid) return { ok: false, error: 'no_permanent_tunnel' };
+
+  const cred = await ensureCredFile(uuid);
+  if (!cred) {
+    return {
+      ok: false,
+      error: 'credentials_not_found',
+      detail: `فایل ${uuid}.json پیدا نشد — تونل باید دوباره ساخته شود.`,
+    };
+  }
+
+  await writeIngress(uuid, cred);
+  logEvent('info', 'panel', 'پیکربندی تونل بازسازی شد');
+  stopTunnel();
+  await startTunnel({});
+  return { ok: true, credentialsFile: cred };
+}
+
 export function namedConfig() {
   return {
     loggedIn: Boolean(findCert()),
@@ -374,10 +469,16 @@ export async function namedSetup({ hostname, name = 'pump-yaqobi' }) {
     return { ok: false, error: 'dns_failed', detail: routed.output.slice(-400) };
   }
 
-  const credFile = path.join(CF_DIR, `${uuid}.json`);
-  const homeCred = path.join(os.homedir(), '.cloudflared', `${uuid}.json`);
-  if (!fs.existsSync(credFile) && fs.existsSync(homeCred)) {
-    await fsp.copyFile(homeCred, credFile);
+  // فایلِ اعتبارِ تونل — اگر پیدا نشود، cloudflared بی‌صدا با کد ۱ می‌میرد
+  const credFile = await ensureCredFile(uuid);
+  if (!credFile) {
+    return {
+      ok: false,
+      error: 'credentials_not_found',
+      detail:
+        `فایلِ اعتبارِ تونل (${uuid}.json) پیدا نشد. ` +
+        `در ترمینال این را بزنید: "${state.binary}" tunnel create ${name}`,
+    };
   }
 
   setSetting('tunnel_mode', 'named');
@@ -706,6 +807,7 @@ export async function startTunnel({ port } = {}) {
       pushLine(line);
       // حالت آدرس ثابت: به‌محض ثبت اتصال، همان زیردامنه آدرس ماست
       if (namedHost && !state.url && /Registered tunnel connection|Connection .* registered/i.test(line)) {
+        state.repairTried = false;
         setStatus('running', { url: `https://${namedHost}`, startedAt: Date.now(), error: null });
         console.log(`[tunnel] آدرس ثابت فعال شد: https://${namedHost}`);
         logEvent('info', 'panel', `تونل با آدرس ثابت فعال شد: ${namedHost}`);
@@ -737,8 +839,26 @@ export async function startTunnel({ port } = {}) {
       return;
     }
     state.restarts++;
-    setStatus('error', { url: null, error: `تونل بسته شد (کد ${code ?? '-'}) — دوباره تلاش می‌شود` });
-    logEvent('warn', 'panel', `تونل بسته شد (کد ${code}); تلاش دوباره تا ۱۰ ثانیهٔ دیگر`);
+    // «کد ۱» به کسی نمی‌گوید چه شده — دلیل واقعی را از خروجی cloudflared و از
+    // بررسیِ پیش‌نیازها بیرون می‌کشیم.
+    const diag = tunnelDiagnosis();
+    const reason = diag.problems[0]?.message || diag.lastError || null;
+    setStatus('error', {
+      url: null,
+      error: reason
+        ? `تونل بالا نیامد: ${reason}`
+        : `تونل بسته شد (کد ${code ?? '-'}) — دوباره تلاش می‌شود`,
+      diagnosis: diag,
+    });
+    logEvent('warn', 'panel', `تونل بسته شد (کد ${code})${reason ? ` — ${reason}` : ''}`);
+
+    // خرابیِ رایج: فایل اعتبار جابه‌جا شده — یک‌بار خودکار درستش می‌کنیم
+    if (diag.problems.some((p) => p.fixable) && !state.repairTried) {
+      state.repairTried = true;
+      logEvent('info', 'panel', 'تلاش خودکار برای بازسازی پیکربندی تونل');
+      repairTunnel().catch(() => {});
+      return;
+    }
     restartTimer = setTimeout(() => startTunnel({ port: targetPort }), 10000);
     restartTimer.unref?.();
   });

@@ -10,6 +10,7 @@ import { getSiteSync } from '../state.js';
 import { config } from '../config.js';
 import { readInterfaces, readPublicIp } from '../metrics/network.js';
 import { getSetting, setSetting, logEvent } from '../db.js';
+import { ensureMainSite } from '../sites/registry.js';
 import {
   publicState,
   startTunnel,
@@ -24,6 +25,8 @@ import {
   addHostname,
   removeHostname,
   routedHostnames,
+  tunnelDiagnosis,
+  repairTunnel,
 } from '../tunnel.js';
 
 const router = Router();
@@ -153,6 +156,22 @@ router.get('/tunnel', (req, res) => {
   res.json({ ...publicState(), autostart: getSetting('tunnel_autostart', true) !== false });
 });
 
+// چرا تونل بالا نمی‌آید؟ — به‌جای «کد ۱»، دلیل واقعی
+router.get('/tunnel/diagnosis', (req, res) => {
+  res.json(tunnelDiagnosis());
+});
+
+// تلاش برای درست کردنِ خودکارِ خرابیِ رایج
+router.post('/tunnel/repair', async (req, res) => {
+  try {
+    const result = await repairTunnel();
+    if (!result.ok) return res.status(400).json(result);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ------------------ آدرس ثابت (مدل فایربیس) — راه‌اندازی یک‌باره ------------------
 router.get('/tunnel/named', (req, res) => {
   res.json(namedConfig());
@@ -193,6 +212,8 @@ router.post('/tunnel/named/setup', async (req, res) => {
     const result = await namedSetup({ hostname });
     if (!result.ok) return res.status(400).json(result);
     logEvent('info', 'panel', `آدرس ثابت سرور: ${result.hostname}`);
+    // زیردامنهٔ تونل هم خودکار در بخش دامنه‌ها ثبت می‌شود
+    await ensureMainSite({ tunnelHostname: result.hostname }).catch(() => {});
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -205,6 +226,7 @@ router.post('/tunnel/token', async (req, res) => {
   try {
     const result = await tokenSetup({ token, hostname });
     if (!result.ok) return res.status(400).json(result);
+    await ensureMainSite({ tunnelHostname: result.hostname }).catch(() => {});
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -232,11 +254,18 @@ router.post('/tunnel/named/reset', async (req, res) => {
 });
 
 // آدرس سایتی که لینک یک‌کلیکی با آن ساخته می‌شود
-router.put('/site-url', (req, res) => {
+router.put('/site-url', async (req, res) => {
   const url = String(req.body?.siteUrl || '').trim();
   if (!/^https?:\/\/[^\s/]+/i.test(url)) return res.status(400).json({ error: 'invalid_url' });
   setSetting('site_url', url.replace(/\/+$/, ''));
-  res.json({ ok: true, siteUrl: siteUrl() });
+  // همین که آدرس سایت را دادید، خودِ سایت و دامنه‌اش در پنل ثبت می‌شوند
+  let registered = null;
+  try {
+    registered = await ensureMainSite({ siteUrl: siteUrl() });
+  } catch (e) {
+    logEvent('error', 'panel', `ثبت خودکار سایت ناموفق بود: ${e.message}`);
+  }
+  res.json({ ok: true, siteUrl: siteUrl(), registered });
 });
 
 export default router;

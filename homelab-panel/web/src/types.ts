@@ -226,6 +226,12 @@ export type SiteServerInfo = {
     hostname: string | null;
     permanent: boolean;
     log: string[];
+    diagnosis?: {
+      mode: string;
+      ok: boolean;
+      problems: { code: string; message: string; fixable?: boolean }[];
+      lastError: string | null;
+    } | null;
   };
   named: {
     loggedIn: boolean;

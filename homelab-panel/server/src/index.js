@@ -19,7 +19,7 @@ import { attachRealtime, broadcastMetrics } from './realtime.js';
 import { startCollector, stopCollector } from './metrics/index.js';
 import { startWinSampler, stopWinSampler } from './metrics/win-sampler.js';
 import { readInterfaces } from './metrics/network.js';
-import { autostartAll, ensureAllSiteWorkspaces } from './sites/registry.js';
+import { autostartAll, ensureAllSiteWorkspaces, ensureMainSite } from './sites/registry.js';
 import { stopAll } from './sites/process.js';
 import { startTunnel, stopTunnel, tunnelEvents } from './tunnel.js';
 import { versionInfo, versionLine } from './version.js';
@@ -208,6 +208,12 @@ async function main() {
     await siteSync.loadAll();
     const ensured = await ensureAllSiteWorkspaces();
     if (ensured.length) console.log(`[site-server] پوشهٔ اختصاصی ${ensured.length} سایت آماده است`);
+    // خودِ سایتِ پمپ و دامنه‌هایش هم باید در پنل دیده شوند — بدون افزودن دستی
+    try {
+      await ensureMainSite();
+    } catch (e) {
+      logEvent('error', 'panel', `ثبت خودکار سایت اصلی ناموفق بود: ${e.message}`);
+    }
   }
 
   await autostartAll();
