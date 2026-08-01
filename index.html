@@ -30503,7 +30503,8 @@ function printWaraq() {
   const w = getActiveWaraq();
   if (!w) return;
   ensureWaraqShifts(w);
-  // خلاصهٔ «قرضِ هر کارمند» برای PDF — همان چیزی که روی صفحه دیده می‌شود
+  // خلاصهٔ «قرضِ هر کارمند» برای PDF — بدون ردیفِ جدا؛ همان نوارِ بالای صفحه را پر می‌کند
+  // (خواستهٔ صاحب ریپو: جای خالیِ کنارِ نامِ کارمند استفاده شود تا ردیف‌های تراکنش کم نشوند)
   const workerDebtHtml = (sd) => {
     const map = new Map();
     let total = 0;
@@ -30515,9 +30516,9 @@ function printWaraq() {
     });
     if (!map.size) return '';
     const items = [...map.entries()].sort((a, b) => b[1] - a[1])
-      .map(([nm, v]) => `<span style="border:1px solid #cbd5e0;border-radius:9px;padding:3px 8px;margin:0 4px 4px 0;display:inline-block">👷 ${escFa(nm)}: <b style="color:#c53030">${Math.round(v)}</b></span>`).join('');
-    return `<div style="margin:6px 0 10px;font-size:0.72rem">💳 قرضِ هر کارمند: ${items}
-      <span style="border:1.5px solid #c53030;border-radius:9px;padding:3px 8px;display:inline-block;font-weight:900">جمله: ${Math.round(total)} افغانی</span></div>`;
+      .map(([nm, v]) => `<span style="border:1px solid #cbd5e0;border-radius:8px;padding:1px 6px;display:inline-block">👷 ${escFa(nm)}: <b style="color:#c53030">${Math.round(v)}</b></span>`).join(' ');
+    return `<span style="display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;font-size:0.68rem;font-weight:700">💳 قرضِ هر کارمند: ${items}
+      <span style="border:1.5px solid #c53030;border-radius:8px;padding:1px 6px;display:inline-block;font-weight:900">جمله: ${Math.round(total)} افغانی</span></span>`;
   };
   const shiftSection = (sd, label, hdrColor) => {
     const t = computeShiftTotals(sd);
@@ -30538,17 +30539,24 @@ function printWaraq() {
     const shortageLabel = wqr.shortage > 0 ? '⚠️ کمبودی' : (wqr.excess > 0 ? '✅ اضافی' : '✅ بدون کمبود');
     const shortageVal = wqr.shortage > 0 ? Math.round(wqr.shortage) : (wqr.excess > 0 ? Math.round(wqr.excess) : 0);
     const shortageColor = wqr.shortage > 0 ? '#d97706' : '#276749';
+    // نوارِ فشردهٔ بالا: نامِ کارمند + عنوانِ «قرائت پمپ‌ها» + چیپ‌های «قرضِ هر کارمند»
+    // همه در یک خط. قبلاً سه خطِ جدا بودند و جای دو–سه ردیفِ تراکنش را می‌گرفتند.
+    const headLeft = label
+      ? `<span style="font-size:0.9rem;font-weight:900;color:${hdrColor}">${label}${sd.workerName?' — کارمند: '+escFa(sd.workerName):''}</span>`
+      : `${sd.workerName?`<span style="font-size:0.88rem;font-weight:900;color:#1a202c">👷 کارمند: ${escFa(sd.workerName)}</span>`:''}
+         <span style="font-size:0.78rem;font-weight:900;color:#2b6cb0">🛢️ قرائت پمپ‌ها</span>`;
     return `
-    ${label ? `<h2 style="font-size:0.92rem;font-weight:900;color:${hdrColor};border-bottom:2px solid ${hdrColor};padding-bottom:4px;margin:14px 0 6px">${label}${sd.workerName?' — کارمند: '+sd.workerName:''}</h2>` : (sd.workerName ? `<div style="font-size:0.95rem;font-weight:900;color:#1a202c;text-align:right;border-bottom:2px solid #cbd5e0;padding-bottom:5px;margin:0 0 10px">👷 کارمند: ${escFa(sd.workerName)}</div>` : '')}
-    <div class="section-title">🛢️ قرائت پمپ‌ها</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:2px solid ${label?hdrColor:'#cbd5e0'};padding-bottom:3px;margin:0 0 4px">
+      ${headLeft}
+      <span style="flex:1 1 auto"></span>
+      ${workerDebtHtml(sd)}
+    </div>
     <table><thead><tr><th>بایه</th><th>نام</th><th>نوع</th><th>توضیح/ساعت</th><th>شروع</th><th>ختم</th><th>فی لیتر</th><th>لیتر</th><th>مبلغ</th><th>جمله قرض</th></tr></thead>
-    <tbody>${pumpRows||'<tr><td colspan="10" style="text-align:center;padding:8px;color:#718096">—</td></tr>'}</tbody>
+    <tbody>${pumpRows||'<tr><td colspan="10" style="text-align:center;padding:4px;color:#718096">—</td></tr>'}</tbody>
     <tfoot><tr><td colspan="7">جمع</td><td>${t.petrolL+t.dieselL} لیتر</td><td>${Math.round(t.sales)} افغانی</td><td>${Math.round(t.declaredDebt||0)} افغانی</td></tr></tfoot></table>
-    ${workerDebtHtml(sd)}
-    <div class="section-title">📋 تراکنش‌ها</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div><table><thead><tr><th>#</th><th>نام</th><th>مقدار تیل</th><th>مبلغ</th><th>نوع</th></tr></thead><tbody>${lTx||'<tr><td colspan="5" style="text-align:center;padding:8px;color:#718096">—</td></tr>'}</tbody></table></div>
-      <div><table><thead><tr><th>#</th><th>نام</th><th>مقدار تیل</th><th>مبلغ</th><th>نوع</th></tr></thead><tbody>${rTx||'<tr><td colspan="5" style="text-align:center;padding:8px;color:#718096">—</td></tr>'}</tbody></table></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div><table><thead><tr><th>📋</th><th>نام</th><th>مقدار تیل</th><th>مبلغ</th><th>نوع</th></tr></thead><tbody>${lTx||'<tr><td colspan="5" style="text-align:center;padding:4px;color:#718096">—</td></tr>'}</tbody></table></div>
+      <div><table><thead><tr><th>📋</th><th>نام</th><th>مقدار تیل</th><th>مبلغ</th><th>نوع</th></tr></thead><tbody>${rTx||'<tr><td colspan="5" style="text-align:center;padding:4px;color:#718096">—</td></tr>'}</tbody></table></div>
     </div>
     <div class="sum-row">
       <div class="sum-box"><div class="l">⛽ بطرول</div><div class="v">${t.petrolL} لیتر</div></div>
@@ -30562,7 +30570,7 @@ function printWaraq() {
   const isNight = w.activeShift === 'night';
   const sd = isNight ? w.night : w.day;
   const pdfFs = parseInt(document.getElementById('wq-pdf-fontsize')?.value || '11') || 11;
-  const html=`<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><title>ورق ${isNight?'شب':'روز'}</title><style>*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:16px;font-size:${pdfFs}px}h1{font-size:1rem;font-weight:900;text-align:center;border-bottom:2px solid #2b6cb0;padding-bottom:6px;margin-bottom:4px}.meta{font-size:0.7rem;color:#718096;text-align:center;margin-bottom:10px}.sum-row{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}.sum-box{flex:1;min-width:100px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:6px;padding:7px;text-align:center}.sum-box .l{font-size:0.62rem;color:#718096;font-weight:700}.sum-box .v{font-size:0.95rem;font-weight:900}table{width:100%;border-collapse:collapse;font-size:0.82rem;margin-bottom:8px}th{background:#2d3748;color:#e2e8f0;padding:6px 7px;text-align:right;font-weight:900;white-space:nowrap;font-size:0.82rem}td{padding:6px 7px;border-bottom:1px solid #cbd5e0;font-weight:700;color:#1a202c}tr:nth-child(even) td{background:#f7fafc}tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:6px 7px}.section-title{font-size:0.88rem;font-weight:900;color:#2b6cb0;margin:10px 0 5px}@media print{body{padding:6px}@page{margin:.5cm}}</style></head><body>
+  const html=`<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><title>ورق ${isNight?'شب':'روز'}</title><style>*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:10px;font-size:${pdfFs}px}h1{font-size:0.95rem;font-weight:900;text-align:center;border-bottom:2px solid #2b6cb0;padding-bottom:3px;margin-bottom:4px}.meta{font-size:0.7rem;color:#718096;text-align:center;margin-bottom:6px}.sum-row{display:flex;gap:6px;margin:5px 0 0;flex-wrap:wrap}.sum-box{flex:1;min-width:92px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:6px;padding:4px;text-align:center}.sum-box .l{font-size:0.62rem;color:#718096;font-weight:700}.sum-box .v{font-size:0.9rem;font-weight:900}table{width:100%;border-collapse:collapse;font-size:0.82rem;margin-bottom:5px}th{background:#2d3748;color:#e2e8f0;padding:3px 6px;text-align:right;font-weight:900;white-space:nowrap;font-size:0.8rem}td{padding:3px 6px;border-bottom:1px solid #cbd5e0;font-weight:700;color:#1a202c}tr:nth-child(even) td{background:#f7fafc}tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:3px 6px}tr{page-break-inside:avoid}@media print{body{padding:4px}@page{margin:.4cm}}</style></head><body>
   <h1>${isNight?'🌙 ورق شب':'☀️ ورق روز'} — ${escFa(w.station)||'پمپ'} — تاریخ: ${w.date||'—'}</h1>
   ${shiftSection(sd, '', isNight ? '#6b46c1' : '#b7791f')}
   <script>window.onload=function(){window.print()}<\/script></body></html>`;
@@ -34236,7 +34244,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.137';
+const APP_VERSION = '2.9.138';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
