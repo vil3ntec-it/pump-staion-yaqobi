@@ -1821,6 +1821,11 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
   var netListeners = [];                   // شنوندگانِ وضعیتِ اتصال/صف (رابط کاربری)
   var hbTimer = null, hbWaitTimer = null;  // ضربانِ زنده‌بودنِ اتصال
 
+  // قطع شدن، آفلاین بودن و پر شدنِ صف، وضعیتِ عادیِ شبکه‌اند نه «خطای فنیِ برنامه».
+  // بدون این علامت، هر بار که اینترنت می‌رفت و می‌آمد ده‌ها promise رد می‌شد و
+  // نگهبانِ خطاها هر ۳۰ ثانیه اعلانِ «یک خطای فنی ثبت شد» را روی صفحه می‌آورد.
+  function netErr(kind){ var e = new Error(kind); e._expected = true; return e; }
+
   function isMutation(m){ return m && (m.op === 'set' || m.op === 'update' || m.op === 'remove' || m.op === 'push'); }
 
   function outqPersist(){
@@ -1885,7 +1890,7 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     // سقفِ صف: کهنه‌ترین‌ها کنار می‌روند تا حافظه هرگز بی‌نهایت رشد نکند
     if (outQueue.length > OUTQ_MAX) {
       var drop = outQueue.splice(0, outQueue.length - OUTQ_MAX);
-      drop.forEach(function(m){ var p = pending[m.id]; if (p) { delete pending[m.id]; try { p.reject(new Error('queue_overflow')); } catch(e){} } });
+      drop.forEach(function(m){ var p = pending[m.id]; if (p) { delete pending[m.id]; try { p.reject(netErr('queue_overflow')); } catch(e){} } });
     }
     if (isMutation(msg)) { outqPersist(); notifyNet(); }
   }
@@ -1894,7 +1899,7 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     var now = Date.now(), keep = [];
     outQueue.forEach(function(m){
       if (m.op === 'get' && m._qts && now - m._qts > GET_TTL_MS) {
-        var p = pending[m.id]; if (p) { delete pending[m.id]; try { p.reject(new Error('offline')); } catch(e){} }
+        var p = pending[m.id]; if (p) { delete pending[m.id]; try { p.reject(netErr('offline')); } catch(e){} }
         return;
       }
       keep.push(m);
@@ -2055,7 +2060,7 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     var ids = Object.keys(pending);
     for (var i = 0; i < ids.length; i++) {
       var p = pending[ids[i]]; delete pending[ids[i]];
-      try { p.reject(new Error('disconnected')); } catch(e){}
+      try { p.reject(netErr('disconnected')); } catch(e){}
     }
     notifyConn(false); notifyNet();
   }
@@ -2187,6 +2192,7 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     if (cfgSwitchTimer) { clearTimeout(cfgSwitchTimer); cfgSwitchTimer = null; }
     cfgPrev = null;
     cfgLastOk = Date.now();                  // این آدرس زنده است — نیازی به خودترمیمی نیست
+    cfgRemember(SELF_HOST_URL, SELF_HOST_TOKEN);   // این سرور جواب داد → به فهرستِ سرورهای شناخته‌شده
     // خواندنِ مستقیم (نه فقط اشتراک): بعد از هر اتصال، تنظیمِ این سرور دوباره سنجیده
     // شود — اشتراک برای «مقدارِ تکراری» رویداد نمی‌دهد و ممکن بود از دستش بدهیم.
     try { doGet(CFG_PATH).then(cfgOnRemote).catch(function(){}); } catch(e){}
@@ -2250,21 +2256,53 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
      آدرسی که مرده شناخته شد، تا بسته شدنِ برنامه دوباره پذیرفته نمی‌شود، وگرنه
      رکوردِ کهنهٔ سرور دوباره ما را به همان آدرسِ مرده می‌فرستاد. ── */
   var cfgDeadUrls = {}, cfgLastOk = Date.now(), cfgRescueAt = 0;
+
+  /* فهرستِ سرورهایی که این دستگاه تا حالا واقعاً به آن‌ها وصل شده. اگر سرورِ
+     پیش‌فرضِ سایت هم روزی از دسترس خارج شود، باز راهی برای پیدا کردنِ سرورِ درست
+     می‌ماند و لازم نیست دستی برای هر دستگاه ببریم. */
+  var KNOWN_KEY = 'pumpKnownServers', KNOWN_MAX = 6;
+  function cfgKnown(){
+    try {
+      var a = JSON.parse(_lsGet(KNOWN_KEY) || '[]');
+      return Array.isArray(a) ? a.filter(function(x){ return x && typeof x.url === 'string'; }) : [];
+    } catch(e){ return []; }
+  }
+  function cfgRemember(url, token){
+    if (!url) return;
+    var a = cfgKnown().filter(function(x){ return x.url !== url; });
+    a.unshift({ url: url, token: token || '' });
+    _lsSet(KNOWN_KEY, JSON.stringify(a.slice(0, KNOWN_MAX)));
+  }
+  // همهٔ جاهایی که ممکن است سرورِ درست را بشناسند (به ترتیبِ اولویت)
+  function cfgHomes(){
+    var out = [{ url: BUILTIN_URL, token: BUILTIN_TOKEN }];
+    cfgKnown().forEach(function(x){ if (x.url !== BUILTIN_URL) out.push(x); });
+    return out.filter(function(x){ return x.url !== SELF_HOST_URL && !cfgDeadUrls[x.url]; });
+  }
+
   function cfgRescue(){
     if (!wantOpen || connected) return;
     try { if (navigator.onLine === false) return; } catch(e){}
     if (Date.now() - cfgLastOk < 60000) return;          // هنوز فرصت بده خودش وصل شود
     if (Date.now() - cfgRescueAt < 120000) return;       // هر دو دقیقه یک‌بار، نه بیشتر
-    if (SELF_HOST_URL === BUILTIN_URL) return;           // خودمان روی سرورِ سایتیم، جایی برای پرسیدن نیست
+    var homes = cfgHomes();
+    if (!homes.length) return;
     cfgRescueAt = Date.now();
     var dead = SELF_HOST_URL;
-    cfgFetchFrom(BUILTIN_URL, BUILTIN_TOKEN).then(function(r){
-      if (!r || !r.reachable || connected || SELF_HOST_URL !== dead) return;
-      cfgDeadUrls[dead] = 1;
-      var v = r.cfg, target = (cfgValid(v) && v.url !== dead) ? v : { url: BUILTIN_URL, token: BUILTIN_TOKEN, ts: 0 };
-      var ts = Math.max(cfgTs(), parseInt(target.ts, 10) || 0);
-      cfgSwitchTo(target.url, target.token || '', ts, true);
-    });
+    // یکی‌یکی از سرورهایی که می‌شناسیم می‌پرسیم «سرورِ درست کدام است؟»؛ اولی که
+    // جواب داد کافی است. اگر خودش هم نشانی‌ای ثبت نداشت، خودِ همان به کار می‌آید.
+    (function tryNext(i){
+      if (i >= homes.length || connected || SELF_HOST_URL !== dead) return;
+      cfgFetchFrom(homes[i].url, homes[i].token).then(function(r){
+        if (connected || SELF_HOST_URL !== dead) return;
+        if (!r || !r.reachable) { tryNext(i + 1); return; }
+        if (dead) cfgDeadUrls[dead] = 1;
+        var v = r.cfg;
+        var target = (cfgValid(v) && v.url !== dead && !cfgDeadUrls[v.url]) ? v : { url: homes[i].url, token: homes[i].token, ts: 0 };
+        var ts = Math.max(cfgTs(), parseInt(target.ts, 10) || 0);
+        cfgSwitchTo(target.url, target.token || '', ts, true);
+      });
+    })(0);
   }
   try { setInterval(cfgRescue, 20000); } catch(e){}
 
@@ -31470,6 +31508,37 @@ function showTopToast(msg, bg, duration) {
   if (_topToastTimer) clearTimeout(_topToastTimer);
   _topToastTimer = setTimeout(() => t.classList.remove('show'), duration || 6000);
 }
+/* ── نوارِ «به سرور وصل نیست» ────────────────────────────────────────────────
+   بدونِ این، دستگاهی که به سرور نمی‌رسد بی‌صدا یک حسابِ خالی نشان می‌داد و آدم
+   خیال می‌کرد «این دستگاه حسابِ جداگانه دارد». حالا خودِ برنامه می‌گوید مشکل از
+   اتصال است، نه از حساب. ── */
+(function(){
+  let _offSince = 0, _bar = null;
+  function bar(){
+    if (_bar) return _bar;
+    _bar = document.createElement('div');
+    _bar.id = 'net-offline-bar';
+    _bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;display:none;'
+      + 'background:#7c2d12;color:#fff;font-family:Vazirmatn,sans-serif;font-size:0.8rem;'
+      + 'font-weight:700;text-align:center;padding:7px 10px;line-height:1.7;box-shadow:0 2px 10px rgba(0,0,0,.35)';
+    _bar.innerHTML = '⚠️ به سرور وصل نیست — چیزی که می‌بینید ممکن است کاملِ حساب نباشد. '
+      + '<button style="margin:0 6px;padding:2px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.5);'
+      + 'background:transparent;color:#fff;font-family:inherit;font-weight:700;cursor:pointer">تلاش دوباره</button>';
+    _bar.querySelector('button').onclick = function(){ try { window.__pumpNet__.reconnect(); } catch(e){} };
+    try { document.body.appendChild(_bar); } catch(e){ _bar = null; }
+    return _bar;
+  }
+  function show(on){ const b = bar(); if (b) b.style.display = on ? 'block' : 'none'; }
+  function tick(){
+    let ok = true;
+    try { ok = window.__pumpNet__ ? window.__pumpNet__.connected() : true; } catch(e){}
+    if (ok) { _offSince = 0; show(false); return; }
+    if (!_offSince) _offSince = Date.now();
+    // قطعِ چند ثانیه‌ای عادی است؛ فقط قطعِ ماندگار را به کاربر می‌گوییم
+    if (Date.now() - _offSince > 20000) show(true);
+  }
+  try { setInterval(tick, 5000); } catch(e){}
+})();
 // توستِ کوچکِ هماهنگیِ سرور — گوشهٔ پایین راست. مزاحمِ کاربر نمی‌شود، خودکار محو
 // می‌شود و اگر همان پیام دوباره بیاید روی هم جمع (شمارنده) می‌شود به‌جای پُر کردنِ صفحه.
 function showSyncToast(msg, bg, duration) {
@@ -34739,7 +34808,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.144';
+const APP_VERSION = '2.9.145';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -39859,6 +39928,11 @@ ${copy('نسخهٔ پمپ')}
   window.addEventListener('unhandledrejection', function (e) {
     let m = 'promise';
     try { m = (e.reason && (e.reason.message || String(e.reason))) || 'promise'; } catch (er) {}
+    // قطع/وصل شدنِ اینترنت خطای برنامه نیست. این‌ها را نه ثبت می‌کنیم نه اعلان می‌دهیم،
+    // وگرنه با هر بار رفتن و آمدنِ نت، اعلانِ «یک خطای فنی ثبت شد» روی صفحه می‌آمد
+    // در حالی که هیچ چیزی خراب نشده و نوشته‌ها خودشان دوباره فرستاده می‌شوند.
+    try { if (e.reason && e.reason._expected) return; } catch (er) {}
+    if (/^(disconnected|offline|queue_overflow|auth_failed|op_failed)$/.test(m)) return;
     logErr('promise', m, '', 0);
   });
   // برای برنامه‌نویس: دیدن و پاک کردن گزارش خطاها از کنسول
