@@ -563,10 +563,12 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 /* کادر ورود به صفحهٔ هر ابزار — پس‌زمینهٔ کارت + سایه تا در تم روشن و تاریک هر دو
    خوب دیده شود (قبلاً transparent بود و فقط یک خط دورش معلوم می‌شد) */
 /* خواستهٔ کاربر: کادرهای «صفحهٔ بعد» دیگر تمام‌صفحه نیستند — کوچک و جمع‌وجور مثل دکمهٔ «رفتن به قرض‌های دسته‌جمعی» */
-.tool-link-card{display:inline-flex;width:auto;max-width:100%;margin:0 0 10px 8px;padding:7px 12px;border-radius:10px;border:1.5px solid var(--accent);background:var(--card);color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.8rem;cursor:pointer;align-items:center;justify-content:flex-start;gap:8px;text-align:right;box-shadow:0 3px 8px rgba(0,0,0,.1);transition:transform .18s,box-shadow .18s}
-.tool-link-card:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(0,0,0,.18)}
-.tool-link-card .tlc-go{background:currentColor;border-radius:999px;padding:3px 9px;flex-shrink:0}
-.tool-link-card .tlc-go i{font-style:normal;color:var(--card);font-size:0.7rem;font-weight:900}
+/* دکمه‌های «رفتن به بخشِ دیگر» — کوچک و یک‌خطی (خواستهٔ صاحب ریپو): قبلاً هرکدام
+   تقریباً یک خطِ کامل را می‌گرفتند؛ حالا چند تا کنار هم در یک خط جا می‌شوند. */
+.tool-link-card{display:inline-flex;width:auto;max-width:100%;margin:0 0 6px 6px;padding:4px 9px;border-radius:8px;border:1.5px solid var(--accent);background:var(--card);color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.7rem;line-height:1.5;cursor:pointer;align-items:center;justify-content:flex-start;gap:6px;text-align:right;box-shadow:0 2px 5px rgba(0,0,0,.08);transition:transform .18s,box-shadow .18s}
+.tool-link-card:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(0,0,0,.16)}
+.tool-link-card .tlc-go{background:currentColor;border-radius:999px;padding:0 6px;flex-shrink:0}
+.tool-link-card .tlc-go i{font-style:normal;color:var(--card);font-size:0.68rem;font-weight:900}
 #robotFab:hover{transform:scale(1.07)}
 #managerFab{position:fixed;bottom:calc(150px + var(--kb-offset,0px));left:18px;z-index:10040;width:54px;height:54px;border-radius:50%;border:none;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;font-size:26px;transition:transform .12s,bottom .18s ease}
 #managerFab:hover{transform:scale(1.07)}
@@ -16033,9 +16035,9 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
   </div>
   <div id="tank-petrol" class="tank-wrap"></div>
   <!-- کادرهای ابزار مخزن — هر کدام یک صفحهٔ جداگانه دارد -->
-  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="showSection('tanker')"><span>🚚 تخلیهٔ تانکر — بارنامه در برابر تحویل</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
-  <button type="button" class="tool-link-card" onclick="showSection('tankdip')"><span>📏 اندازه‌گیری واقعی مخزن — میله‌زنی</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
-  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('storage')"><span>🕘 تاریخچهٔ خریدهای مخزن</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
+  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="showSection('tanker')"><span title="🚚 تخلیهٔ تانکر — بارنامه در برابر تحویل">🚚 تخلیهٔ تانکر</span><span class="tlc-go"><i>‹</i></span></button>
+  <button type="button" class="tool-link-card" onclick="showSection('tankdip')"><span title="📏 اندازه‌گیری واقعی مخزن — میله‌زنی">📏 میله‌زنی مخزن</span><span class="tlc-go"><i>‹</i></span></button>
+  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('storage')"><span>🕘 تاریخچهٔ خریدهای مخزن</span><span class="tlc-go"><i>‹</i></span></button>
   <!-- دکمه‌های «ثبت خرید» و «PDF» بالای فهرست خریدها هستند (باگ گم‌شدنشان): وقتی
        خریدها زیاد می‌شد این دو دکمه ته صفحه می‌افتادند و پیدا نمی‌شدند. -->
   <div class="storage-actions">
@@ -16063,9 +16065,9 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
   </div>
   <div id="tank-diesel" class="tank-wrap"></div>
   <!-- کادرهای ابزار مخزن — هر کدام یک صفحهٔ جداگانه دارد -->
-  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="showSection('tanker')"><span>🚚 تخلیهٔ تانکر — بارنامه در برابر تحویل</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
-  <button type="button" class="tool-link-card" onclick="showSection('tankdip')"><span>📏 اندازه‌گیری واقعی مخزن — میله‌زنی</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
-  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('storage')"><span>🕘 تاریخچهٔ خریدهای مخزن</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
+  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="showSection('tanker')"><span title="🚚 تخلیهٔ تانکر — بارنامه در برابر تحویل">🚚 تخلیهٔ تانکر</span><span class="tlc-go"><i>‹</i></span></button>
+  <button type="button" class="tool-link-card" onclick="showSection('tankdip')"><span title="📏 اندازه‌گیری واقعی مخزن — میله‌زنی">📏 میله‌زنی مخزن</span><span class="tlc-go"><i>‹</i></span></button>
+  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('storage')"><span>🕘 تاریخچهٔ خریدهای مخزن</span><span class="tlc-go"><i>‹</i></span></button>
   <div class="storage-actions">
     <button class="add-row-btn strong strong-diesel" onclick="openAddPurchase('diesel')">➕ ثبت خرید دیزل</button>
     <button class="add-row-btn" style="border-color:#276749;color:#276749" onclick="pdfStorage('diesel')">📄 PDF مخزن دیزل</button>
@@ -16177,11 +16179,11 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
     <span><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> رسید قرض‌داران / چکنه</span>
   </div>
   <!-- کادرهای قرض‌های کهنه — دو صفحهٔ جداگانه: یکی واحد تیل، یکی واحد پول -->
-  <button type="button" class="tool-link-card" style="border-color:var(--red);color:var(--red)" onclick="showSection('oldloans')"><span>⏰ قرض‌های کهنهٔ تیل — بی‌حرکت‌ها اول (واحد تیل)</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
-  <button type="button" class="tool-link-card" style="border-color:var(--green);color:var(--green)" onclick="showSection('oldloansmoney')"><span>💵 قرض‌های کهنهٔ پول — بی‌حرکت‌ها اول (واحد پول)</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
+  <button type="button" class="tool-link-card" style="border-color:var(--red);color:var(--red)" onclick="showSection('oldloans')"><span title="⏰ قرض‌های کهنهٔ تیل — بی‌حرکت‌ها اول (واحد تیل)">⏰ قرض‌های کهنه — تیل</span><span class="tlc-go"><i>‹</i></span></button>
+  <button type="button" class="tool-link-card" style="border-color:var(--green);color:var(--green)" onclick="showSection('oldloansmoney')"><span title="💵 قرض‌های کهنهٔ پول — بی‌حرکت‌ها اول (واحد پول)">💵 قرض‌های کهنه — پول</span><span class="tlc-go"><i>‹</i></span></button>
   <!-- کادر حساب‌های چکنه — صفحهٔ جداگانه (خواستهٔ کاربر) -->
-  <button type="button" class="tool-link-card" style="border-color:var(--purple);color:var(--purple)" onclick="showSection('chakana')"><span>🧾 حساب‌های چکنه</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
-  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('rasid')"><span>🕘 تاریخچهٔ رسیدها — با تاریخ و روز هفته</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
+  <button type="button" class="tool-link-card" style="border-color:var(--purple);color:var(--purple)" onclick="showSection('chakana')"><span>🧾 حساب‌های چکنه</span><span class="tlc-go"><i>‹</i></span></button>
+  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('rasid')"><span title="🕘 تاریخچهٔ رسیدها — با تاریخ و روز هفته">🕘 تاریخچهٔ رسیدها</span><span class="tlc-go"><i>‹</i></span></button>
   <div class="card">
     <div class="card-head">
       <div style="display:flex;align-items:center;gap:10px">
@@ -16215,7 +16217,7 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
     <span>⛽ قرض‌های دسته‌جمعی — واحد تیل</span>
   </div>
   <!-- واحد پول صفحهٔ کاملاً جدا دارد تا پول و تیل یک‌جا قاطی نشوند (خواستهٔ کاربر) -->
-  <button type="button" class="tool-link-card" style="border-color:var(--green);color:var(--green)" onclick="showSection('debtsummoney')"><span>💵 قرض‌های دسته‌جمعی — واحد پول</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
+  <button type="button" class="tool-link-card" style="border-color:var(--green);color:var(--green)" onclick="showSection('debtsummoney')"><span title="💵 قرض‌های دسته‌جمعی — واحد پول">💵 دسته‌جمعی — واحد پول</span><span class="tlc-go"><i>‹</i></span></button>
   <div class="card">
     <div class="card-head">
       <div style="display:flex;align-items:center;gap:10px">
@@ -16254,7 +16256,7 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
 <div class="section" id="sec-debtsummoney">
   <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
     <button class="goto-btn" onclick="showSection('debtsum')">⛽ برگشت به واحد تیل</button>
-    <span>💵 قرض‌های دسته‌جمعی — واحد پول</span>
+    <span title="💵 قرض‌های دسته‌جمعی — واحد پول">💵 دسته‌جمعی — واحد پول</span>
   </div>
   <div class="card" style="border-color:var(--green)">
     <div class="card-head">
@@ -16327,7 +16329,7 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
     <button class="goto-btn" onclick="showSection('debtrasid')">🧾 برگشت به رسید قرض‌داران</button>
     <span>🧾 حساب‌های چکنه</span>
   </div>
-  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('chakana')"><span>🕘 تاریخچهٔ چکنه — با تاریخ، روز هفته و مدتِ برد</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
+  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('chakana')"><span title="🕘 تاریخچهٔ چکنه — با تاریخ، روز هفته و مدتِ برد">🕘 تاریخچهٔ چکنه</span><span class="tlc-go"><i>‹</i></span></button>
   <div class="card" style="border-color:var(--purple)">
     <div class="card-head">
       <div style="display:flex;align-items:center;gap:10px">
@@ -16441,7 +16443,7 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
     </span>
   </div>
   <!-- کادر گزارش پایان ماه — صفحهٔ جداگانه -->
-  <button type="button" class="tool-link-card" style="border-color:var(--green);color:var(--green)" onclick="showSection('monthreport')"><span>📅 گزارش پایان ماه — فروش، مفاد، مصارف، همه در یک صفحه</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
+  <button type="button" class="tool-link-card" style="border-color:var(--green);color:var(--green)" onclick="showSection('monthreport')"><span title="📅 گزارش پایان ماه — فروش، مفاد، مصارف، همه در یک صفحه">📅 گزارش پایان ماه</span><span class="tlc-go"><i>‹</i></span></button>
   <div class="pl-result-wrap">
   <div class="pl-result" id="pl-result">
     <div class="pl-aurora" aria-hidden="true"></div>
@@ -16511,7 +16513,7 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
     </div>
   </div>
   <!-- کادر تاریخچهٔ نرخ اتحادیه — صفحهٔ جداگانه (زیر کادر نرخ اتحادیه) -->
-  <button type="button" class="tool-link-card" onclick="showSection('ratehist')"><span>📈 تاریخچهٔ نرخ اتحادیه — خودکار ثبت می‌شود</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
+  <button type="button" class="tool-link-card" onclick="showSection('ratehist')"><span title="📈 تاریخچهٔ نرخ اتحادیه — خودکار ثبت می‌شود">📈 تاریخچهٔ نرخ اتحادیه</span><span class="tlc-go"><i>‹</i></span></button>
   <!-- فرم ثبت خرید عمده داخل همین بخش — فقط جدولِ خریدهای ثبت‌شده در صفحهٔ جداگانه است -->
   <div class="card">
     <div class="card-head">
@@ -16575,6 +16577,7 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
     <div class="card-head">
       <div class="card-title">📅 گزارش ماه</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="mr-year" class="tools-in" onchange="_ymYearChanged('mr-month',this.value)" title="سال را انتخاب کنید — ماه‌های همان سال در کادر بغلی می‌آیند"></select>
         <select id="mr-month" class="tools-in" onchange="renderMonthReport()"></select>
         <button class="add-btn" style="background:var(--blue);color:#fff" onclick="pdfMonthReport()">📄 PDF</button>
       </div>
@@ -17029,7 +17032,7 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
 <!-- ATTENDANCE — حاضری، ساعت آمدن/رفتن و معاش کارمندان -->
 <div class="section" id="sec-attendance">
   <!-- کادر کمبودی کارمندان — صفحهٔ جداگانه -->
-  <button type="button" class="tool-link-card" style="border-color:var(--red);color:var(--red)" onclick="showSection('staffshort')"><span>👷 کمبودی کارمندان — از ورق‌ها</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
+  <button type="button" class="tool-link-card" style="border-color:var(--red);color:var(--red)" onclick="showSection('staffshort')"><span title="👷 کمبودی کارمندان — از ورق‌ها">👷 کمبودی کارمندان</span><span class="tlc-go"><i>‹</i></span></button>
   <div class="card">
     <div class="card-head">
       <div style="display:flex;align-items:center;gap:10px">
@@ -17221,7 +17224,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
 
 <div class="section" id="sec-invoices">
   <div class="section-title"><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> ثبت فاکتورها</div>
-  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('invoice')"><span>🕘 تاریخچهٔ فاکتورها — با تاریخ و روز هفته</span><span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>
+  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('invoice')"><span title="🕘 تاریخچهٔ فاکتورها — با تاریخ و روز هفته">🕘 تاریخچهٔ فاکتورها</span><span class="tlc-go"><i>‹</i></span></button>
 
   <!-- کارت‌های آماری -->
   <div class="inv-stats">
@@ -20009,7 +20012,7 @@ function renderHistoryCenter() {
       + ' onclick="openSectionHistory(\'' + c.k + '\')">'
       + '<span class="hc-card-main"><span class="hc-card-t">' + c.lbl + '</span>'
       + '<span class="hc-card-s">' + escFa(sub) + '</span></span>'
-      + '<span class="tlc-go"><i>صفحهٔ بعد ‹</i></span></button>';
+      + '<span class="tlc-go"><i>‹</i></span></button>';
   }).join('');
 }
 
@@ -20034,13 +20037,13 @@ function renderHistoryView() {
   months.sort().reverse();
   if (_hcMonth && months.indexOf(_hcMonth) === -1) _hcMonth = '';
   if (monWrap) {
+    // کشویِ سال + کشویِ ماه (خواستهٔ کاربر): با انتخابِ سال، فقط ماه‌های همان سال می‌آیند
     monWrap.innerHTML = months.length
-      ? '<label style="font-size:0.8rem;color:var(--muted);font-weight:700">📅 ماه و سال:</label>'
-        + '<select id="hv-month" onchange="setHistoryMonth(this.value)" style="background:var(--card);border:1px solid ' + meta.color + ';border-radius:9px;padding:7px 12px;color:var(--txt);font-family:\'Vazirmatn\',sans-serif;font-size:0.86rem;font-weight:700;cursor:pointer;min-width:180px">'
-        + '<option value="">همهٔ ماه‌ها</option>'
-        + months.map(function (k) { return '<option value="' + k + '"' + (k === _hcMonth ? ' selected' : '') + '>' + escFa(_monthOptionLabel(k)) + '</option>'; }).join('')
-        + '</select>'
+      ? '<label style="font-size:0.8rem;color:var(--muted);font-weight:700">📅 سال و ماه:</label>'
+        + _ymSelectsHtml('hv-month', months, _hcMonth, meta.color, 180, 'همهٔ ماه‌ها')
       : '';
+    const _hvSel = document.getElementById('hv-month');
+    if (_hvSel) _hvSel.onchange = function () { setHistoryMonth(this.value); };
   }
   const rows = _hcMonth ? all.filter(function (r) { return _monthKey(r.date || '') === _hcMonth; }) : all;
   if (sum) sum.textContent = rows.length
@@ -25267,6 +25270,65 @@ function _monthOptionLabel(key) {
   const raw = _faNumPlain(key);
   return lbl === raw ? lbl : (lbl + ' — ' + raw);
 }
+
+// ══════ کشویِ «سال» کنارِ کشویِ «ماه» ══════
+// خواستهٔ صاحب ریپو: هر بخشی که کادرِ کشویی ماه دارد، یک کادرِ کشویی سال هم داشته
+// باشد؛ با انتخابِ هر سال، فقط ماه‌های همان سال در کشویِ ماه بیایند.
+// نکته: هیچ منطقی عوض نمی‌شود — کشویِ ماه همان id و همان onchange قبلی را دارد و
+// خودِ بخش مثل قبل با ماهِ انتخاب‌شده رندر می‌شود؛ کشویِ سال فقط فهرستِ ماه‌ها را
+// کوتاه می‌کند و ماهِ مناسبِ همان سال را انتخاب می‌کند.
+const _YM_KEYS = {};                                   // id کشویِ ماه → همهٔ کلیدهای همان بخش
+function _ymYearOf(k) { return String(k == null ? '' : k).split('/')[0] || ''; }
+function _ymMonthOf(k) { return String(k == null ? '' : k).split('/')[1] || ''; }
+// html هر دو کشو: اول سال، بعد ماه. keys = فهرست کلیدهای 'YYYY/MM'، active = کلیدِ فعال.
+// allLabel (اختیاری): اگر بخش گزینهٔ «همهٔ ماه‌ها» دارد، همان متن را بدهید تا کشویِ
+// سال هم گزینهٔ «همهٔ سال‌ها» بگیرد و انتخاب‌نکردن مثل قبل یعنی «همه».
+const _YM_ALL = {};
+function _ymSelectsHtml(monthId, keys, active, color, minWidth, allLabel) {
+  const all = (keys || []).filter(k => /\d/.test(String(k)));
+  _YM_KEYS[monthId] = all.slice();
+  _YM_ALL[monthId] = allLabel || '';
+  const col = color || 'var(--accent)';
+  const mw = minWidth || 170;
+  const box = 'background:var(--card);border:1px solid ' + col + ';border-radius:9px;padding:6px 10px;'
+    + "color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.84rem;font-weight:700;cursor:pointer";
+  const years = [];
+  all.forEach(k => { const y = _ymYearOf(k); if (y && years.indexOf(y) === -1) years.push(y); });
+  years.sort().reverse();
+  const curYear = _ymYearOf(active) || (allLabel ? '' : (years[0] || ''));
+  const monthsOfYear = curYear ? all.filter(k => _ymYearOf(k) === curYear) : all;
+  const yearSel = years.length
+    ? '<select id="' + monthId + '-year" style="' + box + ';min-width:96px" onchange="_ymYearChanged(\'' + monthId + '\',this.value)">'
+      + (allLabel ? '<option value=""' + (curYear ? '' : ' selected') + '>📆 همهٔ سال‌ها</option>' : '')
+      + years.map(y => '<option value="' + y + '"' + (y === curYear ? ' selected' : '') + '>📆 ' + _faNumPlain(y) + '</option>').join('')
+      + '</select>'
+    : '';
+  const monSel = '<select id="' + monthId + '" style="' + box + ';min-width:' + mw + 'px">'
+    + (allLabel ? '<option value=""' + (active ? '' : ' selected') + '>' + escFa(allLabel) + '</option>' : '')
+    + monthsOfYear.map(k => '<option value="' + k + '"' + (k === active ? ' selected' : '') + '>'
+        + escFa(_monthOptionLabel(k)) + '</option>').join('')
+    + '</select>';
+  return yearSel + monSel;
+}
+// با عوض‌شدنِ سال: ماه‌های همان سال در کشویِ ماه می‌آیند و — اگر همان شمارهٔ ماه در
+// سالِ تازه باشد همان، وگرنه تازه‌ترین ماهِ آن سال — انتخاب و بخش دوباره رندر می‌شود.
+function _ymYearChanged(monthId, year) {
+  const sel = document.getElementById(monthId);
+  const all = _YM_KEYS[monthId] || [];
+  const allLabel = _YM_ALL[monthId] || '';
+  if (!sel) return;
+  const y = String(year || '');
+  const inYear = y ? all.filter(k => _ymYearOf(k) === y) : all.slice();
+  if (!inYear.length && !allLabel) return;
+  const curM = _ymMonthOf(sel.value);
+  // بدونِ سال (همهٔ سال‌ها) → همان «همهٔ ماه‌ها»؛ با سال → هم‌شمارهٔ ماهِ قبلی وگرنه اولی
+  const want = !y && allLabel ? '' : (inYear.filter(k => _ymMonthOf(k) === curM)[0] || inYear[0] || '');
+  sel.innerHTML = (allLabel ? '<option value=""' + (want ? '' : ' selected') + '>' + escFa(allLabel) + '</option>' : '')
+    + inYear.map(k => '<option value="' + k + '"' + (k === want ? ' selected' : '') + '>'
+        + escFa(_monthOptionLabel(k)) + '</option>').join('');
+  sel.value = want;
+  sel.dispatchEvent(new Event('change'));   // همان رفتارِ قبلیِ خودِ بخش
+}
 function renderExpenses() {
   const today = persianDate();
   const curMonth = _monthKey(today);
@@ -25304,10 +25366,8 @@ function renderExpenses() {
   if (_expEl('exp-total')) _expEl('exp-total').textContent = n2fa(Math.round(_activeMonthTotal)) + ' افغانی';
   const _selWrap = document.createElement('div');
   _selWrap.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px';
-  _selWrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">📅 انتخاب ماه:</label>
-    <select id="exp-month-select" style="background:var(--card);border:1px solid var(--accent);border-radius:9px;padding:8px 12px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;min-width:180px">
-      ${keys.map(k => `<option value="${k}"${k===_activeExpenseMonth?' selected':''}>${escFa(_monthOptionLabel(k))}</option>`).join('')}
-    </select>`;
+  _selWrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">📅 سال و ماه:</label>
+    ${_ymSelectsHtml('exp-month-select', keys, _activeExpenseMonth, 'var(--accent)', 180)}`;
   wrap.appendChild(_selWrap);
   _selWrap.querySelector('#exp-month-select').onchange = function(){ _activeExpenseMonth = this.value; renderExpenses(); };
   [_activeExpenseMonth].forEach(k => {
@@ -25414,10 +25474,8 @@ function renderChakana() {
   }
   const _selWrap = document.createElement('div');
   _selWrap.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px';
-  _selWrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">📅 انتخاب ماه:</label>
-    <select id="chakana-month-select" style="background:var(--card);border:1px solid var(--purple);border-radius:9px;padding:8px 12px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;min-width:180px">
-      ${keys.map(k => `<option value="${k}"${k===_activeChakanaMonth?' selected':''}>${escFa(_monthOptionLabel(k))}</option>`).join('')}
-    </select>`;
+  _selWrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">📅 سال و ماه:</label>
+    ${_ymSelectsHtml('chakana-month-select', keys, _activeChakanaMonth, 'var(--purple)', 180)}`;
   wrap.appendChild(_selWrap);
   _selWrap.querySelector('#chakana-month-select').onchange = function(){ _activeChakanaMonth = this.value; renderChakana(); };
   const items = groups[_activeChakanaMonth] || [];
@@ -25943,10 +26001,8 @@ function renderDebtRasid() {
     const monTotal = items.reduce((a,r)=>a+(r.amount||0), 0);
     const selWrap = document.createElement('div');
     selWrap.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px';
-    selWrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">📅 انتخاب ماه:</label>
-      <select id="dr-month-select" style="background:var(--card);border:1px solid var(--accent);border-radius:9px;padding:8px 12px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;min-width:180px">
-        ${keys.map(k => `<option value="${k}"${k===_drActiveMonth?' selected':''}>${escFa(_monthOptionLabel(k))}</option>`).join('')}
-      </select>
+    selWrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">📅 سال و ماه:</label>
+      ${_ymSelectsHtml('dr-month-select', keys, _drActiveMonth, 'var(--accent)', 180)}
       <button class="add-btn" style="background:var(--blue);color:#fff" onclick="addDebtRasidMonth()">📅 ماه جدید</button>
       <button style="background:var(--blue);color:#fff;border:none;border-radius:7px;padding:8px 12px;font-size:0.8rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="pdfDebtRasid('${_drActiveMonth}')">📄 PDF ماه</button>
       <span style="font-size:0.85rem;font-weight:700;color:var(--green)">جمع ${escFa(_monthLabelFa(_drActiveMonth))}: ${n2fa(Math.round(monTotal*100)/100)}</span>`;
@@ -28700,8 +28756,10 @@ function toggleSafeDropdown() {
 let _safeActiveMonth = null;
 let _safeLastAutoMonth = null;   // آخرین ماهی که خودکار فعال شد — برای تشخیص شروع ماه جدید
 function safeMonthKey(dateStr) {
-  const p = (dateStr || '').split('/');
-  return p.length >= 2 ? p[0] + '/' + p[1] : 'بدون تاریخ';
+  // شمارهٔ ماه دو رقمی می‌شود تا «۱۴۰۵/۵» و «۱۴۰۵/۰۵» یک ماه حساب شوند (قبلاً
+  // یک ماه دو بار در کشوی ماه می‌آمد و ردیف‌هایش بین دو گزینه تقسیم می‌شد)
+  const p = toEnDigits(dateStr || '').split('/');
+  return p.length >= 2 ? p[0] + '/' + String(parseInt(p[1]) || 0).padStart(2, '0') : 'بدون تاریخ';
 }
 function renderSafeMonthTabs() {
   const wrap = document.getElementById('safe-month-tabs');
@@ -28716,10 +28774,8 @@ function renderSafeMonthTabs() {
   if (!_safeActiveMonth || !months.includes(_safeActiveMonth)) {
     _safeActiveMonth = months.includes(curMonth) ? curMonth : months[months.length - 1];
   }
-  wrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">📅 انتخاب ماه:</label>
-    <select id="safe-month-select" style="background:var(--card);border:1px solid var(--accent);border-radius:9px;padding:8px 12px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;min-width:150px">
-      ${months.map(m => `<option value="${m}"${m===_safeActiveMonth?' selected':''}>${m}</option>`).join('')}
-    </select>`;
+  wrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">📅 سال و ماه:</label>
+    ${_ymSelectsHtml('safe-month-select', months, _safeActiveMonth, 'var(--accent)', 170)}`;
   const sel = document.getElementById('safe-month-select');
   if (sel) sel.onchange = () => { _safeActiveMonth = sel.value; renderSafe(); };
 }
@@ -29139,9 +29195,10 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 let _sarrafiActiveMonth = null;
 
 function sarrafiMonthKey(dateStr) {
-  // اولین دو بخش تاریخ شمسی مثل ۱۴۰۳/۰۴ از ۱۴۰۳/۰۴/۱۵
-  const parts = (dateStr || '').split('/');
-  if (parts.length >= 2) return parts[0] + '/' + parts[1];
+  // اولین دو بخش تاریخ شمسی مثل ۱۴۰۳/۰۴ از ۱۴۰۳/۰۴/۱۵ — شمارهٔ ماه دو رقمی می‌شود
+  // تا «۱۴۰۵/۵» و «۱۴۰۵/۰۵» یک ماه حساب شوند و در کشوی ماه دو بار نیایند
+  const parts = toEnDigits(dateStr || '').split('/');
+  if (parts.length >= 2) return parts[0] + '/' + String(parseInt(parts[1]) || 0).padStart(2, '0');
   return 'بدون تاریخ';
 }
 function sarrafiRows() {
@@ -29174,10 +29231,8 @@ function renderSarrafiMonthTabs() {
   months.sort().reverse();
   if (!_sarrafiActiveMonth || !months.includes(_sarrafiActiveMonth)) _sarrafiActiveMonth = curMonth;
   wrap.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px';
-  wrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">🗓️ انتخاب ماه:</label>
-    <select id="sarrafi-month-select" style="background:var(--card);border:1px solid var(--accent);border-radius:9px;padding:8px 12px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;min-width:150px">
-      ${months.map(m => `<option value="${m}"${m===_sarrafiActiveMonth?' selected':''}>${m}</option>`).join('')}
-    </select>`;
+  wrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">🗓️ سال و ماه:</label>
+    ${_ymSelectsHtml('sarrafi-month-select', months, _sarrafiActiveMonth, 'var(--accent)', 170)}`;
   const sel = document.getElementById('sarrafi-month-select');
   if (sel) sel.onchange = () => { _sarrafiActiveMonth = sel.value; renderSarrafi(); };
 }
@@ -34251,7 +34306,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.139';
+const APP_VERSION = '2.9.140';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -36498,9 +36553,22 @@ function renderMonthReport() {
   const body = document.getElementById('mr-body');
   if (!selEl || !body) return;
   const keys = _mrAllKeys();
-  const want = (selEl.value && keys.includes(selEl.value)) ? selEl.value : (keys[0] || _monthKey(persianDate()));
+  // کشویِ سال + کشویِ ماه (خواستهٔ کاربر): با انتخابِ سال فقط ماه‌های همان سال می‌آیند
+  _YM_KEYS['mr-month'] = keys.slice(); _YM_ALL['mr-month'] = '';
+  const yrSel = document.getElementById('mr-year');
+  const years = [];
+  keys.forEach(k => { const y = _ymYearOf(k); if (y && years.indexOf(y) === -1) years.push(y); });
+  years.sort().reverse();
+  let want = (selEl.value && keys.includes(selEl.value)) ? selEl.value : (keys[0] || _monthKey(persianDate()));
+  const curYear = (yrSel && yrSel.value && years.includes(yrSel.value)) ? yrSel.value : _ymYearOf(want);
+  if (_ymYearOf(want) !== curYear) want = keys.filter(k => _ymYearOf(k) === curYear)[0] || want;
+  if (yrSel) {
+    yrSel.style.display = years.length ? '' : 'none';
+    yrSel.innerHTML = years.map(y => `<option value="${y}"${y === curYear ? ' selected' : ''}>📆 ${_faNumPlain(y)}</option>`).join('');
+  }
   // مثل بقیهٔ کشوهای ماه: «اسد ۱۴۰۵ — ۱۴۰۵/۰۵» تا ماه‌های سال‌های مختلف قاطی نشوند
-  selEl.innerHTML = keys.map(k => `<option value="${k}" ${k === want ? 'selected' : ''}>${escFa(_monthOptionLabel(k))}</option>`).join('');
+  selEl.innerHTML = keys.filter(k => _ymYearOf(k) === curYear)
+    .map(k => `<option value="${k}" ${k === want ? 'selected' : ''}>${escFa(_monthOptionLabel(k))}</option>`).join('');
   const cur = _mrCompute(want), prev = _mrCompute(_mrPrevKey(want));
   const locked = _mrProfitLocked();
   const g = (c, p) => {
