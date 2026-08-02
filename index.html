@@ -15634,6 +15634,8 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
     <button type="button" id="lsStaffBtn" onclick="openStaffPage()" style="margin-top:14px;width:100%;background:transparent;border:1.5px dashed rgba(255,255,255,.45);color:rgba(255,255,255,.88);border-radius:10px;padding:10px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">👷 صفحه کارمند — دیدن تیل و مخزن (بدون رمز)</button>
     <!-- روی هر دستگاهی (گوشی/تبلت/کامپیوتر) که برنامه هنوز نصب نشده و مرورگر نصب را پشتیبانی کند دیده می‌شود -->
     <button type="button" id="pwaInstallBtn" onclick="pwaInstall()" style="display:none;margin-top:10px;width:100%;background:rgba(217,119,6,.16);border:1.5px solid rgba(246,166,35,.6);color:#ffd89b;border-radius:10px;padding:10px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">📲 نصب برنامه روی این دستگاه</button>
+    <!-- فایل نصب برای اندروید/ویندوز و راهنمای آیفون — برای کسی که برنامه را ندارد -->
+    <a href="./app.html" style="display:block;margin-top:10px;width:100%;box-sizing:border-box;background:transparent;border:1.5px solid rgba(255,255,255,.28);color:rgba(255,255,255,.85);border-radius:10px;padding:10px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;text-align:center;text-decoration:none">⬇️ دریافت برنامه برای اندروید / ویندوز / آیفون</a>
   </div>
   <div style="position:relative;z-index:2;margin-top:18px;font-size:0.7rem;color:rgba(255,255,255,.5);text-align:center;line-height:1.9">۱۴۰۵ برای پمپ یعقوبی طراحی شده ـــ تمام حقوق محفوظ است<br>طراحی و توسعه: vil3ntec@gmail.com محمد هارون<br>شماره 0792236008 +93</div>
 </div>
@@ -34981,7 +34983,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.150';
+const APP_VERSION = '2.9.151';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
