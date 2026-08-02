@@ -1,7 +1,7 @@
 // سرویس‌ورکر پمپ یعقوبی — پوستهٔ برنامه (این صفحه + آیکون‌ها) را کش می‌کند تا
 // برنامه بعد از نصب، هم آنلاین و هم کاملاً آفلاین باز شود. نسخهٔ کش را هر بار
 // که APP_VERSION در index.html عوض می‌شود، این‌جا هم عوض کنید تا کش کهنه پاک شود.
-const CACHE_NAME = 'pump-yaqobi-shell-v2.9.149';
+const CACHE_NAME = 'pump-yaqobi-shell-v2.9.150';
 const APP_SHELL = [
   './',
   './index.html',
@@ -108,5 +108,74 @@ self.addEventListener('fetch', event => {
       caches.open(CACHE_NAME).then(cache => cache.put(req, copy)).catch(() => {});
       return res;
     }))
+  );
+});
+
+// ---------------------------------------------------------------------------
+//  پیام‌رسان — نوتیفیکیشن وقتی برنامه بسته یا گوشی قفل است
+//
+//  سرورِ خانگی (پنل) پیام را با Web Push می‌فرستد و مرورگر همین Service Worker
+//  را بیدار می‌کند — حتی اگر برنامه اصلاً باز نباشد. اینجا آن را به یک
+//  نوتیفیکیشنِ واقعی تبدیل می‌کنیم.
+// ---------------------------------------------------------------------------
+self.addEventListener('push', event => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    try { data = { body: event.data.text() }; } catch (e2) { data = {}; }
+  }
+
+  const title = data.title || 'پیام تازه';
+  const options = {
+    body: data.body || '',
+    icon: data.icon || './icons/icon-192.png',
+    badge: data.badge || './icons/icon-192.png',
+    // با tag، پیام‌های یک گفت‌وگو روی هم می‌نشینند و صفحه شلوغ نمی‌شود
+    tag: data.tag || 'pump-message',
+    renotify: true,
+    dir: 'rtl',
+    lang: 'fa',
+    timestamp: Date.now(),
+    data: { chatId: data.chatId || null, messageId: data.messageId || null, url: data.url || './' },
+    // روی اندروید، لرزشِ کوتاه تا در جیب هم حس شود
+    vibrate: [80, 40, 80]
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// با زدنِ نوتیفیکیشن: اگر برنامه باز است همان را جلو بیاور، وگرنه بازش کن
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const info = event.notification.data || {};
+  const target = new URL(info.url || './', self.location.origin).href;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const client of list) {
+        if ('focus' in client) {
+          // به خودِ برنامه بگو کدام گفت‌وگو را باز کند
+          try { client.postMessage({ type: 'open-chat', chatId: info.chatId }); } catch (e) {}
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(target);
+      return undefined;
+    })
+  );
+});
+
+// اگر مرورگر اشتراک را تازه کرد، سرور باید اشتراکِ تازه را بداند
+self.addEventListener('pushsubscriptionchange', event => {
+  event.waitUntil(
+    self.registration.pushManager
+      .subscribe({ userVisibleOnly: true, applicationServerKey: event.oldSubscription && event.oldSubscription.options.applicationServerKey })
+      .then(sub => self.clients.matchAll({ includeUncontrolled: true }).then(list => {
+        for (const client of list) {
+          try { client.postMessage({ type: 'push-resubscribed', subscription: sub.toJSON() }); } catch (e) {}
+        }
+      }))
+      .catch(() => {})
   );
 });
