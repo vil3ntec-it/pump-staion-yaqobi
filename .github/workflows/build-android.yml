@@ -53,6 +53,8 @@ jobs:
         run: |
           mkdir -p out
           cp android/app/build/outputs/apk/release/*.apk "out/PumpYaqobi-$(date +%Y%m%d).apk"
+          # یک نام ثابت هم می‌سازیم تا لینکِ دانلود در سایت هیچ‌وقت نشکند
+          cp android/app/build/outputs/apk/release/*.apk "out/PumpYaqobi.apk"
           ls -la out/
 
       - name: بارگذاری به‌عنوان Artifact
