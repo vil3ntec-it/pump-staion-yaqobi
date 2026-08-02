@@ -241,6 +241,12 @@ const fa = {
   onlineVia: 'از راه',
 
   // ---- راه‌اندازی خودکار سایت تازه ----
+  messenger: 'پیام‌رسان',
+  messengerOnline: '{n} نفر آنلاین',
+  messengerCodesHint:
+    'سرور خانگی پیامک نمی‌فرستد. هر کس بخواهد وارد پیام‌رسان شود، کدش اینجا می‌آید و شما آن را به او می‌دهید. کدها ۱۰ دقیقه معتبرند.',
+  messengerNoCodes: 'کسی منتظر کد نیست.',
+  messengerNewUser: 'کاربر تازه',
   repairTunnel: 'تلاش برای درست کردن خودکار',
   repairStarted: 'در حال بازسازی تونل…',
   panelVersion: 'نسخهٔ پنل',
@@ -538,6 +544,12 @@ const en: Dict = {
   onlineViaPublic: 'internet address',
   onlineVia: 'via',
 
+  messenger: 'Messenger',
+  messengerOnline: '{n} online',
+  messengerCodesHint:
+    'A home server cannot send SMS. When someone signs in to the messenger their code appears here and you pass it on. Codes last 10 minutes.',
+  messengerNoCodes: 'Nobody is waiting for a code.',
+  messengerNewUser: 'new user',
   repairTunnel: 'Try to fix it automatically',
   repairStarted: 'Rebuilding the tunnel…',
   panelVersion: 'Panel version',

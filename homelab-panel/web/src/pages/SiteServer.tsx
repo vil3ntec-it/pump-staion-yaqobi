@@ -14,6 +14,7 @@ import {
   RefreshCw,
   RotateCw,
   TriangleAlert,
+  MessageCircle,
   Wrench,
 } from 'lucide-react';
 import { useApp } from '../app-context';
@@ -219,6 +220,8 @@ export default function SiteServer() {
         </Card>
       )}
 
+      <MessengerCard />
+
       <ConfirmDialog
         open={rotateOpen}
         danger
@@ -238,6 +241,62 @@ export default function SiteServer() {
         }}
       />
     </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   پیام‌رسان — سرور خانگی پیامک نمی‌فرستد، پس کدِ ورودِ هر کس اینجا به صاحبِ
+   سرور نشان داده می‌شود تا خودش به او بدهد.
+--------------------------------------------------------------------------- */
+type MessengerInfo = {
+  codes: { phone: string; code: string; expiresAt: number; isNewUser: boolean }[];
+  stats: { onlineUsers: number; connections: number; vapidPublicKey: string };
+};
+
+function MessengerCard() {
+  const { t } = useApp();
+  const [info, setInfo] = useState<MessengerInfo | null>(null);
+
+  const load = useCallback(() => {
+    api<MessengerInfo>('/api/site-server/messenger/codes')
+      .then(setInfo)
+      .catch(() => setInfo(null));
+  }, []);
+
+  useEffect(() => {
+    load();
+    const timer = setInterval(load, 5000);
+    return () => clearInterval(timer);
+  }, [load]);
+
+  if (!info) return null;
+
+  return (
+    <Card
+      title={t('messenger')}
+      icon={<MessageCircle className="h-4 w-4" />}
+      action={<Badge tone={info.stats.onlineUsers > 0 ? 'good' : undefined}>{t('messengerOnline', { n: info.stats.onlineUsers })}</Badge>}
+    >
+      <p className="mb-3 text-[11px] leading-relaxed text-ink-muted">{t('messengerCodesHint')}</p>
+      {!info.codes.length ? (
+        <p className="text-[11px] text-ink-muted">{t('messengerNoCodes')}</p>
+      ) : (
+        <ul className="divide-y divide-line">
+          {info.codes.map((c) => (
+            <li key={c.phone} className="flex flex-wrap items-center gap-2 py-2.5">
+              <span className="min-w-0 flex-1 truncate font-mono text-sm" dir="ltr">
+                {c.phone}
+              </span>
+              {c.isNewUser && <Badge tone="info">{t('messengerNewUser')}</Badge>}
+              <code className="tnum rounded-lg border border-line px-3 py-1 font-mono text-lg tracking-widest">
+                {c.code}
+              </code>
+              <CopyButton value={c.code} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
   );
 }
 

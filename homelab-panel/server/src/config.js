@@ -62,6 +62,10 @@ export const config = {
   // سرویس تشخیص IP عمومی (اگر اینترنت نبود، مقدار null برمی‌گردد — داده‌ی ساختگی نداریم)
   publicIpUrl: process.env.HLP_PUBLIC_IP_URL || 'https://api.ipify.org?format=json',
 
+  // پیام‌رسان: سقفِ حجمِ یک پیام. عمداً بزرگ است تا پیام و پیوست بدون
+  // محدودیت برسد؛ اگر خواستید کم‌ترش کنید HLP_MSG_MAX را بگذارید.
+  messengerMaxBytes: num(process.env.HLP_MSG_MAX, 256 * 1024 * 1024),
+
   // سرورِ سایتِ پمپ یعقوبی (پروتکل realtime) روی همین پورت سوار می‌شود
   siteSync: {
     enabled: (process.env.HLP_SITESYNC ?? '1') !== '0',

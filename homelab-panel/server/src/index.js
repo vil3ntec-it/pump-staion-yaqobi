@@ -63,9 +63,12 @@ app.use((req, res, next) => {
 });
 
 // بدنهٔ JSON فقط برای مسیرهایی که JSON می‌گیرند (آپلود فایل خام است)
+const MSG_LIMIT = `${Math.max(1, Math.round(config.messengerMaxBytes / (1024 * 1024)))}mb`;
 app.use((req, res, next) => {
   if (req.path === '/api/files/upload' || req.path === '/api/settings/logo') return next();
-  express.json({ limit: '5mb' })(req, res, next);
+  // پیام‌رسان سقفِ خودش را دارد تا پیام‌های بلند رد نشوند
+  const limit = req.path.startsWith('/api/messenger') ? MSG_LIMIT : '5mb';
+  express.json({ limit })(req, res, next);
 });
 
 // ------------------------------- سلامت -------------------------------------
@@ -170,7 +173,7 @@ if (siteSync && config.siteSync.port && config.siteSync.port !== config.port) {
     if (req.method === 'OPTIONS') return res.status(204).end();
     next();
   });
-  publicApp.use(express.json({ limit: '5mb' }));
+  publicApp.use(express.json({ limit: MSG_LIMIT }));
   publicApp.get(['/health', '/'], (req, res) => {
     res.json({ ok: true, service: 'pump-yaqobi-server', mode: 'sync-only', time: new Date().toISOString() });
   });
