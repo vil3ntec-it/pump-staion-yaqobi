@@ -15694,12 +15694,24 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
     --ui-title:1.06rem; --ui-sub:.86rem; --ui-big:1.55rem;
   }
   .pl-grid{grid-template-columns:1fr 1fr;gap:11px}
-  .tool-link-card{width:100%;margin:0 0 9px;justify-content:space-between;font-size:.86rem;padding:12px 14px}
+  /* کادرهای لینک روی گوشی: دو‌تا در هر ردیف و هم‌اندازه — همان ردیفِ مرتبِ
+     تصویرِ مرجع. (تمام‌عرض کردنشان ردیف را به چند نوارِ بلند می‌شکست.)
+     .hc-card استثناست: کادرهای «تاریخچه‌ها» عنوان + زیرنویس دارند و باید
+     تمام‌عرض بمانند. */
+  .tool-link-card:not(.hc-card){
+    width:calc(50% - 18px);margin:0 0 9px 8px;justify-content:space-between;
+    font-size:.84rem;padding:11px 12px}
   .inv-stats{grid-template-columns:1fr}
+}
+/* تبلت‌های باریک: باز هم دوتا در ردیف، نه شکستنِ ناجورِ ۳+۱ */
+@media (min-width:641px) and (max-width:860px){
+  .tool-link-card:not(.hc-card){width:calc(50% - 18px);margin:0 0 9px 8px;justify-content:space-between}
 }
 @media (max-width:380px){
   :root{--ui-pad:13px; --ui-gap:11px; --ui-title:1rem; --ui-big:1.4rem}
   .pl-grid{grid-template-columns:1fr}
+  /* گوشیِ خیلی باریک: یک‌تا در ردیف تا متنِ کادر نشکند */
+  .tool-link-card:not(.hc-card){width:100%;margin:0 0 9px}
 }
 </style>
 </head>
@@ -35653,7 +35665,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.152';
+const APP_VERSION = '2.9.153';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
