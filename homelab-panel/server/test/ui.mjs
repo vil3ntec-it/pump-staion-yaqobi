@@ -77,6 +77,7 @@ try {
   browser = await chromium.launch({ executablePath: CHROME });
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   const consoleErrors = [];
+  let expected403 = false;     // آزمونِ رمزِ اعلان عمداً یک ۴۰۳ می‌سازد
   page.on('pageerror', (e) => consoleErrors.push(e.message));
   page.on('console', (m) => {
     if (m.type() === 'error') consoleErrors.push(m.text());
@@ -184,6 +185,40 @@ try {
   const tokenShown = await page.locator('code').first().innerText();
   check('رمز کامل نمایش داده شد', /^[0-9a-f]{30,}$/.test(tokenShown.trim()), tokenShown.slice(0, 12));
 
+  console.log('\n── اعلان‌ها (سرویسِ اعلانِ سرور خانگی) ──');
+  check('کارت اعلان‌ها در صفحهٔ سرور سایت هست', (await page.locator('h2:has-text("اعلان‌ها")').count()) > 0);
+  await page.fill('input[placeholder*="نام موضوع"]', 'ui-topic');
+  await page.click('button:has-text("ساختن")');
+  await page.waitForTimeout(900);
+  check('موضوع تازه ساخته شد', (await page.locator('button:has-text("ui-topic")').count()) > 0);
+
+  await page.click('button:has-text("ui-topic")');
+  await page.waitForTimeout(400);
+  // نقلِ قول لازم است: پلی‌رایت متنی که با / شروع شود را عبارت باقاعده می‌گیرد
+  check('راهنمای curl برای این موضوع نشان داده می‌شود', (await page.locator('code:has-text("api/notify/ui-topic")').count()) > 0);
+
+  await page.fill('input[placeholder*="متن اعلان"]', 'یک خبر آزمایشی از پنل');
+  await page.click('button:has-text("فرستادن اعلان")');
+  await page.waitForTimeout(1200);
+  const sentHistory = await page.evaluate(() =>
+    fetch('/api/notify/ui-topic/json').then((r) => r.json())
+  );
+  check(
+    'اعلانِ فرستاده‌شده از پنل در تاریخچه هست',
+    sentHistory.messages?.some((m) => m.body === 'یک خبر آزمایشی از پنل'),
+    JSON.stringify(sentHistory.messages || []).slice(0, 120)
+  );
+
+  await page.click('button:has-text("ساختن رمزِ نوشتن")');
+  await page.waitForTimeout(900);
+  check('رمزِ نوشتن ساخته و نشان داده شد', (await page.locator('text=همین حالا کپی کنید').count()) > 0);
+  const blocked = await page.evaluate(() =>
+    fetch('/api/notify/ui-topic', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: 'بدون رمز' })
+      .then((r) => r.status)
+  );
+  check('بعد از رمزگذاری، فرستادنِ بدون رمز بسته شد', blocked === 403, String(blocked));
+  expected403 = blocked === 403;
+
   console.log('\n── دامنه‌ها، لاگ‌ها، شبکه ──');
   await page.click('a[href="/domains"]');
   await page.waitForTimeout(900);
@@ -226,7 +261,10 @@ try {
   check('دکمهٔ منوی موبایل دیده می‌شود', await page.locator('button[aria-label="menu"]').isVisible());
 
   console.log('\n── خطاهای کنسول ──');
-  const realErrors = consoleErrors.filter((e) => !/favicon|ResizeObserver loop/i.test(e));
+  // ۴۰۳ عمدیِ آزمونِ رمزِ اعلان خطای برنامه نیست — خودمان خواسته بودیم رد شود
+  const realErrors = consoleErrors.filter(
+    (e) => !/favicon|ResizeObserver loop/i.test(e) && !(/403/.test(e) && expected403)
+  );
   check('کنسول مرورگر خطای واقعی ندارد', realErrors.length === 0, realErrors.slice(0, 2).join(' | '));
 } catch (e) {
   fail++;
