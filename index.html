@@ -2006,6 +2006,14 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
 
   function onConnected(){
     connected = true; reconnectDelay = 1000; lastAuthFail = false;
+    // این اعتبار جواب داد — اگر رمزی جز رمزِ فعلیِ ما بود، همان را نگه دار و بعداً
+    // (در cfgOnConnected) روی سرور هم ثبت کن تا بقیهٔ دستگاه‌ها هم همین را بردارند.
+    if (curCred && curCred.url === SELF_HOST_URL && (curCred.token || '') !== (SELF_HOST_TOKEN || '')) {
+      cfgUseNow(curCred.url, curCred.token);
+      cfgStoreLocal(curCred.url, curCred.token, cfgNewTs());
+      cfgAdopted = true;
+    }
+    authTried = {};
     for (var pth in onDiscRegs){ sendRaw({ op: 'onDisc', path: pth, action: onDiscRegs[pth].action, value: onDiscRegs[pth].value }); }
     for (var id in subs){ var s = subs[id]; sendRaw({ op: 'sub', path: s.path, event: s.event, subId: Number(id), limitToLast: s.limit }); }
     sweepQueuedGets();
@@ -2037,7 +2045,14 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
       // رمزِ این آدرس قبول نشد: هرچه تلاش کنیم باز رد می‌شویم. پس همین حالا (نه یک
       // دقیقهٔ بعد) برو سراغ سرورهای دیگری که می‌شناسیم. بدونِ این، دستگاه با یک
       // رمزِ غلط تا ابد پشتِ در می‌ماند و کاربر فقط می‌بیند «وصل نیست».
-      if (m.msg === 'auth_failed') { lastAuthFail = true; cfgLastOk = 0; cfgRescueAt = 0; try { cfgRescue(); } catch(e){} }
+      if (m.msg === 'auth_failed' || m.msg === 'unknown_site') {
+        lastAuthFail = (m.msg === 'auth_failed');
+        if (curCred) authTried[credKey(curCred)] = 1;      // این اعتبار سوخت
+        // هنوز رمزِ نیازموده‌ای داریم → بی‌معطلی بعدی را امتحان کن (سوکت همین حالا
+        // بسته می‌شود و scheduleReconnect با همین تاخیرِ کوتاه نامزدِ بعدی را می‌گیرد)
+        if (credCandidates().length) { reconnectDelay = 300; return; }
+        cfgLastOk = 0; cfgRescueAt = 0; try { cfgRescue(); } catch(e){}
+      }
       return;
     }
   }
@@ -2072,10 +2087,53 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     }
     notifyConn(false); notifyNet();
   }
+  /* ── چند رمزِ نامزد به‌جای یک رمزِ ثابت ──────────────────────────────────────
+     سرورِ مشترک روی پنلِ هوم‌لب چند «دفتر» دارد و هر دفتر رمزِ خودش را. اگر رمزِ
+     دفترِ اصلی عوض شده باشد (سرور دوباره نصب شده، پوشهٔ داده جابه‌جا شده، یا از
+     پنل رمز چرخانده شده)، دستگاه با یک رمزِ ثابت تا ابد پشتِ در می‌ماند و هیچ
+     راهی برای فهمیدنِ رمزِ تازه ندارد. حالا به‌جای یک رمز، همهٔ رمزهایی که این
+     دستگاه می‌شناسد یکی‌یکی امتحان می‌شوند و اولی که سرور قبولش کرد، همان
+     می‌ماند و روی سرور هم ثبت می‌شود تا بقیهٔ دستگاه‌ها همان را بردارند.
+     نامزدها همچنین یک‌بار با «?site=main» امتحان می‌شوند: با این پارامتر سرورِ
+     چنددفتری دقیقاً دفترِ سایتِ پمپ را می‌دهد و دیگر ممکن نیست دستگاه بی‌صدا در
+     دفترِ سایتِ دیگری بیفتد و حسابِ متفاوتی ببیند. ── */
+  var SITE_KEY  = 'main';                  // نامِ دفترِ سایتِ پمپ روی سرورِ چنددفتری
+  var authTried = {};                      // اعتبارهایی که همین سیزن رد شدند
+  var curCred   = null;                    // اعتباری که سوکتِ فعلی با آن باز شده
+
+  function credKey(c){ return c.url + '|' + (c.token || '') + '|' + (c.site ? '1' : '0'); }
+  function credUrl(c){
+    var q = [];
+    if (c.token) q.push('token=' + encodeURIComponent(c.token));
+    if (c.site)  q.push('site='  + encodeURIComponent(SITE_KEY));
+    if (!q.length) return c.url;
+    return c.url + (c.url.indexOf('?') >= 0 ? '&' : '?') + q.join('&');
+  }
+  // رمزهای نیازمودهٔ این آدرس، به ترتیبِ اولویت (اول همان رفتارِ همیشگی)
+  function credCandidates(){
+    var toks = [], out = [], seen = {};
+    function addTok(t){ t = t || ''; if (toks.indexOf(t) < 0) toks.push(t); }
+    addTok(SELF_HOST_TOKEN);                                   // رمزِ فعلی/دستیِ کاربر
+    addTok(_lsGet('pumpServerToken'));
+    try { cfgKnown().forEach(function(x){ if (x.url === SELF_HOST_URL) addTok(x.token); }); } catch(e){}
+    addTok(BUILTIN_TOKEN);                                     // رمزِ داخلیِ خودِ برنامه
+    function add(token, site){
+      var c = { url: SELF_HOST_URL, token: token || '', site: !!site }, k = credKey(c);
+      if (seen[k] || authTried[k]) return;
+      seen[k] = 1; out.push(c);
+    }
+    toks.forEach(function(t){ add(t, false); });                // بدونِ site — دقیقاً مثل قبل
+    toks.forEach(function(t){ add(t, true);  });                // با site=main — دفترِ درستِ سایت
+    return out;
+  }
   function connect(){
     if (!wantOpen || !SELF_HOST_URL) return;
     if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;   // از قبل در حالِ اتصال/وصل
-    var url = SELF_HOST_URL + (SELF_HOST_TOKEN ? (SELF_HOST_URL.indexOf('?') >= 0 ? '&' : '?') + 'token=' + encodeURIComponent(SELF_HOST_TOKEN) : '');
+    var cands = credCandidates();
+    // همه رد شده‌اند: از نو شروع کن (شاید سرور در این فاصله درست شده باشد)
+    if (!cands.length) { authTried = {}; cands = credCandidates(); }
+    curCred = cands[0] || { url: SELF_HOST_URL, token: SELF_HOST_TOKEN, site: false };
+    var url = credUrl(curCred);
     var sock;
     try { sock = new WebSocket(url); } catch(e){ scheduleReconnect(); return; }
     ws = sock;
@@ -2134,7 +2192,7 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
      محافظ‌ها: (۱) اگر آدرسِ تازه اصلاً وصل نشد، دستگاه خودکار به آدرسِ قبلیِ سالم
      برمی‌گردد و آن تنظیمِ خراب را دیگر امتحان نمی‌کند — یک آدرسِ اشتباه نمی‌تواند
      همهٔ دستگاه‌ها را از کار بیندازد. (۲) تنظیمِ تکراری هیچ کوچ/حلقه‌ای نمی‌سازد. ── */
-  var cfgSwitchTimer = null, cfgPrev = null, cfgMirrored = false, cfgSeenTs = 0;
+  var cfgSwitchTimer = null, cfgPrev = null, cfgMirrored = false, cfgSeenTs = 0, cfgAdopted = false;
 
   // شمارهٔ تنظیمِ تازه: باید از هر چه تا حالا دیده‌ایم بزرگ‌تر باشد. اگر فقط
   // Date.now() می‌گذاشتیم، دستگاهی که ساعتش جلو است یک شمارهٔ آینده می‌نوشت و
@@ -2206,6 +2264,13 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     cfgPrev = null;
     cfgLastOk = Date.now();                  // این آدرس زنده است — نیازی به خودترمیمی نیست
     cfgRemember(SELF_HOST_URL, SELF_HOST_TOKEN);   // این سرور جواب داد → به فهرستِ سرورهای شناخته‌شده
+    // رمزی که با آزمون پیدا شد، باید روی خودِ سرور بنشیند تا دستگاه‌های دیگر هم
+    // همان را بردارند — وگرنه هر دستگاه باید جداگانه شانس بیاورد.
+    if (cfgAdopted) {
+      cfgAdopted = false;
+      cfgPublishHere({ url: SELF_HOST_URL, token: SELF_HOST_TOKEN, ts: cfgTs() || cfgNewTs() });
+      cfgNote('🔑 رمزِ تازهٔ سرور پیدا شد و برای همهٔ دستگاه‌ها ثبت شد', '#38a169');
+    }
     // خواندنِ مستقیم (نه فقط اشتراک): بعد از هر اتصال، تنظیمِ این سرور دوباره سنجیده
     // شود — اشتراک برای «مقدارِ تکراری» رویداد نمی‌دهد و ممکن بود از دستش بدهیم.
     try { doGet(CFG_PATH).then(cfgOnRemote).catch(function(){}); } catch(e){}
@@ -2218,6 +2283,11 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
 
   // نوشتنِ تنظیم روی یک سرورِ دیگر با یک اتصالِ کوتاهِ یک‌بارمصرف (بدون دست زدن به اتصالِ اصلی)
   function cfgPublishTo(url, token, c){
+    return cfgPublishOnce(url, token, c, false).then(function(ok){
+      return ok ? true : cfgPublishOnce(url, token, c, true);
+    });
+  }
+  function cfgPublishOnce(url, token, c, site){
     return new Promise(function(resolve){
       if (!cfgValid({ url: url })) { resolve(false); return; }
       var sock, done = false, timer = null;
@@ -2227,7 +2297,7 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
         try { if (sock) sock.close(); } catch(e){}
         resolve(ok);
       }
-      try { sock = new WebSocket(url + (token ? ((url.indexOf('?') >= 0 ? '&' : '?') + 'token=' + encodeURIComponent(token)) : '')); }
+      try { sock = new WebSocket(credUrl({ url: url, token: token, site: site })); }
       catch(e){ resolve(false); return; }
       timer = setTimeout(function(){ finish(false); }, 12000);
       sock.onmessage = function(ev){
@@ -2243,11 +2313,16 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
 
   // خواندنِ تنظیمِ ثبت‌شده روی یک سرورِ دیگر با یک اتصالِ کوتاهِ یک‌بارمصرف
   function cfgFetchFrom(url, token){
+    return cfgFetchOnce(url, token, false).then(function(r){
+      return r ? r : cfgFetchOnce(url, token, true);   // شاید فقط دفترِ سایت بازش کند
+    });
+  }
+  function cfgFetchOnce(url, token, site){
     return new Promise(function(resolve){
       if (!cfgValid({ url: url })) { resolve(null); return; }
       var sock, done = false, timer = null;
       function finish(v){ if (done) return; done = true; if (timer) clearTimeout(timer); try { if (sock) sock.close(); } catch(e){} resolve(v); }
-      try { sock = new WebSocket(url + (token ? ((url.indexOf('?') >= 0 ? '&' : '?') + 'token=' + encodeURIComponent(token)) : '')); }
+      try { sock = new WebSocket(credUrl({ url: url, token: token, site: site })); }
       catch(e){ resolve(null); return; }
       timer = setTimeout(function(){ finish(null); }, 12000);
       sock.onmessage = function(ev){
@@ -2331,17 +2406,24 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
   try { setInterval(cfgRescue, 20000); } catch(e){}
 
   // آزمایشِ آدرس/رمز پیش از ذخیره: فقط وصل می‌شود و می‌بندد (هیچ چیزی نمی‌نویسد)
-  function cfgProbe(url, token){
+  // یک‌بار ساده و یک‌بار با ?site=main امتحان می‌شود؛ وگرنه رمزِ درستِ دفترِ سایت
+  // «جواب نداد» گزارش می‌شد و کاربر فکر می‌کرد رمز را اشتباه گرفته است.
+  function cfgProbeOnce(url, token, site){
     return new Promise(function(resolve){
       if (!cfgValid({ url: url })) { resolve(false); return; }
       var sock, done = false, timer = null;
       function finish(ok){ if (done) return; done = true; if (timer) clearTimeout(timer); try { if (sock) sock.close(); } catch(e){} resolve(ok); }
-      try { sock = new WebSocket(url + (token ? ((url.indexOf('?') >= 0 ? '&' : '?') + 'token=' + encodeURIComponent(token)) : '')); }
+      try { sock = new WebSocket(credUrl({ url: url, token: token, site: site })); }
       catch(e){ resolve(false); return; }
       timer = setTimeout(function(){ finish(false); }, 12000);
       sock.onmessage = function(ev){ var m; try { m = JSON.parse(ev.data); } catch(e){ return; } if (m.op === 'connected') finish(true); if (m.op === 'error') finish(false); };
       sock.onerror = function(){ finish(false); };
       sock.onclose = function(){ finish(false); };
+    });
+  }
+  function cfgProbe(url, token){
+    return cfgProbeOnce(url, token, false).then(function(ok){
+      return ok ? true : cfgProbeOnce(url, token, true);
     });
   }
 
@@ -31561,10 +31643,21 @@ function showTopToast(msg, bg, duration) {
     _bar.innerHTML = '<span id="net-offline-title">⚠️ به سرور وصل نیست — چیزی که می‌بینید ممکن است کاملِ حساب نباشد.</span>'
       + '<div style="font-size:0.7rem;font-weight:400;opacity:.85;direction:ltr" id="net-offline-url"></div>'
       + '<button id="net-retry" style="' + btn + '">تلاش دوباره</button>'
-      + '<button id="net-builtin" style="' + btn + '">سرور پیش‌فرض برنامه</button>';
+      + '<button id="net-builtin" style="' + btn + '">سرور پیش‌فرض برنامه</button>'
+      + '<button id="net-fixpw" style="' + btn + ';display:none">🔑 گذاشتن رمزِ تازه</button>';
     _bar.querySelector('#net-retry').onclick = function(){ try { window.__pumpNet__.reconnect(); } catch(e){} };
     _bar.querySelector('#net-builtin').onclick = function(){
       try { window.__pumpServerCfg__.resetToBuiltin(); } catch(e){}
+    };
+    // رمز رد شده: کاربر باید بتواند همان‌جا رمزِ تازه را بگذارد، نه اینکه دنبالِ
+    // صفحهٔ تنظیمات بگردد. رمز را از پنلِ سرور (خدمات سرور › رمز) برمی‌دارد.
+    _bar.querySelector('#net-fixpw').onclick = function(){
+      try { showSection('serverservices'); } catch(e){}
+      try { fillSyncSettings(); } catch(e){}
+      try {
+        var el = document.getElementById('server-token');
+        if (el) { el.scrollIntoView({ block: 'center' }); el.focus(); }
+      } catch(e){}
     };
     try { document.body.appendChild(_bar); } catch(e){ _bar = null; }
     return _bar;
@@ -31582,6 +31675,8 @@ function showTopToast(msg, bg, duration) {
       : '⚠️ به سرور وصل نیست — چیزی که می‌بینید ممکن است کاملِ حساب نباشد.';
     const u = b.querySelector('#net-offline-url');
     if (u) u.textContent = (window.__SELF_HOST_URL__ || '') + (reason === 'auth' ? '  (رمز رد شد)' : '');
+    const f = b.querySelector('#net-fixpw');
+    if (f) f.style.display = (reason === 'auth') ? '' : 'none';
   }
   function tick(){
     let ok = true;
@@ -34869,7 +34964,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.147';
+const APP_VERSION = '2.9.148';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
