@@ -259,6 +259,20 @@ body.light-mode #lsStaffBtn{
   color:#6b5636 !important;
   border-color:rgba(0,0,0,.35) !important;
 }
+/* «دریافت برنامه» — دکمهٔ پُر و پُررنگ. قبلاً متنِ سفید روی کادرِ سفیدِ حالتِ
+   روز می‌نشست و کاملاً نامرئی بود؛ حالا در هر دو حالت (روز و شب) یکسان و
+   خوانا دیده می‌شود. */
+#lsGetAppLink{
+  display:none;                                  /* با pumpAppInstalled() روشن می‌شود */
+  margin-top:12px; width:100%; box-sizing:border-box;
+  background:linear-gradient(135deg,#f6a623,#d97706) !important;
+  border:0 !important; color:#231603 !important;
+  border-radius:11px; padding:12px 10px;
+  font-family:'Vazirmatn',sans-serif; font-weight:900; font-size:0.88rem;
+  text-align:center; text-decoration:none;
+  box-shadow:0 6px 18px rgba(217,119,6,.38);
+}
+#lsGetAppLink:hover{ filter:brightness(1.06); }
 @keyframes lsZoom{from{transform:scale(1)}to{transform:scale(1.1)}}
 @keyframes lsFadeDown{from{opacity:0;transform:translateY(-24px)}to{opacity:1;transform:translateY(0)}}
 @keyframes lsFadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
@@ -15760,8 +15774,10 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
     <div class="lock-err" id="lockErr"></div>
     <div style="font-size:0.72rem;color:rgba(255,255,255,.6);margin-top:10px">رمز مدیر یا نظاره‌گر را وارد کنید</div>
     <button type="button" id="lsStaffBtn" onclick="openStaffPage()" style="margin-top:14px;width:100%;background:transparent;border:1.5px dashed rgba(255,255,255,.45);color:rgba(255,255,255,.88);border-radius:10px;padding:10px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">👷 صفحه کارمند — دیدن تیل و مخزن (بدون رمز)</button>
-    <!-- دکمهٔ «نصب برنامه روی این دستگاه» و ردیفِ «دریافت برنامه» از صفحهٔ قفل
-         برداشته شدند. صفحهٔ دریافت برنامه سرِ جایش هست: app.html -->
+    <!-- دکمهٔ «📲 نصب برنامه روی این دستگاه» برداشته شد. این یکی می‌ماند — ولی
+         حالا پُررنگ و دیدنی: قبلاً متنِ سفید روی کادرِ سفید بود و در حالتِ روز
+         اصلاً دیده نمی‌شد. فقط برای کسی که هنوز برنامه را نصب نکرده. -->
+    <a href="./app.html" id="lsGetAppLink" style="display:none">⬇️ دریافت برنامه برای اندروید / ویندوز / آیفون</a>
   </div>
   <div style="position:relative;z-index:2;margin-top:18px;font-size:0.7rem;color:rgba(255,255,255,.5);text-align:center;line-height:1.9">۱۴۰۵ برای پمپ یعقوبی طراحی شده ـــ تمام حقوق محفوظ است<br>طراحی و توسعه: vil3ntec@gmail.com محمد هارون<br>شماره 0792236008 +93</div>
 </div>
@@ -20291,6 +20307,9 @@ function tryUnlock() {
     document.getElementById('lockErr').innerHTML = '';
     try { updateAll(); } catch(e){}
     try { _requestNotifyPermission(); } catch(e){}
+    // همین‌جا (که کاربر واقعاً یک حرکت کرده) دستگاه را برای اعلانِ «برنامه بسته»
+    // نزدِ سرور خانگی ثبت کن — وگرنه با بسته شدنِ برنامه هیچ خبری نمی‌رسد
+    try { setTimeout(function(){ _ntfAutoPush('ask'); }, 1200); } catch(e){}
     // حضور (presence) را همین لحظهٔ ورود ثبت کن تا فرستنده‌ها بدانند کاربر «داخل
     // برنامه» است و اعلان بیرونی (ntfy) برایش نفرستند — بدون منتظر ماندنِ حلقهٔ ۵ ثانیه‌ای.
     try { _chatInitListeners(); } catch(e){}
@@ -33150,7 +33169,7 @@ function toggleRobot() {
   if (!p) return;
   const opening = !p.classList.contains('open');
   p.classList.toggle('open');
-  if (opening) { rbShowTab(_rbTab || 'qa'); _chatInitListeners(); _rbAutoPush(); }
+  if (opening) { rbShowTab(_rbTab || 'qa'); _chatInitListeners(); _ntfAutoPush('ask'); }
   else {
     // با بسته شدن، جابه‌جایی/تغییر اندازهٔ دستی پاک شود — باز شدنِ بعدی سر جای استاندارد
     p.style.left = ''; p.style.top = ''; p.style.right = ''; p.style.bottom = '';
@@ -34435,23 +34454,41 @@ function pushCopyTopic() {
   if (!t) { _pushMsg('کد اشتراک ساخته نشد — یک بار برنامه را ببندید و باز کنید.'); return; }
   try { navigator.clipboard.writeText(t).then(() => _pushMsg('📋 کد کپی شد.', true)); } catch (e) { _pushMsg('کپی نشد — کد را دستی انتخاب و کپی کنید.'); }
 }
-// جای دکمهٔ 🔔 سربرگ پنل چت (که برداشته شد): با اولین باز کردنِ پنل، همین دستگاه
-// خودکار مشترکِ تاپیکِ خودش می‌شود تا پیام‌هایش حتی با برنامهٔ بسته برسد.
-// یک بار در عمرِ دستگاه انجام می‌شود و اگر کاربر اجازه نداد دیگر تکرار نمی‌شود.
-function _rbAutoPush() {
+/* ── روشن شدنِ خودکارِ اعلانِ این دستگاه ────────────────────────────────────
+   جای دکمهٔ 🔔 که برداشته شد. دو حالت دارد:
+
+   • silent: اجازه از قبل داده شده → بی‌سروصدا دستگاه را دوباره نزدِ سرور ثبت
+     می‌کند. این را در هر بالا آمدنِ برنامه می‌زنیم، چون endpointِ پوش گاهی
+     عوض می‌شود و اگر ثبتِ تازه نشود، اعلانِ «برنامه بسته» دیگر نمی‌رسد.
+   • ask: با یک حرکتِ کاربر (ورود به برنامه یا باز کردنِ پنلِ چت) → یک بار
+     اجازه می‌پرسد.
+
+   نکتهٔ مهم: «یک بار پرسیدیم» فقط وقتی ثبت می‌شود که واقعاً جوابی گرفته باشیم
+   (اجازه داد یا رد کرد). اگر سرور در آن لحظه در دسترس نبود، دفعهٔ بعد دوباره
+   تلاش می‌شود — وگرنه دستگاه برای همیشه بدونِ اعلان می‌ماند. ── */
+let _ntfAutoBusy = false;
+function _ntfAutoPush(mode) {
   try {
-    if (typeof Notification === 'undefined' || !('serviceWorker' in navigator)) return;
+    if (_ntfAutoBusy) return;
+    if (typeof Notification === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
     if (Notification.permission === 'denied') return;
-    if (_lsPlain('pumpNtfPushOn')) return;          // قبلاً روشن شده
-    if (_lsPlain('pumpNtfPushAsked')) return;       // یک بار پرسیده‌ایم — دیگر مزاحم نشو
-    if (!_ntfBase('http')) return;                  // سرور خانگی در دسترس نیست
-    try { localStorage.setItem('pumpNtfPushAsked', '1'); } catch (e) {}
+    if (!_ntfBase('http')) return;                       // سرور خانگی در دسترس نیست
+    const granted = Notification.permission === 'granted';
+    // ثبت فقط وقتی لازم است تکرار شود: اولین بار، یا وقتی نقش (تاپیک) عوض شده
+    const done = _lsPlain('pumpNtfPushOn') && _lsPlain('pumpNtfPushTopic') === _ntfMyTopic();
+    if (mode === 'silent') { if (!granted || done) return; }
+    else { if (done) return; if (!granted && _lsPlain('pumpNtfPushAsked')) return; }
+    _ntfAutoBusy = true;
     _ntfSubscribeThisDevice().then(ok => {
-      if (ok === true) {
-        try { showTopToast('🔔 اعلانِ پیام‌ها روی این دستگاه روشن شد — حتی وقتی برنامه بسته است می‌رسد', '#38a169', 5000); } catch (e) {}
+      _ntfAutoBusy = false;
+      if (ok === true || ok === 'denied') { try { localStorage.setItem('pumpNtfPushAsked', '1'); } catch (e) {} }
+      if (ok !== true) return;
+      try { localStorage.setItem('pumpNtfPushTopic', _ntfMyTopic()); } catch (e) {}
+      if (!granted) {   // تازه روشن شد → یک خبرِ کوتاه بده
+        try { showTopToast('🔔 اعلان روی این دستگاه روشن شد — خبرها حتی وقتی برنامه بسته است می‌رسند', '#38a169', 5000); } catch (e) {}
       }
-    }).catch(() => {});
-  } catch (e) {}
+    }).catch(() => { _ntfAutoBusy = false; });
+  } catch (e) { _ntfAutoBusy = false; }
 }
 // راهِ دستی (از «تنظیمات › اعلان‌ها») — همان کارِ بالا، ولی با پیام و راهنما
 async function pushSubscribeSelf() {
@@ -35884,13 +35921,14 @@ function _ntfAccept(msg, { live } = {}) {
   _ntfPaintBadge();
   if (document.getElementById('ntfModal')?.classList.contains('open')) { _ntfPaintList(); _ntfMarkRead(); }
   if (!live) return;
-  // برنامه باز است → یک توستِ کوتاه؛ برنامه پنهان است → نوتیفیکیشن
+  // برنامه باز است → یک توستِ کوتاه؛ برنامه پنهان است → نوتیفیکیشن.
+  // نوتیفیکیشن حتماً از راهِ سرویس‌ورکر (_notify) می‌رود: روی اندروید و کروم
+  // موبایل، `new Notification(...)` مستقیم خطا می‌دهد و خبر بی‌صدا گم می‌شد —
+  // دقیقاً همان «بیرونِ برنامه بودم و اعلانی نیامد».
   if (document.visibilityState === 'visible') {
     try { showTopToast('🔔 ' + (msg.title ? msg.title + ' — ' : '') + msg.body.slice(0, 70), msg.priority >= 5 ? '#e53e3e' : '#3182ce', 5000); } catch (e) {}
-  } else if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-    try {
-      new Notification(msg.title || 'پمپ یعقوبی', { body: msg.body.slice(0, 200), tag: 'notify-' + msg.topic, dir: 'rtl', lang: 'fa' });
-    } catch (e) {}
+  } else {
+    try { _notify(msg.title || 'پمپ یعقوبی', msg.body.slice(0, 200), 'notify-' + msg.topic); } catch (e) {}
   }
 }
 
@@ -35997,7 +36035,7 @@ async function _ntfSubscribeThisDevice() {
     }).then(r => r.json());
     if (!res.ok) return false;
 
-    try { localStorage.setItem('pumpNtfPushOn', '1'); } catch (e) {}
+    try { localStorage.setItem('pumpNtfPushOn', '1'); localStorage.setItem('pumpNtfPushTopic', _ntfMyTopic()); } catch (e) {}
     _ntfPushBtnState();
     return true;
   } catch (e) { return false; }
@@ -36031,17 +36069,21 @@ try {
   };
 } catch (e) {}
 
-// اتصال بعد از بالا آمدن برنامه؛ و هر بار که برنامه از پشتِ زمینه برمی‌گردد
+// اتصال بعد از بالا آمدن برنامه؛ و هر بار که برنامه از پشتِ زمینه برمی‌گردد.
+// همراهش ثبتِ بی‌سروصدای دستگاه برای اعلانِ «برنامه بسته» — بدون این، پوشِ
+// دستگاه بعد از عوض شدنِ endpoint یا پاک شدنِ دیتابیسِ سرور بی‌صدا می‌مُرد.
 try {
-  setTimeout(_ntfConnect, 1500);
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') _ntfConnect(); });
-  window.addEventListener('online', _ntfConnect);
+  setTimeout(() => { _ntfConnect(); _ntfAutoPush('silent'); }, 1500);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') { _ntfConnect(); _ntfAutoPush('silent'); }
+  });
+  window.addEventListener('online', () => { _ntfConnect(); _ntfAutoPush('silent'); });
 } catch (e) {}
 
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.155';
+const APP_VERSION = '2.9.156';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }

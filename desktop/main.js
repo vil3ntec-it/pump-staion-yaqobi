@@ -148,45 +148,62 @@ function createSplash() {
   splashWin.on('closed', () => { splashWin = null; });
 }
 
-function buildMenu() {
-  const template = [
-    { label: 'برنامه', submenu: [
-      { label: 'بررسی آپدیت', click: () => { if (mainWin) mainWin.webContents.send('update:open-panel'); } },
-      { type: 'separator' },
-      { label: 'بارگذاری مجدد', role: 'reload' },
-      { label: 'تمام‌صفحه', role: 'togglefullscreen' },
-      { type: 'separator' },
-      { label: 'خروج', role: 'quit' },
-    ] },
-    // بدونِ این منو، در Electron کلیدهای Ctrl+C / Ctrl+V / Ctrl+Z اصلاً کار
-    // نمی‌کنند — برای برنامه‌ای که تمامِ کارش وارد کردنِ عدد و نام است، این
-    // بزرگ‌ترین باگِ نسخهٔ کامپیوتری بود.
-    { label: 'ویرایش', submenu: [
-      { label: 'واگرد', role: 'undo' },
-      { label: 'ازنو', role: 'redo' },
-      { type: 'separator' },
-      { label: 'بریدن', role: 'cut' },
-      { label: 'کپی', role: 'copy' },
-      { label: 'چسباندن', role: 'paste' },
-      { label: 'چسباندن بدون قالب', role: 'pasteAndMatchStyle' },
-      { label: 'انتخاب همه', role: 'selectAll' },
-    ] },
-    { label: 'نما', submenu: [
-      { label: 'بزرگ‌نمایی', role: 'zoomIn' },
-      { label: 'کوچک‌نمایی', role: 'zoomOut' },
-      { label: 'اندازهٔ عادی', role: 'resetZoom' },
-    ] },
-  ];
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+// نوارِ منو («برنامه / ویرایش / نما») به‌طور کامل برداشته شد — نه دیده می‌شود و
+// نه با Alt برمی‌گردد.
+//
+// ولی در Electron، اگر منو نباشد کلیدهای Ctrl+C / Ctrl+V / Ctrl+X / Ctrl+Z /
+// Ctrl+A اصلاً کار نمی‌کنند (این کلیدها را خودِ منو ثبت می‌کند، نه مرورگر).
+// برای برنامه‌ای که تمامِ کارش وارد کردنِ عدد و نام است این بزرگ‌ترین باگ بود؛
+// پس همان کلیدها را مستقیم روی خودِ پنجره می‌گیریم و به webContents می‌سپاریم.
+function stripMenu() {
+  Menu.setApplicationMenu(null);
+}
+
+/** کلیدهای ویرایش/نما بدونِ منو — دقیقاً همان کاری که roleهای منو می‌کردند */
+// فوکوس داخلِ کادرِ متنی است یا نه (preload خبر می‌دهد). مهم است: بیرونِ کادر،
+// خودِ برنامه Ctrl+Z و Ctrl+X را برای «واگرد/ازنوِ کلِ دفتر» می‌خواهد، پس
+// آن‌جا نباید پوسته کلید را بدزدد.
+let editableFocus = false;
+ipcMain.on('focus:editable', (_e, value) => { editableFocus = Boolean(value); });
+
+function bindShortcuts(win) {
+  // نوار منو حتی با Alt هم بالا نیاید (این دو فقط روی ویندوز/لینوکس هستند)
+  try { win.removeMenu(); } catch (e) {}
+  try { win.setMenuBarVisibility(false); } catch (e) {}
+  win.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown') return;
+    const wc = win.webContents;
+    const key = String(input.key || '').toLowerCase();
+    const mod = process.platform === 'darwin' ? input.meta : input.control;
+
+    if (key === 'f11') { win.setFullScreen(!win.isFullScreen()); event.preventDefault(); return; }
+    if (!mod || input.alt) return;
+
+    const run = (fn) => { fn(); event.preventDefault(); };
+    // این‌ها در برنامه میانبرِ دیگری ندارند → همیشه دستِ پوسته
+    if (key === 'c') return run(() => wc.copy());
+    if (key === 'v') return run(() => (input.shift ? wc.pasteAndMatchStyle() : wc.paste()));
+    if (key === 'a') return run(() => wc.selectAll());
+    if (key === 'y') return run(() => wc.redo());
+    if (key === 'r') return run(() => wc.reload());
+    // بزرگ‌نمایی: هم ردیفِ عددها (+ - 0) و هم کلیدهای numpad
+    if (key === '+' || key === '=' || key === 'add') return run(() => wc.setZoomLevel(Math.min(6, wc.getZoomLevel() + 0.5)));
+    if (key === '-' || key === 'subtract') return run(() => wc.setZoomLevel(Math.max(-6, wc.getZoomLevel() - 0.5)));
+    if (key === '0') return run(() => wc.setZoomLevel(0));
+    // این دو فقط داخلِ کادرِ متنی — بیرونش مالِ واگرد/ازنوِ خودِ برنامه است
+    if (!editableFocus) return;
+    if (key === 'x') return run(() => wc.cut());
+    if (key === 'z') return run(() => (input.shift ? wc.redo() : wc.undo()));
+  });
+  // پنجره که عوض/بارگذاری مجدد شد، حالتِ فوکوس از صفر
+  win.webContents.on('did-start-navigation', () => { editableFocus = false; });
 }
 
 function createMainWindow() {
   mainWin = new BrowserWindow({
     width: 1360, height: 900, minWidth: 900, minHeight: 600,
     backgroundColor: '#0b0f17', title: 'پمپ یعقوبی',
-    // نوارِ منو دیده نمی‌شود (با کلید Alt در می‌آید)؛ ولی خودِ منو ساخته می‌شود
-    // چون بدونِ آن Ctrl+C / Ctrl+V / Ctrl+Z در Electron اصلاً کار نمی‌کنند.
-    autoHideMenuBar: true,
+    autoHideMenuBar: true,   // هیچ نوارِ منویی — نه در دید، نه با Alt
     icon: path.join(__dirname, 'build', 'icon.png'), show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -194,7 +211,8 @@ function createMainWindow() {
     },
   });
 
-  buildMenu();
+  stripMenu();
+  bindShortcuts(mainWin);
 
   const startedAt = Date.now();
   const usingUpdate = activeIndexPath() === updIndex();
