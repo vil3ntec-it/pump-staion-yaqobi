@@ -32,7 +32,7 @@ export const MAIN_KEY = 'main';
    دوباره، جابه‌جا شدنِ پوشهٔ داده، چرخاندنِ رمز از پنل) دیگر همهٔ دستگاه‌ها را
    بیرون نمی‌اندازد. اگر این را نمی‌خواهید: HLP_SITESYNC_STRICT=1 بگذارید.
    دفترِ سایت‌های دیگر هرگز این رمز را نمی‌پذیرد. ── */
-export const APP_BUILTIN_TOKEN = '3b1379be26f61b2f8e460dbccee01ff70364';
+export const APP_BUILTIN_TOKEN = '3f25db6ea9ff8ea4e8089a66cc7492f5f017';
 const STRICT = String(process.env.HLP_SITESYNC_STRICT || '') === '1';
 
 /** نامِ پوشه‌ای امن از روی slug — تا هیچ‌کس از پوشهٔ خودش بیرون نزند */
