@@ -36,6 +36,8 @@ import networkRoutes from './routes/network.js';
 import settingsRoutes from './routes/settings.js';
 import siteServerRoutes from './routes/site-server.js';
 import messengerRoutes from './routes/messenger.js';
+import notifyRoutes, { adminRouter as notifyAdminRoutes } from './routes/notify.js';
+import * as notify from './notify/index.js';
 import * as messenger from './messenger/index.js';
 
 const PUBLIC_DIR = path.join(SERVER_ROOT, 'public');
@@ -97,6 +99,8 @@ app.use('/api/network', networkRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/site-server', siteServerRoutes);
 app.use('/api/messenger', messengerRoutes);
+app.use('/api/notify', notifyRoutes);
+app.use('/api/notify-admin', notifyAdminRoutes);
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'not_found' }));
 
@@ -153,6 +157,7 @@ if (config.siteSync.enabled) {
     } catch { /* مسیر خراب */ }
     if (pathname.startsWith('/socket.io')) return; // مالِ Socket.IO است
     if (pathname.startsWith('/messenger')) return messenger.handleUpgrade(req, socket, head);
+    if (pathname.startsWith('/notify')) return notify.handleUpgrade(req, socket, head);
     siteSync.handleUpgrade(req, socket, head);
   });
 }
@@ -178,6 +183,7 @@ if (siteSync && config.siteSync.port && config.siteSync.port !== config.port) {
     res.json({ ok: true, service: 'pump-yaqobi-server', mode: 'sync-only', time: new Date().toISOString() });
   });
   publicApp.use('/api/messenger', messengerRoutes);
+  publicApp.use('/api/notify', notifyRoutes);
   publicApp.use((req, res) => res.status(404).type('text/plain; charset=utf-8').send('not found'));
 
   syncOnlyServer = http.createServer(publicApp);
@@ -188,6 +194,7 @@ if (siteSync && config.siteSync.port && config.siteSync.port !== config.port) {
       pathname = new URL(req.url, 'http://x').pathname;
     } catch { /* مسیر خراب */ }
     if (pathname.startsWith('/messenger')) return messenger.handleUpgrade(req, socket, head);
+    if (pathname.startsWith('/notify')) return notify.handleUpgrade(req, socket, head);
     siteSync.handleUpgrade(req, socket, head);
   });
   syncOnlyServer.on('error', (e) => {

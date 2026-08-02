@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   Anchor,
+  Bell,
   Database,
   Eye,
   EyeOff,
@@ -222,6 +223,8 @@ export default function SiteServer() {
 
       <MessengerCard />
 
+      <NotifyCard addresses={data.addresses} />
+
       <ConfirmDialog
         open={rotateOpen}
         danger
@@ -297,6 +300,212 @@ function MessengerCard() {
         </ul>
       )}
     </Card>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   اعلان‌ها — همان کاری که ntfy می‌کند، ولی روی همین سرور خانگی.
+   هر «موضوع» یک آدرس دارد؛ هر برنامه‌ای که بتواند یک درخواست ساده بزند،
+   می‌تواند روی آن موضوع خبر بگذارد و خبر روی برنامهٔ پمپ یعقوبی می‌نشیند.
+--------------------------------------------------------------------------- */
+type NotifyTopic = {
+  name: string;
+  title: string | null;
+  hasToken: boolean;
+  messages: number;
+  devices: number;
+  lastAt: number | null;
+};
+
+function NotifyCard({ addresses }: { addresses: SiteServerInfo['addresses'] }) {
+  const { t } = useApp();
+  const [topics, setTopics] = useState<NotifyTopic[] | null>(null);
+  const [listeners, setListeners] = useState(0);
+  const [newName, setNewName] = useState('');
+  const [open, setOpen] = useState<string | null>(null);
+  const [freshToken, setFreshToken] = useState<{ topic: string; token: string } | null>(null);
+
+  const load = useCallback(() => {
+    api<{ topics: NotifyTopic[]; stats: { listeners: number } }>('/api/notify-admin')
+      .then((r) => {
+        setTopics(r.topics);
+        setListeners(r.stats?.listeners ?? 0);
+      })
+      .catch(() => setTopics(null));
+  }, []);
+
+  useEffect(() => {
+    load();
+    const timer = setInterval(load, 6000);
+    return () => clearInterval(timer);
+  }, [load]);
+
+  if (!topics) return null;
+
+  // آدرسی که کاربر باید در برنامهٔ دیگرش بگذارد — بهترین آدرسِ در دسترس
+  const base = addresses.find((a) => a.scope === 'public')?.http || addresses[0]?.http || '';
+
+  const create = async () => {
+    const name = newName.trim();
+    if (!name) return;
+    try {
+      await api('/api/notify-admin', { body: { name } });
+      setNewName('');
+      load();
+    } catch {
+      toast(t('error'), 'bad');
+    }
+  };
+
+  return (
+    <Card
+      title={t('notify')}
+      icon={<Bell className="h-4 w-4" />}
+      action={<Badge tone={listeners > 0 ? 'good' : undefined}>{t('notifyListeners', { n: listeners })}</Badge>}
+    >
+      <p className="mb-3 text-[11px] leading-relaxed text-ink-muted">{t('notifyHint')}</p>
+
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <input
+          className="input min-w-0 flex-1 font-mono"
+          dir="ltr"
+          placeholder={t('notifyTopicName')}
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && create()}
+        />
+        <button className="btn btn-sm btn-primary" onClick={create}>
+          {t('notifyCreate')}
+        </button>
+      </div>
+
+      {!topics.length ? (
+        <p className="text-[11px] text-ink-muted">{t('notifyNoTopics')}</p>
+      ) : (
+        <ul className="divide-y divide-line">
+          {topics.map((topic) => (
+            <li key={topic.name} className="py-2.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  className="min-w-0 flex-1 truncate text-start font-mono text-sm"
+                  dir="ltr"
+                  onClick={() => setOpen(open === topic.name ? null : topic.name)}
+                >
+                  {topic.name}
+                </button>
+                <Badge tone={topic.hasToken ? 'info' : undefined}>
+                  {topic.hasToken ? t('notifyLocked') : t('notifyOpen')}
+                </Badge>
+                <span className="tnum shrink-0 text-[11px] text-ink-soft">
+                  {ltr(`${topic.messages} · ${topic.devices}`)}
+                </span>
+              </div>
+
+              {open === topic.name && (
+                <div className="mt-2.5 flex flex-col gap-2.5 rounded-xl border border-line p-3" style={{ background: 'var(--surface-0)' }}>
+                  <SendNotification topic={topic.name} onSent={load} />
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      className="btn btn-sm"
+                      onClick={async () => {
+                        try {
+                          const r = await api<{ token: string }>(`/api/notify-admin/${topic.name}/token`, { body: {} });
+                          setFreshToken({ topic: topic.name, token: r.token });
+                          load();
+                        } catch {
+                          toast(t('error'), 'bad');
+                        }
+                      }}
+                    >
+                      {t('notifyNewToken')}
+                    </button>
+                    {topic.hasToken && (
+                      <button
+                        className="btn btn-sm"
+                        onClick={async () => {
+                          try {
+                            await api(`/api/notify-admin/${topic.name}/token`, { body: { clear: true } });
+                            setFreshToken(null);
+                            load();
+                          } catch {
+                            toast(t('error'), 'bad');
+                          }
+                        }}
+                      >
+                        {t('notifyClearToken')}
+                      </button>
+                    )}
+                  </div>
+
+                  {freshToken?.topic === topic.name && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <code className="min-w-0 flex-1 truncate rounded-lg border border-line px-2 py-1.5 font-mono text-xs" dir="ltr">
+                        {freshToken.token}
+                      </code>
+                      <CopyButton value={freshToken.token} />
+                      <p className="basis-full text-[11px] text-ink-muted">{t('notifyTokenMade')}</p>
+                    </div>
+                  )}
+
+                  <div>
+                    <p className="mb-1 text-[11px] text-ink-muted">{t('notifyHowTo')}</p>
+                    <div className="flex items-center gap-2">
+                      <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap rounded-lg border border-line px-2 py-1.5 font-mono text-[11px]" dir="ltr">
+                        {curlFor(base, topic.name)}
+                      </code>
+                      <CopyButton value={curlFor(base, topic.name)} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+const curlFor = (base: string, topic: string) => `curl -d "متن خبر" ${base}/api/notify/${topic}`;
+
+function SendNotification({ topic, onSent }: { topic: string; onSent: () => void }) {
+  const { t } = useApp();
+  const [title, setTitle] = useState('');
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const send = async () => {
+    if (!message.trim() || busy) return;
+    setBusy(true);
+    try {
+      await api(`/api/notify-admin/${topic}/send`, { body: { title: title.trim() || undefined, message } });
+      setTitle('');
+      setMessage('');
+      toast(t('notifySent'));
+      onSent();
+    } catch {
+      toast(t('error'), 'bad');
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <input className="input" placeholder={t('notifyTitle')} value={title} onChange={(e) => setTitle(e.target.value)} />
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          className="input min-w-0 flex-1"
+          placeholder={t('notifyBody')}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && send()}
+        />
+        <button className="btn btn-sm btn-primary" onClick={send} disabled={busy}>
+          {busy ? <Spinner /> : t('notifySend')}
+        </button>
+      </div>
+    </div>
   );
 }
 
