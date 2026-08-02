@@ -15819,6 +15819,17 @@ body input[type="date"], body input[type="time"], body textarea{
   border-width:1.5px !important; border-style:solid !important;
   border-color:var(--lg-brd-soft) !important;
 }
+/* استثنا: ورودی‌ها و کشوهای «داخلِ خودِ جدول» هیچ چهارچوبی نگیرند — آنجا فقط
+   خطوطِ خودِ جدول باید دیده شود، نه یک کادرِ دور هر خانه (خواستهٔ صاحب برنامه) */
+body .tbl input:not([type="checkbox"]):not([type="radio"]),
+body .tbl select, body .tbl textarea,
+body .xls-tbl input:not([type="checkbox"]):not([type="radio"]),
+body .xls-tbl select, body .xls-tbl textarea,
+body .ro-tbl input:not([type="checkbox"]):not([type="radio"]),
+body .ro-tbl select, body .ro-tbl textarea,
+body .xls-in, body .xls-in.box, body .tbl .editable{
+  border:0 !important; background:transparent !important;
+}
 
 /* ── ۳) کلفت‌تر شدنِ همهٔ نوشته‌ها (همه‌جا و همهٔ جدول‌ها) ─────────────────── */
 body{ -webkit-text-stroke:.22px currentColor; }
@@ -36350,7 +36361,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.160';
+const APP_VERSION = '2.9.161';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
