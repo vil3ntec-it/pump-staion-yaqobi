@@ -127,15 +127,14 @@
     </div>
   </div>
 
-  <!-- نوتیفیکیشن -->
+  <!-- نوتیفیکیشن — هیچ دکمه‌ای ندارد: خودش روشن می‌شود -->
   <div class="card">
     <h2>🔔 دریافت پیام وقتی برنامه بسته است</h2>
     <p>
-      این قابلیت همیشه روشن است. فقط یک بار باید اجازهٔ اعلان را به دستگاه بدهید؛
-      بستن یا باز کردنش هم فقط از تنظیمات خودِ دستگاه انجام می‌شود.
+      این قابلیت همیشه روشن است و خودش فعال می‌شود — کاری لازم نیست بکنید.
+      بستنش هم فقط از تنظیمات خودِ دستگاه انجام می‌شود.
     </p>
-    <button class="btn ghost" id="notify-btn" type="button">اجازهٔ اعلان را بدهید</button>
-    <p id="notify-state" style="margin-top:12px"></p>
+    <p id="notify-state" style="margin-top:0">در حال روشن کردن…</p>
   </div>
 
   <footer>
@@ -190,10 +189,22 @@
      فایل‌های نصب هنگام انتشارِ سایت کنارِ همین صفحه قرار می‌گیرند
      (downloads/…)، پس دانلود هم‌مبدأ است: با زدنِ دکمه، فایل همان‌جا شروع به
      آمدن می‌کند و کاربر به هیچ صفحهٔ دیگری (گیت‌هاب، مرورگر دیگر، …) نمی‌رود.  */
+  var REPO = 'vil3ntec-it/pump-staion-yaqobi';
   var FILES = {
-    android: { url: './downloads/PumpYaqobi.apk',       name: 'PumpYaqobi.apk',       label: 'فایل نصب اندروید' },
-    windows: { url: './downloads/PumpYaqobi-Setup.exe', name: 'PumpYaqobi-Setup.exe', label: 'نصب‌کنندهٔ ویندوز' }
+    android: {
+      url: './downloads/PumpYaqobi.apk', name: 'PumpYaqobi.apk', label: 'فایل نصب اندروید',
+      // اگر نسخهٔ روی سایت نبود، همان فایل از انتشارِ گیت‌هاب می‌آید تا دانلود هرگز نشکند
+      alt: 'https://github.com/' + REPO + '/releases/download/android-latest/PumpYaqobi.apk'
+    },
+    windows: {
+      url: './downloads/PumpYaqobi-Setup.exe', name: 'PumpYaqobi-Setup.exe', label: 'نصب‌کنندهٔ ویندوز',
+      alt: 'https://github.com/' + REPO + '/releases/download/desktop-latest/PumpYaqobi-Setup.exe'
+    }
   };
+  /* فایل‌های بزرگ را داخلِ حافظه جمع نمی‌کنیم: نصب‌کنندهٔ ویندوز ~۸۰ مگابایت است و
+     ساختنِ Blob از آن، روی گوشی و تبلت حافظه را تمام می‌کرد و دانلود وسطِ کار
+     می‌مُرد. از این حد به بالا، خودِ مرورگر فایل را مستقیم روی دیسک می‌نویسد. */
+  var STREAM_MAX = 24 * 1024 * 1024;
   var meta = { android: null, windows: null };
 
   function fmtSize(n) {
@@ -243,15 +254,34 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
   }
 
-  /* راه دوم (اگر خواندنِ جریانی نشد): همان لینکِ هم‌مبدأ با صفتِ download.
-     چون فایل روی خودِ همین دامنه است، مرورگر آن را دانلود می‌کند و صفحه عوض نمی‌شود. */
-  function anchorDownload(f) {
+  /* دانلودِ مستقیم با صفتِ download — خودِ مرورگر فایل را روی دیسک می‌نویسد
+     (بدون مصرفِ حافظه) و صفحه هم عوض نمی‌شود. */
+  function anchorDownload(url, name, foreign) {
     var a = document.createElement('a');
-    a.href = f.url;
-    a.download = f.name;
+    a.href = url;
+    a.download = name;
+    a.rel = 'noopener';
+    // آدرسِ بیرونی: صفتِ download را مرورگر نادیده می‌گیرد و همین صفحه عوض
+    // می‌شد. با تبِ تازه، صفحهٔ دریافت سرِ جایش می‌ماند و فایل خودش می‌آید.
+    if (foreign) a.target = '_blank';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+  }
+
+  /* آیا فایل واقعاً روی سایت هست؟ فقط یک بایتِ اولش را می‌خواهیم — نه کلِ فایل.
+     برمی‌گرداند: {ok, status, size} */
+  function probe(url) {
+    return fetch(url, { method: 'GET', headers: { Range: 'bytes=0-0' }, cache: 'no-store' })
+      .then(function (r) {
+        var size = 0;
+        var cr = r.headers.get('content-range') || '';         // bytes 0-0/12345
+        var m = cr.match(/\/(\d+)\s*$/);
+        if (m) size = parseInt(m[1], 10);
+        else size = parseInt(r.headers.get('content-length') || '0', 10) || 0;
+        return { ok: r.ok || r.status === 206, status: r.status, size: size };
+      })
+      .catch(function () { return { ok: false, status: 0, size: 0 }; });
   }
 
   function download(kind, btn) {
@@ -260,46 +290,63 @@
     btn.disabled = true;
     say(kind, 'در حال آماده‌سازی دانلود…');
     progress(kind, 3);
-
-    var status = 0;
-    fetch(f.url, { cache: 'no-store' }).then(function (res) {
-      status = res.status;
-      if (!res.ok) throw new Error('http ' + res.status);
-      var total = parseInt(res.headers.get('content-length') || '0', 10)
-        || (meta[kind] && meta[kind].size) || 0;
-      if (!res.body || !res.body.getReader) return res.blob();
-      var reader = res.body.getReader(), chunks = [], got = 0;
-      return (function pump() {
-        return reader.read().then(function (r) {
-          if (r.done) return new Blob(chunks, { type: 'application/octet-stream' });
-          chunks.push(r.value);
-          got += r.value.length;
-          progress(kind, total ? (got / total) * 100 : 50);
-          say(kind, 'در حال دانلود… ' + fmtSize(got) + (total ? ' از ' + fmtSize(total) : ''));
-          return pump();
-        });
-      })();
-    }).then(function (blob) {
-      progress(kind, 100);
-      saveBlob(blob, f.name);
-      say(kind, '✅ ' + f.label + ' دانلود شد — فایل را از پوشهٔ Downloads باز و نصب کنید.', 'ok');
-      btn.disabled = false;
-      setTimeout(function () { progress(kind, null); }, 1500);
-    }).catch(function () {
+    var done = function (text, cls) {
       progress(kind, null);
       btn.disabled = false;
-      /* فایل هنوز روی سایت گذاشته نشده: هیچ صفحه‌ای باز نمی‌کنیم، فقط می‌گوییم */
-      if (status >= 400) {
-        say(kind, '❌ فایل نصب ' + f.label + ' هنوز روی سایت آماده نیست — کمی بعد دوباره بزنید.');
+      say(kind, text, cls);
+    };
+
+    probe(f.url).then(function (p) {
+      var size = p.size || (meta[kind] && meta[kind].size) || 0;
+
+      // ۱) فایل روی سایت نیست → همان فایل را از انتشارِ گیت‌هاب می‌گیریم.
+      //    کاربر جایی نمی‌رود؛ فقط فایل شروع به آمدن می‌کند.
+      if (!p.ok) {
+        if (f.alt) {
+          anchorDownload(f.alt, f.name, true);
+          done('دانلود ' + f.label + ' شروع شد — اگر شروع نشد، یک بار دیگر بزنید.', 'ok');
+        } else {
+          done('❌ ' + f.label + ' در دسترس نیست (کد ' + (p.status || 'شبکه') + ') — کمی بعد دوباره بزنید.');
+        }
         return;
       }
-      /* شبکه/حافظه وسطِ کار اجازه نداد: همان لینکِ مستقیمِ هم‌مبدأ را می‌زنیم */
-      try {
-        anchorDownload(f);
-        say(kind, 'دانلود شروع شد — اگر شروع نشد، اینترنت را بررسی کنید و دوباره بزنید.');
-      } catch (e) {
-        say(kind, '❌ دانلود نشد — اینترنت را بررسی کنید و دوباره تلاش کنید.');
+
+      // ۲) فایلِ بزرگ → مستقیم به خودِ مرورگر بسپار (بدون پر کردنِ حافظه)
+      if (!size || size > STREAM_MAX || !window.ReadableStream) {
+        anchorDownload(f.url, f.name);
+        done('دانلود ' + f.label + ' شروع شد — پیشرفتش را در نوارِ دانلودِ مرورگر می‌بینید.', 'ok');
+        return;
       }
+
+      // ۳) فایلِ کوچک → با نوارِ پیشرفتِ خودمان
+      fetch(f.url, { cache: 'no-store' }).then(function (res) {
+        if (!res.ok) throw new Error('http ' + res.status);
+        if (!res.body || !res.body.getReader) return res.blob();
+        var total = parseInt(res.headers.get('content-length') || '0', 10) || size;
+        var reader = res.body.getReader(), chunks = [], got = 0;
+        return (function pump() {
+          return reader.read().then(function (r) {
+            if (r.done) return new Blob(chunks, { type: 'application/octet-stream' });
+            chunks.push(r.value);
+            got += r.value.length;
+            progress(kind, total ? (got / total) * 100 : 50);
+            say(kind, 'در حال دانلود… ' + fmtSize(got) + (total ? ' از ' + fmtSize(total) : ''));
+            return pump();
+          });
+        })();
+      }).then(function (blob) {
+        progress(kind, 100);
+        saveBlob(blob, f.name);
+        done('✅ ' + f.label + ' دانلود شد — فایل را از پوشهٔ Downloads باز و نصب کنید.', 'ok');
+      }).catch(function () {
+        // وسطِ کار نشد (شبکه/حافظه) → همان لینکِ مستقیم
+        try {
+          anchorDownload(f.url, f.name);
+          done('دانلود شروع شد — اگر شروع نشد، اینترنت را بررسی کنید و دوباره بزنید.');
+        } catch (e) {
+          done('❌ دانلود نشد — اینترنت را بررسی کنید و دوباره تلاش کنید.');
+        }
+      });
     });
   }
 
@@ -321,64 +368,50 @@
     document.getElementById('card-install').classList.add('hide');
   });
 
-  /* ── ۴) اجازهٔ اعلان ───────────────────────────────────────────────────── */
+  /* ── ۴) اعلان: خودکار، بدون هیچ دکمه‌ای ─────────────────────────────────────
+     دکمهٔ «اجازهٔ اعلان را بدهید» برداشته شد. صفحه که باز شد، خودش اجازه را
+     می‌گیرد و سرویس‌ورکر را ثبت می‌کند. ثبتِ «کدام خبرها به این دستگاه برسد»
+     (میرزا / کارمند / نظاره‌گر / مشتریِ کیو‌آر) کارِ خودِ برنامه است و همان
+     لحظهٔ ورود انجام می‌شود — چون نقشِ کاربر فقط آن‌جا معلوم است.
+     تنها چیزی که مرورگر اجازه نمی‌دهد دور بزنیم، خودِ پنجرهٔ «Allow» است. */
   var state = document.getElementById('notify-state');
   function sayN(text, ok) {
     state.textContent = text;
     state.className = ok ? 'ok' : '';
   }
 
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    sayN(isIOS
-      ? 'اول برنامه را با «Add to Home Screen» نصب کنید، بعد از داخل خودِ برنامه اینجا برگردید.'
-      : 'این مرورگر نوتیفیکیشن پس‌زمینه را پشتیبانی نمی‌کند.', false);
-    document.getElementById('notify-btn').disabled = true;
-  } else if (Notification.permission === 'granted') {
-    sayN('اجازهٔ اعلان داده شده است ✓ — بستن آن فقط از تنظیمات دستگاه ممکن است.', true);
-  }
-
-  document.getElementById('notify-btn').addEventListener('click', async function () {
-    try {
-      sayN('در حال گرفتن اجازه…', false);
-      var permission = await Notification.requestPermission();
-      if (permission !== 'granted') {
-        sayN('اجازه داده نشد. از تنظیمات دستگاه (App Info › Notifications) می‌توانید اجازه بدهید.', false);
-        return;
-      }
-
-      var reg = await navigator.serviceWorker.register('./sw.js');
-      await navigator.serviceWorker.ready;
-
-      // آدرس سرور و رمزِ کاربر را خودِ برنامه ذخیره کرده است
-      var server = localStorage.getItem('messengerServer') || '';
-      var token = localStorage.getItem('messengerToken') || '';
-      if (!server || !token) {
-        sayN('اجازه داده شد، ولی اول باید در برنامه وارد پیام‌رسان شوید.', true);
-        return;
-      }
-
-      var cfg = await fetch(server.replace(/\/+$/, '') + '/api/messenger/config').then(r => r.json());
-      var key = cfg.vapidPublicKey;
-
-      // کلید base64url را به همان چیزی که مرورگر می‌خواهد تبدیل کن
-      var pad = '='.repeat((4 - (key.length % 4)) % 4);
-      var raw = atob((key + pad).replace(/-/g, '+').replace(/_/g, '/'));
-      var bytes = new Uint8Array(raw.length);
-      for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-
-      var sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytes });
-
-      await fetch(server.replace(/\/+$/, '') + '/api/messenger/devices', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-        body: JSON.stringify({ subscription: sub.toJSON(), label: navigator.platform || 'دستگاه' })
-      });
-
-      sayN('اعلان روشن شد ✓ حالا حتی وقتی برنامه بسته است پیام می‌رسد.', true);
-    } catch (e) {
-      sayN('روشن نشد: ' + (e && e.message ? e.message : e), false);
+  async function autoNotify() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || typeof Notification === 'undefined') {
+      sayN(isIOS
+        ? 'اول برنامه را با «Add to Home Screen» نصب کنید — بعد از آن اعلان خودکار روشن می‌شود.'
+        : 'این مرورگر نوتیفیکیشن پس‌زمینه ندارد.', false);
+      return;
     }
-  });
+    try { await navigator.serviceWorker.register('./sw.js'); } catch (e) {}
+
+    if (Notification.permission === 'denied') {
+      sayN('اعلان در تنظیمات این دستگاه بسته شده است — از App Info › Notifications بازش کنید.', false);
+      return;
+    }
+    if (Notification.permission === 'granted') {
+      sayN('اعلان روشن است ✓ — خبرها حتی وقتی برنامه بسته است می‌رسند.', true);
+      return;
+    }
+    var perm = 'default';
+    try { perm = await Notification.requestPermission(); } catch (e) { perm = 'default'; }
+    if (perm === 'granted') { sayN('اعلان روشن شد ✓ — خبرها حتی وقتی برنامه بسته است می‌رسند.', true); return; }
+    if (perm === 'denied') { sayN('اجازهٔ اعلان داده نشد — از تنظیمات دستگاه می‌توانید بازش کنید.', false); return; }
+    // سافاری/آیفون اجازه را فقط با لمسِ کاربر می‌دهد: با اولین لمسِ صفحه دوباره تلاش کن
+    sayN('برای روشن شدنِ اعلان، یک بار صفحه را لمس کنید.', false);
+    var once = function () {
+      document.removeEventListener('click', once, true);
+      document.removeEventListener('touchend', once, true);
+      autoNotify();
+    };
+    document.addEventListener('click', once, true);
+    document.addEventListener('touchend', once, true);
+  }
+  autoNotify();
 })();
 </script>
 </body>
