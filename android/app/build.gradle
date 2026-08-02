@@ -1,5 +1,26 @@
 plugins { id 'com.android.application' }
 
+// نسخهٔ برنامه دستی تنظیم نمی‌شود: ورک‌فلوی ساخت، همان APP_VERSION داخلِ
+// index.html را با ‎-PappVersionName=…‎ می‌دهد. اگر داده نشود، از خودِ فایل خوانده
+// می‌شود تا ساختِ محلی هم همیشه با نسخهٔ واقعیِ برنامه یکی باشد.
+def readAppVersion = {
+  if (project.hasProperty('appVersionName')) return project.appVersionName
+  try {
+    def f = new File(rootDir, '../index.html')
+    if (f.exists()) {
+      def m = (f.getText('UTF-8') =~ /const\s+APP_VERSION\s*=\s*['"]([0-9.]+)['"]/)
+      if (m) return m[0][1]
+    }
+  } catch (ignored) { }
+  return '0.0.1'
+}
+def appVersionNameValue = readAppVersion()
+def appVersionCodeValue = {
+  def p = appVersionNameValue.tokenize('.').collect { (it.toInteger() ?: 0) }
+  while (p.size() < 3) p << 0
+  return p[0] * 1000000 + p[1] * 10000 + p[2]
+}()
+
 android {
   namespace 'top.yaqobipump.app'
   compileSdk 34
@@ -8,8 +29,8 @@ android {
     applicationId "top.yaqobipump.app"
     minSdk 23
     targetSdk 34
-    versionCode 1
-    versionName "2.9.136"
+    versionCode appVersionCodeValue
+    versionName appVersionNameValue
   }
 
   buildTypes {

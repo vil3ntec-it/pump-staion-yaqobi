@@ -10,40 +10,57 @@
 <style>
   :root{
     --bg:#0b1220; --card:#131c2e; --line:#243048; --ink:#e8eefc; --soft:#9fb0cd;
-    --accent:#3b82f6; --good:#22c55e;
+    --accent:#3b82f6; --good:#22c55e; --warn:#f59e0b;
   }
   *{box-sizing:border-box}
   body{
-    margin:0; background:var(--bg); color:var(--ink); line-height:1.8;
+    margin:0; background:var(--bg); color:var(--ink); line-height:1.9;
     font-family:system-ui,"Segoe UI",Tahoma,sans-serif;
-    padding:24px 16px 60px;
+    padding:26px 16px 70px;
   }
-  .wrap{max-width:680px;margin:0 auto}
-  h1{font-size:22px;margin:0 0 6px}
-  .lead{color:var(--soft);font-size:14px;margin:0 0 24px}
+  .wrap{max-width:760px;margin:0 auto}
+  h1{font-size:26px;margin:0 0 8px}
+  .lead{color:var(--soft);font-size:15px;margin:0 0 26px}
   .card{
-    background:var(--card); border:1px solid var(--line); border-radius:18px;
-    padding:18px; margin-bottom:16px;
+    background:var(--card); border:1px solid var(--line); border-radius:20px;
+    padding:22px 22px; margin-bottom:18px;
   }
-  .card h2{font-size:16px;margin:0 0 4px;display:flex;align-items:center;gap:8px}
-  .card p{color:var(--soft);font-size:13px;margin:0 0 14px}
+  .card h2{font-size:19px;margin:0 0 6px;display:flex;align-items:center;gap:9px}
+  .card p{color:var(--soft);font-size:14px;margin:0 0 16px}
   .btn{
-    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    display:inline-flex;align-items:center;justify-content:center;gap:9px;
     background:var(--accent);color:#fff;text-decoration:none;
-    padding:12px 18px;border-radius:12px;font-size:15px;font-weight:600;
-    border:0;cursor:pointer;width:100%;
+    padding:15px 20px;border-radius:14px;font-size:16px;font-weight:700;
+    border:0;cursor:pointer;width:100%;font-family:inherit;
   }
+  .btn:disabled{opacity:.55;cursor:default}
   .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
-  .steps{margin:0;padding-inline-start:20px;color:var(--soft);font-size:13px}
-  .steps li{margin-bottom:6px}
+  .steps{margin:0;padding-inline-start:22px;color:var(--soft);font-size:14px}
+  .steps li{margin-bottom:7px}
   .note{
-    font-size:12px;color:var(--soft);background:rgba(59,130,246,.08);
-    border:1px solid rgba(59,130,246,.25);border-radius:12px;padding:10px 12px;margin-top:12px;
+    font-size:13px;color:var(--soft);background:rgba(59,130,246,.08);
+    border:1px solid rgba(59,130,246,.25);border-radius:14px;padding:12px 14px;margin-top:14px;
   }
-  .ok{color:var(--good);font-weight:600}
-  .hide{display:none}
-  footer{color:var(--soft);font-size:12px;text-align:center;margin-top:26px}
+  .note.warn{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.3)}
+  .ok{color:var(--good);font-weight:700}
+  .hide{display:none!important}
+  .meta{font-size:12.5px;color:var(--soft);margin-top:10px;min-height:19px}
+  .bar{height:8px;border-radius:99px;background:#1d283f;overflow:hidden;margin-top:12px;display:none}
+  .bar > i{display:block;height:100%;width:0;background:var(--accent);transition:width .18s}
+  .installed{
+    background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.32);
+    border-radius:20px;padding:22px;margin-bottom:18px;
+  }
+  .installed h2{color:var(--good);margin:0 0 6px;font-size:19px}
+  footer{color:var(--soft);font-size:13px;text-align:center;margin-top:30px}
   footer a{color:var(--soft)}
+  @media (max-width:520px){
+    body{padding:18px 12px 56px}
+    h1{font-size:22px}
+    .card{padding:18px 16px;border-radius:16px}
+    .card h2{font-size:17px}
+    .btn{padding:14px 16px;font-size:15px}
+  }
 </style>
 </head>
 <body>
@@ -55,92 +72,247 @@
     حتی وقتی برنامه بسته است دریافت کنید.
   </p>
 
-  <!-- اندروید -->
-  <div class="card" id="card-android">
-    <h2>📱 اندروید</h2>
-    <p>فایل نصب (APK) را دانلود و باز کنید. بار اول اندروید می‌گوید «نصب از منبع ناشناس» — اجازه بدهید.</p>
-    <a class="btn" href="https://github.com/vil3ntec-it/pump-staion-yaqobi/releases/download/android-latest/PumpYaqobi.apk" id="apk">
-      دانلود فایل نصب اندروید
-    </a>
-    <div class="note">
-      اگر لینک باز نشد، از
-      <a href="https://github.com/vil3ntec-it/pump-staion-yaqobi/releases/tag/android-latest">صفحهٔ انتشار</a>
-      آخرین فایل <code>.apk</code> را بردارید.
-    </div>
-  </div>
-
-  <!-- ویندوز -->
-  <div class="card" id="card-windows">
-    <h2>💻 کامپیوتر (ویندوز)</h2>
-    <p>فایل نصب را دانلود و اجرا کنید. برنامه مثل هر برنامهٔ دیگری در منوی استارت می‌نشیند.</p>
-    <a class="btn" href="https://github.com/vil3ntec-it/pump-staion-yaqobi/releases/tag/desktop-latest" id="exe">
-      دانلود نسخهٔ ویندوز
-    </a>
-  </div>
-
-  <!-- آیفون -->
-  <div class="card" id="card-ios">
-    <h2>🍏 آیفون و آیپد</h2>
-    <p>
-      اپل اجازهٔ نصب فایل نمی‌دهد، ولی همین سایت را می‌شود مثل برنامه روی صفحهٔ
-      اصلی گذاشت — و آن وقت نوتیفیکیشن هم می‌گیرد.
+  <!-- اگر برنامه از قبل نصب باشد، به‌جای همهٔ کادرهای دانلود فقط همین دیده می‌شود -->
+  <div class="installed hide" id="card-installed">
+    <h2>✅ برنامه روی این دستگاه نصب است</h2>
+    <p style="color:var(--soft);font-size:14px;margin:0 0 14px">
+      نیازی به دانلود دوباره نیست. نسخهٔ برنامه با هر انتشار تازه، خودکار به‌روز می‌شود.
     </p>
-    <ol class="steps">
-      <li>همین صفحه را در <b>Safari</b> باز کنید (نه کروم).</li>
-      <li>دکمهٔ <b>اشتراک‌گذاری</b> (مربع با فلش رو به بالا) را بزنید.</li>
-      <li><b>Add to Home Screen</b> را انتخاب کنید.</li>
-      <li>برنامه را از صفحهٔ اصلی باز کنید و اجازهٔ نوتیفیکیشن را بدهید.</li>
-    </ol>
-    <div class="note">
-      روی آیفون، نوتیفیکیشن <b>فقط</b> وقتی کار می‌کند که برنامه به این شکل روی
-      صفحهٔ اصلی نصب شده باشد (iOS نسخهٔ ۱۶.۴ به بالا).
-    </div>
+    <a class="btn" href="./">بازگشت به برنامه</a>
   </div>
 
-  <!-- نصب مستقیم روی مرورگرهای پشتیبان -->
-  <div class="card hide" id="card-install">
-    <h2>⚡ نصب سریع</h2>
-    <p>مرورگر شما می‌تواند همین حالا برنامه را نصب کند.</p>
-    <button class="btn" id="install-btn">نصب برنامه</button>
+  <div id="download-cards">
+    <!-- اندروید -->
+    <div class="card" id="card-android">
+      <h2>📱 اندروید</h2>
+      <p>فایل نصب (APK) مستقیماً از همین سایت دانلود می‌شود. بار اول اندروید می‌گوید «نصب از منبع ناشناس» — اجازه بدهید.</p>
+      <button class="btn" type="button" data-dl="android">⬇️ دانلود فایل نصب اندروید</button>
+      <div class="bar" id="bar-android"><i></i></div>
+      <div class="meta" id="meta-android"></div>
+    </div>
+
+    <!-- ویندوز -->
+    <div class="card" id="card-windows">
+      <h2>💻 کامپیوتر (ویندوز)</h2>
+      <p>فایل نصب مستقیماً از همین سایت دانلود می‌شود. بعد از اجرا، برنامه مثل هر برنامهٔ دیگری در منوی استارت می‌نشیند.</p>
+      <button class="btn" type="button" data-dl="windows">⬇️ دانلود نسخهٔ ویندوز</button>
+      <div class="bar" id="bar-windows"><i></i></div>
+      <div class="meta" id="meta-windows"></div>
+    </div>
+
+    <!-- آیفون -->
+    <div class="card" id="card-ios">
+      <h2>🍏 آیفون و آیپد</h2>
+      <p>
+        اپل اجازهٔ نصب فایل نمی‌دهد، ولی همین سایت را می‌شود مثل برنامه روی صفحهٔ
+        اصلی گذاشت — و آن وقت نوتیفیکیشن هم می‌گیرد و نسخه‌اش هم خودکار تازه می‌شود.
+      </p>
+      <ol class="steps">
+        <li>همین صفحه را در <b>Safari</b> باز کنید (نه کروم).</li>
+        <li>دکمهٔ <b>اشتراک‌گذاری</b> (مربع با فلش رو به بالا) را بزنید.</li>
+        <li><b>Add to Home Screen</b> را انتخاب کنید.</li>
+        <li>برنامه را از صفحهٔ اصلی باز کنید و اجازهٔ نوتیفیکیشن را بدهید.</li>
+      </ol>
+      <div class="note">
+        روی آیفون، نوتیفیکیشن <b>فقط</b> وقتی کار می‌کند که برنامه به این شکل روی
+        صفحهٔ اصلی نصب شده باشد (iOS نسخهٔ ۱۶.۴ به بالا).
+      </div>
+    </div>
+
+    <!-- نصب مستقیم روی مرورگرهای پشتیبان -->
+    <div class="card hide" id="card-install">
+      <h2>⚡ نصب سریع</h2>
+      <p>مرورگر شما می‌تواند همین حالا برنامه را نصب کند — بدون دانلود هیچ فایلی.</p>
+      <button class="btn" id="install-btn" type="button">نصب برنامه</button>
+    </div>
   </div>
 
   <!-- نوتیفیکیشن -->
   <div class="card">
     <h2>🔔 دریافت پیام وقتی برنامه بسته است</h2>
     <p>
-      با روشن کردن نوتیفیکیشن، پیام‌ها حتی وقتی برنامه بسته یا گوشی قفل است به
-      شما می‌رسند.
+      این قابلیت همیشه روشن است. فقط یک بار باید اجازهٔ اعلان را به دستگاه بدهید؛
+      بستن یا باز کردنش هم فقط از تنظیمات خودِ دستگاه انجام می‌شود.
     </p>
-    <button class="btn ghost" id="notify-btn">روشن کردن نوتیفیکیشن</button>
-    <p id="notify-state" style="margin-top:10px"></p>
+    <button class="btn ghost" id="notify-btn" type="button">اجازهٔ اعلان را بدهید</button>
+    <p id="notify-state" style="margin-top:12px"></p>
   </div>
 
   <footer>
     <a href="./">بازگشت به برنامه</a>
+    <div id="site-version" style="margin-top:6px"></div>
   </footer>
 </div>
 
 <script>
 (function () {
   var ua = navigator.userAgent || '';
-  var isIOS = /iPhone|iPad|iPod/i.test(ua);
+  var isIOS = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   var isAndroid = /Android/i.test(ua);
 
-  // فقط بخشِ مربوط به دستگاه خودش را بالا نشان بده
+  /* ── ۱) اگر برنامه نصب است، هیچ پیشنهاد نصب/دانلودی نشان نده ───────────── */
+  function isStandalone() {
+    try {
+      return window.matchMedia('(display-mode: standalone)').matches
+        || window.matchMedia('(display-mode: minimal-ui)').matches
+        || window.matchMedia('(display-mode: fullscreen)').matches
+        || window.navigator.standalone === true;
+    } catch (e) { return false; }
+  }
+  function isNativeShell() {
+    try {
+      return !!window.pumpDesktop || !!window.PumpAndroid || location.protocol === 'file:';
+    } catch (e) { return false; }
+  }
+  function markInstalled() {
+    var dl = document.getElementById('download-cards');
+    if (dl) dl.classList.add('hide');
+    document.getElementById('card-installed').classList.remove('hide');
+  }
+  if (isStandalone() || isNativeShell()) markInstalled();
+  try {
+    if (navigator.getInstalledRelatedApps) {
+      navigator.getInstalledRelatedApps().then(function (l) { if (l && l.length) markInstalled(); }).catch(function () {});
+    }
+  } catch (e) {}
+  window.addEventListener('appinstalled', markInstalled);
+
+  /* فقط بخشِ مربوط به دستگاه خودش را بالا نشان بده */
   function lift(id) {
-    var el = document.getElementById(id);
-    if (el && el.parentNode) el.parentNode.insertBefore(el, el.parentNode.firstChild.nextSibling.nextSibling);
+    var el = document.getElementById(id), host = document.getElementById('download-cards');
+    if (el && host) host.insertBefore(el, host.firstChild);
   }
   if (isIOS) lift('card-ios');
   else if (isAndroid) lift('card-android');
   else lift('card-windows');
 
-  // دکمهٔ نصبِ خودِ مرورگر (اندروید/کروم/اج)
+  /* ── ۲) دانلود مستقیم از خودِ سایت ─────────────────────────────────────────
+     فایل‌های نصب هنگام انتشارِ سایت کنارِ همین صفحه قرار می‌گیرند
+     (downloads/…)، پس دانلود هم‌مبدأ است: با زدنِ دکمه، فایل همان‌جا شروع به
+     آمدن می‌کند و کاربر به هیچ صفحهٔ دیگری (گیت‌هاب، مرورگر دیگر، …) نمی‌رود.  */
+  var FILES = {
+    android: { url: './downloads/PumpYaqobi.apk',       name: 'PumpYaqobi.apk',       label: 'فایل نصب اندروید' },
+    windows: { url: './downloads/PumpYaqobi-Setup.exe', name: 'PumpYaqobi-Setup.exe', label: 'نصب‌کنندهٔ ویندوز' }
+  };
+  var meta = { android: null, windows: null };
+
+  function fmtSize(n) {
+    if (!n && n !== 0) return '';
+    if (n > 1048576) return (n / 1048576).toFixed(1) + ' مگابایت';
+    return Math.round(n / 1024) + ' کیلوبایت';
+  }
+  function say(kind, text, cls) {
+    var el = document.getElementById('meta-' + kind);
+    if (el) { el.textContent = text; el.className = 'meta' + (cls ? ' ' + cls : ''); }
+  }
+  function progress(kind, pct) {
+    var bar = document.getElementById('bar-' + kind);
+    if (!bar) return;
+    if (pct == null) { bar.style.display = 'none'; return; }
+    bar.style.display = 'block';
+    bar.firstElementChild.style.width = Math.max(2, Math.min(100, pct)) + '%';
+  }
+
+  /* نسخه و اندازهٔ فایل‌ها را از version.json می‌خوانیم — این فایل با هر انتشار
+     خودکار ساخته می‌شود، پس هیچ عددی اینجا دستی نوشته نشده است. */
+  fetch('./version.json', { cache: 'no-store' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (v) {
+      if (!v) return;
+      var sv = document.getElementById('site-version');
+      if (sv && v.version) sv.textContent = 'نسخهٔ ' + v.version + (v.buildTime ? ' — ' + v.buildTime.slice(0, 10) : '');
+      ['android', 'windows'].forEach(function (k) {
+        if (v[k] && v[k].size) {
+          meta[k] = v[k];
+          say(k, 'حجم: ' + fmtSize(v[k].size) + (v.version ? ' · نسخهٔ ' + v.version : ''));
+        }
+      });
+    })
+    .catch(function () {});
+
+  /* ذخیرهٔ یک Blob با نامِ مشخص — بدون باز شدنِ هیچ صفحه/تبِ جدید */
+  function saveBlob(blob, name) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+  }
+
+  /* راه دوم (اگر خواندنِ جریانی نشد): همان لینکِ هم‌مبدأ با صفتِ download.
+     چون فایل روی خودِ همین دامنه است، مرورگر آن را دانلود می‌کند و صفحه عوض نمی‌شود. */
+  function anchorDownload(f) {
+    var a = document.createElement('a');
+    a.href = f.url;
+    a.download = f.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  function download(kind, btn) {
+    var f = FILES[kind];
+    if (!f) return;
+    btn.disabled = true;
+    say(kind, 'در حال آماده‌سازی دانلود…');
+    progress(kind, 3);
+
+    var status = 0;
+    fetch(f.url, { cache: 'no-store' }).then(function (res) {
+      status = res.status;
+      if (!res.ok) throw new Error('http ' + res.status);
+      var total = parseInt(res.headers.get('content-length') || '0', 10)
+        || (meta[kind] && meta[kind].size) || 0;
+      if (!res.body || !res.body.getReader) return res.blob();
+      var reader = res.body.getReader(), chunks = [], got = 0;
+      return (function pump() {
+        return reader.read().then(function (r) {
+          if (r.done) return new Blob(chunks, { type: 'application/octet-stream' });
+          chunks.push(r.value);
+          got += r.value.length;
+          progress(kind, total ? (got / total) * 100 : 50);
+          say(kind, 'در حال دانلود… ' + fmtSize(got) + (total ? ' از ' + fmtSize(total) : ''));
+          return pump();
+        });
+      })();
+    }).then(function (blob) {
+      progress(kind, 100);
+      saveBlob(blob, f.name);
+      say(kind, '✅ ' + f.label + ' دانلود شد — فایل را از پوشهٔ Downloads باز و نصب کنید.', 'ok');
+      btn.disabled = false;
+      setTimeout(function () { progress(kind, null); }, 1500);
+    }).catch(function () {
+      progress(kind, null);
+      btn.disabled = false;
+      /* فایل هنوز روی سایت گذاشته نشده: هیچ صفحه‌ای باز نمی‌کنیم، فقط می‌گوییم */
+      if (status >= 400) {
+        say(kind, '❌ فایل نصب ' + f.label + ' هنوز روی سایت آماده نیست — کمی بعد دوباره بزنید.');
+        return;
+      }
+      /* شبکه/حافظه وسطِ کار اجازه نداد: همان لینکِ مستقیمِ هم‌مبدأ را می‌زنیم */
+      try {
+        anchorDownload(f);
+        say(kind, 'دانلود شروع شد — اگر شروع نشد، اینترنت را بررسی کنید و دوباره بزنید.');
+      } catch (e) {
+        say(kind, '❌ دانلود نشد — اینترنت را بررسی کنید و دوباره تلاش کنید.');
+      }
+    });
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-dl]'), function (btn) {
+    btn.addEventListener('click', function () { download(btn.getAttribute('data-dl'), btn); });
+  });
+
+  /* ── ۳) دکمهٔ نصبِ خودِ مرورگر (اندروید/کروم/اج) ─────────────────────────── */
   var deferred = null;
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault();
     deferred = e;
-    document.getElementById('card-install').classList.remove('hide');
+    if (!isStandalone() && !isNativeShell()) document.getElementById('card-install').classList.remove('hide');
   });
   document.getElementById('install-btn').addEventListener('click', function () {
     if (!deferred) return;
@@ -149,28 +321,28 @@
     document.getElementById('card-install').classList.add('hide');
   });
 
-  // ---- روشن کردن نوتیفیکیشن ----
+  /* ── ۴) اجازهٔ اعلان ───────────────────────────────────────────────────── */
   var state = document.getElementById('notify-state');
-  function say(text, ok) {
+  function sayN(text, ok) {
     state.textContent = text;
     state.className = ok ? 'ok' : '';
   }
 
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    say(isIOS
+    sayN(isIOS
       ? 'اول برنامه را با «Add to Home Screen» نصب کنید، بعد از داخل خودِ برنامه اینجا برگردید.'
       : 'این مرورگر نوتیفیکیشن پس‌زمینه را پشتیبانی نمی‌کند.', false);
     document.getElementById('notify-btn').disabled = true;
   } else if (Notification.permission === 'granted') {
-    say('نوتیفیکیشن روشن است ✓', true);
+    sayN('اجازهٔ اعلان داده شده است ✓ — بستن آن فقط از تنظیمات دستگاه ممکن است.', true);
   }
 
   document.getElementById('notify-btn').addEventListener('click', async function () {
     try {
-      say('در حال روشن کردن…', false);
+      sayN('در حال گرفتن اجازه…', false);
       var permission = await Notification.requestPermission();
       if (permission !== 'granted') {
-        say('اجازه داده نشد. از تنظیمات مرورگر می‌توانید اجازه بدهید.', false);
+        sayN('اجازه داده نشد. از تنظیمات دستگاه (App Info › Notifications) می‌توانید اجازه بدهید.', false);
         return;
       }
 
@@ -181,7 +353,7 @@
       var server = localStorage.getItem('messengerServer') || '';
       var token = localStorage.getItem('messengerToken') || '';
       if (!server || !token) {
-        say('نوتیفیکیشن روشن شد، ولی اول باید در برنامه وارد پیام‌رسان شوید.', true);
+        sayN('اجازه داده شد، ولی اول باید در برنامه وارد پیام‌رسان شوید.', true);
         return;
       }
 
@@ -202,9 +374,9 @@
         body: JSON.stringify({ subscription: sub.toJSON(), label: navigator.platform || 'دستگاه' })
       });
 
-      say('نوتیفیکیشن روشن شد ✓ حالا حتی وقتی برنامه بسته است پیام می‌رسد.', true);
+      sayN('اعلان روشن شد ✓ حالا حتی وقتی برنامه بسته است پیام می‌رسد.', true);
     } catch (e) {
-      say('روشن نشد: ' + (e && e.message ? e.message : e), false);
+      sayN('روشن نشد: ' + (e && e.message ? e.message : e), false);
     }
   });
 })();
