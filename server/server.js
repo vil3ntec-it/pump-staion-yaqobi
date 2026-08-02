@@ -60,7 +60,14 @@ const MAX_PAYLOAD_BYTES = parseInt(process.env.MAX_PAYLOAD_BYTES || String(64 * 
 // شده باشد (مثلاً وقتی سرور داخل برنامهٔ دسکتاپ اجرا می‌شود و باید در پوشهٔ
 // قابل‌نوشتنِ کاربر بنویسد) همان استفاده می‌شود.
 const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(__dirname, 'data');
-let AUTH_TOKEN = process.env.AUTH_TOKEN || '';   // اگر خالی بماند، خودکار ساخته و در data/token.txt ذخیره می‌شود
+let AUTH_TOKEN = process.env.AUTH_TOKEN || '';   // اگر خالی بماند، از رمزِ داخلیِ برنامه برداشته و در data/token.txt ذخیره می‌شود
+/* رمزِ داخلیِ خودِ برنامه — همان BUILTIN_TOKEN در index.html. اگر این دو با هم فرق
+   کنند، هیچ دستگاهی نمی‌تواند وصل شود. این رمز از روزِ اول داخلِ index.htmlِ باز
+   روی اینترنت است، پس پذیرفتنش چیزی را آشکارتر نمی‌کند؛ در عوض ساختنِ رمزِ
+   تصادفیِ تازه با هر نصبِ دوباره، همهٔ دستگاه‌ها را بیرون می‌انداخت.
+   برای رفتارِ سخت‌گیرانه: AUTH_TOKEN را خودتان تنظیم کنید یا STRICT_TOKEN=1 بگذارید. */
+const APP_BUILTIN_TOKEN = '3f25db6ea9ff8ea4e8089a66cc7492f5f017';
+const STRICT_TOKEN = String(process.env.STRICT_TOKEN || '') === '1' || !!process.env.AUTH_TOKEN;
 
 // ---------------------------------------------------------------------------
 //  درختِ داده در حافظه
@@ -397,7 +404,7 @@ wss.on('connection', (ws, req) => {
     try {
       const url = new URL(req.url, 'http://x');
       const t = url.searchParams.get('token') || (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
-      ws._authed = safeEqual(t, AUTH_TOKEN);
+      ws._authed = safeEqual(t, AUTH_TOKEN) || (!STRICT_TOKEN && safeEqual(t, APP_BUILTIN_TOKEN));
     } catch (e) { ws._authed = false; }
   }
 
@@ -500,7 +507,7 @@ async function ensureAuthToken() {
     const existing = (await fsp.readFile(tokenFile, 'utf8')).trim();
     if (existing) { AUTH_TOKEN = existing; return; }
   } catch (e) { /* هنوز ساخته نشده */ }
-  AUTH_TOKEN = crypto.randomBytes(18).toString('hex'); // ۳۶ کاراکتر
+  AUTH_TOKEN = STRICT_TOKEN ? crypto.randomBytes(18).toString('hex') : APP_BUILTIN_TOKEN;
   try { await fsp.writeFile(tokenFile, AUTH_TOKEN, 'utf8'); } catch (e) {}
 }
 

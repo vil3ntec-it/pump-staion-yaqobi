@@ -14,7 +14,7 @@ import path from 'node:path';
 
 const PERSIST_DEBOUNCE_MS = 400;
 
-export function createStore({ key = 'main', label = null, dataDir, token = '' }) {
+export function createStore({ key = 'main', label = null, dataDir, token = '', seedToken = '', alsoAccept = [] }) {
   fs.mkdirSync(dataDir, { recursive: true });
 
   const ROOT = {};
@@ -22,6 +22,12 @@ export function createStore({ key = 'main', label = null, dataDir, token = '' })
   const subscriptions = new Set();
   const clients = new Set();
   let AUTH_TOKEN = token;
+  // رمزهای همیشه‌پذیرفته کنارِ رمزِ اصلی. فقط دفترِ اصلی از این استفاده می‌کند و
+  // فقط با رمزی که خودِ برنامه در سایت منتشر می‌کند — پس چیزی که تا حالا محرمانه
+  // بوده، محرمانه می‌ماند و در عوض دستگاه‌ها با عوض شدنِ رمزِ سرور بیرون نمی‌مانند.
+  const EXTRA_TOKENS = (Array.isArray(alsoAccept) ? alsoAccept : [alsoAccept])
+    .map((t) => String(t || '').trim())
+    .filter(Boolean);
   const stats = { connections: 0, messages: 0, writes: 0, reads: 0, lastActivity: null, rejected: 0 };
 
   // ------------------------------ درخت داده -------------------------------
@@ -315,7 +321,13 @@ export function createStore({ key = 'main', label = null, dataDir, token = '' })
   /** آیا این رمز به همین دفتر می‌خورد؟ (رمز خالی یعنی دفتر باز است) */
   function acceptsToken(candidate) {
     if (AUTH_TOKEN === '') return true;
-    return safeEqual(candidate, AUTH_TOKEN);
+    if (safeEqual(candidate, AUTH_TOKEN)) return true;
+    return EXTRA_TOKENS.some((t) => safeEqual(candidate, t));
+  }
+
+  /** آیا این دفتر هر رمزی را می‌پذیرد؟ (برای پیدا کردنِ دفتر از روی رمز مهم است) */
+  function isOpen() {
+    return AUTH_TOKEN === '';
   }
 
   function reject(ws, msg = 'auth_failed') {
@@ -365,7 +377,11 @@ export function createStore({ key = 'main', label = null, dataDir, token = '' })
         return AUTH_TOKEN;
       }
     } catch { /* هنوز ساخته نشده */ }
-    AUTH_TOKEN = crypto.randomBytes(18).toString('hex');
+    // رمزِ دفترِ اصلی از یک مقدارِ ثابت شروع می‌شود (همان رمزی که خودِ برنامه دارد)،
+    // نه از یک رمزِ تصادفی. چرا: با هر بار نصبِ دوباره یا جابه‌جا شدنِ پوشهٔ داده،
+    // رمزِ تصادفیِ تازه ساخته می‌شد و از آن لحظه همهٔ دستگاه‌ها پشتِ در می‌ماندند
+    // بدون اینکه هیچ راهی برای فهمیدنِ رمزِ تازه داشته باشند.
+    AUTH_TOKEN = seedToken || crypto.randomBytes(18).toString('hex');
     await fsp.writeFile(tokenFile, AUTH_TOKEN, 'utf8');
     return AUTH_TOKEN;
   }
@@ -412,6 +428,7 @@ export function createStore({ key = 'main', label = null, dataDir, token = '' })
     dataDir,
     handleConnection,
     acceptsToken,
+    isOpen,
     reject,
     ensureToken,
     rotateToken,

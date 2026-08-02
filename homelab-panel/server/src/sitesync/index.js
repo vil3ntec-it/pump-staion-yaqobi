@@ -22,6 +22,19 @@ import { createStore } from './store.js';
 
 export const MAIN_KEY = 'main';
 
+/* ── رمزِ داخلیِ خودِ برنامهٔ پمپ ─────────────────────────────────────────────
+   دقیقاً همان مقداری که در `index.html` زیر نامِ BUILTIN_TOKEN نشسته است. اگر
+   این دو با هم فرق کنند، هیچ دستگاهی نمی‌تواند وصل شود.
+
+   چرا دفترِ اصلی این را هم می‌پذیرد: این رمز از روزِ اول داخلِ index.html است و
+   index.html روی GitHub Pages برای همه باز است — پس چیزی که تا حالا محرمانه بوده
+   با این کار محرمانه‌تر یا آشکارتر نمی‌شود. در عوض، عوض شدنِ رمزِ سرور (نصبِ
+   دوباره، جابه‌جا شدنِ پوشهٔ داده، چرخاندنِ رمز از پنل) دیگر همهٔ دستگاه‌ها را
+   بیرون نمی‌اندازد. اگر این را نمی‌خواهید: HLP_SITESYNC_STRICT=1 بگذارید.
+   دفترِ سایت‌های دیگر هرگز این رمز را نمی‌پذیرد. ── */
+export const APP_BUILTIN_TOKEN = '3f25db6ea9ff8ea4e8089a66cc7492f5f017';
+const STRICT = String(process.env.HLP_SITESYNC_STRICT || '') === '1';
+
 /** نامِ پوشه‌ای امن از روی slug — تا هیچ‌کس از پوشهٔ خودش بیرون نزند */
 export function safeKey(value) {
   return String(value || '')
@@ -38,7 +51,14 @@ export function createSiteSync({ dataDir, token = '' }) {
 
   /** key → store */
   const stores = new Map();
-  const main = createStore({ key: MAIN_KEY, label: 'سرور اصلی', dataDir, token });
+  const main = createStore({
+    key: MAIN_KEY,
+    label: 'سرور اصلی',
+    dataDir,
+    token,
+    seedToken: STRICT ? '' : APP_BUILTIN_TOKEN,
+    alsoAccept: STRICT ? [] : [APP_BUILTIN_TOKEN],
+  });
   stores.set(MAIN_KEY, main);
 
   const dirFor = (key) => (key === MAIN_KEY ? dataDir : path.join(sitesDir, key));
@@ -117,9 +137,17 @@ export function createSiteSync({ dataDir, token = '' }) {
     }
 
     // ۲) بدون معرفی: رمز خودش می‌گوید مالِ کدام سایت است (سازگاری با نسخه‌های قبل)
+    //    دفترِ «باز» (بی‌رمز) هر رمزی را می‌پذیرد، پس نباید در این جست‌وجو شرکت کند:
+    //    وگرنه سایتی که رمزِ درستِ خودش را می‌فرستاد، بی‌صدا در دفترِ سایتِ دیگری
+    //    می‌افتاد و حسابِ متفاوتی می‌دید — همان «روی هر دستگاه یک چیز دیگر».
+    //    ترتیبِ دفترها هم به ترتیبِ خواندنِ پوشه‌ها بستگی داشت، یعنی همین دستگاه با
+    //    هر بار راه‌اندازیِ سرور می‌توانست جای دیگری بیفتد.
     for (const store of stores.values()) {
+      if (store.isOpen?.()) continue;
       if (store.acceptsToken(token)) return { store };
     }
+    // هیچ دفترِ رمزداری این رمز را نشناخت — اگر دفترِ اصلی باز است، همان (رفتارِ قبل)
+    if (main.isOpen?.()) return { store: main };
     return { store: main, reason: 'auth_failed' };
   }
 

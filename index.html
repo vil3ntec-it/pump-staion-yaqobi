@@ -1739,17 +1739,37 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
   // وصل می‌شود (دقیقاً مثل فایربیس قبلی — یک بک‌اند مشترک برای همه دستگاه‌ها).
   // این آدرس یک «تونل نام‌دار» روی دامنهٔ خودمان است، نه Quick Tunnel؛ پس با
   // restart شدن سرور یا cloudflared عوض نمی‌شود و همیشه همین می‌ماند.
-  var SELF_HOST_URL   = 'wss://sync.yaqobipump.top';
-  var SELF_HOST_TOKEN = '3b1379be26f61b2f8e460dbccee01ff70364';
+  var BUILTIN_URL   = 'wss://sync.yaqobipump.top';
+  var BUILTIN_TOKEN = '3f25db6ea9ff8ea4e8089a66cc7492f5f017';
+  var SELF_HOST_URL   = BUILTIN_URL;
+  var SELF_HOST_TOKEN = BUILTIN_TOKEN;
+  // «خانهٔ اول»: هر دستگاهِ تازه/پاک‌شده از این‌جا شروع می‌کند، پس نشانیِ سرورِ
+  // مشترک هم همیشه روی همین نگه داشته می‌شود تا دستگاهِ ریست‌شده دوباره پیدایش کند.
+  window.__BUILTIN_SERVER__ = { url: BUILTIN_URL, token: BUILTIN_TOKEN };
 
-  // اگر آدرسِ داخلیِ سایت عوض شده باشد، آدرسِ ذخیره‌شدهٔ قدیمی روی این دستگاه باید
-  // کنار برود؛ وگرنه دستگاهی که یک‌بار دستی آدرس ذخیره کرده، آدرس تازه را هرگز
-  // نمی‌گیرد و بی‌صدا از هم‌زمان‌سازی می‌افتد.
+  var CFG_PATH   = 'appConfig/server';   // نشانیِ سرورِ مشترکِ همهٔ دستگاه‌ها (روی خودِ سرور)
+  var CFG_TS_KEY = 'pumpServerCfgTs';    // زمانِ تنظیمی که این دستگاه پذیرفته
+  var CFG_BAD_KEY= 'pumpServerCfgBad';   // تنظیمی که وصل نشد — دوباره امتحان نشود
+
+  function _lsGet(k){ try { return localStorage.getItem(k) || ''; } catch(e){ return ''; } }
+  function _lsSet(k,v){ try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch(e){} }
+  function cfgTs(){ return parseInt(_lsGet(CFG_TS_KEY), 10) || 0; }
+
+  // اگر آدرس یا رمزِ داخلیِ سایت عوض شده باشد، تنظیمِ ذخیره‌شدهٔ قدیمی روی این
+  // دستگاه باید کنار برود؛ وگرنه دستگاهی که یک‌بار آدرس/رمز ذخیره کرده، تنظیمِ
+  // تازه را هرگز نمی‌گیرد و بی‌صدا از هم‌زمان‌سازی می‌افتد. (تنظیمِ مشترک بعد از
+  // وصل شدن به سرورِ پیش‌فرض دوباره خودکار می‌آید — چیزی برای همیشه گم نمی‌شود.)
+  // رمز هم در این مقایسه هست: وقتی رمزِ سرور عوض می‌شود، تنها راهِ برگشتنِ همهٔ
+  // دستگاه‌ها این است که رمزِ کهنهٔ ذخیره‌شده‌شان کنار برود و رمزِ تازهٔ خودِ سایت
+  // بنشیند — وگرنه هر دستگاه با رمزِ کهنه‌اش پشتِ در می‌ماند.
   try {
-    if (localStorage.getItem('pumpServerBuiltin') !== SELF_HOST_URL) {
+    var _builtinId = BUILTIN_URL + '|' + BUILTIN_TOKEN;
+    if (localStorage.getItem('pumpServerBuiltin') !== _builtinId) {
       localStorage.removeItem('pumpServerUrl');
       localStorage.removeItem('pumpServerToken');
-      localStorage.setItem('pumpServerBuiltin', SELF_HOST_URL);
+      localStorage.removeItem(CFG_TS_KEY);
+      localStorage.removeItem(CFG_BAD_KEY);
+      localStorage.setItem('pumpServerBuiltin', _builtinId);
     }
     // صفحه‌ای که با https باز شده حق ندارد به ws:// وصل شود (قانون مرورگر)،
     // پس آدرس ناامنِ ذخیره‌شده فقط باعث قطع بی‌صدای هم‌زمان‌سازی می‌شود.
@@ -1757,12 +1777,14 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     if (_saved && location.protocol === 'https:' && /^ws:\/\//i.test(_saved)) {
       localStorage.removeItem('pumpServerUrl');
       localStorage.removeItem('pumpServerToken');
+      localStorage.removeItem(CFG_TS_KEY);
     }
   } catch(e){}
 
   // لینکِ خودکارِ اتصال: مثلاً .../?server=wss://xxx.trycloudflare.com&token=abc
   // هر کس این لینک را باز کند، بدون نیاز به رفتن به تنظیمات، به همان سرور وصل می‌شود
   // (یک‌بار در localStorage ذخیره می‌شود؛ دفعات بعد لینک ساده هم کافی است).
+  // این آدرس «تازه‌ترین تنظیم» شمرده می‌شود، پس از همین دستگاه به بقیه هم پخش می‌شود.
   try {
     var _qp = new URLSearchParams(location.search);
     var _qServer = _qp.get('server');
@@ -1771,6 +1793,8 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
       var _qToken = _qp.get('token');
       if (_qToken) localStorage.setItem('pumpServerToken', _qToken);
       else localStorage.removeItem('pumpServerToken');
+      localStorage.setItem(CFG_TS_KEY, String(Date.now()));
+      localStorage.removeItem(CFG_BAD_KEY);
       history.replaceState(null, '', location.pathname + location.hash);
     }
   } catch(e){}
@@ -1782,6 +1806,7 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
   window.__SELF_HOST_TOKEN__ = SELF_HOST_TOKEN; // برای نمایش در تنظیمات › هم‌زمان‌سازی
 
   var ws = null, connected = false, wantOpen = true, reconnectDelay = 1000;
+  var lastAuthFail = false;                // آخرین بار سرور رمز را رد کرد؟
   var pending = {}, idSeq = 0;
   var subs = {}, subSeq = 0;               // subId -> {path,event,cb,limit,seen,seenOrder,lastValue}
   var connListeners = [];                  // شنونده‌های .info/connected
@@ -1800,6 +1825,11 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
   var GET_TTL_MS  = 45000;                 // خواندنِ در صف بعد از این مدت رها می‌شود
   var netListeners = [];                   // شنوندگانِ وضعیتِ اتصال/صف (رابط کاربری)
   var hbTimer = null, hbWaitTimer = null;  // ضربانِ زنده‌بودنِ اتصال
+
+  // قطع شدن، آفلاین بودن و پر شدنِ صف، وضعیتِ عادیِ شبکه‌اند نه «خطای فنیِ برنامه».
+  // بدون این علامت، هر بار که اینترنت می‌رفت و می‌آمد ده‌ها promise رد می‌شد و
+  // نگهبانِ خطاها هر ۳۰ ثانیه اعلانِ «یک خطای فنی ثبت شد» را روی صفحه می‌آورد.
+  function netErr(kind){ var e = new Error(kind); e._expected = true; return e; }
 
   function isMutation(m){ return m && (m.op === 'set' || m.op === 'update' || m.op === 'remove' || m.op === 'push'); }
 
@@ -1865,7 +1895,7 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     // سقفِ صف: کهنه‌ترین‌ها کنار می‌روند تا حافظه هرگز بی‌نهایت رشد نکند
     if (outQueue.length > OUTQ_MAX) {
       var drop = outQueue.splice(0, outQueue.length - OUTQ_MAX);
-      drop.forEach(function(m){ var p = pending[m.id]; if (p) { delete pending[m.id]; try { p.reject(new Error('queue_overflow')); } catch(e){} } });
+      drop.forEach(function(m){ var p = pending[m.id]; if (p) { delete pending[m.id]; try { p.reject(netErr('queue_overflow')); } catch(e){} } });
     }
     if (isMutation(msg)) { outqPersist(); notifyNet(); }
   }
@@ -1874,7 +1904,7 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     var now = Date.now(), keep = [];
     outQueue.forEach(function(m){
       if (m.op === 'get' && m._qts && now - m._qts > GET_TTL_MS) {
-        var p = pending[m.id]; if (p) { delete pending[m.id]; try { p.reject(new Error('offline')); } catch(e){} }
+        var p = pending[m.id]; if (p) { delete pending[m.id]; try { p.reject(netErr('offline')); } catch(e){} }
         return;
       }
       keep.push(m);
@@ -1979,13 +2009,22 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
   function notifyConn(state){ connListeners.forEach(function(cb){ try { cb(mkSnap(null, state)); } catch(e){} }); }
 
   function onConnected(){
-    connected = true; reconnectDelay = 1000;
+    connected = true; reconnectDelay = 1000; lastAuthFail = false;
+    // این اعتبار جواب داد — اگر رمزی جز رمزِ فعلیِ ما بود، همان را نگه دار و بعداً
+    // (در cfgOnConnected) روی سرور هم ثبت کن تا بقیهٔ دستگاه‌ها هم همین را بردارند.
+    if (curCred && curCred.url === SELF_HOST_URL && (curCred.token || '') !== (SELF_HOST_TOKEN || '')) {
+      cfgUseNow(curCred.url, curCred.token);
+      cfgStoreLocal(curCred.url, curCred.token, cfgNewTs());
+      cfgAdopted = true;
+    }
+    authTried = {};
     for (var pth in onDiscRegs){ sendRaw({ op: 'onDisc', path: pth, action: onDiscRegs[pth].action, value: onDiscRegs[pth].value }); }
     for (var id in subs){ var s = subs[id]; sendRaw({ op: 'sub', path: s.path, event: s.event, subId: Number(id), limitToLast: s.limit }); }
     sweepQueuedGets();
     var q = outQueue; outQueue = []; q.forEach(function(msg){ sendRaw(msg); });
     outqPersist();
     startHeartbeat();
+    cfgOnConnected();                        // اتصالِ تازه سالم است → نگهبانِ «برگشت به آدرس قبلی» خاموش
     notifyConn(true); notifyNet();
   }
   function onMessage(data){
@@ -2005,7 +2044,21 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
       return;
     }
     if (m.op === 'event') { dispatchEvent(m); return; }
-    if (m.op === 'error') { console.warn('[سرور شخصی] خطای سرور:', m.msg); return; }
+    if (m.op === 'error') {
+      console.warn('[سرور شخصی] خطای سرور:', m.msg);
+      // رمزِ این آدرس قبول نشد: هرچه تلاش کنیم باز رد می‌شویم. پس همین حالا (نه یک
+      // دقیقهٔ بعد) برو سراغ سرورهای دیگری که می‌شناسیم. بدونِ این، دستگاه با یک
+      // رمزِ غلط تا ابد پشتِ در می‌ماند و کاربر فقط می‌بیند «وصل نیست».
+      if (m.msg === 'auth_failed' || m.msg === 'unknown_site') {
+        lastAuthFail = (m.msg === 'auth_failed');
+        if (curCred) authTried[credKey(curCred)] = 1;      // این اعتبار سوخت
+        // هنوز رمزِ نیازموده‌ای داریم → بی‌معطلی بعدی را امتحان کن (سوکت همین حالا
+        // بسته می‌شود و scheduleReconnect با همین تاخیرِ کوتاه نامزدِ بعدی را می‌گیرد)
+        if (credCandidates().length) { reconnectDelay = 300; return; }
+        cfgLastOk = 0; cfgRescueAt = 0; try { cfgRescue(); } catch(e){}
+      }
+      return;
+    }
   }
   // ضربانِ زنده‌بودن: روی موبایل، سوکت گاهی بی‌صدا می‌میرد و onclose هرگز نمی‌آید؛
   // بدون این، برنامه ساعت‌ها خیال می‌کند وصل است و پیام‌ها در هوا گم می‌شوند.
@@ -2034,14 +2087,57 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     var ids = Object.keys(pending);
     for (var i = 0; i < ids.length; i++) {
       var p = pending[ids[i]]; delete pending[ids[i]];
-      try { p.reject(new Error('disconnected')); } catch(e){}
+      try { p.reject(netErr('disconnected')); } catch(e){}
     }
     notifyConn(false); notifyNet();
+  }
+  /* ── چند رمزِ نامزد به‌جای یک رمزِ ثابت ──────────────────────────────────────
+     سرورِ مشترک روی پنلِ هوم‌لب چند «دفتر» دارد و هر دفتر رمزِ خودش را. اگر رمزِ
+     دفترِ اصلی عوض شده باشد (سرور دوباره نصب شده، پوشهٔ داده جابه‌جا شده، یا از
+     پنل رمز چرخانده شده)، دستگاه با یک رمزِ ثابت تا ابد پشتِ در می‌ماند و هیچ
+     راهی برای فهمیدنِ رمزِ تازه ندارد. حالا به‌جای یک رمز، همهٔ رمزهایی که این
+     دستگاه می‌شناسد یکی‌یکی امتحان می‌شوند و اولی که سرور قبولش کرد، همان
+     می‌ماند و روی سرور هم ثبت می‌شود تا بقیهٔ دستگاه‌ها همان را بردارند.
+     نامزدها همچنین یک‌بار با «?site=main» امتحان می‌شوند: با این پارامتر سرورِ
+     چنددفتری دقیقاً دفترِ سایتِ پمپ را می‌دهد و دیگر ممکن نیست دستگاه بی‌صدا در
+     دفترِ سایتِ دیگری بیفتد و حسابِ متفاوتی ببیند. ── */
+  var SITE_KEY  = 'main';                  // نامِ دفترِ سایتِ پمپ روی سرورِ چنددفتری
+  var authTried = {};                      // اعتبارهایی که همین سیزن رد شدند
+  var curCred   = null;                    // اعتباری که سوکتِ فعلی با آن باز شده
+
+  function credKey(c){ return c.url + '|' + (c.token || '') + '|' + (c.site ? '1' : '0'); }
+  function credUrl(c){
+    var q = [];
+    if (c.token) q.push('token=' + encodeURIComponent(c.token));
+    if (c.site)  q.push('site='  + encodeURIComponent(SITE_KEY));
+    if (!q.length) return c.url;
+    return c.url + (c.url.indexOf('?') >= 0 ? '&' : '?') + q.join('&');
+  }
+  // رمزهای نیازمودهٔ این آدرس، به ترتیبِ اولویت (اول همان رفتارِ همیشگی)
+  function credCandidates(){
+    var toks = [], out = [], seen = {};
+    function addTok(t){ t = t || ''; if (toks.indexOf(t) < 0) toks.push(t); }
+    addTok(SELF_HOST_TOKEN);                                   // رمزِ فعلی/دستیِ کاربر
+    addTok(_lsGet('pumpServerToken'));
+    try { cfgKnown().forEach(function(x){ if (x.url === SELF_HOST_URL) addTok(x.token); }); } catch(e){}
+    addTok(BUILTIN_TOKEN);                                     // رمزِ داخلیِ خودِ برنامه
+    function add(token, site){
+      var c = { url: SELF_HOST_URL, token: token || '', site: !!site }, k = credKey(c);
+      if (seen[k] || authTried[k]) return;
+      seen[k] = 1; out.push(c);
+    }
+    toks.forEach(function(t){ add(t, false); });                // بدونِ site — دقیقاً مثل قبل
+    toks.forEach(function(t){ add(t, true);  });                // با site=main — دفترِ درستِ سایت
+    return out;
   }
   function connect(){
     if (!wantOpen || !SELF_HOST_URL) return;
     if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;   // از قبل در حالِ اتصال/وصل
-    var url = SELF_HOST_URL + (SELF_HOST_TOKEN ? (SELF_HOST_URL.indexOf('?') >= 0 ? '&' : '?') + 'token=' + encodeURIComponent(SELF_HOST_TOKEN) : '');
+    var cands = credCandidates();
+    // همه رد شده‌اند: از نو شروع کن (شاید سرور در این فاصله درست شده باشد)
+    if (!cands.length) { authTried = {}; cands = credCandidates(); }
+    curCred = cands[0] || { url: SELF_HOST_URL, token: SELF_HOST_TOKEN, site: false };
+    var url = credUrl(curCred);
     var sock;
     try { sock = new WebSocket(url); } catch(e){ scheduleReconnect(); return; }
     ws = sock;
@@ -2059,10 +2155,11 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     if (reconnTimer) { clearTimeout(reconnTimer); reconnTimer = null; }
     reconnectDelay = 1000; connect();
   }
+  function wakeUp(){ connectNow(); try { cfgRescue(); } catch(e){} }   // باز شدنِ دوباره: هم وصل شو، هم اگر آدرس مرده است خودت را نجات بده
   try {
-    window.addEventListener('online',  connectNow);
-    window.addEventListener('focus',   connectNow);
-    document.addEventListener('visibilitychange', function(){ if (!document.hidden) connectNow(); });
+    window.addEventListener('online',  wakeUp);
+    window.addEventListener('focus',   wakeUp);
+    document.addEventListener('visibilitychange', function(){ if (!document.hidden) wakeUp(); });
   } catch(e){}
 
   outqRestore();                              // صفِ سیزنِ قبلی (اگر برنامه بسته شده بود)
@@ -2074,8 +2171,342 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     connected: function(){ return connected; },
     queued: function(){ return outQueue.filter(isMutation).length; },
     onChange: function(cb){ if (typeof cb === 'function') { netListeners.push(cb); try { cb({ connected: connected, queued: outQueue.filter(isMutation).length }); } catch(e){} } },
-    reconnect: connectNow
+    reconnect: connectNow,
+    // چرا وصل نیستیم؟ 'auth' یعنی سرور هست ولی رمز را قبول نکرد (رمزِ سرور عوض شده)،
+    // 'unreachable' یعنی اصلاً جوابی نمی‌آید. این دو تا درمانِ کاملاً متفاوتی دارند و
+    // اگر به کاربر یک پیامِ سربسته بدهیم، ساعت‌ها دنبالِ چیز اشتباه می‌گردد.
+    reason: function(){ return connected ? '' : (lastAuthFail ? 'auth' : 'unreachable'); },
+    url: function(){ return SELF_HOST_URL; }
   };
+
+  /* ── نشانیِ سرورِ مشترکِ همهٔ دستگاه‌ها ───────────────────────────────────────
+     چیزی که کاربر خواست: وقتی روی یک دستگاه آدرس و رمزِ سرور را می‌گذارم، بقیهٔ
+     دستگاه‌ها هم خودشان همان سرور را بگیرند — و اگر صفحه/برنامه ریست شد، باز هم
+     همان سرور برگردد.
+
+     چطور کار می‌کند: خودِ آدرسِ سرور مثلِ یک دادهٔ معمولی روی سرور ذخیره می‌شود
+     (مسیرِ appConfig/server = {url, token, ts}). هر دستگاه به این مسیر گوش می‌دهد؛
+     هر وقت تنظیمی با زمانِ تازه‌تر از تنظیمِ خودش دید، همان لحظه به آن سرور کوچ
+     می‌کند. برعکسش هم هست: دستگاهی که تنظیمِ تازه‌تری دارد، آن را روی سروری که
+     به آن وصل است می‌نویسد. پس همهٔ دستگاه‌ها به تازه‌ترین تنظیم می‌رسند.
+
+     یک نسخه هم همیشه روی سرورِ پیش‌فرضِ سایت نگه داشته می‌شود؛ دستگاهی که پاک/ریست
+     شده از آن‌جا شروع می‌کند و نشانیِ سرورِ واقعی را همان‌جا پیدا می‌کند.
+
+     محافظ‌ها: (۱) اگر آدرسِ تازه اصلاً وصل نشد، دستگاه خودکار به آدرسِ قبلیِ سالم
+     برمی‌گردد و آن تنظیمِ خراب را دیگر امتحان نمی‌کند — یک آدرسِ اشتباه نمی‌تواند
+     همهٔ دستگاه‌ها را از کار بیندازد. (۲) تنظیمِ تکراری هیچ کوچ/حلقه‌ای نمی‌سازد. ── */
+  var cfgSwitchTimer = null, cfgPrev = null, cfgMirrored = false, cfgSeenTs = 0, cfgAdopted = false;
+
+  // شمارهٔ تنظیمِ تازه: باید از هر چه تا حالا دیده‌ایم بزرگ‌تر باشد. اگر فقط
+  // Date.now() می‌گذاشتیم، دستگاهی که ساعتش جلو است یک شمارهٔ آینده می‌نوشت و
+  // بعد از آن هیچ دستگاهِ دیگری نمی‌توانست سرور را عوض کند.
+  function cfgNewTs(){ return Math.max(Date.now(), cfgSeenTs + 1, cfgTs() + 1); }
+
+  function cfgLocal(){
+    var u = _lsGet('pumpServerUrl'), t = _lsGet('pumpServerToken'), ts = cfgTs();
+    if (!u) { u = BUILTIN_URL; t = BUILTIN_TOKEN; }
+    return { url: u, token: t, ts: ts };
+  }
+  function cfgSameAsNow(c){ return c.url === SELF_HOST_URL && (c.token || '') === (SELF_HOST_TOKEN || ''); }
+  function cfgValid(v){ return v && typeof v === 'object' && typeof v.url === 'string' && /^wss?:\/\/[^\s]+$/i.test(v.url) && !(location.protocol === 'https:' && /^ws:\/\//i.test(v.url)); }
+
+  function cfgStoreLocal(url, token, ts){
+    if (url === BUILTIN_URL && (token || '') === BUILTIN_TOKEN) {   // برگشت به پیش‌فرضِ سایت
+      _lsSet('pumpServerUrl', ''); _lsSet('pumpServerToken', '');
+    } else {
+      _lsSet('pumpServerUrl', url); _lsSet('pumpServerToken', token || '');
+    }
+    _lsSet(CFG_TS_KEY, ts ? String(ts) : '');
+  }
+  function cfgUseNow(url, token){
+    SELF_HOST_URL = url; SELF_HOST_TOKEN = token || '';
+    window.__SELF_HOST_URL__ = SELF_HOST_URL;
+    window.__SELF_HOST_TOKEN__ = SELF_HOST_TOKEN;
+  }
+  function cfgNote(txt, color){
+    try { if (typeof window.showToast === 'function') window.showToast(txt, color); } catch(e){}
+    try { console.log('[پمپ یعقوبی] ' + txt); } catch(e){}
+  }
+
+  // کوچ به آدرسِ تازه + نگهبان: اگر تا ۲۵ ثانیه وصل نشد، به آدرسِ قبلیِ سالم برگرد
+  // (noRevert: وقتی آدرسِ قبلی خودش مرده است، برگشتن به آن معنایی ندارد)
+  function cfgSwitchTo(url, token, ts, noRevert){
+    cfgPrev = noRevert ? null : { url: SELF_HOST_URL, token: SELF_HOST_TOKEN };
+    cfgStoreLocal(url, token, ts);
+    cfgUseNow(url, token);
+    cfgMirrored = false;
+    cfgDropSocket();
+    connectNow();
+    if (cfgSwitchTimer) { clearTimeout(cfgSwitchTimer); cfgSwitchTimer = null; }
+    if (noRevert) { cfgNote('🔄 در حال اتصال به سرورِ ثبت‌شده در سایت: ' + url, '#3182ce'); return; }
+    cfgSwitchTimer = setTimeout(function(){
+      cfgSwitchTimer = null;
+      if (connected || !cfgPrev) return;
+      _lsSet(CFG_BAD_KEY, String(ts));            // این تنظیم خراب است — دوباره سراغش نرو
+      // یک پله جلوتر از تنظیمِ خراب می‌ایستیم: با وصل شدنِ دوباره، همین آدرسِ سالم
+      // روی سرور نوشته می‌شود و بقیهٔ دستگاه‌ها هم از آدرسِ خراب برمی‌گردند.
+      cfgStoreLocal(cfgPrev.url, cfgPrev.token, ts + 1);
+      cfgUseNow(cfgPrev.url, cfgPrev.token);
+      cfgPrev = null;
+      cfgDropSocket();
+      connectNow();
+      cfgNote('سرورِ تازه جواب نداد — به سرور قبلی برگشتیم', '#d97706');
+    }, 25000);
+    cfgNote('🔄 سرورِ مشترک عوض شد — در حال اتصال به ' + url, '#3182ce');
+  }
+
+  // بستنِ سوکتِ فعلی و رها کردنِ همهٔ منتظرها (سوکتِ کهنه دیگر هیچ کاری نمی‌کند)
+  function cfgDropSocket(){
+    var old = ws; ws = null;
+    try { if (old) old.close(); } catch(e){}
+    if (connected) onDisconnected(); else connected = false;
+  }
+
+  function cfgOnConnected(){
+    if (cfgSwitchTimer) { clearTimeout(cfgSwitchTimer); cfgSwitchTimer = null; }
+    cfgPrev = null;
+    cfgLastOk = Date.now();                  // این آدرس زنده است — نیازی به خودترمیمی نیست
+    cfgRemember(SELF_HOST_URL, SELF_HOST_TOKEN);   // این سرور جواب داد → به فهرستِ سرورهای شناخته‌شده
+    // رمزی که با آزمون پیدا شد، باید روی خودِ سرور بنشیند تا دستگاه‌های دیگر هم
+    // همان را بردارند — وگرنه هر دستگاه باید جداگانه شانس بیاورد.
+    if (cfgAdopted) {
+      cfgAdopted = false;
+      cfgPublishHere({ url: SELF_HOST_URL, token: SELF_HOST_TOKEN, ts: cfgTs() || cfgNewTs() });
+      cfgNote('🔑 رمزِ تازهٔ سرور پیدا شد و برای همهٔ دستگاه‌ها ثبت شد', '#38a169');
+    }
+    // خواندنِ مستقیم (نه فقط اشتراک): بعد از هر اتصال، تنظیمِ این سرور دوباره سنجیده
+    // شود — اشتراک برای «مقدارِ تکراری» رویداد نمی‌دهد و ممکن بود از دستش بدهیم.
+    try { doGet(CFG_PATH).then(cfgOnRemote).catch(function(){}); } catch(e){}
+  }
+
+  // نوشتنِ تنظیم روی سروری که همین حالا به آن وصلیم
+  function cfgPublishHere(c){
+    try { doMutation('set', CFG_PATH, { url: c.url, token: c.token || '', ts: c.ts }).catch(function(){}); } catch(e){}
+  }
+
+  // نوشتنِ تنظیم روی یک سرورِ دیگر با یک اتصالِ کوتاهِ یک‌بارمصرف (بدون دست زدن به اتصالِ اصلی)
+  function cfgPublishTo(url, token, c){
+    return cfgPublishOnce(url, token, c, false).then(function(ok){
+      return ok ? true : cfgPublishOnce(url, token, c, true);
+    });
+  }
+  function cfgPublishOnce(url, token, c, site){
+    return new Promise(function(resolve){
+      if (!cfgValid({ url: url })) { resolve(false); return; }
+      var sock, done = false, timer = null;
+      function finish(ok){
+        if (done) return; done = true;
+        if (timer) clearTimeout(timer);
+        try { if (sock) sock.close(); } catch(e){}
+        resolve(ok);
+      }
+      try { sock = new WebSocket(credUrl({ url: url, token: token, site: site })); }
+      catch(e){ resolve(false); return; }
+      timer = setTimeout(function(){ finish(false); }, 12000);
+      sock.onmessage = function(ev){
+        var m; try { m = JSON.parse(ev.data); } catch(e){ return; }
+        if (m.op === 'connected') { try { sock.send(JSON.stringify({ op: 'set', path: CFG_PATH, value: { url: c.url, token: c.token || '', ts: c.ts }, id: 1 })); } catch(e){ finish(false); } return; }
+        if (m.op === 'ack') finish(m.ok !== false);
+        if (m.op === 'error') finish(false);
+      };
+      sock.onerror = function(){ finish(false); };
+      sock.onclose = function(){ finish(false); };
+    });
+  }
+
+  // خواندنِ تنظیمِ ثبت‌شده روی یک سرورِ دیگر با یک اتصالِ کوتاهِ یک‌بارمصرف
+  function cfgFetchFrom(url, token){
+    return cfgFetchOnce(url, token, false).then(function(r){
+      return r ? r : cfgFetchOnce(url, token, true);   // شاید فقط دفترِ سایت بازش کند
+    });
+  }
+  function cfgFetchOnce(url, token, site){
+    return new Promise(function(resolve){
+      if (!cfgValid({ url: url })) { resolve(null); return; }
+      var sock, done = false, timer = null;
+      function finish(v){ if (done) return; done = true; if (timer) clearTimeout(timer); try { if (sock) sock.close(); } catch(e){} resolve(v); }
+      try { sock = new WebSocket(credUrl({ url: url, token: token, site: site })); }
+      catch(e){ resolve(null); return; }
+      timer = setTimeout(function(){ finish(null); }, 12000);
+      sock.onmessage = function(ev){
+        var m; try { m = JSON.parse(ev.data); } catch(e){ return; }
+        if (m.op === 'connected') { try { sock.send(JSON.stringify({ op: 'get', path: CFG_PATH, id: 1 })); } catch(e){ finish(null); } return; }
+        if (m.op === 'result') finish({ reachable: true, cfg: m.value || null });
+        if (m.op === 'error') finish(null);
+      };
+      sock.onerror = function(){ finish(null); };
+      sock.onclose = function(){ finish(null); };
+    });
+  }
+
+  /* ── خودترمیمی: دستگاهی که روی یک آدرسِ مرده گیر کرده ───────────────────────
+     اگر آدرسِ ذخیره‌شدهٔ این دستگاه دیگر جواب ندهد (مثلاً تونلِ قبلی از بین رفته)،
+     هیچ‌وقت خبردار نمی‌شد که سرور عوض شده و باید دستی برایش می‌بردیم. حالا خودش
+     بعد از حدود یک دقیقه ناکامی، از سرورِ پیش‌فرضِ سایت — که آدرسش داخلِ خودِ
+     برنامه است — می‌پرسد «سرورِ درست کدام است؟» و همان‌جا برمی‌گردد سرِ خط.
+     آدرسی که مرده شناخته شد، تا بسته شدنِ برنامه دوباره پذیرفته نمی‌شود، وگرنه
+     رکوردِ کهنهٔ سرور دوباره ما را به همان آدرسِ مرده می‌فرستاد. ── */
+  var cfgDeadUrls = {}, cfgLastOk = Date.now(), cfgRescueAt = 0;
+
+  /* فهرستِ سرورهایی که این دستگاه تا حالا واقعاً به آن‌ها وصل شده. اگر سرورِ
+     پیش‌فرضِ سایت هم روزی از دسترس خارج شود، باز راهی برای پیدا کردنِ سرورِ درست
+     می‌ماند و لازم نیست دستی برای هر دستگاه ببریم. */
+  var KNOWN_KEY = 'pumpKnownServers', KNOWN_MAX = 6;
+  function cfgKnown(){
+    try {
+      var a = JSON.parse(_lsGet(KNOWN_KEY) || '[]');
+      return Array.isArray(a) ? a.filter(function(x){ return x && typeof x.url === 'string'; }) : [];
+    } catch(e){ return []; }
+  }
+  function cfgRemember(url, token){
+    if (!url) return;
+    var a = cfgKnown().filter(function(x){ return x.url !== url; });
+    a.unshift({ url: url, token: token || '' });
+    _lsSet(KNOWN_KEY, JSON.stringify(a.slice(0, KNOWN_MAX)));
+  }
+  // همهٔ جاهایی که ممکن است سرورِ درست را بشناسند (به ترتیبِ اولویت)
+  function cfgHomes(){
+    var out = [{ url: BUILTIN_URL, token: BUILTIN_TOKEN }];
+    cfgKnown().forEach(function(x){ if (x.url !== BUILTIN_URL) out.push(x); });
+    // «همین آدرس با رمزِ دیگر» هم یک نامزدِ جداست: اگر آدرس درست ولی رمز خراب باشد،
+    // باید بتوانیم با رمزِ درستِ داخلِ برنامه دوباره امتحان کنیم، وگرنه دستگاه با
+    // یک رمزِ غلط تا ابد پشتِ در می‌ماند.
+    return out.filter(function(x){
+      if (cfgDeadUrls[x.url] && x.url !== BUILTIN_URL) return false;
+      return !(x.url === SELF_HOST_URL && (x.token || '') === (SELF_HOST_TOKEN || ''));
+    });
+  }
+
+  function cfgRescue(){
+    if (!wantOpen || connected) return;
+    try { if (navigator.onLine === false) return; } catch(e){}
+    if (Date.now() - cfgLastOk < 25000) return;          // ۲۵ ثانیه فرصت بده خودش وصل شود
+    if (Date.now() - cfgRescueAt < 60000) return;        // هر یک دقیقه یک‌بار، نه بیشتر
+    var homes = cfgHomes();
+    if (!homes.length) return;
+    cfgRescueAt = Date.now();
+    var dead = SELF_HOST_URL, deadTok = SELF_HOST_TOKEN;
+    // همهٔ سرورهایی که می‌شناسیم را با هم صدا می‌زنیم (نه یکی‌یکی با ۱۲ ثانیه انتظار)
+    // و اولی که جواب داد برنده است — کاربر نباید دقیقه‌ها پشتِ در بماند.
+    var done = false;
+    homes.forEach(function(h){
+      cfgFetchFrom(h.url, h.token).then(function(r){
+        if (done || connected || SELF_HOST_URL !== dead) return;
+        if (!r || !r.reachable) return;
+        done = true;
+        if (dead && !(h.url === dead && (h.token || '') !== (deadTok || ''))) cfgDeadUrls[dead] = 1;
+        var v = r.cfg;
+        var good = cfgValid(v) && !cfgDeadUrls[v.url] && !(v.url === dead && (v.token || '') === (deadTok || ''));
+        // نشانیِ ثبت‌شده‌ای که رمز ندارد ولی آدرسش همان سرورِ داخلیِ برنامه است:
+        // رمزِ داخلیِ خودمان را بگذار، وگرنه همه با رمزِ خالی پشتِ در می‌مانند.
+        if (good && v.url === BUILTIN_URL && !v.token) v = { url: BUILTIN_URL, token: BUILTIN_TOKEN, ts: v.ts };
+        var target = good ? v : { url: h.url, token: h.token, ts: 0 };
+        var ts = Math.max(cfgTs(), parseInt(target.ts, 10) || 0);
+        cfgSwitchTo(target.url, target.token || '', ts, true);
+      });
+    });
+  }
+  try { setInterval(cfgRescue, 20000); } catch(e){}
+
+  // آزمایشِ آدرس/رمز پیش از ذخیره: فقط وصل می‌شود و می‌بندد (هیچ چیزی نمی‌نویسد)
+  // یک‌بار ساده و یک‌بار با ?site=main امتحان می‌شود؛ وگرنه رمزِ درستِ دفترِ سایت
+  // «جواب نداد» گزارش می‌شد و کاربر فکر می‌کرد رمز را اشتباه گرفته است.
+  function cfgProbeOnce(url, token, site){
+    return new Promise(function(resolve){
+      if (!cfgValid({ url: url })) { resolve(false); return; }
+      var sock, done = false, timer = null;
+      function finish(ok){ if (done) return; done = true; if (timer) clearTimeout(timer); try { if (sock) sock.close(); } catch(e){} resolve(ok); }
+      try { sock = new WebSocket(credUrl({ url: url, token: token, site: site })); }
+      catch(e){ resolve(false); return; }
+      timer = setTimeout(function(){ finish(false); }, 12000);
+      sock.onmessage = function(ev){ var m; try { m = JSON.parse(ev.data); } catch(e){ return; } if (m.op === 'connected') finish(true); if (m.op === 'error') finish(false); };
+      sock.onerror = function(){ finish(false); };
+      sock.onclose = function(){ finish(false); };
+    });
+  }
+  function cfgProbe(url, token){
+    return cfgProbeOnce(url, token, false).then(function(ok){
+      return ok ? true : cfgProbeOnce(url, token, true);
+    });
+  }
+
+  // چیزی که از سرور رسید: تازه‌تر از مالِ ما بود → بپذیر و کوچ کن؛ کهنه‌تر بود → مالِ ما را بنویس
+  function cfgOnRemote(snap){
+    var v = null; try { v = snap.val(); } catch(e){}
+    var local = cfgLocal();
+    var rTs = (v && parseInt(v.ts, 10)) || 0;
+    var bad  = parseInt(_lsGet(CFG_BAD_KEY), 10) || 0;
+    if (rTs > cfgSeenTs) cfgSeenTs = rTs;      // تنظیمِ بعدی باید از این هم جلوتر باشد
+    if (cfgValid(v) && cfgDeadUrls[v.url]) return;           // این آدرس همین حالا مرده شناخته شد
+    if (cfgValid(v) && rTs > local.ts && rTs !== bad) {
+      if (cfgSameAsNow(v)) { cfgStoreLocal(v.url, v.token, rTs); return; }  // همین سروریم، فقط زمان را به‌روز کن
+      // تنظیمِ کهنه‌ای که روی سرور مانده (مثلاً با رمزی که دیگر کار نمی‌کند) نباید
+      // دستگاهِ سالم را از کار بیندازد. اول امتحانش کن؛ اگر جواب داد کوچ کن، اگر
+      // نداد همان ثبتِ خراب را با تنظیمِ سالمِ خودمان بپوشان تا بقیهٔ دستگاه‌ها هم
+      // گرفتارش نشوند — وگرنه یک رکوردِ کهنه می‌تواند همه را با هم پایین بیاورد.
+      var vv = v, vts = rTs;
+      cfgProbe(vv.url, vv.token || '').then(function(ok){
+        if (ok) { cfgSwitchTo(vv.url, vv.token || '', vts); return; }
+        _lsSet(CFG_BAD_KEY, String(vts));
+        if (!connected) return;                    // خودمان هم وصل نیستیم — چیزی برای جایگزینی نداریم
+        var nts = cfgNewTs();
+        cfgStoreLocal(SELF_HOST_URL, SELF_HOST_TOKEN, nts);
+        cfgPublishHere({ url: SELF_HOST_URL, token: SELF_HOST_TOKEN, ts: nts });
+        cfgNote('سرورِ ثبت‌شده جواب نداد — همین سرورِ سالم برای همه ثبت شد', '#d97706');
+      });
+      return;
+    }
+    if (local.ts && rTs < local.ts) cfgPublishHere(local);   // تنظیمِ تازه‌ترِ ما → روی این سرور هم ثبت شود
+    cfgMirrorToBuiltin(local);
+  }
+
+  // یک نسخه از تنظیم روی سرورِ پیش‌فرضِ سایت هم بماند تا دستگاهِ ریست‌شده پیدایش کند
+  function cfgMirrorToBuiltin(c){
+    if (cfgMirrored || !c.ts) return;
+    if (c.url === BUILTIN_URL) { cfgMirrored = true; return; }   // همین‌جاییم، نیازی نیست
+    cfgMirrored = true;
+    cfgPublishTo(BUILTIN_URL, BUILTIN_TOKEN, c);
+  }
+
+  // پخشِ تنظیمِ تازه به همهٔ دستگاه‌ها: هم روی سرورِ فعلی، هم روی سرورِ تازه، هم روی پیش‌فرضِ سایت
+  function cfgBroadcast(c){
+    c.ts = c.ts || Date.now();
+    cfgPublishHere(c);
+    var targets = [{ u: c.url, t: c.token }];
+    if (SELF_HOST_URL && SELF_HOST_URL !== c.url) targets.push({ u: SELF_HOST_URL, t: SELF_HOST_TOKEN });
+    if (BUILTIN_URL !== c.url && BUILTIN_URL !== SELF_HOST_URL) targets.push({ u: BUILTIN_URL, t: BUILTIN_TOKEN });
+    return Promise.all(targets.map(function(x){ return cfgPublishTo(x.u, x.t, c); }))
+      .then(function(res){ return { ok: !!res[0], results: res }; });
+  }
+
+  // رابطِ بیرونی برای تنظیمات › هم‌زمان‌سازی
+  window.__pumpServerCfg__ = {
+    builtin: function(){ return { url: BUILTIN_URL, token: BUILTIN_TOKEN }; },
+    current: function(){ return { url: SELF_HOST_URL, token: SELF_HOST_TOKEN, ts: cfgTs() }; },
+    probe: cfgProbe,
+    // دکمهٔ نجاتِ دستی: هر آدرسِ دستی/خرابی را دور بریز و برگرد به سرورِ داخلیِ
+    // خودِ برنامه با رمزِ خودش. هیچ داده‌ای پاک نمی‌شود، فقط نشانیِ سرور.
+    resetToBuiltin: function(){
+      _lsSet('pumpServerUrl', ''); _lsSet('pumpServerToken', '');
+      _lsSet(CFG_TS_KEY, ''); _lsSet(CFG_BAD_KEY, ''); _lsSet(KNOWN_KEY, '');
+      cfgDeadUrls = {}; cfgSeenTs = 0; cfgLastOk = Date.now(); cfgRescueAt = 0;
+      cfgUseNow(BUILTIN_URL, BUILTIN_TOKEN);
+      cfgDropSocket();
+      connectNow();
+      cfgNote('🔄 برگشت به سرورِ داخلیِ برنامه: ' + BUILTIN_URL, '#3182ce');
+    },
+    apply: function(url, token){                       // ذخیرهٔ محلی + پخش به همه
+      var c = { url: url, token: token || '', ts: cfgNewTs() };
+      _lsSet(CFG_BAD_KEY, '');
+      var p = cfgBroadcast(c);            // پخش در پس‌زمینه (اولین کار: نوشتن روی سرورِ فعلی)
+      if (cfgSameAsNow(c)) cfgStoreLocal(c.url, c.token, c.ts);
+      else cfgSwitchTo(c.url, c.token, c.ts);          // اتصال بدونِ معطلی عوض می‌شود
+      return p;
+    }
+  };
+
+  if (SELF_HOST_URL) doSub(CFG_PATH, 'value', cfgOnRemote);   // با هر اتصال دوباره مسلح می‌شود
 
   // نصب آبجکت firebase جعلی — بقیهٔ برنامه بدون هیچ تغییری همین را صدا می‌زند
   window.firebase = { initializeApp: function(){ return {}; }, database: function(){ return dbInstance; } };
@@ -17502,14 +17933,17 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button class="pw-btn" style="background:var(--blue);color:#fff" onclick="syncUpload()">⬆️ بارگذاری در سرور (دستی)</button>
       <button class="pw-btn" style="background:var(--green);color:#fff" onclick="syncDownload()">⬇️ دریافت از سرور</button>
+      <button class="pw-btn" style="background:var(--card);color:var(--txt);border:1px solid var(--border)" onclick="syncDiagnose()">🔎 وضعیت هم‌زمان‌سازی</button>
     </div>
+    <div id="sync-diag" style="margin-top:10px;font-size:0.8rem;line-height:2;color:var(--muted)"></div>
     <span id="sync-auto-badge" style="display:none;margin-top:10px;font-size:0.78rem;font-weight:700;padding:4px 10px;border-radius:7px;background:var(--dark);border:1px solid var(--border)"></span>
     <div id="sync-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;line-height:1.8"></div>
     <div id="sync-lasttime" style="margin-top:6px;font-size:0.75rem;color:var(--muted)"></div>
     <input type="hidden" id="sync-station-code" value="pump1">
     <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
       <div style="font-size:0.86rem;color:var(--label);margin-bottom:4px;font-weight:700">🖥️ سرور شخصی</div>
-      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.8">آدرس سرور خودت را این‌جا بگذار تا برنامه به آن وصل شود. اگر خالی بماند، برنامه فقط روی همین دستگاه کار می‌کند (بدون هم‌زمان‌سازی). راهنمای ساخت سرور: پوشهٔ <code>server</code>.</div>
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.8">آدرس سرور خودت را این‌جا بگذار تا برنامه به آن وصل شود. راهنمای ساخت سرور: پوشهٔ <code>server</code>.</div>
+      <div style="font-size:0.78rem;color:var(--green);margin-bottom:10px;line-height:1.8">✅ <b>یک بار</b> این‌جا ذخیره کن، تمام. همین آدرس و رمز در خودِ سایت ثبت می‌شود و هر دستگاهی که سایت را باز کند خودش همین سرور را برمی‌دارد — لازم نیست تک‌تک برای کسی بفرستی. اگر برنامه ریست یا پاک شود، یا دستگاهی روی یک آدرسِ قدیمیِ خراب مانده باشد، خودش دوباره همین سرور را پیدا می‌کند.</div>
       <label style="font-size:0.75rem;color:var(--muted)">آدرس سرور</label>
       <input type="text" id="server-url" placeholder="wss://your-name.trycloudflare.com" autocomplete="off" spellcheck="false" style="width:100%;margin:5px 0 10px;padding:9px 11px;border-radius:8px;border:1px solid var(--border);background:var(--dark);color:var(--txt);direction:ltr;text-align:left;font-size:0.85rem">
       <label style="font-size:0.75rem;color:var(--muted)">رمز سرور (AUTH_TOKEN)</label>
@@ -17519,7 +17953,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <button class="pw-btn" style="background:var(--card);color:var(--muted);border:1px solid var(--border)" onclick="clearServerConfig()">پاک کردن سرور</button>
       </div>
       <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
-        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px;line-height:1.8">می‌خوای به کسی دیگه لینک بدی که خودش هم به همین سرور وصل بشه، بدون این‌که خودش آدرس/رمز رو وارد کنه؟ این دکمه یک لینک آماده کپی می‌کنه:</div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px;line-height:1.8">معمولاً لازم نیست — دستگاه‌ها خودشان همین سرور را می‌گیرند. این فقط برای وقتی است که بخواهی دستگاهی را همین حالا و بدون معطلی وصل کنی:</div>
         <button class="pw-btn" style="background:var(--blue);color:#fff" onclick="copyShareLink()">🔗 کپی لینک اتصال خودکار</button>
       </div>
     </div>
@@ -18870,7 +19304,9 @@ function _setSyncMsg(txt, color) {
   const el = document.getElementById('sync-msg');
   if (el) { el.textContent = txt; el.style.color = color || 'var(--muted)'; }
 }
-// ذخیرهٔ آدرس سرور شخصی؛ با ذخیره، صفحه دوباره بارگذاری می‌شود تا اتصال برقرار شود.
+// ذخیرهٔ آدرس سرور شخصی. آدرس فقط روی همین دستگاه نمی‌ماند: روی خودِ سرور ثبت
+// می‌شود تا بقیهٔ دستگاه‌ها هم خودکار به همین سرور کوچ کنند، و یک نسخه روی سرورِ
+// پیش‌فرضِ سایت هم می‌ماند تا دستگاهِ ریست‌شده دوباره همین را پیدا کند.
 function saveServerConfig() {
   const uEl = document.getElementById('server-url');
   const tEl = document.getElementById('server-token');
@@ -18878,23 +19314,49 @@ function saveServerConfig() {
   const t = tEl ? tEl.value.trim() : '';
   if (!u) { showToast('آدرس سرور را وارد کنید', '#e53e3e'); return; }
   if (!/^wss?:\/\//i.test(u)) { showToast('آدرس باید با wss:// شروع شود', '#e53e3e'); return; }
-  try {
-    localStorage.setItem('pumpServerUrl', u);
-    if (t) localStorage.setItem('pumpServerToken', t); else localStorage.removeItem('pumpServerToken');
-  } catch(e) {}
-  showToast('✅ ذخیره شد — در حال اتصال دوباره...', '#38a169');
-  setTimeout(function(){ location.reload(); }, 800);
+  const cfg = window.__pumpServerCfg__;
+  if (!cfg) {   // نباید پیش بیاید؛ ولی اگر شیم بار نشده بود، دست‌کم همین دستگاه تنظیم شود
+    try {
+      localStorage.setItem('pumpServerUrl', u);
+      if (t) localStorage.setItem('pumpServerToken', t); else localStorage.removeItem('pumpServerToken');
+    } catch(e) {}
+    showToast('✅ ذخیره شد — در حال اتصال دوباره...', '#38a169');
+    setTimeout(function(){ location.reload(); }, 800);
+    return;
+  }
+  _setSyncMsg('⏳ در حال آزمایشِ سرور...', 'var(--accent)');
+  cfg.probe(u, t).then(function(ok){
+    // اگر جواب نداد، نه این دستگاه و نه بقیه نباید به یک آدرسِ خراب کوچ کنند
+    if (!ok && !confirm('این آدرس/رمز جواب نداد (شاید سرور خاموش است یا رمز درست نیست).\n\nباز هم ذخیره شود؟')) {
+      _setSyncMsg('ذخیره نشد — آدرس یا رمز جواب نداد', '#e53e3e');
+      return;
+    }
+    _setSyncMsg('⏳ در حال اعلام به همهٔ دستگاه‌ها...', 'var(--accent)');
+    cfg.apply(u, t).then(function(){
+      showToast('✅ ذخیره شد — بقیهٔ دستگاه‌ها هم خودکار به همین سرور وصل می‌شوند', '#38a169');
+      _setSyncMsg('✅ این سرور برای همهٔ دستگاه‌ها ثبت شد.', '#38a169');
+      setTimeout(function(){ location.reload(); }, 1200);
+    });
+  });
 }
 // پاک کردن آدرسِ دستی؛ بعد از آن، آدرسِ داخلیِ خودِ سایت دوباره به کار می‌افتد
 // (نه «بدون هم‌زمان‌سازی» — این دکمه راهِ برگشت به حالت پیش‌فرضِ درست است).
+// این هم مثل ذخیره به همهٔ دستگاه‌ها اعلام می‌شود، وگرنه همین دستگاه یک لحظه بعد
+// دوباره آدرسِ مشترکِ قبلی را از سرور می‌گرفت و به آن برمی‌گشت.
 function clearServerConfig() {
-  const builtin = window.__SELF_HOST_URL__ || '';
-  const msg = builtin
-    ? 'آدرس دستی پاک شود و به آدرس پیش‌فرض سایت برگردیم؟\n\n' + builtin
-    : 'آدرس سرور پاک شود؟ برنامه فقط روی همین دستگاه کار می‌کند (بدون هم‌زمان‌سازی).';
-  if (!confirm(msg)) return;
-  try { localStorage.removeItem('pumpServerUrl'); localStorage.removeItem('pumpServerToken'); } catch(e) {}
-  location.reload();
+  const cfg = window.__pumpServerCfg__;
+  const builtin = cfg ? cfg.builtin() : { url: window.__SELF_HOST_URL__ || '', token: '' };
+  if (!confirm('آدرس دستی پاک شود و همهٔ دستگاه‌ها به سرور پیش‌فرض سایت برگردند؟\n\n' + (builtin.url || '—'))) return;
+  if (!cfg) {
+    try { localStorage.removeItem('pumpServerUrl'); localStorage.removeItem('pumpServerToken'); } catch(e) {}
+    location.reload();
+    return;
+  }
+  _setSyncMsg('⏳ در حال برگرداندن همهٔ دستگاه‌ها به سرور پیش‌فرض...', 'var(--accent)');
+  cfg.apply(builtin.url, builtin.token).then(function(){
+    showToast('✅ به سرور پیش‌فرض برگشتیم', '#38a169');
+    setTimeout(function(){ location.reload(); }, 1200);
+  });
 }
 // لینکی که با باز شدنش، دستگاه گیرنده خودکار به همین سرور شخصی وصل می‌شود
 // (بدون این‌که خودش چیزی در تنظیمات › هم‌زمان‌سازی وارد کند).
@@ -18932,9 +19394,11 @@ function syncUpload() {
   _setSyncMsg('⏳ در حال بارگذاری...', 'var(--accent)');
   const payload = JSON.parse(JSON.stringify(DB));
   payload.lastSyncUpload = new Date().toISOString();
-  _fbDb.ref('stations/' + code).set(payload)
+  _nextSeq(code)
+    .then(seq => { payload._seq = seq; return _fbDb.ref('stations/' + code).set(payload); })
     .then(() => {
       DB.lastSyncUpload = payload.lastSyncUpload;
+      DB._seq = payload._seq;
       DB._rev = (parseInt(DB._rev, 10) || 0) + 1;
       _writeLsCache();
       try { _IDB.put(JSON.parse(JSON.stringify(DB))); } catch(e) {}
@@ -18959,6 +19423,7 @@ function syncDownload() {
       var _prevRev = parseInt(DB._rev, 10) || 0;
       Object.assign(DB, snap.val());
       DB.syncCode = 'pump1';
+      DB._seq = _seqOf(snap.val());
       // دادهٔ تازه‌آمدهٔ سرور باید از هر نسخهٔ محلی (کش یا IndexedDB) تازه‌تر شمرده
       // شود، وگرنه با باز شدنِ بعدی ممکن بود نسخهٔ کهنهٔ محلی رویش بنشیند
       DB._rev = Math.max(_prevRev, parseInt(DB._rev, 10) || 0) + 1;
@@ -18972,6 +19437,45 @@ function syncDownload() {
       _updateAutoSyncBadge();
     })
     .catch(err => _setSyncMsg('❌ خطا در دریافت: ' + err.message, '#e53e3e'));
+}
+/* ── وضعیت هم‌زمان‌سازی: به‌جای حدس زدن، همین را روی هر دستگاه بزن و مقایسه کن ──
+   نشان می‌دهد این دستگاه به کدام سرور وصل است، شمارهٔ نوبتِ خودش و سرور چند است،
+   و چند رکورد این‌جا و چند رکورد روی سرور هست. اگر دو دستگاه «سرور» یا «کد ایستگاه»
+   متفاوتی نشان دادند، ریشهٔ یکی‌نبودن همان است. ── */
+function syncDiagnose() {
+  const box = document.getElementById('sync-diag');
+  if (!box) return;
+  const code = _syncCode();
+  const url = (window.__SELF_HOST_URL__ || '(تنظیم نشده)');
+  const online = (function(){ try { return window.__pumpNet__.connected(); } catch(e){ return null; } })();
+  const L = [];
+  L.push('🖥️ سرورِ این دستگاه: <span style="direction:ltr;display:inline-block">' + url + '</span>');
+  L.push('🔌 وضعیت اتصال: ' + (online === null ? '؟' : (online ? '<b style="color:var(--green)">وصل</b>' : '<b style="color:var(--red)">قطع</b>')));
+  L.push('🏷️ کد ایستگاه: ' + code);
+  L.push('🔢 شمارهٔ نوبتِ این دستگاه: ' + _seqOf(DB));
+  L.push('📦 رکوردهای این دستگاه: ' + _dbRecordCount(DB));
+  box.innerHTML = L.join('<br>') + '<br>⏳ در حال خواندن از سرور...';
+  if (!_fbReady()) { box.innerHTML = L.join('<br>') + '<br>❌ سرور تنظیم نشده'; return; }
+  _fbDb.ref('stations/' + code).get().then(function(snap){
+    const sd = snap.exists() ? snap.val() : null;
+    if (!sd) { box.innerHTML = L.join('<br>') + '<br>⚠️ روی این سرور برای کد «' + code + '» هیچ حسابی نیست.'; return; }
+    L.push('🔢 شمارهٔ نوبتِ سرور: ' + _seqOf(sd));
+    L.push('📦 رکوردهای سرور: ' + _dbRecordCount(sd));
+    L.push('🕓 آخرین بارگذاری روی سرور: ' + (sd.lastSyncUpload ? new Date(sd.lastSyncUpload).toLocaleString('fa-IR') : '—'));
+    L.push('🔑 رمز مدیرِ سرور و این دستگاه: ' + ((sd.password || '') === (DB.password || '') ? '<b style="color:var(--green)">یکی است</b>' : '<b style="color:var(--red)">یکی نیست</b>'));
+    let verdict;
+    if (_serverIsNewer(sd)) verdict = '⬇️ سرور تازه‌تر است — همین حالا از سرور گرفته می‌شود.';
+    else if (_seqOf(DB) > _seqOf(sd)) verdict = '⬆️ این دستگاه تازه‌تر است — تغییراتش به سرور می‌رود.';
+    else verdict = '✅ این دستگاه و سرور دقیقاً یکی هستند.';
+    // ساعتِ دستگاه: با شمارندهٔ نوبت دیگر اثری در تصمیم ندارد، ولی اگر خیلی پرت باشد بهتر است بداند
+    const skew = Date.now() - _tsOf(sd);
+    let clock = '';
+    if (sd.lastSyncUpload && skew < -120000) clock = '<br>⚠️ ساعتِ این دستگاه حدود ' + Math.round(-skew / 60000) + ' دقیقه <b>عقب‌تر</b> از آخرین نوشتهٔ سرور است.';
+    box.innerHTML = L.join('<br>') + '<br><br>' + verdict + clock;
+    if (_serverIsNewer(sd)) _applyServerData(sd);
+  }).catch(function(e){
+    box.innerHTML = L.join('<br>') + '<br>❌ خواندن از سرور نشد: ' + (e && e.message ? e.message : 'خطا');
+  });
 }
 function _updateSyncLastTime() {
   const el = document.getElementById('sync-lasttime');
@@ -19043,14 +19547,18 @@ function _runAutoSync() {
   // timestamp جدید روی سرور می‌نوشت و حساب اصلی همهٔ دستگاه‌ها پاک می‌شد.
   // پاک‌سازیِ عمدی (wipedAt) استثناست: حالتِ خالی باید آپلود شود تا سرور هم خالی شود
   if (_dbRecordCount(DB) === 0 && !_fbStartupPulled && !DB.wipedAt) return;
+  // سوکت قطع است: نوشتن را در صف نگذار (با شمارهٔ کهنه روی کارِ تازهٔ بقیه می‌نشیند)
+  if (!_syncSocketReady()) { _scheduleAutoSync(8000); return; }
 
   _autoSyncInFlight = true;
   _setSyncMsg('⏳ در حال هم‌زمان‌سازی با سرور...', 'var(--accent)');
   const payload = JSON.parse(JSON.stringify(DB));
   payload.lastSyncUpload = new Date().toISOString();
-  _fbDb.ref('stations/' + code).set(payload)
+  _nextSeq(code)
+    .then(seq => { payload._seq = seq; return _fbDb.ref('stations/' + code).set(payload); })
     .then(() => {
       DB.lastSyncUpload = payload.lastSyncUpload;
+      DB._seq = payload._seq;
       // با _writeLsCache — پیش از این مستقیم صدا می‌شد و وقتی حساب از سقفِ کش
       // بزرگ‌تر می‌شد خطای سهمیه می‌داد؛ آن خطا زنجیره را به catch می‌انداخت، پس
       // _dirtySinceUpload صفر نمی‌شد و برنامه کلِ حساب را هر ۱۵ ثانیه تا ابد
@@ -19101,6 +19609,43 @@ setInterval(function(){ if (navigator.onLine && _dirtySinceUpload) _runAutoSync(
 let _fbStartupDone = false;
 let _fbStartupPulled = false;  // اولین دریافت موفق از سرور انجام شده؟ (محافظ آپلودِ دیتای خالی)
 let _fbStartupTries = 0;
+
+/* ── «کدام نسخه تازه‌تر است؟» دیگر با ساعتِ دستگاه تصمیم گرفته نمی‌شود ──────────
+   ریشهٔ این‌که گوشی و کامپیوتر هیچ‌وقت یکی نمی‌شدند همین بود: تازه‌بودن با
+   lastSyncUpload سنجیده می‌شد و آن را هر دستگاه با ساعتِ خودش می‌نوشت. اگر ساعتِ
+   دو دستگاه یکی نبود (که تقریباً هیچ‌وقت دقیقاً یکی نیست):
+     • دستگاهی که ساعتش جلوتر بود، نوشته‌اش همیشه «تازه‌تر» دیده می‌شد و هر بار که
+       باز می‌شد کلِ حسابِ خودش را روی سرور می‌نوشت و کارِ دستگاه دیگر را پاک می‌کرد؛
+     • دستگاهی که ساعتش عقب‌تر بود، هر چه می‌نوشت از نظر بقیه «کهنه» بود و نادیده
+       گرفته می‌شد — حتی عوض کردنِ رمز. برای همین رمزها هم یکی نمی‌شدند.
+   حالا شمارندهٔ نوبت (_seq) روی خودِ سرور می‌نشیند: هر بارگذاری، شمارهٔ سرور را
+   می‌خواند و یکی جلوتر می‌نویسد. همهٔ دستگاه‌ها یک شمارنده را می‌بینند، پس ساعتِ
+   کسی دیگر در کار نیست. (lastSyncUpload فقط برای نمایش به کاربر باقی می‌ماند.) ── */
+function _seqOf(o){ return parseInt(o && o._seq, 10) || 0; }
+function _tsOf(o){ return new Date((o && o.lastSyncUpload) || 0).getTime() || 0; }
+function _serverIsNewer(sd){
+  const ss = _seqOf(sd), ls = _seqOf(DB);
+  if (ss || ls) return ss > ls;              // شمارنده در کار است → ساعت بی‌ربط
+  return _tsOf(sd) > _tsOf(DB);              // سازگاری با نسخه‌هایی که هنوز شمارنده ندارند
+}
+function _localIsNewerOrSame(sd){
+  const ss = _seqOf(sd), ls = _seqOf(DB);
+  if (ss || ls) return ls >= ss;
+  return _tsOf(DB) >= _tsOf(sd);
+}
+// شمارهٔ نوبتِ بعدی را از خودِ سرور بگیر (اگر نشد، دستِ‌کم یکی جلوتر از مالِ خودمان)
+function _nextSeq(code){
+  try {
+    return _fbDb.ref('stations/' + code + '/_seq').get()
+      .then(function(s){ return Math.max(parseInt(s && s.val(), 10) || 0, _seqOf(DB)) + 1; })
+      .catch(function(){ return _seqOf(DB) + 1; });
+  } catch(e) { return Promise.resolve(_seqOf(DB) + 1); }
+}
+// وقتی سوکت قطع است، نوشتنِ کلِ حساب در صف می‌ماند و بعداً — با شمارهٔ کهنه — روی
+// کارِ تازهٔ بقیه می‌نشیند. پس در حالت قطع اصلاً بارگذاری نمی‌کنیم و صبر می‌کنیم.
+function _syncSocketReady(){
+  try { return !window.__pumpNet__ || window.__pumpNet__.connected(); } catch(e) { return true; }
+}
 function _applyServerData(serverData) {
   _applyingServerData = true;
   try {
@@ -19114,6 +19659,7 @@ function _applyServerData(serverData) {
   } catch(e) {}
   Object.assign(DB, serverData);
   DB.syncCode = 'pump1';
+  DB._seq = _seqOf(serverData);   // شمارندهٔ این دستگاه دقیقاً همانِ سرور شود
   // دادهٔ واردشده از سرور ممکن است هنوز ردیف‌های با نرخِ خودکار داشته باشد → به فیِ دستی تبدیلش کن
   try { DB._autoFeesCleared = false; _manualizeDebtorRates(); } catch(e){}
   try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
@@ -19156,13 +19702,11 @@ function _autoLoadFromFirebaseOnStartup() {
         _startFirebaseRealtimeListener();
         return;
       }
-      const serverTime = new Date(serverData.lastSyncUpload || 0).getTime();
-      const localTime  = new Date(DB.lastSyncUpload  || 0).getTime();
       // محافظ دستگاه تازه: اگر اینجا (آیفون/مرورگر تازه) هیچ رکوردی نیست ولی سرور
-      // حساب دارد، همیشه از سرور بگیر — حتی اگر timestamp ها قابل اتکا نباشند.
+      // حساب دارد، همیشه از سرور بگیر.
       // wipedAt: اگر اینجا عمداً با «پاک کردن همه» خالی شده، خالی بودن دلیلِ برگرداندن داده از سرور نیست
       const localEmptyServerHasData = !DB.wipedAt && _dbRecordCount(DB) === 0 && _dbRecordCount(serverData) > 0;
-      if (localTime >= serverTime && !localEmptyServerHasData) {
+      if (_localIsNewerOrSame(serverData) && !localEmptyServerHasData) {
         // لوکال برابر یا جدیدتر است — همیشه آپلود کن تا تغییرات (رمز، تنظیمات، حساب‌ها) به سرور برسند
         _dirtySinceUpload = true;
         _runAutoSync();
@@ -19185,6 +19729,23 @@ function _autoLoadFromFirebaseOnStartup() {
 }
 // اگر رویداد online آمد و هنوز اولین دریافت انجام نشده، فوراً تلاش کن
 window.addEventListener('online', function(){ if (!_fbStartupDone) setTimeout(_autoLoadFromFirebaseOnStartup, 800); });
+// به‌محضِ برقرار شدنِ دوبارهٔ سوکت: اول ببین سرور چه دارد، بعد تغییرات معطلِ خودت را بفرست
+// فقط «لحظهٔ وصل شدن» مهم است. این شنونده با هر پیامِ شبکه (هر ack) صدا می‌خورد؛
+// اگر هر بار زمان‌بندی را از نو بچینیم، تایمرِ بارگذاری هیچ‌وقت به سر نمی‌رسد و
+// هیچ چیزی به سرور نمی‌رود.
+try {
+  let _netWasConnected = null;
+  window.__pumpNet__.onChange(function(st){
+    if (!st) return;
+    const nowConn = !!st.connected;
+    if (nowConn === _netWasConnected) return;
+    _netWasConnected = nowConn;
+    if (!nowConn) return;
+    if (!_fbStartupDone) { try { _autoLoadFromFirebaseOnStartup(); } catch(e){} return; }
+    try { _fbPullLatestOnce(); } catch(e){}
+    if (_dirtySinceUpload) _scheduleAutoSync(2000);
+  });
+} catch(e){}
 // ===== دریافت مقایسه‌ای هنگام برگشت به برنامه (مخصوص PWA/شورت‌کات آیفون) =====
 // iOS اتصال باز Firebase را در پس‌زمینه می‌کُشد؛ هنگام برگشت، یک‌بار مستقیم چک
 // می‌کنیم که اگر روی دستگاه دیگری چیزی ثبت شده، بلافاصله همین‌جا هم بیاید.
@@ -19194,10 +19755,8 @@ function _fbPullLatestOnce() {
   _fbDb.ref('stations/' + code).get().then(function(snap) {
     if (!snap.exists()) return;
     const sd = snap.val();
-    const st = new Date(sd.lastSyncUpload || 0).getTime();
-    const lt = new Date(DB.lastSyncUpload  || 0).getTime();
     const localEmptyServerHasData = !DB.wipedAt && _dbRecordCount(DB) === 0 && _dbRecordCount(sd) > 0;
-    if (st > lt || localEmptyServerHasData) {
+    if (_serverIsNewer(sd) || localEmptyServerHasData) {
       _applyServerData(sd);
       try { showSyncToast('☁️ تغییرات جدید دریافت شد', '#38a169', 2500); } catch(e) {}
     }
@@ -19225,9 +19784,7 @@ function _startFirebaseRealtimeListener() {
     _fbDb.ref('stations/' + code).on('value', function(snap) {
       if (!snap.exists()) return;
       const sd = snap.val();
-      const st = new Date(sd.lastSyncUpload || 0).getTime();
-      const lt = new Date(DB.lastSyncUpload  || 0).getTime();
-      if (st > lt) {
+      if (_serverIsNewer(sd)) {
         _applyServerData(sd);
         try { showSyncToast('☁️ تغییرات جدید دریافت شد', '#38a169', 2500); } catch(e) {}
       }
@@ -31085,6 +31642,69 @@ function showTopToast(msg, bg, duration) {
   if (_topToastTimer) clearTimeout(_topToastTimer);
   _topToastTimer = setTimeout(() => t.classList.remove('show'), duration || 6000);
 }
+/* ── نوارِ «به سرور وصل نیست» ────────────────────────────────────────────────
+   بدونِ این، دستگاهی که به سرور نمی‌رسد بی‌صدا یک حسابِ خالی نشان می‌داد و آدم
+   خیال می‌کرد «این دستگاه حسابِ جداگانه دارد». حالا خودِ برنامه می‌گوید مشکل از
+   اتصال است، نه از حساب. ── */
+(function(){
+  let _offSince = 0, _bar = null;
+  function bar(){
+    if (_bar) return _bar;
+    _bar = document.createElement('div');
+    _bar.id = 'net-offline-bar';
+    _bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;display:none;'
+      + 'background:#7c2d12;color:#fff;font-family:Vazirmatn,sans-serif;font-size:0.8rem;'
+      + 'font-weight:700;text-align:center;padding:7px 10px;line-height:1.7;box-shadow:0 2px 10px rgba(0,0,0,.35)';
+    const btn = 'margin:0 4px;padding:2px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.5);'
+      + 'background:transparent;color:#fff;font-family:inherit;font-weight:700;cursor:pointer';
+    _bar.innerHTML = '<span id="net-offline-title">⚠️ به سرور وصل نیست — چیزی که می‌بینید ممکن است کاملِ حساب نباشد.</span>'
+      + '<div style="font-size:0.7rem;font-weight:400;opacity:.85;direction:ltr" id="net-offline-url"></div>'
+      + '<button id="net-retry" style="' + btn + '">تلاش دوباره</button>'
+      + '<button id="net-builtin" style="' + btn + '">سرور پیش‌فرض برنامه</button>'
+      + '<button id="net-fixpw" style="' + btn + ';display:none">🔑 گذاشتن رمزِ تازه</button>';
+    _bar.querySelector('#net-retry').onclick = function(){ try { window.__pumpNet__.reconnect(); } catch(e){} };
+    _bar.querySelector('#net-builtin').onclick = function(){
+      try { window.__pumpServerCfg__.resetToBuiltin(); } catch(e){}
+    };
+    // رمز رد شده: کاربر باید بتواند همان‌جا رمزِ تازه را بگذارد، نه اینکه دنبالِ
+    // صفحهٔ تنظیمات بگردد. رمز را از پنلِ سرور (خدمات سرور › رمز) برمی‌دارد.
+    _bar.querySelector('#net-fixpw').onclick = function(){
+      try { showSection('serverservices'); } catch(e){}
+      try { fillSyncSettings(); } catch(e){}
+      try {
+        var el = document.getElementById('server-token');
+        if (el) { el.scrollIntoView({ block: 'center' }); el.focus(); }
+      } catch(e){}
+    };
+    try { document.body.appendChild(_bar); } catch(e){ _bar = null; }
+    return _bar;
+  }
+  function show(on){
+    const b = bar(); if (!b) return;
+    b.style.display = on ? 'block' : 'none';
+    if (!on) return;
+    // آدرسی که دارد تلاش می‌کند + دلیلِ واقعی، جلوی چشم باشد
+    let reason = 'unreachable';
+    try { reason = window.__pumpNet__.reason(); } catch(e){}
+    const t = b.querySelector('#net-offline-title');
+    if (t) t.textContent = (reason === 'auth')
+      ? '⚠️ سرور هست ولی رمزش را قبول نکرد — رمزِ سرور عوض شده است.'
+      : '⚠️ به سرور وصل نیست — چیزی که می‌بینید ممکن است کاملِ حساب نباشد.';
+    const u = b.querySelector('#net-offline-url');
+    if (u) u.textContent = (window.__SELF_HOST_URL__ || '') + (reason === 'auth' ? '  (رمز رد شد)' : '');
+    const f = b.querySelector('#net-fixpw');
+    if (f) f.style.display = (reason === 'auth') ? '' : 'none';
+  }
+  function tick(){
+    let ok = true;
+    try { ok = window.__pumpNet__ ? window.__pumpNet__.connected() : true; } catch(e){}
+    if (ok) { _offSince = 0; show(false); return; }
+    if (!_offSince) _offSince = Date.now();
+    // قطعِ چند ثانیه‌ای عادی است؛ فقط قطعِ ماندگار را به کاربر می‌گوییم
+    if (Date.now() - _offSince > 20000) show(true);
+  }
+  try { setInterval(tick, 5000); } catch(e){}
+})();
 // توستِ کوچکِ هماهنگیِ سرور — گوشهٔ پایین راست. مزاحمِ کاربر نمی‌شود، خودکار محو
 // می‌شود و اگر همان پیام دوباره بیاید روی هم جمع (شمارنده) می‌شود به‌جای پُر کردنِ صفحه.
 function showSyncToast(msg, bg, duration) {
@@ -31458,7 +32078,14 @@ function _roArchivesHtml(acct) {
 function openROViewer(type, id) {
   const list = type === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === id);
-  if (!person) { showToast('شخص یافت نشد', '#e53e3e'); return; }
+  if (!person) {
+    // تا وقتی حساب از سرور نرسیده، «شخص یافت نشد» حرفِ درستی نیست و آدم را گمراه
+    // می‌کند؛ صفحهٔ انتظار خودش دلیلِ واقعی را می‌گوید و با رسیدنِ داده دوباره باز می‌شود.
+    let waiting = false;
+    try { waiting = !!document.getElementById('roWaitMsg') || !window.__pumpNet__.connected(); } catch(e){}
+    if (!waiting) showToast('شخص یافت نشد', '#e53e3e');
+    return;
+  }
   _roCurType = type; _roCurId = id;
   _roViewMode = person.mode || 'fuel';
   document.getElementById('ro-title').textContent = '👤 ' + person.name + ' — فقط‌خواندنی';
@@ -34354,7 +34981,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.141';
+const APP_VERSION = '2.9.149';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -36765,10 +37392,23 @@ if (_isMirzaHash) {
     w.style.cssText = 'position:fixed;inset:0;z-index:9000;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;background:#0d1117;color:#e6edf3;font-family:Vazirmatn,Tahoma,sans-serif;text-align:center;padding:20px';
     w.innerHTML = '<div style="font-size:2.4rem">⏳</div><div style="font-weight:800;font-size:1.05rem">در حال دریافت حساب از سرور...</div><div style="font-size:0.85rem;color:#8b949e">اینترنت باید وصل باشد — چند لحظه صبر کنید</div>';
     document.body.appendChild(w);
+    // بعد از ۱۵ ثانیه دلیلِ واقعی را بگو، نه یک پیامِ سربسته: «اینترنت را چک کنید»
+    // وقتی مشکل از رمزِ سرور است، آدم را ساعت‌ها دنبالِ چیز اشتباه می‌فرستد.
     setTimeout(function(){
       var w2 = document.getElementById('roWaitMsg');
-      if (w2) w2.innerHTML = '<div style="font-size:2.4rem">📴</div><div style="font-weight:800;font-size:1.05rem">حساب هنوز نرسید</div><div style="font-size:0.85rem;color:#8b949e">اینترنت را چک کنید و صفحه را دوباره باز کنید</div>';
-    }, 30000);
+      if (!w2) return;
+      var reason = 'unreachable', url = '';
+      try { if (window.__pumpNet__.connected()) return; reason = window.__pumpNet__.reason(); url = window.__pumpNet__.url(); } catch(e){}
+      var head = (reason === 'auth')
+        ? ['🔑', 'رمزِ سرور قبول نشد', 'سرور بالاست ولی رمزش عوض شده — به مسئولِ برنامه بگویید']
+        : (navigator.onLine === false
+            ? ['📴', 'اینترنتِ این دستگاه وصل نیست', 'اینترنت را روشن کنید و صفحه را دوباره باز کنید']
+            : ['🛑', 'سرور جواب نمی‌دهد', 'اینترنتِ شما وصل است ولی سرورِ برنامه در دسترس نیست']);
+      w2.innerHTML = '<div style="font-size:2.4rem">' + head[0] + '</div>'
+        + '<div style="font-weight:800;font-size:1.05rem">' + head[1] + '</div>'
+        + '<div style="font-size:0.85rem;color:#8b949e">' + head[2] + '</div>'
+        + '<div style="font-size:0.7rem;color:#6e7681;direction:ltr;margin-top:4px">' + escFa(url) + '</div>';
+    }, 15000);
   })();
 } else {
   // نسخهٔ معتبر: همیشه ابتدا صفحهٔ قفل (رمز عبور) نمایش داده می‌شود تا حساب‌ها محافظت شوند
@@ -39474,6 +40114,11 @@ ${copy('نسخهٔ پمپ')}
   window.addEventListener('unhandledrejection', function (e) {
     let m = 'promise';
     try { m = (e.reason && (e.reason.message || String(e.reason))) || 'promise'; } catch (er) {}
+    // قطع/وصل شدنِ اینترنت خطای برنامه نیست. این‌ها را نه ثبت می‌کنیم نه اعلان می‌دهیم،
+    // وگرنه با هر بار رفتن و آمدنِ نت، اعلانِ «یک خطای فنی ثبت شد» روی صفحه می‌آمد
+    // در حالی که هیچ چیزی خراب نشده و نوشته‌ها خودشان دوباره فرستاده می‌شوند.
+    try { if (e.reason && e.reason._expected) return; } catch (er) {}
+    if (/^(disconnected|offline|queue_overflow|auth_failed|op_failed)$/.test(m)) return;
     logErr('promise', m, '', 0);
   });
   // برای برنامه‌نویس: دیدن و پاک کردن گزارش خطاها از کنسول
