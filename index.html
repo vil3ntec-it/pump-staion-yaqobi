@@ -15730,6 +15730,204 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
   .tool-link-card:not(.hc-card){width:100%;margin:0 0 9px}
 }
 </style>
+<style id="light-legibility-2960">
+/* ══════════════════════════════════════════════════════════════════════════
+   ☀️ خوانایی گرافیکِ سبک / حالت روشن (نسخه ۲.۹.۱۶۰)
+   --------------------------------------------------------------------------
+   خواستهٔ صاحب برنامه:
+     • «خط‌های کنارهٔ کادرها به سختی دیده می‌شوند — روی کامپیوتر بدتر هم هست»
+     • «تو جدول‌ها هم کادرِ تاریخ/توضیحات و خطوطِ جدول اصلاً دیده نمی‌شود»
+     • «همهٔ نوشته‌ها ریزند — همه‌جا، همهٔ جدول‌ها را کلفت‌تر کن»
+   روش: یک ست متغیرِ مرزِ روشن که از رنگِ خودِ تم (var(--accent)) ساخته می‌شود،
+   پس هر تمی که کاربر انتخاب کند، خطوط هم‌رنگِ همان تم و همیشه دیده‌می‌شوند
+   می‌مانند. این بلاک عمداً آخرِ <head> است تا بر لایه‌های گرافیکی (سبک/متوسط/
+   فوق‌العاده) و بر بلاکِ table-unify هم غلبه کند. هیچ منطق/محاسبه‌ای دست نخورده.
+   ══════════════════════════════════════════════════════════════════════════ */
+body.light-mode{
+  /* مقدارِ ساده اول (برای مرورگرهای قدیمی) و بعد نسخهٔ هم‌رنگِ تم */
+  --lg-brd:#7a8494;        --lg-brd:color-mix(in srgb, var(--accent) 38%, #6c7686);
+  --lg-brd-soft:#98a1af;   --lg-brd-soft:color-mix(in srgb, var(--accent) 30%, #8a93a2);
+  --lg-grid:#9aa3b1;       --lg-grid:color-mix(in srgb, var(--accent) 26%, #828c9b);
+  --lg-head-bg:#e8ecf2;    --lg-head-bg:color-mix(in srgb, var(--accent) 22%, #ffffff);
+  --lg-head-txt:#243040;   --lg-head-txt:color-mix(in srgb, var(--accent) 72%, #0b1119);
+  --lg-foot-bg:#dde3ec;    --lg-foot-bg:color-mix(in srgb, var(--accent) 32%, #ffffff);
+}
+/* در حالت تاریک هم همان سیستم، فقط با پایهٔ روشن روی زمینهٔ تیره */
+body:not(.light-mode){
+  --lg-brd:rgba(255,255,255,.30);        --lg-brd:color-mix(in srgb, var(--accent) 42%, rgba(255,255,255,.30));
+  --lg-brd-soft:rgba(255,255,255,.22);   --lg-brd-soft:color-mix(in srgb, var(--accent) 30%, rgba(255,255,255,.24));
+  --lg-grid:rgba(255,255,255,.20);
+  --lg-head-bg:var(--dark);
+  --lg-head-txt:var(--txt);
+  --lg-foot-bg:var(--dark);
+}
+
+/* ── ۱) کنارهٔ همهٔ کادرها: ضخیم‌تر و هم‌رنگِ تم ───────────────────────────── */
+body .card,
+body .modal, body .sm-modal,
+body .shift-card, body .pl-card,
+body .stat-box, body .msumbox, body .tank-card,
+body .person-card, body .company-card,
+body .tool-link-card, body .fs-group, body .split-box,
+body .tools-in, body .inv-stat, body .ntf-item,
+body .m-menu-panel{
+  border-width:2px !important;
+  border-style:solid !important;
+  border-color:var(--lg-brd) !important;
+}
+/* کارت‌های تنظیمات رنگِ مرزِ عمدی (inline) دارند — فقط ضخیم‌تر می‌شوند، رنگشان می‌ماند */
+body .settings-card{ border-width:2px !important; border-style:solid !important; }
+/* کادرهایی که مرزشان به‌صورت inline با var(--border) نوشته شده (ده‌ها جای برنامه) */
+body [style*="solid var(--border)"]{ border-color:var(--lg-brd) !important; }
+/* خطِ زیرِ سرکادرها و نوارهای جداکننده */
+body .card-head, body .modal-head, body .fs-head{ border-bottom:2px solid var(--lg-brd) !important; }
+body .modal-summary, body .list-header, body .pm-acct-bar{ border-color:var(--lg-brd) !important; }
+
+/* ── ۲) جدول‌ها: هم کادرِ دورِ جدول، هم خطوطِ داخلی، هم سرستون‌ها ─────────── */
+body .tbl-wrap, body .xls-wrap, body .ro-wrap{
+  border:2px solid var(--lg-brd) !important;
+}
+/* سرستون‌ها («#»، «تاریخ»، «توضیحات»، «مبلغ» …): پس‌زمینهٔ هم‌رنگِ تم + متنِ پررنگ */
+body .tbl th, body .xls-tbl th, body .ro-tbl th{
+  background:var(--lg-head-bg) !important;
+  color:var(--lg-head-txt) !important;
+  font-weight:900 !important;
+  border-bottom:2px solid var(--lg-brd) !important;
+  border-left:1px solid var(--lg-grid) !important;
+}
+/* خطوطِ شبکهٔ سلول‌ها — پررنگ‌تر از خاکستریِ کم‌رنگِ قبلی */
+body .tbl td, body .xls-tbl td, body .ro-tbl td{
+  border-left:1px solid var(--lg-grid) !important;
+  border-bottom:1px solid var(--lg-grid) !important;
+}
+/* لبهٔ بیرونیِ چپ دو-خطه نشود */
+body .tbl th:last-child, body .tbl td:last-child,
+body .xls-tbl th:last-child, body .xls-tbl td:last-child,
+body .ro-tbl th:last-child, body .ro-tbl td:last-child{ border-left:0 !important; }
+/* نوارِ جمعِ پایینِ جدول */
+body .tbl tfoot td, body .xls-tbl tfoot td, body .xls-foot td{
+  background:var(--lg-foot-bg) !important;
+  color:var(--lg-head-txt) !important;
+  border-top:2px solid var(--lg-brd) !important;
+  font-weight:900 !important;
+}
+/* ورودی‌ها و کشوها (سال و ماه، تعداد، جست‌وجو …) */
+body .field-input, body .xls-in.box, body .ei-in,
+body .person-search-input, body input[type="search"],
+body select, body input[type="text"], body input[type="number"],
+body input[type="date"], body input[type="time"], body textarea{
+  border-width:1.5px !important; border-style:solid !important;
+  border-color:var(--lg-brd-soft) !important;
+}
+
+/* ── ۳) کلفت‌تر شدنِ همهٔ نوشته‌ها (همه‌جا و همهٔ جدول‌ها) ─────────────────── */
+body{ -webkit-text-stroke:.22px currentColor; }
+body .tbl td, body .tbl th,
+body .xls-tbl td, body .xls-tbl th,
+body .ro-tbl td, body .ro-tbl th,
+body .xls-in, body .tbl .editable, body .xls-num, body .xls-calc,
+body .pm-albaqi-cell, body .pm-bardagi-cell{ font-weight:800 !important; }
+body .stat-label, body .stat-value,
+body .tb-label, body .tb-value,
+body .field-label, body .card-title, body .section-title, body .settings-title,
+body .pl-card-title, body .pl-big, body .fs-cell .l, body .fs-cell .v,
+body .msumbox .ml, body .msumbox .mv,
+body .pname, body .pdebt, body .m-menu-item, body .nav-btn,
+body .goto-btn, body .add-btn, body .save-btn, body .add-row-btn{ font-weight:800 !important; }
+body .header-date, body .app-version{ font-weight:700 !important; }
+/* روی کامپیوتر بدتر دیده می‌شد: آنجا یک پله ضخیم‌تر */
+@media (min-width:1025px){
+  body{ -webkit-text-stroke:.28px currentColor; }
+  body .tbl-wrap, body .xls-wrap, body .ro-wrap,
+  body .card, body .modal, body .sm-modal{ border-width:2px !important; }
+  body .tbl th, body .xls-tbl th, body .ro-tbl th{ border-bottom-width:2px !important; }
+}
+/* گرافیکِ «سبک» همه‌چیز را فلت می‌کند — آنجا مرزها تنها راهِ دیده‌شدنِ کادرند */
+body.gfx-performance .card,
+body.gfx-performance .shift-card,
+body.gfx-performance .settings-card,
+body.gfx-performance .pl-card,
+body.gfx-performance .stat-box,
+body.gfx-performance .msumbox,
+body.gfx-performance .person-card,
+body.gfx-performance .tank-card,
+body.gfx-performance .tbl-wrap,
+body.gfx-performance .xls-wrap{ border-color:var(--lg-brd) !important; border-width:2px !important; }
+body.gfx-performance .card-head{ border-bottom:2px solid var(--lg-brd) !important; }
+body.gfx-performance .tbl th,
+body.gfx-performance .xls-tbl th,
+body.gfx-performance .ro-tbl th{
+  background:var(--lg-head-bg) !important;
+  color:var(--lg-head-txt) !important;
+  border-bottom:2px solid var(--lg-brd) !important;
+}
+body.gfx-performance .tbl tfoot td,
+body.gfx-performance .xls-tbl tfoot td,
+body.gfx-performance .xls-foot td{
+  background:var(--lg-foot-bg) !important;
+  color:var(--lg-head-txt) !important;
+  border-top:2px solid var(--lg-brd) !important;
+}
+
+/* ── ۴) منوی سه‌نقطه: داینامیک برای موبایل و تبلت ─────────────────────────
+   قبلاً فقط تا ۷۶۸px بود؛ روی تبلت نوارِ افقیِ بخش‌ها می‌ماند و جا نمی‌شد.
+   حالا تا ۱۰۲۴px همان کشوی سه‌نقطه است و اندازهٔ دکمه/کشو/آیتم‌ها با clamp()
+   خودشان با پهنای دستگاه بالا و پایین می‌روند (گوشیِ کوچک تا تبلتِ بزرگ). */
+@media (max-width:1024px){
+  .nav{ display:none !important; }
+  .m-menu-fab{
+    display:inline-flex !important; align-items:center; justify-content:center; flex-shrink:0;
+    width:clamp(38px, 5.4vw, 54px); height:clamp(38px, 5.4vw, 54px);
+    padding:0; border-radius:clamp(10px, 1.3vw, 15px); cursor:pointer;
+    border:1px solid var(--accent); background:var(--accent); color:#000;
+  }
+  .m-menu-fab svg{ fill:currentColor; stroke:none; width:52%; height:52%; }
+  .m-menu-overlay{
+    display:block; position:fixed; inset:0; z-index:9500;
+    background:rgba(0,0,0,.55); opacity:0; pointer-events:none; transition:opacity .25s;
+    -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px);
+  }
+  .m-menu-overlay.open{ opacity:1; pointer-events:auto; }
+  .m-menu-panel{
+    position:absolute; top:0; right:0; bottom:0;
+    width:min(88vw, clamp(300px, 40vw, 430px));
+    background:var(--panel); box-shadow:-8px 0 30px rgba(0,0,0,.45);
+    transform:translateX(100%); transition:transform .28s cubic-bezier(.2,.8,.2,1);
+    display:flex; flex-direction:column;
+  }
+  .m-menu-overlay.open .m-menu-panel{ transform:translateX(0); }
+  .m-menu-head{
+    display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
+    border-bottom:1px solid var(--border); font-weight:800; color:var(--accent);
+    padding:clamp(13px,1.7vw,20px) clamp(15px,2vw,24px);
+    font-size:clamp(1.02rem,1.4vw,1.3rem);
+  }
+  .m-menu-close{
+    background:var(--card); border:1px solid var(--border); border-radius:9px; color:var(--muted);
+    width:clamp(34px,3.4vw,42px); height:clamp(34px,3.4vw,42px); cursor:pointer; font-size:1rem; line-height:1;
+  }
+  .m-menu-list{
+    flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;
+    display:flex; flex-direction:column;
+    padding:clamp(9px,1.1vw,14px);
+    padding-bottom:calc(clamp(9px,1.1vw,14px) + env(safe-area-inset-bottom,0px)) !important;
+    gap:clamp(4px,.5vw,8px);
+  }
+  .m-menu-item{
+    display:flex; align-items:center; gap:12px; position:relative;
+    width:100%; text-align:right; cursor:pointer; border:none; background:transparent;
+    color:var(--txt); font-family:'Vazirmatn',sans-serif; font-weight:600;
+    padding:clamp(12px,1.4vw,17px) clamp(13px,1.6vw,19px);
+    font-size:clamp(.96rem,1.25vw,1.14rem);
+    border-radius:clamp(11px,1.2vw,14px);
+  }
+  .m-menu-item:active{ background:var(--card); }
+  .m-menu-item.active{ background:var(--accent); color:#000; font-weight:800; }
+  .m-menu-item .nav-badge{ position:static; margin-right:auto; }
+  .m-menu-item .nav-ic{ width:1.4em; height:1.4em; flex-shrink:0; }
+  html.m-menu-lock, body.m-menu-lock{ overflow:hidden; }
+}
+</style>
 </head>
 <body class="nav-sticky">
 <script id="gfx-tier-boot">
@@ -18468,6 +18666,17 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <div class="theme-row" id="theme-row-dark"></div>
     <div style="font-size:0.8rem;font-weight:700;color:var(--label);margin:16px 0 8px">☀️ تم‌های روشن</div>
     <div class="theme-row" id="theme-row-light"></div>
+  </div>
+  <div class="settings-card" id="glass-clock-card" style="border-color:var(--green)">
+    <div class="settings-title" style="color:var(--green)">🕒 ساعت شیشه‌ای</div>
+    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
+      ساعتِ شناورِ شیشه‌ای که رنگش از همان تمِ انتخاب‌شده می‌آید. با کشیدن، هر جای صفحه که خواستی می‌گذاری و با <b>کلیک راست</b> روی خودش (یا نگه‌داشتنِ انگشت در موبایل) می‌توانی ساعتش را دستی تنظیم کنی، الارم بگذاری یا پنهانش کنی.
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button type="button" id="gcSetOn" class="gc-set-btn" onclick="setGlassClock(true)" style="flex:1;min-width:130px;padding:11px;border-radius:10px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🕒 نمایش ساعت</button>
+      <button type="button" id="gcSetOff" class="gc-set-btn" onclick="setGlassClock(false)" style="flex:1;min-width:130px;padding:11px;border-radius:10px;border:1.5px solid var(--muted);background:transparent;color:var(--muted);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🙈 پنهان باشد</button>
+      <button type="button" onclick="resetGlassClockPos()" style="flex:1;min-width:130px;padding:11px;border-radius:10px;border:1.5px solid var(--blue);background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">✥ برگشت به جای اول</button>
+    </div>
   </div>
   <div class="settings-card" id="hexfx-card" style="border-color:var(--blue)">
     <div class="settings-title" style="color:var(--blue)">✨ نور پس‌زمینه</div>
@@ -36141,7 +36350,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.159';
+const APP_VERSION = '2.9.160';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -41914,6 +42123,491 @@ tfoot td{background:${accent}14;font-weight:900;font-size:.88rem}
     e.preventDefault();
     if (isZ) _histUndo(); else _histRedo();
   });
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     🕒 ساعتِ شیشه‌ایِ شناور (نسخه ۲.۹.۱۶۰)
+     • ظاهر دقیقاً مثل تصویرِ مرجع: کپسولِ شیشه‌ای، کمانِ سبزِ کنارِ چپ،
+       ساعتِ درشت، خطِ جداکننده، تاریخِ دو-خطی و صفحهٔ عقربه‌ایِ گرد.
+     • رنگش از رنگِ تمِ انتخاب‌شده (var(--accent)) می‌آید — با هر تم عوض می‌شود.
+     • هر جای صفحه کشیده می‌شود (جایش ذخیره می‌ماند).
+     • با کلیک راست (یا نگه‌داشتنِ انگشت): تنظیمِ ساعت، الارم، پنهان‌کردن.
+     ═══════════════════════════════════════════════════════════════════════ -->
+<style id="glass-clock-css">
+#glassClock{
+  --gc-h:clamp(56px, 6.6vw, 92px);
+  --gc-line:rgba(255,255,255,.16);
+  --gc-txt:#e8eef6;
+  --gc-sub:#9aa6b6;
+  --gc-surface:linear-gradient(152deg, rgba(38,44,54,.80), rgba(14,17,23,.86));
+  position:fixed; top:0; left:0; z-index:280;
+  display:none; align-items:center; gap:0;
+  height:var(--gc-h); padding:0 calc(var(--gc-h)*.16) 0 calc(var(--gc-h)*.02);
+  border-radius:999px; direction:ltr;
+  font-family:'Vazirmatn',sans-serif; color:var(--gc-txt);
+  background:var(--gc-surface);
+  border:1px solid var(--gc-line);
+  box-shadow:0 26px 60px -26px rgba(0,0,0,.9), 0 2px 10px -4px rgba(0,0,0,.5),
+             inset 0 1px 0 rgba(255,255,255,.14), inset 0 -1px 0 rgba(0,0,0,.35);
+  -webkit-backdrop-filter:blur(16px) saturate(150%);
+  backdrop-filter:blur(16px) saturate(150%);
+  user-select:none; -webkit-user-select:none; touch-action:none;
+  cursor:grab; -webkit-text-stroke:0 !important;
+}
+#glassClock.gc-on{ display:inline-flex; }
+#glassClock.gc-drag{ cursor:grabbing; box-shadow:0 34px 70px -24px rgba(0,0,0,.95), inset 0 1px 0 rgba(255,255,255,.18); }
+/* رنگ‌ها از تمِ فعال — هر تمی انتخاب شود، ساعت هم همان‌رنگ می‌شود */
+#glassClock{
+  --gc-line:color-mix(in srgb, var(--accent) 30%, rgba(255,255,255,.16));
+  --gc-surface:linear-gradient(152deg,
+      color-mix(in srgb, var(--accent) 10%, rgba(36,42,52,.82)),
+      color-mix(in srgb, var(--accent) 4%,  rgba(12,15,21,.88)));
+}
+body.light-mode #glassClock{
+  --gc-txt:#131a24; --gc-sub:#465364;
+  --gc-line:color-mix(in srgb, var(--accent) 58%, rgba(90,100,116,.55));
+  --gc-surface:linear-gradient(152deg,
+      color-mix(in srgb, var(--accent) 20%, rgba(255,255,255,.90)),
+      color-mix(in srgb, var(--accent) 9%,  rgba(255,255,255,.74)));
+  border-width:1.5px;
+  box-shadow:0 22px 50px -26px rgba(40,50,70,.55), 0 2px 8px -4px rgba(40,50,70,.25),
+             inset 0 1px 0 rgba(255,255,255,.9);
+}
+/* کمانِ کنارِ چپ — پیشرویِ ثانیه‌های همین دقیقه */
+#glassClock .gc-arc{ width:calc(var(--gc-h)*.58); height:100%; flex:0 0 auto; }
+#glassClock .gc-arc svg{ width:100%; height:100%; display:block; overflow:visible; }
+#glassClock .gc-arc .gc-arc-bg{ fill:none; stroke:currentColor; opacity:.16; stroke-width:5; stroke-linecap:round; }
+#glassClock .gc-arc .gc-arc-fg{ fill:none; stroke:var(--accent); stroke-width:5; stroke-linecap:round;
+  filter:drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 65%, transparent)); }
+/* ساعتِ درشت */
+#glassClock .gc-time{
+  font-size:calc(var(--gc-h)*.37); font-weight:800; letter-spacing:.5px;
+  color:var(--accent); line-height:1; padding:0 calc(var(--gc-h)*.05) 0 0;
+  font-variant-numeric:tabular-nums; white-space:nowrap;
+  text-shadow:0 0 18px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+/* خطِ جداکنندهٔ عمودی */
+#glassClock .gc-div{
+  width:1px; height:52%; flex:0 0 auto; margin:0 calc(var(--gc-h)*.11);
+  background:linear-gradient(180deg, transparent, var(--gc-line) 18%, var(--gc-line) 82%, transparent);
+}
+/* تاریخ — دو خط، راست‌به‌چپ */
+#glassClock .gc-date{
+  direction:rtl; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:calc(var(--gc-h)*.045); color:var(--gc-sub); white-space:nowrap;
+  font-size:calc(var(--gc-h)*.155); font-weight:700; line-height:1.25;
+  min-width:calc(var(--gc-h)*.95);
+}
+#glassClock .gc-date b{ font-weight:800; color:var(--gc-txt); font-size:calc(var(--gc-h)*.165); }
+/* صفحهٔ عقربه‌ای */
+#glassClock .gc-face{
+  width:calc(var(--gc-h)*.46); height:calc(var(--gc-h)*.46); flex:0 0 auto;
+  margin-inline-start:calc(var(--gc-h)*.12);
+}
+#glassClock .gc-face svg{ width:100%; height:100%; display:block; }
+#glassClock .gc-face .gc-ring{ fill:none; stroke:var(--accent); stroke-width:5; opacity:.95; }
+#glassClock .gc-face .gc-tick{ stroke:currentColor; stroke-width:3.4; stroke-linecap:round; opacity:.35; }
+#glassClock .gc-face .gc-hh{ stroke:currentColor; stroke-width:6.5; stroke-linecap:round; }
+#glassClock .gc-face .gc-mm{ stroke:currentColor; stroke-width:4.5; stroke-linecap:round; }
+#glassClock .gc-face .gc-ss{ stroke:var(--accent); stroke-width:2.6; stroke-linecap:round; }
+#glassClock .gc-face .gc-pin{ fill:var(--accent); }
+/* نشانِ الارمِ فعال */
+#glassClock .gc-bell{
+  position:absolute; top:calc(var(--gc-h)*.09); right:calc(var(--gc-h)*.62);
+  font-size:calc(var(--gc-h)*.13); line-height:1; opacity:.9; display:none;
+}
+#glassClock.gc-has-alarm .gc-bell{ display:block; }
+
+/* منوی کلیک‌راست */
+#gcMenu{
+  position:fixed; z-index:9700; display:none; flex-direction:column; overflow:hidden;
+  min-width:212px; border-radius:14px; direction:rtl;
+  font-family:'Vazirmatn',sans-serif; font-size:.86rem; font-weight:700;
+  background:var(--card); color:var(--txt);
+  border:1.5px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  box-shadow:0 20px 50px -18px rgba(0,0,0,.75);
+}
+#gcMenu.open{ display:flex; }
+#gcMenu button{
+  display:flex; align-items:center; gap:9px; padding:11px 14px; border:none; cursor:pointer;
+  background:transparent; color:inherit; font-family:inherit; font-size:inherit; font-weight:inherit;
+  text-align:right; width:100%;
+}
+#gcMenu button:hover{ background:color-mix(in srgb, var(--accent) 16%, transparent); }
+#gcMenu button+button{ border-top:1px solid var(--border); }
+#gcMenu .gc-mi-danger{ color:var(--red); }
+
+/* پنجرهٔ کوچکِ تنظیم ساعت / الارم */
+#gcDlg{ position:fixed; inset:0; z-index:9800; display:none; align-items:center; justify-content:center; padding:16px;
+  background:rgba(0,0,0,.55); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
+#gcDlg.open{ display:flex; }
+#gcDlg .gc-dlg-box{
+  width:min(360px,94vw); border-radius:18px; padding:18px; direction:rtl;
+  background:var(--card); color:var(--txt);
+  border:1.5px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  box-shadow:0 30px 70px -22px rgba(0,0,0,.8);
+  font-family:'Vazirmatn',sans-serif;
+}
+#gcDlg .gc-dlg-t{ font-weight:900; font-size:1rem; color:var(--accent); margin-bottom:12px; }
+#gcDlg input[type="time"], #gcDlg input[type="text"]{
+  width:100%; padding:11px; border-radius:11px; background:var(--panel); color:var(--txt);
+  border:1.5px solid var(--border); font-family:'Vazirmatn',sans-serif; font-size:1rem; font-weight:800;
+  text-align:center; margin-bottom:10px;
+}
+#gcDlg .gc-dlg-row{ display:flex; align-items:center; gap:8px; font-size:.85rem; font-weight:700; margin-bottom:12px; }
+#gcDlg .gc-dlg-btns{ display:flex; gap:9px; }
+#gcDlg .gc-dlg-btns button{
+  flex:1; padding:11px; border-radius:11px; border:none; cursor:pointer;
+  font-family:'Vazirmatn',sans-serif; font-weight:900; font-size:.9rem;
+}
+#gcDlg .gc-ok{ background:var(--accent); color:#111; }
+#gcDlg .gc-cancel{ background:transparent; color:var(--muted); border:1.5px solid var(--border) !important; }
+#gcDlg .gc-list{ max-height:170px; overflow:auto; margin-bottom:10px; display:flex; flex-direction:column; gap:6px; }
+#gcDlg .gc-list-item{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  padding:8px 10px; border-radius:10px; border:1px solid var(--border); background:var(--panel);
+  font-size:.85rem; font-weight:800;
+}
+#gcDlg .gc-list-item button{
+  border:none; background:transparent; color:var(--red); cursor:pointer; font-size:.95rem;
+  font-family:'Vazirmatn',sans-serif; padding:2px 6px;
+}
+/* دکمه‌های کارتِ تنظیماتِ ساعت */
+#gcSetOn.active{ background:var(--green) !important; color:#fff !important; }
+#gcSetOff.active{ background:var(--muted) !important; color:#fff !important; }
+@media print{ #glassClock, #gcMenu, #gcDlg{ display:none !important; } }
+</style>
+
+<div id="glassClock" aria-label="ساعت">
+  <span class="gc-bell" aria-hidden="true">🔔</span>
+  <div class="gc-arc">
+    <svg viewBox="0 0 60 92" aria-hidden="true">
+      <path class="gc-arc-bg" d="M36.68 11.23 A36 36 0 0 0 36.68 80.77"/>
+      <path class="gc-arc-fg" id="gcArcFg" d="M36.68 11.23 A36 36 0 0 0 36.68 80.77"/>
+    </svg>
+  </div>
+  <div class="gc-time" id="gcTime">--:--</div>
+  <div class="gc-div"></div>
+  <div class="gc-date"><b id="gcWeekday">—</b><span id="gcDay">—</span></div>
+  <div class="gc-face">
+    <svg viewBox="0 0 100 100" aria-hidden="true">
+      <circle class="gc-ring" cx="50" cy="50" r="45"/>
+      <line class="gc-tick" x1="50" y1="14" x2="50" y2="21"/>
+      <line class="gc-tick" x1="86" y1="50" x2="79" y2="50"/>
+      <line class="gc-tick" x1="50" y1="86" x2="50" y2="79"/>
+      <line class="gc-tick" x1="14" y1="50" x2="21" y2="50"/>
+      <line class="gc-hh" id="gcHandH" x1="50" y1="50" x2="50" y2="28"/>
+      <line class="gc-mm" id="gcHandM" x1="50" y1="50" x2="50" y2="20"/>
+      <line class="gc-ss" id="gcHandS" x1="50" y1="56" x2="50" y2="18"/>
+      <circle class="gc-pin" cx="50" cy="50" r="4.5"/>
+    </svg>
+  </div>
+</div>
+<div id="gcMenu" role="menu"></div>
+<div id="gcDlg"><div class="gc-dlg-box" id="gcDlgBox"></div></div>
+
+<script id="glass-clock-js">
+/* ساعتِ شیشه‌ای — کاملاً مستقل و افزودنی: هیچ منطق/دادهٔ برنامه را لمس نمی‌کند.
+   کلیدهای ذخیره: pumpClockHidden / pumpClockPos / pumpClockOffset / pumpClockAlarms */
+(function(){
+  "use strict";
+  var K_HIDE='pumpClockHidden', K_POS='pumpClockPos', K_OFF='pumpClockOffset', K_ALM='pumpClockAlarms';
+  var el, arcFg, tEl, wEl, dEl, hH, hM, hS, menuEl, dlgEl, dlgBox;
+  var ARC_LEN = 2 * Math.PI * 36 * (150/360);   // طولِ کمانِ ۱۵۰ درجه‌ای
+  var FA_WD = ['یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه','شنبه'];
+  var FA_MONTHS = ['حمل','ثور','جوزا','سرطان','اسد','سنبله','میزان','عقرب','قوس','جدی','دلو','حوت'];
+
+  function ls(k, d){ try{ var v = localStorage.getItem(k); return v===null ? d : v; }catch(e){ return d; } }
+  function lsSet(k, v){ try{ localStorage.setItem(k, v); }catch(e){} }
+  function fa(s){ return String(s).replace(/[0-9]/g, function(d){ return '۰۱۲۳۴۵۶۷۸۹'[d]; }); }
+  function pad(n){ return (n<10?'0':'') + n; }
+  function toast(m, c){ try{ if(typeof showToast==='function') showToast(m, c || 'var(--accent)'); }catch(e){} }
+
+  /* ── زمانِ ساعت = زمانِ سیستم + اختلافی که کاربر خودش تنظیم کرده ── */
+  function offset(){ var n = parseInt(ls(K_OFF,'0'),10); return isNaN(n) ? 0 : n; }
+  function now(){ return new Date(Date.now() + offset()); }
+
+  /* ── تاریخِ شمسی (همان تقویمِ خودِ برنامه: حمل/ثور/…) ── */
+  function jalali(d){
+    try{
+      var f = new Intl.DateTimeFormat('en-US-u-ca-persian', {day:'numeric', month:'numeric', year:'numeric'});
+      var o = {}; f.formatToParts(d).forEach(function(p){ if(p.type!=='literal') o[p.type]=p.value; });
+      var y = parseInt(o.year,10), m = parseInt(o.month,10), dd = parseInt(o.day,10);
+      if(!isNaN(y) && !isNaN(m) && !isNaN(dd)) return {y:y, m:m, d:dd};
+    }catch(e){}
+    try{ if(typeof jal_g2j==='function'){ var j = jal_g2j(d.getFullYear(), d.getMonth()+1, d.getDate()); return {y:j.jy, m:j.jm, d:j.jd}; } }catch(e){}
+    return null;
+  }
+  function monthName(m){
+    try{ if(typeof SHAMSI_MONTHS!=='undefined' && SHAMSI_MONTHS[m-1]) return SHAMSI_MONTHS[m-1]; }catch(e){}
+    return FA_MONTHS[m-1] || '';
+  }
+
+  /* ── نقاشیِ هر ثانیه ── */
+  function tick(){
+    if(!el) return;
+    var app = document.getElementById('app');
+    var hidden = ls(K_HIDE,'0') === '1';
+    var appOpen = !!(app && app.style.display !== 'none');
+    el.classList.toggle('gc-on', appOpen && !hidden);
+    if(!appOpen || hidden) return;
+
+    var d = now(), h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
+    tEl.textContent = fa(pad(h) + ':' + pad(m));
+    var j = jalali(d);
+    wEl.textContent = FA_WD[d.getDay()] || '';
+    dEl.textContent = j ? (fa(j.d) + ' ' + monthName(j.m)) : '';
+
+    // کمان = پیشرویِ ثانیه‌های همین دقیقه
+    var p = (s + d.getMilliseconds()/1000) / 60;
+    arcFg.style.strokeDasharray = ARC_LEN + ' ' + ARC_LEN;
+    arcFg.style.strokeDashoffset = (ARC_LEN * (1 - p)).toFixed(2);
+
+    // عقربه‌ها
+    var aH = (h % 12) * 30 + m * 0.5, aM = m * 6 + s * 0.1, aS = s * 6;
+    hH.setAttribute('transform', 'rotate(' + aH + ' 50 50)');
+    hM.setAttribute('transform', 'rotate(' + aM + ' 50 50)');
+    hS.setAttribute('transform', 'rotate(' + aS + ' 50 50)');
+
+    checkAlarms(d);
+    el.classList.toggle('gc-has-alarm', alarms().length > 0);
+  }
+
+  /* ── جای ساعت روی صفحه (کشیدنی + ذخیره‌شونده) ── */
+  function pos(){
+    try{ var o = JSON.parse(ls(K_POS,'null')); if(o && typeof o.xr==='number' && typeof o.yr==='number') return o; }catch(e){}
+    return null;
+  }
+  function place(){
+    if(!el) return;
+    var w = el.offsetWidth || 300, h = el.offsetHeight || 70;
+    var maxX = Math.max(0, window.innerWidth - w - 8), maxY = Math.max(0, window.innerHeight - h - 8);
+    var p = pos(), x, y;
+    if(p){ x = p.xr * maxX; y = p.yr * maxY; }
+    else { x = maxX - 12; y = maxY - 12; }                   // پیش‌فرض: پایین-راست
+    el.style.left = Math.min(Math.max(8, x), Math.max(8, maxX)) + 'px';
+    el.style.top  = Math.min(Math.max(8, y), Math.max(8, maxY)) + 'px';
+  }
+  function savePos(x, y){
+    var w = el.offsetWidth || 300, h = el.offsetHeight || 70;
+    var maxX = Math.max(1, window.innerWidth - w - 8), maxY = Math.max(1, window.innerHeight - h - 8);
+    lsSet(K_POS, JSON.stringify({ xr: Math.min(1, Math.max(0, x / maxX)), yr: Math.min(1, Math.max(0, y / maxY)) }));
+  }
+
+  function initDrag(){
+    var dragging=false, moved=false, sx=0, sy=0, ox=0, oy=0, lpTimer=null;
+    el.addEventListener('pointerdown', function(e){
+      if(e.button === 2) return;                     // کلیک راست = منو، نه کشیدن
+      dragging = true; moved = false;
+      sx = e.clientX; sy = e.clientY;
+      ox = parseFloat(el.style.left) || 0; oy = parseFloat(el.style.top) || 0;
+      el.classList.add('gc-drag');
+      try{ el.setPointerCapture(e.pointerId); }catch(err){}
+      if(e.pointerType !== 'mouse'){                  // نگه‌داشتنِ انگشت = منو
+        lpTimer = setTimeout(function(){ if(!moved){ dragging=false; el.classList.remove('gc-drag'); openMenu(e.clientX, e.clientY); } }, 550);
+      }
+    });
+    el.addEventListener('pointermove', function(e){
+      if(!dragging) return;
+      var dx = e.clientX - sx, dy = e.clientY - sy;
+      if(Math.abs(dx) > 4 || Math.abs(dy) > 4){ moved = true; if(lpTimer){ clearTimeout(lpTimer); lpTimer=null; } }
+      var w = el.offsetWidth, h = el.offsetHeight;
+      var x = Math.min(Math.max(4, ox + dx), window.innerWidth  - w - 4);
+      var y = Math.min(Math.max(4, oy + dy), window.innerHeight - h - 4);
+      el.style.left = x + 'px'; el.style.top = y + 'px';
+      e.preventDefault();
+    });
+    function end(e){
+      if(lpTimer){ clearTimeout(lpTimer); lpTimer=null; }
+      if(!dragging) return;
+      dragging = false; el.classList.remove('gc-drag');
+      if(moved) savePos(parseFloat(el.style.left)||0, parseFloat(el.style.top)||0);
+    }
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+    el.addEventListener('contextmenu', function(e){ e.preventDefault(); openMenu(e.clientX, e.clientY); });
+    window.addEventListener('resize', place);
+  }
+
+  /* ── منوی کلیک راست ── */
+  function mi(icon, label, fn, danger){
+    var b = document.createElement('button');
+    b.type = 'button'; b.innerHTML = '<span>' + icon + '</span><span>' + label + '</span>';
+    if(danger) b.className = 'gc-mi-danger';
+    b.onclick = function(){ closeMenu(); fn(); };
+    return b;
+  }
+  function openMenu(x, y){
+    menuEl.innerHTML = '';
+    menuEl.appendChild(mi('⏰', 'گذاشتن الارم', alarmDialog));
+    if(alarms().length) menuEl.appendChild(mi('🔔', 'الارم‌ها (' + fa(alarms().length) + ')', alarmDialog));
+    menuEl.appendChild(mi('🕒', 'تنظیم دستیِ ساعت', timeDialog));
+    if(offset() !== 0) menuEl.appendChild(mi('↺', 'برگشت به ساعتِ سیستم', function(){
+      lsSet(K_OFF,'0'); tick(); toast('🕒 ساعت به وقتِ سیستم برگشت', 'var(--green)');
+    }));
+    menuEl.appendChild(mi('✥', 'برگشت به جای اول', function(){
+      try{ localStorage.removeItem(K_POS); }catch(e){} place(); toast('ساعت به جای اولش برگشت', 'var(--blue)');
+    }));
+    menuEl.appendChild(mi('🙈', 'پنهان کردن ساعت', hideClock, true));
+    menuEl.classList.add('open');
+    var w = menuEl.offsetWidth, h = menuEl.offsetHeight;
+    menuEl.style.left = Math.min(Math.max(6, x - w/2), window.innerWidth  - w - 6) + 'px';
+    menuEl.style.top  = Math.min(Math.max(6, y + 8),   window.innerHeight - h - 6) + 'px';
+  }
+  function closeMenu(){ menuEl.classList.remove('open'); }
+
+  /* ── پنجرهٔ کوچک ── */
+  function closeDlg(){ dlgEl.classList.remove('open'); dlgBox.innerHTML = ''; }
+  function openDlg(html, onReady){
+    dlgBox.innerHTML = html; dlgEl.classList.add('open');
+    if(onReady) onReady(dlgBox);
+  }
+  function timeDialog(){
+    var d = now();
+    openDlg(
+      '<div class="gc-dlg-t">🕒 تنظیم دستیِ ساعت</div>' +
+      '<input type="time" id="gcTimeIn" step="60" value="' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + '">' +
+      '<div style="font-size:.78rem;color:var(--muted);line-height:1.8;margin-bottom:12px">ساعتِ دلخواهت را بگذار؛ همین ساعت روی این ویجت نشان داده می‌شود (ساعتِ خودِ دستگاه و محاسبات برنامه دست نمی‌خورد).</div>' +
+      '<div class="gc-dlg-btns"><button class="gc-ok" id="gcOk">ثبت</button><button class="gc-cancel" id="gcNo">انصراف</button></div>',
+      function(box){
+        box.querySelector('#gcNo').onclick = closeDlg;
+        box.querySelector('#gcOk').onclick = function(){
+          var v = (box.querySelector('#gcTimeIn').value || '').split(':');
+          if(v.length < 2){ closeDlg(); return; }
+          var real = new Date();
+          var want = new Date(real.getFullYear(), real.getMonth(), real.getDate(), parseInt(v[0],10)||0, parseInt(v[1],10)||0, real.getSeconds());
+          lsSet(K_OFF, String(want.getTime() - real.getTime()));
+          closeDlg(); tick(); toast('🕒 ساعتِ ویجت تنظیم شد', 'var(--green)');
+        };
+      }
+    );
+  }
+
+  /* ── الارم‌ها ── */
+  function alarms(){ try{ var a = JSON.parse(ls(K_ALM,'[]')); return Array.isArray(a) ? a : []; }catch(e){ return []; } }
+  function setAlarms(a){ lsSet(K_ALM, JSON.stringify(a)); }
+  function alarmDialog(){
+    var list = alarms();
+    var rows = list.length
+      ? list.map(function(a){
+          return '<div class="gc-list-item"><span>⏰ ' + fa(a.time) + (a.repeat ? ' — هر روز' : '') + '</span>' +
+                 '<button data-del="' + a.id + '" title="حذف">✕</button></div>';
+        }).join('')
+      : '<div style="font-size:.82rem;color:var(--muted);text-align:center;padding:8px">هنوز الارمی نگذاشته‌ای</div>';
+    var d = now();
+    openDlg(
+      '<div class="gc-dlg-t">⏰ الارم‌ها</div>' +
+      '<div class="gc-list">' + rows + '</div>' +
+      '<input type="time" id="gcAlmIn" step="60" value="' + pad(d.getHours()) + ':' + pad((d.getMinutes()+5)%60) + '">' +
+      '<label class="gc-dlg-row"><input type="checkbox" id="gcAlmRep" style="width:auto;margin:0"> هر روز تکرار شود</label>' +
+      '<div class="gc-dlg-btns"><button class="gc-ok" id="gcOk">افزودن الارم</button><button class="gc-cancel" id="gcNo">بستن</button></div>',
+      function(box){
+        box.querySelector('#gcNo').onclick = closeDlg;
+        box.querySelectorAll('[data-del]').forEach(function(b){
+          b.onclick = function(){
+            setAlarms(alarms().filter(function(a){ return a.id !== b.getAttribute('data-del'); }));
+            alarmDialog(); tick();
+          };
+        });
+        box.querySelector('#gcOk').onclick = function(){
+          var t = box.querySelector('#gcAlmIn').value;
+          if(!t){ return; }
+          var a = alarms();
+          a.push({ id: 'a' + Date.now(), time: t, repeat: box.querySelector('#gcAlmRep').checked, fired: '' });
+          setAlarms(a); closeDlg(); tick();
+          toast('⏰ الارم ' + fa(t) + ' ثبت شد', 'var(--green)');
+        };
+      }
+    );
+  }
+  var ringing = null;
+  function checkAlarms(d){
+    var list = alarms(), changed = false;
+    var key = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+    var hm = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    for(var i = list.length - 1; i >= 0; i--){
+      if(list[i].time === hm && list[i].fired !== key){
+        list[i].fired = key; changed = true;
+        ring(list[i].time);
+        if(!list[i].repeat){ list.splice(i,1); }
+      }
+    }
+    if(changed) setAlarms(list);
+  }
+  function beep(){
+    try{
+      var AC = window.AudioContext || window.webkitAudioContext; if(!AC) return;
+      var ctx = beep.ctx || (beep.ctx = new AC());
+      if(ctx.state === 'suspended'){ try{ ctx.resume(); }catch(e){} }
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.0001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.28, ctx.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.42);
+      o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 0.45);
+    }catch(e){}
+  }
+  function ring(time){
+    try{ if(navigator.vibrate) navigator.vibrate([220,120,220,120,220]); }catch(e){}
+    try{ if(window.Notification && Notification.permission === 'granted') new Notification('⏰ الارم ' + time, { body: 'وقتش رسید' }); }catch(e){}
+    var n = 0;
+    if(ringing) clearInterval(ringing);
+    beep();
+    ringing = setInterval(function(){ beep(); if(++n > 10){ clearInterval(ringing); ringing = null; } }, 700);
+    openDlg(
+      '<div class="gc-dlg-t">⏰ الارم — ' + fa(time) + '</div>' +
+      '<div style="font-size:.95rem;font-weight:800;text-align:center;padding:10px 0 16px">وقتش رسید!</div>' +
+      '<div class="gc-dlg-btns"><button class="gc-ok" id="gcOk">خاموش کردن</button></div>',
+      function(box){
+        box.querySelector('#gcOk').onclick = function(){
+          if(ringing){ clearInterval(ringing); ringing = null; }
+          closeDlg();
+        };
+      }
+    );
+  }
+
+  /* ── پنهان / نمایش ── */
+  function hideClock(){
+    lsSet(K_HIDE,'1'); tick(); syncSettingsUI();
+    toast('🙈 ساعت پنهان شد — از «تنظیمات › ظاهر و گرافیک» دوباره روشنش کن', 'var(--muted)');
+  }
+  function showClock(){ lsSet(K_HIDE,'0'); tick(); place(); syncSettingsUI(); toast('🕒 ساعت روشن شد', 'var(--green)'); }
+  function syncSettingsUI(){
+    var on = ls(K_HIDE,'0') !== '1';
+    var b1 = document.getElementById('gcSetOn'), b2 = document.getElementById('gcSetOff');
+    if(b1) b1.classList.toggle('active', on);
+    if(b2) b2.classList.toggle('active', !on);
+  }
+  window.setGlassClock = function(on){ if(on) showClock(); else hideClock(); };
+  window.resetGlassClockPos = function(){
+    try{ localStorage.removeItem(K_POS); }catch(e){}
+    if(ls(K_HIDE,'0') === '1') showClock();
+    place(); toast('ساعت به جای اولش برگشت', 'var(--blue)');
+  };
+
+  /* ── راه‌اندازی ── */
+  function boot(){
+    el = document.getElementById('glassClock'); if(!el) return;
+    arcFg = document.getElementById('gcArcFg');
+    tEl = document.getElementById('gcTime'); wEl = document.getElementById('gcWeekday'); dEl = document.getElementById('gcDay');
+    hH = document.getElementById('gcHandH'); hM = document.getElementById('gcHandM'); hS = document.getElementById('gcHandS');
+    menuEl = document.getElementById('gcMenu'); dlgEl = document.getElementById('gcDlg'); dlgBox = document.getElementById('gcDlgBox');
+    dlgEl.addEventListener('click', function(e){ if(e.target === dlgEl && !ringing) closeDlg(); });
+    document.addEventListener('pointerdown', function(e){
+      if(menuEl.classList.contains('open') && !menuEl.contains(e.target) && !el.contains(e.target)) closeMenu();
+    }, true);
+    document.addEventListener('keydown', function(e){ if(e.key === 'Escape'){ closeMenu(); if(!ringing) closeDlg(); } });
+    initDrag(); tick(); place(); syncSettingsUI();
+    setInterval(tick, 1000);
+    window.addEventListener('load', place);
+    // اندازهٔ ویجت بعد از رسیدنِ فونت/تغییرِ اندازهٔ صفحه عوض می‌شود — جایش دوباره
+    // داخلِ صفحه تنظیم شود تا هیچ‌وقت لبه‌اش بیرون نیفتد
+    try{ if(window.ResizeObserver) new ResizeObserver(function(){ if(!el.classList.contains('gc-drag')) place(); }).observe(el); }catch(e){}
+    try{ if(document.fonts && document.fonts.ready) document.fonts.ready.then(place); }catch(e){}
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
 </script>
 
