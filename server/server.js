@@ -66,7 +66,7 @@ let AUTH_TOKEN = process.env.AUTH_TOKEN || '';   // اگر خالی بماند،
    روی اینترنت است، پس پذیرفتنش چیزی را آشکارتر نمی‌کند؛ در عوض ساختنِ رمزِ
    تصادفیِ تازه با هر نصبِ دوباره، همهٔ دستگاه‌ها را بیرون می‌انداخت.
    برای رفتارِ سخت‌گیرانه: AUTH_TOKEN را خودتان تنظیم کنید یا STRICT_TOKEN=1 بگذارید. */
-const APP_BUILTIN_TOKEN = '3b1379be26f61b2f8e460dbccee01ff70364';
+const APP_BUILTIN_TOKEN = '3f25db6ea9ff8ea4e8089a66cc7492f5f017';
 const STRICT_TOKEN = String(process.env.STRICT_TOKEN || '') === '1' || !!process.env.AUTH_TOKEN;
 
 // ---------------------------------------------------------------------------

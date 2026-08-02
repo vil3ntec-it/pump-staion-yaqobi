@@ -1740,7 +1740,7 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
   // این آدرس یک «تونل نام‌دار» روی دامنهٔ خودمان است، نه Quick Tunnel؛ پس با
   // restart شدن سرور یا cloudflared عوض نمی‌شود و همیشه همین می‌ماند.
   var BUILTIN_URL   = 'wss://sync.yaqobipump.top';
-  var BUILTIN_TOKEN = '3b1379be26f61b2f8e460dbccee01ff70364';
+  var BUILTIN_TOKEN = '3f25db6ea9ff8ea4e8089a66cc7492f5f017';
   var SELF_HOST_URL   = BUILTIN_URL;
   var SELF_HOST_TOKEN = BUILTIN_TOKEN;
   // «خانهٔ اول»: هر دستگاهِ تازه/پاک‌شده از این‌جا شروع می‌کند، پس نشانیِ سرورِ
@@ -1755,17 +1755,21 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
   function _lsSet(k,v){ try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch(e){} }
   function cfgTs(){ return parseInt(_lsGet(CFG_TS_KEY), 10) || 0; }
 
-  // اگر آدرسِ داخلیِ سایت عوض شده باشد، آدرسِ ذخیره‌شدهٔ قدیمی روی این دستگاه باید
-  // کنار برود؛ وگرنه دستگاهی که یک‌بار دستی آدرس ذخیره کرده، آدرس تازه را هرگز
-  // نمی‌گیرد و بی‌صدا از هم‌زمان‌سازی می‌افتد. (نشانیِ مشترک بعد از وصل شدن به
-  // سرورِ پیش‌فرض دوباره خودکار می‌آید — پس چیزی برای همیشه گم نمی‌شود.)
+  // اگر آدرس یا رمزِ داخلیِ سایت عوض شده باشد، تنظیمِ ذخیره‌شدهٔ قدیمی روی این
+  // دستگاه باید کنار برود؛ وگرنه دستگاهی که یک‌بار آدرس/رمز ذخیره کرده، تنظیمِ
+  // تازه را هرگز نمی‌گیرد و بی‌صدا از هم‌زمان‌سازی می‌افتد. (تنظیمِ مشترک بعد از
+  // وصل شدن به سرورِ پیش‌فرض دوباره خودکار می‌آید — چیزی برای همیشه گم نمی‌شود.)
+  // رمز هم در این مقایسه هست: وقتی رمزِ سرور عوض می‌شود، تنها راهِ برگشتنِ همهٔ
+  // دستگاه‌ها این است که رمزِ کهنهٔ ذخیره‌شده‌شان کنار برود و رمزِ تازهٔ خودِ سایت
+  // بنشیند — وگرنه هر دستگاه با رمزِ کهنه‌اش پشتِ در می‌ماند.
   try {
-    if (localStorage.getItem('pumpServerBuiltin') !== BUILTIN_URL) {
+    var _builtinId = BUILTIN_URL + '|' + BUILTIN_TOKEN;
+    if (localStorage.getItem('pumpServerBuiltin') !== _builtinId) {
       localStorage.removeItem('pumpServerUrl');
       localStorage.removeItem('pumpServerToken');
       localStorage.removeItem(CFG_TS_KEY);
       localStorage.removeItem(CFG_BAD_KEY);
-      localStorage.setItem('pumpServerBuiltin', BUILTIN_URL);
+      localStorage.setItem('pumpServerBuiltin', _builtinId);
     }
     // صفحه‌ای که با https باز شده حق ندارد به ws:// وصل شود (قانون مرورگر)،
     // پس آدرس ناامنِ ذخیره‌شده فقط باعث قطع بی‌صدای هم‌زمان‌سازی می‌شود.
@@ -2437,7 +2441,20 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     if (cfgValid(v) && cfgDeadUrls[v.url]) return;           // این آدرس همین حالا مرده شناخته شد
     if (cfgValid(v) && rTs > local.ts && rTs !== bad) {
       if (cfgSameAsNow(v)) { cfgStoreLocal(v.url, v.token, rTs); return; }  // همین سروریم، فقط زمان را به‌روز کن
-      cfgSwitchTo(v.url, v.token || '', rTs);
+      // تنظیمِ کهنه‌ای که روی سرور مانده (مثلاً با رمزی که دیگر کار نمی‌کند) نباید
+      // دستگاهِ سالم را از کار بیندازد. اول امتحانش کن؛ اگر جواب داد کوچ کن، اگر
+      // نداد همان ثبتِ خراب را با تنظیمِ سالمِ خودمان بپوشان تا بقیهٔ دستگاه‌ها هم
+      // گرفتارش نشوند — وگرنه یک رکوردِ کهنه می‌تواند همه را با هم پایین بیاورد.
+      var vv = v, vts = rTs;
+      cfgProbe(vv.url, vv.token || '').then(function(ok){
+        if (ok) { cfgSwitchTo(vv.url, vv.token || '', vts); return; }
+        _lsSet(CFG_BAD_KEY, String(vts));
+        if (!connected) return;                    // خودمان هم وصل نیستیم — چیزی برای جایگزینی نداریم
+        var nts = cfgNewTs();
+        cfgStoreLocal(SELF_HOST_URL, SELF_HOST_TOKEN, nts);
+        cfgPublishHere({ url: SELF_HOST_URL, token: SELF_HOST_TOKEN, ts: nts });
+        cfgNote('سرورِ ثبت‌شده جواب نداد — همین سرورِ سالم برای همه ثبت شد', '#d97706');
+      });
       return;
     }
     if (local.ts && rTs < local.ts) cfgPublishHere(local);   // تنظیمِ تازه‌ترِ ما → روی این سرور هم ثبت شود
@@ -34964,7 +34981,7 @@ function _botCameraIntent() {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.148';
+const APP_VERSION = '2.9.149';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
