@@ -231,13 +231,40 @@ async function main() {
   r = await api('GET', `/api/messenger/chats/${chatId}/messages`, undefined, sara.token);
   check('تاریخچه کامل است', r.json?.messages?.length === 2, String(r.json?.messages?.length));
 
+  console.log('\n── بدون محدودیتِ حجم پیام ──');
+  // یک پیامِ خیلی بلند (۳ مگابایت) — باید سالم برسد، نه بریده و نه رد شده
+  const big = 'ی'.repeat(3 * 1024 * 1024);
+  r = await api('POST', `/api/messenger/chats/${chatId}/messages`, { body: big }, ali.token);
+  check('پیام ۳ مگابایتی از راه HTTP پذیرفته شد', r.json?.ok === true, `${r.status} ${r.text.slice(0, 80)}`);
+  check('و بریده نشده', r.json?.message?.body?.length === big.length, String(r.json?.message?.body?.length));
+
+  r = await api('GET', `/api/messenger/chats/${chatId}/messages?limit=5`, undefined, sara.token);
+  const stored = r.json?.messages?.find((m) => m.body?.length === big.length);
+  check('همان‌طور کامل ذخیره شد', Boolean(stored), String(r.json?.messages?.map((m) => m.body?.length)));
+
+  // و از راه WebSocket هم
+  const bigWs = 'x'.repeat(2 * 1024 * 1024);
+  const beforeCount = back.inbox.filter((m) => m.op === 'message').length;
+  aliWs.ws.send(JSON.stringify({ op: 'send', id: 'big', chatId, body: bigWs }));
+  let arrived = null;
+  for (let i = 0; i < 60 && !arrived; i++) {
+    await sleep(150);
+    arrived = back.inbox.filter((m) => m.op === 'message').slice(beforeCount).find((m) => m.message?.body?.length === bigWs.length);
+  }
+  check('پیام ۲ مگابایتی از راه WebSocket هم رسید', Boolean(arrived), String(arrived?.message?.body?.length));
+
   console.log('\n── گروه ──');
   r = await api('POST', '/api/messenger/chats/group', { title: 'کارکنان پمپ', memberIds: [sara.user.id] }, ali.token);
   const groupId = r.json?.chatId;
   check('گروه ساخته شد', Boolean(groupId));
   aliWs.ws.send(JSON.stringify({ op: 'send', id: 'g1', chatId: groupId, body: 'سلام به همه' }));
-  const inGroup = await waitFor(back.inbox, 'message');
-  check('پیام گروه به عضو رسید', inGroup?.message?.chatId === groupId, JSON.stringify(inGroup?.message));
+  // در صندوق ورودی پیام‌های قبلی هم هست، پس دنبال همین گروه می‌گردیم
+  let inGroup = null;
+  for (let i = 0; i < 40 && !inGroup; i++) {
+    await sleep(100);
+    inGroup = back.inbox.find((m) => m.op === 'message' && m.message?.chatId === groupId);
+  }
+  check('پیام گروه به عضو رسید', inGroup?.message?.body === 'سلام به همه', String(inGroup?.message?.chatId));
 
   console.log('\n── امنیت ──');
   r = await api('GET', `/api/messenger/chats/${chatId}/messages`);
