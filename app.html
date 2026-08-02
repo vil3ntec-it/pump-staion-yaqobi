@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>دریافت برنامهٔ پمپ یعقوبی</title>
+<link rel="icon" href="./favicon.png">
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0b1220">
+<style>
+  :root{
+    --bg:#0b1220; --card:#131c2e; --line:#243048; --ink:#e8eefc; --soft:#9fb0cd;
+    --accent:#3b82f6; --good:#22c55e;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink); line-height:1.8;
+    font-family:system-ui,"Segoe UI",Tahoma,sans-serif;
+    padding:24px 16px 60px;
+  }
+  .wrap{max-width:680px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 6px}
+  .lead{color:var(--soft);font-size:14px;margin:0 0 24px}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:18px;
+    padding:18px; margin-bottom:16px;
+  }
+  .card h2{font-size:16px;margin:0 0 4px;display:flex;align-items:center;gap:8px}
+  .card p{color:var(--soft);font-size:13px;margin:0 0 14px}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    background:var(--accent);color:#fff;text-decoration:none;
+    padding:12px 18px;border-radius:12px;font-size:15px;font-weight:600;
+    border:0;cursor:pointer;width:100%;
+  }
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+  .steps{margin:0;padding-inline-start:20px;color:var(--soft);font-size:13px}
+  .steps li{margin-bottom:6px}
+  .note{
+    font-size:12px;color:var(--soft);background:rgba(59,130,246,.08);
+    border:1px solid rgba(59,130,246,.25);border-radius:12px;padding:10px 12px;margin-top:12px;
+  }
+  .ok{color:var(--good);font-weight:600}
+  .hide{display:none}
+  footer{color:var(--soft);font-size:12px;text-align:center;margin-top:26px}
+  footer a{color:var(--soft)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>برنامهٔ پمپ یعقوبی</h1>
+  <p class="lead">
+    برنامه را روی دستگاهتان نصب کنید تا بدون اینترنت هم کار کند و پیام‌ها را
+    حتی وقتی برنامه بسته است دریافت کنید.
+  </p>
+
+  <!-- اندروید -->
+  <div class="card" id="card-android">
+    <h2>📱 اندروید</h2>
+    <p>فایل نصب (APK) را دانلود و باز کنید. بار اول اندروید می‌گوید «نصب از منبع ناشناس» — اجازه بدهید.</p>
+    <a class="btn" href="https://github.com/vil3ntec-it/pump-staion-yaqobi/releases/download/android-latest/PumpYaqobi.apk" id="apk">
+      دانلود فایل نصب اندروید
+    </a>
+    <div class="note">
+      اگر لینک باز نشد، از
+      <a href="https://github.com/vil3ntec-it/pump-staion-yaqobi/releases/tag/android-latest">صفحهٔ انتشار</a>
+      آخرین فایل <code>.apk</code> را بردارید.
+    </div>
+  </div>
+
+  <!-- ویندوز -->
+  <div class="card" id="card-windows">
+    <h2>💻 کامپیوتر (ویندوز)</h2>
+    <p>فایل نصب را دانلود و اجرا کنید. برنامه مثل هر برنامهٔ دیگری در منوی استارت می‌نشیند.</p>
+    <a class="btn" href="https://github.com/vil3ntec-it/pump-staion-yaqobi/releases/tag/desktop-latest" id="exe">
+      دانلود نسخهٔ ویندوز
+    </a>
+  </div>
+
+  <!-- آیفون -->
+  <div class="card" id="card-ios">
+    <h2>🍏 آیفون و آیپد</h2>
+    <p>
+      اپل اجازهٔ نصب فایل نمی‌دهد، ولی همین سایت را می‌شود مثل برنامه روی صفحهٔ
+      اصلی گذاشت — و آن وقت نوتیفیکیشن هم می‌گیرد.
+    </p>
+    <ol class="steps">
+      <li>همین صفحه را در <b>Safari</b> باز کنید (نه کروم).</li>
+      <li>دکمهٔ <b>اشتراک‌گذاری</b> (مربع با فلش رو به بالا) را بزنید.</li>
+      <li><b>Add to Home Screen</b> را انتخاب کنید.</li>
+      <li>برنامه را از صفحهٔ اصلی باز کنید و اجازهٔ نوتیفیکیشن را بدهید.</li>
+    </ol>
+    <div class="note">
+      روی آیفون، نوتیفیکیشن <b>فقط</b> وقتی کار می‌کند که برنامه به این شکل روی
+      صفحهٔ اصلی نصب شده باشد (iOS نسخهٔ ۱۶.۴ به بالا).
+    </div>
+  </div>
+
+  <!-- نصب مستقیم روی مرورگرهای پشتیبان -->
+  <div class="card hide" id="card-install">
+    <h2>⚡ نصب سریع</h2>
+    <p>مرورگر شما می‌تواند همین حالا برنامه را نصب کند.</p>
+    <button class="btn" id="install-btn">نصب برنامه</button>
+  </div>
+
+  <!-- نوتیفیکیشن -->
+  <div class="card">
+    <h2>🔔 دریافت پیام وقتی برنامه بسته است</h2>
+    <p>
+      با روشن کردن نوتیفیکیشن، پیام‌ها حتی وقتی برنامه بسته یا گوشی قفل است به
+      شما می‌رسند.
+    </p>
+    <button class="btn ghost" id="notify-btn">روشن کردن نوتیفیکیشن</button>
+    <p id="notify-state" style="margin-top:10px"></p>
+  </div>
+
+  <footer>
+    <a href="./">بازگشت به برنامه</a>
+  </footer>
+</div>
+
+<script>
+(function () {
+  var ua = navigator.userAgent || '';
+  var isIOS = /iPhone|iPad|iPod/i.test(ua);
+  var isAndroid = /Android/i.test(ua);
+
+  // فقط بخشِ مربوط به دستگاه خودش را بالا نشان بده
+  function lift(id) {
+    var el = document.getElementById(id);
+    if (el && el.parentNode) el.parentNode.insertBefore(el, el.parentNode.firstChild.nextSibling.nextSibling);
+  }
+  if (isIOS) lift('card-ios');
+  else if (isAndroid) lift('card-android');
+  else lift('card-windows');
+
+  // دکمهٔ نصبِ خودِ مرورگر (اندروید/کروم/اج)
+  var deferred = null;
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferred = e;
+    document.getElementById('card-install').classList.remove('hide');
+  });
+  document.getElementById('install-btn').addEventListener('click', function () {
+    if (!deferred) return;
+    deferred.prompt();
+    deferred = null;
+    document.getElementById('card-install').classList.add('hide');
+  });
+
+  // ---- روشن کردن نوتیفیکیشن ----
+  var state = document.getElementById('notify-state');
+  function say(text, ok) {
+    state.textContent = text;
+    state.className = ok ? 'ok' : '';
+  }
+
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    say(isIOS
+      ? 'اول برنامه را با «Add to Home Screen» نصب کنید، بعد از داخل خودِ برنامه اینجا برگردید.'
+      : 'این مرورگر نوتیفیکیشن پس‌زمینه را پشتیبانی نمی‌کند.', false);
+    document.getElementById('notify-btn').disabled = true;
+  } else if (Notification.permission === 'granted') {
+    say('نوتیفیکیشن روشن است ✓', true);
+  }
+
+  document.getElementById('notify-btn').addEventListener('click', async function () {
+    try {
+      say('در حال روشن کردن…', false);
+      var permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        say('اجازه داده نشد. از تنظیمات مرورگر می‌توانید اجازه بدهید.', false);
+        return;
+      }
+
+      var reg = await navigator.serviceWorker.register('./sw.js');
+      await navigator.serviceWorker.ready;
+
+      // آدرس سرور و رمزِ کاربر را خودِ برنامه ذخیره کرده است
+      var server = localStorage.getItem('messengerServer') || '';
+      var token = localStorage.getItem('messengerToken') || '';
+      if (!server || !token) {
+        say('نوتیفیکیشن روشن شد، ولی اول باید در برنامه وارد پیام‌رسان شوید.', true);
+        return;
+      }
+
+      var cfg = await fetch(server.replace(/\/+$/, '') + '/api/messenger/config').then(r => r.json());
+      var key = cfg.vapidPublicKey;
+
+      // کلید base64url را به همان چیزی که مرورگر می‌خواهد تبدیل کن
+      var pad = '='.repeat((4 - (key.length % 4)) % 4);
+      var raw = atob((key + pad).replace(/-/g, '+').replace(/_/g, '/'));
+      var bytes = new Uint8Array(raw.length);
+      for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+
+      var sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytes });
+
+      await fetch(server.replace(/\/+$/, '') + '/api/messenger/devices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ subscription: sub.toJSON(), label: navigator.platform || 'دستگاه' })
+      });
+
+      say('نوتیفیکیشن روشن شد ✓ حالا حتی وقتی برنامه بسته است پیام می‌رسد.', true);
+    } catch (e) {
+      say('روشن نشد: ' + (e && e.message ? e.message : e), false);
+    }
+  });
+})();
+</script>
+</body>
+</html>
