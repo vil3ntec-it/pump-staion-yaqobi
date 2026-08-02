@@ -18152,8 +18152,10 @@ body.viewer-mode .inv-admin-only{display:none!important}
 <div class="inv-overlay" id="invListOverlay">
   <div class="inv-ov-head">
     <div class="inv-ov-title" id="inv-ov-title">🟡 فاکتورهای در صف</div>
-    <div style="display:flex;gap:8px;align-items:center">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <span style="font-size:.75rem;color:var(--muted)" id="inv-ov-count"></span>
+      <!-- هر صفحه پی‌دی‌افِ خودش را دارد: صف جدا، تایید شده‌ها جدا -->
+      <button class="inv-act ok" id="inv-ov-pdf" onclick="invPdfList()">📄 PDF این فهرست</button>
       <button class="inv-act" onclick="invCloseList()">✖ بستن</button>
     </div>
   </div>
@@ -23505,10 +23507,15 @@ function _renderFuelSection(fuelType, containerId, label) {
   cont.innerHTML = '';
 
   // موجودی بزرگ
+  // transform:translateZ(0) → لایهٔ پایدارِ کامپوزیتور. بدونِ این، همین کارتِ
+  // بزرگ روی نسخهٔ کامپیوتری (کرومیومِ Electron) گاهی کاملاً خالی/سفید رندر
+  // می‌شد و عدد و عنوانِ «موجودی فعلی مخزن» اصلاً دیده نمی‌شد — بیشتر روی
+  // مخزنِ دیزل که پایین‌ترِ صفحه است. همان درمانی که برای «خلاصهٔ پول‌ها» و
+  // سربرگ به کار رفته بود.
   const hero = document.createElement('div');
   hero.style.cssText = isLow
-    ? `position:relative;overflow:hidden;text-align:center;background:linear-gradient(160deg,#3b0d0d,#7a1515 60%,#5a0f0f);border:2px solid #ff3b3b;border-radius:18px;padding:24px 16px;margin-bottom:16px;box-shadow:0 0 26px #ff000055;animation:ls-flash 1.3s ease-in-out infinite`
-    : `text-align:center;background:linear-gradient(135deg,var(--card),var(--dark));border:2px solid ${color};border-radius:18px;padding:24px 16px;margin-bottom:16px`;
+    ? `position:relative;overflow:hidden;text-align:center;background:linear-gradient(160deg,#3b0d0d,#7a1515 60%,#5a0f0f);border:2px solid #ff3b3b;border-radius:18px;padding:24px 16px;margin-bottom:16px;box-shadow:0 0 26px #ff000055;transform:translateZ(0);animation:ls-flash 1.3s ease-in-out infinite`
+    : `position:relative;overflow:hidden;text-align:center;background:linear-gradient(135deg,var(--card),var(--dark));border:2px solid ${color};border-radius:18px;padding:24px 16px;margin-bottom:16px;transform:translateZ(0)`;
   hero.innerHTML = `
     ${isLow ? '<div class="ls-tape" style="position:absolute;top:0;left:0"></div>' : ''}
     <div style="font-size:0.78rem;color:${isLow?'#ffd6d6':'var(--muted)'};margin-bottom:6px">${icon} موجودی فعلی مخزن (${label})</div>
@@ -34475,7 +34482,7 @@ function _ntfAutoPush(mode) {
     if (!_ntfBase('http')) return;                       // سرور خانگی در دسترس نیست
     const granted = Notification.permission === 'granted';
     // ثبت فقط وقتی لازم است تکرار شود: اولین بار، یا وقتی نقش (تاپیک) عوض شده
-    const done = _lsPlain('pumpNtfPushOn') && _lsPlain('pumpNtfPushTopic') === _ntfMyTopic();
+    const done = _lsPlain('pumpNtfPushOn') && _lsPlain('pumpNtfPushTopic') === _ntfTopicKey();
     if (mode === 'silent') { if (!granted || done) return; }
     else { if (done) return; if (!granted && _lsPlain('pumpNtfPushAsked')) return; }
     _ntfAutoBusy = true;
@@ -34483,7 +34490,7 @@ function _ntfAutoPush(mode) {
       _ntfAutoBusy = false;
       if (ok === true || ok === 'denied') { try { localStorage.setItem('pumpNtfPushAsked', '1'); } catch (e) {} }
       if (ok !== true) return;
-      try { localStorage.setItem('pumpNtfPushTopic', _ntfMyTopic()); } catch (e) {}
+      try { localStorage.setItem('pumpNtfPushTopic', _ntfTopicKey()); } catch (e) {}
       if (!granted) {   // تازه روشن شد → یک خبرِ کوتاه بده
         try { showTopToast('🔔 اعلان روی این دستگاه روشن شد — خبرها حتی وقتی برنامه بسته است می‌رسند', '#38a169', 5000); } catch (e) {}
       }
@@ -35822,16 +35829,30 @@ function NTF_TOPIC_MIRZA() { return 'mirza'; }
 function NTF_TOPIC_STAFF() { return 'staff'; }
 function NTF_TOPIC_PERSON(peer) { return 'p-' + String(peer || '').toLowerCase().replace(/[^a-z0-9_-]+/g, '-'); }
 
-/** موضوعی که همین دستگاه باید دنبالش کند — از روی نقشِ فعلی */
-function _ntfMyTopic() {
+/* موضوع‌هایی که همین دستگاه باید دنبالشان کند — دقیقاً به اندازهٔ نقشِ کاربر:
+     • میرزا (مدیر) → «mirza» + «staff» : همه‌چیز
+     • نظاره‌گر      → «staff» تنها      : چت گروهی و هشدارها؛ نه چت تک‌نفرهٔ میرزا با افراد
+     • کارمند        → «staff» + چت تک‌نفرهٔ خودش (نه چت‌های دیگران)
+     • مشتریِ کیو‌آر → فقط چت تک‌نفرهٔ خودش
+   هشدارهای حساب (تمام شدن حساب، قرض‌دار شدن، کم ماندن) روی «staff» می‌روند،
+   پس هم کارمندان می‌گیرند هم میرزا هم نظاره‌گر. */
+function _ntfMyTopics() {
   try {
-    if (_rbMode === 'person' && _rbPersonPeer) return NTF_TOPIC_PERSON(_rbPersonPeer.peer);
-    if (_rbMode === 'admin') return NTF_TOPIC_MIRZA();
+    if (_rbMode === 'person' && _rbPersonPeer) return [NTF_TOPIC_PERSON(_rbPersonPeer.peer)];
+    if (_rbMode === 'admin') return [NTF_TOPIC_MIRZA(), NTF_TOPIC_STAFF()];
+    if (typeof currentRole !== 'undefined' && currentRole === 'viewer') return [NTF_TOPIC_STAFF()];
+    const out = [NTF_TOPIC_STAFF()];
+    const me = _chatMe();
+    if (me && me.id) out.push(NTF_TOPIC_PERSON(me.id));
+    return out;
   } catch (e) {}
-  return NTF_TOPIC_STAFF();
+  return [NTF_TOPIC_STAFF()];
 }
+/** همان فهرست، به‌صورت یک رشتهٔ ثابت — برای مقایسه و کلیدِ ذخیره */
+function _ntfTopicKey(list) { return (list || _ntfMyTopics()).slice().sort().join(','); }
 
-let _ntfWs = null, _ntfTimer = null, _ntfMsgs = [], _ntfTopic = null;
+// برای هر موضوع یک سوکت: topic → WebSocket
+let _ntfSocks = new Map(), _ntfTimer = null, _ntfMsgs = [], _ntfTopic = null;
 // شمارهٔ آخرین خبرِ خوانده‌شده برای هر موضوع جداست — وگرنه با عوض شدنِ نقش،
 // خبرهای موضوعِ تازه بی‌خود «خوانده‌شده» شمرده می‌شدند
 const _ntfSeenKey = () => 'pumpNtfSeen:' + (_ntfTopic || 'x');
@@ -35937,37 +35958,53 @@ function _ntfMarkRead() {
   if (last > _ntfSeen()) { _ntfSetSeen(last); _ntfPaintBadge(); }
 }
 
-/** اتصالِ زنده به موضوع — با وصلِ دوبارهٔ خودکار، مثل بقیهٔ اتصال‌های برنامه */
+/** اتصالِ زنده به موضوع‌ها — یک سوکت برای هر موضوع، با وصلِ دوبارهٔ خودکار */
 function _ntfConnect() {
   const base = _ntfBase('ws');
   if (!base) return;
-  const want = _ntfMyTopic();
-  // نقش عوض شده (مثلاً کیو‌آرِ یک مشتری اسکن شد) → از موضوعِ قبلی جدا شو
-  if (_ntfWs && _ntfTopic !== want) { try { _ntfWs.close(); } catch (e) {} _ntfWs = null; _ntfMsgs = []; }
-  if (_ntfWs && (_ntfWs.readyState === 0 || _ntfWs.readyState === 1)) return;
-  _ntfTopic = want;
-  let sock;
-  try { sock = new WebSocket(base + '/notify?topic=' + encodeURIComponent(want)); }
-  catch (e) { _ntfRetry(); return; }
-  _ntfWs = sock;
-  sock.onmessage = ev => {
-    let m = null;
-    try { m = JSON.parse(ev.data); } catch (e) { return; }
-    if (m.op === 'ready') { (m.messages || []).forEach(x => _ntfAccept(x, { live: false })); _ntfPaintBadge(); }
-    else if (m.op === 'message') _ntfAccept(m, { live: true });
-  };
-  sock.onclose = () => { if (_ntfWs === sock) { _ntfWs = null; _ntfRetry(); } };
-  sock.onerror = () => { try { sock.close(); } catch (e) {} };
+  const want = _ntfMyTopics();
+  const key = _ntfTopicKey(want);
+  // نقش عوض شده (مثلاً کیو‌آرِ یک مشتری اسکن شد) → از موضوع‌های قبلی جدا شو
+  if (_ntfTopic && _ntfTopic !== key) {
+    _ntfSocks.forEach(s => { try { s.close(); } catch (e) {} });
+    _ntfSocks = new Map();
+    _ntfMsgs = [];
+  }
+  _ntfTopic = key;
+  want.forEach(topic => {
+    const old = _ntfSocks.get(topic);
+    if (old && (old.readyState === 0 || old.readyState === 1)) return;   // همین حالا وصل/در حال وصل
+    let sock;
+    try { sock = new WebSocket(base + '/notify?topic=' + encodeURIComponent(topic)); }
+    catch (e) { _ntfRetry(); return; }
+    _ntfSocks.set(topic, sock);
+    sock.onmessage = ev => {
+      let m = null;
+      try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (m.op === 'ready') { (m.messages || []).forEach(x => _ntfAccept(x, { live: false })); _ntfPaintBadge(); }
+      else if (m.op === 'message') _ntfAccept(m, { live: true });
+    };
+    sock.onclose = () => { if (_ntfSocks.get(topic) === sock) { _ntfSocks.delete(topic); _ntfRetry(); } };
+    sock.onerror = () => { try { sock.close(); } catch (e) {} };
+  });
 }
 function _ntfRetry() {
   if (_ntfTimer) return;
   _ntfTimer = setTimeout(() => { _ntfTimer = null; _ntfConnect(); }, 6000);
 }
-/** نقشِ کاربر عوض شد → موضوعِ درست را دنبال کن (از _rbSetMode صدا زده می‌شود) */
+/** آیا دستِ‌کم یک موضوع همین حالا وصل است؟ */
+function _ntfLive() {
+  let on = false;
+  _ntfSocks.forEach(s => { if (s.readyState === 1) on = true; });
+  return on;
+}
+/** نقشِ کاربر عوض شد → موضوع‌های درست را دنبال کن (از _rbSetMode صدا زده می‌شود) */
 function _ntfRoleChanged() {
-  if (_ntfTopic && _ntfTopic === _ntfMyTopic()) return;
+  if (_ntfTopic && _ntfTopic === _ntfTopicKey()) return;
   if (_ntfTimer) { clearTimeout(_ntfTimer); _ntfTimer = null; }
   _ntfConnect();
+  // نقش عوض شد → همین دستگاه باید روی موضوع‌های تازه هم ثبتِ پوش شود
+  try { _ntfAutoPush('silent'); } catch (e) {}
 }
 
 function ntfOpen() {
@@ -35979,7 +36016,7 @@ function ntfOpen() {
   _ntfPushBtnState();
   const st = document.getElementById('ntfState');
   if (st) {
-    st.textContent = _ntfWs && _ntfWs.readyState === 1
+    st.textContent = _ntfLive()
       ? 'وصل به سرور — خبرها همان لحظه می‌رسند.'
       : 'در حال وصل شدن به سرور…';
   }
@@ -36026,16 +36063,20 @@ async function _ntfSubscribeThisDevice() {
     const sub = await reg.pushManager.getSubscription()
       || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: _b64ToBytes(cfg.vapidPublicKey) });
 
-    // موضوع از روی نقش انتخاب می‌شود — مشتریِ کیو‌آر فقط خبرِ خودش،
-    // میرزا همهٔ خبرها، کارمند خبرهای کارکنان
-    const res = await fetch(base + '/api/notify/' + encodeURIComponent(_ntfMyTopic()) + '/devices', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subscription: sub.toJSON(), label: _ntfDeviceLabel() }),
-    }).then(r => r.json());
-    if (!res.ok) return false;
+    // موضوع‌ها از روی نقش انتخاب می‌شوند — مشتریِ کیو‌آر فقط خبرِ خودش،
+    // میرزا همهٔ خبرها، نظاره‌گر همه جز چت تک‌نفره، کارمند گروه + چتِ خودش.
+    // دستگاه روی هر کدام جداگانه ثبت می‌شود تا با برنامهٔ بسته هم همه برسند.
+    const topics = _ntfMyTopics();
+    const results = await Promise.all(topics.map(t =>
+      fetch(base + '/api/notify/' + encodeURIComponent(t) + '/devices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription: sub.toJSON(), label: _ntfDeviceLabel() }),
+      }).then(r => r.json()).catch(() => ({ ok: false }))
+    ));
+    if (!results.some(r => r && r.ok)) return false;
 
-    try { localStorage.setItem('pumpNtfPushOn', '1'); localStorage.setItem('pumpNtfPushTopic', _ntfMyTopic()); } catch (e) {}
+    try { localStorage.setItem('pumpNtfPushOn', '1'); localStorage.setItem('pumpNtfPushTopic', _ntfTopicKey(topics)); } catch (e) {}
     _ntfPushBtnState();
     return true;
   } catch (e) { return false; }
@@ -36064,7 +36105,7 @@ try {
   window.__pumpNtf__ = {
     topic: () => _ntfTopic,
     unread: () => _ntfUnread(),
-    connected: () => !!(_ntfWs && _ntfWs.readyState === 1),
+    connected: () => _ntfLive(),
     send: (topic, title, body, opts) => _ntfSend(topic, title, body, opts),
   };
 } catch (e) {}
@@ -36083,7 +36124,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.156';
+const APP_VERSION = '2.9.157';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -40727,6 +40768,8 @@ function invOpenList(status, skipHash) {
   const ti = document.getElementById('inv-ov-title');
   const sr = document.getElementById('inv-search-row');
   if (ti) ti.textContent = _invView === 'approved' ? '🟢 فاکتورهای تایید شده' : '🟡 فاکتورهای در صف';
+  const pb = document.getElementById('inv-ov-pdf');
+  if (pb) pb.textContent = _invView === 'approved' ? '📄 PDF فاکتورهای تایید شده' : '📄 PDF فاکتورهای در صف';
   if (sr) sr.style.display = _invView === 'approved' ? '' : 'none';
   const s = document.getElementById('inv-search'); if (s) s.value = '';
   invRenderList();
@@ -40797,7 +40840,8 @@ function invRenderList() {
       <span class="inv-chip ${v.status}">${v.status === 'approved' ? '🟢 تایید شده' : '🟡 در صف'}</span>
       <div class="acts" onclick="event.stopPropagation()">
         ${v.status === 'pending'
-          ? `<button class="inv-act ok inv-admin-only" onclick="invApprove('${v.id}')">✅ تایید فاکتور</button>`
+          ? `<button class="inv-act ok inv-admin-only" onclick="invApprove('${v.id}')">✅ تایید فاکتور</button>
+             <button class="inv-act" onclick="invPdf('${v.id}')">📄 خروجی PDF / چاپ</button>`
           : `<button class="inv-act" onclick="invPdf('${v.id}')">📄 خروجی PDF / چاپ</button>
              <button class="inv-act inv-admin-only" onclick="invRevert('${v.id}')">↩️ برگشت به صف</button>`}
         <button class="inv-act del inv-admin-only" onclick="invDelete('${v.id}')">🗑️ حذف</button>
@@ -41197,6 +41241,70 @@ ${sprite}
 <div class="sheet">${paper}<div class="pdf-note">پمپ یعقوبی — این فاکتور به صورت خودکار تولید شده است</div></div>
 </body></html>`;
   pumpOpenDoc(html, '🧾 فاکتور شماره ' + n2fa(v.invoice_number));
+}
+
+/* ── PDF کلِ یک فهرست: «در صف» و «تایید شده» هر کدام پی‌دی‌افِ جداگانهٔ خودش ──
+   ورقهٔ تک‌فاکتور (invPdf) سرِ جایش می‌ماند؛ این یکی خلاصهٔ همهٔ فاکتورهای همان
+   صفحه است با جمعِ کل — همان چیزی که برای بایگانی و تحویل به حسابدار لازم است. */
+function invPdfList(status) {
+  const view = status || _invView || 'pending';
+  const isApproved = view === 'approved';
+  let rows = _invList().filter(v => v.status === view)
+    .slice().sort((a, b) => (b.invoice_number || 0) - (a.invoice_number || 0));
+  const title = isApproved ? 'فاکتورهای تایید شده' : 'فاکتورهای در صف';
+  const accent = isApproved ? '#276749' : '#b7791f';
+  const today = (typeof persianDate === 'function' ? persianDate() : '');
+  const money = rows.reduce((a, v) => a + _invTotal(v), 0);
+  const liters = rows.reduce((a, v) => a + (parseFloat(v.liters) || 0), 0);
+  const cash = rows.reduce((a, v) => a + (parseFloat(v.amount) || 0), 0);
+  const txt = (v) => {
+    const l = parseFloat(v.liters) || 0, m = parseFloat(v.amount) || 0, out = [];
+    if (l > 0) out.push((v.fuel_type === 'diesel' ? 'دیزل' : 'پطرول') + ' — ' + n2fa(l) + ' لیتر × ' + n2fa(v.price_per_liter));
+    if (m > 0) out.push(n2fa(m) + ' افغانی' + (l > 0 ? ' (رسید پول)' : ' (اعتبار)'));
+    return out.join(' + ') || '—';
+  };
+  const trs = rows.map((v, i) => `<tr>
+      <td>${n2fa(i + 1)}</td>
+      <td><b>${n2fa(v.invoice_number)}</b></td>
+      <td>${escFa(v.customer_name || '') || '—'}</td>
+      <td dir="ltr">${escFa(v.phone || '') || '—'}</td>
+      <td>${txt(v)}</td>
+      <td dir="ltr">${escFa(v.date_sh || '') || '—'}</td>
+      <td class="num">${n2fa(Math.round(_invTotal(v)))}</td>
+    </tr>`).join('')
+    || `<tr><td colspan="7" style="text-align:center;padding:18px">${isApproved ? 'هنوز فاکتور تایید شده‌ای نیست' : 'هیچ فاکتوری در صف نیست'}</td></tr>`;
+
+  const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8">
+<title>${title} — پمپ یعقوبی</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:16px}
+h1{font-size:1.05rem;font-weight:900;text-align:center;border-bottom:2px solid ${accent};padding-bottom:6px;margin-bottom:4px}
+.meta{font-size:.72rem;color:#718096;text-align:center;margin-bottom:12px}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th,td{border:1px solid #cbd5e0;padding:6px 8px;text-align:center}
+th{background:${accent}1a;font-weight:900;color:${accent}}
+tbody tr:nth-child(even){background:#f7fafc}
+td.num{font-weight:900;color:${accent}}
+tfoot td{background:${accent}14;font-weight:900;font-size:.88rem}
+.sum{margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.sum div{border:1.5px solid ${accent};border-radius:8px;padding:8px 14px;font-size:.82rem;font-weight:900;color:${accent}}
+@media print{@page{size:A4 portrait;margin:10mm}body{padding:0}thead{display:table-header-group}tr{break-inside:avoid}}
+</style></head><body>
+<h1>🧾 ${title} — پمپ یعقوبی</h1>
+<div class="meta">تاریخ گزارش: ${escFa(today)} · تعداد: ${n2fa(rows.length)} فاکتور</div>
+<table>
+  <thead><tr><th>#</th><th>شماره فاکتور</th><th>مشتری</th><th>تماس</th><th>محتوا</th><th>تاریخ</th><th>جمع (افغانی)</th></tr></thead>
+  <tbody>${trs}</tbody>
+  <tfoot><tr><td colspan="6">جمع کل</td><td class="num">${n2fa(Math.round(money))}</td></tr></tfoot>
+</table>
+<div class="sum">
+  <div>🛢️ جمع لیتر: ${n2fa(Math.round(liters))}</div>
+  <div>💵 جمع رسید پول: ${n2fa(Math.round(cash))} افغانی</div>
+  <div>💰 جمع کل: ${n2fa(Math.round(money))} افغانی</div>
+</div>
+</body></html>`;
+  pumpOpenDoc(html, '🧾 ' + title);
 }
 
 /* ── ضد باگ (۲): نگهبان سراسری خطاها ──
