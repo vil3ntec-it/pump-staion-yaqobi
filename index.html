@@ -16092,329 +16092,385 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
 <!-- ===== داشبورد — فقط نمایشی (Read-Only)؛ هیچ منطق/داده‌ای را تغییر نمی‌دهد ===== -->
 <style id="dash-style">
 /* ══════════════════════════════════════════════════════════════════════════
-   🏠 داشبورد — طراحیِ تازه (نسخهٔ ۲.۹.۱۵۲)
+   🏠 داشبورد مدیریتی — طرحِ تصویرِ مرجع (نسخهٔ ۲.۹.۱۵۴)
    --------------------------------------------------------------------------
-   داشبوردِ قبلی به‌طور کامل برداشته شد و این چیدمانِ تازه جایش نشست: کارت‌های
-   بزرگ و خوانا، سربرگِ یک‌تکه، نوارِ فیلترها، ردیفِ آماری و یک شبکهٔ دو‌ستونه
-   (نمودار + ستونِ کناری).
-
-   • همهٔ رنگ‌ها از متغیرهای تم می‌آیند — با عوض شدن تم، داشبورد هم عوض می‌شود.
-   • فقط نمایشی است: هیچ منطق یا داده‌ای اینجا تغییر نمی‌کند؛ همان توابعِ خواندنیِ
-     قبلی داده‌ها را پر می‌کنند.
-   • کاملاً Responsive: روی کامپیوتر کارت‌ها بزرگ و حرفه‌ای‌اند، روی تبلت سه/دو
-     ستونه و روی موبایل متناسبِ خودِ گوشی — هیچ‌جا ریز و ناخوانا نمی‌شود.
+   داشبوردِ قبلی کاملاً برداشته شد و این چیدمان دقیقاً بر اساس تصویری که صاحب
+   برنامه فرستاد ساخته شده است:
+     • نوارِ بالا: پروفایل + زنگِ اعلان با نشانِ شمار + وضعیتِ جایگاه + ساعت و تاریخ
+     • ردیفِ کارت‌های آماری با آیکونِ رنگی و درصدِ رشد
+     • ردیفِ دوم: وضعیتِ سوخت‌ها | نمودارِ روندِ فروش | موجودیِ مخازن (دایره‌ای)
+     • ردیفِ سوم: آخرین هشدارها | نمودارِ ستونیِ فروش | آخرین فروش‌ها
+     • نوارِ پایین: وضعیتِ اتصال
+   همهٔ عددها از همان دادهٔ واقعیِ برنامه می‌آید (فقط خواندنی) — هیچ عددِ نمایشیِ
+   ساختگی‌ای در کار نیست و هیچ منطقی از برنامه عوض نشده است.
    ══════════════════════════════════════════════════════════════════════════ */
 #sec-dashboard{
-  max-width:1440px;margin:0 auto;
-  --d-gap:clamp(12px, 1.1vw + 7px, 22px);
-  --d-pad:clamp(15px, 1.3vw + 10px, 26px);
-  --d-r:clamp(16px, .8vw + 12px, 26px);
-  --d-shadow:0 14px 38px -18px rgba(0,0,0,.55);
-  --d-line:color-mix(in srgb, var(--txt) 14%, transparent);
-  --d-soft:color-mix(in srgb, var(--txt) 5%, var(--card));
+  max-width:1520px;margin:0 auto;
+  --k-gap:clamp(11px, .9vw + 6px, 18px);
+  --k-pad:clamp(14px, 1vw + 9px, 22px);
+  --k-r:clamp(14px, .6vw + 11px, 20px);
+  --k-line:color-mix(in srgb, var(--txt) 13%, transparent);
+  --k-soft:color-mix(in srgb, var(--txt) 4%, var(--card));
+  --k-green:#22c55e; --k-blue:#3b82f6; --k-teal:#14b8a6;
+  --k-amber:#f59e0b; --k-red:#ef4444;  --k-purple:#a855f7;
 }
 @supports not (background: color-mix(in srgb, red 50%, blue)){
-  #sec-dashboard{--d-line:var(--border);--d-soft:var(--dark)}
+  #sec-dashboard{--k-line:var(--border);--k-soft:var(--dark)}
 }
+.k-card{
+  position:relative;overflow:hidden;background:var(--card);
+  border:1px solid var(--k-line);border-radius:var(--k-r);
+  box-shadow:0 10px 30px -16px rgba(0,0,0,.7)}
+.k-head{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:calc(var(--k-pad) * .78) var(--k-pad);border-bottom:1px solid var(--k-line)}
+.k-head h3{margin:0;font-size:clamp(.9rem,.2vw + .85rem,1.05rem);font-weight:900;color:var(--txt)}
+.k-body{padding:var(--k-pad)}
 
-/* ── ۱) سربرگ ──────────────────────────────────────────────────────────── */
+/* ── ۱) نوارِ بالا ─────────────────────────────────────────────────────── */
 .dash-head{
-  position:relative;overflow:hidden;border-radius:var(--d-r);
-  padding:var(--d-pad);margin-bottom:var(--d-gap);
-  background:linear-gradient(135deg, color-mix(in srgb, var(--accent) 20%, var(--card)) 0%, var(--card) 58%);
-  border:1.5px solid var(--d-line);box-shadow:var(--d-shadow);
-  display:flex;align-items:center;justify-content:space-between;gap:var(--d-gap);flex-wrap:wrap}
-.dash-head::after{
-  content:'';position:absolute;width:280px;height:280px;border-radius:50%;
-  background:radial-gradient(circle, color-mix(in srgb, var(--accent) 26%, transparent) 0%, transparent 70%);
-  top:-140px;left:-90px;pointer-events:none}
-.dash-greet-row{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;position:relative;z-index:1}
-.dash-title{font-size:clamp(1.3rem, 1vw + 1.05rem, 2rem);font-weight:900;color:var(--txt);margin:0;letter-spacing:-.4px}
-.dash-greet{font-size:clamp(.86rem,.25vw + .8rem,1.05rem);font-weight:800;color:var(--accent)}
-.dash-date{font-size:clamp(.74rem,.15vw + .71rem,.88rem);color:var(--muted);font-weight:700;margin-top:6px;position:relative;z-index:1}
-.dh-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:relative;z-index:1}
-.dash-search-wrap{
-  display:flex;align-items:center;gap:9px;background:var(--d-soft);border:1.5px solid var(--d-line);
-  border-radius:999px;padding:clamp(9px,.5vw + 7px,13px) clamp(14px,.8vw + 11px,20px);
-  min-width:clamp(180px, 22vw, 300px);transition:border-color .25s, box-shadow .25s}
-.dash-search-wrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent)}
+  display:flex;align-items:center;justify-content:space-between;gap:var(--k-gap);flex-wrap:wrap;
+  background:var(--card);border:1px solid var(--k-line);border-radius:var(--k-r);
+  padding:clamp(10px,.7vw + 7px,15px) var(--k-pad);margin-bottom:var(--k-gap);
+  box-shadow:0 10px 30px -18px rgba(0,0,0,.7)}
+.dh-right{display:flex;align-items:center;gap:clamp(9px,.7vw + 6px,15px);flex-wrap:wrap;min-width:0}
+.dh-left{display:flex;align-items:center;gap:clamp(9px,.7vw + 6px,15px);flex-wrap:wrap;min-width:0}
+.dash-user{display:flex;align-items:center;gap:10px;min-width:0}
+.dash-avatar{width:clamp(38px,2vw + 30px,46px);height:clamp(38px,2vw + 30px,46px);border-radius:50%;
+  background:var(--k-soft);border:1px solid var(--k-line);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.dash-avatar svg{width:21px;height:21px;stroke:var(--txt);fill:none;stroke-width:1.7}
+.dash-user-name{font-size:clamp(.84rem,.16vw + .8rem,.96rem);font-weight:900;color:var(--txt);line-height:1.35}
+.dash-user-role{font-size:clamp(.66rem,.11vw + .63rem,.76rem);color:var(--muted);font-weight:700}
+.dash-bell{position:relative;width:clamp(38px,2vw + 30px,46px);height:clamp(38px,2vw + 30px,46px);border-radius:50%;
+  border:1px solid var(--k-line);background:var(--k-soft);display:inline-flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:border-color .2s,background .2s;-webkit-tap-highlight-color:transparent}
+.dash-bell:hover{border-color:var(--k-amber);background:color-mix(in srgb,var(--k-amber) 12%,var(--card))}
+.dash-bell svg{width:20px;height:20px;stroke:var(--txt);fill:none;stroke-width:1.7}
+.dash-bell b{position:absolute;top:-3px;right:-3px;min-width:19px;height:19px;border-radius:999px;
+  background:var(--k-red);color:#fff;font-size:.62rem;font-weight:900;display:none;
+  align-items:center;justify-content:center;padding:0 5px;box-shadow:0 0 0 2px var(--card)}
+.dash-bell b.on{display:inline-flex}
+.dash-pill{display:inline-flex;align-items:center;gap:7px;border-radius:999px;
+  padding:clamp(7px,.4vw + 5px,10px) clamp(13px,.8vw + 10px,18px);
+  font-size:clamp(.74rem,.13vw + .71rem,.85rem);font-weight:900;white-space:nowrap;
+  background:color-mix(in srgb,var(--k-green) 14%,var(--card));border:1px solid color-mix(in srgb,var(--k-green) 42%,transparent);color:var(--k-green)}
+.dash-pill i{width:8px;height:8px;border-radius:50%;background:currentColor;display:inline-block;flex-shrink:0}
+.dash-pill.off{background:color-mix(in srgb,var(--k-red) 14%,var(--card));border-color:color-mix(in srgb,var(--k-red) 42%,transparent);color:var(--k-red)}
+.dash-clock{display:inline-flex;align-items:center;gap:9px;color:var(--muted);
+  font-size:clamp(.72rem,.13vw + .69rem,.84rem);font-weight:800;white-space:nowrap}
+.dash-clock svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7;flex-shrink:0}
+.dash-clock b{color:var(--txt);font-variant-numeric:tabular-nums}
+.dash-search-wrap{display:flex;align-items:center;gap:8px;background:var(--k-soft);
+  border:1px solid var(--k-line);border-radius:999px;padding:clamp(8px,.45vw + 6px,11px) clamp(13px,.8vw + 10px,17px);
+  min-width:clamp(160px,18vw,250px);transition:border-color .2s,box-shadow .2s}
+.dash-search-wrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent)}
 .dash-search{flex:1;background:transparent;border:none;outline:none;color:var(--txt);
-  font-family:'Vazirmatn',sans-serif;font-size:clamp(.8rem,.14vw + .77rem,.92rem);min-width:0}
-.ds-ic{width:17px;height:17px;stroke:var(--muted);fill:none;stroke-width:1.8;flex-shrink:0}
-.dash-iconbtn{
-  width:clamp(40px,2.4vw + 32px,50px);height:clamp(40px,2.4vw + 32px,50px);border-radius:14px;
-  border:1.5px solid var(--d-line);background:var(--d-soft);display:inline-flex;align-items:center;justify-content:center;
-  cursor:pointer;transition:transform .22s, border-color .22s, background .22s;-webkit-tap-highlight-color:transparent}
-.dash-iconbtn:hover{transform:translateY(-2px);border-color:var(--accent);background:color-mix(in srgb, var(--accent) 12%, var(--card))}
-.dash-iconbtn svg{width:21px;height:21px;stroke:var(--txt);fill:none;stroke-width:1.7}
-.dash-avatar{
-  width:clamp(40px,2.4vw + 32px,50px);height:clamp(40px,2.4vw + 32px,50px);border-radius:14px;
-  background:linear-gradient(140deg,var(--accent),var(--purple));display:inline-flex;align-items:center;justify-content:center;
-  box-shadow:0 8px 20px -8px var(--accent)}
-.dash-avatar svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:1.8}
+  font-family:'Vazirmatn',sans-serif;font-size:clamp(.76rem,.13vw + .73rem,.86rem);min-width:0}
+.ds-ic{width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:1.8;flex-shrink:0}
 
-/* ── ۲) نوارِ فیلترِ سوخت ──────────────────────────────────────────────── */
-.dash-fuel-bar{
-  display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:var(--d-gap);
-  background:var(--card);border:1.5px solid var(--d-line);border-radius:999px;
-  padding:clamp(7px,.4vw + 5px,10px) clamp(12px,.7vw + 9px,18px)}
-.dash-fuel-lbl{font-size:clamp(.76rem,.13vw + .73rem,.88rem);color:var(--muted);font-weight:800;margin-inline-end:2px}
-.dash-fuel-btn{
-  border:1.5px solid transparent;background:var(--d-soft);color:var(--txt);font-family:'Vazirmatn',sans-serif;
-  font-size:clamp(.78rem,.14vw + .75rem,.9rem);font-weight:800;padding:clamp(7px,.45vw + 5px,11px) clamp(14px,.9vw + 10px,22px);
-  border-radius:999px;cursor:pointer;transition:all .22s;-webkit-tap-highlight-color:transparent}
-.dash-fuel-btn:hover{border-color:var(--accent)}
-.dash-fuel-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 8px 18px -8px var(--accent)}
-
-/* ── ۳) هشدارهای زنده ──────────────────────────────────────────────────── */
-.dash-alerts{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:var(--d-gap)}
-.da-chip{
-  display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--d-line);background:var(--card);color:var(--txt);
-  font-family:'Vazirmatn',sans-serif;font-size:clamp(.74rem,.13vw + .71rem,.86rem);font-weight:800;
-  padding:clamp(8px,.45vw + 6px,12px) clamp(13px,.8vw + 10px,18px);border-radius:14px;cursor:pointer;
-  box-shadow:0 6px 16px -10px rgba(0,0,0,.6);transition:transform .18s;-webkit-tap-highlight-color:transparent}
-.da-chip:hover{transform:translateY(-2px)}
-.da-chip.warn{border-color:var(--red);color:var(--red);background:color-mix(in srgb, var(--red) 10%, var(--card))}
-.da-chip.soft{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb, var(--accent) 10%, var(--card))}
-.da-chip.ok{border-color:var(--green);color:var(--green);background:color-mix(in srgb, var(--green) 10%, var(--card))}
-
-/* ── ۴) ردیفِ کارت‌های آماری ───────────────────────────────────────────── */
-/* پنج کارت، همیشه هم‌تراز — هیچ ردیفِ ناقصی ساخته نمی‌شود:
-   عریض = ۵ ستون · متوسط = ۳ ستون (کارت پنجم دو ستون) · باریک = ۲ ستون
-   (کارت پنجم تمام‌عرض) · خیلی باریک = یک ستون. */
-.dash-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--d-gap);margin-bottom:var(--d-gap);align-items:stretch}
-.dash-cards .dash-card:last-child{grid-column:1 / -1}
-@media (min-width:900px) and (max-width:1249px){
-  .dash-cards{grid-template-columns:repeat(3,1fr)}
-  .dash-cards .dash-card:last-child{grid-column:span 2}
-}
-@media (min-width:1250px){
-  .dash-cards{grid-template-columns:repeat(5,1fr)}
-  .dash-cards .dash-card:last-child{grid-column:auto}
-}
+/* ── ۲) کارت‌های آماری ─────────────────────────────────────────────────── */
+.dash-cards{display:grid;grid-template-columns:repeat(6,1fr);gap:var(--k-gap);margin-bottom:var(--k-gap)}
 .dash-card{
-  position:relative;overflow:hidden;display:flex;flex-direction:column;
-  background:var(--card);border:1.5px solid var(--d-line);border-radius:var(--d-r);
-  padding:var(--d-pad);box-shadow:var(--d-shadow);
-  transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease}
-.dash-card::before{
-  content:'';position:absolute;inset-inline-start:0;top:0;bottom:0;width:4px;
-  background:linear-gradient(180deg,var(--accent),var(--purple));opacity:.9}
-.dash-card:hover{transform:translateY(-5px);box-shadow:0 22px 46px -18px rgba(0,0,0,.62);border-color:var(--accent)}
-.dc-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:clamp(11px,.7vw + 8px,17px)}
-.dc-ic{
-  width:clamp(44px,2.7vw + 34px,58px);height:clamp(44px,2.7vw + 34px,58px);border-radius:16px;
-  background:color-mix(in srgb, var(--accent) 14%, var(--card));border:1.5px solid color-mix(in srgb, var(--accent) 34%, transparent);
-  display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
-.dc-ic svg{width:clamp(22px,1.2vw + 17px,28px);height:clamp(22px,1.2vw + 17px,28px);stroke:var(--accent);fill:none;stroke-width:1.75}
-.dc-prog{position:relative;width:clamp(44px,2.5vw + 35px,56px);height:clamp(44px,2.5vw + 35px,56px);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
-.dc-prog svg{width:100%;height:100%;transform:rotate(-90deg)}
-.dc-prog circle{fill:none;stroke-width:3.2}
-.dc-prog .tr{stroke:var(--d-line)}
-.dc-prog .bar{stroke:var(--muted);stroke-linecap:round;transition:stroke-dashoffset .8s ease}
-.dc-prog b{position:absolute;font-size:clamp(.58rem,.1vw + .56rem,.7rem);font-weight:900;color:var(--muted)}
-.dc-title{font-size:clamp(.82rem,.16vw + .78rem,.96rem);font-weight:800;color:var(--muted)}
-.dc-value{font-size:clamp(1.18rem,.75vw + .96rem,1.75rem);font-weight:900;color:var(--txt);margin-top:6px;line-height:1.25;letter-spacing:-.3px}
-.dc-sub{font-size:clamp(.68rem,.12vw + .65rem,.8rem);color:var(--muted);margin-top:9px;line-height:1.75;opacity:.92}
+  position:relative;overflow:hidden;background:var(--card);
+  border:1px solid var(--k-line);border-radius:var(--k-r);padding:var(--k-pad);
+  box-shadow:0 10px 30px -16px rgba(0,0,0,.7);cursor:pointer;
+  transition:transform .22s,box-shadow .22s,border-color .22s}
+.dash-card::before{content:'';position:absolute;inset-inline-start:-40px;top:-60px;width:170px;height:170px;
+  border-radius:50%;background:radial-gradient(circle,var(--kc) 0%,transparent 70%);opacity:.18;pointer-events:none}
+.dash-card:hover{transform:translateY(-4px);box-shadow:0 20px 40px -18px rgba(0,0,0,.8);border-color:var(--kc)}
+.dc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:clamp(9px,.6vw + 6px,14px)}
+.dc-title{font-size:clamp(.76rem,.14vw + .73rem,.88rem);font-weight:800;color:var(--muted);line-height:1.5;min-width:0}
+.dc-ic{width:clamp(38px,2.2vw + 30px,48px);height:clamp(38px,2.2vw + 30px,48px);border-radius:13px;flex-shrink:0;
+  background:color-mix(in srgb,var(--kc) 16%,transparent);display:inline-flex;align-items:center;justify-content:center}
+.dc-ic svg{width:clamp(19px,1vw + 15px,24px);height:clamp(19px,1vw + 15px,24px);stroke:var(--kc);fill:none;stroke-width:1.8}
+.dc-value{font-size:clamp(1.05rem,.62vw + .9rem,1.5rem);font-weight:900;color:var(--kc);
+  line-height:1.3;letter-spacing:-.3px;word-break:break-word}
+.dc-delta{font-size:clamp(.64rem,.11vw + .62rem,.75rem);font-weight:800;color:var(--muted);margin-top:8px;
+  display:flex;align-items:center;gap:5px;flex-wrap:wrap;line-height:1.6}
+.dc-delta .up{color:var(--k-green)}
+.dc-delta .down{color:var(--k-red)}
+.dc-sub{font-size:clamp(.62rem,.1vw + .6rem,.72rem);color:var(--muted);margin-top:6px;line-height:1.7;opacity:.9}
 
-/* ── ۵) شبکهٔ اصلی: نمودار + ستونِ کناری ───────────────────────────────── */
-.dash-mid{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(300px,1fr);gap:var(--d-gap);align-items:stretch}
-.dash-side{display:flex;flex-direction:column;gap:var(--d-gap);min-width:0}
-.dash-chart-card{
-  background:var(--card);border:1.5px solid var(--d-line);border-radius:var(--d-r);
-  padding:var(--d-pad);box-shadow:var(--d-shadow);min-width:0;display:flex;flex-direction:column}
-.dcc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:clamp(12px,.8vw + 9px,18px)}
-.dcc-title{font-size:clamp(1rem,.35vw + .92rem,1.24rem);font-weight:900;color:var(--txt)}
-.dcc-sub{font-size:clamp(.68rem,.12vw + .65rem,.8rem);color:var(--muted);margin-top:5px;line-height:1.7}
-.dash-tabs{display:flex;gap:5px;background:var(--d-soft);border:1.5px solid var(--d-line);border-radius:999px;padding:5px}
-.dash-tab{
+/* ── ۳) ردیف‌های سه‌ستونه ─────────────────────────────────────────────── */
+.dash-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.15fr) minmax(0,1.2fr);
+  gap:var(--k-gap);margin-bottom:var(--k-gap);align-items:stretch}
+.dash-row > *{min-width:0}
+
+/* وضعیت سوخت‌ها */
+.fs-row{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--k-soft);border:1px solid var(--k-line);border-radius:13px;
+  padding:clamp(10px,.6vw + 7px,14px) clamp(11px,.7vw + 8px,15px);margin-bottom:10px;cursor:pointer;
+  transition:border-color .2s,transform .18s;-webkit-tap-highlight-color:transparent}
+.fs-row:last-child{margin-bottom:0}
+.fs-row:hover{transform:translateY(-2px);border-color:var(--fc)}
+.fs-name{font-size:clamp(.8rem,.14vw + .77rem,.92rem);font-weight:900;color:var(--txt)}
+.fs-state{font-size:clamp(.66rem,.11vw + .64rem,.76rem);font-weight:800;color:var(--fc);margin-top:3px}
+.fs-ic{width:clamp(34px,1.8vw + 27px,42px);height:clamp(34px,1.8vw + 27px,42px);border-radius:11px;flex-shrink:0;
+  background:color-mix(in srgb,var(--fc) 16%,transparent);display:inline-flex;align-items:center;justify-content:center;
+  font-size:clamp(1rem,.5vw + .84rem,1.25rem)}
+
+/* نمودار روند فروش (سطحی) */
+.dash-seg{display:inline-flex;gap:4px;background:var(--k-soft);border:1px solid var(--k-line);border-radius:999px;padding:4px}
+.dash-fuel-btn,.dash-tab{
   border:none;background:transparent;color:var(--muted);font-family:'Vazirmatn',sans-serif;
-  font-size:clamp(.76rem,.13vw + .73rem,.88rem);font-weight:800;padding:clamp(7px,.4vw + 5px,10px) clamp(13px,.9vw + 9px,21px);
-  border-radius:999px;cursor:pointer;transition:background .22s, color .22s;-webkit-tap-highlight-color:transparent}
-.dash-tab:hover{color:var(--txt)}
-.dash-tab.active{background:var(--accent);color:#fff;box-shadow:0 6px 16px -8px var(--accent)}
-.dash-legend{display:flex;gap:14px;font-size:clamp(.68rem,.12vw + .65rem,.79rem);color:var(--muted);font-weight:700;align-items:center;flex-wrap:wrap}
-.dash-legend i{display:inline-block;width:11px;height:11px;border-radius:4px;margin-inline-end:6px;vertical-align:-1px}
-.dash-legend .lg-amt{background:var(--accent)}
-.dash-legend .lg-lit{background:var(--blue)}
-.dash-legend .lg-prf{background:var(--green)}
-.dash-legend .lg-exp{background:var(--red)}
+  font-size:clamp(.72rem,.12vw + .69rem,.83rem);font-weight:800;
+  padding:clamp(6px,.35vw + 4px,9px) clamp(11px,.8vw + 8px,19px);border-radius:999px;cursor:pointer;
+  transition:background .2s,color .2s;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.dash-fuel-btn:hover,.dash-tab:hover{color:var(--txt)}
+.dash-fuel-btn.active{background:var(--k-green);color:#fff}
+.dash-tab.active{background:var(--k-blue);color:#fff}
+#dash-area{width:100%;height:clamp(190px,17vw,260px);display:block;overflow:visible}
+#dash-area .ar-grid{stroke:var(--k-line);stroke-width:1}
+#dash-area .ar-fill{fill:url(#arGrad)}
+#dash-area .ar-line{fill:none;stroke:var(--k-green);stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round}
+#dash-area .ar-dot{fill:var(--k-green);stroke:var(--card);stroke-width:2;cursor:pointer}
+#dash-area .ar-dot.sel{r:6.5}
+#dash-area text{fill:var(--muted);font-family:'Vazirmatn',sans-serif;font-size:10px;font-weight:700}
+#dash-area .ar-tipbox{fill:var(--panel);stroke:var(--k-line)}
+#dash-area .ar-tiptxt{fill:var(--txt);font-weight:900;font-size:10.5px}
+
+/* موجودی مخازن — دایره‌ای */
+.dash-donut-wrap{display:flex;align-items:center;justify-content:center;gap:clamp(14px,1.4vw + 8px,26px);flex-wrap:wrap}
+.dash-donut{position:relative;width:clamp(130px,11vw,170px);height:clamp(130px,11vw,170px);flex-shrink:0}
+.dash-donut svg{width:100%;height:100%;transform:rotate(-90deg)}
+.dash-donut circle{fill:none;stroke-linecap:butt}
+.dash-donut .dn-track{stroke:var(--k-line)}
+.dash-donut .dn-seg{transition:stroke-dasharray .8s ease}
+.dash-donut-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:3px}
+.dash-donut-mid b{font-size:clamp(1.25rem,.85vw + 1rem,1.85rem);font-weight:900;color:var(--txt);line-height:1}
+.dash-donut-mid span{font-size:clamp(.6rem,.1vw + .58rem,.7rem);color:var(--muted);font-weight:700}
+.dash-tank-legend{display:flex;flex-direction:column;gap:clamp(9px,.6vw + 6px,14px);min-width:120px;flex:1}
+.tl-item{display:flex;align-items:center;gap:9px}
+.tl-item i{width:10px;height:10px;border-radius:3px;background:var(--tc);flex-shrink:0}
+.tl-item .tl-nm{font-size:clamp(.75rem,.13vw + .72rem,.86rem);font-weight:800;color:var(--txt)}
+.tl-item .tl-l{font-size:clamp(.64rem,.1vw + .62rem,.73rem);color:var(--muted);font-weight:700;margin-top:2px}
+.dash-ghost-btn{width:100%;margin-top:clamp(12px,.8vw + 8px,18px);border:1px solid var(--k-line);background:var(--k-soft);
+  color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:clamp(.74rem,.12vw + .71rem,.84rem);font-weight:800;
+  padding:clamp(9px,.5vw + 7px,12px);border-radius:12px;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.dash-ghost-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* آخرین هشدارها */
+.da-item{display:flex;align-items:flex-start;gap:11px;border:1px solid color-mix(in srgb,var(--ac) 34%,transparent);
+  background:color-mix(in srgb,var(--ac) 9%,var(--card));border-radius:13px;
+  padding:clamp(10px,.6vw + 7px,14px);margin-bottom:10px;cursor:pointer;
+  transition:transform .18s,border-color .2s;-webkit-tap-highlight-color:transparent;width:100%;text-align:right}
+.da-item:last-child{margin-bottom:0}
+.da-item:hover{transform:translateY(-2px);border-color:var(--ac)}
+.da-item .da-ic{font-size:clamp(1rem,.4vw + .88rem,1.2rem);flex-shrink:0;line-height:1.4}
+.da-item .da-t{display:block;font-size:clamp(.75rem,.13vw + .72rem,.86rem);font-weight:900;color:var(--ac);line-height:1.65}
+.da-item .da-s{display:block;font-size:clamp(.64rem,.1vw + .62rem,.73rem);color:var(--muted);font-weight:700;margin-top:4px;line-height:1.7}
 
 /* نمودار ستونی — RTL: تازه‌ترین دوره سمت راست */
-.dash-bars{
-  display:flex;flex-direction:row-reverse;align-items:flex-end;gap:clamp(6px,.8vw,16px);
-  height:clamp(190px, 21vw, 300px);padding:30px clamp(8px,.7vw,16px) 14px;
-  background:var(--d-soft);border:1.5px solid var(--d-line);border-radius:calc(var(--d-r) * .72)}
-.db-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:10px;min-width:0;height:100%;cursor:pointer}
-.db-barwrap{position:relative;flex:1;width:100%;max-width:54px;display:flex;align-items:flex-end;justify-content:center;gap:4px}
-.db-bar{width:28%;height:0;border-radius:99px 99px 5px 5px;background:linear-gradient(180deg,var(--accent),color-mix(in srgb, var(--accent) 45%, var(--purple)));
-  transition:height .75s cubic-bezier(.22,.8,.3,1), filter .2s}
-.db-bar.lit{background:linear-gradient(180deg,var(--blue),color-mix(in srgb, var(--blue) 45%, var(--purple)));opacity:.9}
-.db-bar.prf{background:linear-gradient(180deg,var(--green),color-mix(in srgb, var(--green) 45%, var(--purple)));opacity:.92}
-.db-col:hover .db-bar{filter:brightness(1.16)}
-.db-col.sel .db-bar{filter:brightness(1.2);box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 60%, transparent)}
-.db-col.sel .db-lbl{color:var(--accent);font-weight:900}
-.db-tip{position:absolute;bottom:calc(100% + 8px);right:50%;transform:translateX(50%);
-  background:var(--panel);color:var(--txt);border:1.5px solid var(--d-line);border-radius:11px;padding:6px 12px;
-  font-size:.7rem;font-weight:800;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s;
-  box-shadow:0 10px 26px -10px rgba(0,0,0,.8);z-index:3}
+.dash-bars{display:flex;flex-direction:row-reverse;align-items:flex-end;gap:clamp(5px,.7vw,14px);
+  height:clamp(180px,16vw,250px);padding:22px 4px 10px}
+.db-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:9px;min-width:0;height:100%;cursor:pointer}
+.db-barwrap{position:relative;flex:1;width:100%;max-width:46px;display:flex;align-items:flex-end;justify-content:center;gap:3px}
+.db-bar{width:30%;height:0;border-radius:6px 6px 3px 3px;background:var(--k-blue);
+  transition:height .7s cubic-bezier(.22,.8,.3,1),filter .2s}
+.db-bar.lit{background:var(--k-teal);opacity:.9}
+.db-bar.prf{background:var(--k-green);opacity:.92}
+.db-col:hover .db-bar{filter:brightness(1.2)}
+.db-col.sel .db-bar{filter:brightness(1.25);box-shadow:0 0 0 2px color-mix(in srgb,var(--k-blue) 55%,transparent)}
+.db-col.sel .db-lbl{color:var(--k-blue);font-weight:900}
+.db-tip{position:absolute;bottom:calc(100% + 7px);right:50%;transform:translateX(50%);
+  background:var(--panel);color:var(--txt);border:1px solid var(--k-line);border-radius:10px;padding:5px 11px;
+  font-size:.68rem;font-weight:800;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s;
+  box-shadow:0 10px 26px -10px rgba(0,0,0,.85);z-index:3}
 .db-col:hover .db-tip{opacity:1}
-.db-lbl{font-size:clamp(.62rem,.12vw + .59rem,.75rem);color:var(--muted);font-weight:700;max-width:100%;
+.db-lbl{font-size:clamp(.6rem,.1vw + .58rem,.72rem);color:var(--muted);font-weight:700;max-width:100%;
   text-align:center;line-height:1.3;word-break:break-word;overflow-wrap:anywhere}
-.dash-detail{
-  margin-top:clamp(11px,.7vw + 8px,16px);padding:clamp(11px,.6vw + 8px,16px) clamp(13px,.8vw + 9px,18px);
-  border:1.5px dashed var(--d-line);border-radius:calc(var(--d-r) * .62);background:var(--d-soft);
-  font-size:clamp(.72rem,.13vw + .69rem,.84rem);color:var(--muted);display:flex;gap:clamp(10px,1vw,20px);flex-wrap:wrap;align-items:center}
+.dash-detail{margin-top:clamp(10px,.6vw + 7px,15px);padding:clamp(10px,.6vw + 7px,14px) clamp(11px,.7vw + 8px,16px);
+  border:1px solid var(--k-line);border-radius:12px;background:var(--k-soft);
+  font-size:clamp(.68rem,.12vw + .65rem,.79rem);color:var(--muted);display:flex;gap:clamp(9px,.9vw,18px);flex-wrap:wrap;align-items:center}
 .dash-detail b{color:var(--txt)}
-/* روند مفاد/مصارف */
-.dash-trend-wrap{margin-top:clamp(12px,.8vw + 9px,18px);border-top:1.5px dashed var(--d-line);padding-top:clamp(11px,.7vw + 8px,16px)}
-.dash-trend-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
-.dash-trend-title{font-size:clamp(.82rem,.16vw + .78rem,.96rem);font-weight:900;color:var(--txt)}
-#dash-trend{width:100%;height:clamp(78px,7vw,120px);display:block}
-#dash-trend .tl-grid{stroke:var(--d-line);stroke-width:.8}
-#dash-trend .tl-prf{fill:none;stroke:var(--green);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
-#dash-trend .tl-prf-area{fill:var(--green);opacity:.13}
-#dash-trend .tl-exp{fill:none;stroke:var(--red);stroke-width:1.8;stroke-dasharray:5 4;stroke-linejoin:round;stroke-linecap:round}
-#dash-trend .tl-dot{fill:var(--green)}
+.dash-trend-wrap{margin-top:clamp(11px,.7vw + 8px,16px);border-top:1px solid var(--k-line);padding-top:clamp(10px,.6vw + 7px,15px)}
+.dash-trend-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.dash-trend-title{font-size:clamp(.76rem,.13vw + .73rem,.87rem);font-weight:900;color:var(--txt)}
+.dash-legend{display:flex;gap:13px;font-size:clamp(.64rem,.1vw + .62rem,.74rem);color:var(--muted);font-weight:700;align-items:center;flex-wrap:wrap}
+.dash-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:5px;vertical-align:-1px}
+.dash-legend .lg-amt{background:var(--k-blue)}
+.dash-legend .lg-lit{background:var(--k-teal)}
+.dash-legend .lg-prf{background:var(--k-green)}
+.dash-legend .lg-exp{background:var(--k-red)}
+#dash-trend{width:100%;height:clamp(70px,6vw,105px);display:block}
+#dash-trend .tl-grid{stroke:var(--k-line);stroke-width:.8}
+#dash-trend .tl-prf{fill:none;stroke:var(--k-green);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+#dash-trend .tl-prf-area{fill:var(--k-green);opacity:.13}
+#dash-trend .tl-exp{fill:none;stroke:var(--k-red);stroke-width:1.7;stroke-dasharray:5 4;stroke-linejoin:round;stroke-linecap:round}
+#dash-trend .tl-dot{fill:var(--k-green)}
 
-/* کارت مخزن در ستون کناری */
-.dash-tank-card{flex:1;min-height:clamp(230px,20vw,300px)}
-.dash-tank-card #dash-tank{flex:1;display:flex;flex-direction:column;margin-top:10px}
-#dash-tank .tank-card{padding:12px;gap:12px;margin-bottom:0;flex:1}
-#dash-tank .tank-card .tank-visual{width:clamp(84px,7vw,108px);flex:0 0 auto;height:auto;min-height:170px}
-.dash-tank-toggle{
-  border:1.5px solid var(--accent);background:color-mix(in srgb, var(--accent) 12%, var(--card));color:var(--accent);
-  font-family:'Vazirmatn',sans-serif;font-size:clamp(.7rem,.12vw + .68rem,.8rem);font-weight:800;
-  padding:8px 15px;border-radius:999px;cursor:pointer;transition:all .22s;-webkit-tap-highlight-color:transparent}
-.dash-tank-toggle:hover{background:var(--accent);color:#fff}
-.dash-cards .dash-card,.dash-tank-card{cursor:pointer}
+/* آخرین فروش‌ها */
+.dash-recent-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.dash-recent{width:100%;border-collapse:collapse;font-size:clamp(.68rem,.12vw + .65rem,.79rem)}
+.dash-recent th{color:var(--muted);font-weight:800;text-align:right;padding:0 8px 10px;white-space:nowrap;
+  border-bottom:1px solid var(--k-line);font-size:clamp(.65rem,.1vw + .63rem,.75rem)}
+.dash-recent td{padding:11px 8px;border-bottom:1px solid var(--k-line);color:var(--txt);font-weight:700;white-space:nowrap}
+.dash-recent tr:last-child td{border-bottom:none}
+.dash-recent .r-go{width:29px;height:29px;border-radius:9px;border:none;cursor:pointer;
+  background:color-mix(in srgb,var(--k-green) 18%,transparent);color:var(--k-green);font-size:.82rem;
+  display:inline-flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+.dash-recent .r-go:hover{background:var(--k-green);color:#fff}
+.dash-empty{text-align:center;color:var(--muted);padding:26px 10px;font-size:clamp(.72rem,.12vw + .7rem,.83rem)}
 
-/* کارت بزرگِ رشدِ فروش */
-.dash-hero{
-  position:relative;overflow:hidden;border-radius:var(--d-r);padding:var(--d-pad);
-  background:linear-gradient(150deg,var(--accent),var(--purple) 92%);box-shadow:0 18px 42px -18px var(--accent);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;
-  min-height:clamp(230px,19vw,300px);cursor:pointer}
-.dash-hero::after{content:'';position:absolute;width:240px;height:240px;border-radius:50%;
-  background:rgba(255,255,255,.13);top:-100px;left:-80px;pointer-events:none}
-.dhero-gauge{position:relative;width:clamp(140px,11vw,180px);height:clamp(78px,6.2vw,100px)}
-.dhero-gauge svg{width:100%;height:100%}
-.dhero-gauge path{fill:none;stroke-width:10;stroke-linecap:round}
-.dhero-gauge .tr{stroke:rgba(255,255,255,.26)}
-.dhero-gauge .bar{stroke:#fff;stroke-dasharray:151;stroke-dashoffset:151;transition:stroke-dashoffset .9s ease}
-.dhero-gauge b{position:absolute;bottom:0;right:50%;transform:translateX(50%);color:#fff;font-size:clamp(1rem,.4vw + .9rem,1.3rem);font-weight:900}
-.dhero-ic{width:clamp(42px,2.4vw + 34px,54px);height:clamp(42px,2.4vw + 34px,54px);border-radius:16px;
-  background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center}
-.dhero-ic svg{width:26px;height:26px;stroke:#fff;fill:none;stroke-width:1.8}
-.dhero-label{color:rgba(255,255,255,.92);font-weight:800;font-size:clamp(.88rem,.2vw + .83rem,1.08rem)}
-.dhero-value{color:#fff;font-weight:900;font-size:clamp(1.3rem,.9vw + 1.05rem,2rem);letter-spacing:-.4px}
-.dhero-sub{color:rgba(255,255,255,.82);font-size:clamp(.68rem,.12vw + .65rem,.8rem);max-width:280px;line-height:1.9}
+/* ── ۴) نوارِ پایین ────────────────────────────────────────────────────── */
+.dash-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:2px 4px 6px;font-size:clamp(.66rem,.11vw + .64rem,.76rem);color:var(--muted);font-weight:700}
+.dash-foot .df-db{display:inline-flex;align-items:center;gap:7px}
+.dash-foot .df-db i{width:8px;height:8px;border-radius:50%;background:var(--k-green);display:inline-block}
+.dash-foot .df-db.off i{background:var(--k-red)}
 
-/* ── ۶) نردبانِ ریسپانسیو ─────────────────────────────────────────────── */
+/* ── ۵) نردبانِ ریسپانسیو ─────────────────────────────────────────────── */
+@media (max-width:1400px){ .dash-cards{grid-template-columns:repeat(3,1fr)} }
 @media (max-width:1180px){
-  .dash-mid{grid-template-columns:1fr}
-  .dash-side{flex-direction:row;flex-wrap:wrap}
-  .dash-side > *{flex:1 1 300px}
+  .dash-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .dash-row > .k-wide{grid-column:1 / -1;order:-1}
 }
 @media (max-width:820px){
-  .dash-side{flex-direction:column}
   .dash-head{flex-direction:column;align-items:stretch}
-  .dh-left{justify-content:space-between}
+  .dh-right,.dh-left{justify-content:space-between}
   .dash-search-wrap{flex:1;min-width:0}
+  .dash-cards{grid-template-columns:repeat(2,1fr)}
+  .dash-row{grid-template-columns:1fr}
+  .dash-row > .k-wide{order:0}
 }
 @media (max-width:640px){
-  #sec-dashboard{--d-gap:12px;--d-pad:15px;--d-r:17px}
-  .dc-value{font-size:1.06rem}
-  .dc-title{font-size:.8rem}
-  .dc-sub{font-size:.66rem;line-height:1.7}
-  .dash-fuel-bar{border-radius:16px;justify-content:center}
+  #sec-dashboard{--k-gap:11px;--k-pad:14px;--k-r:15px}
+  .dash-clock{width:100%;justify-content:flex-start}
   /* ستون‌ها با پهنای ثابت + اسکرول افقی تا ۱۳ ستونِ حالتِ «ماه» له نشوند */
-  .dash-bars{height:180px;gap:9px;padding-top:26px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
-  .db-col{flex:0 0 auto;min-width:46px}
-  .dash-detail{gap:9px}
-  .dash-hero{min-height:210px}
+  .dash-bars{height:170px;gap:8px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+  .db-col{flex:0 0 auto;min-width:44px}
+  .dash-donut-wrap{gap:16px}
 }
-/* گوشی‌های باریک: یک ستون — کارت بزرگ و کاملاً خوانا، نه دو کارتِ ریز کنار هم */
-@media (max-width:459px){
+@media (max-width:430px){
   .dash-cards{grid-template-columns:1fr}
-  .dash-cards .dash-card:last-child{grid-column:1 / -1}
   .dc-value{font-size:1.3rem}
-  .dc-title{font-size:.88rem}
-  .dc-sub{font-size:.72rem}
 }
 </style>
 <div class="section visible" id="sec-dashboard">
 
-  <!-- سربرگ -->
+  <!-- ── نوارِ بالا ── -->
   <div class="dash-head">
-    <div style="position:relative;z-index:1;min-width:0">
-      <div class="dash-greet-row"><h2 class="dash-title">داشبورد</h2><span class="dash-greet" id="dash-greet">سلام 👋</span></div>
-      <div class="dash-date" id="dash-date"></div>
+    <div class="dh-right">
+      <span class="dash-user">
+        <span class="dash-avatar"><svg><use href="#ic-user1"/></svg></span>
+        <span style="min-width:0">
+          <span class="dash-user-name" id="dash-user-name">مدیر سیستم</span><br>
+          <span class="dash-user-role" id="dash-greet">سلام 👋</span>
+        </span>
+      </span>
+      <button class="dash-bell" title="اعلان‌ها" onclick="dashBellClick()"><svg><use href="#ic-bell"/></svg><b id="dash-bell-badge">۰</b></button>
+      <span class="dash-pill" id="dash-status-pill"><i></i><span id="dash-status-txt">جایگاه فعال</span></span>
     </div>
     <div class="dh-left">
+      <span class="dash-clock">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <b id="dash-clock">۰۰:۰۰:۰۰</b><span id="dash-date"></span>
+      </span>
       <span class="dash-search-wrap"><svg class="ds-ic"><use href="#ic-search"/></svg><input class="dash-search" id="dash-search-in" placeholder="🔍 نام قرض‌دار + Enter" onkeydown="if(event.key==='Enter')dashSearchGo(this.value)"></span>
-      <button class="dash-iconbtn" title="گزارش پایان ماه" onclick="showSection('monthreport')"><svg><use href="#ic-rasid"/></svg></button>
-      <button class="dash-iconbtn" title="اعلان‌ها" onclick="dashBellClick()"><svg><use href="#ic-bell"/></svg></button>
-      <span class="dash-avatar" title="پروفایل"><svg><use href="#ic-user1"/></svg></span>
+      <button class="dash-bell" title="گزارش پایان ماه" onclick="showSection('monthreport')"><svg><use href="#ic-rasid"/></svg></button>
     </div>
   </div>
 
-  <!-- فیلترِ سوخت -->
-  <div class="dash-fuel-bar">
-    <span class="dash-fuel-lbl">⛽ نوع سوخت</span>
-    <button class="dash-fuel-btn active" onclick="dashSetFuel('all',this)">📋 همه</button>
-    <button class="dash-fuel-btn" onclick="dashSetFuel('petrol',this)">⛽ پطرول</button>
-    <button class="dash-fuel-btn" onclick="dashSetFuel('diesel',this)">🟤 دیزل</button>
-  </div>
-
-  <!-- هشدارهای زنده: مخزن کم، قرض‌داران بی‌حرکت، وضعیت بکاپ ابری -->
-  <div class="dash-alerts" id="dash-alerts"></div>
-
-  <!-- کارت‌های آماری -->
+  <!-- ── کارت‌های آماری ── -->
   <div class="dash-cards">
-    <div class="dash-card" title="رفتن به پارچه‌ها" onclick="showSection('shifts')"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-shifts"/></svg></span><span class="dc-prog" id="dcp-sales"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title" id="dct-sales">فروش امروز</div><div class="dc-value" id="dcv-sales">0</div><div class="dc-sub" id="dcs-sales"></div></div>
-    <div class="dash-card" title="رفتن به مفاد / ضرر" onclick="showSection('profit')"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-profit"/></svg></span><span class="dc-prog" id="dcp-profit"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title" id="dct-profit">مفاد امروز</div><div class="dc-value" id="dcv-profit">0</div><div class="dc-sub" id="dcs-profit"></div></div>
-    <div class="dash-card" title="رفتن به قرض‌داران" onclick="showSection('debt')"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-debt"/></svg></span><span class="dc-prog" id="dcp-debt"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>—</b></span></div><div class="dc-title">الباقی قرض‌داران</div><div class="dc-value" id="dcv-debt">0</div><div class="dc-sub" id="dcs-debt"></div></div>
-    <div class="dash-card" title="رفتن به مصارف" onclick="showSection('expenses')"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-expenses"/></svg></span><span class="dc-prog" id="dcp-exp"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title" id="dct-exp">مصارف امروز</div><div class="dc-value" id="dcv-exp">0</div><div class="dc-sub" id="dcs-exp"></div></div>
-    <div class="dash-card" title="رفتن به گاوصندوق" onclick="showSection('safe')"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-safe"/></svg></span><span class="dc-prog" id="dcp-safe"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title">موجودی گاوصندوق</div><div class="dc-value" id="dcv-safe">0</div><div class="dc-sub" id="dcs-safe"></div></div>
+    <div class="dash-card" style="--kc:var(--k-red)" title="دیدن هشدارها" onclick="dashBellClick()">
+      <div class="dc-top"><div class="dc-title">هشدارها</div><span class="dc-ic"><svg viewBox="0 0 24 24"><path d="M12 3.5 2.6 20h18.8L12 3.5Z"/><path d="M12 10v4"/><path d="M12 17.2v.1"/></svg></span></div>
+      <div class="dc-value" id="dcv-alerts">۰ مورد</div><div class="dc-delta" id="dcd-alerts">نیاز به بررسی</div></div>
+
+    <div class="dash-card" style="--kc:var(--k-green)" title="رفتن به پارچه‌ها" onclick="showSection('shifts')">
+      <div class="dc-top"><div class="dc-title" id="dct-sales">فروش امروز</div><span class="dc-ic"><svg><use href="#ic-shifts"/></svg></span></div>
+      <div class="dc-value" id="dcv-sales">۰</div><div class="dc-delta" id="dcd-sales"></div><div class="dc-sub" id="dcs-sales"></div></div>
+
+    <div class="dash-card" style="--kc:var(--k-amber)" title="رفتن به مفاد / ضرر" onclick="showSection('profit')">
+      <div class="dc-top"><div class="dc-title" id="dct-profit">مفاد امروز</div><span class="dc-ic"><svg><use href="#ic-profit"/></svg></span></div>
+      <div class="dc-value" id="dcv-profit">۰</div><div class="dc-delta" id="dcd-profit"></div><div class="dc-sub" id="dcs-profit"></div></div>
+
+    <div class="dash-card" style="--kc:var(--k-blue)" title="رفتن به قرض‌داران" onclick="showSection('debt')">
+      <div class="dc-top"><div class="dc-title">الباقی قرض‌داران</div><span class="dc-ic"><svg><use href="#ic-debt"/></svg></span></div>
+      <div class="dc-value" id="dcv-debt">۰</div><div class="dc-sub" id="dcs-debt"></div></div>
+
+    <div class="dash-card" style="--kc:var(--k-purple)" title="رفتن به مصارف" onclick="showSection('expenses')">
+      <div class="dc-top"><div class="dc-title" id="dct-exp">مصارف امروز</div><span class="dc-ic"><svg><use href="#ic-expenses"/></svg></span></div>
+      <div class="dc-value" id="dcv-exp">۰</div><div class="dc-delta" id="dcd-exp"></div><div class="dc-sub" id="dcs-exp"></div></div>
+
+    <div class="dash-card" style="--kc:var(--k-teal)" title="رفتن به گاوصندوق" onclick="showSection('safe')">
+      <div class="dc-top"><div class="dc-title">موجودی گاوصندوق</div><span class="dc-ic"><svg><use href="#ic-safe"/></svg></span></div>
+      <div class="dc-value" id="dcv-safe">۰</div><div class="dc-delta" id="dcd-safe"></div><div class="dc-sub" id="dcs-safe"></div></div>
   </div>
 
-  <!-- نمودار + ستون کناری -->
-  <div class="dash-mid">
-    <div class="dash-chart-card">
-      <div class="dcc-head">
-        <div style="min-width:0"><div class="dcc-title">📊 نمودار فروش</div><div class="dcc-sub" id="dcc-sub">متصل به پارچه‌های ثبت‌شده — روی هر ستون کلیک کنید</div></div>
-        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-          <div class="dash-legend"><span><i class="lg-amt"></i>مبلغ (افغانی)</span><span><i class="lg-lit"></i>لیتر</span><span><i class="lg-prf"></i>مفاد</span></div>
-          <div class="dash-tabs">
-            <button class="dash-tab active" onclick="dashSetRange('day',this)">روز</button>
-            <button class="dash-tab" onclick="dashSetRange('week',this)">هفته</button>
-            <button class="dash-tab" onclick="dashSetRange('month',this)">ماه</button>
-            <button class="dash-tab" onclick="dashSetRange('year',this)">سال</button>
-          </div>
+  <!-- ── ردیف دوم: وضعیت سوخت‌ها | روند فروش | موجودی مخازن ── -->
+  <div class="dash-row">
+    <div class="k-card">
+      <div class="k-head"><h3>وضعیت سوخت‌ها</h3></div>
+      <div class="k-body" id="dash-fuel-status"></div>
+    </div>
+
+    <div class="k-card k-wide">
+      <div class="k-head">
+        <div style="min-width:0"><h3>روند فروش</h3><div class="dc-sub" id="dash-area-sub" style="margin-top:3px"></div></div>
+        <div class="dash-seg">
+          <button class="dash-fuel-btn active" onclick="dashSetFuel('all',this)">همه</button>
+          <button class="dash-fuel-btn" onclick="dashSetFuel('petrol',this)">پطرول</button>
+          <button class="dash-fuel-btn" onclick="dashSetFuel('diesel',this)">دیزل</button>
         </div>
       </div>
-      <div class="dash-bars" id="dash-bars"></div>
-      <div class="dash-detail" id="dash-detail"></div>
-      <div class="dash-trend-wrap">
-        <div class="dash-trend-head">
-          <span class="dash-trend-title">📈 روند مفاد و مصارف</span>
-          <div class="dash-legend"><span><i class="lg-prf"></i>مفاد</span><span><i class="lg-exp"></i>مصارف</span></div>
+      <div class="k-body"><svg id="dash-area" viewBox="0 0 620 250"></svg></div>
+    </div>
+
+    <div class="k-card">
+      <div class="k-head"><h3>موجودی مخازن</h3></div>
+      <div class="k-body">
+        <div class="dash-donut-wrap">
+          <span class="dash-donut">
+            <svg viewBox="0 0 42 42"><circle class="dn-track" cx="21" cy="21" r="15.9" stroke-width="5.2"/><g id="dash-donut-segs"></g></svg>
+            <span class="dash-donut-mid"><b id="dash-donut-pct">۰٪</b><span>میزان پر بودن کل</span></span>
+          </span>
+          <div class="dash-tank-legend" id="dash-tank-legend"></div>
         </div>
-        <svg id="dash-trend" viewBox="0 0 300 80" preserveAspectRatio="none"></svg>
+        <button class="dash-ghost-btn" onclick="showSection('storage')">مشاهده همه</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ردیف سوم: آخرین هشدارها | نمودار فروش | آخرین فروش‌ها ── -->
+  <div class="dash-row">
+    <div class="k-card">
+      <div class="k-head"><h3>آخرین هشدارها</h3></div>
+      <div class="k-body" id="dash-alerts"></div>
+    </div>
+
+    <div class="k-card k-wide">
+      <div class="k-head">
+        <div style="min-width:0"><h3>نمودار فروش</h3><div class="dc-sub" id="dcc-sub" style="margin-top:3px"></div></div>
+        <div class="dash-seg">
+          <button class="dash-tab active" onclick="dashSetRange('day',this)">روزانه</button>
+          <button class="dash-tab" onclick="dashSetRange('week',this)">هفتگی</button>
+          <button class="dash-tab" onclick="dashSetRange('month',this)">ماهانه</button>
+          <button class="dash-tab" onclick="dashSetRange('year',this)">سالانه</button>
+        </div>
+      </div>
+      <div class="k-body">
+        <div class="dash-legend" style="margin-bottom:4px"><span><i class="lg-amt"></i>مبلغ (افغانی)</span><span><i class="lg-lit"></i>لیتر</span><span><i class="lg-prf"></i>مفاد</span></div>
+        <div class="dash-bars" id="dash-bars"></div>
+        <div class="dash-detail" id="dash-detail"></div>
+        <div class="dash-trend-wrap">
+          <div class="dash-trend-head">
+            <span class="dash-trend-title">روند مفاد و مصارف</span>
+            <div class="dash-legend"><span><i class="lg-prf"></i>مفاد</span><span><i class="lg-exp"></i>مصارف</span></div>
+          </div>
+          <svg id="dash-trend" viewBox="0 0 300 80" preserveAspectRatio="none"></svg>
+        </div>
       </div>
     </div>
 
-    <div class="dash-side">
-      <div class="dash-card dash-tank-card" title="رفتن به مخزن" onclick="if(!event.target.closest('button,input,select'))showSection((_dashFuel==='all'?_dashTankFuel:_dashFuel)==='diesel'?'storage-diesel':'storage')"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-storage"/></svg></span><button class="dash-tank-toggle" id="dash-tank-toggle" onclick="dashToggleTank()">🔁 دیزل</button></div><div class="dc-title" id="dash-tank-title">موجودی مخزن — ⛽ پطرول</div><div id="dash-tank"></div></div>
-      <div class="dash-hero" title="رفتن به پارچه‌ها" onclick="showSection('shifts')">
-        <div class="dhero-gauge"><svg viewBox="0 0 120 66"><path class="tr" d="M12 60 A48 48 0 0 1 108 60"/><path class="bar" id="dash-hero-arc" d="M12 60 A48 48 0 0 1 108 60"/></svg><b id="dash-hero-pct">0٪</b></div>
-        <div class="dhero-ic"><svg><use href="#ic-profit"/></svg></div>
-        <div class="dhero-label" id="dash-hero-label">فروش امروز</div>
-        <div class="dhero-value" id="dash-hero-value">0</div>
-        <div class="dhero-sub" id="dash-hero-sub"></div>
-      </div>
+    <div class="k-card">
+      <div class="k-head"><h3>آخرین فروش‌ها</h3><button class="dash-ghost-btn" style="width:auto;margin:0;padding:7px 13px" onclick="showSection('shifts')">مشاهده همه</button></div>
+      <div class="k-body"><div class="dash-recent-wrap" id="dash-recent"></div></div>
     </div>
+  </div>
+
+  <div class="dash-foot">
+    <span class="df-db" id="dash-db-status"><i></i><span>اتصال پایگاه داده</span></span>
+    <span id="dash-foot-note"></span>
   </div>
 </div>
 
@@ -21228,21 +21284,16 @@ function _dashGrowth(cur, prev) {
   if (!prev) return cur ? null : 0;
   return Math.round((cur - prev) / prev * 100);
 }
-// دایرهٔ درصد: مثبت=سبز، منفی=سرخ، صفر=خاکستری، null=«—» (داده کافی نیست)
-function _dashSetProgress(el, pct, tip) {
+// درصدِ رشد به‌صورت متن (طرحِ مرجع به‌جای دایره، «↑ ۲۴٪ نسبت به دیروز» دارد)
+function _dashDelta(id, pct, word) {
+  const el = document.getElementById(id);
   if (!el) return;
-  const bar = el.querySelector('.bar'), txt = el.querySelector('b');
-  const C = 97.4;   // محیط دایره r=15.5
-  if (tip != null) el.title = tip + (pct == null ? ' — داده کافی نیست' : '');
-  if (pct == null) {
-    if (bar) { bar.style.strokeDasharray = C; bar.style.strokeDashoffset = C; }
-    if (txt) { txt.textContent = '—'; txt.style.color = 'var(--muted)'; }
-    return;
-  }
+  if (pct == null) { el.innerHTML = '<span style="opacity:.75">داده کافی برای مقایسه نیست</span>'; return; }
   const v = Math.max(-999, Math.min(999, Math.round(pct)));
-  const col = v > 0 ? 'var(--green)' : (v < 0 ? 'var(--red)' : 'var(--muted)');
-  if (bar) { bar.style.strokeDasharray = C; bar.style.strokeDashoffset = C - (Math.min(100, Math.abs(v)) / 100) * C; bar.style.stroke = col; }
-  if (txt) { txt.textContent = (v > 0 ? '+' : '') + n2fa(v) + '٪'; txt.style.color = col; }
+  const cls = v > 0 ? 'up' : (v < 0 ? 'down' : '');
+  const arrow = v > 0 ? '↑' : (v < 0 ? '↓' : '•');
+  el.innerHTML = '<span class="' + cls + '">' + arrow + ' ' + n2fa(Math.abs(v)) + '٪</span>'
+    + '<span>نسبت به ' + escFa(word) + '</span>';
 }
 const _dashFuelWord = () => _dashFuel === 'petrol' ? '⛽ پطرول' : (_dashFuel === 'diesel' ? '🟤 دیزل' : '⛽🟤 هر دو سوخت');
 // جمع الباقی و شمارش‌های قرض‌داران — همان منبع سرصفحه (r.albaqi ردیف‌ها)
@@ -21289,28 +21340,168 @@ function _dashExpQuick() {
   });
   return q;
 }
-let _dashTankFuel = 'petrol';   // کارت مخزن همیشه یک مخزن نشان می‌دهد؛ دکمهٔ هدر عوضش می‌کند
-function dashToggleTank() {
-  _dashTankFuel = _dashTankFuel === 'petrol' ? 'diesel' : 'petrol';
-  _renderDashTank();
+/* ── موجودی مخازن — دایرهٔ طرحِ مرجع ─────────────────────────────────────
+   همان اعدادِ بخشِ مخزن: موجودیِ هر سوخت از _fuelStock و ظرفیت از همان
+   tankCapacity_* که در بخشِ مخزن تنظیم می‌شود. هیچ عددی ساخته نمی‌شود. */
+function _dashTankInfo() {
+  const th = (typeof lsThreshold === 'function') ? lsThreshold() : 500;
+  const capOf = f => {
+    const cur = _fuelStock(f);
+    const set = parseFloat(DB['tankCapacity_' + f]);
+    return set > 0 ? set : Math.ceil(Math.max(cur, th * 4, 1000) / 1000) * 1000;
+  };
+  return [
+    { f: 'petrol', nm: '⛽ پطرول', color: 'var(--k-green)', sec: 'storage',        cur: Math.max(0, _fuelStock('petrol')), cap: capOf('petrol'), raw: _fuelStock('petrol') },
+    { f: 'diesel', nm: '🟤 دیزل',  color: 'var(--k-amber)', sec: 'storage-diesel', cur: Math.max(0, _fuelStock('diesel')), cap: capOf('diesel'), raw: _fuelStock('diesel') }
+  ];
 }
-function _renderDashTank() {
-  const host = document.getElementById('dash-tank'); if (!host) return;
-  // اگر فیلتر کلی سوخت روی پطرول/دیزل باشد همان تعیین‌کننده است؛ در حالت «همه» دکمهٔ
-  // تعویض کارت مخزن انتخاب می‌کند. هر لحظه فقط یک مخزن نمایش داده می‌شود (کادر جمع‌وجور).
-  const f = _dashFuel === 'all' ? _dashTankFuel : _dashFuel;
-  const other = f === 'petrol' ? 'diesel' : 'petrol';
-  const nameOf = x => x === 'petrol' ? '⛽ پطرول' : '🟤 دیزل';
-  const titleEl = document.getElementById('dash-tank-title');
-  if (titleEl) titleEl.textContent = 'موجودی مخزن — ' + nameOf(f);
-  const btn = document.getElementById('dash-tank-toggle');
-  if (btn) {
-    // در حالت «همه» دکمه فعال است و مخزن دیگر را پیشنهاد می‌دهد؛ در فیلتر مشخص، دکمه پنهان
-    if (_dashFuel === 'all') { btn.style.display = ''; btn.textContent = '🔁 ' + (other === 'petrol' ? 'پطرول' : 'دیزل'); }
-    else btn.style.display = 'none';
+function _renderDashTanks() {
+  const segs = document.getElementById('dash-donut-segs');
+  const leg = document.getElementById('dash-tank-legend');
+  if (!segs || !leg) return;
+  const list = _dashTankInfo();
+  const totCur = list.reduce((a, t) => a + t.cur, 0);
+  const totCap = list.reduce((a, t) => a + t.cap, 0);
+  const pct = totCap > 0 ? Math.round(Math.min(100, totCur / totCap * 100)) : 0;
+  const el = document.getElementById('dash-donut-pct');
+  if (el) el.textContent = n2fa(pct) + '٪';
+  // هر سوخت یک کمانِ دایره به اندازهٔ سهمِ خودش از کلِ ظرفیت
+  const C = 99.9;   // محیط دایره r=15.9
+  let off = 0;
+  segs.innerHTML = list.map(t => {
+    const share = totCap > 0 ? Math.min(100, t.cur / totCap * 100) : 0;
+    const len = share / 100 * C;
+    const html = '<circle class="dn-seg" cx="21" cy="21" r="15.9" stroke-width="5.2" stroke="' + t.color
+      + '" stroke-dasharray="' + len.toFixed(2) + ' ' + (C - len).toFixed(2)
+      + '" stroke-dashoffset="' + (-off).toFixed(2) + '"></circle>';
+    off += len;
+    return html;
+  }).join('');
+  leg.innerHTML = list.map(t =>
+    '<button type="button" class="tl-item" style="--tc:' + t.color + ';background:none;border:none;padding:0;cursor:pointer;text-align:right"'
+    + ' onclick="showSection(\'' + t.sec + '\')">'
+    + '<i></i><span><span class="tl-nm">' + t.nm + '</span>'
+    + '<span class="tl-l" style="display:block">' + n2fa(Math.round(t.cur)) + ' لیتر از ' + n2fa(Math.round(t.cap)) + '</span></span></button>').join('');
+}
+/* ── وضعیتِ سوخت‌ها (جای «وضعیت پمپ‌ها»ی تصویرِ مرجع) ────────────────────
+   همان حدِ هشدارِ بخشِ مخزن؛ سه حالت: کافی / رو به اتمام / تمام شده. */
+function _renderDashFuelStatus() {
+  const host = document.getElementById('dash-fuel-status');
+  if (!host) return;
+  const th = (typeof lsThreshold === 'function') ? lsThreshold() : 500;
+  host.innerHTML = _dashTankInfo().map(t => {
+    let state, col;
+    if (t.raw <= 0) { state = 'تمام شده'; col = 'var(--k-red)'; }
+    else if (t.raw <= th) { state = 'کمبود'; col = 'var(--k-red)'; }
+    else if (t.raw <= th * 2) { state = 'رو به اتمام'; col = 'var(--k-amber)'; }
+    else { state = 'موجودی کافی'; col = 'var(--k-green)'; }
+    return '<button type="button" class="fs-row" style="--fc:' + col + '" onclick="showSection(\'' + t.sec + '\')">'
+      + '<span style="min-width:0"><span class="fs-name">' + t.nm.replace(/^\S+\s/, '') + '</span>'
+      + '<span class="fs-state" style="display:block">' + state + ' · ' + n2fa(Math.round(t.cur)) + ' لیتر</span></span>'
+      + '<span class="fs-ic">' + t.nm.split(' ')[0] + '</span></button>';
+  }).join('');
+}
+/* ── نمودارِ روندِ فروش (سطحی) — همان سطل‌های زمانیِ نمودارِ ستونی ──────── */
+function _renderDashArea(disp, sel) {
+  const svg = document.getElementById('dash-area');
+  if (!svg) return;
+  const n = disp.length;
+  if (n < 2) { svg.innerHTML = ''; return; }
+  const vals = disp.map(b => Math.max(0, _dashPick(b).a));
+  const vmax = Math.max(1, ...vals);
+  // viewBox را با اندازهٔ واقعیِ کادر یکی می‌کنیم تا متنِ محورها در هیچ عرضی
+  // کشیده/له نشود (preserveAspectRatio="none" متن را بدشکل می‌کرد)
+  const bb = svg.getBoundingClientRect();
+  const W = Math.max(300, Math.round(bb.width) || 620);
+  const H = Math.max(160, Math.round(bb.height) || 250);
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.removeAttribute('preserveAspectRatio');
+  const L = 58, R = W - 10, T = 18, B = H - 36;           // محدودهٔ رسم
+  const X = i => R - (i / (n - 1)) * (R - L);              // RTL: اندیس ۰ (دورهٔ جاری) سمت راست
+  const Y = v => B - (v / vmax) * (B - T);
+  const pts = vals.map((v, i) => X(i).toFixed(1) + ',' + Y(v).toFixed(1));
+  // محور عمودی مثل تصویرِ مرجع: عددهای کوتاه + واحد در بالای محور
+  const unit = vmax >= 1e6 ? { d: 1e6, t: 'میلیون افغانی' }
+    : (vmax >= 1000 ? { d: 1000, t: 'هزار افغانی' } : { d: 1, t: 'افغانی' });
+  const nice = v => { const x = v / unit.d; return n2fa(x >= 10 || x === 0 ? Math.round(x) : Math.round(x * 10) / 10); };
+  let out = '<defs><linearGradient id="arGrad" x1="0" y1="0" x2="0" y2="1">'
+    + '<stop offset="0%" stop-color="var(--k-green)" stop-opacity=".38"/>'
+    + '<stop offset="100%" stop-color="var(--k-green)" stop-opacity="0"/></linearGradient></defs>';
+  // خط‌کش‌های افقی + برچسبِ مقدار
+  for (let g = 0; g <= 4; g++) {
+    const v = vmax * (1 - g / 4), y = Y(v);
+    out += '<line class="ar-grid" x1="' + L + '" y1="' + y.toFixed(1) + '" x2="' + R.toFixed(1) + '" y2="' + y.toFixed(1) + '"/>'
+      + '<text x="' + (L - 8) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="end">' + nice(v) + '</text>';
   }
-  if (typeof __renderTanksInto !== 'function') { host.innerHTML = ''; return; }
-  __renderTanksInto(host, [f]);
+  out += '<text x="' + (L - 8) + '" y="12" text-anchor="end">' + unit.t + '</text>';
+  out += '<path class="ar-fill" d="M' + X(0).toFixed(1) + ',' + B + ' L' + pts.join(' L') + ' L' + X(n - 1).toFixed(1) + ',' + B + ' Z"/>';
+  out += '<path class="ar-line" d="M' + pts.join(' L') + '"/>';
+  disp.forEach((b, i) => {
+    out += '<circle class="ar-dot' + (i === sel ? ' sel' : '') + '" cx="' + X(i).toFixed(1) + '" cy="' + Y(vals[i]).toFixed(1)
+      + '" r="' + (i === sel ? 6.5 : 4.5) + '" onclick="dashSelectBar(' + i + ')"><title>'
+      + escFa(b.full + ' — ' + n2fa(Math.round(vals[i])) + ' افغانی') + '</title></circle>';
+    out += '<text x="' + X(i).toFixed(1) + '" y="' + (B + 22) + '" text-anchor="middle">' + escFa(b.label) + '</text>';
+  });
+  // حبابِ مقدارِ دورهٔ انتخاب‌شده (مثل تصویرِ مرجع)
+  const sy0 = Y(vals[sel]);
+  const txt = n2fa(Math.round(vals[sel])) + ' افغانی';
+  const w = Math.max(64, txt.length * 7.2);
+  // حباب هیچ‌وقت از لبه‌های کادر بیرون نزند (قبلاً روی ستونِ آخر بریده می‌شد)
+  const sx = Math.min(R - w / 2 - 2, Math.max(L + w / 2 + 2, X(sel)));
+  const sy = Math.max(T + 28, sy0);
+  out += '<rect class="ar-tipbox" x="' + (sx - w / 2).toFixed(1) + '" y="' + (sy - 30).toFixed(1)
+    + '" width="' + w.toFixed(1) + '" height="21" rx="7"/>'
+    + '<text class="ar-tiptxt" x="' + sx.toFixed(1) + '" y="' + (sy - 15.5).toFixed(1) + '" text-anchor="middle">' + txt + '</text>';
+  svg.innerHTML = out;
+}
+/* ── آخرین فروش‌ها — از همان پارچه‌های ثبت‌شده (فقط خواندنی) ───────────── */
+function _renderDashRecent() {
+  const host = document.getElementById('dash-recent');
+  if (!host) return;
+  const rows = [];
+  (DB.reports || []).forEach(r => {
+    if (!r || r.fuel !== 'petrol' || !r.date) return;
+    [['روز', r.day], ['شب', r.night]].forEach(([w, sh]) => {
+      if (!sh || (!sh.money && !sh.sale)) return;
+      rows.push({ date: r.date, w, fuel: '⛽ پطرول', l: sh.sale || 0, m: sh.money || 0, sec: 'shifts' });
+    });
+  });
+  (DB.shifts || []).forEach(s => {
+    if (!s || s.fuel !== 'diesel' || !s.date) return;
+    if (!s.money && !s.sale) return;
+    rows.push({ date: s.date, w: s.shift === 'night' ? 'شب' : 'روز', fuel: '🟤 دیزل', l: s.sale || 0, m: s.money || 0, sec: 'shifts-diesel' });
+  });
+  if (_dashFuel === 'petrol') { for (let i = rows.length - 1; i >= 0; i--) if (rows[i].fuel !== '⛽ پطرول') rows.splice(i, 1); }
+  if (_dashFuel === 'diesel') { for (let i = rows.length - 1; i >= 0; i--) if (rows[i].fuel !== '🟤 دیزل') rows.splice(i, 1); }
+  rows.sort((a, b) => _shDateKey(b.date) - _shDateKey(a.date));
+  const top = rows.slice(0, 6);
+  if (!top.length) { host.innerHTML = '<div class="dash-empty">هنوز پارچه‌ای ثبت نشده</div>'; return; }
+  host.innerHTML = '<table class="dash-recent"><thead><tr>'
+    + '<th>تاریخ</th><th>وقت</th><th>سوخت</th><th>مبلغ</th><th>مقدار</th><th></th></tr></thead><tbody>'
+    + top.map(r => '<tr><td>' + escFa(r.date) + '</td><td>' + r.w + '</td><td>' + r.fuel + '</td>'
+      + '<td>' + n2fa(Math.round(r.m)) + '</td><td>' + n2fa(Math.round(r.l)) + ' ل</td>'
+      + '<td><button class="r-go" title="رفتن به پارچه‌ها" onclick="showSection(\'' + r.sec + '\')">👁</button></td></tr>').join('')
+    + '</tbody></table>';
+}
+/* ── ساعت و وضعیتِ اتصال (نوارِ بالا و پایینِ تصویرِ مرجع) ────────────── */
+function _renderDashChrome() {
+  const c = document.getElementById('dash-clock');
+  if (c) {
+    const d = new Date();
+    const p = x => n2fa(String(x).padStart(2, '0'));
+    c.textContent = p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+  }
+  const on = navigator.onLine;
+  const pill = document.getElementById('dash-status-pill');
+  const ptxt = document.getElementById('dash-status-txt');
+  if (pill) pill.classList.toggle('off', !on);
+  if (ptxt) ptxt.textContent = on ? 'جایگاه فعال' : 'آفلاین — بدون اینترنت';
+  const db = document.getElementById('dash-db-status');
+  if (db) { db.classList.toggle('off', !on); db.lastElementChild.textContent = on ? 'اتصال پایگاه داده' : 'اتصال پایگاه داده قطع است'; }
+  const nm = document.getElementById('dash-user-name');
+  if (nm) nm.textContent = (typeof currentRole !== 'undefined' && currentRole === 'viewer') ? 'نظاره‌گر' : 'مدیر سیستم';
+  const note = document.getElementById('dash-foot-note');
+  if (note) note.textContent = (DB.stationName || 'سامانه مدیریت پمپ یعقوبی') + ' — نسخهٔ ' + APP_VERSION;
 }
 function _renderDashChart(disp, sel, skipAnim) {
   const wrap = document.getElementById('dash-bars'); if (!wrap) return;
@@ -21335,7 +21526,7 @@ function renderDashboard(skipAnim) {
   const setT = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
   const g = document.getElementById('dash-greet');
   if (g) { const h = new Date().getHours(); g.textContent = h < 12 ? 'صبح بخیر 👋' : (h < 17 ? 'چاشت بخیر 👋' : 'شب بخیر 👋'); }
-  try { const a = allDates(); setT('dash-date', '📅 امروز: ' + a.sh + ' — ' + a.shName); } catch (e) { setT('dash-date', '📅 ' + persianDate()); }
+  try { const a = allDates(); setT('dash-date', '· ' + a.shName + ' ' + a.sh); } catch (e) { setT('dash-date', '· ' + persianDate()); }
 
   const { buckets } = _dashSeries();
   const disp = buckets.slice(1);
@@ -21348,49 +21539,60 @@ function renderDashboard(skipAnim) {
   const rangeWord = { day: 'امروز', week: 'این هفته', month: 'این ماه', year: 'امسال' }[_dashRange];
   const perWord = { day: 'روز قبل', week: 'هفته قبل', month: 'ماه قبل', year: 'سال قبل' }[_dashRange];
   const bucketWord = isCur ? rangeWord : selB.label;
-  const prog = (id, pct, tip) => _dashSetProgress(document.getElementById(id), pct, tip);
+
+  // ۰) هشدارها
+  let alerts = [];
+  try { alerts = _dashAlertItems(); } catch (e) {}
+  const realAlerts = alerts.filter(a => a.cls !== 'ok').length;
+  setT('dcv-alerts', n2fa(realAlerts) + ' مورد');
+  setT('dcd-alerts', realAlerts ? 'نیاز به بررسی' : 'همه‌چیز مرتب است');
+  const badge = document.getElementById('dash-bell-badge');
+  if (badge) { badge.textContent = n2fa(realAlerts); badge.classList.toggle('on', realAlerts > 0); }
 
   // ۱) فروش — مبلغ + تفکیک پطرول/دیزل + لیتر
   setT('dct-sales', 'فروش ' + bucketWord);
   setT('dcv-sales', n2fa(Math.round(cur.a)) + ' افغانی');
   setT('dcs-sales', '⛽ ' + n2fa(Math.round(selB.petrol.a)) + ' · 🟤 ' + n2fa(Math.round(selB.diesel.a)) + ' · 🛢️ ' + n2fa(Math.round(cur.l)) + ' لیتر');
-  prog('dcp-sales', _dashGrowth(cur.a, prev.a), 'نسبت به ' + perWord);
+  _dashDelta('dcd-sales', _dashGrowth(cur.a, prev.a), perWord);
 
   // ۲) مفاد — از همان profit ثبت‌شدهٔ پارچه‌ها
   setT('dct-profit', 'مفاد ' + bucketWord);
   setT('dcv-profit', n2fa(Math.round(cur.p)) + ' افغانی');
   setT('dcs-profit', '⛽ ' + n2fa(Math.round(selB.petrol.p)) + ' · 🟤 ' + n2fa(Math.round(selB.diesel.p)));
-  prog('dcp-profit', _dashGrowth(cur.p, prev.p), 'نسبت به ' + perWord);
+  _dashDelta('dcd-profit', _dashGrowth(cur.p, prev.p), perWord);
 
   // ۳) قرض‌داران — جمع الباقی + شمارش‌ها
   const dbt = _dashDebtInfo();
   setT('dcv-debt', n2fa(Math.round(dbt.total)) + ' افغانی');
   setT('dcs-debt', '👥 ' + n2fa(dbt.persons) + ' قرض‌دار · 🧾 ' + n2fa(dbt.invoices) + ' فاکتور قرضی · 🏢 ' + n2fa(dbt.comps) + ' شرکت بدهکار');
-  prog('dcp-debt', null, 'مقایسهٔ دوره‌ای برای الباقی تعریف نشده');
 
   // ۴) مصارف — بازهٔ انتخابی + خلاصهٔ روز/هفته/ماه/سال
   const q = _dashExpQuick();
   setT('dct-exp', 'مصارف ' + bucketWord);
   setT('dcv-exp', n2fa(Math.round(selB.exp)) + ' افغانی');
   setT('dcs-exp', 'امروز ' + n2fa(Math.round(q.day)) + ' · هفته ' + n2fa(Math.round(q.week)) + ' · ماه ' + n2fa(Math.round(q.month)) + ' · سال ' + n2fa(Math.round(q.year)));
-  prog('dcp-exp', _dashGrowth(selB.exp, prevB.exp), 'نسبت به ' + perWord);
+  _dashDelta('dcd-exp', _dashGrowth(selB.exp, prevB.exp), perWord);
 
   // ۵) گاوصندوق — موجودی کل + ورود/خروج بازهٔ انتخابی
   const sb = _dashSafeBalance();
   setT('dcv-safe', n2fa(Math.round(sb.afn)) + ' افغانی' + (sb.usd ? ' · $' + n2fa(Math.round(sb.usd)) : ''));
   setT('dcs-safe', 'ورود ' + bucketWord + ': ' + n2fa(Math.round(selB.sin)) + ' · خروج: ' + n2fa(Math.round(selB.sout)));
-  prog('dcp-safe', _dashGrowth(selB.sin - selB.sout, prevB.sin - prevB.sout), 'تغییرات نسبت به ' + perWord);
+  _dashDelta('dcd-safe', _dashGrowth(selB.sin - selB.sout, prevB.sin - prevB.sout), perWord);
 
-  // ۶) مخزن — همان کارت واقعی بخش مخزن
-  _renderDashTank();
+  // ۶) مخزن‌ها، وضعیت سوخت‌ها، آخرین فروش‌ها، ساعت/وضعیت اتصال
+  try { _renderDashTanks(); } catch (e) {}
+  try { _renderDashFuelStatus(); } catch (e) {}
+  try { _renderDashRecent(); } catch (e) {}
+  try { _renderDashChrome(); } catch (e) {}
 
-  // نمودار + جزئیات ستون انتخاب‌شده + کارت بزرگ
+  // نمودارها + جزئیات ستون انتخاب‌شده
   _renderDashChart(disp, sel, skipAnim);
+  try { _renderDashArea(disp, sel); } catch (e) {}
   const gPct = _dashGrowth(cur.a, prev.a);
   const dEl = document.getElementById('dash-detail');
   if (dEl) {
     const gTxt = gPct == null ? 'داده کافی نیست' : ((gPct > 0 ? '+' : '') + n2fa(gPct) + '٪');
-    const gCol = (gPct == null || gPct === 0) ? 'var(--muted)' : (gPct > 0 ? 'var(--green)' : 'var(--red)');
+    const gCol = (gPct == null || gPct === 0) ? 'var(--muted)' : (gPct > 0 ? 'var(--k-green)' : 'var(--k-red)');
     dEl.innerHTML = `<b>📅 ${selB.full}</b>` +
       `<span>💰 فروش: <b>${n2fa(Math.round(cur.a))} افغانی</b></span>` +
       `<span>🛢️ لیتر: <b>${n2fa(Math.round(cur.l))} ل</b> (⛽ ${n2fa(Math.round(selB.petrol.l))} · 🟤 ${n2fa(Math.round(selB.diesel.l))})</span>` +
@@ -21399,12 +21601,7 @@ function renderDashboard(skipAnim) {
       `<span>📈 رشد نسبت به ${perWord}: <b style="color:${gCol}">${gTxt}</b></span>`;
   }
   setT('dcc-sub', _dashFuelWord() + ' — روی هر ستون کلیک کنید تا جزئیات و رشد همان بازه بیاید');
-  const arc = document.getElementById('dash-hero-arc');
-  if (arc) arc.style.strokeDashoffset = 151 - (Math.min(100, Math.abs(gPct || 0)) / 100) * 151;
-  setT('dash-hero-pct', gPct == null ? '—' : (gPct > 0 ? '+' : '') + n2fa(gPct) + '٪');
-  setT('dash-hero-label', 'فروش ' + bucketWord + ' — ' + _dashFuelWord());
-  setT('dash-hero-value', n2fa(Math.round(cur.a)) + ' افغانی');
-  setT('dash-hero-sub', '🛢️ ' + n2fa(Math.round(cur.l)) + ' لیتر · 🧾 ' + n2fa(cur.c) + ' ثبت · رشد نسبت به ' + perWord + ': ' + (gPct == null ? 'داده کافی نیست' : (gPct > 0 ? '+' : '') + n2fa(gPct) + '٪'));
+  setT('dash-area-sub', 'فروش ' + bucketWord + ' — ' + _dashFuelWord() + ' · روی هر نقطه بزنید');
   try { _renderDashAlerts(); } catch (e) {}
   try { _renderDashTrend(disp); } catch (e) {}
 }
@@ -21446,9 +21643,26 @@ function _renderDashAlerts() {
   const el = document.getElementById('dash-alerts');
   if (!el) return;
   const items = _dashAlertItems();
-  el.innerHTML = items.length
-    ? items.map(c => `<button type="button" class="da-chip ${c.cls}" onclick="${c.go}">${c.txt}</button>`).join('')
-    : '<span class="da-chip ok" style="cursor:default">✅ همه‌چیز مرتب است — مخزن، قرض‌داران و بکاپ ابری</span>';
+  if (!items.length) {
+    el.innerHTML = '<div class="dash-empty">✅ همه‌چیز مرتب است — مخزن، قرض‌داران و بکاپ ابری</div>';
+    return;
+  }
+  // فهرستِ هشدارها با همان ظاهرِ تصویرِ مرجع: عنوانِ رنگی + توضیحِ کوتاه
+  const COL = { warn: 'var(--k-red)', soft: 'var(--k-amber)', ok: 'var(--k-green)' };
+  const SUB = {
+    warn: 'همین حالا رسیدگی کنید',
+    soft: 'بهتر است بررسی شود',
+    ok: 'وضعیت عادی'
+  };
+  el.innerHTML = items.map(c => {
+    const icon = c.cls === 'warn' ? '⚠️' : (c.cls === 'soft' ? '🔔' : '✅');
+    // ایموجیِ ابتدای متن در آیکونِ کنار می‌نشیند تا عنوان تمیز بماند
+    const txt = String(c.txt || '').replace(/^[^\p{L}\p{N}]+/u, '').trim();
+    return '<button type="button" class="da-item" style="--ac:' + (COL[c.cls] || 'var(--k-amber)') + '"'
+      + ' onclick="' + c.go + '"><span class="da-ic">' + icon + '</span>'
+      + '<span style="min-width:0"><span class="da-t">' + txt + '</span>'
+      + '<span class="da-s">' + (SUB[c.cls] || '') + '</span></span></button>';
+  }).join('');
 }
 function dashBellClick() {
   const items = _dashAlertItems();
@@ -21484,6 +21698,13 @@ function _renderDashTrend(disp) {
     `<polyline class="tl-exp" points="${pts(exp)}"/>` +
     `<circle class="tl-dot" cx="${X(0).toFixed(1)}" cy="${Y(prf[0]).toFixed(1)}" r="3"/>`;
 }
+// ساعتِ نوارِ بالای داشبورد — فقط وقتی داشبورد باز است تیک می‌زند
+setInterval(function () {
+  try {
+    const sec = document.getElementById('sec-dashboard');
+    if (sec && sec.classList.contains('visible')) _renderDashChrome();
+  } catch (e) {}
+}, 1000);
 // بروزرسانی زنده: هر تغییری در سیستم از save() می‌گذرد؛ اگر داشبورد باز باشد،
 // نمایش خودکار تازه می‌شود (فقط نمایش — هیچ منطقی عوض نشده)
 let _dashRefreshT = null;
@@ -35843,7 +36064,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.153';
+const APP_VERSION = '2.9.154';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
