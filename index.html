@@ -15760,12 +15760,8 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
     <div class="lock-err" id="lockErr"></div>
     <div style="font-size:0.72rem;color:rgba(255,255,255,.6);margin-top:10px">رمز مدیر یا نظاره‌گر را وارد کنید</div>
     <button type="button" id="lsStaffBtn" onclick="openStaffPage()" style="margin-top:14px;width:100%;background:transparent;border:1.5px dashed rgba(255,255,255,.45);color:rgba(255,255,255,.88);border-radius:10px;padding:10px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">👷 صفحه کارمند — دیدن تیل و مخزن (بدون رمز)</button>
-    <!-- روی هر دستگاهی (گوشی/تبلت/کامپیوتر) که برنامه هنوز نصب نشده و مرورگر نصب را پشتیبانی کند دیده می‌شود -->
-    <button type="button" id="pwaInstallBtn" onclick="pwaInstall()" style="display:none;margin-top:10px;width:100%;background:rgba(217,119,6,.16);border:1.5px solid rgba(246,166,35,.6);color:#ffd89b;border-radius:10px;padding:10px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">📲 نصب برنامه روی این دستگاه</button>
-    <!-- فایل نصب برای اندروید/ویندوز و راهنمای آیفون — فقط برای کسی که برنامه را
-         هنوز نصب نکرده است. اگر برنامه نصب شده باشد (اپ اندروید، نسخهٔ ویندوز،
-         یا نصب‌شده روی صفحهٔ اصلی) این کادر اصلاً ساخته نمی‌شود — pumpAppInstalled() -->
-    <a href="./app.html" id="lsGetAppLink" style="display:none;margin-top:10px;width:100%;box-sizing:border-box;background:transparent;border:1.5px solid rgba(255,255,255,.28);color:rgba(255,255,255,.85);border-radius:10px;padding:10px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;text-align:center;text-decoration:none">⬇️ دریافت برنامه برای اندروید / ویندوز / آیفون</a>
+    <!-- دکمهٔ «نصب برنامه روی این دستگاه» و ردیفِ «دریافت برنامه» از صفحهٔ قفل
+         برداشته شدند. صفحهٔ دریافت برنامه سرِ جایش هست: app.html -->
   </div>
   <div style="position:relative;z-index:2;margin-top:18px;font-size:0.7rem;color:rgba(255,255,255,.5);text-align:center;line-height:1.9">۱۴۰۵ برای پمپ یعقوبی طراحی شده ـــ تمام حقوق محفوظ است<br>طراحی و توسعه: vil3ntec@gmail.com محمد هارون<br>شماره 0792236008 +93</div>
 </div>
@@ -15816,8 +15812,8 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
       </span>
       <span class="dn-thumb" aria-hidden="true"></span>
     </button>
-    <!-- زنگ اعلان‌ها — خبرهایی که از سرور خانگی می‌آید (مثل ntfy، ولی مالِ خودمان) -->
-    <button class="theme-toggle ntf-bell" id="ntfBellBtn" onclick="ntfOpen()" title="اعلان‌ها" aria-label="اعلان‌ها">🔔<span class="ntf-dot" id="ntfDot" style="display:none">0</span></button>
+    <!-- زنگِ اعلان از سربرگ برداشته شد؛ فهرستِ خبرهای سرور از «تنظیمات › اعلان‌ها» باز می‌شود.
+         خودِ خبرها مثل قبل زنده می‌رسند (توست وقتی برنامه باز است، نوتیفیکیشن وقتی بسته است). -->
     <span class="role-badge" id="roleBadge" style="background:var(--green)">🛡️ مدیر</span>
     <button class="lock-btn" id="adminUnlockBtn" onclick="promptAdminUnlock()" style="display:none;background:var(--green)">🔓 ورود مدیر</button>
     <button class="lock-btn" id="lockBtn" onclick="lockApp()">🔒 قفل</button>
@@ -18336,6 +18332,12 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <button class="goto-btn" onclick="showSection('settings')">→ برگشت به تنظیمات</button>
     <span style="display:inline-flex;align-items:center;gap:10px">🔔 اعلان‌ها</span>
   </div>
+  <!-- جای زنگِ سربرگ (که برداشته شد): فهرستِ خبرهای رسیده از سرور خانگی -->
+  <div class="settings-card" style="border-color:var(--blue)">
+    <div class="settings-title" style="color:var(--blue)">📨 خبرهای سرور</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">فهرستِ اعلان‌هایی که از سرور خانگی رسیده و روشن کردنِ اعلان روی همین دستگاه.</div>
+    <button class="pw-btn" style="background:var(--blue);color:#fff" onclick="ntfOpen()">📨 دیدن خبرهای سرور</button>
+  </div>
   <div class="settings-card">
     <div class="settings-title">🔔 صدا و اعلان</div>
     <div style="font-size:0.85rem;color:var(--muted);line-height:1.8;margin-bottom:12px">
@@ -18351,7 +18353,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
       🔐 اگر خواستید اعلان‌ها را ببندید، فقط از <b>تنظیمات خودِ دستگاه</b> (اندروید: <b dir="ltr">Settings › Apps › پمپ یعقوبی › Notifications</b> — آیفون/ویندوز: تنظیماتِ اعلانِ همان برنامه) این کار انجام می‌شود؛ داخل برنامه هیچ گزینه‌ای برای خاموش کردنش وجود ندارد.<br>
       راه‌اندازی (فقط یک بار): <b>۱)</b> کد اشتراک خودکار ساخته شده و در کادر پایین است. <b>۲)</b> روی گوشی، برنامهٔ رایگان <b dir="ltr">ntfy</b> را از گوگل‌پلی یا اپ‌استور نصب کنید — روی کامپیوتر لازم نیست چیزی نصب شود، فقط «باز کردن صفحهٔ اشتراک» را بزنید و اجازهٔ اعلان بدهید. <b>۳)</b> در برنامهٔ ntfy گزینهٔ <b dir="ltr">+ Subscribe to topic</b> را بزنید و کد اشتراک را وارد کنید. <b>۴)</b> با «تست اعلان» مطمئن شوید که می‌رسد.<br>
       ⚠️ کد اشتراک مثل رمز است — به هیچ‌کس ندهید؛ هر که آن را بداند اعلان پیام‌ها را می‌بیند.<br>
-      👥 <b>کارمندان و مشتریان</b> لازم نیست این کد را داشته باشند: هر کس در پنل چت روی دکمهٔ <b>🔔</b> بالای پنل بزند، مشترکِ اعلان‌های مربوط به خودش می‌شود — کارمندان: چت گروهی و هشدارها؛ مشتری کیو‌آر: فقط جواب‌های میرزا به خودش.
+      👥 <b>کارمندان و مشتریان</b> لازم نیست این کد را داشته باشند: با اولین باز کردنِ پنل چت، همان دستگاه خودکار مشترکِ اعلان‌های مربوط به خودش می‌شود — کارمندان: چت گروهی و هشدارها؛ مشتری کیو‌آر: فقط جواب‌های میرزا به خودش.
     </div>
     <div class="pw-row">
       <div class="pw-field" style="flex:1"><label>کد اشتراک (تاپیک)</label><input id="push-topic" readonly dir="ltr" style="direction:ltr;text-align:left" placeholder="هنوز ساخته نشده — «فعال کردن» را بزنید"></div>
@@ -18650,7 +18652,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
   <div class="rb-head" id="robotHead">
     <span class="rb-title"><svg><use href="#ic-robot"/></svg> <span id="rbTitleTxt">ربات دستیار</span> <span class="app-version" style="opacity:.7"></span></span>
     <span style="display:flex;gap:2px;align-items:center">
-      <button class="rb-size" onclick="pushSubscribeSelf()" title="اعلان پیام‌ها حتی وقتی برنامه بسته است" style="font-size:0.95rem">🔔</button>
       <button class="rb-size" onclick="toggleRobotSize()" title="بزرگ/کوچک"><svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round"><use href="#ic-expand"/></svg></button>
       <button class="rb-close" onclick="toggleRobot()" title="بستن">✕</button>
     </span>
@@ -32244,66 +32245,28 @@ function showTopToast(msg, bg, duration) {
   if (_topToastTimer) clearTimeout(_topToastTimer);
   _topToastTimer = setTimeout(() => t.classList.remove('show'), duration || 6000);
 }
-/* ── نوارِ «به سرور وصل نیست» ────────────────────────────────────────────────
-   بدونِ این، دستگاهی که به سرور نمی‌رسد بی‌صدا یک حسابِ خالی نشان می‌داد و آدم
-   خیال می‌کرد «این دستگاه حسابِ جداگانه دارد». حالا خودِ برنامه می‌گوید مشکل از
-   اتصال است، نه از حساب. ── */
+/* ── قطعِ ارتباط با سرور ─────────────────────────────────────────────────────
+   نوارِ سرخِ بالای صفحه (که کلِ سربرگ را می‌پوشاند) برداشته شد. ولی دستگاهی که
+   به سرور نمی‌رسد نباید بی‌صدا یک حسابِ خالی نشان بدهد؛ پس همان خبر به‌صورت یک
+   توستِ کوچکِ گوشهٔ صفحه گفته می‌شود — بدون پوشاندنِ صفحه. ── */
 (function(){
-  let _offSince = 0, _bar = null;
-  function bar(){
-    if (_bar) return _bar;
-    _bar = document.createElement('div');
-    _bar.id = 'net-offline-bar';
-    _bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;display:none;'
-      + 'background:#7c2d12;color:#fff;font-family:Vazirmatn,sans-serif;font-size:0.8rem;'
-      + 'font-weight:700;text-align:center;padding:7px 10px;line-height:1.7;box-shadow:0 2px 10px rgba(0,0,0,.35)';
-    const btn = 'margin:0 4px;padding:2px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.5);'
-      + 'background:transparent;color:#fff;font-family:inherit;font-weight:700;cursor:pointer';
-    _bar.innerHTML = '<span id="net-offline-title">⚠️ به سرور وصل نیست — چیزی که می‌بینید ممکن است کاملِ حساب نباشد.</span>'
-      + '<div style="font-size:0.7rem;font-weight:400;opacity:.85;direction:ltr" id="net-offline-url"></div>'
-      + '<button id="net-retry" style="' + btn + '">تلاش دوباره</button>'
-      + '<button id="net-builtin" style="' + btn + '">سرور پیش‌فرض برنامه</button>'
-      + '<button id="net-fixpw" style="' + btn + ';display:none">🔑 گذاشتن رمزِ تازه</button>';
-    _bar.querySelector('#net-retry').onclick = function(){ try { window.__pumpNet__.reconnect(); } catch(e){} };
-    _bar.querySelector('#net-builtin').onclick = function(){
-      try { window.__pumpServerCfg__.resetToBuiltin(); } catch(e){}
-    };
-    // رمز رد شده: کاربر باید بتواند همان‌جا رمزِ تازه را بگذارد، نه اینکه دنبالِ
-    // صفحهٔ تنظیمات بگردد. رمز را از پنلِ سرور (خدمات سرور › رمز) برمی‌دارد.
-    _bar.querySelector('#net-fixpw').onclick = function(){
-      try { showSection('serverservices'); } catch(e){}
-      try { fillSyncSettings(); } catch(e){}
-      try {
-        var el = document.getElementById('server-token');
-        if (el) { el.scrollIntoView({ block: 'center' }); el.focus(); }
-      } catch(e){}
-    };
-    try { document.body.appendChild(_bar); } catch(e){ _bar = null; }
-    return _bar;
-  }
-  function show(on){
-    const b = bar(); if (!b) return;
-    b.style.display = on ? 'block' : 'none';
-    if (!on) return;
-    // آدرسی که دارد تلاش می‌کند + دلیلِ واقعی، جلوی چشم باشد
-    let reason = 'unreachable';
-    try { reason = window.__pumpNet__.reason(); } catch(e){}
-    const t = b.querySelector('#net-offline-title');
-    if (t) t.textContent = (reason === 'auth')
-      ? '⚠️ سرور هست ولی رمزش را قبول نکرد — رمزِ سرور عوض شده است.'
-      : '⚠️ به سرور وصل نیست — چیزی که می‌بینید ممکن است کاملِ حساب نباشد.';
-    const u = b.querySelector('#net-offline-url');
-    if (u) u.textContent = (window.__SELF_HOST_URL__ || '') + (reason === 'auth' ? '  (رمز رد شد)' : '');
-    const f = b.querySelector('#net-fixpw');
-    if (f) f.style.display = (reason === 'auth') ? '' : 'none';
-  }
+  let _offSince = 0, _lastSaid = 0;
   function tick(){
     let ok = true;
     try { ok = window.__pumpNet__ ? window.__pumpNet__.connected() : true; } catch(e){}
-    if (ok) { _offSince = 0; show(false); return; }
+    if (ok) { _offSince = 0; return; }
     if (!_offSince) _offSince = Date.now();
-    // قطعِ چند ثانیه‌ای عادی است؛ فقط قطعِ ماندگار را به کاربر می‌گوییم
-    if (Date.now() - _offSince > 20000) show(true);
+    // قطعِ چند ثانیه‌ای عادی است؛ فقط قطعِ ماندگار را به کاربر می‌گوییم — و
+    // حداکثر هر ۵ دقیقه یک بار، تا تکرارش آزاردهنده نشود
+    if (Date.now() - _offSince <= 20000) return;
+    if (_lastSaid && Date.now() - _lastSaid < 300000) return;
+    _lastSaid = Date.now();
+    let reason = 'unreachable';
+    try { reason = window.__pumpNet__.reason(); } catch(e){}
+    const msg = (reason === 'auth')
+      ? '⚠️ سرور هست ولی رمزش را قبول نکرد — رمزِ سرور عوض شده است'
+      : '⚠️ به سرور وصل نیست — چیزی که می‌بینید ممکن است کاملِ حساب نباشد';
+    try { showSyncToast(msg, '#7c2d12', 6000); } catch(e){}
   }
   try { setInterval(tick, 5000); } catch(e){}
 })();
@@ -33187,7 +33150,7 @@ function toggleRobot() {
   if (!p) return;
   const opening = !p.classList.contains('open');
   p.classList.toggle('open');
-  if (opening) { rbShowTab(_rbTab || 'qa'); _chatInitListeners(); }
+  if (opening) { rbShowTab(_rbTab || 'qa'); _chatInitListeners(); _rbAutoPush(); }
   else {
     // با بسته شدن، جابه‌جایی/تغییر اندازهٔ دستی پاک شود — باز شدنِ بعدی سر جای استاندارد
     p.style.left = ''; p.style.top = ''; p.style.right = ''; p.style.bottom = '';
@@ -34472,11 +34435,25 @@ function pushCopyTopic() {
   if (!t) { _pushMsg('کد اشتراک ساخته نشد — یک بار برنامه را ببندید و باز کنید.'); return; }
   try { navigator.clipboard.writeText(t).then(() => _pushMsg('📋 کد کپی شد.', true)); } catch (e) { _pushMsg('کپی نشد — کد را دستی انتخاب و کپی کنید.'); }
 }
-// دکمهٔ 🔔 سربرگ پنل چت: هر کس (کارمند/مشتری کیو‌آر) با یک بار زدن، مشترکِ
-// تاپیک مربوط به خودش می‌شود تا پیام‌هایش حتی با برنامهٔ بسته برسد.
-// کارمند/هرکه در برنامه است → تاپیک کارمندان (چت گروهی + هشدارها)
-// مشتری کیو‌آر → تاپیک شخصی خودش (فقط جواب‌های میرزا به خودش، نه چت‌های دیگران)
-// مدیر → تاپیک اصلی خودش
+// جای دکمهٔ 🔔 سربرگ پنل چت (که برداشته شد): با اولین باز کردنِ پنل، همین دستگاه
+// خودکار مشترکِ تاپیکِ خودش می‌شود تا پیام‌هایش حتی با برنامهٔ بسته برسد.
+// یک بار در عمرِ دستگاه انجام می‌شود و اگر کاربر اجازه نداد دیگر تکرار نمی‌شود.
+function _rbAutoPush() {
+  try {
+    if (typeof Notification === 'undefined' || !('serviceWorker' in navigator)) return;
+    if (Notification.permission === 'denied') return;
+    if (_lsPlain('pumpNtfPushOn')) return;          // قبلاً روشن شده
+    if (_lsPlain('pumpNtfPushAsked')) return;       // یک بار پرسیده‌ایم — دیگر مزاحم نشو
+    if (!_ntfBase('http')) return;                  // سرور خانگی در دسترس نیست
+    try { localStorage.setItem('pumpNtfPushAsked', '1'); } catch (e) {}
+    _ntfSubscribeThisDevice().then(ok => {
+      if (ok === true) {
+        try { showTopToast('🔔 اعلانِ پیام‌ها روی این دستگاه روشن شد — حتی وقتی برنامه بسته است می‌رسد', '#38a169', 5000); } catch (e) {}
+      }
+    }).catch(() => {});
+  } catch (e) {}
+}
+// راهِ دستی (از «تنظیمات › اعلان‌ها») — همان کارِ بالا، ولی با پیام و راهنما
 async function pushSubscribeSelf() {
   // راهِ اصلی: سرور خانگیِ خودمان — نه نصبِ برنامه لازم دارد، نه کدِ اشتراک،
   // نه تنظیمِ قبلی. یک بار «اجازه» و تمام.
@@ -36064,7 +36041,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.154';
+const APP_VERSION = '2.9.155';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
