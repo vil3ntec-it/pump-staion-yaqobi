@@ -1,7 +1,7 @@
 // سرویس‌ورکر پمپ یعقوبی — پوستهٔ برنامه (این صفحه + آیکون‌ها) را کش می‌کند تا
 // برنامه بعد از نصب، هم آنلاین و هم کاملاً آفلاین باز شود. نسخهٔ کش را هر بار
 // که APP_VERSION در index.html عوض می‌شود، این‌جا هم عوض کنید تا کش کهنه پاک شود.
-const CACHE_NAME = 'pump-yaqobi-shell-v2.9.151';
+const CACHE_NAME = 'pump-yaqobi-shell-v2.9.152';
 const APP_SHELL = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ const APP_SHELL = [
   './icons/icon-maskable-192.png',
   './icons/icon-maskable-512.png',
   './icons/apple-touch-icon.png',
+  './app.html',
   './favicon.png'
 ];
 
@@ -60,6 +61,11 @@ self.addEventListener('fetch', event => {
     // بقیهٔ مبداهای خارجی دست‌نخورده از شبکه بروند
     return;
   }
+
+  // فایل‌های نصب (downloads/) و کارتِ نسخه (version.json) هرگز کش نمی‌شوند:
+  // فایل نصب ده‌ها مگابایت است و کشِ برنامه را پر می‌کند، و version.json باید
+  // همیشه تازه خوانده شود وگرنه برنامه نسخهٔ کهنه را «آخرین نسخه» می‌بیند.
+  if (/\/downloads\//.test(url.pathname) || /\/version\.json$/.test(url.pathname)) return;
 
   const isAppShellPage = req.mode === 'navigate' || url.pathname.endsWith('/index.html') || url.pathname.endsWith('/');
   if (isAppShellPage) {
