@@ -24948,6 +24948,31 @@ function calcPersonRow(pid, idx, field, value) {
   renderPersons(currentPersonType);
   updateBanner();
 }
+/* ── خبر دادن به صاحبِ حساب ────────────────────────────────────────────────
+   وقتی میرزا حسابِ کسی را می‌نویسد یا عوض می‌کند، خودِ همان شخص خبردار شود —
+   کسی که با اسکنِ کیو‌آر حسابش را می‌بیند، روی موضوعِ خودش (p-<شناسه>) این خبر
+   را می‌گیرد و هیچ خبری از حسابِ دیگران به او نمی‌رسد.
+
+   نوشتنِ یک حساب ده‌ها بار «ذخیره» صدا می‌زند (هر خانه که پر می‌شود)، پس خبر
+   جمع می‌شود و چند ثانیه بعدِ آخرین تغییر یک اعلان فرستاده می‌شود — نه ده تا. ── */
+const _ACCT_NTF_DELAY = 8000;
+let _acctNtfTimers = {};
+function _ntfAccountTouched(person, type) {
+  try {
+    if (!person) return;
+    if (_rbMode === 'person') return;                 // خودِ مشتری که چیزی نمی‌نویسد
+    const peer = _peerKey((type || currentPersonType || 'debt') + '-' + person.id);
+    const key = String(peer);
+    if (_acctNtfTimers[key]) clearTimeout(_acctNtfTimers[key]);
+    _acctNtfTimers[key] = setTimeout(() => {
+      delete _acctNtfTimers[key];
+      _ntfSend(NTF_TOPIC_PERSON(peer), '📄 حساب شما به‌روز شد',
+        'میرزا حسابِ «' + (person.name || '') + '» را به‌روز کرد. برای دیدن، صفحهٔ حساب‌تان را باز کنید.',
+        { tags: ['memo'] });
+    }, _ACCT_NTF_DELAY);
+  } catch (e) {}
+}
+
 function updatePersonRow(pid, idx, field, value) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === pid);
@@ -24959,6 +24984,7 @@ function updatePersonRow(pid, idx, field, value) {
   _updatePersonTotals(person);
   renderPersons(currentPersonType);
   updateBanner();
+  _ntfAccountTouched(person);
 }
 function _updatePersonRowCells(person, idx, r) {
   const tbody = document.getElementById('pm-body');
@@ -25793,6 +25819,7 @@ function deletePersonRow(pid, idx) {
   }
   rowsArr.splice(idx, 1);
   save(); renderPersonRows(person); renderPersons(currentPersonType); updateBanner();
+  _ntfAccountTouched(person);
 }
 function setRowFuel(pid, idx, type) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
@@ -25841,6 +25868,7 @@ function addPersonRow() {
   const ft = (currentPersonFilter === 'diesel') ? 'diesel' : 'petrol';
   _acctRows(person).push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, rasidFuel: 0, albaqi: 0, byMoney: person.mode === 'money' });
   save(); renderPersonRows(person);
+  _ntfAccountTouched(person);
 }
 function setAllRowsFuel(type) {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
@@ -25866,6 +25894,7 @@ function addPersonRowsBulk() {
     rowsArr.push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, rasidFuel: 0, albaqi: 0, byMoney: person.mode === 'money' });
   }
   save(); renderPersonRows(person);
+  _ntfAccountTouched(person);
   showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
 }
 function closePersonModal() {
@@ -32685,6 +32714,9 @@ function _rbSetMode(mode, personCtx) {
   rbShowTab(_rbTab || 'qa');
   _chatInitListeners();
   _rbUpdateBadges();
+  // موضوعِ اعلان‌ها به نقش وابسته است: مشتریِ کیو‌آر فقط خبرِ حسابِ خودش را
+  // بگیرد، نه چت‌های داخلی و نه حسابِ دیگران
+  try { _ntfRoleChanged(); } catch (e) {}
 }
 function _showChatFabs(on) {
   ['calcFab', 'robotFab', 'managerFab'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = on ? 'flex' : 'none'; });
@@ -33254,6 +33286,17 @@ function _botAnnounce(text, toGroup) {
     // اعلان بیرون از برنامه هم بفرستد — جواب‌های معمولی ربات این نشان را ندارند
     try { _chatPushRaw('group', { f: 'bot', n: 'ربات', k: 'text', t: text, ts: Date.now(), alert: true }); } catch (e) {}
   }
+  // خبر روی سرور خانگی — تا به میرزا و کارمندان برسد حتی با برنامهٔ بسته.
+  // هشدارهای گروهی (تیل کم، بررسی حساب‌ها) روی هر دستگاهی محلی تشخیص داده
+  // می‌شوند، پس فقط دستگاهِ میرزا خبر می‌دهد تا اعلان چند بار تکرار نشود.
+  // خبرهای موردی (حساب تازه ساخته شد) همان‌جا یک بار اتفاق می‌افتند.
+  try {
+    if (!toGroup || _rbMode === 'admin') {
+      const urgent = /تمام شده|تمام‌شده|خالی|حد هشدار/.test(text);
+      _ntfSend(NTF_TOPIC_MIRZA(), '📢 پمپ یعقوبی', text, { priority: urgent ? 5 : 4, tags: ['warning'] });
+      _ntfSend(NTF_TOPIC_STAFF(), '📢 پمپ یعقوبی', text, { priority: urgent ? 5 : 4, tags: ['warning'] });
+    }
+  } catch (e) {}
 }
 function _qaRender() {
   const el = document.getElementById('qaList');
@@ -33768,9 +33811,14 @@ function _chatCacheSaveNow() {
 // به او برسد، دستگاهِ «فرستنده» همان لحظه یک اعلان کوچک به سرویس رایگان ntfy.sh
 // می‌فرستد و گوشی/کامپیوتر میرزا که مشترکِ همان کد (تاپیک) است، اعلان را می‌گیرد.
 // فقط عنوان و پیش‌نمایش کوتاه فرستاده می‌شود — عکس/صدا/ویدیو فقط با برچسب نوع.
-function _extPushRaw(topic, title, message) {
+// از نسخهٔ ۲.۹.۱۵۳ راهِ اصلی «سرور خانگیِ خودمان» است، نه ntfy.sh:
+//   homeTopic → سرور خانگی (همیشه، بدون هیچ تنظیمی و بدون نصبِ برنامهٔ جانبی)
+//   topic     → ntfy.sh (فقط اگر در تنظیمات روشن باشد — برای کسانی که عادت کرده‌اند)
+function _extPushRaw(topic, title, message, homeTopic) {
   try {
     const baseUrl = /^http/.test(location.protocol) ? location.href.split('#')[0] : 'https://vil3ntec-it.github.io/pump-staion-yaqobi/';
+    if (homeTopic) { try { _ntfSend(homeTopic, title, message, { click: baseUrl }); } catch (e) {} }
+    if (!topic || !DB.pushEnabled) return;
     fetch('https://ntfy.sh', {
       method: 'POST',
       body: JSON.stringify({ topic: topic, title: title, message: message, click: baseUrl, tags: ['speech_balloon'] })
@@ -33781,10 +33829,10 @@ function _extPushRaw(topic, title, message) {
 // کلیدی است که گیرنده هنگام باز بودنِ برنامه روی مسیرِ presence می‌گذارد:
 //   'admin' (میرزا) · 'staff' (هر کارمندی که آنلاین باشد) · 'p/<peer>' (مشتری کیو‌آر)
 // اگر گیرنده حاضر باشد اعلانِ سایت را می‌بیند و ntfy فرستاده نمی‌شود (نبودِ پیامِ تکراری).
-function _extPushAway(presenceKey, topic, title, message) {
+function _extPushAway(presenceKey, topic, title, message, homeTopic) {
   try {
     // اگر Firebase در دسترس نیست، محتاطانه اعلانِ بیرونی را بفرست (بهتر از نرسیدن)
-    if (!_chatOnline() || !_fbDb) { _extPushRaw(topic, title, message); return; }
+    if (!_chatOnline() || !_fbDb) { _extPushRaw(topic, title, message, homeTopic); return; }
     const now = Date.now();
     _fbDb.ref(_chatRoot() + 'presence/' + presenceKey).get().then(snap => {
       const v = snap.val();
@@ -33797,9 +33845,11 @@ function _extPushAway(presenceKey, topic, title, message) {
           present = (now - (v.ts || 0) < _PRESENCE_FRESH_MS);
         }
       }
-      if (!present) _extPushRaw(topic, title, message);
-    }).catch(() => { _extPushRaw(topic, title, message); });
-  } catch (e) { try { _extPushRaw(topic, title, message); } catch (e2) {} }
+      // سرور خانگی همیشه خبر می‌گیرد: خودش می‌داند برنامهٔ گیرنده باز است یا نه —
+      // باز باشد فوری در فهرست می‌نشیند، بسته باشد نوتیفیکیشن می‌فرستد
+      _extPushRaw(present ? null : topic, title, message, homeTopic);
+    }).catch(() => { _extPushRaw(topic, title, message, homeTopic); });
+  } catch (e) { try { _extPushRaw(topic, title, message, homeTopic); } catch (e2) {} }
 }
 // مسیربندی اعلان‌ها (خواستهٔ صاحب برنامه):
 //   • پیام کارمند/مشتری (گروهی یا به میرزا) → تاپیک میرزا + تاپیک کارمندان
@@ -33809,24 +33859,27 @@ function _extPushAway(presenceKey, topic, title, message) {
 // تاپیک‌ها: میرزا = کد اصلی · کارمندان = کد اصلی + «-staff» · هر مشتری = کد اصلی + «-p-» + شناسه‌اش
 function _extPushNotify(scope, msg, peer) {
   try {
-    if (!DB.pushEnabled) return;
-    const base = (DB.pushTopic || '').trim();
-    if (!base) return;
+    // ntfy.sh فقط وقتی که کاربر روشنش کرده و کد دارد؛ سرور خانگی همیشه
+    const base = (DB.pushEnabled && (DB.pushTopic || '').trim()) || '';
+    const t = (suffix) => (base ? base + suffix : null);
     if (msg.f === 'bot' && !msg.alert) return; // جواب معمولی ربات — اعلان نمی‌خواهد
+    // هشدارهای ربات را خودِ _botAnnounce به سرور خانگی داده — دوباره نفرست
+    const home = msg.f === 'bot' ? null : true;
     const who = msg.f === 'admin' ? 'میرزا' : (msg.f === 'bot' ? 'ربات' : (msg.n || 'مشتری'));
     const preview = msg.k === 'text' ? String(msg.t || '').slice(0, 80)
       : (msg.k === 'acct' ? ('📄 حساب ' + (msg.nm || '')) : msg.k === 'audio' ? '🎤 پیام صوتی' : msg.k === 'image' ? '🖼️ عکس' : '🎬 ویدیو');
     if (scope === 'group') {
       const title = msg.f === 'bot' ? '📢 هشدار پمپ' : '👥 چت گروهی — ' + who;
-      _extPushAway('admin', base, title, preview);
-      _extPushAway('staff', base + '-staff', title, preview);
+      _extPushAway('admin', t(''), title, preview, home && NTF_TOPIC_MIRZA());
+      _extPushAway('staff', t('-staff'), title, preview, home && NTF_TOPIC_STAFF());
       return;
     }
     if (msg.f === 'admin') {
-      if (peer) _extPushAway('p/' + peer, base + '-p-' + peer, '💬 جواب میرزا — پمپ یعقوبی', preview);
+      // جوابِ میرزا فقط به همان طرف می‌رود — نه به چت‌های دیگران
+      if (peer) _extPushAway('p/' + peer, t('-p-' + peer), '💬 جواب میرزا — پمپ یعقوبی', preview, NTF_TOPIC_PERSON(peer));
       return;
     }
-    _extPushAway('admin', base, '💬 پیام به میرزا — ' + who, preview);
+    _extPushAway('admin', t(''), '💬 پیام به میرزا — ' + who, preview, NTF_TOPIC_MIRZA());
   } catch (e) {}
 }
 // --- تنظیمات اعلان بیرون از برنامه (کارت در «تنظیمات») ---
@@ -33877,9 +33930,25 @@ function pushCopyTopic() {
 // کارمند/هرکه در برنامه است → تاپیک کارمندان (چت گروهی + هشدارها)
 // مشتری کیو‌آر → تاپیک شخصی خودش (فقط جواب‌های میرزا به خودش، نه چت‌های دیگران)
 // مدیر → تاپیک اصلی خودش
-function pushSubscribeSelf() {
+async function pushSubscribeSelf() {
+  // راهِ اصلی: سرور خانگیِ خودمان — نه نصبِ برنامه لازم دارد، نه کدِ اشتراک،
+  // نه تنظیمِ قبلی. یک بار «اجازه» و تمام.
+  if (_ntfBase('http')) {
+    try { showTopToast('🔔 در حال روشن کردن اعلان روی این دستگاه…', '#2b6cb0', 3000); } catch (e) {}
+    const ok = await _ntfSubscribeThisDevice();
+    if (ok === true) {
+      try { showTopToast('✅ روشن شد — از این به بعد خبرهای مربوط به شما حتی با برنامهٔ بسته می‌رسد', '#38a169', 6000); } catch (e) {}
+      return;
+    }
+    if (ok === 'denied') { showToast('اجازهٔ اعلان داده نشد', '#e53e3e'); return; }
+    if (ok === 'unsupported') {
+      try { showTopToast('این مرورگر اعلان ندارد. در آیفون اول برنامه را «افزودن به صفحهٔ خانه» کنید، بعد دوباره بزنید.', '#b7791f', 8000); } catch (e) {}
+      return;
+    }
+    // سرور جواب نداد → می‌افتد روی راهِ قدیمی (ntfy.sh) اگر تنظیم شده باشد
+  }
   const base = (DB.pushTopic || '').trim();
-  if (!DB.pushEnabled || !base) { showToast('اعلان بیرون از برنامه هنوز در تنظیمات فعال نشده است', '#e53e3e'); return; }
+  if (!DB.pushEnabled || !base) { showToast('سرور در دسترس نیست — کمی بعد دوباره بزنید', '#e53e3e'); return; }
   let topic;
   if (_rbMode === 'person' && _rbPersonPeer) topic = base + '-p-' + _rbPersonPeer.peer;
   else if (_rbMode === 'admin') topic = base;
@@ -35022,9 +35091,36 @@ function _botCameraIntent() {
    و همان خبر این‌جا می‌نشیند: وقتی برنامه باز است از راه وب‌سوکت (فوری)، و
    وقتی برنامه بسته یا گوشی قفل است از راه نوتیفیکیشنِ مرورگر (کدش در sw.js).
    هیچ سرویسِ بیرونی در کار نیست — همه‌چیز روی سرور خودمان.
+
+   ── هر کس فقط خبرهای خودش را می‌گیرد ──────────────────────────────────────
+   موضوع‌ها ثابت‌اند و بر اساس نقشِ کسی که برنامه را باز کرده انتخاب می‌شوند:
+
+     میرزا (مدیر)          → mirza    همهٔ خبرها: چت، هشدار تیل، حساب تازه…
+     کارمند / نظاره‌گر      → staff    چت گروهی و هشدارها
+     مشتریِ کیو‌آر          → p-<شناسه>  فقط تغییرِ حسابِ خودش و جوابِ میرزا به خودش
+
+   یعنی کسی که با اسکنِ کیو‌آر حسابش را می‌بیند، هیچ‌وقت خبرِ حسابِ دیگران و
+   چت‌های داخلی را نمی‌گیرد — فقط مالِ خودش.
    ═════════════════════════════════════════════════════════════════════════ */
-const NTF_TOPIC = 'pump';
-let _ntfWs = null, _ntfTimer = null, _ntfMsgs = [], _ntfSeenKey = 'pumpNtfSeenId';
+// عمداً «function» و نه «const»: این‌ها از جاهایی بالاتر از همین‌جا هم صدا زده
+// می‌شوند و تعریفِ function در جاوااسکریپت بالا کشیده می‌شود، ولی const نه.
+function NTF_TOPIC_MIRZA() { return 'mirza'; }
+function NTF_TOPIC_STAFF() { return 'staff'; }
+function NTF_TOPIC_PERSON(peer) { return 'p-' + String(peer || '').toLowerCase().replace(/[^a-z0-9_-]+/g, '-'); }
+
+/** موضوعی که همین دستگاه باید دنبالش کند — از روی نقشِ فعلی */
+function _ntfMyTopic() {
+  try {
+    if (_rbMode === 'person' && _rbPersonPeer) return NTF_TOPIC_PERSON(_rbPersonPeer.peer);
+    if (_rbMode === 'admin') return NTF_TOPIC_MIRZA();
+  } catch (e) {}
+  return NTF_TOPIC_STAFF();
+}
+
+let _ntfWs = null, _ntfTimer = null, _ntfMsgs = [], _ntfTopic = null;
+// شمارهٔ آخرین خبرِ خوانده‌شده برای هر موضوع جداست — وگرنه با عوض شدنِ نقش،
+// خبرهای موضوعِ تازه بی‌خود «خوانده‌شده» شمرده می‌شدند
+const _ntfSeenKey = () => 'pumpNtfSeen:' + (_ntfTopic || 'x');
 
 function _ntfBase(kind) {                      // wss://host → wss://host یا https://host
   let url = '';
@@ -35032,8 +35128,37 @@ function _ntfBase(kind) {                      // wss://host → wss://host یا
   if (!url) return '';
   return kind === 'http' ? url.replace(/^ws/i, 'http') : url;
 }
-function _ntfSeen()      { try { return +(localStorage.getItem(_ntfSeenKey) || 0); } catch (e) { return 0; } }
-function _ntfSetSeen(id) { try { localStorage.setItem(_ntfSeenKey, String(id)); } catch (e) {} }
+function _ntfSeen()      { try { return +(localStorage.getItem(_ntfSeenKey()) || 0); } catch (e) { return 0; } }
+function _ntfSetSeen(id) { try { localStorage.setItem(_ntfSeenKey(), String(id)); } catch (e) {} }
+
+/* ── فرستادنِ خبر از خودِ برنامه ───────────────────────────────────────────
+   برنامه سرور ندارد، ولی سرور خانگی دارد: هر رویدادی که در برنامه می‌افتد
+   (میرزا حساب می‌نویسد، تیل کم می‌شود، ربات هشدار می‌دهد، پیام چت می‌آید…)
+   از همین‌جا به سرور خانگی خبر داده می‌شود و سرور آن را به گوشیِ همه می‌رساند
+   — حتی گوشیِ قفل. ── */
+function _ntfSend(topic, title, body, opts) {
+  const base = _ntfBase('http');
+  if (!base || !topic) return Promise.resolve(false);
+  const o = opts || {};
+  return fetch(base + '/api/notify/' + encodeURIComponent(topic), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: title || undefined,
+      message: String(body || ''),
+      priority: o.priority || 3,
+      tags: o.tags || undefined,
+      click: o.click || _ntfAppUrl(),
+    }),
+  }).then(r => r.ok).catch(() => false);
+}
+/** لینکی که با زدنِ نوتیفیکیشن باز می‌شود — خودِ برنامه */
+function _ntfAppUrl() {
+  try {
+    if (/^https?:$/.test(location.protocol)) return location.href.split('#')[0];
+  } catch (e) {}
+  return 'https://vil3ntec-it.github.io/pump-staion-yaqobi/';
+}
 
 function _ntfUnread() { const s = _ntfSeen(); return _ntfMsgs.filter(m => m.id > s).length; }
 
@@ -35101,15 +35226,19 @@ function _ntfMarkRead() {
 function _ntfConnect() {
   const base = _ntfBase('ws');
   if (!base) return;
+  const want = _ntfMyTopic();
+  // نقش عوض شده (مثلاً کیو‌آرِ یک مشتری اسکن شد) → از موضوعِ قبلی جدا شو
+  if (_ntfWs && _ntfTopic !== want) { try { _ntfWs.close(); } catch (e) {} _ntfWs = null; _ntfMsgs = []; }
   if (_ntfWs && (_ntfWs.readyState === 0 || _ntfWs.readyState === 1)) return;
+  _ntfTopic = want;
   let sock;
-  try { sock = new WebSocket(base + '/notify?topic=' + encodeURIComponent(NTF_TOPIC)); }
+  try { sock = new WebSocket(base + '/notify?topic=' + encodeURIComponent(want)); }
   catch (e) { _ntfRetry(); return; }
   _ntfWs = sock;
   sock.onmessage = ev => {
     let m = null;
     try { m = JSON.parse(ev.data); } catch (e) { return; }
-    if (m.op === 'ready') (m.messages || []).forEach(x => _ntfAccept(x, { live: false }));
+    if (m.op === 'ready') { (m.messages || []).forEach(x => _ntfAccept(x, { live: false })); _ntfPaintBadge(); }
     else if (m.op === 'message') _ntfAccept(m, { live: true });
   };
   sock.onclose = () => { if (_ntfWs === sock) { _ntfWs = null; _ntfRetry(); } };
@@ -35118,6 +35247,12 @@ function _ntfConnect() {
 function _ntfRetry() {
   if (_ntfTimer) return;
   _ntfTimer = setTimeout(() => { _ntfTimer = null; _ntfConnect(); }, 6000);
+}
+/** نقشِ کاربر عوض شد → موضوعِ درست را دنبال کن (از _rbSetMode صدا زده می‌شود) */
+function _ntfRoleChanged() {
+  if (_ntfTopic && _ntfTopic === _ntfMyTopic()) return;
+  if (_ntfTimer) { clearTimeout(_ntfTimer); _ntfTimer = null; }
+  _ntfConnect();
 }
 
 function ntfOpen() {
@@ -35146,37 +35281,58 @@ function _ntfPushBtnState() {
   btn.style.color = on ? 'var(--green)' : 'var(--accent)';
 }
 function _lsPlain(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
-
-async function ntfEnablePush() {
-  const say = (t) => { const st = document.getElementById('ntfState'); if (st) st.textContent = t; };
+/** اسمی که در پنل کنارِ این دستگاه دیده می‌شود */
+function _ntfDeviceLabel() {
   try {
-    if (typeof Notification === 'undefined' || !('serviceWorker' in navigator)) {
-      return say('این مرورگر نوتیفیکیشن ندارد. در آیفون اول برنامه را «افزودن به صفحهٔ خانه» کنید.');
-    }
-    if ((await Notification.requestPermission()) !== 'granted') return say('اجازهٔ نوتیفیکیشن داده نشد.');
+    if (_rbMode === 'person' && _rbPersonPeer) return _rbPersonPeer.name || 'مشتری';
+    if (_rbMode === 'admin') return 'میرزا';
+    const me = _chatMe();
+    if (me && me.name) return me.name;
+  } catch (e) {}
+  return 'کارمند';
+}
 
-    const base = _ntfBase('http');
-    if (!base) return say('آدرس سرور تنظیم نشده است.');
+/**
+ * این دستگاه را روی موضوعِ نقشِ خودش ثبت می‌کند تا با برنامهٔ بسته هم اعلان بگیرد.
+ * برمی‌گرداند: true (شد) · 'denied' (اجازه نداد) · 'unsupported' (مرورگر ندارد)
+ *              · false (سرور جواب نداد)
+ */
+async function _ntfSubscribeThisDevice() {
+  if (typeof Notification === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) return 'unsupported';
+  if ((await Notification.requestPermission()) !== 'granted') return 'denied';
+
+  const base = _ntfBase('http');
+  if (!base) return false;
+  try {
     const cfg = await fetch(base + '/api/notify/config').then(r => r.json());
-    if (!cfg.vapidPublicKey) return say('سرور هنوز کلید نوتیفیکیشن ندارد.');
+    if (!cfg.vapidPublicKey) return false;
 
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.getSubscription()
       || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: _b64ToBytes(cfg.vapidPublicKey) });
 
-    const res = await fetch(base + '/api/notify/' + NTF_TOPIC + '/devices', {
+    // موضوع از روی نقش انتخاب می‌شود — مشتریِ کیو‌آر فقط خبرِ خودش،
+    // میرزا همهٔ خبرها، کارمند خبرهای کارکنان
+    const res = await fetch(base + '/api/notify/' + encodeURIComponent(_ntfMyTopic()) + '/devices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subscription: sub.toJSON(), label: 'پمپ یعقوبی' }),
+      body: JSON.stringify({ subscription: sub.toJSON(), label: _ntfDeviceLabel() }),
     }).then(r => r.json());
-    if (!res.ok) return say('ثبت دستگاه انجام نشد.');
+    if (!res.ok) return false;
 
     try { localStorage.setItem('pumpNtfPushOn', '1'); } catch (e) {}
     _ntfPushBtnState();
-    say('روشن شد — از این به بعد خبرها حتی با برنامهٔ بسته هم می‌رسند.');
-  } catch (e) {
-    say('روشن کردن نوتیفیکیشن نشد: ' + (e && e.message ? e.message : e));
-  }
+    return true;
+  } catch (e) { return false; }
+}
+
+async function ntfEnablePush() {
+  const say = (t) => { const st = document.getElementById('ntfState'); if (st) st.textContent = t; };
+  const r = await _ntfSubscribeThisDevice();
+  if (r === true) return say('روشن شد — از این به بعد خبرهای شما حتی با برنامهٔ بسته هم می‌رسند.');
+  if (r === 'denied') return say('اجازهٔ نوتیفیکیشن داده نشد.');
+  if (r === 'unsupported') return say('این مرورگر نوتیفیکیشن ندارد. در آیفون اول برنامه را «افزودن به صفحهٔ خانه» کنید.');
+  say('سرور در دسترس نیست — کمی بعد دوباره امتحان کنید.');
 }
 
 function _b64ToBytes(b64) {
@@ -35186,6 +35342,17 @@ function _b64ToBytes(b64) {
   for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
   return out;
 }
+
+// دستِ کوچکِ بیرونی — مثل window.__pumpNet__ برای هم‌زمان‌سازی. هم برای عیب‌یابی
+// به کار می‌آید، هم اگر روزی خواستید از یک اسکریپتِ دیگر خبر بفرستید.
+try {
+  window.__pumpNtf__ = {
+    topic: () => _ntfTopic,
+    unread: () => _ntfUnread(),
+    connected: () => !!(_ntfWs && _ntfWs.readyState === 1),
+    send: (topic, title, body, opts) => _ntfSend(topic, title, body, opts),
+  };
+} catch (e) {}
 
 // اتصال بعد از بالا آمدن برنامه؛ و هر بار که برنامه از پشتِ زمینه برمی‌گردد
 try {
@@ -35197,7 +35364,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.152';
+const APP_VERSION = '2.9.153';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
