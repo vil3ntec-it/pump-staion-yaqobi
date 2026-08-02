@@ -175,8 +175,6 @@ function buildMenu() {
       { label: 'بزرگ‌نمایی', role: 'zoomIn' },
       { label: 'کوچک‌نمایی', role: 'zoomOut' },
       { label: 'اندازهٔ عادی', role: 'resetZoom' },
-      { type: 'separator' },
-      { label: 'ابزار برنامه‌نویس', role: 'toggleDevTools' },
     ] },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
@@ -186,6 +184,9 @@ function createMainWindow() {
   mainWin = new BrowserWindow({
     width: 1360, height: 900, minWidth: 900, minHeight: 600,
     backgroundColor: '#0b0f17', title: 'پمپ یعقوبی',
+    // نوارِ منو دیده نمی‌شود (با کلید Alt در می‌آید)؛ ولی خودِ منو ساخته می‌شود
+    // چون بدونِ آن Ctrl+C / Ctrl+V / Ctrl+Z در Electron اصلاً کار نمی‌کنند.
+    autoHideMenuBar: true,
     icon: path.join(__dirname, 'build', 'icon.png'), show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
