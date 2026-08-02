@@ -7,12 +7,13 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning src/index.js",
-    "test": "node test/smoke.mjs && node test/multisite.mjs && node test/protected-domains.mjs && node test/tunnel-recovery.mjs",
+    "test": "node test/smoke.mjs && node test/multisite.mjs && node test/protected-domains.mjs && node test/tunnel-recovery.mjs && node test/messenger.mjs",
     "test:multisite": "node test/multisite.mjs",
     "test:ui": "node test/ui.mjs",
     "test:perf": "node test/perf.mjs",
     "test:tunnel": "node test/tunnel.mjs",
-    "test:tunnel-recovery": "node test/tunnel-recovery.mjs"
+    "test:tunnel-recovery": "node test/tunnel-recovery.mjs",
+    "test:messenger": "node test/messenger.mjs"
   },
   "dependencies": {
     "express": "^4.21.2",

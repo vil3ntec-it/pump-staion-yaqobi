@@ -11,6 +11,7 @@ import { config } from '../config.js';
 import { readInterfaces, readPublicIp } from '../metrics/network.js';
 import { getSetting, setSetting, logEvent } from '../db.js';
 import { ensureMainSite } from '../sites/registry.js';
+import { pendingCodes, snapshot as messengerSnapshot } from '../messenger/index.js';
 import {
   publicState,
   startTunnel,
@@ -266,6 +267,13 @@ router.put('/site-url', async (req, res) => {
     logEvent('error', 'panel', `ثبت خودکار سایت ناموفق بود: ${e.message}`);
   }
   res.json({ ok: true, siteUrl: siteUrl(), registered });
+});
+
+// ------------------------------- پیام‌رسان --------------------------------
+// سرور خانگی پیامک نمی‌فرستد، پس کدِ ورود اینجا به صاحبِ سرور نشان داده
+// می‌شود تا خودش به کاربر بدهد. فقط روی پنل است، نه روی پورتِ عمومی.
+router.get('/messenger/codes', (req, res) => {
+  res.json({ codes: pendingCodes(), stats: messengerSnapshot() });
 });
 
 export default router;
