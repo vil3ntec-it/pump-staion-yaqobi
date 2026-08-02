@@ -43,11 +43,25 @@ jobs:
             convert icons/icon-512.png -resize ${px}x${px} android/app/src/main/res/mipmap-$n/ic_launcher.png
           done
 
+      # نسخهٔ اپ همیشه همان نسخهٔ خودِ برنامه است — دستی تنظیم نمی‌شود
+      - name: خواندنِ نسخهٔ برنامه از index.html
+        id: ver
+        run: |
+          V=$(python3 - <<'PY'
+          import re
+          h = open('index.html', encoding='utf-8', errors='ignore').read()
+          m = re.search(r"const\s+APP_VERSION\s*=\s*['\"]([0-9.]+)['\"]", h)
+          print(m.group(1) if m else '0.0.1')
+          PY
+          )
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "نسخهٔ برنامه: $V"
+
       - name: ساختِ APK
         working-directory: android
         run: |
           gradle wrapper --gradle-version 8.7
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleRelease --no-daemon -PappVersionName=${{ steps.ver.outputs.version }}
 
       - name: نام‌گذاری فایل
         run: |

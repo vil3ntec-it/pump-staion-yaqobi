@@ -620,6 +620,22 @@ html.kb-open #calcPanel{bottom:calc(8px + var(--kb-offset,0px))}
 #appUpdBar{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:100000;background:var(--panel);border:1.5px solid var(--green);color:var(--txt);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;font-family:'Vazirmatn',sans-serif;font-size:0.82rem;font-weight:800;box-shadow:0 12px 34px -10px rgba(0,0,0,.8);max-width:94vw}
 #appUpdBar button{border:none;border-radius:9px;padding:7px 14px;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:900;cursor:pointer;background:var(--green);color:#fff}
 #appUpdBar button.later{background:transparent;border:1px solid var(--border);color:var(--muted)}
+/* صفحهٔ تمام‌صفحهٔ سندهای چاپ/PDF داخل خودِ برنامه (موبایل و اپ نصب‌شده).
+   بالاتر از همهٔ مودال‌ها می‌نشیند و همیشه یک دکمهٔ «بستن» دارد تا کاربر
+   هیچ‌وقت داخلِ نمای PDF گیر نکند. */
+#pumpDocOverlay{position:fixed;inset:0;z-index:100010;background:var(--dark,#0d1117);display:flex;flex-direction:column}
+#pumpDocOverlay .pdoc-head{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  padding:calc(9px + env(safe-area-inset-top,0px)) 14px 9px;background:var(--panel,#161b22);border-bottom:2px solid var(--accent,#f6a623)}
+#pumpDocOverlay .pdoc-title{font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.95rem;color:var(--txt,#e6edf3);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#pumpDocOverlay .pdoc-acts{display:flex;gap:8px;flex-shrink:0}
+#pumpDocOverlay .pdoc-btn{border:none;border-radius:10px;padding:9px 16px;font-family:'Vazirmatn',sans-serif;font-size:0.84rem;font-weight:900;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#pumpDocOverlay .pdoc-btn.print{background:var(--green,#38a169);color:#fff}
+#pumpDocOverlay .pdoc-btn.close{background:var(--red,#e53e3e);color:#fff}
+#pumpDocOverlay iframe{flex:1;width:100%;border:none;background:#fff;display:block}
+@media(max-width:640px){
+  #pumpDocOverlay .pdoc-title{font-size:0.84rem;flex:1}
+  #pumpDocOverlay .pdoc-btn{padding:10px 13px;font-size:0.8rem}
+}
 /* نوارِ وضعیتِ اتصال بالای چت */
 .rb-net{padding:6px 10px;font-size:0.72rem;font-weight:800;text-align:center;line-height:1.7;border-bottom:1px solid var(--border)}
 .rb-net.off{background:rgba(217,119,6,.16);color:#e8930c}
@@ -15601,6 +15617,91 @@ body:not(.light-mode) .xls-tbl td{ border-color:var(--border); }
 /* نوارِ ناوبری بالای صفحه هم خطِ زیرش واضح‌تر */
 body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:var(--border); }
 </style>
+<style id="ui-scale-and-layout">
+/* ══════════════════════════════════════════════════════════════════════════
+   📐 اندازهٔ کادرها و کارت‌ها + چیدمانِ «خرید عمده کنار تاریخچهٔ مفاد و ضرر»
+   --------------------------------------------------------------------------
+   خواستهٔ صاحب برنامه:
+     • کادرهایی که بیش از حد کوچک شده بودند بزرگ‌تر و خوانا شوند.
+     • روی کامپیوتر کارت‌ها بزرگ، خوانا و حرفه‌ای باشند.
+     • روی تبلت و موبایل اندازهٔ هر کارت متناسب با همان دستگاه تنظیم شود؛ هیچ
+       بخشی کوچک یا ناخوانا نماند و طراحی کاملاً Responsive باشد.
+   روش: یک مقیاسِ واحد با clamp() که خودش با پهنای صفحه بالا و پایین می‌رود —
+   نه عددِ ثابتِ دسکتاپ، نه ریزشدنِ افراطی در موبایل. جدول‌ها عمداً دست‌نخورده
+   می‌مانند تا ستون‌بندی و محاسبات هیچ‌کدام تکان نخورند.
+   ══════════════════════════════════════════════════════════════════════════ */
+:root{
+  --ui-pad:clamp(14px, 1.35vw + 9px, 22px);      /* فاصلهٔ داخلیِ کادرها */
+  --ui-gap:clamp(12px, 1.1vw + 7px, 20px);       /* فاصلهٔ بین کارت‌ها */
+  --ui-radius:clamp(13px, .55vw + 10px, 20px);
+  --ui-title:clamp(1.02rem, .32vw + .94rem, 1.28rem);
+  --ui-sub:clamp(.8rem, .13vw + .77rem, .92rem);
+  --ui-big:clamp(1.5rem, 1.05vw + 1.2rem, 2.15rem);
+}
+
+/* ── کادرهای اصلی ─────────────────────────────────────────────────────────── */
+.card{border-radius:var(--ui-radius);margin-bottom:var(--ui-gap)}
+.card-head{padding:calc(var(--ui-pad) * .72) var(--ui-pad)}
+.card-title{font-size:var(--ui-title)}
+.section-title{font-size:clamp(.86rem, .2vw + .82rem, 1.02rem);margin-bottom:calc(var(--ui-gap) * .8)}
+.goto-btn{padding:clamp(7px,.5vw + 5px,11px) clamp(12px,.8vw + 9px,20px);font-size:var(--ui-sub);border-radius:10px}
+
+/* ── کارت‌های مفاد/ضرر ────────────────────────────────────────────────────── */
+.pl-grid{gap:var(--ui-gap);margin-bottom:var(--ui-gap)}
+.pl-card{padding:var(--ui-pad);border-radius:var(--ui-radius)}
+.pl-card-title{font-size:var(--ui-sub);margin-bottom:clamp(8px,.5vw + 6px,13px)}
+.pl-big{font-size:var(--ui-big)}
+.pl-field label{font-size:var(--ui-sub)}
+.ei-in{padding:clamp(10px,.6vw + 8px,14px) clamp(11px,.6vw + 9px,15px);font-size:clamp(1rem,.2vw + .96rem,1.16rem)}
+.add-btn{padding:clamp(9px,.5vw + 7px,13px) clamp(16px,1vw + 12px,24px);font-size:clamp(.9rem,.15vw + .87rem,1.02rem)}
+
+/* ── کادرهای لینکِ صفحه‌های جانبی: قبلاً خیلی ریز بودند ──────────────────── */
+.tool-link-card{
+  padding:clamp(8px,.55vw + 6px,13px) clamp(12px,.85vw + 9px,18px);
+  font-size:clamp(.78rem,.16vw + .74rem,.9rem);
+  border-radius:clamp(10px,.4vw + 8px,13px);
+  gap:9px;margin:0 0 8px 8px}
+.tool-link-card .tlc-go i{font-size:clamp(.72rem,.1vw + .7rem,.82rem)}
+
+/* ── کارت‌های آماریِ فاکتورها ─────────────────────────────────────────────── */
+.inv-stats{gap:var(--ui-gap);grid-template-columns:repeat(auto-fit,minmax(clamp(230px,24vw,300px),1fr))}
+.inv-stat{padding:var(--ui-pad);border-radius:var(--ui-radius)}
+.inv-stat .ic{width:clamp(48px,3.2vw + 36px,64px);height:clamp(48px,3.2vw + 36px,64px);font-size:clamp(1.5rem,.7vw + 1.25rem,2rem)}
+.inv-stat .lbl{font-size:var(--ui-sub)}
+.inv-stat .cnt{font-size:var(--ui-big)}
+
+/* ── ۱) «خرید عمده از مشتریان» کنارِ «تاریخچهٔ مفاد و ضرر» ────────────────
+   دو ستونِ هم‌ارتفاع روی کامپیوتر؛ روی تبلت و موبایل خودکار زیرِ هم. */
+.pl-side-by-side{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));
+  gap:var(--ui-gap);align-items:stretch;margin-bottom:var(--ui-gap)}
+.pl-side-by-side > .card{margin-bottom:0;display:flex;flex-direction:column}
+.pl-side-by-side > .card > div:last-child{flex:1}
+.pl-hist-links{display:flex;flex-direction:column;gap:10px;align-items:stretch}
+.pl-hist-links .tool-link-card{width:100%;margin:0;justify-content:space-between}
+@media (max-width:900px){
+  .pl-side-by-side{grid-template-columns:1fr}
+}
+
+/* ── تبلت: کارت‌ها همچنان بزرگ و خوانا، فقط کمی جمع‌وجورتر ────────────────── */
+@media (max-width:1024px){
+  .pl-grid{grid-template-columns:repeat(2,1fr)}
+}
+/* ── موبایل: هیچ چیزی ریز و ناخوانا نشود؛ اندازه‌ها متناسبِ خودِ گوشی ──────── */
+@media (max-width:640px){
+  :root{
+    --ui-pad:15px; --ui-gap:13px; --ui-radius:15px;
+    --ui-title:1.06rem; --ui-sub:.86rem; --ui-big:1.55rem;
+  }
+  .pl-grid{grid-template-columns:1fr 1fr;gap:11px}
+  .tool-link-card{width:100%;margin:0 0 9px;justify-content:space-between;font-size:.86rem;padding:12px 14px}
+  .inv-stats{grid-template-columns:1fr}
+}
+@media (max-width:380px){
+  :root{--ui-pad:13px; --ui-gap:11px; --ui-title:1rem; --ui-big:1.4rem}
+  .pl-grid{grid-template-columns:1fr}
+}
+</style>
 </head>
 <body class="nav-sticky">
 <script id="gfx-tier-boot">
@@ -15649,8 +15750,10 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
     <button type="button" id="lsStaffBtn" onclick="openStaffPage()" style="margin-top:14px;width:100%;background:transparent;border:1.5px dashed rgba(255,255,255,.45);color:rgba(255,255,255,.88);border-radius:10px;padding:10px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">👷 صفحه کارمند — دیدن تیل و مخزن (بدون رمز)</button>
     <!-- روی هر دستگاهی (گوشی/تبلت/کامپیوتر) که برنامه هنوز نصب نشده و مرورگر نصب را پشتیبانی کند دیده می‌شود -->
     <button type="button" id="pwaInstallBtn" onclick="pwaInstall()" style="display:none;margin-top:10px;width:100%;background:rgba(217,119,6,.16);border:1.5px solid rgba(246,166,35,.6);color:#ffd89b;border-radius:10px;padding:10px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">📲 نصب برنامه روی این دستگاه</button>
-    <!-- فایل نصب برای اندروید/ویندوز و راهنمای آیفون — برای کسی که برنامه را ندارد -->
-    <a href="./app.html" style="display:block;margin-top:10px;width:100%;box-sizing:border-box;background:transparent;border:1.5px solid rgba(255,255,255,.28);color:rgba(255,255,255,.85);border-radius:10px;padding:10px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;text-align:center;text-decoration:none">⬇️ دریافت برنامه برای اندروید / ویندوز / آیفون</a>
+    <!-- فایل نصب برای اندروید/ویندوز و راهنمای آیفون — فقط برای کسی که برنامه را
+         هنوز نصب نکرده است. اگر برنامه نصب شده باشد (اپ اندروید، نسخهٔ ویندوز،
+         یا نصب‌شده روی صفحهٔ اصلی) این کادر اصلاً ساخته نمی‌شود — pumpAppInstalled() -->
+    <a href="./app.html" id="lsGetAppLink" style="display:none;margin-top:10px;width:100%;box-sizing:border-box;background:transparent;border:1.5px solid rgba(255,255,255,.28);color:rgba(255,255,255,.85);border-radius:10px;padding:10px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;text-align:center;text-decoration:none">⬇️ دریافت برنامه برای اندروید / ویندوز / آیفون</a>
   </div>
   <div style="position:relative;z-index:2;margin-top:18px;font-size:0.7rem;color:rgba(255,255,255,.5);text-align:center;line-height:1.9">۱۴۰۵ برای پمپ یعقوبی طراحی شده ـــ تمام حقوق محفوظ است<br>طراحی و توسعه: vil3ntec@gmail.com محمد هارون<br>شماره 0792236008 +93</div>
 </div>
@@ -15976,187 +16079,263 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
 
 <!-- ===== داشبورد — فقط نمایشی (Read-Only)؛ هیچ منطق/داده‌ای را تغییر نمی‌دهد ===== -->
 <style id="dash-style">
-/* همهٔ رنگ‌ها از Theme (متغیرهای CSS) گرفته می‌شوند — با تغییر تم، خودکار عوض می‌شوند */
-#sec-dashboard{max-width:1280px;margin:0 auto}
-.dash-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px}
-.dash-greet-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-.dash-title{font-size:1.5rem;font-weight:900;color:var(--txt);margin:0}
-.dash-greet{font-size:.95rem;font-weight:800;color:var(--accent)}
-.dash-date{font-size:.8rem;color:var(--muted);font-weight:700;margin-top:4px}
-.dh-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.dash-search-wrap{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:999px;padding:9px 14px;min-width:230px;box-shadow:0 6px 18px rgba(0,0,0,.08);transition:border-color .25s,box-shadow .25s}
-.dash-search-wrap:focus-within{border-color:var(--accent);box-shadow:0 6px 22px rgba(0,0,0,.14)}
-.dash-search{flex:1;background:transparent;border:none;outline:none;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:.85rem;min-width:0}
-.ds-ic{width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:1.8;flex-shrink:0}
-.dash-iconbtn{width:42px;height:42px;border-radius:50%;border:1px solid var(--border);background:var(--card);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.08);transition:transform .22s,border-color .22s}
-.dash-iconbtn:hover{transform:translateY(-2px);border-color:var(--accent)}
-.dash-iconbtn svg{width:19px;height:19px;stroke:var(--txt);fill:none;stroke-width:1.7}
-.dash-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--purple));display:inline-flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.14)}
-.dash-avatar svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:1.8}
-/* ۵ کارت آماری هم‌اندازه و هم‌تراز در یک ردیف (repeat(5) به‌جای repeat(3) که ردیفِ
-   دوم را ناهم‌تراز می‌کرد). align-items:stretch تا ارتفاع همه یکی شود. */
-.dash-cards{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:18px;align-items:stretch}
-.dash-card{position:relative;overflow:hidden;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--border);border-radius:22px;padding:20px 22px;box-shadow:0 10px 30px rgba(0,0,0,.10);transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease}
-.dash-card:hover{transform:translateY(-4px);box-shadow:0 16px 38px rgba(0,0,0,.16);border-color:var(--accent)}
-.dash-card::before{content:'';position:absolute;inset-inline-end:0;top:18%;bottom:18%;width:5px;border-radius:99px 0 0 99px;background:linear-gradient(180deg,var(--accent),var(--purple))}
-.dc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
-.dc-ic{width:44px;height:44px;border-radius:14px;background:var(--dark);border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center}
-.dc-ic svg{width:22px;height:22px;stroke:var(--accent);fill:none;stroke-width:1.7}
-.dc-prog{position:relative;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center}
-.dc-prog svg{width:44px;height:44px;transform:rotate(-90deg)}
-.dc-prog circle{fill:none;stroke-width:3.4}
-.dc-prog .tr{stroke:var(--border)}
-.dc-prog .bar{stroke:var(--muted);stroke-linecap:round;transition:stroke-dashoffset .8s ease}
-.dc-prog b{position:absolute;font-size:.56rem;font-weight:800;color:var(--muted)}
-.dc-title{font-size:.82rem;font-weight:700;color:var(--muted)}
-.dc-value{font-size:1.25rem;font-weight:900;color:var(--txt);margin-top:4px}
-.dc-sub{font-size:.68rem;color:var(--muted);margin-top:6px;opacity:.8}
-.dash-mid{display:grid;grid-template-columns:1fr 300px 320px;gap:16px;align-items:stretch}
-.dash-chart-card{background:var(--card);border:1.5px solid var(--border);border-radius:22px;padding:20px 22px;box-shadow:0 10px 30px rgba(0,0,0,.10);min-width:0}
-.dcc-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px}
-.dcc-title{font-size:1rem;font-weight:900;color:var(--txt)}
-.dcc-sub{font-size:.72rem;color:var(--muted);margin-top:3px}
-.dash-tabs{display:flex;gap:6px;background:var(--dark);border:1px solid var(--border);border-radius:999px;padding:4px}
-.dash-tab{border:none;background:transparent;color:var(--muted);font-family:'Vazirmatn',sans-serif;font-size:.8rem;font-weight:800;padding:7px 16px;border-radius:999px;cursor:pointer;transition:background .22s,color .22s}
-.dash-tab:hover{color:var(--txt)}
-.dash-tab.active{background:var(--accent);color:#fff}
-.dash-fuel-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
-.dash-fuel-btn{border:1.5px solid var(--border);background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:.8rem;font-weight:800;padding:7px 16px;border-radius:999px;cursor:pointer;transition:all .22s;box-shadow:0 4px 14px rgba(0,0,0,.06)}
+/* ══════════════════════════════════════════════════════════════════════════
+   🏠 داشبورد — طراحیِ تازه (نسخهٔ ۲.۹.۱۵۲)
+   --------------------------------------------------------------------------
+   داشبوردِ قبلی به‌طور کامل برداشته شد و این چیدمانِ تازه جایش نشست: کارت‌های
+   بزرگ و خوانا، سربرگِ یک‌تکه، نوارِ فیلترها، ردیفِ آماری و یک شبکهٔ دو‌ستونه
+   (نمودار + ستونِ کناری).
+
+   • همهٔ رنگ‌ها از متغیرهای تم می‌آیند — با عوض شدن تم، داشبورد هم عوض می‌شود.
+   • فقط نمایشی است: هیچ منطق یا داده‌ای اینجا تغییر نمی‌کند؛ همان توابعِ خواندنیِ
+     قبلی داده‌ها را پر می‌کنند.
+   • کاملاً Responsive: روی کامپیوتر کارت‌ها بزرگ و حرفه‌ای‌اند، روی تبلت سه/دو
+     ستونه و روی موبایل متناسبِ خودِ گوشی — هیچ‌جا ریز و ناخوانا نمی‌شود.
+   ══════════════════════════════════════════════════════════════════════════ */
+#sec-dashboard{
+  max-width:1440px;margin:0 auto;
+  --d-gap:clamp(12px, 1.1vw + 7px, 22px);
+  --d-pad:clamp(15px, 1.3vw + 10px, 26px);
+  --d-r:clamp(16px, .8vw + 12px, 26px);
+  --d-shadow:0 14px 38px -18px rgba(0,0,0,.55);
+  --d-line:color-mix(in srgb, var(--txt) 14%, transparent);
+  --d-soft:color-mix(in srgb, var(--txt) 5%, var(--card));
+}
+@supports not (background: color-mix(in srgb, red 50%, blue)){
+  #sec-dashboard{--d-line:var(--border);--d-soft:var(--dark)}
+}
+
+/* ── ۱) سربرگ ──────────────────────────────────────────────────────────── */
+.dash-head{
+  position:relative;overflow:hidden;border-radius:var(--d-r);
+  padding:var(--d-pad);margin-bottom:var(--d-gap);
+  background:linear-gradient(135deg, color-mix(in srgb, var(--accent) 20%, var(--card)) 0%, var(--card) 58%);
+  border:1.5px solid var(--d-line);box-shadow:var(--d-shadow);
+  display:flex;align-items:center;justify-content:space-between;gap:var(--d-gap);flex-wrap:wrap}
+.dash-head::after{
+  content:'';position:absolute;width:280px;height:280px;border-radius:50%;
+  background:radial-gradient(circle, color-mix(in srgb, var(--accent) 26%, transparent) 0%, transparent 70%);
+  top:-140px;left:-90px;pointer-events:none}
+.dash-greet-row{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;position:relative;z-index:1}
+.dash-title{font-size:clamp(1.3rem, 1vw + 1.05rem, 2rem);font-weight:900;color:var(--txt);margin:0;letter-spacing:-.4px}
+.dash-greet{font-size:clamp(.86rem,.25vw + .8rem,1.05rem);font-weight:800;color:var(--accent)}
+.dash-date{font-size:clamp(.74rem,.15vw + .71rem,.88rem);color:var(--muted);font-weight:700;margin-top:6px;position:relative;z-index:1}
+.dh-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:relative;z-index:1}
+.dash-search-wrap{
+  display:flex;align-items:center;gap:9px;background:var(--d-soft);border:1.5px solid var(--d-line);
+  border-radius:999px;padding:clamp(9px,.5vw + 7px,13px) clamp(14px,.8vw + 11px,20px);
+  min-width:clamp(180px, 22vw, 300px);transition:border-color .25s, box-shadow .25s}
+.dash-search-wrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent)}
+.dash-search{flex:1;background:transparent;border:none;outline:none;color:var(--txt);
+  font-family:'Vazirmatn',sans-serif;font-size:clamp(.8rem,.14vw + .77rem,.92rem);min-width:0}
+.ds-ic{width:17px;height:17px;stroke:var(--muted);fill:none;stroke-width:1.8;flex-shrink:0}
+.dash-iconbtn{
+  width:clamp(40px,2.4vw + 32px,50px);height:clamp(40px,2.4vw + 32px,50px);border-radius:14px;
+  border:1.5px solid var(--d-line);background:var(--d-soft);display:inline-flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:transform .22s, border-color .22s, background .22s;-webkit-tap-highlight-color:transparent}
+.dash-iconbtn:hover{transform:translateY(-2px);border-color:var(--accent);background:color-mix(in srgb, var(--accent) 12%, var(--card))}
+.dash-iconbtn svg{width:21px;height:21px;stroke:var(--txt);fill:none;stroke-width:1.7}
+.dash-avatar{
+  width:clamp(40px,2.4vw + 32px,50px);height:clamp(40px,2.4vw + 32px,50px);border-radius:14px;
+  background:linear-gradient(140deg,var(--accent),var(--purple));display:inline-flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 20px -8px var(--accent)}
+.dash-avatar svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:1.8}
+
+/* ── ۲) نوارِ فیلترِ سوخت ──────────────────────────────────────────────── */
+.dash-fuel-bar{
+  display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:var(--d-gap);
+  background:var(--card);border:1.5px solid var(--d-line);border-radius:999px;
+  padding:clamp(7px,.4vw + 5px,10px) clamp(12px,.7vw + 9px,18px)}
+.dash-fuel-lbl{font-size:clamp(.76rem,.13vw + .73rem,.88rem);color:var(--muted);font-weight:800;margin-inline-end:2px}
+.dash-fuel-btn{
+  border:1.5px solid transparent;background:var(--d-soft);color:var(--txt);font-family:'Vazirmatn',sans-serif;
+  font-size:clamp(.78rem,.14vw + .75rem,.9rem);font-weight:800;padding:clamp(7px,.45vw + 5px,11px) clamp(14px,.9vw + 10px,22px);
+  border-radius:999px;cursor:pointer;transition:all .22s;-webkit-tap-highlight-color:transparent}
 .dash-fuel-btn:hover{border-color:var(--accent)}
-.dash-fuel-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
-.dash-legend{display:flex;gap:14px;font-size:.72rem;color:var(--muted);font-weight:700;align-items:center}
-.dash-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:5px;vertical-align:-1px}
+.dash-fuel-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 8px 18px -8px var(--accent)}
+
+/* ── ۳) هشدارهای زنده ──────────────────────────────────────────────────── */
+.dash-alerts{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:var(--d-gap)}
+.da-chip{
+  display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--d-line);background:var(--card);color:var(--txt);
+  font-family:'Vazirmatn',sans-serif;font-size:clamp(.74rem,.13vw + .71rem,.86rem);font-weight:800;
+  padding:clamp(8px,.45vw + 6px,12px) clamp(13px,.8vw + 10px,18px);border-radius:14px;cursor:pointer;
+  box-shadow:0 6px 16px -10px rgba(0,0,0,.6);transition:transform .18s;-webkit-tap-highlight-color:transparent}
+.da-chip:hover{transform:translateY(-2px)}
+.da-chip.warn{border-color:var(--red);color:var(--red);background:color-mix(in srgb, var(--red) 10%, var(--card))}
+.da-chip.soft{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb, var(--accent) 10%, var(--card))}
+.da-chip.ok{border-color:var(--green);color:var(--green);background:color-mix(in srgb, var(--green) 10%, var(--card))}
+
+/* ── ۴) ردیفِ کارت‌های آماری ───────────────────────────────────────────── */
+/* پنج کارت، همیشه هم‌تراز — هیچ ردیفِ ناقصی ساخته نمی‌شود:
+   عریض = ۵ ستون · متوسط = ۳ ستون (کارت پنجم دو ستون) · باریک = ۲ ستون
+   (کارت پنجم تمام‌عرض) · خیلی باریک = یک ستون. */
+.dash-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--d-gap);margin-bottom:var(--d-gap);align-items:stretch}
+.dash-cards .dash-card:last-child{grid-column:1 / -1}
+@media (min-width:900px) and (max-width:1249px){
+  .dash-cards{grid-template-columns:repeat(3,1fr)}
+  .dash-cards .dash-card:last-child{grid-column:span 2}
+}
+@media (min-width:1250px){
+  .dash-cards{grid-template-columns:repeat(5,1fr)}
+  .dash-cards .dash-card:last-child{grid-column:auto}
+}
+.dash-card{
+  position:relative;overflow:hidden;display:flex;flex-direction:column;
+  background:var(--card);border:1.5px solid var(--d-line);border-radius:var(--d-r);
+  padding:var(--d-pad);box-shadow:var(--d-shadow);
+  transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease}
+.dash-card::before{
+  content:'';position:absolute;inset-inline-start:0;top:0;bottom:0;width:4px;
+  background:linear-gradient(180deg,var(--accent),var(--purple));opacity:.9}
+.dash-card:hover{transform:translateY(-5px);box-shadow:0 22px 46px -18px rgba(0,0,0,.62);border-color:var(--accent)}
+.dc-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:clamp(11px,.7vw + 8px,17px)}
+.dc-ic{
+  width:clamp(44px,2.7vw + 34px,58px);height:clamp(44px,2.7vw + 34px,58px);border-radius:16px;
+  background:color-mix(in srgb, var(--accent) 14%, var(--card));border:1.5px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.dc-ic svg{width:clamp(22px,1.2vw + 17px,28px);height:clamp(22px,1.2vw + 17px,28px);stroke:var(--accent);fill:none;stroke-width:1.75}
+.dc-prog{position:relative;width:clamp(44px,2.5vw + 35px,56px);height:clamp(44px,2.5vw + 35px,56px);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.dc-prog svg{width:100%;height:100%;transform:rotate(-90deg)}
+.dc-prog circle{fill:none;stroke-width:3.2}
+.dc-prog .tr{stroke:var(--d-line)}
+.dc-prog .bar{stroke:var(--muted);stroke-linecap:round;transition:stroke-dashoffset .8s ease}
+.dc-prog b{position:absolute;font-size:clamp(.58rem,.1vw + .56rem,.7rem);font-weight:900;color:var(--muted)}
+.dc-title{font-size:clamp(.82rem,.16vw + .78rem,.96rem);font-weight:800;color:var(--muted)}
+.dc-value{font-size:clamp(1.18rem,.75vw + .96rem,1.75rem);font-weight:900;color:var(--txt);margin-top:6px;line-height:1.25;letter-spacing:-.3px}
+.dc-sub{font-size:clamp(.68rem,.12vw + .65rem,.8rem);color:var(--muted);margin-top:9px;line-height:1.75;opacity:.92}
+
+/* ── ۵) شبکهٔ اصلی: نمودار + ستونِ کناری ───────────────────────────────── */
+.dash-mid{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(300px,1fr);gap:var(--d-gap);align-items:stretch}
+.dash-side{display:flex;flex-direction:column;gap:var(--d-gap);min-width:0}
+.dash-chart-card{
+  background:var(--card);border:1.5px solid var(--d-line);border-radius:var(--d-r);
+  padding:var(--d-pad);box-shadow:var(--d-shadow);min-width:0;display:flex;flex-direction:column}
+.dcc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:clamp(12px,.8vw + 9px,18px)}
+.dcc-title{font-size:clamp(1rem,.35vw + .92rem,1.24rem);font-weight:900;color:var(--txt)}
+.dcc-sub{font-size:clamp(.68rem,.12vw + .65rem,.8rem);color:var(--muted);margin-top:5px;line-height:1.7}
+.dash-tabs{display:flex;gap:5px;background:var(--d-soft);border:1.5px solid var(--d-line);border-radius:999px;padding:5px}
+.dash-tab{
+  border:none;background:transparent;color:var(--muted);font-family:'Vazirmatn',sans-serif;
+  font-size:clamp(.76rem,.13vw + .73rem,.88rem);font-weight:800;padding:clamp(7px,.4vw + 5px,10px) clamp(13px,.9vw + 9px,21px);
+  border-radius:999px;cursor:pointer;transition:background .22s, color .22s;-webkit-tap-highlight-color:transparent}
+.dash-tab:hover{color:var(--txt)}
+.dash-tab.active{background:var(--accent);color:#fff;box-shadow:0 6px 16px -8px var(--accent)}
+.dash-legend{display:flex;gap:14px;font-size:clamp(.68rem,.12vw + .65rem,.79rem);color:var(--muted);font-weight:700;align-items:center;flex-wrap:wrap}
+.dash-legend i{display:inline-block;width:11px;height:11px;border-radius:4px;margin-inline-end:6px;vertical-align:-1px}
 .dash-legend .lg-amt{background:var(--accent)}
 .dash-legend .lg-lit{background:var(--blue)}
 .dash-legend .lg-prf{background:var(--green)}
 .dash-legend .lg-exp{background:var(--red)}
-/* نوار هشدارهای داشبورد — فقط وقتی هشداری هست دیده می‌شود */
-.dash-alerts{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-.da-chip{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--border);background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:.76rem;font-weight:800;padding:7px 13px;border-radius:999px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.06);transition:transform .18s}
-.da-chip:hover{transform:translateY(-2px)}
-.da-chip.warn{border-color:var(--red);color:var(--red)}
-.da-chip.soft{border-color:var(--accent);color:var(--accent)}
-.da-chip.ok{border-color:var(--green);color:var(--green)}
-/* نمودار روند مفاد/مصارف زیر ستون‌ها */
-.dash-trend-wrap{margin-top:14px;border-top:1px dashed var(--border);padding-top:12px}
-.dash-trend-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px}
-.dash-trend-title{font-size:.82rem;font-weight:900;color:var(--txt)}
-#dash-trend{width:100%;height:92px;display:block}
-#dash-trend .tl-grid{stroke:var(--border);stroke-width:.6;opacity:.6}
-#dash-trend .tl-prf{fill:none;stroke:var(--green);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
-#dash-trend .tl-prf-area{fill:var(--green);opacity:.12}
-#dash-trend .tl-exp{fill:none;stroke:var(--red);stroke-width:1.6;stroke-dasharray:5 4;stroke-linejoin:round;stroke-linecap:round}
-#dash-trend .tl-dot{fill:var(--green)}
-/* در RTL، ترتیبِ زمانی از راست (جدید) به چپ (قدیمی) باشد: row-reverse تا «امروز/این‌
-   هفته/این ماه/امسال» سمتِ راست بیفتد و قدیمی‌ها سمتِ چپ (قبلاً برعکس بود). */
-.dash-bars{display:flex;flex-direction:row-reverse;align-items:flex-end;gap:2.5%;height:240px;padding:26px 12px 12px;background:var(--dark);border:1px solid var(--border);border-radius:14px}
-/* در تم‌های روشن --dark تقریباً هم‌رنگِ پس‌زمینه است و کادرِ نمودار «گم» می‌شد — با
-   color-mix از رنگِ متن، در هر تمی پس‌زمینه/حاشیه/خط‌کشِ نمودار همیشه دیده می‌شود */
-@supports (background: color-mix(in srgb, red 50%, blue)){
-  .dash-bars{
-    background:
-      repeating-linear-gradient(to top,
-        transparent 0 47px,
-        color-mix(in srgb, var(--txt) 10%, transparent) 47px 48px)
-      color-mix(in srgb, var(--txt) 6%, var(--card));
-    border-color:color-mix(in srgb, var(--txt) 20%, transparent);
-  }
-  .dash-chart-card{border-color:color-mix(in srgb, var(--txt) 18%, transparent)}
-}
-.db-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0;height:100%;cursor:pointer}
-.db-barwrap{position:relative;flex:1;width:100%;max-width:44px;display:flex;align-items:flex-end;justify-content:center;gap:3px}
-.db-bar{width:30%;height:0;border-radius:9px;background:linear-gradient(180deg,var(--accent) 0%,var(--purple) 160%);transition:height .7s cubic-bezier(.22,.8,.3,1),filter .2s}
-.db-bar.lit{background:linear-gradient(180deg,var(--blue) 0%,var(--purple) 160%);opacity:.85}
-.db-bar.prf{background:linear-gradient(180deg,var(--green) 0%,var(--purple) 160%);opacity:.9}
-.db-col:hover .db-bar{filter:brightness(1.14)}
-.db-col.sel .db-bar{filter:brightness(1.18);box-shadow:0 0 0 1.5px var(--accent)}
+
+/* نمودار ستونی — RTL: تازه‌ترین دوره سمت راست */
+.dash-bars{
+  display:flex;flex-direction:row-reverse;align-items:flex-end;gap:clamp(6px,.8vw,16px);
+  height:clamp(190px, 21vw, 300px);padding:30px clamp(8px,.7vw,16px) 14px;
+  background:var(--d-soft);border:1.5px solid var(--d-line);border-radius:calc(var(--d-r) * .72)}
+.db-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:10px;min-width:0;height:100%;cursor:pointer}
+.db-barwrap{position:relative;flex:1;width:100%;max-width:54px;display:flex;align-items:flex-end;justify-content:center;gap:4px}
+.db-bar{width:28%;height:0;border-radius:99px 99px 5px 5px;background:linear-gradient(180deg,var(--accent),color-mix(in srgb, var(--accent) 45%, var(--purple)));
+  transition:height .75s cubic-bezier(.22,.8,.3,1), filter .2s}
+.db-bar.lit{background:linear-gradient(180deg,var(--blue),color-mix(in srgb, var(--blue) 45%, var(--purple)));opacity:.9}
+.db-bar.prf{background:linear-gradient(180deg,var(--green),color-mix(in srgb, var(--green) 45%, var(--purple)));opacity:.92}
+.db-col:hover .db-bar{filter:brightness(1.16)}
+.db-col.sel .db-bar{filter:brightness(1.2);box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 60%, transparent)}
 .db-col.sel .db-lbl{color:var(--accent);font-weight:900}
-.db-tip{position:absolute;bottom:calc(100% + 6px);right:50%;transform:translateX(50%);background:var(--panel);color:var(--txt);border:1px solid var(--border);border-radius:9px;padding:4px 10px;font-size:.66rem;font-weight:800;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s;box-shadow:0 8px 20px rgba(0,0,0,.18);z-index:3}
+.db-tip{position:absolute;bottom:calc(100% + 8px);right:50%;transform:translateX(50%);
+  background:var(--panel);color:var(--txt);border:1.5px solid var(--d-line);border-radius:11px;padding:6px 12px;
+  font-size:.7rem;font-weight:800;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s;
+  box-shadow:0 10px 26px -10px rgba(0,0,0,.8);z-index:3}
 .db-col:hover .db-tip{opacity:1}
-/* برچسبِ زیرِ ستون‌ها: اسم‌های ماه/هفته/سال کامل دیده شوند (نه بریده با …). اجازهٔ
-   شکستن به خط بعد + متنِ وسط‌چین تا در ستون‌های باریک هم خوانا بمانند. */
-.db-lbl{font-size:.62rem;color:var(--muted);font-weight:700;max-width:100%;text-align:center;line-height:1.2;word-break:break-word;overflow-wrap:anywhere}
-.dash-detail{margin-top:12px;padding:10px 14px;border:1px dashed var(--border);border-radius:12px;background:var(--dark);font-size:.76rem;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.db-lbl{font-size:clamp(.62rem,.12vw + .59rem,.75rem);color:var(--muted);font-weight:700;max-width:100%;
+  text-align:center;line-height:1.3;word-break:break-word;overflow-wrap:anywhere}
+.dash-detail{
+  margin-top:clamp(11px,.7vw + 8px,16px);padding:clamp(11px,.6vw + 8px,16px) clamp(13px,.8vw + 9px,18px);
+  border:1.5px dashed var(--d-line);border-radius:calc(var(--d-r) * .62);background:var(--d-soft);
+  font-size:clamp(.72rem,.13vw + .69rem,.84rem);color:var(--muted);display:flex;gap:clamp(10px,1vw,20px);flex-wrap:wrap;align-items:center}
 .dash-detail b{color:var(--txt)}
-/* کارت مخزن هم‌قدِ ستونِ نمودار کش می‌آید و خودِ مخزن جای خالیِ پایین را پر می‌کند —
-   قبلاً ارتفاعِ مخزن ثابت بود و پایینِ کارت خالی می‌ماند */
-.dash-tank-card #dash-tank{flex:1;display:flex;flex-direction:column}
-#dash-tank .tank-card{padding:12px;gap:10px;margin-bottom:0;flex:1}
-#dash-tank .tank-card .tank-visual{width:92px;flex:0 0 92px;height:auto;min-height:168px}
-/* کارت‌های آماری و مخزن با کلیک به بخشِ خودشان می‌روند */
-.dash-cards .dash-card,.dash-tank-card{cursor:pointer}
-.dash-tank-toggle{border:1.5px solid var(--accent);background:var(--card);color:var(--accent);font-family:'Vazirmatn',sans-serif;font-size:.72rem;font-weight:800;padding:5px 12px;border-radius:999px;cursor:pointer;transition:all .22s}
+/* روند مفاد/مصارف */
+.dash-trend-wrap{margin-top:clamp(12px,.8vw + 9px,18px);border-top:1.5px dashed var(--d-line);padding-top:clamp(11px,.7vw + 8px,16px)}
+.dash-trend-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.dash-trend-title{font-size:clamp(.82rem,.16vw + .78rem,.96rem);font-weight:900;color:var(--txt)}
+#dash-trend{width:100%;height:clamp(78px,7vw,120px);display:block}
+#dash-trend .tl-grid{stroke:var(--d-line);stroke-width:.8}
+#dash-trend .tl-prf{fill:none;stroke:var(--green);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
+#dash-trend .tl-prf-area{fill:var(--green);opacity:.13}
+#dash-trend .tl-exp{fill:none;stroke:var(--red);stroke-width:1.8;stroke-dasharray:5 4;stroke-linejoin:round;stroke-linecap:round}
+#dash-trend .tl-dot{fill:var(--green)}
+
+/* کارت مخزن در ستون کناری */
+.dash-tank-card{flex:1;min-height:clamp(230px,20vw,300px)}
+.dash-tank-card #dash-tank{flex:1;display:flex;flex-direction:column;margin-top:10px}
+#dash-tank .tank-card{padding:12px;gap:12px;margin-bottom:0;flex:1}
+#dash-tank .tank-card .tank-visual{width:clamp(84px,7vw,108px);flex:0 0 auto;height:auto;min-height:170px}
+.dash-tank-toggle{
+  border:1.5px solid var(--accent);background:color-mix(in srgb, var(--accent) 12%, var(--card));color:var(--accent);
+  font-family:'Vazirmatn',sans-serif;font-size:clamp(.7rem,.12vw + .68rem,.8rem);font-weight:800;
+  padding:8px 15px;border-radius:999px;cursor:pointer;transition:all .22s;-webkit-tap-highlight-color:transparent}
 .dash-tank-toggle:hover{background:var(--accent);color:#fff}
-.dash-hero{position:relative;overflow:hidden;border-radius:26px;padding:26px 20px;background:linear-gradient(160deg,var(--accent),var(--purple) 90%);box-shadow:0 14px 34px rgba(0,0,0,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;min-height:320px}
-.dash-hero::after{content:'';position:absolute;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.12);top:-90px;left:-70px;pointer-events:none}
-.dhero-gauge{position:relative;width:150px;height:84px}
-.dhero-gauge svg{width:150px;height:84px}
+.dash-cards .dash-card,.dash-tank-card{cursor:pointer}
+
+/* کارت بزرگِ رشدِ فروش */
+.dash-hero{
+  position:relative;overflow:hidden;border-radius:var(--d-r);padding:var(--d-pad);
+  background:linear-gradient(150deg,var(--accent),var(--purple) 92%);box-shadow:0 18px 42px -18px var(--accent);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;
+  min-height:clamp(230px,19vw,300px);cursor:pointer}
+.dash-hero::after{content:'';position:absolute;width:240px;height:240px;border-radius:50%;
+  background:rgba(255,255,255,.13);top:-100px;left:-80px;pointer-events:none}
+.dhero-gauge{position:relative;width:clamp(140px,11vw,180px);height:clamp(78px,6.2vw,100px)}
+.dhero-gauge svg{width:100%;height:100%}
 .dhero-gauge path{fill:none;stroke-width:10;stroke-linecap:round}
-.dhero-gauge .tr{stroke:rgba(255,255,255,.25)}
+.dhero-gauge .tr{stroke:rgba(255,255,255,.26)}
 .dhero-gauge .bar{stroke:#fff;stroke-dasharray:151;stroke-dashoffset:151;transition:stroke-dashoffset .9s ease}
-.dhero-gauge b{position:absolute;bottom:2px;right:50%;transform:translateX(50%);color:#fff;font-size:1.1rem;font-weight:900}
-.dhero-ic{width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center}
-.dhero-ic svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:1.8}
-.dhero-label{color:rgba(255,255,255,.9);font-weight:800;font-size:1rem}
-.dhero-value{color:#fff;font-weight:900;font-size:1.5rem}
-.dhero-sub{color:rgba(255,255,255,.78);font-size:.72rem;max-width:230px;line-height:1.8}
-/* نردبانِ ریسپانسیوِ ۵ کارت: یک ردیفِ ۵‌تاییِ هم‌اندازه در صفحهٔ عریض؛ در صفحهٔ باریک‌تر
-   ۲ ستون و کارتِ پنجم تمام‌عرض تا هیچ‌وقت ردیفِ ناهم‌ترازِ ۳+۲ ساخته نشود. */
-@media (max-width:1150px){ .dash-cards{grid-template-columns:repeat(2,1fr)} .dash-cards .dash-card:last-child{grid-column:1 / -1} }
-@media (max-width:1100px){ .dash-mid{grid-template-columns:1fr} .dash-hero{min-height:260px} }
-@media (min-width:1101px) and (max-width:1500px){ .dash-mid{grid-template-columns:1fr 300px} .dash-mid .dash-hero{grid-column:1 / -1;min-height:auto} }
-/* موبایل: همه‌چیز فشرده تا بدون زوم و اسکرول افقی، چند کارت هم‌زمان دیده شود.
-   کارت‌های آماری دو‌ستونه می‌مانند (مثل داشبوردهای واقعی) و کارت مخزن تمام‌عرض */
-@media (max-width:640px){
-  #sec-dashboard{margin:0}
-  .dash-head{align-items:flex-start;gap:10px;margin-bottom:14px}
-  .dash-title{font-size:1.15rem}
-  .dash-greet{font-size:.78rem}
-  .dash-date{font-size:.7rem}
-  .dash-search-wrap{min-width:0;flex:1;padding:7px 11px}
-  .dash-iconbtn{width:36px;height:36px}
-  .dash-avatar{width:36px;height:36px}
-  .dash-fuel-bar{gap:6px;margin-bottom:12px}
-  .dash-fuel-btn{padding:6px 12px;font-size:.74rem}
-  .dash-cards{grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px}
-  .dash-card{padding:11px 12px;border-radius:16px}
-  .dash-card:last-child{grid-column:1 / -1}
-  .dc-top{margin-bottom:7px}
-  .dc-ic{width:32px;height:32px;border-radius:9px}
-  .dc-ic svg{width:16px;height:16px}
-  .dc-prog,.dc-prog svg{width:32px;height:32px}
-  .dc-prog b{font-size:.5rem}
-  .dc-title{font-size:.7rem}
-  .dc-value{font-size:.92rem;margin-top:3px}
-  .dc-sub{font-size:.56rem;margin-top:4px;line-height:1.5}
-  .dash-chart-card{padding:14px 12px;border-radius:16px}
-  .dcc-title{font-size:.9rem}
-  .dcc-sub{font-size:.62rem}
-  .dash-tabs{padding:3px}
-  .dash-tab{padding:6px 11px;font-size:.72rem}
-  .dash-legend{font-size:.62rem;gap:9px}
-  /* موبایل: ستون‌ها با پهنای ثابت + اسکرول افقی تا ۱۳ ستونِ حالت «ماه» له نشوند؛
-     چون صفحه RTL است، اسکرول از سمت راست (دورهٔ جاری) شروع می‌شود */
-  .dash-bars{height:160px;gap:8px;padding-top:22px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
-  .db-col{flex:0 0 auto;min-width:42px}
-  .db-lbl{font-size:.58rem}
-  .da-chip{font-size:.68rem;padding:6px 10px}
-  #dash-trend{height:70px}
-  .dash-detail{font-size:.66rem;gap:9px;padding:8px 10px}
-  .dash-hero{min-height:180px;border-radius:18px;padding:18px 14px}
-  .dhero-value{font-size:1.2rem}
-  .dhero-label{font-size:.85rem}
+.dhero-gauge b{position:absolute;bottom:0;right:50%;transform:translateX(50%);color:#fff;font-size:clamp(1rem,.4vw + .9rem,1.3rem);font-weight:900}
+.dhero-ic{width:clamp(42px,2.4vw + 34px,54px);height:clamp(42px,2.4vw + 34px,54px);border-radius:16px;
+  background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center}
+.dhero-ic svg{width:26px;height:26px;stroke:#fff;fill:none;stroke-width:1.8}
+.dhero-label{color:rgba(255,255,255,.92);font-weight:800;font-size:clamp(.88rem,.2vw + .83rem,1.08rem)}
+.dhero-value{color:#fff;font-weight:900;font-size:clamp(1.3rem,.9vw + 1.05rem,2rem);letter-spacing:-.4px}
+.dhero-sub{color:rgba(255,255,255,.82);font-size:clamp(.68rem,.12vw + .65rem,.8rem);max-width:280px;line-height:1.9}
+
+/* ── ۶) نردبانِ ریسپانسیو ─────────────────────────────────────────────── */
+@media (max-width:1180px){
+  .dash-mid{grid-template-columns:1fr}
+  .dash-side{flex-direction:row;flex-wrap:wrap}
+  .dash-side > *{flex:1 1 300px}
 }
-@media (max-width:400px){
-  .dash-cards{grid-template-columns:1fr 1fr;gap:8px}
-  .dc-value{font-size:.86rem}
-  .dc-sub{font-size:.52rem}
-  .dash-tab{padding:5px 9px;font-size:.68rem}
+@media (max-width:820px){
+  .dash-side{flex-direction:column}
+  .dash-head{flex-direction:column;align-items:stretch}
+  .dh-left{justify-content:space-between}
+  .dash-search-wrap{flex:1;min-width:0}
+}
+@media (max-width:640px){
+  #sec-dashboard{--d-gap:12px;--d-pad:15px;--d-r:17px}
+  .dc-value{font-size:1.06rem}
+  .dc-title{font-size:.8rem}
+  .dc-sub{font-size:.66rem;line-height:1.7}
+  .dash-fuel-bar{border-radius:16px;justify-content:center}
+  /* ستون‌ها با پهنای ثابت + اسکرول افقی تا ۱۳ ستونِ حالتِ «ماه» له نشوند */
+  .dash-bars{height:180px;gap:9px;padding-top:26px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+  .db-col{flex:0 0 auto;min-width:46px}
+  .dash-detail{gap:9px}
+  .dash-hero{min-height:210px}
+}
+/* گوشی‌های باریک: یک ستون — کارت بزرگ و کاملاً خوانا، نه دو کارتِ ریز کنار هم */
+@media (max-width:459px){
+  .dash-cards{grid-template-columns:1fr}
+  .dash-cards .dash-card:last-child{grid-column:1 / -1}
+  .dc-value{font-size:1.3rem}
+  .dc-title{font-size:.88rem}
+  .dc-sub{font-size:.72rem}
 }
 </style>
 <div class="section visible" id="sec-dashboard">
+
+  <!-- سربرگ -->
   <div class="dash-head">
-    <div>
+    <div style="position:relative;z-index:1;min-width:0">
       <div class="dash-greet-row"><h2 class="dash-title">داشبورد</h2><span class="dash-greet" id="dash-greet">سلام 👋</span></div>
       <div class="dash-date" id="dash-date"></div>
     </div>
@@ -16167,14 +16346,19 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
       <span class="dash-avatar" title="پروفایل"><svg><use href="#ic-user1"/></svg></span>
     </div>
   </div>
+
+  <!-- فیلترِ سوخت -->
   <div class="dash-fuel-bar">
-    <span style="font-size:.78rem;color:var(--muted);font-weight:700">⛽ نوع سوخت:</span>
+    <span class="dash-fuel-lbl">⛽ نوع سوخت</span>
     <button class="dash-fuel-btn active" onclick="dashSetFuel('all',this)">📋 همه</button>
     <button class="dash-fuel-btn" onclick="dashSetFuel('petrol',this)">⛽ پطرول</button>
     <button class="dash-fuel-btn" onclick="dashSetFuel('diesel',this)">🟤 دیزل</button>
   </div>
+
   <!-- هشدارهای زنده: مخزن کم، قرض‌داران بی‌حرکت، وضعیت بکاپ ابری -->
   <div class="dash-alerts" id="dash-alerts"></div>
+
+  <!-- کارت‌های آماری -->
   <div class="dash-cards">
     <div class="dash-card" title="رفتن به پارچه‌ها" onclick="showSection('shifts')"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-shifts"/></svg></span><span class="dc-prog" id="dcp-sales"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title" id="dct-sales">فروش امروز</div><div class="dc-value" id="dcv-sales">0</div><div class="dc-sub" id="dcs-sales"></div></div>
     <div class="dash-card" title="رفتن به مفاد / ضرر" onclick="showSection('profit')"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-profit"/></svg></span><span class="dc-prog" id="dcp-profit"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title" id="dct-profit">مفاد امروز</div><div class="dc-value" id="dcv-profit">0</div><div class="dc-sub" id="dcs-profit"></div></div>
@@ -16182,11 +16366,13 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
     <div class="dash-card" title="رفتن به مصارف" onclick="showSection('expenses')"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-expenses"/></svg></span><span class="dc-prog" id="dcp-exp"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title" id="dct-exp">مصارف امروز</div><div class="dc-value" id="dcv-exp">0</div><div class="dc-sub" id="dcs-exp"></div></div>
     <div class="dash-card" title="رفتن به گاوصندوق" onclick="showSection('safe')"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-safe"/></svg></span><span class="dc-prog" id="dcp-safe"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.5"/><circle class="bar" cx="18" cy="18" r="15.5"/></svg><b>0٪</b></span></div><div class="dc-title">موجودی گاوصندوق</div><div class="dc-value" id="dcv-safe">0</div><div class="dc-sub" id="dcs-safe"></div></div>
   </div>
+
+  <!-- نمودار + ستون کناری -->
   <div class="dash-mid">
     <div class="dash-chart-card">
       <div class="dcc-head">
-        <div><div class="dcc-title">📊 نمودار فروش</div><div class="dcc-sub" id="dcc-sub">متصل به پارچه‌های ثبت‌شده — روی هر ستون کلیک کنید</div></div>
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="min-width:0"><div class="dcc-title">📊 نمودار فروش</div><div class="dcc-sub" id="dcc-sub">متصل به پارچه‌های ثبت‌شده — روی هر ستون کلیک کنید</div></div>
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
           <div class="dash-legend"><span><i class="lg-amt"></i>مبلغ (افغانی)</span><span><i class="lg-lit"></i>لیتر</span><span><i class="lg-prf"></i>مفاد</span></div>
           <div class="dash-tabs">
             <button class="dash-tab active" onclick="dashSetRange('day',this)">روز</button>
@@ -16206,13 +16392,16 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
         <svg id="dash-trend" viewBox="0 0 300 80" preserveAspectRatio="none"></svg>
       </div>
     </div>
-    <div class="dash-card dash-tank-card" title="رفتن به مخزن" onclick="if(!event.target.closest('button,input,select'))showSection((_dashFuel==='all'?_dashTankFuel:_dashFuel)==='diesel'?'storage-diesel':'storage')"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-storage"/></svg></span><button class="dash-tank-toggle" id="dash-tank-toggle" onclick="dashToggleTank()">🔁 دیزل</button></div><div class="dc-title" id="dash-tank-title">موجودی مخزن — ⛽ پطرول</div><div id="dash-tank" style="margin-top:8px"></div></div>
-    <div class="dash-hero" title="رفتن به پارچه‌ها" style="cursor:pointer" onclick="showSection('shifts')">
-      <div class="dhero-gauge"><svg viewBox="0 0 120 66"><path class="tr" d="M12 60 A48 48 0 0 1 108 60"/><path class="bar" id="dash-hero-arc" d="M12 60 A48 48 0 0 1 108 60"/></svg><b id="dash-hero-pct">0٪</b></div>
-      <div class="dhero-ic"><svg><use href="#ic-profit"/></svg></div>
-      <div class="dhero-label" id="dash-hero-label">فروش امروز</div>
-      <div class="dhero-value" id="dash-hero-value">0</div>
-      <div class="dhero-sub" id="dash-hero-sub"></div>
+
+    <div class="dash-side">
+      <div class="dash-card dash-tank-card" title="رفتن به مخزن" onclick="if(!event.target.closest('button,input,select'))showSection((_dashFuel==='all'?_dashTankFuel:_dashFuel)==='diesel'?'storage-diesel':'storage')"><div class="dc-top"><span class="dc-ic"><svg><use href="#ic-storage"/></svg></span><button class="dash-tank-toggle" id="dash-tank-toggle" onclick="dashToggleTank()">🔁 دیزل</button></div><div class="dc-title" id="dash-tank-title">موجودی مخزن — ⛽ پطرول</div><div id="dash-tank"></div></div>
+      <div class="dash-hero" title="رفتن به پارچه‌ها" onclick="showSection('shifts')">
+        <div class="dhero-gauge"><svg viewBox="0 0 120 66"><path class="tr" d="M12 60 A48 48 0 0 1 108 60"/><path class="bar" id="dash-hero-arc" d="M12 60 A48 48 0 0 1 108 60"/></svg><b id="dash-hero-pct">0٪</b></div>
+        <div class="dhero-ic"><svg><use href="#ic-profit"/></svg></div>
+        <div class="dhero-label" id="dash-hero-label">فروش امروز</div>
+        <div class="dhero-value" id="dash-hero-value">0</div>
+        <div class="dhero-sub" id="dash-hero-sub"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -16907,8 +17096,6 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
       <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('profit',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('profit',0.08)">A+</button></span>
     </span>
   </div>
-  <!-- کادر گزارش پایان ماه — صفحهٔ جداگانه -->
-  <button type="button" class="tool-link-card" style="border-color:var(--green);color:var(--green)" onclick="showSection('monthreport')"><span title="📅 گزارش پایان ماه — فروش، مفاد، مصارف، همه در یک صفحه">📅 گزارش پایان ماه</span><span class="tlc-go"><i>‹</i></span></button>
   <div class="pl-result-wrap">
   <div class="pl-result" id="pl-result">
     <div class="pl-aurora" aria-hidden="true"></div>
@@ -16977,12 +17164,14 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
       </div>
     </div>
   </div>
-  <!-- کادر تاریخچهٔ نرخ اتحادیه — صفحهٔ جداگانه (زیر کادر نرخ اتحادیه) -->
-  <button type="button" class="tool-link-card" onclick="showSection('ratehist')"><span title="📈 تاریخچهٔ نرخ اتحادیه — خودکار ثبت می‌شود">📈 تاریخچهٔ نرخ اتحادیه</span><span class="tlc-go"><i>‹</i></span></button>
+  <!-- ═══ خرید عمده از مشتریان، کنارِ کادرِ تاریخچهٔ مفاد و ضرر ═══
+       خواستهٔ صاحب برنامه: این دو کادر کنارِ هم باشند. روی کامپیوتر دو ستونِ
+       هم‌ارتفاع‌اند و روی تبلت/موبایل خودکار زیرِ هم می‌روند (کاملاً ریسپانسیو). -->
+  <div class="pl-side-by-side">
   <!-- فرم ثبت خرید عمده داخل همین بخش — فقط جدولِ خریدهای ثبت‌شده در صفحهٔ جداگانه است -->
   <div class="card">
     <div class="card-head">
-      <div class="card-title">🛒 خرید عمده از مشتری (درآمد اضافی)</div>
+      <div class="card-title">🛒 خرید عمده از مشتریان</div>
       <button class="add-btn" style="background:var(--green);color:#fff" onclick="showSection('extraincome')">📋 جدول خریدها ←</button>
     </div>
     <div style="padding:14px">
@@ -16997,6 +17186,20 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
       </div>
       <div style="margin-top:10px;font-size:0.8rem;color:var(--muted)">جمع درآمد اضافی ثبت‌شده: <b id="ei-profit-sum" style="color:var(--green)">0 افغانی</b></div>
     </div>
+  </div>
+  <!-- کادرِ تاریخچهٔ مفاد و ضرر — همان صفحه‌های موجود، این‌بار یک‌جا و مرتب -->
+  <div class="card" style="border-color:var(--blue)">
+    <div class="card-head"><div class="card-title" style="color:var(--blue)">🕘 تاریخچهٔ مفاد و ضرر</div></div>
+    <div style="padding:14px">
+      <div style="font-size:0.76rem;color:var(--muted);margin-bottom:12px;line-height:1.7">گزارش‌ها و تاریخچه‌های همین بخش — روی هر کادر بزنید تا صفحهٔ خودش باز شود.</div>
+      <div class="pl-hist-links">
+        <button type="button" class="tool-link-card" style="border-color:var(--green);color:var(--green)" onclick="showSection('monthreport')"><span title="📅 گزارش پایان ماه — فروش، مفاد، مصارف، همه در یک صفحه">📅 گزارش پایان ماه</span><span class="tlc-go"><i>‹</i></span></button>
+        <button type="button" class="tool-link-card" onclick="showSection('ratehist')"><span title="📈 تاریخچهٔ نرخ اتحادیه — خودکار ثبت می‌شود">📈 تاریخچهٔ نرخ اتحادیه</span><span class="tlc-go"><i>‹</i></span></button>
+        <button type="button" class="tool-link-card" style="border-color:var(--green);color:var(--green)" onclick="showSection('extraincome')"><span title="📋 جدول همهٔ خریدهای عمده از مشتریان">📋 جدول خریدهای عمده</span><span class="tlc-go"><i>‹</i></span></button>
+        <button type="button" class="tool-link-card" style="border-color:var(--purple);color:var(--purple)" onclick="openSectionHistory('expense')"><span title="💸 تاریخچهٔ مصارف — با تاریخ و روز هفته">💸 تاریخچهٔ مصارف</span><span class="tlc-go"><i>‹</i></span></button>
+      </div>
+    </div>
+  </div>
   </div>
   <div class="card">
     <div class="card-head"><div class="card-title">✍️ درآمد و مصرف اضافی دستی</div></div>
@@ -17668,10 +17871,47 @@ body.viewer-mode .inv-admin-only{display:none!important}
 .inv-act.del{border-color:#e53e3e66;color:var(--red)}
 .inv-act.del:hover{background:#e53e3e;color:#fff}
 .inv-empty{text-align:center;color:var(--muted);padding:46px 14px;font-size:.9rem;background:var(--card);border:1.5px dashed var(--border);border-radius:16px}
-/* ── پیش‌نمایش فاکتور (مودال جزئیات) — باید روی صفحهٔ لیست (z-index:10070) باز شود ── */
-#invDetailModal{z-index:10080}
-#invDetailModal .modal{background:transparent!important;border:none!important;box-shadow:none!important}
-#invDetailModal .modal-head{background:var(--panel)!important;border-radius:12px 12px 0 0}
+/* ── صفحهٔ تمام‌صفحهٔ فاکتور — روی صفحهٔ لیست (z-index:10070) باز می‌شود ──
+   خواستهٔ صاحب برنامه: فاکتور داخلِ برنامه تمام‌صفحه دیده شود تا اطلاعات کامل،
+   خوانا و حرفه‌ای باشد. سربرگ ثابت می‌ماند و بدنه اسکرول می‌شود؛ روی هر اندازه
+   صفحه‌ای (کامپیوتر، تبلت، موبایل) برگه هم‌اندازهٔ همان دستگاه بزرگ می‌شود. */
+#invDetailModal.inv-fullpage{z-index:10080;padding:0;align-items:stretch;justify-content:stretch;background:var(--dark)}
+#invDetailModal.inv-fullpage .modal{
+  background:transparent!important;border:none!important;box-shadow:none!important;border-radius:0!important;
+  max-width:none!important;width:100%!important;max-height:none!important;height:100%!important;
+  display:flex;flex-direction:column;overflow:hidden;padding:0!important;margin:0!important}
+#invDetailModal.inv-fullpage .modal-head{
+  background:var(--panel)!important;border-radius:0!important;flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:calc(12px + env(safe-area-inset-top,0px)) 18px 12px;border-bottom:2px solid var(--accent);font-size:1.1rem}
+#invDetailModal.inv-fullpage .modal-close{
+  background:var(--red);border:none;color:#fff;border-radius:10px;padding:9px 16px;
+  font-family:'Vazirmatn',sans-serif;font-size:.86rem;font-weight:900;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#invDetailModal.inv-fullpage #inv-detail-body{
+  flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:22px 18px calc(28px + env(safe-area-inset-bottom,0px));width:100%;max-width:1000px;margin:0 auto;box-sizing:border-box}
+/* برگه در حالت تمام‌صفحه بزرگ‌تر و خواناتر — نه ریز مثل مودال قدیمی */
+#invDetailModal.inv-fullpage .invp-frame{padding:30px 32px 200px}
+#invDetailModal.inv-fullpage .invp-title{font-size:2rem}
+#invDetailModal.inv-fullpage .invp-grid{grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+#invDetailModal.inv-fullpage .invp-row{padding:13px 16px}
+#invDetailModal.inv-fullpage .invp-row .k{font-size:.86rem}
+#invDetailModal.inv-fullpage .invp-in,#invDetailModal.inv-fullpage .invp-row .v{font-size:1.06rem}
+#invDetailModal.inv-fullpage .invp-total{padding:15px 20px}
+#invDetailModal.inv-fullpage .invp-total .tv{font-size:1.5rem}
+@media(max-width:900px){
+  #invDetailModal.inv-fullpage #inv-detail-body{padding:16px 12px calc(24px + env(safe-area-inset-bottom,0px))}
+  #invDetailModal.inv-fullpage .invp-frame{padding:20px 16px 170px}
+  #invDetailModal.inv-fullpage .invp-title{font-size:1.5rem}
+  #invDetailModal.inv-fullpage .invp-grid{grid-template-columns:1fr}
+}
+@media(max-width:520px){
+  #invDetailModal.inv-fullpage .modal-head{font-size:.98rem;padding-inline:12px}
+  #invDetailModal.inv-fullpage .invp-frame{padding:16px 12px 150px}
+  #invDetailModal.inv-fullpage .invp-title{font-size:1.28rem}
+  #invDetailModal.inv-fullpage .invp-in,#invDetailModal.inv-fullpage .invp-row .v{font-size:1rem}
+  #invDetailModal.inv-fullpage .invp-total .tv{font-size:1.2rem}
+}
 /* ── مهر «تانک تیل یعقوبی» (SVG با افکت جوهر) — فقط با status=approved رندر می‌شود ── */
 .inv-stamp{position:absolute;inset:-6px;transform:rotate(-12deg);pointer-events:none;user-select:none}
 .inv-stamp svg{width:100%;height:100%;filter:drop-shadow(0 1px 1px rgba(16,50,140,.18))}
@@ -17845,14 +18085,16 @@ body.viewer-mode .inv-admin-only{display:none!important}
   </div>
 </div>
 
-<!-- مودال جزئیات / پیش‌نمایش فاکتور -->
-<div class="modal-overlay" id="invDetailModal">
-  <div class="modal" style="max-width:560px;width:96vw;max-height:92dvh;overflow-y:auto">
-    <div class="modal-head" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border)">
-      <b>🧾 جزئیات فاکتور</b>
-      <button class="modal-close" onclick="invCloseDetail()" style="background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer">✖</button>
+<!-- صفحهٔ تمام‌صفحهٔ فاکتور — خواستهٔ صاحب برنامه: فاکتور داخلِ برنامه
+     تمام‌صفحه دیده شود تا همهٔ اطلاعات کامل، خوانا و حرفه‌ای باشند.
+     (خروجی PDF جداست و فقط یک فاکتور در حدودِ نصفِ برگهٔ A4 می‌سازد) -->
+<div class="modal-overlay inv-fullpage" id="invDetailModal">
+  <div class="modal">
+    <div class="modal-head">
+      <b>🧾 فاکتور</b>
+      <button class="modal-close" onclick="invCloseDetail()" title="بستن (Esc)">✖ بستن</button>
     </div>
-    <div style="padding:14px" id="inv-detail-body"></div>
+    <div id="inv-detail-body"></div>
   </div>
 </div>
 <!-- ═══════════════ پایان ثبت فاکتورها ═══════════════ -->
@@ -18037,8 +18279,9 @@ body.viewer-mode .inv-admin-only{display:none!important}
   <div class="settings-card" id="ext-push-card" style="border-color:var(--green)">
     <div class="settings-title" style="color:var(--green)">📬 اعلان بیرون از برنامه — پیام‌ها حتی وقتی برنامه بسته است</div>
     <div style="font-size:0.85rem;color:var(--muted);line-height:2;margin-bottom:12px">
-      با فعال کردن این بخش، هر پیامی که کارمند یا مشتری در چت (گروهی یا چت با میرزا) بفرستد، همان لحظه به‌صورت اعلان به گوشی/کامپیوتر شما می‌رسد — <b>حتی وقتی برنامه کاملاً بسته باشد</b>. این کار از راه سرویس اعلان رایگان <b dir="ltr">ntfy</b> انجام می‌شود.<br>
-      راه‌اندازی (فقط یک بار): <b>۱)</b> دکمهٔ «فعال کردن» را بزنید تا کد اشتراک ساخته شود. <b>۲)</b> روی گوشی، برنامهٔ رایگان <b dir="ltr">ntfy</b> را از گوگل‌پلی یا اپ‌استور نصب کنید — روی کامپیوتر لازم نیست چیزی نصب شود، فقط «باز کردن صفحهٔ اشتراک» را بزنید و اجازهٔ اعلان بدهید. <b>۳)</b> در برنامهٔ ntfy گزینهٔ <b dir="ltr">+ Subscribe to topic</b> را بزنید و کد اشتراک را وارد کنید. <b>۴)</b> با «تست اعلان» مطمئن شوید که می‌رسد.<br>
+      <b style="color:var(--green)">این قابلیت همیشه روشن است و کلیدِ خاموش کردن ندارد.</b> هر پیامی که کارمند یا مشتری در چت (گروهی یا چت با میرزا) بفرستد، همان لحظه به‌صورت اعلان به گوشی/کامپیوتر شما می‌رسد — <b>حتی وقتی برنامه کاملاً بسته باشد</b>. این کار از راه سرویس اعلان رایگان <b dir="ltr">ntfy</b> انجام می‌شود.<br>
+      🔐 اگر خواستید اعلان‌ها را ببندید، فقط از <b>تنظیمات خودِ دستگاه</b> (اندروید: <b dir="ltr">Settings › Apps › پمپ یعقوبی › Notifications</b> — آیفون/ویندوز: تنظیماتِ اعلانِ همان برنامه) این کار انجام می‌شود؛ داخل برنامه هیچ گزینه‌ای برای خاموش کردنش وجود ندارد.<br>
+      راه‌اندازی (فقط یک بار): <b>۱)</b> کد اشتراک خودکار ساخته شده و در کادر پایین است. <b>۲)</b> روی گوشی، برنامهٔ رایگان <b dir="ltr">ntfy</b> را از گوگل‌پلی یا اپ‌استور نصب کنید — روی کامپیوتر لازم نیست چیزی نصب شود، فقط «باز کردن صفحهٔ اشتراک» را بزنید و اجازهٔ اعلان بدهید. <b>۳)</b> در برنامهٔ ntfy گزینهٔ <b dir="ltr">+ Subscribe to topic</b> را بزنید و کد اشتراک را وارد کنید. <b>۴)</b> با «تست اعلان» مطمئن شوید که می‌رسد.<br>
       ⚠️ کد اشتراک مثل رمز است — به هیچ‌کس ندهید؛ هر که آن را بداند اعلان پیام‌ها را می‌بیند.<br>
       👥 <b>کارمندان و مشتریان</b> لازم نیست این کد را داشته باشند: هر کس در پنل چت روی دکمهٔ <b>🔔</b> بالای پنل بزند، مشترکِ اعلان‌های مربوط به خودش می‌شود — کارمندان: چت گروهی و هشدارها؛ مشتری کیو‌آر: فقط جواب‌های میرزا به خودش.
     </div>
@@ -18046,7 +18289,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
       <div class="pw-field" style="flex:1"><label>کد اشتراک (تاپیک)</label><input id="push-topic" readonly dir="ltr" style="direction:ltr;text-align:left" placeholder="هنوز ساخته نشده — «فعال کردن» را بزنید"></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-      <button class="pw-btn" id="push-toggle-btn" onclick="pushToggleEnabled()">📬 فعال کردن</button>
       <button class="pw-btn" style="background:var(--blue);color:#fff" onclick="pushOpenSubscribe()">🌐 باز کردن صفحهٔ اشتراک</button>
       <button class="pw-btn" style="background:transparent;border:1px solid var(--border);color:var(--txt)" onclick="pushCopyTopic()">📋 کپی کد</button>
       <button class="pw-btn" style="background:transparent;border:1px solid var(--green);color:var(--green)" onclick="pushTest()">🔔 تست اعلان</button>
@@ -19062,10 +19304,12 @@ const DB = {
   stationPhone: '',
   unionRatePetrol: 0,
   unionRateDiesel: 0,
-  // اعلان بیرون از برنامه (ntfy): با فعال بودن، پیام‌های چت حتی وقتی برنامه بسته
-  // است به دستگاه میرزا می‌رسند. pushTopic مثل رمز است و بین دستگاه‌ها سینک می‌شود
-  // تا دستگاهِ فرستنده بداند اعلان را به کدام کد بفرستد.
-  pushEnabled: false,
+  // اعلان بیرون از برنامه (ntfy): همیشه روشن است — پیام‌های چت حتی وقتی برنامه
+  // بسته است به دستگاه میرزا می‌رسند. دیگر هیچ کلید روشن/خاموشی داخل برنامه نیست؛
+  // اجازهٔ اعلان فقط از تنظیماتِ خودِ دستگاه (App Info) مدیریت می‌شود.
+  // pushTopic مثل رمز است و بین دستگاه‌ها سینک می‌شود تا دستگاهِ فرستنده بداند
+  // اعلان را به کدام کد بفرستد.
+  pushEnabled: true,
   pushTopic: '',
   trash: []
 };
@@ -19165,6 +19409,9 @@ function load() {
   // کد ایستگاه همیشه pump1 — بدون نیاز به تنظیم دستی
   if (!DB.syncCode) { DB.syncCode = 'pump1'; }
   if (!DB.trash) DB.trash = [];
+  // «دریافت پیام حتی وقتی برنامه بسته است» همیشه و اجباراً روشن — حتی روی
+  // داده‌های قدیمی که با pushEnabled:false ذخیره شده‌اند
+  try { _pushEnsureOn(); } catch (e) {}
   _cleanTrash();
   try { if (dedupAccounts()) save(); } catch(e){}
   // مهاجرتِ یک‌بارهٔ نرخ‌ها: نرخِ اتحادیه/خودکار از جدول‌های قرض‌داران حذف و به «فیِ دستی» تبدیل می‌شود
@@ -20735,7 +20982,9 @@ function showSection(id, btn) {
   document.body.classList.toggle('nav-sticky', !(id === 'waraq' || id === 'debt' || id === 'noinv'));
   // صفحه‌های جدولیِ رسید/قرض‌داران تمام‌عرضِ صفحه شوند (خواستهٔ کاربر: جدول‌هایی که
   // از کادرها به صفحهٔ جدا می‌روند «تمام صفحه» نبودند). فقط همین صفحه‌ها؛ بقیه ۱۰۰۰px می‌مانند.
-  const _WIDE = ['rasid','debtrasid','chakana','oldloans','oldloansmoney','debtsum','debtsummoney'];
+  // داشبورد هم تمام‌عرض است تا کارت‌هایش روی کامپیوتر بزرگ و خوانا بمانند
+  // (خودِ #sec-dashboard حداکثر ۱۴۴۰px است، پس روی نمایشگرِ خیلی پهن هم کش نمی‌آید)
+  const _WIDE = ['dashboard','rasid','debtrasid','chakana','oldloans','oldloansmoney','debtsum','debtsummoney'];
   document.body.classList.toggle('sec-wide', _WIDE.indexOf(id) !== -1);
   if (btn) {
     btn.classList.add('active');
@@ -21501,6 +21750,103 @@ function _pdfDoc(html) {
   return s;
 }
 
+/* ============================================================================
+   🖨️ باز کردنِ سندِ چاپ/PDF — بدونِ گیر کردنِ برنامه روی گوشی
+   ----------------------------------------------------------------------------
+   باگِ گزارش‌شده: روی موبایل، هر «چاپ/PDF» یک پنجرهٔ تازه باز می‌کرد. در اپِ
+   نصب‌شده و در سافاری/کروم گوشی، آن پنجره یا اصلاً باز نمی‌شد (مسدود) یا باز
+   می‌شد و راهِ برگشتی نداشت؛ کاربر داخلِ نمای PDF گیر می‌کرد و گاهی مجبور
+   می‌شد برنامه را ببندد و دوباره نصب کند.
+
+   حالا روی گوشی/اپ، سند داخلِ خودِ برنامه در یک صفحهٔ تمام‌صفحه با دکمهٔ «بستن»
+   باز می‌شود (دکمهٔ برگشتِ گوشی و کلید Esc هم می‌بندندش)، و چاپ/PDF با دکمهٔ
+   خودش انجام می‌شود. روی کامپیوتر همان پنجرهٔ جدا باز می‌شود (رفتار قبلی).
+   ========================================================================== */
+function _pumpIsMobileShell() {
+  try {
+    if (window.pumpDesktop) return false;                       // ویندوز: پنجرهٔ جدا خوب کار می‌کند
+    if (window.PumpAndroid || location.protocol === 'file:') return true;
+    if (window.navigator.standalone === true) return true;
+    if (window.matchMedia && (matchMedia('(display-mode: standalone)').matches
+      || matchMedia('(display-mode: fullscreen)').matches
+      || matchMedia('(display-mode: minimal-ui)').matches)) return true;
+    return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+  } catch (e) { return false; }
+}
+// پشتهٔ «چیزهای بازِ تمام‌صفحه» تا دکمهٔ برگشتِ گوشی همیشه آخری را ببندد
+window._pumpEscStack = window._pumpEscStack || [];
+function _pumpPushEsc(fn) { window._pumpEscStack.push(fn); }
+function _pumpPopEsc(fn) {
+  const i = window._pumpEscStack.lastIndexOf(fn);
+  if (i >= 0) window._pumpEscStack.splice(i, 1);
+}
+// دکمهٔ برگشتِ گوشی (اپ اندروید این را صدا می‌زند) — true یعنی «بستم، بیرون نرو»
+window.pumpHandleBack = function () {
+  const st = window._pumpEscStack;
+  if (!st || !st.length) return false;
+  const fn = st[st.length - 1];
+  try { fn(); } catch (e) { _pumpPopEsc(fn); }
+  return true;
+};
+try {
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { try { window.pumpHandleBack(); } catch (er) {} }
+  });
+} catch (e) {}
+
+function pumpCloseDoc() {
+  const ov = document.getElementById('pumpDocOverlay');
+  if (ov) { _pumpPopEsc(ov.__esc); ov.remove(); }
+  try { document.body.style.overflow = ''; } catch (e) {}
+}
+function pumpPrintDoc() {
+  const fr = document.getElementById('pumpDocFrame');
+  if (!fr || !fr.contentWindow) return;
+  try { fr.contentWindow.focus(); fr.contentWindow.print(); }
+  catch (e) { try { showToast('چاپ از این دستگاه ممکن نشد', '#e53e3e'); } catch (e2) {} }
+}
+function _pumpDocOverlay(doc, title) {
+  pumpCloseDoc();
+  // اسکریپتِ «چاپِ خودکار» را برمی‌داریم: داخلِ برنامه، کاربر خودش دکمهٔ چاپ را
+  // می‌زند — وگرنه پنجرهٔ چاپ بلافاصله می‌پرید بالا و بستنش روی گوشی سخت بود
+  const safe = String(doc).replace(
+    /<script>\s*window\.onload\s*=\s*function\s*\(\s*\)\s*\{\s*window\.print\(\)\s*;?\s*\}\s*;?\s*<\/script>/gi, '');
+  const ov = document.createElement('div');
+  ov.id = 'pumpDocOverlay';
+  ov.innerHTML =
+    '<div class="pdoc-head">' +
+      '<span class="pdoc-title">' + (title ? String(title) : '📄 پیش‌نمایش سند') + '</span>' +
+      '<span class="pdoc-acts">' +
+        '<button type="button" class="pdoc-btn print" onclick="pumpPrintDoc()">🖨️ چاپ / PDF</button>' +
+        '<button type="button" class="pdoc-btn close" onclick="pumpCloseDoc()">✕ بستن</button>' +
+      '</span>' +
+    '</div>' +
+    '<iframe id="pumpDocFrame" title="سند"></iframe>';
+  document.body.appendChild(ov);
+  const fr = ov.querySelector('#pumpDocFrame');
+  try { fr.srcdoc = safe; }
+  catch (e) {
+    try { const d = fr.contentWindow.document; d.open(); d.write(safe); d.close(); } catch (e2) {}
+  }
+  ov.__esc = pumpCloseDoc;
+  _pumpPushEsc(ov.__esc);
+  try { document.body.style.overflow = 'hidden'; } catch (e) {}
+}
+/* تنها راهِ باز کردنِ سندهای چاپ/PDF در کلِ برنامه */
+function pumpOpenDoc(html, title) {
+  const doc = _pdfDoc(html);
+  if (!_pumpIsMobileShell()) {
+    let w = null;
+    try { w = window.open('', '_blank'); } catch (e) {}
+    if (w && w.document) {
+      try { w.document.write(doc); w.document.close(); return true; } catch (e) {}
+    }
+    // پنجره مسدود شد → به‌جای پیامِ خطا، همان سند داخلِ خودِ برنامه باز می‌شود
+  }
+  _pumpDocOverlay(doc, title);
+  return true;
+}
+
 // چاپ/PDF لیست مدت عضویت
 function pdfMembershipList(){
   const rows = _membershipRows();
@@ -21519,10 +21865,7 @@ function pdfMembershipList(){
     <h1>⏳ مدت عضویتِ قرض‌داران</h1><div class="meta">تاریخ چاپ: ${n2fa(today)} — مجموعاً ${n2fa(rows.length)} قرض‌دار (قدیمی‌ترین اول)</div>
     <table><thead><tr><th>#</th><th>تاریخ شروع</th><th>نام قرض‌دار</th><th>مدت عضویت</th></tr></thead><tbody>${trs}</tbody></table>
     </body></html>`;
-  const w = window.open('', '_blank');
-  if (!w){ showToast('❌ پنجرهٔ چاپ باز نشد — پاپ‌آپ را اجازه دهید', '#e53e3e'); return; }
-  w.document.write(_pdfDoc(html)); w.document.close();
-  setTimeout(()=>{ try{ w.print(); }catch(e){} }, 400);
+  pumpOpenDoc(html);
 }
 function miladiDate() {
   return new Date().toLocaleDateString('en-GB', {day:'2-digit',month:'2-digit',year:'numeric'});
@@ -22334,9 +22677,7 @@ ${dates.length ? summaryPage + pages : '<div style="text-align:center;padding:40
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
 
-  const w = window.open('', '_blank', 'width=900,height=750');
-  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
-  else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
+  pumpOpenDoc(html);
 }
 
 function printDieselShifts() {
@@ -22357,8 +22698,7 @@ function printDieselShifts() {
   }).join('');
   const totalMoney  = shifts.reduce((a,s)=>a+(s.money||0),0);
   const totalProfit = shifts.reduce((a,s)=>a+(s.profit||0),0);
-  const win = window.open('','_blank');
-  win.document.write(_pdfDoc(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>گزارش دیزل</title>
+  pumpOpenDoc(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>گزارش دیزل</title>
   <style>body{font-family:'Tahoma',sans-serif;padding:20px;font-size:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}h2{text-align:center}
   table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:3px 5px;text-align:right;white-space:nowrap}
   th{background:#f0f0f0}.day-th{background:#fff3e0}.night-th{background:#ede7f6}.total-th{background:#e8f5e9}
@@ -22380,9 +22720,7 @@ function printDieselShifts() {
     </tr>
   </thead><tbody>${rows||'<tr><td colspan="22" style="text-align:center">خالی</td></tr>'}</tbody>
   <tfoot><tr class="foot"><td colspan="19">جمع کل</td><td></td><td>${n2fa(totalMoney)}</td><td>${n2fa(totalProfit)}</td></tr></tfoot>
-  </table></body></html>`));
-  win.document.close();
-  setTimeout(()=>win.print(),400);
+  </table></body></html>`);
 }
 
 function deleteReport(id) {
@@ -22618,9 +22956,7 @@ ${reports.length ? summaryPage + pages : '<div style="text-align:center;padding:
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
 
-  const w = window.open('', '_blank', 'width=950,height=800');
-  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
-  else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
+  pumpOpenDoc(html);
 }
 
 function printShifts() {
@@ -22653,8 +22989,7 @@ function printShifts() {
     const dsl = getDieselForDate(r.date);
     return a+((r.day?.profit||0)+(r.night?.profit||0)+(dsl.day?.profit||0)+(dsl.night?.profit||0));
   },0);
-  const win = window.open('','_blank');
-  win.document.write(_pdfDoc(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
+  pumpOpenDoc(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
   <title>گزارش پارچه‌ها — پمپ یعقوبی</title>
   <style>
     body{font-family:'Tahoma',sans-serif;padding:20px;color:#111;font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -22693,9 +23028,7 @@ function printShifts() {
     </thead>
     <tbody>${rows||'<tr><td colspan="42" style="text-align:center">خالی</td></tr>'}</tbody>
     <tfoot><tr class="foot"><td colspan="39">جمع کل</td><td></td><td>${n2fa(totalMoney)}</td><td>${n2fa(totalProfit)}</td></tr></tfoot>
-  </table></body></html>`));
-  win.document.close();
-  setTimeout(()=>win.print(),400);
+  </table></body></html>`);
 }
 
 
@@ -24731,9 +25064,7 @@ ${noteHtml}
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
 
-  const w = window.open('', '_blank', 'width=960,height=720');
-  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
-  else showToast('مرورگر پنجره را مسدود کرد. اجازه popup بدهید', '#e53e3e');
+  pumpOpenDoc(html);
 }
 function updateStackedRasid(pid, acctId, ftype, value) {
   const person = _getStackedPerson(pid); if (!person) return;
@@ -25693,8 +26024,7 @@ ${(h.headerNote||'').trim()?`<div class="note-box"><b>توضیحات (نوار �
 ${h.note?`<div class="note-box"><b>توضیحات:</b> ${h.note.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>`:''}
 <script>window.onload=function(){window.print()}<\/script>
 </body></html>`;
-  const w = window.open('','_blank');
-  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
+  pumpOpenDoc(html);
 }
 // فیلتر پطرول/دیزل جدول آرشیو — روی نمایش و PDF همان آرشیو اثر می‌کند
 function setHistoryFilter(pid, hid, f) {
@@ -26313,8 +26643,7 @@ function pdfChakana(monthKey) {
   <tbody>${body}</tbody>
   <tfoot><tr><td colspan="5">جمع</td><td>${Math.round(totB)}</td><td>${Math.round(totR)}</td><td>${Math.round(totAlb)}</td></tr></tfoot></table>
   <script>window.onload=function(){window.print()}<\/script></body></html>`;
-  const win = window.open('','_blank','width=900,height=680');
-  if (win) { win.document.write(_pdfDoc(html)); win.document.close(); } else showToast('مرورگر پنجره را مسدود کرد','#e53e3e');
+  pumpOpenDoc(html);
 }
 function monkeyLabel(key){ return (key && /\d/.test(key)) ? _monthLabelFa(key) : ''; }
 function monkeyTitle(base, lbl){ return lbl ? (base + ' — ' + lbl) : base; }
@@ -26785,9 +27114,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 <div class="footer">پمپ یعقوبی — این سند به صورت خودکار تولید شده است</div>
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
-  const w = window.open('', '_blank', 'width=800,height=650');
-  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
-  else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
+  pumpOpenDoc(html);
 }
 
 // ========== قرض‌های دسته‌جمعی (صفحهٔ جداگانه — خلاصهٔ همهٔ قرض‌داران در یک جدول) ==========
@@ -26902,9 +27229,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 <div class="footer">پمپ یعقوبی — این سند به صورت خودکار تولید شده است</div>
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
-  const w = window.open('', '_blank', 'width=800,height=650');
-  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
-  else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
+  pumpOpenDoc(html);
 }
 // «چند وقت است قرض‌دار است» — از قدیمی‌ترین ردیفِ تاریخ‌دارِ حساب حساب می‌شود.
 // برمی‌گرداند { txt, days, from } — days = تعداد روز از اولین قرض تا امروز.
@@ -27733,9 +28058,7 @@ ${bodyHtml}
 <div class="footer">پمپ یعقوبی — این گزارش به صورت خودکار تولید شده است</div>
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
-  const w = window.open('', '_blank', 'width=900,height=980');
-  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
-  else if (typeof showToast === 'function') showToast('مرورگر پنجره را مسدود کرد. اجازه popup بدهید', '#e53e3e');
+  pumpOpenDoc(html);
 }
 
 // «جدول جدید» شرکت — هر دو جدولِ همین شرکت (پطرول و دیزل) با هم آرشیو می‌شوند و
@@ -28258,9 +28581,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px}
 <td>${n2fa(Math.round(sumPoul))}</td><td>${n2fa(Math.round(sumAlb))}</td><td>${n2fa(sumAlbUsd.toFixed(1))} $</td></tr></tfoot></table>
 <div class="footer">پمپ یعقوبی — ${escFa(company.name)}</div>
 <script>window.onload=function(){window.print();}<\/script></body></html>`;
-  const w = window.open('', '_blank', 'width=900,height=650');
-  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
-  else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
+  pumpOpenDoc(html);
 }
 
 // پی‌دی‌اف یک جدولِ آرشیوشدهٔ شرکت (تاریخچه) — همان ستون‌هایی که در کادرِ آرشیو دیده می‌شوند
@@ -28327,9 +28648,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px}
 <td>${n2fa(Math.round(tPoul))}</td><td>${n2fa(Math.round(tAlb))}</td></tr></tfoot></table>
 <div class="footer">پمپ یعقوبی — ${escFa(company.name)} — جدول آرشیو‌شده</div>
 <script>window.onload=function(){window.print();}<\/script></body></html>`;
-  const w = window.open('', '_blank', 'width=900,height=650');
-  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
-  else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
+  pumpOpenDoc(html);
 }
 
 // ========== درآمد اضافی (خرید عمده از مشتری) ==========
@@ -28871,9 +29190,7 @@ ${(acct.note||'').trim() ? `<div class="note-box"><b>توضیحات:</b> ${escFa
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
 
-  const w = window.open('', '_blank', 'width=960,height=720');
-  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
-  else showToast('مرورگر پنجره را مسدود کرد. اجازه popup بدهید', '#e53e3e');
+  pumpOpenDoc(html);
 }
 
 // ========== PDF مصارف ==========
@@ -28947,9 +29264,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
 
-  const w = window.open('', '_blank', 'width=800,height=650');
-  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
-  else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
+  pumpOpenDoc(html);
 }
 
 // ========== PDF مخزن (پطرول / دیزل) ==========
@@ -29070,9 +29385,7 @@ ${itemsHtml || '<div style="text-align:center;padding:20px;color:#6b7280">هیچ
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
 
-  const w = window.open('', '_blank', 'width=900,height=750');
-  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
-  else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
+  pumpOpenDoc(html);
 }
 
 
@@ -29243,9 +29556,7 @@ body{font-family:'Vazirmatn',sans-serif;background:#111827;color:#f3f4f6;padding
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
 
-  const w = window.open('', '_blank', 'width=880,height=750');
-  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
-  else showToast('مرورگر پنجره را مسدود کرد — اجازه popup بدهید', '#e53e3e');
+  pumpOpenDoc(html);
 }
 
 function saveStationInfo() {
@@ -29852,9 +30163,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
 
-  const w = window.open('', '_blank', 'width=960,height=720');
-  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
-  else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
+  pumpOpenDoc(html);
 }
 
 // ========== صرافی ==========
@@ -30198,9 +30507,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px}
 <div style="margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px">© پمپ یعقوبی — تمام حقوق محفوظ است · طراحی: vil3ntec</div>
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
-  const w = window.open('', '_blank', 'width=960,height=720');
-  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
-  else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
+  pumpOpenDoc(html);
 }
 
 
@@ -31304,8 +31611,7 @@ function printWaraq() {
   <h1>${isNight?'🌙 ورق شب':'☀️ ورق روز'} — ${escFa(w.station)||'پمپ'} — تاریخ: ${w.date||'—'}</h1>
   ${shiftSection(sd, '', isNight ? '#6b46c1' : '#b7791f')}
   <script>window.onload=function(){window.print()}<\/script></body></html>`;
-  const win=window.open('','_blank','width=900,height=680');
-  if(win){win.document.write(_pdfDoc(html));win.document.close();}else showToast('مرورگر پنجره را مسدود کرد','#e53e3e');
+  pumpOpenDoc(html);
 }
 
 // ========== لایو سینک پارچه به ورق ==========
@@ -32775,13 +33081,10 @@ function _mirzaPrintQR(){
   let src = '';
   try { src = img ? (img.tagName === 'IMG' ? img.src : img.toDataURL('image/png')) : ''; } catch(e){}
   const link = _mirzaGenericLink();
-  const w = window.open('', '_blank');
-  if (!w) { showToast('اجازهٔ بازکردنِ پنجرهٔ چاپ داده نشد', '#e53e3e'); return; }
-  w.document.write(_pdfDoc('<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>گفتگو با میرزا</title></head><body style="font-family:Tahoma,sans-serif;text-align:center;padding:30px">'
+  pumpOpenDoc(('<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>گفتگو با میرزا</title></head><body style="font-family:Tahoma,sans-serif;text-align:center;padding:30px">'
     + '<h2>💬 گفتگو با میرزا</h2><p style="color:#555">این کد را اسکن کنید تا گفتگوی خصوصی با میرزا باز شود.</p>'
     + (src ? '<img src="' + src + '" style="width:300px;height:300px">' : '')
-    + '<p dir="ltr" style="font-size:12px;color:#888;word-break:break-all">' + link + '</p></body></html>'));
-  w.document.close(); setTimeout(function(){ try { w.print(); } catch(e){} }, 400);
+    + '<p dir="ltr" style="font-size:12px;color:#888;word-break:break-all">' + link + '</p></body></html>'), '💬 کیو‌آر گفتگو با میرزا');
 }
 // ── مهمانِ کیو‌آر: ورود به گفتگوی خصوصی با میرزا (خصوصی، دائمی، با همان توکن برمی‌گردد) ──
 let _mirzaGuestToken = '';
@@ -32858,13 +33161,10 @@ function _mirzaGuestPDF(){
     if (t) items.push(t.replace(/&/g,'&amp;').replace(/</g,'&lt;'));
   });
   if (!items.length){ showToast('هنوز گفتگویی برای PDF نیست', '#718096'); return; }
-  const w = window.open('', '_blank');
-  if (!w) { showToast('اجازهٔ بازکردنِ پنجرهٔ چاپ داده نشد', '#e53e3e'); return; }
-  w.document.write(_pdfDoc('<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>گفتگو با میرزا</title></head><body style="font-family:Tahoma,sans-serif;padding:24px">'
+  pumpOpenDoc(('<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>گفتگو با میرزا</title></head><body style="font-family:Tahoma,sans-serif;padding:24px">'
     + '<h2 style="text-align:center">💬 گفتگو با میرزا</h2>'
     + items.map(function(t){ return '<div style="border-bottom:1px solid #eee;padding:9px 4px;white-space:pre-wrap;line-height:1.7">' + t + '</div>'; }).join('')
-    + '</body></html>'));
-  w.document.close(); setTimeout(function(){ try { w.print(); } catch(e){} }, 400);
+    + '</body></html>'), '💬 گفتگو با میرزا');
 }
 
 // ---- سوال و جواب (ربات محلی) ----
@@ -33817,12 +34117,23 @@ function _chatCacheSaveNow() {
 function _extPushRaw(topic, title, message, homeTopic) {
   try {
     const baseUrl = /^http/.test(location.protocol) ? location.href.split('#')[0] : 'https://vil3ntec-it.github.io/pump-staion-yaqobi/';
-    if (homeTopic) { try { _ntfSend(homeTopic, title, message, { click: baseUrl }); } catch (e) {} }
-    if (!topic || !DB.pushEnabled) return;
-    fetch('https://ntfy.sh', {
-      method: 'POST',
-      body: JSON.stringify({ topic: topic, title: title, message: message, click: baseUrl, tags: ['speech_balloon'] })
-    }).catch(() => {});
+    const toNtfy = () => {
+      if (!topic || !DB.pushEnabled) return;
+      fetch('https://ntfy.sh', {
+        method: 'POST',
+        body: JSON.stringify({ topic: topic, title: title, message: message, click: baseUrl, tags: ['speech_balloon'] })
+      }).catch(() => {});
+    };
+    // تا وقتی سرور خانگی در دسترس است، پیام‌ها از خانه بیرون نمی‌روند.
+    // ntfy.sh فقط وقتی به کار می‌آید که سرور خانگی جواب ندهد — نه موازیِ آن،
+    // وگرنه متنِ چت و نامِ حساب‌ها بی‌دلیل روی سرورِ کسِ دیگری هم می‌نشیند.
+    if (_ntfBase('http')) {
+      // homeTopic خالی یعنی این خبر را جای دیگری (مثلاً _botAnnounce) به سرور
+      // خانگی داده‌ایم — پس اینجا هم نباید به بیرون برود
+      if (homeTopic) _ntfSend(homeTopic, title, message, { click: baseUrl }).then(ok => { if (!ok) toNtfy(); });
+      return;
+    }
+    toNtfy();
   } catch (e) {}
 }
 // اعلانِ بیرونی را فقط وقتی بفرست که گیرنده برنامه‌اش باز نباشد. presenceKey همان
@@ -33888,25 +34199,26 @@ function _pushMsg(t, ok) {
   if (el) { el.textContent = t; el.style.color = ok ? 'var(--green)' : 'var(--muted)'; }
 }
 function renderPushCard() {
+  _pushEnsureOn();
   const inp = document.getElementById('push-topic');
   if (inp) inp.value = (DB.pushTopic || '');
-  const btn = document.getElementById('push-toggle-btn');
-  if (btn) {
-    btn.textContent = DB.pushEnabled ? '⏸️ غیرفعال کردن' : '📬 فعال کردن';
-    btn.style.background = DB.pushEnabled ? 'var(--red)' : '';
-    btn.style.color = DB.pushEnabled ? '#fff' : '';
-  }
-  _pushMsg(DB.pushEnabled ? '✅ فعال است — پیام‌های تازهٔ چت به مشترکینِ کد بالا می‌رسد.' : 'غیرفعال است.', DB.pushEnabled);
+  _pushMsg('✅ همیشه فعال است — پیام‌های تازهٔ چت به مشترکینِ کد بالا می‌رسد، حتی وقتی برنامه بسته است.', true);
 }
 function _pushGenTopic() {
   return 'pump-' + String(_syncCode() || 'pump1').replace(/[^a-zA-Z0-9_-]/g, '') + '-' + Math.random().toString(36).slice(2, 10);
 }
-function pushToggleEnabled() {
-  if (!DB.pushEnabled && !(DB.pushTopic || '').trim()) DB.pushTopic = _pushGenTopic();
-  DB.pushEnabled = !DB.pushEnabled;
-  save();
-  renderPushCard();
-  if (DB.pushEnabled) _pushMsg('✅ فعال شد — حالا در برنامهٔ ntfy مشترکِ کد بالا شوید و «تست اعلان» را بزنید.', true);
+/* «دریافت پیام حتی وقتی برنامه بسته است» همیشه روشن و اجباری است (خواستهٔ صاحب
+   برنامه). هیچ کلیدِ روشن/خاموشی داخل برنامه نیست؛ اگر کاربر نخواهد اعلان بگیرد،
+   فقط از تنظیماتِ خودِ دستگاه (App Info › Notifications) آن را می‌بندد.
+   این تابع در هر باز شدن برنامه و هر بار رندرِ کارت، روشن‌بودن را تضمین می‌کند و
+   اگر کدِ اشتراک نساخته شده باشد، خودش می‌سازد. */
+function _pushEnsureOn() {
+  try {
+    let changed = false;
+    if (DB.pushEnabled !== true) { DB.pushEnabled = true; changed = true; }
+    if (!(DB.pushTopic || '').trim()) { DB.pushTopic = _pushGenTopic(); changed = true; }
+    if (changed) save();
+  } catch (e) {}
 }
 function pushNewTopic() {
   if (!confirm('کد نو ساخته شود؟ اشتراک قبلی از کار می‌افتد و باید دوباره در ntfy مشترک شوید.')) return;
@@ -33916,13 +34228,15 @@ function pushNewTopic() {
   _pushMsg('♻️ کد نو ساخته شد — در ntfy با همین کد دوباره مشترک شوید.', true);
 }
 function pushOpenSubscribe() {
+  _pushEnsureOn();
   const t = (DB.pushTopic || '').trim();
-  if (!t) { _pushMsg('اول «فعال کردن» را بزنید تا کد ساخته شود.'); return; }
+  if (!t) { _pushMsg('کد اشتراک ساخته نشد — یک بار برنامه را ببندید و باز کنید.'); return; }
   try { window.open('https://ntfy.sh/' + encodeURIComponent(t), '_blank'); } catch (e) {}
 }
 function pushCopyTopic() {
+  _pushEnsureOn();
   const t = (DB.pushTopic || '').trim();
-  if (!t) { _pushMsg('اول «فعال کردن» را بزنید تا کد ساخته شود.'); return; }
+  if (!t) { _pushMsg('کد اشتراک ساخته نشد — یک بار برنامه را ببندید و باز کنید.'); return; }
   try { navigator.clipboard.writeText(t).then(() => _pushMsg('📋 کد کپی شد.', true)); } catch (e) { _pushMsg('کپی نشد — کد را دستی انتخاب و کپی کنید.'); }
 }
 // دکمهٔ 🔔 سربرگ پنل چت: هر کس (کارمند/مشتری کیو‌آر) با یک بار زدن، مشترکِ
@@ -33945,10 +34259,11 @@ async function pushSubscribeSelf() {
       try { showTopToast('این مرورگر اعلان ندارد. در آیفون اول برنامه را «افزودن به صفحهٔ خانه» کنید، بعد دوباره بزنید.', '#b7791f', 8000); } catch (e) {}
       return;
     }
-    // سرور جواب نداد → می‌افتد روی راهِ قدیمی (ntfy.sh) اگر تنظیم شده باشد
+    // سرور جواب نداد → می‌افتد روی راهِ قدیمی (ntfy.sh)
   }
+  _pushEnsureOn();
   const base = (DB.pushTopic || '').trim();
-  if (!DB.pushEnabled || !base) { showToast('سرور در دسترس نیست — کمی بعد دوباره بزنید', '#e53e3e'); return; }
+  if (!base) { showToast('سرور در دسترس نیست — کمی بعد دوباره بزنید', '#e53e3e'); return; }
   let topic;
   if (_rbMode === 'person' && _rbPersonPeer) topic = base + '-p-' + _rbPersonPeer.peer;
   else if (_rbMode === 'admin') topic = base;
@@ -33957,8 +34272,9 @@ async function pushSubscribeSelf() {
   try { showTopToast('🔔 در صفحه‌ای که باز شد، اعلان‌ها (Notifications) را فعال کنید — از آن به بعد پیام‌های مربوط به شما حتی وقتی برنامه بسته است می‌رسد', '#2b6cb0', 7000); } catch (e) {}
 }
 function pushTest() {
+  _pushEnsureOn();
   const t = (DB.pushTopic || '').trim();
-  if (!t) { _pushMsg('اول «فعال کردن» را بزنید تا کد ساخته شود.'); return; }
+  if (!t) { _pushMsg('کد اشتراک ساخته نشد — یک بار برنامه را ببندید و باز کنید.'); return; }
   _pushMsg('در حال فرستادن تست...');
   fetch('https://ntfy.sh', {
     method: 'POST',
@@ -34731,6 +35047,157 @@ try {
     });
   }
 } catch (e) {}
+
+/* ============================================================================
+   🔄 نسخه‌گذاری خودکار و یکپارچه — ویندوز، اندروید، آیفون و مرورگر
+   ----------------------------------------------------------------------------
+   خواستهٔ صاحب برنامه: «با انتشار نسخهٔ تازهٔ سایت یا اپلیکیشن، نسخهٔ برنامه
+   خودکار عوض شود و برای هر تغییر لازم نباشد برنامه از نو نصب یا تنظیم شود؛ و
+   این کار روی همهٔ نسخه‌ها یکسان انجام شود.»
+
+   یک منبعِ حقیقت: فایل version.json که هنگام انتشارِ سایت خودکار از روی همان
+   APP_VERSION ساخته می‌شود (هیچ عددی دستی جایی نوشته نمی‌شود). هر سه پوسته همان
+   را می‌خوانند و هرکدام به روشِ خودش تازه می‌شوند:
+     • مرورگر / آیفون (PWA)  → Service Worker نسخهٔ تازه را می‌آورد و با یک زدن
+                               روی نوارِ آپدیت، همان لحظه سوار می‌شود.
+     • ویندوز (Electron)     → پوستهٔ برنامه فایل تازه را می‌گیرد و سوار می‌کند.
+     • اندروید (اپ نصب‌شده)  → خودِ برنامه فایل تازه را می‌گیرد و در حافظهٔ
+                               خصوصیِ اپ می‌نویسد؛ با یک بار باز و بسته شدن،
+                               نسخهٔ تازه بالا می‌آید — بدونِ نصبِ دوباره.
+   در همهٔ حالت‌ها نسخهٔ سالمِ قبلی سرِ جایش می‌ماند، پس هیچ‌وقت لازم نیست برنامه
+   پاک و دوباره نصب شود.
+   ========================================================================== */
+const PUMP_UPDATE_BASES = [
+  'https://yaqobipump.top/',
+  'https://vil3ntec-it.github.io/pump-staion-yaqobi/'
+];
+let _pumpLatestInfo = null, _pumpUpdBusy = false, _pumpLastCheck = 0;
+
+function _pumpVerCmp(a, b) {                 // ۱ اگر a تازه‌تر باشد
+  const pa = String(a || '0').split('.').map(n => parseInt(n, 10) || 0);
+  const pb = String(b || '0').split('.').map(n => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const x = pa[i] || 0, y = pb[i] || 0;
+    if (x !== y) return x > y ? 1 : -1;
+  }
+  return 0;
+}
+// نشانی‌هایی که باید برای گرفتنِ نسخه امتحان شوند. روی سایت، خودِ همان مبدأ اول
+// می‌آید (سریع‌ترین و همیشه در دسترس)؛ در اپ اندروید که از file:// بالا می‌آید،
+// فقط نشانی‌های اینترنتی معنا دارند.
+function _pumpUpdateBases() {
+  const list = [];
+  try {
+    if (location.protocol === 'http:' || location.protocol === 'https:') {
+      list.push(location.href.replace(/[^/]*$/, ''));
+    }
+  } catch (e) {}
+  PUMP_UPDATE_BASES.forEach(b => { if (list.indexOf(b) === -1) list.push(b); });
+  return list;
+}
+async function _pumpFetchLatest() {
+  for (const base of _pumpUpdateBases()) {
+    try {
+      const r = await fetch(base + 'version.json?ts=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) continue;
+      const j = await r.json();
+      if (j && j.version) { j._base = base; return j; }
+    } catch (e) {}
+  }
+  return null;
+}
+function _pumpUpdBar(html) {
+  try {
+    document.getElementById('appUpdBar')?.remove();
+    const el = document.createElement('div');
+    el.id = 'appUpdBar';
+    el.innerHTML = html;
+    document.body.appendChild(el);
+  } catch (e) {}
+}
+// ── اپ اندروید: گرفتنِ نسخهٔ تازه و نوشتنش در حافظهٔ خصوصیِ خودِ اپ ──
+async function _pumpAndroidPull(info, loud) {
+  if (!window.PumpAndroid || _pumpUpdBusy) return;
+  _pumpUpdBusy = true;
+  try {
+    if (loud) showToast('در حال گرفتنِ نسخهٔ ' + info.version + '…', '#2b6cb0');
+    let html = null;
+    for (const base of _pumpUpdateBases()) {
+      try {
+        const r = await fetch(base + 'index.html?ts=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) continue;
+        const t = await r.text();
+        // فایل باید کامل و همان نسخهٔ اعلام‌شده باشد، وگرنه دست نمی‌زنیم
+        const m = t.match(/const\s+APP_VERSION\s*=\s*['"]([0-9.]+)['"]/);
+        if (t.length > 200000 && m && _pumpVerCmp(m[1], APP_VERSION) > 0) { html = t; info.version = m[1]; break; }
+      } catch (e) {}
+    }
+    if (!html) { if (loud) showToast('نسخهٔ تازه گرفته نشد — اینترنت را بررسی کنید', '#e53e3e'); return; }
+    if (!PumpAndroid.updateBegin()) { if (loud) showToast('حافظهٔ دستگاه اجازه نداد', '#e53e3e'); return; }
+    const STEP = 262144;
+    for (let i = 0; i < html.length; i += STEP) {
+      if (!PumpAndroid.updateChunk(html.slice(i, i + STEP))) {
+        PumpAndroid.updateAbort();
+        if (loud) showToast('نوشتنِ نسخهٔ تازه نیمه‌کاره ماند', '#e53e3e');
+        return;
+      }
+    }
+    if (!PumpAndroid.updateCommit(info.version)) {
+      if (loud) showToast('نسخهٔ تازه سالم نبود — نسخهٔ فعلی دست‌نخورده ماند', '#e53e3e');
+      return;
+    }
+    _pumpUpdBar('🎉 نسخهٔ ' + info.version + ' آماده است' +
+      '<button onclick="pumpApplyAndroidUpdate()">همین حالا سوار کن</button>' +
+      '<button class="later" onclick="this.parentNode.remove()">بعداً</button>');
+  } catch (e) {
+    try { PumpAndroid.updateAbort(); } catch (e2) {}
+  } finally { _pumpUpdBusy = false; }
+}
+function pumpApplyAndroidUpdate() {
+  try { save(); } catch (e) {}
+  try { _chatOutboxSave(); _chatCacheSaveNow(); } catch (e) {}
+  setTimeout(() => { try { PumpAndroid.restart(); } catch (e) {} }, 350);
+}
+/* بررسیِ نسخه — روی هر سه پوسته یکسان صدا زده می‌شود.
+   loud=true یعنی کاربر خودش دکمه را زده و باید نتیجه را ببیند. */
+async function pumpCheckUpdate(loud) {
+  _pumpLastCheck = Date.now();
+  // ویندوز: پوستهٔ Electron خودش کارِ گرفتن و سوار کردن را بلد است
+  if (window.pumpDesktop) { try { await deskUpdCheck(loud); } catch (e) {} return; }
+  if (!navigator.onLine) { if (loud) showToast('اینترنت وصل نیست', '#e53e3e'); return; }
+  const info = await _pumpFetchLatest();
+  if (!info) { if (loud) showToast('نسخهٔ سایت خوانده نشد — بعداً دوباره تلاش کنید', '#e53e3e'); return; }
+  _pumpLatestInfo = info;
+  if (_pumpVerCmp(info.version, APP_VERSION) <= 0) {
+    if (loud) showToast('✅ برنامه به‌روز است (نسخهٔ ' + APP_VERSION + ')', '#38a169');
+    return;
+  }
+  if (window.PumpAndroid) { await _pumpAndroidPull(info, loud); return; }
+  // مرورگر و آیفون: سرویس‌ورکر نسخهٔ تازه را می‌آورد؛ نوارِ آپدیت را نشان بده
+  try {
+    const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+    if (reg) reg.update();
+  } catch (e) {}
+  if (_swNewVersion === info.version) return;
+  _swNewVersion = info.version;
+  _pumpUpdBar('🎉 نسخهٔ تازهٔ برنامه (' + info.version + ') آماده است' +
+    '<button onclick="pumpApplyWebUpdate()">آپدیت کن</button>' +
+    '<button class="later" onclick="this.parentNode.remove()">بعداً</button>');
+}
+(function () {
+  // اپ اندروید: همین که برنامه سالم بالا آمد، به پوسته خبر بده تا نسخهٔ تازه را
+  // «تاییدشده» بداند (وگرنه دفعهٔ بعد خودش به نسخهٔ سالمِ قبلی برمی‌گردد)
+  try {
+    if (window.PumpAndroid && PumpAndroid.updateOk) setTimeout(() => { try { PumpAndroid.updateOk(); } catch (e) {} }, 4000);
+  } catch (e) {}
+  const kick = (loud) => { try { pumpCheckUpdate(loud); } catch (e) {} };
+  setTimeout(() => kick(false), 9000);                 // کمی بعد از بالا آمدن
+  setInterval(() => kick(false), 6 * 3600 * 1000);      // هر ۶ ساعت
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && Date.now() - _pumpLastCheck > 2 * 3600 * 1000) kick(false);
+  });
+  window.addEventListener('online', () => { if (Date.now() - _pumpLastCheck > 600000) kick(false); });
+})();
 
 // صفِ پیام‌ها مستقل از باز بودنِ پنجرهٔ چت کار می‌کند: همین که برنامه باز شود،
 // هر پیامی که از سیزنِ قبلی در صف مانده خودکار فرستاده می‌شود (مثل واتساپ).
@@ -37317,9 +37784,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px;border-top
 <div class="footer">پمپ یعقوبی — این سند به صورت خودکار تولید شده است</div>
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
-  const w = window.open('', '_blank', 'width=800,height=650');
-  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
-  else showToast('مرورگر پنجره را مسدود کرد', '#e53e3e');
+  pumpOpenDoc(html);
 }
 // ── کمبودی/اضافیِ کارمندان (از همهٔ ورق‌ها) + رسید/پرداخت ──
 // دفترِ جداگانه است (DB.staffShortSettles) — به خود ورق‌ها دست نمی‌زند.
@@ -37700,10 +38165,7 @@ function pdfMonthReport() {
       ${row('🚚 تخلیهٔ تانکر', n2fa(cur.tkCount) + ' تخلیه', cur.tkShort ? ('جمع کم‌آمد ' + n2fa(Math.round(cur.tkShort)) + ' لیتر') : 'کم‌آمدی ثبت نشده')}
     </table>
   </body></html>`;
-  const w = window.open('', '_blank');
-  if (!w) { showToast('❌ پنجرهٔ چاپ باز نشد — پاپ‌آپ را اجازه دهید', '#e53e3e'); return; }
-  w.document.write(_pdfDoc(html)); w.document.close();
-  setTimeout(() => { try { w.print(); } catch (e) {} }, 400);
+  pumpOpenDoc(html);
 }
 
 // ========== INIT ==========
@@ -40017,11 +40479,13 @@ function invOpenList(status, skipHash) {
   const s = document.getElementById('inv-search'); if (s) s.value = '';
   invRenderList();
   if (ov) ov.classList.add('open');
+  try { _pumpPushEsc(invCloseList); } catch (e) {}
   if (!skipHash) { try { if (location.hash !== '#invoices/' + _invView) history.pushState(null, '', '#invoices/' + _invView); } catch (e) {} }
 }
 function invCloseList() {
   const ov = document.getElementById('invListOverlay');
   if (ov) ov.classList.remove('open');
+  try { _pumpPopEsc(invCloseList); } catch (e) {}
   if ((location.hash || '').startsWith('#invoices/')) {
     try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
   }
@@ -40082,7 +40546,7 @@ function invRenderList() {
       <div class="acts" onclick="event.stopPropagation()">
         ${v.status === 'pending'
           ? `<button class="inv-act ok inv-admin-only" onclick="invApprove('${v.id}')">✅ تایید فاکتور</button>`
-          : `<button class="inv-act" onclick="invPrint('${v.id}')">🖨️ چاپ / PDF</button>
+          : `<button class="inv-act" onclick="invPdf('${v.id}')">📄 خروجی PDF / چاپ</button>
              <button class="inv-act inv-admin-only" onclick="invRevert('${v.id}')">↩️ برگشت به صف</button>`}
         <button class="inv-act del inv-admin-only" onclick="invDelete('${v.id}')">🗑️ حذف</button>
       </div>
@@ -40191,10 +40655,13 @@ function invOpenDetail(id) {
   _invDetailId = id;
   invRenderDetail();
   document.getElementById('invDetailModal').classList.add('open');
+  // صفحهٔ تمام‌صفحه است: دکمهٔ برگشتِ گوشی و کلید Esc هم باید ببندندش
+  try { _pumpPushEsc(invCloseDetail); document.body.style.overflow = 'hidden'; } catch (e) {}
 }
 function invCloseDetail() {
   document.getElementById('invDetailModal').classList.remove('open');
   _invDetailId = null;
+  try { _pumpPopEsc(invCloseDetail); document.body.style.overflow = ''; } catch (e) {}
 }
 function invRenderDetail() {
   const v = _invList().find(x => x.id === _invDetailId);
@@ -40205,7 +40672,7 @@ function invRenderDetail() {
     <div class="inv-btn-row" style="margin-top:14px">
       ${v.status === 'pending'
         ? `<button class="inv-btn submit inv-admin-only" onclick="invApprove('${v.id}')">✅ تایید فاکتور</button>`
-        : `<button class="inv-btn reset" onclick="invPrint('${v.id}')">🖨️ چاپ / PDF</button>
+        : `<button class="inv-btn reset" onclick="invPdf('${v.id}')">📄 خروجی PDF / چاپ</button>
            <button class="inv-btn reset inv-admin-only" onclick="invRevert('${v.id}')">↩️ برگشت به صف</button>`}
       ${admin ? `<button class="inv-btn reset inv-admin-only" onclick="invSaveEdits('${v.id}')">💾 ذخیره تغییرات</button>` : ''}
       <button class="inv-btn reset del inv-admin-only" style="color:var(--red);border-color:#e53e3e66" onclick="invDelete('${v.id}')">🗑️ حذف</button>
@@ -40401,7 +40868,19 @@ function invDelete(id) {
 }
 
 // ── چاپ / PDF — دو نسخهٔ همان برگهٔ فاکتور (نسخهٔ مشتری + نسخهٔ پمپ) در یک صفحهٔ A4 ──
-function invPrint(id) {
+function invPrint(id) { invPdf(id); }
+
+/* ── خروجی PDF فاکتور — دقیقاً یک فاکتور، در حدودِ نصفِ برگهٔ A4 ─────────────
+   خواستهٔ صاحب برنامه:
+     • در فایل PDF فقط و فقط یک فاکتور باشد — نه نسخهٔ دوم، نه کپیِ خالی.
+     • اندازهٔ فاکتور استانداردِ چاپ و حدودِ نصفِ یک برگهٔ A4 باشد؛ نصفِ پایینِ
+       برگه کاملاً خالی بماند و هیچ چیزی خودکار در آن ساخته نشود.
+     • هیچ بخشی از اطلاعات بریده نشود، به صفحهٔ دوم نرود یا از کادر بزند بیرون.
+     • این طرح مستقل از نمایِ داخلِ برنامه است (آن‌جا تمام‌صفحه است).
+   برای همین اندازه‌ها با میلی‌متر نوشته شده‌اند: عرضِ مفید ۱۹۰mm و بلندیِ برگهٔ
+   فاکتور ۱۳۰mm — یعنی درست نیمهٔ بالای A4 (۲۹۷mm) با حاشیهٔ ۹mm.
+   ------------------------------------------------------------------------- */
+function invPdf(id) {
   const v = _invList().find(x => x.id === id);
   if (!v) return;
   // همان CSS و اسپرایت SVG صفحهٔ اصلی به سند چاپ می‌رود تا ظاهر یکسان بماند.
@@ -40411,7 +40890,6 @@ function invPrint(id) {
   const css = (document.getElementById('invoice-styles') || {}).textContent || '';
   const sprite = (document.getElementById('invp-sprite') || {}).outerHTML || '';
   const paper = _invPaperHtml(v, { forPrint: true });
-  const copy = label => `<div class="sheet"><div class="copy-label">${label}</div>${paper}</div>`;
   const html = `<!DOCTYPE html>
 <html lang="fa" dir="rtl"><head><meta charset="UTF-8">
 <title>فاکتور ${v.invoice_number} — پمپ یعقوبی</title>
@@ -40419,53 +40897,54 @@ function invPrint(id) {
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 :root{--card:#fff;--txt:#0f172a;--accent:#1d5bd8;--border:#d6e0f5;--muted:#64748b;--panel:#f8faff}
-body{font-family:'Vazirmatn',sans-serif;background:#eef1f6;padding:20px;display:flex;justify-content:center}
-.print-wrap{width:100%;max-width:660px}
+html,body{background:#eef1f6}
+body{font-family:'Vazirmatn',sans-serif;padding:14px;display:flex;justify-content:center}
 ${css}
-/* ── نسخهٔ فشرده برای چاپ: دو فاکتور در یک برگهٔ A4 جا می‌شود ── */
-.invp{padding:7px}
-.invp-frame{padding:10px 14px 106px}
-.invp-frame::before{inset:4px}
-.invp-corner{width:24px;height:24px}
-.invp-nozzle{width:44px;height:44px;top:12px;left:14px}
-.invp-title{font-size:1.18rem;margin:0}
-.invp-sub{font-size:.58rem;letter-spacing:.6px}
-.invp-wave{height:16px;margin:5px auto 8px}
-.invp-meta{gap:5px;margin-bottom:8px}
-.invp-meta-line{font-size:.76rem}
-.invp-meta-line .k .ico{width:15px;height:15px}
-.invp-badge{padding:2px 9px;font-size:.76rem;border-width:1.3px}
-.invp-grid{gap:7px;margin-bottom:8px;grid-template-columns:1fr 1fr}
-.invp-row{padding:5px 10px;border-radius:8px;gap:7px}
-.invp-row .ico{width:17px;height:17px}
-.invp-row .k{font-size:.68rem}
-.invp-row .v,.invp-in{font-size:.8rem}
-.invp-total{padding:6px 12px;border-radius:9px;border-width:1.6px}
-.invp-total .k{font-size:.72rem}
-.invp-total .k .ico{width:16px;height:16px}
-.invp-total .tv{font-size:.95rem}
-.invp-stampbox{width:92px;height:92px;bottom:11px;right:13px}
-.invp-stamp-ph{font-size:.56rem}
-.invp-station{width:150px;bottom:9px;left:11px}
-.sheet{position:relative}
-.copy-label{text-align:center;font-size:.62rem;font-weight:900;color:#12419c;background:#eef4ff;border:1.3px solid #1d5bd8;border-radius:999px;padding:2px 14px;width:fit-content;margin:0 auto 5px}
-.cut-line{display:flex;align-items:center;gap:8px;color:#94a3b8;margin:9px 0;font-size:.7rem}
-.cut-line::before,.cut-line::after{content:"";flex:1;border-top:2px dashed #b6c2d6}
-.footer{margin-top:8px;text-align:center;font-size:.6rem;color:#94a3b8}
-@media print{body{background:#fff;padding:0}.invp{box-shadow:none}.sheet{page-break-inside:avoid}@page{margin:.7cm;size:A4}}
+/* ══ برگهٔ چاپ: یک فاکتور، نیمهٔ بالای A4 ══════════════════════════════════
+   .sheet دقیقاً به اندازهٔ نصفِ برگه است و چیزی بعد از آن نمی‌آید، پس نه صفحهٔ
+   دوم ساخته می‌شود و نه فاکتورِ تکراری/خالی. اندازه‌ها طوری چیده شده‌اند که
+   محتوا با فاصلهٔ راحت داخلِ همین ۱۳۰mm جا شود و هیچ چیزی بریده نشود. */
+.sheet{width:190mm;max-width:100%;height:130mm;position:relative;break-inside:avoid;page-break-inside:avoid;break-after:avoid;page-break-after:avoid}
+.invp{padding:0;height:100%;box-shadow:none;border-radius:0;background:#fff}
+.invp-frame{height:100%;padding:6mm 7mm 33mm;border-width:2px;border-radius:4mm}
+.invp-frame::before{inset:2.4mm;border-radius:2.6mm}
+.invp-corner{width:8mm;height:8mm}
+.invp-corner.tl{top:3.4mm;left:3.4mm}.invp-corner.tr{top:3.4mm;right:3.4mm}
+.invp-corner.bl{bottom:3.4mm;left:3.4mm}.invp-corner.br{bottom:3.4mm;right:3.4mm}
+.invp-nozzle{width:13mm;height:13mm;top:5mm;left:6mm}
+.invp-title{font-size:15pt;margin:0;line-height:1.25}
+.invp-sub{font-size:6pt;letter-spacing:.5px;margin-top:.6mm}
+.invp-wave{height:4.5mm;margin:1.6mm auto 2.6mm}
+.invp-meta{gap:1.6mm;margin-bottom:2.8mm;max-width:112mm}
+.invp-meta-line{font-size:8pt;gap:2mm}
+.invp-meta-line .k{gap:1.4mm}
+.invp-meta-line .k .ico{width:3.9mm;height:3.9mm}
+.invp-badge{padding:.5mm 2.4mm;font-size:8pt;border-width:1px;border-radius:2mm}
+.invp-grid{gap:2mm;margin-bottom:2.6mm;grid-template-columns:1fr 1fr}
+.invp-row{padding:1.5mm 2.6mm;border-radius:2mm;gap:1.8mm;border-width:1px;flex-wrap:nowrap}
+.invp-row .ico{width:4.4mm;height:4.4mm}
+.invp-row .k{font-size:7pt}
+.invp-row .v,.invp-in{font-size:8.5pt}
+.invp-total{padding:1.8mm 3mm;border-radius:2.2mm;border-width:1.4px}
+.invp-total .k{font-size:8pt;gap:1.6mm}
+.invp-total .k .ico{width:4.2mm;height:4.2mm}
+.invp-total .tv{font-size:11pt}
+.invp-stampbox{width:26mm;height:26mm;bottom:3.5mm;right:4mm}
+.invp-stamp-ph{font-size:6pt;border-width:1px}
+.invp-station{width:40mm;bottom:3mm;left:4mm}
+.pdf-note{position:absolute;bottom:3mm;right:33mm;left:46mm;text-align:center;font-size:5.6pt;color:#94a3b8}
+@media print{
+  html,body{background:#fff}
+  body{padding:0;display:block}
+  /* نیمهٔ پایینِ برگه عمداً کاملاً خالی می‌ماند */
+  @page{size:A4 portrait;margin:9mm}
+  .sheet{width:auto;margin:0}
+}
 </style></head><body>
-<div class="print-wrap">
 ${sprite}
-${copy('نسخهٔ مشتری')}
-<div class="cut-line">✂ محل برش</div>
-${copy('نسخهٔ پمپ')}
-<div class="footer">پمپ یعقوبی — این فاکتور به صورت خودکار تولید شده است</div>
-</div>
-<script>window.onload=function(){window.print();}<\/script>
+<div class="sheet">${paper}<div class="pdf-note">پمپ یعقوبی — این فاکتور به صورت خودکار تولید شده است</div></div>
 </body></html>`;
-  const w = window.open('', '_blank', 'width=760,height=980');
-  if (w) { w.document.write(_pdfDoc(html)); w.document.close(); }
-  else showToast('مرورگر پنجره را مسدود کرد. اجازه popup بدهید', '#e53e3e');
+  pumpOpenDoc(html, '🧾 فاکتور شماره ' + n2fa(v.invoice_number));
 }
 
 /* ── ضد باگ (۲): نگهبان سراسری خطاها ──
@@ -40564,6 +41043,8 @@ ${copy('نسخهٔ پمپ')}
     try {
       return window.matchMedia('(display-mode: standalone)').matches
         || window.matchMedia('(display-mode: minimal-ui)').matches
+        || window.matchMedia('(display-mode: fullscreen)').matches
+        || window.matchMedia('(display-mode: window-controls-overlay)').matches
         || window.navigator.standalone === true;
     } catch(e){ return false; }
   }
@@ -40572,13 +41053,45 @@ ${copy('نسخهٔ پمپ')}
     return /iPhone|iPod/i.test(ua) || (/iPad/i.test(ua))
       || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   }
+  /* ── آیا برنامه روی همین دستگاه نصب است؟ ─────────────────────────────────
+     خواستهٔ صاحب برنامه: اگر کاربر برنامه را نصب کرده باشد، دیگر هیچ پیام یا
+     بنرِ «دانلود و نصب برنامه» — نه روی صفحهٔ قفل، نه جای دیگر — دیده نشود.
+     نصب‌بودن در همهٔ حالت‌ها تشخیص داده می‌شود:
+       • اپلیکیشن اندروید (WebView داخل APK) — پروتکل file:// یا پلِ PumpAndroid
+       • نسخهٔ ویندوز (Electron) — window.pumpDesktop
+       • نصب‌شده روی صفحهٔ اصلی / PWA — display-mode یا navigator.standalone
+       • مرورگری که خودش می‌گوید نسخهٔ نصب‌شده وجود دارد — getInstalledRelatedApps
+     نتیجهٔ getInstalledRelatedApps ناهم‌زمان است؛ وقتی رسید دوباره refresh می‌شود. */
+  var relatedInstalled = false;
+  function isNativeShell(){
+    try {
+      if (window.pumpDesktop) return true;                  // نسخهٔ ویندوز
+      if (window.PumpAndroid) return true;                   // اپ اندروید (پل جاوا)
+      if (location.protocol === 'file:') return true;         // WebView داخل APK
+      if (/PumpYaqobiApp/i.test(navigator.userAgent || '')) return true;
+    } catch(e){}
+    return false;
+  }
+  function appInstalled(){ return isNativeShell() || isStandalone() || relatedInstalled; }
+  window.pumpAppInstalled = appInstalled;
+
   function refreshBtn(){
+    var installed = appInstalled();
     var btn = document.getElementById('pwaInstallBtn');
-    if (!btn) return;
-    // روی آیفون/آیپد همیشه (چون رویداد نصب ندارند) و روی بقیه (اندروید و
-    // کروم/اج کامپیوتر) وقتی رویداد نصب آمده باشد
-    var show = !isStandalone() && (deferredPrompt || isIOS());
-    btn.style.display = show ? 'block' : 'none';
+    if (btn) {
+      // روی آیفون/آیپد همیشه (چون رویداد نصب ندارند) و روی بقیه (اندروید و
+      // کروم/اج کامپیوتر) وقتی رویداد نصب آمده باشد — و هرگز وقتی نصب است
+      btn.style.display = (!installed && (deferredPrompt || isIOS())) ? 'block' : 'none';
+    }
+    // لینکِ «دریافت برنامه» صفحهٔ قفل — فقط برای کسی که هنوز نصب نکرده
+    var link = document.getElementById('lsGetAppLink');
+    if (link) link.style.display = installed ? 'none' : 'block';
+    // هر بنر/کادرِ دیگری که با data-install-only نشانه‌گذاری شده باشد
+    try {
+      document.querySelectorAll('[data-install-only]').forEach(function(el){
+        el.style.display = installed ? 'none' : '';
+      });
+    } catch(e){}
   }
 
   window.addEventListener('beforeinstallprompt', function(e){
@@ -40588,11 +41101,25 @@ ${copy('نسخهٔ پمپ')}
   });
   window.addEventListener('appinstalled', function(){
     deferredPrompt = null;
-    var btn = document.getElementById('pwaInstallBtn');
-    if (btn) btn.style.display = 'none';
+    relatedInstalled = true;
+    refreshBtn();
   });
   window.addEventListener('resize', refreshBtn);
   document.addEventListener('DOMContentLoaded', refreshBtn);
+  try {
+    if (navigator.getInstalledRelatedApps) {
+      navigator.getInstalledRelatedApps().then(function(list){
+        if (list && list.length) { relatedInstalled = true; refreshBtn(); }
+      }).catch(function(){});
+    }
+  } catch(e){}
+  try {
+    ['standalone','minimal-ui','fullscreen'].forEach(function(m){
+      var mq = window.matchMedia('(display-mode: ' + m + ')');
+      if (mq.addEventListener) mq.addEventListener('change', refreshBtn);
+      else if (mq.addListener) mq.addListener(refreshBtn);
+    });
+  } catch(e){}
   refreshBtn();
 
   function showIOSHelp(){

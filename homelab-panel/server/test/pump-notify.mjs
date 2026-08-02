@@ -92,6 +92,14 @@ try {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  // هر درخواستی که از خانه بیرون می‌رود ثبت می‌شود — نباید چیزی به ntfy.sh برود
+  const outbound = [];
+  page.on('request', (r) => { if (!r.url().startsWith('http://127.0.0.1:')) outbound.push(r.url()); });
+  // «Failed to load resource» متنِ کلی است و آدرس ندارد؛ پس خودِ پاسخ‌های خراب را
+  // جدا نگه می‌داریم تا بشود گفت کدامش واقعاً مشکلِ برنامه است
+  const badUrls = [];
+  page.on('response', (r) => { if (r.status() >= 400) badUrls.push(r.url()); });
+  page.on('requestfailed', (r) => badUrls.push(r.url()));
 
   // سایت را به سرورِ آزمایشی وصل کن و قفل را رد کن (همان روشِ آزمون‌های دستی)
   await page.addInitScript((wsUrl) => {
@@ -250,8 +258,21 @@ try {
   );
   check('برنامه‌ای که تازه باز شده، خبرهای قبلی را هم می‌گیرد', true);
 
+  console.log('\n── هیچ چیزی به سرورِ بیرونی نمی‌رود ──');
+  const toNtfy = outbound.filter((u) => /ntfy\.sh/i.test(u));
+  check('تا وقتی سرور خانگی کار می‌کند، هیچ پیامی به ntfy.sh نمی‌رود', toNtfy.length === 0, toNtfy.slice(0, 2).join(' | '));
+
   console.log('\n── خطاهای کنسول ──');
-  const real = errors.filter((e) => !/favicon|ResizeObserver|firebase|manifest|icon-/i.test(e));
+  // ۴۰۴ فایلِ version.json و آدرس‌های اینترنتی، از سرورِ ایستای همین آزمون است
+  // (فایلِ نسخه را ورک‌فلوی دیپلوی می‌سازد) — خطای خودِ برنامه نیست
+  // version.json را ورک‌فلوی دیپلوی می‌سازد و آدرس‌های اینترنتی از این جعبه در
+  // دسترس نیستند — هیچ‌کدام ایرادِ خودِ برنامه نیست
+  const benign = /favicon|manifest|icon-|version\.json|ntfy\.sh|yaqobipump\.top|github\.io/i;
+  const realBad = badUrls.filter((u) => !benign.test(u));
+  check('هیچ فایلی از خودِ برنامه گم نیست', realBad.length === 0, realBad.slice(0, 3).join(' | '));
+  const real = errors.filter(
+    (e) => !/favicon|ResizeObserver|firebase|manifest|icon-|Failed to load resource/i.test(e)
+  );
   check('کنسولِ برنامه خطای واقعی ندارد', real.length === 0, real.slice(0, 2).join(' | '));
 
   console.log('\n════════════════════════════════════');

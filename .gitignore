@@ -8,6 +8,10 @@ desktop/app/
 dist/
 build/
 
+# فایل‌های نصب و نسخه — هنگام دیپلوی خودکار ساخته می‌شوند، نه دستی
+downloads/
+version.json
+
 # فایل‌های موقت سیستم
 .DS_Store
 Thumbs.db

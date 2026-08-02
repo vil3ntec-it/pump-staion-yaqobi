@@ -31,6 +31,90 @@ jobs:
       # پنل سرور خانگی یک برنامهٔ محلی است و نباید روی سایت منتشر شود
       - name: حذف پنل سرور خانگی از خروجی سایت
         run: rm -rf homelab-panel
+
+      # ── فایل‌های نصب را داخلِ خودِ سایت می‌گذاریم ──────────────────────────
+      # خواستهٔ صاحب برنامه: با زدنِ دکمهٔ دانلود، کاربر نباید به گیت‌هاب یا هیچ
+      # صفحهٔ دیگری برود؛ فایل باید مستقیم از خودِ سایت بیاید. پس آخرین فایل نصبِ
+      # اندروید و ویندوز را از Releases می‌گیریم و کنارِ سایت منتشر می‌کنیم.
+      # اگر انتشاری هنوز ساخته نشده باشد، دیپلوی نمی‌شکند — فقط آن فایل نمی‌آید.
+      - name: گرفتنِ آخرین فایل‌های نصب برای دانلود مستقیم
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, urllib.request
+
+          repo  = os.environ['GITHUB_REPOSITORY']
+          token = os.environ['GH_TOKEN']
+          os.makedirs('downloads', exist_ok=True)
+
+          def api(url, accept='application/vnd.github+json'):
+              req = urllib.request.Request(url, headers={
+                  'Authorization': 'Bearer ' + token,
+                  'Accept': accept,
+                  'User-Agent': 'pump-yaqobi-pages',
+              })
+              return urllib.request.urlopen(req, timeout=120)
+
+          def grab(tag, suffix, out):
+              try:
+                  rel = json.load(api('https://api.github.com/repos/%s/releases/tags/%s' % (repo, tag)))
+              except Exception as e:
+                  print('::warning::انتشار %s خوانده نشد (%s)' % (tag, e))
+                  return
+              assets = [a for a in (rel.get('assets') or [])
+                        if a.get('name', '').lower().endswith(suffix)]
+              assets.sort(key=lambda a: a.get('updated_at', ''), reverse=True)
+              if not assets:
+                  print('::warning::فایل %s در انتشار %s نبود' % (suffix, tag))
+                  return
+              dest = os.path.join('downloads', out)
+              try:
+                  with api(assets[0]['url'], 'application/octet-stream') as r, open(dest, 'wb') as f:
+                      while True:
+                          chunk = r.read(1 << 20)
+                          if not chunk:
+                              break
+                          f.write(chunk)
+                  print('%s → %s (%d بایت)' % (assets[0]['name'], dest, os.path.getsize(dest)))
+              except Exception as e:
+                  print('::warning::دانلود %s نشد (%s)' % (out, e))
+                  if os.path.exists(dest):
+                      os.remove(dest)
+
+          grab('android-latest', '.apk', 'PumpYaqobi.apk')
+          grab('desktop-latest', '.exe', 'PumpYaqobi-Setup.exe')
+          PY
+
+      # ── نسخهٔ سایت به‌صورت خودکار ─────────────────────────────────────────
+      # version.json از روی همان APP_VERSION داخل index.html ساخته می‌شود؛ هیچ
+      # جای دیگری دستی تنظیم نمی‌شود. برنامه (وب، اندروید، ویندوز و آیفون) همین
+      # فایل را می‌خواند و با هر انتشارِ تازه، خودش را به‌روز می‌کند.
+      - name: ساختِ version.json (نسخهٔ خودکار)
+        run: |
+          python3 - <<'PY'
+          import json, os, re, time
+          html = open('index.html', encoding='utf-8', errors='ignore').read()
+          m = re.search(r"const\s+APP_VERSION\s*=\s*['\"]([0-9.]+)['\"]", html)
+          ver = m.group(1) if m else '0.0.0'
+          def finfo(path):
+              if not os.path.isfile(path):
+                  return None
+              return {'url': './' + path.replace(os.sep, '/'),
+                      'size': os.path.getsize(path),
+                      'name': os.path.basename(path)}
+          data = {
+              'version': ver,
+              'buildTime': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+              'commit': (os.environ.get('GITHUB_SHA') or '')[:8],
+              'android': finfo('downloads/PumpYaqobi.apk'),
+              'windows': finfo('downloads/PumpYaqobi-Setup.exe'),
+              'ios': {'mode': 'pwa'}
+          }
+          with open('version.json', 'w', encoding='utf-8') as f:
+              json.dump(data, f, ensure_ascii=False, indent=2)
+          print(json.dumps(data, ensure_ascii=False))
+          PY
       # بدون فایل CNAME، گیت‌هاب دامنهٔ اختصاصی را کنار می‌گذارد و سایت با خطای
       # گواهی (ERR_CERT_COMMON_NAME_INVALID) بالا می‌آید. پس اگر نبود، همین‌جا
       # می‌ایستیم — نه این که سایت را خراب منتشر کنیم.
