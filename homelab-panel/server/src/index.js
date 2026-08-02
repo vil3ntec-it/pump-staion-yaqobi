@@ -35,6 +35,8 @@ import logsRoutes from './routes/logs.js';
 import networkRoutes from './routes/network.js';
 import settingsRoutes from './routes/settings.js';
 import siteServerRoutes from './routes/site-server.js';
+import messengerRoutes from './routes/messenger.js';
+import * as messenger from './messenger/index.js';
 
 const PUBLIC_DIR = path.join(SERVER_ROOT, 'public');
 const PID_FILE = path.join(config.dataDir, 'panel.pid');
@@ -91,6 +93,7 @@ app.use('/api/logs', logsRoutes);
 app.use('/api/network', networkRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/site-server', siteServerRoutes);
+app.use('/api/messenger', messengerRoutes);
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'not_found' }));
 
@@ -146,6 +149,7 @@ if (config.siteSync.enabled) {
       pathname = new URL(req.url, 'http://x').pathname;
     } catch { /* مسیر خراب */ }
     if (pathname.startsWith('/socket.io')) return; // مالِ Socket.IO است
+    if (pathname.startsWith('/messenger')) return messenger.handleUpgrade(req, socket, head);
     siteSync.handleUpgrade(req, socket, head);
   });
 }
@@ -155,17 +159,34 @@ if (config.siteSync.enabled) {
 // فایل‌منیجر و کنترل پروسه‌های پنل به بیرون درز نکند.
 let syncOnlyServer = null;
 if (siteSync && config.siteSync.port && config.siteSync.port !== config.port) {
-  syncOnlyServer = http.createServer((req, res) => {
-    const pathname = (req.url || '/').split('?')[0];
-    if (pathname === '/health' || pathname === '/') {
-      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-      res.end(JSON.stringify({ ok: true, service: 'pump-yaqobi-server', mode: 'sync-only', time: new Date().toISOString() }));
-      return;
-    }
-    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end('not found');
+  // روی پورت عمومی فقط دو چیز سرو می‌شود: سرورِ داده و پیام‌رسان.
+  // پنل، فایل‌منیجر و کنترل پروسه‌ها هرگز به اینترنت درز نمی‌کنند.
+  const publicApp = express();
+  publicApp.disable('x-powered-by');
+  publicApp.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    if (req.method === 'OPTIONS') return res.status(204).end();
+    next();
   });
-  syncOnlyServer.on('upgrade', (req, socket, head) => siteSync.handleUpgrade(req, socket, head));
+  publicApp.use(express.json({ limit: '5mb' }));
+  publicApp.get(['/health', '/'], (req, res) => {
+    res.json({ ok: true, service: 'pump-yaqobi-server', mode: 'sync-only', time: new Date().toISOString() });
+  });
+  publicApp.use('/api/messenger', messengerRoutes);
+  publicApp.use((req, res) => res.status(404).type('text/plain; charset=utf-8').send('not found'));
+
+  syncOnlyServer = http.createServer(publicApp);
+  syncOnlyServer.on('upgrade', (req, socket, head) => {
+    // پیام‌رسان هم باید از راه تونل در دسترس باشد
+    let pathname = '/';
+    try {
+      pathname = new URL(req.url, 'http://x').pathname;
+    } catch { /* مسیر خراب */ }
+    if (pathname.startsWith('/messenger')) return messenger.handleUpgrade(req, socket, head);
+    siteSync.handleUpgrade(req, socket, head);
+  });
   syncOnlyServer.on('error', (e) => {
     console.error(`❌ پورت سرورِ سایت (${config.siteSync.port}) بالا نیامد: ${e.message}`);
     logEvent('error', 'panel', `پورت سرورِ سایت بالا نیامد: ${e.message}`);
