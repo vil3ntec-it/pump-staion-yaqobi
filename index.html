@@ -19593,7 +19593,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
   </div>
   <div class="ro-sum" id="staff-sums"></div>
   <div class="ro-body">
-    <div style="text-align:center;padding:10px 16px;font-size:0.8rem;color:var(--muted)">🔒 فقط دیدن — این جمع‌ها همان «قرض کل» صفحهٔ اصلی است و با هر تغییری خودکار تازه می‌شود — با کلیک روی هر خط، حساب همان شخص باز می‌شود</div>
+    <div style="text-align:center;padding:10px 16px;font-size:0.8rem;color:var(--muted)">🔒 فقط دیدن — این جمله‌ها همان «قرض کل» صفحهٔ اصلی است و با هر تغییری خودکار تازه می‌شود — با کلیک روی هر خط، حساب همان شخص باز می‌شود</div>
     <div style="overflow-x:auto;padding:0 12px 18px" id="staff-sums-tbl"></div>
   </div>
 </div>
@@ -28053,7 +28053,7 @@ function renderDebtSummary(kind) {
     tb.appendChild(frag);
     if (list.length > CAP) {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td colspan="6" style="text-align:center;padding:10px;color:var(--muted)">نمایش ${n2fa(CAP)} از ${n2fa(list.length)} قرض‌دار — جمع‌های پایین شاملِ همه است</td>`;
+      tr.innerHTML = `<td colspan="6" style="text-align:center;padding:10px;color:var(--muted)">نمایش ${n2fa(CAP)} از ${n2fa(list.length)} قرض‌دار — جمله‌های پایین شاملِ همه است</td>`;
       tb.appendChild(tr);
     }
   }
@@ -36152,6 +36152,34 @@ async function _pumpOfferUpdate(ver, alreadyCached, loud) {
   _pumpUpdBar('🎉 نسخهٔ تازهٔ برنامه (' + ver + ') آماده است' +
     '<button onclick="pumpApplyWebUpdate()">آپدیت کن</button>' +
     '<button class="later" onclick="this.parentNode.remove()">بعداً</button>');
+  _pumpWatchPending(ver);
+}
+/* ── چرا باگ‌های رفع‌شده «دوباره می‌آیند» ───────────────────────────────────────
+   نسخهٔ تازه در کش می‌نشیند، ولی تا وقتی صفحه رفرش نشود کاربر همان نسخهٔ کهنه را
+   می‌بیند و همان باگ‌های رفع‌شده را دوباره گزارش می‌کند. تا حالا فقط یک‌بار (همان
+   لحظهٔ رسیدنِ خبر) شانسِ سوار شدنِ خودکار بود؛ اگر آن لحظه کاربر مشغول بود، نوارِ
+   «آپدیت کن» می‌ماند و اگر زده نمی‌شد، نسخهٔ کهنه تا روزها سرِ جایش می‌ماند.
+   حالا نسخهٔ آمادهٔ تازه رها نمی‌شود: هر چند ثانیه (و با هر بار برگشتن به برنامه)
+   نگاه می‌کنیم و «اولین لحظه‌ای که بی‌خطر باشد» خودش سوار می‌شود — بی‌خطرترین
+   لحظه هم صفحهٔ قفل است (هنوز واردِ کار نشده). هیچ داده‌ای هم از دست نمی‌رود؛
+   pumpApplyWebUpdate پیش از رفرش save() می‌کند. ── */
+let _pumpPendingVer = null, _pumpPendingTimer = null;
+function _pumpWatchPending(ver) {
+  // محافظِ حلقه: اگر برای همین نسخه یک‌بار در همین نشست خودکار رفرش کرده‌ایم و باز
+  // هم نسخهٔ کهنه بالا آمده، دیگر خودکار رفرش نمی‌کنیم — فقط نوار می‌ماند.
+  try { if (sessionStorage.getItem('pumpAutoUpd') === ver) return; } catch (e) {}
+  _pumpPendingVer = ver;
+  if (_pumpPendingTimer) return;
+  const tick = () => {
+    if (!_pumpPendingVer) return;
+    if (!_pumpSafeToReload()) return;
+    clearInterval(_pumpPendingTimer); _pumpPendingTimer = null;
+    try { sessionStorage.setItem('pumpAutoUpd', _pumpPendingVer); } catch (e) {}
+    try { showToast('🎉 نسخهٔ ' + _pumpPendingVer + ' آمد — تازه‌سازی…', '#2b6cb0'); } catch (e) {}
+    setTimeout(() => { try { pumpApplyWebUpdate(); } catch (e) {} }, 900);
+  };
+  _pumpPendingTimer = setInterval(tick, 15000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') tick(); });
 }
 // نسخهٔ تازهٔ index.html را می‌گیرد و در همهٔ کش‌های پوستهٔ برنامه می‌نشاند تا
 // رفرشِ بعدی «واقعاً» نسخهٔ تازه را بالا بیاورد. اگر چیزی درست نبود (فایل ناقص
@@ -36182,6 +36210,16 @@ async function _pumpWebPullFresh() {
 // آیا همین حالا رفرشِ خودکار بی‌خطر است؟ (وسطِ کارِ کاربر نپرد)
 function _pumpSafeToReload() {
   try {
+    // بی‌خطرترین لحظهٔ ممکن: صفحهٔ قفل باز است و هنوز رمزی نوشته نشده — کاربر
+    // اصلاً واردِ کار نشده، پس نسخهٔ تازه همان‌جا سوار می‌شود و دیگر نسخهٔ کهنه
+    // (و باگ‌های رفع‌شده‌اش) به دستش نمی‌رسد. این حالت محدودیتِ زمانی هم ندارد.
+    const lockUp = (function () {
+      const ls = document.getElementById('lockScreen');
+      if (!ls || getComputedStyle(ls).display === 'none') return false;
+      const pw = document.getElementById('lockInput');
+      return !pw || String(pw.value || '').trim() === '';
+    })();
+    if (lockUp) return true;
     if (Date.now() - _pumpBootTs > 150000) return false;      // مدتی است باز است → فقط نوار
     // فقط وقتی جلوی رفرش را می‌گیریم که کاربر واقعاً چیزی نوشته باشد؛ کادرِ خالیِ
     // فوکوس‌دار (مثلاً کادرِ رمزِ صفحهٔ قفل که خودکار فوکوس می‌گیرد) مانع نیست
@@ -36880,7 +36918,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.178';
+const APP_VERSION = '2.9.179';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -38061,7 +38099,7 @@ document.addEventListener('keydown', function(e){
 // دست‌نخورده می‌ماند. خودِ <select> و value/onchangeاش دست‌نخورده است — با کلیک
 // روی گزینهٔ این لیستِ سفارشی، فقط value ست و change شلیک می‌شود، انگار خودِ
 // کاربر از لیستِ نیتیو انتخاب کرده؛ منطقِ فیلترِ سال/ماه (_ymYearChanged و بقیه) عوض نشده.
-let _ysBox = null, _ysSelect = null;
+let _ysBox = null, _ysSelect = null, _ysHandledAt = 0;
 // خواستهٔ صاحب ریپو: پاپ‌آپِ نیتیوِ کشویی‌ها هیچ‌جا نیاید — نه کامپیوتر و نه گوشی.
 // پس این لیستِ خودمان روی همهٔ دستگاه‌ها باز می‌شود (تنها استثنا: کلاسِ native-sel).
 function _ysIsDesktop(){ return true; }
@@ -38085,8 +38123,13 @@ function _ysPosition(sel){
   const h = _ysBox.offsetHeight || 220;
   const below = window.innerHeight - r.bottom - 8;
   const openUp = below < Math.min(h, 220) && r.top > below;
-  const w = Math.max(r.width, 150);
-  _ysBox.style.width = w + 'px';
+  // عرض: کف‌عرضش اندازهٔ خودِ کشویی است، ولی اگر متنِ گزینه بلندتر بود تا لبهٔ
+  // صفحه کش می‌آید — وگرنه برچسبِ ماه («اسد 1405 — 1405/05») وسطش بریده می‌شد و
+  // کاربر نمی‌فهمید کدام ماه را می‌زند
+  _ysBox.style.width = '';
+  _ysBox.style.minWidth = Math.max(r.width, 150) + 'px';
+  _ysBox.style.maxWidth = Math.max(150, window.innerWidth - 12) + 'px';
+  const w = Math.max(_ysBox.offsetWidth, r.width, 150);
   _ysBox.style.left = Math.round(Math.max(6, Math.min(r.left, window.innerWidth - w - 6))) + 'px';
   _ysBox.style.top = openUp
     ? Math.round(Math.max(6, r.top - Math.min(h, r.top - 10) - 4)) + 'px'
@@ -38136,6 +38179,7 @@ document.addEventListener('mousedown', function (e) {
   if (sel && !sel.disabled && !sel.multiple && (sel.size || 1) <= 1
       && !sel.classList.contains('native-sel') && _ysIsDesktop()) {
     e.preventDefault();
+    _ysHandledAt = Date.now();
     if (_ysSelect === sel && box && box.style.display !== 'none') { _ysClose(); return; }
     sel.focus();
     _ysOpen(sel);
@@ -38168,10 +38212,28 @@ document.addEventListener('mousedown', function (e) {
     const sel = tSel; tSel = null;
     if (!sel || tMoved) return;
     e.preventDefault();                       // نه پاپ‌آپِ نیتیو، نه clickِ بعدی
+    _ysHandledAt = Date.now();
     if (_ysSelect === sel && _ysBox && _ysBox.style.display !== 'none') { _ysClose(); return; }
     try { sel.focus({ preventScroll: true }); } catch (err) {}
     _ysOpen(sel);
   }, { passive: false });
+  // ── گاردِ آخر ──────────────────────────────────────────────────────────────
+  // اگر به هر دلیلی نه mousedown و نه touchend به کشویی نرسید (زدنِ قلمی/کمکی،
+  // رویدادِ ساختگی، یا لمسی که خودِ مرورگر جورِ دیگری تحویل داد)، همین‌جا جلوی
+  // بازشدنِ پاپ‌آپِ نیتیو گرفته می‌شود و لیستِ خودِ برنامه می‌آید — پس دیگر هیچ
+  // راهی برای برگشتنِ آن پاپ‌آپ (و رقم‌های فارسیِ داخلش) نمی‌ماند.
+  document.addEventListener('click', function (e) {
+    const t = e.target;
+    const sel = (t && t.closest) ? t.closest('select') : null;
+    if (!usable(sel)) return;
+    e.preventDefault();
+    // همین حالا mousedown/touchend خودش کار را انجام داده (باز یا بستهٔ عمدی) —
+    // پس این‌جا فقط جلوی پاپ‌آپِ نیتیو گرفته می‌شود و دوباره باز نمی‌کنیم
+    if (Date.now() - _ysHandledAt < 700) return;
+    if (_ysBox && _ysBox.style.display !== 'none' && _ysSelect === sel) return;
+    _ysHandledAt = Date.now();
+    _ysOpen(sel);
+  }, true);
 })();
 // کیبورد: بالا/پایین بین گزینه‌ها، Enter انتخاب، Esc بستن — همان کاری که لیستِ
 // نیتیو می‌کرد، تا ناوبریِ کلیدیِ فرم‌ها با این لیست هم مثل قبل کار کند.
@@ -39270,7 +39332,7 @@ function _renderRateHistPanel() {
   if (!el) return;
   const list = DB.rateHistory || [];
   el.innerHTML = list.length ? list.map(h => {
-    const time = h.at ? new Date(h.at).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }) : '';
+    const time = h.at ? toEnDigits(new Date(h.at).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })) : '';
     return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px dashed var(--border);flex-wrap:wrap">
       <span>${h.fuel === 'diesel' ? '🟤 دیزل' : '⛽ پطرول'}</span>
       <b style="color:var(--accent)">${n2fa(h.rate)} فی لیتر</b>
