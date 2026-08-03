@@ -16541,7 +16541,16 @@ body.gfx-performance .xls-foot td{
 .dash-donut svg{width:100%;height:100%;transform:rotate(-90deg)}
 .dash-donut circle{fill:none;stroke-linecap:butt}
 .dash-donut .dn-track{stroke:var(--k-line)}
-.dash-donut .dn-seg{transition:stroke-dasharray .8s ease}
+/* کمان‌ها با انیمیشن پر می‌شوند و زدنی‌اند (روی خطِ خودِ کمان، نه وسطِ دایره) */
+.dash-donut .dn-seg{transition:stroke-dasharray .9s cubic-bezier(.22,.8,.3,1),stroke-width .18s,opacity .18s;
+  pointer-events:stroke;cursor:pointer;outline:none}
+.dash-donut .dn-seg:hover{stroke-width:6.4}
+.dash-donut .dn-seg.on{stroke-width:7}
+.dash-donut .dn-seg:focus-visible{stroke-width:7}
+.dash-donut-note{margin-top:clamp(9px,.6vw + 6px,14px);text-align:center;font-size:clamp(.66rem,.11vw + .64rem,.76rem);
+  color:var(--muted);font-weight:700;line-height:1.8}
+.tl-item.on .tl-nm{color:var(--tc)}
+.tl-item.on i{box-shadow:0 0 0 3px color-mix(in srgb,var(--tc) 35%,transparent)}
 .dash-donut-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:3px}
 .dash-donut-mid b{font-size:clamp(1.25rem,.85vw + 1rem,1.85rem);font-weight:900;color:var(--txt);line-height:1}
 .dash-donut-mid span{font-size:clamp(.6rem,.1vw + .58rem,.7rem);color:var(--muted);font-weight:700}
@@ -16689,9 +16698,8 @@ body.gfx-performance .xls-foot td{
       <div class="dc-top"><div class="dc-title" id="dct-sales">فروش تیل امروز</div><span class="dc-ic"><svg><use href="#ic-shifts"/></svg></span></div>
       <div class="dc-value" id="dcv-sales">۰</div><div class="dc-delta" id="dcd-sales"></div><div class="dc-sub" id="dcs-sales"></div></div>
 
-    <div class="dash-card" style="--kc:var(--k-amber)" title="رفتن به مفاد / ضرر" onclick="showSection('profit')">
-      <div class="dc-top"><div class="dc-title" id="dct-profit">مبلغ فروش امروز</div><span class="dc-ic"><svg><use href="#ic-profit"/></svg></span></div>
-      <div class="dc-value" id="dcv-profit">۰</div><div class="dc-delta" id="dcd-profit"></div><div class="dc-sub" id="dcs-profit"></div></div>
+    <!-- خواستهٔ صاحب ریپو: کارتِ «مبلغ فروش امروز» از داشبورد برداشته شد
+         (خودِ محاسبه‌ها و بخشِ مفاد/ضرر دست‌نخورده‌اند) -->
 
     <div class="dash-card" style="--kc:var(--k-blue)" title="رفتن به قرض‌داران" onclick="showSection('debt')">
       <div class="dc-top"><div class="dc-title">الباقی قرض‌داران</div><span class="dc-ic"><svg><use href="#ic-debt"/></svg></span></div>
@@ -16735,6 +16743,8 @@ body.gfx-performance .xls-foot td{
           </span>
           <div class="dash-tank-legend" id="dash-tank-legend"></div>
         </div>
+        <!-- با زدن روی هر کمانِ دایره، همین خط جزئیاتِ همان سوخت را می‌گوید -->
+        <div class="dash-donut-note" id="dash-donut-note"></div>
         <button class="dash-ghost-btn" onclick="showSection('storage')">مشاهده همه</button>
       </div>
     </div>
@@ -21729,6 +21739,8 @@ function _dashTankInfo() {
     { f: 'diesel', nm: '🟤 دیزل',  color: 'var(--k-amber)', sec: 'storage-diesel', cur: Math.max(0, _fuelStock('diesel')), cap: capOf('diesel'), raw: _fuelStock('diesel') }
   ];
 }
+// کدام سوخت روی دایره انتخاب شده (null = هیچ‌کدام → نمای کلی)
+let _dashDonutSel = null;
 function _renderDashTanks() {
   const segs = document.getElementById('dash-donut-segs');
   const leg = document.getElementById('dash-tank-legend');
@@ -21742,20 +21754,69 @@ function _renderDashTanks() {
   // هر سوخت یک کمانِ دایره به اندازهٔ سهمِ خودش از کلِ ظرفیت
   const C = 99.9;   // محیط دایره r=15.9
   let off = 0;
-  segs.innerHTML = list.map(t => {
+  const parts = list.map(t => {
     const share = totCap > 0 ? Math.min(100, t.cur / totCap * 100) : 0;
     const len = share / 100 * C;
-    const html = '<circle class="dn-seg" cx="21" cy="21" r="15.9" stroke-width="5.2" stroke="' + t.color
-      + '" stroke-dasharray="' + len.toFixed(2) + ' ' + (C - len).toFixed(2)
-      + '" stroke-dashoffset="' + (-off).toFixed(2) + '"></circle>';
+    const p = { f: t.f, len: len, off: off };
     off += len;
-    return html;
-  }).join('');
+    return p;
+  });
+  // انیمیشن: کمان‌ها از صفر شروع می‌شوند و در فریمِ بعد به اندازهٔ واقعی می‌رسند
+  // (چون هر بار عنصرها از نو ساخته می‌شوند، ترنزیشن به‌تنهایی هیچ‌وقت اجرا نمی‌شد)
+  segs.innerHTML = list.map((t, i) => '<circle class="dn-seg" cx="21" cy="21" r="15.9" stroke-width="5.2" stroke="' + t.color
+    + '" stroke-dasharray="0 ' + C + '" stroke-dashoffset="' + (-parts[i].off).toFixed(2) + '"'
+    + ' data-fuel="' + t.f + '" tabindex="0" role="button"'
+    + ' style="transition-delay:' + (i * 0.18).toFixed(2) + 's"><title>' + t.nm + ' — ' + n2fa(Math.round(t.cur)) + ' لیتر</title></circle>').join('');
+  const circles = segs.querySelectorAll('.dn-seg');
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    circles.forEach((c, i) => {
+      c.setAttribute('stroke-dasharray', parts[i].len.toFixed(2) + ' ' + (C - parts[i].len).toFixed(2));
+    });
+  }));
+  circles.forEach(c => {
+    c.addEventListener('click', () => dashDonutPick(c.getAttribute('data-fuel')));
+    c.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); dashDonutPick(c.getAttribute('data-fuel')); } });
+  });
   leg.innerHTML = list.map(t =>
-    '<button type="button" class="tl-item" style="--tc:' + t.color + ';background:none;border:none;padding:0;cursor:pointer;text-align:right"'
-    + ' onclick="showSection(\'' + t.sec + '\')">'
+    '<button type="button" class="tl-item' + (_dashDonutSel === t.f ? ' on' : '') + '" style="--tc:' + t.color + ';background:none;border:none;padding:0;cursor:pointer;text-align:right"'
+    + ' onclick="dashDonutPick(\'' + t.f + '\')" ondblclick="showSection(\'' + t.sec + '\')">'
     + '<i></i><span><span class="tl-nm">' + t.nm + '</span>'
     + '<span class="tl-l" style="display:block">' + n2fa(Math.round(t.cur)) + ' لیتر از ' + n2fa(Math.round(t.cap)) + '</span></span></button>').join('');
+  _renderDonutNote(list, totCur, totCap);
+}
+// خطِ زیرِ دایره: می‌گوید کدام سوخت بیشترین موجودی را دارد؛ با زدن روی هر کمان،
+// جزئیاتِ همان سوخت را نشان می‌دهد (خواستهٔ صاحب ریپو).
+function _renderDonutNote(list, totCur, totCap) {
+  const note = document.getElementById('dash-donut-note');
+  if (!note) return;
+  list = list || _dashTankInfo();
+  if (totCur == null) totCur = list.reduce((a, t) => a + t.cur, 0);
+  if (totCap == null) totCap = list.reduce((a, t) => a + t.cap, 0);
+  const top = list.slice().sort((a, b) => b.cur - a.cur)[0];
+  const sel = _dashDonutSel ? list.find(t => t.f === _dashDonutSel) : null;
+  const pctOf = t => (t.cap > 0 ? Math.round(Math.min(100, t.cur / t.cap * 100)) : 0);
+  if (sel) {
+    const isTop = top && sel.f === top.f && sel.cur > 0;
+    note.innerHTML = '<b style="color:' + sel.color + '">' + sel.nm + '</b> · ' + n2fa(Math.round(sel.cur)) + ' لیتر از '
+      + n2fa(Math.round(sel.cap)) + ' (' + n2fa(pctOf(sel)) + '٪)'
+      + (isTop ? ' <span style="color:var(--k-green);font-weight:900">🏆 بیشترین موجودی</span>' : '');
+  } else if (top && top.cur > 0) {
+    note.innerHTML = '🏆 بیشترین موجودی: <b style="color:' + top.color + '">' + top.nm + '</b> — '
+      + n2fa(Math.round(top.cur)) + ' لیتر (' + n2fa(pctOf(top)) + '٪) · روی دایره بزنید';
+  } else {
+    note.textContent = 'هیچ تیلی در مخزن نیست';
+  }
+  note.style.display = '';
+}
+// زدن روی یک کمان/عنوانِ سوخت — دوباره زدنِ همان، انتخاب را برمی‌دارد
+function dashDonutPick(f) {
+  _dashDonutSel = (_dashDonutSel === f) ? null : f;
+  const segs = document.getElementById('dash-donut-segs');
+  if (segs) segs.querySelectorAll('.dn-seg').forEach(c => c.classList.toggle('on', !!_dashDonutSel && c.getAttribute('data-fuel') === _dashDonutSel));
+  const leg = document.getElementById('dash-tank-legend');
+  const list = _dashTankInfo();
+  if (leg) leg.querySelectorAll('.tl-item').forEach((b, i) => b.classList.toggle('on', !!_dashDonutSel && (list[i] || {}).f === _dashDonutSel));
+  _renderDonutNote(list);
 }
 /* ── وضعیتِ سوخت‌ها (جای «وضعیت پمپ‌ها»ی تصویرِ مرجع) ────────────────────
    همان حدِ هشدارِ بخشِ مخزن؛ سه حالت: کافی / رو به اتمام / تمام شده. */
@@ -21952,11 +22013,8 @@ function renderDashboard(skipAnim) {
   setT('dcs-sales', '⛽ ' + n2fa(Math.round(selB.petrol.l)) + ' ل · 🟤 ' + n2fa(Math.round(selB.diesel.l)) + ' ل');
   _dashDelta('dcd-sales', _dashGrowth(cur.l, prev.l), perWord);
 
-  // ۲) مبلغِ فروش (جای کارتِ «مفاد») — مفاد به‌صورت یک زیرنویسِ کوتاه می‌آید
-  setT('dct-profit', 'مبلغ فروش ' + bucketWord);
-  setT('dcv-profit', n2fa(Math.round(cur.a)) + ' افغانی');
-  setT('dcs-profit', '📈 مفاد: ' + n2fa(Math.round(cur.p)) + ' افغانی');
-  _dashDelta('dcd-profit', _dashGrowth(cur.a, prev.a), perWord);
+  // ۲) کارتِ «مبلغ فروش» به خواستهٔ صاحب ریپو از داشبورد برداشته شد — خودِ
+  //    محاسبه‌ها (cur.a / cur.p) دست‌نخورده‌اند و در نمودارها استفاده می‌شوند.
 
   // ۳) قرض‌داران — جمع الباقی
   const dbt = _dashDebtInfo();
@@ -36684,7 +36742,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.173';
+const APP_VERSION = '2.9.174';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -42727,6 +42785,26 @@ tfoot td{background:${accent}14;font-weight:900;font-size:.88rem}
 }
 #glassClock.gc-on{ display:inline-flex; }
 #glassClock.gc-drag{ cursor:grabbing; box-shadow:0 34px 70px -24px rgba(0,0,0,.95), inset 0 1px 0 rgba(255,255,255,.18); }
+/* ═══ پایداریِ تصویر روی موبایل ═══════════════════════════════════════════
+   باگِ گزارش‌شده (عکسِ صاحب ریپو): گاهی نصفِ صفحه یک فریمِ کهنه/سفید می‌ماند و
+   صفحه «پاره» دیده می‌شود. عاملش محوکردنِ پس‌زمینه (backdrop-filter) روی
+   عنصرهای شناورِ position:fixed است که جابه‌جا/ظاهر می‌شوند — روی گوشی‌های
+   اندروید کاشی‌های کامپوزیتور را خراب می‌کند. روی لمسی این محو برداشته می‌شود
+   (پس‌زمینه‌شان از قبل تقریباً مات است، پس ظاهر تقریباً همان می‌ماند) و هر کدام
+   لایهٔ گرافیکیِ خودشان را می‌گیرند تا بقیهٔ صفحه را دوباره رنگ نکنند. */
+@media (pointer:coarse){
+  #glassClock, #gcMenu, #gcDlg, .toast, #lsCalcBtn, .ls-reset-btn,
+  /* سربرگ/نوار بالا/منو چسبیده (sticky) هستند و پس‌زمینه‌شان از قبل کاملاً مات
+     است؛ محوِ پشت‌شان دیده نمی‌شد ولی همان چیزی است که هنگام اسکرول روی اندروید
+     صفحه را «پاره» نشان می‌داد */
+  body.gfx-standard .header, body.gfx-standard .top-banner, body.gfx-standard .nav,
+  body.gfx-ultra .header, body.gfx-ultra .top-banner, body.gfx-ultra .nav{
+    -webkit-backdrop-filter:none !important; backdrop-filter:none !important;
+  }
+  /* فقط ساعت لایهٔ جدا می‌گیرد — تُست خودش با translateX(-50%) جابه‌جا می‌شود
+     و نباید transformش را دست بزنیم */
+  #glassClock{ transform:translateZ(0); }
+}
 /* رنگ‌ها از تمِ فعال — هر تمی انتخاب شود، ساعت هم همان‌رنگ می‌شود */
 #glassClock{
   --gc-line:color-mix(in srgb, var(--accent) 30%, rgba(255,255,255,.16));
@@ -42898,10 +42976,13 @@ body.light-mode #glassClock{
   function offset(){ var n = parseInt(ls(K_OFF,'0'),10); return isNaN(n) ? 0 : n; }
   function now(){ return new Date(Date.now() + offset()); }
 
-  /* ── تاریخِ شمسی (همان تقویمِ خودِ برنامه: حمل/ثور/…) ── */
+  /* ── تاریخِ شمسی (همان تقویمِ خودِ برنامه: حمل/ثور/…) ──
+     بهینه‌سازی: ساختِ Intl.DateTimeFormat گران است و قبلاً هر ثانیه یک‌بار ساخته
+     می‌شد؛ حالا یک‌بار ساخته و نگه داشته می‌شود (خروجی دقیقاً همان است). */
+  var _jFmt;
   function jalali(d){
     try{
-      var f = new Intl.DateTimeFormat('en-US-u-ca-persian', {day:'numeric', month:'numeric', year:'numeric'});
+      var f = _jFmt || (_jFmt = new Intl.DateTimeFormat('en-US-u-ca-persian', {day:'numeric', month:'numeric', year:'numeric'}));
       var o = {}; f.formatToParts(d).forEach(function(p){ if(p.type!=='literal') o[p.type]=p.value; });
       var y = parseInt(o.year,10), m = parseInt(o.month,10), dd = parseInt(o.day,10);
       if(!isNaN(y) && !isNaN(m) && !isNaN(dd)) return {y:y, m:m, d:dd};
@@ -42915,6 +42996,7 @@ body.light-mode #glassClock{
   }
 
   /* ── نقاشیِ هر ثانیه ── */
+  var _dayKey = '', _arcInit = false;
   function tick(){
     if(!el) return;
     var app = document.getElementById('app');
@@ -42924,14 +43006,21 @@ body.light-mode #glassClock{
     if(!appOpen || hidden) return;
 
     var d = now(), h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
-    tEl.textContent = fa(pad(h) + ':' + pad(m));
-    var j = jalali(d);
-    wEl.textContent = FA_WD[d.getDay()] || '';
-    dEl.textContent = j ? (fa(j.d) + ' ' + monthName(j.m)) : '';
+    // فقط وقتی نوشته واقعاً عوض شده روی صفحه بنویس (هر ثانیه بی‌خود رنگ نشود)
+    var tTxt = fa(pad(h) + ':' + pad(m));
+    if(tEl.textContent !== tTxt) tEl.textContent = tTxt;
+    // تاریخ فقط با عوض‌شدنِ روز دوباره حساب می‌شود، نه هر ثانیه
+    var dayKey = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+    if(_dayKey !== dayKey){
+      _dayKey = dayKey;
+      var j = jalali(d);
+      wEl.textContent = FA_WD[d.getDay()] || '';
+      dEl.textContent = j ? (fa(j.d) + ' ' + monthName(j.m)) : '';
+    }
 
     // کمان = پیشرویِ ثانیه‌های همین دقیقه
     var p = (s + d.getMilliseconds()/1000) / 60;
-    arcFg.style.strokeDasharray = ARC_LEN + ' ' + ARC_LEN;
+    if(!_arcInit){ arcFg.style.strokeDasharray = ARC_LEN + ' ' + ARC_LEN; _arcInit = true; }
     arcFg.style.strokeDashoffset = (ARC_LEN * (1 - p)).toFixed(2);
 
     // عقربه‌ها
@@ -43018,11 +43107,40 @@ body.light-mode #glassClock{
       el.style.left = x + 'px'; el.style.top = y + 'px';
       e.preventDefault();
     });
+    /* ── زدنِ ساده روی ساعت = زدنِ چیزی که زیرش است ─────────────────────
+       باگِ گزارش‌شده: هر جا ساعت روی یک کادر (مثلاً کادرهای فرمِ فاکتور) بیفتد،
+       زدنِ آن کادر به خودِ ساعت می‌خورد و «چیزی نوشته نمی‌شود». خودِ ساعت با
+       زدنِ ساده هیچ کاری نمی‌کرد، پس آن زدن را به عنصرِ زیرش پاس می‌دهیم.
+       کشیدن (drag)، نگه‌داشتن (منو) و کلیک راست دقیقاً مثل قبل کار می‌کنند. */
+    function tapThrough(x, y){
+      var prev = el.style.pointerEvents;
+      el.style.pointerEvents = 'none';
+      var t = null;
+      try{ t = document.elementFromPoint(x, y); }catch(err){}
+      el.style.pointerEvents = prev || '';
+      if(!t || !t.closest) return;
+      var hit = t.closest('input,textarea,select,button,a,label,[onclick],[role="button"],[tabindex]');
+      if(!hit || hit === el || el.contains(hit)) return;
+      var tag = hit.tagName;
+      if(tag === 'INPUT' || tag === 'TEXTAREA'){
+        try{ hit.focus({ preventScroll:true }); }catch(err){ try{ hit.focus(); }catch(e2){} }
+        if(hit.type === 'checkbox' || hit.type === 'radio' || hit.type === 'button' || hit.type === 'submit') hit.click();
+        return;
+      }
+      if(tag === 'SELECT'){
+        try{ hit.focus({ preventScroll:true }); }catch(err){}
+        // لیستِ کشوییِ سفارشیِ برنامه با mousedown باز می‌شود
+        try{ hit.dispatchEvent(new MouseEvent('mousedown', { bubbles:true, clientX:x, clientY:y })); }catch(err){}
+        return;
+      }
+      try{ hit.click(); }catch(err){}
+    }
     function end(e){
       if(lpTimer){ clearTimeout(lpTimer); lpTimer=null; }
       if(!dragging) return;
       dragging = false; el.classList.remove('gc-drag');
       if(moved) savePos(parseFloat(el.style.left)||0, parseFloat(el.style.top)||0);
+      else if(e && e.type === 'pointerup') tapThrough(e.clientX, e.clientY);
     }
     el.addEventListener('pointerup', end);
     el.addEventListener('pointercancel', end);
