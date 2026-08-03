@@ -18163,10 +18163,17 @@ body.gfx-performance .xls-foot td{
 @media (min-width:900px){
   .inv-form-card .invp-frame{padding:30px 34px 200px}
   .inv-form-card .invp-title{font-size:2rem}
-  /* خانه‌ها به جای دو ستونِ ثابت، به اندازهٔ عرضِ واقعیِ صفحه پخش می‌شوند */
-  .inv-form-card .invp-grid{grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+  /* دو ستونِ ثابت (نه auto-fit): با auto-fit بسته به عرضِ دقیقِ پنجره گاهی ۳ ستون
+     می‌شد و یک خانه (مثلاً «نوع ماشین») تنها زیرش می‌ماند — همین چیدمانِ نامنظم
+     باعث می‌شد ناوبری با کلیدهای جهت‌دار زیگزاگی/غیرقابل‌پیش‌بینی به‌نظر برسد
+     (خواستهٔ کاربر). با دو ستونِ ثابت، همیشه دقیقاً دو ردیفِ تمیز داریم. */
+  .inv-form-card .invp-grid{grid-template-columns:repeat(2,1fr);gap:14px}
   .inv-form-card .invp-row{padding:13px 16px}
-  .inv-form-card .invp-row .k{font-size:.86rem}
+  /* عرضِ حداقلِ ثابت برای برچسب — وگرنه طولِ متفاوتِ برچسب‌ها («نوع تیل» کوتاه
+     در برابر «مقدار خرید (لیتر)» بلندتر) باعث می‌شد خودِ کادرِ ورودی در هر ردیف
+     عرض/مرکزِ متفاوتی داشته باشد و ناوبری با کلیدهای چپ/راست/بالا/پایین بینِ
+     ستون‌ها اشتباه بپرد (خواستهٔ کاربر) */
+  .inv-form-card .invp-row .k{font-size:.86rem;min-width:100px}
   .inv-form-card .invp-in,.inv-form-card .invp-row .v{font-size:1.06rem}
   .inv-form-card .invp-total{padding:15px 20px}
   .inv-form-card .invp-meta{max-width:none}
@@ -18307,21 +18314,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
 
 <div class="section" id="sec-invoices">
   <div class="section-title"><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> ثبت فاکتورها</div>
-  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('invoice')"><span title="🕘 تاریخچهٔ فاکتورها — با تاریخ و روز هفته">🕘 تاریخچهٔ فاکتورها</span><span class="tlc-go"><i>‹</i></span></button>
-
-  <!-- کارت‌های آماری -->
-  <div class="inv-stats">
-    <div class="inv-stat pending" onclick="invOpenList('pending')" role="button" tabindex="0" title="دیدن فاکتورهای در صف">
-      <div class="ic">🟡</div>
-      <div><div class="lbl">فاکتورهای در صف</div><div class="cnt" id="inv-cnt-pending">۰</div></div>
-      <div class="go">مشاهده ←</div>
-    </div>
-    <div class="inv-stat approved" onclick="invOpenList('approved')" role="button" tabindex="0" title="دیدن فاکتورهای تایید شده">
-      <div class="ic">🟢</div>
-      <div><div class="lbl">فاکتورهای تایید شده</div><div class="cnt" id="inv-cnt-approved">۰</div></div>
-      <div class="go">مشاهده ←</div>
-    </div>
-  </div>
 
   <!-- اسپرایت گرافیک‌های فاکتور (SVG داخلی — بدون فایل خارجی، آفلاین هم کار می‌کند) -->
   <svg id="invp-sprite" style="display:none" aria-hidden="true"><defs>
@@ -18442,6 +18434,24 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <div class="inv-btn-row" style="margin-top:16px">
       <button class="inv-btn submit inv-admin-only" onclick="invSubmit()">✅ ثبت فاکتور</button>
       <button class="inv-btn reset" onclick="invResetForm()">🔄 پاک کردن فرم</button>
+    </div>
+  </div>
+
+  <!-- خواستهٔ کاربر: این کارت‌ها زیرِ خودِ فاکتور بیایند تا فاکتور بالاتر و زودتر
+       دیده شود (بدون اسکرول‌کردنِ زیاد) -->
+  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('invoice')"><span title="🕘 تاریخچهٔ فاکتورها — با تاریخ و روز هفته">🕘 تاریخچهٔ فاکتورها</span><span class="tlc-go"><i>‹</i></span></button>
+
+  <!-- کارت‌های آماری -->
+  <div class="inv-stats">
+    <div class="inv-stat pending" onclick="invOpenList('pending')" role="button" tabindex="0" title="دیدن فاکتورهای در صف">
+      <div class="ic">🟡</div>
+      <div><div class="lbl">فاکتورهای در صف</div><div class="cnt" id="inv-cnt-pending">۰</div></div>
+      <div class="go">مشاهده ←</div>
+    </div>
+    <div class="inv-stat approved" onclick="invOpenList('approved')" role="button" tabindex="0" title="دیدن فاکتورهای تایید شده">
+      <div class="ic">🟢</div>
+      <div><div class="lbl">فاکتورهای تایید شده</div><div class="cnt" id="inv-cnt-approved">۰</div></div>
+      <div class="go">مشاهده ←</div>
     </div>
   </div>
 </div>
@@ -36522,7 +36532,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.170';
+const APP_VERSION = '2.9.171';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -37758,9 +37768,8 @@ function _navFocusables(scope){
 function _pickInDirection(el, dir, cands){
   const r = el.getBoundingClientRect();
   const cx = r.left + r.width/2, cy = r.top + r.height/2;
-  // مرحلهٔ ۱: فاصلهٔ اصلیِ (عمود بر جهتِ حرکت) نزدیک‌ترین کاندید را پیدا کن —
-  // یعنی «ردیفِ بعدی» (بالا/پایین) یا «ستونِ بعدی» (چپ/راست) واقعاً کدام است،
-  // صرف‌نظر از این‌که آن ردیف/ستون چقدر هم‌راستا یا عریض است.
+  const isVertical = (dir === 'up' || dir === 'down');
+  // فاصلهٔ اصلی (عمود بر جهتِ حرکت) و فرعی (محورِ دیگر) هر کاندیدِ معتبر را حساب کن.
   const valid = [];
   let minPrimary = Infinity;
   for (const c of cands){
@@ -37775,20 +37784,41 @@ function _pickInDirection(el, dir, cands){
     else                     { ok = dx > 3;  primary = dx;  secondary = Math.abs(dy); }
     if (!ok) continue;
     valid.push({ c, primary, secondary });
-    if (primary < minPrimary) minPrimary = primary;
+    if (isVertical && primary < minPrimary) minPrimary = primary;
   }
   if (!valid.length) return null;
-  // مرحلهٔ ۲: بینِ کاندیدهایی که تقریباً همان فاصلهٔ اصلیِ نزدیک‌ترین را دارند
-  // (یعنی واقعاً همان ردیف/ستونِ بعدی‌اند، نه چند ردیف/ستون دورتر)، نزدیک‌ترین از
-  // نظرِ محورِ دیگر را بگیر. قبلاً کاندیدِ «هم‌راستا با عرضِ خودِ فیلدِ فعلی» را با
-  // هر فاصلهٔ اصلی‌ای برنده می‌کرد؛ برای فیلدهای خیلی عریض (مثلِ «نام مشتری» تمامِ
-  // عرضِ فاکتور) این باعث می‌شد کلیدِ پایین از فیلدِ اول مستقیم به فیلدِ تمام‌عرضِ
-  // آخر (مثلاً «شماره تماس») بپرد و ردیف‌های میانی را رد کند. حالا اول ردیفِ واقعاً
-  // بعدی پیدا می‌شود، بعد نزدیک‌ترینِ همان ردیف.
-  const band = Math.max(24, minPrimary * 0.6);
-  let best = null, bestSecondary = Infinity;
+  if (isVertical) {
+    // بالا/پایین: اول فاصلهٔ عمودیِ نزدیک‌ترین کاندید را پیدا کن — یعنی «ردیفِ
+    // بعدی» واقعاً کدام است، صرف‌نظر از این‌که آن ردیف چقدر هم‌راستا یا عریض
+    // است. بعد بینِ کاندیدهایی که تقریباً همان فاصلهٔ عمودی را دارند (همان ردیف)،
+    // نزدیک‌ترین از نظرِ افقی را بگیر. قبلاً کاندیدِ «هم‌راستا با عرضِ خودِ فیلدِ
+    // فعلی» را با هر فاصلهٔ عمودی‌ای برنده می‌کرد؛ برای فیلدهای خیلی عریض (مثلِ
+    // «نام مشتری» تمامِ عرضِ فاکتور) این باعث می‌شد کلیدِ پایین از فیلدِ اول
+    // مستقیم به فیلدِ تمام‌عرضِ آخر بپرد و ردیف‌های میانی را رد کند.
+    const band = Math.max(24, minPrimary * 0.6);
+    let best = null, bestSecondary = Infinity;
+    valid.forEach(v => {
+      if (v.primary <= minPrimary + band && v.secondary < bestSecondary) { bestSecondary = v.secondary; best = v.c; }
+    });
+    return best;
+  }
+  // چپ/راست: اول فقط کاندیدهایی که واقعاً «هم‌ردیف»اند (فاصلهٔ عمودیِ کم) را
+  // در نظر بگیر و نزدیک‌ترین از نظرِ افقی را در همان‌ها انتخاب کن. وگرنه در
+  // ردیف‌های خیلی عریض (مثلِ فرمِ فاکتور با دو ستونِ دورافتاده از هم)، فیلدِ
+  // هم‌ردیفِ آن‌طرفِ ردیف به فیلدی در ردیفِ دیگر می‌بازد که فاصلهٔ افقی‌اش کمتر
+  // به‌نظر می‌رسد ولی اصلاً هم‌ردیف نیست (باگِ کاربر: چپ‌رفتن قاطیِ ردیف‌ها می‌شد).
+  const rowEps = Math.max(24, r.height * 0.75);
+  let best = null, bestPrimary = Infinity;
   valid.forEach(v => {
-    if (v.primary <= minPrimary + band && v.secondary < bestSecondary) { bestSecondary = v.secondary; best = v.c; }
+    if (v.secondary <= rowEps && v.primary < bestPrimary) { bestPrimary = v.primary; best = v.c; }
+  });
+  if (best) return best;
+  // هیچ کاندیدِ هم‌ردیفی نبود (مثلاً از ردیفِ بالای فرم به داخلِ گرید) — نزدیک‌ترینِ
+  // کلی را با وزن‌دهیِ بیشتر به محورِ عمودی بگیر (همان الگوریتمِ قدیمیِ امتحان‌شده).
+  let bestScore = Infinity;
+  valid.forEach(v => {
+    const score = v.primary + v.secondary * 2.2;
+    if (score < bestScore) { bestScore = score; best = v.c; }
   });
   return best;
 }
