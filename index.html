@@ -542,9 +542,18 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 }
 /* لیستِ سفارشیِ پیشنهادِ نام — جایگزینِ دیتالیستِ نیتیو که در کامپیوتر/برنامهٔ
    دسکتاپ چپ‌چین و بی‌قواره رندر می‌شد؛ همیشه راست‌چین و هم‌شکل با بقیهٔ برنامه است */
-.suggest-box{position:fixed;z-index:9999;background:var(--card);border:1.5px solid var(--border);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.22);max-height:220px;overflow-y:auto;direction:rtl;text-align:right;font-family:'Vazirmatn',sans-serif}
+.suggest-box{position:fixed;z-index:100050;background:var(--card);border:1.5px solid var(--border);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.22);max-height:220px;overflow-y:auto;direction:rtl;text-align:right;font-family:'Vazirmatn',sans-serif}
 .suggest-item{padding:8px 12px;font-size:0.86rem;font-weight:700;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--txt)}
 .suggest-item:hover,.suggest-item.active{background:var(--accent);color:#fff}
+/* لیستِ سفارشیِ کشویی‌ها (جایگزینِ پاپ‌آپِ نیتیوِ <select> در کامپیوتر): همان قالبِ
+   بالا + یک تیکِ کوچک کنارِ گزینهٔ انتخاب‌شده و کمی جادارتر */
+.ys-box{padding:4px;border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.3)}
+.ys-box .ys-item{display:flex;align-items:center;gap:7px;border-radius:8px;padding:8px 10px}
+.ys-box .ys-item + .ys-item{margin-top:2px}
+.ys-box .ys-tick{flex-shrink:0;width:14px;text-align:center;font-size:0.8rem;opacity:.9}
+.ys-box .ys-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.ys-box .ys-dis{opacity:.45;cursor:default}
+.ys-box .ys-dis:hover{background:transparent;color:var(--txt)}
 /* جدول قرائت پمپ‌ها: کادرهای ورودی (نام/نوع/ساعت/شروع/ختم/فی‌لیتر) هم‌اندازهٔ بقیهٔ ستون‌ها
    (لیتر/مبلغ فروش) باشند — با inherit، اندازهٔ موبایل و بزرگ‌شدنِ دسکتاپ هر دو خودکار دنبال می‌شود */
 #wq-pump-tbl .xls-in{font-size:inherit!important}
@@ -19102,7 +19111,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <button class="add-row-btn" style="margin:0;border-color:var(--accent);color:var(--accent);padding:5px 10px;font-size:0.78rem" onclick="renameCurrentPerson()">✏️ تغییر اسم</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--red);color:var(--red);padding:5px 10px;font-size:0.78rem" onclick="clearAllPersonRows()">🗑️ پاک همه</button>
         <button class="add-row-btn pm-view-ok" style="margin:0;border-color:var(--green);color:var(--green);padding:5px 10px;font-size:0.78rem" onclick="pdfPerson()">📄 PDF</button>
-        <button class="add-row-btn pm-view-ok" style="margin:0;border-color:var(--blue);color:var(--blue);padding:5px 10px;font-size:0.78rem" onclick="showPersonQRFromModal()">📲 کیو‌آر</button>
+        <button class="add-row-btn pm-view-ok" id="pm-qr-btn" title="کیو‌آر همین حساب" style="margin:0;border-color:var(--blue);color:var(--blue);padding:5px 10px;font-size:0.78rem" onclick="showPersonQRFromModal()">📲 کیو‌آر</button>
         <button class="modal-close" onclick="closePersonModal()">✕</button>
       </div>
     </div>
@@ -19563,7 +19572,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <h2 id="ro-title">👤 حساب</h2>
     <div style="display:flex;gap:8px;align-items:center">
       <button id="ro-mode-btn" onclick="_toggleROMode()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--purple);background:transparent;color:var(--purple);font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer">🔁 پول</button>
-      <button onclick="if(_roCurType&&_roCurId)pdfPersonById(_roCurType,_roCurId)" style="padding:6px 14px;border-radius:8px;border:none;background:#38a169;color:#fff;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer">🖨️ دانلود PDF</button>
+      <button onclick="if(_roCurType&&_roCurId)pdfPersonById(_roCurType,_roCurId,_roCurSub)" style="padding:6px 14px;border-radius:8px;border:none;background:#38a169;color:#fff;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer">🖨️ دانلود PDF</button>
       <button id="ro-close-btn" onclick="closeROViewer()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-family:'Vazirmatn',sans-serif;cursor:pointer">✕ بستن</button>
     </div>
   </div>
@@ -19602,18 +19611,24 @@ body.viewer-mode .inv-admin-only{display:none!important}
   </div>
 </div>
 <!-- بعد از بستن نمای کیو‌آر، مهمان با این دکمه حساب را دوباره باز می‌کند (قبلاً صفحه خالی می‌ماند) -->
-<button id="roReopenBtn" style="display:none;position:fixed;bottom:26px;right:50%;transform:translateX(50%);z-index:9000;padding:13px 26px;border-radius:999px;border:none;background:var(--accent);color:#000;font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.95rem;cursor:pointer;box-shadow:0 8px 26px rgba(0,0,0,.4)" onclick="this.style.display='none';openROViewer(_roCurType,_roCurId)">↩️ دیدن دوبارهٔ حساب</button>
+<button id="roReopenBtn" style="display:none;position:fixed;bottom:26px;right:50%;transform:translateX(50%);z-index:9000;padding:13px 26px;border-radius:999px;border:none;background:var(--accent);color:#000;font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.95rem;cursor:pointer;box-shadow:0 8px 26px rgba(0,0,0,.4)" onclick="this.style.display='none';openROViewer(_roCurType,_roCurId,_roCurSub)">↩️ دیدن دوبارهٔ حساب</button>
 
 <!-- READ-ONLY COMPANY VIEWER -->
 <div class="ro-overlay" id="companyRoOverlay">
   <div class="ro-header">
     <h2 id="company-ro-title">🛢️ شرکت</h2>
     <div style="display:flex;gap:8px;align-items:center">
-      <button onclick="if(_companyRoId)pdfCompanyById(_companyRoId)" style="padding:6px 14px;border-radius:8px;border:none;background:#38a169;color:#fff;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer">🖨️ دانلود PDF</button>
+      <button onclick="if(_companyRoId)pdfCompanyById(_companyRoId,_cmpRoFilter)" style="padding:6px 14px;border-radius:8px;border:none;background:#38a169;color:#fff;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer">🖨️ دانلود PDF</button>
       <button id="company-ro-close-btn" onclick="closeCompanyROViewer()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-family:'Vazirmatn',sans-serif;cursor:pointer">✕ بستن</button>
     </div>
   </div>
   <div class="ro-sum" id="company-ro-sum"></div>
+  <!-- کادرِ حساب جداگانهٔ پطرول/دیزلِ شرکت — مثل نمای قرض‌دار، برای کسی که با کیو‌آر می‌بیند -->
+  <div class="ro-filter-bar" id="company-ro-filter-bar">
+    <button type="button" class="pm-filter-btn active" id="cro-filter-all" onclick="setCompanyROFilter('all')">📋 همه</button>
+    <button type="button" class="pm-filter-btn petrol" id="cro-filter-petrol" onclick="setCompanyROFilter('petrol')">⛽ حساب جداگانه پطرول</button>
+    <button type="button" class="pm-filter-btn diesel" id="cro-filter-diesel" onclick="setCompanyROFilter('diesel')">🟤 حساب جداگانه دیزل</button>
+  </div>
   <div class="ro-body">
     <div style="overflow-x:auto" id="company-ro-table-wrap"></div>
     <div style="text-align:center;padding:16px;font-size:0.75rem;color:var(--muted)">🔒 این صفحه فقط‌خواندنی است — هیچ تغییری ذخیره نمی‌شود</div>
@@ -25207,6 +25222,14 @@ function _renderSubBar(person) {
   if (del) del.style.display = currentSubId ? '' : 'none';
   const label = document.querySelector('#personModal .pm-acct-bar .pm-acct-label');
   if (label) label.style.display = subs.length === 0 ? 'none' : '';
+  // دکمهٔ کیو‌آر همیشه مالِ «همین حسابی» است که بازش کرده‌ایم — نامش را هم نشان می‌دهد
+  const qb = document.getElementById('pm-qr-btn');
+  if (qb) {
+    const s = currentSubId ? subs.find(x => x && x.id === currentSubId) : null;
+    const nm = s ? String(s.name || 'حساب') : '';
+    qb.textContent = s ? ('📲 کیو‌آر ' + (nm.length > 10 ? nm.slice(0, 10) + '…' : nm)) : '📲 کیو‌آر';
+    qb.title = s ? ('کیو‌آر مخصوصِ حساب «' + nm + '»') : 'کیو‌آر حساب اصلی';
+  }
 }
 function switchPersonSub(id) {
   currentSubId = id || null;
@@ -25609,10 +25632,12 @@ h2{font-size:0.95rem;font-weight:700;color:#2d3748;margin-bottom:10px}
 .sum-box .l{font-size:0.65rem;color:#718096;margin-bottom:4px}
 .sum-box .v{font-size:1rem;font-weight:900}
 table{width:100%;border-collapse:collapse;font-size:0.75rem;table-layout:auto}
-th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:right;font-weight:700;border-bottom:2px solid #4a5568;white-space:nowrap}
-td{padding:6px 7px;border-bottom:1px solid #e2e8f0;white-space:normal;word-break:break-word;font-weight:600;color:#1a202c}
+/* خواستهٔ صاحب ریپو: نوشته‌ها و عددهای داخلِ جدول دقیقاً زیرِ سرستونِ خودشان
+   وسط‌چین باشند (قبلاً سرستون‌ها راست‌چین بودند و با ردیف‌ها جور در نمی‌آمد) */
+th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:center;font-weight:700;border-bottom:2px solid #4a5568;white-space:nowrap}
+td{padding:6px 7px;border-bottom:1px solid #e2e8f0;white-space:normal;word-break:break-word;font-weight:600;color:#1a202c;text-align:center;vertical-align:middle}
 tr:nth-child(even) td{background:#f7fafc}
-tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border-top:2px solid #4a5568}
+tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border-top:2px solid #4a5568;text-align:center}
 .footer{margin-top:16px;font-size:0.68rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
 .split-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
 .split-box{flex:1;min-width:200px;border:1px solid #e2e8f0;border-radius:8px;padding:10px}
@@ -25679,7 +25704,7 @@ ${noteHtml}
   </tr></thead>
   <tbody>${tableRows||`<tr><td colspan="${colCount}" style="text-align:center;padding:20px;color:#718096">هیچ ردیفی ثبت نشده</td></tr>`}</tbody>
   <tfoot><tr>
-    <td colspan="5" style="text-align:right">جمع</td>
+    <td colspan="5">جمع</td>
     ${unitFootCols}
   </tr></tfoot>
 </table>
@@ -28004,8 +28029,12 @@ function cmpAlbaqiUsd(r, fallbackRate){ return cmpTotalUsd(r) - cmpPoulUsdPay(r,
 // نرخ تبدیلِ مؤثرِ یک شرکت: نرخ دستی، وگرنه نرخ میانگین خرید، وگرنه نرخِ خودِ ردیف‌ها (نرخ پول/نرخ)
 // تا حتی وقتی خریدی ثبت نشده، رسیدها قابل تبدیل و حساب باشند.
 function _companyConvRate(company){
+  return _companyConvRateOf(company, company ? _cmpRows(company) : []);
+}
+// همان محاسبه، ولی روی مجموعهٔ ردیفی که خودمان می‌دهیم (مثلاً پطرول و دیزل با هم)
+function _companyConvRateOf(company, rows){
   if (!company) return 0;
-  const rows = _cmpRows(company);
+  rows = rows || [];
   const sumUsd = rows.reduce((a,r)=>a+cmpTotalUsd(r), 0);
   const sumAfn = rows.reduce((a,r)=>a+cmpAfnTotal(r), 0);
   let rate = (parseFloat(company.usdRate) || 0) || (sumUsd > 0 ? sumAfn / sumUsd : 0);
@@ -29156,16 +29185,22 @@ function renameCurrentCompany() {
   renderCompanies(); showToast('✅ نام ویرایش شد', '#38a169');
 }
 
-function pdfCompany() {
+// fuelMode='all' → پطرول و دیزل با هم در یک سند (پی‌دی‌افِ کیو‌آرِ شرکت)؛
+// بدونِ آرگومان مثل همیشه فقط همان نوعِ تیلِ بازِ مودال چاپ می‌شود.
+function pdfCompany(fuelMode) {
   const company = (DB.tilCompanies||[]).find(c => c.id === currentCompanyId);
   if (!company) return;
   const d = allDates();
-  const rows = _cmpRows(company);
-  const fuelLabel = _cmpFuelLabel();
+  const bothFuel = fuelMode === 'all';
+  if (bothFuel) { (company.rows||[]).forEach(_migrateCompanyRow); (company.dieselRows||[]).forEach(_migrateCompanyRow); }
+  const petRows = bothFuel ? _cmpRows(company, 'petrol') : [];
+  const rows = bothFuel ? [].concat(petRows, _cmpRows(company, 'diesel')) : _cmpRows(company);
+  const fuelLabel = bothFuel ? '⛽ پطرول + 🟤 دیزل' : _cmpFuelLabel();
   const sumTon  = rows.reduce((a,r)=>a+cmpTon(r),0);
   const sumUsd  = rows.reduce((a,r)=>a+cmpTotalUsd(r),0);
   const sumAfn  = rows.reduce((a,r)=>a+cmpAfnTotal(r),0);
-  const convRate = _companyConvRate(company);
+  // نرخِ تبدیل در حالتِ «هر دو تیل» از روی همهٔ ردیف‌ها گرفته می‌شود، نه فقط تیلِ باز
+  const convRate = bothFuel ? _companyConvRateOf(company, rows) : _companyConvRate(company);
   const sumPoul = rows.reduce((a,r)=>a+cmpPoulAfn(r, convRate),0);
   const sumAlbRaw  = rows.reduce((a,r)=>a+cmpAlbaqi(r, convRate),0);
   const sumAlbUsdRaw = rows.reduce((a,r)=>a+cmpAlbaqiUsd(r, convRate),0);
@@ -29176,10 +29211,12 @@ function pdfCompany() {
   // خطِ «بدهکارید/طلبکارید» به خواست کاربر از PDF حذف شد — فقط اعداد چاپ می‌شوند
   const rowsHtml = rows.map((r,i) => {
     const ton=cmpTon(r), tusd=cmpTotalUsd(r), tafn=cmpAfnTotal(r), ab=cmpAlbaqi(r, convRate), abUsd=cmpAlbaqiUsd(r, convRate);
+    const ftCell = bothFuel ? `<td style="font-weight:700;color:${i >= petRows.length ? '#8B4513' : '#c07700'}">${i >= petRows.length ? '🟤 دیزل' : '⛽ پطرول'}</td>` : '';
     return `<tr>
       <td style="text-align:center;color:#718096">${i+1}</td>
       <td style="font-weight:700;color:#c07700">${r.date||'—'}</td>
       <td style="font-weight:700">${escFa(r.name)||'—'}</td>
+      ${ftCell}
       <td style="color:#2b6cb0;font-weight:700">${n2fa(ton.toFixed(3))} تن</td>
       <td style="color:#276749">${n2fa(r.usd||0)} $/تن</td>
       <td style="color:#2b6cb0;font-weight:700">${n2fa(tusd.toFixed(1))} $</td>
@@ -29200,9 +29237,9 @@ h1{font-size:1.25rem;font-weight:900;color:#805ad5;border-bottom:2px solid #805a
 .sum-row{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:1fr;gap:10px;margin-bottom:16px}
 .sum-box{min-width:0;min-height:74px;background:#faf5ff;border:1px solid #e9d8fd;border-radius:8px;padding:10px;text-align:center;display:flex;flex-direction:column;justify-content:center;gap:4px;box-sizing:border-box}
 .sum-box .l{font-size:0.62rem;color:#718096;line-height:1.3}.sum-box .v{font-size:1.05rem;font-weight:900;white-space:nowrap}
-table{width:100%;border-collapse:collapse;font-size:0.72rem}th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:right;font-weight:700}
-td{padding:6px 7px;border-bottom:1px solid #e2e8f0}tr:nth-child(even) td{background:#faf5ff}
-tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px}
+table{width:100%;border-collapse:collapse;font-size:0.72rem}th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:center;font-weight:700}
+td{padding:6px 7px;border-bottom:1px solid #e2e8f0;text-align:center;vertical-align:middle}tr:nth-child(even) td{background:#faf5ff}
+tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px;text-align:center}
 .footer{margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
 @media print{@page{margin:0.5cm;size:A4 landscape}}</style></head><body>
 <h1>🛢️ ${escFa(company.name)} — حساب شرکت تیل (${fuelLabel})</h1>
@@ -29216,11 +29253,11 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px}
   <div class="sum-box" style="border-color:${sumAlbUsd>0?'#fc8181':'#9ae6b4'}"><div class="l">الباقی دالر ($)</div><div class="v" style="color:${sumAlbUsd>0?'#e53e3e':'#276749'}">${n2fa(sumAlbUsd.toFixed(1))} $</div></div>
 </div>
 <table><thead><tr>
-  <th>#</th><th>تاریخ</th><th>نام</th><th>خرید به تن</th><th>قیمت تن ($)</th>
+  <th>#</th><th>تاریخ</th><th>نام</th>${bothFuel ? '<th>نوع تیل</th>' : ''}<th>خرید به تن</th><th>قیمت تن ($)</th>
   <th>کل ($)</th><th>نرخ</th><th>کل (افغانی)</th><th>رسید</th><th>الباقی</th><th>الباقی ($)</th>
 </tr></thead>
-<tbody>${rowsHtml||'<tr><td colspan="11" style="text-align:center;padding:20px;color:#718096">ردیفی نیست</td></tr>'}</tbody>
-<tfoot><tr><td colspan="3">جمع</td><td>${n2fa(sumTon.toFixed(2))} تن</td><td></td>
+<tbody>${rowsHtml||`<tr><td colspan="${bothFuel?12:11}" style="text-align:center;padding:20px;color:#718096">ردیفی نیست</td></tr>`}</tbody>
+<tfoot><tr><td colspan="${bothFuel?4:3}">جمع</td><td>${n2fa(sumTon.toFixed(2))} تن</td><td></td>
 <td>${n2fa(sumUsd.toFixed(1))} $</td><td></td><td>${n2fa(Math.round(sumAfn))}</td>
 <td>${n2fa(Math.round(sumPoul))}</td><td>${n2fa(Math.round(sumAlb))}</td><td>${n2fa(sumAlbUsd.toFixed(1))} $</td></tr></tfoot></table>
 <div class="footer">پمپ یعقوبی — ${escFa(company.name)}</div>
@@ -29268,9 +29305,9 @@ h1{font-size:1.25rem;font-weight:900;color:#805ad5;border-bottom:2px solid #805a
 .sum-row{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:1fr;gap:10px;margin-bottom:16px}
 .sum-box{min-width:0;min-height:74px;background:#faf5ff;border:1px solid #e9d8fd;border-radius:8px;padding:10px;text-align:center;display:flex;flex-direction:column;justify-content:center;gap:4px;box-sizing:border-box}
 .sum-box .l{font-size:0.62rem;color:#718096;line-height:1.3}.sum-box .v{font-size:1.05rem;font-weight:900;white-space:nowrap}
-table{width:100%;border-collapse:collapse;font-size:0.72rem}th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:right;font-weight:700}
-td{padding:6px 7px;border-bottom:1px solid #e2e8f0}tr:nth-child(even) td{background:#faf5ff}
-tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px}
+table{width:100%;border-collapse:collapse;font-size:0.72rem}th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:center;font-weight:700}
+td{padding:6px 7px;border-bottom:1px solid #e2e8f0;text-align:center;vertical-align:middle}tr:nth-child(even) td{background:#faf5ff}
+tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px;text-align:center}
 .footer{margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
 @media print{@page{margin:0.5cm;size:A4 landscape}}</style></head><body>
 <h1>🗂️ ${escFa(company.name)} — جدول آرشیو‌شده (${fuelLabel})</h1>
@@ -29699,6 +29736,8 @@ function pdfPerson() {
   const remlabel = money ? 'الباقی پول' : 'الباقی تیل';
   const showFtCol = filter === 'all';
   const fuelTitle = filter === 'petrol' ? ' — حساب جداگانه ⛽ پطرول' : (filter === 'diesel' ? ' — حساب جداگانه 🟤 دیزل' : '');
+  // نامِ حسابِ فرعی هم در سربرگ بیاید تا پی‌دی‌افِ کیو‌آرِ هر حساب از حسابِ اصلی جدا باشد
+  const subTitle = (acct !== person && acct.name) ? (' — 📄 ' + escFa(acct.name)) : '';
 
   // PDF دقیقاً همان جدولِ سایت: همان ستون‌ها، همان ترتیب، همان محاسبات و رنگ‌ها
   // (باگ ۵). ستون‌ها: # · تاریخ · نام · نمبر حواله · [نوع تیل] · مقدار تیل · فی لیتر ·
@@ -29770,24 +29809,29 @@ function pdfPerson() {
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>حساب ${escFa(person.name)}${fuelTitle} — پمپ یعقوبی</title>
+<title>حساب ${escFa(person.name)}${subTitle}${fuelTitle} — پمپ یعقوبی</title>
 <style>
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:13.5px;font-weight:500}
 h1{font-size:1.3rem;font-weight:900;color:#c07700;border-bottom:2px solid #c07700;padding-bottom:8px;margin-bottom:6px}
-.meta-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+/* خواستهٔ صاحب ریپو: کادرِ «فیصدی ٪» دقیقاً وسطِ همین خط بنشیند (نه گوشهٔ چپ) —
+   سه ستون: تاریخ چاپ راست، فیصدی وسط، ستونِ خالی چپ تا وسط واقعاً وسط بماند */
+.meta-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin-bottom:16px}
 .meta{font-size:0.75rem;color:#718096}
+.pct-wrap{text-align:center}
 .pct-box{display:inline-flex;align-items:center;gap:6px;background:#fffdf5;border:1px solid #f0dfa8;border-radius:6px;padding:3px 9px;font-size:0.62rem;color:#718096;white-space:nowrap}
 .pct-box b{font-size:0.74rem;color:#c07700}
 .sum-box{flex:1;min-width:0;background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:6px 4px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;gap:3px}
 .sum-box .l{font-size:0.56rem;color:#718096;line-height:1.25}
 .sum-box .v{font-size:0.8rem;font-weight:900;white-space:nowrap}
 table{width:100%;border-collapse:collapse;font-size:0.75rem;table-layout:auto}
-th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:right;font-weight:700;border-bottom:2px solid #4a5568;white-space:nowrap}
-td{padding:6px 7px;border-bottom:1px solid #e2e8f0;white-space:normal;word-break:break-word;font-weight:600;color:#1a202c}
+/* خواستهٔ صاحب ریپو: نوشته‌ها و عددهای داخلِ جدول دقیقاً زیرِ سرستونِ خودشان
+   وسط‌چین باشند (قبلاً سرستون‌ها راست‌چین بودند و با ردیف‌ها جور در نمی‌آمد) */
+th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:center;font-weight:700;border-bottom:2px solid #4a5568;white-space:nowrap}
+td{padding:6px 7px;border-bottom:1px solid #e2e8f0;white-space:normal;word-break:break-word;font-weight:600;color:#1a202c;text-align:center;vertical-align:middle}
 tr:nth-child(even) td{background:#f7fafc}
-tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border-top:2px solid #4a5568}
+tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border-top:2px solid #4a5568;text-align:center}
 .footer{margin-top:16px;font-size:0.68rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
 .split-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
 .split-box{flex:1;min-width:200px;border:1px solid #e2e8f0;border-radius:8px;padding:8px}
@@ -29814,10 +29858,11 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 </style>
 </head>
 <body>
-<h1>⛽ پمپ یعقوبی — حساب ${escFa(person.name)}${fuelTitle}</h1>
+<h1>⛽ پمپ یعقوبی — حساب ${escFa(person.name)}${subTitle}${fuelTitle}</h1>
 <div class="meta-row">
   <div class="meta">تاریخ چاپ: ${printDate} | نوع: ${type === 'debt' ? 'قرض‌دار' : 'بدون پارچه'}</div>
-  <div class="pct-box"><span>فیصدی ٪ (از مقدار رسید تیل کم می‌شود)</span><b>${n2fa(pct)}٪</b></div>
+  <div class="pct-wrap"><div class="pct-box"><span>فیصدی ٪ (از مقدار رسید تیل کم می‌شود)</span><b>${n2fa(pct)}٪</b></div></div>
+  <div></div>
 </div>
 ${splitBoxesHtml}
 <table>
@@ -29827,7 +29872,7 @@ ${splitBoxesHtml}
   </tr></thead>
   <tbody>${tableRows || `<tr><td colspan="${colCount}" style="text-align:center;padding:20px;color:#718096">هیچ ردیفی ثبت نشده</td></tr>`}</tbody>
   <tfoot><tr>
-    <td colspan="${showFtCol?5:4}" style="text-align:right">جمع</td>
+    <td colspan="${showFtCol?5:4}">جمع</td>
     ${unitFootCols}
   </tr></tfoot>
 </table>
@@ -32771,17 +32816,30 @@ function clearAllPersonRows() {
 
 // ========== QR CODE ==========
 let _qrInstance = null;
-let _qrCurrentType = null, _qrCurrentId = null, _qrCurrentUrl = '';
+let _qrCurrentType = null, _qrCurrentId = null, _qrCurrentUrl = '', _qrCurrentSub = null;
+// هشِ لینکِ «دیدن حساب» — حسابِ فرعی با «~» بعد از شناسهٔ شخص می‌آید
+// (شناسه‌ها فقط حرف و رقم‌اند، پس «~» با چیزی قاطی نمی‌شود)
+function _acctHash(type, id, subId) {
+  return '#roview-' + type + '-' + id + (subId ? ('~' + subId) : '') + '-pdf';
+}
+// جدا کردنِ «شناسهٔ شخص» و «شناسهٔ حساب فرعی» از تکهٔ لینک
+function _splitAcctId(raw) {
+  const s = String(raw || ''), i = s.indexOf('~');
+  return i < 0 ? { id: s, sub: null } : { id: s.slice(0, i), sub: s.slice(i + 1) || null };
+}
 function _qrPrintPDF() {
-  if (_qrCurrentType === 'company' && _qrCurrentId) { pdfCompanyById(_qrCurrentId); return; }
-  if (_qrCurrentType && _qrCurrentId) pdfPersonById(_qrCurrentType, _qrCurrentId);
+  if (_qrCurrentType === 'company' && _qrCurrentId) { pdfCompanyById(_qrCurrentId, 'all'); return; }
+  if (_qrCurrentType && _qrCurrentId) pdfPersonById(_qrCurrentType, _qrCurrentId, _qrCurrentSub);
 }
 // ===== شرکت‌ها: PDF بر اساس id، کیو‌آر، و نمای فقط‌خواندنی (شبیه قرض‌داران) =====
-function pdfCompanyById(id) {
-  const saved = currentCompanyId;
+// fuel: 'petrol' | 'diesel' | 'all' — «همه» یعنی همان پی‌دی‌افِ پطرول‌ودیزل با هم
+function pdfCompanyById(id, fuel) {
+  const saved = currentCompanyId, savedFuel = currentCompanyFuel;
   currentCompanyId = id;
-  pdfCompany();
+  if (fuel === 'petrol' || fuel === 'diesel') currentCompanyFuel = fuel;
+  pdfCompany(fuel === 'all' || !fuel ? 'all' : undefined);
   currentCompanyId = saved;
+  currentCompanyFuel = savedFuel;
 }
 function showCompanyQR(id) {
   const c = (DB.tilCompanies || []).find(x => x.id === id);
@@ -32802,25 +32860,47 @@ function showCompanyQR(id) {
   document.getElementById('qrModal').classList.add('open');
 }
 let _companyRoId = null;
+// «حساب جداگانهٔ پطرول/دیزل» در نمای فقط‌خواندنیِ شرکت (اسکنِ کیو‌آر) — دقیقاً مثل
+// کادرهای نمای قرض‌دار: با زدنِ «حساب جداگانه دیزل» همان صفحه فقط ردیف‌های دیزل را
+// نشان می‌دهد (و دکمهٔ پی‌دی‌اف هم همان را می‌سازد).
+let _cmpRoFilter = 'all';
+function setCompanyROFilter(f) {
+  _cmpRoFilter = f;
+  if (_companyRoId) openCompanyROViewer(_companyRoId);
+}
+function _updateCmpROFilterBtns() {
+  const ids = { all: 'cro-filter-all', petrol: 'cro-filter-petrol', diesel: 'cro-filter-diesel' };
+  Object.keys(ids).forEach(k => {
+    const el = document.getElementById(ids[k]);
+    if (el) el.classList.toggle('active', _cmpRoFilter === k);
+  });
+}
 function openCompanyROViewer(id) {
   const c = (DB.tilCompanies || []).find(x => x.id === id);
   if (!c) { showToast('شرکت یافت نشد', '#e53e3e'); return; }
+  const isNew = _companyRoId !== id;
   _companyRoId = id;
+  if (isNew) _cmpRoFilter = 'all';
+  _updateCmpROFilterBtns();
   // مهمان کیو‌آر شرکت: دکمهٔ ✕ برداشته می‌شود تا در صفحهٔ خالی گیر نکند
+  const app = document.getElementById('app');
+  const isGuest = (!app || app.style.display === 'none');
   {
-    const app = document.getElementById('app');
     const ccb = document.getElementById('company-ro-close-btn');
-    if (ccb) ccb.style.display = (!app || app.style.display === 'none') ? 'none' : '';
+    if (ccb) ccb.style.display = isGuest ? 'none' : '';
   }
   (c.rows || []).forEach(_migrateCompanyRow); (c.dieselRows || []).forEach(_migrateCompanyRow);
-  const rows = [...(c.rows || []), ...(c.dieselRows || [])];
+  const petRows = c.rows || [], dslRows = c.dieselRows || [];
+  const rows = _cmpRoFilter === 'petrol' ? [...petRows] : (_cmpRoFilter === 'diesel' ? [...dslRows] : [...petRows, ...dslRows]);
+  const showFtCol = _cmpRoFilter === 'all';
   const sumTon  = rows.reduce((a,r)=>a+cmpTon(r),0);
   const sumUsd  = rows.reduce((a,r)=>a+cmpTotalUsd(r),0);
   let convRate = (parseFloat(c.usdRate)||0) || (sumUsd>0 ? rows.reduce((a,r)=>a+cmpAfnTotal(r),0)/sumUsd : 0);
   if (!convRate) { for (const r of rows){ const rr=(parseFloat(r.payRate)||0)||(parseFloat(r.rate)||0); if(rr){convRate=rr;break;} } }
   const sumPoul = rows.reduce((a,r)=>a+cmpPoulAfn(r, convRate),0);
   const sumAlb  = rows.reduce((a,r)=>a+cmpAlbaqi(r, convRate),0);
-  document.getElementById('company-ro-title').textContent = '🛢️ ' + c.name + ' — فقط‌خواندنی';
+  const fuelTtl = _cmpRoFilter === 'petrol' ? ' — ⛽ حساب پطرول' : (_cmpRoFilter === 'diesel' ? ' — 🟤 حساب دیزل' : '');
+  document.getElementById('company-ro-title').textContent = '🛢️ ' + c.name + fuelTtl + ' — فقط‌خواندنی';
   document.getElementById('company-ro-sum').innerHTML =
     `<div class="ro-sum-box"><div class="l">جمع (تن)</div><div class="v" style="color:var(--blue)">${n2fa(sumTon.toFixed(2))}</div></div>
      <div class="ro-sum-box"><div class="l">جمع دالر</div><div class="v" style="color:var(--green)">${n2fa(sumUsd.toFixed(1))} $</div></div>
@@ -32828,12 +32908,22 @@ function openCompanyROViewer(id) {
      <div class="ro-sum-box"><div class="l">الباقی</div><div class="v" style="color:${sumAlb>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(sumAlb))} افغانی</div></div>`;
   const rowsHtml = rows.map((r,i) => {
     const ton=cmpTon(r), tusd=cmpTotalUsd(r), tafn=cmpAfnTotal(r), ab=cmpAlbaqi(r, convRate);
-    return `<tr><td style="text-align:center;color:var(--muted)">${n2fa(i+1)}</td><td>${r.date||'—'}</td><td>${escFa(r.name)||'—'}</td><td style="color:var(--blue)">${n2fa(ton.toFixed(3))} تن</td><td>${n2fa(r.usd||0)} $</td><td style="color:var(--blue)">${n2fa(tusd.toFixed(1))} $</td><td>${n2fa(r.rate||0)}</td><td style="color:var(--purple)">${n2fa(Math.round(tafn))}</td><td style="color:var(--green)">${n2fa(Math.round(parseFloat(r.poul)||0))}${r.poulCurrency==='usd'?' $':''}</td><td style="color:${ab>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(ab))}</td></tr>`;
+    const isD = showFtCol ? (i >= petRows.length) : (_cmpRoFilter === 'diesel');
+    const ftCell = showFtCol ? `<td style="color:${isD?'#a05a2c':'var(--accent)'}">${isD?'🟤 دیزل':'⛽ پطرول'}</td>` : '';
+    return `<tr><td style="text-align:center;color:var(--muted)">${n2fa(i+1)}</td><td>${r.date||'—'}</td><td>${escFa(r.name)||'—'}</td>${ftCell}<td style="color:var(--blue)">${n2fa(ton.toFixed(3))} تن</td><td>${n2fa(r.usd||0)} $</td><td style="color:var(--blue)">${n2fa(tusd.toFixed(1))} $</td><td>${n2fa(r.rate||0)}</td><td style="color:var(--purple)">${n2fa(Math.round(tafn))}</td><td style="color:var(--green)">${n2fa(Math.round(parseFloat(r.poul)||0))}${r.poulCurrency==='usd'?' $':''}</td><td style="color:${ab>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(ab))}</td></tr>`;
   }).join('');
+  const emptyTxt = _cmpRoFilter === 'petrol' ? '⛽ هیچ ردیف پطرولی ثبت نشده' : (_cmpRoFilter === 'diesel' ? '🟤 هیچ ردیف دیزلی ثبت نشده' : 'ردیفی نیست');
   document.getElementById('company-ro-table-wrap').innerHTML =
-    `<table class="ro-tbl"><thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>تن</th><th>$/تن</th><th>کل $</th><th>نرخ</th><th>کل افغانی</th><th>رسید</th><th>الباقی</th></tr></thead><tbody>${rowsHtml || '<tr><td colspan="10" style="text-align:center;padding:18px;color:var(--muted)">ردیفی نیست</td></tr>'}</tbody></table>`;
+    `<table class="ro-tbl"><thead><tr><th>#</th><th>تاریخ</th><th>نام</th>${showFtCol?'<th>نوع تیل</th>':''}<th>تن</th><th>$/تن</th><th>کل $</th><th>نرخ</th><th>کل افغانی</th><th>رسید</th><th>الباقی</th></tr></thead><tbody>${rowsHtml || `<tr><td colspan="${showFtCol?11:10}" style="text-align:center;padding:18px;color:var(--muted)">${emptyTxt}</td></tr>`}</tbody></table>`;
   document.getElementById('companyRoOverlay').classList.add('open');
   var _rw2 = document.getElementById('roWaitMsg'); if (_rw2) _rw2.remove();
+  // مهمانِ کیو‌آرِ شرکت هم مثل قرض‌دار «چت با میرزا» داشته باشد (قبلاً فقط قرض‌دارها داشتند)
+  if (isGuest) {
+    try {
+      _showChatFabs(true);
+      if (!_roKeepChat) _rbSetMode('person', { peer: _peerKey('company-' + id), type: 'company', id: id, name: c.name });
+    } catch (e) {}
+  }
 }
 function closeCompanyROViewer() {
   document.getElementById('companyRoOverlay').classList.remove('open');
@@ -32892,33 +32982,45 @@ async function _qrShare() {
     showToast('🖼️ تصویر کیو‌آر دانلود شد', '#2b6cb0');
   }
 }
-function pdfPersonById(type, id) {
+// subId (اختیاری): پی‌دی‌افِ یک «حساب فرعیِ» همان شخص — بدونِ آن، حسابِ اصلی
+function pdfPersonById(type, id, subId) {
   const _savedType = currentPersonType;
   const _savedId = currentPersonId;
   const _savedFilter = currentPersonFilter;
+  const _savedSub = currentSubId;
   currentPersonType = type;
   currentPersonId = id;
   currentPersonFilter = 'all';
+  currentSubId = subId || null;
   pdfPerson();
   currentPersonType = _savedType;
   currentPersonId = _savedId;
   currentPersonFilter = _savedFilter;
+  currentSubId = _savedSub;
 }
-function showPersonQR(type, id) {
+// subId (اختیاری): کیو‌آرِ مخصوصِ همان حسابِ فرعی — خواستهٔ صاحب ریپو، تا هر حساب
+// فرعی هم مثل حساب اصلی کیو‌آرِ خودش را داشته باشد.
+function showPersonQR(type, id, subId) {
   _qrCurrentType = type;
   _qrCurrentId = id;
+  _qrCurrentSub = subId || null;
   const list = type === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === id);
   if (!person) return;
-  document.getElementById('qr-person-name').textContent = '📲 ' + person.name;
+  const sub = subId ? (person.subs || []).find(s => s && s.id === subId) : null;
+  if (!sub) _qrCurrentSub = null;
+  document.getElementById('qr-person-name').textContent = '📲 ' + person.name + (sub ? ' — 📄 ' + (sub.name || 'حساب فرعی') : '');
   // اگر قبلاً کیو‌آر صفحهٔ کارمند باز شده بود، دکمه/متن مخصوص شخص برگردد
   const _qpdf = document.getElementById('qr-pdf-btn'); if (_qpdf) _qpdf.style.display = '';
-  const _qdesc = document.querySelector('#qrModal .qr-box p'); if (_qdesc) _qdesc.textContent = 'با اسکن این کد، پی‌دی‌اف حساب شخص باز می‌شود';
+  const _qdesc = document.querySelector('#qrModal .qr-box p');
+  if (_qdesc) _qdesc.textContent = sub
+    ? ('با اسکن این کد، حساب «' + (sub.name || 'حساب فرعی') + '» و پی‌دی‌اف همان حساب باز می‌شود')
+    : 'با اسکن این کد، پی‌دی‌اف حساب شخص باز می‌شود';
   const wrap = document.getElementById('qr-canvas-wrap');
   wrap.innerHTML = '';
   // URL that opens the read-only viewer for this person and auto-brings up the PDF
   const baseUrl = /^http/.test(location.protocol) ? window.location.href.split('#')[0] : 'https://vil3ntec-it.github.io/pump-staion-yaqobi/';
-  const viewUrl = baseUrl + '#roview-' + type + '-' + id + '-pdf';
+  const viewUrl = baseUrl + _acctHash(type, id, sub ? sub.id : null);
   _qrCurrentUrl = viewUrl;
   if (typeof QRCode !== 'undefined') {
     new QRCode(wrap, {
@@ -32934,12 +33036,21 @@ function showPersonQR(type, id) {
   }
   document.getElementById('qrModal').classList.add('open');
 }
+// داخلِ مودالِ شخص: اگر روی یک «حساب فرعی» ایستاده‌ایم، کیو‌آرِ همان حساب ساخته
+// می‌شود (نه حسابِ اصلی) — خواستهٔ صاحب ریپو.
 function showPersonQRFromModal() {
-  if (currentPersonId) showPersonQR(currentPersonType, currentPersonId);
+  if (currentPersonId) showPersonQR(currentPersonType, currentPersonId, currentSubId);
 }
 
 // ========== READ-ONLY VIEWER ==========
 let _roCurType = null, _roCurId = null, _roViewMode = 'fuel';
+// حسابِ فرعیِ باز در نمای فقط‌خواندنی (null = حساب اصلی)
+let _roCurSub = null;
+// حسابِ فعالِ نمای فقط‌خواندنی: خودِ شخص یا یکی از حساب‌های فرعی‌اش
+function _roAcctOf(person) {
+  if (!person || !_roCurSub) return person;
+  return (person.subs || []).find(s => s && s.id === _roCurSub) || person;
+}
 // فیلترِ حساب جداگانهٔ پطرول/دیزل در نمای فقط‌خواندنی (اسکنِ کیو‌آر) — مثل دکمه‌های
 // «حساب جداگانه پطرول/دیزل» مودالِ مدیر، فقط این‌جا چیزی قابل ویرایش نیست
 let _roFilter = 'all';
@@ -32965,7 +33076,8 @@ function _renderROViewer() {
   const list = _roCurType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list ? list.find(p => p.id === _roCurId) : null;
   if (!person) return;
-  const rows = person.rows || [];
+  const acct = _roAcctOf(person);
+  const rows = acct.rows || [];
   const t = _splitTotals(rows);
   const isMoney = _roViewMode === 'money';
   // Update toggle button label
@@ -33035,7 +33147,7 @@ function _renderROViewer() {
   document.getElementById('ro-ft-albaqi').textContent  = n2fa(ft.albaqi);
   // جدول‌های آرشیوشده — فقط‌خواندنی با نام ماه (خواستهٔ کاربر برای اسکن‌کننده‌های کیو‌آر)
   const arcEl = document.getElementById('ro-archives');
-  if (arcEl) { try { arcEl.innerHTML = _roArchivesHtml(person); } catch (e) { arcEl.innerHTML = ''; } }
+  if (arcEl) { try { arcEl.innerHTML = _roArchivesHtml(acct); } catch (e) { arcEl.innerHTML = ''; } }
 }
 // جدول‌های آرشیو یک حساب برای نماهای فقط‌خواندنی (کیو‌آر و صفحهٔ کارمند) — هیچ ورودی/دکمه‌ای ندارد
 function _roArchivesHtml(acct) {
@@ -33084,7 +33196,7 @@ function _roArchivesHtml(acct) {
   }).join('');
   return `<div style="margin-top:18px"><div style="font-weight:900;font-size:0.95rem">📅 ماه‌های قبل</div>${blocks}</div>`;
 }
-function openROViewer(type, id) {
+function openROViewer(type, id, subId) {
   const list = type === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === id);
   if (!person) {
@@ -33096,9 +33208,11 @@ function openROViewer(type, id) {
     return;
   }
   _roCurType = type; _roCurId = id;
+  const sub = subId ? (person.subs || []).find(s => s && s.id === subId) : null;
+  _roCurSub = sub ? sub.id : null;
   _roViewMode = person.mode || 'fuel';
   _roFilter = 'all';
-  document.getElementById('ro-title').textContent = '👤 ' + person.name + ' — فقط‌خواندنی';
+  document.getElementById('ro-title').textContent = '👤 ' + person.name + (sub ? ' — 📄 ' + (sub.name || 'حساب فرعی') : '') + ' — فقط‌خواندنی';
   _renderROViewer();
   document.getElementById('roOverlay').classList.add('open');
   var _rw = document.getElementById('roWaitMsg'); if (_rw) _rw.remove();
@@ -33147,7 +33261,8 @@ function checkHashViewer() {
   const dashIdx = rest.indexOf('-');
   if (dashIdx < 0) return;
   const type = rest.slice(0, dashIdx);  // 'debt' or 'noinv'
-  const id   = rest.slice(dashIdx + 1); // person id
+  const _sp = _splitAcctId(rest.slice(dashIdx + 1)); // 'p123' یا 'p123~s456' (حساب فرعی)
+  const id = _sp.id, subId = _sp.sub;
   if (!type || !id) return;
   load(); // ensure data from localStorage is loaded
   // پی‌دی‌افِ خودکار فقط برای «اولین» باز شدن لینک کیو‌آر — نه برای رفرش صفحه.
@@ -33156,7 +33271,7 @@ function checkHashViewer() {
   // همچنین تا وقتی حسابِ شخص از سرور نرسیده، پی‌دی‌اف صدا زده نمی‌شود (قبلاً روی
   // دستگاهِ اسکن‌کننده با دیتای هنوز-نرسیده اجرا می‌شد و خراب می‌شد) — این تابع بعد از
   // رسیدن دیتای سرور دوباره صدا می‌خورد و همان موقع پی‌دی‌اف می‌آید.
-  const _pdfOnceKey = 'roPdfShown-' + type + '-' + id;
+  const _pdfOnceKey = 'roPdfShown-' + type + '-' + id + (subId ? ('~' + subId) : '');
   let _pdfAlreadyShown = false;
   try { _pdfAlreadyShown = sessionStorage.getItem(_pdfOnceKey) === '1'; } catch (e) {}
   const _list = type === 'company' ? (DB.tilCompanies || []) : (type === 'debt' ? (DB.debtPersons || []) : (DB.noinvPersons || []));
@@ -33164,13 +33279,14 @@ function checkHashViewer() {
   const firePdf = wantPdf && !_pdfAlreadyShown && _recordReady;
   if (firePdf) { try { sessionStorage.setItem(_pdfOnceKey, '1'); } catch (e) {} }
   if (type === 'company') {
+    // خواستهٔ صاحب ریپو: اسکنِ کیو‌آرِ شرکت دیگر مستقیم پی‌دی‌اف نمی‌آورد — اول خودِ
+    // صفحهٔ حساب باز می‌شود (با کادرهای جداگانهٔ پطرول/دیزل) و پی‌دی‌اف با دکمهٔ خودش.
     openCompanyROViewer(id);
-    if (firePdf) setTimeout(() => pdfCompanyById(id), 700);
     return;
   }
-  openROViewer(type, id);
+  openROViewer(type, id, subId);
   // با اسکن کیو‌آر، پی‌دی‌اف حساب هم خودکار باز می‌شود (در صورت مسدود شدن popup، دکمهٔ PDF در همان صفحه موجود است)
-  if (firePdf) setTimeout(() => pdfPersonById(type, id), 700);
+  if (firePdf) setTimeout(() => pdfPersonById(type, id, subId), 700);
 }
 
 // ========== صفحه کارمند (بدون رمز — فقط دیدن) ==========
@@ -33815,6 +33931,11 @@ function _rbPerson() {
   const list = _rbPersonPeer.type === 'debt' ? DB.debtPersons : (_rbPersonPeer.type === 'noinv' ? DB.noinvPersons : null);
   return list ? list.find(p => String(p.id) === String(_rbPersonPeer.id)) : null;
 }
+// مهمانِ کیو‌آرِ یک شرکت (نه قرض‌دار) — برای جواب‌های حسابِ خودِ شرکت
+function _rbCompany() {
+  if (!_rbPersonPeer || _rbPersonPeer.type !== 'company') return null;
+  return (DB.tilCompanies || []).find(c => String(c.id) === String(_rbPersonPeer.id)) || null;
+}
 function _botHelp() {
   if (_rbMode === 'person') return 'می‌توانید بپرسید: «الباقی من چند است؟»، «بردگی من؟»، «رسید من؟»، «باقی تیل من؟»، تاریخ و ساعت، یا هر محاسبه (مثلاً ۲۰*۱۵). اگر جواب را ندانستم، پیام تان را به میرزا می‌رسانم.';
   if (_rbMode === 'admin') return 'می‌توانید بپرسید یا بگویید: «باقی مخزن؟»، «حساب فلانی چند است؟»، «حساب فلانی را باز کن»، «یک قرض‌دار جدید بساز به نام فلانی»، «حساب فلانی را حذف کن»، «برو به تنظیمات/مصارف/گاوصندوق/...»، «دوربین‌ها را نشان بده»، یا هر محاسبه (مثلاً ۲۰*۱۵). هر چیزی را هم بنویسید «پیدا کن ...» (نام، عدد، حواله، توضیحات...) تا در همهٔ بخش‌های برنامه برای‌تان بگردم — اگر جواب آماده نداشتم، خودم اتومات همه‌جا را جستجو می‌کنم. پیام‌های کارمندان و مشتریان در «چت تک‌نفره» می‌آید.';
@@ -34134,6 +34255,26 @@ function _botAnswer(qRaw) {
   if (has('شماره تماس', 'تلفن', 'شماره پمپ') && (DB.stationPhone || '').trim()) return 'شماره تماس پمپ: ' + DB.stationPhone;
   if (has('میرزا کیست', 'میرزا چیست', 'میرزا کی است')) return 'میرزا مسئول حساب‌های پمپ است — در بخش «چت تک‌نفره» می‌توانید برایش پیام بفرستید.';
   if (_rbMode === 'person') {
+    const cmp = _rbCompany();
+    if (cmp) {
+      (cmp.rows || []).forEach(_migrateCompanyRow); (cmp.dieselRows || []).forEach(_migrateCompanyRow);
+      const crows = [].concat(cmp.rows || [], cmp.dieselRows || []);
+      const cr = _companyConvRateOf(cmp, crows);
+      const cTon = crows.reduce((a, r) => a + cmpTon(r), 0);
+      const cUsd = crows.reduce((a, r) => a + cmpTotalUsd(r), 0);
+      const cPoul = crows.reduce((a, r) => a + cmpPoulAfn(r, cr), 0);
+      const cAlb = Math.round(crows.reduce((a, r) => a + cmpAlbaqi(r, cr), 0));
+      if (has('الباقی', 'باقی مانده', 'قرض من', 'قرضم', 'چقدر بدهکار', 'بدهی', 'حساب من چند', 'حسابم چند')) {
+        return 'جمع دالر: ' + n2fa(cUsd.toFixed(1)) + ' $\n' +
+          'رسید: ' + n2fa(Math.round(cPoul)) + ' افغانی\n' +
+          'الباقی: ' + n2fa(Math.abs(cAlb)) + ' افغانی\n' +
+          (cAlb > 0 ? '🔴 بدهکار هستید' : (cAlb < 0 ? '🟢 طلبکار هستید' : '✅ حساب تسویه است'));
+      }
+      if (has('رسید')) return 'جمع رسید: ' + n2fa(Math.round(cPoul)) + ' افغانی';
+      if (has('تن', 'مقدار خرید')) return 'جمع خرید: ' + n2fa(cTon.toFixed(2)) + ' تن';
+      if (has('دالر')) return 'جمع دالر: ' + n2fa(cUsd.toFixed(1)) + ' $';
+      if (has('جدول', 'ردیف')) return 'جزئیات کامل حساب در جدول همین صفحه است — ' + n2fa(crows.length) + ' ردیف ثبت شده.';
+    }
     const p = _rbPerson();
     if (p) {
       const t = _splitTotals(p.rows || []);
@@ -35131,13 +35272,13 @@ function openSharedAcct(url) {
   if (rest.endsWith('-pdf')) rest = rest.slice(0, -4);
   const d = rest.indexOf('-');
   if (d < 0) return;
-  const type = rest.slice(0, d), id = rest.slice(d + 1);
+  const type = rest.slice(0, d), sp = _splitAcctId(rest.slice(d + 1)), id = sp.id;
   if (!type || !id) return;
   try { const p = document.getElementById('robotPanel'); if (p) p.classList.remove('open'); } catch (e) {}
   _roKeepChat = true;   // گفتگوی باز نباید عوض شود
   try {
     if (type === 'company') openCompanyROViewer(id);
-    else openROViewer(type, id);
+    else openROViewer(type, id, sp.sub);
   } finally { _roKeepChat = false; }
 }
 /* ============================================================================
@@ -35146,11 +35287,11 @@ function openSharedAcct(url) {
    «کادرِ حساب» برای طرف فرستاده می‌شود که با یک زدن باز می‌شود. این دکمه برای
    مشتری و کارمند اصلاً دیده نمی‌شود.
    ============================================================================ */
-function _acctViewUrl(kind, type, id) {
+function _acctViewUrl(kind, type, id, subId) {
   const baseUrl = /^http/.test(location.protocol)
     ? window.location.href.split('#')[0]
     : 'https://vil3ntec-it.github.io/pump-staion-yaqobi/';
-  return baseUrl + (kind === 'company' ? ('#roview-company-' + id + '-pdf') : ('#roview-' + type + '-' + id + '-pdf'));
+  return baseUrl + (kind === 'company' ? _acctHash('company', id, null) : _acctHash(type, id, subId));
 }
 function _acctPickerRows() {
   const rows = [];
@@ -36543,7 +36684,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.172';
+const APP_VERSION = '2.9.173';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -37698,7 +37839,7 @@ function _ysClose(){ if (_ysBox) _ysBox.style.display = 'none'; _ysSelect = null
 function _ysEnsureBox(){
   if (_ysBox) return _ysBox;
   _ysBox = document.createElement('div');
-  _ysBox.className = 'suggest-box';
+  _ysBox.className = 'suggest-box ys-box';
   _ysBox.style.display = 'none';
   document.body.appendChild(_ysBox);
   return _ysBox;
@@ -37706,40 +37847,64 @@ function _ysEnsureBox(){
 // فقط جای کادر را به‌روز می‌کند — بدونِ بازسازیِ innerHTML، وگرنه اسکرولِ خودِ
 // لیست (کشیدنِ داخلِ همین کادر برای دیدنِ ماه/سالِ پایین‌تر) هر بار به صفر
 // برمی‌گشت و انگار اسکرول کار نمی‌کرد (باگِ کاربر)
+// اگر پایینِ صفحه جا نبود، لیست بالای خودِ کشویی باز می‌شود (قبلاً می‌رفت زیرِ لبهٔ
+// پنجره و گزینه‌های آخر دیده نمی‌شدند).
 function _ysPosition(sel){
   if (!_ysBox) return;
   const r = sel.getBoundingClientRect();
-  _ysBox.style.left = Math.round(r.left) + 'px';
-  _ysBox.style.top = Math.round(r.bottom + 4) + 'px';
-  _ysBox.style.width = Math.max(r.width, 140) + 'px';
+  const h = _ysBox.offsetHeight || 220;
+  const below = window.innerHeight - r.bottom - 8;
+  const openUp = below < Math.min(h, 220) && r.top > below;
+  const w = Math.max(r.width, 150);
+  _ysBox.style.width = w + 'px';
+  _ysBox.style.left = Math.round(Math.max(6, Math.min(r.left, window.innerWidth - w - 6))) + 'px';
+  _ysBox.style.top = openUp
+    ? Math.round(Math.max(6, r.top - Math.min(h, r.top - 10) - 4)) + 'px'
+    : Math.round(r.bottom + 4) + 'px';
+  _ysBox.style.maxHeight = Math.max(120, Math.min(280, openUp ? r.top - 12 : below)) + 'px';
 }
 function _ysOpen(sel){
   const opts = Array.prototype.slice.call(sel.options);
   if (!opts.length) return;
   const box = _ysEnsureBox();
   _ysSelect = sel;
-  box.innerHTML = opts.map(function (o) {
-    return '<div class="suggest-item' + (o.selected ? ' active' : '') + '" data-val="' + String(o.value).replace(/"/g, '&quot;') + '">' + escFa(o.textContent) + '</div>';
+  box.innerHTML = opts.map(function (o, i) {
+    const cls = 'suggest-item ys-item' + (o.selected ? ' active' : '') + (o.disabled ? ' ys-dis' : '');
+    return '<div class="' + cls + '" data-i="' + i + '" data-val="' + String(o.value).replace(/"/g, '&quot;') + '">'
+      + '<span class="ys-tick">' + (o.selected ? '✓' : '') + '</span>'
+      + '<span class="ys-txt">' + escFa(o.textContent) + '</span></div>';
   }).join('');
-  _ysPosition(sel);
   box.style.display = '';
+  _ysPosition(sel);
   const activeEl = box.querySelector('.suggest-item.active');
   if (activeEl && activeEl.scrollIntoView) activeEl.scrollIntoView({ block: 'nearest' });
 }
+// انتخابِ یک گزینه از لیستِ سفارشی — دقیقاً مثل انتخاب از لیستِ نیتیو
+function _ysPick(item){
+  if (!item || !_ysSelect || item.classList.contains('ys-dis')) return;
+  const sel = _ysSelect;
+  const idx = parseInt(item.getAttribute('data-i'), 10);
+  if (!isNaN(idx) && sel.options[idx]) sel.selectedIndex = idx;
+  else sel.value = item.getAttribute('data-val');
+  sel.dispatchEvent(new Event('input', { bubbles: true }));
+  sel.dispatchEvent(new Event('change', { bubbles: true }));
+  _ysClose();
+}
 document.addEventListener('mousedown', function (e) {
   const box = _ysBox;
-  if (box && box.contains(e.target)) {
-    const item = e.target.closest('.suggest-item');
-    if (item && _ysSelect) {
-      e.preventDefault();
-      _ysSelect.value = item.getAttribute('data-val');
-      _ysSelect.dispatchEvent(new Event('change', { bubbles: true }));
-      _ysClose();
-    }
+  const tg = e.target;
+  if (!tg || typeof tg.closest !== 'function') { _ysClose(); return; }
+  if (box && box.contains(tg)) {
+    const item = tg.closest('.suggest-item');
+    if (item && _ysSelect) { e.preventDefault(); _ysPick(item); }
     return; // کلیک داخلِ خودِ لیست (مثلاً روی اسکرول‌بار) چیزی را نمی‌بندد
   }
-  const sel = e.target.closest('select.ym-select');
-  if (sel && !sel.disabled && _ysIsDesktop()) {
+  // خواستهٔ صاحب ریپو: دیگر هیچ کشویی در کامپیوتر پاپ‌آپِ زشتِ نیتیو را باز نکند —
+  // همهٔ <select>ها (نه فقط سال/ماه) همین لیستِ راست‌چینِ هم‌شکلِ برنامه را می‌آورند.
+  // کشویی‌های چندانتخابی/لیستی و هر کشویی با کلاسِ ‎.native-sel استثنا هستند.
+  const sel = tg.closest('select');
+  if (sel && !sel.disabled && !sel.multiple && (sel.size || 1) <= 1
+      && !sel.classList.contains('native-sel') && _ysIsDesktop()) {
     e.preventDefault();
     if (_ysSelect === sel && box && box.style.display !== 'none') { _ysClose(); return; }
     sel.focus();
@@ -37748,8 +37913,31 @@ document.addEventListener('mousedown', function (e) {
   }
   _ysClose();
 });
+// کیبورد: بالا/پایین بین گزینه‌ها، Enter انتخاب، Esc بستن — همان کاری که لیستِ
+// نیتیو می‌کرد، تا ناوبریِ کلیدیِ فرم‌ها با این لیست هم مثل قبل کار کند.
+// کیبورد — فقط وقتی همین لیست باز است: بالا/پایین بین گزینه‌ها، Enter انتخاب، Esc
+// بستن. با stopImmediatePropagation، ناوبریِ اکسل‌مانندِ فرم‌ها (که خودش هم روی
+// همین رویداد نشسته) در این حالت دخالت نمی‌کند؛ وقتی لیست بسته است هیچ‌چیز عوض
+// نشده و کلیدها دقیقاً مثل قبل بین کادرها حرکت می‌کنند.
 document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape' && _ysSelect) _ysClose();
+  if (!_ysSelect || !_ysBox || _ysBox.style.display === 'none') return;
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+  const k = e.key;
+  if (k !== 'Escape' && k !== 'ArrowDown' && k !== 'ArrowUp' && k !== 'Enter' && k !== 'Tab') return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  if (k === 'Escape') { _ysClose(); return; }
+  const items = Array.prototype.slice.call(_ysBox.querySelectorAll('.suggest-item'));
+  if (!items.length) { _ysClose(); return; }
+  let idx = items.findIndex(function (x) { return x.classList.contains('active'); });
+  if (k === 'ArrowDown' || k === 'ArrowUp') {
+    idx = Math.max(0, Math.min(items.length - 1, (idx < 0 ? 0 : idx) + (k === 'ArrowDown' ? 1 : -1)));
+    items.forEach(function (x) { x.classList.remove('active'); });
+    items[idx].classList.add('active');
+    if (items[idx].scrollIntoView) items[idx].scrollIntoView({ block: 'nearest' });
+    return;
+  }
+  _ysPick(items[idx < 0 ? 0 : idx]);   // Enter / Tab
 });
 window.addEventListener('resize', function () { if (_ysSelect) _ysPosition(_ysSelect); });
 window.addEventListener('scroll', function (e) {
