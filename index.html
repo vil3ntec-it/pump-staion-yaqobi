@@ -428,7 +428,7 @@ body.staff-view .qr-overlay{z-index:10020}
 .add-btn{display:flex;align-items:center;gap:6px;padding:9px 18px;background:var(--accent);color:#000;border:none;border-radius:8px;cursor:pointer;font-family:'Vazirmatn',sans-serif;font-weight:700;font-size:0.95rem;transition:all .2s}
 .add-btn:hover{opacity:.88}
 .add-btn.purple{background:var(--night);color:#e9d8fd}
-.persons-grid{display:grid;grid-template-columns:repeat(auto-fill,175px);justify-content:start;gap:10px}
+.persons-grid{display:grid;grid-template-columns:repeat(auto-fill,175px);justify-content:start;gap:10px;padding-bottom:100px}
 /* بخش‌های دارای کارت حساب تمام‌عرض شوند تا کارت‌ها از راست و در کل صفحه بچینند */
 #sec-debt.section.visible,#sec-noinv.section.visible,#sec-waraq.section.visible,#sec-expenses.section.visible,#sec-debtrasid.section.visible,#sec-debtsum.section.visible,#sec-storage.section.visible,#sec-storage-diesel.section.visible,#sec-profit.section.visible,#sec-extraincome.section.visible{margin-left:calc(48% - 48vw);margin-right:calc(48% - 48vw);padding-left:18px;padding-right:18px;box-sizing:border-box}
 .person-card{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:14px 12px;cursor:pointer;transition:all .2s;text-align:center;position:relative}
@@ -603,6 +603,12 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 #managerFab{position:fixed;bottom:calc(150px + var(--kb-offset,0px));left:18px;z-index:10040;width:54px;height:54px;border-radius:50%;border:none;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;font-size:26px;transition:transform .12s,bottom .18s ease}
 #managerFab:hover{transform:scale(1.07)}
 .fab-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:999px;background:var(--red);color:#fff;font-size:0.7rem;font-weight:900;display:none;align-items:center;justify-content:center;padding:0 5px;border:2px solid var(--panel)}
+/* خواستهٔ کاربر: وقتی مودالی باز است (z-index:300)، این سه دکمهٔ شناور
+   (z-index:10040) رویش نایستند و دکمه‌های خودِ مودال (مثلاً «تایید»/«انصراف»)
+   را نپوشانند — تا وقتی مودال بسته می‌شود دوباره دیده می‌شوند */
+body:has(.modal-overlay.open) #calcFab,
+body:has(.modal-overlay.open) #robotFab,
+body:has(.modal-overlay.open) #managerFab{display:none!important}
 /* resize:both یعنی همان دستهٔ کشیدنیِ گوشهٔ استاندارد مرورگر (مثل تغییر اندازهٔ
    پنجره در ویندوز) — بدون نیاز به کدِ دستیِ کشیدن که ممکن است لرزش/خطا داشته باشد */
 #robotPanel{position:fixed;bottom:calc(148px + var(--kb-offset,0px));left:18px;z-index:10050;width:min(360px,calc(100vw - 24px));height:min(520px,calc(100dvh - 90px - var(--kb-offset,0px)));min-width:260px;min-height:280px;max-width:96vw;max-height:92dvh;background:var(--panel);border:1.5px solid var(--blue);border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.5);display:none;flex-direction:column;overflow:hidden;transition:bottom .18s ease}
@@ -18431,14 +18437,15 @@ body.viewer-mode .inv-admin-only{display:none!important}
       </div>
     </div>
 
-    <div class="inv-btn-row" style="margin-top:16px">
+    <div class="inv-btn-row" style="margin-top:16px;margin-bottom:22px">
       <button class="inv-btn submit inv-admin-only" onclick="invSubmit()">✅ ثبت فاکتور</button>
       <button class="inv-btn reset" onclick="invResetForm()">🔄 پاک کردن فرم</button>
     </div>
   </div>
 
   <!-- خواستهٔ کاربر: این کارت‌ها زیرِ خودِ فاکتور بیایند تا فاکتور بالاتر و زودتر
-       دیده شود (بدون اسکرول‌کردنِ زیاد) -->
+       دیده شود (بدون اسکرول‌کردنِ زیاد) — با فاصلهٔ کافی از دکمه‌های بالا تا
+       به آن‌ها نچسبند -->
   <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('invoice')"><span title="🕘 تاریخچهٔ فاکتورها — با تاریخ و روز هفته">🕘 تاریخچهٔ فاکتورها</span><span class="tlc-go"><i>‹</i></span></button>
 
   <!-- کارت‌های آماری -->
@@ -21780,7 +21787,11 @@ function _renderDashArea(disp, sel) {
   svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
   svg.removeAttribute('preserveAspectRatio');
   const L = 58, R = W - 10, T = 18, B = H - 36;           // محدودهٔ رسم
-  const X = i => R - (i / (n - 1)) * (R - L);              // RTL: اندیس ۰ (دورهٔ جاری) سمت راست
+  // خواستهٔ کاربر: «امروز» باید اول (چپ‌ترین نقطه) باشد نه آخر — قبلاً با
+  // قاعدهٔ RTL، اندیسِ ۰ (امروز) سمتِ راست می‌نشست و روزهای بعد به چپ می‌رفتند؛
+  // این‌طور کسی که نمودار را از چپ به راست می‌خواند، «امروز» را انتهای محور
+  // می‌دید. حالا اندیسِ ۰ چپ‌ترین نقطه است و روزهای بعد به راست ادامه می‌یابند.
+  const X = i => L + (i / (n - 1)) * (R - L);
   const Y = v => B - (v / vmax) * (B - T);
   const pts = vals.map((v, i) => X(i).toFixed(1) + ',' + Y(v).toFixed(1));
   // محور عمودی مثل تصویرِ مرجع: عددهای کوتاه + واحد در بالای محور
@@ -28135,9 +28146,9 @@ function renderCompanies() {
     card.className = 'person-card';
     card.innerHTML = `
       <button class="person-del" onclick="event.stopPropagation();deleteCompany('${c.id}')">✕</button>
-      <div class="pname">🛢️ ${escFa(c.name)}</div>
+      <div class="pname">${escFa(c.name)}</div>
       <div style="display:flex;justify-content:center;gap:10px;margin:6px 0;flex-wrap:wrap">
-        <span style="font-size:0.82rem;font-weight:800;color:var(--blue)">💲 ${n2fa(sumUsd.toFixed(1))} $</span>
+        <span style="font-size:0.82rem;font-weight:800;color:var(--blue)">${n2fa(sumUsd.toFixed(1))} $</span>
       </div>
       <div class="pdebt ${settled?'clear':''}">${settled ? '✅ تسویه' : 'الباقی: '+n2fa(Math.round(albaqi))+' افغانی'}</div>
       <div style="display:flex;gap:6px;margin-top:8px">
@@ -28188,7 +28199,7 @@ function _renderCompanySummary() {
     tr.style.cursor = 'pointer';
     tr.innerHTML =
       '<td style="text-align:center;color:var(--muted)">' + n2fa(i+1) + '</td>' +
-      '<td style="font-weight:700">🛢️ ' + escFa(c.name || '—') + '</td>' +
+      '<td style="font-weight:700">' + escFa(c.name || '—') + '</td>' +
       '<td style="color:var(--blue);font-weight:700">' + n2fa(sumUsd.toFixed(1)) + ' $</td>' +
       '<td style="color:' + (sumAlbaqi>0?'var(--red)':'var(--green)') + ';font-weight:700">' + n2fa(Math.round(sumAlbaqi)) + ' افغانی</td>';
     tr.onclick = () => openCompanyModal(c.id);
@@ -28247,7 +28258,7 @@ function searchCompany(q) {
     const settled=albaqi<=0&&rows.length>0;
     const card=document.createElement('div');
     card.className='person-card';
-    card.innerHTML=`<button class="person-del" onclick="event.stopPropagation();deleteCompany('${c.id}')">✕</button><div class="pname">🛢️ ${escFa(c.name)}</div><div style="display:flex;justify-content:center;gap:10px;margin:6px 0;flex-wrap:wrap"><span style="font-size:0.82rem;font-weight:800;color:var(--blue)">💲 ${n2fa(sumUsd.toFixed(1))} $</span><span style="font-size:0.82rem;font-weight:800;color:${albaqi>0?'var(--red)':'var(--green)'}">📊 ${n2fa(Math.round(albaqi))} افغ</span></div><div class="pdebt ${settled?'clear':''}">${settled?'✅ تسویه':'الباقی: '+n2fa(Math.round(albaqi))+' افغانی'}</div>`;
+    card.innerHTML=`<button class="person-del" onclick="event.stopPropagation();deleteCompany('${c.id}')">✕</button><div class="pname">${escFa(c.name)}</div><div style="display:flex;justify-content:center;gap:10px;margin:6px 0;flex-wrap:wrap"><span style="font-size:0.82rem;font-weight:800;color:var(--blue)">${n2fa(sumUsd.toFixed(1))} $</span><span style="font-size:0.82rem;font-weight:800;color:${albaqi>0?'var(--red)':'var(--green)'}">📊 ${n2fa(Math.round(albaqi))} افغ</span></div><div class="pdebt ${settled?'clear':''}">${settled?'✅ تسویه':'الباقی: '+n2fa(Math.round(albaqi))+' افغانی'}</div>`;
     card.onclick=()=>openCompanyModal(c.id);
     grid.appendChild(card);
   });
@@ -36532,7 +36543,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.171';
+const APP_VERSION = '2.9.172';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
