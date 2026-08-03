@@ -15642,7 +15642,7 @@ body:not(.light-mode) .pm-acct-bar{
 }
 body:not(.light-mode) .card-head,
 body:not(.light-mode) .modal-head{ border-bottom:1.5px solid var(--border); }
-body:not(.light-mode) .fs-head{ border-bottom:1.5px solid var(--border); }
+/* خواستهٔ کاربر: کادرهای حساب پطرول/دیزل (fs-head) دیگر خطِ زیرِ سرکادر نگیرند */
 /* جدول‌ها: خطوطِ سلول‌ها هم واضح‌تر تا مرزبندی تمیز و باکیفیت دیده شود */
 body:not(.light-mode) .xls-tbl th{ border-color:var(--border); border-bottom-width:2px; }
 body:not(.light-mode) .xls-tbl td{ border-color:var(--border); }
@@ -15795,8 +15795,8 @@ body .m-menu-panel{
 body .settings-card{ border-width:2px !important; border-style:solid !important; }
 /* کادرهایی که مرزشان به‌صورت inline با var(--border) نوشته شده (ده‌ها جای برنامه) */
 body [style*="solid var(--border)"]{ border-color:var(--lg-brd) !important; }
-/* خطِ زیرِ سرکادرها و نوارهای جداکننده */
-body .card-head, body .modal-head, body .fs-head{ border-bottom:2px solid var(--lg-brd) !important; }
+/* خطِ زیرِ سرکادرها و نوارهای جداکننده — به‌جز fs-head (حساب پطرول/دیزل)، طبقِ خواستهٔ کاربر */
+body .card-head, body .modal-head{ border-bottom:2px solid var(--lg-brd) !important; }
 body .modal-summary, body .list-header, body .pm-acct-bar{ border-color:var(--lg-brd) !important; }
 
 /* ── ۲) جدول‌ها: هم کادرِ دورِ جدول، هم خطوطِ داخلی، هم سرستون‌ها ─────────── */
@@ -36529,7 +36529,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.166';
+const APP_VERSION = '2.9.167';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
