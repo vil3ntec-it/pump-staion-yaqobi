@@ -17610,8 +17610,8 @@ body.gfx-performance .xls-foot td{
     <div class="card-head">
       <div class="card-title">📅 گزارش ماه</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <select id="mr-year" class="tools-in" onchange="_ymYearChanged('mr-month',this.value)" title="سال را انتخاب کنید — ماه‌های همان سال در کادر بغلی می‌آیند"></select>
-        <select id="mr-month" class="tools-in" onchange="renderMonthReport()"></select>
+        <select id="mr-year" class="tools-in ym-select" onchange="_ymYearChanged('mr-month',this.value)" title="سال را انتخاب کنید — ماه‌های همان سال در کادر بغلی می‌آیند"></select>
+        <select id="mr-month" class="tools-in ym-select" onchange="renderMonthReport()"></select>
         <button class="add-btn" style="background:var(--blue);color:#fff" onclick="pdfMonthReport()">📄 PDF</button>
       </div>
     </div>
@@ -26898,12 +26898,12 @@ function _ymSelectsHtml(monthId, keys, active, color, minWidth, allLabel) {
   const curYear = _ymYearOf(active) || (allLabel ? '' : (years[0] || ''));
   const monthsOfYear = curYear ? all.filter(k => _ymYearOf(k) === curYear) : all;
   const yearSel = years.length
-    ? '<select id="' + monthId + '-year" style="' + box + ';min-width:96px" onchange="_ymYearChanged(\'' + monthId + '\',this.value)">'
+    ? '<select id="' + monthId + '-year" class="ym-select" style="' + box + ';min-width:96px" onchange="_ymYearChanged(\'' + monthId + '\',this.value)">'
       + (allLabel ? '<option value=""' + (curYear ? '' : ' selected') + '>📆 همهٔ سال‌ها</option>' : '')
       + years.map(y => '<option value="' + y + '"' + (y === curYear ? ' selected' : '') + '>📆 ' + _faNumPlain(y) + '</option>').join('')
       + '</select>'
     : '';
-  const monSel = '<select id="' + monthId + '" style="' + box + ';min-width:' + mw + 'px">'
+  const monSel = '<select id="' + monthId + '" class="ym-select" style="' + box + ';min-width:' + mw + 'px">'
     + (allLabel ? '<option value=""' + (active ? '' : ' selected') + '>' + escFa(allLabel) + '</option>' : '')
     + monthsOfYear.map(k => '<option value="' + k + '"' + (k === active ? ' selected' : '') + '>'
         + escFa(_monthOptionLabel(k)) + '</option>').join('')
@@ -36522,7 +36522,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.168';
+const APP_VERSION = '2.9.169';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -37654,6 +37654,67 @@ document.addEventListener('keydown', function(e){
     _sgClose();
   }
 }, true);
+
+// ========== لیستِ بازشوندهٔ سفارشی برای کشوهای سال/ماه (فقط دسکتاپ) ==========
+// پاپ‌آپِ نیتیوِ گزینه‌های <select> در نسخهٔ دسکتاپ/الکترون خیلی ساده و بی‌قواره
+// رندر می‌شد (همان مشکلِ قبلیِ دیتالیست) — در موبایل مشکلی نداشت، پس همان‌جا
+// دست‌نخورده می‌ماند. خودِ <select> و value/onchangeاش دست‌نخورده است — با کلیک
+// روی گزینهٔ این لیستِ سفارشی، فقط value ست و change شلیک می‌شود، انگار خودِ
+// کاربر از لیستِ نیتیو انتخاب کرده؛ منطقِ فیلترِ سال/ماه (_ymYearChanged و بقیه) عوض نشده.
+let _ysBox = null, _ysSelect = null;
+function _ysIsDesktop(){ return window.matchMedia('(min-width:1025px)').matches; }
+function _ysClose(){ if (_ysBox) _ysBox.style.display = 'none'; _ysSelect = null; }
+function _ysEnsureBox(){
+  if (_ysBox) return _ysBox;
+  _ysBox = document.createElement('div');
+  _ysBox.className = 'suggest-box';
+  _ysBox.style.display = 'none';
+  document.body.appendChild(_ysBox);
+  return _ysBox;
+}
+function _ysOpen(sel){
+  const opts = Array.prototype.slice.call(sel.options);
+  if (!opts.length) return;
+  const box = _ysEnsureBox();
+  _ysSelect = sel;
+  box.innerHTML = opts.map(function (o) {
+    return '<div class="suggest-item' + (o.selected ? ' active' : '') + '" data-val="' + String(o.value).replace(/"/g, '&quot;') + '">' + escFa(o.textContent) + '</div>';
+  }).join('');
+  const r = sel.getBoundingClientRect();
+  box.style.left = Math.round(r.left) + 'px';
+  box.style.top = Math.round(r.bottom + 4) + 'px';
+  box.style.width = Math.max(r.width, 140) + 'px';
+  box.style.display = '';
+  const activeEl = box.querySelector('.suggest-item.active');
+  if (activeEl && activeEl.scrollIntoView) activeEl.scrollIntoView({ block: 'nearest' });
+}
+document.addEventListener('mousedown', function (e) {
+  const box = _ysBox;
+  if (box && box.contains(e.target)) {
+    const item = e.target.closest('.suggest-item');
+    if (item && _ysSelect) {
+      e.preventDefault();
+      _ysSelect.value = item.getAttribute('data-val');
+      _ysSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      _ysClose();
+    }
+    return; // کلیک داخلِ خودِ لیست (مثلاً روی اسکرول‌بار) چیزی را نمی‌بندد
+  }
+  const sel = e.target.closest('select.ym-select');
+  if (sel && !sel.disabled && _ysIsDesktop()) {
+    e.preventDefault();
+    if (_ysSelect === sel && box && box.style.display !== 'none') { _ysClose(); return; }
+    sel.focus();
+    _ysOpen(sel);
+    return;
+  }
+  _ysClose();
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && _ysSelect) _ysClose();
+});
+window.addEventListener('resize', function () { if (_ysSelect) _ysOpen(_ysSelect); });
+window.addEventListener('scroll', function () { if (_ysSelect) _ysOpen(_ysSelect); }, true);
 
 // ========== EXCEL-LIKE GRID NAVIGATION (ناوبری مکانی بین کادرها) ==========
 function _navFocusables(scope){
