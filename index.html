@@ -15811,16 +15811,36 @@ body .tbl tfoot td, body .xls-tbl tfoot td, body .xls-foot td{
   border-top:2px solid var(--lg-brd) !important;
   font-weight:900 !important;
 }
-/* ورودی‌ها و کشوها (سال و ماه، تعداد، جست‌وجو …) */
-body .field-input, body .xls-in.box, body .ei-in,
-body .person-search-input, body input[type="search"],
-body select, body input[type="text"], body input[type="number"],
-body input[type="date"], body input[type="time"], body textarea{
+/* ورودی‌ها و کشوها (سال و ماه، تعداد، جست‌وجو …).
+   هر ورودی‌ای که خودش inline کادرِ دلخواه دارد (مثلاً border:none با یک خطِ
+   نقطه‌چینِ زیرین در کارت‌های حساب) دست نمی‌خورد — وگرنه دورش یک مربعِ ناخواسته
+   کشیده می‌شد. */
+body .field-input:not([style*="border"]),
+body .ei-in:not([style*="border"]),
+body .person-search-input:not([style*="border"]),
+body input[type="search"]:not([style*="border"]),
+body select:not([style*="border"]){
   border-width:1.5px !important; border-style:solid !important;
   border-color:var(--lg-brd-soft) !important;
 }
 /* استثنا: ورودی‌ها و کشوهای «داخلِ خودِ جدول» هیچ چهارچوبی نگیرند — آنجا فقط
    خطوطِ خودِ جدول باید دیده شود، نه یک کادرِ دور هر خانه (خواستهٔ صاحب برنامه) */
+/* ── کادرهای خلاصهٔ «شرکت‌ها»: بدون جای خالیِ بزرگ ──────────────────────────
+   با گرید (auto-fit) وقتی مثلاً ۶ کادر در ۵ ستون جا می‌شد، کادرِ ششم تنها
+   می‌ماند و کنارش یک نوارِ خالیِ بزرگ می‌افتاد. با flex، کادرها هم در یک ردیف
+   جا می‌شوند و هم اگر شکستند، ردیفِ آخر تا آخرِ عرض کشیده می‌شود. */
+body #companyModal .modal-summary,
+body .cm-hist-sum{
+  display:flex !important; flex-wrap:wrap !important;
+  align-items:stretch !important; align-content:flex-start !important;
+}
+body #companyModal .modal-summary > .msumbox,
+body .cm-hist-sum > .cmhs-box{
+  flex:1 1 clamp(96px, 12vw, 150px) !important;
+  min-width:clamp(96px, 12vw, 150px) !important;
+  margin:0 !important;
+}
+
 body .tbl input:not([type="checkbox"]):not([type="radio"]),
 body .tbl select, body .tbl textarea,
 body .xls-tbl input:not([type="checkbox"]):not([type="radio"]),
@@ -36361,7 +36381,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.161';
+const APP_VERSION = '2.9.162';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -42147,7 +42167,8 @@ tfoot td{background:${accent}14;font-weight:900;font-size:.88rem}
      ═══════════════════════════════════════════════════════════════════════ -->
 <style id="glass-clock-css">
 #glassClock{
-  --gc-h:clamp(56px, 6.6vw, 92px);
+  /* اندازهٔ ساعت = اندازهٔ خودکارِ صفحه × ضریبی که کاربر خودش کم و زیاد می‌کند */
+  --gc-h:calc(clamp(56px, 6.6vw, 92px) * var(--gc-scale, 1));
   --gc-line:rgba(255,255,255,.16);
   --gc-txt:#e8eef6;
   --gc-sub:#9aa6b6;
@@ -42323,7 +42344,7 @@ body.light-mode #glassClock{
    کلیدهای ذخیره: pumpClockHidden / pumpClockPos / pumpClockOffset / pumpClockAlarms */
 (function(){
   "use strict";
-  var K_HIDE='pumpClockHidden', K_POS='pumpClockPos', K_OFF='pumpClockOffset', K_ALM='pumpClockAlarms';
+  var K_HIDE='pumpClockHidden', K_POS='pumpClockPos', K_OFF='pumpClockOffset', K_ALM='pumpClockAlarms', K_SCL='pumpClockScale';
   var el, arcFg, tEl, wEl, dEl, hH, hM, hS, menuEl, dlgEl, dlgBox;
   var ARC_LEN = 2 * Math.PI * 36 * (150/360);   // طولِ کمانِ ۱۵۰ درجه‌ای
   var FA_WD = ['یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه','شنبه'];
@@ -42385,6 +42406,36 @@ body.light-mode #glassClock{
     el.classList.toggle('gc-has-alarm', alarms().length > 0);
   }
 
+  /* ── اندازهٔ ساعت (کوچک/بزرگ‌شدنی + ذخیره‌شونده) ── */
+  var SCL_MIN = 0.6, SCL_MAX = 2.2;
+  function scale(){ var n = parseFloat(ls(K_SCL,'1')); return (isNaN(n) || n <= 0) ? 1 : Math.min(SCL_MAX, Math.max(SCL_MIN, n)); }
+  function applyScale(v, save){
+    v = Math.min(SCL_MAX, Math.max(SCL_MIN, Math.round(v * 100) / 100));
+    el.style.setProperty('--gc-scale', v);
+    if(save !== false) lsSet(K_SCL, String(v));
+    place();
+    return v;
+  }
+  function sizeDialog(){
+    var before = scale();
+    openDlg(
+      '<div class="gc-dlg-t">📏 اندازهٔ ساعت</div>' +
+      '<div style="font-size:.8rem;color:var(--muted);line-height:1.9;margin-bottom:10px">با کشیدن این نوار، ساعت همان لحظه بزرگ یا کوچک می‌شود.</div>' +
+      '<input type="range" id="gcScl" min="' + SCL_MIN + '" max="' + SCL_MAX + '" step="0.05" value="' + before + '" style="width:100%;margin-bottom:6px">' +
+      '<div style="text-align:center;font-weight:900;color:var(--accent);margin-bottom:12px" id="gcSclLbl">' + fa(Math.round(before*100)) + '٪</div>' +
+      '<div class="gc-dlg-btns"><button class="gc-ok" id="gcOk">ثبت</button>' +
+      '<button class="gc-cancel" id="gcRst">اندازهٔ اولیه</button>' +
+      '<button class="gc-cancel" id="gcNo">انصراف</button></div>',
+      function(box){
+        var rng = box.querySelector('#gcScl'), lbl = box.querySelector('#gcSclLbl');
+        rng.oninput = function(){ var v = applyScale(parseFloat(rng.value), false); lbl.textContent = fa(Math.round(v*100)) + '٪'; };
+        box.querySelector('#gcRst').onclick = function(){ rng.value = 1; applyScale(1, true); lbl.textContent = fa(100) + '٪'; };
+        box.querySelector('#gcNo').onclick = function(){ applyScale(before, true); closeDlg(); };
+        box.querySelector('#gcOk').onclick = function(){ applyScale(parseFloat(rng.value), true); closeDlg(); toast('📏 اندازهٔ ساعت ذخیره شد', 'var(--green)'); };
+      }
+    );
+  }
+
   /* ── جای ساعت روی صفحه (کشیدنی + ذخیره‌شونده) ── */
   function pos(){
     try{ var o = JSON.parse(ls(K_POS,'null')); if(o && typeof o.xr==='number' && typeof o.yr==='number') return o; }catch(e){}
@@ -42438,6 +42489,11 @@ body.light-mode #glassClock{
     el.addEventListener('pointerup', end);
     el.addEventListener('pointercancel', end);
     el.addEventListener('contextmenu', function(e){ e.preventDefault(); openMenu(e.clientX, e.clientY); });
+    // چرخِ ماوس روی خودِ ساعت = بزرگ/کوچک کردنش (صفحه اسکرول نمی‌شود)
+    el.addEventListener('wheel', function(e){
+      e.preventDefault();
+      applyScale(scale() + (e.deltaY < 0 ? 0.06 : -0.06), true);
+    }, { passive:false });
     window.addEventListener('resize', place);
   }
 
@@ -42453,6 +42509,7 @@ body.light-mode #glassClock{
     menuEl.innerHTML = '';
     menuEl.appendChild(mi('⏰', 'گذاشتن الارم', alarmDialog));
     if(alarms().length) menuEl.appendChild(mi('🔔', 'الارم‌ها (' + fa(alarms().length) + ')', alarmDialog));
+    menuEl.appendChild(mi('📏', 'اندازهٔ ساعت (بزرگ / کوچک)', sizeDialog));
     menuEl.appendChild(mi('🕒', 'تنظیم دستیِ ساعت', timeDialog));
     if(offset() !== 0) menuEl.appendChild(mi('↺', 'برگشت به ساعتِ سیستم', function(){
       lsSet(K_OFF,'0'); tick(); toast('🕒 ساعت به وقتِ سیستم برگشت', 'var(--green)');
@@ -42610,6 +42667,7 @@ body.light-mode #glassClock{
       if(menuEl.classList.contains('open') && !menuEl.contains(e.target) && !el.contains(e.target)) closeMenu();
     }, true);
     document.addEventListener('keydown', function(e){ if(e.key === 'Escape'){ closeMenu(); if(!ringing) closeDlg(); } });
+    el.style.setProperty('--gc-scale', scale());
     initDrag(); tick(); place(); syncSettingsUI();
     setInterval(tick, 1000);
     window.addEventListener('load', place);
