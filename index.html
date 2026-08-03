@@ -877,15 +877,8 @@ body.viewer-mode .att-admin{display:none !important}
 .ro-sum-box{flex:1;min-width:110px;background:var(--card);border-radius:9px;padding:10px;text-align:center}
 .ro-sum-box .l{font-size:0.68rem;color:var(--muted);margin-bottom:3px}
 .ro-sum-box .v{font-size:1rem;font-weight:900}
-/* دو کادرِ جداگانهٔ پطرول/دیزل در نمای اسکن */
-.ro-fuel-split{display:flex;gap:10px;padding:0 18px 12px;flex-wrap:wrap;flex-shrink:0}
-.ro-fuel-split:empty{display:none}
-.ro-fuel-split .rofs-group{flex:1 1 260px;min-width:240px;background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:8px 10px}
-.ro-fuel-split .rofs-head{font-size:0.86rem;font-weight:900;margin-bottom:6px;text-align:center}
-.ro-fuel-split .rofs-rows{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.ro-fuel-split .rofs-cell{background:var(--dark);border-radius:8px;padding:6px 4px;text-align:center;min-width:0}
-.ro-fuel-split .rofs-cell .l{font-size:0.66rem;color:var(--muted);font-weight:700;margin-bottom:2px;white-space:nowrap}
-.ro-fuel-split .rofs-cell .v{font-size:0.86rem;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* فیلترِ حساب جداگانهٔ پطرول/دیزل در نمای اسکن — مثل دکمه‌های مودالِ مدیر */
+.ro-filter-bar{display:flex;gap:8px;padding:0 18px 12px;flex-wrap:wrap;flex-shrink:0}
 /* ── صفحه کارمند (بدون رمز — فقط دیدن) ── */
 .staff-search{width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:1rem;font-weight:700;margin-bottom:8px}
 .staff-search:focus{outline:none;border-color:var(--accent)}
@@ -19534,14 +19527,18 @@ body.viewer-mode .inv-admin-only{display:none!important}
     </div>
   </div>
   <div class="ro-sum" id="ro-sum"></div>
-  <!-- کادرهای جداگانهٔ پطرول و دیزل — برای کسی که با اسکنِ کیو‌آر حساب را می‌بیند -->
-  <div class="ro-fuel-split" id="ro-fuel-split"></div>
+  <!-- فیلترِ حساب جداگانهٔ پطرول/دیزل — برای کسی که با اسکنِ کیو‌آر حساب را می‌بیند، مثل دکمه‌های مودالِ مدیر -->
+  <div class="ro-filter-bar" id="ro-filter-bar">
+    <button type="button" class="pm-filter-btn active" id="ro-filter-all" onclick="setROFilter('all')">📋 همه</button>
+    <button type="button" class="pm-filter-btn petrol" id="ro-filter-petrol" onclick="setROFilter('petrol')">⛽ حساب جداگانه پطرول</button>
+    <button type="button" class="pm-filter-btn diesel" id="ro-filter-diesel" onclick="setROFilter('diesel')">🟤 حساب جداگانه دیزل</button>
+  </div>
   <div class="ro-body">
     <div style="overflow-x:auto">
       <table class="ro-tbl" id="ro-tbl">
         <thead>
           <tr>
-            <th>#</th><th>تاریخ</th><th>نام</th><th>شماره حواله</th><th>نوع تیل</th>
+            <th>#</th><th>تاریخ</th><th>نام</th><th>شماره حواله</th><th id="ro-th-ftype">نوع تیل</th>
             <th>مقدار</th><th>فی لیتر</th><th>بردگی</th><th>پول</th><th>الباقی</th>
           </tr>
         </thead>
@@ -32901,6 +32898,24 @@ function showPersonQRFromModal() {
 
 // ========== READ-ONLY VIEWER ==========
 let _roCurType = null, _roCurId = null, _roViewMode = 'fuel';
+// فیلترِ حساب جداگانهٔ پطرول/دیزل در نمای فقط‌خواندنی (اسکنِ کیو‌آر) — مثل دکمه‌های
+// «حساب جداگانه پطرول/دیزل» مودالِ مدیر، فقط این‌جا چیزی قابل ویرایش نیست
+let _roFilter = 'all';
+function setROFilter(f) {
+  _roFilter = f;
+  _renderROViewer();
+}
+function _updateROFilterBtns() {
+  const ids = { all: 'ro-filter-all', petrol: 'ro-filter-petrol', diesel: 'ro-filter-diesel' };
+  Object.keys(ids).forEach(k => {
+    const el = document.getElementById(ids[k]);
+    if (el) el.classList.toggle('active', _roFilter === k);
+  });
+}
+function _toggleROFtColumn(show) {
+  const th = document.getElementById('ro-th-ftype');
+  if (th) th.style.display = show ? '' : 'none';
+}
 // وقتی حسابی از داخلِ چت باز می‌شود، گفتگوی جاری نباید عوض شود (وگرنه مشتری از
 // چتِ خودش با میرزا پرت می‌شد به گفتگوی حسابِ فرستاده‌شده)
 let _roKeepChat = false;
@@ -32930,24 +32945,32 @@ function _renderROViewer() {
       <div class="ro-sum-box"><div class="l">الباقی</div><div class="v" style="color:${t.all.albaqi>0?'var(--red)':'var(--green)'}">${n2fa(t.all.albaqi)} افغانی</div></div>
     `;
   }
-  // دو کادر جداگانهٔ پطرول و دیزل — تا کسی که با اسکنِ کیو‌آر می‌آید، حسابِ هر
-  // سوخت را جدا ببیند (خواستهٔ صاحب برنامه)
-  const splitEl = document.getElementById('ro-fuel-split');
-  if (splitEl) splitEl.innerHTML = isMoney ? '' : _roFuelSplitHtml(t);
+  // فیلترِ حساب جداگانهٔ پطرول/دیزل — فقط در واحد تیل معنا دارد؛ در واحد پول همیشه «همه»
+  if (isMoney) _roFilter = 'all';
+  const filterBarEl = document.getElementById('ro-filter-bar');
+  if (filterBarEl) filterBarEl.style.display = isMoney ? 'none' : '';
+  _updateROFilterBtns();
+  const filterActive = !isMoney && _roFilter !== 'all';
+  const showFtCol = !isMoney && _roFilter === 'all';
+  _toggleROFtColumn(showFtCol);
   // Table rows
   const tbody = document.getElementById('ro-body');
   tbody.innerHTML = '';
-  rows.forEach((r, i) => {
+  let shown = 0;
+  rows.forEach((r) => {
+    if (filterActive && (r.ftype||'petrol') !== _roFilter) return;
+    shown++;
     const fuelLabel = r.ftype === 'diesel' ? '🟤 دیزل' : '⛽ پطرول';
     const albaqiColor = (r.albaqi||0) > 0 ? 'var(--red)' : 'var(--green)';
     const showFuel = !isMoney && !r.byMoney;
+    const ftCell = showFtCol ? `<td>${fuelLabel}</td>` : '';
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td style="color:var(--muted);font-size:0.72rem;text-align:center">${n2fa(i+1)}</td>
+      <td style="color:var(--muted);font-size:0.72rem;text-align:center">${n2fa(shown)}</td>
       <td>${r.date||'—'}</td>
       <td>${escFa(r.name)||'—'}</td>
       <td style="color:var(--accent)">${r.hawala||'—'}</td>
-      <td>${fuelLabel}</td>
+      ${ftCell}
       <td style="color:var(--blue)">${showFuel ? n2fa(r.fuel||0) : '—'}</td>
       <td>${showFuel ? n2fa(r.priceper||0) : '—'}</td>
       <td style="color:var(--accent)">${n2fa(r.bardagi||0)}</td>
@@ -32956,32 +32979,21 @@ function _renderROViewer() {
     `;
     tbody.appendChild(tr);
   });
-  // Footer totals
-  document.getElementById('ro-ft-fuel').textContent    = isMoney ? '—' : n2fa(t.all.fuel) + ' ل';
-  document.getElementById('ro-ft-bardagi').textContent = n2fa(t.all.bardagi);
-  document.getElementById('ro-ft-rasid').textContent   = n2fa(t.all.rasid);
-  document.getElementById('ro-ft-albaqi').textContent  = n2fa(t.all.albaqi);
+  if (shown === 0) {
+    const label = _roFilter === 'petrol' ? '⛽ هیچ ردیف پطرولی ثبت نشده' : (_roFilter === 'diesel' ? '🟤 هیچ ردیف دیزلی ثبت نشده' : 'هیچ ردیفی ثبت نشده');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="${showFtCol?10:9}" style="text-align:center;padding:16px;color:var(--muted);font-size:0.85rem">${label}</td>`;
+    tbody.appendChild(tr);
+  }
+  // Footer totals — با فیلترِ فعال هماهنگ باشد
+  const ft = filterActive ? t[_roFilter] : t.all;
+  document.getElementById('ro-ft-fuel').textContent    = isMoney ? '—' : n2fa(ft.fuel) + ' ل';
+  document.getElementById('ro-ft-bardagi').textContent = n2fa(ft.bardagi);
+  document.getElementById('ro-ft-rasid').textContent   = n2fa(ft.rasid);
+  document.getElementById('ro-ft-albaqi').textContent  = n2fa(ft.albaqi);
   // جدول‌های آرشیوشده — فقط‌خواندنی با نام ماه (خواستهٔ کاربر برای اسکن‌کننده‌های کیو‌آر)
   const arcEl = document.getElementById('ro-archives');
   if (arcEl) { try { arcEl.innerHTML = _roArchivesHtml(person); } catch (e) { arcEl.innerHTML = ''; } }
-}
-// دو کادرِ جداگانهٔ «حساب پطرول» و «حساب دیزل» برای نماهای فقط‌خواندنی (اسکنِ کیو‌آر
-// و صفحهٔ کارمند). همان چهار عددِ آشنا برای هر سوخت، بدون هیچ ورودی یا دکمه‌ای.
-function _roFuelSplitHtml(t){
-  if (!t) return '';
-  const cell = (l, v, c) => `<div class="rofs-cell"><div class="l">${l}</div><div class="v" style="color:${c}">${v}</div></div>`;
-  const group = (title, icon, color, s) =>
-    `<div class="rofs-group" style="border-color:${color}">
-       <div class="rofs-head" style="color:${color}">${icon} ${title}</div>
-       <div class="rofs-rows">
-         ${cell('مقدار تیل', n2fa(s.fuel) + ' ل', 'var(--blue)')}
-         ${cell('بردگی', n2fa(s.bardagi), 'var(--accent)')}
-         ${cell('رسید', n2fa(s.rasid), 'var(--green)')}
-         ${cell('الباقی', n2fa(s.albaqi), s.albaqi > 0 ? 'var(--red)' : 'var(--green)')}
-       </div>
-     </div>`;
-  return group('حساب پطرول', '⛽', 'var(--green)', t.petrol) +
-         group('حساب دیزل', '🟤', '#b7791f', t.diesel);
 }
 // جدول‌های آرشیو یک حساب برای نماهای فقط‌خواندنی (کیو‌آر و صفحهٔ کارمند) — هیچ ورودی/دکمه‌ای ندارد
 function _roArchivesHtml(acct) {
@@ -33043,6 +33055,7 @@ function openROViewer(type, id) {
   }
   _roCurType = type; _roCurId = id;
   _roViewMode = person.mode || 'fuel';
+  _roFilter = 'all';
   document.getElementById('ro-title').textContent = '👤 ' + person.name + ' — فقط‌خواندنی';
   _renderROViewer();
   document.getElementById('roOverlay').classList.add('open');
@@ -36488,7 +36501,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.163';
+const APP_VERSION = '2.9.164';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
