@@ -35951,17 +35951,9 @@ try {
     navigator.serviceWorker.addEventListener('message', ev => {
       const d = ev && ev.data;
       if (!d || d.type !== 'app-version' || !d.version) return;
-      if (d.version === APP_VERSION || _swNewVersion === d.version) return;
-      _swNewVersion = d.version;
-      try {
-        const el = document.createElement('div');
-        el.id = 'appUpdBar';
-        el.innerHTML = '🎉 نسخهٔ تازهٔ برنامه (' + d.version + ') آماده است' +
-          '<button onclick="pumpApplyWebUpdate()">آپدیت کن</button>' +
-          '<button class="later" onclick="this.parentNode.remove()">بعداً</button>';
-        document.getElementById('appUpdBar')?.remove();
-        document.body.appendChild(el);
-      } catch (e) {}
+      // سرویس‌ورکر نسخهٔ تازه را گرفته و در کش نشانده — همان مسیرِ مشترک:
+      // اگر کاربر وسطِ کاری نیست خودکار سوار می‌شود، وگرنه نوار می‌آید
+      try { _pumpOfferUpdate(d.version, true); } catch (e) {}
     });
   }
 } catch (e) {}
@@ -35990,6 +35982,7 @@ const PUMP_UPDATE_BASES = [
   'https://vil3ntec-it.github.io/pump-staion-yaqobi/'
 ];
 let _pumpLatestInfo = null, _pumpUpdBusy = false, _pumpLastCheck = 0;
+const _pumpBootTs = Date.now();   // برای تصمیمِ «رفرشِ خودکار بی‌خطر است یا نه»
 
 function _pumpVerCmp(a, b) {                 // ۱ اگر a تازه‌تر باشد
   const pa = String(a || '0').split('.').map(n => parseInt(n, 10) || 0);
@@ -36096,11 +36089,75 @@ async function pumpCheckUpdate(loud) {
     const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
     if (reg) reg.update();
   } catch (e) {}
-  if (_swNewVersion === info.version) return;
-  _swNewVersion = info.version;
-  _pumpUpdBar('🎉 نسخهٔ تازهٔ برنامه (' + info.version + ') آماده است' +
+  await _pumpOfferUpdate(info.version, false, loud);
+}
+/* پیشنهاد/سوارکردنِ نسخهٔ تازه — تنها مسیرِ مشترکِ همهٔ خبررسان‌ها (سرویس‌ورکر و
+   بررسیِ version.json). نکتهٔ مهم: خودمان هم فایلِ تازه را در کشِ سرویس‌ورکر
+   می‌نشانیم، وگرنه رفرش دوباره همان نسخهٔ کهنه را از کش می‌آورد و کاربر
+   می‌گفت «تغییرها را نمی‌بینم» (باید دو بار برنامه را باز می‌کرد). */
+async function _pumpOfferUpdate(ver, alreadyCached, loud) {
+  if (!ver || ver === APP_VERSION || _pumpVerCmp(ver, APP_VERSION) <= 0) return;
+  if (_swNewVersion === ver && document.getElementById('appUpdBar')) return;
+  _swNewVersion = ver;
+  let ok = !!alreadyCached;
+  const pulled = await _pumpWebPullFresh();
+  if (pulled) { ok = true; ver = pulled; }
+  if (!ok) { _swNewVersion = null; if (loud) showToast('نسخهٔ تازه گرفته نشد — اینترنت را بررسی کنید', '#e53e3e'); return; }
+  // اگر تازه برنامه را باز کرده و مشغولِ کاری نیست، همان‌جا و خودکار سوار شود.
+  // محافظِ حلقه: برای هر نسخه فقط یک‌بار در همین نشست خودکار رفرش می‌کنیم — اگر
+  // به هر دلیلی باز هم نسخهٔ کهنه بالا آمد، دیگر تکرار نمی‌شود و فقط نوار می‌آید.
+  let triedOnce = false;
+  try { triedOnce = sessionStorage.getItem('pumpAutoUpd') === ver; } catch (e) {}
+  if (!triedOnce && _pumpSafeToReload()) {
+    try { sessionStorage.setItem('pumpAutoUpd', ver); } catch (e) {}
+    try { showToast('🎉 نسخهٔ ' + ver + ' آمد — تازه‌سازی…', '#2b6cb0'); } catch (e) {}
+    setTimeout(() => { try { pumpApplyWebUpdate(); } catch (e) {} }, 900);
+    return;
+  }
+  _pumpUpdBar('🎉 نسخهٔ تازهٔ برنامه (' + ver + ') آماده است' +
     '<button onclick="pumpApplyWebUpdate()">آپدیت کن</button>' +
     '<button class="later" onclick="this.parentNode.remove()">بعداً</button>');
+}
+// نسخهٔ تازهٔ index.html را می‌گیرد و در همهٔ کش‌های پوستهٔ برنامه می‌نشاند تا
+// رفرشِ بعدی «واقعاً» نسخهٔ تازه را بالا بیاورد. اگر چیزی درست نبود (فایل ناقص
+// یا نسخهٔ قدیمی‌تر)، هیچ دست نمی‌زند و null برمی‌گرداند.
+async function _pumpWebPullFresh() {
+  if (!window.caches) return null;
+  for (const base of _pumpUpdateBases()) {
+    try {
+      const r = await fetch(base + 'index.html?ts=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) continue;
+      const t = await r.text();
+      const m = t.match(/const\s+APP_VERSION\s*=\s*['"]([0-9.]+)['"]/);
+      if (!(t.length > 200000 && m && _pumpVerCmp(m[1], APP_VERSION) > 0)) continue;
+      const keys = (await caches.keys()).filter(k => /^pump-yaqobi-shell/.test(k));
+      if (!keys.length) return m[1];           // کشی نیست → خودِ رفرش کافی است
+      const mk = () => new Response(t, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+      for (const k of keys) {
+        const c = await caches.open(k);
+        // هم آدرسِ ریشه و هم index.html — درخواستِ ناوبری با هر کدام ممکن است بیاید
+        await c.put(new Request(base), mk()).catch(() => {});
+        await c.put(new Request(base + 'index.html'), mk()).catch(() => {});
+      }
+      return m[1];
+    } catch (e) {}
+  }
+  return null;
+}
+// آیا همین حالا رفرشِ خودکار بی‌خطر است؟ (وسطِ کارِ کاربر نپرد)
+function _pumpSafeToReload() {
+  try {
+    if (Date.now() - _pumpBootTs > 150000) return false;      // مدتی است باز است → فقط نوار
+    // فقط وقتی جلوی رفرش را می‌گیریم که کاربر واقعاً چیزی نوشته باشد؛ کادرِ خالیِ
+    // فوکوس‌دار (مثلاً کادرِ رمزِ صفحهٔ قفل که خودکار فوکوس می‌گیرد) مانع نیست
+    const ae = document.activeElement;
+    if (ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName) && String(ae.value || '').trim() !== '') return false;
+    if (ae && ae.isContentEditable) return false;
+    if (document.querySelector('.modal-overlay.open, .qr-overlay.open, .inv-overlay.open, .ro-overlay.open, .sm-overlay.open')) return false;
+    const rp = document.getElementById('robotPanel');
+    if (rp && rp.classList.contains('open')) return false;
+    return true;
+  } catch (e) { return false; }
 }
 (function () {
   // اپ اندروید: همین که برنامه سالم بالا آمد، به پوسته خبر بده تا نسخهٔ تازه را
@@ -36109,7 +36166,7 @@ async function pumpCheckUpdate(loud) {
     if (window.PumpAndroid && PumpAndroid.updateOk) setTimeout(() => { try { PumpAndroid.updateOk(); } catch (e) {} }, 4000);
   } catch (e) {}
   const kick = (loud) => { try { pumpCheckUpdate(loud); } catch (e) {} };
-  setTimeout(() => kick(false), 9000);                 // کمی بعد از بالا آمدن
+  setTimeout(() => kick(false), 3000);                 // زود بعد از بالا آمدن — تا نسخهٔ کهنه دستِ کاربر نماند
   setInterval(() => kick(false), 6 * 3600 * 1000);      // هر ۶ ساعت
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && Date.now() - _pumpLastCheck > 2 * 3600 * 1000) kick(false);
@@ -36788,7 +36845,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.176';
+const APP_VERSION = '2.9.177';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
