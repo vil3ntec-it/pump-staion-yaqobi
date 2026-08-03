@@ -877,6 +877,15 @@ body.viewer-mode .att-admin{display:none !important}
 .ro-sum-box{flex:1;min-width:110px;background:var(--card);border-radius:9px;padding:10px;text-align:center}
 .ro-sum-box .l{font-size:0.68rem;color:var(--muted);margin-bottom:3px}
 .ro-sum-box .v{font-size:1rem;font-weight:900}
+/* دو کادرِ جداگانهٔ پطرول/دیزل در نمای اسکن */
+.ro-fuel-split{display:flex;gap:10px;padding:0 18px 12px;flex-wrap:wrap;flex-shrink:0}
+.ro-fuel-split:empty{display:none}
+.ro-fuel-split .rofs-group{flex:1 1 260px;min-width:240px;background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:8px 10px}
+.ro-fuel-split .rofs-head{font-size:0.86rem;font-weight:900;margin-bottom:6px;text-align:center}
+.ro-fuel-split .rofs-rows{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.ro-fuel-split .rofs-cell{background:var(--dark);border-radius:8px;padding:6px 4px;text-align:center;min-width:0}
+.ro-fuel-split .rofs-cell .l{font-size:0.66rem;color:var(--muted);font-weight:700;margin-bottom:2px;white-space:nowrap}
+.ro-fuel-split .rofs-cell .v{font-size:0.86rem;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* ── صفحه کارمند (بدون رمز — فقط دیدن) ── */
 .staff-search{width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:1rem;font-weight:700;margin-bottom:8px}
 .staff-search:focus{outline:none;border-color:var(--accent)}
@@ -15811,18 +15820,9 @@ body .tbl tfoot td, body .xls-tbl tfoot td, body .xls-foot td{
   border-top:2px solid var(--lg-brd) !important;
   font-weight:900 !important;
 }
-/* ورودی‌ها و کشوها (سال و ماه، تعداد، جست‌وجو …).
-   هر ورودی‌ای که خودش inline کادرِ دلخواه دارد (مثلاً border:none با یک خطِ
-   نقطه‌چینِ زیرین در کارت‌های حساب) دست نمی‌خورد — وگرنه دورش یک مربعِ ناخواسته
-   کشیده می‌شد. */
-body .field-input:not([style*="border"]),
-body .ei-in:not([style*="border"]),
-body .person-search-input:not([style*="border"]),
-body input[type="search"]:not([style*="border"]),
-body select:not([style*="border"]){
-  border-width:1.5px !important; border-style:solid !important;
-  border-color:var(--lg-brd-soft) !important;
-}
+/* ورودی‌ها عمداً هیچ مرزِ اضافه‌ای از این بلاک نمی‌گیرند: هر کادرِ چهارگوشی که
+   دورشان کشیده می‌شد، در همهٔ بخش‌ها ناجور دیده می‌شد (خواستهٔ صاحب برنامه).
+   هر ورودی همان ظاهرِ اصلیِ خودش را نگه می‌دارد. */
 /* استثنا: ورودی‌ها و کشوهای «داخلِ خودِ جدول» هیچ چهارچوبی نگیرند — آنجا فقط
    خطوطِ خودِ جدول باید دیده شود، نه یک کادرِ دور هر خانه (خواستهٔ صاحب برنامه) */
 /* ── کادرهای خلاصهٔ «شرکت‌ها»: بدون جای خالیِ بزرگ ──────────────────────────
@@ -15960,7 +15960,10 @@ body.gfx-performance .xls-foot td{
 }
 </style>
 </head>
-<body class="nav-sticky">
+<!-- sec-wide از همان اولین رنگ‌آمیزی روی body است: بخشِ بازِ پیش‌فرض «داشبورد» است و
+     تمام‌عرض می‌خواهد. بدونِ این، داشبورد اول در قابِ ۱۰۰۰px تنگ رسم می‌شد و بعد با
+     اولین showSection ناگهان تمام‌صفحه می‌شد (همان پرشی که صاحب برنامه دید). -->
+<body class="nav-sticky sec-wide">
 <script id="gfx-tier-boot">
 /* apply the saved graphics tier BEFORE first paint (no flash of the
    wrong tier). The full engine lives in #gfx-quality-js near the end
@@ -16361,12 +16364,21 @@ body.gfx-performance .xls-foot td{
   #sec-dashboard{--k-line:var(--border);--k-soft:var(--dark)}
 }
 .k-card{
-  position:relative;overflow:hidden;background:var(--card);
-  border:1px solid var(--k-line);border-radius:var(--k-r);
-  box-shadow:0 10px 30px -16px rgba(0,0,0,.7)}
+  position:relative;overflow:hidden;
+  background:linear-gradient(168deg, color-mix(in srgb, var(--txt) 3%, var(--card)), var(--card) 55%);
+  border:1.5px solid var(--k-line);border-radius:var(--k-r);
+  box-shadow:0 14px 34px -20px rgba(0,0,0,.75), inset 0 1px 0 color-mix(in srgb, var(--txt) 6%, transparent);
+  transition:border-color .22s, box-shadow .22s}
+.k-card:hover{box-shadow:0 20px 44px -22px rgba(0,0,0,.85)}
+/* نوارِ باریکِ رنگی بالای هر کارت — همان لهجهٔ تمِ فعال */
+.k-card::after{content:'';position:absolute;top:0;inset-inline:0;height:3px;
+  background:linear-gradient(90deg, transparent, var(--accent), transparent);opacity:.55;pointer-events:none}
 .k-head{display:flex;align-items:center;justify-content:space-between;gap:10px;
-  padding:calc(var(--k-pad) * .78) var(--k-pad);border-bottom:1px solid var(--k-line)}
-.k-head h3{margin:0;font-size:clamp(.9rem,.2vw + .85rem,1.05rem);font-weight:900;color:var(--txt)}
+  padding:calc(var(--k-pad) * .78) var(--k-pad);border-bottom:1.5px solid var(--k-line);
+  background:color-mix(in srgb, var(--txt) 3%, transparent)}
+.k-head h3{margin:0;font-size:clamp(.92rem,.2vw + .87rem,1.08rem);font-weight:900;color:var(--txt);
+  display:flex;align-items:center;gap:8px}
+.k-head h3::before{content:'';width:4px;height:1.05em;border-radius:3px;background:var(--accent);flex-shrink:0}
 .k-body{padding:var(--k-pad)}
 
 /* ── ۱) نوارِ بالا ─────────────────────────────────────────────────────── */
@@ -16413,43 +16425,61 @@ body.gfx-performance .xls-foot td{
 /* ── ۲) کارت‌های آماری ─────────────────────────────────────────────────── */
 .dash-cards{display:grid;grid-template-columns:repeat(6,1fr);gap:var(--k-gap);margin-bottom:var(--k-gap)}
 .dash-card{
-  position:relative;overflow:hidden;background:var(--card);
-  border:1px solid var(--k-line);border-radius:var(--k-r);padding:var(--k-pad);
-  box-shadow:0 10px 30px -16px rgba(0,0,0,.7);cursor:pointer;
+  position:relative;overflow:hidden;display:flex;flex-direction:column;
+  background:linear-gradient(168deg, color-mix(in srgb,var(--kc) 7%, var(--card)), var(--card) 62%);
+  border:1.5px solid var(--k-line);border-radius:var(--k-r);padding:var(--k-pad);
+  box-shadow:0 14px 34px -20px rgba(0,0,0,.75);cursor:pointer;
   transition:transform .22s,box-shadow .22s,border-color .22s}
 .dash-card::before{content:'';position:absolute;inset-inline-start:-40px;top:-60px;width:170px;height:170px;
-  border-radius:50%;background:radial-gradient(circle,var(--kc) 0%,transparent 70%);opacity:.18;pointer-events:none}
-.dash-card:hover{transform:translateY(-4px);box-shadow:0 20px 40px -18px rgba(0,0,0,.8);border-color:var(--kc)}
-.dc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:clamp(9px,.6vw + 6px,14px)}
-.dc-title{font-size:clamp(.76rem,.14vw + .73rem,.88rem);font-weight:800;color:var(--muted);line-height:1.5;min-width:0}
-.dc-ic{width:clamp(38px,2.2vw + 30px,48px);height:clamp(38px,2.2vw + 30px,48px);border-radius:13px;flex-shrink:0;
-  background:color-mix(in srgb,var(--kc) 16%,transparent);display:inline-flex;align-items:center;justify-content:center}
+  border-radius:50%;background:radial-gradient(circle,var(--kc) 0%,transparent 70%);opacity:.16;pointer-events:none}
+/* نوارِ رنگیِ کنارهٔ کارت — کارت‌ها را از هم جدا و خوانا می‌کند */
+.dash-card::after{content:'';position:absolute;inset-block:0;inset-inline-start:0;width:4px;background:var(--kc);opacity:.85}
+.dash-card:hover{transform:translateY(-4px);box-shadow:0 22px 44px -20px rgba(0,0,0,.85);border-color:var(--kc)}
+.dc-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:clamp(10px,.6vw + 7px,15px)}
+/* عنوانِ همهٔ کارت‌ها یک‌اندازه و یک‌خطی — بدون شلوغی */
+.dc-title{font-size:clamp(.75rem,.13vw + .72rem,.86rem);font-weight:800;color:var(--muted);line-height:1.5;
+  min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dc-ic{width:clamp(38px,2.2vw + 30px,48px);height:clamp(38px,2.2vw + 30px,48px);border-radius:14px;flex-shrink:0;
+  background:color-mix(in srgb,var(--kc) 18%,transparent);border:1px solid color-mix(in srgb,var(--kc) 32%,transparent);
+  display:inline-flex;align-items:center;justify-content:center}
 .dc-ic svg{width:clamp(19px,1vw + 15px,24px);height:clamp(19px,1vw + 15px,24px);stroke:var(--kc);fill:none;stroke-width:1.8}
 .dc-value{font-size:clamp(1.05rem,.62vw + .9rem,1.5rem);font-weight:900;color:var(--kc);
   line-height:1.3;letter-spacing:-.3px;word-break:break-word}
-.dc-delta{font-size:clamp(.64rem,.11vw + .62rem,.75rem);font-weight:800;color:var(--muted);margin-top:8px;
-  display:flex;align-items:center;gap:5px;flex-wrap:wrap;line-height:1.6}
+/* هر دو خطِ زیرِ عدد یک‌مدل‌اند: یک خط، یک اندازه، بدونِ شکستن */
+.dc-delta,.dc-sub{margin-top:7px;line-height:1.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  font-size:clamp(.63rem,.1vw + .61rem,.73rem);font-weight:800;color:var(--muted)}
+.dc-delta{display:flex;align-items:center;gap:5px;min-height:1.15em}
 .dc-delta .up{color:var(--k-green)}
 .dc-delta .down{color:var(--k-red)}
-.dc-sub{font-size:clamp(.62rem,.1vw + .6rem,.72rem);color:var(--muted);margin-top:6px;line-height:1.7;opacity:.9}
+.dc-sub{font-weight:700;opacity:.88;margin-top:4px;min-height:1.15em}
 
 /* ── ۳) ردیف‌های سه‌ستونه ─────────────────────────────────────────────── */
 .dash-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.15fr) minmax(0,1.2fr);
   gap:var(--k-gap);margin-bottom:var(--k-gap);align-items:stretch}
 .dash-row > *{min-width:0}
 
-/* وضعیت سوخت‌ها */
-.fs-row{display:flex;align-items:center;justify-content:space-between;gap:10px;
-  background:var(--k-soft);border:1px solid var(--k-line);border-radius:13px;
-  padding:clamp(10px,.6vw + 7px,14px) clamp(11px,.7vw + 8px,15px);margin-bottom:10px;cursor:pointer;
-  transition:border-color .2s,transform .18s;-webkit-tap-highlight-color:transparent}
-.fs-row:last-child{margin-bottom:0}
-.fs-row:hover{transform:translateY(-2px);border-color:var(--fc)}
-.fs-name{font-size:clamp(.8rem,.14vw + .77rem,.92rem);font-weight:900;color:var(--txt)}
-.fs-state{font-size:clamp(.66rem,.11vw + .64rem,.76rem);font-weight:800;color:var(--fc);margin-top:3px}
-.fs-ic{width:clamp(34px,1.8vw + 27px,42px);height:clamp(34px,1.8vw + 27px,42px);border-radius:11px;flex-shrink:0;
+/* وضعیت سوخت‌ها — ردیف‌ها ارتفاعِ کارت را پر می‌کنند (بدون جای خالیِ بزرگ) */
+#dash-fuel-status{display:flex;flex-direction:column;gap:clamp(10px,.7vw + 6px,14px);height:100%}
+.dash-row > .k-card{display:flex;flex-direction:column}
+.dash-row > .k-card > .k-body{flex:1;min-height:0}
+.fs-row{display:flex;align-items:stretch;gap:10px;width:100%;text-align:right;flex:1;
+  background:var(--k-soft);border:1px solid var(--k-line);border-radius:14px;
+  padding:clamp(11px,.7vw + 8px,15px);cursor:pointer;font-family:'Vazirmatn',sans-serif;
+  transition:border-color .2s,transform .18s,box-shadow .2s;-webkit-tap-highlight-color:transparent}
+.fs-row:hover{transform:translateY(-2px);border-color:var(--fc);box-shadow:0 10px 24px -16px var(--fc)}
+.fs-main{display:flex;flex-direction:column;justify-content:center;gap:9px;width:100%;min-width:0}
+.fs-top{display:flex;align-items:center;gap:10px;min-width:0}
+.fs-name{font-size:clamp(.82rem,.14vw + .79rem,.95rem);font-weight:900;color:var(--txt);display:block;line-height:1.4}
+.fs-state{font-size:clamp(.66rem,.11vw + .64rem,.76rem);font-weight:800;color:var(--fc);display:block;margin-top:2px}
+.fs-pct{margin-inline-start:auto;font-size:clamp(.9rem,.35vw + .8rem,1.15rem);font-weight:900;color:var(--fc);flex-shrink:0}
+.fs-ic{width:clamp(34px,1.8vw + 27px,42px);height:clamp(34px,1.8vw + 27px,42px);border-radius:12px;flex-shrink:0;
   background:color-mix(in srgb,var(--fc) 16%,transparent);display:inline-flex;align-items:center;justify-content:center;
   font-size:clamp(1rem,.5vw + .84rem,1.25rem)}
+.fs-bar{display:block;height:9px;border-radius:999px;background:color-mix(in srgb,var(--txt) 12%,transparent);overflow:hidden}
+.fs-bar i{display:block;height:100%;border-radius:999px;background:var(--fc);min-width:3px;transition:width .7s cubic-bezier(.22,.8,.3,1)}
+.fs-nums{display:flex;justify-content:space-between;gap:10px;font-size:clamp(.64rem,.1vw + .62rem,.74rem);
+  color:var(--muted);font-weight:700}
+.fs-nums b{color:var(--txt);font-weight:900}
 
 /* نمودار روند فروش (سطحی) */
 .dash-seg{display:inline-flex;gap:4px;background:var(--k-soft);border:1px solid var(--k-line);border-radius:999px;padding:4px}
@@ -16462,10 +16492,13 @@ body.gfx-performance .xls-foot td{
 .dash-fuel-btn.active{background:var(--k-green);color:#fff}
 .dash-tab.active{background:var(--k-blue);color:#fff}
 #dash-area{width:100%;height:clamp(190px,17vw,260px);display:block;overflow:visible}
-#dash-area .ar-grid{stroke:var(--k-line);stroke-width:1}
+/* خطوطِ راهنما و خودِ خطِ نمودار عمداً از رنگِ تم مستقل‌اند و یک «هاله» هم‌رنگِ
+   کارت زیرشان دارند تا با هیچ تمی قاطی و نامرئی نشوند (خواستهٔ صاحب برنامه). */
+#dash-area .ar-grid{stroke:color-mix(in srgb, var(--txt) 24%, transparent);stroke-width:1}
 #dash-area .ar-fill{fill:url(#arGrad)}
-#dash-area .ar-line{fill:none;stroke:var(--k-green);stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round}
-#dash-area .ar-dot{fill:var(--k-green);stroke:var(--card);stroke-width:2;cursor:pointer}
+#dash-area .ar-halo{fill:none;stroke:var(--card);stroke-width:6.5;stroke-linejoin:round;stroke-linecap:round;opacity:.9}
+#dash-area .ar-line{fill:none;stroke:var(--k-teal);stroke-width:3.2;stroke-linejoin:round;stroke-linecap:round}
+#dash-area .ar-dot{fill:var(--k-teal);stroke:var(--card);stroke-width:2;cursor:pointer}
 #dash-area .ar-dot.sel{r:6.5}
 #dash-area text{fill:var(--muted);font-family:'Vazirmatn',sans-serif;font-size:10px;font-weight:700}
 #dash-area .ar-tipbox{fill:var(--panel);stroke:var(--k-line)}
@@ -16507,10 +16540,11 @@ body.gfx-performance .xls-foot td{
   height:clamp(180px,16vw,250px);padding:22px 4px 10px}
 .db-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:9px;min-width:0;height:100%;cursor:pointer}
 .db-barwrap{position:relative;flex:1;width:100%;max-width:46px;display:flex;align-items:flex-end;justify-content:center;gap:3px}
-.db-bar{width:30%;height:0;border-radius:6px 6px 3px 3px;background:var(--k-blue);
+/* یک ستون در هر دوره (نه سه‌تا) — پهن‌تر و با گرادیانِ ملایم */
+.db-bar{width:76%;height:0;border-radius:8px 8px 4px 4px;
+  background:linear-gradient(180deg, color-mix(in srgb, var(--k-blue) 82%, #fff 18%), var(--k-blue));
+  box-shadow:0 6px 16px -10px var(--k-blue);
   transition:height .7s cubic-bezier(.22,.8,.3,1),filter .2s}
-.db-bar.lit{background:var(--k-teal);opacity:.9}
-.db-bar.prf{background:var(--k-green);opacity:.92}
 .db-col:hover .db-bar{filter:brightness(1.2)}
 .db-col.sel .db-bar{filter:brightness(1.25);box-shadow:0 0 0 2px color-mix(in srgb,var(--k-blue) 55%,transparent)}
 .db-col.sel .db-lbl{color:var(--k-blue);font-weight:900}
@@ -16535,10 +16569,11 @@ body.gfx-performance .xls-foot td{
 .dash-legend .lg-prf{background:var(--k-green)}
 .dash-legend .lg-exp{background:var(--k-red)}
 #dash-trend{width:100%;height:clamp(70px,6vw,105px);display:block}
-#dash-trend .tl-grid{stroke:var(--k-line);stroke-width:.8}
-#dash-trend .tl-prf{fill:none;stroke:var(--k-green);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+#dash-trend .tl-grid{stroke:color-mix(in srgb, var(--txt) 22%, transparent);stroke-width:.9}
+#dash-trend .tl-halo{fill:none;stroke:var(--card);stroke-width:5.5;stroke-linejoin:round;stroke-linecap:round;opacity:.9}
+#dash-trend .tl-prf{fill:none;stroke:var(--k-green);stroke-width:2.6;stroke-linejoin:round;stroke-linecap:round}
 #dash-trend .tl-prf-area{fill:var(--k-green);opacity:.13}
-#dash-trend .tl-exp{fill:none;stroke:var(--k-red);stroke-width:1.7;stroke-dasharray:5 4;stroke-linejoin:round;stroke-linecap:round}
+#dash-trend .tl-exp{fill:none;stroke:var(--k-red);stroke-width:2.4;stroke-dasharray:5 4;stroke-linejoin:round;stroke-linecap:round}
 #dash-trend .tl-dot{fill:var(--k-green)}
 
 /* آخرین فروش‌ها */
@@ -16617,19 +16652,19 @@ body.gfx-performance .xls-foot td{
   <div class="dash-cards">
     <div class="dash-card" style="--kc:var(--k-red)" title="دیدن هشدارها" onclick="dashBellClick()">
       <div class="dc-top"><div class="dc-title">هشدارها</div><span class="dc-ic"><svg viewBox="0 0 24 24"><path d="M12 3.5 2.6 20h18.8L12 3.5Z"/><path d="M12 10v4"/><path d="M12 17.2v.1"/></svg></span></div>
-      <div class="dc-value" id="dcv-alerts">۰ مورد</div><div class="dc-delta" id="dcd-alerts">نیاز به بررسی</div></div>
+      <div class="dc-value" id="dcv-alerts">۰ مورد</div><div class="dc-delta" id="dcd-alerts">نیاز به بررسی</div><div class="dc-sub" id="dcs-alerts"></div></div>
 
     <div class="dash-card" style="--kc:var(--k-green)" title="رفتن به پارچه‌ها" onclick="showSection('shifts')">
-      <div class="dc-top"><div class="dc-title" id="dct-sales">فروش امروز</div><span class="dc-ic"><svg><use href="#ic-shifts"/></svg></span></div>
+      <div class="dc-top"><div class="dc-title" id="dct-sales">فروش تیل امروز</div><span class="dc-ic"><svg><use href="#ic-shifts"/></svg></span></div>
       <div class="dc-value" id="dcv-sales">۰</div><div class="dc-delta" id="dcd-sales"></div><div class="dc-sub" id="dcs-sales"></div></div>
 
     <div class="dash-card" style="--kc:var(--k-amber)" title="رفتن به مفاد / ضرر" onclick="showSection('profit')">
-      <div class="dc-top"><div class="dc-title" id="dct-profit">مفاد امروز</div><span class="dc-ic"><svg><use href="#ic-profit"/></svg></span></div>
+      <div class="dc-top"><div class="dc-title" id="dct-profit">مبلغ فروش امروز</div><span class="dc-ic"><svg><use href="#ic-profit"/></svg></span></div>
       <div class="dc-value" id="dcv-profit">۰</div><div class="dc-delta" id="dcd-profit"></div><div class="dc-sub" id="dcs-profit"></div></div>
 
     <div class="dash-card" style="--kc:var(--k-blue)" title="رفتن به قرض‌داران" onclick="showSection('debt')">
       <div class="dc-top"><div class="dc-title">الباقی قرض‌داران</div><span class="dc-ic"><svg><use href="#ic-debt"/></svg></span></div>
-      <div class="dc-value" id="dcv-debt">۰</div><div class="dc-sub" id="dcs-debt"></div></div>
+      <div class="dc-value" id="dcv-debt">۰</div><div class="dc-delta" id="dcd-debt"></div><div class="dc-sub" id="dcs-debt"></div></div>
 
     <div class="dash-card" style="--kc:var(--k-purple)" title="رفتن به مصارف" onclick="showSection('expenses')">
       <div class="dc-top"><div class="dc-title" id="dct-exp">مصارف امروز</div><span class="dc-ic"><svg><use href="#ic-expenses"/></svg></span></div>
@@ -16692,7 +16727,7 @@ body.gfx-performance .xls-foot td{
         </div>
       </div>
       <div class="k-body">
-        <div class="dash-legend" style="margin-bottom:4px"><span><i class="lg-amt"></i>مبلغ (افغانی)</span><span><i class="lg-lit"></i>لیتر</span><span><i class="lg-prf"></i>مفاد</span></div>
+        <div class="dash-legend" style="margin-bottom:4px"><span><i class="lg-amt"></i>مبلغ فروش (افغانی)</span></div>
         <div class="dash-bars" id="dash-bars"></div>
         <div class="dash-detail" id="dash-detail"></div>
         <div class="dash-trend-wrap">
@@ -19499,6 +19534,8 @@ body.viewer-mode .inv-admin-only{display:none!important}
     </div>
   </div>
   <div class="ro-sum" id="ro-sum"></div>
+  <!-- کادرهای جداگانهٔ پطرول و دیزل — برای کسی که با اسکنِ کیو‌آر حساب را می‌بیند -->
+  <div class="ro-fuel-split" id="ro-fuel-split"></div>
   <div class="ro-body">
     <div style="overflow-x:auto">
       <table class="ro-tbl" id="ro-tbl">
@@ -21563,6 +21600,11 @@ function _dashGrowth(cur, prev) {
   if (!prev) return cur ? null : 0;
   return Math.round((cur - prev) / prev * 100);
 }
+// یک خطِ سادهٔ هم‌قالبِ «رشد» برای کارت‌هایی که رشدِ عددی ندارند (مثل قرض‌داران)
+function _dashDeltaTxt(id, txt) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = '<span>' + escFa(txt) + '</span>';
+}
 // درصدِ رشد به‌صورت متن (طرحِ مرجع به‌جای دایره، «↑ ۲۴٪ نسبت به دیروز» دارد)
 function _dashDelta(id, pct, word) {
   const el = document.getElementById(id);
@@ -21668,16 +21710,26 @@ function _renderDashFuelStatus() {
   const host = document.getElementById('dash-fuel-status');
   if (!host) return;
   const th = (typeof lsThreshold === 'function') ? lsThreshold() : 500;
+  // هر ردیف حالا نوارِ پرشدنِ مخزن و درصد را هم دارد و ردیف‌ها ارتفاعِ کارت را
+  // پر می‌کنند — قبلاً کارت پُر از جای خالی بود (خواستهٔ صاحب برنامه).
   host.innerHTML = _dashTankInfo().map(t => {
     let state, col;
     if (t.raw <= 0) { state = 'تمام شده'; col = 'var(--k-red)'; }
     else if (t.raw <= th) { state = 'کمبود'; col = 'var(--k-red)'; }
     else if (t.raw <= th * 2) { state = 'رو به اتمام'; col = 'var(--k-amber)'; }
     else { state = 'موجودی کافی'; col = 'var(--k-green)'; }
+    const cap = Math.max(0, t.cap || 0);
+    const pct = cap > 0 ? Math.max(0, Math.min(100, Math.round(t.cur / cap * 100))) : 0;
     return '<button type="button" class="fs-row" style="--fc:' + col + '" onclick="showSection(\'' + t.sec + '\')">'
-      + '<span style="min-width:0"><span class="fs-name">' + t.nm.replace(/^\S+\s/, '') + '</span>'
-      + '<span class="fs-state" style="display:block">' + state + ' · ' + n2fa(Math.round(t.cur)) + ' لیتر</span></span>'
-      + '<span class="fs-ic">' + t.nm.split(' ')[0] + '</span></button>';
+      + '<span class="fs-main">'
+      +   '<span class="fs-top"><span class="fs-ic">' + t.nm.split(' ')[0] + '</span>'
+      +     '<span style="min-width:0"><span class="fs-name">' + t.nm.replace(/^\S+\s/, '') + '</span>'
+      +     '<span class="fs-state">' + state + '</span></span>'
+      +     '<span class="fs-pct">' + n2fa(pct) + '٪</span></span>'
+      +   '<span class="fs-bar"><i style="width:' + pct + '%"></i></span>'
+      +   '<span class="fs-nums"><span>موجودی: <b>' + n2fa(Math.round(t.cur)) + ' ل</b></span>'
+      +     '<span>ظرفیت: <b>' + n2fa(Math.round(cap)) + ' ل</b></span></span>'
+      + '</span></button>';
   }).join('');
 }
 /* ── نمودارِ روندِ فروش (سطحی) — همان سطل‌های زمانیِ نمودارِ ستونی ──────── */
@@ -21686,7 +21738,8 @@ function _renderDashArea(disp, sel) {
   if (!svg) return;
   const n = disp.length;
   if (n < 2) { svg.innerHTML = ''; return; }
-  const vals = disp.map(b => Math.max(0, _dashPick(b).a));
+  // خواستهٔ صاحب برنامه: «روند فروش» روندِ تیل را نشان بدهد، نه پول را
+  const vals = disp.map(b => Math.max(0, _dashPick(b).l));
   const vmax = Math.max(1, ...vals);
   // viewBox را با اندازهٔ واقعیِ کادر یکی می‌کنیم تا متنِ محورها در هیچ عرضی
   // کشیده/له نشود (preserveAspectRatio="none" متن را بدشکل می‌کرد)
@@ -21700,12 +21753,12 @@ function _renderDashArea(disp, sel) {
   const Y = v => B - (v / vmax) * (B - T);
   const pts = vals.map((v, i) => X(i).toFixed(1) + ',' + Y(v).toFixed(1));
   // محور عمودی مثل تصویرِ مرجع: عددهای کوتاه + واحد در بالای محور
-  const unit = vmax >= 1e6 ? { d: 1e6, t: 'میلیون افغانی' }
-    : (vmax >= 1000 ? { d: 1000, t: 'هزار افغانی' } : { d: 1, t: 'افغانی' });
+  const unit = vmax >= 1e6 ? { d: 1e6, t: 'میلیون لیتر' }
+    : (vmax >= 1000 ? { d: 1000, t: 'هزار لیتر' } : { d: 1, t: 'لیتر' });
   const nice = v => { const x = v / unit.d; return n2fa(x >= 10 || x === 0 ? Math.round(x) : Math.round(x * 10) / 10); };
   let out = '<defs><linearGradient id="arGrad" x1="0" y1="0" x2="0" y2="1">'
-    + '<stop offset="0%" stop-color="var(--k-green)" stop-opacity=".38"/>'
-    + '<stop offset="100%" stop-color="var(--k-green)" stop-opacity="0"/></linearGradient></defs>';
+    + '<stop offset="0%" stop-color="var(--k-teal)" stop-opacity=".38"/>'
+    + '<stop offset="100%" stop-color="var(--k-teal)" stop-opacity="0"/></linearGradient></defs>';
   // خط‌کش‌های افقی + برچسبِ مقدار
   for (let g = 0; g <= 4; g++) {
     const v = vmax * (1 - g / 4), y = Y(v);
@@ -21714,16 +21767,19 @@ function _renderDashArea(disp, sel) {
   }
   out += '<text x="' + (L - 8) + '" y="12" text-anchor="end">' + unit.t + '</text>';
   out += '<path class="ar-fill" d="M' + X(0).toFixed(1) + ',' + B + ' L' + pts.join(' L') + ' L' + X(n - 1).toFixed(1) + ',' + B + ' Z"/>';
+  // خطِ نمودار دو لایه است: یک «هاله» هم‌رنگِ خودِ کارت زیرِ خط، تا هر تمی که
+  // انتخاب شود (حتی هم‌رنگِ خطِ نمودار) خط باز هم جدا و دیده‌شدنی بماند.
+  out += '<path class="ar-halo" d="M' + pts.join(' L') + '"/>';
   out += '<path class="ar-line" d="M' + pts.join(' L') + '"/>';
   disp.forEach((b, i) => {
     out += '<circle class="ar-dot' + (i === sel ? ' sel' : '') + '" cx="' + X(i).toFixed(1) + '" cy="' + Y(vals[i]).toFixed(1)
       + '" r="' + (i === sel ? 6.5 : 4.5) + '" onclick="dashSelectBar(' + i + ')"><title>'
-      + escFa(b.full + ' — ' + n2fa(Math.round(vals[i])) + ' افغانی') + '</title></circle>';
+      + escFa(b.full + ' — ' + n2fa(Math.round(vals[i])) + ' لیتر') + '</title></circle>';
     out += '<text x="' + X(i).toFixed(1) + '" y="' + (B + 22) + '" text-anchor="middle">' + escFa(b.label) + '</text>';
   });
   // حبابِ مقدارِ دورهٔ انتخاب‌شده (مثل تصویرِ مرجع)
   const sy0 = Y(vals[sel]);
-  const txt = n2fa(Math.round(vals[sel])) + ' افغانی';
+  const txt = n2fa(Math.round(vals[sel])) + ' لیتر';
   const w = Math.max(64, txt.length * 7.2);
   // حباب هیچ‌وقت از لبه‌های کادر بیرون نزند (قبلاً روی ستونِ آخر بریده می‌شد)
   const sx = Math.min(R - w / 2 - 2, Math.max(L + w / 2 + 2, X(sel)));
@@ -21785,15 +21841,15 @@ function _renderDashChrome() {
 function _renderDashChart(disp, sel, skipAnim) {
   const wrap = document.getElementById('dash-bars'); if (!wrap) return;
   const vals = disp.map(_dashPick);
+  // خواستهٔ صاحب برنامه: هر دوره فقط «یک» ستون داشته باشد، نه سه ستونِ کنارِ هم.
+  // ستون = مبلغِ فروش؛ لیتر و مفاد در راهنمای همان ستون و کادرِ جزئیات می‌آیند.
   const maxA = Math.max(1, ...vals.map(v => v.a));
-  const maxL = Math.max(1, ...vals.map(v => v.l));
-  const maxP = Math.max(1, ...vals.map(v => Math.abs(v.p)));
   wrap.innerHTML = disp.map((b, i) => {
     const v = vals[i];
-    const ha = Math.round(v.a / maxA * 100), hl = Math.round(v.l / maxL * 100), hp = Math.round(Math.abs(v.p) / maxP * 100);
+    const ha = Math.round(v.a / maxA * 100);
     const tip = `📅 ${b.full} — 💰 ${n2fa(Math.round(v.a))} افغانی · 🛢️ ${n2fa(Math.round(v.l))} ل · 📈 ${n2fa(Math.round(v.p))} مفاد · 🧾 ${n2fa(v.c)} ثبت`;
     return `<div class="db-col ${i === sel ? 'sel' : ''}" onclick="dashSelectBar(${i})">
-      <div class="db-barwrap"><span class="db-tip">${tip}</span><div class="db-bar amt" data-h="${ha}"></div><div class="db-bar lit" data-h="${hl}"></div><div class="db-bar prf" data-h="${hp}"></div></div>
+      <div class="db-barwrap"><span class="db-tip">${tip}</span><div class="db-bar amt" data-h="${ha}"></div></div>
       <span class="db-lbl">${b.label}</span></div>`;
   }).join('');
   const setH = () => wrap.querySelectorAll('.db-bar').forEach(bar => { bar.style.height = Math.max(2, parseInt(bar.getAttribute('data-h'), 10) || 0) + '%'; });
@@ -21825,37 +21881,43 @@ function renderDashboard(skipAnim) {
   const realAlerts = alerts.filter(a => a.cls !== 'ok').length;
   setT('dcv-alerts', n2fa(realAlerts) + ' مورد');
   setT('dcd-alerts', realAlerts ? 'نیاز به بررسی' : 'همه‌چیز مرتب است');
+  setT('dcs-alerts', 'برای دیدن فهرست بزنید');
   const badge = document.getElementById('dash-bell-badge');
   if (badge) { badge.textContent = n2fa(realAlerts); badge.classList.toggle('on', realAlerts > 0); }
 
-  // ۱) فروش — مبلغ + تفکیک پطرول/دیزل + لیتر
-  setT('dct-sales', 'فروش ' + bucketWord);
-  setT('dcv-sales', n2fa(Math.round(cur.a)) + ' افغانی');
-  setT('dcs-sales', '⛽ ' + n2fa(Math.round(selB.petrol.a)) + ' · 🟤 ' + n2fa(Math.round(selB.diesel.a)) + ' · 🛢️ ' + n2fa(Math.round(cur.l)) + ' لیتر');
-  _dashDelta('dcd-sales', _dashGrowth(cur.a, prev.a), perWord);
+  // ── شش کارتِ بالا: همه یک قالبِ ثابت دارند ─────────────────────────────
+  //   عنوان (یک خط) · عدد (یک خط) · رشد (یک خط) · یک زیرنویسِ کوتاه (یک خط)
+  //   خواستهٔ صاحب برنامه: نوشته‌های زیر و بالای هر شش کارت یک‌مدل و بی‌شلوغی.
 
-  // ۲) مفاد — از همان profit ثبت‌شدهٔ پارچه‌ها
-  setT('dct-profit', 'مفاد ' + bucketWord);
-  setT('dcv-profit', n2fa(Math.round(cur.p)) + ' افغانی');
-  setT('dcs-profit', '⛽ ' + n2fa(Math.round(selB.petrol.p)) + ' · 🟤 ' + n2fa(Math.round(selB.diesel.p)));
-  _dashDelta('dcd-profit', _dashGrowth(cur.p, prev.p), perWord);
+  // ۱) فروش — بر حسبِ تیل (لیتر)، نه پول
+  setT('dct-sales', 'فروش تیل ' + bucketWord);
+  setT('dcv-sales', n2fa(Math.round(cur.l)) + ' لیتر');
+  setT('dcs-sales', '⛽ ' + n2fa(Math.round(selB.petrol.l)) + ' ل · 🟤 ' + n2fa(Math.round(selB.diesel.l)) + ' ل');
+  _dashDelta('dcd-sales', _dashGrowth(cur.l, prev.l), perWord);
 
-  // ۳) قرض‌داران — جمع الباقی + شمارش‌ها
+  // ۲) مبلغِ فروش (جای کارتِ «مفاد») — مفاد به‌صورت یک زیرنویسِ کوتاه می‌آید
+  setT('dct-profit', 'مبلغ فروش ' + bucketWord);
+  setT('dcv-profit', n2fa(Math.round(cur.a)) + ' افغانی');
+  setT('dcs-profit', '📈 مفاد: ' + n2fa(Math.round(cur.p)) + ' افغانی');
+  _dashDelta('dcd-profit', _dashGrowth(cur.a, prev.a), perWord);
+
+  // ۳) قرض‌داران — جمع الباقی
   const dbt = _dashDebtInfo();
   setT('dcv-debt', n2fa(Math.round(dbt.total)) + ' افغانی');
-  setT('dcs-debt', '👥 ' + n2fa(dbt.persons) + ' قرض‌دار · 🧾 ' + n2fa(dbt.invoices) + ' فاکتور قرضی · 🏢 ' + n2fa(dbt.comps) + ' شرکت بدهکار');
+  _dashDeltaTxt('dcd-debt', '👥 ' + n2fa(dbt.persons) + ' قرض‌دار');
+  setT('dcs-debt', '🧾 ' + n2fa(dbt.invoices) + ' فاکتور قرضی · 🏢 ' + n2fa(dbt.comps) + ' شرکت');
 
-  // ۴) مصارف — بازهٔ انتخابی + خلاصهٔ روز/هفته/ماه/سال
+  // ۴) مصارف — بازهٔ انتخابی
   const q = _dashExpQuick();
   setT('dct-exp', 'مصارف ' + bucketWord);
   setT('dcv-exp', n2fa(Math.round(selB.exp)) + ' افغانی');
-  setT('dcs-exp', 'امروز ' + n2fa(Math.round(q.day)) + ' · هفته ' + n2fa(Math.round(q.week)) + ' · ماه ' + n2fa(Math.round(q.month)) + ' · سال ' + n2fa(Math.round(q.year)));
+  setT('dcs-exp', 'این ماه: ' + n2fa(Math.round(q.month)) + ' افغانی');
   _dashDelta('dcd-exp', _dashGrowth(selB.exp, prevB.exp), perWord);
 
-  // ۵) گاوصندوق — موجودی کل + ورود/خروج بازهٔ انتخابی
+  // ۵) گاوصندوق — موجودی کل
   const sb = _dashSafeBalance();
   setT('dcv-safe', n2fa(Math.round(sb.afn)) + ' افغانی' + (sb.usd ? ' · $' + n2fa(Math.round(sb.usd)) : ''));
-  setT('dcs-safe', 'ورود ' + bucketWord + ': ' + n2fa(Math.round(selB.sin)) + ' · خروج: ' + n2fa(Math.round(selB.sout)));
+  setT('dcs-safe', 'ورود ' + n2fa(Math.round(selB.sin)) + ' · خروج ' + n2fa(Math.round(selB.sout)));
   _dashDelta('dcd-safe', _dashGrowth(selB.sin - selB.sout, prevB.sin - prevB.sout), perWord);
 
   // ۶) مخزن‌ها، وضعیت سوخت‌ها، آخرین فروش‌ها، ساعت/وضعیت اتصال
@@ -21880,7 +21942,7 @@ function renderDashboard(skipAnim) {
       `<span>📈 رشد نسبت به ${perWord}: <b style="color:${gCol}">${gTxt}</b></span>`;
   }
   setT('dcc-sub', _dashFuelWord() + ' — روی هر ستون کلیک کنید تا جزئیات و رشد همان بازه بیاید');
-  setT('dash-area-sub', 'فروش ' + bucketWord + ' — ' + _dashFuelWord() + ' · روی هر نقطه بزنید');
+  setT('dash-area-sub', 'فروش تیل (لیتر) ' + bucketWord + ' — ' + _dashFuelWord() + ' · روی هر نقطه بزنید');
   try { _renderDashAlerts(); } catch (e) {}
   try { _renderDashTrend(disp); } catch (e) {}
 }
@@ -21973,7 +22035,9 @@ function _renderDashTrend(disp) {
   svg.innerHTML =
     '<line class="tl-grid" x1="0" y1="26" x2="300" y2="26"/><line class="tl-grid" x1="0" y1="50" x2="300" y2="50"/><line class="tl-grid" x1="0" y1="74" x2="300" y2="74"/>' +
     `<polygon class="tl-prf-area" points="${X(0).toFixed(1)},74 ${pts(prf)} ${X(n - 1).toFixed(1)},74"/>` +
+    `<polyline class="tl-halo" points="${pts(prf)}"/>` +
     `<polyline class="tl-prf" points="${pts(prf)}"/>` +
+    `<polyline class="tl-halo" points="${pts(exp)}"/>` +
     `<polyline class="tl-exp" points="${pts(exp)}"/>` +
     `<circle class="tl-dot" cx="${X(0).toFixed(1)}" cy="${Y(prf[0]).toFixed(1)}" r="3"/>`;
 }
@@ -28761,6 +28825,27 @@ function _renderCompanyHistoryPanel(company){
     }).join('');
 }
 // ── ویرایش ردیف‌های جدولِ آرشیوشدهٔ شرکت (تاریخ/نام/کیلو/قیمت/نرخ/رسید) ──
+// رندرِ دوبارهٔ پنلِ آرشیو، ولی نه وسطِ تایپ: اگر همان لحظه داخلِ یکی از خانه‌های
+// همین پنل در حال نوشتن باشیم، رندر تا وقتی فوکوس از آن خانه برود عقب می‌افتد.
+// (قبلاً هر تغییر، کلِ پنل را دوباره می‌ساخت؛ روی گوشی خانهٔ در حالِ تایپ نابود
+//  می‌شد و کیبورد می‌پرید — همان باگی که صاحب برنامه گزارش کرد.)
+function _cmHistRenderSafe(c){
+  if (!c) return;
+  const a = document.activeElement;
+  const inPanel = a && a.closest && a.closest('#cm-history-wrap') &&
+                  (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT');
+  if (!inPanel) { _renderCompanyHistoryPanel(c); return; }
+  const cid = c.id;
+  const redraw = () => {
+    a.removeEventListener('blur', redraw);
+    setTimeout(() => {
+      const cc = (DB.tilCompanies||[]).find(x => x.id === cid);
+      const modal = document.getElementById('companyModal');
+      if (cc && modal && modal.classList.contains('open')) _renderCompanyHistoryPanel(cc);
+    }, 0);
+  };
+  a.addEventListener('blur', redraw);
+}
 function updateCompanyHistoryRow(cid, hid, idx, field, val){
   const c = (DB.tilCompanies||[]).find(x => x.id === cid);
   const h = c && (c.tableHistory||[]).find(x => x.id === hid);
@@ -28772,7 +28857,7 @@ function updateCompanyHistoryRow(cid, hid, idx, field, val){
     if (field === 'kg') r.ton = '';   // ورودی کیلو است؛ تن خودکار = کیلو ÷ ۱۰۰۰
   }
   save();
-  _renderCompanyHistoryPanel(c);   // جمع‌های همان جدول بلافاصله دوباره حساب می‌شوند
+  _cmHistRenderSafe(c);   // جمع‌ها به‌محضِ بیرون‌رفتنِ فوکوس دوباره حساب می‌شوند
 }
 function addCompanyHistoryRow(cid, hid){
   const c = (DB.tilCompanies||[]).find(x => x.id === cid);
@@ -32845,6 +32930,10 @@ function _renderROViewer() {
       <div class="ro-sum-box"><div class="l">الباقی</div><div class="v" style="color:${t.all.albaqi>0?'var(--red)':'var(--green)'}">${n2fa(t.all.albaqi)} افغانی</div></div>
     `;
   }
+  // دو کادر جداگانهٔ پطرول و دیزل — تا کسی که با اسکنِ کیو‌آر می‌آید، حسابِ هر
+  // سوخت را جدا ببیند (خواستهٔ صاحب برنامه)
+  const splitEl = document.getElementById('ro-fuel-split');
+  if (splitEl) splitEl.innerHTML = isMoney ? '' : _roFuelSplitHtml(t);
   // Table rows
   const tbody = document.getElementById('ro-body');
   tbody.innerHTML = '';
@@ -32875,6 +32964,24 @@ function _renderROViewer() {
   // جدول‌های آرشیوشده — فقط‌خواندنی با نام ماه (خواستهٔ کاربر برای اسکن‌کننده‌های کیو‌آر)
   const arcEl = document.getElementById('ro-archives');
   if (arcEl) { try { arcEl.innerHTML = _roArchivesHtml(person); } catch (e) { arcEl.innerHTML = ''; } }
+}
+// دو کادرِ جداگانهٔ «حساب پطرول» و «حساب دیزل» برای نماهای فقط‌خواندنی (اسکنِ کیو‌آر
+// و صفحهٔ کارمند). همان چهار عددِ آشنا برای هر سوخت، بدون هیچ ورودی یا دکمه‌ای.
+function _roFuelSplitHtml(t){
+  if (!t) return '';
+  const cell = (l, v, c) => `<div class="rofs-cell"><div class="l">${l}</div><div class="v" style="color:${c}">${v}</div></div>`;
+  const group = (title, icon, color, s) =>
+    `<div class="rofs-group" style="border-color:${color}">
+       <div class="rofs-head" style="color:${color}">${icon} ${title}</div>
+       <div class="rofs-rows">
+         ${cell('مقدار تیل', n2fa(s.fuel) + ' ل', 'var(--blue)')}
+         ${cell('بردگی', n2fa(s.bardagi), 'var(--accent)')}
+         ${cell('رسید', n2fa(s.rasid), 'var(--green)')}
+         ${cell('الباقی', n2fa(s.albaqi), s.albaqi > 0 ? 'var(--red)' : 'var(--green)')}
+       </div>
+     </div>`;
+  return group('حساب پطرول', '⛽', 'var(--green)', t.petrol) +
+         group('حساب دیزل', '🟤', '#b7791f', t.diesel);
 }
 // جدول‌های آرشیو یک حساب برای نماهای فقط‌خواندنی (کیو‌آر و صفحهٔ کارمند) — هیچ ورودی/دکمه‌ای ندارد
 function _roArchivesHtml(acct) {
@@ -36381,7 +36488,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.162';
+const APP_VERSION = '2.9.163';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
