@@ -24667,11 +24667,11 @@ function _applySavedColWidths(table){
       ths[i].style.width = ths[i]._origW || '';
       if(colEls && colEls[i]) colEls[i].style.width = colEls[i]._origW || '';
     }
-    const tW = Math.round(table.getBoundingClientRect().width);
+    const tW = Math.round(_ownW(table));
     const target = [];
     for(let i=0;i<ths.length;i++){
       const s = saved[keys[i]] != null ? saved[keys[i]] : saved[i];
-      target[i] = s ? Math.round(s) : Math.round(ths[i].getBoundingClientRect().width);
+      target[i] = s ? Math.round(s) : Math.round(_ownW(ths[i]));
     }
     // 2) جمعِ ستون‌ها باید دقیقاً برابرِ عرضِ خودِ جدول شود؛ وگرنه در table-layout:fixed
     //    مرورگر همهٔ ستون‌ها را نسبتی بزرگ/کوچک می‌کند و جدولِ آرشیو با جدولِ اصلی
@@ -24702,6 +24702,26 @@ function _syncColWidthSiblings(storeKey, except){
       if(t !== except && t._colwKey === storeKey) _applySavedColWidths(t);
     });
   }catch(e){}
+}
+/* ── بزرگ‌نماییِ بخش، هنگامِ اندازه‌گیریِ ستون‌ها ─────────────────────────────
+   دکمهٔ A+/A− اندازهٔ بخش را با zoom عوض می‌کند. getBoundingClientRect عرضِ
+   «رویِ صفحه» را می‌دهد (یعنی ضرب‌در zoom)، ولی style.width که می‌نویسیم در
+   فضایِ خودِ عنصر است. اگر این دو قاطی شوند، در بخشی که فونتش بزرگ شده کشیدنِ
+   لبهٔ ستون چند برابرِ موس می‌پرید و همان عددِ غلط ذخیره می‌شد. با تقسیم بر همین
+   ضریب، اندازه‌گیری و کشیدن در هر اندازهٔ فونتی دقیقاً مثلِ حالتِ عادی است. */
+function _elZoom(el){
+  let z = 1;
+  try{
+    for(let n = el; n && n.nodeType === 1; n = n.parentElement){
+      const v = parseFloat(getComputedStyle(n).zoom);
+      if(v && isFinite(v) && v > 0) z *= v;
+    }
+  }catch(e){}
+  return (z && isFinite(z) && z > 0) ? z : 1;
+}
+// عرضِ یک عنصر در فضایِ خودش (بدونِ اثرِ zoomِ بخش) — همان واحدی که style.width دارد
+function _ownW(el){
+  try{ return el.getBoundingClientRect().width / _elZoom(el); }catch(e){ return 0; }
 }
 // تغییرِ اندازهٔ ستون‌ها با کشیدنِ لبهٔ عنوان (مثل اکسل). عرضِ هر ستون در
 // localStorage ذخیره می‌شود تا بعد از رفرش هم بماند. فقط ظاهر — روی داده اثری ندارد.
@@ -24743,7 +24763,7 @@ function makeTableResizable(table, storeKey){
     if(table._colFrozen) return;
     table._colFrozen = true;
     Array.prototype.forEach.call(ths, function(th, i){
-      const w = Math.round(th.getBoundingClientRect().width);
+      const w = Math.round(_ownW(th));
       if(w > 15 && !getW(i)) setW(i, w);
     });
     try{ if(getComputedStyle(table).tableLayout !== 'fixed') table.style.tableLayout = 'fixed'; }catch(e){}
@@ -24767,7 +24787,9 @@ function makeTableResizable(table, storeKey){
       const cx = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
       if(pIdx < 0) return;
       // کشیدن به راست = این ستون پهن‌تر و همسایهٔ راستی باریک‌تر؛ به چپ برعکس
-      let d = cx - startX;
+      // جابه‌جاییِ موس رویِ صفحه است؛ برای نوشتن در style.width باید به فضایِ
+      // خودِ جدول برگردد (در بخشی که با A+ بزرگ شده zoom ≠ 1 است)
+      let d = (cx - startX) / _elZoom(table);
       d = Math.max(36 - startW, Math.min(d, pStartW - 36));
       setW(dIdx, Math.round(startW + d));
       setW(pIdx, Math.round(pStartW - d));
@@ -24782,7 +24804,7 @@ function makeTableResizable(table, storeKey){
       // همه را نسبتی بزرگ می‌کرد (باگِ «جدولِ آرشیو درشت‌تر از جدولِ اصلی»).
       const allKeys = _colKeysOfTable(table);
       for(let i=0;i<ths.length;i++){
-        const w = getW(i) || Math.round(ths[i].getBoundingClientRect().width);
+        const w = getW(i) || Math.round(_ownW(ths[i]));
         if(w > 0) saved[allKeys[i]] = w;
       }
       try{ localStorage.setItem('colw_'+storeKey, JSON.stringify(saved)); }catch(e){}
@@ -24811,13 +24833,13 @@ function makeTableResizable(table, storeKey){
       // عرضِ رندرشدهٔ همین لحظهٔ همهٔ ستون‌ها پیکسلی قفل می‌شود تا جمعِ ستون‌ها با
       // عرضِ جدول (width:100%) برابر بماند و مرورگر چیزی را دوباره پخش نکند
       Array.prototype.forEach.call(ths, function(t2, i){
-        const w2 = Math.round(t2.getBoundingClientRect().width);
+        const w2 = Math.round(_ownW(t2));
         if(w2 > 0) setW(i, w2);
       });
       try{ if(getComputedStyle(table).tableLayout !== 'fixed') table.style.tableLayout = 'fixed'; }catch(e2){}
       startX = e.clientX;
-      startW = getW(dIdx) || th.getBoundingClientRect().width;
-      pStartW = getW(pIdx) || ths[pIdx].getBoundingClientRect().width;
+      startW = getW(dIdx) || _ownW(th);
+      pStartW = getW(pIdx) || _ownW(ths[pIdx]);
       document.addEventListener('pointermove', move);
       document.addEventListener('pointerup', up);
     });
@@ -36918,7 +36940,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.179';
+const APP_VERSION = '2.9.180';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
