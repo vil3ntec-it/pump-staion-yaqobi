@@ -531,6 +531,20 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 .xls-in.sm{min-width:46px}
 .xls-in.sm::placeholder{font-size:0.85rem}
 .xls-in.xs{min-width:44px;max-width:72px;width:72px;font-size:0.85rem;padding:6px 5px}
+/* دو کادرِ «قرض‌های کهنه» در بخش قرض‌داران: پیش‌فرض (موبایل/تبلت) همان‌جای همیشگی
+   زیرِ سربرگ؛ روی کامپیوتر (جای خالیِ کنارِ «مدت عضویت همه» زیاد است) به‌جایش
+   کپیِ داخلِ سربرگ دیده می‌شود. هر دو کپی روی یک دکمه (onclick یکسان) هستند، فقط
+   نمایش با CSS جابه‌جا می‌شود — هیچ منطقی عوض نشده. */
+.tool-link-card.debt-oldloan-desktop{display:none}
+@media (min-width:1025px){
+  .tool-link-card.debt-oldloan-mobile{display:none}
+  .tool-link-card.debt-oldloan-desktop{display:inline-flex}
+}
+/* لیستِ سفارشیِ پیشنهادِ نام — جایگزینِ دیتالیستِ نیتیو که در کامپیوتر/برنامهٔ
+   دسکتاپ چپ‌چین و بی‌قواره رندر می‌شد؛ همیشه راست‌چین و هم‌شکل با بقیهٔ برنامه است */
+.suggest-box{position:fixed;z-index:9999;background:var(--card);border:1.5px solid var(--border);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.22);max-height:220px;overflow-y:auto;direction:rtl;text-align:right;font-family:'Vazirmatn',sans-serif}
+.suggest-item{padding:8px 12px;font-size:0.86rem;font-weight:700;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--txt)}
+.suggest-item:hover,.suggest-item.active{background:var(--accent);color:#fff}
 /* جدول قرائت پمپ‌ها: کادرهای ورودی (نام/نوع/ساعت/شروع/ختم/فی‌لیتر) هم‌اندازهٔ بقیهٔ ستون‌ها
    (لیتر/مبلغ فروش) باشند — با inherit، اندازهٔ موبایل و بزرگ‌شدنِ دسکتاپ هر دو خودکار دنبال می‌شود */
 #wq-pump-tbl .xls-in{font-size:inherit!important}
@@ -15843,6 +15857,15 @@ body .ro-tbl select, body .ro-tbl textarea,
 body .xls-in, body .xls-in.box, body .tbl .editable{
   border:0 !important; background:transparent !important;
 }
+/* استثنای دیگر: ردیفِ ورودِ سریعِ «رسید قرض‌داران/چکنه» (dr-quick-row) داخلِ
+   جدول نیست — یک ردیفِ آزادِ فلکسی است — پس همان قاعدهٔ بالا این‌جا صدق نمی‌کند؛
+   بدونِ کادرِ دورِ خودشان، کادرها با متنِ اطرافشان قاطی می‌شدند (خواستهٔ کاربر) */
+body .dr-quick-row .xls-in{
+  border:1.5px solid var(--accent) !important;
+  border-radius:8px !important;
+  background:var(--card) !important;
+  padding:7px 9px !important;
+}
 
 /* ── ۳) کلفت‌تر شدنِ همهٔ نوشته‌ها (همه‌جا و همهٔ جدول‌ها) ─────────────────── */
 body{ -webkit-text-stroke:.22px currentColor; }
@@ -16777,7 +16800,7 @@ body.gfx-performance .xls-foot td{
           <div class="field-row" style="align-items:center">
             <label class="field-label">نام کارمند</label>
             <div style="display:flex;gap:8px;align-items:center">
-              <input class="field-input" id="d-name" placeholder="نام" style="flex:1" list="staff-names-dl" autocomplete="off">
+              <input class="field-input" id="d-name" placeholder="نام" style="flex:1" data-suggest="staff-names-dl" autocomplete="off">
               <div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:52px">
                 <span style="font-size:0.65rem;color:var(--muted);white-space:nowrap">شماره پایه</span>
                 <input class="field-input keep-spin" id="d-pumpnum" type="number" placeholder="#" style="width:52px;text-align:center;padding:6px 4px;font-weight:700;font-size:0.9rem" oninput="liveWaraqSync('d')">
@@ -16819,7 +16842,7 @@ body.gfx-performance .xls-foot td{
           <div class="field-row" style="align-items:center">
             <label class="field-label">نام کارمند</label>
             <div style="display:flex;gap:8px;align-items:center">
-              <input class="field-input" id="n-name" placeholder="نام" style="flex:1" list="staff-names-dl" autocomplete="off">
+              <input class="field-input" id="n-name" placeholder="نام" style="flex:1" data-suggest="staff-names-dl" autocomplete="off">
               <div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:52px">
                 <span style="font-size:0.65rem;color:var(--muted);white-space:nowrap">شماره پایه</span>
                 <input class="field-input keep-spin" id="n-pumpnum" type="number" placeholder="#" style="width:52px;text-align:center;padding:6px 4px;font-weight:700;font-size:0.9rem" oninput="liveWaraqSync('n')">
@@ -16905,7 +16928,7 @@ body.gfx-performance .xls-foot td{
         <div class="field-row" style="align-items:center">
           <label class="field-label">نام کارمند</label>
           <div style="display:flex;gap:8px;align-items:center">
-            <input class="field-input" id="dd-name" placeholder="نام" style="flex:1" list="staff-names-dl" autocomplete="off">
+            <input class="field-input" id="dd-name" placeholder="نام" style="flex:1" data-suggest="staff-names-dl" autocomplete="off">
             <div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:52px">
               <span style="font-size:0.65rem;color:var(--muted);white-space:nowrap">شماره پایه</span>
               <input class="field-input keep-spin" id="dd-pumpnum" type="number" placeholder="#" style="width:52px;text-align:center;padding:6px 4px;font-weight:700;font-size:0.9rem" oninput="liveWaraqSync('dd')">
@@ -16946,7 +16969,7 @@ body.gfx-performance .xls-foot td{
         <div class="field-row" style="align-items:center">
           <label class="field-label">نام کارمند</label>
           <div style="display:flex;gap:8px;align-items:center">
-            <input class="field-input" id="dn-name" placeholder="نام" style="flex:1" list="staff-names-dl" autocomplete="off">
+            <input class="field-input" id="dn-name" placeholder="نام" style="flex:1" data-suggest="staff-names-dl" autocomplete="off">
             <div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:52px">
               <span style="font-size:0.65rem;color:var(--muted);white-space:nowrap">شماره پایه</span>
               <input class="field-input keep-spin" id="dn-pumpnum" type="number" placeholder="#" style="width:52px;text-align:center;padding:6px 4px;font-weight:700;font-size:0.9rem" oninput="liveWaraqSync('dn')">
@@ -17121,11 +17144,14 @@ body.gfx-performance .xls-foot td{
       <input type="search" id="debt-search" class="person-search-input" placeholder="🔍 جستجوی نام..." oninput="searchPerson('debt',this.value)">
       <button class="add-btn" style="border-color:var(--green);color:var(--green)" onclick="openMembershipList()" title="یک صفحهٔ جدا با مدت عضویتِ همهٔ قرض‌داران">⏳ مدت عضویت همه</button>
       <button class="add-btn" onclick="openAddPerson('debt')">➕ افزودن شخص</button>
+      <!-- فقط روی کامپیوتر (جای خالی زیاد است): همین دو کادرِ قرض‌های کهنه، بغلِ «مدت عضویت همه» -->
+      <button type="button" class="tool-link-card debt-oldloan-desktop" style="border-color:var(--red);color:var(--red)" onclick="showSection('oldloans')"><span title="⏰ قرض‌های کهنهٔ تیل — بی‌حرکت‌ها اول (واحد تیل)">⏰ قرض‌های کهنه — تیل</span><span class="tlc-go"><i>‹</i></span></button>
+      <button type="button" class="tool-link-card debt-oldloan-desktop" style="border-color:var(--green);color:var(--green)" onclick="showSection('oldloansmoney')"><span title="💵 قرض‌های کهنهٔ پول — بی‌حرکت‌ها اول (واحد پول)">💵 قرض‌های کهنه — پول</span><span class="tlc-go"><i>‹</i></span></button>
     </div>
   </div>
-  <!-- کادرهای قرض‌های کهنه — دو صفحهٔ جداگانه: یکی واحد تیل، یکی واحد پول (خواستهٔ کاربر: از بخش رسید قرض‌داران به این‌جا منتقل شد) -->
-  <button type="button" class="tool-link-card" style="border-color:var(--red);color:var(--red)" onclick="showSection('oldloans')"><span title="⏰ قرض‌های کهنهٔ تیل — بی‌حرکت‌ها اول (واحد تیل)">⏰ قرض‌های کهنه — تیل</span><span class="tlc-go"><i>‹</i></span></button>
-  <button type="button" class="tool-link-card" style="border-color:var(--green);color:var(--green)" onclick="showSection('oldloansmoney')"><span title="💵 قرض‌های کهنهٔ پول — بی‌حرکت‌ها اول (واحد پول)">💵 قرض‌های کهنه — پول</span><span class="tlc-go"><i>‹</i></span></button>
+  <!-- موبایل/تبلت: همین دو کادر مثل قبل، زیرِ سربرگ (خواستهٔ کاربر: این‌جا دست‌نخورده بماند) -->
+  <button type="button" class="tool-link-card debt-oldloan-mobile" style="border-color:var(--red);color:var(--red)" onclick="showSection('oldloans')"><span title="⏰ قرض‌های کهنهٔ تیل — بی‌حرکت‌ها اول (واحد تیل)">⏰ قرض‌های کهنه — تیل</span><span class="tlc-go"><i>‹</i></span></button>
+  <button type="button" class="tool-link-card debt-oldloan-mobile" style="border-color:var(--green);color:var(--green)" onclick="showSection('oldloansmoney')"><span title="💵 قرض‌های کهنهٔ پول — بی‌حرکت‌ها اول (واحد پول)">💵 قرض‌های کهنه — پول</span><span class="tlc-go"><i>‹</i></span></button>
   <div class="persons-grid" id="debt-grid"></div>
 </div>
 
@@ -18357,7 +18383,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <div class="invp-meta">
           <div class="invp-meta-line">
             <span class="k"><svg class="ico"><use href="#invp-person"/></svg> نام مشتری:</span>
-            <input class="invp-in" id="inv-customer" placeholder="نام کامل مشتری..." style="flex:1;min-width:170px" autocomplete="off" list="inv-cust-names" oninput="invCustomerSuggest(this.value)">
+            <input class="invp-in" id="inv-customer" placeholder="نام کامل مشتری..." style="flex:1;min-width:170px" autocomplete="off" data-suggest="inv-cust-names" oninput="invCustomerSuggest(this.value)">
             <datalist id="inv-cust-names"></datalist>
           </div>
           <div id="inv-cust-suggest" style="display:none;font-size:.72rem;margin:-2px 0 4px;padding:7px 11px;border-radius:9px;background:rgba(56,161,105,.12);color:#276749;font-weight:700;line-height:1.7"></div>
@@ -27461,9 +27487,9 @@ function addDrQuickRow(focus) {
   div.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:12px;border:1px dashed var(--accent);border-radius:10px';
   div.innerHTML = `
     <input class="xls-in dr-q-date" style="flex:0 0 110px;max-width:110px" placeholder="تاریخ">
-    <input class="xls-in dr-q-name" style="flex:1 1 150px;min-width:130px" list="debtrasid-names" placeholder="نام قرض‌دار" onchange="quickAddDebtRasid(this.closest('.dr-quick-row'))" onkeydown="if(event.key==='Enter'){this.blur();}">
+    <input class="xls-in dr-q-name" style="flex:1 1 150px;min-width:130px" data-suggest="debtrasid-names" placeholder="نام قرض‌دار" onchange="quickAddDebtRasid(this.closest('.dr-quick-row'))" onkeydown="if(event.key==='Enter'){this.blur();}">
     <input class="xls-in dr-q-note" style="flex:1 1 150px;min-width:130px" placeholder="توضیح (اختیاری)">
-    <input class="xls-in dr-q-amount" type="number" style="flex:1 1 150px;min-width:130px;border:1.5px solid var(--accent);border-radius:8px;background:var(--card);padding:7px 9px" placeholder="مبلغ رسید" onchange="quickAddDebtRasid(this.closest('.dr-quick-row'))" onkeydown="if(event.key==='Enter'){this.blur();}">
+    <input class="xls-in dr-q-amount" type="number" style="flex:1 1 150px;min-width:130px" placeholder="مبلغ رسید" onchange="quickAddDebtRasid(this.closest('.dr-quick-row'))" onkeydown="if(event.key==='Enter'){this.blur();}">
     <button class="del-btn" title="حذف این ردیف" onclick="removeDrQuickRow(this)">✖</button>
   `;
   wrap.appendChild(div);
@@ -36503,7 +36529,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.165';
+const APP_VERSION = '2.9.166';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -37550,6 +37576,92 @@ function adjModalFont(delta) {
   try { localStorage.setItem('modalFontScale', _modalFontScale); } catch(e) {}
 }
 
+// ========== لیستِ سفارشیِ پیشنهادِ نام (جایگزینِ دیتالیستِ نیتیو) ==========
+// کادرهایی که به‌جای list="..." روی data-suggest="..." تنظیم شده‌اند، به‌جای
+// پاپ‌آپِ نیتیوِ مرورگر (که در نسخهٔ دسکتاپ/برنامهٔ کامپیوتری چپ‌چین و بدشکل
+// رندر می‌شد؛ در موبایل مشکلی نداشت) این لیستِ خودمان را نشان می‌دهند. خودِ
+// <datalist> و منطقِ پرشدنِ <option>هایش (در جاهای دیگرِ کد) دست‌نخورده می‌ماند —
+// فقط نمایش عوض شده و همیشه راست‌چین و هم‌شکل با بقیهٔ برنامه است.
+let _sgBox = null, _sgInput = null, _sgItems = [], _sgActive = -1;
+function _sgEnsureBox(){
+  if (_sgBox) return _sgBox;
+  _sgBox = document.createElement('div');
+  _sgBox.className = 'suggest-box';
+  _sgBox.style.display = 'none';
+  document.body.appendChild(_sgBox);
+  _sgBox.addEventListener('mousedown', function(e){
+    const item = e.target.closest('.suggest-item');
+    if (!item || !_sgInput) return;
+    e.preventDefault();
+    _sgPick(item.textContent);
+  });
+  return _sgBox;
+}
+function _sgPick(val){
+  const inp = _sgInput;
+  if (!inp) return;
+  inp.value = val;
+  inp.dispatchEvent(new Event('input', { bubbles: true }));
+  inp.dispatchEvent(new Event('change', { bubbles: true }));
+  _sgClose();
+}
+function _sgClose(){
+  if (_sgBox) _sgBox.style.display = 'none';
+  _sgInput = null; _sgItems = []; _sgActive = -1;
+}
+function _sgShow(input){
+  const dlId = input.getAttribute('data-suggest');
+  const dl = dlId && document.getElementById(dlId);
+  if (!dl) { _sgClose(); return; }
+  const q = (input.value || '').trim().toLowerCase();
+  const opts = Array.prototype.slice.call(dl.options).map(o => o.value).filter(Boolean);
+  const filtered = (q ? opts.filter(v => v.toLowerCase().indexOf(q) !== -1) : opts).slice(0, 30);
+  if (!filtered.length) { _sgClose(); return; }
+  const box = _sgEnsureBox();
+  _sgInput = input; _sgItems = filtered; _sgActive = -1;
+  box.innerHTML = filtered.map(v => '<div class="suggest-item">' + escFa(v) + '</div>').join('');
+  const r = input.getBoundingClientRect();
+  box.style.left = Math.round(r.left) + 'px';
+  box.style.top = Math.round(r.bottom + 4) + 'px';
+  box.style.width = Math.round(r.width) + 'px';
+  box.style.display = '';
+}
+document.addEventListener('focusin', function(e){
+  const el = e.target;
+  if (el && el.matches && el.matches('input[data-suggest]')) _sgShow(el);
+});
+document.addEventListener('input', function(e){
+  const el = e.target;
+  if (el && el.matches && el.matches('input[data-suggest]')) _sgShow(el);
+});
+document.addEventListener('focusout', function(e){
+  const el = e.target;
+  if (el && el.matches && el.matches('input[data-suggest]')) {
+    setTimeout(function(){ if (_sgInput === el) _sgClose(); }, 150);
+  }
+});
+window.addEventListener('resize', function(){ if (_sgInput) _sgShow(_sgInput); });
+window.addEventListener('scroll', function(){ if (_sgInput) _sgShow(_sgInput); }, true);
+// ناوبریِ صفحه‌کلید داخلِ لیستِ پیشنهاد — با فازِ capture، پیش از هندلرِ عمومیِ
+// جهت‌یابیِ کلیدهای پایین‌تر اجرا می‌شود تا وقتی لیست باز است، بالا/پایین/Enter
+// را خودش بگیرد و به فیلدِ دیگری نپرد.
+document.addEventListener('keydown', function(e){
+  if (!_sgInput || _sgInput !== e.target || !_sgBox || _sgBox.style.display === 'none') return;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+    e.preventDefault(); e.stopPropagation();
+    const n = _sgItems.length;
+    _sgActive = (e.key === 'ArrowDown') ? (_sgActive + 1) % n : (_sgActive - 1 + n) % n;
+    Array.prototype.forEach.call(_sgBox.querySelectorAll('.suggest-item'), (el, i) => el.classList.toggle('active', i === _sgActive));
+    const activeEl = _sgBox.children[_sgActive];
+    if (activeEl && activeEl.scrollIntoView) activeEl.scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter' && _sgActive >= 0){
+    e.preventDefault(); e.stopPropagation();
+    _sgPick(_sgItems[_sgActive]);
+  } else if (e.key === 'Escape'){
+    _sgClose();
+  }
+}, true);
+
 // ========== EXCEL-LIKE GRID NAVIGATION (ناوبری مکانی بین کادرها) ==========
 function _navFocusables(scope){
   const sel = 'input:not([type=button]):not([type=hidden]):not([type=checkbox]):not([type=submit]):not([type=reset]):not([disabled]):not([readonly]),select:not([disabled]),textarea:not([disabled]):not([readonly])';
@@ -37571,39 +37683,39 @@ function _navFocusables(scope){
 function _pickInDirection(el, dir, cands){
   const r = el.getBoundingClientRect();
   const cx = r.left + r.width/2, cy = r.top + r.height/2;
-  // اول بین کاندیدهایی که واقعاً هم‌ردیف (چپ/راست) یا هم‌ستون (بالا/پایین) با
-  // فیلد فعلی هستند (هم‌پوشانیِ محور عمود بر جهتِ حرکت) بگرد. اگر یکی پیدا شد،
-  // همیشه همان انتخاب می‌شود — حتی اگر نزدیک‌ترینِ مطلق نباشد — وگرنه کلید چپ/
-  // راست گاهی چند کادر پایین‌تر می‌پرید (نزدیک‌ترین فاصلهٔ اقلیدسی، نه هم‌ردیف).
-  // اگر هیچ کاندیدِ هم‌راستایی نبود، به همان الگوریتمِ نزدیک‌ترینِ قبلی برمی‌گردیم.
-  let best = null, bestScore = Infinity, bestPrimary = Infinity;
-  let bestAligned = null, bestAlignedScore = Infinity, bestAlignedPrimary = Infinity;
+  // مرحلهٔ ۱: فاصلهٔ اصلیِ (عمود بر جهتِ حرکت) نزدیک‌ترین کاندید را پیدا کن —
+  // یعنی «ردیفِ بعدی» (بالا/پایین) یا «ستونِ بعدی» (چپ/راست) واقعاً کدام است،
+  // صرف‌نظر از این‌که آن ردیف/ستون چقدر هم‌راستا یا عریض است.
+  const valid = [];
+  let minPrimary = Infinity;
   for (const c of cands){
     if (c === el) continue;
     const cr = c.getBoundingClientRect();
     const ccx = cr.left + cr.width/2, ccy = cr.top + cr.height/2;
     const dx = ccx - cx, dy = ccy - cy;
-    // هم‌راستایی دقیق: مرکزِ کاندید باید داخلِ گسترهٔ محورِ عمود بر جهتِ حرکتِ
-    // فیلدِ فعلی باشد (چپ/راست → مرکزِ عمودیِ کاندید داخلِ ارتفاعِ همین ردیف؛
-    // بالا/پایین → مرکزِ افقیِ کاندید داخلِ عرضِ همین ستون). این سخت‌گیری جلوی
-    // پرشِ کلیدِ چپ/راست به کادرِ یکی-دو ردیف پایین‌تر (که فقط کمی هم‌پوشانی
-    // داشت) را می‌گیرد.
-    let valid, primary, secondary, aligned;
-    if (dir === 'up')        { valid = dy < -3; primary = -dy; secondary = Math.abs(dx); aligned = ccx >= r.left && ccx <= r.right; }
-    else if (dir === 'down') { valid = dy > 3;  primary = dy;  secondary = Math.abs(dx); aligned = ccx >= r.left && ccx <= r.right; }
-    else if (dir === 'left') { valid = dx < -3; primary = -dx; secondary = Math.abs(dy); aligned = ccy >= r.top && ccy <= r.bottom; }
-    else                     { valid = dx > 3;  primary = dx;  secondary = Math.abs(dy); aligned = ccy >= r.top && ccy <= r.bottom; }
-    if (!valid) continue;
-    const score = primary + secondary * 2.2;
-    if (score < bestScore) { bestScore = score; best = c; bestPrimary = primary; }
-    if (aligned && score < bestAlignedScore) { bestAlignedScore = score; bestAligned = c; bestAlignedPrimary = primary; }
+    let ok, primary, secondary;
+    if (dir === 'up')        { ok = dy < -3; primary = -dy; secondary = Math.abs(dx); }
+    else if (dir === 'down') { ok = dy > 3;  primary = dy;  secondary = Math.abs(dx); }
+    else if (dir === 'left') { ok = dx < -3; primary = -dx; secondary = Math.abs(dy); }
+    else                     { ok = dx > 3;  primary = dx;  secondary = Math.abs(dy); }
+    if (!ok) continue;
+    valid.push({ c, primary, secondary });
+    if (primary < minPrimary) minPrimary = primary;
   }
-  // بالا/پایین: اگر کاندیدِ هم‌ستون خیلی دورتر از نزدیک‌ترین کاندید باشد، هم‌ستونی
-  // را رها کن و نزدیک‌ترین را بگیر — وگرنه Enter روی کادرِ باریکِ «شماره پایه» به‌جای
-  // «شروع پایه» (که هم‌ستون نیست) به فیلترِ گزارش‌های ۲۴ ساعته در پایینِ صفحه می‌پرید.
-  if ((dir === 'up' || dir === 'down') && bestAligned && best && bestAligned !== best &&
-      bestAlignedPrimary > bestPrimary * 3 + 60) return best;
-  return bestAligned || best;
+  if (!valid.length) return null;
+  // مرحلهٔ ۲: بینِ کاندیدهایی که تقریباً همان فاصلهٔ اصلیِ نزدیک‌ترین را دارند
+  // (یعنی واقعاً همان ردیف/ستونِ بعدی‌اند، نه چند ردیف/ستون دورتر)، نزدیک‌ترین از
+  // نظرِ محورِ دیگر را بگیر. قبلاً کاندیدِ «هم‌راستا با عرضِ خودِ فیلدِ فعلی» را با
+  // هر فاصلهٔ اصلی‌ای برنده می‌کرد؛ برای فیلدهای خیلی عریض (مثلِ «نام مشتری» تمامِ
+  // عرضِ فاکتور) این باعث می‌شد کلیدِ پایین از فیلدِ اول مستقیم به فیلدِ تمام‌عرضِ
+  // آخر (مثلاً «شماره تماس») بپرد و ردیف‌های میانی را رد کند. حالا اول ردیفِ واقعاً
+  // بعدی پیدا می‌شود، بعد نزدیک‌ترینِ همان ردیف.
+  const band = Math.max(24, minPrimary * 0.6);
+  let best = null, bestSecondary = Infinity;
+  valid.forEach(v => {
+    if (v.primary <= minPrimary + band && v.secondary < bestSecondary) { bestSecondary = v.secondary; best = v.c; }
+  });
+  return best;
 }
 function _refocusLater(el){
   const td = el.closest('td'), tr = el.closest('tr');
