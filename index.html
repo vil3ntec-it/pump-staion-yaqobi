@@ -19605,7 +19605,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <tbody id="ro-body"></tbody>
         <tfoot>
           <tr style="background:var(--dark);font-weight:900">
-            <td colspan="5" style="padding:8px 7px">جمع</td>
+            <td id="ro-ft-label" colspan="5" style="padding:8px 7px">جمع</td>
             <td id="ro-ft-fuel" style="padding:8px 7px"></td>
             <td style="padding:8px 7px">—</td>
             <td id="ro-ft-bardagi" style="padding:8px 7px;color:var(--accent)"></td>
@@ -25281,13 +25281,33 @@ function _renderSubBar(person) {
   const label = document.querySelector('#personModal .pm-acct-bar .pm-acct-label');
   if (label) label.style.display = subs.length === 0 ? 'none' : '';
   // دکمهٔ کیو‌آر همیشه مالِ «همین حسابی» است که بازش کرده‌ایم — نامش را هم نشان می‌دهد
+  const sub = currentSubId ? subs.find(x => x && x.id === currentSubId) : null;
   const qb = document.getElementById('pm-qr-btn');
   if (qb) {
-    const s = currentSubId ? subs.find(x => x && x.id === currentSubId) : null;
-    const nm = s ? String(s.name || 'حساب') : '';
-    qb.textContent = s ? ('📲 کیو‌آر ' + (nm.length > 10 ? nm.slice(0, 10) + '…' : nm)) : '📲 کیو‌آر';
-    qb.title = s ? ('کیو‌آر مخصوصِ حساب «' + nm + '»') : 'کیو‌آر حساب اصلی';
+    const nm = sub ? String(sub.name || 'حساب') : '';
+    qb.textContent = sub ? ('📲 کیو‌آر ' + (nm.length > 10 ? nm.slice(0, 10) + '…' : nm)) : '📲 کیو‌آر';
+    qb.title = sub ? ('کیو‌آر مخصوصِ حساب «' + nm + '»') : 'کیو‌آر حساب اصلی';
   }
+  _pmUpdateNames(person, sub);
+}
+// نامِ بالای مودال: وقتی داخلِ یک «حساب فرعی» هستیم فقط نامِ خودِ همان حساب
+// دیده می‌شود، نه نامِ حسابِ اصلی — این‌ها حساب‌های کاملاً جدا هستند
+// (خواستهٔ صاحب ریپو). در حسابِ اصلی دقیقاً مثل قبل است.
+function _pmUpdateNames(person, sub) {
+  if (!person) return;
+  if (sub === undefined) sub = currentSubId ? (person.subs || []).find(x => x && x.id === currentSubId) : null;
+  const ttl = document.getElementById('personModalTitle');
+  const bn = document.getElementById('pm-bigname');
+  if (sub) {
+    const nm = sub.name || 'حساب';
+    if (ttl) ttl.textContent = '📄 ' + nm;
+    if (bn) bn.textContent = '📄 ' + nm;
+    return;
+  }
+  const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
+  const idx = (list || []).findIndex(p => p && p.id === person.id);
+  if (ttl) ttl.textContent = '👤 ' + person.name + (idx >= 0 ? (' (' + (idx + 1) + '/' + list.length + ')') : '');
+  if (bn) bn.textContent = '👤 ' + person.name;
 }
 function switchPersonSub(id) {
   currentSubId = id || null;
@@ -25633,6 +25653,9 @@ function pdfStackedAcct(pid, acctId) {
   const person = _getStackedPerson(pid); if (!person) return;
   const acct = _getStackedAcct(person, acctId);
   const acctLabel = acctId === '__main__' ? 'حساب اصلی' : (acct.name || 'حساب فرعی');
+  // حسابِ فرعی سندِ خودش را دارد و نامِ حسابِ اصلی داخلش نمی‌آید (حساب‌های جدا)
+  const isSub = acctId !== '__main__';
+  const docTitle = isSub ? ('📄 ' + escFa(acctLabel)) : ('حساب ' + escFa(person.name));
   const rows = _acctRows(person, acct);
   const t = _splitTotals(rows);
   const money = person.mode === 'money';
@@ -25677,7 +25700,7 @@ function pdfStackedAcct(pid, acctId) {
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>حساب ${escFa(person.name)} — ${acctLabel} — پمپ یعقوبی</title>
+<title>${docTitle} — پمپ یعقوبی</title>
 <style>
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -25721,8 +25744,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 </style>
 </head>
 <body>
-<h1>⛽ پمپ یعقوبی — ${escFa(person.name)}</h1>
-<h2>📄 ${acctLabel}</h2>
+<h1>⛽ پمپ یعقوبی — ${docTitle}</h1>
 <div class="meta">تاریخ چاپ: ${printDate} | قرض‌دار</div>
 <div class="split-row">
   <div class="split-box petrol-box">
@@ -25766,7 +25788,7 @@ ${noteHtml}
     ${unitFootCols}
   </tr></tfoot>
 </table>
-<div class="footer">پمپ یعقوبی — ${escFa(person.name)} — ${acctLabel} — این سند به صورت خودکار تولید شده است</div>
+<div class="footer">پمپ یعقوبی — ${isSub ? escFa(acctLabel) : escFa(person.name)} — این سند به صورت خودکار تولید شده است</div>
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
 
@@ -29794,8 +29816,10 @@ function pdfPerson() {
   const remlabel = money ? 'الباقی پول' : 'الباقی تیل';
   const showFtCol = filter === 'all';
   const fuelTitle = filter === 'petrol' ? ' — حساب جداگانه ⛽ پطرول' : (filter === 'diesel' ? ' — حساب جداگانه 🟤 دیزل' : '');
-  // نامِ حسابِ فرعی هم در سربرگ بیاید تا پی‌دی‌افِ کیو‌آرِ هر حساب از حسابِ اصلی جدا باشد
-  const subTitle = (acct !== person && acct.name) ? (' — 📄 ' + escFa(acct.name)) : '';
+  // هر حساب (اصلی یا فرعی) سربرگِ نامِ خودش را دارد — نامِ حسابِ اصلی داخلِ
+  // پی‌دی‌افِ حسابِ فرعی نمی‌آید (خواستهٔ صاحب ریپو: این‌ها حساب‌های جدا هستند)
+  const isSub = (acct !== person && !!acct.name);
+  const acctTitle = isSub ? ('📄 ' + escFa(acct.name)) : ('حساب ' + escFa(person.name));
 
   // PDF دقیقاً همان جدولِ سایت: همان ستون‌ها، همان ترتیب، همان محاسبات و رنگ‌ها
   // (باگ ۵). ستون‌ها: # · تاریخ · نام · نمبر حواله · [نوع تیل] · مقدار تیل · فی لیتر ·
@@ -29867,7 +29891,7 @@ function pdfPerson() {
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>حساب ${escFa(person.name)}${subTitle}${fuelTitle} — پمپ یعقوبی</title>
+<title>${acctTitle}${fuelTitle} — پمپ یعقوبی</title>
 <style>
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -29916,7 +29940,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 </style>
 </head>
 <body>
-<h1>⛽ پمپ یعقوبی — حساب ${escFa(person.name)}${subTitle}${fuelTitle}</h1>
+<h1>⛽ پمپ یعقوبی — ${acctTitle}${fuelTitle}</h1>
 <div class="meta-row">
   <div class="meta">تاریخ چاپ: ${printDate} | نوع: ${type === 'debt' ? 'قرض‌دار' : 'بدون پارچه'}</div>
   <div class="pct-wrap"><div class="pct-box"><span>فیصدی ٪ (از مقدار رسید تیل کم می‌شود)</span><b>${n2fa(pct)}٪</b></div></div>
@@ -32845,13 +32869,24 @@ function renameCurrentPerson() {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === currentPersonId);
   if (!person) return;
+  // اگر داخلِ یک «حساب فرعی» هستیم، نامِ همان حساب عوض می‌شود — نه نامِ حسابِ
+  // اصلی (این‌ها حساب‌های جدا هستند و هر کدام نامِ خودش را دارد)
+  const sub = currentSubId ? (person.subs || []).find(s => s && s.id === currentSubId) : null;
+  if (sub) {
+    const nn = prompt('نام جدید این حساب را وارد کنید:', sub.name || '');
+    if (!nn || !nn.trim()) return;
+    sub.name = nn.trim();
+    save();
+    _renderSubBar(person);
+    renderPersons(currentPersonType);
+    showToast('✅ نام حساب تغییر کرد', '#38a169');
+    return;
+  }
   const newName = prompt('نام جدید شخص را وارد کنید:', person.name);
   if (!newName || !newName.trim()) return;
   person.name = newName.trim();
   save();
-  const list2 = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
-  const idx2 = list2.findIndex(p => p.id === currentPersonId);
-  document.getElementById('personModalTitle').textContent = '👤 ' + person.name + ' (' + (idx2+1) + '/' + list2.length + ')';
+  _pmUpdateNames(person, null);
   renderPersons(currentPersonType);
   showToast('✅ نام تغییر کرد', '#38a169');
 }
@@ -33067,7 +33102,8 @@ function showPersonQR(type, id, subId) {
   if (!person) return;
   const sub = subId ? (person.subs || []).find(s => s && s.id === subId) : null;
   if (!sub) _qrCurrentSub = null;
-  document.getElementById('qr-person-name').textContent = '📲 ' + person.name + (sub ? ' — 📄 ' + (sub.name || 'حساب فرعی') : '');
+  // کیو‌آرِ حسابِ فرعی فقط نامِ خودِ همان حساب را نشان می‌دهد (حساب‌ها جدا هستند)
+  document.getElementById('qr-person-name').textContent = sub ? ('📲 📄 ' + (sub.name || 'حساب')) : ('📲 ' + person.name);
   // اگر قبلاً کیو‌آر صفحهٔ کارمند باز شده بود، دکمه/متن مخصوص شخص برگردد
   const _qpdf = document.getElementById('qr-pdf-btn'); if (_qpdf) _qpdf.style.display = '';
   const _qdesc = document.querySelector('#qrModal .qr-box p');
@@ -33126,6 +33162,11 @@ function _updateROFilterBtns() {
 function _toggleROFtColumn(show) {
   const th = document.getElementById('ro-th-ftype');
   if (th) th.style.display = show ? '' : 'none';
+  // باگِ گزارش‌شده: ردیفِ «جمع» colspan ثابتِ ۵ داشت؛ وقتی ستونِ «نوع تیل» در
+  // حسابِ جداگانهٔ پطرول/دیزل برداشته می‌شد، فوتر یک ستون بیشتر از سرستون‌ها
+  // می‌شد و کلِ جدول جابه‌جا و خراب دیده می‌شد. حالا با ستون‌ها هم‌اندازه است.
+  const lb = document.getElementById('ro-ft-label');
+  if (lb) lb.setAttribute('colspan', show ? '5' : '4');
 }
 // وقتی حسابی از داخلِ چت باز می‌شود، گفتگوی جاری نباید عوض شود (وگرنه مشتری از
 // چتِ خودش با میرزا پرت می‌شد به گفتگوی حسابِ فرستاده‌شده)
@@ -33270,7 +33311,8 @@ function openROViewer(type, id, subId) {
   _roCurSub = sub ? sub.id : null;
   _roViewMode = person.mode || 'fuel';
   _roFilter = 'all';
-  document.getElementById('ro-title').textContent = '👤 ' + person.name + (sub ? ' — 📄 ' + (sub.name || 'حساب فرعی') : '') + ' — فقط‌خواندنی';
+  // حسابِ فرعی فقط با نامِ خودش دیده می‌شود — نامِ حسابِ اصلی نمی‌آید (حساب‌ها جدا هستند)
+  document.getElementById('ro-title').textContent = (sub ? ('📄 ' + (sub.name || 'حساب')) : ('👤 ' + person.name)) + ' — فقط‌خواندنی';
   _renderROViewer();
   document.getElementById('roOverlay').classList.add('open');
   var _rw = document.getElementById('roWaitMsg'); if (_rw) _rw.remove();
@@ -33283,7 +33325,8 @@ function openROViewer(type, id, subId) {
   if (isGuest) {
     try {
       _showChatFabs(true);
-      if (!_roKeepChat) _rbSetMode('person', { peer: _peerKey(type + '-' + id), type: type, id: id, name: person.name });
+      // نامِ گفتگو هم نامِ همان حسابی است که باز شده (حسابِ فرعی نامِ خودش را دارد)
+      if (!_roKeepChat) _rbSetMode('person', { peer: _peerKey(type + '-' + id + (sub ? ('~' + sub.id) : '')), type: type, id: id, sub: sub ? sub.id : null, name: sub ? (sub.name || 'حساب') : person.name });
     } catch (e) {}
   }
 }
@@ -33987,7 +34030,10 @@ function _botNorm(s) { return normFa(String(s || '')).replace(/[؟?!.،,:؛«»(
 function _rbPerson() {
   if (!_rbPersonPeer) return null;
   const list = _rbPersonPeer.type === 'debt' ? DB.debtPersons : (_rbPersonPeer.type === 'noinv' ? DB.noinvPersons : null);
-  return list ? list.find(p => String(p.id) === String(_rbPersonPeer.id)) : null;
+  const p = list ? list.find(x => String(x.id) === String(_rbPersonPeer.id)) : null;
+  // حسابِ فرعی دفترِ کاملاً جدای خودش را دارد — جوابِ ربات هم از همان حساب است
+  if (p && _rbPersonPeer.sub) return (p.subs || []).find(s => s && String(s.id) === String(_rbPersonPeer.sub)) || p;
+  return p;
 }
 // مهمانِ کیو‌آرِ یک شرکت (نه قرض‌دار) — برای جواب‌های حسابِ خودِ شرکت
 function _rbCompany() {
@@ -36742,7 +36788,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.174';
+const APP_VERSION = '2.9.175';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -37514,7 +37560,8 @@ function _staffAskWhich(scored) {
   box.className = 'vx-ask';
   box.innerHTML = '<div class="vx-ask-t">🎤 کدام‌شان بود؟</div>' +
     scored.map(x => {
-      const nm = x.it.p.name + (x.it.sub ? ' — ' + (x.it.sub.name || 'حساب فرعی') : '');
+      // حسابِ فرعی با نامِ خودش نشان داده می‌شود، نه «اصلی — فرعی»
+      const nm = x.it.sub ? (x.it.sub.name || 'حساب فرعی') : x.it.p.name;
       return '<button onclick="_staffPick(\'' + String(x.it.p.id).replace(/'/g, '') + '\',\''
         + (x.it.sub ? String(x.it.sub.id).replace(/'/g, '') : '') + '\')">' + escFa(nm) + '</button>';
     }).join('') +
@@ -37541,7 +37588,7 @@ function _vxAskWhich(list) {
   box.innerHTML = '<div class="vx-ask-t">🎤 مطمئن نیستم — کدام‌شان بود؟</div>' +
     list.map(r => {
       const t = _vxLiveKey(r.key);
-      const nm = t ? (t.p.name + (t.sub ? ' — ' + (t.sub.name || 'حساب فرعی') : '')) : (r.nm || '');
+      const nm = t ? (t.sub ? (t.sub.name || 'حساب فرعی') : t.p.name) : (r.nm || '');
       return `<button onclick="_vxPick('${String(r.key).replace(/'/g, '')}')">${escFa(nm)}</button>`;
     }).join('') +
     '<button class="vx-no" onclick="document.getElementById(\'vxAsk\').remove()">هیچ‌کدام</button>';
