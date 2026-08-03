@@ -36522,7 +36522,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.169';
+const APP_VERSION = '2.9.170';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -37602,6 +37602,15 @@ function _sgClose(){
   if (_sgBox) _sgBox.style.display = 'none';
   _sgInput = null; _sgItems = []; _sgActive = -1;
 }
+// فقط جای کادر را به‌روز می‌کند — بدونِ بازسازیِ innerHTML، وگرنه اسکرولِ خودِ
+// لیست (کشیدنِ داخلِ همین کادر) هر بار به صفر برمی‌گشت (باگِ کاربر)
+function _sgPosition(input){
+  if (!_sgBox) return;
+  const r = input.getBoundingClientRect();
+  _sgBox.style.left = Math.round(r.left) + 'px';
+  _sgBox.style.top = Math.round(r.bottom + 4) + 'px';
+  _sgBox.style.width = Math.round(r.width) + 'px';
+}
 function _sgShow(input){
   const dlId = input.getAttribute('data-suggest');
   const dl = dlId && document.getElementById(dlId);
@@ -37613,10 +37622,7 @@ function _sgShow(input){
   const box = _sgEnsureBox();
   _sgInput = input; _sgItems = filtered; _sgActive = -1;
   box.innerHTML = filtered.map(v => '<div class="suggest-item">' + escFa(v) + '</div>').join('');
-  const r = input.getBoundingClientRect();
-  box.style.left = Math.round(r.left) + 'px';
-  box.style.top = Math.round(r.bottom + 4) + 'px';
-  box.style.width = Math.round(r.width) + 'px';
+  _sgPosition(input);
   box.style.display = '';
 }
 document.addEventListener('focusin', function(e){
@@ -37633,8 +37639,12 @@ document.addEventListener('focusout', function(e){
     setTimeout(function(){ if (_sgInput === el) _sgClose(); }, 150);
   }
 });
-window.addEventListener('resize', function(){ if (_sgInput) _sgShow(_sgInput); });
-window.addEventListener('scroll', function(){ if (_sgInput) _sgShow(_sgInput); }, true);
+window.addEventListener('resize', function(){ if (_sgInput) _sgPosition(_sgInput); });
+window.addEventListener('scroll', function(e){
+  if (!_sgInput) return;
+  if (_sgBox && e.target === _sgBox) return;   // اسکرولِ خودِ لیست نادیده گرفته شود
+  _sgPosition(_sgInput);
+}, true);
 // ناوبریِ صفحه‌کلید داخلِ لیستِ پیشنهاد — با فازِ capture، پیش از هندلرِ عمومیِ
 // جهت‌یابیِ کلیدهای پایین‌تر اجرا می‌شود تا وقتی لیست باز است، بالا/پایین/Enter
 // را خودش بگیرد و به فیلدِ دیگری نپرد.
@@ -37672,6 +37682,16 @@ function _ysEnsureBox(){
   document.body.appendChild(_ysBox);
   return _ysBox;
 }
+// فقط جای کادر را به‌روز می‌کند — بدونِ بازسازیِ innerHTML، وگرنه اسکرولِ خودِ
+// لیست (کشیدنِ داخلِ همین کادر برای دیدنِ ماه/سالِ پایین‌تر) هر بار به صفر
+// برمی‌گشت و انگار اسکرول کار نمی‌کرد (باگِ کاربر)
+function _ysPosition(sel){
+  if (!_ysBox) return;
+  const r = sel.getBoundingClientRect();
+  _ysBox.style.left = Math.round(r.left) + 'px';
+  _ysBox.style.top = Math.round(r.bottom + 4) + 'px';
+  _ysBox.style.width = Math.max(r.width, 140) + 'px';
+}
 function _ysOpen(sel){
   const opts = Array.prototype.slice.call(sel.options);
   if (!opts.length) return;
@@ -37680,10 +37700,7 @@ function _ysOpen(sel){
   box.innerHTML = opts.map(function (o) {
     return '<div class="suggest-item' + (o.selected ? ' active' : '') + '" data-val="' + String(o.value).replace(/"/g, '&quot;') + '">' + escFa(o.textContent) + '</div>';
   }).join('');
-  const r = sel.getBoundingClientRect();
-  box.style.left = Math.round(r.left) + 'px';
-  box.style.top = Math.round(r.bottom + 4) + 'px';
-  box.style.width = Math.max(r.width, 140) + 'px';
+  _ysPosition(sel);
   box.style.display = '';
   const activeEl = box.querySelector('.suggest-item.active');
   if (activeEl && activeEl.scrollIntoView) activeEl.scrollIntoView({ block: 'nearest' });
@@ -37713,8 +37730,12 @@ document.addEventListener('mousedown', function (e) {
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape' && _ysSelect) _ysClose();
 });
-window.addEventListener('resize', function () { if (_ysSelect) _ysOpen(_ysSelect); });
-window.addEventListener('scroll', function () { if (_ysSelect) _ysOpen(_ysSelect); }, true);
+window.addEventListener('resize', function () { if (_ysSelect) _ysPosition(_ysSelect); });
+window.addEventListener('scroll', function (e) {
+  if (!_ysSelect) return;
+  if (_ysBox && e.target === _ysBox) return;   // اسکرولِ خودِ لیست نادیده گرفته شود
+  _ysPosition(_ysSelect);
+}, true);
 
 // ========== EXCEL-LIKE GRID NAVIGATION (ناوبری مکانی بین کادرها) ==========
 function _navFocusables(scope){
