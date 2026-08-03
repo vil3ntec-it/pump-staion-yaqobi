@@ -17123,6 +17123,9 @@ body.gfx-performance .xls-foot td{
       <button class="add-btn" onclick="openAddPerson('debt')">➕ افزودن شخص</button>
     </div>
   </div>
+  <!-- کادرهای قرض‌های کهنه — دو صفحهٔ جداگانه: یکی واحد تیل، یکی واحد پول (خواستهٔ کاربر: از بخش رسید قرض‌داران به این‌جا منتقل شد) -->
+  <button type="button" class="tool-link-card" style="border-color:var(--red);color:var(--red)" onclick="showSection('oldloans')"><span title="⏰ قرض‌های کهنهٔ تیل — بی‌حرکت‌ها اول (واحد تیل)">⏰ قرض‌های کهنه — تیل</span><span class="tlc-go"><i>‹</i></span></button>
+  <button type="button" class="tool-link-card" style="border-color:var(--green);color:var(--green)" onclick="showSection('oldloansmoney')"><span title="💵 قرض‌های کهنهٔ پول — بی‌حرکت‌ها اول (واحد پول)">💵 قرض‌های کهنه — پول</span><span class="tlc-go"><i>‹</i></span></button>
   <div class="persons-grid" id="debt-grid"></div>
 </div>
 
@@ -17171,9 +17174,6 @@ body.gfx-performance .xls-foot td{
     <button class="goto-btn" onclick="showSection('debtsum')">📊 رفتن به قرض‌های دسته‌جمعی</button>
     <span><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> رسید قرض‌داران / چکنه</span>
   </div>
-  <!-- کادرهای قرض‌های کهنه — دو صفحهٔ جداگانه: یکی واحد تیل، یکی واحد پول -->
-  <button type="button" class="tool-link-card" style="border-color:var(--red);color:var(--red)" onclick="showSection('oldloans')"><span title="⏰ قرض‌های کهنهٔ تیل — بی‌حرکت‌ها اول (واحد تیل)">⏰ قرض‌های کهنه — تیل</span><span class="tlc-go"><i>‹</i></span></button>
-  <button type="button" class="tool-link-card" style="border-color:var(--green);color:var(--green)" onclick="showSection('oldloansmoney')"><span title="💵 قرض‌های کهنهٔ پول — بی‌حرکت‌ها اول (واحد پول)">💵 قرض‌های کهنه — پول</span><span class="tlc-go"><i>‹</i></span></button>
   <!-- کادر حساب‌های چکنه — صفحهٔ جداگانه (خواستهٔ کاربر) -->
   <button type="button" class="tool-link-card" style="border-color:var(--purple);color:var(--purple)" onclick="showSection('chakana')"><span>🧾 حساب‌های چکنه</span><span class="tlc-go"><i>‹</i></span></button>
   <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('rasid')"><span title="🕘 تاریخچهٔ رسیدها — با تاریخ و روز هفته">🕘 تاریخچهٔ رسیدها</span><span class="tlc-go"><i>‹</i></span></button>
@@ -17287,7 +17287,7 @@ body.gfx-performance .xls-foot td{
 <!-- ⏰ قرض‌های کهنهٔ تیل (صفحهٔ جداگانه — فقط واحد تیل) -->
 <div class="section" id="sec-oldloans">
   <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-    <button class="goto-btn" onclick="showSection('debtrasid')">🧾 برگشت به رسید قرض‌داران</button>
+    <button class="goto-btn" onclick="showSection('debt')">👥 برگشت به قرض‌داران</button>
     <span>⏰ قرض‌های کهنهٔ تیل</span>
   </div>
   <div class="card" style="border-color:var(--red)">
@@ -17303,7 +17303,7 @@ body.gfx-performance .xls-foot td{
 <!-- 💵 قرض‌های کهنهٔ پول (صفحهٔ جداگانه — فقط واحد پول، بدون تیل) -->
 <div class="section" id="sec-oldloansmoney">
   <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-    <button class="goto-btn" onclick="showSection('debtrasid')">🧾 برگشت به رسید قرض‌داران</button>
+    <button class="goto-btn" onclick="showSection('debt')">👥 برگشت به قرض‌داران</button>
     <span>💵 قرض‌های کهنهٔ پول</span>
   </div>
   <div class="card" style="border-color:var(--green)">
@@ -21354,7 +21354,7 @@ function showSection(id, btn) {
   if (id === 'debtsum' || id === 'debtsummoney') navId = 'debtrasid';
   if (id === 'extraincome') navId = 'profit';
   if (id === 'tanker' || id === 'tankdip') navId = 'storage';
-  if (id === 'oldloans' || id === 'oldloansmoney') navId = 'debtrasid';
+  if (id === 'oldloans' || id === 'oldloansmoney') navId = 'debt';
   if (id === 'chakana') navId = 'debtrasid';
   if (id === 'staffshort') navId = 'attendance';
   if (id === 'ratehist' || id === 'monthreport') navId = 'profit';
@@ -29731,8 +29731,8 @@ function pdfPerson() {
 *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:13.5px;font-weight:500}
 h1{font-size:1.3rem;font-weight:900;color:#c07700;border-bottom:2px solid #c07700;padding-bottom:8px;margin-bottom:6px}
-.meta{font-size:0.75rem;color:#718096;margin-bottom:16px}
-.pct-corner{display:flex;justify-content:flex-end;margin-bottom:10px}
+.meta-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.meta{font-size:0.75rem;color:#718096}
 .pct-box{display:inline-flex;align-items:center;gap:6px;background:#fffdf5;border:1px solid #f0dfa8;border-radius:6px;padding:3px 9px;font-size:0.62rem;color:#718096;white-space:nowrap}
 .pct-box b{font-size:0.74rem;color:#c07700}
 .sum-box{flex:1;min-width:0;background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:6px 4px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;gap:3px}
@@ -29770,9 +29770,11 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 </head>
 <body>
 <h1>⛽ پمپ یعقوبی — حساب ${escFa(person.name)}${fuelTitle}</h1>
-<div class="meta">تاریخ چاپ: ${printDate} | نوع: ${type === 'debt' ? 'قرض‌دار' : 'بدون پارچه'}</div>
+<div class="meta-row">
+  <div class="meta">تاریخ چاپ: ${printDate} | نوع: ${type === 'debt' ? 'قرض‌دار' : 'بدون پارچه'}</div>
+  <div class="pct-box"><span>فیصدی ٪ (از مقدار رسید تیل کم می‌شود)</span><b>${n2fa(pct)}٪</b></div>
+</div>
 ${splitBoxesHtml}
-<div class="pct-corner"><div class="pct-box"><span>فیصدی ٪ (از مقدار رسید تیل کم می‌شود)</span><b>${n2fa(pct)}٪</b></div></div>
 <table>
   <thead><tr>
     <th>#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th>${ftHeadCols}
@@ -36501,7 +36503,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.164';
+const APP_VERSION = '2.9.165';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
