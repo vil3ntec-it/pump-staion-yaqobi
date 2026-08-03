@@ -36788,7 +36788,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.175';
+const APP_VERSION = '2.9.176';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -43131,29 +43131,82 @@ body.light-mode #glassClock{
     lsSet(K_POS, JSON.stringify({ xr: Math.min(1, Math.max(0, x / maxX)), yr: Math.min(1, Math.max(0, y / maxY)) }));
   }
 
+  /* ── اسکرولِ صفحه از روی خودِ ساعت ────────────────────────────────────────
+     خواستهٔ صاحب ریپو: تا حالا کشیدنِ انگشت روی ساعت فقط خودِ ساعت را جابه‌جا
+     می‌کرد و صفحه زیرش تکان نمی‌خورد (چون ساعت touch-action:none دارد). حالا
+     جهتِ حرکت تصمیم می‌گیرد: کشیدنِ «عمودی» صفحهٔ زیر را اسکرول می‌کند (با
+     ادامهٔ حرکت/اینرسی، مثل اسکرولِ معمولی) و کشیدنِ «مورب/افقی» مثل قبل خودِ
+     ساعت را می‌برد. زدنِ ساده، نگه‌داشتن (منو) و کلیک راست دست‌نخورده‌اند. */
+  function _scrollableUnder(x, y){
+    var prev = el.style.pointerEvents;
+    el.style.pointerEvents = 'none';
+    var t = null;
+    try{ t = document.elementFromPoint(x, y); }catch(err){}
+    el.style.pointerEvents = prev || '';
+    var n = t;
+    while(n && n !== document.body && n !== document.documentElement){
+      if(n.scrollHeight > n.clientHeight + 2){
+        var ov = '';
+        try{ ov = getComputedStyle(n).overflowY; }catch(err){}
+        if(ov === 'auto' || ov === 'scroll' || ov === 'overlay') return n;
+      }
+      n = n.parentElement;
+    }
+    return document.scrollingElement || document.documentElement;
+  }
+  function _scrollBy(target, dy){
+    if(!target) return;
+    if(target === document.scrollingElement || target === document.documentElement || target === document.body) window.scrollBy(0, dy);
+    else target.scrollTop += dy;
+  }
   function initDrag(){
     var dragging=false, moved=false, sx=0, sy=0, ox=0, oy=0, lpTimer=null;
+    var mode=null, scEl=null, lastY=0, lastT=0, vel=0, glide=null;
     el.addEventListener('pointerdown', function(e){
       if(e.button === 2) return;                     // کلیک راست = منو، نه کشیدن
-      dragging = true; moved = false;
-      sx = e.clientX; sy = e.clientY;
+      if(glide){ cancelAnimationFrame(glide); glide = null; }
+      dragging = true; moved = false; mode = null; scEl = null; vel = 0;
+      sx = e.clientX; sy = e.clientY; lastY = e.clientY; lastT = Date.now();
       ox = parseFloat(el.style.left) || 0; oy = parseFloat(el.style.top) || 0;
-      el.classList.add('gc-drag');
       try{ el.setPointerCapture(e.pointerId); }catch(err){}
       if(e.pointerType !== 'mouse'){                  // نگه‌داشتنِ انگشت = منو
-        lpTimer = setTimeout(function(){ if(!moved){ dragging=false; el.classList.remove('gc-drag'); openMenu(e.clientX, e.clientY); } }, 550);
+        lpTimer = setTimeout(function(){ if(!moved){ dragging=false; mode=null; el.classList.remove('gc-drag'); openMenu(e.clientX, e.clientY); } }, 550);
       }
     });
     el.addEventListener('pointermove', function(e){
       if(!dragging) return;
       var dx = e.clientX - sx, dy = e.clientY - sy;
-      if(Math.abs(dx) > 4 || Math.abs(dy) > 4){ moved = true; if(lpTimer){ clearTimeout(lpTimer); lpTimer=null; } }
+      if(mode === null){
+        if(Math.abs(dx) < 5 && Math.abs(dy) < 5) return;      // هنوز معلوم نیست
+        moved = true; if(lpTimer){ clearTimeout(lpTimer); lpTimer=null; }
+        // انگشت + حرکتِ عمودیِ آشکار = اسکرولِ صفحه؛ در غیر این صورت = کشیدنِ ساعت
+        if(e.pointerType !== 'mouse' && Math.abs(dy) > Math.abs(dx) * 1.4){
+          mode = 'scroll'; scEl = _scrollableUnder(e.clientX, e.clientY);
+          lastY = e.clientY; lastT = Date.now(); vel = 0;
+        } else { mode = 'drag'; el.classList.add('gc-drag'); }
+      }
+      if(mode === 'scroll'){
+        var step = lastY - e.clientY;                          // بالا کشیدن = پایین رفتن
+        _scrollBy(scEl, step);
+        var t = Date.now(), dt = Math.max(1, t - lastT);
+        vel = step / dt;                                        // پیکسل بر میلی‌ثانیه
+        lastY = e.clientY; lastT = t;
+        e.preventDefault();
+        return;
+      }
       var w = el.offsetWidth, h = el.offsetHeight;
       var x = Math.min(Math.max(4, ox + dx), window.innerWidth  - w - 4);
       var y = Math.min(Math.max(4, oy + dy), window.innerHeight - h - 4);
       el.style.left = x + 'px'; el.style.top = y + 'px';
       e.preventDefault();
     });
+    // ادامهٔ نرمِ اسکرول بعد از رها کردنِ انگشت (مثل اسکرولِ خودِ صفحه)
+    function glideScroll(){
+      if(Math.abs(vel) < 0.02){ glide = null; return; }
+      _scrollBy(scEl, vel * 16);
+      vel *= 0.94;
+      glide = requestAnimationFrame(glideScroll);
+    }
     /* ── زدنِ ساده روی ساعت = زدنِ چیزی که زیرش است ─────────────────────
        باگِ گزارش‌شده: هر جا ساعت روی یک کادر (مثلاً کادرهای فرمِ فاکتور) بیفتد،
        زدنِ آن کادر به خودِ ساعت می‌خورد و «چیزی نوشته نمی‌شود». خودِ ساعت با
@@ -43186,8 +43239,17 @@ body.light-mode #glassClock{
       if(lpTimer){ clearTimeout(lpTimer); lpTimer=null; }
       if(!dragging) return;
       dragging = false; el.classList.remove('gc-drag');
-      if(moved) savePos(parseFloat(el.style.left)||0, parseFloat(el.style.top)||0);
+      if(mode === 'scroll'){
+        // اگر انگشت وسطِ حرکت رها شد، اسکرول کمی ادامه پیدا می‌کند
+        if(Date.now() - lastT > 90) vel = 0;
+        if(glide) cancelAnimationFrame(glide);
+        glide = requestAnimationFrame(glideScroll);
+        mode = null;
+        return;
+      }
+      if(mode === 'drag') savePos(parseFloat(el.style.left)||0, parseFloat(el.style.top)||0);
       else if(e && e.type === 'pointerup') tapThrough(e.clientX, e.clientY);
+      mode = null;
     }
     el.addEventListener('pointerup', end);
     el.addEventListener('pointercancel', end);
