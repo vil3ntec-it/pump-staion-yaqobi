@@ -17834,9 +17834,7 @@ body.gfx-performance .xls-foot td{
       <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('waraq',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('waraq',0.08)">A+</button></span>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <select id="wq-month-filter" onchange="setWaraqMonthFilter(this.value)" title="فیلتر بر اساس ماه" style="padding:8px 10px;border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.85rem;cursor:pointer">
-        <option value="">همهٔ ماه‌ها</option>
-      </select>
+      <div id="wq-month-wrap" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"></div>
       <button class="add-btn" style="border-color:var(--green);color:var(--green)" onclick="openPumpHistory()" title="تاریخچهٔ شروع/ختمِ همهٔ پایه‌ها با تاریخ و روز هفته">🕘 تاریخچهٔ پایه‌ها</button>
       <button class="add-btn" onclick="openWaraqDatePicker()">➕ اضافه کردن</button>
     </div>
@@ -31306,13 +31304,6 @@ function _waraqMonthKey(w) {
   if (!y || !m) return '';
   return y + '/' + String(m).padStart(2, '0');
 }
-function _waraqMonthLabel(key) {
-  const parts = key.split('/');
-  const m = parseInt(parts[1], 10);
-  // سالِ بدونِ جداکنندهٔ هزارگان (۱۴۰۴ نه ۱،۴۰۴)
-  const yr = String(parts[0]).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
-  return (SHAMSI_MONTHS[m - 1] || parts[1]) + ' ' + yr;
-}
 function setWaraqMonthFilter(v) {
   renderWaraqList._month = v || '';
   renderWaraqList._limit = 60;
@@ -31323,14 +31314,16 @@ function renderWaraqList() {
   if (!grid) return;
   if (!DB.waraqEntries) DB.waraqEntries = [];
   grid.innerHTML = '';
-  // پُر کردنِ کشویِ ماه بر اساس ماه‌های موجود (جدیدترین بالا)
-  const selEl = document.getElementById('wq-month-filter');
-  if (selEl) {
+  // پُر کردنِ کشویِ سال+ماه بر اساس ماه‌های موجود (جدیدترین بالا) — مثل بقیهٔ
+  // بخش‌ها (خواستهٔ کاربر: هر جا کادرِ کشویی ماه هست، کادرِ کشویی سال هم کنارش باشد)
+  const wrapEl = document.getElementById('wq-month-wrap');
+  if (wrapEl) {
     const keys = Array.from(new Set((DB.waraqEntries || []).map(_waraqMonthKey).filter(Boolean))).sort().reverse();
     const cur = renderWaraqList._month || '';
-    selEl.innerHTML = '<option value="">همهٔ ماه‌ها</option>' +
-      keys.map(k => '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + _waraqMonthLabel(k) + '</option>').join('');
     if (cur && keys.indexOf(cur) === -1) { renderWaraqList._month = ''; }
+    wrapEl.innerHTML = keys.length ? _ymSelectsHtml('wq-month-filter', keys, renderWaraqList._month || '', 'var(--accent)', 170, 'همهٔ ماه‌ها') : '';
+    const selEl = document.getElementById('wq-month-filter');
+    if (selEl) selEl.onchange = function () { setWaraqMonthFilter(this.value); };
   }
   if (!DB.waraqEntries.length) {
     grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:0.9rem">هیچ ورقی ثبت نشده — از دکمه بالا ورق جدید اضافه کنید</div>';
@@ -36529,7 +36522,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.167';
+const APP_VERSION = '2.9.168';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
