@@ -428,6 +428,9 @@ body.staff-view .qr-overlay{z-index:10020}
 .tbl .editable:focus{outline:2px solid var(--accent);border-radius:4px;background:#ffffff0a}
 .del-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--red);cursor:pointer;font-size:1.05rem;padding:0;line-height:1;transition:all .15s}
 .del-btn:hover{background:var(--red);color:#fff;border-color:var(--red)}
+/* دکمهٔ حذفِ نوشته‌دار (مثلاً «🗑️ حذف» سربرگِ جدول‌های آرشیو): کادرِ ۳۲پیکسلیِ
+   دکمه‌های داخلِ ردیف را نمی‌گیرد تا نوشته از دکمه بیرون نزند و کوچک/شکسته نشود */
+.del-btn.del-btn-txt{width:auto;height:auto;min-height:30px;gap:5px;padding:5px 10px;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;line-height:1.6}
 .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:700}
 .badge.day{background:#dd6b2033;color:var(--day)}.badge.night{background:#553c9a33;color:#b794f4}
 
@@ -1052,9 +1055,10 @@ body.viewer-mode .att-admin{display:none !important}
 .storage-actions .add-row-btn{margin-top:0;flex:1 1 190px;width:auto}
 /* شش هدرِ خلاصهٔ جدول‌های آرشیوِ شرکت — همان شش کادرِ بالای بخش، با دادهٔ خودِ آرشیو */
 .cm-hist-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:7px;padding:9px 12px}
-.cm-hist-sum .cmhs-box{display:flex;flex-direction:column;gap:2px;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:6px 9px;min-width:0}
-.cm-hist-sum .cmhs-box i{font-style:normal;font-size:0.66rem;color:var(--muted);font-weight:700;line-height:1.25}
-.cm-hist-sum .cmhs-box b{font-size:0.85rem;font-weight:900;line-height:1.3;word-break:break-word}
+/* نوشتهٔ داخلِ هر کادر وسط‌چین است — هم برچسب هم عدد (قبلاً به لبه می‌چسبید) */
+.cm-hist-sum .cmhs-box{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2px;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:6px 9px;min-width:0}
+.cm-hist-sum .cmhs-box i{font-style:normal;font-size:0.66rem;color:var(--muted);font-weight:700;line-height:1.25;text-align:center}
+.cm-hist-sum .cmhs-box b{font-size:0.85rem;font-weight:900;line-height:1.3;word-break:break-word;text-align:center}
 .cm-hist-sum .cmhs-box small{font-size:0.68rem;font-weight:700;color:var(--muted)}
 
 .pm-filter-btn{padding:8px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--card);color:var(--muted);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;transition:all .2s}
@@ -19710,6 +19714,9 @@ body.viewer-mode .inv-admin-only{display:none!important}
   </div>
   <div class="ro-body">
     <div style="overflow-x:auto" id="company-ro-table-wrap"></div>
+    <!-- جدول‌های آرشیوشدهٔ همین شرکت — فقط‌خواندنی، با نام ماه و سال و تاریخِ بسته‌شدن
+         (برای کسی که حساب را با اسکنِ کیو‌آر می‌بیند) -->
+    <div id="company-ro-archives"></div>
     <div style="text-align:center;padding:16px;font-size:0.75rem;color:var(--muted)">🔒 این صفحه فقط‌خواندنی است — هیچ تغییری ذخیره نمی‌شود</div>
   </div>
 </div>
@@ -23243,7 +23250,7 @@ function renderDieselLog() {
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">پول کل: <span style="color:var(--accent);font-weight:700">${n2fa(day.money)} افغانی</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فایده کل: <span style="color:var(--green);font-weight:700">${n2fa(day.profit)} افغانی</span></div>
             ${day.note?`<div style="font-size:0.72rem;color:var(--muted);margin-top:3px;font-style:italic">${escFa(day.note)}</div>`:''}
-            <button class="del-btn" style="margin-top:6px" onclick="deleteDieselShift(${day.id})">🗑️ حذف</button>
+            <button class="del-btn del-btn-txt" style="margin-top:6px" onclick="deleteDieselShift(${day.id})">🗑️ حذف</button>
           ` : '<div style="color:var(--muted);font-size:0.78rem;font-style:italic">ثبت نشده</div>'}
         </div>
         <div style="padding:12px 14px">
@@ -23258,7 +23265,7 @@ function renderDieselLog() {
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">پول کل: <span style="color:var(--accent);font-weight:700">${n2fa(night.money)} افغانی</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فایده کل: <span style="color:var(--green);font-weight:700">${n2fa(night.profit)} افغانی</span></div>
             ${night.note?`<div style="font-size:0.72rem;color:var(--muted);margin-top:3px;font-style:italic">${escFa(night.note)}</div>`:''}
-            <button class="del-btn" style="margin-top:6px" onclick="deleteDieselShift(${night.id})">🗑️ حذف</button>
+            <button class="del-btn del-btn-txt" style="margin-top:6px" onclick="deleteDieselShift(${night.id})">🗑️ حذف</button>
           ` : '<div style="color:var(--muted);font-size:0.78rem;font-style:italic">ثبت نشده</div>'}
         </div>
       </div>
@@ -29034,11 +29041,18 @@ function _renderCompanyHistoryPanel(company){
         purchBadge = own === 'petrol' ? (ownBadge + otherBadge) : (otherBadge + ownBadge);
       }
       return `<div style="border:1.5px solid ${ac}66;border-radius:12px;margin-bottom:12px;overflow:hidden">
+        <!-- سربرگ: نام و تاریخِ جدول یک طرف، دکمه‌های PDF و حذف کنارِ هم آن طرف —
+             دکمهٔ حذف هم‌اندازه و هم‌شکلِ دکمهٔ PDF است (قبلاً کادرِ ۳۲پیکسلیِ
+             ردیف‌های جدول را می‌گرفت و نوشتهٔ «حذف» از آن بیرون می‌زد) -->
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:${ac}18;flex-wrap:wrap">
-          <span style="font-weight:800;color:${ac};font-size:0.85rem;white-space:nowrap;flex:1">🗂️ جدول ${n2fa(history.length-hi)} — ${fuelLabel}</span>
-          <span style="font-size:0.72rem;color:var(--muted);white-space:nowrap">${escFa(_archDateLabel(h.createdAt) || (h.createdAt||''))}</span>
-          <button style="white-space:nowrap;border-radius:7px;border:1px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;padding:5px 10px;cursor:pointer" onclick="pdfCompanyHistory('${company.id}','${h.id}')">📄 PDF</button>
-          <button class="del-btn" style="${armed?'background:var(--red);color:#fff;':''}white-space:nowrap" onclick="deleteCompanyTableHistory('${company.id}','${h.id}',this)">${armed?'✔ تأیید حذف؟':'🗑️ حذف'}</button>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;flex:1 1 auto">
+            <span style="font-weight:800;color:${ac};font-size:0.85rem;white-space:nowrap">🗂️ جدول ${n2fa(history.length-hi)} — ${fuelLabel}</span>
+            <span style="font-size:0.72rem;color:var(--muted);white-space:nowrap">${escFa(_archDateLabel(h.createdAt) || (h.createdAt||''))}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex:0 0 auto">
+            <button style="white-space:nowrap;border-radius:7px;border:1px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;padding:5px 10px;cursor:pointer;line-height:1.6" onclick="pdfCompanyHistory('${company.id}','${h.id}')">📄 PDF</button>
+            <button class="del-btn del-btn-txt" style="${armed?'background:var(--red)!important;color:#fff!important;':''}white-space:nowrap" onclick="deleteCompanyTableHistory('${company.id}','${h.id}',this)">${armed?'✔ تأیید حذف؟':'🗑️ حذف'}</button>
+          </div>
         </div>
         <!-- خلاصهٔ همین جدول آرشیو — دقیقاً همان شش هدرِ بالای بخش، ولی با اطلاعاتِ
              خودِ همین آرشیو (خواستهٔ کاربر) -->
@@ -33098,6 +33112,9 @@ function openCompanyROViewer(id) {
   const emptyTxt = _cmpRoFilter === 'petrol' ? '⛽ هیچ ردیف پطرولی ثبت نشده' : (_cmpRoFilter === 'diesel' ? '🟤 هیچ ردیف دیزلی ثبت نشده' : 'ردیفی نیست');
   document.getElementById('company-ro-table-wrap').innerHTML =
     `<table class="ro-tbl"><thead><tr><th>#</th><th>تاریخ</th><th>نام</th>${showFtCol?'<th>نوع تیل</th>':''}<th>تن</th><th>$/تن</th><th>کل $</th><th>نرخ</th><th>کل افغانی</th><th>رسید</th><th>الباقی</th></tr></thead><tbody>${rowsHtml || `<tr><td colspan="${showFtCol?11:10}" style="text-align:center;padding:18px;color:var(--muted)">${emptyTxt}</td></tr>`}</tbody></table>`;
+  // جدول‌های آرشیوشدهٔ همین شرکت هم برای اسکن‌کنندهٔ کیو‌آر دیده می‌شوند
+  const cArc = document.getElementById('company-ro-archives');
+  if (cArc) { try { cArc.innerHTML = _cmpRoArchivesHtml(c); } catch (e) { cArc.innerHTML = ''; } }
   document.getElementById('companyRoOverlay').classList.add('open');
   var _rw2 = document.getElementById('roWaitMsg'); if (_rw2) _rw2.remove();
   // مهمانِ کیو‌آرِ شرکت هم مثل قرض‌دار «چت با میرزا» داشته باشد (قبلاً فقط قرض‌دارها داشتند)
@@ -33107,6 +33124,76 @@ function openCompanyROViewer(id) {
       if (!_roKeepChat) _rbSetMode('person', { peer: _peerKey('company-' + id), type: 'company', id: id, name: c.name });
     } catch (e) {}
   }
+}
+/* جدول‌های آرشیوشدهٔ یک شرکت برای نمای فقط‌خواندنیِ کیو‌آر — همان چیزی که مدیر در
+   مودالِ شرکت می‌بیند، ولی بدون هیچ ورودی/دکمهٔ حذف. سربرگِ هر جدول: نامِ ماه و سال،
+   تاریخِ کاملِ بسته‌شدن و نامِ شرکت. جمع‌ها دقیقاً مثل مودالِ مدیر حساب می‌شوند
+   (خریدهای مخزن در جمع هستند ولی در جدول نشان داده نمی‌شوند). */
+function _cmpRoArchivesHtml(company) {
+  const hist = (company && company.tableHistory) || [];
+  if (!hist.length) return '';
+  const blocks = hist.slice().reverse().map(h => {
+    const rows = h.rows || [];
+    const sumUsdAll = rows.reduce((a, r) => a + cmpTotalUsd(r), 0);
+    const sumAfnAll = rows.reduce((a, r) => a + cmpAfnTotal(r), 0);
+    const rate = sumUsdAll > 0 ? sumAfnAll / sumUsdAll : 0;
+    let tTon = 0, tUsd = 0, tAfn = 0, tPoul = 0, tAlb = 0, tAlbUsd = 0, num = 0;
+    const body = rows.map(r => {
+      const ton = cmpTon(r), tu = cmpTotalUsd(r), ta = cmpAfnTotal(r);
+      const poul = cmpPoulAfn(r, rate), ab = cmpAlbaqi(r, rate);
+      tTon += ton; tUsd += tu; tAfn += ta; tPoul += poul; tAlb += ab;
+      tAlbUsd += cmpAlbaqiUsd(r, rate);
+      if (r.srcPurchaseId) return '';   // خریدِ مخزن — مثل مودالِ مدیر فقط در جمع‌هاست
+      num++;
+      return `<tr>
+        <td style="text-align:center;color:var(--muted)">${n2fa(num)}</td>
+        <td>${escFa(String(r.date || '—'))}</td>
+        <td>${escFa(r.name || '') || '—'}</td>
+        <td style="color:var(--blue)">${n2fa(ton.toFixed(3))} تن</td>
+        <td>${n2fa(parseFloat(r.usd) || 0)} $</td>
+        <td style="color:var(--blue)">${n2fa(tu.toFixed(1))} $</td>
+        <td>${n2fa(parseFloat(r.rate) || 0)}</td>
+        <td style="color:var(--purple)">${n2fa(Math.round(ta))}</td>
+        <td style="color:var(--green)">${n2fa(Math.round(poul))}</td>
+        <td style="color:${ab > 0 ? 'var(--red)' : 'var(--green)'}">${n2fa(Math.round(ab))}</td>
+      </tr>`;
+    }).join('');
+    let mon = '';
+    try { mon = _monthLabel(_monthKey(h.createdAt || '')); } catch (e) {}
+    if (!mon || mon === 'بدون تاریخ') mon = 'بی‌تاریخ';
+    const fuelLbl = h.fuel === 'diesel' ? ' — 🟤 دیزل' : ' — ⛽ پطرول';
+    const dateLbl = _archDateLabel(h.createdAt) || toEnDigits(String(h.createdAt || ''));
+    const sumBox = (l, v, c) => `<div class="ro-sum-box"><div class="l">${l}</div><div class="v" style="color:${c}">${v}</div></div>`;
+    const sums =
+      sumBox('جمله مقدار', n2fa(Math.round(tTon * 1000)) + ' کیلو', 'var(--blue)') +
+      sumBox('جمله کل دالر', n2fa(tUsd.toFixed(1)) + ' $', 'var(--blue)') +
+      sumBox('باقی‌مانده دالر', n2fa(tAlbUsd.toFixed(1)) + ' $', tAlbUsd >= 0 ? 'var(--green)' : 'var(--red)') +
+      sumBox('جمله کل (افغانی)', n2fa(Math.round(tAfn)), 'var(--accent)') +
+      sumBox('رسید', n2fa(Math.round(tPoul)), 'var(--green)') +
+      sumBox('جمله الباقی', n2fa(Math.round(tAlb)) + ' AFN', tAlb > 0 ? 'var(--red)' : 'var(--green)');
+    return `<div style="margin-top:14px;border:1px solid var(--border);border-radius:12px;overflow:hidden">
+      <div style="padding:10px 12px;background:var(--dark);font-weight:900;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <span>📅 ماه ${escFa(mon)}${fuelLbl} — 🛢️ ${escFa(company.name || '')}</span>
+        <span style="color:var(--muted);font-size:0.72rem;font-weight:700">بسته شده: ${escFa(dateLbl)} · 🔒 فقط خواندنی</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;padding:10px 12px;border-bottom:1px solid var(--border)">${sums}</div>
+      <div style="overflow-x:auto"><table class="ro-tbl" style="min-width:760px;width:100%">
+        <thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>تن</th><th>$/تن</th><th>کل $</th><th>نرخ</th><th>کل افغانی</th><th>رسید</th><th>الباقی</th></tr></thead>
+        <tbody>${body || '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:14px">فقط خرید — ردیفی برای نمایش نیست</td></tr>'}</tbody>
+        <tfoot><tr style="background:var(--dark);font-weight:900">
+          <td colspan="3" style="padding:8px 7px">جمله</td>
+          <td style="padding:8px 7px;color:var(--blue)">${n2fa(tTon.toFixed(3))} تن</td>
+          <td style="padding:8px 7px">—</td>
+          <td style="padding:8px 7px;color:var(--blue)">${n2fa(tUsd.toFixed(1))} $</td>
+          <td style="padding:8px 7px">—</td>
+          <td style="padding:8px 7px;color:var(--purple)">${n2fa(Math.round(tAfn))}</td>
+          <td style="padding:8px 7px;color:var(--green)">${n2fa(Math.round(tPoul))}</td>
+          <td style="padding:8px 7px;color:${tAlb > 0 ? 'var(--red)' : 'var(--green)'}">${n2fa(Math.round(tAlb))}</td>
+        </tr></tfoot>
+      </table></div>
+    </div>`;
+  }).join('');
+  return `<div style="margin-top:18px"><div style="font-weight:900;font-size:0.95rem">🗂️ جدول‌های آرشیوشده (ماه‌های قبل)</div>${blocks}</div>`;
 }
 function closeCompanyROViewer() {
   document.getElementById('companyRoOverlay').classList.remove('open');
@@ -36973,7 +37060,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.184';
+const APP_VERSION = '2.9.185';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -37975,6 +38062,24 @@ function adjSecFont(secId, delta) {
   _applySecFont(secId);
   try { localStorage.setItem('secFont_' + secId, scale); } catch(e) {}
 }
+/* برگشتِ یک بخش به اندازهٔ عادی (زوم ۱) — دکمهٔ ↺ کنارِ A− / A+.
+   پیش از این اگر بخشی (صرافی، گاوصندوق، رسید پارچه‌ها و ...) بزرگ می‌ماند، راهی
+   جز چند بار زدنِ A− نبود و کاربر نمی‌دانست اندازهٔ اصلی کجاست. */
+function resetSecFont(secId) {
+  delete _secFontScales[secId];
+  _applySecFont(secId);
+  try { localStorage.removeItem('secFont_' + secId); } catch(e) {}
+}
+// همهٔ بخش‌ها با هم به اندازهٔ عادی برمی‌گردند
+function resetAllSecFonts() {
+  let keys = [];
+  try { keys = Object.keys(localStorage).filter(k => k.indexOf('secFont_') === 0); } catch(e) {}
+  keys.forEach(k => { try { localStorage.removeItem(k); } catch(e) {} });
+  Object.keys(_secFontScales).forEach(id => { delete _secFontScales[id]; });
+  document.querySelectorAll('.section[id^="sec-"]').forEach(sec => {
+    sec.style.zoom = ''; sec.style.removeProperty('--secz'); sec.removeAttribute('data-secfs');
+  });
+}
 // دکمه‌های A− / A+ برای «همهٔ» بخش‌ها — بخش‌هایی که این دکمه‌ها را نداشتند (مثل
 // فاکتورها، دوربین‌ها، گزارش ماه، تنظیمات‌ها و ...) خودکار می‌گیرند، پس دیگر هیچ
 // بخشی بدونِ کنترلِ اندازه نمی‌ماند.
@@ -37989,13 +38094,36 @@ function _ensureSecFontBtns() {
     const sp = document.createElement('span');
     sp.className = 'sec-font-ctrl';
     sp.style.marginInlineStart = '8px';
-    sp.innerHTML = '<button class="sec-font-btn" title="کوچک‌تر">A-</button><button class="sec-font-btn" title="بزرگ‌تر">A+</button>';
+    sp.innerHTML = '<button class="sec-font-btn" title="کوچک‌تر">A-</button><button class="sec-font-btn" title="بزرگ‌تر">A+</button><button class="sec-font-btn sec-font-reset" title="برگشت به اندازهٔ عادی">↺</button>';
     sp.children[0].onclick = () => adjSecFont(id, -0.08);
     sp.children[1].onclick = () => adjSecFont(id, 0.08);
+    sp.children[2].onclick = () => resetSecFont(id);
     ttl.appendChild(sp);
+  });
+  // دکمهٔ ↺ کنارِ A− / A+ِ بخش‌هایی که این دو دکمه را از قبل داخلِ صفحه دارند
+  document.querySelectorAll('.sec-font-ctrl').forEach(sp => {
+    if (sp.querySelector('.sec-font-reset')) return;
+    const b = sp.querySelector('button[onclick*="adjSecFont("]');
+    const m = b && /adjSecFont\(\s*'([^']+)'/.exec(b.getAttribute('onclick') || '');
+    if (!m) return;
+    const r = document.createElement('button');
+    r.className = 'sec-font-btn sec-font-reset';
+    r.title = 'برگشت به اندازهٔ عادی';
+    r.textContent = '↺';
+    r.onclick = () => resetSecFont(m[1]);
+    sp.appendChild(r);
   });
 }
 function loadSecFonts() {
+  // یک‌بار برای همیشه: بخش‌هایی که ناخواسته زوم‌شده مانده بودند (صرافی، گاوصندوق،
+  // رسید پارچه‌ها و ...) به اندازهٔ عادی برمی‌گردند. بعد از این، هر اندازه‌ای که
+  // خودِ کاربر با A+ / A− بدهد مثل قبل ذخیره می‌شود و می‌ماند.
+  try {
+    if (!localStorage.getItem('secFontResetOnce')) {
+      Object.keys(localStorage).filter(k => k.indexOf('secFont_') === 0).forEach(k => localStorage.removeItem(k));
+      localStorage.setItem('secFontResetOnce', '1');
+    }
+  } catch(e) {}
   // هر بخشی که اندازهٔ ذخیره‌شده دارد — بدونِ فهرستِ دستی، پس بخش‌های تازه هم خودکار
   let keys = [];
   try { keys = Object.keys(localStorage).filter(k => k.indexOf('secFont_') === 0); } catch(e) {}
