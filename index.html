@@ -347,6 +347,7 @@ body.viewer-mode .ft-opt{pointer-events:none !important;opacity:.85}
    همهٔ دکمه‌های سربرگ را inline-flex می‌کند و قاعدهٔ عمومی viewer-mode را می‌بَرد */
 body.viewer-mode #personModal .pm-view-ok{display:inline-block !important}
 body.viewer-mode #personModal .modal-head .add-row-btn:not(.pm-view-ok){display:none !important}
+body.viewer-mode .row-add-bar{display:none !important}
 /* کادر «ردیف جدید / افزودن چندتایی» در حالت فقط‌دیدن کلاً پنهان شود (دکمه‌هایش که مخفی شوند فقط یک جعبهٔ خالی می‌ماند) */
 body.viewer-mode #pm-add-row-area{display:none !important}
 /* صفحه کارمند: مودال شخص و کیو‌آر باید روی صفحهٔ کارمند (z-index:10000) باز شوند */
@@ -17557,9 +17558,6 @@ body.gfx-performance .xls-foot td{
         <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('expenses',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('expenses',0.08)">A+</button></span>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <button class="add-btn" onclick="addExpenseRow()">+ ردیف</button>
-        <input type="number" id="exp-bulk-count" min="1" value="5" style="width:52px;padding:6px;background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--txt);font-family:'Vazirmatn',sans-serif;text-align:center">
-        <button class="add-btn" onclick="addExpenseRowsBulkDirect()">++ چندتایی</button>
         <button class="add-btn" style="background:var(--blue);color:#fff" onclick="addExpenseMonth()">📅 ماه جدید</button>
         <button class="add-btn" style="background:var(--green);color:#fff" onclick="pdfExpenses()">📄 PDF</button>
       </div>
@@ -17577,6 +17575,15 @@ body.gfx-performance .xls-foot td{
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-expenses" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('expenses', this.value)"></textarea>
   </div>
+  <!-- کادرهای «ردیف جدید / چندتایی» طبقِ خواستهٔ صاحب ریپو از سربرگ آمدند پایینِ
+       توضیحات، تا سربرگ شلوغ نباشد و دستِ آدم موقعِ کار به آن‌ها نخورد. -->
+  <div class="row-add-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 2px 16px"><button class="add-btn" onclick="addExpenseRow()">+ ردیف</button>
+    <div style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
+      <span style="font-size:0.78rem;color:var(--muted)">تعداد:</span>
+      <input type="number" id="exp-bulk-count" min="1" value="5" style="width:55px;padding:6px;background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--txt);font-family:'Vazirmatn',sans-serif;text-align:center">
+      <button class="add-btn" onclick="addExpenseRowsBulkDirect()">++ چندتایی</button>
+    </div></div>
+
 </div>
 
 <!-- رسید پارچه‌ها -->
@@ -17588,9 +17595,6 @@ body.gfx-performance .xls-foot td{
         <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('rasid',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('rasid',0.08)">A+</button></span>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <button class="add-btn" onclick="addRasidRow()">➕ ردیف</button>
-        <input type="number" id="rasid-bulk" min="1" value="5" title="تعداد ردیف" style="width:52px;padding:6px;background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--txt);font-family:'Vazirmatn',sans-serif;text-align:center">
-        <button class="add-btn" style="background:var(--blue);color:#fff" onclick="addRasidRowsBulk()">➕➕ چندتایی</button>
         <button class="add-btn" style="background:var(--green);color:#fff" onclick="postAllRasid()">📥 ثبت همه در حساب‌ها</button>
       </div>
     </div>
@@ -17613,6 +17617,15 @@ body.gfx-performance .xls-foot td{
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-rasid" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('rasid', this.value)"></textarea>
   </div>
+  <!-- کادرهای «ردیف جدید / چندتایی» طبقِ خواستهٔ صاحب ریپو از سربرگ آمدند پایینِ
+       توضیحات، تا سربرگ شلوغ نباشد و دستِ آدم موقعِ کار به آن‌ها نخورد. -->
+  <div class="row-add-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 2px 16px"><button class="add-btn" onclick="addRasidRow()">➕ ردیف</button>
+    <div style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
+      <span style="font-size:0.78rem;color:var(--muted)">تعداد:</span>
+      <input type="number" id="rasid-bulk" min="1" value="5" title="تعداد ردیف" style="width:55px;padding:6px;background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--txt);font-family:'Vazirmatn',sans-serif;text-align:center">
+      <button class="add-btn" style="background:var(--blue);color:#fff" onclick="addRasidRowsBulk()">➕➕ چندتایی</button>
+    </div></div>
+
 </div>
 
 <!-- PROFIT/LOSS -->
@@ -17806,11 +17819,7 @@ body.gfx-performance .xls-foot td{
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
         <button class="add-btn" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('safe')" title="تاریخچهٔ همهٔ بردگی/ماندگی‌ها با تاریخ و روز هفته">🕘 تاریخچه</button>
-        <button class="add-btn" onclick="addSafeRowDirect()">+ ردیف</button>
-        <input type="number" id="safe-bulk-count" min="1" value="3" style="width:52px;padding:6px;background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--txt);font-family:'Vazirmatn',sans-serif;text-align:center">
-        <button class="add-btn" onclick="addSafeRowsBulkDirect()">++ چندتایی</button>
         <button class="add-btn" style="background:var(--night);color:#fff" onclick="addSafeMonth()">📅 ماه بعد</button>
-        <button class="add-btn" style="background:var(--green);color:#fff;font-weight:800" onclick="submitSafe()">✔ ثبت</button>
         <button class="add-btn" style="background:var(--blue);color:#fff" onclick="printSafe(_safeActiveMonth)">📄 PDF این ماه</button>
       </div>
     </div>
@@ -17856,6 +17865,15 @@ body.gfx-performance .xls-foot td{
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-safe" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('safe', this.value)"></textarea>
   </div>
+  <!-- کادرهای «ردیف جدید / چندتایی» طبقِ خواستهٔ صاحب ریپو از سربرگ آمدند پایینِ
+       توضیحات، تا سربرگ شلوغ نباشد و دستِ آدم موقعِ کار به آن‌ها نخورد. -->
+  <div class="row-add-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 2px 16px"><button class="add-btn" onclick="addSafeRowDirect()">+ ردیف</button>
+    <div style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
+      <span style="font-size:0.78rem;color:var(--muted)">تعداد:</span>
+      <input type="number" id="safe-bulk-count" min="1" value="3" style="width:55px;padding:6px;background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--txt);font-family:'Vazirmatn',sans-serif;text-align:center">
+      <button class="add-btn" onclick="addSafeRowsBulkDirect()">++ چندتایی</button>
+    </div></div>
+
 </div>
 
 <!-- ADD SAFE MODAL -->
@@ -17927,14 +17945,7 @@ body.gfx-performance .xls-foot td{
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
         <button class="add-btn" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('sarrafi')" title="تاریخچهٔ رسیدها و بردگی‌ها با تاریخ و روز هفته">🕘 تاریخچه</button>
-        <button class="add-btn" onclick="addSarrafiRow()">➕ ردیف جدید</button>
-        <div style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
-          <span style="font-size:0.78rem;color:var(--muted)">تعداد:</span>
-          <input type="number" id="sarrafi-bulk-count" value="5" min="1" max="100" style="width:55px;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;text-align:center">
-          <button class="add-btn" style="background:var(--green);color:#fff" onclick="addSarrafiRowsBulk()">➕➕ چندتایی</button>
-        </div>
         <button class="add-btn" style="background:var(--night);color:#fff" onclick="addSarrafiMonth()">📅 ماه بعد</button>
-        <button class="add-btn" style="background:var(--green);color:#fff;font-weight:800" onclick="submitSarrafi()">✔ ثبت</button>
         <button class="add-btn" style="background:var(--blue);color:#fff" onclick="printSarrafi()">📄 PDF</button>
       </div>
     </div>
@@ -17985,6 +17996,15 @@ body.gfx-performance .xls-foot td{
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-sarrafi" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('sarrafi', this.value)"></textarea>
   </div>
+  <!-- کادرهای «ردیف جدید / چندتایی» طبقِ خواستهٔ صاحب ریپو از سربرگ آمدند پایینِ
+       توضیحات، تا سربرگ شلوغ نباشد و دستِ آدم موقعِ کار به آن‌ها نخورد. -->
+  <div class="row-add-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 2px 16px"><button class="add-btn" onclick="addSarrafiRow()">➕ ردیف جدید</button>
+    <div style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
+      <span style="font-size:0.78rem;color:var(--muted)">تعداد:</span>
+      <input type="number" id="sarrafi-bulk-count" value="5" min="1" max="100" style="width:55px;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;text-align:center">
+      <button class="add-btn" style="background:var(--green);color:#fff" onclick="addSarrafiRowsBulk()">➕➕ چندتایی</button>
+    </div></div>
+
 </div>
 </div>
 
@@ -37425,7 +37445,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.198';
+const APP_VERSION = '2.9.199';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
