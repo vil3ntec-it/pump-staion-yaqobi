@@ -83,21 +83,30 @@
 
   <div id="download-cards">
     <!-- اندروید -->
+    <!-- ── لینکِ مستقیم و ساده (خواستهٔ صاحب ریپو) ────────────────────────────
+         قبلاً این دکمه جاوااسکریپت اجرا می‌کرد: اول یک درخواستِ آزمایشی به همان
+         فایل می‌فرستاد و بعد از جواب، دانلود را با یک کلیکِ ساختگی شروع می‌کرد.
+         دو خرابی داشت: (۱) کلیکِ دانلود دیگر «لمسِ خودِ کاربر» حساب نمی‌شد چون
+         بعد از یک رفت‌وبرگشتِ شبکه اجرا می‌شد و کرومِ اندروید چنین دانلودی را
+         نگه می‌دارد؛ (۲) درخواستِ آزمایشی روی همان اتصال، پشتِ دانلودِ اصلی
+         می‌ماند. نتیجه‌اش همان «تا آخر پر می‌شود و همان‌جا گیر می‌کند» بود.
+         حالا خودِ دکمه یک لینکِ واقعیِ هم‌مبدأ است — هیچ جاوااسکریپتی در مسیرِ
+         دانلود نیست و مرورگر مستقیم فایل را می‌گیرد. -->
     <div class="card" id="card-android">
       <h2>📱 اندروید</h2>
       <p>فایل نصب (APK) مستقیماً از همین سایت دانلود می‌شود. بار اول اندروید می‌گوید «نصب از منبع ناشناس» — اجازه بدهید.</p>
-      <button class="btn" type="button" data-dl="android">⬇️ دانلود فایل نصب اندروید</button>
-      <div class="bar" id="bar-android"><i></i></div>
+      <a class="btn" id="dl-android" href="./downloads/PumpYaqobi.apk" download="PumpYaqobi.apk">⬇️ دانلود فایل نصب اندروید</a>
       <div class="meta" id="meta-android"></div>
+      <div class="meta"><a id="alt-android" href="#" rel="noopener">اگر دانلود شروع نشد یا نیمه‌کاره ماند، از این لینک بگیرید ↗</a></div>
     </div>
 
     <!-- ویندوز -->
     <div class="card" id="card-windows">
       <h2>💻 کامپیوتر (ویندوز)</h2>
       <p>فایل نصب مستقیماً از همین سایت دانلود می‌شود. بعد از اجرا، برنامه مثل هر برنامهٔ دیگری در منوی استارت می‌نشیند.</p>
-      <button class="btn" type="button" data-dl="windows">⬇️ دانلود نسخهٔ ویندوز</button>
-      <div class="bar" id="bar-windows"><i></i></div>
+      <a class="btn" id="dl-windows" href="./downloads/PumpYaqobi-Setup.exe" download="PumpYaqobi-Setup.exe">⬇️ دانلود نسخهٔ ویندوز</a>
       <div class="meta" id="meta-windows"></div>
+      <div class="meta"><a id="alt-windows" href="#" rel="noopener">اگر دانلود شروع نشد یا نیمه‌کاره ماند، از این لینک بگیرید ↗</a></div>
     </div>
 
     <!-- آیفون -->
@@ -201,9 +210,20 @@
       alt: 'https://github.com/' + REPO + '/releases/download/desktop-latest/PumpYaqobi-Setup.exe'
     }
   };
-  /* هیچ فایلِ نصبی داخلِ حافظه جمع نمی‌شود — همیشه خودِ مرورگر آن را روی دیسک
-     می‌نویسد (کم‌مصرف، با نوارِ دانلودِ خودش، و قابلِ ادامه‌دادن). */
+  /* هیچ فایلِ نصبی داخلِ حافظه جمع نمی‌شود و هیچ جاوااسکریپتی دانلود را شروع
+     نمی‌کند: خودِ دکمه یک لینکِ مستقیم است و مرورگر فایل را روی دیسک می‌نویسد
+     (کم‌مصرف، با نوارِ دانلودِ خودش، و قابلِ ادامه‌دادن). این‌جا فقط نشانیِ
+     لینکِ پشتیبان و نوشتهٔ حجم/نسخه تنظیم می‌شود. */
   var meta = { android: null, windows: null };
+
+  ['android', 'windows'].forEach(function (k) {
+    var alt = document.getElementById('alt-' + k);
+    if (alt && FILES[k] && FILES[k].alt) {
+      alt.href = FILES[k].alt;
+      alt.setAttribute('download', FILES[k].name);
+      alt.target = '_blank';   // آدرسِ بیرونی: صفتِ download را مرورگر نادیده می‌گیرد
+    }
+  });
 
   function fmtSize(n) {
     if (!n && n !== 0) return '';
@@ -213,13 +233,6 @@
   function say(kind, text, cls) {
     var el = document.getElementById('meta-' + kind);
     if (el) { el.textContent = text; el.className = 'meta' + (cls ? ' ' + cls : ''); }
-  }
-  function progress(kind, pct) {
-    var bar = document.getElementById('bar-' + kind);
-    if (!bar) return;
-    if (pct == null) { bar.style.display = 'none'; return; }
-    bar.style.display = 'block';
-    bar.firstElementChild.style.width = Math.max(2, Math.min(100, pct)) + '%';
   }
 
   /* نسخه و اندازهٔ فایل‌ها را از version.json می‌خوانیم — این فایل با هر انتشار
@@ -239,90 +252,23 @@
     })
     .catch(function () {});
 
-  /* دانلودِ مستقیم با صفتِ download — خودِ مرورگر فایل را روی دیسک می‌نویسد
-     (بدون مصرفِ حافظه) و صفحه هم عوض نمی‌شود. */
-  function anchorDownload(url, name, foreign) {
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    a.rel = 'noopener';
-    // آدرسِ بیرونی: صفتِ download را مرورگر نادیده می‌گیرد و همین صفحه عوض
-    // می‌شد. با تبِ تازه، صفحهٔ دریافت سرِ جایش می‌ماند و فایل خودش می‌آید.
-    if (foreign) a.target = '_blank';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }
-
-  /* آیا فایل واقعاً روی سایت هست؟ فقط یک بایتِ اولش را می‌خواهیم — نه کلِ فایل.
-     برمی‌گرداند: {ok, status, size} */
-  function probe(url) {
-    return fetch(url, { method: 'GET', headers: { Range: 'bytes=0-0' }, cache: 'no-store' })
+  /* ── دانلود: هیچ جاوااسکریپتی در مسیر نیست ────────────────────────────────
+     خودِ دکمه یک <a href="./downloads/…" download> واقعی است، پس زدنِ کاربر
+     مستقیم به مرورگر می‌رسد: بدون درخواستِ آزمایشی، بدون کلیکِ ساختگی و بدون
+     از دست رفتنِ «لمسِ کاربر». تنها کاری که این‌جا می‌کنیم این است که اگر فایل
+     روی سایت نبود، همان دکمه از قبل به انتشارِ گیت‌هاب اشاره کند — این بررسی
+     یک بار و در پس‌زمینه انجام می‌شود، نه موقعِ زدنِ دکمه. */
+  ['android', 'windows'].forEach(function (k) {
+    var f = FILES[k], btn = document.getElementById('dl-' + k);
+    if (!f || !btn || !f.alt) return;
+    fetch(f.url, { method: 'HEAD', cache: 'no-store' })
       .then(function (r) {
-        var size = 0;
-        var cr = r.headers.get('content-range') || '';         // bytes 0-0/12345
-        var m = cr.match(/\/(\d+)\s*$/);
-        if (m) size = parseInt(m[1], 10);
-        else size = parseInt(r.headers.get('content-length') || '0', 10) || 0;
-        // اگر سرور Range را نادیده گرفت، کلِ فایل در راه است و همین‌جا رها می‌شد؛
-        // بدنه را می‌بندیم تا یک اتصالِ نیمه‌باز نماند و دانلودِ اصلی پشتش گیر نکند
-        try { if (r.body && r.body.cancel) r.body.cancel(); } catch (e) {}
-        return { ok: r.ok || r.status === 206, status: r.status, size: size };
+        if (r && r.ok) return;
+        btn.href = f.alt;                 // روی سایت نیست → از انتشارِ گیت‌هاب
+        btn.target = '_blank';
+        say(k, 'این فایل از انتشارِ گیت‌هاب گرفته می‌شود.');
       })
-      .catch(function () { return { ok: false, status: 0, size: 0 }; });
-  }
-
-  function download(kind, btn) {
-    var f = FILES[kind];
-    if (!f) return;
-    btn.disabled = true;
-    say(kind, 'در حال آماده‌سازی دانلود…');
-    progress(kind, 3);
-    var done = function (text, cls) {
-      progress(kind, null);
-      btn.disabled = false;
-      say(kind, text, cls);
-    };
-
-    probe(f.url).then(function (p) {
-      var size = p.size || (meta[kind] && meta[kind].size) || 0;
-
-      // ۱) فایل روی سایت نیست → همان فایل را از انتشارِ گیت‌هاب می‌گیریم.
-      //    کاربر جایی نمی‌رود؛ فقط فایل شروع به آمدن می‌کند.
-      if (!p.ok) {
-        if (f.alt) {
-          anchorDownload(f.alt, f.name, true);
-          done('دانلود ' + f.label + ' شروع شد — اگر شروع نشد، یک بار دیگر بزنید.', 'ok');
-        } else {
-          done('❌ ' + f.label + ' در دسترس نیست (کد ' + (p.status || 'شبکه') + ') — کمی بعد دوباره بزنید.');
-        }
-        return;
-      }
-
-      // ۲) ذخیرهٔ فایل همیشه کارِ خودِ مرورگر است — نه ما.
-      //    قبلاً فایل‌های کوچک‌تر از STREAM_MAX را خودمان تکه‌تکه در حافظه جمع
-      //    می‌کردیم و آخرش با blob: ذخیره می‌کردیم. این کار روی اندروید خراب بود:
-      //      • داخلِ خودِ برنامهٔ نصب‌شده (WebView) دانلودِ blob: اصلاً انجام
-      //        نمی‌شود — نوارِ پیشرفتِ ما تا آخر پر می‌شد و بعد هیچ اتفاقی
-      //        نمی‌افتاد (همان «تا آخرین مگابایت می‌رود و همان‌جا می‌ماند»).
-      //      • کرومِ اندروید هم دانلودِ blob: با پسوندِ apk را مطمئن انجام نمی‌دهد.
-      //    حالا لینکِ مستقیمِ هم‌مبدأ به خودِ مرورگر سپرده می‌شود: بدون مصرفِ
-      //    حافظه، با نوارِ دانلودِ خودِ مرورگر، و قابلِ ادامه‌دادن.
-      anchorDownload(f.url, f.name);
-      if (isNativeShell()) {
-        // نسخه‌های قدیمیِ برنامهٔ نصب‌شده هنوز دانلود را نمی‌گیرند — راهِ مطمئن
-        // را همان‌جا می‌گوییم تا کاربر پشتِ یک نوارِ نیمه‌کاره نماند
-        done('اگر دانلود شروع نشد، این صفحه را در مرورگر (کروم) باز کنید و دوباره بزنید.', 'ok');
-      } else {
-        done('دانلود ' + f.label + ' شروع شد — پیشرفتش را در نوارِ دانلودِ مرورگر می‌بینید.', 'ok');
-      }
-      return;
-
-    });
-  }
-
-  Array.prototype.forEach.call(document.querySelectorAll('[data-dl]'), function (btn) {
-    btn.addEventListener('click', function () { download(btn.getAttribute('data-dl'), btn); });
+      .catch(function () {});
   });
 
   /* ── ۳) دکمهٔ نصبِ خودِ مرورگر (اندروید/کروم/اج) ─────────────────────────── */
