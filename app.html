@@ -201,10 +201,8 @@
       alt: 'https://github.com/' + REPO + '/releases/download/desktop-latest/PumpYaqobi-Setup.exe'
     }
   };
-  /* فایل‌های بزرگ را داخلِ حافظه جمع نمی‌کنیم: نصب‌کنندهٔ ویندوز ~۸۰ مگابایت است و
-     ساختنِ Blob از آن، روی گوشی و تبلت حافظه را تمام می‌کرد و دانلود وسطِ کار
-     می‌مُرد. از این حد به بالا، خودِ مرورگر فایل را مستقیم روی دیسک می‌نویسد. */
-  var STREAM_MAX = 24 * 1024 * 1024;
+  /* هیچ فایلِ نصبی داخلِ حافظه جمع نمی‌شود — همیشه خودِ مرورگر آن را روی دیسک
+     می‌نویسد (کم‌مصرف، با نوارِ دانلودِ خودش، و قابلِ ادامه‌دادن). */
   var meta = { android: null, windows: null };
 
   function fmtSize(n) {
@@ -241,19 +239,6 @@
     })
     .catch(function () {});
 
-  /* ذخیرهٔ یک Blob با نامِ مشخص — بدون باز شدنِ هیچ صفحه/تبِ جدید */
-  function saveBlob(blob, name) {
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    a.rel = 'noopener';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
-  }
-
   /* دانلودِ مستقیم با صفتِ download — خودِ مرورگر فایل را روی دیسک می‌نویسد
      (بدون مصرفِ حافظه) و صفحه هم عوض نمی‌شود. */
   function anchorDownload(url, name, foreign) {
@@ -279,6 +264,9 @@
         var m = cr.match(/\/(\d+)\s*$/);
         if (m) size = parseInt(m[1], 10);
         else size = parseInt(r.headers.get('content-length') || '0', 10) || 0;
+        // اگر سرور Range را نادیده گرفت، کلِ فایل در راه است و همین‌جا رها می‌شد؛
+        // بدنه را می‌بندیم تا یک اتصالِ نیمه‌باز نماند و دانلودِ اصلی پشتش گیر نکند
+        try { if (r.body && r.body.cancel) r.body.cancel(); } catch (e) {}
         return { ok: r.ok || r.status === 206, status: r.status, size: size };
       })
       .catch(function () { return { ok: false, status: 0, size: 0 }; });
@@ -311,42 +299,25 @@
         return;
       }
 
-      // ۲) فایلِ بزرگ → مستقیم به خودِ مرورگر بسپار (بدون پر کردنِ حافظه)
-      if (!size || size > STREAM_MAX || !window.ReadableStream) {
-        anchorDownload(f.url, f.name);
+      // ۲) ذخیرهٔ فایل همیشه کارِ خودِ مرورگر است — نه ما.
+      //    قبلاً فایل‌های کوچک‌تر از STREAM_MAX را خودمان تکه‌تکه در حافظه جمع
+      //    می‌کردیم و آخرش با blob: ذخیره می‌کردیم. این کار روی اندروید خراب بود:
+      //      • داخلِ خودِ برنامهٔ نصب‌شده (WebView) دانلودِ blob: اصلاً انجام
+      //        نمی‌شود — نوارِ پیشرفتِ ما تا آخر پر می‌شد و بعد هیچ اتفاقی
+      //        نمی‌افتاد (همان «تا آخرین مگابایت می‌رود و همان‌جا می‌ماند»).
+      //      • کرومِ اندروید هم دانلودِ blob: با پسوندِ apk را مطمئن انجام نمی‌دهد.
+      //    حالا لینکِ مستقیمِ هم‌مبدأ به خودِ مرورگر سپرده می‌شود: بدون مصرفِ
+      //    حافظه، با نوارِ دانلودِ خودِ مرورگر، و قابلِ ادامه‌دادن.
+      anchorDownload(f.url, f.name);
+      if (isNativeShell()) {
+        // نسخه‌های قدیمیِ برنامهٔ نصب‌شده هنوز دانلود را نمی‌گیرند — راهِ مطمئن
+        // را همان‌جا می‌گوییم تا کاربر پشتِ یک نوارِ نیمه‌کاره نماند
+        done('اگر دانلود شروع نشد، این صفحه را در مرورگر (کروم) باز کنید و دوباره بزنید.', 'ok');
+      } else {
         done('دانلود ' + f.label + ' شروع شد — پیشرفتش را در نوارِ دانلودِ مرورگر می‌بینید.', 'ok');
-        return;
       }
+      return;
 
-      // ۳) فایلِ کوچک → با نوارِ پیشرفتِ خودمان
-      fetch(f.url, { cache: 'no-store' }).then(function (res) {
-        if (!res.ok) throw new Error('http ' + res.status);
-        if (!res.body || !res.body.getReader) return res.blob();
-        var total = parseInt(res.headers.get('content-length') || '0', 10) || size;
-        var reader = res.body.getReader(), chunks = [], got = 0;
-        return (function pump() {
-          return reader.read().then(function (r) {
-            if (r.done) return new Blob(chunks, { type: 'application/octet-stream' });
-            chunks.push(r.value);
-            got += r.value.length;
-            progress(kind, total ? (got / total) * 100 : 50);
-            say(kind, 'در حال دانلود… ' + fmtSize(got) + (total ? ' از ' + fmtSize(total) : ''));
-            return pump();
-          });
-        })();
-      }).then(function (blob) {
-        progress(kind, 100);
-        saveBlob(blob, f.name);
-        done('✅ ' + f.label + ' دانلود شد — فایل را از پوشهٔ Downloads باز و نصب کنید.', 'ok');
-      }).catch(function () {
-        // وسطِ کار نشد (شبکه/حافظه) → همان لینکِ مستقیم
-        try {
-          anchorDownload(f.url, f.name);
-          done('دانلود شروع شد — اگر شروع نشد، اینترنت را بررسی کنید و دوباره بزنید.');
-        } catch (e) {
-          done('❌ دانلود نشد — اینترنت را بررسی کنید و دوباره تلاش کنید.');
-        }
-      });
     });
   }
 
