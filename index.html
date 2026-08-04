@@ -15636,6 +15636,30 @@ table thead th:first-child .col-resize-grip{ display:none; }
   box-sizing:border-box;
 }
 .xls-num, .xls-calc, .pm-albaqi-cell, .pm-bardagi-cell{ text-align:center !important; }
+/* ── کادرهای داخلِ خانه‌های جدول با اندازهٔ ستون هماهنگ شوند ────────────────────
+   کادرهای تایپیِ داخلِ جدول یک min-width ثابت دارند (۶۵ تا ۹۲ پیکسل) تا در چیدمانِ
+   خودکار جای نوشتن داشته باشند. ولی به‌محضی که کاربر خودش لبهٔ ستون را می‌کشد،
+   همین کفِ ثابت دو تا خرابی می‌ساخت: ۱) با جمع‌کردنِ ستون، کادر از خانهٔ خودش پهن‌تر
+   می‌ماند و روی خانهٔ بغلی می‌افتاد؛ ۲) عرضی که کاربر تنظیم می‌کرد واقعاً اعمال
+   نمی‌شد و سرستون با ردیف‌ها ناهماهنگ می‌افتاد. پس فقط روی جدول‌هایی که عرضشان
+   دستیِ کاربر است (data-colw-fixed) این کف برداشته می‌شود؛ بقیهٔ جدول‌ها دقیقاً
+   مثل قبل می‌مانند. */
+.tbl[data-colw-fixed] td input:not([type=radio]):not([type=checkbox]):not([type=range]):not([type=color]):not([type=file]):not([type=submit]):not([type=button]),
+.xls-tbl[data-colw-fixed] td input:not([type=radio]):not([type=checkbox]):not([type=range]):not([type=color]):not([type=file]):not([type=submit]):not([type=button]),
+.tbl[data-colw-fixed] th input:not([type=radio]):not([type=checkbox]):not([type=range]):not([type=color]):not([type=file]):not([type=submit]):not([type=button]),
+.xls-tbl[data-colw-fixed] th input:not([type=radio]):not([type=checkbox]):not([type=range]):not([type=color]):not([type=file]):not([type=submit]):not([type=button]),
+.tbl[data-colw-fixed] td .editable:not([type=radio]):not([type=checkbox]):not([type=range]),
+.xls-tbl[data-colw-fixed] td .editable:not([type=radio]):not([type=checkbox]):not([type=range]),
+.tbl[data-colw-fixed] td select, .tbl[data-colw-fixed] td textarea,
+.xls-tbl[data-colw-fixed] td select, .xls-tbl[data-colw-fixed] td textarea,
+.tbl[data-colw-fixed] td .xls-in, .xls-tbl[data-colw-fixed] td .xls-in{
+  min-width:0 !important;
+  max-width:100% !important;
+  box-sizing:border-box !important;
+}
+/* متنِ بلندِ فقط‌خواندنی هم از خانه بیرون نزند. فقط روی <td> — روی <th> نه، چون
+   دستهٔ کشیدنِ ستون (.col-resize-grip) کمی از لبهٔ سرستون بیرون است و بریده می‌شد */
+.tbl[data-colw-fixed] td, .xls-tbl[data-colw-fixed] td{ overflow:hidden }
 /* کارت‌های شخص/شرکت هم‌قد شوند (ستون‌های grid از قبل stretch هستند) */
 /* padding-bottom اضافه تا شمارهٔ کفِ کارت هیچ‌وقت روی دکمهٔ کیوآر نیفتد (حتی وقتی کارت
    به‌خاطر خطِ «تیلش تمام شده» بلندتر است و دکمه پایین‌تر می‌رود) */
@@ -24735,6 +24759,9 @@ function _applySavedColWidths(table){
     }
     try{ if(getComputedStyle(table).tableLayout !== 'fixed') table.style.tableLayout = 'fixed'; }catch(e){}
     table._colFrozen = true;
+    // نشانه برای CSS: عرضِ ستون‌های این جدول دستِ کاربر است، پس کفِ عرضِ کادرهای
+    // داخلِ خانه‌ها برداشته می‌شود تا کادر از خانه بیرون نزند و با ستون هماهنگ بماند
+    try{ table.setAttribute('data-colw-fixed',''); }catch(e){}
   }catch(e){}
 }
 // بعد از هر کشیدن، بقیهٔ جدول‌هایی که همین کلیدِ عرض را دارند هم فوری هم‌اندازه شوند
@@ -24809,6 +24836,7 @@ function makeTableResizable(table, storeKey){
       if(w > 15 && !getW(i)) setW(i, w);
     });
     try{ if(getComputedStyle(table).tableLayout !== 'fixed') table.style.tableLayout = 'fixed'; }catch(e){}
+    try{ table.setAttribute('data-colw-fixed',''); }catch(e){}
   }
   Array.prototype.forEach.call(ths, function(th, idx){
     // عرضِ ذخیره‌شده بر اساس «نامِ ستون» اعمال می‌شود؛ اگر نبود، برای سازگاری با
@@ -27089,10 +27117,18 @@ function _monthLabelFa(key) {
   }
   return String(key == null ? '' : key);
 }
-// همان برچسب + کلیدِ عددی برای وضوح بیشتر در کشوها
+/* همان برچسب + کلیدِ عددی برای وضوح بیشتر در کشوها.
+   سالْ یک‌بار نوشته می‌شود: قبلاً «قوس 1405 — 1405/09» بود و 1405 دو بار تکرار
+   می‌شد (کنارِ نامِ ماه و داخلِ کلید). حالا «قوس — 1405/09» — سال سرِ جایش هست،
+   فقط تکرارش برداشته شد. کشویِ «سال» هم که کنارِ همین کشو است سال را نشان می‌دهد. */
 function _monthOptionLabel(key) {
-  const lbl = _monthLabelFa(key);
+  const p = String(key == null ? '' : key).split('/');
   const raw = _faNumPlain(key);
+  if (p.length === 2 && /\d/.test(p[0])) {
+    const m = parseInt(p[1]) || 0;
+    return (SHAMSI_MONTHS[m - 1] || p[1]) + ' — ' + raw;
+  }
+  const lbl = _monthLabelFa(key);
   return lbl === raw ? lbl : (lbl + ' — ' + raw);
 }
 
@@ -37060,7 +37096,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.185';
+const APP_VERSION = '2.9.186';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -41593,6 +41629,13 @@ body{ min-height:calc(100vh + 2px); }
      (8px همان فاصلهٔ فعلی است؛ فقط حاشیهٔ امنِ دستگاه به آن اضافه می‌شود) */
   .main{ padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))!important; }
   .copyright-bar{ padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))!important; }
+  /* نوشتهٔ پایینِ صفحه دقیقاً روی کفِ پنجره می‌نشست: با ظاهر/پنهان‌شدنِ نوارِ آدرسِ
+     مرورگر ارتفاعِ پنجره چند ده پیکسل کم‌وزیاد می‌شود و همان لحظه خطِ آخرش بریده و
+     دوباره پیدا می‌شد («با اسکرول پیدا و گم می‌شود»). حالا زیرش جای خالی هست تا
+     همیشه کامل دیده شود، و از سمتِ دکمه‌های شناور (چت/ربات/ماشین‌حساب) هم فاصله
+     می‌گیرد تا رویش نیفتند. */
+  .copyright-bar{ margin-bottom:calc(120px + env(safe-area-inset-bottom,0px))!important;
+                  padding-left:78px!important; }
 
   /* کادرهای شناور (چت/ربات/ماشین‌حساب) هم بالای همان نوار بنشینند */
   #calcFab,#lsCalcBtn{ bottom:calc(18px + env(safe-area-inset-bottom,0px) + var(--kb-offset,0px)); }
