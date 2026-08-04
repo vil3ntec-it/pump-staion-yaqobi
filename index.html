@@ -543,10 +543,14 @@ body.staff-view .qr-overlay{z-index:10020}
 .tbl td input[dir="ltr"],.xls-tbl td input[dir="ltr"]{text-align:center}
 /* حالا که وسط‌چین شده‌اند، کادرهای تنگ نباید دو طرفِ نوشته را ببُرند: فاصلهٔ داخلی
    کمتر و کف‌عرضِ کافی برای تاریخ‌ها (مثل 1405/05/01) */
-.tbl td input,.tbl td .editable,.xls-tbl td input,.xls-tbl td .xls-in{padding-left:3px;padding-right:3px}
-.tbl td input:not([type=number]),.xls-tbl td input:not([type=number]){min-width:92px}
+.tbl td input:not([type=radio]):not([type=checkbox]),.tbl td .editable,.xls-tbl td input:not([type=radio]):not([type=checkbox]),.xls-tbl td .xls-in{padding-left:3px;padding-right:3px}
+/* کف‌عرض فقط برای کادرهای «نوشتنی» است. دکمه‌های گِرد (رادیوی نوع تیل) و تیک‌ها
+   نباید کف‌عرض بگیرند — با آن قاعده، رادیوی 12 پیکسلیِ «نوع تیل» به 86 پیکسل
+   باد می‌کرد؛ هم بدشکل می‌شد و هم چون ناوبریِ کلیدهای چپ/راست/بالا/پایین از
+   روی مرکزِ همین کادرها حساب می‌شود، از ستونی به ستونِ اشتباه می‌پرید. */
+.tbl td input:not([type=number]):not([type=radio]):not([type=checkbox]):not([type=range]):not([type=color]):not([type=file]),.xls-tbl td input:not([type=number]):not([type=radio]):not([type=checkbox]):not([type=range]):not([type=color]):not([type=file]){min-width:92px}
 @media (max-width:600px){
-  .tbl td input:not([type=number]),.xls-tbl td input:not([type=number]){min-width:84px}
+  .tbl td input:not([type=number]):not([type=radio]):not([type=checkbox]):not([type=range]):not([type=color]):not([type=file]),.xls-tbl td input:not([type=number]):not([type=radio]):not([type=checkbox]):not([type=range]):not([type=color]):not([type=file]){min-width:84px}
 }
 /* حذف فلش‌های کم/زیاد عدد از همه کادرها به‌جز شماره پایه (.keep-spin) */
 input[type=number]{-moz-appearance:textfield}
@@ -36948,7 +36952,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.181';
+const APP_VERSION = '2.9.182';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
