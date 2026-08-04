@@ -6,9 +6,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.app.DownloadManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
+import android.webkit.MimeTypeMap;
+import android.webkit.URLUtil;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -80,6 +86,7 @@ public class MainActivity extends Activity {
 
     web.setWebViewClient(new WebViewClient());
     web.addJavascriptInterface(new Bridge(), "PumpAndroid");
+    setupDownloads();
 
     // اجازهٔ مایکروفون برای ضبطِ پیام صوتی و جستجوی صوتی
     web.setWebChromeClient(new WebChromeClient() {
@@ -92,6 +99,82 @@ public class MainActivity extends Activity {
     requestNeededPermissions();
 
     web.loadUrl(pickStartUrl());
+  }
+
+  /**
+   * دانلودِ فایل از داخلِ خودِ برنامه.
+   *
+   * تا حالا WebView هیچ DownloadListener نداشت. نتیجه‌اش این بود که زدنِ دکمهٔ
+   * دانلود (مثلاً فایلِ نصبِ تازه در صفحهٔ «دریافت برنامه») هیچ کاری نمی‌کرد:
+   * نوارِ پیشرفتِ خودِ صفحه تا آخر پر می‌شد و بعد هیچ فایلی ذخیره نمی‌شد —
+   * دقیقاً همان «تا آخرین مگابایت می‌رود و همان‌جا می‌ماند».
+   *
+   * حالا دانلود به DownloadManagerِ خودِ اندروید سپرده می‌شود: فایل در پوشهٔ
+   * Downloads می‌نشیند، نوارِ پیشرفت در سایهٔ اعلان‌ها دیده می‌شود، و با تمام
+   * شدنش می‌شود همان‌جا بازش کرد و نصبش کرد.
+   */
+  private void setupDownloads() {
+    web.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) -> {
+      // blob:/data: را DownloadManager نمی‌فهمد؛ خودِ صفحه دیگر از آن‌ها استفاده
+      // نمی‌کند، ولی اگر نسخهٔ کهنه‌ای از صفحه بالا آمده بود، به‌جای سکوت به
+      // مرورگر می‌سپاریم تا کاربر بی‌جواب نماند.
+      if (url == null || url.startsWith("blob:") || url.startsWith("data:")) {
+        openOutside(url);
+        return;
+      }
+      try {
+        String name = URLUtil.guessFileName(url, contentDisposition, mimeType);
+        DownloadManager.Request req = new DownloadManager.Request(Uri.parse(url));
+        req.setMimeType(resolveMime(mimeType, name));
+        req.addRequestHeader("User-Agent", userAgent);
+        try {
+          String cookie = CookieManager.getInstance().getCookie(url);
+          if (cookie != null) req.addRequestHeader("Cookie", cookie);
+        } catch (Exception ignored) {}
+        req.setTitle(name);
+        req.setDescription("پمپ یعقوبی");
+        req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+        req.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, name);
+        DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+        if (dm == null) { openOutside(url); return; }
+        dm.enqueue(req);
+        toast("دانلود شروع شد — در پوشهٔ Downloads ذخیره می‌شود");
+      } catch (Exception e) {
+        openOutside(url);        // هر مشکلی پیش آمد، دستِ کم مرورگر بگیردش
+      }
+    });
+  }
+
+  /**
+   * نوعِ فایل. برای فایلِ نصب باید دقیقاً نوعِ apk باشد، وگرنه اندروید فایلِ
+   * دانلودشده را «ناشناخته» می‌بیند و با زدنش نصب‌کننده باز نمی‌شود.
+   */
+  private String resolveMime(String mimeType, String name) {
+    String n = (name == null) ? "" : name.toLowerCase();
+    if (n.endsWith(".apk")) return "application/vnd.android.package-archive";
+    if (mimeType != null && !mimeType.isEmpty() && !"application/octet-stream".equals(mimeType)) return mimeType;
+    try {
+      String ext = MimeTypeMap.getFileExtensionFromUrl(n);
+      String guess = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext);
+      if (guess != null && !guess.isEmpty()) return guess;
+    } catch (Exception ignored) {}
+    return "application/octet-stream";
+  }
+
+  /** بازکردنِ یک نشانی با مرورگرِ خودِ گوشی (وقتی خودمان نمی‌توانیم بگیریمش) */
+  private void openOutside(String url) {
+    try {
+      if (url == null) return;
+      startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+    } catch (Exception e) {
+      toast("دانلود نشد — این صفحه را در مرورگر باز کنید");
+    }
+  }
+
+  private void toast(String msg) {
+    try {
+      runOnUiThread(() -> android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_LONG).show());
+    } catch (Exception ignored) {}
   }
 
   /**

@@ -7,6 +7,10 @@
   <!-- «دریافت پیام حتی وقتی برنامه بسته است» همیشه فعال است؛ داخل برنامه هیچ
        گزینه‌ای برای خاموش کردنش نیست و مدیریتش فقط از App Info انجام می‌شود -->
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+  <!-- ذخیرهٔ فایلِ دانلودشده در پوشهٔ Downloads. از اندروید 10 (API 29) به بعد
+       اصلاً لازم نیست؛ فقط برای گوشی‌های قدیمی‌تر (minSdk 23) گرفته می‌شود. -->
+  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+      android:maxSdkVersion="28"/>
   <uses-feature android:name="android.hardware.microphone" android:required="false"/>
 
   <application
