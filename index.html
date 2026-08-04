@@ -19401,6 +19401,9 @@ body.viewer-mode .inv-admin-only{display:none!important}
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
         <button type="button" onclick="newCompanyTable()" style="display:inline-flex;align-items:center;gap:7px;background:var(--dark);border:1.5px solid var(--green);border-radius:999px;padding:8px 16px;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">📋 جدول جدید</button>
         <button type="button" id="cm-del-current-btn" onclick="deleteCurrentCompanyTable(this)" style="display:inline-flex;align-items:center;gap:7px;background:var(--dark);border:1.5px solid var(--red);border-radius:999px;padding:8px 16px;color:var(--red);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">🗑️ حذف این جدول</button>
+        <!-- کادرِ رفتن به حسابِ تیلِ دیگر — کنارِ همین کادرها (خواستهٔ صاحب ریپو):
+             با زدنش، هم حساب و هم جدول‌های آرشیوِ همان تیل می‌آید -->
+        <button type="button" id="cm-fuel-switch" onclick="toggleCompanyFuel()" style="display:inline-flex;align-items:center;gap:7px;background:var(--dark);border:1.5px solid #b7791f;border-radius:999px;padding:8px 16px;color:#b7791f;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">🟤 حساب و جدول دیزل</button>
         <!-- دکمهٔ کوچکِ خریدها — با کلیک یک صفحهٔ جدا باز می‌شود (نه کشویی) -->
         <span id="cm-purchases"></span>
       </div>
@@ -28294,6 +28297,13 @@ function _setCompanyTitle(company, idx, total){
 function _updateCompanyFuelBtn(){
   const btn = document.getElementById('cm-fuel-btn');
   if (!btn) return;
+  const sw = document.getElementById('cm-fuel-switch');
+  if (sw){
+    const toDiesel = currentCompanyFuel !== 'diesel';
+    sw.textContent = toDiesel ? '🟤 حساب و جدول دیزل' : '⛽ حساب و جدول پطرول';
+    sw.style.borderColor = toDiesel ? '#b7791f' : 'var(--green)';
+    sw.style.color = toDiesel ? '#b7791f' : 'var(--green)';
+  }
   if (currentCompanyFuel === 'diesel'){ btn.textContent = '⛽ پطرول'; btn.style.borderColor = 'var(--accent)'; btn.style.color = 'var(--accent)'; }
   else { btn.textContent = '🟤 دیزل'; btn.style.borderColor = '#b7791f'; btn.style.color = '#b7791f'; }
 }
@@ -29113,7 +29123,11 @@ function deleteCurrentCompanyTable(btn){
 function _renderCompanyHistoryPanel(company){
   const wrap = document.getElementById('cm-history-wrap');
   if (!wrap || !company) return;
-  const history = company.tableHistory || [];
+  // فقط آرشیوِ همان تیلی که حسابش باز است — قبلاً جدول‌های دیزل داخلِ حسابِ پطرول
+  // (و برعکس) هم دیده می‌شدند و قاطی می‌شد. برای رفتن به آنِ دیگر، کادرِ
+  // «🟤 حساب و جدول دیزل / ⛽ حساب و جدول پطرول» بالای جدول است.
+  const _cf = currentCompanyFuel === 'diesel' ? 'diesel' : 'petrol';
+  const history = (company.tableHistory || []).filter(h => ((h && h.fuel) === 'diesel' ? 'diesel' : 'petrol') === _cf);
   if (!history.length){ wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
   wrap.style.display = '';
   const COLORS = ['#3182ce','#38a169','#805ad5','#d97706','#e53e3e','#dd6b20'];
@@ -29180,7 +29194,9 @@ function _renderCompanyHistoryPanel(company){
         const own = h.fuel === 'diesel' ? 'diesel' : 'petrol';
         const other = own === 'diesel' ? 'petrol' : 'diesel';
         // جدولِ هم‌زمانِ تیل دیگر (با «جدول جدید» هر دو با هم آرشیو می‌شوند و purchasesBefore یکی است)
-        const sib = history.find(x => x.id !== h.id && (x.fuel || 'petrol') === other && x.purchasesBefore === h.purchasesBefore);
+        // جدولِ هم‌زمانِ تیلِ دیگر را باید در «همهٔ» آرشیوها گشت — نه در فهرستِ
+        // فیلترشدهٔ همین تیل، وگرنه شمارِ «خریدهای تیلِ دیگر» همیشه صفر می‌شد
+        const sib = (company.tableHistory || []).find(x => x.id !== h.id && (x.fuel || 'petrol') === other && x.purchasesBefore === h.purchasesBefore);
         const ownBadge = badge(own, `openCompanyPurchasesHistory('${company.id}','${h.id}')`, countFor(own, h.purchasesAfter || 0, hBefore));
         const otherCount = sib
           ? countFor(other, sib.purchasesAfter || 0, (sib.purchasesBefore != null ? sib.purchasesBefore : Number.MAX_SAFE_INTEGER))
@@ -37258,7 +37274,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.195';
+const APP_VERSION = '2.9.196';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
