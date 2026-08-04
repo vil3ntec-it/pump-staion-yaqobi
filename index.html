@@ -29597,8 +29597,9 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px;text-align
   <div class="sum-box"><div class="l">جمله کل دالر</div><div class="v" style="color:#276749">${n2fa(sumUsd.toFixed(1))} $</div></div>
   <div class="sum-box"><div class="l">جمله (افغانی)</div><div class="v" style="color:#805ad5">${n2fa(Math.round(sumAfn))}</div></div>
   <div class="sum-box"><div class="l">رسید</div><div class="v" style="color:#276749">${n2fa(Math.round(sumPoul))}</div></div>
-  <div class="sum-box" style="border-color:${sumAlb>0?'#fc8181':'#9ae6b4'}"><div class="l">الباقی</div><div class="v" style="color:${sumAlb>0?'#e53e3e':'#276749'}">${n2fa(Math.round(sumAlb))}</div></div>
-  <div class="sum-box" style="border-color:${sumAlbUsd>0?'#fc8181':'#9ae6b4'}"><div class="l">الباقی دالر ($)</div><div class="v" style="color:${sumAlbUsd>0?'#e53e3e':'#276749'}">${n2fa(sumAlbUsd.toFixed(1))} $</div></div>
+  <div class="sum-box"><div class="l">باقی‌مانده دالر ($)</div><div class="v" style="color:${sumAlbUsd>=0?'#276749':'#e53e3e'}">${n2fa(sumAlbUsd.toFixed(1))} $</div></div>
+  <!-- الباقیِ افغانی و دالر با هم در یک کادر (خواستهٔ صاحب ریپو) -->
+  <div class="sum-box" style="border-color:${sumAlb>0?'#fc8181':'#9ae6b4'}"><div class="l">جمله الباقی</div><div class="v" style="color:${sumAlb>0?'#e53e3e':'#276749'}">${n2fa(Math.round(sumAlb))} AFN<small style="display:block;font-size:0.78rem;font-weight:900;color:${sumAlbUsd>=0?'#276749':'#e53e3e'}">${n2fa(sumAlbUsd.toFixed(1))} $</small></div></div>
 </div>
 <table><thead><tr>
   <th>#</th><th>تاریخ</th><th>نام</th>${bothFuel ? '<th>نوع تیل</th>' : ''}<th>خرید به تن</th><th>قیمت تن ($)</th>
@@ -29624,13 +29625,16 @@ function pdfCompanyHistory(companyId, historyId){
   const sumUsd0 = rows.reduce((a,r)=>a+cmpTotalUsd(r), 0);
   const sumAfn0 = rows.reduce((a,r)=>a+cmpAfnTotal(r), 0);
   const rate = sumUsd0 > 0 ? sumAfn0 / sumUsd0 : 0;
-  let tTon=0,tUsd=0,tAfn=0,tPoul=0,tAlb=0;
-  const rowsHtml = rows.filter(r => !r.srcPurchaseId).map((r,i) => {
+  let tTon=0,tUsd=0,tAfn=0,tPoul=0,tAlb=0,tAlbUsd=0;
+  // ردیف‌هایی که از خریدِ مخزن آمده‌اند هم چاپ می‌شوند (با نشانِ 📦) — قبلاً کنار
+  // گذاشته می‌شدند و اگر همهٔ ردیف‌ها خرید بودند، پی‌دی‌اف «ردیفی نیست» و همه صفر
+  // درمی‌آمد، در حالی که جمع‌ها عدد داشتند (باگِ گزارش‌شده: «پی‌دی‌اف هیچی نمی‌آورد»)
+  const rowsHtml = rows.map((r,i) => {
     const ton=cmpTon(r), tu=cmpTotalUsd(r), ta=cmpAfnTotal(r), poul=cmpPoulAfn(r,rate), ab=cmpAlbaqi(r,rate);
-    tTon+=ton; tUsd+=tu; tAfn+=ta; tPoul+=poul; tAlb+=ab;
+    tTon+=ton; tUsd+=tu; tAfn+=ta; tPoul+=poul; tAlb+=ab; tAlbUsd += cmpAlbaqiUsd(r, rate);
     const kgShow = (r.kg!=null && r.kg!=='' && +r.kg!==0) ? r.kg : (r.ton ? Math.round(parseFloat(r.ton)*1000) : '');
     return `<tr>
-      <td style="text-align:center;color:#718096">${i+1}</td>
+      <td style="text-align:center;color:#718096">${i+1}${r.srcPurchaseId ? ' 📦' : ''}</td>
       <td style="font-weight:700;color:#c07700">${r.date||'—'}</td>
       <td style="font-weight:700">${escFa(r.name)||'—'}</td>
       <td style="color:#2b6cb0;font-weight:700">${kgShow!==''?n2fa(kgShow):''}</td>
@@ -29661,11 +29665,13 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px;text-align
 <h1>🗂️ ${escFa(company.name)} — جدول آرشیو‌شده (${fuelLabel})</h1>
 <div class="meta">تاریخ ساخته‌شدنِ جدول: ${escFa(_archDateLabel(h.createdAt) || (h.createdAt||'—'))} | تاریخ چاپ: ${d.sh} | ${d.mi}</div>
 <div class="sum-row">
-  <div class="sum-box"><div class="l">جمله (کیلو)</div><div class="v" style="color:#2b6cb0">${n2fa(Math.round(tTon*1000))}</div></div>
-  <div class="sum-box"><div class="l">جمله کل دالر</div><div class="v" style="color:#276749">${n2fa(tUsd.toFixed(1))} $</div></div>
-  <div class="sum-box"><div class="l">جمله (افغانی)</div><div class="v" style="color:#805ad5">${n2fa(Math.round(tAfn))}</div></div>
+  <div class="sum-box"><div class="l">جمله مقدار</div><div class="v" style="color:#2b6cb0">${n2fa(Math.round(tTon*1000))} کیلو<small style="display:block;font-size:0.62rem;font-weight:700;color:#718096">(${n2fa((Math.round(tTon*100)/100).toString())} تن)</small></div></div>
+  <div class="sum-box"><div class="l">جمله کل دالر</div><div class="v" style="color:#2b6cb0">${n2fa(tUsd.toFixed(1))} $</div></div>
+  <div class="sum-box"><div class="l">باقی‌مانده دالر ($)</div><div class="v" style="color:${tAlbUsd>=0?'#276749':'#e53e3e'}">${n2fa(tAlbUsd.toFixed(1))} $</div></div>
+  <div class="sum-box"><div class="l">جمله کل (افغانی)</div><div class="v" style="color:#805ad5">${n2fa(Math.round(tAfn))}</div></div>
   <div class="sum-box"><div class="l">رسید</div><div class="v" style="color:#276749">${n2fa(Math.round(tPoul))}</div></div>
-  <div class="sum-box" style="border-color:${tAlb>0?'#fc8181':'#9ae6b4'}"><div class="l">الباقی</div><div class="v" style="color:${tAlb>0?'#e53e3e':'#276749'}">${n2fa(Math.round(tAlb))}</div></div>
+  <!-- الباقیِ افغانی و دالر با هم در یک کادر (خواستهٔ صاحب ریپو) -->
+  <div class="sum-box" style="border-color:${tAlb>0?'#fc8181':'#9ae6b4'}"><div class="l">جمله الباقی</div><div class="v" style="color:${tAlb>0?'#e53e3e':'#276749'}">${n2fa(Math.round(tAlb))} AFN<small style="display:block;font-size:0.78rem;font-weight:900;color:${tAlbUsd>=0?'#276749':'#e53e3e'}">${n2fa(tAlbUsd.toFixed(1))} $</small></div></div>
 </div>
 <table><thead><tr>
   <th>#</th><th>تاریخ</th><th>نام</th><th>خرید(کیلو)</th><th>قیمت تن ($)</th>
@@ -29674,7 +29680,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px;text-align
 <tbody>${rowsHtml||'<tr><td colspan="10" style="text-align:center;padding:20px;color:#718096">ردیفی نیست</td></tr>'}</tbody>
 <tfoot><tr><td colspan="3">جمله</td><td>${n2fa(Math.round(tTon*1000))}</td><td></td>
 <td>${n2fa(tUsd.toFixed(1))} $</td><td></td><td>${n2fa(Math.round(tAfn))}</td>
-<td>${n2fa(Math.round(tPoul))}</td><td>${n2fa(Math.round(tAlb))}</td></tr></tfoot></table>
+<td>${n2fa(Math.round(tPoul))}</td><td>${n2fa(Math.round(tAlb))} AFN<div style="font-size:0.66rem;font-weight:700">${n2fa(tAlbUsd.toFixed(1))} $</div></td></tr></tfoot></table>
 <div class="footer">پمپ یعقوبی — ${escFa(company.name)} — جدول آرشیو‌شده</div>
 <script>window.onload=function(){window.print();}<\/script></body></html>`;
   pumpOpenDoc(html);
@@ -37274,7 +37280,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.196';
+const APP_VERSION = '2.9.197';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
