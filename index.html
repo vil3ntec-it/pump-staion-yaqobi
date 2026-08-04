@@ -945,7 +945,14 @@ body.viewer-mode .att-admin{display:none !important}
 .ro-tbl tr:last-child td{border-bottom:none}
 .ro-tbl tr:nth-child(even) td{background:#ffffff05}
 .ro-sum{display:flex;gap:10px;padding:12px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;flex-shrink:0}
-.ro-sum-box{flex:1;min-width:110px;background:var(--card);border-radius:9px;padding:10px;text-align:center}
+/* کادرهای خلاصهٔ نمای فقط‌خواندنی خطِ دور نداشتند و اصلاً «کادر» دیده نمی‌شدند
+   (خواستهٔ کاربر: «خطِ کنارهٔ کادرها کجاست؟») — حالا مثل بقیهٔ کادرهای برنامه
+   خطِ دورِ هم‌رنگِ تم دارند. */
+.ro-sum-box{flex:1;min-width:110px;background:var(--card);border:1.5px solid var(--lg-brd);border-radius:9px;padding:10px;text-align:center}
+/* کادرهای خلاصهٔ جدول‌های آرشیو: با flex ردیفِ آخر تا آخرِ عرض کشیده می‌شود تا
+   کنارِ کادرِ آخر یک خانهٔ خالیِ بزرگ نماند */
+.ro-arc-sums{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border)}
+.ro-arc-sums > .ro-sum-box{flex:1 1 130px;min-width:130px;margin:0}
 .ro-sum-box .l{font-size:0.68rem;color:var(--muted);margin-bottom:3px}
 .ro-sum-box .v{font-size:1rem;font-weight:900}
 /* فیلترِ حساب جداگانهٔ پطرول/دیزل در نمای اسکن — مثل دکمه‌های مودالِ مدیر */
@@ -16563,20 +16570,26 @@ body.gfx-performance .xls-foot td{
 /* نوارِ رنگیِ کنارهٔ کارت — کارت‌ها را از هم جدا و خوانا می‌کند */
 .dash-card::after{content:'';position:absolute;inset-block:0;inset-inline-start:0;width:4px;background:var(--kc);opacity:.85}
 .dash-card:hover{transform:translateY(-4px);box-shadow:0 22px 44px -20px rgba(0,0,0,.85);border-color:var(--kc)}
-.dc-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:clamp(10px,.6vw + 7px,15px)}
-/* عنوانِ همهٔ کارت‌ها یک‌اندازه و یک‌خطی — بدون شلوغی */
-.dc-title{font-size:clamp(.75rem,.13vw + .72rem,.86rem);font-weight:800;color:var(--muted);line-height:1.5;
-  min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dc-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:clamp(8px,.5vw + 5px,12px)}
+/* چیدمانِ کارت (خواستهٔ صاحب ریپو): عدد بالا کنارِ آیکن — همان جای خالی که قبلاً
+   بی‌استفاده بود — و عنوان پایین‌ترِ عدد و وسطِ کارت. عنوان قبلاً بالا کنارِ آیکن
+   می‌نشست و چون جا کم بود با «…» بریده می‌شد (مثلاً «الباقی قرض‌دارا…»)؛ حالا کلِ
+   عرضِ کارت مالِ خودش است و کامل خوانده می‌شود. */
+.dc-title{font-size:clamp(.78rem,.13vw + .75rem,.9rem);font-weight:800;color:var(--muted);line-height:1.55;
+  min-width:0;width:100%;text-align:center;white-space:normal;overflow-wrap:break-word;
+  margin-bottom:clamp(6px,.4vw + 4px,10px)}
 .dc-ic{width:clamp(38px,2.2vw + 30px,48px);height:clamp(38px,2.2vw + 30px,48px);border-radius:14px;flex-shrink:0;
   background:color-mix(in srgb,var(--kc) 18%,transparent);border:1px solid color-mix(in srgb,var(--kc) 32%,transparent);
   display:inline-flex;align-items:center;justify-content:center}
 .dc-ic svg{width:clamp(19px,1vw + 15px,24px);height:clamp(19px,1vw + 15px,24px);stroke:var(--kc);fill:none;stroke-width:1.8}
 .dc-value{font-size:clamp(1.05rem,.62vw + .9rem,1.5rem);font-weight:900;color:var(--kc);
-  line-height:1.3;letter-spacing:-.3px;word-break:break-word}
-/* هر دو خطِ زیرِ عدد یک‌مدل‌اند: یک خط، یک اندازه، بدونِ شکستن */
-.dc-delta,.dc-sub{margin-top:7px;line-height:1.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  line-height:1.3;letter-spacing:-.3px;word-break:break-word;min-width:0;flex:1}
+/* دو خطِ پایینِ کارت: از سمتِ راست شروع می‌شوند و اگر بلند بودند می‌شکنند —
+   قبلاً یک‌خطی و با «…» بریده می‌شدند و نصفِ نوشته دیده نمی‌شد */
+.dc-delta,.dc-sub{margin-top:6px;line-height:1.65;white-space:normal;overflow-wrap:break-word;
+  text-align:start;width:100%;
   font-size:clamp(.63rem,.1vw + .61rem,.73rem);font-weight:800;color:var(--muted)}
-.dc-delta{display:flex;align-items:center;gap:5px;min-height:1.15em}
+.dc-delta{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:5px;min-height:1.15em}
 .dc-delta .up{color:var(--k-green)}
 .dc-delta .down{color:var(--k-red)}
 .dc-sub{font-weight:700;opacity:.88;margin-top:4px;min-height:1.15em}
@@ -16734,7 +16747,13 @@ body.gfx-performance .xls-foot td{
 .dash-foot .df-db.off i{background:var(--k-red)}
 
 /* ── 5) نردبانِ ریسپانسیو ─────────────────────────────────────────────── */
-@media (max-width:1400px){ .dash-cards{grid-template-columns:repeat(3,1fr)} }
+/* کارت‌ها ۵ تا هستند؛ در چیدمانِ سه‌ستونه و دوستونه آخری تنها می‌ماند و کنارش یک
+   جای خالیِ بزرگ می‌افتاد (خواستهٔ کاربر: «آن کادر خالی است و فضا را اشغال کرده»).
+   حالا کارتِ آخر باقیِ ردیف را پر می‌کند و جای خالی نمی‌ماند. */
+@media (max-width:1400px){
+  .dash-cards{grid-template-columns:repeat(3,1fr)}
+  .dash-cards > .dash-card:last-child:nth-child(3n+2){ grid-column:span 2 }
+}
 @media (max-width:1180px){
   .dash-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
   .dash-row > .k-wide{grid-column:1 / -1;order:-1}
@@ -16744,6 +16763,7 @@ body.gfx-performance .xls-foot td{
   .dh-right,.dh-left{justify-content:space-between}
   .dash-search-wrap{flex:1;min-width:0}
   .dash-cards{grid-template-columns:repeat(2,1fr)}
+  .dash-cards > .dash-card:last-child:nth-child(odd){ grid-column:1 / -1 }
   .dash-row{grid-template-columns:1fr}
   .dash-row > .k-wide{order:0}
 }
@@ -16788,27 +16808,27 @@ body.gfx-performance .xls-foot td{
   <!-- ── کارت‌های آماری ── -->
   <div class="dash-cards">
     <div class="dash-card" style="--kc:var(--k-red)" title="دیدن هشدارها" onclick="dashBellClick()">
-      <div class="dc-top"><div class="dc-title">هشدارها</div><span class="dc-ic"><svg viewBox="0 0 24 24"><path d="M12 3.5 2.6 20h18.8L12 3.5Z"/><path d="M12 10v4"/><path d="M12 17.2v.1"/></svg></span></div>
-      <div class="dc-value" id="dcv-alerts">0 مورد</div><div class="dc-delta" id="dcd-alerts">نیاز به بررسی</div><div class="dc-sub" id="dcs-alerts"></div></div>
+      <div class="dc-top"><div class="dc-value" id="dcv-alerts">0 مورد</div><span class="dc-ic"><svg viewBox="0 0 24 24"><path d="M12 3.5 2.6 20h18.8L12 3.5Z"/><path d="M12 10v4"/><path d="M12 17.2v.1"/></svg></span></div>
+      <div class="dc-title">هشدارها</div><div class="dc-delta" id="dcd-alerts">نیاز به بررسی</div><div class="dc-sub" id="dcs-alerts"></div></div>
 
     <div class="dash-card" style="--kc:var(--k-green)" title="رفتن به پارچه‌ها" onclick="showSection('shifts')">
-      <div class="dc-top"><div class="dc-title" id="dct-sales">فروش تیل امروز</div><span class="dc-ic"><svg><use href="#ic-shifts"/></svg></span></div>
-      <div class="dc-value" id="dcv-sales">0</div><div class="dc-delta" id="dcd-sales"></div><div class="dc-sub" id="dcs-sales"></div></div>
+      <div class="dc-top"><div class="dc-value" id="dcv-sales">0</div><span class="dc-ic"><svg><use href="#ic-shifts"/></svg></span></div>
+      <div class="dc-title" id="dct-sales">فروش تیل امروز</div><div class="dc-delta" id="dcd-sales"></div><div class="dc-sub" id="dcs-sales"></div></div>
 
     <!-- خواستهٔ صاحب ریپو: کارتِ «مبلغ فروش امروز» از داشبورد برداشته شد
          (خودِ محاسبه‌ها و بخشِ مفاد/ضرر دست‌نخورده‌اند) -->
 
     <div class="dash-card" style="--kc:var(--k-blue)" title="رفتن به قرض‌داران" onclick="showSection('debt')">
-      <div class="dc-top"><div class="dc-title">الباقی قرض‌داران</div><span class="dc-ic"><svg><use href="#ic-debt"/></svg></span></div>
-      <div class="dc-value" id="dcv-debt">0</div><div class="dc-delta" id="dcd-debt"></div><div class="dc-sub" id="dcs-debt"></div></div>
+      <div class="dc-top"><div class="dc-value" id="dcv-debt">0</div><span class="dc-ic"><svg><use href="#ic-debt"/></svg></span></div>
+      <div class="dc-title">الباقی قرض‌داران</div><div class="dc-delta" id="dcd-debt"></div><div class="dc-sub" id="dcs-debt"></div></div>
 
     <div class="dash-card" style="--kc:var(--k-purple)" title="رفتن به مصارف" onclick="showSection('expenses')">
-      <div class="dc-top"><div class="dc-title" id="dct-exp">مصارف امروز</div><span class="dc-ic"><svg><use href="#ic-expenses"/></svg></span></div>
-      <div class="dc-value" id="dcv-exp">0</div><div class="dc-delta" id="dcd-exp"></div><div class="dc-sub" id="dcs-exp"></div></div>
+      <div class="dc-top"><div class="dc-value" id="dcv-exp">0</div><span class="dc-ic"><svg><use href="#ic-expenses"/></svg></span></div>
+      <div class="dc-title" id="dct-exp">مصارف امروز</div><div class="dc-delta" id="dcd-exp"></div><div class="dc-sub" id="dcs-exp"></div></div>
 
     <div class="dash-card" style="--kc:var(--k-teal)" title="رفتن به گاوصندوق" onclick="showSection('safe')">
-      <div class="dc-top"><div class="dc-title">موجودی گاوصندوق</div><span class="dc-ic"><svg><use href="#ic-safe"/></svg></span></div>
-      <div class="dc-value" id="dcv-safe">0</div><div class="dc-delta" id="dcd-safe"></div><div class="dc-sub" id="dcs-safe"></div></div>
+      <div class="dc-top"><div class="dc-value" id="dcv-safe">0</div><span class="dc-ic"><svg><use href="#ic-safe"/></svg></span></div>
+      <div class="dc-title">موجودی گاوصندوق</div><div class="dc-delta" id="dcd-safe"></div><div class="dc-sub" id="dcs-safe"></div></div>
   </div>
 
   <!-- ── ردیف دوم: وضعیت سوخت‌ها | روند فروش | موجودی مخازن ── -->
@@ -33108,6 +33128,14 @@ function _updateCmpROFilterBtns() {
     if (el) el.classList.toggle('active', _cmpRoFilter === k);
   });
 }
+// همان سه کادرِ «همه / حساب جداگانه پطرول / حساب جداگانه دیزل»، این‌بار برای
+// جدول‌های آرشیوشده (خواستهٔ کاربر). فیلترِ خودش را دارد تا جدولِ زندهٔ بالا و
+// آرشیوِ پایین هر کدام مستقل دیده شوند.
+let _cmpRoArcFilter = 'all';
+function setCompanyROArcFilter(f) {
+  _cmpRoArcFilter = f;
+  if (_companyRoId) openCompanyROViewer(_companyRoId);
+}
 function openCompanyROViewer(id) {
   const c = (DB.tilCompanies || []).find(x => x.id === id);
   if (!c) { showToast('شرکت یافت نشد', '#e53e3e'); return; }
@@ -33168,7 +33196,9 @@ function openCompanyROViewer(id) {
 function _cmpRoArchivesHtml(company) {
   const hist = (company && company.tableHistory) || [];
   if (!hist.length) return '';
-  const blocks = hist.slice().reverse().map(h => {
+  const shown = hist.filter(h => _cmpRoArcFilter === 'all'
+    || (_cmpRoArcFilter === 'diesel' ? (h.fuel === 'diesel') : (h.fuel !== 'diesel')));
+  const blocks = shown.slice().reverse().map(h => {
     const rows = h.rows || [];
     const sumUsdAll = rows.reduce((a, r) => a + cmpTotalUsd(r), 0);
     const sumAfnAll = rows.reduce((a, r) => a + cmpAfnTotal(r), 0);
@@ -33212,7 +33242,7 @@ function _cmpRoArchivesHtml(company) {
         <span>📅 ماه ${escFa(mon)}${fuelLbl} — 🛢️ ${escFa(company.name || '')}</span>
         <span style="color:var(--muted);font-size:0.72rem;font-weight:700">بسته شده: ${escFa(dateLbl)} · 🔒 فقط خواندنی</span>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;padding:10px 12px;border-bottom:1px solid var(--border)">${sums}</div>
+      <div class="ro-arc-sums">${sums}</div>
       <div style="overflow-x:auto"><table class="ro-tbl" style="min-width:760px;width:100%">
         <thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>تن</th><th>$/تن</th><th>کل $</th><th>نرخ</th><th>کل افغانی</th><th>رسید</th><th>الباقی</th></tr></thead>
         <tbody>${body || '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:14px">فقط خرید — ردیفی برای نمایش نیست</td></tr>'}</tbody>
@@ -33229,7 +33259,15 @@ function _cmpRoArchivesHtml(company) {
       </table></div>
     </div>`;
   }).join('');
-  return `<div style="margin-top:18px"><div style="font-weight:900;font-size:0.95rem">🗂️ جدول‌های آرشیوشده (ماه‌های قبل)</div>${blocks}</div>`;
+  const fBtn = (k, lbl, cls) => `<button type="button" class="pm-filter-btn ${cls}${_cmpRoArcFilter === k ? ' active' : ''}" onclick="setCompanyROArcFilter('${k}')">${lbl}</button>`;
+  const bar = `<div class="ro-filter-bar" style="padding:10px 0 4px">
+      ${fBtn('all', '📋 همه', '')}${fBtn('petrol', '⛽ حساب جداگانه پطرول', 'petrol')}${fBtn('diesel', '🟤 حساب جداگانه دیزل', 'diesel')}
+    </div>`;
+  const emptyTxt = _cmpRoArcFilter === 'petrol' ? '⛽ جدول آرشیوِ پطرول ندارد'
+    : (_cmpRoArcFilter === 'diesel' ? '🟤 جدول آرشیوِ دیزل ندارد' : '');
+  return `<div style="margin-top:18px"><div style="font-weight:900;font-size:0.95rem">🗂️ جدول‌های آرشیوشده (ماه‌های قبل)</div>${bar}${
+    blocks || `<div style="text-align:center;color:var(--muted);padding:18px;border:1px solid var(--border);border-radius:12px">${emptyTxt}</div>`
+  }</div>`;
 }
 function closeCompanyROViewer() {
   document.getElementById('companyRoOverlay').classList.remove('open');
@@ -37096,7 +37134,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.186';
+const APP_VERSION = '2.9.187';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
