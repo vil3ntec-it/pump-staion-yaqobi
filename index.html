@@ -13246,6 +13246,9 @@ body.is-scrolling .nav-btn{ pointer-events:none!important; }
 /* ---------- 15. SCROLL-REVEAL + ENTRANCE ---------- */
 .reveal-fx{opacity:0;transform:translateY(20px);transition:opacity .7s cubic-bezier(.2,.8,.2,1),transform .7s cubic-bezier(.2,.8,.2,1)}
 .reveal-fx.is-in{opacity:1;transform:none}
+/* بازکردنِ یک بخش نباید جلوهٔ ورودی را دوباره پخش کند — کارت‌ها همان لحظه و بدون
+   محو/لغزش سرِ جای خودشان باشند (وگرنه موقعِ ساخته‌شدنِ جدول‌ها «پرپرک» دیده می‌شود) */
+.reveal-fx.no-fx{transition:none!important;opacity:1!important;transform:none!important}
 .section.visible>.card,.section.visible>.shifts-grid>.shift-card,.section.visible>.settings-card{animation:fxRise .6s cubic-bezier(.2,.8,.2,1) both}
 .section.visible>.shifts-grid>.shift-card:nth-child(2){animation-delay:.08s}
 @keyframes fxRise{from{opacity:0;transform:translateY(16px) scale(.99)}to{opacity:1;transform:none}}
@@ -13896,9 +13899,15 @@ html, body {
     min-width: 44px !important;
   }
   /* کادرهای متنی (تاریخ/نام) روی گوشی هم باید کاملِ نوشته را نشان بدهند — با
-     وسط‌چین‌شدنِ نوشته‌ها، کف‌عرضِ 44px دو طرفِ تاریخ را می‌بُرید */
-  .tbl td input:not([type=number]), .xls-tbl td input:not([type=number]),
+     وسط‌چین‌شدنِ نوشته‌ها، کف‌عرضِ 44px دو طرفِ تاریخ را می‌بُرید.
+     دکمهٔ گِردِ رادیو و تیک از این کف‌عرض بیرون‌اند: با آن قاعده، رادیوی ۱۲پیکسلیِ
+     «نوع تیل» روی گوشی ۸۴ پیکسل می‌شد، کادرِ «⛽ پطرول» را به ۱۶۰ پیکسل می‌رساند و
+     از ستون بیرون می‌زد و روی ستونِ بغلی می‌افتاد — همان باگی که صاحب ریپو دید. */
+  .tbl td input:not([type=number]):not([type=radio]):not([type=checkbox]):not([type=range]):not([type=color]):not([type=file]),
+  .xls-tbl td input:not([type=number]):not([type=radio]):not([type=checkbox]):not([type=range]):not([type=color]):not([type=file]),
   .tbl td .editable:not([type=number]){ min-width: 84px !important; }
+  /* دکمهٔ رادیو دقیقاً به اندازهٔ خودش — نه یک پیکسل بیشتر */
+  .ft-opt input[type=radio]{ min-width:0 !important; width:15px !important; height:15px !important; flex:0 0 auto !important; }
 
   /* ── فیلتر بار داخل مودال ── */
   .pm-filter-bar {
@@ -15545,6 +15554,33 @@ body.gfx-ultra.light-mode .daynight-toggle .dn-thumb{ animation:dnThumbGlowUltra
   body.gfx-ultra .daynight-toggle .dn-thumb{ animation:dnThumbGlowUltra 2.6s ease-in-out infinite !important; }
   body.gfx-ultra.light-mode .daynight-toggle .dn-thumb{ animation:dnThumbGlowUltraLight 2.6s ease-in-out infinite !important; }
 }
+
+/* ── ULTRA روی گوشی: همان ظاهر، بدونِ «پرپرک» ────────────────────────────────
+   گزارشِ صاحب ریپو: «تو کیفیت الترا هرچی باز می‌کنم اول صد مدل پرپرک می‌شود بعد
+   جدول‌ها درست می‌شوند». دو تا از جلوه‌های ورودی روی گوشی گران‌اند و همان لرزش را
+   می‌سازند: (۱) انیمیشنِ blur روی خودِ مودال — مرورگر باید کلِ مودالِ تمام‌صفحه را
+   چند فریم تار و دوباره واضح بکشد، (۲) انیمیشنِ جداگانه برای «هر ردیفِ» جدول.
+   این‌جا فقط روی صفحه‌های لمسی/کوچک، ورودی مودال به یک محوشدنِ سبک تبدیل می‌شود و
+   انیمیشنِ ردیف‌ها برداشته می‌شود. روی کامپیوتر همه‌چیز دقیقاً مثل قبل است. */
+@media (max-width:900px), (hover:none){
+  @keyframes gfxUltraModalInLite{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
+  body.gfx-ultra .modal-overlay.open .modal,
+  body.gfx-ultra .modal-overlay.open .sm-modal{
+    animation:gfxUltraModalInLite .22s ease-out both !important; filter:none !important;
+  }
+  body.gfx-standard .modal-overlay.open #wq-pump-body tr,
+  body.gfx-standard .modal-overlay.open #wq-trans-body-left tr,
+  body.gfx-standard .modal-overlay.open #wq-trans-body-right tr,
+  body.gfx-ultra .modal-overlay.open #wq-pump-body tr,
+  body.gfx-ultra .modal-overlay.open #wq-trans-body-left tr,
+  body.gfx-ultra .modal-overlay.open #wq-trans-body-right tr{ animation:none !important; }
+  /* تارکردنِ پس‌زمینهٔ کلِ صفحه پشتِ هر مودال، روی گوشی هر بار یک بارِ رسمِ سنگین
+     است؛ رنگِ تیره‌تر همان حس را بدون آن لرزش می‌دهد */
+  body.gfx-ultra .modal-overlay{
+    -webkit-backdrop-filter:none !important; backdrop-filter:none !important;
+    background:rgba(3,4,8,.86) !important;
+  }
+}
 </style>
 
 <style id="atmo-premium-bg">
@@ -16578,7 +16614,11 @@ body.gfx-performance .xls-foot td{
 .ds-ic{width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:1.8;flex-shrink:0}
 
 /* ── 2) کارت‌های آماری ─────────────────────────────────────────────────── */
-.dash-cards{display:grid;grid-template-columns:repeat(6,1fr);gap:var(--k-gap);margin-bottom:var(--k-gap)}
+/* کارت‌ها ۵ تا هستند: روی کامپیوترِ بزرگ ستون‌ها هم ۵ تا باشند، وگرنه با ۶ ستون
+   یک خانهٔ خالی ته ردیف می‌ماند (خواستهٔ صاحب ریپو). قاعدهٔ دوم بیمهٔ آینده است:
+   اگر روزی کارتی کم/زیاد شد، کارتِ آخر باقیِ ردیف را پر می‌کند. */
+.dash-cards{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--k-gap);margin-bottom:var(--k-gap)}
+.dash-cards > .dash-card:last-child:nth-child(5n+4){ grid-column:span 2 }
 .dash-card{
   position:relative;overflow:hidden;display:flex;flex-direction:column;
   background:linear-gradient(168deg, color-mix(in srgb,var(--kc) 7%, var(--card)), var(--card) 62%);
@@ -37608,7 +37648,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.200';
+const APP_VERSION = '2.9.201';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -40874,11 +40914,16 @@ document.addEventListener('click', function(e) {
     }, {root:null, rootMargin:'0px 0px -8% 0px', threshold:0.08});
     nodes.forEach(function(n){ io.observe(n); });
 
-    /* when a section is switched on, reveal its tagged descendants at once */
+    /* When a section is switched on, its cards appear AT ONCE — instantly, with
+       no fade/slide. Before this, opening any section replayed the entrance
+       transition on every card while the tables were still rendering, which the
+       owner saw as "everything flickers first, then settles". The scroll-reveal
+       below still runs for the first painted section. */
+    var revealNow = function(n){ n.classList.add('no-fx'); n.classList.add('is-in'); };
     [].slice.call(document.querySelectorAll('.main .section')).forEach(function(sec){
       new MutationObserver(function(){
         if(sec.classList.contains('visible')){
-          [].slice.call(sec.querySelectorAll('.reveal-fx')).forEach(reveal);
+          [].slice.call(sec.querySelectorAll('.reveal-fx')).forEach(revealNow);
         }
       }).observe(sec, {attributes:true, attributeFilter:['class']});
     });
@@ -42211,6 +42256,12 @@ body{ min-height:calc(100vh + 2px); }
      می‌گیرد تا رویش نیفتند. */
   .copyright-bar{ margin-bottom:calc(120px + env(safe-area-inset-bottom,0px))!important;
                   padding-left:78px!important; }
+  /* …و همان درمانِ کارت‌های مخزن/سربرگ برای خودِ این نوار: یک لایهٔ پایدارِ
+     کامپوزیتور. روی وب‌ویوهای اندروید، آخرین عنصرِ صفحه بعد از اسکرول نیمه‌رسم
+     می‌ماند («اسم و شماره بعد از اسکرول یک تکه‌اش دیده می‌شود») — با لایهٔ خودش
+     دیگر با تغییرِ ارتفاعِ نوارِ آدرس دوباره‌رسم نمی‌شود. */
+  .copyright-bar{ position:relative; z-index:1; transform:translateZ(0);
+                  backface-visibility:hidden; -webkit-backface-visibility:hidden; }
 
   /* کادرهای شناور (چت/ربات/ماشین‌حساب) هم بالای همان نوار بنشینند */
   #calcFab,#lsCalcBtn{ bottom:calc(18px + env(safe-area-inset-bottom,0px) + var(--kb-offset,0px)); }
