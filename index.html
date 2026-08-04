@@ -15678,9 +15678,10 @@ table thead th:first-child .col-resize-grip{ display:none; }
 .persons-grid .person-card{ height:100% !important; padding-bottom:30px !important; }
 
 /* ── کارتِ «شرکت ها تیل» ───────────────────────────────────────────────────
-   کادرِ «دالر» و کادرِ «الباقی» و ردیفِ «کیوآر/PDF» هم‌عرض، هم‌قد و هم‌ترازند.
-   خطِ دورشان طبقِ خواستهٔ صاحب ریپو برداشته شد — در هیچ تم و برای هیچ‌کس دیده
-   نمی‌شود؛ فقط چیدمان و اندازهٔ یکسانشان سرِ جایش مانده. */
+   کادرِ «دالر» و کادرِ «الباقی» هم‌عرض، هم‌قد و هم‌ترازند و خطِ دور ندارند
+   (خواستهٔ صاحب ریپو). ولی دکمه‌های «کیوآر» و «PDF» دقیقاً همان مدلِ دکمهٔ
+   «📲 کیو‌آر کد» کارت‌های قرض‌داران‌اند: کادرِ خط‌دار با رنگِ خودِ دکمه، همان
+   شعاعِ گوشه، همان پدینگ و همان اندازهٔ نوشته. */
 .person-card .cmp-fig{
   width:100%; box-sizing:border-box; margin:6px 0 0; min-height:40px;
   display:flex; align-items:center; justify-content:center;
@@ -15690,15 +15691,21 @@ table thead th:first-child .col-resize-grip{ display:none; }
 }
 .person-card .cmp-fig.usd{ color:var(--blue) }
 .person-card .cmp-acts{
-  width:100%; box-sizing:border-box; margin-top:8px; display:flex; gap:6px;
-  border:0 !important; border-radius:9px; background:transparent;
+  width:100%; box-sizing:border-box; margin-top:10px; display:flex; gap:6px;
+  border:0 !important; background:transparent;
 }
+/* همان اعدادِ دکمهٔ کیوآرِ کارتِ قرض‌دار: border 1px، radius 7px، padding 6px 8px،
+   وزن 700، پس‌زمینهٔ شفاف و رنگِ خطِ دور = رنگِ خودِ دکمه.
+   اندازهٔ نوشته 0.88rem نوشته شده چون دکمهٔ قرض‌دار استایلِ درون‌خطیِ 0.75rem دارد و
+   قاعدهٔ سراسریِ «نوشته‌های ریز کمی بزرگ‌تر» آن را به همین 0.88rem می‌رساند — با این
+   عدد، اندازهٔ نهاییِ هر دو دکمه دقیقاً یکی می‌شود. */
 .person-card .cmp-acts button{
-  flex:1 1 0; min-width:0; padding:7px 6px; border:0 !important; background:transparent;
-  border-radius:8px;
-  font-family:'Vazirmatn',sans-serif; font-size:0.74rem; font-weight:700; cursor:pointer;
+  flex:1 1 0; min-width:0;
+  padding:6px 8px; border-radius:7px;
+  border:1px solid currentColor !important; background:transparent;
+  font-family:'Vazirmatn',sans-serif; font-size:0.88rem; font-weight:700; cursor:pointer;
 }
-.person-card .cmp-acts button:hover{ background:color-mix(in srgb, var(--accent) 14%, transparent) }
+.person-card .cmp-acts button:hover{ background:color-mix(in srgb, currentColor 12%, transparent) }
 
 /* ── زنگ اعلان‌ها و فهرستِ خبرها (سرویسِ اعلانِ سرور خانگی) ─────────────── */
 .ntf-bell{ position:relative; padding:6px 10px; border-radius:7px; border:1px solid var(--border);
@@ -37166,7 +37173,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.190';
+const APP_VERSION = '2.9.191';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
