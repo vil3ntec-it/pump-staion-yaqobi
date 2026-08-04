@@ -1010,7 +1010,12 @@ body.viewer-mode .att-admin{display:none !important}
 #staffAcctOverlay .ro-sum-box .v{font-size:1.3rem}
 #sa-title{font-size:1.15rem}
 /* انتخاب نوع تیل (دیزل / پطرول) در هر ردیف */
-.ft-pick{display:flex;flex-direction:column;gap:3px;min-width:74px;padding:3px}
+/* align-items:center ریشهٔ خرابیِ ستون «نوع تیل» را می‌بندد: پیش‌فرضِ flex روی
+   stretch است، پس هر کدام از دو کادرِ «⛽ پطرول / 🟤 دیزل» تا آخرِ عرضِ ستون کش
+   می‌آمد و بینِ دایرهٔ انتخاب و نوشته یک فضای خالیِ بزرگ می‌افتاد — هرچه ستون
+   پهن‌تر، فاصله بدتر. حالا هر کادر دقیقاً به‌اندازهٔ نوشتهٔ خودش است و وسطِ ستون
+   می‌نشیند (مثل بقیهٔ ستون‌ها که وسط‌چین‌اند). */
+.ft-pick{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:74px;padding:3px}
 .ft-opt{display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.88rem;font-weight:700;border-radius:6px;padding:3px 7px;border:1px solid transparent;transition:all .15s;white-space:nowrap}
 .ft-opt input{accent-color:currentColor;cursor:pointer;margin:0}
 .ft-opt.petrol{color:var(--green)}
@@ -24775,6 +24780,9 @@ function _applySavedColWidths(table){
     for(let i=0;i<ths.length;i++){
       const s = saved[keys[i]] != null ? saved[keys[i]] : saved[i];
       target[i] = s ? Math.round(s) : Math.round(_ownW(ths[i]));
+      // عرضِ ذخیره‌شده هم نمی‌تواند از کفِ خودِ ستون کمتر باشد (مثلاً «نوع تیل»)
+      const mn = _colMinW(table, i);
+      if(target[i] < mn) target[i] = mn;
     }
     // 2) جمعِ ستون‌ها باید دقیقاً برابرِ عرضِ خودِ جدول شود؛ وگرنه در table-layout:fixed
     //    مرورگر همهٔ ستون‌ها را نسبتی بزرگ/کوچک می‌کند و جدولِ آرشیو با جدولِ اصلی
@@ -24828,6 +24836,25 @@ function _elZoom(el){
 // عرضِ یک عنصر در فضایِ خودش (بدونِ اثرِ zoomِ بخش) — همان واحدی که style.width دارد
 function _ownW(el){
   try{ return el.getBoundingClientRect().width / _elZoom(el); }catch(e){ return 0; }
+}
+/* کفِ عرضِ هر ستون. برای ستون‌های معمولی همان ۳۶ پیکسلِ همیشگی است، ولی ستونِ
+   «نوع تیل» نمی‌تواند از عرضِ واقعیِ «⛽ پطرول / 🟤 دیزل» باریک‌تر شود — وگرنه یا
+   نام‌ها بریده می‌شوند یا از خانه بیرون می‌زنند و کاربر مجبور می‌شود دستی ستون را
+   خیلی پهن کند تا درست دیده شود. حالا این کف خودکار رعایت می‌شود. */
+function _colMinW(table, idx){
+  try{
+    const body = table.tBodies && table.tBodies[0];
+    for(let r = 0; body && r < Math.min(body.rows.length, 3); r++){
+      const cell = body.rows[r].cells[idx];
+      const pick = cell && cell.querySelector('.ft-pick');
+      if(pick){
+        let w = 0;
+        pick.querySelectorAll('.ft-opt').forEach(function(o){ w = Math.max(w, o.scrollWidth); });
+        if(w > 0) return Math.max(36, Math.ceil(w / _elZoom(table)) + 12);
+      }
+    }
+  }catch(e){}
+  return 36;
 }
 // تغییرِ اندازهٔ ستون‌ها با کشیدنِ لبهٔ عنوان (مثل اکسل). عرضِ هر ستون در
 // localStorage ذخیره می‌شود تا بعد از رفرش هم بماند. فقط ظاهر — روی داده اثری ندارد.
@@ -24897,7 +24924,8 @@ function makeTableResizable(table, storeKey){
       // جابه‌جاییِ موس رویِ صفحه است؛ برای نوشتن در style.width باید به فضایِ
       // خودِ جدول برگردد (در بخشی که با A+ بزرگ شده zoom ≠ 1 است)
       let d = (cx - startX) / _elZoom(table);
-      d = Math.max(36 - startW, Math.min(d, pStartW - 36));
+      // هیچ‌کدام از دو ستونِ کنارِ دست نمی‌توانند از کفِ خودشان باریک‌تر شوند
+      d = Math.max(_colMinW(table, dIdx) - startW, Math.min(d, pStartW - _colMinW(table, pIdx)));
       setW(dIdx, Math.round(startW + d));
       setW(pIdx, Math.round(pStartW - d));
     }
@@ -28430,9 +28458,10 @@ function renderCompanies() {
       <div class="pname">${escFa(c.name)}</div>
       <div class="cmp-fig usd">${n2fa(sumUsd.toFixed(1))} $</div>
       <div class="pdebt cmp-fig ${settled?'clear':''}">${settled ? '✅ تسویه' : 'الباقی: '+n2fa(Math.round(albaqi))+' AFN'}</div>
+      <!-- فقط کیو‌آر — دقیقاً مثل کارت‌های قرض‌داران. دکمهٔ PDF برداشته شد: با اسکنِ
+           همین کیو‌آر، حساب باز می‌شود و خودش دکمهٔ «دانلود PDF» دارد. -->
       <div class="cmp-acts">
-        <button onclick="event.stopPropagation();pdfCompanyById('${c.id}')" style="color:var(--green)">📄 PDF</button>
-        <button onclick="event.stopPropagation();showCompanyQR('${c.id}')" style="color:var(--blue)">📲 کیو‌آر</button>
+        <button onclick="event.stopPropagation();showCompanyQR('${c.id}')" style="color:var(--blue)">📲 کیو‌آر کد</button>
       </div>
     `;
     // مثل کارت قرض‌داران: کلیک معمولی حساب را باز می‌کند؛ راست‌کلیک/نگه‌داشتن، منو را
@@ -37173,7 +37202,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.191';
+const APP_VERSION = '2.9.192';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
