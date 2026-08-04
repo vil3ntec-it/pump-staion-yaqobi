@@ -15673,26 +15673,26 @@ table thead th:first-child .col-resize-grip{ display:none; }
 .persons-grid .person-card{ height:100% !important; padding-bottom:30px !important; }
 
 /* ── کارتِ «شرکت ها تیل» ───────────────────────────────────────────────────
-   کادرِ «دالر» و کادرِ «الباقی» دقیقاً یک اندازه‌اند (هم‌عرض، هم‌قد، هم‌فونت) و
-   دکمه‌های «کیوآر» و «PDF» داخلِ یک کادرِ واحد می‌نشینند — مثل کارت‌های
-   قرض‌داران که پایینشان یک کادر است، نه دو کادرِ جدا. */
+   کادرِ «دالر» و کادرِ «الباقی» و ردیفِ «کیوآر/PDF» هم‌عرض، هم‌قد و هم‌ترازند.
+   خطِ دورشان طبقِ خواستهٔ صاحب ریپو برداشته شد — در هیچ تم و برای هیچ‌کس دیده
+   نمی‌شود؛ فقط چیدمان و اندازهٔ یکسانشان سرِ جایش مانده. */
 .person-card .cmp-fig{
   width:100%; box-sizing:border-box; margin:6px 0 0; min-height:40px;
   display:flex; align-items:center; justify-content:center;
-  padding:6px 8px; border:1.5px solid var(--lg-brd); border-radius:9px;
+  padding:6px 8px; border:0 !important; border-radius:9px; background:transparent;
   font-size:1rem; font-weight:800; line-height:1.35; text-align:center;
   overflow-wrap:break-word; word-break:break-word;
 }
 .person-card .cmp-fig.usd{ color:var(--blue) }
 .person-card .cmp-acts{
-  width:100%; box-sizing:border-box; margin-top:8px; display:flex;
-  border:1.5px solid var(--lg-brd); border-radius:9px; overflow:hidden;
+  width:100%; box-sizing:border-box; margin-top:8px; display:flex; gap:6px;
+  border:0 !important; border-radius:9px; background:transparent;
 }
 .person-card .cmp-acts button{
-  flex:1 1 0; min-width:0; padding:7px 6px; border:0; background:transparent;
+  flex:1 1 0; min-width:0; padding:7px 6px; border:0 !important; background:transparent;
+  border-radius:8px;
   font-family:'Vazirmatn',sans-serif; font-size:0.74rem; font-weight:700; cursor:pointer;
 }
-.person-card .cmp-acts button + button{ border-inline-start:1.5px solid var(--lg-brd) }
 .person-card .cmp-acts button:hover{ background:color-mix(in srgb, var(--accent) 14%, transparent) }
 
 /* ── زنگ اعلان‌ها و فهرستِ خبرها (سرویسِ اعلانِ سرور خانگی) ─────────────── */
@@ -33136,6 +33136,27 @@ function setCompanyROArcFilter(f) {
   _cmpRoArcFilter = f;
   if (_companyRoId) openCompanyROViewer(_companyRoId);
 }
+// نوارِ سه‌کادریِ آرشیو — داخلِ خودِ هر جدولِ آرشیو، پایینِ شش کادرِ خلاصه
+function _cmpRoArcFilterBar() {
+  const btn = (k, lbl, cls) => '<button type="button" class="pm-filter-btn ' + cls
+    + (_cmpRoArcFilter === k ? ' active' : '') + '" onclick="setCompanyROArcFilter(\'' + k + '\')">' + lbl + '</button>';
+  return '<div class="ro-filter-bar" style="padding:8px 12px 10px;border-bottom:1px solid var(--border)">'
+    + btn('all', '📋 همه', '') + btn('petrol', '⛽ حساب جداگانه پطرول', 'petrol')
+    + btn('diesel', '🟤 حساب جداگانه دیزل', 'diesel') + '</div>';
+}
+/* شش کادرِ خلاصهٔ حساب شرکت — یک تابعِ واحد برای بالای صفحه و برای هر جدولِ آرشیو،
+   تا هر دو دقیقاً یک‌شکل و یک‌تعداد باشند (قبلاً بالای صفحه فقط چهار کادر داشت و
+   «باقی‌مانده دالر» و «جمله کل (افغانی)» را نشان نمی‌داد). */
+function _cmpSumBoxesHtml(t) {
+  const box = (l, v, c) => '<div class="ro-sum-box"><div class="l">' + l + '</div><div class="v" style="color:' + c + '">' + v + '</div></div>';
+  const ton = t.ton || 0;
+  return box('جمله مقدار', n2fa(Math.round(ton * 1000)) + ' کیلو<small style="display:block;font-size:0.7rem;font-weight:700;color:var(--muted)">(' + n2fa((Math.round(ton * 100) / 100).toString()) + ' تن)</small>', 'var(--blue)')
+    + box('جمله کل دالر', n2fa((t.usd || 0).toFixed(1)) + ' $', 'var(--blue)')
+    + box('باقی‌مانده دالر', n2fa((t.albUsd || 0).toFixed(1)) + ' $', (t.albUsd || 0) >= 0 ? 'var(--green)' : 'var(--red)')
+    + box('جمله کل (افغانی)', n2fa(Math.round(t.afn || 0)), 'var(--accent)')
+    + box('رسید', n2fa(Math.round(t.poul || 0)), 'var(--green)')
+    + box('جمله الباقی', n2fa(Math.round(t.alb || 0)) + ' AFN', (t.alb || 0) > 0 ? 'var(--red)' : 'var(--green)');
+}
 function openCompanyROViewer(id) {
   const c = (DB.tilCompanies || []).find(x => x.id === id);
   if (!c) { showToast('شرکت یافت نشد', '#e53e3e'); return; }
@@ -33162,11 +33183,13 @@ function openCompanyROViewer(id) {
   const sumAlb  = rows.reduce((a,r)=>a+cmpAlbaqi(r, convRate),0);
   const fuelTtl = _cmpRoFilter === 'petrol' ? ' — ⛽ حساب پطرول' : (_cmpRoFilter === 'diesel' ? ' — 🟤 حساب دیزل' : '');
   document.getElementById('company-ro-title').textContent = '🛢️ ' + c.name + fuelTtl + ' — فقط‌خواندنی';
-  document.getElementById('company-ro-sum').innerHTML =
-    `<div class="ro-sum-box"><div class="l">جمله (تن)</div><div class="v" style="color:var(--blue)">${n2fa(sumTon.toFixed(2))}</div></div>
-     <div class="ro-sum-box"><div class="l">جمله دالر</div><div class="v" style="color:var(--green)">${n2fa(sumUsd.toFixed(1))} $</div></div>
-     <div class="ro-sum-box"><div class="l">جمله رسید</div><div class="v" style="color:var(--green)">${n2fa(Math.round(sumPoul))}</div></div>
-     <div class="ro-sum-box"><div class="l">الباقی</div><div class="v" style="color:${sumAlb>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(sumAlb))} افغانی</div></div>`;
+  // خواستهٔ کاربر: کادرهای بالای صفحه هم دقیقاً همان شش کادرِ جدول‌های آرشیو باشند
+  // (قبلاً چهار تا بودند و «باقی‌مانده دالر» و «جمله کل افغانی» را نداشتند)
+  const sumAfn    = rows.reduce((a,r)=>a+cmpAfnTotal(r),0);
+  const sumAlbUsd = rows.reduce((a,r)=>a+cmpAlbaqiUsd(r, convRate),0);
+  document.getElementById('company-ro-sum').innerHTML = _cmpSumBoxesHtml({
+    ton: sumTon, usd: sumUsd, albUsd: sumAlbUsd, afn: sumAfn, poul: sumPoul, alb: sumAlb
+  });
   const rowsHtml = rows.map((r,i) => {
     const ton=cmpTon(r), tusd=cmpTotalUsd(r), tafn=cmpAfnTotal(r), ab=cmpAlbaqi(r, convRate);
     const isD = showFtCol ? (i >= petRows.length) : (_cmpRoFilter === 'diesel');
@@ -33229,20 +33252,20 @@ function _cmpRoArchivesHtml(company) {
     if (!mon || mon === 'بدون تاریخ') mon = 'بی‌تاریخ';
     const fuelLbl = h.fuel === 'diesel' ? ' — 🟤 دیزل' : ' — ⛽ پطرول';
     const dateLbl = _archDateLabel(h.createdAt) || toEnDigits(String(h.createdAt || ''));
-    const sumBox = (l, v, c) => `<div class="ro-sum-box"><div class="l">${l}</div><div class="v" style="color:${c}">${v}</div></div>`;
-    const sums =
-      sumBox('جمله مقدار', n2fa(Math.round(tTon * 1000)) + ' کیلو', 'var(--blue)') +
-      sumBox('جمله کل دالر', n2fa(tUsd.toFixed(1)) + ' $', 'var(--blue)') +
-      sumBox('باقی‌مانده دالر', n2fa(tAlbUsd.toFixed(1)) + ' $', tAlbUsd >= 0 ? 'var(--green)' : 'var(--red)') +
-      sumBox('جمله کل (افغانی)', n2fa(Math.round(tAfn)), 'var(--accent)') +
-      sumBox('رسید', n2fa(Math.round(tPoul)), 'var(--green)') +
-      sumBox('جمله الباقی', n2fa(Math.round(tAlb)) + ' AFN', tAlb > 0 ? 'var(--red)' : 'var(--green)');
+    const sums = _cmpSumBoxesHtml({ ton: tTon, usd: tUsd, albUsd: tAlbUsd, afn: tAfn, poul: tPoul, alb: tAlb });
     return `<div style="margin-top:14px;border:1px solid var(--border);border-radius:12px;overflow:hidden">
       <div style="padding:10px 12px;background:var(--dark);font-weight:900;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-        <span>📅 ماه ${escFa(mon)}${fuelLbl} — 🛢️ ${escFa(company.name || '')}</span>
-        <span style="color:var(--muted);font-size:0.72rem;font-weight:700">بسته شده: ${escFa(dateLbl)} · 🔒 فقط خواندنی</span>
+        <span style="min-width:0">📅 ماه ${escFa(mon)}${fuelLbl} — 🛢️ ${escFa(company.name || '')}</span>
+        <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="color:var(--muted);font-size:0.72rem;font-weight:700">بسته شده: ${escFa(dateLbl)} · 🔒 فقط خواندنی</span>
+          <!-- هر جدولِ آرشیو پی‌دی‌افِ مخصوصِ خودش را دارد (خواستهٔ کاربر) -->
+          <button type="button" onclick="pdfCompanyHistory('${company.id}','${h.id}')" style="white-space:nowrap;border-radius:7px;border:1px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-size:0.75rem;font-weight:800;padding:5px 10px;cursor:pointer">📄 PDF این جدول</button>
+        </span>
       </div>
       <div class="ro-arc-sums">${sums}</div>
+      <!-- سه کادرِ «همه / پطرول جداگانه / دیزل جداگانه» داخلِ خودِ جدولِ آرشیو و
+           پایینِ شش کادرِ خلاصه (خواستهٔ کاربر) -->
+      ${_cmpRoArcFilterBar()}
       <div style="overflow-x:auto"><table class="ro-tbl" style="min-width:760px;width:100%">
         <thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>تن</th><th>$/تن</th><th>کل $</th><th>نرخ</th><th>کل افغانی</th><th>رسید</th><th>الباقی</th></tr></thead>
         <tbody>${body || '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:14px">فقط خرید — ردیفی برای نمایش نیست</td></tr>'}</tbody>
@@ -33259,14 +33282,13 @@ function _cmpRoArchivesHtml(company) {
       </table></div>
     </div>`;
   }).join('');
-  const fBtn = (k, lbl, cls) => `<button type="button" class="pm-filter-btn ${cls}${_cmpRoArcFilter === k ? ' active' : ''}" onclick="setCompanyROArcFilter('${k}')">${lbl}</button>`;
-  const bar = `<div class="ro-filter-bar" style="padding:10px 0 4px">
-      ${fBtn('all', '📋 همه', '')}${fBtn('petrol', '⛽ حساب جداگانه پطرول', 'petrol')}${fBtn('diesel', '🟤 حساب جداگانه دیزل', 'diesel')}
-    </div>`;
   const emptyTxt = _cmpRoArcFilter === 'petrol' ? '⛽ جدول آرشیوِ پطرول ندارد'
     : (_cmpRoArcFilter === 'diesel' ? '🟤 جدول آرشیوِ دیزل ندارد' : '');
-  return `<div style="margin-top:18px"><div style="font-weight:900;font-size:0.95rem">🗂️ جدول‌های آرشیوشده (ماه‌های قبل)</div>${bar}${
-    blocks || `<div style="text-align:center;color:var(--muted);padding:18px;border:1px solid var(--border);border-radius:12px">${emptyTxt}</div>`
+  return `<div style="margin-top:18px"><div style="font-weight:900;font-size:0.95rem">🗂️ جدول‌های آرشیوشده (ماه‌های قبل)</div>${
+    blocks || `<div style="margin-top:12px;border:1px solid var(--border);border-radius:12px;overflow:hidden">
+        ${_cmpRoArcFilterBar()}
+        <div style="text-align:center;color:var(--muted);padding:18px">${emptyTxt}</div>
+      </div>`
   }</div>`;
 }
 function closeCompanyROViewer() {
@@ -37134,7 +37156,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.187';
+const APP_VERSION = '2.9.188';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
