@@ -37202,7 +37202,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.192';
+const APP_VERSION = '2.9.193';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -38180,21 +38180,78 @@ function renderStaffList() {
 // ========== PER-SECTION FONT SCALE ==========
 const _secFontScales = {};
 /* اندازهٔ نوشته‌های هر بخش (A+ / A−)
-   قبلاً روی «فهرستی از کلاس‌ها» اندازهٔ فونت را تک‌تک می‌نوشت؛ نتیجه این بود که در
-   خیلی از بخش‌ها (که عنصرهایشان در آن فهرست نبودند) هیچ اتفاقی نمی‌افتاد و در بقیه
-   هم با هر بار رندرِ دوبارهٔ جدول، اندازه به حالتِ اول برمی‌گشت (باگِ گزارش‌شده:
-   «اندازهٔ فونت‌ها در همهٔ بخش‌ها کار نمی‌کند»).
-   حالا مقیاس روی «خودِ کادرِ بخش» می‌نشیند، پس بدون استثنا همه‌چیزِ آن بخش بزرگ/کوچک
-   می‌شود و با رندرِ دوبارهٔ محتوا هم سرِ جایش می‌ماند. */
+   ┌─ تاریخچه ───────────────────────────────────────────────────────────────┐
+   │ اول روی «فهرستی از کلاس‌ها» اندازهٔ فونت نوشته می‌شد: در خیلی از بخش‌ها      │
+   │ هیچ اتفاقی نمی‌افتاد و با هر رندرِ دوباره هم اندازه برمی‌گشت.               │
+   │ بعد به zoom روی خودِ کادرِ بخش عوض شد: آن دو مشکل حل شد ولی zoom «همه‌چیز»  │
+   │ را بزرگ می‌کند — کادرها، فاصله‌ها، خط‌ها و بلندیِ ردیف‌ها — و بخش به‌هم       │
+   │ می‌ریخت (خواستهٔ صاحب ریپو: فقط نوشته بزرگ شود، نه کادرها).                │
+   └────────────────────────────────────────────────────────────────────────┘
+   حالا فقط «اندازهٔ نوشته» عوض می‌شود و هندسهٔ بخش دست‌نخورده می‌ماند:
+   • فقط عنصرهایی که خودشان نوشته دارند (یا ورودی/دکمه‌اند) اندازه می‌گیرند.
+   • اندازهٔ پایهٔ هر عنصر یک‌بار خوانده و نگه داشته می‌شود، پس بزرگ/کوچک‌کردنِ
+     پشت‌سرهم روی هم جمع نمی‌شود.
+   • با priority=important نوشته می‌شود تا قاعده‌های !important برنامه آن را
+     خنثی نکنند (همان چیزی که روشِ اول را ناکار کرده بود).
+   • یک ناظرِ تغییر روی بخش، بعد از هر رندرِ دوباره اندازه را روی ردیف‌های تازه
+     هم می‌گذارد (مشکل دومِ روشِ اول). */
+const _secFontObs = {};
+// عنصرهایی که «خودشان» نوشته دارند — کادرها و لایه‌های چیدمان کاری‌شان نداریم
+function _secFontEls(sec) {
+  const out = [];
+  const all = sec.querySelectorAll('*');
+  for (let i = 0; i < all.length; i++) {
+    const el = all[i];
+    if (el.namespaceURI && el.namespaceURI.indexOf('/svg') > -1) continue;   // آیکن‌ها
+    const t = el.tagName;
+    if (t === 'SCRIPT' || t === 'STYLE' || t === 'BR' || t === 'HR' || t === 'IMG' || t === 'CANVAS') continue;
+    if (el.closest('.sec-font-ctrl')) continue;   // خودِ دکمه‌های A− / A+ / ↺ ثابت بمانند
+    if (t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA' || t === 'OPTION' || t === 'BUTTON') { out.push(el); continue; }
+    for (let n = el.firstChild; n; n = n.nextSibling) {
+      if (n.nodeType === 3 && n.nodeValue && n.nodeValue.trim()) { out.push(el); break; }
+    }
+  }
+  return out;
+}
 function _applySecFont(secId) {
   const sec = document.getElementById('sec-' + secId);
   if (!sec) return;
   const s = _secFontScales[secId] || 1;
-  // --secz کنارِ zoom لازم است: بخش‌هایی که عرضشان با vw تمام‌صفحه می‌شود باید
-  // همان ضریب را بدانند، وگرنه در اندازهٔ فونتِ بزرگ‌تر از دو طرف بیرونِ پنجره
-  // می‌زنند و کادرها/سربرگ‌ها بریده می‌شوند (باگِ گزارش‌شده روی کامپیوتر)
-  if (Math.abs(s - 1) < 0.005) { sec.style.zoom = ''; sec.style.removeProperty('--secz'); sec.removeAttribute('data-secfs'); }
-  else { sec.style.zoom = s; sec.style.setProperty('--secz', String(s)); sec.setAttribute('data-secfs', s.toFixed(2)); }
+  const one = Math.abs(s - 1) < 0.005;
+  // zoom دیگر استفاده نمی‌شود — اگر از نسخه‌های قبل مانده باشد پاک می‌شود
+  sec.style.zoom = ''; sec.style.removeProperty('--secz');
+  if (one) sec.removeAttribute('data-secfs'); else sec.setAttribute('data-secfs', s.toFixed(2));
+  const els = _secFontEls(sec);
+  for (let i = 0; i < els.length; i++) {
+    const el = els[i];
+    if (el.dataset.sfBase == null) {
+      // اندازهٔ پایه و استایلِ درون‌خطیِ خودِ عنصر، یک‌بار و قبل از هر دست‌کاری
+      el.dataset.sfOwn = el.style.getPropertyValue('font-size') || '';
+      el.dataset.sfBase = String(parseFloat(getComputedStyle(el).fontSize) || 0);
+    }
+    const base = parseFloat(el.dataset.sfBase) || 0;
+    if (!base) continue;
+    if (one) {
+      if (el.dataset.sfOwn) el.style.setProperty('font-size', el.dataset.sfOwn);
+      else el.style.removeProperty('font-size');
+    } else {
+      el.style.setProperty('font-size', (Math.round(base * s * 100) / 100) + 'px', 'important');
+    }
+  }
+  // ناظرِ رندرِ دوباره: ردیف/کارتِ تازه هم همان اندازه را بگیرد
+  if (one) {
+    if (_secFontObs[secId]) { _secFontObs[secId].disconnect(); delete _secFontObs[secId]; }
+  } else if (!_secFontObs[secId] && typeof MutationObserver === 'function') {
+    let pending = false;
+    const ob = new MutationObserver(function () {
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(function () { pending = false; _applySecFont(secId); });
+    });
+    // فقط childList — نوشتنِ style خودش attribute است و اگر دیده می‌شد حلقه می‌ساخت
+    ob.observe(sec, { childList: true, subtree: true });
+    _secFontObs[secId] = ob;
+  }
 }
 function adjSecFont(secId, delta) {
   const sec = document.getElementById('sec-' + secId);
@@ -38219,7 +38276,13 @@ function resetAllSecFonts() {
   keys.forEach(k => { try { localStorage.removeItem(k); } catch(e) {} });
   Object.keys(_secFontScales).forEach(id => { delete _secFontScales[id]; });
   document.querySelectorAll('.section[id^="sec-"]').forEach(sec => {
+    const id = sec.id.slice(4);
+    if (_secFontObs[id]) { _secFontObs[id].disconnect(); delete _secFontObs[id]; }
     sec.style.zoom = ''; sec.style.removeProperty('--secz'); sec.removeAttribute('data-secfs');
+    sec.querySelectorAll('[data-sf-base]').forEach(el => {
+      if (el.dataset.sfOwn) el.style.setProperty('font-size', el.dataset.sfOwn);
+      else el.style.removeProperty('font-size');
+    });
   });
 }
 // دکمه‌های A− / A+ برای «همهٔ» بخش‌ها — بخش‌هایی که این دکمه‌ها را نداشتند (مثل
