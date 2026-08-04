@@ -15667,14 +15667,11 @@ table thead th:first-child .col-resize-grip{ display:none; }
   max-width:100% !important;
   box-sizing:border-box !important;
 }
-/* نکته: این‌جا عمداً overflow:hidden روی خانه‌ها گذاشته نمی‌شود — با ستونِ باریک،
-   نامِ «⛽ پطرول / 🟤 دیزل» را می‌بُرید و فقط دایرهٔ انتخاب می‌ماند. به‌جایش خودِ
-   کنترل‌های داخلِ خانه اجازهٔ کوچک‌شدن و شکستنِ خط می‌گیرند تا نه چیزی بریده شود و
-   نه چیزی روی خانهٔ بغلی بیفتد. */
-.tbl[data-colw-fixed] td .ft-pick, .xls-tbl[data-colw-fixed] td .ft-pick{ min-width:0 }
-.tbl[data-colw-fixed] td .ft-opt, .xls-tbl[data-colw-fixed] td .ft-opt{
-  white-space:normal; overflow-wrap:break-word; min-width:0;
-}
+/* خانهٔ «نوع تیل» عمداً هیچ قاعدهٔ اضافه‌ای نمی‌گیرد و دقیقاً مثل نسخهٔ 2.9.175
+   می‌ماند: .ft-pick با min-width:74px و .ft-opt یک‌خطی (white-space:nowrap).
+   دو تلاشِ قبلی برای «جا کردنِ» آن در ستونِ باریک هر دو خراب‌تر کردند — یکی نام را
+   می‌بُرید (overflow:hidden) و یکی نام را می‌شکست و روی ستونِ بغلی می‌انداخت و
+   ردیف‌ها را چند برابر بلند می‌کرد. این ستون کفِ عرضِ خودش را دارد و همان درست است. */
 /* کارت‌های شخص/شرکت هم‌قد شوند (ستون‌های grid از قبل stretch هستند) */
 /* padding-bottom اضافه تا شمارهٔ کفِ کارت هیچ‌وقت روی دکمهٔ کیوآر نیفتد (حتی وقتی کارت
    به‌خاطر خطِ «تیلش تمام شده» بلندتر است و دکمه پایین‌تر می‌رود) */
@@ -37169,7 +37166,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.189';
+const APP_VERSION = '2.9.190';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
