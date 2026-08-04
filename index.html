@@ -29131,18 +29131,22 @@ function _renderCompanyHistoryPanel(company){
         const ton=cmpTon(r), tu=cmpTotalUsd(r), ta=cmpAfnTotal(r), poul=cmpPoulAfn(r,rate), ab=cmpAlbaqi(r,rate);
         tTon+=ton; tUsd+=tu; tAfn+=ta; tPoul+=poul; tAlb+=ab;   // جمع‌ها شاملِ خریدها (برای درستیِ الباقی)
         tAlbUsd += cmpAlbaqiUsd(r, rate);
-        if (r.srcPurchaseId) return '';   // خریدِ مخزن در جدول نشان داده نمی‌شود (فقط در کادرِ خریدها)
+        // خریدِ مخزن هم مثل جدولِ زندهٔ حساب نشان داده می‌شود (با نشانِ 📦 و فقط‌خواندنی).
+        // قبلاً این ردیف‌ها پنهان می‌شدند ولی در جمع‌ها بودند، برای همین جدول خالی/صفر
+        // دیده می‌شد در حالی که فوتر عددِ بزرگ داشت — باگِ «اطلاعات جدول نامرئی می‌شود».
+        const linked = !!r.srcPurchaseId;
         dispNum++;
         const kgShow = (r.kg!=null && r.kg!=='' && +r.kg!==0) ? r.kg : (r.ton ? Math.round(parseFloat(r.ton)*1000) : '');
         const U = `updateCompanyHistoryRow('${company.id}','${h.id}',${i},`;
-        return `<tr>
-          <td class="xls-num">${n2fa(dispNum)}</td>
-          <td><input class="xls-in" value="${cmpEsc(r.date||'')}" onchange="${U}'date',this.value)"></td>
-          <td><input class="xls-in" value="${cmpEsc(r.name||'')}" placeholder="نام" onchange="${U}'name',this.value)"></td>
-          <td><input class="xls-in" type="number" value="${kgShow!==''?kgShow:''}" placeholder="0" onchange="${U}'kg',this.value)"></td>
-          <td><input class="xls-in" type="number" value="${parseFloat(r.usd)||''}" placeholder="0" onchange="${U}'usd',this.value)"></td>
+        const RO = linked ? ' readonly style="opacity:0.75;cursor:default"' : '';
+        return `<tr${linked ? ' style="background:color-mix(in srgb, var(--dark) 92%, var(--accent) 8%)"' : ''}>
+          <td class="xls-num">${n2fa(dispNum)}${linked ? '<div style="font-size:0.6rem;color:var(--accent);line-height:1">📦</div>' : ''}</td>
+          <td><input class="xls-in" value="${cmpEsc(r.date||'')}"${RO} onchange="${U}'date',this.value)"></td>
+          <td><input class="xls-in" value="${cmpEsc(r.name||'')}" placeholder="نام"${RO} onchange="${U}'name',this.value)"></td>
+          <td><input class="xls-in" type="number" value="${kgShow!==''?kgShow:''}" placeholder="0"${RO} onchange="${U}'kg',this.value)"></td>
+          <td><input class="xls-in" type="number" value="${parseFloat(r.usd)||''}" placeholder="0"${RO} onchange="${U}'usd',this.value)"></td>
           <td style="color:var(--blue);font-weight:700">${n2fa(tu.toFixed(1))} $</td>
-          <td><input class="xls-in" type="number" value="${parseFloat(r.rate)||''}" placeholder="0" onchange="${U}'rate',this.value)"></td>
+          <td><input class="xls-in" type="number" value="${parseFloat(r.rate)||''}" placeholder="0"${RO} onchange="${U}'rate',this.value)"></td>
           <td style="color:var(--accent);font-weight:700">${n2fa(Math.round(ta))}</td>
           <td>
             <div style="display:flex;gap:3px;align-items:center">
@@ -33320,10 +33324,11 @@ function _cmpRoArchivesHtml(company) {
       const poul = cmpPoulAfn(r, rate), ab = cmpAlbaqi(r, rate);
       tTon += ton; tUsd += tu; tAfn += ta; tPoul += poul; tAlb += ab;
       tAlbUsd += cmpAlbaqiUsd(r, rate);
-      if (r.srcPurchaseId) return '';   // خریدِ مخزن — مثل مودالِ مدیر فقط در جمع‌هاست
+      // خریدِ مخزن هم — مثل مودالِ مدیر — با نشانِ 📦 دیده می‌شود، نه پنهان
+      const linked = !!r.srcPurchaseId;
       num++;
-      return `<tr>
-        <td style="text-align:center;color:var(--muted)">${n2fa(num)}</td>
+      return `<tr${linked ? ' style="background:color-mix(in srgb, var(--dark) 92%, var(--accent) 8%)"' : ''}>
+        <td style="text-align:center;color:var(--muted)">${n2fa(num)}${linked ? '<div style="font-size:0.6rem;color:var(--accent);line-height:1">📦</div>' : ''}</td>
         <td>${escFa(String(r.date || '—'))}</td>
         <td>${escFa(r.name || '') || '—'}</td>
         <td style="color:var(--blue)">${n2fa(ton.toFixed(3))} تن</td>
@@ -36311,6 +36316,11 @@ try {
   if (navigator.serviceWorker) {
     navigator.serviceWorker.addEventListener('message', ev => {
       const d = ev && ev.data;
+      // پیامِ پوش وقتی کاربر داخلِ برنامه است: به‌جای اعلانِ گوشی، یک توستِ کوتاه
+      if (d && d.type === 'push-message') {
+        try { showTopToast('🔔 ' + (d.title ? d.title + ' — ' : '') + String(d.body || '').slice(0, 70), '#3182ce', 5000); } catch (e) {}
+        return;
+      }
       if (!d || d.type !== 'app-version' || !d.version) return;
       // سرویس‌ورکر نسخهٔ تازه را گرفته و در کش نشانده — همان مسیرِ مشترک:
       // اگر کاربر وسطِ کاری نیست خودکار سوار می‌شود، وگرنه نوار می‌آید
@@ -37069,7 +37079,11 @@ function _ntfAccept(msg, { live } = {}) {
   if (document.visibilityState === 'visible') {
     try { showTopToast('🔔 ' + (msg.title ? msg.title + ' — ' : '') + msg.body.slice(0, 70), msg.priority >= 5 ? '#e53e3e' : '#3182ce', 5000); } catch (e) {}
   } else {
-    try { _notify(msg.title || 'پمپ یعقوبی', msg.body.slice(0, 200), 'notify-' + msg.topic); } catch (e) {}
+    // اگر پوشِ سرور روی همین دستگاه روشن است، خودِ سرویس‌ورکر اعلان را می‌دهد؛
+    // این‌جا دوباره اعلان ندهیم وگرنه دو اعلانِ یکسان روی نوارِ گوشی می‌نشیند
+    let pushOn = false;
+    try { pushOn = !!_lsPlain('pumpNtfPushOn'); } catch (e) {}
+    if (!pushOn) { try { _notify(msg.title || 'پمپ یعقوبی', msg.body.slice(0, 200), 'notify-' + msg.topic); } catch (e) {} }
   }
 }
 
@@ -37244,7 +37258,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.194';
+const APP_VERSION = '2.9.195';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
