@@ -17541,6 +17541,7 @@ body.gfx-performance .xls-foot td{
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <input type="search" id="company-search" class="person-search-input" placeholder="🔍 جستجوی شرکت..." oninput="searchCompany(this.value)">
+      <button class="add-btn" style="border-color:var(--blue);color:var(--blue);background:transparent" onclick="openCmpSearch(null)">🔍 جستجوی خرید</button>
       <button class="add-btn purple" onclick="openAddCompany()">➕ افزودن شرکت</button>
     </div>
   </div>
@@ -19397,15 +19398,22 @@ body.viewer-mode .inv-admin-only{display:none!important}
       <div class="msumbox" id="cm-albaqi-box"><div class="ml">جمله الباقی</div><div class="mv red" id="cm-total-albaqi">0</div><div style="font-size:0.8rem;font-weight:700;margin-top:3px" id="cm-total-albaqi-usd"></div><div id="cm-albaqi-status" style="font-size:0.72rem;font-weight:700;margin-top:3px;color:var(--muted)"></div></div>
     </div>
     <div class="modal-body">
-      <!-- نوار دکمه‌های کوچک بالای جدول -->
+      <!-- ── یک کادرِ کشویی به‌جای ردیفِ شلوغِ دکمه‌ها (خواستهٔ صاحب ریپو) ──
+           همهٔ کارها این‌جا جمع شده‌اند؛ «حذف این جدول» عمداً این‌جا نیست و پایینِ
+           صفحه، دور از بقیه، نشسته تا دست اشتباهی نخورد. -->
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
-        <button type="button" onclick="newCompanyTable()" style="display:inline-flex;align-items:center;gap:7px;background:var(--dark);border:1.5px solid var(--green);border-radius:999px;padding:8px 16px;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">📋 جدول جدید</button>
-        <button type="button" id="cm-del-current-btn" onclick="deleteCurrentCompanyTable(this)" style="display:inline-flex;align-items:center;gap:7px;background:var(--dark);border:1.5px solid var(--red);border-radius:999px;padding:8px 16px;color:var(--red);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">🗑️ حذف این جدول</button>
-        <!-- کادرِ رفتن به حسابِ تیلِ دیگر — کنارِ همین کادرها (خواستهٔ صاحب ریپو):
-             با زدنش، هم حساب و هم جدول‌های آرشیوِ همان تیل می‌آید -->
-        <button type="button" id="cm-fuel-switch" onclick="toggleCompanyFuel()" style="display:inline-flex;align-items:center;gap:7px;background:var(--dark);border:1.5px solid #b7791f;border-radius:999px;padding:8px 16px;color:#b7791f;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">🟤 حساب و جدول دیزل</button>
-        <!-- دکمهٔ کوچکِ خریدها — با کلیک یک صفحهٔ جدا باز می‌شود (نه کشویی) -->
-        <span id="cm-purchases"></span>
+        <select id="cm-actions" onchange="cmDoAction(this.value); this.selectedIndex=0"
+          style="flex:1 1 240px;min-width:200px;background:var(--card);border:1.5px solid var(--accent);border-radius:9px;padding:9px 12px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.88rem;font-weight:800;cursor:pointer">
+          <option value="">☰ کارها — انتخاب کنید…</option>
+          <option value="new">📋 جدول جدید</option>
+          <option value="switch" id="cm-act-switch">🟤 حساب و جدول دیزل</option>
+          <option value="buy-petrol">⛽ خریدهای پطرول</option>
+          <option value="buy-diesel">🟤 خریدهای دیزل</option>
+          <option value="pdf">📄 پی‌دی‌اف این حساب</option>
+        </select>
+        <!-- جستجوی خرید — با تن و/یا تاریخ، همان‌جا و فوری -->
+        <button type="button" onclick="openCmpSearch()" style="display:inline-flex;align-items:center;gap:7px;background:var(--dark);border:1.5px solid var(--blue);border-radius:999px;padding:9px 16px;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">🔍 جستجوی خرید</button>
+        <span id="cm-purchases" style="display:none"></span>
       </div>
       <div class="xls-wrap">
         <table class="xls-tbl" id="cm-tbl">
@@ -19447,7 +19455,14 @@ body.viewer-mode .inv-admin-only{display:none!important}
         </div>
       </div>
       <!-- جدول‌های آرشیو‌شدهٔ شرکت — هر بار «جدول جدید» زده شود اینجا اضافه می‌شود -->
+      <!-- ── آرشیوها دیگر زیرِ جدولِ اصلی پهن نمی‌شوند: دو کادرِ جدا، یکی پطرول
+           یکی دیزل؛ با زدنِ هرکدام جدول‌های آرشیوِ همان تیل باز/بسته می‌شود ── -->
+      <div id="cm-arc-boxes" style="display:none;gap:8px;flex-wrap:wrap;margin-top:16px"></div>
       <div id="cm-history-wrap" style="display:none;margin-top:14px"></div>
+      <!-- «حذف این جدول» — عمداً ته صفحه و دور از بقیهٔ کادرها -->
+      <div style="margin-top:26px;padding-top:14px;border-top:1px dashed var(--border);display:flex;justify-content:flex-start">
+        <button type="button" id="cm-del-current-btn" onclick="deleteCurrentCompanyTable(this)" style="display:inline-flex;align-items:center;gap:7px;background:transparent;border:1px dashed var(--red);border-radius:999px;padding:7px 14px;color:var(--red);font-family:'Vazirmatn',sans-serif;font-weight:700;font-size:0.78rem;opacity:.85;cursor:pointer">🗑️ حذف این جدول</button>
+      </div>
 
     </div>
   </div>
@@ -19763,12 +19778,32 @@ body.viewer-mode .inv-admin-only{display:none!important}
 <!-- بعد از بستن نمای کیو‌آر، مهمان با این دکمه حساب را دوباره باز می‌کند (قبلاً صفحه خالی می‌ماند) -->
 <button id="roReopenBtn" style="display:none;position:fixed;bottom:26px;right:50%;transform:translateX(50%);z-index:9000;padding:13px 26px;border-radius:999px;border:none;background:var(--accent);color:#000;font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.95rem;cursor:pointer;box-shadow:0 8px 26px rgba(0,0,0,.4)" onclick="this.style.display='none';openROViewer(_roCurType,_roCurId,_roCurSub)">↩️ دیدن دوبارهٔ حساب</button>
 
+<!-- ── جستجوی خرید (حسابِ شرکت و نمای اسکنِ کیوآر) ── -->
+<div class="modal-overlay" id="cmpSearchModal">
+  <div class="sm-modal" style="max-width:520px">
+    <h3>🔍 جستجوی خرید</h3>
+    <div id="cs-scope" style="font-size:0.76rem;color:var(--muted);margin:-8px 0 12px"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div class="sm-field" style="flex:1 1 150px"><label>مقدار (تن)</label>
+        <input type="text" inputmode="decimal" id="cs-ton" placeholder="مثلاً 12.6" onkeydown="if(event.key==='Enter')runCmpSearch()"></div>
+      <div class="sm-field" style="flex:1 1 150px"><label>تاریخ</label>
+        <input type="text" id="cs-date" placeholder="مثلاً 1405/5/12" onkeydown="if(event.key==='Enter')runCmpSearch()"></div>
+      <div class="sm-field" style="flex:1 1 130px"><label>نوع تیل</label>
+        <select id="cs-fuel"><option value="all">📋 هر دو</option><option value="petrol">⛽ پطرول</option><option value="diesel">🟤 دیزل</option></select></div>
+    </div>
+    <div class="sm-btns"><button class="btn-ok" onclick="runCmpSearch()">🔍 جستجو</button>
+      <button class="btn-cancel" onclick="closeModal('cmpSearchModal')">بستن</button></div>
+    <div id="cs-result" style="margin-top:12px;max-height:46vh;overflow-y:auto"></div>
+  </div>
+</div>
+
 <!-- READ-ONLY COMPANY VIEWER -->
 <div class="ro-overlay" id="companyRoOverlay">
   <div class="ro-header">
     <h2 id="company-ro-title">🛢️ شرکت</h2>
     <div style="display:flex;gap:8px;align-items:center">
       <button onclick="if(_companyRoId)pdfCompanyById(_companyRoId,_cmpRoFilter)" style="padding:6px 14px;border-radius:8px;border:none;background:#38a169;color:#fff;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer">🖨️ دانلود PDF</button>
+      <button onclick="openCmpSearch(_companyRoId)" style="padding:6px 14px;border-radius:8px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer">🔍 جستجوی خرید</button>
       <button id="company-ro-close-btn" onclick="closeCompanyROViewer()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-family:'Vazirmatn',sans-serif;cursor:pointer">✕ بستن</button>
     </div>
   </div>
@@ -28297,13 +28332,8 @@ function _setCompanyTitle(company, idx, total){
 function _updateCompanyFuelBtn(){
   const btn = document.getElementById('cm-fuel-btn');
   if (!btn) return;
-  const sw = document.getElementById('cm-fuel-switch');
-  if (sw){
-    const toDiesel = currentCompanyFuel !== 'diesel';
-    sw.textContent = toDiesel ? '🟤 حساب و جدول دیزل' : '⛽ حساب و جدول پطرول';
-    sw.style.borderColor = toDiesel ? '#b7791f' : 'var(--green)';
-    sw.style.color = toDiesel ? '#b7791f' : 'var(--green)';
-  }
+  const swOpt = document.getElementById('cm-act-switch');
+  if (swOpt) swOpt.textContent = currentCompanyFuel !== 'diesel' ? '🟤 حساب و جدول دیزل' : '⛽ حساب و جدول پطرول';
   if (currentCompanyFuel === 'diesel'){ btn.textContent = '⛽ پطرول'; btn.style.borderColor = 'var(--accent)'; btn.style.color = 'var(--accent)'; }
   else { btn.textContent = '🟤 دیزل'; btn.style.borderColor = '#b7791f'; btn.style.color = '#b7791f'; }
 }
@@ -29050,9 +29080,12 @@ ${bodyHtml}
 function newCompanyTable(){
   const company = (DB.tilCompanies||[]).find(c => c.id === currentCompanyId);
   if (!company) return;
-  const petrolRows = _cmpRows(company, 'petrol');
-  const dieselRows = _cmpRows(company, 'diesel');
-  if (!petrolRows.length && !dieselRows.length){ if (typeof showToast==='function') showToast('جدول فعلی خالی است', '#e53e3e'); return; }
+  // فقط جدولِ همان تیلی که حسابش باز است نو می‌شود — پطرول و دیزل دو دفترِ جدا
+  // هستند و نو کردنِ یکی نباید آنِ دیگری را هم آرشیو کند (باگِ گزارش‌شده).
+  const fuel = currentCompanyFuel === 'diesel' ? 'diesel' : 'petrol';
+  const curRows = _cmpRows(company, fuel);
+  const fuelWord = fuel === 'diesel' ? '🟤 دیزل' : '⛽ پطرول';
+  if (!curRows.length){ if (typeof showToast==='function') showToast('جدولِ ' + fuelWord + ' خالی است', '#e53e3e'); return; }
   if (!Array.isArray(company.tableHistory)) company.tableHistory = [];
   if (!company.purchaseCheckpoint) company.purchaseCheckpoint = { petrol: 0, diesel: 0 };
   const createdAt = (typeof persianDate === 'function' ? persianDate() : '');
@@ -29060,22 +29093,129 @@ function newCompanyTable(){
   // کادرهای «خریدهای پطرول/دیزل» هم مثل جدول از صفر شروع کنند: نقطهٔ شمارش جلو
   // کشیده می‌شود و روی خودِ جدولِ آرشیوشده هم ثبت می‌شود تا آرشیو، شمارشِ خریدهای
   // قدیمِ خودش را نشان بدهد (نه صفر)
-  if (petrolRows.length) {
-    company.tableHistory.push({ id: 'ch' + now + 'p', createdAt, fuel: 'petrol', rows: JSON.parse(JSON.stringify(petrolRows)), purchasesAfter: company.purchaseCheckpoint.petrol || 0, purchasesBefore: now });
-    company.rows = [];
-    company.purchaseCheckpoint.petrol = now;
-  }
-  if (dieselRows.length) {
-    company.tableHistory.push({ id: 'ch' + now + 'd', createdAt, fuel: 'diesel', rows: JSON.parse(JSON.stringify(dieselRows)), purchasesAfter: company.purchaseCheckpoint.diesel || 0, purchasesBefore: now });
-    company.dieselRows = [];
-    company.purchaseCheckpoint.diesel = now;
-  }
+  company.tableHistory.push({ id: 'ch' + now + (fuel === 'diesel' ? 'd' : 'p'), createdAt, fuel: fuel,
+    rows: JSON.parse(JSON.stringify(curRows)), purchasesAfter: company.purchaseCheckpoint[fuel] || 0, purchasesBefore: now });
+  if (fuel === 'diesel') company.dieselRows = []; else company.rows = [];
+  company.purchaseCheckpoint[fuel] = now;
   save();
   renderCompanyRows(company);
   renderCompanyPurchases(company);
   _renderCompanyHistoryPanel(company);
   setTimeout(() => { const hw = document.getElementById('cm-history-wrap'); if (hw) hw.scrollIntoView({ behavior:'smooth', block:'start' }); }, 80);
-  if (typeof showToast === 'function') showToast('✅ جدول جدید ساخته شد — جدول‌های پطرول و دیزل قبلی پایین آرشیو شدند', '#38a169');
+  if (typeof showToast === 'function') showToast('✅ جدولِ ' + fuelWord + ' نو شد — جدولِ قبلیِ همین تیل پایین آرشیو شد', '#38a169');
+}
+
+/* ── جستجوی خرید ──────────────────────────────────────────────────────────
+   خواستهٔ صاحب ریپو: مقدارِ تن و/یا تاریخ را بزنم و همان لحظه خریدِ مربوطه پیدا
+   شود؛ اگر نبود بگوید «پیدا نشد». انتخابِ پطرول/دیزل هم دارد. همین جستجو هم در
+   حسابِ شرکت (مدیر) و هم در نمای اسکنِ کیوآر هست.
+   فقط می‌خوانَد — هیچ داده‌ای عوض نمی‌شود. */
+let _cmpSearchCo = null;      // null = همهٔ شرکت‌ها
+function openCmpSearch(companyId) {
+  _cmpSearchCo = companyId || (typeof currentCompanyId !== 'undefined' ? currentCompanyId : null) || null;
+  const m = document.getElementById('cmpSearchModal');
+  if (!m) return;
+  const co = (DB.tilCompanies || []).find(c => c.id === _cmpSearchCo);
+  const sub = document.getElementById('cs-scope');
+  if (sub) sub.textContent = co ? ('در خریدهای «' + co.name + '»') : 'در خریدهای همهٔ شرکت‌ها';
+  ['cs-ton', 'cs-date'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const res = document.getElementById('cs-result');
+  if (res) res.innerHTML = '<div style="text-align:center;color:var(--muted);padding:18px;font-size:0.85rem">مقدار تن یا تاریخ را بنویسید و «جستجو» را بزنید</div>';
+  m.classList.add('open');
+  setTimeout(() => { const t = document.getElementById('cs-ton'); if (t) t.focus(); }, 80);
+}
+function runCmpSearch() {
+  const tonRaw = (document.getElementById('cs-ton') || {}).value || '';
+  const dateRaw = (document.getElementById('cs-date') || {}).value || '';
+  const fuel = (document.getElementById('cs-fuel') || {}).value || 'all';
+  const res = document.getElementById('cs-result');
+  if (!res) return;
+  const ton = parseFloat(toEnDigits(String(tonRaw)).replace(/[^0-9.\-]/g, ''));
+  const dateQ = toEnDigits(String(dateRaw)).trim();
+  if (!isFinite(ton) && !dateQ) {
+    res.innerHTML = '<div style="text-align:center;color:var(--red);padding:18px;font-size:0.85rem">اول مقدار تن یا تاریخ را بنویسید</div>';
+    return;
+  }
+  const norm = (typeof normFa === 'function') ? normFa : (x => String(x || '').toLowerCase().trim());
+  const co = (DB.tilCompanies || []).find(c => c.id === _cmpSearchCo);
+  const coName = co ? norm(co.name) : null;
+  const list = (DB.fuelEntries || []).filter(e => {
+    if (!e) return false;
+    const ft = e.fuelType || 'petrol';
+    if (fuel !== 'all' && ft !== fuel) return false;
+    if (coName && norm(e.seller) !== coName) return false;
+    if (dateQ && toEnDigits(String(e.date || '')).indexOf(dateQ) < 0) return false;
+    if (isFinite(ton)) {
+      const t = (parseFloat(e.ton) || (parseFloat(e.kg) || 0) / 1000);
+      if (Math.abs(t - ton) > 0.051) return false;   // تا ۵۰ کیلو اختلاف، همان بار حساب می‌شود
+    }
+    return true;
+  }).sort((a, b) => (b.id || 0) - (a.id || 0));
+  if (!list.length) {
+    res.innerHTML = '<div style="text-align:center;padding:22px"><div style="font-size:1.6rem">🔍</div>'
+      + '<div style="font-weight:900;color:var(--red);margin-top:6px">پیدا نشد</div>'
+      + '<div style="color:var(--muted);font-size:0.8rem;margin-top:4px">با این مقدار/تاریخ خریدی ثبت نشده است</div></div>';
+    return;
+  }
+  res.innerHTML = '<div style="font-size:0.78rem;color:var(--muted);margin:2px 2px 8px">' + n2fa(list.length) + ' خرید پیدا شد</div>'
+    + list.map(e => {
+      const ft = (e.fuelType || 'petrol') === 'diesel' ? '🟤 دیزل' : '⛽ پطرول';
+      const col = (e.fuelType || 'petrol') === 'diesel' ? '#b7791f' : 'var(--green)';
+      const t = (parseFloat(e.ton) || (parseFloat(e.kg) || 0) / 1000);
+      return `<div style="border:1.5px solid var(--lg-brd);border-right:4px solid ${col};border-radius:11px;padding:10px 12px;margin-bottom:8px;background:var(--card)">
+        <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline">
+          <b style="font-size:0.9rem">${escFa(e.seller || '—')}</b>
+          <span style="color:${col};font-weight:800;font-size:0.82rem">${ft}</span>
+        </div>
+        <div style="font-size:0.8rem;color:var(--muted);margin-top:4px">📅 ${escFa(String(e.date || '—'))}</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;font-size:0.82rem;font-weight:800">
+          <span style="color:var(--blue)">${n2fa((Math.round(t * 1000) / 1000).toString())} تن</span>
+          <span>${n2fa(Math.round(parseFloat(e.kg) || 0))} کیلو</span>
+          <span style="color:var(--green)">${n2fa(Math.round(parseFloat(e.totalUSD) || 0))} $</span>
+          <span style="color:var(--accent)">${n2fa(Math.round(parseFloat(e.totalAFN) || 0))} افغانی</span>
+        </div>
+      </div>`;
+    }).join('');
+}
+
+/* ── کارهای مودالِ شرکت از یک کادرِ کشویی ─────────────────────────────────
+   ردیفِ دکمه‌ها شلوغ شده بود؛ همه‌شان این‌جا جمع شدند. «حذف این جدول» عمداً در
+   این فهرست نیست و ته صفحه، دور از بقیه، مانده تا دست اشتباهی نخورد. */
+function cmDoAction(v){
+  if (!v) return;
+  try {
+    if (v === 'new') newCompanyTable();
+    else if (v === 'switch') toggleCompanyFuel();
+    else if (v === 'buy-petrol') openCompanyPurchases('petrol');
+    else if (v === 'buy-diesel') openCompanyPurchases('diesel');
+    else if (v === 'pdf') pdfCompanyById(currentCompanyId);
+  } catch (e) {}
+}
+/* ── دو کادرِ آرشیو (پطرول / دیزل) ─────────────────────────────────────────
+   قبلاً جدول‌های آرشیو مستقیم زیرِ جدولِ اصلی پهن می‌شدند و صفحه را شلوغ می‌کردند.
+   حالا برای هر تیل یک کادر است؛ با زدنش آرشیوِ همان تیل باز و با زدنِ دوباره بسته
+   می‌شود. خودِ داده‌ها دست‌نخورده‌اند — فقط نمایش. */
+let _cmArcOpen = null;   // 'petrol' | 'diesel' | null
+function cmToggleArchive(fuel){
+  _cmArcOpen = (_cmArcOpen === fuel) ? null : fuel;
+  const company = (DB.tilCompanies||[]).find(c => c.id === currentCompanyId);
+  if (company) _renderCompanyHistoryPanel(company);
+}
+function _renderCompanyArcBoxes(company){
+  const box = document.getElementById('cm-arc-boxes');
+  if (!box) return;
+  const hist = (company && company.tableHistory) || [];
+  const nP = hist.filter(h => (h.fuel || 'petrol') !== 'diesel').length;
+  const nD = hist.filter(h => (h.fuel || 'petrol') === 'diesel').length;
+  if (!nP && !nD){ box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = 'flex';
+  const mk = (fuel, n, lbl, col) => {
+    const on = _cmArcOpen === fuel;
+    const bg = on ? col : 'var(--dark)', fg = on ? '#fff' : col;
+    return `<button type="button" onclick="cmToggleArchive('${fuel}')" style="flex:1 1 220px;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:${bg};border:1.5px solid ${col};border-radius:12px;padding:12px 16px;color:${fg};font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🗂️ ${lbl} — ${n2fa(n)} جدول ${on ? '▲' : '▼'}</button>`;
+  };
+  box.innerHTML = mk('petrol', nP, 'جدول‌های آرشیو پطرول', 'var(--green)')
+                + mk('diesel', nD, 'جدول‌های آرشیو دیزل', '#b7791f');
 }
 
 // «حذف این جدول» — جدولِ فعلیِ همین شرکت را پاک می‌کند؛ اگر جدولِ قبلی (آرشیو) باشد آن را برمی‌گرداند (لغوِ «جدول جدید»).
@@ -29123,10 +29263,11 @@ function deleteCurrentCompanyTable(btn){
 function _renderCompanyHistoryPanel(company){
   const wrap = document.getElementById('cm-history-wrap');
   if (!wrap || !company) return;
-  // فقط آرشیوِ همان تیلی که حسابش باز است — قبلاً جدول‌های دیزل داخلِ حسابِ پطرول
-  // (و برعکس) هم دیده می‌شدند و قاطی می‌شد. برای رفتن به آنِ دیگر، کادرِ
-  // «🟤 حساب و جدول دیزل / ⛽ حساب و جدول پطرول» بالای جدول است.
-  const _cf = currentCompanyFuel === 'diesel' ? 'diesel' : 'petrol';
+  // دو کادرِ بالای پنل تعیین می‌کنند آرشیوِ کدام تیل باز باشد؛ تا وقتی هیچ‌کدام
+  // زده نشده، هیچ آرشیوی زیرِ جدولِ اصلی پهن نمی‌شود (خواستهٔ صاحب ریپو).
+  try { _renderCompanyArcBoxes(company); } catch (e) {}
+  const _cf = _cmArcOpen;
+  if (!_cf){ wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
   const history = (company.tableHistory || []).filter(h => ((h && h.fuel) === 'diesel' ? 'diesel' : 'petrol') === _cf);
   if (!history.length){ wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
   wrap.style.display = '';
@@ -33245,18 +33386,26 @@ function _updateCmpROFilterBtns() {
 // همان سه کادرِ «همه / حساب جداگانه پطرول / حساب جداگانه دیزل»، این‌بار برای
 // جدول‌های آرشیوشده (خواستهٔ کاربر). فیلترِ خودش را دارد تا جدولِ زندهٔ بالا و
 // آرشیوِ پایین هر کدام مستقل دیده شوند.
-let _cmpRoArcFilter = 'all';
+/* آرشیوها دیگر زیرِ جدولِ اصلی پهن نمی‌شوند: تا وقتی کاربر یکی از دو کادرِ
+   «آرشیو پطرول» / «آرشیو دیزل» را نزده، هیچ جدولِ آرشیوی باز نیست. */
+let _cmpRoArcFilter = null;   // null = بسته · 'petrol' · 'diesel'
 function setCompanyROArcFilter(f) {
-  _cmpRoArcFilter = f;
+  _cmpRoArcFilter = (_cmpRoArcFilter === f) ? null : f;
   if (_companyRoId) openCompanyROViewer(_companyRoId);
 }
-// نوارِ سه‌کادریِ آرشیو — داخلِ خودِ هر جدولِ آرشیو، پایینِ شش کادرِ خلاصه
-function _cmpRoArcFilterBar() {
-  const btn = (k, lbl, cls) => '<button type="button" class="pm-filter-btn ' + cls
-    + (_cmpRoArcFilter === k ? ' active' : '') + '" onclick="setCompanyROArcFilter(\'' + k + '\')">' + lbl + '</button>';
-  return '<div class="ro-filter-bar" style="padding:8px 12px 10px;border-bottom:1px solid var(--border)">'
-    + btn('all', '📋 همه', '') + btn('petrol', '⛽ حساب جداگانه پطرول', 'petrol')
-    + btn('diesel', '🟤 حساب جداگانه دیزل', 'diesel') + '</div>';
+// دو کادرِ باز/بستهٔ آرشیو — بالای فهرستِ آرشیو، نه داخلِ هر جدول
+function _cmpRoArcBoxes(company) {
+  const hist = (company && company.tableHistory) || [];
+  const nP = hist.filter(h => (h.fuel || 'petrol') !== 'diesel').length;
+  const nD = hist.filter(h => (h.fuel || 'petrol') === 'diesel').length;
+  const mk = (fuel, n, lbl, col) => {
+    const on = _cmpRoArcFilter === fuel;
+    const bg = on ? col : 'var(--card)', fg = on ? '#fff' : col;
+    return `<button type="button" onclick="setCompanyROArcFilter('${fuel}')" style="flex:1 1 220px;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:${bg};border:1.5px solid ${col};border-radius:12px;padding:12px 16px;color:${fg};font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🗂️ ${lbl} — ${n2fa(n)} جدول ${on ? '▲' : '▼'}</button>`;
+  };
+  return '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+    + mk('petrol', nP, 'جدول‌های آرشیو پطرول', 'var(--green)')
+    + mk('diesel', nD, 'جدول‌های آرشیو دیزل', '#b7791f') + '</div>';
 }
 /* شش کادرِ خلاصهٔ حساب شرکت — یک تابعِ واحد برای بالای صفحه و برای هر جدولِ آرشیو،
    تا هر دو دقیقاً یک‌شکل و یک‌تعداد باشند (قبلاً بالای صفحه فقط چهار کادر داشت و
@@ -33333,8 +33482,8 @@ function openCompanyROViewer(id) {
 function _cmpRoArchivesHtml(company) {
   const hist = (company && company.tableHistory) || [];
   if (!hist.length) return '';
-  const shown = hist.filter(h => _cmpRoArcFilter === 'all'
-    || (_cmpRoArcFilter === 'diesel' ? (h.fuel === 'diesel') : (h.fuel !== 'diesel')));
+  const shown = !_cmpRoArcFilter ? []
+    : hist.filter(h => (_cmpRoArcFilter === 'diesel' ? (h.fuel === 'diesel') : (h.fuel !== 'diesel')));
   const blocks = shown.slice().reverse().map(h => {
     const rows = h.rows || [];
     const sumUsdAll = rows.reduce((a, r) => a + cmpTotalUsd(r), 0);
@@ -33378,9 +33527,6 @@ function _cmpRoArchivesHtml(company) {
         </span>
       </div>
       <div class="ro-arc-sums">${sums}</div>
-      <!-- سه کادرِ «همه / پطرول جداگانه / دیزل جداگانه» داخلِ خودِ جدولِ آرشیو و
-           پایینِ شش کادرِ خلاصه (خواستهٔ کاربر) -->
-      ${_cmpRoArcFilterBar()}
       <div style="overflow-x:auto"><table class="ro-tbl" style="min-width:760px;width:100%">
         <thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>تن</th><th>$/تن</th><th>کل $</th><th>نرخ</th><th>کل افغانی</th><th>رسید</th><th>الباقی</th></tr></thead>
         <tbody>${body || '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:14px">فقط خرید — ردیفی برای نمایش نیست</td></tr>'}</tbody>
@@ -33399,11 +33545,10 @@ function _cmpRoArchivesHtml(company) {
   }).join('');
   const emptyTxt = _cmpRoArcFilter === 'petrol' ? '⛽ جدول آرشیوِ پطرول ندارد'
     : (_cmpRoArcFilter === 'diesel' ? '🟤 جدول آرشیوِ دیزل ندارد' : '');
-  return `<div style="margin-top:18px"><div style="font-weight:900;font-size:0.95rem">🗂️ جدول‌های آرشیوشده (ماه‌های قبل)</div>${
-    blocks || `<div style="margin-top:12px;border:1px solid var(--border);border-radius:12px;overflow:hidden">
-        ${_cmpRoArcFilterBar()}
-        <div style="text-align:center;color:var(--muted);padding:18px">${emptyTxt}</div>
-      </div>`
+  return `<div style="margin-top:18px"><div style="font-weight:900;font-size:0.95rem">🗂️ جدول‌های آرشیوشده (ماه‌های قبل)</div>${_cmpRoArcBoxes(company)}${
+    _cmpRoArcFilter && !blocks
+      ? `<div style="margin-top:12px;border:1px solid var(--border);border-radius:12px;text-align:center;color:var(--muted);padding:18px">${emptyTxt}</div>`
+      : blocks
   }</div>`;
 }
 function closeCompanyROViewer() {
@@ -37280,7 +37425,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.197';
+const APP_VERSION = '2.9.198';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
