@@ -1,7 +1,7 @@
 // سرویس‌ورکر پمپ یعقوبی — پوستهٔ برنامه (این صفحه + آیکون‌ها) را کش می‌کند تا
 // برنامه بعد از نصب، هم آنلاین و هم کاملاً آفلاین باز شود. نسخهٔ کش را هر بار
 // که APP_VERSION در index.html عوض می‌شود، این‌جا هم عوض کنید تا کش کهنه پاک شود.
-const CACHE_NAME = 'pump-yaqobi-shell-v2.9.194';
+const CACHE_NAME = 'pump-yaqobi-shell-v2.9.195';
 const APP_SHELL = [
   './',
   './index.html',
@@ -148,7 +148,24 @@ self.addEventListener('push', event => {
     vibrate: [80, 40, 80]
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  /* کسی که همین حالا داخلِ برنامه است نباید روی نوارِ اعلانِ گوشی پیام بگیرد —
+     برای او خودِ صفحه یک توستِ کوتاه نشان می‌دهد (خواستهٔ صاحب ریپو).
+     ۱) پنجره‌ای باز و «دیده‌شده» هست  → اعلانِ سیستمی نمی‌آید، پیام به صفحه می‌رود.
+     ۲) پنجره باز است ولی پس‌زمینه     → خودِ صفحه اعلانش را می‌دهد، پس این‌جا
+        ساکت می‌مانیم تا دو تا اعلانِ تکراری روی هم نیفتد.
+     ۳) برنامه اصلاً باز نیست          → اعلانِ سیستمی همین‌جا نشان داده می‌شود. */
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      const alive = list && list.length ? list : [];
+      const visible = alive.filter(c => c.visibilityState === 'visible');
+      if (visible.length) {
+        visible.forEach(c => { try { c.postMessage({ type: 'push-message', title: title, body: options.body, data: options.data }); } catch (e) {} });
+        return undefined;
+      }
+      if (alive.length) return undefined;               // صفحه زنده است و خودش خبر می‌دهد
+      return self.registration.showNotification(title, options);
+    }).catch(() => self.registration.showNotification(title, options))
+  );
 });
 
 // با زدنِ نوتیفیکیشن: اگر برنامه باز است همان را جلو بیاور، وگرنه بازش کن
