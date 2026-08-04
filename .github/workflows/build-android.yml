@@ -1,15 +1,38 @@
 name: ساخت برنامهٔ اندروید (APK)
 
 # فایل نصبِ اندروید (.apk) را می‌سازد و در Releases می‌گذارد.
-# اجرا: از تب Actions دکمهٔ «Run workflow» را بزنید.
+#
+# ── چرا خودکار شد ────────────────────────────────────────────────────────────
+# خودِ برنامه (index.html) داخلِ همین فایلِ نصب بسته می‌شود، پس APK فقط وقتی
+# تازه می‌شود که این ورک‌فلو اجرا شود. قبلاً فقط دستی اجرا می‌شد و برای همین
+# فایلِ نصبِ روی سایت ده‌ها نسخه عقب مانده بود (۲.۹.۱۵۱ در برابرِ نسخهٔ روز).
+# حالا با هر تغییرِ خودِ برنامه روی main، APK دوباره ساخته و منتشر می‌شود و بعد
+# دیپلویِ سایت را صدا می‌زند تا همان فایلِ تازه کنارِ سایت بنشیند.
 on:
   workflow_dispatch:
   push:
     tags:
       - 'android-v*'
+    branches:
+      - main
+    paths:
+      - 'index.html'
+      - 'sw.js'
+      - 'manifest.json'
+      - 'favicon.png'
+      - 'icons/**'
+      - 'android/**'
+      - '.github/workflows/build-android.yml'
 
+# actions: write برای صدا زدنِ دیپلویِ سایت بعد از ساخته شدنِ APK
 permissions:
   contents: write
+  actions: write
+
+# اگر چند تغییر پشتِ سرِ هم مرج شد، فقط آخری ساخته شود
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
 
 jobs:
   build-apk:
@@ -69,6 +92,9 @@ jobs:
           cp android/app/build/outputs/apk/release/*.apk "out/PumpYaqobi-$(date +%Y%m%d).apk"
           # یک نام ثابت هم می‌سازیم تا لینکِ دانلود در سایت هیچ‌وقت نشکند
           cp android/app/build/outputs/apk/release/*.apk "out/PumpYaqobi.apk"
+          # نسخهٔ خودِ فایلِ نصب کنارش منتشر می‌شود تا صفحهٔ دریافت بتواند
+          # بنویسد «نسخهٔ فایل نصب: …» و هر عقب‌ماندگی فوری دیده شود
+          echo -n "${{ steps.ver.outputs.version }}" > "out/PumpYaqobi-version.txt"
           ls -la out/
 
       - name: بارگذاری به‌عنوان Artifact
@@ -89,5 +115,18 @@ jobs:
             بار اول اندروید می‌گوید «نصب از منبع ناشناس» — اجازه بدهید.
             خودِ برنامه داخلِ همین فایل است، پس بدون اینترنت هم کار می‌کند و
             هیچ نوارِ آدرس یا سربرگِ مرورگر بالای صفحه نمی‌آید.
-          files: out/*.apk
+          files: |
+            out/*.apk
+            out/PumpYaqobi-version.txt
           make_latest: false
+
+      # سایت فایلِ نصب را از همین انتشار برمی‌دارد. دیپلویِ سایت هم‌زمان با این
+      # ساخت شروع شده بود، پس نسخهٔ کهنه را برداشته؛ حالا که فایلِ تازه منتشر
+      # شد، یک‌بار دیگر صدایش می‌زنیم تا فایلِ تازه کنارِ سایت بنشیند.
+      - name: تازه‌سازیِ سایت با فایلِ نصبِ تازه
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run deploy-pages.yml --ref main \
+            && echo "دیپلوی سایت صدا زده شد" \
+            || echo "::warning::دیپلوی سایت صدا زده نشد — سایت با دیپلوی بعدی تازه می‌شود"

@@ -83,6 +83,7 @@ jobs:
                       os.remove(dest)
 
           grab('android-latest', '.apk', 'PumpYaqobi.apk')
+          grab('android-latest', 'version.txt', 'apk-version.txt')
           grab('desktop-latest', '.exe', 'PumpYaqobi-Setup.exe')
           PY
 
@@ -103,11 +104,22 @@ jobs:
               return {'url': './' + path.replace(os.sep, '/'),
                       'size': os.path.getsize(path),
                       'name': os.path.basename(path)}
+          # نسخهٔ خودِ فایلِ نصبِ اندروید (کنارِ خودش منتشر می‌شود). اگر با نسخهٔ
+          # سایت یکی نباشد، صفحهٔ دریافت همان‌جا می‌گوید — تا دوباره پیش نیاید که
+          # کاربر فایلِ نصبِ ده‌ها نسخه عقب‌تر را بگیرد.
+          apk_ver = ''
+          try:
+              apk_ver = open('downloads/apk-version.txt', encoding='utf-8').read().strip()
+          except Exception:
+              pass
+          android = finfo('downloads/PumpYaqobi.apk')
+          if android and apk_ver:
+              android['appVersion'] = apk_ver
           data = {
               'version': ver,
               'buildTime': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
               'commit': (os.environ.get('GITHUB_SHA') or '')[:8],
-              'android': finfo('downloads/PumpYaqobi.apk'),
+              'android': android,
               'windows': finfo('downloads/PumpYaqobi-Setup.exe'),
               'ios': {'mode': 'pwa'}
           }
