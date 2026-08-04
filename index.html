@@ -15637,6 +15637,29 @@ table thead th:first-child .col-resize-grip{ display:none; }
    به‌خاطر خطِ «تیلش تمام شده» بلندتر است و دکمه پایین‌تر می‌رود) */
 .persons-grid .person-card{ height:100% !important; padding-bottom:30px !important; }
 
+/* ── کارتِ «شرکت ها تیل» ───────────────────────────────────────────────────
+   کادرِ «دالر» و کادرِ «الباقی» دقیقاً یک اندازه‌اند (هم‌عرض، هم‌قد، هم‌فونت) و
+   دکمه‌های «کیوآر» و «PDF» داخلِ یک کادرِ واحد می‌نشینند — مثل کارت‌های
+   قرض‌داران که پایینشان یک کادر است، نه دو کادرِ جدا. */
+.person-card .cmp-fig{
+  width:100%; box-sizing:border-box; margin:6px 0 0; min-height:40px;
+  display:flex; align-items:center; justify-content:center;
+  padding:6px 8px; border:1.5px solid var(--lg-brd); border-radius:9px;
+  font-size:1rem; font-weight:800; line-height:1.35; text-align:center;
+  overflow-wrap:break-word; word-break:break-word;
+}
+.person-card .cmp-fig.usd{ color:var(--blue) }
+.person-card .cmp-acts{
+  width:100%; box-sizing:border-box; margin-top:8px; display:flex;
+  border:1.5px solid var(--lg-brd); border-radius:9px; overflow:hidden;
+}
+.person-card .cmp-acts button{
+  flex:1 1 0; min-width:0; padding:7px 6px; border:0; background:transparent;
+  font-family:'Vazirmatn',sans-serif; font-size:0.74rem; font-weight:700; cursor:pointer;
+}
+.person-card .cmp-acts button + button{ border-inline-start:1.5px solid var(--lg-brd) }
+.person-card .cmp-acts button:hover{ background:color-mix(in srgb, var(--accent) 14%, transparent) }
+
 /* ── زنگ اعلان‌ها و فهرستِ خبرها (سرویسِ اعلانِ سرور خانگی) ─────────────── */
 .ntf-bell{ position:relative; padding:6px 10px; border-radius:7px; border:1px solid var(--border);
   background:var(--card); color:var(--txt); font-size:0.95rem; cursor:pointer; line-height:1 }
@@ -28325,13 +28348,11 @@ function renderCompanies() {
     card.innerHTML = `
       <button class="person-del" onclick="event.stopPropagation();deleteCompany('${c.id}')">✕</button>
       <div class="pname">${escFa(c.name)}</div>
-      <div style="display:flex;justify-content:center;gap:10px;margin:6px 0;flex-wrap:wrap">
-        <span style="font-size:0.82rem;font-weight:800;color:var(--blue)">${n2fa(sumUsd.toFixed(1))} $</span>
-      </div>
-      <div class="pdebt ${settled?'clear':''}">${settled ? '✅ تسویه' : 'الباقی: '+n2fa(Math.round(albaqi))+' افغانی'}</div>
-      <div style="display:flex;gap:6px;margin-top:8px">
-        <button onclick="event.stopPropagation();pdfCompanyById('${c.id}')" style="flex:1;padding:5px 6px;border-radius:7px;border:1px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-size:0.72rem;font-weight:700;cursor:pointer">📄 PDF</button>
-        <button onclick="event.stopPropagation();showCompanyQR('${c.id}')" style="flex:1;padding:5px 6px;border-radius:7px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-size:0.72rem;font-weight:700;cursor:pointer">📲 کیو‌آر</button>
+      <div class="cmp-fig usd">${n2fa(sumUsd.toFixed(1))} $</div>
+      <div class="pdebt cmp-fig ${settled?'clear':''}">${settled ? '✅ تسویه' : 'الباقی: '+n2fa(Math.round(albaqi))+' AFN'}</div>
+      <div class="cmp-acts">
+        <button onclick="event.stopPropagation();pdfCompanyById('${c.id}')" style="color:var(--green)">📄 PDF</button>
+        <button onclick="event.stopPropagation();showCompanyQR('${c.id}')" style="color:var(--blue)">📲 کیو‌آر</button>
       </div>
     `;
     // مثل کارت قرض‌داران: کلیک معمولی حساب را باز می‌کند؛ راست‌کلیک/نگه‌داشتن، منو را
@@ -36952,7 +36973,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.183';
+const APP_VERSION = '2.9.184';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -38746,7 +38767,7 @@ function applyFontScale(val) {
   if (lbl) lbl.textContent = pct + '٪';
   // Scale text elements specifically
   const textEls = document.querySelectorAll(
-    '.pname,.pdebt,.msumbox .mv,.msumbox .ml,.xls-in,.xls-calc,.xls-num,.fs-cell .v,.fs-cell .l,.stat-value,.stat-label,.tb-value,.tb-label'
+    '.pname,.pdebt,.cmp-fig,.msumbox .mv,.msumbox .ml,.xls-in,.xls-calc,.xls-num,.fs-cell .v,.fs-cell .l,.stat-value,.stat-label,.tb-value,.tb-label'
   );
   textEls.forEach(el => {
     const base = parseFloat(el.dataset.baseFontSize || getComputedStyle(el).fontSize);
