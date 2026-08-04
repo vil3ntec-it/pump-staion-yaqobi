@@ -246,7 +246,14 @@
       ['android', 'windows'].forEach(function (k) {
         if (v[k] && v[k].size) {
           meta[k] = v[k];
-          say(k, 'حجم: ' + fmtSize(v[k].size) + (v.version ? ' · نسخهٔ ' + v.version : ''));
+          // نسخهٔ نوشته‌شده همان نسخهٔ خودِ فایلِ نصب است (نه نسخهٔ سایت) — تا
+          // دیگر پیش نیاید که کاربر فایلی ده‌ها نسخه عقب‌تر بگیرد و نفهمد.
+          var fv = v[k].appVersion || v.version;
+          var txt = 'حجم: ' + fmtSize(v[k].size) + (fv ? ' · نسخهٔ ' + fv : '');
+          if (v[k].appVersion && v.version && v[k].appVersion !== v.version) {
+            txt += ' — نسخهٔ ' + v.version + ' در راه است؛ برنامه بعد از نصب خودش تازه می‌شود.';
+          }
+          say(k, txt);
         }
       });
     })
