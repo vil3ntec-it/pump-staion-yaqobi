@@ -14601,6 +14601,22 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
 @media (max-width: 480px){
   .person-card .pname{ padding: 0 18px; }
 }
+/* ═══ تراز شدنِ دکمهٔ کیوآرِ همهٔ کارت‌ها (قرض‌داران و شرکت‌ها) ═══════════════
+   خواستهٔ صاحب ریپو: چه نامِ کارت کوتاه باشد چه بلند (یک خط یا دو خط) و چه
+   خطِ «تیلش تمام شده» داشته باشد چه نداشته باشد، دکمهٔ کیوآرِ همهٔ کارت‌ها روی
+   یک خطِ افقی بنشیند.
+   ۱) جای نام همیشه به‌اندازهٔ دو خط رزرو می‌شود ⇒ نامِ کوتاه و بلند هم‌قد. */
+.person-card .pname{
+  min-height:2.7em;            /* دقیقاً دو خط با line-height:1.35 */
+  display:flex; align-items:center; justify-content:center;
+  width:100%; box-sizing:border-box;
+}
+/* ۲) دکمهٔ کیوآر (و نوارِ دکمه‌های کارتِ شرکت) همیشه کفِ کارت می‌چسبد.
+   با !important نوشته شده چون قاعده‌های قدیمی‌ترِ همین کارت‌ها هم !important
+   دارند و بدون آن، کارتِ بدونِ خطِ وضعیت دکمه‌اش بالا می‌ماند (همان ناترازی). */
+.person-card .pcard-qr,
+.person-card .cmp-acts{ margin-top:auto !important; }
+.person-card .pcard-qr{ margin-bottom:0 !important; }
 
 /* ===== نوار حساب/فیلتر مودال شخص: همه در یک خط بغل هم ===== */
 /* کشویی دیگر بالای «حساب جدید / جدول جدید» باز نمی‌شود که دست اشتباهی برود؛
@@ -16216,7 +16232,40 @@ body.gfx-performance .xls-foot td{
   document.body.classList.add('gfx-' + t);
   window.__gfxTier = t;
 })();
+/* لینک‌های کیو‌آر (#roview-…) و صفحه‌های مهمان: قبل از اولین رنگ‌آمیزی، صفحهٔ
+   قفل پنهان و یک پردهٔ سادهٔ «در حال باز کردن حساب…» گذاشته می‌شود تا موقعِ
+   رفرش، برای کسری از ثانیه صفحهٔ قفل/سیاه پرش نکند (باگِ گزارش‌شده).
+   با باز شدنِ خودِ حساب برداشته می‌شود و یک تایمرِ ایمنی هم دارد تا اگر لینک
+   خراب بود، صفحهٔ قفل مثل همیشه برگردد. */
+(function(){
+  try{
+    if(!/^#(roview-|mirza|staff|karmand)/.test(location.hash || '')) return;
+    document.body.classList.add('boot-viewer');
+    window._bootViewerDone = function(){
+      try{ document.body.classList.remove('boot-viewer'); }catch(e){}
+    };
+    setTimeout(window._bootViewerDone, 3500);
+  }catch(e){}
+})();
 </script>
+<style id="boot-viewer-css">
+body.boot-viewer .lock-screen{ display:none !important; }
+#bootViewerSplash{ display:none }
+body.boot-viewer #bootViewerSplash{
+  display:flex; position:fixed; inset:0; z-index:9400;
+  align-items:center; justify-content:center; flex-direction:column; gap:14px;
+  background:var(--bg,#0c0e13); color:var(--muted,#9aa4b2);
+  font-family:'Vazirmatn',sans-serif; font-size:0.92rem; font-weight:700;
+}
+#bootViewerSplash .bvs-ring{
+  width:44px; height:44px; border-radius:50%;
+  border:3px solid rgba(255,255,255,.14); border-top-color:var(--accent,#f6a623);
+  animation:bvsSpin .9s linear infinite;
+}
+@keyframes bvsSpin{ to{ transform:rotate(360deg) } }
+@media (prefers-reduced-motion: reduce){ #bootViewerSplash .bvs-ring{ animation:none } }
+</style>
+<div id="bootViewerSplash" aria-hidden="true"><div class="bvs-ring"></div><div>در حال باز کردن حساب…</div></div>
 
 <div id="siteBg"></div>
 
@@ -24787,7 +24836,7 @@ function renderPersons(type) {
         <span style="color:var(--green)">⛽ ${n2fa(pBal)}</span>
         <span style="color:#b7791f">🟤 ${n2fa(dBal)}</span>
       </div>
-      <button onclick="event.stopPropagation();showPersonQR('${type}','${p.id}')" style="margin-top:10px;width:100%;padding:6px 8px;border-radius:7px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-size:0.75rem;font-weight:700;cursor:pointer">📲 کیو‌آر کد</button>
+      <button class="pcard-qr" onclick="event.stopPropagation();showPersonQR('${type}','${p.id}')" style="width:100%;padding:6px 8px;border-radius:7px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-size:0.75rem;font-weight:700;cursor:pointer">📲 کیو‌آر کد</button>
     `;
     // کلیک معمولی حساب را باز می‌کند؛ راست‌کلیک (یا نگه‌داشتن انگشت) منوی گزینه‌ها را
     card.onclick = () => openPersonModal(type, p.id);
@@ -34409,6 +34458,7 @@ function openCompanyROViewer(id) {
   const cArc = document.getElementById('company-ro-archives');
   if (cArc) { try { cArc.innerHTML = _cmpRoArchivesHtml(c); } catch (e) { cArc.innerHTML = ''; } }
   document.getElementById('companyRoOverlay').classList.add('open');
+  try { if (window._bootViewerDone) window._bootViewerDone(); } catch (e) {}
   var _rw2 = document.getElementById('roWaitMsg'); if (_rw2) _rw2.remove();
   // مهمانِ کیو‌آرِ شرکت هم مثل قرض‌دار «چت با میرزا» داشته باشد (قبلاً فقط قرض‌دارها داشتند)
   if (isGuest) {
@@ -34503,12 +34553,35 @@ function closeCompanyROViewer() {
     history.replaceState(null, '', window.location.pathname + window.location.search);
   }
 }
-// اشتراک‌گذاری تصویر کیو‌آر (با Web Share API روی موبایل، در غیر این صورت دانلود/کپی لینک)
+// شمارهٔ تماسِ صاحبِ همین کیو‌آر (اگر در حسابش ثبت شده باشد)
+function _qrPersonPhone() {
+  try {
+    if (_qrCurrentType === 'company') {
+      const c = (DB.tilCompanies || []).find(x => x && String(x.id) === String(_qrCurrentId));
+      return c ? String(c.phone || '').trim() : '';
+    }
+    const list = _qrCurrentType === 'debt' ? DB.debtPersons : DB.noinvPersons;
+    const p = (list || []).find(x => x && x.id === _qrCurrentId);
+    return p ? String(p.phone || '').trim() : '';
+  } catch (e) { return ''; }
+}
+// اشتراک‌گذاری: اگر شمارهٔ خودِ شخص ثبت شده باشد، مستقیم می‌رود به واتساپِ همان
+// شخص با لینکِ حسابش. اگر شماره نبود (یا مرورگر بازشدن را بلاک کرد)، همان راهِ
+// قبلی: Web Share، وگرنه دانلودِ تصویر + کپیِ لینک.
 async function _qrShare() {
   const wrap = document.getElementById('qr-canvas-wrap');
   const canvas = wrap.querySelector('canvas');
   const imgEl = wrap.querySelector('img');
   const nameTxt = (document.getElementById('qr-person-name').textContent || 'qr').replace('📲', '').trim();
+  // 0) شمارهٔ خودِ شخص ⇒ یک‌راست به پیویِ واتساپِ همان شخص
+  const _ph = _qrPersonPhone();
+  if (_ph && typeof _openWhatsApp === 'function' && typeof _waNumber === 'function' && _waNumber(_ph)) {
+    const msg = 'سلام ' + nameTxt + ' — حساب شما در پمپ یعقوبی:\n' + (_qrCurrentUrl || '');
+    if (_openWhatsApp(_ph, msg, '📋 لینک حساب کپی شد — در واتساپ/تلگرام بفرستید')) {
+      showToast('📲 واتساپِ «' + nameTxt + '» باز شد', '#38a169');
+    }
+    return;
+  }
   let blob = null;
   try {
     if (canvas && canvas.toBlob) {
@@ -34650,12 +34723,21 @@ function _toggleROFtColumn(show) {
 // وقتی حسابی از داخلِ چت باز می‌شود، گفتگوی جاری نباید عوض شود (وگرنه مشتری از
 // چتِ خودش با میرزا پرت می‌شد به گفتگوی حسابِ فرستاده‌شده)
 let _roKeepChat = false;
+// دفترِ همان واحدی که روی حساب فعال است — «واحد پول» و «واحد تیل» دو دفترِ
+// کاملاً جدا هستند (rows و moneyRows). قبلاً این نما همیشه دفترِ تیل را می‌خواند،
+// پس حسابی که به «واحد پول» برده شده بود برای صاحبش خالی دیده می‌شد (باگِ
+// گزارش‌شده). این تابع فقط می‌خواند و هیچ آرایه‌ای نمی‌سازد/ذخیره نمی‌کند.
+function _roRowsOf(acct) {
+  if (!acct) return [];
+  if (_roViewMode === 'money') return Array.isArray(acct.moneyRows) ? acct.moneyRows : [];
+  return Array.isArray(acct.rows) ? acct.rows : [];
+}
 function _renderROViewer() {
   const list = _roCurType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list ? list.find(p => p.id === _roCurId) : null;
   if (!person) return;
   const acct = _roAcctOf(person);
-  const rows = acct.rows || [];
+  const rows = _roRowsOf(acct);
   const t = _splitTotals(rows);
   const isMoney = _roViewMode === 'money';
   // Update toggle button label
@@ -34677,13 +34759,14 @@ function _renderROViewer() {
       <div class="ro-sum-box"><div class="l">الباقی</div><div class="v" style="color:${t.all.albaqi>0?'var(--red)':'var(--green)'}">${n2fa(t.all.albaqi)} افغانی</div></div>
     `;
   }
-  // فیلترِ حساب جداگانهٔ پطرول/دیزل — فقط در واحد تیل معنا دارد؛ در واحد پول همیشه «همه»
-  if (isMoney) _roFilter = 'all';
+  // فیلترِ «همه / حساب جداگانه پطرول / حساب جداگانه دیزل» در هر دو واحد دیده
+  // می‌شود — دقیقاً مثل مودالِ مدیر. قبلاً در «واحد پول» پنهان می‌شد و صاحبِ
+  // حسابی که با کیو‌آر نگاه می‌کرد اصلاً این دکمه‌ها را نداشت (باگِ گزارش‌شده).
   const filterBarEl = document.getElementById('ro-filter-bar');
-  if (filterBarEl) filterBarEl.style.display = isMoney ? 'none' : '';
+  if (filterBarEl) filterBarEl.style.display = '';
   _updateROFilterBtns();
-  const filterActive = !isMoney && _roFilter !== 'all';
-  const showFtCol = !isMoney && _roFilter === 'all';
+  const filterActive = _roFilter !== 'all';
+  const showFtCol = _roFilter === 'all';
   _toggleROFtColumn(showFtCol);
   // Table rows
   const tbody = document.getElementById('ro-body');
@@ -34694,7 +34777,10 @@ function _renderROViewer() {
     shown++;
     const fuelLabel = r.ftype === 'diesel' ? '🟤 دیزل' : '⛽ پطرول';
     const albaqiColor = (r.albaqi||0) > 0 ? 'var(--red)' : 'var(--green)';
-    const showFuel = !isMoney && !r.byMoney;
+    // لیتر و فیِ هر ردیف هر جا که واقعاً وجود دارد نشان داده می‌شود — در «واحد
+    // پول» هم، چون ردیفِ لیتردار در آن دفتر هم ممکن است باشد و پنهان‌کردنش
+    // اطلاعات را از صاحبِ حساب می‌گرفت. (فقط نمایش؛ هیچ جمعی عوض نمی‌شود.)
+    const showFuel = (parseFloat(r.fuel) || 0) > 0;
     const ftCell = showFtCol ? `<td>${fuelLabel}</td>` : '';
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -34719,7 +34805,7 @@ function _renderROViewer() {
   }
   // Footer totals — با فیلترِ فعال هماهنگ باشد
   const ft = filterActive ? t[_roFilter] : t.all;
-  document.getElementById('ro-ft-fuel').textContent    = isMoney ? '—' : n2fa(ft.fuel) + ' ل';
+  document.getElementById('ro-ft-fuel').textContent    = (ft.fuel > 0) ? (n2fa(ft.fuel) + ' ل') : '—';
   document.getElementById('ro-ft-bardagi').textContent = n2fa(ft.bardagi);
   document.getElementById('ro-ft-rasid').textContent   = n2fa(ft.rasid);
   document.getElementById('ro-ft-albaqi').textContent  = n2fa(ft.albaqi);
@@ -34794,6 +34880,7 @@ function openROViewer(type, id, subId) {
   document.getElementById('ro-title').textContent = (sub ? ('📄 ' + (sub.name || 'حساب')) : ('👤 ' + person.name)) + ' — فقط‌خواندنی';
   _renderROViewer();
   document.getElementById('roOverlay').classList.add('open');
+  try { if (window._bootViewerDone) window._bootViewerDone(); } catch (e) {}
   var _rw = document.getElementById('roWaitMsg'); if (_rw) _rw.remove();
   // چت تک‌نفرهٔ صاحب حساب (از کیو‌آر): سوال از ربات + پیام مستقیم به میرزا
   const app = document.getElementById('app');
@@ -34959,6 +35046,7 @@ function openStaffPage() {
   document.body.classList.add('staff-view');
   renderStaffPage();
   document.getElementById('staffOverlay').classList.add('open');
+  try { if (window._bootViewerDone) window._bootViewerDone(); } catch (e) {}
   // چت گروهی کارمندان + سوال‌وجواب ربات + ماشین حساب روی صفحهٔ کارمند
   try { _lsCalcBtnShow(false); _showChatFabs(true); _rbSetMode('staff'); } catch (e) {}
   // هشدار کمبود مخزن برای کارمند هم نمایش داده شود
@@ -38371,7 +38459,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.208';
+const APP_VERSION = '2.9.209';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
