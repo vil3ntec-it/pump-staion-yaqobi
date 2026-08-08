@@ -1090,6 +1090,44 @@ body.viewer-mode .att-admin{display:none !important}
    فقط می‌گوید تیلی که قرضی رفته، تا روزِ پرداخت چقدر گران‌تر شده است.
    کاملاً ریسپانسیو: کادرهای جمع با auto-fit می‌شکنند و جدول در موبایل
    اسکرول افقیِ خودش را دارد (صفحه هیچ‌وقت افقی کشیده نمی‌شود). */
+/* ═══ سربرگِ مودالِ حساب: دکمه‌ها یک‌بغل، نام وسط، ✕ آن‌سر ═══════════════════
+   همهٔ دکمه‌ها در یک بلوکِ واحد جمع‌اند و در جای کم به‌جای پخش‌شدن، مرتب به
+   ردیفِ دوم می‌روند. نامِ حساب همیشه وسطِ نوار می‌ماند. */
+/* سه ستون با دو کنارهٔ هم‌اندازه ⇒ نامِ حساب دقیقاً وسطِ نوار می‌نشیند، هر
+   چقدر هم که دکمه‌ها یا خودِ نام بلند باشند. دکمه‌ها همه در یک بلوکِ واحدند و
+   در جای کم مرتب به ردیفِ دوم می‌روند (همان چیدمانی که صاحب ریپو پسندید). */
+.pm-head{
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  align-items:start; gap:10px;
+}
+.pm-head .pm-head-btns{
+  grid-column:1; display:flex; align-items:center; gap:6px;
+  flex-wrap:wrap; justify-content:flex-start; min-width:0;
+}
+/* دکمه‌های داخلِ این نوار نباید عرضِ کامل بگیرند (add-row-btn جای دیگر
+   تمام‌عرض است) — این‌جا هرکدام به اندازهٔ خودشان و بغلِ هم می‌نشینند */
+.pm-head .pm-head-btns > button,
+.pm-head .pm-head-btns > .sec-font-ctrl{
+  flex:0 0 auto !important; width:auto !important; margin:0 !important;
+  display:inline-flex; align-items:center; justify-content:center; white-space:nowrap;
+}
+.pm-head .pm-head-title{
+  grid-column:2; text-align:center; align-self:center; margin:0;
+  min-width:90px; overflow-wrap:break-word; word-break:break-word;
+}
+.pm-head > .modal-close{ grid-column:3; justify-self:end; align-self:start; }
+@media (max-width:700px){
+  .pm-head{ grid-template-columns:1fr auto; }
+  .pm-head .pm-head-title{ grid-column:1; grid-row:1; justify-self:center; }
+  .pm-head > .modal-close{ grid-column:2; grid-row:1; }
+  .pm-head .pm-head-btns{ grid-column:1 / -1; grid-row:2; justify-content:center; }
+}
+
+/* کنترلِ جداگانهٔ اندازهٔ نوشتهٔ «کادرهای خلاصه» */
+.sec-box-font{ margin-inline-start:4px; }
+.sec-box-font .sbf-ic{ font-size:0.72rem; opacity:.75; margin-inline-end:2px; }
+
 .pl-loss-filter{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .pl-loss-filter .pm-filter-btn{padding:6px 11px;font-size:0.78rem}
 .pl-loss-filter .pm-filter-btn.active{background:var(--purple);border-color:var(--purple);color:#fff}
@@ -19468,23 +19506,24 @@ body.viewer-mode .inv-admin-only{display:none!important}
 <!-- PERSON MODAL (debt/noinv) -->
 <div class="modal-overlay" id="personModal">
   <div class="modal">
-    <div class="modal-head" style="gap:10px;flex-wrap:wrap">
-      <div style="display:flex;align-items:center;gap:8px">
+    <!-- سربرگ: همهٔ دکمه‌ها یک‌بغل و منظم (در جای کم، دو ردیفِ مرتب می‌شوند)،
+         نامِ حساب دقیقاً وسط و ✕ آن‌سرِ نوار — چه نام کوتاه باشد چه بلند، چه
+         حسابِ اصلی باشد چه حسابِ فرعی. (خواستهٔ صاحب ریپو) -->
+    <div class="modal-head pm-head">
+      <div class="pm-head-btns">
         <button class="person-nav-btn" id="pm-prev-btn" onclick="navigatePerson(-1)">&#8594; قبلی</button>
         <button class="person-nav-btn" id="pm-next-btn" onclick="navigatePerson(1)">بعدی &#8592;</button>
-        <span class="sec-font-ctrl" style="margin-right:4px" title="فونت کلی مودال"><button class="sec-font-btn" onclick="adjModalFont(-0.08)">A-</button><button class="sec-font-btn" onclick="adjModalFont(0.08)">A+</button></span>
+        <span class="sec-font-ctrl" title="فونت کلی مودال"><button class="sec-font-btn" onclick="adjModalFont(-0.08)">A-</button><button class="sec-font-btn" onclick="adjModalFont(0.08)">A+</button></span>
         <span class="sec-font-ctrl" title="فونت کادرهای یادداشت/توضیحات">📝<button class="sec-font-btn" onclick="adjNoteFont(-0.08)">A-</button><button class="sec-font-btn" onclick="adjNoteFont(0.08)">A+</button></span>
-      </div>
-      <h2 id="personModalTitle" style="flex:1;text-align:center">جزئیات</h2>
-      <div style="display:flex;align-items:center;gap:6px">
         <button class="add-row-btn pm-view-ok" id="pm-mode-btn" style="margin:0;border-color:var(--purple);color:var(--purple);padding:5px 10px;font-size:0.78rem" onclick="togglePersonMode()">🔁 پول</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--accent);color:var(--accent);padding:5px 10px;font-size:0.78rem" onclick="renameCurrentPerson()">✏️ تغییر اسم</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--red);color:var(--red);padding:5px 10px;font-size:0.78rem" onclick="clearAllPersonRows()">🗑️ پاک همه</button>
         <!-- دکمهٔ «📄 PDF» این‌جا برداشته شد (خواستهٔ صاحب ریپو): با اسکنِ همین کیو‌آر،
              صفحهٔ حساب باز می‌شود و خودش دکمهٔ «دانلود PDF» دارد — پس اینجا تکراری بود. -->
         <button class="add-row-btn pm-view-ok" id="pm-qr-btn" title="کیو‌آر همین حساب" style="margin:0;border-color:var(--blue);color:var(--blue);padding:5px 10px;font-size:0.78rem" onclick="showPersonQRFromModal()">📲 کیو‌آر</button>
-        <button class="modal-close" onclick="closePersonModal()">✕</button>
       </div>
+      <h2 id="personModalTitle" class="pm-head-title">جزئیات</h2>
+      <button class="modal-close" onclick="closePersonModal()">✕</button>
     </div>
     <div class="fuel-split">
       <div class="fs-group petrol">
@@ -31440,8 +31479,7 @@ function pdfStorage(fuelType) {
   const d = allDates();
   const isPetrol = fuelType !== 'diesel';
   const label = isPetrol ? '⛽ پطرول' : '🟤 دیزل';
-  const color  = isPetrol ? '#f59e0b' : '#d97706';
-  const bdrClr = isPetrol ? '#b45309' : '#92400e';
+  const color  = isPetrol ? '#b45309' : '#92400e';   // رنگِ تیره تا روی کاغذِ سفید خوانا باشد
 
   // داده‌ها از DB.fuelEntries
   const entries = (DB.fuelEntries || []).filter(e => (e.fuelType||'petrol') === fuelType);
@@ -31459,69 +31497,74 @@ function pdfStorage(fuelType) {
   }
   const current = totalLiters - totalOut;
 
-  const itemsHtml = entries.map((e,i) => `
-    <div class="purch">
-      <div class="purch-num">${n2fa(i+1)}</div>
-      <div class="purch-body">
-        <div class="purch-top">
-          <span class="purch-date">${e.date||'—'}</span>
-          <span class="purch-sup">${e.seller||'—'}</span>
-        </div>
-        <div class="purch-vals">
-          <span class="pv"><span class="pvl">وزن (کگ)</span><span class="pvv">${n2fa(e.kg||0)}</span></span>
-          <span class="pv"><span class="pvl">تن</span><span class="pvv">${n2fa((e.ton||0).toFixed(2))}</span></span>
-          <span class="pv"><span class="pvl">تقلت</span><span class="pvv">${n2fa(e.density||0)}</span></span>
-          <span class="pv"><span class="pvl">لیتر</span><span class="pvv blue">${n2fa(Math.round(e.liters||0))}</span></span>
-          <span class="pv"><span class="pvl">فی تن ($)</span><span class="pvv">${n2fa(e.priceTon||0)}</span></span>
-          <span class="pv"><span class="pvl">نرخ دالر</span><span class="pvv">${n2fa(e.usdRate||0)}</span></span>
-          <span class="pv"><span class="pvl">کل (دالر)</span><span class="pvv" style="color:#a78bfa">${n2fa((e.totalUSD||0).toFixed(1))} $</span></span>
-          <span class="pv"><span class="pvl">کل (افغانی)</span><span class="pvv green">${n2fa(Math.round(e.totalAFN||0))}</span></span>
-          <span class="pv"><span class="pvl">فی لیتر (افغ)</span><span class="pvv amber">${n2fa((e.perLiter||0).toFixed(1))} ؋</span></span>
-          ${e.note?`<span class="pv"><span class="pvl">یادداشت</span><span class="pvv muted">${escFa(e.note)}</span></span>`:''}
-        </div>
-      </div>
-    </div>`).join('');
+  // هر خرید = یک ردیفِ جدول با ستون‌های جدا (قبلاً همهٔ عددها در یک ردیفِ
+  // flex پشتِ هم می‌ریختند و روی هم می‌افتادند — خواستهٔ صاحب ریپو: مرتب و ستونی)
+  const rowsHtml = entries.map((e,i) => `
+    <tr>
+      <td class="c num">${n2fa(i+1)}</td>
+      <td class="c nowrap">${escFa(e.date || '—')}</td>
+      <td class="name">${escFa(e.seller || '—')}</td>
+      <td class="c">${n2fa(e.kg||0)}</td>
+      <td class="c">${n2fa((e.ton||0).toFixed(2))}</td>
+      <td class="c">${n2fa(e.density||0)}</td>
+      <td class="c b">${n2fa(Math.round(e.liters||0))}</td>
+      <td class="c">${n2fa(e.priceTon||0)}</td>
+      <td class="c">${n2fa(e.usdRate||0)}</td>
+      <td class="c">${n2fa((e.totalUSD||0).toFixed(1))}</td>
+      <td class="c b">${n2fa(Math.round(e.totalAFN||0))}</td>
+      <td class="c b">${n2fa((e.perLiter||0).toFixed(1))}</td>
+    </tr>` + (e.note ? `
+    <tr class="noterow"><td></td><td colspan="11" class="note">📝 ${escFa(e.note)}</td></tr>` : '')).join('');
 
+  /* برگهٔ سفید و کم‌جوهر (خواستهٔ صاحب ریپو: ورقِ تمام‌سیاه رنگِ زیادی مصرف
+     می‌کرد). فقط خطوط و سرستون‌ها رنگِ ملایم دارند و بقیه سفیدِ ساده است. */
   const css = `
-
-*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{font-family:'Vazirmatn',sans-serif;background:#111827;color:#f3f4f6;padding:18px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1f2430;padding:16px 18px}
 .save-wrap{position:fixed;top:12px;left:12px;z-index:999}
-.save-wrap button{padding:8px 18px;background:${color};color:#000;border:none;border-radius:8px;font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.9rem;cursor:pointer}
-.page-hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid ${color};padding-bottom:10px;margin-bottom:16px}
+.save-wrap button{padding:8px 18px;background:${color};color:#fff;border:none;border-radius:8px;font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.9rem;cursor:pointer}
+/* سربرگ: نام پمپ و نوع مخزن سمتِ راست، تاریخِ چاپ سمتِ چپ — نه روی هم */
+.page-hdr{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
+  border-bottom:2px solid ${color};padding-bottom:8px;margin-bottom:14px}
 .page-title{font-size:1.05rem;font-weight:900;color:${color}}
-.page-meta{font-size:0.7rem;color:#9ca3af;margin-top:3px}
-.hero{background:#1f2937;border:2px solid ${bdrClr};border-radius:14px;padding:18px;text-align:center;margin-bottom:14px}
-.hero-lbl{font-size:0.72rem;color:#9ca3af;margin-bottom:6px}
-.hero-num{font-size:2.8rem;font-weight:900;color:${color};line-height:1}
-.hero-unit{font-size:0.88rem;color:#9ca3af;margin-top:4px}
-.hero-sub{display:flex;justify-content:center;gap:28px;margin-top:12px}
-.hero-sub-i .l{font-size:0.62rem;color:#9ca3af;margin-bottom:2px}
-.hero-sub-i .v{font-size:0.88rem;font-weight:700}
-.stats{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
-.stat{flex:1;min-width:110px;background:#1f2937;border:1.5px solid #374151;border-radius:10px;padding:10px;text-align:center}
-.stat .sl{font-size:0.62rem;color:#9ca3af;margin-bottom:4px}
-.stat .sv{font-size:0.95rem;font-weight:900}
-.list-lbl{font-size:0.78rem;font-weight:700;color:#9ca3af;margin-bottom:8px}
-.purch{display:flex;gap:10px;background:#1f2937;border:1px solid #374151;border-radius:10px;padding:12px;margin-bottom:8px}
-.purch-num{min-width:26px;height:26px;background:#374151;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#9ca3af;font-weight:700;flex-shrink:0;margin-top:2px}
-.purch-body{flex:1}
-.purch-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.purch-date{font-size:0.82rem;font-weight:700;color:${color}}
-.purch-sup{font-size:0.78rem;color:#9ca3af}
-.purch-vals{display:flex;gap:12px;flex-wrap:wrap}
-.pv{display:flex;flex-direction:column}
-.pvl{font-size:0.58rem;color:#6b7280;margin-bottom:2px}
-.pvv{font-size:0.8rem;font-weight:700;color:#f3f4f6}
-.pvv.blue{color:#60a5fa}.pvv.amber{color:#fbbf24}.pvv.green{color:#34d399}.pvv.muted{color:#9ca3af;font-weight:400}
+.page-sub{font-size:0.72rem;color:#5b6472;margin-top:2px}
+.page-meta{font-size:0.7rem;color:#5b6472;text-align:left;white-space:nowrap}
+/* کارتِ موجودی — کادرِ خط‌دار، بدون پس‌زمینهٔ پررنگ */
+.hero{border:1.5px solid ${color};border-radius:12px;padding:12px 14px;margin-bottom:12px;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.hero-main{text-align:center;flex:1 1 200px}
+.hero-lbl{font-size:0.72rem;color:#5b6472;margin-bottom:2px}
+.hero-num{font-size:2.1rem;font-weight:900;color:${color};line-height:1.1}
+.hero-unit{font-size:0.74rem;color:#5b6472}
+.hero-sub{display:flex;gap:22px;flex:0 0 auto}
+.hero-sub-i{text-align:center}
+.hero-sub-i .l{font-size:0.64rem;color:#5b6472;margin-bottom:2px}
+.hero-sub-i .v{font-size:0.92rem;font-weight:800}
+/* کادرهای خلاصه — هم‌عرض و هم‌قد، بدون پس‌زمینهٔ تیره */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}
+.stat{border:1px solid #d6dae1;border-radius:9px;padding:8px 6px;text-align:center;min-width:0}
+.stat .sl{font-size:0.62rem;color:#5b6472;margin-bottom:3px;line-height:1.3}
+.stat .sv{font-size:0.9rem;font-weight:900;word-break:break-word}
+.list-lbl{font-size:0.8rem;font-weight:900;color:${color};margin:0 0 6px}
+/* جدولِ خریدها — هر عدد ستونِ خودش را دارد */
+table{width:100%;border-collapse:collapse;font-size:0.72rem}
+th{background:#f2f4f7;color:#3a4250;font-weight:800;font-size:0.66rem;
+  padding:6px 4px;border:1px solid #d6dae1;white-space:nowrap;line-height:1.3}
+td{padding:5px 4px;border:1px solid #e3e6eb;line-height:1.4}
+td.c{text-align:center;white-space:nowrap}
+td.num{color:#7b8494;width:26px}
+td.b{font-weight:800}
+td.name{font-weight:700;text-align:right;max-width:130px;word-break:break-word}
+tbody tr:nth-child(4n+3) td{background:#fafbfc}
+tr.noterow td.note{font-size:0.66rem;color:#5b6472;text-align:right;background:#fafbfc}
+tfoot td{background:#f2f4f7;font-weight:900;border:1px solid #d6dae1;text-align:center}
+.empty{text-align:center;padding:18px;color:#7b8494;border:1px dashed #d6dae1;border-radius:9px}
 @media print{
-  body{padding:8px}
-  @page{margin:0.6cm;size:A4 portrait}
-  .purch{padding:8px;margin-bottom:5px}
-  .stats{gap:7px}
+  body{padding:0}
+  @page{margin:0.8cm;size:A4 landscape}
   .save-wrap{display:none}
-  .hero{padding:12px}
-  .hero-num{font-size:2rem}
+  tr{page-break-inside:avoid}
+  thead{display:table-header-group}
 }`;
 
   const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><title>مخزن ${label} — پمپ یعقوبی</title><style>${css}</style></head><body>
@@ -31529,27 +31572,45 @@ body{font-family:'Vazirmatn',sans-serif;background:#111827;color:#f3f4f6;padding
 <div class="page-hdr">
   <div>
     <div class="page-title">🛢️ پمپ یعقوبی — مخزن ${label}</div>
-    <div class="page-meta">تاریخ چاپ: ${d.sh} | ${d.mi}</div>
+    <div class="page-sub">گزارش موجودی و تاریخچهٔ خریدها</div>
   </div>
+  <div class="page-meta">تاریخ چاپ: ${d.sh}<br>${d.mi}</div>
 </div>
 <div class="hero">
-  <div class="hero-lbl">موجودی فعلی مخزن</div>
-  <div class="hero-num">${n2fa(Math.round(current))}</div>
-  <div class="hero-unit">لیتر</div>
+  <div class="hero-main">
+    <div class="hero-lbl">موجودی فعلی مخزن</div>
+    <div class="hero-num">${n2fa(Math.round(current))}</div>
+    <div class="hero-unit">لیتر</div>
+  </div>
   <div class="hero-sub">
-    <div class="hero-sub-i"><div class="l">جمله ورودی</div><div class="v" style="color:#34d399">${n2fa(Math.round(totalLiters))} ل</div></div>
-    <div class="hero-sub-i"><div class="l">جمله فروش</div><div class="v" style="color:#f87171">${n2fa(Math.round(totalOut))} ل</div></div>
+    <div class="hero-sub-i"><div class="l">جمله ورودی</div><div class="v" style="color:#0f7a4d">${n2fa(Math.round(totalLiters))} ل</div></div>
+    <div class="hero-sub-i"><div class="l">جمله فروش</div><div class="v" style="color:#b3261e">${n2fa(Math.round(totalOut))} ل</div></div>
   </div>
 </div>
 <div class="stats">
-  <div class="stat"><div class="sl">تعداد خریدها</div><div class="sv" style="color:#9ca3af">${n2fa(entries.length)}</div></div>
-  <div class="stat" style="border-color:${bdrClr}"><div class="sl">جمله لیتر خریداری</div><div class="sv" style="color:#60a5fa">${n2fa(Math.round(totalLiters))} ل</div></div>
-  <div class="stat" style="border-color:${bdrClr}"><div class="sl">فی متوسط / لیتر</div><div class="sv" style="color:${color}">${n2fa(Math.round(avgPerLiter))} افغ</div></div>
-  <div class="stat" style="border-color:#065f46"><div class="sl">جمله هزینه (افغانی)</div><div class="sv" style="color:#34d399">${n2fa(Math.round(totalAFN))}</div></div>
-  <div class="stat"><div class="sl">جمله هزینه (دالر)</div><div class="sv" style="color:#a78bfa">${n2fa(totalUSD.toFixed(1))} $</div></div>
+  <div class="stat"><div class="sl">تعداد خریدها</div><div class="sv">${n2fa(entries.length)}</div></div>
+  <div class="stat"><div class="sl">جمله لیتر خریداری</div><div class="sv" style="color:#1a4f9c">${n2fa(Math.round(totalLiters))} ل</div></div>
+  <div class="stat"><div class="sl">فی متوسط / لیتر</div><div class="sv" style="color:${color}">${n2fa(Math.round(avgPerLiter))} افغ</div></div>
+  <div class="stat"><div class="sl">جمله هزینه (افغانی)</div><div class="sv" style="color:#0f7a4d">${n2fa(Math.round(totalAFN))}</div></div>
+  <div class="stat"><div class="sl">جمله هزینه (دالر)</div><div class="sv" style="color:#5b3fb5">${n2fa(totalUSD.toFixed(1))} $</div></div>
 </div>
 <div class="list-lbl">📋 تاریخچه خریدها</div>
-${itemsHtml || '<div style="text-align:center;padding:20px;color:#6b7280">هیچ خریدی ثبت نشده</div>'}
+${entries.length ? `<table>
+  <thead><tr>
+    <th>#</th><th>تاریخ</th><th>فروشنده</th><th>وزن (کگ)</th><th>تن</th><th>تقلت</th>
+    <th>لیتر</th><th>فی تن ($)</th><th>نرخ دالر</th><th>کل ($)</th><th>کل (افغانی)</th><th>فی لیتر (افغ)</th>
+  </tr></thead>
+  <tbody>${rowsHtml}</tbody>
+  <tfoot><tr>
+    <td colspan="3">جمله (${n2fa(entries.length)} خرید)</td>
+    <td>—</td><td>—</td><td>—</td>
+    <td>${n2fa(Math.round(totalLiters))}</td>
+    <td>—</td><td>—</td>
+    <td>${n2fa(totalUSD.toFixed(1))}</td>
+    <td>${n2fa(Math.round(totalAFN))}</td>
+    <td>${n2fa(Math.round(avgPerLiter))}</td>
+  </tr></tfoot>
+</table>` : '<div class="empty">هیچ خریدی ثبت نشده</div>'}
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
 
@@ -38459,7 +38520,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.209';
+const APP_VERSION = '2.9.210';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -39436,6 +39497,7 @@ function renderStaffList() {
 
 // ========== PER-SECTION FONT SCALE ==========
 const _secFontScales = {};
+const _secBoxFontScales = {};
 /* اندازهٔ نوشته‌های هر بخش (A+ / A−)
    ┌─ تاریخچه ───────────────────────────────────────────────────────────────┐
    │ اول روی «فهرستی از کلاس‌ها» اندازهٔ فونت نوشته می‌شد: در خیلی از بخش‌ها      │
@@ -39453,8 +39515,19 @@ const _secFontScales = {};
    • یک ناظرِ تغییر روی بخش، بعد از هر رندرِ دوباره اندازه را روی ردیف‌های تازه
      هم می‌گذارد (مشکل دومِ روشِ اول). */
 const _secFontObs = {};
+/* ── «کادرها» جدا از «جدول‌ها» ──────────────────────────────────────────────
+   خواستهٔ صاحب ریپو: وقتی نوشته‌های داخلِ جدول را بزرگ می‌کنم، کادرهای خلاصهٔ
+   بالای صفحه هم بزرگ می‌شوند و صفحه به‌هم می‌ریزد. حالا دو کنترلِ جدا هست:
+     • A− / A+  ⇒ همه‌چیزِ بخش به‌جز همین کادرها (یعنی عملاً جدول‌ها و متن‌ها)
+     • 🔲 A− / A+ ⇒ فقط نوشته‌های داخلِ همین کادرها
+   هیچ محاسبه‌ای در کار نیست؛ فقط اندازهٔ نوشته. */
+const PL_BOX_SEL = '.stat-box, .msumbox, .pl-card, .sum-box, .ro-sum-box, .cmhs-box, .fs-cell, .dash-card, .pl-loss-sum > div, .exp-sum-box, .tool-link-card';
+function _isBoxEl(el) {
+  try { return !!(el.closest && el.closest(PL_BOX_SEL)); } catch (e) { return false; }
+}
 // عنصرهایی که «خودشان» نوشته دارند — کادرها و لایه‌های چیدمان کاری‌شان نداریم
-function _secFontEls(sec) {
+function _secFontEls(sec, mode) {
+  // mode: 'box' ⇒ فقط داخلِ کادرها ، 'rest' ⇒ همه‌چیز به‌جز کادرها
   const out = [];
   const all = sec.querySelectorAll('*');
   for (let i = 0; i < all.length; i++) {
@@ -39463,6 +39536,8 @@ function _secFontEls(sec) {
     const t = el.tagName;
     if (t === 'SCRIPT' || t === 'STYLE' || t === 'BR' || t === 'HR' || t === 'IMG' || t === 'CANVAS') continue;
     if (el.closest('.sec-font-ctrl')) continue;   // خودِ دکمه‌های A− / A+ / ↺ ثابت بمانند
+    if (mode === 'box' && !_isBoxEl(el)) continue;
+    if (mode === 'rest' && _isBoxEl(el)) continue;
     if (t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA' || t === 'OPTION' || t === 'BUTTON') { out.push(el); continue; }
     for (let n = el.firstChild; n; n = n.nextSibling) {
       if (n.nodeType === 3 && n.nodeValue && n.nodeValue.trim()) { out.push(el); break; }
@@ -39474,13 +39549,16 @@ function _applySecFont(secId) {
   const sec = document.getElementById('sec-' + secId);
   if (!sec) return;
   const s = _secFontScales[secId] || 1;
-  const one = Math.abs(s - 1) < 0.005;
+  const sBox = _secBoxFontScales[secId] || 1;
+  const one = Math.abs(s - 1) < 0.005 && Math.abs(sBox - 1) < 0.005;
   // zoom دیگر استفاده نمی‌شود — اگر از نسخه‌های قبل مانده باشد پاک می‌شود
   sec.style.zoom = ''; sec.style.removeProperty('--secz');
   if (one) sec.removeAttribute('data-secfs'); else sec.setAttribute('data-secfs', s.toFixed(2));
-  const els = _secFontEls(sec);
+  // دو گروهِ جدا: بیرونِ کادرها با s ، داخلِ کادرها با sBox
+  const els = _secFontEls(sec, 'rest').map(function (e) { return [e, s]; })
+    .concat(_secFontEls(sec, 'box').map(function (e) { return [e, sBox]; }));
   for (let i = 0; i < els.length; i++) {
-    const el = els[i];
+    const el = els[i][0], _sc = els[i][1], _one = Math.abs(_sc - 1) < 0.005;
     if (el.dataset.sfBase == null) {
       // اندازهٔ پایه و استایلِ درون‌خطیِ خودِ عنصر، یک‌بار و قبل از هر دست‌کاری
       el.dataset.sfOwn = el.style.getPropertyValue('font-size') || '';
@@ -39488,11 +39566,11 @@ function _applySecFont(secId) {
     }
     const base = parseFloat(el.dataset.sfBase) || 0;
     if (!base) continue;
-    if (one) {
+    if (_one) {
       if (el.dataset.sfOwn) el.style.setProperty('font-size', el.dataset.sfOwn);
       else el.style.removeProperty('font-size');
     } else {
-      el.style.setProperty('font-size', (Math.round(base * s * 100) / 100) + 'px', 'important');
+      el.style.setProperty('font-size', (Math.round(base * _sc * 100) / 100) + 'px', 'important');
     }
   }
   // ناظرِ رندرِ دوباره: ردیف/کارتِ تازه هم همان اندازه را بگیرد
@@ -39518,20 +39596,32 @@ function adjSecFont(secId, delta) {
   _applySecFont(secId);
   try { localStorage.setItem('secFont_' + secId, scale); } catch(e) {}
 }
+// اندازهٔ نوشتهٔ «کادرهای خلاصه» — کاملاً جدا از A−/A+ اصلی، تا بزرگ‌کردنِ
+// نوشته‌های جدول کادرها را بزرگ نکند (خواستهٔ صاحب ریپو)
+function adjSecBoxFont(secId, delta) {
+  const sec = document.getElementById('sec-' + secId);
+  if (!sec) return;
+  const scale = Math.min(2.2, Math.max(0.6, Math.round(((_secBoxFontScales[secId] || 1) + delta) * 100) / 100));
+  _secBoxFontScales[secId] = scale;
+  _applySecFont(secId);
+  try { localStorage.setItem('secBoxFont_' + secId, scale); } catch(e) {}
+}
 /* برگشتِ یک بخش به اندازهٔ عادی (زوم ۱) — دکمهٔ ↺ کنارِ A− / A+.
    پیش از این اگر بخشی (صرافی، گاوصندوق، رسید پارچه‌ها و ...) بزرگ می‌ماند، راهی
    جز چند بار زدنِ A− نبود و کاربر نمی‌دانست اندازهٔ اصلی کجاست. */
 function resetSecFont(secId) {
   delete _secFontScales[secId];
+  delete _secBoxFontScales[secId];
   _applySecFont(secId);
-  try { localStorage.removeItem('secFont_' + secId); } catch(e) {}
+  try { localStorage.removeItem('secFont_' + secId); localStorage.removeItem('secBoxFont_' + secId); } catch(e) {}
 }
 // همهٔ بخش‌ها با هم به اندازهٔ عادی برمی‌گردند
 function resetAllSecFonts() {
   let keys = [];
-  try { keys = Object.keys(localStorage).filter(k => k.indexOf('secFont_') === 0); } catch(e) {}
+  try { keys = Object.keys(localStorage).filter(k => k.indexOf('secFont_') === 0 || k.indexOf('secBoxFont_') === 0); } catch(e) {}
   keys.forEach(k => { try { localStorage.removeItem(k); } catch(e) {} });
   Object.keys(_secFontScales).forEach(id => { delete _secFontScales[id]; });
+  Object.keys(_secBoxFontScales).forEach(id => { delete _secBoxFontScales[id]; });
   document.querySelectorAll('.section[id^="sec-"]').forEach(sec => {
     const id = sec.id.slice(4);
     if (_secFontObs[id]) { _secFontObs[id].disconnect(); delete _secFontObs[id]; }
@@ -39561,6 +39651,28 @@ function _ensureSecFontBtns() {
     sp.children[1].onclick = () => adjSecFont(id, 0.08);
     sp.children[2].onclick = () => resetSecFont(id);
     ttl.appendChild(sp);
+  });
+  // کنترلِ جداگانهٔ «نوشتهٔ کادرها» — کنارِ همان A−/A+ هر بخش
+  document.querySelectorAll('.sec-font-ctrl').forEach(sp => {
+    // خودِ کنترلِ کادرها هم کلاسِ sec-font-ctrl دارد — نباید دوباره پردازش شود،
+    // وگرنه با هر بار صدا زدنِ این تابع یک نسخهٔ تکراری ساخته می‌شد
+    if (sp.classList.contains('sec-box-font')) return;
+    if (sp.dataset.boxCtrl === '1' || sp.querySelector('.sec-box-font')) return;
+    if (sp.nextElementSibling && sp.nextElementSibling.classList.contains('sec-box-font')) { sp.dataset.boxCtrl = '1'; return; }
+    let id = '';
+    const b = sp.querySelector('button[onclick*="adjSecFont("]');
+    const m = b && /adjSecFont\(\s*'([^']+)'/.exec(b.getAttribute('onclick') || '');
+    if (m) id = m[1];
+    else { const sec = sp.closest('.section[id^="sec-"]'); if (sec) id = sec.id.slice(4); }
+    if (!id) return;                       // کنترلِ مودال‌ها (بدون بخش) دست نمی‌خورد
+    sp.dataset.boxCtrl = '1';
+    const wrap = document.createElement('span');
+    wrap.className = 'sec-font-ctrl sec-box-font';
+    wrap.title = 'اندازهٔ نوشتهٔ کادرهای خلاصه — جدا از جدول‌ها';
+    wrap.innerHTML = '<span class="sbf-ic">🔲</span><button class="sec-font-btn" title="کادرها کوچک‌تر">A-</button><button class="sec-font-btn" title="کادرها بزرگ‌تر">A+</button>';
+    wrap.children[1].onclick = () => adjSecBoxFont(id, -0.08);
+    wrap.children[2].onclick = () => adjSecBoxFont(id, 0.08);
+    if (sp.parentNode) sp.parentNode.insertBefore(wrap, sp.nextSibling);
   });
   // دکمهٔ ↺ کنارِ A− / A+ِ بخش‌هایی که این دو دکمه را از قبل داخلِ صفحه دارند
   document.querySelectorAll('.sec-font-ctrl').forEach(sp => {
@@ -39593,6 +39705,13 @@ function loadSecFonts() {
     const id = k.slice(8);
     const saved = parseFloat((function(){ try { return localStorage.getItem(k) || 0; } catch(e){ return 0; } })());
     if (saved && saved !== 1) { _secFontScales[id] = saved; _applySecFont(id); }
+  });
+  let bkeys = [];
+  try { bkeys = Object.keys(localStorage).filter(k => k.indexOf('secBoxFont_') === 0); } catch(e) {}
+  bkeys.forEach(k => {
+    const id = k.slice(11);
+    const saved = parseFloat((function(){ try { return localStorage.getItem(k) || 0; } catch(e){ return 0; } })());
+    if (saved && saved !== 1) { _secBoxFontScales[id] = saved; _applySecFont(id); }
   });
 }
 
