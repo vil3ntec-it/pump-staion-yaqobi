@@ -31329,21 +31329,21 @@ function pdfPerson() {
 <style>
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:13.5px;font-weight:500}
+body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:14px 16px;font-size:13px;font-weight:500}
 /* سربرگِ دوطرفه — هم‌مدلِ سربرگِ تازهٔ پی‌دی‌افِ مخزن: نام حساب و زیرنویسش یک
    طرف، تاریخ چاپ طرف دیگر؛ نه روی هم، نه شلوغ (خواستهٔ صاحب ریپو). */
 .page-hdr{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
-  border-bottom:2px solid #b45309;padding-bottom:8px;margin-bottom:12px}
+  border-bottom:2px solid #b45309;padding-bottom:6px;margin-bottom:8px}
 .page-title{font-size:1.05rem;font-weight:900;color:#b45309}
 .page-sub{font-size:0.72rem;color:#5b6472;margin-top:2px}
 .page-meta{font-size:0.7rem;color:#5b6472;text-align:left;white-space:nowrap;line-height:1.7}
 .pct-box{display:inline-flex;align-items:center;gap:6px;border:1px solid #d6dae1;border-radius:7px;
-  padding:4px 10px;font-size:0.66rem;color:#5b6472;white-space:nowrap;margin-bottom:12px}
+  padding:3px 9px;font-size:0.64rem;color:#5b6472;white-space:nowrap;margin-bottom:8px}
 .pct-box b{font-size:0.78rem;color:#b45309}
-.sum-box{min-width:0;border:1px solid #d6dae1;border-radius:9px;padding:7px 5px;text-align:center;
-  display:flex;flex-direction:column;justify-content:center;gap:3px}
-.sum-box .l{font-size:0.62rem;color:#5b6472;line-height:1.3}
-.sum-box .v{font-size:0.86rem;font-weight:900;white-space:nowrap}
+.sum-box{min-width:0;border:1px solid #e3e6eb;border-radius:7px;padding:5px 3px;text-align:center;
+  display:flex;flex-direction:column;justify-content:center;gap:2px}
+.sum-box .l{font-size:0.58rem;color:#5b6472;line-height:1.25}
+.sum-box .v{font-size:0.78rem;font-weight:900;white-space:nowrap}
 table{width:100%;border-collapse:collapse;font-size:0.75rem;table-layout:auto}
 /* خواستهٔ صاحب ریپو: نوشته‌ها و عددهای داخلِ جدول دقیقاً زیرِ سرستونِ خودشان
    وسط‌چین باشند (قبلاً سرستون‌ها راست‌چین بودند و با ردیف‌ها جور در نمی‌آمد) */
@@ -31352,27 +31352,30 @@ th{background:#f2f4f7;color:#3a4250;padding:7px 5px;text-align:center;font-weigh
 td{padding:6px 5px;border:1px solid #e3e6eb;white-space:normal;word-break:break-word;font-weight:600;color:#1f2430;text-align:center;vertical-align:middle}
 tbody tr:nth-child(even) td{background:#fafbfc}
 tfoot td{background:#f2f4f7;color:#1f2430;font-weight:900;padding:7px 5px;border:1px solid #d6dae1;text-align:center}
-.footer{margin-top:16px;font-size:0.68rem;color:#7b8494;text-align:center;border-top:1px solid #d6dae1;padding-top:8px}
-/* کادرهای پطرول/دیزل: جادار و دوستونی — قبلاً چهارتا در یک خطِ باریک روی هم می‌ریختند */
-.split-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;margin-bottom:14px}
-.split-box{border:1.5px solid #d6dae1;border-radius:11px;padding:10px 10px 11px;min-width:0}
+.footer{margin-top:10px;font-size:0.66rem;color:#7b8494;text-align:center;border-top:1px solid #d6dae1;padding-top:6px}
+/* ورقِ افقی جا دارد، پس هر دو کادر بغلِ هم و هر کدام چهار خانه در یک خط —
+   جمع‌وجور و کم‌ارتفاع تا کاغذِ کمتری بگیرد (خواستهٔ صاحب ریپو). */
+.split-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.split-box{border:1.2px solid #d6dae1;border-radius:9px;padding:7px 8px 8px;min-width:0}
 .petrol-box{border-color:#b45309}
 .diesel-box{border-color:#8B4513}
-.split-title{font-size:0.82rem;font-weight:900;margin-bottom:8px;text-align:right}
+.split-title{font-size:0.76rem;font-weight:900;margin-bottom:5px;text-align:right}
 .petrol-box .split-title{color:#b45309}
 .diesel-box .split-title{color:#8B4513}
-.split-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;text-align:center}
+.split-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center}
 .note-box{margin-top:14px;padding:8px 12px;border:1px solid #d6dae1;border-right:3px solid #b45309;border-radius:7px;font-size:0.75rem;color:#3a4250}
 @media print{
-  body{padding:6px}
-  @page{margin:0.5cm;size:A4}
-  table{font-size:0.68rem;width:100%}
-  th,td{padding:5px 6px;white-space:normal!important;word-break:break-word}
-  .split-row{page-break-inside:avoid}
+  /* ورقِ افقی مثل پی‌دی‌افِ مخزن — ستون‌ها جا می‌شوند و کاغذِ کمتری می‌رود */
+  body{padding:0}
+  @page{margin:0.7cm;size:A4 landscape}
+  table{font-size:0.66rem;width:100%}
+  th,td{padding:4px 5px;white-space:normal!important;word-break:break-word}
+  .split-row{page-break-inside:avoid;margin-bottom:8px}
+  .split-box{padding:6px 7px}
   tr{page-break-inside:avoid}
   thead{display:table-header-group}
-  .page-title{font-size:1rem}
-  .footer{margin-top:8px}
+  .page-title{font-size:0.98rem}
+  .footer{margin-top:6px}
 }
 </style>
 </head>
@@ -38523,7 +38526,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.211';
+const APP_VERSION = '2.9.212';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
