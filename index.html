@@ -30045,46 +30045,53 @@ function _renderCompanyArcBoxes(company){
                 + mk('diesel', nD, 'جدول‌های آرشیو دیزل', '#b7791f');
 }
 
-// «حذف این جدول» — جدولِ فعلیِ همین شرکت را پاک می‌کند؛ اگر جدولِ قبلی (آرشیو) باشد آن را برمی‌گرداند (لغوِ «جدول جدید»).
-// تأیید دومرحله‌ای است تا در وب‌ویوهایی که confirm ندارند هم کار کند.
+// «حذف این جدول» — فقط ردیف‌های جدولِ فعلیِ همین شرکت را پاک می‌کند.
+// جدول‌های آرشیو (tableHistory) هرگز دست نمی‌خورند.
 let _cmCurDelArm = false;
 let _cmCurDelTimer = null;
+function _cmDelReset(){
+  _cmCurDelArm = false;
+  if (_cmCurDelTimer) { clearTimeout(_cmCurDelTimer); _cmCurDelTimer = null; }
+  const b = document.getElementById('cm-del-current-btn');
+  if (b){ b.textContent = '🗑️ حذف این جدول'; b.style.background = ''; b.style.color = 'var(--red)'; }
+}
 function deleteCurrentCompanyTable(btn){
   const company = (DB.tilCompanies||[]).find(c => c.id === currentCompanyId);
   if (!company) return;
-  if (!_cmCurDelArm){
-    _cmCurDelArm = true;
-    if (btn){ btn.textContent = '✔ تأیید حذف این جدول؟'; btn.style.background = 'var(--red)'; btn.style.color = '#fff'; }
-    if (_cmCurDelTimer) clearTimeout(_cmCurDelTimer);
-    _cmCurDelTimer = setTimeout(()=>{ _cmCurDelArm = false; const b=document.getElementById('cm-del-current-btn'); if(b){ b.textContent='🗑️ حذف این جدول'; b.style.background=''; b.style.color='var(--red)'; } }, 3500);
-    if (typeof showToast === 'function') showToast('برای حذفِ جدولِ فعلی، دوباره بزنید', '#dd6b20');
-    return;
-  }
-  if (_cmCurDelTimer) clearTimeout(_cmCurDelTimer);
-  _cmCurDelArm = false;
-  // آخرین جدولِ آرشیوِ هم‌سوخت را پیدا کن تا برگردانده شود (لغوِ جدول جدید)
-  const hist = company.tableHistory || [];
-  let restoreIdx = -1;
-  for (let i = hist.length - 1; i >= 0; i--){ if ((hist[i].fuel||'petrol') === currentCompanyFuel){ restoreIdx = i; break; } }
-  if (restoreIdx >= 0){
-    const arch = hist[restoreIdx];
-    if (currentCompanyFuel === 'diesel') company.dieselRows = arch.rows || []; else company.rows = arch.rows || [];
-    // نقطهٔ شمارشِ خریدها هم برگردد به همان‌جایی که قبل از «جدول جدید» بود
-    if (arch.purchasesAfter != null) {
-      if (!company.purchaseCheckpoint) company.purchaseCheckpoint = { petrol: 0, diesel: 0 };
-      company.purchaseCheckpoint[currentCompanyFuel] = arch.purchasesAfter;
+  const fuelLbl = currentCompanyFuel === 'diesel' ? '🟤 دیزل' : '⛽ پطرول';
+  const rowsNow = (currentCompanyFuel === 'diesel' ? company.dieselRows : company.rows) || [];
+  const msg = 'جدولِ فعلیِ ' + fuelLbl + ' حسابِ «' + (company.name || '') + '» با '
+            + rowsNow.length + ' ردیف پاک شود؟\n\nجدول‌های آرشیو دست نمی‌خورند.';
+  // ── تاییدِ واقعی (باگِ گزارش‌شده: با دوبار زدن، بدونِ هیچ پرسشی همه‌چیز پاک
+  //    می‌شد). اول پرسشِ صریحِ confirm؛ و چون بعضی وب‌ویوها confirm ندارند، اگر
+  //    در دسترس نبود همان تاییدِ دومرحله‌ایِ قبلی به‌عنوان راهِ جایگزین می‌ماند.
+  let okToDelete = false;
+  try {
+    if (typeof window.confirm === 'function') { okToDelete = window.confirm(msg); if (!okToDelete) { _cmDelReset(); return; } }
+  } catch (e) { okToDelete = false; }
+  if (!okToDelete) {
+    if (!_cmCurDelArm){
+      _cmCurDelArm = true;
+      if (btn){ btn.textContent = '✔ تأیید حذف این جدول؟'; btn.style.background = 'var(--red)'; btn.style.color = '#fff'; }
+      if (_cmCurDelTimer) clearTimeout(_cmCurDelTimer);
+      _cmCurDelTimer = setTimeout(_cmDelReset, 3500);
+      if (typeof showToast === 'function') showToast('برای حذفِ جدولِ فعلی، دوباره بزنید', '#dd6b20');
+      return;
     }
-    hist.splice(restoreIdx, 1);
-    if (typeof showToast === 'function') showToast('🗑️ جدولِ فعلی حذف شد — جدولِ قبلی برگشت', '#e53e3e');
-  } else {
-    if (currentCompanyFuel === 'diesel') company.dieselRows = []; else company.rows = [];
-    if (typeof showToast === 'function') showToast('🗑️ جدولِ فعلی پاک شد', '#e53e3e');
   }
+  _cmDelReset();
+  // ── فقط ردیف‌های همین جدول پاک می‌شوند. جدول‌های آرشیو (tableHistory) اصلاً
+  //    دست نمی‌خورند — قبلاً آخرین آرشیو برگردانده و از فهرست حذف می‌شد و به‌همین
+  //    خاطر کادرهای «جدول‌های آرشیو» هم غیب می‌شدند (باگِ گزارش‌شده).
+  if (currentCompanyFuel === 'diesel') company.dieselRows = []; else company.rows = [];
   save();
   renderCompanyRows(company);
   renderCompanyPurchases(company);
   _renderCompanyHistoryPanel(company);
+  if (typeof showToast === 'function') showToast('🗑️ جدولِ فعلی پاک شد — آرشیوها دست‌نخورده‌اند', '#e53e3e');
 }
+
+
 
 // رندر جدول‌های آرشیو‌شدهٔ شرکت (فقط‌خواندنی) زیر مودال
 function _renderCompanyHistoryPanel(company){
@@ -38512,7 +38519,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.215';
+const APP_VERSION = '2.9.216';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
