@@ -22040,9 +22040,11 @@ function _dashShell(label, full) { return { label, full, petrol: _dashZ(), diese
 function _dashDayAt(offset) {
   return _dashParseDate(toEnDigits(new Date(Date.now() + offset * 864e5).toLocaleDateString('fa-IR')));
 }
-// پنجرهٔ «آینده‌نگر» (خواستهٔ کاربر): همیشه از امروز به بعد نمایش داده می‌شود، دوره‌های
-// گذشته نمایش داده نمی‌شوند. اندیس 0 = دورهٔ درست قبل از پنجره (فقط برای محاسبهٔ رشدِ
-// ستونِ اول). ستون‌های نمایشی = امروز و بعد از آن:
+// پنجرهٔ «گذشته‌نگر» (باگِ گزارش‌شده): قبلاً پنجره از امروز به «آینده» می‌رفت، پس
+// امروز همیشه ستونِ اول بود و هر چقدر روز می‌گذشت باز هم سرِ همان ستونِ اول گیر
+// می‌کرد و هیچ‌وقت جلو نمی‌رفت. حالا مثل هر نمودارِ فروشِ درست، پنجره به عقب
+// نگاه می‌کند: امروز/این هفته/این ماه/امسال «ستونِ آخر» است و دوره‌های قبلش
+// پشتِ سرش می‌آیند. اندیس 0 = دورهٔ درست قبل از پنجره (فقط پایهٔ محاسبهٔ رشد).
 //   روز = 7 روز · هفته = 7 هفته · ماه = 12 ماه · سال = 6 سال
 // همهٔ این پنجره‌ها «چرخان»‌اند: چون مبنا هر بار persianDate()/Date.now() است، با
 // عوض‌شدنِ روز خودبه‌خود قدیمی‌ترین ستون می‌افتد و ستونِ تازه به آخر اضافه می‌شود.
@@ -22054,30 +22056,31 @@ function _dashMakeBuckets() {
   const buckets = []; let assign;
   if (_dashRange === 'day') {
     const idx = {};
-    for (let o = -1; o <= 6; o++) {                 // ‎-1 (دیروز، پایهٔ رشد) تا 6 روزِ بعد
+    for (let o = -7; o <= 0; o++) {                 // ‎-7 (پایهٔ رشد) تا امروز — ۷ ستونِ نمایشی
       const p = _dashDayAt(o);
-      idx[_dashDayKey(p.y, p.m, p.d)] = o + 1;
-      const lbl = o === 0 ? 'امروز' : (o === 1 ? 'فردا' : (o === 2 ? 'پس‌فردا' : n2fa(p.m) + '/' + n2fa(p.d)));
+      idx[_dashDayKey(p.y, p.m, p.d)] = o + 7;
+      const lbl = o === 0 ? 'امروز' : (o === -1 ? 'دیروز' : (o === -2 ? 'پریروز' : n2fa(p.m) + '/' + n2fa(p.d)));
       buckets.push(_dashShell(lbl, p.y + '/' + p.m + '/' + p.d));
     }
     assign = p => { const i = idx[_dashDayKey(p.y, p.m, p.d)]; return i == null ? -1 : i; };
   } else if (_dashRange === 'week') {
     const idx = {};
-    for (let wi = 0; wi <= 7; wi++) {               // wi=0 هفتهٔ قبل (پایهٔ رشد)، wi=1 این هفته، تا 6 هفتهٔ بعد — ۷ ستونِ نمایشی
-      const startOff = -7 + wi * 7;
+    for (let wi = 0; wi <= 7; wi++) {               // wi=0 هفتهٔ پایهٔ رشد، wi=7 همین هفته
+      const startOff = -7 * (7 - wi);
       const days = [];
       for (let d = 0; d < 7; d++) { const p = _dashDayAt(startOff + d); idx[_dashDayKey(p.y, p.m, p.d)] = wi; days.push(p); }
-      const lbl = wi === 1 ? 'این هفته' : (wi === 0 ? 'هفته قبل' : (wi === 2 ? 'هفته بعد' : n2fa(wi - 1) + ' هفته بعد'));
+      const back = 7 - wi;
+      const lbl = back === 0 ? 'این هفته' : (back === 1 ? 'هفته قبل' : n2fa(back) + ' هفته قبل');
       buckets.push(_dashShell(lbl, n2fa(days[0].m) + '/' + n2fa(days[0].d) + ' تا ' + n2fa(days[6].m) + '/' + n2fa(days[6].d)));
     }
     assign = p => { const i = idx[_dashDayKey(p.y, p.m, p.d)]; return i == null ? -1 : i; };
   } else if (_dashRange === 'month') {
     const mAt = o => { let m = today.m + o, y = today.y; while (m > 12) { m -= 12; y++; } while (m < 1) { m += 12; y--; } return { y, m }; };
-    for (let o = -1; o <= 11; o++) { const mm = mAt(o); const nm = SHAMSI_MONTHS[mm.m - 1]; buckets.push(_dashShell(nm, nm + ' ' + _yr(mm.y))); }
-    assign = p => { for (let o = -1; o <= 11; o++) { const mm = mAt(o); if (p.y === mm.y && p.m === mm.m) return o + 1; } return -1; };
+    for (let o = -12; o <= 0; o++) { const mm = mAt(o); const nm = SHAMSI_MONTHS[mm.m - 1]; buckets.push(_dashShell(nm, nm + ' ' + _yr(mm.y))); }
+    assign = p => { for (let o = -12; o <= 0; o++) { const mm = mAt(o); if (p.y === mm.y && p.m === mm.m) return o + 12; } return -1; };
   } else {
-    for (let o = -1; o <= 5; o++) buckets.push(_dashShell(_yr(today.y + o), 'سال ' + _yr(today.y + o)));
-    assign = p => { const i = (p.y - today.y) + 1; return (i >= 0 && i <= 6) ? i : -1; };
+    for (let o = -6; o <= 0; o++) buckets.push(_dashShell(_yr(today.y + o), 'سال ' + _yr(today.y + o)));
+    assign = p => { const i = (p.y - today.y) + 6; return (i >= 0 && i <= 6) ? i : -1; };
   }
   return { buckets, assign, today };
 }
@@ -38519,7 +38522,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.216';
+const APP_VERSION = '2.9.217';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
