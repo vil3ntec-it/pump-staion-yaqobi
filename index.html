@@ -17754,6 +17754,7 @@ body.gfx-performance .xls-foot td{
 <div class="section" id="sec-profit">
   <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
     <button class="goto-btn" style="border-color:var(--green);color:var(--green)" onclick="showSection('extraincome')">🛒 خرید عمده از مشتری</button>
+    <button class="goto-btn" style="border-color:var(--blue);color:var(--blue)" onclick="showSection('plsource')">📊 ضرر و مفاد از کجا آمده؟</button>
     <span style="display:inline-flex;align-items:center;gap:10px"><svg class="nav-ic ia-rise"><use href="#ic-profit"/></svg> مفاد / ضرر / اتحادیه
       <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('profit',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('profit',0.08)">A+</button></span>
     </span>
@@ -17816,30 +17817,8 @@ body.gfx-performance .xls-foot td{
     </div>
   </div>
   </div>
-  <!-- 📊 «ضرر و مفاد از کجا آمده؟» — تفکیکِ منبع‌به‌منبع برای روز/هفته/ماه/سال.
-       فقط همان اعدادی که برنامه از قبل دارد را دسته‌بندی و جمع می‌کند؛ هیچ
-       محاسبهٔ تازه‌ای به بخش‌های دیگر اضافه یا از آن‌ها کم نمی‌شود. -->
-  <div class="card" style="border-color:var(--blue)">
-    <div class="card-head">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <div class="card-title" style="color:var(--blue)">📊 ضرر و مفاد از کجا آمده؟</div>
-      </div>
-      <span class="pl-range-bar">
-        <button class="pm-filter-btn" id="plr-day"   onclick="setPLRange('day')">📅 امروز</button>
-        <button class="pm-filter-btn" id="plr-week"  onclick="setPLRange('week')">🗓️ هفته</button>
-        <button class="pm-filter-btn active" id="plr-month" onclick="setPLRange('month')">📆 ماه</button>
-        <button class="pm-filter-btn" id="plr-year"  onclick="setPLRange('year')">🗂️ سال</button>
-        <button class="pm-filter-btn" id="plr-all"   onclick="setPLRange('all')">♾️ همه</button>
-      </span>
-    </div>
-    <div style="padding:14px">
-      <div style="font-size:0.76rem;color:var(--muted);margin-bottom:12px;line-height:1.8">
-        همان درآمدها و مصارفِ خودِ برنامه، این‌بار <b style="color:var(--txt)">منبع‌به‌منبع</b> — تا معلوم شود مفاد از کجا آمده و ضرر از چه بوده.
-        بازهٔ زمانی را از دکمه‌های بالا انتخاب کنید.
-      </div>
-      <div id="pl-breakdown"></div>
-    </div>
-  </div>
+  <!-- تاریخچهٔ نرخ اتحادیه — درست بالای خودِ کادرِ نرخ اتحادیه (خواستهٔ صاحب ریپو) -->
+  <button type="button" class="tool-link-card" onclick="showSection('ratehist')"><span title="📈 تاریخچهٔ نرخ اتحادیه — خودکار ثبت می‌شود">📈 تاریخچهٔ نرخ اتحادیه</span><span class="tlc-go"><i>‹</i></span></button>
   <div class="card" style="border-color:var(--accent)">
     <div class="card-head"><div class="card-title">🏛️ نرخ اتحادیه</div></div>
     <div style="padding:14px">
@@ -17880,9 +17859,6 @@ body.gfx-performance .xls-foot td{
       <div style="font-size:0.76rem;color:var(--muted);margin-bottom:12px;line-height:1.7">گزارش‌ها و تاریخچه‌های همین بخش — روی هر کادر بزنید تا صفحهٔ خودش باز شود.</div>
       <div class="pl-hist-links">
         <button type="button" class="tool-link-card" style="border-color:var(--green);color:var(--green)" onclick="showSection('monthreport')"><span title="📅 گزارش پایان ماه — فروش، مفاد، مصارف، همه در یک صفحه">📅 گزارش پایان ماه</span><span class="tlc-go"><i>‹</i></span></button>
-        <button type="button" class="tool-link-card" onclick="showSection('ratehist')"><span title="📈 تاریخچهٔ نرخ اتحادیه — خودکار ثبت می‌شود">📈 تاریخچهٔ نرخ اتحادیه</span><span class="tlc-go"><i>‹</i></span></button>
-        <button type="button" class="tool-link-card" style="border-color:var(--green);color:var(--green)" onclick="showSection('extraincome')"><span title="📋 جدول همهٔ خریدهای عمده از مشتریان">📋 جدول خریدهای عمده</span><span class="tlc-go"><i>‹</i></span></button>
-        <button type="button" class="tool-link-card" style="border-color:var(--purple);color:var(--purple)" onclick="openSectionHistory('expense')"><span title="💸 تاریخچهٔ مصارف — با تاریخ و روز هفته">💸 تاریخچهٔ مصارف</span><span class="tlc-go"><i>‹</i></span></button>
       </div>
     </div>
   </div>
@@ -17894,6 +17870,38 @@ body.gfx-performance .xls-foot td{
         <div class="pl-field"><label>درآمد اضافی دستی</label><input type="number" id="pl-extra-income" placeholder="0" oninput="calcPL()"></div>
         <div class="pl-field"><label>مصرف اضافی</label><input type="number" id="pl-extra-exp" placeholder="0" oninput="calcPL()"></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- 📊 «ضرر و مفاد از کجا آمده؟» (صفحهٔ جداگانه — از نوارِ بالای مفاد/ضرر باز می‌شود)
+     فقط همان اعدادِ خودِ برنامه را منبع‌به‌منبع دسته‌بندی می‌کند؛ هیچ محاسبه‌ای را
+     عوض نمی‌کند و چیزی در دیتابیس نمی‌نویسد. -->
+<div class="section" id="sec-plsource">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('profit')">📈 برگشت به مفاد / ضرر</button>
+    <span>📊 ضرر و مفاد از کجا آمده؟</span>
+  </div>
+  <div class="card" style="border-color:var(--blue)">
+    <div class="card-head">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div class="card-title" style="color:var(--blue)">📊 ضرر و مفاد از کجا آمده؟</div>
+        <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('plsource',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('plsource',0.08)">A+</button></span>
+      </div>
+      <span class="pl-range-bar">
+        <button class="pm-filter-btn" id="plr-day"   onclick="setPLRange('day')">📅 امروز</button>
+        <button class="pm-filter-btn" id="plr-week"  onclick="setPLRange('week')">🗓️ هفته</button>
+        <button class="pm-filter-btn active" id="plr-month" onclick="setPLRange('month')">📆 ماه</button>
+        <button class="pm-filter-btn" id="plr-year"  onclick="setPLRange('year')">🗂️ سال</button>
+        <button class="pm-filter-btn" id="plr-all"   onclick="setPLRange('all')">♾️ همه</button>
+      </span>
+    </div>
+    <div style="padding:14px">
+      <div style="font-size:0.76rem;color:var(--muted);margin-bottom:12px;line-height:1.8">
+        همان درآمدها و مصارفِ خودِ برنامه، این‌بار <b style="color:var(--txt)">منبع‌به‌منبع</b> — تا معلوم شود مفاد از کجا آمده و ضرر از چه بوده.
+        فقط منبع‌هایی نوشته می‌شوند که در بازهٔ انتخاب‌شده واقعاً عدد دارند.
+      </div>
+      <div id="pl-breakdown"></div>
     </div>
   </div>
 </div>
@@ -21738,7 +21746,7 @@ const _SEC_LABEL = {
   priceloss: '📉 زیان افزایش قیمت',
   chakana: '🧾 چکنه', noinv: '🏭 شرکت‌های تیل', expenses: '💸 مصارف', rasid: '🧾 فاکتورهای رسید',
   profit: '📈 مفاد / ضرر', extraincome: '➕ درآمد اضافی', monthreport: '📅 گزارش ماهانه',
-  ratehist: '📈 تاریخچهٔ نرخ', safe: '🏦 گاوصندوق', sarrafi: '💱 صرافی', waraq: '📝 ورق روزانه',
+  ratehist: '📈 تاریخچهٔ نرخ', plsource: '📊 ضرر و مفاد از کجا آمده؟', safe: '🏦 گاوصندوق', sarrafi: '💱 صرافی', waraq: '📝 ورق روزانه',
   attendance: '🧑‍💼 حاضری و معاش', staffshort: '👷 کمبودی کارمندان', invoices: '🧾 فاکتورها',
   history: '🕘 تاریخچه‌ها', settings: '⚙️ تنظیمات'
 };
@@ -21783,7 +21791,7 @@ function showSection(id, btn) {
   if (id === 'shifts-diesel') navId = 'shifts';
   if (id === 'storage-diesel') navId = 'storage';
   if (id === 'debtsum' || id === 'debtsummoney') navId = 'debtrasid';
-  if (id === 'extraincome') navId = 'profit';
+  if (id === 'extraincome' || id === 'plsource') navId = 'profit';
   if (id === 'tanker' || id === 'tankdip') navId = 'storage';
   if (id === 'oldloans' || id === 'oldloansmoney' || id === 'priceloss') navId = 'debt';
   if (id === 'chakana') navId = 'debtrasid';
@@ -21796,7 +21804,7 @@ function showSection(id, btn) {
   // از کادرها به صفحهٔ جدا می‌روند «تمام صفحه» نبودند). فقط همین صفحه‌ها؛ بقیه 1000px می‌مانند.
   // داشبورد هم تمام‌عرض است تا کارت‌هایش روی کامپیوتر بزرگ و خوانا بمانند
   // (خودِ #sec-dashboard حداکثر 1440px است، پس روی نمایشگرِ خیلی پهن هم کش نمی‌آید)
-  const _WIDE = ['dashboard','rasid','debtrasid','chakana','oldloans','oldloansmoney','debtsum','debtsummoney','priceloss'];
+  const _WIDE = ['dashboard','rasid','debtrasid','chakana','oldloans','oldloansmoney','debtsum','debtsummoney','priceloss','plsource'];
   document.body.classList.toggle('sec-wide', _WIDE.indexOf(id) !== -1);
   if (btn) {
     btn.classList.add('active');
@@ -21809,6 +21817,7 @@ function showSection(id, btn) {
   if (id === 'tanker') { try { _renderTankerPanel(); } catch(e) {} }
   if (id === 'tankdip') { try { _renderDipPanel(); _dipRenderTankInfo(); dipLiveCalc(); } catch(e) {} }
   if (id === 'priceloss') { try { renderPriceLossPage(); } catch(e) {} }
+  if (id === 'plsource') { try { renderPLBreakdown(); } catch(e) {} }
   if (id === 'oldloans') { try { _renderAgingPanel('fuel', 'aging-list'); } catch(e) {} }
   if (id === 'oldloansmoney') { try { _renderAgingPanel('money', 'aging-list-money'); } catch(e) {} }
   if (id === 'chakana') { try { renderChakana(); } catch(e) {} }
@@ -30746,7 +30755,10 @@ function renderPLBreakdown() {
   const gain = lines.filter(x => x.v > 0).reduce((a, x) => a + x.v, 0);
   const loss = lines.filter(x => x.v < 0).reduce((a, x) => a - x.v, 0);
 
-  const rows = lines.map(x => {
+  // خواستهٔ صاحب ریپو: منبعی که در این بازه هیچ عددی ندارد اصلاً نوشته نشود —
+  // فقط آن‌هایی که واقعاً مفاد یا ضرر داشته‌اند دیده شوند.
+  const shown = lines.filter(x => Math.round(x.v) !== 0);
+  const rows = shown.map(x => {
     const isGain = x.v > 0, isLoss = x.v < 0;
     const share = isGain ? (gain > 0 ? (x.v / gain * 100) : 0) : (loss > 0 ? (-x.v / loss * 100) : 0);
     return '<tr>'
@@ -30755,7 +30767,8 @@ function renderPLBreakdown() {
       + '<td style="color:var(--red);font-weight:800">' + (isLoss ? afn(x.v) : '—') + '</td>'
       + '<td style="color:var(--muted)">' + (x.v ? (n2fa(Math.round(share)) + '٪') : '—') + '</td>'
       + '</tr>';
-  }).join('');
+  }).join('') || '<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--muted)">'
+      + 'در این بازه هیچ مفاد و ضرری ثبت نشده — نه درآمدی، نه مصرفی.</td></tr>';
 
   // یادآوریِ بدونِ جمع: زیانِ نرخِ قرض‌داران هنوز محقق نشده، پس در مفاد/ضرر جمع نمی‌شود
   let memo = 0;
@@ -30824,8 +30837,10 @@ function calcPL() {
   document.getElementById('pl-net').style.color = '';
   document.getElementById('pl-sub').textContent = net >= 0 ? '✅ مفاد خالص' : '❌ ضرر خالص';
   _renderPLTrend(net >= 0);
-  // 📊 کادرِ «ضرر و مفاد از کجا آمده؟» — داخل try تا خطایش به محاسبهٔ بالا نرسد
-  try { renderPLBreakdown(); } catch (e) {}
+  // 📊 صفحهٔ «ضرر و مفاد از کجا آمده؟» فقط وقتی بازِ روی نمایش است تازه می‌شود
+  // (کارِ بی‌خود روی هر محاسبهٔ مفاد/ضرر انجام نشود). داخل try تا خطایش به بالا نرسد.
+  try { const _ps = document.getElementById('sec-plsource');
+        if (_ps && _ps.classList.contains('visible')) renderPLBreakdown(); } catch (e) {}
 }
 // نقطه‌ها را با کِرو نرم (بدون گوشهٔ تیز) به رشتهٔ d تبدیل می‌کند — فقط
 // یک تکنیک رسم، هیچ داده‌ای عوض نمی‌شود؛ همان نقاط قبلی، فقط منحنی‌تر.
@@ -38356,7 +38371,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.207';
+const APP_VERSION = '2.9.208';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -42667,6 +42682,15 @@ document.addEventListener('click', function(e) {
         document.body.classList.add('gfx-weak');
       }
     }catch(e){}
+    /* وقتی صفحه دیده نمی‌شود (تبِ دیگر باز است یا نمایشگر خاموش شده) هیچ
+       انیمیشنی نباید بچرخد — روی موبایل مستقیم یعنی باتری و گرمای کمتر، و
+       موقعِ برگشت همه‌چیز از همان‌جا ادامه می‌یابد. فقط pause است؛ نه ظاهر
+       عوض می‌شود نه هیچ منطقی. */
+    try{
+      var _gfxVis = function(){ document.body.classList.toggle('gfx-paused', document.hidden); };
+      document.addEventListener('visibilitychange', _gfxVis, { passive:true });
+      _gfxVis();
+    }catch(e){}
     apply(tier, false);
   }
   if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', boot); }
@@ -43029,6 +43053,41 @@ body.is-scrolling.gfx-standard .daynight-toggle .dn-thumb{
   animation-play-state:paused !important;
 }
 body.gfx-ultra #fxLayer{ will-change:filter; }
+
+/* ═══ سه بهینه‌سازیِ تازه — روی هر سه حالتِ گرافیک، بدون تغییرِ ظاهر یا منطق ═══
+
+   ۱) صفحه در پس‌زمینه (تبِ دیگر / نمایشگر خاموش) ⇒ هیچ انیمیشنی نچرخد.
+      فقط pause است: با برگشت، دقیقاً از همان‌جا ادامه می‌یابد. */
+body.gfx-paused *,
+body.gfx-paused *::before,
+body.gfx-paused *::after{ animation-play-state:paused !important; }
+
+/*  ۲) حالتِ Performance قرار است «تخت و بی‌حرکت» باشد، ولی تا حالا فقط
+      انیمیشن‌ها را می‌بست و افکتِ محوِ پشتِ کارت‌ها (backdrop-filter) روشن
+      می‌ماند — همان چیزی که بیشترین گیر را موقعِ اسکرول روی موبایلِ ضعیف
+      می‌سازد. حالا در این حالت کاملاً برداشته می‌شود؛ چون پس‌زمینهٔ کارت‌ها
+      تقریباً مات است، دیده هم نمی‌شود. */
+body.gfx-performance *,
+body.gfx-performance *::before,
+body.gfx-performance *::after{
+  -webkit-backdrop-filter:none !important;
+  backdrop-filter:none !important;
+}
+
+/*  ۳) دستگاهِ ضعیف: حلقه‌های تزئینیِ همیشه‌درحال‌چرخشِ صفحهٔ مفاد/ضرر
+      (نورِ پس‌زمینه، ذره‌های پول، فلشِ روند) دیگر بی‌وقفه GPU نگیرند.
+      عددها، نمودار و همهٔ محاسبات دست‌نخورده می‌مانند. */
+body.gfx-weak .pl-aurora,
+body.gfx-weak .pl-particles,
+body.gfx-weak .pl-particles *,
+body.gfx-weak .pl-arrow{ animation:none !important; }
+body.gfx-weak .pl-particles{ display:none !important; }
+
+/*  ۴) همان حلقه‌های تزئینی، روی هر دستگاهی، موقعِ اسکرول مکث کنند
+      (فهرستِ بالا این‌ها را نداشت). */
+body.is-scrolling .pl-aurora,
+body.is-scrolling .pl-particles *,
+body.is-scrolling .pl-arrow{ animation-play-state:paused !important; }
 
 /* ═══ دستگاه‌های ضعیف (CPU/RAM کم — body.gfx-weak از JS ست می‌شود) ═══
    افکتِ محوِ پشتِ کارت‌ها (backdrop-filter) پرهزینه‌ترین بخشِ Standard/Ultra
