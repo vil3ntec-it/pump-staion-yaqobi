@@ -31337,8 +31337,10 @@ body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:14
 .page-title{font-size:1.05rem;font-weight:900;color:#b45309}
 .page-sub{font-size:0.72rem;color:#5b6472;margin-top:2px}
 .page-meta{font-size:0.7rem;color:#5b6472;text-align:left;white-space:nowrap;line-height:1.7}
+/* کادرِ «فیصدی ٪» وسطِ ورق بنشیند، نه گوشه (خواستهٔ صاحب ریپو) */
+.pct-wrap{text-align:center;margin-bottom:8px}
 .pct-box{display:inline-flex;align-items:center;gap:6px;border:1px solid #d6dae1;border-radius:7px;
-  padding:3px 9px;font-size:0.64rem;color:#5b6472;white-space:nowrap;margin-bottom:8px}
+  padding:3px 9px;font-size:0.64rem;color:#5b6472;white-space:nowrap}
 .pct-box b{font-size:0.78rem;color:#b45309}
 .sum-box{min-width:0;border:1px solid #e3e6eb;border-radius:7px;padding:5px 3px;text-align:center;
   display:flex;flex-direction:column;justify-content:center;gap:2px}
@@ -31389,7 +31391,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 5px;border
   </div>
   <div class="page-meta">تاریخ چاپ: ${printDate}</div>
 </div>
-<div class="pct-box"><span>فیصدی ٪ (از مقدار رسید تیل کم می‌شود)</span><b>${n2fa(pct)}٪</b></div>
+<div class="pct-wrap"><div class="pct-box"><span>فیصدی ٪ (از مقدار رسید تیل کم می‌شود)</span><b>${n2fa(pct)}٪</b></div></div>
 ${splitBoxesHtml}
 <table>
   <thead><tr>
@@ -38529,7 +38531,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.213';
+const APP_VERSION = '2.9.214';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
