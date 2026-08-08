@@ -1093,6 +1093,13 @@ body.viewer-mode .att-admin{display:none !important}
 .pl-loss-filter{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .pl-loss-filter .pm-filter-btn{padding:6px 11px;font-size:0.78rem}
 .pl-loss-filter .pm-filter-btn.active{background:var(--purple);border-color:var(--purple);color:#fff}
+/* دکمه‌های بازهٔ زمانیِ کادرِ «ضرر و مفاد از کجا آمده؟» (روز/هفته/ماه/سال/همه) */
+.pl-range-bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.pl-range-bar .pm-filter-btn{padding:6px 11px;font-size:0.78rem}
+.pl-range-bar .pm-filter-btn.active{background:var(--blue);border-color:var(--blue);color:#fff}
+/* جدولِ تفکیکِ منبع‌ها — ستونِ اولش متن است، پس نباید nowrap بماند */
+.pl-brk-tbl{min-width:520px}
+.pl-brk-tbl td:first-child{white-space:normal;min-width:220px}
 .pl-loss-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:12px}
 .pl-loss-sum > div{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-align:center;background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:9px 10px;min-width:0}
 .pl-loss-sum i{font-style:normal;font-size:0.7rem;font-weight:700;color:var(--muted);line-height:1.35}
@@ -17809,6 +17816,30 @@ body.gfx-performance .xls-foot td{
     </div>
   </div>
   </div>
+  <!-- 📊 «ضرر و مفاد از کجا آمده؟» — تفکیکِ منبع‌به‌منبع برای روز/هفته/ماه/سال.
+       فقط همان اعدادی که برنامه از قبل دارد را دسته‌بندی و جمع می‌کند؛ هیچ
+       محاسبهٔ تازه‌ای به بخش‌های دیگر اضافه یا از آن‌ها کم نمی‌شود. -->
+  <div class="card" style="border-color:var(--blue)">
+    <div class="card-head">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div class="card-title" style="color:var(--blue)">📊 ضرر و مفاد از کجا آمده؟</div>
+      </div>
+      <span class="pl-range-bar">
+        <button class="pm-filter-btn" id="plr-day"   onclick="setPLRange('day')">📅 امروز</button>
+        <button class="pm-filter-btn" id="plr-week"  onclick="setPLRange('week')">🗓️ هفته</button>
+        <button class="pm-filter-btn active" id="plr-month" onclick="setPLRange('month')">📆 ماه</button>
+        <button class="pm-filter-btn" id="plr-year"  onclick="setPLRange('year')">🗂️ سال</button>
+        <button class="pm-filter-btn" id="plr-all"   onclick="setPLRange('all')">♾️ همه</button>
+      </span>
+    </div>
+    <div style="padding:14px">
+      <div style="font-size:0.76rem;color:var(--muted);margin-bottom:12px;line-height:1.8">
+        همان درآمدها و مصارفِ خودِ برنامه، این‌بار <b style="color:var(--txt)">منبع‌به‌منبع</b> — تا معلوم شود مفاد از کجا آمده و ضرر از چه بوده.
+        بازهٔ زمانی را از دکمه‌های بالا انتخاب کنید.
+      </div>
+      <div id="pl-breakdown"></div>
+    </div>
+  </div>
   <div class="card" style="border-color:var(--accent)">
     <div class="card-head"><div class="card-title">🏛️ نرخ اتحادیه</div></div>
     <div style="padding:14px">
@@ -30609,6 +30640,155 @@ function renderExtraIncomes() {
 }
 
 // ========== PROFIT/LOSS ==========
+/* ══════════════════════════════════════════════════════════════════════════════
+   📊 «ضرر و مفاد از کجا آمده؟» — تفکیکِ منبع‌به‌منبعِ مفاد/ضرر برای روز/هفته/ماه/سال
+   ──────────────────────────────────────────────────────────────────────────────
+   این بخش هیچ عددِ تازه‌ای نمی‌سازد: دقیقاً همان منبع‌هایی را که calcPL از قبل
+   جمع می‌زند (مفادِ پارچه‌ها، حسابِ شرکت‌های تیل، درآمد اضافی، مصارف) با تاریخِ
+   خودشان دسته‌بندی و جمع می‌کند، به‌علاوهٔ «اختلافِ نرخِ ثبت و تاییدِ فاکتورها».
+   به هیچ بخشِ دیگری دست نمی‌زند و چیزی در دیتابیس نمی‌نویسد.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+let _plRange = 'month';   // day | week | month | year | all
+
+// مرزهای بازه بر پایهٔ تقویمِ شمسی (همان تقویمِ خودِ برنامه)
+function _plRangeBounds(r) {
+  if (r === 'all') return null;
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  const to = now.getTime();
+  const gTs = (g) => new Date(g.gy, g.gm - 1, g.gd).getTime();
+  try {
+    const j = jal_g2j(now.getFullYear(), now.getMonth() + 1, now.getDate());
+    if (r === 'day')   return { from: to, to: to };
+    if (r === 'week')  return { from: to - 6 * 86400000, to: to };   // ۷ روزِ اخیر
+    if (r === 'month') return { from: gTs(jal_j2g(j.jy, j.jm, 1)), to: to };   // از اولِ همین ماهِ شمسی
+    if (r === 'year')  return { from: gTs(jal_j2g(j.jy, 1, 1)), to: to };      // از اولِ همین سالِ شمسی
+  } catch (e) {}
+  return null;
+}
+function _plInRange(dateStr, b) {
+  if (!b) return true;                     // «همه» — همه‌چیز، حتی تاریخِ خالی
+  const ts = _jalaliStrToTs(dateStr);
+  return ts ? (ts >= b.from && ts <= b.to) : false;
+}
+// تاریخِ شمسیِ روزِ تاییدِ فاکتور (اختلافِ نرخ همان روز محقق می‌شود)
+function _plInvApproveDateSh(v) {
+  if (v && v.approved_at) {
+    try { const d = new Date(v.approved_at); if (!isNaN(d.getTime())) return _jalaliStrFromTs(d.getTime()); } catch (e) {}
+  }
+  return (v && v.date_sh) || '';
+}
+/* اختلافِ نرخِ ثبت و تاییدِ فاکتورها.
+   مثبت = ضرر (تیل تا روزِ تایید گران‌تر شده ولی به نرخِ روزِ ثبت داده‌ایم)
+   منفی = مفاد (نرخ پایین آمده). فقط فاکتورِ تاییدشده‌ای که هر دو نرخ را دارد. */
+function _plInvRateDiff(b) {
+  let sum = 0;
+  (DB.invoices || []).forEach(v => {
+    if (!v || v.by_money || v.status !== 'approved') return;
+    const liters = parseFloat(v.liters) || 0;
+    if (!(liters > 0)) return;
+    const rc = (v.rate_on_create != null ? (parseFloat(v.rate_on_create) || 0) : (parseFloat(v.price_per_liter) || 0));
+    const ra = parseFloat(v.rate_on_approve) || 0;
+    if (!(rc > 0) || !(ra > 0)) return;
+    if (!_plInRange(_plInvApproveDateSh(v), b)) return;
+    sum += (ra - rc) * liters;
+  });
+  return sum;
+}
+// همان منبع‌های calcPL، این‌بار جدا‌جدا و با فیلترِ تاریخ
+function _plBreakdownData(b) {
+  const d = { petrol: 0, diesel: 0, noinv: 0, extra: 0, exp: 0, invDiff: 0 };
+  (DB.reports || []).forEach(r => {
+    if (!r || r.fuel !== 'petrol' || !_plInRange(r.date, b)) return;
+    d.petrol += ((r.day && r.day.profit) || 0) + ((r.night && r.night.profit) || 0);
+  });
+  (DB.shifts || []).forEach(s => {
+    if (!s || s.fuel !== 'diesel' || !_plInRange(s.date, b)) return;
+    d.diesel += (s.profit || 0);
+  });
+  (DB.noinvPersons || []).forEach(p => ((p && p.rows) || []).forEach(r => {
+    if (r && _plInRange(r.date, b)) d.noinv += (parseFloat(r.bardagi) || 0);
+  }));
+  (DB.extraIncomes || []).forEach(e => { if (e && _plInRange(e.date, b)) d.extra += (parseFloat(e.amount) || 0); });
+  (DB.expenses || []).forEach(e => { if (e && _plInRange(e.date, b)) d.exp += (parseFloat(e.amount) || 0); });
+  d.invDiff = _plInvRateDiff(b);
+  return d;
+}
+function setPLRange(r) {
+  _plRange = r;
+  ['day', 'week', 'month', 'year', 'all'].forEach(k => {
+    const el = document.getElementById('plr-' + k);
+    if (el) el.classList.toggle('active', k === r);
+  });
+  renderPLBreakdown();
+}
+function renderPLBreakdown() {
+  const wrap = document.getElementById('pl-breakdown');
+  if (!wrap) return;
+  const b = _plRangeBounds(_plRange);
+  const d = _plBreakdownData(b);
+  const afn = x => n2fa(Math.round(Math.abs(x || 0))) + ' افغانی';
+  // کادرهای دستیِ همین صفحه تاریخ ندارند، پس در هر بازه‌ای دیده می‌شوند
+  const manIn = parseFloat((document.getElementById('pl-extra-income') || {}).value) || 0;
+  const manEx = parseFloat((document.getElementById('pl-extra-exp') || {}).value) || 0;
+
+  // مثبت = مفاد، منفی = ضرر
+  const lines = [
+    { t: '⛽ مفاد پارچه‌های پطرول', v: d.petrol, s: 'از ورق‌های روز و شبِ پطرول' },
+    { t: '🟤 مفاد پارچه‌های دیزل', v: d.diesel, s: 'از ورق‌های روز و شبِ دیزل' },
+    { t: '🏭 حساب شرکت‌های تیل', v: d.noinv, s: 'جمع بردگیِ شرکت‌ها' },
+    { t: '🛒 درآمد اضافی (خرید عمده)', v: d.extra, s: 'خریدهای عمده از مشتریان' },
+    { t: '🧾 اختلاف نرخ ثبت و تایید فاکتورها', v: -d.invDiff, s: 'نرخ روزِ تایید منهای نرخ روزِ ثبت، ضربدر لیتر' },
+    { t: '💸 مصارف', v: -d.exp, s: 'همهٔ مصارفِ ثبت‌شده' },
+    { t: '✍️ درآمد و مصرف اضافیِ دستی', v: manIn - manEx, s: 'کادرهای دستیِ همین صفحه — تاریخ ندارند' }
+  ];
+  const net = lines.reduce((a, x) => a + x.v, 0);
+  const gain = lines.filter(x => x.v > 0).reduce((a, x) => a + x.v, 0);
+  const loss = lines.filter(x => x.v < 0).reduce((a, x) => a - x.v, 0);
+
+  const rows = lines.map(x => {
+    const isGain = x.v > 0, isLoss = x.v < 0;
+    const share = isGain ? (gain > 0 ? (x.v / gain * 100) : 0) : (loss > 0 ? (-x.v / loss * 100) : 0);
+    return '<tr>'
+      + '<td style="text-align:right"><b>' + x.t + '</b><br><small style="color:var(--muted)">' + x.s + '</small></td>'
+      + '<td style="color:var(--green);font-weight:800">' + (isGain ? afn(x.v) : '—') + '</td>'
+      + '<td style="color:var(--red);font-weight:800">' + (isLoss ? afn(x.v) : '—') + '</td>'
+      + '<td style="color:var(--muted)">' + (x.v ? (n2fa(Math.round(share)) + '٪') : '—') + '</td>'
+      + '</tr>';
+  }).join('');
+
+  // یادآوریِ بدونِ جمع: زیانِ نرخِ قرض‌داران هنوز محقق نشده، پس در مفاد/ضرر جمع نمی‌شود
+  let memo = 0;
+  try { _lossAllRows().forEach(it => { if (it.open) memo += it.loss; }); } catch (e) {}
+
+  const label = { day: 'امروز', week: '۷ روز اخیر', month: 'این ماه', year: 'امسال', all: 'همهٔ زمان‌ها' }[_plRange] || '';
+
+  wrap.innerHTML =
+    '<div class="pl-loss-sum">'
+      + '<div><i>مفاد از این منبع‌ها (' + label + ')</i><b style="color:var(--green)">' + afn(gain) + '</b></div>'
+      + '<div><i>ضرر از این منبع‌ها (' + label + ')</i><b style="color:var(--red)">' + afn(loss) + '</b></div>'
+      + '<div><i>' + (net >= 0 ? 'مفاد خالصِ ' : 'ضرر خالصِ ') + label + '</i><b style="color:' + (net >= 0 ? 'var(--green)' : 'var(--red)') + '">' + afn(net) + '</b></div>'
+    + '</div>'
+    + '<div class="pl-loss-wrap"><table class="pl-loss-tbl pl-brk-tbl">'
+      + '<thead><tr><th>منبع</th><th>مفاد (+)</th><th>ضرر (−)</th><th>سهم</th></tr></thead>'
+      + '<tbody>' + rows + '</tbody>'
+      + '<tfoot><tr>'
+        + '<td style="text-align:right">جمله — ' + (net >= 0 ? 'مفاد خالص' : 'ضرر خالص') + '</td>'
+        + '<td style="color:var(--green)">' + afn(gain) + '</td>'
+        + '<td style="color:var(--red)">' + afn(loss) + '</td>'
+        + '<td style="color:' + (net >= 0 ? 'var(--green)' : 'var(--red)') + '">' + afn(net) + '</td>'
+      + '</tr></tfoot>'
+    + '</table></div>'
+    + (memo > 0
+      ? '<div class="pl-loss-warn" style="margin-top:10px;border-color:var(--purple);color:var(--purple)">'
+        + '📉 یادآوری (در جمعِ بالا نیست چون هنوز محقق نشده): زیانِ افزایش قیمتِ قرض‌های <b>پرداخت‌نشده</b> در این لحظه '
+        + '<b>' + afn(memo) + '</b> است. جزئیاتش در «👥 قرض‌داران ← 📉 زیان افزایش قیمت».</div>'
+      : '')
+    + '<div class="pl-loss-note">این کادر فقط همان اعدادِ خودِ برنامه را دسته‌بندی می‌کند و چیزی را عوض نمی‌کند. '
+      + '«اختلاف نرخ ثبت و تایید فاکتورها» در روزِ تاییدِ هر فاکتور حساب می‌شود: اگر نرخ تا روزِ تایید بالا رفته باشد ضرر است، '
+      + 'و اگر پایین آمده باشد مفاد. ردیفِ «دستی» تاریخ ندارد، پس در همهٔ بازه‌ها دیده می‌شود.</div>';
+}
+
 function calcPL() {
   renderExtraIncomes();
   const shiftProfit = (() => {
@@ -30622,8 +30802,14 @@ function calcPL() {
   const extraIncome = extraIncomeManual + extraIncomeRecorded;
   const extraExp = parseFloat(document.getElementById('pl-extra-exp').value) || 0;
   const totalExpenses = DB.expenses.reduce((a,e) => a+e.amount, 0);
-  const income = shiftProfit + noinvTotal + extraIncome;
-  const expenses = totalExpenses + extraExp;
+  // 🧾 اختلافِ نرخِ ثبت و تاییدِ فاکتورها (خواستهٔ صاحب ریپو: در مفاد/ضرر هم جمع شود).
+  // مثبت = ضرر (تیل تا روزِ تایید گران‌تر شده ولی به نرخِ روزِ ثبت داده‌ایم) ⇒ به مصارف؛
+  // منفی = مفاد (نرخ پایین آمده) ⇒ به درآمدها. هر دو کادر مثبت می‌مانند و
+  // «مفاد/ضرر خالص = درآمد − مصارف» مثل همیشه درست درمی‌آید.
+  let invRateDiff = 0;
+  try { invRateDiff = _plInvRateDiff(null); } catch (e) { invRateDiff = 0; }
+  const income = shiftProfit + noinvTotal + extraIncome + Math.max(-invRateDiff, 0);
+  const expenses = totalExpenses + extraExp + Math.max(invRateDiff, 0);
   const net = income - expenses;
 
   const incEl = document.getElementById('pl-income');
@@ -30638,6 +30824,8 @@ function calcPL() {
   document.getElementById('pl-net').style.color = '';
   document.getElementById('pl-sub').textContent = net >= 0 ? '✅ مفاد خالص' : '❌ ضرر خالص';
   _renderPLTrend(net >= 0);
+  // 📊 کادرِ «ضرر و مفاد از کجا آمده؟» — داخل try تا خطایش به محاسبهٔ بالا نرسد
+  try { renderPLBreakdown(); } catch (e) {}
 }
 // نقطه‌ها را با کِرو نرم (بدون گوشهٔ تیز) به رشتهٔ d تبدیل می‌کند — فقط
 // یک تکنیک رسم، هیچ داده‌ای عوض نمی‌شود؛ همان نقاط قبلی، فقط منحنی‌تر.
@@ -38168,7 +38356,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.206';
+const APP_VERSION = '2.9.207';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
