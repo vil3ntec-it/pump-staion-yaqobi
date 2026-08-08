@@ -17700,14 +17700,6 @@ body.boot-viewer #bootViewerSplash{
       </span>
     </div>
     <div style="padding:14px">
-      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:12px;line-height:1.8">
-        وقتی مشتری تیل را قرضی می‌برد و تا روزِ پرداخت قیمتِ تیل بالا می‌رود، آن تفاوت زیانِ ماست:
-        <b style="color:var(--txt)">زیان = (قیمت مبنا − قیمت فروش) × مقدار لیتر</b>.
-        برای قرضِ <b style="color:var(--red)">پرداخت‌نشده</b> قیمتِ مبنا نرخِ <b>امروز</b> است (هنوز باز است و بالا/پایین می‌رود)؛
-        اما به‌محضِ اینکه رسید را ثبت کنید، نرخِ همان روز <b style="color:var(--green)">قفل می‌شود</b> و دیگر با تغییرِ نرخِ اتحادیه تکان نمی‌خورد.
-        اگر قیمت پایین بیاید، زیان صفر است و هیچ عدد منفی‌ای نمایش داده نمی‌شود.
-        <b style="color:var(--accent)">این صفحه فقط گزارش است — بدهی و مبلغِ قابل‌پرداختِ مشتری هیچ تغییری نمی‌کند.</b>
-      </div>
       <div id="pl-loss-page"></div>
     </div>
   </div>
@@ -27128,23 +27120,7 @@ function renderPriceLossPage() {
         + '<th>جمع مبلغ بدهی</th><th>جمع ارزش با قیمت مبنا</th><th>جمع زیان</th><th>فاکتورها</th><th>حساب</th>'
       + '</tr></thead>'
       + '<tbody>' + bodyHtml + '</tbody>'
-      + '<tfoot><tr>'
-        + '<td colspan="2">جمله (' + n2fa(list.length) + ' واحد)</td>'
-        + '<td>' + n2fa(tot.n) + '</td>'
-        + '<td style="color:var(--blue)">' + n2fa(rnd2(tot.fuel)) + ' ل</td>'
-        + '<td style="color:var(--accent)">' + afn(tot.principal) + '</td>'
-        + '<td style="color:var(--purple)">' + afn(tot.refValue) + '</td>'
-        + '<td style="color:' + (tot.loss > 0 ? 'var(--red)' : 'var(--green)') + '">' + afn(tot.loss) + '</td>'
-        + '<td style="color:' + (gInvDiff > 0 ? 'var(--red)' : 'var(--muted)') + '">' + afn(gInvDiff) + '</td>'
-        + '<td>—</td>'
-      + '</tr></tfoot>'
-    + '</table></div>'
-    + '<div class="pl-loss-note">🔒 فقط گزارش — مبلغ بدهی، الباقی و مبلغِ قابل‌پرداختِ مشتری با این اعداد هیچ تغییری نمی‌کنند. '
-      + 'هر واحد <b>یک ردیف</b> است و همهٔ برداشت‌هایش زیرِ همان ردیف جمع شده؛ با زدنِ روی نام، تک‌تکِ معامله‌ها با تاریخ، مقدار و نرخِ خودشان باز می‌شوند. '
-      + 'قیمتِ مبنای قرضِ <b>پرداخت‌نشده</b> نرخِ امروزِ همان نوع تیل است و هر روز تازه می‌شود؛ '
-      + 'قیمتِ مبنای قرضِ <b>پرداخت‌شده</b> همان نرخی است که در روزِ گرفتنِ رسید قفل شده و دیگر تغییر نمی‌کند. '
-      + 'برای فاکتورها، <b>نرخ زمان ثبت</b> و <b>نرخ زمان تایید</b> جداگانه نگه داشته می‌شوند و هیچ‌کدام جای دیگری را نمی‌گیرد؛ '
-      + 'تا فاکتور تایید نشود نرخِ تایید نه ثبت می‌شود نه حدس زده می‌شود.</div>';
+    + '</table></div>';
 }
 function lossOpenPerson(pid) {
   try {
@@ -31541,6 +31517,10 @@ body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1f2430;padding:16
 .page-title{font-size:1.05rem;font-weight:900;color:${color}}
 .page-sub{font-size:0.72rem;color:#5b6472;margin-top:2px}
 .page-meta{font-size:0.7rem;color:#5b6472;text-align:left;white-space:nowrap}
+/* دکمهٔ چاپ داخلِ خودِ سربرگ (نه شناور) — نه چیزی را می‌پوشاند نه گم می‌شود */
+.hdr-print{margin-top:6px;padding:6px 14px;background:${color};color:#fff;border:none;border-radius:8px;
+  font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.78rem;cursor:pointer}
+@media print{ .hdr-print{display:none !important} }
 /* کارتِ موجودی — کادرِ خط‌دار، بدون پس‌زمینهٔ پررنگ */
 .hero{border:1.5px solid ${color};border-radius:12px;padding:12px 14px;margin-bottom:12px;
   display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
@@ -31585,7 +31565,8 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;border:1px solid #4a55
     <div class="page-title">🛢️ پمپ یعقوبی — مخزن ${label}</div>
     <div class="page-sub">گزارش موجودی و تاریخچهٔ خریدها</div>
   </div>
-  <div class="page-meta">تاریخ چاپ: ${d.sh}<br>${d.mi}</div>
+  <div><div class="page-meta">تاریخ چاپ: ${d.sh}<br>${d.mi}</div>
+    <button class="hdr-print" onclick="window.print()">🖨️ چاپ / ذخیره PDF</button></div>
 </div>
 <div class="hero">
   <div class="hero-main">
@@ -38531,7 +38512,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.214';
+const APP_VERSION = '2.9.215';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
