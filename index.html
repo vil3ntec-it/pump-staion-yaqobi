@@ -31330,56 +31330,61 @@ function pdfPerson() {
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:13.5px;font-weight:500}
-h1{font-size:1.3rem;font-weight:900;color:#c07700;border-bottom:2px solid #c07700;padding-bottom:8px;margin-bottom:6px}
-/* خواستهٔ صاحب ریپو: کادرِ «فیصدی ٪» دقیقاً وسطِ همین خط بنشیند (نه گوشهٔ چپ) —
-   سه ستون: تاریخ چاپ راست، فیصدی وسط، ستونِ خالی چپ تا وسط واقعاً وسط بماند */
-.meta-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin-bottom:16px}
-.meta{font-size:0.75rem;color:#718096}
-.pct-wrap{text-align:center}
-.pct-box{display:inline-flex;align-items:center;gap:6px;background:#fffdf5;border:1px solid #f0dfa8;border-radius:6px;padding:3px 9px;font-size:0.62rem;color:#718096;white-space:nowrap}
-.pct-box b{font-size:0.74rem;color:#c07700}
-.sum-box{flex:1;min-width:0;background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:6px 4px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;gap:3px}
-.sum-box .l{font-size:0.56rem;color:#718096;line-height:1.25}
-.sum-box .v{font-size:0.8rem;font-weight:900;white-space:nowrap}
+/* سربرگِ دوطرفه — هم‌مدلِ سربرگِ تازهٔ پی‌دی‌افِ مخزن: نام حساب و زیرنویسش یک
+   طرف، تاریخ چاپ طرف دیگر؛ نه روی هم، نه شلوغ (خواستهٔ صاحب ریپو). */
+.page-hdr{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
+  border-bottom:2px solid #b45309;padding-bottom:8px;margin-bottom:12px}
+.page-title{font-size:1.05rem;font-weight:900;color:#b45309}
+.page-sub{font-size:0.72rem;color:#5b6472;margin-top:2px}
+.page-meta{font-size:0.7rem;color:#5b6472;text-align:left;white-space:nowrap;line-height:1.7}
+.pct-box{display:inline-flex;align-items:center;gap:6px;border:1px solid #d6dae1;border-radius:7px;
+  padding:4px 10px;font-size:0.66rem;color:#5b6472;white-space:nowrap;margin-bottom:12px}
+.pct-box b{font-size:0.78rem;color:#b45309}
+.sum-box{min-width:0;border:1px solid #d6dae1;border-radius:9px;padding:7px 5px;text-align:center;
+  display:flex;flex-direction:column;justify-content:center;gap:3px}
+.sum-box .l{font-size:0.62rem;color:#5b6472;line-height:1.3}
+.sum-box .v{font-size:0.86rem;font-weight:900;white-space:nowrap}
 table{width:100%;border-collapse:collapse;font-size:0.75rem;table-layout:auto}
 /* خواستهٔ صاحب ریپو: نوشته‌ها و عددهای داخلِ جدول دقیقاً زیرِ سرستونِ خودشان
    وسط‌چین باشند (قبلاً سرستون‌ها راست‌چین بودند و با ردیف‌ها جور در نمی‌آمد) */
-th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:center;font-weight:700;border-bottom:2px solid #4a5568;white-space:nowrap}
-td{padding:6px 7px;border-bottom:1px solid #e2e8f0;white-space:normal;word-break:break-word;font-weight:600;color:#1a202c;text-align:center;vertical-align:middle}
-tr:nth-child(even) td{background:#f7fafc}
-tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border-top:2px solid #4a5568;text-align:center}
-.footer{margin-top:16px;font-size:0.68rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
-.split-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
-.split-box{flex:1;min-width:200px;border:1px solid #e2e8f0;border-radius:8px;padding:8px}
-.petrol-box{border-color:#c07700;background:#fffdf5}
-.diesel-box{border-color:#8B4513;background:#fdf8f0}
-.split-title{font-size:0.78rem;font-weight:700;margin-bottom:8px}
-.petrol-box .split-title{color:#c07700}
+th{background:#f2f4f7;color:#3a4250;padding:7px 5px;text-align:center;font-weight:800;font-size:0.7rem;
+  border:1px solid #d6dae1;white-space:nowrap;line-height:1.3}
+td{padding:6px 5px;border:1px solid #e3e6eb;white-space:normal;word-break:break-word;font-weight:600;color:#1f2430;text-align:center;vertical-align:middle}
+tbody tr:nth-child(even) td{background:#fafbfc}
+tfoot td{background:#f2f4f7;color:#1f2430;font-weight:900;padding:7px 5px;border:1px solid #d6dae1;text-align:center}
+.footer{margin-top:16px;font-size:0.68rem;color:#7b8494;text-align:center;border-top:1px solid #d6dae1;padding-top:8px}
+/* کادرهای پطرول/دیزل: جادار و دوستونی — قبلاً چهارتا در یک خطِ باریک روی هم می‌ریختند */
+.split-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;margin-bottom:14px}
+.split-box{border:1.5px solid #d6dae1;border-radius:11px;padding:10px 10px 11px;min-width:0}
+.petrol-box{border-color:#b45309}
+.diesel-box{border-color:#8B4513}
+.split-title{font-size:0.82rem;font-weight:900;margin-bottom:8px;text-align:right}
+.petrol-box .split-title{color:#b45309}
 .diesel-box .split-title{color:#8B4513}
-.split-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center}
-.note-box{margin-top:14px;padding:8px 12px;background:#fffbeb;border-right:3px solid #c07700;border-radius:6px;font-size:0.75rem;color:#4a5568}
+.split-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;text-align:center}
+.note-box{margin-top:14px;padding:8px 12px;border:1px solid #d6dae1;border-right:3px solid #b45309;border-radius:7px;font-size:0.75rem;color:#3a4250}
 @media print{
   body{padding:6px}
   @page{margin:0.5cm;size:A4}
   table{font-size:0.68rem;width:100%}
   th,td{padding:5px 6px;white-space:normal!important;word-break:break-word}
-  .split-row{page-break-inside:avoid;flex-wrap:wrap}
-  .split-box{min-width:140px}
-  .summary{flex-wrap:wrap}
-  .sum-box{min-width:80px}
+  .split-row{page-break-inside:avoid}
   tr{page-break-inside:avoid}
-  h1{font-size:1rem}
+  thead{display:table-header-group}
+  .page-title{font-size:1rem}
   .footer{margin-top:8px}
 }
 </style>
 </head>
 <body>
-<h1>⛽ پمپ یعقوبی — ${acctTitle}${fuelTitle}</h1>
-<div class="meta-row">
-  <div class="meta">تاریخ چاپ: ${printDate} | نوع: ${type === 'debt' ? 'قرض‌دار' : 'بدون پارچه'}</div>
-  <div class="pct-wrap"><div class="pct-box"><span>فیصدی ٪ (از مقدار رسید تیل کم می‌شود)</span><b>${n2fa(pct)}٪</b></div></div>
-  <div></div>
+<div class="page-hdr">
+  <div>
+    <div class="page-title">⛽ پمپ یعقوبی — ${acctTitle}${fuelTitle}</div>
+    <div class="page-sub">${type === 'debt' ? 'حساب قرض‌دار' : 'حساب بدون پارچه'} — ${money ? 'واحد پول' : 'واحد تیل'}</div>
+  </div>
+  <div class="page-meta">تاریخ چاپ: ${printDate}</div>
 </div>
+<div class="pct-box"><span>فیصدی ٪ (از مقدار رسید تیل کم می‌شود)</span><b>${n2fa(pct)}٪</b></div>
 ${splitBoxesHtml}
 <table>
   <thead><tr>
@@ -31521,9 +31526,9 @@ function pdfStorage(fuelType) {
   const css = `
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1f2430;padding:16px 18px}
-.save-wrap{position:fixed;top:12px;left:12px;z-index:999}
-.save-wrap button{padding:8px 18px;background:${color};color:#fff;border:none;border-radius:8px;font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.9rem;cursor:pointer}
-/* سربرگ: نام پمپ و نوع مخزن سمتِ راست، تاریخِ چاپ سمتِ چپ — نه روی هم */
+/* سربرگ: نام پمپ و نوع مخزن سمتِ راست، تاریخِ چاپ سمتِ چپ — نه روی هم.
+   دکمهٔ شناورِ «ذخیره/چاپ» برداشته شد: خودِ پیش‌نمایشِ سند دکمهٔ «🖨 چاپ / PDF»
+   را دارد و آن دکمه روی سربرگ می‌افتاد و تاریخ چاپ را می‌پوشاند (باگِ گزارش‌شده). */
 .page-hdr{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
   border-bottom:2px solid ${color};padding-bottom:8px;margin-bottom:14px}
 .page-title{font-size:1.05rem;font-weight:900;color:${color}}
@@ -31562,13 +31567,11 @@ tfoot td{background:#f2f4f7;font-weight:900;border:1px solid #d6dae1;text-align:
 @media print{
   body{padding:0}
   @page{margin:0.8cm;size:A4 landscape}
-  .save-wrap{display:none}
   tr{page-break-inside:avoid}
   thead{display:table-header-group}
 }`;
 
   const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><title>مخزن ${label} — پمپ یعقوبی</title><style>${css}</style></head><body>
-<div class="save-wrap"><button onclick="window.print()">💾 ذخیره / چاپ</button></div>
 <div class="page-hdr">
   <div>
     <div class="page-title">🛢️ پمپ یعقوبی — مخزن ${label}</div>
@@ -38520,7 +38523,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.210';
+const APP_VERSION = '2.9.211';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
