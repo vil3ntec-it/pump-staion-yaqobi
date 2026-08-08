@@ -1085,32 +1085,27 @@ body.viewer-mode .att-admin{display:none !important}
 .pm-filter-btn.diesel.active{background:#b7791f;border-color:#b7791f;color:#fff}
 .pm-filter-btn#pm-filter-all.active{background:var(--accent);border-color:var(--accent);color:#fff}
 
-/* ═══ «زیان ناشی از افزایش قیمت» — فقط بخش قرض‌داران، فقط نمایشی ══════════════
-   این کادر هیچ نقشی در محاسبات ندارد: نه بدهی مشتری را عوض می‌کند نه الباقی را.
-   فقط می‌گوید تیلی که قرضی رفته، با قیمتِ امروز چقدر گران‌تر شده است.
+/* ═══ صفحهٔ «زیان ناشی از افزایش قیمت» — فقط بخش قرض‌داران، فقط گزارشی ═════════
+   این صفحه هیچ نقشی در محاسبات ندارد: نه بدهی مشتری را عوض می‌کند نه الباقی را.
+   فقط می‌گوید تیلی که قرضی رفته، تا روزِ پرداخت چقدر گران‌تر شده است.
    کاملاً ریسپانسیو: کادرهای جمع با auto-fit می‌شکنند و جدول در موبایل
    اسکرول افقیِ خودش را دارد (صفحه هیچ‌وقت افقی کشیده نمی‌شود). */
-.pl-loss-box{margin-top:12px;border:1.5px solid var(--red);border-radius:12px;background:var(--card);overflow:hidden}
-.pl-loss-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;padding:10px 12px;background:transparent;border:none;cursor:pointer;font-family:'Vazirmatn',sans-serif;color:var(--txt);text-align:right}
-.pl-loss-head .t{font-size:0.88rem;font-weight:900;color:var(--red)}
-.pl-loss-head .s{font-size:0.78rem;font-weight:800;color:var(--muted);margin-inline-start:auto}
-.pl-loss-head .s b{color:var(--red);font-weight:900}
-.pl-loss-head .chev{font-size:0.86rem;font-weight:900;color:var(--muted);transition:transform .2s;display:inline-block}
-.pl-loss-box.open .pl-loss-head .chev{transform:rotate(-90deg)}
-.pl-loss-body{display:none;border-top:1px solid var(--border)}
-.pl-loss-box.open .pl-loss-body{display:block}
-.pl-loss-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(122px,1fr));gap:7px;padding:10px 12px}
-.pl-loss-sum > div{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:7px 9px;min-width:0}
-.pl-loss-sum i{font-style:normal;font-size:0.68rem;font-weight:700;color:var(--muted);line-height:1.3}
-.pl-loss-sum b{font-size:0.9rem;font-weight:900;line-height:1.35;word-break:break-word}
-.pl-loss-note{padding:0 12px 10px;font-size:0.72rem;line-height:1.75;color:var(--muted)}
-.pl-loss-warn{margin:0 12px 10px;padding:6px 9px;border:1px dashed var(--accent);border-radius:8px;font-size:0.72rem;line-height:1.7;color:var(--accent)}
-.pl-loss-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.pl-loss-tbl{width:100%;border-collapse:collapse;font-size:0.78rem;min-width:660px}
-.pl-loss-tbl th{background:var(--dark);color:var(--muted);font-weight:800;font-size:0.71rem;padding:7px 6px;border-bottom:1px solid var(--border);white-space:nowrap}
-.pl-loss-tbl td{padding:6px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap}
+.pl-loss-filter{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.pl-loss-filter .pm-filter-btn{padding:6px 11px;font-size:0.78rem}
+.pl-loss-filter .pm-filter-btn.active{background:var(--purple);border-color:var(--purple);color:#fff}
+.pl-loss-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:12px}
+.pl-loss-sum > div{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-align:center;background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:9px 10px;min-width:0}
+.pl-loss-sum i{font-style:normal;font-size:0.7rem;font-weight:700;color:var(--muted);line-height:1.35}
+.pl-loss-sum b{font-size:0.98rem;font-weight:900;line-height:1.35;word-break:break-word}
+.pl-loss-note{margin-top:10px;font-size:0.74rem;line-height:1.85;color:var(--muted)}
+.pl-loss-warn{margin-bottom:10px;padding:7px 10px;border:1px dashed var(--accent);border-radius:8px;font-size:0.74rem;line-height:1.7;color:var(--accent)}
+.pl-loss-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:10px}
+.pl-loss-tbl{width:100%;border-collapse:collapse;font-size:0.8rem;min-width:900px}
+.pl-loss-tbl th{background:var(--dark);color:var(--muted);font-weight:800;font-size:0.72rem;padding:8px 6px;border-bottom:1px solid var(--border);white-space:nowrap}
+.pl-loss-tbl td{padding:7px 6px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap}
+.pl-loss-tbl tbody tr:hover{background:var(--dark)}
 .pl-loss-tbl tfoot td{background:var(--dark);font-weight:900;border-bottom:none}
-@media (max-width:600px){ .pl-loss-tbl{font-size:0.73rem;min-width:600px} .pl-loss-head .s{margin-inline-start:0;width:100%} }
+@media (max-width:600px){ .pl-loss-tbl{font-size:0.74rem;min-width:820px} .pl-loss-sum b{font-size:0.9rem} }
 
 .sm-modal{background:var(--panel);border:1.5px solid var(--border);border-radius:14px;width:100%;max-width:360px;padding:22px}
 .sm-modal h3{font-size:0.95rem;font-weight:700;color:var(--accent);margin-bottom:14px}
@@ -17378,11 +17373,13 @@ body.gfx-performance .xls-foot td{
       <!-- فقط روی کامپیوتر (جای خالی زیاد است): همین دو کادرِ قرض‌های کهنه، بغلِ «مدت عضویت همه» -->
       <button type="button" class="tool-link-card debt-oldloan-desktop" style="border-color:var(--red);color:var(--red)" onclick="showSection('oldloans')"><span title="⏰ قرض‌های کهنهٔ تیل — بی‌حرکت‌ها اول (واحد تیل)">⏰ قرض‌های کهنه — تیل</span><span class="tlc-go"><i>‹</i></span></button>
       <button type="button" class="tool-link-card debt-oldloan-desktop" style="border-color:var(--green);color:var(--green)" onclick="showSection('oldloansmoney')"><span title="💵 قرض‌های کهنهٔ پول — بی‌حرکت‌ها اول (واحد پول)">💵 قرض‌های کهنه — پول</span><span class="tlc-go"><i>‹</i></span></button>
+      <button type="button" class="tool-link-card debt-oldloan-desktop" style="border-color:var(--purple);color:var(--purple)" onclick="showSection('priceloss')"><span title="📉 زیان ناشی از افزایش قیمت — تیلی که قرضی رفته، امروز چقدر گران‌تر شده">📉 زیان افزایش قیمت</span><span class="tlc-go"><i>‹</i></span></button>
     </div>
   </div>
   <!-- موبایل/تبلت: همین دو کادر مثل قبل، زیرِ سربرگ (خواستهٔ کاربر: این‌جا دست‌نخورده بماند) -->
   <button type="button" class="tool-link-card debt-oldloan-mobile" style="border-color:var(--red);color:var(--red)" onclick="showSection('oldloans')"><span title="⏰ قرض‌های کهنهٔ تیل — بی‌حرکت‌ها اول (واحد تیل)">⏰ قرض‌های کهنه — تیل</span><span class="tlc-go"><i>‹</i></span></button>
   <button type="button" class="tool-link-card debt-oldloan-mobile" style="border-color:var(--green);color:var(--green)" onclick="showSection('oldloansmoney')"><span title="💵 قرض‌های کهنهٔ پول — بی‌حرکت‌ها اول (واحد پول)">💵 قرض‌های کهنه — پول</span><span class="tlc-go"><i>‹</i></span></button>
+  <button type="button" class="tool-link-card debt-oldloan-mobile" style="border-color:var(--purple);color:var(--purple)" onclick="showSection('priceloss')"><span title="📉 زیان ناشی از افزایش قیمت — تیلی که قرضی رفته، امروز چقدر گران‌تر شده">📉 زیان افزایش قیمت</span><span class="tlc-go"><i>‹</i></span></button>
   <div class="persons-grid" id="debt-grid"></div>
 </div>
 
@@ -17569,6 +17566,40 @@ body.gfx-performance .xls-foot td{
     <div style="padding:14px">
       <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.7">فقط کسانی که «پول» قرض‌دارند (واحد پول) — تیل در این لیست نیست. به ترتیبِ «چند روز بی‌حرکت»‌اند. با کلیک روی نام، حساب کاملش باز می‌شود؛ با دکمهٔ یادآوری، حسابش کپی می‌شود تا خودتان در واتساپ/تلگرام بفرستید.</div>
       <div id="aging-list-money" style="font-size:0.84rem"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 📉 زیان ناشی از افزایش قیمت (صفحهٔ جداگانه — از کادرِ بخش قرض‌داران باز می‌شود)
+     کاملاً نمایشی/گزارشی: هیچ عددی از این صفحه وارد بدهی، الباقی یا مبلغِ
+     قابل‌پرداختِ مشتری نمی‌شود و هیچ محاسبهٔ موجودی را عوض نمی‌کند. -->
+<div class="section" id="sec-priceloss">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('debt')">👥 برگشت به قرض‌داران</button>
+    <span>📉 زیان ناشی از افزایش قیمت</span>
+  </div>
+  <div class="card" style="border-color:var(--purple)">
+    <div class="card-head">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="card-title" style="color:var(--purple)">📉 زیان ناشی از افزایش قیمت</div>
+        <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('priceloss',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('priceloss',0.08)">A+</button></span>
+      </div>
+      <span class="pl-loss-filter">
+        <button class="pm-filter-btn active" id="plf-all" onclick="setPriceLossFilter('all')">📋 همه</button>
+        <button class="pm-filter-btn" id="plf-open" onclick="setPriceLossFilter('open')">🔴 پرداخت‌نشده</button>
+        <button class="pm-filter-btn" id="plf-paid" onclick="setPriceLossFilter('paid')">✅ پرداخت‌شده</button>
+      </span>
+    </div>
+    <div style="padding:14px">
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:12px;line-height:1.8">
+        وقتی مشتری تیل را قرضی می‌برد و تا روزِ پرداخت قیمتِ تیل بالا می‌رود، آن تفاوت زیانِ ماست:
+        <b style="color:var(--txt)">زیان = (قیمت مبنا − قیمت فروش) × مقدار لیتر</b>.
+        برای قرضِ <b style="color:var(--red)">پرداخت‌نشده</b> قیمتِ مبنا نرخِ <b>امروز</b> است (هنوز باز است و بالا/پایین می‌رود)؛
+        اما به‌محضِ اینکه رسید را ثبت کنید، نرخِ همان روز <b style="color:var(--green)">قفل می‌شود</b> و دیگر با تغییرِ نرخِ اتحادیه تکان نمی‌خورد.
+        اگر قیمت پایین بیاید، زیان صفر است و هیچ عدد منفی‌ای نمایش داده نمی‌شود.
+        <b style="color:var(--accent)">این صفحه فقط گزارش است — بدهی و مبلغِ قابل‌پرداختِ مشتری هیچ تغییری نمی‌کند.</b>
+      </div>
+      <div id="pl-loss-page"></div>
     </div>
   </div>
 </div>
@@ -19451,18 +19482,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
           <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green)" onclick="addPersonRowsBulk()">➕ افزودن چندتایی</button>
         </div>
       </div>
-      <!-- 📉 زیان ناشی از افزایش قیمت — فقط بخش قرض‌داران و کاملاً نمایشی.
-           هیچ عددی از این کادر وارد بدهی/الباقی/قابل‌پرداختِ مشتری نمی‌شود. -->
-      <div id="pm-loss-box" class="pl-loss-box" style="display:none">
-        <button type="button" class="pl-loss-head" id="pm-loss-head" onclick="togglePriceLossBox()"
-                title="فقط گزارش — تیلی که قرضی رفته با قیمتِ امروز چقدر گران‌تر شده است">
-          <span class="chev">‹</span>
-          <span class="t">📉 زیان ناشی از افزایش قیمت</span>
-          <span class="s" id="pm-loss-headsum"></span>
-        </button>
-        <div class="pl-loss-body" id="pm-loss-body"></div>
-      </div>
-
       <div id="pm-stacked-wrap" style="display:none"></div>
 
       <!-- تاریخچه جداول آرشیو‌شده — هر بار «جدول جدید» کلیک شود یک بلوک اینجا اضافه می‌شود -->
@@ -20153,6 +20172,10 @@ function load() {
   try { if (dedupAccounts()) save(); } catch(e){}
   // مهاجرتِ یک‌بارهٔ نرخ‌ها: نرخِ اتحادیه/خودکار از جدول‌های قرض‌داران حذف و به «فیِ دستی» تبدیل می‌شود
   try { _manualizeDebtorRates(); } catch(e){}
+  // مهاجرتِ یک‌بارهٔ گزارشِ «زیان افزایش قیمت»: قرض‌هایی که پیش از این قابلیت تسویه
+  // شده‌اند تاریخِ پرداخت ندارند و «تسویه (تاریخ نامشخص)» علامت می‌خورند تا زیانِ
+  // ساختگی با نرخِ امروز برایشان حساب نشود. فقط یک فیلدِ تازه اضافه می‌کند.
+  try { _lossMarkLegacyPaid(); } catch(e){}
   // مهاجرت خودکار و یک‌باره: رمزهایی که از نسخه‌های قدیم به‌صورت متن ساده ذخیره شده بودند، به هَش SHA-256 تبدیل می‌شوند
   if (DB.password && !_looksHashed(DB.password)) { DB.password = _sha256Hex(DB.password); save(); }
   if (DB.profitPassword && !_looksHashed(DB.profitPassword)) { DB.profitPassword = _sha256Hex(DB.profitPassword); save(); }
@@ -21666,6 +21689,7 @@ const _SEC_LABEL = {
   tankdip: '📏 میله‌زنی مخزن', debt: '👥 قرض‌داران', debtrasid: '🧾 رسید قرض‌داران',
   debtsum: '📊 دسته‌جمعی (تیل)', debtsummoney: '💵 دسته‌جمعی (پول)',
   oldloans: '⏰ قرض‌های کهنه (تیل)', oldloansmoney: '💵 قرض‌های کهنه (پول)',
+  priceloss: '📉 زیان افزایش قیمت',
   chakana: '🧾 چکنه', noinv: '🏭 شرکت‌های تیل', expenses: '💸 مصارف', rasid: '🧾 فاکتورهای رسید',
   profit: '📈 مفاد / ضرر', extraincome: '➕ درآمد اضافی', monthreport: '📅 گزارش ماهانه',
   ratehist: '📈 تاریخچهٔ نرخ', safe: '🏦 گاوصندوق', sarrafi: '💱 صرافی', waraq: '📝 ورق روزانه',
@@ -21715,7 +21739,7 @@ function showSection(id, btn) {
   if (id === 'debtsum' || id === 'debtsummoney') navId = 'debtrasid';
   if (id === 'extraincome') navId = 'profit';
   if (id === 'tanker' || id === 'tankdip') navId = 'storage';
-  if (id === 'oldloans' || id === 'oldloansmoney') navId = 'debt';
+  if (id === 'oldloans' || id === 'oldloansmoney' || id === 'priceloss') navId = 'debt';
   if (id === 'chakana') navId = 'debtrasid';
   if (id === 'staffshort') navId = 'attendance';
   if (id === 'ratehist' || id === 'monthreport') navId = 'profit';
@@ -21726,7 +21750,7 @@ function showSection(id, btn) {
   // از کادرها به صفحهٔ جدا می‌روند «تمام صفحه» نبودند). فقط همین صفحه‌ها؛ بقیه 1000px می‌مانند.
   // داشبورد هم تمام‌عرض است تا کارت‌هایش روی کامپیوتر بزرگ و خوانا بمانند
   // (خودِ #sec-dashboard حداکثر 1440px است، پس روی نمایشگرِ خیلی پهن هم کش نمی‌آید)
-  const _WIDE = ['dashboard','rasid','debtrasid','chakana','oldloans','oldloansmoney','debtsum','debtsummoney'];
+  const _WIDE = ['dashboard','rasid','debtrasid','chakana','oldloans','oldloansmoney','debtsum','debtsummoney','priceloss'];
   document.body.classList.toggle('sec-wide', _WIDE.indexOf(id) !== -1);
   if (btn) {
     btn.classList.add('active');
@@ -21738,6 +21762,7 @@ function showSection(id, btn) {
   if (id === 'extraincome') { renderExtraIncomes(); calcExtraIncome(); }
   if (id === 'tanker') { try { _renderTankerPanel(); } catch(e) {} }
   if (id === 'tankdip') { try { _renderDipPanel(); _dipRenderTankInfo(); dipLiveCalc(); } catch(e) {} }
+  if (id === 'priceloss') { try { renderPriceLossPage(); } catch(e) {} }
   if (id === 'oldloans') { try { _renderAgingPanel('fuel', 'aging-list'); } catch(e) {} }
   if (id === 'oldloansmoney') { try { _renderAgingPanel('money', 'aging-list-money'); } catch(e) {} }
   if (id === 'chakana') { try { renderChakana(); } catch(e) {} }
@@ -26388,6 +26413,9 @@ function calcPersonRow(pid, idx, field, value) {
   // الباقی پولی هر ردیف = بردگی − رسید پول (رسید تیل دفترِ لیتر است و جدا جمع می‌شود)
   r.albaqi = (parseFloat(r.bardagi)||0) - (r.rasid||0);
   save();
+  // 📉 همین‌که رسید ثبت شد، تاریخ و نرخِ همان روز روی قرض‌های تسویه‌شده قفل می‌شود
+  // (فقط سه فیلدِ تازه — هیچ عددِ حسابی دست نمی‌خورد). ← گزارشِ «زیان افزایش قیمت»
+  if (field === 'rasid' || field === 'rasidFuel') _lossOnReceipt(person);
   _updatePersonRowCells(person, idx, r);
   _updatePersonTotals(person);
   renderPersons(currentPersonType);
@@ -26468,6 +26496,9 @@ function updatePersonRasidFuel(fuel, val) {
   if (fuel === 'diesel') { if (money) acct.rasidMoneyD = v; else acct.rasidFuelD = v; }
   else { if (money) acct.rasidMoneyP = v; else acct.rasidFuelP = v; }
   save(); _updatePersonTotals(person);
+  // 📉 همین‌که رسید ثبت شد، تاریخ و نرخِ همان روز روی قرض‌های تسویه‌شده قفل می‌شود
+  // (فقط سه فیلدِ تازه — هیچ عددِ حسابی دست نمی‌خورد). ← گزارشِ «زیان افزایش قیمت»
+  _lossOnReceipt(person);
 }
 // موقعِ کلیک روی کادرِ «مقدار رسید» در «واحد پول»، فقط سهمِ رسیدِ دستیِ هدر نشان داده شود
 // (نه جمعِ آن با رسیدهای جدول) تا ویرایش دوباره‌شماری نکند. مقدارِ ذخیره‌شده (rasidMoney)
@@ -26553,15 +26584,22 @@ function _renderPersonRateBadge(person) {
    📉 زیان ناشی از افزایش قیمت — فقط بخش «قرض‌داران»، فقط نمایش و گزارش
    ──────────────────────────────────────────────────────────────────────────────
    وقتی مشتری تیل را قرضی می‌برد، تا روزی که بدهی‌اش را بپردازد ممکن است قیمتِ
-   تیل بالا رفته باشد؛ آن تفاوت، زیانِ ماست. این کادر همان را حساب و نشان می‌دهد:
+   تیل بالا رفته باشد؛ آن تفاوت، زیانِ ماست:
 
-       زیان = (قیمت روز − قیمت فروش) × مقدار لیتر        (اگر منفی شد ⇒ صفر)
+       زیان = (قیمت مبنا − قیمت فروش) × مقدار لیتر        (اگر منفی شد ⇒ صفر)
+
+   «قیمت مبنا» چیست؟ (نکتهٔ اصلیِ خواستهٔ صاحب ریپو)
+     • قرضِ پرداخت‌نشده  ⇒ نرخِ امروز. هنوز باز است، پس هر روز بالا/پایین می‌رود.
+     • قرضِ پرداخت‌شده   ⇒ نرخِ همان روزی که رسید را گرفتیم، که روی خودِ ردیف
+       «قفل» می‌شود. اگر ده سال دیگر نرخِ اتحادیه عوض شود، زیانِ آن قرض یک
+       افغانی هم تکان نمی‌خورد — چون مشتری هفتهٔ پیش پولش را داده بود.
 
    قانون‌های سفت‌وسختِ این بخش (خواستهٔ صاحب ریپو):
      • مبلغِ بدهی، الباقی و مبلغِ قابل‌پرداختِ مشتری هیچ تغییری نمی‌کنند.
-     • هیچ محاسبهٔ موجودی دست نمی‌خورد و چیزی در دیتابیس نوشته نمی‌شود
-       (این توابع فقط می‌خوانند — حتی یک save() هم ندارند).
-     • اگر قیمت روز ثبت نشده باشد، زیان صفر نشان داده می‌شود و خطایی رخ نمی‌دهد.
+     • هیچ محاسبهٔ موجودی دست نمی‌خورد.
+     • تنها چیزی که در دیتابیس نوشته می‌شود سه فیلدِ کاملاً تازه روی ردیف است
+       (lossPaidDate ، lossPaidRate ، lossLegacy) که هیچ‌جای دیگرِ برنامه
+       خوانده نمی‌شوند — پس ساختارِ موجود دست‌نخورده می‌ماند.
    ══════════════════════════════════════════════════════════════════════════════ */
 
 // قیمتِ روزِ هر لیتر برای یک نوع تیل = همان «نرخ اتحادیه»ی امروز (بخش مفاد/ضرر).
@@ -26588,137 +26626,270 @@ function _lossDelayDays(fromStr, toTs) {
   const d = Math.floor((toTs - from) / 86400000);
   return d > 0 ? d : 0;
 }
+
+/* ── «کدام ردیفِ قرض پرداخت شده؟» ───────────────────────────────────────────
+   قانونِ ساده و بدونِ هیچ تبدیلِ واحد، تا با محاسباتِ موجودِ برنامه هیچ اختلافی
+   پیدا نکند (پول و تیل دو دفترِ جدا هستند و همان‌طور هم می‌مانند):
+
+     ۱) رسیدِ خودِ ردیف:  رسیدِ پولی ≥ بردگی  یا  رسیدِ تیل ≥ مقدار تیل
+     ۲) رسیدِ کادرهای بالای حساب: از قدیمی‌ترین ردیف به‌ترتیبِ تاریخ خرج می‌شود —
+        رسیدِ تیل (لیتر) روی «مقدار تیل» ردیف‌ها و رسیدِ پول (افغانی) روی «بردگی».
+
+   این تابع فقط می‌خواند و چیزی نمی‌نویسد. */
+function _lossCoveredFlags(acct, rows, money) {
+  const covered = new Array(rows.length).fill(false);
+  if (!rows.length) return covered;
+  rows.forEach((r, i) => {
+    if (!r) return;
+    const f = parseFloat(r.fuel) || 0, b = parseFloat(r.bardagi) || 0;
+    const rs = parseFloat(r.rasid) || 0, rf = parseFloat(r.rasidFuel) || 0;
+    if (b > 0 && rs >= b) covered[i] = true;
+    if (f > 0 && rf >= f) covered[i] = true;
+  });
+  // قدیمی‌ترین قرض اول تسویه می‌شود (عرفِ حساب‌داری) — تاریخِ نامعتبر آخر می‌افتد
+  const order = rows.map((r, i) => i)
+    .sort((a, b) => _dateSortKey(rows[a] && rows[a].date) - _dateSortKey(rows[b] && rows[b].date));
+  ['petrol', 'diesel'].forEach(ft => {
+    const isD = ft === 'diesel';
+    // فقط استخرِ همان دفتری که این ردیف‌ها در آن نشسته‌اند (پول یا تیل)
+    let poolFuel = money ? 0 : (parseFloat(isD ? acct.rasidFuelD : acct.rasidFuelP) || 0);
+    let poolMoney = money ? (parseFloat(isD ? acct.rasidMoneyD : acct.rasidMoneyP) || 0) : 0;
+    order.forEach(i => {
+      const r = rows[i];
+      if (!r || covered[i]) return;
+      if (((r.ftype === 'diesel') ? 'diesel' : 'petrol') !== ft) return;
+      const f = parseFloat(r.fuel) || 0, b = parseFloat(r.bardagi) || 0;
+      if (f > 0 && poolFuel >= f) { poolFuel -= f; covered[i] = true; return; }
+      if (b > 0 && poolMoney >= b) { poolMoney -= b; covered[i] = true; }
+    });
+  });
+  return covered;
+}
+
+/* ── مهرِ «پرداخت شد» ───────────────────────────────────────────────────────
+   فقط از مسیرهای ثبتِ رسید صدا زده می‌شود (نه هنگام رندر)، پس تاریخی که ثبت
+   می‌شود واقعاً همان روزی است که پول/رسید را گرفته‌ایم. نرخِ همان روز هم کنارش
+   قفل می‌شود تا زیانِ آن قرض دیگر هیچ‌وقت با تغییرِ نرخِ اتحادیه تکان نخورد.
+   این تابع فقط سه فیلدِ تازه را می‌نویسد و به هیچ عددِ موجودی دست نمی‌زند. */
+function _lossStampReceipts(person) {
+  if (!person) return false;
+  const acct = _acctOf(person);
+  const rows = _acctRows(person, acct);
+  const covered = _lossCoveredFlags(acct, rows, person.mode === 'money');
+  let changed = false;
+  rows.forEach((r, i) => {
+    if (!r || !((parseFloat(r.fuel) || 0) > 0)) return;
+    if (covered[i]) {
+      // ردیفی که از قبل مهر خورده (یا «کهنه»ی بی‌تاریخ است) دوباره مهر نمی‌خورد
+      if (!r.lossPaidDate && r.lossLegacy !== true) {
+        r.lossPaidDate = persianDate();
+        r.lossPaidRate = _lossTodayRate((r.ftype === 'diesel') ? 'diesel' : 'petrol');
+        changed = true;
+      }
+    } else if (r.lossPaidDate || r.lossLegacy) {
+      // رسید پس گرفته/اصلاح شد ⇒ قرض دوباره باز است و مهر برداشته می‌شود
+      delete r.lossPaidDate; delete r.lossPaidRate; delete r.lossLegacy;
+      changed = true;
+    }
+  });
+  return changed;
+}
+// همان مهر، ولی خودش ذخیره هم می‌کند — این را مسیرهای ثبتِ رسید صدا می‌زنند.
+// داخلِ try است تا اگر روزی خطایی بدهد، ثبتِ رسید هیچ آسیبی نبیند.
+function _lossOnReceipt(person) {
+  try { if (_lossStampReceipts(person)) save(); } catch (e) {}
+}
+/* ── مهاجرتِ یک‌بارهٔ قرض‌های قدیمی ──────────────────────────────────────────
+   قرض‌هایی که پیش از آمدنِ این قابلیت تسویه شده‌اند تاریخِ پرداخت ندارند و ما
+   هم نمی‌توانیم از خودمان تاریخ بسازیم. پس یک‌بار «تسویه‌شدهٔ بی‌تاریخ» علامت
+   می‌خورند تا زیانِ ساختگی (با نرخِ امروز) برایشان حساب نشود. فقط یک فیلدِ
+   تازه اضافه می‌کند و هیچ عددی را دست نمی‌زند. */
+function _lossMarkLegacyPaid() {
+  if (DB._lossLegacyMarked) return;
+  const eachAcct = acct => {
+    if (!acct) return;
+    [['rows', false], ['moneyRows', true]].forEach(pair => {
+      const arr = acct[pair[0]];
+      if (!Array.isArray(arr) || !arr.length) return;
+      const covered = _lossCoveredFlags(acct, arr, pair[1]);
+      arr.forEach((r, i) => {
+        if (!r || !((parseFloat(r.fuel) || 0) > 0)) return;
+        if (covered[i] && !r.lossPaidDate) r.lossLegacy = true;
+      });
+    });
+  };
+  (DB.debtPersons || []).forEach(p => { if (!p) return; eachAcct(p); (p.subs || []).forEach(eachAcct); });
+  DB._lossLegacyMarked = true;
+  try { save(); } catch (e) {}
+}
+
 // گزارشِ یک ردیفِ قرض. ردیفی که لیتر ندارد اصلاً قرضِ تیلی نیست ⇒ null.
 function _lossRowInfo(r) {
   const fuel = parseFloat(r && r.fuel) || 0;
   if (!(fuel > 0)) return null;
   const ftype = (r.ftype === 'diesel') ? 'diesel' : 'petrol';
   const sale = _lossSaleRate(r);
-  const today = _lossTodayRate(ftype);
-  // زیان فقط وقتی معنا دارد که هر دو قیمت را داشته باشیم و قیمتِ روز بالاتر باشد.
+  const paidDate = (r.lossPaidDate && _jalaliStrToTs(r.lossPaidDate)) ? String(r.lossPaidDate) : '';
+  const legacy = !paidDate && r.lossLegacy === true;
+  // قیمتِ مبنا: پرداخت‌شده ⇒ نرخِ قفل‌شدهٔ روزِ پرداخت (ثابت). باز ⇒ نرخِ امروز.
+  // تسویه‌شدهٔ بی‌تاریخ (قرض‌های پیش از این نسخه) ⇒ مبنایی نداریم، پس صفر.
+  const ref = paidDate ? (parseFloat(r.lossPaidRate) || 0) : (legacy ? 0 : _lossTodayRate(ftype));
   // کاهشِ قیمت هیچ‌وقت عددِ منفی نمی‌سازد (خواستهٔ صاحب ریپو) — صفر می‌ماند.
-  const diff = (sale > 0 && today > sale) ? (today - sale) : 0;
-  // «تا تاریخ پرداخت» اگر روی ردیف تاریخ پرداخت ثبت شده باشد، وگرنه «تا امروز»
-  const paid = (r.paidDate && _jalaliStrToTs(r.paidDate)) ? String(r.paidDate) : '';
-  const endTs = paid ? _jalaliStrToTs(paid) : _lossTodayTs();
+  const diff = (sale > 0 && ref > sale) ? (ref - sale) : 0;
+  const endTs = paidDate ? _jalaliStrToTs(paidDate) : _lossTodayTs();
   return {
     ftype: ftype,
     date: r.date || '',
     fuel: fuel,
     sale: sale,
-    today: today,
+    ref: ref,
     principal: sale > 0 ? sale * fuel : 0,   // مبلغ اصلی بدهی = لیتر × قیمت فروش
-    nowValue: today > 0 ? today * fuel : 0,  // ارزش روزِ همان مقدار تیل
+    refValue: ref > 0 ? ref * fuel : 0,      // ارزشِ همان مقدار تیل با قیمتِ مبنا
     loss: diff * fuel,                       // زیانِ ناشی از افزایش قیمت
-    days: _lossDelayDays(r.date, endTs),
-    endLabel: paid || ''                     // خالی = تا امروز
+    days: legacy ? null : _lossDelayDays(r.date, endTs),
+    paidDate: paidDate,
+    legacy: legacy,
+    open: !paidDate && !legacy
   };
 }
-// باز/بستهٔ کادر — روی همین دستگاه یادش می‌ماند
-let _lossBoxOpen = (function () { try { return localStorage.getItem('pmLossOpen') === '1'; } catch (e) { return false; } })();
-function togglePriceLossBox() {
-  _lossBoxOpen = !_lossBoxOpen;
-  try { localStorage.setItem('pmLossOpen', _lossBoxOpen ? '1' : '0'); } catch (e) {}
-  const box = document.getElementById('pm-loss-box');
-  if (box) box.classList.toggle('open', _lossBoxOpen);
-  // جدولِ گزارش فقط وقتی ساخته می‌شود که کادر باز باشد (تا تایپ در جدولِ حساب
-  // هیچ کندی نگیرد) — پس هنگام باز کردن، همان‌جا ساخته می‌شود.
-  if (_lossBoxOpen) { try { _renderPriceLossPanel(_curPerson()); } catch (e) {} }
+// همهٔ ردیف‌های قرضِ تیل در همهٔ قرض‌داران (حساب اصلی + حساب‌های فرعی، هر دو دفتر)
+function _lossAllRows() {
+  const out = [];
+  const eachAcct = (person, acct, label) => {
+    if (!acct) return;
+    ['rows', 'moneyRows'].forEach(key => {
+      const arr = acct[key];
+      if (!Array.isArray(arr)) return;
+      arr.forEach(r => {
+        const it = _lossRowInfo(r);
+        if (!it) return;
+        it.person = person.name || '—';
+        it.personId = person.id;
+        it.acct = label || '';
+        it.note = (r.name || '').toString();
+        out.push(it);
+      });
+    });
+  };
+  (DB.debtPersons || []).forEach(p => {
+    if (!p) return;
+    eachAcct(p, p, '');
+    (p.subs || []).forEach(s => { if (s) eachAcct(p, s, s.name || 'حساب'); });
+  });
+  return out;
 }
-// ساختِ کادرِ گزارش. فقط DOM می‌نویسد؛ به دادهٔ برنامه دست نمی‌زند.
-function _renderPriceLossPanel(person) {
-  const box = document.getElementById('pm-loss-box');
-  if (!box) return;
-  const body = document.getElementById('pm-loss-body');
-  const headSum = document.getElementById('pm-loss-headsum');
-  const hide = () => { box.style.display = 'none'; if (body) body.innerHTML = ''; if (headSum) headSum.textContent = ''; };
-  // فقط بخش قرض‌داران — در «شرکت ها تیل» (noinv) این کادر اصلاً وجود ندارد
-  if (!person || currentPersonType !== 'debt') return hide();
 
-  // همان ردیف‌هایی که در جدولِ روبه‌روی کاربر دیده می‌شوند (فیلترِ پطرول/دیزل هم رعایت می‌شود)
-  const items = _acctRows(person)
-    .filter(r => r && (currentPersonFilter === 'all' || ((r.ftype === 'diesel') ? 'diesel' : 'petrol') === currentPersonFilter))
-    .map(_lossRowInfo)
-    .filter(Boolean);
-  if (!items.length) return hide();
+// ── صفحهٔ جداگانهٔ گزارش ──────────────────────────────────────────────────────
+let _lossFilter = 'all';   // all | open | paid
+function setPriceLossFilter(f) {
+  _lossFilter = f;
+  ['all', 'open', 'paid'].forEach(k => {
+    const el = document.getElementById('plf-' + k);
+    if (el) el.classList.toggle('active', k === f);
+  });
+  renderPriceLossPage();
+}
+function renderPriceLossPage() {
+  const wrap = document.getElementById('pl-loss-page');
+  if (!wrap) return;
+  const all = _lossAllRows();
+  // پرداخت‌نشده‌ها اول و پرزیان‌ترین بالا؛ بعد پرداخت‌شده‌ها از تازه‌ترین تاریخ
+  all.sort((a, b) => (a.open === b.open)
+    ? (a.open ? (b.loss - a.loss) : (_dateSortKey(b.paidDate) - _dateSortKey(a.paidDate)))
+    : (a.open ? -1 : 1));
+  const items = all.filter(it => _lossFilter === 'all' || (_lossFilter === 'open' ? it.open : !it.open));
 
   const rnd2 = x => Math.round((x || 0) * 100) / 100;
   const afn = x => n2fa(Math.round(x || 0)) + ' افغانی';
-  let tFuel = 0, tPrincipal = 0, tNow = 0, tLoss = 0, priced = 0;
-  items.forEach(it => {
-    tFuel += it.fuel; tPrincipal += it.principal; tNow += it.nowValue; tLoss += it.loss;
-    if (it.sale > 0 && it.today > 0) priced++;
+  let openLoss = 0, paidLoss = 0, openFuel = 0, tPrincipal = 0, tRefValue = 0, tFuel = 0;
+  all.forEach(it => {
+    if (it.open) { openLoss += it.loss; openFuel += it.fuel; } else { paidLoss += it.loss; }
   });
+  items.forEach(it => { tPrincipal += it.principal; tRefValue += it.refValue; tFuel += it.fuel; });
+  const totalLoss = openLoss + paidLoss;
 
-  // سرصفحهٔ کادر همیشه به‌روز است؛ جدولِ سنگین فقط وقتی ساخته می‌شود که کادر باز
-  // باشد — این‌طور تایپ کردن در جدولِ حساب هیچ کندی‌ای نمی‌گیرد.
-  if (headSum) {
-    headSum.innerHTML = priced
-      ? ('جمع زیان: <b>' + afn(tLoss) + '</b>')
-      : 'قیمت روز ثبت نشده — جمع زیان: <b>' + afn(0) + '</b>';
+  if (!all.length) {
+    wrap.innerHTML = '<div style="text-align:center;padding:26px;color:var(--muted);font-size:0.86rem">'
+      + 'هنوز هیچ قرضِ تیلی ثبت نشده — این صفحه وقتی پر می‌شود که در حسابِ یک قرض‌دار «مقدار تیل» ثبت شده باشد.</div>';
+    return;
   }
-  box.style.display = '';
-  box.classList.toggle('open', _lossBoxOpen);
-  if (!_lossBoxOpen) { if (body) body.innerHTML = ''; return; }
 
-  const rowsHtml = items.map((it, i) => {
-    const hasBoth = it.sale > 0 && it.today > 0;
-    const lossTxt = hasBoth ? afn(it.loss > 0 ? it.loss : 0) : '—';
-    const lossColor = (hasBoth && it.loss > 0) ? 'var(--red)' : 'var(--muted)';
-    const daysTxt = it.days == null ? '—'
-      : (n2fa(it.days) + ' روز' + (it.endLabel ? ' (تا ' + escFa(it.endLabel) + ')' : ''));
+  // هشدارِ نرمِ «قیمت روز ثبت نشده» — فقط برای قرض‌های باز، بدون خطا
+  const needP = all.some(it => it.open && it.ftype === 'petrol' && !(it.ref > 0));
+  const needD = all.some(it => it.open && it.ftype === 'diesel' && !(it.ref > 0));
+  const need = [needP ? '⛽ پطرول' : '', needD ? '🟤 دیزل' : ''].filter(Boolean).join(' و ');
+  const warnHtml = need
+    ? '<div class="pl-loss-warn">⚠️ قیمت روزِ ' + need + ' هنوز ثبت نشده — زیانِ قرض‌های بازِ این نوع تیل صفر نمایش داده می‌شود. '
+      + 'قیمت روز را در «📈 مفاد / ضرر ← 🏛️ نرخ اتحادیه» بنویسید.</div>'
+    : '';
+
+  const rowsHtml = items.length ? items.map((it, i) => {
+    const hasBoth = it.sale > 0 && it.ref > 0;
+    const status = it.open
+      ? '<b style="color:var(--red)">🔴 پرداخت‌نشده</b>'
+      : (it.legacy
+        ? '<b style="color:var(--muted)">✅ تسویه (تاریخ نامشخص)</b>'
+        : '<b style="color:var(--green)">✅ ' + escFa(it.paidDate) + '</b><br><small style="color:var(--muted)">نرخ قفل‌شده</small>');
+    const daysTxt = it.days == null ? '—' : (n2fa(it.days) + ' روز');
+    const who = escFa(it.person) + (it.acct ? '<br><small style="color:var(--muted)">📄 ' + escFa(it.acct) + '</small>' : '');
     return '<tr>'
       + '<td style="color:var(--muted)">' + n2fa(i + 1) + '</td>'
+      + '<td style="text-align:right;font-weight:800;cursor:pointer" title="باز کردن حسابِ این شخص" '
+        + 'onclick="lossOpenPerson(\'' + it.personId + '\')">' + who + '</td>'
       + '<td>' + (escFa(it.date) || '—') + '</td>'
       + '<td>' + (it.ftype === 'diesel' ? '🟤 دیزل' : '⛽ پطرول') + '</td>'
       + '<td style="color:var(--blue);font-weight:800">' + n2fa(rnd2(it.fuel)) + ' ل</td>'
       + '<td>' + (it.sale > 0 ? n2fa(rnd2(it.sale)) : '—') + '</td>'
-      + '<td>' + (it.today > 0 ? n2fa(rnd2(it.today)) : '—') + '</td>'
+      + '<td>' + (it.ref > 0 ? n2fa(rnd2(it.ref)) : '—') + '</td>'
       + '<td style="color:var(--accent);font-weight:800">' + (it.sale > 0 ? afn(it.principal) : '—') + '</td>'
-      + '<td style="color:var(--purple);font-weight:800">' + (it.today > 0 ? afn(it.nowValue) : '—') + '</td>'
-      + '<td style="color:' + lossColor + ';font-weight:900">' + lossTxt + '</td>'
+      + '<td style="color:var(--purple);font-weight:800">' + (it.ref > 0 ? afn(it.refValue) : '—') + '</td>'
+      + '<td style="color:' + ((hasBoth && it.loss > 0) ? 'var(--red)' : 'var(--muted)') + ';font-weight:900">'
+        + (hasBoth ? afn(it.loss > 0 ? it.loss : 0) : '—') + '</td>'
       + '<td style="color:var(--muted)">' + daysTxt + '</td>'
+      + '<td>' + status + '</td>'
       + '</tr>';
-  }).join('');
+  }).join('')
+    : '<tr><td colspan="12" style="text-align:center;padding:16px;color:var(--muted)">در این نما ردیفی نیست</td></tr>';
 
-  // هشدارِ نرمِ «قیمت روز ثبت نشده» — بدون خطا، فقط راهنمایی
-  const needP = items.some(it => it.ftype === 'petrol' && !(it.today > 0));
-  const needD = items.some(it => it.ftype === 'diesel' && !(it.today > 0));
-  const need = [needP ? '⛽ پطرول' : '', needD ? '🟤 دیزل' : ''].filter(Boolean).join(' و ');
-  const warnHtml = need
-    ? '<div class="pl-loss-warn">⚠️ قیمت روزِ ' + need + ' هنوز ثبت نشده — زیانِ این ردیف‌ها صفر نمایش داده می‌شود. '
-      + 'قیمت روز را در «📈 مفاد / ضرر ← 🏛️ نرخ اتحادیه» بنویسید.</div>'
-    : '';
-
-  body.innerHTML =
+  wrap.innerHTML =
     '<div class="pl-loss-sum">'
-      + '<div><i>مقدار تیل</i><b style="color:var(--blue)">' + n2fa(rnd2(tFuel)) + ' لیتر</b></div>'
-      + '<div><i>مبلغ اصلی بدهی</i><b style="color:var(--accent)">' + afn(tPrincipal) + '</b></div>'
-      + '<div><i>ارزش روز همان تیل</i><b style="color:var(--purple)">' + afn(tNow) + '</b></div>'
-      + '<div><i>زیان ناشی از افزایش قیمت</i><b style="color:' + (tLoss > 0 ? 'var(--red)' : 'var(--green)') + '">' + afn(tLoss) + '</b></div>'
+      + '<div><i>زیانِ قرض‌های پرداخت‌نشده</i><b style="color:' + (openLoss > 0 ? 'var(--red)' : 'var(--green)') + '">' + afn(openLoss) + '</b></div>'
+      + '<div><i>زیانِ قفل‌شدهٔ پرداخت‌شده‌ها</i><b style="color:var(--purple)">' + afn(paidLoss) + '</b></div>'
+      + '<div><i>جمعِ کلِ زیان</i><b style="color:' + (totalLoss > 0 ? 'var(--red)' : 'var(--green)') + '">' + afn(totalLoss) + '</b></div>'
+      + '<div><i>تیلِ قرضِ پرداخت‌نشده</i><b style="color:var(--blue)">' + n2fa(rnd2(openFuel)) + ' لیتر</b></div>'
     + '</div>'
     + warnHtml
     + '<div class="pl-loss-wrap"><table class="pl-loss-tbl">'
       + '<thead><tr>'
-        + '<th>#</th><th>تاریخ فروش</th><th>نوع تیل</th><th>مقدار تیل</th>'
-        + '<th>قیمت فروش (هر لیتر)</th><th>قیمت روز (هر لیتر)</th>'
-        + '<th>مبلغ اصلی بدهی</th><th>ارزش روز</th><th>زیان</th><th>روزهای تأخیر</th>'
+        + '<th>#</th><th>قرض‌دار</th><th>تاریخ فروش</th><th>نوع تیل</th><th>مقدار تیل</th>'
+        + '<th>قیمت فروش (هر لیتر)</th><th>قیمت مبنا (هر لیتر)</th>'
+        + '<th>مبلغ اصلی بدهی</th><th>ارزش با قیمت مبنا</th><th>زیان</th><th>روزهای تأخیر</th><th>وضعیت</th>'
       + '</tr></thead>'
       + '<tbody>' + rowsHtml + '</tbody>'
       + '<tfoot><tr>'
-        + '<td colspan="3">جمله</td>'
+        + '<td colspan="4">جمله (' + n2fa(items.length) + ' ردیف)</td>'
         + '<td style="color:var(--blue)">' + n2fa(rnd2(tFuel)) + ' ل</td>'
         + '<td>—</td><td>—</td>'
         + '<td style="color:var(--accent)">' + afn(tPrincipal) + '</td>'
-        + '<td style="color:var(--purple)">' + afn(tNow) + '</td>'
-        + '<td style="color:' + (tLoss > 0 ? 'var(--red)' : 'var(--green)') + '">' + afn(tLoss) + '</td>'
-        + '<td>—</td>'
+        + '<td style="color:var(--purple)">' + afn(tRefValue) + '</td>'
+        + '<td style="color:' + (items.reduce((s, x) => s + x.loss, 0) > 0 ? 'var(--red)' : 'var(--green)') + '">'
+          + afn(items.reduce((s, x) => s + x.loss, 0)) + '</td>'
+        + '<td>—</td><td>—</td>'
       + '</tr></tfoot>'
     + '</table></div>'
-    + '<div class="pl-loss-note">🔒 این کادر فقط گزارش است: مبلغ بدهی، الباقی و مبلغِ قابل‌پرداختِ مشتری '
-      + 'با آن هیچ تغییری نمی‌کنند. «قیمت روز» از نرخ اتحادیهٔ همان نوع تیل خوانده می‌شود و '
-      + 'اگر قیمت روز کمتر یا مساوی قیمت فروش باشد، زیان صفر است (عدد منفی نمایش داده نمی‌شود). '
-      + 'روزهای تأخیر از تاریخ فروش تا امروز شمرده می‌شود (یا تا تاریخ پرداختِ ثبت‌شدهٔ همان ردیف).</div>';
+    + '<div class="pl-loss-note">🔒 فقط گزارش — مبلغ بدهی، الباقی و مبلغِ قابل‌پرداختِ مشتری با این اعداد هیچ تغییری نمی‌کنند. '
+      + 'قیمتِ مبنای قرضِ <b>پرداخت‌نشده</b> نرخِ امروزِ همان نوع تیل است و هر روز تازه می‌شود؛ '
+      + 'قیمتِ مبنای قرضِ <b>پرداخت‌شده</b> همان نرخی است که در روزِ گرفتنِ رسید قفل شده و دیگر تغییر نمی‌کند. '
+      + 'قرض‌هایی که پیش از افزوده‌شدنِ این قابلیت تسویه شده‌اند تاریخِ پرداخت ندارند و «تسویه (تاریخ نامشخص)» نشان داده می‌شوند.</div>';
+}
+// کلیک روی نامِ قرض‌دار در گزارش ⇒ حسابِ کاملش باز شود
+function lossOpenPerson(pid) {
+  try {
+    const p = (DB.debtPersons || []).find(x => x && x.id === pid);
+    if (!p) return;
+    showSection('debt');
+    openPersonModal('debt', pid);
+  } catch (e) {}
 }
 
 function _updatePersonTotals(person) {
@@ -26940,9 +27111,6 @@ function _updatePersonTotals(person) {
   if (topVal) { topVal.textContent = netTxt; topVal.style.color = netAll < 0 ? 'var(--red)' : 'var(--green)'; }
   // کادر نمایشی نرخ هر لیتر (کنار شماره تماس) — فقط نمایشی، بدون اثر بر محاسبات
   try { _renderPersonRateBadge(person); } catch (e) {}
-  // 📉 کادر «زیان ناشی از افزایش قیمت» — فقط گزارش (بخش قرض‌داران). داخل try است
-  // تا حتی اگر روزی خطایی بدهد، جمع‌ها و محاسبات بالا هیچ آسیبی نبینند.
-  try { _renderPriceLossPanel(person); } catch (e) {}
 }
 function newPersonTable() {
   const person = _curPerson(); if (!person) return;
@@ -37863,7 +38031,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.204';
+const APP_VERSION = '2.9.205';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
