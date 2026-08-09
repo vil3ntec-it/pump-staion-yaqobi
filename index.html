@@ -12920,8 +12920,15 @@ html{background:#070a11!important}
    translateZ(0)+will-change promote each layer to its own GPU compositor
    layer so scrolling never needs to repaint them — the other cause of
    fixed decoration visibly lagging/sliding during scroll on mobile. */
-#fxLayer{position:fixed;inset:0;height:100dvh;z-index:0;pointer-events:none;overflow:hidden;transform:translateZ(0);will-change:transform}
-#fxLayerTop{position:fixed;inset:0;height:100dvh;pointer-events:none;overflow:hidden;transform:translateZ(0);will-change:transform}
+/* +140px عمدی: این لایه یک «تهٔ رنگِ» ملایم (fx-vignette) روی کلِ صفحه می‌اندازد و
+   چون position:fixed است، قدش به ویوپورت بسته می‌شود. روی گوشی، ویوپورتِ چیدمان و
+   ویوپورتِ دیده‌شده هم‌قد نیستند (نوار آدرس/نوار ایمایی جمع و باز می‌شود)، پس یک
+   نوارِ باریکِ پایینِ صفحه بی‌رنگ می‌ماند و چون بقیهٔ صفحه ته‌رنگ دارد، آن نوار
+   به‌صورت یک «لایهٔ رنگیِ» جدا در انتهای اسکرول دیده می‌شد. با این سرریز، لایه در
+   هر حالتی از کفِ صفحه پایین‌تر است. (تابعِ pinFxToVisualViewport هم همین سرریز
+   را به قدِ محاسبه‌شده اضافه می‌کند.) */
+#fxLayer{position:fixed;inset:0;height:calc(100dvh + 140px);z-index:0;pointer-events:none;overflow:hidden;transform:translateZ(0);will-change:transform}
+#fxLayerTop{position:fixed;inset:0;height:calc(100dvh + 140px);pointer-events:none;overflow:hidden;transform:translateZ(0);will-change:transform}
 #fxCanvas{position:absolute;inset:0;width:100%;height:100%;opacity:.9}
 
 /* atmospheric blur wash sitting behind the blobs for extra depth
@@ -16083,6 +16090,10 @@ body .stat-box, body .msumbox, body .tank-card,
 body .person-card, body .company-card,
 body .tool-link-card, body .fs-group, body .split-box,
 body .tools-in, body .inv-stat, body .ntf-item,
+/* کادرِ «📝 توضیحات این بخش» و نوارِ «ردیف جدید / چندتایی» هم باید همین کنارهٔ
+   پررنگِ هم‌رنگِ تم را بگیرند — بدونِ این، با var(--border)ِ کم‌رنگ روی زمینهٔ
+   کرمِ تم‌های روز عملاً نامرئی می‌شدند و باز «کادر نیست» دیده می‌شد. */
+body .sec-note-box, body .row-add-bar,
 body .m-menu-panel{
   border-width:2px !important;
   border-style:solid !important;
@@ -38625,7 +38636,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.225';
+const APP_VERSION = '2.9.226';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -41745,7 +41756,10 @@ document.addEventListener('click', function(e) {
     function sync(){
       var fx = document.getElementById('fxLayer');
       var fxTop = document.getElementById('fxLayerTop');
-      var h = vv.height + 'px', t = vv.offsetTop + 'px', l = vv.offsetLeft + 'px';
+      /* +140 همان سرریزِ CSS است: قدِ دقیقِ ویوپورت باعث می‌شد یک نوارِ باریکِ
+         پایینِ صفحه بدونِ ته‌رنگِ این لایه بماند و مثل یک «لایهٔ رنگیِ» جدا
+         دیده شود. کمی بلندتر بودن هیچ عارضه‌ای ندارد (pointer-events:none). */
+      var h = (vv.height + 140) + 'px', t = vv.offsetTop + 'px', l = vv.offsetLeft + 'px';
       if(fx){ fx.style.height = h; fx.style.top = t; fx.style.left = l; }
       if(fxTop){ fxTop.style.height = h; fxTop.style.top = t; fxTop.style.left = l; }
     }
@@ -43289,20 +43303,22 @@ body{ min-height:calc(100vh + 2px); }
     padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));
   }
 
-  /* آخرین ردیف/دکمهٔ هر صفحه زیرِ نوارِ پایینِ گوشی پنهان نشود
-     (8px همان فاصلهٔ فعلی است؛ فقط حاشیهٔ امنِ دستگاه به آن اضافه می‌شود) */
-  .main{ padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))!important; }
   /* نوشتهٔ پایینِ صفحه دقیقاً روی کفِ پنجره می‌نشست: با ظاهر/پنهان‌شدنِ نوارِ آدرسِ
      مرورگر ارتفاعِ پنجره چند ده پیکسل کم‌وزیاد می‌شود و همان لحظه خطِ آخرش بریده و
-     دوباره پیدا می‌شد («با اسکرول پیدا و گم می‌شود»). حالا زیرش جای خالی هست تا
-     همیشه کامل دیده شود، و از سمتِ دکمه‌های شناور (چت/ربات/ماشین‌حساب) هم فاصله
-     می‌گیرد تا رویش نیفتند.
-     این فاصله عمداً padding است نه margin: حاشیهٔ عنصرِ آخر از جعبهٔ <body> بیرون
-     می‌زند، پس ۱۲۰ پیکسلِ پایینِ صفحه را دیگر پس‌زمینهٔ <body> رنگ نمی‌کرد و رنگِ
-     خامِ <html> (که تم آن را جدا ست می‌کند) به‌صورتِ یک «لایهٔ رنگیِ» ناجور در
-     انتهای اسکرول دیده می‌شد. با padding همان فاصله داخلِ body می‌ماند و
-     پس‌زمینه تا آخرِ صفحه یک‌دست است. */
-  .copyright-bar{ padding-bottom:calc(148px + env(safe-area-inset-bottom,0px))!important;
+     دوباره پیدا می‌شد («با اسکرول پیدا و گم می‌شود»). پس زیرِ آن ~۱۲۰ پیکسل جای
+     خالی هست تا همیشه کامل دیده شود و از دکمه‌های شناور هم فاصله بگیرد.
+     ── این فاصله عمداً روی .main است، نه روی خودِ نوار ──
+     دو راهِ قبلی هر دو یک «لایهٔ رنگی» در انتهای اسکرول می‌ساختند:
+       • margin-bottom روی نوار: حاشیهٔ آخرین عنصر از جعبهٔ <body> بیرون می‌زند، پس
+         آن نوار را پس‌زمینهٔ body رنگ نمی‌کرد.
+       • padding-bottom روی نوار: خودِ نوار transform:translateZ(0) دارد (برای رفعِ
+         نیمه‌رسم‌شدن روی وب‌ویوی اندروید) و با آن padding به یک لایهٔ کامپوزیتِ
+         بلندِ بی‌پس‌زمینه تبدیل می‌شد که اندروید پشتش را به‌جای #siteBgِ ثابت،
+         رنگِ خامِ <html> می‌گرفت — همان نوارِ رنگیِ گزارش‌شده.
+     حالا نوار کوچک و کم‌ارتفاع می‌ماند و جای خالی داخلِ .main است: یک بلاکِ ساده
+     بدون لایهٔ کامپوزیت که پس‌زمینه‌اش را همیشه درست می‌گیرد. */
+  .main{ padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))!important; }
+  .copyright-bar{ padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))!important;
                   margin-bottom:0!important;
                   padding-left:78px!important; }
   /* …و همان درمانِ کارت‌های مخزن/سربرگ برای خودِ این نوار: یک لایهٔ پایدارِ
