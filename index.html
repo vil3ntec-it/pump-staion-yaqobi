@@ -16787,22 +16787,29 @@ body.boot-viewer #bootViewerSplash{
 .dash-cards > .dash-card:last-child:nth-child(5n+4){ grid-column:span 2 }
 .dash-card{
   position:relative;overflow:hidden;display:flex;flex-direction:column;
+  container-type:inline-size;
   background:linear-gradient(168deg, color-mix(in srgb,var(--kc) 7%, var(--card)), var(--card) 62%);
   border:1.5px solid var(--k-line);border-radius:var(--k-r);padding:var(--k-pad);
   box-shadow:0 14px 34px -20px rgba(0,0,0,.75);cursor:pointer;
   transition:transform .22s,box-shadow .22s,border-color .22s}
-/* ── جایگزینِ «نورهای کنجی» ────────────────────────────────────────────────
-   قبلاً یک هالهٔ گردِ ۱۷۰ پیکسلی در کنجِ کارت بود به‌اضافهٔ یک نوارِ ۴ پیکسلیِ
-   رنگی در کناره؛ صاحب ریپو گفت خز و شلوغ است. حالا به‌جای آن دو چیزِ آرام:
-   یک خطِ نازکِ رنگیِ بالای کارت (مثل کارت‌های داشبوردهای حسابداری) و یک
-   روشناییِ خیلی ملایمِ سراسری از بالا. هیچ کنجی نورِ تیز ندارد. */
-.dash-card::before{content:'';position:absolute;inset-inline:0;top:0;height:3px;
-  background:linear-gradient(90deg,transparent,var(--kc) 22%,var(--kc) 78%,transparent);
-  opacity:.9;pointer-events:none}
-.dash-card::after{content:'';position:absolute;inset-inline:0;top:0;height:58%;pointer-events:none;
-  background:linear-gradient(180deg,color-mix(in srgb,var(--kc) 9%,transparent),transparent)}
+/* ── طرحِ کارت طبقِ مدلی که صاحب ریپو فرستاد ───────────────────────────────
+   «نورهای کنجی» (هالهٔ گردِ کنج + نوارِ ۴ پیکسلیِ کناره) کلاً برداشته شدند. حالا:
+   عنوان با آیکنِ کوچکِ هم‌رنگ در بالا سمتِ راست، یک نشانِ شش‌ضلعی سمتِ چپ، یک
+   تصویرِ تزئینیِ هم‌رنگ سمتِ راست، و عدد و دو خطِ زیرش وسطِ کارت. تهِ کارت هم
+   فقط یک شست‌وشوی خیلی ملایمِ هم‌رنگِ تم دارد، بدونِ هیچ لبهٔ تیز. */
+.dash-card::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(120% 90% at 88% 12%, color-mix(in srgb,var(--kc) 13%,transparent) 0%, transparent 62%)}
 .dash-card:hover{transform:translateY(-4px);box-shadow:0 22px 44px -20px rgba(0,0,0,.85);border-color:var(--kc)}
-.dc-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:clamp(6px,.4vw + 4px,10px)}
+/* ردیفِ بالا = آیکنِ کوچکِ هم‌رنگ + عنوان، هر دو سمتِ راست (مثل مدلِ فرستاده‌شده) */
+.dc-top{display:flex;align-items:center;justify-content:flex-start;gap:7px;
+  position:relative;z-index:3;margin-bottom:clamp(6px,.4vw + 4px,10px)}
+.dc-tic{width:clamp(15px,.6vw + 13px,19px);height:clamp(15px,.6vw + 13px,19px);flex:0 0 auto;
+  display:inline-flex;align-items:center;justify-content:center}
+.dc-tic svg{width:100%;height:100%;stroke:var(--kc);fill:none;stroke-width:1.9}
+/* بدنهٔ وسطِ کارت (عدد + دو خطِ زیرش) */
+.dc-body{position:relative;z-index:3;flex:1;display:flex;flex-direction:column;justify-content:center}
+/* تصویرِ تزئینی — پیش‌فرض پنهان است و فقط در کارتِ پهن (زیر) دیده می‌شود */
+.dc-art{display:none;position:absolute;z-index:1;color:var(--kc);pointer-events:none}
 /* چیدمانِ کارت (خواستهٔ صاحب ریپو): عدد بالا کنارِ آیکن — همان جای خالی که قبلاً
    بی‌استفاده بود — و عنوان پایین‌ترِ عدد و وسطِ کارت. عنوان قبلاً بالا کنارِ آیکن
    می‌نشست و چون جا کم بود با «…» بریده می‌شد (مثلاً «الباقی قرض‌دارا…»)؛ حالا کلِ
@@ -16810,10 +16817,14 @@ body.boot-viewer #bootViewerSplash{
 /* چیدمانِ کارت (خواستهٔ صاحب ریپو): «اسمِ کادر بالا، مقدار وسط، ما‌بقی زیرش».
    یعنی ردیفِ اول = عنوان + آیکن، بعد عددِ درشت، بعد رشد و زیرنویس. هر چهار خط از
    یک لبه شروع می‌شوند تا هر پنج کارت دقیقاً یک‌شکل باشند. */
-.dc-title{font-size:clamp(.78rem,.13vw + .75rem,.9rem);font-weight:800;color:var(--muted);line-height:1.55;
+.dc-title{font-size:clamp(.78rem,.13vw + .75rem,.9rem);font-weight:900;color:var(--kc);line-height:1.55;
   min-width:0;flex:1;text-align:start;white-space:normal;overflow-wrap:break-word}
-.dc-ic{width:clamp(38px,2.2vw + 30px,48px);height:clamp(38px,2.2vw + 30px,48px);border-radius:14px;flex-shrink:0;
-  background:color-mix(in srgb,var(--kc) 18%,transparent);border:1px solid color-mix(in srgb,var(--kc) 32%,transparent);
+/* نشانِ شش‌ضلعی — در کارتِ باریک بالا کنارِ عنوان می‌ماند، در کارتِ پهن می‌رود
+   سمتِ چپ و وسطِ ارتفاع (همان جای مدل) */
+.dc-ic{width:clamp(38px,2.2vw + 30px,48px);height:clamp(42px,2.4vw + 33px,54px);flex-shrink:0;
+  position:absolute;inset-block-start:var(--k-pad);inset-inline-end:var(--k-pad);z-index:2;
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+  background:color-mix(in srgb,var(--kc) 16%,transparent);
   display:inline-flex;align-items:center;justify-content:center}
 .dc-ic svg{width:clamp(19px,1vw + 15px,24px);height:clamp(19px,1vw + 15px,24px);stroke:var(--kc);fill:none;stroke-width:1.8}
 /* خواستهٔ صاحب ریپو: عدد و دو خطِ زیرش وسطِ کارت بیایند — قبلاً هر سه از لبهٔ
@@ -16833,6 +16844,29 @@ body.boot-viewer #bootViewerSplash{
 .dc-delta .up{color:var(--k-green)}
 .dc-delta .down{color:var(--k-red)}
 .dc-sub{font-weight:800;opacity:.86;margin-top:4px;min-height:1.15em}
+/* عنوان زیرِ نشانِ شش‌ضلعی نرود */
+.dc-top{padding-inline-end:calc(clamp(38px,2.2vw + 30px,48px) + 10px)}
+
+/* ══ کارتِ پهن (وقتی کارت یک‌ستونه/عریض است) — دقیقاً چیدمانِ مدلِ فرستاده‌شده ══
+   نشانِ شش‌ضلعی می‌رود سمتِ چپ و وسطِ ارتفاع، تصویرِ تزئینی می‌آید سمتِ راست زیرِ
+   عنوان، و عدد و دو خطِ زیرش بینِ این دو، وسطِ کارت می‌نشینند.
+   با @container نوشته شده تا ملاک، پهنای «خودِ کارت» باشد نه پهنای صفحه — پس در
+   چیدمانِ ۲/۳/۵ ستونه خودبه‌خود به همان حالتِ جمع‌وجورِ بالا برمی‌گردد. مرورگرهای
+   قدیمی که @container ندارند، همان حالتِ جمع‌وجور را می‌بینند. */
+@container (min-width: 290px){
+  .dash-card{min-height:118px}
+  .dc-ic{
+    inset-block-start:50%; transform:translateY(-50%);
+    width:clamp(50px,15cqw,66px); height:clamp(56px,17cqw,74px);
+  }
+  .dc-ic svg{width:46%;height:46%}
+  .dc-art{
+    display:block; inset-inline-start:6px; inset-block-end:4px;
+    width:clamp(96px,33cqw,140px); height:auto; aspect-ratio:6/5; opacity:.9;
+  }
+  .dc-top{padding-inline-end:0}
+  .dc-body{padding-inline:clamp(74px,30cqw,124px) clamp(62px,19cqw,82px)}
+}
 
 /* ── 3) ردیف‌های سه‌ستونه ─────────────────────────────────────────────── */
 .dash-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.15fr) minmax(0,1.2fr);
@@ -17045,30 +17079,95 @@ body.boot-viewer #bootViewerSplash{
     </div>
   </div>
 
+  <!-- تصویرهای تزئینیِ کارت‌های داشبورد (SVG داخلی — بدون فایل خارجی و آفلاین).
+       همه با currentColor کشیده شده‌اند تا با رنگِ هر کارت (--kc) هم‌رنگ شوند و
+       در تمِ روز و شب هر دو درست دیده شوند. -->
+  <svg id="dash-art-sprite" style="display:none" aria-hidden="true"><defs>
+    <symbol id="art-shield" viewBox="0 0 120 100">
+      <ellipse cx="60" cy="86" rx="41" ry="9.5" fill="currentColor" opacity=".10"/>
+      <ellipse cx="60" cy="86" rx="26" ry="6" fill="currentColor" opacity=".16"/>
+      <path d="M60 12 92 24v27c0 19-14 32-32 39-18-7-32-20-32-39V24z" fill="currentColor" opacity=".18"/>
+      <path d="M60 12 92 24v27c0 19-14 32-32 39-18-7-32-20-32-39V24z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" opacity=".6"/>
+      <path d="M60 33v20" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" opacity=".85"/>
+      <circle cx="60" cy="63" r="3.4" fill="currentColor" opacity=".85"/>
+    </symbol>
+    <symbol id="art-drop" viewBox="0 0 120 100">
+      <ellipse cx="60" cy="85" rx="42" ry="9.5" fill="currentColor" opacity=".10"/>
+      <ellipse cx="60" cy="85" rx="27" ry="6" fill="currentColor" opacity=".16"/>
+      <path d="M60 10c0 0 27 30 27 47a27 27 0 0 1-54 0C33 40 60 10 60 10z" fill="currentColor" opacity=".2"/>
+      <path d="M60 10c0 0 27 30 27 47a27 27 0 0 1-54 0C33 40 60 10 60 10z" fill="none" stroke="currentColor" stroke-width="3" opacity=".6"/>
+      <path d="M45 58a15 15 0 0 0 10 14" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" opacity=".55"/>
+    </symbol>
+    <symbol id="art-bars" viewBox="0 0 120 100">
+      <ellipse cx="60" cy="88" rx="46" ry="8" fill="currentColor" opacity=".10"/>
+      <rect x="20" y="62" width="14" height="24" rx="4" fill="currentColor" opacity=".28"/>
+      <rect x="41" y="50" width="14" height="36" rx="4" fill="currentColor" opacity=".38"/>
+      <rect x="62" y="38" width="14" height="48" rx="4" fill="currentColor" opacity=".48"/>
+      <rect x="83" y="24" width="14" height="62" rx="4" fill="currentColor" opacity=".6"/>
+      <path d="M27 50 48 38 69 26 90 12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/>
+      <circle cx="27" cy="50" r="4" fill="currentColor" opacity=".8"/>
+      <circle cx="48" cy="38" r="4" fill="currentColor" opacity=".8"/>
+      <circle cx="69" cy="26" r="4" fill="currentColor" opacity=".8"/>
+      <circle cx="90" cy="12" r="4" fill="currentColor" opacity=".8"/>
+    </symbol>
+    <symbol id="art-pie" viewBox="0 0 120 100">
+      <ellipse cx="58" cy="88" rx="40" ry="8" fill="currentColor" opacity=".10"/>
+      <path d="M56 16a34 34 0 1 0 34 34H56z" fill="currentColor" opacity=".3"/>
+      <path d="M56 16a34 34 0 1 0 34 34H56z" fill="none" stroke="currentColor" stroke-width="2.6" opacity=".55"/>
+      <path d="M64 10a34 34 0 0 1 30 30l-30 4z" fill="currentColor" opacity=".62"/>
+      <path d="M64 10a34 34 0 0 1 30 30l-30 4z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" opacity=".8"/>
+    </symbol>
+    <symbol id="art-safe" viewBox="0 0 120 100">
+      <ellipse cx="60" cy="90" rx="40" ry="7.5" fill="currentColor" opacity=".10"/>
+      <rect x="22" y="14" width="76" height="72" rx="10" fill="currentColor" opacity=".18"/>
+      <rect x="22" y="14" width="76" height="72" rx="10" fill="none" stroke="currentColor" stroke-width="3" opacity=".6"/>
+      <rect x="32" y="24" width="56" height="52" rx="6" fill="none" stroke="currentColor" stroke-width="2.4" opacity=".45"/>
+      <circle cx="60" cy="50" r="15" fill="currentColor" opacity=".22"/>
+      <circle cx="60" cy="50" r="15" fill="none" stroke="currentColor" stroke-width="3" opacity=".7"/>
+      <path d="M60 39v7M60 54v7M49 50h7M64 50h7" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+      <path d="M34 86v7M86 86v7" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity=".45"/>
+    </symbol>
+  </defs></svg>
+
   <!-- ── کارت‌های آماری ── -->
   <div class="dash-cards">
     <div class="dash-card" style="--kc:var(--k-red)" title="دیدن هشدارها" onclick="dashBellClick()">
-      <div class="dc-top"><div class="dc-title">هشدارها</div><span class="dc-ic"><svg viewBox="0 0 24 24"><path d="M12 3.5 2.6 20h18.8L12 3.5Z"/><path d="M12 10v4"/><path d="M12 17.2v.1"/></svg></span></div>
-      <div class="dc-value" id="dcv-alerts">0 مورد</div><div class="dc-delta" id="dcd-alerts">نیاز به بررسی</div><div class="dc-sub" id="dcs-alerts"></div></div>
+      <div class="dc-top"><span class="dc-tic"><svg viewBox="0 0 24 24"><path d="M12 3.5 2.6 20h18.8L12 3.5Z"/><path d="M12 10v4"/><path d="M12 17.2v.1"/></svg></span><div class="dc-title">هشدارها</div></div>
+      <svg class="dc-art" viewBox="0 0 120 100" aria-hidden="true"><use href="#art-shield"/></svg>
+      <span class="dc-ic"><svg viewBox="0 0 24 24"><path d="M12 3.5 2.6 20h18.8L12 3.5Z"/><path d="M12 10v4"/><path d="M12 17.2v.1"/></svg></span>
+      <div class="dc-body">
+        <div class="dc-value" id="dcv-alerts">0 مورد</div><div class="dc-delta" id="dcd-alerts">نیاز به بررسی</div><div class="dc-sub" id="dcs-alerts"></div></div></div>
 
     <div class="dash-card" style="--kc:var(--k-green)" title="رفتن به پارچه‌ها" onclick="showSection('shifts')">
-      <div class="dc-top"><div class="dc-title" id="dct-sales">فروش تیل امروز</div><span class="dc-ic"><svg><use href="#ic-shifts"/></svg></span></div>
-      <div class="dc-value" id="dcv-sales">0</div><div class="dc-delta" id="dcd-sales"></div><div class="dc-sub" id="dcs-sales"></div></div>
+      <div class="dc-top"><span class="dc-tic"><svg><use href="#ic-shifts"/></svg></span><div class="dc-title" id="dct-sales">فروش تیل امروز</div></div>
+      <svg class="dc-art" viewBox="0 0 120 100" aria-hidden="true"><use href="#art-drop"/></svg>
+      <span class="dc-ic"><svg><use href="#ic-shifts"/></svg></span>
+      <div class="dc-body">
+        <div class="dc-value" id="dcv-sales">0</div><div class="dc-delta" id="dcd-sales"></div><div class="dc-sub" id="dcs-sales"></div></div></div>
 
     <!-- خواستهٔ صاحب ریپو: کارتِ «مبلغ فروش امروز» از داشبورد برداشته شد
          (خودِ محاسبه‌ها و بخشِ مفاد/ضرر دست‌نخورده‌اند) -->
 
     <div class="dash-card" style="--kc:var(--k-blue)" title="رفتن به قرض‌داران" onclick="showSection('debt')">
-      <div class="dc-top"><div class="dc-title">الباقی قرض‌داران</div><span class="dc-ic"><svg><use href="#ic-debt"/></svg></span></div>
-      <div class="dc-value" id="dcv-debt">0</div><div class="dc-delta" id="dcd-debt"></div><div class="dc-sub" id="dcs-debt"></div></div>
+      <div class="dc-top"><span class="dc-tic"><svg><use href="#ic-debt"/></svg></span><div class="dc-title">الباقی قرض‌داران</div></div>
+      <svg class="dc-art" viewBox="0 0 120 100" aria-hidden="true"><use href="#art-bars"/></svg>
+      <span class="dc-ic"><svg><use href="#ic-debt"/></svg></span>
+      <div class="dc-body">
+        <div class="dc-value" id="dcv-debt">0</div><div class="dc-delta" id="dcd-debt"></div><div class="dc-sub" id="dcs-debt"></div></div></div>
 
     <div class="dash-card" style="--kc:var(--k-purple)" title="رفتن به مصارف" onclick="showSection('expenses')">
-      <div class="dc-top"><div class="dc-title" id="dct-exp">مصارف امروز</div><span class="dc-ic"><svg><use href="#ic-expenses"/></svg></span></div>
-      <div class="dc-value" id="dcv-exp">0</div><div class="dc-delta" id="dcd-exp"></div><div class="dc-sub" id="dcs-exp"></div></div>
+      <div class="dc-top"><span class="dc-tic"><svg><use href="#ic-expenses"/></svg></span><div class="dc-title" id="dct-exp">مصارف امروز</div></div>
+      <svg class="dc-art" viewBox="0 0 120 100" aria-hidden="true"><use href="#art-pie"/></svg>
+      <span class="dc-ic"><svg><use href="#ic-expenses"/></svg></span>
+      <div class="dc-body">
+        <div class="dc-value" id="dcv-exp">0</div><div class="dc-delta" id="dcd-exp"></div><div class="dc-sub" id="dcs-exp"></div></div></div>
 
     <div class="dash-card" style="--kc:var(--k-teal)" title="رفتن به گاوصندوق" onclick="showSection('safe')">
-      <div class="dc-top"><div class="dc-title">موجودی گاوصندوق</div><span class="dc-ic"><svg><use href="#ic-safe"/></svg></span></div>
-      <div class="dc-value" id="dcv-safe">0</div><div class="dc-delta" id="dcd-safe"></div><div class="dc-sub" id="dcs-safe"></div></div>
+      <div class="dc-top"><span class="dc-tic"><svg><use href="#ic-safe"/></svg></span><div class="dc-title">موجودی گاوصندوق</div></div>
+      <svg class="dc-art" viewBox="0 0 120 100" aria-hidden="true"><use href="#art-safe"/></svg>
+      <span class="dc-ic"><svg><use href="#ic-safe"/></svg></span>
+      <div class="dc-body">
+        <div class="dc-value" id="dcv-safe">0</div><div class="dc-delta" id="dcd-safe"></div><div class="dc-sub" id="dcs-safe"></div></div></div>
   </div>
 
   <!-- ── ردیف دوم: وضعیت سوخت‌ها | روند فروش | موجودی مخازن ── -->
@@ -38664,7 +38763,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.227';
+const APP_VERSION = '2.9.228';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
