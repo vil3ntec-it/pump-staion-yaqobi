@@ -16791,10 +16791,16 @@ body.boot-viewer #bootViewerSplash{
   border:1.5px solid var(--k-line);border-radius:var(--k-r);padding:var(--k-pad);
   box-shadow:0 14px 34px -20px rgba(0,0,0,.75);cursor:pointer;
   transition:transform .22s,box-shadow .22s,border-color .22s}
-.dash-card::before{content:'';position:absolute;inset-inline-start:-40px;top:-60px;width:170px;height:170px;
-  border-radius:50%;background:radial-gradient(circle,var(--kc) 0%,transparent 70%);opacity:.16;pointer-events:none}
-/* نوارِ رنگیِ کنارهٔ کارت — کارت‌ها را از هم جدا و خوانا می‌کند */
-.dash-card::after{content:'';position:absolute;inset-block:0;inset-inline-start:0;width:4px;background:var(--kc);opacity:.85}
+/* ── جایگزینِ «نورهای کنجی» ────────────────────────────────────────────────
+   قبلاً یک هالهٔ گردِ ۱۷۰ پیکسلی در کنجِ کارت بود به‌اضافهٔ یک نوارِ ۴ پیکسلیِ
+   رنگی در کناره؛ صاحب ریپو گفت خز و شلوغ است. حالا به‌جای آن دو چیزِ آرام:
+   یک خطِ نازکِ رنگیِ بالای کارت (مثل کارت‌های داشبوردهای حسابداری) و یک
+   روشناییِ خیلی ملایمِ سراسری از بالا. هیچ کنجی نورِ تیز ندارد. */
+.dash-card::before{content:'';position:absolute;inset-inline:0;top:0;height:3px;
+  background:linear-gradient(90deg,transparent,var(--kc) 22%,var(--kc) 78%,transparent);
+  opacity:.9;pointer-events:none}
+.dash-card::after{content:'';position:absolute;inset-inline:0;top:0;height:58%;pointer-events:none;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--kc) 9%,transparent),transparent)}
 .dash-card:hover{transform:translateY(-4px);box-shadow:0 22px 44px -20px rgba(0,0,0,.85);border-color:var(--kc)}
 .dc-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:clamp(6px,.4vw + 4px,10px)}
 /* چیدمانِ کارت (خواستهٔ صاحب ریپو): عدد بالا کنارِ آیکن — همان جای خالی که قبلاً
@@ -16810,17 +16816,20 @@ body.boot-viewer #bootViewerSplash{
   background:color-mix(in srgb,var(--kc) 18%,transparent);border:1px solid color-mix(in srgb,var(--kc) 32%,transparent);
   display:inline-flex;align-items:center;justify-content:center}
 .dc-ic svg{width:clamp(19px,1vw + 15px,24px);height:clamp(19px,1vw + 15px,24px);stroke:var(--kc);fill:none;stroke-width:1.8}
+/* خواستهٔ صاحب ریپو: عدد و دو خطِ زیرش وسطِ کارت بیایند — قبلاً هر سه از لبهٔ
+   راست شروع می‌شدند و نیمهٔ چپِ کارت خالی و بی‌استفاده می‌ماند. عنوان و آیکن
+   سرِ جای خودشان (بالا، دو سرِ ردیف) می‌مانند. */
 .dc-value{font-size:clamp(1.05rem,.62vw + .9rem,1.5rem);font-weight:900;color:var(--kc);
-  line-height:1.3;letter-spacing:-.3px;word-break:break-word;min-width:0;width:100%;text-align:start;
+  line-height:1.3;letter-spacing:-.3px;word-break:break-word;min-width:0;width:100%;text-align:center;
   margin-bottom:clamp(4px,.3vw + 3px,8px)}
 /* دو خطِ پایینِ کارت: از سمتِ راست شروع می‌شوند و اگر بلند بودند می‌شکنند —
    قبلاً یک‌خطی و با «…» بریده می‌شدند و نصفِ نوشته دیده نمی‌شد */
 /* خط‌های زیرِ کارت خیلی ریز و کم‌رنگ بودند و خوانده نمی‌شدند — یک پله بزرگ‌تر و
    پررنگ‌تر شدند (خواستهٔ کاربر: «آن سه‌چهار خطِ زیرش هم خوب دیده شود») */
 .dc-delta,.dc-sub{margin-top:6px;line-height:1.7;white-space:normal;overflow-wrap:break-word;
-  text-align:start;width:100%;
+  text-align:center;width:100%;
   font-size:clamp(.74rem,.12vw + .71rem,.84rem);font-weight:800;color:var(--txt);opacity:.92}
-.dc-delta{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:5px;min-height:1.15em}
+.dc-delta{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:5px;min-height:1.15em}
 .dc-delta .up{color:var(--k-green)}
 .dc-delta .down{color:var(--k-red)}
 .dc-sub{font-weight:800;opacity:.86;margin-top:4px;min-height:1.15em}
@@ -34641,6 +34650,7 @@ function openCompanyROViewer(id) {
   if (isGuest) {
     try {
       _showChatFabs(true);
+      _managerFabShow(false);   // مثل نمای قرض‌دار: دکمهٔ سبزِ میرزا در صفحهٔ کیو‌آر نباشد
       if (!_roKeepChat) _rbSetMode('person', { peer: _peerKey('company-' + id), type: 'company', id: id, name: c.name });
     } catch (e) {}
   }
@@ -35068,6 +35078,11 @@ function openROViewer(type, id, subId) {
   if (isGuest) {
     try {
       _showChatFabs(true);
+      // خواستهٔ صاحب ریپو: دکمهٔ سبزِ «ارتباط با میرزا» در صفحهٔ کیو‌آر نباشد.
+      // کسی که کیو‌آر را زده، خودش همین حالا یک گفتگوی مستقیم با میرزا دارد
+      // (همان دکمهٔ آبیِ چت)؛ دکمهٔ سبز فقط یک کیو‌آرِ دیگر برای همان گفتگو
+      // نشان می‌داد و اضافه بود.
+      _managerFabShow(false);
       // نامِ گفتگو هم نامِ همان حسابی است که باز شده (حسابِ فرعی نامِ خودش را دارد)
       if (!_roKeepChat) _rbSetMode('person', { peer: _peerKey(type + '-' + id + (sub ? ('~' + sub.id) : '')), type: type, id: id, sub: sub ? sub.id : null, name: sub ? (sub.name || 'حساب') : person.name });
     } catch (e) {}
@@ -37732,6 +37747,12 @@ const PUMP_UPDATE_BASES = [
 ];
 let _pumpLatestInfo = null, _pumpUpdBusy = false, _pumpLastCheck = 0;
 const _pumpBootTs = Date.now();   // برای تصمیمِ «رفرشِ خودکار بی‌خطر است یا نه»
+/* آخرین لحظه‌ای که کاربر واقعاً با صفحه کار کرده — ملاکِ «بی‌کار بودن» برای
+   تازه‌سازیِ خودکارِ نسخه. passive تا روی اسکرول هیچ کندی نسازد. */
+window._pumpLastInteract = Date.now();
+['pointerdown', 'keydown', 'touchstart', 'wheel', 'scroll'].forEach(ev => {
+  try { window.addEventListener(ev, () => { window._pumpLastInteract = Date.now(); }, { passive: true, capture: true }); } catch (e) {}
+});
 
 function _pumpVerCmp(a, b) {                 // 1 اگر a تازه‌تر باشد
   const pa = String(a || '0').split('.').map(n => parseInt(n, 10) || 0);
@@ -37934,7 +37955,14 @@ function _pumpSafeToReload() {
       return !pw || String(pw.value || '').trim() === '';
     })();
     if (lockUp) return true;
-    if (Date.now() - _pumpBootTs > 150000) return false;      // مدتی است باز است → فقط نوار
+    /* تا حالا بعد از ۱۵۰ ثانیه از باز شدنِ برنامه دیگر هیچ‌وقت خودکار تازه نمی‌شد و
+       فقط نوارِ «آپدیت کن» می‌ماند؛ اگر کاربر آن را نمی‌زد، نسخهٔ کهنه (و باگ‌های
+       رفع‌شده‌اش) روزها سرِ جایش می‌ماند. حالا به‌جای ساعتِ دیواری، «بی‌کاری» ملاک
+       است: اگر ۳۰ ثانیه است هیچ دست به صفحه نخورده، تازه‌سازی بی‌خطر است — همهٔ
+       شرط‌های ایمنیِ زیر (کادرِ نوشته‌شده، مودالِ باز، پنلِ ربات) سرِ جای‌شان‌اند و
+       pumpApplyWebUpdate هم پیش از رفرش save() می‌کند. */
+    const idleMs = Date.now() - (window._pumpLastInteract || _pumpBootTs);
+    if (Date.now() - _pumpBootTs > 150000 && idleMs < 30000) return false;
     // فقط وقتی جلوی رفرش را می‌گیریم که کاربر واقعاً چیزی نوشته باشد؛ کادرِ خالیِ
     // فوکوس‌دار (مثلاً کادرِ رمزِ صفحهٔ قفل که خودکار فوکوس می‌گیرد) مانع نیست
     const ae = document.activeElement;
@@ -38636,7 +38664,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.226';
+const APP_VERSION = '2.9.227';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }

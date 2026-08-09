@@ -1,7 +1,7 @@
 // سرویس‌ورکر پمپ یعقوبی — پوستهٔ برنامه (این صفحه + آیکون‌ها) را کش می‌کند تا
 // برنامه بعد از نصب، هم آنلاین و هم کاملاً آفلاین باز شود. نسخهٔ کش را هر بار
 // که APP_VERSION در index.html عوض می‌شود، این‌جا هم عوض کنید تا کش کهنه پاک شود.
-const CACHE_NAME = 'pump-yaqobi-shell-v2.9.226';
+const CACHE_NAME = 'pump-yaqobi-shell-v2.9.227';
 const APP_SHELL = [
   './',
   './index.html',
@@ -69,19 +69,27 @@ self.addEventListener('fetch', event => {
 
   const isAppShellPage = req.mode === 'navigate' || url.pathname.endsWith('/index.html') || url.pathname.endsWith('/');
   if (isAppShellPage) {
-    // صفحهٔ اصلی: «کهنه ولی فوری» — اگر نسخه‌ای در کش هست همان را بی‌درنگ نشان
-    // بده (این صفحه ~1MB است؛ منتظرِ شبکه ماندن باعث می‌شد قفلِ صفحه چند ثانیه
-    // دیر باز شود) و هم‌زمان در پس‌زمینه از شبکه یک نسخهٔ تازه می‌گیریم و کش را
-    // به‌روز می‌کنیم — دفعهٔ بعد که باز شود، تازه‌ترین نسخه همان‌جاست.
-    // cache:'reload' لازم است تا خودِ این fetch پس‌زمینه از کشِ HTTP مرورگر
-    // به‌جای شبکهٔ واقعی جواب نگیرد.
+    /* صفحهٔ اصلی — «مسابقهٔ شبکه با کش، با مهلتِ کوتاه».
+       ── چرا عوض شد ──
+       قبلاً اگر نسخه‌ای در کش بود، همیشه و بی‌قید و شرط همان سرو می‌شد و نسخهٔ
+       تازه فقط در پس‌زمینه داخلِ کش می‌نشست. یعنی کاربر ذاتاً همیشه «یک نسخه
+       عقب» بود: هر تغییری که امروز منتشر می‌شد، تازه دفعهٔ بعدِ باز کردنِ برنامه
+       دیده می‌شد — و باگی که رفع شده بود، برای او «دوباره می‌آمد».
+       ── حالا ──
+       شبکه و کش با هم مسابقه می‌دهند و شبکه فقط SHELL_NET_MS میلی‌ثانیه فرصت
+       دارد. اینترنتِ سالم → همان اولین باز شدن، تازه‌ترین نسخه. اینترنتِ کند یا
+       قطع → دقیقاً مثل قبل، نسخهٔ کش بی‌درنگ می‌آید و شبکه در پس‌زمینه ادامه
+       می‌دهد و کش را برای دفعهٔ بعد تازه می‌کند. یعنی آفلاین‌بودن هیچ آسیبی
+       نمی‌بیند و فقط حالتِ «آنلاینِ سالم» بهتر می‌شود.
+       cache:'reload' لازم است تا این fetch از کشِ HTTP مرورگر جواب نگیرد. */
+    const SHELL_NET_MS = 2500;
     event.respondWith(
       caches.match(req).then(cached => {
         // بدون AbortController، fetch روی شبکهٔ کند/قطع می‌توانست دقیقه‌ها معلق
-        // بماند و باز شدنِ برنامه از آیکون را همان‌قدر عقب بیندازد — وقتی کش
-        // خالی است (اولین نصب یا کش پاک‌شده)، این تنها راه رسیدن به صفحه بود
+        // بماند. این مهلت فقط تا رسیدنِ سرآیندهاست؛ بعد از آن دانلودِ بدنه با
+        // خیال راحت تا آخر ادامه پیدا می‌کند (clearTimeout پایین).
         const ctrl = new AbortController();
-        const timeout = setTimeout(() => ctrl.abort(), 4000);
+        const timeout = setTimeout(() => ctrl.abort(), 15000);
         const networkUpdate = fetch(req.url, { cache: 'reload', signal: ctrl.signal }).then(res => {
           clearTimeout(timeout);
           const copy = res.clone();
@@ -100,8 +108,14 @@ self.addEventListener('fetch', event => {
           } catch (e) {}
           return res;
         }).catch(() => { clearTimeout(timeout); return null; });
-        if (cached) return cached; // فوری — networkUpdate در پس‌زمینه ادامه دارد
-        return networkUpdate.then(res => res || caches.match('./index.html'));
+
+        if (!cached) return networkUpdate.then(res => res || caches.match('./index.html'));
+
+        // کش هست: به شبکه فقط همین مهلتِ کوتاه را می‌دهیم
+        return Promise.race([
+          networkUpdate.then(res => res || Promise.reject(0)),
+          new Promise((_, rej) => setTimeout(() => rej(0), SHELL_NET_MS))
+        ]).catch(() => cached);
       })
     );
     return;
