@@ -22067,49 +22067,52 @@ function _dashShell(label, full) { return { label, full, petrol: _dashZ(), diese
 function _dashDayAt(offset) {
   return _dashParseDate(toEnDigits(new Date(Date.now() + offset * 864e5).toLocaleDateString('fa-IR')));
 }
-// پنجرهٔ «گذشته‌نگر» (باگِ گزارش‌شده): قبلاً پنجره از امروز به «آینده» می‌رفت، پس
-// امروز همیشه ستونِ اول بود و هر چقدر روز می‌گذشت باز هم سرِ همان ستونِ اول گیر
-// می‌کرد و هیچ‌وقت جلو نمی‌رفت. حالا مثل هر نمودارِ فروشِ درست، پنجره به عقب
-// نگاه می‌کند: امروز/این هفته/این ماه/امسال «ستونِ آخر» است و دوره‌های قبلش
-// پشتِ سرش می‌آیند. اندیس 0 = دورهٔ درست قبل از پنجره (فقط پایهٔ محاسبهٔ رشد).
-//   روز = 7 روز · هفته = 7 هفته · ماه = 12 ماه · سال = 6 سال
-// همهٔ این پنجره‌ها «چرخان»‌اند: چون مبنا هر بار persianDate()/Date.now() است، با
-// عوض‌شدنِ روز خودبه‌خود قدیمی‌ترین ستون می‌افتد و ستونِ تازه به آخر اضافه می‌شود.
-// حذفِ ستون فقط نمایشی است — دادهٔ روزها/هفته‌ها/ماه‌های قبل دست‌نخورده در DB می‌ماند
-// و از راهِ کشویِ ماه/سالِ هر بخش و صفحهٔ تاریخچه‌ها همیشه در دسترس است.
+/* نوارِ نمودارها — خواستهٔ صاحب ریپو، دقیقاً همین قاعده:
+     • نوار تعدادِ خانه‌های ثابتی دارد (روز ۷ · هفته ۷ · ماه ۱۲ · سال ۶).
+     • نشانگرِ «حالا» (امروز/این هفته/این ماه/امسال) روی خانه‌ای می‌نشیند که هر
+       دوره یک خانه جلو می‌رود؛ به آخرِ نوار که رسید، برمی‌گردد سرِ نوار.
+     • هر خانهٔ بعد از نشانگر «آینده» است (فردا، پس‌فردا، …) و هر خانهٔ قبلش
+       «گذشته» (دیروز، پریروز، …). یعنی خانهٔ i فاصلهٔ (i − نشانگر) دوره با حالا دارد.
+   اندیس 0 در buckets خانهٔ نمایشی نیست — یک دورهٔ درست قبل از خانهٔ اولِ نوار است
+   و فقط پایهٔ محاسبهٔ رشد. دادهٔ هیچ روزی پاک نمی‌شود؛ این‌ها فقط پنجرهٔ نمایش‌اند. */
+function _dashCols() { return _dashRange === 'month' ? 12 : (_dashRange === 'year' ? 6 : 7); }
 function _dashMakeBuckets() {
   const today = _dashParseDate(persianDate());
   const _yr = y => String(y);   // سال بدونِ جداکنندهٔ هزارگان — با رقم لاتین (خواستهٔ صاحب ریپو)
+  const n = _dashCols();
+  const slot = _dashTodaySlot(n);          // خانهٔ «حالا» روی نوار
+  const oFirst = -slot - 1, oLast = n - 1 - slot;   // oFirst = پایهٔ رشد
+  const at = o => o - oFirst;              // فاصلهٔ دوره‌ای ← اندیسِ سطل
   const buckets = []; let assign;
   if (_dashRange === 'day') {
     const idx = {};
-    for (let o = -7; o <= 0; o++) {                 // ‎-7 (پایهٔ رشد) تا امروز — ۷ ستونِ نمایشی
+    for (let o = oFirst; o <= oLast; o++) {
       const p = _dashDayAt(o);
-      idx[_dashDayKey(p.y, p.m, p.d)] = o + 7;
-      const lbl = o === 0 ? 'امروز' : (o === -1 ? 'دیروز' : (o === -2 ? 'پریروز' : n2fa(p.m) + '/' + n2fa(p.d)));
+      idx[_dashDayKey(p.y, p.m, p.d)] = at(o);
+      const lbl = o === 0 ? 'امروز' : o === -1 ? 'دیروز' : o === -2 ? 'پریروز'
+                : o === 1 ? 'فردا' : o === 2 ? 'پس‌فردا' : n2fa(p.m) + '/' + n2fa(p.d);
       buckets.push(_dashShell(lbl, p.y + '/' + p.m + '/' + p.d));
     }
     assign = p => { const i = idx[_dashDayKey(p.y, p.m, p.d)]; return i == null ? -1 : i; };
   } else if (_dashRange === 'week') {
     const idx = {};
-    for (let wi = 0; wi <= 7; wi++) {               // wi=0 هفتهٔ پایهٔ رشد، wi=7 همین هفته
-      const startOff = -7 * (7 - wi);
+    for (let o = oFirst; o <= oLast; o++) {
       const days = [];
-      for (let d = 0; d < 7; d++) { const p = _dashDayAt(startOff + d); idx[_dashDayKey(p.y, p.m, p.d)] = wi; days.push(p); }
-      const back = 7 - wi;
-      const lbl = back === 0 ? 'این هفته' : (back === 1 ? 'هفته قبل' : n2fa(back) + ' هفته قبل');
+      for (let d = 0; d < 7; d++) { const p = _dashDayAt(o * 7 - 6 + d); idx[_dashDayKey(p.y, p.m, p.d)] = at(o); days.push(p); }
+      const lbl = o === 0 ? 'این هفته' : o === -1 ? 'هفته قبل' : o === 1 ? 'هفته بعد'
+                : o < 0 ? n2fa(-o) + ' هفته قبل' : n2fa(o) + ' هفته بعد';
       buckets.push(_dashShell(lbl, n2fa(days[0].m) + '/' + n2fa(days[0].d) + ' تا ' + n2fa(days[6].m) + '/' + n2fa(days[6].d)));
     }
     assign = p => { const i = idx[_dashDayKey(p.y, p.m, p.d)]; return i == null ? -1 : i; };
   } else if (_dashRange === 'month') {
     const mAt = o => { let m = today.m + o, y = today.y; while (m > 12) { m -= 12; y++; } while (m < 1) { m += 12; y--; } return { y, m }; };
-    for (let o = -12; o <= 0; o++) { const mm = mAt(o); const nm = SHAMSI_MONTHS[mm.m - 1]; buckets.push(_dashShell(nm, nm + ' ' + _yr(mm.y))); }
-    assign = p => { for (let o = -12; o <= 0; o++) { const mm = mAt(o); if (p.y === mm.y && p.m === mm.m) return o + 12; } return -1; };
+    for (let o = oFirst; o <= oLast; o++) { const mm = mAt(o); const nm = SHAMSI_MONTHS[mm.m - 1]; buckets.push(_dashShell(nm, nm + ' ' + _yr(mm.y))); }
+    assign = p => { for (let o = oFirst; o <= oLast; o++) { const mm = mAt(o); if (p.y === mm.y && p.m === mm.m) return at(o); } return -1; };
   } else {
-    for (let o = -6; o <= 0; o++) buckets.push(_dashShell(_yr(today.y + o), 'سال ' + _yr(today.y + o)));
-    assign = p => { const i = (p.y - today.y) + 6; return (i >= 0 && i <= 6) ? i : -1; };
+    for (let o = oFirst; o <= oLast; o++) buckets.push(_dashShell(_yr(today.y + o), 'سال ' + _yr(today.y + o)));
+    assign = p => { const i = at(p.y - today.y); return (i >= 0 && i <= oLast - oFirst) ? i : -1; };
   }
-  return { buckets, assign, today };
+  return { buckets, assign, today, slot };
 }
 // یک منبع دادهٔ مشترک برای همهٔ نمودارها و کارت‌ها — فقط خواندن از DB
 function _dashSeries() {
@@ -22469,23 +22472,15 @@ function renderDashboard(skipAnim) {
   if (g) { const h = new Date().getHours(); g.textContent = h < 12 ? 'صبح بخیر 👋' : (h < 17 ? 'چاشت بخیر 👋' : 'شب بخیر 👋'); }
   try { const a = allDates(); setT('dash-date', '· ' + a.shName + ' ' + a.sh); } catch (e) { setT('dash-date', '· ' + persianDate()); }
 
-  const { buckets } = _dashSeries();
-  // chrono = ترتیبِ زمانیِ سطل‌ها (قدیمی‌ترین → دورهٔ جاری). خودِ نوارِ نمایشی همان
-  // سطل‌هاست ولی «چرخانده‌شده» تا «امروز» روی خانه‌ای بنشیند که هر روز یک واحد جلو
-  // می‌رود و آخرِ نوار که رسید از سرِ نوار ادامه می‌دهد (خواستهٔ صاحب ریپو).
-  // cidx[i] = اندیسِ زمانیِ خانهٔ i — رشد و «قبلی» همیشه از همین اندیس حساب می‌شوند،
-  // پس چرخشِ نمایشی هیچ عددی را عوض نمی‌کند.
-  const chrono = buckets.slice(1);
-  const nCols = chrono.length;
-  const slot = _dashTodaySlot(nCols);
-  const rot = ((slot - (nCols - 1)) % nCols + nCols) % nCols;
-  const disp = [], cidx = [];
-  for (let i = 0; i < nCols; i++) { const j = ((i - rot) % nCols + nCols) % nCols; cidx.push(j); disp.push(chrono[j]); }
-  const sel = _dashSelIdx == null ? slot : Math.max(0, Math.min(_dashSelIdx, nCols - 1));
-  const cj = cidx[sel];
-  const selB = chrono[cj], prevB = cj === 0 ? buckets[0] : chrono[cj - 1];
+  const { buckets, slot } = _dashSeries();
+  // نوارِ نمایشی همان سطل‌هاست منهای سطلِ صفر (که فقط پایهٔ رشد است). خانهٔ «حالا»
+  // همان slot است: قبلش گذشته، بعدش آینده. نشانگرِ پیش‌فرض هم روی همان می‌نشیند و
+  // چون slot هر دوره یک خانه جلو می‌رود، خودبه‌خود جلو می‌رود.
+  const disp = buckets.slice(1);
+  const sel = _dashSelIdx == null ? slot : Math.max(0, Math.min(_dashSelIdx, disp.length - 1));
+  const selB = disp[sel], prevB = sel === 0 ? buckets[0] : disp[sel - 1];
   const cur = _dashPick(selB), prev = _dashPick(prevB);
-  const isCur = cj === nCols - 1;   // خانهٔ دورهٔ جاری (امروز/این هفته/…)
+  const isCur = sel === slot;   // خانهٔ دورهٔ جاری (امروز/این هفته/…)
   const rangeWord = { day: 'امروز', week: 'این هفته', month: 'این ماه', year: 'امسال' }[_dashRange];
   const perWord = { day: 'روز قبل', week: 'هفته قبل', month: 'ماه قبل', year: 'سال قبل' }[_dashRange];
   const bucketWord = isCur ? rangeWord : selB.label;
@@ -38576,7 +38571,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.221';
+const APP_VERSION = '2.9.222';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
