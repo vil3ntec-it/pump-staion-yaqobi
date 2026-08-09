@@ -15954,6 +15954,23 @@ body:not(.light-mode) .nav-bar, body:not(.light-mode) .app-header{ border-color:
 /* ── کادرهای اصلی ─────────────────────────────────────────────────────────── */
 .card{border-radius:var(--ui-radius);margin-bottom:var(--ui-gap)}
 .card-head{padding:calc(var(--ui-pad) * .72) var(--ui-pad)}
+
+/* ── کادرِ «📝 توضیحات این بخش» و نوارِ «ردیف جدید / چندتایی» ──────────────
+   این دو ناحیه زیرِ هر جدول لخت روی پس‌زمینه می‌نشستند: نه قاب داشتند نه
+   زمینه، و کنارِ کارت‌های قاب‌دارِ بالای‌شان بی‌ریخت و غیراستاندارد دیده
+   می‌شدند (در بعضی بخش‌ها اصلاً معلوم نبود که کادرِ یادداشت آنجاست). حالا هر
+   دو دقیقاً همان قاب/زمینه/گردیِ .card را می‌گیرند تا کلِ صفحه یک‌دست باشد.
+   padding با !important است چون این کادرها padding درون‌خطی دارند. */
+.sec-note-box,
+.row-add-bar{
+  background:var(--card);
+  border:1.5px solid var(--border);
+  border-radius:var(--ui-radius);
+  margin-bottom:var(--ui-gap);
+  padding:calc(var(--ui-pad) * .72) var(--ui-pad) !important;
+  box-sizing:border-box;
+}
+.sec-note-box .note-field{ background:var(--dark) }
 .card-title{font-size:var(--ui-title)}
 .section-title{font-size:clamp(.86rem, .2vw + .82rem, 1.02rem);margin-bottom:calc(var(--ui-gap) * .8)}
 .goto-btn{padding:clamp(7px,.5vw + 5px,11px) clamp(12px,.8vw + 9px,20px);font-size:var(--ui-sub);border-radius:10px}
@@ -17239,7 +17256,7 @@ body.boot-viewer #bootViewerSplash{
     </div>
     <div style="padding:12px" id="log-reports-container"></div>
   </div>
-  <div style="padding:0 2px 12px">
+  <div class="sec-note-box" style="padding:0 2px 12px">
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-shifts" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('shifts', this.value)"></textarea>
   </div>
@@ -17365,7 +17382,7 @@ body.boot-viewer #bootViewerSplash{
     <div style="padding:8px 14px 0;font-size:0.72rem;color:var(--muted)">ℹ️ این پارچه‌ها به صورت اتومات در «گزارش‌های 24 ساعته» (بخش پارچه‌ها) هم نشان داده می‌شوند.</div>
     <div style="padding:12px" id="log-diesel-container"></div>
   </div>
-  <div style="padding:0 2px 12px">
+  <div class="sec-note-box" style="padding:0 2px 12px">
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-shifts-diesel" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('shifts-diesel', this.value)"></textarea>
   </div>
@@ -17395,7 +17412,7 @@ body.boot-viewer #bootViewerSplash{
     <button class="add-row-btn strong" onclick="openAddPurchase('petrol')">➕ ثبت خرید پطرول</button>
     <button class="add-row-btn" style="border-color:var(--green);color:var(--green)" onclick="pdfStorage('petrol')">📄 PDF مخزن پطرول</button>
   </div>
-  <div style="padding:0 2px 12px">
+  <div class="sec-note-box" style="padding:0 2px 12px">
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-storage" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('storage', this.value)"></textarea>
   </div>
@@ -17423,7 +17440,7 @@ body.boot-viewer #bootViewerSplash{
     <button class="add-row-btn strong strong-diesel" onclick="openAddPurchase('diesel')">➕ ثبت خرید دیزل</button>
     <button class="add-row-btn" style="border-color:#276749;color:#276749" onclick="pdfStorage('diesel')">📄 PDF مخزن دیزل</button>
   </div>
-  <div style="padding:0 2px 12px">
+  <div class="sec-note-box" style="padding:0 2px 12px">
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-storage-diesel" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('storage-diesel', this.value)"></textarea>
   </div>
@@ -17570,7 +17587,7 @@ body.boot-viewer #bootViewerSplash{
       <div id="debtrasid-months"></div>
     </div>
   </div>
-  <div style="padding:10px 2px 12px">
+  <div class="sec-note-box" style="padding:10px 2px 12px">
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-debtrasid" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('debtrasid', this.value)"></textarea>
   </div>
@@ -17612,7 +17629,7 @@ body.boot-viewer #bootViewerSplash{
       </div>
     </div>
   </div>
-  <div style="padding:10px 2px 12px">
+  <div class="sec-note-box" style="padding:10px 2px 12px">
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-debtsum" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('debtsum', this.value)"></textarea>
   </div>
@@ -17651,7 +17668,7 @@ body.boot-viewer #bootViewerSplash{
       </div>
     </div>
   </div>
-  <div style="padding:10px 2px 12px">
+  <div class="sec-note-box" style="padding:10px 2px 12px">
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-debtsummoney" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('debtsummoney', this.value)"></textarea>
   </div>
@@ -17738,7 +17755,7 @@ body.boot-viewer #bootViewerSplash{
       <div id="chakana-body-wrap"></div>
     </div>
   </div>
-  <div style="padding:10px 2px 12px">
+  <div class="sec-note-box" style="padding:10px 2px 12px">
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-chakana" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('chakana', this.value)"></textarea>
   </div>
@@ -17782,7 +17799,7 @@ body.boot-viewer #bootViewerSplash{
       <div id="exp-body-wrap"></div>
     </div>
   </div>
-  <div style="padding:10px 2px 12px">
+  <div class="sec-note-box" style="padding:10px 2px 12px">
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-expenses" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('expenses', this.value)"></textarea>
   </div>
@@ -17824,7 +17841,7 @@ body.boot-viewer #bootViewerSplash{
       </div>
     </div>
   </div>
-  <div style="padding:10px 2px 12px">
+  <div class="sec-note-box" style="padding:10px 2px 12px">
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-rasid" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('rasid', this.value)"></textarea>
   </div>
@@ -18104,7 +18121,7 @@ body.boot-viewer #bootViewerSplash{
       </div>
     </div>
   </div>
-  <div style="padding:10px 2px 12px">
+  <div class="sec-note-box" style="padding:10px 2px 12px">
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-safe" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('safe', this.value)"></textarea>
   </div>
@@ -18235,7 +18252,7 @@ body.boot-viewer #bootViewerSplash{
       </div>
     </div>
   </div>
-  <div style="padding:10px 2px 12px">
+  <div class="sec-note-box" style="padding:10px 2px 12px">
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-sarrafi" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('sarrafi', this.value)"></textarea>
   </div>
@@ -18248,7 +18265,6 @@ body.boot-viewer #bootViewerSplash{
       <button class="add-btn" style="background:var(--green);color:#fff" onclick="addSarrafiRowsBulk()">➕➕ چندتایی</button>
     </div></div>
 
-</div>
 </div>
 
 <!-- ورق‌های روزانه -->
@@ -18927,7 +18943,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
     همه‌جا با تاریخ و روز هفته و از تازه به کهنه چیده شده است؛ فقط برای دیدن، هیچ چیزی عوض یا پاک نمی‌شود.
   </div>
   <div id="hc-cards"></div>
-  <div style="padding:0 2px 12px">
+  <div class="sec-note-box" style="padding:0 2px 12px">
     <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
     <textarea id="secnote-history" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('history', this.value)"></textarea>
   </div>
@@ -38570,7 +38586,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.223';
+const APP_VERSION = '2.9.224';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -43237,13 +43253,18 @@ body{ min-height:calc(100vh + 2px); }
   /* آخرین ردیف/دکمهٔ هر صفحه زیرِ نوارِ پایینِ گوشی پنهان نشود
      (8px همان فاصلهٔ فعلی است؛ فقط حاشیهٔ امنِ دستگاه به آن اضافه می‌شود) */
   .main{ padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))!important; }
-  .copyright-bar{ padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))!important; }
   /* نوشتهٔ پایینِ صفحه دقیقاً روی کفِ پنجره می‌نشست: با ظاهر/پنهان‌شدنِ نوارِ آدرسِ
      مرورگر ارتفاعِ پنجره چند ده پیکسل کم‌وزیاد می‌شود و همان لحظه خطِ آخرش بریده و
      دوباره پیدا می‌شد («با اسکرول پیدا و گم می‌شود»). حالا زیرش جای خالی هست تا
      همیشه کامل دیده شود، و از سمتِ دکمه‌های شناور (چت/ربات/ماشین‌حساب) هم فاصله
-     می‌گیرد تا رویش نیفتند. */
-  .copyright-bar{ margin-bottom:calc(120px + env(safe-area-inset-bottom,0px))!important;
+     می‌گیرد تا رویش نیفتند.
+     این فاصله عمداً padding است نه margin: حاشیهٔ عنصرِ آخر از جعبهٔ <body> بیرون
+     می‌زند، پس ۱۲۰ پیکسلِ پایینِ صفحه را دیگر پس‌زمینهٔ <body> رنگ نمی‌کرد و رنگِ
+     خامِ <html> (که تم آن را جدا ست می‌کند) به‌صورتِ یک «لایهٔ رنگیِ» ناجور در
+     انتهای اسکرول دیده می‌شد. با padding همان فاصله داخلِ body می‌ماند و
+     پس‌زمینه تا آخرِ صفحه یک‌دست است. */
+  .copyright-bar{ padding-bottom:calc(148px + env(safe-area-inset-bottom,0px))!important;
+                  margin-bottom:0!important;
                   padding-left:78px!important; }
   /* …و همان درمانِ کارت‌های مخزن/سربرگ برای خودِ این نوار: یک لایهٔ پایدارِ
      کامپوزیتور. روی وب‌ویوهای اندروید، آخرین عنصرِ صفحه بعد از اسکرول نیمه‌رسم
