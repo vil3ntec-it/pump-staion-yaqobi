@@ -22899,14 +22899,13 @@ function _membershipText(ts){
   if(!parts.length) return 'امروز';
   return parts.slice(0,2).join(' و ');
 }
+/* خواستهٔ صاحب ریپو: کادرِ «⏳ مشتریِ ما از: … روز» از داخلِ مودالِ حساب برداشته
+   شد — همین اطلاعات در صفحهٔ «مدت عضویت / تاریخچه» هست و این‌جا اضافی بود.
+   خودِ محاسبه (_membershipText / _personCreatedTs) دست‌نخورده مانده چون صفحهٔ
+   تاریخچه و PDF مدت عضویت از همان‌ها می‌خوانند. */
 function _renderPersonMembership(person){
   const el=document.getElementById('pm-membership'); if(!el) return;
-  try{
-    const ts=_personCreatedTs(person);
-    const txt=_membershipText(ts);
-    if(txt){ el.style.display=''; el.textContent='⏳ مشتریِ ما از: '+txt; }
-    else { el.style.display='none'; el.textContent=''; }
-  }catch(e){ el.style.display='none'; }
+  el.style.display='none'; el.textContent='';
 }
 // تاریخِ شمسیِ یک timestamp به‌صورت رشتهٔ «jy/jm/jd»
 function _jalaliStrFromTs(ts){
@@ -38571,7 +38570,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.222';
+const APP_VERSION = '2.9.223';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -43914,6 +43913,19 @@ function _invPaperHtml(v, opts) {
           <span class="k"><svg class="ico"><use href="#invp-person"/></svg> نام مشتری:</span>
           ${edit ? `<input class="invp-in" id="invd-name" value="${escFa(v.customer_name)}" style="flex:1;min-width:150px">` : `<span style="font-weight:900">${escFa(v.customer_name) || '—'}</span>`}
         </div>
+        ${edit ? `
+        <!-- خواستهٔ صاحب ریپو: بشود همین فاکتور را با نامِ دیگر و در حسابِ دیگری ثبت کرد -->
+        <div class="invp-meta-line">
+          <span class="k"><svg class="ico"><use href="#invp-person"/></svg> ثبت در حساب:</span>
+          <select class="invp-in" id="invd-target" style="flex:1;min-width:150px">
+            <option value=""${!v.debt_target_id ? ' selected' : ''}>🔄 خودکار — حسابِ هم‌نامِ مشتری</option>
+            ${(DB.debtPersons || []).map(p => `<option value="${escFa(p.id)}"${v.debt_target_id === p.id ? ' selected' : ''}>👤 ${escFa(p.name || '—')}</option>`).join('')}
+          </select>
+        </div>
+        <div class="invp-meta-line">
+          <span class="k"><svg class="ico"><use href="#invp-hash"/></svg> به نام دیگر:</span>
+          <input class="invp-in" id="invd-alias" value="${escFa(v.debt_alias || '')}" placeholder="اختیاری — خالی بماند یعنی همان نام مشتری" style="flex:1;min-width:150px">
+        </div>` : ''}
       </div>
       <div class="invp-grid">
         <!-- باگ 12: هم بخشِ تیل (فی+لیتر → رسید تیل) و هم بخشِ پول (مبلغ → رسید پول) با هم -->
@@ -43988,11 +44000,23 @@ function _findDebtPersonByName(name) {
   return (DB.debtPersons || []).find(p => _debtNameKey(p.name) === key) || null;
 }
 // حساب قرض‌دارِ هم‌نام را پیدا می‌کند؛ اگر نبود می‌سازد. شماره تماس فاکتور را هم منتقل می‌کند.
+/* نامی که فاکتور با آن در حسابِ قرض‌دار ثبت می‌شود — اگر مدیر «نام دیگر» نوشته
+   باشد همان، وگرنه نامِ خودِ مشتریِ فاکتور (خواستهٔ صاحب ریپو). */
+function _invDebtName(v) {
+  return ((v && v.debt_alias) || '').trim() || ((v && v.customer_name) || '').trim();
+}
+/* حسابِ مقصدِ فاکتور. خواستهٔ صاحب ریپو: بشود فاکتور را به حسابِ دلخواه فرستاد،
+   نه فقط به حسابِ هم‌نامِ مشتری. ترتیبِ انتخاب:
+     ۱) حسابی که مدیر در کشویِ «ثبت در حساب» انتخاب کرده (debt_target_id)
+     ۲) حسابِ هم‌نام با «نام دیگر» یا نامِ مشتری
+     ۳) اگر نبود، حسابِ تازه با همان نام ساخته می‌شود (رفتار قبلی) */
 function _ensureDebtPersonForInvoice(v) {
-  let p = _findDebtPersonByName(v.customer_name);
+  let p = null;
+  if (v.debt_target_id) p = (DB.debtPersons || []).find(x => x.id === v.debt_target_id) || null;
+  if (!p) p = _findDebtPersonByName(_invDebtName(v));
   if (!p) {
     p = { id: 'dp' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-          name: (v.customer_name || '').trim() || 'مشتری',
+          name: _invDebtName(v) || 'مشتری',
           mode: 'fuel', percent: 0, rows: [], subs: [] };
     if (!Array.isArray(DB.debtPersons)) DB.debtPersons = [];
     DB.debtPersons.push(p);
@@ -44061,7 +44085,7 @@ function _invPostToDebt(v) {
   if (amount > 0) {
     const data = {
       date: v.date_sh || '',
-      name: ((v.customer_name || '').trim() ? ((v.customer_name || '').trim() + ' - ') : '') +
+      name: (_invDebtName(v) ? (_invDebtName(v) + ' - ') : '') +
             'فاکتور شماره ' + n2fa(v.invoice_number) + (v.vehicle_type ? (' — ' + v.vehicle_type) : ''),
       hawala: '',
       ftype: v.fuel_type === 'diesel' ? 'diesel' : 'petrol',
@@ -44077,11 +44101,28 @@ function _invPostToDebt(v) {
   }
   // ── بخشِ تیل (مقدار رسید تیل) ──
   _invUnpostFuelRasid(v);        // تایید/ویرایش دوباره → اول اعتبار تیلِ قبلی برگردد
+  // خواستهٔ صاحب ریپو: با تاییدِ فاکتور، خودِ اطلاعاتِ فاکتور هم داخلِ جدولِ حساب
+  // دیده شود (چند لیتر رسید، به نامِ چه کسی، کدام فاکتور) — قبلاً فقط کادرِ
+  // «مقدار رسید تیل» بی‌صدا عدد می‌گرفت و در جدول هیچ ردیفی نمی‌آمد.
+  // ردیف فقط ستونِ «رسید تیل» را پر می‌کند (بردگی/فی/رسیدِ پول صفر)، پس هیچ
+  // محاسبه‌ای عوض نمی‌شود؛ کادرِ بالای حساب هم مثل قبل از rasidFuelP/D می‌آید.
+  let fRow = p.rows.find(r => r && r.invFuelId === v.id) || null;
   if (liters > 0) {
     const ft = v.fuel_type === 'diesel' ? 'diesel' : 'petrol';
     if (ft === 'diesel') p.rasidFuelD = (parseFloat(p.rasidFuelD) || 0) + liters;
     else p.rasidFuelP = (parseFloat(p.rasidFuelP) || 0) + liters;
     v.posted_fuel_rasid = { personId: p.id, ftype: ft, liters: liters };
+    const fdata = {
+      date: v.date_sh || (typeof persianDate === 'function' ? persianDate() : ''),
+      name: (_invDebtName(v) ? (_invDebtName(v) + ' - ') : '') +
+            'فاکتور شماره ' + n2fa(v.invoice_number) + (v.vehicle_type ? (' — ' + v.vehicle_type) : ''),
+      hawala: 'فاکتور ' + n2fa(v.invoice_number),
+      ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0,
+      rasidFuel: liters, albaqi: 0, byMoney: false, invFuelId: v.id
+    };
+    if (fRow) Object.assign(fRow, fdata); else p.rows.push(fdata);
+  } else if (fRow) {
+    p.rows.splice(p.rows.indexOf(fRow), 1);   // لیتر حذف شد ⇒ ردیفِ نمایشی هم برود
   }
   v.debtPersonId = p.id;
 }
@@ -44094,8 +44135,11 @@ function _invRemoveFromDebt(v) {
     // در لحظهٔ ثبت) — هر دو دفتر چک می‌شوند تا چیزی جا نماند.
     ['rows', 'moneyRows'].forEach(k => {
       if (Array.isArray(p[k])) {
-        const i = p[k].findIndex(r => r.invId === v.id);
-        if (i >= 0) p[k].splice(i, 1);
+        // هم ردیفِ رسیدِ پولی (invId) و هم ردیفِ نمایشیِ رسیدِ تیل (invFuelId)
+        for (let i = p[k].length - 1; i >= 0; i--) {
+          const r = p[k][i];
+          if (r && (r.invId === v.id || r.invFuelId === v.id)) p[k].splice(i, 1);
+        }
       }
     });
   });
@@ -44120,9 +44164,11 @@ function invApprove(id) {
   // اگر مودالِ حسابِ شخص پشتِ فاکتور باز است (کلیک از «فاکتورهای در انتظار تایید»)،
   // همان‌جا هم تازه شود تا فاکتور از صف برود و رسید/الباقی به‌روز دیده شود
   try { const pm = document.getElementById('personModal'); if (pm && pm.classList.contains('open')) { const p = _curPerson(); if (p) renderPersonRows(p); } } catch (e) {}
+  let _tgt = '—';
+  try { const _tp = (DB.debtPersons || []).find(x => x.id === v.debtPersonId); _tgt = (_tp && _tp.name) || _invDebtName(v) || '—'; } catch (e) {}
   showToast('✅ فاکتور شماره ' + n2fa(v.invoice_number) + (v.by_money
-    ? (' تایید شد و مبلغ به عنوان اعتبار (رسید پول) در حساب «' + (v.customer_name || '—') + '» ثبت شد')
-    : (' تایید شد — ' + n2fa(v.liters) + ' لیتر به «مقدار رسید تیل» حساب «' + (v.customer_name || '—') + '» اضافه شد')), '#38a169');
+    ? (' تایید شد و مبلغ به عنوان اعتبار (رسید پول) در حساب «' + _tgt + '» ثبت شد')
+    : (' تایید شد — ' + n2fa(v.liters) + ' لیتر با ردیفِ خودش در حساب «' + _tgt + '» ثبت شد')), '#38a169');
 }
 function invRevert(id) {
   if (!requireAdmin()) return;
@@ -44150,6 +44196,9 @@ function invSaveEdits(id) {
   if (g('invd-amount'))  v.amount          = Math.max(0, parseFloat(g('invd-amount').value) || 0);
   if (g('invd-vehicle')) v.vehicle_type   = (g('invd-vehicle').value || '').trim();
   if (g('invd-phone'))   v.phone          = (g('invd-phone').value || '').trim();
+  // حساب و نامِ مقصد در بخشِ قرض‌داران (خواستهٔ صاحب ریپو)
+  if (g('invd-target'))  v.debt_target_id = (g('invd-target').value || '') || null;
+  if (g('invd-alias'))   v.debt_alias     = (g('invd-alias').value || '').trim();
   // «فقط مبلغ» دوباره از روی محتوای فاکتور محاسبه شود (تیل حذف/اضافه شده باشد) — باگ 12
   v.by_money = ((parseFloat(v.amount) || 0) > 0) && !((parseFloat(v.price_per_liter) || 0) > 0 && (parseFloat(v.liters) || 0) > 0);
   // اگر فاکتور قبلاً تایید شده، رسیدِ تیلِ ثبت‌شده در حساب قرض‌دار هم با تغییرات هماهنگ شود
