@@ -469,6 +469,10 @@ body.staff-view .qr-overlay{z-index:10020}
 #companyPurchasesModal .modal-body,#companyArchiveModal .modal-body{overflow-y:auto}
 /* صفحهٔ آرشیو و جستجوی خرید باید روی نمای اسکنِ کیوآر (z-index:10000) هم دیده شوند */
 #companyArchiveModal,#cmpSearchModal{z-index:10050}
+/* صفحهٔ «خریدهای پطرول/دیزل» از داخلِ صفحهٔ آرشیو هم باز می‌شود، پس باید بالاتر از
+   خودِ آرشیو (10050) بنشیند — وگرنه باز می‌شد ولی پشتِ آرشیو می‌ماند و کاربر
+   فکر می‌کرد دکمه کار نمی‌کند (باگِ گزارش‌شده). */
+#companyPurchasesModal{z-index:10055}
 .person-nav-btn{padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap}
 .person-nav-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent);background:var(--dark)}
 .person-nav-btn:disabled{opacity:.3;cursor:default}
@@ -38535,7 +38539,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.218';
+const APP_VERSION = '2.9.219';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
