@@ -18652,12 +18652,26 @@ select.invp-in option{background:var(--card);color:var(--txt)}
 .invp-total .k{font-size:.85rem;color:var(--accent);font-weight:900;display:inline-flex;align-items:center;gap:7px}
 .invp-total .k .ico{width:22px;height:22px;color:var(--accent)}
 .invp-total .tv{margin-inline-start:auto;font-size:1.3rem;font-weight:900;color:var(--accent)}
+/* کادرِ «تاریخچهٔ فاکتورها» در سربرگِ بخش — درشت‌تر از کارت‌های لینکِ معمولی و
+   همیشه انتهای ردیف (سمت چپ). روی موبایل اگر جا نشد، خودش می‌رود سطر بعد. */
+#sec-invoices .section-title{flex-wrap:wrap;row-gap:8px}
+.tool-link-card.inv-hist-top{
+  order:9; margin:0; margin-inline-start:auto; width:auto;
+  padding:9px 16px; font-size:.92rem; border-radius:11px; border-width:2px;
+  border-color:var(--blue); color:var(--blue); gap:9px;
+}
+.tool-link-card.inv-hist-top .tlc-go i{font-size:.86rem}
+@media (max-width:520px){
+  .tool-link-card.inv-hist-top{width:100%;justify-content:space-between;margin-inline-start:0}
+}
+
 /* واترمارک محو جایگاه سوخت — پایین سمت چپ */
 .invp-station{position:absolute;bottom:14px;left:16px;width:240px;max-width:46%;color:var(--accent);opacity:.08;pointer-events:none;z-index:1}
 /* جای مهر — پایین سمت راست؛ قبل از تایید فقط دایرهٔ نقطه‌چینِ «محل مهر». عمداً
    خالی می‌ماند (نه در برنامه نه در PDF) چون مهر واقعی/فیزیکی همین‌جا زده می‌شود. */
 .invp-stampbox{position:absolute;bottom:22px;right:26px;width:142px;height:142px;pointer-events:none;z-index:3}
-.invp-stamp-ph{position:absolute;inset:6px;border:2px dashed var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:.72rem;font-weight:800;letter-spacing:1px}
+.invp-stamp-ph{position:absolute;inset:6px;border:2px dashed var(--border);border-radius:50%;display:flex;flex-direction:column;gap:5px;align-items:center;justify-content:center;color:var(--muted);font-size:.72rem;font-weight:800;letter-spacing:1px;text-align:center;line-height:1.5}
+.invp-stamp-ph .ph-ic{width:30px;height:30px;opacity:.5;flex-shrink:0}
 /* ── دکمه‌ها ── */
 .inv-btn-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
 .inv-btn{border:none;border-radius:12px;padding:13px 30px;font-family:'Vazirmatn',sans-serif;font-size:1rem;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:transform .15s,box-shadow .15s,filter .15s}
@@ -18754,7 +18768,10 @@ body.viewer-mode .inv-admin-only{display:none!important}
 </style>
 
 <div class="section" id="sec-invoices">
-  <div class="section-title"><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> ثبت فاکتورها</div>
+  <!-- خواستهٔ صاحب ریپو: کادرِ «تاریخچهٔ فاکتورها» از تهِ صفحه آمد بالا، همین‌جا کنارِ
+       سربرگ — و درشت‌تر شد. order:9 لازم است چون دکمه‌های A−/A+ بعداً با جاوااسکریپت
+       به همین سربرگ اضافه می‌شوند و بدون آن، کادر قبل از آن‌ها می‌افتاد. -->
+  <div class="section-title"><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> ثبت فاکتورها<button type="button" class="tool-link-card inv-hist-top" onclick="openSectionHistory('invoice')" title="🕘 تاریخچهٔ فاکتورها — با تاریخ و روز هفته"><span>🕘 تاریخچهٔ فاکتورها</span><span class="tlc-go"><i>‹</i></span></button></div>
 
   <!-- اسپرایت گرافیک‌های فاکتور (SVG داخلی — بدون فایل خارجی، آفلاین هم کار می‌کند) -->
   <svg id="invp-sprite" style="display:none" aria-hidden="true"><defs>
@@ -18763,38 +18780,51 @@ body.viewer-mode .inv-admin-only{display:none!important}
       <path d="M9 38V17c0-4.4 3.6-8 8-8h21" stroke-width="1.4" opacity=".55"/>
       <circle cx="10" cy="10" r="2.6" fill="currentColor" stroke="none"/>
     </symbol>
-    <symbol id="invp-nozzle" viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M22 30v-9c0-3.9 3.1-7 7-7h13l10 10v8"/>
-      <rect x="22" y="30" width="24" height="28" rx="4"/>
-      <rect x="27" y="36" width="14" height="10" rx="2" stroke-width="2.4"/>
-      <path d="M52 32h5l7 8v13h-7"/>
-      <path d="M64 40h4"/>
-      <path d="M22 58h-4c-7 0-10-5-10-12V26"/>
-      <path d="M35 14v-4"/>
+    <!-- نشانِ بالای برگه: یک پمپِ تیل با صفحهٔ نمایش، شیلنگ و تفنگیِ آویزان.
+         عمداً کم‌خط و درشت است تا در اندازهٔ کوچکِ سربرگ هم فوراً شناخته شود
+         (طرحِ قبلی چند خطِ روی‌هم بود و از دور یک لکه دیده می‌شد). -->
+    <symbol id="invp-nozzle" viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M11 64h34"/>
+      <path d="M17 64V16a6 6 0 0 1 6-6h13a6 6 0 0 1 6 6v48"/>
+      <rect x="23" y="18" width="16" height="12" rx="2.6"/>
+      <path d="M25 40h12"/>
+      <path d="M42 27h6a7 7 0 0 1 7 7v16a4.5 4.5 0 0 1-9 0V38"/>
     </symbol>
     <symbol id="invp-wave" viewBox="0 0 600 30" preserveAspectRatio="none" fill="none" stroke="currentColor">
       <path d="M0 22C120 2 240 30 360 14 440 3 520 10 600 20" stroke-width="3.4" stroke-linecap="round"/>
       <path d="M0 27C130 8 250 34 380 18 460 8 535 14 600 25" stroke-width="1.5" opacity=".45"/>
     </symbol>
-    <symbol id="invp-station" viewBox="0 0 260 130" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 36 L130 12 L248 36"/><path d="M24 36h212"/>
-      <path d="M42 36v82M218 36v82"/><path d="M6 118h248"/>
-      <rect x="96" y="68" width="32" height="50" rx="3"/>
-      <rect x="102" y="76" width="20" height="13" rx="2" stroke-width="3"/>
-      <path d="M128 86h9v24"/>
-      <path d="M146 108c2-9 9-14 18-14h16c9 0 15 4 18 12"/>
-      <circle cx="158" cy="116" r="6"/><circle cx="192" cy="116" r="6"/>
-      <rect x="228" y="56" width="18" height="24" rx="2" stroke-width="3"/><path d="M237 80v38"/>
+    <!-- واترمارکِ کفِ برگه: جایگاهِ تیل — سایبان روی دو ستون، یک پمپ زیر سایبان و
+         یک موتر کنارش. طرحِ قبلی سقفِ شیب‌دار و خط‌های درهم داشت و مثل یک خانه
+         دیده می‌شد؛ این یکی سایبانِ صافِ پمپ‌های واقعی را دارد. -->
+    <symbol id="invp-station" viewBox="0 0 260 130" fill="none" stroke="currentColor" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="20" y="18" width="182" height="15" rx="4"/>
+      <path d="M36 33v79M186 33v79"/>
+      <path d="M6 112h248"/>
+      <rect x="150" y="64" width="27" height="48" rx="3.5"/>
+      <rect x="156" y="71" width="15" height="11" rx="2" stroke-width="3.4"/>
+      <path d="M177 84h9v22"/>
+      <path d="M46 104v-9a5 5 0 0 1 5-5h63a5 5 0 0 1 5 5v9"/>
+      <path d="M58 90l10-13h28l11 13"/>
+      <circle cx="64" cy="105" r="8"/><circle cx="103" cy="105" r="8"/>
     </symbol>
-    <symbol id="invp-person" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></symbol>
-    <symbol id="invp-hash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 3 7 21M17 3l-2 18M4 9h17M3 15h17"/></symbol>
-    <symbol id="invp-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></symbol>
-    <symbol id="invp-pump" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="10" height="17" rx="2"/><rect x="6.5" y="7" width="5" height="4" rx="1"/><path d="M14 9h3l3 3v6a2 2 0 0 1-4 0v-8"/></symbol>
-    <symbol id="invp-coin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9M9 10c0-1.4 1.3-2.2 3-2.2s3 .7 3 2c0 2.8-6 1.6-6 4.4 0 1.3 1.3 2 3 2s3-.8 3-2.2"/></symbol>
-    <symbol id="invp-drop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6.5 7 6.5 12a6.5 6.5 0 0 1-13 0C5.5 10 12 3 12 3z"/><path d="M9.5 14.5a3 3 0 0 0 2 3" stroke-width="1.6"/></symbol>
-    <symbol id="invp-car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v-3l2-5c.3-.8 1-1.3 1.9-1.3h8.2c.9 0 1.6.5 1.9 1.3l2 5v3"/><path d="M4 13h16"/><circle cx="7.5" cy="17" r="2"/><circle cx="16.5" cy="17" r="2"/></symbol>
-    <symbol id="invp-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A15 15 0 0 1 3 6a2 2 0 0 1 2-2z"/></symbol>
-    <symbol id="invp-calc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 7h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01"/></symbol>
+    <!-- ── آیکون‌های سطرهای فاکتور ─────────────────────────────────────────────
+         بازنویسیِ کامل: هر آیکون باید در ۱۹ تا ۲۶ پیکسل هم بدون توضیح فهمیده شود.
+         «فی هر لیتر» و «مبلغ» دیگر یک آیکونِ مشترکِ سکه ندارند — اولی برچسبِ قیمت
+         و دومی بانک‌نوت است تا از هم فرق کنند. ── -->
+    <symbol id="invp-person" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7.6" r="3.9"/><path d="M4.4 20.6c.7-4.2 3.8-6.6 7.6-6.6s6.9 2.4 7.6 6.6"/></symbol>
+    <symbol id="invp-hash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M10 3.5 8 20.5M16.5 3.5l-2 17M4.5 9h15M3.5 15h15"/></symbol>
+    <symbol id="invp-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 2.6v4.2M16 2.6v4.2M3 10h18"/><path d="M7.6 14h.01M12 14h.01M16.4 14h.01M7.6 17.4h.01M12 17.4h.01" stroke-width="2.5"/></symbol>
+    <symbol id="invp-pump" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 21h10.8"/><path d="M5.6 21V5.4a2.4 2.4 0 0 1 2.4-2.4h2a2.4 2.4 0 0 1 2.4 2.4V21"/><rect x="7" y="5.6" width="4" height="3.4" rx="1"/><path d="M13.4 8.4h2.2a2.4 2.4 0 0 1 2.4 2.4v6.4a1.7 1.7 0 0 0 3.4 0v-4.6"/></symbol>
+    <symbol id="invp-price" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.6 3H6a3 3 0 0 0-3 3v5.6a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l5.6-5.6a2 2 0 0 0 0-2.8L13 3.6A2 2 0 0 0 11.6 3z"/><circle cx="7.9" cy="7.9" r="1.6"/></symbol>
+    <symbol id="invp-cash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.4" y="5.8" width="19.2" height="12.4" rx="2.6"/><circle cx="12" cy="12" r="2.8"/><path d="M6 9.4v5.2M18 9.4v5.2"/></symbol>
+    <symbol id="invp-drop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8s7 7.6 7 12.2a7 7 0 0 1-14 0C5 10.4 12 2.8 12 2.8z"/><path d="M5.7 14.6c2.1 1.5 4.2-1 6.3 0s4.2-1.5 6.3 0" stroke-width="1.7"/></symbol>
+    <symbol id="invp-car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 17.2V14a2 2 0 0 1 .3-1.1l2.6-4.2a2 2 0 0 1 1.7-1h8.4a2 2 0 0 1 1.7 1l2.6 4.2a2 2 0 0 1 .3 1.1v3.2"/><path d="M3.8 13.2h16.4"/><circle cx="7.4" cy="17.4" r="2.1"/><circle cx="16.6" cy="17.4" r="2.1"/><path d="M9.5 17.4h5"/></symbol>
+    <symbol id="invp-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 3.4h-2A1.6 1.6 0 0 0 3 5c0 8.8 7.2 16 16 16a1.6 1.6 0 0 0 1.6-1.6v-2a1.6 1.6 0 0 0-1.3-1.6l-2.6-.5a1.6 1.6 0 0 0-1.6.7l-.8 1.2a12.6 12.6 0 0 1-5.4-5.4l1.2-.8a1.6 1.6 0 0 0 .7-1.6L10.2 4.7a1.6 1.6 0 0 0-1.6-1.3z"/></symbol>
+    <symbol id="invp-calc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2.6" width="16" height="18.8" rx="2.6"/><rect x="7" y="5.4" width="10" height="3.6" rx="1.2"/><path d="M8 13.2h.01M12 13.2h.01M16 13.2h.01M8 17.4h.01M12 17.4h.01M16 17.4h.01" stroke-width="2.6"/></symbol>
+    <!-- «ثبت در حساب»: دفترِ حساب — «به نام دیگر»: کارتِ نام -->
+    <symbol id="invp-ledger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.4h12a2 2 0 0 1 2 2v15.2a2 2 0 0 0-2-2H5z"/><path d="M5 3.4A1.6 1.6 0 0 0 3.4 5v14a1.6 1.6 0 0 0 1.6 1.6h12"/><path d="M8.4 8h7.2M8.4 11.4h7.2M8.4 14.8h4.4"/></symbol>
+    <symbol id="invp-tag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.6" y="5.6" width="18.8" height="13.4" rx="2.6"/><path d="M9 2.6v3.2M15 2.6v3.2"/><circle cx="8.8" cy="11.4" r="1.9"/><path d="M5.8 16.4c.5-1.6 1.6-2.4 3-2.4s2.5.8 3 2.4"/><path d="M14.6 10.4h4M14.6 14h3"/></symbol>
   </defs></svg>
 
   <!-- فرم رسمی فاکتور — برگهٔ چاپی (تمامِ عرضِ صفحه) -->
@@ -18814,10 +18844,24 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <div class="invp-meta">
           <div class="invp-meta-line">
             <span class="k"><svg class="ico"><use href="#invp-person"/></svg> نام مشتری:</span>
-            <input class="invp-in" id="inv-customer" placeholder="نام کامل مشتری..." style="flex:1;min-width:170px" autocomplete="off" data-suggest="inv-cust-names" oninput="invCustomerSuggest(this.value)">
+            <input class="invp-in" id="inv-customer" placeholder="نام کامل مشتری..." style="flex:1;min-width:170px" autocomplete="off" data-suggest="inv-cust-names" oninput="invCustomerSuggest(this.value);invTargetHint()">
             <datalist id="inv-cust-names"></datalist>
           </div>
           <div id="inv-cust-suggest" style="display:none;font-size:.72rem;margin:-2px 0 4px;padding:7px 11px;border-radius:9px;background:rgba(56,161,105,.12);color:#276749;font-weight:700;line-height:1.7"></div>
+          <!-- خواستهٔ صاحب ریپو: همین‌جا — موقعِ ساختنِ فاکتور — بشود فاکتور را با
+               نامِ دیگری و در حسابِ شخصِ دیگری ثبت کرد. تا حالا این دو کادر فقط بعد
+               از ثبت، داخلِ صفحهٔ ویرایشِ فاکتور بودند. -->
+          <div class="invp-meta-line">
+            <span class="k"><svg class="ico"><use href="#invp-ledger"/></svg> ثبت در حساب:</span>
+            <select class="invp-in" id="inv-target" style="flex:1;min-width:170px" title="فاکتور در حسابِ کدام شخص ثبت شود" onchange="invTargetHint()">
+              <option value="">🔄 خودکار — حسابِ هم‌نامِ مشتری</option>
+            </select>
+          </div>
+          <div class="invp-meta-line">
+            <span class="k"><svg class="ico"><use href="#invp-tag"/></svg> به نام دیگر:</span>
+            <input class="invp-in" id="inv-alias" placeholder="اختیاری — خالی یعنی همان نام مشتری" style="flex:1;min-width:170px" autocomplete="off" title="نامی که این فاکتور با آن در جدولِ حساب ثبت می‌شود" oninput="invTargetHint()">
+          </div>
+          <div id="inv-target-note" style="display:none;font-size:.72rem;margin:-2px 0 4px;padding:7px 11px;border-radius:9px;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent);font-weight:700;line-height:1.7"></div>
           <div class="invp-meta-line">
             <span class="k"><svg class="ico"><use href="#invp-hash"/></svg> شماره فاکتور:</span>
             <input class="invp-in" id="inv-number" type="number" min="1" step="1" inputmode="numeric" placeholder="—" style="max-width:110px;font-weight:900;text-align:center" oninput="this.dataset.userSet='1'" title="خودکار پر می‌شود — قبل از ثبت می‌توانید تغییرش دهید">
@@ -18839,7 +18883,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
             </select>
           </div>
           <div class="invp-row">
-            <svg class="ico"><use href="#invp-coin"/></svg><span class="k">فی خرید هر لیتر</span>
+            <svg class="ico"><use href="#invp-price"/></svg><span class="k">فی خرید هر لیتر</span>
             <input class="invp-in" id="inv-price" type="number" min="0" step="any" inputmode="decimal" placeholder="0" oninput="invCalcTotal()">
           </div>
           <div class="invp-row">
@@ -18852,7 +18896,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
           </div>
           <!-- فاکتورِ «فقط مبلغ»: مشتری پول می‌گذارد تا بعداً با نرخ روز تیل ببرد — به عنوان اعتبار (رسید) در حساب او ثبت می‌شود -->
           <div class="invp-row" style="grid-column:1/-1">
-            <svg class="ico"><use href="#invp-coin"/></svg><span class="k">مبلغ بدون تیل (اعتبار)</span>
+            <svg class="ico"><use href="#invp-cash"/></svg><span class="k">مبلغ بدون تیل (اعتبار)</span>
             <input class="invp-in" id="inv-amount" type="number" min="0" step="any" inputmode="decimal" placeholder="0" oninput="invCalcTotal()" title="اگر مشتری فقط پول داده و تیل نبرده، فقط همین کادر را پر کنید — مبلغ به عنوان اعتبار مشتری ذخیره می‌شود">
             <span style="font-size:.64rem;color:#94a3b8">اگر فقط پول گرفته شده (بدون تیل)، فقط همین کادر را پر کنید</span>
           </div>
@@ -18868,7 +18912,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
         </div>
 
         <svg class="invp-station"><use href="#invp-station"/></svg>
-        <div class="invp-stampbox"><div class="invp-stamp-ph">محل مهر</div></div>
+        <div class="invp-stampbox"><div class="invp-stamp-ph"><svg class="ph-ic"><use href="#invp-nozzle"/></svg><span>محل مهر و امضا</span></div></div>
       </div>
     </div>
 
@@ -18877,11 +18921,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
       <button class="inv-btn reset" onclick="invResetForm()">🔄 پاک کردن فرم</button>
     </div>
   </div>
-
-  <!-- خواستهٔ کاربر: این کارت‌ها زیرِ خودِ فاکتور بیایند تا فاکتور بالاتر و زودتر
-       دیده شود (بدون اسکرول‌کردنِ زیاد) — با فاصلهٔ کافی از دکمه‌های بالا تا
-       به آن‌ها نچسبند -->
-  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('invoice')"><span title="🕘 تاریخچهٔ فاکتورها — با تاریخ و روز هفته">🕘 تاریخچهٔ فاکتورها</span><span class="tlc-go"><i>‹</i></span></button>
 
   <!-- کارت‌های آماری -->
   <div class="inv-stats">
@@ -38586,7 +38625,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.224';
+const APP_VERSION = '2.9.225';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -43674,7 +43713,34 @@ function renderInvoices() {
   // فهرست نام قرض‌داران برای پیشنهادِ خودکارِ کادرِ نام مشتری
   const dl = document.getElementById('inv-cust-names');
   if (dl) dl.innerHTML = (DB.debtPersons || []).map(p => '<option value="' + escFa(p.name) + '">').join('');
+  // کشویِ «ثبت در حساب» — با هر رندر تازه می‌شود ولی انتخابِ کاربر حفظ می‌گردد.
+  // وقتی خودِ کشو باز/فوکوس است دست نمی‌خورد تا وسطِ انتخاب بسته نشود.
+  const tsel = document.getElementById('inv-target');
+  if (tsel && document.activeElement !== tsel) {
+    const keep = tsel.value;
+    tsel.innerHTML = '<option value="">🔄 خودکار — حسابِ هم‌نامِ مشتری</option>' +
+      (DB.debtPersons || []).map(p => '<option value="' + escFa(p.id) + '">👤 ' + escFa(p.name || '—') + '</option>').join('');
+    if (keep && Array.prototype.some.call(tsel.options, o => o.value === keep)) tsel.value = keep;
+  }
+  invTargetHint();
   invCalcTotal();
+}
+/* یک خطِ راهنما زیرِ «ثبت در حساب» و «به نام دیگر»: دقیقاً می‌گوید این فاکتور با
+   تایید شدن، در حسابِ چه کسی و به چه نامی می‌نشیند — تا مدیر قبل از ثبت مطمئن شود. */
+function invTargetHint() {
+  const el = document.getElementById('inv-target-note');
+  if (!el) return;
+  const tid   = ((document.getElementById('inv-target') || {}).value || '').trim();
+  const alias = ((document.getElementById('inv-alias') || {}).value || '').trim();
+  const cust  = ((document.getElementById('inv-customer') || {}).value || '').trim();
+  const rowName = alias || cust;
+  if (!tid && !alias && !cust) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  let acc = tid ? ((DB.debtPersons || []).find(x => x.id === tid) || null) : null;
+  if (!acc) acc = _findDebtPersonByName(rowName);
+  el.style.display = '';
+  el.innerHTML = '🧾 با تایید، این فاکتور در حساب «<b>' + escFa((acc && acc.name) || rowName || 'مشتری') + '</b>»' +
+    (acc ? '' : ' <span style="font-weight:600">(حسابِ تازه ساخته می‌شود)</span>') +
+    ' و به نام «<b>' + escFa(rowName || 'مشتری') + '</b>» ثبت می‌شود';
 }
 // پیشنهادِ حسابِ قرض‌دارِ موجود وقتی نامِ مشتری نزدیک به یکی از قرض‌داران است
 function invCustomerSuggest(val) {
@@ -43700,7 +43766,12 @@ function invPickDebtPerson(pid) {
   if (!p) return;
   const ci = document.getElementById('inv-customer'); if (ci) ci.value = p.name;
   if (p.phone) { const ph = document.getElementById('inv-phone'); if (ph && !ph.value.trim()) ph.value = p.phone; }
+  // «همین حساب باشد ✓» از این به بعد واقعاً حساب را قفل می‌کند (نه فقط نام را
+  // کپی می‌کند) — کشویِ «ثبت در حساب» روی همین شخص می‌نشیند.
+  const ts = document.getElementById('inv-target');
+  if (ts && Array.prototype.some.call(ts.options, o => o.value === p.id)) ts.value = p.id;
   invCustomerSuggest(p.name);
+  invTargetHint();
 }
 function invCalcTotal() {
   const price = parseFloat((document.getElementById('inv-price') || {}).value) || 0;
@@ -43722,6 +43793,9 @@ function invSubmit() {
   const amount = parseFloat((document.getElementById('inv-amount') || {}).value);
   const vehicle = (document.getElementById('inv-vehicle').value || '').trim();
   const phone = (document.getElementById('inv-phone').value || '').trim();
+  // حسابِ مقصد و نامِ روی ردیفِ حساب — همان دو کادرِ بالای فرم
+  const targetId = ((document.getElementById('inv-target') || {}).value || '').trim();
+  const alias = ((document.getElementById('inv-alias') || {}).value || '').trim();
   if (!name) { showToast('❌ نام مشتری را وارد کنید', '#e53e3e'); document.getElementById('inv-customer').focus(); return; }
   // باگ 12: فاکتور می‌تواند بخشِ تیل (فی+لیتر → رسید تیل) و بخشِ پول (مبلغ → رسید پول)
   // را با هم داشته باشد. هر کدام که پر شده لحاظ می‌شود؛ حداقل یکی باید باشد.
@@ -43759,6 +43833,8 @@ function invSubmit() {
     by_money: byMoney,                       // فاکتور «فقط مبلغ» — اعتبار مشتری
     vehicle_type: vehicle,
     phone: phone,
+    debt_target_id: targetId || null,        // حسابِ مقصد (خالی = حسابِ هم‌نامِ مشتری)
+    debt_alias: alias,                       // نامِ روی ردیفِ حساب (خالی = نامِ مشتری)
     status: 'pending',                       // پیش‌فرض: در صف تایید
     created_at: new Date().toISOString(),    // خودکار
     // تاریخِ اتوماتِ قابل‌ویرایش: اگر کاربر تغییرش داد همان، وگرنه تاریخ امروز
@@ -43771,10 +43847,12 @@ function invSubmit() {
   showToast('✅ فاکتور شماره ' + n2fa(v.invoice_number) + ' ثبت شد و در صف تایید است', '#38a169');
 }
 function invResetForm(toast) {
-  ['inv-customer', 'inv-price', 'inv-liters', 'inv-amount', 'inv-vehicle', 'inv-phone', 'inv-date'].forEach(id => {
+  ['inv-customer', 'inv-price', 'inv-liters', 'inv-amount', 'inv-vehicle', 'inv-phone', 'inv-date', 'inv-alias'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   const f = document.getElementById('inv-fuel'); if (f) f.value = 'petrol';
+  const t = document.getElementById('inv-target'); if (t) t.value = '';
+  const cs = document.getElementById('inv-cust-suggest'); if (cs) { cs.style.display = 'none'; cs.innerHTML = ''; }
   // شمارهٔ فاکتور به حالت خودکار برگردد تا دوباره با شمارهٔ بعدی پر شود
   const ni = document.getElementById('inv-number'); if (ni) { ni.value = ''; delete ni.dataset.userSet; }
   renderInvoices();
@@ -43872,27 +43950,41 @@ function invRenderList() {
 
 // ── مهر داینامیک «تانک تیل یعقوبی» — فقط approved (بدون هیچ مهرِ ثابت در قالب) ──
 // SVG با آیکون تانکر سوخت + افکت جوهرِ مهر واقعی (feTurbulence نقاط خالی جوهر را می‌سازد)
-function invStampHtml(status) {
+/* ── مهرِ «تایید شد» ────────────────────────────────────────────────────────
+   بازسازیِ کامل به شکلِ یک مهرِ واقعی: دو حلقهٔ بیرونی، نامِ پمپ روی کمانِ بالا،
+   تاریخِ فاکتور روی کمانِ پایین، و در وسط نشانِ پمپ + کلمهٔ «تایید شد» داخل یک
+   حلقهٔ سوم. طرحِ قبلی سه سطر نوشتهٔ صاف با یک شکلِ نامفهوم (تانکر) بود که صاحب
+   ریپو گفت معنی‌اش را نمی‌فهمد. */
+function invStampHtml(status, v) {
   if (status !== 'approved') return '';
+  const dt = ((v && v.date_sh) || '').trim();
   return `<div class="inv-stamp" aria-hidden="true">
-  <svg viewBox="0 0 190 190" font-family="'Vazirmatn',sans-serif">
-    <defs><filter id="invInkFx" x="-15%" y="-15%" width="130%" height="130%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="2" seed="6" result="n"/>
-      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.6 1.9" result="tex"/>
-      <feComposite in="SourceGraphic" in2="tex" operator="in"/>
-    </filter></defs>
-    <g filter="url(#invInkFx)">
-      <circle cx="95" cy="95" r="88" fill="none" stroke="#1c53c9" stroke-width="6"/>
-      <circle cx="95" cy="95" r="73" fill="none" stroke="#1c53c9" stroke-dasharray="6 5" stroke-width="1.8"/>
-      <g transform="translate(53,37)" fill="none" stroke="#1c53c9" stroke-width="3.3" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="0" y="3" width="49" height="17" rx="8.5"/>
-        <path d="M49 7h13l14 9v7h-8"/>
-        <path d="M49 23h11"/>
-        <circle cx="12" cy="26" r="4.2"/><circle cx="30" cy="26" r="4.2"/><circle cx="66" cy="26" r="4.2"/>
+  <svg viewBox="0 0 200 200" font-family="'Vazirmatn',sans-serif">
+    <defs>
+      <filter id="invInkFx" x="-15%" y="-15%" width="130%" height="130%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="9" result="n"/>
+        <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.5 1.85" result="tex"/>
+        <feComposite in="SourceGraphic" in2="tex" operator="in"/>
+      </filter>
+      <path id="invStampArcTop" d="M24 100a76 76 0 0 1 152 0" fill="none"/>
+      <path id="invStampArcBot" d="M32 100a68 68 0 0 0 136 0" fill="none"/>
+    </defs>
+    <g filter="url(#invInkFx)" stroke="#1c53c9" fill="none">
+      <circle cx="100" cy="100" r="94" stroke-width="5"/>
+      <circle cx="100" cy="100" r="85" stroke-width="1.8"/>
+      <circle cx="100" cy="100" r="59" stroke-width="2.4"/>
+      <path d="M14 100h8M178 100h8" stroke-width="4" stroke-linecap="round"/>
+      <g transform="translate(84,48) scale(1.32)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3.6 21h10.8"/>
+        <path d="M5.6 21V5.4a2.4 2.4 0 0 1 2.4-2.4h2a2.4 2.4 0 0 1 2.4 2.4V21"/>
+        <rect x="7" y="5.6" width="4" height="3.4" rx="1"/>
+        <path d="M13.4 8.4h2.2a2.4 2.4 0 0 1 2.4 2.4v6.4a1.7 1.7 0 0 0 3.4 0v-4.6"/>
       </g>
-      <text x="95" y="104" text-anchor="middle" font-size="26" font-weight="900" fill="#1c53c9">تانک تیل</text>
-      <text x="95" y="132" text-anchor="middle" font-size="24" font-weight="900" fill="#1c53c9">یعقوبی</text>
-      <text x="95" y="157" text-anchor="middle" font-size="11" font-weight="800" letter-spacing="3" fill="#1c53c9">★ تایید شد ★</text>
+      <g fill="#1c53c9" stroke="none" text-anchor="middle" font-weight="900">
+        <text font-size="19" letter-spacing="1"><textPath href="#invStampArcTop" startOffset="50%">پمپ یعقوبی</textPath></text>
+        <text font-size="14" letter-spacing="1"><textPath href="#invStampArcBot" startOffset="50%">${escFa(dt) || 'فاکتور رسمی'}</textPath></text>
+        <text x="100" y="128" font-size="22">تایید شد</text>
+      </g>
     </g>
   </svg></div>`;
 }
@@ -43937,14 +44029,14 @@ function _invPaperHtml(v, opts) {
         ${edit ? `
         <!-- خواستهٔ صاحب ریپو: بشود همین فاکتور را با نامِ دیگر و در حسابِ دیگری ثبت کرد -->
         <div class="invp-meta-line">
-          <span class="k"><svg class="ico"><use href="#invp-person"/></svg> ثبت در حساب:</span>
+          <span class="k"><svg class="ico"><use href="#invp-ledger"/></svg> ثبت در حساب:</span>
           <select class="invp-in" id="invd-target" style="flex:1;min-width:150px">
             <option value=""${!v.debt_target_id ? ' selected' : ''}>🔄 خودکار — حسابِ هم‌نامِ مشتری</option>
             ${(DB.debtPersons || []).map(p => `<option value="${escFa(p.id)}"${v.debt_target_id === p.id ? ' selected' : ''}>👤 ${escFa(p.name || '—')}</option>`).join('')}
           </select>
         </div>
         <div class="invp-meta-line">
-          <span class="k"><svg class="ico"><use href="#invp-hash"/></svg> به نام دیگر:</span>
+          <span class="k"><svg class="ico"><use href="#invp-tag"/></svg> به نام دیگر:</span>
           <input class="invp-in" id="invd-alias" value="${escFa(v.debt_alias || '')}" placeholder="اختیاری — خالی بماند یعنی همان نام مشتری" style="flex:1;min-width:150px">
         </div>` : ''}
       </div>
@@ -43953,7 +44045,7 @@ function _invPaperHtml(v, opts) {
         <div class="invp-row"><svg class="ico"><use href="#invp-pump"/></svg><span class="k">نوع تیل</span>
           ${edit ? `<select class="invp-in" id="invd-fuel"><option value="petrol"${v.fuel_type !== 'diesel' ? ' selected' : ''}>⛽ پطرول</option><option value="diesel"${v.fuel_type === 'diesel' ? ' selected' : ''}>🟤 دیزل</option></select>` : `<span class="v">${_invFuelLabel(v.fuel_type)}</span>`}
         </div>
-        <div class="invp-row"><svg class="ico"><use href="#invp-coin"/></svg><span class="k">فی خرید هر لیتر</span>
+        <div class="invp-row"><svg class="ico"><use href="#invp-price"/></svg><span class="k">فی خرید هر لیتر</span>
           ${edit ? `<input class="invp-in" id="invd-price" type="number" min="0" step="any" value="${v.price_per_liter}">` : `<span class="v">${n2fa(v.price_per_liter)}</span>`}<span style="font-size:.72rem;color:#64748b">افغانی</span>
         </div>
         <div class="invp-row"><svg class="ico"><use href="#invp-drop"/></svg><span class="k">مقدار خرید (رسید تیل)</span>
@@ -43962,7 +44054,7 @@ function _invPaperHtml(v, opts) {
         <div class="invp-row"><svg class="ico"><use href="#invp-car"/></svg><span class="k">نوع ماشین</span>
           ${edit ? `<input class="invp-in" id="invd-vehicle" value="${escFa(v.vehicle_type)}">` : `<span class="v">${escFa(v.vehicle_type) || '—'}</span>`}
         </div>
-        <div class="invp-row" style="grid-column:1/-1"><svg class="ico"><use href="#invp-coin"/></svg><span class="k">مبلغ (رسید پول / اعتبار)</span>
+        <div class="invp-row" style="grid-column:1/-1"><svg class="ico"><use href="#invp-cash"/></svg><span class="k">مبلغ (رسید پول / اعتبار)</span>
           ${edit ? `<input class="invp-in" id="invd-amount" type="number" min="0" step="any" value="${parseFloat(v.amount) || 0}">` : `<span class="v">${n2fa(parseFloat(v.amount) || 0)}</span>`}<span style="font-size:.72rem;color:#64748b">افغانی — می‌تواند همراهِ تیل باشد یا تنها</span>
         </div>
         <div class="invp-row" style="grid-column:1/-1"><svg class="ico"><use href="#invp-phone"/></svg><span class="k">شماره تماس</span>
@@ -43974,7 +44066,7 @@ function _invPaperHtml(v, opts) {
         <span class="tv">${n2fa(Math.round(_invTotal(v) * 100) / 100)} افغانی</span>
       </div>
       <svg class="invp-station"><use href="#invp-station"/></svg>
-      <div class="invp-stampbox">${(!forPrint && v.status === 'approved') ? invStampHtml(v.status) : '<div class="invp-stamp-ph">محل مهر</div>'}</div>
+      <div class="invp-stampbox">${(!forPrint && v.status === 'approved') ? invStampHtml(v.status, v) : '<div class="invp-stamp-ph"><svg class="ph-ic"><use href="#invp-nozzle"/></svg><span>محل مهر و امضا</span></div>'}</div>
     </div>
   </div>`;
 }
@@ -44304,7 +44396,8 @@ ${css}
 .invp-total .k .ico{width:4.2mm;height:4.2mm}
 .invp-total .tv{font-size:11pt}
 .invp-stampbox{width:26mm;height:26mm;bottom:3.5mm;right:4mm}
-.invp-stamp-ph{font-size:6pt;border-width:1px}
+.invp-stamp-ph{font-size:6pt;border-width:1px;gap:1mm}
+.invp-stamp-ph .ph-ic{width:5.5mm;height:5.5mm}
 .invp-station{width:40mm;bottom:3mm;left:4mm}
 .pdf-note{position:absolute;bottom:3mm;right:33mm;left:46mm;text-align:center;font-size:5.6pt;color:#94a3b8}
 @media print{
