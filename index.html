@@ -26983,6 +26983,10 @@ function updatePersonRasidFuel(fuel, val) {
   const v = parseFloat(val)||0;
   if (fuel === 'diesel') { if (money) acct.rasidMoneyD = v; else acct.rasidFuelD = v; }
   else { if (money) acct.rasidMoneyP = v; else acct.rasidFuelP = v; }
+  /* تاریخِ همین رسید ثبت شود تا زیرِ جدول بشود گفت «این تاریخ، این مقدار رسید
+     داده شد». فقط یک تاریخ است — هیچ عددِ حسابی با آن عوض نمی‌شود. */
+  if (!acct.rasidAt || typeof acct.rasidAt !== 'object') acct.rasidAt = {};
+  acct.rasidAt[(money ? 'money' : 'fuel') + (fuel === 'diesel' ? 'D' : 'P')] = v ? persianDate() : '';
   save(); _updatePersonTotals(person);
   // 📉 همین‌که رسید ثبت شد، تاریخ و نرخِ همان روز روی قرض‌های تسویه‌شده قفل می‌شود
   // (فقط سه فیلدِ تازه — هیچ عددِ حسابی دست نمی‌خورد). ← گزارشِ «زیان افزایش قیمت»
@@ -27489,6 +27493,54 @@ function lossOpenPerson(pid) {
   } catch (e) {}
 }
 
+/* ═══ ثبتِ رسیدهای سربرگ و فیصدی‌شان ════════════════════════════════════════
+   خواستهٔ صاحب ریپو: «وقتی رسید را در سربرگ می‌گیرم، پایین گفته نمی‌شود این
+   تاریخ این مقدار رسید داده شد، و برای فیصدی هم گفته نمی‌شود چقدر از چه مقداری
+   کم شد.»
+
+   چرا ردیفِ جدول نشد: فیصدی روی «رسیدِ سربرگ» حساب می‌شود (فیصدی = رسید × ٪) و
+   الباقی = برد + فیصدی − رسید. اگر رسیدِ سربرگ به یک ردیفِ جدول تبدیل می‌شد،
+   خودِ rasid صفر می‌شد و با آن فیصدی هم صفر می‌شد — یعنی الباقیِ همهٔ حساب‌ها
+   عوض می‌شد. پس این‌جا فقط «گفته» می‌شود، بدون دست زدن به هیچ عددی.
+
+   نتیجهٔ خالص هم نوشته می‌شود: چون الباقی = برد + فیصدی − رسید، اثرِ واقعیِ این
+   رسید روی حساب برابرِ (رسید − فیصدی) است. ═══ */
+function _renderRasidLog(acct, o) {
+  const tbody = document.getElementById('pm-body');
+  if (!tbody) return;
+  // ردیف‌های خودکارِ قبلی برداشته شوند (ردیف‌های واقعی data-idx دارند و دست نمی‌خورند)
+  tbody.querySelectorAll('tr.pm-auto-row').forEach(tr => tr.remove());
+  const key = (o.money ? 'money' : 'fuel');
+  const at = (acct && acct.rasidAt) || {};
+  /* ستون‌ها زنده‌اند: «نوع تیل» در حسابِ جداگانهٔ پطرول/دیزل برداشته می‌شود و
+     «رسید»/«رسید تیل» با واحد جابه‌جا می‌شوند. پس به‌جای شمردنِ ستون‌ها، از روی
+     خودِ سرستون‌های همین لحظه ساخته می‌شود تا هیچ‌وقت کج نیفتد. */
+  const heads = Array.prototype.map.call(
+    document.querySelectorAll('#pm-tbl thead th'), th => th.textContent.trim());
+  if (!heads.length) return;
+
+  const one = (amount, comm, icon, label, when) => {
+    if (!amount) return;
+    const net = o.rnd(amount - comm);
+    const tr = document.createElement('tr');
+    tr.className = 'pm-auto-row';
+    tr.title = 'این ردیف خودکار است — از «مقدار رسید» سربرگ می‌آید و در جدول قابل ویرایش نیست';
+    tr.innerHTML = heads.map(h => {
+      if (h === '#') return '<td class="pmar-mark">📌</td>';
+      if (h === 'تاریخ') return '<td>' + escFa(when || '—') + '</td>';
+      if (h === 'نام') return '<td class="pmar-name">' + icon + ' رسید ' + escFa(label) +
+        (o.pct ? '<span class="pmar-sub">فیصدی ' + n2fa(o.rnd(o.pct)) + '٪ از ' + n2fa(o.rnd(amount)) +
+                 ' = ' + n2fa(o.rnd(comm)) + ' کم شد</span>' : '') + '</td>';
+      if (h === 'رسید' || h === 'رسید تیل') return '<td class="pmar-val">' + n2fa(o.rnd(amount)) + '</td>';
+      if (h === 'الباقی') return '<td class="pmar-net">' + n2fa(net) + '</td>';
+      return '<td></td>';
+    }).join('');
+    tbody.appendChild(tr);
+  };
+  const uLbl = o.money ? 'پول' : 'تیل';
+  one(o.rasidP, o.commP, '⛽', uLbl + ' پطرول', at[key + 'P']);
+  one(o.rasidD, o.commD, '🟤', uLbl + ' دیزل', at[key + 'D']);
+}
 function _updatePersonTotals(person) {
   const acct = _acctOf(person);
   const rows = _acctRows(person, acct);
@@ -27580,6 +27632,8 @@ function _updatePersonTotals(person) {
   setL('pm-p-comm-l', 'فیصدی ما (' + n2fa(rnd(pct)) + '٪)');
   setL('pm-d-comm-l', 'فیصدی ما (' + n2fa(rnd(pct)) + '٪)');
   setL('pm-bord-sum-l', money ? 'جمله کل برد پول' : 'جمله کل برد تیل');
+  // ثبتِ تاریخ‌دارِ رسیدهای سربرگ و فیصدی‌شان، درست زیرِ جدول
+  try { _renderRasidLog(acct, { money, unit, pct, rasidP, rasidD, commP, commD, rnd }); } catch (e) {}
   const modeBtn = document.getElementById('pm-mode-btn');
   if (modeBtn) modeBtn.textContent = money ? '🔁 تیل' : '🔁 پول';
   // در «واحد پول»، کادر «مقدار رسید پول» مجموعِ رسیدِ دستیِ هدر + رسیدهای داخلِ جدول را
@@ -39108,7 +39162,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.242';
+const APP_VERSION = '2.9.243';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -47126,6 +47180,22 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
   font-weight:800; font-size:0.82rem; cursor:pointer;
 }
 #uf-bar button:active{ transform:scale(.94); }
+
+/* ردیفِ خودکارِ «رسیدِ سربرگ» داخلِ خودِ جدول — خواندنی، با ته‌رنگِ ملایم تا از
+   ردیف‌های تایپیِ خودتان تشخیص داده شود. هیچ داده‌ای پشتش نیست: از «مقدار رسید»
+   سربرگ ساخته می‌شود و در جمع‌های جدول شمرده نمی‌شود (جمع‌ها از خودِ ردیف‌ها
+   می‌آیند و الباقیِ سربرگ از قبل این رسید را حساب کرده است). */
+.xls-tbl tr.pm-auto-row td{
+  background:color-mix(in srgb, var(--accent) 9%, transparent);
+  font-weight:800; color:var(--txt); padding:8px 7px; cursor:default;
+}
+.xls-tbl tr.pm-auto-row .pmar-mark{ color:var(--accent); }
+.xls-tbl tr.pm-auto-row .pmar-name{ text-align:center; line-height:1.7; }
+.xls-tbl tr.pm-auto-row .pmar-sub{
+  display:block; font-size:0.68rem; font-weight:700; color:var(--muted); margin-top:2px;
+}
+.xls-tbl tr.pm-auto-row .pmar-val{ color:var(--green); }
+.xls-tbl tr.pm-auto-row .pmar-net{ color:var(--blue); }
 </style>
 
 </body>
