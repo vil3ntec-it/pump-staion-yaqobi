@@ -19797,8 +19797,10 @@ body.viewer-mode .inv-admin-only{display:none!important}
         </div>
       </div>
     </div>
-    <div class="modal-summary">
-      <div class="msumbox"><div class="ml">فیصدی ٪ (از مقدار رسید تیل کم می‌شود)</div><input type="number" class="mv acc pm-edit" id="pm-percent" placeholder="0" style="background:transparent;border:none;border-bottom:1px dashed var(--accent);text-align:center;width:100%" oninput="updatePersonPercent(this.value)"></div>
+    <div class="modal-summary" id="pm-pct-row">
+      <div class="msumbox"><div class="ml">⛽ فیصدی پطرول ٪</div><input type="number" class="mv acc pm-edit" id="pm-percent" placeholder="0" title="فیصدیِ پطرول — از مقدار رسیدِ پطرول کم می‌شود" style="background:transparent;border:none;border-bottom:1px dashed var(--accent);text-align:center;width:100%" oninput="updatePersonPercent(this.value,'petrol')"></div>
+      <div class="msumbox"><div class="ml">🟤 فیصدی دیزل ٪</div><input type="number" class="mv acc pm-edit" id="pm-percent-d" placeholder="0" title="فیصدیِ دیزل — از مقدار رسیدِ دیزل کم می‌شود" style="background:transparent;border:none;border-bottom:1px dashed var(--accent);text-align:center;width:100%" oninput="updatePersonPercent(this.value,'diesel')"></div>
+      <div class="msumbox pm-pct-lock"><button type="button" class="pm-pct-link" id="pm-pct-link" onclick="togglePersonPctLink()" title="قفلِ بسته: هر چه در یکی بنویسید در دیگری هم می‌نشیند. قفلِ باز: هر تیل فیصدیِ خودش را دارد و می‌توانید یکی را خالی بگذارید (برای یکی فیصدی بدهید، برای دیگری نه).">🔒 فیصدیِ هر دو یکی</button></div>
     </div>
     <div class="modal-body">
       <div id="pm-bigname" style="text-align:center;font-size:1.9rem;font-weight:900;color:var(--accent);padding:6px 10px;margin-bottom:8px;border-bottom:2px solid var(--border)"></div>
@@ -25040,6 +25042,46 @@ function _acctModeMoney(person, acct){
   return m === 'money';
 }
 /** واحدِ یک حسابِ مشخص را می‌نویسد (حسابِ اصلی = خودِ شخص) */
+/* ── فیصدیِ جدا برای پطرول و دیزل ─────────────────────────────────────────────
+   تا پیش از این هر حساب یک «فیصدی» داشت و از رسیدِ هر دو تیل همان یکی کم می‌شد.
+   حالا هر تیل فیصدیِ خودش را دارد: percentP (پطرول) و percentD (دیزل).
+   • حساب‌های قدیمی فقط percent دارند → تا وقتی دست نخورده‌اند، هر دو تیل همان را
+     می‌خوانند؛ پس هیچ عددی در هیچ حسابِ قدیمی جابه‌جا نمی‌شود.
+   • «🔗 قفل» (pctLink، پیش‌فرض روشن) یعنی هر چه در یکی بنویسی در دیگری هم بنشیند —
+     همان رفتارِ قبلی برای کسی که یک فیصدی می‌خواهد.
+   • قفل که باز شد، هر کادر مالِ خودش است؛ خالی گذاشتنِ یکی یعنی «برای این تیل
+     فیصدی نیست» (برای یکی بده، برای دیگری نه).
+   چون خالی‌گذاشتن باید واقعاً صفر بماند، اولین باری که دست به فیصدی می‌خورد هر دو
+   کادر صریح نوشته می‌شوند (_pctSplit) تا فیصدیِ مشترکِ قدیمی دوباره زنده نشود. */
+function _pctKey(fuel){ return (fuel === 'diesel' || fuel === 'D') ? 'percentD' : 'percentP'; }
+function _acctPct(a, fuel){
+  if (!a) return 0;
+  var v = a[_pctKey(fuel)];
+  if (v !== undefined && v !== null) return parseFloat(v) || 0;
+  return parseFloat(a.percent) || 0;      // حسابِ قدیمی: همان فیصدیِ مشترک
+}
+function _acctPctRaw(a, fuel){            // آنچه در کادر نوشته می‌شود (خالی = بی‌فیصدی)
+  if (!a) return '';
+  var v = a[_pctKey(fuel)];
+  var x = (v !== undefined && v !== null) ? v : a.percent;
+  return (x === '' || x == null || !(parseFloat(x) || 0)) ? '' : x;
+}
+function _pctLinked(a){ return !(a && a.pctLink === false); }
+function _pctSplit(a){
+  if (!a) return;
+  var base = parseFloat(a.percent) || 0;
+  if (a.percentP === undefined || a.percentP === null) a.percentP = base;
+  if (a.percentD === undefined || a.percentD === null) a.percentD = base;
+}
+function _setAcctPct(a, fuel, val){
+  if (!a) return;
+  _pctSplit(a);
+  var num = (val === '' || val == null) ? '' : (parseFloat(val) || 0);
+  if (_pctLinked(a)) { a.percentP = num; a.percentD = num; }
+  else a[_pctKey(fuel)] = num;
+  // فیصدیِ تک‌خانهٔ قدیمی هم‌گام می‌ماند تا فایل‌های کپی و نسخه‌های پیشین چیزی گم نکنند
+  a.percent = (parseFloat(a.percentP) || 0) || (parseFloat(a.percentD) || 0);
+}
 function _setAcctMode(acct, money){ if (acct) acct.mode = money ? 'money' : 'fuel'; }
 /* هر حساب فرعیِ بی‌واحد، واحدِ شخص را می‌گیرد — یک‌بار، هنگام بالا آمدنِ برنامه.
    بعد از آن هر حساب مستقل است و عوض کردنِ یکی روی بقیه اثر ندارد. */
@@ -25128,12 +25170,13 @@ function debtFuelStatus(p) {
     if (!a) return;
     // لیترِ ردیف‌های دفترِ پول در «تیلِ مصرف‌شده» شمرده نمی‌شود (دو دفتر جدا)
     const t = _splitTotals((a.rows || []).concat((a.moneyRows || []).map(_noFuel)));
-    const eff = 1 - ((parseFloat(a.percent) || 0) / 100);   // سهم کمیشن کم می‌شود
-    check((parseFloat(a.rasidFuelP)  || 0) * eff, t.petrol.fuel,    'fuel');
-    check((parseFloat(a.rasidFuelD)  || 0) * eff, t.diesel.fuel,    'fuel');
+    const effP = 1 - (_acctPct(a, 'petrol') / 100);   // فیصدیِ هر تیل، جدا کم می‌شود
+    const effD = 1 - (_acctPct(a, 'diesel') / 100);
+    check((parseFloat(a.rasidFuelP)  || 0) * effP, t.petrol.fuel,    'fuel');
+    check((parseFloat(a.rasidFuelD)  || 0) * effD, t.diesel.fuel,    'fuel');
     // رسیدهای داخل جدول (پول آورده‌شده) هم جزو رسید پول حساب می‌شود — مثل الباقی حساب
-    check((parseFloat(a.rasidMoneyP) || 0) * eff + t.petrol.rasid, t.petrol.bardagi, 'money');
-    check((parseFloat(a.rasidMoneyD) || 0) * eff + t.diesel.rasid, t.diesel.bardagi, 'money');
+    check((parseFloat(a.rasidMoneyP) || 0) * effP + t.petrol.rasid, t.petrol.bardagi, 'money');
+    check((parseFloat(a.rasidMoneyD) || 0) * effD + t.diesel.rasid, t.diesel.bardagi, 'money');
   });
   return { st: worst, kinds };
 }
@@ -26408,13 +26451,14 @@ function _renderStackedAccounts(person) {
 
     // محاسبات پطرول/دیزل برای این section
     const st = _splitTotals(rows);
-    const pct = parseFloat(sec.acct.percent || person.percent) || 0;
+    const pctP = _acctPct(sec.acct, 'petrol') || _acctPct(person, 'petrol');
+    const pctD = _acctPct(sec.acct, 'diesel') || _acctPct(person, 'diesel');
     const money = _acctModeMoney(person, sec.acct);
     const rasidP = money ? (parseFloat(sec.acct.rasidMoneyP)||0) : (parseFloat(sec.acct.rasidFuelP)||0);
     const rasidD = money ? (parseFloat(sec.acct.rasidMoneyD)||0) : (parseFloat(sec.acct.rasidFuelD)||0);
     const bordP = money ? st.petrol.bardagi : st.petrol.fuel;
     const bordD = money ? st.diesel.bardagi : st.diesel.fuel;
-    const commP = rasidP * pct / 100, commD = rasidD * pct / 100;
+    const commP = rasidP * pctP / 100, commD = rasidD * pctD / 100;
     // رسیدهای داخل جدول (پول آورده‌شده) هم در حالت پولی از الباقی کم می‌شود
     const remP = rasidP + (money ? st.petrol.rasid : 0) - bordP - commP,
           remD = rasidD + (money ? st.diesel.rasid : 0) - bordD - commD;
@@ -26558,13 +26602,14 @@ function pdfStackedAcct(pid, acctId) {
   const rows = _acctRows(person, acct);
   const t = _splitTotals(rows);
   const money = _acctModeMoney(person, acct);
-  const pct = parseFloat(acct.percent || person.percent)||0;
+  const pctP = _acctPct(acct, 'petrol') || _acctPct(person, 'petrol');
+  const pctD = _acctPct(acct, 'diesel') || _acctPct(person, 'diesel');
   const unit = money ? 'افغانی' : 'ل';
   const rasidP = money ? (parseFloat(acct.rasidMoneyP)||0) : (parseFloat(acct.rasidFuelP)||0);
   const rasidD = money ? (parseFloat(acct.rasidMoneyD)||0) : (parseFloat(acct.rasidFuelD)||0);
   const bordP = money ? t.petrol.bardagi : t.petrol.fuel;
   const bordD = money ? t.diesel.bardagi : t.diesel.fuel;
-  const commP = rasidP*pct/100, commD = rasidD*pct/100;
+  const commP = rasidP*pctP/100, commD = rasidD*pctD/100;
   const rnd = x => Math.round(x*100)/100;
   const ft = t.all;
   const printDate = toEnDigits(new Date().toLocaleDateString('fa-IR'));
@@ -26651,7 +26696,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
     <div class="split-grid">
       <div class="sum-box"><div class="l">رسید</div><div class="v" style="color:#276749">${n2fa(rnd(rasidP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">برد</div><div class="v" style="color:#c07700">${n2fa(rnd(bordP))} ${unit}</div></div>
-      <div class="sum-box"><div class="l">فیصدی (${n2fa(pct)}٪)</div><div class="v" style="color:#805ad5">${n2fa(rnd(commP))} ${unit}</div></div>
+      <div class="sum-box"><div class="l">فیصدی (${n2fa(pctP)}٪)</div><div class="v" style="color:#805ad5">${n2fa(rnd(commP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">الباقی</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(rasidP-bordP-commP))} ${unit}</div></div>
     </div>
   </div>
@@ -26660,7 +26705,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
     <div class="split-grid">
       <div class="sum-box"><div class="l">رسید</div><div class="v" style="color:#276749">${n2fa(rnd(rasidD))} ${unit}</div></div>
       <div class="sum-box"><div class="l">برد</div><div class="v" style="color:#c07700">${n2fa(rnd(bordD))} ${unit}</div></div>
-      <div class="sum-box"><div class="l">فیصدی (${n2fa(pct)}٪)</div><div class="v" style="color:#805ad5">${n2fa(rnd(commD))} ${unit}</div></div>
+      <div class="sum-box"><div class="l">فیصدی (${n2fa(pctD)}٪)</div><div class="v" style="color:#805ad5">${n2fa(rnd(commD))} ${unit}</div></div>
       <div class="sum-box"><div class="l">الباقی</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(rasidD-bordD-commD))} ${unit}</div></div>
     </div>
   </div>
@@ -27019,10 +27064,22 @@ function togglePersonMode() {
   if (currentRole !== 'viewer') save();
   renderPersonRows(person);
 }
-function updatePersonPercent(val) {
+function updatePersonPercent(val, fuel) {
   const person = _curPerson(); if (!person) return;
-  _acctOf(person).percent = parseFloat(val)||0;
+  _setAcctPct(_acctOf(person), fuel || 'petrol', val);
   save(); _updatePersonTotals(person);
+}
+/* قفلِ فیصدی: بسته = یک فیصدی برای هر دو تیل (رفتارِ قبلی)، باز = هر تیل جدا.
+   با بستنِ دوبارهٔ قفل، فیصدیِ پطرول روی دیزل هم می‌نشیند تا یکی شوند. */
+function togglePersonPctLink() {
+  const person = _curPerson(); if (!person) return;
+  const acct = _acctOf(person);
+  _pctSplit(acct);
+  acct.pctLink = !_pctLinked(acct);
+  if (acct.pctLink) acct.percentD = acct.percentP;
+  acct.percent = (parseFloat(acct.percentP) || 0) || (parseFloat(acct.percentD) || 0);
+  if (currentRole !== 'viewer') save();
+  _updatePersonTotals(person);
 }
 function updatePersonMoney(val) {
   const person = _curPerson(); if (!person) return;
@@ -27519,33 +27576,36 @@ function _renderRasidLog(acct, o) {
     document.querySelectorAll('#pm-tbl thead th'), th => th.textContent.trim());
   if (!heads.length) return;
 
-  const one = (amount, comm, icon, label, when) => {
+  /* خواستهٔ صاحب ریپو: در ستونِ «نام» هیچ توضیحی نوشته نشود — فقط «فیصدی از پطرول».
+     مقداری که از رسید کم شده در ستونِ «مقدار بردگی» می‌نشیند (چون فیصدی هم مثل
+     بردگی به حسابِ ما اضافه می‌شود) و خودِ رسید در ستونِ رسید. الباقی نوشته نمی‌شود
+     چون در سربرگ و فوترِ جدول خودکار حساب شده است. */
+  const one = (ftype, amount, comm, pct, icon, label, when) => {
     if (!amount) return;
-    const net = o.rnd(amount - comm);
+    // در «حساب جداگانه پطرول/دیزل» فقط ردیفِ همان تیل بیاید
+    if (currentPersonFilter !== 'all' && currentPersonFilter !== ftype) return;
     const tr = document.createElement('tr');
     tr.className = 'pm-auto-row';
     tr.title = 'این ردیف خودکار است — از «مقدار رسید» سربرگ می‌آید و در جدول قابل ویرایش نیست';
     tr.innerHTML = heads.map(h => {
       if (h === '#') return '<td class="pmar-mark">📌</td>';
       if (h === 'تاریخ') return '<td>' + escFa(when || '—') + '</td>';
-      if (h === 'نام') return '<td class="pmar-name">' + icon + ' رسید ' + escFa(label) +
-        (o.pct ? '<span class="pmar-sub">فیصدی ' + n2fa(o.rnd(o.pct)) + '٪ از ' + n2fa(o.rnd(amount)) +
-                 ' = ' + n2fa(o.rnd(comm)) + ' کم شد</span>' : '') + '</td>';
+      if (h === 'نام') return '<td class="pmar-name">' + icon + ' ' +
+        escFa(pct ? ('فیصدی از ' + label) : ('رسید ' + label)) + '</td>';
+      if (h === 'مقدار بردگی') return '<td class="pmar-comm">' + (comm ? n2fa(o.rnd(comm)) : '') + '</td>';
       if (h === 'رسید' || h === 'رسید تیل') return '<td class="pmar-val">' + n2fa(o.rnd(amount)) + '</td>';
-      if (h === 'الباقی') return '<td class="pmar-net">' + n2fa(net) + '</td>';
       return '<td></td>';
     }).join('');
     tbody.appendChild(tr);
   };
-  const uLbl = o.money ? 'پول' : 'تیل';
-  one(o.rasidP, o.commP, '⛽', uLbl + ' پطرول', at[key + 'P']);
-  one(o.rasidD, o.commD, '🟤', uLbl + ' دیزل', at[key + 'D']);
+  one('petrol', o.rasidP, o.commP, o.pctP, '⛽', 'پطرول', at[key + 'P']);
+  one('diesel', o.rasidD, o.commD, o.pctD, '🟤', 'دیزل', at[key + 'D']);
 }
 function _updatePersonTotals(person) {
   const acct = _acctOf(person);
   const rows = _acctRows(person, acct);
   const t = _splitTotals(rows);
-  const pct = parseFloat(acct.percent)||0;
+  const pctP = _acctPct(acct, 'petrol'), pctD = _acctPct(acct, 'diesel');
   const money = _acctModeMoney(person, acct);
   const unit = money ? ' افغانی' : ' ل';
   const setV = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
@@ -27611,7 +27671,7 @@ function _updatePersonTotals(person) {
   // برد = مجموع لیتر (+ معادلِ لیترِ بردگیِ پولی) در حالت تیل؛ مجموع بردگی/پول در حالت پول
   const bordP = money ? t.petrol.bardagi : (t.petrol.fuel + _moneyBardLP);
   const bordD = money ? t.diesel.bardagi : (t.diesel.fuel + _moneyBardLD);
-  const commP = rasidP * pct/100, commD = rasidD * pct/100;
+  const commP = rasidP * pctP/100, commD = rasidD * pctD/100;
   const rnd = x => Math.round(x*100)/100;
   // الباقی: حالت پول → رسیدِ پول + معادلِ پولیِ رسید تیل کم می‌شوند؛ حالت تیل → رسیدِ پولی (معادلِ لیتر)
   const remP = bordP + commP - rasidP - (money ? (t.petrol.rasid + _rasidFuelMoneyP) : _rasidMoneyLP),
@@ -27629,11 +27689,11 @@ function _updatePersonTotals(person) {
   setL('pm-p-rem-l', money ? 'الباقی پول' : 'الباقی تیل');
   setL('pm-d-rem-l', money ? 'الباقی پول' : 'الباقی تیل');
   // خواستهٔ کاربر: «فیصدی ما (6٪)» — درصدِ واقعیِ همین حساب داینامیک داخل پرانتز
-  setL('pm-p-comm-l', 'فیصدی ما (' + n2fa(rnd(pct)) + '٪)');
-  setL('pm-d-comm-l', 'فیصدی ما (' + n2fa(rnd(pct)) + '٪)');
+  setL('pm-p-comm-l', 'فیصدی ما (' + n2fa(rnd(pctP)) + '٪)');
+  setL('pm-d-comm-l', 'فیصدی ما (' + n2fa(rnd(pctD)) + '٪)');
   setL('pm-bord-sum-l', money ? 'جمله کل برد پول' : 'جمله کل برد تیل');
   // ثبتِ تاریخ‌دارِ رسیدهای سربرگ و فیصدی‌شان، درست زیرِ جدول
-  try { _renderRasidLog(acct, { money, unit, pct, rasidP, rasidD, commP, commD, rnd }); } catch (e) {}
+  try { _renderRasidLog(acct, { money, unit, pctP, pctD, rasidP, rasidD, commP, commD, rnd }); } catch (e) {}
   const modeBtn = document.getElementById('pm-mode-btn');
   if (modeBtn) modeBtn.textContent = money ? '🔁 تیل' : '🔁 پول';
   // در «واحد پول»، کادر «مقدار رسید پول» مجموعِ رسیدِ دستیِ هدر + رسیدهای داخلِ جدول را
@@ -27645,7 +27705,14 @@ function _updatePersonTotals(person) {
   // (وگرنه صفر می‌ماند). onfocus فقط سهمِ دستی را نشان می‌دهد و onblur دوباره جمع را می‌نویسد.
   setInput('pm-p-rasidfuel', money ? ((rasidP + t.petrol.rasid)||'') : (rnd(rasidP + _rasidMoneyLP)||''));
   setInput('pm-d-rasidfuel', money ? ((rasidD + t.diesel.rasid)||'') : (rnd(rasidD + _rasidMoneyLD)||''));
-  setInput('pm-percent', acct.percent||'');
+  setInput('pm-percent', _acctPctRaw(acct, 'petrol'));
+  setInput('pm-percent-d', _acctPctRaw(acct, 'diesel'));
+  const pctLinkBtn = document.getElementById('pm-pct-link');
+  if (pctLinkBtn) {
+    const lk = _pctLinked(acct);
+    pctLinkBtn.textContent = lk ? '🔒 فیصدیِ هر دو یکی' : '🔓 فیصدیِ هر کدام جدا';
+    pctLinkBtn.classList.toggle('off', !lk);
+  }
   setInput('pm-money', (acct.moneyDeposit!=null && acct.moneyDeposit!=='') ? acct.moneyDeposit : '');
   setV('pm-p-bord', n2fa(rnd(bordP)));
   setV('pm-d-bord', n2fa(rnd(bordD)));
@@ -27786,7 +27853,10 @@ function newPersonTable() {
     rasidFuelD: filter === 'petrol' ? acct.rasidFuelD : (filter === 'all' ? acct.rasidFuelD : 0),
     rasidMoneyP: filter === 'diesel' ? acct.rasidMoneyP : (filter === 'all' ? acct.rasidMoneyP : 0),
     rasidMoneyD: filter === 'petrol' ? acct.rasidMoneyD : (filter === 'all' ? acct.rasidMoneyD : 0),
-    percent: acct.percent, note: acct.note || '',
+    percent: acct.percent,
+    percentP: _acctPct(acct, 'petrol'), percentD: _acctPct(acct, 'diesel'),
+    pctLink: _pctLinked(acct),
+    note: acct.note || '',
     // «فیِ خرید» (یادداشتِ دستی) هم با آرشیو می‌رود تا در آرشیو هم همان‌جا دیده شود
     buyFeeNote: person.buyFeeNote || '',
     unitMode: _acctModeMoney(person, acct) ? 'money' : 'fuel'
@@ -27874,7 +27944,7 @@ function _renderHistoryPanel(person) {
     const ac = COLORS[hi % COLORS.length];
     const rows = h.rows || [];
     const st = _splitTotals(rows);
-    const pct = parseFloat(h.percent) || 0;
+    const pctP = _acctPct(h, 'petrol'), pctD = _acctPct(h, 'diesel');
     const hMoney = (h.viewMoney != null) ? h.viewMoney : money;
     // آرشیوهای قدیمی «فیِ خرید» را ذخیره نکرده‌اند — از خودِ شخص نشان داده می‌شود
     const hBuyFee = (h.buyFeeNote != null) ? h.buyFeeNote : (person.buyFeeNote || '');
@@ -27888,7 +27958,7 @@ function _renderHistoryPanel(person) {
     // نداشت و انگار «خراب/کار نمی‌کند». (بخش قرض‌داران — خواستهٔ کاربر)
     const rasidRowP = hMoney ? st.petrol.rasid : st.petrol.rasidFuel;
     const rasidRowD = hMoney ? st.diesel.rasid : st.diesel.rasidFuel;
-    const commP = (rasidP + rasidRowP) * pct / 100, commD = (rasidD + rasidRowD) * pct / 100;
+    const commP = (rasidP + rasidRowP) * pctP / 100, commD = (rasidD + rasidRowD) * pctD / 100;
     const remP  = bordP + commP - rasidP - (hMoney ? st.petrol.rasid : 0),
           remD  = bordD + commD - rasidD - (hMoney ? st.diesel.rasid : 0);
     // fuel summary with editable rasid
@@ -27918,8 +27988,10 @@ function _renderHistoryPanel(person) {
         <input value="${escFa(hBuyFee)}" placeholder="مثلاً فی 56 / 57 / 58" title="فقط یادداشت — در هیچ محاسبه‌ای استفاده نمی‌شود"
           style="width:170px;text-align:center;border:1px solid var(--border);border-radius:7px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.76rem;font-weight:700;padding:4px 8px;box-sizing:border-box"
           oninput="updateHistoryBuyFee('${pid}','${h.id}',this.value)">
-        <span style="font-size:0.72rem;color:var(--muted);font-weight:700">فیصدی ٪:</span>
-        <input type="number" value="${pct||''}" placeholder="0" style="width:60px;background:transparent;border:none;border-bottom:1px dashed var(--accent);text-align:center;font-size:0.82rem;font-weight:800;color:var(--accent);font-family:'Vazirmatn',sans-serif" oninput="updateHistoryPercent('${pid}','${h.id}',this.value)">
+        <span style="font-size:0.72rem;color:var(--muted);font-weight:700">فیصدی ٪ ⛽:</span>
+        <input type="number" value="${pctP||''}" placeholder="0" title="فیصدیِ پطرولِ همین آرشیو" style="width:56px;background:transparent;border:none;border-bottom:1px dashed var(--accent);text-align:center;font-size:0.82rem;font-weight:800;color:var(--accent);font-family:'Vazirmatn',sans-serif" oninput="updateHistoryPercent('${pid}','${h.id}',this.value,'petrol')">
+        <span style="font-size:0.72rem;color:var(--muted);font-weight:700">🟤:</span>
+        <input type="number" value="${pctD||''}" placeholder="0" title="فیصدیِ دیزلِ همین آرشیو" style="width:56px;background:transparent;border:none;border-bottom:1px dashed var(--accent);text-align:center;font-size:0.82rem;font-weight:800;color:var(--accent);font-family:'Vazirmatn',sans-serif" oninput="updateHistoryPercent('${pid}','${h.id}',this.value,'diesel')">
         <span style="font-size:0.72rem;color:var(--muted)">جمله برد (پطرول+دیزل): <b style="color:var(--accent)">${n2fa(rnd(bordP+bordD))}${hMoney?' افغانی':' لیتر'}</b></span>
         <span style="font-size:0.72rem;color:var(--muted)">الباقی کل (پطرول+دیزل): <b style="color:var(--blue)">${n2fa(rnd(remP+remD))}${hMoney?' افغانی':' لیتر'}</b></span>
       </div>`;
@@ -28033,7 +28105,12 @@ function restorePersonHistory(pid, hid) {
   const add = (k, v) => { const n = parseFloat(v) || 0; if (n) acct[k] = (parseFloat(acct[k]) || 0) + n; };
   add('rasidFuelP', h.rasidFuelP); add('rasidFuelD', h.rasidFuelD);
   add('rasidMoneyP', h.rasidMoneyP); add('rasidMoneyD', h.rasidMoneyD);
-  if (h.percent != null && !(parseFloat(acct.percent) || 0)) acct.percent = h.percent;
+  // فیصدیِ آرشیو فقط برای تیلی برمی‌گردد که حسابِ مقصد برایش فیصدی ندارد
+  ['petrol', 'diesel'].forEach(function (f) {
+    if (!_acctPct(acct, f) && _acctPct(h, f)) { _pctSplit(acct); acct[_pctKey(f)] = _acctPct(h, f); }
+  });
+  if (acct.percentP !== undefined || acct.percentD !== undefined)
+    acct.percent = (parseFloat(acct.percentP) || 0) || (parseFloat(acct.percentD) || 0);
   if ((h.note || '').trim()) acct.note = ((acct.note || '') + (acct.note ? '\n' : '') + h.note).trim();
   acct.tableHistory = (acct.tableHistory || []).filter(x => x.id !== hid);
   // اگر حساب در واحدِ دیگری باز است، به همان واحدی برو که ردیف‌ها برگشتند
@@ -28053,7 +28130,7 @@ function pdfPersonHistory(pid, hid) {
   const hFilter = h.viewFilter || h.fuel || currentPersonFilter || 'all';
   const rows = (h.rows || []).filter(r => hFilter === 'all' || ((r.ftype || 'petrol') === hFilter));
   const money = (h.viewMoney != null) ? h.viewMoney : (h.unitMode ? h.unitMode === 'money' : _acctModeMoney(person));
-  const pct = parseFloat(h.percent) || 0;
+  const pctP = _acctPct(h, 'petrol'), pctD = _acctPct(h, 'diesel');
   const unit = money ? 'افغانی' : 'ل';
   const rnd = x => Math.round(x * 100) / 100;
   const rasidP = money ? (parseFloat(h.rasidMoneyP)||0) : (parseFloat(h.rasidFuelP)||0);
@@ -28061,7 +28138,7 @@ function pdfPersonHistory(pid, hid) {
   const st = _splitTotals(rows);
   const bordP = money ? st.petrol.bardagi : st.petrol.fuel;
   const bordD = money ? st.diesel.bardagi : st.diesel.fuel;
-  const commP = rasidP*pct/100, commD = rasidD*pct/100;
+  const commP = rasidP*pctP/100, commD = rasidD*pctD/100;
   const remP = bordP + commP - rasidP - (money ? st.petrol.rasid : 0),
         remD = bordD + commD - rasidD - (money ? st.diesel.rasid : 0);
   const archiveLabel = h.note ? h.note.split('\n')[0].substring(0,50) : '';
@@ -28126,7 +28203,7 @@ tr:nth-child(even) td{background:#f7fafc}
     </div>
   </div>` : ''}
 </div>
-<div class="pct-row">فیصدی ٪: <b>${n2fa(pct)}</b> &nbsp;|&nbsp; جمله برد: <b style="color:#c07700">${n2fa(rnd(bordP+bordD))} ${unit}</b> &nbsp;|&nbsp; الباقی کل: <b style="color:#2b6cb0">${n2fa(rnd(remP+remD))} ${unit}</b></div>
+<div class="pct-row">فیصدی ٪: <b>⛽ ${n2fa(pctP)}</b> / <b>🟤 ${n2fa(pctD)}</b> &nbsp;|&nbsp; جمله برد: <b style="color:#c07700">${n2fa(rnd(bordP+bordD))} ${unit}</b> &nbsp;|&nbsp; الباقی کل: <b style="color:#2b6cb0">${n2fa(rnd(remP+remD))} ${unit}</b></div>
 <table><thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th><th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>الباقی</th></tr></thead>
 <tbody>${tableRows||'<tr><td colspan="9" style="text-align:center;padding:12px;color:#718096">هیچ ردیفی ثبت نشده</td></tr>'}</tbody></table>
 ${(h.headerNote||'').trim()?`<div class="note-box"><b>توضیحات (نوار عنوان):</b> ${escFa(h.headerNote).replace(/\n/g,'<br>')}</div>`:''}
@@ -28151,10 +28228,13 @@ function updateHistoryRasid(pid, hid, ftype, value) {
   else { if (money) h.rasidMoneyD = v; else h.rasidFuelD = v; }
   save(); _rerenderHistoryPreserveFocus(person);
 }
-function updateHistoryPercent(pid, hid, value) {
+function updateHistoryPercent(pid, hid, value, fuel) {
   const person = _hPerson(pid); if (!person) return;
   const h = _hEntry(pid, hid); if (!h) return;
-  h.percent = parseFloat(value) || 0;
+  // در آرشیو هر تیل کادرِ خودش را دارد (قفلی در کار نیست — جدولِ بسته‌شده است)
+  _pctSplit(h);
+  h[_pctKey(fuel || 'petrol')] = (value === '' || value == null) ? '' : (parseFloat(value) || 0);
+  h.percent = (parseFloat(h.percentP) || 0) || (parseFloat(h.percentD) || 0);
   save(); _rerenderHistoryPreserveFocus(person);
 }
 function updateHistoryRow(pid, hid, idx, field, value) {
@@ -31630,13 +31710,13 @@ function pdfPerson() {
   const rows = filter === 'all' ? allRows : allRows.filter(r => (r.ftype || 'petrol') === filter);
   const t = _splitTotals(allRows);
   const money = _acctModeMoney(person, acct);
-  const pct = parseFloat(acct.percent)||0;
+  const pctP = _acctPct(acct, 'petrol'), pctD = _acctPct(acct, 'diesel');
   const unit = money ? 'افغانی' : 'ل';
   const rasidP = money ? (parseFloat(acct.rasidMoneyP)||0) : (parseFloat(acct.rasidFuelP)||0);
   const rasidD = money ? (parseFloat(acct.rasidMoneyD)||0) : (parseFloat(acct.rasidFuelD)||0);
   const bordP = money ? t.petrol.bardagi : t.petrol.fuel;
   const bordD = money ? t.diesel.bardagi : t.diesel.fuel;
-  const commP = rasidP*pct/100, commD = rasidD*pct/100;
+  const commP = rasidP*pctP/100, commD = rasidD*pctD/100;
   const rnd = x => Math.round(x*100)/100;
   const remP = bordP + commP - rasidP - (money ? t.petrol.rasid : 0),
         remD = bordD + commD - rasidD - (money ? t.diesel.rasid : 0);
@@ -31686,7 +31766,7 @@ function pdfPerson() {
   <div class="split-box petrol-box">
     <div class="split-title">⛽ حساب پطرول</div>
     <div class="split-grid">
-      <div class="sum-box"><div class="l">فیصدی ما (${n2fa(pct)}٪)</div><div class="v" style="color:#805ad5">${n2fa(rnd(commP))} ${unit}</div></div>
+      <div class="sum-box"><div class="l">فیصدی ما (${n2fa(pctP)}٪)</div><div class="v" style="color:#805ad5">${n2fa(rnd(commP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">${rlabel}</div><div class="v" style="color:#276749">${n2fa(rnd(rasidP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">برد</div><div class="v" style="color:#c07700">${n2fa(rnd(bordP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">${remlabel}</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(remP))} ${unit}</div></div>
@@ -31695,7 +31775,7 @@ function pdfPerson() {
   <div class="split-box diesel-box">
     <div class="split-title">🟤 حساب دیزل</div>
     <div class="split-grid">
-      <div class="sum-box"><div class="l">فیصدی ما (${n2fa(pct)}٪)</div><div class="v" style="color:#805ad5">${n2fa(rnd(commD))} ${unit}</div></div>
+      <div class="sum-box"><div class="l">فیصدی ما (${n2fa(pctD)}٪)</div><div class="v" style="color:#805ad5">${n2fa(rnd(commD))} ${unit}</div></div>
       <div class="sum-box"><div class="l">${rlabel}</div><div class="v" style="color:#276749">${n2fa(rnd(rasidD))} ${unit}</div></div>
       <div class="sum-box"><div class="l">برد</div><div class="v" style="color:#c07700">${n2fa(rnd(bordD))} ${unit}</div></div>
       <div class="sum-box"><div class="l">${remlabel}</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(remD))} ${unit}</div></div>
@@ -31706,7 +31786,7 @@ function pdfPerson() {
   <div class="split-box ${filter==='diesel'?'diesel-box':'petrol-box'}">
     <div class="split-title">${filter==='diesel'?'🟤 حساب دیزل':'⛽ حساب پطرول'}</div>
     <div class="split-grid">
-      <div class="sum-box"><div class="l">فیصدی ما (${n2fa(pct)}٪)</div><div class="v" style="color:#805ad5">${n2fa(rnd(filter==='diesel'?commD:commP))} ${unit}</div></div>
+      <div class="sum-box"><div class="l">فیصدی ما (${n2fa(filter==='diesel'?pctD:pctP)}٪)</div><div class="v" style="color:#805ad5">${n2fa(rnd(filter==='diesel'?commD:commP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">${rlabel}</div><div class="v" style="color:#276749">${n2fa(rnd(filter==='diesel'?rasidD:rasidP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">برد</div><div class="v" style="color:#c07700">${n2fa(rnd(filter==='diesel'?bordD:bordP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">${remlabel}</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(filter==='diesel'?remD:remP))} ${unit}</div></div>
@@ -31785,7 +31865,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 5px;border
   </div>
   <div class="page-meta">تاریخ چاپ: ${printDate}</div>
 </div>
-<div class="pct-wrap"><div class="pct-box"><span>فیصدی ٪ (از مقدار رسید تیل کم می‌شود)</span><b>${n2fa(pct)}٪</b></div></div>
+<div class="pct-wrap"><div class="pct-box"><span>فیصدی ٪ (از مقدار رسید کم می‌شود)</span><b>⛽ ${n2fa(pctP)}٪ &nbsp;·&nbsp; 🟤 ${n2fa(pctD)}٪</b></div></div>
 ${splitBoxesHtml}
 <table>
   <thead><tr>
@@ -35810,9 +35890,8 @@ function renderStaffPage() {
 // باقی‌ماندهٔ تیلِ امانتیِ «یک حساب» (رسید تیل منهای برده‌شده، با کسر فیصدی) — به لیتر
 function _staffAcctFuelLeft(a) {
   const t = _splitTotals(a.rows || []);
-  const eff = 1 - ((parseFloat(a.percent) || 0) / 100);
-  const rp = (parseFloat(a.rasidFuelP) || 0) * eff;
-  const rd = (parseFloat(a.rasidFuelD) || 0) * eff;
+  const rp = (parseFloat(a.rasidFuelP) || 0) * (1 - _acctPct(a, 'petrol') / 100);
+  const rd = (parseFloat(a.rasidFuelD) || 0) * (1 - _acctPct(a, 'diesel') / 100);
   return { petrol: rp - t.petrol.fuel, diesel: rd - t.diesel.fuel, hasP: rp > 0, hasD: rd > 0 };
 }
 // باز کردن حساب از صفحهٔ کارمند: نمای «خیلی ساده» — فقط نام، جمع‌ها و جدول
@@ -39162,7 +39241,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.243';
+const APP_VERSION = '2.9.244';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -46761,7 +46840,9 @@ body.light-mode #glassClock{
     if (!parts.length) parts.push('<div class="empty">این حساب داده‌ای ندارد</div>');
     var info = [];
     if (acct.phone) info.push('📞 ' + h(acct.phone));
-    if (acct.percent) info.push('٪ فیصدی: ' + h(acct.percent));
+    var _pctP = _acctPct(acct, 'petrol'), _pctD = _acctPct(acct, 'diesel');
+    if (_pctP || _pctD) info.push(_pctP === _pctD ? ('٪ فیصدی: ' + h(_pctP))
+      : ('٪ فیصدی — ⛽ پطرول: ' + h(_pctP) + ' · 🟤 دیزل: ' + h(_pctD)));
     if (acct.rasidFuelP) info.push('⛽ رسید تیل پطرول: ' + h(acct.rasidFuelP));
     if (acct.rasidFuelD) info.push('🟤 رسید تیل دیزل: ' + h(acct.rasidFuelD));
     if (acct.note) info.push('📝 ' + h(acct.note));
@@ -47191,11 +47272,20 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
 }
 .xls-tbl tr.pm-auto-row .pmar-mark{ color:var(--accent); }
 .xls-tbl tr.pm-auto-row .pmar-name{ text-align:center; line-height:1.7; }
-.xls-tbl tr.pm-auto-row .pmar-sub{
-  display:block; font-size:0.68rem; font-weight:700; color:var(--muted); margin-top:2px;
-}
 .xls-tbl tr.pm-auto-row .pmar-val{ color:var(--green); }
-.xls-tbl tr.pm-auto-row .pmar-net{ color:var(--blue); }
+.xls-tbl tr.pm-auto-row .pmar-comm{ color:var(--accent); }
+
+/* ردیفِ فیصدی: دو کادرِ پطرول/دیزل کنار هم و دکمهٔ قفل، تمام‌عرض، زیرشان.
+   (با auto-fitِ عمومی، کادرِ سوم نصفه و شکسته می‌افتاد.) */
+#pm-pct-row{ grid-template-columns:1fr 1fr; }
+#pm-pct-row .pm-pct-lock{ grid-column:1 / -1; min-height:0; padding:5px 10px; }
+.pm-pct-link{
+  background:transparent; border:1px dashed var(--accent); border-radius:8px;
+  color:var(--accent); font-family:'Vazirmatn',sans-serif; font-weight:800;
+  font-size:0.86rem; cursor:pointer; padding:5px 8px; width:100%;
+}
+.pm-pct-link.off{ color:var(--muted); border-color:var(--muted); }
+.pm-pct-link:active{ transform:scale(.97); }
 </style>
 
 </body>
