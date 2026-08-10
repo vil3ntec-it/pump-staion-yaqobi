@@ -19530,16 +19530,12 @@ body.viewer-mode .inv-admin-only{display:none!important}
 </div>
 
 <div class="copyright-bar" style="text-align:center;padding:18px 12px 28px;margin-top:18px;border-top:1px solid var(--border);font-size:0.78rem;color:var(--muted);line-height:1.9">
+  <!-- دکمهٔ «🔄 آوردن آخرین نسخه» از این‌جا برداشته شد (خواستهٔ صاحب ریپو)؛ همان کار
+       با دکمهٔ 🔄 صفحهٔ قفل انجام می‌شود. نوشته‌ها هم دقیقاً وسطِ برنامه می‌نشینند. -->
   <span class="app-version" style="display:inline-block;background:var(--card);border:1px solid var(--border);border-radius:999px;padding:2px 14px;margin-bottom:8px"></span>
-  <!-- دکمهٔ همیشه‌در‌دسترسِ «آوردن آخرین نسخه»: کشِ پوستهٔ برنامه را پاک می‌کند و
-       صفحه را از شبکه می‌آورد. تا حالا تنها راهِ در دسترسِ کاربر، دکمهٔ 🔄 صفحهٔ
-       قفل بود که فقط location.reload() می‌کرد و سرویس‌ورکر باز همان نسخهٔ کهنه را
-       می‌داد؛ یعنی کاربر هیچ راهی نداشت نسخهٔ تازه را بیاورد. -->
-  <button type="button" id="cprUpdBtn" onclick="pumpHardRefresh()" title="کشِ برنامه پاک و آخرین نسخه از اینترنت آورده می‌شود — اطلاعات پاک نمی‌شود"
-    style="display:inline-block;margin:0 6px 8px;background:var(--card);border:1px solid var(--accent);color:var(--accent);border-radius:999px;padding:2px 14px;font-family:'Vazirmatn',sans-serif;font-size:0.76rem;font-weight:800;cursor:pointer">🔄 آوردن آخرین نسخه</button><br>
-  1405 برای پمپ یعقوبی طراحی شده ـــ تمام حقوق محفوظ است<br>
-  طراحی و توسعه: <b style="color:var(--accent)">vil3ntec@gmail.com محمد هارون</b><br>
-  شماره 0792236008 +93
+  <div style="text-align:center">1405 برای پمپ یعقوبی طراحی شده ـــ تمام حقوق محفوظ است</div>
+  <div style="text-align:center">طراحی و توسعه: <b style="color:var(--accent)">vil3ntec@gmail.com محمد هارون</b></div>
+  <div style="text-align:center">شماره 0792236008 +93</div>
 </div>
 </div><!-- .main -->
 </div><!-- #app -->
@@ -19724,11 +19720,9 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <span class="sec-font-ctrl" title="فونت کادرهای یادداشت/توضیحات">📝<button class="sec-font-btn" onclick="adjNoteFont(-0.08)">A-</button><button class="sec-font-btn" onclick="adjNoteFont(0.08)">A+</button></span>
         <button class="add-row-btn pm-view-ok" id="pm-mode-btn" style="margin:0;border-color:var(--purple);color:var(--purple);padding:5px 10px;font-size:0.78rem" onclick="togglePersonMode()">🔁 پول</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--accent);color:var(--accent);padding:5px 10px;font-size:0.78rem" onclick="renameCurrentPerson()">✏️ تغییر اسم</button>
-        <button class="add-row-btn" style="margin:0;border-color:var(--red);color:var(--red);padding:5px 10px;font-size:0.78rem" onclick="clearAllPersonRows()">🗑️ پاک همه</button>
-        <!-- دکمهٔ «📄 PDF» این‌جا برداشته شد (خواستهٔ صاحب ریپو): با اسکنِ همین کیو‌آر،
-             صفحهٔ حساب باز می‌شود و خودش دکمهٔ «دانلود PDF» دارد — پس اینجا تکراری بود. -->
-        <button class="add-row-btn pm-view-ok" id="pm-qr-btn" title="کیو‌آر همین حساب" style="margin:0;border-color:var(--blue);color:var(--blue);padding:5px 10px;font-size:0.78rem" onclick="showPersonQRFromModal()">📲 کیو‌آر</button>
-        <button class="add-row-btn pm-view-ok" title="گرفتن کپیِ همین حساب برای بردن به برنامهٔ دیگر" style="margin:0;border-color:var(--green);color:var(--green);padding:5px 10px;font-size:0.78rem" onclick="openAcctCardFromPerson()">📇 کپیِ حساب</button>
+        <!-- دکمه‌های «📄 PDF»، «📲 کیو‌آر»، «🗑️ پاک همه» و «📇 کپیِ حساب» از این سربرگ
+             برداشته شدند (خواستهٔ صاحب ریپو): کیو‌آرِ هر حساب از دکمهٔ «📲 کیو‌آر کد»ِ
+             روی کارتِ همان شخص باز می‌شود و «کپیِ حساب» هم داخلِ همان پنجرهٔ کیو‌آر است. -->
       </div>
       <h2 id="personModalTitle" class="pm-head-title">جزئیات</h2>
       <button class="modal-close" onclick="closePersonModal()">✕</button>
@@ -20137,6 +20131,8 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <h3 id="qr-person-name">📲 کیو‌آر کد</h3>
     <p>با اسکن این کد، پی‌دی‌اف حساب شخص باز می‌شود</p>
     <div id="qr-canvas-wrap"></div>
+    <!-- «کپیِ حساب» از سربرگِ مودالِ شخص به این‌جا آمد (خواستهٔ صاحب ریپو) -->
+    <button id="qr-acct-btn" onclick="_qrOpenAcctCard()" title="گرفتن کپیِ همین حساب برای بردن به برنامهٔ دیگر" style="width:100%;padding:10px;border-radius:9px;border:none;background:#276749;color:#fff;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer;margin-bottom:8px">📇 کپیِ حساب</button>
     <button id="qr-share-btn" onclick="_qrShare()" style="width:100%;padding:10px;border-radius:9px;border:none;background:#2b6cb0;color:#fff;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer;margin-bottom:8px">📤 اشتراک‌گذاری کیو‌آر</button>
     <button id="qr-pdf-btn" onclick="_qrPrintPDF()" style="width:100%;padding:10px;border-radius:9px;border:none;background:#38a169;color:#fff;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer;margin-bottom:8px">🖨️ پرینت / دانلود PDF</button>
     <button onclick="document.getElementById('qrModal').classList.remove('open')" style="width:100%;padding:10px;border-radius:9px;border:none;background:var(--accent);color:#000;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer">✔ بستن</button>
@@ -26077,14 +26073,8 @@ function _renderSubBar(person) {
   if (del) del.style.display = currentSubId ? '' : 'none';
   const label = document.querySelector('#personModal .pm-acct-bar .pm-acct-label');
   if (label) label.style.display = subs.length === 0 ? 'none' : '';
-  // دکمهٔ کیو‌آر همیشه مالِ «همین حسابی» است که بازش کرده‌ایم — نامش را هم نشان می‌دهد
+  // (دکمهٔ کیو‌آرِ سربرگ برداشته شد؛ کیو‌آرِ هر حساب از روی کارتِ خودش باز می‌شود)
   const sub = currentSubId ? subs.find(x => x && x.id === currentSubId) : null;
-  const qb = document.getElementById('pm-qr-btn');
-  if (qb) {
-    const nm = sub ? String(sub.name || 'حساب') : '';
-    qb.textContent = sub ? ('📲 کیو‌آر ' + (nm.length > 10 ? nm.slice(0, 10) + '…' : nm)) : '📲 کیو‌آر';
-    qb.title = sub ? ('کیو‌آر مخصوصِ حساب «' + nm + '»') : 'کیو‌آر حساب اصلی';
-  }
   _pmUpdateNames(person, sub);
 }
 // نامِ بالای مودال: وقتی داخلِ یک «حساب فرعی» هستیم فقط نامِ خودِ همان حساب
@@ -34630,6 +34620,18 @@ function _qrPrintPDF() {
   if (_qrCurrentType === 'company' && _qrCurrentId) { pdfCompanyById(_qrCurrentId, 'all'); return; }
   if (_qrCurrentType && _qrCurrentId) pdfPersonById(_qrCurrentType, _qrCurrentId, _qrCurrentSub);
 }
+// «📇 کپیِ حساب» داخلِ پنجرهٔ کیو‌آر: همان پنجرهٔ گرفتنِ کپی را برای همین حسابی که
+// کیو‌آرش باز است باز می‌کند (قرض‌دار، بی‌فاکتور یا شرکت).
+function _qrOpenAcctCard() {
+  if (!_qrCurrentType || !_qrCurrentId || typeof openAcctCard !== 'function') return;
+  document.getElementById('qrModal').classList.remove('open');
+  openAcctCard(_qrCurrentType, _qrCurrentId);
+}
+// دکمهٔ «کپیِ حساب» فقط وقتی دیده می‌شود که کیو‌آر مالِ یک حساب باشد (نه صفحهٔ کارمند)
+function _qrAcctBtnShow(on) {
+  const b = document.getElementById('qr-acct-btn');
+  if (b) b.style.display = on ? '' : 'none';
+}
 // ===== شرکت‌ها: PDF بر اساس id، کیو‌آر، و نمای فقط‌خواندنی (شبیه قرض‌داران) =====
 // fuel: 'petrol' | 'diesel' | 'all' — «همه» یعنی همان پی‌دی‌افِ پطرول‌ودیزل با هم
 function pdfCompanyById(id, fuel) {
@@ -34645,6 +34647,9 @@ function showCompanyQR(id) {
   if (!c) return;
   _qrCurrentType = 'company';
   _qrCurrentId = id;
+  _qrCurrentSub = null;
+  const _cpdf = document.getElementById('qr-pdf-btn'); if (_cpdf) _cpdf.style.display = '';
+  _qrAcctBtnShow(true);
   document.getElementById('qr-person-name').textContent = '📲 ' + c.name;
   const wrap = document.getElementById('qr-canvas-wrap');
   wrap.innerHTML = '';
@@ -34977,6 +34982,7 @@ function showPersonQR(type, id, subId) {
   document.getElementById('qr-person-name').textContent = sub ? ('📲 📄 ' + (sub.name || 'حساب')) : ('📲 ' + person.name);
   // اگر قبلاً کیو‌آر صفحهٔ کارمند باز شده بود، دکمه/متن مخصوص شخص برگردد
   const _qpdf = document.getElementById('qr-pdf-btn'); if (_qpdf) _qpdf.style.display = '';
+  _qrAcctBtnShow(true);
   const _qdesc = document.querySelector('#qrModal .qr-box p');
   if (_qdesc) _qdesc.textContent = sub
     ? ('با اسکن این کد، حساب «' + (sub.name || 'حساب فرعی') + '» و پی‌دی‌اف همان حساب باز می‌شود')
@@ -35348,6 +35354,7 @@ function showStaffQR() {
   _qrCurrentUrl = url;
   document.getElementById('qr-person-name').textContent = '👷 صفحهٔ کارمند';
   const pdfBtn = document.getElementById('qr-pdf-btn'); if (pdfBtn) pdfBtn.style.display = 'none';
+  _qrAcctBtnShow(false);
   const desc = document.querySelector('#qrModal .qr-box p'); if (desc) desc.textContent = 'با اسکن این کد، صفحهٔ کارمند (فقط دیدن) باز می‌شود' + ((DB.staffPassword||'').trim() ? ' — رمز صفحهٔ کارمند لازم است' : '');
   if (typeof QRCode !== 'undefined') {
     new QRCode(wrap, { text: url, width: 220, height: 220, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
@@ -38828,7 +38835,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.232';
+const APP_VERSION = '2.9.233';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
