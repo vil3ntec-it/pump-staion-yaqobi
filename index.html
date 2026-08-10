@@ -165,9 +165,27 @@ body.light-mode .daynight-toggle .dn-thumb{left:3px;background:radial-gradient(c
    overflow-x:hidden فقط روی html است، نه body — گذاشتنش روی body یک ظرفِ
    اسکرولِ جدید می‌سازد و sticky (نوار تب‌ها) را نسبت به صفحه می‌شکند؛ body
    کنترل افقی خودش را جداگانه با overflow-x:clip دارد (پایین‌تر) که این مشکل را ندارد. */
-html{background:#0d1117;min-height:100vh;overflow-x:hidden;overscroll-behavior:none;scroll-behavior:auto}
-body.light-mode ~ html,body.light-mode+html{background:#f0f4f8}
-body{font-family:'Vazirmatn',sans-serif;background:none;color:var(--txt);min-height:100vh;overscroll-behavior:none}
+/* ═══ «بومِ صفحه» — ریشهٔ باگِ لایهٔ رنگی (بارها برگشته بود) ══════════════════
+   نوارها و مستطیل‌های رنگیِ صورتی/تیره که گاهی بالای صفحه، کنارِ صفحه یا زیرِ
+   نوشتهٔ پایین پیدا می‌شدند و «با اسکرول می‌آمدند و می‌رفتند»، هیچ‌کدام لایهٔ
+   اضافه‌ای نبودند: همان «بومِ صفحه» (پس‌زمینهٔ خودِ <html>) بود که از پشتِ
+   محتوا بیرون می‌زد. چون رنگِ بوم عمداً با رنگی که خودِ صفحه می‌کشد فرق داشت
+   (مثلاً در پوستهٔ «یاقوت اجرایی» بوم #fbdfe4 صورتی بود و صفحه تقریباً سفید)،
+   هر جا بوم دیده می‌شد یک مستطیلِ رنگیِ ناجور به چشم می‌آمد:
+     • زیرِ کفِ محتوا، وقتی سند از جعبهٔ <body> بلندتر می‌شد،
+     • پشتِ سربرگ/نوارهای شیشه‌ای (backdrop-filter)،
+     • و روی اندروید، پشتِ هر عنصری که لایهٔ کامپوزیتِ خودش را داشت.
+   تا امروز هر بار فقط همان یک جا وصله می‌شد، برای همین از جای دیگری برمی‌گشت.
+
+   درمانِ ریشه‌ای: بوم دیگر رنگِ جدا ندارد. با شفاف بودنِ پس‌زمینهٔ <html>،
+   طبق خودِ استانداردِ CSS پس‌زمینهٔ <body> به بوم «تسرّی» پیدا می‌کند و کلِ
+   پنجره را می‌پوشاند. یعنی رنگِ بوم دیگر همیشه و به‌طور تعریفی همان رنگِ صفحه
+   است و حتی اگر جایی بیرون بزند، چیزی دیده نمی‌شود.
+   ⚠️ برای همین این‌جا و هیچ‌جای دیگر نباید روی <html> رنگِ پس‌زمینه گذاشت. */
+html{background:transparent;min-height:100vh;overflow-x:hidden;overscroll-behavior:none;scroll-behavior:auto}
+/* پس‌زمینهٔ واقعیِ صفحه — همین به بوم تسرّی پیدا می‌کند (حالتِ روشن پایین‌تر
+   نسخهٔ خودش را دارد). قبلاً none بود و بوم را <html> می‌کشید. */
+body{font-family:'Vazirmatn',sans-serif;background:var(--dark);color:var(--txt);min-height:100vh;overscroll-behavior:none}
 /* بدون-فنری برای ظرف‌های واقعاً عمودی‌اسکرول‌دار (مودال‌ها، لیست‌های چت،
    صفحه‌های فاکتور/کارمند/شرکت‌ها) — اینها ارتفاع محدود دارند و واقعاً کش
    می‌آمدند، پس overscroll-behavior هر دو محور را می‌بندیم. */
@@ -12903,12 +12921,15 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
   --hexline-base: rgba(160,196,255,0);
   /* tied straight to --accent (not a fixed hue) so the sweep always matches
      whichever of the 10 palettes is active, exactly — see the counter
-     hue-rotate on .fx-grid::before/::after below for why this can't just
+     hue-rotate on the sweep layers below for why this can't just
      rely on #fxLayer's per-theme hue-rotate filter like the rest of the
      ambient layer does. */
   --hexglow-a:var(--accent); --hexglow-b:var(--accent); --hexglow-c:var(--accent);
 }
-html{background:#070a11!important}
+/* بوم عمداً شفاف می‌ماند تا پس‌زمینهٔ <body> به آن تسرّی پیدا کند — توضیح کامل
+   کنارِ تعریفِ html در بالای فایل. رنگ گذاشتن این‌جا همان باگِ «لایهٔ رنگی» را
+   برمی‌گرداند، چون رنگِ بوم دوباره با رنگِ صفحه فرق می‌کند. */
+html{background:transparent!important}
 
 /* ---------- 2. PREMIUM AMBIENT BACKGROUND — soft mesh, organic drift ---------- */
 /* z-index:0, not -1: body has no stacking context of its own, so a
@@ -12931,10 +12952,15 @@ html{background:#070a11!important}
    ویوپورتِ دیده‌شده هم‌قد نیستند (نوار آدرس/نوار ایمایی جمع و باز می‌شود)، پس یک
    نوارِ باریکِ پایینِ صفحه بی‌رنگ می‌ماند و چون بقیهٔ صفحه ته‌رنگ دارد، آن نوار
    به‌صورت یک «لایهٔ رنگیِ» جدا در انتهای اسکرول دیده می‌شد. با این سرریز، لایه در
-   هر حالتی از کفِ صفحه پایین‌تر است. (تابعِ pinFxToVisualViewport هم همین سرریز
-   را به قدِ محاسبه‌شده اضافه می‌کند.) */
-#fxLayer{position:fixed;inset:0;height:calc(100dvh + 140px);z-index:0;pointer-events:none;overflow:hidden;transform:translateZ(0);will-change:transform}
-#fxLayerTop{position:fixed;inset:0;height:calc(100dvh + 140px);pointer-events:none;overflow:hidden;transform:translateZ(0);will-change:transform}
+   هر حالتی از کفِ صفحه پایین‌تر است. */
+/* ⚠️ عمداً lvh و نه dvh: dvh با پنهان/آشکار شدنِ نوارِ آدرسِ مرورگر کم‌وزیاد
+   می‌شود، یعنی این دو لایهٔ تمام‌صفحه — که filter و mix-blend-mode دارند —
+   دقیقاً در حینِ اسکرول دوباره اندازه‌گیری و بازرسم می‌شدند؛ همان «پرپرک»ِ
+   هنگام اسکرول. lvh بزرگ‌ترین حالتِ ویوپورت است: همیشه از صفحهٔ دیده‌شده
+   بلندتر یا مساوی است (پس هیچ نوارِ بی‌رنگی نمی‌ماند) و هرگز عوض نمی‌شود.
+   با همین، تابعِ pinFxToVisualViewport هم دیگر لازم نیست و حذف شد. */
+#fxLayer{position:fixed;inset:0;height:calc(100lvh + 140px);z-index:0;pointer-events:none;overflow:hidden;transform:translateZ(0);will-change:transform}
+#fxLayerTop{position:fixed;inset:0;height:calc(100lvh + 140px);pointer-events:none;overflow:hidden;transform:translateZ(0);will-change:transform}
 #fxCanvas{position:absolute;inset:0;width:100%;height:100%;opacity:.9}
 
 /* atmospheric blur wash sitting behind the blobs for extra depth
@@ -12977,82 +13003,18 @@ html{background:#070a11!important}
    ~1.3s, then simply FADES OUT in place (no retreating wipe — the light
    never crawls back the way it came), rests dark for a moment and repeats.
    A soft white drop-shadow bloom keeps every colour reading as neon. */
-.fx-grid{position:absolute;inset:-90px -52px;
-  -webkit-mask-image:var(--hex-line);mask-image:var(--hex-line);
-  -webkit-mask-repeat:repeat;mask-repeat:repeat;
-  -webkit-mask-size:51.96px 90px;mask-size:51.96px 90px;
-  background:var(--hexline-base)}
-.fx-grid::before{content:"";position:absolute;inset:0;
-  -webkit-mask-image:var(--hex-line);mask-image:var(--hex-line);
-  -webkit-mask-repeat:repeat;mask-repeat:repeat;
-  -webkit-mask-size:51.96px 90px;mask-size:51.96px 90px;
-  mix-blend-mode:screen;
-  /* everything user-tunable lives in custom properties, set by applyHexFx()
-     from the «نور شش‌ضلعی» settings card: --hexfx-bg (colour gradient, bands
-     run along the sweep direction), --hexclip-0/-1 (hidden/full clip shapes
-     that define WHERE the sweep starts and ends), --hexfx-dur (cycle time).
-     The var() fallbacks are the defaults: rainbow, top-right → bottom-left,
-     6s. */
-  background:var(--hexfx-bg,linear-gradient(225deg,#ff2d78 0%,#ff8a00 17%,#ffe14d 33%,#2de37a 50%,#22ccff 67%,#5b7bff 83%,#c05bff 100%));
-  /* counter-rotate: #fxLayer (the ancestor) applies filter:hue-rotate(var(--fx-hue))
-     per theme to re-tint the rest of the ambient layer's fixed hardcoded
-     colours; cancel it here so the chosen colours keep exactly their hues on
-     every theme. The white-ish drop-shadows bloom equally for all colours. */
-  /* drop-shadow() اینجا عمداً حذف شد — چون همراه با انیمیشن clip-path روی این
-     لایهٔ تمام‌صفحه، هر فریم باید دوباره محاسبه شود و باعث گیر/لگ محسوس
-     می‌شد؛ hue-rotate برای درستیِ رنگ در هر تم لازم است و نگه داشته شده */
-  filter:hue-rotate(calc(var(--fx-hue,0deg) * -1));
-  -webkit-clip-path:var(--hexclip-0,polygon(100% 0,100% 0,100% 0));clip-path:var(--hexclip-0,polygon(100% 0,100% 0,100% 0));
-  /* لایهٔ کامپوزیت جدا — بدون این، انیمیشن clip-path رویِ لایهٔ محتوای صفحه
-     فشار می‌آورد و روی تبلت/موبایل کاشی‌های خالی (مستطیل تیره) هنگام اسکرول
-     دیده می‌شد */
-  transform:translateZ(0);will-change:clip-path,opacity;
-  animation:hexSweep var(--hexfx-dur,6s) ease-in-out infinite}
-/* corner sweeps clip with a triangle anchored at the start corner whose free
-   vertices slide out past the opposite corner (to -120%/220%, i.e. beyond
-   fully-covered); side sweeps use inset() instead — both come in as the
-   --hexclip vars so one set of keyframes serves every direction.
-   hexSweep (پیش‌فرض): sweep in → hold lit → FADE OUT IN PLACE → rest dark.
-   The clip only snaps back to the empty shape at 100%, while opacity is
-   already 0, so the reset is never visible. */
-@keyframes hexSweep{
-  0%{opacity:1;-webkit-clip-path:var(--hexclip-0,polygon(100% 0,100% 0,100% 0));clip-path:var(--hexclip-0,polygon(100% 0,100% 0,100% 0))}
-  20%{opacity:1;-webkit-clip-path:var(--hexclip-1,polygon(-120% 0,100% 0,100% 220%));clip-path:var(--hexclip-1,polygon(-120% 0,100% 0,100% 220%))}
-  42%{opacity:1;-webkit-clip-path:var(--hexclip-1,polygon(-120% 0,100% 0,100% 220%));clip-path:var(--hexclip-1,polygon(-120% 0,100% 0,100% 220%))}
-  60%{opacity:0;-webkit-clip-path:var(--hexclip-1,polygon(-120% 0,100% 0,100% 220%));clip-path:var(--hexclip-1,polygon(-120% 0,100% 0,100% 220%))}
-  100%{opacity:0;-webkit-clip-path:var(--hexclip-0,polygon(100% 0,100% 0,100% 0));clip-path:var(--hexclip-0,polygon(100% 0,100% 0,100% 0))}
-}
-/* «برود و برگردد»: sweeps in, holds, then retreats back out the same way */
-@keyframes hexSweepBack{
-  0%{opacity:1;-webkit-clip-path:var(--hexclip-0,polygon(100% 0,100% 0,100% 0));clip-path:var(--hexclip-0,polygon(100% 0,100% 0,100% 0))}
-  20%{opacity:1;-webkit-clip-path:var(--hexclip-1,polygon(-120% 0,100% 0,100% 220%));clip-path:var(--hexclip-1,polygon(-120% 0,100% 0,100% 220%))}
-  45%{opacity:1;-webkit-clip-path:var(--hexclip-1,polygon(-120% 0,100% 0,100% 220%));clip-path:var(--hexclip-1,polygon(-120% 0,100% 0,100% 220%))}
-  65%{opacity:1;-webkit-clip-path:var(--hexclip-0,polygon(100% 0,100% 0,100% 0));clip-path:var(--hexclip-0,polygon(100% 0,100% 0,100% 0))}
-  100%{opacity:1;-webkit-clip-path:var(--hexclip-0,polygon(100% 0,100% 0,100% 0));clip-path:var(--hexclip-0,polygon(100% 0,100% 0,100% 0))}
-}
-/* «آرام روشن و خاموش»: no travelling front — the whole grid breathes */
-@keyframes hexFadePulse{
-  0%{opacity:0;-webkit-clip-path:var(--hexclip-1,polygon(-120% 0,100% 0,100% 220%));clip-path:var(--hexclip-1,polygon(-120% 0,100% 0,100% 220%))}
-  25%{opacity:1;-webkit-clip-path:var(--hexclip-1,polygon(-120% 0,100% 0,100% 220%));clip-path:var(--hexclip-1,polygon(-120% 0,100% 0,100% 220%))}
-  55%{opacity:1;-webkit-clip-path:var(--hexclip-1,polygon(-120% 0,100% 0,100% 220%));clip-path:var(--hexclip-1,polygon(-120% 0,100% 0,100% 220%))}
-  80%{opacity:0;-webkit-clip-path:var(--hexclip-1,polygon(-120% 0,100% 0,100% 220%));clip-path:var(--hexclip-1,polygon(-120% 0,100% 0,100% 220%))}
-  100%{opacity:0;-webkit-clip-path:var(--hexclip-1,polygon(-120% 0,100% 0,100% 220%));clip-path:var(--hexclip-1,polygon(-120% 0,100% 0,100% 220%))}
-}
-body.hexfx-mode-back .fx-grid::before{animation-name:hexSweepBack}
-body.hexfx-mode-fade .fx-grid::before{animation-name:hexFadePulse}
-body.hexfx-off .fx-grid{display:none!important}
-/* light mode: screen-blend vanishes against a pale page, so switch to
-   darken and use a deeper palette that stays saturated on light ground
-   (also user-tunable; fallback = deep rainbow). */
-body.light-mode .fx-grid::before{mix-blend-mode:darken;
-  background:var(--hexfx-bg-light,linear-gradient(225deg,#e0004f 0%,#e07800 17%,#c7a500 33%,#00a659 50%,#0092c7 67%,#3b55e6 83%,#8f2fd9 100%))}
+/* ── «شبکهٔ شش‌ضلعی» کاملاً برداشته شد ────────────────────────────────────
+   خواستهٔ صاحب ریپو: «این نوارهای شش‌ضلعی را نمی‌خواهم — حذفش کن.»
+   قبلاً این مدل فقط با کلاسِ body پنهان می‌شد، یعنی اگر تنظیمِ ذخیره‌شدهٔ کهنه‌ای
+   روی دستگاه می‌ماند یا مقدارِ ناشناخته‌ای در pumpHexFx می‌نشست، هیچ‌کدام از
+   کلاس‌های hexfx-pattern-* گذاشته نمی‌شد و شش‌ضلعی‌ها دوباره پیدا می‌شدند.
+   حالا نه عنصرش ساخته می‌شود، نه استایلی برایش هست و نه انیمیشنی — پس با هیچ
+   تنظیمی برنمی‌گردد. مدل‌های «رعد و برق» و «ستارهٔ دنباله‌دار» سرِ جایشان‌اند. */
 /* ---- مدل‌های دیگر نور پس‌زمینه: رعد و برق / ستارهٔ دنباله‌دار ----
    --hexfx-a/-b/-c (و نسخه‌های -light) سه رنگِ پخش‌شده از رنگ‌بندیِ
    انتخاب‌شده‌اند که applyHexFx می‌چیند؛ سرعت همان --hexfx-dur مشترک است. */
 .fx-bolts,.fx-stars{position:absolute;inset:0;display:none;pointer-events:none}
-body.hexfx-pattern-bolt .fx-grid{display:none!important}
 body.hexfx-pattern-bolt .fx-bolts{display:block}
-body.hexfx-pattern-stars .fx-grid{display:none!important}
 body.hexfx-pattern-stars .fx-stars{display:block}
 body.hexfx-off .fx-bolts,body.hexfx-off .fx-stars{display:none!important}
 /* رعد و برق نئونی: آذرخش یک شکلِ پُر نیست — یک «لولهٔ نئون» است: خطِ
@@ -13385,7 +13347,7 @@ body.light-mode *::-webkit-scrollbar-thumb{background:rgba(200,120,0,.4)}
 /* ---------- 17. REDUCED MOTION ---------- */
 @media (prefers-reduced-motion: reduce){
   .fx-aurora,.shift-header::after,.ls-brand-icon{animation:none!important}
-  .fx-grid::before,.fx-grid::after,.fx-bolts i,.fx-stars i{animation:none!important}
+  .fx-bolts i,.fx-stars i{animation:none!important}
   #fxCanvas{display:none!important}
   .reveal-fx{opacity:1!important;transform:none!important;transition:none!important}
   .nav-btn,.card,.shift-card,.settings-card{animation:none!important}
@@ -14988,9 +14950,13 @@ body.gfx-performance .daynight-toggle .dn-bird{ display:none !important; }
    ╚══════════════════════════════════════════════════════════════════╝ */
 
 /* -- 2.1 glass backdrop ------------------------------------------------ */
+/* backdrop-filter از این‌جا برداشته شد: #siteBg با z-index:-1 پشتِ همه‌چیز است و
+   جز بومِ صفحه چیزی زیرش نیست، پس آن blur هیچ چیزی را تار نمی‌کرد — فقط مرورگر
+   را مجبور می‌کرد یک «عکسِ پس‌زمینهٔ» تمام‌صفحه نگه دارد و با هر تغییرِ صفحه
+   دوباره بسازد. همان سطح، یکی از سازندگانِ مستطیل‌های نیمه‌رسم‌شده بود.
+   ظاهر عوض نمی‌شود؛ blur واقعی همان filter پایین است. */
 body.gfx-standard #siteBg{
   background:linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
-  -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px);
   filter:blur(24px) brightness(0.22) saturate(0.7);
   transform:scale(1.06);
 }
@@ -15154,8 +15120,8 @@ body.gfx-standard .daynight-toggle .dn-thumb{ animation:dnThumbGlow 3s ease-in-o
 
 /* -- 3.1 LIVING BACKGROUND: parallax blobs + canvas embers + hue drift - */
 body.gfx-ultra #siteBg{
+  /* backdrop-filter برداشته شد — دلیلش کنارِ همین قاعده در لایهٔ gfx-standard */
   background:linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
-  -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px);
   filter:blur(26px) brightness(0.20) saturate(1.15);
   transform:scale(1.07);
 }
@@ -19762,6 +19728,15 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <span class="sec-font-ctrl" title="فونت کادرهای یادداشت/توضیحات">📝<button class="sec-font-btn" onclick="adjNoteFont(-0.08)">A-</button><button class="sec-font-btn" onclick="adjNoteFont(0.08)">A+</button></span>
         <button class="add-row-btn pm-view-ok" id="pm-mode-btn" style="margin:0;border-color:var(--purple);color:var(--purple);padding:5px 10px;font-size:0.78rem" onclick="togglePersonMode()">🔁 پول</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--accent);color:var(--accent);padding:5px 10px;font-size:0.78rem" onclick="renameCurrentPerson()">✏️ تغییر اسم</button>
+        <!-- «همینِ باز» — این سه روی «حسابی که همین حالا باز است» کار می‌کنند: حسابِ
+             اصلی باشد یا حسابِ فرعی. قبلاً پایین در نوارِ حساب بودند و آن نوار جا
+             نداشت (خواستهٔ صاحب ریپو: بیایند بالا). -->
+        <button class="add-row-btn" id="pm-acct-pdf" title="پی‌دی‌افِ همین حسابی که باز است" style="margin:0;border-color:var(--green);color:var(--green);padding:5px 10px;font-size:0.78rem" onclick="pdfPersonCurrentAcct()">📄 PDF</button>
+        <button class="add-row-btn" id="pm-acct-qr" title="کیو‌آرِ همین حسابی که باز است" style="margin:0;border-color:var(--blue);color:var(--blue);padding:5px 10px;font-size:0.78rem" onclick="showPersonQRFromModal()">📲 کیو‌آر</button>
+        <button class="add-row-btn" id="pm-acct-copy" title="گرفتن کپیِ همین حسابی که باز است — برای بردن به برنامهٔ دیگر" style="margin:0;border-color:var(--purple);color:var(--purple);padding:5px 10px;font-size:0.78rem" onclick="openAcctCardFromPerson()">📇 کپیِ حساب</button>
+        <!-- حذفِ حسابِ فرعی — فقط وقتی داخلِ یک حساب فرعی هستیم دیده می‌شود و فقط
+             همان یک حساب را پاک می‌کند؛ حسابِ اصلی و بقیهٔ فرعی‌ها دست نمی‌خورند. -->
+        <button class="add-row-btn" id="pm-head-subdel" title="فقط همین حساب فرعی پاک می‌شود" style="display:none;margin:0;border-color:var(--red);color:var(--red);padding:5px 10px;font-size:0.78rem" onclick="deletePersonSub()">🗑️ حذف این حساب فرعی</button>
         <!-- دکمه‌های «📄 PDF»، «📲 کیو‌آر»، «🗑️ پاک همه» و «📇 کپیِ حساب» از این سربرگ
              برداشته شدند (خواستهٔ صاحب ریپو): کیو‌آرِ هر حساب از دکمهٔ «📲 کیو‌آر کد»ِ
              روی کارتِ همان شخص باز می‌شود و «کپیِ حساب» هم داخلِ همان پنجرهٔ کیو‌آر است. -->
@@ -19804,14 +19779,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
 </select>
         <button class="add-btn pm-acct-new" onclick="newPersonSub()" style="padding:6px 9px;font-size:0.78rem;white-space:nowrap;flex-shrink:0">➕ حساب جدید</button>
         <button class="add-btn pm-table-new" onclick="newPersonTable()" style="padding:6px 9px;font-size:0.78rem;white-space:nowrap;flex-shrink:0">📋 جدول جدید</button>
-        <span style="width:1px;height:24px;background:var(--border);flex-shrink:0"></span>
-        <!-- «همینِ باز» — سه دکمهٔ پی‌دی‌اف/کیو‌آر/کپی روی «حسابی که همین حالا باز است»
-             کار می‌کنند: حسابِ اصلی باشد یا حسابِ فرعی. قبلاً این سه فقط از روی کارتِ
-             خودِ شخص در دسترس بودند و همیشه حسابِ اصلی را می‌گرفتند، پس حساب‌های فرعی
-             نه پی‌دی‌اف داشتند نه کیو‌آر نه کپی. (باگِ گزارش‌شدهٔ صاحب ریپو) -->
-        <button class="pm-acct-tool" id="pm-acct-pdf" onclick="pdfPersonCurrentAcct()" title="پی‌دی‌افِ همین حسابی که باز است" style="padding:6px 9px;font-size:0.78rem;white-space:nowrap;flex-shrink:0;border:1px solid var(--green);border-radius:7px;background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer">📄 PDF</button>
-        <button class="pm-acct-tool" id="pm-acct-qr" onclick="showPersonQRFromModal()" title="کیو‌آرِ همین حسابی که باز است" style="padding:6px 9px;font-size:0.78rem;white-space:nowrap;flex-shrink:0;border:1px solid var(--blue);border-radius:7px;background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer">📲 کیو‌آر</button>
-        <button class="pm-acct-tool" id="pm-acct-copy" onclick="openAcctCardFromPerson()" title="گرفتن کپیِ همین حسابی که باز است — برای بردن به برنامهٔ دیگر" style="padding:6px 9px;font-size:0.78rem;white-space:nowrap;flex-shrink:0;border:1px solid var(--purple);border-radius:7px;background:transparent;color:var(--purple);font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer">📇 کپیِ حساب</button>
         <span style="width:1px;height:24px;background:var(--border);flex-shrink:0"></span>
         <span class="pm-filter-bar">
           <button class="pm-filter-btn active" id="pm-filter-all" onclick="setPersonFilter('all')">📋 همه</button>
@@ -22978,7 +22945,11 @@ function toggleTheme() {
   const btn = document.getElementById('themeBtn');
   if (btn) { const label = isLight ? '🌙 تاریک' : '☀️ روشن'; btn.title = label; btn.setAttribute('aria-label', label); }
   try { localStorage.setItem('pumpTheme', isLight ? 'light' : 'dark'); } catch(e) {}
-  document.documentElement.style.background = isLight ? '#f0f4f8' : '#0d1117';
+  /* عمداً هیچ رنگی روی <html> گذاشته نمی‌شود — پس‌زمینهٔ <body> خودش به بومِ
+     صفحه تسرّی پیدا می‌کند و همیشه هم‌رنگِ صفحه است. سه جای برنامه این‌جا،
+     loadTheme و applyPaletteVisual هر کدام رنگِ متفاوتی روی <html> می‌نوشتند و
+     چون این یکی !important نداشت، همیشه بازنده بود: بوم روی رنگِ پوستهٔ قبلی
+     می‌ماند و همان مستطیل‌های رنگی را می‌ساخت. */
 }
 function loadTheme() {
   try {
@@ -22986,7 +22957,6 @@ function loadTheme() {
       document.body.classList.add('light-mode');
       const btn = document.getElementById('themeBtn');
       if (btn) { btn.title = '🌙 تاریک'; btn.setAttribute('aria-label', '🌙 تاریک'); }
-      document.documentElement.style.background = '#f0f4f8';
     }
   } catch(e) {}
 }
@@ -23034,8 +23004,7 @@ function applyHexFx() {
   const p = _hexFxLoad();
   const b = document.body;
   b.classList.toggle('hexfx-off', !p.on);
-  b.classList.toggle('hexfx-mode-back', p.mode === 'back');
-  b.classList.toggle('hexfx-mode-fade', p.mode === 'fade');
+  // کلاس‌های hexfx-mode-* فقط برای شبکهٔ شش‌ضلعی بودند که حذف شد
   b.classList.toggle('hexfx-pattern-bolt', p.pattern === 'bolt');
   b.classList.toggle('hexfx-pattern-stars', p.pattern === 'stars');
   const d = _HEXFX_DIRS[p.dir] || _HEXFX_DIRS['tr-bl'];
@@ -23054,7 +23023,7 @@ function applyHexFx() {
   b.style.setProperty('--hexfx-b-light', mid(c.light));
   b.style.setProperty('--hexfx-c-light', c.light[c.light.length - 1]);
   // انیمیشن از نو شروع شود تا مقدار جدیدِ متغیرها همان لحظه دیده شود
-  document.querySelectorAll('.fx-grid,.fx-bolts,.fx-stars').forEach(g => {
+  document.querySelectorAll('.fx-bolts,.fx-stars').forEach(g => {
     g.style.display = 'none'; void g.offsetHeight; g.style.display = '';
   });
   _hexFxSyncUI(p);
@@ -26127,6 +26096,9 @@ function _renderSubBar(person) {
   }
   const del = document.getElementById('pm-acct-del');
   if (del) del.style.display = currentSubId ? '' : 'none';
+  // همان دکمه در سربرگ — آن‌جا همیشه دیده می‌شود و لازم نیست نوارِ حساب را کشید
+  const delTop = document.getElementById('pm-head-subdel');
+  if (delTop) delTop.style.display = currentSubId ? '' : 'none';
   const label = document.querySelector('#personModal .pm-acct-bar .pm-acct-label');
   if (label) label.style.display = subs.length === 0 ? 'none' : '';
   // (دکمهٔ کیو‌آرِ سربرگ برداشته شد؛ کیو‌آرِ هر حساب از روی کارتِ خودش باز می‌شود)
@@ -26183,7 +26155,9 @@ function deletePersonSub() {
   const person = _curPerson(); if (!person || !currentSubId) return;
   const sub = (person.subs || []).find(s => s.id === currentSubId);
   if (!sub) return;
-  if (!confirm('حساب «' + (sub.name || '') + '» و همهٔ ردیف‌هایش حذف شود؟')) return;
+  // متن صریح است تا اشتباه نشود: فقط همین حساب فرعی، نه حسابِ اصلی و نه بقیهٔ فرعی‌ها
+  if (!confirm('فقط حسابِ فرعیِ «' + (sub.name || '') + '» و همهٔ ردیف‌هایش حذف شود؟\n\n' +
+               'حسابِ اصلیِ «' + (person.name || '') + '» و بقیهٔ حساب‌های فرعی دست نمی‌خورند.')) return;
   person.subs = (person.subs || []).filter(s => s.id !== currentSubId);
   currentSubId = null; // برگرد به حساب اصلی
   save();
@@ -39001,7 +38975,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.236';
+const APP_VERSION = '2.9.237';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -42104,48 +42078,19 @@ document.addEventListener('click', function(e) {
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* ---------- 1. Build the cinematic background layer ---------- */
-  /* ---------- 1a. Pin the ambient layers to the REAL visible viewport ----------
-     CSS position:fixed + 100dvh mostly keeps the hex grid/aurora blobs from
-     moving on scroll, but on some Android browsers the URL bar's collapse/
-     expand animation still briefly renders #fxLayer sized to the "layout"
-     viewport for a frame while the page is already showing the smaller/
-     larger "visual" viewport, which reads as the background drifting.
-     window.visualViewport tracks the true visible rect continuously, so
-     pin height/top/left to it directly and this can never happen. */
-  var _fxPinned = false;
-  function pinFxToVisualViewport(){
-    if(_fxPinned) return;
-    var vv = window.visualViewport;
-    if(!vv) return;
-    _fxPinned = true;
-    /* PERFORMANCE: این هم‌گام‌سازی قبلاً روی هر رویدادِ scroll/resize ویوپورت
-       مستقیم اجرا می‌شد و سه استایلِ inline روی دو لایهٔ تمام‌صفحه می‌نوشت —
-       یعنی در حینِ اسکرول، هر رویداد یک style/layout/paint اجباریِ تمام‌صفحه
-       می‌ساخت (همان «پرپرک»/گیرِ اسکرول). حالا: (۱) با requestAnimationFrame
-       جمع می‌شود تا در هر فریم حداکثر یک بار اجرا شود، (۲) اگر مقدارها عوض
-       نشده باشند اصلاً چیزی نوشته نمی‌شود. خروجیِ دیده‌شده مو‌به‌مو همان است. */
-    var _lastH = '', _lastT = '', _lastL = '', _rafId = 0;
-    function applyPin(){
-      _rafId = 0;
-      var fx = document.getElementById('fxLayer');
-      var fxTop = document.getElementById('fxLayerTop');
-      /* +140 همان سرریزِ CSS است: قدِ دقیقِ ویوپورت باعث می‌شد یک نوارِ باریکِ
-         پایینِ صفحه بدونِ ته‌رنگِ این لایه بماند و مثل یک «لایهٔ رنگیِ» جدا
-         دیده شود. کمی بلندتر بودن هیچ عارضه‌ای ندارد (pointer-events:none). */
-      var h = (vv.height + 140) + 'px', t = vv.offsetTop + 'px', l = vv.offsetLeft + 'px';
-      if(h === _lastH && t === _lastT && l === _lastL) return;
-      _lastH = h; _lastT = t; _lastL = l;
-      if(fx){ fx.style.height = h; fx.style.top = t; fx.style.left = l; }
-      if(fxTop){ fxTop.style.height = h; fxTop.style.top = t; fxTop.style.left = l; }
-    }
-    function sync(){ if(!_rafId) _rafId = requestAnimationFrame(applyPin); }
-    applyPin();
-    vv.addEventListener('resize', sync, { passive: true });
-    vv.addEventListener('scroll', sync, { passive: true });
-  }
+  /* ---------- 1a. لایه‌های تزئینی دیگر با ویوپورت هم‌گام نمی‌شوند ----------
+     قبلاً این‌جا قد/بالا/چپِ #fxLayer و #fxLayerTop روی هر رویدادِ اسکرولِ
+     ویوپورت با استایلِ inline بازنویسی می‌شد تا با نوارِ آدرسِ مرورگر جا نماند.
+     ولی این دو لایه filter و mix-blend-mode دارند: هر بار که قدشان عوض شود،
+     مرورگر باید کلِ آن سطحِ تمام‌صفحه را دوباره بسازد — و همین وسطِ اسکرول
+     همان «پرپرک»/نیمه‌رسم‌شدن را می‌ساخت. نسخهٔ قبلی فقط تعدادِ دفعاتش را کم
+     کرد، ولی خودِ کار سرِ جایش بود.
+     حالا قدشان در CSS با 100lvh (بزرگ‌ترین حالتِ ویوپورت) بسته شده: همیشه از
+     صفحهٔ دیده‌شده بلندتر یا مساوی است، پس هیچ نوارِ بی‌رنگی نمی‌ماند و هیچ‌وقت
+     هم عوض نمی‌شود. یعنی این هم‌گام‌سازی به‌کل لازم نیست و برداشته شد. */
 
   function buildFx(){
-    if(document.getElementById('fxLayer')){ pinFxToVisualViewport(); return; }
+    if(document.getElementById('fxLayer')) return;
     var fx = document.createElement('div');
     fx.id = 'fxLayer';
     fx.setAttribute('aria-hidden','true');
@@ -42153,7 +42098,6 @@ document.addEventListener('click', function(e) {
       '<div class="fx-aurora fx-a1"></div>'+
       '<div class="fx-aurora fx-a2"></div>'+
       '<div class="fx-aurora fx-a3"></div>'+
-      '<div class="fx-grid"></div>'+
       '<div class="fx-bolts"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i><i class="b5"></i><i class="b6"></i><i class="b7"></i><i class="b8"></i></div>'+
       '<div class="fx-stars"><i class="s1"></i><i class="s2"></i><i class="s3"></i><i class="s4"></i><i class="s5"></i></div>'+
       '<canvas id="fxCanvas"></canvas>'+
@@ -42178,7 +42122,6 @@ document.addEventListener('click', function(e) {
         '<div class="fx-geo fx-geo-3"></div>';
       fx.parentNode.insertBefore(fxTop, fx.nextSibling);
     }
-    pinFxToVisualViewport();
   }
 
   /* ---------- 2. Ember / vapor particle field ----------
@@ -43073,19 +43016,19 @@ document.addEventListener('click', function(e) {
 
   // id, light?, preview bg, accent dot, <html> background colour
   var PALETTES = [
-    {id:'dark-amber',   light:false, name:'طلای مشکی (Obsidian Gold)',      bg:'#0b0904', ac:'#ffb43d', html:'#050402'},
-    {id:'dark-emerald', light:false, name:'زمرد سایبری (Cyber Emerald)',    bg:'#0c1814', ac:'#2fe39c', html:'#040d0a'},
-    {id:'dark-teal',    light:false, name:'اقیانوس نیمه‌شب (Midnight Ocean)', bg:'#0a1c1f', ac:'#22d3ee', html:'#031013'},
-    {id:'dark-crimson', light:false, name:'شب یاقوتی (Crimson Night)',      bg:'#1a0e11', ac:'#ff5d62', html:'#0d0607'},
-    {id:'dark-indigo',  light:false, name:'نقره‌ای تیتانیوم (Titanium Silver)', bg:'#14161c', ac:'#c3cbd6', html:'#0a0b0f'},
-    {id:'light-cream',  light:true,  name:'طلای سلطنتی (Royal Gold)',       bg:'#fffdf8', ac:'#d97706', html:'#f5e8d0'},
-    {id:'light-mint',   light:true,  name:'زمرد لوکس (Emerald Luxury)',     bg:'#ffffff', ac:'#10a05a', html:'#e6f6ee'},
-    {id:'light-sky',    light:true,  name:'یاقوت کبود سلطنتی (Royal Sapphire)', bg:'#ffffff', ac:'#2b7fff', html:'#e6f0fc'},
-    {id:'light-peach',  light:true,  name:'یاقوت اجرایی (Ruby Executive)',  bg:'#fffafa', ac:'#c81e3a', html:'#fbdfe4'},
-    {id:'light-slate',  light:true,  name:'بلور آمیتیست (Amethyst Crystal)', bg:'#ffffff', ac:'#7c4dff', html:'#e9e3fb'},
-    {id:'golden-dune',  light:true,  name:'تپهٔ طلایی (Golden Dune)',        bg:'#fff2e2', ac:'#dfa35e', html:'#f7e6cf'},
-    {id:'burgundy',     light:true,  name:'شرابی کِرِم (Burgundy)',          bg:'#fff3e1', ac:'#8a0d0d', html:'#f6e2cf'},
-    {id:'deep-ocean',   light:false, name:'اقیانوس عمیق (Deep Ocean)',       bg:'#063a61', ac:'#c9c1b0', html:'#001120'}
+    {id:'dark-amber',   light:false, name:'طلای مشکی (Obsidian Gold)',      bg:'#0b0904', ac:'#ffb43d'},
+    {id:'dark-emerald', light:false, name:'زمرد سایبری (Cyber Emerald)',    bg:'#0c1814', ac:'#2fe39c'},
+    {id:'dark-teal',    light:false, name:'اقیانوس نیمه‌شب (Midnight Ocean)', bg:'#0a1c1f', ac:'#22d3ee'},
+    {id:'dark-crimson', light:false, name:'شب یاقوتی (Crimson Night)',      bg:'#1a0e11', ac:'#ff5d62'},
+    {id:'dark-indigo',  light:false, name:'نقره‌ای تیتانیوم (Titanium Silver)', bg:'#14161c', ac:'#c3cbd6'},
+    {id:'light-cream',  light:true,  name:'طلای سلطنتی (Royal Gold)',       bg:'#fffdf8', ac:'#d97706'},
+    {id:'light-mint',   light:true,  name:'زمرد لوکس (Emerald Luxury)',     bg:'#ffffff', ac:'#10a05a'},
+    {id:'light-sky',    light:true,  name:'یاقوت کبود سلطنتی (Royal Sapphire)', bg:'#ffffff', ac:'#2b7fff'},
+    {id:'light-peach',  light:true,  name:'یاقوت اجرایی (Ruby Executive)',  bg:'#fffafa', ac:'#c81e3a'},
+    {id:'light-slate',  light:true,  name:'بلور آمیتیست (Amethyst Crystal)', bg:'#ffffff', ac:'#7c4dff'},
+    {id:'golden-dune',  light:true,  name:'تپهٔ طلایی (Golden Dune)',        bg:'#fff2e2', ac:'#dfa35e'},
+    {id:'burgundy',     light:true,  name:'شرابی کِرِم (Burgundy)',          bg:'#fff3e1', ac:'#8a0d0d'},
+    {id:'deep-ocean',   light:false, name:'اقیانوس عمیق (Deep Ocean)',       bg:'#063a61', ac:'#c9c1b0'}
   ];
   function allClasses(){ return PALETTES.map(function(p){ return 'theme-'+p.id; }); }
   function find(id){ for(var i=0;i<PALETTES.length;i++){ if(PALETTES[i].id===id) return PALETTES[i]; } return null; }
@@ -43100,7 +43043,10 @@ document.addEventListener('click', function(e) {
     b.classList.add('theme-'+id);
     if(p.light){ b.classList.add('light-mode'); try{ localStorage.setItem('pumpTheme','light'); }catch(e){} }
     else { b.classList.remove('light-mode'); try{ localStorage.setItem('pumpTheme','dark'); }catch(e){} }
-    try{ document.documentElement.style.setProperty('background', p.html, 'important'); }catch(e){}
+    /* رنگِ جداگانهٔ بوم برداشته شد — همان چیزی بود که مستطیل‌های رنگی می‌ساخت.
+       اگر از نسخه‌های قبلی رنگی روی <html> مانده باشد، همین‌جا پاک می‌شود تا
+       دستگاهی که برنامه را به‌روز می‌کند بی‌درنگ درست شود. */
+    try{ document.documentElement.style.removeProperty('background'); }catch(e){}
     var tb = document.getElementById('themeBtn'); if(tb){ var _tbLabel = p.light ? '🌙 تاریک' : '☀️ روشن'; tb.title = _tbLabel; tb.setAttribute('aria-label', _tbLabel); }
     try{ localStorage.setItem('pumpPalette', id); }catch(e){}
     try{ localStorage.setItem(p.light ? 'pumpPaletteLight' : 'pumpPaletteDark', id); }catch(e){}
@@ -43789,17 +43735,16 @@ body.gfx-ultra #fxLayer{ will-change:filter; }
    دوباره ترکیب می‌کند — همین در حینِ اسکرول روی گوشی «پرپرک»/کاشی‌های خالی
    می‌ساخت. حالا فقط تا وقتی انگشت روی صفحه اسکرول می‌کند مکث می‌کند و ~150ms
    بعد از توقف دقیقاً از همان‌جا ادامه می‌دهد؛ رنگ، شکل و سرعتش عوض نمی‌شود. */
-body.is-scrolling .fx-grid,
-body.is-scrolling .fx-grid::before,
 body.is-scrolling .fx-bolts i,
 body.is-scrolling .fx-stars i{
   animation-play-state:paused !important;
 }
 
-/* لایه‌های تزئینیِ تمام‌صفحه از بقیهٔ صفحه جدا نگه داشته می‌شوند تا رنگ‌آمیزیِ
-   دوبارهٔ آن‌ها، صفحه را هم بی‌اعتبار نکند (فقط ایزوله‌سازی — چیزی از ظاهرشان
-   عوض نمی‌شود؛ هر دو از قبل overflow:hidden و pointer-events:none هستند). */
-#fxLayer, #fxLayerTop{ contain:layout paint; }
+/* contain:layout paint از این دو لایه برداشته شد. هر دو از قبل overflow:hidden
+   و pointer-events:none هستند، پس چیزی به بُرِش اضافه نمی‌کرد؛ ولی contain:paint
+   روی یک عنصرِ fixed که هم filter دارد و هم فرزندانش mix-blend-mode، بُرِش و
+   ترتیبِ لایه‌ها را عوض می‌کند و روی گوشی‌های مختلف نتیجهٔ یکسانی نمی‌دهد —
+   یکی از راه‌های پیدا شدنِ همان مستطیل‌های نیمه‌رسم‌شده. */
 
 /* منوی سه‌نقطه (کشویی بخش‌ها): تا وقتی بسته است، یک لایهٔ تمام‌صفحه با
    backdrop-filter بود که فقط opacity:0 داشت — یعنی مرورگر همچنان می‌توانست
@@ -43808,8 +43753,18 @@ body.is-scrolling .fx-stars i{
    دیده‌شده عوض نمی‌شود: باز شدن فوری visible می‌شود و پنهان‌شدن دقیقاً بعد از
    پایانِ همان محوشدنِ 0.25/0.28 ثانیه‌ای اتفاق می‌افتد، پس انیمیشنِ بسته‌شدن
    هم کامل دیده می‌شود. */
-.m-menu-overlay{ visibility:hidden; transition:opacity .25s, visibility 0s linear .3s; }
-.m-menu-overlay.open{ visibility:visible; transition:opacity .25s, visibility 0s; }
+/* تا وقتی بسته است هیچ‌کاری برایش انجام نمی‌شود: نه دیده می‌شود، نه لایهٔ
+   محوکنندهٔ تمام‌صفحه‌اش زنده می‌ماند. backdrop-filter عمداً فقط روی .open است —
+   قبلاً همیشه روشن بود و مرورگر برای منوی بسته هم یک سطحِ محوکنندهٔ تمام‌صفحه
+   نگه می‌داشت. !important لازم است چون دو قاعدهٔ @media پایین‌تر در همین فایل
+   دوباره transition و backdrop-filter را می‌نویسند و بدون آن این‌جا بازنده بود
+   (همان اشتباهی که باعث شد وصلهٔ قبلی اثر نکند). */
+.m-menu-overlay{ visibility:hidden !important;
+  transition:opacity .25s, visibility 0s linear .3s !important;
+  -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+.m-menu-overlay.open{ visibility:visible !important;
+  transition:opacity .25s, visibility 0s !important;
+  -webkit-backdrop-filter:blur(2px) !important; backdrop-filter:blur(2px) !important; }
 
 /* ═══ سه بهینه‌سازیِ تازه — روی هر سه حالتِ گرافیک، بدون تغییرِ ظاهر یا منطق ═══
 
