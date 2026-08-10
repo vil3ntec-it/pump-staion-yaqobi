@@ -19798,9 +19798,9 @@ body.viewer-mode .inv-admin-only{display:none!important}
       </div>
     </div>
     <div class="modal-summary" id="pm-pct-row">
-      <div class="msumbox"><div class="ml">⛽ فیصدی پطرول ٪</div><input type="number" class="mv acc pm-edit" id="pm-percent" placeholder="0" title="فیصدیِ پطرول — از مقدار رسیدِ پطرول کم می‌شود" style="background:transparent;border:none;border-bottom:1px dashed var(--accent);text-align:center;width:100%" oninput="updatePersonPercent(this.value,'petrol')"></div>
-      <div class="msumbox"><div class="ml">🟤 فیصدی دیزل ٪</div><input type="number" class="mv acc pm-edit" id="pm-percent-d" placeholder="0" title="فیصدیِ دیزل — از مقدار رسیدِ دیزل کم می‌شود" style="background:transparent;border:none;border-bottom:1px dashed var(--accent);text-align:center;width:100%" oninput="updatePersonPercent(this.value,'diesel')"></div>
-      <div class="msumbox pm-pct-lock"><button type="button" class="pm-pct-link" id="pm-pct-link" onclick="togglePersonPctLink()" title="قفلِ بسته: هر چه در یکی بنویسید در دیگری هم می‌نشیند. قفلِ باز: هر تیل فیصدیِ خودش را دارد و می‌توانید یکی را خالی بگذارید (برای یکی فیصدی بدهید، برای دیگری نه).">🔒 فیصدیِ هر دو یکی</button></div>
+      <div class="msumbox"><div class="ml">⛽ پطرول</div><input type="number" class="mv acc pm-edit" id="pm-percent" placeholder="0" title="فیصدیِ پطرول — از مقدار رسیدِ پطرول کم می‌شود" style="background:transparent;border:none;border-bottom:1px dashed var(--accent);text-align:center;width:100%" oninput="updatePersonPercent(this.value,'petrol')"></div>
+      <div class="msumbox"><div class="ml">🟤 دیزل</div><input type="number" class="mv acc pm-edit" id="pm-percent-d" placeholder="0" title="فیصدیِ دیزل — از مقدار رسیدِ دیزل کم می‌شود" style="background:transparent;border:none;border-bottom:1px dashed var(--accent);text-align:center;width:100%" oninput="updatePersonPercent(this.value,'diesel')"></div>
+      <div class="msumbox"><div class="ml">فیصدی</div><button type="button" class="pm-pct-link" id="pm-pct-link" onclick="togglePersonPctLink()" title="دوگانه: یک فیصدی برای هر دو تیل — هر چه در یکی بنویسید در دیگری هم می‌نشیند. جداگانه: هر تیل فیصدیِ خودش را دارد و می‌توانید یکی را خالی بگذارید.">🔒 دوگانه</button></div>
     </div>
     <div class="modal-body">
       <div id="pm-bigname" style="text-align:center;font-size:1.9rem;font-weight:900;color:var(--accent);padding:6px 10px;margin-bottom:8px;border-bottom:2px solid var(--border)"></div>
@@ -27576,30 +27576,47 @@ function _renderRasidLog(acct, o) {
     document.querySelectorAll('#pm-tbl thead th'), th => th.textContent.trim());
   if (!heads.length) return;
 
-  /* خواستهٔ صاحب ریپو: در ستونِ «نام» هیچ توضیحی نوشته نشود — فقط «فیصدی از پطرول».
-     مقداری که از رسید کم شده در ستونِ «مقدار بردگی» می‌نشیند (چون فیصدی هم مثل
-     بردگی به حسابِ ما اضافه می‌شود) و خودِ رسید در ستونِ رسید. الباقی نوشته نمی‌شود
-     چون در سربرگ و فوترِ جدول خودکار حساب شده است. */
-  const one = (ftype, amount, comm, pct, icon, label, when) => {
-    if (!amount) return;
-    // در «حساب جداگانه پطرول/دیزل» فقط ردیفِ همان تیل بیاید
-    if (currentPersonFilter !== 'all' && currentPersonFilter !== ftype) return;
+  /* خواستهٔ صاحب ریپو: هر چیز ردیفِ خودِ خودش را داشته باشد — یکی برای «رسید» و
+     یکی برای «فیصدی». این‌طور عددِ رسید توی ردیفِ فیصدی نمی‌نشیند و مزاحمِ خانه‌های
+     نوشته‌دار نمی‌شود. در ستونِ «نام» هم هیچ توضیحی نیست. «الباقی» نوشته نمی‌شود چون
+     در سربرگ و فوترِ جدول خودکار حساب شده است.
+     اندازهٔ خانه‌ها دقیقاً مثل ردیف‌های دستی است: همان ستونِ «نوع تیل» و همان فاصله‌ها. */
+  const rasidHead = heads.indexOf('رسید تیل') >= 0 ? 'رسید تیل' : 'رسید';
+  const ftCell = ftype => {
+    const isP = ftype !== 'diesel';
+    return '<td class="pmar-ft"><div class="ft-pick">' +
+      '<span class="ft-opt petrol' + (isP ? ' active' : '') + '">⛽ پطرول</span>' +
+      '<span class="ft-opt diesel' + (isP ? '' : ' active') + '">🟤 دیزل</span>' +
+      '</div></td>';
+  };
+  const line = (ftype, when, name, cells, tip) => {
     const tr = document.createElement('tr');
     tr.className = 'pm-auto-row';
-    tr.title = 'این ردیف خودکار است — از «مقدار رسید» سربرگ می‌آید و در جدول قابل ویرایش نیست';
+    tr.title = tip;
     tr.innerHTML = heads.map(h => {
       if (h === '#') return '<td class="pmar-mark">📌</td>';
       if (h === 'تاریخ') return '<td>' + escFa(when || '—') + '</td>';
-      if (h === 'نام') return '<td class="pmar-name">' + icon + ' ' +
-        escFa(pct ? ('فیصدی از ' + label) : ('رسید ' + label)) + '</td>';
-      if (h === 'مقدار بردگی') return '<td class="pmar-comm">' + (comm ? n2fa(o.rnd(comm)) : '') + '</td>';
-      if (h === 'رسید' || h === 'رسید تیل') return '<td class="pmar-val">' + n2fa(o.rnd(amount)) + '</td>';
-      return '<td></td>';
+      if (h === 'نام') return '<td class="pmar-name">' + escFa(name) + '</td>';
+      if (h === 'نوع تیل') return ftCell(ftype);
+      return cells[h] || '<td></td>';
     }).join('');
     tbody.appendChild(tr);
   };
-  one('petrol', o.rasidP, o.commP, o.pctP, '⛽', 'پطرول', at[key + 'P']);
-  one('diesel', o.rasidD, o.commD, o.pctD, '🟤', 'دیزل', at[key + 'D']);
+  const one = (ftype, icon, label, amount, comm, pct, when) => {
+    if (!amount) return;
+    // در «حساب جداگانه پطرول/دیزل» فقط ردیفِ همان تیل بیاید
+    if (currentPersonFilter !== 'all' && currentPersonFilter !== ftype) return;
+    const rc = {};
+    rc[rasidHead] = '<td class="pmar-val">' + n2fa(o.rnd(amount)) + '</td>';
+    line(ftype, when, icon + ' رسید ' + label, rc,
+      'ردیفِ خودکار — همان «مقدار رسید»ی که در سربرگ نوشته‌اید');
+    if (!pct) return;
+    line(ftype, when, icon + ' فیصدی از ' + label,
+      { 'مقدار بردگی': '<td class="pmar-comm">' + n2fa(o.rnd(comm)) + '</td>' },
+      'ردیفِ خودکار — فیصدیِ ' + n2fa(o.rnd(pct)) + '٪ که از همین رسید کم شده');
+  };
+  one('petrol', '⛽', 'پطرول', o.rasidP, o.commP, o.pctP, at[key + 'P']);
+  one('diesel', '🟤', 'دیزل', o.rasidD, o.commD, o.pctD, at[key + 'D']);
 }
 function _updatePersonTotals(person) {
   const acct = _acctOf(person);
@@ -27710,7 +27727,7 @@ function _updatePersonTotals(person) {
   const pctLinkBtn = document.getElementById('pm-pct-link');
   if (pctLinkBtn) {
     const lk = _pctLinked(acct);
-    pctLinkBtn.textContent = lk ? '🔒 فیصدیِ هر دو یکی' : '🔓 فیصدیِ هر کدام جدا';
+    pctLinkBtn.textContent = lk ? '🔒 دوگانه' : '🔓 جداگانه';
     pctLinkBtn.classList.toggle('off', !lk);
   }
   setInput('pm-money', (acct.moneyDeposit!=null && acct.moneyDeposit!=='') ? acct.moneyDeposit : '');
@@ -39241,7 +39258,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.244';
+const APP_VERSION = '2.9.245';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -47268,21 +47285,27 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
    می‌آیند و الباقیِ سربرگ از قبل این رسید را حساب کرده است). */
 .xls-tbl tr.pm-auto-row td{
   background:color-mix(in srgb, var(--accent) 9%, transparent);
-  font-weight:800; color:var(--txt); padding:8px 7px; cursor:default;
+  /* همان اندازه و فاصله‌ای که کادرهای تایپیِ .xls-in دارند تا ردیف کوچک/بزرگ نیفتد */
+  font-weight:700; color:var(--txt); padding:8px 3px; cursor:default;
 }
+.xls-tbl tr.pm-auto-row td.pmar-ft{ padding:8px 7px; }
+.xls-tbl tr.pm-auto-row .ft-opt{ cursor:default; }
 .xls-tbl tr.pm-auto-row .pmar-mark{ color:var(--accent); }
 .xls-tbl tr.pm-auto-row .pmar-name{ text-align:center; line-height:1.7; }
 .xls-tbl tr.pm-auto-row .pmar-val{ color:var(--green); }
 .xls-tbl tr.pm-auto-row .pmar-comm{ color:var(--accent); }
 
-/* ردیفِ فیصدی: دو کادرِ پطرول/دیزل کنار هم و دکمهٔ قفل، تمام‌عرض، زیرشان.
-   (با auto-fitِ عمومی، کادرِ سوم نصفه و شکسته می‌افتاد.) */
-#pm-pct-row{ grid-template-columns:1fr 1fr; }
-#pm-pct-row .pm-pct-lock{ grid-column:1 / -1; min-height:0; padding:5px 10px; }
+/* ردیفِ فیصدی: هر سه کادر در همان یک خط و همان بلندیِ قبلی — بلندتر نمی‌شود.
+   نوشته‌ها کوتاه‌اند («پطرول ٪» / «دیزل ٪» / «فیصدی دوگانه») تا در گوشیِ باریک هم
+   بی‌شکستگی جا شوند. */
+#pm-pct-row{ grid-template-columns:1fr 1fr 1.15fr; gap:4px; }
+#pm-pct-row .msumbox{ padding:4px 5px !important; gap:6px !important; }
+#pm-pct-row .ml{ font-size:0.78rem !important; white-space:nowrap; }
+#pm-pct-row input.mv{ width:52px !important; font-size:0.98rem !important; }
 .pm-pct-link{
   background:transparent; border:1px dashed var(--accent); border-radius:8px;
   color:var(--accent); font-family:'Vazirmatn',sans-serif; font-weight:800;
-  font-size:0.86rem; cursor:pointer; padding:5px 8px; width:100%;
+  font-size:0.8rem; cursor:pointer; padding:3px 6px; white-space:nowrap;
 }
 .pm-pct-link.off{ color:var(--muted); border-color:var(--muted); }
 .pm-pct-link:active{ transform:scale(.97); }
