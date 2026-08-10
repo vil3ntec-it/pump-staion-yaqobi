@@ -164,7 +164,6 @@
 <header>
   <span class="dot" id="dot" title="وضعیت اتصال به سرور"></span>
   <h1>📨 پیام‌رسان یعقوبی</h1>
-  <button class="ico" id="bell" onclick="enablePush()" title="روشن کردن اعلان روی این دستگاه">🔕</button>
   <button class="ico" onclick="openSet()" title="تنظیمات">⚙️</button>
 </header>
 
@@ -240,10 +239,6 @@
 
     <div class="row">
       <button class="btn g" onclick="saveSet()">💾 ذخیره</button>
-      <button class="btn o" onclick="enablePush()">🔔 روشن کردن اعلان</button>
-    </div>
-    <div class="row">
-      <button class="btn o" onclick="testMsg()">✅ تست اعلان</button>
       <button class="btn o" onclick="closeSet()">بستن</button>
     </div>
     <div class="row">
@@ -256,6 +251,7 @@
       <b dir="ltr">p-&lt;شناسه&gt;</b> فقط خبرِ حسابِ همان مشتری. نقش با کیو‌آرِ فعال‌سازی می‌آید و قفل می‌ماند.<br>
       <b>نصب روی گوشی:</b> اندروید — منوی مرورگر ← <b dir="ltr">Add to Home screen</b>.
       آیفون — <b dir="ltr">Share ← Add to Home Screen</b>؛ در آیفون اعلان فقط بعد از همین کار کار می‌کند.<br>
+      <b>اعلان:</b> دکمهٔ روشن/خاموش ندارد — به‌محضِ فعال شدنِ نقش، خودِ برنامه اجازه را می‌گیرد و خبرها می‌آیند.<br>
       <b>هر برنامه‌ای</b> می‌تواند به همین‌جا خبر بدهد:<br>
       <code dir="ltr" style="font-size:11.5px;color:var(--blue)">curl -d "تیل مخزن ۲ کم شد" https://&lt;سرور&gt;/api/notify/staff</code>
     </div>
@@ -367,7 +363,6 @@ function paintGate() {
   document.getElementById('list').style.display = on ? 'none' : '';
   // مشتری و کارمند هم می‌توانند پیام بفرستند؛ فقط بدونِ نقش کادر بسته است
   document.getElementById('composer').style.display = on ? 'none' : '';
-  document.getElementById('bell').style.display = on ? 'none' : '';
   var h = document.querySelector('header h1');
   h.textContent = on ? '📨 پیام‌رسان یعقوبی' : ('📨 ' + roleName());
   return on;
@@ -555,12 +550,11 @@ function note(html, warn) {
 }
 
 /* ── نوتیفیکیشن روی همین دستگاه ───────────────────────────────────────── */
+/* اعلان در این برنامه اختیاری نیست: دکمهٔ روشن/خاموش برداشته شده و به‌محضِ
+   داشتنِ نقش، خود برنامه اجازه را می‌گیرد و دستگاه را نزدِ سرور ثبت می‌کند.
+   این تابع فقط می‌گوید «الان نشسته یا نه» — دکمه‌ای برای دست‌کاری نیست. */
 function bellState() {
-  var b = document.getElementById('bell');
-  var on = (typeof Notification !== 'undefined') && Notification.permission === 'granted' && !!LS.get('payamPushOn', '');
-  b.textContent = on ? '🔔' : '🔕';
-  b.style.borderColor = on ? 'var(--green)' : 'var(--line)';
-  return on;
+  return (typeof Notification !== 'undefined') && Notification.permission === 'granted' && !!LS.get('payamPushOn', '');
 }
 function b64ToBytes(b64) {
   var pad = '='.repeat((4 - (b64.length % 4)) % 4);
@@ -619,30 +613,37 @@ function subscribeDevice() {
     }).catch(function () { return false; });
   }).catch(function () { return false; });
 }
-function enablePush() {
-  setMsg('در حال روشن کردن اعلان…');
+/* اعلان را خودِ برنامه روشن می‌کند. اگر مرورگر اجازه را رد کرده باشد، فقط یک خط
+   راهنما نشان داده می‌شود (کارِ دیگری از دستِ برنامه برنمی‌آید — قفلِ خودِ مرورگر است). */
+var _pushTried = false;
+function ensurePush() {
+  if (!role || _pushTried) return;
+  if (typeof Notification === 'undefined') return;
+  if (Notification.permission === 'denied') {
+    note('اعلانِ این صفحه در مرورگر بسته است. از تنظیماتِ مرورگر، <b>Notifications</b> را برای همین صفحه «Allow» کنید.', true);
+    return;
+  }
+  _pushTried = true;
   subscribeDevice().then(function (r) {
-    bellState();
-    if (r === true) {
-      note('🔔 اعلان روی این دستگاه روشن شد — خبرها حتی با برنامهٔ بسته می‌رسند.');
-      setMsg('✅ روشن شد.', 'var(--green)');
-      setTimeout(function () { note(''); }, 6000);
-      return;
-    }
     if (r === 'denied') {
-      note('اجازهٔ اعلان داده نشد. از تنظیماتِ مرورگر، <b>Notifications</b> این صفحه را «Allow» کنید.', true);
-      setMsg('❌ اجازه داده نشد.', 'var(--red)');
+      _pushTried = false;   // شاید بعداً اجازه بدهد
+      note('اعلانِ این صفحه در مرورگر بسته است. از تنظیماتِ مرورگر، <b>Notifications</b> را برای همین صفحه «Allow» کنید.', true);
       return;
     }
     if (r === 'unsupported') {
       note('این مرورگر نوتیفیکیشن ندارد. در آیفون اول <b>Share ← Add to Home Screen</b> را بزنید و از همان آیکون باز کنید.', true);
-      setMsg('این مرورگر پشتیبانی نمی‌کند.', 'var(--red)');
       return;
     }
-    note('سرورِ خانگی جواب نداد — مطمئن شوید کامپیوترِ سرور روشن است.', true);
-    setMsg('❌ سرور در دسترس نیست.', 'var(--red)');
+    if (r !== true) _pushTried = false;   // سرور جواب نداد — دفعهٔ بعد دوباره
   });
 }
+/* بعضی مرورگرها (آیفون/سافاری) اجازهٔ اعلان را فقط با یک لمسِ کاربر می‌دهند؛
+   پس اگر بار اول نشد، اولین لمسِ صفحه دوباره امتحان می‌کند. */
+function _pushOnFirstTouch() {
+  if (typeof Notification !== 'undefined' && Notification.permission === 'default') ensurePush();
+}
+document.addEventListener('click', _pushOnFirstTouch);
+document.addEventListener('touchstart', _pushOnFirstTouch, { passive: true });
 /* بی‌سروصدا: اگر قبلاً اجازه داده شده، هر بار که برنامه بالا می‌آید دستگاه دوباره
    نزدِ سرور ثبت می‌شود — چون اشتراکِ پوش گاهی عوض می‌شود و بدون ثبتِ تازه،
    اعلان بی‌صدا می‌میرد. */
@@ -656,7 +657,7 @@ function silentPush() {
     .then(function (reg) { return reg.pushManager.getSubscription(); })
     .then(function (sub) {
       if (same && sub && sub.endpoint === wantEp) return;   // همه‌چیز سرِ جایش
-      subscribeDevice().then(bellState);
+      subscribeDevice();
     })
     .catch(function () {});
 }
@@ -727,15 +728,6 @@ function saveSet() {
   paintList(); connect();
   setMsg('✅ ذخیره شد.', 'var(--green)');
 }
-function testMsg() {
-  setMsg('در حال فرستادن تست…');
-  post(active, myName, '✅ تست پیام‌رسان — ' + when(Date.now()), { tags: ['tada'] }).then(function (ok) {
-    setMsg(ok
-      ? '✅ تست فرستاده شد. برنامه را ببندید و دوباره تست بزنید تا مطمئن شوید اعلان با برنامهٔ بسته هم می‌آید.'
-      : '❌ سرور خبر را نگرفت — مطمئن شوید کامپیوترِ سرور روشن است.', ok ? 'var(--green)' : 'var(--red)');
-  });
-}
-
 /* ── راه‌اندازی ───────────────────────────────────────────────────────── */
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(function () {});
@@ -743,7 +735,7 @@ if ('serviceWorker' in navigator) {
     var d = ev.data || {};
     // پیامی که سرویس‌ورکر گرفت و چون صفحه باز بود خودش نشان نداد
     if (d.type === 'push-message') note('🔔 <b>' + esc(d.title || '') + '</b> — ' + esc(String(d.body || '').slice(0, 90)));
-    if (d.type === 'push-resubscribe') subscribeDevice().then(bellState);
+    if (d.type === 'push-resubscribe') subscribeDevice();
   });
 }
 function boot() {
@@ -751,14 +743,11 @@ function boot() {
   paintTabs();
   paintList();
   paintDot();
-  bellState();
   note('');
   if (gated) return;
   connect();
+  ensurePush();                       // اعلان اجباری است — خودش روشن می‌شود
   setTimeout(silentPush, 1200);
-  if (!bellState()) {
-    note('برای گرفتنِ اعلان با برنامهٔ بسته، یک‌بار اجازه بدهید.<button onclick="enablePush()">🔔 روشن کن</button>');
-  }
 }
 boot();
 setInterval(function () { if (role) paintDot(); }, 3000);
