@@ -7,7 +7,7 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning src/index.js",
-    "test": "node test/smoke.mjs && node test/multisite.mjs && node test/protected-domains.mjs && node test/tunnel-recovery.mjs && node test/messenger.mjs && node test/notify.mjs",
+    "test": "node test/smoke.mjs && node test/multisite.mjs && node test/protected-domains.mjs && node test/tunnel-recovery.mjs && node test/messenger.mjs && node test/notify.mjs && node test/notify-readkey.mjs",
     "test:multisite": "node test/multisite.mjs",
     "test:ui": "node test/ui.mjs",
     "test:perf": "node test/perf.mjs",
@@ -15,6 +15,7 @@
     "test:tunnel-recovery": "node test/tunnel-recovery.mjs",
     "test:messenger": "node test/messenger.mjs",
     "test:notify": "node test/notify.mjs",
+    "test:notify-readkey": "node test/notify-readkey.mjs",
     "test:pump-notify": "node test/pump-notify.mjs"
   },
   "dependencies": {
