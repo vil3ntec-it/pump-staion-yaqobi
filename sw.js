@@ -1,7 +1,7 @@
 // سرویس‌ورکر پمپ یعقوبی — پوستهٔ برنامه (این صفحه + آیکون‌ها) را کش می‌کند تا
 // برنامه بعد از نصب، هم آنلاین و هم کاملاً آفلاین باز شود. نسخهٔ کش را هر بار
 // که APP_VERSION در index.html عوض می‌شود، این‌جا هم عوض کنید تا کش کهنه پاک شود.
-const CACHE_NAME = 'pump-yaqobi-shell-v2.9.228';
+const CACHE_NAME = 'pump-yaqobi-shell-v2.9.229';
 const APP_SHELL = [
   './',
   './index.html',
@@ -22,7 +22,13 @@ self.addEventListener('install', event => {
   // جدا برای هر فایل، شکستِ یکی مانع کش‌شدنِ بقیه (به‌خصوص خودِ index.html) نمی‌شود.
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => Promise.all(APP_SHELL.map(url => cache.add(url).catch(() => {}))))
+      // cache:'reload' مهم است: cache.add(url) به‌طور پیش‌فرض از کشِ HTTPِ مرورگر
+      // هم جواب می‌گیرد، پس سرویس‌ورکرِ تازه می‌توانست همان index.htmlِ کهنه را
+      // (تا سقفِ max-ageِ سرور) داخلِ کشِ خودش بنشاند و نسخهٔ تازه باز هم دیده
+      // نشود. با این پرچم، پوستهٔ برنامه همیشه از خودِ شبکه گرفته می‌شود.
+      .then(cache => Promise.all(APP_SHELL.map(url =>
+        cache.add(new Request(url, { cache: 'reload' })).catch(() => cache.add(url).catch(() => {}))
+      )))
       .then(() => self.skipWaiting())
       .catch(() => {})
   );

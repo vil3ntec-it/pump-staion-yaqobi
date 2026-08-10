@@ -16345,7 +16345,7 @@ body.boot-viewer #bootViewerSplash{
 <!-- LOCK SCREEN -->
 <div class="lock-screen" id="lockScreen">
   <!-- دکمهٔ ریست/تازه‌سازی — بالای صفحهٔ قفل، برای همهٔ دستگاه‌ها -->
-  <button type="button" id="lsResetBtn" class="ls-reset-btn" onclick="location.reload()" title="تازه‌سازی صفحه (اطلاعات پاک نمی‌شود)" aria-label="تازه‌سازی صفحه">🔄</button>
+  <button type="button" id="lsResetBtn" class="ls-reset-btn" onclick="pumpHardRefresh()" title="آوردن آخرین نسخهٔ برنامه (اطلاعات پاک نمی‌شود)" aria-label="آوردن آخرین نسخه">🔄</button>
   <div class="ls-bg"></div>
   <div class="ls-overlay"></div>
   <div class="ls-geo ls-geo-1" aria-hidden="true"></div>
@@ -19505,7 +19505,13 @@ body.viewer-mode .inv-admin-only{display:none!important}
 </div>
 
 <div class="copyright-bar" style="text-align:center;padding:18px 12px 28px;margin-top:18px;border-top:1px solid var(--border);font-size:0.78rem;color:var(--muted);line-height:1.9">
-  <span class="app-version" style="display:inline-block;background:var(--card);border:1px solid var(--border);border-radius:999px;padding:2px 14px;margin-bottom:8px"></span><br>
+  <span class="app-version" style="display:inline-block;background:var(--card);border:1px solid var(--border);border-radius:999px;padding:2px 14px;margin-bottom:8px"></span>
+  <!-- دکمهٔ همیشه‌در‌دسترسِ «آوردن آخرین نسخه»: کشِ پوستهٔ برنامه را پاک می‌کند و
+       صفحه را از شبکه می‌آورد. تا حالا تنها راهِ در دسترسِ کاربر، دکمهٔ 🔄 صفحهٔ
+       قفل بود که فقط location.reload() می‌کرد و سرویس‌ورکر باز همان نسخهٔ کهنه را
+       می‌داد؛ یعنی کاربر هیچ راهی نداشت نسخهٔ تازه را بیاورد. -->
+  <button type="button" id="cprUpdBtn" onclick="pumpHardRefresh()" title="کشِ برنامه پاک و آخرین نسخه از اینترنت آورده می‌شود — اطلاعات پاک نمی‌شود"
+    style="display:inline-block;margin:0 6px 8px;background:var(--card);border:1px solid var(--accent);color:var(--accent);border-radius:999px;padding:2px 14px;font-family:'Vazirmatn',sans-serif;font-size:0.76rem;font-weight:800;cursor:pointer">🔄 آوردن آخرین نسخه</button><br>
   1405 برای پمپ یعقوبی طراحی شده ـــ تمام حقوق محفوظ است<br>
   طراحی و توسعه: <b style="color:var(--accent)">vil3ntec@gmail.com محمد هارون</b><br>
   شماره 0792236008 +93
@@ -37804,6 +37810,38 @@ function pumpApplyWebUpdate() {
   try { _chatOutboxSave(); _chatCacheSaveNow(); } catch (e) {}
   setTimeout(() => { try { location.reload(); } catch (e) {} }, 250);
 }
+
+/* ── «آوردن آخرین نسخه» — تازه‌سازیِ واقعی ───────────────────────────────────
+   باگِ گزارش‌شده: صاحب ریپو دکمهٔ 🔄 صفحهٔ قفل را می‌زد و هیچ فرقی نمی‌کرد و
+   همان نسخهٔ کهنه با همان باگ‌ها بالا می‌آمد. علتش این بود که آن دکمه فقط
+   location.reload() صدا می‌زد و سرویس‌ورکر دوباره همان صفحهٔ کشِ خودش را جواب
+   می‌داد — یعنی دکمهٔ «تازه‌سازی» عملاً برای نسخه هیچ کاری نمی‌کرد.
+   این تابع کشِ پوستهٔ برنامه را پاک می‌کند، به سرویس‌ورکر می‌گوید خودش را
+   به‌روز کند و بعد صفحه را می‌آورد؛ پس نسخهٔ تازه قطعاً از شبکه می‌آید.
+   • داده‌ها دست نمی‌خورند: فقط کشِ فایل‌های برنامه پاک می‌شود، نه localStorage.
+   • آفلاین: کش پاک نمی‌شود (وگرنه برنامه اصلاً بالا نمی‌آمد) و فقط رفرشِ ساده
+     انجام می‌شود. */
+async function pumpHardRefresh() {
+  try { save(); } catch (e) {}
+  try { _chatOutboxSave(); _chatCacheSaveNow(); } catch (e) {}
+  try { showToast('🔄 در حال آوردن آخرین نسخه…', '#2b6cb0'); } catch (e) {}
+  const online = (typeof navigator.onLine === 'boolean') ? navigator.onLine : true;
+  if (online) {
+    try {
+      if (window.caches) {
+        const keys = await caches.keys();
+        await Promise.all(keys.filter(k => /^pump-yaqobi-shell/.test(k)).map(k => caches.delete(k).catch(() => {})));
+      }
+    } catch (e) {}
+    try {
+      if (navigator.serviceWorker) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.update().catch(() => {})));
+      }
+    } catch (e) {}
+  }
+  setTimeout(() => { try { location.reload(); } catch (e) {} }, 350);
+}
 try {
   if (navigator.serviceWorker) {
     navigator.serviceWorker.addEventListener('message', ev => {
@@ -38763,7 +38801,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.228';
+const APP_VERSION = '2.9.229';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
