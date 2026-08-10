@@ -26341,18 +26341,25 @@ function renderPersonRows(person) {
   const money = _acctModeMoney(person, acct);
   _togglePmMoneyCols(money);
   let shown = 0;
+  /* ── چرا این نشانه لازم است ────────────────────────────────────────────────
+     حلقهٔ زیر ردیف‌های خرابِ کهنه را «خوددرمان» می‌کند (بردگی = تیل × فی و غیره)،
+     ولی تا امروز نتیجه‌اش را ذخیره نمی‌کرد — فقط در حافظه می‌ماند. اگر کاربر بعد از
+     دیدنِ جدول چیزی تایپ نکند و همان‌موقع همگام‌سازی با سرور برسد، عددِ خرابِ سرور
+     دوباره می‌نشیند و کاربر می‌بیند «از حساب بیرون رفتم و پس آمدم، خراب شد».
+     پس هر بار که واقعاً چیزی درمان شد، همان‌جا ذخیره می‌شود. */
+  let _healed = false;
   rows.forEach((r, i) => {
     // خوددرمانیِ دادهٔ کهنه: ردیفی که «مقدار تیل» دارد ولی پولی (byMoney) با بردگیِ صفر
     // مانده — بردگیِ دستی‌ای در کار نیست، پس ردیفِ تیل است و بردگی‌اش لیتر × فی حساب
     // شود؛ وگرنه فیِ حساب (بردگی ÷ تیل) خراب و «مقدار رسید تیل» چند برابر نمایش داده می‌شد
-    if (r.byMoney && !(parseFloat(r.bardagi)||0) && (parseFloat(r.fuel)||0) > 0) r.byMoney = false;
+    if (r.byMoney && !(parseFloat(r.bardagi)||0) && (parseFloat(r.fuel)||0) > 0) { r.byMoney = false; _healed = true; }
     // ردیف «پولی» (byMoney): بردگی مستقیم پول است، نه ضربِ لیتر×فی
     const bardagi = (r.byMoney ? (parseFloat(r.bardagi)||0) : _personRowBardagi(r)).toFixed(0);
     const albaqi  = (parseFloat(bardagi) - (r.rasid||0)).toFixed(0);
     // auto-store calculated values
-    if (r.bardagi !== parseFloat(bardagi)) { r.bardagi = parseFloat(bardagi); }
-    if (r.albaqi  !== parseFloat(albaqi))  { r.albaqi  = parseFloat(albaqi); }
-    if (!r.ftype) r.ftype = 'petrol';
+    if (r.bardagi !== parseFloat(bardagi)) { r.bardagi = parseFloat(bardagi); _healed = true; }
+    if (r.albaqi  !== parseFloat(albaqi))  { r.albaqi  = parseFloat(albaqi); _healed = true; }
+    if (!r.ftype) { r.ftype = 'petrol'; _healed = true; }
 
     // فیلتر حساب جداگانه: فقط ردیف‌های نوع تیلِ انتخاب‌شده نمایش داده شوند
     if (currentPersonFilter !== 'all' && r.ftype !== currentPersonFilter) return;
@@ -26392,6 +26399,8 @@ function renderPersonRows(person) {
     tr.innerHTML = `<td colspan="${showFtCol?11:10}" style="text-align:center;padding:16px;color:var(--muted);font-size:0.85rem">${label}</td>`;
     tbody.appendChild(tr);
   }
+  // اصلاحِ بالا روی دیسک هم بنشیند تا همگام‌سازیِ بعدی آن را پس نگیرد
+  if (_healed && currentRole !== 'viewer') { try { save(); } catch (e) {} }
   // جمع‌ها بعد از حلقهٔ ردیف‌ها حساب می‌شوند — حلقه بردگی/الباقیِ هر ردیف را
   // نرمال و ذخیره می‌کند؛ اگر جمع قبل از آن اجرا شود، بار اولِ باز شدن مودال
   // فوترِ «جمع بردگی/الباقی» با مقدارهای کهنه (مثلاً صفر) نمایش داده می‌شد
@@ -39248,7 +39257,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.246';
+const APP_VERSION = '2.9.247';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
