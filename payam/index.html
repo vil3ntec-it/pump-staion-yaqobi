@@ -170,11 +170,39 @@
 
 <div id="note"></div>
 
+<!-- ── صفحهٔ فعال‌سازی ──────────────────────────────────────────────────────
+     تا وقتی نقشِ این دستگاه مشخص نشده، هیچ موضوعی دنبال نمی‌شود و هیچ پیامی
+     دیده نمی‌شود. نقش فقط با لینک/کیو‌آری که از خودِ برنامهٔ اصلی می‌آید تعیین
+     می‌شود — نه با انتخابِ خودِ کاربر. -->
+<div id="gate" style="display:none;flex:1;overflow-y:auto;padding:26px 18px">
+  <div style="max-width:460px;margin:0 auto">
+    <div style="font-size:44px;text-align:center;margin-bottom:10px">📨</div>
+    <h2 style="font-size:19px;margin:0 0 8px;text-align:center">پیام‌رسان یعقوبی</h2>
+    <p style="color:var(--soft);font-size:13.5px;line-height:2;margin:0 0 20px;text-align:center">
+      این برنامه تا فعال نشود هیچ پیامی نشان نمی‌دهد.<br>
+      <b style="color:var(--ink)">کیو‌آرِ فعال‌سازی</b> را از میرزا بگیرید و اسکن کنید — نقشِ شما (کارمند یا مشتری) از همان کد می‌آید.
+    </p>
+    <div class="fld">
+      <label>یا لینکِ فعال‌سازی را این‌جا بچسبانید</label>
+      <input id="gateLink" dir="ltr" placeholder="https://…/payam/?role=staff&key=…">
+    </div>
+    <div class="row">
+      <button class="btn g" onclick="activateFromLink()">✅ فعال کردن</button>
+    </div>
+    <div id="gateMsg" style="font-size:12.5px;line-height:1.9;margin-top:12px;min-height:1.2em;color:var(--soft)"></div>
+    <div class="hint" style="margin-top:20px">
+      <b>میرزا:</b> در برنامهٔ اصلی → <b>تنظیمات ← اعلان‌ها ← 📱 پیام‌رسانِ من</b>.<br>
+      <b>کارمندان:</b> میرزا از <b>تنظیمات ← 🔐 چه کسی چه پیامی را می‌بیند ← 📲 کیو‌آرِ پیام‌رسانِ کارمندان</b> کد را نشان می‌دهد.<br>
+      <b>مشتری:</b> از دکمهٔ «📲 کیو‌آر کد»ِ حسابِ خودتان → «📨 کیو‌آرِ پیام‌رسانِ این مشتری».
+    </div>
+  </div>
+</div>
+
 <div class="tabs" id="tabs"></div>
 
 <div id="list"></div>
 
-<div class="composer">
+<div class="composer" id="composer">
   <textarea id="box" rows="1" placeholder="پیام بنویسید…" oninput="growBox()"
     onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!isTouch()){event.preventDefault();sendMsg();}"></textarea>
   <button class="send" id="sendBtn" onclick="sendMsg()" title="فرستادن">➤</button>
@@ -193,7 +221,15 @@
       <label>نام شما (روی پیام‌هایی که می‌فرستید می‌نشیند)</label>
       <input id="setName" placeholder="مثلاً میرزا">
     </div>
-    <div class="fld">
+    <div class="fld" id="setRoleBox">
+      <label>نقشِ این دستگاه</label>
+      <div id="setRole" style="font-size:14px;font-weight:800"></div>
+      <div id="setRoleNote" style="font-size:12px;color:var(--soft);line-height:1.9;margin-top:5px"></div>
+    </div>
+
+    <!-- کادرِ موضوع فقط برای میرزا — کارمند و مشتری نباید بتوانند خودشان را
+         روی موضوعِ دیگری بنشانند. این همان چیزی بود که نگرانش بودید. -->
+    <div class="fld" id="setTopicsBox">
       <label>موضوع‌هایی که دنبال می‌کنید</label>
       <div class="chips" id="setTopics"></div>
       <div style="display:flex;gap:7px;margin-top:9px">
@@ -210,12 +246,14 @@
       <button class="btn o" onclick="testMsg()">✅ تست اعلان</button>
       <button class="btn o" onclick="closeSet()">بستن</button>
     </div>
+    <div class="row">
+      <button class="btn o" style="border-color:var(--red);color:var(--red)" onclick="signOut()">🚪 برداشتنِ نقشِ این دستگاه</button>
+    </div>
     <div id="setMsg"></div>
 
     <div class="hint">
-      <b>موضوع‌های آماده:</b> <b dir="ltr">mirza</b> (همهٔ خبرها — مالِ مدیر)،
-      <b dir="ltr">staff</b> (چت گروهی و هشدارها — مالِ کارمندان)،
-      <b dir="ltr">p-&lt;شناسه&gt;</b> (هر مشتریِ کیو‌آر، فقط خبرِ خودش).<br>
+      <b>نقش‌ها:</b> <b dir="ltr">mirza</b> همهٔ خبرها · <b dir="ltr">staff</b> چت گروهی و هشدارها ·
+      <b dir="ltr">p-&lt;شناسه&gt;</b> فقط خبرِ حسابِ همان مشتری. نقش با کیو‌آرِ فعال‌سازی می‌آید و قفل می‌ماند.<br>
       <b>نصب روی گوشی:</b> اندروید — منوی مرورگر ← <b dir="ltr">Add to Home screen</b>.
       آیفون — <b dir="ltr">Share ← Add to Home Screen</b>؛ در آیفون اعلان فقط بعد از همین کار کار می‌کند.<br>
       <b>هر برنامه‌ای</b> می‌تواند به همین‌جا خبر بدهد:<br>
@@ -234,31 +272,68 @@ var LS = {
 var DEFAULT_SERVER = 'wss://sync.yaqobipump.top';
 
 var server = LS.get('payamServer', '') || DEFAULT_SERVER;
-var myName = LS.get('payamName', '') || 'میرزا';
-var topics = [];
-try { topics = JSON.parse(LS.get('payamTopics', '')) || []; } catch (e) { topics = []; }
-if (!topics.length) topics = ['mirza', 'staff'];
-var active = LS.get('payamActive', '') || topics[0];
+var myName = LS.get('payamName', '') || '';
+/* ── نقشِ این دستگاه ───────────────────────────────────────────────────────
+   خواستهٔ صاحب ریپو: «هر کی بیاد تو اپ، پیامِ میرزا و کارمندان براش میاد» —
+   نباید این‌طور باشد. پس برنامه تا وقتی «فعال» نشده هیچ موضوعی را دنبال
+   نمی‌کند، و نقش را لینک/کیو‌آرِ فعال‌سازی تعیین می‌کند، نه خودِ کاربر:
+     mirza  → همهٔ خبرها          (لینکش فقط از داخلِ تنظیماتِ برنامهٔ اصلی درمی‌آید)
+     staff  → فقط چت گروهی و هشدارها
+     p      → فقط موضوعِ شخصیِ همان مشتری
+   بعد از فعال شدن، فهرستِ موضوع‌ها قفل است و فقط میرزا می‌تواند موضوع اضافه کند. */
+var role = LS.get('payamRole', '');            // '' | 'mirza' | 'staff' | 'p'
+var personId = LS.get('payamPerson', '');
+var readKey = LS.get('payamKey', '');
+var extra = [];                                 // موضوع‌های دستیِ میرزا
+try { extra = JSON.parse(LS.get('payamExtra', '')) || []; } catch (e) { extra = []; }
 
-/* لینکِ «?server=…» یک‌بار ذخیره می‌شود تا دفعهٔ بعد لینکِ ساده هم کافی باشد */
+var topics = [];
+var active = '';
+
+/* لینکِ فعال‌سازی: ?role=…&id=…&server=…&key=…
+   یک‌بار ذخیره می‌شود و بعد از نوارِ نشانی پاک می‌شود تا رمز جایی نماند. */
 try {
   var qp = new URLSearchParams(location.search);
-  if (qp.get('server')) { server = qp.get('server'); LS.set('payamServer', server); }
-  if (qp.get('topic')) {
-    var qt = clean(qp.get('topic'));
-    if (qt && topics.indexOf(qt) < 0) { topics.push(qt); saveTopics(); }
-    if (qt) active = qt;
+  var qRole = qp.get('role');
+  if (qRole === 'mirza' || qRole === 'staff' || qRole === 'p') {
+    role = qRole; LS.set('payamRole', role);
+    if (qRole === 'p') { personId = clean(qp.get('id') || ''); LS.set('payamPerson', personId); }
+    if (!myName) { myName = qRole === 'mirza' ? 'میرزا' : (qRole === 'staff' ? 'کارمند' : 'مشتری'); LS.set('payamName', myName); }
   }
-  if (qp.get('server') || qp.get('topic')) history.replaceState(null, '', location.pathname);
+  if (qp.get('server')) { server = qp.get('server'); LS.set('payamServer', server); }
+  if (qp.get('key') !== null) { readKey = qp.get('key') || ''; LS.set('payamKey', readKey); }
+  if (qp.toString()) history.replaceState(null, '', location.pathname);
 } catch (e) {}
 
-function saveTopics() { LS.set('payamTopics', JSON.stringify(topics)); }
+/** موضوع‌های این نقش — هیچ‌جای دیگری موضوع ساخته نمی‌شود */
+function topicsOfRole() {
+  if (role === 'mirza') return ['mirza', 'staff'].concat(extra);
+  if (role === 'staff') return ['staff'];
+  if (role === 'p' && personId) return ['p-' + personId];
+  return [];
+}
+function applyRole() {
+  topics = topicsOfRole();
+  var saved = LS.get('payamActive', '');
+  active = topics.indexOf(saved) >= 0 ? saved : (topics[0] || '');
+}
+applyRole();
+
+function roleName() {
+  if (role === 'mirza') return '👤 میرزا';
+  if (role === 'staff') return '👷 کارمند';
+  if (role === 'p') return '🧑 مشتری';
+  return '';
+}
+function saveTopics() { LS.set('payamExtra', JSON.stringify(extra)); }
 function clean(v) {
   return String(v || '').trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
 }
 /* آدرسِ سرور به دو شکل لازم می‌شود: ws برای سوکت، http برای API */
 function wsBase() { return String(server || '').replace(/\/+$/, ''); }
 function httpBase() { return wsBase().replace(/^ws/i, 'http'); }
+/* رمزِ خواندن — اگر روی سرور رمزی تنظیم نشده باشد خالی می‌ماند و اثری ندارد */
+function keyQS(sep) { return readKey ? (sep + 'key=' + encodeURIComponent(readKey)) : ''; }
 
 /* ── فهرستِ پیام‌ها ────────────────────────────────────────────────────── */
 var msgs = {};       // topic → [message]
@@ -284,9 +359,56 @@ function when(ts) {
 }
 function isTouch() { return matchMedia('(pointer:coarse)').matches; }
 
+/* ── قفلِ نقش ──────────────────────────────────────────────────────────── */
+function paintGate() {
+  var on = !role;                               // نقش ندارد → فقط صفحهٔ فعال‌سازی
+  document.getElementById('gate').style.display = on ? 'flex' : 'none';
+  document.getElementById('tabs').style.display = on ? 'none' : '';
+  document.getElementById('list').style.display = on ? 'none' : '';
+  // مشتری و کارمند هم می‌توانند پیام بفرستند؛ فقط بدونِ نقش کادر بسته است
+  document.getElementById('composer').style.display = on ? 'none' : '';
+  document.getElementById('bell').style.display = on ? 'none' : '';
+  var h = document.querySelector('header h1');
+  h.textContent = on ? '📨 پیام‌رسان یعقوبی' : ('📨 ' + roleName());
+  return on;
+}
+/** فعال‌سازی با چسباندنِ لینک — همان کاری که اسکنِ کیو‌آر می‌کند */
+function activateFromLink() {
+  var raw = (document.getElementById('gateLink').value || '').trim();
+  var msg = document.getElementById('gateMsg');
+  var q = null;
+  try { q = new URL(raw, location.href).searchParams; } catch (e) { q = null; }
+  var r = q && q.get('role');
+  if (r !== 'mirza' && r !== 'staff' && r !== 'p') {
+    msg.innerHTML = '❌ این لینکِ فعال‌سازی نیست. کیو‌آر را از میرزا بگیرید.';
+    msg.style.color = 'var(--red)';
+    return;
+  }
+  role = r; LS.set('payamRole', role);
+  if (r === 'p') { personId = clean(q.get('id') || ''); LS.set('payamPerson', personId); }
+  if (q.get('server')) { server = q.get('server'); LS.set('payamServer', server); }
+  if (q.get('key') !== null) { readKey = q.get('key') || ''; LS.set('payamKey', readKey); }
+  if (!myName) { myName = r === 'mirza' ? 'میرزا' : (r === 'staff' ? 'کارمند' : 'مشتری'); LS.set('payamName', myName); }
+  applyRole();
+  boot();
+}
+/** برداشتنِ نقش — دستگاه دوباره خالی می‌شود (مثلاً گوشی دستِ کسِ دیگری می‌رود) */
+function signOut() {
+  if (!confirm('نقشِ این دستگاه برداشته شود؟ بعد از این تا کیو‌آرِ تازه اسکن نکنید، هیچ پیامی نمی‌آید.')) return;
+  ['payamRole', 'payamPerson', 'payamKey', 'payamExtra', 'payamActive', 'payamPushOn', 'payamPushEndpoint', 'payamPushTopics']
+    .forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
+  role = ''; personId = ''; readKey = ''; extra = []; msgs = {};
+  Object.keys(socks).forEach(function (t) { try { socks[t].close(); } catch (e) {} delete socks[t]; });
+  applyRole();
+  closeSet();
+  boot();
+}
+
 /* ── نمای موضوع‌ها ─────────────────────────────────────────────────────── */
 function paintTabs() {
   var el = document.getElementById('tabs');
+  // یک موضوعِ تنها (کارمند/مشتری) نوارِ انتخاب لازم ندارد
+  el.style.display = (!role || topics.length < 2) ? 'none' : '';
   el.innerHTML = topics.map(function (t) {
     var n = unread[t] || 0;
     return '<button class="tab' + (t === active ? ' active' : '') + '" onclick="pick(\'' + esc(t) + '\')">' +
@@ -308,10 +430,12 @@ function pick(t) {
 
 function paintList() {
   var el = document.getElementById('list');
+  if (!role || !active) { el.innerHTML = ''; return; }
   var list = msgs[active] || [];
   if (!list.length) {
     el.innerHTML = '<div class="empty">هنوز پیامی در «' + esc(label(active)) + '» نیست.<br>' +
-      (live() ? 'به سرور وصل هستید — اولین پیام همین‌جا می‌نشیند.'
+      (forbidden ? '🔒 رمزِ خواندن درست نیست — کیو‌آرِ فعال‌سازی را دوباره اسکن کنید.'
+        : live() ? 'به سرور وصل هستید — اولین پیام همین‌جا می‌نشیند.'
               : '⏳ در حال وصل شدن به سرور خانگی…') + '</div>';
     return;
   }
@@ -348,22 +472,28 @@ function paintDot() {
   d.className = 'dot' + (live() ? ' on' : '');
   d.title = live() ? 'وصل به سرور خانگی' : 'قطع — در حال تلاش دوباره';
 }
+var forbidden = false;
 function connect() {
   var base = wsBase();
-  if (!base) return;
+  if (!base || !role) return;                 // بدون نقش، هیچ اتصالی برقرار نمی‌شود
   topics.forEach(function (t) {
     var old = socks[t];
     if (old && (old.readyState === 0 || old.readyState === 1)) return;
     var s;
-    try { s = new WebSocket(base + '/notify?topic=' + encodeURIComponent(t)); }
+    try { s = new WebSocket(base + '/notify?topic=' + encodeURIComponent(t) + keyQS('&')); }
     catch (e) { again(); return; }
     socks[t] = s;
-    s.onopen = function () { paintDot(); if (t === active) paintList(); };
+    s.onopen = function () { forbidden = false; paintDot(); if (t === active) paintList(); };
     s.onmessage = function (ev) {
       var m = null;
       try { m = JSON.parse(ev.data); } catch (e) { return; }
       if (m.op === 'ready') { (m.messages || []).forEach(function (x) { accept(t, x, false); }); }
       else if (m.op === 'message') { accept(t, m, true); }
+      else if (m.op === 'error' && m.msg === 'forbidden') {
+        // سرور قفل است و رمزِ این دستگاه درست نیست — بی‌صدا نمانیم
+        forbidden = true;
+        note('🔒 رمزِ خواندن درست نیست. کیو‌آرِ فعال‌سازی را دوباره از میرزا بگیرید و اسکن کنید.', true);
+      }
     };
     s.onclose = function () { if (socks[t] === s) { delete socks[t]; paintDot(); again(); } };
     s.onerror = function () { try { s.close(); } catch (e) {} };
@@ -451,6 +581,7 @@ function sameKey(sub, want) {
 }
 /* برمی‌گرداند: true · 'denied' · 'unsupported' · false (سرور جواب نداد) */
 function subscribeDevice() {
+  if (!role) return Promise.resolve(false);       // بدون نقش، هیچ ثبتی انجام نمی‌شود
   if (typeof Notification === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) {
     return Promise.resolve('unsupported');
   }
@@ -475,7 +606,7 @@ function subscribeDevice() {
           return fetch(base + '/api/notify/' + encodeURIComponent(t) + '/devices', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ subscription: sub.toJSON(), label: myName })
+            body: JSON.stringify({ subscription: sub.toJSON(), label: myName, key: readKey || undefined })
           }).then(function (r) { return r.json(); }).catch(function () { return { ok: false }; });
         })).then(function (res) {
           if (!res.some(function (x) { return x && x.ok; })) return false;
@@ -539,6 +670,14 @@ function setMsg(t, color) {
 function openSet() {
   document.getElementById('setServer').value = server;
   document.getElementById('setName').value = myName;
+  document.getElementById('setRole').textContent = role ? roleName() : '— هنوز فعال نشده —';
+  document.getElementById('setRoleNote').textContent =
+    role === 'mirza' ? 'همهٔ خبرها: چت گروهی، چت تک‌نفره، هشدارهای ربات.'
+    : role === 'staff' ? 'فقط چت گروهی و هشدارها — چت‌های تک‌نفرهٔ میرزا به شما نمی‌رسد.'
+    : role === 'p' ? 'فقط خبرِ حسابِ خودتان و جوابِ میرزا به خودتان.'
+    : 'کیو‌آرِ فعال‌سازی را از میرزا بگیرید.';
+  // فقط میرزا می‌تواند موضوع اضافه/کم کند
+  document.getElementById('setTopicsBox').style.display = (role === 'mirza') ? '' : 'none';
   paintSetTopics();
   setMsg('');
   document.getElementById('sheet').classList.add('open');
@@ -546,24 +685,28 @@ function openSet() {
 function closeSet() { document.getElementById('sheet').classList.remove('open'); }
 function paintSetTopics() {
   document.getElementById('setTopics').innerHTML = topics.map(function (t) {
+    var fixed = ['mirza', 'staff'].indexOf(t) >= 0;
     return '<span class="chip on">' + esc(label(t)) +
-      '<span class="x" onclick="dropTopic(\'' + esc(t) + '\')" title="برداشتن">✕</span></span>';
+      (fixed ? '' : '<span class="x" onclick="dropTopic(\'' + esc(t) + '\')" title="برداشتن">✕</span>') +
+      '</span>';
   }).join('') || '<span style="color:var(--soft);font-size:12.5px">هیچ موضوعی انتخاب نشده</span>';
 }
 function addTopic() {
+  if (role !== 'mirza') return;                 // فقط میرزا
   var inp = document.getElementById('setNewTopic');
   var t = clean(inp.value);
   if (!t) { setMsg('نام موضوع باید با حروف انگلیسی باشد.', 'var(--red)'); return; }
-  if (topics.indexOf(t) < 0) topics.push(t);
+  if (extra.indexOf(t) < 0 && ['mirza', 'staff'].indexOf(t) < 0) extra.push(t);
   inp.value = '';
-  saveTopics(); paintSetTopics(); paintTabs(); connect();
+  saveTopics(); applyRole(); paintSetTopics(); paintTabs(); connect();
   setMsg('موضوع «' + esc(t) + '» افزوده شد.', 'var(--green)');
 }
 function dropTopic(t) {
-  if (topics.length <= 1) { setMsg('دستِ‌کم یک موضوع باید بماند.', 'var(--red)'); return; }
-  topics = topics.filter(function (x) { return x !== t; });
-  if (active === t) active = topics[0];
-  saveTopics(); LS.set('payamActive', active);
+  if (role !== 'mirza') return;
+  if (['mirza', 'staff'].indexOf(t) >= 0) { setMsg('موضوع‌های اصلی برداشته نمی‌شوند.', 'var(--red)'); return; }
+  extra = extra.filter(function (x) { return x !== t; });
+  saveTopics(); applyRole();
+  if (topics.indexOf(active) < 0) { active = topics[0] || ''; LS.set('payamActive', active); }
   paintSetTopics(); paintTabs(); paintList(); connect();
 }
 function saveSet() {
@@ -603,20 +746,26 @@ if ('serviceWorker' in navigator) {
     if (d.type === 'push-resubscribe') subscribeDevice().then(bellState);
   });
 }
-paintTabs();
-paintList();
-paintDot();
-bellState();
-connect();
-setInterval(paintDot, 3000);
-document.addEventListener('visibilitychange', function () {
-  if (document.visibilityState === 'visible') { connect(); silentPush(); }
-});
-window.addEventListener('online', connect);
-setTimeout(silentPush, 1500);
-if (!bellState()) {
-  note('برای گرفتنِ اعلان با برنامهٔ بسته، یک‌بار اجازه بدهید.<button onclick="enablePush()">🔔 روشن کن</button>');
+function boot() {
+  var gated = paintGate();
+  paintTabs();
+  paintList();
+  paintDot();
+  bellState();
+  note('');
+  if (gated) return;
+  connect();
+  setTimeout(silentPush, 1200);
+  if (!bellState()) {
+    note('برای گرفتنِ اعلان با برنامهٔ بسته، یک‌بار اجازه بدهید.<button onclick="enablePush()">🔔 روشن کن</button>');
+  }
 }
+boot();
+setInterval(function () { if (role) paintDot(); }, 3000);
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible' && role) { connect(); silentPush(); }
+});
+window.addEventListener('online', function () { if (role) connect(); });
 </script>
 </body>
 </html>

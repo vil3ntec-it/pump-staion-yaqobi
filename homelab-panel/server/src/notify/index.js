@@ -17,7 +17,7 @@
 import crypto from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { WebSocketServer } from 'ws';
-import { db, logEvent, getSetting } from '../db.js';
+import { db, logEvent, getSetting, setSetting } from '../db.js';
 import { pushToDevices, vapidPublicKey } from '../messenger/push.js';
 
 export const notifyEvents = new EventEmitter();
@@ -54,6 +54,17 @@ CREATE TABLE IF NOT EXISTS ntf_devices (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_ntf_devices ON ntf_devices(topic, push_endpoint);
 `);
+
+/* ── رمزِ خواندن (بعداً اضافه شد) ──────────────────────────────────────────
+   تا پیش از این، هر کس نامِ موضوع را می‌دانست می‌توانست به آن وصل شود و همهٔ
+   پیام‌ها را بخواند — یعنی «موضوع» فقط یک نام بود، نه یک در با قفل.
+   حالا هر موضوع می‌تواند رمزِ خواندن داشته باشد. اگر نداشته باشد، دقیقاً مثل
+   قبل باز است (پس هیچ دستگاهی با این تغییر اعلانش را از دست نمی‌دهد) و هر
+   وقت صاحبِ سرور از پنل رمز بگذارد، از همان لحظه قفل می‌شود. */
+try {
+  const cols = db.prepare('PRAGMA table_info(ntf_topics)').all().map((c) => c.name);
+  if (!cols.includes('read_token')) db.exec('ALTER TABLE ntf_topics ADD COLUMN read_token TEXT');
+} catch { /* ستون از قبل هست */ }
 
 /** نام موضوع: ساده، بدون فاصله، تا در آدرس هم بنشیند */
 export function cleanTopic(value) {
@@ -93,6 +104,7 @@ export function listTopics() {
       name: t.name,
       title: t.title,
       hasToken: Boolean(t.write_token),
+      hasReadToken: Boolean(t.read_token),
       messages: t.messages,
       devices: t.devices,
       createdAt: t.created_at,
@@ -115,11 +127,55 @@ export function newWriteToken(name) {
   return res.ok ? { ok: true, token } : res;
 }
 
+/** مقایسهٔ رمز بدون نشت دادنِ زمان — طولِ نابرابر خودش یعنی نادرست */
+function tokenOk(want, provided) {
+  const a = Buffer.from(String(provided || ''));
+  const b = Buffer.from(String(want));
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 function mayWrite(topicRow, provided) {
   if (!topicRow?.write_token) return true; // موضوع باز است
-  const a = Buffer.from(String(provided || ''));
-  const b = Buffer.from(topicRow.write_token);
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
+  return tokenOk(topicRow.write_token, provided);
+}
+
+/* یک «رمزِ خواندنِ همگانی» هم هست که روی همهٔ موضوع‌ها کار می‌کند. در عمل همین
+   راحت‌تر است: صاحبِ سرور یک بار رمز می‌سازد و همان را در برنامه می‌گذارد، به‌جای
+   اینکه برای mirza و staff و تک‌تکِ مشتری‌ها رمزِ جدا نگه دارد. رمزِ خودِ موضوع
+   (اگر باشد) مقدم است. */
+export const readKeyAll = () => getSetting('notify_read_key', '') || '';
+
+export function setReadKeyAll(value) {
+  setSetting('notify_read_key', value == null ? '' : String(value));
+  return { ok: true, hasKey: Boolean(value) };
+}
+
+export function newReadKeyAll() {
+  const key = crypto.randomBytes(15).toString('base64url');
+  setReadKeyAll(key);
+  return { ok: true, key };
+}
+
+/** خواندنِ پیام‌ها و ثبتِ دستگاه — اگر هیچ رمزی تنظیم نشده باشد، باز است */
+export function mayRead(name, provided) {
+  const row = getTopic(name);
+  const want = row?.read_token || readKeyAll();
+  if (!want) return true;
+  return tokenOk(want, provided);
+}
+
+export function setReadToken(name, token) {
+  const topic = ensureTopic(name);
+  if (!topic) return { ok: false, error: 'invalid_topic' };
+  const value = token === null || token === '' ? null : String(token);
+  db.prepare('UPDATE ntf_topics SET read_token = ? WHERE name = ?').run(value, topic.name);
+  return { ok: true, hasReadToken: Boolean(value) };
+}
+
+export function newReadToken(name) {
+  const token = crypto.randomBytes(12).toString('base64url');
+  const res = setReadToken(name, token);
+  return res.ok ? { ok: true, token } : res;
 }
 
 // ------------------------------ دنبال‌کننده‌ها ------------------------------
@@ -251,13 +307,25 @@ const wss = new WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 });
 export function handleUpgrade(req, socket, head) {
   wss.handleUpgrade(req, socket, head, (ws) => {
     let topic = null;
+    let key = null;
     try {
-      topic = cleanTopic(new URL(req.url, 'http://x').searchParams.get('topic'));
+      const q = new URL(req.url, 'http://x').searchParams;
+      topic = cleanTopic(q.get('topic'));
+      key = q.get('key');
     } catch { /* مسیر خراب */ }
 
     if (!topic) {
       try {
         ws.send(JSON.stringify({ op: 'error', msg: 'no_topic' }));
+        ws.close();
+      } catch { /* بسته شد */ }
+      return;
+    }
+
+    // موضوعِ قفل‌دار بدونِ رمزِ درست، حتی یک پیام هم نمی‌بیند
+    if (!mayRead(topic, key)) {
+      try {
+        ws.send(JSON.stringify({ op: 'error', msg: 'forbidden' }));
         ws.close();
       } catch { /* بسته شد */ }
       return;

@@ -2000,6 +2000,11 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
   // این آدرس «تازه‌ترین تنظیم» شمرده می‌شود، پس از همین دستگاه به بقیه هم پخش می‌شود.
   try {
     var _qp = new URLSearchParams(location.search);
+    // رمزِ خواندنِ پیام‌رسان — از لینک/کیو‌آرِ فعال‌سازی می‌آید و روی همین دستگاه
+    // می‌ماند. عمداً در localStorage است و نه در DB: اگر داخلِ دیتابیس می‌رفت،
+    // با هم‌زمان‌سازی به دستِ همهٔ کارمندان و مشتری‌ها هم می‌افتاد.
+    var _qKey = _qp.get('nkey');
+    if (_qKey) localStorage.setItem('pumpNtfKey', _qKey);
     var _qServer = _qp.get('server');
     if (_qServer) {
       localStorage.setItem('pumpServerUrl', _qServer);
@@ -2008,8 +2013,9 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
       else localStorage.removeItem('pumpServerToken');
       localStorage.setItem(CFG_TS_KEY, String(Date.now()));
       localStorage.removeItem(CFG_BAD_KEY);
-      history.replaceState(null, '', location.pathname + location.hash);
     }
+    // آدرس تمیز شود تا رمز/توکن در نوارِ نشانی نماند و کسی از روی شانه نبیند
+    if (_qServer || _qKey) history.replaceState(null, '', location.pathname + location.hash);
   } catch(e){}
 
   try { SELF_HOST_URL   = window.SELF_HOST_URL   || localStorage.getItem('pumpServerUrl')   || SELF_HOST_URL; } catch(e){}
@@ -19291,9 +19297,41 @@ body.viewer-mode .inv-admin-only{display:none!important}
       <button class="pw-btn" style="background:var(--green);color:#fff" onclick="pushSubscribeSelf()">🔔 روشن کردن اعلان روی این دستگاه</button>
       <button class="pw-btn" style="background:transparent;border:1px solid var(--green);color:var(--green)" onclick="pushTest()">✅ تست اعلان</button>
       <button class="pw-btn" style="background:var(--blue);color:#fff" onclick="ntfOpen()">📨 دیدن خبرها</button>
-      <button class="pw-btn" style="background:transparent;border:1px solid var(--accent);color:var(--accent)" onclick="openMessengerApp()">📱 برنامهٔ پیام‌رسان (جداگانه)</button>
+      <button class="pw-btn" style="background:transparent;border:1px solid var(--accent);color:var(--accent)" onclick="openMessengerApp()">📱 پیام‌رسانِ من (میرزا)</button>
     </div>
     <div id="push-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted);line-height:1.9"></div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       چه کسی چه پیامی را می‌بیند — قفلِ نقشِ پیام‌رسان
+       ══════════════════════════════════════════════════════════════════════ -->
+  <div class="settings-card" id="ntf-roles-card" style="border-color:var(--blue)">
+    <div class="settings-title" style="color:var(--blue)">🔐 چه کسی چه پیامی را می‌بیند</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:2;margin-bottom:12px">
+      برنامهٔ پیام‌رسان یکی است، ولی <b>نقشِ هر دستگاه با لینک/کیو‌آرِ فعال‌سازی</b> تعیین می‌شود و بعد قفل می‌ماند:<br>
+      👤 <b>میرزا</b> — همهٔ خبرها (چت، هشدار تیل، حساب تازه).<br>
+      👷 <b>کارمندان</b> — فقط چت گروهی و هشدارها؛ چت تک‌نفرهٔ شما با مشتری‌ها را نمی‌بینند.<br>
+      🧑 <b>مشتریِ کیو‌آر</b> — فقط خبرِ حسابِ خودش و جوابِ شما به خودش.<br>
+      کارمند و مشتری در برنامه‌شان کادرِ «موضوع تازه» ندارند، پس نمی‌توانند خودشان را روی خبرهای شما بنشانند.
+    </div>
+    <div class="pw-row">
+      <div class="pw-field" style="flex:1">
+        <label>🔑 رمزِ خواندنِ پیام‌رسان (از پنلِ سرور خانگی)</label>
+        <input id="ntf-read-key" dir="ltr" style="direction:ltr;text-align:left" placeholder="اگر روی سرور رمز نگذاشته‌اید، خالی بماند" oninput="saveNtfKey(this.value)">
+      </div>
+    </div>
+    <div style="font-size:0.79rem;color:var(--muted);line-height:1.95;margin:8px 0 12px">
+      تا وقتی روی سرور رمزی نگذاشته‌اید، این کادر خالی می‌ماند و همه‌چیز مثل قبل کار می‌کند.
+      برای قفل کردنِ واقعی، در پنلِ سرور خانگی یک «رمزِ خواندن» بسازید و همان را این‌جا بگذارید؛
+      کیو‌آرهای پایین خودشان رمز را به دستگاهِ کارمند/مشتری می‌رسانند.
+      <b style="color:var(--accent)">این رمز فقط روی همین دستگاه می‌ماند و با هم‌زمان‌سازی جایی نمی‌رود.</b>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="pw-btn" style="background:var(--blue);color:#fff" onclick="showStaffMessengerQR()">📲 کیو‌آرِ پیام‌رسانِ کارمندان</button>
+    </div>
+    <div style="font-size:0.79rem;color:var(--muted);line-height:1.95;margin-top:10px">
+      🧑 برای هر مشتری، کیو‌آرِ پیام‌رسانِ شخصی‌اش از دکمهٔ «📲 کیو‌آر کد»ِ همان حساب گرفته می‌شود.
+    </div>
   </div>
 </div>
 
@@ -20149,6 +20187,8 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <div id="qr-canvas-wrap"></div>
     <!-- «کپیِ حساب» از سربرگِ مودالِ شخص به این‌جا آمد (خواستهٔ صاحب ریپو) -->
     <button id="qr-acct-btn" onclick="_qrOpenAcctCard()" title="گرفتن کپیِ همین حساب برای بردن به برنامهٔ دیگر" style="width:100%;padding:10px;border-radius:9px;border:none;background:#276749;color:#fff;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer;margin-bottom:8px">📇 کپیِ حساب</button>
+    <!-- کیو‌آرِ پیام‌رسانِ شخصیِ همین مشتری — فقط خبرِ حسابِ خودش -->
+    <button id="qr-msg-btn" onclick="showPersonMessengerQR()" title="کیو‌آرِ پیام‌رسانِ شخصیِ همین حساب" style="width:100%;padding:10px;border-radius:9px;border:none;background:#5a4599;color:#fff;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer;margin-bottom:8px">📨 کیو‌آرِ پیام‌رسانِ این مشتری</button>
     <button id="qr-share-btn" onclick="_qrShare()" style="width:100%;padding:10px;border-radius:9px;border:none;background:#2b6cb0;color:#fff;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer;margin-bottom:8px">📤 اشتراک‌گذاری کیو‌آر</button>
     <button id="qr-pdf-btn" onclick="_qrPrintPDF()" style="width:100%;padding:10px;border-radius:9px;border:none;background:#38a169;color:#fff;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer;margin-bottom:8px">🖨️ پرینت / دانلود PDF</button>
     <button onclick="document.getElementById('qrModal').classList.remove('open')" style="width:100%;padding:10px;border-radius:9px;border:none;background:var(--accent);color:#000;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer">✔ بستن</button>
@@ -34689,6 +34729,7 @@ function showCompanyQR(id) {
   const _cpdf = document.getElementById('qr-pdf-btn'); if (_cpdf) _cpdf.style.display = '';
   _qrAcctBtnShow(true);
   _qrHideAcctPick();                    // شرکت حسابِ فرعی ندارد
+  _qrMsgBtnShow(false);
   document.getElementById('qr-person-name').textContent = '📲 ' + c.name;
   const wrap = document.getElementById('qr-canvas-wrap');
   wrap.innerHTML = '';
@@ -35018,6 +35059,7 @@ function showPersonQR(type, id, subId) {
   const sub = subId ? (person.subs || []).find(s => s && s.id === subId) : null;
   if (!sub) _qrCurrentSub = null;
   _qrFillAcctPick(person, _qrCurrentSub);
+  _qrMsgBtnShow(true);                  // این حساب می‌تواند پیام‌رسانِ شخصی داشته باشد
   // کیو‌آرِ حسابِ فرعی فقط نامِ خودِ همان حساب را نشان می‌دهد (حساب‌ها جدا هستند)
   document.getElementById('qr-person-name').textContent = sub ? ('📲 📄 ' + (sub.name || 'حساب')) : ('📲 ' + person.name);
   // اگر قبلاً کیو‌آر صفحهٔ کارمند باز شده بود، دکمه/متن مخصوص شخص برگردد
@@ -35403,6 +35445,7 @@ function showStaffQR() {
   const pdfBtn = document.getElementById('qr-pdf-btn'); if (pdfBtn) pdfBtn.style.display = 'none';
   _qrAcctBtnShow(false);
   _qrHideAcctPick();                    // صفحهٔ کارمند حساب نیست
+  _qrMsgBtnShow(false);
   const desc = document.querySelector('#qrModal .qr-box p'); if (desc) desc.textContent = 'با اسکن این کد، صفحهٔ کارمند (فقط دیدن) باز می‌شود' + ((DB.staffPassword||'').trim() ? ' — رمز صفحهٔ کارمند لازم است' : '');
   if (typeof QRCode !== 'undefined') {
     new QRCode(wrap, { text: url, width: 220, height: 220, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
@@ -36992,21 +37035,93 @@ function _pushMsg(t, ok) {
   if (el) { el.innerHTML = t; el.style.color = ok ? 'var(--green)' : 'var(--muted)'; }
 }
 function renderPushCard() {
+  const keyInp = document.getElementById('ntf-read-key');
+  if (keyInp && document.activeElement !== keyInp) keyInp.value = _ntfKey();
   const on = (typeof Notification !== 'undefined' && Notification.permission === 'granted' && !!_lsPlain('pumpNtfPushOn'));
   const srv = _ntfBase('http');
   if (!srv) { _pushMsg('⚠️ آدرسِ سرورِ خانگی تنظیم نشده — از «تنظیمات ← هم‌زمان‌سازی» آدرس سرور را بگذارید.'); return; }
+  if (_ntfForbidden) {
+    _pushMsg('🔒 سرور رمزِ خواندن می‌خواهد و رمزِ این دستگاه درست نیست — رمز را در کادرِ «رمزِ خواندنِ پیام‌رسان» بگذارید.');
+    return;
+  }
   _pushMsg(on
     ? '✅ اعلان روی این دستگاه روشن است — خبرها حتی با برنامهٔ بسته می‌رسند. سرور: <b dir="ltr">' + _esc(srv) + '</b>'
     : '🔕 هنوز روی این دستگاه روشن نشده — دکمهٔ «روشن کردن اعلان» را بزنید و «اجازه» بدهید.', on);
 }
-/** برنامهٔ جداگانهٔ پیام‌رسان (نصب‌شدنی، بدون خودِ برنامهٔ حساب‌ها) */
-function openMessengerApp() {
+/** رمزِ خواندن روی همین دستگاه ذخیره می‌شود — نه در DB و نه در هم‌زمان‌سازی */
+function saveNtfKey(v) {
+  try { localStorage.setItem('pumpNtfKey', String(v || '').trim()); } catch (e) {}
+  _ntfForbidden = false;
+  // با رمزِ تازه باید از نو وصل شویم و دستگاه را دوباره ثبت کنیم
+  try { _ntfSocks.forEach(s => { try { s.close(); } catch (e) {} }); _ntfSocks = new Map(); } catch (e) {}
+  try { localStorage.removeItem('pumpNtfPushTopic'); } catch (e) {}
+  _ntfConnect();
+  _ntfAutoPush('silent');
+}
+/** ریشهٔ سایت — برای ساختنِ لینکِ پیام‌رسان و لینک‌های فعال‌سازی */
+function _siteRoot() {
   try {
-    const base = /^https?:$/.test(location.protocol)
-      ? location.href.split('#')[0].replace(/[^/]*$/, '')
-      : 'https://vil3ntec-it.github.io/pump-staion-yaqobi/';
-    window.open(base + 'payam/', '_blank');
+    if (/^https?:$/.test(location.protocol)) return location.href.split('#')[0].split('?')[0].replace(/[^/]*$/, '');
   } catch (e) {}
+  return 'https://vil3ntec-it.github.io/pump-staion-yaqobi/';
+}
+/* لینکِ فعال‌سازیِ پیام‌رسان برای یک نقش. رمزِ خواندن (اگر باشد) همراهش می‌رود،
+   پس دستگاهِ کارمند/مشتری با یک اسکن هم نقشش را می‌گیرد هم رمزش را. */
+function _messengerLink(role, personId) {
+  const q = ['role=' + encodeURIComponent(role)];
+  if (personId) q.push('id=' + encodeURIComponent(personId));
+  const srv = _ntfBase('ws');
+  if (srv) q.push('server=' + encodeURIComponent(srv));
+  const k = _ntfKey();
+  if (k) q.push('key=' + encodeURIComponent(k));
+  return _siteRoot() + 'payam/?' + q.join('&');
+}
+/** پیام‌رسانِ خودِ میرزا */
+function openMessengerApp() {
+  try { window.open(_messengerLink('mirza'), '_blank'); } catch (e) {}
+}
+/* کیو‌آرِ فعال‌سازیِ پیام‌رسانِ کارمندان — کارمند با اسکنِ همین، برنامهٔ پیام‌رسان
+   را باز/نصب می‌کند و فقط روی موضوعِ «staff» می‌نشیند. */
+function showStaffMessengerQR() {
+  _qrShowLink(_messengerLink('staff'), '👷 پیام‌رسانِ کارمندان',
+    'کارمند با اسکنِ این کد، برنامهٔ پیام‌رسان را باز می‌کند و فقط چت گروهی و هشدارها را می‌گیرد — نه چت‌های تک‌نفرهٔ شما.');
+}
+/* کیو‌آرِ پیام‌رسانِ شخصیِ یک مشتری — فقط خبرِ حسابِ خودش */
+function showPersonMessengerQR() {
+  if (!_qrCurrentType || !_qrCurrentId) return;
+  const list = _qrCurrentType === 'debt' ? DB.debtPersons : DB.noinvPersons;
+  const person = (list || []).find(p => p.id === _qrCurrentId);
+  if (!person) return;
+  const sub = _qrCurrentSub ? (person.subs || []).find(s => s && s.id === _qrCurrentSub) : null;
+  // دقیقاً همان «peer»ی که نمای کیو‌آرِ حساب هم می‌سازد — وگرنه موضوعِ اعلانِ
+  // مشتری با موضوعی که برنامه به آن پیام می‌فرستد یکی نمی‌شد
+  const peer = _peerKey(_qrCurrentType + '-' + _qrCurrentId + (sub ? ('~' + sub.id) : ''));
+  const nm = sub ? (sub.name || 'حساب') : person.name;
+  _qrShowLink(_messengerLink('p', peer), '📨 پیام‌رسانِ ' + nm,
+    'این کد را به همین مشتری بدهید — فقط خبرِ حسابِ خودش و جوابِ شما به خودش را می‌گیرد.');
+}
+/** نمایشِ یک لینکِ دلخواه در همان پنجرهٔ کیو‌آر */
+function _qrShowLink(url, title, desc) {
+  const wrap = document.getElementById('qr-canvas-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  _qrCurrentUrl = url;
+  document.getElementById('qr-person-name').textContent = title;
+  const pdfBtn = document.getElementById('qr-pdf-btn'); if (pdfBtn) pdfBtn.style.display = 'none';
+  _qrAcctBtnShow(false);
+  _qrHideAcctPick();
+  _qrMsgBtnShow(false);
+  const d = document.querySelector('#qrModal .qr-box p'); if (d) d.textContent = desc;
+  if (typeof QRCode !== 'undefined') {
+    new QRCode(wrap, { text: url, width: 220, height: 220, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+  } else {
+    wrap.innerHTML = '<div style="padding:20px;color:var(--muted);font-size:0.8rem">کتابخانه QR در دسترس نیست</div>';
+  }
+  document.getElementById('qrModal').classList.add('open');
+}
+function _qrMsgBtnShow(on) {
+  const b = document.getElementById('qr-msg-btn');
+  if (b) b.style.display = on ? '' : 'none';
 }
 /* ── روشن شدنِ خودکارِ اعلانِ این دستگاه ────────────────────────────────────
    جای دکمهٔ 🔔 که برداشته شد. دو حالت دارد:
@@ -38572,6 +38687,8 @@ function _ntfTopicKey(list) { return (list || _ntfMyTopics()).slice().sort().joi
 
 // برای هر موضوع یک سوکت: topic → WebSocket
 let _ntfSocks = new Map(), _ntfTimer = null, _ntfMsgs = [], _ntfTopic = null;
+// سرور رمزِ خواندن می‌خواهد و رمزِ این دستگاه درست نیست
+let _ntfForbidden = false;
 // شمارهٔ آخرین خبرِ خوانده‌شده برای هر موضوع جداست — وگرنه با عوض شدنِ نقش،
 // خبرهای موضوعِ تازه بی‌خود «خوانده‌شده» شمرده می‌شدند
 const _ntfSeenKey = () => 'pumpNtfSeen:' + (_ntfTopic || 'x');
@@ -38582,6 +38699,11 @@ function _ntfBase(kind) {                      // wss://host → wss://host یا
   if (!url) return '';
   return kind === 'http' ? url.replace(/^ws/i, 'http') : url;
 }
+/* رمزِ خواندنِ پیام‌رسان. تا وقتی روی سرور رمزی تنظیم نشده باشد، خالی بودنش هیچ
+   اشکالی ندارد و همه‌چیز مثل قبل کار می‌کند. وقتی صاحبِ سرور رمز بگذارد، فقط
+   دستگاه‌هایی که این رمز را دارند پیام‌ها را می‌گیرند. */
+function _ntfKey() { try { return localStorage.getItem('pumpNtfKey') || ''; } catch (e) { return ''; } }
+function _ntfKeyQS(sep) { const k = _ntfKey(); return k ? (sep + 'key=' + encodeURIComponent(k)) : ''; }
 function _ntfSeen()      { try { return +(localStorage.getItem(_ntfSeenKey()) || 0); } catch (e) { return 0; } }
 function _ntfSetSeen(id) { try { localStorage.setItem(_ntfSeenKey(), String(id)); } catch (e) {} }
 
@@ -38701,7 +38823,7 @@ function _ntfConnect() {
     const old = _ntfSocks.get(topic);
     if (old && (old.readyState === 0 || old.readyState === 1)) return;   // همین حالا وصل/در حال وصل
     let sock;
-    try { sock = new WebSocket(base + '/notify?topic=' + encodeURIComponent(topic)); }
+    try { sock = new WebSocket(base + '/notify?topic=' + encodeURIComponent(topic) + _ntfKeyQS('&')); }
     catch (e) { _ntfRetry(); return; }
     _ntfSocks.set(topic, sock);
     sock.onmessage = ev => {
@@ -38709,6 +38831,8 @@ function _ntfConnect() {
       try { m = JSON.parse(ev.data); } catch (e) { return; }
       if (m.op === 'ready') { (m.messages || []).forEach(x => _ntfAccept(x, { live: false })); _ntfPaintBadge(); }
       else if (m.op === 'message') _ntfAccept(m, { live: true });
+      // سرور قفل است و رمزِ این دستگاه درست نیست — بی‌صدا نمانیم
+      else if (m.op === 'error' && m.msg === 'forbidden') _ntfForbidden = true;
     };
     sock.onclose = () => { if (_ntfSocks.get(topic) === sock) { _ntfSocks.delete(topic); _ntfRetry(); } };
     sock.onerror = () => { try { sock.close(); } catch (e) {} };
@@ -38807,7 +38931,7 @@ async function _ntfSubscribeThisDevice() {
       fetch(base + '/api/notify/' + encodeURIComponent(t) + '/devices', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscription: sub.toJSON(), label: _ntfDeviceLabel() }),
+        body: JSON.stringify({ subscription: sub.toJSON(), label: _ntfDeviceLabel(), key: _ntfKey() || undefined }),
       }).then(r => r.json()).catch(() => ({ ok: false }))
     ));
     if (!results.some(r => r && r.ok)) return false;
@@ -38877,7 +39001,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.235';
+const APP_VERSION = '2.9.236';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
