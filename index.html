@@ -19761,19 +19761,13 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <span class="sec-font-ctrl" title="فونت کلی مودال"><button class="sec-font-btn" onclick="adjModalFont(-0.08)">A-</button><button class="sec-font-btn" onclick="adjModalFont(0.08)">A+</button></span>
         <span class="sec-font-ctrl" title="فونت کادرهای یادداشت/توضیحات">📝<button class="sec-font-btn" onclick="adjNoteFont(-0.08)">A-</button><button class="sec-font-btn" onclick="adjNoteFont(0.08)">A+</button></span>
         <button class="add-row-btn pm-view-ok" id="pm-mode-btn" style="margin:0;border-color:var(--purple);color:var(--purple);padding:5px 10px;font-size:0.78rem" onclick="togglePersonMode()">🔁 پول</button>
-        <button class="add-row-btn" style="margin:0;border-color:var(--accent);color:var(--accent);padding:5px 10px;font-size:0.78rem" onclick="renameCurrentPerson()">✏️ تغییر اسم</button>
-        <!-- «همینِ باز» — این سه روی «حسابی که همین حالا باز است» کار می‌کنند: حسابِ
-             اصلی باشد یا حسابِ فرعی. قبلاً پایین در نوارِ حساب بودند و آن نوار جا
-             نداشت (خواستهٔ صاحب ریپو: بیایند بالا). -->
+        <!-- «📄 PDF» بیرون می‌ماند چون بیشتر از همه به کار می‌رود -->
         <button class="add-row-btn" id="pm-acct-pdf" title="پی‌دی‌افِ همین حسابی که باز است" style="margin:0;border-color:var(--green);color:var(--green);padding:5px 10px;font-size:0.78rem" onclick="pdfPersonCurrentAcct()">📄 PDF</button>
-        <button class="add-row-btn" id="pm-acct-qr" title="کیو‌آرِ همین حسابی که باز است" style="margin:0;border-color:var(--blue);color:var(--blue);padding:5px 10px;font-size:0.78rem" onclick="showPersonQRFromModal()">📲 کیو‌آر</button>
-        <button class="add-row-btn" id="pm-acct-copy" title="گرفتن کپیِ همین حسابی که باز است — برای بردن به برنامهٔ دیگر" style="margin:0;border-color:var(--purple);color:var(--purple);padding:5px 10px;font-size:0.78rem" onclick="openAcctCardFromPerson()">📇 کپیِ حساب</button>
-        <!-- حذفِ حسابِ فرعی — فقط وقتی داخلِ یک حساب فرعی هستیم دیده می‌شود و فقط
-             همان یک حساب را پاک می‌کند؛ حسابِ اصلی و بقیهٔ فرعی‌ها دست نمی‌خورند.
-             پنهان‌شدنش با صفتِ hidden است، نه style.display: قاعدهٔ !importantِ
-             سربرگ (بالا) استایلِ inline را می‌بُرد و دکمه روی حسابِ اصلی هم دیده
-             می‌شد. -->
-        <button class="add-row-btn" id="pm-head-subdel" hidden title="فقط همین حسابِ فرعی پاک می‌شود" style="margin:0;border-color:var(--red);color:var(--red);padding:5px 10px;font-size:0.78rem" onclick="deletePersonSub()">🗑️ حذف حساب</button>
+        <!-- ⋯ بیشتر — خواستهٔ صاحب ریپو: کیو‌آر، تغییر اسم، کپیِ حساب و حذفِ حساب
+             از سربرگ برداشته شدند و داخلِ همین کشویی رفتند تا سربرگ شلوغ نباشد.
+             کشویی یک منوی شناور است (نه داخلِ سربرگ) تا قاعده‌های !importantِ
+             سربرگ رویش اثر نگذارند. -->
+        <button class="add-row-btn" id="pm-more-btn" title="بقیهٔ کارهای این حساب" style="margin:0;border-color:var(--muted);color:var(--txt);padding:5px 10px;font-size:0.78rem" onclick="pmMoreMenu(event)">⋯ بیشتر</button>
         <!-- دکمه‌های «📄 PDF»، «📲 کیو‌آر»، «🗑️ پاک همه» و «📇 کپیِ حساب» از این سربرگ
              برداشته شدند (خواستهٔ صاحب ریپو): کیو‌آرِ هر حساب از دکمهٔ «📲 کیو‌آر کد»ِ
              روی کارتِ همان شخص باز می‌شود و «کپیِ حساب» هم داخلِ همان پنجرهٔ کیو‌آر است. -->
@@ -26173,10 +26167,10 @@ function _renderSubBar(person) {
       sel.value = currentSubId || '';
     }
   }
-  // «حذف حساب» فقط داخلِ یک حسابِ فرعی معنی دارد: با hidden پنهان می‌شود چون
-  // قاعدهٔ !importantِ سربرگ، style.display را می‌بُرد.
-  const delTop = document.getElementById('pm-head-subdel');
-  if (delTop) delTop.hidden = !currentSubId;
+  // «حذف حساب» داخلِ کشویی «⋯ بیشتر» است و همان‌جا فقط وقتی ساخته می‌شود که
+  // روی یک حسابِ فرعی ایستاده باشیم — پس این‌جا کاری لازم نیست.
+  // اگر منوی «بیشتر» باز است، با عوض شدنِ حساب بسته شود تا گزینه‌های کهنه نماند.
+  try { _pmMoreClose(); } catch (e) {}
   const label = document.querySelector('#personModal .pm-acct-bar .pm-acct-label');
   if (label) label.style.display = subs.length === 0 ? 'none' : '';
   // (دکمهٔ کیو‌آرِ سربرگ برداشته شد؛ کیو‌آرِ هر حساب از روی کارتِ خودش باز می‌شود)
@@ -28289,6 +28283,7 @@ function addPersonRowsBulk() {
   showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
 }
 function closePersonModal() {
+  try { _pmMoreClose(); } catch (e) {}
   document.getElementById('personModal').classList.remove('open');
   currentSubId = null;
   const hw = document.getElementById('pm-history-wrap'); if (hw) { hw.style.display = 'none'; hw.innerHTML = ''; }
@@ -35159,6 +35154,53 @@ function showPersonQR(type, id, subId) {
 function showPersonQRFromModal() {
   if (currentPersonId) showPersonQR(currentPersonType, currentPersonId, currentSubId);
 }
+/* ═══ کشویی «⋯ بیشتر» در سربرگِ مودالِ شخص ══════════════════════════════════
+   خواستهٔ صاحب ریپو: سربرگ شلوغ بود؛ کیو‌آر، تغییر اسم، کپیِ حساب و حذفِ حساب
+   داخلِ یک کشویی رفتند. منو شناور ساخته می‌شود (نه داخلِ سربرگ) تا قاعده‌های
+   !importantِ سربرگ رویش اثر نگذارند و جا هم کم نیاورد.
+   «حذف حساب» فقط وقتی ساخته می‌شود که روی یک حسابِ فرعی ایستاده باشیم. ═══ */
+function _pmMoreClose() {
+  const m = document.getElementById('pmMoreMenu');
+  if (m) m.remove();
+}
+function pmMoreMenu(ev) {
+  try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+  if (document.getElementById('pmMoreMenu')) { _pmMoreClose(); return; }   // دوباره زدن = بستن
+  if (!currentPersonId) return;
+  const inSub = !!currentSubId;
+  const menu = document.createElement('div');
+  menu.id = 'pmMoreMenu';
+  menu.className = 'ch-msg-menu';
+  menu.innerHTML =
+    '<button type="button" data-a="qr">📲 کیو‌آر</button>' +
+    '<button type="button" data-a="rename">✏️ تغییر اسم</button>' +
+    '<button type="button" data-a="copy">📇 کپیِ حساب</button>' +
+    (inSub ? '<button type="button" data-a="del" class="ch-del-everyone">🗑️ حذف حساب</button>' : '');
+  menu.addEventListener('click', function (e) {
+    const b = e.target.closest('button'); if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    const a = b.getAttribute('data-a');
+    _pmMoreClose();
+    if (a === 'qr') showPersonQRFromModal();
+    else if (a === 'rename') renameCurrentPerson();
+    else if (a === 'copy') openAcctCardFromPerson();
+    else if (a === 'del') deletePersonSub();
+  });
+  document.body.appendChild(menu);
+  // زیرِ خودِ دکمه بنشیند و از لبه‌های صفحه بیرون نزند
+  const btn = document.getElementById('pm-more-btn');
+  const r = btn ? btn.getBoundingClientRect() : { left: 12, bottom: 60, width: 0 };
+  const w = menu.offsetWidth, h = menu.offsetHeight;
+  let left = r.left + (r.width / 2) - (w / 2);
+  left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+  let top = r.bottom + 6;
+  if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
+  menu.style.left = Math.round(left) + 'px';
+  menu.style.top = Math.round(top) + 'px';
+  setTimeout(function () { document.addEventListener('click', _pmMoreClose, { once: true }); }, 0);
+}
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') _pmMoreClose(); });
+
 // پی‌دی‌افِ «همان حسابی که همین حالا باز است» — حسابِ اصلی یا حسابِ فرعی. خودِ
 // pdfPerson از currentSubId حسابِ فعال را برمی‌دارد، پس فقط باید مطمئن شویم
 // حسابی باز است. (دکمهٔ 📄 PDF در نوارِ حسابِ مودالِ شخص)
@@ -39066,7 +39108,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.241';
+const APP_VERSION = '2.9.242';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
