@@ -19324,6 +19324,16 @@ body.viewer-mode .inv-admin-only{display:none!important}
     </div>
     <button onclick="_emptyTrash()" style="padding:7px 18px;border-radius:8px;border:1px solid var(--red);background:transparent;color:var(--red);font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer;font-size:0.85rem">🗑️ خالی کردن سطل زباله</button>
   </div>
+  <!-- بردنِ یک حساب به برنامهٔ دیگر — خواستهٔ صاحب ریپو -->
+  <div class="settings-card" id="acct-card-settings" style="border-color:var(--green)">
+    <div class="settings-title" style="color:var(--green)">📇 بردنِ یک حساب به برنامهٔ دیگر</div>
+    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
+      از یک حسابِ <b>قرض‌دار</b> یا <b>شرکت</b> می‌توانید یک فایل بگیرید و همان را در برنامهٔ جداگانهٔ دیگرتان بیاورید — مثل اکسل، ولی با همهٔ ماه‌ها و سال‌ها.<br>
+      <b style="color:var(--green)">گرفتن:</b> حساب را باز کنید و در سربرگش دکمهٔ «📇 کپیِ حساب» را بزنید. آن‌جا می‌توانید <b>کلِ حساب</b>، <b>فقط جدولِ فعلی</b>، <b>یک ماه</b> یا <b>یک سال با همهٔ ماه‌هایش</b> را انتخاب کنید.<br>
+      <b style="color:var(--green)">آوردن:</b> همین‌جا دکمهٔ زیر را بزنید و آن فایل را انتخاب کنید. اگر حسابی به همان نام این‌جا باشد، می‌توانید اطلاعات را به همان اضافه کنید (ردیف‌های تکراری دوباره ثبت نمی‌شوند) یا یک حسابِ تازه بسازید. هیچ حسابِ موجودی پاک یا جایگزین نمی‌شود.
+    </div>
+    <button onclick="acctCardImportPick()" style="padding:8px 18px;border-radius:9px;border:1px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:800;cursor:pointer;font-size:0.85rem">📥 آوردن حساب از فایل</button>
+  </div>
   <div class="settings-card" id="chat-trash-card" style="border-color:var(--blue)">
     <div class="settings-title" style="color:var(--blue)">🗑️ سطل آشغال چت گروهی</div>
     <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.8">پیام‌ها، عکس‌ها، ویدیوها و صداهای چت گروهی بعد از <b style="color:var(--blue)">10 روز</b> خودکار به این سطل می‌روند و <b style="color:var(--red)">10 روز بعد</b> برای همیشه از سرور حذف می‌شوند.</div>
@@ -19703,6 +19713,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <!-- دکمهٔ «📄 PDF» این‌جا برداشته شد (خواستهٔ صاحب ریپو): با اسکنِ همین کیو‌آر،
              صفحهٔ حساب باز می‌شود و خودش دکمهٔ «دانلود PDF» دارد — پس اینجا تکراری بود. -->
         <button class="add-row-btn pm-view-ok" id="pm-qr-btn" title="کیو‌آر همین حساب" style="margin:0;border-color:var(--blue);color:var(--blue);padding:5px 10px;font-size:0.78rem" onclick="showPersonQRFromModal()">📲 کیو‌آر</button>
+        <button class="add-row-btn pm-view-ok" title="گرفتن کپیِ همین حساب برای بردن به برنامهٔ دیگر" style="margin:0;border-color:var(--green);color:var(--green);padding:5px 10px;font-size:0.78rem" onclick="openAcctCardFromPerson()">📇 کپیِ حساب</button>
       </div>
       <h2 id="personModalTitle" class="pm-head-title">جزئیات</h2>
       <button class="modal-close" onclick="closePersonModal()">✕</button>
@@ -19829,6 +19840,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <button class="add-row-btn" id="cm-fuel-btn" style="margin:0;border-color:#b7791f;color:#b7791f;padding:5px 10px;font-size:0.78rem" onclick="toggleCompanyFuel()">🟤 دیزل</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--accent);color:var(--accent);padding:5px 10px;font-size:0.78rem" onclick="renameCurrentCompany()">✏️ تغییر نام</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green);padding:5px 10px;font-size:0.78rem" onclick="pdfCompany()">📄 PDF</button>
+        <button class="add-row-btn" title="گرفتن کپیِ همین شرکت برای بردن به برنامهٔ دیگر" style="margin:0;border-color:var(--purple);color:var(--purple);padding:5px 10px;font-size:0.78rem" onclick="openAcctCardFromCompany()">📇 کپیِ حساب</button>
         <button class="modal-close" onclick="closeCompanyModal()">✕</button>
       </div>
     </div>
@@ -38801,7 +38813,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.229';
+const APP_VERSION = '2.9.230';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -45894,6 +45906,288 @@ body.light-mode #glassClock{
     try{ if(document.fonts && document.fonts.ready) document.fonts.ready.then(place); }catch(e){}
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     📇 کارتِ حساب — گرفتنِ کپیِ یک حساب و بردنش به برنامهٔ دیگر
+     خواستهٔ صاحب ریپو: «می‌خواهم یک حسابِ شرکت یا قرض‌دار را با همهٔ ماه‌ها و
+     سال‌هایش بگیرم و در برنامهٔ جداگانه‌ام بیاورم — مثل اکسل، ولی بهتر: حسابِ
+     تکی، یا یک ماه، یا یک سال با همهٔ ماه‌هایش.»
+     یک فایل .json ساخته می‌شود که فقط همان یک حساب داخلش است (نه کلِ برنامه)، و
+     در برنامهٔ مقصد یا حسابِ تازه می‌سازد یا با حسابِ هم‌نامِ موجود ادغام می‌شود.
+     ══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="acctCardModal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-head">
+      <h2 style="flex:1">📇 گرفتن کپیِ حساب</h2>
+      <button class="modal-close" onclick="closeModal('acctCardModal')">✕</button>
+    </div>
+    <div style="padding:16px 18px;overflow-y:auto">
+      <div id="ac-head" style="font-weight:900;font-size:1rem;margin-bottom:6px"></div>
+      <div style="font-size:0.78rem;color:var(--muted);line-height:1.9;margin-bottom:14px">
+        یک فایل ساخته می‌شود که فقط همین حساب در آن است. آن فایل را در برنامهٔ دیگرتان،
+        از «تنظیمات ← مدیریت داده‌ها ← آوردن حساب از فایل» باز کنید.
+      </div>
+      <div id="ac-scopes" style="display:flex;flex-direction:column;gap:9px"></div>
+      <div id="ac-summary" style="margin-top:14px;font-size:0.8rem;font-weight:800;color:var(--accent);min-height:1.3em"></div>
+    </div>
+    <div style="padding:12px 18px 16px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;border-top:1px solid var(--border)">
+      <button class="btn-cancel" style="padding:9px 20px;border-radius:9px;border:none;cursor:pointer;font-family:'Vazirmatn',sans-serif;font-weight:800" onclick="closeModal('acctCardModal')">انصراف</button>
+      <button class="btn-ok" style="padding:9px 22px;border-radius:9px;border:none;cursor:pointer;font-family:'Vazirmatn',sans-serif;font-weight:800" onclick="doAcctCardExport()">⬇️ گرفتن فایل</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="acctImportModal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-head">
+      <h2 style="flex:1">📥 آوردن حساب از فایل</h2>
+      <button class="modal-close" onclick="closeModal('acctImportModal')">✕</button>
+    </div>
+    <div style="padding:16px 18px;overflow-y:auto" id="ai-body"></div>
+    <div style="padding:12px 18px 16px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;border-top:1px solid var(--border)">
+      <button class="btn-cancel" style="padding:9px 20px;border-radius:9px;border:none;cursor:pointer;font-family:'Vazirmatn',sans-serif;font-weight:800" onclick="closeModal('acctImportModal')">انصراف</button>
+      <button id="ai-merge-btn" style="display:none;padding:9px 18px;border-radius:9px;border:1px solid var(--blue);background:transparent;color:var(--blue);cursor:pointer;font-family:'Vazirmatn',sans-serif;font-weight:800" onclick="acctCardApplyImport('merge')">🔗 افزودن به حسابِ هم‌نام</button>
+      <button class="btn-ok" style="padding:9px 22px;border-radius:9px;border:none;cursor:pointer;font-family:'Vazirmatn',sans-serif;font-weight:800" onclick="acctCardApplyImport('new')">➕ ثبت به‌عنوان حسابِ تازه</button>
+    </div>
+  </div>
+</div>
+<input type="file" id="ac-import-file" accept=".json,application/json" style="display:none" onchange="acctCardReadFile(this)">
+
+<script id="acct-card-js">
+/* کارتِ حساب — کاملاً افزودنی: هیچ داده یا محاسبهٔ موجودی را دست نمی‌زند.
+   ساختارِ فایل: { pumpAcctCard:1, kind, scope, account:{…} } */
+(function () {
+  "use strict";
+  var KINDS = {
+    debt:    { label: 'قرض‌دار',  list: function () { return (DB.debtPersons = DB.debtPersons || []); },  redraw: function () { try { renderPersons('debt'); } catch (e) {} } },
+    noinv:   { label: 'بی‌فاکتور', list: function () { return (DB.noinvPersons = DB.noinvPersons || []); }, redraw: function () { try { renderPersons('noinv'); } catch (e) {} } },
+    company: { label: 'شرکت',     list: function () { return (DB.tilCompanies = DB.tilCompanies || []); },  redraw: function () { try { renderCompanies(); } catch (e) {} } }
+  };
+  var _cur = null;      // {kind, rec}
+  var _pending = null;  // بستهٔ خوانده‌شده از فایل
+
+  function esc(s) { return (typeof escFa === 'function') ? escFa(s) : String(s == null ? '' : s); }
+  function fa(n) { return (typeof n2fa === 'function') ? n2fa(n) : String(n); }
+  function en(s) { return (typeof toEnDigits === 'function') ? toEnDigits(String(s || '')) : String(s || ''); }
+  function toast(m, c) { try { showToast(m, c); } catch (e) {} }
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function nid(p) { return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function ymOf(h) { var m = en(h && h.createdAt).match(/(\d{4})\D+(\d{1,2})/); return m ? (m[1] + '/' + ('0' + m[2]).slice(-2)) : ''; }
+  function yOf(h)  { var m = en(h && h.createdAt).match(/(\d{4})/); return m ? m[1] : ''; }
+  /* شمارشِ ردیف‌های «جدولِ فعلی» — قرض‌دار دو دفتر دارد (تیل و پول) و حسابِ فرعی هم
+     دارد؛ شرکت دو جدولِ پطرول/دیزل دارد. همه با هم شمرده می‌شوند. */
+  function curRowCount(kind, rec) {
+    var n = 0;
+    ['rows', 'moneyRows', 'dieselRows'].forEach(function (k) { if (Array.isArray(rec[k])) n += rec[k].length; });
+    (rec.subs || []).forEach(function (s) {
+      ['rows', 'moneyRows'].forEach(function (k) { if (Array.isArray(s[k])) n += s[k].length; });
+    });
+    return n;
+  }
+  function archives(rec) {
+    var out = (rec.tableHistory || []).slice();
+    (rec.subs || []).forEach(function (s) { out = out.concat(s.tableHistory || []); });
+    return out;
+  }
+
+  // ── پنجرهٔ گرفتنِ کپی ──
+  window.openAcctCard = function (kind, id) {
+    var K = KINDS[kind]; if (!K) return;
+    var rec = K.list().find(function (x) { return x && x.id === id; });
+    if (!rec) { toast('حساب پیدا نشد', '#e53e3e'); return; }
+    _cur = { kind: kind, rec: rec };
+    document.getElementById('ac-head').innerHTML =
+      '📇 ' + esc(K.label) + ': <span style="color:var(--accent)">' + esc(rec.name || '—') + '</span>';
+    var arcs = archives(rec);
+    var months = {}, years = {};
+    arcs.forEach(function (h) { var m = ymOf(h), y = yOf(h); if (m) months[m] = (months[m] || 0) + 1; if (y) years[y] = (years[y] || 0) + 1; });
+    var mKeys = Object.keys(months).sort().reverse(), yKeys = Object.keys(years).sort().reverse();
+    function row(val, txt, extra) {
+      return '<label style="display:flex;align-items:center;gap:9px;padding:9px 11px;border:1.5px solid var(--border);border-radius:11px;cursor:pointer">' +
+        '<input type="radio" name="acScope" value="' + val + '" ' + (val === 'all' ? 'checked' : '') + ' onchange="_acScopeChanged()">' +
+        '<span style="font-weight:800;font-size:0.86rem">' + txt + '</span>' + (extra || '') + '</label>';
+    }
+    document.getElementById('ac-scopes').innerHTML =
+      row('all', '📚 کلِ حساب — جدولِ فعلی + همهٔ ماه‌های آرشیو') +
+      row('current', '📄 فقط جدولِ فعلی (ماهِ جاری)') +
+      (mKeys.length ? row('month', '🗓️ فقط یک ماهِ آرشیو:',
+        '<select id="ac-month" onchange="_acScopeChanged()" style="margin-inline-start:auto;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:5px 8px;color:var(--txt);font-family:\'Vazirmatn\',sans-serif;font-weight:800">' +
+        mKeys.map(function (m) { return '<option value="' + m + '">' + esc(m) + ' (' + fa(months[m]) + ' جدول)</option>'; }).join('') + '</select>') : '') +
+      (yKeys.length ? row('year', '📆 یک سال با همهٔ ماه‌هایش:',
+        '<select id="ac-year" onchange="_acScopeChanged()" style="margin-inline-start:auto;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:5px 8px;color:var(--txt);font-family:\'Vazirmatn\',sans-serif;font-weight:800">' +
+        yKeys.map(function (y) { return '<option value="' + y + '">' + esc(y) + ' (' + fa(years[y]) + ' جدول)</option>'; }).join('') + '</select>') : '');
+    _acScopeChanged();
+    document.getElementById('acctCardModal').classList.add('open');
+  };
+
+  function pickedScope() {
+    var r = document.querySelector('input[name="acScope"]:checked');
+    return r ? r.value : 'all';
+  }
+  /* بسته‌سازیِ رکورد بر اساس دامنهٔ انتخاب‌شده. هیچ‌وقت خودِ رکوردِ برنامه دست
+     نمی‌خورد — همیشه روی یک کپی کار می‌کنیم. */
+  function build(kind, rec, scope) {
+    var out = clone(rec);
+    function filterArc(o, keep) {
+      o.tableHistory = (o.tableHistory || []).filter(keep);
+      (o.subs || []).forEach(function (s) { s.tableHistory = (s.tableHistory || []).filter(keep); });
+    }
+    function clearCur(o) {
+      ['rows', 'moneyRows', 'dieselRows'].forEach(function (k) { if (Array.isArray(o[k])) o[k] = []; });
+      (o.subs || []).forEach(function (s) { ['rows', 'moneyRows'].forEach(function (k) { if (Array.isArray(s[k])) s[k] = []; }); });
+    }
+    if (scope === 'current') { filterArc(out, function () { return false; }); }
+    else if (scope === 'month') {
+      var m = (document.getElementById('ac-month') || {}).value || '';
+      clearCur(out); filterArc(out, function (h) { return ymOf(h) === m; });
+    } else if (scope === 'year') {
+      var y = (document.getElementById('ac-year') || {}).value || '';
+      clearCur(out); filterArc(out, function (h) { return yOf(h) === y; });
+    }
+    return out;
+  }
+  window._acScopeChanged = function () {
+    if (!_cur) return;
+    var scope = pickedScope();
+    var pack = build(_cur.kind, _cur.rec, scope);
+    document.getElementById('ac-summary').innerHTML =
+      '📦 در این فایل: ' + fa(curRowCount(_cur.kind, pack)) + ' ردیفِ جدولِ فعلی و ' +
+      fa(archives(pack).length) + ' جدولِ آرشیو';
+  };
+
+  window.doAcctCardExport = function () {
+    if (!_cur) return;
+    var scope = pickedScope();
+    var acct = build(_cur.kind, _cur.rec, scope);
+    var scopeLabel = scope === 'all' ? 'کل حساب' : scope === 'current' ? 'جدول فعلی' :
+      scope === 'month' ? ('ماه ' + ((document.getElementById('ac-month') || {}).value || '')) :
+      ('سال ' + ((document.getElementById('ac-year') || {}).value || ''));
+    var pack = {
+      pumpAcctCard: 1, app: 'pump-yaqobi',
+      appVersion: (typeof APP_VERSION !== 'undefined' ? APP_VERSION : ''),
+      exportedAt: (typeof persianDate === 'function' ? persianDate() : ''),
+      exportedAtISO: new Date().toISOString(),
+      kind: _cur.kind, scope: scope, scopeLabel: scopeLabel, account: acct
+    };
+    try {
+      var blob = new Blob([JSON.stringify(pack, null, 1)], { type: 'application/json' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'حساب-' + String(acct.name || 'بی‌نام').replace(/[\\/:*?"<>|]+/g, '-') + '-' +
+        en(pack.exportedAt).replace(/\//g, '-') + '.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+      closeModal('acctCardModal');
+      toast('⬇️ فایلِ حساب گرفته شد — همین را در برنامهٔ دیگر باز کنید', '#38a169');
+    } catch (e) { toast('❌ فایل ساخته نشد', '#e53e3e'); }
+  };
+
+  // ── آوردن از فایل ──
+  window.acctCardImportPick = function () {
+    if (typeof requireAdmin === 'function' && !requireAdmin()) return;
+    var f = document.getElementById('ac-import-file'); if (f) { f.value = ''; f.click(); }
+  };
+  window.acctCardReadFile = function (input) {
+    var f = input && input.files && input.files[0];
+    input.value = '';
+    if (!f) return;
+    var r = new FileReader();
+    r.onload = function () {
+      var obj = null;
+      try { obj = JSON.parse(String(r.result || '')); } catch (e) {}
+      if (!obj || obj.pumpAcctCard !== 1 || !KINDS[obj.kind] || !obj.account || typeof obj.account !== 'object') {
+        toast('❌ این فایل، فایلِ «کپیِ حساب» نیست', '#e53e3e'); return;
+      }
+      _pending = obj;
+      var K = KINDS[obj.kind], acct = obj.account;
+      var twin = K.list().find(function (x) {
+        return x && (typeof normFa === 'function' ? normFa(x.name) === normFa(acct.name) : x.name === acct.name);
+      });
+      document.getElementById('ai-body').innerHTML =
+        '<div style="font-weight:900;font-size:1rem;margin-bottom:10px">📇 ' + esc(K.label) + ': <span style="color:var(--accent)">' + esc(acct.name || '—') + '</span></div>' +
+        '<div style="font-size:0.84rem;line-height:2">' +
+          '🧾 دامنه: <b>' + esc(obj.scopeLabel || '—') + '</b><br>' +
+          '📄 ردیفِ جدولِ فعلی: <b>' + fa(curRowCount(obj.kind, acct)) + '</b><br>' +
+          '🗂️ جدولِ آرشیو: <b>' + fa(archives(acct).length) + '</b><br>' +
+          '📅 گرفته شده در: <b>' + esc(obj.exportedAt || '—') + '</b> (نسخهٔ ' + esc(obj.appVersion || '—') + ')' +
+        '</div>' +
+        '<div style="margin-top:12px;font-size:0.78rem;line-height:1.9;padding:9px 11px;border-radius:10px;background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--txt)">' +
+          (twin ? ('⚠️ حسابی به نام «' + esc(twin.name) + '» از قبل این‌جا هست. می‌توانید این اطلاعات را <b>به همان</b> اضافه کنید (ردیف‌های تکراری دوباره ثبت نمی‌شوند)، یا به‌عنوان یک <b>حسابِ تازه</b> ثبت کنید.')
+                : '✅ حسابی به این نام این‌جا نیست — به‌عنوان حسابِ تازه ثبت می‌شود.') +
+        '</div>';
+      var mb = document.getElementById('ai-merge-btn');
+      if (mb) mb.style.display = twin ? '' : 'none';
+      document.getElementById('acctImportModal').classList.add('open');
+    };
+    r.readAsText(f);
+  };
+
+  function sig(r) { try { return JSON.stringify(r); } catch (e) { return String(r); } }
+  function mergeRows(dst, src) {
+    if (!Array.isArray(src) || !src.length) return 0;
+    if (!Array.isArray(dst)) return 0;
+    var have = {}; dst.forEach(function (r) { have[sig(r)] = 1; });
+    var n = 0;
+    src.forEach(function (r) { var s = sig(r); if (!have[s]) { dst.push(r); have[s] = 1; n++; } });
+    return n;
+  }
+
+  window.acctCardApplyImport = function (mode) {
+    if (typeof requireAdmin === 'function' && !requireAdmin()) return;
+    if (!_pending) return;
+    var K = KINDS[_pending.kind], list = K.list(), acct = clone(_pending.account);
+    var added = 0;
+    if (mode === 'merge') {
+      var twin = list.find(function (x) {
+        return x && (typeof normFa === 'function' ? normFa(x.name) === normFa(acct.name) : x.name === acct.name);
+      });
+      if (!twin) { toast('حسابِ هم‌نام پیدا نشد', '#e53e3e'); return; }
+      ['rows', 'moneyRows', 'dieselRows'].forEach(function (k) {
+        if (Array.isArray(acct[k]) && acct[k].length) { if (!Array.isArray(twin[k])) twin[k] = []; added += mergeRows(twin[k], acct[k]); }
+      });
+      if (!Array.isArray(twin.tableHistory)) twin.tableHistory = [];
+      var haveArc = {}; twin.tableHistory.forEach(function (h) { haveArc[(h && h.createdAt) + '|' + ((h && h.rows) || []).length] = 1; });
+      (acct.tableHistory || []).forEach(function (h) {
+        var key = (h && h.createdAt) + '|' + ((h && h.rows) || []).length;
+        if (haveArc[key]) return;
+        h.id = nid('h'); twin.tableHistory.push(h); haveArc[key] = 1; added++;
+      });
+      toast('🔗 ' + fa(added) + ' مورد به حساب «' + (twin.name || '') + '» افزوده شد', added ? '#38a169' : '#d97706');
+    } else {
+      // شناسه‌ها از نو ساخته می‌شوند تا با هیچ حسابِ موجودی در این برنامه تصادم نکنند
+      acct.id = nid(_pending.kind === 'company' ? 'c' : 'p');
+      (acct.subs || []).forEach(function (s) { s.id = nid('s'); (s.tableHistory || []).forEach(function (h) { h.id = nid('h'); }); });
+      (acct.tableHistory || []).forEach(function (h) { h.id = nid('h'); });
+      var base = String(acct.name || 'حساب'), name = base, i = 2;
+      while (list.some(function (x) { return x && (typeof normFa === 'function' ? normFa(x.name) === normFa(name) : x.name === name); })) {
+        name = base + ' (' + i + ')'; i++;
+      }
+      acct.name = name;
+      list.push(acct);
+      toast('➕ حساب «' + name + '» ساخته شد', '#38a169');
+    }
+    try { save(); } catch (e) {}
+    K.redraw();
+    try { updateBanner(); } catch (e) {}
+    _pending = null;
+    closeModal('acctImportModal');
+  };
+
+  /* دکمهٔ «کپیِ حساب» در سربرگِ مودالِ قرض‌دار و شرکت — از همان متغیرهای خودِ
+     برنامه (currentPersonId / currentCompanyId) استفاده می‌کند. */
+  window.openAcctCardFromPerson = function () {
+    var kind = (typeof currentPersonType !== 'undefined' && currentPersonType === 'noinv') ? 'noinv' : 'debt';
+    var id = (typeof currentPersonId !== 'undefined') ? currentPersonId : null;
+    if (!id) { toast('اول یک حساب را باز کنید', '#e53e3e'); return; }
+    openAcctCard(kind, id);
+  };
+  window.openAcctCardFromCompany = function () {
+    var id = (typeof currentCompanyId !== 'undefined') ? currentCompanyId : null;
+    if (!id) { toast('اول یک شرکت را باز کنید', '#e53e3e'); return; }
+    openAcctCard('company', id);
+  };
 })();
 </script>
 
