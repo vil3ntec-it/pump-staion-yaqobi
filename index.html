@@ -19328,11 +19328,26 @@ body.viewer-mode .inv-admin-only{display:none!important}
   <div class="settings-card" id="acct-card-settings" style="border-color:var(--green)">
     <div class="settings-title" style="color:var(--green)">📇 بردنِ یک حساب به برنامهٔ دیگر</div>
     <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
-      از یک حسابِ <b>قرض‌دار</b> یا <b>شرکت</b> می‌توانید یک فایل بگیرید و همان را در برنامهٔ جداگانهٔ دیگرتان بیاورید — مثل اکسل، ولی با همهٔ ماه‌ها و سال‌ها.<br>
-      <b style="color:var(--green)">گرفتن:</b> حساب را باز کنید و در سربرگش دکمهٔ «📇 کپیِ حساب» را بزنید. آن‌جا می‌توانید <b>کلِ حساب</b>، <b>فقط جدولِ فعلی</b>، <b>یک ماه</b> یا <b>یک سال با همهٔ ماه‌هایش</b> را انتخاب کنید.<br>
-      <b style="color:var(--green)">آوردن:</b> همین‌جا دکمهٔ زیر را بزنید و آن فایل را انتخاب کنید. اگر حسابی به همان نام این‌جا باشد، می‌توانید اطلاعات را به همان اضافه کنید (ردیف‌های تکراری دوباره ثبت نمی‌شوند) یا یک حسابِ تازه بسازید. هیچ حسابِ موجودی پاک یا جایگزین نمی‌شود.
+      یک حساب یا یک بخش را در یک فایل بگیرید و همان را در برنامهٔ جداگانهٔ دیگرتان بیاورید — مثل اکسل، ولی با همهٔ ماه‌ها و سال‌ها. این کار <b>دوطرفه</b> است: از آن برنامه هم می‌توانید بگیرید و به این‌جا بیاورید.<br>
+      <b style="color:var(--green)">حسابِ نام‌دار</b> (قرض‌دار، بی‌فاکتور، شرکت): حساب را باز کنید و در سربرگش «📇 کپیِ حساب» را بزنید.<br>
+      <b style="color:var(--blue)">بخش‌ها</b> (مصارف، صرافی، گاوصندوق، رسید پارچه‌ها، چکنه، عایدات دیگر، فاکتورها، ورق‌های روزانه): از همین‌جا، با کادرِ زیر.<br>
+      در هر دو حالت می‌توانید <b>همه‌اش</b>، یا <b>یک ماه</b>، یا <b>یک سال با همهٔ ماه‌هایش</b> را انتخاب کنید. هیچ چیزی در برنامهٔ مقصد پاک یا جایگزین نمی‌شود و موردهای تکراری دوباره ثبت نمی‌شوند.
     </div>
-    <button onclick="acctCardImportPick()" style="padding:8px 18px;border-radius:9px;border:1px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:800;cursor:pointer;font-size:0.85rem">📥 آوردن حساب از فایل</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+      <span style="font-size:0.82rem;font-weight:800">📤 گرفتن کپیِ یک بخش:</span>
+      <select id="sec-card-pick" style="background:var(--card);border:1px solid var(--border);border-radius:9px;padding:7px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.83rem">
+        <option value="expenses">💸 مصارف</option>
+        <option value="sarrafiRows">💱 صرافی</option>
+        <option value="safeEntries">🏦 گاوصندوق</option>
+        <option value="parchaReceipts">🧾 رسید پارچه‌ها</option>
+        <option value="chakanaRows">🛒 چکنه</option>
+        <option value="extraIncomes">📈 عایدات دیگر</option>
+        <option value="invoices">📇 فاکتورها</option>
+        <option value="waraqEntries">📋 ورق‌های روزانه</option>
+      </select>
+      <button onclick="openSectionCardPicked()" style="padding:7px 16px;border-radius:9px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-weight:800;cursor:pointer;font-size:0.83rem">📤 گرفتن</button>
+    </div>
+    <button onclick="acctCardImportPick()" style="padding:8px 18px;border-radius:9px;border:1px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:800;cursor:pointer;font-size:0.85rem">📥 آوردن حساب یا بخش از فایل</button>
   </div>
   <div class="settings-card" id="chat-trash-card" style="border-color:var(--blue)">
     <div class="settings-title" style="color:var(--blue)">🗑️ سطل آشغال چت گروهی</div>
@@ -38813,7 +38828,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.231';
+const APP_VERSION = '2.9.232';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -45953,7 +45968,7 @@ body.light-mode #glassClock{
     <div style="padding:12px 18px 16px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;border-top:1px solid var(--border)">
       <button class="btn-cancel" style="padding:9px 20px;border-radius:9px;border:none;cursor:pointer;font-family:'Vazirmatn',sans-serif;font-weight:800" onclick="closeModal('acctImportModal')">انصراف</button>
       <button id="ai-merge-btn" style="display:none;padding:9px 18px;border-radius:9px;border:1px solid var(--blue);background:transparent;color:var(--blue);cursor:pointer;font-family:'Vazirmatn',sans-serif;font-weight:800" onclick="acctCardApplyImport('merge')">🔗 افزودن به حسابِ هم‌نام</button>
-      <button class="btn-ok" style="padding:9px 22px;border-radius:9px;border:none;cursor:pointer;font-family:'Vazirmatn',sans-serif;font-weight:800" onclick="acctCardApplyImport('new')">➕ ثبت به‌عنوان حسابِ تازه</button>
+      <button class="btn-ok" id="ai-new-btn" style="padding:9px 22px;border-radius:9px;border:none;cursor:pointer;font-family:'Vazirmatn',sans-serif;font-weight:800" onclick="acctCardApplyImport('new')">➕ ثبت به‌عنوان حسابِ تازه</button>
     </div>
   </div>
 </div>
@@ -45969,7 +45984,34 @@ body.light-mode #glassClock{
     noinv:   { label: 'بی‌فاکتور', list: function () { return (DB.noinvPersons = DB.noinvPersons || []); }, redraw: function () { try { renderPersons('noinv'); } catch (e) {} } },
     company: { label: 'شرکت',     list: function () { return (DB.tilCompanies = DB.tilCompanies || []); },  redraw: function () { try { renderCompanies(); } catch (e) {} } }
   };
-  var _cur = null;      // {kind, rec}
+  /* بخش‌هایی که «حسابِ نام‌دار» نیستند و یک فهرستِ ردیفِ تاریخ‌دارند. این‌ها هم
+     مثل حساب‌ها کپی می‌شوند، فقط به‌جای «کل/ماه/سال آرشیو»، ماه و سال از روی
+     تاریخِ خودِ ردیف‌ها درمی‌آید. (خواستهٔ صاحب ریپو: «از هر بخشی که است».) */
+  var SECTIONS = {
+    expenses:       { label: 'مصارف' },
+    sarrafiRows:    { label: 'صرافی' },
+    safeEntries:    { label: 'گاوصندوق' },
+    parchaReceipts: { label: 'رسید پارچه‌ها' },
+    chakanaRows:    { label: 'چکنه' },
+    extraIncomes:   { label: 'عایدات دیگر' },
+    invoices:       { label: 'فاکتورها' },
+    waraqEntries:   { label: 'ورق‌های روزانه' }
+  };
+  function secRows(key) { if (!Array.isArray(DB[key])) DB[key] = []; return DB[key]; }
+  // تاریخِ یک ردیف — هر بخشی نامِ فیلدِ خودش را دارد
+  function rowDate(r) {
+    if (!r || typeof r !== 'object') return '';
+    var k = ['date', 'date_sh', 'day', 'createdAt'];
+    for (var i = 0; i < k.length; i++) {
+      var v = r[k[i]];
+      if (typeof v === 'string' && /\d{3,4}\D+\d{1,2}/.test(en(v))) return en(v);
+    }
+    return '';
+  }
+  function rowYm(r) { var m = rowDate(r).match(/(\d{4})\D+(\d{1,2})/); return m ? (m[1] + '/' + ('0' + m[2]).slice(-2)) : ''; }
+  function rowY(r)  { var m = rowDate(r).match(/(\d{4})/); return m ? m[1] : ''; }
+
+  var _cur = null;      // {kind, rec}  یا  {kind:'section', sec, rec}
   var _pending = null;  // بستهٔ خوانده‌شده از فایل
 
   function esc(s) { return (typeof escFa === 'function') ? escFa(s) : String(s == null ? '' : s); }
@@ -46061,6 +46103,39 @@ body.light-mode #glassClock{
     document.getElementById('acctCardModal').classList.add('open');
   };
 
+  /* همان پنجره، این‌بار برای یک «بخش» (مصارف، صرافی، گاوصندوق و …) */
+  window.openSectionCard = function (key) {
+    var S = SECTIONS[key]; if (!S) return;
+    var rows = secRows(key);
+    if (!rows.length) { toast('بخش «' + S.label + '» ردیفی ندارد', '#d97706'); return; }
+    _cur = { kind: 'section', sec: key, rec: { name: S.label, rows: rows } };
+    document.getElementById('ac-head').innerHTML =
+      '🗂️ بخش: <span style="color:var(--accent)">' + esc(S.label) + '</span>';
+    var months = {}, years = {};
+    rows.forEach(function (r) { var m = rowYm(r), y = rowY(r); if (m) months[m] = (months[m] || 0) + 1; if (y) years[y] = (years[y] || 0) + 1; });
+    var mKeys = Object.keys(months).sort().reverse(), yKeys = Object.keys(years).sort().reverse();
+    function row(val, txt, extra) {
+      return '<label style="display:flex;align-items:center;gap:9px;padding:9px 11px;border:1.5px solid var(--border);border-radius:11px;cursor:pointer">' +
+        '<input type="radio" name="acScope" value="' + val + '" ' + (val === 'all' ? 'checked' : '') + ' onchange="_acScopeChanged()">' +
+        '<span style="font-weight:800;font-size:0.86rem">' + txt + '</span>' + (extra || '') + '</label>';
+    }
+    var selCss = 'margin-inline-start:auto;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:5px 8px;color:var(--txt);font-family:\'Vazirmatn\',sans-serif;font-weight:800';
+    document.getElementById('ac-scopes').innerHTML =
+      row('all', '📚 کلِ بخش — همهٔ ردیف‌ها') +
+      (mKeys.length ? row('month', '🗓️ فقط یک ماه:',
+        '<select id="ac-month" onchange="_acScopeChanged()" style="' + selCss + '">' +
+        mKeys.map(function (m) { return '<option value="' + m + '">' + esc(m) + ' (' + fa(months[m]) + ' ردیف)</option>'; }).join('') + '</select>') : '') +
+      (yKeys.length ? row('year', '📆 یک سال با همهٔ ماه‌هایش:',
+        '<select id="ac-year" onchange="_acScopeChanged()" style="' + selCss + '">' +
+        yKeys.map(function (y) { return '<option value="' + y + '">' + esc(y) + ' (' + fa(years[y]) + ' ردیف)</option>'; }).join('') + '</select>') : '');
+    _acScopeChanged();
+    document.getElementById('acctCardModal').classList.add('open');
+  };
+  window.openSectionCardPicked = function () {
+    var s = document.getElementById('sec-card-pick');
+    if (s && s.value) openSectionCard(s.value);
+  };
+
   function pickedScope() {
     var r = document.querySelector('input[name="acScope"]:checked');
     return r ? r.value : 'all';
@@ -46068,6 +46143,12 @@ body.light-mode #glassClock{
   /* بسته‌سازیِ رکورد بر اساس دامنهٔ انتخاب‌شده. هیچ‌وقت خودِ رکوردِ برنامه دست
      نمی‌خورد — همیشه روی یک کپی کار می‌کنیم. */
   function build(kind, rec, scope) {
+    if (kind === 'section') {
+      var rows = (rec.rows || []).slice();
+      if (scope === 'month') { var m = (document.getElementById('ac-month') || {}).value || ''; rows = rows.filter(function (r) { return rowYm(r) === m; }); }
+      else if (scope === 'year') { var y = (document.getElementById('ac-year') || {}).value || ''; rows = rows.filter(function (r) { return rowY(r) === y; }); }
+      return sanitize({ name: rec.name, rows: clone(rows) });
+    }
     var out = clone(rec);
     function filterArc(o, keep) {
       o.tableHistory = (o.tableHistory || []).filter(keep);
@@ -46091,35 +46172,42 @@ body.light-mode #glassClock{
     if (!_cur) return;
     var scope = pickedScope();
     var pack = build(_cur.kind, _cur.rec, scope);
-    document.getElementById('ac-summary').innerHTML =
-      '📦 در این فایل: ' + fa(curRowCount(_cur.kind, pack)) + ' ردیفِ جدولِ فعلی و ' +
-      fa(archives(pack).length) + ' جدولِ آرشیو';
+    document.getElementById('ac-summary').innerHTML = (_cur.kind === 'section')
+      ? ('📦 در این فایل: ' + fa((pack.rows || []).length) + ' ردیف')
+      : ('📦 در این فایل: ' + fa(curRowCount(_cur.kind, pack)) + ' ردیفِ جدولِ فعلی و ' +
+         fa(archives(pack).length) + ' جدولِ آرشیو');
   };
+  // برچسبِ دامنه — برای نامِ فایل و برای نوشتهٔ بالای برگه
+  function scopeLabelOf(scope) {
+    if (scope === 'all') return _cur && _cur.kind === 'section' ? 'کل بخش' : 'کل حساب';
+    if (scope === 'current') return 'جدول فعلی';
+    if (scope === 'month') return 'ماه ' + ((document.getElementById('ac-month') || {}).value || '');
+    return 'سال ' + ((document.getElementById('ac-year') || {}).value || '');
+  }
 
   window.doAcctCardExport = function () {
     if (!_cur) return;
     var scope = pickedScope();
     var acct = build(_cur.kind, _cur.rec, scope);
-    var scopeLabel = scope === 'all' ? 'کل حساب' : scope === 'current' ? 'جدول فعلی' :
-      scope === 'month' ? ('ماه ' + ((document.getElementById('ac-month') || {}).value || '')) :
-      ('سال ' + ((document.getElementById('ac-year') || {}).value || ''));
     var pack = {
       pumpAcctCard: 1, app: 'pump-yaqobi',
       appVersion: (typeof APP_VERSION !== 'undefined' ? APP_VERSION : ''),
       exportedAt: (typeof persianDate === 'function' ? persianDate() : ''),
       exportedAtISO: new Date().toISOString(),
-      kind: _cur.kind, scope: scope, scopeLabel: scopeLabel, account: acct
+      kind: _cur.kind, section: _cur.sec || null,
+      scope: scope, scopeLabel: scopeLabelOf(scope), account: acct
     };
     try {
       var blob = new Blob([JSON.stringify(pack, null, 1)], { type: 'application/json' });
       var a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'حساب-' + String(acct.name || 'بی‌نام').replace(/[\\/:*?"<>|]+/g, '-') + '-' +
+      a.download = (_cur.kind === 'section' ? 'بخش-' : 'حساب-') +
+        String(acct.name || 'بی‌نام').replace(/[\\/:*?"<>|]+/g, '-') + '-' +
         en(pack.exportedAt).replace(/\//g, '-') + '.json';
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
       closeModal('acctCardModal');
-      toast('⬇️ فایلِ حساب گرفته شد — همین را در برنامهٔ دیگر باز کنید', '#38a169');
+      toast('⬇️ فایل گرفته شد — همین را در برنامهٔ دیگر باز کنید', '#38a169');
     } catch (e) { toast('❌ فایل ساخته نشد', '#e53e3e'); }
   };
 
@@ -46175,8 +46263,9 @@ body.light-mode #glassClock{
     return '<div class="blk"><div class="blk-h">' + h(title) + '</div>' + tableHtml(rows) + '</div>';
   }
   function buildViewHtml(kind, acct, scopeLabel) {
-    var K = KINDS[kind], parts = [];
-    if ((acct.rows || []).length) parts.push(blockHtml(kind === 'company' ? '📄 جدول فعلی — پطرول' : '📄 جدول فعلی — واحد تیل', acct.rows));
+    var K = KINDS[kind] || { label: 'بخش' }, parts = [];
+    if (kind === 'section') parts.push(blockHtml('📄 ' + (acct.name || ''), acct.rows));
+    else if ((acct.rows || []).length) parts.push(blockHtml(kind === 'company' ? '📄 جدول فعلی — پطرول' : '📄 جدول فعلی — واحد تیل', acct.rows));
     if ((acct.dieselRows || []).length) parts.push(blockHtml('📄 جدول فعلی — دیزل', acct.dieselRows));
     if ((acct.moneyRows || []).length) parts.push(blockHtml('📄 جدول فعلی — واحد پول', acct.moneyRows));
     (acct.subs || []).forEach(function (s) {
@@ -46227,14 +46316,12 @@ body.light-mode #glassClock{
   window.doAcctCardHtml = function () {
     if (!_cur) return;
     var scope = pickedScope(), acct = build(_cur.kind, _cur.rec, scope);
-    var scopeLabel = scope === 'all' ? 'کل حساب' : scope === 'current' ? 'جدول فعلی' :
-      scope === 'month' ? ('ماه ' + ((document.getElementById('ac-month') || {}).value || '')) :
-      ('سال ' + ((document.getElementById('ac-year') || {}).value || ''));
     try {
-      var blob = new Blob([buildViewHtml(_cur.kind, acct, scopeLabel)], { type: 'text/html;charset=utf-8' });
+      var blob = new Blob([buildViewHtml(_cur.kind, acct, scopeLabelOf(scope))], { type: 'text/html;charset=utf-8' });
       var a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'حساب-' + String(acct.name || 'بی‌نام').replace(/[\\/:*?"<>|]+/g, '-') + '.html';
+      a.download = (_cur.kind === 'section' ? 'بخش-' : 'حساب-') +
+        String(acct.name || 'بی‌نام').replace(/[\\/:*?"<>|]+/g, '-') + '.html';
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
       closeModal('acctCardModal');
@@ -46255,10 +46342,34 @@ body.light-mode #glassClock{
     r.onload = function () {
       var obj = null;
       try { obj = JSON.parse(String(r.result || '')); } catch (e) {}
-      if (!obj || obj.pumpAcctCard !== 1 || !KINDS[obj.kind] || !obj.account || typeof obj.account !== 'object') {
+      var okKind = obj && (KINDS[obj.kind] || (obj.kind === 'section' && SECTIONS[obj.section]));
+      if (!obj || obj.pumpAcctCard !== 1 || !okKind || !obj.account || typeof obj.account !== 'object') {
         toast('❌ این فایل، فایلِ «کپیِ حساب» نیست', '#e53e3e'); return;
       }
       _pending = obj;
+      // ── بستهٔ «بخش» (مصارف، صرافی، …): فقط افزودنِ ردیف‌ها ──
+      if (obj.kind === 'section') {
+        var S = SECTIONS[obj.section], have = secRows(obj.section);
+        var incoming = (obj.account.rows || []);
+        var known = {}; have.forEach(function (r) { known[sig(r)] = 1; });
+        var fresh = incoming.filter(function (r) { return !known[sig(r)]; }).length;
+        document.getElementById('ai-body').innerHTML =
+          '<div style="font-weight:900;font-size:1rem;margin-bottom:10px">🗂️ بخش: <span style="color:var(--accent)">' + esc(S.label) + '</span></div>' +
+          '<div style="font-size:0.84rem;line-height:2">' +
+            '🧾 دامنه: <b>' + esc(obj.scopeLabel || '—') + '</b><br>' +
+            '📄 ردیف در فایل: <b>' + fa(incoming.length) + '</b><br>' +
+            '➕ از این‌ها تازه است: <b>' + fa(fresh) + '</b> (بقیه از قبل این‌جا هست)<br>' +
+            '📅 گرفته شده در: <b>' + esc(obj.exportedAt || '—') + '</b> (نسخهٔ ' + esc(obj.appVersion || '—') + ')' +
+          '</div>' +
+          '<div style="margin-top:12px;font-size:0.78rem;line-height:1.9;padding:9px 11px;border-radius:10px;background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--txt)">' +
+            'ردیف‌ها به بخشِ «' + esc(S.label) + '»ِ همین برنامه <b>اضافه</b> می‌شوند. هیچ ردیفی پاک یا جایگزین نمی‌شود و موردهای تکراری دوباره ثبت نمی‌شوند.' +
+          '</div>';
+        var mb0 = document.getElementById('ai-merge-btn'); if (mb0) mb0.style.display = 'none';
+        var nb0 = document.getElementById('ai-new-btn'); if (nb0) nb0.textContent = '➕ افزودن ردیف‌ها';
+        document.getElementById('acctImportModal').classList.add('open');
+        return;
+      }
+      var nb1 = document.getElementById('ai-new-btn'); if (nb1) nb1.textContent = '➕ ثبت به‌عنوان حسابِ تازه';
       var K = KINDS[obj.kind], acct = obj.account;
       var twin = K.list().find(function (x) {
         return x && (typeof normFa === 'function' ? normFa(x.name) === normFa(acct.name) : x.name === acct.name);
@@ -46295,6 +46406,18 @@ body.light-mode #glassClock{
   window.acctCardApplyImport = function (mode) {
     if (typeof requireAdmin === 'function' && !requireAdmin()) return;
     if (!_pending) return;
+    // ── بخش‌ها: ردیف‌ها فقط اضافه می‌شوند، هیچ چیزی جایگزین نمی‌شود ──
+    if (_pending.kind === 'section') {
+      var S2 = SECTIONS[_pending.section], dst = secRows(_pending.section);
+      var n = mergeRows(dst, clone(_pending.account.rows || []));
+      try { save(); } catch (e) {}
+      try { if (typeof renderAll === 'function') renderAll(); } catch (e) {}
+      ['renderExpenses', 'renderSarrafi', 'renderSafe', 'renderChakana', 'renderExtraIncome', 'renderInvoices', 'renderWaraqList', 'renderDebtRasid', 'updateBanner']
+        .forEach(function (fn) { try { if (typeof window[fn] === 'function') window[fn](); } catch (e) {} });
+      toast('➕ ' + fa(n) + ' ردیف به بخشِ «' + S2.label + '» افزوده شد', n ? '#38a169' : '#d97706');
+      _pending = null; closeModal('acctImportModal');
+      return;
+    }
     var K = KINDS[_pending.kind], list = K.list(), acct = clone(_pending.account);
     var added = 0;
     if (mode === 'merge') {
