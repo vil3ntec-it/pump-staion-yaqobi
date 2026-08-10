@@ -20579,6 +20579,11 @@ function load() {
   try { if (dedupAccounts()) save(); } catch(e){}
   // مهاجرتِ یک‌بارهٔ نرخ‌ها: نرخِ اتحادیه/خودکار از جدول‌های قرض‌داران حذف و به «فیِ دستی» تبدیل می‌شود
   try { _manualizeDebtorRates(); } catch(e){}
+  /* مهاجرتِ یک‌بارهٔ «واحدِ هر حساب»: تا پیش از این واحد (پول/تیل) روی خودِ شخص
+     بود و به همهٔ حساب‌های فرعی‌اش سرایت می‌کرد. حالا هر حساب واحدِ خودش را دارد.
+     برای اینکه هیچ حسابی ظاهرش عوض نشود، هر حساب فرعی همان واحدی را می‌گیرد که
+     تا همین حالا با آن دیده می‌شد (واحدِ شخص) — از این به بعد مستقل است. */
+  try { _migrateAcctModes(); } catch(e){}
   // مهاجرتِ یک‌بارهٔ گزارشِ «زیان افزایش قیمت»: قرض‌هایی که پیش از این قابلیت تسویه
   // شده‌اند تاریخِ پرداخت ندارند و «تسویه (تاریخ نامشخص)» علامت می‌خورند تا زیانِ
   // ساختگی با نرخِ امروز برایشان حساب نشود. فقط یک فیلدِ تازه اضافه می‌کند.
@@ -25025,9 +25030,42 @@ function _acctOf(person){
 // «واحد پول» و «واحد تیل» دو صفحهٔ کاملاً جدا هستند: هر حالت جدولِ ردیف‌های خودش را
 // دارد و هیچ ربطی به هم ندارند. rows = جدول واحد تیل (همان دادهٔ قدیمی، دست‌نخورده)؛
 // moneyRows = جدول واحد پول. این تابع جدولِ حالتِ فعال را برمی‌گرداند.
+/* ── «واحد» مالِ هر حساب است، نه مالِ شخص ────────────────────────────────────
+   خواستهٔ صاحب ریپو: «واحد را برای هر حساب جدا کن.»
+   تا پیش از این، واحد (پول/تیل) روی خودِ شخص می‌نشست، پس اگر روی یک حساب فرعی
+   پول می‌کردید، حسابِ اصلی و همهٔ فرعی‌های دیگرِ همان شخص هم پول می‌شدند.
+   حالا هر حساب واحدِ خودش را دارد:
+     • حسابِ اصلی همان person.mode است (خودِ شخص، شیءِ حسابِ اصلی است) — پس
+       دادهٔ قدیمی مو‌به‌مو همان‌طور که بود می‌ماند.
+     • هر حساب فرعی sub.mode خودش را دارد. اگر نداشته باشد (دادهٔ قدیمی)، تا
+       وقتی مهاجرت انجام نشده از واحدِ شخص ارث می‌برد، پس ظاهر عوض نمی‌شود.
+   هیچ محاسبه‌ای عوض نشده؛ فقط «کدام دفتر» از روی حسابِ درست خوانده می‌شود. */
+function _acctModeMoney(person, acct){
+  var a = acct || _acctOf(person);
+  var m = (a && a.mode) || (person && person.mode) || 'fuel';
+  return m === 'money';
+}
+/** واحدِ یک حسابِ مشخص را می‌نویسد (حسابِ اصلی = خودِ شخص) */
+function _setAcctMode(acct, money){ if (acct) acct.mode = money ? 'money' : 'fuel'; }
+/* هر حساب فرعیِ بی‌واحد، واحدِ شخص را می‌گیرد — یک‌بار، هنگام بالا آمدنِ برنامه.
+   بعد از آن هر حساب مستقل است و عوض کردنِ یکی روی بقیه اثر ندارد. */
+function _migrateAcctModes(){
+  var changed = false;
+  ['debtPersons', 'noinvPersons'].forEach(function (k) {
+    (DB[k] || []).forEach(function (p) {
+      if (!p || !Array.isArray(p.subs)) return;
+      var base = p.mode === 'money' ? 'money' : 'fuel';
+      p.subs.forEach(function (s) {
+        if (s && !s.mode) { s.mode = base; changed = true; }
+      });
+    });
+  });
+  if (changed) { try { save(); } catch (e) {} }
+  return changed;
+}
 function _acctRows(person, acct){
   acct = acct || _acctOf(person);
-  if (person && person.mode === 'money') {
+  if (_acctModeMoney(person, acct)) {
     if (!Array.isArray(acct.moneyRows)) acct.moneyRows = [];
     return acct.moneyRows;
   }
@@ -26177,7 +26215,11 @@ function newPersonSub() {
   const name = prompt('نام حساب جدید:');
   if (!name || !name.trim()) return;
   if (!Array.isArray(person.subs)) person.subs = [];
-  const sub = { id: 's' + Date.now() + Math.random().toString(36).slice(2, 6), name: name.trim(), rows: [], note: '' };
+  /* واحدِ حسابِ تازه صریح نوشته می‌شود (همان واحدی که همین حالا در آن هستید).
+     بدونِ این، حساب تا اولین بار عوض کردنِ واحد از شخص «ارث» می‌بُرد و با عوض
+     کردنِ واحدِ حسابِ اصلی، این هم عوض می‌شد — همان سرایتی که قرار بود برود. */
+  const sub = { id: 's' + Date.now() + Math.random().toString(36).slice(2, 6), name: name.trim(), rows: [], moneyRows: [], note: '',
+                mode: _acctModeMoney(person) ? 'money' : 'fuel' };
   person.subs.push(sub);
   currentSubId = sub.id;
   save();
@@ -26260,7 +26302,7 @@ function renderPersonRows(person) {
   const showFtCol = currentPersonFilter === 'all';
   _togglePmFtColumn(showFtCol);
   _togglePmFuelCards(currentPersonFilter);
-  const money = person.mode === 'money';
+  const money = _acctModeMoney(person, acct);
   _togglePmMoneyCols(money);
   let shown = 0;
   rows.forEach((r, i) => {
@@ -26373,7 +26415,7 @@ function _renderStackedAccounts(person) {
     // محاسبات پطرول/دیزل برای این section
     const st = _splitTotals(rows);
     const pct = parseFloat(sec.acct.percent || person.percent) || 0;
-    const money = person.mode === 'money';
+    const money = _acctModeMoney(person, sec.acct);
     const rasidP = money ? (parseFloat(sec.acct.rasidMoneyP)||0) : (parseFloat(sec.acct.rasidFuelP)||0);
     const rasidD = money ? (parseFloat(sec.acct.rasidMoneyD)||0) : (parseFloat(sec.acct.rasidFuelD)||0);
     const bordP = money ? st.petrol.bardagi : st.petrol.fuel;
@@ -26498,7 +26540,7 @@ function deleteStackedRow(pid, acctId, idx) {
 function addRowToAcct(pid, acctId) {
   const person = _getStackedPerson(pid); if (!person) return;
   const acct = _getStackedAcct(person, acctId);
-  _acctRows(person, acct).push({ date:persianDate(), name:'', hawala:'', ftype:'petrol', fuel:0, priceper:0, bardagi:0, rasid:0, albaqi:0, byMoney:person.mode==='money' });
+  _acctRows(person, acct).push({ date:persianDate(), name:'', hawala:'', ftype:'petrol', fuel:0, priceper:0, bardagi:0, rasid:0, albaqi:0, byMoney:_acctModeMoney(person, acct) });
   save(); _renderStackedAccounts(person); _updatePersonTotals(person);
 }
 function addRowsBulkToAcct(pid, acctId, countId) {
@@ -26508,7 +26550,7 @@ function addRowsBulkToAcct(pid, acctId, countId) {
   let n = parseInt(inp?.value||'10', 10)||10;
   if (n<1) n=1; if (n>200) n=200;
   const rowsArr = _acctRows(person, acct);
-  for (let k=0;k<n;k++) rowsArr.push({ date:persianDate(), name:'', hawala:'', ftype:'petrol', fuel:0, priceper:0, bardagi:0, rasid:0, albaqi:0, byMoney:person.mode==='money' });
+  for (let k=0;k<n;k++) rowsArr.push({ date:persianDate(), name:'', hawala:'', ftype:'petrol', fuel:0, priceper:0, bardagi:0, rasid:0, albaqi:0, byMoney:_acctModeMoney(person, acct) });
   save(); _renderStackedAccounts(person); _updatePersonTotals(person);
   showToast('✅ '+n2fa(n)+' ردیف افزوده شد', '#38a169');
 }
@@ -26521,7 +26563,7 @@ function pdfStackedAcct(pid, acctId) {
   const docTitle = isSub ? ('📄 ' + escFa(acctLabel)) : ('حساب ' + escFa(person.name));
   const rows = _acctRows(person, acct);
   const t = _splitTotals(rows);
-  const money = person.mode === 'money';
+  const money = _acctModeMoney(person, acct);
   const pct = parseFloat(acct.percent || person.percent)||0;
   const unit = money ? 'افغانی' : 'ل';
   const rasidP = money ? (parseFloat(acct.rasidMoneyP)||0) : (parseFloat(acct.rasidFuelP)||0);
@@ -26660,7 +26702,7 @@ ${noteHtml}
 function updateStackedRasid(pid, acctId, ftype, value) {
   const person = _getStackedPerson(pid); if (!person) return;
   const acct = _getStackedAcct(person, acctId);
-  const money = person.mode === 'money';
+  const money = _acctModeMoney(person, acct);
   const v = parseFloat(value) || 0;
   if (ftype === 'petrol') { if (money) acct.rasidMoneyP = v; else acct.rasidFuelP = v; }
   else { if (money) acct.rasidMoneyD = v; else acct.rasidFuelD = v; }
@@ -26841,7 +26883,7 @@ function calcPersonRow(pid, idx, field, value) {
   // جدا از رسید پول؛ تفاوت با مقدار قبلی جمع می‌شود تا هنگام تایپ دوبار حساب نشود.
   // فقط در دفترِ «واحد تیل» — دفترِ «واحد پول» کاملاً جداست و هیچ اثری بر
   // حساب تیل (rasidFuelP/D) نمی‌گذارد
-  if (field === 'rasidFuel' && person.mode !== 'money') {
+  if (field === 'rasidFuel' && !_acctModeMoney(person, acct)) {
     const delta = (parseFloat(value) || 0) - prevRasidFuel;
     if (delta) {
       if (r.ftype === 'diesel') acct.rasidFuelD = (parseFloat(acct.rasidFuelD)||0) + delta;
@@ -26943,7 +26985,7 @@ function _refreshOpenPersonModal() {
 function updatePersonRasidFuel(fuel, val) {
   const person = _curPerson(); if (!person) return;
   const acct = _acctOf(person);
-  const money = person.mode === 'money';
+  const money = _acctModeMoney(person, acct);
   const v = parseFloat(val)||0;
   if (fuel === 'diesel') { if (money) acct.rasidMoneyD = v; else acct.rasidFuelD = v; }
   else { if (money) acct.rasidMoneyP = v; else acct.rasidFuelP = v; }
@@ -26958,7 +27000,7 @@ function updatePersonRasidFuel(fuel, val) {
 function personRasidFocus(fuel){
   const person=_curPerson(); if(!person) return;
   const acct=_acctOf(person);
-  const money = person.mode==='money';
+  const money = _acctModeMoney(person, acct);
   const el=document.getElementById(fuel==='diesel'?'pm-d-rasidfuel':'pm-p-rasidfuel');
   if(el){
     // در هر دو حالت، موقعِ ویرایش فقط سهمِ دستیِ هدر نشان داده می‌شود (نه جمعش با رسیدهای
@@ -26970,9 +27012,12 @@ function personRasidFocus(fuel){
 }
 // با خروج از کادر، دوباره جمعِ رسید (دستی + رسیدهای جدول) در کادر نوشته شود
 function personRasidBlur(){ const p=_curPerson(); if(p) _updatePersonTotals(p); }
+/* واحد فقط برای «حسابی که باز است» عوض می‌شود — حسابِ اصلی یا همان حساب فرعی.
+   قبلاً روی خودِ شخص می‌نشست و به همهٔ حساب‌های او سرایت می‌کرد. */
 function togglePersonMode() {
   const person = _curPerson(); if (!person) return;
-  person.mode = (person.mode === 'money') ? 'fuel' : 'money';
+  const acct = _acctOf(person);
+  _setAcctMode(acct, !_acctModeMoney(person, acct));
   if (currentRole !== 'viewer') save();
   renderPersonRows(person);
 }
@@ -27127,7 +27172,7 @@ function _lossStampReceipts(person) {
   if (!person) return false;
   const acct = _acctOf(person);
   const rows = _acctRows(person, acct);
-  const covered = _lossCoveredFlags(acct, rows, person.mode === 'money');
+  const covered = _lossCoveredFlags(acct, rows, _acctModeMoney(person, acct));
   let changed = false;
   rows.forEach((r, i) => {
     if (!r || !((parseFloat(r.fuel) || 0) > 0)) return;
@@ -27455,7 +27500,7 @@ function _updatePersonTotals(person) {
   const rows = _acctRows(person, acct);
   const t = _splitTotals(rows);
   const pct = parseFloat(acct.percent)||0;
-  const money = person.mode === 'money';
+  const money = _acctModeMoney(person, acct);
   const unit = money ? ' افغانی' : ' ل';
   const setV = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
   const setL = (id,txt) => { const el=document.getElementById(id); if(el) el.textContent=txt; };
@@ -27696,10 +27741,10 @@ function newPersonTable() {
     percent: acct.percent, note: acct.note || '',
     // «فیِ خرید» (یادداشتِ دستی) هم با آرشیو می‌رود تا در آرشیو هم همان‌جا دیده شود
     buyFeeNote: person.buyFeeNote || '',
-    unitMode: person.mode === 'money' ? 'money' : 'fuel'
+    unitMode: _acctModeMoney(person, acct) ? 'money' : 'fuel'
   });
   // ریست جدول فعلی (یا فقط بخش فیلترشده) — فقط جدولِ حالتِ فعال (پول یا تیل)
-  if (person.mode === 'money') acct.moneyRows = remainingRows; else acct.rows = remainingRows;
+  if (_acctModeMoney(person, acct)) acct.moneyRows = remainingRows; else acct.rows = remainingRows;
   if (filter === 'all' || filter === 'petrol') { acct.rasidFuelP = 0; acct.rasidMoneyP = 0; }
   if (filter === 'all' || filter === 'diesel') { acct.rasidFuelD = 0; acct.rasidMoneyD = 0; }
   if (filter === 'all') acct.note = '';
@@ -27775,7 +27820,7 @@ function _renderHistoryPanel(person) {
   wrap.style.display = '';
   const COLORS = ['#3182ce','#38a169','#805ad5','#d97706','#e53e3e','#dd6b20'];
   const rnd = x => Math.round(x * 100) / 100;
-  const money = person.mode === 'money';
+  const money = _acctModeMoney(person, acct);
   const pid = person.id;
   wrap.innerHTML = [...history].reverse().map((h, hi) => {
     const ac = COLORS[hi % COLORS.length];
@@ -27944,7 +27989,7 @@ function restorePersonHistory(pid, hid) {
   if ((h.note || '').trim()) acct.note = ((acct.note || '') + (acct.note ? '\n' : '') + h.note).trim();
   acct.tableHistory = (acct.tableHistory || []).filter(x => x.id !== hid);
   // اگر حساب در واحدِ دیگری باز است، به همان واحدی برو که ردیف‌ها برگشتند
-  person.mode = toMoney ? 'money' : 'fuel';
+  _setAcctMode(acct, toMoney);   // فقط همین حساب، نه بقیهٔ حساب‌های همین شخص
   save();
   renderPersonRows(person);
   _updatePersonTotals(person);
@@ -27959,7 +28004,7 @@ function pdfPersonHistory(pid, hid) {
   // فیلتر فعال آرشیو (همه/پطرول/دیزل) روی PDF هم اعمال می‌شود
   const hFilter = h.viewFilter || h.fuel || currentPersonFilter || 'all';
   const rows = (h.rows || []).filter(r => hFilter === 'all' || ((r.ftype || 'petrol') === hFilter));
-  const money = (h.viewMoney != null) ? h.viewMoney : (person.mode === 'money');
+  const money = (h.viewMoney != null) ? h.viewMoney : (h.unitMode ? h.unitMode === 'money' : _acctModeMoney(person));
   const pct = parseFloat(h.percent) || 0;
   const unit = money ? 'افغانی' : 'ل';
   const rnd = x => Math.round(x * 100) / 100;
@@ -28052,7 +28097,7 @@ function setHistoryFilter(pid, hid, f) {
 function updateHistoryRasid(pid, hid, ftype, value) {
   const person = _hPerson(pid); if (!person) return;
   const h = _hEntry(pid, hid); if (!h) return;
-  const money = person.mode === 'money';
+  const money = (h.unitMode ? h.unitMode === 'money' : _acctModeMoney(person));
   const v = parseFloat(value) || 0;
   if (ftype === 'petrol') { if (money) h.rasidMoneyP = v; else h.rasidFuelP = v; }
   else { if (money) h.rasidMoneyD = v; else h.rasidFuelD = v; }
@@ -28145,7 +28190,7 @@ function updateHistoryHeaderNote(pid, hid, value) {
 function toggleHistoryMode(pid, hid) {
   const h = _hEntry(pid, hid); if (!h) return;
   const person = _hPerson(pid); if (!person) return;
-  const cur = (h.viewMoney != null) ? h.viewMoney : (person.mode === 'money');
+  const cur = (h.viewMoney != null) ? h.viewMoney : (h.unitMode ? h.unitMode === 'money' : _acctModeMoney(person));
   h.viewMoney = !cur;
   save();
   _renderHistoryPanel(person);
@@ -28159,7 +28204,7 @@ function deletePersonRow(pid, idx) {
   const r = rowsArr[idx];
   // «رسید تیل» ردیفِ حذف‌شده باید از حساب تیلِ همان نوع کم شود تا عددِ کهنه جا نماند
   const rf = r ? (parseFloat(r.rasidFuel) || 0) : 0;
-  if (rf && person.mode !== 'money') {
+  if (rf && !_acctModeMoney(person, acct)) {
     if (r.ftype === 'diesel') acct.rasidFuelD = (parseFloat(acct.rasidFuelD) || 0) - rf;
     else acct.rasidFuelP = (parseFloat(acct.rasidFuelP) || 0) - rf;
   }
@@ -28180,7 +28225,7 @@ function setRowFuel(pid, idx, type) {
   // شده بود؛ با تغییر نوع تیل باید همان مقدار از حساب قبلی کم و به حساب جدید منتقل
   // شود — وگرنه عدد در حساب اشتباه می‌ماند و به حساب جدید نمی‌رود
   const rf = parseFloat(r.rasidFuel) || 0;
-  if (rf && oldFt !== ft && person.mode !== 'money') {
+  if (rf && oldFt !== ft && !_acctModeMoney(person, acct)) {
     if (oldFt === 'diesel') acct.rasidFuelD = (parseFloat(acct.rasidFuelD) || 0) - rf;
     else acct.rasidFuelP = (parseFloat(acct.rasidFuelP) || 0) - rf;
     if (ft === 'diesel') acct.rasidFuelD = (parseFloat(acct.rasidFuelD) || 0) + rf;
@@ -28212,7 +28257,7 @@ function addPersonRow() {
   const person = list.find(p => p.id === currentPersonId);
   if (!person) return;
   const ft = (currentPersonFilter === 'diesel') ? 'diesel' : 'petrol';
-  _acctRows(person).push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, rasidFuel: 0, albaqi: 0, byMoney: person.mode === 'money' });
+  _acctRows(person).push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, rasidFuel: 0, albaqi: 0, byMoney: _acctModeMoney(person) });
   save(); renderPersonRows(person);
   _ntfAccountTouched(person);
 }
@@ -28237,7 +28282,7 @@ function addPersonRowsBulk() {
   const ft = (currentPersonFilter === 'diesel') ? 'diesel' : 'petrol';
   const rowsArr = _acctRows(person);
   for (let k = 0; k < n; k++) {
-    rowsArr.push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, rasidFuel: 0, albaqi: 0, byMoney: person.mode === 'money' });
+    rowsArr.push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, rasidFuel: 0, albaqi: 0, byMoney: _acctModeMoney(person) });
   }
   save(); renderPersonRows(person);
   _ntfAccountTouched(person);
@@ -31535,7 +31580,7 @@ function pdfPerson() {
   const allRows = _acctRows(person, acct);
   const rows = filter === 'all' ? allRows : allRows.filter(r => (r.ftype || 'petrol') === filter);
   const t = _splitTotals(allRows);
-  const money = person.mode === 'money';
+  const money = _acctModeMoney(person, acct);
   const pct = parseFloat(acct.percent)||0;
   const unit = money ? 'افغانی' : 'ل';
   const rasidP = money ? (parseFloat(acct.rasidMoneyP)||0) : (parseFloat(acct.rasidFuelP)||0);
@@ -34671,7 +34716,7 @@ function clearAllPersonRows() {
   if (!person) return;
   if (!confirm('همه ردیف‌های این حساب پاک شود؟')) return;
   const _ca = _acctOf(person);
-  if (person.mode === 'money') _ca.moneyRows = []; else _ca.rows = [];
+  if (_acctModeMoney(person, _ca)) _ca.moneyRows = []; else _ca.rows = [];
   save();
   renderPersonRows(person);
   renderPersons(currentPersonType);
@@ -35308,7 +35353,7 @@ function openROViewer(type, id, subId) {
   _roCurType = type; _roCurId = id;
   const sub = subId ? (person.subs || []).find(s => s && s.id === subId) : null;
   _roCurSub = sub ? sub.id : null;
-  _roViewMode = person.mode || 'fuel';
+  _roViewMode = (sub && sub.mode) || person.mode || 'fuel';
   _roFilter = 'all';
   // حسابِ فرعی فقط با نامِ خودش دیده می‌شود — نامِ حسابِ اصلی نمی‌آید (حساب‌ها جدا هستند)
   document.getElementById('ro-title').textContent = (sub ? ('📄 ' + (sub.name || 'حساب')) : ('👤 ' + person.name)) + ' — فقط‌خواندنی';
@@ -39021,7 +39066,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.240';
+const APP_VERSION = '2.9.241';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -45264,7 +45309,7 @@ tfoot td{background:${accent}14;font-weight:900;font-size:.88rem}
       var ft = (currentPersonFilter === 'diesel') ? 'diesel' : 'petrol';
       var rowsArr = _acctRows(person);
       for (var k = 0; k < n; k++)
-        rowsArr.push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, rasidFuel: 0, albaqi: 0, byMoney: person.mode === 'money' });
+        rowsArr.push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, rasidFuel: 0, albaqi: 0, byMoney: _acctModeMoney(person) });
       save(); renderPersonRows(person);
       showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
     } else if (ctx.kind === 'company'){
@@ -45301,7 +45346,7 @@ tfoot td{background:${accent}14;font-weight:900;font-size:.88rem}
         var r = rowsArr[rowsArr.length - 1];
         // مثل deletePersonRow: «رسید تیل» ردیفِ حذف‌شده باید از حساب تیلِ همان نوع کم شود
         var rf = r ? (parseFloat(r.rasidFuel) || 0) : 0;
-        if (rf && person.mode !== 'money'){
+        if (rf && !_acctModeMoney(person, acct)){
           if (r.ftype === 'diesel') acct.rasidFuelD = (parseFloat(acct.rasidFuelD) || 0) - rf;
           else acct.rasidFuelP = (parseFloat(acct.rasidFuelP) || 0) - rf;
         }
@@ -46830,6 +46875,9 @@ body.light-mode #glassClock{
       list.push(acct);
       toast('➕ حساب «' + name + '» ساخته شد', '#38a169');
     }
+    // حساب‌های فرعیِ آمده از فایل هم واحدِ صریحِ خودشان را بگیرند تا از واحدِ
+    // حسابِ اصلی ارث نبرند (هر حساب مستقل است)
+    try { if (typeof _migrateAcctModes === 'function') _migrateAcctModes(); } catch (e) {}
     try { save(); } catch (e) {}
     K.redraw();
     try { updateBanner(); } catch (e) {}
