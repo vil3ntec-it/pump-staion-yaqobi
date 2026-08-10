@@ -134,6 +134,32 @@ console.log('\n── شبکهٔ شش‌ضلعی برنگردد ──');
   }
 }
 
+console.log('\n── دکمه‌های سربرگِ مودالِ شخص ──');
+
+// ۸) قاعدهٔ !importantِ سربرگ نباید دکمه‌های پنهان را هم نشان بدهد
+{
+  const re = /#personModal\s+\.modal-head\s+button\s*\{[^}]*display\s*:[^;}]*!important/;
+  if (re.test(html)) {
+    fail('قاعدهٔ سربرگ دکمه‌های پنهان را هم نشان می‌دهد',
+      '«#personModal .modal-head button» با display:...!important روی «هر» دکمهٔ' +
+      '\n     سربرگ می‌نشیند، پس دکمه‌ای که باید پنهان باشد (مثل «حذف حساب» که فقط' +
+      '\n     داخلِ حساب فرعی معنی دارد) با هیچ راهی پنهان نمی‌شود.' +
+      '\n     ← باید «button:not([hidden])» باشد.');
+  } else {
+    ok('قاعدهٔ سربرگ دکمه‌های [hidden] را استثنا می‌کند');
+  }
+}
+
+// ۹) و دکمهٔ hidden صریحاً پنهان بماند
+{
+  if (/#personModal\s+\.modal-head\s+button\[hidden\]\s*\{[^}]*display\s*:\s*none\s*!important/.test(html)) {
+    ok('دکمهٔ [hidden] در سربرگ صریحاً پنهان است');
+  } else {
+    fail('گاردِ #personModal .modal-head button[hidden] نیست',
+      'بدونِ آن، قاعده‌های دیگر (مثل .add-row-btn{display:flex}) دوباره نشانش می‌دهند.');
+  }
+}
+
 console.log('\n════════════════════════════════════');
 if (failed) {
   console.log(`  ❌ ${failed} مورد — باگِ «لایهٔ رنگی» می‌تواند برگردد`);
