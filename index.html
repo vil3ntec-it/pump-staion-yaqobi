@@ -38813,7 +38813,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.230';
+const APP_VERSION = '2.9.231';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -45926,15 +45926,19 @@ body.light-mode #glassClock{
     <div style="padding:16px 18px;overflow-y:auto">
       <div id="ac-head" style="font-weight:900;font-size:1rem;margin-bottom:6px"></div>
       <div style="font-size:0.78rem;color:var(--muted);line-height:1.9;margin-bottom:14px">
-        یک فایل ساخته می‌شود که فقط همین حساب در آن است. آن فایل را در برنامهٔ دیگرتان،
-        از «تنظیمات ← مدیریت داده‌ها ← آوردن حساب از فایل» باز کنید.
+        فقط همین یک حساب در فایل می‌رود — نه بقیهٔ حساب‌ها، نه بخش‌های دیگر.<br>
+        <b style="color:var(--green)">📦 فایل انتقال:</b> برای بردن به برنامهٔ دیگر («تنظیمات ← مدیریت داده‌ها ← آوردن حساب از فایل»).
+        هیچ آدرس و سرور و دامنه‌ای همراهش نمی‌رود؛ در برنامهٔ مقصد به سرورِ خودِ همان برنامه وصل می‌شود و
+        تغییرهای بعدیِ این برنامه دیگر رویش نمی‌آید.<br>
+        <b style="color:var(--blue)">👁️ برگهٔ دیدنی:</b> یک صفحهٔ مستقل که <b>بدون برنامه و بدون اینترنت</b> با هر مرورگری باز و چاپ می‌شود.
       </div>
       <div id="ac-scopes" style="display:flex;flex-direction:column;gap:9px"></div>
       <div id="ac-summary" style="margin-top:14px;font-size:0.8rem;font-weight:800;color:var(--accent);min-height:1.3em"></div>
     </div>
     <div style="padding:12px 18px 16px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;border-top:1px solid var(--border)">
       <button class="btn-cancel" style="padding:9px 20px;border-radius:9px;border:none;cursor:pointer;font-family:'Vazirmatn',sans-serif;font-weight:800" onclick="closeModal('acctCardModal')">انصراف</button>
-      <button class="btn-ok" style="padding:9px 22px;border-radius:9px;border:none;cursor:pointer;font-family:'Vazirmatn',sans-serif;font-weight:800" onclick="doAcctCardExport()">⬇️ گرفتن فایل</button>
+      <button style="padding:9px 18px;border-radius:9px;border:1px solid var(--blue);background:transparent;color:var(--blue);cursor:pointer;font-family:'Vazirmatn',sans-serif;font-weight:800" onclick="doAcctCardHtml()" title="صفحه‌ای مستقل که بدون برنامه و بدون اینترنت باز می‌شود">👁️ برگهٔ دیدنی</button>
+      <button class="btn-ok" style="padding:9px 22px;border-radius:9px;border:none;cursor:pointer;font-family:'Vazirmatn',sans-serif;font-weight:800" onclick="doAcctCardExport()">📦 فایل انتقال</button>
     </div>
   </div>
 </div>
@@ -45992,6 +45996,41 @@ body.light-mode #glassClock{
     return out;
   }
 
+  /* ── پاک کردنِ هر بند به برنامهٔ مبدأ ──────────────────────────────────────
+     خواستهٔ صاحب ریپو: «کپی نباید به سرور یا سایت و هاست و دامنه ربطی داشته
+     باشد؛ وقتی بردمش در برنامهٔ دیگر، به سرورِ همان برنامه وصل شود، و هر
+     تغییری که در برنامهٔ اول دادم روی این نیاید.»
+     برای همین، پیش از ساختنِ فایل این چیزها از رکورد بیرون کشیده می‌شوند:
+       • invId / invFuelId / debtPersonId / posted_fuel_rasid — این‌ها ردیف را
+         به فاکتورهای برنامهٔ اول گره می‌زنند؛ در برنامهٔ مقصد آن فاکتورها اصلاً
+         وجود ندارند، پس ردیف باید یک ردیفِ مستقلِ همان برنامه شود.
+       • هر کلیدِ آدرس/توکن/دستگاه، و هر مقداری که داخلش http/https/ws/wss باشد.
+     آدرسِ سرور و توکن در localStorage خودِ هر برنامه است (نه داخل حساب‌ها) و
+     شمارندهٔ همگام‌سازی (_rev) هم برای کلِ دیتابیس است، نه رکورد — پس بعد از
+     آوردن، حساب مثل هر حسابِ دیگری با save() خودِ برنامهٔ مقصد ذخیره و با سرورِ
+     همان برنامه همگام می‌شود. فایل یک عکسِ لحظه‌ای است؛ هیچ پیوندِ زنده‌ای به
+     برنامهٔ اول ندارد. */
+  var DROP_KEYS = {
+    invId: 1, invFuelId: 1, debtPersonId: 1, posted_fuel_rasid: 1,
+    serverUrl: 1, server: 1, host: 1, origin: 1, domain: 1, baseUrl: 1,
+    token: 1, deviceId: 1, syncId: 1, _rev: 1, qrUrl: 1, shareUrl: 1
+  };
+  var URLISH = /(^|[\s"'(])(https?:|wss?:)\/\//i;
+  function sanitize(v) {
+    if (Array.isArray(v)) return v.map(sanitize);
+    if (v && typeof v === 'object') {
+      var o = {};
+      Object.keys(v).forEach(function (k) {
+        if (DROP_KEYS[k]) return;
+        var val = v[k];
+        if (typeof val === 'string' && URLISH.test(val)) return;   // هیچ آدرسی همراه نرود
+        o[k] = sanitize(val);
+      });
+      return o;
+    }
+    return v;
+  }
+
   // ── پنجرهٔ گرفتنِ کپی ──
   window.openAcctCard = function (kind, id) {
     var K = KINDS[kind]; if (!K) return;
@@ -46046,7 +46085,7 @@ body.light-mode #glassClock{
       var y = (document.getElementById('ac-year') || {}).value || '';
       clearCur(out); filterArc(out, function (h) { return yOf(h) === y; });
     }
-    return out;
+    return sanitize(out);   // بدون هیچ بندی به سرور/سایت/فاکتورهای برنامهٔ اول
   }
   window._acScopeChanged = function () {
     if (!_cur) return;
@@ -46082,6 +46121,125 @@ body.light-mode #glassClock{
       closeModal('acctCardModal');
       toast('⬇️ فایلِ حساب گرفته شد — همین را در برنامهٔ دیگر باز کنید', '#38a169');
     } catch (e) { toast('❌ فایل ساخته نشد', '#e53e3e'); }
+  };
+
+  /* ── فایلِ دیدنی (HTML) — بدون داشتنِ برنامه هم باز می‌شود ─────────────────
+     خواستهٔ صاحب ریپو: «کاری کن بدون داشتنِ برنامه هم آن جدول‌ها و اطلاعات باز
+     شود.» این یک صفحهٔ کاملاً مستقل است: نه اینترنت می‌خواهد، نه برنامه، نه
+     سرور — با هر مرورگری (گوشی یا کامپیوتر) باز و چاپ می‌شود.
+     ستون‌ها از روی خودِ ردیف‌ها ساخته می‌شوند، پس هر بخشی (قرض‌دار، شرکت،
+     واحد پول، واحد تیل) با همان ستون‌های خودش می‌آید. */
+  var LBL = {
+    date: 'تاریخ', name: 'نام', hawala: 'شماره حواله', ftype: 'نوع تیل', fuel: 'مقدار تیل',
+    priceper: 'فی لیتر', bardagi: 'بردگی', rasid: 'رسید', rasidFuel: 'رسید تیل', albaqi: 'الباقی',
+    byMoney: 'واحد پول', desc: 'توضیحات', note: 'یادداشت', amount: 'مبلغ', tons: 'تن',
+    usdPerTon: 'دلار بر تن', rate: 'نرخ', total: 'جمع', percent: 'فیصدی', vehicle: 'موتر'
+  };
+  var HIDE_COLS = { id: 1, unitMode: 1 };
+  // ستون‌هایی که جمع‌شان معنی ندارد (تاریخ، نام، …) — وگرنه پای جدول عددهای بی‌معنی می‌آمد
+  var NOSUM = { date: 1, name: 1, hawala: 1, ftype: 1, desc: 1, note: 1, vehicle: 1, createdAt: 1 };
+  var VALMAP = { petrol: 'پطرول', diesel: 'دیزل', fuel: 'واحد تیل', money: 'واحد پول' };
+  function h(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+  function cell(v) {
+    if (v === true) return 'بله'; if (v === false) return '—';
+    if (v === null || v === undefined || v === '') return '—';
+    if (typeof v === 'object') { try { return JSON.stringify(v); } catch (e) { return '—'; } }
+    return VALMAP[v] || String(v);
+  }
+  function tableHtml(rows) {
+    rows = (rows || []).filter(function (r) { return r && typeof r === 'object'; });
+    if (!rows.length) return '<div class="empty">ردیفی نیست</div>';
+    var cols = [];
+    rows.forEach(function (r) { Object.keys(r).forEach(function (k) { if (!HIDE_COLS[k] && cols.indexOf(k) < 0) cols.push(k); }); });
+    var sums = {};
+    cols.forEach(function (c) {
+      if (NOSUM[c]) return;
+      var any = false, s = 0, bad = false;
+      rows.forEach(function (r) {
+        var v = r[c];
+        if (typeof v === 'string' && /\d{3,4}\s*[\/\-]\s*\d{1,2}/.test(v)) { bad = true; return; }  // تاریخ است، نه عدد
+        var n = parseFloat(v);
+        if (isFinite(n) && typeof v !== 'boolean') { s += n; any = true; }
+      });
+      if (any && !bad) sums[c] = Math.round(s * 100) / 100;
+    });
+    return '<table><thead><tr><th>#</th>' + cols.map(function (c) { return '<th>' + h(LBL[c] || c) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      rows.map(function (r, i) {
+        return '<tr><td class="n">' + (i + 1) + '</td>' + cols.map(function (c) { return '<td>' + h(cell(r[c])) + '</td>'; }).join('') + '</tr>';
+      }).join('') +
+      '</tbody><tfoot><tr><td>جمع</td>' + cols.map(function (c) {
+        return '<td>' + (sums.hasOwnProperty(c) ? h(sums[c]) : '') + '</td>';
+      }).join('') + '</tr></tfoot></table>';
+  }
+  function blockHtml(title, rows) {
+    return '<div class="blk"><div class="blk-h">' + h(title) + '</div>' + tableHtml(rows) + '</div>';
+  }
+  function buildViewHtml(kind, acct, scopeLabel) {
+    var K = KINDS[kind], parts = [];
+    if ((acct.rows || []).length) parts.push(blockHtml(kind === 'company' ? '📄 جدول فعلی — پطرول' : '📄 جدول فعلی — واحد تیل', acct.rows));
+    if ((acct.dieselRows || []).length) parts.push(blockHtml('📄 جدول فعلی — دیزل', acct.dieselRows));
+    if ((acct.moneyRows || []).length) parts.push(blockHtml('📄 جدول فعلی — واحد پول', acct.moneyRows));
+    (acct.subs || []).forEach(function (s) {
+      if ((s.rows || []).length) parts.push(blockHtml('👤 حساب فرعی «' + (s.name || '') + '» — واحد تیل', s.rows));
+      if ((s.moneyRows || []).length) parts.push(blockHtml('👤 حساب فرعی «' + (s.name || '') + '» — واحد پول', s.moneyRows));
+      (s.tableHistory || []).forEach(function (a) {
+        parts.push(blockHtml('🗂️ آرشیو حساب فرعی «' + (s.name || '') + '» — ' + (a.createdAt || ''), a.rows));
+      });
+    });
+    (acct.tableHistory || []).forEach(function (a) {
+      parts.push(blockHtml('🗂️ آرشیو — ' + (a.createdAt || '') + (a.fuel ? (' — ' + (a.fuel === 'diesel' ? 'دیزل' : 'پطرول')) : ''), a.rows));
+    });
+    if (!parts.length) parts.push('<div class="empty">این حساب داده‌ای ندارد</div>');
+    var info = [];
+    if (acct.phone) info.push('📞 ' + h(acct.phone));
+    if (acct.percent) info.push('٪ فیصدی: ' + h(acct.percent));
+    if (acct.rasidFuelP) info.push('⛽ رسید تیل پطرول: ' + h(acct.rasidFuelP));
+    if (acct.rasidFuelD) info.push('🟤 رسید تیل دیزل: ' + h(acct.rasidFuelD));
+    if (acct.note) info.push('📝 ' + h(acct.note));
+    return '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8">' +
+      '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+      '<title>' + h(acct.name || 'حساب') + ' — پمپ یعقوبی</title><style>' +
+      '*{box-sizing:border-box;margin:0;padding:0}' +
+      'body{font-family:Tahoma,"Segoe UI",sans-serif;background:#f6f7fb;color:#16202e;padding:18px;font-size:14px}' +
+      '.card{max-width:1000px;margin:0 auto;background:#fff;border:1px solid #dde3ec;border-radius:14px;padding:18px 20px;box-shadow:0 8px 26px -18px rgba(0,0,0,.4)}' +
+      'h1{font-size:1.4rem;color:#b45309;margin-bottom:4px}' +
+      '.sub{color:#64748b;font-size:.82rem;line-height:1.9;margin-bottom:12px}' +
+      '.info{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}' +
+      '.info span{background:#fff7ed;border:1px solid #fed7aa;border-radius:999px;padding:3px 12px;font-size:.8rem;font-weight:700}' +
+      '.blk{margin-bottom:20px}.blk-h{font-weight:800;margin-bottom:7px;color:#0f172a;font-size:.95rem}' +
+      'table{width:100%;border-collapse:collapse;font-size:.8rem;overflow:hidden;border-radius:9px}' +
+      'th{background:#1f2937;color:#f1f5f9;padding:7px 6px;text-align:right;font-weight:700;white-space:nowrap}' +
+      'td{padding:6px;border-bottom:1px solid #e5e9f0;text-align:right}' +
+      'tr:nth-child(even) td{background:#f8fafc}td.n{color:#94a3b8}' +
+      'tfoot td{background:#e8edf5;font-weight:800;border-top:2px solid #cbd5e1}' +
+      '.empty{color:#94a3b8;padding:12px;text-align:center}' +
+      '.wrap{overflow-x:auto}' +
+      '.foot{margin-top:16px;border-top:1px solid #e5e9f0;padding-top:10px;color:#94a3b8;font-size:.72rem;text-align:center;line-height:1.9}' +
+      '@media print{body{background:#fff;padding:0}.card{border:none;box-shadow:none}}' +
+      '</style></head><body><div class="card">' +
+      '<h1>' + h(K.label) + ': ' + h(acct.name || '—') + '</h1>' +
+      '<div class="sub">🧾 دامنه: ' + h(scopeLabel) + ' · 📅 گرفته شده در: ' + h(typeof persianDate === 'function' ? persianDate() : '') + '</div>' +
+      (info.length ? '<div class="info"><span>' + info.join('</span><span>') + '</span></div>' : '') +
+      '<div class="wrap">' + parts.join('') + '</div>' +
+      '<div class="foot">این یک برگهٔ مستقل است — بدون برنامه، بدون اینترنت و بدون سرور باز می‌شود.<br>پمپ یعقوبی</div>' +
+      '</div></body></html>';
+  }
+  window.doAcctCardHtml = function () {
+    if (!_cur) return;
+    var scope = pickedScope(), acct = build(_cur.kind, _cur.rec, scope);
+    var scopeLabel = scope === 'all' ? 'کل حساب' : scope === 'current' ? 'جدول فعلی' :
+      scope === 'month' ? ('ماه ' + ((document.getElementById('ac-month') || {}).value || '')) :
+      ('سال ' + ((document.getElementById('ac-year') || {}).value || ''));
+    try {
+      var blob = new Blob([buildViewHtml(_cur.kind, acct, scopeLabel)], { type: 'text/html;charset=utf-8' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'حساب-' + String(acct.name || 'بی‌نام').replace(/[\\/:*?"<>|]+/g, '-') + '.html';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+      closeModal('acctCardModal');
+      toast('👁️ برگهٔ دیدنی گرفته شد — با هر مرورگری باز می‌شود', '#38a169');
+    } catch (e) { toast('❌ برگه ساخته نشد', '#e53e3e'); }
   };
 
   // ── آوردن از فایل ──
