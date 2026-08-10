@@ -14568,7 +14568,14 @@ button:focus-visible,.nav-btn:focus-visible,a:focus-visible,input:focus-visible,
 #personModal .msumbox .ml{ font-size:0.84rem !important; font-weight:700 !important; white-space:nowrap !important; }
 #personModal .msumbox .mv{ font-size:1.02rem !important; width:90px !important; }
 /* دکمه‌های هدر — یک‌شکل و مربع */
-#personModal .modal-head button{ height:32px !important; min-width:32px !important; padding:0 5px !important; font-size:0.72rem !important; border-radius:7px !important; display:inline-flex !important; align-items:center !important; justify-content:center !important; }
+/* ⚠️ «:not([hidden])» را برندارید. این قاعده با !important روی «هر» دکمهٔ سربرگ
+   می‌نشیند، پس بدونِ آن، دکمه‌ای که باید پنهان باشد (مثل «حذف حساب» که فقط داخلِ
+   حساب فرعی معنی دارد) با هیچ راهی پنهان نمی‌شد — نه با style.display و نه با
+   صفتِ hidden. همان باگی که «حذف حساب» را روی حسابِ اصلی هم نشان می‌داد. */
+#personModal .modal-head button:not([hidden]){ height:32px !important; min-width:32px !important; padding:0 5px !important; font-size:0.72rem !important; border-radius:7px !important; display:inline-flex !important; align-items:center !important; justify-content:center !important; }
+/* و صریح: دکمهٔ hidden در این سربرگ هرگز دیده نشود — هیچ قاعدهٔ دیگری نتواند
+   دوباره نشانش بدهد. */
+#personModal .modal-head button[hidden]{ display:none !important; }
 /* ── مودال شرکت: متنِ کادرهای خلاصه کوچک‌تر + دکمه‌های هدر مربع و بافاصله ── */
 /* (چیدمان/ابعادِ کادرها در بلوکِ #companyModal .modal-summary پایین‌تر تنظیم می‌شود) */
 /* خواستهٔ صاحب ریپو: در شش کادرِ خلاصهٔ شرکت، نوشته و عدد به هم چسبیده بودند —
@@ -19735,8 +19742,11 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <button class="add-row-btn" id="pm-acct-qr" title="کیو‌آرِ همین حسابی که باز است" style="margin:0;border-color:var(--blue);color:var(--blue);padding:5px 10px;font-size:0.78rem" onclick="showPersonQRFromModal()">📲 کیو‌آر</button>
         <button class="add-row-btn" id="pm-acct-copy" title="گرفتن کپیِ همین حسابی که باز است — برای بردن به برنامهٔ دیگر" style="margin:0;border-color:var(--purple);color:var(--purple);padding:5px 10px;font-size:0.78rem" onclick="openAcctCardFromPerson()">📇 کپیِ حساب</button>
         <!-- حذفِ حسابِ فرعی — فقط وقتی داخلِ یک حساب فرعی هستیم دیده می‌شود و فقط
-             همان یک حساب را پاک می‌کند؛ حسابِ اصلی و بقیهٔ فرعی‌ها دست نمی‌خورند. -->
-        <button class="add-row-btn" id="pm-head-subdel" title="فقط همین حساب فرعی پاک می‌شود" style="display:none;margin:0;border-color:var(--red);color:var(--red);padding:5px 10px;font-size:0.78rem" onclick="deletePersonSub()">🗑️ حذف این حساب فرعی</button>
+             همان یک حساب را پاک می‌کند؛ حسابِ اصلی و بقیهٔ فرعی‌ها دست نمی‌خورند.
+             پنهان‌شدنش با صفتِ hidden است، نه style.display: قاعدهٔ !importantِ
+             سربرگ (بالا) استایلِ inline را می‌بُرد و دکمه روی حسابِ اصلی هم دیده
+             می‌شد. -->
+        <button class="add-row-btn" id="pm-head-subdel" hidden title="فقط همین حسابِ فرعی پاک می‌شود" style="margin:0;border-color:var(--red);color:var(--red);padding:5px 10px;font-size:0.78rem" onclick="deletePersonSub()">🗑️ حذف حساب</button>
         <!-- دکمه‌های «📄 PDF»، «📲 کیو‌آر»، «🗑️ پاک همه» و «📇 کپیِ حساب» از این سربرگ
              برداشته شدند (خواستهٔ صاحب ریپو): کیو‌آرِ هر حساب از دکمهٔ «📲 کیو‌آر کد»ِ
              روی کارتِ همان شخص باز می‌شود و «کپیِ حساب» هم داخلِ همان پنجرهٔ کیو‌آر است. -->
@@ -19796,9 +19806,9 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <span id="pm-membership" style="display:none;flex-shrink:0;white-space:nowrap;font-size:0.78rem;font-weight:800;border:1px solid var(--green);border-radius:7px;padding:6px 10px;background:var(--dark);color:var(--green);box-sizing:border-box" title="مدت زمانِ مشتری بودن — از تاریخِ اولین ثبتِ حساب"></span>
         <!-- نرخ هر لیتر فاکتورهای باز — فقط نمایشی، هیچ نقشی در محاسبات جدول ندارد -->
         <span id="pm-rate-badge" style="display:none;flex-shrink:0;white-space:nowrap;font-size:0.78rem;font-weight:800;border:1px solid var(--border);border-radius:7px;padding:6px 10px;background:var(--dark);color:var(--txt);box-sizing:border-box" title="نرخ هر لیتر از فاکتورهای بازِ این حساب — فقط نمایشی"></span>
-        <!-- دکمهٔ حذف حساب فرعی — آخرِ نوار (سمت چپ) تا وسط دکمه‌های مهم نباشد و اشتباهی زده نشود -->
+        <!-- دکمهٔ «حذف حساب» به سربرگ منتقل شد (این نوار جا نداشت و دکمه ته آن گم
+             می‌شد). دو تا دکمهٔ حذف هم گیج‌کننده بود، پس این‌جا برداشته شد. -->
         <span style="flex:1"></span>
-        <button id="pm-acct-del" class="del-btn pm-acct-del" onclick="deletePersonSub()" style="display:none;background:transparent;color:var(--red);border:1px solid var(--red);border-radius:7px;padding:6px 8px;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">🗑️ حذف</button>
       </div>
       <div class="xls-wrap">
         <table class="xls-tbl" id="pm-tbl">
@@ -26082,6 +26092,10 @@ function _renderSubBar(person) {
   // در حالت تک‌حساب (بدون زیرحساب): select مخفی بشه
   if (sel) {
     if (subs.length === 0) {
+      // گزینه‌های شخصِ قبلی پاک شوند، وگرنه با رفتن به شخصی که حساب فرعی ندارد
+      // مقدارِ کهنه در کشویی می‌ماند و با باز شدنِ دوباره اشتباه دیده می‌شود
+      sel.innerHTML = '<option value="">📒 حساب اصلی</option>';
+      sel.value = '';
       sel.style.display = 'none';
     } else {
       sel.style.display = '';
@@ -26094,11 +26108,10 @@ function _renderSubBar(person) {
       sel.value = currentSubId || '';
     }
   }
-  const del = document.getElementById('pm-acct-del');
-  if (del) del.style.display = currentSubId ? '' : 'none';
-  // همان دکمه در سربرگ — آن‌جا همیشه دیده می‌شود و لازم نیست نوارِ حساب را کشید
+  // «حذف حساب» فقط داخلِ یک حسابِ فرعی معنی دارد: با hidden پنهان می‌شود چون
+  // قاعدهٔ !importantِ سربرگ، style.display را می‌بُرد.
   const delTop = document.getElementById('pm-head-subdel');
-  if (delTop) delTop.style.display = currentSubId ? '' : 'none';
+  if (delTop) delTop.hidden = !currentSubId;
   const label = document.querySelector('#personModal .pm-acct-bar .pm-acct-label');
   if (label) label.style.display = subs.length === 0 ? 'none' : '';
   // (دکمهٔ کیو‌آرِ سربرگ برداشته شد؛ کیو‌آرِ هر حساب از روی کارتِ خودش باز می‌شود)
@@ -26151,8 +26164,14 @@ function newPersonSub() {
   const sw = document.getElementById('pm-stacked-wrap');
   if (sw) sw.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+/* فقط «حسابِ فرعیِ باز» را پاک می‌کند. اگر روی حسابِ اصلی باشیم هیچ کاری نمی‌کند
+   و می‌گوید چرا — حسابِ اصلی از این‌جا پاک نمی‌شود و بقیهٔ فرعی‌ها هم دست نمی‌خورند. */
 function deletePersonSub() {
-  const person = _curPerson(); if (!person || !currentSubId) return;
+  const person = _curPerson(); if (!person) return;
+  if (!currentSubId) {
+    try { showToast('اول از کشویی «📒 حساب» یکی از حساب‌های فرعی را باز کنید', '#d97706'); } catch (e) {}
+    return;
+  }
   const sub = (person.subs || []).find(s => s.id === currentSubId);
   if (!sub) return;
   // متن صریح است تا اشتباه نشود: فقط همین حساب فرعی، نه حسابِ اصلی و نه بقیهٔ فرعی‌ها
@@ -38975,7 +38994,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.237';
+const APP_VERSION = '2.9.238';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
