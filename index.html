@@ -208,7 +208,14 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--dark);color:var(--txt);
 /* PERFORMANCE FIX: this full-viewport layer used to run backdrop-filter:blur(20px)
    AND filter:blur(24px) permanently on every screen size — a constant, expensive
    full-screen blur. Previously only turned off on mobile; now off everywhere. */
-#siteBg{position:fixed;inset:0;z-index:-1;background:var(--dark);filter:brightness(.22) saturate(.7);pointer-events:none}
+/* ⚠️ قد با lvh و کمی سرریز — دقیقاً همان درمانی که #fxLayer دارد.
+   #siteBg رنگِ واقعیِ صفحه را می‌کشد و position:fixed است، پس قدش به ویوپورت
+   بسته می‌شود. روی گوشی، وقتی نوارِ پایینِ مرورگر جمع می‌شود صفحهٔ دیده‌شده از
+   ویوپورتِ چیدمان بلندتر است و یک نوارِ باریکِ کفِ صفحه بدونِ این لایه می‌ماند —
+   همان «نوارِ رنگیِ» کفِ صفحه که بارها گزارش شد. با lvh (بزرگ‌ترین حالتِ
+   ویوپورت) به‌علاوهٔ سرریز، این لایه در هر حالتی از کفِ صفحه پایین‌تر است و
+   هیچ نواری بی‌رنگ نمی‌ماند. inset:0 نبود که این را تضمین کند. */
+#siteBg{position:fixed;top:0;left:0;right:0;height:calc(100lvh + 140px);z-index:-1;background:var(--dark);filter:brightness(.22) saturate(.7);pointer-events:none}
 
 
 .lock-screen{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;overflow:hidden}
@@ -39014,7 +39021,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.239';
+const APP_VERSION = '2.9.240';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -46958,10 +46965,17 @@ body.light-mode #glassClock{
     var t = (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 18);
     return t || el.tagName.toLowerCase();
   }
+  /* چیزهایی که در حالتِ انتخاب هم باید مثل همیشه کار کنند: منوی سه‌نقطه، نوارِ
+     بخش‌ها، دکمهٔ بستنِ مودال‌ها و خودِ نوارِ اندازه. بدونِ این، حالتِ انتخاب همهٔ
+     کلیک‌ها را می‌گرفت و نمی‌شد به بخشِ دیگری رفت تا کادرهای آن‌جا را اندازه زد —
+     همان چیزی که گزارش شد: «روی سه‌نقطه می‌زنم که بروم بخشِ دیگر، نمی‌شود». */
+  var PASS = '#uf-bar, #uf-bar *, .m-menu-fab, .m-menu-fab *, .m-menu-overlay, .m-menu-panel,' +
+             '.m-menu-head, .m-menu-close, .m-menu-item, .m-menu-item *, .m-menu-list,' +
+             '.nav, .nav-btn, .nav-btn *, .modal-close, .ro-close, #uf-toggle';
   function onPick(e) {
-    if (bar && bar.contains(e.target)) return;
     var el = e.target;
     if (!el || el.nodeType !== 1) return;
+    try { if (el.matches(PASS) || el.closest('.m-menu-panel, .m-menu-overlay, #uf-bar')) return; } catch (e2) {}
     e.preventDefault(); e.stopPropagation();
     if (target) target.classList.remove('uf-target');
     target = el; targetSel = selectorFor(el);
@@ -47004,6 +47018,10 @@ body.light-mode #glassClock{
 /* حالتِ انتخاب: هر چیزی که موس/انگشت رویش برود یک قابِ نازک می‌گیرد تا معلوم
    باشد کدام را می‌گیرید. هیچ‌کدام از این‌ها روی حالتِ عادی اثر ندارد. */
 body.uf-picking *:hover{ outline:1px dashed var(--accent) !important; outline-offset:1px; cursor:crosshair !important; }
+/* چیزهایی که در حالتِ انتخاب هم عادی کار می‌کنند، قابِ انتخاب نگیرند */
+body.uf-picking .m-menu-fab:hover, body.uf-picking .m-menu-panel *:hover,
+body.uf-picking .nav-btn:hover, body.uf-picking #uf-bar *:hover,
+body.uf-picking .modal-close:hover{ outline:none !important; cursor:pointer !important; }
 body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-offset:2px; }
 #uf-bar{
   display:none; position:fixed; z-index:100000; inset-inline:10px; bottom:calc(14px + env(safe-area-inset-bottom,0px));
