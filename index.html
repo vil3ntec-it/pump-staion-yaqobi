@@ -38835,7 +38835,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.233';
+const APP_VERSION = '2.9.234';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -40154,7 +40154,7 @@ window.addEventListener('scroll', function(e){
   if (!_sgInput) return;
   if (_sgBox && e.target === _sgBox) return;   // اسکرولِ خودِ لیست نادیده گرفته شود
   _sgPosition(_sgInput);
-}, true);
+}, { capture: true, passive: true });
 // ناوبریِ صفحه‌کلید داخلِ لیستِ پیشنهاد — با فازِ capture، پیش از هندلرِ عمومیِ
 // جهت‌یابیِ کلیدهای پایین‌تر اجرا می‌شود تا وقتی لیست باز است، بالا/پایین/Enter
 // را خودش بگیرد و به فیلدِ دیگری نپرد.
@@ -40348,7 +40348,7 @@ window.addEventListener('scroll', function (e) {
   if (!_ysSelect) return;
   if (_ysBox && e.target === _ysBox) return;   // اسکرولِ خودِ لیست نادیده گرفته شود
   _ysPosition(_ysSelect);
-}, true);
+}, { capture: true, passive: true });
 
 // ========== EXCEL-LIKE GRID NAVIGATION (ناوبری مکانی بین کادرها) ==========
 function _navFocusables(scope){
@@ -41952,19 +41952,30 @@ document.addEventListener('click', function(e) {
     var vv = window.visualViewport;
     if(!vv) return;
     _fxPinned = true;
-    function sync(){
+    /* PERFORMANCE: این هم‌گام‌سازی قبلاً روی هر رویدادِ scroll/resize ویوپورت
+       مستقیم اجرا می‌شد و سه استایلِ inline روی دو لایهٔ تمام‌صفحه می‌نوشت —
+       یعنی در حینِ اسکرول، هر رویداد یک style/layout/paint اجباریِ تمام‌صفحه
+       می‌ساخت (همان «پرپرک»/گیرِ اسکرول). حالا: (۱) با requestAnimationFrame
+       جمع می‌شود تا در هر فریم حداکثر یک بار اجرا شود، (۲) اگر مقدارها عوض
+       نشده باشند اصلاً چیزی نوشته نمی‌شود. خروجیِ دیده‌شده مو‌به‌مو همان است. */
+    var _lastH = '', _lastT = '', _lastL = '', _rafId = 0;
+    function applyPin(){
+      _rafId = 0;
       var fx = document.getElementById('fxLayer');
       var fxTop = document.getElementById('fxLayerTop');
       /* +140 همان سرریزِ CSS است: قدِ دقیقِ ویوپورت باعث می‌شد یک نوارِ باریکِ
          پایینِ صفحه بدونِ ته‌رنگِ این لایه بماند و مثل یک «لایهٔ رنگیِ» جدا
          دیده شود. کمی بلندتر بودن هیچ عارضه‌ای ندارد (pointer-events:none). */
       var h = (vv.height + 140) + 'px', t = vv.offsetTop + 'px', l = vv.offsetLeft + 'px';
+      if(h === _lastH && t === _lastT && l === _lastL) return;
+      _lastH = h; _lastT = t; _lastL = l;
       if(fx){ fx.style.height = h; fx.style.top = t; fx.style.left = l; }
       if(fxTop){ fxTop.style.height = h; fxTop.style.top = t; fxTop.style.left = l; }
     }
-    sync();
-    vv.addEventListener('resize', sync);
-    vv.addEventListener('scroll', sync);
+    function sync(){ if(!_rafId) _rafId = requestAnimationFrame(applyPin); }
+    applyPin();
+    vv.addEventListener('resize', sync, { passive: true });
+    vv.addEventListener('scroll', sync, { passive: true });
   }
 
   function buildFx(){
@@ -42218,18 +42229,37 @@ document.addEventListener('click', function(e) {
   // می‌گذاریم تا پنل‌ها با انتقال نرم درست بالای کیبورد بمانند.
   var vv = window.visualViewport;
   if(!vv){ return; }
+  // آیا واقعاً داخلِ یک کادرِ نوشتاری هستیم؟ کیبورد فقط همان وقت باز می‌شود.
+  // بدونِ این شرط، روی تبلت/گوشیِ بلند، بالا/پایین‌رفتنِ نوارِ آدرسِ مرورگر
+  // (که از 80px هم بلندتر است) «کیبورد» حساب می‌شد و سه دکمهٔ شناورِ گوشهٔ
+  // صفحه با هر اسکرول بی‌دلیل بالا و پایین می‌پریدند — همان باگی که گزارش شد.
+  function editing(){
+    var el = document.activeElement;
+    if(!el) return false;
+    var t = (el.tagName || '').toUpperCase();
+    return t === 'INPUT' || t === 'TEXTAREA' || el.isContentEditable === true;
+  }
+  var _lastKb = -1;
   function sync(){
     var kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
     // اختلافِ کمِ ارتفاع مالِ نوارِ آدرسِ مرورگر است، نه کیبورد. قبلاً همین اختلاف
     // (تا ~100px) به‌عنوان کیبورد حساب می‌شد و سه کادرِ شناور بی‌دلیل بالا می‌ماندند و
     // با هر باز/بسته‌شدنِ نوارِ آدرس می‌پریدند. همان آستانهٔ 80px پایین، این‌جا هم.
-    if (kb < 80) kb = 0;
+    if (kb < 80 || !editing()) kb = 0;
+    // PERFORMANCE: تا وقتی مقدار عوض نشده، هیچ استایلی نوشته نمی‌شود — نوشتنِ
+    // این متغیر روی <html> کلِ صفحه را برای بازمحاسبهٔ استایل بی‌اعتبار می‌کند.
+    if (kb === _lastKb) return;
+    _lastKb = kb;
     document.documentElement.style.setProperty('--kb-offset', kb + 'px');
     // پنل‌های شناور با کیبوردِ باز باید لنگرِ دیگری بگیرند، وگرنه سرشان از صفحه
     // بیرون می‌زند. آستانهٔ 80px تا نوسانِ نوار آدرسِ مرورگر «کیبورد» حساب نشود.
     document.documentElement.classList.toggle('kb-open', kb > 80);
   }
   sync();
+  // با رفتن/آمدنِ فوکوس روی کادرهای نوشتاری هم یک‌بار حساب شود (باز/بسته‌شدنِ
+  // کیبورد همیشه با resize همراه نیست).
+  document.addEventListener('focusin', sync, { passive: true });
+  document.addEventListener('focusout', function(){ setTimeout(sync, 60); }, { passive: true });
   // فقط resize لازم است — باز/بسته‌شدنِ کیبورد یعنی تغییرِ ارتفاعِ ویوپورت.
   // گوش‌دادن به scroll هم قبلاً باعث می‌شد با هر اسکرولِ معمولی صفحه (مخصوصاً
   // موبایل، وقتی نوار آدرس مرورگر پنهان/آشکار می‌شود) --kb-offset لحظه‌ای نوسان
@@ -42246,11 +42276,13 @@ document.addEventListener('click', function(e) {
   // برای هاورِ واقعی اجرا می‌شود، که به‌نظر «پرشِ» بخش‌ها هنگام اسکرول می‌رسد.
   // با اضافه‌کردن body.is-scrolling در حین اسکرول (CSS آن pointer-events را موقتاً
   // خاموش می‌کند تا hover ثبت نشود) و پاک‌کردنش کمی بعد از توقفِ اسکرول، رفع می‌شود.
-  var t = null;
+  // PERFORMANCE: کلاس فقط یک‌بار در ابتدای هر اسکرول نوشته می‌شود (نه در هر
+  // رویداد) — هر نوشتنِ کلاس روی <body> استایلِ کلِ صفحه را بی‌اعتبار می‌کند.
+  var t = null, on = false;
   window.addEventListener('scroll', function(){
-    document.body.classList.add('is-scrolling');
+    if(!on){ on = true; document.body.classList.add('is-scrolling'); }
     clearTimeout(t);
-    t = setTimeout(function(){ document.body.classList.remove('is-scrolling'); }, 150);
+    t = setTimeout(function(){ on = false; document.body.classList.remove('is-scrolling'); }, 150);
   }, { passive: true });
 })();
 </script>
@@ -43585,6 +43617,33 @@ body.is-scrolling.gfx-standard .daynight-toggle .dn-thumb{
   animation-play-state:paused !important;
 }
 body.gfx-ultra #fxLayer{ will-change:filter; }
+
+/* همان منطقِ بالا برای سنگین‌ترین انیمیشنِ پس‌زمینه: جاروی نورِ شش‌ضلعی/رعد/
+   ستاره یک لایهٔ تمام‌صفحه با mask و mix-blend-mode است و هر فریمش کلِ صفحه را
+   دوباره ترکیب می‌کند — همین در حینِ اسکرول روی گوشی «پرپرک»/کاشی‌های خالی
+   می‌ساخت. حالا فقط تا وقتی انگشت روی صفحه اسکرول می‌کند مکث می‌کند و ~150ms
+   بعد از توقف دقیقاً از همان‌جا ادامه می‌دهد؛ رنگ، شکل و سرعتش عوض نمی‌شود. */
+body.is-scrolling .fx-grid,
+body.is-scrolling .fx-grid::before,
+body.is-scrolling .fx-bolts i,
+body.is-scrolling .fx-stars i{
+  animation-play-state:paused !important;
+}
+
+/* لایه‌های تزئینیِ تمام‌صفحه از بقیهٔ صفحه جدا نگه داشته می‌شوند تا رنگ‌آمیزیِ
+   دوبارهٔ آن‌ها، صفحه را هم بی‌اعتبار نکند (فقط ایزوله‌سازی — چیزی از ظاهرشان
+   عوض نمی‌شود؛ هر دو از قبل overflow:hidden و pointer-events:none هستند). */
+#fxLayer, #fxLayerTop{ contain:layout paint; }
+
+/* منوی سه‌نقطه (کشویی بخش‌ها): تا وقتی بسته است، یک لایهٔ تمام‌صفحه با
+   backdrop-filter بود که فقط opacity:0 داشت — یعنی مرورگر همچنان می‌توانست
+   برایش لایهٔ محوکنندهٔ تمام‌صفحه نگه دارد و همین بازکردنش را کند و پرپرکی
+   می‌کرد. با visibility، وقتی بسته است هیچ کاری برایش انجام نمی‌شود. مقدارِ
+   دیده‌شده عوض نمی‌شود: باز شدن فوری visible می‌شود و پنهان‌شدن دقیقاً بعد از
+   پایانِ همان محوشدنِ 0.25/0.28 ثانیه‌ای اتفاق می‌افتد، پس انیمیشنِ بسته‌شدن
+   هم کامل دیده می‌شود. */
+.m-menu-overlay{ visibility:hidden; transition:opacity .25s, visibility 0s linear .3s; }
+.m-menu-overlay.open{ visibility:visible; transition:opacity .25s, visibility 0s; }
 
 /* ═══ سه بهینه‌سازیِ تازه — روی هر سه حالتِ گرافیک، بدون تغییرِ ظاهر یا منطق ═══
 
