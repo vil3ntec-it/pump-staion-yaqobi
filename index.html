@@ -17638,7 +17638,7 @@ body.boot-viewer #bootViewerSplash{
   <div class="persons-grid" id="debt-grid"></div>
 </div>
 
-<!-- اعلان‌ها — خبرهایی که از سرور خانگی می‌رسند (سرویسِ اعلانِ خودمان، مثل ntfy) -->
+<!-- اعلان‌ها — خبرهایی که از پیام‌رسانِ سرورِ خانگیِ خودمان می‌رسند -->
 <div class="modal-overlay" id="ntfModal">
   <div class="modal" style="max-width:560px">
     <div class="modal-head">
@@ -19272,25 +19272,28 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <button class="pw-btn" onclick="_manualEnableNotify()">🔔 فعال‌سازی اعلان‌ها</button>
     <div id="set-notify-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted)"></div>
   </div>
+  <!-- ══════════════════════════════════════════════════════════════════════
+       📨 پیام‌رسانِ یعقوبی — سرویسِ اعلانِ خودمان روی سرورِ خانگی
+       ntfy از ریشه برداشته شد (خواستهٔ صاحب ریپو): نه برنامهٔ جانبی نصب می‌شود،
+       نه کدِ اشتراک، نه سرورِ کسِ دیگری. همه‌چیز روی سرورِ خودمان.
+       ══════════════════════════════════════════════════════════════════════ -->
   <div class="settings-card" id="ext-push-card" style="border-color:var(--green)">
-    <div class="settings-title" style="color:var(--green)">📬 اعلان بیرون از برنامه — پیام‌ها حتی وقتی برنامه بسته است</div>
+    <div class="settings-title" style="color:var(--green)">📨 پیام‌رسان یعقوبی — اعلان حتی وقتی برنامه بسته است</div>
     <div style="font-size:0.85rem;color:var(--muted);line-height:2;margin-bottom:12px">
-      <b style="color:var(--green)">این قابلیت همیشه روشن است و کلیدِ خاموش کردن ندارد.</b> هر پیامی که کارمند یا مشتری در چت (گروهی یا چت با میرزا) بفرستد، همان لحظه به‌صورت اعلان به گوشی/کامپیوتر شما می‌رسد — <b>حتی وقتی برنامه کاملاً بسته باشد</b>. این کار از راه سرویس اعلان رایگان <b dir="ltr">ntfy</b> انجام می‌شود.<br>
-      🔐 اگر خواستید اعلان‌ها را ببندید، فقط از <b>تنظیمات خودِ دستگاه</b> (اندروید: <b dir="ltr">Settings › Apps › پمپ یعقوبی › Notifications</b> — آیفون/ویندوز: تنظیماتِ اعلانِ همان برنامه) این کار انجام می‌شود؛ داخل برنامه هیچ گزینه‌ای برای خاموش کردنش وجود ندارد.<br>
-      راه‌اندازی (فقط یک بار): <b>1)</b> کد اشتراک خودکار ساخته شده و در کادر پایین است. <b>2)</b> روی گوشی، برنامهٔ رایگان <b dir="ltr">ntfy</b> را از گوگل‌پلی یا اپ‌استور نصب کنید — روی کامپیوتر لازم نیست چیزی نصب شود، فقط «باز کردن صفحهٔ اشتراک» را بزنید و اجازهٔ اعلان بدهید. <b>3)</b> در برنامهٔ ntfy گزینهٔ <b dir="ltr">+ Subscribe to topic</b> را بزنید و کد اشتراک را وارد کنید. <b>4)</b> با «تست اعلان» مطمئن شوید که می‌رسد.<br>
-      ⚠️ کد اشتراک مثل رمز است — به هیچ‌کس ندهید؛ هر که آن را بداند اعلان پیام‌ها را می‌بیند.<br>
-      👥 <b>کارمندان و مشتریان</b> لازم نیست این کد را داشته باشند: با اولین باز کردنِ پنل چت، همان دستگاه خودکار مشترکِ اعلان‌های مربوط به خودش می‌شود — کارمندان: چت گروهی و هشدارها؛ مشتری کیو‌آر: فقط جواب‌های میرزا به خودش.
-    </div>
-    <div class="pw-row">
-      <div class="pw-field" style="flex:1"><label>کد اشتراک (تاپیک)</label><input id="push-topic" readonly dir="ltr" style="direction:ltr;text-align:left" placeholder="هنوز ساخته نشده — «فعال کردن» را بزنید"></div>
+      <b style="color:var(--green)">همیشه روشن است و کلیدِ خاموش کردن ندارد.</b> هر پیامی که کارمند یا مشتری در چت بفرستد و هر هشداری که ربات بدهد، همان لحظه روی گوشی/کامپیوتر شما می‌نشیند — <b>حتی وقتی برنامه کاملاً بسته باشد</b>.<br>
+      🏠 پیام‌ها فقط از <b>سرورِ خانگیِ خودمان</b> می‌روند و می‌آیند. هیچ سرویسِ بیرونی در کار نیست و متنِ چت و نامِ حساب‌ها روی سرورِ هیچ‌کسِ دیگری نمی‌نشیند.<br>
+      📲 راه‌اندازی روی هر دستگاه فقط <b>یک کار</b> است: دکمهٔ زیر را بزنید و «اجازه» بدهید. نه برنامهٔ جانبی، نه کدِ اشتراک، نه ثبت‌نام.<br>
+      🍎 در آیفون/آیپد اول باید برنامه را با <b dir="ltr">Share › Add to Home Screen</b> به صفحهٔ خانه اضافه کنید، بعد این دکمه را بزنید (قانونِ خودِ اپل است).<br>
+      🔐 برای بستنِ اعلان‌ها فقط از <b>تنظیمات خودِ دستگاه</b> (اندروید: <b dir="ltr">Settings › Apps › پمپ یعقوبی › Notifications</b>) اقدام کنید؛ داخل برنامه گزینه‌ای برای خاموش کردنش نیست.<br>
+      👥 <b>کارمندان و مشتریان</b> کاری لازم نیست بکنند: با اولین باز کردنِ پنل چت، دستگاهشان خودکار فقط اعلان‌های مربوط به خودش را می‌گیرد — کارمند: چت گروهی و هشدارها؛ مشتری کیو‌آر: فقط جواب‌های میرزا به خودش.
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-      <button class="pw-btn" style="background:var(--blue);color:#fff" onclick="pushOpenSubscribe()">🌐 باز کردن صفحهٔ اشتراک</button>
-      <button class="pw-btn" style="background:transparent;border:1px solid var(--border);color:var(--txt)" onclick="pushCopyTopic()">📋 کپی کد</button>
-      <button class="pw-btn" style="background:transparent;border:1px solid var(--green);color:var(--green)" onclick="pushTest()">🔔 تست اعلان</button>
-      <button class="pw-btn" style="background:transparent;border:1px solid var(--accent);color:var(--accent)" onclick="pushNewTopic()">♻️ کد نو</button>
+      <button class="pw-btn" style="background:var(--green);color:#fff" onclick="pushSubscribeSelf()">🔔 روشن کردن اعلان روی این دستگاه</button>
+      <button class="pw-btn" style="background:transparent;border:1px solid var(--green);color:var(--green)" onclick="pushTest()">✅ تست اعلان</button>
+      <button class="pw-btn" style="background:var(--blue);color:#fff" onclick="ntfOpen()">📨 دیدن خبرها</button>
+      <button class="pw-btn" style="background:transparent;border:1px solid var(--accent);color:var(--accent)" onclick="openMessengerApp()">📱 برنامهٔ پیام‌رسان (جداگانه)</button>
     </div>
-    <div id="push-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted)"></div>
+    <div id="push-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px;color:var(--muted);line-height:1.9"></div>
   </div>
 </div>
 
@@ -19329,9 +19332,10 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <div class="settings-title" style="color:var(--green)">📇 بردنِ یک حساب به برنامهٔ دیگر</div>
     <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
       یک حساب یا یک بخش را در یک فایل بگیرید و همان را در برنامهٔ جداگانهٔ دیگرتان بیاورید — مثل اکسل، ولی با همهٔ ماه‌ها و سال‌ها. این کار <b>دوطرفه</b> است: از آن برنامه هم می‌توانید بگیرید و به این‌جا بیاورید.<br>
-      <b style="color:var(--green)">حسابِ نام‌دار</b> (قرض‌دار، بی‌فاکتور، شرکت): حساب را باز کنید و در سربرگش «📇 کپیِ حساب» را بزنید.<br>
+      <b style="color:var(--green)">حسابِ نام‌دار</b> (قرض‌دار، بی‌فاکتور، شرکت): حساب را باز کنید و در نوارِ «📒 حساب» دکمهٔ «📇 کپیِ حساب» را بزنید. اگر روی یک <b>حساب فرعی</b> ایستاده باشید، کپیِ همان حساب فرعی گرفته می‌شود.<br>
       <b style="color:var(--blue)">بخش‌ها</b> (مصارف، صرافی، گاوصندوق، رسید پارچه‌ها، چکنه، عایدات دیگر، فاکتورها، ورق‌های روزانه): از همین‌جا، با کادرِ زیر.<br>
-      در هر دو حالت می‌توانید <b>همه‌اش</b>، یا <b>یک ماه</b>، یا <b>یک سال با همهٔ ماه‌هایش</b> را انتخاب کنید. هیچ چیزی در برنامهٔ مقصد پاک یا جایگزین نمی‌شود و موردهای تکراری دوباره ثبت نمی‌شوند.
+      می‌توانید <b>همه‌اش</b>، یا <b>یک ماه</b>، یا <b>یک سال با همهٔ ماه‌هایش</b>، یا <b>فقط یکی از حساب‌های فرعی</b> را انتخاب کنید. کپیِ کلِ یک حساب، <b style="color:var(--green)">همهٔ حساب‌های فرعی‌اش را هم با خودش می‌برد</b>. هیچ چیزی در برنامهٔ مقصد پاک یا جایگزین نمی‌شود و موردهای تکراری دوباره ثبت نمی‌شوند.<br>
+      <b style="color:var(--accent)">📥 آوردنِ فایل:</b> با همان دکمهٔ سبزِ «📥 آوردن حساب یا بخش از فایل» در پایینِ همین کارت — فایلِ <b dir="ltr">.json</b> را از پوشهٔ «دانلودها» انتخاب کنید.
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
       <span style="font-size:0.82rem;font-weight:800">📤 گرفتن کپیِ یک بخش:</span>
@@ -19763,6 +19767,14 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <button class="add-btn pm-acct-new" onclick="newPersonSub()" style="padding:6px 9px;font-size:0.78rem;white-space:nowrap;flex-shrink:0">➕ حساب جدید</button>
         <button class="add-btn pm-table-new" onclick="newPersonTable()" style="padding:6px 9px;font-size:0.78rem;white-space:nowrap;flex-shrink:0">📋 جدول جدید</button>
         <span style="width:1px;height:24px;background:var(--border);flex-shrink:0"></span>
+        <!-- «همینِ باز» — سه دکمهٔ پی‌دی‌اف/کیو‌آر/کپی روی «حسابی که همین حالا باز است»
+             کار می‌کنند: حسابِ اصلی باشد یا حسابِ فرعی. قبلاً این سه فقط از روی کارتِ
+             خودِ شخص در دسترس بودند و همیشه حسابِ اصلی را می‌گرفتند، پس حساب‌های فرعی
+             نه پی‌دی‌اف داشتند نه کیو‌آر نه کپی. (باگِ گزارش‌شدهٔ صاحب ریپو) -->
+        <button class="pm-acct-tool" id="pm-acct-pdf" onclick="pdfPersonCurrentAcct()" title="پی‌دی‌افِ همین حسابی که باز است" style="padding:6px 9px;font-size:0.78rem;white-space:nowrap;flex-shrink:0;border:1px solid var(--green);border-radius:7px;background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer">📄 PDF</button>
+        <button class="pm-acct-tool" id="pm-acct-qr" onclick="showPersonQRFromModal()" title="کیو‌آرِ همین حسابی که باز است" style="padding:6px 9px;font-size:0.78rem;white-space:nowrap;flex-shrink:0;border:1px solid var(--blue);border-radius:7px;background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer">📲 کیو‌آر</button>
+        <button class="pm-acct-tool" id="pm-acct-copy" onclick="openAcctCardFromPerson()" title="گرفتن کپیِ همین حسابی که باز است — برای بردن به برنامهٔ دیگر" style="padding:6px 9px;font-size:0.78rem;white-space:nowrap;flex-shrink:0;border:1px solid var(--purple);border-radius:7px;background:transparent;color:var(--purple);font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer">📇 کپیِ حساب</button>
+        <span style="width:1px;height:24px;background:var(--border);flex-shrink:0"></span>
         <span class="pm-filter-bar">
           <button class="pm-filter-btn active" id="pm-filter-all" onclick="setPersonFilter('all')">📋 همه</button>
           <button class="pm-filter-btn petrol" id="pm-filter-petrol" onclick="setPersonFilter('petrol')">⛽ حساب جداگانه پطرول</button>
@@ -20130,6 +20142,10 @@ body.viewer-mode .inv-admin-only{display:none!important}
   <div class="qr-box">
     <h3 id="qr-person-name">📲 کیو‌آر کد</h3>
     <p>با اسکن این کد، پی‌دی‌اف حساب شخص باز می‌شود</p>
+    <!-- کشویی «کدام حساب؟» — وقتی شخص حساب فرعی دارد، همین‌جا می‌شود کیو‌آر/پی‌دی‌افِ
+         هر کدام را گرفت. قبلاً کیو‌آرِ کارت همیشه فقط حسابِ اصلی بود و حساب‌های
+         فرعی هیچ راهی برای کیو‌آر/پی‌دی‌اف نداشتند. -->
+    <select id="qr-acct-pick" onchange="_qrPickAcct(this.value)" style="display:none;width:100%;margin-bottom:10px;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:8px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.85rem;font-weight:800;cursor:pointer"></select>
     <div id="qr-canvas-wrap"></div>
     <!-- «کپیِ حساب» از سربرگِ مودالِ شخص به این‌جا آمد (خواستهٔ صاحب ریپو) -->
     <button id="qr-acct-btn" onclick="_qrOpenAcctCard()" title="گرفتن کپیِ همین حساب برای بردن به برنامهٔ دیگر" style="width:100%;padding:10px;border-radius:9px;border:none;background:#276749;color:#fff;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer;margin-bottom:8px">📇 کپیِ حساب</button>
@@ -20407,13 +20423,11 @@ const DB = {
   stationPhone: '',
   unionRatePetrol: 0,
   unionRateDiesel: 0,
-  // اعلان بیرون از برنامه (ntfy): همیشه روشن است — پیام‌های چت حتی وقتی برنامه
-  // بسته است به دستگاه میرزا می‌رسند. دیگر هیچ کلید روشن/خاموشی داخل برنامه نیست؛
-  // اجازهٔ اعلان فقط از تنظیماتِ خودِ دستگاه (App Info) مدیریت می‌شود.
-  // pushTopic مثل رمز است و بین دستگاه‌ها سینک می‌شود تا دستگاهِ فرستنده بداند
-  // اعلان را به کدام کد بفرستد.
-  pushEnabled: true,
-  pushTopic: '',
+  // اعلانِ بیرون از برنامه (پیام‌رسانِ سرورِ خانگی): همیشه روشن است — پیام‌های چت
+  // حتی وقتی برنامه بسته است به دستگاه میرزا می‌رسند. هیچ کلید روشن/خاموشی داخل
+  // برنامه نیست؛ اجازهٔ اعلان فقط از تنظیماتِ خودِ دستگاه (App Info) مدیریت می‌شود.
+  // موضوع‌ها ثابت‌اند (mirza / staff / p-<شناسه>) و از روی نقشِ کاربر انتخاب
+  // می‌شوند، پس دیگر هیچ «کدِ اشتراکی» برای ذخیره و سینک کردن وجود ندارد.
   trash: []
 };
 
@@ -20512,9 +20526,11 @@ function load() {
   // کد ایستگاه همیشه pump1 — بدون نیاز به تنظیم دستی
   if (!DB.syncCode) { DB.syncCode = 'pump1'; }
   if (!DB.trash) DB.trash = [];
-  // «دریافت پیام حتی وقتی برنامه بسته است» همیشه و اجباراً روشن — حتی روی
-  // داده‌های قدیمی که با pushEnabled:false ذخیره شده‌اند
-  try { _pushEnsureOn(); } catch (e) {}
+  // بازمانده‌های سرویسِ بیرونیِ قدیمی (ntfy) از دیتابیس پاک می‌شوند — دیگر هیچ
+  // کد اشتراکی لازم نیست و نگه داشتنش فقط داده‌ای بی‌مصرف در سینک است
+  try {
+    if ('pushTopic' in DB || 'pushEnabled' in DB) { delete DB.pushTopic; delete DB.pushEnabled; save(); }
+  } catch (e) {}
   _cleanTrash();
   try { if (dedupAccounts()) save(); } catch(e){}
   // مهاجرتِ یک‌بارهٔ نرخ‌ها: نرخِ اتحادیه/خودکار از جدول‌های قرض‌داران حذف و به «فیِ دستی» تبدیل می‌شود
@@ -21333,7 +21349,7 @@ function tryUnlock() {
     // نزدِ سرور خانگی ثبت کن — وگرنه با بسته شدنِ برنامه هیچ خبری نمی‌رسد
     try { setTimeout(function(){ _ntfAutoPush('ask'); }, 1200); } catch(e){}
     // حضور (presence) را همین لحظهٔ ورود ثبت کن تا فرستنده‌ها بدانند کاربر «داخل
-    // برنامه» است و اعلان بیرونی (ntfy) برایش نفرستند — بدون منتظر ماندنِ حلقهٔ 5 ثانیه‌ای.
+    // برنامه» است و اعلان بیرونی برایش نفرستند — بدون منتظر ماندنِ حلقهٔ 5 ثانیه‌ای.
     try { _chatInitListeners(); } catch(e){}
     setTimeout(function(){ try { checkLowStock(); } catch(e){} try { checkDebtReview(); } catch(e){} }, 600);
   } else {
@@ -25114,7 +25130,7 @@ function renderPersons(type) {
         <span style="color:var(--green)">⛽ ${n2fa(pBal)}</span>
         <span style="color:#b7791f">🟤 ${n2fa(dBal)}</span>
       </div>
-      <button class="pcard-qr" onclick="event.stopPropagation();showPersonQR('${type}','${p.id}')" style="width:100%;padding:6px 8px;border-radius:7px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-size:0.75rem;font-weight:700;cursor:pointer">📲 کیو‌آر کد</button>
+      <button class="pcard-qr" title="کیو‌آر و پی‌دی‌افِ این حساب — اگر حساب فرعی داشته باشد، داخلِ همین پنجره انتخاب می‌شود" onclick="event.stopPropagation();showPersonQR('${type}','${p.id}')" style="width:100%;padding:6px 8px;border-radius:7px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-size:0.75rem;font-weight:700;cursor:pointer">📲 کیو‌آر کد</button>
     `;
     // کلیک معمولی حساب را باز می‌کند؛ راست‌کلیک (یا نگه‌داشتن انگشت) منوی گزینه‌ها را
     card.onclick = () => openPersonModal(type, p.id);
@@ -34621,11 +34637,33 @@ function _qrPrintPDF() {
   if (_qrCurrentType && _qrCurrentId) pdfPersonById(_qrCurrentType, _qrCurrentId, _qrCurrentSub);
 }
 // «📇 کپیِ حساب» داخلِ پنجرهٔ کیو‌آر: همان پنجرهٔ گرفتنِ کپی را برای همین حسابی که
-// کیو‌آرش باز است باز می‌کند (قرض‌دار، بی‌فاکتور یا شرکت).
+// کیو‌آرش باز است باز می‌کند (قرض‌دار، بی‌فاکتور یا شرکت). اگر کیو‌آر مالِ یک
+// «حساب فرعی» باشد، کپی هم از همان حساب فرعی گرفته می‌شود.
 function _qrOpenAcctCard() {
   if (!_qrCurrentType || !_qrCurrentId || typeof openAcctCard !== 'function') return;
   document.getElementById('qrModal').classList.remove('open');
-  openAcctCard(_qrCurrentType, _qrCurrentId);
+  openAcctCard(_qrCurrentType, _qrCurrentId, _qrCurrentSub);
+}
+/* کشویی «کدام حساب؟» در پنجرهٔ کیو‌آر — فهرستِ حسابِ اصلی + همهٔ حساب‌های فرعیِ
+   همان شخص. برای شرکت/صفحهٔ کارمند اصلاً دیده نمی‌شود. */
+function _qrFillAcctPick(person, subId) {
+  const sel = document.getElementById('qr-acct-pick');
+  if (!sel) return;
+  const subs = (person && person.subs) || [];
+  if (!subs.length) { sel.style.display = 'none'; sel.innerHTML = ''; return; }
+  sel.innerHTML = '<option value="">📒 حساب اصلی — ' + escFa(person.name || '') + '</option>' +
+    subs.map(s => '<option value="' + escFa(String(s.id)) + '">📄 ' + escFa(s.name || 'حساب فرعی') + '</option>').join('');
+  sel.value = subId || '';
+  sel.style.display = '';
+}
+function _qrHideAcctPick() {
+  const sel = document.getElementById('qr-acct-pick');
+  if (sel) { sel.style.display = 'none'; sel.innerHTML = ''; }
+}
+// انتخاب از همان کشویی → کیو‌آر و پی‌دی‌افِ همان حساب
+function _qrPickAcct(subId) {
+  if (!_qrCurrentType || !_qrCurrentId) return;
+  showPersonQR(_qrCurrentType, _qrCurrentId, subId || null);
 }
 // دکمهٔ «کپیِ حساب» فقط وقتی دیده می‌شود که کیو‌آر مالِ یک حساب باشد (نه صفحهٔ کارمند)
 function _qrAcctBtnShow(on) {
@@ -34650,6 +34688,7 @@ function showCompanyQR(id) {
   _qrCurrentSub = null;
   const _cpdf = document.getElementById('qr-pdf-btn'); if (_cpdf) _cpdf.style.display = '';
   _qrAcctBtnShow(true);
+  _qrHideAcctPick();                    // شرکت حسابِ فرعی ندارد
   document.getElementById('qr-person-name').textContent = '📲 ' + c.name;
   const wrap = document.getElementById('qr-canvas-wrap');
   wrap.innerHTML = '';
@@ -34978,6 +35017,7 @@ function showPersonQR(type, id, subId) {
   if (!person) return;
   const sub = subId ? (person.subs || []).find(s => s && s.id === subId) : null;
   if (!sub) _qrCurrentSub = null;
+  _qrFillAcctPick(person, _qrCurrentSub);
   // کیو‌آرِ حسابِ فرعی فقط نامِ خودِ همان حساب را نشان می‌دهد (حساب‌ها جدا هستند)
   document.getElementById('qr-person-name').textContent = sub ? ('📲 📄 ' + (sub.name || 'حساب')) : ('📲 ' + person.name);
   // اگر قبلاً کیو‌آر صفحهٔ کارمند باز شده بود، دکمه/متن مخصوص شخص برگردد
@@ -35011,6 +35051,13 @@ function showPersonQR(type, id, subId) {
 // می‌شود (نه حسابِ اصلی) — خواستهٔ صاحب ریپو.
 function showPersonQRFromModal() {
   if (currentPersonId) showPersonQR(currentPersonType, currentPersonId, currentSubId);
+}
+// پی‌دی‌افِ «همان حسابی که همین حالا باز است» — حسابِ اصلی یا حسابِ فرعی. خودِ
+// pdfPerson از currentSubId حسابِ فعال را برمی‌دارد، پس فقط باید مطمئن شویم
+// حسابی باز است. (دکمهٔ 📄 PDF در نوارِ حسابِ مودالِ شخص)
+function pdfPersonCurrentAcct() {
+  if (!currentPersonId) { try { showToast('اول یک حساب را باز کنید', '#e53e3e'); } catch (e) {} return; }
+  pdfPerson();
 }
 
 // ========== READ-ONLY VIEWER ==========
@@ -35355,6 +35402,7 @@ function showStaffQR() {
   document.getElementById('qr-person-name').textContent = '👷 صفحهٔ کارمند';
   const pdfBtn = document.getElementById('qr-pdf-btn'); if (pdfBtn) pdfBtn.style.display = 'none';
   _qrAcctBtnShow(false);
+  _qrHideAcctPick();                    // صفحهٔ کارمند حساب نیست
   const desc = document.querySelector('#qrModal .qr-box p'); if (desc) desc.textContent = 'با اسکن این کد، صفحهٔ کارمند (فقط دیدن) باز می‌شود' + ((DB.staffPassword||'').trim() ? ' — رمز صفحهٔ کارمند لازم است' : '');
   if (typeof QRCode !== 'undefined') {
     new QRCode(wrap, { text: url, width: 220, height: 220, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
@@ -36506,10 +36554,10 @@ function _chatNotifyIncoming(scope, m) {
 }
 // ===== حضور (presence) روی Firebase =====
 // وقتی برنامه باز و آنلاین است، این دستگاه روی مسیرِ presence علامتِ «من اینجا هستم»
-// می‌گذارد. فرستندهٔ پیام قبل از فرستادن اعلانِ بیرونی (ntfy) این علامت را می‌خواند:
-// اگر گیرنده حاضر باشد یعنی اعلانِ داخلِ برنامه (سایت) را می‌بیند، پس اعلانِ ntfy
+// می‌گذارد. فرستندهٔ پیام قبل از فرستادن اعلانِ بیرونی این علامت را می‌خواند:
+// اگر گیرنده حاضر باشد یعنی اعلانِ داخلِ برنامه (سایت) را می‌بیند، پس اعلانِ بیرونی
 // فرستاده نمی‌شود و پیامِ تکراری نمی‌آید. با بسته/فریز شدنِ برنامه، اتصال Firebase
-// قطع می‌شود و onDisconnect علامت را برمی‌دارد؛ از آن لحظه ntfy دوباره می‌رسد.
+// قطع می‌شود و onDisconnect علامت را برمی‌دارد؛ از آن لحظه اعلان دوباره می‌رسد.
 const _PRESENCE_FRESH_MS = 120000; // 2 دقیقه — با ضربانِ هر 45 ثانیه تازه می‌ماند
 let _presenceRef = null, _presenceKeyCur = null, _presenceConnBound = false, _presenceHb = null;
 function _presenceDeviceId() {
@@ -36519,7 +36567,7 @@ function _presenceDeviceId() {
     return id;
   } catch (e) { return 'd0'; }
 }
-// کلیدِ حضورِ این دستگاه — دقیقاً متناظرِ همان تاپیکِ ntfy که خودش گیرندهٔ آن است:
+// کلیدِ حضورِ این دستگاه — دقیقاً متناظرِ همان موضوعی که خودش گیرندهٔ آن است:
 //   مدیر (میرزا) → 'admin' · کارمند → 'staff/<شناسهٔ دستگاه>' · مشتری کیو‌آر → 'p/<peer>'
 function _presenceKeyNow() {
   if (_rbMode === 'person' && _rbPersonPeer) return 'p/' + _peerKey(_rbPersonPeer.peer);
@@ -36890,73 +36938,34 @@ function _chatCacheSaveNow() {
     try { localStorage.removeItem(_CHAT_CACHE_KEY); } catch (e2) {}
   }
 }
-// ========== اعلان بیرون از برنامه (ntfy.sh) ==========
-// برنامه سرور ندارد؛ برای اینکه پیامِ چت حتی وقتی برنامهٔ میرزا کاملاً بسته است
-// به او برسد، دستگاهِ «فرستنده» همان لحظه یک اعلان کوچک به سرویس رایگان ntfy.sh
-// می‌فرستد و گوشی/کامپیوتر میرزا که مشترکِ همان کد (تاپیک) است، اعلان را می‌گیرد.
-// فقط عنوان و پیش‌نمایش کوتاه فرستاده می‌شود — عکس/صدا/ویدیو فقط با برچسب نوع.
-// از نسخهٔ 2.9.153 راهِ اصلی «سرور خانگیِ خودمان» است، نه ntfy.sh:
-//   homeTopic → سرور خانگی (همیشه، بدون هیچ تنظیمی و بدون نصبِ برنامهٔ جانبی)
-//   topic     → ntfy.sh (فقط اگر در تنظیمات روشن باشد — برای کسانی که عادت کرده‌اند)
+// ========== اعلان بیرون از برنامه — پیام‌رسانِ سرورِ خانگی ==========
+// خواستهٔ صاحب ریپو: «ntfy را از ریشه بردار و یک پیام‌رسان برای برنامهٔ خودم
+// درست کن؛ سرور خانگی دارم و پیام‌ها از همان برود و بیاید.»
+// پس دیگر هیچ سرویسِ بیرونی‌ای در کار نیست: هر خبری که در برنامه می‌افتد به
+// سرورِ خانگی (`/api/notify/<موضوع>`) می‌رود و سرور آن را هم به‌صورت زنده
+// (وب‌سوکت) و هم به‌صورت نوتیفیکیشنِ واقعی (Web Push) به دستگاه‌ها می‌رساند.
+// فقط عنوان و پیش‌نمایش کوتاه می‌رود — عکس/صدا/ویدیو فقط با برچسبِ نوع.
 function _extPushRaw(topic, title, message, homeTopic) {
   try {
+    if (!homeTopic) return;                     // این خبر را جای دیگری داده‌ایم
     const baseUrl = /^http/.test(location.protocol) ? location.href.split('#')[0] : 'https://vil3ntec-it.github.io/pump-staion-yaqobi/';
-    const toNtfy = () => {
-      if (!topic || !DB.pushEnabled) return;
-      fetch('https://ntfy.sh', {
-        method: 'POST',
-        body: JSON.stringify({ topic: topic, title: title, message: message, click: baseUrl, tags: ['speech_balloon'] })
-      }).catch(() => {});
-    };
-    // تا وقتی سرور خانگی در دسترس است، پیام‌ها از خانه بیرون نمی‌روند.
-    // ntfy.sh فقط وقتی به کار می‌آید که سرور خانگی جواب ندهد — نه موازیِ آن،
-    // وگرنه متنِ چت و نامِ حساب‌ها بی‌دلیل روی سرورِ کسِ دیگری هم می‌نشیند.
-    if (_ntfBase('http')) {
-      // homeTopic خالی یعنی این خبر را جای دیگری (مثلاً _botAnnounce) به سرور
-      // خانگی داده‌ایم — پس اینجا هم نباید به بیرون برود
-      if (homeTopic) _ntfSend(homeTopic, title, message, { click: baseUrl }).then(ok => { if (!ok) toNtfy(); });
-      return;
-    }
-    toNtfy();
+    _ntfSend(homeTopic, title, message, { click: baseUrl });
   } catch (e) {}
 }
-// اعلانِ بیرونی را فقط وقتی بفرست که گیرنده برنامه‌اش باز نباشد. presenceKey همان
-// کلیدی است که گیرنده هنگام باز بودنِ برنامه روی مسیرِ presence می‌گذارد:
-//   'admin' (میرزا) · 'staff' (هر کارمندی که آنلاین باشد) · 'p/<peer>' (مشتری کیو‌آر)
-// اگر گیرنده حاضر باشد اعلانِ سایت را می‌بیند و ntfy فرستاده نمی‌شود (نبودِ پیامِ تکراری).
+// سرورِ خانگی خودش می‌داند برنامهٔ گیرنده باز است یا نه: باز باشد خبر فوری در
+// فهرستش می‌نشیند، بسته باشد نوتیفیکیشن می‌فرستد. پس دیگر لازم نیست این‌جا
+// «حاضر بودنِ» گیرنده را بسنجیم — همان سنجش بود که وقتی سرورِ حضور در دسترس
+// نبود، اعلان را بی‌صدا می‌انداخت.
 function _extPushAway(presenceKey, topic, title, message, homeTopic) {
-  try {
-    // اگر Firebase در دسترس نیست، محتاطانه اعلانِ بیرونی را بفرست (بهتر از نرسیدن)
-    if (!_chatOnline() || !_fbDb) { _extPushRaw(topic, title, message, homeTopic); return; }
-    const now = Date.now();
-    _fbDb.ref(_chatRoot() + 'presence/' + presenceKey).get().then(snap => {
-      const v = snap.val();
-      let present = false;
-      if (v) {
-        if (presenceKey === 'staff') {
-          // هر یک از کارمندان که برنامه‌اش باز باشد → کافی است
-          present = Object.keys(v).some(k => v[k] && (now - (v[k].ts || 0) < _PRESENCE_FRESH_MS));
-        } else {
-          present = (now - (v.ts || 0) < _PRESENCE_FRESH_MS);
-        }
-      }
-      // سرور خانگی همیشه خبر می‌گیرد: خودش می‌داند برنامهٔ گیرنده باز است یا نه —
-      // باز باشد فوری در فهرست می‌نشیند، بسته باشد نوتیفیکیشن می‌فرستد
-      _extPushRaw(present ? null : topic, title, message, homeTopic);
-    }).catch(() => { _extPushRaw(topic, title, message, homeTopic); });
-  } catch (e) { try { _extPushRaw(topic, title, message, homeTopic); } catch (e2) {} }
+  _extPushRaw(topic, title, message, homeTopic);
 }
 // مسیربندی اعلان‌ها (خواستهٔ صاحب برنامه):
-//   • پیام کارمند/مشتری (گروهی یا به میرزا) → تاپیک میرزا + تاپیک کارمندان
-//   • هشدارهای ربات (مخزن کم، حساب جدید و...) → تاپیک میرزا + تاپیک کارمندان
+//   • پیام کارمند/مشتری (گروهی یا به میرزا) → موضوعِ میرزا + موضوعِ کارمندان
+//   • هشدارهای ربات (مخزن کم، حساب جدید و...) → همان دو موضوع (از _botAnnounce)
 //   • جوابِ سوال‌وجوابِ ربات و گفتگوی جواب‌گوی خودکارِ کیو‌آر → هیچ اعلانی
-//   • جواب میرزا در چت تک‌نفره → فقط تاپیک شخصیِ همان طرف (نه چت‌های دیگران)
-// تاپیک‌ها: میرزا = کد اصلی · کارمندان = کد اصلی + «-staff» · هر مشتری = کد اصلی + «-p-» + شناسه‌اش
+//   • جواب میرزا در چت تک‌نفره → فقط موضوعِ شخصیِ همان طرف (نه چت‌های دیگران)
 function _extPushNotify(scope, msg, peer) {
   try {
-    // ntfy.sh فقط وقتی که کاربر روشنش کرده و کد دارد؛ سرور خانگی همیشه
-    const base = (DB.pushEnabled && (DB.pushTopic || '').trim()) || '';
-    const t = (suffix) => (base ? base + suffix : null);
     if (msg.f === 'bot' && !msg.alert) return; // جواب معمولی ربات — اعلان نمی‌خواهد
     // هشدارهای ربات را خودِ _botAnnounce به سرور خانگی داده — دوباره نفرست
     const home = msg.f === 'bot' ? null : true;
@@ -36965,63 +36974,39 @@ function _extPushNotify(scope, msg, peer) {
       : (msg.k === 'acct' ? ('📄 حساب ' + (msg.nm || '')) : msg.k === 'audio' ? '🎤 پیام صوتی' : msg.k === 'image' ? '🖼️ عکس' : '🎬 ویدیو');
     if (scope === 'group') {
       const title = msg.f === 'bot' ? '📢 هشدار پمپ' : '👥 چت گروهی — ' + who;
-      _extPushAway('admin', t(''), title, preview, home && NTF_TOPIC_MIRZA());
-      _extPushAway('staff', t('-staff'), title, preview, home && NTF_TOPIC_STAFF());
+      _extPushAway('admin', null, title, preview, home && NTF_TOPIC_MIRZA());
+      _extPushAway('staff', null, title, preview, home && NTF_TOPIC_STAFF());
       return;
     }
     if (msg.f === 'admin') {
       // جوابِ میرزا فقط به همان طرف می‌رود — نه به چت‌های دیگران
-      if (peer) _extPushAway('p/' + peer, t('-p-' + peer), '💬 جواب میرزا — پمپ یعقوبی', preview, NTF_TOPIC_PERSON(peer));
+      if (peer) _extPushAway('p/' + peer, null, '💬 جواب میرزا — پمپ یعقوبی', preview, NTF_TOPIC_PERSON(peer));
       return;
     }
-    _extPushAway('admin', t(''), '💬 پیام به میرزا — ' + who, preview, NTF_TOPIC_MIRZA());
+    _extPushAway('admin', null, '💬 پیام به میرزا — ' + who, preview, NTF_TOPIC_MIRZA());
   } catch (e) {}
 }
-// --- تنظیمات اعلان بیرون از برنامه (کارت در «تنظیمات») ---
+// --- کارتِ «پیام‌رسان یعقوبی» در «تنظیمات» ---
 function _pushMsg(t, ok) {
   const el = document.getElementById('push-msg');
-  if (el) { el.textContent = t; el.style.color = ok ? 'var(--green)' : 'var(--muted)'; }
+  if (el) { el.innerHTML = t; el.style.color = ok ? 'var(--green)' : 'var(--muted)'; }
 }
 function renderPushCard() {
-  _pushEnsureOn();
-  const inp = document.getElementById('push-topic');
-  if (inp) inp.value = (DB.pushTopic || '');
-  _pushMsg('✅ همیشه فعال است — پیام‌های تازهٔ چت به مشترکینِ کد بالا می‌رسد، حتی وقتی برنامه بسته است.', true);
+  const on = (typeof Notification !== 'undefined' && Notification.permission === 'granted' && !!_lsPlain('pumpNtfPushOn'));
+  const srv = _ntfBase('http');
+  if (!srv) { _pushMsg('⚠️ آدرسِ سرورِ خانگی تنظیم نشده — از «تنظیمات ← هم‌زمان‌سازی» آدرس سرور را بگذارید.'); return; }
+  _pushMsg(on
+    ? '✅ اعلان روی این دستگاه روشن است — خبرها حتی با برنامهٔ بسته می‌رسند. سرور: <b dir="ltr">' + _esc(srv) + '</b>'
+    : '🔕 هنوز روی این دستگاه روشن نشده — دکمهٔ «روشن کردن اعلان» را بزنید و «اجازه» بدهید.', on);
 }
-function _pushGenTopic() {
-  return 'pump-' + String(_syncCode() || 'pump1').replace(/[^a-zA-Z0-9_-]/g, '') + '-' + Math.random().toString(36).slice(2, 10);
-}
-/* «دریافت پیام حتی وقتی برنامه بسته است» همیشه روشن و اجباری است (خواستهٔ صاحب
-   برنامه). هیچ کلیدِ روشن/خاموشی داخل برنامه نیست؛ اگر کاربر نخواهد اعلان بگیرد،
-   فقط از تنظیماتِ خودِ دستگاه (App Info › Notifications) آن را می‌بندد.
-   این تابع در هر باز شدن برنامه و هر بار رندرِ کارت، روشن‌بودن را تضمین می‌کند و
-   اگر کدِ اشتراک نساخته شده باشد، خودش می‌سازد. */
-function _pushEnsureOn() {
+/** برنامهٔ جداگانهٔ پیام‌رسان (نصب‌شدنی، بدون خودِ برنامهٔ حساب‌ها) */
+function openMessengerApp() {
   try {
-    let changed = false;
-    if (DB.pushEnabled !== true) { DB.pushEnabled = true; changed = true; }
-    if (!(DB.pushTopic || '').trim()) { DB.pushTopic = _pushGenTopic(); changed = true; }
-    if (changed) save();
+    const base = /^https?:$/.test(location.protocol)
+      ? location.href.split('#')[0].replace(/[^/]*$/, '')
+      : 'https://vil3ntec-it.github.io/pump-staion-yaqobi/';
+    window.open(base + 'payam/', '_blank');
   } catch (e) {}
-}
-function pushNewTopic() {
-  if (!confirm('کد نو ساخته شود؟ اشتراک قبلی از کار می‌افتد و باید دوباره در ntfy مشترک شوید.')) return;
-  DB.pushTopic = _pushGenTopic();
-  save();
-  renderPushCard();
-  _pushMsg('♻️ کد نو ساخته شد — در ntfy با همین کد دوباره مشترک شوید.', true);
-}
-function pushOpenSubscribe() {
-  _pushEnsureOn();
-  const t = (DB.pushTopic || '').trim();
-  if (!t) { _pushMsg('کد اشتراک ساخته نشد — یک بار برنامه را ببندید و باز کنید.'); return; }
-  try { window.open('https://ntfy.sh/' + encodeURIComponent(t), '_blank'); } catch (e) {}
-}
-function pushCopyTopic() {
-  _pushEnsureOn();
-  const t = (DB.pushTopic || '').trim();
-  if (!t) { _pushMsg('کد اشتراک ساخته نشد — یک بار برنامه را ببندید و باز کنید.'); return; }
-  try { navigator.clipboard.writeText(t).then(() => _pushMsg('📋 کد کپی شد.', true)); } catch (e) { _pushMsg('کپی نشد — کد را دستی انتخاب و کپی کنید.'); }
 }
 /* ── روشن شدنِ خودکارِ اعلانِ این دستگاه ────────────────────────────────────
    جای دکمهٔ 🔔 که برداشته شد. دو حالت دارد:
@@ -37036,6 +37021,20 @@ function pushCopyTopic() {
    (اجازه داد یا رد کرد). اگر سرور در آن لحظه در دسترس نبود، دفعهٔ بعد دوباره
    تلاش می‌شود — وگرنه دستگاه برای همیشه بدونِ اعلان می‌ماند. ── */
 let _ntfAutoBusy = false;
+/* آیا اشتراکِ پوشِ همین مرورگر همانی است که آخرین بار نزدِ سرور ثبت شد؟
+   مرورگرها (به‌خصوص کروم روی اندروید) اشتراک را بی‌خبر عوض می‌کنند؛ اگر این را
+   نسنجیم، «یک‌بار ثبت کردیم» برای همیشه جلوی ثبتِ دوباره را می‌گیرد و اعلانِ
+   دستگاه بی‌صدا می‌میرد — همان «چرا دیگر اعلان نمی‌آید». */
+function _ntfEndpointFresh() {
+  try {
+    const want = _lsPlain('pumpNtfPushEndpoint');
+    if (!want) return Promise.resolve(false);
+    return navigator.serviceWorker.ready
+      .then(reg => reg.pushManager.getSubscription())
+      .then(sub => !!sub && sub.endpoint === want)
+      .catch(() => false);
+  } catch (e) { return Promise.resolve(false); }
+}
 function _ntfAutoPush(mode) {
   try {
     if (_ntfAutoBusy) return;
@@ -37043,10 +37042,22 @@ function _ntfAutoPush(mode) {
     if (Notification.permission === 'denied') return;
     if (!_ntfBase('http')) return;                       // سرور خانگی در دسترس نیست
     const granted = Notification.permission === 'granted';
-    // ثبت فقط وقتی لازم است تکرار شود: اولین بار، یا وقتی نقش (تاپیک) عوض شده
-    const done = _lsPlain('pumpNtfPushOn') && _lsPlain('pumpNtfPushTopic') === _ntfTopicKey();
-    if (mode === 'silent') { if (!granted || done) return; }
-    else { if (done) return; if (!granted && _lsPlain('pumpNtfPushAsked')) return; }
+    // ثبت فقط وقتی لازم است تکرار شود: اولین بار، وقتی نقش (تاپیک) عوض شده،
+    // یا وقتی خودِ اشتراکِ مرورگر عوض شده باشد
+    const marked = _lsPlain('pumpNtfPushOn') && _lsPlain('pumpNtfPushTopic') === _ntfTopicKey();
+    if (marked) {
+      if (!granted) return;
+      _ntfEndpointFresh().then(fresh => { if (!fresh) _ntfAutoPushRun(mode, granted); });
+      return;
+    }
+    if (mode === 'silent' && !granted) return;
+    if (mode !== 'silent' && !granted && _lsPlain('pumpNtfPushAsked')) return;
+    _ntfAutoPushRun(mode, granted);
+  } catch (e) { _ntfAutoBusy = false; }
+}
+function _ntfAutoPushRun(mode, granted) {
+  try {
+    if (_ntfAutoBusy) return;
     _ntfAutoBusy = true;
     _ntfSubscribeThisDevice().then(ok => {
       _ntfAutoBusy = false;
@@ -37061,42 +37072,43 @@ function _ntfAutoPush(mode) {
 }
 // راهِ دستی (از «تنظیمات › اعلان‌ها») — همان کارِ بالا، ولی با پیام و راهنما
 async function pushSubscribeSelf() {
-  // راهِ اصلی: سرور خانگیِ خودمان — نه نصبِ برنامه لازم دارد، نه کدِ اشتراک،
+  // تنها راه: سرورِ خانگیِ خودمان — نه نصبِ برنامهٔ جانبی، نه کدِ اشتراک،
   // نه تنظیمِ قبلی. یک بار «اجازه» و تمام.
-  if (_ntfBase('http')) {
-    try { showTopToast('🔔 در حال روشن کردن اعلان روی این دستگاه…', '#2b6cb0', 3000); } catch (e) {}
-    const ok = await _ntfSubscribeThisDevice();
-    if (ok === true) {
-      try { showTopToast('✅ روشن شد — از این به بعد خبرهای مربوط به شما حتی با برنامهٔ بسته می‌رسد', '#38a169', 6000); } catch (e) {}
-      return;
-    }
-    if (ok === 'denied') { showToast('اجازهٔ اعلان داده نشد', '#e53e3e'); return; }
-    if (ok === 'unsupported') {
-      try { showTopToast('این مرورگر اعلان ندارد. در آیفون اول برنامه را «افزودن به صفحهٔ خانه» کنید، بعد دوباره بزنید.', '#b7791f', 8000); } catch (e) {}
-      return;
-    }
-    // سرور جواب نداد → می‌افتد روی راهِ قدیمی (ntfy.sh)
+  if (!_ntfBase('http')) {
+    _pushMsg('⚠️ آدرسِ سرورِ خانگی تنظیم نشده — از «تنظیمات ← هم‌زمان‌سازی» آدرس سرور را بگذارید، بعد دوباره بزنید.');
+    showToast('آدرس سرور خانگی تنظیم نشده', '#e53e3e');
+    return;
   }
-  _pushEnsureOn();
-  const base = (DB.pushTopic || '').trim();
-  if (!base) { showToast('سرور در دسترس نیست — کمی بعد دوباره بزنید', '#e53e3e'); return; }
-  let topic;
-  if (_rbMode === 'person' && _rbPersonPeer) topic = base + '-p-' + _rbPersonPeer.peer;
-  else if (_rbMode === 'admin') topic = base;
-  else topic = base + '-staff';
-  try { window.open('https://ntfy.sh/' + encodeURIComponent(topic), '_blank'); } catch (e) {}
-  try { showTopToast('🔔 در صفحه‌ای که باز شد، اعلان‌ها (Notifications) را فعال کنید — از آن به بعد پیام‌های مربوط به شما حتی وقتی برنامه بسته است می‌رسد', '#2b6cb0', 7000); } catch (e) {}
+  try { showTopToast('🔔 در حال روشن کردن اعلان روی این دستگاه…', '#2b6cb0', 3000); } catch (e) {}
+  const ok = await _ntfSubscribeThisDevice();
+  if (ok === true) {
+    try { showTopToast('✅ روشن شد — از این به بعد خبرهای مربوط به شما حتی با برنامهٔ بسته می‌رسد', '#38a169', 6000); } catch (e) {}
+    renderPushCard();
+    return;
+  }
+  if (ok === 'denied') {
+    _pushMsg('❌ اجازهٔ اعلان داده نشد. از تنظیماتِ خودِ مرورگر/دستگاه اجازهٔ Notifications این سایت را «Allow» کنید و دوباره بزنید.');
+    showToast('اجازهٔ اعلان داده نشد', '#e53e3e');
+    return;
+  }
+  if (ok === 'unsupported') {
+    _pushMsg('این مرورگر نوتیفیکیشن ندارد. در آیفون/آیپد اول برنامه را با <b dir="ltr">Share › Add to Home Screen</b> به صفحهٔ خانه اضافه کنید، بعد دوباره بزنید.');
+    return;
+  }
+  _pushMsg('سرورِ خانگی جواب نداد — مطمئن شوید کامپیوترِ سرور روشن است، بعد دوباره بزنید.');
 }
+/* تستِ واقعی: خبر را به موضوعِ خودِ همین دستگاه روی سرورِ خانگی می‌فرستیم، پس
+   اگر برسد یعنی کلِ زنجیره (برنامه → سرور → نوتیفیکیشن) سالم است. */
 function pushTest() {
-  _pushEnsureOn();
-  const t = (DB.pushTopic || '').trim();
-  if (!t) { _pushMsg('کد اشتراک ساخته نشد — یک بار برنامه را ببندید و باز کنید.'); return; }
-  _pushMsg('در حال فرستادن تست...');
-  fetch('https://ntfy.sh', {
-    method: 'POST',
-    body: JSON.stringify({ topic: t, title: '⛽ پمپ یعقوبی — تست', message: 'اعلان بیرون از برنامه درست کار می‌کند ✅', tags: ['tada'] })
-  }).then(r => _pushMsg(r.ok ? '✅ تست فرستاده شد — باید همین حالا روی دستگاهِ مشترک برسد.' : 'خطا در فرستادن — کمی بعد دوباره تلاش کنید.', r.ok))
-    .catch(() => _pushMsg('اینترنت وصل نیست یا سرویس در دسترس نیست.'));
+  const base = _ntfBase('http');
+  if (!base) { _pushMsg('⚠️ آدرسِ سرورِ خانگی تنظیم نشده.'); return; }
+  const topics = _ntfMyTopics();
+  const topic = topics[0];
+  _pushMsg('در حال فرستادن تست به موضوعِ «' + _esc(topic) + '»…');
+  _ntfSend(topic, '⛽ پمپ یعقوبی — تست', 'پیام‌رسان درست کار می‌کند ✅ (' + _ntfWhen(Date.now()) + ')', { tags: ['tada'] })
+    .then(ok => _pushMsg(ok
+      ? '✅ تست فرستاده شد. اگر برنامه را ببندید یا صفحه را پنهان کنید، باید روی نوارِ اعلانِ دستگاه بنشیند. اگر نیامد، اول «روشن کردن اعلان روی این دستگاه» را بزنید.'
+      : '❌ سرور خبر را نگرفت — مطمئن شوید کامپیوترِ سرور روشن و در دسترس است.', ok));
 }
 function chatSendText(scope) {
   const inp = document.getElementById(scope === 'group' ? 'groupInput' : 'dmInput');
@@ -38510,7 +38522,7 @@ function _botCameraIntent() {
 })();
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   اعلان‌ها — گیرندهٔ سرویسِ اعلانِ سرور خانگی (همان کاری که ntfy می‌کند)
+   اعلان‌ها — گیرندهٔ «پیام‌رسانِ یعقوبی» روی سرورِ خانگی
 
    هر برنامه‌ای می‌تواند با یک درخواست ساده روی «موضوع» خبر بگذارد:
 
@@ -38656,11 +38668,14 @@ function _ntfAccept(msg, { live } = {}) {
   if (document.visibilityState === 'visible') {
     try { showTopToast('🔔 ' + (msg.title ? msg.title + ' — ' : '') + msg.body.slice(0, 70), msg.priority >= 5 ? '#e53e3e' : '#3182ce', 5000); } catch (e) {}
   } else {
-    // اگر پوشِ سرور روی همین دستگاه روشن است، خودِ سرویس‌ورکر اعلان را می‌دهد؛
-    // این‌جا دوباره اعلان ندهیم وگرنه دو اعلانِ یکسان روی نوارِ گوشی می‌نشیند
-    let pushOn = false;
-    try { pushOn = !!_lsPlain('pumpNtfPushOn'); } catch (e) {}
-    if (!pushOn) { try { _notify(msg.title || 'پمپ یعقوبی', msg.body.slice(0, 200), 'notify-' + msg.topic); } catch (e) {} }
+    /* صفحه پنهان است → همین‌جا اعلانِ واقعی نشان بده.
+       قبلاً اگر پوشِ دستگاه روشن بود این‌جا ساکت می‌ماندیم، با این حساب که
+       «سرویس‌ورکر اعلان را می‌دهد» — ولی سرویس‌ورکر هم چون می‌دید یک پنجرهٔ باز
+       (هرچند پنهان) هست، ساکت می‌ماند و می‌گفت «صفحه خودش خبر می‌دهد».
+       نتیجهٔ آن قفلِ دوطرفه این بود که هیچ اعلانی روی هیچ دستگاهی نمی‌آمد.
+       حالا هر دو طرف اعلان می‌دهند، ولی چون «tag» هر دو یکی است (notify-<موضوع>)
+       مرورگر آن‌ها را روی هم می‌نشاند و کاربر فقط یک اعلان می‌بیند. */
+    try { _notify(msg.title || 'پمپ یعقوبی', msg.body.slice(0, 200), 'notify-' + msg.topic); } catch (e) {}
   }
 }
 
@@ -38771,8 +38786,18 @@ async function _ntfSubscribeThisDevice() {
     if (!cfg.vapidPublicKey) return false;
 
     const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.getSubscription()
-      || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: _b64ToBytes(cfg.vapidPublicKey) });
+    /* اشتراکِ قدیمی فقط وقتی به درد می‌خورد که با «همین» کلیدِ سرور گرفته شده
+       باشد. اگر سرور تازه راه افتاده یا پوشهٔ داده‌اش عوض شده، کلیدِ VAPIDش هم
+       تازه است و اشتراکِ قدیمی برای همیشه بی‌صدا می‌ماند: سرور می‌فرستد، سرویسِ
+       پوشِ مرورگر رد می‌کند، و کاربر هیچ‌وقت اعلانی نمی‌بیند. پس اگر کلید یکی
+       نبود، اشتراک را دور می‌اندازیم و از نو می‌گیریم. */
+    const key = _b64ToBytes(cfg.vapidPublicKey);
+    let sub = await reg.pushManager.getSubscription();
+    if (sub && !_sameAppServerKey(sub, key)) {
+      try { await sub.unsubscribe(); } catch (e) {}
+      sub = null;
+    }
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
 
     // موضوع‌ها از روی نقش انتخاب می‌شوند — مشتریِ کیو‌آر فقط خبرِ خودش،
     // میرزا همهٔ خبرها، نظاره‌گر همه جز چت تک‌نفره، کارمند گروه + چتِ خودش.
@@ -38787,8 +38812,25 @@ async function _ntfSubscribeThisDevice() {
     ));
     if (!results.some(r => r && r.ok)) return false;
 
-    try { localStorage.setItem('pumpNtfPushOn', '1'); localStorage.setItem('pumpNtfPushTopic', _ntfTopicKey(topics)); } catch (e) {}
+    try {
+      localStorage.setItem('pumpNtfPushOn', '1');
+      localStorage.setItem('pumpNtfPushTopic', _ntfTopicKey(topics));
+      // نشانیِ اشتراک را نگه می‌داریم: مرورگرها گاهی خودشان اشتراک را عوض
+      // می‌کنند و بدون این مقایسه، ثبتِ تازه هرگز انجام نمی‌شد.
+      localStorage.setItem('pumpNtfPushEndpoint', sub.endpoint || '');
+    } catch (e) {}
     _ntfPushBtnState();
+    return true;
+  } catch (e) { return false; }
+}
+/** آیا این اشتراک با همین کلیدِ سرور گرفته شده؟ */
+function _sameAppServerKey(sub, wantBytes) {
+  try {
+    const have = sub.options && sub.options.applicationServerKey;
+    if (!have) return false;
+    const a = new Uint8Array(have);
+    if (a.length !== wantBytes.length) return false;
+    for (let i = 0; i < a.length; i++) if (a[i] !== wantBytes[i]) return false;
     return true;
   } catch (e) { return false; }
 }
@@ -38835,7 +38877,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.234';
+const APP_VERSION = '2.9.235';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -46008,13 +46050,26 @@ body.light-mode #glassClock{
       <div id="ac-head" style="font-weight:900;font-size:1rem;margin-bottom:6px"></div>
       <div style="font-size:0.78rem;color:var(--muted);line-height:1.9;margin-bottom:14px">
         فقط همین یک حساب در فایل می‌رود — نه بقیهٔ حساب‌ها، نه بخش‌های دیگر.<br>
-        <b style="color:var(--green)">📦 فایل انتقال:</b> برای بردن به برنامهٔ دیگر («تنظیمات ← مدیریت داده‌ها ← آوردن حساب از فایل»).
+        <b style="color:var(--green)">📦 فایل انتقال:</b> یک فایل <b dir="ltr">.json</b> در پوشهٔ «دانلودها»ی دستگاه ذخیره می‌شود.
         هیچ آدرس و سرور و دامنه‌ای همراهش نمی‌رود؛ در برنامهٔ مقصد به سرورِ خودِ همان برنامه وصل می‌شود و
         تغییرهای بعدیِ این برنامه دیگر رویش نمی‌آید.<br>
         <b style="color:var(--blue)">👁️ برگهٔ دیدنی:</b> یک صفحهٔ مستقل که <b>بدون برنامه و بدون اینترنت</b> با هر مرورگری باز و چاپ می‌شود.
       </div>
       <div id="ac-scopes" style="display:flex;flex-direction:column;gap:9px"></div>
       <div id="ac-summary" style="margin-top:14px;font-size:0.8rem;font-weight:800;color:var(--accent);min-height:1.3em"></div>
+      <!-- ── «این فایل را از کجا باید آورد؟» ─────────────────────────────────
+           سوالِ صاحب ریپو. جوابش همیشه یک جای دور در تنظیمات بود؛ حالا هم نوشته
+           شده و هم دکمه‌اش همین‌جاست. -->
+      <div style="margin-top:16px;border-top:1px dashed var(--border);padding-top:13px;font-size:0.78rem;line-height:1.95;color:var(--muted)">
+        <b style="color:var(--accent)">📥 این فایل را چطور در برنامه بیاورم؟</b><br>
+        در همین برنامه یا در هر برنامهٔ دیگرِ پمپ یعقوبی (روی هر گوشی یا کامپیوتر):
+        <b>تنظیمات ← 🗂️ مدیریت داده‌ها ← 📥 آوردن حساب یا بخش از فایل</b> — بعد همین فایل <b dir="ltr">.json</b> را از «دانلودها» انتخاب کنید.
+        اگر حسابی به همان نام آن‌جا باشد، می‌توانید به همان اضافه کنید؛ وگرنه یک حسابِ تازه ساخته می‌شود.
+        <br>فایل را می‌توانید با واتساپ/تلگرام/بلوتوث یا حافظهٔ USB به دستگاهِ دیگر هم بفرستید.
+        <div style="margin-top:9px">
+          <button onclick="closeModal('acctCardModal');acctCardImportPick()" style="padding:8px 16px;border-radius:9px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:800;cursor:pointer;font-size:0.8rem">📥 همین حالا یک فایلِ حساب را بیاور</button>
+        </div>
+      </div>
     </div>
     <div style="padding:12px 18px 16px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;border-top:1px solid var(--border)">
       <button class="btn-cancel" style="padding:9px 20px;border-radius:9px;border:none;cursor:pointer;font-family:'Vazirmatn',sans-serif;font-weight:800" onclick="closeModal('acctCardModal')">انصراف</button>
@@ -46140,13 +46195,24 @@ body.light-mode #glassClock{
   }
 
   // ── پنجرهٔ گرفتنِ کپی ──
-  window.openAcctCard = function (kind, id) {
+  /* subId (اختیاری): کپیِ فقط یک «حساب فرعی». حساب فرعی در این برنامه یک حسابِ
+     کاملاً جداست، پس در فایل هم مثل یک حسابِ مستقل می‌رود (نامِ خودش، دفترهای
+     خودش، آرشیوِ خودش) و در برنامهٔ مقصد یا حسابِ تازه می‌شود یا با هم‌نامِ خودش
+     ادغام می‌شود. بدونِ subId، مثل همیشه کلِ حساب می‌رود — با همهٔ حساب‌های فرعی. */
+  window.openAcctCard = function (kind, id, subId) {
     var K = KINDS[kind]; if (!K) return;
-    var rec = K.list().find(function (x) { return x && x.id === id; });
-    if (!rec) { toast('حساب پیدا نشد', '#e53e3e'); return; }
-    _cur = { kind: kind, rec: rec };
-    document.getElementById('ac-head').innerHTML =
-      '📇 ' + esc(K.label) + ': <span style="color:var(--accent)">' + esc(rec.name || '—') + '</span>';
+    var owner = K.list().find(function (x) { return x && x.id === id; });
+    if (!owner) { toast('حساب پیدا نشد', '#e53e3e'); return; }
+    var sub = subId ? (owner.subs || []).find(function (s) { return s && s.id === subId; }) : null;
+    var rec = sub || owner;
+    _cur = { kind: kind, rec: rec, sub: sub || null, owner: owner };
+    document.getElementById('ac-head').innerHTML = sub
+      ? ('📇 حساب فرعی: <span style="color:var(--accent)">' + esc(sub.name || '—') + '</span>' +
+         '<div style="font-size:0.74rem;color:var(--muted);font-weight:700;margin-top:3px">این حساب جداگانه می‌رود — نامِ حسابِ اصلی («' + esc(owner.name || '') + '») همراهش نیست.</div>')
+      : ('📇 ' + esc(K.label) + ': <span style="color:var(--accent)">' + esc(rec.name || '—') + '</span>' +
+         ((owner.subs || []).length
+           ? ('<div style="font-size:0.74rem;color:var(--green);font-weight:700;margin-top:3px">✅ ' + fa((owner.subs || []).length) + ' حساب فرعی هم داخلِ همین فایل می‌رود.</div>')
+           : ''));
     var arcs = archives(rec);
     var months = {}, years = {};
     arcs.forEach(function (h) { var m = ymOf(h), y = yOf(h); if (m) months[m] = (months[m] || 0) + 1; if (y) years[y] = (years[y] || 0) + 1; });
@@ -46156,15 +46222,21 @@ body.light-mode #glassClock{
         '<input type="radio" name="acScope" value="' + val + '" ' + (val === 'all' ? 'checked' : '') + ' onchange="_acScopeChanged()">' +
         '<span style="font-weight:800;font-size:0.86rem">' + txt + '</span>' + (extra || '') + '</label>';
     }
+    var _nSub = sub ? 0 : (owner.subs || []).length;
+    var _subNote = _nSub ? ' <span style="color:var(--green);font-size:0.76rem">(+ ' + fa(_nSub) + ' حساب فرعی)</span>' : '';
     document.getElementById('ac-scopes').innerHTML =
-      row('all', '📚 کلِ حساب — جدولِ فعلی + همهٔ ماه‌های آرشیو') +
-      row('current', '📄 فقط جدولِ فعلی (ماهِ جاری)') +
+      row('all', '📚 کلِ حساب — جدولِ فعلی + همهٔ ماه‌های آرشیو' + _subNote) +
+      row('current', '📄 فقط جدولِ فعلی (ماهِ جاری)' + _subNote) +
       (mKeys.length ? row('month', '🗓️ فقط یک ماهِ آرشیو:',
         '<select id="ac-month" onchange="_acScopeChanged()" style="margin-inline-start:auto;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:5px 8px;color:var(--txt);font-family:\'Vazirmatn\',sans-serif;font-weight:800">' +
         mKeys.map(function (m) { return '<option value="' + m + '">' + esc(m) + ' (' + fa(months[m]) + ' جدول)</option>'; }).join('') + '</select>') : '') +
       (yKeys.length ? row('year', '📆 یک سال با همهٔ ماه‌هایش:',
         '<select id="ac-year" onchange="_acScopeChanged()" style="margin-inline-start:auto;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:5px 8px;color:var(--txt);font-family:\'Vazirmatn\',sans-serif;font-weight:800">' +
-        yKeys.map(function (y) { return '<option value="' + y + '">' + esc(y) + ' (' + fa(years[y]) + ' جدول)</option>'; }).join('') + '</select>') : '');
+        yKeys.map(function (y) { return '<option value="' + y + '">' + esc(y) + ' (' + fa(years[y]) + ' جدول)</option>'; }).join('') + '</select>') : '') +
+      // فقط یکی از حساب‌های فرعی — جداگانه و بدون حسابِ اصلی
+      (_nSub ? row('sub', '👤 فقط یکی از حساب‌های فرعی:',
+        '<select id="ac-sub" onchange="_acScopeChanged()" style="margin-inline-start:auto;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:5px 8px;color:var(--txt);font-family:\'Vazirmatn\',sans-serif;font-weight:800">' +
+        (owner.subs || []).map(function (s) { return '<option value="' + esc(String(s.id)) + '">' + esc(s.name || 'حساب فرعی') + '</option>'; }).join('') + '</select>') : '');
     _acScopeChanged();
     document.getElementById('acctCardModal').classList.add('open');
   };
@@ -46215,6 +46287,12 @@ body.light-mode #glassClock{
       else if (scope === 'year') { var y = (document.getElementById('ac-year') || {}).value || ''; rows = rows.filter(function (r) { return rowY(r) === y; }); }
       return sanitize({ name: rec.name, rows: clone(rows) });
     }
+    // «فقط یکی از حساب‌های فرعی» — همان حساب فرعی به‌تنهایی، مثل یک حسابِ مستقل
+    if (scope === 'sub') {
+      var sid = (document.getElementById('ac-sub') || {}).value || '';
+      var only = ((_cur && _cur.owner && _cur.owner.subs) || []).find(function (s) { return s && String(s.id) === String(sid); });
+      return sanitize(clone(only || {}));
+    }
     var out = clone(rec);
     function filterArc(o, keep) {
       o.tableHistory = (o.tableHistory || []).filter(keep);
@@ -46238,16 +46316,22 @@ body.light-mode #glassClock{
     if (!_cur) return;
     var scope = pickedScope();
     var pack = build(_cur.kind, _cur.rec, scope);
+    // تعدادِ حساب‌های فرعیِ داخلِ فایل صریح نوشته می‌شود تا معلوم باشد همراهش
+    // رفته‌اند — قبلاً فقط یک عددِ کلی بود و کاربر نمی‌دانست فرعی‌ها هم هستند.
+    var nSub = (pack.subs || []).length;
     document.getElementById('ac-summary').innerHTML = (_cur.kind === 'section')
       ? ('📦 در این فایل: ' + fa((pack.rows || []).length) + ' ردیف')
       : ('📦 در این فایل: ' + fa(curRowCount(_cur.kind, pack)) + ' ردیفِ جدولِ فعلی و ' +
-         fa(archives(pack).length) + ' جدولِ آرشیو');
+         fa(archives(pack).length) + ' جدولِ آرشیو' +
+         (nSub ? ' — به‌همراهِ <b style="color:var(--green)">' + fa(nSub) + ' حساب فرعی</b>' :
+           (scope === 'sub' ? ' — <b style="color:var(--green)">فقط همین حساب فرعی</b>' : '')));
   };
   // برچسبِ دامنه — برای نامِ فایل و برای نوشتهٔ بالای برگه
   function scopeLabelOf(scope) {
     if (scope === 'all') return _cur && _cur.kind === 'section' ? 'کل بخش' : 'کل حساب';
     if (scope === 'current') return 'جدول فعلی';
     if (scope === 'month') return 'ماه ' + ((document.getElementById('ac-month') || {}).value || '');
+    if (scope === 'sub') return 'یک حساب فرعی';
     return 'سال ' + ((document.getElementById('ac-year') || {}).value || '');
   }
 
@@ -46446,10 +46530,14 @@ body.light-mode #glassClock{
           '🧾 دامنه: <b>' + esc(obj.scopeLabel || '—') + '</b><br>' +
           '📄 ردیفِ جدولِ فعلی: <b>' + fa(curRowCount(obj.kind, acct)) + '</b><br>' +
           '🗂️ جدولِ آرشیو: <b>' + fa(archives(acct).length) + '</b><br>' +
+          ((acct.subs || []).length
+            ? ('👤 حساب فرعی: <b style="color:var(--green)">' + fa((acct.subs || []).length) + '</b> — ' +
+               esc((acct.subs || []).map(function (s) { return s && s.name || 'بی‌نام'; }).join('، ')) + '<br>')
+            : '') +
           '📅 گرفته شده در: <b>' + esc(obj.exportedAt || '—') + '</b> (نسخهٔ ' + esc(obj.appVersion || '—') + ')' +
         '</div>' +
         '<div style="margin-top:12px;font-size:0.78rem;line-height:1.9;padding:9px 11px;border-radius:10px;background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--txt)">' +
-          (twin ? ('⚠️ حسابی به نام «' + esc(twin.name) + '» از قبل این‌جا هست. می‌توانید این اطلاعات را <b>به همان</b> اضافه کنید (ردیف‌های تکراری دوباره ثبت نمی‌شوند)، یا به‌عنوان یک <b>حسابِ تازه</b> ثبت کنید.')
+          (twin ? ('⚠️ حسابی به نام «' + esc(twin.name) + '» از قبل این‌جا هست. می‌توانید این اطلاعات را <b>به همان</b> اضافه کنید (ردیف‌های تکراری دوباره ثبت نمی‌شوند؛ حساب‌های فرعی هم با هم‌نامِ خودشان ادغام می‌شوند و اگر نباشند ساخته می‌شوند)، یا به‌عنوان یک <b>حسابِ تازه</b> ثبت کنید.')
                 : '✅ حسابی به این نام این‌جا نیست — به‌عنوان حسابِ تازه ثبت می‌شود.') +
         '</div>';
       var mb = document.getElementById('ai-merge-btn');
@@ -46460,6 +46548,48 @@ body.light-mode #glassClock{
   };
 
   function sig(r) { try { return JSON.stringify(r); } catch (e) { return String(r); } }
+  function sameName(a, b) {
+    return (typeof normFa === 'function') ? normFa(a || '') === normFa(b || '') : String(a || '') === String(b || '');
+  }
+  /* ادغامِ آرشیوها — کلید: تاریخِ ساخت + تعدادِ ردیف، تا جدولِ تکراری دوباره ننشیند */
+  function mergeArchives(dstObj, srcArcs) {
+    if (!Array.isArray(dstObj.tableHistory)) dstObj.tableHistory = [];
+    var have = {};
+    dstObj.tableHistory.forEach(function (h) { have[(h && h.createdAt) + '|' + ((h && h.rows) || []).length] = 1; });
+    var n = 0;
+    (srcArcs || []).forEach(function (h) {
+      var key = (h && h.createdAt) + '|' + ((h && h.rows) || []).length;
+      if (have[key]) return;
+      h.id = nid('h'); dstObj.tableHistory.push(h); have[key] = 1; n++;
+    });
+    return n;
+  }
+  /* ── ادغامِ حساب‌های فرعی ────────────────────────────────────────────────
+     باگِ گزارش‌شده: هنگام «افزودن به حسابِ هم‌نام»، فقط دفترهای خودِ حسابِ اصلی
+     ادغام می‌شد و حساب‌های فرعیِ داخلِ فایل کاملاً کنار گذاشته می‌شدند — یعنی
+     کپی درست گرفته می‌شد ولی در برنامهٔ مقصد حساب‌های فرعی نمی‌آمدند.
+     حالا هر حساب فرعی با هم‌نامِ خودش ادغام می‌شود و اگر نبود، ساخته می‌شود. */
+  function mergeSubs(twin, incomingSubs) {
+    if (!Array.isArray(incomingSubs) || !incomingSubs.length) return 0;
+    if (!Array.isArray(twin.subs)) twin.subs = [];
+    var n = 0;
+    incomingSubs.forEach(function (s) {
+      if (!s || typeof s !== 'object') return;
+      var mate = twin.subs.find(function (x) { return x && sameName(x.name, s.name); });
+      if (!mate) {
+        s.id = nid('s');
+        (s.tableHistory || []).forEach(function (h) { h.id = nid('h'); });
+        twin.subs.push(s);
+        n += 1 + (s.rows || []).length + (s.moneyRows || []).length + (s.tableHistory || []).length;
+        return;
+      }
+      ['rows', 'moneyRows'].forEach(function (k) {
+        if (Array.isArray(s[k]) && s[k].length) { if (!Array.isArray(mate[k])) mate[k] = []; n += mergeRows(mate[k], s[k]); }
+      });
+      n += mergeArchives(mate, s.tableHistory || []);
+    });
+    return n;
+  }
   function mergeRows(dst, src) {
     if (!Array.isArray(src) || !src.length) return 0;
     if (!Array.isArray(dst)) return 0;
@@ -46494,13 +46624,9 @@ body.light-mode #glassClock{
       ['rows', 'moneyRows', 'dieselRows'].forEach(function (k) {
         if (Array.isArray(acct[k]) && acct[k].length) { if (!Array.isArray(twin[k])) twin[k] = []; added += mergeRows(twin[k], acct[k]); }
       });
-      if (!Array.isArray(twin.tableHistory)) twin.tableHistory = [];
-      var haveArc = {}; twin.tableHistory.forEach(function (h) { haveArc[(h && h.createdAt) + '|' + ((h && h.rows) || []).length] = 1; });
-      (acct.tableHistory || []).forEach(function (h) {
-        var key = (h && h.createdAt) + '|' + ((h && h.rows) || []).length;
-        if (haveArc[key]) return;
-        h.id = nid('h'); twin.tableHistory.push(h); haveArc[key] = 1; added++;
-      });
+      added += mergeArchives(twin, acct.tableHistory || []);
+      // حساب‌های فرعیِ داخلِ فایل هم می‌آیند (قبلاً بی‌صدا حذف می‌شدند)
+      added += mergeSubs(twin, acct.subs || []);
       toast('🔗 ' + fa(added) + ' مورد به حساب «' + (twin.name || '') + '» افزوده شد', added ? '#38a169' : '#d97706');
     } else {
       // شناسه‌ها از نو ساخته می‌شوند تا با هیچ حسابِ موجودی در این برنامه تصادم نکنند
@@ -46524,11 +46650,13 @@ body.light-mode #glassClock{
 
   /* دکمهٔ «کپیِ حساب» در سربرگِ مودالِ قرض‌دار و شرکت — از همان متغیرهای خودِ
      برنامه (currentPersonId / currentCompanyId) استفاده می‌کند. */
+  /* اگر داخلِ یک «حساب فرعی» ایستاده‌ایم، کپی هم از همان حساب فرعی گرفته می‌شود —
+     نه از حسابِ اصلی. (خواستهٔ صاحب ریپو: این‌ها حساب‌های جدا هستند) */
   window.openAcctCardFromPerson = function () {
     var kind = (typeof currentPersonType !== 'undefined' && currentPersonType === 'noinv') ? 'noinv' : 'debt';
     var id = (typeof currentPersonId !== 'undefined') ? currentPersonId : null;
     if (!id) { toast('اول یک حساب را باز کنید', '#e53e3e'); return; }
-    openAcctCard(kind, id);
+    openAcctCard(kind, id, (typeof currentSubId !== 'undefined') ? currentSubId : null);
   };
   window.openAcctCardFromCompany = function () {
     var id = (typeof currentCompanyId !== 'undefined') ? currentCompanyId : null;
