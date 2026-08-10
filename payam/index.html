@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>📨 پیام‌رسان یعقوبی</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="../favicon.png">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<meta name="theme-color" content="#276749">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="پیام‌رسان">
+<meta name="description" content="پیام‌رسان و اعلانِ پمپ یعقوبی روی سرور خانگی خودمان">
+<!--
+  ═══════════════════════════════════════════════════════════════════════════
+  📨 پیام‌رسان یعقوبی — برنامهٔ جداگانهٔ پیام و اعلان
+
+  خواستهٔ صاحب ریپو: «ntfy را از ریشه بردار و یک برنامهٔ پیام‌رسان برای برنامهٔ
+  خودم درست کن؛ سرور خانگی دارم و پیام‌ها از همان برود و بیاید.»
+
+  این یک صفحهٔ کاملاً مستقل و نصب‌شدنی است (PWA با scope مخصوصِ خودش: /payam/):
+    • هیچ کتابخانه و هیچ سرویسِ بیرونی ندارد — فقط سرورِ خانگیِ خودتان.
+    • پیام می‌گیرد (وب‌سوکتِ زنده + نوتیفیکیشن با برنامهٔ بسته) و پیام می‌فرستد.
+    • روی گوشی و کامپیوتر نصب می‌شود و مثل یک برنامهٔ واقعی باز می‌شود.
+
+  سرور: همان پنلِ خانگی. سه مسیرش را به کار می‌گیرد —
+    GET  /api/notify/config                → کلید VAPID
+    POST /api/notify/<موضوع>               → فرستادن پیام
+    POST /api/notify/<موضوع>/devices       → ثبتِ این دستگاه برای نوتیفیکیشن
+    WS   /notify?topic=<موضوع>             → گرفتنِ زندهٔ پیام‌ها
+  ═══════════════════════════════════════════════════════════════════════════
+-->
+<style>
+  :root{
+    --bg:#0d1117; --card:#161b22; --card2:#1c2230; --line:#2a3140;
+    --ink:#e6edf3; --soft:#8b98a8; --green:#3fb950; --blue:#58a6ff;
+    --accent:#d97706; --red:#f85149; --mine:#1f3d2b;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:system-ui,"Segoe UI",Tahoma,sans-serif;
+    display:flex; flex-direction:column; overscroll-behavior:none;
+  }
+  button,input,textarea,select{font-family:inherit}
+
+  header{
+    display:flex; align-items:center; gap:10px; padding:12px 14px;
+    background:var(--card); border-bottom:1px solid var(--line);
+    padding-top:calc(12px + env(safe-area-inset-top));
+  }
+  header h1{font-size:17px;margin:0;flex:1;display:flex;align-items:center;gap:8px}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--red);flex-shrink:0}
+  .dot.on{background:var(--green);box-shadow:0 0 8px var(--green)}
+  .ico{
+    background:transparent;border:1px solid var(--line);color:var(--ink);
+    border-radius:10px;padding:7px 10px;font-size:15px;cursor:pointer;
+  }
+  .ico:active{background:var(--card2)}
+
+  /* نوارِ موضوع‌ها */
+  .tabs{
+    display:flex;gap:7px;padding:9px 12px;overflow-x:auto;background:var(--card);
+    border-bottom:1px solid var(--line);scrollbar-width:none;
+  }
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{
+    white-space:nowrap;border:1px solid var(--line);background:transparent;color:var(--soft);
+    border-radius:999px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;
+    position:relative;
+  }
+  .tab.active{background:var(--green);border-color:var(--green);color:#06210e}
+  .tab .badge{
+    position:absolute;top:-5px;inset-inline-start:-5px;background:var(--red);color:#fff;
+    border-radius:999px;min-width:18px;height:18px;font-size:11px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;padding:0 4px;
+  }
+
+  /* پیام‌ها */
+  #list{flex:1;overflow-y:auto;padding:14px 12px 6px;display:flex;flex-direction:column;gap:9px}
+  .msg{
+    background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:9px 12px;max-width:88%;align-self:flex-start;
+  }
+  .msg.mine{background:var(--mine);border-color:#2d5a3d;align-self:flex-end}
+  .msg.p5{border-color:var(--red)}
+  .msg .t{font-size:12.5px;font-weight:800;color:var(--accent);margin-bottom:3px}
+  .msg.mine .t{color:var(--green)}
+  .msg .b{font-size:14.5px;line-height:1.85;white-space:pre-wrap;word-break:break-word}
+  .msg .m{font-size:11px;color:var(--soft);margin-top:5px;display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+  .msg .tg{background:var(--card2);border-radius:6px;padding:1px 7px}
+  .msg .b a{color:var(--blue)}
+  .empty{color:var(--soft);text-align:center;padding:40px 16px;font-size:14px;line-height:2}
+
+  /* کادرِ فرستادن */
+  .composer{
+    display:flex;gap:8px;padding:10px 12px;background:var(--card);
+    border-top:1px solid var(--line);align-items:flex-end;
+    padding-bottom:calc(10px + env(safe-area-inset-bottom));
+  }
+  .composer textarea{
+    flex:1;resize:none;background:var(--bg);border:1px solid var(--line);border-radius:14px;
+    color:var(--ink);padding:11px 14px;font-size:15px;line-height:1.7;max-height:130px;
+  }
+  .composer textarea:focus{outline:none;border-color:var(--green)}
+  .send{
+    background:var(--green);border:0;color:#06210e;border-radius:14px;
+    width:48px;height:46px;font-size:20px;cursor:pointer;flex-shrink:0;
+  }
+  .send:disabled{opacity:.45;cursor:default}
+
+  /* نوارِ خبرِ بالای صفحه */
+  #note{
+    display:none;padding:9px 14px;font-size:13px;font-weight:700;line-height:1.8;
+    background:#3a2a08;color:#f0c674;border-bottom:1px solid #57420f;
+  }
+  #note b{color:#fff}
+  #note button{
+    margin-inline-start:8px;background:var(--green);border:0;color:#06210e;
+    border-radius:9px;padding:5px 12px;font-size:12.5px;font-weight:800;cursor:pointer;
+  }
+
+  /* پنجرهٔ تنظیمات */
+  .sheet{
+    position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;
+    align-items:center;justify-content:center;padding:16px;z-index:50;
+  }
+  .sheet.open{display:flex}
+  .sheet-box{
+    background:var(--card);border:1px solid var(--line);border-radius:18px;
+    width:100%;max-width:460px;max-height:88vh;overflow-y:auto;padding:18px;
+  }
+  .sheet-box h2{margin:0 0 4px;font-size:17px}
+  .sheet-box p{color:var(--soft);font-size:12.7px;line-height:1.95;margin:0 0 14px}
+  .fld{margin-bottom:13px}
+  .fld label{display:block;font-size:12.5px;font-weight:800;margin-bottom:5px;color:var(--soft)}
+  .fld input{
+    width:100%;background:var(--bg);border:1px solid var(--line);border-radius:11px;
+    color:var(--ink);padding:10px 12px;font-size:14px;
+  }
+  .fld input:focus{outline:none;border-color:var(--green)}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+  .chip{
+    border:1px solid var(--line);background:transparent;color:var(--soft);
+    border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:700;cursor:pointer;
+  }
+  .chip.on{background:var(--blue);border-color:var(--blue);color:#04203f}
+  .chip .x{margin-inline-start:6px;opacity:.75}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .btn{
+    flex:1;min-width:130px;border:0;border-radius:12px;padding:12px;
+    font-size:14px;font-weight:800;cursor:pointer;
+  }
+  .btn.g{background:var(--green);color:#06210e}
+  .btn.o{background:transparent;border:1px solid var(--line);color:var(--ink)}
+  .hint{font-size:12px;color:var(--soft);line-height:1.95;margin-top:12px;
+        border-top:1px dashed var(--line);padding-top:11px}
+  #setMsg{font-size:12.5px;line-height:1.9;margin-top:10px;min-height:1.2em;color:var(--soft)}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="dot" id="dot" title="وضعیت اتصال به سرور"></span>
+  <h1>📨 پیام‌رسان یعقوبی</h1>
+  <button class="ico" id="bell" onclick="enablePush()" title="روشن کردن اعلان روی این دستگاه">🔕</button>
+  <button class="ico" onclick="openSet()" title="تنظیمات">⚙️</button>
+</header>
+
+<div id="note"></div>
+
+<div class="tabs" id="tabs"></div>
+
+<div id="list"></div>
+
+<div class="composer">
+  <textarea id="box" rows="1" placeholder="پیام بنویسید…" oninput="growBox()"
+    onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!isTouch()){event.preventDefault();sendMsg();}"></textarea>
+  <button class="send" id="sendBtn" onclick="sendMsg()" title="فرستادن">➤</button>
+</div>
+
+<div class="sheet" id="sheet" onclick="if(event.target===this)closeSet()">
+  <div class="sheet-box">
+    <h2>⚙️ تنظیمات پیام‌رسان</h2>
+    <p>همه‌چیز روی <b>سرورِ خانگیِ خودتان</b> است. هیچ سرویسِ بیرونی و هیچ ثبت‌نامی در کار نیست.</p>
+
+    <div class="fld">
+      <label>آدرس سرور خانگی</label>
+      <input id="setServer" dir="ltr" placeholder="wss://sync.yaqobipump.top">
+    </div>
+    <div class="fld">
+      <label>نام شما (روی پیام‌هایی که می‌فرستید می‌نشیند)</label>
+      <input id="setName" placeholder="مثلاً میرزا">
+    </div>
+    <div class="fld">
+      <label>موضوع‌هایی که دنبال می‌کنید</label>
+      <div class="chips" id="setTopics"></div>
+      <div style="display:flex;gap:7px;margin-top:9px">
+        <input id="setNewTopic" dir="ltr" placeholder="نام موضوع تازه (حروف انگلیسی)">
+        <button class="chip" style="border-color:var(--green);color:var(--green)" onclick="addTopic()">➕ افزودن</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <button class="btn g" onclick="saveSet()">💾 ذخیره</button>
+      <button class="btn o" onclick="enablePush()">🔔 روشن کردن اعلان</button>
+    </div>
+    <div class="row">
+      <button class="btn o" onclick="testMsg()">✅ تست اعلان</button>
+      <button class="btn o" onclick="closeSet()">بستن</button>
+    </div>
+    <div id="setMsg"></div>
+
+    <div class="hint">
+      <b>موضوع‌های آماده:</b> <b dir="ltr">mirza</b> (همهٔ خبرها — مالِ مدیر)،
+      <b dir="ltr">staff</b> (چت گروهی و هشدارها — مالِ کارمندان)،
+      <b dir="ltr">p-&lt;شناسه&gt;</b> (هر مشتریِ کیو‌آر، فقط خبرِ خودش).<br>
+      <b>نصب روی گوشی:</b> اندروید — منوی مرورگر ← <b dir="ltr">Add to Home screen</b>.
+      آیفون — <b dir="ltr">Share ← Add to Home Screen</b>؛ در آیفون اعلان فقط بعد از همین کار کار می‌کند.<br>
+      <b>هر برنامه‌ای</b> می‌تواند به همین‌جا خبر بدهد:<br>
+      <code dir="ltr" style="font-size:11.5px;color:var(--blue)">curl -d "تیل مخزن ۲ کم شد" https://&lt;سرور&gt;/api/notify/staff</code>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ── حافظهٔ تنظیمات ────────────────────────────────────────────────────── */
+var LS = {
+  get: function (k, d) { try { var v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
+  set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+};
+var DEFAULT_SERVER = 'wss://sync.yaqobipump.top';
+
+var server = LS.get('payamServer', '') || DEFAULT_SERVER;
+var myName = LS.get('payamName', '') || 'میرزا';
+var topics = [];
+try { topics = JSON.parse(LS.get('payamTopics', '')) || []; } catch (e) { topics = []; }
+if (!topics.length) topics = ['mirza', 'staff'];
+var active = LS.get('payamActive', '') || topics[0];
+
+/* لینکِ «?server=…» یک‌بار ذخیره می‌شود تا دفعهٔ بعد لینکِ ساده هم کافی باشد */
+try {
+  var qp = new URLSearchParams(location.search);
+  if (qp.get('server')) { server = qp.get('server'); LS.set('payamServer', server); }
+  if (qp.get('topic')) {
+    var qt = clean(qp.get('topic'));
+    if (qt && topics.indexOf(qt) < 0) { topics.push(qt); saveTopics(); }
+    if (qt) active = qt;
+  }
+  if (qp.get('server') || qp.get('topic')) history.replaceState(null, '', location.pathname);
+} catch (e) {}
+
+function saveTopics() { LS.set('payamTopics', JSON.stringify(topics)); }
+function clean(v) {
+  return String(v || '').trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+}
+/* آدرسِ سرور به دو شکل لازم می‌شود: ws برای سوکت، http برای API */
+function wsBase() { return String(server || '').replace(/\/+$/, ''); }
+function httpBase() { return wsBase().replace(/^ws/i, 'http'); }
+
+/* ── فهرستِ پیام‌ها ────────────────────────────────────────────────────── */
+var msgs = {};       // topic → [message]
+var socks = {};      // topic → WebSocket
+var unread = {};     // topic → عدد
+var retry = null;
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+  });
+}
+/* لینک‌های داخلِ متن قابل زدن شوند — بعد از esc، پس هیچ HTMLی تزریق نمی‌شود */
+function linkify(s) {
+  return esc(s).replace(/(https?:\/\/[^\s<]+)/g, function (u) {
+    return '<a href="' + u + '" target="_blank" rel="noopener">' + u + '</a>';
+  });
+}
+function when(ts) {
+  var d = new Date(ts || Date.now());
+  try { return d.toLocaleString('fa-IR', { dateStyle: 'short', timeStyle: 'short' }); }
+  catch (e) { return d.toLocaleString(); }
+}
+function isTouch() { return matchMedia('(pointer:coarse)').matches; }
+
+/* ── نمای موضوع‌ها ─────────────────────────────────────────────────────── */
+function paintTabs() {
+  var el = document.getElementById('tabs');
+  el.innerHTML = topics.map(function (t) {
+    var n = unread[t] || 0;
+    return '<button class="tab' + (t === active ? ' active' : '') + '" onclick="pick(\'' + esc(t) + '\')">' +
+      esc(label(t)) + (n && t !== active ? '<span class="badge">' + (n > 99 ? '99+' : n) + '</span>' : '') +
+      '</button>';
+  }).join('');
+}
+function label(t) {
+  if (t === 'mirza') return '👤 میرزا';
+  if (t === 'staff') return '👷 کارمندان';
+  if (t.indexOf('p-') === 0) return '🧑 ' + t.slice(2);
+  return '# ' + t;
+}
+function pick(t) {
+  active = t; unread[t] = 0;
+  LS.set('payamActive', t);
+  paintTabs(); paintList();
+}
+
+function paintList() {
+  var el = document.getElementById('list');
+  var list = msgs[active] || [];
+  if (!list.length) {
+    el.innerHTML = '<div class="empty">هنوز پیامی در «' + esc(label(active)) + '» نیست.<br>' +
+      (live() ? 'به سرور وصل هستید — اولین پیام همین‌جا می‌نشیند.'
+              : '⏳ در حال وصل شدن به سرور خانگی…') + '</div>';
+    return;
+  }
+  el.innerHTML = list.map(function (m) {
+    var mine = (m.title || '') === myName;
+    return '<div class="msg' + (mine ? ' mine' : '') + (m.priority >= 5 ? ' p5' : '') + '">' +
+      (m.title ? '<div class="t">' + esc(m.title) + '</div>' : '') +
+      '<div class="b">' + linkify(m.body) + '</div>' +
+      '<div class="m"><span>' + esc(when(m.createdAt)) + '</span>' +
+      (m.tags || []).map(function (g) { return '<span class="tg">' + esc(g) + '</span>'; }).join('') +
+      '</div></div>';
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function accept(topic, m, isLive) {
+  if (!m || typeof m.id === 'undefined') return;
+  if (!msgs[topic]) msgs[topic] = [];
+  if (msgs[topic].some(function (x) { return x.id === m.id; })) return;
+  msgs[topic].push(m);
+  msgs[topic].sort(function (a, b) { return a.id - b.id; });
+  if (msgs[topic].length > 300) msgs[topic] = msgs[topic].slice(-300);
+  if (isLive && topic !== active) { unread[topic] = (unread[topic] || 0) + 1; paintTabs(); }
+  if (topic === active) paintList();
+}
+
+/* ── اتصالِ زنده ───────────────────────────────────────────────────────── */
+function live() {
+  for (var t in socks) if (socks[t] && socks[t].readyState === 1) return true;
+  return false;
+}
+function paintDot() {
+  var d = document.getElementById('dot');
+  d.className = 'dot' + (live() ? ' on' : '');
+  d.title = live() ? 'وصل به سرور خانگی' : 'قطع — در حال تلاش دوباره';
+}
+function connect() {
+  var base = wsBase();
+  if (!base) return;
+  topics.forEach(function (t) {
+    var old = socks[t];
+    if (old && (old.readyState === 0 || old.readyState === 1)) return;
+    var s;
+    try { s = new WebSocket(base + '/notify?topic=' + encodeURIComponent(t)); }
+    catch (e) { again(); return; }
+    socks[t] = s;
+    s.onopen = function () { paintDot(); if (t === active) paintList(); };
+    s.onmessage = function (ev) {
+      var m = null;
+      try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (m.op === 'ready') { (m.messages || []).forEach(function (x) { accept(t, x, false); }); }
+      else if (m.op === 'message') { accept(t, m, true); }
+    };
+    s.onclose = function () { if (socks[t] === s) { delete socks[t]; paintDot(); again(); } };
+    s.onerror = function () { try { s.close(); } catch (e) {} };
+  });
+  // سوکتِ موضوع‌هایی که دیگر دنبال نمی‌شوند بسته شود
+  Object.keys(socks).forEach(function (t) {
+    if (topics.indexOf(t) < 0) { try { socks[t].close(); } catch (e) {} delete socks[t]; }
+  });
+}
+function again() {
+  if (retry) return;
+  retry = setTimeout(function () { retry = null; connect(); }, 5000);
+}
+
+/* ── فرستادن پیام ─────────────────────────────────────────────────────── */
+function growBox() {
+  var b = document.getElementById('box');
+  b.style.height = 'auto';
+  b.style.height = Math.min(b.scrollHeight, 130) + 'px';
+}
+function sendMsg() {
+  var b = document.getElementById('box');
+  var txt = (b.value || '').trim();
+  if (!txt) return;
+  var btn = document.getElementById('sendBtn');
+  btn.disabled = true;
+  post(active, myName, txt, {}).then(function (ok) {
+    btn.disabled = false;
+    if (ok) { b.value = ''; growBox(); }
+    else note('پیام فرستاده نشد — سرورِ خانگی در دسترس نیست.', true);
+  });
+}
+/* یک درخواستِ ساده به سرورِ خانگی — همان چیزی که curl هم می‌زند */
+function post(topic, title, body, opts) {
+  var base = httpBase();
+  if (!base || !topic) return Promise.resolve(false);
+  var o = opts || {};
+  return fetch(base + '/api/notify/' + encodeURIComponent(topic), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: title || undefined,
+      message: String(body || ''),
+      priority: o.priority || 3,
+      tags: o.tags || undefined,
+      click: location.href.split('?')[0]
+    })
+  }).then(function (r) { return r.ok; }).catch(function () { return false; });
+}
+
+/* ── نوارِ خبر ─────────────────────────────────────────────────────────── */
+function note(html, warn) {
+  var el = document.getElementById('note');
+  el.innerHTML = html;
+  el.style.display = html ? '' : 'none';
+  el.style.background = warn ? '#3a1010' : '#3a2a08';
+  el.style.color = warn ? '#ffb4ab' : '#f0c674';
+  el.style.borderBottomColor = warn ? '#5c1d1d' : '#57420f';
+}
+
+/* ── نوتیفیکیشن روی همین دستگاه ───────────────────────────────────────── */
+function bellState() {
+  var b = document.getElementById('bell');
+  var on = (typeof Notification !== 'undefined') && Notification.permission === 'granted' && !!LS.get('payamPushOn', '');
+  b.textContent = on ? '🔔' : '🔕';
+  b.style.borderColor = on ? 'var(--green)' : 'var(--line)';
+  return on;
+}
+function b64ToBytes(b64) {
+  var pad = '='.repeat((4 - (b64.length % 4)) % 4);
+  var raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  var out = new Uint8Array(raw.length);
+  for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+function sameKey(sub, want) {
+  try {
+    var have = sub.options && sub.options.applicationServerKey;
+    if (!have) return false;
+    var a = new Uint8Array(have);
+    if (a.length !== want.length) return false;
+    for (var i = 0; i < a.length; i++) if (a[i] !== want[i]) return false;
+    return true;
+  } catch (e) { return false; }
+}
+/* برمی‌گرداند: true · 'denied' · 'unsupported' · false (سرور جواب نداد) */
+function subscribeDevice() {
+  if (typeof Notification === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+    return Promise.resolve('unsupported');
+  }
+  return Notification.requestPermission().then(function (p) {
+    if (p !== 'granted') return 'denied';
+    var base = httpBase();
+    if (!base) return false;
+    return fetch(base + '/api/notify/config').then(function (r) { return r.json(); }).then(function (cfg) {
+      if (!cfg || !cfg.vapidPublicKey) return false;
+      var key = b64ToBytes(cfg.vapidPublicKey);
+      return navigator.serviceWorker.ready.then(function (reg) {
+        return reg.pushManager.getSubscription().then(function (sub) {
+          /* اشتراکِ قدیمی که با کلیدِ دیگری گرفته شده، برای همیشه بی‌صداست:
+             سرور می‌فرستد و سرویسِ پوش ردش می‌کند. پس دور انداخته می‌شود. */
+          if (sub && !sameKey(sub, key)) return sub.unsubscribe().catch(function () {}).then(function () { return null; });
+          return sub;
+        }).then(function (sub) {
+          return sub || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+        });
+      }).then(function (sub) {
+        return Promise.all(topics.map(function (t) {
+          return fetch(base + '/api/notify/' + encodeURIComponent(t) + '/devices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subscription: sub.toJSON(), label: myName })
+          }).then(function (r) { return r.json(); }).catch(function () { return { ok: false }; });
+        })).then(function (res) {
+          if (!res.some(function (x) { return x && x.ok; })) return false;
+          LS.set('payamPushOn', '1');
+          LS.set('payamPushEndpoint', sub.endpoint || '');
+          LS.set('payamPushTopics', topics.slice().sort().join(','));
+          return true;
+        });
+      });
+    }).catch(function () { return false; });
+  }).catch(function () { return false; });
+}
+function enablePush() {
+  setMsg('در حال روشن کردن اعلان…');
+  subscribeDevice().then(function (r) {
+    bellState();
+    if (r === true) {
+      note('🔔 اعلان روی این دستگاه روشن شد — خبرها حتی با برنامهٔ بسته می‌رسند.');
+      setMsg('✅ روشن شد.', 'var(--green)');
+      setTimeout(function () { note(''); }, 6000);
+      return;
+    }
+    if (r === 'denied') {
+      note('اجازهٔ اعلان داده نشد. از تنظیماتِ مرورگر، <b>Notifications</b> این صفحه را «Allow» کنید.', true);
+      setMsg('❌ اجازه داده نشد.', 'var(--red)');
+      return;
+    }
+    if (r === 'unsupported') {
+      note('این مرورگر نوتیفیکیشن ندارد. در آیفون اول <b>Share ← Add to Home Screen</b> را بزنید و از همان آیکون باز کنید.', true);
+      setMsg('این مرورگر پشتیبانی نمی‌کند.', 'var(--red)');
+      return;
+    }
+    note('سرورِ خانگی جواب نداد — مطمئن شوید کامپیوترِ سرور روشن است.', true);
+    setMsg('❌ سرور در دسترس نیست.', 'var(--red)');
+  });
+}
+/* بی‌سروصدا: اگر قبلاً اجازه داده شده، هر بار که برنامه بالا می‌آید دستگاه دوباره
+   نزدِ سرور ثبت می‌شود — چون اشتراکِ پوش گاهی عوض می‌شود و بدون ثبتِ تازه،
+   اعلان بی‌صدا می‌میرد. */
+function silentPush() {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  var wantTopics = topics.slice().sort().join(',');
+  var same = LS.get('payamPushTopics', '') === wantTopics;
+  var wantEp = LS.get('payamPushEndpoint', '');
+  navigator.serviceWorker.ready
+    .then(function (reg) { return reg.pushManager.getSubscription(); })
+    .then(function (sub) {
+      if (same && sub && sub.endpoint === wantEp) return;   // همه‌چیز سرِ جایش
+      subscribeDevice().then(bellState);
+    })
+    .catch(function () {});
+}
+
+/* ── تنظیمات ──────────────────────────────────────────────────────────── */
+function setMsg(t, color) {
+  var el = document.getElementById('setMsg');
+  el.innerHTML = t || '';
+  el.style.color = color || 'var(--soft)';
+}
+function openSet() {
+  document.getElementById('setServer').value = server;
+  document.getElementById('setName').value = myName;
+  paintSetTopics();
+  setMsg('');
+  document.getElementById('sheet').classList.add('open');
+}
+function closeSet() { document.getElementById('sheet').classList.remove('open'); }
+function paintSetTopics() {
+  document.getElementById('setTopics').innerHTML = topics.map(function (t) {
+    return '<span class="chip on">' + esc(label(t)) +
+      '<span class="x" onclick="dropTopic(\'' + esc(t) + '\')" title="برداشتن">✕</span></span>';
+  }).join('') || '<span style="color:var(--soft);font-size:12.5px">هیچ موضوعی انتخاب نشده</span>';
+}
+function addTopic() {
+  var inp = document.getElementById('setNewTopic');
+  var t = clean(inp.value);
+  if (!t) { setMsg('نام موضوع باید با حروف انگلیسی باشد.', 'var(--red)'); return; }
+  if (topics.indexOf(t) < 0) topics.push(t);
+  inp.value = '';
+  saveTopics(); paintSetTopics(); paintTabs(); connect();
+  setMsg('موضوع «' + esc(t) + '» افزوده شد.', 'var(--green)');
+}
+function dropTopic(t) {
+  if (topics.length <= 1) { setMsg('دستِ‌کم یک موضوع باید بماند.', 'var(--red)'); return; }
+  topics = topics.filter(function (x) { return x !== t; });
+  if (active === t) active = topics[0];
+  saveTopics(); LS.set('payamActive', active);
+  paintSetTopics(); paintTabs(); paintList(); connect();
+}
+function saveSet() {
+  var s = (document.getElementById('setServer').value || '').trim().replace(/\/+$/, '');
+  var n = (document.getElementById('setName').value || '').trim();
+  if (s && !/^wss?:\/\/|^https?:\/\//i.test(s)) { setMsg('آدرس باید با <b dir="ltr">wss://</b> شروع شود.', 'var(--red)'); return; }
+  if (s && /^ws:\/\//i.test(s) && location.protocol === 'https:') {
+    setMsg('صفحه با https باز شده، پس آدرسِ ناامنِ <b dir="ltr">ws://</b> کار نمی‌کند — از <b dir="ltr">wss://</b> استفاده کنید.', 'var(--red)');
+    return;
+  }
+  server = s || DEFAULT_SERVER;
+  myName = n || 'میرزا';
+  LS.set('payamServer', server);
+  LS.set('payamName', myName);
+  // آدرسِ سرور عوض شد → همهٔ سوکت‌ها از نو
+  Object.keys(socks).forEach(function (t) { try { socks[t].close(); } catch (e) {} delete socks[t]; });
+  msgs = {};
+  paintList(); connect();
+  setMsg('✅ ذخیره شد.', 'var(--green)');
+}
+function testMsg() {
+  setMsg('در حال فرستادن تست…');
+  post(active, myName, '✅ تست پیام‌رسان — ' + when(Date.now()), { tags: ['tada'] }).then(function (ok) {
+    setMsg(ok
+      ? '✅ تست فرستاده شد. برنامه را ببندید و دوباره تست بزنید تا مطمئن شوید اعلان با برنامهٔ بسته هم می‌آید.'
+      : '❌ سرور خبر را نگرفت — مطمئن شوید کامپیوترِ سرور روشن است.', ok ? 'var(--green)' : 'var(--red)');
+  });
+}
+
+/* ── راه‌اندازی ───────────────────────────────────────────────────────── */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(function () {});
+  navigator.serviceWorker.addEventListener('message', function (ev) {
+    var d = ev.data || {};
+    // پیامی که سرویس‌ورکر گرفت و چون صفحه باز بود خودش نشان نداد
+    if (d.type === 'push-message') note('🔔 <b>' + esc(d.title || '') + '</b> — ' + esc(String(d.body || '').slice(0, 90)));
+    if (d.type === 'push-resubscribe') subscribeDevice().then(bellState);
+  });
+}
+paintTabs();
+paintList();
+paintDot();
+bellState();
+connect();
+setInterval(paintDot, 3000);
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible') { connect(); silentPush(); }
+});
+window.addEventListener('online', connect);
+setTimeout(silentPush, 1500);
+if (!bellState()) {
+  note('برای گرفتنِ اعلان با برنامهٔ بسته، یک‌بار اجازه بدهید.<button onclick="enablePush()">🔔 روشن کن</button>');
+}
+</script>
+</body>
+</html>
