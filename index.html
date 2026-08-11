@@ -1960,12 +1960,12 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
 </style>
 <script>
 /* ============================================================================
-   سرور شخصی (جایگزین فایربیس) — شیم سازگار با Firebase Realtime Database
+   سرورِ خانگیِ خودتان — تنها بک‌اندِ این برنامه
    ----------------------------------------------------------------------------
    اگر آدرس سرور شخصی خودت را این‌جا (یا در localStorage با کلید pumpServerUrl)
-   بگذاری، کل هم‌زمان‌سازی و چت به‌جای فایربیس به سرور تو (WebSocket) می‌رود و
-   محدودیت فضای فایربیس برداشته می‌شود. راهنمای راه‌اندازی: server/README-fa.md
-   اگر خالی بماند، برنامه دقیقاً مثل قبل با فایربیس کار می‌کند (بدون هیچ تغییری).
+   بگذاری، کل هم‌زمان‌سازی و چت روی همان سرور (WebSocket) می‌رود و هیچ سقفِ
+   فضایی در کار نیست. راهنمای راه‌اندازی: server/README-fa.md
+   اگر خالی بماند، برنامه فقط محلی کار می‌کند و چیزی جایی نمی‌رود.
 
    روش فعال‌سازی بدون ویرایش این فایل (در کنسول مرورگر):
      localStorage.setItem('pumpServerUrl',  'wss://YOURNAME.trycloudflare.com');
@@ -1974,7 +1974,7 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
    ============================================================================ */
 (function(){
   // پیش‌فرضِ همیشگی: هر کس بدون هیچ تنظیمی سایت را باز کند، خودکار به همین سرور
-  // وصل می‌شود (دقیقاً مثل فایربیس قبلی — یک بک‌اند مشترک برای همه دستگاه‌ها).
+  // وصل می‌شود — یک بک‌اندِ مشترک برای همهٔ دستگاه‌ها، همه‌اش مالِ خودتان.
   // این آدرس یک «تونل نام‌دار» روی دامنهٔ خودمان است، نه Quick Tunnel؛ پس با
   // restart شدن سرور یا cloudflared عوض نمی‌شود و همیشه همین می‌ماند.
   var BUILTIN_URL   = 'wss://sync.yaqobipump.top';
@@ -2045,7 +2045,7 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
 
   try { SELF_HOST_URL   = window.SELF_HOST_URL   || localStorage.getItem('pumpServerUrl')   || SELF_HOST_URL; } catch(e){}
   try { SELF_HOST_TOKEN = window.SELF_HOST_TOKEN || localStorage.getItem('pumpServerToken') || SELF_HOST_TOKEN; } catch(e){}
-  window.__USE_SELF_HOST__ = true;         // فایربیس کاملاً حذف شده — تنها بک‌اند، سرور شخصی است
+  window.__USE_SELF_HOST__ = true;         // تنها بک‌اندِ برنامه: سرورِ خانگیِ خودتان
   window.__SELF_HOST_URL__ = SELF_HOST_URL; // اگر خالی باشد، برنامه فقط محلی کار می‌کند (بدون هم‌زمان‌سازی)
   window.__SELF_HOST_TOKEN__ = SELF_HOST_TOKEN; // برای نمایش در تنظیمات › هم‌زمان‌سازی
 
@@ -2752,11 +2752,14 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
 
   if (SELF_HOST_URL) doSub(CFG_PATH, 'value', cfgOnRemote);   // با هر اتصال دوباره مسلح می‌شود
 
-  // نصب آبجکت firebase جعلی — بقیهٔ برنامه بدون هیچ تغییری همین را صدا می‌زند
-  window.firebase = { initializeApp: function(){ return {}; }, database: function(){ return dbInstance; } };
+  /* درِ ورودیِ «سرورِ خانگی» برای بقیهٔ برنامه. تا نسخهٔ 2.9.250 اسمش «firebase»
+     بود — نه چون فایربیسی در کار بود (سال‌هاست نیست و هیچ کتابخانه‌ای از گوگل
+     بارگذاری نمی‌شود)، بلکه چون شکلِ صدا زدنش همان مانده بود. اسم عوض شد تا
+     کسی گمان نکند دادهٔ این پمپ جایی بیرون از سرورِ خودش می‌رود. */
+  window.__pumpHome__ = { open: function(){ return {}; }, db: function(){ return dbInstance; } };
   if (SELF_HOST_URL) connect();            // فقط وقتی آدرس سرور تنظیم شده باشد وصل شو
-  window._firebaseLibLoaded = true;
-  if (typeof window._onFirebaseLibReady === 'function') { try { window._onFirebaseLibReady(); } catch(e){} }
+  window._srvLibLoaded = true;
+  if (typeof window._onSrvLibReady === 'function') { try { window._onSrvLibReady(); } catch(e){} }
   try { console.log(SELF_HOST_URL ? ('[پمپ یعقوبی] سرور شخصی → ' + SELF_HOST_URL) : '[پمپ یعقوبی] سرور شخصی تنظیم نشده — فقط محلی (تنظیمات › هم‌زمان‌سازی)'); } catch(e){}
 })();
 </script>
@@ -2780,7 +2783,7 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
     if (window.XLSX) { if (cb) cb(); return; }
     add('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', cb);
   };
-  // فایربیس کاملاً حذف شده — دیگر هیچ کتابخانه‌ای از گوگل بارگذاری نمی‌شود.
+  // هیچ کتابخانه‌ای از گوگل بارگذاری نمی‌شود.
   // بک‌اند برنامه فقط «سرور شخصی» است (شیمِ بالا در index.html). آدرس سرور در
   // تنظیمات › هم‌زمان‌سازی یا localStorage('pumpServerUrl') تعیین می‌شود.
 })();
@@ -19703,7 +19706,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
 
   <!-- 3) چت تک‌نفره = پیام‌رسانِ یعقوبی (روی سرورِ خانگی) ─────────────────────
        گفت‌وگوها همان موضوع‌های سرورِ خانگی‌اند: «چتِ کارمندان» و چتِ تک‌به‌تک با
-       هر حسابِ قرض‌دار. چتِ قدیمیِ Firebase پاک نشده — پیام‌هایش به‌عنوان
+       هر حسابِ قرض‌دار. چتِ قدیمی پاک نشده — پیام‌هایش به‌عنوان
        «تاریخچه» در همان گفت‌وگو دیده می‌شوند (فقط خواندنی). -->
   <div class="rb-pane" id="rbPane-dm">
     <div class="msgr-pane" id="msgrPane">
@@ -20767,15 +20770,15 @@ function dedupAccounts() {
   return changed;
 }
 
-// ========== SYNC آنلاین (سرور شخصی — جایگزین کامل فایربیس) ==========
+// ========== SYNC آنلاین (فقط و فقط سرورِ خانگیِ خودتان) ==========
 // فایربیس از ریشه حذف شده. تنها بک‌اند، «سرور شخصی» است که آدرسش در
 // تنظیمات › هم‌زمان‌سازی (یا localStorage['pumpServerUrl']) تعیین می‌شود.
 // اگر آدرس تنظیم نشده باشد، برنامه فقط محلی کار می‌کند (بدون هم‌زمان‌سازی/چت).
-let _fbApp = null, _fbDb = null;
-function _fbReady() {
+let _srvApp = null, _srvDb = null;
+function _srvReady() {
   if (!window.__SELF_HOST_URL__) return false;   // آدرس سرور شخصی تنظیم نشده → فقط محلی
   try {
-    if (!_fbApp) { _fbApp = firebase.initializeApp({}); _fbDb = firebase.database(); }
+    if (!_srvApp) { _srvApp = window.__pumpHome__.open({}); _srvDb = window.__pumpHome__.db(); }
     return true;
   } catch(e) { return false; }
 }
@@ -20873,7 +20876,7 @@ function _copyShareText(text, okMsg) {
 function syncUpload() {
   const code = _syncCode();
   if (!code) { _setSyncMsg('❌ اول کد ایستگاه را ذخیره کنید', '#e53e3e'); return; }
-  if (!_fbReady()) { _setSyncMsg('⚠️ آدرس سرور شخصی تنظیم نشده — در تنظیمات › هم‌زمان‌سازی، آدرس سرور را وارد کنید.', '#d97706'); return; }
+  if (!_srvReady()) { _setSyncMsg('⚠️ آدرس سرور شخصی تنظیم نشده — در تنظیمات › هم‌زمان‌سازی، آدرس سرور را وارد کنید.', '#d97706'); return; }
   if (!navigator.onLine) { _setSyncMsg('❌ اینترنت وصل نیست', '#e53e3e'); return; }
   // محافظ: بارگذاریِ دستیِ یک حسابِ کاملاً خالی (دستگاه تازه) روی سرورِ داده‌دار، حساب اصلی را پاک می‌کند
   if (_dbRecordCount(DB) === 0 && !confirm('حساب این دستگاه خالی است. با بارگذاری، حسابِ خالی روی سرور نوشته می‌شود و اطلاعات قبلی سرور از بین می‌رود. مطمئن هستید؟')) { _setSyncMsg('بارگذاری لغو شد — اول «دریافت از سرور» را بزنید', '#d97706'); return; }
@@ -20882,7 +20885,7 @@ function syncUpload() {
   const payload = JSON.parse(JSON.stringify(DB));
   payload.lastSyncUpload = new Date().toISOString();
   _nextSeq(code)
-    .then(seq => { payload._seq = seq; return _fbDb.ref('stations/' + code).set(payload); })
+    .then(seq => { payload._seq = seq; return _srvDb.ref('stations/' + code).set(payload); })
     .then(() => {
       DB.lastSyncUpload = payload.lastSyncUpload;
       DB._seq = payload._seq;
@@ -20899,12 +20902,12 @@ function syncUpload() {
 function syncDownload() {
   const code = _syncCode();
   if (!code) { _setSyncMsg('❌ اول کد ایستگاه را ذخیره کنید', '#e53e3e'); return; }
-  if (!_fbReady()) { _setSyncMsg('⚠️ آدرس سرور شخصی تنظیم نشده — در تنظیمات › هم‌زمان‌سازی، آدرس سرور را وارد کنید.', '#d97706'); return; }
+  if (!_srvReady()) { _setSyncMsg('⚠️ آدرس سرور شخصی تنظیم نشده — در تنظیمات › هم‌زمان‌سازی، آدرس سرور را وارد کنید.', '#d97706'); return; }
   if (!navigator.onLine) { _setSyncMsg('❌ اینترنت وصل نیست', '#e53e3e'); return; }
   if (!confirm('اطلاعات فعلی شما با اطلاعات سرور جایگزین می‌شود. ادامه می‌دهید؟')) return;
   clearTimeout(_autoSyncTimer);
   _setSyncMsg('⏳ در حال دریافت...', 'var(--accent)');
-  _fbDb.ref('stations/' + code).get()
+  _srvDb.ref('stations/' + code).get()
     .then(snap => {
       if (!snap.exists()) { _setSyncMsg('چیزی روی سرور برای این کد پیدا نشد.', '#d97706'); return; }
       var _prevRev = parseInt(DB._rev, 10) || 0;
@@ -20942,8 +20945,8 @@ function syncDiagnose() {
   L.push('🔢 شمارهٔ نوبتِ این دستگاه: ' + _seqOf(DB));
   L.push('📦 رکوردهای این دستگاه: ' + _dbRecordCount(DB));
   box.innerHTML = L.join('<br>') + '<br>⏳ در حال خواندن از سرور...';
-  if (!_fbReady()) { box.innerHTML = L.join('<br>') + '<br>❌ سرور تنظیم نشده'; return; }
-  _fbDb.ref('stations/' + code).get().then(function(snap){
+  if (!_srvReady()) { box.innerHTML = L.join('<br>') + '<br>❌ سرور تنظیم نشده'; return; }
+  _srvDb.ref('stations/' + code).get().then(function(snap){
     const sd = snap.exists() ? snap.val() : null;
     if (!sd) { box.innerHTML = L.join('<br>') + '<br>⚠️ روی این سرور برای کد «' + code + '» هیچ حسابی نیست.'; return; }
     L.push('🔢 شمارهٔ نوبتِ سرور: ' + _seqOf(sd));
@@ -21026,14 +21029,14 @@ function _runAutoSync() {
   if (!navigator.onLine) return;
   const code = _syncCode();
   if (!code) return;            // کد ایستگاه هنوز ثبت نشده — کاری برای خودکار فرستادن نیست
-  if (!_fbReady()) return;      // سرور آنلاین هنوز فعال نشده
+  if (!_srvReady()) return;      // سرور آنلاین هنوز فعال نشده
   if (currentRole === 'viewer') return; // نظاره‌گر چیزی برای بارگذاری ندارد
   // محافظ حیاتی (مشکل آیفون/دستگاه تازه): اگر دیتای محلی کاملاً خالی است و هنوز
   // اولین دریافت از سرور انجام نشده، هرگز آپلود نکن — وگرنه یک دستگاه تازه
   // (مثلاً Safari آیفون یا شورت‌کات که حافظهٔ جدا دارند) حسابِ خالی خودش را با
   // timestamp جدید روی سرور می‌نوشت و حساب اصلی همهٔ دستگاه‌ها پاک می‌شد.
   // پاک‌سازیِ عمدی (wipedAt) استثناست: حالتِ خالی باید آپلود شود تا سرور هم خالی شود
-  if (_dbRecordCount(DB) === 0 && !_fbStartupPulled && !DB.wipedAt) return;
+  if (_dbRecordCount(DB) === 0 && !_srvStartupPulled && !DB.wipedAt) return;
   // سوکت قطع است: نوشتن را در صف نگذار (با شمارهٔ کهنه روی کارِ تازهٔ بقیه می‌نشیند)
   if (!_syncSocketReady()) { _scheduleAutoSync(8000); return; }
 
@@ -21042,7 +21045,7 @@ function _runAutoSync() {
   const payload = JSON.parse(JSON.stringify(DB));
   payload.lastSyncUpload = new Date().toISOString();
   _nextSeq(code)
-    .then(seq => { payload._seq = seq; return _fbDb.ref('stations/' + code).set(payload); })
+    .then(seq => { payload._seq = seq; return _srvDb.ref('stations/' + code).set(payload); })
     .then(() => {
       DB.lastSyncUpload = payload.lastSyncUpload;
       DB._seq = payload._seq;
@@ -21090,12 +21093,12 @@ window.addEventListener('offline', function(){
 // محافظ اضافه: هر دو دقیقه یک‌بار هم چک کن (برای حالتی که رویداد online را مرورگر/سیستم نفرستد)
 setInterval(function(){ if (navigator.onLine && _dirtySinceUpload) _runAutoSync(); }, 120000);
 
-// ========== بارگذاری خودکار از Firebase هنگام شروع برنامه ==========
+// ========== بارگذاری خودکار از سرورِ خانگی هنگام شروع برنامه ==========
 // روی هر دستگاهی (فلش، ارسال‌شده، دستگاه جدید) که کد ایستگاه داشته باشد،
 // در شروع برنامه آخرین اطلاعات از سرور دریافت می‌شود — بدون نیاز به زدن دکمه.
-let _fbStartupDone = false;
-let _fbStartupPulled = false;  // اولین دریافت موفق از سرور انجام شده؟ (محافظ آپلودِ دیتای خالی)
-let _fbStartupTries = 0;
+let _srvStartupDone = false;
+let _srvStartupPulled = false;  // اولین دریافت موفق از سرور انجام شده؟ (محافظ آپلودِ دیتای خالی)
+let _srvStartupTries = 0;
 
 /* ── «کدام نسخه تازه‌تر است؟» دیگر با ساعتِ دستگاه تصمیم گرفته نمی‌شود ──────────
    ریشهٔ این‌که گوشی و کامپیوتر هیچ‌وقت یکی نمی‌شدند همین بود: تازه‌بودن با
@@ -21123,7 +21126,7 @@ function _localIsNewerOrSame(sd){
 // شمارهٔ نوبتِ بعدی را از خودِ سرور بگیر (اگر نشد، دستِ‌کم یکی جلوتر از مالِ خودمان)
 function _nextSeq(code){
   try {
-    return _fbDb.ref('stations/' + code + '/_seq').get()
+    return _srvDb.ref('stations/' + code + '/_seq').get()
       .then(function(s){ return Math.max(parseInt(s && s.val(), 10) || 0, _seqOf(DB)) + 1; })
       .catch(function(){ return _seqOf(DB) + 1; });
   } catch(e) { return Promise.resolve(_seqOf(DB) + 1); }
@@ -21160,7 +21163,7 @@ function _applyServerDataGuarded(serverData, toastText){
   if (_holdServerData()){
     try { _scheduleAutoSync(600); } catch (e) {}            // اول مالِ خودمان برود
     clearTimeout(_holdRetryTimer);
-    _holdRetryTimer = setTimeout(function(){ try { _fbPullLatestOnce(); } catch (e) {} }, 6000);
+    _holdRetryTimer = setTimeout(function(){ try { _srvPullLatestOnce(); } catch (e) {} }, 6000);
     return false;
   }
   _applyServerData(serverData);
@@ -21171,7 +21174,7 @@ let _holdRetryTimer = null;
 function _applyServerData(serverData) {
   _applyingServerData = true;
   try {
-  // سرور همیشه یک عکسِ کاملِ دیتابیس است، ولی Firebase آرایه/آبجکتِ خالی را ذخیره
+  // سرور همیشه یک عکسِ کاملِ دیتابیس است، ولی آرایه/آبجکتِ خالی را ذخیره
   // نمی‌کند — پس نبودنِ کلید یعنی آن بخش خالی است. بدون این، «پاک کردن همه» روی یک
   // دستگاه هرگز به دستگاه‌های دیگر نمی‌رسید و داده‌های قدیمی دوباره برمی‌گشتند.
   try {
@@ -21200,28 +21203,28 @@ function _applyServerData(serverData) {
     try { _updateAutoSyncBadge(); } catch(e) {}
   }
 }
-function _autoLoadFromFirebaseOnStartup() {
-  if (_fbStartupDone) return; // یک‌بار کافی است — از تایمر و onload کتابخانه هر دو صدا می‌خورد
+function _autoLoadFromServerOnStartup() {
+  if (_srvStartupDone) return; // یک‌بار کافی است — از تایمر و onload کتابخانه هر دو صدا می‌خورد
   const code = _syncCode();
-  if (!code || !_fbReady()) {
-    // کتابخانهٔ Firebase هنوز نیامده — کمی بعد دوباره (onload کتابخانه هم صدا می‌زند)
-    setTimeout(_autoLoadFromFirebaseOnStartup, 3000);
+  if (!code || !_srvReady()) {
+    // لایهٔ سرور هنوز بالا نیامده — کمی بعد دوباره (onload خودش هم صدا می‌زند)
+    setTimeout(_autoLoadFromServerOnStartup, 3000);
     return;
   }
   // نکتهٔ مهم iOS: در Safari/شورت‌کات آیفون navigator.onLine گاهی به‌اشتباه false است
   // و رویداد online هم هرگز نمی‌آید؛ قبلاً همین‌جا دریافتِ حساب از سرور برای همیشه
   // متوقف می‌شد و آیفون مثل «حساب جدید و خالی» می‌ماند. حالا به آن اتکا نمی‌کنیم —
   // خودِ درخواست را می‌فرستیم و اگر شکست خورد با فاصلهٔ فزاینده دوباره تلاش می‌کنیم.
-  _fbStartupDone = true; // جلوی اجرای هم‌زمان دوباره — در صورت خطا در catch باز می‌شود
-  _fbDb.ref('stations/' + code).get()
+  _srvStartupDone = true; // جلوی اجرای هم‌زمان دوباره — در صورت خطا در catch باز می‌شود
+  _srvDb.ref('stations/' + code).get()
     .then(function(snap) {
-      _fbStartupPulled = true;
+      _srvStartupPulled = true;
       const serverData = snap.exists() ? snap.val() : null;
       if (!serverData) {
         // سرور خالی — اطلاعات محلی را آپلود کن
         _dirtySinceUpload = true;
         _runAutoSync();
-        _startFirebaseRealtimeListener();
+        _startServerRealtimeListener();
         return;
       }
       // محافظ دستگاه تازه: اگر اینجا (آیفون/مرورگر تازه) هیچ رکوردی نیست ولی سرور
@@ -21238,19 +21241,19 @@ function _autoLoadFromFirebaseOnStartup() {
         try { showTopToast('☁️ حساب از سرور به‌روز شد', '#38a169', 3000); } catch(e) {}
       }
       // پس از اولین sync، listener بلادرنگ را شروع کن
-      _startFirebaseRealtimeListener();
+      _startServerRealtimeListener();
     })
     .catch(function() {
       // شبکه در لحظهٔ باز شدن برنامه ناپایدار بود — دوباره تلاش کن (5s، 10s، 20s… سقف 30s)
-      _fbStartupDone = false;
-      _fbStartupTries++;
-      var delay = Math.min(5000 * Math.pow(2, Math.max(0, _fbStartupTries - 1)), 30000);
-      setTimeout(_autoLoadFromFirebaseOnStartup, delay);
-      _startFirebaseRealtimeListener();
+      _srvStartupDone = false;
+      _srvStartupTries++;
+      var delay = Math.min(5000 * Math.pow(2, Math.max(0, _srvStartupTries - 1)), 30000);
+      setTimeout(_autoLoadFromServerOnStartup, delay);
+      _startServerRealtimeListener();
     });
 }
 // اگر رویداد online آمد و هنوز اولین دریافت انجام نشده، فوراً تلاش کن
-window.addEventListener('online', function(){ if (!_fbStartupDone) setTimeout(_autoLoadFromFirebaseOnStartup, 800); });
+window.addEventListener('online', function(){ if (!_srvStartupDone) setTimeout(_autoLoadFromServerOnStartup, 800); });
 // به‌محضِ برقرار شدنِ دوبارهٔ سوکت: اول ببین سرور چه دارد، بعد تغییرات معطلِ خودت را بفرست
 // فقط «لحظهٔ وصل شدن» مهم است. این شنونده با هر پیامِ شبکه (هر ack) صدا می‌خورد؛
 // اگر هر بار زمان‌بندی را از نو بچینیم، تایمرِ بارگذاری هیچ‌وقت به سر نمی‌رسد و
@@ -21263,18 +21266,18 @@ try {
     if (nowConn === _netWasConnected) return;
     _netWasConnected = nowConn;
     if (!nowConn) return;
-    if (!_fbStartupDone) { try { _autoLoadFromFirebaseOnStartup(); } catch(e){} return; }
-    try { _fbPullLatestOnce(); } catch(e){}
+    if (!_srvStartupDone) { try { _autoLoadFromServerOnStartup(); } catch(e){} return; }
+    try { _srvPullLatestOnce(); } catch(e){}
     if (_dirtySinceUpload) _scheduleAutoSync(2000);
   });
 } catch(e){}
 // ===== دریافت مقایسه‌ای هنگام برگشت به برنامه (مخصوص PWA/شورت‌کات آیفون) =====
-// iOS اتصال باز Firebase را در پس‌زمینه می‌کُشد؛ هنگام برگشت، یک‌بار مستقیم چک
+// iOS اتصالِ بازِ سرور را در پس‌زمینه می‌کُشد؛ هنگام برگشت، یک‌بار مستقیم چک
 // می‌کنیم که اگر روی دستگاه دیگری چیزی ثبت شده، بلافاصله همین‌جا هم بیاید.
-function _fbPullLatestOnce() {
+function _srvPullLatestOnce() {
   const code = _syncCode();
-  if (!code || !_fbReady()) return;
-  _fbDb.ref('stations/' + code).get().then(function(snap) {
+  if (!code || !_srvReady()) return;
+  _srvDb.ref('stations/' + code).get().then(function(snap) {
     if (!snap.exists()) return;
     const sd = snap.val();
     const localEmptyServerHasData = !DB.wipedAt && _dbRecordCount(DB) === 0 && _dbRecordCount(sd) > 0;
@@ -21285,8 +21288,8 @@ function _fbPullLatestOnce() {
 }
 document.addEventListener('visibilitychange', function() {
   if (document.visibilityState !== 'visible') return;
-  if (!_fbStartupDone) { try { _autoLoadFromFirebaseOnStartup(); } catch(e) {} return; }
-  try { _fbPullLatestOnce(); } catch(e) {}
+  if (!_srvStartupDone) { try { _autoLoadFromServerOnStartup(); } catch(e) {} return; }
+  try { _srvPullLatestOnce(); } catch(e) {}
   // تغییرات آفلاین معطل‌مانده هم همین حالا فرستاده شوند
   if (_dirtySinceUpload && navigator.onLine) _scheduleAutoSync(1200);
 });
@@ -21294,15 +21297,15 @@ document.addEventListener('visibilitychange', function() {
 // (در Chrome/Android) می‌گیرد؛ Safari آن را نادیده می‌گیرد ولی ضرری ندارد.
 try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function(){}); } catch(e) {}
 
-// listener بلادرنگ: هر تغییری در Firebase روی همه دستگاه‌های باز بلافاصله اعمال می‌شود
-let _fbListenerStarted = false;
-function _startFirebaseRealtimeListener() {
-  if (_fbListenerStarted) return; // با retryهای شروع برنامه چند بار صدا می‌خورد — listener فقط یک‌بار ثبت شود
+// listener بلادرنگ: هر تغییری روی سرور، بلافاصله روی همهٔ دستگاه‌های باز اعمال می‌شود
+let _srvListenerStarted = false;
+function _startServerRealtimeListener() {
+  if (_srvListenerStarted) return; // با retryهای شروع برنامه چند بار صدا می‌خورد — listener فقط یک‌بار ثبت شود
   const code = _syncCode();
-  if (!code || !_fbReady()) return;
-  _fbListenerStarted = true;
+  if (!code || !_srvReady()) return;
+  _srvListenerStarted = true;
   try {
-    _fbDb.ref('stations/' + code).on('value', function(snap) {
+    _srvDb.ref('stations/' + code).on('value', function(snap) {
       if (!snap.exists()) return;
       const sd = snap.val();
       if (_serverIsNewer(sd)) {
@@ -32421,7 +32424,7 @@ function saveProfitPassword() {
   ['profit-pw-old','profit-pw-new','profit-pw-rep'].forEach(id => { const e = document.getElementById(id); if(e) e.value = ''; });
 }
 // همهٔ بخش‌های داده‌ای برنامه با مقدارِ خالی‌شان — هم برای «پاک کردن همه» و هم برای
-// دریافت از سرور (Firebase آرایه/آبجکتِ خالی را ذخیره نمی‌کند؛ نبودنِ کلید یعنی خالی بودن)
+// دریافت از سرور (آرایه/آبجکتِ خالی ذخیره نمی‌شود؛ نبودنِ کلید یعنی خالی بودن)
 const _DB_COLLECTIONS = {
   shifts: [], reports: [], fuelEntries: [], debtPersons: [], noinvPersons: [], tilCompanies: [],
   sarrafiRows: [], expenses: [], chakanaRows: [], safeEntries: [], waraqEntries: [], trash: [], invoices: [],
@@ -36091,7 +36094,7 @@ function closeStaffAcct() {
 }
 // ========== ربات دستیار: سوال‌وجواب + چت گروهی + چت تک‌نفره ==========
 // سه کادر: 1) سوال و جواب (ربات محلی، بدون سرور) 2) چت گروهی کارمندان
-// (عکس/ویدیو/صدا — روی Firebase در مسیر جدا از حساب‌ها) 3) چت تک‌نفره با میرزا.
+// (عکس/ویدیو/صدا — روی سرورِ خانگی در مسیر جدا از حساب‌ها) 3) چت تک‌نفره با میرزا.
 // نمای کیو‌آر (مشتری): فقط سوال‌وجواب + چت تک‌نفره؛ اگر ربات نفهمید، پیشنهاد
 // می‌دهد پیام به میرزا برود و می‌گوید «در زودترین فرصت جواب شما را خواهیم داد».
 let _rbMode = 'staff';          // admin | staff | person
@@ -36113,7 +36116,7 @@ let _chatL = { group: false, dmIdx: false, dm: {} };
 
 function _chatRoot() { return 'chat/' + _syncCode().replace(/[.#$\[\]\/]/g, '_') + '/'; }
 function _peerKey(s) { return String(s).replace(/[.#$\[\]\/]/g, '_'); }
-function _chatOnline() { return navigator.onLine && typeof firebase !== 'undefined' && _fbReady(); }
+function _chatOnline() { return navigator.onLine && !!window.__pumpHome__ && _srvReady(); }
 // آیا همین لحظه سوکتِ سرور واقعاً وصل است؟ (فرقش با _chatOnline: این «اتصالِ زنده»
 // را می‌گوید، نه فقط تنظیم بودنِ آدرس). فرستادنِ پیام به این وابسته نیست — پیام
 // همیشه در صف می‌نشیند — فقط متنِ پیغام‌ها با آن انتخاب می‌شود.
@@ -36900,15 +36903,15 @@ function qaSpeak(i) {
   } catch (e) { showToast('این مرورگر خواندن صوتی ندارد', '#e53e3e'); }
 }
 
-// ---- چت (گروهی + تک‌نفره) روی Firebase — مسیر جدا از حساب‌ها (stations) ----
+// ---- چت (گروهی + تک‌نفره) روی سرورِ خانگی — مسیر جدا از حساب‌ها (stations) ----
 function _chatResetListeners() {
   try {
-    if (typeof firebase !== 'undefined' && _fbDb) {
-      _fbDb.ref(_chatRoot() + 'group').off();
-      _fbDb.ref(_chatRoot() + 'dmIndex').off();
+    if (!!window.__pumpHome__ && _srvDb) {
+      _srvDb.ref(_chatRoot() + 'group').off();
+      _srvDb.ref(_chatRoot() + 'dmIndex').off();
       Object.keys(_chatL.dm).forEach(p => {
-        _fbDb.ref(_chatRoot() + 'dm/' + p + '/msgs').off();
-        _fbDb.ref(_chatRoot() + 'dmIndex/' + p).off();
+        _srvDb.ref(_chatRoot() + 'dm/' + p + '/msgs').off();
+        _srvDb.ref(_chatRoot() + 'dmIndex/' + p).off();
       });
     }
   } catch (e) {}
@@ -36924,11 +36927,11 @@ function _chatNotifyIncoming(scope, m) {
     : m.k === 'audio' ? '🎤 پیام صوتی' : m.k === 'image' ? '🖼️ عکس' : m.k === 'video' ? '🎬 ویدیو' : 'پیام جدید');
   try { _notify('💬 ' + who + (scope === 'group' ? ' (چت گروهی)' : ' (چت تک‌نفره)'), preview, scope + '-msg-' + who); } catch (e) {}
 }
-// ===== حضور (presence) روی Firebase =====
+// ===== حضور (presence) روی سرورِ خانگی =====
 // وقتی برنامه باز و آنلاین است، این دستگاه روی مسیرِ presence علامتِ «من اینجا هستم»
 // می‌گذارد. فرستندهٔ پیام قبل از فرستادن اعلانِ بیرونی این علامت را می‌خواند:
 // اگر گیرنده حاضر باشد یعنی اعلانِ داخلِ برنامه (سایت) را می‌بیند، پس اعلانِ بیرونی
-// فرستاده نمی‌شود و پیامِ تکراری نمی‌آید. با بسته/فریز شدنِ برنامه، اتصال Firebase
+// فرستاده نمی‌شود و پیامِ تکراری نمی‌آید. با بسته/فریز شدنِ برنامه، اتصالِ سرور
 // قطع می‌شود و onDisconnect علامت را برمی‌دارد؛ از آن لحظه اعلان دوباره می‌رسد.
 const _PRESENCE_FRESH_MS = 120000; // 2 دقیقه — با ضربانِ هر 45 ثانیه تازه می‌ماند
 let _presenceRef = null, _presenceKeyCur = null, _presenceConnBound = false, _presenceHb = null;
@@ -36948,20 +36951,20 @@ function _presenceKeyNow() {
 }
 function _presenceStart() {
   try {
-    if (!_chatOnline() || !_fbDb) return;
+    if (!_chatOnline() || !_srvDb) return;
     const key = _presenceKeyNow();
     // نقش عوض شده؟ علامتِ قبلی را بردار تا حضورِ کهنه باقی نماند
     if (_presenceKeyCur && _presenceKeyCur !== key && _presenceRef) {
       try { _presenceRef.onDisconnect().cancel(); _presenceRef.remove(); } catch (e) {}
     }
     _presenceKeyCur = key;
-    _presenceRef = _fbDb.ref(_chatRoot() + 'presence/' + key);
+    _presenceRef = _srvDb.ref(_chatRoot() + 'presence/' + key);
     try { _presenceRef.onDisconnect().remove(); _presenceRef.set({ ts: Date.now() }); } catch (e) {}
     // بعد از هر بار وصل شدنِ دوباره، onDisconnect را از نو مسلح و علامت را تازه کن
     if (!_presenceConnBound) {
       _presenceConnBound = true;
       try {
-        _fbDb.ref('.info/connected').on('value', s => {
+        _srvDb.ref('.info/connected').on('value', s => {
           if (s.val() === true && _presenceRef) {
             try { _presenceRef.onDisconnect().remove(); _presenceRef.set({ ts: Date.now() }); } catch (e) {}
           }
@@ -36973,7 +36976,7 @@ function _presenceStart() {
 }
 function _presenceBeat() {
   try {
-    if (!_chatOnline() || !_fbDb) return;
+    if (!_chatOnline() || !_srvDb) return;
     if (_presenceKeyNow() !== _presenceKeyCur) { _presenceStart(); return; }
     if (_presenceRef) _presenceRef.set({ ts: Date.now() });
   } catch (e) {}
@@ -36991,13 +36994,13 @@ function _chatInitListeners() {
   _chatCacheSeed();
   try { _chatFlushOutbox(); } catch (e) {}
   try { _chatUpdateNetUi(); } catch (e) {}
-  if (!_fbReady()) return;
+  if (!_srvReady()) return;
   try { _presenceStart(); } catch (e) {}
   const me = _chatMe();
   if (!_chatL.group && _rbMode !== 'person') {
     _chatL.group = true;
     const _groupBootTs = Date.now();
-    _fbDb.ref(_chatRoot() + 'group').limitToLast(60).on('child_added', snap => {
+    _srvDb.ref(_chatRoot() + 'group').limitToLast(60).on('child_added', snap => {
       const m = snap.val();
       if (!m) return;
       m._key = snap.key;
@@ -37008,7 +37011,7 @@ function _chatInitListeners() {
       if (_rbPaneVisible('group')) { _renderChatList('groupList', _groupMsgs); _chatMarkRead('group'); }
       else _rbUpdateBadges();
     });
-    _fbDb.ref(_chatRoot() + 'group').limitToLast(60).on('child_changed', snap => {
+    _srvDb.ref(_chatRoot() + 'group').limitToLast(60).on('child_changed', snap => {
       const m = snap.val();
       if (!m) return;
       m._key = snap.key;
@@ -37020,7 +37023,7 @@ function _chatInitListeners() {
   if (!_chatL.dmIdx) {
     if (_rbMode === 'admin') {
       _chatL.dmIdx = true;
-      _fbDb.ref(_chatRoot() + 'dmIndex').on('value', snap => {
+      _srvDb.ref(_chatRoot() + 'dmIndex').on('value', snap => {
         _dmIndex = snap.val() || {};
         _chatCacheSave();
         if (_rbPaneVisible('dm') && !_rbCurrentDm) _dmRenderThreadList();
@@ -37031,7 +37034,7 @@ function _chatInitListeners() {
     } else if (me) {
       _chatL.dmIdx = true;
       const pk = _peerKey(me.id);
-      _fbDb.ref(_chatRoot() + 'dmIndex/' + pk).on('value', snap => {
+      _srvDb.ref(_chatRoot() + 'dmIndex/' + pk).on('value', snap => {
         _dmIndex = {};
         const v = snap.val();
         if (v) _dmIndex[pk] = v;
@@ -37042,11 +37045,11 @@ function _chatInitListeners() {
   if (_rbMode !== 'admin' && me) _ensureDmListener(_peerKey(me.id));
 }
 function _ensureDmListener(peer) {
-  if (!peer || _chatL.dm[peer] || !_fbReady()) return;
+  if (!peer || _chatL.dm[peer] || !_srvReady()) return;
   _chatL.dm[peer] = true;
   _dmMsgCache[peer] = _dmMsgCache[peer] || [];
   const _dmBootTs = Date.now();
-  _fbDb.ref(_chatRoot() + 'dm/' + peer + '/msgs').limitToLast(60).on('child_added', snap => {
+  _srvDb.ref(_chatRoot() + 'dm/' + peer + '/msgs').limitToLast(60).on('child_added', snap => {
     const m = snap.val();
     if (!m) return;
     m._key = snap.key;
@@ -37059,7 +37062,7 @@ function _ensureDmListener(peer) {
     if (_rbPaneVisible('dm') && _rbActiveDmPeer() === peer) { _dmRenderList(peer); _chatMarkRead('dm', peer); }
     else _rbUpdateBadges();
   });
-  _fbDb.ref(_chatRoot() + 'dm/' + peer + '/msgs').limitToLast(60).on('child_changed', snap => {
+  _srvDb.ref(_chatRoot() + 'dm/' + peer + '/msgs').limitToLast(60).on('child_changed', snap => {
     const m = snap.val();
     if (!m) return;
     m._key = snap.key;
@@ -37170,7 +37173,7 @@ function _chatSendItem(it) {
   const root = it.root || _chatRoot();
   const path = it.scope === 'group' ? (root + 'group/' + it.key) : (root + 'dm/' + it.peer + '/msgs/' + it.key);
   let p;
-  try { p = _fbDb.ref(path).set(it.msg); } catch (e) { p = Promise.reject(e); }
+  try { p = _srvDb.ref(path).set(it.msg); } catch (e) { p = Promise.reject(e); }
   Promise.resolve(p).then(() => {
     it.sending = false;
     const msg = it.msg;
@@ -37180,7 +37183,7 @@ function _chatSendItem(it) {
           : (msg.k === 'acct' ? ('حساب ' + (msg.nm || '')) : msg.k === 'audio' ? 'پیام صوتی' : msg.k === 'image' ? 'عکس' : 'ویدیو');
         const idx = { ts: msg.ts, last: preview, from: msg.f };
         if (msg.f !== 'admin' && msg.f !== 'bot') idx.name = msg.n;
-        try { _fbDb.ref(root + 'dmIndex/' + it.peer).update(idx).catch(() => {}); } catch (e) {}
+        try { _srvDb.ref(root + 'dmIndex/' + it.peer).update(idx).catch(() => {}); } catch (e) {}
         _chatMarkRead('dm', it.peer);
       } else _chatMarkRead('group');
       _extPushNotify(it.scope, msg, it.peer || undefined);
@@ -37202,7 +37205,7 @@ function _chatFlushOutbox() {
   const box = _chatOutboxLoad();
   if (!box.length) { _chatStopFlushTimer(); _chatUpdateNetUi(); return; }
   _chatStartFlushTimer();
-  if (!_fbReady() || !(window.__pumpNet__ && window.__pumpNet__.connected())) { _chatUpdateNetUi(); return; }
+  if (!_srvReady() || !(window.__pumpNet__ && window.__pumpNet__.connected())) { _chatUpdateNetUi(); return; }
   let inflight = box.filter(it => it.sending).length;
   const now = Date.now();
   for (const it of box) {
@@ -37872,10 +37875,10 @@ function _chatDeleteForEveryone(scope, peer, key) {
     showToast('پیامِ در صف لغو شد', '#38a169');
     return;
   }
-  if (!_fbReady()) { showToast('سرور تنظیم نشده — حذف ممکن نیست', '#e53e3e'); return; }
+  if (!_srvReady()) { showToast('سرور تنظیم نشده — حذف ممکن نیست', '#e53e3e'); return; }
   try {
     // با سرورِ قطع هم دستورِ حذف در صف می‌ماند و با وصل شدن اجرا می‌شود
-    const ref = scope === 'group' ? _fbDb.ref(_chatRoot() + 'group/' + key) : _fbDb.ref(_chatRoot() + 'dm/' + peer + '/msgs/' + key);
+    const ref = scope === 'group' ? _srvDb.ref(_chatRoot() + 'group/' + key) : _srvDb.ref(_chatRoot() + 'dm/' + peer + '/msgs/' + key);
     ref.update({ del: true, t: '', d: '' }).catch(() => {});
     if (!_chatNetUp()) showToast('🕐 حذف در صف — با وصل شدنِ سرور انجام می‌شود', '#d97706');
   } catch (e) { showToast('خطا در حذف پیام', '#e53e3e'); }
@@ -38205,11 +38208,11 @@ function _makeResizable(id) {
     });
   });
 }
-// اگر کتابخانهٔ Firebase دیرتر از باز شدن چت برسد، خودکار وصل شود
+// اگر لایهٔ سرور دیرتر از باز شدن چت بالا بیاید، خودکار وصل شود
 setInterval(function () {
   try {
     const fab = document.getElementById('robotFab');
-    if (fab && fab.style.display !== 'none' && fab.style.display !== '' && !_chatL.group && !_chatL.dmIdx && _fbReady()) _chatInitListeners();
+    if (fab && fab.style.display !== 'none' && fab.style.display !== '' && !_chatL.group && !_chatL.dmIdx && _srvReady()) _chatInitListeners();
   } catch (e) {}
 }, 5000);
 /* ============================================================================
@@ -39594,7 +39597,7 @@ function _msgrPaintThreads() {
       + '</button>';
   }).join('') || '<div class="msgr-empty">هنوز گفت‌وگویی نیست.</div>';
 }
-/* پیام‌های چتِ قدیمی (Firebase) گم نشوند: هر گفت‌وگوی p-… با همان peer در
+/* پیام‌های چتِ قدیمی گم نشوند: هر گفت‌وگوی p-… با همان peer در
    _dmMsgCache خوانده می‌شود و به‌عنوان تاریخچه، پیش از پیام‌های سرورِ خانگی
    نشان داده می‌شود. فقط نمایش است — چیزی دوباره فرستاده یا ذخیره نمی‌شود. */
 function _msgrLegacyMerge(thread, live) {
@@ -39669,7 +39672,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.250';
+const APP_VERSION = '2.9.251';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -39685,7 +39688,7 @@ function _chatRetentionSweep() {
   const cutoff = Date.now() - _CHAT_RETENTION_DAYS * 86400000;
   const root = _chatRoot();
   // 1) پیام‌های گروهی کهنه → سطل آشغال
-  _fbDb.ref(root + 'group').once('value').then(snap => {
+  _srvDb.ref(root + 'group').once('value').then(snap => {
     const ups = {};
     snap.forEach(ch => {
       const m = ch.val();
@@ -39694,16 +39697,16 @@ function _chatRetentionSweep() {
         ups['group/' + ch.key] = null;
       }
     });
-    if (Object.keys(ups).length) return _fbDb.ref(root).update(ups);
+    if (Object.keys(ups).length) return _srvDb.ref(root).update(ups);
   }).catch(() => {});
   // 2) سطل آشغال کهنه → حذف دائم
-  _fbDb.ref(root + 'trash').once('value').then(snap => {
+  _srvDb.ref(root + 'trash').once('value').then(snap => {
     const ups = {};
     snap.forEach(ch => {
       const m = ch.val();
       if (m && (m.trashedAt || 0) < cutoff) ups[ch.key] = null;
     });
-    if (Object.keys(ups).length) return _fbDb.ref(root + 'trash').update(ups);
+    if (Object.keys(ups).length) return _srvDb.ref(root + 'trash').update(ups);
   }).catch(() => {});
 }
 function renderChatTrash() {
@@ -39713,7 +39716,7 @@ function renderChatTrash() {
     el.innerHTML = '<div style="text-align:center;padding:18px;color:var(--muted);font-size:0.85rem">برای دیدن سطل آشغال چت، اینترنت لازم است</div>';
     return;
   }
-  _fbDb.ref(_chatRoot() + 'trash').once('value').then(snap => {
+  _srvDb.ref(_chatRoot() + 'trash').once('value').then(snap => {
     const items = [];
     snap.forEach(ch => { const m = ch.val(); if (m) items.push(m); });
     items.sort((a, b) => (b.ts || 0) - (a.ts || 0));
@@ -39735,7 +39738,7 @@ function chatTrashEmpty() {
   if (!requireAdmin()) return;
   if (!_chatOnline()) { showToast('برای این کار اینترنت لازم است', '#e53e3e'); return; }
   if (!confirm('سطل آشغال چت برای همیشه خالی شود؟ (قابل بازگشت نیست)')) return;
-  _fbDb.ref(_chatRoot() + 'trash').remove()
+  _srvDb.ref(_chatRoot() + 'trash').remove()
     .then(() => { showToast('🗑️ سطل آشغال چت خالی شد', '#38a169'); renderChatTrash(); })
     .catch(() => showToast('خطا — دوباره تلاش کنید', '#e53e3e'));
 }
@@ -42320,7 +42323,7 @@ function _renderRateHistPanel() {
     </div>`;
   }).join('') : '<div style="color:var(--muted)">با هر تغییرِ نرخ اتحادیه، اینجا خودکار ثبت می‌شود</div>';
 }
-// ═══════════ ☁️ بکاپ ابری خودکار (Firebase — جدا از مسیر همگام‌سازی زنده) ═══════════
+// ═══════════ ☁️ بکاپِ خودکار روی سرورِ خانگی (جدا از مسیر همگام‌سازی زنده) ═══════════
 // هر روز یک عکسِ کامل از DB در backups/<کد ایستگاه>/<روز> ذخیره می‌شود و 30 روز اخیر می‌ماند.
 // جدا از stations/<کد> است تا اگر دادهٔ خراب همگام شد، نسخه‌های روزهای قبل سالم بمانند.
 function _cloudBkDayKey() {
@@ -42331,19 +42334,19 @@ function _autoCloudBackup(force) {
   try {
     if (currentRole === 'viewer') return;
     if (!navigator.onLine) { if (force) showToast('❌ اینترنت وصل نیست', '#e53e3e'); return; }
-    if (typeof firebase === 'undefined' || !_fbReady()) { if (force) showToast('⚠️ سرور آنلاین هنوز وصل نشده', '#d97706'); return; }
+    if (!window.__pumpHome__ || !_srvReady()) { if (force) showToast('⚠️ سرور آنلاین هنوز وصل نشده', '#d97706'); return; }
     const code = _syncCode();
     if (!code) return;
     if (_dbRecordCount(DB) === 0) return;   // حسابِ خالی ارزش بکاپ ندارد و بکاپ خوب را هم نمی‌پوشاند (کلید روزانه جداست)
     const day = _cloudBkDayKey();
     if (!force && localStorage.getItem('pumpCloudBkDay') === day) return;
-    _fbDb.ref('backups/' + code + '/' + day).set({ at: new Date().toISOString(), day, data: JSON.stringify(DB) })
+    _srvDb.ref('backups/' + code + '/' + day).set({ at: new Date().toISOString(), day, data: JSON.stringify(DB) })
       .then(() => {
         try { localStorage.setItem('pumpCloudBkDay', day); } catch (e) {}
         _renderCloudBackupStatus();
         if (force) showToast('☁️ بکاپ ابری فرستاده شد', '#38a169');
         // نگه‌داری فقط 30 روز اخیر — فهرست روزها در مسیر کوچکِ جدا تا لازم نشود همهٔ بکاپ‌ها دانلود شوند
-        const idxRef = _fbDb.ref('backupsIndex/' + code);
+        const idxRef = _srvDb.ref('backupsIndex/' + code);
         idxRef.get().then(snap => {
           let keys = [];
           try { const v = snap.val(); keys = Array.isArray(v) ? v : Object.values(v || {}); } catch (e) {}
@@ -42353,7 +42356,7 @@ function _autoCloudBackup(force) {
           const extra = keys.length > 30 ? keys.slice(0, keys.length - 30) : [];
           keys = keys.slice(-30);
           idxRef.set(keys).catch(() => {});
-          extra.forEach(k => { try { _fbDb.ref('backups/' + code + '/' + k.replace(/[.#$\[\]\/]/g, '')).remove(); } catch (e) {} });
+          extra.forEach(k => { try { _srvDb.ref('backups/' + code + '/' + k.replace(/[.#$\[\]\/]/g, '')).remove(); } catch (e) {} });
         }).catch(() => {});
       })
       .catch(() => { if (force) showToast('❌ فرستادن بکاپ ابری ناموفق بود', '#e53e3e'); });
@@ -42371,9 +42374,9 @@ function _renderCloudBackupStatus() {
 function _renderCloudBackupList() {
   const el = document.getElementById('cloudbk-list');
   if (!el) return;
-  if (!navigator.onLine || typeof firebase === 'undefined' || !_fbReady()) { el.innerHTML = '<div style="color:var(--muted)">برای دیدن فهرست، اینترنت لازم است</div>'; return; }
+  if (!navigator.onLine || !window.__pumpHome__ || !_srvReady()) { el.innerHTML = '<div style="color:var(--muted)">برای دیدن فهرست، اینترنت لازم است</div>'; return; }
   el.innerHTML = '<div style="color:var(--muted)">در حال گرفتن فهرست از سرور...</div>';
-  _fbDb.ref('backupsIndex/' + _syncCode()).get()
+  _srvDb.ref('backupsIndex/' + _syncCode()).get()
     .then(snap => {
       let keys = [];
       try { const v = snap.val(); keys = Array.isArray(v) ? v : Object.values(v || {}); } catch (e) {}
@@ -42388,8 +42391,8 @@ function _renderCloudBackupList() {
 }
 function restoreCloudBackup(day) {
   if (!_toolsAdminOnly()) return;
-  if (!navigator.onLine || typeof firebase === 'undefined' || !_fbReady()) { showToast('❌ اینترنت وصل نیست', '#e53e3e'); return; }
-  _fbDb.ref('backups/' + _syncCode() + '/' + day).get()
+  if (!navigator.onLine || !window.__pumpHome__ || !_srvReady()) { showToast('❌ اینترنت وصل نیست', '#e53e3e'); return; }
+  _srvDb.ref('backups/' + _syncCode() + '/' + day).get()
     .then(snap => {
       const v = snap.val();
       if (v && v.data) _bkRestoreData(v.data);
@@ -42591,11 +42594,11 @@ window.addEventListener('online', function(){ setTimeout(function(){ try { _auto
 try { applyHexFx(); } catch(e) {}
 // اگر صفحه وقتی هنوز قفلِ تلاش‌های ناموفق فعال بود رفرش شود، همان لحظه دوباره نشان داده شود
 (function(){ try { var r = _lockoutRemaining(); if (r > 0) _lockoutShow(r); } catch(e){} })();
-// بارگذاری خودکار از Firebase — اگر کد ایستگاه تنظیم شده، آخرین حساب از سرور گرفته می‌شود
-setTimeout(function(){ try { _autoLoadFromFirebaseOnStartup(); } catch(e){} }, 800);
-// کتابخانهٔ Firebase حالا async می‌آید — هر وقت رسید (حتی روی نت کند)، هم‌زمان‌سازی شروع شود
-window._onFirebaseLibReady = function(){ try { _autoLoadFromFirebaseOnStartup(); } catch(e){} };
-if (window._firebaseLibLoaded) { try { _autoLoadFromFirebaseOnStartup(); } catch(e){} }
+// بارگذاری خودکار از سرورِ خانگی — اگر کد ایستگاه تنظیم شده، آخرین حساب گرفته می‌شود
+setTimeout(function(){ try { _autoLoadFromServerOnStartup(); } catch(e){} }, 800);
+// لایهٔ سرور async بالا می‌آید — هر وقت رسید (حتی روی نت کند)، هم‌زمان‌سازی شروع شود
+window._onSrvLibReady = function(){ try { _autoLoadFromServerOnStartup(); } catch(e){} };
+if (window._srvLibLoaded) { try { _autoLoadFromServerOnStartup(); } catch(e){} }
 // قفل بخش مفاد/ضرر در شروع برنامه
 try { _lockProfitSection(); } catch(e){}
 
@@ -44780,7 +44783,7 @@ body:not(.light-mode):not([class*="theme-"]).gfx-standard .top-banner{
 <script>
 /* ═══════════════════ ماژول ثبت فاکتورها ═══════════════════
    دیتا در DB.invoices نگه داشته می‌شود (همان دیتابیس برنامه که در localStorage/
-   IndexedDB ذخیره و با Firebase بین همهٔ دستگاه‌ها همگام می‌شود).
+   IndexedDB ذخیره و با سرورِ خانگی بین همهٔ دستگاه‌ها همگام می‌شود).
    ستون‌ها: id, invoice_number, customer_name, fuel_type(petrol|diesel),
    price_per_liter, liters, vehicle_type, phone, status(pending|approved),
    created_at (ISO خودکار) + date_sh (تاریخ شمسی برای نمایش/جستجو).
