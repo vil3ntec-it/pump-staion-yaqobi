@@ -28240,8 +28240,15 @@ function _updatePersonTotals(person) {
   const commP = rasidP * pctP/100, commD = rasidD * pctD/100;
   const rnd = x => Math.round(x*100)/100;
   // الباقی: حالت پول → رسیدِ پول + معادلِ پولیِ رسید تیل کم می‌شوند؛ حالت تیل → رسیدِ پولی (معادلِ لیتر)
-  const remP = bordP + commP - rasidP - (money ? (t.petrol.rasid + _rasidFuelMoneyP) : _rasidMoneyLP),
-        remD = bordD + commD - rasidD - (money ? (t.diesel.rasid + _rasidFuelMoneyD) : _rasidMoneyLD);
+  /* ⚠️ در «واحد تیل»، ستونِ «رسید تیل» جدول (r.rasidFuel) هم رسید است و باید مثلِ
+     رسیدِ سربرگ از الباقی کم شود. پیش از این فقط رسیدِ سربرگ و معادلِ لیترِ رسیدِ
+     پولی کم می‌شدند، پس رسیدی که در خودِ جدول نوشته می‌شد هیچ اثری روی الباقی
+     نداشت و سربرگ و جدول دو حسابِ جدا می‌شدند — همان چیزی که گزارش شد
+     («سربرگ جدا رسید گرفته می‌شود از جدول جدا»).
+     دوباره‌شماری نمی‌شود: _rasidMoneyLP معادلِ لیترِ ستونِ «رسید» (پول) است و
+     t.petrol.rasidFuel ستونِ «رسید تیل» — دو ستونِ جدا. */
+  const remP = bordP + commP - rasidP - (money ? (t.petrol.rasid + _rasidFuelMoneyP) : (_rasidMoneyLP + t.petrol.rasidFuel)),
+        remD = bordD + commD - rasidD - (money ? (t.diesel.rasid + _rasidFuelMoneyD) : (_rasidMoneyLD + t.diesel.rasidFuel));
   // الباقیِ همین لحظه برای «رسید یک‌جا» کنار گذاشته می‌شود — همان عددی که چشمِ
   // کاربر روی کارت‌های پطرول/دیزل می‌بیند، بدون هیچ حسابِ دوبارهٔ جداگانه
   // rasidP/rasidD هم اضافه شد تا خبررسانِ آستانه‌ای بداند «کم مانده» را نسبت به
@@ -28275,8 +28282,10 @@ function _updatePersonTotals(person) {
   // تیلِ دستیِ هدر + معادلِ لیترِ رسیدهای پولیِ داخلِ جدول را نشان می‌دهد تا پولی که در ستونِ
   // «رسید» زده شده (و به تیل تبدیل و در «الباقی تیل» دیده می‌شود) در این کادر هم دیده شود
   // (وگرنه صفر می‌ماند). onfocus فقط سهمِ دستی را نشان می‌دهد و onblur دوباره جمع را می‌نویسد.
-  setInput('pm-p-rasidfuel', money ? ((rasidP + t.petrol.rasid)||'') : (rnd(rasidP + _rasidMoneyLP)||''));
-  setInput('pm-d-rasidfuel', money ? ((rasidD + t.diesel.rasid)||'') : (rnd(rasidD + _rasidMoneyLD)||''));
+  // در «واحد تیل» ستونِ «رسید تیل» جدول هم به این جمع اضافه شد تا رسیدی که در جدول
+  // زده می‌شود در سربرگ هم دیده شود (قرینهٔ همان کاری که حالتِ پول از قبل می‌کرد)
+  setInput('pm-p-rasidfuel', money ? ((rasidP + t.petrol.rasid)||'') : (rnd(rasidP + _rasidMoneyLP + t.petrol.rasidFuel)||''));
+  setInput('pm-d-rasidfuel', money ? ((rasidD + t.diesel.rasid)||'') : (rnd(rasidD + _rasidMoneyLD + t.diesel.rasidFuel)||''));
   const _rawP = _acctPctRaw(acct, 'petrol'), _rawD = _acctPctRaw(acct, 'diesel');
   setInput('pm-percent', _rawP);
   setInput('pm-percent-d', _rawD);
@@ -28358,7 +28367,11 @@ function _updatePersonTotals(person) {
   setV('pm-ft-fuel', n2fa(tf.fuel));
   setV('pm-ft-bardagi', n2fa(tf.bardagi));
   setV('pm-ft-rasid', n2fa(tf.rasid));
-  setV('pm-ft-rasidfuel', n2fa(tf.rasidFuel));
+  /* رسیدِ سربرگ در جدول به‌صورت ردیفِ 📌 دیده می‌شود، پس باید در جمعِ همین ستون هم
+     بیاید — وگرنه جمعِ ستون با کادرِ سربرگ نمی‌خواند. فقط «واحد تیل»: در واحد پول
+     رسیدِ سربرگ پول است و در ستونِ لیتری جای ندارد. */
+  const _hdrRasidF = money ? 0 : ((_incP ? rasidP : 0) + (_incD ? rasidD : 0));
+  setV('pm-ft-rasidfuel', n2fa(rnd(tf.rasidFuel + _hdrRasidF)));
   // جمعِ الباقی ستونِ ردیفِ «جمع» به‌صورت «رسید − بردگی» (پیش‌پرداخت مثبت/سبز،
   // بدهی منفی/سرخ) — فقط از خودِ جدول. در حالتِ «واحد تیل» زیرش الباقی تیلِ همین
   // جدول هم به لیتر نوشته می‌شود: رسید تیل − مقدار تیل
@@ -28378,7 +28391,10 @@ function _updatePersonTotals(person) {
     } else {
       // واحد تیل: فقط «الباقی تیل» = رسید تیل − مقدار تیل، منهای معادلِ لیترِ بردگیِ
       // پولی و به‌علاوهٔ معادلِ لیترِ رسیدِ پولی (هماهنگ با کارت‌های بالا)
-      const netL = (Math.round((tf.rasidFuel - tf.fuel - _moneyBardLF + _rasidMoneyLF) * 100) / 100) || 0;
+      /* فیصدی هم از رسید کم می‌شود (همان «فیصدی ما»ی کارت‌ها)، وگرنه این عدد و
+         عددِ کارت‌ها هر دو «الباقی تیل» نام دارند ولی به‌اندازهٔ فیصدی فرق می‌کنند. */
+      const _commF = (_incP ? commP : 0) + (_incD ? commD : 0);
+      const netL = (Math.round((tf.rasidFuel + _hdrRasidF - tf.fuel - _moneyBardLF + _rasidMoneyLF - _commF) * 100) / 100) || 0;
       ftAlbEl.innerHTML =
         '<div style="font-size:0.78rem;font-weight:800;line-height:1.5;color:' + (netL < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی تیل:<br>' + n2fa(netL) + ' ل</div>';
     }
@@ -40658,7 +40674,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.274';
+const APP_VERSION = '2.9.275';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
