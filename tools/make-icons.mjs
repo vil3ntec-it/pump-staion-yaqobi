@@ -30,13 +30,15 @@ const svg = readFileSync(join(root, 'icons/logo.svg'), 'utf8');
 /* هر خروجی: نام فایل، اندازه، پس‌زمینه (null = شفاف)، و «حاشیهٔ امن» به‌صورت
    نسبتِ خودِ لوگو به کلِ قاب. maskable طبق استانداردِ اندروید ۸۰٪ است تا گوشه‌هایش
    با هر شکلِ ماسکی (دایره/چهارگوش) بریده نشود. */
+/* پس‌زمینهٔ سفید برای همه: قطرهٔ لوگو مشکی است و روی صفحهٔ خانهٔ تیرهٔ گوشی
+   (یا تبِ تیرهٔ مرورگر) با پس‌زمینهٔ شفاف اصلاً دیده نمی‌شد. */
 const JOBS = [
-  { file: 'icons/icon-192.png',          size: 192, bg: null,      scale: 1.0 },
-  { file: 'icons/icon-512.png',          size: 512, bg: null,      scale: 1.0 },
-  { file: 'icons/icon-maskable-192.png', size: 192, bg: '#ffffff', scale: 0.72 },
-  { file: 'icons/icon-maskable-512.png', size: 512, bg: '#ffffff', scale: 0.72 },
-  { file: 'icons/apple-touch-icon.png',  size: 180, bg: '#ffffff', scale: 0.86 },
-  { file: 'favicon.png',                 size: 128, bg: null,      scale: 1.0 },
+  { file: 'icons/icon-192.png',          size: 192, bg: '#ffffff', scale: 0.84 },
+  { file: 'icons/icon-512.png',          size: 512, bg: '#ffffff', scale: 0.84 },
+  { file: 'icons/icon-maskable-192.png', size: 192, bg: '#ffffff', scale: 0.66 },
+  { file: 'icons/icon-maskable-512.png', size: 512, bg: '#ffffff', scale: 0.66 },
+  { file: 'icons/apple-touch-icon.png',  size: 180, bg: '#ffffff', scale: 0.84 },
+  { file: 'favicon.png',                 size: 128, bg: '#ffffff', scale: 0.9 },
 ];
 
 const chromiumPath = process.env.CHROMIUM ||
