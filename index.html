@@ -22306,6 +22306,7 @@ function showSection(id, btn) {
     try { _renderBackupPanel(); } catch(e) {}
     try { _renderCloudBackupStatus(); } catch(e) {}
   }
+  if (id === 'dashboard') { try { _seedBannerPaint(); } catch (e) {} }
   if (id === 'notifications') {
     try { renderPushCard(); } catch(e) {}
   }
@@ -39786,10 +39787,14 @@ const _SEED_EXP  = ['برق','کرایه','ترمیم پمپ','خوراکِ کا
 const _SEED_COMP = ['شرکت تیل هرات','نفت‌پخش کابل','تانکرِ اسلام‌قلعه','شرکت آریانا'];
 
 /** یک سال (یا چند سال) حسابِ کاملِ همهٔ بخش‌ها می‌سازد */
-function seedDemoData(years) {
+function seedDemoData(years, opts) {
   years = Math.max(1, Math.min(5, parseInt(years, 10) || 1));
+  const keep = !!(opts && opts.keep);       // حساب‌های موجود پاک نشوند
   const days = Math.round(years * 365);
   _seedRnd = 20250811;                      // همیشه همان دادهٔ تکرارشدنی
+  const _keepDebt = keep ? (DB.debtPersons || []).slice() : [];
+  const _keepNoinv = keep ? (DB.noinvPersons || []).slice() : [];
+  const _keepComp = keep ? (DB.tilCompanies || []).slice() : [];
 
   // ── ۱) پارچه‌های پطرول (گزارش‌ها) و دیزل (شیفت‌ها) — هر روز، روز و شب ─────
   DB.reports = []; DB.shifts = [];
@@ -39912,6 +39917,7 @@ function seedDemoData(years) {
       rows, moneyRows, rasidLog, tableHistory: hist, subs,
       note: k % 5 === 0 ? 'مشتریِ قدیمی' : '' });
   }
+  if (keep && _keepDebt.length) DB.debtPersons = _keepDebt.concat(DB.debtPersons);
   try { DB.debtPersons.forEach(p => { _rasidLogSync(p); (p.subs || []).forEach(_rasidLogSync); }); } catch (e) {}
 
   // ── ۴) شرکت‌های بی‌فاکتور (noinv) ────────────────────────────────────────
@@ -39926,6 +39932,10 @@ function seedDemoData(years) {
     }
     DB.noinvPersons.push({ id: 'ni-seed-' + k, name: _SEED_COMP[k % _SEED_COMP.length] + ' (بی‌فاکتور)',
       mode: 'fuel', percentP: 0, percentD: 0, percent: 0, rows, moneyRows: [], tableHistory: [], subs: [] });
+  }
+  if (keep) {
+    if (_keepNoinv.length) DB.noinvPersons = _keepNoinv.concat(DB.noinvPersons);
+    if (_keepComp.length) DB.tilCompanies = _keepComp.concat(DB.tilCompanies);
   }
 
   // ── ۵) مصارف، گاوصندوق، صرافی، چکنه، عوایدِ اضافی ────────────────────────
@@ -40022,18 +40032,64 @@ function seedDemoData(years) {
      • فقط وقتی هیچ رکوردی در برنامه نیست
      • هرگز اگر «پاک کردن همه» زده شده باشد (wipedAt) — یعنی خودش پاک کرده
      • فقط یک‌بار در عمرِ این حساب (_autoSeeded) */
+/* «برنامه هنوز خالی است» یعنی هیچ کارِ روزمره‌ای در آن ثبت نشده: نه پارچه، نه ورق،
+   نه مصرف، نه گاوصندوق، نه فاکتور، نه خریدِ مخزن. چند حسابِ خالیِ قرض‌دار که آدم
+   موقعِ امتحان می‌سازد، «داده» به حساب نمی‌آید — قبلاً همین چند حساب جلوی پر شدنِ
+   خودکار را می‌گرفت و کاربر فکر می‌کرد چیزی نیامده. حساب‌های خودش هم پاک نمی‌شوند. */
+function _seedLooksEmpty() {
+  const n = k => (Array.isArray(DB[k]) ? DB[k].length : 0);
+  return !(n('reports') + n('shifts') + n('waraqEntries') + n('expenses') +
+           n('safeEntries') + n('invoices') + n('fuelEntries') + n('sarrafiRows') +
+           n('chakanaRows') + n('attendance'));
+}
 function _maybeAutoSeed() {
   try {
     if (DB._autoSeeded) return;
     if (DB.wipedAt) return;
     if (!_srvStartupPulled) return;
-    if (_dbRecordCount(DB) > 0) return;
+    if (!_seedLooksEmpty()) return;
     if (typeof currentRole !== 'undefined' && currentRole === 'viewer') return;
-    seedDemoData(1);
+    seedDemoData(1, { keep: true });
     DB._autoSeeded = true;
     save(); _flushSave();
+    try { _seedBannerPaint(); } catch (e) {}
     try { showTopToast('📚 یک سال حساب برای همهٔ بخش‌ها آماده شد — با «پاک کردن همه» می‌رود', '#3182ce', 7000); } catch (e) {}
   } catch (e) {}
+}
+/* کارتِ دیدنیِ داشبورد: تا وقتی برنامه خالی است، همان‌جا که کاربر می‌ایستد دیده
+   می‌شود — نه در ته تنظیمات. با پر شدنِ برنامه خودش ناپدید می‌شود. */
+function _seedBannerPaint() {
+  const host = document.getElementById('sec-dashboard');
+  if (!host) return;
+  let box = document.getElementById('seed-banner');
+  const show = _seedLooksEmpty();
+  if (!show) { if (box) box.remove(); return; }
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'seed-banner';
+    box.className = 'settings-card';
+    box.style.cssText = 'border-color:var(--blue);margin:10px 12px';
+    box.innerHTML = '<div class="settings-title" style="color:var(--blue)">🧪 برنامه هنوز خالی است</div>' +
+      '<div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">' +
+      'برای دیدن و امتحان کردنِ همهٔ بخش‌ها، یک تا پنج سال حسابِ کامل ساخته می‌شود — ' +
+      'پارچه، ورق، مخزن، قرض‌داران با حساب‌های فرعی، مصارف، گاوصندوق، صرافی، چکنه، ' +
+      'فاکتورها، کارمندان و حاضری. حساب‌های خودتان پاک نمی‌شوند و هر وقت خواستید با ' +
+      '«🗑️ پاک کردن همه» همه‌اش می‌رود.</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
+      '<button onclick="_seedNow(1)" style="padding:9px 20px;border-radius:9px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-family:\'Vazirmatn\',sans-serif;font-weight:800;cursor:pointer;font-size:0.87rem">🧪 یک سال</button>' +
+      '<button onclick="_seedNow(5)" style="padding:9px 20px;border-radius:9px;border:1px solid var(--green);background:transparent;color:var(--green);font-family:\'Vazirmatn\',sans-serif;font-weight:800;cursor:pointer;font-size:0.87rem">🧪 پنج سال</button>' +
+      '</div>';
+    const t = host.querySelector('.section-title');
+    if (t && t.nextSibling) host.insertBefore(box, t.nextSibling); else host.appendChild(box);
+  }
+}
+function _seedNow(y) {
+  let out;
+  try { out = seedDemoData(y, { keep: true }); }
+  catch (e) { showToast('❌ نشد: ' + (e && e.message), '#e53e3e'); return; }
+  DB._autoSeeded = true; save(); _flushSave();
+  try { _seedBannerPaint(); } catch (e) {}
+  showToast('✅ ' + n2fa(out.years) + ' سال حساب ساخته شد — همهٔ بخش‌ها پر شدند', '#38a169');
 }
 /** دکمهٔ بخشِ «مدیریت داده» */
 function fillDemoData() {
@@ -40041,8 +40097,10 @@ function fillDemoData() {
   const y = Math.max(1, Math.min(5, parseInt(el && el.value, 10) || 1));
   if (!confirm('برای ' + n2fa(y) + ' سال، حسابِ آزمایشی در همهٔ بخش‌ها ساخته می‌شود و جای دادهٔ فعلی را می‌گیرد.\n\nاین کار با «🗑️ پاک کردن همه» در همین صفحه به‌طور کامل برمی‌گردد. ادامه؟')) return;
   let out;
-  try { out = seedDemoData(y); }
+  try { out = seedDemoData(y, { keep: true }); }
   catch (e) { showToast('❌ ساختنِ دادهٔ آزمایشی نشد: ' + (e && e.message), '#e53e3e'); return; }
+  DB._autoSeeded = true; save();
+  try { _seedBannerPaint(); } catch (e) {}
   const box = document.getElementById('seed-result');
   if (box) {
     box.style.display = '';
@@ -40057,7 +40115,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.254';
+const APP_VERSION = '2.9.255';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
