@@ -28284,8 +28284,13 @@ function _updatePersonTotals(person) {
   // (وگرنه صفر می‌ماند). onfocus فقط سهمِ دستی را نشان می‌دهد و onblur دوباره جمع را می‌نویسد.
   // در «واحد تیل» ستونِ «رسید تیل» جدول هم به این جمع اضافه شد تا رسیدی که در جدول
   // زده می‌شود در سربرگ هم دیده شود (قرینهٔ همان کاری که حالتِ پول از قبل می‌کرد)
-  setInput('pm-p-rasidfuel', money ? ((rasidP + t.petrol.rasid)||'') : (rnd(rasidP + _rasidMoneyLP + t.petrol.rasidFuel)||''));
-  setInput('pm-d-rasidfuel', money ? ((rasidD + t.diesel.rasid)||'') : (rnd(rasidD + _rasidMoneyLD + t.diesel.rasidFuel)||''));
+  /* هر دو واحد یک قاعده دارند: کادرِ سربرگ = رسیدِ سربرگ + همهٔ رسیدهای جدول.
+     واحد پول → ستونِ «رسید» + معادلِ پولیِ ستونِ «رسید تیل».
+     واحد تیل → معادلِ لیترِ ستونِ «رسید» + ستونِ «رسید تیل».
+     (پیشتر واحد پول معادلِ پولیِ «رسید تیل» را نشان نمی‌داد، در حالی که الباقی
+      آن را کم می‌کرد — یعنی کادر با الباقی نمی‌خواند.) */
+  setInput('pm-p-rasidfuel', money ? (rnd(rasidP + t.petrol.rasid + _rasidFuelMoneyP)||'') : (rnd(rasidP + _rasidMoneyLP + t.petrol.rasidFuel)||''));
+  setInput('pm-d-rasidfuel', money ? (rnd(rasidD + t.diesel.rasid + _rasidFuelMoneyD)||'') : (rnd(rasidD + _rasidMoneyLD + t.diesel.rasidFuel)||''));
   const _rawP = _acctPctRaw(acct, 'petrol'), _rawD = _acctPctRaw(acct, 'diesel');
   setInput('pm-percent', _rawP);
   setInput('pm-percent-d', _rawD);
@@ -28366,7 +28371,10 @@ function _updatePersonTotals(person) {
   // محاسبات (الباقی، کادرهای حساب و …) ندارند
   setV('pm-ft-fuel', n2fa(tf.fuel));
   setV('pm-ft-bardagi', n2fa(tf.bardagi));
-  setV('pm-ft-rasid', n2fa(tf.rasid));
+  /* قرینهٔ همان کارِ ستونِ «رسید تیل»: در واحد پول، رسیدِ سربرگ پول است و باید در
+     جمعِ ستونِ «رسید» بیاید (در جدول هم به‌صورت ردیفِ 📌 دیده می‌شود). */
+  const _hdrRasidM = money ? ((_incP ? rasidP : 0) + (_incD ? rasidD : 0)) : 0;
+  setV('pm-ft-rasid', n2fa(rnd(tf.rasid + _hdrRasidM)));
   /* رسیدِ سربرگ در جدول به‌صورت ردیفِ 📌 دیده می‌شود، پس باید در جمعِ همین ستون هم
      بیاید — وگرنه جمعِ ستون با کادرِ سربرگ نمی‌خواند. فقط «واحد تیل»: در واحد پول
      رسیدِ سربرگ پول است و در ستونِ لیتری جای ندارد. */
@@ -28377,7 +28385,10 @@ function _updatePersonTotals(person) {
   // جدول هم به لیتر نوشته می‌شود: رسید تیل − مقدار تیل
   // جمع الباقیِ جدول (رسید − بردگی). در «واحد پول» معادلِ پولیِ «رسید تیلِ» جدول هم
   // طلب است و به رسید اضافه می‌شود (هماهنگ با کارت‌های بالا).
-  const netAll = Math.round(tf.rasid - tf.bardagi + (money ? _rasidFuelMoneyF : 0));
+  /* مثلِ واحد تیل: رسیدِ سربرگ و فیصدی هم در این عدد بیایند تا «الباقی پول»ِ فوتر
+     و عددِ کارت‌های پطرول/دیزل یکی باشند (هر دو یک نام دارند). */
+  const _commAll = (_incP ? commP : 0) + (_incD ? commD : 0);
+  const netAll = Math.round(tf.rasid + _hdrRasidM - tf.bardagi + (money ? _rasidFuelMoneyF : 0) - (money ? _commAll : 0));
   const netTxt = n2fa(netAll);
   const ftAlbEl = document.getElementById('pm-ft-albaqi');
   if (ftAlbEl) {
@@ -40674,7 +40685,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.275';
+const APP_VERSION = '2.9.276';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
