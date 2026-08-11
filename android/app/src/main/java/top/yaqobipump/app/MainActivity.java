@@ -202,14 +202,53 @@ public class MainActivity extends Activity {
   private File stagingFile() { return new File(updateDir(), "index.part"); }
   private SharedPreferences prefs() { return getSharedPreferences(PREFS, Context.MODE_PRIVATE); }
 
+  /** نسخهٔ برنامه‌ای که همراهِ خودِ فایلِ نصب آمده (همان APP_VERSIONِ index.html) */
+  private String bundledVersion() {
+    try {
+      String v = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+      return v == null ? "" : v;
+    } catch (Throwable t) {
+      return "";
+    }
+  }
+
+  /** ۱ اگر a تازه‌تر از b باشد — همان مقایسه‌ای که خودِ برنامه می‌کند */
+  private static int verCmp(String a, String b) {
+    String[] pa = (a == null ? "" : a).split("\\.");
+    String[] pb = (b == null ? "" : b).split("\\.");
+    int n = Math.max(pa.length, pb.length);
+    for (int i = 0; i < n; i++) {
+      int x = 0, y = 0;
+      try { if (i < pa.length) x = Integer.parseInt(pa[i].trim()); } catch (Throwable ignored) { }
+      try { if (i < pb.length) y = Integer.parseInt(pb[i].trim()); } catch (Throwable ignored) { }
+      if (x != y) return x > y ? 1 : -1;
+    }
+    return 0;
+  }
+
   /**
    * اگر آپدیتِ سالمی هست همان بار شود، وگرنه نسخهٔ همراهِ نصب.
    * فایلِ خیلی کوچک = ناقص، پس دور انداخته می‌شود.
+   *
+   * ⚠️ نسخهٔ ذخیره‌شده باید از نسخهٔ همراهِ نصب «تازه‌تر» باشد، وگرنه دور
+   * انداخته می‌شود. بدونِ این شرط، وقتی کاربر فایلِ نصبِ تازه را نصب می‌کرد،
+   * همان آپدیتِ کهنه‌ای که قبلاً در حافظهٔ خصوصی نشسته بود باز هم برنده می‌شد و
+   * برنامه نسخهٔ قدیمی را نشان می‌داد — یعنی «هرچه آپدیت می‌دهم به اپ نمی‌رسد».
+   * چون android:allowBackup روشن است، آن فایل حتی از پاک‌کردن و نصبِ دوباره هم
+   * جان سالم به در می‌برد، پس نصبِ دوباره هم درستش نمی‌کرد.
+   * اگر نسخهٔ فایلِ ذخیره‌شده معلوم نباشد (تنظیماتِ پاک‌شده یا ساختِ قدیمی) هم
+   * دور انداخته می‌شود: نسخهٔ همراهِ نصب همیشه سالم است و اگر سایت تازه‌تر باشد،
+   * خودِ برنامه دوباره می‌گیردش.
    */
   private String pickStartUrl() {
     File f = updateFile();
     try {
       if (f.exists() && f.length() > 200000) {
+        String stored = prefs().getString(KEY_VERSION, "");
+        if (stored.isEmpty() || verCmp(stored, bundledVersion()) <= 0) {
+          dropUpdate();
+          return ASSET_URL;
+        }
         int tries = prefs().getInt(KEY_TRIES, 0);
         if (tries >= MAX_TRIES) {
           dropUpdate();                      // دو بار بالا نیامد → برگشت به نسخهٔ سالم
