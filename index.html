@@ -28716,6 +28716,11 @@ function pdfPersonHistory(pid, hid) {
   const commP = rasidP*pctP/100, commD = rasidD*pctD/100;
   const remP = bordP + commP - rasidP - (money ? st.petrol.rasid : 0),
         remD = bordD + commD - rasidD - (money ? st.diesel.rasid : 0);
+  /* ⚠️ علامت: روی صفحه، کارت‌های پطرول/دیزل این عدد را «قرینه» نشان می‌دهند
+     (setRem با ‎-v‎): مثبت یعنی هنوز تیل/پیش‌پرداخت دارد، منفی یعنی بدهکار.
+     پی‌دی‌اف عددِ خام را می‌نوشت، پس حسابی که ۸٬۸۷۹ لیتر داشت در ورق
+     «‎-8,944‎» دیده می‌شد و برعکس. حالا دقیقاً همان چیزی است که روی صفحه است. */
+  const showRemP = -remP, showRemD = -remD;
   const archiveLabel = h.note ? h.note.split('\n')[0].substring(0,50) : '';
   const tableRows = rows.map((r,i) => {
     const bard = r.byMoney ? (r.bardagi||0) : _personRowBardagi(r);
@@ -28769,7 +28774,7 @@ tr:nth-child(even) td{background:#f7fafc}
       <div class="sum-box"><div class="l">فیصدی</div><div class="v" style="color:#e53e3e">${n2fa(rnd(commP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">رسید</div><div class="v" style="color:#276749">${n2fa(rnd(rasidP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">برد</div><div class="v" style="color:#c07700">${n2fa(rnd(bordP))} ${unit}</div></div>
-      <div class="sum-box"><div class="l">الباقی</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(remP))} ${unit}</div></div>
+      <div class="sum-box"><div class="l">الباقی</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(showRemP))} ${unit}</div></div>
     </div>
   </div>` : ''}
   ${hFilter !== 'petrol' ? `<div class="split-box" style="border-color:#d9770666">
@@ -28778,7 +28783,7 @@ tr:nth-child(even) td{background:#f7fafc}
       <div class="sum-box"><div class="l">فیصدی</div><div class="v" style="color:#e53e3e">${n2fa(rnd(commD))} ${unit}</div></div>
       <div class="sum-box"><div class="l">رسید</div><div class="v" style="color:#276749">${n2fa(rnd(rasidD))} ${unit}</div></div>
       <div class="sum-box"><div class="l">برد</div><div class="v" style="color:#c07700">${n2fa(rnd(bordD))} ${unit}</div></div>
-      <div class="sum-box"><div class="l">الباقی</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(remD))} ${unit}</div></div>
+      <div class="sum-box"><div class="l">الباقی</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(showRemD))} ${unit}</div></div>
     </div>
   </div>` : ''}
 </div>
@@ -32298,6 +32303,11 @@ function pdfPerson() {
   const rnd = x => Math.round(x*100)/100;
   const remP = bordP + commP - rasidP - (money ? t.petrol.rasid : 0),
         remD = bordD + commD - rasidD - (money ? t.diesel.rasid : 0);
+  /* ⚠️ علامت: روی صفحه، کارت‌های پطرول/دیزل این عدد را «قرینه» نشان می‌دهند
+     (setRem با ‎-v‎): مثبت یعنی هنوز تیل/پیش‌پرداخت دارد، منفی یعنی بدهکار.
+     پی‌دی‌اف عددِ خام را می‌نوشت، پس حسابی که ۸٬۸۷۹ لیتر داشت در ورق
+     «‎-8,944‎» دیده می‌شد و برعکس. حالا دقیقاً همان چیزی است که روی صفحه است. */
+  const showRemP = -remP, showRemD = -remD;
   const rlabel = money ? 'مقدار رسید پول' : 'مقدار رسید تیل';
   const remlabel = money ? 'الباقی پول' : 'الباقی تیل';
   const showFtCol = filter === 'all';
@@ -32314,8 +32324,10 @@ function pdfPerson() {
     const fuelLabel = r.ftype === 'diesel' ? '🟤 دیزل' : '⛽ پطرول';
     // بردگی مثل خودِ سایت: ردیفِ پولی → مقدارِ بردگیِ دستی، وگرنه مقدار تیل × فی (نرخِ اتحادیهٔ قفل‌شده)
     const bardagi = r.byMoney ? (parseFloat(r.bardagi) || 0) : _personRowBardagi(r);
-    const albaqi = bardagi - (parseFloat(r.rasid) || 0);
-    const albaqiColor = albaqi > 0 ? '#e53e3e' : '#276749';
+    /* ⚠️ ستونِ «الباقی» در خودِ جدولِ برنامه عمداً خالی است — _updatePersonRowCells
+       صریحاً albaqiCell.textContent='' می‌گذارد («عددِ ردیف‌به‌ردیف جلو نیاید،
+       جمع شود»). پی‌دی‌اف به‌جایش «بردگی − رسید» می‌نوشت و چون رسیدِ ردیف‌ها صفر
+       بود عیناً همان عددِ بردگی درمی‌آمد — همان چیزی که گزارش شد. */
     return `<tr>
       <td style="text-align:center;color:#718096">${n2fa(i + 1)}</td>
       <td>${r.date || '—'}</td>
@@ -32327,7 +32339,7 @@ function pdfPerson() {
       <td style="color:#c07700;font-weight:700">${n2fa(Math.round(bardagi))}</td>
       <td style="color:#276749;font-weight:700">${(parseFloat(r.rasid)||0) ? n2fa(r.rasid) : '—'}</td>
       <td style="color:#2b6cb0">${(parseFloat(r.rasidFuel)||0) ? n2fa(r.rasidFuel) + ' لیتر' : '—'}</td>
-      <td style="color:${albaqiColor};font-weight:700">${n2fa(Math.round(albaqi))}</td>
+      <td></td>
     </tr>`;
   }).join('');
 
@@ -32347,7 +32359,7 @@ function pdfPerson() {
       <div class="sum-box"><div class="l">فیصدی ما (${n2fa(pctP)}٪)</div><div class="v" style="color:#e53e3e">${n2fa(rnd(commP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">${rlabel}</div><div class="v" style="color:#276749">${n2fa(rnd(rasidP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">برد</div><div class="v" style="color:#c07700">${n2fa(rnd(bordP))} ${unit}</div></div>
-      <div class="sum-box"><div class="l">${remlabel}</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(remP))} ${unit}</div></div>
+      <div class="sum-box"><div class="l">${remlabel}</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(showRemP))} ${unit}</div></div>
     </div>
   </div>
   <div class="split-box diesel-box">
@@ -32356,7 +32368,7 @@ function pdfPerson() {
       <div class="sum-box"><div class="l">فیصدی ما (${n2fa(pctD)}٪)</div><div class="v" style="color:#e53e3e">${n2fa(rnd(commD))} ${unit}</div></div>
       <div class="sum-box"><div class="l">${rlabel}</div><div class="v" style="color:#276749">${n2fa(rnd(rasidD))} ${unit}</div></div>
       <div class="sum-box"><div class="l">برد</div><div class="v" style="color:#c07700">${n2fa(rnd(bordD))} ${unit}</div></div>
-      <div class="sum-box"><div class="l">${remlabel}</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(remD))} ${unit}</div></div>
+      <div class="sum-box"><div class="l">${remlabel}</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(showRemD))} ${unit}</div></div>
     </div>
   </div>
 </div>` : `
@@ -32367,7 +32379,7 @@ function pdfPerson() {
       <div class="sum-box"><div class="l">فیصدی ما (${n2fa(filter==='diesel'?pctD:pctP)}٪)</div><div class="v" style="color:#e53e3e">${n2fa(rnd(filter==='diesel'?commD:commP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">${rlabel}</div><div class="v" style="color:#276749">${n2fa(rnd(filter==='diesel'?rasidD:rasidP))} ${unit}</div></div>
       <div class="sum-box"><div class="l">برد</div><div class="v" style="color:#c07700">${n2fa(rnd(filter==='diesel'?bordD:bordP))} ${unit}</div></div>
-      <div class="sum-box"><div class="l">${remlabel}</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(filter==='diesel'?remD:remP))} ${unit}</div></div>
+      <div class="sum-box"><div class="l">${remlabel}</div><div class="v" style="color:#2b6cb0">${n2fa(rnd(filter==='diesel'?showRemD:showRemP))} ${unit}</div></div>
     </div>
   </div>
 </div>`;
@@ -40143,7 +40155,11 @@ function _msgrThreadIds() {
   const add = t => { if (_msgrIsPersonThread(t) && out.indexOf(t) < 0) out.push(t); };
   try { (_ntfMyTopics() || []).forEach(add); } catch (e) {}
   _msgrExtra.forEach(add);
-  Object.keys(_msgrMsgs).forEach(add);
+  /* گفت‌وگوهای زندهٔ سرور هم فقط وقتی در فهرست می‌آیند که صاحبشان یکی از
+     قرض‌دارهای همین دستگاه باشد. پیام‌هایی که از یک کیو‌آرِ ناشناس یا حسابِ
+     پاک‌شده می‌آمدند با نامِ «🧑 مهمان» می‌نشستند و معلوم نبود کی‌اند —
+     خواستهٔ صریحِ صاحب ریپو که برداشته شوند. */
+  Object.keys(_msgrMsgs).forEach(t => { if (_msgrKnownPerson(t)) add(t); });
   /* گفت‌وگوهایی که فقط در چتِ قدیمی هستند هم باید در فهرست دیده شوند.
      باگِ گزارش‌شده: «پیام‌ها دیده نمی‌شود، یارو پیام هم داده و برای چت تک‌نفره
      هیچی نیست» — بجِ رباتِ شناور از _dmIndex (چتِ قدیمی) شمرده می‌شد ولی این
@@ -40642,7 +40658,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.273';
+const APP_VERSION = '2.9.274';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -48735,6 +48751,9 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
   position:absolute; top:3px; bottom:3px;
   left:50%; transform:translateX(-50%);
   justify-content:center;
+  /* «⛽ پطرول» و «🟤 دیزل» یک‌اندازه نیستند و کادرشان ناهم‌عرض درمی‌آمد؛ یک کفِ
+     عرض بر حسبِ em هر دو را برابر می‌کند و با هر اندازهٔ فونتی هم جور می‌ماند. */
+  min-width:6.4em; box-sizing:border-box;
 }
 .xls-tbl tr.pm-auto-row .pmar-mark{ color:var(--accent); }
 .xls-tbl tr.pm-auto-row .pmar-name{ white-space:nowrap; }
