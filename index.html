@@ -17639,6 +17639,39 @@ body.boot-viewer #bootViewerSplash{
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════════════════════════
+     📨 پیام‌رسانِ یعقوبی — داخلِ خودِ برنامه، روی سرورِ خانگی
+     ستونِ راست: گفت‌وگوها · ستونِ چپ: پیام‌ها + کادرِ نوشتن. در گوشی یکی‌یکی
+     دیده می‌شوند (کلاسِ msgr-on-chat جابه‌جاشان می‌کند).
+     ══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="msgrModal">
+  <div class="modal msgr-modal">
+    <div class="modal-head">
+      <h2 style="flex:1;text-align:center">📨 پیام‌رسان یعقوبی</h2>
+      <button class="add-row-btn msgr-new" style="margin:0;border-color:var(--green);color:var(--green);padding:5px 10px;font-size:0.78rem" onclick="msgrPickPerson()">➕ چت تازه</button>
+      <button class="modal-close" onclick="msgrClose()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0;overflow:hidden">
+      <div class="msgr-pane" id="msgrPane">
+        <div class="msgr-side" id="msgrThreads"></div>
+        <div class="msgr-main">
+          <div class="msgr-top">
+            <button class="msgr-back" onclick="msgrBack()">→</button>
+            <span class="msgr-name" id="msgrChatName"></span>
+            <span class="msgr-state" id="msgrState"></span>
+          </div>
+          <div class="msgr-list" id="msgrList"></div>
+          <div class="msgr-comp" id="msgrComposer">
+            <input id="msgrInput" placeholder="پیام بنویسید…" autocomplete="off"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();msgrSend();}">
+            <button onclick="msgrSend()">فرستادن ➤</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- صفحهٔ جدا: مدت عضویتِ همهٔ قرض‌داران (چند وقت است مشتریِ ما هستند) -->
 <div class="modal-overlay" id="membershipListModal">
   <div class="modal" style="max-width:680px">
@@ -19269,6 +19302,13 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <div class="settings-title" style="color:var(--blue)">📨 خبرهای سرور</div>
     <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">فهرستِ اعلان‌هایی که از سرور خانگی رسیده و روشن کردنِ اعلان روی همین دستگاه.</div>
     <button class="pw-btn" style="background:var(--blue);color:#fff" onclick="ntfOpen()">📨 دیدن خبرهای سرور</button>
+  </div>
+  <div class="settings-card" style="border-color:var(--green)">
+    <div class="settings-title" style="color:var(--green)">📨 پیام‌رسان یعقوبی <span id="msgrDot" style="display:none;background:var(--red);color:#fff;border-radius:11px;min-width:20px;height:20px;align-items:center;justify-content:center;font-size:0.68rem;font-weight:800;padding:0 5px"></span></div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">
+      چتِ کارمندان و چتِ تک‌به‌تک با هر قرض‌دار — همه روی <b>سرورِ خانگیِ خودتان</b>. هر پیام همان لحظه اعلان هم می‌شود، حتی وقتی برنامه بسته است. پیامی که آفلاین بنویسید در صف می‌ماند و با وصل شدن خودش می‌رود.
+    </div>
+    <button class="pw-btn" style="background:var(--green);color:#fff" onclick="msgrOpen()">📨 باز کردن پیام‌رسان</button>
   </div>
   <div class="settings-card">
     <div class="settings-title">🔔 صدا و اعلان</div>
@@ -35364,6 +35404,7 @@ function pmMoreMenu(ev) {
   menu.id = 'pmMoreMenu';
   menu.className = 'ch-msg-menu';
   menu.innerHTML =
+    '<button type="button" data-a="chat">💬 چت با این حساب</button>' +
     '<button type="button" data-a="qr">📲 کیو‌آر</button>' +
     '<button type="button" data-a="rename">✏️ تغییر اسم</button>' +
     '<button type="button" data-a="copy">📇 کپیِ حساب</button>' +
@@ -35373,7 +35414,8 @@ function pmMoreMenu(ev) {
     e.preventDefault(); e.stopPropagation();
     const a = b.getAttribute('data-a');
     _pmMoreClose();
-    if (a === 'qr') showPersonQRFromModal();
+    if (a === 'chat') msgrOpenPerson(currentPersonId, currentSubId || '');
+    else if (a === 'qr') showPersonQRFromModal();
     else if (a === 'rename') renameCurrentPerson();
     else if (a === 'copy') openAcctCardFromPerson();
     else if (a === 'del') deletePersonSub();
@@ -38982,6 +39024,18 @@ function _ntfMyTopics() {
 }
 /** همان فهرست، به‌صورت یک رشتهٔ ثابت — برای مقایسه و کلیدِ ذخیره */
 function _ntfTopicKey(list) { return (list || _ntfMyTopics()).slice().sort().join(','); }
+/* گفت‌وگوهای تک‌به‌تکی که در پیام‌رسان باز کرده‌ایم هم باید زنده بمانند — وگرنه
+   جوابِ طرف فقط وقتی دیده می‌شد که همان لحظه پنجره باز باشد. */
+(function () {
+  const _base = _ntfMyTopics;
+  _ntfMyTopics = function () {
+    const out = _base();
+    try {
+      (_msgrExtra || []).forEach(t => { if (t && out.indexOf(t) < 0) out.push(t); });
+    } catch (e) {}
+    return out;
+  };
+})();
 
 // برای هر موضوع یک سوکت: topic → WebSocket
 let _ntfSocks = new Map(), _ntfTimer = null, _ntfMsgs = [], _ntfTopic = null;
@@ -39075,6 +39129,7 @@ function _ntfWhen(ts) {
 /** خبرِ تازه رسید: در فهرست بنشان، نشانگر را تازه کن، و اگر برنامه پشتِ زمینه است اطلاع بده */
 function _ntfAccept(msg, { live } = {}) {
   if (!msg || _ntfMsgs.some(m => m.id === msg.id)) return;
+  try { _msgrAccept(msg); } catch (e) {}
   _ntfMsgs.push(msg);
   _ntfMsgs.sort((a, b) => a.id - b.id);
   if (_ntfMsgs.length > 200) _ntfMsgs = _ntfMsgs.slice(-200);
@@ -39296,10 +39351,292 @@ try {
   window.addEventListener('online', () => { _ntfConnect(); _ntfAutoPush('silent'); });
 } catch (e) {}
 
+/* ══════════════════════════════════════════════════════════════════════════
+   📨 پیام‌رسانِ یعقوبی — داخلِ خودِ برنامه، روی سرورِ خانگیِ خودمان
+   ─────────────────────────────────────────────────────────────────────────
+   نه ntfy، نه سرویسِ بیرونی: همان `/api/notify/<موضوع>` و سوکتِ `/notify?topic=`
+   سرورِ خانگی، ولی این‌بار به‌جای «فهرستِ خبر»، یک پیام‌رسانِ درست و حسابی:
+     • هر گفت‌وگو یک «موضوع» است: چتِ کارمندان (staff) و چتِ تک‌به‌تک با هر
+       قرض‌دار (p-<شناسه> — همان موضوعی که کیو‌آرِ همان شخص به آن گوش می‌دهد).
+     • پیام‌ها حبابی‌اند، نامِ فرستنده و ساعت دارند، خوانده‌نشده‌ها شمرده می‌شوند.
+     • نوشتنِ آفلاین گم نمی‌شود: در صف می‌ماند و با وصل شدن خودش می‌رود.
+     • هر پیام همان لحظه اعلانِ واقعی هم می‌شود (حتی با برنامهٔ بسته) — چون از
+       همان مسیرِ پوشِ سرورِ خانگی رد می‌شود. هیچ کارِ اضافه‌ای لازم نیست.
+   چرا از میرزا به مشتری روی موضوعِ خودِ مشتری می‌رود ولی برعکسش یک نسخه هم به
+   «mirza» می‌رود: میرزا نمی‌تواند به موضوعِ تک‌تکِ صدها مشتری وصل بماند؛ پس
+   مشتری یک رونوشت به صندوقِ میرزا هم می‌فرستد و برچسبِ موضوعِ خودش را رویش
+   می‌گذارد تا در همان گفت‌وگو بنشیند. اگر میرزا همان گفت‌وگو را باز داشته باشد
+   پیام دو بار می‌رسد — با مقایسهٔ متن و زمان یکی‌شان کنار گذاشته می‌شود.
+   ══════════════════════════════════════════════════════════════════════════ */
+const MSGR_KEEP = 300;            // بیشترین پیامِ نگه‌داشته‌شده در هر گفت‌وگو
+const MSGR_MAX_EXTRA = 12;        // بیشترین گفت‌وگوی تک‌به‌تکِ باز نگه‌داشته‌شده
+let _msgrMsgs = {};               // گفت‌وگو → [پیام]
+let _msgrCur = null;              // گفت‌وگوی باز
+let _msgrExtra = [];              // موضوع‌های تک‌به‌تکی که سوکتشان باز می‌ماند
+
+function _msgrLsGet(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }
+function _msgrLsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+
+try { _msgrExtra = (_msgrLsGet('pumpMsgrExtra', []) || []).slice(0, MSGR_MAX_EXTRA); } catch (e) { _msgrExtra = []; }
+
+/** موضوعِ گفت‌وگوی تک‌به‌تکِ یک قرض‌دار — دقیقاً همانی که کیو‌آرِ خودش به آن گوش می‌دهد */
+function msgrTopicOfPerson(person, sub) {
+  if (!person) return '';
+  const peer = _peerKey('debt-' + person.id + (sub && sub.id ? ('~' + sub.id) : ''));
+  return NTF_TOPIC_PERSON(peer);
+}
+/** پیام روی کدام گفت‌وگو می‌نشیند؟ برچسبِ p-… حرفِ آخر را می‌زند، وگرنه خودِ موضوع */
+function _msgrThreadOf(m) {
+  const tags = (m && m.tags) || [];
+  for (let i = 0; i < tags.length; i++) {
+    const t = String(tags[i] || '').toLowerCase();
+    if (/^p-[a-z0-9_-]+$/.test(t)) return t;
+  }
+  return (m && m.topic) || 'staff';
+}
+function _msgrIsAdmin() { try { return _rbMode === 'admin' || currentRole === 'admin'; } catch (e) { return false; } }
+function _msgrMeName() {
+  // مدیرِ برنامه همیشه با نامِ «میرزا» پیام می‌فرستد — حتی اگر هنوز سراغِ ربات نرفته باشد
+  try { if (_msgrIsAdmin()) return 'میرزا'; } catch (e) {}
+  try { return _ntfDeviceLabel(); } catch (e) { return 'من'; }
+}
+/** نامِ خواناى گفت‌وگو */
+function _msgrName(id) {
+  if (id === 'staff') return '👷 چتِ کارمندان';
+  if (id === 'mirza') return '📥 رسیده به میرزا';
+  const want = String(id || '').toLowerCase();
+  let found = '';
+  try {
+    (DB.debtPersons || []).some(p => {
+      if (msgrTopicOfPerson(p) === want) { found = p.name; return true; }
+      return (p.subs || []).some(sb => {
+        if (msgrTopicOfPerson(p, sb) === want) { found = p.name + ' — ' + (sb.name || 'حساب'); return true; }
+        return false;
+      });
+    });
+  } catch (e) {}
+  return '🧑 ' + (found || want.replace(/^p-/, ''));
+}
+function _msgrSeenKey(id) { return 'pumpMsgrSeen:' + id; }
+function _msgrSeen(id) { return +(_msgrLsGet(_msgrSeenKey(id), 0) || 0); }
+function _msgrMarkRead(id) {
+  const list = _msgrMsgs[id] || [];
+  if (!list.length) return;
+  const last = list[list.length - 1].at || 0;
+  if (last > _msgrSeen(id)) { _msgrLsSet(_msgrSeenKey(id), last); _msgrPaintBadge(); }
+}
+function _msgrUnread(id) {
+  const s = _msgrSeen(id);
+  return (_msgrMsgs[id] || []).filter(m => !m.mine && (m.at || 0) > s).length;
+}
+function _msgrUnreadAll() { return Object.keys(_msgrMsgs).reduce((n, id) => n + _msgrUnread(id), 0); }
+
+/** پیامی که از سرور رسید را در گفت‌وگوی خودش بنشان */
+function _msgrAccept(raw) {
+  if (!raw) return;
+  const id = _msgrThreadOf(raw);
+  const at = +raw.createdAt || Date.now();
+  const from = String(raw.title || '').trim();
+  const text = String(raw.body || '');
+  if (!text) return;
+  const list = _msgrMsgs[id] || (_msgrMsgs[id] = []);
+  // رونوشتِ دوم (همان متن از همان فرستنده در ۱۰ ثانیه) دوباره ننشیند
+  if (list.some(m => m.text === text && m.from === from && Math.abs((m.at || 0) - at) < 10000)) return;
+  // پیامی که خودمان فرستادیم و محلی نشانده بودیم → همان را «رسید» علامت بزن
+  const pend = list.find(m => m.pending && m.text === text);
+  if (pend) { pend.pending = false; pend.at = at; _msgrPaintIfOpen(id); return; }
+  list.push({ at, from, text, mine: false, id: raw.id });
+  list.sort((a, b) => (a.at || 0) - (b.at || 0));
+  if (list.length > MSGR_KEEP) _msgrMsgs[id] = list.slice(-MSGR_KEEP);
+  _msgrPaintBadge();
+  _msgrPaintIfOpen(id);
+}
+function _msgrPaintIfOpen(id) {
+  const m = document.getElementById('msgrModal');
+  if (!m || !m.classList.contains('open')) return;
+  _msgrPaintThreads();
+  if (_msgrCur === id) { _msgrPaintChat(); _msgrMarkRead(id); }
+}
+function _msgrPaintBadge() {
+  const n = _msgrUnreadAll();
+  ['msgrDot', 'msgrDot2'].forEach(k => {
+    const el = document.getElementById(k);
+    if (!el) return;
+    el.textContent = n > 99 ? '99+' : String(n);
+    el.style.display = n ? 'inline-flex' : 'none';
+  });
+}
+
+/* ── صفِ فرستادن: پیامِ آفلاین گم نمی‌شود ─────────────────────────────────── */
+function _msgrOutbox() { return _msgrLsGet('pumpMsgrOutbox', []) || []; }
+function _msgrOutboxSet(v) { _msgrLsSet('pumpMsgrOutbox', (v || []).slice(-100)); }
+function _msgrFlush() {
+  const box = _msgrOutbox();
+  if (!box.length) return;
+  const it = box[0];
+  _msgrPost(it).then(ok => {
+    if (!ok) return;                       // سرور نبود — دفعهٔ بعد
+    // نشانِ «🕐 در صف» از روی همان حباب برداشته شود (وگرنه تا برگشتنِ پیام از
+    // سوکت همان‌طور می‌ماند و کاربر فکر می‌کند نرفته)
+    try {
+      const lst = _msgrMsgs[it.thread] || [];
+      for (let i = lst.length - 1; i >= 0; i--) {
+        if (lst[i].pending && lst[i].text === it.text) { lst[i].pending = false; break; }
+      }
+    } catch (e) {}
+    const rest = _msgrOutbox().filter(x => x.key !== it.key);
+    _msgrOutboxSet(rest);
+    if (rest.length) setTimeout(_msgrFlush, 250);
+    else _msgrPaintIfOpen(_msgrCur);
+  });
+}
+/** یک پیام را واقعاً به سرورِ خانگی می‌فرستد (و برای گفت‌وگوی تک‌به‌تک، رونوشت به میرزا) */
+function _msgrPost(it) {
+  const jobs = [_ntfSend(it.topic, it.from, it.text, { tags: ['dm', it.thread], priority: 4 })];
+  if (it.copyToMirza) jobs.push(_ntfSend(NTF_TOPIC_MIRZA(), it.from, it.text, { tags: ['dm', it.thread], priority: 4 }));
+  return Promise.all(jobs).then(r => r.some(Boolean)).catch(() => false);
+}
+function msgrSend() {
+  const box = document.getElementById('msgrInput');
+  if (!box || !_msgrCur) return;
+  const text = String(box.value || '').trim();
+  if (!text) return;
+  box.value = '';
+  const thread = _msgrCur;
+  const it = {
+    key: 'm' + Date.now() + Math.random().toString(36).slice(2, 7),
+    thread, topic: thread === 'staff' ? 'staff' : thread,
+    from: _msgrMeName(), text, ts: Date.now(),
+    // مشتری/کارمند: یک رونوشت به صندوقِ میرزا تا بدونِ وصل بودن به موضوعِ او هم برسد
+    copyToMirza: thread !== 'staff' && !_msgrIsAdmin(),
+  };
+  const list = _msgrMsgs[thread] || (_msgrMsgs[thread] = []);
+  list.push({ at: it.ts, from: it.from, text, mine: true, pending: true });
+  _msgrLsSet(_msgrSeenKey(thread), it.ts);
+  _msgrPaintChat();
+  const q = _msgrOutbox(); q.push(it); _msgrOutboxSet(q);
+  _msgrFlush();
+}
+
+/* ── باز کردنِ گفت‌وگو ────────────────────────────────────────────────────── */
+/** موضوعِ یک گفت‌وگوی تک‌به‌تک را به سوکت‌های همیشه‌روشن اضافه می‌کند */
+function _msgrKeepTopic(topic) {
+  if (!topic || topic === 'staff' || topic === 'mirza') return;
+  if (_msgrExtra.indexOf(topic) >= 0) return;
+  _msgrExtra.unshift(topic);
+  if (_msgrExtra.length > MSGR_MAX_EXTRA) _msgrExtra = _msgrExtra.slice(0, MSGR_MAX_EXTRA);
+  _msgrLsSet('pumpMsgrExtra', _msgrExtra);
+  try { _ntfConnect(); } catch (e) {}
+  try { _ntfAutoPush('silent'); } catch (e) {}
+}
+/** فهرستِ گفت‌وگوهایی که باید در ستونِ کناری دیده شوند */
+function _msgrThreadIds() {
+  const out = [];
+  const add = t => { if (t && out.indexOf(t) < 0) out.push(t); };
+  add('staff');
+  try { (_ntfMyTopics() || []).forEach(t => { if (t !== 'mirza') add(t); }); } catch (e) {}
+  _msgrExtra.forEach(add);
+  Object.keys(_msgrMsgs).forEach(add);
+  return out;
+}
+function msgrOpen(threadId) {
+  const m = document.getElementById('msgrModal');
+  if (!m) return;
+  m.classList.add('open');
+  if (threadId) { _msgrCur = threadId; _msgrKeepTopic(threadId); }
+  _msgrPaintThreads();
+  _msgrPaintChat();
+  if (_msgrCur) _msgrMarkRead(_msgrCur);
+  try { _ntfAutoPush('ask'); } catch (e) {}
+  _msgrFlush();
+}
+function msgrClose() { const m = document.getElementById('msgrModal'); if (m) m.classList.remove('open'); }
+function msgrBack() { _msgrCur = null; _msgrPaintThreads(); _msgrPaintChat(); }
+/** «چت با این شخص» — از مودالِ حساب یا از فهرست */
+function msgrOpenPerson(pid, subId) {
+  const person = (DB.debtPersons || []).find(p => String(p.id) === String(pid));
+  if (!person) { showToast('این شخص پیدا نشد', '#e53e3e'); return; }
+  const sub = subId ? (person.subs || []).find(s => String(s.id) === String(subId)) : null;
+  msgrOpen(msgrTopicOfPerson(person, sub));
+}
+
+function _msgrWhen(ts) {
+  const d = new Date(ts || Date.now());
+  try { return toEnDigits(d.toLocaleString('fa-IR', { dateStyle: 'short', timeStyle: 'short' })); }
+  catch (e) { return toEnDigits(d.toLocaleString()); }
+}
+function _msgrPaintThreads() {
+  const box = document.getElementById('msgrThreads');
+  const wrap = document.getElementById('msgrPane');
+  if (!box || !wrap) return;
+  wrap.classList.toggle('msgr-on-chat', !!_msgrCur);
+  const ids = _msgrThreadIds();
+  box.innerHTML = ids.map(id => {
+    const list = _msgrMsgs[id] || [];
+    const last = list[list.length - 1];
+    const n = _msgrUnread(id);
+    return '<button class="msgr-th' + (id === _msgrCur ? ' on' : '') + '" onclick="msgrOpen(\'' + _esc(id) + '\')">'
+      + '<span class="msgr-th-n">' + _esc(_msgrName(id)) + '</span>'
+      + '<span class="msgr-th-p">' + (last ? _esc((last.mine ? 'شما: ' : (last.from ? last.from + ': ' : '')) + last.text).slice(0, 90) : 'هنوز پیامی نیست') + '</span>'
+      + (n ? '<span class="msgr-th-b">' + n2fa(n) + '</span>' : '')
+      + '</button>';
+  }).join('') || '<div class="msgr-empty">هنوز گفت‌وگویی نیست.</div>';
+}
+function _msgrPaintChat() {
+  const head = document.getElementById('msgrChatName');
+  const list = document.getElementById('msgrList');
+  const comp = document.getElementById('msgrComposer');
+  if (!list) return;
+  if (!_msgrCur) {
+    if (head) head.textContent = '';
+    list.innerHTML = '<div class="msgr-empty">یک گفت‌وگو را از کنار انتخاب کنید.</div>';
+    if (comp) comp.style.display = 'none';
+    return;
+  }
+  if (comp) comp.style.display = '';
+  if (head) head.textContent = _msgrName(_msgrCur);
+  const msgs = _msgrMsgs[_msgrCur] || [];
+  list.innerHTML = msgs.length
+    ? msgs.map(m => '<div class="msgr-row' + (m.mine ? ' me' : '') + '">'
+        + '<div class="msgr-b">'
+        + (m.mine ? '' : '<div class="msgr-from">' + _esc(m.from || '—') + '</div>')
+        + '<div class="msgr-t">' + _esc(m.text) + '</div>'
+        + '<div class="msgr-w">' + _esc(_msgrWhen(m.at)) + (m.pending ? ' · 🕐 در صف' : '') + '</div>'
+        + '</div></div>').join('')
+    : '<div class="msgr-empty">هنوز پیامی رد و بدل نشده — اولین پیام را شما بنویسید.</div>';
+  list.scrollTop = list.scrollHeight;
+  const st = document.getElementById('msgrState');
+  if (st) {
+    const q = _msgrOutbox().length;
+    st.textContent = _ntfLive()
+      ? (q ? ('🕐 ' + n2fa(q) + ' پیام در صف') : 'وصل به سرورِ خانگی')
+      : (q ? ('🕐 ' + n2fa(q) + ' پیام در صف — با وصل شدن می‌رود') : 'در حال وصل شدن…');
+  }
+}
+/** فهرستِ قرض‌داران برای شروعِ گفت‌وگوی تازه */
+function msgrPickPerson() {
+  const box = document.getElementById('msgrThreads');
+  if (!box) return;
+  const list = (DB.debtPersons || []).slice(0, 400);
+  box.innerHTML = '<button class="msgr-th" onclick="_msgrPaintThreads()"><span class="msgr-th-n">→ برگشت به گفت‌وگوها</span></button>'
+    + (list.length ? list.map(p =>
+        '<button class="msgr-th" onclick="msgrOpenPerson(\'' + _esc(p.id) + '\')">'
+        + '<span class="msgr-th-n">🧑 ' + _esc(p.name || 'بی‌نام') + '</span>'
+        + '<span class="msgr-th-p">شروعِ گفت‌وگوی تک‌به‌تک</span></button>').join('')
+      : '<div class="msgr-empty">هنوز قرض‌داری ثبت نشده.</div>');
+}
+try {
+  window.__pumpMsgr__ = { open: msgrOpen, unread: _msgrUnreadAll, threads: _msgrThreadIds };
+} catch (e) {}
+try {
+  window.addEventListener('online', () => setTimeout(_msgrFlush, 800));
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') setTimeout(_msgrFlush, 800); });
+} catch (e) {}
+
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.248';
+const APP_VERSION = '2.9.249';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -47336,6 +47673,57 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
 .xls-tbl tr.pm-auto-row .pmar-name{ white-space:nowrap; }
 .xls-tbl tr.pm-auto-row .pmar-val{ color:var(--green); }
 .xls-tbl tr.pm-auto-row .pmar-comm{ color:var(--accent); }
+/* ── 📨 پیام‌رسانِ داخلِ برنامه ─────────────────────────────────────────────── */
+.msgr-modal{ max-width:920px; width:96vw; height:min(88lvh,760px); display:flex; flex-direction:column; }
+.msgr-modal .modal-head{ flex-wrap:nowrap; gap:6px; }
+.msgr-modal .modal-head h2{ font-size:0.95rem; white-space:nowrap; }
+/* دکمهٔ «چت تازه» نباید کشیده شود و سربرگ را دو خطه کند */
+.msgr-modal .modal-head .msgr-new{ flex:0 0 auto; width:auto; white-space:nowrap; }
+.msgr-modal .modal-body{ flex:1; min-height:0; }
+.msgr-pane{ display:flex; height:100%; min-height:0; }
+.msgr-side{ width:266px; flex:0 0 266px; border-inline-start:1px solid var(--border);
+  overflow-y:auto; background:var(--dark); display:flex; flex-direction:column; }
+.msgr-main{ flex:1; min-width:0; display:flex; flex-direction:column; }
+.msgr-top{ display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid var(--border); }
+.msgr-name{ font-weight:800; font-size:0.92rem; color:var(--txt); flex:1; }
+.msgr-state{ font-size:0.68rem; color:var(--muted); white-space:nowrap; }
+.msgr-back{ display:none; background:transparent; border:1px solid var(--border); border-radius:8px;
+  color:var(--accent); font-family:'Vazirmatn',sans-serif; font-weight:800; font-size:0.9rem; padding:2px 9px; cursor:pointer; }
+.msgr-th{ display:block; width:100%; text-align:right; background:transparent; border:none;
+  border-bottom:1px solid var(--border); padding:9px 12px; cursor:pointer; position:relative;
+  font-family:'Vazirmatn',sans-serif; color:var(--txt); }
+.msgr-th:hover{ background:rgba(127,127,127,.10); }
+.msgr-th.on{ background:color-mix(in srgb, var(--accent) 14%, transparent); }
+.msgr-th-n{ display:block; font-weight:800; font-size:0.84rem; }
+.msgr-th-p{ display:block; font-size:0.7rem; color:var(--muted); margin-top:2px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.msgr-th-b{ position:absolute; inset-inline-start:10px; top:12px; background:var(--red); color:#fff;
+  border-radius:11px; min-width:20px; height:20px; display:inline-flex; align-items:center;
+  justify-content:center; font-size:0.68rem; font-weight:800; padding:0 5px; }
+.msgr-list{ flex:1; min-height:0; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:8px; }
+.msgr-row{ display:flex; }
+.msgr-row.me{ justify-content:flex-start; }
+.msgr-row:not(.me){ justify-content:flex-end; }
+.msgr-b{ max-width:78%; background:var(--dark); border:1px solid var(--border); border-radius:12px; padding:7px 10px; }
+.msgr-row.me .msgr-b{ background:color-mix(in srgb, var(--accent) 18%, transparent); border-color:var(--accent); }
+.msgr-from{ font-size:0.68rem; font-weight:800; color:var(--accent); margin-bottom:2px; }
+.msgr-t{ font-size:0.86rem; font-weight:600; color:var(--txt); line-height:1.75; white-space:pre-wrap; word-break:break-word; }
+.msgr-w{ font-size:0.63rem; color:var(--muted); margin-top:3px; }
+.msgr-comp{ display:flex; gap:7px; padding:9px 12px; border-top:1px solid var(--border); }
+.msgr-comp input{ flex:1; min-width:0; background:var(--card); border:1px solid var(--border); border-radius:9px;
+  color:var(--txt); font-family:'Vazirmatn',sans-serif; font-size:0.86rem; font-weight:600; padding:8px 11px; }
+.msgr-comp button{ background:var(--green); border:none; border-radius:9px; color:#fff;
+  font-family:'Vazirmatn',sans-serif; font-weight:800; font-size:0.82rem; padding:8px 14px; cursor:pointer; white-space:nowrap; }
+.msgr-comp button:active{ transform:scale(.96); }
+.msgr-empty{ text-align:center; color:var(--muted); font-size:0.84rem; padding:26px 12px; }
+@media (max-width:700px){
+  /* گوشی: یا فهرستِ گفت‌وگوها دیده می‌شود یا خودِ گفت‌وگو — نه هر دو با هم */
+  .msgr-side{ width:100%; flex:1 1 auto; border:none; }
+  .msgr-main{ display:none; }
+  .msgr-pane.msgr-on-chat .msgr-side{ display:none; }
+  .msgr-pane.msgr-on-chat .msgr-main{ display:flex; }
+  .msgr-back{ display:inline-block; }
+}
 
 /* ردیفِ فیصدی: هر سه کادر در همان یک خط و همان بلندیِ قبلی — بلندتر نمی‌شود.
    نوشته‌ها کوتاه‌اند («پطرول» / «دیزل» / «هر دو») تا در گوشیِ باریک هم جا شوند. */
