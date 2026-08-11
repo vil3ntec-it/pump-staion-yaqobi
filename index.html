@@ -27852,17 +27852,17 @@ function _renderRasidLog(acct, o) {
      disabled عمدی است: هم کلیک‌شدنی نیست و هم ناوبریِ جدولی (_navFocusables)
      خودش [disabled] را کنار می‌گذارد، پس هیچ ایستگاهِ قلابی نمی‌سازد. */
   const ftDot = '<input type="radio" class="pmar-radio" disabled tabindex="-1" aria-hidden="true">';
+  /* دو جای خالیِ نامرئی (دقیقاً مثل دو گزینهٔ ردیف‌های دستی) فقط بلندیِ خانه را
+     می‌سازند تا با هر اندازهٔ فونتی مو‌به‌مو با ردیف‌های دستی یکی بماند — همان
+     قاعده‌ای که .pmar-box برای بقیهٔ خانه‌ها دارد. کادرِ دیدنی روی هر دو کشیده
+     می‌شود (قاعده‌اش در CSS)، پس جای خالی نمی‌ماند. */
   const ftCell = ftype => {
     const isP = ftype !== 'diesel';
+    const ghost = txt => '<span class="ft-opt pmar-ft-ghost" aria-hidden="true">' + ftDot + txt + '</span>';
     return '<td class="pmar-ft"><div class="ft-pick">' +
-      '<span class="ft-opt ' + (isP ? 'petrol' : 'diesel') + ' active">' +
+      ghost('⛽ پطرول') + ghost('🟤 دیزل') +
+      '<span class="ft-opt pmar-ft-real ' + (isP ? 'petrol' : 'diesel') + ' active">' +
       ftDot + (isP ? '⛽ پطرول' : '🟤 دیزل') + '</span>' +
-      /* جای خالیِ گزینهٔ دوم نگه داشته می‌شود (دیده نمی‌شود ولی جا می‌گیرد) تا
-         بلندیِ این ردیف مو‌به‌مو با ردیف‌های دستی یکی بماند — همان قاعده‌ای که
-         .pmar-box برای بقیهٔ خانه‌ها دارد. با هر اندازهٔ فونتی هم خودش جور
-         درمی‌آید، چون از خودِ همان .ft-opt ساخته شده. */
-      '<span class="ft-opt pmar-ft-ghost" aria-hidden="true">' +
-      ftDot + (isP ? '🟤 دیزل' : '⛽ پطرول') + '</span>' +
       '</div></td>';
   };
   /* هر خانه دقیقاً همان جعبه‌ای را می‌گیرد که کادرِ تایپیِ ردیف‌های دستی دارد:
@@ -40503,7 +40503,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.269';
+const APP_VERSION = '2.9.270';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -48571,6 +48571,20 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
    نوشته‌اش در همهٔ ردیف‌ها یکی می‌شود. چون disabled است، خاکستری‌شدنش هم
    دیده نمی‌شود. */
 .xls-tbl tr.pm-auto-row .pmar-radio{ visibility:hidden; }
+/* خواستهٔ صاحب ریپو: «جای دیزلش که خالی است را با پطرول پر کن» — کادرِ همان
+   تیلی که این رسید مالِ اوست از بالا تا پایینِ خانه کشیده می‌شود، پس هیچ جای
+   خالی‌ای نمی‌ماند.
+   گزینهٔ دوم (نامرئی) سرِ جایش می‌ماند چون بلندیِ خانه را همان می‌سازد؛ کادرِ
+   دیدنی رویش می‌نشیند. left:50% + translateX(-50%) یعنی عرضش همان عرضِ
+   نوشته‌اش می‌ماند (نه کش‌آمده) و دقیقاً همان‌جایی می‌ایستد که کادرِ ردیف‌های
+   دستی می‌ایستد — یعنی هم‌ترازیِ ستون به هم نمی‌خورد.
+   ⚠️ 3px همان padding خودِ .ft-pick است؛ اگر آن عوض شد، این هم باید عوض شود. */
+.xls-tbl tr.pm-auto-row .pmar-ft .ft-pick{ position:relative; }
+.xls-tbl tr.pm-auto-row .pmar-ft .pmar-ft-real{
+  position:absolute; top:3px; bottom:3px;
+  left:50%; transform:translateX(-50%);
+  justify-content:center;
+}
 .xls-tbl tr.pm-auto-row .pmar-mark{ color:var(--accent); }
 .xls-tbl tr.pm-auto-row .pmar-name{ white-space:nowrap; }
 .xls-tbl tr.pm-auto-row .pmar-val{ color:var(--green); }
