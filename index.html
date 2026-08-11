@@ -17639,39 +17639,6 @@ body.boot-viewer #bootViewerSplash{
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════════════════
-     📨 پیام‌رسانِ یعقوبی — داخلِ خودِ برنامه، روی سرورِ خانگی
-     ستونِ راست: گفت‌وگوها · ستونِ چپ: پیام‌ها + کادرِ نوشتن. در گوشی یکی‌یکی
-     دیده می‌شوند (کلاسِ msgr-on-chat جابه‌جاشان می‌کند).
-     ══════════════════════════════════════════════════════════════════════════ -->
-<div class="modal-overlay" id="msgrModal">
-  <div class="modal msgr-modal">
-    <div class="modal-head">
-      <h2 style="flex:1;text-align:center">📨 پیام‌رسان یعقوبی</h2>
-      <button class="add-row-btn msgr-new" style="margin:0;border-color:var(--green);color:var(--green);padding:5px 10px;font-size:0.78rem" onclick="msgrPickPerson()">➕ چت تازه</button>
-      <button class="modal-close" onclick="msgrClose()">✕</button>
-    </div>
-    <div class="modal-body" style="padding:0;overflow:hidden">
-      <div class="msgr-pane" id="msgrPane">
-        <div class="msgr-side" id="msgrThreads"></div>
-        <div class="msgr-main">
-          <div class="msgr-top">
-            <button class="msgr-back" onclick="msgrBack()">→</button>
-            <span class="msgr-name" id="msgrChatName"></span>
-            <span class="msgr-state" id="msgrState"></span>
-          </div>
-          <div class="msgr-list" id="msgrList"></div>
-          <div class="msgr-comp" id="msgrComposer">
-            <input id="msgrInput" placeholder="پیام بنویسید…" autocomplete="off"
-                   onkeydown="if(event.key==='Enter'){event.preventDefault();msgrSend();}">
-            <button onclick="msgrSend()">فرستادن ➤</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- صفحهٔ جدا: مدت عضویتِ همهٔ قرض‌داران (چند وقت است مشتریِ ما هستند) -->
 <div class="modal-overlay" id="membershipListModal">
   <div class="modal" style="max-width:680px">
@@ -19309,6 +19276,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
       چتِ کارمندان و چتِ تک‌به‌تک با هر قرض‌دار — همه روی <b>سرورِ خانگیِ خودتان</b>. هر پیام همان لحظه اعلان هم می‌شود، حتی وقتی برنامه بسته است. پیامی که آفلاین بنویسید در صف می‌ماند و با وصل شدن خودش می‌رود.
     </div>
     <button class="pw-btn" style="background:var(--green);color:#fff" onclick="msgrOpen()">📨 باز کردن پیام‌رسان</button>
+    <div style="font-size:0.76rem;color:var(--muted);margin-top:8px">جایش داخلِ خودِ رباتِ دستیار است — تبِ «چت تک‌نفره».</div>
   </div>
   <div class="settings-card">
     <div class="settings-title">🔔 صدا و اعلان</div>
@@ -19733,8 +19701,28 @@ body.viewer-mode .inv-admin-only{display:none!important}
     </div>
   </div>
 
-  <!-- 3) چت تک‌نفره -->
+  <!-- 3) چت تک‌نفره = پیام‌رسانِ یعقوبی (روی سرورِ خانگی) ─────────────────────
+       گفت‌وگوها همان موضوع‌های سرورِ خانگی‌اند: «چتِ کارمندان» و چتِ تک‌به‌تک با
+       هر حسابِ قرض‌دار. چتِ قدیمیِ Firebase پاک نشده — پیام‌هایش به‌عنوان
+       «تاریخچه» در همان گفت‌وگو دیده می‌شوند (فقط خواندنی). -->
   <div class="rb-pane" id="rbPane-dm">
+    <div class="msgr-pane" id="msgrPane">
+      <div class="msgr-side" id="msgrThreads"></div>
+      <div class="msgr-main">
+        <div class="msgr-top">
+          <button class="msgr-back" onclick="msgrBack()">→</button>
+          <span class="msgr-name" id="msgrChatName"></span>
+          <span class="msgr-state" id="msgrState"></span>
+        </div>
+        <div class="msgr-list" id="msgrList"></div>
+        <div class="msgr-comp" id="msgrComposer">
+          <input id="msgrInput" placeholder="پیام بنویسید…" autocomplete="off"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();msgrSend();}">
+          <button onclick="msgrSend()">➤</button>
+        </div>
+      </div>
+    </div>
+    <div id="dmLegacy" style="display:none">
     <div id="dmThreads" style="flex:1;overflow-y:auto;min-height:0"></div>
     <div id="dmChatWrap" style="display:none;flex:1;flex-direction:column;min-height:0">
       <div class="dm-back" id="dmBackBar" style="display:none">
@@ -19749,6 +19737,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <button class="ch-ib" id="dmAcctBtn" style="display:none" onclick="dmOpenAcctPicker()" title="فرستادن حساب برای این شخص (فقط میرزا)"><svg><use href="#ic-qrscan"/></svg></button>
         <button class="ch-ib send" onclick="chatSendText('dm')" title="فرستادن"><svg><use href="#ic-send"/></svg></button>
       </div>
+    </div>
     </div>
   </div>
   <input type="file" id="chatFileInput" style="display:none">
@@ -37893,6 +37882,21 @@ function _chatDeleteForEveryone(scope, peer, key) {
 }
 // ---- چت تک‌نفره ----
 function _rbRenderDmPane() {
+  /* تبِ «چت تک‌نفره» حالا خودِ پیام‌رسانِ سرورِ خانگی است. مشتریِ کیو‌آر فقط یک
+     گفت‌وگو دارد، پس همان یکی خودکار باز می‌شود و فهرست به دردش نمی‌خورد. */
+  try {
+    if (!_msgrCur && _rbMode === 'person') {
+      const own = (_ntfMyTopics() || []).filter(t => t !== 'staff' && t !== 'mirza');
+      if (own.length) _msgrCur = own[0];
+    }
+    _msgrPaintThreads();
+    _msgrPaintChat();
+    if (_msgrCur) _msgrMarkRead(_msgrCur);
+    _msgrFlush();
+  } catch (e) {}
+  return _rbRenderDmPaneLegacy();
+}
+function _rbRenderDmPaneLegacy() {
   const th = document.getElementById('dmThreads');
   const wrap = document.getElementById('dmChatWrap');
   if (!th || !wrap) return;
@@ -39452,8 +39456,10 @@ function _msgrAccept(raw) {
   _msgrPaintIfOpen(id);
 }
 function _msgrPaintIfOpen(id) {
-  const m = document.getElementById('msgrModal');
-  if (!m || !m.classList.contains('open')) return;
+  // پیام‌رسان داخلِ پنلِ ربات است: فقط وقتی پنل باز و روی تبِ «چت تک‌نفره» است
+  const p = document.getElementById('robotPanel');
+  const pane = document.getElementById('rbPane-dm');
+  if (!p || !p.classList.contains('open') || !pane || !pane.classList.contains('active')) return;
   _msgrPaintThreads();
   if (_msgrCur === id) { _msgrPaintChat(); _msgrMarkRead(id); }
 }
@@ -39539,18 +39545,20 @@ function _msgrThreadIds() {
   Object.keys(_msgrMsgs).forEach(add);
   return out;
 }
+/* پیام‌رسان جای جدایی ندارد: همان تبِ «چت تک‌نفره»ی خودِ رباتِ دستیار است.
+   msgrOpen پنل را باز می‌کند، می‌رود روی همان تب و گفت‌وگوی خواسته‌شده را می‌آورد. */
 function msgrOpen(threadId) {
-  const m = document.getElementById('msgrModal');
-  if (!m) return;
-  m.classList.add('open');
   if (threadId) { _msgrCur = threadId; _msgrKeepTopic(threadId); }
+  const p = document.getElementById('robotPanel');
+  if (p && !p.classList.contains('open')) { try { toggleRobot(); } catch (e) {} }
+  try { rbShowTab('dm'); } catch (e) {}
   _msgrPaintThreads();
   _msgrPaintChat();
   if (_msgrCur) _msgrMarkRead(_msgrCur);
   try { _ntfAutoPush('ask'); } catch (e) {}
   _msgrFlush();
 }
-function msgrClose() { const m = document.getElementById('msgrModal'); if (m) m.classList.remove('open'); }
+function msgrClose() { const p = document.getElementById('robotPanel'); if (p) p.classList.remove('open'); }
 function msgrBack() { _msgrCur = null; _msgrPaintThreads(); _msgrPaintChat(); }
 /** «چت با این شخص» — از مودالِ حساب یا از فهرست */
 function msgrOpenPerson(pid, subId) {
@@ -39570,6 +39578,10 @@ function _msgrPaintThreads() {
   const wrap = document.getElementById('msgrPane');
   if (!box || !wrap) return;
   wrap.classList.toggle('msgr-on-chat', !!_msgrCur);
+  // مشتریِ کیو‌آر فقط یک گفت‌وگو دارد — نه فهرست لازم است نه دکمهٔ برگشت
+  let solo = false;
+  try { solo = (_rbMode === 'person'); } catch (e) {}
+  wrap.classList.toggle('msgr-solo', solo);
   const ids = _msgrThreadIds();
   box.innerHTML = ids.map(id => {
     const list = _msgrMsgs[id] || [];
@@ -39581,6 +39593,27 @@ function _msgrPaintThreads() {
       + (n ? '<span class="msgr-th-b">' + n2fa(n) + '</span>' : '')
       + '</button>';
   }).join('') || '<div class="msgr-empty">هنوز گفت‌وگویی نیست.</div>';
+}
+/* پیام‌های چتِ قدیمی (Firebase) گم نشوند: هر گفت‌وگوی p-… با همان peer در
+   _dmMsgCache خوانده می‌شود و به‌عنوان تاریخچه، پیش از پیام‌های سرورِ خانگی
+   نشان داده می‌شود. فقط نمایش است — چیزی دوباره فرستاده یا ذخیره نمی‌شود. */
+function _msgrLegacyMerge(thread, live) {
+  if (!thread || thread.indexOf('p-') !== 0) return live;
+  let old = [];
+  try {
+    const want = thread.slice(2);
+    const cache = _dmMsgCache || {};
+    const hit = Object.keys(cache).find(k => String(k).toLowerCase() === want);
+    const meId = (_chatMe() || {}).id;
+    old = (hit ? (cache[hit] || []) : [])
+      .filter(m => m && (m.t || m.d) && !m.del)
+      .map(m => ({ at: m.ts || 0, from: m.n || '—', text: String(m.t || m.d || ''), mine: m.f === meId, old: true }));
+  } catch (e) { return live; }
+  if (!old.length) return live;
+  // پیامی که هر دو طرف دارند دو بار دیده نشود
+  const seen = new Set(live.map(m => m.text + '|' + Math.round((m.at || 0) / 60000)));
+  const add = old.filter(m => !seen.has(m.text + '|' + Math.round((m.at || 0) / 60000)));
+  return add.concat(live).sort((a, b) => (a.at || 0) - (b.at || 0));
 }
 function _msgrPaintChat() {
   const head = document.getElementById('msgrChatName');
@@ -39595,7 +39628,7 @@ function _msgrPaintChat() {
   }
   if (comp) comp.style.display = '';
   if (head) head.textContent = _msgrName(_msgrCur);
-  const msgs = _msgrMsgs[_msgrCur] || [];
+  const msgs = _msgrLegacyMerge(_msgrCur, _msgrMsgs[_msgrCur] || []);
   list.innerHTML = msgs.length
     ? msgs.map(m => '<div class="msgr-row' + (m.mine ? ' me' : '') + '">'
         + '<div class="msgr-b">'
@@ -39636,7 +39669,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.249';
+const APP_VERSION = '2.9.250';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -47716,6 +47749,13 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
   font-family:'Vazirmatn',sans-serif; font-weight:800; font-size:0.82rem; padding:8px 14px; cursor:pointer; white-space:nowrap; }
 .msgr-comp button:active{ transform:scale(.96); }
 .msgr-empty{ text-align:center; color:var(--muted); font-size:0.84rem; padding:26px 12px; }
+/* داخلِ پنلِ ربات، پیام‌رسان تمامِ قدِ تب را می‌گیرد */
+#rbPane-dm .msgr-pane{ flex:1; min-height:0; }
+#rbPane-dm .msgr-side{ width:200px; flex:0 0 200px; }
+/* نمای مشتریِ کیو‌آر: فقط گفت‌وگوی خودش */
+.msgr-pane.msgr-solo .msgr-side{ display:none; }
+.msgr-pane.msgr-solo .msgr-main{ display:flex; }
+.msgr-pane.msgr-solo .msgr-back{ display:none; }
 @media (max-width:700px){
   /* گوشی: یا فهرستِ گفت‌وگوها دیده می‌شود یا خودِ گفت‌وگو — نه هر دو با هم */
   .msgr-side{ width:100%; flex:1 1 auto; border:none; }
