@@ -27132,26 +27132,71 @@ function calcPersonRow(pid, idx, field, value) {
   updateBanner();
 }
 /* ── خبر دادن به صاحبِ حساب ────────────────────────────────────────────────
-   وقتی میرزا حسابِ کسی را می‌نویسد یا عوض می‌کند، خودِ همان شخص خبردار شود —
-   کسی که با اسکنِ کیو‌آر حسابش را می‌بیند، روی موضوعِ خودش (p-<شناسه>) این خبر
-   را می‌گیرد و هیچ خبری از حسابِ دیگران به او نمی‌رسد.
+   خواستهٔ صاحب ریپو: «محضِ این‌که حسابی توش چیزی نوشته می‌شود در جا پیام می‌آید؛
+   این‌طور نباشد — وقتی پیام برود که یارو به آخرهای تیلش می‌رسد، یا ختم می‌شود،
+   یا خیلی قرض‌دار شد.»
 
-   نوشتنِ یک حساب ده‌ها بار «ذخیره» صدا می‌زند (هر خانه که پر می‌شود)، پس خبر
-   جمله می‌شود و چند ثانیه بعدِ آخرین تغییر یک اعلان فرستاده می‌شود — نه ده تا. ── */
+   پس دیگر هیچ خبری بابتِ «نوشتنِ حساب» فرستاده نمی‌شود. به‌جایش وضعیتِ خودِ حساب
+   سنجیده می‌شود و فقط وقتی خبر می‌رود که وضعیت «عوض شود» — یعنی هر حالت فقط
+   یک‌بار خبر می‌دهد، نه با هر تایپ. اگر حساب دوباره پر شد و بعدها باز کم آمد،
+   طبیعتاً دوباره خبر می‌رود.
+
+   مقیاسِ سنجش خودِ همان حساب است (رسیدش)، پس نه عددِ جادوییِ ثابتی لازم است و نه
+   تنظیمی: کمتر از ۱۵٪ رسید ⇒ «رو به تمام شدن»، صفر ⇒ «ختم»، پایین‌ترش ⇒ «قرض‌دار».
+   حساب‌های بی‌رسید فقط وقتی خبر می‌دهند که واقعاً بدهکار باشند.
+
+   هیچ عددِ حسابی این‌جا ساخته یا عوض نمی‌شود: الباقی همان چیزی است که
+   _updatePersonTotals حساب کرده و روی کارت‌های پطرول/دیزل دیده می‌شود. ── */
 const _ACCT_NTF_DELAY = 8000;
 let _acctNtfTimers = {};
+/** وضعیتِ هشدارِ یک حساب — '' یعنی خبری لازم نیست */
+function _acctAlertState(rem, rasid) {
+  const left = -(parseFloat(rem) || 0);         // نمایشِ الباقی برعکسِ عددِ داخلی است
+  const base = Math.abs(parseFloat(rasid) || 0);
+  if (base > 0) {
+    if (left > base * 0.15) return '';          // هنوز جا دارد
+    if (left > 0) return 'low';                 // به آخرهای تیلش می‌رسد
+    if (left > -base * 0.05) return 'done';     // ختم شد
+    return 'debt';                              // قرض‌دار شد
+  }
+  return left < 0 ? 'debt' : '';
+}
+function _acctAlertKey(peer, fuel) { return 'pumpAcctAlert:' + peer + ':' + fuel; }
 function _ntfAccountTouched(person, type) {
   try {
     if (!person) return;
     if (_rbMode === 'person') return;                 // خودِ مشتری که چیزی نمی‌نویسد
+    // الباقیِ همین لحظه را همین‌جا برمی‌داریم (نه داخلِ تایمر) تا اگر کاربر تا آن
+    // موقع حسابِ دیگری باز کرد، خبرِ حسابِ اشتباه نرود
+    const snap = (_pmRem && _pmRem.pid === person.id) ? _pmRem : null;
+    if (!snap) return;
     const peer = _peerKey((type || currentPersonType || 'debt') + '-' + person.id);
     const key = String(peer);
+    const unit = snap.money ? ' افغانی' : ' لیتر';
+    const want = [
+      { fuel: 'petrol', label: 'پطرول', st: _acctAlertState(snap.remP, snap.rasidP), left: -(snap.remP || 0) },
+      { fuel: 'diesel', label: 'دیزل', st: _acctAlertState(snap.remD, snap.rasidD), left: -(snap.remD || 0) },
+    ];
     if (_acctNtfTimers[key]) clearTimeout(_acctNtfTimers[key]);
     _acctNtfTimers[key] = setTimeout(() => {
       delete _acctNtfTimers[key];
-      _ntfSend(NTF_TOPIC_PERSON(peer), '📄 حساب شما به‌روز شد',
-        'میرزا حسابِ «' + (person.name || '') + '» را به‌روز کرد. برای دیدن، صفحهٔ حساب‌تان را باز کنید.',
-        { tags: ['memo'] });
+      want.forEach(w => {
+        let was = '';
+        try { was = localStorage.getItem(_acctAlertKey(peer, w.fuel)) || ''; } catch (e) {}
+        if (w.st === was) return;                       // وضعیت عوض نشده ⇒ خبری نیست
+        try { localStorage.setItem(_acctAlertKey(peer, w.fuel), w.st); } catch (e) {}
+        if (!w.st) return;                              // برگشت به حالتِ عادی، بی‌خبر
+        const amount = n2fa(Math.round(Math.abs(w.left)));
+        const msg = w.st === 'low'
+          ? { t: '⛽ تیل‌تان رو به تمام شدن است',
+              b: 'از حسابِ ' + w.label + 'ِ «' + (person.name || '') + '» تنها ' + amount + unit + ' باقی مانده.' }
+          : w.st === 'done'
+          ? { t: '✅ حسابِ ' + w.label + ' ختم شد',
+              b: 'حسابِ ' + w.label + 'ِ «' + (person.name || '') + '» تمام شد.' }
+          : { t: '⚠️ حسابِ ' + w.label + ' بدهکار شد',
+              b: 'حسابِ ' + w.label + 'ِ «' + (person.name || '') + '» ' + amount + unit + ' بدهکار است.' };
+        _ntfSend(NTF_TOPIC_PERSON(peer), msg.t, msg.b, { tags: ['memo'] });
+      });
     }, _ACCT_NTF_DELAY);
   } catch (e) {}
 }
@@ -27793,11 +27838,22 @@ function _renderRasidLog(acct, o) {
      در سربرگ و فوترِ جدول خودکار حساب شده است.
      اندازهٔ خانه‌ها دقیقاً مثل ردیف‌های دستی است: همان ستونِ «نوع تیل» و همان فاصله‌ها. */
   const rasidHead = heads.indexOf('رسید تیل') >= 0 ? 'رسید تیل' : 'رسید';
+  /* فقط همان تیلی که این ردیف مالِ اوست — نه هر دو.
+     خواستهٔ صاحب ریپو: «نوع تیل هم فقط پطرول را نشان بده و اگر دیزل بود هم
+     همین‌طور». دو گزینهٔ روی‌هم، این ردیف را یک خط بلندتر از ردیف‌های دستی
+     می‌کرد (همان «طولش نسبت به بقیه بزرگ‌تر می‌شود») — چون این ردیف‌ها انتخابی
+     نیستند و فقط نمایش‌اند، یک برچسب کافی است و بلندی‌شان هم یکی می‌شود. */
   const ftCell = ftype => {
     const isP = ftype !== 'diesel';
     return '<td class="pmar-ft"><div class="ft-pick">' +
-      '<span class="ft-opt petrol' + (isP ? ' active' : '') + '">⛽ پطرول</span>' +
-      '<span class="ft-opt diesel' + (isP ? '' : ' active') + '">🟤 دیزل</span>' +
+      '<span class="ft-opt ' + (isP ? 'petrol' : 'diesel') + ' active">' +
+      (isP ? '⛽ پطرول' : '🟤 دیزل') + '</span>' +
+      /* جای خالیِ گزینهٔ دوم نگه داشته می‌شود (دیده نمی‌شود ولی جا می‌گیرد) تا
+         بلندیِ این ردیف مو‌به‌مو با ردیف‌های دستی یکی بماند — همان قاعده‌ای که
+         .pmar-box برای بقیهٔ خانه‌ها دارد. با هر اندازهٔ فونتی هم خودش جور
+         درمی‌آید، چون از خودِ همان .ft-opt ساخته شده. */
+      '<span class="ft-opt pmar-ft-ghost" aria-hidden="true">' +
+      (isP ? '🟤 دیزل' : '⛽ پطرول') + '</span>' +
       '</div></td>';
   };
   /* هر خانه دقیقاً همان جعبه‌ای را می‌گیرد که کادرِ تایپیِ ردیف‌های دستی دارد:
@@ -27855,15 +27911,18 @@ function _renderRasidLog(acct, o) {
     entries.forEach((e, i) => {
       const rc = {};
       rc[rasidHead] = box('pmar-val', n2fa(o.rnd(parseFloat(e.v) || 0)));
-      // سهمِ یک رسیدِ «یک‌جا» با نامش پیدا باشد تا معلوم شود از کجا آمده
-      const nm = e.yekja ? (icon + ' رسید یک‌جا — سهمِ ' + label)
-                         : (icon + ' رسید ' + label + (entries.length > 1 ? ' ' + n2fa(i + 1) : ''));
+      /* نامِ ردیف دیگر نوعِ تیل را تکرار نمی‌کند — خواستهٔ صاحب ریپو: «اگر در
+         سربرگِ پطرول رسیدی نوشتم، در جدول نوشته نشود رسید پطرول، چون نوع تیل
+         در خودِ جدول دیده می‌شود». فقط «رسید یک‌جا» می‌ماند چون آن یکی از کجا
+         آمدنِ عدد را می‌گوید، نه نوعِ تیل را. */
+      const nm = e.yekja ? 'رسید یک‌جا'
+                         : ('رسید' + (entries.length > 1 ? ' ' + n2fa(i + 1) : ''));
       line(ftype, e.at, nm, rc,
         e.yekja ? 'سهمِ ' + label + ' از رسیدِ یک‌جا (پطرول + دیزل) — با 🗑️ می‌توانید همین سهم را پاک کنید'
                 : 'رسیدی که در سربرگ نوشته‌اید — با 🗑️ می‌توانید همین یکی را پاک کنید', e.id);
     });
     if (!total || !pct) return;
-    line(ftype, entries.length ? entries[entries.length - 1].at : '', icon + ' فیصدی از ' + label,
+    line(ftype, entries.length ? entries[entries.length - 1].at : '', 'فیصدی',
       { 'مقدار بردگی': box('pmar-comm', n2fa(o.rnd(comm))) },
       'فیصدیِ ' + n2fa(o.rnd(pct)) + '٪ از جمعِ رسیدِ ' + label + ' (' + n2fa(o.rnd(total)) + ')');
   };
@@ -28049,7 +28108,9 @@ function _updatePersonTotals(person) {
         remD = bordD + commD - rasidD - (money ? (t.diesel.rasid + _rasidFuelMoneyD) : _rasidMoneyLD);
   // الباقیِ همین لحظه برای «رسید یک‌جا» کنار گذاشته می‌شود — همان عددی که چشمِ
   // کاربر روی کارت‌های پطرول/دیزل می‌بیند، بدون هیچ حسابِ دوبارهٔ جداگانه
-  _pmRem = { pid: person.id, money, remP, remD, pctP, pctD };
+  // rasidP/rasidD هم اضافه شد تا خبررسانِ آستانه‌ای بداند «کم مانده» را نسبت به
+  // چه مقیاسی بسنجد. فقط افزوده است — خواننده‌های قبلی دست‌نخورده‌اند.
+  _pmRem = { pid: person.id, money, remP, remD, pctP, pctD, rasidP, rasidD };
   try { _pmSettleRender(); } catch (e) {}
   // کادرهای «مقدار رسید» در هر دو حالت قابلِ ویرایش‌اند (readOnly حالتِ پول برداشته شد —
   // باعث می‌شد در بخش قرض‌داران هیچ چیزی در کادر نوشته نشود)
@@ -39779,6 +39840,15 @@ function _msgrMeName() {
    «چتِ کارمندان» و «رسیده به میرزا» از این‌جا برداشته شدند (خواستهٔ صاحب ریپو):
    اولی همان تبِ «چت گروهی» است و دومی صندوقِ خبرها بود، نه گفت‌وگوی یک آدم. */
 function _msgrIsPersonThread(t) { return /^p-[a-z0-9_-]+$/i.test(String(t || '')); }
+/** آیا این گفت‌وگو مالِ یکی از قرض‌دارهای خودِ همین دستگاه است؟ */
+function _msgrKnownPerson(id) {
+  const want = String(id || '').toLowerCase();
+  try {
+    return (DB.debtPersons || []).some(p =>
+      msgrTopicOfPerson(p) === want ||
+      (p.subs || []).some(sb => msgrTopicOfPerson(p, sb) === want));
+  } catch (e) { return false; }
+}
 /** نامِ خواناى گفت‌وگو */
 function _msgrName(id) {
   // در نمای کیو‌آرِ خودِ مشتری، طرفِ گفت‌وگو همیشه میرزاست
@@ -39933,10 +40003,18 @@ function _msgrThreadIds() {
      فهرست خالی می‌ماند. با همان NTF_TOPIC_PERSON به موضوع تبدیل می‌شوند تا
      شناسهٔ گفت‌وگو دقیقاً همانی باشد که کیو‌آرِ همان حساب به آن گوش می‌دهد.
      فقط نمایش است: چیزی فرستاده، ساخته یا ذخیره نمی‌شود. */
+  /* دو شرط، هر دو لازم:
+       ۱) واقعاً پیامی داشته باشد — _dmIndex فقط فهرست است و پیامی ندارد، پس اگر
+          از رویش گفت‌وگو بسازیم ردیف‌های «هنوز پیامی نیست» پیدا می‌شوند.
+       ۲) صاحبش یکی از همین قرض‌دارهای خودمان باشد. کلیدهای کهنهٔ چتِ قدیمی
+          (مهمان‌های کیو‌آرِ عمومی، خودِ میرزا، حساب‌های پاک‌شده) با نامِ «مهمان»
+          در فهرست می‌نشستند و معلوم نبود کی‌اند و از کجا آمده‌اند. */
   try {
-    // فقط آن‌هایی که واقعاً چیزی دارند — وگرنه گفت‌وگوی خالیِ «مهمان» ساخته می‌شود
-    Object.keys(_dmMsgCache || {}).forEach(p => { if ((_dmMsgCache[p] || []).length) add(NTF_TOPIC_PERSON(p)); });
-    Object.keys(_dmIndex || {}).forEach(p => { if ((_dmIndex[p] || {}).ts) add(NTF_TOPIC_PERSON(p)); });
+    Object.keys(_dmMsgCache || {}).forEach(p => {
+      if (!(_dmMsgCache[p] || []).length) return;
+      const t = NTF_TOPIC_PERSON(p);
+      if (_msgrKnownPerson(t)) add(t);
+    });
   } catch (e) {}
   return out;
 }
@@ -40416,7 +40494,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.267';
+const APP_VERSION = '2.9.268';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -48468,7 +48546,17 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
 /* .pmar-box همان کلاسِ .xls-in را دارد، فقط span است نه input — پس اندازه، فاصله و
    فونتش با کادرهای تایپیِ ردیف‌های دستی یکی است و جدول ناهموار نمی‌شود */
 .xls-tbl tr.pm-auto-row .pmar-box{ display:block; box-sizing:border-box; }
+/* ⚠️ و همین‌قدر مهم: خودِ <td> هم باید مثلِ ردیف‌های دستی بی‌فاصله باشد.
+   قاعدهٔ عمومیِ «.xls-tbl td:not(:has(input)):not(:has(select)){padding:8px 7px}»
+   خانه‌های ردیف‌های دستی را چون input دارند صفر می‌کند، ولی خانه‌های این ردیف
+   span دارند نه input — پس ۸ پیکسل بالا و ۸ پیکسل پایین می‌گرفتند و همین ردیف
+   را ۱۶ پیکسل بلندتر از بقیه می‌کرد. همان «طولش نسبت به بقیه بزرگ‌تر می‌شود».
+   خانهٔ «نوع تیل» هم همین‌طور: در ردیف دستی رادیو دارد (پس input) و صفر می‌شود. */
+.xls-tbl tr.pm-auto-row td:has(.pmar-box),
+.xls-tbl tr.pm-auto-row td.pmar-ft{ padding:0 !important; }
 .xls-tbl tr.pm-auto-row .ft-opt{ cursor:default; }
+/* گزینهٔ دومِ «نوع تیل» در ردیف‌های خودکار فقط جا نگه می‌دارد و دیده نمی‌شود */
+.xls-tbl tr.pm-auto-row .pmar-ft-ghost{ visibility:hidden; }
 .xls-tbl tr.pm-auto-row .pmar-mark{ color:var(--accent); }
 .xls-tbl tr.pm-auto-row .pmar-name{ white-space:nowrap; }
 .xls-tbl tr.pm-auto-row .pmar-val{ color:var(--green); }
