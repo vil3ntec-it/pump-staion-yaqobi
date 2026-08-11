@@ -1109,16 +1109,6 @@ body.viewer-mode .att-admin{display:none !important}
 .fs-cell .l{font-size:0.82rem;font-weight:700;color:var(--muted);margin-bottom:2px}
 .fs-cell .v{font-size:0.96rem;font-weight:800}
 @media(max-width:560px){.fuel-split{grid-template-columns:1fr}}
-/* نوارِ «رسید یک‌جا» — درست زیرِ دو کارتِ پطرول و دیزل می‌نشیند، چون کارِ هر دوی
-   آن‌هاست. کادرِ عدد پهن است و دو دکمه بغلش؛ راهنما در خطِ خودش زیرشان. */
-.pm-settle{display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:7px 12px;border-bottom:1px solid var(--border)}
-.pm-settle .pms-head{font-size:0.82rem;font-weight:800;color:var(--blue);white-space:nowrap}
-.pm-settle .pms-sub{font-size:0.74rem;font-weight:700;color:var(--muted)}
-.pm-settle .pms-in{flex:1 1 130px;min-width:110px;background:var(--dark);border:1px solid var(--blue);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.9rem;font-weight:800;text-align:center;box-sizing:border-box}
-.pm-settle .pms-btn{background:transparent;border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;white-space:nowrap;color:var(--txt)}
-.pm-settle .pms-btn.full{border-color:var(--blue);color:var(--blue)}
-.pm-settle .pms-btn.ok{border-color:var(--green);color:var(--green)}
-.pm-settle .pms-hint{flex:1 0 100%;font-size:0.74rem;font-weight:700;color:var(--muted);line-height:1.7}
 /* translateZ(0): لایهٔ پایدارِ کامپوزیتور — روی بعضی وب‌ویوهای اندروید این دکمه‌ها
    (مثلاً «➕ ثبت خرید» در بخش مخزن) هنگام اسکرول خالی/نامرئی می‌شدند؛ همان درمانی
    که برای کارت‌های مخزن و سربرگ هم به کار رفته است. */
@@ -19916,23 +19906,9 @@ body.viewer-mode .inv-admin-only{display:none!important}
         </div>
       </div>
     </div>
-    <!-- ── رسیدِ یک‌جا (پطرول + دیزل با هم) ──────────────────────────────────────
-         خواستهٔ صاحب ریپو: مشتری هم پطرول برده هم دیزل و یک‌جا کلِ پولش را می‌آورد.
-         پیش از این باید خودش حساب می‌کرد که از این مبلغ چقدر مالِ پطرول است و چقدر
-         مالِ دیزل، و در دو کادرِ جدا می‌نوشت. حالا یک عدد این‌جا نوشته می‌شود و
-         برنامه خودش به نسبتِ الباقیِ هر کدام تقسیم می‌کند — اگر مبلغ دقیقاً برابرِ
-         جمعِ الباقی باشد، هر دو حساب دقیقاً صفر می‌شوند.
-         فقط در «واحد پول» و در نمای «همه» دیده می‌شود (در حسابِ جداگانهٔ پطرول/دیزل
-         تقسیمی در کار نیست و همان کادرِ خودِ آن تیل کافی است). -->
-    <div class="pm-settle" id="pm-settle-bar" style="display:none">
-      <div class="pms-head">🧾 رسید یک‌جا <span class="pms-sub">(پطرول + دیزل با هم)</span></div>
-      <input type="number" id="pm-settle-in" class="pms-in" placeholder="مبلغِ رسید…"
-        title="یک مبلغ بنویسید — خودش به نسبتِ الباقیِ پطرول و دیزل تقسیم و در هر دو حساب ثبت می‌شود"
-        oninput="pmSettlePreview()" onkeydown="if(event.key==='Enter'){event.preventDefault();pmSettleApply();}">
-      <button type="button" class="pms-btn full" id="pm-settle-full" onclick="pmSettleFill()" title="مبلغِ کاملِ الباقیِ هر دو حساب را می‌نویسد">🎯 کلِ الباقی</button>
-      <button type="button" class="pms-btn ok" onclick="pmSettleApply()">✅ ثبت</button>
-      <div class="pms-hint" id="pm-settle-hint"></div>
-    </div>
+    <!-- نوارِ «رسید یک‌جا» برداشته شد — خواستهٔ صریحِ صاحب ریپو: «اون نوار رسید
+         یک‌جا رو بردار نمی‌خام». رسیدهایی که پیش از این با آن ثبت شده‌اند دست
+         نخورده‌اند و در جدول با نامِ «رسید یک‌جا» دیده می‌شوند. -->
     <div class="modal-summary" id="pm-pct-row">
       <div class="msumbox"><div class="ml">⛽ پطرول</div><input type="number" class="mv acc pm-edit" id="pm-percent" placeholder="0" title="فیصدیِ پطرول — از مقدار رسیدِ پطرول کم می‌شود" style="background:transparent;border:none;border-bottom:1px dashed var(--accent);text-align:center;width:100%" oninput="updatePersonPercent(this.value,'petrol')"></div>
       <div class="msumbox"><div class="ml">🟤 دیزل</div><input type="number" class="mv acc pm-edit" id="pm-percent-d" placeholder="0" title="فیصدیِ دیزل — از مقدار رسیدِ دیزل کم می‌شود" style="background:transparent;border:none;border-bottom:1px dashed var(--accent);text-align:center;width:100%" oninput="updatePersonPercent(this.value,'diesel')"></div>
@@ -28090,82 +28066,6 @@ function _pmPushRasid(acct, fuel, money, v, extra) {
   _rasidLogSync(acct);
   return e;
 }
-/* چقدر رسید لازم است تا یک حساب دقیقاً صفر شود؟
-   الباقی = برد + رسید×٪ − رسید، پس هر ۱ افغانیِ رسید فقط (۱ − ٪) از الباقی کم
-   می‌کند و مبلغِ لازم = الباقی ÷ (۱ − ٪). بی‌فیصدی، همان خودِ الباقی است. */
-function _pmNeed(rem, pct) {
-  if (!(rem > 0)) return 0;
-  const f = 1 - (parseFloat(pct) || 0) / 100;
-  return f > 0 ? rem / f : rem;
-}
-/* تقسیمِ یک مبلغ بین پطرول و دیزل. جمعِ دو سهم دقیقاً برابرِ خودِ مبلغ می‌ماند
-   (سهمِ دوم از تفریق درمی‌آید) تا گِردکردن یک افغانی هم گم/اضافه نکند. */
-function _pmSettleParts(v) {
-  const s = _pmRem || {};
-  const r2 = x => Math.round(x * 100) / 100;
-  const needP = _pmNeed(s.remP || 0, s.pctP), needD = _pmNeed(s.remD || 0, s.pctD);
-  const tot = needP + needD;
-  let dP, dD;
-  if (tot > 0) { dP = r2(v * needP / tot); dD = r2(v - dP); }
-  else { dP = r2(v); dD = 0; }        // هیچ بدهی‌ای نیست ⇒ همه‌اش پیش‌پرداختِ پطرول
-  return { needP: r2(needP), needD: r2(needD), total: r2(tot), dP, dD };
-}
-/* نوار فقط در «واحد پول» و نمای «همه» به کار می‌آید: در حسابِ جداگانهٔ پطرول/دیزل
-   تقسیمی در کار نیست و کادرِ خودِ همان تیل کافی است. */
-function _pmSettleRender() {
-  const bar = document.getElementById('pm-settle-bar');
-  if (!bar) return;
-  const s = _pmRem;
-  const show = !!(s && s.money) && currentPersonFilter === 'all' && currentRole !== 'viewer';
-  bar.style.display = show ? '' : 'none';
-  if (show) pmSettlePreview();
-}
-function pmSettlePreview() {
-  const hint = document.getElementById('pm-settle-hint');
-  if (!hint) return;
-  const s = _pmRem || {};
-  const el = document.getElementById('pm-settle-in');
-  const v = parseFloat(el && el.value) || 0;
-  const p = _pmSettleParts(v);
-  const r2 = x => Math.round(x * 100) / 100;
-  const head = 'بدهیِ همین حالا — ⛽ ' + n2fa(r2(Math.max(0, s.remP || 0))) +
-               ' · 🟤 ' + n2fa(r2(Math.max(0, s.remD || 0))) +
-               ' · برای صفر شدنِ هر دو: ' + n2fa(p.total) + ' افغانی';
-  if (!v) { hint.textContent = head; return; }
-  const diff = r2(v - p.total);
-  const tail = diff === 0 ? ' ✅ هر دو حساب صفر می‌شود'
-             : (diff > 0 ? ' (' + n2fa(diff) + ' افغانی بیشتر — پیش‌پرداخت می‌ماند)'
-                         : ' (' + n2fa(Math.abs(diff)) + ' افغانی کمتر از بدهی)');
-  hint.textContent = head + ' ← از این مبلغ: ⛽ پطرول ' + n2fa(p.dP) +
-                     ' · 🟤 دیزل ' + n2fa(p.dD) + tail;
-}
-function pmSettleFill() {
-  const el = document.getElementById('pm-settle-in'); if (!el) return;
-  const p = _pmSettleParts(0);
-  if (!(p.total > 0)) { showToast('این حساب بدهی ندارد', '#d97706'); return; }
-  el.value = p.total;
-  pmSettlePreview();
-}
-function pmSettleApply() {
-  const person = _curPerson(); if (!person) return;
-  const acct = _acctOf(person);
-  if (!_acctModeMoney(person, acct)) { showToast('رسید یک‌جا فقط در «واحد پول» است', '#d97706'); return; }
-  const el = document.getElementById('pm-settle-in');
-  const v = parseFloat(el && el.value) || 0;
-  if (!(v > 0)) { showToast('مبلغِ رسید را بنویسید', '#d97706'); return; }
-  // الباقیِ کهنه تقسیم را خراب می‌کند — اگر مالِ همین شخص نیست، تازه‌اش کن
-  if (!_pmRem || _pmRem.pid !== person.id) _updatePersonTotals(person);
-  const p = _pmSettleParts(v);
-  const tag = 'y' + Date.now().toString(36);   // نشانهٔ «یک‌جا» روی هر دو سهم
-  if (p.dP > 0) _pmPushRasid(acct, 'petrol', true, p.dP, { yekja: tag });
-  if (p.dD > 0) _pmPushRasid(acct, 'diesel', true, p.dD, { yekja: tag });
-  if (el) el.value = '';
-  save(); renderPersonRows(person);
-  if (typeof renderPersons === 'function') renderPersons(currentPersonType);
-  if (typeof updateBanner === 'function') updateBanner();
-  _lossOnReceipt(person);
-  showToast('✅ رسیدِ یک‌جا ثبت شد — ⛽ ' + n2fa(p.dP) + ' · 🟤 ' + n2fa(p.dD), '#38a169');
-}
 function _updatePersonTotals(person) {
   const acct = _acctOf(person);
   const rows = _acctRows(person, acct);
@@ -28254,7 +28154,6 @@ function _updatePersonTotals(person) {
   // rasidP/rasidD هم اضافه شد تا خبررسانِ آستانه‌ای بداند «کم مانده» را نسبت به
   // چه مقیاسی بسنجد. فقط افزوده است — خواننده‌های قبلی دست‌نخورده‌اند.
   _pmRem = { pid: person.id, money, remP, remD, pctP, pctD, rasidP, rasidD };
-  try { _pmSettleRender(); } catch (e) {}
   // کادرهای «مقدار رسید» در هر دو حالت قابلِ ویرایش‌اند (readOnly حالتِ پول برداشته شد —
   // باعث می‌شد در بخش قرض‌داران هیچ چیزی در کادر نوشته نشود)
   const pRasidEl = document.getElementById('pm-p-rasidfuel');
@@ -40685,7 +40584,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.276';
+const APP_VERSION = '2.9.277';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
