@@ -14489,14 +14489,32 @@ body.light-mode[class*="theme-"] .goto-btn:hover{
    حالا به‌جای fixed روی خودِ body، یک لایهٔ ::before با position:fixed پشتِ صفحه
    می‌گذاریم — این لایه را کامپوزیتور مرورگر جدا نگه می‌دارد و نیازی به رنگ‌آمیزیِ
    دوباره حین اسکرول ندارد، پس هیچ شکافی هنگام اسکرول دیده نمی‌شود. */
-body[class*="theme-"]{ background:none!important; }
+/* ⚠️ رنگِ بوم: none نه — یک رنگِ تختِ ساده.
+   با none، پس‌زمینهٔ <body> خالی می‌ماند و چون <html> هم عمداً شفاف است، بوم
+   هیچ رنگی ندارد و رنگِ پیش‌فرضِ مرورگر (سفید/سیاه) پشتِ همه‌چیز می‌نشیند. روی
+   گوشی، هر لحظه‌ای که لایه‌های ثابت هنوز رسم نشده‌اند همان رنگ یک «لایهٔ
+   غیرمرتبط» دیده می‌شود. دلیلِ اصلیِ none، گرادیانِ سنگینِ body بود که هر فریمِ
+   اسکرول دوباره کشیده می‌شد؛ یک رنگِ تخت آن هزینه را ندارد و طبقِ همان قاعدهٔ
+   ثابتِ این ریپو بوم را هم‌رنگِ صفحه نگه می‌دارد. زیرِ گرادیانِ ماتِ ::before
+   دیده هم نمی‌شود. */
+body[class*="theme-"]{ background:var(--dark)!important; }
+/* ⚠️ قد با lvh و کمی سرریز — همان درمانی که #siteBg و #fxLayer دارند.
+   با inset:0 این لایه به ویوپورتِ چیدمان بسته می‌شد؛ روی گوشی وقتی نوارِ آدرس
+   جمع/باز می‌شود صفحهٔ دیده‌شده بلندتر می‌شود و یک نوارِ بی‌رنگ می‌ماند که پشتش
+   #siteBgِ تیره پیدا بود — همان «لایهٔ رنگیِ ناجور» که در حینِ اسکرول می‌آمد و
+   با ایستادنِ اسکرول می‌رفت. lvh بزرگ‌ترین حالتِ ویوپورت است و هرگز عوض
+   نمی‌شود، پس نه نواری می‌ماند و نه این لایه وسطِ اسکرول اندازه‌گیریِ دوباره
+   می‌شود. translateZ(0) هم لایهٔ کامپوزیتورِ خودش را می‌دهد تا اسکرول مجبور به
+   رنگ‌آمیزیِ دوباره‌اش نباشد. */
 body[class*="theme-"]::before{
   content:"";
   position:fixed;
   inset:0;
+  height:calc(100lvh + 140px);
   z-index:0;
   background:var(--app-bg)!important;
   pointer-events:none;
+  transform:translateZ(0);
 }
 body[class*="theme-"] .header{ background:var(--hdr-bg)!important; border-bottom-color:var(--chrome-brd)!important; }
 body[class*="theme-"] .header-title{ color:var(--hdr-title)!important; }
@@ -40354,7 +40372,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.264';
+const APP_VERSION = '2.9.265';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -44996,12 +45014,14 @@ body[class*="theme-"].gfx-standard .nav,
 body[class*="theme-"].gfx-ultra .nav{ background:var(--nav-bg)!important; }
 body[class*="theme-"] .nav-btn.active,
 body[class*="theme-"] #navGlider{ background:var(--grad-amber)!important; }
-/* روی خودِ body نه — این‌ها روی ::before (لایهٔ position:fixed پشتِ صفحه) اعمال می‌شوند
-   تا کروم مجبور به رنگ‌آمیزیِ دوبارهٔ گرادیان حین اسکرول نشود (وگرنه در دسکتاپ/PWA
-   با اسکرول زیاد یک شکاف خالی موقت وسط صفحه دیده می‌شد) */
-body[class*="theme-"].gfx-performance{ background:none!important; }
-body[class*="theme-"].gfx-standard{ background:none!important; }
-body[class*="theme-"].gfx-ultra{ background:none!important; }
+/* گرادیانِ صفحه روی خودِ body نه — روی ::before (لایهٔ position:fixed پشتِ صفحه)
+   اعمال می‌شود تا کروم مجبور به رنگ‌آمیزیِ دوبارهٔ گرادیان حین اسکرول نشود (وگرنه
+   در دسکتاپ/PWA با اسکرول زیاد یک شکاف خالی موقت وسط صفحه دیده می‌شد).
+   ولی body بی‌رنگ نمی‌ماند: یک رنگِ تخت می‌گیرد تا بوم هم‌رنگِ صفحه بماند —
+   توضیحِ کامل کنارِ همان قاعده در لایهٔ theme-bridge بالاتر. */
+body[class*="theme-"].gfx-performance{ background:var(--dark)!important; }
+body[class*="theme-"].gfx-standard{ background:var(--dark)!important; }
+body[class*="theme-"].gfx-ultra{ background:var(--dark)!important; }
 body[class*="theme-"].gfx-performance::before,
 body[class*="theme-"].gfx-standard::before,
 body[class*="theme-"].gfx-ultra::before{ background:var(--app-bg)!important; }
@@ -48482,6 +48502,59 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
 #pm-pct-row .msumbox{ padding:4px 5px !important; gap:6px !important; }
 #pm-pct-row .ml{ font-size:0.78rem !important; white-space:nowrap; }
 #pm-pct-row input.mv{ width:52px !important; font-size:0.98rem !important; }
+</style>
+
+<style id="mobile-render-fix">
+/* ══════════════════════════════════════════════════════════════════════════
+   رفعِ باگ‌های ظاهریِ گوشی — فقط رنگ و رسم؛ هیچ منطق، داده، فرم، محاسبه یا
+   رفتارِ دکمه‌ای این‌جا لمس نمی‌شود. نسخهٔ کامپیوتر عمداً دست‌نخورده می‌ماند:
+   همهٔ قاعده‌ها پشتِ (pointer:coarse) هستند.
+   عمداً آخرین <style> صفحه است تا چیزی رویش ننشیند و به !important نیاز نیفتد
+   — یعنی قاعده‌های «کاهشِ حرکت» (prefers-reduced-motion) که !important دارند
+   همچنان برنده‌اند و دسترس‌پذیری خراب نمی‌شود.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── ۱) «پرپر زدن / سفید شدن / پرشِ» چند صدم‌ثانیه‌ایِ بازکردنِ بخش‌ها ────────
+   دو جلوهٔ ورودیِ جدا روی «هر» فرزندِ مستقیمِ بخش سوار است: fxRise (کارت‌ها) و
+   mpEnter (بقیهٔ فرزندها). هر دو کنارِ محوشدن، جابه‌جایی (translateY) و مقیاسِ
+   کسری (scale(.99) / scale(.995)) هم دارند. مقیاسِ کسری یعنی مرورگر باید کارتِ
+   پُر از جدول را چند فریم در اندازه‌ای دیگر دوباره rasterize کند و دقیقاً همان
+   لحظه بخش تازه از display:none درآمده — نتیجه‌اش روی گوشی همان پرپرک/سفیدیِ
+   لحظه‌ای است، و translateY همان «پرش».
+   این‌جا فقط «نامِ» انیمیشن به یک محوِ خالص عوض می‌شود: مدت، تاخیر، پله‌بندی و
+   منحنیِ هر قاعده دقیقاً همان می‌ماند، پس ورود همان‌قدر نرم دیده می‌شود؛ ولی
+   opacity تنها روی GPU انجام می‌شود و هیچ چیزی جابه‌جا یا بازرسم نمی‌گردد. */
+@keyframes fxEnterFade{ from{ opacity:0 } to{ opacity:1 } }
+@media (pointer:coarse){
+  .section.visible>div,
+  .section.visible>h2,
+  .section.visible>.card,
+  .section.visible>.settings-card,
+  .section.visible>.shifts-grid>.shift-card{ animation-name:fxEnterFade; }
+}
+
+/* ── ۲) همان مشکل، هنگام بازشدنِ مودال‌ها ──────────────────────────────────
+   mpPop مودال را از scale(.93) باز می‌کند و روی گوشی بیشترِ مودال‌ها تمام‌صفحه‌اند
+   (‎#personModal / شرکت‌ها با height:100vh) — یعنی کلِ صفحه چند فریم در اندازهٔ
+   دیگر رسم می‌شود. جهش و فنریتش سرِ جایش می‌ماند، فقط از مقیاس به جابه‌جاییِ
+   کوچک تبدیل می‌شود. کیفیتِ «الترا» نسخهٔ موبایلِ خودش را دارد (خاص‌تر و با
+   !important) و این قاعده رویش اثر نمی‌گذارد. */
+@keyframes mpPopLite{ from{ transform:translateY(10px) } to{ transform:none } }
+@media (pointer:coarse){
+  .modal-overlay.open .modal{ animation-name:mpPopLite; }
+}
+
+/* ── ۳) دکمه‌های شناور (ماشین‌حساب / ربات / پیام به مدیر) ───────────────────
+   جا، اندازه، رنگ و کارشان هیچ تغییری نمی‌کند؛ فقط روی صفحه‌های لمسی هرکدام
+   لایهٔ گرافیکیِ خودشان را می‌گیرند — همان کاری که پیش‌تر برای #glassClock
+   انجام شد — تا ظاهر/پنهان شدنشان (با باز و بسته شدنِ مودال‌ها) و بالا رفتنشان
+   با کیبورد، کاشی‌های صفحهٔ زیرشان را دوباره رنگ نکند.
+   ‎:hover هم خاص‌تر است هم روی لمسی معنایی ندارد، پس دست‌نخورده می‌ماند؛ و چون
+   هر سه از قبل position:fixed اند، نه ترتیبِ لایه‌ها عوض می‌شود و نه لنگرِ
+   ‎.fab-badge که absolute است. */
+@media (pointer:coarse){
+  #calcFab, #robotFab, #managerFab{ transform:translateZ(0); }
+}
 </style>
 
 </body>
