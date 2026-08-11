@@ -27843,17 +27843,26 @@ function _renderRasidLog(acct, o) {
      همین‌طور». دو گزینهٔ روی‌هم، این ردیف را یک خط بلندتر از ردیف‌های دستی
      می‌کرد (همان «طولش نسبت به بقیه بزرگ‌تر می‌شود») — چون این ردیف‌ها انتخابی
      نیستند و فقط نمایش‌اند، یک برچسب کافی است و بلندی‌شان هم یکی می‌شود. */
+  /* جای نقطهٔ رادیو هم نگه داشته می‌شود.
+     ردیف‌های دستی داخلِ هر برچسب یک <input type=radio> دارند؛ ردیف‌های خودکار
+     نداشتند، پس کادرشان دقیقاً به اندازهٔ همان رادیو (۱۳px) به‌علاوهٔ فاصلهٔ ۴px
+     باریک‌تر می‌شد و چون .ft-pick وسط‌چین است، ۸.۵px هم جابه‌جا می‌نشست — همان
+     ناهم‌ترازی که گزارش شد. حالا همان رادیو گذاشته می‌شود ولی نامرئی، پس
+     اندازه و جا با هر فونت و هر بزرگ‌نماییِ مرورگر مو‌به‌مو یکی می‌ماند.
+     disabled عمدی است: هم کلیک‌شدنی نیست و هم ناوبریِ جدولی (_navFocusables)
+     خودش [disabled] را کنار می‌گذارد، پس هیچ ایستگاهِ قلابی نمی‌سازد. */
+  const ftDot = '<input type="radio" class="pmar-radio" disabled tabindex="-1" aria-hidden="true">';
   const ftCell = ftype => {
     const isP = ftype !== 'diesel';
     return '<td class="pmar-ft"><div class="ft-pick">' +
       '<span class="ft-opt ' + (isP ? 'petrol' : 'diesel') + ' active">' +
-      (isP ? '⛽ پطرول' : '🟤 دیزل') + '</span>' +
+      ftDot + (isP ? '⛽ پطرول' : '🟤 دیزل') + '</span>' +
       /* جای خالیِ گزینهٔ دوم نگه داشته می‌شود (دیده نمی‌شود ولی جا می‌گیرد) تا
          بلندیِ این ردیف مو‌به‌مو با ردیف‌های دستی یکی بماند — همان قاعده‌ای که
          .pmar-box برای بقیهٔ خانه‌ها دارد. با هر اندازهٔ فونتی هم خودش جور
          درمی‌آید، چون از خودِ همان .ft-opt ساخته شده. */
       '<span class="ft-opt pmar-ft-ghost" aria-hidden="true">' +
-      (isP ? '🟤 دیزل' : '⛽ پطرول') + '</span>' +
+      ftDot + (isP ? '🟤 دیزل' : '⛽ پطرول') + '</span>' +
       '</div></td>';
   };
   /* هر خانه دقیقاً همان جعبه‌ای را می‌گیرد که کادرِ تایپیِ ردیف‌های دستی دارد:
@@ -40494,7 +40503,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.268';
+const APP_VERSION = '2.9.269';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -48557,6 +48566,11 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
 .xls-tbl tr.pm-auto-row .ft-opt{ cursor:default; }
 /* گزینهٔ دومِ «نوع تیل» در ردیف‌های خودکار فقط جا نگه می‌دارد و دیده نمی‌شود */
 .xls-tbl tr.pm-auto-row .pmar-ft-ghost{ visibility:hidden; }
+/* نقطهٔ رادیو هم فقط جا نگه می‌دارد: نامرئی است ولی دقیقاً همان جعبه‌ای را
+   می‌گیرد که رادیوی ردیف‌های دستی می‌گیرد، پس عرضِ کادرِ «پطرول/دیزل» و جای
+   نوشته‌اش در همهٔ ردیف‌ها یکی می‌شود. چون disabled است، خاکستری‌شدنش هم
+   دیده نمی‌شود. */
+.xls-tbl tr.pm-auto-row .pmar-radio{ visibility:hidden; }
 .xls-tbl tr.pm-auto-row .pmar-mark{ color:var(--accent); }
 .xls-tbl tr.pm-auto-row .pmar-name{ white-space:nowrap; }
 .xls-tbl tr.pm-auto-row .pmar-val{ color:var(--green); }
