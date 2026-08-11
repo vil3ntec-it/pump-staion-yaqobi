@@ -37536,19 +37536,19 @@ function _chatCacheSaveNow() {
 // سرورِ خانگی (`/api/notify/<موضوع>`) می‌رود و سرور آن را هم به‌صورت زنده
 // (وب‌سوکت) و هم به‌صورت نوتیفیکیشنِ واقعی (Web Push) به دستگاه‌ها می‌رساند.
 // فقط عنوان و پیش‌نمایش کوتاه می‌رود — عکس/صدا/ویدیو فقط با برچسبِ نوع.
-function _extPushRaw(topic, title, message, homeTopic) {
+function _extPushRaw(topic, title, message, homeTopic, tags) {
   try {
     if (!homeTopic) return;                     // این خبر را جای دیگری داده‌ایم
     const baseUrl = /^http/.test(location.protocol) ? location.href.split('#')[0] : 'https://vil3ntec-it.github.io/pump-staion-yaqobi/';
-    _ntfSend(homeTopic, title, message, { click: baseUrl });
+    _ntfSend(homeTopic, title, message, { click: baseUrl, tags: tags || undefined });
   } catch (e) {}
 }
 // سرورِ خانگی خودش می‌داند برنامهٔ گیرنده باز است یا نه: باز باشد خبر فوری در
 // فهرستش می‌نشیند، بسته باشد نوتیفیکیشن می‌فرستد. پس دیگر لازم نیست این‌جا
 // «حاضر بودنِ» گیرنده را بسنجیم — همان سنجش بود که وقتی سرورِ حضور در دسترس
 // نبود، اعلان را بی‌صدا می‌انداخت.
-function _extPushAway(presenceKey, topic, title, message, homeTopic) {
-  _extPushRaw(topic, title, message, homeTopic);
+function _extPushAway(presenceKey, topic, title, message, homeTopic, tags) {
+  _extPushRaw(topic, title, message, homeTopic, tags);
 }
 // مسیربندی اعلان‌ها (خواستهٔ صاحب برنامه):
 //   • پیام کارمند/مشتری (گروهی یا به میرزا) → موضوعِ میرزا + موضوعِ کارمندان
@@ -37574,7 +37574,10 @@ function _extPushNotify(scope, msg, peer) {
       if (peer) _extPushAway('p/' + peer, null, '💬 جواب میرزا — پمپ یعقوبی', preview, NTF_TOPIC_PERSON(peer));
       return;
     }
-    _extPushAway('admin', null, '💬 پیام به میرزا — ' + who, preview, NTF_TOPIC_MIRZA());
+    // برچسبِ گفت‌وگوی همین شخص روی پیام می‌نشیند تا در «چت تک‌نفره»ی میرزا داخلِ
+    // گفت‌وگوی خودِ او بنشیند، نه در یک صندوقِ جدا («رسیده به میرزا» برداشته شد)
+    _extPushAway('admin', null, '💬 پیام به میرزا — ' + who, preview, NTF_TOPIC_MIRZA(),
+      peer ? ['dm', NTF_TOPIC_PERSON(peer)] : null);
   } catch (e) {}
 }
 // --- کارتِ «پیام‌رسان یعقوبی» در «تنظیمات» ---
@@ -38185,17 +38188,16 @@ function _personBotHandle(txt) {
   _dmRenderList(_rbActiveDmPeer());
   return true;
 }
-// واگذاری به میرزا: گفتگوی انجام‌شده با جواب‌گوی خودکار یک‌جا برای میرزا فرستاده
-// می‌شود و از این به بعد پیام‌ها مستقیم به خودِ میرزا می‌روند.
+// واگذاری به میرزا: از این به بعد پیام‌ها مستقیم به خودِ میرزا می‌روند.
+// خواستهٔ صاحب ریپو: آنچه طرف با «جواب‌گوی خودکار» گفته و شنیده، برای میرزا
+// فرستاده نشود — آن گفتگو مالِ ربات است، نه مالِ میرزا. فقط یک خطِ کوتاه می‌رود
+// که «فلانی منتظرِ جواب است»، و بعد از آن هر چه خودش بنویسد مستقیم می‌رسد.
 function _personBotHandoff() {
   _personBotActive = false;
-  const nm = (_rbPersonPeer && _rbPersonPeer.name) || 'مهمان';
-  const transcript = _personBotMsgs.filter(m => m.k === 'text' && m.t).slice(-20)
-    .map(m => (m.f === 'bot' ? 'جواب‌گوی خودکار: ' : nm + ': ') + m.t).join('\n');
-  try { _chatPush('dm', { k: 'text', t: '📨 درخواست صحبت با میرزا — گفتگو با جواب‌گوی خودکار:\n' + transcript }); } catch (e) {}
+  try { _chatPush('dm', { k: 'text', t: '✉️ می‌خواهم با شما صحبت کنم.' }); } catch (e) {}
   _personBotMsgs.push({ f: 'bot', bn: 'میرزا (جواب خودکار)', k: 'text', t: _chatNetUp()
-    ? '✅ پیام‌های شما به میرزا فرستاده شد — از این به بعد مستقیم با خودِ میرزا صحبت می‌کنید و در زودترین فرصت جواب تان را می‌دهد.'
-    : '🕐 پیام‌های شما ثبت شد و در صف است — به‌محضِ وصل شدنِ سرور خودکار به میرزا می‌رسد. از این به بعد مستقیم با خودِ میرزا صحبت می‌کنید.', ts: Date.now() });
+    ? '✅ به میرزا خبر داده شد — از این به بعد هر چه بنویسید مستقیم به خودش می‌رسد و در زودترین فرصت جواب تان را می‌دهد.'
+    : '🕐 خبرِ شما ثبت شد و در صف است — به‌محضِ وصل شدنِ سرور به میرزا می‌رسد. از این به بعد مستقیم با خودِ میرزا صحبت می‌کنید.', ts: Date.now() });
   return true;
 }
 function dmMirzaYes() {
@@ -39623,10 +39625,14 @@ function _msgrMeName() {
   try { if (_msgrIsAdmin()) return 'میرزا'; } catch (e) {}
   try { return _ntfDeviceLabel(); } catch (e) { return 'من'; }
 }
+/* تبِ «چت تک‌نفره» فقط گفت‌وگوی کسانی است که از راهِ کیو‌آر آمده‌اند (موضوعِ p-…).
+   «چتِ کارمندان» و «رسیده به میرزا» از این‌جا برداشته شدند (خواستهٔ صاحب ریپو):
+   اولی همان تبِ «چت گروهی» است و دومی صندوقِ خبرها بود، نه گفت‌وگوی یک آدم. */
+function _msgrIsPersonThread(t) { return /^p-[a-z0-9_-]+$/i.test(String(t || '')); }
 /** نامِ خواناى گفت‌وگو */
 function _msgrName(id) {
-  if (id === 'staff') return '👷 چتِ کارمندان';
-  if (id === 'mirza') return '📥 رسیده به میرزا';
+  // در نمای کیو‌آرِ خودِ مشتری، طرفِ گفت‌وگو همیشه میرزاست
+  try { if (_rbMode === 'person') return '💬 گفتگو با میرزا'; } catch (e) {}
   const want = String(id || '').toLowerCase();
   let found = '';
   try {
@@ -39638,7 +39644,8 @@ function _msgrName(id) {
       });
     });
   } catch (e) {}
-  return '🧑 ' + (found || want.replace(/^p-/, ''));
+  // حسابش هنوز در این دستگاه نیست (یا مهمانِ کیو‌آرِ عمومی است)
+  return '🧑 ' + (found || 'مهمان');
 }
 function _msgrSeenKey(id) { return 'pumpMsgrSeen:' + id; }
 function _msgrSeen(id) { return +(_msgrLsGet(_msgrSeenKey(id), 0) || 0); }
@@ -39658,8 +39665,12 @@ function _msgrUnreadAll() { return Object.keys(_msgrMsgs).reduce((n, id) => n + 
 function _msgrAccept(raw) {
   if (!raw) return;
   const id = _msgrThreadOf(raw);
+  // فقط گفت‌وگوی آدم‌ها (p-…) این‌جا می‌نشیند؛ خبرهای «staff/mirza» جای خودشان
+  // را دارند و نباید در فهرستِ چتِ تک‌نفره گفت‌وگوی قلابی بسازند
+  if (!_msgrIsPersonThread(id)) return;
   const at = +raw.createdAt || Date.now();
-  const from = String(raw.title || '').trim();
+  // عنوانِ رونوشتِ مسیرِ قدیمی «💬 پیام به میرزا — نام» است؛ فقط خودِ نام بماند
+  const from = String(raw.title || '').trim().replace(/^💬\s*(?:پیام به میرزا|جواب میرزا)\s*—\s*/, '');
   const text = String(raw.body || '');
   if (!text) return;
   const list = _msgrMsgs[id] || (_msgrMsgs[id] = []);
@@ -39757,9 +39768,8 @@ function _msgrKeepTopic(topic) {
 /** فهرستِ گفت‌وگوهایی که باید در ستونِ کناری دیده شوند */
 function _msgrThreadIds() {
   const out = [];
-  const add = t => { if (t && out.indexOf(t) < 0) out.push(t); };
-  add('staff');
-  try { (_ntfMyTopics() || []).forEach(t => { if (t !== 'mirza') add(t); }); } catch (e) {}
+  const add = t => { if (_msgrIsPersonThread(t) && out.indexOf(t) < 0) out.push(t); };
+  try { (_ntfMyTopics() || []).forEach(add); } catch (e) {}
   _msgrExtra.forEach(add);
   Object.keys(_msgrMsgs).forEach(add);
   return out;
@@ -39811,7 +39821,7 @@ function _msgrPaintThreads() {
       + '<span class="msgr-th-p">' + (last ? _esc((last.mine ? 'شما: ' : (last.from ? last.from + ': ' : '')) + last.text).slice(0, 90) : 'هنوز پیامی نیست') + '</span>'
       + (n ? '<span class="msgr-th-b">' + n2fa(n) + '</span>' : '')
       + '</button>';
-  }).join('') || '<div class="msgr-empty">هنوز گفت‌وگویی نیست.</div>';
+  }).join('') || '<div class="msgr-empty">هنوز کسی از راهِ کیو‌آر پیام نداده.<br>از داخلِ حسابِ هر قرض‌دار می‌توانید خودتان گفت‌وگو را شروع کنید.</div>';
 }
 /* پیام‌های چتِ قدیمی گم نشوند: هر گفت‌وگوی p-… با همان peer در
    _dmMsgCache خوانده می‌شود و به‌عنوان تاریخچه، پیش از پیام‌های سرورِ خانگی
@@ -40226,7 +40236,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.257';
+const APP_VERSION = '2.9.258';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -48306,9 +48316,17 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
   font-family:'Vazirmatn',sans-serif; font-weight:800; font-size:0.82rem; padding:8px 14px; cursor:pointer; white-space:nowrap; }
 .msgr-comp button:active{ transform:scale(.96); }
 .msgr-empty{ text-align:center; color:var(--muted); font-size:0.84rem; padding:26px 12px; }
-/* داخلِ پنلِ ربات، پیام‌رسان تمامِ قدِ تب را می‌گیرد */
+/* داخلِ پنلِ ربات، پیام‌رسان تمامِ قدِ تب را می‌گیرد.
+   پنلِ ربات باریک است: دو ستون کنارِ هم یعنی نیمِ صفحه سفیدِ خالی می‌ماند تا وقتی
+   گفت‌وگویی باز نشده. پس این‌جا همیشه یک‌ستونه است — اول فهرست، با زدنِ یک نام
+   خودِ گفت‌وگو (و دکمهٔ «→» برای برگشت). نمای تک‌گفت‌وگوی مشتری (msgr-solo) از این
+   قاعده بیرون است، چون او اصلاً فهرست ندارد. */
 #rbPane-dm .msgr-pane{ flex:1; min-height:0; }
-#rbPane-dm .msgr-side{ width:200px; flex:0 0 200px; }
+#rbPane-dm .msgr-side{ width:100%; flex:1 1 auto; border:none; }
+#rbPane-dm .msgr-pane:not(.msgr-solo) .msgr-main{ display:none; }
+#rbPane-dm .msgr-pane:not(.msgr-solo).msgr-on-chat .msgr-side{ display:none; }
+#rbPane-dm .msgr-pane:not(.msgr-solo).msgr-on-chat .msgr-main{ display:flex; }
+#rbPane-dm .msgr-pane:not(.msgr-solo) .msgr-back{ display:inline-block; }
 /* نمای مشتریِ کیو‌آر: فقط گفت‌وگوی خودش */
 .msgr-pane.msgr-solo .msgr-side{ display:none; }
 .msgr-pane.msgr-solo .msgr-main{ display:flex; }
