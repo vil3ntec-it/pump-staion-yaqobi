@@ -19812,7 +19812,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <div class="fs-head petrol">⛽ حساب پطرول</div>
         <div class="fs-rows">
           <div class="fs-cell"><div class="l" id="pm-p-comm-l">فیصدی ما</div><div class="v" style="color:var(--purple)" id="pm-p-comm">0</div></div>
-          <div class="fs-cell"><div class="l" id="pm-p-rasid-l">مقدار رسید تیل</div><input type="number" class="v pm-edit" id="pm-p-rasidfuel" placeholder="0" style="color:var(--green);background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;width:100%;font-weight:800;font-family:'Vazirmatn',sans-serif" onfocus="personRasidFocus('petrol')" onblur="personRasidBlur()" oninput="updatePersonRasidFuel('petrol',this.value)"></div>
+          <div class="fs-cell"><div class="l" id="pm-p-rasid-l">مقدار رسید تیل</div><input type="number" class="v pm-edit" id="pm-p-rasidfuel" style="color:var(--green);background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;width:100%;font-weight:800;font-family:'Vazirmatn',sans-serif" placeholder="رسید تازه…" title="هر عددی این‌جا بنویسید یک رسیدِ تازه است و به جدول اضافه می‌شود — رسیدِ قبلی پاک نمی‌شود" onfocus="personRasidFocus('petrol')" onblur="personRasidBlur('petrol')" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"></div>
           <div class="fs-cell"><div class="l">برد</div><div class="v" style="color:var(--accent)" id="pm-p-bord">0</div></div>
           <div class="fs-cell"><div class="l" id="pm-p-rem-l">الباقی تیل</div><div class="v" style="color:var(--blue)" id="pm-p-remfuel">0</div></div>
           <div class="fs-cell" id="pm-p-remmoney-cell" style="display:none"><div class="l">الباقی پول</div><div class="v" id="pm-p-remmoney">0</div></div>
@@ -19822,7 +19822,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <div class="fs-head diesel">🟤 حساب دیزل</div>
         <div class="fs-rows">
           <div class="fs-cell"><div class="l" id="pm-d-comm-l">فیصدی ما</div><div class="v" style="color:var(--purple)" id="pm-d-comm">0</div></div>
-          <div class="fs-cell"><div class="l" id="pm-d-rasid-l">مقدار رسید تیل</div><input type="number" class="v pm-edit" id="pm-d-rasidfuel" placeholder="0" style="color:var(--green);background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;width:100%;font-weight:800;font-family:'Vazirmatn',sans-serif" onfocus="personRasidFocus('diesel')" onblur="personRasidBlur()" oninput="updatePersonRasidFuel('diesel',this.value)"></div>
+          <div class="fs-cell"><div class="l" id="pm-d-rasid-l">مقدار رسید تیل</div><input type="number" class="v pm-edit" id="pm-d-rasidfuel" style="color:var(--green);background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;width:100%;font-weight:800;font-family:'Vazirmatn',sans-serif" placeholder="رسید تازه…" title="هر عددی این‌جا بنویسید یک رسیدِ تازه است و به جدول اضافه می‌شود — رسیدِ قبلی پاک نمی‌شود" onfocus="personRasidFocus('diesel')" onblur="personRasidBlur('diesel')" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"></div>
           <div class="fs-cell"><div class="l">برد</div><div class="v" style="color:var(--accent)" id="pm-d-bord">0</div></div>
           <div class="fs-cell"><div class="l" id="pm-d-rem-l">الباقی تیل</div><div class="v" style="color:var(--blue)" id="pm-d-remfuel">0</div></div>
           <div class="fs-cell" id="pm-d-remmoney-cell" style="display:none"><div class="l">الباقی پول</div><div class="v" id="pm-d-remmoney">0</div></div>
@@ -27103,18 +27103,69 @@ function _refreshOpenPersonModal() {
   try { _updatePersonTotals(person); } catch (e) {}
   try { _renderHistoryPanel(person); } catch (e) {}
 }
+/* ══ دفترِ رسیدهای سربرگ ═══════════════════════════════════════════════════
+   تا پیش از این، کادرِ «مقدار رسید» یک عددِ تکی بود: هر بار که رسیدِ تازه‌ای
+   می‌نوشتید، رسیدِ قبلی را پاک می‌کرد و ردیفِ فیصدی هم با آن می‌پرید.
+   حالا هر چیزی که در سربرگ می‌نویسید یک «رسیدِ تازه» است و در دفتر (rasidLog)
+   ثبت می‌شود؛ کادرِ سربرگ جمعِ همهٔ آن‌ها را نشان می‌دهد و هر رسید ردیفِ خودش را
+   در جدول نگه می‌دارد. عددهای قدیمیِ rasidFuelP/D و rasidMoneyP/D دقیقاً همان
+   جمعِ دفتر می‌مانند، پس PDF، آرشیو، نمای انباشته و هشدارها هیچ تغییری نمی‌بینند. */
+function _rasidLogKey(fuel, money) { return (money ? 'money' : 'fuel') + (fuel === 'diesel' || fuel === 'D' ? 'D' : 'P'); }
+/* حساب‌های قدیمی دفتر ندارند — یک‌بار از روی همان چهار عددِ قبلی ساخته می‌شود */
+function _rasidLogInit(acct) {
+  if (!acct) return [];
+  if (Array.isArray(acct.rasidLog)) return acct.rasidLog;
+  const at = acct.rasidAt || {};
+  const log = [];
+  [['fuelP', 'rasidFuelP'], ['fuelD', 'rasidFuelD'], ['moneyP', 'rasidMoneyP'], ['moneyD', 'rasidMoneyD']]
+    .forEach(([k, field]) => {
+      const v = parseFloat(acct[field]) || 0;
+      if (v) log.push({ id: 'r' + k, k, v, at: at[k] || '' });
+    });
+  acct.rasidLog = log;
+  return log;
+}
+function _rasidLogSum(acct, k) {
+  return _rasidLogInit(acct).reduce((n, e) => n + (e && e.k === k ? (parseFloat(e.v) || 0) : 0), 0);
+}
+/* عددهای قدیمی همیشه برابرِ جمعِ دفتر نگه داشته می‌شوند */
+function _rasidLogSync(acct) {
+  if (!acct) return;
+  _rasidLogInit(acct);
+  acct.rasidFuelP = _rasidLogSum(acct, 'fuelP');
+  acct.rasidFuelD = _rasidLogSum(acct, 'fuelD');
+  acct.rasidMoneyP = _rasidLogSum(acct, 'moneyP');
+  acct.rasidMoneyD = _rasidLogSum(acct, 'moneyD');
+}
+/** پاک کردنِ یک رسیدِ ثبت‌شده (اگر اشتباه نوشته شده باشد) */
+function deletePersonRasid(entryId) {
+  const person = _curPerson(); if (!person) return;
+  const acct = _acctOf(person);
+  const log = _rasidLogInit(acct);
+  const i = log.findIndex(e => e && String(e.id) === String(entryId));
+  if (i < 0) return;
+  if (!confirm('این رسید پاک شود؟ (' + n2fa(log[i].v) + ')')) return;
+  log.splice(i, 1);
+  _rasidLogSync(acct);
+  save(); renderPersonRows(person);
+  if (typeof renderPersons === 'function') renderPersons(currentPersonType);
+  if (typeof updateBanner === 'function') updateBanner();
+  showToast('🗑️ رسید پاک شد', '#38a169');
+}
+/** نوشتنِ رسیدِ تازه در سربرگ — به دفتر اضافه می‌شود، جای قبلی را نمی‌گیرد */
 function updatePersonRasidFuel(fuel, val) {
   const person = _curPerson(); if (!person) return;
   const acct = _acctOf(person);
   const money = _acctModeMoney(person, acct);
-  const v = parseFloat(val)||0;
-  if (fuel === 'diesel') { if (money) acct.rasidMoneyD = v; else acct.rasidFuelD = v; }
-  else { if (money) acct.rasidMoneyP = v; else acct.rasidFuelP = v; }
-  /* تاریخِ همین رسید ثبت شود تا زیرِ جدول بشود گفت «این تاریخ، این مقدار رسید
-     داده شد». فقط یک تاریخ است — هیچ عددِ حسابی با آن عوض نمی‌شود. */
-  if (!acct.rasidAt || typeof acct.rasidAt !== 'object') acct.rasidAt = {};
-  acct.rasidAt[(money ? 'money' : 'fuel') + (fuel === 'diesel' ? 'D' : 'P')] = v ? persianDate() : '';
-  save(); _updatePersonTotals(person);
+  const v = parseFloat(val) || 0;
+  const el = document.getElementById(fuel === 'diesel' ? 'pm-d-rasidfuel' : 'pm-p-rasidfuel');
+  if (!v) { if (el) el.value = ''; _updatePersonTotals(person); return; }   // چیزی نوشته نشده
+  const log = _rasidLogInit(acct);
+  log.push({ id: 'r' + Date.now() + Math.random().toString(36).slice(2, 6),
+             k: _rasidLogKey(fuel, money), v, at: persianDate() });
+  _rasidLogSync(acct);
+  if (el) el.value = '';           // کادر خالی می‌شود تا رسیدِ بعدی نوشته شود
+  save(); renderPersonRows(person);
   // 📉 همین‌که رسید ثبت شد، تاریخ و نرخِ همان روز روی قرض‌های تسویه‌شده قفل می‌شود
   // (فقط سه فیلدِ تازه — هیچ عددِ حسابی دست نمی‌خورد). ← گزارشِ «زیان افزایش قیمت»
   _lossOnReceipt(person);
@@ -27122,21 +27173,19 @@ function updatePersonRasidFuel(fuel, val) {
 // موقعِ کلیک روی کادرِ «مقدار رسید» در «واحد پول»، فقط سهمِ رسیدِ دستیِ هدر نشان داده شود
 // (نه جمعِ آن با رسیدهای جدول) تا ویرایش دوباره‌شماری نکند. مقدارِ ذخیره‌شده (rasidMoney)
 // دست‌نخورده و همان رسیدِ دستی می‌ماند؛ فقط نمایش عوض می‌شود.
+/* کادر با دست خوردن خالی می‌شود: عددی که می‌نویسید «رسیدِ تازه» است، نه ویرایشِ
+   جمعِ قبلی. با بیرون رفتن یا Enter ثبت می‌شود و کادر دوباره جمعِ کل را نشان می‌دهد. */
 function personRasidFocus(fuel){
-  const person=_curPerson(); if(!person) return;
-  const acct=_acctOf(person);
-  const money = _acctModeMoney(person, acct);
   const el=document.getElementById(fuel==='diesel'?'pm-d-rasidfuel':'pm-p-rasidfuel');
-  if(el){
-    // در هر دو حالت، موقعِ ویرایش فقط سهمِ دستیِ هدر نشان داده می‌شود (نه جمعش با رسیدهای
-    // جدول) تا ویرایش دوباره‌شماری نکند؛ onblur دوباره جمع را می‌نویسد.
-    const v = money ? (parseFloat(fuel==='diesel'?acct.rasidMoneyD:acct.rasidMoneyP)||0)
-                    : (parseFloat(fuel==='diesel'?acct.rasidFuelD:acct.rasidFuelP)||0);
-    el.value=v||'';
-  }
+  if(el) el.value='';
 }
-// با خروج از کادر، دوباره جمعِ رسید (دستی + رسیدهای جدول) در کادر نوشته شود
-function personRasidBlur(){ const p=_curPerson(); if(p) _updatePersonTotals(p); }
+function personRasidBlur(fuel){
+  const p=_curPerson(); if(!p) return;
+  const el=document.getElementById(fuel==='diesel'?'pm-d-rasidfuel':'pm-p-rasidfuel');
+  const v=el?parseFloat(el.value)||0:0;
+  if(v) updatePersonRasidFuel(fuel==='diesel'?'diesel':'petrol', v);
+  else _updatePersonTotals(p);
+}
 /* واحد فقط برای «حسابی که باز است» عوض می‌شود — حسابِ اصلی یا همان حساب فرعی.
    قبلاً روی خودِ شخص می‌نشست و به همهٔ حساب‌های او سرایت می‌کرد. */
 function togglePersonMode() {
@@ -27665,7 +27714,7 @@ function _renderRasidLog(acct, o) {
      کمینه مو‌به‌مو یکی است و با بزرگ/کوچک کردنِ فونت هم با هم جابه‌جا می‌شوند. */
   const box = (cls, txt) => '<td><span class="xls-in pmar-box' + (cls ? ' ' + cls : '') +
     '">' + (txt == null ? '' : txt) + '</span></td>';
-  const line = (ftype, when, name, cells, tip) => {
+  const line = (ftype, when, name, cells, tip, delId) => {
     const tr = document.createElement('tr');
     tr.className = 'pm-auto-row';
     tr.title = tip;
@@ -27674,31 +27723,40 @@ function _renderRasidLog(acct, o) {
       if (h === 'تاریخ') return box('', escFa(when || '—'));
       if (h === 'نام') return box('pmar-name', escFa(name));
       if (h === 'نوع تیل') return ftCell(ftype);
-      // «الباقی» و «حذف» در ردیف‌های دستی هم کادرِ تایپی ندارند — این‌جا هم خالی
-      if (h === 'الباقی' || h === 'حذف') return '<td></td>';
+      if (h === 'الباقی') return '<td></td>';
+      // فقط ردیفِ «رسید» دکمهٔ پاک کردن دارد — ردیفِ فیصدی خودش از فیصدی می‌آید
+      if (h === 'حذف') return delId
+        ? '<td><button class="del-btn" title="پاک کردنِ همین رسید" onclick="deletePersonRasid(\'' + delId + '\')">🗑️</button></td>'
+        : '<td></td>';
       return cells[h] || box('', '');
     }).join('');
     tbody.appendChild(tr);
   };
-  const one = (ftype, icon, label, amount, comm, pct, when) => {
-    if (!amount) return;
-    // در «حساب جداگانه پطرول/دیزل» فقط ردیفِ همان تیل بیاید
+  /* هر رسیدِ ثبت‌شده ردیفِ خودش را دارد و با نوشتنِ رسیدِ تازه پاک نمی‌شود؛ ردیفِ
+     «فیصدی» هم درست زیرِ رسیدهای همان تیل می‌نشیند (نه تهِ جدول) و با عوض کردنِ
+     فیصدی فقط عددِ همان ردیف تغییر می‌کند. */
+  const one = (ftype, icon, label, total, comm, pct) => {
     if (currentPersonFilter !== 'all' && currentPersonFilter !== ftype) return;
-    const rc = {};
-    rc[rasidHead] = box('pmar-val', n2fa(o.rnd(amount)));
-    line(ftype, when, icon + ' رسید ' + label, rc,
-      'ردیفِ خودکار — همان «مقدار رسید»ی که در سربرگ نوشته‌اید');
-    if (!pct) return;
-    line(ftype, when, icon + ' فیصدی از ' + label,
+    const k = key + (ftype === 'diesel' ? 'D' : 'P');
+    const entries = _rasidLogInit(acct).filter(e => e && e.k === k && (parseFloat(e.v) || 0));
+    entries.forEach((e, i) => {
+      const rc = {};
+      rc[rasidHead] = box('pmar-val', n2fa(o.rnd(parseFloat(e.v) || 0)));
+      line(ftype, e.at, icon + ' رسید ' + label + (entries.length > 1 ? ' ' + n2fa(i + 1) : ''), rc,
+        'رسیدی که در سربرگ نوشته‌اید — با 🗑️ می‌توانید همین یکی را پاک کنید', e.id);
+    });
+    if (!total || !pct) return;
+    line(ftype, entries.length ? entries[entries.length - 1].at : '', icon + ' فیصدی از ' + label,
       { 'مقدار بردگی': box('pmar-comm', n2fa(o.rnd(comm))) },
-      'ردیفِ خودکار — فیصدیِ ' + n2fa(o.rnd(pct)) + '٪ که از همین رسید کم شده');
+      'فیصدیِ ' + n2fa(o.rnd(pct)) + '٪ از جمعِ رسیدِ ' + label + ' (' + n2fa(o.rnd(total)) + ')');
   };
-  one('petrol', '⛽', 'پطرول', o.rasidP, o.commP, o.pctP, at[key + 'P']);
-  one('diesel', '🟤', 'دیزل', o.rasidD, o.commD, o.pctD, at[key + 'D']);
+  one('petrol', '⛽', 'پطرول', o.rasidP, o.commP, o.pctP);
+  one('diesel', '🟤', 'دیزل', o.rasidD, o.commD, o.pctD);
 }
 function _updatePersonTotals(person) {
   const acct = _acctOf(person);
   const rows = _acctRows(person, acct);
+  try { _rasidLogSync(acct); } catch (e) {}
   const t = _splitTotals(rows);
   const pctP = _acctPct(acct, 'petrol'), pctD = _acctPct(acct, 'diesel');
   const money = _acctModeMoney(person, acct);
@@ -27956,6 +28014,13 @@ function newPersonTable() {
   if (_acctModeMoney(person, acct)) acct.moneyRows = remainingRows; else acct.rows = remainingRows;
   if (filter === 'all' || filter === 'petrol') { acct.rasidFuelP = 0; acct.rasidMoneyP = 0; }
   if (filter === 'all' || filter === 'diesel') { acct.rasidFuelD = 0; acct.rasidMoneyD = 0; }
+  // دفترِ رسید هم همان‌قدر پاک شود که عددهایش پاک شده‌اند
+  try {
+    const drop = {};
+    if (filter === 'all' || filter === 'petrol') { drop.fuelP = 1; drop.moneyP = 1; }
+    if (filter === 'all' || filter === 'diesel') { drop.fuelD = 1; drop.moneyD = 1; }
+    acct.rasidLog = _rasidLogInit(acct).filter(e => !(e && drop[e.k]));
+  } catch (e) {}
   if (filter === 'all') acct.note = '';
   // کادر توضیحاتِ روی صفحه هم پاک شود تا با جدولِ نو یکی باشد (توضیحات قبلی همراه آرشیو رفت)
   if (filter === 'all') { const nf0 = document.getElementById('pm-note-field'); if (nf0) nf0.value = ''; }
@@ -39672,7 +39737,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.251';
+const APP_VERSION = '2.9.252';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
