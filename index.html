@@ -39800,6 +39800,10 @@ function _msgrName(id) {
 function _msgrSeenKey(id) { return 'pumpMsgrSeen:' + id; }
 function _msgrSeen(id) { return +(_msgrLsGet(_msgrSeenKey(id), 0) || 0); }
 function _msgrMarkRead(id) {
+  /* بجِ رباتِ شناور از نشانه‌های چتِ قدیمی هم شمرده می‌شود؛ اگر این گفت‌وگو
+     همان‌جا هم پیامِ نخوانده دارد، با باز کردنش این‌جا خوانده حساب شود — وگرنه
+     عددِ بج تا ابد روی صفحه می‌ماند در حالی که کاربر پیام را دیده است. */
+  try { const lp = _msgrLegacyPeer(id); if (lp) _chatMarkRead('dm', lp); } catch (e) {}
   const list = _msgrMsgs[id] || [];
   if (!list.length) return;
   const last = list[list.length - 1].at || 0;
@@ -39922,6 +39926,18 @@ function _msgrThreadIds() {
   try { (_ntfMyTopics() || []).forEach(add); } catch (e) {}
   _msgrExtra.forEach(add);
   Object.keys(_msgrMsgs).forEach(add);
+  /* گفت‌وگوهایی که فقط در چتِ قدیمی هستند هم باید در فهرست دیده شوند.
+     باگِ گزارش‌شده: «پیام‌ها دیده نمی‌شود، یارو پیام هم داده و برای چت تک‌نفره
+     هیچی نیست» — بجِ رباتِ شناور از _dmIndex (چتِ قدیمی) شمرده می‌شد ولی این
+     فهرست فقط از پیام‌های سرورِ خانگی ساخته می‌شد، پس عددِ بج بالا می‌رفت و
+     فهرست خالی می‌ماند. با همان NTF_TOPIC_PERSON به موضوع تبدیل می‌شوند تا
+     شناسهٔ گفت‌وگو دقیقاً همانی باشد که کیو‌آرِ همان حساب به آن گوش می‌دهد.
+     فقط نمایش است: چیزی فرستاده، ساخته یا ذخیره نمی‌شود. */
+  try {
+    // فقط آن‌هایی که واقعاً چیزی دارند — وگرنه گفت‌وگوی خالیِ «مهمان» ساخته می‌شود
+    Object.keys(_dmMsgCache || {}).forEach(p => { if ((_dmMsgCache[p] || []).length) add(NTF_TOPIC_PERSON(p)); });
+    Object.keys(_dmIndex || {}).forEach(p => { if ((_dmIndex[p] || {}).ts) add(NTF_TOPIC_PERSON(p)); });
+  } catch (e) {}
   return out;
 }
 /* پیام‌رسان جای جدایی ندارد: همان تبِ «چت تک‌نفره»ی خودِ رباتِ دستیار است.
@@ -39963,7 +39979,9 @@ function _msgrPaintThreads() {
   wrap.classList.toggle('msgr-solo', solo);
   const ids = _msgrThreadIds();
   box.innerHTML = ids.map(id => {
-    const list = _msgrMsgs[id] || [];
+    // پیش‌نمایش از همان فهرستی که خودِ گفت‌وگو نشان می‌دهد (چتِ قدیمی هم در آن
+    // هست)، وگرنه گفت‌وگویی که فقط پیامِ قدیمی دارد «هنوز پیامی نیست» می‌گفت
+    const list = _msgrLegacyMerge(id, _msgrMsgs[id] || []);
     const last = list[list.length - 1];
     const n = _msgrUnread(id);
     return '<button class="msgr-th' + (id === _msgrCur ? ' on' : '') + '" onclick="msgrOpen(\'' + _esc(id) + '\')">'
@@ -39976,13 +39994,25 @@ function _msgrPaintThreads() {
 /* پیام‌های چتِ قدیمی گم نشوند: هر گفت‌وگوی p-… با همان peer در
    _dmMsgCache خوانده می‌شود و به‌عنوان تاریخچه، پیش از پیام‌های سرورِ خانگی
    نشان داده می‌شود. فقط نمایش است — چیزی دوباره فرستاده یا ذخیره نمی‌شود. */
+/* کلیدِ چتِ قدیمی که به این گفت‌وگو مربوط است.
+   ⚠️ مقایسه باید با همان NTF_TOPIC_PERSON باشد، نه با toLowerCase خالی: کلیدِ
+   حساب‌های فرعی «debt-2~9» است و موضوعش «p-debt-2-9» می‌شود (چون ~ در نام
+   موضوع به - تبدیل می‌شود). با مقایسهٔ خام، تاریخچهٔ هیچ حسابِ فرعی پیدا
+   نمی‌شد. برای حساب‌های اصلی نتیجه دقیقاً همان قبل است. */
+function _msgrLegacyPeer(thread) {
+  const t = String(thread || '');
+  if (t.indexOf('p-') !== 0) return null;
+  try {
+    const keys = Object.keys(_dmMsgCache || {}).concat(Object.keys(_dmIndex || {}));
+    return keys.find(k => NTF_TOPIC_PERSON(k) === t) || null;
+  } catch (e) { return null; }
+}
 function _msgrLegacyMerge(thread, live) {
   if (!thread || thread.indexOf('p-') !== 0) return live;
   let old = [];
   try {
-    const want = thread.slice(2);
+    const hit = _msgrLegacyPeer(thread);
     const cache = _dmMsgCache || {};
-    const hit = Object.keys(cache).find(k => String(k).toLowerCase() === want);
     const meId = (_chatMe() || {}).id;
     old = (hit ? (cache[hit] || []) : [])
       .filter(m => m && (m.t || m.d) && !m.del)
@@ -40386,7 +40416,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.266';
+const APP_VERSION = '2.9.267';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -48568,6 +48598,60 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
    ‎.fab-badge که absolute است. */
 @media (pointer:coarse){
   #calcFab, #robotFab, #managerFab{ transform:translateZ(0); }
+}
+
+/* ── ۴) تکه‌های نقاشی‌نشدهٔ جدول‌ها روی اندروید ─────────────────────────────
+   نشانه (عکسِ صاحب ریپو): وسطِ کار، یک مستطیلِ خالی روی چند ستونِ جدول می‌افتد
+   (ستون‌های ردیف و تاریخ و گاهی فقط خانه‌های سربرگ) و با کمی اسکرول/لمس دوباره
+   درست می‌شود.
+   ریشه: قاعدهٔ #perf-fix روی «هر» سرستون position:sticky + z-index می‌گذارد. ولی
+   ظرفِ این جدول‌ها (.tbl-wrap / .xls-wrap) طبق قاعدهٔ ثابتِ همین ریپو هرگز
+   ارتفاعِ محدود ندارد — با اندازه‌گیریِ واقعی هم scrollHeight و clientHeight
+   برابرند، یعنی این sticky هیچ‌وقت هیچ سرستونی را نمی‌چسباند و کاملاً بی‌اثر
+   است. ولی چون داخلِ یک ظرفِ اسکرولِ افقی و با کلیپِ گِرد (overflow:hidden +
+   border-radius) نشسته، مرورگرِ اندروید برایش لایهٔ چسبنده می‌سازد و همان
+   کاشی‌های نیمه‌رسم‌شده را می‌دهد.
+   ⚠️ position:static نه — دستگیرهٔ تغییرِ عرضِ ستون (.col-resize-grip) با
+   position:absolute داخلِ همین th است و لنگرش را از دست می‌داد. relative همان
+   لنگر و همان z-index و همان ظاهر را می‌دهد، فقط قیدِ چسبندگی برداشته می‌شود. */
+@media (pointer:coarse){
+  .xls-wrap .xls-tbl th,
+  .tbl-wrap .tbl th{ position:relative !important; }
+}
+</style>
+
+<style id="person-head-inline">
+/* ══════════════════════════════════════════════════════════════════════════
+   سربرگِ مودالِ شخص روی کامپیوتر و تبلت — «حساب پطرول / حساب دیزل» کنارِ خودِ
+   ردیف، نه بالای آن.
+   خواستهٔ صاحب ریپو: این دو نوشته یک خطِ کاملِ جدا می‌گرفتند و کادرِ سربرگ را
+   بی‌جهت بلند می‌کردند، در حالی که روی کامپیوتر و تبلت جای افقی زیاد است. حالا
+   هرکدام کادرِ کوچکِ خودش را دارد و سمتِ راستِ همان ردیف می‌نشیند (شروعِ RTL)، و
+   چهار خانهٔ آمار جای باقی‌مانده را می‌گیرند — یعنی کمی به سمتِ چپ می‌روند.
+   فقط چیدمان است: نه خانه‌ای کم/زیاد می‌شود، نه شناسه‌ای عوض، نه عددی.
+   زیرِ 700 پیکسل (گوشی) هیچ تغییری نمی‌کند و همان چیدمانِ عمودیِ قبلی می‌ماند.
+   ══════════════════════════════════════════════════════════════════════════ */
+@media (min-width:700px){
+  #personModal .fs-group{
+    display:flex !important;
+    align-items:center !important;
+    gap:10px !important;
+  }
+  #personModal .fs-head{
+    margin-bottom:0 !important;      /* دیگر خطِ جدا نیست، پس فاصلهٔ زیرش لازم نیست */
+    flex:0 0 auto !important;        /* به اندازهٔ نوشتهٔ خودش، نه بیشتر */
+    justify-content:center !important;
+    white-space:nowrap !important;
+    padding:6px 12px !important;
+    border-radius:10px !important;
+    border:1.5px solid var(--border);
+    background:var(--card);
+  }
+  /* کادرِ هر کدام هم‌رنگِ خودِ حساب — مثل کادرِ دورِ گروه */
+  #personModal .fs-head.petrol{ border-color:color-mix(in srgb, var(--green) 45%, var(--border)); }
+  #personModal .fs-head.diesel{ border-color:color-mix(in srgb, #b7791f 45%, var(--border)); }
+  /* چهار خانهٔ آمار همهٔ جای باقی‌مانده را بگیرند */
+  #personModal .fs-rows{ flex:1 1 auto !important; min-width:0 !important; }
 }
 </style>
 
