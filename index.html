@@ -21238,8 +21238,7 @@ function _autoLoadFromServerOnStartup() {
       _srvStartupPulled = true;
       const serverData = snap.exists() ? snap.val() : null;
       if (!serverData) {
-        // سرور خالی — اگر این‌جا هم خالی است، یک‌بار حساب‌ها ساخته می‌شوند
-        try { _maybeAutoSeed(); } catch (e) {}
+        // سرور خالی — اطلاعات محلی را آپلود کن
         _dirtySinceUpload = true;
         _runAutoSync();
         _startServerRealtimeListener();
@@ -21258,8 +21257,6 @@ function _autoLoadFromServerOnStartup() {
         _applyServerData(serverData);
         try { showTopToast('☁️ حساب از سرور به‌روز شد', '#38a169', 3000); } catch(e) {}
       }
-      // سرور هم داده‌ای نداشت و این‌جا هم خالی است → یک‌بار حساب‌ها ساخته شوند
-      try { _maybeAutoSeed(); } catch (e) {}
       // پس از اولین sync، listener بلادرنگ را شروع کن
       _startServerRealtimeListener();
     })
@@ -32529,7 +32526,6 @@ function clearAll() {
   // مهر زمانی پاک‌سازی: بدون این، منطقِ «دستگاه خالی + سرور داده دارد» بلافاصله همهٔ
   // داده‌های قدیمی را از سرور برمی‌گرداند و به نظر می‌رسید پاک‌سازی کار نکرده است
   DB.wipedAt = new Date().toISOString();
-  DB._autoSeeded = true;      // دیگر خودکار پر نشود — خودش عمداً پاک کرده
   DB.lastSyncUpload = DB.wipedAt;
   // فرم‌های روی صفحه (پارچهٔ پطرول/دیزل، روز/شب) هم خالی شوند
   ['d','n','dd','dn'].forEach(p => { try { clearShiftInputs(p); } catch(e) {} });
@@ -39439,8 +39435,6 @@ try {
 // دستگاه بعد از عوض شدنِ endpoint یا پاک شدنِ دیتابیسِ سرور بی‌صدا می‌مُرد.
 try {
   setTimeout(() => { _ntfConnect(); _ntfAutoPush('silent'); }, 1500);
-  // بدونِ سرور (فقط محلی): همان یک‌بار پر شدنِ خودکار
-  setTimeout(() => { try { if (!_srvReady()) { _srvStartupPulled = true; _maybeAutoSeed(); } } catch (e) {} }, 4000);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') { _ntfConnect(); _ntfAutoPush('silent'); }
   });
@@ -40024,37 +40018,19 @@ function seedDemoData(years, opts) {
     'معاش': DB.salaryPayments.length,
   };
 }
-/* ── پر شدنِ خودکارِ برنامه در اولین بار ─────────────────────────────────────
-   خواستهٔ صاحب ریپو: لازم نباشد دکمه‌ای بزند — با باز کردنِ سایت، حساب‌ها همان‌جا
-   باشند. پس اگر «هم این دستگاه و هم سرور» کاملاً خالی باشند، یک‌بار یک سال حساب
-   ساخته می‌شود. شرط‌ها سخت‌گیرانه‌اند تا هرگز روی دادهٔ واقعی ننشیند:
-     • فقط بعد از اینکه یک‌بار واقعاً از سرور پرسیده‌ایم (_srvStartupPulled)
-     • فقط وقتی هیچ رکوردی در برنامه نیست
-     • هرگز اگر «پاک کردن همه» زده شده باشد (wipedAt) — یعنی خودش پاک کرده
-     • فقط یک‌بار در عمرِ این حساب (_autoSeeded) */
-/* «برنامه هنوز خالی است» یعنی هیچ کارِ روزمره‌ای در آن ثبت نشده: نه پارچه، نه ورق،
-   نه مصرف، نه گاوصندوق، نه فاکتور، نه خریدِ مخزن. چند حسابِ خالیِ قرض‌دار که آدم
-   موقعِ امتحان می‌سازد، «داده» به حساب نمی‌آید — قبلاً همین چند حساب جلوی پر شدنِ
-   خودکار را می‌گرفت و کاربر فکر می‌کرد چیزی نیامده. حساب‌های خودش هم پاک نمی‌شوند. */
+/* ── قاعدهٔ سفت‌وسختِ این بخش ────────────────────────────────────────────────
+   هیچ کدی خودش داده نمی‌سازد. دادهٔ آزمایشی فقط و فقط وقتی ساخته می‌شود که
+   کاربر با دستِ خودش دکمه‌اش را بزند. (نسخهٔ 2.9.254 یک‌بار خودکار می‌ساخت؛
+   صاحب ریپو گفت کدی که خودش می‌نویسد نمی‌خواهد — برداشته شد.)
+   پس: «پاک کردن همه» یعنی تمام؛ هیچ چیزی هیچ‌وقت خودش برنمی‌گردد.
+
+   «برنامه هنوز خالی است» فقط برای این است که بدانیم کارتِ راهنما را نشان بدهیم
+   یا نه — هیچ داده‌ای بر اساسش ساخته نمی‌شود. */
 function _seedLooksEmpty() {
   const n = k => (Array.isArray(DB[k]) ? DB[k].length : 0);
   return !(n('reports') + n('shifts') + n('waraqEntries') + n('expenses') +
            n('safeEntries') + n('invoices') + n('fuelEntries') + n('sarrafiRows') +
            n('chakanaRows') + n('attendance'));
-}
-function _maybeAutoSeed() {
-  try {
-    if (DB._autoSeeded) return;
-    if (DB.wipedAt) return;
-    if (!_srvStartupPulled) return;
-    if (!_seedLooksEmpty()) return;
-    if (typeof currentRole !== 'undefined' && currentRole === 'viewer') return;
-    seedDemoData(1, { keep: true });
-    DB._autoSeeded = true;
-    save(); _flushSave();
-    try { _seedBannerPaint(); } catch (e) {}
-    try { showTopToast('📚 یک سال حساب برای همهٔ بخش‌ها آماده شد — با «پاک کردن همه» می‌رود', '#3182ce', 7000); } catch (e) {}
-  } catch (e) {}
 }
 /* کارتِ دیدنیِ داشبورد: تا وقتی برنامه خالی است، همان‌جا که کاربر می‌ایستد دیده
    می‌شود — نه در ته تنظیمات. با پر شدنِ برنامه خودش ناپدید می‌شود. */
@@ -40062,7 +40038,8 @@ function _seedBannerPaint() {
   const host = document.getElementById('sec-dashboard');
   if (!host) return;
   let box = document.getElementById('seed-banner');
-  const show = _seedLooksEmpty();
+  // کسی که عمداً «پاک کردن همه» زده، دیگر حتی پیشنهادش را هم نبیند
+  const show = _seedLooksEmpty() && !DB.wipedAt;
   if (!show) { if (box) box.remove(); return; }
   if (!box) {
     box = document.createElement('div');
@@ -40071,7 +40048,8 @@ function _seedBannerPaint() {
     box.style.cssText = 'border-color:var(--blue);margin:10px 12px';
     box.innerHTML = '<div class="settings-title" style="color:var(--blue)">🧪 برنامه هنوز خالی است</div>' +
       '<div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">' +
-      'برای دیدن و امتحان کردنِ همهٔ بخش‌ها، یک تا پنج سال حسابِ کامل ساخته می‌شود — ' +
+      'اگر خواستید همهٔ بخش‌ها را با حسابِ پر ببینید، با زدنِ یکی از این دو دکمه ' +
+      'یک یا پنج سال حسابِ کامل ساخته می‌شود — ' +
       'پارچه، ورق، مخزن، قرض‌داران با حساب‌های فرعی، مصارف، گاوصندوق، صرافی، چکنه، ' +
       'فاکتورها، کارمندان و حاضری. حساب‌های خودتان پاک نمی‌شوند و هر وقت خواستید با ' +
       '«🗑️ پاک کردن همه» همه‌اش می‌رود.</div>' +
@@ -40115,7 +40093,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.255';
+const APP_VERSION = '2.9.256';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
