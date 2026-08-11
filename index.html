@@ -20643,7 +20643,16 @@ function _writeLsCache(snap) {
     else localStorage.removeItem('pumpDB');
   } catch (e) { try { localStorage.removeItem('pumpDB'); } catch (_) {} }
 }
+/* آخرین لحظه‌ای که خودِ کاربر روی این دستگاه چیزی عوض کرد. نگهبانِ همگام‌سازی از
+   این استفاده می‌کند تا عکسِ سرور روی چیزی که همین الان تایپ شده نریزد. */
+let _lastLocalEditAt = 0;
 function save() {
+  if (!_applyingServerData) _lastLocalEditAt = Date.now();
+  _saveQuiet();
+}
+/* ذخیرهٔ بی‌سروصدا: برای کارهای خودکارِ خودِ برنامه (مثل درمانِ ردیف‌های کهنه) که
+   «تایپِ کاربر» نیستند و نباید جلوی گرفتنِ تغییراتِ سرور را بگیرند. */
+function _saveQuiet() {
   // نوشتن واقعی روی دیسک (localStorage/IndexedDB) با تأخیر کوتاه گروه‌بندی می‌شود
   // تا هنگام تایپ سریع (هر keystroke) کل دیتابیس بارها سریالایز نشود؛ با ترک صفحه/تب فوراً نوشته می‌شود
   _savePending = true;
@@ -21095,6 +21104,41 @@ function _nextSeq(code){
 function _syncSocketReady(){
   try { return !window.__pumpNet__ || window.__pumpNet__.connected(); } catch(e) { return true; }
 }
+/* ── چرا این نگهبان هست ───────────────────────────────────────────────────────
+   همگام‌سازی «کلِ حساب» است: هر بار که شمارهٔ نوبتِ سرور از مالِ ما جلوتر باشد،
+   عکسِ سرور تمامِ DB را می‌گیرد. اگر همان لحظه کاربر روی این دستگاه چیزی تایپ کرده
+   باشد و هنوز بارگذاری نشده باشد، آن نوشته «خودبه‌خود پاک می‌شود» — همان چیزی که
+   با باز و بسته کردنِ حسابِ یک شخص دیده می‌شد (مخصوصاً وقتی چند تبِ برنامه باز است).
+   حالا در این حالت عکسِ سرور نگه داشته می‌شود، اول تغییرِ خودمان می‌رود (که شمارهٔ
+   نوبت را از سرور جلو می‌بَرد) و کمی بعد دوباره از سرور می‌پرسیم. */
+const _EDIT_HOLD_MS = 45000;
+function _userIsTypingNow(){
+  try {
+    const el = document.activeElement;
+    if (!el) return false;
+    const t = el.tagName;
+    if (t !== 'INPUT' && t !== 'TEXTAREA') return false;
+    return !el.readOnly && !el.disabled;
+  } catch (e) { return false; }
+}
+function _holdServerData(){
+  if (!_dirtySinceUpload) return false;                     // چیزی برای از دست دادن نیست
+  if (_userIsTypingNow()) return true;                      // دستش روی کادر است
+  return (Date.now() - _lastLocalEditAt) < _EDIT_HOLD_MS;   // همین چند لحظه پیش نوشت
+}
+/* اعمالِ عکسِ سرور با همان نگهبان — همهٔ مسیرهای «زنده» از این رد می‌شوند */
+function _applyServerDataGuarded(serverData, toastText){
+  if (_holdServerData()){
+    try { _scheduleAutoSync(600); } catch (e) {}            // اول مالِ خودمان برود
+    clearTimeout(_holdRetryTimer);
+    _holdRetryTimer = setTimeout(function(){ try { _fbPullLatestOnce(); } catch (e) {} }, 6000);
+    return false;
+  }
+  _applyServerData(serverData);
+  if (toastText) { try { showSyncToast(toastText, '#38a169', 2500); } catch (e) {} }
+  return true;
+}
+let _holdRetryTimer = null;
 function _applyServerData(serverData) {
   _applyingServerData = true;
   try {
@@ -21206,8 +21250,7 @@ function _fbPullLatestOnce() {
     const sd = snap.val();
     const localEmptyServerHasData = !DB.wipedAt && _dbRecordCount(DB) === 0 && _dbRecordCount(sd) > 0;
     if (_serverIsNewer(sd) || localEmptyServerHasData) {
-      _applyServerData(sd);
-      try { showSyncToast('☁️ تغییرات جدید دریافت شد', '#38a169', 2500); } catch(e) {}
+      _applyServerDataGuarded(sd, '☁️ تغییرات جدید دریافت شد');
     }
   }).catch(function(){});
 }
@@ -21234,8 +21277,7 @@ function _startFirebaseRealtimeListener() {
       if (!snap.exists()) return;
       const sd = snap.val();
       if (_serverIsNewer(sd)) {
-        _applyServerData(sd);
-        try { showSyncToast('☁️ تغییرات جدید دریافت شد', '#38a169', 2500); } catch(e) {}
+        _applyServerDataGuarded(sd, '☁️ تغییرات جدید دریافت شد');
       }
     });
   } catch(e) {}
@@ -26400,7 +26442,7 @@ function renderPersonRows(person) {
     tbody.appendChild(tr);
   }
   // اصلاحِ بالا روی دیسک هم بنشیند تا همگام‌سازیِ بعدی آن را پس نگیرد
-  if (_healed && currentRole !== 'viewer') { try { save(); } catch (e) {} }
+  if (_healed && currentRole !== 'viewer') { try { _saveQuiet(); } catch (e) {} }
   // جمع‌ها بعد از حلقهٔ ردیف‌ها حساب می‌شوند — حلقه بردگی/الباقیِ هر ردیف را
   // نرمال و ذخیره می‌کند؛ اگر جمع قبل از آن اجرا شود، بار اولِ باز شدن مودال
   // فوترِ «جمع بردگی/الباقی» با مقدارهای کهنه (مثلاً صفر) نمایش داده می‌شد
@@ -39257,7 +39299,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.247';
+const APP_VERSION = '2.9.248';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
