@@ -755,6 +755,23 @@ html.kb-open #calcPanel{bottom:calc(8px + var(--kb-offset,0px))}
   #pumpDocOverlay .pdoc-title{font-size:0.84rem;flex:1}
   #pumpDocOverlay .pdoc-btn{padding:10px 13px;font-size:0.8rem}
 }
+/* دو راهیِ «چاپ یا دانلود» — پیش از هر سندِ پی‌دی‌اف/چاپ */
+#pumpDocAsk{position:fixed;inset:0;z-index:100020;background:rgba(4,6,11,.72);
+  display:flex;align-items:center;justify-content:center;padding:16px;font-family:'Vazirmatn',sans-serif}
+#pumpDocAsk .pda-box{background:var(--panel,#161b22);border:1.5px solid var(--accent,#f6a623);border-radius:16px;
+  padding:18px 16px 14px;width:100%;max-width:400px;text-align:center;box-shadow:0 18px 50px -14px rgba(0,0,0,.8)}
+#pumpDocAsk .pda-title{font-weight:900;font-size:1rem;color:var(--txt,#e6edf3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#pumpDocAsk .pda-sub{font-size:0.82rem;font-weight:700;color:var(--muted,#8b949e);margin:6px 0 14px}
+#pumpDocAsk .pda-acts{display:flex;gap:9px;flex-wrap:wrap;justify-content:center}
+#pumpDocAsk .pda-btn{flex:1 1 150px;border:none;border-radius:11px;padding:13px 12px;
+  font-family:'Vazirmatn',sans-serif;font-size:0.88rem;font-weight:900;cursor:pointer;color:#fff;
+  -webkit-tap-highlight-color:transparent}
+#pumpDocAsk .pda-btn.print{background:var(--green,#38a169)}
+#pumpDocAsk .pda-btn.save{background:var(--blue,#2b6cb0)}
+#pumpDocAsk .pda-cancel{margin-top:11px;background:transparent;border:1px solid var(--border,#30363d);
+  border-radius:9px;padding:8px 16px;color:var(--muted,#8b949e);font-family:'Vazirmatn',sans-serif;
+  font-size:0.8rem;font-weight:800;cursor:pointer}
 /* نوارِ وضعیتِ اتصال بالای چت */
 .rb-net{padding:6px 10px;font-size:0.72rem;font-weight:800;text-align:center;line-height:1.7;border-bottom:1px solid var(--border)}
 .rb-net.off{background:rgba(217,119,6,.16);color:#e8930c}
@@ -23492,9 +23509,8 @@ function _pumpDocOverlay(doc, title) {
   _pumpPushEsc(ov.__esc);
   try { document.body.style.overflow = 'hidden'; } catch (e) {}
 }
-/* تنها راهِ باز کردنِ سندهای چاپ/PDF در کلِ برنامه */
-function pumpOpenDoc(html, title) {
-  const doc = _pdfDoc(html);
+/* رفتنِ مستقیم به پنجرهٔ چاپ — همان کارِ قبلیِ pumpOpenDoc */
+function _pumpDocPrint(doc, title) {
   if (!_pumpIsMobileShell()) {
     let w = null;
     try { w = window.open('', '_blank'); } catch (e) {}
@@ -23504,6 +23520,82 @@ function pumpOpenDoc(html, title) {
     // پنجره مسدود شد → به‌جای پیامِ خطا، همان سند داخلِ خودِ برنامه باز می‌شود
   }
   _pumpDocOverlay(doc, title);
+  return true;
+}
+/* ذخیرهٔ خودِ سند به‌صورت فایل — بدونِ پنجرهٔ چاپ و بدونِ انتخابِ چاپگر.
+   فایل یک صفحهٔ کاملِ HTML است (همان چیزی که در پیش‌نمایش می‌بینید): با هر
+   مرورگری باز می‌شود، آفلاین هم باز می‌شود، و هر وقت خواستید از داخلِ خودش
+   می‌شود چاپ یا «ذخیره به PDF» کرد. */
+function _pumpDocSave(doc, title) {
+  const base = String(title || 'سند').replace(/[\\/:*?"<>|\n\r\t]+/g, '-').trim().slice(0, 60) || 'سند';
+  const name = base + ' — ' + (typeof persianDate === 'function' ? persianDate() : '').replace(/\//g, '-') + '.html';
+  try {
+    const blob = new Blob(['﻿', doc], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { try { URL.revokeObjectURL(url); } catch (e) {} }, 8000);
+    try { showToast('⬇️ ذخیره شد: ' + name, '#38a169'); } catch (e) {}
+    return true;
+  } catch (e) {
+    try { showToast('ذخیره نشد — به‌جایش از «چاپ» استفاده کنید', '#e53e3e'); } catch (e2) {}
+    return false;
+  }
+}
+/* ── دو راهیِ «چاپ یا دانلود» ───────────────────────────────────────────────
+   خواستهٔ صاحب ریپو: «روی کامپیوتر پی‌دی‌اف می‌زنم، مرا می‌برد جای فولدرها و
+   نمی‌برد جای پرینت. دو قابلیته باشد که بگوید می‌خواهی دانلود کنی یا پرینت.»
+   ریشهٔ آن گلایه: سند خودش با باز شدن window.print() را صدا می‌زد و اگر مقصدِ
+   پیش‌فرضِ چاپگرِ مرورگر روی «Save as PDF» مانده بود، کاربر یک‌راست در پنجرهٔ
+   انتخابِ پوشه می‌افتاد. حالا اول خودِ برنامه می‌پرسد و هیچ کاری بی‌خبر انجام
+   نمی‌شود. ── */
+function pumpDocChoose(kind) {
+  const ov = document.getElementById('pumpDocAsk');
+  if (!ov) return;
+  const doc = ov.__doc, title = ov.__title;
+  _pumpPopEsc(ov.__esc);
+  ov.remove();
+  try { document.body.style.overflow = ''; } catch (e) {}
+  if (kind === 'print') _pumpDocPrint(doc, title);
+  else if (kind === 'save') _pumpDocSave(doc, title);
+}
+function _pumpDocAsk(doc, title) {
+  const old = document.getElementById('pumpDocAsk');
+  if (old) { _pumpPopEsc(old.__esc); old.remove(); }
+  const ov = document.createElement('div');
+  ov.id = 'pumpDocAsk';
+  ov.__doc = doc; ov.__title = title;
+  /* روی اپ اندروید، «چاپ» خودش سرویسِ چاپِ اندروید را باز می‌کند که گزینهٔ
+     «ذخیره به PDF» دارد — یعنی همان‌جا فایلِ پی‌دی‌افِ واقعی ساخته می‌شود. */
+  ov.innerHTML =
+    '<div class="pda-box" role="dialog" aria-modal="true">' +
+      '<div class="pda-title">📄 ' + _esc(title || 'سند') + '</div>' +
+      '<div class="pda-sub">می‌خواهید چاپ شود یا فایلش ذخیره شود؟</div>' +
+      '<div class="pda-acts">' +
+        '<button type="button" class="pda-btn print" onclick="pumpDocChoose(\'print\')">🖨️ چاپ / پیش‌نمایش</button>' +
+        '<button type="button" class="pda-btn save" onclick="pumpDocChoose(\'save\')">⬇️ دانلود فایل</button>' +
+      '</div>' +
+      '<button type="button" class="pda-cancel" onclick="pumpDocChoose(\'\')">✕ بی‌خیال</button>' +
+    '</div>';
+  ov.addEventListener('click', function (e) { if (e.target === ov) pumpDocChoose(''); });
+  document.body.appendChild(ov);
+  ov.__esc = function () { pumpDocChoose(''); };
+  _pumpPushEsc(ov.__esc);
+  try { document.body.style.overflow = 'hidden'; } catch (e) {}
+}
+/* تنها راهِ باز کردنِ سندهای چاپ/PDF در کلِ برنامه */
+function pumpOpenDoc(html, title) {
+  /* بیشترِ صداکننده‌ها عنوان نمی‌دهند؛ خودِ سند همیشه <title> دارد، پس هم نوشتهٔ
+     دو راهی و هم نامِ فایلِ دانلود از همان‌جا می‌آید و برای هر بخش درست است. */
+  let t = title;
+  if (!t) {
+    const m = /<title[^>]*>([^<]*)<\/title>/i.exec(String(html || ''));
+    t = m ? m[1].replace(/\s+/g, ' ').trim() : '';
+  }
+  _pumpDocAsk(_pdfDoc(html), t || 'سند');
   return true;
 }
 
@@ -26841,14 +26933,17 @@ td{padding:6px 7px;border-bottom:1px solid #e2e8f0;white-space:normal;word-break
 tr:nth-child(even) td{background:#f7fafc}
 tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border-top:2px solid #4a5568;text-align:center}
 .footer{margin-top:16px;font-size:0.68rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
+/* همان سربرگِ یک‌خطیِ پی‌دی‌افِ حساب — نام کنارِ آمار، نه بالای آن */
 .split-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
-.split-box{flex:1;min-width:200px;border:1px solid #e2e8f0;border-radius:8px;padding:10px}
+.split-box{flex:1;min-width:280px;border:1px solid #e2e8f0;border-radius:8px;padding:6px 8px;
+  display:flex;align-items:center;gap:9px}
 .petrol-box{border-color:#c07700;background:#fffdf5}
 .diesel-box{border-color:#8B4513;background:#fdf8f0}
-.split-title{font-size:0.78rem;font-weight:700;margin-bottom:8px}
+.split-title{font-size:0.78rem;font-weight:700;white-space:nowrap;text-align:center;
+  flex:0 0 auto;border:1px solid currentColor;border-radius:7px;padding:4px 9px}
 .petrol-box .split-title{color:#c07700}
 .diesel-box .split-title{color:#8B4513}
-.split-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.split-grid{flex:1 1 auto;min-width:0;display:grid;grid-template-columns:1fr 1fr;gap:6px}
 @media print{
   body{padding:6px}
   @page{margin:0.5cm;size:A4}
@@ -28612,10 +28707,13 @@ function pdfPersonHistory(pid, hid) {
 body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:20px;font-size:13.5px}
 h1{font-size:1.2rem;font-weight:900;color:#c07700;border-bottom:2px solid #c07700;padding-bottom:6px;margin-bottom:4px}
 .meta{font-size:0.7rem;color:#718096;margin-bottom:14px}
+/* همان سربرگِ یک‌خطیِ پی‌دی‌افِ حساب — نام کنارِ آمار، نه بالای آن */
 .split-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
-.split-box{flex:1;min-width:130px;border:1px solid #e2e8f0;border-radius:8px;padding:8px}
-.split-title{font-weight:900;font-size:0.72rem;margin-bottom:6px;color:#4a5568}
-.split-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center}
+.split-box{flex:1;min-width:260px;border:1px solid #e2e8f0;border-radius:8px;padding:5px 7px;
+  display:flex;align-items:center;gap:8px}
+.split-title{font-weight:900;font-size:0.72rem;color:#4a5568;white-space:nowrap;text-align:center;
+  flex:0 0 auto;border:1px solid currentColor;border-radius:7px;padding:4px 9px}
+.split-grid{flex:1 1 auto;min-width:0;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center}
 .sum-box{display:flex;flex-direction:column;justify-content:space-between;gap:2px}
 .sum-box .l{font-size:0.58rem;color:#718096;line-height:1.25}
 .sum-box .v{font-size:0.82rem;font-weight:900;white-space:nowrap}
@@ -32280,14 +32378,20 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 5px;border
 .footer{margin-top:10px;font-size:0.66rem;color:#7b8494;text-align:center;border-top:1px solid #d6dae1;padding-top:6px}
 /* دقیقاً مثل خودِ برنامه: کادرِ «حساب پطرول» بالا و «حساب دیزل» زیرش —
    هر کدام چهار خانه در یک خط (خواستهٔ صاحب ریپو). */
+/* سربرگِ حسابِ پطرول/دیزل — دقیقاً مثل خودِ برنامه: نامِ حساب کادرِ کوچکِ خودش
+   را دارد و سمتِ راستِ همان ردیف می‌نشیند، چهار خانهٔ آمار جای باقی‌مانده را
+   می‌گیرند. پیش از این نام یک خطِ کاملِ جدا می‌گرفت و کادر را بی‌جهت بلند
+   می‌کرد (خواستهٔ صاحب ریپو: «سربرگ‌های بخش قرض‌داران را در پی‌دی‌اف هم درست کن»). */
 .split-row{display:grid;grid-template-columns:1fr;gap:6px;margin-bottom:10px}
-.split-box{border:1.2px solid #d6dae1;border-radius:9px;padding:7px 8px 8px;min-width:0}
+.split-box{border:1.2px solid #d6dae1;border-radius:9px;padding:5px 7px;min-width:0;
+  display:flex;align-items:center;gap:8px}
 .petrol-box{border-color:#b45309}
 .diesel-box{border-color:#8B4513}
-.split-title{font-size:0.76rem;font-weight:900;margin-bottom:5px;text-align:right}
+.split-title{font-size:0.76rem;font-weight:900;text-align:center;white-space:nowrap;
+  flex:0 0 auto;border:1.2px solid currentColor;border-radius:7px;padding:4px 9px}
 .petrol-box .split-title{color:#b45309}
 .diesel-box .split-title{color:#8B4513}
-.split-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center}
+.split-grid{flex:1 1 auto;min-width:0;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center}
 .note-box{margin-top:14px;padding:8px 12px;border:1px solid #d6dae1;border-right:3px solid #b45309;border-radius:7px;font-size:0.75rem;color:#3a4250}
 @media print{
   /* ورقِ افقی مثل پی‌دی‌افِ مخزن — ستون‌ها جا می‌شوند و کاغذِ کمتری می‌رود */
@@ -40503,7 +40607,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.271';
+const APP_VERSION = '2.9.272';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
