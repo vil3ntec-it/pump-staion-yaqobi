@@ -1,0 +1,52 @@
+<!-- لوگوی پمپ یعقوبی — قطرهٔ تیل + نازل
+     تنها «اصلِ» لوگو همین فایل است؛ همهٔ آیکون‌های PNG (آیکونِ برنامه روی گوشی،
+     apple-touch، favicon و نشانِ کوچکِ اعلان) با tools/make-icons.mjs از روی
+     همین ساخته می‌شوند. برای عوض کردنِ لوگو فقط این‌جا را تغییر دهید و اسکریپت
+     را دوباره اجرا کنید. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="gold" x1="0.1" y1="0.02" x2="0.75" y2="0.95">
+      <stop offset="0" stop-color="#FFC93F"/>
+      <stop offset="0.5" stop-color="#F7A81B"/>
+      <stop offset="1" stop-color="#E8830A"/>
+    </linearGradient>
+    <!-- خودِ قطره: نوکِ بالا، بدنهٔ گردِ پایین -->
+    <clipPath id="dropClip">
+      <path d="M256 26 C256 26 448 234 448 312 A192 192 0 1 1 64 312 C64 234 256 26 256 26 Z"/>
+    </clipPath>
+    <!-- سوراخِ ماشه: همان چیزی که نازل را «نازل» نشان می‌دهد -->
+    <mask id="nzMask">
+      <rect width="512" height="512" fill="#fff"/>
+      <rect x="226" y="352" width="62" height="34" rx="17" fill="#000"/>
+    </mask>
+  </defs>
+
+  <g clip-path="url(#dropClip)">
+    <rect width="512" height="512" fill="url(#gold)"/>
+    <!-- نیمهٔ سرمه‌ای: هر چه سمتِ راست/پایینِ خطِ اریب است -->
+    <path d="M344 -40 L580 -40 L580 580 L146 580 Z" fill="#152242"/>
+  </g>
+
+  <!-- نازل و شیلنگ‌هایش با هم می‌چرخند تا سرِ شیلنگ دقیقاً به نازل بچسبد -->
+  <!-- شیلنگِ طلایی: از تهِ دستهٔ نازل بیرون می‌زند، از لبهٔ قطره می‌گذرد و برمی‌گردد.
+       عمداً از لبه بیرون می‌رود، وگرنه طلایی روی طلایی اصلاً دیده نمی‌شد. -->
+  <path d="M168 400 C112 446 36 430 26 378 C18 334 64 300 106 306"
+        fill="none" stroke="#E8830A" stroke-width="21" stroke-linecap="round"/>
+
+  <g transform="rotate(36 256 268) translate(256 268) scale(.88) translate(-256 -268)">
+    <!-- شیلنگِ سرمه‌ای: از نوکِ لوله به بیرون -->
+    <path d="M256 78 C258 30 320 6 380 28"
+          fill="none" stroke="#152242" stroke-width="21" stroke-linecap="round"/>
+
+    <g fill="#fff" mask="url(#nzMask)">
+      <!-- لولهٔ خروجی -->
+      <rect x="231" y="70" width="50" height="140" rx="14"/>
+      <!-- گلویی -->
+      <rect x="215" y="192" width="82" height="44" rx="14"/>
+      <!-- سرِ نازل -->
+      <rect x="194" y="228" width="124" height="108" rx="32"/>
+      <!-- دسته -->
+      <rect x="208" y="326" width="96" height="132" rx="30"/>
+    </g>
+  </g>
+</svg>
