@@ -19958,7 +19958,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
             <th style="width:34px">#</th>
             <th style="width:96px">تاریخ</th>
             <th style="min-width:150px">نام</th>
-            <th style="width:60px">نمبر حواله</th>
+            <th style="width:60px">حواله</th>
             <th style="width:100px">نوع تیل</th>
             <th style="width:56px">مقدار تیل</th>
             <th style="width:56px">فی لیتر</th>
@@ -26705,7 +26705,7 @@ function _renderStackedAccounts(person) {
       ${fuelSplitHtml}
       <div class="xls-wrap" style="overflow-x:auto">
         <table class="xls-tbl" id="stacked-tbl-${person.id}-${sec.acctId}" data-colw-key="pm"><thead><tr>
-          <th style="min-width:24px">#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th><th>نوع تیل</th><th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>الباقی</th><th>حذف</th>
+          <th style="min-width:24px">#</th><th>تاریخ</th><th>نام</th><th>حواله</th><th>نوع تیل</th><th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>الباقی</th><th>حذف</th>
         </tr></thead><tbody>${rowsHtml}</tbody></table>
       </div>
       <div style="padding:6px 10px;border-top:1px solid ${acColor}44;background:var(--dark)">
@@ -26900,7 +26900,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 ${noteHtml}
 <table>
   <thead><tr>
-    <th>#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th><th>نوع تیل</th>
+    <th>#</th><th>تاریخ</th><th>نام</th><th>حواله</th><th>نوع تیل</th>
     ${unitHeadCols}
   </tr></thead>
   <tbody>${tableRows||`<tr><td colspan="${colCount}" style="text-align:center;padding:20px;color:#718096">هیچ ردیفی ثبت نشده</td></tr>`}</tbody>
@@ -28482,7 +28482,7 @@ function _renderHistoryPanel(person) {
         <div style="overflow-x:auto">
           <table class="xls-tbl" id="hist-tbl-${pid}-${h.id}" data-colw-key="pm" style="table-layout:fixed;width:100%;min-width:${showFt?752:652}px">
             <thead><tr>
-              <th style="width:34px">#</th><th style="width:96px">تاریخ</th><th style="width:150px">نام</th><th style="width:60px">نمبر حواله</th>
+              <th style="width:34px">#</th><th style="width:96px">تاریخ</th><th style="width:150px">نام</th><th style="width:60px">حواله</th>
               ${showFt?'<th style="width:100px">نوع تیل</th>':''}<th style="width:56px">مقدار تیل</th><th style="width:56px">فی لیتر</th><th style="width:90px">مقدار بردگی</th>${hMoney?'<th style="width:90px">رسید</th>':'<th style="width:90px">رسید تیل</th>'}<th style="width:90px">الباقی</th><th style="width:46px">حذف</th>
             </tr></thead>
             <tbody>${rowsHtml}</tbody>
@@ -28652,7 +28652,7 @@ tr:nth-child(even) td{background:#f7fafc}
   </div>` : ''}
 </div>
 <div class="pct-row">فیصدی ٪: <b>⛽ ${n2fa(pctP)}</b> / <b>🟤 ${n2fa(pctD)}</b> &nbsp;|&nbsp; جمله برد: <b style="color:#c07700">${n2fa(rnd(bordP+bordD))} ${unit}</b> &nbsp;|&nbsp; الباقی کل: <b style="color:#2b6cb0">${n2fa(rnd(remP+remD))} ${unit}</b></div>
-<table><thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th><th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>الباقی</th></tr></thead>
+<table><thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>حواله</th><th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>الباقی</th></tr></thead>
 <tbody>${tableRows||'<tr><td colspan="9" style="text-align:center;padding:12px;color:#718096">هیچ ردیفی ثبت نشده</td></tr>'}</tbody></table>
 ${(h.headerNote||'').trim()?`<div class="note-box"><b>توضیحات (نوار عنوان):</b> ${escFa(h.headerNote).replace(/\n/g,'<br>')}</div>`:''}
 ${h.note?`<div class="note-box"><b>توضیحات:</b> ${h.note.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>`:''}
@@ -32316,7 +32316,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 5px;border
 ${splitBoxesHtml}
 <table>
   <thead><tr>
-    <th>#</th><th>تاریخ</th><th>نام</th><th>نمبر حواله</th>${ftHeadCols}
+    <th>#</th><th>تاریخ</th><th>نام</th><th>حواله</th>${ftHeadCols}
     ${unitHeadCols}
   </tr></thead>
   <tbody>${tableRows || `<tr><td colspan="${colCount}" style="text-align:center;padding:20px;color:#718096">هیچ ردیفی ثبت نشده</td></tr>`}</tbody>
@@ -40503,7 +40503,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.270';
+const APP_VERSION = '2.9.271';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -41519,6 +41519,12 @@ function _secFontEls(sec, mode) {
     const t = el.tagName;
     if (t === 'SCRIPT' || t === 'STYLE' || t === 'BR' || t === 'HR' || t === 'IMG' || t === 'CANVAS') continue;
     if (el.closest('.sec-font-ctrl')) continue;   // خودِ دکمه‌های A− / A+ / ↺ ثابت بمانند
+    /* دکمه‌های کارِ سربرگِ کارت (تاریخچه / ماه بعد / PDF / ثبت همه و مانندِ آن‌ها)
+       هم ثابت بمانند — خواستهٔ صاحب ریپو: «وقتی فونتِ جدول‌ها و نوشته‌ها را بزرگ
+       می‌کنم این کادرها هم بزرگ می‌شوند؛ کاری کن بزرگ نشوند». این دکمه‌ها با
+       بزرگ‌شدن، سربرگ را به چند خط می‌شکستند و از کادر بیرون می‌زدند. فقط خودِ
+       دکمه‌ها؛ عنوانِ کارت و نوشته‌های دیگر مثل قبل بزرگ می‌شوند. */
+    if (el.closest('.card-head') && el.closest('button')) continue;
     if (mode === 'box' && !_isBoxEl(el)) continue;
     if (mode === 'rest' && _isBoxEl(el)) continue;
     if (t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA' || t === 'OPTION' || t === 'BUTTON') { out.push(el); continue; }
@@ -48554,7 +48560,13 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
 }
 /* .pmar-box همان کلاسِ .xls-in را دارد، فقط span است نه input — پس اندازه، فاصله و
    فونتش با کادرهای تایپیِ ردیف‌های دستی یکی است و جدول ناهموار نمی‌شود */
-.xls-tbl tr.pm-auto-row .pmar-box{ display:block; box-sizing:border-box; }
+/* ⚠️ overflow هم لازم است: .pmar-box یک span است، نه input. کادرِ تایپیِ
+   ردیف‌های دستی نوشتهٔ بلندتر از خودش را خودکار می‌بُرد، ولی span آن را بیرون
+   می‌ریزد — برای همین تاریخِ کاملِ ردیف‌های خودکار («1405/5/20») از ستونِ تاریخ
+   می‌زد بیرون و روی خانهٔ بغلی می‌افتاد. حالا دقیقاً مثل همان کادرها می‌بُرد
+   (با سه‌نقطه تا معلوم باشد ادامه دارد) و با پهن‌کردنِ ستون کامل دیده می‌شود. */
+.xls-tbl tr.pm-auto-row .pmar-box{ display:block; box-sizing:border-box;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 /* ⚠️ و همین‌قدر مهم: خودِ <td> هم باید مثلِ ردیف‌های دستی بی‌فاصله باشد.
    قاعدهٔ عمومیِ «.xls-tbl td:not(:has(input)):not(:has(select)){padding:8px 7px}»
    خانه‌های ردیف‌های دستی را چون input دارند صفر می‌کند، ولی خانه‌های این ردیف
