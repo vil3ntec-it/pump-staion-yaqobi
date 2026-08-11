@@ -762,6 +762,28 @@ html.kb-open #calcPanel{bottom:calc(8px + var(--kb-offset,0px))}
 .ch-b img{max-width:100%;border-radius:9px;display:block;cursor:pointer}
 .ch-b video{max-width:100%;border-radius:9px;display:block}
 .ch-b audio{max-width:100%;width:210px;display:block}
+/* ── پیامِ صوتی: پخش‌کنندهٔ خودِ برنامه ────────────────────────────────────────
+   پیش از این <audio controls> بود، یعنی پخش‌کنندهٔ خودِ کروم: ظاهرش مثلِ
+   «دانلودِ آهنگ» بود، سرعتِ پخش نداشت و دکمهٔ ⋮ِ خودِ پیام هم درست روی دکمهٔ
+   پخشش می‌افتاد و هیچ‌کدام زده نمی‌شدند. این یکی مالِ خودِ برنامه است:
+   پخش/توقف، نوارِ زمان که می‌شود رویش زد، و کلیدِ سرعت (۱× → ۱٫۵× → ۲× → ۰٫۷۵×). */
+.ch-voice{display:flex;align-items:center;gap:8px;min-width:190px;max-width:250px;padding:1px 0}
+.ch-voice audio{display:none}
+.chv-play{flex:0 0 auto;width:34px;height:34px;border-radius:50%;border:none;background:var(--green);color:#fff;
+  font-size:0.9rem;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
+  font-family:'Vazirmatn',sans-serif;-webkit-tap-highlight-color:transparent}
+.chv-play:active{transform:scale(.94)}
+.ch-b.me .chv-play{background:var(--accent);color:#231703}
+.chv-mid{flex:1;min-width:0}
+.chv-track{position:relative;height:15px;cursor:pointer;direction:ltr}
+.chv-track::before{content:'';position:absolute;left:0;right:0;top:6px;height:3.5px;border-radius:4px;background:currentColor;opacity:.22}
+.chv-fill{position:absolute;left:0;top:6px;height:3.5px;width:0;border-radius:4px;background:currentColor;opacity:.95}
+.chv-knob{position:absolute;top:2.5px;left:0;width:10px;height:10px;border-radius:50%;background:currentColor;margin-left:-5px}
+.chv-row{display:flex;justify-content:space-between;gap:6px;direction:ltr;font-size:0.62rem;opacity:.75;font-weight:700}
+.chv-rate{flex:0 0 auto;min-width:36px;border:1px solid currentColor;background:transparent;color:inherit;opacity:.85;
+  border-radius:8px;padding:3px 5px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.66rem;cursor:pointer;
+  -webkit-tap-highlight-color:transparent}
+.chv-rate:active{opacity:1}
 .ch-b .ch-speak{background:transparent;border:1px solid var(--blue);border-radius:7px;color:var(--blue);cursor:pointer;padding:2px 8px;margin-top:5px;display:inline-flex;align-items:center;gap:4px;font-family:'Vazirmatn',sans-serif;font-size:0.7rem}
 .ch-b .ch-speak svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .ch-sug{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
@@ -24705,7 +24727,14 @@ function _requestNotifyPermission() {
 function _notify(title, body, tag) {
   try {
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
-    const opts = { body: body || '', icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', tag: tag || 'pump-yaqobi', renotify: true, vibrate: [180, 90, 180] };
+    // نامِ برنامه در عنوان + آیکونِ کوچکِ تک‌رنگ (badge-96): وگرنه اندروید کنارِ
+    // اعلان یک مربعِ سفیدِ خالی می‌گذارد و بالایش فقط «Chrome» می‌نویسد — معلوم
+    // نیست از کدام برنامه است. badge فقط آلفا را می‌خواند، پس آیکونِ رنگی به دردش نمی‌خورد.
+    const APP = 'پمپ یعقوبی';
+    let ttl = String(title || 'پیام تازه');
+    if (ttl.indexOf(APP) < 0) ttl = APP + ' · ' + ttl;
+    title = ttl;
+    const opts = { body: body || '', icon: 'icons/icon-192.png', badge: 'icons/badge-96.png', tag: tag || 'pump-yaqobi', renotify: true, vibrate: [180, 90, 180] };
     if (navigator.serviceWorker && navigator.serviceWorker.ready) {
       navigator.serviceWorker.ready.then(reg => reg.showNotification(title, opts)).catch(() => { try { new Notification(title, opts); } catch (e2) {} });
     } else {
@@ -27756,6 +27785,26 @@ function _renderRasidLog(acct, o) {
      کمینه مو‌به‌مو یکی است و با بزرگ/کوچک کردنِ فونت هم با هم جابه‌جا می‌شوند. */
   const box = (cls, txt) => '<td><span class="xls-in pmar-box' + (cls ? ' ' + cls : '') +
     '">' + (txt == null ? '' : txt) + '</span></td>';
+  /* ── کجای جدول بنشینند؟ (خواستهٔ صاحب ریپو) ──────────────────────────────
+     پیش از این تهِ جدول می‌نشستند و پشتِ ردیف‌های خالیِ آماده‌ی تایپ گم می‌شدند:
+     «رسیدی که در سربرگ می‌نویسم می‌آید ته جدول؛ برود همان‌جا که کادرِ خالی شروع
+     می‌شود، آخر نیاید». پس درست بعدِ آخرین ردیفِ پرشده می‌نشینند و ردیف‌های
+     خالی زیرشان می‌مانند. ردیفِ «خالی» یعنی نه نام دارد نه حواله نه هیچ عددی —
+     تاریخِ خودکار و دکمهٔ نوع تیل به‌حساب نمی‌آیند. */
+  const anchor = (function () {
+    const trs = Array.prototype.slice.call(tbody.querySelectorAll('tr[data-idx]'));
+    let a = null;
+    for (let i = trs.length - 1; i >= 0; i--) {
+      const ins = trs[i].querySelectorAll('input[type=number], input[placeholder="نام"], input[placeholder="متن یا عدد"]');
+      const empty = Array.prototype.every.call(ins, inp => {
+        const v = String(inp.value || '').trim();
+        return v === '' || v === '0';
+      });
+      if (!empty) break;
+      a = trs[i];
+    }
+    return a;
+  })();
   const line = (ftype, when, name, cells, tip, delId) => {
     const tr = document.createElement('tr');
     tr.className = 'pm-auto-row';
@@ -27772,7 +27821,8 @@ function _renderRasidLog(acct, o) {
         : '<td></td>';
       return cells[h] || box('', '');
     }).join('');
-    tbody.appendChild(tr);
+    if (anchor && anchor.parentNode === tbody) tbody.insertBefore(tr, anchor);
+    else tbody.appendChild(tr);
   };
   /* هر رسیدِ ثبت‌شده ردیفِ خودش را دارد و با نوشتنِ رسیدِ تازه پاک نمی‌شود؛ ردیفِ
      «فیصدی» هم درست زیرِ رسیدهای همان تیل می‌نشیند (نه تهِ جدول) و با عوض کردنِ
@@ -37890,7 +37940,9 @@ function _chMsgHtml(m, meId, scope, peer) {
   const delBtn = key ? `<span class="ch-del-btn" onclick="_chatOpenMsgMenu(event,'${scope}','${safePeer}','${key}',${mineFlag})" title="گزینه‌ها">⋮</span>` : '';
   // متن و نام و ساعت داخل یک ستونِ خودش می‌نشینند و دکمهٔ ⋮ کنارشان — پیامِ کوتاه
   // دیگر در یک ستونِ باریک حرف‌حرف نمی‌شکند. روی رسانه دکمه شناور می‌ماند.
-  const isMedia = (m.k === 'image' || m.k === 'video' || m.k === 'audio') && typeof m.d === 'string' && m.d.slice(0, 5) === 'data:';
+  // ⋮ فقط روی عکس/ویدیو شناور می‌شود. روی پیامِ صوتی نه — آن‌جا درست روی دکمهٔ
+  // «پخش» می‌نشست و هیچ‌کدام زده نمی‌شدند (باگی که گزارش شد)
+  const isMedia = (m.k === 'image' || m.k === 'video') && typeof m.d === 'string' && m.d.slice(0, 5) === 'data:';
   const menuCls = key && isMedia ? ' menu-over' : '';
   // پیامی که کاربر «فقط برای من» پنهان کرده: پاک نمی‌شود، یک نوارِ کوچک می‌ماند تا
   // اگر دستش خورده باشد بتواند برگرداند یا «حذف برای همه» را بزند
@@ -37904,7 +37956,7 @@ function _chMsgHtml(m, meId, scope, peer) {
   let body = '';
   if (m.k === 'image' && safeD) body = `<img src="${safeD}" alt="عکس">`;
   else if (m.k === 'video' && safeD) body = `<video src="${safeD}" controls playsinline preload="metadata"></video>`;
-  else if (m.k === 'audio' && safeD) body = `<audio src="${safeD}" controls preload="metadata"></audio>`;
+  else if (m.k === 'audio' && safeD) body = _chVoiceHtml(safeD);
   // رسانه‌ای که برای صرفه‌جویی در حافظهٔ دستگاه محلی نگه داشته نشده — با وصل شدن می‌آید
   else if (!safeD && m.dn && (m.k === 'image' || m.k === 'video' || m.k === 'audio'))
     body = `<i style="opacity:.8">${m.k === 'image' ? '🖼️ عکس' : m.k === 'video' ? '🎬 ویدیو' : '🎤 پیام صوتی'} — برای دیدن، به سرور وصل شوید</i>`;
@@ -37919,6 +37971,69 @@ function _chMsgHtml(m, meId, scope, peer) {
    آدرس همان صفحه است و فقط «#» عوض می‌شد، مرورگر صفحه را دوباره باز نمی‌کرد).
    حالا: (1) میرزا یک کادرِ حساب می‌فرستد که با یک زدن باز می‌شود، (2) لینک‌های
    متنیِ قدیمی هم قابلِ زدن شده‌اند و همان‌جا در برنامه حساب را باز می‌کنند. */
+/* ── پخش‌کنندهٔ پیامِ صوتی (مالِ خودِ برنامه) ────────────────────────────────
+   ظاهرِ پخش‌کنندهٔ کروم («انگار می‌خواهم آهنگ دانلود کنم») رفت. این یکی سه چیز
+   دارد: دکمهٔ پخش/توقف، نوارِ زمانِ زدنی، و کلیدِ سرعت. هیچ داده‌ای عوض نمی‌شود —
+   فقط نمایش. خودِ <audio> پنهان می‌ماند و همه‌کاره است. */
+function _chVoiceHtml(src) {
+  return '<div class="ch-voice">' +
+    '<button type="button" class="chv-play" onclick="_chvToggle(this)" title="پخش / توقف">▶</button>' +
+    '<div class="chv-mid">' +
+      '<div class="chv-track" onclick="_chvSeek(event,this)" title="برای رفتن به هر جای صدا، روی نوار بزنید">' +
+        '<i class="chv-fill"></i><i class="chv-knob"></i></div>' +
+      '<div class="chv-row"><span class="chv-t">0:00</span><span class="chv-d">—</span></div>' +
+    '</div>' +
+    '<button type="button" class="chv-rate" onclick="_chvRate(this)" title="سرعتِ پخش — با هر زدن عوض می‌شود">1×</button>' +
+    '<audio src="' + src + '" preload="metadata"></audio>' +
+  '</div>';
+}
+const _CHV_RATES = [1, 1.5, 2, 0.75];
+function _chvFmt(s) {
+  s = Math.max(0, Math.round(s || 0));
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+function _chvPaint(box) {
+  const a = box.querySelector('audio'); if (!a) return;
+  const dur = isFinite(a.duration) && a.duration > 0 ? a.duration : 0;
+  const pct = dur ? Math.min(100, a.currentTime / dur * 100) : 0;
+  const fill = box.querySelector('.chv-fill'); if (fill) fill.style.width = pct + '%';
+  const knob = box.querySelector('.chv-knob'); if (knob) knob.style.left = pct + '%';
+  const t = box.querySelector('.chv-t'); if (t) t.textContent = _chvFmt(a.currentTime);
+  const d = box.querySelector('.chv-d'); if (d) d.textContent = dur ? _chvFmt(dur) : '—';
+  const b = box.querySelector('.chv-play'); if (b) b.textContent = a.paused ? '▶' : '⏸';
+}
+function _chvToggle(btn) {
+  const box = btn.closest('.ch-voice'); if (!box) return;
+  const a = box.querySelector('audio'); if (!a) return;
+  if (!a._chvWired) {
+    a._chvWired = true;
+    ['timeupdate', 'loadedmetadata', 'durationchange', 'play', 'pause'].forEach(ev =>
+      a.addEventListener(ev, () => _chvPaint(box)));
+    a.addEventListener('ended', () => { a.currentTime = 0; _chvPaint(box); });
+  }
+  if (a.paused) {
+    // هم‌زمان فقط یک صدا — وگرنه دو پیام روی هم پخش می‌شوند
+    document.querySelectorAll('.ch-voice audio').forEach(o => { if (o !== a && !o.paused) o.pause(); });
+    const pr = a.play(); if (pr && pr.catch) pr.catch(() => {});
+  } else a.pause();
+  _chvPaint(box);
+}
+function _chvSeek(ev, track) {
+  const box = track.closest('.ch-voice'); const a = box && box.querySelector('audio');
+  if (!a || !isFinite(a.duration) || !a.duration) return;
+  const r = track.getBoundingClientRect();
+  const p = Math.min(1, Math.max(0, (ev.clientX - r.left) / (r.width || 1)));
+  a.currentTime = p * a.duration;
+  _chvPaint(box);
+}
+function _chvRate(btn) {
+  const box = btn.closest('.ch-voice'); const a = box && box.querySelector('audio');
+  if (!a) return;
+  const i = _CHV_RATES.indexOf(a.playbackRate);
+  const r = _CHV_RATES[(i + 1) % _CHV_RATES.length] || 1;
+  a.playbackRate = r; a.defaultPlaybackRate = r;
+  btn.textContent = String(r) + '×';
+}
 function _chAcctCardHtml(m) {
   const nm = escFa(m.nm || m.t || 'حساب');
   const u = escFa(String(m.u || '').replace(/'/g, '%27'));
@@ -40236,7 +40351,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.258';
+const APP_VERSION = '2.9.259';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -43595,7 +43710,25 @@ document.addEventListener('click', function(e) {
               '.main .section > .section-title, .main .section > .list-header';
     var nodes = [].slice.call(document.querySelectorAll(sel));
     if(!nodes.length) return;
-    nodes.forEach(function(n){ n.classList.add('reveal-fx'); });
+    /* ── باگِ «پرپرک شدنِ برنامه» در Standard/Ultra ─────────────────────────
+       این تابع چند ثانیه بعدِ باز شدنِ برنامه اجرا می‌شود و به همهٔ کارت‌ها کلاسِ
+       reveal-fx (یعنی opacity:0) می‌داد — حتی به کارت‌هایی که همان لحظه جلوی
+       چشمِ کاربر بودند. نتیجه: کلِ صفحه یک‌باره غیب می‌شد و بعد محو-محو برمی‌گشت.
+       در حالتِ Performance دیده نمی‌شد چون آن‌جا reveal-fx با !important خنثی است؛
+       برای همین فقط Standard و Ultra «پرپرک» می‌کردند.
+       درمان: چیزی که همین حالا روی صفحه دیده می‌شود هرگز پنهان نمی‌شود — همان‌جا
+       «آمده» علامت می‌خورد (no-fx = بدون ترنزیشن). فقط کارت‌های پایین‌ترِ صفحه و
+       بخش‌های بسته با اسکرول نرم می‌آیند، که خودِ همان افکتِ خواسته‌شده است. */
+    var vh = window.innerHeight || document.documentElement.clientHeight || 0;
+    nodes.forEach(function(n){
+      var r = n.getBoundingClientRect();
+      var painted = (r.width > 0 || r.height > 0);          // بخشِ بسته نیست
+      if(painted && r.top < vh && r.bottom > 0){            // همین حالا دیده می‌شود
+        n.classList.add('reveal-fx', 'no-fx', 'is-in');
+        return;
+      }
+      n.classList.add('reveal-fx');
+    });
 
     function reveal(n){ n.classList.add('is-in'); }
     var revealAll = function(){ nodes.forEach(reveal); };

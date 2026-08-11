@@ -1,7 +1,7 @@
 // سرویس‌ورکر پمپ یعقوبی — پوستهٔ برنامه (این صفحه + آیکون‌ها) را کش می‌کند تا
 // برنامه بعد از نصب، هم آنلاین و هم کاملاً آفلاین باز شود. نسخهٔ کش را هر بار
 // که APP_VERSION در index.html عوض می‌شود، این‌جا هم عوض کنید تا کش کهنه پاک شود.
-const CACHE_NAME = 'pump-yaqobi-shell-v2.9.258';
+const CACHE_NAME = 'pump-yaqobi-shell-v2.9.259';
 const APP_SHELL = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ const APP_SHELL = [
   './icons/icon-maskable-192.png',
   './icons/icon-maskable-512.png',
   './icons/apple-touch-icon.png',
+  './icons/badge-96.png',
   './app.html',
   './favicon.png'
 ];
@@ -157,11 +158,19 @@ self.addEventListener('push', event => {
     try { data = { body: event.data.text() }; } catch (e2) { data = {}; }
   }
 
-  const title = data.title || 'پیام تازه';
+  /* نامِ برنامه همیشه در عنوان باشد: روی نوارِ اعلانِ اندروید بالای پیام فقط
+     «Chrome • yaqobipump.top» نوشته می‌شود و کاربر نمی‌فهمد این اعلان از کدام
+     برنامه است. با این پیشوند، خطِ اولِ خودِ اعلان می‌گوید «پمپ یعقوبی». */
+  const APP = 'پمپ یعقوبی';
+  let title = data.title || 'پیام تازه';
+  if (title.indexOf(APP) < 0) title = APP + ' · ' + title;
   const options = {
     body: data.body || '',
     icon: data.icon || './icons/icon-192.png',
-    badge: data.badge || './icons/icon-192.png',
+    // آیکونِ کوچکِ اعلان: اندروید فقط آلفای این تصویر را می‌خواند. با تصویرِ رنگیِ
+    // پُر (icon-192) یک مربعِ سفیدِ خالی نشان می‌داد و معلوم نبود اعلان از کدام
+    // برنامه است؛ badge-96 یک سیلوئتِ تک‌رنگِ پمپ است و درست دیده می‌شود.
+    badge: data.badge || './icons/badge-96.png',
     // با tag، پیام‌های یک گفت‌وگو روی هم می‌نشینند و صفحه شلوغ نمی‌شود
     tag: data.tag || 'pump-message',
     renotify: true,
