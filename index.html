@@ -38686,6 +38686,20 @@ function pumpApplyWebUpdate() {
 async function pumpHardRefresh() {
   try { save(); } catch (e) {}
   try { _chatOutboxSave(); _chatCacheSaveNow(); } catch (e) {}
+  /* ⚠️ اپ اندروید (و پوستهٔ ویندوز) نه سرویس‌ورکر دارند نه کشِ مرورگر: صفحه از
+     file:// بالا می‌آید، پس پاک‌کردنِ کش و location.reload() فقط همان فایلِ
+     محلیِ قبلی را دوباره می‌آورد. برای همین دکمهٔ 🔄 روی اپ اندروید هیچ‌وقت
+     نسخهٔ تازه نمی‌آورد — همان باگِ «اپدیت‌هایی که می‌دهم به اپ نمی‌رسد».
+     مسیرِ درستِ این پوسته‌ها همان pumpCheckUpdate است که خودش می‌داند برای
+     اندروید فایل را بگیرد و با پلِ PumpAndroid بنویسد و برای ویندوز به
+     deskUpdCheck بسپارد. loud=true تا اگر جایی شکست خورد، کاربر دلیلش را
+     ببیند (پیش از این همهٔ مسیر بی‌صدا بود و هیچ خبری نمی‌داد). */
+  if (window.PumpAndroid || window.pumpDesktop) {
+    try { await pumpCheckUpdate(true); } catch (e) {
+      try { showToast('نسخهٔ تازه گرفته نشد — اینترنت را بررسی کنید', '#e53e3e'); } catch (e2) {}
+    }
+    return;
+  }
   try { showToast('🔄 در حال آوردن آخرین نسخه…', '#2b6cb0'); } catch (e) {}
   const online = (typeof navigator.onLine === 'boolean') ? navigator.onLine : true;
   if (online) {
@@ -40372,7 +40386,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.265';
+const APP_VERSION = '2.9.266';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
