@@ -14715,16 +14715,32 @@ body.viewer-mode #pm-acct-select{ pointer-events:auto !important; }
 /* ===== نوار حساب/فیلتر مودال شخص: همه در یک خط بغل هم ===== */
 /* کشویی دیگر بالای «حساب جدید / جدول جدید» باز نمی‌شود که دست اشتباهی برود؛
    در صفحهٔ باریک همین خط اسکرول افقی می‌خورد و هرگز به دو خط نمی‌شکند */
+/* ⚠️ این نوار روی کامپیوتر «نمی‌شکست» و اسکرولِ افقی می‌خورد. روی گوشی با
+   انگشت می‌شود کشیدش، ولی با ماوس نه: چرخِ ماوس این نوار را افقی نمی‌برد و
+   نوارِ اسکرولش هم نازک و نامرئی بود. نتیجه: «فیِ خرید» و دکمهٔ «٪ فیصدی»
+   (و هر چه بعدشان بود) بیرونِ لبهٔ چپ می‌ماندند و اصلاً قابلِ زدن نبودند —
+   گزارشِ صاحب ریپو: «تو کامپیوتر نمی‌شه فیصدی زد، هر سه تا کادرش» و «کادرِ
+   شماره و فیِ خرید چیزی نوشته نمی‌شه».
+   حالا روی صفحه‌های پهن (کامپیوتر) نوار می‌شکند و همه‌چیز دیده می‌شود؛ روی
+   گوشی همان رفتارِ قبلی (یک خط + اسکرولِ افقی) می‌ماند. */
+/* برچسب و کادرش یک تکه‌اند و از هم جدا نمی‌افتند */
+.pm-acct-bar .pm-bar-grp{ display:inline-flex; align-items:center; gap:6px; flex-shrink:0; }
 .pm-acct-bar{
   display:flex;
-  flex-wrap:nowrap;
+  flex-wrap:wrap;
   align-items:center;
   gap:8px;
   margin-bottom:10px;
-  overflow-x:auto;
-  -webkit-overflow-scrolling:touch;
-  scrollbar-width:thin;
+  row-gap:6px;
   padding:4px 0 6px;
+}
+@media (max-width:820px){
+  .pm-acct-bar{
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;
+  }
 }
 .pm-acct-bar .pm-filter-bar{
   display:flex;
@@ -19793,6 +19809,8 @@ body.viewer-mode .inv-admin-only{display:none!important}
           <button class="msgr-back" onclick="msgrBack()">→</button>
           <span class="msgr-name" id="msgrChatName"></span>
           <span class="msgr-state" id="msgrState"></span>
+          <!-- بستنِ همین گفت‌وگو — تا حالا هیچ راهی برای بستنِ چتِ تکی نبود -->
+          <button class="msgr-del" id="msgrDelBtn" title="بستنِ این گفت‌وگو" onclick="msgrCloseThread()">🗑️</button>
         </div>
         <div class="msgr-list" id="msgrList"></div>
         <div class="msgr-comp" id="msgrComposer">
@@ -19932,11 +19950,11 @@ body.viewer-mode .inv-admin-only{display:none!important}
         </span>
         <span style="width:1px;height:24px;background:var(--border);flex-shrink:0"></span>
         <!-- شماره تماس شخص — هم‌سطح و هم‌اندازه با دکمه‌های حساب جداگانه (روی خودِ شخص ذخیره می‌شود) -->
-        <span style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap;flex-shrink:0">📞 شماره تماس:</span>
-        <input id="pm-phone" class="pm-edit" placeholder="مثلاً 0700000000" autocomplete="off" style="direction:ltr;text-align:center;width:180px;flex-shrink:0;border:1px solid var(--border);border-radius:7px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;padding:6px 10px;box-sizing:border-box" oninput="updatePersonPhone(this.value)">
+        <span class="pm-bar-grp"><span style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap;flex-shrink:0">📞 شماره تماس:</span>
+        <input id="pm-phone" class="pm-edit" placeholder="مثلاً 0700000000" autocomplete="off" style="direction:ltr;text-align:center;width:180px;flex-shrink:0;border:1px solid var(--border);border-radius:7px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;padding:6px 10px;box-sizing:border-box" oninput="updatePersonPhone(this.value)"></span>
         <!-- «فیِ خرید» — فقط یادداشتِ دستیِ خودِ شخص، در هیچ محاسبه‌ای نیست (خواستهٔ کاربر: بغلِ کادرِ شمارهٔ مشتری) -->
-        <span style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap;flex-shrink:0">📝 فیِ خرید:</span>
-        <input id="pm-buyfee" class="pm-edit" placeholder="56 / 57" autocomplete="off" title="فقط یادداشت — تیل مشتری با چه فی خریداری شده. در هیچ محاسبه‌ای استفاده نمی‌شود." style="text-align:center;width:96px;flex-shrink:0;border:1px solid var(--border);border-radius:7px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;padding:6px 10px;box-sizing:border-box" oninput="updatePersonBuyFee(this.value)">
+        <span class="pm-bar-grp"><span style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap;flex-shrink:0">📝 فیِ خرید:</span>
+        <input id="pm-buyfee" class="pm-edit" placeholder="56 / 57" autocomplete="off" title="فقط یادداشت — تیل مشتری با چه فی خریداری شده. در هیچ محاسبه‌ای استفاده نمی‌شود." style="text-align:center;width:96px;flex-shrink:0;border:1px solid var(--border);border-radius:7px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;padding:6px 10px;box-sizing:border-box" oninput="updatePersonBuyFee(this.value)"></span>
         <!-- کادرِ کشوییِ «فیصدی» — بغلِ فیِ خرید (خواستهٔ صاحب ریپو). سه کادرِ
              فیصدی همیشه بالای صفحه جا می‌گرفتند؛ حالا پنهان‌اند و با زدنِ همین
              کادر از زیرِ سربرگ می‌آیند و با زدنِ دوباره پنهان می‌شوند.
@@ -25962,6 +25980,8 @@ function makeTableResizable(table, storeKey){
     function up(){
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', up);
+      document.removeEventListener('pointercancel', up);
+      window.removeEventListener('blur', up);
       saved[dKey] = getW(dIdx) || Math.round(startW);
       if(pIdx >= 0 && pKey) saved[pKey] = getW(pIdx) || Math.round(pStartW);
       // عرضِ «همهٔ» ستون‌ها ذخیره می‌شود، نه فقط دوتای کشیده‌شده — وگرنه جمعِ ستون‌ها
@@ -26007,7 +26027,19 @@ function makeTableResizable(table, storeKey){
       pStartW = getW(pIdx) || _ownW(ths[pIdx]);
       document.addEventListener('pointermove', move);
       document.addEventListener('pointerup', up);
+      /* ⚠️ اگر موس جایی رها شود که pointerup به سند نرسد — بیرونِ پنجره، روی
+         نوارِ اسکرول، با Alt+Tab، یا وقتی خودِ سیستم کشیدن را لغو می‌کند — این
+         دو شنونده تا ابد روی document می‌ماندند. آن‌وقت هر تکانِ ماوس ستون‌ها
+         را جابه‌جا می‌کرد و کلیک‌ها به‌جای دکمه‌ها به همین کشیدن می‌خورد:
+         «یهو دکمه‌ها از کار افتادند و با رفرش درست شد». روی گوشی پیش نمی‌آمد
+         چون انگشت بیرونِ صفحه رها نمی‌شود — و گزارش هم فقط از کامپیوتر بود.
+         حالا سه راهِ خروجِ دیگر هم بسته است و خودِ دسته اشاره‌گر را می‌گیرد تا
+         رها شدنش را حتماً بشنود. */
+      document.addEventListener('pointercancel', up);
+      window.addEventListener('blur', up);
+      try{ grip.setPointerCapture(e.pointerId); }catch(e2){}
     });
+    grip.addEventListener('lostpointercapture', up);
   });
   // اگر قبلاً عرضِ ذخیره‌شده دارد، همان چیدمانِ ثابتِ انتخابیِ کاربر برگردد
   if(Object.keys(saved).length) _applySavedColWidths(table);
@@ -28030,6 +28062,12 @@ function _renderRasidLog(acct, o) {
       if (!empty) break;
       a = trs[i];
     }
+    /* ⚠️ اگر همهٔ ردیف‌ها خالی باشند (حسابِ تازه، یا حسابی که هنوز چیزی در
+       جدولش ننوشته‌اید)، این حلقه به ردیفِ اول می‌رسید و ردیف‌های رسید درست
+       «اولِ جدول» می‌نشستند — انگار یک جدولِ بی‌ربط بالای جدول سبز شده باشد.
+       گزارشِ صاحب ریپو: «یک جدولِ بی‌ربط درست می‌شود اولِ جدول». در آن حالت
+       ردیف‌ها می‌روند ته جدول، جایی که چشم دنبالشان می‌گردد. */
+    if (a && a === trs[0]) a = null;
     return a;
   })();
   const line = (ftype, when, name, cells, tip, delId) => {
@@ -32298,18 +32336,26 @@ function pdfPerson() {
       <td style="color:#2b6cb0">${(parseFloat(r.fuel)||0) ? n2fa(r.fuel) : '—'}</td>
       <td>${(parseFloat(r.priceper)||0) ? n2fa(r.priceper) : '—'}</td>
       <td style="color:#c07700;font-weight:700">${n2fa(Math.round(bardagi))}</td>
-      <td style="color:#276749;font-weight:700">${(parseFloat(r.rasid)||0) ? n2fa(r.rasid) : '—'}</td>
-      <td style="color:#2b6cb0">${(parseFloat(r.rasidFuel)||0) ? n2fa(r.rasidFuel) + ' لیتر' : '—'}</td>
+      ${money
+        ? `<td style="color:#276749;font-weight:700">${(parseFloat(r.rasid)||0) ? n2fa(r.rasid) : '—'}</td>`
+        : `<td style="color:#2b6cb0">${(parseFloat(r.rasidFuel)||0) ? n2fa(r.rasidFuel) + ' لیتر' : '—'}</td>`}
       <td></td>
     </tr>`;
   }).join('');
 
   // جمع‌های جدول بر اساس ردیف‌های فیلترشده (نه کل) — مثل فوترِ جدولِ سایت
   const ft = _splitTotals(rows).all;
-  const colCount = (showFtCol ? 5 : 4) + 6;
+  const colCount = (showFtCol ? 5 : 4) + 5;
   const ftHeadCols = showFtCol ? '<th>نوع تیل</th>' : '';
-  const unitHeadCols = '<th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>رسید تیل</th><th>الباقی</th>';
-  const unitFootCols = `<td>${n2fa(ft.fuel)}</td><td>—</td><td>${n2fa(ft.bardagi)}</td><td>${n2fa(ft.rasid)}</td><td>${n2fa(ft.rasidFuel)}</td><td>${n2fa(ft.albaqi)}</td>`;
+  /* ⚠️ فقط ستونِ رسیدِ همان واحد می‌آید — دقیقاً مثل خودِ جدولِ برنامه، که
+     _togglePmMoneyCols ستونِ واحدِ مقابل را از جدول برمی‌دارد. پیش از این
+     پی‌دی‌اف هر دو ستون را می‌گذاشت: حسابِ پولی یک ستونِ خالیِ «رسید تیل»
+     داشت و حسابِ تیلی یک ستونِ خالیِ «رسید» — گزارشِ صاحب ریپو:
+     «چرا دو تا رسید دارن». */
+  const rasidHead = money ? '<th>رسید</th>' : '<th>رسید تیل</th>';
+  const unitHeadCols = '<th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th>' + rasidHead + '<th>الباقی</th>';
+  const rasidFoot = money ? n2fa(ft.rasid) : n2fa(ft.rasidFuel);
+  const unitFootCols = `<td>${n2fa(ft.fuel)}</td><td>—</td><td>${n2fa(ft.bardagi)}</td><td>${rasidFoot}</td><td>${n2fa(ft.albaqi)}</td>`;
 
   // بخش خلاصهٔ پطرول/دیزل: فقط در حالت «همه» هر دو نشان داده شود؛ در حالت فیلترشده فقط همان حساب
   const splitBoxesHtml = filter === 'all' ? `
@@ -35862,8 +35908,10 @@ function pmMoreMenu(ev) {
   const menu = document.createElement('div');
   menu.id = 'pmMoreMenu';
   menu.className = 'ch-msg-menu';
+  /* «💬 چت با این حساب» برداشته شد — خواستهٔ صریحِ صاحب ریپو. خودِ پیام‌رسان
+     سرِ جایش است (تبِ «چت تک‌نفره»ی ربات)، فقط این میان‌بُر از حسابِ قرض‌دار
+     رفت که ناخواسته زده می‌شد. */
   menu.innerHTML =
-    '<button type="button" data-a="chat">💬 چت با این حساب</button>' +
     '<button type="button" data-a="qr">📲 کیو‌آر</button>' +
     '<button type="button" data-a="rename">✏️ تغییر اسم</button>' +
     '<button type="button" data-a="copy">📇 کپیِ حساب</button>' +
@@ -35873,8 +35921,7 @@ function pmMoreMenu(ev) {
     e.preventDefault(); e.stopPropagation();
     const a = b.getAttribute('data-a');
     _pmMoreClose();
-    if (a === 'chat') msgrOpenPerson(currentPersonId, currentSubId || '');
-    else if (a === 'qr') showPersonQRFromModal();
+    if (a === 'qr') showPersonQRFromModal();
     else if (a === 'rename') renameCurrentPerson();
     else if (a === 'copy') openAcctCardFromPerson();
     else if (a === 'del') deletePersonSub();
@@ -40016,6 +40063,8 @@ function _msgrAccept(raw) {
   const from = String(raw.title || '').trim().replace(/^💬\s*(?:پیام به میرزا|جواب میرزا)\s*—\s*/, '');
   const text = String(raw.body || '');
   if (!text) return;
+  // اگر این گفت‌وگو بسته شده بود، با رسیدنِ پیامِ تازه برمی‌گردد (پیام گم نشود)
+  try { if (_msgrIsHidden(id)) _msgrUnhide(id); } catch (e) {}
   const list = _msgrMsgs[id] || (_msgrMsgs[id] = []);
   // رونوشتِ دوم (همان متن از همان فرستنده در ۱۰ ثانیه) دوباره ننشیند
   if (list.some(m => m.text === text && m.from === from && Math.abs((m.at || 0) - at) < 10000)) return;
@@ -40109,9 +40158,43 @@ function _msgrKeepTopic(topic) {
   try { _ntfAutoPush('silent'); } catch (e) {}
 }
 /** فهرستِ گفت‌وگوهایی که باید در ستونِ کناری دیده شوند */
+/* ── بستنِ گفت‌وگو ────────────────────────────────────────────────────────
+   تا حالا هیچ راهی نبود که یک گفت‌وگوی تک‌به‌تک را از فهرست برداری؛ هر کسی که
+   یک بار پیام داده بود تا ابد آن‌جا می‌ماند (گزارشِ صاحب ریپو: «نمی‌تونم چتِ
+   تکیِ کسی رو ببندم»). بسته‌شدن فقط محلی است: پیام‌های روی سرور و تاریخچهٔ
+   چتِ قدیمی دست نمی‌خورند، و اگر همان طرف پیامِ تازه بدهد گفت‌وگو خودش
+   برمی‌گردد تا پیامی گم نشود. */
+function _msgrHidden() { return _msgrLsGet('pumpMsgrHidden', []) || []; }
+function _msgrIsHidden(id) { return _msgrHidden().indexOf(String(id)) >= 0; }
+function _msgrHide(id) {
+  const h = _msgrHidden();
+  if (h.indexOf(String(id)) < 0) h.push(String(id));
+  _msgrLsSet('pumpMsgrHidden', h.slice(-200));
+}
+function _msgrUnhide(id) {
+  const h = _msgrHidden().filter(x => x !== String(id));
+  _msgrLsSet('pumpMsgrHidden', h);
+}
+/** بستنِ گفت‌وگویی که باز است (دکمهٔ 🗑️ سربرگ) */
+function msgrCloseThread(id) {
+  const t = id || _msgrCur;
+  if (!t) return;
+  const nm = _msgrName(t);
+  if (!confirm('گفت‌وگو با «' + nm + '» از فهرست برداشته شود؟\n\nپیام‌های خودِ سرور پاک نمی‌شوند؛ اگر دوباره پیام بدهد، گفت‌وگو برمی‌گردد.')) return;
+  _msgrHide(t);
+  delete _msgrMsgs[t];
+  _msgrExtra = (_msgrExtra || []).filter(x => x !== t);
+  _msgrLsSet('pumpMsgrExtra', _msgrExtra);
+  if (_msgrCur === t) _msgrCur = null;
+  _msgrPaintThreads();
+  _msgrPaintChat();
+  _msgrPaintBadge();
+  try { showToast('گفت‌وگو بسته شد', '#718096'); } catch (e) {}
+}
 function _msgrThreadIds() {
   const out = [];
-  const add = t => { if (_msgrIsPersonThread(t) && out.indexOf(t) < 0) out.push(t); };
+  const hid = _msgrHidden();
+  const add = t => { if (_msgrIsPersonThread(t) && out.indexOf(t) < 0 && hid.indexOf(String(t)) < 0) out.push(t); };
   try { (_ntfMyTopics() || []).forEach(add); } catch (e) {}
   _msgrExtra.forEach(add);
   /* گفت‌وگوهای زندهٔ سرور هم فقط وقتی در فهرست می‌آیند که صاحبشان یکی از
@@ -40144,7 +40227,7 @@ function _msgrThreadIds() {
 /* پیام‌رسان جای جدایی ندارد: همان تبِ «چت تک‌نفره»ی خودِ رباتِ دستیار است.
    msgrOpen پنل را باز می‌کند، می‌رود روی همان تب و گفت‌وگوی خواسته‌شده را می‌آورد. */
 function msgrOpen(threadId) {
-  if (threadId) { _msgrCur = threadId; _msgrKeepTopic(threadId); }
+  if (threadId) { _msgrUnhide(threadId); _msgrCur = threadId; _msgrKeepTopic(threadId); }
   const p = document.getElementById('robotPanel');
   if (p && !p.classList.contains('open')) { try { toggleRobot(); } catch (e) {} }
   try { rbShowTab('dm'); } catch (e) {}
@@ -40185,11 +40268,14 @@ function _msgrPaintThreads() {
     const list = _msgrLegacyMerge(id, _msgrMsgs[id] || []);
     const last = list[list.length - 1];
     const n = _msgrUnread(id);
-    return '<button class="msgr-th' + (id === _msgrCur ? ' on' : '') + '" onclick="msgrOpen(\'' + _esc(id) + '\')">'
+    return '<span class="msgr-th-wrap">'
+      + '<button class="msgr-th' + (id === _msgrCur ? ' on' : '') + '" onclick="msgrOpen(\'' + _esc(id) + '\')">'
       + '<span class="msgr-th-n">' + _esc(_msgrName(id)) + '</span>'
       + '<span class="msgr-th-p">' + (last ? _esc((last.mine ? 'شما: ' : (last.from ? last.from + ': ' : '')) + last.text).slice(0, 90) : 'هنوز پیامی نیست') + '</span>'
       + (n ? '<span class="msgr-th-b">' + n2fa(n) + '</span>' : '')
-      + '</button>';
+      + '</button>'
+      + '<button class="msgr-th-x" title="بستنِ این گفت‌وگو" onclick="msgrCloseThread(\'' + _esc(id) + '\')">✕</button>'
+      + '</span>';
   }).join('') || '<div class="msgr-empty">هنوز کسی از راهِ کیو‌آر پیام نداده.<br>از داخلِ حسابِ هر قرض‌دار می‌توانید خودتان گفت‌وگو را شروع کنید.</div>';
 }
 /* پیام‌های چتِ قدیمی گم نشوند: هر گفت‌وگوی p-… با همان peer در
@@ -40617,7 +40703,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.279';
+const APP_VERSION = '2.9.281';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -48734,6 +48820,17 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
 .msgr-state{ font-size:0.68rem; color:var(--muted); white-space:nowrap; }
 .msgr-back{ display:none; background:transparent; border:1px solid var(--border); border-radius:8px;
   color:var(--accent); font-family:'Vazirmatn',sans-serif; font-weight:800; font-size:0.9rem; padding:2px 9px; cursor:pointer; }
+/* هر ردیفِ فهرست = خودِ گفت‌وگو + دکمهٔ «بستن» که با نگه‌داشتنِ ماوس پیدا می‌شود */
+.msgr-th-wrap{ display:block; position:relative; }
+.msgr-th-x{ position:absolute; inset-inline-start:6px; bottom:8px; width:24px; height:24px;
+  border:none; background:transparent; color:var(--muted); cursor:pointer; border-radius:7px;
+  font-size:0.82rem; line-height:1; opacity:0; transition:opacity .15s, background .15s; }
+.msgr-th-wrap:hover .msgr-th-x, .msgr-th-x:focus{ opacity:1; }
+.msgr-th-x:hover{ background:var(--red); color:#fff; }
+@media (hover:none){ .msgr-th-x{ opacity:.65; } }   /* گوشی: همیشه دیده شود */
+.msgr-del{ border:none; background:transparent; cursor:pointer; font-size:0.9rem;
+  padding:4px 6px; border-radius:7px; color:var(--muted); flex-shrink:0; }
+.msgr-del:hover{ background:var(--red); color:#fff; }
 .msgr-th{ display:block; width:100%; text-align:right; background:transparent; border:none;
   border-bottom:1px solid var(--border); padding:9px 12px; cursor:pointer; position:relative;
   font-family:'Vazirmatn',sans-serif; color:var(--txt); }
