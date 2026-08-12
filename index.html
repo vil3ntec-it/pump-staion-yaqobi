@@ -465,6 +465,11 @@ body.staff-view .qr-overlay{z-index:10020}
 .add-btn{display:flex;align-items:center;gap:6px;padding:9px 18px;background:var(--accent);color:#000;border:none;border-radius:8px;cursor:pointer;font-family:'Vazirmatn',sans-serif;font-weight:700;font-size:0.95rem;transition:all .2s}
 .add-btn:hover{opacity:.88}
 .add-btn.purple{background:var(--night);color:#e9d8fd}
+.grid-more{display:flex;align-items:center;justify-content:center;gap:12px;padding:6px 0 26px;
+  flex-wrap:wrap;font-size:0.83rem;color:var(--muted);font-weight:700;text-align:center}
+.grid-more button{padding:7px 18px;border-radius:9px;border:1px solid var(--border);background:var(--card);
+  color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.86rem;cursor:pointer}
+.grid-more button:active{transform:scale(.97)}
 .persons-grid{display:grid;grid-template-columns:repeat(auto-fill,175px);justify-content:start;gap:10px;padding-bottom:100px}
 /* بخش‌های دارای کارت حساب تمام‌عرض شوند تا کارت‌ها از راست و در کل صفحه بچینند */
 #sec-debt.section.visible,#sec-noinv.section.visible,#sec-waraq.section.visible,#sec-expenses.section.visible,#sec-debtrasid.section.visible,#sec-debtsum.section.visible,#sec-storage.section.visible,#sec-storage-diesel.section.visible,#sec-profit.section.visible,#sec-extraincome.section.visible{margin-left:calc(48% - 48vw / var(--secz,1));margin-right:calc(48% - 48vw / var(--secz,1));padding-left:18px;padding-right:18px;box-sizing:border-box}
@@ -18923,7 +18928,16 @@ body.viewer-mode .inv-admin-only{display:none!important}
 .inv-chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:4px 12px;font-size:.74rem;font-weight:900}
 .inv-chip.pending{background:#d9770622;color:#e8930c;border:1px solid #d9770655}
 .inv-chip.approved{background:#38a16922;color:var(--green);border:1px solid #38a16955}
-.inv-item .acts{display:flex;gap:7px;flex-wrap:wrap}
+/* دکمه‌های کارتِ فاکتور فضای خالیِ کنارشان را پر می‌کنند. پیش از این .acts
+   به‌اندازهٔ خودش بود و روی گوشی یک جای خالیِ بزرگ کنارش می‌ماند (خواستهٔ صاحب
+   ریپو: «اون هدرهای برگشت و حذف بیاد اون جایی که کادر کشیدم»). */
+.inv-item .acts{display:flex;gap:7px;flex-wrap:wrap;flex:1 1 240px;justify-content:flex-end}
+@media (max-width:768px){
+  /* روی گوشی هر سه دکمه عرضِ ردیف را بینِ خودشان تقسیم می‌کنند — نه جای خالی
+     می‌ماند و نه دکمه‌ها ریز می‌شوند */
+  .inv-item .acts{flex:1 1 100%}
+  .inv-item .acts .inv-act{flex:1 1 0;justify-content:center;padding:8px 6px}
+}
 .inv-act{border:1.5px solid var(--border);background:var(--panel);color:var(--txt);border-radius:9px;padding:7px 13px;font-family:'Vazirmatn',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .14s;display:inline-flex;align-items:center;gap:5px}
 .inv-act:hover{transform:translateY(-1px)}
 .inv-act.ok{border-color:#38a16977;color:var(--green)}
@@ -25598,13 +25612,53 @@ function _allRows(person){
   return rows;
 }
 
-// ===== صفحه‌بندی حساب‌ها: هزاران حساب بدون کاهش سرعت =====
-const _PERSON_PAGE = 50; // تعداد کارت در هر صفحه
-const _personPages = { debt: 0, noinv: 0 };
-function _goPersonPage(type, page) {
-  _personPages[type] = page;
+/* ===== نمایشِ حساب‌ها: دسته‌دسته، ولی با یک اسکرولِ پیوسته =====
+   پیش از این صفحه‌بندی بود (۵۰ کارت در هر صفحه، با دکمه‌های «قبلی/بعدی» پایینِ
+   گرید). شکایتِ صاحب ریپو درست بود: «اسکرول نمیشه تا حساب‌های قرض‌دارهای دیگه رو
+   ببینم» — چون بعد از کارتِ پنجاهم دیگر چیزی نبود و آن نوارِ کوچکِ «صفحهٔ ۱ از ۲»
+   پایینِ صفحه، بعد از آن‌همه اسکرول اصلاً به چشم نمی‌آمد.
+   حالا با نزدیک شدن به تهِ فهرست، دستهٔ بعدی خودش می‌آید (مثل هر برنامهٔ گوشی)،
+   و یک دکمهٔ «نمایش همه» هم هست. سرعت هم حفظ می‌شود چون کارت‌ها هنوز دسته‌دسته
+   ساخته می‌شوند، نه هزارتا با هم. ===== */
+const _PERSON_PAGE = 50;                     // اندازهٔ هر دسته
+const _personShown = { debt: _PERSON_PAGE, noinv: _PERSON_PAGE };
+function _goPersonPage(type) { _showAllPersons(type); }   // سازگاری با کدِ قدیمی
+function _showAllPersons(type) {
+  const l = type === 'debt' ? DB.debtPersons : DB.noinvPersons;
+  _personShown[type] = (l || []).length;
   renderPersons(type);
-  try { document.getElementById(type + '-grid').scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch(e) {}
+}
+function _showAllCompanies() {
+  _companyShown = (DB.tilCompanies || []).length;
+  renderCompanies();
+}
+/** وقتی این نشانه به دیدِ کاربر نزدیک شد، دستهٔ بعدی را بیاور */
+function _observeMore(el, cb) {
+  try {
+    if (typeof IntersectionObserver !== 'function') return;
+    const io = new IntersectionObserver(es => {
+      if (es.some(e => e.isIntersecting)) { io.disconnect(); cb(); }
+    }, { rootMargin: '600px 0px' });    // کمی زودتر، تا انتظار حس نشود
+    io.observe(el);
+  } catch (e) {}
+}
+/** نوارِ پایینِ گرید: «چندتا مانده» + دکمهٔ نمایش همه، یا «همه نشان داده شد» */
+function _paintMoreBar(id, grid, shown, total, onMore, allFn, word) {
+  const old = document.getElementById(id);
+  if (old) old.remove();
+  if (total <= _PERSON_PAGE) return;
+  const bar = document.createElement('div');
+  bar.id = id;
+  bar.className = 'grid-more';
+  if (shown < total) {
+    bar.innerHTML = '<span>' + n2fa(shown) + ' از ' + n2fa(total) + ' ' + word + ' — بقیه با اسکرول می‌آید</span>' +
+                    '<button type="button" onclick="' + allFn + '">نمایش همه</button>';
+    grid.after(bar);
+    _observeMore(bar, onMore);
+  } else {
+    bar.innerHTML = '<span>✅ همهٔ ' + n2fa(total) + ' ' + word + ' نشان داده شد</span>';
+    grid.after(bar);
+  }
 }
 
 // وضعیت هر قرض‌دار — هم تیل هم پول، هر کدام که کم بود:
@@ -25668,12 +25722,8 @@ function renderPersons(type) {
   if (!grid) return;
 
   const total = list.length;
-  const totalPages = Math.max(1, Math.ceil(total / _PERSON_PAGE));
-  if (_personPages[type] >= totalPages) _personPages[type] = totalPages - 1;
-  if (_personPages[type] < 0) _personPages[type] = 0;
-  const page = _personPages[type];
-  const start = page * _PERSON_PAGE;
-  const pageList = list.slice(start, start + _PERSON_PAGE);
+  const shown = Math.min(Math.max(_personShown[type] || _PERSON_PAGE, _PERSON_PAGE), total);
+  const pageList = list.slice(0, shown);
 
   const frag = document.createDocumentFragment();
   pageList.forEach(p => {
@@ -25720,22 +25770,9 @@ function renderPersons(type) {
   grid.innerHTML = '';
   grid.appendChild(frag);
 
-  // کنترل صفحه‌بندی — فقط وقتی بیش از یک صفحه داریم
-  const pagerId = type + '-pager';
-  const oldPager = document.getElementById(pagerId);
-  if (oldPager) oldPager.remove();
-  if (totalPages > 1) {
-    const btnS = 'padding:7px 18px;border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--txt);font-family:\'Vazirmatn\',sans-serif;font-size:0.9rem;cursor:pointer;transition:all .2s';
-    const pager = document.createElement('div');
-    pager.id = pagerId;
-    pager.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:12px;padding:14px 0 4px;flex-wrap:wrap';
-    pager.innerHTML = `
-      <button onclick="_goPersonPage('${type}',${page-1})" ${page===0?'disabled style="opacity:0.35;cursor:default"':''} style="${btnS}">‹ قبلی</button>
-      <span style="font-size:0.83rem;color:var(--muted);font-weight:700">صفحهٔ ${n2fa(page+1)} از ${n2fa(totalPages)} &nbsp;|&nbsp; ${n2fa(total)} حساب</span>
-      <button onclick="_goPersonPage('${type}',${page+1})" ${page>=totalPages-1?'disabled style="opacity:0.35;cursor:default"':''} style="${btnS}">بعدی ›</button>
-    `;
-    grid.after(pager);
-  }
+  _paintMoreBar(type + '-pager', grid, shown, total,
+    () => { _personShown[type] = shown + _PERSON_PAGE; renderPersons(type); },
+    "_showAllPersons('" + type + "')", 'حساب');
 }
 
 function openAddPerson(type) {
@@ -29292,20 +29329,24 @@ function renderExpenses() {
   const keys = Object.keys(groups).sort().reverse();
   // با شروع ماه جدید، خودکار به ماه جاری برو؛ ماه‌های قبلی در منوی کشویی می‌مانند
   if (_expLastAutoMonth !== curMonth) { _activeExpenseMonth = curMonth; _expLastAutoMonth = curMonth; }
-  if (!_activeExpenseMonth || !keys.includes(_activeExpenseMonth)) {
+  /* null یعنی «هنوز انتخاب نشده» → ماهِ جاری. رشتهٔ خالی یعنی کاربر خودش
+     «همهٔ ماه‌ها» را انتخاب کرده و باید همان بماند. */
+  if (_activeExpenseMonth == null || (_activeExpenseMonth !== '' && !keys.includes(_activeExpenseMonth))) {
     _activeExpenseMonth = keys.includes(curMonth) ? curMonth : keys[0];
   }
   // «مصرف این ماه» باید جمعِ همان ماهی باشد که در کشوی «انتخاب ماه» انتخاب شده،
   // نه همیشه ماهِ تقویمیِ جاری — وگرنه وقتی ماهِ جدید (خالی) را می‌بینی، باز هم
   // جمعِ ماهِ قبل نمایش داده می‌شد و مثل «آمدنِ اطلاعاتِ ماه قبل» دیده می‌شد
-  const _activeMonthTotal = (groups[_activeExpenseMonth] || []).reduce((a, {e}) => a + (e.amount || 0), 0);
+  const _expShownList = _activeExpenseMonth ? (groups[_activeExpenseMonth] || [])
+    : keys.reduce((acc, k) => acc.concat(groups[k] || []), []);   // خالی = همهٔ ماه‌ها
+  const _activeMonthTotal = _expShownList.reduce((a, {e}) => a + (e.amount || 0), 0);
   if (_expEl('exp-week')) _expEl('exp-week').textContent = n2fa(Math.round(_activeMonthTotal)) + ' افغانی';
   // «مصارف کل» هم طبق خواستهٔ کاربر فقط ماهِ انتخاب‌شده را نشان دهد (نه جمعِ همهٔ ماه‌ها)
   if (_expEl('exp-total')) _expEl('exp-total').textContent = n2fa(Math.round(_activeMonthTotal)) + ' افغانی';
   const _selWrap = document.createElement('div');
   _selWrap.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px';
   _selWrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">📅 سال و ماه:</label>
-    ${_ymSelectsHtml('exp-month-select', keys, _activeExpenseMonth, 'var(--accent)', 180)}`;
+    ${_ymSelectsHtml('exp-month-select', keys, _activeExpenseMonth, 'var(--accent)', 180, 'همهٔ ماه‌ها')}`;
   wrap.appendChild(_selWrap);
   _selWrap.querySelector('#exp-month-select').onchange = function(){ _activeExpenseMonth = this.value; renderExpenses(); };
   [_activeExpenseMonth].forEach(k => {
@@ -29407,16 +29448,19 @@ function renderChakana() {
   Object.keys(groups).forEach(k => { groups[k].sort((a, b) => _dateSortKey(a.e.date) - _dateSortKey(b.e.date)); });
   const keys = Object.keys(groups).sort().reverse();
   if (_chakanaLastAutoMonth !== curMonth) { _activeChakanaMonth = curMonth; _chakanaLastAutoMonth = curMonth; }
-  if (!_activeChakanaMonth || !keys.includes(_activeChakanaMonth)) {
+  /* null یعنی «هنوز انتخاب نشده» → ماهِ جاری. رشتهٔ خالی یعنی کاربر خودش
+     «همهٔ ماه‌ها» را انتخاب کرده و باید همان بماند. */
+  if (_activeChakanaMonth == null || (_activeChakanaMonth !== '' && !keys.includes(_activeChakanaMonth))) {
     _activeChakanaMonth = keys.includes(curMonth) ? curMonth : keys[0];
   }
   const _selWrap = document.createElement('div');
   _selWrap.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px';
   _selWrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">📅 سال و ماه:</label>
-    ${_ymSelectsHtml('chakana-month-select', keys, _activeChakanaMonth, 'var(--purple)', 180)}`;
+    ${_ymSelectsHtml('chakana-month-select', keys, _activeChakanaMonth, 'var(--purple)', 180, 'همهٔ ماه‌ها')}`;
   wrap.appendChild(_selWrap);
   _selWrap.querySelector('#chakana-month-select').onchange = function(){ _activeChakanaMonth = this.value; renderChakana(); };
-  const items = groups[_activeChakanaMonth] || [];
+  const items = _activeChakanaMonth ? (groups[_activeChakanaMonth] || [])
+    : keys.reduce((acc, k) => acc.concat(groups[k] || []), []);   // خالی = همهٔ ماه‌ها
   const totBord = items.reduce((a,{e})=>a+_chakanaBardagi(e), 0);
   const totRasid = items.reduce((a,{e})=>a+(parseFloat(e.rasid)||0), 0);
   const totAlb = totBord - totRasid;
@@ -29931,15 +29975,18 @@ function renderDebtRasid() {
     const keys = Object.keys(groups).sort().reverse();
     // با شروع ماه جدید، خودکار به ماه جاری برو؛ ماه‌های قبلی در منو می‌مانند
     if (_drLastAutoMonth !== curMonth) { _drActiveMonth = curMonth; _drLastAutoMonth = curMonth; }
-    if (!_drActiveMonth || !keys.includes(_drActiveMonth)) {
+  /* null یعنی «هنوز انتخاب نشده» → ماهِ جاری. رشتهٔ خالی یعنی کاربر خودش
+     «همهٔ ماه‌ها» را انتخاب کرده و باید همان بماند. */
+    if (_drActiveMonth == null || (_drActiveMonth !== '' && !keys.includes(_drActiveMonth))) {
       _drActiveMonth = keys.includes(curMonth) ? curMonth : keys[0];
     }
-    const items = groups[_drActiveMonth] || [];
+    const items = _drActiveMonth ? (groups[_drActiveMonth] || [])
+      : keys.reduce((acc, k) => acc.concat(groups[k] || []), []);   // خالی = همهٔ ماه‌ها
     const monTotal = items.reduce((a,r)=>a+(r.amount||0), 0);
     const selWrap = document.createElement('div');
     selWrap.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px';
     selWrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">📅 سال و ماه:</label>
-      ${_ymSelectsHtml('dr-month-select', keys, _drActiveMonth, 'var(--accent)', 180)}
+      ${_ymSelectsHtml('dr-month-select', keys, _drActiveMonth, 'var(--accent)', 180, 'همهٔ ماه‌ها')}
       <button class="add-btn" style="background:var(--blue);color:#fff" onclick="addDebtRasidMonth()">📅 ماه جدید</button>
       <button style="background:var(--blue);color:#fff;border:none;border-radius:7px;padding:8px 12px;font-size:0.8rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="pdfDebtRasid('${_drActiveMonth}')">📄 PDF ماه</button>
       <span style="font-size:0.85rem;font-weight:700;color:var(--green)">جمله ${escFa(_monthLabelFa(_drActiveMonth))}: ${n2fa(Math.round(monTotal*100)/100)}</span>`;
@@ -30443,8 +30490,8 @@ function _findOrCreateCompany(name) {
 // سازگاری با داده‌های قدیمی tilRows
 function tilAlbaqi(r){ return cmpAlbaqi(r); }
 
-let _companyPage = 0;
-function _goCompanyPage(page) { _companyPage = page; renderCompanies(); try { document.getElementById('company-grid').scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch(e) {} }
+let _companyShown = _PERSON_PAGE;
+function _goCompanyPage() { _showAllCompanies(); }   // سازگاری با کدِ قدیمی
 
 function renderCompanies() {
   const grid = document.getElementById('company-grid');
@@ -30454,10 +30501,9 @@ function renderCompanies() {
   const fullList = q ? DB.tilCompanies.filter(c => (c.name||'').toLowerCase().includes(q)) : DB.tilCompanies;
   // صفحه‌بندی فقط وقتی جستجو نیست
   const total = fullList.length;
-  const totalPages = Math.max(1, Math.ceil(total / _PERSON_PAGE));
-  if (_companyPage >= totalPages) _companyPage = totalPages - 1;
-  if (_companyPage < 0) _companyPage = 0;
-  const list = q ? fullList : fullList.slice(_companyPage * _PERSON_PAGE, (_companyPage + 1) * _PERSON_PAGE);
+  // هنگام جست‌وجو همهٔ نتیجه‌ها می‌آیند؛ در حالت عادی دسته‌دسته و با اسکرول
+  const cShown = q ? total : Math.min(Math.max(_companyShown || _PERSON_PAGE, _PERSON_PAGE), total);
+  const list = fullList.slice(0, cShown);
   grid.innerHTML = '';
   list.forEach(c => {
     (c.rows||[]).forEach(_migrateCompanyRow); (c.dieselRows||[]).forEach(_migrateCompanyRow);
@@ -30488,22 +30534,11 @@ function renderCompanies() {
     _acctAttachMenu(card, 'company', '', c.id);
     grid.appendChild(card);
   });
-  // کنترل صفحه‌بندی شرکت‌ها (فقط زمانی که جستجو نیست)
-  const cpagerId = 'company-pager';
-  const oldCPager = document.getElementById(cpagerId);
-  if (oldCPager) oldCPager.remove();
-  if (!q && totalPages > 1) {
-    const btnS = 'padding:7px 18px;border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--txt);font-family:\'Vazirmatn\',sans-serif;font-size:0.9rem;cursor:pointer;transition:all .2s';
-    const cpager = document.createElement('div');
-    cpager.id = cpagerId;
-    cpager.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:12px;padding:14px 0 4px;flex-wrap:wrap';
-    cpager.innerHTML = `
-      <button onclick="_goCompanyPage(${_companyPage-1})" ${_companyPage===0?'disabled style="opacity:0.35;cursor:default"':''} style="${btnS}">‹ قبلی</button>
-      <span style="font-size:0.83rem;color:var(--muted);font-weight:700">صفحهٔ ${n2fa(_companyPage+1)} از ${n2fa(totalPages)} &nbsp;|&nbsp; ${n2fa(total)} شرکت</span>
-      <button onclick="_goCompanyPage(${_companyPage+1})" ${_companyPage>=totalPages-1?'disabled style="opacity:0.35;cursor:default"':''} style="${btnS}">بعدی ›</button>
-    `;
-    grid.after(cpager);
-  }
+  // هنگام جست‌وجو نوارِ «بقیه» لازم نیست — همهٔ نتیجه‌ها همان‌جا هستند
+  if (q) { const o = document.getElementById('company-pager'); if (o) o.remove(); }
+  else _paintMoreBar('company-pager', grid, cShown, total,
+    () => { _companyShown = cShown + _PERSON_PAGE; renderCompanies(); },
+    '_showAllCompanies()', 'شرکت');
   _renderCompanySummary();
   _updateCompanyBanner();
 }
@@ -33284,11 +33319,13 @@ function renderSafeMonthTabs() {
   months.sort();
   // با شروع ماه جدید، خودکار به ماه جاری برو؛ ماه‌های قبلی در منوی کشویی می‌مانند
   if (_safeLastAutoMonth !== curMonth) { _safeActiveMonth = curMonth; _safeLastAutoMonth = curMonth; }
-  if (!_safeActiveMonth || !months.includes(_safeActiveMonth)) {
+  /* null یعنی «هنوز انتخاب نشده» → ماهِ جاری. رشتهٔ خالی یعنی کاربر خودش
+     «همهٔ ماه‌ها» را انتخاب کرده و باید همان بماند. */
+  if (_safeActiveMonth == null || (_safeActiveMonth !== '' && !months.includes(_safeActiveMonth))) {
     _safeActiveMonth = months.includes(curMonth) ? curMonth : months[months.length - 1];
   }
   wrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">📅 سال و ماه:</label>
-    ${_ymSelectsHtml('safe-month-select', months, _safeActiveMonth, 'var(--accent)', 170)}`;
+    ${_ymSelectsHtml('safe-month-select', months, _safeActiveMonth, 'var(--accent)', 170, 'همهٔ ماه‌ها')}`;
   const sel = document.getElementById('safe-month-select');
   if (sel) sel.onchange = () => { _safeActiveMonth = sel.value; renderSafe(); };
 }
@@ -33342,7 +33379,7 @@ function renderSafe() {
   const monthRows = [];                     // ردیف‌های ماه فعال، با اندیس اصلی‌شان در DB.safeEntries
   entries.forEach((e, i) => {
     _safeAddAmt(e.type === 'bardagi' ? totalBardagi : totalMandagi, e);
-    if (safeMonthKey(e.date) !== _safeActiveMonth) return;
+    if (_safeActiveMonth && safeMonthKey(e.date) !== _safeActiveMonth) return;   // خالی = همهٔ ماه‌ها
     _safeAddAmt(e.type === 'bardagi' ? mBardagi : mMandagi, e);
     monthRows.push({ i, e });
   });
@@ -33592,7 +33629,7 @@ function _recalcSafeTotals() {
   // جمعِ کلِ همهٔ ماه‌ها را روی کادرها ننویسد و اطلاعاتِ ماهِ قبل در ماهِ جدید دیده نشود
   const entries = DB.safeEntries || [];
   let mBardagi = { afn: 0, usd: 0 }, mMandagi = { afn: 0, usd: 0 };
-  entries.forEach(e => { if (safeMonthKey(e.date) === _safeActiveMonth) _safeAddAmt(e.type === 'bardagi' ? mBardagi : mMandagi, e); });
+  entries.forEach(e => { if (!_safeActiveMonth || safeMonthKey(e.date) === _safeActiveMonth) _safeAddAmt(e.type === 'bardagi' ? mBardagi : mMandagi, e); });
   const mNet = { afn: mBardagi.afn - mMandagi.afn, usd: mBardagi.usd - mMandagi.usd };
   const el = id => document.getElementById(id);
   if (el('safe-total-bardagi')) el('safe-total-bardagi').textContent = fmtSafeTotal(mBardagi);
@@ -33740,10 +33777,12 @@ function renderSarrafiMonthTabs() {
   const curMonth = sarrafiMonthKey(today.sh);
   if (!months.includes(curMonth)) months.push(curMonth);
   months.sort().reverse();
-  if (!_sarrafiActiveMonth || !months.includes(_sarrafiActiveMonth)) _sarrafiActiveMonth = curMonth;
+  /* null یعنی «هنوز انتخاب نشده» → ماهِ جاری. رشتهٔ خالی یعنی کاربر خودش
+     «همهٔ ماه‌ها» را انتخاب کرده و باید همان بماند. */
+  if (_sarrafiActiveMonth == null || (_sarrafiActiveMonth !== '' && !months.includes(_sarrafiActiveMonth))) _sarrafiActiveMonth = curMonth;
   wrap.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px';
   wrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">🗓️ سال و ماه:</label>
-    ${_ymSelectsHtml('sarrafi-month-select', months, _sarrafiActiveMonth, 'var(--accent)', 170)}`;
+    ${_ymSelectsHtml('sarrafi-month-select', months, _sarrafiActiveMonth, 'var(--accent)', 170, 'همهٔ ماه‌ها')}`;
   const sel = document.getElementById('sarrafi-month-select');
   if (sel) sel.onchange = () => { _sarrafiActiveMonth = sel.value; renderSarrafi(); };
 }
@@ -33765,7 +33804,7 @@ function renderSarrafi() {
   tbody.innerHTML = '';
   let sumBardagi = 0, sumBaqi = 0, sumUsd = 0, sumBardagiUsd = 0;
   rows.forEach((r, i) => {
-    if (sarrafiMonthKey(r.date) !== _sarrafiActiveMonth) return;
+    if (_sarrafiActiveMonth && sarrafiMonthKey(r.date) !== _sarrafiActiveMonth) return;   // خالی = همهٔ ماه‌ها
     const broken = sarrafiBroken(r);
     const baqi = sarrafiBaqi(r);
     sumBardagi += parseFloat(r.bardagi) || 0;
@@ -41263,7 +41302,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.287';
+const APP_VERSION = '2.9.288';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -43243,6 +43282,8 @@ function searchPerson(type, query) {
   const matches = list.filter(p => p.name.toLowerCase().includes(lower));
   const grid = document.getElementById(type + '-grid');
   grid.innerHTML = '';
+  // نتیجهٔ جست‌وجو کامل نشان داده می‌شود، پس نوارِ «بقیه با اسکرول می‌آید» برداشته شود
+  const _mb = document.getElementById(type + '-pager'); if (_mb) _mb.remove();
   matches.forEach(p => {
     const rows = p.rows || [];
     const t = _splitTotals(rows);
@@ -47060,6 +47101,10 @@ function invRevert(id) {
   if (!requireAdmin()) return;
   const v = _invList().find(x => x.id === id);
   if (!v) return;
+  /* این کار بی‌خطر نیست: رسیدِ تیل را هم از حسابِ قرض‌دار برمی‌دارد. پس مثل
+     «حذف»، اول پرسیده می‌شود (خواستهٔ صاحب ریپو). */
+  if (!confirm('فاکتور شماره ' + n2fa(v.invoice_number) + ' (' + (v.customer_name || '—') +
+               ') به صفِ تایید برگردد؟\nرسیدِ تیلِ این فاکتور از حسابِ قرض‌دار برداشته می‌شود.')) return;
   v.status = 'pending';            // مهر خودکار حذف می‌شود (رندر داینامیک از status)
   delete v.approved_at;
   delete v.rate_on_approve;        // 📉 تا تایید نشده، نرخِ تایید نباید ثبت/حدس زده شود
