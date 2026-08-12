@@ -97,8 +97,10 @@
   #pubPin{display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;
     padding:9px 12px;border-bottom:1px solid var(--line);background:var(--card)}
   #pubPin .pp-n{font-weight:800;font-size:14px}
-  #pubPin .pp-tel{margin-inline-start:auto;font-weight:800;font-size:13px;color:var(--green);
+  #pubPin .pp-tel{font-weight:800;font-size:13px;color:var(--green);
     text-decoration:none;border:1px solid var(--green);border-radius:999px;padding:4px 11px;direction:ltr}
+  #pubPin .pp-cnt{margin-inline-start:auto;font-size:12px;font-weight:800;white-space:nowrap;
+    background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:4px 10px}
   .composer{
     display:flex;gap:8px;padding:10px 12px;background:var(--card);
     border-top:1px solid var(--line);align-items:flex-end;
@@ -395,7 +397,24 @@ function paintGate() {
   if (gear) gear.style.display = (!on && !_canSeeSettings()) ? 'none' : '';
   return on;
 }
-/* نوارِ سنجاق‌شده — فقط برای نقشِ «گروهِ عمومی»: نامِ پمپ + شمارهٔ تماس */
+/* چند نفر همین حالا گروه را باز کرده‌اند و چند نفر عضوند — از خودِ سرورِ خانگی.
+   فقط وقتی صفحه دیده می‌شود پرسیده می‌شود تا بی‌خود ترافیک نرود. */
+var pubStats = null;
+function fetchPubStats() {
+  var base = httpBase();
+  if (!base || role !== 'omumi') return;
+  fetch(base + '/api/notify/omumi/stats' + keyQS('?'))
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (j) {
+      if (!j) return;
+      pubStats = { online: +j.online || 0, members: +j.members || 0 };
+      paintPubPin(!role);
+    })
+    .catch(function () {});
+}
+setInterval(function () { if (!document.hidden && role === 'omumi') fetchPubStats(); }, 15000);
+
+/* نوارِ سنجاق‌شده — فقط برای نقشِ «گروهِ عمومی»: نامِ پمپ + شمارهٔ تماس + شمارش */
 function paintPubPin(gateOn) {
   var el = document.getElementById('pubPin');
   if (!el) return;
@@ -404,7 +423,11 @@ function paintPubPin(gateOn) {
   el.style.display = '';
   el.innerHTML =
     '<span class="pp-n">📢 ' + esc(pubName || 'پمپ یعقوبی') + '</span>' +
-    (tel ? '<a class="pp-tel" href="tel:' + esc(tel.replace(/[^\d+]/g, '')) + '">📞 ' + esc(tel) + '</a>' : '');
+    (tel ? '<a class="pp-tel" href="tel:' + esc(tel.replace(/[^\d+]/g, '')) + '">📞 ' + esc(tel) + '</a>' : '') +
+    (pubStats
+      ? '<span class="pp-cnt"><b style="color:var(--green)">🟢 ' + pubStats.online + ' آنلاین</b>' +
+        '<span style="opacity:.5"> · </span><b>👥 ' + pubStats.members + ' عضو</b></span>'
+      : '');
 }
 /** فعال‌سازی با چسباندنِ لینک — همان کاری که اسکنِ کیو‌آر می‌کند */
 function activateFromLink() {
@@ -789,6 +812,7 @@ function boot() {
   connect();
   ensurePush();                       // اعلان اجباری است — خودش روشن می‌شود
   setTimeout(silentPush, 1200);
+  if (role === 'omumi') fetchPubStats();
 }
 boot();
 setInterval(function () { if (role) paintDot(); }, 3000);
