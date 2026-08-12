@@ -41350,7 +41350,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.289';
+const APP_VERSION = '2.9.290';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -49678,6 +49678,183 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
   #personModal .fs-rows{ flex:1 1 auto !important; min-width:0 !important; }
 }
 </style>
+
+<style id="table-scroll-fix">
+/* ══════════════════════════════════════════════════════════════════════════
+   جدول‌های بلند: اسکرولِ داخلیِ خودشان + سربرگِ چسبان
+   ──────────────────────────────────────────────────────────────────────────
+   گزارشِ صاحب ریپو: در بخش‌های جدولی (صرافی، مصارف، گاوصندوق، چکنه، رسید …)
+   وقتی ماهی ده‌ها یا صدها ردیف دارد، هیچ‌چیز «داخلِ» جدول اسکرول نمی‌شود —
+   کلِ صفحه راه می‌افتد، سربرگِ ستون‌ها («#»، «تاریخ»، «مبلغ» …) از بالا بیرون
+   می‌رود و ردیفِ جمع هم دیده نمی‌شود؛ یعنی وسطِ جدول معلوم نیست هر ستون چیست.
+
+   درمان (بدونِ هیچ دستکاری در منطق): کادرِ دورِ جدول وقتی محتوایش از یک قدِ
+   معقول بلندتر شد، خودش ظرفِ اسکرول می‌شود؛ آن‌وقت سربرگ بالا و ردیفِ جمع
+   پایین می‌چسبند و ردیف‌ها زیرشان می‌لغزند. هیچ ردیفی حذف/فیلتر/صفحه‌بندی
+   نمی‌شود — همهٔ ردیف‌های همان ماه سرِ جایشان‌اند، فقط داخلِ کادر دیده می‌شوند.
+
+   ⚠️ چرا کلاسِ tw-tall/tw-scroll و نه یک قاعدهٔ CSSِ سرراست روی هر جدول؟
+   پایین‌تر (بلاکِ «تکه‌های نقاشی‌نشدهٔ جدول‌ها روی اندروید») مستند شده که روی
+   لمسی، position:sticky روی سرستون‌ها کاشی‌های نیمه‌رسم‌شده می‌ساخت. ریشهٔ آن
+   باگ این بود که ظرفِ جدول هیچ‌وقت ارتفاعِ محدود نداشت، پس آن sticky کاملاً
+   بی‌اثر بود ولی مرورگر برایش لایهٔ چسبنده می‌ساخت. این‌جا sticky فقط روی
+   جدولی روشن می‌شود که واقعاً اسکرول می‌شود (اسکریپتِ زیر با اندازه‌گیری
+   تصمیم می‌گیرد) — یعنی همان گاردِ اندرویدی برای جدول‌های کوتاه دست‌نخورده
+   می‌ماند و هیچ لایهٔ چسبندهٔ بی‌اثری ساخته نمی‌شود.
+   ══════════════════════════════════════════════════════════════════════════ */
+:root{ --tbl-maxh: min(70vh, 720px); }
+
+/* ۱) کاندیدِ اسکرولِ داخلی: قدش محدود می‌شود. جدولِ کوتاه‌تر از این قد هیچ
+      تغییری نمی‌کند (max-height فقط وقتی معنی دارد که محتوا بلندتر باشد). */
+.section .tbl-wrap.tw-tall,
+.section .xls-wrap.tw-tall{
+  max-height: var(--tbl-maxh) !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ۲) و وقتی واقعاً اسکرول می‌شود: به انتهای جدول که رسیدیم صفحه پشتِ سرش
+      نلغزد (خواستهٔ صریح: «تمام صفحه میره اسکرول میشه»). فقط روی همین
+      جدول‌های واقعاً اسکرول‌شونده — پس زنجیرِ چرخِ ماوس روی جدول‌های کوتاه
+      مثل قبل به صفحه می‌رسد و باگِ قدیمیِ دسکتاپ برنمی‌گردد. */
+.section .tbl-wrap.tw-scroll,
+.section .xls-wrap.tw-scroll{
+  overscroll-behavior-y: contain;
+}
+
+/* ۳) سربرگِ ستون‌ها بالا بچسبد — با border-collapse:collapse مرزِ سلولِ چسبان
+      گاهی رسم نمی‌شود، پس خطِ زیرش را با inset box-shadow می‌کشیم. */
+.section .tbl-wrap.tw-scroll thead th,
+.section .xls-wrap.tw-scroll thead th,
+.section .tbl-wrap.tw-scroll .tbl th,
+.section .xls-wrap.tw-scroll .xls-tbl th{
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 6 !important;
+  box-shadow: inset 0 -2px 0 0 var(--lg-brd, var(--border)) !important;
+}
+
+/* ۴) ردیفِ جمع («تمام حساب» / «جمله») پایین بچسبد تا همیشه دیده شود */
+.section .tbl-wrap.tw-scroll tfoot td,
+.section .xls-wrap.tw-scroll tfoot td{
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 6 !important;
+  box-shadow: inset 0 2px 0 0 var(--lg-brd, var(--border)) !important;
+}
+
+/* ۵) چاپ/PDF هیچ‌وقت بریده نشود (نسخه‌های چاپی پنجرهٔ جدا دارند، ولی این
+      گارد جلوی هر مسیرِ چاپِ مستقیم را هم می‌گیرد) */
+@media print{
+  .tbl-wrap, .xls-wrap{ max-height:none !important; overflow:visible !important; }
+  .tbl-wrap thead th, .xls-wrap thead th,
+  .tbl-wrap tfoot td, .xls-wrap tfoot td{ position:static !important; box-shadow:none !important; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   سربرگِ «قرض‌داران» و «شرکت ها تیل» و «ورق» بالا بماند
+   ──────────────────────────────────────────────────────────────────────────
+   این سه بخش صدها کارتِ حساب دارند و سربرگشان (نامِ بخش + کادرِ جستجو +
+   «افزودن شخص/شرکت») با اولین اسکرول از صفحه بیرون می‌رفت؛ برای پیدا کردنِ
+   یک حساب باید تا بالا برمی‌گشتی. حالا همان سربرگ بالای صفحه می‌چسبد و
+   کارت‌ها زیرش می‌لغزند — نه کارتی کم می‌شود، نه چیدمانِ شبکه عوض می‌شود.
+   (نوارِ تب‌ها در همین سه بخش sticky نیست — showSection کلاسِ nav-sticky را
+   برمی‌دارد — پس این سربرگ با چیزی تصادف نمی‌کند.)
+   ══════════════════════════════════════════════════════════════════════════ */
+/* ⚠️ بدونِ این، sticky در همین سه بخش اصلاً کار نمی‌کند.
+   دلیلش دقیقاً همان چیزی است که کنارِ قاعدهٔ body.nav-sticky (بالاتر) نوشته
+   شده: overflow-x:hidden روی <body> آن را «ظرفِ اسکرول» می‌کند و هر sticky
+   داخلش به‌جای صفحه به همان ظرفِ بی‌اسکرول می‌چسبد — یعنی هیچ‌وقت نمی‌چسبد.
+   آن‌جا این مشکل با overflow-x:clip حل شده بود، ولی فقط برای body.nav-sticky؛
+   و nav-sticky دقیقاً در همین سه بخش (ورق، قرض‌داران، شرکت‌ها) برداشته
+   می‌شود. پس همان درمان را این‌جا برای حالتِ بدونِ nav-sticky هم می‌گذاریم.
+   clip همان بریدنِ افقی را می‌دهد، بدونِ ساختنِ ظرفِ اسکرول — و چون نوارِ
+   تب‌ها را sticky نمی‌کند، رفتارِ عمدیِ «نوار در این بخش‌ها نچسبد» دست‌نخورده
+   می‌ماند. */
+body:not(.nav-sticky){ overflow-x:clip !important; overflow-y:visible !important; }
+
+#sec-debt.visible > .list-header,
+#sec-noinv.visible > .list-header,
+#sec-waraq.visible > .list-header{
+  position: sticky !important;
+  top: 0;
+  z-index: 120;
+  background: var(--panel);
+  padding: 8px 10px;
+  margin: 0 -10px 12px;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 10px 20px -14px rgba(0,0,0,.7);
+}
+/* روی گوشی این سربرگ سه سطر می‌شود (نام بخش / جستجو / دکمه‌ها)؛ کمی جمع‌ترش
+   می‌کنیم تا جای کارت‌ها را کم نگیرد. هیچ دکمه‌ای حذف یا جابه‌جا نمی‌شود. */
+@media (max-width:600px){
+  #sec-debt.visible > .list-header,
+  #sec-noinv.visible > .list-header,
+  #sec-waraq.visible > .list-header{ padding:6px 10px; gap:6px !important; }
+}
+</style>
+
+<script id="table-scroll-fix-js">
+/* نگهبانِ کلاسِ اسکرولِ جدول‌ها — توضیحِ کامل در استایلِ table-scroll-fix، درست
+   بالای همین اسکریپت. کارش فقط گذاشتن/برداشتنِ دو کلاس است: هیچ ردیف، عدد،
+   شناسه یا داده‌ای را لمس نمی‌کند. */
+(function () {
+  'use strict';
+  /* زیرِ این تعداد ردیف اصلاً کاندید نمی‌شود — تا برای جدول‌های کوتاه حتی یک
+     اندازه‌گیریِ اضافه هم انجام نشود. */
+  var MIN_ROWS = 8;
+  /* آستانهٔ سرریز: نوارِ اسکرولِ افقی روی دسکتاپ چند پیکسل از clientHeight کم
+     می‌کند؛ با این حاشیه، جدولِ کوتاه به اشتباه «اسکرول‌شونده» شمرده نمی‌شود. */
+  var OVERFLOW_SLACK = 24;
+  var pending = 0;
+
+  function sync() {
+    pending = 0;
+    var sec = document.querySelector('.section.visible');
+    if (!sec) return;
+    var wraps = sec.querySelectorAll('.tbl-wrap, .xls-wrap');
+    if (!wraps.length) return;
+    var i, w;
+    // مرحلهٔ ۱ — فقط نوشتن (بدونِ خواندنِ چیدمان)
+    for (i = 0; i < wraps.length; i++) {
+      w = wraps[i];
+      if (w.querySelectorAll('tbody tr').length >= MIN_ROWS) {
+        w.classList.add('tw-tall');
+      } else {
+        w.classList.remove('tw-tall');
+        w.classList.remove('tw-scroll');
+      }
+    }
+    // مرحلهٔ ۲ — فقط خواندن، بعد از همهٔ نوشتن‌ها (یک چیدمانِ اجباری، نه چندتا)
+    for (i = 0; i < wraps.length; i++) {
+      w = wraps[i];
+      if (!w.classList.contains('tw-tall')) continue;
+      w.classList.toggle('tw-scroll', w.scrollHeight > w.clientHeight + OVERFLOW_SLACK);
+    }
+  }
+
+  function schedule() {
+    if (pending) return;
+    pending = requestAnimationFrame(sync);
+  }
+  window._tblScrollSync = schedule;
+
+  function boot() {
+    schedule();
+    /* هر رندرِ جدول در این برنامه یعنی عوض شدنِ فرزندانِ .main. تغییرِ کلاس
+       (که خودِ همین تابع انجام می‌دهد) childList نیست، پس حلقه نمی‌سازد. */
+    try {
+      var root = document.querySelector('.main') || document.body;
+      new MutationObserver(schedule).observe(root, { childList: true, subtree: true });
+    } catch (e) {}
+    window.addEventListener('resize', schedule);
+    window.addEventListener('orientationchange', schedule);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
 
 </body>
 </html>
