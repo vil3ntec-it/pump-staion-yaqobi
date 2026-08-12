@@ -97,11 +97,8 @@
   #pubPin{display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;
     padding:9px 12px;border-bottom:1px solid var(--line);background:var(--card)}
   #pubPin .pp-n{font-weight:800;font-size:14px}
-  #pubPin .pp-tel{font-weight:800;font-size:13px;color:var(--green);text-decoration:none;
-    border:1px solid var(--green);border-radius:999px;padding:4px 11px;direction:ltr}
-  #pubPin .pp-dm{margin-inline-start:auto;background:transparent;border:1px solid var(--line);
-    color:var(--soft);border-radius:9px;padding:5px 11px;font-family:inherit;font-weight:800;
-    font-size:12.5px;cursor:pointer}
+  #pubPin .pp-tel{margin-inline-start:auto;font-weight:800;font-size:13px;color:var(--green);
+    text-decoration:none;border:1px solid var(--green);border-radius:999px;padding:4px 11px;direction:ltr}
   .composer{
     display:flex;gap:8px;padding:10px 12px;background:var(--card);
     border-top:1px solid var(--line);align-items:flex-end;
@@ -289,13 +286,13 @@ var myName = LS.get('payamName', '') || '';
      p      → فقط موضوعِ شخصیِ همان مشتری
    بعد از فعال شدن، فهرستِ موضوع‌ها قفل است و فقط میرزا می‌تواند موضوع اضافه کند. */
 /* omumi → گروهِ عمومیِ مشتری‌های عادی: فقط اعلان‌های پمپ را می‌بیند، خودش در
-   گروه پیام نمی‌دهد، شمارهٔ تماس بالای صفحه سنجاق است، و اگر خواست می‌تواند
-   «پیامِ شخصی» بفرستد (که به صندوقِ خودِ میرزا می‌رود، نه به گروه). */
+   گروه پیام نمی‌دهد. شمارهٔ تماس بالای صفحه سنجاق است — خواستهٔ صاحب ریپو:
+   راهِ تماسِ مشتری با میرزا همان شماره باشد، نه پیامِ داخلِ برنامه؛ پس دکمهٔ
+   «پیامِ شخصی» که قبلاً این‌جا بود برداشته شد. */
 var role = LS.get('payamRole', '');            // '' | 'mirza' | 'staff' | 'p' | 'omumi'
 var personId = LS.get('payamPerson', '');
 var pubTel = LS.get('payamTel', '');            // شمارهٔ تماسِ سنجاق‌شدهٔ گروهِ عمومی
 var pubName = LS.get('payamPumpName', '');      // نامِ پمپ روی همان نوار
-var pubDm = false;                              // «پیامِ شخصی» باز است؟
 var readKey = LS.get('payamKey', '');
 var extra = [];                                 // موضوع‌های دستیِ میرزا
 try { extra = JSON.parse(LS.get('payamExtra', '')) || []; } catch (e) { extra = []; }
@@ -328,8 +325,8 @@ function topicsOfRole() {
   if (role === 'omumi') return ['omumi'];
   return [];
 }
-/** این نقش اجازهٔ نوشتن در گروه را دارد؟ (عمومی: نه) */
-function canPost() { return role !== 'omumi' || pubDm; }
+/** این نقش اجازهٔ نوشتن در گروه را دارد؟ (عمومی: نه — تماس فقط با شمارهٔ سنجاق‌شده) */
+function canPost() { return role !== 'omumi'; }
 function applyRole() {
   topics = topicsOfRole();
   var saved = LS.get('payamActive', '');
@@ -385,14 +382,14 @@ function paintGate() {
   document.getElementById('tabs').style.display = on ? 'none' : '';
   document.getElementById('list').style.display = on ? 'none' : '';
   /* مشتری و کارمند هم می‌توانند پیام بفرستند. «گروهِ عمومی» فقط می‌بیند —
-     مگر وقتی خودش دکمهٔ «پیامِ شخصی» را زده باشد. */
+     تماسِ مستقیم با میرزا از راهِ همان شمارهٔ سنجاق‌شده است، نه نوشتن این‌جا. */
   document.getElementById('composer').style.display = (on || !canPost()) ? 'none' : '';
   paintPubPin(on);
   var h = document.querySelector('header h1');
   h.textContent = on ? '📨 پیام‌رسان یعقوبی' : ('📨 ' + roleName());
   return on;
 }
-/* نوارِ سنجاق‌شده — فقط برای نقشِ «گروهِ عمومی» */
+/* نوارِ سنجاق‌شده — فقط برای نقشِ «گروهِ عمومی»: نامِ پمپ + شمارهٔ تماس */
 function paintPubPin(gateOn) {
   var el = document.getElementById('pubPin');
   if (!el) return;
@@ -401,21 +398,7 @@ function paintPubPin(gateOn) {
   el.style.display = '';
   el.innerHTML =
     '<span class="pp-n">📢 ' + esc(pubName || 'پمپ یعقوبی') + '</span>' +
-    (tel ? '<a class="pp-tel" href="tel:' + esc(tel.replace(/[^\d+]/g, '')) + '">📞 ' + esc(tel) + '</a>' : '') +
-    '<button type="button" class="pp-dm" onclick="pubToggleDm()">' +
-      (pubDm ? '✕ بستنِ پیامِ شخصی' : '✉️ پیامِ شخصی') + '</button>';
-}
-/* «پیامِ شخصی»: کادرِ نوشتن باز می‌شود و هر چه بنویسد به صندوقِ خودِ میرزا
-   می‌رود، نه به گروه — پس گروه فقط اعلانِ پمپ می‌ماند. */
-function pubToggleDm() {
-  pubDm = !pubDm;
-  paintGate();
-  var b = document.getElementById('box');
-  if (b) {
-    b.placeholder = pubDm ? 'پیامِ شخصی به میرزا…' : 'پیام بنویسید…';
-    if (pubDm) { try { b.focus(); } catch (e) {} }
-  }
-  note(pubDm ? 'هر چه بنویسید فقط به خودِ میرزا می‌رسد — در گروه دیده نمی‌شود.' : '', false);
+    (tel ? '<a class="pp-tel" href="tel:' + esc(tel.replace(/[^\d+]/g, '')) + '">📞 ' + esc(tel) + '</a>' : '');
 }
 /** فعال‌سازی با چسباندنِ لینک — همان کاری که اسکنِ کیو‌آر می‌کند */
 function activateFromLink() {
@@ -566,10 +549,7 @@ function sendMsg() {
   if (!txt) return;
   var btn = document.getElementById('sendBtn');
   btn.disabled = true;
-  /* در گروهِ عمومی، نوشتن فقط در حالتِ «پیامِ شخصی» ممکن است و مقصدش صندوقِ
-     خودِ میرزاست — نه موضوعِ گروه. */
-  var dest = (role === 'omumi') ? 'mirza' : active;
-  post(dest, myName, txt, {}).then(function (ok) {
+  post(active, myName, txt, {}).then(function (ok) {
     btn.disabled = false;
     if (ok) { b.value = ''; growBox(); }
     else note('پیام فرستاده نشد — سرورِ خانگی در دسترس نیست.', true);
