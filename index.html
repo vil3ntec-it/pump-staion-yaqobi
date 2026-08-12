@@ -40607,7 +40607,7 @@ function pubShowQR() {
   const tel = _pubPhone(); if (tel) q.push('tel=' + encodeURIComponent(tel));
   const nm = (DB.stationName || '').trim(); if (nm) q.push('nm=' + encodeURIComponent(nm));
   _qrShowLink(_siteRoot() + 'payam/?' + q.join('&'), '📢 گروهِ اعلانِ عمومی',
-    'هر کسی این کد را بزند، اعلان‌های شما را می‌گیرد — حتی وقتی برنامه بسته است. فقط می‌بیند و نمی‌تواند در گروه پیام بدهد؛ اگر بخواهد، از همان‌جا می‌تواند پیامِ شخصی بفرستد.');
+    'هر کسی این کد را بزند، اعلان‌های شما را می‌گیرد — حتی وقتی برنامه بسته است. فقط می‌بیند و نمی‌تواند در گروه پیام بدهد؛ اگر خواست تماس بگیرد، همان شمارهٔ تماسِ سنجاق‌شدهٔ بالای گروه را می‌بیند.');
 }
 function msgrClose() { const p = document.getElementById('robotPanel'); if (p) p.classList.remove('open'); }
 function msgrBack() { _msgrCur = null; _msgrPaintThreads(); _msgrPaintChat(); }
@@ -41097,7 +41097,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.284';
+const APP_VERSION = '2.9.285';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
