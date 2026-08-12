@@ -545,6 +545,17 @@ body.staff-view .qr-overlay{z-index:10020}
 .msumbox{background:var(--dark);border-radius:9px;padding:6px 10px;text-align:center;min-height:66px;display:flex;flex-direction:column;justify-content:center;box-sizing:border-box}
 .msumbox .ml{font-size:0.86rem;font-weight:700;color:var(--muted);margin-bottom:2px}
 .msumbox .mv{font-size:1rem;font-weight:800}
+/* روی کامپیوتر این کادرها جای زیادی دارند و نوشته‌شان گم می‌شد (خواستهٔ صاحب
+   ریپو). درشت‌تر می‌شوند و همچنان با A+/A− سربرگِ همین پنجره کوچک و بزرگ
+   می‌شوند، پس اندازهٔ دقیق دستِ خودتان است. */
+@media (min-width:1024px){
+  .msumbox{min-height:74px}
+  .msumbox .ml{font-size:1rem}
+  .msumbox .mv{font-size:1.35rem}
+}
+/* کشویی‌ها: نوشته وسط، نه چسبیده به راست (خواستهٔ صاحب ریپو) */
+select.mid-select{ text-align:center; text-align-last:center; }
+select.mid-select option{ text-align:center; }
 .mv.acc{color:var(--accent)}.mv.grn{color:var(--green)}.mv.red{color:var(--red)}.mv.blue{color:var(--blue)}
 .modal-body{flex:1;overflow-y:auto;padding:14px 18px}
 
@@ -1149,6 +1160,18 @@ body.viewer-mode .att-admin{display:none !important}
 .cm-hist-sum .cmhs-box i{font-style:normal;font-size:0.66rem;color:var(--muted);font-weight:700;line-height:1.25;text-align:center}
 .cm-hist-sum .cmhs-box b{font-size:0.85rem;font-weight:900;line-height:1.3;word-break:break-word;text-align:center}
 .cm-hist-sum .cmhs-box small{font-size:0.68rem;font-weight:700;color:var(--muted)}
+/* جدول‌های آرشیو هم مثل جدولِ زنده: روی کامپیوتر کادرهای خلاصه درشت‌تر
+   (خواستهٔ صاحب ریپو: «برای جدول‌های آرشیو هم همین‌ها را اعمال کن») */
+@media (min-width:1024px){
+  .cm-hist-sum .cmhs-box i{font-size:0.82rem}
+  .cm-hist-sum .cmhs-box b{font-size:1.08rem}
+  .cm-hist-sum .cmhs-box small{font-size:0.8rem}
+}
+/* کادرِ «توضیحات این جدول» در آرشیوها بزرگ‌تر از خودِ کارش بود و نصفِ پایینِ
+   هر جدولِ آرشیو را می‌گرفت — یک‌خطی و جمع‌وجور شد (خواستهٔ صاحب ریپو).
+   با نوشتنِ متنِ بلندتر خودش قابلِ اسکرول است و چیزی گم نمی‌شود. */
+.cm-hist-note{ min-height:0 !important; }
+textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
 
 .pm-filter-btn{padding:8px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--card);color:var(--muted);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;transition:all .2s}
 .pm-filter-btn:hover{border-color:var(--accent);color:var(--accent)}
@@ -17693,13 +17716,13 @@ body.boot-viewer #bootViewerSplash{
       <!-- فقط روی کامپیوتر (جای خالی زیاد است): همین دو کادرِ قرض‌های کهنه، بغلِ «مدت عضویت همه» -->
       <button type="button" class="tool-link-card debt-oldloan-desktop" style="border-color:var(--red);color:var(--red)" onclick="showSection('oldloans')"><span title="⏰ قرض‌های کهنهٔ تیل — بی‌حرکت‌ها اول (واحد تیل)">⏰ قرض‌های کهنه — تیل</span><span class="tlc-go"><i>‹</i></span></button>
       <button type="button" class="tool-link-card debt-oldloan-desktop" style="border-color:var(--green);color:var(--green)" onclick="showSection('oldloansmoney')"><span title="💵 قرض‌های کهنهٔ پول — بی‌حرکت‌ها اول (واحد پول)">💵 قرض‌های کهنه — پول</span><span class="tlc-go"><i>‹</i></span></button>
-      <button type="button" class="tool-link-card debt-oldloan-desktop" style="border-color:var(--purple);color:var(--purple)" onclick="showSection('priceloss')"><span title="📉 زیان ناشی از افزایش قیمت — تیلی که قرضی رفته، امروز چقدر گران‌تر شده">📉 زیان افزایش قیمت</span><span class="tlc-go"><i>‹</i></span></button>
+      <button type="button" hidden class="tool-link-card debt-oldloan-desktop" style="display:none;border-color:var(--purple);color:var(--purple)" onclick="showSection('priceloss')"><span title="📉 زیان ناشی از افزایش قیمت — تیلی که قرضی رفته، امروز چقدر گران‌تر شده">📉 زیان افزایش قیمت</span><span class="tlc-go"><i>‹</i></span></button>
     </div>
   </div>
   <!-- موبایل/تبلت: همین دو کادر مثل قبل، زیرِ سربرگ (خواستهٔ کاربر: این‌جا دست‌نخورده بماند) -->
   <button type="button" class="tool-link-card debt-oldloan-mobile" style="border-color:var(--red);color:var(--red)" onclick="showSection('oldloans')"><span title="⏰ قرض‌های کهنهٔ تیل — بی‌حرکت‌ها اول (واحد تیل)">⏰ قرض‌های کهنه — تیل</span><span class="tlc-go"><i>‹</i></span></button>
   <button type="button" class="tool-link-card debt-oldloan-mobile" style="border-color:var(--green);color:var(--green)" onclick="showSection('oldloansmoney')"><span title="💵 قرض‌های کهنهٔ پول — بی‌حرکت‌ها اول (واحد پول)">💵 قرض‌های کهنه — پول</span><span class="tlc-go"><i>‹</i></span></button>
-  <button type="button" class="tool-link-card debt-oldloan-mobile" style="border-color:var(--purple);color:var(--purple)" onclick="showSection('priceloss')"><span title="📉 زیان ناشی از افزایش قیمت — تیلی که قرضی رفته، امروز چقدر گران‌تر شده">📉 زیان افزایش قیمت</span><span class="tlc-go"><i>‹</i></span></button>
+  <button type="button" hidden class="tool-link-card debt-oldloan-mobile" style="display:none;border-color:var(--purple);color:var(--purple)" onclick="showSection('priceloss')"><span title="📉 زیان ناشی از افزایش قیمت — تیلی که قرضی رفته، امروز چقدر گران‌تر شده">📉 زیان افزایش قیمت</span><span class="tlc-go"><i>‹</i></span></button>
   <div class="persons-grid" id="debt-grid"></div>
 </div>
 
@@ -20035,6 +20058,9 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <button class="add-row-btn" style="margin:0;border-color:var(--accent);color:var(--accent);padding:5px 10px;font-size:0.78rem" onclick="renameCurrentCompany()">✏️ تغییر نام</button>
         <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green);padding:5px 10px;font-size:0.78rem" onclick="pdfCompany()">📄 PDF</button>
         <button class="add-row-btn" title="گرفتن کپیِ همین شرکت برای بردن به برنامهٔ دیگر" style="margin:0;border-color:var(--purple);color:var(--purple);padding:5px 10px;font-size:0.78rem" onclick="openAcctCardFromCompany()">📇 کپیِ حساب</button>
+        <!-- ✕ از دکمهٔ «کپیِ حساب» جدا می‌ایستد: چسبیده بودند و دستِ اشتباهی
+             به‌جای بستن، کپی می‌گرفت (گزارشِ صاحب ریپو). -->
+        <span style="width:1px;height:22px;background:var(--border);margin:0 12px;flex-shrink:0"></span>
         <button class="modal-close" onclick="closeCompanyModal()">✕</button>
       </div>
     </div>
@@ -20052,14 +20078,15 @@ body.viewer-mode .inv-admin-only{display:none!important}
            همهٔ کارها این‌جا جمع شده‌اند؛ «حذف این جدول» عمداً این‌جا نیست و پایینِ
            صفحه، دور از بقیه، نشسته تا دست اشتباهی نخورد. -->
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
-        <select id="cm-actions" onchange="cmDoAction(this.value); this.selectedIndex=0"
+        <select id="cm-actions" class="mid-select" onchange="cmDoAction(this.value); this.selectedIndex=0"
           style="flex:1 1 240px;min-width:200px;background:var(--card);border:1.5px solid var(--accent);border-radius:9px;padding:9px 12px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.88rem;font-weight:800;cursor:pointer">
+          <!-- «پی‌دی‌اف» و «حساب و جدول دیزل» از این کشویی برداشته شدند (خواستهٔ
+               صاحب ریپو): هر دو همین بالا در سربرگِ همین پنجره دکمهٔ خودشان را
+               دارند («📄 PDF» و «🟤 دیزل») و دوباره‌نویسی‌شان فقط گیج‌کننده بود. -->
           <option value="">☰ کارها — انتخاب کنید…</option>
           <option value="new">📋 جدول جدید</option>
-          <option value="switch" id="cm-act-switch">🟤 حساب و جدول دیزل</option>
           <option value="buy-petrol">⛽ خریدهای پطرول</option>
           <option value="buy-diesel">🟤 خریدهای دیزل</option>
-          <option value="pdf">📄 پی‌دی‌اف این حساب</option>
         </select>
         <!-- جستجوی خرید — با تن و/یا تاریخ، همان‌جا و فوری -->
         <button type="button" onclick="openCmpSearch()" style="display:inline-flex;align-items:center;gap:7px;background:var(--dark);border:1.5px solid var(--blue);border-radius:999px;padding:9px 16px;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer">🔍 جستجوی خرید</button>
@@ -20077,7 +20104,9 @@ body.viewer-mode .inv-admin-only{display:none!important}
             <th style="width:58px">نرخ</th>
             <th style="width:95px">کل (افغانی)</th>
             <th style="width:112px">رسید</th>
-            <th style="width:60px;font-size:0.75rem">نرخ پول</th>
+            <!-- ستونِ «نرخ پول» برداشته شد (خواستهٔ صاحب ریپو). همان نرخِ خودِ
+                 ردیف برای هر دو سمتِ حساب به کار می‌رود، پس الباقیِ دالری و
+                 افغانی دیگر با هم می‌خوانند. -->
             <th style="width:95px">الباقی</th>
             <th style="width:46px">حذف</th>
           </tr></thead>
@@ -20090,7 +20119,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
             <td></td>
             <td class="xls-calc" id="cm-ft-afn">0</td>
             <td class="xls-calc" id="cm-ft-poul">0</td>
-            <td></td>
             <td class="xls-calc" id="cm-ft-albaqi">0</td>
             <td></td>
           </tr></tfoot>
@@ -22304,7 +22332,14 @@ function backFromSection(btn) {
   const from = _SEC_ORIGIN[id];
   showSection((from && document.getElementById('sec-' + from)) ? from : fb);
 }
+/* کلیدِ «زیان ناشی از افزایش قیمت» — خواستهٔ صاحب ریپو: فعلاً از مدار خارج
+   باشد و بعداً تکمیل شود. با true شدنِ همین یک خط، همه‌چیزش برمی‌گردد.
+   این‌جا (پیش از showSection) تعریف شده تا در هیچ مسیری زودتر از تعریفش
+   خوانده نشود. */
+const PRICE_LOSS_ON = false;
 function showSection(id, btn) {
+  // «زیان افزایش قیمت» از مدار خارج است — هر جا صدا زده شود، همان قرض‌داران باز می‌شود
+  if (id === 'priceloss' && !PRICE_LOSS_ON) id = 'debt';
   if ((id === 'settings' || id === 'appearance' || id === 'passwords' || id === 'serverservices' || id === 'notifications' || id === 'alerts' || id === 'datamgmt') && currentRole === 'viewer') { showToast('🔒 بخش تنظیمات فقط برای مدیر است', '#e53e3e'); return; }
   // از کدام بخش به این بخش آمدیم — تا دکمهٔ «برگشت» دقیقاً به همان‌جا برگردد
   // (خواستهٔ صاحب ریپو: «از هر بخشی رفتم تو، به همان بخش پس بیایم»)
@@ -22347,7 +22382,7 @@ function showSection(id, btn) {
   if (id === 'extraincome') { renderExtraIncomes(); calcExtraIncome(); }
   if (id === 'tanker') { try { _renderTankerPanel(); } catch(e) {} }
   if (id === 'tankdip') { try { _renderDipPanel(); _dipRenderTankInfo(); dipLiveCalc(); } catch(e) {} }
-  if (id === 'priceloss') { try { renderPriceLossPage(); } catch(e) {} }
+  if (id === 'priceloss') { try { renderPriceLossPage(); } catch(e) {} }   // فقط وقتی PRICE_LOSS_ON روشن باشد به این‌جا می‌رسد
   if (id === 'plsource') { try { renderPLBreakdown(); } catch(e) {} }
   if (id === 'oldloans') { try { _renderAgingPanel('fuel', 'aging-list'); } catch(e) {} }
   if (id === 'oldloansmoney') { try { _renderAgingPanel('money', 'aging-list-money'); } catch(e) {} }
@@ -23481,7 +23516,13 @@ function _pdfDoc(html) {
    ========================================================================== */
 function _pumpIsMobileShell() {
   try {
-    if (window.pumpDesktop) return false;                       // ویندوز: پنجرهٔ جدا خوب کار می‌کند
+    /* ⚠️ ویندوز (اپِ دسکتاپ) هم مثل گوشی، سند را داخلِ خودِ برنامه باز می‌کند.
+       پیش از این پنجرهٔ جدا باز می‌شد و همان لحظه پنجرهٔ چاپِ ویندوز می‌پرید
+       بالا: نه پیش‌نمایشی داشت، نه انتخابِ ورق، و اگر Cancel می‌زدید پنجرهٔ
+       سند هم هیچ دکمهٔ چاپی نداشت که دوباره بزنید — گزارشِ صاحب ریپو:
+       «مجبورم هر دو را ببندم و دوباره پرینت بزنم». حالا سند با دکمهٔ «🖨️ چاپ»
+       و «✕ بستن» داخلِ برنامه می‌آید و چاپ هر وقت خودتان خواستید. */
+    if (window.pumpDesktop) return true;
     if (window.PumpAndroid || location.protocol === 'file:') return true;
     if (window.navigator.standalone === true) return true;
     if (window.matchMedia && (matchMedia('(display-mode: standalone)').matches
@@ -23626,16 +23667,23 @@ function _pumpDocAsk(doc, title) {
   _pumpPushEsc(ov.__esc);
   try { document.body.style.overflow = 'hidden'; } catch (e) {}
 }
-/* تنها راهِ باز کردنِ سندهای چاپ/PDF در کلِ برنامه */
+/* تنها راهِ باز کردنِ سندهای چاپ/PDF در کلِ برنامه
+   ⚠️ دو راهیِ «چاپ یا دانلود» برداشته شد — خواستهٔ صریحِ صاحب ریپو: «آن سؤال
+   را نخواهد، مستقیم برود توی پرینت». دلیلِ فنی‌اش هم درست است: فایلی که آن
+   دکمه ذخیره می‌کرد یک صفحهٔ HTML بود، نه پی‌دی‌افِ واقعی. حالا یک‌راست پنجرهٔ
+   چاپ باز می‌شود و از همان‌جا با «Save as PDF» یک پی‌دی‌افِ واقعی درمی‌آید که
+   بدونِ اینترنت هم همه‌جا باز می‌شود.
+   خودِ _pumpDocAsk و pumpDocChoose دست‌نخورده مانده‌اند (اگر روزی خواستید
+   برگردد)، فقط دیگر کسی صدایشان نمی‌زند. */
 function pumpOpenDoc(html, title) {
-  /* بیشترِ صداکننده‌ها عنوان نمی‌دهند؛ خودِ سند همیشه <title> دارد، پس هم نوشتهٔ
-     دو راهی و هم نامِ فایلِ دانلود از همان‌جا می‌آید و برای هر بخش درست است. */
+  /* بیشترِ صداکننده‌ها عنوان نمی‌دهند؛ خودِ سند همیشه <title> دارد، پس نوشتهٔ
+     سربرگِ پیش‌نمایش از همان‌جا می‌آید و برای هر بخش درست است. */
   let t = title;
   if (!t) {
     const m = /<title[^>]*>([^<]*)<\/title>/i.exec(String(html || ''));
     t = m ? m[1].replace(/\s+/g, ' ').trim() : '';
   }
-  _pumpDocAsk(_pdfDoc(html), t || 'سند');
+  _pumpDocPrint(_pdfDoc(html), t || 'سند');
   return true;
 }
 
@@ -24997,7 +25045,13 @@ let lastDebtAlertShown = 0;
 // (DB.debtAlertState) ذخیره و بین دستگاه‌ها همگام می‌شود:
 //   کم ماند → یک پیام «کم مانده»؛ تمام شد → یک پیام «تمام شده»؛ همین و بس.
 //   دوباره که پر شد، وضعیت پاک می‌شود تا دفعهٔ بعدِ کم‌شدن دوباره (یک بار) خبر بدهد.
+/* ⚠️ خبرِ خودکارِ «بررسی حساب قرض‌داران» خاموش است — خواستهٔ صریحِ صاحب ریپو:
+   «آن پیام نیاید». این تابع فقط خبر می‌داد؛ رنگِ کارتِ قرض‌داران (زرد/سرخ) کارِ
+   debtFuelStatus است و دست‌نخورده سرِ جایش می‌ماند، پس هیچ چیزی از دست نمی‌رود.
+   با true کردنِ همین یک خط برمی‌گردد. */
+const DEBT_REVIEW_ALERT_ON = false;
 function checkDebtReview() {
+  if (!DEBT_REVIEW_ALERT_ON) return false;
   if (!DB.debtAlertState || typeof DB.debtAlertState !== 'object') DB.debtAlertState = {};
   const st8 = DB.debtAlertState;
   const low = [], out = [];
@@ -27677,7 +27731,16 @@ function _lossStampReceipts(person) {
 }
 // همان مهر، ولی خودش ذخیره هم می‌کند — این را مسیرهای ثبتِ رسید صدا می‌زنند.
 // داخلِ try است تا اگر روزی خطایی بدهد، ثبتِ رسید هیچ آسیبی نبیند.
+/* ⚠️ «زیان ناشی از افزایش قیمت» از مدار خارج است (خواستهٔ صاحب ریپو: «الان در
+   دسترس نباشد و به هیچ منطقی وصل نباشد؛ بعداً باز تکمیل می‌کنیم»).
+   کدش دست‌نخورده مانده تا هر وقت خواستید با یک true برگردد؛ ولی تا آن روز:
+     • دو کادرِ ورودی‌اش در بخش قرض‌داران دیده نمی‌شوند،
+     • صفحه‌اش باز نمی‌شود (showSection به قرض‌داران برمی‌گردد)،
+     • و هیچ رسیدی مهرِ زیان نمی‌زند — یعنی به هیچ محاسبه‌ای وصل نیست.
+   این عدد از اول هم در بدهی/الباقی/مفاد نمی‌نشست، پس خاموش کردنش هیچ عددی
+   را در برنامه عوض نمی‌کند. */
 function _lossOnReceipt(person) {
+  if (!PRICE_LOSS_ON) return;
   try { if (_lossStampReceipts(person)) save(); } catch (e) {}
 }
 /* ── مهاجرتِ یک‌بارهٔ قرض‌های قدیمی ──────────────────────────────────────────
@@ -30152,11 +30215,16 @@ function cmpPoulUsd(r, fallbackRate){
   return rate ? poul / rate : 0;
 }
 function cmpAlbaqi(r, fallbackRate){ return cmpAfnTotal(r) - cmpPoulAfn(r, fallbackRate); }
-// معادل دالریِ رسید: رسید دالری همان مقدار؛ رسید افغانی ÷ «نرخ پول» (payRate) و اگر نبود ÷ نرخ ردیف و در نهایت ÷ نرخ تبدیل شرکت
+/* معادل دالریِ رسید.
+   ⚠️ پیش از این «نرخ پول» (payRate) اولویت داشت و نرخِ خودِ ردیف دوم بود؛ یعنی
+   الباقیِ دالری با یک نرخ حساب می‌شد و الباقیِ افغانی با نرخِ دیگری، و آن دو
+   عدد با هم نمی‌خواندند (گزارشِ صاحب ریپو: «در الباقی چرا دالر با افغانی برابر
+   نیست»). حالا هر دو سمت با یک نرخ حساب می‌شوند، پس همیشه
+   «الباقیِ دالری × نرخ = الباقیِ افغانی» است. ستونِ «نرخ پول» هم برداشته شد. */
 function cmpPoulUsdPay(r, fallbackRate){
   const poul = parseFloat(r.poul) || 0;
   if (r.poulCurrency === 'usd') return poul;
-  const rate = (parseFloat(r.payRate) || 0) || (parseFloat(r.rate) || 0) || (parseFloat(fallbackRate) || 0);
+  const rate = (parseFloat(r.rate) || 0) || (parseFloat(fallbackRate) || 0);
   return rate ? poul / rate : 0;
 }
 // الباقی دالری = کل دالر خرید − معادل دالریِ رسید
@@ -30554,7 +30622,7 @@ function renderCompanyRows(company) {
           </select>
         </div>
       </td>
-      <td><input class="xls-in xs" type="number" value="${r.payRate||''}" placeholder="0" style="width:50px" oninput="calcCompanyRow('${company.id}',${i},'payRate',this.value)" title="نرخ تبدیل رسید افغانی — فقط برای رسید افغانی"></td>
+
       <td id="cm-albaqi-${i}" style="font-weight:700;color:${albaqi>0?'var(--red)':'var(--green)'};min-width:95px;font-size:0.92rem">${n2fa(Math.round(albaqi))}${albaqiExtra}</td>
       <td><button class="del-btn" onclick="deleteCompanyRow('${company.id}',${i})" title="${linked ? 'فقط همین ردیفِ حساب پاک می‌شود — خریدِ مخزن سرِ جایش می‌ماند' : 'حذف این ردیف'}">🗑️</button></td>
     `;
@@ -31224,7 +31292,6 @@ function _renderCompanyHistoryPanel(company){
               </select>
             </div>
           </td>
-          <td><input class="xls-in xs" type="number" value="${parseFloat(r.payRate)||''}" placeholder="0" style="width:50px" onchange="${U}'payRate',this.value)" title="نرخ تبدیل رسید افغانی — فقط برای رسید افغانی"></td>
           <td style="color:${ab>0?'var(--red)':'var(--green)'};font-weight:700">${n2fa(Math.round(ab))}</td>
           <td><button class="del-btn" onclick="deleteCompanyHistoryRow('${company.id}','${h.id}',${i})">🗑️</button></td>
         </tr>`;
@@ -31282,16 +31349,16 @@ function _renderCompanyHistoryPanel(company){
           <span class="cmhs-box"><i>جمله الباقی</i><b style="color:${tAlb>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(tAlb))}<small style="color:${tAlbUsd>=0?'var(--green)':'var(--red)'}"> · ${n2fa(tAlbUsd.toFixed(1))} $</small></b></span>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 12px;background:${ac}0d;border-bottom:1px solid ${ac}33">${purchBadge}</div>
-        <div class="xls-wrap"><table class="xls-tbl" id="chist-tbl-${company.id}-${h.id}" data-colw-key="cm" style="table-layout:fixed;width:100%;min-width:1031px">
-          <thead><tr><th style="width:34px">#</th><th style="width:96px">تاریخ</th><th style="width:150px">نام</th><th style="width:95px" data-colkey="خرید (کیلو)">خرید(کیلو)</th><th style="width:95px" data-colkey="قیمت تن ($)">قیمت تن($)</th><th style="width:95px" data-colkey="کل ($)">کل($)</th><th style="width:58px">نرخ</th><th style="width:95px" data-colkey="کل (افغانی)">کل(افغانی)</th><th style="width:112px">رسید</th><th style="width:60px;font-size:0.75rem">نرخ پول</th><th style="width:95px">الباقی</th><th style="width:46px">حذف</th></tr></thead>
-          <tbody>${body || '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:12px">فقط خرید — جزئیات در کادرِ خریدها</td></tr>'}</tbody>
-          <tfoot class="xls-foot"><tr><td colspan="3" style="padding:7px">جمله</td><td>${n2fa(Math.round(tTon*1000))}</td><td></td><td>${n2fa(tUsd.toFixed(1))} $</td><td></td><td>${n2fa(Math.round(tAfn))}</td><td>${n2fa(Math.round(tPoul))}</td><td></td><td>${n2fa(Math.round(tAlb))}</td><td></td></tr></tfoot>
+        <div class="xls-wrap"><table class="xls-tbl" id="chist-tbl-${company.id}-${h.id}" data-colw-key="cm" style="table-layout:fixed;width:100%;min-width:971px">
+          <thead><tr><th style="width:34px">#</th><th style="width:96px">تاریخ</th><th style="width:150px">نام</th><th style="width:95px" data-colkey="خرید (کیلو)">خرید(کیلو)</th><th style="width:95px" data-colkey="قیمت تن ($)">قیمت تن($)</th><th style="width:95px" data-colkey="کل ($)">کل($)</th><th style="width:58px">نرخ</th><th style="width:95px" data-colkey="کل (افغانی)">کل(افغانی)</th><th style="width:112px">رسید</th><th style="width:95px">الباقی</th><th style="width:46px">حذف</th></tr></thead>
+          <tbody>${body || '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:12px">فقط خرید — جزئیات در کادرِ خریدها</td></tr>'}</tbody>
+          <tfoot class="xls-foot"><tr><td colspan="3" style="padding:7px">جمله</td><td>${n2fa(Math.round(tTon*1000))}</td><td></td><td>${n2fa(tUsd.toFixed(1))} $</td><td></td><td>${n2fa(Math.round(tAfn))}</td><td>${n2fa(Math.round(tPoul))}</td><td>${n2fa(Math.round(tAlb))}</td><td></td></tr></tfoot>
         </table></div>
         <div style="padding:6px 10px 0">
           <button class="add-row-btn" style="margin:0;padding:5px 12px;font-size:0.78rem" onclick="addCompanyHistoryRow('${company.id}','${h.id}')">➕ ردیف جدید</button>
         </div>
         <div style="padding:8px 10px 10px">
-          <textarea id="chnb-${h.id}" class="note-field" placeholder="📝 توضیحات این جدول..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateCompanyHistoryNote('${company.id}','${h.id}',this.value)">${escFa(h.note||'')}</textarea>
+          <textarea id="chnb-${h.id}" class="note-field cm-hist-note" placeholder="📝 توضیحات این جدول..." rows="1" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateCompanyHistoryNote('${company.id}','${h.id}',this.value)">${escFa(h.note||'')}</textarea>
         </div>
       </div>`;
     }).join('');
@@ -34805,7 +34872,12 @@ function syncWaraqTxnsToPersons(w) {
         let fuel = litersFilled;
         let priceper, byMoney = false;
         // اگر فقط مبلغ نوشته شده (بدون لیتر/فی) → ردیف پولی، نه «1 لیتر فی ...»
-        if (fuel > 0) { priceper = amount / fuel; } else { fuel = 0; priceper = 0; byMoney = true; }
+        /* فی تا دو رقمِ اعشار — نه بیشتر. تقسیمِ خام عددهایی مثل
+           «۹۶.۶۰۸۶۹۵۶۵۲۱۷۳۹» می‌ساخت که هم ستون را به‌هم می‌ریخت و هم هیچ
+           معنایی نداشت (خواستهٔ صاحب ریپو: «۶۹.۶۰ هم بزند بس است»).
+           عددِ خودِ بدهی از همین تقسیم نمی‌آید — «amount»ِ ورق است — پس این
+           گرد کردن هیچ حسابی را جابه‌جا نمی‌کند. */
+        if (fuel > 0) { priceper = Math.round((amount / fuel) * 100) / 100; } else { fuel = 0; priceper = 0; byMoney = true; }
         // در «واحد پول» پول حرفِ آخر را می‌زند: الباقی از خودِ مبلغ حساب می‌شود، نه از
         // لیتر × فی. ولی اگر همان معامله تیل بوده، لیتر و فی هم همراهِ ردیف به دفترِ
         // واحد پول می‌روند و در ستون‌های «مقدار تیل» و «فی لیتر» دیده می‌شوند — مدرکِ
@@ -40703,7 +40775,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.281';
+const APP_VERSION = '2.9.282';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
