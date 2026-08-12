@@ -14121,10 +14121,13 @@ html, body {
   .header .header-right{ gap:7px !important; flex-wrap:wrap !important; justify-content:flex-end !important; }
 
   /* روکش تیره + کشوی بخش‌ها */
+  /* ⚠️ backdrop-filter از این روکش برداشته شد. روی گوشی، تارکردنِ کلِ صفحه
+     هم‌زمان با سُر خوردنِ کشو یعنی مرورگر باید هر فریم دوباره تمام صفحه را تار
+     کند؛ نتیجه‌اش همان «پرپرک»ی بود که هنگام باز کردنِ کادرِ بخش‌ها دیده می‌شد.
+     رنگِ تیرهٔ پشت همان است، فقط دیگر تار نمی‌کند و باز شدنش روان است. */
   .m-menu-overlay{
     display:block;position:fixed;inset:0;z-index:9500;
     background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .25s;
-    -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);
   }
   .m-menu-overlay.open{opacity:1;pointer-events:auto}
   .m-menu-panel{
@@ -14133,6 +14136,8 @@ html, body {
     box-shadow:-8px 0 30px rgba(0,0,0,.55);
     transform:translateX(100%);transition:transform .28s cubic-bezier(.2,.8,.2,1);
     display:flex;flex-direction:column;
+    /* کشو روی لایهٔ خودش کشیده می‌شود و رنگِ پشتش را با خودش نمی‌کشد */
+    will-change:transform;backface-visibility:hidden;contain:paint;
   }
   .m-menu-overlay.open .m-menu-panel{transform:translateX(0)}
   .m-menu-head{
@@ -19718,6 +19723,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
   <symbol id="ic-photo" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2.4"/><circle cx="9" cy="10.2" r="1.8"/><path d="M3.5 17.5l5-4.5 3.5 3 3.5-3.5 5 5"/></symbol>
   <symbol id="ic-vid" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2.4"/><path d="M16 10.5l5-3v9l-5-3"/></symbol>
   <symbol id="ic-speaker" viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4z"/><path d="M15.5 9a4.4 4.4 0 0 1 0 6M18 6.7a8 8 0 0 1 0 10.6"/></symbol>
+  <symbol id="ic-mega" viewBox="0 0 24 24"><path d="M3.5 10.2v3.6a1.4 1.4 0 0 0 1.4 1.4h2.3l7.4 4.3a.9.9 0 0 0 1.4-.8V5.3a.9.9 0 0 0-1.4-.8L7.2 8.8H4.9a1.4 1.4 0 0 0-1.4 1.4Z"/><path d="M7.2 8.8v6.4"/><path d="M18.6 9.1a4 4 0 0 1 0 5.8"/></symbol>
   <symbol id="ic-users" viewBox="0 0 24 24"><circle cx="9" cy="8.2" r="3.2"/><path d="M3.2 19.5c.7-3.2 3-5 5.8-5s5.1 1.8 5.8 5"/><circle cx="16.8" cy="9.2" r="2.6"/><path d="M16.4 14.6c2.4.2 4 1.8 4.6 4.4"/></symbol>
   <symbol id="ic-user1" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c.9-3.7 3.6-5.7 7-5.7s6.1 2 7 5.7"/></symbol>
   <symbol id="ic-ask" viewBox="0 0 24 24"><path d="M20.5 11.5a8.5 8 0 1 1-3.4-6.4L20.5 4l-.6 4a8 8 0 0 1 .6 3.5z" transform="rotate(4 12 12)"/><path d="M10 9.3a2.2 2.2 0 1 1 3 2c-.75.43-1 .9-1 1.8"/><path d="M12 16.2h.02" stroke-width="2.6"/></symbol>
@@ -19795,6 +19801,8 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <button class="rb-tab active" id="rbTabBtn-qa" onclick="rbShowTab('qa')"><span class="tab-dot" id="rbDot-qa"></span><svg><use href="#ic-ask"/></svg> سوال و جواب</button>
     <button class="rb-tab" id="rbTabBtn-group" onclick="rbShowTab('group')"><span class="tab-dot" id="rbDot-group"></span><svg><use href="#ic-users"/></svg> چت گروهی</button>
     <button class="rb-tab" id="rbTabBtn-dm" onclick="rbShowTab('dm')"><span class="tab-dot" id="rbDot-dm"></span><svg><use href="#ic-user1"/></svg> چت تک‌نفره</button>
+    <!-- گروهِ عمومیِ مشتری‌ها: فقط میرزا می‌نویسد، بقیه فقط می‌بینند -->
+    <button class="rb-tab" id="rbTabBtn-pub" onclick="rbShowTab('pub')"><span class="tab-dot" id="rbDot-pub"></span><svg><use href="#ic-mega"/></svg> اعلان عمومی</button>
   </div>
 
   <!-- 1) سوال و جواب با ربات -->
@@ -19836,10 +19844,16 @@ body.viewer-mode .inv-admin-only{display:none!important}
           <button class="msgr-del" id="msgrDelBtn" title="بستنِ این گفت‌وگو" onclick="msgrCloseThread()">🗑️</button>
         </div>
         <div class="msgr-list" id="msgrList"></div>
+        <!-- عکس، پیامِ صوتی و «فرستادنِ حساب» به این نوار برگشتند (خواستهٔ صاحب
+             ریپو). همان دکمه‌ها و همان مسیرِ چتِ قدیمی‌اند — فقط جایشان این‌جاست
+             و روی همان کسی کار می‌کنند که گفت‌وگویش باز است. -->
         <div class="msgr-comp" id="msgrComposer">
           <input id="msgrInput" placeholder="پیام بنویسید…" autocomplete="off"
                  onkeydown="if(event.key==='Enter'){event.preventDefault();msgrSend();}">
-          <button onclick="msgrSend()">➤</button>
+          <button class="msgr-ib" onclick="msgrPickMedia('image')" title="فرستادن عکس"><svg><use href="#ic-photo"/></svg></button>
+          <button class="msgr-ib" id="msgrRecBtn" onclick="msgrToggleRec()" title="پیام صوتی"><svg><use href="#ic-mic2"/></svg></button>
+          <button class="msgr-ib" id="msgrAcctBtn" onclick="msgrSendAcct()" title="فرستادنِ حسابِ یک قرض‌دار/شرکت (فقط میرزا)"><svg><use href="#ic-qrscan"/></svg></button>
+          <button class="msgr-send" onclick="msgrSend()">➤</button>
         </div>
       </div>
     </div>
@@ -19859,6 +19873,19 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <button class="ch-ib send" onclick="chatSendText('dm')" title="فرستادن"><svg><use href="#ic-send"/></svg></button>
       </div>
     </div>
+    </div>
+  </div>
+
+  <!-- 4) اعلانِ عمومی — گروهِ مشتری‌های عادی ─────────────────────────────────
+       فقط میرزا می‌نویسد؛ کسی که با کیو‌آر وارد می‌شود فقط می‌بیند. شمارهٔ تماس
+       بالا سنجاق است تا با اسکرول گم نشود، و کنارش راهِ «پیام شخصی». -->
+  <div class="rb-pane" id="rbPane-pub">
+    <div class="pub-pin" id="pubPin"></div>
+    <div class="msgr-list" id="pubList"></div>
+    <div class="msgr-comp" id="pubComposer" style="display:none">
+      <input id="pubInput" placeholder="اعلان برای همهٔ مشتری‌ها…" autocomplete="off"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();pubSend();}">
+      <button class="msgr-send" onclick="pubSend()">➤</button>
     </div>
   </div>
   <input type="file" id="chatFileInput" style="display:none">
@@ -36736,7 +36763,7 @@ function rbShowTab(tab) {
   // نمای کیو‌آر شخص (مشتری/قرض‌دار): فقط چت تک‌نفره — نه چت گروهی، نه حتی سوال‌وجواب
   if (_rbMode === 'person' && tab !== 'dm') tab = 'dm';
   _rbTab = tab;
-  ['qa', 'group', 'dm'].forEach(t => {
+  ['qa', 'group', 'dm', 'pub'].forEach(t => {
     const b = document.getElementById('rbTabBtn-' + t);
     const pn = document.getElementById('rbPane-' + t);
     if (b) b.classList.toggle('active', t === tab);
@@ -36751,6 +36778,7 @@ function rbShowTab(tab) {
     if (!_chatMe() && _rbMode !== 'person') _chatAskName('group');
   }
   if (tab === 'dm') { _chatInitListeners(); _rbRenderDmPane(); }
+  if (tab === 'pub') { _pubPaint(); }
 }
 function _rbPaneVisible(tab) {
   const p = document.getElementById('robotPanel');
@@ -38726,7 +38754,15 @@ function _chatCompressImage(file, cb) {
 }
 let _recState = null;
 async function chatToggleRec(scope) {
-  const btn = document.getElementById(scope === 'group' ? 'groupRecBtn' : 'dmRecBtn');
+  /* دکمهٔ ضبط هم در نوارِ قدیمی هست و هم در نوارِ چتِ تک‌نفره — هر دو باید
+     حالتِ «در حال ضبط» را نشان بدهند، وگرنه کاربر نمی‌فهمد ضبط شروع شده. */
+  const _btns = [document.getElementById(scope === 'group' ? 'groupRecBtn' : 'dmRecBtn')];
+  if (scope !== 'group') _btns.push(document.getElementById('msgrRecBtn'));
+  const btn = {
+    classList: { add: c => _btns.forEach(b => b && b.classList.add(c === 'rec-on' && b.id === 'msgrRecBtn' ? 'rec' : c)),
+                 remove: c => _btns.forEach(b => b && b.classList.remove(c === 'rec-on' && b.id === 'msgrRecBtn' ? 'rec' : c)) },
+    set innerHTML(v) { _btns.forEach(b => { if (b) b.innerHTML = v; }); }
+  };
   if (_recState) { try { _recState.rec.stop(); } catch (e) {} return; }
   const me = _chatMe();
   if (!me) { _chatAskName(scope); return; }
@@ -39687,7 +39723,7 @@ function NTF_TOPIC_PERSON(peer) { return 'p-' + String(peer || '').toLowerCase()
 function _ntfMyTopics() {
   try {
     if (_rbMode === 'person' && _rbPersonPeer) return [NTF_TOPIC_PERSON(_rbPersonPeer.peer)];
-    if (_rbMode === 'admin') return [NTF_TOPIC_MIRZA(), NTF_TOPIC_STAFF()];
+    if (_rbMode === 'admin') return [NTF_TOPIC_MIRZA(), NTF_TOPIC_STAFF(), NTF_TOPIC_PUBLIC];
     if (typeof currentRole !== 'undefined' && currentRole === 'viewer') return [NTF_TOPIC_STAFF()];
     const out = [NTF_TOPIC_STAFF()];
     const me = _chatMe();
@@ -40127,6 +40163,21 @@ function _msgrUnreadAll() { return Object.keys(_msgrMsgs).reduce((n, id) => n + 
 function _msgrAccept(raw) {
   if (!raw) return;
   const id = _msgrThreadOf(raw);
+  /* موضوعِ گروهِ عمومی هم این‌جا می‌نشیند (ولی در فهرستِ چتِ تک‌نفره نمی‌آید،
+     چون _msgrThreadIds فقط p-… را می‌پذیرد). */
+  if (id === NTF_TOPIC_PUBLIC) {
+    const at0 = +raw.createdAt || Date.now();
+    const txt0 = String(raw.body || ''); if (!txt0) return;
+    const lp = _msgrMsgs[id] || (_msgrMsgs[id] = []);
+    if (lp.some(m => m.text === txt0 && Math.abs((m.at || 0) - at0) < 10000)) return;
+    const pend0 = lp.find(m => m.pending && m.text === txt0);
+    if (pend0) { pend0.pending = false; pend0.at = at0; }
+    else lp.push({ at: at0, from: String(raw.title || '').trim() || 'میرزا', text: txt0, mine: false });
+    lp.sort((a, b) => (a.at || 0) - (b.at || 0));
+    if (lp.length > MSGR_KEEP) _msgrMsgs[id] = lp.slice(-MSGR_KEEP);
+    try { if (_rbTab === 'pub') _pubPaint(); } catch (e) {}
+    return;
+  }
   // فقط گفت‌وگوی آدم‌ها (p-…) این‌جا می‌نشیند؛ خبرهای «staff/mirza» جای خودشان
   // را دارند و نباید در فهرستِ چتِ تک‌نفره گفت‌وگوی قلابی بسازند
   if (!_msgrIsPersonThread(id)) return;
@@ -40135,6 +40186,8 @@ function _msgrAccept(raw) {
   const from = String(raw.title || '').trim().replace(/^💬\s*(?:پیام به میرزا|جواب میرزا)\s*—\s*/, '');
   const text = String(raw.body || '');
   if (!text) return;
+  // بلاک‌شده: پیامش اصلاً نمی‌نشیند (نه در فهرست، نه در بج)
+  try { if (_msgrIsBlocked(id)) return; } catch (e) {}
   // اگر این گفت‌وگو بسته شده بود، با رسیدنِ پیامِ تازه برمی‌گردد (پیام گم نشود)
   try { if (_msgrIsHidden(id)) _msgrUnhide(id); } catch (e) {}
   const list = _msgrMsgs[id] || (_msgrMsgs[id] = []);
@@ -40247,6 +40300,72 @@ function _msgrUnhide(id) {
   const h = _msgrHidden().filter(x => x !== String(id));
   _msgrLsSet('pumpMsgrHidden', h);
 }
+/* ── بلاک ────────────────────────────────────────────────────────────────
+   «بستن» یعنی از فهرست برود ولی با پیامِ تازه برگردد. «بلاک» یعنی دیگر هیچ
+   پیامی از آن طرف ننشیند — نه در فهرست بیاید و نه بجِ نخوانده بگیرد. هر دو
+   فقط روی همین دستگاه‌اند و چیزی روی سرور پاک نمی‌شود. */
+function _msgrBlocked() { return _msgrLsGet('pumpMsgrBlocked', []) || []; }
+function _msgrIsBlocked(id) { return _msgrBlocked().indexOf(String(id)) >= 0; }
+function msgrBlockThread(id) {
+  const t = id || _msgrCur; if (!t) return;
+  const nm = _msgrName(t);
+  if (_msgrIsBlocked(t)) {
+    _msgrLsSet('pumpMsgrBlocked', _msgrBlocked().filter(x => x !== String(t)));
+    _msgrUnhide(t);
+    try { showToast('بلاک برداشته شد — ' + nm, '#38a169'); } catch (e) {}
+  } else {
+    if (!confirm('«' + nm + '» بلاک شود؟\n\nپیام‌های تازه‌اش دیگر نمی‌آیند. هر وقت خواستید از همین منو برش می‌دارید.')) return;
+    const b = _msgrBlocked(); b.push(String(t));
+    _msgrLsSet('pumpMsgrBlocked', b.slice(-200));
+    _msgrHide(t);
+    delete _msgrMsgs[t];
+    if (_msgrCur === t) _msgrCur = null;
+    try { showToast('🚫 بلاک شد', '#e53e3e'); } catch (e) {}
+  }
+  _msgrPaintThreads(); _msgrPaintChat(); _msgrPaintBadge();
+}
+/** منوی گفت‌وگو — با کلیکِ راست یا نگه‌داشتنِ انگشت */
+function msgrThreadMenu(ev, id) {
+  try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+  const old = document.getElementById('msgrThMenu'); if (old) old.remove();
+  const m = document.createElement('div');
+  m.id = 'msgrThMenu';
+  m.className = 'ch-msg-menu';
+  m.innerHTML =
+    '<button type="button" data-a="open">💬 باز کردن</button>' +
+    '<button type="button" data-a="block">' + (_msgrIsBlocked(id) ? '✅ برداشتنِ بلاک' : '🚫 بلاک کردن') + '</button>' +
+    '<button type="button" data-a="del" class="ch-del-everyone">🗑️ حذفِ گفت‌وگو</button>';
+  m.addEventListener('click', function (e) {
+    const b = e.target.closest('button'); if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    const a = b.getAttribute('data-a');
+    m.remove();
+    if (a === 'open') msgrOpen(id);
+    else if (a === 'block') msgrBlockThread(id);
+    else if (a === 'del') msgrCloseThread(id);
+  });
+  document.body.appendChild(m);
+  const t = (ev.touches && ev.touches[0]) || (ev.changedTouches && ev.changedTouches[0]) || ev;
+  const w = m.offsetWidth, h = m.offsetHeight;
+  let left = Math.max(8, Math.min((t.clientX || 40) - w / 2, innerWidth - w - 8));
+  let top = (t.clientY || 40) + 6;
+  if (top + h > innerHeight - 8) top = Math.max(8, (t.clientY || 40) - h - 6);
+  m.style.left = Math.round(left) + 'px';
+  m.style.top = Math.round(top) + 'px';
+  setTimeout(function () {
+    document.addEventListener('click', function _c() { const x = document.getElementById('msgrThMenu'); if (x) x.remove(); document.removeEventListener('click', _c); });
+  }, 0);
+}
+/* نگه‌داشتنِ انگشت (۵۵۰ میلی‌ثانیه) = همان کلیکِ راست */
+let _msgrHoldTimer = null;
+function _msgrHoldStart(ev, id) {
+  _msgrHoldEnd();
+  const e = { preventDefault: function () {}, stopPropagation: function () {}, clientX: 0, clientY: 0 };
+  const t = ev.touches && ev.touches[0];
+  if (t) { e.clientX = t.clientX; e.clientY = t.clientY; }
+  _msgrHoldTimer = setTimeout(function () { _msgrHoldTimer = null; msgrThreadMenu(e, id); }, 550);
+}
+function _msgrHoldEnd() { if (_msgrHoldTimer) { clearTimeout(_msgrHoldTimer); _msgrHoldTimer = null; } }
 /** بستنِ گفت‌وگویی که باز است (دکمهٔ 🗑️ سربرگ) */
 function msgrCloseThread(id) {
   const t = id || _msgrCur;
@@ -40265,7 +40384,7 @@ function msgrCloseThread(id) {
 }
 function _msgrThreadIds() {
   const out = [];
-  const hid = _msgrHidden();
+  const hid = _msgrHidden().concat(_msgrBlocked());
   const add = t => { if (_msgrIsPersonThread(t) && out.indexOf(t) < 0 && hid.indexOf(String(t)) < 0) out.push(t); };
   try { (_ntfMyTopics() || []).forEach(add); } catch (e) {}
   _msgrExtra.forEach(add);
@@ -40306,8 +40425,129 @@ function msgrOpen(threadId) {
   _msgrPaintThreads();
   _msgrPaintChat();
   if (_msgrCur) _msgrMarkRead(_msgrCur);
+  try { _msgrSyncLegacyPeer(); } catch (e) {}   // عکس/صدا/حساب به همین طرف برود
   try { _ntfAutoPush('ask'); } catch (e) {}
   _msgrFlush();
+}
+/* ── عکس / صدا / حساب در چتِ تک‌نفره ─────────────────────────────────────
+   این‌ها کارِ تازه‌ای نمی‌کنند: همان مسیرِ رسانه‌ایِ چتِ قدیمی است که از اول
+   عکس و صدا و کارتِ حساب را می‌برد و می‌آورد. تنها کاری که این‌جا می‌شود این
+   است که «طرفِ گفت‌وگو» را روی همان کسی می‌گذاریم که تبِ چتِ تک‌نفره بازش
+   کرده، بعد همان تابعِ قدیمی صدا زده می‌شود. هیچ منطق و هیچ فرمتی عوض نشد. */
+/* کلیدِ چتِ قدیمیِ این گفت‌وگو. اول از روی تاریخچهٔ موجود، و اگر تاریخچه‌ای
+   نبود، از روی خودِ حساب‌های قرض‌دار ساخته می‌شود — دقیقاً با همان قاعده‌ای که
+   msgrTopicOfPerson موضوع را می‌سازد (_peerKey('debt-'+id[+'~'+subId])).
+   ⚠️ دستی نسازیدش؛ همین‌جا از همان تابع استفاده می‌شود تا هیچ‌وقت با کیو‌آرِ
+   همان حساب دو تا نشود. */
+function _msgrPeerKeyOf(thread) {
+  const t = String(thread || '');
+  if (t.indexOf('p-') !== 0) return null;
+  const known = _msgrLegacyPeer(t);
+  if (known) return known;
+  const list = (DB.debtPersons || []);
+  for (let i = 0; i < list.length; i++) {
+    const p = list[i];
+    if (msgrTopicOfPerson(p) === t) return _peerKey('debt-' + p.id);
+    const subs = p.subs || [];
+    for (let j = 0; j < subs.length; j++) {
+      if (msgrTopicOfPerson(p, subs[j]) === t) return _peerKey('debt-' + p.id + '~' + subs[j].id);
+    }
+  }
+  return null;
+}
+function _msgrSyncLegacyPeer() {
+  const peer = _msgrCur ? _msgrPeerKeyOf(_msgrCur) : null;
+  if (!peer) return null;
+  try { if (_rbMode === 'admin') _rbCurrentDm = peer; } catch (e) {}
+  return peer;
+}
+function msgrPickMedia(kind) {
+  if (!_msgrCur) { showToast('اول یک گفت‌وگو را باز کنید', '#e53e3e'); return; }
+  if (!_msgrSyncLegacyPeer()) { showToast('این گفت‌وگو رسانه نمی‌پذیرد', '#e53e3e'); return; }
+  chatPickMedia('dm', kind);
+}
+function msgrToggleRec() {
+  if (!_msgrCur) { showToast('اول یک گفت‌وگو را باز کنید', '#e53e3e'); return; }
+  if (!_msgrSyncLegacyPeer()) { showToast('این گفت‌وگو صدا نمی‌پذیرد', '#e53e3e'); return; }
+  chatToggleRec('dm');
+}
+function msgrSendAcct() {
+  if (!_msgrCur) { showToast('اول یک گفت‌وگو را باز کنید', '#e53e3e'); return; }
+  if (!_msgrSyncLegacyPeer()) { showToast('این گفت‌وگو حساب نمی‌پذیرد', '#e53e3e'); return; }
+  dmOpenAcctPicker();
+}
+/* ═══ گروهِ عمومیِ مشتری‌ها ═════════════════════════════════════════════════
+   خواستهٔ صاحب ریپو: یک گروه برای مردمِ عادی که «فقط پیام‌های من را ببینند»،
+   هر جا که باشند از نرخ اتحادیه و مانندِ آن خبر شوند، با یک کیو‌آر عضو شوند،
+   نتوانند پیام بدهند، شمارهٔ تماس با اسکرول گم نشود، و اگر کسی خواست بتواند
+   پیامِ شخصی هم بدهد.
+
+   روی همان سرورِ خانگی سوار است — یک موضوعِ ثابت به نامِ «omumi»، دقیقاً مثل
+   «staff». هیچ چیزِ تازه‌ای به دیتابیس اضافه نمی‌شود و هیچ منطقِ حسابی را
+   دست نمی‌زند: فقط پیام. خواندنش برای همه، نوشتنش فقط برای میرزا.
+   ═══════════════════════════════════════════════════════════════════════ */
+const NTF_TOPIC_PUBLIC = 'omumi';
+function _pubPhone() {
+  try { return String((DB.stationPhone || '')).trim(); } catch (e) { return ''; }
+}
+/** نوارِ سنجاق‌شدهٔ بالای گروه: نامِ پمپ + شمارهٔ تماس (با اسکرول گم نمی‌شود) */
+function _pubPaintPin() {
+  const el = document.getElementById('pubPin');
+  if (!el) return;
+  const tel = _pubPhone();
+  const nm = (DB.stationName || 'پمپ یعقوبی');
+  el.innerHTML =
+    '<span class="pub-pin-n">📢 ' + _esc(nm) + '</span>' +
+    (tel ? '<a class="pub-pin-tel" href="tel:' + _esc(tel.replace(/[^\d+]/g, '')) + '">📞 ' + _esc(tel) + '</a>' : '') +
+    (_msgrIsAdmin()
+      ? '<button type="button" class="pub-pin-qr" onclick="pubShowQR()">📲 کیو‌آر گروه</button>'
+      : '<button type="button" class="pub-pin-qr" onclick="rbShowTab(\'dm\')">✉️ پیام شخصی</button>');
+}
+function _pubPaint() {
+  const list = document.getElementById('pubList');
+  if (!list) return;
+  const msgs = (_msgrMsgs[NTF_TOPIC_PUBLIC] || []).slice().sort((a, b) => (a.at || 0) - (b.at || 0));
+  list.innerHTML = msgs.length
+    ? msgs.map(m => '<div class="msgr-row' + (m.mine ? ' me' : '') + '">'
+        + '<div class="msgr-b">'
+        + (m.mine ? '' : '<div class="msgr-from">' + _esc(m.from || '—') + '</div>')
+        + '<div class="msgr-t">' + _esc(m.text) + '</div>'
+        + '<div class="msgr-w">' + _esc(_msgrWhen(m.at)) + (m.pending ? ' · 🕐 در صف' : '') + '</div>'
+        + '</div></div>').join('')
+    : '<div class="msgr-empty">' + (_msgrIsAdmin()
+        ? 'هنوز اعلانی نفرستاده‌اید. هر چه این‌جا بنویسید، به همهٔ مشتری‌هایی که کیو‌آر را زده‌اند می‌رسد.'
+        : 'هنوز اعلانی نیامده.') + '</div>';
+  list.scrollTop = list.scrollHeight;
+  const comp = document.getElementById('pubComposer');
+  if (comp) comp.style.display = _msgrIsAdmin() ? '' : 'none';   // فقط میرزا می‌نویسد
+  _pubPaintPin();
+  _msgrLsSet('pumpPubSeen', Date.now());
+}
+/** فرستادنِ اعلان — از همان صفِ پیام‌رسان می‌رود، پس بی‌اینترنت هم گم نمی‌شود */
+function pubSend() {
+  if (!_msgrIsAdmin()) { showToast('فقط میرزا می‌تواند اعلان بفرستد', '#e53e3e'); return; }
+  const box = document.getElementById('pubInput');
+  const text = String((box && box.value) || '').trim();
+  if (!text) return;
+  box.value = '';
+  const it = { key: 'pb' + Date.now() + Math.random().toString(36).slice(2, 7),
+               thread: NTF_TOPIC_PUBLIC, topic: NTF_TOPIC_PUBLIC,
+               from: _msgrMeName(), text, ts: Date.now(), copyToMirza: false };
+  const l = _msgrMsgs[NTF_TOPIC_PUBLIC] || (_msgrMsgs[NTF_TOPIC_PUBLIC] = []);
+  l.push({ at: it.ts, from: it.from, text, mine: true, pending: true });
+  _pubPaint();
+  const q = _msgrOutbox(); q.push(it); _msgrOutboxSet(q);
+  _msgrFlush();
+}
+/** کیو‌آرِ عضو شدن در گروه — همان پیام‌رسانِ payam با نقشِ «فقط دیدن» */
+function pubShowQR() {
+  const q = ['role=omumi'];
+  const srv = _ntfBase('ws'); if (srv) q.push('server=' + encodeURIComponent(srv));
+  const k = _ntfKey(); if (k) q.push('key=' + encodeURIComponent(k));
+  const tel = _pubPhone(); if (tel) q.push('tel=' + encodeURIComponent(tel));
+  const nm = (DB.stationName || '').trim(); if (nm) q.push('nm=' + encodeURIComponent(nm));
+  _qrShowLink(_siteRoot() + 'payam/?' + q.join('&'), '📢 گروهِ اعلانِ عمومی',
+    'هر کسی این کد را بزند، اعلان‌های شما را می‌گیرد — حتی وقتی برنامه بسته است. فقط می‌بیند و نمی‌تواند در گروه پیام بدهد؛ اگر بخواهد، از همان‌جا می‌تواند پیامِ شخصی بفرستد.');
 }
 function msgrClose() { const p = document.getElementById('robotPanel'); if (p) p.classList.remove('open'); }
 function msgrBack() { _msgrCur = null; _msgrPaintThreads(); _msgrPaintChat(); }
@@ -40340,13 +40580,16 @@ function _msgrPaintThreads() {
     const list = _msgrLegacyMerge(id, _msgrMsgs[id] || []);
     const last = list[list.length - 1];
     const n = _msgrUnread(id);
-    return '<span class="msgr-th-wrap">'
+    /* دکمهٔ ✕ برداشته شد (خواستهٔ صاحب ریپو). حالا مثل واتساپ: کلیکِ راست روی
+       کامپیوتر، یا نگه‌داشتنِ انگشت روی گوشی، منوی «حذف گفت‌وگو / بلاک» را
+       می‌آورد — پس دستِ اشتباهی هیچ گفت‌وگویی را نمی‌بندد. */
+    return '<span class="msgr-th-wrap" oncontextmenu="msgrThreadMenu(event,\'' + _esc(id) + '\');return false"'
+      + ' ontouchstart="_msgrHoldStart(event,\'' + _esc(id) + '\')" ontouchend="_msgrHoldEnd()" ontouchmove="_msgrHoldEnd()" ontouchcancel="_msgrHoldEnd()">'
       + '<button class="msgr-th' + (id === _msgrCur ? ' on' : '') + '" onclick="msgrOpen(\'' + _esc(id) + '\')">'
       + '<span class="msgr-th-n">' + _esc(_msgrName(id)) + '</span>'
       + '<span class="msgr-th-p">' + (last ? _esc((last.mine ? 'شما: ' : (last.from ? last.from + ': ' : '')) + last.text).slice(0, 90) : 'هنوز پیامی نیست') + '</span>'
       + (n ? '<span class="msgr-th-b">' + n2fa(n) + '</span>' : '')
       + '</button>'
-      + '<button class="msgr-th-x" title="بستنِ این گفت‌وگو" onclick="msgrCloseThread(\'' + _esc(id) + '\')">✕</button>'
       + '</span>';
   }).join('') || '<div class="msgr-empty">هنوز کسی از راهِ کیو‌آر پیام نداده.<br>از داخلِ حسابِ هر قرض‌دار می‌توانید خودتان گفت‌وگو را شروع کنید.</div>';
 }
@@ -40373,9 +40616,13 @@ function _msgrLegacyMerge(thread, live) {
     const hit = _msgrLegacyPeer(thread);
     const cache = _dmMsgCache || {};
     const meId = (_chatMe() || {}).id;
+    /* ⚠️ «k» و «d» هم همراه می‌آیند تا عکس/صدا/کارتِ حساب واقعاً دیده شوند،
+       نه این‌که آدرسِ خامِ base64 به‌جای عکس چاپ شود (باگی که بود). */
     old = (hit ? (cache[hit] || []) : [])
       .filter(m => m && (m.t || m.d) && !m.del)
-      .map(m => ({ at: m.ts || 0, from: m.n || '—', text: String(m.t || m.d || ''), mine: m.f === meId, old: true }));
+      .map(m => ({ at: m.ts || 0, from: m.n || '—', mine: m.f === meId, old: true,
+                   k: m.k || 'text', d: m.d || '', u: m.u || '', n: m.n || '',
+                   text: String(m.t || (m.k && m.k !== 'text' ? '' : m.d) || '') }));
   } catch (e) { return live; }
   if (!old.length) return live;
   // پیامی که هر دو طرف دارند دو بار دیده نشود
@@ -40395,13 +40642,28 @@ function _msgrPaintChat() {
     return;
   }
   if (comp) comp.style.display = '';
+  const ab = document.getElementById('msgrAcctBtn');
+  if (ab) ab.style.display = _msgrIsAdmin() ? '' : 'none';   // فرستادنِ حساب فقط از طرف میرزا
   if (head) head.textContent = _msgrName(_msgrCur);
   const msgs = _msgrLegacyMerge(_msgrCur, _msgrMsgs[_msgrCur] || []);
+  /* بدنهٔ هر پیام: متن، یا عکس/ویدیو/صدا/کارتِ حساب — با همان نمایش‌دهنده‌های
+     خودِ برنامه (_chVoiceHtml و _chAcctCardHtml)، پس هیچ ظاهرِ تازه‌ای ساخته
+     نشد و هر چیزی که در چتِ قدیمی کار می‌کرد این‌جا هم کار می‌کند. */
+  const bodyOf = m => {
+    const d = (typeof m.d === 'string' && m.d.slice(0, 5) === 'data:') ? _esc(m.d) : '';
+    if (m.k === 'image' && d) return '<img class="msgr-img" src="' + d + '" alt="عکس">';
+    if (m.k === 'video' && d) return '<video class="msgr-img" src="' + d + '" controls playsinline preload="metadata"></video>';
+    if (m.k === 'audio' && d) { try { return _chVoiceHtml(d); } catch (e) { return '🎤 پیام صوتی'; } }
+    if (m.k === 'acct' && m.u) { try { return _chAcctCardHtml(m); } catch (e) { return '📇 حساب'; } }
+    if (!d && (m.k === 'image' || m.k === 'video' || m.k === 'audio'))
+      return '<i style="opacity:.8">' + (m.k === 'image' ? '🖼️ عکس' : m.k === 'video' ? '🎬 ویدیو' : '🎤 پیام صوتی') + ' — برای دیدن به سرور وصل شوید</i>';
+    return _esc(m.text || '');
+  };
   list.innerHTML = msgs.length
     ? msgs.map(m => '<div class="msgr-row' + (m.mine ? ' me' : '') + '">'
         + '<div class="msgr-b">'
         + (m.mine ? '' : '<div class="msgr-from">' + _esc(m.from || '—') + '</div>')
-        + '<div class="msgr-t">' + _esc(m.text) + '</div>'
+        + '<div class="msgr-t">' + bodyOf(m) + '</div>'
         + '<div class="msgr-w">' + _esc(_msgrWhen(m.at)) + (m.pending ? ' · 🕐 در صف' : '') + '</div>'
         + '</div></div>').join('')
     : '<div class="msgr-empty">هنوز پیامی رد و بدل نشده — اولین پیام را شما بنویسید.</div>';
@@ -40775,7 +41037,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.282';
+const APP_VERSION = '2.9.283';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -48892,14 +49154,10 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
 .msgr-state{ font-size:0.68rem; color:var(--muted); white-space:nowrap; }
 .msgr-back{ display:none; background:transparent; border:1px solid var(--border); border-radius:8px;
   color:var(--accent); font-family:'Vazirmatn',sans-serif; font-weight:800; font-size:0.9rem; padding:2px 9px; cursor:pointer; }
-/* هر ردیفِ فهرست = خودِ گفت‌وگو + دکمهٔ «بستن» که با نگه‌داشتنِ ماوس پیدا می‌شود */
+/* هر ردیفِ فهرست: با کلیکِ راست (کامپیوتر) یا نگه‌داشتنِ انگشت (گوشی) منوی
+   «باز کردن / بلاک / حذف» می‌آید — مثل واتساپ */
 .msgr-th-wrap{ display:block; position:relative; }
-.msgr-th-x{ position:absolute; inset-inline-start:6px; bottom:8px; width:24px; height:24px;
-  border:none; background:transparent; color:var(--muted); cursor:pointer; border-radius:7px;
-  font-size:0.82rem; line-height:1; opacity:0; transition:opacity .15s, background .15s; }
-.msgr-th-wrap:hover .msgr-th-x, .msgr-th-x:focus{ opacity:1; }
-.msgr-th-x:hover{ background:var(--red); color:#fff; }
-@media (hover:none){ .msgr-th-x{ opacity:.65; } }   /* گوشی: همیشه دیده شود */
+.msgr-th-wrap{ -webkit-touch-callout:none; }
 .msgr-del{ border:none; background:transparent; cursor:pointer; font-size:0.9rem;
   padding:4px 6px; border-radius:7px; color:var(--muted); flex-shrink:0; }
 .msgr-del:hover{ background:var(--red); color:#fff; }
@@ -48926,6 +49184,24 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
 .msgr-comp{ display:flex; gap:7px; padding:9px 12px; border-top:1px solid var(--border); }
 .msgr-comp input{ flex:1; min-width:0; background:var(--card); border:1px solid var(--border); border-radius:9px;
   color:var(--txt); font-family:'Vazirmatn',sans-serif; font-size:0.86rem; font-weight:600; padding:8px 11px; }
+/* نوارِ سنجاق‌شدهٔ گروهِ عمومی — بالای فهرست می‌ماند و با اسکرول نمی‌رود */
+.pub-pin{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex-shrink:0;
+  padding:9px 12px; border-bottom:1px solid var(--border); background:var(--dark); }
+.pub-pin-n{ font-weight:900; font-size:0.85rem; color:var(--accent); }
+.pub-pin-tel{ font-weight:800; font-size:0.82rem; color:var(--green); text-decoration:none;
+  border:1px solid var(--green); border-radius:999px; padding:4px 11px; direction:ltr; }
+.pub-pin-qr{ margin-inline-start:auto; background:var(--card); border:1px solid var(--blue);
+  color:var(--blue); border-radius:9px; padding:5px 11px; font-family:'Vazirmatn',sans-serif;
+  font-weight:800; font-size:0.78rem; cursor:pointer; }
+#rbPane-pub{ display:none; flex-direction:column; min-height:0; }
+#rbPane-pub.active{ display:flex; }
+.msgr-comp .msgr-ib{ background:var(--card); border:1px solid var(--border); border-radius:9px;
+  color:var(--muted); width:38px; flex-shrink:0; display:inline-flex; align-items:center;
+  justify-content:center; cursor:pointer; padding:0; }
+.msgr-comp .msgr-ib svg{ width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.8; }
+.msgr-comp .msgr-ib:hover{ border-color:var(--accent); color:var(--accent); }
+.msgr-comp .msgr-ib.rec{ border-color:var(--red); color:var(--red); }
+.msgr-t img.msgr-img, .msgr-t video.msgr-img{ max-width:min(240px,60vw); border-radius:9px; display:block; }
 .msgr-comp button{ background:var(--green); border:none; border-radius:9px; color:#fff;
   font-family:'Vazirmatn',sans-serif; font-weight:800; font-size:0.82rem; padding:8px 14px; cursor:pointer; white-space:nowrap; }
 .msgr-comp button:active{ transform:scale(.96); }

@@ -94,6 +94,14 @@
   .empty{color:var(--soft);text-align:center;padding:40px 16px;font-size:14px;line-height:2}
 
   /* کادرِ فرستادن */
+  #pubPin{display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;
+    padding:9px 12px;border-bottom:1px solid var(--line);background:var(--card)}
+  #pubPin .pp-n{font-weight:800;font-size:14px}
+  #pubPin .pp-tel{font-weight:800;font-size:13px;color:var(--green);text-decoration:none;
+    border:1px solid var(--green);border-radius:999px;padding:4px 11px;direction:ltr}
+  #pubPin .pp-dm{margin-inline-start:auto;background:transparent;border:1px solid var(--line);
+    color:var(--soft);border-radius:9px;padding:5px 11px;font-family:inherit;font-weight:800;
+    font-size:12.5px;cursor:pointer}
   .composer{
     display:flex;gap:8px;padding:10px 12px;background:var(--card);
     border-top:1px solid var(--line);align-items:flex-end;
@@ -199,6 +207,9 @@
 
 <div class="tabs" id="tabs"></div>
 
+<!-- نوارِ سنجاق‌شدهٔ گروهِ عمومی: نامِ پمپ و شمارهٔ تماس، با اسکرول گم نمی‌شود -->
+<div id="pubPin" style="display:none"></div>
+
 <div id="list"></div>
 
 <div class="composer" id="composer">
@@ -277,8 +288,14 @@ var myName = LS.get('payamName', '') || '';
      staff  → فقط چت گروهی و هشدارها
      p      → فقط موضوعِ شخصیِ همان مشتری
    بعد از فعال شدن، فهرستِ موضوع‌ها قفل است و فقط میرزا می‌تواند موضوع اضافه کند. */
-var role = LS.get('payamRole', '');            // '' | 'mirza' | 'staff' | 'p'
+/* omumi → گروهِ عمومیِ مشتری‌های عادی: فقط اعلان‌های پمپ را می‌بیند، خودش در
+   گروه پیام نمی‌دهد، شمارهٔ تماس بالای صفحه سنجاق است، و اگر خواست می‌تواند
+   «پیامِ شخصی» بفرستد (که به صندوقِ خودِ میرزا می‌رود، نه به گروه). */
+var role = LS.get('payamRole', '');            // '' | 'mirza' | 'staff' | 'p' | 'omumi'
 var personId = LS.get('payamPerson', '');
+var pubTel = LS.get('payamTel', '');            // شمارهٔ تماسِ سنجاق‌شدهٔ گروهِ عمومی
+var pubName = LS.get('payamPumpName', '');      // نامِ پمپ روی همان نوار
+var pubDm = false;                              // «پیامِ شخصی» باز است؟
 var readKey = LS.get('payamKey', '');
 var extra = [];                                 // موضوع‌های دستیِ میرزا
 try { extra = JSON.parse(LS.get('payamExtra', '')) || []; } catch (e) { extra = []; }
@@ -291,11 +308,13 @@ var active = '';
 try {
   var qp = new URLSearchParams(location.search);
   var qRole = qp.get('role');
-  if (qRole === 'mirza' || qRole === 'staff' || qRole === 'p') {
+  if (qRole === 'mirza' || qRole === 'staff' || qRole === 'p' || qRole === 'omumi') {
     role = qRole; LS.set('payamRole', role);
     if (qRole === 'p') { personId = clean(qp.get('id') || ''); LS.set('payamPerson', personId); }
     if (!myName) { myName = qRole === 'mirza' ? 'میرزا' : (qRole === 'staff' ? 'کارمند' : 'مشتری'); LS.set('payamName', myName); }
   }
+  if (qp.get('tel')) { pubTel = String(qp.get('tel') || '').trim(); LS.set('payamTel', pubTel); }
+  if (qp.get('nm')) { pubName = String(qp.get('nm') || '').trim(); LS.set('payamPumpName', pubName); }
   if (qp.get('server')) { server = qp.get('server'); LS.set('payamServer', server); }
   if (qp.get('key') !== null) { readKey = qp.get('key') || ''; LS.set('payamKey', readKey); }
   if (qp.toString()) history.replaceState(null, '', location.pathname);
@@ -303,11 +322,14 @@ try {
 
 /** موضوع‌های این نقش — هیچ‌جای دیگری موضوع ساخته نمی‌شود */
 function topicsOfRole() {
-  if (role === 'mirza') return ['mirza', 'staff'].concat(extra);
+  if (role === 'mirza') return ['mirza', 'staff', 'omumi'].concat(extra);
   if (role === 'staff') return ['staff'];
   if (role === 'p' && personId) return ['p-' + personId];
+  if (role === 'omumi') return ['omumi'];
   return [];
 }
+/** این نقش اجازهٔ نوشتن در گروه را دارد؟ (عمومی: نه) */
+function canPost() { return role !== 'omumi' || pubDm; }
 function applyRole() {
   topics = topicsOfRole();
   var saved = LS.get('payamActive', '');
@@ -319,6 +341,7 @@ function roleName() {
   if (role === 'mirza') return '👤 میرزا';
   if (role === 'staff') return '👷 کارمند';
   if (role === 'p') return '🧑 مشتری';
+  if (role === 'omumi') return '📢 گروهِ اعلان‌ها';
   return '';
 }
 function saveTopics() { LS.set('payamExtra', JSON.stringify(extra)); }
@@ -361,11 +384,38 @@ function paintGate() {
   document.getElementById('gate').style.display = on ? 'flex' : 'none';
   document.getElementById('tabs').style.display = on ? 'none' : '';
   document.getElementById('list').style.display = on ? 'none' : '';
-  // مشتری و کارمند هم می‌توانند پیام بفرستند؛ فقط بدونِ نقش کادر بسته است
-  document.getElementById('composer').style.display = on ? 'none' : '';
+  /* مشتری و کارمند هم می‌توانند پیام بفرستند. «گروهِ عمومی» فقط می‌بیند —
+     مگر وقتی خودش دکمهٔ «پیامِ شخصی» را زده باشد. */
+  document.getElementById('composer').style.display = (on || !canPost()) ? 'none' : '';
+  paintPubPin(on);
   var h = document.querySelector('header h1');
   h.textContent = on ? '📨 پیام‌رسان یعقوبی' : ('📨 ' + roleName());
   return on;
+}
+/* نوارِ سنجاق‌شده — فقط برای نقشِ «گروهِ عمومی» */
+function paintPubPin(gateOn) {
+  var el = document.getElementById('pubPin');
+  if (!el) return;
+  if (gateOn || role !== 'omumi') { el.style.display = 'none'; return; }
+  var tel = String(pubTel || '').trim();
+  el.style.display = '';
+  el.innerHTML =
+    '<span class="pp-n">📢 ' + esc(pubName || 'پمپ یعقوبی') + '</span>' +
+    (tel ? '<a class="pp-tel" href="tel:' + esc(tel.replace(/[^\d+]/g, '')) + '">📞 ' + esc(tel) + '</a>' : '') +
+    '<button type="button" class="pp-dm" onclick="pubToggleDm()">' +
+      (pubDm ? '✕ بستنِ پیامِ شخصی' : '✉️ پیامِ شخصی') + '</button>';
+}
+/* «پیامِ شخصی»: کادرِ نوشتن باز می‌شود و هر چه بنویسد به صندوقِ خودِ میرزا
+   می‌رود، نه به گروه — پس گروه فقط اعلانِ پمپ می‌ماند. */
+function pubToggleDm() {
+  pubDm = !pubDm;
+  paintGate();
+  var b = document.getElementById('box');
+  if (b) {
+    b.placeholder = pubDm ? 'پیامِ شخصی به میرزا…' : 'پیام بنویسید…';
+    if (pubDm) { try { b.focus(); } catch (e) {} }
+  }
+  note(pubDm ? 'هر چه بنویسید فقط به خودِ میرزا می‌رسد — در گروه دیده نمی‌شود.' : '', false);
 }
 /** فعال‌سازی با چسباندنِ لینک — همان کاری که اسکنِ کیو‌آر می‌کند */
 function activateFromLink() {
@@ -374,7 +424,7 @@ function activateFromLink() {
   var q = null;
   try { q = new URL(raw, location.href).searchParams; } catch (e) { q = null; }
   var r = q && q.get('role');
-  if (r !== 'mirza' && r !== 'staff' && r !== 'p') {
+  if (r !== 'mirza' && r !== 'staff' && r !== 'p' && r !== 'omumi') {
     msg.innerHTML = '❌ این لینکِ فعال‌سازی نیست. کیو‌آر را از میرزا بگیرید.';
     msg.style.color = 'var(--red)';
     return;
@@ -414,6 +464,7 @@ function paintTabs() {
 function label(t) {
   if (t === 'mirza') return '👤 میرزا';
   if (t === 'staff') return '👷 کارمندان';
+  if (t === 'omumi') return '📢 اعلان‌های پمپ';
   if (t.indexOf('p-') === 0) return '🧑 ' + t.slice(2);
   return '# ' + t;
 }
@@ -515,7 +566,10 @@ function sendMsg() {
   if (!txt) return;
   var btn = document.getElementById('sendBtn');
   btn.disabled = true;
-  post(active, myName, txt, {}).then(function (ok) {
+  /* در گروهِ عمومی، نوشتن فقط در حالتِ «پیامِ شخصی» ممکن است و مقصدش صندوقِ
+     خودِ میرزاست — نه موضوعِ گروه. */
+  var dest = (role === 'omumi') ? 'mirza' : active;
+  post(dest, myName, txt, {}).then(function (ok) {
     btn.disabled = false;
     if (ok) { b.value = ''; growBox(); }
     else note('پیام فرستاده نشد — سرورِ خانگی در دسترس نیست.', true);
