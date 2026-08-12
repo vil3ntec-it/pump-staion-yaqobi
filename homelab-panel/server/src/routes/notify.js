@@ -94,6 +94,18 @@ router.get('/:topic/json', (req, res) => {
   });
 });
 
+/* آمارِ سریعِ یک موضوع — چند نفر همین لحظه بازند (آنلاین/بیننده) و چند دستگاه
+   عضوِ نوتیفیکیشنِ آن‌اند. خواستهٔ صاحبِ برنامه: در تبِ «اعلان عمومی» ببیند
+   الان چند نفر آنلاین‌اند و کلاً چند مشتری عضو شده‌اند. رمزِ خواندنِ همان
+   موضوع را می‌خواهد — همان رمزی که برای دیدنِ خودِ پیام‌ها لازم است. */
+router.get('/:topic/stats', (req, res) => {
+  if (!notify.mayRead(req.params.topic, readKey(req))) {
+    return res.status(403).json({ ok: false, error: 'forbidden' });
+  }
+  const topic = notify.cleanTopic(req.params.topic);
+  res.json({ topic, online: notify.listenerCount(topic), members: notify.deviceCount(topic) });
+});
+
 // ---------------------- ثبت دستگاه برای نوتیفیکیشن -------------------------
 /* ثبتِ دستگاه هم «خواندن» است: هر کس بتواند دستگاهش را روی یک موضوع ثبت کند،
    از آن به بعد همهٔ پیام‌های آن موضوع را به‌صورت نوتیفیکیشن می‌گیرد. پس همان

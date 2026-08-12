@@ -200,6 +200,15 @@ function fanout(topic, event) {
 
 export const listenerCount = (topic) => listeners.get(cleanTopic(topic))?.size ?? 0;
 
+/** چند دستگاه روی این موضوع ثبت‌نامِ نوتیفیکیشن دارند — یعنی «عضوِ» گروه‌اند،
+    چه همین لحظه باز باشند چه نه (برخلافِ listenerCount که فقط اتصالِ زنده را می‌شمارد) */
+export function deviceCount(name) {
+  const topic = cleanTopic(name);
+  if (!topic) return 0;
+  const row = db.prepare('SELECT COUNT(*) AS n FROM ntf_devices WHERE topic = ?').get(topic);
+  return row ? row.n : 0;
+}
+
 // -------------------------------- انتشار ----------------------------------
 const RETAIN_DEFAULT = 500;
 
