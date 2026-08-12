@@ -18145,6 +18145,14 @@ body.boot-viewer #bootViewerSplash{
         <div class="pl-field"><label style="color:var(--accent);font-weight:700">⛽ پطرول</label><input class="ei-in" type="number" id="union-petrol" placeholder="0" oninput="setUnionRate('petrol',this.value)"></div>
         <div class="pl-field"><label style="color:#b7791f;font-weight:700">🟤 دیزل</label><input class="ei-in" type="number" id="union-diesel" placeholder="0" oninput="setUnionRate('diesel',this.value)"></div>
       </div>
+      <!-- اعلانِ خودکارِ نرخِ تازه به مشتریان — خواستهٔ صاحب ریپو: با هر تغییرِ واقعیِ
+           نرخ، همان پیامِ «اطلاعیه نرخ جدید» خودکار به «📢 اعلان عمومی» می‌رود؛ این دو
+           آستانه فقط تعیین می‌کنند چه وقت جملهٔ عذرخواهی یا پیشنهادِ خرید هم اضافه شود. -->
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;max-width:380px;margin-top:14px;padding-top:12px;border-top:1px dashed var(--border)">
+        <div class="pl-field"><label style="font-size:0.76rem">📈 آستانهٔ افزایشِ زیاد (٪)</label><input class="ei-in" type="number" id="rate-ann-up" placeholder="5" oninput="setRateAnnounceCfg('up',this.value)"></div>
+        <div class="pl-field"><label style="font-size:0.76rem">📉 آستانهٔ کاهش (٪)</label><input class="ei-in" type="number" id="rate-ann-down" placeholder="3" oninput="setRateAnnounceCfg('down',this.value)"></div>
+      </div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:6px;line-height:1.8">با هر تغییرِ نرخ، خودکار همین اطلاعیه به «📢 اعلان عمومی» می‌رود. اگر افزایش از آستانهٔ بالا بیشتر شود، عذرخواهیِ کمبودِ تیل هم به آخرش اضافه می‌شود؛ اگر کاهش از آستانهٔ پایین بیشتر شود، پیشنهادِ «همین حالا بخرید» اضافه می‌شود.</div>
     </div>
   </div>
   <!-- ═══ خرید عمده از مشتریان، کنارِ کادرِ تاریخچهٔ مفاد و ضرر ═══
@@ -20653,6 +20661,8 @@ const DB = {
   stationPhone: '',
   unionRatePetrol: 0,
   unionRateDiesel: 0,
+  rateAnnounceUpPct: 5,     // آستانهٔ افزایشِ زیاد (٪) — از این بیشتر شود، عذرخواهی هم به اعلان اضافه می‌شود
+  rateAnnounceDownPct: 3,   // آستانهٔ کاهش (٪) — از این بیشتر شود، پیشنهادِ خرید زودتر هم اضافه می‌شود
   // اعلانِ بیرون از برنامه (پیام‌رسانِ سرورِ خانگی): همیشه روشن است — پیام‌های چت
   // حتی وقتی برنامه بسته است به دستگاه میرزا می‌رسند. هیچ کلید روشن/خاموشی داخل
   // برنامه نیست؛ اجازهٔ اعلان فقط از تنظیماتِ خودِ دستگاه (App Info) مدیریت می‌شود.
@@ -33094,18 +33104,27 @@ function setUnionRate(fuel, val) {
   _rateHistTimer = setTimeout(() => {
     try {
       DB.rateHistory = DB.rateHistory || [];
+      const changed = [];   // تغییرهای واقعیِ همین دور — پایهٔ اعلانِ خودکار به مشتریان
       const rec = (ft, rate) => {
         if (!(rate > 0)) return;
         const lastSame = DB.rateHistory.find(h => h.fuel === ft);
         if (lastSame && lastSame.rate === rate) return;   // فقط تغییرِ واقعی ثبت شود
+        if (lastSame) changed.push({ fuel: ft, from: lastSame.rate, to: rate });
         DB.rateHistory.unshift({ date: persianDate(), at: Date.now(), fuel: ft, rate });
       };
       rec('petrol', parseFloat(DB.unionRatePetrol) || 0);
       rec('diesel', parseFloat(DB.unionRateDiesel) || 0);
       if (DB.rateHistory.length > 300) DB.rateHistory.length = 300;
       save();
+      if (changed.length) _announceRateChange(changed);
     } catch (e) {}
   }, 1500);
+}
+/** آستانه‌های اعلانِ خودکار — فقط میرزا تنظیم می‌کند (خودِ کادر هم زیرِ نرخ اتحادیه است) */
+function setRateAnnounceCfg(kind, val) {
+  const v = Math.max(0, parseFloat(val) || 0);
+  if (kind === 'down') DB.rateAnnounceDownPct = v; else DB.rateAnnounceUpPct = v;
+  save();
 }
 function applyUnionRates() {
   const up = document.getElementById('union-petrol');
@@ -33114,6 +33133,10 @@ function applyUnionRates() {
   if (ud) ud.value = DB.unionRateDiesel ? DB.unionRateDiesel : '';
   if (DB.unionRatePetrol) _applyRateToShifts(['d', 'n'], DB.unionRatePetrol);
   if (DB.unionRateDiesel) _applyRateToShifts(['dd', 'dn'], DB.unionRateDiesel);
+  const au = document.getElementById('rate-ann-up');
+  const ad = document.getElementById('rate-ann-down');
+  if (au) au.value = DB.rateAnnounceUpPct ? DB.rateAnnounceUpPct : '';
+  if (ad) ad.value = DB.rateAnnounceDownPct ? DB.rateAnnounceDownPct : '';
 }
 
 // رمز پاک‌سازی داده‌ها — بدون این رمز هیچ‌کس نمی‌تواند حساب‌ها را خالی کند
@@ -40523,13 +40546,9 @@ function _pubPaint() {
   _pubPaintPin();
   _msgrLsSet('pumpPubSeen', Date.now());
 }
-/** فرستادنِ اعلان — از همان صفِ پیام‌رسان می‌رود، پس بی‌اینترنت هم گم نمی‌شود */
-function pubSend() {
-  if (!_msgrIsAdmin()) { showToast('فقط میرزا می‌تواند اعلان بفرستد', '#e53e3e'); return; }
-  const box = document.getElementById('pubInput');
-  const text = String((box && box.value) || '').trim();
-  if (!text) return;
-  box.value = '';
+/** فرستادنِ خودِ متن به گروهِ عمومی — از همان صفِ پیام‌رسان می‌رود، پس بی‌اینترنت هم گم نمی‌شود.
+    هم دکمهٔ «فرستادن» دستیِ میرزا از این رد می‌شود، هم اعلانِ خودکارِ نرخِ تازه. */
+function _pubPostMessage(text) {
   const it = { key: 'pb' + Date.now() + Math.random().toString(36).slice(2, 7),
                thread: NTF_TOPIC_PUBLIC, topic: NTF_TOPIC_PUBLIC,
                from: _msgrMeName(), text, ts: Date.now(), copyToMirza: false };
@@ -40538,6 +40557,47 @@ function pubSend() {
   _pubPaint();
   const q = _msgrOutbox(); q.push(it); _msgrOutboxSet(q);
   _msgrFlush();
+}
+function pubSend() {
+  if (!_msgrIsAdmin()) { showToast('فقط میرزا می‌تواند اعلان بفرستد', '#e53e3e'); return; }
+  const box = document.getElementById('pubInput');
+  const text = String((box && box.value) || '').trim();
+  if (!text) return;
+  box.value = '';
+  _pubPostMessage(text);
+}
+/* ── اعلانِ خودکارِ نرخِ تازه ────────────────────────────────────────────────
+   خواستهٔ صاحب ریپو: با هر تغییرِ واقعیِ نرخ اتحادیه (همان لحظه‌ای که در
+   تاریخچه ثبت می‌شود، نه هر ضربهٔ کیبورد)، بدون هیچ کلیکی همین پیامِ ثابت به
+   «اعلان عمومی» می‌رود. اگر درصدِ افزایشِ یکی از دو تیل از rateAnnounceUpPct
+   بیشتر شد، یک عذرخواهیِ کمبودِ تیل هم به آخرش اضافه می‌شود؛ اگر کاهش از
+   rateAnnounceDownPct بیشتر شد، پیشنهادِ «همین حالا بخرید» اضافه می‌شود. این
+   دو آستانه را خودِ میرزا زیرِ کادرِ نرخ اتحادیه تنظیم می‌کند.
+   فقط دستگاهِ میرزا این کار را می‌کند (_msgrIsAdmin) — دستگاه‌های دیگر که همین
+   نرخ را از سرور می‌گیرند و applyUnionRates صدا می‌زنند، setUnionRate را صدا
+   نمی‌زنند، پس دوباره اعلان نمی‌فرستند. */
+function _announceRateChange(changed) {
+  try {
+    if (!_msgrIsAdmin()) return;
+    const petrol = parseFloat(DB.unionRatePetrol) || 0;
+    const diesel = parseFloat(DB.unionRateDiesel) || 0;
+    if (!petrol && !diesel) return;
+    const upPct = parseFloat(DB.rateAnnounceUpPct) || 0;
+    const downPct = parseFloat(DB.rateAnnounceDownPct) || 0;
+    let apology = false, buyNow = false;
+    changed.forEach(c => {
+      if (!(c.from > 0)) return;
+      const pct = (c.to - c.from) / c.from * 100;
+      if (pct > 0 && upPct > 0 && pct >= upPct) apology = true;
+      if (pct < 0 && downPct > 0 && -pct >= downPct) buyNow = true;
+    });
+    let text = '📢 اطلاعیه نرخ جدید\nمشتریان عزیز،\nبه اطلاع می‌رسانیم نرخ سوخت طبق نرخ جدید اتحادیه تغییر کرده است.\n'
+      + '⛽ پطرول: ' + n2fa(petrol) + '\n🛢️ دیزل: ' + n2fa(diesel) + '\n'
+      + 'لطفاً از این پس نرخ‌های فوق را در نظر بگیرید.\nاز اعتماد و همراهی شما سپاسگزاریم 🌹';
+    if (apology) text += '\n\n🙏 بابت این افزایش عذرخواهی می‌کنیم؛ به دلیل کمبود تیل در ولایت، نرخ اتحادیه بالا رفته است.';
+    if (buyNow) text += '\n\n🛒 نرخ فعلاً پایین‌تر است — پیشنهاد می‌کنیم پیش از افزایشِ دوباره، همین حالا خریداری کنید.';
+    _pubPostMessage(text);
+  } catch (e) {}
 }
 /** کیو‌آرِ عضو شدن در گروه — همان پیام‌رسانِ payam با نقشِ «فقط دیدن» */
 function pubShowQR() {
@@ -41037,7 +41097,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.283';
+const APP_VERSION = '2.9.284';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
