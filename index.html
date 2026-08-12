@@ -23381,46 +23381,23 @@ const _PDF_TYPO_CSS =
   'td{font-weight:700}' +
   'th{font-weight:800}';
 
-/* ── سند به اندازهٔ کاغذ درآید — نه بریده شود، نه له شود ────────────────────
-   دو باگ که همهٔ ۲۷ پی‌دی‌افِ برنامه را با هم خراب می‌کرد:
+/* ── سند به اندازهٔ کاغذ درآید — نه بریده شود، نه له شود، نه ورق حرام کند ──
+   سه چیز با هم این کار را می‌کنند و هیچ‌کدام جاوااسکریپت نیست:
 
-   ۱) «بریدن»: هر چیزی که از عرضِ ورق بیرون بزند، مرورگر در چاپ آن را نمی‌شکند
-      و به ورقِ بعدی هم نمی‌برد — می‌بُرد. گزارشِ ۲۴ساعته ۳۳ ستون دارد و روی
-      ورقِ Letter بیش از سه برابرِ عرضِ کاغذ می‌شد، یعنی دو سومِ ستون‌ها اصلاً
-      چاپ نمی‌شدند.
-   ۲) «له شدن»: قاعدهٔ `body{zoom:1.22}` (نسخه 2.9.273) که برای «بزرگ‌تر شدنِ
-      چاپ» گذاشته شده بود، در واقع عرضِ کارِ چیدمان را ۲۲٪ کم می‌کرد (کروم
-      کادرِ دربرگیرنده را بر ضریبِ zoom تقسیم می‌کند). ورقِ ۷۴۰ پیکسلی برای
-      جدول ۶۰۶ پیکسل می‌شد: سربرگ‌ها سه‌خطی، عددها دوخطی، و مبلغ‌های بلند از
-      کادرِ خودشان بیرون می‌زدند («۵۹,۱۴۴,۰۴۰ افغا…»).
+   ۱) هر چه از عرضِ ورق بیرون بزند، مرورگر در چاپ نمی‌شکندش — می‌بُرد. پس روی
+      کاغذ به خانه‌های جدول اجازهٔ شکستن داده می‌شود (`white-space:normal`)؛
+      تا وقتی جا هست هیچ فرقی نمی‌کند و فقط وقتی جا نشد، به‌جای بریده شدن به
+      خطِ بعد می‌رود.
+   ۲) دو گزارشِ خیلی پهن (۲۴ساعته و دیزل، با ده‌ها ستون) روی ورقِ افقی چاپ
+      می‌شوند — همان کاری که پی‌دی‌افِ مخزن از قبل می‌کرد.
+   ۳) هیچ بزرگ‌نمایی/کوچک‌نماییِ ساختگی‌ای در کار نیست.
 
-   حالا هیچ بزرگ‌نماییِ ساختگی‌ای در کار نیست — اندازه‌ها همان‌اند که خودِ سند
-   می‌گوید (همان منطقِ قدیم: تنها اهرم، فونتِ ریشه در _PDF_TYPO_CSS است) — و
-   درست پیش از چاپ، پهنای واقعیِ محتوا با پهنای کاغذ سنجیده می‌شود؛ فقط اگر
-   پهن‌تر بود، همان‌قدر (و نه ذره‌ای بیشتر) کوچک می‌شود که کامل جا شود. اگر
-   کاربر در پنجرهٔ چاپ کاغذ را افقی کند، خودش دوباره اندازه می‌گیرد و بزرگ‌تر
-   می‌شود. روی «صفحه» هیچ کاری نمی‌کند تا پیش‌نمایش مثل قبل قابلِ اسکرول بماند.
+   ⚠️ zoom را برنگردانید: یک بار (نسخه 2.9.273) برای بزرگ‌تر کردنِ چاپ گذاشته
+   شد و عرضِ کار را ۲۲٪ کم کرد، و یک بار (نسخه 2.9.278) به‌صورت خودکار برای
+   جا شدن — که روی اندروید عرضِ کاغذ را اشتباه می‌سنجید، نوشته‌ها را ریز
+   می‌کرد و بدتر: مرورگر شکستنِ ورق را با اندازهٔ پیش از zoom حساب می‌کرد، پس
+   نیمهٔ پایینِ ورق سفید می‌ماند و بقیهٔ ردیف‌ها می‌رفتند ورقِ بعد.
    ────────────────────────────────────────────────────────────────────────── */
-const _PDF_FIT_JS =
-  '(function(){' +
-  'function isPrint(){try{return !!(window.matchMedia&&matchMedia("print").matches)}catch(e){return false}}' +
-  /* اندازه‌گیری تکراری است چون خودِ کوچک شدن، عرضِ خط‌ها و حاشیه‌ها را گرد
-     می‌کند؛ دو-سه دور، دقیقاً روی لبهٔ کاغذ می‌نشیند. */
-  'function fit(){var de=document.documentElement,b=document.body;if(!b||!de)return;' +
-  'b.style.zoom="";' +                                  /* اول اندازهٔ طبیعی */
-  'var page=de.clientWidth||0;if(!page)return;var z=1,i,w;' +
-  'for(i=0;i<5;i++){w=de.scrollWidth||0;if(!w||w<=page+1)break;' +
-  'z=z*page/w*0.998;if(z<0.3)z=0.3;b.style.zoom=z;if(z<=0.3)break;}' +
-  'if(z>=1)b.style.zoom="";}' +
-  'function clear(){try{document.body.style.zoom=""}catch(e){}}' +
-  /* فونتِ درون‌ریزی‌شده گاهی بعد از load آماده می‌شود و نوشته‌ها را کمی پهن‌تر
-     می‌کند؛ پس بعد از آماده شدنش دوباره اندازه گرفته می‌شود. */
-  'function later(){if(isPrint())fit()}' +
-  'window.addEventListener("load",function(){later();' +
-  'try{if(document.fonts&&document.fonts.ready)document.fonts.ready.then(later)}catch(e){}});' +
-  'window.addEventListener("beforeprint",fit);' +
-  'window.addEventListener("afterprint",clear);' +
-  '})();';
 function _pdfDoc(html) {
   const s = String(html || '');
   if (!s || /name=["']?viewport/i.test(s)) return s;
@@ -23449,14 +23426,21 @@ function _pdfDoc(html) {
        قبل ندارد. (این‌ها هم روی صفحه و هم روی کاغذ لازم‌اند.) */
     '.sum-box .v,.sum-box .l,.split-title{white-space:normal!important;overflow-wrap:anywhere}' +
     '.sum-row{flex-wrap:wrap!important}' +
-    /* روی کاغذ: جدول تمام‌عرضِ ورق، سربرگش در هر ورق تکرار شود و ردیف‌ها از
-       وسط دو نیم نشوند. اندازه‌ها همان اندازه‌های خودِ سند می‌مانند. */
+    /* روی کاغذ: جدول تمام‌عرضِ ورق، سربرگش در هر ورق تکرار شود، ردیف‌ها از وسط
+       دو نیم نشوند، و هیچ ستونی از لبهٔ ورق بیرون نزند (بیرون‌زده = بریده).
+       ورق تا آخر پُر می‌شود و بعد ورقِ بعدی باز می‌شود — هیچ شکستنِ زودهنگامی
+       این‌جا نیست. خانه‌ها کمی بلندتر و نوشته‌ها کمی درشت‌تر از قبل‌اند
+       (خواستهٔ صاحب ریپو) — بلندیِ خانه روی عرضِ ستون اثری ندارد. */
     '@media print{' +
+      /* ⚠️ فونتِ ریشه را از ۱۸ بالاتر نبرید: جدولِ مخزن (۱۱ ستون) درست روی
+         همین اندازه یک‌خطی می‌ماند و با ۱۹ پیکسل، هر ۲۳۸ خانه‌اش دوخطی
+         می‌شود. درشت‌تر شدنِ چاپ از راهِ دیگری آمد — ورقِ افقی که چاپگر
+         کوچکش می‌کرد برداشته شد، پس نوشته‌ها روی کاغذ حدود ۵۰٪ درشت‌ترند. */
       'table{width:100%;max-width:100%}' +
       'thead{display:table-header-group}' +
       'tr{page-break-inside:avoid;break-inside:avoid}' +
-    '}</style>' +
-    '<script>' + _PDF_FIT_JS + '<\/script>';
+      'th,td{white-space:normal!important;overflow-wrap:anywhere;line-height:1.85}' +
+    '}</style>';
   // بعد از <meta charset> تزریق می‌شود تا charset از 1024 بایتِ اول بیرون نیفتد
   const mCharset = s.match(/<meta[^>]+charset[^>]*>/i);
   if (mCharset) return s.replace(mCharset[0], mCharset[0] + inject);
@@ -24352,7 +24336,7 @@ function pdfDieselShifts() {
   const pages = dates.map((dt, i) => {
     const dy=byDate[dt].day||{}, ni=byDate[dt].night||{};
     const ts=(dy.sale||0)+(ni.sale||0), tm=(dy.money||0)+(ni.money||0), tp=(dy.profit||0)+(ni.profit||0);
-    return `<div class="page${i < dates.length-1 ? ' break' : ''}">
+    return `<div class="page">
       <div class="page-hdr">
         <div>
           <div class="page-title">🟤 پمپ یعقوبی — گزارش دیزل</div>
@@ -24376,8 +24360,11 @@ function pdfDieselShifts() {
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:'Vazirmatn',sans-serif;background:#111827;color:#f3f4f6;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.page{padding:18px;display:flex;flex-direction:column;gap:12px}
-.page.break{page-break-after:always;break-after:page}
+.page{padding:18px;display:flex;flex-direction:column;gap:12px;
+  /* گزارشِ هر روز یک «کارت» است. کارت از وسط دو نیم نمی‌شود، ولی ورقِ تازه هم
+     باز نمی‌کند: تا ورق جا دارد، کارتِ بعدی همان‌جا می‌نشیند (پیش از این هر
+     کارت page-break-after داشت و نصفِ هر ورق سفید می‌ماند). */
+  page-break-inside:avoid;break-inside:avoid}
 .page-hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #d97706;padding-bottom:10px}
 .page-title{font-size:1.05rem;font-weight:900;color:#d97706}
 .page-meta{font-size:0.72rem;color:#9ca3af;margin-top:3px}
@@ -24403,14 +24390,13 @@ body{font-family:'Vazirmatn',sans-serif;background:#111827;color:#f3f4f6;-webkit
 .sum-val.blue{color:#60a5fa}.sum-val.amber{color:#fbbf24}.sum-val.green{color:#34d399}
 @media print{
   body{background:#111827}
-  .page{padding:10px;gap:8px}
-  .page.break{page-break-after:always;break-after:page}
+  .page{padding:8px;gap:6px}
   @page{margin:0.6cm;size:A4 portrait}
-  .halves{gap:8px}
-  .row{padding:4px 0}
-  .shift-hdr{padding:8px 12px}
-  .shift-body{padding:8px 12px}
-  .summary{padding:8px 14px;gap:16px}
+  .halves{gap:6px}
+  .row{padding:3px 0}
+  .shift-hdr{padding:6px 10px}
+  .shift-body{padding:6px 10px}
+  .summary{padding:6px 12px;gap:14px}
 }`;
 
   const totalM = shifts.reduce((a,s)=>a+(s.money||0),0);
@@ -24492,7 +24478,10 @@ function printDieselShifts() {
   <style>body{font-family:'Tahoma',sans-serif;padding:20px;font-size:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}h2{text-align:center}
   table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:3px 5px;text-align:center;white-space:nowrap}
   th{background:#f0f0f0}.day-th{background:#fff3e0}.night-th{background:#ede7f6}.total-th{background:#e8f5e9}
-  .foot td{background:#e8e8e8;font-weight:700}@media print{.no-print{display:none}}</style></head><body>
+  .foot td{background:#e8e8e8;font-weight:700}
+  /* مثل گزارشِ ۲۴ساعته، ستون‌هایش برای ورقِ عمودی زیاد است — افقی چاپ می‌شود. */
+  @media print{.no-print{display:none}@page{size:A4 landscape;margin:0.6cm}
+    th,td{padding:3px 4px!important;font-size:10px}}</style></head><body>
   <h2>🟤 گزارش دیزل — پمپ یعقوبی</h2>
   <div style="text-align:center;font-size:10px;color:#555">تاریخ: ${d.sh} | ${d.mi}</div>
   <button class="no-print" onclick="window.print()" style="margin:8px 0;padding:8px 20px;background:#38a169;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:13px">📄 ذخیره PDF</button>
@@ -24793,7 +24782,11 @@ function printShifts() {
     .total-th{background:#e8f5e9}
     tr:nth-child(even) td{background:#fafafa}
     .foot td{background:#e8e8e8;font-weight:700}
-    @media print{.no-print{display:none}}
+    /* ⚠️ تنها سندِ برنامه که ورقِ افقی می‌خواهد: ۳۳ ستون دارد و روی ورقِ
+       عمودی هر عدد به چند خط می‌شکند و خواندنی نمی‌ماند. بقیهٔ پی‌دی‌اف‌ها
+       عمدی عمودی‌اند تا چاپگر کوچکشان نکند و ورق حرام نشود. */
+    @media print{.no-print{display:none}@page{size:A4 landscape;margin:0.6cm}
+      th,td{padding:2px 3px!important;font-size:9.5px}}
   </style></head><body>
   <h2>⛽ گزارش 24 ساعته (پطرول + دیزل) — پمپ یعقوبی</h2>
   <div class="dates">تاریخ چاپ: ${d.sh} | ${d.mi}</div>
@@ -30806,7 +30799,7 @@ td{padding:6px 7px;border-bottom:1px solid #e2e8f0;text-align:center}
 tr:nth-child(even) td{background:#fffaf0}
 tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px;border-top:2px solid #4a5568}
 .footer{margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
-@media print{body{padding:6px}@page{margin:0.5cm;size:A4 landscape}tr{page-break-inside:avoid}h1{font-size:1rem}}
+@media print{body{padding:6px}@page{margin:0.5cm}tr{page-break-inside:avoid}h1{font-size:1rem}}
 </style></head><body>
 <h1>📦 پمپ یعقوبی — ${title}</h1>
 <div class="meta">تاریخ چاپ: ${dts.sh} | ${dts.mi||''}</div>
@@ -31611,7 +31604,7 @@ table{width:100%;border-collapse:collapse;font-size:0.72rem}th{background:#2d374
 td{padding:6px 7px;border-bottom:1px solid #e2e8f0;text-align:center;vertical-align:middle}tr:nth-child(even) td{background:#faf5ff}
 tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px;text-align:center}
 .footer{margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
-@media print{@page{margin:0.5cm;size:A4 landscape}}</style></head><body>
+@media print{@page{margin:0.5cm}}</style></head><body>
 <h1>🛢️ ${escFa(company.name)} — حساب شرکت تیل (${fuelLabel})</h1>
 <div class="meta">تاریخ چاپ: ${d.sh} | ${d.mi}</div>
 <div class="sum-row">
@@ -31683,7 +31676,7 @@ table{width:100%;border-collapse:collapse;font-size:0.72rem}th{background:#2d374
 td{padding:6px 7px;border-bottom:1px solid #e2e8f0;text-align:center;vertical-align:middle}tr:nth-child(even) td{background:#faf5ff}
 tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px;text-align:center}
 .footer{margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
-@media print{@page{margin:0.5cm;size:A4 landscape}}</style></head><body>
+@media print{@page{margin:0.5cm}}</style></head><body>
 <h1>🗂️ ${escFa(company.name)} — جدول آرشیو‌شده (${fuelLabel})</h1>
 <div class="meta">تاریخ ساخته‌شدنِ جدول: ${escFa(_archDateLabel(h.createdAt) || (h.createdAt||'—'))} | تاریخ چاپ: ${d.sh} | ${d.mi}</div>
 <div class="sum-row">
@@ -32409,7 +32402,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 5px;border
 @media print{
   /* ورقِ افقی مثل پی‌دی‌افِ مخزن — ستون‌ها جا می‌شوند و کاغذِ کمتری می‌رود */
   body{padding:0}
-  @page{margin:0.7cm;size:A4 landscape}
+  @page{margin:0.7cm}
   table{font-size:0.66rem;width:100%}
   th,td{padding:4px 5px;white-space:normal!important;word-break:break-word}
   .split-row{page-break-inside:avoid;margin-bottom:8px}
@@ -32616,7 +32609,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;border:1px solid #4a55
 .empty{text-align:center;padding:18px;color:#7b8494;border:1px dashed #d6dae1;border-radius:9px}
 @media print{
   body{padding:0}
-  @page{margin:0.8cm;size:A4 landscape}
+  @page{margin:0.8cm}
   tr{page-break-inside:avoid}
   thead{display:table-header-group}
 }`;
@@ -40624,7 +40617,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.278';
+const APP_VERSION = '2.9.279';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
