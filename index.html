@@ -25980,6 +25980,8 @@ function makeTableResizable(table, storeKey){
     function up(){
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', up);
+      document.removeEventListener('pointercancel', up);
+      window.removeEventListener('blur', up);
       saved[dKey] = getW(dIdx) || Math.round(startW);
       if(pIdx >= 0 && pKey) saved[pKey] = getW(pIdx) || Math.round(pStartW);
       // عرضِ «همهٔ» ستون‌ها ذخیره می‌شود، نه فقط دوتای کشیده‌شده — وگرنه جمعِ ستون‌ها
@@ -26025,7 +26027,19 @@ function makeTableResizable(table, storeKey){
       pStartW = getW(pIdx) || _ownW(ths[pIdx]);
       document.addEventListener('pointermove', move);
       document.addEventListener('pointerup', up);
+      /* ⚠️ اگر موس جایی رها شود که pointerup به سند نرسد — بیرونِ پنجره، روی
+         نوارِ اسکرول، با Alt+Tab، یا وقتی خودِ سیستم کشیدن را لغو می‌کند — این
+         دو شنونده تا ابد روی document می‌ماندند. آن‌وقت هر تکانِ ماوس ستون‌ها
+         را جابه‌جا می‌کرد و کلیک‌ها به‌جای دکمه‌ها به همین کشیدن می‌خورد:
+         «یهو دکمه‌ها از کار افتادند و با رفرش درست شد». روی گوشی پیش نمی‌آمد
+         چون انگشت بیرونِ صفحه رها نمی‌شود — و گزارش هم فقط از کامپیوتر بود.
+         حالا سه راهِ خروجِ دیگر هم بسته است و خودِ دسته اشاره‌گر را می‌گیرد تا
+         رها شدنش را حتماً بشنود. */
+      document.addEventListener('pointercancel', up);
+      window.addEventListener('blur', up);
+      try{ grip.setPointerCapture(e.pointerId); }catch(e2){}
     });
+    grip.addEventListener('lostpointercapture', up);
   });
   // اگر قبلاً عرضِ ذخیره‌شده دارد، همان چیدمانِ ثابتِ انتخابیِ کاربر برگردد
   if(Object.keys(saved).length) _applySavedColWidths(table);
@@ -28048,6 +28062,12 @@ function _renderRasidLog(acct, o) {
       if (!empty) break;
       a = trs[i];
     }
+    /* ⚠️ اگر همهٔ ردیف‌ها خالی باشند (حسابِ تازه، یا حسابی که هنوز چیزی در
+       جدولش ننوشته‌اید)، این حلقه به ردیفِ اول می‌رسید و ردیف‌های رسید درست
+       «اولِ جدول» می‌نشستند — انگار یک جدولِ بی‌ربط بالای جدول سبز شده باشد.
+       گزارشِ صاحب ریپو: «یک جدولِ بی‌ربط درست می‌شود اولِ جدول». در آن حالت
+       ردیف‌ها می‌روند ته جدول، جایی که چشم دنبالشان می‌گردد. */
+    if (a && a === trs[0]) a = null;
     return a;
   })();
   const line = (ftype, when, name, cells, tip, delId) => {
@@ -35888,8 +35908,10 @@ function pmMoreMenu(ev) {
   const menu = document.createElement('div');
   menu.id = 'pmMoreMenu';
   menu.className = 'ch-msg-menu';
+  /* «💬 چت با این حساب» برداشته شد — خواستهٔ صریحِ صاحب ریپو. خودِ پیام‌رسان
+     سرِ جایش است (تبِ «چت تک‌نفره»ی ربات)، فقط این میان‌بُر از حسابِ قرض‌دار
+     رفت که ناخواسته زده می‌شد. */
   menu.innerHTML =
-    '<button type="button" data-a="chat">💬 چت با این حساب</button>' +
     '<button type="button" data-a="qr">📲 کیو‌آر</button>' +
     '<button type="button" data-a="rename">✏️ تغییر اسم</button>' +
     '<button type="button" data-a="copy">📇 کپیِ حساب</button>' +
@@ -35899,8 +35921,7 @@ function pmMoreMenu(ev) {
     e.preventDefault(); e.stopPropagation();
     const a = b.getAttribute('data-a');
     _pmMoreClose();
-    if (a === 'chat') msgrOpenPerson(currentPersonId, currentSubId || '');
-    else if (a === 'qr') showPersonQRFromModal();
+    if (a === 'qr') showPersonQRFromModal();
     else if (a === 'rename') renameCurrentPerson();
     else if (a === 'copy') openAcctCardFromPerson();
     else if (a === 'del') deletePersonSub();
@@ -40682,7 +40703,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.280';
+const APP_VERSION = '2.9.281';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
