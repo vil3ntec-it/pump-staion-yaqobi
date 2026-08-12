@@ -169,7 +169,7 @@
 <header>
   <span class="dot" id="dot" title="وضعیت اتصال به سرور"></span>
   <h1>📨 پیام‌رسان یعقوبی</h1>
-  <button class="ico" onclick="openSet()" title="تنظیمات">⚙️</button>
+  <button class="ico" id="gearBtn" onclick="openSet()" title="تنظیمات">⚙️</button>
 </header>
 
 <div id="note"></div>
@@ -327,6 +327,10 @@ function topicsOfRole() {
 }
 /** این نقش اجازهٔ نوشتن در گروه را دارد؟ (عمومی: نه — تماس فقط با شمارهٔ سنجاق‌شده) */
 function canPost() { return role !== 'omumi'; }
+/* مشتری‌ها (گروهِ عمومی و مشتریِ تک‌به‌تک) کارِ فنی با تنظیمات ندارند و نباید
+   آدرسِ سرورِ خانگی را ببینند یا بتوانند نقشِ دستگاه را خودشان بردارند — اگر
+   اشتباهی وصل شدند، کیو‌آرِ تازه از میرزا همان لحظه نقش را درست می‌کند. */
+function _canSeeSettings() { return role !== 'omumi' && role !== 'p'; }
 function applyRole() {
   topics = topicsOfRole();
   var saved = LS.get('payamActive', '');
@@ -387,6 +391,8 @@ function paintGate() {
   paintPubPin(on);
   var h = document.querySelector('header h1');
   h.textContent = on ? '📨 پیام‌رسان یعقوبی' : ('📨 ' + roleName());
+  var gear = document.getElementById('gearBtn');
+  if (gear) gear.style.display = (!on && !_canSeeSettings()) ? 'none' : '';
   return on;
 }
 /* نوارِ سنجاق‌شده — فقط برای نقشِ «گروهِ عمومی»: نامِ پمپ + شمارهٔ تماس */
@@ -703,6 +709,7 @@ function setMsg(t, color) {
   el.style.color = color || 'var(--soft)';
 }
 function openSet() {
+  if (!_canSeeSettings()) return;   // مشتری از این‌جا رد نمی‌شود، حتی اگر دکمه‌اش پنهان نباشد
   document.getElementById('setServer').value = server;
   document.getElementById('setName').value = myName;
   document.getElementById('setRole').textContent = role ? roleName() : '— هنوز فعال نشده —';

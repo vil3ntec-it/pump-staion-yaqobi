@@ -142,6 +142,11 @@ async function main() {
   const live = await waitMsg(app.inbox, (m) => m.body === 'یک خبر تازه');
   check('پیام تازه فوری رسید', Boolean(live), 'نرسید');
 
+  console.log('\n── آمارِ آنلاین/عضو ──');
+  r = await req('GET', '/api/notify/pump/stats');
+  check('یک نفر همین الان آنلاین است', r.json?.online === 1, String(r.json?.online));
+  check('هنوز هیچ عضوی ثبت نشده', r.json?.members === 0, String(r.json?.members));
+
   console.log('\n── وقتی برنامه بسته است ──');
   const key = crypto.createECDH('prime256v1');
   key.generateKeys();
