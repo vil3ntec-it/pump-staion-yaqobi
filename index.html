@@ -18329,7 +18329,10 @@ body.boot-viewer #bootViewerSplash{
            renderSafe() خودکار کادر بعدی را زیرش می‌سازد (به ترتیب) -->
       <div id="safe-print-area">
         <div id="safe-boxes"></div>
-        <div class="tbl-wrap" style="margin-top:10px">
+        <!-- خانهٔ ذخیرهٔ ردیفِ «تمام حساب». وقتی ردیفی هست، _safeDockFooter همین
+             tfoot را داخلِ آخرین جدولِ بالا می‌برد تا با ستون‌ها هم‌ردیف بماند و
+             با همان اسکرول برود؛ فقط وقتی هیچ ردیفی نیست این‌جا دیده می‌شود. -->
+        <div class="tbl-wrap" id="safe-ft-spare" style="margin-top:10px">
           <table class="tbl safe-tbl" style="table-layout:fixed;min-width:700px">
             <colgroup>
               <col style="width:36px"><col style="width:100px"><col style="width:104px"><col><col style="width:132px"><col style="width:150px"><col style="width:54px">
@@ -33373,6 +33376,11 @@ function renderSafe() {
   renderSafeMonthTabs();
   const boxesEl = document.getElementById('safe-boxes');
   if (!boxesEl) return;
+  /* ⚠️ پیش از خالی کردنِ کادرها، ردیفِ «تمام حساب» را به خانهٔ ذخیره برگردان.
+     در رندرِ قبلی این tfoot داخلِ یکی از همین جدول‌ها نشسته بود؛ اگر همین‌جا
+     پاک شود، خودِ گره از بین می‌رود و از آن به بعد safe-ft-total دیگر پیدا
+     نمی‌شود (یعنی جمع برای همیشه ناپدید می‌شد). */
+  _safeParkFooter();
   boxesEl.innerHTML = '';
   let totalBardagi = { afn: 0, usd: 0 }, totalMandagi = { afn: 0, usd: 0 };   // مجموع کل
   let mBardagi = { afn: 0, usd: 0 }, mMandagi = { afn: 0, usd: 0 };           // مجموع ماه فعال
@@ -33455,6 +33463,46 @@ function renderSafe() {
   netEl.style.color = netFmt.ok ? 'var(--green)' : 'var(--red)';
   const ftEl = document.getElementById('safe-ft-total');
   if (ftEl) { const mNetFmt = fmtSafeNet(mNet); ftEl.textContent = mNetFmt.text; ftEl.style.color = mNetFmt.ok?'var(--green)':'var(--red)'; }
+  _safeDockFooter();
+}
+/* ── ردیفِ «تمام حساب» باید به جدول بچسبد ──────────────────────────────────
+   پیش از این، این ردیف یک جدولِ جدا در یک ظرفِ اسکرولِ جدا بود. یعنی جدولِ داده
+   و ردیفِ جمع، هر کدام اسکرولِ افقیِ خودشان را داشتند و با کشیدنِ یکی، آن یکی
+   سرِ جایش می‌ماند — جمع از زیرِ ستونِ «مبلغ» درمی‌رفت و جای دیگری می‌افتاد
+   (شکایتِ صاحب ریپو: «اون جمله‌ها چرا اسکرول میشن چپ و راست؟ باید با جدول
+   چسپیده باشه»).
+   حالا همان tfoot داخلِ آخرین جدولِ داده منتقل می‌شود: همان ظرفِ اسکرول، همان
+   colgroup — پس همیشه دقیقاً زیرِ ستونِ خودش می‌ماند. چون خودِ گره جابه‌جا
+   می‌شود (نه یک کپی)، getElementById('safe-ft-total') مثل قبل کار می‌کند.
+   جدولِ صرافی از اول همین‌طور بود؛ حالا گاوصندوق هم مثل آن شد. ── */
+/** ردیفِ جمع را به خانهٔ ذخیره برمی‌گرداند تا پاک‌کردنِ کادرها نابودش نکند */
+function _safeParkFooter() {
+  try {
+    const cell = document.getElementById('safe-ft-total');
+    const spare = document.getElementById('safe-ft-spare');
+    if (!cell || !spare) return;
+    const ft = cell.closest('tfoot');
+    const t = spare.querySelector('table.safe-tbl');
+    if (ft && t && !t.contains(ft)) t.appendChild(ft);
+  } catch (e) {}
+}
+function _safeDockFooter() {
+  try {
+    const cell = document.getElementById('safe-ft-total');
+    const spare = document.getElementById('safe-ft-spare');
+    const boxes = document.getElementById('safe-boxes');
+    if (!cell || !spare || !boxes) return;
+    const ft = cell.closest('tfoot');
+    if (!ft) return;
+    const tables = boxes.querySelectorAll('table.safe-tbl');
+    const last = tables[tables.length - 1];
+    if (last) { last.appendChild(ft); spare.style.display = 'none'; }
+    else {                                   // هیچ ردیفی نیست → برگردد سرِ جای خودش
+      const t = spare.querySelector('table.safe-tbl');
+      if (t) t.appendChild(ft);
+      spare.style.display = '';
+    }
+  } catch (e) {}
 }
 function openAddSafe(type) {
   document.getElementById('sf-type').value = type;
@@ -41302,7 +41350,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.288';
+const APP_VERSION = '2.9.289';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
