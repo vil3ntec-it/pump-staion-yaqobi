@@ -18464,14 +18464,14 @@ body.boot-viewer #bootViewerSplash{
             <th style="min-width:90px">دالر</th>
             <th style="min-width:120px">رسید به صرافی</th>
             <th>بردگی پمپ بنزین</th>
-            <th style="min-width:120px">مبلغ باقی‌مانده</th>
+            <th style="min-width:120px" title="الباقی از اولِ ماه تا همین ردیف — ردیفِ آخر همان عددِ «جمله»ی پایینِ جدول است">الباقی تا این ردیف</th>
             <th>حذف</th>
           </tr></thead>
           <tbody id="sarrafi-body"></tbody>
           <tfoot class="xls-foot"><tr>
             <td colspan="6" style="padding:8px 7px">جمله</td>
             <td class="xls-calc" id="sarrafi-ft-usd">0</td>
-            <td></td>
+            <td class="xls-calc" id="sarrafi-ft-rasid">0</td>
             <td class="xls-calc" id="sarrafi-ft-bardagi">0</td>
             <td class="xls-calc" id="sarrafi-ft-baqi">0</td>
             <td></td>
@@ -33426,10 +33426,16 @@ function renderSafe() {
     `;
     const tbody = wrap.querySelector('tbody');
     const rowsFrag = document.createDocumentFragment();
-    chunk.forEach(({ i, e }) => {
+    /* شمارهٔ ردیف از «۱» و برای هر ماه جدا — و در کادرهای بعدی (هر ۳۰ ردیف یک
+       کادر) پشتِ سرِ هم ادامه پیدا می‌کند. قبلاً اندیسِ آرایهٔ کلِ گاوصندوق چاپ
+       می‌شد، پس ماهِ تازه با شماره‌های بلند (۳۶۲، ۳۶۳ …) شروع می‌شد و ماه‌ها
+       به‌نظر به هم چسبیده می‌آمدند. اندیسِ واقعی (i) دست‌نخورده در onchange
+       می‌ماند — داده با همان بسته می‌شود، نه با این شماره. */
+    chunk.forEach(({ i, e }, k) => {
+      const seq = start + k + 1;
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td style="text-align:center;color:var(--muted)">${n2fa(i+1)}</td>
+        <td style="text-align:center;color:var(--muted)">${n2fa(seq)}</td>
         <td><input class="xls-in sm" value="${(e.date||'').replace(/"/g,'&quot;')}" placeholder="تاریخ" onchange="updateSafeEntry(${i},'date',this.value)"></td>
         <td><select class="xls-in" style="min-width:90px;color:${e.type==='bardagi'?'var(--green)':'var(--blue)'};font-weight:700;padding:5px 4px;font-size:0.82rem" onchange="updateSafeEntry(${i},'type',this.value)"><option value="bardagi"${e.type==='bardagi'?' selected':''}>💵 بردگی</option><option value="mandagi"${e.type!=='bardagi'?' selected':''}>🏛️ ماندگی</option></select></td>
         <td><input class="xls-in" value="${(e.title||'').replace(/"/g,'&quot;')}" placeholder="نام" onchange="updateSafeEntry(${i},'title',this.value)"></td>
@@ -33850,18 +33856,18 @@ function renderSarrafi() {
   const tbody = document.getElementById('sarrafi-body');
   if (!tbody) return;
   tbody.innerHTML = '';
-  let sumBardagi = 0, sumBaqi = 0, sumUsd = 0, sumBardagiUsd = 0;
+  /* شمارهٔ ردیف از «۱» و برای هر ماه جدا. قبلاً اندیسِ آرایهٔ کلِ برنامه چاپ
+     می‌شد، برای همین ماهِ تازه با شماره‌های بلند (۲۲۷، ۲۲۸ …) شروع می‌شد و
+     ماه‌ها به‌نظر به هم چسبیده می‌آمدند. اندیسِ واقعی (i) دست‌نخورده در
+     onchange/oninput می‌ماند — داده با همان بسته می‌شود، نه با این شماره. */
+  let seq = 0;
   rows.forEach((r, i) => {
     if (_sarrafiActiveMonth && sarrafiMonthKey(r.date) !== _sarrafiActiveMonth) return;   // خالی = همهٔ ماه‌ها
+    seq++;
     const broken = sarrafiBroken(r);
-    const baqi = sarrafiBaqi(r);
-    sumBardagi += parseFloat(r.bardagi) || 0;
-    sumBaqi += baqi;
-    sumUsd += broken;
-    sumBardagiUsd += (parseFloat(r.rate)||0) ? (parseFloat(r.bardagi)||0) / (parseFloat(r.rate)||1) : 0;
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td style="text-align:center;color:var(--muted)">${n2fa(i+1)}</td>
+      <td style="text-align:center;color:var(--muted)">${n2fa(seq)}</td>
       <td><input class="xls-in sm" value="${cmpEsc(r.date)}" placeholder="تاریخ" onchange="updateSarrafiRow(${i},'date',this.value)"></td>
       <td><input class="xls-in" value="${cmpEsc(r.desc)}" placeholder="توضیحات" oninput="updateSarrafiRow(${i},'desc',this.value)"></td>
       <td><input class="xls-in sm" type="number" value="${r.amount||''}" placeholder="0" oninput="updateSarrafiRow(${i},'amount',this.value)"></td>
@@ -33876,17 +33882,66 @@ function renderSarrafi() {
       <td id="sarrafi-usd-${i}" style="font-weight:700;color:var(--blue);min-width:85px;font-size:0.92rem">${broken ? n2fa(broken.toFixed(2)) : '—'}</td>
       <td id="sarrafi-rasid-${i}" style="font-weight:700;color:var(--green);min-width:115px;font-size:0.92rem">${broken ? n2fa(broken.toFixed(2)) + ' $' : '—'}</td>
       <td><input class="xls-in sm" type="number" value="${r.bardagi||''}" placeholder="0" oninput="updateSarrafiRow(${i},'bardagi',this.value)"></td>
-      <td id="sarrafi-baqi-${i}" style="font-weight:700;color:${baqi>0?'var(--red)':'var(--green)'};min-width:115px;font-size:0.92rem">${n2fa(Math.round(baqi))}</td>
+      <td id="sarrafi-baqi-${i}" style="font-weight:700;min-width:115px;font-size:0.92rem">—</td>
       <td><button class="del-btn" onclick="deleteSarrafiRow(${i})">🗑️</button></td>
     `;
     tbody.appendChild(tr);
   });
-  document.getElementById('sarrafi-total-usd').textContent = n2fa(sumUsd.toFixed(2)) + ' $';
-  document.getElementById('sarrafi-total-bardagi-usd').textContent = n2fa(Math.round(sumBardagi));
-  document.getElementById('sarrafi-ft-usd').textContent = n2fa(sumUsd.toFixed(2)) + ' $';
-  document.getElementById('sarrafi-ft-bardagi').textContent = n2fa(Math.round(sumBardagi));
-  document.getElementById('sarrafi-ft-baqi').textContent = n2fa(Math.round(sumBaqi));
+  _sarrafiRepaint();
+}
+/* ══════════════════════════════════════════════════════════════════════════
+   جمع‌ها و ستونِ الباقیِ صرافی — تنها جایی که این عددها نوشته می‌شوند
+   ──────────────────────────────────────────────────────────────────────────
+   الباقی «تجمعی» است: هر ردیف الباقیِ از اولِ ماه تا خودِ همان ردیف را نشان
+   می‌دهد، پس ردیفِ آخر دقیقاً همان عددِ «جمله»ی پایینِ جدول و همان جملهٔ
+   «الباقی پمپ نزد صرافی» می‌شود.
+
+   قبلاً هر ردیف «رسیدِ همان ردیف منهای بردگیِ همان ردیف» را نشان می‌داد و این
+   بی‌معنی بود: بردگی و رسید دو رویدادِ جدا هستند و هیچ قرار نیست روبه‌روی هم
+   در یک ردیف بنشینند. برای همین ردیفِ اولِ ماه (که بردگیِ کلِ ماه رویش نشسته
+   بود) عددِ بزرگِ منفی می‌داد و بقیهٔ ردیف‌ها عددهای بی‌ربط — خواستهٔ صریحِ
+   صاحب ریپو: «الباقی با جمع کل ها کار داره نه با تک‌تکِ کادرهای جدول».
+
+   ⚠️ هیچ جمعی عوض نشد: sarrafiBaqi() و جمعِ پایینِ جدول همان‌اند که بودند —
+   فقط چیزی که در هر خانه چاپ می‌شود جمعِ تا همان‌جاست، نه تفریقِ تک‌ردیفی.
+   ══════════════════════════════════════════════════════════════════════════ */
+function _sarrafiRepaint() {
+  const rows = sarrafiRows();
+  let sumBardagi = 0, sumBaqi = 0, sumUsd = 0, sumBardagiUsd = 0;
+  rows.forEach((r, i) => {
+    if (_sarrafiActiveMonth && sarrafiMonthKey(r.date) !== _sarrafiActiveMonth) return;   // خالی = همهٔ ماه‌ها
+    const broken = sarrafiBroken(r);
+    const rate = parseFloat(r.rate) || 0;
+    sumBardagi += parseFloat(r.bardagi) || 0;
+    sumBaqi += sarrafiBaqi(r);
+    sumUsd += broken;
+    sumBardagiUsd += rate ? (parseFloat(r.bardagi) || 0) / rate : 0;
+    const usdEl = document.getElementById('sarrafi-usd-' + i);
+    if (usdEl) usdEl.textContent = broken ? n2fa(broken.toFixed(2)) : '—';
+    const rasidEl = document.getElementById('sarrafi-rasid-' + i);
+    if (rasidEl) rasidEl.textContent = broken ? n2fa(broken.toFixed(2)) + ' $' : '—';
+    const baqiEl = document.getElementById('sarrafi-baqi-' + i);
+    if (baqiEl) {
+      /* ردیفِ کاملاً خالی (نه رسیدی، نه بردگی‌ای) چیزی به الباقی اضافه نمی‌کند،
+         پس تکرارِ همان عدد فقط شلوغی است — مثلِ ستون‌های دالر و رسید «—» می‌شود.
+         الباقیِ تجمعی خودش دست‌نخورده به ردیفِ بعدی می‌رسد. */
+      const emptyRow = !broken && !(parseFloat(r.bardagi) || 0);
+      baqiEl.textContent = emptyRow ? '—' : n2fa(Math.round(sumBaqi));
+      // هم‌رنگِ جملهٔ بالای جدول: مثبت = طلبِ پمپ (سبز)، منفی = بدهیِ پمپ (قرمز)
+      baqiEl.style.color = emptyRow ? 'var(--muted)' : (sumBaqi >= 0 ? 'var(--green)' : 'var(--red)');
+    }
+  });
+  const _set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  _set('sarrafi-total-usd', n2fa(sumUsd.toFixed(2)) + ' $');
+  _set('sarrafi-total-bardagi-usd', n2fa(Math.round(sumBardagi)));
+  _set('sarrafi-ft-usd', n2fa(sumUsd.toFixed(2)) + ' $');
+  // ستونِ «رسید به صرافی» تا امروز هیچ جمعی نداشت (خانه‌اش در tfoot خالی بود).
+  // همان عددِ ستونِ دالر است، چون هر دو «مبلغ ÷ فی» را نشان می‌دهند.
+  _set('sarrafi-ft-rasid', n2fa(sumUsd.toFixed(2)) + ' $');
+  _set('sarrafi-ft-bardagi', n2fa(Math.round(sumBardagi)));
+  _set('sarrafi-ft-baqi', n2fa(Math.round(sumBaqi)));
   _updateSarrafiSentence(sumBaqi);
+  return { sumBardagi, sumBaqi, sumUsd, sumBardagiUsd };
 }
 // جملهٔ الباقی صرافی: مثبت = طلبِ پمپ از صرافی، منفی = بدهیِ پمپ به صرافی
 function _updateSarrafiSentence(sumBaqi) {
@@ -33983,31 +34038,14 @@ function updateSarrafiRow(idx, field, val) {
     renderSarrafiMonthTabs();
     return;
   }
-  // فقط مقدار باقی‌مانده همین ردیف و جمع‌ها را آپدیت کن (بدون رندر کامل، برای سرعت)
-  const r = rows[idx];
-  const broken = sarrafiBroken(r);
-  const baqi = sarrafiBaqi(r);
-  const usdEl = document.getElementById('sarrafi-usd-' + idx);
-  if (usdEl) usdEl.textContent = broken ? n2fa(broken.toFixed(2)) : '—';
-  const rasidEl = document.getElementById('sarrafi-rasid-' + idx);
-  if (rasidEl) rasidEl.textContent = broken ? n2fa(broken.toFixed(2)) + ' $' : '—';
-  const baqiEl = document.getElementById('sarrafi-baqi-' + idx);
-  if (baqiEl) { baqiEl.textContent = n2fa(Math.round(baqi)); baqiEl.style.color = baqi>0?'var(--red)':'var(--green)'; }
-  let sumBardagi = 0, sumBaqi = 0, sumUsd = 0, sumBardagiUsd = 0;
-  rows.forEach(rr => {
-    if (sarrafiMonthKey(rr.date) === _sarrafiActiveMonth) {
-      sumBardagi += parseFloat(rr.bardagi)||0;
-      sumBaqi += sarrafiBaqi(rr);
-      sumUsd += sarrafiBroken(rr);
-      sumBardagiUsd += (parseFloat(rr.rate)||0) ? (parseFloat(rr.bardagi)||0) / (parseFloat(rr.rate)||1) : 0;
-    }
-  });
-  document.getElementById('sarrafi-total-usd').textContent = n2fa(sumUsd.toFixed(2)) + ' $';
-  document.getElementById('sarrafi-total-bardagi-usd').textContent = n2fa(Math.round(sumBardagi));
-  document.getElementById('sarrafi-ft-usd').textContent = n2fa(sumUsd.toFixed(2)) + ' $';
-  document.getElementById('sarrafi-ft-bardagi').textContent = n2fa(Math.round(sumBardagi));
-  document.getElementById('sarrafi-ft-baqi').textContent = n2fa(Math.round(sumBaqi));
-  _updateSarrafiSentence(sumBaqi);
+  /* خانه‌های محاسباتی و جمع‌ها را به‌روز کن، بدونِ رندرِ کاملِ جدول (تا کادری که
+     کاربر داخلش تایپ می‌کند نابود نشود و کیبورد بسته نشود).
+     ⚠️ فقط همین ردیف کافی نیست: الباقی تجمعی است، پس عوض شدنِ یک ردیف الباقیِ
+     همهٔ ردیف‌های بعدی را هم عوض می‌کند. _sarrafiRepaint همان یک حلقه را می‌زند
+     و هم خانه‌ها و هم جمع‌ها را می‌نویسد — یعنی یک منطق، نه دو نسخهٔ موازی.
+     (نسخهٔ قبلی این‌جا شرطِ ماه را بدونِ گاردِ «همهٔ ماه‌ها» می‌نوشت، برای همین در
+     حالتِ «همهٔ ماه‌ها» همهٔ جمع‌ها صفر می‌شدند.) */
+  _sarrafiRepaint();
 }
 function deleteSarrafiRow(idx) {
   if (!confirm('این ردیف حذف شود؟')) return;
@@ -34078,13 +34116,14 @@ function printSarrafi() {
   const rows = sarrafiRows().filter(r => sarrafiMonthKey(r.date) === _sarrafiActiveMonth);
   let sumBardagi = 0, sumBaqi = 0, sumUsd = 0, sumBardagiUsd = 0;
   const rowsHtml = rows.map((r, i) => {
-    const baqi = sarrafiBaqi(r);
     const broken = sarrafiBroken(r);
     const rate = parseFloat(r.rate) || 0;
-    sumBardagi += parseFloat(r.bardagi)||0; sumBaqi += baqi; sumUsd += broken;
+    sumBardagi += parseFloat(r.bardagi)||0; sumBaqi += sarrafiBaqi(r); sumUsd += broken;
     sumBardagiUsd += rate ? (parseFloat(r.bardagi)||0) / rate : 0;
+    const baqi = sumBaqi;   // الباقیِ تجمعی — مثلِ خودِ جدولِ صفحه
+    const emptyRow = !broken && !(parseFloat(r.bardagi) || 0);
     return `<tr>
-      <td style="text-align:center;color:#718096">${i+1}</td>
+      <td style="text-align:center;color:#718096">${n2fa(i+1)}</td>
       <td style="font-weight:700;color:#c07700">${r.date||'—'}</td>
       <td>${escFa(r.desc)||'—'}</td>
       <td style="font-weight:700">${n2fa(r.amount||0)}</td>
@@ -34093,7 +34132,7 @@ function printSarrafi() {
       <td style="color:#2b6cb0;font-weight:700">${broken ? n2fa(broken.toFixed(2))+' $' : '—'}</td>
       <td style="color:#2b6cb0;font-weight:700">${broken ? n2fa(broken.toFixed(2))+' $' : '—'}</td>
       <td style="color:#276749">${n2fa(r.bardagi||0)}</td>
-      <td style="color:${baqi>0?'#e53e3e':'#276749'};font-weight:800">${n2fa(Math.round(baqi))}</td>
+      <td style="color:${emptyRow?'#718096':(baqi>=0?'#276749':'#e53e3e')};font-weight:800">${emptyRow?'—':n2fa(Math.round(baqi))}</td>
     </tr>`;
   }).join('');
   const sentence = sumBaqi >= 0
@@ -34121,9 +34160,9 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px}
   <div class="sum-box"><div class="l">🧮 جمله بردگی (افغانی)</div><div class="v" style="color:#276749">${n2fa(Math.round(sumBardagi))}</div></div>
 </div>
 <div class="albaqi">${sentence}</div>
-<table><thead><tr><th>#</th><th>تاریخ</th><th>توضیحات</th><th>مبلغ</th><th>واحد</th><th>فی</th><th>دالر</th><th>رسید به صرافی</th><th>بردگی پمپ بنزین</th><th>باقی‌مانده</th></tr></thead>
+<table><thead><tr><th>#</th><th>تاریخ</th><th>توضیحات</th><th>مبلغ</th><th>واحد</th><th>فی</th><th>دالر</th><th>رسید به صرافی</th><th>بردگی پمپ بنزین</th><th>الباقی تا این ردیف</th></tr></thead>
 <tbody>${rowsHtml||'<tr><td colspan="10" style="text-align:center;padding:20px;color:#718096">ردیفی نیست</td></tr>'}</tbody>
-<tfoot><tr><td colspan="8" style="text-align:left">جمله</td><td>${n2fa(Math.round(sumBardagi))}</td><td>${n2fa(Math.round(sumBaqi))}</td></tr></tfoot>
+<tfoot><tr><td colspan="6" style="text-align:left">جمله</td><td>${n2fa(sumUsd.toFixed(2))} $</td><td>${n2fa(sumUsd.toFixed(2))} $</td><td>${n2fa(Math.round(sumBardagi))}</td><td>${n2fa(Math.round(sumBaqi))}</td></tr></tfoot>
 </table>
 <div style="margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px">© پمپ یعقوبی — تمام حقوق محفوظ است · طراحی: vil3ntec</div>
 <script>window.onload=function(){window.print();}<\/script>
@@ -41350,7 +41389,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.290';
+const APP_VERSION = '2.9.291';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
