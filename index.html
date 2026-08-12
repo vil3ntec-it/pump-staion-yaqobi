@@ -19247,6 +19247,36 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <div id="uf-count" style="margin-top:10px;font-size:0.82rem;color:var(--muted);line-height:1.9"></div>
   </div>
 
+  <!-- ══════════════════════════════════════════════════════════════════════
+       🏷️ اطلاعات جایگاه — نام، آدرس و شمارهٔ تماس
+       این کادر گم شده بود: تابعِ saveStationInfo از قدیم وجود داشت و دنبالِ
+       st-name / st-address / st-phone می‌گشت، ولی خودِ کادرها هیچ‌جای صفحه
+       ساخته نشده بودند. نتیجه‌اش این بود که هیچ راهی برای نوشتنِ شمارهٔ تماس
+       نبود — و چون شمارهٔ گروهِ اعلان از همین‌جا برداشته می‌شود، مشتری‌ها هم
+       هیچ شماره‌ای نمی‌دیدند. ══════════════════════════════════════════════ -->
+  <div class="settings-card" id="station-card" style="border-color:var(--accent)">
+    <div class="settings-title" style="color:var(--accent)">🏷️ اطلاعات جایگاه</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:1.95;margin-bottom:12px">
+      نام و شمارهٔ تماسِ جایگاه. <b style="color:var(--txt)">شمارهٔ تماس</b> روی کیو‌آرِ
+      «📢 اعلان عمومی» می‌نشیند و بالای گروه برای همهٔ مشتری‌ها دیده می‌شود — تنها راهِ
+      تماسِ آن‌ها با شماست، پس خالی نماند.
+    </div>
+    <div class="pl-field" style="margin-bottom:10px">
+      <label style="font-size:0.8rem;font-weight:700">نام جایگاه</label>
+      <input class="ei-in" id="st-name" placeholder="پمپ یعقوبی" autocomplete="off">
+    </div>
+    <div class="pl-field" style="margin-bottom:10px">
+      <label style="font-size:0.8rem;font-weight:700">آدرس</label>
+      <input class="ei-in" id="st-address" placeholder="آدرس جایگاه" autocomplete="off">
+    </div>
+    <div class="pl-field" style="margin-bottom:12px">
+      <label style="font-size:0.8rem;font-weight:700;color:var(--green)">📞 شمارهٔ تماس</label>
+      <input class="ei-in" id="st-phone" dir="ltr" inputmode="tel" placeholder="0700000000" autocomplete="off">
+    </div>
+    <button class="pw-btn" style="background:var(--accent);color:#fff" onclick="saveStationInfo()">💾 ذخیره</button>
+    <div id="st-msg" style="font-size:0.82rem;line-height:1.9;margin-top:10px;min-height:1.2em"></div>
+  </div>
+
   <!-- آپدیتِ برنامهٔ کامپیوتری — فقط در نسخهٔ دسکتاپ دیده می‌شود -->
   <div class="settings-card" id="desktop-update-card" style="border-color:var(--green);display:none">
     <div class="settings-title" style="color:var(--green)">⬇️ آپدیت برنامه</div>
@@ -33015,9 +33045,10 @@ body{font-family:'Vazirmatn',sans-serif;background:#111827;color:#f3f4f6;padding
 }
 
 function saveStationInfo() {
-  const name = document.getElementById('st-name').value.trim();
-  const address = document.getElementById('st-address').value.trim();
-  const phone = document.getElementById('st-phone').value.trim();
+  const _v = id => (document.getElementById(id) || {}).value || '';
+  const name = _v('st-name').trim();
+  const address = _v('st-address').trim();
+  const phone = _v('st-phone').trim();
   if (!name) { document.getElementById('st-msg').textContent = '❌ نام ایستگاه نمی‌تواند خالی باشد'; document.getElementById('st-msg').style.color='var(--red)'; return; }
   DB.stationName = name;
   DB.stationAddress = address;
@@ -33028,6 +33059,8 @@ function saveStationInfo() {
   const hTitle = document.querySelector('.header-title');
   if (hTitle) hTitle.innerHTML = '⛽ ' + name;
   document.getElementById('st-msg').textContent = '✅ اطلاعات ذخیره شد'; document.getElementById('st-msg').style.color='var(--green)';
+  // نوارِ بالای گروهِ اعلان همین لحظه شمارهٔ تازه را نشان دهد
+  try { _pubPaintPin(); } catch (e) {}
 }
 
 function changePassword() {
@@ -33145,9 +33178,42 @@ function setUnionRate(fuel, val) {
       rec('diesel', parseFloat(DB.unionRateDiesel) || 0);
       if (DB.rateHistory.length > 300) DB.rateHistory.length = 300;
       save();
-      if (changed.length) _announceRateChange(changed);
+      if (changed.length) _rateAnnQueue(changed);
     } catch (e) {}
   }, 1500);
+}
+/* ── چرا اعلانِ نرخ ۱۰ ثانیه صبر می‌کند ────────────────────────────────────
+   خواستهٔ صاحب ریپو: «تغییر نرخ پطرول رو میدم یک پیام جدا میره و از دیزل جدا و
+   این دو پیام بزرگ و گیج‌کننده میشه».
+   درست هم بود: هر پیام هر دو نرخ را می‌نویسد، پس عوض کردنِ پطرول و بعد دیزل،
+   دو اطلاعیهٔ تقریباً یکسان پشتِ سرِ هم به همهٔ مشتری‌ها می‌فرستاد.
+   حالا:
+     • یک تیل را عوض کردید → ۱۰ ثانیه صبر می‌کند، شاید آن یکی را هم عوض کنید.
+     • در همان ۱۰ ثانیه تیلِ دوم را هم عوض کردید → همان لحظه یک پیامِ واحد
+       با هر دو نرخِ تازه می‌رود (دیگر منتظر نمی‌ماند).
+     • ۱۰ ثانیه گذشت و خبری نشد → همان یک تغییر فرستاده می‌شود.
+   اگر وسطِ انتظار همان تیل را دوباره اصلاح کنید، شمارش از نو شروع می‌شود تا
+   عددِ نیمه‌کاره برای مشتری نرود. ── */
+const RATE_ANN_WAIT_MS = 10000;
+let _rateAnnTimer = null;
+let _rateAnnPending = {};        // 'petrol' | 'diesel' → {fuel, from, to}
+function _rateAnnQueue(changed) {
+  changed.forEach(c => {
+    const p = _rateAnnPending[c.fuel];
+    // همان تیل دوباره اصلاح شد: مبدأ همان اولی می‌ماند، مقصد تازه می‌شود
+    if (p) p.to = c.to;
+    else _rateAnnPending[c.fuel] = { fuel: c.fuel, from: c.from, to: c.to };
+  });
+  if (_rateAnnTimer) { clearTimeout(_rateAnnTimer); _rateAnnTimer = null; }
+  // هر دو تیل عوض شده‌اند → دیگر منتظرِ چیزی نیستیم
+  if (_rateAnnPending.petrol && _rateAnnPending.diesel) { _rateAnnFlush(); return; }
+  _rateAnnTimer = setTimeout(_rateAnnFlush, RATE_ANN_WAIT_MS);
+}
+function _rateAnnFlush() {
+  if (_rateAnnTimer) { clearTimeout(_rateAnnTimer); _rateAnnTimer = null; }
+  const list = Object.keys(_rateAnnPending).map(k => _rateAnnPending[k]);
+  _rateAnnPending = {};
+  if (list.length) _announceRateChange(list);
 }
 /** آستانه‌های اعلانِ خودکار — فقط میرزا تنظیم می‌کند (خودِ کادر هم زیرِ نرخ اتحادیه است) */
 function setRateAnnounceCfg(kind, val) {
@@ -40591,7 +40657,7 @@ function _pubPaintPin() {
     (tel
       ? '<a class="pub-pin-tel" href="tel:' + _esc(tel.replace(/[^\d+]/g, '')) + '">📞 ' + _esc(tel) + '</a>'
       : (admin
-          ? '<button type="button" class="pub-pin-tel" style="border-color:var(--red);color:var(--red);background:transparent;cursor:pointer" onclick="showSection(\'settings\')">⚠️ شمارهٔ تماس تنظیم نشده</button>'
+          ? '<button type="button" class="pub-pin-tel" style="border-color:var(--red);color:var(--red);background:transparent;cursor:pointer" onclick="_goStationCard()">⚠️ شمارهٔ تماس تنظیم نشده</button>'
           : '')) +
     // شمارشِ زنده — تا وقتی جواب سرور نیامده، چیزی نشان داده نمی‌شود (نه صفرِ دروغین)
     (s
@@ -40677,13 +40743,25 @@ function _announceRateChange(changed) {
   } catch (e) {}
 }
 /** کیو‌آرِ عضو شدن در گروه — همان پیام‌رسانِ payam با نقشِ «فقط دیدن» */
+/** میان‌بُر به کادرِ «اطلاعات جایگاه» — همان‌جا که شمارهٔ تماس نوشته می‌شود */
+function _goStationCard() {
+  try { msgrClose(); } catch (e) {}
+  try { showSection('settings'); } catch (e) {}
+  setTimeout(function () {
+    const c = document.getElementById('station-card');
+    if (!c) return;
+    try { c.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { c.scrollIntoView(); }
+    const f = document.getElementById('st-phone');
+    if (f) { try { f.focus(); } catch (e) {} }
+  }, 260);
+}
 function pubShowQR() {
   /* شمارهٔ تماس همراهِ خودِ کیو‌آر می‌رود و روی گوشیِ مشتری بالای گروه سنجاق
      می‌شود. اگر تنظیم نشده باشد، مشتری هیچ راهِ تماسی نمی‌بیند — پس همین‌جا
      جلویش گرفته می‌شود تا کیو‌آرِ ناقص پخش نشود. */
   if (!_pubPhone()) {
-    showToast('⚠️ اول شمارهٔ تماس جایگاه را در تنظیمات بنویسید تا روی کیو‌آر بنشیند', '#e53e3e');
-    try { showSection('settings'); } catch (e) {}
+    showToast('⚠️ اول شمارهٔ تماس جایگاه را بنویسید تا روی کیو‌آر بنشیند', '#e53e3e');
+    _goStationCard();
     return;
   }
   const q = ['role=omumi'];
@@ -41185,7 +41263,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.286';
+const APP_VERSION = '2.9.287';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
