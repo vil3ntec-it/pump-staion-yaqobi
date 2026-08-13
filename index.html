@@ -189,8 +189,18 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--dark);color:var(--txt);
 /* بدون-فنری برای ظرف‌های واقعاً عمودی‌اسکرول‌دار (مودال‌ها، لیست‌های چت،
    صفحه‌های فاکتور/کارمند/شرکت‌ها) — اینها ارتفاع محدود دارند و واقعاً کش
    می‌آمدند، پس overscroll-behavior هر دو محور را می‌بندیم. */
+/* ⚠️ هر ظرفِ «قدمحدود + عمودی‌اسکرول» باید این‌جا نامش بیاید. گزارشِ صاحب ریپو:
+   «آن بخش‌هایی که کادر کشویی دارند، وقتی به آخرش می‌رسد از اسکرولِ همان کادر
+   همهٔ صفحه اسکرول می‌شود — انگار دیگر کادری نبود و می‌آمد روی اسکرولِ صفحه.»
+   این همان «زنجیرِ اسکرول»ِ مرورگر است و تنها درمانش overscroll-behavior است.
+   قاعدهٔ قبلی فقط ظرف‌هایی را می‌گرفت که overflow-y را در style درجا داشتند؛
+   ظرف‌هایی که کلاسشان در همین شیت تعریف شده (فهرستِ پیشنهادِ نام، فهرستِ
+   گفت‌وگوها و حساب‌های پیام‌رسان، فهرستِ آموزشِ صدا، کشویی‌های بکاپ و منوی
+   موبایل، نمایشگرِ ماشین‌حساب) از قلم افتاده بودند. */
 .modal-body,.ch-list,.ro-body,.inv-ov-body,
 #chat-trash-body,#dmThreads,#company-ro-table-wrap,
+.suggest-box,.dm-acct-list,.vx-list,.msgr-list,.msgr-side,
+#calcDisplay,#gcDlg .gc-list,.m-menu-list,
 [style*="overflow-y:auto"],[style*="overflow-y: auto"]{
   overscroll-behavior:none;
 }
@@ -15969,6 +15979,65 @@ table thead th:first-child .col-resize-grip{ display:none; }
 }
 .person-card .cmp-acts button:hover{ background:color-mix(in srgb, currentColor 12%, transparent) }
 
+/* ══ کارتِ حساب: نام خوانا، و همهٔ کادرهای پایین روی یک خط ═══════════════════
+   دو گزارشِ صاحب ریپو، هر دو از یک ریشه:
+     • «اسم‌ها داخل هدرها یا نصف می‌شوند یا خوانده نمی‌شوند، چون سه خط می‌شوند
+        و آدم نمی‌فهمد حسابِ کیست.»
+     • «کادرهای ⛽/🟤 و $ و افغانی تراز نیستند — مثل دکمهٔ کیوآر همه‌شان روی یک
+        خط بمانند، چه هدر بزرگ باشد چه کوچک.»
+
+   ریشه‌اش دو چیز بود:
+   ۱) نام فقط ۱۰۳ پیکسل جا داشت. کارت ۱۷۵ پیکسل است، ۲۴ پیکسل پدینگِ خودش و
+      ۴۸ پیکسل هم پدینگِ چپ‌وراستِ خودِ نام (که برای نرفتنِ نام زیرِ دکمهٔ ✕
+      گذاشته شده بود) می‌رفت. با ۱٫۵rem، سه‌چهار حرف در هر خط جا می‌شد و نامِ
+      «شرکت تیل هرات» سه‌خطی می‌شد و از کادرِ دوخطی بیرون می‌زد.
+      درمان: به‌جای پس زدنِ نام از چپ و راست، بالای کارت یک نوارِ ۴۰پیکسلی
+      برای ✕ و نقطهٔ وضعیت رزرو می‌شود و نام تمامِ عرضِ کارت را می‌گیرد
+      (۱۴۳ پیکسل، یعنی نزدیک ۱٫۵ برابرِ قبل). اندازهٔ خطِ نام هم به بلندیِ
+      خودش بسته است (کلاس‌های long/xlong) تا نامِ بلند ریزتر ولی کامل بیاید.
+      جای نام همیشه دقیقاً دو خط است، پس کارت‌ها هم‌قد می‌مانند.
+   ۲) فقط دکمهٔ کیوآر کفِ کارت می‌چسبید؛ عددهای ⛽/🟤 و $ و «الباقی» بالای آن
+      شناور بودند و با هر خطِ اضافه («⛔ تیلش تمام شده») بالا و پایین می‌رفتند.
+      درمان: همهٔ آن‌ها داخلِ یک بلوکِ .pcard-foot رفتند و همان بلوک کفِ کارت
+      می‌چسبد — پس ترتیب و فاصله‌شان ثابت است و همهٔ کارت‌های یک ردیف روی یک
+      خط تراز می‌مانند. ⚠️ margin-top:auto را از تک‌تکِ بچه‌ها برندارید و به
+      خودِ .pcard-foot بدهید، وگرنه فضای خالی بینشان پخش می‌شود و باز ناتراز. */
+.person-card{ padding-top:40px !important; }
+/* ⚠️ قدِ کادرِ نام با پیکسل نوشته شده، نه با em: با em، کارتی که نامِ بلند دارد
+   (و پس فونتِ ریزتر می‌گیرد) کادرِ نامِ کوتاه‌تری هم پیدا می‌کرد و خطِ «الباقی»ِ
+   زیرش با کارتِ بغلی یک‌تراز نمی‌شد. ۶۶ پیکسل دقیقاً دو خط با فونتِ ۱٫۵rem است.
+   min-height (نه height) تا اگر کاربر فونتِ برنامه را بزرگ کرد، نام بریده نشود. */
+.person-card .pname{
+  padding:0 4px !important;
+  min-height:66px;
+  font-size:1.5rem;
+  overflow:hidden;
+}
+/* متن داخلِ یک span می‌نشیند تا هم وسطِ کادر بماند (flexِ والد) و هم اگر از دو
+   خط گذشت با «…» بریده شود، نه اینکه از کارت بزند بیرون و روی بقیه بیفتد */
+.person-card .pname > span{
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2;
+  overflow:hidden; width:100%; text-align:center;
+}
+.person-card .pname.long{ font-size:1.15rem; }
+.person-card .pname.xlong{ font-size:0.95rem; }
+.person-card .pcard-foot{
+  margin-top:auto !important;
+  width:100%; box-sizing:border-box;
+  display:flex; flex-direction:column; align-items:stretch; gap:8px;
+}
+.person-card .pcard-foot > *{ margin:0 !important; }
+.person-card .pcard-figs{
+  display:flex; gap:10px; justify-content:center; align-items:center;
+  font-size:0.95rem; font-weight:700; min-height:1.5em;
+}
+@media (max-width:480px){
+  .person-card{ padding-top:36px !important; }
+  .person-card .pname{ font-size:1.25rem; min-height:56px; }
+  .person-card .pname.long{ font-size:1.05rem; }
+  .person-card .pname.xlong{ font-size:0.9rem; }
+}
+
 /* ── زنگ اعلان‌ها و فهرستِ خبرها (سرویسِ اعلانِ سرور خانگی) ─────────────── */
 .ntf-bell{ position:relative; padding:6px 10px; border-radius:7px; border:1px solid var(--border);
   background:var(--card); color:var(--txt); font-size:0.95rem; cursor:pointer; line-height:1 }
@@ -22436,6 +22505,25 @@ function backFromSection(btn) {
    این‌جا (پیش از showSection) تعریف شده تا در هیچ مسیری زودتر از تعریفش
    خوانده نشود. */
 const PRICE_LOSS_ON = false;
+/* ── هیچ بخشی نباید «باز شود ولی خالی بماند» ────────────────────────────────
+   گزارشِ صاحب ریپو: «سایت بعضی وقت‌ها باگ می‌خورد و فریز می‌شود و هیچی را نشان
+   نمی‌دهد مگر اینکه رفرش کنم.»
+   ریشه‌اش این‌جا بود: showSection رندرِ هر بخش را مستقیم صدا می‌زد. اگر یکی از
+   آن‌ها خطا می‌داد (مثلاً یک رکوردِ خرابِ جامانده از همگام‌سازی)، خطا از showSection
+   بیرون می‌زد و *بقیهٔ تابع هم اجرا نمی‌شد*: گرید همان اولِ کار خالی شده بود و
+   دیگر پر نمی‌شد، منوی موبایل بسته نمی‌شد و هیچ پیامی هم نبود. کاربر فقط یک
+   صفحهٔ خالی می‌دید و چاره‌ای جز رفرش نداشت.
+   حالا هر رندر داخلِ همین محافظ اجرا می‌شود: خطا در یک بخش، بقیهٔ کارها و
+   بخش‌های دیگر را زمین نمی‌زند، در گزارشِ خطاها ثبت می‌شود (pumpShowErrors) و
+   خودِ همان بخش پیامِ «دوباره باز کنید» می‌گیرد — نه سکوت و صفحهٔ سفید. */
+function _secRun(label, fn) {
+  try { fn(); return true; }
+  catch (err) {
+    console.warn('[پمپ یعقوبی] رندرِ «' + label + '» خطا داد:', err);
+    try { window.dispatchEvent(new ErrorEvent('error', { message: 'render:' + label + ' — ' + (err && err.message || err) })); } catch (e) {}
+    return false;
+  }
+}
 function showSection(id, btn) {
   // «زیان افزایش قیمت» از مدار خارج است — هر جا صدا زده شود، همان قرض‌داران باز می‌شود
   if (id === 'priceloss' && !PRICE_LOSS_ON) id = 'debt';
@@ -22477,8 +22565,8 @@ function showSection(id, btn) {
     const matchBtn = document.querySelector(`.nav-btn[onclick*="showSection('${navId}'"]`);
     if (matchBtn) matchBtn.classList.add('active');
   }
-  if (id === 'profit') calcPL();
-  if (id === 'extraincome') { renderExtraIncomes(); calcExtraIncome(); }
+  if (id === 'profit') _secRun('مفاد', calcPL);
+  if (id === 'extraincome') _secRun('عواید اضافی', () => { renderExtraIncomes(); calcExtraIncome(); });
   if (id === 'tanker') { try { _renderTankerPanel(); } catch(e) {} }
   if (id === 'tankdip') { try { _renderDipPanel(); _dipRenderTankInfo(); dipLiveCalc(); } catch(e) {} }
   if (id === 'priceloss') { try { renderPriceLossPage(); } catch(e) {} }   // فقط وقتی PRICE_LOSS_ON روشن باشد به این‌جا می‌رسد
@@ -22489,28 +22577,29 @@ function showSection(id, btn) {
   if (id === 'staffshort') { try { _ssSettleIdx = null; _renderStaffShortPanel(); } catch(e) {} }
   if (id === 'ratehist') { try { _renderRateHistPanel(); } catch(e) {} }
   if (id === 'monthreport') { try { renderMonthReport(); } catch(e) {} }
-  if (id === 'storage' || id === 'storage-diesel') { renderStorage(); initAutoProfit(); setTimeout(checkLowStock, 300); }
-  if (id === 'expenses') renderExpenses();
-  if (id === 'rasid') renderRasid();
-  if (id === 'shifts') { renderLog(); }
-  if (id === 'shifts-diesel') { renderDieselLog(); }
-  if (id === 'debt') renderPersons('debt');
-  if (id === 'debtrasid') { renderDebtRasid(); }
-  if (id === 'debtsum') { renderDebtSummary('fuel'); }
-  if (id === 'debtsummoney') { renderDebtSummary('money'); }
-  if (id === 'noinv') { try { syncAllPurchasesToCompanies(); } catch(e) {} renderCompanies(); }
-  if (id === 'safe') renderSafe();
-  if (id === 'sarrafi') renderSarrafi();
+  if (id === 'storage' || id === 'storage-diesel') _secRun('مخزن', () => { renderStorage(); initAutoProfit(); setTimeout(checkLowStock, 300); });
+  if (id === 'expenses') _secRun('مصارف', renderExpenses);
+  if (id === 'rasid') _secRun('رسیدها', renderRasid);
+  if (id === 'shifts') _secRun('ورق پطرول', renderLog);
+  if (id === 'shifts-diesel') _secRun('ورق دیزل', renderDieselLog);
+  if (id === 'debt') _secRun('قرض‌داران', () => renderPersons('debt'));
+  if (id === 'debtrasid') _secRun('رسید قرض‌داران', renderDebtRasid);
+  if (id === 'debtsum') _secRun('خلاصهٔ تیل', () => renderDebtSummary('fuel'));
+  if (id === 'debtsummoney') _secRun('خلاصهٔ پول', () => renderDebtSummary('money'));
+  if (id === 'noinv') { _secRun('همگام‌سازی خریدها', syncAllPurchasesToCompanies); _secRun('شرکت ها تیل', renderCompanies); }
+  if (id === 'safe') _secRun('گاوصندوق', renderSafe);
+  if (id === 'sarrafi') _secRun('صرافی', renderSarrafi);
   if (id === 'history') { try { renderHistoryCenter(); } catch(e) {} }
   if (id === 'historyview') { try { renderHistoryView(); } catch(e) {} }
-  if (id === 'waraq') renderWaraqList();
-  if (id === 'cameras') { renderCameras(); refreshLocalCams(); } else { try { stopAllLocalCams(); } catch(e){} }
-  if (id === 'attendance') renderAttendance();
-  if (id === 'zodiac') { initDate(); }
+  if (id === 'waraq') _secRun('ورق‌ها', renderWaraqList);
+  if (id === 'cameras') _secRun('کمره‌ها', () => { renderCameras(); refreshLocalCams(); });
+  else { try { stopAllLocalCams(); } catch(e){} }
+  if (id === 'attendance') _secRun('حاضری', renderAttendance);
+  if (id === 'zodiac') _secRun('تقویم', initDate);
   if (id === 'dashboard') { try { renderDashboard(); } catch(e) {} }
   if (id === 'settings') {
-    fillLowStockSettings();
-    fillSyncSettings();
+    _secRun('هشدارها', fillLowStockSettings);
+    _secRun('همگام‌سازی', fillSyncSettings);
     try { _renderBackupPanel(); } catch(e) {}
     try { _renderCloudBackupStatus(); } catch(e) {}
     try { renderPushCard(); } catch(e) {}
@@ -25753,17 +25842,36 @@ function updateDebtAlertBadge() {
   b.style.boxShadow = out ? '0 0 9px rgba(229,62,62,.7)' : '0 0 9px rgba(246,192,0,.7)';
   b.title = (out ? ('تیل/پول تمام‌شده: ' + n2fa(out)) : '') + (out && low ? ' — ' : '') + (low ? ('تیل/پول کم‌مانده: ' + n2fa(low)) : '');
 }
+/* سربرگِ نامِ کارت‌های حساب (قرض‌داران و شرکت‌ها) — یک تابع برای هر دو، تا
+   هیچ‌وقت از هم جدا نیفتند. نامِ بلندتر کلاسِ ریزتر می‌گیرد؛ خودِ متن داخلِ span
+   می‌نشیند (CSSِ دوخطیِ .pname) و نامِ کامل در title می‌ماند تا با نگه‌داشتن/
+   نشانگر دیده شود، حتی اگر روزی از دو خط هم بگذرد. */
+function _pcardNameHtml(name) {
+  const n = (name || '').trim();
+  const L = n.length;
+  const cls = L > 20 ? ' xlong' : (L > 12 ? ' long' : '');
+  return '<div class="pname' + cls + '" title="' + escFa(n) + '"><span>' + escFa(n) + '</span></div>';
+}
 function renderPersons(type) {
-  const list = type === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const grid = document.getElementById(type + '-grid');
   if (!grid) return;
+  /* رکوردِ خالی/خراب (که گاهی از همگام‌سازی جا می‌ماند) از همین‌جا کنار گذاشته
+     می‌شود — وگرنه اولین p.rowsِ null کلِ حلقه را می‌انداخت و «بخش خالی» می‌شد. */
+  const all = ((type === 'debt' ? DB.debtPersons : DB.noinvPersons) || []).filter(Boolean);
+  /* جست‌وجو از خودِ کادر خوانده می‌شود، پس هر رندرِ دوباره‌ای (ذخیره، همگام‌سازی،
+     برگشت از مودال) فیلترِ فعال را پاک نمی‌کند. پیش از این searchPerson کارت‌ها
+     را خودش و با چیدمانِ قدیمی می‌ساخت — یعنی دو سازندهٔ کارت که از هم جدا
+     می‌افتادند. حالا فقط همین یکی کارت می‌سازد. */
+  const q = ((document.getElementById(type + '-search') || {}).value || '').trim().toLowerCase();
+  const list = q ? all.filter(p => (p.name || '').toLowerCase().includes(q)) : all;
 
   const total = list.length;
-  const shown = Math.min(Math.max(_personShown[type] || _PERSON_PAGE, _PERSON_PAGE), total);
+  const shown = q ? total : Math.min(Math.max(_personShown[type] || _PERSON_PAGE, _PERSON_PAGE), total);
   const pageList = list.slice(0, shown);
 
   const frag = document.createDocumentFragment();
   pageList.forEach(p => {
+   try {
     const rows = _allRows(p);
     const t = _splitTotals(rows);
     // حساب «واحد تیل»: الباقی روی کارت به لیتر (برد تیل − رسید تیل) — نه مبلغِ لیتر×فی
@@ -25790,24 +25898,41 @@ function renderPersons(type) {
     card.innerHTML = `
       <button class="person-del" onclick="event.stopPropagation();deletePerson('${type}','${p.id}')">✕</button>
       ${st==='low' ? `<span class="pstatus-dot low" title="${who} کم مانده"></span>` : st==='out' ? `<span class="pstatus-dot out" title="${who} تمام شده"></span>` : ''}
-      <div class="pname">${escFa(p.name)}</div>
+      ${_pcardNameHtml(p.name)}
       <div class="pdebt ${albaqi<=0?'clear':''}">${albaqi<=0 ? '✅ تسویه' : 'الباقی: '+n2fa(Math.round(albaqi*100)/100)+albaqiUnit}</div>
       ${st==='low' ? `<div class="pstatus-label low">⚠️ ${who} کم مانده</div>` : st==='out' ? `<div class="pstatus-label out">⛔ ${who} تمام شده</div>` : ''}
-      <div style="display:flex;gap:10px;margin-top:10px;font-size:0.95rem;font-weight:700;justify-content:center">
-        <span style="color:var(--green)">⛽ ${n2fa(pBal)}</span>
-        <span style="color:#b7791f">🟤 ${n2fa(dBal)}</span>
+      <!-- ⛽/🟤 و دکمهٔ کیوآر یک بلوک‌اند و همان بلوک کفِ کارت می‌چسبد، پس چه نامِ
+           کارت یک‌خطی باشد چه دوخطی و چه خطِ «تمام شده» داشته باشد، در همهٔ
+           کارت‌ها روی یک خط تراز می‌مانند (خواستهٔ صاحب ریپو) -->
+      <div class="pcard-foot">
+        <div class="pcard-figs">
+          <span style="color:var(--green)">⛽ ${n2fa(pBal)}</span>
+          <span style="color:#b7791f">🟤 ${n2fa(dBal)}</span>
+        </div>
+        <button class="pcard-qr" title="کیو‌آر و پی‌دی‌افِ این حساب — اگر حساب فرعی داشته باشد، داخلِ همین پنجره انتخاب می‌شود" onclick="event.stopPropagation();showPersonQR('${type}','${p.id}')" style="width:100%;padding:6px 8px;border-radius:7px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-size:0.75rem;font-weight:700;cursor:pointer">📲 کیو‌آر کد</button>
       </div>
-      <button class="pcard-qr" title="کیو‌آر و پی‌دی‌افِ این حساب — اگر حساب فرعی داشته باشد، داخلِ همین پنجره انتخاب می‌شود" onclick="event.stopPropagation();showPersonQR('${type}','${p.id}')" style="width:100%;padding:6px 8px;border-radius:7px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-size:0.75rem;font-weight:700;cursor:pointer">📲 کیو‌آر کد</button>
     `;
     // کلیک معمولی حساب را باز می‌کند؛ راست‌کلیک (یا نگه‌داشتن انگشت) منوی گزینه‌ها را
     card.onclick = () => openPersonModal(type, p.id);
     _acctAttachMenu(card, 'person', type, p.id);
     frag.appendChild(card);
+   } catch (err) {
+    /* یک حسابِ خراب نباید کلِ فهرست را خالی کند — فقط خودش رد می‌شود و در
+       گزارشِ خطاها می‌ماند (pumpShowErrors). این همان چیزی است که «بخش باز
+       می‌شد ولی هیچ کارتی نداشت» را می‌ساخت. */
+    console.warn('[پمپ یعقوبی] کارتِ حساب ساخته نشد:', p && p.id, err);
+   }
   });
   grid.innerHTML = '';
   grid.appendChild(frag);
+  if (q && !pageList.length) {
+    grid.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:0.9rem">حسابی یافت نشد</div>';
+  }
 
-  _paintMoreBar(type + '-pager', grid, shown, total,
+  // هنگام جست‌وجو همهٔ نتیجه‌ها آمده‌اند و نوارِ «بقیه» معنی ندارد
+  const _pgr = document.getElementById(type + '-pager');
+  if (q) { if (_pgr) _pgr.remove(); }
+  else _paintMoreBar(type + '-pager', grid, shown, total,
     () => { _personShown[type] = shown + _PERSON_PAGE; renderPersons(type); },
     "_showAllPersons('" + type + "')", 'حساب');
 }
@@ -30663,7 +30788,10 @@ function renderCompanies() {
   if (!grid) return;
   if (!DB.tilCompanies) DB.tilCompanies = [];
   const q = (document.getElementById('company-search')?.value || '').trim().toLowerCase();
-  const fullList = q ? DB.tilCompanies.filter(c => (c.name||'').toLowerCase().includes(q)) : DB.tilCompanies;
+  // رکوردِ خالی/خراب کنار گذاشته می‌شود — وگرنه اولین c.rowsِ null کلِ حلقه را
+  // می‌انداخت و بخش «شرکت ها تیل» باز می‌شد ولی هیچ کارتی نداشت
+  const allC = DB.tilCompanies.filter(Boolean);
+  const fullList = q ? allC.filter(c => (c.name||'').toLowerCase().includes(q)) : allC;
   // صفحه‌بندی فقط وقتی جستجو نیست
   const total = fullList.length;
   // هنگام جست‌وجو همهٔ نتیجه‌ها می‌آیند؛ در حالت عادی دسته‌دسته و با اسکرول
@@ -30671,6 +30799,7 @@ function renderCompanies() {
   const list = fullList.slice(0, cShown);
   grid.innerHTML = '';
   list.forEach(c => {
+   try {
     (c.rows||[]).forEach(_migrateCompanyRow); (c.dieselRows||[]).forEach(_migrateCompanyRow);
     const rows = [...(c.rows || []), ...(c.dieselRows || [])];
     const totalAfn = rows.reduce((a,r)=>a+cmpAfnTotal(r),0);
@@ -30685,20 +30814,31 @@ function renderCompanies() {
     card.className = 'person-card';
     card.innerHTML = `
       <button class="person-del" onclick="event.stopPropagation();deleteCompany('${c.id}')">✕</button>
-      <div class="pname">${escFa(c.name)}</div>
-      <div class="cmp-fig usd">${n2fa(sumUsd.toFixed(1))} $</div>
-      <div class="pdebt cmp-fig ${settled?'clear':''}">${settled ? '✅ تسویه' : 'الباقی: '+n2fa(Math.round(albaqi))+' AFN'}</div>
-      <!-- فقط کیو‌آر — دقیقاً مثل کارت‌های قرض‌داران. دکمهٔ PDF برداشته شد: با اسکنِ
-           همین کیو‌آر، حساب باز می‌شود و خودش دکمهٔ «دانلود PDF» دارد. -->
-      <div class="cmp-acts">
-        <button onclick="event.stopPropagation();showCompanyQR('${c.id}')" style="color:var(--blue)">📲 کیو‌آر کد</button>
+      ${_pcardNameHtml(c.name)}
+      <!-- دالر، الباقی و کیوآر یک بلوک‌اند و کفِ کارت می‌چسبند — پس نامِ یک‌خطی و
+           دوخطی هر دو، عددهای همهٔ کارت‌ها را روی یک خط نگه می‌دارند -->
+      <div class="pcard-foot">
+        <div class="cmp-fig usd">${n2fa(sumUsd.toFixed(1))} $</div>
+        <div class="pdebt cmp-fig ${settled?'clear':''}">${settled ? '✅ تسویه' : 'الباقی: '+n2fa(Math.round(albaqi))+' AFN'}</div>
+        <!-- فقط کیو‌آر — دقیقاً مثل کارت‌های قرض‌داران. دکمهٔ PDF برداشته شد: با اسکنِ
+             همین کیو‌آر، حساب باز می‌شود و خودش دکمهٔ «دانلود PDF» دارد. -->
+        <div class="cmp-acts">
+          <button onclick="event.stopPropagation();showCompanyQR('${c.id}')" style="color:var(--blue)">📲 کیو‌آر کد</button>
+        </div>
       </div>
     `;
     // مثل کارت قرض‌داران: کلیک معمولی حساب را باز می‌کند؛ راست‌کلیک/نگه‌داشتن، منو را
     card.onclick = () => openCompanyModal(c.id);
     _acctAttachMenu(card, 'company', '', c.id);
     grid.appendChild(card);
+   } catch (err) {
+    // یک شرکتِ خراب فقط خودش رد می‌شود، نه کلِ فهرست (باگِ «بخش خالی باز می‌شد»)
+    console.warn('[پمپ یعقوبی] کارتِ شرکت ساخته نشد:', c && c.id, err);
+   }
   });
+  if (q && !list.length) {
+    grid.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:0.9rem">شرکتی یافت نشد</div>';
+  }
   // هنگام جست‌وجو نوارِ «بقیه» لازم نیست — همهٔ نتیجه‌ها همان‌جا هستند
   if (q) { const o = document.getElementById('company-pager'); if (o) o.remove(); }
   else _paintMoreBar('company-pager', grid, cShown, total,
@@ -30754,41 +30894,24 @@ function _updateCompanyBanner() {
   if (typeof _renderCompanySummary === 'function') _renderCompanySummary();
 }
 
+/* ── جست‌وجوی شرکت ───────────────────────────────────────────────────────────
+   مثل جست‌وجوی قرض‌داران، این‌جا هم سازندهٔ کارتِ دومِ جداگانه برداشته شد.
+   renderCompanies از قبل خودش متنِ همین کادر را می‌خواند و فیلتر می‌کند، پس
+   کارت‌های نتیجهٔ جست‌وجو دقیقاً همان کارت‌های فهرستِ عادی‌اند. */
 function searchCompany(q) {
   const lower = (q || '').trim().toLowerCase();
-  const grid = document.getElementById('company-grid');
-  if (!grid) return;
   if (!DB.tilCompanies) DB.tilCompanies = [];
-  if (!lower) { renderCompanies(); return; }
-  const exact = DB.tilCompanies.find(c => (c.name||'').toLowerCase() === lower);
-  if (exact) {
-    openCompanyModal(exact.id);
-    const inp = document.getElementById('company-search');
-    if (inp) inp.value = '';
-    return;
+  if (lower) {
+    const exact = DB.tilCompanies.filter(Boolean).find(c => (c.name || '').toLowerCase() === lower);
+    if (exact) {
+      const inp = document.getElementById('company-search');
+      if (inp) inp.value = '';
+      renderCompanies();
+      openCompanyModal(exact.id);
+      return;
+    }
   }
-  const matches = DB.tilCompanies.filter(c => (c.name||'').toLowerCase().includes(lower));
-  grid.innerHTML = '';
-  if (!matches.length) {
-    grid.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:0.9rem">شرکتی یافت نشد</div>';
-    return;
-  }
-  matches.forEach(c => {
-    const rows = [...(c.rows||[]),...(c.dieselRows||[])];
-    const totalAfn=rows.reduce((a,r)=>a+cmpAfnTotal(r),0);
-    const sumUsd=rows.reduce((a,r)=>a+cmpTotalUsd(r),0);
-    let cr = (parseFloat(c.usdRate)||0) || (sumUsd>0 ? totalAfn/sumUsd : 0);
-    if (!cr) { for (const r of rows){ const rr=(parseFloat(r.payRate)||0)||(parseFloat(r.rate)||0); if(rr){cr=rr;break;} } }
-    const sumPoul=rows.reduce((a,r)=>a+cmpPoulAfn(r, cr),0);
-    const albaqi=rows.reduce((a,r)=>a+cmpAlbaqi(r, cr),0);
-    const totalTon=rows.reduce((a,r)=>a+cmpTon(r),0);
-    const settled=albaqi<=0&&rows.length>0;
-    const card=document.createElement('div');
-    card.className='person-card';
-    card.innerHTML=`<button class="person-del" onclick="event.stopPropagation();deleteCompany('${c.id}')">✕</button><div class="pname">${escFa(c.name)}</div><div style="display:flex;justify-content:center;gap:10px;margin:6px 0;flex-wrap:wrap"><span style="font-size:0.82rem;font-weight:800;color:var(--blue)">${n2fa(sumUsd.toFixed(1))} $</span><span style="font-size:0.82rem;font-weight:800;color:${albaqi>0?'var(--red)':'var(--green)'}">📊 ${n2fa(Math.round(albaqi))} افغ</span></div><div class="pdebt ${settled?'clear':''}">${settled?'✅ تسویه':'الباقی: '+n2fa(Math.round(albaqi))+' افغانی'}</div>`;
-    card.onclick=()=>openCompanyModal(c.id);
-    grid.appendChild(card);
-  });
+  renderCompanies();
 }
 
 function openAddCompany() {
@@ -41549,7 +41672,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.295';
+const APP_VERSION = '2.9.296';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -43512,59 +43635,26 @@ function navigatePerson(dir) {
 }
 
 // ========== PERSON SEARCH ==========
+/* ── جست‌وجوی نام ────────────────────────────────────────────────────────────
+   این تابع دیگر خودش کارت نمی‌سازد. پیش از این یک سازندهٔ کارتِ دومِ کاملِ
+   جداگانه داشت، پس هر تغییری در چیدمانِ کارت‌ها فقط روی فهرستِ عادی می‌نشست و
+   به‌محضِ تایپ در کادرِ جست‌وجو، کارت‌ها به شکلِ قدیمی برمی‌گشتند. حالا فیلتر
+   داخلِ خودِ renderPersons است (از همین کادر خوانده می‌شود) و این‌جا فقط
+   میان‌بُرِ «نامِ کامل = باز کردنِ حساب» مانده است. */
 function searchPerson(type, query) {
-  const q = query.trim();
-  if (!q) { renderPersons(type); return; }
-  const list = type === 'debt' ? DB.debtPersons : DB.noinvPersons;
-  const lower = q.toLowerCase();
-  // Exact full-name match → open modal instantly
-  const exact = list.find(p => p.name.toLowerCase() === lower);
-  if (exact) {
-    openPersonModal(type, exact.id);
-    const inp = document.getElementById(type + '-search');
-    if (inp) inp.value = '';
-    return;
-  }
-  // Partial match → filter cards
-  const matches = list.filter(p => p.name.toLowerCase().includes(lower));
-  const grid = document.getElementById(type + '-grid');
-  grid.innerHTML = '';
-  // نتیجهٔ جست‌وجو کامل نشان داده می‌شود، پس نوارِ «بقیه با اسکرول می‌آید» برداشته شود
-  const _mb = document.getElementById(type + '-pager'); if (_mb) _mb.remove();
-  matches.forEach(p => {
-    const rows = p.rows || [];
-    const t = _splitTotals(rows);
-    // حساب «واحد تیل»: الباقی روی کارت به لیتر — مثل فهرست اصلی
-    const isMoneyP = p.mode === 'money';
-    const fuelFig = isMoneyP ? null : _debtSumFigures(p);
-    const albaqi = isMoneyP ? t.all.albaqi : fuelFig.albaqi;
-    const albaqiUnit = isMoneyP ? ' افغانی' : ' لیتر';
-    // ⛽/🟤 روی کارت: در واحدِ پول همان الباقیِ پولیِ هر نوع تیل؛ در واحدِ تیل «الباقیِ
-    // لیتر»ِ هر نوع = بردهٔ تیل − رسیدِ تیلِ همان نوع (رسیدهای هدرِ پطرول/دیزل هم کم
-    // می‌شوند) تا رسیدی که کاربر می‌زند، روی کارتِ قرض‌دار هم دیده شود (خواستهٔ کاربر).
-    let pBal, dBal;
-    if (isMoneyP) { pBal = t.petrol.albaqi; dBal = t.diesel.albaqi; }
-    else {
-      let _rLP = 0, _rLD = 0;
-      [p, ...(p.subs || [])].forEach(a => { if (a) { _rLP += parseFloat(a.rasidFuelP) || 0; _rLD += parseFloat(a.rasidFuelD) || 0; } });
-      pBal = Math.round((t.petrol.fuel - _rLP) * 100) / 100;
-      dBal = Math.round((t.diesel.fuel - _rLD) * 100) / 100;
+  const q = (query || '').trim();
+  if (q) {
+    const list = ((type === 'debt' ? DB.debtPersons : DB.noinvPersons) || []).filter(Boolean);
+    const exact = list.find(p => (p.name || '').toLowerCase() === q.toLowerCase());
+    if (exact) {
+      const inp = document.getElementById(type + '-search');
+      if (inp) inp.value = '';
+      renderPersons(type);
+      openPersonModal(type, exact.id);
+      return;
     }
-    const card = document.createElement('div');
-    card.className = 'person-card';
-    card.innerHTML = `
-      <button class="person-del" onclick="event.stopPropagation();deletePerson('${type}','${p.id}')">✕</button>
-      <div class="pname">${escFa(p.name)}</div>
-      <div class="pdebt ${albaqi<=0?'clear':''}">${albaqi<=0 ? '✅ تسویه' : 'الباقی: '+n2fa(Math.round(albaqi*100)/100)+albaqiUnit}</div>
-      <div style="display:flex;gap:8px;margin-top:8px;font-size:0.88rem;font-weight:700;justify-content:center">
-        <span style="color:var(--green)">⛽ ${n2fa(pBal)}</span>
-        <span style="color:#b7791f">🟤 ${n2fa(dBal)}</span>
-      </div>
-      <button onclick="event.stopPropagation();showPersonQR('${type}','${p.id}')" style="margin-top:8px;width:100%;padding:5px 8px;border-radius:7px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-size:0.75rem;font-weight:700;cursor:pointer">📲 کیو‌آر کد</button>
-    `;
-    card.onclick = () => openPersonModal(type, p.id);
-    grid.appendChild(card);
-  });
+  }
+  renderPersons(type);
 }
 
 // ========== FONT SCALE ==========
