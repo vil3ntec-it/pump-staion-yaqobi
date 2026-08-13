@@ -1183,6 +1183,17 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
 .pm-filter-btn.petrol.active{background:var(--green);border-color:var(--green);color:#fff}
 .pm-filter-btn.diesel.active{background:#b7791f;border-color:#b7791f;color:#fff}
 .pm-filter-btn#pm-filter-all.active{background:var(--accent);border-color:var(--accent);color:#fff}
+/* همان دکمهٔ «📋 همه»، این‌بار در جدول‌های آرشیو که شناسه ندارند (هر آرشیو یک
+   دستهٔ دکمه دارد، پس شناسه تکراری می‌شد) — کلاسِ .all جای شناسه را می‌گیرد */
+.pm-filter-btn.all.active{background:var(--accent);border-color:var(--accent);color:#fff}
+/* ── نوارِ «فیِ خرید / فیصدی»ِ جدول‌های آرشیو ───────────────────────────────
+   قرینهٔ .pm-acct-bar حسابِ زنده است تا آرشیو و اصلی یک‌شکل دیده شوند. */
+.pm-arc-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;row-gap:6px;padding:6px 12px;background:var(--dark)}
+.pm-arc-bar .pm-bar-grp{display:inline-flex;align-items:center;gap:6px;flex-shrink:0}
+.pm-arc-lbl{font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap}
+.pm-arc-in{text-align:center;border:1px solid var(--border);border-radius:7px;background:var(--card);color:var(--txt);
+  font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;padding:6px 10px;box-sizing:border-box}
+.pm-arc-in.pct{width:64px;color:var(--accent);font-weight:800}
 
 /* ═══ صفحهٔ «زیان ناشی از افزایش قیمت» — فقط بخش قرض‌داران، فقط گزارشی ═════════
    این صفحه هیچ نقشی در محاسبات ندارد: نه بدهی مشتری را عوض می‌کند نه الباقی را.
@@ -16201,6 +16212,10 @@ body [style*="solid var(--border)"]{ border-color:var(--lg-brd) !important; }
 /* خطِ زیرِ سرکادرها و نوارهای جداکننده — به‌جز fs-head (حساب پطرول/دیزل)، طبقِ خواستهٔ کاربر */
 body .card-head, body .modal-head{ border-bottom:2px solid var(--lg-brd) !important; }
 body .modal-summary, body .list-header, body .pm-acct-bar{ border-color:var(--lg-brd) !important; }
+/* کادرهای نوارِ آرشیو مرزشان از شیت می‌آید نه از style درجا، پس قاعدهٔ
+   [style*="solid var(--border)"]ِ بالا نمی‌گیردشان — این‌جا صریح گفته می‌شود
+   تا مثل همتای زنده‌شان («فیِ خرید» حسابِ اصلی) در تمِ روشن هم کادر داشته باشند */
+body .pm-arc-in{ border-color:var(--lg-brd) !important; }
 
 /* ── 2) جدول‌ها: هم کادرِ دورِ جدول، هم خطوطِ داخلی، هم سرستون‌ها ─────────── */
 body .tbl-wrap, body .xls-wrap, body .ro-wrap{
@@ -23545,6 +23560,25 @@ const _PDF_TYPO_CSS =
   'td{font-weight:700}' +
   'th{font-weight:800}';
 
+/* ── شبکهٔ جدول‌های چاپ/PDF: هم خطِ افقی، هم عمودی ─────────────────────────────
+   گزارشِ صاحب ریپو: «برای همهٔ پی‌دی‌اف‌ها خط‌های دورِ کادرها دیده نمی‌شود؛
+   افقی هست ولی عمودی نه». ریشه‌اش در خودِ سندها بود: تقریباً همه فقط
+   `td{border-bottom:...}` می‌نوشتند، پس ستون‌ها هیچ مرزی نداشتند و نه دورِ
+   جدول خطی بود نه بینِ خانه‌ها.
+
+   این بلوک یک‌بار برای «همهٔ» سندها اجرا می‌شود (هر پی‌دی‌افِ برنامه از
+   pumpOpenDoc → _pdfDoc رد می‌شود)، پس دیگر لازم نیست ۲۷ قالبِ جداگانه
+   تک‌تک وصله شوند و آنکه فردا اضافه شود هم از اول درست است.
+
+   رنگ عمداً «خاکستریِ نیمه‌شفاف» است، نه یک رنگِ ثابت: سربرگ و فوترِ سندها
+   تیره‌اند (#2d3748) و خانه‌ها روشن؛ یک خطِ روشن روی سربرگ دیده می‌شود ولی
+   روی خانه‌ها گم می‌شد و برعکس. نیمه‌شفاف روی هر دو زمینه خودش را نشان
+   می‌دهد، پس یک قاعده برای همه‌جا بس است.
+   ⚠️ !important لازم است: این بلوک پیش از استایلِ خودِ سند تزریق می‌شود. */
+const _PDF_GRID_CSS =
+  'table{border-collapse:collapse!important;border-spacing:0!important}' +
+  'th,td{border:1px solid rgba(148,163,184,.55)!important}';
+
 /* ── سند به اندازهٔ کاغذ درآید — نه بریده شود، نه له شود، نه ورق حرام کند ──
    سه چیز با هم این کار را می‌کنند و هیچ‌کدام جاوااسکریپت نیست:
 
@@ -23569,7 +23603,7 @@ function _pdfDoc(html) {
   const inject =
     '<meta name="viewport" content="width=device-width,initial-scale=1">' +
     _PDF_FONT_LINK +
-    '<style>' + _PDF_TYPO_CSS + '</style>' +
+    '<style>' + _PDF_TYPO_CSS + _PDF_GRID_CSS + '</style>' +
     '<style>@media screen{' +
       'html{-webkit-text-size-adjust:100%}' +
       'body{max-width:1000px;margin:0 auto}' +
@@ -28760,39 +28794,56 @@ function _renderHistoryPanel(person) {
     const commP = (rasidP + rasidRowP) * pctP / 100, commD = (rasidD + rasidRowD) * pctD / 100;
     const remP  = bordP + commP - rasidP - (hMoney ? st.petrol.rasid : 0),
           remD  = bordD + commD - rasidD - (hMoney ? st.diesel.rasid : 0);
-    // fuel summary with editable rasid
+    /* ── سربرگِ خلاصهٔ هر جدولِ آرشیو ─────────────────────────────────────────
+       گزارشِ صاحب ریپو: «جدول‌های آرشیو اصلاً شبیه اصلی‌ها نیست — همهٔ کادرها و
+       سربرگ‌ها را مثل جدولِ اصلی کن». ریشه‌اش این بود که این‌جا یک چیدمانِ
+       دست‌سازِ ریز با استایلِ درجا نوشته شده بود، در حالی که سربرگِ حسابِ زنده
+       از کلاس‌های `.fuel-split / .fs-group / .fs-head / .fs-rows / .fs-cell`
+       می‌آید. حالا آرشیو هم دقیقاً همان کلاس‌ها را می‌گیرد، پس هر قاعده‌ای که
+       برای سربرگِ زنده نوشته شود (اندازه‌ها، تمِ روشن، گوشی/کامپیوتر) خودبه‌خود
+       این‌جا هم می‌افتد و دیگر از هم جدا نمی‌مانند. ⚠️ استایلِ درجا برنگردانید.
+       برچسب‌ها هم مثل زنده‌اند: «فیصدی ما (۴٪)» با فیصدیِ خودِ همین آرشیو، و
+       «رسید/الباقیِ پول یا تیل» بر اساس واحدِ همین آرشیو. عددها و محاسبه‌ها
+       هیچ تغییری نکرده‌اند — فقط جای نشستنشان. */
+    const rasidLbl = hMoney ? 'مقدار رسید پول' : 'مقدار رسید تیل';
+    const remLbl   = hMoney ? 'الباقی پول' : 'الباقی تیل';
+    const _rasidIn = (fuel, val) => `<input type="number" class="v pm-edit" value="${val||''}" placeholder="0" title="رسیدِ سربرگِ همین آرشیو"
+              style="color:var(--green);background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;width:100%;font-weight:800;font-family:'Vazirmatn',sans-serif"
+              oninput="updateHistoryRasid('${pid}','${h.id}','${fuel}',this.value)">`;
     const fuelHtml = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px;border-bottom:1px solid ${ac}33">
-        <div style="border:1px solid #38a16966;border-radius:10px;padding:8px">
-          <div style="font-size:0.7rem;font-weight:800;color:#38a169;margin-bottom:5px;text-align:center">⛽ حساب پطرول</div>
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;text-align:center">
-            <div><div style="font-size:0.54rem;color:var(--muted)">فیصدی ما</div><div style="font-size:0.78rem;font-weight:800;color:var(--purple)">${n2fa(rnd(commP))}</div></div>
-            <div><div style="font-size:0.54rem;color:var(--muted)">رسید</div><input type="number" value="${rasidP||''}" placeholder="0" style="width:100%;background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;font-size:0.78rem;font-weight:800;color:var(--green);font-family:'Vazirmatn',sans-serif" oninput="updateHistoryRasid('${pid}','${h.id}','petrol',this.value)"></div>
-            <div><div style="font-size:0.54rem;color:var(--muted)">برد</div><div style="font-size:0.78rem;font-weight:800;color:var(--accent)">${n2fa(rnd(bordP))}</div></div>
-            <div><div style="font-size:0.54rem;color:var(--muted)">الباقی</div><div style="font-size:0.78rem;font-weight:800;color:var(--blue)">${n2fa(rnd(remP))}</div></div>
+      <div class="fuel-split">
+        <div class="fs-group petrol">
+          <div class="fs-head petrol">⛽ حساب پطرول</div>
+          <div class="fs-rows">
+            <div class="fs-cell"><div class="l">فیصدی ما (${n2fa(rnd(pctP))}٪)</div><div class="v" style="color:var(--purple)">${n2fa(rnd(commP))}</div></div>
+            <div class="fs-cell"><div class="l">${rasidLbl}</div>${_rasidIn('petrol', rasidP)}</div>
+            <div class="fs-cell"><div class="l">برد</div><div class="v" style="color:var(--accent)">${n2fa(rnd(bordP))}</div></div>
+            <div class="fs-cell"><div class="l">${remLbl}</div><div class="v" style="color:var(--blue)">${n2fa(rnd(remP))}</div></div>
           </div>
         </div>
-        <div style="border:1px solid #b7791f66;border-radius:10px;padding:8px">
-          <div style="font-size:0.7rem;font-weight:800;color:#d97706;margin-bottom:5px;text-align:center">🟤 حساب دیزل</div>
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;text-align:center">
-            <div><div style="font-size:0.54rem;color:var(--muted)">فیصدی ما</div><div style="font-size:0.78rem;font-weight:800;color:var(--purple)">${n2fa(rnd(commD))}</div></div>
-            <div><div style="font-size:0.54rem;color:var(--muted)">رسید</div><input type="number" value="${rasidD||''}" placeholder="0" style="width:100%;background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;font-size:0.78rem;font-weight:800;color:var(--green);font-family:'Vazirmatn',sans-serif" oninput="updateHistoryRasid('${pid}','${h.id}','diesel',this.value)"></div>
-            <div><div style="font-size:0.54rem;color:var(--muted)">برد</div><div style="font-size:0.78rem;font-weight:800;color:var(--accent)">${n2fa(rnd(bordD))}</div></div>
-            <div><div style="font-size:0.54rem;color:var(--muted)">الباقی</div><div style="font-size:0.78rem;font-weight:800;color:var(--blue)">${n2fa(rnd(remD))}</div></div>
+        <div class="fs-group diesel">
+          <div class="fs-head diesel">🟤 حساب دیزل</div>
+          <div class="fs-rows">
+            <div class="fs-cell"><div class="l">فیصدی ما (${n2fa(rnd(pctD))}٪)</div><div class="v" style="color:var(--purple)">${n2fa(rnd(commD))}</div></div>
+            <div class="fs-cell"><div class="l">${rasidLbl}</div>${_rasidIn('diesel', rasidD)}</div>
+            <div class="fs-cell"><div class="l">برد</div><div class="v" style="color:var(--accent)">${n2fa(rnd(bordD))}</div></div>
+            <div class="fs-cell"><div class="l">${remLbl}</div><div class="v" style="color:var(--blue)">${n2fa(rnd(remD))}</div></div>
           </div>
         </div>
       </div>
-      <div style="padding:5px 12px;border-bottom:1px solid ${ac}22;display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--dark)">
-        <span style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap">📝 فیِ خرید:</span>
+      <!-- نوارِ «فیِ خرید / فیصدی» — هم‌شکلِ نوارِ حسابِ زنده (.pm-acct-bar):
+           همان برچسب‌های ۰٫۷۵rem و همان کادرهای خط‌دار، نه کادرهای زیرخط‌دارِ ریز -->
+      <div class="pm-arc-bar" style="border-bottom:1px solid ${ac}22">
+        <span class="pm-bar-grp"><span class="pm-arc-lbl">📝 فیِ خرید:</span>
         <input value="${escFa(hBuyFee)}" placeholder="مثلاً فی 56 / 57 / 58" title="فقط یادداشت — در هیچ محاسبه‌ای استفاده نمی‌شود"
-          style="width:170px;text-align:center;border:1px solid var(--border);border-radius:7px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.76rem;font-weight:700;padding:4px 8px;box-sizing:border-box"
-          oninput="updateHistoryBuyFee('${pid}','${h.id}',this.value)">
-        <span style="font-size:0.72rem;color:var(--muted);font-weight:700">فیصدی ٪ ⛽:</span>
-        <input type="number" value="${pctP||''}" placeholder="0" title="فیصدیِ پطرولِ همین آرشیو" style="width:56px;background:transparent;border:none;border-bottom:1px dashed var(--accent);text-align:center;font-size:0.82rem;font-weight:800;color:var(--accent);font-family:'Vazirmatn',sans-serif" oninput="updateHistoryPercent('${pid}','${h.id}',this.value,'petrol')">
-        <span style="font-size:0.72rem;color:var(--muted);font-weight:700">🟤:</span>
-        <input type="number" value="${pctD||''}" placeholder="0" title="فیصدیِ دیزلِ همین آرشیو" style="width:56px;background:transparent;border:none;border-bottom:1px dashed var(--accent);text-align:center;font-size:0.82rem;font-weight:800;color:var(--accent);font-family:'Vazirmatn',sans-serif" oninput="updateHistoryPercent('${pid}','${h.id}',this.value,'diesel')">
-        <span style="font-size:0.72rem;color:var(--muted)">جمله برد (پطرول+دیزل): <b style="color:var(--accent)">${n2fa(rnd(bordP+bordD))}${hMoney?' افغانی':' لیتر'}</b></span>
-        <span style="font-size:0.72rem;color:var(--muted)">الباقی کل (پطرول+دیزل): <b style="color:var(--blue)">${n2fa(rnd(remP+remD))}${hMoney?' افغانی':' لیتر'}</b></span>
+          class="pm-arc-in" style="width:150px"
+          oninput="updateHistoryBuyFee('${pid}','${h.id}',this.value)"></span>
+        <span class="pm-bar-grp"><span class="pm-arc-lbl">٪ فیصدی ⛽:</span>
+        <input type="number" value="${pctP||''}" placeholder="0" title="فیصدیِ پطرولِ همین آرشیو" class="pm-arc-in pct" oninput="updateHistoryPercent('${pid}','${h.id}',this.value,'petrol')"></span>
+        <span class="pm-bar-grp"><span class="pm-arc-lbl">🟤:</span>
+        <input type="number" value="${pctD||''}" placeholder="0" title="فیصدیِ دیزلِ همین آرشیو" class="pm-arc-in pct" oninput="updateHistoryPercent('${pid}','${h.id}',this.value,'diesel')"></span>
+        <span class="pm-arc-lbl">جمله برد (پطرول+دیزل): <b style="color:var(--accent)">${n2fa(rnd(bordP+bordD))}${hMoney?' افغانی':' لیتر'}</b></span>
+        <span class="pm-arc-lbl">الباقی کل (پطرول+دیزل): <b style="color:var(--blue)">${n2fa(rnd(remP+remD))}${hMoney?' افغانی':' لیتر'}</b></span>
       </div>`;
     // فیلتر پطرول/دیزل این آرشیو — مثل سه دکمهٔ بالای جدول اصلی. اگر کاربر خودش
     // روی همین آرشیو فیلتر نزده باشد (h.viewFilter)، از نوعِ خودِ آرشیو (h.fuel —
@@ -28802,8 +28853,10 @@ function _renderHistoryPanel(person) {
     const viewRows = rows.map((r, ri) => ({ r, ri })).filter(x => hFilter === 'all' || ((x.r.ftype || 'petrol') === hFilter));
     // ستون «نوع تیل» فقط وقتی نمایش داده می‌شود که فیلتر روی «همه» است (مثل جدول اصلی)
     const showFt = hFilter === 'all';
-    const fBtn = (f, lbl) => `<button onclick="setHistoryFilter('${pid}','${h.id}','${f}')" style="padding:5px 12px;border-radius:8px;border:1.5px solid ${hFilter===f?'var(--blue)':'var(--border)'};background:${hFilter===f?'var(--blue)':'var(--card)'};color:${hFilter===f?'#fff':'var(--txt)'};font-family:'Vazirmatn',sans-serif;font-size:0.75rem;font-weight:700;cursor:pointer">${lbl}</button>`;
-    const filterBarHtml = `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:8px 10px 0">${fBtn('all','📋 همه')}${fBtn('petrol','⛽ حساب جداگانه پطرول')}${fBtn('diesel','🟤 حساب جداگانه دیزل')}</div>`;
+    // همان کلاسِ دکمه‌های فیلترِ جدولِ اصلی (.pm-filter-btn) — نه دکمه‌های آبیِ
+    // دست‌سازِ قبلی. رنگِ فعال هم مثل اصلی: همه=کرمی، پطرول=سبز، دیزل=قهوه‌ای.
+    const fBtn = (f, lbl) => `<button class="pm-filter-btn ${f}${hFilter===f?' active':''}" onclick="setHistoryFilter('${pid}','${h.id}','${f}')">${lbl}</button>`;
+    const filterBarHtml = `<div class="pm-filter-bar" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:8px 10px 0">${fBtn('all','📋 همه')}${fBtn('petrol','⛽ حساب جداگانه پطرول')}${fBtn('diesel','🟤 حساب جداگانه دیزل')}</div>`;
     // xls table with editable rows
     let rowsHtml = viewRows.map(({ r, ri }, vi) => {
       const bard = r.byMoney ? (r.bardagi||0) : _personRowBardagi(r);
@@ -41444,7 +41497,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.293';
+const APP_VERSION = '2.9.294';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
