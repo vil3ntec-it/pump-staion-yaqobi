@@ -28763,6 +28763,18 @@ function _rerenderStackedPreserveFocus(person) {
     if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(selStart, selEnd); } catch (e) {} }
   }
 }
+/* خانهٔ «الباقی»ِ فوترِ جدول‌های آرشیو — دو خطی و سبز/سرخ، درست مثل فوترِ جدولِ
+   اصلی (pm-ft-albaqi). یک تابعِ مشترک است تا رسمِ اولیه و به‌روزرسانیِ درجای
+   حینِ تایپ (_histRepaint) هرگز از هم جدا نیفتند.
+   عدد همان «رسید − بردگی»ِ ردیف‌های همین جدول است — دست‌نخورده از قبل. چون هر
+   دو طرفش پولی‌اند، برچسبش در واحد پول «الباقی پول» است و در واحد تیل — که
+   ستونِ دیده‌شده «رسید تیل» است و این عدد از آن نمی‌آید — فقط «الباقی». */
+function _histFootAlbHtml(net, money) {
+  const v = Math.round(net) || 0;
+  const c = v < 0 ? 'var(--red)' : 'var(--green)';
+  return '<div style="font-size:0.78rem;line-height:1.5;color:' + c + '">'
+    + (money ? 'الباقی پول:' : 'الباقی:') + '<br>' + n2fa(v) + '</div>';
+}
 function _renderHistoryPanel(person) {
   const wrap = document.getElementById('pm-history-wrap'); if (!wrap || !person) return;
   const acct = _acctOf(person);
@@ -28875,12 +28887,27 @@ function _renderHistoryPanel(person) {
         <td><input class="xls-in pm-bardagi-cell" type="number" value="${parseFloat(bard.toFixed(0))||''}" placeholder="0" style="color:var(--accent);font-weight:700" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'bardagi',this.value)"></td>
         ${hMoney ? `<td><input class="xls-in" type="number" value="${r.rasid||''}" placeholder="0" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'rasid',this.value)"></td>` : ''}
         ${hMoney ? '' : `<td><input class="xls-in" type="number" value="${r.rasidFuel||''}" placeholder="0" oninput="calcHistoryRow('${pid}','${h.id}',${ri},'rasidFuel',this.value)"></td>`}
-        <td class="pm-albaqi-cell" style="font-weight:700;color:var(--accent)">${n2fa(Math.round(bard)||0)}</td>
+        <!-- خانهٔ الباقیِ هر ردیف عمداً خالی است — مو‌به‌مو مثل جدولِ اصلی
+             (_updatePersonRowCells هم همان‌جا خالی‌اش می‌کند). پیش از این این‌جا
+             عددِ «بردگی» دوباره نوشته می‌شد که نه الباقی بود نه جایش این‌جا بود؛
+             الباقی فقط یک‌بار، در جمعِ پایینِ همین جدول می‌آید. -->
+        <td class="pm-albaqi-cell"></td>
         <td><button class="del-btn" onclick="deleteHistoryRow('${pid}','${h.id}',${ri})">🗑️</button></td>
       </tr>`;
     }).join('');
     if (!rowsHtml) rowsHtml = `<tr><td colspan="${showFt?11:10}" style="text-align:center;padding:12px;color:var(--muted);font-size:0.82rem">${hFilter==='petrol'?'⛽ هیچ ردیف پطرولی ثبت نشده':(hFilter==='diesel'?'🟤 هیچ ردیف دیزلی ثبت نشده':'هیچ ردیفی ثبت نشده')}</td></tr>`;
     const viewAlbaqi = viewRows.reduce((s, x) => s + ((x.r.byMoney ? (x.r.bardagi||0) : _personRowBardagi(x.r)) - (x.r.rasid||0)), 0);
+    /* ── جمعِ ستون‌های فوتر — همان کاری که جدولِ اصلی می‌کند ────────────────────
+       گزارشِ صاحب ریپو: «جدول‌های آرشیو جمع کل تیل برده‌شده ندارد، جمع رسید ندارد،
+       جمع برد هم ندارد». فوتر فقط یک عددِ الباقی داشت و بقیهٔ ستون‌ها زیرشان خالی
+       بود. حالا مثل جدولِ اصلی زیر هر ستون جمعِ خودِ همان ستون می‌نشیند.
+       ⚠️ هر جمع دقیقاً روی همان خانه‌هایی بسته می‌شود که در همان ستون دیده
+       می‌شوند — نه رسیدِ سربرگ به آن اضافه می‌شود نه چیزی کم — تا اگر کاربر
+       ستون را با دست جمع بزند همان عدد دربیاید. فیلترِ «حساب جداگانه» هم
+       خودبه‌خود رعایت می‌شود، چون از viewRows خوانده می‌شود نه از کلِ ردیف‌ها. */
+    const ftFuel  = viewRows.reduce((s, x) => s + (parseFloat(x.r.fuel) || 0), 0);
+    const ftBard  = viewRows.reduce((s, x) => s + (x.r.byMoney ? (x.r.bardagi||0) : _personRowBardagi(x.r)), 0);
+    const ftRasid = viewRows.reduce((s, x) => s + (parseFloat(hMoney ? x.r.rasid : x.r.rasidFuel) || 0), 0);
     const tableHtml = filterBarHtml + `
       <div class="xls-wrap" style="margin:8px 10px;border-radius:9px;overflow:hidden">
         <div style="overflow-x:auto">
@@ -28891,8 +28918,12 @@ function _renderHistoryPanel(person) {
             </tr></thead>
             <tbody>${rowsHtml}</tbody>
             <tfoot class="xls-foot"><tr>
-              <td colspan="${showFt?7:6}" style="padding:8px 7px;font-weight:800">جمله الباقی همین جدول (رسید − بردگی)</td>
-              <td class="xls-calc hist-ft-alb" id="hist-ft-${pid}-${h.id}" colspan="3" style="font-weight:800;color:${(-viewAlbaqi)<0?'var(--red)':'var(--green)'}">${n2fa(Math.round(-viewAlbaqi)||0)}</td>
+              <td colspan="${showFt?5:4}" style="padding:8px 7px">جمله</td>
+              <td class="xls-calc" id="hist-ftf-${pid}-${h.id}">${n2fa(rnd(ftFuel))}</td>
+              <td class="xls-calc">—</td>
+              <td class="xls-calc" id="hist-ftb-${pid}-${h.id}">${n2fa(rnd(ftBard))}</td>
+              <td class="xls-calc" id="hist-ftr-${pid}-${h.id}">${n2fa(rnd(ftRasid))}</td>
+              <td class="xls-calc hist-ft-alb" id="hist-ft-${pid}-${h.id}" style="font-weight:800">${_histFootAlbHtml(-viewAlbaqi, hMoney)}</td>
               <td></td>
             </tr></tfoot>
           </table>
@@ -28999,6 +29030,16 @@ function pdfPersonHistory(pid, hid) {
      «‎-8,944‎» دیده می‌شد و برعکس. حالا دقیقاً همان چیزی است که روی صفحه است. */
   const showRemP = -remP, showRemD = -remD;
   const archiveLabel = h.note ? h.note.split('\n')[0].substring(0,50) : '';
+  // جمعِ ستون‌ها برای ردیفِ «جمله»ی ته جدول — مثل خودِ صفحه (پیش از این ورقِ
+  // آرشیو هیچ جمعی زیر جدول نداشت). دقیقاً روی همان ردیف‌هایی بسته می‌شود که
+  // در همین ورق چاپ می‌شوند، پس با فیلترِ پطرول/دیزلِ فعال هم جور درمی‌آید.
+  let pdfFuel = 0, pdfBard = 0, pdfRasid = 0;
+  rows.forEach(r => {
+    pdfFuel  += parseFloat(r.fuel) || 0;
+    pdfBard  += r.byMoney ? (r.bardagi||0) : _personRowBardagi(r);
+    pdfRasid += parseFloat(r.rasid) || 0;
+  });
+  const pdfAlb = pdfRasid - pdfBard;
   const tableRows = rows.map((r,i) => {
     const bard = r.byMoney ? (r.bardagi||0) : _personRowBardagi(r);
     const alb = bard - (r.rasid||0);
@@ -29037,6 +29078,7 @@ table{width:100%;border-collapse:collapse;font-size:0.72rem}
 th{background:#2d3748;color:#e2e8f0;padding:6px;text-align:center;font-weight:700;white-space:nowrap}
 td{padding:5px 6px;border-bottom:1px solid #e2e8f0;text-align:center}
 tr:nth-child(even) td{background:#f7fafc}
+tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:6px}
 .no-print{display:none}
 @media print{@page{margin:12mm}}
 </style></head><body>
@@ -29065,7 +29107,8 @@ tr:nth-child(even) td{background:#f7fafc}
 </div>
 <div class="pct-row">فیصدی ٪: <b>⛽ ${n2fa(pctP)}</b> / <b>🟤 ${n2fa(pctD)}</b> &nbsp;|&nbsp; جمله برد: <b style="color:#c07700">${n2fa(rnd(bordP+bordD))} ${unit}</b> &nbsp;|&nbsp; الباقی کل: <b style="color:#2b6cb0">${n2fa(rnd(remP+remD))} ${unit}</b></div>
 <table><thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>حواله</th><th>مقدار تیل</th><th>فی لیتر</th><th>مقدار بردگی</th><th>رسید</th><th>الباقی</th></tr></thead>
-<tbody>${tableRows||'<tr><td colspan="9" style="text-align:center;padding:12px;color:#718096">هیچ ردیفی ثبت نشده</td></tr>'}</tbody></table>
+<tbody>${tableRows||'<tr><td colspan="9" style="text-align:center;padding:12px;color:#718096">هیچ ردیفی ثبت نشده</td></tr>'}</tbody>
+<tfoot><tr><td colspan="4" style="text-align:right">جمله</td><td>${n2fa(rnd(pdfFuel))}</td><td>—</td><td>${n2fa(rnd(pdfBard))}</td><td>${n2fa(rnd(pdfRasid))}</td><td>${n2fa(rnd(pdfAlb))}</td></tr></tfoot></table>
 <script>window.onload=function(){window.print()}<\/script>
 </body></html>`;
   pumpOpenDoc(html);
@@ -29139,23 +29182,32 @@ function _histRepaint(pid, hid) {
   const tbl = document.getElementById('hist-tbl-' + pid + '-' + hid);
   if (!tbl) { _rerenderHistoryPreserveFocus(person); return; }   // جدول در DOM نیست → همان راهِ قبلی
   const hFilter = h.viewFilter || h.fuel || currentPersonFilter || 'all';
-  let viewAlbaqi = 0;
+  const hMoney = (h.viewMoney != null) ? h.viewMoney : _acctModeMoney(person, _acctOf(person));
+  let viewAlbaqi = 0, ftFuel = 0, ftBard = 0, ftRasid = 0;
   (h.rows || []).forEach((r, ri) => {
     if (hFilter !== 'all' && (r.ftype || 'petrol') !== hFilter) return;
     const bard = r.byMoney ? (r.bardagi || 0) : _personRowBardagi(r);
     viewAlbaqi += bard - (r.rasid || 0);
+    // همان سه جمعِ فوتر که _renderHistoryPanel می‌سازد — این‌جا هم باید هم‌گام
+    // بمانند، وگرنه حینِ تایپ جمع‌ها عقب می‌ماندند تا رندرِ بعدی
+    ftFuel  += parseFloat(r.fuel) || 0;
+    ftBard  += bard;
+    ftRasid += parseFloat(hMoney ? r.rasid : r.rasidFuel) || 0;
     const tr = tbl.querySelector('tbody tr[data-ri="' + ri + '"]');
     if (!tr) return;
     const bCell = tr.querySelector('.pm-bardagi-cell');
     if (bCell && document.activeElement !== bCell) bCell.value = parseFloat(bard.toFixed(0)) || '';
+    // خانهٔ الباقیِ ردیف مثل جدولِ اصلی خالی می‌ماند
     const aCell = tr.querySelector('.pm-albaqi-cell');
-    if (aCell) aCell.textContent = n2fa(Math.round(bard) || 0);
+    if (aCell) aCell.textContent = '';
   });
+  const rnd2 = x => Math.round(x * 100) / 100;
+  const setFt = (id, txt) => { const el = document.getElementById(id + '-' + pid + '-' + hid); if (el) el.textContent = txt; };
+  setFt('hist-ftf', n2fa(rnd2(ftFuel)));
+  setFt('hist-ftb', n2fa(rnd2(ftBard)));
+  setFt('hist-ftr', n2fa(rnd2(ftRasid)));
   const ft = document.getElementById('hist-ft-' + pid + '-' + hid);
-  if (ft) {
-    ft.textContent = n2fa(Math.round(-viewAlbaqi) || 0);
-    ft.style.color = (-viewAlbaqi) < 0 ? 'var(--red)' : 'var(--green)';
-  }
+  if (ft) ft.innerHTML = _histFootAlbHtml(-viewAlbaqi, hMoney);
 }
 // نوع تیل (پطرول/دیزل) ردیف‌های جدولِ آرشیو — مثل جدول اصلی
 function setHistoryRowFuel(pid, hid, idx, ftype) {
@@ -41497,7 +41549,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.294';
+const APP_VERSION = '2.9.295';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
