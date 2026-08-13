@@ -18335,7 +18335,7 @@ body.boot-viewer #bootViewerSplash{
         <div class="tbl-wrap" id="safe-ft-spare" style="margin-top:10px">
           <table class="tbl safe-tbl" style="table-layout:fixed;min-width:700px">
             <colgroup>
-              <col style="width:36px"><col style="width:100px"><col style="width:104px"><col><col style="width:132px"><col style="width:150px"><col style="width:54px">
+              <col style="width:36px"><col style="width:100px"><col style="width:126px"><col><col style="width:132px"><col style="width:150px"><col style="width:54px">
             </colgroup>
             <tfoot>
               <tr style="background:var(--dark);font-weight:700">
@@ -18459,7 +18459,7 @@ body.boot-viewer #bootViewerSplash{
             <th>تاریخ</th>
             <th style="min-width:140px">توضیحات</th>
             <th>مبلغ</th>
-            <th style="width:60px">واحد</th>
+            <th>واحد</th>
             <th>فی</th>
             <th style="min-width:90px">دالر</th>
             <th style="min-width:120px">رسید به صرافی</th>
@@ -27082,7 +27082,7 @@ function calcStackedRow(pid, acctId, idx, field, value) {
   _stampRowUnionRate(r);   // قفلِ نرخِ اتحادیهٔ همین لحظه روی ردیف (مثل جدولِ اصلی)
   if (!r.byMoney) r.bardagi=_personRowBardagi(r);
   r.albaqi=(parseFloat(r.bardagi)||0)-(r.rasid||0);
-  save(); _updatePersonTotals(person); _rerenderStackedPreserveFocus(person); renderPersons(currentPersonType); updateBanner();
+  save(); _updatePersonTotals(person); _rerenderSoon('pm-stacked-wrap', _rerenderStackedPreserveFocus); renderPersons(currentPersonType); updateBanner();
 }
 function setStackedRowFuel(pid, acctId, idx, ftype) {
   const person = _getStackedPerson(pid); if (!person) return;
@@ -28666,6 +28666,29 @@ function _hEntry(pid, hid) {
 // این یعنی خودِ اینپوتِ در حال تایپ هم از نو ساخته می‌شود، فوکوس را گم می‌کند و
 // صفحه (که داخل modal-body قابل‌اسکرول است) به بالا می‌پرد. این تابع موقعیتِ اسکرول
 // و فوکوس/مکانِ نشانگر را قبل از رندر ذخیره و بعدش برمی‌گرداند تا تایپ روان بماند.
+/* ══════════════════════════════════════════════════════════════════════════
+   بازسازیِ عقب‌انداخته — درمانِ ریشه‌ایِ «کیبورد می‌پره»
+   ──────────────────────────────────────────────────────────────────────────
+   ‎_rerenderHistoryPreserveFocus / ‎_rerenderStackedPreserveFocus فوکوس را
+   برمی‌گردانند، ولی خودِ کادر را نابود و دوباره می‌سازند. روی گوشی همین کافی
+   است که مرورگر کیبورد را ببندد؛ ‎focus()ِ برنامه‌ای (بدونِ لمسِ کاربر) دوباره
+   بازش نمی‌کند. پس تا وقتی دستِ کاربر روی همان کادر است اصلاً بازسازی نمی‌کنیم
+   — داده با save() سرِ جایش ذخیره شده — و به‌محضِ اینکه از کادر بیرون رفت
+   یک‌بار بازسازی می‌شود.
+   ══════════════════════════════════════════════════════════════════════════ */
+function _rerenderSoon(wrapId, renderFn) {
+  const wrap = document.getElementById(wrapId);
+  const act = document.activeElement;
+  const typing = wrap && act && wrap.contains(act) && (act.tagName === 'INPUT' || act.tagName === 'TEXTAREA');
+  if (!typing) { const p = _curPerson(); if (p) renderFn(p); return; }
+  if (act.dataset.rerenderArmed === '1') return;      // یک‌بار بس است
+  act.dataset.rerenderArmed = '1';
+  act.addEventListener('blur', function onBlur() {
+    act.removeEventListener('blur', onBlur);
+    delete act.dataset.rerenderArmed;
+    const p = _curPerson(); if (p) renderFn(p);
+  }, { once: true });
+}
 function _rerenderHistoryPreserveFocus(person) {
   const wrap = document.getElementById('pm-history-wrap');
   const scroller = wrap ? wrap.closest('.modal-body') : null;
@@ -28785,7 +28808,7 @@ function _renderHistoryPanel(person) {
     let rowsHtml = viewRows.map(({ r, ri }, vi) => {
       const bard = r.byMoney ? (r.bardagi||0) : _personRowBardagi(r);
       const alb  = bard - (r.rasid||0);
-      return `<tr>
+      return `<tr data-ri="${ri}">
         <td class="xls-num">${n2fa(vi+1)}</td>
         <td><input class="xls-in" value="${r.date||''}" onchange="updateHistoryRow('${pid}','${h.id}',${ri},'date',this.value)"></td>
         <td><input class="xls-in" value="${escFa(r.name)}" placeholder="نام" onchange="updateHistoryRow('${pid}','${h.id}',${ri},'name',this.value)"></td>
@@ -28816,7 +28839,7 @@ function _renderHistoryPanel(person) {
             <tbody>${rowsHtml}</tbody>
             <tfoot class="xls-foot"><tr>
               <td colspan="${showFt?7:6}" style="padding:8px 7px;font-weight:800">جمله الباقی همین جدول (رسید − بردگی)</td>
-              <td class="xls-calc" colspan="3" style="font-weight:800;color:${(-viewAlbaqi)<0?'var(--red)':'var(--green)'}">${n2fa(Math.round(-viewAlbaqi)||0)}</td>
+              <td class="xls-calc hist-ft-alb" id="hist-ft-${pid}-${h.id}" colspan="3" style="font-weight:800;color:${(-viewAlbaqi)<0?'var(--red)':'var(--green)'}">${n2fa(Math.round(-viewAlbaqi)||0)}</td>
               <td></td>
             </tr></tfoot>
           </table>
@@ -29008,7 +29031,7 @@ function updateHistoryRasid(pid, hid, ftype, value) {
   const v = parseFloat(value) || 0;
   if (ftype === 'petrol') { if (money) h.rasidMoneyP = v; else h.rasidFuelP = v; }
   else { if (money) h.rasidMoneyD = v; else h.rasidFuelD = v; }
-  save(); _rerenderHistoryPreserveFocus(person);
+  save(); _rerenderSoon('pm-history-wrap', _rerenderHistoryPreserveFocus);
 }
 function updateHistoryPercent(pid, hid, value, fuel) {
   const person = _hPerson(pid); if (!person) return;
@@ -29016,7 +29039,7 @@ function updateHistoryPercent(pid, hid, value, fuel) {
   _pctSplit(h);
   h[_pctKey(fuel || 'petrol')] = (value === '' || value == null) ? '' : (parseFloat(value) || 0);
   h.percent = (parseFloat(h.percentP) || 0) || (parseFloat(h.percentD) || 0);
-  save(); _rerenderHistoryPreserveFocus(person);
+  save(); _rerenderSoon('pm-history-wrap', _rerenderHistoryPreserveFocus);
 }
 function updateHistoryRow(pid, hid, idx, field, value) {
   const h = _hEntry(pid, hid); if (!h || !h.rows[idx]) return;
@@ -29045,7 +29068,41 @@ function calcHistoryRow(pid, hid, idx, field, value) {
     }
   }
   r.albaqi = (r.bardagi||0) - (r.rasid||0);
-  save(); _rerenderHistoryPreserveFocus(person);
+  save();
+  /* ⚠️ این‌جا عمداً جدول بازسازی نمی‌شود — درمانِ باگِ «کیبورد می‌پره».
+     تا امروز هر حرفی که در جدولِ آرشیو تایپ می‌شد کلِ پنل را از نو می‌ساخت و
+     خودِ کادرِ در حالِ تایپ هم نابود می‌شد. ‎_rerenderHistoryPreserveFocus بعدش
+     فوکوس را برمی‌گرداند، ولی روی گوشی این کافی نیست: مرورگر با نابود شدنِ کادر
+     کیبورد را می‌بندد و ‎focus()ِ برنامه‌ای (بدونِ لمسِ کاربر) دوباره بازش
+     نمی‌کند. پس مثلِ جدولِ اصلی (_updatePersonRowCells) فقط همان خانه‌هایی که
+     عدد‌شان عوض شده به‌روز می‌شوند. */
+  _histRepaint(pid, hid);
+}
+/* به‌روزرسانیِ درجای یک جدولِ آرشیو: خانهٔ بردگی، خانهٔ الباقی و جمعِ پایینِ
+   همان جدول — بدونِ دست زدن به کادری که کاربر داخلش تایپ می‌کند. */
+function _histRepaint(pid, hid) {
+  const person = _hPerson(pid); if (!person) return;
+  const h = _hEntry(pid, hid); if (!h) return;
+  const tbl = document.getElementById('hist-tbl-' + pid + '-' + hid);
+  if (!tbl) { _rerenderHistoryPreserveFocus(person); return; }   // جدول در DOM نیست → همان راهِ قبلی
+  const hFilter = h.viewFilter || h.fuel || currentPersonFilter || 'all';
+  let viewAlbaqi = 0;
+  (h.rows || []).forEach((r, ri) => {
+    if (hFilter !== 'all' && (r.ftype || 'petrol') !== hFilter) return;
+    const bard = r.byMoney ? (r.bardagi || 0) : _personRowBardagi(r);
+    viewAlbaqi += bard - (r.rasid || 0);
+    const tr = tbl.querySelector('tbody tr[data-ri="' + ri + '"]');
+    if (!tr) return;
+    const bCell = tr.querySelector('.pm-bardagi-cell');
+    if (bCell && document.activeElement !== bCell) bCell.value = parseFloat(bard.toFixed(0)) || '';
+    const aCell = tr.querySelector('.pm-albaqi-cell');
+    if (aCell) aCell.textContent = n2fa(Math.round(bard) || 0);
+  });
+  const ft = document.getElementById('hist-ft-' + pid + '-' + hid);
+  if (ft) {
+    ft.textContent = n2fa(Math.round(-viewAlbaqi) || 0);
+    ft.style.color = (-viewAlbaqi) < 0 ? 'var(--red)' : 'var(--green)';
+  }
 }
 // نوع تیل (پطرول/دیزل) ردیف‌های جدولِ آرشیو — مثل جدول اصلی
 function setHistoryRowFuel(pid, hid, idx, ftype) {
@@ -32930,22 +32987,22 @@ function pdfSingleReport(repId) {
     if (!s || !s.name) return `
       <div style="padding:12px 16px;flex:1;min-width:200px">
         <div style="font-size:0.85rem;font-weight:900;color:${hColor};margin-bottom:10px">${label}</div>
-        <div style="color:#6b7280;font-size:0.8rem;font-style:italic">ثبت نشده</div>
+        <div style="color:#718096;font-size:0.8rem;font-style:italic">ثبت نشده</div>
       </div>`;
     return `
       <div style="padding:12px 16px;flex:1;min-width:200px">
         <div style="font-size:0.85rem;font-weight:900;color:${hColor};margin-bottom:10px">${label}</div>
-        <div style="font-size:0.82rem;color:#9ca3af;margin-bottom:4px">کارمند: <span style="color:#f3f4f6;font-weight:700">${escFa(s.name)||'—'}</span></div>
-        <div style="font-size:0.82rem;color:#9ca3af;margin-bottom:4px">پایه: <span style="color:#f3f4f6">${n2fa(s.start||0)} → ${n2fa(s.end||0)} ل</span></div>
-        <div style="font-size:0.82rem;color:#9ca3af;margin-bottom:4px">فروش: <span style="color:#60a5fa;font-weight:900">${n2fa(s.sale||0)} ل</span></div>
-        <div style="font-size:0.82rem;color:#9ca3af;margin-bottom:4px">فی فروش: <span style="color:#fbbf24;font-weight:700">${n2fa(s.price||0)} ؋</span></div>
-        <div style="font-size:0.82rem;color:#9ca3af;margin-bottom:4px">فی خرید: <span style="color:#f87171;font-weight:600">${s.buyPerLiter?n2fa(s.buyPerLiter.toFixed(1))+' ؋':'—'}</span></div>
-        <div style="font-size:0.82rem;color:#9ca3af;margin-bottom:4px">فایده / لیتر: <span style="color:#34d399;font-weight:700">${n2fa(s.profitPer||0)} ؋</span></div>
-        <div style="font-size:0.82rem;color:#9ca3af;margin-bottom:4px">پول کل: <span style="color:#fbbf24;font-weight:900">${n2fa(s.money||0)} افغانی</span></div>
-        <div style="font-size:0.82rem;color:#9ca3af;margin-bottom:4px">فایده کل: <span style="color:#34d399;font-weight:900">${n2fa(s.profit||0)} افغانی</span></div>
-        ${(s.debt||0)>0?`<div style="font-size:0.82rem;color:#9ca3af;margin-bottom:4px">جمله قرض: <span style="color:#f87171;font-weight:700">${n2fa(s.debt)} افغانی</span></div>
-        <div style="font-size:0.82rem;font-weight:900;margin-bottom:4px;padding:4px 8px;background:#064e3b;border-radius:6px;border:1px solid #065f46">💵 پول موجود: <span style="color:#34d399">${n2fa(s.available||0)} افغانی</span></div>`:''}
-        ${s.note?`<div style="font-size:0.75rem;color:#6b7280;margin-top:4px;font-style:italic">${escFa(s.note)}</div>`:''}
+        <div style="font-size:0.82rem;color:#718096;margin-bottom:4px">کارمند: <span style="color:#1a202c;font-weight:700">${escFa(s.name)||'—'}</span></div>
+        <div style="font-size:0.82rem;color:#718096;margin-bottom:4px">پایه: <span style="color:#1a202c">${n2fa(s.start||0)} → ${n2fa(s.end||0)} ل</span></div>
+        <div style="font-size:0.82rem;color:#718096;margin-bottom:4px">فروش: <span style="color:#2b6cb0;font-weight:900">${n2fa(s.sale||0)} ل</span></div>
+        <div style="font-size:0.82rem;color:#718096;margin-bottom:4px">فی فروش: <span style="color:#b7791f;font-weight:700">${n2fa(s.price||0)} ؋</span></div>
+        <div style="font-size:0.82rem;color:#718096;margin-bottom:4px">فی خرید: <span style="color:#c53030;font-weight:600">${s.buyPerLiter?n2fa(s.buyPerLiter.toFixed(1))+' ؋':'—'}</span></div>
+        <div style="font-size:0.82rem;color:#718096;margin-bottom:4px">فایده / لیتر: <span style="color:#276749;font-weight:700">${n2fa(s.profitPer||0)} ؋</span></div>
+        <div style="font-size:0.82rem;color:#718096;margin-bottom:4px">پول کل: <span style="color:#b7791f;font-weight:900">${n2fa(s.money||0)} افغانی</span></div>
+        <div style="font-size:0.82rem;color:#718096;margin-bottom:4px">فایده کل: <span style="color:#276749;font-weight:900">${n2fa(s.profit||0)} افغانی</span></div>
+        ${(s.debt||0)>0?`<div style="font-size:0.82rem;color:#718096;margin-bottom:4px">جمله قرض: <span style="color:#c53030;font-weight:700">${n2fa(s.debt)} افغانی</span></div>
+        <div style="font-size:0.82rem;font-weight:900;margin-bottom:4px;padding:4px 8px;background:#f0fff4;border-radius:6px;border:1px solid #9ae6b4">💵 پول موجود: <span style="color:#276749">${n2fa(s.available||0)} افغانی</span></div>`:''}
+        ${s.note?`<div style="font-size:0.75rem;color:#718096;margin-top:4px;font-style:italic">${escFa(s.note)}</div>`:''}
       </div>`;
   }
 
@@ -32957,32 +33014,33 @@ function pdfSingleReport(repId) {
 <style>
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{font-family:'Vazirmatn',sans-serif;background:#111827;color:#f3f4f6;padding:20px;font-size:13px;
+body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:20px;font-size:13px;
   -webkit-print-color-adjust:exact;print-color-adjust:exact}
 .page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
-  border-bottom:2px solid #f59e0b;padding-bottom:10px;margin-bottom:14px}
-.page-title{font-size:1.1rem;font-weight:900;color:#f59e0b}
-.page-meta{font-size:0.72rem;color:#9ca3af}
+  border-bottom:2px solid #b7791f;padding-bottom:10px;margin-bottom:14px}
+.page-title{font-size:1.1rem;font-weight:900;color:#b7791f}
+.page-meta{font-size:0.72rem;color:#718096}
 .stat-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
-.stat-box{flex:1;min-width:110px;background:#1f2937;border:1px solid #374151;border-radius:10px;padding:10px;text-align:center}
-.stat-box .sl{font-size:0.62rem;color:#9ca3af;margin-bottom:3px}
-.stat-box .sv{font-size:1rem;font-weight:900}
-.card{background:#1f2937;border:1.5px solid #374151;border-radius:12px;margin-bottom:12px;overflow:hidden}
+.stat-box{flex:1;min-width:110px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px;
+  text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.stat-box .sl{font-size:0.62rem;color:#718096;line-height:1.4}
+.stat-box .sv{font-size:1rem;font-weight:900;line-height:1.5}
+.card{background:#f7fafc;border:1.5px solid #e2e8f0;border-radius:12px;margin-bottom:12px;overflow:hidden}
 .card-header{padding:10px 16px;display:flex;align-items:center;justify-content:space-between;
-  flex-wrap:wrap;gap:6px;border-bottom:1px solid #374151}
+  flex-wrap:wrap;gap:6px;border-bottom:1px solid #e2e8f0}
 .card-title{font-weight:800;font-size:0.9rem}
 .badge{font-size:0.72rem;border-radius:5px;padding:2px 10px;font-weight:700}
 .cols{display:flex;gap:0;flex-wrap:wrap}
-.cols > div + div{border-right:1px solid #374151}
-.diesel-header{padding:8px 16px;border-top:1px dashed #92400e88;background:#92400e18}
-.summary-bar{padding:10px 16px;border-top:1px solid #374151;background:#111827;display:flex;flex-direction:column;gap:5px}
+.cols > div + div{border-right:1px solid #e2e8f0}
+.diesel-header{padding:8px 16px;border-top:1px dashed #dd6b20;background:#fffaf0}
+.summary-bar{padding:10px 16px;border-top:1px solid #e2e8f0;background:#f7fafc;display:flex;flex-direction:column;gap:5px}
 .sum-line{display:flex;gap:14px;flex-wrap:wrap}
-.sum-label{font-size:0.72rem;color:#9ca3af}
+.sum-label{font-size:0.72rem;color:#718096}
 .sum-val{font-size:0.75rem;font-weight:700}
-.grand-line{display:flex;gap:14px;flex-wrap:wrap;border-top:1px dashed #374151;padding-top:6px;margin-top:2px}
-.save-hint{background:#1f2937;border:1px solid #374151;border-radius:8px;padding:10px 14px;
-  font-size:0.72rem;color:#9ca3af;margin-bottom:14px;text-align:center}
-.save-hint strong{color:#f59e0b}
+.grand-line{display:flex;gap:14px;flex-wrap:wrap;border-top:1px dashed #e2e8f0;padding-top:6px;margin-top:2px}
+.save-hint{background:#fffaf0;border:1px solid #fbd38d;border-radius:8px;padding:10px 14px;
+  font-size:0.72rem;color:#718096;margin-bottom:14px;text-align:center}
+.save-hint strong{color:#b7791f}
 @media print{
   body{padding:6px;font-size:11px}
   @page{margin:0.5cm;size:A4}
@@ -33009,69 +33067,69 @@ body{font-family:'Vazirmatn',sans-serif;background:#111827;color:#f3f4f6;padding
     <div class="page-meta" style="margin-top:4px">📅 ${rep.date||'—'} | ${rep.dateMi||'—'} | ${rep.dateQa||'—'}</div>
   </div>
   <div style="display:flex;gap:8px;align-items:center">
-    <span class="badge" style="background:${rep.day&&rep.night?'#065f4622':'#7f1d1d22'};
-      color:${rep.day&&rep.night?'#34d399':'#f87171'};border:1px solid ${rep.day&&rep.night?'#065f46':'#7f1d1d'}">
+    <span class="badge" style="background:${rep.day&&rep.night?'#f0fff4':'#fff5f5'};
+      color:${rep.day&&rep.night?'#276749':'#c53030'};border:1px solid ${rep.day&&rep.night?'#9ae6b4':'#fc8181'}">
       ${rep.day&&rep.night?'✅ کامل':'⏳ ناقص'}
     </span>
   </div>
 </div>
 
 <div class="stat-row">
-  <div class="stat-box" style="border-color:#1d4ed8">
+  <div class="stat-box" style="border-color:#2b6cb0">
     <div class="sl">⛽ فروش پطرول</div>
-    <div class="sv" style="color:#60a5fa">${n2fa(pS)} ل</div>
+    <div class="sv" style="color:#2b6cb0">${n2fa(pS)} ل</div>
   </div>
-  <div class="stat-box" style="border-color:#b45309">
+  <div class="stat-box" style="border-color:#b7791f">
     <div class="sl">⛽ پول پطرول</div>
-    <div class="sv" style="color:#fbbf24">${n2fa(pM)} افغ</div>
+    <div class="sv" style="color:#b7791f">${n2fa(pM)} افغ</div>
   </div>
-  <div class="stat-box" style="border-color:#92400e">
+  <div class="stat-box" style="border-color:#c05621">
     <div class="sl">🟤 فروش دیزل</div>
-    <div class="sv" style="color:#60a5fa">${n2fa(dS)} ل</div>
+    <div class="sv" style="color:#2b6cb0">${n2fa(dS)} ل</div>
   </div>
-  <div class="stat-box" style="border-color:#92400e">
+  <div class="stat-box" style="border-color:#c05621">
     <div class="sl">🟤 پول دیزل</div>
-    <div class="sv" style="color:#d97706">${n2fa(dM)} افغ</div>
+    <div class="sv" style="color:#c05621">${n2fa(dM)} افغ</div>
   </div>
-  <div class="stat-box" style="border-color:#065f46;background:#064e3b">
+  <div class="stat-box" style="border-color:#9ae6b4;background:#f0fff4">
     <div class="sl">جمله کل 24 ساعت</div>
-    <div class="sv" style="color:#34d399">${n2fa(gM)} افغ | فایده: ${n2fa(gP)}</div>
+    <div class="sv" style="color:#276749">${n2fa(gM)} افغ | فایده: ${n2fa(gP)}</div>
   </div>
 </div>
 
 <div class="card">
   <div class="card-header">
-    <span class="card-title" style="color:#f59e0b">⛽ پارچه‌های پطرول</span>
+    <span class="card-title" style="color:#b7791f">⛽ پارچه‌های پطرول</span>
   </div>
   <div class="cols">
-    ${shiftCol(rep.day,   '☀️ شیفت روز',  '#fbbf24', '#1f2937')}
-    ${shiftCol(rep.night, '🌙 شیفت شب', '#c084fc', '#1f2937')}
+    ${shiftCol(rep.day,   '☀️ شیفت روز',  '#b7791f', '#f7fafc')}
+    ${shiftCol(rep.night, '🌙 شیفت شب', '#6b46c1', '#f7fafc')}
   </div>
   <div class="diesel-header">
-    <span style="font-size:0.82rem;font-weight:900;color:#d97706">🟤 دیزل (همین تاریخ)</span>
+    <span style="font-size:0.82rem;font-weight:900;color:#c05621">🟤 دیزل (همین تاریخ)</span>
   </div>
   <div class="cols">
-    ${shiftCol(dsl.day,   '☀️ شیفت روز (دیزل)',  '#fbbf24', '#1f2937')}
-    ${shiftCol(dsl.night, '🌙 شیفت شب (دیزل)', '#c084fc', '#1f2937')}
+    ${shiftCol(dsl.day,   '☀️ شیفت روز (دیزل)',  '#b7791f', '#f7fafc')}
+    ${shiftCol(dsl.night, '🌙 شیفت شب (دیزل)', '#6b46c1', '#f7fafc')}
   </div>
   <div class="summary-bar">
     <div class="sum-line">
       <span class="sum-label">⛽ پطرول:</span>
-      <span class="sum-val" style="color:#60a5fa">فروش ${n2fa(pS)} ل</span>
-      <span class="sum-val" style="color:#fbbf24">پول ${n2fa(pM)}</span>
-      <span class="sum-val" style="color:#34d399">فایده ${n2fa(pP)}</span>
+      <span class="sum-val" style="color:#2b6cb0">فروش ${n2fa(pS)} ل</span>
+      <span class="sum-val" style="color:#b7791f">پول ${n2fa(pM)}</span>
+      <span class="sum-val" style="color:#276749">فایده ${n2fa(pP)}</span>
     </div>
     <div class="sum-line">
       <span class="sum-label">🟤 دیزل:</span>
-      <span class="sum-val" style="color:#60a5fa">فروش ${n2fa(dS)} ل</span>
-      <span class="sum-val" style="color:#fbbf24">پول ${n2fa(dM)}</span>
-      <span class="sum-val" style="color:#34d399">فایده ${n2fa(dP)}</span>
+      <span class="sum-val" style="color:#2b6cb0">فروش ${n2fa(dS)} ل</span>
+      <span class="sum-val" style="color:#b7791f">پول ${n2fa(dM)}</span>
+      <span class="sum-val" style="color:#276749">فایده ${n2fa(dP)}</span>
     </div>
     <div class="grand-line">
-      <span class="sum-label" style="font-weight:900;color:#f3f4f6">جمله کل 24 ساعت:</span>
-      <span class="sum-val" style="color:#60a5fa;font-size:0.85rem">فروش: ${n2fa(gS)} ل</span>
-      <span class="sum-val" style="color:#fbbf24;font-size:0.85rem">پول: ${n2fa(gM)} افغانی</span>
-      <span class="sum-val" style="color:#34d399;font-size:0.85rem">فایده: ${n2fa(gP)} افغانی</span>
+      <span class="sum-label" style="font-weight:900;color:#1a202c">جمله کل 24 ساعت:</span>
+      <span class="sum-val" style="color:#2b6cb0;font-size:0.85rem">فروش: ${n2fa(gS)} ل</span>
+      <span class="sum-val" style="color:#b7791f;font-size:0.85rem">پول: ${n2fa(gM)} افغانی</span>
+      <span class="sum-val" style="color:#276749;font-size:0.85rem">فایده: ${n2fa(gP)} افغانی</span>
     </div>
   </div>
 </div>
@@ -33408,7 +33466,7 @@ function renderSafe() {
     wrap.innerHTML = `
       <table class="tbl safe-tbl" style="table-layout:fixed;min-width:700px">
         <colgroup>
-          <col style="width:36px"><col style="width:100px"><col style="width:104px"><col><col style="width:132px"><col style="width:150px"><col style="width:54px">
+          <col style="width:36px"><col style="width:100px"><col style="width:126px"><col><col style="width:132px"><col style="width:150px"><col style="width:54px">
         </colgroup>
         <thead>
           <tr>
@@ -41386,7 +41444,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.292';
+const APP_VERSION = '2.9.293';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -49827,6 +49885,39 @@ body:not(.nav-sticky){ overflow-x:clip !important; overflow-y:visible !important
   #sec-debt.visible > .list-header,
   #sec-noinv.visible > .list-header,
   #sec-waraq.visible > .list-header{ padding:6px 10px; gap:6px !important; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   کشویی‌ها: فلشِ نیتیو برداشته شد تا نوشته نصفه نشود
+   ──────────────────────────────────────────────────────────────────────────
+   گزارشِ صاحب ریپو: «تومان» می‌شد «توما»، «افغانی» می‌شد «افغا»، «کالدار» می‌شد
+   «کالدا» و در گاوصندوق «💵 بردگی» می‌شد «💵 برد». دلیلش فلشِ خودِ مرورگر بود:
+   ‏۱۵ تا ۲۰ پیکسل از عرضِ کادر را می‌گرفت و نوشته جا نمی‌شد.
+
+   آن فلش هیچ کاری هم نمی‌کرد: از نسخه‌های قبل، زدنِ «هر جای» کادرِ کشویی لیستِ
+   خودِ برنامه را باز می‌کند (‎_ysOpen در همین فایل) و پاپ‌آپِ نیتیو اصلاً نمی‌آید.
+   پس فلش فقط یک علامتِ تزئینی بود که جای نوشته را می‌خورد. برداشته شد و همان
+   جا به نوشته رسید — منطق، مقدار، onchange و لیستِ گزینه‌ها هیچ تغییری نکرد.
+
+   ‎.native-sel استثناست: همان کشویی‌هایی که عمداً پاپ‌آپِ نیتیو دارند.
+   ══════════════════════════════════════════════════════════════════════════ */
+select:not(.native-sel){
+  -webkit-appearance:none !important;
+  -moz-appearance:none !important;
+  appearance:none !important;
+  background-image:none !important;
+  text-indent:0 !important;
+  cursor:pointer;
+}
+/* کشویی‌های داخلِ جدول‌ها: عرضشان دستِ‌کم اندازهٔ بلندترین گزینه باشد تا هیچ
+   برچسبی بریده نشود؛ سقف‌های ثابتِ قدیمی (مثل ‎.xls-in.xs با width:72px) که
+   برای کادرهای عددی گذاشته شده بودند نباید کشویی را تنگ کنند. */
+.xls-tbl td select, .tbl td select, .ro-tbl td select, .safe-tbl td select{
+  min-width:max-content !important;
+  max-width:none !important;
+  width:100% !important;
+  text-overflow:clip !important;
+  overflow:visible !important;
 }
 </style>
 
