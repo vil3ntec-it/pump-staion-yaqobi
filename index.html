@@ -20990,32 +20990,80 @@ function _saveQuiet() {
   clearTimeout(_saveDebounceTimer);
   _saveDebounceTimer = setTimeout(_flushSave, 400);
 }
-function _flushSave() {
+/* ╔═══════════════════════════════════════════════════════════════════════════╗
+   ║  چرا برنامه «یخ می‌زد» — و چرا دیگر نمی‌زند                              ║
+   ╚═══════════════════════════════════════════════════════════════════════════╝
+   گزارشِ صاحب ریپو: «برنامه و سایت یخ می‌زند، هیچ کادری کار نمی‌کند و مجبورم
+   برنامه را ریستارت کنم.»
+
+   اندازه‌گیری شد (کروم، پروفایلرِ واقعی، با دادهٔ ۵ سال ≈ ۲٫۶ مگابایت):
+     • هر ذخیره، کلِ دیتابیس را با JSON.stringify رشته می‌کرد و همان‌جا،
+       *همگام*، در localStorage می‌نوشت: ۵۰ms رشته‌سازی + ۱۲ms نوشتن روی یک
+       کامپیوترِ سریع. روی گوشی حدود ۶ برابر → نزدیک ۴۰۰ms.
+     • ذخیره هر ۴۰۰ms در حینِ تایپ اجرا می‌شود. یعنی نخِ اصلی تقریباً تمامِ
+       وقتش صرفِ ذخیره می‌شد و برای پاسخ به لمسِ کاربر چیزی نمی‌ماند.
+     • بدتر: localStorage قفلِ مشترکِ همهٔ تب‌های یک سایت است. صاحب ریپو چند تبِ
+       برنامه و پیام‌رسان را با هم باز دارد؛ نوشتنِ همگامِ چندمگابایتی در یک تب،
+       نخِ اصلیِ *همهٔ* تب‌ها را پشتِ همان قفل نگه می‌داشت. برای همین «برنامه و
+       سایت» با هم می‌خوابیدند.
+     • وقتی هر لمس چند صد میلی‌ثانیه طول بکشد، لمس‌ها در صف می‌مانند و هر لمسِ
+       صف‌مانده باز کارِ تازه می‌سازد؛ صف هیچ‌وقت خالی نمی‌شود. این همان چیزی
+       است که کاربر «یخ زد» می‌بیند و تنها راهش ریستارت است.
+
+   درمانِ ریشه‌ای: localStorage این‌جا فقط «کشِ باز شدنِ فوری» است — منبعِ اصلی
+   IndexedDB است که async می‌نویسد و قفلِ بین‌تبی هم ندارد. پس رشته‌سازی و
+   نوشتنِ کش از مسیرِ تایپ برداشته شد و به «وقتِ بیکاریِ مرورگر» رفت
+   (requestIdleCallback)، با فاصلهٔ دست‌کم ۴ ثانیه. هنگام پنهان‌شدن/بستنِ تب
+   فوراً و کامل نوشته می‌شود.
+   ⚠️ خطرِ «کشِ عقب‌مانده» وجود ندارد: IndexedDB در هر ذخیره نوشته می‌شود، پس
+   _rev اش همیشه ≥ کش است و بارگذاری (بالای همین فایل) هر وقت _revِ IndexedDB
+   جلوتر باشد همان را برمی‌دارد. یعنی حتی اگر تب ناگهانی کشته شود، داده از
+   IndexedDB برمی‌گردد — نه از کش.
+   ⚠️ این نوشتن را به مسیرِ ذخیره برنگردانید. */
+let _lsCacheDirty = false, _lsCacheTimer = null, _lsCacheLastWrite = 0;
+const _LS_CACHE_MIN_GAP = 4000;
+function _writeLsCacheNow() {
+  _lsCacheDirty = false;
+  _lsCacheLastWrite = Date.now();
+  // دادهٔ بزرگ‌تر از سقفِ کش: بی‌خود رشته نشود — فقط هر ۴۰ بار یک‌بار دوباره سنجیده
+  // می‌شود تا اگر حساب کوچک شد کش برگردد (همان منطقِ قبلی، فقط بیرون از مسیرِ تایپ)
+  if (_lsCacheOff && (++_lsCacheProbe % 40 !== 0)) return;
+  let snap;
+  try { snap = JSON.stringify(DB); } catch (e) { return; }
+  _lastSnapLen = snap.length;
+  _lsCacheOff = snap.length > _LS_CACHE_MAX;
+  _writeLsCache(snap);
+}
+function _scheduleLsCache() {
+  _lsCacheDirty = true;
+  if (_lsCacheTimer) return;
+  const wait = Math.max(0, _LS_CACHE_MIN_GAP - (Date.now() - _lsCacheLastWrite));
+  _lsCacheTimer = setTimeout(function () {
+    _lsCacheTimer = null;
+    if (!_lsCacheDirty) return;
+    const run = function () { if (_lsCacheDirty) _writeLsCacheNow(); };
+    // در وقتِ بیکاریِ مرورگر — هرگز وسطِ تایپ یا اسکرول
+    if (typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: 3000 });
+    else run();
+  }, wait);
+}
+function _flushSave(force) {
   clearTimeout(_saveDebounceTimer);
   _saveDebounceTimer = null;
-  if (!_savePending) return;
+  if (!_savePending) { if (force === true && _lsCacheDirty) _writeLsCacheNow(); return; }
   _savePending = false;
-  // ── بدونِ سقفِ حجم ────────────────────────────────────────────────────────
-  // منبعِ اصلیِ داده IndexedDB است (سهمیه‌اش گیگابایتی است، نه 5 مگابایت).
-  // localStorage فقط یک «کشِ باز شدنِ فوری» است: اگر داده در آن جا شد نوشته
-  // می‌شود، اگر نشد بی‌سر و صدا رد می‌شویم و نسخهٔ کهنه‌اش پاک می‌شود تا هرگز
-  // بر IndexedDB غلبه نکند. شمارندهٔ _rev می‌گوید کدام نسخه تازه‌تر است.
   DB._rev = (parseInt(DB._rev, 10) || 0) + 1;
-  // رشته‌سازیِ کلِ دیتابیس گران است (در 20 سال داده ~230ms). اگر از قبل معلوم
-  // شده که داده از سقفِ کش بزرگ‌تر است، دیگر برای کش رشته نمی‌سازیم؛ فقط هر 40
-  // ذخیره یک‌بار دوباره می‌سنجیم تا اگر داده کوچک شد کش برگردد.
-  if (!_lsCacheOff || (++_lsCacheProbe % 40 === 0)) {
-    var snap = JSON.stringify(DB);
-    _lastSnapLen = snap.length;
-    _lsCacheOff = snap.length > _LS_CACHE_MAX;
-    _writeLsCache(snap);
-  }
+  // IndexedDB منبعِ اصلی است و async می‌نویسد — این‌جا می‌ماند
   try { _IDB.put(DB); } catch(e) {}
+  // کشِ localStorage: در وقتِ بیکاری. فقط هنگام ترکِ صفحه فوری و همگام.
+  if (force === true) _writeLsCacheNow(); else _scheduleLsCache();
   // علامت‌گذاری: اطلاعات تغییر کرده و هنوز به سرور نرسیده — برای بارگذاری خودکار وقتی نت وصل شد
   try { _markDirtyForAutoSync(); } catch(e){}
 }
-window.addEventListener('beforeunload', _flushSave);
-document.addEventListener('visibilitychange', function() { if (document.visibilityState === 'hidden') _flushSave(); });
+window.addEventListener('beforeunload', function(){ _flushSave(true); });
+document.addEventListener('visibilitychange', function() { if (document.visibilityState === 'hidden') _flushSave(true); });
+// «pagehide» تنها رویدادی است که روی سافاری/اپِ نصب‌شدهٔ گوشی مطمئن می‌آید
+window.addEventListener('pagehide', function(){ _flushSave(true); });
 
 // ===== یکپارچه‌سازی حساب‌های تکراری =====
 // نام‌های مشابه (ي/ی، ك/ک، نیم‌فاصله، ارقام، فاصله‌ها) یک حساب در نظر گرفته می‌شوند.
@@ -21341,18 +21389,23 @@ function _runAutoSync() {
 
   _autoSyncInFlight = true;
   _setSyncMsg('⏳ در حال هم‌زمان‌سازی با سرور...', 'var(--accent)');
-  const payload = JSON.parse(JSON.stringify(DB));
+  /* ⚠️ این‌جا کلونِ عمیقِ کلِ دیتابیس (stringify + parse) گرفته می‌شد و این تابع
+     در حینِ تایپ هر ~۱ ثانیه اجرا می‌شود — یعنی دو بار سریالایزِ کاملِ حساب در
+     هر ثانیه، همگام روی نخِ اصلی. کلون فقط برای این بود که دو فیلدِ زیر روی
+     خودِ DB ننشیند؛ کپیِ سطحی همان کار را می‌کند و هزینه‌اش صفر است (خودِ
+     فرستادن به سرور، شیء را سریالایز می‌کند). کلونِ عمیق را برنگردانید. */
+  const payload = Object.assign({}, DB);
   payload.lastSyncUpload = new Date().toISOString();
   _nextSeq(code)
     .then(seq => { payload._seq = seq; return _srvDb.ref('stations/' + code).set(payload); })
     .then(() => {
       DB.lastSyncUpload = payload.lastSyncUpload;
       DB._seq = payload._seq;
-      // با _writeLsCache — پیش از این مستقیم صدا می‌شد و وقتی حساب از سقفِ کش
-      // بزرگ‌تر می‌شد خطای سهمیه می‌داد؛ آن خطا زنجیره را به catch می‌انداخت، پس
-      // _dirtySinceUpload صفر نمی‌شد و برنامه کلِ حساب را هر 15 ثانیه تا ابد
-      // دوباره آپلود می‌کرد (با پیامِ «ناموفق»، در حالی که واقعاً موفق بوده).
-      _writeLsCache();
+      // کشِ localStorage در وقتِ بیکاری نوشته می‌شود، نه این‌جا: این مسیر خودکار
+      // است و مکرر اجرا می‌شود. (نوشتنِ همگام در همین‌جا یکی از دلیل‌های یخ‌زدن
+      // بود.) خطای سهمیه هم دیگر زنجیرهٔ promise را به catch نمی‌اندازد، پس
+      // باگِ «هر ۱۵ ثانیه تا ابد دوباره آپلود می‌کرد» هم برنمی‌گردد.
+      _scheduleLsCache();
       _dirtySinceUpload = false;
       _autoSyncInFlight = false;
       _setSyncMsg('✅ اطلاعات با سرور هم‌زمان شد.', '#38a169');
@@ -21486,8 +21539,14 @@ function _applyServerData(serverData) {
   DB._seq = _seqOf(serverData);   // شمارندهٔ این دستگاه دقیقاً همانِ سرور شود
   // دادهٔ واردشده از سرور ممکن است هنوز ردیف‌های با نرخِ خودکار داشته باشد → به فیِ دستی تبدیلش کن
   try { DB._autoFeesCleared = false; _manualizeDebtorRates(); } catch(e){}
-  try { localStorage.setItem('pumpDB', JSON.stringify(DB)); } catch(e) {}
-  try { _IDB.put(JSON.parse(JSON.stringify(DB))); } catch(e) {}
+  /* ⚠️ این‌جا سه بار پشتِ سرِ هم کلِ دیتابیس سریالایز می‌شد — یک‌بار برای
+     localStorage و دو بار برای کلونِ IndexedDB (stringify + parse) — همگام و
+     روی نخِ اصلی، و بدونِ سقفِ ۴مگابایتیِ کش. با هر عکسی که از سرور می‌آمد
+     (که در چند تبِ باز مرتب می‌آید) برنامه چند صد میلی‌ثانیه قفل می‌شد.
+     IndexedDB خودش هنگام put یک کلونِ ساختاری می‌سازد، پس کلونِ دستی فقط
+     هزینه بود؛ کشِ localStorage هم مثل بقیهٔ مسیرها به وقتِ بیکاری می‌رود. */
+  try { _IDB.put(DB); } catch(e) {}
+  try { _scheduleLsCache(); } catch(e) {}
   _dirtySinceUpload = false;
   try { updateAll(); } catch(e) {}
   try { if (_isROHash) checkHashViewer(); } catch(e) {}
@@ -28900,6 +28959,26 @@ function _histFootAlbHtml(net, money) {
   return '<div style="font-size:0.78rem;line-height:1.5;color:' + c + '">'
     + (money ? 'الباقی پول:' : 'الباقی:') + '<br>' + n2fa(v) + '</div>';
 }
+/* ریاضیِ سربرگِ هر جدولِ آرشیو — یک جا، تا رسمِ اولیه و به‌روزرسانیِ درجا
+   (_histRepaint) هرگز دو عددِ متفاوت نشان ندهند. هیچ فرمولی این‌جا عوض نشده؛
+   فقط از داخلِ _renderHistoryPanel بیرون کشیده شد. */
+function _histFigures(person, h, moneyDefault) {
+  const st = _splitTotals(h.rows || []);
+  const pctP = _acctPct(h, 'petrol'), pctD = _acctPct(h, 'diesel');
+  const hMoney = (h.viewMoney != null) ? h.viewMoney
+    : (moneyDefault != null ? moneyDefault : _acctModeMoney(person, _acctOf(person)));
+  const rasidP = hMoney ? (parseFloat(h.rasidMoneyP)||0) : (parseFloat(h.rasidFuelP)||0);
+  const rasidD = hMoney ? (parseFloat(h.rasidMoneyD)||0) : (parseFloat(h.rasidFuelD)||0);
+  const bordP  = hMoney ? st.petrol.bardagi : st.petrol.fuel;
+  const bordD  = hMoney ? st.diesel.bardagi : st.diesel.fuel;
+  // فیصدی (کمیشن) روی «کل رسید» = رسیدِ سربرگ + رسیدهای داخلِ خودِ جدولِ آرشیو
+  const rasidRowP = hMoney ? st.petrol.rasid : st.petrol.rasidFuel;
+  const rasidRowD = hMoney ? st.diesel.rasid : st.diesel.rasidFuel;
+  const commP = (rasidP + rasidRowP) * pctP / 100, commD = (rasidD + rasidRowD) * pctD / 100;
+  const remP  = bordP + commP - rasidP - (hMoney ? st.petrol.rasid : 0);
+  const remD  = bordD + commD - rasidD - (hMoney ? st.diesel.rasid : 0);
+  return { st, pctP, pctD, hMoney, rasidP, rasidD, bordP, bordD, commP, commD, remP, remD };
+}
 function _renderHistoryPanel(person) {
   const wrap = document.getElementById('pm-history-wrap'); if (!wrap || !person) return;
   const acct = _acctOf(person);
@@ -28913,24 +28992,13 @@ function _renderHistoryPanel(person) {
   wrap.innerHTML = [...history].reverse().map((h, hi) => {
     const ac = COLORS[hi % COLORS.length];
     const rows = h.rows || [];
-    const st = _splitTotals(rows);
-    const pctP = _acctPct(h, 'petrol'), pctD = _acctPct(h, 'diesel');
-    const hMoney = (h.viewMoney != null) ? h.viewMoney : money;
+    const _f = _histFigures(person, h, money);
+    const st = _f.st, pctP = _f.pctP, pctD = _f.pctD, hMoney = _f.hMoney;
+    const rasidP = _f.rasidP, rasidD = _f.rasidD, bordP = _f.bordP, bordD = _f.bordD;
+    const commP = _f.commP, commD = _f.commD, remP = _f.remP, remD = _f.remD;
     // آرشیوهای قدیمی «فیِ خرید» را ذخیره نکرده‌اند — از خودِ شخص نشان داده می‌شود
     const hBuyFee = (h.buyFeeNote != null) ? h.buyFeeNote : (person.buyFeeNote || '');
     const unit = hMoney ? ' افغانی' : ' ل';
-    const rasidP = hMoney ? (parseFloat(h.rasidMoneyP)||0) : (parseFloat(h.rasidFuelP)||0);
-    const rasidD = hMoney ? (parseFloat(h.rasidMoneyD)||0) : (parseFloat(h.rasidFuelD)||0);
-    const bordP  = hMoney ? st.petrol.bardagi : st.petrol.fuel;
-    const bordD  = hMoney ? st.diesel.bardagi : st.diesel.fuel;
-    // فیصدی (کمیشن) باید روی «کل رسید» یعنی رسیدِ هدر + رسیدهای داخلِ خودِ جدولِ آرشیو
-    // حساب شود؛ وگرنه اگر رسید فقط در ردیف‌ها زده شده باشد (هدر=0) تایپِ فیصدی هیچ اثری
-    // نداشت و انگار «خراب/کار نمی‌کند». (بخش قرض‌داران — خواستهٔ کاربر)
-    const rasidRowP = hMoney ? st.petrol.rasid : st.petrol.rasidFuel;
-    const rasidRowD = hMoney ? st.diesel.rasid : st.diesel.rasidFuel;
-    const commP = (rasidP + rasidRowP) * pctP / 100, commD = (rasidD + rasidRowD) * pctD / 100;
-    const remP  = bordP + commP - rasidP - (hMoney ? st.petrol.rasid : 0),
-          remD  = bordD + commD - rasidD - (hMoney ? st.diesel.rasid : 0);
     /* ── سربرگِ خلاصهٔ هر جدولِ آرشیو ─────────────────────────────────────────
        گزارشِ صاحب ریپو: «جدول‌های آرشیو اصلاً شبیه اصلی‌ها نیست — همهٔ کادرها و
        سربرگ‌ها را مثل جدولِ اصلی کن». ریشه‌اش این بود که این‌جا یک چیدمانِ
@@ -28952,19 +29020,19 @@ function _renderHistoryPanel(person) {
         <div class="fs-group petrol">
           <div class="fs-head petrol">⛽ حساب پطرول</div>
           <div class="fs-rows">
-            <div class="fs-cell"><div class="l">فیصدی ما (${n2fa(rnd(pctP))}٪)</div><div class="v" style="color:var(--purple)">${n2fa(rnd(commP))}</div></div>
+            <div class="fs-cell"><div class="l" data-hf="lp">فیصدی ما (${n2fa(rnd(pctP))}٪)</div><div class="v" data-hf="cp" style="color:var(--purple)">${n2fa(rnd(commP))}</div></div>
             <div class="fs-cell"><div class="l">${rasidLbl}</div>${_rasidIn('petrol', rasidP)}</div>
-            <div class="fs-cell"><div class="l">برد</div><div class="v" style="color:var(--accent)">${n2fa(rnd(bordP))}</div></div>
-            <div class="fs-cell"><div class="l">${remLbl}</div><div class="v" style="color:var(--blue)">${n2fa(rnd(remP))}</div></div>
+            <div class="fs-cell"><div class="l">برد</div><div class="v" data-hf="bp" style="color:var(--accent)">${n2fa(rnd(bordP))}</div></div>
+            <div class="fs-cell"><div class="l">${remLbl}</div><div class="v" data-hf="rp" style="color:var(--blue)">${n2fa(rnd(remP))}</div></div>
           </div>
         </div>
         <div class="fs-group diesel">
           <div class="fs-head diesel">🟤 حساب دیزل</div>
           <div class="fs-rows">
-            <div class="fs-cell"><div class="l">فیصدی ما (${n2fa(rnd(pctD))}٪)</div><div class="v" style="color:var(--purple)">${n2fa(rnd(commD))}</div></div>
+            <div class="fs-cell"><div class="l" data-hf="ld">فیصدی ما (${n2fa(rnd(pctD))}٪)</div><div class="v" data-hf="cd" style="color:var(--purple)">${n2fa(rnd(commD))}</div></div>
             <div class="fs-cell"><div class="l">${rasidLbl}</div>${_rasidIn('diesel', rasidD)}</div>
-            <div class="fs-cell"><div class="l">برد</div><div class="v" style="color:var(--accent)">${n2fa(rnd(bordD))}</div></div>
-            <div class="fs-cell"><div class="l">${remLbl}</div><div class="v" style="color:var(--blue)">${n2fa(rnd(remD))}</div></div>
+            <div class="fs-cell"><div class="l">برد</div><div class="v" data-hf="bd" style="color:var(--accent)">${n2fa(rnd(bordD))}</div></div>
+            <div class="fs-cell"><div class="l">${remLbl}</div><div class="v" data-hf="rd" style="color:var(--blue)">${n2fa(rnd(remD))}</div></div>
           </div>
         </div>
       </div>
@@ -28979,8 +29047,8 @@ function _renderHistoryPanel(person) {
         <input type="number" value="${pctP||''}" placeholder="0" title="فیصدیِ پطرولِ همین آرشیو" class="pm-arc-in pct" oninput="updateHistoryPercent('${pid}','${h.id}',this.value,'petrol')"></span>
         <span class="pm-bar-grp"><span class="pm-arc-lbl">🟤:</span>
         <input type="number" value="${pctD||''}" placeholder="0" title="فیصدیِ دیزلِ همین آرشیو" class="pm-arc-in pct" oninput="updateHistoryPercent('${pid}','${h.id}',this.value,'diesel')"></span>
-        <span class="pm-arc-lbl">جمله برد (پطرول+دیزل): <b style="color:var(--accent)">${n2fa(rnd(bordP+bordD))}${hMoney?' افغانی':' لیتر'}</b></span>
-        <span class="pm-arc-lbl">الباقی کل (پطرول+دیزل): <b style="color:var(--blue)">${n2fa(rnd(remP+remD))}${hMoney?' افغانی':' لیتر'}</b></span>
+        <span class="pm-arc-lbl">جمله برد (پطرول+دیزل): <b data-hf="tb" style="color:var(--accent)">${n2fa(rnd(bordP+bordD))}${hMoney?' افغانی':' لیتر'}</b></span>
+        <span class="pm-arc-lbl">الباقی کل (پطرول+دیزل): <b data-hf="tr" style="color:var(--blue)">${n2fa(rnd(remP+remD))}${hMoney?' افغانی':' لیتر'}</b></span>
       </div>`;
     // فیلتر پطرول/دیزل این آرشیو — مثل سه دکمهٔ بالای جدول اصلی. اگر کاربر خودش
     // روی همین آرشیو فیلتر نزده باشد (h.viewFilter)، از نوعِ خودِ آرشیو (h.fuel —
@@ -29060,7 +29128,7 @@ function _renderHistoryPanel(person) {
       <div style="padding:0 10px 10px">
         <textarea id="hnb-${h.id}" class="note-field" placeholder="📝 توضیحات این جدول..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateHistoryNote('${pid}','${h.id}',this.value)">${escFa(h.note||'')}</textarea>
       </div>`;
-    return `<div style="margin-bottom:16px;border:2px solid ${ac};border-radius:13px;overflow:hidden">
+    return `<div id="hist-blk-${pid}-${h.id}" style="margin-bottom:16px;border:2px solid ${ac};border-radius:13px;overflow:hidden">
       <div style="background:${ac};padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
         <span style="font-weight:800;font-size:0.82rem;color:#fff;white-space:nowrap">📋 ${escFa(_archDateLabel(h.createdAt) || (h.createdAt||''))}</span>
         <input id="hn-${h.id}" value="${escFa(h.headerNote||'')}" placeholder="📝 توضیحات این جدول..." oninput="updateHistoryHeaderNote('${pid}','${h.id}',this.value)"
@@ -29252,7 +29320,12 @@ function updateHistoryRasid(pid, hid, ftype, value) {
   const v = parseFloat(value) || 0;
   if (ftype === 'petrol') { if (money) h.rasidMoneyP = v; else h.rasidFuelP = v; }
   else { if (money) h.rasidMoneyD = v; else h.rasidFuelD = v; }
-  save(); _rerenderSoon('pm-history-wrap', _rerenderHistoryPreserveFocus);
+  /* ⚠️ این‌جا پیش از این کلِ پنلِ آرشیو (همهٔ جدول‌های آرشیوِ این حساب) با
+     innerHTML از نو ساخته می‌شد — با هر عددی که تایپ می‌شد. در پروفایلِ واقعی،
+     همین یکی بزرگ‌ترین کارِ جاوااسکریپتِ مسیرِ تایپ بود و چیدمانِ دوبارهٔ مرورگر
+     را هم پشتِ سرش می‌آورد. حالا فقط عددهای همان یک آرشیو در جای خود به‌روز
+     می‌شوند. بازسازیِ کامل را برنگردانید. */
+  save(); _histRepaint(pid, hid);
 }
 function updateHistoryPercent(pid, hid, value, fuel) {
   const person = _hPerson(pid); if (!person) return;
@@ -29260,7 +29333,7 @@ function updateHistoryPercent(pid, hid, value, fuel) {
   _pctSplit(h);
   h[_pctKey(fuel || 'petrol')] = (value === '' || value == null) ? '' : (parseFloat(value) || 0);
   h.percent = (parseFloat(h.percentP) || 0) || (parseFloat(h.percentD) || 0);
-  save(); _rerenderSoon('pm-history-wrap', _rerenderHistoryPreserveFocus);
+  save(); _histRepaint(pid, hid);   // مثل بالا — بدونِ بازسازیِ کلِ پنل
 }
 function updateHistoryRow(pid, hid, idx, field, value) {
   const h = _hEntry(pid, hid); if (!h || !h.rows[idx]) return;
@@ -29333,6 +29406,28 @@ function _histRepaint(pid, hid) {
   setFt('hist-ftr', n2fa(rnd2(ftRasid)));
   const ft = document.getElementById('hist-ft-' + pid + '-' + hid);
   if (ft) ft.innerHTML = _histFootAlbHtml(-viewAlbaqi, hMoney);
+  _histRepaintHead(person, pid, hid, h);
+}
+/* سربرگِ خلاصهٔ همان یک آرشیو (کارت‌های پطرول/دیزل و دو جملهٔ نوار) در جای خود
+   به‌روز می‌شود — به‌جای ساختنِ دوبارهٔ کلِ پنل. عددها از _histFigures می‌آیند،
+   یعنی همان تابعی که رسمِ اولیه هم از آن می‌خوانَد؛ پس هرگز از هم جدا نمی‌افتند. */
+function _histRepaintHead(person, pid, hid, h) {
+  const blk = document.getElementById('hist-blk-' + pid + '-' + hid);
+  if (!blk) return;
+  const f = _histFigures(person, h);
+  const rnd = x => Math.round(x * 100) / 100;
+  const unit = f.hMoney ? ' افغانی' : ' لیتر';
+  const put = (k, txt) => { const el = blk.querySelector('[data-hf="' + k + '"]'); if (el) el.textContent = txt; };
+  put('lp', 'فیصدی ما (' + n2fa(rnd(f.pctP)) + '٪)');
+  put('ld', 'فیصدی ما (' + n2fa(rnd(f.pctD)) + '٪)');
+  put('cp', n2fa(rnd(f.commP)));
+  put('cd', n2fa(rnd(f.commD)));
+  put('bp', n2fa(rnd(f.bordP)));
+  put('bd', n2fa(rnd(f.bordD)));
+  put('rp', n2fa(rnd(f.remP)));
+  put('rd', n2fa(rnd(f.remD)));
+  put('tb', n2fa(rnd(f.bordP + f.bordD)) + unit);
+  put('tr', n2fa(rnd(f.remP + f.remD)) + unit);
 }
 // نوع تیل (پطرول/دیزل) ردیف‌های جدولِ آرشیو — مثل جدول اصلی
 function setHistoryRowFuel(pid, hid, idx, ftype) {
@@ -41672,7 +41767,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.296';
+const APP_VERSION = '2.9.297';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -48140,22 +48235,53 @@ tfoot td{background:${accent}14;font-weight:900;font-size:.88rem}
   // یک «تاریخچهٔ عکس‌فوری» از کلِ دیتابیس نگه می‌داریم؛ هر تغییری که save() صدا بزند،
   // بعد از کمی مکث یک عکس ثبت می‌شود (تایپِ پشت‌سرهم یک قدم می‌شود، مثل اکسل). undo/redo
   // فقط عکس را برمی‌گرداند و صفحه را از نو رندر می‌کند — هیچ منطقِ محاسباتی‌ای دست نمی‌خورد.
+  /* ⚠️ این تاریخچه یکی از سه دلیلِ «یخ زدنِ» برنامه بود ─────────────────────────
+     save() پوشانده شده، پس هر تغییری ۵۰۰ms بعد یک JSON.stringify از *کلِ*
+     دیتابیس می‌گرفت — همگام روی نخِ اصلی، ۵۰ms روی کامپیوترِ سریع و حدود
+     ۳۰۰ms روی گوشی برای حسابِ ۲٫۶ مگابایتی. و ۳۰ تا از همین عکس‌ها در حافظه
+     می‌ماند: ۳۰ × ۲٫۶ = ۷۸ مگابایت رشته، فقط برای Ctrl+Z. روی گوشی با چند تبِ
+     باز، همین به تنهایی سیستم را به کشتنِ تب می‌رساند — همان «مجبورم برنامه را
+     ریستارت کنم».
+     سه محافظ گذاشته شد و هیچ‌کدام را برندارید:
+       ۱) عکس در «وقتِ بیکاریِ مرورگر» گرفته می‌شود، نه وسطِ تایپ.
+       ۲) سقفِ تاریخچه با «بایت» است نه «تعداد» — حافظه هرگز از ۶ مگابایت رد
+          نمی‌شود، حسابِ کاربر هر چقدر هم بزرگ شود.
+       ۳) اگر خودِ حساب از ۱٫۵ مگابایت بزرگ‌تر شد، عکس‌برداری خاموش می‌شود.
+          Ctrl+Z یک راحتی است؛ ارزشش را ندارد که برنامه سرِ آن قفل کند. */
+  var _HIST_MAX_BYTES = 6 * 1024 * 1024;    // سقفِ کلِ تاریخچه در حافظه
+  var _HIST_MAX_DB    = 1.5 * 1024 * 1024;  // بزرگ‌تر از این، عکس گرفته نمی‌شود
   var _hist = [], _hi = -1, _histRestoring = false, _histTimer = null;
+  var _histBytes = 0, _histOff = false;
   function _dbJson(){ try { return JSON.stringify(DB); } catch(e){ return null; } }
-  function _histSeed(){ var j = _dbJson(); if (j == null) return; _hist = [j]; _hi = 0; }
+  function _histReset(){ _hist = []; _hi = -1; _histBytes = 0; }
+  function _histSeed(){
+    var j = _dbJson(); if (j == null) return;
+    if (j.length > _HIST_MAX_DB){ _histOff = true; _histReset(); return; }
+    _hist = [j]; _hi = 0; _histBytes = j.length;
+  }
+  function _histIdle(fn){
+    if (typeof requestIdleCallback === 'function') requestIdleCallback(fn, { timeout: 4000 });
+    else setTimeout(fn, 0);
+  }
   function _histNote(){
-    if (_histRestoring) return;
+    if (_histRestoring || _histOff) return;
     clearTimeout(_histTimer);
-    _histTimer = setTimeout(_histCommit, 500);
+    _histTimer = setTimeout(function(){ _histIdle(_histCommit); }, 500);
   }
   function _histCommit(){
-    if (_histRestoring) return;
+    if (_histRestoring || _histOff) return;
     var j = _dbJson(); if (j == null) return;
-    if (_hi < 0){ _hist = [j]; _hi = 0; return; }
+    if (j.length > _HIST_MAX_DB){          // حساب بزرگ شد → از این به بعد خاموش
+      _histOff = true; _histReset(); return;
+    }
+    if (_hi < 0){ _hist = [j]; _hi = 0; _histBytes = j.length; return; }
     if (_hist[_hi] === j) return;                 // تغییری نبوده
+    for (var k = _hi + 1; k < _hist.length; k++) _histBytes -= _hist[k].length;
     _hist = _hist.slice(0, _hi + 1);              // شاخهٔ «جلو» پاک می‌شود (مثل اکسل)
-    _hist.push(j);
-    if (_hist.length > 30) _hist.shift();   // سقفِ تاریخچه — مصرفِ حافظه کنترل شود (موبایل)
+    _hist.push(j); _histBytes += j.length;
+    // سقفِ حافظه: قدیمی‌ترین‌ها می‌روند تا زیرِ سقف برگردیم (دست‌کم دو قدم می‌ماند)
+    while (_hist.length > 2 && _histBytes > _HIST_MAX_BYTES) _histBytes -= _hist.shift().length;
+    if (_hist.length > 30) _histBytes -= _hist.shift().length;
     _hi = _hist.length - 1;
   }
   function _histApply(){
@@ -48195,12 +48321,17 @@ tfoot td{background:${accent}14;font-weight:900;font-size:.88rem}
     var sec = document.querySelector('.section.visible');
     if (sec){ try { showSection(sec.id.replace(/^sec-/, '')); } catch(e){} }
   }
+  // اگر حساب از سقف بزرگ‌تر شده و عکس‌برداری خاموش است، کاربر باید بداند چرا
+  // Ctrl+Z کار نمی‌کند — نه اینکه بی‌صدا هیچ اتفاقی نیفتد
+  function _histSayOff(){ try { showToast('↩️ برگشت به عقب برای حساب‌های بزرگ خاموش است (برای اینکه برنامه کند نشود)', '#d97706'); } catch(e){} }
   function _histUndo(){
+    if (_histOff){ _histSayOff(); return; }
     if (_hi <= 0){ try { showToast('چیزی برای برگشت به عقب نیست', '#718096'); } catch(e){} return; }
     _hi--; _histApply();
     try { showToast('↩️ برگشت به عقب', '#3182ce'); } catch(e){}
   }
   function _histRedo(){
+    if (_histOff){ _histSayOff(); return; }
     if (_hi >= _hist.length - 1){ try { showToast('چیزی برای برگشت به جلو نیست', '#718096'); } catch(e){} return; }
     _hi++; _histApply();
     try { showToast('↪️ برگشت به جلو', '#3182ce'); } catch(e){}
