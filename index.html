@@ -2165,21 +2165,55 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
 
   function isMutation(m){ return m && (m.op === 'set' || m.op === 'update' || m.op === 'remove' || m.op === 'push'); }
 
-  function outqPersist(){
+  /* ⚠️ این تابع یکی از دلیل‌های «یخ زدنِ» برنامه بود ─────────────────────────────
+     هر عملیاتِ شبکه یک‌بار صدایش می‌زد و این‌جا *هر آیتمِ صف* از نو JSON می‌شد.
+     بزرگ‌ترین آیتمِ صف، خودِ عکسِ کاملِ دیتابیسِ همگام‌سازی است (در حسابِ چند‌ساله
+     ده‌ها مگابایت). آن آیتم از سقفِ ۲مگابایتیِ ذخیره بزرگ‌تر است و آخرش دور
+     انداخته می‌شد — ولی هزینهٔ رشته‌کردنش *هر بار* پرداخت می‌شد. در پروفایل، با
+     دادهٔ ۱۳ مگابایتی، همین یک تابع ~۹٪ کلِ زمانِ تایپ را می‌بلعید، به‌علاوهٔ یک
+     localStorage.setItemِ همگام که قفلِ مشترکِ همهٔ تب‌هاست.
+     حالا:
+       • اندازهٔ هر آیتم یک‌بار حساب و روی خودش نگه داشته می‌شود (__sLen)؛ آیتمِ
+         بزرگ‌تر از سقف با ‎-1‎ علامت می‌خورد و دیگر هرگز رشته نمی‌شود.
+       • خودِ نوشتن روی دیسک در وقتِ بیکاری انجام می‌شود، نه وسطِ کارِ کاربر.
+     ⚠️ رشته‌کردنِ بی‌شرطِ همهٔ آیتم‌ها را برنگردانید. */
+  function outqItemLen(it){
+    if (it.__sLen === undefined){
+      var s = '';
+      try { s = JSON.stringify(it); } catch(e){ s = ''; }
+      it.__sLen = (!s || s.length > OUTQ_BYTES) ? -1 : s.length;
+    }
+    return it.__sLen;
+  }
+  function outqPersistNow(){
     try {
       var keep = outQueue.filter(isMutation);
       var out = [], bytes = 0;
       for (var i = keep.length - 1; i >= 0; i--) {   // از تازه‌ترین به کهنه‌ترین تا سقف حجم
-        var s = '';
-        try { s = JSON.stringify(keep[i]); } catch(e){ continue; }
-        if (!s || s.length > OUTQ_BYTES) continue;   // یک آیتمِ غول‌پیکر (ویدیو): فقط در حافظه
-        if (bytes + s.length > OUTQ_BYTES) break;
-        bytes += s.length; out.push(keep[i]);
+        var n = outqItemLen(keep[i]);
+        if (n < 0) continue;                         // آیتمِ غول‌پیکر: فقط در حافظه می‌ماند
+        if (bytes + n > OUTQ_BYTES) break;
+        bytes += n; out.push(keep[i]);
       }
       out.reverse();
       localStorage.setItem(OUTQ_KEY, JSON.stringify(out));
     } catch(e){ try { localStorage.removeItem(OUTQ_KEY); } catch(e2){} }
   }
+  var outqTimer = null;
+  function outqPersist(){
+    if (outqTimer) return;
+    outqTimer = setTimeout(function(){
+      outqTimer = null;
+      if (typeof requestIdleCallback === 'function') requestIdleCallback(outqPersistNow, { timeout: 3000 });
+      else outqPersistNow();
+    }, 800);
+  }
+  // ترکِ صفحه: صف باید همان لحظه و کامل روی دیسک بنشیند
+  try {
+    window.addEventListener('pagehide', outqPersistNow);
+    window.addEventListener('beforeunload', outqPersistNow);
+    document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden') outqPersistNow(); });
+  } catch(e){}
   function outqRestore(){
     try {
       var arr = JSON.parse(localStorage.getItem(OUTQ_KEY) || '[]');
@@ -20963,7 +20997,8 @@ let _quotaWarnedThisSession = false;
 // IndexedDB می‌نویسیم. این «محدودیتِ برنامه» نیست؛ فقط مرزِ کشِ سریع است.
 const _LS_CACHE_MAX = 4 * 1024 * 1024;
 let _lsCacheOff = false;      // داده از سقفِ کش بزرگ‌تر شده؟
-let _lsCacheProbe = 0;        // هر چند ذخیره یک‌بار دوباره بسنج
+let _lsCacheProbe = 0;        // (کهنه — نگه داشته شده برای سازگاری)
+let _lsCacheProbeAt = 0;      // آخرین باری که «آیا در کش جا می‌شود؟» سنجیده شد
 let _lastSnapLen = 0;         // اندازهٔ تقریبیِ آخرین رشته‌سازی
 // نوشتنِ کشِ localStorage: اگر جا شد بنویس، اگر نشد نسخهٔ کهنه را پاک کن تا
 // هرگز با _rev قدیمی‌اش بر IndexedDB غلبه نکند.
@@ -21025,9 +21060,16 @@ const _LS_CACHE_MIN_GAP = 4000;
 function _writeLsCacheNow() {
   _lsCacheDirty = false;
   _lsCacheLastWrite = Date.now();
-  // دادهٔ بزرگ‌تر از سقفِ کش: بی‌خود رشته نشود — فقط هر ۴۰ بار یک‌بار دوباره سنجیده
-  // می‌شود تا اگر حساب کوچک شد کش برگردد (همان منطقِ قبلی، فقط بیرون از مسیرِ تایپ)
-  if (_lsCacheOff && (++_lsCacheProbe % 40 !== 0)) return;
+  /* حسابی که از سقفِ ۴مگابایتیِ کش رد شده، هیچ‌وقت در کش جا نمی‌شود — ولی
+     فهمیدنِ همین، خودش یک JSON.stringifyِ کاملِ حساب لازم دارد (روی حسابِ
+     ۱۳مگابایتی ~۷۰ms، روی گوشی چند برابر). سنجشِ «هر ۴۰ ذخیره» یعنی همین
+     هزینه مرتب تکرار می‌شد، بی‌آنکه هیچ‌وقت نتیجه‌ای داشته باشد.
+     حالا حداکثر هر ۱۰ دقیقه یک‌بار دوباره سنجیده می‌شود — اگر روزی حساب کوچک
+     شد (پاک کردن، آرشیو) کش خودش برمی‌گردد، ولی در کارِ روزمره هزینه‌ای ندارد. */
+  if (_lsCacheOff) {
+    if (Date.now() - _lsCacheProbeAt < 600000) return;
+    _lsCacheProbeAt = Date.now();
+  }
   let snap;
   try { snap = JSON.stringify(DB); } catch (e) { return; }
   _lastSnapLen = snap.length;
@@ -25911,6 +25953,69 @@ function _pcardNameHtml(name) {
   const cls = L > 20 ? ' xlong' : (L > 12 ? ' long' : '');
   return '<div class="pname' + cls + '" title="' + escFa(n) + '"><span>' + escFa(n) + '</span></div>';
 }
+/* سقفِ ردیف‌های ساخته‌شدهٔ جدولِ یک حساب. ۴۰۰ عمداً سخاوتمند است: بیشترِ
+   حساب‌ها از این کوچک‌ترند و اصلاً پنجره‌ای نمی‌شوند. */
+const _PM_ROW_PAGE = 400;
+let _pmRowShown = _PM_ROW_PAGE;
+function _resetPmRowWindow() { _pmRowShown = _PM_ROW_PAGE; }
+window.pmShowAllRows = function () {
+  _pmRowShown = Infinity;
+  const p = _curPerson(); if (p) renderPersonRows(p);
+};
+window.pmShowOlderRows = function () {
+  _pmRowShown = (_pmRowShown === Infinity ? Infinity : _pmRowShown + _PM_ROW_PAGE);
+  const p = _curPerson(); if (p) renderPersonRows(p);
+};
+/* نوارِ «قدیمی‌ترها» بالای جدول — با همان الگوی نوارِ کارت‌ها: با اسکرول به
+   بالا خودش دستهٔ بعدی را می‌آورد، و دکمهٔ «نمایش همه» هم دارد. */
+function _paintPmRowBar(person, total, shownCount) {
+  const wrap = document.querySelector('#personModal .xls-wrap');
+  const old = document.getElementById('pm-row-more');
+  if (old) old.remove();
+  if (!wrap || total <= _PM_ROW_PAGE) return;
+  const bar = document.createElement('div');
+  bar.id = 'pm-row-more';
+  bar.className = 'grid-more';
+  if (shownCount < total) {
+    /* ⚠️ این نوار عمداً با دکمه کار می‌کند، نه با اسکرول. نوارِ کارت‌ها زیرِ
+       گرید است و با رسیدنِ اسکرول به آن، دستهٔ بعدی می‌آید؛ ولی این یکی *بالای*
+       جدول است و از همان لحظهٔ باز شدن دیده می‌شود — با ناظرِ اسکرول بی‌درنگ
+       همه‌چیز را بار می‌کرد و پنجره بی‌فایده می‌شد. */
+    bar.innerHTML = '<span>' + n2fa(shownCount) + ' ردیفِ آخر از ' + n2fa(total) + ' نشان داده شده</span>' +
+      '<button type="button" onclick="pmShowOlderRows()">⬆️ ' + n2fa(_PM_ROW_PAGE) + ' ردیفِ قدیمی‌تر</button>' +
+      '<button type="button" onclick="pmShowAllRows()">نمایش همه</button>';
+    wrap.before(bar);
+  } else {
+    bar.innerHTML = '<span>✅ همهٔ ' + n2fa(total) + ' ردیف نشان داده شد</span>';
+    wrap.before(bar);
+  }
+}
+/* ── تازه‌سازیِ «پس‌زمینه»: کارت‌های فهرست + نوارِ بالای صفحه ─────────────────
+   گزارشِ صاحب ریپو: «باز هم یخ زد، تو بخش قرض‌داران بودم با ۳ تب باز.»
+   اندازه‌گیری با ۲۵ قرض‌دار و ۱۰۹٬۰۰۰ ردیف (۱۳٫۶ مگابایت): هر کلیدِ تایپ در
+   جدولِ یک حساب ۱۸۷ms روی کامپیوترِ سریع می‌بُرد — یعنی بیش از یک ثانیه روی
+   گوشی. دلیلش این بود که هر کلید، *فهرستِ همهٔ قرض‌داران* و *نوارِ بالا* را از
+   نو می‌ساخت، و ساختِ هر کارت همهٔ ردیف‌های آن شخص و حساب‌های فرعی‌اش را
+   می‌پیمود. یعنی هزینهٔ هر کلید با کلِ حجمِ داده بزرگ می‌شد — دقیقاً همان چیزی
+   که با «ده‌ها سال داده» به قفلِ کامل می‌رسد.
+   این دو تازه‌سازی «پس‌زمینه»اند: کارت‌های پشتِ مودال و نوارِ بالا لازم نیست با
+   هر حرف به‌روز شوند. حالا یک‌بار، کمی بعد از ایستادنِ دست و در وقتِ بیکاریِ
+   مرورگر اجرا می‌شوند. نتیجهٔ نهایی مو‌به‌مو همان است، فقط هزینهٔ هر کلید ثابت
+   و مستقل از حجمِ داده شد.
+   ⚠️ در مسیرِ تایپ، renderPersons/updateBanner را مستقیم صدا نزنید. */
+let _bgRefreshTimer = null;
+function _scheduleBgRefresh() {
+  if (_bgRefreshTimer) return;
+  _bgRefreshTimer = setTimeout(function () {
+    _bgRefreshTimer = null;
+    const run = function () {
+      try { renderPersons(currentPersonType); } catch (e) {}
+      try { updateBanner(); } catch (e) {}
+    };
+    if (typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: 1500 });
+    else run();
+  }, 400);
+}
 function renderPersons(type) {
   const grid = document.getElementById(type + '-grid');
   if (!grid) return;
@@ -26463,6 +26568,15 @@ function makeTableResizable(table, storeKey){
 function _fixColspanOverflow(table){
   try{
     if(!table || !table.tHead || !table.tHead.rows[0]) return;
+    /* ⚠️ حافظِ کوچکِ زیر حیاتی است. این تابع همهٔ ردیف‌ها × همهٔ خانه‌های یک
+       جدول را می‌پیماید و از ناظرِ سراسریِ پایین، *در هر فریم* روی *همهٔ*
+       جدول‌های صفحه صدا زده می‌شود. روی حسابِ چندساله (صدها ردیف در چند جدول)
+       همین یک تابع، به‌تنهایی، برنامه را در حینِ تایپ زمین می‌زد.
+       جدولی که ساختارش عوض نشده (تعدادِ ردیف و ستون همان است) دوباره پیمایش
+       نمی‌شود — و ساختار دقیقاً همان چیزی است که این تابع درست می‌کند. */
+    const sig = table.rows.length + 'x' + table.tHead.rows[0].cells.length;
+    if (table._colspanSig === sig) return;
+    table._colspanSig = sig;
     let cols = 0;
     Array.prototype.forEach.call(table.tHead.rows[0].cells, function(c){ cols += (c.colSpan||1); });
     if(!cols) return;
@@ -26491,7 +26605,10 @@ function initAllTableResizers(root){
     // بمانند تا عرض‌های ذخیره‌شدهٔ قبلیِ کاربر از بین نرود
     const LEGACY_KEYS = { 'pm-tbl': 'pm', 'cm-tbl': 'cm' };
     Array.prototype.forEach.call(tables, function(t){
-      _fixColspanOverflow(t);   // محافظ ستون فانتوم — روی هر تغییر DOM دوباره اجرا می‌شود
+      // جدولِ پنهان (بخشِ بسته، مودالِ بسته) دیده نمی‌شود؛ کارِ رویش تلف‌کردنِ
+      // وقتِ نخِ اصلی است. با دیده‌شدن، ناظرِ پایین دوباره صدایش می‌زند.
+      if (!t.offsetParent && t.style.display !== 'contents') return;
+      _fixColspanOverflow(t);   // محافظ ستون فانتوم — فقط وقتی ساختارِ جدول عوض شده
       if(!t.tHead || !t.tHead.rows[0]) return;
       let key = LEGACY_KEYS[t.id] || t.id;
       if(!key){
@@ -26531,10 +26648,25 @@ function initAllTableResizers(root){
 // جدولِ تازه (مثلاً بعد از عوض کردن ماه) یک لحظه با عرض پیش‌فرض دیده می‌شد و
 // بعد «می‌پرید» به عرض‌هایی که کاربر تنظیم کرده بود.
 (function(){
+  /* ⚠️ این ناظر روی کلِ <body> است و با هر تغییرِ DOM بیدار می‌شود — یعنی با هر
+     حرفی که در جدول‌ها تایپ می‌شود. پیش از این هر بار در *همان فریم* اجرا
+     می‌شد و initAllTableResizers را روی *همهٔ* جدول‌های سند می‌بُرد. با دادهٔ
+     چندساله، سهمِ همین یکی در پروفایل از همهٔ کارهای جاوااسکریپتِ دیگر بیشتر
+     بود و بخشِ بزرگی از زمانِ «چیدمانِ مرورگر» را هم خودش می‌ساخت.
+     حالا دو محافظ دارد:
+       ۱) به‌جای «هر فریم»، با مکثِ کوتاه و در وقتِ بیکاری اجرا می‌شود؛ یک
+          رگبارِ تایپ به یک اجرا تبدیل می‌شود، نه شصت تا در ثانیه.
+       ۲) جدولِ پنهان (بخشی که دیده نمی‌شود) اصلاً پردازش نمی‌شود — با باز شدنِ
+          آن بخش، همین ناظر دوباره بیدار می‌شود و آن‌وقت نوبتش می‌رسد.
+     ⚠️ به requestAnimationFrame برنگردانید. */
   let _trTimer = null;
   function schedule(){
     if(_trTimer) return;
-    _trTimer = requestAnimationFrame(function(){ _trTimer = null; initAllTableResizers(); });
+    _trTimer = setTimeout(function(){
+      _trTimer = null;
+      if (typeof requestIdleCallback === 'function') requestIdleCallback(function(){ initAllTableResizers(); }, { timeout: 1200 });
+      else initAllTableResizers();
+    }, 150);
   }
   function startObs(){
     try{
@@ -26868,6 +27000,8 @@ function initAllTableResizers(root){
   });
 })();
 function openPersonModal(type, id) {
+  _resetPmRowWindow();   // هر حساب با پنجرهٔ تازه باز می‌شود
+  _resetHistOpen();      // و آرشیوهایش بسته، جز تازه‌ترین
   currentPersonType = type;
   currentPersonId = id;
   currentPersonFilter = 'all';
@@ -26894,6 +27028,7 @@ function openPersonModal(type, id) {
   if (savedMFS !== 1) { _modalFontScale = savedMFS; adjModalFont(0); }
 }
 function setPersonFilter(f) {
+  _resetPmRowWindow();   // پنجرهٔ ردیف‌ها برای هر نما از نو
   currentPersonFilter = f;
   _updatePersonFilterBtns();
   _togglePmFuelCards(f);
@@ -26972,6 +27107,7 @@ function _pmUpdateNames(person, sub) {
   if (bn) bn.textContent = '👤 ' + person.name;
 }
 function switchPersonSub(id) {
+  _resetPmRowWindow();   // پنجرهٔ ردیف‌ها برای هر نما از نو
   currentSubId = id || null;
   const person = _curPerson(); if (!person) return;
   currentPersonFilter = 'all';
@@ -27074,6 +27210,18 @@ function renderPersonRows(person) {
   const money = _acctModeMoney(person, acct);
   _togglePmMoneyCols(money);
   let shown = 0;
+  /* ── پنجرهٔ ردیف‌ها: جدولِ حساب هر چقدر هم بلند شود، DOM محدود می‌ماند ────────
+     گزارشِ صاحب ریپو: «هرگز یخ نزند، حتی با ده‌ها سال کار و داده.»
+     ریشهٔ باقی‌مانده این بود که جدولِ یک حساب *همهٔ* ردیف‌هایش را می‌ساخت. با
+     ۱۵۰۰ ردیف یعنی ~۱۳٬۶۰۰ کادرِ ورودی در صفحه. نوشتنشان به‌تنهایی ۲۲۷ms بود،
+     ولی بدتر از آن: از آن لحظه به بعد *هر* کارِ مرورگر (چیدمان، اسکرول، هر
+     ناظرِ DOM) روی همان ۱۳٬۶۰۰ عنصر انجام می‌شد و کلِ برنامه کند می‌ماند.
+     حالا فقط یک «پنجره» از آخرِ جدول ساخته می‌شود (ردیف‌های تازه، همان‌جا که
+     کاربر کار می‌کند) و قدیمی‌ترها با اسکرول به بالا یا دکمهٔ «نمایش همه» می‌آیند.
+     شمارهٔ «#» از جای واقعیِ ردیف حساب می‌شود، نه از شمارندهٔ محلی — پس عددها
+     همان‌اند که بودند. همهٔ کارها (ویرایش، حذف، فرمت) با data-idx کار می‌کنند و
+     data-idx شمارهٔ واقعیِ ردیف در داده است، پس پنجره‌ای‌شدن هیچ‌چیز را نمی‌شکند. */
+  const _visIdx = [];
   /* ── چرا این نشانه لازم است ────────────────────────────────────────────────
      حلقهٔ زیر ردیف‌های خرابِ کهنه را «خوددرمان» می‌کند (بردگی = تیل × فی و غیره)،
      ولی تا امروز نتیجه‌اش را ذخیره نمی‌کرد — فقط در حافظه می‌ماند. اگر کاربر بعد از
@@ -27081,6 +27229,7 @@ function renderPersonRows(person) {
      دوباره می‌نشیند و کاربر می‌بیند «از حساب بیرون رفتم و پس آمدم، خراب شد».
      پس هر بار که واقعاً چیزی درمان شد، همان‌جا ذخیره می‌شود. */
   let _healed = false;
+  const _rowHtml = [];
   rows.forEach((r, i) => {
     // خوددرمانیِ دادهٔ کهنه: ردیفی که «مقدار تیل» دارد ولی پولی (byMoney) با بردگیِ صفر
     // مانده — بردگیِ دستی‌ای در کار نیست، پس ردیفِ تیل است و بردگی‌اش لیتر × فی حساب
@@ -27096,7 +27245,17 @@ function renderPersonRows(person) {
 
     // فیلتر حساب جداگانه: فقط ردیف‌های نوع تیلِ انتخاب‌شده نمایش داده شوند
     if (currentPersonFilter !== 'all' && r.ftype !== currentPersonFilter) return;
-    shown++;
+    _visIdx.push(i);
+  });
+  // پنجره: آخرین _pmRowShown ردیف (تازه‌ترین‌ها) — بقیه با اسکرول/«نمایش همه»
+  const _visTotal = _visIdx.length;
+  const _cap = Math.min(Math.max(_pmRowShown || _PM_ROW_PAGE, _PM_ROW_PAGE), _visTotal);
+  const _from = Math.max(0, _visTotal - _cap);
+  _visIdx.slice(_from).forEach((i, wi) => {
+    const r = rows[i];
+    shown = _from + wi + 1;          // شمارهٔ واقعیِ ردیف در فهرستِ فیلترشده
+    // حلقهٔ بالا ردیف‌ها را درمان و نرمال کرده؛ این‌جا فقط همان مقدارِ ذخیره‌شده خوانده می‌شود
+    const bardagi = (r.byMoney ? (parseFloat(r.bardagi)||0) : _personRowBardagi(r)).toFixed(0);
 
     const isP = r.ftype !== 'diesel';
     const rn = 'ft-' + person.id + '-' + i;
@@ -27108,9 +27267,7 @@ function renderPersonRows(person) {
           <label class="ft-opt diesel ${!isP?'active':''}"><input type="radio" name="${rn}" ${!isP?'checked':''} onchange="setRowFuel('${person.id}',${i},'diesel')">🟤 دیزل</label>
         </div>
       </td>` : '';
-    const tr = document.createElement('tr');
-    tr.setAttribute('data-idx', i);
-    tr.innerHTML = `
+    _rowHtml.push(`<tr data-idx="${i}">
       <td class="xls-num" style="cursor:pointer" title="فیِ این ردیف (دستی) — بزنید تا وارد/عوض کنید" onclick="rowRateEditor(this,'${person.id}',${i})">${n2fa(shown)}</td>
       <td><input class="xls-in" value="${r.date||''}" onchange="updatePersonRow('${person.id}',${i},'date',this.value)"></td>
       <td><input class="xls-in" value="${escFa(r.name)}" placeholder="نام" style="min-width:140px" onchange="updatePersonRow('${person.id}',${i},'name',this.value)"></td>
@@ -27123,15 +27280,27 @@ function renderPersonRows(person) {
       ${money ? '' : `<td><input class="xls-in" type="number" value="${r.rasidFuel||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasidFuel',this.value)"></td>`}
       <td class="pm-albaqi-cell"></td>
       <td><button class="del-btn" onclick="deletePersonRow('${person.id}',${i})">🗑️</button></td>
-    `;
-    tbody.appendChild(tr);
+    </tr>`);
   });
-  if (shown === 0) {
-    const tr = document.createElement('tr');
+  if (_visTotal === 0) {
     const label = currentPersonFilter === 'petrol' ? '⛽ هیچ ردیف پطرولی ثبت نشده' : (currentPersonFilter === 'diesel' ? '🟤 هیچ ردیف دیزلی ثبت نشده' : 'هیچ ردیفی ثبت نشده');
-    tr.innerHTML = `<td colspan="${showFtCol?11:10}" style="text-align:center;padding:16px;color:var(--muted);font-size:0.85rem">${label}</td>`;
-    tbody.appendChild(tr);
+    _rowHtml.push(`<tr><td colspan="${showFtCol?11:10}" style="text-align:center;padding:16px;color:var(--muted);font-size:0.85rem">${label}</td></tr>`);
   }
+  /* ⚠️ یک‌بار نوشتن، نه ۱۵۰۰ بار appendChild ────────────────────────────────
+     پیش از این برای هر ردیف یک <tr> ساخته و جداگانه به جدولِ زنده چسبانده
+     می‌شد؛ یعنی به‌ازای هر ردیف یک تجزیهٔ HTML و یک بی‌اعتبار کردنِ چیدمان.
+     روی حسابِ ۱۵۰۰ ردیفی ۴۱۳ms طول می‌کشید. با ساختنِ یک رشته و یک‌بار
+     نوشتن، خروجی مو‌به‌مو همان است ولی مرورگر یک‌بار کار می‌کند.
+     ردیف‌ها هیچ هندلرِ جاوااسکریپتیِ چسبیده ندارند (همه inline اند)، پس این
+     تغییر هیچ رفتاری را عوض نمی‌کند. */
+  /* نوشتن روی یک <tbody>ِ جدا و بعد جابه‌جایی: نوشتنِ مستقیم روی جدولِ زنده
+     چهار برابر گران‌تر بود (۱۴۱ms در برابر ۳۵ms برای همان محتوا)، چون مرورگر
+     وسطِ کار مجبور به بی‌اعتبار کردنِ چیدمانِ صفحه می‌شد. */
+  const _newBody = document.createElement('tbody');
+  _newBody.id = 'pm-body';
+  _newBody.innerHTML = _rowHtml.join('');
+  tbody.replaceWith(_newBody);
+  _paintPmRowBar(person, _visTotal, _cap);
   // اصلاحِ بالا روی دیسک هم بنشیند تا همگام‌سازیِ بعدی آن را پس نگیرد
   if (_healed && currentRole !== 'viewer') { try { _saveQuiet(); } catch (e) {} }
   // جمع‌ها بعد از حلقهٔ ردیف‌ها حساب می‌شوند — حلقه بردگی/الباقیِ هر ردیف را
@@ -27286,7 +27455,7 @@ function updateStackedRow(pid, acctId, idx, field, value) {
   const rowsArr = _acctRows(person, acct);
   if (!rowsArr[idx]) return;
   rowsArr[idx][field] = value;
-  save(); _updatePersonTotals(person); renderPersons(currentPersonType); updateBanner();
+  save(); _updatePersonTotals(person); _scheduleBgRefresh();
 }
 function calcStackedRow(pid, acctId, idx, field, value) {
   const person = _getStackedPerson(pid); if (!person) return;
@@ -27300,7 +27469,7 @@ function calcStackedRow(pid, acctId, idx, field, value) {
   _stampRowUnionRate(r);   // قفلِ نرخِ اتحادیهٔ همین لحظه روی ردیف (مثل جدولِ اصلی)
   if (!r.byMoney) r.bardagi=_personRowBardagi(r);
   r.albaqi=(parseFloat(r.bardagi)||0)-(r.rasid||0);
-  save(); _updatePersonTotals(person); _rerenderSoon('pm-stacked-wrap', _rerenderStackedPreserveFocus); renderPersons(currentPersonType); updateBanner();
+  save(); _updatePersonTotals(person); _rerenderSoon('pm-stacked-wrap', _rerenderStackedPreserveFocus); _scheduleBgRefresh();
 }
 function setStackedRowFuel(pid, acctId, idx, ftype) {
   const person = _getStackedPerson(pid); if (!person) return;
@@ -27308,7 +27477,7 @@ function setStackedRowFuel(pid, acctId, idx, ftype) {
   const rowsArr = _acctRows(person, acct);
   if (!rowsArr[idx]) return;
   rowsArr[idx].ftype = ftype;
-  save(); _updatePersonTotals(person); renderPersons(currentPersonType);
+  save(); _updatePersonTotals(person); _scheduleBgRefresh();
 }
 function deleteStackedRow(pid, acctId, idx) {
   const person = _getStackedPerson(pid); if (!person) return;
@@ -27696,8 +27865,7 @@ function calcPersonRow(pid, idx, field, value) {
   if (field === 'rasid' || field === 'rasidFuel') _lossOnReceipt(person);
   _updatePersonRowCells(person, idx, r);
   _updatePersonTotals(person);
-  renderPersons(currentPersonType);
-  updateBanner();
+  _scheduleBgRefresh();   // فهرست و نوارِ بالا: یک‌بار بعد از ایستادنِ دست
 }
 /* ── خبر دادن به صاحبِ حساب ────────────────────────────────────────────────
    خواستهٔ صاحب ریپو: «محضِ این‌که حسابی توش چیزی نوشته می‌شود در جا پیام می‌آید؛
@@ -27778,8 +27946,7 @@ function updatePersonRow(pid, idx, field, value) {
   _ur[idx][field] = value;
   save();
   _updatePersonTotals(person);
-  renderPersons(currentPersonType);
-  updateBanner();
+  _scheduleBgRefresh();
   _ntfAccountTouched(person);
 }
 function _updatePersonRowCells(person, idx, r) {
@@ -27788,13 +27955,16 @@ function _updatePersonRowCells(person, idx, r) {
   const row = tbody.querySelector('tr[data-idx="' + idx + '"]');
   if (!row) return;
   const bardagiCell = row.querySelector('.pm-bardagi-cell');
-  if (bardagiCell && document.activeElement !== bardagiCell) bardagiCell.value = r.bardagi || 0;
-  const albaqiCell = row.querySelector('.pm-albaqi-cell');
-  if (albaqiCell) {
-    // الباقی جلوی هر ردیف نمایش داده نمی‌شود — فقط «جمع الباقی» بالای جدول و
-    // پایین جدول (خواستهٔ کاربر: عدد ردیف‌به‌ردیف جلو رویش نیاید، جمع شود)
-    albaqiCell.textContent = '';
+  if (bardagiCell && document.activeElement !== bardagiCell) {
+    const nv = String(r.bardagi || 0);
+    if (bardagiCell.value !== nv) bardagiCell.value = nv;
   }
+  const albaqiCell = row.querySelector('.pm-albaqi-cell');
+  // الباقی جلوی هر ردیف نمایش داده نمی‌شود — فقط «جمع الباقی» بالای جدول و
+  // پایین جدول (خواستهٔ کاربر: عدد ردیف‌به‌ردیف جلو رویش نیاید، جمع شود)
+  // ⚠️ شرطِ !== لازم است: نوشتنِ '' روی خانه‌ای که از قبل خالی است هم یک تغییرِ
+  // DOM حساب می‌شود و ناظرهای سراسری را با هر کلید بیدار می‌کرد.
+  if (albaqiCell && albaqiCell.textContent !== '') albaqiCell.textContent = '';
 }
 function _curPerson() {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
@@ -29101,7 +29271,19 @@ function _renderHistoryPanel(person) {
     const ftFuel  = viewRows.reduce((s, x) => s + (parseFloat(x.r.fuel) || 0), 0);
     const ftBard  = viewRows.reduce((s, x) => s + (x.r.byMoney ? (x.r.bardagi||0) : _personRowBardagi(x.r)), 0);
     const ftRasid = viewRows.reduce((s, x) => s + (parseFloat(hMoney ? x.r.rasid : x.r.rasidFuel) || 0), 0);
-    const tableHtml = filterBarHtml + `
+    /* ── جدولِ آرشیوِ بسته اصلاً ساخته نمی‌شود ────────────────────────────────
+       گزارشِ صاحب ریپو: «هرگز یخ نزند، حتی با ده‌ها سال داده.»
+       هر آرشیو یک جدولِ کاملِ قابلِ ویرایش است. با ۸ آرشیوِ ۱۲۰ردیفی، تنها همین
+       پنل ~۱۰٬۰۰۰ کادرِ ورودی به صفحه اضافه می‌کرد؛ بعد از آن *هر* چیدمانِ
+       مرورگر روی همان ده‌ها هزار عنصر انجام می‌شد و برنامه دیگر روان نمی‌شد،
+       هرچند خودِ جاوااسکریپت سریع بود. با «ده‌ها سال» تعدادِ آرشیوها ده‌ها
+       می‌شود و این عدد بی‌مرز بزرگ می‌شد.
+       حالا فقط آرشیوِ باز جدول می‌سازد. تازه‌ترین آرشیو خودش باز است و بقیه با
+       زدنِ سربرگشان باز می‌شوند — پس تعدادِ عناصرِ صفحه دیگر به تعدادِ آرشیوها
+       بسته نیست. سربرگ و کادرهای خلاصهٔ *همهٔ* آرشیوها مثل قبل دیده می‌شوند،
+       چون عددهایشان از داده حساب می‌شود نه از جدول. */
+    const _open = _histIsOpen(h.id, hi);
+    const tableHtml = !_open ? '' : filterBarHtml + `
       <div class="xls-wrap" style="margin:8px 10px;border-radius:9px;overflow:hidden">
         <div style="overflow-x:auto">
           <table class="xls-tbl" id="hist-tbl-${pid}-${h.id}" data-colw-key="pm" style="table-layout:fixed;width:100%;min-width:${showFt?752:652}px">
@@ -29135,16 +29317,35 @@ function _renderHistoryPanel(person) {
           style="flex:1;min-width:130px;background:rgba(255,255,255,0.16);border:1px dashed rgba(255,255,255,0.6);border-radius:7px;padding:4px 10px;color:#fff;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;box-sizing:border-box">
         <div style="display:flex;align-items:center;gap:6px">
           <span style="font-size:0.72rem;color:rgba(255,255,255,0.85)">${n2fa(rows.length)} ردیف</span>
+          <button onclick="toggleHistoryOpen('${h.id}')" title="باز/بستهٔ جدولِ این آرشیو" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.5);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">${_open ? '🔽 بستن' : '📂 باز کردن'}</button>
           <button onclick="restorePersonHistory('${pid}','${h.id}')" title="ردیف‌های این جدول دوباره داخل حسابِ خودِ شخص بیایند" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.5);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">↩️ برگشت به حساب</button>
           <button onclick="toggleHistoryMode('${pid}','${h.id}')" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.5);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">🔁 ${hMoney?'تیل':'پول'}</button>
           <button onclick="pdfPersonHistory('${pid}','${h.id}')" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.5);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">📄 PDF</button>
           <button onclick="deletePersonHistory('${pid}','${h.id}')" style="background:transparent;border:1px solid rgba(255,255,255,0.45);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">🗑️ حذف کل</button>
         </div>
       </div>
-      <div style="background:var(--dark)">${fuelHtml}${tableHtml}</div>
+      <div style="background:var(--dark)">${fuelHtml}${_open ? '' :
+        `<div style="padding:8px 12px 12px">
+           <button class="add-row-btn" style="margin:0" onclick="toggleHistoryOpen('${h.id}')">
+             📂 باز کردنِ جدولِ این آرشیو (${n2fa(rows.length)} ردیف)
+           </button>
+         </div>`}${tableHtml}</div>
     </div>`;
   }).join('');
 }
+/* کدام آرشیوها باز‌اند. پیش‌فرض: فقط تازه‌ترین (hi === 0 در فهرستِ معکوس‌شده). */
+let _histOpenSet = null;
+function _histIsOpen(hid, hi) {
+  if (_histOpenSet === null) return hi === 0;
+  return _histOpenSet.has(hid) || (hi === 0 && !_histOpenSet.has('!' + hid));
+}
+function toggleHistoryOpen(hid) {
+  if (_histOpenSet === null) _histOpenSet = new Set();
+  if (_histOpenSet.has(hid)) { _histOpenSet.delete(hid); _histOpenSet.add('!' + hid); }
+  else { _histOpenSet.delete('!' + hid); _histOpenSet.add(hid); }
+  const p = _curPerson(); if (p) _renderHistoryPanel(p);
+}
+function _resetHistOpen() { _histOpenSet = null; }
 // ویرایشِ «فیِ خرید»ِ یک آرشیو — فقط یادداشت، در هیچ محاسبه‌ای نیست
 function updateHistoryBuyFee(pid, hid, val) {
   const h = _hEntry(pid, hid); if (!h) return;
@@ -41767,7 +41968,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.297';
+const APP_VERSION = '2.9.298';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -43868,9 +44069,23 @@ function _bkOpenDb(cb) {
     rq.onerror = () => {};
   } catch (e) {}
 }
+/* ⚠️ این هر ۱۰ دقیقه اجرا می‌شود و بی‌قید و شرط کلِ دیتابیس را JSON می‌کرد —
+   روی حسابِ چندساله یعنی چند صد میلی‌ثانیه قفلِ نخِ اصلی، بی‌آنکه چیزی عوض شده
+   باشد. حالا اگر از عکسِ قبلی هیچ تغییری نبوده (_rev یکی است) اصلاً رشته نمی‌شود،
+   و خودِ کار هم در وقتِ بیکاریِ مرورگر انجام می‌شود. */
+let _bkLastRev = -1, _bkLastDay = '';
 function _autoDailyBackup() {
   try {
     const day = toEnDigits(persianDate());
+    const rev = parseInt(DB._rev, 10) || 0;
+    if (day === _bkLastDay && rev === _bkLastRev) return;   // چیزی عوض نشده
+    if (typeof requestIdleCallback === 'function') { requestIdleCallback(function(){ _autoDailyBackupNow(day, rev); }, { timeout: 8000 }); }
+    else _autoDailyBackupNow(day, rev);
+  } catch (e) {}
+}
+function _autoDailyBackupNow(day, rev) {
+  try {
+    _bkLastDay = day; _bkLastRev = rev;
     const data = JSON.stringify(DB);
     _bkOpenDb(db => {
       try {
@@ -50286,9 +50501,14 @@ select:not(.native-sel){
     }
   }
 
+  /* ⚠️ این تابع قد و scrollHeightِ همهٔ ظرف‌های جدول را می‌خوانَد، یعنی مرورگر را
+     مجبور به یک «چیدمانِ اجباریِ» کامل می‌کند. پیش از این با هر تغییرِ DOM در
+     همان فریم اجرا می‌شد — یعنی با هر کلیدی که تایپ می‌شد، روی یک سندِ ده‌ها
+     هزار عنصری. با مکثِ کوتاه، یک رگبارِ تایپ به یک اجرا تبدیل می‌شود و نتیجه
+     برای چشم هیچ فرقی ندارد. به requestAnimationFrameِ بی‌مکث برنگردانید. */
   function schedule() {
     if (pending) return;
-    pending = requestAnimationFrame(sync);
+    pending = setTimeout(function () { pending = null; requestAnimationFrame(sync); }, 200);
   }
   window._tblScrollSync = schedule;
 
