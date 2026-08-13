@@ -45,6 +45,25 @@
 // فونت دیگر از اینترنت گرفته نمی‌شود — داخلِ خودِ همین فایل است (پایین‌تر).
 </script>
 <style>
+/* ══ اندازهٔ آیکون‌ها — عمداً همین بالا، پیش از هر چیزِ دیگر ═══════════════════
+   گزارشِ صاحب ریپو: «این چیه که اومده همه برنامه رو خراب کرده» — با یک عکس که
+   در آن آیکون‌های بالای صفحه (ماه، بشکه‌ها، نمودار) غول‌پیکر و سیاه شده بودند.
+
+   این خرابی نبود؛ «نیمه‌بارشدنِ» صفحه بود. قاعدهٔ کاملِ ‎.nav-ic در
+   ‎<style id="motion-pro">‎ نوشته شده که تهِ همین فایلِ ۳٫۵ مگابایتی است. هر بار
+   که نسخهٔ تازه‌ای منتشر می‌شود کشِ سرویس‌ورکر نو می‌شود و کلِ فایل دوباره از
+   اینترنت می‌آید؛ تا وقتی که آن تهِ فایل برسد، مرورگر هر ‎<svg>‎ را با اندازهٔ
+   پیش‌فرضِ استانداردِ خودش — ۳۰۰×۱۵۰ پیکسل، سیاه — می‌کشد. روی اینترنتِ کند
+   چند ثانیه همین دیده می‌شود و آدم فکر می‌کند برنامه خراب شده.
+
+   پس فقط «هندسه و رنگِ» آیکون همین بالا آمد تا از همان اولین لحظه درست باشد.
+   پایین‌تر همین‌ها (به‌علاوهٔ انیمیشن‌ها) دوباره نوشته شده‌اند و چون یکی‌اند،
+   ظاهرِ نهایی مو‌به‌مو مثل قبل است. این چند خط را از بالای فایل برندارید و با
+   قاعدهٔ پایینی هم‌قدم نگه‌شان دارید. ══ */
+svg.nav-ic{
+  width:1.22em; height:1.22em; display:inline-block; vertical-align:-0.26em;
+  fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round;
+}
 /* Vazirmatn — درون‌ریزی‌شده تا برنامه بدونِ اینترنت هم درست دیده شود (SIL OFL 1.1) */
 @font-face {
   font-family: 'Vazirmatn';
@@ -20351,7 +20370,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
            ریپو این بود: «در جدولِ اصلی آن کادرِ آرشیوها نمی‌آید، حتی با اسکرول؛
            اگر جدول کمی بزرگ شود آن زیر می‌رود و گم می‌شود و دیگر برگشتی ندارد».
            پایین نبریدش. -->
-      <div id="pm-arc-box" style="display:none;margin-bottom:12px"></div>
+      <div id="pm-arc-box" style="margin-bottom:12px"></div>
       <!-- همهٔ ابزارها در «یک خط» کنار هم: کشویی حساب + حساب جدید + جدول جدید + فیلترها + شماره تماس.
            دیگر کشویی بالای دکمه‌ها نیست که دست اشتباهی رویشان برود؛ در صفحهٔ باریک این خط اسکرول افقی می‌خورد و نمی‌شکند -->
       <div class="pm-acct-bar">
@@ -20378,6 +20397,11 @@ body.viewer-mode .inv-admin-only{display:none!important}
              کادر از زیرِ سربرگ می‌آیند و با زدنِ دوباره پنهان می‌شوند.
              خودِ کادرها و کارشان هیچ تغییری نکرده — فقط دیده‌شدنشان. -->
         <button type="button" id="pm-pct-toggle" onclick="pmTogglePct()" title="فیصدیِ پطرول و دیزل — با زدنِ همین کادر باز و بسته می‌شود">٪ فیصدی <span id="pm-pct-caret">▾</span></button>
+        <!-- کادرِ کشوییِ «جدول‌های آرشیو» — بغلِ همان «٪ فیصدی» و دقیقاً مثل آن
+             (خواستهٔ صاحب ریپو: «برای کادر جدول آرشیو هم یک کادر کشویی درست کن و
+             بغلِ آن فیصدی بگذار؛ بزنم بیاید و بزنم برود پنهان شود»). خودِ کادرِ
+             بزرگ (#pm-arc-box) تا زده نشود دیده نمی‌شود، پس بالای صفحه جا نمی‌گیرد. -->
+        <button type="button" id="pm-arc-toggle" onclick="pmToggleArc()" style="display:none" title="جدول‌های آرشیوِ این حساب — با زدنِ همین کادر باز و بسته می‌شود">🗂️ آرشیو <span id="pm-arc-count"></span> <span id="pm-arc-caret">▾</span></button>
         <!-- مدت زمانِ مشتری بودن — فقط نمایشی (از تاریخِ اولین ثبت حساب) -->
         <span id="pm-membership" style="display:none;flex-shrink:0;white-space:nowrap;font-size:0.78rem;font-weight:800;border:1px solid var(--green);border-radius:7px;padding:6px 10px;background:var(--dark);color:var(--green);box-sizing:border-box" title="مدت زمانِ مشتری بودن — از تاریخِ اولین ثبتِ حساب"></span>
         <!-- نرخ هر لیتر فاکتورهای باز — فقط نمایشی، هیچ نقشی در محاسبات جدول ندارد -->
@@ -26581,11 +26605,14 @@ function _applySavedColWidths(table){
       ths[i].style.width = ths[i]._origW || '';
       if(colEls && colEls[i]) colEls[i].style.width = colEls[i]._origW || '';
     }
-    const tW = Math.round(_ownW(table));
+    // ⚠️ اندازه‌گیری با عرضِ چیدمانی (_ownWL) — نه عرضِ روی پرده. توضیحِ کامل
+    //    کنارِ خودِ _ownWL: انیمیشنِ باز شدنِ پنجره عرضِ دیده‌شده را کوچک نشان
+    //    می‌داد و همان «پرشِ عرضِ ستون‌های جدولِ آرشیو» را می‌ساخت.
+    const tW = Math.round(_ownWL(table));
     const target = [];
     for(let i=0;i<ths.length;i++){
       const s = saved[keys[i]] != null ? saved[keys[i]] : saved[i];
-      target[i] = s ? Math.round(s) : Math.round(_ownW(ths[i]));
+      target[i] = s ? Math.round(s) : Math.round(_ownWL(ths[i]));
       // عرضِ ذخیره‌شده هم نمی‌تواند از کفِ خودِ ستون کمتر باشد (مثلاً «نوع تیل»)
       const mn = _colMinW(table, i);
       if(target[i] < mn) target[i] = mn;
@@ -26642,6 +26669,19 @@ function _elZoom(el){
 // عرضِ یک عنصر در فضایِ خودش (بدونِ اثرِ zoomِ بخش) — همان واحدی که style.width دارد
 function _ownW(el){
   try{ return el.getBoundingClientRect().width / _elZoom(el); }catch(e){ return 0; }
+}
+/* ── عرضِ «چیدمانی» (نه عرضِ روی پرده) ────────────────────────────────────────
+   گزارشِ صاحب ریپو: «جدولِ آرشیو اول بزرگ می‌شود بعد همان‌اندازه می‌شود، انگار
+   برنامه خراب باشد.»
+   ریشه: پنجره‌ها با یک انیمیشنِ کوچکِ باز شدن می‌آیند (mpPop: از scale(.93) به
+   ۱). ‎getBoundingClientRect عرضِ «دیده‌شده» را می‌دهد، یعنی وسطِ آن انیمیشن
+   ۹۳٪ِ عرضِ واقعی. پس عرضِ ستون‌ها با عددِ کوچک‌شده حساب و اعمال می‌شد و چند
+   لحظه بعد که ناظرِ سراسری دوباره حساب می‌کرد، جدول به اندازهٔ درست می‌پرید.
+   ‎offsetWidth عرضِ خودِ چیدمان است و هیچ transformی رویش اثر ندارد؛ برای
+   بزرگ‌نماییِ بخش‌ها (zoom) هم مثل قبل عددِ بی‌زوم می‌دهد. اگر عنصر اصلاً
+   چیدمان نداشته باشد (مثلاً display:contents) به همان راهِ قبلی برمی‌گردیم. */
+function _ownWL(el){
+  try{ return el.offsetWidth || _ownW(el); }catch(e){ return _ownW(el); }
 }
 /* کفِ عرضِ هر ستون. برای ستون‌های معمولی همان ۳۶ پیکسلِ همیشگی است، ولی ستونِ
    «نوع تیل» نمی‌تواند از عرضِ واقعیِ «⛽ پطرول / 🟤 دیزل» باریک‌تر شود — وگرنه یا
@@ -26881,8 +26921,10 @@ function initAllTableResizers(root){
     // ویرایش/تغییرِ واحد اندازه‌ها ثابت بمانند (رفعِ «پرشِ اندازهٔ سلول‌ها»)
     try {
       if (typeof _modalFontScale !== 'undefined' && _modalFontScale !== 1 && typeof adjModalFont === 'function') {
-        const _pmEl = document.getElementById('personModal'), _cmEl = document.getElementById('companyModal');
-        if ((_pmEl && _pmEl.classList.contains('open')) || (_cmEl && _cmEl.classList.contains('open'))) adjModalFont(0);
+        const _pmEl = document.getElementById('personModal'), _cmEl = document.getElementById('companyModal'),
+              _paEl = document.getElementById('personArchiveModal');
+        if ((_pmEl && _pmEl.classList.contains('open')) || (_cmEl && _cmEl.classList.contains('open'))
+            || (_paEl && _paEl.classList.contains('open'))) adjModalFont(0);
       }
     } catch(e){}
   }catch(e){}
@@ -27265,6 +27307,10 @@ function openPersonModal(type, id) {
   renderPersonRows(person);
   document.getElementById('personModal').classList.add('open');
   try { pmTogglePct(false); } catch (e) {}   // کشویی فیصدی هر بار بسته باز شود
+  // کشویی‌های «آرشیو» و «فاکتورهای در صف» هم هر بار بسته باز می‌شوند تا صفحه
+  // کوتاه بماند و دکمهٔ «➕ ردیف جدید» همیشه نزدیک باشد
+  try { pmToggleArc(false); } catch (e) {}
+  try { _pmPendOpen = false; } catch (e) {}
   makeTableResizable(document.getElementById('pm-tbl'), 'pm');
   _updateNavBtns();
   // load saved modal font scale
@@ -27569,12 +27615,36 @@ function _renderPendingInvoices(person, xlsWrap) {
       _debtNameKey(v.customer_name) === _debtNameKey(person.name));
   if (!pend.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
   box.style.display = '';
-  box.style.cssText = 'margin:10px 0;padding:10px 12px;border:1px dashed var(--accent);border-radius:10px;background:rgba(255,180,61,.06);opacity:.9';
-  box.innerHTML = '<div style="font-size:0.78rem;font-weight:800;color:var(--accent);margin-bottom:6px">⏳ فاکتورهای در انتظارِ تایید (هنوز در الباقیِ حساب جمله نشده‌اند — با تایید، خودکار اضافه می‌شوند · برای باز کردن و تایید، روی فاکتور بزنید)</div>' +
-    pend.map(v => `<div role="button" tabindex="0" title="باز کردن این فاکتور برای تایید" onclick="invOpenDetail('${v.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();invOpenDetail('${v.id}');}" style="font-size:0.76rem;color:var(--muted);display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px dashed var(--border);cursor:pointer">
+  box.style.cssText = 'margin:10px 0;padding:8px 12px;border:1px dashed var(--accent);border-radius:10px;background:rgba(255,180,61,.06)';
+  /* ── کشویی، نه فهرستِ باز ────────────────────────────────────────────────
+     گزارشِ صاحب ریپو: «نمی‌توانم اسکرول کنم تا ردیف جدید به جدول اضافه کنم …
+     آن فاکتورهای در صف هم خیلی روی مخ است؛ برایش یک کادرِ کشویی بگذار تا
+     بیایند و بروند.» با ده‌ها فاکتورِ در صف، دکمهٔ «➕ ردیف جدید» ته یک فهرستِ
+     بلند گم می‌شد. حالا فقط یک نوارِ یک‌خطی دیده می‌شود و فهرست با زدنِ همان
+     نوار باز و بسته می‌شود — مثل کادرِ «٪ فیصدی». پیش‌فرض: بسته. */
+  const open = !!_pmPendOpen;
+  box.innerHTML =
+    '<div role="button" tabindex="0" onclick="pmTogglePend()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();pmTogglePend();}"' +
+    ' title="فاکتورهای در انتظارِ تایید — با زدنِ همین نوار باز و بسته می‌شود"' +
+    ' style="display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;user-select:none;font-size:0.78rem;font-weight:800;color:var(--accent)">' +
+      '<span>⏳ فاکتورهای در انتظارِ تایید — ' + n2fa(pend.length) + ' فاکتور</span>' +
+      '<span>' + (open ? '▴' : '▾') + '</span>' +
+    '</div>' +
+    (!open ? '' : '<div style="margin-top:6px;opacity:.9">' +
+      '<div style="font-size:0.72rem;color:var(--muted);margin-bottom:4px;line-height:1.7">هنوز در الباقیِ حساب جمله نشده‌اند — با تایید، خودکار اضافه می‌شوند · برای باز کردن و تایید، روی فاکتور بزنید</div>' +
+      pend.map(v => `<div role="button" tabindex="0" title="باز کردن این فاکتور برای تایید" onclick="invOpenDetail('${v.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();invOpenDetail('${v.id}');}" style="font-size:0.76rem;color:var(--muted);display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px dashed var(--border);cursor:pointer">
         <span>🧾 فاکتور شماره ${n2fa(v.invoice_number)} · ${_invPartsHtml(v)}</span>
         <b style="color:var(--txt)">${n2fa(Math.round(_invTotal(v)))} افغانی</b>
-      </div>`).join('');
+      </div>`).join('') + '</div>');
+}
+/* باز/بستهٔ فهرستِ فاکتورهای در صف. عمداً بیرونِ DB نگه داشته می‌شود (فقط نمایش) و
+   با هر بار باز شدنِ حساب دوباره بسته می‌شود تا صفحه کوتاه بماند. */
+let _pmPendOpen = false;
+function pmTogglePend(force) {
+  _pmPendOpen = (force == null) ? !_pmPendOpen : !!force;
+  const p = _curPerson(); if (!p) return;
+  const xw = document.querySelector('#personModal .xls-wrap');
+  _renderPendingInvoices(p, xw);
 }
 
 // ===== حساب‌های انباشته (stacked view) =====
@@ -29413,13 +29483,29 @@ function _renderPersonArcBox(person) {
   const box = document.getElementById('pm-arc-box');
   if (!box) return;
   const n = ((_acctOf(person) || {}).tableHistory || []).length;
-  if (!n) { box.style.display = 'none'; box.innerHTML = ''; return; }
-  box.style.display = '';
+  const tgl = document.getElementById('pm-arc-toggle');
+  const cnt = document.getElementById('pm-arc-count');
+  if (tgl) tgl.style.display = n ? '' : 'none';
+  if (cnt) cnt.textContent = n ? '(' + n2fa(n) + ')' : '';
+  // بدونِ آرشیو، نه دکمهٔ کشویی هست نه کادرش
+  if (!n) { box.classList.remove('open'); box.innerHTML = ''; pmToggleArc(false); return; }
   box.innerHTML = '<button type="button" onclick="openPersonArchive()" ' +
     'style="width:100%;display:inline-flex;align-items:center;justify-content:center;gap:8px;' +
     'background:var(--dark);border:1.5px solid var(--blue);border-radius:12px;padding:12px 16px;' +
     'color:var(--blue);font-family:\'Vazirmatn\',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">' +
     '🗂️ جدول‌های آرشیو این حساب — ' + n2fa(n) + ' جدول ↗</button>';
+}
+/* باز/بستهٔ کادرِ «جدول‌های آرشیو» — مو‌به‌مو مثل pmTogglePct، با همان رفتار و
+   همان ظاهر. خودِ صفحهٔ آرشیو با زدنِ کادرِ داخلش باز می‌شود. */
+function pmToggleArc(force) {
+  const box = document.getElementById('pm-arc-box');
+  if (!box) return;
+  const on = (force == null) ? !box.classList.contains('open') : !!force;
+  box.classList.toggle('open', on);
+  const btn = document.getElementById('pm-arc-toggle');
+  if (btn) btn.classList.toggle('on', on);
+  const caret = document.getElementById('pm-arc-caret');
+  if (caret) caret.textContent = on ? '▴' : '▾';
 }
 function openPersonArchive() {
   const person = _curPerson(); if (!person) return;
@@ -29644,6 +29730,34 @@ function _renderHistoryPanel(person) {
   /* ردیف‌های خودکارِ «رسید/فیصدی» بعد از ساخته‌شدنِ جدول‌ها گذاشته می‌شوند —
      همان کاری که جدولِ زنده با _renderRasidLog می‌کند. */
   history.forEach(h => { try { _histRenderAutoRows(person, pid, h); } catch (e) {} });
+  /* ── عرضِ ستون‌ها همین‌جا، پیش از اولین رسمِ فریم ─────────────────────────────
+     گزارشِ صاحب ریپو: «جدولِ آرشیو باگ دارد — اول بزرگ می‌شود بعد برای صدمِ
+     ثانیه‌ای همان‌اندازه می‌شود، انگار برنامه خراب باشد.»
+     ریشه: عرضِ ذخیره‌شدهٔ ستون‌ها را ناظرِ سراسری اعمال می‌کند و آن ناظر عمداً
+     با مکث (۱۵۰ms + وقتِ بیکاری) کار می‌کند تا حینِ تایپ کندی نسازد. پس جدولِ
+     تازه‌ساختهٔ آرشیو یک لحظه با عرضِ پیش‌فرضِ خودش دیده می‌شد و بعد می‌پرید.
+     حالا دقیقاً مثل جدولِ اصلی (که openPersonModal همان لحظه صدایش می‌زند)
+     همین‌جا و بی‌مکث اندازه می‌گیرد، پس هیچ پرشی دیده نمی‌شود. */
+  const _sizeCols = () => {
+    try {
+      if (typeof makeTableResizable !== 'function') return;
+      wrap.querySelectorAll('table.xls-tbl').forEach(t => {
+        makeTableResizable(t, t.getAttribute('data-colw-key') || 'pm');
+        if (typeof _applySavedColWidths === 'function') _applySavedColWidths(t);
+      });
+      // اندازهٔ فونتِ A+/A− هم همین‌جا اعمال شود، نه ۱۵۰ میلی‌ثانیه بعد به‌دستِ
+      // ناظرِ سراسری — وگرنه نوشته‌های جدولِ آرشیو یک لحظه ریز می‌آیند و بعد
+      // بزرگ می‌شوند (همان «اول بزرگ/کوچک می‌شود»ی که گزارش شد)
+      if (typeof _modalFontScale !== 'undefined' && _modalFontScale !== 1 && typeof adjModalFont === 'function') adjModalFont(0);
+    } catch (e) {}
+  };
+  _sizeCols();
+  /* یک‌بار دیگر در همان فریم: وقتی این تابع از خودِ openPersonArchive صدا زده
+     می‌شود، صفحهٔ آرشیو همان لحظه باز شده و پهنای نهاییِ خودش را هنوز ندارد؛
+     اندازه‌گیریِ اول با پهنای گذرا انجام می‌شود. requestAnimationFrame پیش از
+     نخستین رسمِ همان فریم اجرا می‌شود، پس اندازهٔ درست می‌نشیند بی‌آنکه چشم
+     چیزی ببیند. (با setTimeout همان پرشِ گزارش‌شده برمی‌گشت.) */
+  try { requestAnimationFrame(_sizeCols); } catch (e) {}
 }
 /* ═══ رسید و فیصدیِ سربرگ، داخلِ خودِ جدولِ آرشیو ══════════════════════════════
    گزارشِ صاحب ریپو: «رسیدی که در سربرگ می‌زنم، داخلِ جدولِ آرشیو نمی‌آید — مثل
@@ -42408,7 +42522,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.301';
+const APP_VERSION = '2.9.302';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -50831,6 +50945,12 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
    مو‌به‌مو همان قبلی است. */
 #pm-pct-row{ display:none; grid-template-columns:1fr 1fr 1fr; gap:4px; }
 #pm-pct-row.open{ display:grid; }
+/* کادرِ «جدول‌های آرشیو» هم دقیقاً همین رفتار را دارد (خواستهٔ صاحب ریپو:
+   «مثل فیصدی باشد؛ بزنم بیاید و بزنم برود پنهان شود») */
+#pm-arc-box{ display:none; }
+#pm-arc-box.open{ display:block; }
+#pm-arc-toggle.on{ border-color:var(--blue); color:var(--blue); background:var(--dark); }
+#pm-arc-toggle,
 #pm-pct-toggle{
   flex-shrink:0; white-space:nowrap; cursor:pointer; box-sizing:border-box;
   border:1px solid var(--border); border-radius:7px; padding:6px 10px;
