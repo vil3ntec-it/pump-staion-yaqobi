@@ -16053,8 +16053,16 @@ table thead th:first-child .col-resize-grip{ display:none; }
   display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2;
   overflow:hidden; width:100%; text-align:center;
 }
-.person-card .pname.long{ font-size:1.15rem; }
-.person-card .pname.xlong{ font-size:0.95rem; }
+/* ⚠️ همهٔ نام‌ها یک اندازه ─────────────────────────────────────────────────
+   گزارشِ صاحب ریپو: «نام شرکت‌ها در هدرها اندازهٔ یکسانی ندارند؛ بعضی بزرگ‌تر و
+   بعضی کوچک‌تر.» پیش از این نامِ بلندتر عمداً ریزتر می‌شد تا کامل جا شود، ولی
+   نتیجه‌اش کارت‌هایی با فونت‌های ناهمگون بود. حالا هر سه کلاس یک اندازه‌اند —
+   یعنی نامِ همهٔ حساب‌ها و شرکت‌ها دقیقاً هم‌فونت و هم‌تراز است. اندازه طوری
+   انتخاب شده که نام‌های معمول در همان دو خطِ رزروشده جا شوند؛ نامِ خیلی بلند با
+   «…» کوتاه می‌شود و کاملش در title می‌ماند. */
+.person-card .pname,
+.person-card .pname.long,
+.person-card .pname.xlong{ font-size:1.15rem; }
 .person-card .pcard-foot{
   margin-top:auto !important;
   width:100%; box-sizing:border-box;
@@ -16065,11 +16073,53 @@ table thead th:first-child .col-resize-grip{ display:none; }
   display:flex; gap:10px; justify-content:center; align-items:center;
   font-size:0.95rem; font-weight:700; min-height:1.5em;
 }
+/* ── کادر و صفحهٔ یادداشت‌ها ────────────────────────────────────────────────
+   دکمهٔ «یادداشت‌های این بخش» در همهٔ بخش‌ها یک شکل است؛ صفحه‌اش هم یکی است. */
+.sec-note-btn{
+  width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:10px 13px; border-radius:10px; cursor:pointer;
+  background:var(--card); border:1.5px dashed var(--border); color:var(--txt);
+  font-family:'Vazirmatn',sans-serif; font-size:0.86rem; font-weight:700;
+}
+.sec-note-btn:hover{ border-color:var(--accent); color:var(--accent); }
+.sec-note-count{
+  min-width:22px; padding:1px 8px; border-radius:999px;
+  background:var(--accent); color:#1a1102; font-size:0.76rem; font-weight:900;
+}
+.sec-note-count:empty{ display:none; }
+.notes-add{ margin-bottom:14px; }
+.notes-list{ display:flex; flex-direction:column; gap:8px; }
+.note-card{
+  background:var(--card); border:1.5px solid var(--border); border-radius:11px;
+  padding:10px 12px; display:flex; align-items:flex-start; gap:10px;
+}
+.note-card .nc-body{ flex:1; min-width:0; }
+.note-card .nc-txt{
+  font-size:0.92rem; font-weight:700; color:var(--txt); line-height:1.9;
+  white-space:pre-wrap; overflow-wrap:anywhere;
+}
+.note-card .nc-at{ font-size:0.7rem; color:var(--muted); font-weight:700; margin-top:5px; }
+.note-card .nc-del{
+  flex:0 0 auto; background:transparent; border:1px solid var(--border); border-radius:8px;
+  color:var(--red); cursor:pointer; padding:4px 9px; font-size:0.82rem; font-family:'Vazirmatn',sans-serif;
+}
+.note-card .nc-del:hover{ background:var(--red); color:#fff; border-color:var(--red); }
+.notes-empty{ text-align:center; padding:26px 10px; color:var(--muted); font-size:0.88rem; font-weight:700; }
+/* ── نوارِ اسکرول زیرِ نوارِ پایین/تب‌ها نرود ─────────────────────────────────
+   گزارشِ صاحب ریپو: «نوار اسکرول ... به زیر تب‌ها و نوار پایینیِ کامپیوتر
+   می‌رود.» دو کار می‌کند:
+   ۱) پایینِ هر بخش فضای خالی می‌گیرد تا آخرین ردیف/نوارِ اسکرولِ افقیِ جدول
+      زیرِ دکمه‌های شناورِ کفِ صفحه (ماشین‌حساب/ربات/چت) گم نشود.
+   ۲) جای نوارِ اسکرولِ عمودی همیشه رزرو می‌ماند (scrollbar-gutter)، پس با
+      آمدن و رفتنش چیدمان یک پیکسل هم نمی‌پرد. */
+.section{ padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+.tbl-wrap, .xls-wrap{ scrollbar-gutter: stable; }
 @media (max-width:480px){
   .person-card{ padding-top:36px !important; }
-  .person-card .pname{ font-size:1.25rem; min-height:56px; }
-  .person-card .pname.long{ font-size:1.05rem; }
-  .person-card .pname.xlong{ font-size:0.9rem; }
+  .person-card .pname,
+  .person-card .pname.long,
+  .person-card .pname.xlong{ font-size:1.05rem; }
+  .person-card .pname{ min-height:56px; }
 }
 
 /* ── زنگ اعلان‌ها و فهرستِ خبرها (سرویسِ اعلانِ سرور خانگی) ─────────────── */
@@ -17592,8 +17642,7 @@ body.boot-viewer #bootViewerSplash{
     <div style="padding:12px" id="log-reports-container"></div>
   </div>
   <div class="sec-note-box" style="padding:0 2px 12px">
-    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
-    <textarea id="secnote-shifts" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('shifts', this.value)"></textarea>
+    <button type="button" class="sec-note-btn" onclick="openNotes('shifts')"><span>📝 یادداشت‌های این بخش</span><span class="sec-note-count" id="secnote-n-shifts"></span></button>
   </div>
 </div>
 <div class="section" id="sec-shifts-diesel">
@@ -17718,8 +17767,7 @@ body.boot-viewer #bootViewerSplash{
     <div style="padding:12px" id="log-diesel-container"></div>
   </div>
   <div class="sec-note-box" style="padding:0 2px 12px">
-    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
-    <textarea id="secnote-shifts-diesel" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('shifts-diesel', this.value)"></textarea>
+    <button type="button" class="sec-note-btn" onclick="openNotes('shifts-diesel')"><span>📝 یادداشت‌های این بخش</span><span class="sec-note-count" id="secnote-n-shifts-diesel"></span></button>
   </div>
 </div>
 
@@ -17748,8 +17796,7 @@ body.boot-viewer #bootViewerSplash{
     <button class="add-row-btn" style="border-color:var(--green);color:var(--green)" onclick="pdfStorage('petrol')">📄 PDF مخزن پطرول</button>
   </div>
   <div class="sec-note-box" style="padding:0 2px 12px">
-    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
-    <textarea id="secnote-storage" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('storage', this.value)"></textarea>
+    <button type="button" class="sec-note-btn" onclick="openNotes('storage')"><span>📝 یادداشت‌های این بخش</span><span class="sec-note-count" id="secnote-n-storage"></span></button>
   </div>
 </div>
 
@@ -17776,8 +17823,7 @@ body.boot-viewer #bootViewerSplash{
     <button class="add-row-btn" style="border-color:#276749;color:#276749" onclick="pdfStorage('diesel')">📄 PDF مخزن دیزل</button>
   </div>
   <div class="sec-note-box" style="padding:0 2px 12px">
-    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
-    <textarea id="secnote-storage-diesel" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('storage-diesel', this.value)"></textarea>
+    <button type="button" class="sec-note-btn" onclick="openNotes('storage-diesel')"><span>📝 یادداشت‌های این بخش</span><span class="sec-note-count" id="secnote-n-storage-diesel"></span></button>
   </div>
 </div>
 
@@ -17923,8 +17969,7 @@ body.boot-viewer #bootViewerSplash{
     </div>
   </div>
   <div class="sec-note-box" style="padding:10px 2px 12px">
-    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
-    <textarea id="secnote-debtrasid" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('debtrasid', this.value)"></textarea>
+    <button type="button" class="sec-note-btn" onclick="openNotes('debtrasid')"><span>📝 یادداشت‌های این بخش</span><span class="sec-note-count" id="secnote-n-debtrasid"></span></button>
   </div>
 </div>
 
@@ -17965,8 +18010,7 @@ body.boot-viewer #bootViewerSplash{
     </div>
   </div>
   <div class="sec-note-box" style="padding:10px 2px 12px">
-    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
-    <textarea id="secnote-debtsum" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('debtsum', this.value)"></textarea>
+    <button type="button" class="sec-note-btn" onclick="openNotes('debtsum')"><span>📝 یادداشت‌های این بخش</span><span class="sec-note-count" id="secnote-n-debtsum"></span></button>
   </div>
 </div>
 
@@ -18004,8 +18048,7 @@ body.boot-viewer #bootViewerSplash{
     </div>
   </div>
   <div class="sec-note-box" style="padding:10px 2px 12px">
-    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
-    <textarea id="secnote-debtsummoney" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('debtsummoney', this.value)"></textarea>
+    <button type="button" class="sec-note-btn" onclick="openNotes('debtsummoney')"><span>📝 یادداشت‌های این بخش</span><span class="sec-note-count" id="secnote-n-debtsummoney"></span></button>
   </div>
 </div>
 
@@ -18091,8 +18134,7 @@ body.boot-viewer #bootViewerSplash{
     </div>
   </div>
   <div class="sec-note-box" style="padding:10px 2px 12px">
-    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
-    <textarea id="secnote-chakana" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('chakana', this.value)"></textarea>
+    <button type="button" class="sec-note-btn" onclick="openNotes('chakana')"><span>📝 یادداشت‌های این بخش</span><span class="sec-note-count" id="secnote-n-chakana"></span></button>
   </div>
 </div>
 
@@ -18135,8 +18177,7 @@ body.boot-viewer #bootViewerSplash{
     </div>
   </div>
   <div class="sec-note-box" style="padding:10px 2px 12px">
-    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
-    <textarea id="secnote-expenses" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('expenses', this.value)"></textarea>
+    <button type="button" class="sec-note-btn" onclick="openNotes('expenses')"><span>📝 یادداشت‌های این بخش</span><span class="sec-note-count" id="secnote-n-expenses"></span></button>
   </div>
   <!-- کادرهای «ردیف جدید / چندتایی» طبقِ خواستهٔ صاحب ریپو از سربرگ آمدند پایینِ
        توضیحات، تا سربرگ شلوغ نباشد و دستِ آدم موقعِ کار به آن‌ها نخورد. -->
@@ -18177,8 +18218,7 @@ body.boot-viewer #bootViewerSplash{
     </div>
   </div>
   <div class="sec-note-box" style="padding:10px 2px 12px">
-    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
-    <textarea id="secnote-rasid" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('rasid', this.value)"></textarea>
+    <button type="button" class="sec-note-btn" onclick="openNotes('rasid')"><span>📝 یادداشت‌های این بخش</span><span class="sec-note-count" id="secnote-n-rasid"></span></button>
   </div>
   <!-- کادرهای «ردیف جدید / چندتایی» طبقِ خواستهٔ صاحب ریپو از سربرگ آمدند پایینِ
        توضیحات، تا سربرگ شلوغ نباشد و دستِ آدم موقعِ کار به آن‌ها نخورد. -->
@@ -18468,8 +18508,7 @@ body.boot-viewer #bootViewerSplash{
     </div>
   </div>
   <div class="sec-note-box" style="padding:10px 2px 12px">
-    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
-    <textarea id="secnote-safe" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('safe', this.value)"></textarea>
+    <button type="button" class="sec-note-btn" onclick="openNotes('safe')"><span>📝 یادداشت‌های این بخش</span><span class="sec-note-count" id="secnote-n-safe"></span></button>
   </div>
   <!-- کادرهای «ردیف جدید / چندتایی» طبقِ خواستهٔ صاحب ریپو از سربرگ آمدند پایینِ
        توضیحات، تا سربرگ شلوغ نباشد و دستِ آدم موقعِ کار به آن‌ها نخورد. -->
@@ -18599,8 +18638,7 @@ body.boot-viewer #bootViewerSplash{
     </div>
   </div>
   <div class="sec-note-box" style="padding:10px 2px 12px">
-    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
-    <textarea id="secnote-sarrafi" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('sarrafi', this.value)"></textarea>
+    <button type="button" class="sec-note-btn" onclick="openNotes('sarrafi')"><span>📝 یادداشت‌های این بخش</span><span class="sec-note-count" id="secnote-n-sarrafi"></span></button>
   </div>
   <!-- کادرهای «ردیف جدید / چندتایی» طبقِ خواستهٔ صاحب ریپو از سربرگ آمدند پایینِ
        توضیحات، تا سربرگ شلوغ نباشد و دستِ آدم موقعِ کار به آن‌ها نخورد. -->
@@ -19338,8 +19376,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
   </div>
   <div id="hc-cards"></div>
   <div class="sec-note-box" style="padding:0 2px 12px">
-    <div style="font-size:0.72rem;color:var(--muted);font-weight:700;margin-bottom:4px">📝 توضیحات این بخش</div>
-    <textarea id="secnote-history" class="note-field" placeholder="یادداشت شما..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateSectionNote('history', this.value)"></textarea>
+    <button type="button" class="sec-note-btn" onclick="openNotes('history')"><span>📝 یادداشت‌های این بخش</span><span class="sec-note-count" id="secnote-n-history"></span></button>
   </div>
 </div>
 
@@ -20347,6 +20384,29 @@ body.viewer-mode .inv-admin-only{display:none!important}
 
 <!-- COMPANY ARCHIVE MODAL — صفحهٔ جداگانهٔ جدول‌های آرشیو (پطرول یا دیزل).
      قبلاً آرشیو زیرِ جدولِ اصلی پهن می‌شد؛ حالا مثل «خریدها» یک صفحهٔ کامل است. -->
+<!-- ═══ صفحهٔ یادداشت‌های هر بخش ═══════════════════════════════════════════════
+     خواستهٔ صاحب ریپو: «توضیحاتِ همهٔ بخش‌ها به یادداشت تبدیل شود؛ برای هر بخش
+     یک کادرِ جدا که با باز شدن در یک صفحهٔ جدا نشان داده شود؛ چند یادداشت بشود
+     ثبت کرد و هرکدام را جدا حذف کرد؛ و برای همهٔ بخش‌ها یکسان باشد.»
+     یک صفحه برای همهٔ بخش‌ها ساخته شده (نه یکی برای هر بخش) تا رفتار و ظاهرشان
+     هرگز از هم جدا نیفتد؛ کلیدِ بخش موقعِ باز شدن به آن داده می‌شود. -->
+<div class="modal-overlay" id="notesModal">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-head">
+      <h2 id="notes-title">📝 یادداشت‌ها</h2>
+      <button class="modal-close" onclick="closeNotes()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="notes-add">
+        <textarea id="notes-input" class="note-field" rows="3" placeholder="یادداشت تازه بنویسید…"
+          style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:8px 11px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:vertical;box-sizing:border-box"></textarea>
+        <button type="button" class="add-btn" style="margin-top:8px" onclick="addNote()">➕ ثبت یادداشت</button>
+      </div>
+      <div id="notes-list" class="notes-list"></div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="companyArchiveModal">
   <div class="modal">
     <div class="modal-head" style="gap:10px;flex-wrap:wrap">
@@ -41968,7 +42028,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.298';
+const APP_VERSION = '2.9.299';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -43174,17 +43234,102 @@ function loadSecFonts() {
 }
 
 // ========== یادداشتِ آزاد هر بخش (زیر جدول‌ها) — هر بخش یادداشت خودش را دارد ==========
-const SECTION_NOTE_KEYS = ['shifts','shifts-diesel','storage','storage-diesel','debtrasid','debtsum','expenses','rasid','safe','sarrafi'];
-function updateSectionNote(key, value) {
+/* ══ یادداشت‌های هر بخش ═══════════════════════════════════════════════════════
+   پیش از این هر بخش یک «توضیحات» داشت: یک کادرِ متنیِ تک‌خطی که فقط *یک* متن
+   نگه می‌داشت و هر بار روی قبلی نوشته می‌شد. خواستهٔ صاحب ریپو: چند یادداشت،
+   هرکدام جدا قابلِ حذف، در یک صفحهٔ جدا، و برای همهٔ بخش‌ها یکسان.
+
+   شکلِ داده: DB.sectionNotes[key] از «رشته» به «آرایه‌ای از {id,t,at}» تبدیل شد.
+   ⚠️ مهاجرت خودکار و بی‌خطر است: متنِ قدیمیِ هر بخش به‌عنوان اولین یادداشتِ
+   همان بخش می‌ماند، پس هیچ نوشته‌ای از بین نمی‌رود. */
+const SECTION_NOTE_KEYS = ['shifts','shifts-diesel','storage','storage-diesel','debtrasid','debtsum','debtsummoney','chakana','expenses','rasid','safe','sarrafi','history'];
+const SECTION_NOTE_TITLES = {
+  'shifts':'ورق پطرول', 'shifts-diesel':'ورق دیزل', 'storage':'مخزن پطرول',
+  'storage-diesel':'مخزن دیزل', 'debtrasid':'رسید قرض‌داران', 'debtsum':'خلاصهٔ تیل',
+  'debtsummoney':'خلاصهٔ پول', 'chakana':'چکنه', 'expenses':'مصارف',
+  'rasid':'رسید پارچه‌ها', 'safe':'گاوصندوق', 'sarrafi':'صرافی', 'history':'تاریخچه'
+};
+function _noteList(key) {
   if (!DB.sectionNotes) DB.sectionNotes = {};
-  DB.sectionNotes[key] = value;
-  save();
+  let v = DB.sectionNotes[key];
+  // مهاجرتِ یک‌باره: «توضیحاتِ» قدیمی (یک رشته) → اولین یادداشت
+  if (typeof v === 'string') {
+    const t = v.trim();
+    v = t ? [{ id: 'n' + Date.now() + Math.random().toString(36).slice(2, 6), t, at: '' }] : [];
+    DB.sectionNotes[key] = v;
+  }
+  if (!Array.isArray(v)) { v = []; DB.sectionNotes[key] = v; }
+  return v;
 }
+/* برای سازگاری با هر مسیرِ قدیمی که هنوز صدایش می‌زند — به‌جای بازنویسیِ همه‌چیز،
+   یک یادداشتِ تازه اضافه می‌کند. */
+function updateSectionNote(key, value) {
+  const t = (value || '').trim();
+  if (!t) return;
+  _noteList(key).push({ id: 'n' + Date.now() + Math.random().toString(36).slice(2, 6), t, at: (typeof persianDate === 'function' ? persianDate() : '') });
+  save(); _loadSectionNotes();
+}
+let _notesKey = '';
+function openNotes(key) {
+  _notesKey = key;
+  const ttl = document.getElementById('notes-title');
+  if (ttl) ttl.textContent = '📝 یادداشت‌های ' + (SECTION_NOTE_TITLES[key] || 'این بخش');
+  const inp = document.getElementById('notes-input');
+  if (inp) inp.value = '';
+  _renderNotes();
+  const ov = document.getElementById('notesModal');
+  if (ov) ov.classList.add('open');
+  setTimeout(() => { try { inp && inp.focus(); } catch (e) {} }, 80);
+}
+function closeNotes() {
+  const ov = document.getElementById('notesModal');
+  if (ov) ov.classList.remove('open');
+  _notesKey = '';
+}
+function _renderNotes() {
+  const box = document.getElementById('notes-list');
+  if (!box) return;
+  const list = _noteList(_notesKey);
+  if (!list.length) {
+    box.innerHTML = '<div class="notes-empty">هنوز یادداشتی ثبت نشده — بالا بنویسید و «ثبت یادداشت» را بزنید.</div>';
+    return;
+  }
+  // تازه‌ترین بالا
+  box.innerHTML = list.slice().reverse().map(n =>
+    '<div class="note-card"><div class="nc-body"><div class="nc-txt">' + escFa(n.t) + '</div>' +
+    (n.at ? '<div class="nc-at">🗓️ ' + escFa(n.at) + '</div>' : '') +
+    '</div><button type="button" class="nc-del" title="حذف این یادداشت" onclick="deleteNote(\'' + n.id + '\')">🗑️</button></div>'
+  ).join('');
+}
+function addNote() {
+  const inp = document.getElementById('notes-input');
+  const t = ((inp && inp.value) || '').trim();
+  if (!t) { try { showToast('اول یادداشت را بنویسید', '#d97706'); } catch (e) {} return; }
+  _noteList(_notesKey).push({
+    id: 'n' + Date.now() + Math.random().toString(36).slice(2, 6), t,
+    at: (typeof persianDate === 'function' ? persianDate() : '')
+  });
+  if (inp) inp.value = '';
+  save(); _renderNotes(); _loadSectionNotes();
+  try { showToast('📝 یادداشت ثبت شد', '#38a169'); } catch (e) {}
+}
+function deleteNote(id) {
+  const list = _noteList(_notesKey);
+  const i = list.findIndex(n => n && n.id === id);
+  if (i < 0) return;
+  if (!confirm('این یادداشت حذف شود؟')) return;
+  list.splice(i, 1);
+  save(); _renderNotes(); _loadSectionNotes();
+  try { showToast('🗑️ یادداشت حذف شد', '#e53e3e'); } catch (e) {}
+}
+/* شمارندهٔ روی دکمهٔ هر بخش */
 function _loadSectionNotes() {
   if (!DB.sectionNotes) DB.sectionNotes = {};
   SECTION_NOTE_KEYS.forEach(key => {
-    const el = document.getElementById('secnote-' + key);
-    if (el && document.activeElement !== el) el.value = DB.sectionNotes[key] || '';
+    const el = document.getElementById('secnote-n-' + key);
+    if (!el) return;
+    const n = _noteList(key).length;
+    el.textContent = n ? n2fa(n) : '';
   });
 }
 
@@ -50315,68 +50460,23 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
 </style>
 
 <style id="table-scroll-fix">
-/* ══════════════════════════════════════════════════════════════════════════
-   جدول‌های بلند: اسکرولِ داخلیِ خودشان + سربرگِ چسبان
-   ──────────────────────────────────────────────────────────────────────────
-   گزارشِ صاحب ریپو: در بخش‌های جدولی (صرافی، مصارف، گاوصندوق، چکنه، رسید …)
-   وقتی ماهی ده‌ها یا صدها ردیف دارد، هیچ‌چیز «داخلِ» جدول اسکرول نمی‌شود —
-   کلِ صفحه راه می‌افتد، سربرگِ ستون‌ها («#»، «تاریخ»، «مبلغ» …) از بالا بیرون
-   می‌رود و ردیفِ جمع هم دیده نمی‌شود؛ یعنی وسطِ جدول معلوم نیست هر ستون چیست.
+/* ⚠️ برداشته شد — خواستهٔ صریحِ صاحب ریپو ─────────────────────────────────────
+   «در صرافی، مصارف، رسید پارچه‌ها و گاوصندوق وقتی موس روی جدول است فقط خودِ
+   جدول اسکرول می‌شود و صفحه نه؛ جدول‌ها فقط ~۱۴ کادر نشان می‌دهند؛ سرستون‌ها
+   به‌هم می‌ریزند. همه را مثل جدول‌های شرکت‌ها و قرض‌داران کن.»
 
-   درمان (بدونِ هیچ دستکاری در منطق): کادرِ دورِ جدول وقتی محتوایش از یک قدِ
-   معقول بلندتر شد، خودش ظرفِ اسکرول می‌شود؛ آن‌وقت سربرگ بالا و ردیفِ جمع
-   پایین می‌چسبند و ردیف‌ها زیرشان می‌لغزند. هیچ ردیفی حذف/فیلتر/صفحه‌بندی
-   نمی‌شود — همهٔ ردیف‌های همان ماه سرِ جایشان‌اند، فقط داخلِ کادر دیده می‌شوند.
-
-   ⚠️ چرا کلاسِ tw-tall/tw-scroll و نه یک قاعدهٔ CSSِ سرراست روی هر جدول؟
-   پایین‌تر (بلاکِ «تکه‌های نقاشی‌نشدهٔ جدول‌ها روی اندروید») مستند شده که روی
-   لمسی، position:sticky روی سرستون‌ها کاشی‌های نیمه‌رسم‌شده می‌ساخت. ریشهٔ آن
-   باگ این بود که ظرفِ جدول هیچ‌وقت ارتفاعِ محدود نداشت، پس آن sticky کاملاً
-   بی‌اثر بود ولی مرورگر برایش لایهٔ چسبنده می‌ساخت. این‌جا sticky فقط روی
-   جدولی روشن می‌شود که واقعاً اسکرول می‌شود (اسکریپتِ زیر با اندازه‌گیری
-   تصمیم می‌گیرد) — یعنی همان گاردِ اندرویدی برای جدول‌های کوتاه دست‌نخورده
-   می‌ماند و هیچ لایهٔ چسبندهٔ بی‌اثری ساخته نمی‌شود.
-   ══════════════════════════════════════════════════════════════════════════ */
-:root{ --tbl-maxh: min(70vh, 720px); }
-
-/* ۱) کاندیدِ اسکرولِ داخلی: قدش محدود می‌شود. جدولِ کوتاه‌تر از این قد هیچ
-      تغییری نمی‌کند (max-height فقط وقتی معنی دارد که محتوا بلندتر باشد). */
-.section .tbl-wrap.tw-tall,
-.section .xls-wrap.tw-tall{
-  max-height: var(--tbl-maxh) !important;
-  overflow-y: auto !important;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* ۲) و وقتی واقعاً اسکرول می‌شود: به انتهای جدول که رسیدیم صفحه پشتِ سرش
-      نلغزد (خواستهٔ صریح: «تمام صفحه میره اسکرول میشه»). فقط روی همین
-      جدول‌های واقعاً اسکرول‌شونده — پس زنجیرِ چرخِ ماوس روی جدول‌های کوتاه
-      مثل قبل به صفحه می‌رسد و باگِ قدیمیِ دسکتاپ برنمی‌گردد. */
-.section .tbl-wrap.tw-scroll,
-.section .xls-wrap.tw-scroll{
-  overscroll-behavior-y: contain;
-}
-
-/* ۳) سربرگِ ستون‌ها بالا بچسبد — با border-collapse:collapse مرزِ سلولِ چسبان
-      گاهی رسم نمی‌شود، پس خطِ زیرش را با inset box-shadow می‌کشیم. */
-.section .tbl-wrap.tw-scroll thead th,
-.section .xls-wrap.tw-scroll thead th,
-.section .tbl-wrap.tw-scroll .tbl th,
-.section .xls-wrap.tw-scroll .xls-tbl th{
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 6 !important;
-  box-shadow: inset 0 -2px 0 0 var(--lg-brd, var(--border)) !important;
-}
-
-/* ۴) ردیفِ جمع («تمام حساب» / «جمله») پایین بچسبد تا همیشه دیده شود */
-.section .tbl-wrap.tw-scroll tfoot td,
-.section .xls-wrap.tw-scroll tfoot td{
-  position: sticky !important;
-  bottom: 0 !important;
-  z-index: 6 !important;
-  box-shadow: inset 0 2px 0 0 var(--lg-brd, var(--border)) !important;
-}
+   این‌جا قبلاً کادرِ دورِ جدول، بالای ۸ ردیف، خودش یک «ظرفِ اسکرول» با سقفِ قد
+   min(70vh,720px) می‌شد و سرستون/فوتر داخلش sticky می‌شدند. هر سهٔ شکایت از
+   همین یک مکانیزم می‌آمد:
+     • ظرفِ اسکرول + overscroll-behavior:contain ⇒ چرخِ ماوس روی جدول به صفحه
+       نمی‌رسید و باید موس را از روی جدول بیرون می‌بردی.
+     • سقفِ قد ⇒ همان «فقط ۱۴ کادر دیده می‌شود».
+     • لایهٔ sticky ⇒ جابه‌جا شدن/خراب شدنِ سرستون‌ها هنگام اسکرول و افزودنِ ردیف.
+   جدول‌های شرکت‌ها و قرض‌داران (که مرجعِ خواسته‌اند) داخلِ مودال‌اند و اصلاً این
+   کلاس‌ها را نمی‌گرفتند — برای همین آن‌ها درست بودند.
+   حالا این بخش‌ها هم مثل آن‌ها: جدول به‌اندازهٔ محتوایش بلند می‌شود و خودِ صفحه
+   اسکرول می‌کند. هیچ ردیفی حذف/صفحه‌بندی نمی‌شود و هیچ منطقی عوض نشده.
+   ⚠️ tw-tall/tw-scroll را برنگردانید. */
 
 /* ۵) چاپ/PDF هیچ‌وقت بریده نشود (نسخه‌های چاپی پنجرهٔ جدا دارند، ولی این
       گارد جلوی هر مسیرِ چاپِ مستقیم را هم می‌گیرد) */
@@ -50468,64 +50568,25 @@ select:not(.native-sel){
    شناسه یا داده‌ای را لمس نمی‌کند. */
 (function () {
   'use strict';
-  /* زیرِ این تعداد ردیف اصلاً کاندید نمی‌شود — تا برای جدول‌های کوتاه حتی یک
-     اندازه‌گیریِ اضافه هم انجام نشود. */
-  var MIN_ROWS = 8;
-  /* آستانهٔ سرریز: نوارِ اسکرولِ افقی روی دسکتاپ چند پیکسل از clientHeight کم
-     می‌کند؛ با این حاشیه، جدولِ کوتاه به اشتباه «اسکرول‌شونده» شمرده نمی‌شود. */
-  var OVERFLOW_SLACK = 24;
-  var pending = 0;
-
-  function sync() {
-    pending = 0;
-    var sec = document.querySelector('.section.visible');
-    if (!sec) return;
-    var wraps = sec.querySelectorAll('.tbl-wrap, .xls-wrap');
-    if (!wraps.length) return;
-    var i, w;
-    // مرحلهٔ ۱ — فقط نوشتن (بدونِ خواندنِ چیدمان)
-    for (i = 0; i < wraps.length; i++) {
-      w = wraps[i];
-      if (w.querySelectorAll('tbody tr').length >= MIN_ROWS) {
-        w.classList.add('tw-tall');
-      } else {
-        w.classList.remove('tw-tall');
-        w.classList.remove('tw-scroll');
-      }
-    }
-    // مرحلهٔ ۲ — فقط خواندن، بعد از همهٔ نوشتن‌ها (یک چیدمانِ اجباری، نه چندتا)
-    for (i = 0; i < wraps.length; i++) {
-      w = wraps[i];
-      if (!w.classList.contains('tw-tall')) continue;
-      w.classList.toggle('tw-scroll', w.scrollHeight > w.clientHeight + OVERFLOW_SLACK);
-    }
-  }
-
-  /* ⚠️ این تابع قد و scrollHeightِ همهٔ ظرف‌های جدول را می‌خوانَد، یعنی مرورگر را
-     مجبور به یک «چیدمانِ اجباریِ» کامل می‌کند. پیش از این با هر تغییرِ DOM در
-     همان فریم اجرا می‌شد — یعنی با هر کلیدی که تایپ می‌شد، روی یک سندِ ده‌ها
-     هزار عنصری. با مکثِ کوتاه، یک رگبارِ تایپ به یک اجرا تبدیل می‌شود و نتیجه
-     برای چشم هیچ فرقی ندارد. به requestAnimationFrameِ بی‌مکث برنگردانید. */
-  function schedule() {
-    if (pending) return;
-    pending = setTimeout(function () { pending = null; requestAnimationFrame(sync); }, 200);
-  }
-  window._tblScrollSync = schedule;
-
-  function boot() {
-    schedule();
-    /* هر رندرِ جدول در این برنامه یعنی عوض شدنِ فرزندانِ .main. تغییرِ کلاس
-       (که خودِ همین تابع انجام می‌دهد) childList نیست، پس حلقه نمی‌سازد. */
+  /* این نگهبان قبلاً کلاس‌های tw-tall/tw-scroll را می‌گذاشت و برای این کار،
+     با هر تغییرِ DOM قد و scrollHeightِ همهٔ جدول‌های بخشِ باز را می‌خواند —
+     یعنی مرورگر را مجبور به یک «چیدمانِ اجباریِ» کامل می‌کرد. آن مکانیزم به
+     خواستهٔ صاحب ریپو برداشته شد (توضیح در استایلِ table-scroll-fix)، پس این
+     اندازه‌گیری هم دیگر لازم نیست و برداشته شد — یک کارِ سنگینِ دیگر از مسیرِ
+     تایپ کم شد.
+     خودِ نام سرِ جایش می‌ماند تا اگر جایی هنوز صدایش می‌زند خطا ندهد، و
+     کلاس‌های جامانده از نشست‌های قبلی یک‌بار پاک می‌شوند. */
+  function cleanup() {
     try {
-      var root = document.querySelector('.main') || document.body;
-      new MutationObserver(schedule).observe(root, { childList: true, subtree: true });
+      document.querySelectorAll('.tw-tall, .tw-scroll').forEach(function (el) {
+        el.classList.remove('tw-tall');
+        el.classList.remove('tw-scroll');
+      });
     } catch (e) {}
-    window.addEventListener('resize', schedule);
-    window.addEventListener('orientationchange', schedule);
   }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
+  window._tblScrollSync = function () {};
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', cleanup);
+  else cleanup();
 })();
 </script>
 
