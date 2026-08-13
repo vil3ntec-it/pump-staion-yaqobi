@@ -18463,8 +18463,8 @@ body.boot-viewer #bootViewerSplash{
             <th>فی</th>
             <th style="min-width:90px">دالر</th>
             <th style="min-width:120px">رسید به صرافی</th>
-            <th>بردگی پمپ بنزین</th>
-            <th style="min-width:120px" title="الباقی از اولِ ماه تا همین ردیف — ردیفِ آخر همان عددِ «جمله»ی پایینِ جدول است">الباقی تا این ردیف</th>
+            <th>بردگی پمپ بنزین ($)</th>
+            <th style="min-width:120px" title="الباقیِ کلِ ماه — فقط یک عدد دارد و پایینِ همین ستون در ردیفِ «جمله» می‌آید">الباقی ($)</th>
             <th>حذف</th>
           </tr></thead>
           <tbody id="sarrafi-body"></tbody>
@@ -33882,7 +33882,7 @@ function renderSarrafi() {
       <td id="sarrafi-usd-${i}" style="font-weight:700;color:var(--blue);min-width:85px;font-size:0.92rem">${broken ? n2fa(broken.toFixed(2)) : '—'}</td>
       <td id="sarrafi-rasid-${i}" style="font-weight:700;color:var(--green);min-width:115px;font-size:0.92rem">${broken ? n2fa(broken.toFixed(2)) + ' $' : '—'}</td>
       <td><input class="xls-in sm" type="number" value="${r.bardagi||''}" placeholder="0" oninput="updateSarrafiRow(${i},'bardagi',this.value)"></td>
-      <td id="sarrafi-baqi-${i}" style="font-weight:700;min-width:115px;font-size:0.92rem">—</td>
+      <td style="min-width:115px"></td>
       <td><button class="del-btn" onclick="deleteSarrafiRow(${i})">🗑️</button></td>
     `;
     tbody.appendChild(tr);
@@ -33920,26 +33920,21 @@ function _sarrafiRepaint() {
     if (usdEl) usdEl.textContent = broken ? n2fa(broken.toFixed(2)) : '—';
     const rasidEl = document.getElementById('sarrafi-rasid-' + i);
     if (rasidEl) rasidEl.textContent = broken ? n2fa(broken.toFixed(2)) + ' $' : '—';
-    const baqiEl = document.getElementById('sarrafi-baqi-' + i);
-    if (baqiEl) {
-      /* ردیفِ کاملاً خالی (نه رسیدی، نه بردگی‌ای) چیزی به الباقی اضافه نمی‌کند،
-         پس تکرارِ همان عدد فقط شلوغی است — مثلِ ستون‌های دالر و رسید «—» می‌شود.
-         الباقیِ تجمعی خودش دست‌نخورده به ردیفِ بعدی می‌رسد. */
-      const emptyRow = !broken && !(parseFloat(r.bardagi) || 0);
-      baqiEl.textContent = emptyRow ? '—' : n2fa(Math.round(sumBaqi));
-      // هم‌رنگِ جملهٔ بالای جدول: مثبت = طلبِ پمپ (سبز)، منفی = بدهیِ پمپ (قرمز)
-      baqiEl.style.color = emptyRow ? 'var(--muted)' : (sumBaqi >= 0 ? 'var(--green)' : 'var(--red)');
-    }
+    /* ستونِ الباقی در خودِ ردیف‌ها هیچ عددی نمی‌گیرد — خواستهٔ صریحِ صاحب ریپو:
+       «تو این جدول‌ها هیچی نباشه». الباقی فقط یک عدد دارد و آن هم پایینِ جدول
+       (ردیفِ «جمله») و در کادرِ «الباقی پمپ نزد صرافی» است. */
   });
   const _set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   _set('sarrafi-total-usd', n2fa(sumUsd.toFixed(2)) + ' $');
-  _set('sarrafi-total-bardagi-usd', n2fa(Math.round(sumBardagi)));
+  // همهٔ عددهای این جدول دالرند (الباقی = رسیدِ دالری منهای بردگی)، پس علامتِ
+  // دالر روی بردگی و الباقی هم می‌آید — مثلِ ستون‌های دالر و رسید به صرافی.
+  _set('sarrafi-total-bardagi-usd', n2fa(Math.round(sumBardagi)) + ' $');
   _set('sarrafi-ft-usd', n2fa(sumUsd.toFixed(2)) + ' $');
   // ستونِ «رسید به صرافی» تا امروز هیچ جمعی نداشت (خانه‌اش در tfoot خالی بود).
   // همان عددِ ستونِ دالر است، چون هر دو «مبلغ ÷ فی» را نشان می‌دهند.
   _set('sarrafi-ft-rasid', n2fa(sumUsd.toFixed(2)) + ' $');
-  _set('sarrafi-ft-bardagi', n2fa(Math.round(sumBardagi)));
-  _set('sarrafi-ft-baqi', n2fa(Math.round(sumBaqi)));
+  _set('sarrafi-ft-bardagi', n2fa(Math.round(sumBardagi)) + ' $');
+  _set('sarrafi-ft-baqi', n2fa(Math.round(sumBaqi)) + ' $');
   _updateSarrafiSentence(sumBaqi);
   return { sumBardagi, sumBaqi, sumUsd, sumBardagiUsd };
 }
@@ -34120,8 +34115,6 @@ function printSarrafi() {
     const rate = parseFloat(r.rate) || 0;
     sumBardagi += parseFloat(r.bardagi)||0; sumBaqi += sarrafiBaqi(r); sumUsd += broken;
     sumBardagiUsd += rate ? (parseFloat(r.bardagi)||0) / rate : 0;
-    const baqi = sumBaqi;   // الباقیِ تجمعی — مثلِ خودِ جدولِ صفحه
-    const emptyRow = !broken && !(parseFloat(r.bardagi) || 0);
     return `<tr>
       <td style="text-align:center;color:#718096">${n2fa(i+1)}</td>
       <td style="font-weight:700;color:#c07700">${r.date||'—'}</td>
@@ -34131,8 +34124,8 @@ function printSarrafi() {
       <td>${n2fa(r.rate||0)}</td>
       <td style="color:#2b6cb0;font-weight:700">${broken ? n2fa(broken.toFixed(2))+' $' : '—'}</td>
       <td style="color:#2b6cb0;font-weight:700">${broken ? n2fa(broken.toFixed(2))+' $' : '—'}</td>
-      <td style="color:#276749">${n2fa(r.bardagi||0)}</td>
-      <td style="color:${emptyRow?'#718096':(baqi>=0?'#276749':'#e53e3e')};font-weight:800">${emptyRow?'—':n2fa(Math.round(baqi))}</td>
+      <td style="color:#276749">${(parseFloat(r.bardagi)||0) ? n2fa(r.bardagi) + ' $' : '—'}</td>
+      <td></td>
     </tr>`;
   }).join('');
   const sentence = sumBaqi >= 0
@@ -34156,13 +34149,17 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px}
 <div class="meta">تاریخ چاپ: ${d.sh} | ${d.mi}</div>
 <div class="sum-row">
   <div class="sum-box"><div class="l">💲 جمله دالر این ماه</div><div class="v">${n2fa(sumUsd.toFixed(2))} $</div></div>
-  <div class="sum-box"><div class="l">💵 جمله بردگی دالر این ماه</div><div class="v" style="color:#276749">${n2fa(sumBardagiUsd.toFixed(2))} $</div></div>
-  <div class="sum-box"><div class="l">🧮 جمله بردگی (افغانی)</div><div class="v" style="color:#276749">${n2fa(Math.round(sumBardagi))}</div></div>
+  <!-- دقیقاً همان دو کادرِ خودِ صفحه. قبلاً این‌جا دو کادرِ بردگی بود: یکی
+       «بردگی دالر» (بردگی ÷ فی) و یکی «بردگی (افغانی)». هر دو با حسابِ خودِ
+       برنامه جور نبودند — الباقی «رسیدِ دالری منهای بردگی» است، یعنی بردگی
+       از اول دالر است؛ پس تقسیم بر فی یک تبدیلِ دوباره بود و برچسبِ «افغانی»
+       هم غلط. حالا یک کادر، همان عددِ صفحه و همان واحد. -->
+  <div class="sum-box"><div class="l">💵 جمله بردگی این ماه</div><div class="v" style="color:#276749">${n2fa(Math.round(sumBardagi))} $</div></div>
 </div>
 <div class="albaqi">${sentence}</div>
-<table><thead><tr><th>#</th><th>تاریخ</th><th>توضیحات</th><th>مبلغ</th><th>واحد</th><th>فی</th><th>دالر</th><th>رسید به صرافی</th><th>بردگی پمپ بنزین</th><th>الباقی تا این ردیف</th></tr></thead>
+<table><thead><tr><th>#</th><th>تاریخ</th><th>توضیحات</th><th>مبلغ</th><th>واحد</th><th>فی</th><th>دالر</th><th>رسید به صرافی</th><th>بردگی پمپ بنزین ($)</th><th>الباقی ($)</th></tr></thead>
 <tbody>${rowsHtml||'<tr><td colspan="10" style="text-align:center;padding:20px;color:#718096">ردیفی نیست</td></tr>'}</tbody>
-<tfoot><tr><td colspan="6" style="text-align:left">جمله</td><td>${n2fa(sumUsd.toFixed(2))} $</td><td>${n2fa(sumUsd.toFixed(2))} $</td><td>${n2fa(Math.round(sumBardagi))}</td><td>${n2fa(Math.round(sumBaqi))}</td></tr></tfoot>
+<tfoot><tr><td colspan="6" style="text-align:left">جمله</td><td>${n2fa(sumUsd.toFixed(2))} $</td><td>${n2fa(sumUsd.toFixed(2))} $</td><td>${n2fa(Math.round(sumBardagi))} $</td><td>${n2fa(Math.round(sumBaqi))} $</td></tr></tfoot>
 </table>
 <div style="margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px">© پمپ یعقوبی — تمام حقوق محفوظ است · طراحی: vil3ntec</div>
 <script>window.onload=function(){window.print();}<\/script>
@@ -41389,7 +41386,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.291';
+const APP_VERSION = '2.9.292';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
