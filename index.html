@@ -507,8 +507,18 @@ body.staff-view .qr-overlay{z-index:10020}
 #companyModal,#companyPurchasesModal,#companyArchiveModal{padding:0;align-items:stretch}
 #companyModal .modal,#companyPurchasesModal .modal,#companyArchiveModal .modal{max-width:100%!important;width:100%!important;height:100vh!important;max-height:100vh!important;border-radius:0!important;border:none!important;box-shadow:none!important}
 #companyPurchasesModal .modal-body,#companyArchiveModal .modal-body{overflow-y:auto}
+/* ── صفحهٔ جدول‌های آرشیوِ قرض‌دار: دقیقاً مثل خودِ صفحهٔ حساب ────────────────
+   گزارشِ صاحب ریپو: «تو آرشیوِ جدول‌ها که می‌روم ضربدرش معلوم نیست، از آن‌جا
+   بیایم بیرون» و «طولِ کادرهای آرشیو با جدولِ اصلی یکی نیست».
+   ریشه: این صفحه تنها صفحه‌ای بود که تمام‌صفحه نشده بود — یک کادرِ ۸۲۰پیکسلیِ
+   وسطِ پرده که با بلند شدنِ محتوا سرش (و ✕ِ آن) از بالای پرده بیرون می‌زد.
+   حالا مثل حساب/شرکت تمام‌صفحه است: سربرگ ثابت می‌ماند و فقط بدنه اسکرول
+   می‌شود، پس ✕ همیشه سرِ جایش است و پهنای جدول‌ها هم با جدولِ اصلی یکی است. */
+#personArchiveModal{padding:0;align-items:stretch}
+#personArchiveModal .modal{max-width:100%!important;width:100%!important;height:100vh!important;max-height:100vh!important;border-radius:0!important;border:none!important;box-shadow:none!important}
+#personArchiveModal .modal-body{overflow-y:auto}
 /* صفحهٔ آرشیو و جستجوی خرید باید روی نمای اسکنِ کیوآر (z-index:10000) هم دیده شوند */
-#companyArchiveModal,#cmpSearchModal{z-index:10050}
+#companyArchiveModal,#cmpSearchModal,#personArchiveModal{z-index:10050}
 /* صفحهٔ «خریدهای پطرول/دیزل» از داخلِ صفحهٔ آرشیو هم باز می‌شود، پس باید بالاتر از
    خودِ آرشیو (10050) بنشیند — وگرنه باز می‌شد ولی پشتِ آرشیو می‌ماند و کاربر
    فکر می‌کرد دکمه کار نمی‌کند (باگِ گزارش‌شده). */
@@ -14708,15 +14718,23 @@ button:focus-visible,.nav-btn:focus-visible,a:focus-visible,input:focus-visible,
 /* Petrol & diesel accounts as full-width horizontal rectangles, with the
    4 stats (رسید / برد / فیصدی / الباقی) laid out in a single horizontal row. */
 /* حساب پطرول/دیزل — فشرده و کنار هم */
-#personModal .fuel-split{ grid-template-columns:1fr !important; padding:4px 10px !important; gap:4px !important; }
-#personModal .fs-group{ padding:4px 8px !important; }
-#personModal .fs-head{ font-size:0.85rem !important; font-weight:800 !important; margin-bottom:3px !important; }
-#personModal .fs-rows{ grid-template-columns:repeat(4,1fr) !important; gap:3px !important; }
+/* ⚠️ #personArchiveModal عمداً کنارِ #personModal در همهٔ این قاعده‌ها هست.
+   گزارشِ صاحب ریپو: «سربرگ‌های جدول‌های آرشیو افقی نیستند مثل جدول اصلی … در
+   آرشیو همه‌شان جاهای دیگر است». ریشه‌اش همین‌جا بود: این قاعده‌ها فقط به
+   #personModal بسته بودند، پس در صفحهٔ آرشیو کارت‌های پطرول/دیزل به پیش‌فرضِ
+   .fuel-split برمی‌گشتند (دو ستون بغلِ هم و چهار خانه در دو ردیفِ ۲×۲) در حالی
+   که در حسابِ زنده هر کارت تمام‌عرض است و چهار خانه‌اش در یک خطِ افقی.
+   هر قاعده‌ای که این‌جا اضافه می‌شود باید هر دو شناسه را با هم بگیرد — وگرنه
+   دوباره از هم جدا می‌افتند. */
+#personModal .fuel-split, #personArchiveModal .fuel-split{ grid-template-columns:1fr !important; padding:4px 10px !important; gap:4px !important; }
+#personModal .fs-group, #personArchiveModal .fs-group{ padding:4px 8px !important; }
+#personModal .fs-head, #personArchiveModal .fs-head{ font-size:0.85rem !important; font-weight:800 !important; margin-bottom:3px !important; }
+#personModal .fs-rows, #personArchiveModal .fs-rows{ grid-template-columns:repeat(4,1fr) !important; gap:3px !important; }
 /* در حالت «واحد تیل» خانهٔ «الباقی پول» هم افقی کنار بقیه می‌نشیند تا کادر بلند نشود */
-#personModal .fs-rows.has-remmoney{ grid-template-columns:repeat(5,1fr) !important; }
+#personModal .fs-rows.has-remmoney, #personArchiveModal .fs-rows.has-remmoney{ grid-template-columns:repeat(5,1fr) !important; }
 /* هدرهای بالای مودال قرض‌داران: جا زیاد دارند — نوشته‌ها کلفت‌تر و بزرگ‌تر تا خوانا باشند */
-#personModal .fs-cell .l{ font-size:1rem !important; font-weight:900 !important; }
-#personModal .fs-cell .v{ font-size:1.2rem !important; font-weight:900 !important; }
+#personModal .fs-cell .l, #personArchiveModal .fs-cell .l{ font-size:1rem !important; font-weight:900 !important; }
+#personModal .fs-cell .v, #personArchiveModal .fs-cell .v{ font-size:1.2rem !important; font-weight:900 !important; }
 /* فیصدی — فشرده، ولی خوانا (برچسب‌ها بزرگ‌تر و پررنگ‌تر برای خوانایی بهتر) */
 #personModal .modal-summary{ padding:2px 10px !important; }
 #personModal .msumbox{ min-height:unset !important; padding:4px 8px !important; flex-direction:row !important; align-items:center !important; gap:10px !important; justify-content:center !important; }
@@ -20325,6 +20343,15 @@ body.viewer-mode .inv-admin-only{display:none!important}
     </div>
     <div class="modal-body">
       <div id="pm-bigname" style="text-align:center;font-size:1.9rem;font-weight:900;color:var(--accent);padding:6px 10px;margin-bottom:8px;border-bottom:2px solid var(--border)"></div>
+      <!-- خواستهٔ صاحب ریپو: «برای جدول‌های آرشیو قرض‌داران هم یک کادر جدا بساز،
+           بزنم برود صفحهٔ جداگانه و آن‌جا جدول‌های آرشیوش را ببینم.»
+           دقیقاً مثل کارتِ آرشیوِ شرکت‌ها — یک دکمه با شمارِ جدول‌ها.
+           ⚠️ این کادر عمداً بالای صفحه است، درست مثل کارتِ آرشیوِ شرکت‌ها.
+           پیش از این تهِ صفحه، زیرِ جدول و نوارِ «ردیف جدید» بود و گزارشِ صاحب
+           ریپو این بود: «در جدولِ اصلی آن کادرِ آرشیوها نمی‌آید، حتی با اسکرول؛
+           اگر جدول کمی بزرگ شود آن زیر می‌رود و گم می‌شود و دیگر برگشتی ندارد».
+           پایین نبریدش. -->
+      <div id="pm-arc-box" style="display:none;margin-bottom:12px"></div>
       <!-- همهٔ ابزارها در «یک خط» کنار هم: کشویی حساب + حساب جدید + جدول جدید + فیلترها + شماره تماس.
            دیگر کشویی بالای دکمه‌ها نیست که دست اشتباهی رویشان برود؛ در صفحهٔ باریک این خط اسکرول افقی می‌خورد و نمی‌شکند -->
       <div class="pm-acct-bar">
@@ -20404,10 +20431,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
       </div>
       <div id="pm-stacked-wrap" style="display:none"></div>
 
-      <!-- خواستهٔ صاحب ریپو: «برای جدول‌های آرشیو قرض‌داران هم یک کادر جدا بساز،
-           بزنم برود صفحهٔ جداگانه و آن‌جا جدول‌های آرشیوش را ببینم.»
-           دقیقاً مثل کارتِ آرشیوِ شرکت‌ها — یک دکمه با شمارِ جدول‌ها. -->
-      <div id="pm-arc-box" style="display:none;margin-top:14px"></div>
       <!-- خودِ پنل: حالا داخلِ صفحهٔ جداگانه رندر می‌شود، نه این‌جا -->
       <div id="pm-history-wrap" style="display:none"></div>
     </div>
@@ -22474,10 +22497,21 @@ function _hcDateLabel(dateStr) {
 // همان برچسب، برای سربرگِ جدول‌های آرشیو (حسابِ قرض‌دار، شرکت تیل، ماه‌های بسته‌شده).
 // خواستهٔ کاربر: «در همهٔ تاریخچه‌ها تاریخ و کدوم هفته بوده نوشته باشد». اگر تاریخ
 // نداشت، رشتهٔ خالی برمی‌گردد تا سربرگ مثل قبل بی‌نوشته بماند (نه «بی‌تاریخ»).
+/* ⚠️ نوشتهٔ هفته با «حرف» گفته می‌شود، نه «۴مِ ماه».
+   گزارشِ صاحب ریپو: «بالای آرشیو نوشته هفتهٔ ۴مِ ماه — این یعنی چی؟» یعنی
+   همان تاریخ در هفتهٔ چندمِ ماه بوده؛ ولی «۴م» شبیهِ یک عددِ حسابی دیده می‌شد.
+   حالا «هفتهٔ چهارمِ ماه» نوشته می‌شود که خودش خودش را توضیح می‌دهد. */
 function _archDateLabel(dateStr) {
   const s = String(dateStr == null ? '' : dateStr).trim();
   if (!s || !/\d/.test(s)) return '';
-  try { return _hcDateLabel(s); } catch (e) { return s; }
+  try {
+    const parts = toEnDigits(s).split('/');
+    const day = parseInt(parts[2], 10);
+    const words = ['اول', 'دوم', 'سوم', 'چهارم', 'پنجم', 'ششم'];
+    const wi = (isFinite(day) && day > 0) ? Math.floor((day - 1) / 7) : -1;
+    const wk = (wi >= 0 && words[wi]) ? (' · هفتهٔ ' + words[wi] + 'ِ ماه') : '';
+    return _faDateWithWeekday(s) + wk;
+  } catch (e) { return s; }
 }
 // چند روز از یک تاریخِ شمسی گذشته (برای «چند وقت است برده») — منفی = بی‌تاریخ
 function _hcDaysSince(dateStr) {
@@ -29348,17 +29382,28 @@ function _histFigures(person, h, moneyDefault) {
   const pctP = _acctPct(h, 'petrol'), pctD = _acctPct(h, 'diesel');
   const hMoney = (h.viewMoney != null) ? h.viewMoney
     : (moneyDefault != null ? moneyDefault : _acctModeMoney(person, _acctOf(person)));
-  const rasidP = hMoney ? (parseFloat(h.rasidMoneyP)||0) : (parseFloat(h.rasidFuelP)||0);
-  const rasidD = hMoney ? (parseFloat(h.rasidMoneyD)||0) : (parseFloat(h.rasidFuelD)||0);
+  /* ── «مقدار رسید» = رسیدِ سربرگ + رسیدهای داخلِ خودِ جدول ────────────────────
+     گزارشِ صاحب ریپو: «در جدولِ آرشیو، رسیدی که در جدول می‌زنم در سربرگش نمی‌آید،
+     مثل جدولِ اصلی». جدولِ زنده همین قاعده را دارد (_updatePersonTotals: کادرِ
+     سربرگ = رسیدِ سربرگ + همهٔ رسیدهای جدول)، ولی آرشیو فقط عددِ سربرگ را نشان
+     می‌داد و در «واحد تیل» ستونِ «رسید تیل»ِ جدول را حتی از الباقی هم کم نمی‌کرد.
+     hdrP/hdrD همان عددِ دستیِ سربرگ‌اند (چیزی که ذخیره می‌شود و کادر موقعِ
+     ویرایش نشان می‌دهد) و rasidP/rasidD جمعِ دیده‌شده. ⚠️ به همین دلیل
+     calcHistoryRow دیگر «رسید تیل»ِ ردیف‌ها را داخلِ h.rasidFuelP/D جمع نمی‌کند —
+     وگرنه همین‌جا دوبار شمرده می‌شد. */
+  const hdrP = hMoney ? (parseFloat(h.rasidMoneyP)||0) : (parseFloat(h.rasidFuelP)||0);
+  const hdrD = hMoney ? (parseFloat(h.rasidMoneyD)||0) : (parseFloat(h.rasidFuelD)||0);
+  const rowRasidP = hMoney ? st.petrol.rasid : st.petrol.rasidFuel;
+  const rowRasidD = hMoney ? st.diesel.rasid : st.diesel.rasidFuel;
+  const rasidP = hdrP + rowRasidP, rasidD = hdrD + rowRasidD;
   const bordP  = hMoney ? st.petrol.bardagi : st.petrol.fuel;
   const bordD  = hMoney ? st.diesel.bardagi : st.diesel.fuel;
-  // فیصدی (کمیشن) روی «کل رسید» = رسیدِ سربرگ + رسیدهای داخلِ خودِ جدولِ آرشیو
-  const rasidRowP = hMoney ? st.petrol.rasid : st.petrol.rasidFuel;
-  const rasidRowD = hMoney ? st.diesel.rasid : st.diesel.rasidFuel;
-  const commP = (rasidP + rasidRowP) * pctP / 100, commD = (rasidD + rasidRowD) * pctD / 100;
-  const remP  = bordP + commP - rasidP - (hMoney ? st.petrol.rasid : 0);
-  const remD  = bordD + commD - rasidD - (hMoney ? st.diesel.rasid : 0);
-  return { st, pctP, pctD, hMoney, rasidP, rasidD, bordP, bordD, commP, commD, remP, remD };
+  // فیصدی (کمیشن) روی «کل رسید» — همان جمعِ بالا
+  const commP = rasidP * pctP / 100, commD = rasidD * pctD / 100;
+  const remP  = bordP + commP - rasidP;
+  const remD  = bordD + commD - rasidD;
+  return { st, pctP, pctD, hMoney, hdrP, hdrD, rowRasidP, rowRasidD,
+           rasidP, rasidD, bordP, bordD, commP, commD, remP, remD };
 }
 /* ── کارتِ «جدول‌های آرشیو» در مودالِ حساب ─────────────────────────────────
    خواستهٔ صاحب ریپو: آرشیوها در خودِ صفحهٔ حساب پهن نشوند؛ یک کادر باشد که با
@@ -29427,16 +29472,23 @@ function _renderHistoryPanel(person) {
        هیچ تغییری نکرده‌اند — فقط جای نشستنشان. */
     const rasidLbl = hMoney ? 'مقدار رسید پول' : 'مقدار رسید تیل';
     const remLbl   = hMoney ? 'الباقی پول' : 'الباقی تیل';
-    const _rasidIn = (fuel, val) => `<input type="number" class="v pm-edit" value="${val||''}" placeholder="0" title="رسیدِ سربرگِ همین آرشیو"
+    /* کادرِ «مقدار رسید» — مو‌به‌مو مثل کادرِ همین‌نامِ حسابِ زنده:
+       عددِ دیده‌شده جمعِ «رسیدِ سربرگ + رسیدهای داخلِ جدول» است، ولی به‌محضِ
+       دست زدن فقط سهمِ دستیِ سربرگ نشان داده می‌شود تا ویرایش دوباره‌شماری
+       نکند (data-hdr همان سهمِ دستی است). data-hf برای این است که حینِ تایپ در
+       خودِ جدول، این کادر هم در جا به‌روز شود (_histRepaintHead) — پیش از این
+       تا رندرِ بعدی عقب می‌ماند و کاربر می‌دید «رسیدِ جدول در سربرگ نمی‌آید». */
+    const _rasidIn = (fuel, hdr, tot) => `<input type="number" class="v pm-edit" data-hf="${fuel==='diesel'?'sd':'sp'}" data-hdr="${hdr||''}" value="${tot||''}" placeholder="0" title="رسیدِ سربرگِ همین آرشیو — عددِ نشان‌داده‌شده جمعِ آن با رسیدهای داخلِ جدول است"
               style="color:var(--green);background:transparent;border:none;border-bottom:1px dashed var(--green);text-align:center;width:100%;font-weight:800;font-family:'Vazirmatn',sans-serif"
-              oninput="updateHistoryRasid('${pid}','${h.id}','${fuel}',this.value)">`;
+              onfocus="histRasidFocus(this)" onblur="histRasidBlur(this,'${pid}','${h.id}','${fuel}')"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">`;
     const fuelHtml = `
       <div class="fuel-split">
         <div class="fs-group petrol">
           <div class="fs-head petrol">⛽ حساب پطرول</div>
           <div class="fs-rows">
             <div class="fs-cell"><div class="l" data-hf="lp">فیصدی ما (${n2fa(rnd(pctP))}٪)</div><div class="v" data-hf="cp" style="color:var(--purple)">${n2fa(rnd(commP))}</div></div>
-            <div class="fs-cell"><div class="l">${rasidLbl}</div>${_rasidIn('petrol', rasidP)}</div>
+            <div class="fs-cell"><div class="l">${rasidLbl}</div>${_rasidIn('petrol', _f.hdrP, rnd(rasidP))}</div>
             <div class="fs-cell"><div class="l">برد</div><div class="v" data-hf="bp" style="color:var(--accent)">${n2fa(rnd(bordP))}</div></div>
             <div class="fs-cell"><div class="l">${remLbl}</div><div class="v" data-hf="rp" style="color:var(--blue)">${n2fa(rnd(remP))}</div></div>
           </div>
@@ -29445,7 +29497,7 @@ function _renderHistoryPanel(person) {
           <div class="fs-head diesel">🟤 حساب دیزل</div>
           <div class="fs-rows">
             <div class="fs-cell"><div class="l" data-hf="ld">فیصدی ما (${n2fa(rnd(pctD))}٪)</div><div class="v" data-hf="cd" style="color:var(--purple)">${n2fa(rnd(commD))}</div></div>
-            <div class="fs-cell"><div class="l">${rasidLbl}</div>${_rasidIn('diesel', rasidD)}</div>
+            <div class="fs-cell"><div class="l">${rasidLbl}</div>${_rasidIn('diesel', _f.hdrD, rnd(rasidD))}</div>
             <div class="fs-cell"><div class="l">برد</div><div class="v" data-hf="bd" style="color:var(--accent)">${n2fa(rnd(bordD))}</div></div>
             <div class="fs-cell"><div class="l">${remLbl}</div><div class="v" data-hf="rd" style="color:var(--blue)">${n2fa(rnd(remD))}</div></div>
           </div>
@@ -29560,28 +29612,115 @@ function _renderHistoryPanel(person) {
       <div style="padding:0 10px 10px">
         <textarea id="hnb-${h.id}" class="note-field" placeholder="📝 توضیحات این جدول..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateHistoryNote('${pid}','${h.id}',this.value)">${escFa(h.note||'')}</textarea>
       </div>`;
+    /* ── سربرگِ هر جدولِ آرشیو ────────────────────────────────────────────────
+       خواستهٔ صریحِ صاحب ریپو (این سیزن): «آن کادرِ ↩️ برگشت به حساب چیست؟ از آن
+       بردار، نمی‌خواهم. یک کادرِ دیگر هم هست: باز کردن — آن را هم بردار.»
+       پس هر دو دکمه از سربرگ رفتند. باز و بستهٔ جدول از دست نرفته: خودِ نوارِ
+       سربرگ (تاریخ و شمارِ ردیف) کلیدِ باز/بسته است — یک نشانهٔ ▾/▸ هم کنارش
+       است. این عمدی است و «فقط زیبایی» نیست: جدولِ آرشیوِ بسته اصلاً ساخته
+       نمی‌شود و همین چیزی است که برنامه را با ده‌ها آرشیو روان نگه می‌دارد
+       (توضیحش بالاتر، کنارِ _histIsOpen). دکمه‌ای برنگردانید — نوار خودش کلید است.
+       نوشتهٔ تاریخ هم می‌گوید این تاریخ چیست («بسته شد: …») — پیش از این فقط یک
+       تاریخِ لخت بود و صاحب ریپو پرسید «این یعنی چه؟». */
+    const _headTip = _open ? 'بستنِ جدولِ این آرشیو' : 'باز کردنِ جدولِ این آرشیو';
     return `<div id="hist-blk-${pid}-${h.id}" style="margin-bottom:16px;border:2px solid ${ac};border-radius:13px;overflow:hidden">
       <div style="background:${ac};padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
-        <span style="font-weight:800;font-size:0.82rem;color:#fff;white-space:nowrap">📋 ${escFa(_archDateLabel(h.createdAt) || (h.createdAt||''))}</span>
+        <span onclick="toggleHistoryOpen('${h.id}')" title="${_headTip}" style="font-weight:800;font-size:0.82rem;color:#fff;white-space:nowrap;cursor:pointer;user-select:none">${_open ? '▾' : '▸'} 📋 بسته شد: ${escFa(_archDateLabel(h.createdAt) || (h.createdAt||''))}</span>
         <input id="hn-${h.id}" value="${escFa(h.headerNote||'')}" placeholder="📝 توضیحات این جدول..." oninput="updateHistoryHeaderNote('${pid}','${h.id}',this.value)"
           style="flex:1;min-width:130px;background:rgba(255,255,255,0.16);border:1px dashed rgba(255,255,255,0.6);border-radius:7px;padding:4px 10px;color:#fff;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;box-sizing:border-box">
         <div style="display:flex;align-items:center;gap:6px">
-          <span style="font-size:0.72rem;color:rgba(255,255,255,0.85)">${n2fa(rows.length)} ردیف</span>
-          <button onclick="toggleHistoryOpen('${h.id}')" title="باز/بستهٔ جدولِ این آرشیو" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.5);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">${_open ? '🔽 بستن' : '📂 باز کردن'}</button>
-          <button onclick="restorePersonHistory('${pid}','${h.id}')" title="ردیف‌های این جدول دوباره داخل حسابِ خودِ شخص بیایند" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.5);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">↩️ برگشت به حساب</button>
+          <span onclick="toggleHistoryOpen('${h.id}')" title="${_headTip}" style="font-size:0.72rem;color:rgba(255,255,255,0.85);cursor:pointer;user-select:none">${n2fa(rows.length)} ردیف</span>
           <button onclick="toggleHistoryMode('${pid}','${h.id}')" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.5);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">🔁 ${hMoney?'تیل':'پول'}</button>
           <button onclick="pdfPersonHistory('${pid}','${h.id}')" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.5);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">📄 PDF</button>
           <button onclick="deletePersonHistory('${pid}','${h.id}')" style="background:transparent;border:1px solid rgba(255,255,255,0.45);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">🗑️ حذف کل</button>
         </div>
       </div>
       <div style="background:var(--dark)">${fuelHtml}${_open ? '' :
-        `<div style="padding:8px 12px 12px">
-           <button class="add-row-btn" style="margin:0" onclick="toggleHistoryOpen('${h.id}')">
-             📂 باز کردنِ جدولِ این آرشیو (${n2fa(rows.length)} ردیف)
-           </button>
+        `<div onclick="toggleHistoryOpen('${h.id}')" style="padding:8px 12px 12px;color:var(--muted);font-size:0.78rem;font-weight:700;cursor:pointer;user-select:none">
+           ▸ برای دیدنِ جدولِ این آرشیو (${n2fa(rows.length)} ردیف) روی همین نوار یا سربرگِ بالا بزنید
          </div>`}${tableHtml}</div>
     </div>`;
   }).join('');
+  /* ردیف‌های خودکارِ «رسید/فیصدی» بعد از ساخته‌شدنِ جدول‌ها گذاشته می‌شوند —
+     همان کاری که جدولِ زنده با _renderRasidLog می‌کند. */
+  history.forEach(h => { try { _histRenderAutoRows(person, pid, h); } catch (e) {} });
+}
+/* ═══ رسید و فیصدیِ سربرگ، داخلِ خودِ جدولِ آرشیو ══════════════════════════════
+   گزارشِ صاحب ریپو: «رسیدی که در سربرگ می‌زنم، داخلِ جدولِ آرشیو نمی‌آید — مثل
+   جدولِ اصلی [بیاید]». جدولِ زنده برای هر رسیدِ سربرگ و برای فیصدی‌اش یک ردیفِ
+   📌 نشان می‌دهد (_renderRasidLog). این‌جا همان کار برای آرشیو انجام می‌شود.
+
+   ⚠️ این ردیف‌ها فقط «نمایش»اند: نه data-ri دارند نه data-idx و نه پشتشان
+   ردیفی در h.rows هست، پس در هیچ جمعی (فوتر، الباقی، PDF) شمرده نمی‌شوند —
+   عددشان از همان h.rasid*ِ سربرگ می‌آید که از قبل در الباقی حساب شده است.
+   نوشتهٔ هر خانه داخلِ <span class="xls-in pmar-box"> می‌نشیند تا اندازه و
+   فاصله‌شان مو‌به‌مو با ردیف‌های تایپیِ دستی یکی باشد (قاعدهٔ CLAUDE.md). ═══ */
+function _histRenderAutoRows(person, pid, h) {
+  const tbl = document.getElementById('hist-tbl-' + pid + '-' + h.id);
+  if (!tbl) return;                       // جدولِ این آرشیو بسته است
+  const tbody = tbl.querySelector('tbody'); if (!tbody) return;
+  tbody.querySelectorAll('tr.pm-auto-row').forEach(tr => tr.remove());
+  const heads = Array.prototype.map.call(tbl.querySelectorAll('thead th'), th => th.textContent.trim());
+  if (!heads.length) return;
+  const f = _histFigures(person, h);
+  const rnd = x => Math.round(x * 100) / 100;
+  const rasidHead = heads.indexOf('رسید تیل') >= 0 ? 'رسید تیل' : 'رسید';
+  const hFilter = h.viewFilter || h.fuel || currentPersonFilter || 'all';
+  const ftDot = '<input type="radio" class="pmar-radio" disabled tabindex="-1" aria-hidden="true">';
+  const ftCell = ftype => {
+    const isP = ftype !== 'diesel';
+    const ghost = txt => '<span class="ft-opt pmar-ft-ghost" aria-hidden="true">' + ftDot + txt + '</span>';
+    return '<td class="pmar-ft"><div class="ft-pick">' + ghost('⛽ پطرول') + ghost('🟤 دیزل') +
+      '<span class="ft-opt pmar-ft-real ' + (isP ? 'petrol' : 'diesel') + ' active">' +
+      ftDot + (isP ? '⛽ پطرول' : '🟤 دیزل') + '</span></div></td>';
+  };
+  const box = (cls, txt) => '<td><span class="xls-in pmar-box' + (cls ? ' ' + cls : '') + '">' +
+    (txt == null ? '' : txt) + '</span></td>';
+  // درست بعدِ آخرین ردیفِ پرشده می‌نشینند (مثل جدولِ زنده) تا پشتِ ردیف‌های خالی گم نشوند
+  const anchor = (function () {
+    const trs = Array.prototype.slice.call(tbody.querySelectorAll('tr[data-ri]'));
+    let a = null;
+    for (let i = trs.length - 1; i >= 0; i--) {
+      const ins = trs[i].querySelectorAll('input[type=number], input[placeholder="نام"], input[placeholder="متن یا عدد"]');
+      const empty = Array.prototype.every.call(ins, inp => {
+        const v = String(inp.value || '').trim();
+        return v === '' || v === '0';
+      });
+      if (!empty) break;
+      a = trs[i];
+    }
+    if (a && a === trs[0]) a = null;
+    return a;
+  })();
+  const line = (ftype, name, cells, tip, hfKey) => {
+    const tr = document.createElement('tr');
+    tr.className = 'pm-auto-row';
+    tr.title = tip;
+    if (hfKey) tr.setAttribute('data-har', hfKey);
+    tr.innerHTML = heads.map(hd => {
+      if (hd === '#') return '<td class="xls-num pmar-mark">📌</td>';
+      if (hd === 'تاریخ') return box('', escFa(String(h.createdAt || '') || '—'));
+      if (hd === 'نام') return box('pmar-name', escFa(name));
+      if (hd === 'نوع تیل') return ftCell(ftype);
+      if (hd === 'الباقی' || hd === 'حذف') return '<td></td>';
+      return cells[hd] || box('', '');
+    }).join('');
+    if (anchor && anchor.parentNode === tbody) tbody.insertBefore(tr, anchor);
+    else tbody.appendChild(tr);
+  };
+  const one = (ftype, label, hdr, comm, pct) => {
+    if (hFilter !== 'all' && hFilter !== ftype) return;
+    if (hdr) {
+      const rc = {}; rc[rasidHead] = box('pmar-val', n2fa(rnd(hdr)));
+      line(ftype, 'رسید', rc, 'رسیدی که در سربرگِ ' + label + 'ِ همین آرشیو نوشته شده', 'r' + ftype);
+    }
+    if (comm && pct) {
+      line(ftype, 'فیصدی', { 'مقدار بردگی': box('pmar-comm', n2fa(rnd(comm))) },
+        'فیصدیِ ' + n2fa(rnd(pct)) + '٪ از جمعِ رسیدِ ' + label, 'c' + ftype);
+    }
+  };
+  one('petrol', 'پطرول', f.hdrP, f.commP, f.pctP);
+  one('diesel', 'دیزل', f.hdrD, f.commD, f.pctD);
 }
 /* کدام آرشیوها باز‌اند. پیش‌فرض: فقط تازه‌ترین (hi === 0 در فهرستِ معکوس‌شده). */
 let _histOpenSet = null;
@@ -29613,6 +29752,9 @@ function deletePersonHistory(pid, hid) {
 // حساب طرف برمی‌گشتند، داخل بخش تاریخچه/آرشیو می‌ماندند). ردیف‌ها به همان دفتری
 // برمی‌گردند که از آن آرشیو شده بودند (واحد تیل یا واحد پول) و رسیدهای هدرِ همان
 // آرشیو هم به حساب اضافه می‌شوند؛ بعد آن آرشیو برداشته می‌شود.
+// ⚠️ دکمه‌اش از سربرگِ آرشیو برداشته شد (خواستهٔ صریحِ صاحب ریپو: «آن کادرِ برگشت
+// به حساب چیست؟ بردار، نمی‌خواهم»). خودِ تابع عمداً مانده تا اگر روزی جدولی
+// اشتباهی آرشیو شد، راهِ برگرداندنش از دست نرفته باشد. دکمه را برنگردانید.
 function restorePersonHistory(pid, hid) {
   const person = _hPerson(pid); if (!person) return;
   const acct = _acctOf(person);
@@ -29660,14 +29802,17 @@ function pdfPersonHistory(pid, hid) {
   const pctP = _acctPct(h, 'petrol'), pctD = _acctPct(h, 'diesel');
   const unit = money ? 'افغانی' : 'لیتر';
   const rnd = x => Math.round(x * 100) / 100;
-  const rasidP = money ? (parseFloat(h.rasidMoneyP)||0) : (parseFloat(h.rasidFuelP)||0);
-  const rasidD = money ? (parseFloat(h.rasidMoneyD)||0) : (parseFloat(h.rasidFuelD)||0);
   const st = _splitTotals(rows);
+  // همان قاعدهٔ صفحه: «مقدار رسید» = رسیدِ سربرگ + رسیدهای داخلِ جدول
+  const rasidP = (money ? (parseFloat(h.rasidMoneyP)||0) : (parseFloat(h.rasidFuelP)||0))
+               + (money ? st.petrol.rasid : st.petrol.rasidFuel);
+  const rasidD = (money ? (parseFloat(h.rasidMoneyD)||0) : (parseFloat(h.rasidFuelD)||0))
+               + (money ? st.diesel.rasid : st.diesel.rasidFuel);
   const bordP = money ? st.petrol.bardagi : st.petrol.fuel;
   const bordD = money ? st.diesel.bardagi : st.diesel.fuel;
   const commP = rasidP*pctP/100, commD = rasidD*pctD/100;
-  const remP = bordP + commP - rasidP - (money ? st.petrol.rasid : 0),
-        remD = bordD + commD - rasidD - (money ? st.diesel.rasid : 0);
+  const remP = bordP + commP - rasidP,
+        remD = bordD + commD - rasidD;
   /* ⚠️ علامت: روی صفحه، کارت‌های پطرول/دیزل این عدد را «قرینه» نشان می‌دهند
      (setRem با ‎-v‎): مثبت یعنی هنوز تیل/پیش‌پرداخت دارد، منفی یعنی بدهکار.
      پی‌دی‌اف عددِ خام را می‌نوشت، پس حسابی که ۸٬۸۷۹ لیتر داشت در ورق
@@ -29764,6 +29909,14 @@ function setHistoryFilter(pid, hid, f) {
   h.viewFilter = f;
   save(); _renderHistoryPanel(person);
 }
+/* کادرِ «مقدار رسید»ِ سربرگِ آرشیو — قرینهٔ personRasidFocus/Blur حسابِ زنده:
+   با دست خوردن فقط سهمِ دستیِ سربرگ نشان داده می‌شود (نه جمعِ آن با رسیدهای
+   جدول) تا ویرایش دوباره‌شماری نکند، و با بیرون رفتن دوباره جمع نوشته می‌شود. */
+function histRasidFocus(el) { if (el) el.value = el.dataset.hdr || ''; }
+function histRasidBlur(el, pid, hid, fuel) {
+  if (!el) return;
+  updateHistoryRasid(pid, hid, fuel, el.value);
+}
 function updateHistoryRasid(pid, hid, ftype, value) {
   const person = _hPerson(pid); if (!person) return;
   const h = _hEntry(pid, hid); if (!h) return;
@@ -29831,7 +29984,6 @@ function calcHistoryRow(pid, hid, idx, field, value) {
   const person = _hPerson(pid); if (!person) return;
   const h = _hEntry(pid, hid); if (!h || !h.rows[idx]) return;
   const r = h.rows[idx];
-  const prevRasidFuel = parseFloat(r.rasidFuel) || 0;
   if (field === 'bardagi') { r.byMoney = true; r.bardagi = parseFloat(value)||0; }
   else {
     r[field] = parseFloat(value)||0;
@@ -29840,15 +29992,13 @@ function calcHistoryRow(pid, hid, idx, field, value) {
         (parseFloat(r.fuel)||0) > 0 && ((parseFloat(r.priceper)||0) > 0 || !(parseFloat(r.bardagi)||0))) r.byMoney = false;
     _stampRowUnionRate(r); if (!r.byMoney) r.bardagi = _personRowBardagi(r);
   }
-  // «رسید تیل» آرشیو هم دقیقاً مثل جدول اصلی به رسیدِ حساب تیلِ همین آرشیو (پطرول/دیزل)
-  // به‌صورت تفاضلی اضافه می‌شود — کاملاً جدا از رسید پول
-  if (field === 'rasidFuel') {
-    const delta = (parseFloat(value)||0) - prevRasidFuel;
-    if (delta) {
-      if (r.ftype === 'diesel') h.rasidFuelD = (parseFloat(h.rasidFuelD)||0) + delta;
-      else h.rasidFuelP = (parseFloat(h.rasidFuelP)||0) + delta;
-    }
-  }
+  /* ⚠️ «رسید تیل»ِ ردیف دیگر داخلِ h.rasidFuelP/D جمع نمی‌شود.
+     پیش از این این‌جا به‌صورت تفاضلی به عددِ سربرگ اضافه می‌شد، ولی همان عدد
+     برای ردیف‌هایی که با «جدول جدید» از حسابِ زنده آرشیو شده بودند اضافه نشده
+     بود — یعنی رسیدِ جدول گاهی در سربرگ بود و گاهی نبود. حالا h.rasidFuelP/D
+     فقط «رسیدِ دستیِ سربرگ» است و جمعِ رسیدهای جدول یک جا در _histFigures
+     حساب می‌شود (همان قاعدهٔ جدولِ زنده). این را برنگردانید — با هم دو بار
+     شمرده می‌شوند. */
   r.albaqi = (r.bardagi||0) - (r.rasid||0);
   save();
   /* ⚠️ این‌جا عمداً جدول بازسازی نمی‌شود — درمانِ باگِ «کیبورد می‌پره».
@@ -29906,6 +30056,18 @@ function _histRepaintHead(person, pid, hid, h) {
   const rnd = x => Math.round(x * 100) / 100;
   const unit = f.hMoney ? ' افغانی' : ' لیتر';
   const put = (k, txt) => { const el = blk.querySelector('[data-hf="' + k + '"]'); if (el) el.textContent = txt; };
+  /* کادرهای «مقدار رسید» هم همین‌جا به‌روز می‌شوند: تا وقتی دستِ کاربر داخلشان
+     نیست، جمعِ «سربرگ + رسیدهای جدول» را نشان می‌دهند — پس رسیدی که در خودِ
+     جدول زده می‌شود در جا در سربرگ دیده می‌شود (گزارشِ صاحب ریپو). */
+  const putIn = (k, hdr, tot) => {
+    const el = blk.querySelector('input[data-hf="' + k + '"]'); if (!el) return;
+    el.dataset.hdr = hdr || '';
+    if (document.activeElement !== el) el.value = rnd(tot) || '';
+  };
+  putIn('sp', f.hdrP, f.rasidP);
+  putIn('sd', f.hdrD, f.rasidD);
+  // ردیف‌های 📌 رسید/فیصدیِ داخلِ جدول هم با همین عددها هم‌گام بمانند
+  try { _histRenderAutoRows(person, pid, h); } catch (e) {}
   put('lp', 'فیصدی ما (' + n2fa(rnd(f.pctP)) + '٪)');
   put('ld', 'فیصدی ما (' + n2fa(rnd(f.pctD)) + '٪)');
   put('cp', n2fa(rnd(f.commP)));
@@ -29923,15 +30085,9 @@ function setHistoryRowFuel(pid, hid, idx, ftype) {
   const h = _hEntry(pid, hid); if (!h || !h.rows[idx]) return;
   const ft = (ftype === 'diesel') ? 'diesel' : 'petrol';
   const r = h.rows[idx];
-  const oldFt = (r.ftype === 'diesel') ? 'diesel' : 'petrol';
-  // مثل جدول اصلی: «رسید تیل» ردیف با تغییر نوع تیل بین حساب پطرول/دیزلِ همین آرشیو جابجا شود
-  const rf = parseFloat(r.rasidFuel) || 0;
-  if (rf && oldFt !== ft) {
-    if (oldFt === 'diesel') h.rasidFuelD = (parseFloat(h.rasidFuelD) || 0) - rf;
-    else h.rasidFuelP = (parseFloat(h.rasidFuelP) || 0) - rf;
-    if (ft === 'diesel') h.rasidFuelD = (parseFloat(h.rasidFuelD) || 0) + rf;
-    else h.rasidFuelP = (parseFloat(h.rasidFuelP) || 0) + rf;
-  }
+  /* «رسید تیل»ِ ردیف دیگر لازم نیست دستی بین حسابِ پطرول/دیزل جابه‌جا شود:
+     جمعِ رسیدهای جدول در _histFigures از روی ftypeِ خودِ ردیف‌ها حساب می‌شود،
+     پس با عوض شدنِ نوعِ تیل خودبه‌خود سرِ جای درست می‌رود. */
   r.ftype = ft;
   save(); _rerenderHistoryPreserveFocus(person);
 }
@@ -29949,12 +30105,8 @@ function addHistoryRow(pid, hid) {
 function deleteHistoryRow(pid, hid, idx) {
   const person = _hPerson(pid); if (!person) return;
   const h = _hEntry(pid, hid); if (!h) return;
-  const r = h.rows[idx];
-  const rf = r ? (parseFloat(r.rasidFuel) || 0) : 0;
-  if (rf) {
-    if (r.ftype === 'diesel') h.rasidFuelD = (parseFloat(h.rasidFuelD) || 0) - rf;
-    else h.rasidFuelP = (parseFloat(h.rasidFuelP) || 0) - rf;
-  }
+  // «رسید تیل»ِ این ردیف جایی جمع نشده که لازم باشد کم شود — با رفتنِ خودِ ردیف
+  // از جمعِ رسیدهای جدول (_histFigures) هم می‌رود.
   h.rows.splice(idx, 1); save(); _renderHistoryPanel(person);
 }
 function updateHistoryNote(pid, hid, value) {
@@ -42256,7 +42408,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.300';
+const APP_VERSION = '2.9.301';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -43613,7 +43765,10 @@ if (_noteFontScale !== 1) adjNoteFont(0);
 let _modalFontScale = 1;
 function adjModalFont(delta) {
   _modalFontScale = Math.min(2.5, Math.max(0.5, _modalFontScale + delta));
-  const modals = [document.getElementById('personModal'), document.getElementById('companyModal')];
+  // صفحهٔ جدول‌های آرشیوِ قرض‌دار هم با همین A+/A− بزرگ و کوچک شود — کادرهایش
+  // همان کلاس‌های حسابِ زنده را دارند، پس باید همان‌طور هم فونت بگیرند
+  const modals = [document.getElementById('personModal'), document.getElementById('companyModal'),
+                  document.getElementById('personArchiveModal')];
   modals.forEach(modal => {
     if (!modal || !modal.classList.contains('open')) return;
     modal.querySelectorAll('th,td,.xls-in,.xls-calc,.xls-num,.fs-head,.fs-cell .l,.fs-cell .v,.msumbox .ml,.msumbox .mv').forEach(el => {
