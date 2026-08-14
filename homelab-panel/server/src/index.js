@@ -39,6 +39,9 @@ import messengerRoutes from './routes/messenger.js';
 import notifyRoutes, { adminRouter as notifyAdminRoutes } from './routes/notify.js';
 import * as notify from './notify/index.js';
 import * as messenger from './messenger/index.js';
+import { aiProxy, AI_PREFIX } from './ai/proxy.js';
+import { autostartAi, stopAi } from './ai/supervisor.js';
+import aiRoutes from './routes/ai.js';
 
 const PUBLIC_DIR = path.join(SERVER_ROOT, 'public');
 const PID_FILE = path.join(config.dataDir, 'panel.pid');
@@ -63,6 +66,9 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') return res.status(204).end();
   next();
 });
+
+// دستیارِ پشتیبانی — پیش از میان‌افزارِ JSON، به همان دلیلِ بالا
+app.use(AI_PREFIX, aiProxy);
 
 // بدنهٔ JSON فقط برای مسیرهایی که JSON می‌گیرند (آپلود فایل خام است)
 const MSG_LIMIT = `${Math.max(1, Math.round(config.messengerMaxBytes / (1024 * 1024)))}mb`;
@@ -101,8 +107,10 @@ app.use('/api/site-server', siteServerRoutes);
 app.use('/api/messenger', messengerRoutes);
 app.use('/api/notify', notifyRoutes);
 app.use('/api/notify-admin', notifyAdminRoutes);
+app.use('/api/ai', aiRoutes);
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'not_found' }));
+
 
 // ---------------------------- رابط کاربری ----------------------------------
 if (fs.existsSync(PUBLIC_DIR)) {
@@ -178,6 +186,9 @@ if (siteSync && config.siteSync.port && config.siteSync.port !== config.port) {
     if (req.method === 'OPTIONS') return res.status(204).end();
     next();
   });
+  // ⚠️ پراکسیِ دستیار **پیش از** express.json می‌نشیند: آن میان‌افزار جریانِ
+  //    بدنه را می‌خورد و بعدش دیگر چیزی برای لوله کردن نمی‌ماند.
+  publicApp.use(AI_PREFIX, aiProxy);
   publicApp.use(express.json({ limit: MSG_LIMIT }));
   publicApp.get(['/health', '/'], (req, res) => {
     res.json({ ok: true, service: 'pump-yaqobi-server', mode: 'sync-only', time: new Date().toISOString() });
@@ -251,6 +262,14 @@ async function main() {
   ensureSitesRoot();
   await autostartAll();
 
+  // دستیارِ پشتیبانی هم با پنل بالا می‌آید. اگر پوشه‌اش نبود یا خاموش بود،
+  // فقط یک سطر لاگ می‌شود و بقیهٔ پنل عادی کار می‌کند.
+  try {
+    autostartAi();
+  } catch (e) {
+    console.warn(`⚠️  دستیارِ پشتیبانی بالا نیامد: ${e.message}`);
+  }
+
   if (syncOnlyServer) {
     syncOnlyServer.listen(config.siteSync.port, config.host);
   }
@@ -323,6 +342,9 @@ async function shutdown(signal) {
   try {
     syncOnlyServer?.close();
   } catch { /* بسته شده */ }
+  try {
+    stopAi();
+  } catch { /* بی‌خیال */ }
   try {
     await stopAll();
   } catch { /* بی‌خیال */ }

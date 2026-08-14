@@ -79,6 +79,18 @@ export const config = {
     ),
     token: process.env.HLP_SITESYNC_TOKEN || '',
   },
+
+  // ── دستیارِ پشتیبانیِ هوشمند (پوشهٔ ai-support کنارِ همین پنل) ─────────────
+  // با بالا آمدنِ پنل خودش روشن می‌شود و اگر افتاد برمی‌گردد. روی 127.0.0.1
+  // گوش می‌دهد و تنها راهِ رسیدنِ سایت به آن، پراکسیِ /ai/support روی همین
+  // پورتِ عمومی است — پس پورتِ تازه‌ای لازم نیست تونل شود.
+  aiEnabled: (process.env.HLP_AI_ENABLED ?? '1') !== '0',
+  aiPort: num(process.env.HLP_AI_PORT, 8788),
+  aiDir: process.env.HLP_AI_DIR || '',
+  // اگر بگذارید، دستیار می‌تواند نشستِ سطحِ مدیر بدهد (جست‌وجوی سراسری و مصارف)
+  aiAdminToken: process.env.HLP_AI_ADMIN_TOKEN || '',
+  aiModel: process.env.HLP_AI_MODEL || '',
+  aiOllamaUrl: process.env.HLP_AI_OLLAMA_URL || '',
 };
 
 export const paths = {
