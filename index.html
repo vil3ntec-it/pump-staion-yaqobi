@@ -37424,7 +37424,12 @@ function findDebtAcctForText(rawText, cleanName) {
   return best;
 }
 // جستجوی هر حساب (قرض‌دار یا شرکت تیل) با نام — برای ربات دستیار
-function _botMatchAnyPerson(text) {
+/* ابزارِ عمومیِ برنامه — پیدا کردنِ شخص/شرکت از روی نامِ نوشته‌شده.
+   ⚠️ این تابع بخشی از «رباتِ سوال و جواب» (که برداشته شد) نیست. سه مصرف‌کنندهٔ
+      مستقل دارد: «/بات» در چت گروهی، جوابِ خودکار به مشتریِ کیو‌آر، و ابزارِ
+      دادهٔ «پشتیبانی هوشمند». اسمش قبلاً _botMatchAnyPerson بود و همین باعثِ
+      این تصور می‌شد که به آن ربات وابسته است. */
+function _findPersonByName(text) {
   return matchPersonInListByText(DB.debtPersons, text) || matchPersonInListByText(DB.noinvPersons, text);
 }
 // اگر نامِ یک «حساب فرعی» داخل متن (توضیحات ورق/پارچه) باشد، همان ساب‌اکانت را برگردان
@@ -39216,7 +39221,7 @@ function _botTryAgentAction(qRaw) {
 
   // 2) باز کردن حساب یک شخص با نام
   if (canBrowsePersons && has('باز کن', 'نشان بده', 'نشانم بده', 'حسابش را ببینم', 'ببینم حساب')) {
-    const p = _botMatchAnyPerson(qRaw);
+    const p = _findPersonByName(qRaw);
     if (p) {
       const type = (DB.debtPersons || []).some(x => x.id === p.id) ? 'debt' : 'noinv';
       _botOpenPerson(type, p.id);
@@ -39241,7 +39246,7 @@ function _botTryAgentAction(qRaw) {
 
   // 4) حذف حساب — فقط مدیر، همیشه با تایید «بله/نی»
   if (isAdmin && has('حذف کن', 'پاک کن', 'حذفش کن', 'پاکش کن')) {
-    const p = _botMatchAnyPerson(qRaw);
+    const p = _findPersonByName(qRaw);
     if (p) {
       const type = (DB.debtPersons || []).some(x => x.id === p.id) ? 'debt' : 'noinv';
       _qaMsgs.push({
@@ -39272,7 +39277,7 @@ function _botTryAgentActionGroup(qRaw) {
   }
 
   if (has('باز کن', 'نشان بده', 'نشانم بده', 'حسابش را ببینم', 'ببینم حساب')) {
-    const p = _botMatchAnyPerson(qRaw);
+    const p = _findPersonByName(qRaw);
     if (p) {
       const type = (DB.debtPersons || []).some(x => x.id === p.id) ? 'debt' : 'noinv';
       _botOpenPerson(type, p.id);
@@ -39294,7 +39299,7 @@ function _botTryAgentActionGroup(qRaw) {
   // حذف: چون این یک دستورِ مستقیم از خودِ میرزاست (نه سوال)، بدون کلیک تاییدی
   // همین‌جا اجرا می‌شود — ولی همیشه در سطل زباله قابل بازگردانی می‌ماند
   if (has('حذف کن', 'پاک کن', 'حذفش کن', 'پاکش کن')) {
-    const p = _botMatchAnyPerson(qRaw);
+    const p = _findPersonByName(qRaw);
     if (p) {
       const type = (DB.debtPersons || []).some(x => x.id === p.id) ? 'debt' : 'noinv';
       const ok = _botDeletePerson(type, p.id);
@@ -39336,7 +39341,10 @@ function _botSearchTerm(qRaw) {
   s = s.replace(/\s+/g, ' ').trim();
   return s || null;
 }
-function _botDeepSearch(qRaw) {
+/* ابزارِ عمومیِ برنامه — جست‌وجوی یک عبارت در همهٔ بخش‌ها.
+   ⚠️ مثلِ بالا: بخشی از رباتِ حذف‌شده نیست؛ ابزارِ مشترک است.
+      اسمش قبلاً _botDeepSearch بود. */
+function _deepSearchAll(qRaw) {
   const needle = normFa(toEnDigits(String(qRaw || ''))).trim();
   if (!needle || needle.length < 2) return null;
   const MAXN = 8;
@@ -39461,13 +39469,13 @@ function _botAnswer(qRaw) {
     // دستور صریح جستجو (فقط مدیر): «پیدا کن ...»، «بگرد ...»، «... کجاست» — در همهٔ بخش‌ها
     if (_rbMode === 'admin') {
       const term = _botSearchTerm(qRaw);
-      if (term) return _botDeepSearch(term) || ('چیزی با «' + term + '» در هیچ بخشی پیدا نشد.');
+      if (term) return _deepSearchAll(term) || ('چیزی با «' + term + '» در هیچ بخشی پیدا نشد.');
     }
     // سوال دربارهٔ یک حساب مشخص با نام (مثلاً «حساب محمد چند است؟» یا فقط «محمد»)
     // — قبل از بقیه چون کلمهٔ «قرض» ممکن است داخل چنین سوالی هم باشد
     const isCountQuery = (has('قرضدار', 'قرض دار') && has('چند', 'تعداد')) || has('قرض کل', 'جمله قرض', 'مجموع قرض');
     if (!isCountQuery) {
-      const mp = _botMatchAnyPerson(qRaw);
+      const mp = _findPersonByName(qRaw);
       if (mp) {
         const t = _splitTotals(_allRows(mp));
         const alb = Math.round(t.all.albaqi);
@@ -39509,7 +39517,7 @@ function _botAnswer(qRaw) {
   if (has('کمک', 'راهنما', 'چه بلدی', 'چی بلدی', 'چه کار', 'چی کار')) return _botHelp();
   // مدیر: اگر هیچ جواب آماده‌ای نبود، خودِ متن در کل داده‌های برنامه جستجو می‌شود —
   // حتی یک نقطه یا یک عدد؛ هر جا ثبت شده باشد پیدا می‌شود و ربات دستِ خالی برنمی‌گردد
-  if (_rbMode === 'admin') { const ds = _botDeepSearch(qRaw); if (ds) return ds; }
+  if (_rbMode === 'admin') { const ds = _deepSearchAll(qRaw); if (ds) return ds; }
   return null;
 }
 // اعلان خودکار ربات در «سوال و جواب»: هر حساب/چیز جدیدی که اضافه می‌شود، ربات
@@ -43262,7 +43270,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.317';
+const APP_VERSION = '2.9.318';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -52786,7 +52794,7 @@ select:not(.native-sel){
 
      ⚠️ منطقِ محاسبه از نو نوشته نشده: همان توابعی صدا زده می‌شوند که خودِ
         برنامه استفاده می‌کند (_splitTotals، _allRows، _staffAcctFuelLeft،
-        _fuelStock، _botMatchAnyPerson). منطقِ حسابِ قرض‌داران حساس است و
+        _fuelStock، _findPersonByName). منطقِ حسابِ قرض‌داران حساس است و
         دو پیاده‌سازیِ موازی یعنی دو جوابِ متفاوت.
 
      ⚠️ همه فقط می‌خوانند. هیچ‌کدام save() صدا نمی‌زند و چیزی را عوض نمی‌کند.
@@ -52803,7 +52811,7 @@ select:not(.native-sel){
   var AI_CLIENT_TOOLS = {
     get_account_balance: function (args) {
       if (!_aiCanReadData()) return { error: 'اجازهٔ دیدنِ حساب‌ها را ندارید' };
-      var p = _botMatchAnyPerson(String(args && args.name || ''));
+      var p = _findPersonByName(String(args && args.name || ''));
       if (!p) return { found: false, note: 'حسابی با این نام پیدا نشد' };
 
       var t = _splitTotals(_allRows(p));
@@ -52872,7 +52880,7 @@ select:not(.native-sel){
     search_app_data: function (args) {
       if (!_aiIsAdmin()) return { error: 'جست‌وجوی سراسری فقط برای مدیر است' };
       try {
-        var t = _botDeepSearch(String(args && args.query || ''));
+        var t = _deepSearchAll(String(args && args.query || ''));
         return t ? { text: String(t).slice(0, 3000) } : { found: false };
       } catch (e) {
         return { error: 'جست‌وجو انجام نشد' };
