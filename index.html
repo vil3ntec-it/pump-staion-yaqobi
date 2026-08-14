@@ -43255,7 +43255,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.311';
+const APP_VERSION = '2.9.312';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -44814,9 +44814,39 @@ document.addEventListener('keydown', function(e){
     { ctx: 'person',  re: /(نام قرض|قرض‌?دار|نام مشتری|نام شخص|نام کامل|نام و تخلص|نام شرکت|نام فروشنده|نام تانکر|نام حساب|جستجوی نام|customer|person|debtor)/i },
     { ctx: 'vehicle', re: /(موتر|وسیله|کرولا|نوع نقلیه|vehicle)/i },
     { ctx: 'hawala',  re: /(حواله|hawala)/i },
-    { ctx: 'note',    re: /(یادداشت|توضیح|شرح|note|desc|comment)/i },
-    { ctx: 'person',  re: /^نام$|^نام\.\.\.$|^نام \/ توضیح$/ }
+    { ctx: 'note',    re: /(یادداشت|توضیح|شرح|note|desc|comment)/i }
   ];
+  /* ── عنوان‌های کوتاه (ستونِ جدول یا راهنمای تک‌کلمه‌ای) ────────────────────
+     این‌ها باید «دقیقاً» سنجیده شوند، نه داخلِ یک متنِ سرِهم. باگی که گزارش شد
+     از همین‌جا بود: ستونِ «نام» جدولِ حساب راهنمایش فقط «نام» است و قاعدهٔ
+     لنگردارِ /^نام$/ روی متنِ سرِهم هیچ‌وقت نمی‌خورد، پس آن ستون بی‌پیشنهاد
+     می‌ماند — همان «چند بار در یک جدول اسم نوشتم و سایه نیامد».
+     ستونِ «نام» زمینهٔ خودش را دارد (rowname): نام‌های واقعیِ سیستم را می‌گیرد
+     و آنچه خودتان در همین ستون تکرار کرده‌اید، جدا از کادرهای دیگر. */
+  var HEAD_RULES = [
+    { ctx: 'rowname', re: /^(نام|نام\.\.\.|نام \/ توضیح)$/ },
+    { ctx: 'hawala',  re: /^(حواله|حواله\/سند|سند)$/ },
+    { ctx: 'note',    re: /^(توضیح|توضیحات|شرح|یادداشت|ملاحظات)$/ },
+    { ctx: 'vehicle', re: /^(نوع موتر|موتر|وسیله)$/ }
+  ];
+  /* عنوانِ ستونِ همین خانه — با colspan هم درست می‌شمارد */
+  function stxColHead(el) {
+    try {
+      var td = el.closest && el.closest('td');
+      if (!td) return '';
+      var tr = td.parentElement, tbl = el.closest('table');
+      if (!tr || !tbl) return '';
+      var i = Array.prototype.indexOf.call(tr.children, td);
+      var head = tbl.querySelector('thead tr');
+      if (!head || i < 0) return '';
+      for (var j = 0, c = 0; j < head.children.length; j++) {
+        var span = parseInt(head.children[j].getAttribute('colspan') || '1', 10) || 1;
+        if (i < c + span) return (head.children[j].textContent || '').trim();
+        c += span;
+      }
+    } catch (e) {}
+    return '';
+  }
   var CELL_SEL = '.xls-tbl td input, .xls-tbl td textarea, .tbl td input, .tbl td textarea,' +
                  '.safe-tbl td input, .rasid-tbl td input, .ro-tbl td input';
   function stxInCell(el) { try { return !!(el && el.matches && el.matches(CELL_SEL)); } catch (e) { return false; } }
@@ -44855,6 +44885,13 @@ document.addEventListener('keydown', function(e){
     if (/^مثلاً\s*[\d۰-۹]/.test(ph)) return null;
     if (/(^|[-_ ])(fee|buyfee|price|rate|amount|qty|pct|percent)/i.test(idn)) return null;
 
+    // اول عنوان‌های کوتاه: راهنمای خودِ کادر، وگرنه عنوانِ ستونِ جدول
+    var head = ph || stxColHead(el);
+    if (head) {
+      for (var h = 0; h < HEAD_RULES.length; h++) {
+        if (HEAD_RULES[h].re.test(head)) return HEAD_RULES[h].ctx;
+      }
+    }
     for (var i = 0; i < CTX_RULES.length; i++) {
       if (CTX_RULES[i].re.test(hint)) {
         // «شرح/توضیح» با واژه‌های عددی قاطی شده باشد ⇒ عددی است، نه متنی
@@ -44885,7 +44922,7 @@ document.addEventListener('keydown', function(e){
       seen[k] = 1; out.push(t);
     };
     try {
-      if (ctx === 'person') {
+      if (ctx === 'person' || ctx === 'rowname') {
         (DB.debtPersons || []).forEach(function (p) {
           if (!p) return; push(p.name);
           (p.subs || []).forEach(function (s) { if (s) push(s.name); });
@@ -44919,7 +44956,8 @@ document.addEventListener('keydown', function(e){
            'یک قسمت پرداخت شد، بقیه باقی است'],
     hawala: ['حواله شد', 'حواله بانکی', 'حواله صرافی', 'نقد گرفته شد'],
     vehicle: ['کرولا', 'موتر باربری', 'تانکر', 'موترسایکل', 'زرنج', 'جنراتور', 'تراکتور'],
-    person: []
+    person: [],
+    rowname: []
   };
 
   /* ── ۵) منبعِ سوم: چیزهایی که خودِ کاربر تکرار کرده ──────────────────────
@@ -45071,8 +45109,11 @@ document.addEventListener('keydown', function(e){
     // ۱۸) سایه فقط وقتی که پیشنهاد دقیقاً ادامهٔ همین متن باشد — این تنها
     // چیزی است که جلوی «پرداختپرداخت شد» را می‌گیرد.
     if (!full || full.length <= typed.length || full.slice(0, typed.length) !== typed) return stxGhostHide();
-    // متن از کادر بیرون زده یا کادر اسکرول خورده ⇒ جای سایه دقیق درنمی‌آید
-    if (el.scrollWidth > el.clientWidth + 1 || el.scrollTop > 0 || el.scrollLeft !== 0) return stxGhostHide();
+    /* فقط وقتی کادر «واقعاً اسکرول خورده» سایه را رها می‌کنیم، چون آن‌وقت جای
+       نوشته جابه‌جا شده است. صرفِ بلندتر بودنِ متن از عرضِ کادر مشکلی نیست:
+       خودِ لایه overflow:hidden دارد و دُمِ پیشنهاد بریده می‌شود — این برای
+       خانه‌های باریکِ جدول مهم است، وگرنه آن‌جا هیچ سایه‌ای دیده نمی‌شد. */
+    if (Math.abs(el.scrollLeft) > 1 || el.scrollTop > 0) return stxGhostHide();
     var cs = getComputedStyle(el), r = el.getBoundingClientRect();
     if (!r.width || !r.height) return stxGhostHide();
     var g = stxGhostEl();
