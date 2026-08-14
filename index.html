@@ -1311,7 +1311,7 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
 .pl-loss-note{margin-top:10px;font-size:0.74rem;line-height:1.85;color:var(--muted)}
 .pl-loss-warn{margin-bottom:10px;padding:7px 10px;border:1px dashed var(--accent);border-radius:8px;font-size:0.74rem;line-height:1.7;color:var(--accent)}
 .pl-loss-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:10px}
-.pl-loss-tbl{width:100%;border-collapse:collapse;font-size:0.8rem;min-width:1000px}
+.pl-loss-tbl{width:100%;border-collapse:collapse;font-size:0.8rem;min-width:1120px}
 .pl-loss-tbl th{background:var(--dark);color:var(--muted);font-weight:800;font-size:0.72rem;padding:8px 6px;border-bottom:1px solid var(--border);white-space:nowrap}
 .pl-loss-tbl td{padding:7px 6px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap}
 .pl-loss-tbl tbody tr:hover{background:var(--dark)}
@@ -1333,7 +1333,7 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
 .pl-sub-tbl tfoot td{background:var(--panel);font-weight:900;border-bottom:none}
 .pl-open-btn{background:transparent;border:1px solid var(--blue);color:var(--blue);border-radius:7px;padding:4px 9px;font-family:'Vazirmatn',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;white-space:nowrap}
 .pl-open-btn:hover{background:var(--blue);color:#fff}
-@media (max-width:600px){ .pl-loss-tbl{font-size:0.74rem;min-width:920px} .pl-loss-sum b{font-size:0.9rem} .pl-sub-tbl{font-size:0.71rem;min-width:1100px} }
+@media (max-width:600px){ .pl-loss-tbl{font-size:0.74rem;min-width:1040px} .pl-loss-sum b{font-size:0.9rem} .pl-sub-tbl{font-size:0.71rem;min-width:1100px} }
 
 .sm-modal{background:var(--panel);border:1.5px solid var(--border);border-radius:14px;width:100%;max-width:360px;padding:22px}
 .sm-modal h3{font-size:0.95rem;font-weight:700;color:var(--accent);margin-bottom:14px}
@@ -28753,9 +28753,21 @@ function _plInvIndex(rebuild) {
   _plInvCache = { byId: byId, byPerson: byPerson, byName: byName, onlyNames: onlyNames };
   return _plInvCache;
 }
-/* نمای گزارشیِ یک فاکتور: نرخِ روزِ ثبت (rate_on_create) و نرخِ روزِ تایید
-   (rate_on_approve) هرکدام جداگانه روی خودِ فاکتور قفل شده‌اند و هیچ‌کدام جای
-   دیگری را نمی‌گیرند. فاکتوری که هنوز تایید نشده فقط نرخِ ثبتش را دارد. */
+/* نمای گزارشیِ یک فاکتور — «زیانِ اختلافِ نرخِ فاکتور» ────────────────────────
+   داستانش همانی است که صاحب ریپو گفت: فاکتور با قیمتِ خودش (مثلاً ۶۰) در صف
+   می‌نشیند؛ روزی که دکمهٔ «تایید» زده می‌شود، نرخِ اتحادیهٔ همان لحظه (مثلاً ۷۰)
+   روی فاکتور قفل می‌شود. آن ۱۰ افغانی تفاوت، ضربدرِ لیترهای همان فاکتور، همان
+   ضرری است که در آن فاکتور خورده‌ایم.
+
+     نرخِ ثبت      = rate_on_create  (لحظهٔ ساختنِ فاکتور، دستِ‌نخورده می‌ماند)
+     نرخِ تایید    = rate_on_approve (نرخِ اتحادیه در لحظهٔ زدنِ «تایید»)
+     تفاوتِ هر لیتر = نرخِ تایید − نرخِ ثبت
+     ضررِ فاکتور    = تفاوتِ هر لیتر × لیتر            (اگر منفی شد ⇒ مفاد، نه ضرر)
+
+   فاکتوری که هنوز تایید نشده هیچ نرخِ تاییدی ندارد و هیچ عددی برایش قفل نمی‌شود؛
+   فقط برای این‌که پیش از زدنِ دکمه بدانید چه خبر است، «اگر همین حالا تایید شود»
+   با نرخِ اتحادیهٔ همین لحظه نشان داده می‌شود — و در هیچ جمعی شمرده نمی‌شود.
+   این تابع فقط می‌خواند؛ هیچ نرخی این‌جا ساخته یا ذخیره نمی‌شود. */
 function _plInvView(v) {
   const liters = parseFloat(v.liters) || 0;
   // فاکتورهای قدیمی rate_on_create ندارند — همان نرخِ ثبت‌شدهٔ خودشان مبناست
@@ -28763,12 +28775,20 @@ function _plInvView(v) {
   const approved = v.status === 'approved';
   const ra = approved ? (parseFloat(v.rate_on_approve) || 0) : 0;
   const both = approved && rc > 0 && ra > 0;
+  const dpl = both ? (ra - rc) : 0;             // تفاوتِ هر لیتر
+  const diff = dpl * liters;                    // مثبت = ضرر ، منفی = مفاد
+  // فاکتورِ در صف: نرخِ اتحادیهٔ همین لحظه (فقط پیش‌نمایش، در هیچ جمعی نیست)
+  const now = approved ? 0 : (parseFloat(v.fuel_type === 'diesel' ? DB.unionRateDiesel : DB.unionRatePetrol) || 0);
+  const pdpl = (!approved && rc > 0 && now > 0) ? (now - rc) : 0;
   return {
     id: v.id, no: v.invoice_number || 0, date: v.date_sh || '',
     ftype: v.fuel_type === 'diesel' ? 'diesel' : 'petrol',
     liters: liters, rc: rc, ra: ra, approved: approved,
     amount: rc * liters,
-    hasDiff: both, diff: both ? (ra - rc) * liters : 0
+    hasDiff: both, dpl: dpl, diff: diff,
+    loss: diff > 0 ? diff : 0,                  // فقط ضرر — عددِ منفی «زیان» نیست
+    gain: diff < 0 ? -diff : 0,
+    nowRate: now, pdpl: pdpl, pendDiff: pdpl * liters
   };
 }
 // فاکتورهای یک شخص — هم آن‌هایی که به شناسه‌اش بسته‌اند، هم آن‌هایی که فقط نامش
@@ -29023,30 +29043,46 @@ function _plReportAll() {
   const idx = _plRateIndex();
   const list = [];
   const g = { persons: 0, lossPersons: 0, fuel: 0, principal: 0, refValue: 0,
-              loss: 0, openFuel: 0, n: 0, singleN: 0, invN: 0, noRateN: 0 };
+              loss: 0, openFuel: 0, n: 0, singleN: 0, invN: 0, noRateN: 0,
+              invLoss: 0, invGain: 0, invLossN: 0, pendN: 0, pendLoss: 0 };
+  // جمعِ «زیانِ اختلافِ نرخِ فاکتور» برای یک فهرست از فاکتورها
+  const invSum = inv => inv.reduce((a, x) => {
+    a.loss += x.loss; a.gain += x.gain;
+    if (x.loss > 0) a.n++;
+    if (!x.approved && x.pendDiff > 0) { a.pendN++; a.pendLoss += x.pendDiff; }
+    return a;
+  }, { loss: 0, gain: 0, n: 0, pendN: 0, pendLoss: 0 });
+  const addInv = s => {
+    g.invLoss += s.loss; g.invGain += s.gain; g.invLossN += s.n;
+    g.pendN += s.pendN; g.pendLoss += s.pendLoss;
+  };
   (DB.debtPersons || []).forEach(p => {
     if (!p) return;
     const rep = _plPersonReport(idx, p);
     const inv = _plInvoicesFor(p);
     if (!rep.t.n && !inv.length) return;
+    const s = invSum(inv);
     list.push({ key: String(p.id), id: p.id, name: p.name || '—',
-                items: rep.items, t: rep.t, inv: inv });
+                items: rep.items, t: rep.t, inv: inv, iv: s });
     g.persons++; g.n += rep.t.n; g.singleN += rep.t.singleN; g.invN += inv.length;
     g.fuel += rep.t.fuel; g.principal += rep.t.principal; g.refValue += rep.t.refValue;
     g.loss += rep.t.loss; g.openFuel += rep.t.openFuel; g.noRateN += rep.t.noRateN;
-    if (rep.t.loss > 0) g.lossPersons++;
+    addInv(s);
+    if (rep.t.loss > 0 || s.loss > 0) g.lossPersons++;
   });
   // کسانی که فقط فاکتورِ در صفِ تایید دارند و هنوز حسابِ قرض‌داری برایشان نیست
   _plInvoiceOnlyNames().forEach(nm => {
     const inv = _plInvoicesFor({ id: null, name: nm });
     if (!inv.length) return;
-    g.invN += inv.length;
-    list.push({ key: 'name:' + _debtNameKey(nm), id: null, name: nm, items: [], inv: inv,
+    const s = invSum(inv);
+    g.invN += inv.length; addInv(s);
+    if (s.loss > 0) g.lossPersons++;
+    list.push({ key: 'name:' + _debtNameKey(nm), id: null, name: nm, items: [], inv: inv, iv: s,
                 t: { n: 0, singleN: 0, invRowN: 0, fuel: 0, principal: 0, refValue: 0, loss: 0,
                      openFuel: 0, lossN: 0, sameDayN: 0, noRateN: 0, paidN: 0 } });
   });
-  list.sort((a, b) => (b.t.loss - a.t.loss) || (b.t.principal - a.t.principal)
-                   || (b.t.openFuel - a.t.openFuel));
+  list.sort((a, b) => ((b.t.loss + b.iv.loss) - (a.t.loss + a.iv.loss))
+                   || (b.t.principal - a.t.principal) || (b.t.openFuel - a.t.openFuel));
   return { list: list, g: g };
 }
 
@@ -29110,9 +29146,29 @@ function renderPriceLossPage() {
       + afn(g.loss) + '</b></div>'
     + '<div title="هنوز رسیدی برایشان نیامده — تا روزِ رسید هیچ زیانی برایشان حساب نمی‌شود">'
       + '<i>تیلِ هنوز تسویه‌نشده (بی‌زیان)</i><b style="color:var(--muted)">' + lit(g.openFuel) + '</b></div>'
+    /* ── ضررِ خودِ فاکتور: از روزِ ثبت تا روزی که دکمهٔ تایید زده شد ────────
+       فاکتور با قیمتِ خودش در صف می‌ماند؛ روزِ تایید، نرخِ اتحادیهٔ همان لحظه
+       روی آن قفل می‌شود. تفاوتشان ضربدرِ لیتر = همان ضرری که در آن فاکتور
+       خورده‌ایم. جدا از زیانِ بالا نگه داشته می‌شود چون دو چیزِ متفاوت‌اند و
+       جمعِ کورکورانه‌شان می‌تواند یک لیتر را دوبار بشمارد. */
+    + '<div title="نرخِ اتحادیه در لحظهٔ زدنِ «تایید» منهای قیمتِ خودِ فاکتور، ضربدرِ لیترهای همان فاکتور">'
+      + '<i>زیان اختلاف نرخ فاکتور<br><small>(از ثبت تا تایید)</small></i>'
+      + '<b style="color:' + (g.invLoss > 0 ? 'var(--red)' : 'var(--green)') + '">' + afn(g.invLoss) + '</b></div>'
+    + '<div title="جمعِ دو زیانِ بالا — این دو یک چیز نیستند و هرکدام جدا هم بالا نوشته شده">'
+      + '<i>جمع کل زیان</i><b style="color:' + ((g.loss + g.invLoss) > 0 ? 'var(--red)' : 'var(--green)') + '">'
+      + afn(g.loss + g.invLoss) + '</b></div>'
     + '<div title="هر ردیفِ «مقدار تیل» در حسابِ قرض‌دار یک برداشتِ مستقل است، و هر فاکتور یک رکوردِ جدا">'
       + '<i>رکوردهای گزارش</i><b style="color:var(--blue)">' + n2fa(g.singleN) + ' برداشت تکی · ' + n2fa(g.invN) + ' فاکتور</b></div>'
     + '</div>';
+
+  // فاکتورهایی که هنوز در صفِ تایید نشسته‌اند و با نرخِ امروز ضرر می‌دهند —
+  // هشدارِ پیش از زدنِ دکمه. هیچ‌جا شمرده نمی‌شود، فقط خبر می‌دهد.
+  const pendHtml = g.pendLoss > 0
+    ? '<div class="pl-loss-warn" style="border-color:var(--purple);color:var(--purple)">'
+      + '🧾 <b>' + n2fa(g.pendN) + '</b> فاکتور هنوز در صفِ تایید است و نرخِ اتحادیهٔ امروز از قیمتِ خودشان بالاتر رفته. '
+      + 'اگر همین حالا تایید شوند، <b>' + afn(g.pendLoss) + '</b> ضرر می‌خورد. '
+      + '(این عدد در هیچ جمعی شمرده نشده — تا وقتی تایید نشود، نرخِ تایید نه ثبت می‌شود نه حدس زده می‌شود.)</div>'
+    : '';
 
   const warnHtml = g.noRateN
     ? '<div class="pl-loss-warn">⚠️ برای <b>' + n2fa(g.noRateN) + '</b> رسید، نرخ اتحادیه برای همان تاریخ موجود نیست '
@@ -29134,7 +29190,12 @@ function renderPriceLossPage() {
       + '<td style="color:var(--purple);font-weight:800">' + afn(x.t.refValue) + '</td>'
       + '<td style="color:' + (x.t.loss > 0 ? 'var(--red)' : 'var(--muted)') + ';font-weight:900">'
         + afn(x.t.loss) + (x.t.loss > 0 ? '<br><small style="color:var(--muted)">زیان افزایش قیمت</small>' : '') + '</td>'
-      + '<td>' + n2fa(x.inv.length) + ' فاکتور</td>'
+      + '<td style="color:' + (x.iv.loss > 0 ? 'var(--red)' : 'var(--muted)') + ';font-weight:900">'
+        + afn(x.iv.loss)
+        + (x.iv.loss > 0 ? '<br><small style="color:var(--muted)">' + n2fa(x.iv.n) + ' فاکتور</small>'
+          : (x.iv.gain > 0 ? '<br><small style="color:var(--green)">' + afn(x.iv.gain) + ' مفاد</small>' : '')) + '</td>'
+      + '<td>' + n2fa(x.inv.length) + ' فاکتور'
+        + (x.iv.pendLoss > 0 ? '<br><small style="color:var(--purple)">' + n2fa(x.iv.pendN) + ' در صف</small>' : '') + '</td>'
       + '<td>' + n2fa(x.t.singleN) + ' برداشت تکی'
         + (x.t.invRowN ? '<br><small style="color:var(--muted)">+ ' + n2fa(x.t.invRowN) + ' ردیفِ فاکتوری</small>' : '') + '</td>'
       + '<td><button class="pl-open-btn" onclick="event.stopPropagation();togglePriceLossGroup(\'' + k + '\')">'
@@ -29221,28 +29282,53 @@ function renderPriceLossPage() {
     //    محاسبه شده است؛ این جدول همان فاکتورها را با نرخ‌هایشان نشان می‌دهد.
     const invRows = x.inv.map(v => {
       const up = v.hasDiff && v.diff > 0, dn = v.hasDiff && v.diff < 0;
+      // نرخِ روزِ تایید — و برای فاکتورِ در صف، نرخِ اتحادیهٔ همین لحظه به‌عنوانِ پیش‌نمایش
+      const raCell = v.approved
+        ? (v.ra > 0 ? n2fa(rnd2(v.ra)) : '—')
+        : (v.nowRate > 0
+            ? '<span style="color:var(--purple)">' + n2fa(rnd2(v.nowRate)) + '</span>'
+              + '<br><small style="color:var(--muted)">نرخ امروز — هنوز قفل نشده</small>'
+            : '<small style="color:var(--muted)">هنوز تایید نشده</small>');
+      // تفاوتِ هر لیتر: همان «۶۰ شد ۷۰ ⇒ ۱۰ افغانی»
+      const dplCell = v.hasDiff
+        ? '<b style="color:' + (up ? 'var(--red)' : (dn ? 'var(--green)' : 'var(--muted)')) + '">'
+          + n2fa(rnd2(Math.abs(v.dpl))) + '</b><br><small style="color:var(--muted)">'
+          + (up ? 'بالا رفته' : (dn ? 'پایین آمده' : 'بی‌تغییر')) + '</small>'
+        : (v.pdpl > 0 ? '<span style="color:var(--purple)">' + n2fa(rnd2(v.pdpl)) + '</span>'
+                        + '<br><small style="color:var(--muted)">اگر امروز تایید شود</small>' : '—');
+      // ضررِ خودِ همین فاکتور = تفاوتِ هر لیتر × لیتر
+      const lossCell = v.hasDiff
+        ? '<b style="color:' + (up ? 'var(--red)' : (dn ? 'var(--green)' : 'var(--muted)')) + '">'
+          + afn(Math.abs(v.diff)) + '</b><br><small style="color:var(--muted)">'
+          + (up ? 'ضرر این فاکتور' : (dn ? 'مفاد این فاکتور' : 'بی‌تغییر')) + '</small>'
+        : (v.pendDiff > 0 ? '<span style="color:var(--purple)">' + afn(v.pendDiff) + '</span>'
+                            + '<br><small style="color:var(--muted)">پیش‌نمایش — در جمع نیست</small>' : '—');
       return '<tr>'
         + '<td>' + n2fa(v.no) + '</td>'
         + '<td>' + (esc(v.date) || '—') + '</td>'
         + '<td>' + (v.ftype === 'diesel' ? '🟤 دیزل' : '⛽ پطرول') + '</td>'
         + '<td style="color:var(--blue);font-weight:800">' + n2fa(rnd2(v.liters)) + ' ل</td>'
         + '<td style="font-weight:800">' + (v.rc > 0 ? n2fa(rnd2(v.rc)) : '—') + '</td>'
-        + '<td style="font-weight:800">' + (v.approved ? (v.ra > 0 ? n2fa(rnd2(v.ra)) : '—') : '<small style="color:var(--muted)">هنوز تایید نشده</small>') + '</td>'
+        + '<td style="font-weight:800">' + raCell + '</td>'
+        + '<td>' + dplCell + '</td>'
         + '<td style="color:var(--accent)">' + (v.rc > 0 ? afn(v.amount) : '—') + '</td>'
-        + '<td style="font-weight:900;color:' + (up ? 'var(--red)' : (dn ? 'var(--green)' : 'var(--muted)')) + '">'
-          + (v.hasDiff ? (afn(Math.abs(v.diff)) + '<br><small>' + (up ? 'نرخ بالا رفته' : (dn ? 'نرخ پایین آمده' : 'بی‌تغییر')) + '</small>') : '—') + '</td>'
+        + '<td style="font-weight:900">' + lossCell + '</td>'
         + '<td>' + (v.approved ? '<b style="color:var(--green)">✅ تاییدشده</b>' : '<b style="color:var(--accent)">⏳ در صف تایید</b>') + '</td>'
         + '</tr>';
     }).join('');
 
-    return head + '<tr class="pl-det"><td colspan="9"><div class="pl-det-box">'
+    return head + '<tr class="pl-det"><td colspan="10"><div class="pl-det-box">'
       + detTable
       + (invRows
-        ? '<div class="pl-det-t" style="margin-top:12px">🧾 فاکتورهای «' + esc(x.name) + '» — فاکتورِ تاییدشده در جدولِ بالا به‌عنوانِ «رسید» نشسته و لیترش همان‌جا شمرده شده؛ این‌جا فقط خودِ فاکتور با نرخ‌هایش دیده می‌شود</div>'
+        ? '<div class="pl-det-t" style="margin-top:12px">🧾 فاکتورهای «' + esc(x.name) + '» — قیمتِ خودِ فاکتور در برابرِ نرخِ اتحادیه در لحظهٔ زدنِ «تایید»؛ تفاوتشان ضربدرِ لیتر، ضررِ همان فاکتور است</div>'
           + '<div class="pl-loss-wrap"><table class="pl-sub-tbl"><thead><tr>'
-            + '<th>شماره</th><th>تاریخ</th><th>نوع تیل</th><th>مقدار</th><th>نرخ زمان ثبت</th><th>نرخ زمان تایید</th>'
-            + '<th>مبلغ فاکتور</th><th>اختلاف نرخ</th><th>وضعیت</th>'
-          + '</tr></thead><tbody>' + invRows + '</tbody></table></div>'
+            + '<th>شماره</th><th>تاریخ</th><th>نوع تیل</th><th>مقدار</th><th>نرخ ثبت فاکتور</th><th>نرخ اتحادیه روز تایید</th>'
+            + '<th>تفاوت هر لیتر</th><th>مبلغ فاکتور</th><th>ضرر این فاکتور</th><th>وضعیت</th>'
+          + '</tr></thead><tbody>' + invRows + '</tbody>'
+          + '<tfoot><tr><td colspan="8" style="text-align:right">جمعِ ضررِ اختلافِ نرخِ فاکتورهای «' + esc(x.name) + '»</td>'
+            + '<td style="color:' + (x.iv.loss > 0 ? 'var(--red)' : 'var(--muted)') + '">' + afn(x.iv.loss) + '</td>'
+            + '<td style="color:var(--muted)">' + n2fa(x.iv.n) + ' فاکتورِ ضررده</td></tr></tfoot>'
+          + '</table></div>'
         : '')
       + '<div style="margin-top:10px"><button class="pl-open-btn" onclick="event.stopPropagation();lossOpenPerson(\'' + k + '\')">👥 باز کردنِ حسابِ کاملِ این شخص ‹</button></div>'
       + '</div></td></tr>';
@@ -29250,24 +29336,26 @@ function renderPriceLossPage() {
 
   const shown = list.reduce((a, x) => {
     a.fuel += x.t.fuel; a.principal += x.t.principal; a.refValue += x.t.refValue;
-    a.loss += x.t.loss; a.single += x.t.singleN; a.inv += x.inv.length; return a;
-  }, { fuel: 0, principal: 0, refValue: 0, loss: 0, single: 0, inv: 0 });
+    a.loss += x.t.loss; a.single += x.t.singleN; a.inv += x.inv.length;
+    a.invLoss += x.iv.loss; return a;
+  }, { fuel: 0, principal: 0, refValue: 0, loss: 0, single: 0, inv: 0, invLoss: 0 });
   const fLabel = { all: 'همه', open: 'فقط پرداخت‌نشده‌ها', paid: 'فقط پرداخت‌شده‌ها' }[_lossFilter] || 'همه';
 
-  wrap.innerHTML = cards + warnHtml
+  wrap.innerHTML = cards + warnHtml + pendHtml
     + '<div class="pl-loss-wrap"><table class="pl-loss-tbl">'
       + '<thead><tr>'
         + '<th>#</th><th>قرض‌دار</th><th>تیل باقی‌مانده</th><th>مبلغ ثبت‌شده</th>'
-        + '<th>ارزش بر اساس نرخ رسید</th><th>زیان افزایش قیمت</th><th>تعداد فاکتور</th>'
-        + '<th>تعداد برداشت تکی</th><th>جزئیات</th>'
+        + '<th>ارزش بر اساس نرخ رسید</th><th>زیان افزایش قیمت</th><th>زیان نرخ فاکتور<br><small>(ثبت ← تایید)</small></th>'
+        + '<th>تعداد فاکتور</th><th>تعداد برداشت تکی</th><th>جزئیات</th>'
       + '</tr></thead>'
-      + '<tbody>' + (bodyHtml || '<tr><td colspan="9" style="color:var(--muted);padding:14px">در این نما قرض‌داری نیست</td></tr>') + '</tbody>'
+      + '<tbody>' + (bodyHtml || '<tr><td colspan="10" style="color:var(--muted);padding:14px">در این نما قرض‌داری نیست</td></tr>') + '</tbody>'
       + '<tfoot><tr>'
         + '<td colspan="2" style="text-align:right">جمعِ نمای «' + fLabel + '» — ' + n2fa(list.length) + ' قرض‌دار</td>'
         + '<td style="color:var(--blue)">' + n2fa(rnd2(shown.fuel)) + ' ل</td>'
         + '<td style="color:var(--accent)">' + afn(shown.principal) + '</td>'
         + '<td style="color:var(--purple)">' + afn(shown.refValue) + '</td>'
         + '<td style="color:' + (shown.loss > 0 ? 'var(--red)' : 'var(--muted)') + '">' + afn(shown.loss) + '</td>'
+        + '<td style="color:' + (shown.invLoss > 0 ? 'var(--red)' : 'var(--muted)') + '">' + afn(shown.invLoss) + '</td>'
         + '<td>' + n2fa(shown.inv) + ' فاکتور</td>'
         + '<td>' + n2fa(shown.single) + ' برداشت تکی</td>'
         + '<td></td>'
@@ -29279,6 +29367,11 @@ function renderPriceLossPage() {
       + 'لیترش به‌عنوانِ اعتبار در همان حساب ثبت می‌شود، پس برداشت‌ها را تسویه می‌کند و <b>تاریخِ خودِ فاکتور</b> تاریخِ آن رسید است — '
       + 'به همین دلیل هیچ فاکتوری دوباره به‌عنوانِ برداشتِ جدا شمرده نمی‌شود. ردیف‌های قدیمیِ فاکتوری که خودشان مقدار تیل دارند، '
       + 'با نوعِ «🧾 فاکتور» علامت خورده‌اند و مثل بقیه در جمعِ زیان می‌آیند.<br>'
+      + '📌 <b>«زیان نرخ فاکتور» چیزِ دیگری است.</b> فاکتور با قیمتِ خودش (مثلاً ۶۰) در صف می‌نشیند و روزی که دکمهٔ «تایید» را می‌زنید، '
+      + 'نرخِ اتحادیهٔ همان لحظه (مثلاً ۷۰) روی همان فاکتور قفل می‌شود. آن ۱۰ افغانی ضربدرِ لیترهای فاکتور، ضررِ همان فاکتور است. '
+      + 'این عدد جدا از «زیان افزایش قیمت» نگه داشته می‌شود چون دو چیزِ متفاوت‌اند و جمعِ کورکورانه‌شان می‌تواند یک لیتر را دوبار بشمارد؛ '
+      + 'کارتِ «جمع کل زیان» هر دو را کنارِ هم نشان می‌دهد. فاکتوری که هنوز تایید نشده هیچ نرخِ تاییدی ندارد و در هیچ جمعی نیست — '
+      + 'فقط برای این‌که پیش از زدنِ دکمه بدانید، «اگر امروز تایید شود» با نرخِ امروز نشان داده می‌شود.<br>'
       + '📌 <b>زیان با بدهی یکی نیست.</b> بدهی همان چیزی است که مشتری باید بپردازد؛ زیانِ افزایش قیمت اختلافِ ارزشِ همان تیل '
       + 'بین نرخِ خودِ برداشت و نرخِ اتحادیه در روزِ رسید است. اگر بدهیِ کسی صفر شود، سابقهٔ زیانش این‌جا می‌ماند و '
       + 'با بدهیِ فعلی جمع نمی‌شود.<br>'
@@ -42941,7 +43034,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.306';
+const APP_VERSION = '2.9.307';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
