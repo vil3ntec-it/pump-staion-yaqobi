@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { suite, test, assert, assertEqual } from './helpers.mjs';
-import { TOOLS, TOOL_BY_NAME, toolSchemasFor } from '../src/agent/tools/registry.js';
+import { TOOLS, CLIENT_TOOLS, TOOL_BY_NAME, toolSchemasFor } from '../src/agent/tools/registry.js';
 import { callTool, activeTools } from '../src/agent/tools/router.js';
 import { registerAllSources } from '../src/gateway/sources.js';
 import { listSources, assertGatewayIsReadOnly, readSource, registerSource, _clearSources } from '../src/gateway/readonly.js';
@@ -187,6 +187,54 @@ export default async function run() {
       const res = await callTool('generate_qr', { target: bad }, ctx);
       assert(res.ok, 'ابزار خطا داد به‌جای ردِ محترمانه');
       assert(res.result.ok === false, `برای «${bad}» کد ساخته شد`);
+    }
+  });
+
+  // ───────────────────────────────────────────────────────────────────────
+  suite('ابزارهای سمتِ دستگاه (اعدادِ حساب‌ها)');
+
+  test('ابزارهای سمتِ دستگاه هم فقط‌خواندنی‌اند', () => {
+    for (const t of CLIENT_TOOLS) {
+      assertEqual(t.readOnly, true, `${t.name} فقط‌خواندنی نیست`);
+      assertEqual(t.clientSide, true, `${t.name} علامتِ سمتِ دستگاه ندارد`);
+    }
+  });
+
+  test('سرور آن‌ها را اجرا نمی‌کند — فقط واگذار می‌کند', async () => {
+    const res = await callTool('get_account_balance', { name: 'احمد' }, ctx);
+    assert(res.deferred === true, 'سرور خودش خواست اجرایش کند');
+    assert(res.ok === false, 'نباید نتیجهٔ آماده برگرداند');
+    assertEqual(res.tool, 'get_account_balance');
+  });
+
+  test('هیچ ابزارِ سمتِ دستگاه روی سرور پیاده‌سازی ندارد', () => {
+    // اگر روزی کسی handler برایشان بنویسد، یعنی داده روی سرور خوانده می‌شود
+    for (const t of CLIENT_TOOLS) {
+      assertEqual(typeof t.handler, 'undefined', `${t.name} روی سرور handler دارد`);
+    }
+  });
+
+  test('واگذاری هم از whitelist و سطحِ دسترسی رد می‌شود', async () => {
+    // جست‌وجوی سراسری فقط مدیر
+    const asUser = await callTool('search_app_data', { query: 'احمد' }, { ...ctx, level: 'USER' });
+    assert(!asUser.deferred, 'برای کاربرِ عادی واگذار شد');
+    assert(!asUser.ok);
+    const asAdmin = await callTool('search_app_data', { query: 'احمد' }, ctx);
+    assert(asAdmin.deferred, 'برای مدیر واگذار نشد');
+  });
+
+  test('آرگومانِ نامعتبر پیش از رفتن به دستگاه رد می‌شود', async () => {
+    const res = await callTool('get_account_balance', { name: 'ا' }, ctx);
+    assert(!res.deferred && !res.ok, 'نامِ خیلی کوتاه به دستگاه رفت');
+  });
+
+  test('ابزارِ سمتِ دستگاه هم اسمِ نوشتنی ندارد', () => {
+    for (const t of CLIENT_TOOLS) {
+      for (const w of WRITE_WORDS) {
+        // «get_» و «list_» و «search_» مجازند؛ بقیهٔ فعل‌ها نه
+        if (t.name.startsWith('get_') || t.name.startsWith('list_') || t.name.startsWith('search_')) continue;
+        assert(!t.name.toLowerCase().includes(w), `${t.name} شاملِ «${w}» است`);
+      }
     }
   });
 

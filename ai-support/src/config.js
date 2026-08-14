@@ -109,6 +109,13 @@ const defaults = {
       'get_supported_links',
       'get_account_help',
       'generate_qr',
+      // ابزارهای «سمتِ دستگاه» — اعدادِ واقعیِ حساب‌ها. سرور اجرایشان نمی‌کند؛
+      // مرورگرِ خودِ کاربر حسابشان می‌کند و فقط نتیجه برمی‌گردد.
+      'get_account_balance',
+      'list_accounts',
+      'get_fuel_stock',
+      'get_app_totals',
+      'search_app_data',
     ],
   },
 

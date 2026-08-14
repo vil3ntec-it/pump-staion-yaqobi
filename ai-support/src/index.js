@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import http from 'node:http';
+import crypto from 'node:crypto';
 import config from './config.js';
 import { enforceBoundaryOrExit } from './security/guard.js';
 import { sessionFromRequest, checkAppCredentials, issueSession, levelForAppRole, levelRank } from './security/auth.js';
@@ -124,12 +125,55 @@ function ipKey(req) {
 
 const CHAT_SCHEMA = {
   type: 'object',
-  required: ['question'],
   properties: {
     question: { type: 'string', minLength: 1, maxLength: 1000 },
     history: { type: 'array', maxItems: 12 },
+    // ادامهٔ گفت‌وگویی که منتظرِ دادهٔ دستگاه بود
+    continuation: { type: 'string', maxLength: 64 },
+    toolResults: { type: 'array', maxItems: 4 },
   },
 };
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  انبارِ گفت‌وگوهای نیمه‌کاره
+//
+//  وقتی مدل دادهٔ دستگاه می‌خواهد، گفت‌وگو این‌جا نگه داشته می‌شود و فقط یک
+//  شناسه به مرورگر می‌رود. دلیلش: اگر خودِ پیام‌ها را به مرورگر بدهیم، system
+//  prompt و متنِ بازیابی‌شده هم می‌رود بیرون — بی‌دلیل و قابلِ دست‌کاری.
+//
+//  عمرِ کوتاه و سقفِ تعداد دارد تا به نشتِ حافظه تبدیل نشود.
+// ═══════════════════════════════════════════════════════════════════════════
+const PENDING_TTL_MS = 120_000;
+const PENDING_MAX = 200;
+const pendingTurns = new Map();
+
+function putPending(state) {
+  if (pendingTurns.size >= PENDING_MAX) {
+    // قدیمی‌ترین‌ها را بریز دور (ترتیبِ درجِ Map)
+    for (const k of pendingTurns.keys()) {
+      pendingTurns.delete(k);
+      if (pendingTurns.size < PENDING_MAX) break;
+    }
+  }
+  const id = crypto.randomBytes(12).toString('hex');
+  pendingTurns.set(id, { state, expires: Date.now() + PENDING_TTL_MS });
+  return id;
+}
+
+function takePending(id, user) {
+  const hit = pendingTurns.get(id);
+  if (!hit) return null;
+  pendingTurns.delete(id);
+  if (hit.expires < Date.now()) return null;
+  // گفت‌وگوی یک نفر را نفرِ دیگری نمی‌تواند ادامه بدهد
+  if (hit.state?.user !== user) return null;
+  return hit.state;
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of pendingTurns) if (v.expires < now) pendingTurns.delete(k);
+}, 60_000).unref?.();
 
 const SESSION_SCHEMA = {
   type: 'object',
@@ -198,6 +242,26 @@ async function handle(req, res, url) {
     if (!g) return;
 
     const body = validate(await readJsonBody(req, config.server.maxBodyBytes), CHAT_SCHEMA, 'چت');
+
+    // ── ادامهٔ گفت‌وگو با دادهٔ دستگاه ────────────────────────────────────
+    if (body.continuation) {
+      const state = takePending(body.continuation, g.session.sub);
+      if (!state) return send(res, 410, { error: 'این گفت‌وگو منقضی شده — دوباره بپرسید.' });
+
+      const out2 = await agent.continueWithClientData({
+        state,
+        toolResults: Array.isArray(body.toolResults) ? body.toolResults : [],
+      });
+      audit({
+        kind: 'chat', user: g.session.sub, level: g.session.lvl,
+        mode: out2.mode, clientData: true, ms: out2.ms,
+        tools: (body.toolResults || []).map(t => t && t.name).filter(Boolean),
+      });
+      return send(res, 200, out2);
+    }
+
+    if (!body.question) throw new ValidationError('«question» لازم است', 'question');
+
     const history = (body.history || [])
       .filter(m => m && typeof m.content === 'string' && ['user', 'assistant'].includes(m.role))
       .map(m => ({ role: m.role, content: String(m.content).slice(0, 1500) }));
@@ -211,6 +275,21 @@ async function handle(req, res, url) {
       // وقتی سهمیهٔ مدل پر شده، عمداً مدل را صدا نمی‌زنیم — جوابِ استخراجی می‌رود
       signal: g.degrade ? AbortSignal.abort() : undefined,
     });
+
+    // مدل دادهٔ دستگاه خواست → شناسه بده، خودِ گفت‌وگو پیشِ ما می‌ماند
+    if (out.mode === 'need-client-data') {
+      const id = putPending({ ...out.state, user: g.session.sub });
+      audit({
+        kind: 'chat', user: g.session.sub, level: g.session.lvl,
+        mode: out.mode, needs: out.needsClient.map(t => t.name), ms: out.ms,
+      });
+      return send(res, 200, {
+        mode: 'need-client-data',
+        needsClient: out.needsClient,
+        continuation: id,
+        ms: out.ms,
+      });
+    }
 
     audit({
       kind: 'chat', user: g.session.sub, level: g.session.lvl,
