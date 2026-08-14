@@ -20315,24 +20315,17 @@ body.viewer-mode .inv-admin-only{display:none!important}
   <!-- نوارِ وضعیتِ اتصال/صف — مثل واتساپ: پیام گم نمی‌شود، فقط در صف می‌ماند -->
   <div class="rb-net" id="rbNetBar" style="display:none"></div>
   <div class="rb-tabs" id="rbTabs">
-    <button class="rb-tab active" id="rbTabBtn-qa" onclick="rbShowTab('qa')"><span class="tab-dot" id="rbDot-qa"></span><svg><use href="#ic-ask"/></svg> سوال و جواب</button>
+    <!-- تبِ «سوال و جواب» (رباتِ کلیدواژه‌ای) به خواستهٔ صاحبِ ریپو برداشته شد.
+         جایش را «پشتیبانی هوشمند» گرفت تا کادرِ پرسش همان‌جای همیشگی بماند.
+         ⚠️ موتورِ آن ربات (_botAnswer و دوستانش) عمداً پاک نشد — دو جای دیگر
+            هنوز از آن استفاده می‌کنند و پاک کردنش آن‌ها را می‌شکست:
+              • «/بات …» داخلِ چت گروهی
+              • جوابِ خودکار به مشتریِ کیو‌آر وقتی میرزا آنلاین نیست -->
+    <button class="rb-tab active" id="rbTabBtn-ai" onclick="rbShowTab('ai')"><span class="tab-dot" id="rbDot-ai"></span><svg><use href="#ic-ask"/></svg> پشتیبانی هوشمند</button>
     <button class="rb-tab" id="rbTabBtn-group" onclick="rbShowTab('group')"><span class="tab-dot" id="rbDot-group"></span><svg><use href="#ic-users"/></svg> چت گروهی</button>
     <button class="rb-tab" id="rbTabBtn-dm" onclick="rbShowTab('dm')"><span class="tab-dot" id="rbDot-dm"></span><svg><use href="#ic-user1"/></svg> چت تک‌نفره</button>
     <!-- گروهِ عمومیِ مشتری‌ها: فقط میرزا می‌نویسد، بقیه فقط می‌بینند -->
     <button class="rb-tab" id="rbTabBtn-pub" onclick="rbShowTab('pub')"><span class="tab-dot" id="rbDot-pub"></span><svg><use href="#ic-mega"/></svg> اعلان عمومی</button>
-    <!-- دستیارِ پشتیبانیِ هوشمند — سرویسِ جدا روی سرورِ خانگی (پوشهٔ ai-support/).
-         هیچ دسترسی‌ای به دادهٔ برنامه ندارد؛ فقط مستندات را می‌داند. -->
-    <button class="rb-tab" id="rbTabBtn-ai" onclick="rbShowTab('ai')"><span class="tab-dot" id="rbDot-ai"></span><svg><use href="#ic-ask"/></svg> پشتیبانی هوشمند</button>
-  </div>
-
-  <!-- 1) سوال و جواب با ربات -->
-  <div class="rb-pane active" id="rbPane-qa">
-    <div class="ch-list" id="qaList"></div>
-    <div class="ch-comp">
-      <input type="text" id="qaInput" placeholder="سوال تان را بنویسید..." onkeydown="if(event.key==='Enter')qaAsk()">
-      <button class="ch-ib" id="qaMicBtn" onclick="qaVoiceAsk()" title="پرسیدن با صدا"><svg><use href="#ic-mic2"/></svg></button>
-      <button class="ch-ib send" onclick="qaAsk()" title="فرستادن"><svg><use href="#ic-send"/></svg></button>
-    </div>
   </div>
 
   <!-- 2) چت گروهی (کارمندان) -->
@@ -20412,7 +20405,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
   <!-- 5) پشتیبانیِ هوشمند ─────────────────────────────────────────────────────
        ویجتِ سرویسِ ai-support/. فقط سؤال می‌فرستد و جواب+منبع نشان می‌دهد.
        هیچ راهی برای تغییرِ برنامه ندارد و ظاهرِ برنامه را هم دست نمی‌زند. -->
-  <div class="rb-pane" id="rbPane-ai">
+  <div class="rb-pane active" id="rbPane-ai">
     <div class="ch-list" id="aiList"></div>
     <div class="ai-state" id="aiState"></div>
     <div class="ch-comp">
@@ -38838,7 +38831,7 @@ function closeStaffAcct() {
 // می‌دهد پیام به میرزا برود و می‌گوید «در زودترین فرصت جواب شما را خواهیم داد».
 let _rbMode = 'staff';          // admin | staff | person
 let _rbPersonPeer = null;       // نمای کیو‌آر: {peer, type, id, name}
-let _rbTab = 'qa';
+let _rbTab = 'ai';   // تبِ پیش‌فرض؛ «سوال و جواب» برداشته شده و دیگر وجود ندارد
 let _rbCurrentDm = null;        // چت تک‌نفرهٔ باز (سمت مدیر)
 let _qaMsgs = [];
 let _qaPendingMirza = null;
@@ -38872,7 +38865,7 @@ function toggleRobot() {
   if (!p) return;
   const opening = !p.classList.contains('open');
   p.classList.toggle('open');
-  if (opening) { rbShowTab(_rbTab || 'qa'); _chatInitListeners(); _ntfAutoPush('ask'); }
+  if (opening) { rbShowTab(_rbTab || 'ai'); _chatInitListeners(); _ntfAutoPush('ask'); }
   else {
     // با بسته شدن، جابه‌جایی/تغییر اندازهٔ دستی پاک شود — باز شدنِ بعدی سر جای استاندارد
     p.style.left = ''; p.style.top = ''; p.style.right = ''; p.style.bottom = '';
@@ -38889,13 +38882,12 @@ function rbShowTab(tab) {
   // نمای کیو‌آر شخص (مشتری/قرض‌دار): فقط چت تک‌نفره — نه چت گروهی، نه حتی سوال‌وجواب
   if (_rbMode === 'person' && tab !== 'dm') tab = 'dm';
   _rbTab = tab;
-  ['qa', 'group', 'dm', 'pub', 'ai'].forEach(t => {
+  ['group', 'dm', 'pub', 'ai'].forEach(t => {
     const b = document.getElementById('rbTabBtn-' + t);
     const pn = document.getElementById('rbPane-' + t);
     if (b) b.classList.toggle('active', t === tab);
     if (pn) pn.classList.toggle('active', t === tab);
   });
-  if (tab === 'qa') { _qaUnread = false; _qaRender(); try { _rbUpdateBadges(); } catch (e) {} }
   if (tab === 'group') {
     _chatInitListeners();
     // حتی با سرورِ قطع هم گفتگو باز می‌شود: تاریخچهٔ محلی + پیام‌های در صف
@@ -38918,8 +38910,6 @@ function _rbSetMode(mode, personCtx) {
   if (changed) { _chatResetListeners(); _rbCurrentDm = null; }
   const gt = document.getElementById('rbTabBtn-group');
   if (gt) gt.style.display = mode === 'person' ? 'none' : 'flex';
-  const qt = document.getElementById('rbTabBtn-qa');
-  if (qt) qt.style.display = mode === 'person' ? 'none' : 'flex';
   // مشتریِ کیو‌آر فقط «چت با میرزا» را می‌بیند — دستیارِ پشتیبانی هم برایش نیست
   const at = document.getElementById('rbTabBtn-ai');
   if (at) at.style.display = mode === 'person' ? 'none' : 'flex';
@@ -38941,7 +38931,7 @@ function _rbSetMode(mode, personCtx) {
     _personBotMsgs = [{ f: 'bot', bn: 'میرزا (جواب خودکار)', k: 'text', t: _botGreeting(), ts: Date.now() }];
   }
   _qaMsgs = [{ who: 'bot', t: _botGreeting() }];
-  rbShowTab(_rbTab || 'qa');
+  rbShowTab(_rbTab || 'ai');
   _chatInitListeners();
   _rbUpdateBadges();
   // موضوعِ اعلان‌ها به نقش وابسته است: مشتریِ کیو‌آر فقط خبرِ حسابِ خودش را
@@ -40825,13 +40815,10 @@ function _rbUpdateBadges() {
     if ((it.ts || 0) > ((marks.dm || {})[p] || 0) && it.from && it.from !== meId) dmUn++;
   });
   count += dmUn;
-  if (_qaUnread) count++;
   const gd = document.getElementById('rbDot-group');
   if (gd) gd.style.display = gUn ? 'block' : 'none';
   const dd = document.getElementById('rbDot-dm');
   if (dd) dd.style.display = dmUn ? 'block' : 'none';
-  const qd = document.getElementById('rbDot-qa');
-  if (qd) qd.style.display = _qaUnread ? 'block' : 'none';
   const b = document.getElementById('rbFabBadge');
   if (b) { b.style.display = count ? 'flex' : 'none'; b.textContent = n2fa(count); }
 }
@@ -43275,7 +43262,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.316';
+const APP_VERSION = '2.9.317';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
