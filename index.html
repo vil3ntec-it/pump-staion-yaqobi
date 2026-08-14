@@ -18021,13 +18021,13 @@ body.boot-viewer #bootViewerSplash{
       <!-- فقط روی کامپیوتر (جای خالی زیاد است): همین دو کادرِ قرض‌های کهنه، بغلِ «مدت عضویت همه» -->
       <button type="button" class="tool-link-card debt-oldloan-desktop" style="border-color:var(--red);color:var(--red)" onclick="showSection('oldloans')"><span title="⏰ قرض‌های کهنهٔ تیل — بی‌حرکت‌ها اول (واحد تیل)">⏰ قرض‌های کهنه — تیل</span><span class="tlc-go"><i>‹</i></span></button>
       <button type="button" class="tool-link-card debt-oldloan-desktop" style="border-color:var(--green);color:var(--green)" onclick="showSection('oldloansmoney')"><span title="💵 قرض‌های کهنهٔ پول — بی‌حرکت‌ها اول (واحد پول)">💵 قرض‌های کهنه — پول</span><span class="tlc-go"><i>‹</i></span></button>
-      <button type="button" hidden class="tool-link-card debt-oldloan-desktop" style="display:none;border-color:var(--purple);color:var(--purple)" onclick="showSection('priceloss')"><span title="📉 زیان ناشی از افزایش قیمت — تیلی که قرضی رفته، امروز چقدر گران‌تر شده">📉 زیان افزایش قیمت</span><span class="tlc-go"><i>‹</i></span></button>
+      <button type="button" class="tool-link-card debt-oldloan-desktop" style="border-color:var(--purple);color:var(--purple)" onclick="showSection('priceloss')"><span title="📉 زیان ناشی از افزایش قیمت — تیلی که قرضی رفته، امروز چقدر گران‌تر شده">📉 زیان افزایش قیمت</span><span class="tlc-go"><i>‹</i></span></button>
     </div>
   </div>
   <!-- موبایل/تبلت: همین دو کادر مثل قبل، زیرِ سربرگ (خواستهٔ کاربر: این‌جا دست‌نخورده بماند) -->
   <button type="button" class="tool-link-card debt-oldloan-mobile" style="border-color:var(--red);color:var(--red)" onclick="showSection('oldloans')"><span title="⏰ قرض‌های کهنهٔ تیل — بی‌حرکت‌ها اول (واحد تیل)">⏰ قرض‌های کهنه — تیل</span><span class="tlc-go"><i>‹</i></span></button>
   <button type="button" class="tool-link-card debt-oldloan-mobile" style="border-color:var(--green);color:var(--green)" onclick="showSection('oldloansmoney')"><span title="💵 قرض‌های کهنهٔ پول — بی‌حرکت‌ها اول (واحد پول)">💵 قرض‌های کهنه — پول</span><span class="tlc-go"><i>‹</i></span></button>
-  <button type="button" hidden class="tool-link-card debt-oldloan-mobile" style="display:none;border-color:var(--purple);color:var(--purple)" onclick="showSection('priceloss')"><span title="📉 زیان ناشی از افزایش قیمت — تیلی که قرضی رفته، امروز چقدر گران‌تر شده">📉 زیان افزایش قیمت</span><span class="tlc-go"><i>‹</i></span></button>
+  <button type="button" class="tool-link-card debt-oldloan-mobile" style="border-color:var(--purple);color:var(--purple)" onclick="showSection('priceloss')"><span title="📉 زیان ناشی از افزایش قیمت — تیلی که قرضی رفته، امروز چقدر گران‌تر شده">📉 زیان افزایش قیمت</span><span class="tlc-go"><i>‹</i></span></button>
   <div class="persons-grid" id="debt-grid"></div>
 </div>
 
@@ -22887,11 +22887,17 @@ function backFromSection(btn) {
   const from = _SEC_ORIGIN[id];
   showSection((from && document.getElementById('sec-' + from)) ? from : fb);
 }
-/* کلیدِ «زیان ناشی از افزایش قیمت» — خواستهٔ صاحب ریپو: فعلاً از مدار خارج
-   باشد و بعداً تکمیل شود. با true شدنِ همین یک خط، همه‌چیزش برمی‌گردد.
+/* کلیدِ «زیان ناشی از افزایش قیمت».
+   یک‌بار به خواستهٔ صاحب ریپو خاموش شد («فعلاً از مدار خارج باشد») و حالا به
+   خواستهٔ خودش دوباره روشن است: «آن کادرِ ضرر ناشی از قیمت را پس بیاور و منطقِ
+   سایت دست نخورد.» با همین یک خط هر دو حالت ممکن است.
+   ⚠️ روشن بودنش هیچ عددی را در برنامه عوض نمی‌کند: این گزارش فقط سه فیلدِ
+   کاملاً تازه روی ردیف می‌نویسد (lossPaidDate ، lossPaidRate ، lossLegacy) که
+   هیچ‌جای دیگرِ برنامه خوانده نمی‌شوند. بدهی، الباقی، رسید، فیصدی و مفاد
+   دست‌نخورده‌اند.
    این‌جا (پیش از showSection) تعریف شده تا در هیچ مسیری زودتر از تعریفش
    خوانده نشود. */
-const PRICE_LOSS_ON = false;
+const PRICE_LOSS_ON = true;
 /* ── هیچ بخشی نباید «باز شود ولی خالی بماند» ────────────────────────────────
    گزارشِ صاحب ریپو: «سایت بعضی وقت‌ها باگ می‌خورد و فریز می‌شود و هیچی را نشان
    نمی‌دهد مگر اینکه رفرش کنم.»
@@ -42539,7 +42545,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.303';
+const APP_VERSION = '2.9.304';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
