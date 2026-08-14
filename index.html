@@ -43255,7 +43255,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.312';
+const APP_VERSION = '2.9.313';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -44784,7 +44784,10 @@ document.addEventListener('keydown', function(e){
   var SCAN_CAP   = 6000;   // بیشترین نامزدی که در یک نوبت سنجیده می‌شود
   var LS_KEY     = 'pumpSmartType';
   var MEM_CAP    = 300;    // بیشترین عبارتِ به‌خاطر‌سپرده در هر زمینه
-  var MEM_MIN_N  = 2;      // تا وقتی کمتر از این بار تکرار نشده، پیشنهاد نمی‌شود
+  /* یک بار نوشتن کافی است (خواستهٔ صریحِ صاحب ریپو: «اگه یک بار نوشتم»).
+     بی‌احتیاطی نیست، چون به‌خاطرسپاری فقط وقتی رخ می‌دهد که کادر را با همان
+     نوشته ترک کنید — یعنی واقعاً نگهش داشته‌اید — و هر سطل مالِ همان بخش است. */
+  var MEM_MIN_N  = 1;
 
   /* ── ۱) نرمال‌سازیِ فارسی/عربی ────────────────────────────────────────────
      فقط برای «مقایسه» به کار می‌رود. متنی که به کادر می‌نشیند همیشه شکلِ
@@ -44824,10 +44827,11 @@ document.addEventListener('keydown', function(e){
      ستونِ «نام» زمینهٔ خودش را دارد (rowname): نام‌های واقعیِ سیستم را می‌گیرد
      و آنچه خودتان در همین ستون تکرار کرده‌اید، جدا از کادرهای دیگر. */
   var HEAD_RULES = [
-    { ctx: 'rowname', re: /^(نام|نام\.\.\.|نام \/ توضیح)$/ },
-    { ctx: 'hawala',  re: /^(حواله|حواله\/سند|سند)$/ },
-    { ctx: 'note',    re: /^(توضیح|توضیحات|شرح|یادداشت|ملاحظات)$/ },
-    { ctx: 'vehicle', re: /^(نوع موتر|موتر|وسیله)$/ }
+    { ctx: 'rowname', re: /^(نام|نام\.\.\.|نام \/ توضیح|عنوان|موضوع|بابت|مورد)$/ },
+    { ctx: 'hawala',  re: /^(حواله|نمبر حواله|شماره حواله|حواله\/سند|سند)$/ },
+    { ctx: 'note',    re: /^(توضیح|توضیحات|شرح|یادداشت|ملاحظات|تفصیل|محتوا|توضیح\/ساعت)$/ },
+    { ctx: 'vehicle', re: /^(نوع موتر|موتر|وسیله)$/ },
+    { ctx: 'person',  re: /^(نام قرض‌?دار|نام مشتری|نام شخص|به حساب|قرض‌?دار|مشتری|فروشنده)$/ }
   ];
   /* عنوانِ ستونِ همین خانه — با colspan هم درست می‌شمارد */
   function stxColHead(el) {
@@ -44847,6 +44851,25 @@ document.addEventListener('keydown', function(e){
     } catch (e) {}
     return '';
   }
+  /* ── دامنهٔ هر کادر: کدام بخش/مودال ────────────────────────────────────────
+     خواستهٔ صاحب ریپو: «تو مصارف می‌نویسم بابت نان، همان‌جا بیاید؛ در بخش‌های
+     دیگر نیاید مگر آن‌جا هم یک بار نوشته باشم.»
+     پس آنچه یاد گرفته می‌شود در سطلِ همان بخش می‌نشیند، نه یک سطلِ مشترک. */
+  function stxScope(el) {
+    try {
+      var m = el.closest('.modal-overlay[id], .modal[id], [id$="Modal"]');
+      if (m && m.id) return m.id;
+      var sec = el.closest('.section[id]');
+      if (sec && sec.id) return sec.id.replace(/^sec-/, '');
+    } catch (e) {}
+    return 'app';
+  }
+  /* در کدام دامنه‌ها ستونِ «نام» یعنی «نامِ یک آدم»؟ فقط همین‌جاها نام‌های
+     واقعیِ سیستم پیشنهاد می‌شوند. در «مصارف» ستونِ نام یعنی «بابتِ چه» —
+     آن‌جا نامِ قرض‌دار پیشنهاد دادن غلط است و نمی‌شود. */
+  var PERSON_SCOPES = { personModal: 1, historyModal: 1, debt: 1, debtrasid: 1,
+                        debtsum: 1, debtsummoney: 1, oldloans: 1, oldloansmoney: 1,
+                        noinv: 1, chakana: 1, invoices: 1, attendance: 1, staffshort: 1 };
   var CELL_SEL = '.xls-tbl td input, .xls-tbl td textarea, .tbl td input, .tbl td textarea,' +
                  '.safe-tbl td input, .rasid-tbl td input, .ro-tbl td input';
   function stxInCell(el) { try { return !!(el && el.matches && el.matches(CELL_SEL)); } catch (e) { return false; } }
@@ -44874,6 +44897,16 @@ document.addEventListener('keydown', function(e){
                (el.getAttribute('aria-label') || '') + ' ' +
                (el.getAttribute('title') || '') + ' ' + idn;
     var ph = (el.getAttribute('placeholder') || '').trim();
+    /* عنوان‌های کوتاه اول سنجیده می‌شوند: هم راهنمای خودِ کادر، هم عنوانِ ستونِ
+       جدول. جدا بودنشان لازم است — ستونِ «یادداشت» جدولِ مصارف راهنمایش «...»
+       است و اگر فقط راهنما را می‌دیدیم، به‌عنوانِ کادرِ بی‌حرف رد می‌شد. */
+    var heads = [ph, stxColHead(el)];
+    for (var hi = 0; hi < heads.length; hi++) {
+      if (!heads[hi]) continue;
+      for (var hr = 0; hr < HEAD_RULES.length; hr++) {
+        if (HEAD_RULES[hr].re.test(heads[hi])) return HEAD_RULES[hr].ctx;
+      }
+    }
     /* کادرِ عددی/تاریخی سه نشانه دارد و هر سه این‌جا گرفته می‌شوند:
        ۱) راهنمایش هیچ حرفی ندارد و فقط عدد و علامت است («0»، «#»، «56 / 57»)
        ۲) با «مثلاً <عدد>» شروع می‌شود
@@ -44885,13 +44918,6 @@ document.addEventListener('keydown', function(e){
     if (/^مثلاً\s*[\d۰-۹]/.test(ph)) return null;
     if (/(^|[-_ ])(fee|buyfee|price|rate|amount|qty|pct|percent)/i.test(idn)) return null;
 
-    // اول عنوان‌های کوتاه: راهنمای خودِ کادر، وگرنه عنوانِ ستونِ جدول
-    var head = ph || stxColHead(el);
-    if (head) {
-      for (var h = 0; h < HEAD_RULES.length; h++) {
-        if (HEAD_RULES[h].re.test(head)) return HEAD_RULES[h].ctx;
-      }
-    }
     for (var i = 0; i < CTX_RULES.length; i++) {
       if (CTX_RULES[i].re.test(hint)) {
         // «شرح/توضیح» با واژه‌های عددی قاطی شده باشد ⇒ عددی است، نه متنی
@@ -44963,12 +44989,12 @@ document.addEventListener('keydown', function(e){
   /* ── ۵) منبعِ سوم: چیزهایی که خودِ کاربر تکرار کرده ──────────────────────
      هر متنی همان بار اول وارد پیشنهادها نمی‌شود؛ باید چند بار تکرار شود
      (MEM_MIN_N). قبول کردنِ یک پیشنهاد هم امتیازش را بالا می‌برد. */
-  var _mem = null, _memDirty = false, _memTimer = null;
+  var _store = null, _memDirty = false, _memTimer = null;
   function stxMem() {
-    if (_mem) return _mem;
-    try { _mem = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch (e) { _mem = null; }
-    if (!_mem || _mem.v !== 1 || !_mem.m) _mem = { v: 1, m: {} };
-    return _mem;
+    if (_store) return _store;
+    try { _store = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch (e) { _store = null; }
+    if (!_store || _store.v !== 1 || !_store.m) _store = { v: 1, m: {} };
+    return _store;
   }
   function stxMemSave() {
     _memDirty = true;
@@ -45010,7 +45036,8 @@ document.addEventListener('keydown', function(e){
   }
 
   /* ── ۶) ساختنِ فهرستِ نامزدها برای یک زمینه ─────────────────────────────── */
-  function stxCandidates(ctx) {
+  function stxCandidates(ctx, memKey, useNames) {
+    memKey = memKey || ctx;
     var out = [], seen = {};
     var add = function (text, src, n, u) {
       var t = String(text || '').trim();
@@ -45025,9 +45052,10 @@ document.addEventListener('keydown', function(e){
       var c = { text: t, key: k, src: src, n: n || 0, u: u || 0 };
       seen[k] = c; out.push(c);
     };
-    stxSystem(ctx).forEach(function (t) { add(t, 'sys', 0, 0); });
+    // نام‌های واقعیِ سیستم فقط جایی که «نام» یعنی نامِ یک آدم
+    if (useNames !== false) stxSystem(ctx).forEach(function (t) { add(t, 'sys', 0, 0); });
     (PHRASES[ctx] || []).forEach(function (t) { add(t, 'phrase', 0, 0); });
-    var b = stxBucket(ctx);
+    var b = stxBucket(memKey);
     Object.keys(b).forEach(function (k) {
       var e = b[k];
       if (!e || (e.n || 0) < MEM_MIN_N) return;
@@ -45073,11 +45101,11 @@ document.addEventListener('keydown', function(e){
     return s;
   }
 
-  function stxRank(ctx, raw) {
+  function stxRank(ctx, raw, memKey, useNames) {
     var q = stxNorm(raw);
     if (q.length < MIN_CHARS) return [];
     var qWords = q.split(' ').filter(Boolean);
-    var cands = stxCandidates(ctx);
+    var cands = stxCandidates(ctx, memKey, useNames);
     var n = Math.min(cands.length, SCAN_CAP);
     var res = [];
     for (var i = 0; i < n; i++) {
@@ -45158,7 +45186,7 @@ document.addEventListener('keydown', function(e){
   }
 
   /* ── ۱۰) وضعیتِ زنده ─────────────────────────────────────────────────────── */
-  var _el = null, _ctx = null, _cands = [], _active = -1, _open = false;
+  var _el = null, _ctx = null, _mem = null, _names = true, _cands = [], _active = -1, _open = false;
   var _timer = null, _applying = false;
   var _typedEl = null;      // در کدام کادر واقعاً تایپ شده — مبنای به‌خاطرسپاری
 
@@ -45218,7 +45246,7 @@ document.addEventListener('keydown', function(e){
      همین رویدادها می‌نشیند) عیناً مثل تایپِ دستی اجرا شود. */
   function stxAccept() {
     if (!_open || !_el || _active < 0 || !_cands[_active]) return false;
-    var el = _el, cand = _cands[_active], ctx = _ctx;
+    var el = _el, cand = _cands[_active], memKey = _mem || _ctx;
     _applying = true;
     try {
       el.value = cand.text;
@@ -45227,16 +45255,28 @@ document.addEventListener('keydown', function(e){
       el.dispatchEvent(new Event('change', { bubbles: true }));
     } finally { _applying = false; }
     // ۱۵) یادگیریِ کنترل‌شده: قبول کردن امتیاز می‌دهد، نادیده گرفتن جریمه ندارد
-    if (ctx) stxRemember(ctx, cand.text, 2);
+    if (memKey) stxRemember(memKey, cand.text, 2);
     stxClose();
     try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); }
     return true;
   }
 
+  /* کلیدِ حافظهٔ همین کادر = نقشِ کادر + بخشی که در آن است */
+  function stxMemKeyOf(el, ctx) { return ctx + '@' + stxScope(el); }
+  /* نام‌های واقعیِ سیستم فقط برای کادرهای «نامِ آدم» و ستونِ «نام» در بخش‌های
+     مربوط به آدم‌ها. در «مصارف» ستونِ نام یعنی «بابتِ چه»، پس نامِ قرض‌دار
+     آن‌جا پیشنهاد نمی‌شود. */
+  function stxUseNames(el, ctx) {
+    if (ctx === 'person' || ctx === 'vehicle' || ctx === 'hawala') return true;
+    if (ctx === 'rowname') return !!PERSON_SCOPES[stxScope(el)];
+    return false;
+  }
   function stxCompute(el, ctx) {
     if (!document.contains(el) || document.activeElement !== el) return stxClose();
     var raw = el.value || '';
-    var res = stxRank(ctx, raw);
+    var memKey = stxMemKeyOf(el, ctx), useNames = stxUseNames(el, ctx);
+    var res = stxRank(ctx, raw, memKey, useNames);
+    _mem = memKey; _names = useNames;
     if (!res.length) { _open = false; _cands = []; _active = -1;
       if (_box) _box.style.display = 'none'; stxGhostHide();
       if (el.hasAttribute('aria-expanded')) el.setAttribute('aria-expanded', 'false');
@@ -45292,7 +45332,7 @@ document.addEventListener('keydown', function(e){
     var el = e.target;
     if (_typedEl === el) {
       var ctx = stxCtx(el);
-      if (ctx) { try { stxRemember(ctx, el.value); } catch (err) {} }
+      if (ctx) { try { stxRemember(stxMemKeyOf(el, ctx), el.value); } catch (err) {} }
       _typedEl = null;
     }
     if (el === _el) setTimeout(function () { if (_el === el) stxClose(); }, 120);
@@ -45309,11 +45349,14 @@ document.addEventListener('keydown', function(e){
   window.__smartType__ = {
     norm: stxNorm,
     ctxOf: stxCtx,
+    scopeOf: stxScope,
+    keyOf: function (el) { var c = stxCtx(el); return c ? stxMemKeyOf(el, c) : null; },
+    usesNames: function (el) { var c = stxCtx(el); return c ? stxUseNames(el, c) : false; },
     rank: stxRank,
     remember: stxRemember,
     state: function () { return { open: _open, active: _active, n: _cands.length,
                                  items: _cands.map(function (c) { return c.text; }) }; },
-    reset: function () { _mem = { v: 1, m: {} }; try { localStorage.removeItem(LS_KEY); } catch (e) {} }
+    reset: function () { _store = { v: 1, m: {} }; try { localStorage.removeItem(LS_KEY); } catch (e) {} }
   };
 })();
 
