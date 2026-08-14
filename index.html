@@ -1304,36 +1304,69 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
 /* جدولِ تفکیکِ منبع‌ها — ستونِ اولش متن است، پس نباید nowrap بماند */
 .pl-brk-tbl{min-width:520px}
 .pl-brk-tbl td:first-child{white-space:normal;min-width:220px}
-.pl-loss-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:12px}
-.pl-loss-sum > div{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-align:center;background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:9px 10px;min-width:0}
-.pl-loss-sum i{font-style:normal;font-size:0.7rem;font-weight:700;color:var(--muted);line-height:1.35}
-.pl-loss-sum b{font-size:0.98rem;font-weight:900;line-height:1.35;word-break:break-word}
+/* کادرهای خلاصه: عنوانشان باید در یک نگاه خوانده شود، نه این‌که به چهار خطِ
+   باریک بشکند. پس هم کادر پهن‌تر شد، هم عنوان درشت‌تر و پررنگ‌تر. */
+.pl-loss-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:11px;margin-bottom:14px}
+.pl-loss-sum > div{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;background:var(--dark);border:1px solid var(--border);border-radius:12px;padding:14px 13px;min-width:0;min-height:106px}
+.pl-loss-sum i{font-style:normal;font-size:0.84rem;font-weight:800;color:var(--label);line-height:1.65}
+.pl-loss-sum i small{font-size:0.74rem;font-weight:700;color:var(--muted)}
+.pl-loss-sum b{font-size:1.24rem;font-weight:900;line-height:1.4;word-break:break-word}
 .pl-loss-note{margin-top:10px;font-size:0.74rem;line-height:1.85;color:var(--muted)}
 .pl-loss-warn{margin-bottom:10px;padding:7px 10px;border:1px dashed var(--accent);border-radius:8px;font-size:0.74rem;line-height:1.7;color:var(--accent)}
-.pl-loss-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:10px}
-.pl-loss-tbl{width:100%;border-collapse:collapse;font-size:0.8rem;min-width:1120px}
-.pl-loss-tbl th{background:var(--dark);color:var(--muted);font-weight:800;font-size:0.72rem;padding:8px 6px;border-bottom:1px solid var(--border);white-space:nowrap}
-.pl-loss-tbl td{padding:7px 6px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap}
-.pl-loss-tbl tbody tr:hover{background:var(--dark)}
+/* ── نوارِ اسکرولِ افقیِ جدول‌ها ─────────────────────────────────────────────
+   باگی که گزارش شد: کشیدنِ چپ/راست وسطِ کار می‌ایستاد و باید از سرِ صفحه دوباره
+   شروع می‌شد. دلیلش زنجیرِ اسکرول بود: انگشت که به تهِ نوارِ داخلی می‌رسید،
+   حرکت به نوارِ بیرونی/خودِ صفحه «سرریز» می‌کرد و کنترل از دستِ جدول در می‌رفت.
+   overscroll-behavior جلوی همین سرریز را می‌گیرد و touch-action صریح می‌گوید
+   این ناحیه هر دو جهت را خودش می‌گیرد. (جدولِ جزئیات هم از داخلِ جدولِ اصلی
+   بیرون آمد و صفحهٔ خودش را گرفت، پس دیگر هیچ نوارِ تودرتویی نمانده.) */
+.pl-loss-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;touch-action:pan-x pan-y;border:1px solid var(--border);border-radius:10px}
+.pl-loss-tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:0.86rem;min-width:1120px}
+.pl-loss-tbl th{background:var(--dark);color:var(--label);font-weight:800;font-size:0.8rem;padding:11px 9px;border-bottom:1px solid var(--border);white-space:nowrap;line-height:1.5}
+.pl-loss-tbl th small{font-size:0.7rem;font-weight:700;color:var(--muted)}
+.pl-loss-tbl td{padding:10px 9px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;line-height:1.55}
+.pl-loss-tbl tbody tr:hover td{background:var(--dark)}
 .pl-loss-tbl tfoot td{background:var(--dark);font-weight:900;border-bottom:none}
+/* ── نامِ قرض‌دار همیشه دیده شود ──────────────────────────────────────────────
+   جدول پهن‌تر از صفحه است؛ تا حالا با یک ذره اسکرولِ افقی، ستونِ «#» و «قرض‌دار»
+   از دید بیرون می‌رفتند و معلوم نبود این عددها مالِ کیست. حالا این دو ستون
+   می‌چسبند و هرچه هم افقی بکشید سرِ جایشان می‌مانند. (RTL است، پس right.) */
+.pl-loss-tbl th:nth-child(1),.pl-loss-tbl td:nth-child(1){position:sticky;right:0;z-index:2;width:46px;min-width:46px;background:var(--card)}
+.pl-loss-tbl th:nth-child(2),.pl-loss-tbl td:nth-child(2){position:sticky;right:46px;z-index:2;min-width:150px;background:var(--card);box-shadow:1px 0 0 var(--border)}
+.pl-loss-tbl thead th:nth-child(1),.pl-loss-tbl thead th:nth-child(2){z-index:3;background:var(--dark)}
+.pl-loss-tbl tfoot td:nth-child(1),.pl-loss-tbl tfoot td:nth-child(2){z-index:3;background:var(--dark)}
+.pl-loss-tbl tbody tr:hover td:nth-child(1),.pl-loss-tbl tbody tr:hover td:nth-child(2){background:var(--dark)}
 /* ردیفِ «یک واحد» که با کلیک، تک‌تکِ معامله‌ها و فاکتورهایش زیرش باز می‌شود */
 .pl-loss-tbl tr.pl-grp{cursor:pointer}
-.pl-loss-tbl tr.pl-grp.open{background:var(--dark)}
-.pl-loss-tbl tr.pl-grp.open td{border-bottom-color:var(--purple)}
-.pl-chev{display:inline-block;color:var(--purple);font-weight:900;transition:transform .2s;transform:rotate(-90deg)}
-.pl-loss-tbl tr.pl-grp.open .pl-chev{transform:none}
-.pl-loss-tbl tr.pl-det:hover{background:transparent}
-.pl-loss-tbl tr.pl-det > td{padding:0;background:var(--dark);white-space:normal}
-.pl-det-box{padding:10px 12px 12px;border-right:3px solid var(--purple)}
-.pl-det-t{font-size:0.76rem;font-weight:800;color:var(--purple);margin-bottom:6px}
-.pl-sub-tbl{width:100%;border-collapse:collapse;font-size:0.75rem;min-width:1200px;background:var(--card);border-radius:8px;overflow:hidden}
-.pl-sub-tbl th{background:var(--panel);color:var(--muted);font-weight:800;font-size:0.69rem;padding:6px 5px;border-bottom:1px solid var(--border);white-space:nowrap}
-.pl-sub-tbl td{padding:6px 5px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap}
+/* جزئیات دیگر زیرِ ردیف باز نمی‌شود — صفحهٔ خودش را دارد (sec-plperson)، پس
+   قاعده‌های «باز/بستهٔ داخلِ جدول» و جدولِ تودرتو از این‌جا برداشته شدند. */
+.pl-sub-tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:0.84rem;min-width:1200px;background:var(--card);border-radius:8px}
+.pl-sub-tbl th{background:var(--panel);color:var(--label);font-weight:800;font-size:0.78rem;padding:11px 9px;border-bottom:1px solid var(--border);white-space:nowrap;line-height:1.5}
+.pl-sub-tbl td{padding:10px 9px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;line-height:1.55}
+.pl-sub-tbl tbody tr:hover td{background:var(--dark)}
 /* ردیفِ «جمع» جدولِ جزئیات — همان قاعدهٔ جدولِ اصلی، تا خوانده شود که جمعِ کیست */
 .pl-sub-tbl tfoot td{background:var(--panel);font-weight:900;border-bottom:none}
+/* دو ستونِ اولِ جدولِ جزئیات هم می‌چسبند تا با اسکرولِ افقی، «کدام ردیف» گم نشود */
+.pl-sub-tbl th:nth-child(1),.pl-sub-tbl td:nth-child(1){position:sticky;right:0;z-index:2;width:44px;min-width:44px;background:var(--card)}
+.pl-sub-tbl th:nth-child(2),.pl-sub-tbl td:nth-child(2){position:sticky;right:44px;z-index:2;min-width:118px;background:var(--card);box-shadow:1px 0 0 var(--border)}
+.pl-sub-tbl thead th:nth-child(1),.pl-sub-tbl thead th:nth-child(2){z-index:3;background:var(--panel)}
+.pl-sub-tbl tfoot td:nth-child(1),.pl-sub-tbl tfoot td:nth-child(2){z-index:3;background:var(--panel)}
+.pl-sub-tbl tbody tr:hover td:nth-child(1),.pl-sub-tbl tbody tr:hover td:nth-child(2){background:var(--dark)}
+/* عنوانِ جدول‌های صفحهٔ جزئیات */
+.plp-sec{margin:18px 0 8px}
+.plp-sec:first-child{margin-top:0}
+.plp-sec h4{font-size:0.95rem;font-weight:900;color:var(--purple);margin-bottom:4px}
+.plp-sec p{font-size:0.78rem;line-height:1.8;color:var(--muted)}
 .pl-open-btn{background:transparent;border:1px solid var(--blue);color:var(--blue);border-radius:7px;padding:4px 9px;font-family:'Vazirmatn',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;white-space:nowrap}
 .pl-open-btn:hover{background:var(--blue);color:#fff}
-@media (max-width:600px){ .pl-loss-tbl{font-size:0.74rem;min-width:1040px} .pl-loss-sum b{font-size:0.9rem} .pl-sub-tbl{font-size:0.71rem;min-width:1100px} }
+@media (max-width:600px){
+  .pl-loss-tbl{font-size:0.8rem;min-width:1040px} .pl-sub-tbl{font-size:0.78rem;min-width:1100px}
+  .pl-loss-sum{grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:9px}
+  .pl-loss-sum > div{padding:11px 9px;min-height:92px}
+  .pl-loss-sum i{font-size:0.77rem} .pl-loss-sum b{font-size:1.05rem}
+  .pl-loss-tbl th:nth-child(2),.pl-loss-tbl td:nth-child(2){min-width:116px}
+  .pl-sub-tbl th:nth-child(2),.pl-sub-tbl td:nth-child(2){min-width:100px}
+}
 
 .sm-modal{background:var(--panel);border:1.5px solid var(--border);border-radius:14px;width:100%;max-width:360px;padding:22px}
 .sm-modal h3{font-size:0.95rem;font-weight:700;color:var(--accent);margin-bottom:14px}
@@ -18261,6 +18294,28 @@ body.boot-viewer #bootViewerSplash{
   </div>
 </div>
 
+<!-- 📉 جزئیاتِ یک قرض‌دار — صفحهٔ کاملاً جدا (خواستهٔ صاحب ریپو: با زدنِ «جزئیات»
+     یک صفحهٔ مستقل باز شود). جدا بودنش یک باگ را هم می‌بَرد: وقتی جدولِ جزئیات
+     داخلِ جدولِ اصلی باز می‌شد، دو نوارِ اسکرولِ افقیِ تودرتو می‌شدند و کشیدنِ
+     چپ/راست وسطِ کار گیر می‌کرد. -->
+<div class="section" id="sec-plperson">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('priceloss')">📉 برگشت به زیان افزایش قیمت</button>
+    <span>📉 جزئیات زیان قرض‌دار</span>
+  </div>
+  <div class="card" style="border-color:var(--purple)">
+    <div class="card-head">
+      <div style="display:flex;align-items:center;gap:10px;min-width:0">
+        <div class="card-title" style="color:var(--purple)" id="plp-name">📉 جزئیات</div>
+        <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('plperson',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('plperson',0.08)">A+</button></span>
+      </div>
+    </div>
+    <div style="padding:14px">
+      <div id="pl-person-page"></div>
+    </div>
+  </div>
+</div>
+
 <!-- 🧾 حساب‌های چکنه (صفحهٔ جداگانه — از کادر بخش رسید قرض‌داران باز می‌شود) -->
 <div class="section" id="sec-chakana">
   <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
@@ -22859,7 +22914,7 @@ const _SEC_LABEL = {
   tankdip: '📏 میله‌زنی مخزن', debt: '👥 قرض‌داران', debtrasid: '🧾 رسید قرض‌داران',
   debtsum: '📊 دسته‌جمعی (تیل)', debtsummoney: '💵 دسته‌جمعی (پول)',
   oldloans: '⏰ قرض‌های کهنه (تیل)', oldloansmoney: '💵 قرض‌های کهنه (پول)',
-  priceloss: '📉 زیان افزایش قیمت',
+  priceloss: '📉 زیان افزایش قیمت', plperson: '📉 جزئیات زیان قرض‌دار',
   chakana: '🧾 چکنه', noinv: '🏭 شرکت‌های تیل', expenses: '💸 مصارف', rasid: '🧾 فاکتورهای رسید',
   profit: '📈 مفاد / ضرر', extraincome: '➕ درآمد اضافی', monthreport: '📅 گزارش ماهانه',
   ratehist: '📈 تاریخچهٔ نرخ', plsource: '📊 ضرر و مفاد از کجا آمده؟', safe: '🏦 گاوصندوق', sarrafi: '💱 صرافی', waraq: '📝 ورق روزانه',
@@ -22941,7 +22996,7 @@ function showSection(id, btn) {
   if (id === 'debtsum' || id === 'debtsummoney') navId = 'debtrasid';
   if (id === 'extraincome' || id === 'plsource') navId = 'profit';
   if (id === 'tanker' || id === 'tankdip') navId = 'storage';
-  if (id === 'oldloans' || id === 'oldloansmoney' || id === 'priceloss') navId = 'debt';
+  if (id === 'oldloans' || id === 'oldloansmoney' || id === 'priceloss' || id === 'plperson') navId = 'debt';
   if (id === 'chakana') navId = 'debtrasid';
   if (id === 'staffshort') navId = 'attendance';
   if (id === 'ratehist' || id === 'monthreport') navId = 'profit';
@@ -22952,7 +23007,7 @@ function showSection(id, btn) {
   // از کادرها به صفحهٔ جدا می‌روند «تمام صفحه» نبودند). فقط همین صفحه‌ها؛ بقیه 1000px می‌مانند.
   // داشبورد هم تمام‌عرض است تا کارت‌هایش روی کامپیوتر بزرگ و خوانا بمانند
   // (خودِ #sec-dashboard حداکثر 1440px است، پس روی نمایشگرِ خیلی پهن هم کش نمی‌آید)
-  const _WIDE = ['dashboard','rasid','debtrasid','chakana','oldloans','oldloansmoney','debtsum','debtsummoney','priceloss','plsource'];
+  const _WIDE = ['dashboard','rasid','debtrasid','chakana','oldloans','oldloansmoney','debtsum','debtsummoney','priceloss','plsource','plperson'];
   document.body.classList.toggle('sec-wide', _WIDE.indexOf(id) !== -1);
   if (btn) {
     btn.classList.add('active');
@@ -22965,6 +23020,7 @@ function showSection(id, btn) {
   if (id === 'tanker') { try { _renderTankerPanel(); } catch(e) {} }
   if (id === 'tankdip') { try { _renderDipPanel(); _dipRenderTankInfo(); dipLiveCalc(); } catch(e) {} }
   if (id === 'priceloss') { try { renderPriceLossPage(); } catch(e) {} }   // فقط وقتی PRICE_LOSS_ON روشن باشد به این‌جا می‌رسد
+  if (id === 'plperson') { try { renderPlPersonPage(); } catch(e) {} }
   if (id === 'plsource') { try { renderPLBreakdown(); } catch(e) {} }
   if (id === 'oldloans') { try { _renderAgingPanel('fuel', 'aging-list'); } catch(e) {} }
   if (id === 'oldloansmoney') { try { _renderAgingPanel('money', 'aging-list-money'); } catch(e) {} }
@@ -29088,7 +29144,7 @@ function _plReportAll() {
 
 // ── صفحهٔ جداگانهٔ گزارش ──────────────────────────────────────────────────────
 let _lossFilter = 'all';   // all | open | paid
-const _lossOpenGroups = {};   // کدام قرض‌دار جزئیاتش باز است
+let _plPersonKey = '';     // کدام قرض‌دار صفحهٔ جزئیاتش باز است
 function setPriceLossFilter(f) {
   _lossFilter = f;
   ['all', 'open', 'paid'].forEach(k => {
@@ -29097,20 +29153,233 @@ function setPriceLossFilter(f) {
   });
   renderPriceLossPage();
 }
-function togglePriceLossGroup(key) {
-  _lossOpenGroups[key] = !_lossOpenGroups[key];
-  renderPriceLossPage();
-}
 // کلیدِ گروه داخلِ onclick می‌نشیند — نامِ فارسی ممکن است ' یا " داشته باشد
 function _plKeyJs(k) { return String(k).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+/* جزئیاتِ هر قرض‌دار صفحهٔ خودش را دارد (خواستهٔ صاحب ریپو). جدا بودنش یک باگ را
+   هم می‌بَرد: وقتی جدولِ جزئیات داخلِ جدولِ اصلی باز می‌شد، دو نوارِ اسکرولِ افقیِ
+   تودرتو می‌شدند و کشیدنِ چپ/راست وسطِ کار گیر می‌کرد. */
+function openPriceLossPerson(key) {
+  _plPersonKey = String(key || '');
+  showSection('plperson');
+}
+// سازگاری با فراخوان‌های قدیمی (کلیک روی خودِ ردیف) — همان صفحهٔ جدا را باز می‌کند
+function togglePriceLossGroup(key) { openPriceLossPerson(key); }
+/* ── «کشیدن» با «زدن» اشتباه گرفته نشود ────────────────────────────────────
+   جدول از عرضِ صفحه پهن‌تر است و راهِ اسکرولِ افقی‌اش همین است که انگشت را روی
+   ردیف بکشید. اگر هر رها کردنی «کلیک» حساب می‌شد، وسطِ اسکرول ناگهان صفحهٔ
+   جزئیات باز می‌شد. پس فقط زدنِ واقعی (بدونِ جابه‌جاییِ محسوس) می‌شمارد؛
+   خودِ دکمهٔ «جزئیات» مثل همیشه کار می‌کند. */
+let _plTapAt = null;
+function _plRowTap(ev, key) {
+  if (_plTapAt && (Math.abs(ev.clientX - _plTapAt.x) > 8 || Math.abs(ev.clientY - _plTapAt.y) > 8)) return;
+  openPriceLossPerson(key);
+}
 
+/* ── ابزارهای مشترکِ نمایش ───────────────────────────────────────────────── */
+function _plAfn(x) { return n2fa(Math.round(x || 0)) + ' افغانی'; }
+function _plLit(x) { return n2fa(_plRnd2(x)) + ' لیتر'; }
+/* یک کادرِ خلاصه. عنوان درشت و پررنگ است تا در یک نگاه خوانده شود. */
+function _plCard(title, value, color, tip, sub) {
+  return '<div' + (tip ? ' title="' + tip + '"' : '') + '>'
+    + '<i>' + title + (sub ? '<br><small>' + sub + '</small>' : '') + '</i>'
+    + '<b style="color:' + color + '">' + value + '</b></div>';
+}
+
+/* ══ جدول‌های صفحهٔ جزئیاتِ یک قرض‌دار ═════════════════════════════════════
+   همان چیزی که پیش از این زیرِ ردیفِ جدولِ اصلی باز می‌شد — حالا در صفحهٔ خودش. */
+function _plDetailTablesHtml(x) {
+  const rnd2 = _plRnd2, afn = _plAfn, esc = s => escFa(s);
+  let ln = 0;
+  const detRows = [];
+  x.items.forEach(it => {
+    const ftIcon = (it.ftype === 'diesel' ? '🟤 دیزل' : '⛽ پطرول');
+    const saleTxt = it.sale > 0 ? n2fa(rnd2(it.sale)) : '—';
+    const multi = it.parts.length > 1;
+    const kindTxt = it.kind === 'inv'
+      ? '<b style="color:var(--purple)">🧾 فاکتور' + (it.invNo ? ' ' + n2fa(it.invNo) : '') + '</b>'
+      : '<b style="color:var(--blue)">🛢️ برداشت تکی</b>';
+    const line = (cells) => {
+      ln++;
+      detRows.push('<tr>'
+        + '<td style="color:var(--muted)">' + n2fa(ln) + '</td>'
+        + '<td>' + (esc(it.date) || '—') + (it.acct ? '<br><small style="color:var(--muted)">📄 ' + esc(it.acct) + '</small>' : '') + '</td>'
+        + '<td>' + kindTxt + '</td>'
+        + '<td>' + ftIcon + '</td>'
+        + cells + '</tr>');
+    };
+    it.parts.forEach((p, pi) => {
+      const status = p.noRate
+        ? '<b style="color:var(--accent)">⚠️ ' + esc(p.why || 'نرخ اتحادیه برای این تاریخ موجود نیست') + '</b>'
+        : (p.noSale ? '<b style="color:var(--accent)">⚠️ نرخِ خودِ این برداشت ثبت نشده</b>'
+        : (p.sameDay ? '<b style="color:var(--green)">✅ رسیدِ همان روز — بدون زیان افزایش قیمت</b>'
+        : (p.loss > 0 ? '<b style="color:var(--red)">📉 زیان افزایش قیمت</b>'
+                      : '<b style="color:var(--muted)">✅ بدون زیان — نرخِ روزِ رسید بالاتر نرفته</b>')));
+      const refTxt = p.ref > 0
+        ? '<span title="' + (p.refLocked ? 'نرخِ قفل‌شدهٔ همان روزِ ثبتِ رسید/فاکتور'
+            : ('نرخِ ثبت‌شدهٔ اتحادیه در ' + esc(p.refOn || p.date) + (p.refOn && p.refOn !== p.date ? ' — تا روزِ رسید عوض نشده' : ''))) + '">'
+          + n2fa(rnd2(p.ref)) + '</span>'
+        : '—';
+      line('<td style="color:var(--blue);font-weight:800">' + n2fa(rnd2(p.qty)) + ' ل'
+            + (multi ? '<br><small style="color:var(--muted)">بخش ' + n2fa(pi + 1) + ' از ' + n2fa(it.parts.length) + '</small>' : '') + '</td>'
+        + '<td>' + saleTxt + '</td>'
+        + '<td style="color:var(--accent)">' + (p.noSale ? '—' : afn(p.principal)) + '</td>'
+        + '<td>' + (esc(p.date) || '—')
+          + (p.invNo ? '<br><small style="color:var(--purple)">🧾 فاکتور ' + n2fa(p.invNo) + '</small>' : '') + '</td>'
+        + '<td>' + refTxt + '</td>'
+        + '<td style="color:var(--purple)">' + (p.noRate ? '—' : afn(p.refValue)) + '</td>'
+        + '<td style="color:' + (p.loss > 0 ? 'var(--red)' : 'var(--muted)') + ';font-weight:800">'
+          + ((p.noRate || p.noSale) ? '—' : afn(p.loss)) + '</td>'
+        + '<td>' + status + '</td>');
+    });
+    if (it.remain > 0) {
+      line('<td style="color:var(--blue);font-weight:800">' + n2fa(rnd2(it.remain)) + ' ل</td>'
+        + '<td>' + saleTxt + '</td>'
+        + '<td style="color:var(--accent)">' + (it.sale > 0 ? afn(it.sale * it.remain) : '—') + '</td>'
+        + '<td style="color:var(--muted)">— هنوز رسید نیامده</td>'
+        + '<td>—</td><td>—</td>'
+        + '<td style="color:var(--muted)">—</td>'
+        + '<td><b style="color:var(--red)">🔴 تسویه‌نشده — تا روزِ رسید زیانی حساب نمی‌شود</b></td>');
+    }
+  });
+
+  const detFoot = '<tr>'
+    + '<td colspan="4" style="text-align:right">جمعِ ' + esc(x.name) + '</td>'
+    + '<td style="color:var(--blue)">' + n2fa(rnd2(x.t.fuel)) + ' ل</td>'
+    + '<td>—</td>'
+    + '<td style="color:var(--accent)">' + afn(x.t.principal) + '</td>'
+    + '<td>—</td><td>—</td>'
+    + '<td style="color:var(--purple)">' + afn(x.t.refValue) + '</td>'
+    + '<td style="color:' + (x.t.loss > 0 ? 'var(--red)' : 'var(--muted)') + '">' + afn(x.t.loss) + '</td>'
+    + '<td style="color:var(--muted)">' + n2fa(x.t.lossN) + ' رکوردِ دارای زیان</td>'
+    + '</tr>';
+
+  const detTable = detRows.length
+    ? '<div class="plp-sec"><h4>🛢️ برداشت‌های تیل</h4>'
+      + '<p>هر برداشت با نوعِ خودش، نرخِ خودش و نرخِ اتحادیهٔ روزِ رسیدِ خودش. دو ستونِ اول با اسکرولِ افقی سرِ جایشان می‌مانند.</p></div>'
+      + '<div class="pl-loss-wrap"><table class="pl-sub-tbl"><thead><tr>'
+        + '<th>#</th><th>تاریخ برداشت</th><th>نوع</th><th>نوع تیل</th><th>مقدار باقی‌مانده</th><th>نرخ برداشت</th>'
+        + '<th>مبلغ ثبت‌شده</th><th>تاریخ رسید</th><th>نرخ اتحادیه روز رسید</th><th>ارزش با نرخ رسید</th>'
+        + '<th>زیان</th><th>وضعیت</th>'
+      + '</tr></thead><tbody>' + detRows.join('') + '</tbody>'
+      + '<tfoot>' + detFoot + '</tfoot></table></div>'
+    : '<div class="plp-sec"><h4>🛢️ برداشت‌های تیل</h4>'
+      + '<p>برای این نام هنوز برداشتِ تیلی در حسابِ قرض‌داران ثبت نشده.</p></div>';
+
+  // ── فاکتورهای همین شخص: قیمتِ خودِ فاکتور در برابرِ نرخِ اتحادیهٔ روزِ تایید ──
+  const invRows = x.inv.map(v => {
+    const up = v.hasDiff && v.diff > 0, dn = v.hasDiff && v.diff < 0;
+    const raCell = v.approved
+      ? (v.ra > 0 ? n2fa(rnd2(v.ra)) : '—')
+      : (v.nowRate > 0
+          ? '<span style="color:var(--purple)">' + n2fa(rnd2(v.nowRate)) + '</span>'
+            + '<br><small style="color:var(--muted)">نرخ امروز — هنوز قفل نشده</small>'
+          : '<small style="color:var(--muted)">هنوز تایید نشده</small>');
+    const dplCell = v.hasDiff
+      ? '<b style="color:' + (up ? 'var(--red)' : (dn ? 'var(--green)' : 'var(--muted)')) + '">'
+        + n2fa(rnd2(Math.abs(v.dpl))) + '</b><br><small style="color:var(--muted)">'
+        + (up ? 'بالا رفته' : (dn ? 'پایین آمده' : 'بی‌تغییر')) + '</small>'
+      : (v.pdpl > 0 ? '<span style="color:var(--purple)">' + n2fa(rnd2(v.pdpl)) + '</span>'
+                      + '<br><small style="color:var(--muted)">اگر امروز تایید شود</small>' : '—');
+    const lossCell = v.hasDiff
+      ? '<b style="color:' + (up ? 'var(--red)' : (dn ? 'var(--green)' : 'var(--muted)')) + '">'
+        + afn(Math.abs(v.diff)) + '</b><br><small style="color:var(--muted)">'
+        + (up ? 'ضرر این فاکتور' : (dn ? 'مفاد این فاکتور' : 'بی‌تغییر')) + '</small>'
+      : (v.pendDiff > 0 ? '<span style="color:var(--purple)">' + afn(v.pendDiff) + '</span>'
+                          + '<br><small style="color:var(--muted)">پیش‌نمایش — در جمع نیست</small>' : '—');
+    return '<tr>'
+      + '<td>' + n2fa(v.no) + '</td>'
+      + '<td>' + (esc(v.date) || '—') + '</td>'
+      + '<td>' + (v.ftype === 'diesel' ? '🟤 دیزل' : '⛽ پطرول') + '</td>'
+      + '<td style="color:var(--blue);font-weight:800">' + n2fa(rnd2(v.liters)) + ' ل</td>'
+      + '<td style="font-weight:800">' + (v.rc > 0 ? n2fa(rnd2(v.rc)) : '—') + '</td>'
+      + '<td style="font-weight:800">' + raCell + '</td>'
+      + '<td>' + dplCell + '</td>'
+      + '<td style="color:var(--accent)">' + (v.rc > 0 ? afn(v.amount) : '—') + '</td>'
+      + '<td style="font-weight:900">' + lossCell + '</td>'
+      + '<td>' + (v.approved ? '<b style="color:var(--green)">✅ تاییدشده</b>' : '<b style="color:var(--accent)">⏳ در صف تایید</b>') + '</td>'
+      + '</tr>';
+  }).join('');
+
+  return detTable
+    + (invRows
+      ? '<div class="plp-sec"><h4>🧾 فاکتورها</h4>'
+        + '<p>قیمتِ خودِ فاکتور در برابرِ نرخِ اتحادیه در لحظهٔ زدنِ «تایید»؛ تفاوتشان ضربدرِ لیتر، ضررِ همان فاکتور است. '
+        + 'فاکتورِ تاییدشده در جدولِ بالا هم به‌عنوانِ «رسید» نشسته و لیترش همان‌جا شمرده شده.</p></div>'
+        + '<div class="pl-loss-wrap"><table class="pl-sub-tbl"><thead><tr>'
+          + '<th>شماره</th><th>تاریخ</th><th>نوع تیل</th><th>مقدار</th><th>نرخ ثبت فاکتور</th><th>نرخ اتحادیه روز تایید</th>'
+          + '<th>تفاوت هر لیتر</th><th>مبلغ فاکتور</th><th>ضرر این فاکتور</th><th>وضعیت</th>'
+        + '</tr></thead><tbody>' + invRows + '</tbody>'
+        + '<tfoot><tr><td colspan="8" style="text-align:right">جمعِ ضررِ اختلافِ نرخِ فاکتورها</td>'
+          + '<td style="color:' + (x.iv.loss > 0 ? 'var(--red)' : 'var(--muted)') + '">' + afn(x.iv.loss) + '</td>'
+          + '<td style="color:var(--muted)">' + n2fa(x.iv.n) + ' فاکتورِ ضررده</td></tr></tfoot>'
+        + '</table></div>'
+      : '');
+}
+
+/* ══ صفحهٔ جداگانهٔ جزئیاتِ یک قرض‌دار ═════════════════════════════════════ */
+function renderPlPersonPage() {
+  const wrap = document.getElementById('pl-person-page');
+  if (!wrap) return;
+  const ttl = document.getElementById('plp-name');
+  const afn = _plAfn, lit = _plLit, esc = s => escFa(s);
+
+  const x = _plReportAll().list.find(v => v.key === _plPersonKey);
+  if (!x) {
+    if (ttl) ttl.textContent = '📉 جزئیات';
+    wrap.innerHTML = '<div style="text-align:center;padding:26px;color:var(--muted);font-size:0.9rem">'
+      + 'این قرض‌دار پیدا نشد — شاید حسابش پاک شده باشد.'
+      + '<div style="margin-top:12px"><button class="pl-open-btn" onclick="showSection(\'priceloss\')">📉 برگشت به فهرست ‹</button></div></div>';
+    return;
+  }
+  if (ttl) ttl.textContent = '📉 ' + x.name;
+
+  const total = x.t.loss + x.iv.loss;
+  const cards = '<div class="pl-loss-sum">'
+    + _plCard('تیل باقی‌مانده', lit(x.t.fuel), 'var(--blue)',
+        'مقدارِ تیلی که در زمانِ رسید هنوز تسویه نشده بود و همین رسید آن را بست')
+    + _plCard('مبلغ ثبت‌شده', afn(x.t.principal), 'var(--accent)',
+        'همان مقدار تیل × نرخِ ثبت‌شدهٔ خودِ همان برداشت')
+    + _plCard('ارزش با نرخ رسید', afn(x.t.refValue), 'var(--purple)',
+        'همان مقدار تیل × نرخِ اتحادیهٔ روزِ رسید')
+    + _plCard('زیان افزایش قیمت', afn(x.t.loss), x.t.loss > 0 ? 'var(--red)' : 'var(--green)',
+        'اختلافِ نرخِ برداشت تا نرخِ اتحادیهٔ روزِ رسید')
+    + _plCard('زیان اختلاف نرخ فاکتور', afn(x.iv.loss), x.iv.loss > 0 ? 'var(--red)' : 'var(--green)',
+        'نرخِ اتحادیه در لحظهٔ زدنِ «تایید» منهای قیمتِ خودِ فاکتور، ضربدرِ لیتر', '(از ثبت تا تایید)')
+    + _plCard('جمع کل زیان', afn(total), total > 0 ? 'var(--red)' : 'var(--green)',
+        'جمعِ دو زیانِ بالا — این دو یک چیز نیستند و هرکدام جدا هم نوشته شده')
+    + _plCard('تیلِ هنوز تسویه‌نشده', lit(x.t.openFuel), 'var(--muted)',
+        'هنوز رسیدی برایش نیامده — تا روزِ رسید هیچ زیانی برایش حساب نمی‌شود', '(بی‌زیان)')
+    + _plCard('رکوردها', n2fa(x.t.singleN) + ' برداشت تکی · ' + n2fa(x.inv.length) + ' فاکتور', 'var(--blue)',
+        'هر ردیفِ «مقدار تیل» یک برداشتِ مستقل است، و هر فاکتور یک رکوردِ جدا')
+    + '</div>';
+
+  const warn = x.t.noRateN
+    ? '<div class="pl-loss-warn">⚠️ برای <b>' + n2fa(x.t.noRateN) + '</b> رسیدِ این حساب، نرخ اتحادیه برای همان تاریخ موجود نیست '
+      + '(یا نرخِ خودِ برداشت ثبت نشده). این موارد در هیچ جمعی شمرده نشده‌اند و هیچ نرخِ تخمینی جایشان گذاشته نشده.</div>'
+    : '';
+  const pend = x.iv.pendLoss > 0
+    ? '<div class="pl-loss-warn" style="border-color:var(--purple);color:var(--purple)">'
+      + '🧾 <b>' + n2fa(x.iv.pendN) + '</b> فاکتورِ این شخص هنوز در صفِ تایید است و نرخِ اتحادیهٔ امروز از قیمتشان بالاتر رفته. '
+      + 'اگر همین حالا تایید شوند، <b>' + afn(x.iv.pendLoss) + '</b> ضرر می‌خورد. (در هیچ جمعی شمرده نشده.)</div>'
+    : '';
+
+  wrap.innerHTML = cards + warn + pend + _plDetailTablesHtml(x)
+    + '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">'
+      + '<button class="pl-open-btn" onclick="showSection(\'priceloss\')">📉 برگشت به فهرست ‹</button>'
+      + (x.id != null ? '<button class="pl-open-btn" onclick="lossOpenPerson(\'' + _plKeyJs(x.key) + '\')">👥 باز کردنِ حسابِ کاملِ این شخص ‹</button>' : '')
+    + '</div>'
+    + '<div class="pl-loss-note">'
+      + '📌 <b>زیان با بدهی یکی نیست.</b> بدهی همان چیزی است که مشتری باید بپردازد؛ زیانِ افزایش قیمت اختلافِ ارزشِ همان تیل '
+      + 'بین نرخِ خودِ برداشت و نرخِ اتحادیه در روزِ رسید است. اگر بدهیِ این شخص صفر شود، سابقهٔ زیانش این‌جا می‌ماند.<br>'
+      + '📌 این صفحه فقط گزارش است: هیچ عددی از این‌جا وارد بدهی، الباقی، موجودی یا حسابداری نمی‌شود.'
+    + '</div>';
+}
+
+/* ══ صفحهٔ فهرستِ «زیان ناشی از افزایش قیمت» ═══════════════════════════════ */
 function renderPriceLossPage() {
   const wrap = document.getElementById('pl-loss-page');
   if (!wrap) return;
-  const rnd2 = _plRnd2;
-  const afn = x => n2fa(Math.round(x || 0)) + ' افغانی';
-  const lit = x => n2fa(rnd2(x)) + ' لیتر';
-  const esc = s => escFa(s);
+  const rnd2 = _plRnd2, afn = _plAfn, lit = _plLit, esc = s => escFa(s);
 
   const rep = _plReportAll();
   const g = rep.g;
@@ -29131,35 +29400,35 @@ function renderPriceLossPage() {
 
   // ── کارت‌های بالای صفحه (فقط رکوردهایی که واقعاً شرایطِ محاسبه دارند) ──────
   const cards = '<div class="pl-loss-sum">'
-    + '<div title="قرض‌دارانی که دستِ‌کم یک برداشتشان با نرخِ بالاترِ روزِ رسید تسویه شده">'
-      + '<i>قرض‌داران دارای زیان</i><b style="color:' + (g.lossPersons ? 'var(--red)' : 'var(--green)') + '">'
-      + n2fa(g.lossPersons) + ' نفر</b></div>'
-    + '<div title="مقدارِ تیلی که در زمانِ رسید هنوز تسویه نشده بود و همین رسید آن را بست — مبنای محاسبه">'
-      + '<i>مجموع تیل باقی‌مانده</i><b style="color:var(--blue)">' + lit(g.fuel) + '</b></div>'
-    + '<div title="همان مقدار تیل × نرخِ ثبت‌شدهٔ خودِ همان برداشت">'
-      + '<i>مجموع مبلغ ثبت‌شده</i><b style="color:var(--accent)">' + afn(g.principal) + '</b></div>'
-    + '<div title="همان مقدار تیل × نرخِ اتحادیهٔ روزِ رسید">'
-      + '<i>مجموع ارزش با نرخ رسید</i><b style="color:var(--purple)">' + afn(g.refValue) + '</b></div>'
+    + _plCard('قرض‌داران دارای زیان', n2fa(g.lossPersons) + ' نفر', g.lossPersons ? 'var(--red)' : 'var(--green)',
+        'قرض‌دارانی که دستِ‌کم یک برداشت یا یک فاکتورِ ضررده دارند')
+    + _plCard('مجموع تیل باقی‌مانده', lit(g.fuel), 'var(--blue)',
+        'مقدارِ تیلی که در زمانِ رسید هنوز تسویه نشده بود و همین رسید آن را بست — مبنای محاسبه')
+    + _plCard('مجموع مبلغ ثبت‌شده', afn(g.principal), 'var(--accent)',
+        'همان مقدار تیل × نرخِ ثبت‌شدهٔ خودِ همان برداشت')
+    + _plCard('مجموع ارزش با نرخ رسید', afn(g.refValue), 'var(--purple)',
+        'همان مقدار تیل × نرخِ اتحادیهٔ روزِ رسید')
     // ⚠️ بدونِ علامتِ منفی — این عدد «زیان» است، نه یک عددِ منفیِ حسابداری
-    + '<div title="فقط از رکوردهایی که نرخِ اتحادیهٔ روزِ رسیدشان از نرخِ خودشان بالاتر بوده">'
-      + '<i>زیان ناشی از افزایش قیمت</i><b style="color:' + (g.loss > 0 ? 'var(--red)' : 'var(--green)') + '">'
-      + afn(g.loss) + '</b></div>'
-    + '<div title="هنوز رسیدی برایشان نیامده — تا روزِ رسید هیچ زیانی برایشان حساب نمی‌شود">'
-      + '<i>تیلِ هنوز تسویه‌نشده (بی‌زیان)</i><b style="color:var(--muted)">' + lit(g.openFuel) + '</b></div>'
-    /* ── ضررِ خودِ فاکتور: از روزِ ثبت تا روزی که دکمهٔ تایید زده شد ────────
-       فاکتور با قیمتِ خودش در صف می‌ماند؛ روزِ تایید، نرخِ اتحادیهٔ همان لحظه
-       روی آن قفل می‌شود. تفاوتشان ضربدرِ لیتر = همان ضرری که در آن فاکتور
-       خورده‌ایم. جدا از زیانِ بالا نگه داشته می‌شود چون دو چیزِ متفاوت‌اند و
-       جمعِ کورکورانه‌شان می‌تواند یک لیتر را دوبار بشمارد. */
-    + '<div title="نرخِ اتحادیه در لحظهٔ زدنِ «تایید» منهای قیمتِ خودِ فاکتور، ضربدرِ لیترهای همان فاکتور">'
-      + '<i>زیان اختلاف نرخ فاکتور<br><small>(از ثبت تا تایید)</small></i>'
-      + '<b style="color:' + (g.invLoss > 0 ? 'var(--red)' : 'var(--green)') + '">' + afn(g.invLoss) + '</b></div>'
-    + '<div title="جمعِ دو زیانِ بالا — این دو یک چیز نیستند و هرکدام جدا هم بالا نوشته شده">'
-      + '<i>جمع کل زیان</i><b style="color:' + ((g.loss + g.invLoss) > 0 ? 'var(--red)' : 'var(--green)') + '">'
-      + afn(g.loss + g.invLoss) + '</b></div>'
-    + '<div title="هر ردیفِ «مقدار تیل» در حسابِ قرض‌دار یک برداشتِ مستقل است، و هر فاکتور یک رکوردِ جدا">'
-      + '<i>رکوردهای گزارش</i><b style="color:var(--blue)">' + n2fa(g.singleN) + ' برداشت تکی · ' + n2fa(g.invN) + ' فاکتور</b></div>'
+    + _plCard('زیان ناشی از افزایش قیمت', afn(g.loss), g.loss > 0 ? 'var(--red)' : 'var(--green)',
+        'فقط از رکوردهایی که نرخِ اتحادیهٔ روزِ رسیدشان از نرخِ خودشان بالاتر بوده')
+    /* ضررِ خودِ فاکتور: از روزِ ثبت تا روزی که دکمهٔ تایید زده شد. جدا از زیانِ
+       بالا نگه داشته می‌شود چون دو چیزِ متفاوت‌اند و جمعِ کورکورانه‌شان می‌تواند
+       یک لیتر را دوبار بشمارد. */
+    + _plCard('زیان اختلاف نرخ فاکتور', afn(g.invLoss), g.invLoss > 0 ? 'var(--red)' : 'var(--green)',
+        'نرخِ اتحادیه در لحظهٔ زدنِ «تایید» منهای قیمتِ خودِ فاکتور، ضربدرِ لیترهای همان فاکتور', '(از ثبت تا تایید)')
+    + _plCard('جمع کل زیان', afn(g.loss + g.invLoss), (g.loss + g.invLoss) > 0 ? 'var(--red)' : 'var(--green)',
+        'جمعِ دو زیانِ بالا — این دو یک چیز نیستند و هرکدام جدا هم بالا نوشته شده')
+    + _plCard('تیلِ هنوز تسویه‌نشده', lit(g.openFuel), 'var(--muted)',
+        'هنوز رسیدی برایشان نیامده — تا روزِ رسید هیچ زیانی برایشان حساب نمی‌شود', '(بی‌زیان)')
+    + _plCard('رکوردهای گزارش', n2fa(g.singleN) + ' برداشت تکی · ' + n2fa(g.invN) + ' فاکتور', 'var(--blue)',
+        'هر ردیفِ «مقدار تیل» در حسابِ قرض‌دار یک برداشتِ مستقل است، و هر فاکتور یک رکوردِ جدا')
     + '</div>';
+
+  const warnHtml = g.noRateN
+    ? '<div class="pl-loss-warn">⚠️ برای <b>' + n2fa(g.noRateN) + '</b> رسید، نرخ اتحادیه برای همان تاریخ موجود نیست '
+      + '(یا نرخِ خودِ برداشت ثبت نشده). این موارد در هیچ جمعی شمرده نشده‌اند و هیچ نرخِ تخمینی جایشان گذاشته نشده — '
+      + 'نرخِ همان روز را در «📈 مفاد / ضرر ← 🏛️ نرخ اتحادیه» بنویسید تا خودکار وارد محاسبه شوند.</div>'
+    : '';
 
   // فاکتورهایی که هنوز در صفِ تایید نشسته‌اند و با نرخِ امروز ضرر می‌دهند —
   // هشدارِ پیش از زدنِ دکمه. هیچ‌جا شمرده نمی‌شود، فقط خبر می‌دهد.
@@ -29170,19 +29439,13 @@ function renderPriceLossPage() {
       + '(این عدد در هیچ جمعی شمرده نشده — تا وقتی تایید نشود، نرخِ تایید نه ثبت می‌شود نه حدس زده می‌شود.)</div>'
     : '';
 
-  const warnHtml = g.noRateN
-    ? '<div class="pl-loss-warn">⚠️ برای <b>' + n2fa(g.noRateN) + '</b> رسید، نرخ اتحادیه برای همان تاریخ موجود نیست '
-      + '(یا نرخِ خودِ برداشت ثبت نشده). این موارد در هیچ جمعی شمرده نشده‌اند و هیچ نرخِ تخمینی جایشان گذاشته نشده — '
-      + 'نرخِ همان روز را در «📈 مفاد / ضرر ← 🏛️ نرخ اتحادیه» بنویسید تا خودکار وارد محاسبه شوند.</div>'
-    : '';
-
-  // ── جدولِ اصلی: هر قرض‌دار فقط یک ردیف ─────────────────────────────────────
+  // ── جدولِ اصلی: هر قرض‌دار فقط یک ردیف، و «جزئیات» صفحهٔ خودش را باز می‌کند ──
   const bodyHtml = list.map((x, i) => {
-    const open = !!_lossOpenGroups[x.key];
     const k = _plKeyJs(x.key);
-    const head = '<tr class="pl-grp' + (open ? ' open' : '') + '" onclick="togglePriceLossGroup(\'' + k + '\')">'
+    return '<tr class="pl-grp" onpointerdown="_plTapAt={x:event.clientX,y:event.clientY}"'
+      + ' onclick="_plRowTap(event,\'' + k + '\')">'
       + '<td style="color:var(--muted)">' + n2fa(i + 1) + '</td>'
-      + '<td style="text-align:right;font-weight:900"><span class="pl-chev">▾</span> ' + esc(x.name) + '</td>'
+      + '<td style="text-align:right;font-weight:900">' + esc(x.name) + '</td>'
       + '<td style="color:var(--blue);font-weight:800">' + n2fa(rnd2(x.t.fuel)) + ' ل'
         + (x.t.openFuel > 0 ? '<br><small style="color:var(--muted)">' + n2fa(rnd2(x.t.openFuel)) + ' ل تسویه‌نشده</small>' : '')
         + '</td>'
@@ -29198,140 +29461,8 @@ function renderPriceLossPage() {
         + (x.iv.pendLoss > 0 ? '<br><small style="color:var(--purple)">' + n2fa(x.iv.pendN) + ' در صف</small>' : '') + '</td>'
       + '<td>' + n2fa(x.t.singleN) + ' برداشت تکی'
         + (x.t.invRowN ? '<br><small style="color:var(--muted)">+ ' + n2fa(x.t.invRowN) + ' ردیفِ فاکتوری</small>' : '') + '</td>'
-      + '<td><button class="pl-open-btn" onclick="event.stopPropagation();togglePriceLossGroup(\'' + k + '\')">'
-        + (open ? 'بستن ▾' : 'جزئیات ‹') + '</button></td>'
+      + '<td><button class="pl-open-btn" onclick="event.stopPropagation();openPriceLossPerson(\'' + k + '\')">جزئیات ‹</button></td>'
       + '</tr>';
-    if (!open) return head;
-
-    // ── جزئیات: هر برداشت با نوع، نرخِ خودش، و هر رسید با نرخِ روزِ خودش ──
-    let ln = 0;
-    const detRows = [];
-    x.items.forEach(it => {
-      const ftIcon = (it.ftype === 'diesel' ? '🟤 دیزل' : '⛽ پطرول');
-      const saleTxt = it.sale > 0 ? n2fa(rnd2(it.sale)) : '—';
-      const multi = it.parts.length > 1;
-      const kindTxt = it.kind === 'inv'
-        ? '<b style="color:var(--purple)">🧾 فاکتور' + (it.invNo ? ' ' + n2fa(it.invNo) : '') + '</b>'
-        : '<b style="color:var(--blue)">🛢️ برداشت تکی</b>';
-      const line = (cells) => {
-        ln++;
-        detRows.push('<tr>'
-          + '<td style="color:var(--muted)">' + n2fa(ln) + '</td>'
-          + '<td>' + (esc(it.date) || '—') + (it.acct ? '<br><small style="color:var(--muted)">📄 ' + esc(it.acct) + '</small>' : '') + '</td>'
-          + '<td>' + kindTxt + '</td>'
-          + '<td>' + ftIcon + '</td>'
-          + cells + '</tr>');
-      };
-      it.parts.forEach((p, pi) => {
-        const status = p.noRate
-          ? '<b style="color:var(--accent)">⚠️ ' + esc(p.why || 'نرخ اتحادیه برای این تاریخ موجود نیست') + '</b>'
-          : (p.noSale ? '<b style="color:var(--accent)">⚠️ نرخِ خودِ این برداشت ثبت نشده</b>'
-          : (p.sameDay ? '<b style="color:var(--green)">✅ رسیدِ همان روز — بدون زیان افزایش قیمت</b>'
-          : (p.loss > 0 ? '<b style="color:var(--red)">📉 زیان افزایش قیمت</b>'
-                        : '<b style="color:var(--muted)">✅ بدون زیان — نرخِ روزِ رسید بالاتر نرفته</b>')));
-        const refTxt = p.ref > 0
-          ? '<span title="' + (p.refLocked ? 'نرخِ قفل‌شدهٔ همان روزِ ثبتِ رسید/فاکتور'
-              : ('نرخِ ثبت‌شدهٔ اتحادیه در ' + esc(p.refOn || p.date) + (p.refOn && p.refOn !== p.date ? ' — تا روزِ رسید عوض نشده' : ''))) + '">'
-            + n2fa(rnd2(p.ref)) + '</span>'
-          : '—';
-        line('<td style="color:var(--blue);font-weight:800">' + n2fa(rnd2(p.qty)) + ' ل'
-              + (multi ? '<br><small style="color:var(--muted)">بخش ' + n2fa(pi + 1) + ' از ' + n2fa(it.parts.length) + '</small>' : '') + '</td>'
-          + '<td>' + saleTxt + '</td>'
-          + '<td style="color:var(--accent)">' + (p.noSale ? '—' : afn(p.principal)) + '</td>'
-          + '<td>' + (esc(p.date) || '—')
-            + (p.invNo ? '<br><small style="color:var(--purple)">🧾 فاکتور ' + n2fa(p.invNo) + '</small>' : '') + '</td>'
-          + '<td>' + refTxt + '</td>'
-          + '<td style="color:var(--purple)">' + (p.noRate ? '—' : afn(p.refValue)) + '</td>'
-          + '<td style="color:' + (p.loss > 0 ? 'var(--red)' : 'var(--muted)') + ';font-weight:800">'
-            + ((p.noRate || p.noSale) ? '—' : afn(p.loss)) + '</td>'
-          + '<td>' + status + '</td>');
-      });
-      if (it.remain > 0) {
-        line('<td style="color:var(--blue);font-weight:800">' + n2fa(rnd2(it.remain)) + ' ل</td>'
-          + '<td>' + saleTxt + '</td>'
-          + '<td style="color:var(--accent)">' + (it.sale > 0 ? afn(it.sale * it.remain) : '—') + '</td>'
-          + '<td style="color:var(--muted)">— هنوز رسید نیامده</td>'
-          + '<td>—</td><td>—</td>'
-          + '<td style="color:var(--muted)">—</td>'
-          + '<td><b style="color:var(--red)">🔴 تسویه‌نشده — تا روزِ رسید زیانی حساب نمی‌شود</b></td>');
-      }
-    });
-
-    const detFoot = '<tr>'
-      + '<td colspan="4" style="text-align:right">جمعِ ' + esc(x.name) + '</td>'
-      + '<td style="color:var(--blue)">' + n2fa(rnd2(x.t.fuel)) + ' ل</td>'
-      + '<td>—</td>'
-      + '<td style="color:var(--accent)">' + afn(x.t.principal) + '</td>'
-      + '<td>—</td><td>—</td>'
-      + '<td style="color:var(--purple)">' + afn(x.t.refValue) + '</td>'
-      + '<td style="color:' + (x.t.loss > 0 ? 'var(--red)' : 'var(--muted)') + '">' + afn(x.t.loss) + '</td>'
-      + '<td style="color:var(--muted)">' + n2fa(x.t.lossN) + ' رکوردِ دارای زیان</td>'
-      + '</tr>';
-
-    const detTable = detRows.length
-      ? '<div class="pl-det-t">🛢️ برداشت‌های تیلِ «' + esc(x.name) + '» — هر برداشت با نوع، نرخِ خودش و نرخِ اتحادیهٔ روزِ رسیدِ خودش</div>'
-        + '<div class="pl-loss-wrap"><table class="pl-sub-tbl"><thead><tr>'
-          + '<th>#</th><th>تاریخ برداشت</th><th>نوع</th><th>نوع تیل</th><th>مقدار باقی‌مانده</th><th>نرخ برداشت</th>'
-          + '<th>مبلغ ثبت‌شده</th><th>تاریخ رسید</th><th>نرخ اتحادیه روز رسید</th><th>ارزش با نرخ رسید</th>'
-          + '<th>زیان</th><th>وضعیت</th>'
-        + '</tr></thead><tbody>' + detRows.join('') + '</tbody>'
-        + '<tfoot>' + detFoot + '</tfoot></table></div>'
-      : '<div class="pl-det-t">برای این نام هنوز برداشتِ تیلی در حسابِ قرض‌داران ثبت نشده.</div>';
-
-    // ── فاکتورهای همین شخص — با تاییدشان، لیترشان بالا به‌عنوانِ رسید وارد
-    //    محاسبه شده است؛ این جدول همان فاکتورها را با نرخ‌هایشان نشان می‌دهد.
-    const invRows = x.inv.map(v => {
-      const up = v.hasDiff && v.diff > 0, dn = v.hasDiff && v.diff < 0;
-      // نرخِ روزِ تایید — و برای فاکتورِ در صف، نرخِ اتحادیهٔ همین لحظه به‌عنوانِ پیش‌نمایش
-      const raCell = v.approved
-        ? (v.ra > 0 ? n2fa(rnd2(v.ra)) : '—')
-        : (v.nowRate > 0
-            ? '<span style="color:var(--purple)">' + n2fa(rnd2(v.nowRate)) + '</span>'
-              + '<br><small style="color:var(--muted)">نرخ امروز — هنوز قفل نشده</small>'
-            : '<small style="color:var(--muted)">هنوز تایید نشده</small>');
-      // تفاوتِ هر لیتر: همان «۶۰ شد ۷۰ ⇒ ۱۰ افغانی»
-      const dplCell = v.hasDiff
-        ? '<b style="color:' + (up ? 'var(--red)' : (dn ? 'var(--green)' : 'var(--muted)')) + '">'
-          + n2fa(rnd2(Math.abs(v.dpl))) + '</b><br><small style="color:var(--muted)">'
-          + (up ? 'بالا رفته' : (dn ? 'پایین آمده' : 'بی‌تغییر')) + '</small>'
-        : (v.pdpl > 0 ? '<span style="color:var(--purple)">' + n2fa(rnd2(v.pdpl)) + '</span>'
-                        + '<br><small style="color:var(--muted)">اگر امروز تایید شود</small>' : '—');
-      // ضررِ خودِ همین فاکتور = تفاوتِ هر لیتر × لیتر
-      const lossCell = v.hasDiff
-        ? '<b style="color:' + (up ? 'var(--red)' : (dn ? 'var(--green)' : 'var(--muted)')) + '">'
-          + afn(Math.abs(v.diff)) + '</b><br><small style="color:var(--muted)">'
-          + (up ? 'ضرر این فاکتور' : (dn ? 'مفاد این فاکتور' : 'بی‌تغییر')) + '</small>'
-        : (v.pendDiff > 0 ? '<span style="color:var(--purple)">' + afn(v.pendDiff) + '</span>'
-                            + '<br><small style="color:var(--muted)">پیش‌نمایش — در جمع نیست</small>' : '—');
-      return '<tr>'
-        + '<td>' + n2fa(v.no) + '</td>'
-        + '<td>' + (esc(v.date) || '—') + '</td>'
-        + '<td>' + (v.ftype === 'diesel' ? '🟤 دیزل' : '⛽ پطرول') + '</td>'
-        + '<td style="color:var(--blue);font-weight:800">' + n2fa(rnd2(v.liters)) + ' ل</td>'
-        + '<td style="font-weight:800">' + (v.rc > 0 ? n2fa(rnd2(v.rc)) : '—') + '</td>'
-        + '<td style="font-weight:800">' + raCell + '</td>'
-        + '<td>' + dplCell + '</td>'
-        + '<td style="color:var(--accent)">' + (v.rc > 0 ? afn(v.amount) : '—') + '</td>'
-        + '<td style="font-weight:900">' + lossCell + '</td>'
-        + '<td>' + (v.approved ? '<b style="color:var(--green)">✅ تاییدشده</b>' : '<b style="color:var(--accent)">⏳ در صف تایید</b>') + '</td>'
-        + '</tr>';
-    }).join('');
-
-    return head + '<tr class="pl-det"><td colspan="10"><div class="pl-det-box">'
-      + detTable
-      + (invRows
-        ? '<div class="pl-det-t" style="margin-top:12px">🧾 فاکتورهای «' + esc(x.name) + '» — قیمتِ خودِ فاکتور در برابرِ نرخِ اتحادیه در لحظهٔ زدنِ «تایید»؛ تفاوتشان ضربدرِ لیتر، ضررِ همان فاکتور است</div>'
-          + '<div class="pl-loss-wrap"><table class="pl-sub-tbl"><thead><tr>'
-            + '<th>شماره</th><th>تاریخ</th><th>نوع تیل</th><th>مقدار</th><th>نرخ ثبت فاکتور</th><th>نرخ اتحادیه روز تایید</th>'
-            + '<th>تفاوت هر لیتر</th><th>مبلغ فاکتور</th><th>ضرر این فاکتور</th><th>وضعیت</th>'
-          + '</tr></thead><tbody>' + invRows + '</tbody>'
-          + '<tfoot><tr><td colspan="8" style="text-align:right">جمعِ ضررِ اختلافِ نرخِ فاکتورهای «' + esc(x.name) + '»</td>'
-            + '<td style="color:' + (x.iv.loss > 0 ? 'var(--red)' : 'var(--muted)') + '">' + afn(x.iv.loss) + '</td>'
-            + '<td style="color:var(--muted)">' + n2fa(x.iv.n) + ' فاکتورِ ضررده</td></tr></tfoot>'
-          + '</table></div>'
-        : '')
-      + '<div style="margin-top:10px"><button class="pl-open-btn" onclick="event.stopPropagation();lossOpenPerson(\'' + k + '\')">👥 باز کردنِ حسابِ کاملِ این شخص ‹</button></div>'
-      + '</div></td></tr>';
   }).join('');
 
   const shown = list.reduce((a, x) => {
@@ -29362,19 +29493,16 @@ function renderPriceLossPage() {
       + '</tr></tfoot>'
     + '</table></div>'
     + '<div class="pl-loss-note">'
+      + '📌 روی هر ردیف (یا دکمهٔ «جزئیات») بزنید تا صفحهٔ کاملِ همان قرض‌دار باز شود. '
+      + 'ستونِ «#» و «قرض‌دار» با اسکرولِ افقی سرِ جایشان می‌مانند تا معلوم باشد این عددها مالِ کیست.<br>'
       + '📌 <b>برداشت تکی و فاکتور، هر دو در همین یک گزارش‌اند.</b> هر ردیفِ «مقدار تیل» در حسابِ قرض‌دار یک برداشتِ مستقل است '
       + '(تاریخ، مقدار و نرخِ خودش) و هیچ‌وقت با میانگین در هم نمی‌شود. فاکتور در این برنامه سمتِ رسید می‌نشیند: با تاییدش '
       + 'لیترش به‌عنوانِ اعتبار در همان حساب ثبت می‌شود، پس برداشت‌ها را تسویه می‌کند و <b>تاریخِ خودِ فاکتور</b> تاریخِ آن رسید است — '
-      + 'به همین دلیل هیچ فاکتوری دوباره به‌عنوانِ برداشتِ جدا شمرده نمی‌شود. ردیف‌های قدیمیِ فاکتوری که خودشان مقدار تیل دارند، '
-      + 'با نوعِ «🧾 فاکتور» علامت خورده‌اند و مثل بقیه در جمعِ زیان می‌آیند.<br>'
+      + 'به همین دلیل هیچ فاکتوری دوباره به‌عنوانِ برداشتِ جدا شمرده نمی‌شود.<br>'
       + '📌 <b>«زیان نرخ فاکتور» چیزِ دیگری است.</b> فاکتور با قیمتِ خودش (مثلاً ۶۰) در صف می‌نشیند و روزی که دکمهٔ «تایید» را می‌زنید، '
       + 'نرخِ اتحادیهٔ همان لحظه (مثلاً ۷۰) روی همان فاکتور قفل می‌شود. آن ۱۰ افغانی ضربدرِ لیترهای فاکتور، ضررِ همان فاکتور است. '
-      + 'این عدد جدا از «زیان افزایش قیمت» نگه داشته می‌شود چون دو چیزِ متفاوت‌اند و جمعِ کورکورانه‌شان می‌تواند یک لیتر را دوبار بشمارد؛ '
-      + 'کارتِ «جمع کل زیان» هر دو را کنارِ هم نشان می‌دهد. فاکتوری که هنوز تایید نشده هیچ نرخِ تاییدی ندارد و در هیچ جمعی نیست — '
-      + 'فقط برای این‌که پیش از زدنِ دکمه بدانید، «اگر امروز تایید شود» با نرخِ امروز نشان داده می‌شود.<br>'
-      + '📌 <b>زیان با بدهی یکی نیست.</b> بدهی همان چیزی است که مشتری باید بپردازد؛ زیانِ افزایش قیمت اختلافِ ارزشِ همان تیل '
-      + 'بین نرخِ خودِ برداشت و نرخِ اتحادیه در روزِ رسید است. اگر بدهیِ کسی صفر شود، سابقهٔ زیانش این‌جا می‌ماند و '
-      + 'با بدهیِ فعلی جمع نمی‌شود.<br>'
+      + 'این عدد جدا نگه داشته می‌شود چون جمعِ کورکورانه‌شان می‌تواند یک لیتر را دوبار بشمارد؛ کارتِ «جمع کل زیان» هر دو را کنارِ هم می‌گذارد.<br>'
+      + '📌 <b>زیان با بدهی یکی نیست.</b> اگر بدهیِ کسی صفر شود، سابقهٔ زیانش این‌جا می‌ماند و با بدهیِ فعلی جمع نمی‌شود.<br>'
       + '📌 نرخ فقط از «🏛️ نرخ اتحادیه» و فقط برای <b>تاریخِ واقعیِ همان رسید</b> خوانده می‌شود — نرخِ امروز جای نرخِ رسیدهای قدیمی نمی‌نشیند. '
       + 'برداشت و رسیدِ همان روز ⇒ زیان صفر. نرخِ روزِ رسیدِ کمتر یا برابر ⇒ زیان صفر. گذشتِ زمان به‌تنهایی هیچ زیانی نمی‌سازد.<br>'
       + '📌 این صفحه فقط گزارش است: هیچ عددی از این‌جا وارد بدهی، الباقی، موجودی یا حسابداری نمی‌شود و هیچ داده‌ای را عوض نمی‌کند.'
@@ -43034,7 +43162,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.307';
+const APP_VERSION = '2.9.308';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
