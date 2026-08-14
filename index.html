@@ -43275,7 +43275,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.314';
+const APP_VERSION = '2.9.315';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -52780,6 +52780,125 @@ select:not(.native-sel){
     return set;
   }
 
+  /* ═══════════════════════════════════════════════════════════════════════
+     ابزارهای «سمتِ دستگاه» — اعدادِ واقعیِ حساب‌ها
+
+     وقتی سرویس می‌گوید «برای جواب دادن به الباقیِ فلانی نیاز دارم»، این‌جا —
+     روی دستگاهِ خودِ کاربر — حساب می‌شود و فقط نتیجه برمی‌گردد. خودِ دیتابیس
+     هیچ‌وقت از دستگاه بیرون نمی‌رود.
+
+     ⚠️ منطقِ محاسبه از نو نوشته نشده: همان توابعی صدا زده می‌شوند که خودِ
+        برنامه استفاده می‌کند (_splitTotals، _allRows، _staffAcctFuelLeft،
+        _fuelStock، _botMatchAnyPerson). منطقِ حسابِ قرض‌داران حساس است و
+        دو پیاده‌سازیِ موازی یعنی دو جوابِ متفاوت.
+
+     ⚠️ همه فقط می‌خوانند. هیچ‌کدام save() صدا نمی‌زند و چیزی را عوض نمی‌کند.
+     ═══════════════════════════════════════════════════════════════════════ */
+  function _aiCanReadData() {
+    // همان قاعدهٔ خودِ ربات: مدیر و کارمند بله، مهمانِ کیو‌آر نه
+    try { return _rbMode === 'admin' || _rbMode === 'staff'; } catch (e) { return false; }
+  }
+  function _aiIsAdmin() {
+    try { return _rbMode === 'admin'; } catch (e) { return false; }
+  }
+  function _aiNum(n) { return Math.round(Number(n) || 0); }
+
+  var AI_CLIENT_TOOLS = {
+    get_account_balance: function (args) {
+      if (!_aiCanReadData()) return { error: 'اجازهٔ دیدنِ حساب‌ها را ندارید' };
+      var p = _botMatchAnyPerson(String(args && args.name || ''));
+      if (!p) return { found: false, note: 'حسابی با این نام پیدا نشد' };
+
+      var t = _splitTotals(_allRows(p));
+      var alb = _aiNum(t.all.albaqi);
+      var out = {
+        found: true,
+        name: p.name,
+        بردگی: _aiNum(t.all.bardagi),
+        رسید: _aiNum(t.all.rasid),
+        الباقی: Math.abs(alb),
+        وضعیت: alb > 0 ? 'بدهکار است' : (alb < 0 ? 'طلبکار است' : 'تسویه است'),
+        واحد: 'افغانی'
+      };
+      try {
+        var fl = _staffAcctFuelLeft(p);
+        if (fl.hasP) out.تیل_پطرول_لیتر = _aiNum(fl.petrol);
+        if (fl.hasD) out.تیل_دیزل_لیتر = _aiNum(fl.diesel);
+      } catch (e) {}
+      return out;
+    },
+
+    list_accounts: function (args) {
+      if (!_aiCanReadData()) return { error: 'اجازهٔ دیدنِ حساب‌ها را ندارید' };
+      var kind = (args && args.kind) || 'all';
+      var q = String(args && args.query || '').trim().toLowerCase();
+      var out = [];
+      var push = function (arr, tag) {
+        (arr || []).forEach(function (p) {
+          if (q && String(p.name || '').toLowerCase().indexOf(q) < 0) return;
+          out.push({ name: p.name, نوع: tag });
+        });
+      };
+      if (kind === 'all' || kind === 'debt') push(DB.debtPersons, 'قرض‌دار');
+      if (kind === 'all' || kind === 'company') push(DB.noinvPersons, 'شرکت');
+      return { تعداد: out.length, حساب‌ها: out.slice(0, 60) };
+    },
+
+    get_fuel_stock: function () {
+      if (!_aiCanReadData()) return { error: 'اجازه ندارید' };
+      return {
+        پطرول_لیتر: _aiNum(_fuelStock('petrol')),
+        دیزل_لیتر: _aiNum(_fuelStock('diesel'))
+      };
+    },
+
+    get_app_totals: function () {
+      if (!_aiCanReadData()) return { error: 'اجازه ندارید' };
+      var res = { تعداد_قرض‌داران: (DB.debtPersons || []).length };
+      try {
+        res.قرض_کل_افغانی = _aiNum((DB.debtPersons || []).reduce(function (a, p) {
+          return a + _allRows(p).reduce(function (b, r) { return b + (r.albaqi || 0); }, 0);
+        }, 0));
+      } catch (e) {}
+      // مصارف فقط برای مدیر — مثلِ خودِ ربات
+      if (_aiIsAdmin()) {
+        try {
+          var today = persianDate();
+          res.مصارف_امروز_افغانی = _aiNum((DB.expenses || [])
+            .filter(function (e) { return e.date === today; })
+            .reduce(function (a, e) { return a + (e.amount || 0); }, 0));
+        } catch (e) {}
+      }
+      return res;
+    },
+
+    search_app_data: function (args) {
+      if (!_aiIsAdmin()) return { error: 'جست‌وجوی سراسری فقط برای مدیر است' };
+      try {
+        var t = _botDeepSearch(String(args && args.query || ''));
+        return t ? { text: String(t).slice(0, 3000) } : { found: false };
+      } catch (e) {
+        return { error: 'جست‌وجو انجام نشد' };
+      }
+    }
+  };
+
+  // دریچهٔ آزمایشِ خودکار — فقط برای تستِ headless. چیزی را باز نمی‌کند که از
+  // راهِ چت هم در دسترس نباشد، و همان بررسی‌های نقش داخلِ خودِ توابع است.
+  window.__aiTest_tools = AI_CLIENT_TOOLS;
+
+  function runClientTools(needs) {
+    return (needs || []).slice(0, 4).map(function (n) {
+      var fn = AI_CLIENT_TOOLS[n.name];
+      if (!fn) return { name: n.name, result: { error: 'این ابزار روی دستگاه وجود ندارد' } };
+      try {
+        return { name: n.name, result: fn(n.args || {}) };
+      } catch (e) {
+        return { name: n.name, result: { error: 'محاسبه انجام نشد' } };
+      }
+    });
+  }
+
   // ── رندر ────────────────────────────────────────────────────────────────
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -52915,7 +53034,25 @@ select:not(.native-sel){
         });
       })
       .then(function (res) {
-        var badge = res.cached ? 'از حافظه' : (res.degraded ? 'از مستندات' : null);
+        // مدل برای جواب دادن به اعدادِ حسابِ واقعی نیاز دارد → همین‌جا، روی
+        // دستگاهِ خودمان، حسابش می‌کنیم و فقط نتیجه را پس می‌فرستیم
+        if (res && res.mode === 'need-client-data') {
+          state('در حالِ خواندنِ حساب‌ها روی همین دستگاه…');
+          var results = runClientTools(res.needsClient);
+          return api('/ai/support/chat', {
+            method: 'POST',
+            body: { continuation: res.continuation, toolResults: results }
+          }).then(function (fin) {
+            return { fin: fin, fromData: true };
+          });
+        }
+        return { fin: res, fromData: false };
+      })
+      .then(function (w) {
+        var res = w.fin || {};
+        var badge = res.cached ? 'از حافظه'
+          : (w.fromData || res.usedClientData) ? 'از حسابِ خودت'
+          : (res.degraded ? 'از مستندات' : null);
         say('bot', res.text || 'جوابی نیامد.', { sources: res.sources, badge: badge });
         state(res.ms ? ('پاسخ در ' + Math.round(res.ms / 100) / 10 + ' ثانیه' + (res.model ? ' · ' + res.model : '')) : '');
       })

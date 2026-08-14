@@ -239,11 +239,85 @@ export const TOOLS = [
   },
 ];
 
-export const TOOL_BY_NAME = new Map(TOOLS.map(t => [t.name, t]));
+// ═══════════════════════════════════════════════════════════════════════════
+//  ابزارهای «سمتِ دستگاه» — خواندنِ اعدادِ واقعیِ حساب‌ها
+//
+//  این‌ها handler ندارند و **روی سرور اجرا نمی‌شوند**. وقتی مدل یکی‌شان را صدا
+//  بزند، سرویس فقط می‌گوید «این را از دستگاه بپرس» و مرورگرِ خودِ کاربر آن را
+//  با توابعِ خودِ برنامه (_splitTotals، _allRows، _fuelStock …) حساب می‌کند.
+//
+//  چرا این‌طور، نه اتصالِ سرویس به دیتابیس:
+//    • دادهٔ مالی از دستگاهِ کاربر بیرون نمی‌رود. سرویس فقط نتیجهٔ نهایی را
+//      می‌بیند، آن هم چون خودِ کاربر پرسیده.
+//    • مرزِ امنیتی دست‌نخورده می‌ماند: سرویس هنوز هیچ راهی به server/data ندارد.
+//    • محاسبهٔ حساس (الباقی، فیصدی، دو دفترِ تیل و پول) دوباره نوشته نمی‌شود —
+//      همان کدی اجرا می‌شود که خودِ برنامه سال‌هاست استفاده می‌کند.
+//    • آفلاین هم کار می‌کند.
+//
+//  همچنان فقط‌خواندنی‌اند: هیچ‌کدام چیزی را عوض نمی‌کنند.
+// ═══════════════════════════════════════════════════════════════════════════
+export const CLIENT_TOOLS = [
+  {
+    name: 'get_account_balance',
+    description: 'الباقی، بردگی، رسید و تیلِ باقی‌ماندهٔ یک قرض‌دار یا شرکت را با نامش می‌گیرد. برای «حساب فلانی چند است؟» یا «الباقی فلانی».',
+    readOnly: true,
+    clientSide: true,
+    minLevel: 'USER',
+    schema: {
+      type: 'object',
+      required: ['name'],
+      properties: { name: { type: 'string', maxLength: 80, minLength: 2 } },
+    },
+  },
+  {
+    name: 'list_accounts',
+    description: 'فهرستِ نامِ قرض‌داران و شرکت‌ها. اگر query بدهی، فقط آن‌هایی که نامشان می‌خورد.',
+    readOnly: true,
+    clientSide: true,
+    minLevel: 'USER',
+    schema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', maxLength: 60 },
+        kind: { type: 'string', enum: ['debt', 'company', 'all'], default: 'all' },
+      },
+    },
+  },
+  {
+    name: 'get_fuel_stock',
+    description: 'باقی‌ماندهٔ مخزنِ پطرول و دیزل به لیتر.',
+    readOnly: true,
+    clientSide: true,
+    minLevel: 'USER',
+    schema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'get_app_totals',
+    description: 'جمع‌های کلی: تعدادِ قرض‌داران، قرضِ کل، مصارفِ امروز.',
+    readOnly: true,
+    clientSide: true,
+    minLevel: 'USER',
+    schema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'search_app_data',
+    description: 'جست‌وجوی یک نام، عدد، حواله یا توضیح در همهٔ بخش‌های برنامه. فقط برای مدیر.',
+    readOnly: true,
+    clientSide: true,
+    minLevel: 'ADMIN',
+    schema: {
+      type: 'object',
+      required: ['query'],
+      properties: { query: { type: 'string', maxLength: 80, minLength: 2 } },
+    },
+  },
+];
+
+export const TOOL_BY_NAME = new Map([...TOOLS, ...CLIENT_TOOLS].map(t => [t.name, t]));
 
 /** طرحی که به مدل داده می‌شود (قالبِ tool-calling) */
-export function toolSchemasFor(level, whitelist) {
-  return TOOLS
+export function toolSchemasFor(level, whitelist, { withClientTools = true } = {}) {
+  return [...TOOLS, ...(withClientTools ? CLIENT_TOOLS : [])]
     .filter(t => whitelist.includes(t.name))
     .filter(t => t.readOnly === true)
     .filter(t => canAccess(level, t.minLevel))

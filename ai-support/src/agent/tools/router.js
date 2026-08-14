@@ -71,6 +71,18 @@ export async function callTool(name, rawArgs, ctx) {
     throw e;
   }
 
+  // ۵) ابزارِ سمتِ دستگاه: سرور اجرایش نمی‌کند — فقط می‌گوید «این را از مرورگر بپرس».
+  //    همهٔ بررسی‌های بالا از قبل انجام شده، پس چیزی که به دستگاه می‌رود
+  //    whitelist‌شده، فقط‌خواندنی، مجاز برای این سطح، و با آرگومانِ پاک‌شده است.
+  if (tool.clientSide === true) {
+    auditToolCall({ ...base, args: redactDeep(args), ok: true, reason: 'واگذار به دستگاهِ کاربر', ms: Date.now() - started });
+    return { ok: false, deferred: true, tool: toolName, args };
+  }
+
+  if (typeof tool.handler !== 'function') {
+    return deny(`ابزارِ «${toolName}» پیاده‌سازی ندارد`);
+  }
+
   try {
     const result = await tool.handler(args, ctx);
     auditToolCall({ ...base, args: redactDeep(args), ok: true, result, ms: Date.now() - started });

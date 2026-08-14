@@ -22,7 +22,7 @@ import { packContext, Retriever } from '../rag/retriever.js';
 import { systemMessage, contextMessage, expansionMessages, parseExpansions } from './prompt.js';
 import { callTool } from './tools/router.js';
 import { toolSchemasFor } from './tools/registry.js';
-import { inspectUserInput } from '../security/injection.js';
+import { inspectUserInput, sanitizeUntrusted } from '../security/injection.js';
 import { redactText } from '../security/redact.js';
 import { audit } from '../security/audit.js';
 
@@ -78,8 +78,21 @@ export class SupportAgent {
         question: cleanQuestion, results, level, user, history, memory, signal, flagged: inj.flagged,
       }));
 
+      // مدل دادهٔ دستگاه خواست → جوابِ نهایی نیست، درخواستِ داده است
+      if (out.needsClient) {
+        return {
+          mode: 'need-client-data',
+          needsClient: out.needsClient,
+          state: { messages: out.messages, level, user },
+          sources: [],
+          ms: Date.now() - started,
+        };
+      }
+
       const reply = this._reply({ ...out, started, level });
-      if (reply.text && reply.text !== NO_ANSWER) {
+      // ⚠️ جوابی که روی دادهٔ زندهٔ دستگاه ساخته شده **کش نمی‌شود**: هم مالِ همان
+      //    شخص است و به دیگری ربطی ندارد، هم فردا عددش عوض می‌شود.
+      if (reply.text && reply.text !== NO_ANSWER && !out.usedClientData) {
         answerCache.set(cleanQuestion, level, this.kbVersion, { ...reply, ms: undefined });
       }
       return reply;
@@ -146,10 +159,19 @@ export class SupportAgent {
         tool_calls: out.toolCalls.map(t => ({ function: { name: t.name, arguments: t.args } })),
       });
 
+      const deferred = [];
+
       for (const call of out.toolCalls.slice(0, 3)) {
         const res = await callTool(call.name, call.args, {
           level, user, index: this.index, retriever: this.retriever,
         });
+
+        // ابزارِ سمتِ دستگاه — سرور جوابش را ندارد و نباید داشته باشد
+        if (res.deferred) {
+          deferred.push({ name: res.tool, args: res.args });
+          continue;
+        }
+
         usedTools.push({ name: call.name, ok: res.ok });
 
         if (res.ok && Array.isArray(res.result)) {
@@ -161,6 +183,12 @@ export class SupportAgent {
           content: JSON.stringify(res.ok ? res.result : { error: res.error }).slice(0, 6000),
         });
       }
+
+      // اگر مدل دادهٔ دستگاه خواست، همین‌جا می‌ایستیم و توپ را به مرورگر می‌دهیم.
+      // گفت‌وگو نیمه‌کاره نگه داشته می‌شود تا با رسیدنِ نتیجه ادامه پیدا کند.
+      if (deferred.length) {
+        return { needsClient: deferred, messages, sources, usedTools };
+      }
     }
 
     return {
@@ -171,6 +199,64 @@ export class SupportAgent {
       sources,
       usage: final?.usage,
     };
+  }
+
+  /**
+   * ادامهٔ گفت‌وگو بعد از اینکه مرورگر اعدادِ خواسته‌شده را حساب کرد و فرستاد.
+   *
+   * @param {{state: object, toolResults: object[], signal?: AbortSignal}} req
+   */
+  async continueWithClientData({ state, toolResults, signal }) {
+    const started = Date.now();
+    const messages = Array.isArray(state?.messages) ? [...state.messages] : [];
+    const level = state?.level || 'PUBLIC';
+
+    if (!messages.length) {
+      return this._reply({ text: NO_ANSWER, mode: 'model', started, level });
+    }
+
+    for (const r of (toolResults || []).slice(0, 4)) {
+      // نتیجه از مرورگر آمده، پس **نامعتمد** است: هم پاکسازیِ تزریق می‌خورد هم
+      // redact. اگر عددی که برگشته کنارش متنِ دستوری داشته باشد، بی‌اثر می‌شود.
+      const raw = JSON.stringify(r?.result ?? { error: 'نتیجه‌ای نیامد' }).slice(0, 4000);
+      messages.push({
+        role: 'tool',
+        name: String(r?.name || 'client_tool').slice(0, 64),
+        content: sanitizeUntrusted(redactText(raw)).text,
+      });
+    }
+
+    messages.push({
+      role: 'user',
+      content: 'حالا با همین اعدادِ واقعی، جوابِ کوتاه و روشن به سؤالم بده. عددها را همان‌طور که آمده بگو و از خودت عددی نساز.',
+    });
+
+    try {
+      const provider = getProvider();
+      const out = await llmPool.run(() => provider.chat({ messages, tools: [], signal }));
+      return this._reply({
+        text: (out.text || '').trim() || NO_ANSWER,
+        mode: 'model',
+        model: provider.name,
+        usedTools: (toolResults || []).map(r => ({ name: r?.name, ok: true })),
+        usedClientData: true,
+        usage: out.usage,
+        started, level,
+      });
+    } catch (e) {
+      if (e instanceof OverloadedError || e.degrade) {
+        // مدل نتوانست جمله‌بندی کند — عددها که هست، خامش را نشان بده
+        return this._reply({
+          text: 'الان نتوانستم جمله‌بندی کنم، ولی این چیزی است که از حسابِ خودت درآمد:\n\n' + rawClientText(toolResults),
+          mode: 'extractive', degraded: true, usedClientData: true, started, level,
+        });
+      }
+      audit({ kind: 'error', where: 'continue', msg: e.message });
+      return this._reply({
+        text: 'در تولیدِ پاسخ خطایی پیش آمد، ولی عددها این‌هاست:\n\n' + rawClientText(toolResults),
+        mode: 'extractive', degraded: true, usedClientData: true, started, level,
+      });
+    }
   }
 
   // ───────────────────────────────────────────────────────────────────────
@@ -205,11 +291,12 @@ export class SupportAgent {
     });
   }
 
-  _reply({ text, mode, sources = [], model, usedTools = [], usage, started, level, degraded = false }) {
+  _reply({ text, mode, sources = [], model, usedTools = [], usage, started, level, degraded = false, usedClientData = false }) {
     return {
       text: redactText(text),
       mode,
       degraded,
+      usedClientData,
       model: model || null,
       usedTools,
       // منابع همیشه برمی‌گردند تا کاربر بتواند خودش راستی‌آزمایی کند
@@ -224,6 +311,15 @@ export class SupportAgent {
       ms: Date.now() - started,
     };
   }
+}
+
+/** وقتی مدل نتوانست جمله بسازد، خودِ عددها را خوانا نشان بده — بهتر از هیچ */
+function rawClientText(toolResults) {
+  return (toolResults || []).map(r => {
+    const v = r?.result;
+    if (v && typeof v === 'object' && typeof v.text === 'string') return v.text;
+    try { return JSON.stringify(v, null, 1); } catch { return ''; }
+  }).filter(Boolean).join('\n\n') || 'چیزی پیدا نشد.';
 }
 
 /** منابعِ ابزار را به منابعِ بازیابی اضافه می‌کند، بدونِ تکرار */
