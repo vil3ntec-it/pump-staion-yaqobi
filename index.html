@@ -1311,7 +1311,7 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
 .pl-loss-note{margin-top:10px;font-size:0.74rem;line-height:1.85;color:var(--muted)}
 .pl-loss-warn{margin-bottom:10px;padding:7px 10px;border:1px dashed var(--accent);border-radius:8px;font-size:0.74rem;line-height:1.7;color:var(--accent)}
 .pl-loss-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:10px}
-.pl-loss-tbl{width:100%;border-collapse:collapse;font-size:0.8rem;min-width:900px}
+.pl-loss-tbl{width:100%;border-collapse:collapse;font-size:0.8rem;min-width:1000px}
 .pl-loss-tbl th{background:var(--dark);color:var(--muted);font-weight:800;font-size:0.72rem;padding:8px 6px;border-bottom:1px solid var(--border);white-space:nowrap}
 .pl-loss-tbl td{padding:7px 6px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap}
 .pl-loss-tbl tbody tr:hover{background:var(--dark)}
@@ -1326,14 +1326,14 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
 .pl-loss-tbl tr.pl-det > td{padding:0;background:var(--dark);white-space:normal}
 .pl-det-box{padding:10px 12px 12px;border-right:3px solid var(--purple)}
 .pl-det-t{font-size:0.76rem;font-weight:800;color:var(--purple);margin-bottom:6px}
-.pl-sub-tbl{width:100%;border-collapse:collapse;font-size:0.75rem;min-width:1040px;background:var(--card);border-radius:8px;overflow:hidden}
+.pl-sub-tbl{width:100%;border-collapse:collapse;font-size:0.75rem;min-width:1200px;background:var(--card);border-radius:8px;overflow:hidden}
 .pl-sub-tbl th{background:var(--panel);color:var(--muted);font-weight:800;font-size:0.69rem;padding:6px 5px;border-bottom:1px solid var(--border);white-space:nowrap}
 .pl-sub-tbl td{padding:6px 5px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap}
 /* ردیفِ «جمع» جدولِ جزئیات — همان قاعدهٔ جدولِ اصلی، تا خوانده شود که جمعِ کیست */
 .pl-sub-tbl tfoot td{background:var(--panel);font-weight:900;border-bottom:none}
 .pl-open-btn{background:transparent;border:1px solid var(--blue);color:var(--blue);border-radius:7px;padding:4px 9px;font-family:'Vazirmatn',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;white-space:nowrap}
 .pl-open-btn:hover{background:var(--blue);color:#fff}
-@media (max-width:600px){ .pl-loss-tbl{font-size:0.74rem;min-width:820px} .pl-loss-sum b{font-size:0.9rem} .pl-sub-tbl{font-size:0.71rem;min-width:960px} }
+@media (max-width:600px){ .pl-loss-tbl{font-size:0.74rem;min-width:920px} .pl-loss-sum b{font-size:0.9rem} .pl-sub-tbl{font-size:0.71rem;min-width:1100px} }
 
 .sm-modal{background:var(--panel);border:1.5px solid var(--border);border-radius:14px;width:100%;max-width:360px;padding:22px}
 .sm-modal h3{font-size:0.95rem;font-weight:700;color:var(--accent);margin-bottom:14px}
@@ -28687,47 +28687,6 @@ function _lossAllRows() {
   return out;
 }
 
-/* ── فاکتورهای همین شخص، با دو نرخِ جدا ─────────────────────────────────────
-   نرخِ روزِ ثبت (rate_on_create) و نرخِ روزِ تایید (rate_on_approve) هرکدام
-   جداگانه روی خودِ فاکتور قفل شده‌اند و هیچ‌کدام جای دیگری را نمی‌گیرند.
-   فاکتوری که هنوز تایید نشده فقط نرخِ ثبتش را دارد — نرخِ تایید نه ثبت
-   می‌شود نه حدس زده می‌شود. این تابع فقط می‌خواند. */
-function _plInvoicesFor(person) {
-  const key = _debtNameKey(person && person.name);
-  return (DB.invoices || []).filter(v => v && !v.by_money && (parseFloat(v.liters) || 0) > 0
-      && ((v.debtPersonId && person && v.debtPersonId === person.id) || _debtNameKey(v.customer_name) === key))
-    .map(v => {
-      const liters = parseFloat(v.liters) || 0;
-      // فاکتورهای قدیمی rate_on_create ندارند — همان نرخِ ثبت‌شدهٔ خودشان مبناست
-      const rc = (v.rate_on_create != null ? (parseFloat(v.rate_on_create) || 0) : (parseFloat(v.price_per_liter) || 0));
-      const approved = v.status === 'approved';
-      const ra = approved ? (parseFloat(v.rate_on_approve) || 0) : 0;
-      const both = approved && rc > 0 && ra > 0;
-      return {
-        id: v.id, no: v.invoice_number || 0, date: v.date_sh || '',
-        ftype: v.fuel_type === 'diesel' ? 'diesel' : 'petrol',
-        liters: liters, rc: rc, ra: ra, approved: approved,
-        amount: rc * liters,
-        hasDiff: both, diff: both ? (ra - rc) * liters : 0
-      };
-    })
-    .sort((a, b) => (b.no || 0) - (a.no || 0));
-}
-// نامِ کسانی که فاکتور دارند ولی هنوز حسابِ قرض‌داری برایشان ساخته نشده
-// (فاکتورِ در صفِ تایید) — تا نرخِ ثبتشان هم در گزارش دیده شود
-function _plInvoiceOnlyNames() {
-  const have = {};
-  (DB.debtPersons || []).forEach(p => { if (p) have[_debtNameKey(p.name)] = true; });
-  const out = {};
-  (DB.invoices || []).forEach(v => {
-    if (!v || v.by_money || !((parseFloat(v.liters) || 0) > 0)) return;
-    const k = _debtNameKey(v.customer_name);
-    if (!k || have[k] || out[k]) return;
-    out[k] = v.customer_name || '—';
-  });
-  return Object.keys(out).map(k => out[k]);
-}
-
 /* ══════════════════════════════════════════════════════════════════════════════
    📉 لایهٔ محاسبهٔ «زیان ناشی از افزایش قیمت» — فقط می‌خواند، هیچ‌چیز نمی‌نویسد
    ──────────────────────────────────────────────────────────────────────────────
@@ -28741,11 +28700,25 @@ function _plInvoiceOnlyNames() {
    چند هفته ثابت مانده باشد، هر رسیدی که در آن بازه گرفته شده با همان نرخِ ثابت
    حساب می‌شود و زیانش صفر است.
 
+   ── «برداشت تکی» و «فاکتور» در همین برنامه چه فرقی دارند؟ ──────────────────
+   این را از خودِ دادهٔ برنامه خواندیم، نه از روی حدس:
+     • هر ردیفِ جدولِ حسابِ قرض‌دار که «مقدار تیل» دارد، خودش یک برداشتِ مستقل
+       است: تاریخِ خودش، مقدارِ خودش، نرخِ خودش. همین است «تیلِ تکی / روزانه» —
+       هیچ ساختارِ جداگانه‌ای لازم نداشت و هیچ رکوردِ تکراری‌ای ساخته نشده.
+     • «فاکتور» در این برنامه سمتِ رسید می‌نشیند، نه سمتِ برداشت: با تاییدِ
+       فاکتور، لیتر/مبلغش به‌عنوانِ اعتبار در همان حساب ثبت می‌شود و یک ردیفِ
+       نمایشی با invFuelId/invId می‌سازد که «مقدار تیل»ش صفر است. پس فاکتور،
+       برداشت‌های تکی را «تسویه» می‌کند و تاریخِ خودش تاریخِ واقعیِ آن رسید است.
+   به همین دلیل فاکتور هرگز دوباره به‌عنوانِ یک برداشتِ جدا شمرده نمی‌شود؛ ولی
+   کاملاً واردِ محاسبه می‌شود، چون نرخِ روزِ خودش همان نرخی است که زیان با آن
+   سنجیده می‌شود. ردیف‌های قدیمیِ «بردگیِ فاکتور» (که هم فاکتورند هم مقدار تیل
+   دارند) با نوعِ «فاکتور» علامت می‌خورند و مثل بقیه حساب می‌شوند.
+
    از کجا می‌خواند (هیچ دادهٔ تازه‌ای ساخته نمی‌شود):
      • نرخِ روزِ رسید  →  فقط از «🏛️ نرخ اتحادیه» (DB.rateHistory). نرخِ امروز
        هرگز جای نرخِ روزِ یک رسیدِ قدیمی را نمی‌گیرد.
-     • تاریخِ واقعیِ رسید → دفترِ رسیدهای همان حساب (acct.rasidLog) و برای رسیدِ
-       داخلِ خودِ ردیف، مهرِ lossPaidDate (یا تاریخِ همان ردیف).
+     • تاریخِ واقعیِ رسید → دفترِ رسیدهای همان حساب (acct.rasidLog)، تاریخِ خودِ
+       فاکتور، و برای رسیدِ داخلِ خودِ ردیف مهرِ lossPaidDate (یا تاریخِ ردیف).
      • نرخِ ثبت‌شدهٔ هر برداشت → همان فیِ خودِ ردیف (بردگی ÷ لیتر، وگرنه فیِ دستی).
      • تخصیصِ رسید به برداشت‌ها → همان قاعدهٔ موجودِ برنامه: قدیمی‌ترین قرض اول.
 
@@ -28756,6 +28729,76 @@ function _plInvoiceOnlyNames() {
 // گِردکردنِ نمایشی — محاسبه‌ها با دقتِ کامل انجام می‌شوند و فقط نمایش گِرد می‌شود
 function _plRnd2(x) { return Math.round(((x || 0) + Number.EPSILON) * 100) / 100; }
 const _PL_EPS = 1e-6;
+
+/* ── ۰) نمایهٔ فاکتورها — یک‌بار در هر گزارش ساخته می‌شود ────────────────────
+   بدونِ این، هر قرض‌دار همهٔ فاکتورها را از اول جست‌وجو می‌کرد و صفحه با هزاران
+   قرض‌دار کند می‌شد. نمایه فقط خواندنی است و چیزی را عوض نمی‌کند. */
+let _plInvCache = null;
+function _plInvIndex(rebuild) {
+  if (!rebuild && _plInvCache) return _plInvCache;
+  const byId = {}, byPerson = {}, byName = {}, onlyNames = {};
+  const have = {};
+  (DB.debtPersons || []).forEach(p => { if (p) have[_debtNameKey(p.name)] = true; });
+  (DB.invoices || []).forEach(v => {
+    if (!v) return;
+    if (v.id != null) byId[String(v.id)] = v;
+    if (v.by_money || !((parseFloat(v.liters) || 0) > 0)) return;
+    if (v.debtPersonId != null) (byPerson[String(v.debtPersonId)] = byPerson[String(v.debtPersonId)] || []).push(v);
+    const k = _debtNameKey(v.customer_name);
+    if (k) {
+      (byName[k] = byName[k] || []).push(v);
+      if (!have[k] && !onlyNames[k]) onlyNames[k] = v.customer_name || '—';
+    }
+  });
+  _plInvCache = { byId: byId, byPerson: byPerson, byName: byName, onlyNames: onlyNames };
+  return _plInvCache;
+}
+/* نمای گزارشیِ یک فاکتور: نرخِ روزِ ثبت (rate_on_create) و نرخِ روزِ تایید
+   (rate_on_approve) هرکدام جداگانه روی خودِ فاکتور قفل شده‌اند و هیچ‌کدام جای
+   دیگری را نمی‌گیرند. فاکتوری که هنوز تایید نشده فقط نرخِ ثبتش را دارد. */
+function _plInvView(v) {
+  const liters = parseFloat(v.liters) || 0;
+  // فاکتورهای قدیمی rate_on_create ندارند — همان نرخِ ثبت‌شدهٔ خودشان مبناست
+  const rc = (v.rate_on_create != null ? (parseFloat(v.rate_on_create) || 0) : (parseFloat(v.price_per_liter) || 0));
+  const approved = v.status === 'approved';
+  const ra = approved ? (parseFloat(v.rate_on_approve) || 0) : 0;
+  const both = approved && rc > 0 && ra > 0;
+  return {
+    id: v.id, no: v.invoice_number || 0, date: v.date_sh || '',
+    ftype: v.fuel_type === 'diesel' ? 'diesel' : 'petrol',
+    liters: liters, rc: rc, ra: ra, approved: approved,
+    amount: rc * liters,
+    hasDiff: both, diff: both ? (ra - rc) * liters : 0
+  };
+}
+// فاکتورهای یک شخص — هم آن‌هایی که به شناسه‌اش بسته‌اند، هم آن‌هایی که فقط نامش
+// روی‌شان است. هر فاکتور فقط یک‌بار (شناسه‌اش کلیدِ یکتاست).
+function _plInvoicesFor(person) {
+  const ix = _plInvIndex();
+  const seen = {}, out = [];
+  const take = arr => (arr || []).forEach(v => {
+    const k = String(v.id != null ? v.id : (v.invoice_number || Math.random()));
+    if (seen[k]) return;
+    seen[k] = 1; out.push(_plInvView(v));
+  });
+  if (person && person.id != null) take(ix.byPerson[String(person.id)]);
+  take(ix.byName[_debtNameKey(person && person.name)]);
+  return out.sort((a, b) => (b.no || 0) - (a.no || 0));
+}
+// نامِ کسانی که فاکتور دارند ولی هنوز حسابِ قرض‌داری برایشان ساخته نشده
+// (فاکتورِ در صفِ تایید) — تا نرخِ ثبتشان هم در گزارش دیده شود
+function _plInvoiceOnlyNames() {
+  const o = _plInvIndex().onlyNames;
+  return Object.keys(o).map(k => o[k]);
+}
+// نوعِ یک ردیفِ برداشت: ردیفی که به فاکتوری بسته باشد «فاکتور» است، وگرنه
+// «برداشت تکی». هیچ ردیفی به فاکتور تبدیل نمی‌شود — فقط برچسب می‌خورد.
+function _plRowKind(r) {
+  const id = r && (r.invId || r.invFuelId);
+  if (id == null || id === '') return { kind: 'single', invNo: 0 };
+  const v = _plInvIndex().byId[String(id)];
+  return { kind: 'inv', invNo: (v && v.invoice_number) || 0 };
+}
 
 /* ── ۱) نرخِ اتحادیه در یک تاریخِ مشخص ──────────────────────────────────────
    تاریخچهٔ نرخ فقط «تغییرها» را ثبت می‌کند، پس نرخِ یک روز = آخرین نرخی که تا
@@ -28791,20 +28834,49 @@ function _plRateOn(idx, ftype, dateStr) {
   return { rate: 0, missing: true, why: 'نرخ اتحادیه برای این تاریخ موجود نیست' };
 }
 
-/* ── ۲) رسیدهای سربرگِ یک حساب — نسخهٔ فقط‌خواندنی ──────────────────────────
-   عمداً _rasidLogInit صدا زده نمی‌شود: آن تابع روی حساب می‌نویسد (acct.rasidLog)
-   و این‌جا فقط گزارش می‌سازیم. حساب‌های قدیمی که هنوز دفتر ندارند، از همان چهار
-   عددِ قبلی خوانده می‌شوند — بدون هیچ تغییری در داده. */
-function _plRasidEntries(acct, k) {
+/* ── ۲) همهٔ رسیدهای یک دفترِ حساب، با تاریخِ واقعیِ خودشان ─────────────────
+   سه منبع دارند و هیچ‌کدام روی دیگری نمی‌افتد (پس هیچ رسیدی دوبار شمرده
+   نمی‌شود و هیچ‌کدام هم از قلم نمی‌افتد):
+     ۱) دفترِ رسیدهای سربرگ (rasidLog) — رسیدهای دستیِ کادرِ بالای حساب.
+     ۲) فاکتورهای تاییدشده — با تایید، اعتبارشان در همین حساب می‌نشیند و یک
+        ردیفِ نمایشیِ بی‌لیتر با invFuelId/invId می‌سازند. تاریخِ خودِ فاکتور،
+        تاریخِ واقعیِ این رسید است.
+     ۳) ردیف‌های بی‌لیترِ جدول که فقط رسید در آن‌ها نوشته شده.
+   حسابِ قدیمی که هنوز rasidLog ندارد، عددِ سربرگش خودش شاملِ لیترِ فاکتورهاست؛
+   پس سهمِ فاکتورها از آن کم می‌شود تا دوبار شمرده نشود.
+   عمداً _rasidLogInit صدا زده نمی‌شود: آن تابع روی حساب می‌نویسد و این‌جا فقط
+   گزارش ساخته می‌شود. */
+function _plReceipts(acct, rows, money, ftype) {
   if (!acct) return [];
+  const isD = (ftype === 'diesel');
+  const k = (money ? 'money' : 'fuel') + (isD ? 'D' : 'P');
+  const out = [];
+  let invSum = 0;
+  (rows || []).forEach(r => {
+    if (!r) return;
+    if ((parseFloat(r.fuel) || 0) > 0) return;      // ردیفِ برداشت است، نه رسید
+    if ((((r.ftype === 'diesel') ? 'diesel' : 'petrol')) !== ftype) return;
+    const v = money ? (parseFloat(r.rasid) || 0) : (parseFloat(r.rasidFuel) || 0);
+    if (!(v > 0)) return;
+    const invId = (r.invFuelId != null && r.invFuelId !== '') ? r.invFuelId
+                : ((r.invId != null && r.invId !== '') ? r.invId : '');
+    // سهمِ فاکتور از عددِ سربرگ فقط در دفترِ تیل جمع می‌شود (تاییدِ فاکتور فقط
+    // rasidFuelP/D را بالا می‌برد؛ بخشِ پولی‌اش به سربرگ دست نمی‌زند)
+    if (invId && !money) invSum += v;
+    out.push({ v: v, at: String(r.date || ''), invId: invId });
+  });
   if (Array.isArray(acct.rasidLog)) {
-    return acct.rasidLog.filter(e => e && e.k === k && (parseFloat(e.v) || 0) > 0);
+    acct.rasidLog.forEach(e => {
+      const v = parseFloat(e && e.v) || 0;
+      if (e && e.k === k && v > 0) out.push({ v: v, at: String(e.at || ''), invId: '' });
+    });
+  } else {
+    // حسابِ قدیمی بدونِ دفتر — همان عددِ سربرگ، منهای سهمِ فاکتورها
+    const field = { fuelP: 'rasidFuelP', fuelD: 'rasidFuelD', moneyP: 'rasidMoneyP', moneyD: 'rasidMoneyD' }[k];
+    const v = (parseFloat(acct[field]) || 0) - invSum;
+    if (v > _PL_EPS) out.push({ v: v, at: String((acct.rasidAt || {})[k] || ''), invId: '' });
   }
-  const field = { fuelP: 'rasidFuelP', fuelD: 'rasidFuelD', moneyP: 'rasidMoneyP', moneyD: 'rasidMoneyD' }[k];
-  const v = parseFloat(acct && acct[field]) || 0;
-  if (!(v > 0)) return [];
-  const at = (acct.rasidAt || {})[k] || '';
-  return [{ id: 'r' + k, k: k, v: v, at: at }];
+  return out.sort((a, b) => _dateSortKey(a.at) - _dateSortKey(b.at));
 }
 
 /* ── ۳) کدام رسید، کدام برداشت را تسویه کرده ────────────────────────────────
@@ -28819,7 +28891,6 @@ function _plAllocate(acct, rows, money) {
     events: [], settled: 0
   }));
   ['petrol', 'diesel'].forEach(ft => {
-    const isD = (ft === 'diesel');
     const order = out.map((x, i) => i).filter(i => {
       const r = rows[i];
       return r && out[i].fuel > 0 && (((r.ftype === 'diesel') ? 'diesel' : 'petrol') === ft);
@@ -28837,34 +28908,35 @@ function _plAllocate(acct, rows, money) {
       const q = Math.min(left, own);
       x.settled += q;
       x.events.push({ qty: q, date: String(r.lossPaidDate || r.date || ''),
-                      lockRate: parseFloat(r.lossPaidRate) || 0, hdr: false });
+                      lockRate: parseFloat(r.lossPaidRate) || 0, invNo: 0, hdr: false });
     });
 
-    // ب) رسیدهای سربرگ — از قدیمی‌ترین رسید، روی قدیمی‌ترین قرضِ باقی‌مانده
-    const key = (money ? 'money' : 'fuel') + (isD ? 'D' : 'P');
-    _plRasidEntries(acct, key)
-      .slice()
-      .sort((a, b) => _dateSortKey(a.at) - _dateSortKey(b.at))
-      .forEach(e => {
-        let pool = parseFloat(e.v) || 0;
-        for (let n = 0; n < order.length && pool > _PL_EPS; n++) {
-          const x = out[order[n]];
-          const left = x.fuel - x.settled;
-          if (!(left > _PL_EPS)) continue;
-          let q;
-          if (money) {                       // دفترِ پول: رسید افغانی است
-            if (!(x.sale > 0)) continue;     // بی‌فی نمی‌شود افغانی را به لیتر برد
-            q = Math.min(left, pool / x.sale);
-            pool -= q * x.sale;
-          } else {                           // دفترِ تیل: رسید لیتر است
-            q = Math.min(left, pool);
-            pool -= q;
-          }
-          if (!(q > _PL_EPS)) continue;
-          x.settled += q;
-          x.events.push({ qty: q, date: String(e.at || ''), lockRate: 0, hdr: true });
+    // ب) رسیدهای سربرگ و فاکتورها — از قدیمی‌ترین رسید، روی قدیمی‌ترین قرضِ باقی‌مانده
+    _plReceipts(acct, rows, money, ft).forEach(e => {
+      let pool = parseFloat(e.v) || 0;
+      const inv = e.invId ? _plInvIndex().byId[String(e.invId)] : null;
+      // نرخِ روزِ ثبتِ همان فاکتور — فقط اگر تاریخچهٔ نرخ آن روز را نداشته باشد
+      const lockRate = inv ? (inv.rate_on_create != null ? (parseFloat(inv.rate_on_create) || 0)
+                                                         : (parseFloat(inv.price_per_liter) || 0)) : 0;
+      const invNo = inv ? (inv.invoice_number || 0) : 0;
+      for (let n = 0; n < order.length && pool > _PL_EPS; n++) {
+        const x = out[order[n]];
+        const left = x.fuel - x.settled;
+        if (!(left > _PL_EPS)) continue;
+        let q;
+        if (money) {                       // دفترِ پول: رسید افغانی است
+          if (!(x.sale > 0)) continue;     // بی‌فی نمی‌شود افغانی را به لیتر برد
+          q = Math.min(left, pool / x.sale);
+          pool -= q * x.sale;
+        } else {                           // دفترِ تیل: رسید لیتر است
+          q = Math.min(left, pool);
+          pool -= q;
         }
-      });
+        if (!(q > _PL_EPS)) continue;
+        x.settled += q;
+        x.events.push({ qty: q, date: String(e.at || ''), lockRate: lockRate, invNo: invNo, hdr: true });
+      }
+    });
   });
   return out;
 }
@@ -28880,7 +28952,7 @@ function _plRowReport(idx, r, alloc) {
   const parts = alloc.events.map(ev => {
     const sameDay = isFinite(wKey) && (_dateSortKey(ev.date) === wKey);
     let rr = _plRateOn(idx, ftype, ev.date);
-    // نرخی که همان روزِ ثبتِ رسید روی ردیف قفل شده بود، خودش رکوردِ اتحادیهٔ همان
+    // نرخی که همان روزِ ثبتِ رسید/فاکتور قفل شده بود، خودش رکوردِ اتحادیهٔ همان
     // روز است — فقط وقتی به کار می‌رود که تاریخچه آن روز را نداشته باشد
     if (rr.missing && ev.lockRate > 0) rr = { rate: ev.lockRate, on: ev.date, exact: true, locked: true };
     const ref = rr.rate || 0;
@@ -28889,7 +28961,7 @@ function _plRowReport(idx, r, alloc) {
     // صفرشدن‌ها: رسیدِ همان روز، نبودِ نرخ، یا نرخِ رسیدِ پایین‌تر/برابر ⇒ زیان ۰
     const diff = (!sameDay && !noRate && !noSale && ref > sale) ? (ref - sale) : 0;
     return {
-      qty: ev.qty, date: ev.date, hdr: ev.hdr, sameDay: sameDay,
+      qty: ev.qty, date: ev.date, hdr: ev.hdr, invNo: ev.invNo || 0, sameDay: sameDay,
       ref: ref, refOn: rr.on || '', refLocked: !!rr.locked,
       noRate: noRate, noSale: noSale, why: rr.why || '',
       principal: noSale ? 0 : sale * ev.qty,
@@ -28898,9 +28970,11 @@ function _plRowReport(idx, r, alloc) {
     };
   }).sort((a, b) => _dateSortKey(a.date) - _dateSortKey(b.date));
   const remain = alloc.fuel - alloc.settled;
+  const kind = _plRowKind(r);
   return {
     ftype: ftype, date: r.date || '', fuel: alloc.fuel, sale: sale, parts: parts,
     remain: remain > _PL_EPS ? remain : 0,
+    kind: kind.kind, invNo: kind.invNo,
     note: (r.name || '').toString()
   };
 }
@@ -28926,9 +29000,11 @@ function _plPersonReport(idx, person) {
   (person.subs || []).forEach(s => { if (s) eachAcct(s, s.name || 'حساب'); });
   items.sort((a, b) => (_dateSortKey(a.date) - _dateSortKey(b.date)));
 
-  const t = { n: items.length, fuel: 0, principal: 0, refValue: 0, loss: 0,
+  const t = { n: items.length, singleN: 0, invRowN: 0,
+              fuel: 0, principal: 0, refValue: 0, loss: 0,
               openFuel: 0, lossN: 0, sameDayN: 0, noRateN: 0, paidN: 0 };
   items.forEach(it => {
+    if (it.kind === 'inv') t.invRowN++; else t.singleN++;
     t.openFuel += it.remain;
     it.parts.forEach(p => {
       if (p.noRate || p.noSale) { t.noRateN++; return; }
@@ -28943,10 +29019,11 @@ function _plPersonReport(idx, person) {
 
 /* ── ۶) گزارشِ همهٔ قرض‌داران، یک‌بار در هر رندر ───────────────────────────── */
 function _plReportAll() {
+  _plInvIndex(true);                 // نمایهٔ فاکتورها یک‌بار برای کلِ گزارش
   const idx = _plRateIndex();
   const list = [];
   const g = { persons: 0, lossPersons: 0, fuel: 0, principal: 0, refValue: 0,
-              loss: 0, openFuel: 0, n: 0, noRateN: 0 };
+              loss: 0, openFuel: 0, n: 0, singleN: 0, invN: 0, noRateN: 0 };
   (DB.debtPersons || []).forEach(p => {
     if (!p) return;
     const rep = _plPersonReport(idx, p);
@@ -28954,7 +29031,7 @@ function _plReportAll() {
     if (!rep.t.n && !inv.length) return;
     list.push({ key: String(p.id), id: p.id, name: p.name || '—',
                 items: rep.items, t: rep.t, inv: inv });
-    g.persons++; g.n += rep.t.n;
+    g.persons++; g.n += rep.t.n; g.singleN += rep.t.singleN; g.invN += inv.length;
     g.fuel += rep.t.fuel; g.principal += rep.t.principal; g.refValue += rep.t.refValue;
     g.loss += rep.t.loss; g.openFuel += rep.t.openFuel; g.noRateN += rep.t.noRateN;
     if (rep.t.loss > 0) g.lossPersons++;
@@ -28963,9 +29040,10 @@ function _plReportAll() {
   _plInvoiceOnlyNames().forEach(nm => {
     const inv = _plInvoicesFor({ id: null, name: nm });
     if (!inv.length) return;
+    g.invN += inv.length;
     list.push({ key: 'name:' + _debtNameKey(nm), id: null, name: nm, items: [], inv: inv,
-                t: { n: 0, fuel: 0, principal: 0, refValue: 0, loss: 0, openFuel: 0,
-                     lossN: 0, sameDayN: 0, noRateN: 0, paidN: 0 } });
+                t: { n: 0, singleN: 0, invRowN: 0, fuel: 0, principal: 0, refValue: 0, loss: 0,
+                     openFuel: 0, lossN: 0, sameDayN: 0, noRateN: 0, paidN: 0 } });
   });
   list.sort((a, b) => (b.t.loss - a.t.loss) || (b.t.principal - a.t.principal)
                    || (b.t.openFuel - a.t.openFuel));
@@ -29032,6 +29110,8 @@ function renderPriceLossPage() {
       + afn(g.loss) + '</b></div>'
     + '<div title="هنوز رسیدی برایشان نیامده — تا روزِ رسید هیچ زیانی برایشان حساب نمی‌شود">'
       + '<i>تیلِ هنوز تسویه‌نشده (بی‌زیان)</i><b style="color:var(--muted)">' + lit(g.openFuel) + '</b></div>'
+    + '<div title="هر ردیفِ «مقدار تیل» در حسابِ قرض‌دار یک برداشتِ مستقل است، و هر فاکتور یک رکوردِ جدا">'
+      + '<i>رکوردهای گزارش</i><b style="color:var(--blue)">' + n2fa(g.singleN) + ' برداشت تکی · ' + n2fa(g.invN) + ' فاکتور</b></div>'
     + '</div>';
 
   const warnHtml = g.noRateN
@@ -29054,25 +29134,30 @@ function renderPriceLossPage() {
       + '<td style="color:var(--purple);font-weight:800">' + afn(x.t.refValue) + '</td>'
       + '<td style="color:' + (x.t.loss > 0 ? 'var(--red)' : 'var(--muted)') + ';font-weight:900">'
         + afn(x.t.loss) + (x.t.loss > 0 ? '<br><small style="color:var(--muted)">زیان افزایش قیمت</small>' : '') + '</td>'
-      + '<td>' + n2fa(x.t.n) + ' برداشت'
-        + (x.inv.length ? '<br><small style="color:var(--muted)">' + n2fa(x.inv.length) + ' فاکتور</small>' : '') + '</td>'
+      + '<td>' + n2fa(x.inv.length) + ' فاکتور</td>'
+      + '<td>' + n2fa(x.t.singleN) + ' برداشت تکی'
+        + (x.t.invRowN ? '<br><small style="color:var(--muted)">+ ' + n2fa(x.t.invRowN) + ' ردیفِ فاکتوری</small>' : '') + '</td>'
       + '<td><button class="pl-open-btn" onclick="event.stopPropagation();togglePriceLossGroup(\'' + k + '\')">'
         + (open ? 'بستن ▾' : 'جزئیات ‹') + '</button></td>'
       + '</tr>';
     if (!open) return head;
 
-    // ── جزئیات: هر برداشت با نرخِ خودش، و هر رسید با نرخِ روزِ خودش ──
+    // ── جزئیات: هر برداشت با نوع، نرخِ خودش، و هر رسید با نرخِ روزِ خودش ──
     let ln = 0;
     const detRows = [];
     x.items.forEach(it => {
       const ftIcon = (it.ftype === 'diesel' ? '🟤 دیزل' : '⛽ پطرول');
       const saleTxt = it.sale > 0 ? n2fa(rnd2(it.sale)) : '—';
       const multi = it.parts.length > 1;
+      const kindTxt = it.kind === 'inv'
+        ? '<b style="color:var(--purple)">🧾 فاکتور' + (it.invNo ? ' ' + n2fa(it.invNo) : '') + '</b>'
+        : '<b style="color:var(--blue)">🛢️ برداشت تکی</b>';
       const line = (cells) => {
         ln++;
         detRows.push('<tr>'
           + '<td style="color:var(--muted)">' + n2fa(ln) + '</td>'
           + '<td>' + (esc(it.date) || '—') + (it.acct ? '<br><small style="color:var(--muted)">📄 ' + esc(it.acct) + '</small>' : '') + '</td>'
+          + '<td>' + kindTxt + '</td>'
           + '<td>' + ftIcon + '</td>'
           + cells + '</tr>');
       };
@@ -29084,7 +29169,7 @@ function renderPriceLossPage() {
           : (p.loss > 0 ? '<b style="color:var(--red)">📉 زیان افزایش قیمت</b>'
                         : '<b style="color:var(--muted)">✅ بدون زیان — نرخِ روزِ رسید بالاتر نرفته</b>')));
         const refTxt = p.ref > 0
-          ? '<span title="' + (p.refLocked ? 'نرخِ قفل‌شدهٔ همان روزِ ثبتِ رسید'
+          ? '<span title="' + (p.refLocked ? 'نرخِ قفل‌شدهٔ همان روزِ ثبتِ رسید/فاکتور'
               : ('نرخِ ثبت‌شدهٔ اتحادیه در ' + esc(p.refOn || p.date) + (p.refOn && p.refOn !== p.date ? ' — تا روزِ رسید عوض نشده' : ''))) + '">'
             + n2fa(rnd2(p.ref)) + '</span>'
           : '—';
@@ -29092,7 +29177,8 @@ function renderPriceLossPage() {
               + (multi ? '<br><small style="color:var(--muted)">بخش ' + n2fa(pi + 1) + ' از ' + n2fa(it.parts.length) + '</small>' : '') + '</td>'
           + '<td>' + saleTxt + '</td>'
           + '<td style="color:var(--accent)">' + (p.noSale ? '—' : afn(p.principal)) + '</td>'
-          + '<td>' + (esc(p.date) || '—') + '</td>'
+          + '<td>' + (esc(p.date) || '—')
+            + (p.invNo ? '<br><small style="color:var(--purple)">🧾 فاکتور ' + n2fa(p.invNo) + '</small>' : '') + '</td>'
           + '<td>' + refTxt + '</td>'
           + '<td style="color:var(--purple)">' + (p.noRate ? '—' : afn(p.refValue)) + '</td>'
           + '<td style="color:' + (p.loss > 0 ? 'var(--red)' : 'var(--muted)') + ';font-weight:800">'
@@ -29111,7 +29197,7 @@ function renderPriceLossPage() {
     });
 
     const detFoot = '<tr>'
-      + '<td colspan="3" style="text-align:right">جمعِ ' + esc(x.name) + '</td>'
+      + '<td colspan="4" style="text-align:right">جمعِ ' + esc(x.name) + '</td>'
       + '<td style="color:var(--blue)">' + n2fa(rnd2(x.t.fuel)) + ' ل</td>'
       + '<td>—</td>'
       + '<td style="color:var(--accent)">' + afn(x.t.principal) + '</td>'
@@ -29122,16 +29208,17 @@ function renderPriceLossPage() {
       + '</tr>';
 
     const detTable = detRows.length
-      ? '<div class="pl-det-t">🛢️ برداشت‌های تیلِ «' + esc(x.name) + '» — هر برداشت با نرخِ خودش و نرخِ اتحادیهٔ روزِ رسیدِ خودش</div>'
+      ? '<div class="pl-det-t">🛢️ برداشت‌های تیلِ «' + esc(x.name) + '» — هر برداشت با نوع، نرخِ خودش و نرخِ اتحادیهٔ روزِ رسیدِ خودش</div>'
         + '<div class="pl-loss-wrap"><table class="pl-sub-tbl"><thead><tr>'
-          + '<th>#</th><th>تاریخ برداشت</th><th>نوع تیل</th><th>مقدار باقی‌مانده</th><th>نرخ فاکتور</th>'
+          + '<th>#</th><th>تاریخ برداشت</th><th>نوع</th><th>نوع تیل</th><th>مقدار باقی‌مانده</th><th>نرخ برداشت</th>'
           + '<th>مبلغ ثبت‌شده</th><th>تاریخ رسید</th><th>نرخ اتحادیه روز رسید</th><th>ارزش با نرخ رسید</th>'
           + '<th>زیان</th><th>وضعیت</th>'
         + '</tr></thead><tbody>' + detRows.join('') + '</tbody>'
         + '<tfoot>' + detFoot + '</tfoot></table></div>'
       : '<div class="pl-det-t">برای این نام هنوز برداشتِ تیلی در حسابِ قرض‌داران ثبت نشده.</div>';
 
-    // ── فاکتورهای همین شخص — جدا و بیرونِ جمعِ زیان (تا دوباره شمرده نشوند) ──
+    // ── فاکتورهای همین شخص — با تاییدشان، لیترشان بالا به‌عنوانِ رسید وارد
+    //    محاسبه شده است؛ این جدول همان فاکتورها را با نرخ‌هایشان نشان می‌دهد.
     const invRows = x.inv.map(v => {
       const up = v.hasDiff && v.diff > 0, dn = v.hasDiff && v.diff < 0;
       return '<tr>'
@@ -29148,10 +29235,10 @@ function renderPriceLossPage() {
         + '</tr>';
     }).join('');
 
-    return head + '<tr class="pl-det"><td colspan="8"><div class="pl-det-box">'
+    return head + '<tr class="pl-det"><td colspan="9"><div class="pl-det-box">'
       + detTable
       + (invRows
-        ? '<div class="pl-det-t" style="margin-top:12px">🧾 فاکتورهای «' + esc(x.name) + '» — فقط برای پیگیری؛ در جمعِ زیانِ بالا شمرده نشده‌اند</div>'
+        ? '<div class="pl-det-t" style="margin-top:12px">🧾 فاکتورهای «' + esc(x.name) + '» — فاکتورِ تاییدشده در جدولِ بالا به‌عنوانِ «رسید» نشسته و لیترش همان‌جا شمرده شده؛ این‌جا فقط خودِ فاکتور با نرخ‌هایش دیده می‌شود</div>'
           + '<div class="pl-loss-wrap"><table class="pl-sub-tbl"><thead><tr>'
             + '<th>شماره</th><th>تاریخ</th><th>نوع تیل</th><th>مقدار</th><th>نرخ زمان ثبت</th><th>نرخ زمان تایید</th>'
             + '<th>مبلغ فاکتور</th><th>اختلاف نرخ</th><th>وضعیت</th>'
@@ -29163,27 +29250,35 @@ function renderPriceLossPage() {
 
   const shown = list.reduce((a, x) => {
     a.fuel += x.t.fuel; a.principal += x.t.principal; a.refValue += x.t.refValue;
-    a.loss += x.t.loss; a.n += x.t.n; return a;
-  }, { fuel: 0, principal: 0, refValue: 0, loss: 0, n: 0 });
+    a.loss += x.t.loss; a.single += x.t.singleN; a.inv += x.inv.length; return a;
+  }, { fuel: 0, principal: 0, refValue: 0, loss: 0, single: 0, inv: 0 });
   const fLabel = { all: 'همه', open: 'فقط پرداخت‌نشده‌ها', paid: 'فقط پرداخت‌شده‌ها' }[_lossFilter] || 'همه';
 
   wrap.innerHTML = cards + warnHtml
     + '<div class="pl-loss-wrap"><table class="pl-loss-tbl">'
       + '<thead><tr>'
         + '<th>#</th><th>قرض‌دار</th><th>تیل باقی‌مانده</th><th>مبلغ ثبت‌شده</th>'
-        + '<th>ارزش بر اساس نرخ رسید</th><th>زیان افزایش قیمت</th><th>تعداد فاکتور/برداشت</th><th>جزئیات</th>'
+        + '<th>ارزش بر اساس نرخ رسید</th><th>زیان افزایش قیمت</th><th>تعداد فاکتور</th>'
+        + '<th>تعداد برداشت تکی</th><th>جزئیات</th>'
       + '</tr></thead>'
-      + '<tbody>' + (bodyHtml || '<tr><td colspan="8" style="color:var(--muted);padding:14px">در این نما قرض‌داری نیست</td></tr>') + '</tbody>'
+      + '<tbody>' + (bodyHtml || '<tr><td colspan="9" style="color:var(--muted);padding:14px">در این نما قرض‌داری نیست</td></tr>') + '</tbody>'
       + '<tfoot><tr>'
-        + '<td colspan="2" style="text-align:right">جمعِ نمای «' + fLabel + '» — ' + n2fa(list.length) + ' قرض‌دار، ' + n2fa(shown.n) + ' برداشت</td>'
+        + '<td colspan="2" style="text-align:right">جمعِ نمای «' + fLabel + '» — ' + n2fa(list.length) + ' قرض‌دار</td>'
         + '<td style="color:var(--blue)">' + n2fa(rnd2(shown.fuel)) + ' ل</td>'
         + '<td style="color:var(--accent)">' + afn(shown.principal) + '</td>'
         + '<td style="color:var(--purple)">' + afn(shown.refValue) + '</td>'
         + '<td style="color:' + (shown.loss > 0 ? 'var(--red)' : 'var(--muted)') + '">' + afn(shown.loss) + '</td>'
-        + '<td colspan="2"></td>'
+        + '<td>' + n2fa(shown.inv) + ' فاکتور</td>'
+        + '<td>' + n2fa(shown.single) + ' برداشت تکی</td>'
+        + '<td></td>'
       + '</tr></tfoot>'
     + '</table></div>'
     + '<div class="pl-loss-note">'
+      + '📌 <b>برداشت تکی و فاکتور، هر دو در همین یک گزارش‌اند.</b> هر ردیفِ «مقدار تیل» در حسابِ قرض‌دار یک برداشتِ مستقل است '
+      + '(تاریخ، مقدار و نرخِ خودش) و هیچ‌وقت با میانگین در هم نمی‌شود. فاکتور در این برنامه سمتِ رسید می‌نشیند: با تاییدش '
+      + 'لیترش به‌عنوانِ اعتبار در همان حساب ثبت می‌شود، پس برداشت‌ها را تسویه می‌کند و <b>تاریخِ خودِ فاکتور</b> تاریخِ آن رسید است — '
+      + 'به همین دلیل هیچ فاکتوری دوباره به‌عنوانِ برداشتِ جدا شمرده نمی‌شود. ردیف‌های قدیمیِ فاکتوری که خودشان مقدار تیل دارند، '
+      + 'با نوعِ «🧾 فاکتور» علامت خورده‌اند و مثل بقیه در جمعِ زیان می‌آیند.<br>'
       + '📌 <b>زیان با بدهی یکی نیست.</b> بدهی همان چیزی است که مشتری باید بپردازد؛ زیانِ افزایش قیمت اختلافِ ارزشِ همان تیل '
       + 'بین نرخِ خودِ برداشت و نرخِ اتحادیه در روزِ رسید است. اگر بدهیِ کسی صفر شود، سابقهٔ زیانش این‌جا می‌ماند و '
       + 'با بدهیِ فعلی جمع نمی‌شود.<br>'
@@ -42846,7 +42941,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.305';
+const APP_VERSION = '2.9.306';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
