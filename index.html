@@ -681,6 +681,20 @@ input.keep-spin[type=number]::-webkit-outer-spin-button,input.keep-spin[type=num
 .suggest-box{position:fixed;z-index:100050;background:var(--card);border:1.5px solid var(--border);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.22);max-height:220px;overflow-y:auto;direction:rtl;text-align:right;font-family:'Vazirmatn',sans-serif}
 .suggest-item{padding:8px 12px;font-size:0.86rem;font-weight:700;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--txt)}
 .suggest-item:hover,.suggest-item.active{background:var(--accent);color:#fff}
+/* ✍️ دستیارِ تایپ — لیستِ پیشنهاد و سایهٔ داخلِ کادر (ماژولِ smart text completion) */
+.stx-list{position:fixed;z-index:100060;background:var(--card);border:1.5px solid var(--accent);
+  border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.28);max-height:250px;overflow-y:auto;
+  overscroll-behavior:contain;direction:rtl;text-align:right;font-family:'Vazirmatn',sans-serif}
+.stx-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;
+  font-size:0.86rem;font-weight:700;color:var(--txt);cursor:pointer;white-space:nowrap;overflow:hidden}
+.stx-item .stx-t{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.stx-item .stx-src{flex:0 0 auto;font-size:0.64rem;font-weight:800;color:var(--muted);opacity:.85}
+.stx-item.active,.stx-item:hover{background:var(--accent);color:#fff}
+.stx-item.active .stx-src,.stx-item:hover .stx-src{color:#fff;opacity:.9}
+/* «ادامهٔ پیشنهادی» — کم‌رنگ، بدونِ هیچ جابه‌جاییِ چیدمان (لایه روی کادر است) */
+#stx-ghost .stx-rest{opacity:.45}
+body.light-mode .stx-list{background:#fff;box-shadow:0 12px 30px rgba(80,60,20,.2)}
+body.light-mode .stx-item{color:#1a1a1a}
 /* لیستِ سفارشیِ کشویی‌ها (جایگزینِ پاپ‌آپِ نیتیوِ <select> در کامپیوتر): همان قالبِ
    بالا + یک تیکِ کوچک کنارِ گزینهٔ انتخاب‌شده و کمی جادارتر */
 .ys-box{padding:4px;border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.3)}
@@ -43241,7 +43255,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.310';
+const APP_VERSION = '2.9.311';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -44731,6 +44745,536 @@ document.addEventListener('keydown', function(e){
     _sgClose();
   }
 }, true);
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ✍️ دستیارِ تایپ (Smart Text Completion) — ماژولِ مستقل
+   ───────────────────────────────────────────────────────────────────────────
+   کارش یک چیز است: کاربر چند حرف بزند و ادامهٔ محتملِ جمله را پیشنهاد بدهد تا
+   با یک کلید کامل شود. نه بیشتر.
+
+   ── قاعده‌های سختی که این ماژول به آن‌ها پایبند است ─────────────────────────
+   • هیچ منطقی از برنامه را عوض نمی‌کند و هیچ تابعی را بازنویسی نمی‌کند. همه‌چیز
+     با شنوندهٔ سراسری (delegation) است. اگر همین بلوک را پاک کنید، برنامه دقیقاً
+     مثل قبل کار می‌کند.
+   • هیچ‌وقت DB را دست نمی‌زند و save() صدا نمی‌زند. حافظه‌اش در localStorage
+     جداست (کلیدِ pumpSmartType)، پس همگام‌سازی و بکاپ هم چیزی از آن نمی‌بینند.
+   • مقدارِ کادر فقط با کارِ صریحِ کاربر عوض می‌شود: Tab، Enter، کلیک یا لمس.
+     تا آن لحظه، پیشنهاد فقط یک «سایه» روی کادر است و مقدارِ واقعی همان چیزی
+     است که کاربر تایپ کرده — پس هندلرهای oninput برنامه چیزِ ناخواسته ذخیره
+     نمی‌کنند.
+   • کادرهایی که از قبل لیستِ پیشنهادِ خودِ برنامه را دارند ([data-suggest])
+     اصلاً دستِ این ماژول نیست، تا دو لیست روی هم نیفتند.
+   • کادرهای عددی/تاریخ/رمز هرگز فعال نمی‌شوند.
+
+   ── دو نکتهٔ صریحِ صاحب ریپو ────────────────────────────────────────────────
+   ۱) پیشنهاد فقط «موقعِ تایپ» می‌آید — نه با فوکوس شدن، نه با کلیک، نه با
+      باز شدنِ کادر. تا حرفی زده نشود، هیچ چیزی باز نمی‌شود.
+   ۲) Tab پیشنهاد را «قبول» می‌کند و همان‌جا می‌ماند — به کادرِ بعدی نمی‌رود.
+      وقتی پیشنهادی در کار نیست، Tab دقیقاً همان رفتارِ همیشگیِ برنامه را دارد.
+   ═══════════════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+
+  var MAX_LIST   = 7;      // بیشترین پیشنهادِ نمایشی
+  var MIN_CHARS  = 2;      // کمتر از این، حدس زدن بی‌معنی است
+  var DEBOUNCE   = 90;     // میلی‌ثانیه — تا با تایپِ تند، هر حرف یک محاسبه نشود
+  var MIN_SCORE  = 0.30;   // کف امتیاز برای دیده شدن در لیست
+  var GHOST_MIN  = 0.62;   // کف امتیازِ سایهٔ داخلِ کادر (سخت‌گیرتر — «دقت > پیشنهاد زیاد»)
+  var IDX_TTL    = 4000;   // عمرِ کشِ داده‌های سیستم (میلی‌ثانیه)
+  var SCAN_CAP   = 6000;   // بیشترین نامزدی که در یک نوبت سنجیده می‌شود
+  var LS_KEY     = 'pumpSmartType';
+  var MEM_CAP    = 300;    // بیشترین عبارتِ به‌خاطر‌سپرده در هر زمینه
+  var MEM_MIN_N  = 2;      // تا وقتی کمتر از این بار تکرار نشده، پیشنهاد نمی‌شود
+
+  /* ── ۱) نرمال‌سازیِ فارسی/عربی ────────────────────────────────────────────
+     فقط برای «مقایسه» به کار می‌رود. متنی که به کادر می‌نشیند همیشه شکلِ
+     اصلیِ خودش را دارد — هیچ نوشته‌ای بدونِ اجازهٔ کاربر عوض نمی‌شود. */
+  var AR_MAP = { 'ي':'ی','ﻱ':'ی','ﻲ':'ی','ك':'ک','ﻙ':'ک','ﻚ':'ک','ة':'ه','ۀ':'ه',
+                 'أ':'ا','إ':'ا','آ':'ا','ٱ':'ا','ؤ':'و','ئ':'ی','ى':'ی' };
+  var FA_DIG = '۰۱۲۳۴۵۶۷۸۹', AR_DIG = '٠١٢٣٤٥٦٧٨٩';
+  function stxNorm(s) {
+    s = String(s == null ? '' : s);
+    s = s.replace(/[ً-ْٰۖ-ۭ]/g, '');        // اعراب
+    s = s.replace(/[​-‏‪-‮⁦-⁩﻿]/g, ' '); // نیم‌فاصله و کنترل‌ها
+    s = s.replace(/[يﻱﻲكﻙﻚةۀأإآٱؤئى]/g, function (c) { return AR_MAP[c] || c; });
+    s = s.replace(/[۰-۹]/g, function (c) { return String(FA_DIG.indexOf(c)); });
+    s = s.replace(/[٠-٩]/g, function (c) { return String(AR_DIG.indexOf(c)); });
+    return s.toLowerCase().replace(/\s+/g, ' ').trim();
+  }
+
+  /* ── ۲) این کادر اصلاً پیشنهاد می‌خواهد؟ و اگر بله، از کدام زمینه؟ ────────
+     سیاست عمداً محافظه‌کارانه است: هر کادری که زمینه‌اش را نشناسیم، دست‌نخورده
+     می‌ماند. بهتر است جایی پیشنهاد نیاید تا این‌که جای اشتباه بیاید. */
+  var BAD_TYPE = { number:1, tel:1, date:1, time:1, password:1, email:1, url:1,
+                   hidden:1, checkbox:1, radio:1, file:1, color:1, range:1,
+                   submit:1, button:1, reset:1, image:1 };
+  // نشانه‌های «این کادر عددی/تاریخی/رمزی است» — هرگز پیشنهادِ متنی نگیرد
+  var NUM_RE = /(مبلغ|نرخ|فی|لیتر|مقدار|تعداد|تاریخ|شماره|شمارهٔ|کد|رمز|درصد|فیصد|قیمت|بردگی|رسید|الباقی|جمع|ساعت|عدد|تلفن|موبایل|شناسه|price|rate|amount|liter|date|num|code|pass|percent|qty|phone|id)/i;
+  var CTX_RULES = [
+    { ctx: 'person',  re: /(نام قرض|قرض‌?دار|نام مشتری|نام شخص|نام کامل|نام و تخلص|نام شرکت|نام فروشنده|نام تانکر|نام حساب|جستجوی نام|customer|person|debtor)/i },
+    { ctx: 'vehicle', re: /(موتر|وسیله|کرولا|نوع نقلیه|vehicle)/i },
+    { ctx: 'hawala',  re: /(حواله|hawala)/i },
+    { ctx: 'note',    re: /(یادداشت|توضیح|شرح|note|desc|comment)/i },
+    { ctx: 'person',  re: /^نام$|^نام\.\.\.$|^نام \/ توضیح$/ }
+  ];
+  var CELL_SEL = '.xls-tbl td input, .xls-tbl td textarea, .tbl td input, .tbl td textarea,' +
+                 '.safe-tbl td input, .rasid-tbl td input, .ro-tbl td input';
+  function stxInCell(el) { try { return !!(el && el.matches && el.matches(CELL_SEL)); } catch (e) { return false; } }
+
+  function stxCtx(el) {
+    if (!el || !el.tagName) return null;
+    var tag = el.tagName.toLowerCase();
+    if (tag !== 'input' && tag !== 'textarea') return null;
+    if (el.disabled || el.readOnly) return null;
+    if (tag === 'input') {
+      var t = (el.type || 'text').toLowerCase();
+      if (BAD_TYPE[t]) return null;
+    }
+    // لیستِ پیشنهادِ خودِ برنامه این کادر را دارد — دستش نمی‌زنیم
+    if (el.hasAttribute('data-suggest') || el.hasAttribute('list')) return null;
+    if (el.hasAttribute('data-nostx')) return null;
+    var im = (el.getAttribute('inputmode') || '').toLowerCase();
+    if (im === 'numeric' || im === 'decimal' || im === 'tel') return null;
+    // چت و رباتِ دستیار جای پیشنهادِ تایپ نیست
+    if (el.closest && el.closest('#rbPane-dm, .msgr-wrap, #dmLegacy, .rb-body')) return null;
+    var idn = (el.id || '') + ' ' + (el.name || '') + ' ' + (el.className || '');
+    if (/(^|[-_ ])(pass|pw|rmz)/i.test(idn)) return null;
+
+    var hint = (el.getAttribute('placeholder') || '') + ' ' +
+               (el.getAttribute('aria-label') || '') + ' ' +
+               (el.getAttribute('title') || '') + ' ' + idn;
+    var ph = (el.getAttribute('placeholder') || '').trim();
+    /* کادرِ عددی/تاریخی سه نشانه دارد و هر سه این‌جا گرفته می‌شوند:
+       ۱) راهنمایش هیچ حرفی ندارد و فقط عدد و علامت است («0»، «#»، «56 / 57»)
+       ۲) با «مثلاً <عدد>» شروع می‌شود
+       ۳) نامِ خودِ کادر واژهٔ عددی دارد (fee/price/rate/…)
+       نمونهٔ واقعی که این‌جا گیر افتاد: کادرِ «فیِ خرید» که راهنمایش «56 / 57»
+       است ولی در راهنمای شناور واژهٔ «یادداشت» دارد — بدونِ قاعدهٔ ۱ به‌اشتباه
+       یک کادرِ متنی حساب می‌شد. */
+    if (ph && !/[A-Za-z\u0600-\u06FF]/.test(ph)) return null;
+    if (/^مثلاً\s*[\d۰-۹]/.test(ph)) return null;
+    if (/(^|[-_ ])(fee|buyfee|price|rate|amount|qty|pct|percent)/i.test(idn)) return null;
+
+    for (var i = 0; i < CTX_RULES.length; i++) {
+      if (CTX_RULES[i].re.test(hint)) {
+        // «شرح/توضیح» با واژه‌های عددی قاطی شده باشد ⇒ عددی است، نه متنی
+        if (CTX_RULES[i].ctx !== 'person' && NUM_RE.test(ph) && !/(یادداشت|توضیح|شرح)/.test(ph)) return null;
+        return CTX_RULES[i].ctx;
+      }
+    }
+    if (tag === 'textarea' && /note-field/.test(el.className || '')) return 'note';
+    if (NUM_RE.test(hint)) return null;
+    return null;      // زمینه‌اش را نمی‌شناسیم ⇒ دست‌نخورده بماند
+  }
+
+  /* ── ۳) منبعِ اول: دادهٔ واقعیِ خودِ سیستم ───────────────────────────────
+     فقط خوانده می‌شود. کشِ کوتاه‌عمر دارد تا با تایپِ تند هزاران رکورد هر بار
+     دوباره پیمایش نشوند، و چون عمرش کوتاه است، تغییرِ نام/حذفِ مشتری هم خیلی
+     زود در پیشنهادها دیده می‌شود. */
+  var _sysCache = {}, _sysAt = {};
+  function stxSystem(ctx) {
+    var now = Date.now();
+    if (_sysCache[ctx] && (now - (_sysAt[ctx] || 0)) < IDX_TTL) return _sysCache[ctx];
+    var out = [], seen = {};
+    var push = function (v) {
+      if (!v) return;
+      var t = String(v).trim();
+      if (t.length < 2 || t.length > 90) return;
+      var k = stxNorm(t);
+      if (!k || seen[k]) return;
+      seen[k] = 1; out.push(t);
+    };
+    try {
+      if (ctx === 'person') {
+        (DB.debtPersons || []).forEach(function (p) {
+          if (!p) return; push(p.name);
+          (p.subs || []).forEach(function (s) { if (s) push(s.name); });
+        });
+        (DB.noinvPersons || []).forEach(function (p) { if (p) push(p.name); });
+        (DB.invoices || []).forEach(function (v) { if (v) push(v.customer_name); });
+      } else if (ctx === 'vehicle') {
+        (DB.invoices || []).forEach(function (v) { if (v) push(v.vehicle_type); });
+      } else if (ctx === 'hawala') {
+        (DB.debtPersons || []).forEach(function (p) {
+          if (!p) return;
+          ['rows', 'moneyRows'].forEach(function (k) {
+            (p[k] || []).forEach(function (r) { if (r) push(r.hawala); });
+          });
+        });
+      }
+    } catch (e) { out = []; }
+    _sysCache[ctx] = out; _sysAt[ctx] = now;
+    return out;
+  }
+
+  /* ── ۴) منبعِ دوم: عبارت‌های پرکاربردِ آماده ─────────────────────────────
+     اینها فقط «شروعِ کار» را پر می‌کنند؛ چیزی که خودِ کاربر می‌نویسد کم‌کم
+     بالاتر از اینها می‌نشیند. */
+  var PHRASES = {
+    note: ['پرداخت شد', 'پرداخت کامل شد', 'پرداخت قسمتی انجام شد', 'پرداخت به حساب ثبت شد',
+           'مبلغ پرداخت شد', 'مبلغ کامل دریافت شد', 'مبلغ باقی‌مانده ثبت شد',
+           'تیل دریافت شد', 'تیل به حساب ثبت شد', 'تیل تحویل داده شد',
+           'رسید داده شد', 'حساب تسویه شد', 'حساب صاف شد', 'قرض باقی مانده',
+           'نقد پرداخت شد', 'به حساب بانکی واریز شد', 'قرار شد بعداً بدهد',
+           'یک قسمت پرداخت شد، بقیه باقی است'],
+    hawala: ['حواله شد', 'حواله بانکی', 'حواله صرافی', 'نقد گرفته شد'],
+    vehicle: ['کرولا', 'موتر باربری', 'تانکر', 'موترسایکل', 'زرنج', 'جنراتور', 'تراکتور'],
+    person: []
+  };
+
+  /* ── ۵) منبعِ سوم: چیزهایی که خودِ کاربر تکرار کرده ──────────────────────
+     هر متنی همان بار اول وارد پیشنهادها نمی‌شود؛ باید چند بار تکرار شود
+     (MEM_MIN_N). قبول کردنِ یک پیشنهاد هم امتیازش را بالا می‌برد. */
+  var _mem = null, _memDirty = false, _memTimer = null;
+  function stxMem() {
+    if (_mem) return _mem;
+    try { _mem = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch (e) { _mem = null; }
+    if (!_mem || _mem.v !== 1 || !_mem.m) _mem = { v: 1, m: {} };
+    return _mem;
+  }
+  function stxMemSave() {
+    _memDirty = true;
+    if (_memTimer) return;
+    _memTimer = setTimeout(function () {
+      _memTimer = null;
+      if (!_memDirty) return;
+      _memDirty = false;
+      try { localStorage.setItem(LS_KEY, JSON.stringify(stxMem())); } catch (e) {}
+    }, 1200);
+  }
+  function stxBucket(ctx) {
+    var m = stxMem().m;
+    if (!m[ctx]) m[ctx] = {};
+    return m[ctx];
+  }
+  function stxPrune(b) {
+    var keys = Object.keys(b);
+    if (keys.length <= MEM_CAP) return;
+    keys.sort(function (a, c) {
+      var x = b[a], y = b[c];
+      return ((y.n || 0) * 1e6 + (y.u || 0) / 1e6) - ((x.n || 0) * 1e6 + (x.u || 0) / 1e6);
+    });
+    keys.slice(MEM_CAP).forEach(function (k) { delete b[k]; });
+  }
+  /* متنِ نهاییِ یک کادر را «شاید» به خاطر بسپار. عمداً سخت‌گیر: چیزهای خیلی
+     کوتاه، خیلی بلند، و هر چیزی که فقط عدد است کنار گذاشته می‌شوند. */
+  function stxRemember(ctx, txt, bonus) {
+    var t = String(txt == null ? '' : txt).trim();
+    if (t.length < 3 || t.length > 90) return;
+    if (!/[^\d\s.,\/\-۰-۹٠-٩]/.test(t)) return;          // فقط عدد/تاریخ ⇒ نه
+    var k = stxNorm(t);
+    if (!k) return;
+    var b = stxBucket(ctx);
+    var e = b[k] || (b[k] = { t: t, n: 0, u: 0 });
+    e.t = t; e.n = (e.n || 0) + (bonus || 1); e.u = Date.now();
+    stxPrune(b);
+    stxMemSave();
+  }
+
+  /* ── ۶) ساختنِ فهرستِ نامزدها برای یک زمینه ─────────────────────────────── */
+  function stxCandidates(ctx) {
+    var out = [], seen = {};
+    var add = function (text, src, n, u) {
+      var t = String(text || '').trim();
+      if (!t) return;
+      var k = stxNorm(t);
+      // ۶) یک عبارت از چند منبع ⇒ فقط یک بار. قوی‌ترین نسخه‌اش می‌ماند.
+      if (seen[k]) {
+        var prev = seen[k];
+        if ((n || 0) > (prev.n || 0)) { prev.n = n || 0; prev.u = Math.max(prev.u || 0, u || 0); }
+        return;
+      }
+      var c = { text: t, key: k, src: src, n: n || 0, u: u || 0 };
+      seen[k] = c; out.push(c);
+    };
+    stxSystem(ctx).forEach(function (t) { add(t, 'sys', 0, 0); });
+    (PHRASES[ctx] || []).forEach(function (t) { add(t, 'phrase', 0, 0); });
+    var b = stxBucket(ctx);
+    Object.keys(b).forEach(function (k) {
+      var e = b[k];
+      if (!e || (e.n || 0) < MEM_MIN_N) return;
+      add(e.t, 'mem', e.n, e.u);
+    });
+    return out;
+  }
+
+  /* ── ۷) رتبه‌بندی ────────────────────────────────────────────────────────
+     فقط «با این حروف شروع می‌شود» کافی نیست. هفت چیز با هم سنجیده می‌شوند:
+     تطابقِ ابتدای متن، تطابقِ ابتدای کلمه‌ها، تطابقِ کلمه‌به‌کلمه، میزانِ
+     استفاده، تازگیِ استفاده، منبع، و کوتاهیِ ادامه. */
+  var DAY = 86400000;
+  function stxScore(c, q, qWords) {
+    var k = c.key;
+    if (!k) return 0;
+    var s = 0, matched = false;
+    if (k.indexOf(q) === 0) { s += 1.00; matched = true; }                       // ۱) ابتدای متن
+    else {
+      var wi = k.indexOf(' ' + q);
+      if (wi >= 0) { s += 0.62; matched = true; }                                // ابتدای یک کلمه
+      else if (k.indexOf(q) >= 0) { s += 0.34; matched = true; }                 // جایی داخلِ متن
+    }
+    // ۲) تطابقِ کلمه‌به‌کلمه — «مبلغ احمد» به «مبلغ … احمد …» هم بخورد
+    if (qWords.length > 1) {
+      var hit = 0;
+      for (var i = 0; i < qWords.length; i++) if (qWords[i] && k.indexOf(qWords[i]) >= 0) hit++;
+      if (hit) { s += 0.30 * (hit / qWords.length); matched = true; }
+    }
+    if (!matched) return 0;
+    // ۳) میزان استفاده (اشباع‌شونده — ۱۰۰ بار خیلی از ۱۰ بار جلوتر نمی‌افتد)
+    if (c.n > 0) s += Math.min(0.45, Math.log(1 + c.n) / 7);
+    // ۴) تازگی — تا ۳۰ روز کم‌کم آب می‌رود
+    if (c.u > 0) {
+      var age = (Date.now() - c.u) / DAY;
+      if (age < 30) s += 0.22 * (1 - age / 30);
+    }
+    // ۵) منبع
+    s += (c.src === 'sys' ? 0.16 : (c.src === 'mem' ? 0.12 : 0.06));
+    // ۶) شباهتِ طولی — ادامهٔ کوتاه‌تر، حدسِ مطمئن‌تری است
+    var extra = k.length - q.length;
+    if (extra >= 0) s += Math.max(0, 0.14 - extra / 260);
+    return s;
+  }
+
+  function stxRank(ctx, raw) {
+    var q = stxNorm(raw);
+    if (q.length < MIN_CHARS) return [];
+    var qWords = q.split(' ').filter(Boolean);
+    var cands = stxCandidates(ctx);
+    var n = Math.min(cands.length, SCAN_CAP);
+    var res = [];
+    for (var i = 0; i < n; i++) {
+      var c = cands[i];
+      if (c.key === q) continue;                       // چیزی که همین حالا نوشته، پیشنهاد نیست
+      var s = stxScore(c, q, qWords);
+      if (s >= MIN_SCORE) res.push({ text: c.text, key: c.key, src: c.src, score: s });
+    }
+    res.sort(function (a, b) { return b.score - a.score || a.text.length - b.text.length; });
+    return res.slice(0, MAX_LIST);
+  }
+
+  /* ── ۸) سایهٔ داخلِ کادر ─────────────────────────────────────────────────
+     یک لایهٔ شفاف دقیقاً روی کادر کشیده می‌شود: تکهٔ تایپ‌شده نامرئی است و فقط
+     «ادامه» کم‌رنگ دیده می‌شود. خودِ مقدارِ کادر دست نمی‌خورد، پس هیچ هندلرِ
+     oninput ای چیزِ ناتمام ذخیره نمی‌کند. */
+  var _ghost = null;
+  function stxGhostEl() {
+    if (_ghost) return _ghost;
+    _ghost = document.createElement('div');
+    _ghost.id = 'stx-ghost';
+    _ghost.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(_ghost);
+    return _ghost;
+  }
+  function stxGhostHide() { if (_ghost) _ghost.style.display = 'none'; }
+  function stxGhostShow(el, full) {
+    var typed = el.value || '';
+    // ۱۸) سایه فقط وقتی که پیشنهاد دقیقاً ادامهٔ همین متن باشد — این تنها
+    // چیزی است که جلوی «پرداختپرداخت شد» را می‌گیرد.
+    if (!full || full.length <= typed.length || full.slice(0, typed.length) !== typed) return stxGhostHide();
+    // متن از کادر بیرون زده یا کادر اسکرول خورده ⇒ جای سایه دقیق درنمی‌آید
+    if (el.scrollWidth > el.clientWidth + 1 || el.scrollTop > 0 || el.scrollLeft !== 0) return stxGhostHide();
+    var cs = getComputedStyle(el), r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return stxGhostHide();
+    var g = stxGhostEl();
+    g.style.cssText =
+      'position:fixed;pointer-events:none;z-index:100045;overflow:hidden;' +
+      'left:' + r.left + 'px;top:' + r.top + 'px;width:' + r.width + 'px;height:' + r.height + 'px;' +
+      'box-sizing:border-box;background:transparent;' +
+      'font:' + cs.font + ';font-family:' + cs.fontFamily + ';font-size:' + cs.fontSize + ';' +
+      'font-weight:' + cs.fontWeight + ';letter-spacing:' + cs.letterSpacing + ';' +
+      'line-height:' + cs.lineHeight + ';direction:' + cs.direction + ';text-align:' + cs.textAlign + ';' +
+      'padding:' + cs.paddingTop + ' ' + cs.paddingRight + ' ' + cs.paddingBottom + ' ' + cs.paddingLeft + ';' +
+      'border:' + cs.borderTopWidth + ' solid transparent;' +
+      'border-right-width:' + cs.borderRightWidth + ';border-bottom-width:' + cs.borderBottomWidth + ';' +
+      'border-left-width:' + cs.borderLeftWidth + ';' +
+      'white-space:' + (el.tagName.toLowerCase() === 'textarea' ? 'pre-wrap' : 'pre') + ';';
+    g.textContent = '';
+    var a = document.createElement('span'); a.style.cssText = 'color:transparent'; a.textContent = typed;
+    var b = document.createElement('span'); b.className = 'stx-rest'; b.textContent = full.slice(typed.length);
+    g.appendChild(a); g.appendChild(b);
+    g.style.display = '';
+  }
+
+  /* ── ۹) لیستِ پیشنهادها ─────────────────────────────────────────────────── */
+  var _box = null;
+  function stxBoxEl() {
+    if (_box) return _box;
+    _box = document.createElement('div');
+    _box.id = 'stx-list';
+    _box.className = 'stx-list';
+    _box.setAttribute('role', 'listbox');
+    _box.style.display = 'none';
+    document.body.appendChild(_box);
+    // pointerdown (نه click): پیش از blur اجرا می‌شود، پس لمس و کلیک هر دو کار می‌کنند
+    _box.addEventListener('pointerdown', function (e) {
+      var it = e.target.closest ? e.target.closest('.stx-item') : null;
+      if (!it) return;
+      e.preventDefault(); e.stopPropagation();
+      _active = parseInt(it.getAttribute('data-i'), 10) || 0;
+      stxAccept();
+    });
+    return _box;
+  }
+
+  /* ── ۱۰) وضعیتِ زنده ─────────────────────────────────────────────────────── */
+  var _el = null, _ctx = null, _cands = [], _active = -1, _open = false;
+  var _timer = null, _applying = false;
+  var _typedEl = null;      // در کدام کادر واقعاً تایپ شده — مبنای به‌خاطرسپاری
+
+  function stxPosition() {
+    if (!_el || !_box) return;
+    var r = _el.getBoundingClientRect();
+    _box.style.left = Math.round(r.left) + 'px';
+    _box.style.top = Math.round(r.bottom + 4) + 'px';
+    _box.style.width = Math.round(r.width) + 'px';
+    if (_open) stxGhostShow(_el, _cands[_active] && _cands[_active].score >= GHOST_MIN ? _cands[_active].text : '');
+  }
+
+  function stxClose() {
+    _open = false; _cands = []; _active = -1;
+    if (_box) _box.style.display = 'none';
+    stxGhostHide();
+    if (_el) {
+      _el.removeAttribute('aria-expanded');
+      _el.removeAttribute('aria-activedescendant');
+    }
+    _el = null; _ctx = null;
+  }
+
+  function stxPaint() {
+    var box = stxBoxEl();
+    box.innerHTML = _cands.map(function (c, i) {
+      var tag = c.src === 'sys' ? 'ثبت‌شده' : (c.src === 'mem' ? 'تکراری' : 'آماده');
+      return '<div class="stx-item' + (i === _active ? ' active' : '') + '" role="option"' +
+             ' id="stx-o' + i + '" data-i="' + i + '" aria-selected="' + (i === _active) + '">' +
+             '<span class="stx-t">' + escFa(c.text) + '</span>' +
+             '<span class="stx-src">' + tag + '</span></div>';
+    }).join('');
+    stxPosition();
+    box.style.display = '';
+    if (_el) {
+      _el.setAttribute('role', 'combobox');
+      _el.setAttribute('aria-autocomplete', 'both');
+      _el.setAttribute('aria-controls', 'stx-list');
+      _el.setAttribute('aria-expanded', 'true');
+      if (_active >= 0) _el.setAttribute('aria-activedescendant', 'stx-o' + _active);
+    }
+    stxGhostShow(_el, (_cands[_active] && _cands[_active].score >= GHOST_MIN) ? _cands[_active].text : '');
+  }
+
+  function stxMove(d) {
+    if (!_cands.length) return;
+    _active = (_active + d + _cands.length) % _cands.length;
+    stxPaint();
+    var a = _box.querySelector('.stx-item.active');
+    if (a && a.scrollIntoView) a.scrollIntoView({ block: 'nearest' });
+  }
+
+  /* ── ۱۱) قبول کردنِ پیشنهاد ───────────────────────────────────────────────
+     مقدارِ نهایی «دقیقاً» خودِ متنِ پیشنهاد است — نه چسباندنِ چیزی به تایپِ
+     کاربر. پس هیچ‌وقت «پرداختپرداخت شد» ساخته نمی‌شود.
+     رویدادهای input/change دستی فرستاده می‌شوند تا منطقِ خودِ برنامه (که روی
+     همین رویدادها می‌نشیند) عیناً مثل تایپِ دستی اجرا شود. */
+  function stxAccept() {
+    if (!_open || !_el || _active < 0 || !_cands[_active]) return false;
+    var el = _el, cand = _cands[_active], ctx = _ctx;
+    _applying = true;
+    try {
+      el.value = cand.text;
+      try { el.setSelectionRange(cand.text.length, cand.text.length); } catch (e) {}
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    } finally { _applying = false; }
+    // ۱۵) یادگیریِ کنترل‌شده: قبول کردن امتیاز می‌دهد، نادیده گرفتن جریمه ندارد
+    if (ctx) stxRemember(ctx, cand.text, 2);
+    stxClose();
+    try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); }
+    return true;
+  }
+
+  function stxCompute(el, ctx) {
+    if (!document.contains(el) || document.activeElement !== el) return stxClose();
+    var raw = el.value || '';
+    var res = stxRank(ctx, raw);
+    if (!res.length) { _open = false; _cands = []; _active = -1;
+      if (_box) _box.style.display = 'none'; stxGhostHide();
+      if (el.hasAttribute('aria-expanded')) el.setAttribute('aria-expanded', 'false');
+      return; }
+    _el = el; _ctx = ctx; _cands = res; _active = 0; _open = true;
+    stxPaint();
+  }
+
+  /* ── ۱۲) شنونده‌ها — همه سراسری، هیچ تابعی از برنامه دست نمی‌خورد ────────── */
+
+  // پیشنهاد فقط با تایپ ساخته می‌شود (خواستهٔ صریح: «موقعِ تایپ، نه موقع‌های دیگر»)
+  document.addEventListener('input', function (e) {
+    if (_applying) return;
+    var el = e.target;
+    var ctx = stxCtx(el);
+    if (!ctx) { if (_el && el !== _el) stxClose(); return; }
+    if (_el && _el !== el) stxClose();          // ۲۰) کادر عوض شد ⇒ لیستِ قبلی برود
+    _typedEl = el;
+    _el = el; _ctx = ctx;
+    if (_timer) clearTimeout(_timer);
+    _timer = setTimeout(function () { _timer = null; stxCompute(el, ctx); }, DEBOUNCE);
+  }, true);
+
+  document.addEventListener('keydown', function (e) {
+    if (!_open || e.target !== _el) return;
+    var k = e.key;
+    if (k === 'Tab') {
+      /* خواستهٔ صریحِ صاحب ریپو: Tab پیشنهاد را بگیرد و «همان‌جا بماند» —
+         به کادرِ بعدی نرود. Tabِ بعدی (که دیگر پیشنهادی ندارد) مثل همیشه
+         به کادرِ بعدی می‌رود. */
+      if (stxAccept()) { e.preventDefault(); e.stopPropagation(); }
+      return;
+    }
+    if (k === 'Enter') {
+      // ۱۷) نباید فرم را ناخواسته ثبت کند: وقتی پیشنهاد گرفته شد، همین‌جا می‌ایستد
+      if (stxAccept()) { e.preventDefault(); e.stopPropagation(); }
+      return;
+    }
+    if (k === 'Escape') { stxClose(); e.stopPropagation(); return; }
+    if (k === 'ArrowDown' || k === 'ArrowUp') {
+      /* داخلِ سلولِ جدول، کلیدهای جهت مالِ ناوبریِ خودِ برنامه‌اند (خواستهٔ
+         قبلیِ صاحب ریپو: «با کلید پایین باید بروم کادرِ پایینی»). پس آن‌جا
+         لیست بسته می‌شود و کلید دست‌نخورده رد می‌شود. */
+      if (stxInCell(_el)) { stxClose(); return; }
+      e.preventDefault(); e.stopPropagation();
+      stxMove(k === 'ArrowDown' ? 1 : -1);
+      return;
+    }
+  }, true);
+
+  // ۲۰) رفتن به کادرِ دیگر ⇒ بستن + شاید به‌خاطر‌سپردنِ متنِ نهایی
+  document.addEventListener('focusout', function (e) {
+    var el = e.target;
+    if (_typedEl === el) {
+      var ctx = stxCtx(el);
+      if (ctx) { try { stxRemember(ctx, el.value); } catch (err) {} }
+      _typedEl = null;
+    }
+    if (el === _el) setTimeout(function () { if (_el === el) stxClose(); }, 120);
+  }, true);
+
+  window.addEventListener('resize', function () { if (_open) stxPosition(); });
+  window.addEventListener('scroll', function (e) {
+    if (!_open) return;
+    if (_box && e.target === _box) return;
+    stxPosition();
+  }, { capture: true, passive: true });
+
+  /* ── ۱۳) رابطِ کوچک برای آزمون/عیب‌یابی — هیچ منطقی به آن وابسته نیست ──── */
+  window.__smartType__ = {
+    norm: stxNorm,
+    ctxOf: stxCtx,
+    rank: stxRank,
+    remember: stxRemember,
+    state: function () { return { open: _open, active: _active, n: _cands.length,
+                                 items: _cands.map(function (c) { return c.text; }) }; },
+    reset: function () { _mem = { v: 1, m: {} }; try { localStorage.removeItem(LS_KEY); } catch (e) {} }
+  };
+})();
 
 /* ═══ سلول‌های جدول، مثل اکسل ═══════════════════════════════════════════════
    باگِ گزارش‌شده: «تو هر جدولی روی کادر می‌زنم، مکان‌نما وسطِ نوشته می‌نشیند و
