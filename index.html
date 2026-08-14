@@ -522,9 +522,9 @@ body.staff-view .qr-overlay{z-index:10020}
 .modal-overlay{position:fixed;inset:0;background:#000b;z-index:300;display:none;align-items:center;justify-content:center;padding:12px}
 .modal-overlay.open{display:flex}
 #personModal{padding:0;align-items:stretch}
-#personModal .modal{max-width:100%!important;width:100%!important;height:100vh!important;max-height:100vh!important;border-radius:0!important;border:none!important;box-shadow:none!important}
+#personModal .modal{max-width:100%!important;width:100%!important;height:100%!important;max-height:100%!important;border-radius:0!important;border:none!important;box-shadow:none!important}
 #companyModal,#companyPurchasesModal,#companyArchiveModal{padding:0;align-items:stretch}
-#companyModal .modal,#companyPurchasesModal .modal,#companyArchiveModal .modal{max-width:100%!important;width:100%!important;height:100vh!important;max-height:100vh!important;border-radius:0!important;border:none!important;box-shadow:none!important}
+#companyModal .modal,#companyPurchasesModal .modal,#companyArchiveModal .modal{max-width:100%!important;width:100%!important;height:100%!important;max-height:100%!important;border-radius:0!important;border:none!important;box-shadow:none!important}
 #companyPurchasesModal .modal-body,#companyArchiveModal .modal-body{overflow-y:auto}
 /* ── صفحهٔ جدول‌های آرشیوِ قرض‌دار: دقیقاً مثل خودِ صفحهٔ حساب ────────────────
    گزارشِ صاحب ریپو: «تو آرشیوِ جدول‌ها که می‌روم ضربدرش معلوم نیست، از آن‌جا
@@ -534,8 +534,25 @@ body.staff-view .qr-overlay{z-index:10020}
    حالا مثل حساب/شرکت تمام‌صفحه است: سربرگ ثابت می‌ماند و فقط بدنه اسکرول
    می‌شود، پس ✕ همیشه سرِ جایش است و پهنای جدول‌ها هم با جدولِ اصلی یکی است. */
 #personArchiveModal{padding:0;align-items:stretch}
-#personArchiveModal .modal{max-width:100%!important;width:100%!important;height:100vh!important;max-height:100vh!important;border-radius:0!important;border:none!important;box-shadow:none!important}
+#personArchiveModal .modal{max-width:100%!important;width:100%!important;height:100%!important;max-height:100%!important;border-radius:0!important;border:none!important;box-shadow:none!important}
 #personArchiveModal .modal-body{overflow-y:auto}
+/* ══ «تمام‌صفحه» یعنی به قدِ همان صفحه‌ای که دیده می‌شود ═══════════════════════
+   گزارشِ صاحب ریپو: «بیشتر از آن کادر اسکرول نمی‌شود، گیر کرده و جدولِ آرشیو را
+   تا آخر نمی‌توانم ببینم.»
+   ریشه: قدِ این پنجره‌ها 100vh بود. روی گوشی 100vh یعنی قدِ صفحه *بدونِ* نوارِ
+   آدرسِ مرورگر؛ وقتی آن نوار دیده می‌شود، به همان اندازه از تهِ پنجره پایین‌ترِ
+   صفحه می‌افتد. اسکرول به آخر می‌رسد ولی آخرش زیرِ نوارِ مرورگر مانده و هیچ‌وقت
+   دیده نمی‌شود — درست همان «گیر کرده». در آزمایش هم پیدا بود: تهِ پنجره ۴ پیکسل
+   بیرونِ صفحه می‌ایستاد، و روی گوشی به اندازهٔ کلِ نوارِ مرورگر.
+   درمان: قدِ خودِ پرده با dvh (قدِ «دیده‌شدهٔ» همین لحظه، نه بیشترین قدِ ممکن) و
+   قدِ پنجره ۱۰۰٪ِ همان پرده. پس هر چه داخلش است همیشه در دسترسِ اسکرول می‌ماند.
+   ⚠️ به 100vh برنگردانید. ══ */
+#personModal,#companyModal,#companyPurchasesModal,#companyArchiveModal,#personArchiveModal,
+#pumpHistoryModal,#waraqModal{ height:100vh; }
+@supports (height:100dvh){
+  #personModal,#companyModal,#companyPurchasesModal,#companyArchiveModal,#personArchiveModal,
+  #pumpHistoryModal,#waraqModal{ height:100dvh; }
+}
 /* صفحهٔ آرشیو و جستجوی خرید باید روی نمای اسکنِ کیوآر (z-index:10000) هم دیده شوند */
 #companyArchiveModal,#cmpSearchModal,#personArchiveModal{z-index:10050}
 /* صفحهٔ «خریدهای پطرول/دیزل» از داخلِ صفحهٔ آرشیو هم باز می‌شود، پس باید بالاتر از
@@ -18868,7 +18885,7 @@ body.boot-viewer #bootViewerSplash{
 
 <!-- صفحهٔ جدا: تاریخچهٔ شروع/ختمِ همهٔ پایه‌ها (کدام تاریخ/روز هفته بوده) — کلیک روی هر ردیف همان ورق را باز می‌کند -->
 <div class="modal-overlay" id="pumpHistoryModal">
-  <div class="modal" style="max-width:100%;width:100%;height:100vh;max-height:100vh;border-radius:0;border:none;display:flex;flex-direction:column">
+  <div class="modal" style="max-width:100%;width:100%;height:100%;max-height:100%;border-radius:0;border:none;display:flex;flex-direction:column">
     <div class="modal-head">
       <h2 style="flex:1;text-align:center">🕘 تاریخچهٔ شروع/ختمِ پایه‌ها</h2>
       <button class="modal-close" onclick="closeModal('pumpHistoryModal')">✕</button>
@@ -18895,7 +18912,7 @@ body.boot-viewer #bootViewerSplash{
 
 <!-- WARAQ MODAL (full-screen) -->
 <div class="modal-overlay" id="waraqModal">
-  <div class="modal" style="max-width:100%;width:100%;height:100vh;max-height:100vh;border-radius:0;border:none;display:flex;flex-direction:column">
+  <div class="modal" style="max-width:100%;width:100%;height:100%;max-height:100%;border-radius:0;border:none;display:flex;flex-direction:column">
     <div class="modal-head" style="gap:10px;flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green);padding:5px 10px;font-size:0.78rem" onclick="printWaraq()" id="wq-pdf-btn">📄 PDF این شیفت</button>
@@ -42522,7 +42539,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.302';
+const APP_VERSION = '2.9.303';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
