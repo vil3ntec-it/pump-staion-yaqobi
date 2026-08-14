@@ -20320,6 +20320,9 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <button class="rb-tab" id="rbTabBtn-dm" onclick="rbShowTab('dm')"><span class="tab-dot" id="rbDot-dm"></span><svg><use href="#ic-user1"/></svg> چت تک‌نفره</button>
     <!-- گروهِ عمومیِ مشتری‌ها: فقط میرزا می‌نویسد، بقیه فقط می‌بینند -->
     <button class="rb-tab" id="rbTabBtn-pub" onclick="rbShowTab('pub')"><span class="tab-dot" id="rbDot-pub"></span><svg><use href="#ic-mega"/></svg> اعلان عمومی</button>
+    <!-- دستیارِ پشتیبانیِ هوشمند — سرویسِ جدا روی سرورِ خانگی (پوشهٔ ai-support/).
+         هیچ دسترسی‌ای به دادهٔ برنامه ندارد؛ فقط مستندات را می‌داند. -->
+    <button class="rb-tab" id="rbTabBtn-ai" onclick="rbShowTab('ai')"><span class="tab-dot" id="rbDot-ai"></span><svg><use href="#ic-ask"/></svg> پشتیبانی هوشمند</button>
   </div>
 
   <!-- 1) سوال و جواب با ربات -->
@@ -20403,6 +20406,19 @@ body.viewer-mode .inv-admin-only{display:none!important}
       <input id="pubInput" placeholder="اعلان برای همهٔ مشتری‌ها…" autocomplete="off"
              onkeydown="if(event.key==='Enter'){event.preventDefault();pubSend();}">
       <button class="msgr-send" onclick="pubSend()">➤</button>
+    </div>
+  </div>
+
+  <!-- 5) پشتیبانیِ هوشمند ─────────────────────────────────────────────────────
+       ویجتِ سرویسِ ai-support/. فقط سؤال می‌فرستد و جواب+منبع نشان می‌دهد.
+       هیچ راهی برای تغییرِ برنامه ندارد و ظاهرِ برنامه را هم دست نمی‌زند. -->
+  <div class="rb-pane" id="rbPane-ai">
+    <div class="ch-list" id="aiList"></div>
+    <div class="ai-state" id="aiState"></div>
+    <div class="ch-comp">
+      <input type="text" id="aiInput" placeholder="سؤالت را دربارهٔ برنامه بپرس…" autocomplete="off"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();aiSupportAsk();}">
+      <button class="ch-ib send" onclick="aiSupportAsk()" title="فرستادن"><svg><use href="#ic-send"/></svg></button>
     </div>
   </div>
   <input type="file" id="chatFileInput" style="display:none">
@@ -38873,7 +38889,7 @@ function rbShowTab(tab) {
   // نمای کیو‌آر شخص (مشتری/قرض‌دار): فقط چت تک‌نفره — نه چت گروهی، نه حتی سوال‌وجواب
   if (_rbMode === 'person' && tab !== 'dm') tab = 'dm';
   _rbTab = tab;
-  ['qa', 'group', 'dm', 'pub'].forEach(t => {
+  ['qa', 'group', 'dm', 'pub', 'ai'].forEach(t => {
     const b = document.getElementById('rbTabBtn-' + t);
     const pn = document.getElementById('rbPane-' + t);
     if (b) b.classList.toggle('active', t === tab);
@@ -38888,6 +38904,7 @@ function rbShowTab(tab) {
     if (!_chatMe() && _rbMode !== 'person') _chatAskName('group');
   }
   if (tab === 'dm') { _chatInitListeners(); _rbRenderDmPane(); }
+  if (tab === 'ai') { try { _aiSupOpen(); } catch (e) {} }
   if (tab === 'pub') { _pubPaint(); try { _pubStatsStart(); } catch (e) {} }
   else { try { _pubStatsStop(); } catch (e) {} }
 }
@@ -38903,6 +38920,9 @@ function _rbSetMode(mode, personCtx) {
   if (gt) gt.style.display = mode === 'person' ? 'none' : 'flex';
   const qt = document.getElementById('rbTabBtn-qa');
   if (qt) qt.style.display = mode === 'person' ? 'none' : 'flex';
+  // مشتریِ کیو‌آر فقط «چت با میرزا» را می‌بیند — دستیارِ پشتیبانی هم برایش نیست
+  const at = document.getElementById('rbTabBtn-ai');
+  if (at) at.style.display = mode === 'person' ? 'none' : 'flex';
   // نمای کیو‌آر (مشتری): هیچ تب و کلمهٔ «ربات»ی دیده نمی‌شود — فقط «چت با میرزا».
   // جواب‌گوی خودکار جای میرزا جواب می‌دهد و با هر بار باز شدن صفحه از نو فعال است.
   const tabsBar = document.getElementById('rbTabs');
@@ -43255,7 +43275,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.313';
+const APP_VERSION = '2.9.314';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -52545,6 +52565,391 @@ select:not(.native-sel){
   window._tblScrollSync = function () {};
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', cleanup);
   else cleanup();
+})();
+</script>
+
+<style id="ai-support-css">
+/* ویجتِ پشتیبانیِ هوشمند — فقط داخلِ پنلِ خودش. هیچ قاعده‌ای اینجا به عناصرِ
+   دیگرِ برنامه دست نمی‌زند: همهٔ گزینشگرها زیرِ #rbPane-ai قفل شده‌اند. */
+#rbPane-ai{ display:none; flex-direction:column; min-height:0; }
+#rbPane-ai.active{ display:flex; }
+#rbPane-ai .ch-list{ flex:1; min-height:0; overflow-y:auto; }
+#rbPane-ai .ai-msg{ margin:8px 10px; display:flex; }
+#rbPane-ai .ai-msg.me{ justify-content:flex-start; }
+#rbPane-ai .ai-msg.bot{ justify-content:flex-end; }
+#rbPane-ai .ai-bub{
+  max-width:86%; padding:9px 12px; border-radius:14px; line-height:1.85;
+  font-size:.88rem; white-space:pre-wrap; word-break:break-word;
+}
+#rbPane-ai .ai-msg.me .ai-bub{ background:var(--accent,#3182ce); color:#fff; border-bottom-left-radius:4px; }
+#rbPane-ai .ai-msg.bot .ai-bub{ background:var(--card2,rgba(128,128,128,.14)); border-bottom-right-radius:4px; }
+#rbPane-ai .ai-src{
+  margin-top:8px; padding-top:6px; border-top:1px dashed rgba(128,128,128,.4);
+  font-size:.72rem; opacity:.82; line-height:1.7;
+}
+#rbPane-ai .ai-src b{ font-weight:700; }
+#rbPane-ai .ai-badge{
+  display:inline-block; font-size:.66rem; padding:1px 7px; border-radius:999px;
+  background:rgba(128,128,128,.22); margin-inline-end:5px;
+}
+#rbPane-ai .ai-link{ display:inline-block; margin:4px 4px 0 0; font-size:.78rem;
+  padding:4px 10px; border-radius:8px; background:rgba(128,128,128,.16);
+  text-decoration:none; color:inherit; }
+#rbPane-ai .ai-qr{ margin-top:8px; background:#fff; padding:8px; border-radius:10px; width:max-content; }
+#rbPane-ai .ai-state{
+  padding:5px 12px; font-size:.72rem; opacity:.75; min-height:20px;
+  border-top:1px solid rgba(128,128,128,.16);
+}
+#rbPane-ai .ai-chips{ display:flex; flex-wrap:wrap; gap:6px; padding:8px 10px 2px; }
+#rbPane-ai .ai-chip{
+  font-size:.76rem; padding:5px 11px; border-radius:999px; cursor:pointer;
+  background:rgba(128,128,128,.15); border:1px solid rgba(128,128,128,.22);
+  font-family:'Vazirmatn',sans-serif; color:inherit;
+}
+#rbPane-ai .ai-chip:active{ transform:scale(.97); }
+</style>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   دستیارِ پشتیبانیِ هوشمند — سمتِ مرورگر
+   ---------------------------------------------------------------------------
+   سرویسش جداست: پوشهٔ ai-support/ روی همان سرورِ خانگی، پورتِ ۸۷۸۸.
+
+   تقسیمِ کار (خواستهٔ صریحِ صاحبِ ریپو: «کامپیوترِ کسی فشار نبیند»):
+     • بازیابیِ محلی → همین‌جا، روی دستگاهِ خودِ کاربر. ایندکس یک بار گرفته و
+       در localStorage می‌ماند. جست‌وجویش چند میلی‌ثانیه است و آفلاین هم کار
+       می‌کند.
+     • فهمیدن و نوشتنِ جواب → روی سرورِ خانگی. تنها کارِ سنگینِ واقعی.
+     • رسمِ QR → همین‌جا با کتابخانهٔ QRCode که از قبل داخلِ همین فایل است.
+
+   امنیت در این سمت:
+     • جوابِ مدل هیچ‌وقت به‌عنوان HTML اجرا نمی‌شود — همه‌چیز textContent است.
+       پس نه اسکریپتی اجرا می‌شود، نه ظاهرِ برنامه می‌تواند از راهِ متن عوض شود.
+     • فقط لینک‌هایی نشان داده می‌شوند که سرویس از فهرستِ رسمی برگردانده و
+       این‌جا هم دوباره https بودنشان بررسی می‌شود.
+   ═══════════════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+
+  var IDX_KEY  = 'aiSupIndex';
+  var SESS_KEY = 'aiSupSession';
+  var URL_KEY  = 'pumpAiUrl';
+
+  var _msgs = [];
+  var _busy = false;
+  var _idx = null;        // ایندکسِ محلی برای بازیابیِ آفلاین
+  var _session = null;
+  var _greeted = false;
+
+  // ── نشانیِ سرویس ────────────────────────────────────────────────────────
+  // پیش‌فرض: همان میزبانِ سرورِ خانگی، پورتِ ۸۷۸۸. اگر کسی دستی چیزی گذاشته
+  // باشد، همان مقدم است.
+  function baseUrl() {
+    try {
+      var manual = localStorage.getItem(URL_KEY);
+      if (manual) return manual.replace(/\/+$/, '');
+    } catch (e) {}
+    try {
+      var sync = window.__SELF_HOST_URL__ || '';
+      if (sync) {
+        var u = new URL(sync.replace(/^ws/, 'http'));
+        return u.protocol + '//' + u.hostname + ':8788';
+      }
+    } catch (e) {}
+    return 'http://127.0.0.1:8788';
+  }
+
+  function deviceId() {
+    try {
+      var id = localStorage.getItem('pumpPresenceId');
+      if (id) return id;
+    } catch (e) {}
+    return 'web';
+  }
+
+  function currentRoleName() {
+    try {
+      if (typeof _rbMode !== 'undefined' && _rbMode === 'admin') return 'admin';
+      if (typeof currentRole !== 'undefined' && currentRole === 'admin') return 'admin';
+      if (typeof currentRole !== 'undefined' && currentRole === 'viewer') return 'viewer';
+    } catch (e) {}
+    return 'staff';
+  }
+
+  // ── ارتباط با سرویس ─────────────────────────────────────────────────────
+  function api(path, opts) {
+    opts = opts || {};
+    var headers = { 'content-type': 'application/json' };
+    if (_session && _session.token) headers.authorization = 'Bearer ' + _session.token;
+    return fetch(baseUrl() + path, {
+      method: opts.method || 'GET',
+      headers: headers,
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+      signal: opts.signal || AbortSignal.timeout(opts.timeout || 90000)
+    }).then(function (r) {
+      return r.json().then(function (j) {
+        if (!r.ok) throw Object.assign(new Error(j.error || ('خطای ' + r.status)), { status: r.status, data: j });
+        return j;
+      });
+    });
+  }
+
+  function ensureSession() {
+    if (_session && _session.expiresAt > Date.now() + 60000) return Promise.resolve(_session);
+    try {
+      var saved = JSON.parse(localStorage.getItem(SESS_KEY) || 'null');
+      if (saved && saved.expiresAt > Date.now() + 60000) { _session = saved; return Promise.resolve(saved); }
+    } catch (e) {}
+    return api('/ai/support/session', {
+      method: 'POST', timeout: 8000,
+      body: { deviceId: deviceId(), role: currentRoleName() }
+    }).then(function (s) {
+      _session = s;
+      try { localStorage.setItem(SESS_KEY, JSON.stringify(s)); } catch (e) {}
+      return s;
+    });
+  }
+
+  // ── ایندکسِ محلی (برای آفلاین و جوابِ فوری) ─────────────────────────────
+  function loadLocalIndex() {
+    if (_idx) return Promise.resolve(_idx);
+    try {
+      var cached = JSON.parse(localStorage.getItem(IDX_KEY) || 'null');
+      if (cached && cached.chunks) _idx = cached;
+    } catch (e) {}
+    // تازه‌سازی در پس‌زمینه — نبودِ اینترنت نباید کار را بخواباند
+    api('/ai/support/index', { timeout: 8000 }).then(function (fresh) {
+      if (!fresh || !fresh.chunks) return;
+      _idx = fresh;
+      try { localStorage.setItem(IDX_KEY, JSON.stringify(fresh)); } catch (e) {}
+    }).catch(function () {});
+    return Promise.resolve(_idx);
+  }
+
+  /* نرمال‌سازی — باید مو‌به‌مو همان قاعده‌های src/rag/normalize.js باشد،
+     وگرنه جستجوی محلی و جستجوی سرور دو جوابِ متفاوت می‌دهند. */
+  var _AR = { 'ي': 'ی', 'ك': 'ک', 'ة': 'ه', 'ۀ': 'ه', 'أ': 'ا', 'إ': 'ا', 'آ': 'ا', 'ؤ': 'و', 'ئ': 'ی' };
+  var _DG = { '۰': '0', '۱': '1', '۲': '2', '۳': '3', '۴': '4', '۵': '5', '۶': '6', '۷': '7', '۸': '8', '۹': '9',
+              '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4', '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9' };
+  function norm(s) {
+    if (typeof s !== 'string') return '';
+    var out = s.normalize('NFKC').replace(/[ً-ٰـ]/g, '')
+      .replace(/‌/g, ' ').replace(/[​-‏‪-‮﻿]/g, '');
+    var buf = '';
+    for (var i = 0; i < out.length; i++) {
+      var ch = out[i];
+      buf += (_AR[ch] || _DG[ch] || ch);
+    }
+    return buf.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  /* بازیابیِ محلیِ سبک: هم‌پوشانیِ کلمه + سه‌گرام. عمداً ساده است — کارش
+     «جوابِ آفلاین» است، نه رقابت با بازیابِ کاملِ سرور. */
+  function localSearch(q, limit) {
+    if (!_idx || !_idx.chunks || !_idx.chunks.length) return [];
+    var qn = norm(q);
+    if (!qn) return [];
+    var qw = qn.split(' ').filter(function (w) { return w.length > 2; });
+    var qt = tri(qn);
+    var out = [];
+    for (var i = 0; i < _idx.chunks.length; i++) {
+      var c = _idx.chunks[i];
+      var hay = norm([c.title, c.heading, (c.tags || []).join(' '), (c.synonyms || []).join(' '), c.text].join(' '));
+      var score = 0;
+      for (var j = 0; j < qw.length; j++) if (hay.indexOf(qw[j]) >= 0) score += 2;
+      var ht = triSet(hay);   // ← Set، نه آرایه: has() روی آرایه وجود ندارد
+      var shared = 0;
+      for (var k = 0; k < qt.length; k++) if (ht.has(qt[k])) shared++;
+      score += qt.length ? (shared / qt.length) * 3 : 0;
+      if (score > 0.6) out.push({ c: c, s: score });
+    }
+    out.sort(function (a, b) { return b.s - a.s; });
+    return out.slice(0, limit || 3).map(function (x) { return x.c; });
+  }
+  function tri(s) {
+    var t = s.replace(/ /g, ''), out = [];
+    for (var i = 0; i + 3 <= t.length; i++) out.push(t.slice(i, i + 3));
+    return out;
+  }
+  var _triCache = new Map();
+  function triSet(s) {
+    if (_triCache.has(s)) return _triCache.get(s);
+    var set = new Set(tri(s));
+    if (_triCache.size > 400) _triCache.clear();
+    _triCache.set(s, set);
+    return set;
+  }
+
+  // ── رندر ────────────────────────────────────────────────────────────────
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;   // ← همیشه textContent، هرگز innerHTML
+    return n;
+  }
+
+  function render() {
+    var list = document.getElementById('aiList');
+    if (!list) return;
+    list.textContent = '';
+
+    for (var i = 0; i < _msgs.length; i++) {
+      var m = _msgs[i];
+      var row = el('div', 'ai-msg ' + (m.who === 'me' ? 'me' : 'bot'));
+      var bub = el('div', 'ai-bub');
+
+      if (m.badge) bub.appendChild(el('span', 'ai-badge', m.badge));
+      bub.appendChild(document.createTextNode(m.text || ''));
+
+      if (m.links && m.links.length) {
+        var lw = el('div');
+        for (var j = 0; j < m.links.length; j++) {
+          var L = m.links[j];
+          if (!/^https:\/\//i.test(L.url || '')) continue;   // بررسیِ دوباره در سمتِ مرورگر
+          var a = el('a', 'ai-link', L.text || L.url);
+          a.href = L.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+          lw.appendChild(a);
+        }
+        if (lw.childNodes.length) bub.appendChild(lw);
+      }
+
+      if (m.qr && /^https:\/\//i.test(m.qr)) {
+        var qw = el('div', 'ai-qr');
+        bub.appendChild(qw);
+        try {
+          if (typeof QRCode !== 'undefined') {
+            new QRCode(qw, { text: m.qr, width: 150, height: 150, colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.M });
+          }
+        } catch (e) {}
+      }
+
+      if (m.sources && m.sources.length) {
+        var sw = el('div', 'ai-src');
+        sw.appendChild(el('b', null, 'منبع: '));
+        var seen = {};
+        var parts = [];
+        for (var k = 0; k < m.sources.length; k++) {
+          var s = m.sources[k];
+          var key = s.title + '|' + (s.section || '');
+          if (seen[key]) continue;
+          seen[key] = 1;
+          parts.push(s.title + (s.section ? ' ← ' + s.section : '') + (s.version ? ' (نسخه ' + s.version + ')' : ''));
+        }
+        sw.appendChild(document.createTextNode(parts.join(' · ')));
+        bub.appendChild(sw);
+      }
+
+      row.appendChild(bub);
+      list.appendChild(row);
+    }
+    list.scrollTop = list.scrollHeight;
+  }
+
+  function say(who, text, extra) {
+    var m = { who: who, text: text };
+    if (extra) for (var k in extra) m[k] = extra[k];
+    _msgs.push(m);
+    if (_msgs.length > 60) _msgs.splice(0, _msgs.length - 60);
+    render();
+  }
+
+  function state(txt) {
+    var s = document.getElementById('aiState');
+    if (s) s.textContent = txt || '';
+  }
+
+  // ── پیشنهادهای شروع ─────────────────────────────────────────────────────
+  function chips() {
+    var list = document.getElementById('aiList');
+    if (!list) return;
+    var wrap = el('div', 'ai-chips');
+    var qs = ['میانبرهای برنامه چیست؟', 'رمزم یادم نیست', 'چطور پی‌دی‌اف بگیرم؟', 'قابلیت‌های کمتر شناخته‌شده'];
+    qs.forEach(function (q) {
+      var b = el('button', 'ai-chip', q);
+      b.type = 'button';
+      b.onclick = function () {
+        var inp = document.getElementById('aiInput');
+        if (inp) inp.value = q;
+        window.aiSupportAsk();
+      };
+      wrap.appendChild(b);
+    });
+    list.appendChild(wrap);
+    list.scrollTop = list.scrollHeight;
+  }
+
+  // ── باز شدنِ تب ─────────────────────────────────────────────────────────
+  window._aiSupOpen = function () {
+    if (!_greeted) {
+      _greeted = true;
+      say('bot',
+        'سلام. من دستیارِ پشتیبانیِ برنامه‌ام.\n\n' +
+        'هر چیزی دربارهٔ کارِ با برنامه بپرس: میانبرها، حساب کاربری، قرض‌داران، ' +
+        'پیام‌رسان، مشکلاتِ رایج.\n\n' +
+        'فقط راهنمایی می‌کنم — هیچ چیزی را در برنامه نمی‌سازم، عوض نمی‌کنم و پاک نمی‌کنم.');
+      chips();
+    }
+    loadLocalIndex();
+    ensureSession().then(function () { state(''); }).catch(function () {
+      state('⚠️ سرویسِ پشتیبانی در دسترس نیست — از مستنداتِ ذخیره‌شده جواب می‌دهم.');
+    });
+  };
+
+  // ── پرسیدن ──────────────────────────────────────────────────────────────
+  window.aiSupportAsk = function () {
+    var inp = document.getElementById('aiInput');
+    if (!inp) return;
+    var q = (inp.value || '').trim();
+    if (!q || _busy) return;
+    inp.value = '';
+    say('me', q);
+
+    _busy = true;
+    state('در حالِ فکر کردن…');
+
+    ensureSession()
+      .then(function () {
+        return api('/ai/support/chat', {
+          method: 'POST',
+          body: { question: q, history: recentHistory() }
+        });
+      })
+      .then(function (res) {
+        var badge = res.cached ? 'از حافظه' : (res.degraded ? 'از مستندات' : null);
+        say('bot', res.text || 'جوابی نیامد.', { sources: res.sources, badge: badge });
+        state(res.ms ? ('پاسخ در ' + Math.round(res.ms / 100) / 10 + ' ثانیه' + (res.model ? ' · ' + res.model : '')) : '');
+      })
+      .catch(function (err) {
+        // آفلاین یا سرویسِ خاموش → بازیابیِ محلی روی همین دستگاه
+        var hits = localSearch(q, 2);
+        if (hits.length) {
+          var body = hits.map(function (c) {
+            return (c.heading ? c.heading + '\n' : '') + c.text;
+          }).join('\n\n———\n\n');
+          say('bot', 'سرویسِ پشتیبانی در دسترس نیست، ولی این را در مستنداتِ ذخیره‌شده پیدا کردم:\n\n' + body, {
+            badge: 'آفلاین',
+            sources: hits.map(function (c) { return { title: c.title, section: c.heading, version: c.version }; })
+          });
+        } else {
+          say('bot', 'اطلاعات کافی برای پاسخ دقیق به این سؤال پیدا نکردم.\n\n' +
+            (err && err.status === 429
+              ? 'ضمناً کمی تند پشتِ سر هم پرسیدید — چند لحظه صبر کنید.'
+              : 'سرویسِ پشتیبانی روی سرورِ خانگی روشن نیست. برای راه‌اندازی: پوشهٔ ai-support/'), { badge: 'آفلاین' });
+        }
+        state('');
+      })
+      .finally(function () { _busy = false; });
+  };
+
+  function recentHistory() {
+    var out = [];
+    for (var i = Math.max(0, _msgs.length - 6); i < _msgs.length; i++) {
+      var m = _msgs[i];
+      if (!m.text) continue;
+      out.push({ role: m.who === 'me' ? 'user' : 'assistant', content: m.text.slice(0, 1000) });
+    }
+    return out;
+  }
 })();
 </script>
 
