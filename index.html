@@ -38887,6 +38887,8 @@ function toggleRobot() {
   p.classList.toggle('open');
   if (opening) { rbShowTab(_rbTab || 'ai'); _chatInitListeners(); _ntfAutoPush('ask'); }
   else {
+    // پنل که بسته شد، دیگر هر ۱۵ ثانیه حالِ آنلاین بودن پرسیده نشود
+    try { _msgrPresStop(); } catch (e) {}
     // با بسته شدن، جابه‌جایی/تغییر اندازهٔ دستی پاک شود — باز شدنِ بعدی سر جای استاندارد
     p.style.left = ''; p.style.top = ''; p.style.right = ''; p.style.bottom = '';
     p.style.width = ''; p.style.height = '';
@@ -38917,7 +38919,8 @@ function rbShowTab(tab) {
     if (_rbPaneVisible('group')) _chatMarkRead('group');
     if (!_chatMe() && _rbMode !== 'person') _chatAskName('group');
   }
-  if (tab === 'dm') { _chatInitListeners(); _rbRenderDmPane(); }
+  if (tab === 'dm') { _chatInitListeners(); _rbRenderDmPane(); try { _msgrPresStart(); } catch (e) {} }
+  else { try { _msgrPresStop(); } catch (e) {} }
   if (tab === 'ai') { try { _aiSupOpen(); } catch (e) {} }
   if (tab === 'pub') { _pubPaint(); try { _pubStatsStart(); } catch (e) {} }
   else { try { _pubStatsStop(); } catch (e) {} }
@@ -42363,6 +42366,89 @@ function _msgrPaintBadge() {
   });
 }
 
+/* ── نقطهٔ آنلاین ──────────────────────────────────────────────────────────
+   خواستهٔ صاحب ریپو: «برای هر نفر کادر آنلاین یا آفلاین بودنش باشه، نقطه سبز یا
+   خاموش — و برای میرزا هم باشه، یعنی کسی که از کیو‌آر میاد یا گروه، اون‌ها هم
+   ببینن که من آنلاین استم یا نه.»
+
+   «آنلاین» یعنی همین حالا دستگاهی روی آن موضوع سوکتِ باز دارد. شمارشش را خودِ
+   سرورِ خانگی می‌کند (/api/notify/presence) — روی دستگاه هیچ چیزی حدس زده
+   نمی‌شود. حالِ همهٔ گفت‌وگوها با *یک* درخواست پرسیده می‌شود، نه یکی به‌ازای هر
+   نفر، و فقط تا وقتی تبِ چت تک‌نفره باز است.
+
+   ⚠️ اتصالِ خودمان از شمارش کم می‌شود: میرزا برای شنیدنِ جوابِ هر گفت‌وگو خودش
+   هم روی همان موضوع وصل می‌شود، پس بدونِ این تفریق هر کسی که گفت‌وگویش را باز
+   می‌کرد «آنلاین» دیده می‌شد. ── */
+let _msgrPres = {};
+let _msgrPresTimer = null;
+const MSGR_PRES_MS = 15000;
+
+/** حالِ کدام موضوع‌ها را باید بپرسیم */
+function _msgrPresTopics() {
+  const out = [];
+  try {
+    if (_rbMode === 'admin') _msgrThreadIds().forEach(t => { if (t) out.push(t); });
+    // مشتری، کارمند و مهمان فقط یک چیز می‌خواهند بدانند: میرزا هست یا نه
+    else out.push(NTF_TOPIC_MIRZA());
+    if (_msgrCur && out.indexOf(_msgrCur) < 0) out.push(_msgrCur);
+  } catch (e) {}
+  return out.slice(0, 60);
+}
+
+/** آیا کسی *غیرِ خودمان* روی این موضوع باز است؟ */
+function _msgrOnline(topic) {
+  const p = _msgrPres[topic];
+  if (!p) return false;
+  let mine = 0;
+  try { const s = _ntfSocks.get(topic); if (s && s.readyState === 1) mine = 1; } catch (e) {}
+  return (p.online - mine) > 0;
+}
+
+function _msgrDotHtml(topic) {
+  const on = _msgrOnline(topic);
+  return '<i class="msgr-dot' + (on ? ' on' : '') + '" title="' + (on ? 'آنلاین' : 'آفلاین') + '"></i>';
+}
+
+function _msgrPresFetch() {
+  const base = _ntfBase('http');
+  const topics = _msgrPresTopics();
+  if (!base || !topics.length) return;
+  fetch(base + '/api/notify/presence?topics=' + encodeURIComponent(topics.join(',')) + _ntfKeyQS('&'))
+    .then(r => (r.ok ? r.json() : null))
+    .then(j => {
+      if (!j || !j.presence) return;
+      _msgrPres = j.presence;
+      // فقط نقطه‌ها تازه می‌شوند؛ فهرستِ پیام‌ها دست نمی‌خورد تا اسکرول نپرد
+      try { _msgrPaintThreads(); } catch (e) {}
+      try { _msgrPaintHeadDot(); } catch (e) {}
+    })
+    .catch(() => {});
+}
+
+function _msgrPresStart() {
+  if (_msgrPresTimer) return;
+  _msgrPresFetch();
+  _msgrPresTimer = setInterval(_msgrPresFetch, MSGR_PRES_MS);
+}
+function _msgrPresStop() {
+  if (!_msgrPresTimer) return;
+  clearInterval(_msgrPresTimer);
+  _msgrPresTimer = null;
+}
+
+/** نقطهٔ سربرگِ گفت‌وگو — جدا از _msgrPaintChat تا هر ۱۵ ثانیه پیام‌ها بازرسم نشوند */
+function _msgrPaintHeadDot() {
+  const head = document.getElementById('msgrChatName');
+  if (!head || !_msgrCur) return;
+  const dot = head.querySelector('.msgr-dot');
+  if (!dot) return;
+  // مشتری/مهمان حالِ میرزا را می‌بیند، میرزا حالِ طرفِ مقابل را
+  const topic = _rbMode === 'admin' ? _msgrCur : NTF_TOPIC_MIRZA();
+  const on = _msgrOnline(topic);
+  dot.classList.toggle('on', on);
+  dot.title = on ? 'آنلاین' : 'آفلاین';
+}
+
 /* ── صفِ فرستادن: پیامِ آفلاین گم نمی‌شود ─────────────────────────────────── */
 function _msgrOutbox() { return _msgrLsGet('pumpMsgrOutbox', []) || []; }
 function _msgrOutboxSet(v) { _msgrLsSet('pumpMsgrOutbox', (v || []).slice(-100)); }
@@ -42847,7 +42933,7 @@ function _msgrPaintThreads() {
     return '<span class="msgr-th-wrap" oncontextmenu="msgrThreadMenu(event,\'' + _esc(id) + '\');return false"'
       + ' ontouchstart="_msgrHoldStart(event,\'' + _esc(id) + '\')" ontouchend="_msgrHoldEnd()" ontouchmove="_msgrHoldEnd()" ontouchcancel="_msgrHoldEnd()">'
       + '<button class="msgr-th' + (id === _msgrCur ? ' on' : '') + '" onclick="msgrOpen(\'' + _esc(id) + '\')">'
-      + '<span class="msgr-th-n">' + _esc(_msgrName(id)) + '</span>'
+      + '<span class="msgr-th-n">' + _msgrDotHtml(id) + _esc(_msgrName(id)) + '</span>'
       + '<span class="msgr-th-p">' + (last ? _esc((last.mine ? 'شما: ' : (last.from ? last.from + ': ' : '')) + last.text).slice(0, 90) : 'هنوز پیامی نیست') + '</span>'
       + (n ? '<span class="msgr-th-b">' + n2fa(n) + '</span>' : '')
       + '</button>'
@@ -42905,7 +42991,11 @@ function _msgrPaintChat() {
   if (comp) comp.style.display = '';
   const ab = document.getElementById('msgrAcctBtn');
   if (ab) ab.style.display = _msgrIsAdmin() ? '' : 'none';   // فرستادنِ حساب فقط از طرف میرزا
-  if (head) head.textContent = _msgrName(_msgrCur);
+  if (head) {
+    // نقطه پیش از نام: میرزا حالِ طرف را می‌بیند، طرف حالِ میرزا را
+    const dotTopic = _rbMode === 'admin' ? _msgrCur : NTF_TOPIC_MIRZA();
+    head.innerHTML = _msgrDotHtml(dotTopic) + _esc(_msgrName(_msgrCur));
+  }
   const msgs = _msgrLegacyMerge(_msgrCur, _msgrMsgs[_msgrCur] || []);
   /* بدنهٔ هر پیام: متن، یا عکس/ویدیو/صدا/کارتِ حساب — با همان نمایش‌دهنده‌های
      خودِ برنامه (_chVoiceHtml و _chAcctCardHtml)، پس هیچ ظاهرِ تازه‌ای ساخته
@@ -43298,7 +43388,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.322';
+const APP_VERSION = '2.9.323';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -52262,6 +52352,10 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
 .msgr-th:hover{ background:rgba(127,127,127,.10); }
 .msgr-th.on{ background:color-mix(in srgb, var(--accent) 14%, transparent); }
 .msgr-th-n{ display:block; font-weight:800; font-size:0.84rem; }
+/* نقطهٔ آنلاین/آفلاین — کنارِ نامِ هر گفت‌وگو و در سربرگِ خودِ گفت‌وگو */
+.msgr-dot{ display:inline-block; width:9px; height:9px; border-radius:50%; margin-inline-end:6px;
+  background:var(--muted); opacity:.45; vertical-align:middle; flex-shrink:0; }
+.msgr-dot.on{ background:var(--green); opacity:1; box-shadow:0 0 0 3px color-mix(in srgb, var(--green) 26%, transparent); }
 .msgr-th-p{ display:block; font-size:0.7rem; color:var(--muted); margin-top:2px;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .msgr-th-b{ position:absolute; inset-inline-start:10px; top:12px; background:var(--red); color:#fff;
