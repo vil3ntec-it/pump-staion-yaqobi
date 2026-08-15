@@ -42596,12 +42596,22 @@ function _msgrPeerKeyOf(thread) {
       if (msgrTopicOfPerson(p, subs[j]) === t) return _peerKey('debt-' + p.id + '~' + subs[j].id);
     }
   }
+  /* مهمانِ «گفتگو با میرزا» (کیو‌آر یا لینکِ #mirza) هیچ‌وقت در فهرستِ قرض‌داران
+     نیست — کلیدش guest_<توکن> است. تا حالا این‌جا null برمی‌گشت و نتیجه‌اش این
+     بود که میرزا به مهمان نه عکس می‌توانست بفرستد نه صدا. الگو عمداً تنگ است تا
+     با حساب‌های فرعی (که «~»شان در نامِ موضوع به «-» تبدیل می‌شود) قاطی نشود. */
+  if (/^p-guest_[0-9a-f]{8,}$/i.test(t)) return t.slice(2);
   return null;
 }
 function _msgrSyncLegacyPeer() {
+  /* کارمند، مشتری و مهمان همیشه فقط در گفت‌وگوی *خودشان* می‌نویسند و کلیدش را
+     از نقشِ خودشان دارند. قبلاً این‌جا هم از روی فهرستِ قرض‌داران پیدا می‌شد —
+     فهرستی که روی گوشیِ آن‌ها اصلاً وجود ندارد — پس همیشه null می‌شد و دکمه‌های
+     عکس و صدا با پیامِ «این گفت‌وگو رسانه نمی‌پذیرد» رد می‌کردند. */
+  if (_rbMode !== 'admin') return _rbActiveDmPeer();
   const peer = _msgrCur ? _msgrPeerKeyOf(_msgrCur) : null;
   if (!peer) return null;
-  try { if (_rbMode === 'admin') _rbCurrentDm = peer; } catch (e) {}
+  try { _rbCurrentDm = peer; } catch (e) {}
   return peer;
 }
 function msgrPickMedia(kind) {
@@ -43288,7 +43298,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.321';
+const APP_VERSION = '2.9.322';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
