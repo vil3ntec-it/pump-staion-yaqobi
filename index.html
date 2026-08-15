@@ -16896,6 +16896,10 @@ body.boot-viewer #bootViewerSplash{
          خودِ خبرها مثل قبل زنده می‌رسند (توست وقتی برنامه باز است، نوتیفیکیشن وقتی بسته است). -->
     <span class="role-badge" id="roleBadge" style="background:var(--green)">🛡️ مدیر</span>
     <button class="lock-btn" id="adminUnlockBtn" onclick="promptAdminUnlock()" style="display:none;background:var(--green)">🔓 ورود مدیر</button>
+    <!-- «اندازهٔ دلخواهِ هر کادر» از تنظیمات به این‌جا آمد: از هر بخشی در دسترس
+         باشد، نه فقط از تنظیمات. کوتاه و نشانه‌ای، تا سربرگ روی گوشی شلوغ نشود. -->
+    <button class="lock-btn" id="uf-toggle" onclick="ufToggle()" title="روشن کردن حالتِ انتخاب — بعد روی هر چیزی بزنید و با A− / A+ اندازه‌اش را بگیرید" style="background:var(--blue)">🔎</button>
+    <button class="lock-btn" id="uf-reset" onclick="ufResetAll()" title="برگرداندن همه به اندازهٔ عادی" style="background:transparent;border:1px solid var(--red);color:var(--red)">↺</button>
     <button class="lock-btn" id="lockBtn" onclick="lockApp()">🔒 قفل</button>
   </div>
 </div>
@@ -19706,55 +19710,9 @@ body.viewer-mode .inv-admin-only{display:none!important}
       <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('settings',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('settings',0.08)">A+</button></span>
     </span>
   </div>
-  <!-- ══════════════════════════════════════════════════════════════════════
-       اندازهٔ دلخواهِ هر کادر — خواستهٔ صاحب ریپو: «هر کادری را که بخواهم بتوانم
-       بزرگ کنم؛ سربرگ‌ها، کادرها، کادرهای دکمه‌ای.»
-       ══════════════════════════════════════════════════════════════════════ -->
-  <div class="settings-card" id="uf-card" style="border-color:var(--blue)">
-    <div class="settings-title" style="color:var(--blue)">🔎 اندازهٔ دلخواهِ هر کادر</div>
-    <div style="font-size:0.85rem;color:var(--muted);line-height:1.95;margin-bottom:12px">
-      دکمه‌های <b>A− / A+</b>ِ بالای هر بخش، «همهٔ» آن بخش را با هم بزرگ و کوچک می‌کنند.
-      اگر می‌خواهید فقط <b>یک چیزِ مشخص</b> بزرگ شود — یک سربرگ، یک کادر، یک دکمه، یا ستونِ یک جدول —
-      این حالت را روشن کنید، بعد روی همان چیز بزنید و با A− / A+ اندازه‌اش را بگیرید.<br>
-      اندازه روی <b>همان دستگاه</b> ذخیره می‌شود و با هر بار باز شدنِ برنامه خودش برمی‌گردد.
-      چیزهای هم‌جنس (مثلاً همهٔ دکمه‌های «ردیف جدید») با هم اندازه می‌گیرند تا صفحه به‌هم نریزد.
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="pw-btn" id="uf-toggle" style="background:var(--blue);color:#fff" onclick="ufToggle()">🔎 روشن کردن حالتِ انتخاب</button>
-      <button class="pw-btn" style="background:transparent;border:1px solid var(--red);color:var(--red)" onclick="ufResetAll()">↺ برگرداندن همه به اندازهٔ عادی</button>
-    </div>
-    <div id="uf-count" style="margin-top:10px;font-size:0.82rem;color:var(--muted);line-height:1.9"></div>
-  </div>
-
-  <!-- ══════════════════════════════════════════════════════════════════════
-       🏷️ اطلاعات جایگاه — نام، آدرس و شمارهٔ تماس
-       این کادر گم شده بود: تابعِ saveStationInfo از قدیم وجود داشت و دنبالِ
-       st-name / st-address / st-phone می‌گشت، ولی خودِ کادرها هیچ‌جای صفحه
-       ساخته نشده بودند. نتیجه‌اش این بود که هیچ راهی برای نوشتنِ شمارهٔ تماس
-       نبود — و چون شمارهٔ گروهِ اعلان از همین‌جا برداشته می‌شود، مشتری‌ها هم
-       هیچ شماره‌ای نمی‌دیدند. ══════════════════════════════════════════════ -->
-  <div class="settings-card" id="station-card" style="border-color:var(--accent)">
-    <div class="settings-title" style="color:var(--accent)">🏷️ اطلاعات جایگاه</div>
-    <div style="font-size:0.85rem;color:var(--muted);line-height:1.95;margin-bottom:12px">
-      نام و شمارهٔ تماسِ جایگاه. <b style="color:var(--txt)">شمارهٔ تماس</b> روی کیو‌آرِ
-      «📢 اعلان عمومی» می‌نشیند و بالای گروه برای همهٔ مشتری‌ها دیده می‌شود — تنها راهِ
-      تماسِ آن‌ها با شماست، پس خالی نماند.
-    </div>
-    <div class="pl-field" style="margin-bottom:10px">
-      <label style="font-size:0.8rem;font-weight:700">نام جایگاه</label>
-      <input class="ei-in" id="st-name" placeholder="پمپ یعقوبی" autocomplete="off">
-    </div>
-    <div class="pl-field" style="margin-bottom:10px">
-      <label style="font-size:0.8rem;font-weight:700">آدرس</label>
-      <input class="ei-in" id="st-address" placeholder="آدرس جایگاه" autocomplete="off">
-    </div>
-    <div class="pl-field" style="margin-bottom:12px">
-      <label style="font-size:0.8rem;font-weight:700;color:var(--green)">📞 شمارهٔ تماس</label>
-      <input class="ei-in" id="st-phone" dir="ltr" inputmode="tel" placeholder="0700000000" autocomplete="off">
-    </div>
-    <button class="pw-btn" style="background:var(--accent);color:#fff" onclick="saveStationInfo()">💾 ذخیره</button>
-    <div id="st-msg" style="font-size:0.82rem;line-height:1.9;margin-top:10px;min-height:1.2em"></div>
-  </div>
+  <!-- «🔎 اندازهٔ دلخواهِ هر کادر» از این‌جا برداشته شد: دو دکمه‌اش حالا بالای صفحه
+       کنارِ 🔒 قفل نشسته‌اند تا از هر بخشی در دسترس باشند، نه فقط از تنظیمات.
+       «🏷️ اطلاعات جایگاه» هم به «🗂️ مدیریت داده‌ها» رفت. -->
 
   <!-- آپدیتِ برنامهٔ کامپیوتری — فقط در نسخهٔ دسکتاپ دیده می‌شود -->
   <div class="settings-card" id="desktop-update-card" style="border-color:var(--green);display:none">
@@ -19989,6 +19947,36 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <button class="goto-btn" onclick="showSection('settings')">→ برگشت به تنظیمات</button>
     <span style="display:inline-flex;align-items:center;gap:10px">🗂️ مدیریت داده‌ها</span>
   </div>
+  <!-- ══════════════════════════════════════════════════════════════════════
+       🏷️ اطلاعات جایگاه — نام، آدرس و شمارهٔ تماس
+       این کادر گم شده بود: تابعِ saveStationInfo از قدیم وجود داشت و دنبالِ
+       st-name / st-address / st-phone می‌گشت، ولی خودِ کادرها هیچ‌جای صفحه
+       ساخته نشده بودند. نتیجه‌اش این بود که هیچ راهی برای نوشتنِ شمارهٔ تماس
+       نبود — و چون شمارهٔ گروهِ اعلان از همین‌جا برداشته می‌شود، مشتری‌ها هم
+       هیچ شماره‌ای نمی‌دیدند. ══════════════════════════════════════════════ -->
+  <div class="settings-card" id="station-card" style="border-color:var(--accent)">
+    <div class="settings-title" style="color:var(--accent)">🏷️ اطلاعات جایگاه</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:1.95;margin-bottom:12px">
+      نام و شمارهٔ تماسِ جایگاه. <b style="color:var(--txt)">شمارهٔ تماس</b> روی کیو‌آرِ
+      «📢 اعلان عمومی» می‌نشیند و بالای گروه برای همهٔ مشتری‌ها دیده می‌شود — تنها راهِ
+      تماسِ آن‌ها با شماست، پس خالی نماند.
+    </div>
+    <div class="pl-field" style="margin-bottom:10px">
+      <label style="font-size:0.8rem;font-weight:700">نام جایگاه</label>
+      <input class="ei-in" id="st-name" placeholder="پمپ یعقوبی" autocomplete="off">
+    </div>
+    <div class="pl-field" style="margin-bottom:10px">
+      <label style="font-size:0.8rem;font-weight:700">آدرس</label>
+      <input class="ei-in" id="st-address" placeholder="آدرس جایگاه" autocomplete="off">
+    </div>
+    <div class="pl-field" style="margin-bottom:12px">
+      <label style="font-size:0.8rem;font-weight:700;color:var(--green)">📞 شمارهٔ تماس</label>
+      <input class="ei-in" id="st-phone" dir="ltr" inputmode="tel" placeholder="0700000000" autocomplete="off">
+    </div>
+    <button class="pw-btn" style="background:var(--accent);color:#fff" onclick="saveStationInfo()">💾 ذخیره</button>
+    <div id="st-msg" style="font-size:0.82rem;line-height:1.9;margin-top:10px;min-height:1.2em"></div>
+  </div>
+
   <!-- 🧪 دادهٔ آزمایشی — برای دیدنِ همهٔ بخش‌ها با حسابِ پر -->
   <div class="settings-card" style="border-color:var(--blue)">
     <div class="settings-title" style="color:var(--blue)">🧪 پر کردن با حسابِ آزمایشی</div>
@@ -42782,7 +42770,8 @@ function _announceRateChange(changed) {
 /** میان‌بُر به کادرِ «اطلاعات جایگاه» — همان‌جا که شمارهٔ تماس نوشته می‌شود */
 function _goStationCard() {
   try { msgrClose(); } catch (e) {}
-  try { showSection('settings'); } catch (e) {}
+  // کادرِ جایگاه از «تنظیمات» به «🗂️ مدیریت داده‌ها» رفت — میان‌بُر هم با آن رفت
+  try { showSection('datamgmt'); } catch (e) {}
   setTimeout(function () {
     const c = document.getElementById('station-card');
     if (!c) return;
@@ -43299,7 +43288,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.320';
+const APP_VERSION = '2.9.321';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -52132,7 +52121,8 @@ body.light-mode #glassClock{
     say('روی چیزی که می‌خواهید بزنید');
     document.addEventListener('click', onPick, true);
     var b = document.getElementById('uf-toggle');
-    if (b) { b.textContent = '✅ بستن حالتِ انتخاب'; b.style.background = 'var(--green)'; }
+    // دکمه در سربرگ است، پس فقط نشانه عوض می‌شود؛ توضیحش در title می‌ماند
+    if (b) { b.textContent = '✅'; b.title = 'بستن حالتِ انتخاب'; b.style.background = 'var(--green)'; }
   }
   function stop() {
     picking = false;
@@ -52142,7 +52132,7 @@ body.light-mode #glassClock{
     if (bar) bar.style.display = 'none';
     document.removeEventListener('click', onPick, true);
     var b = document.getElementById('uf-toggle');
-    if (b) { b.textContent = '🔎 روشن کردن حالتِ انتخاب'; b.style.background = 'var(--blue)'; }
+    if (b) { b.textContent = '🔎'; b.title = 'روشن کردن حالتِ انتخاب — بعد روی هر چیزی بزنید و با A− / A+ اندازه‌اش را بگیرید'; b.style.background = 'var(--blue)'; }
   }
   window.ufToggle = function () { picking ? stop() : start(); };
   window.ufResetAll = function () {
