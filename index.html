@@ -24444,7 +24444,9 @@ function _pumpDocOverlay(doc, title) {
     narrow: { t: 19.1, b: 19.1, l: 6.4,  r: 6.4,  h: 7.6,  f: 7.6  },
     wide:   { t: 25.4, b: 25.4, l: 25.4, r: 25.4, h: 12.7, f: 12.7 }
   };
-  var KEY = 'pumpPrintStudio_v1';
+  /* v2: پیش‌فرضِ «تکرارِ سطرِ عنوان» خاموش شد؛ با بالا بردنِ شمارهٔ کلید،
+     تنظیماتِ ذخیره‌شدهٔ قدیمی (که روشن بودند) دیگر آن را برنمی‌گردانند. */
+  var KEY = 'pumpPrintStudio_v2';
   var DEF = {
     copies: 1, collate: true, what: 'all', from: 1, to: 1,
     orient: 'portrait', paper: 'A4', cw: 210, ch: 297,
@@ -24453,7 +24455,10 @@ function _pumpDocOverlay(doc, title) {
        «بدون مقیاس» از لبهٔ ورق بیرون می‌زنند. اکسل در آن حالت ستون‌ها را به
        ورقِ اضافی می‌برد؛ این‌جا به‌جایش کوچک می‌شوند تا چیزی بریده نشود. */
     scaleMode: 'fitCols', scalePct: 100,
-    gridlines: true, repeatHead: true, color: 'color',
+    /* سرستونِ جدول فقط در ورقِ اول — خواستهٔ صریحِ صاحب ریپو برای همهٔ پی‌دی‌اف‌ها:
+       «چرا آن سربرگِ جدول در صفحهٔ دیگر هم هست؟ نباید باشد، گیج‌کننده می‌شود.»
+       گزینه‌اش سرِ جایش هست (زبانهٔ «جدول» در تنظیمِ ورق)، فقط پیش‌فرض خاموش است. */
+    gridlines: true, repeatHead: false, color: 'color',
     hdrL: '', hdrC: '', hdrR: '',
     ftrL: '', ftrC: 'ورق &[Page] از &[Pages]', ftrR: '&[Date]',
     guides: true, zoom: 'fit'
@@ -44921,7 +44926,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.334';
+const APP_VERSION = '2.9.335';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
