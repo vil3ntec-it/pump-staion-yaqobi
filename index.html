@@ -872,16 +872,20 @@ html.kb-open #calcPanel{bottom:calc(8px + var(--kb-offset,0px))}
    پخش/توقف، نوارِ زمان که می‌شود رویش زد، و کلیدِ سرعت (۱× → ۱٫۵× → ۲× → ۰٫۷۵×). */
 .ch-voice{display:flex;align-items:center;gap:8px;min-width:190px;max-width:250px;padding:1px 0}
 .ch-voice audio{display:none}
-.chv-play{flex:0 0 auto;width:34px;height:34px;border-radius:50%;border:none;background:var(--green);color:#fff;
-  font-size:0.9rem;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
+.chv-play{flex:0 0 auto;width:36px;height:36px;border-radius:50%;border:none;background:var(--green);color:#fff;
+  line-height:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;
   font-family:'Vazirmatn',sans-serif;-webkit-tap-highlight-color:transparent}
+/* آیکنِ برداری: در هر بزرگ‌نمایی و روی هر صفحه‌ای تیز می‌ماند */
+.chv-play .chv-ic{width:17px;height:17px;display:block;fill:currentColor;stroke:none}
 .chv-play:active{transform:scale(.94)}
 .ch-b.me .chv-play{background:var(--accent);color:#231703}
-.chv-mid{flex:1;min-width:0}
-.chv-track{position:relative;height:15px;cursor:pointer;direction:ltr}
-.chv-track::before{content:'';position:absolute;left:0;right:0;top:6px;height:3.5px;border-radius:4px;background:currentColor;opacity:.22}
-.chv-fill{position:absolute;left:0;top:6px;height:3.5px;width:0;border-radius:4px;background:currentColor;opacity:.95}
-.chv-knob{position:absolute;top:2.5px;left:0;width:10px;height:10px;border-radius:50%;background:currentColor;margin-left:-5px}
+/* نوارِ صدا دقیقاً وسطِ کادر بنشیند — قبلاً چون ساعت‌ها زیرش بودند، خطِ نوار به
+   بالای کادر می‌چسبید (گزارشِ صاحب ریپو: «نوار وسط نیست، خیلی بالاست») */
+.chv-mid{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:1px}
+.chv-track{position:relative;height:22px;cursor:pointer;direction:ltr;display:flex;align-items:center}
+.chv-track::before{content:'';position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:4px;border-radius:4px;background:currentColor;opacity:.22}
+.chv-fill{position:absolute;left:0;top:50%;transform:translateY(-50%);height:4px;width:0;border-radius:4px;background:currentColor;opacity:.95}
+.chv-knob{position:absolute;top:50%;left:0;width:11px;height:11px;border-radius:50%;background:currentColor;margin-left:-5.5px;transform:translateY(-50%)}
 .chv-row{display:flex;justify-content:space-between;gap:6px;direction:ltr;font-size:0.62rem;opacity:.75;font-weight:700}
 .chv-rate{flex:0 0 auto;min-width:36px;border:1px solid currentColor;background:transparent;color:inherit;opacity:.85;
   border-radius:8px;padding:3px 5px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.66rem;cursor:pointer;
@@ -20335,9 +20339,9 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <div class="msgr-top">
           <button class="msgr-back" onclick="msgrBack()">→</button>
           <span class="msgr-name" id="msgrChatName"></span>
-          <span class="msgr-state" id="msgrState"></span>
-          <!-- بستنِ همین گفت‌وگو — تا حالا هیچ راهی برای بستنِ چتِ تکی نبود -->
-          <button class="msgr-del" id="msgrDelBtn" title="بستنِ این گفت‌وگو" onclick="msgrCloseThread()">🗑️</button>
+          <!-- خواستهٔ صاحب ریپو: نه نوشتهٔ «وصل به سرورِ خانگی» (به طرفِ مقابل
+               ربطی ندارد به چه چیزی وصلیم) و نه سطلِ حذف این‌جا. بستنِ گفت‌وگو
+               سرِ جایش هست: در فهرستِ گفت‌وگوها، نگه‌داشتنِ انگشت روی همان ردیف. -->
         </div>
         <div class="msgr-list" id="msgrList"></div>
         <!-- عکس، پیامِ صوتی و «فرستادنِ حساب» به این نوار برگشتند (خواستهٔ صاحب
@@ -39953,7 +39957,9 @@ function _chatSendItem(it) {
     _chatRenderScope(it.scope, it.peer);
   }).catch(() => {
     it.sending = false;
-    it.nextTry = Date.now() + Math.min(30000, 1000 * Math.pow(2, Math.min(it.tries, 5)));
+    // صبرِ بینِ تلاش‌ها کوتاه شد (سقفِ ۳۰ ثانیه یعنی یک پیامِ ساده گاهی یک دقیقه
+    // معطل می‌ماند). حالا حداکثر ۶ ثانیه.
+    it.nextTry = Date.now() + Math.min(6000, 600 * Math.pow(2, Math.min(it.tries, 4)));
     _chatOutboxSave();
     _chatRenderScope(it.scope, it.peer);
     _chatUpdateNetUi();
@@ -39963,18 +39969,22 @@ function _chatFlushOutbox() {
   const box = _chatOutboxLoad();
   if (!box.length) { _chatStopFlushTimer(); _chatUpdateNetUi(); return; }
   _chatStartFlushTimer();
-  if (!_srvReady() || !(window.__pumpNet__ && window.__pumpNet__.connected())) { _chatUpdateNetUi(); return; }
+  /* پیام همان لحظه تحویلِ لایهٔ سرور می‌شود — منتظرِ «وصل بودن» نمی‌مانیم.
+     خواستهٔ صاحب ریپو: «در جا برود؛ اگر نت نبود، خودش وقتی نت آمد بالا برود،
+     مثل واتساپ». خودِ لایهٔ سرور (__pumpHome__) صفِ خودش را دارد و به‌محضِ وصل
+     شدن می‌فرستد؛ کلیدِ هر پیام ثابت است پس تکراری هم نمی‌شود. */
+  if (!_srvReady()) { _chatUpdateNetUi(); return; }
   let inflight = box.filter(it => it.sending).length;
   const now = Date.now();
   for (const it of box) {
-    if (inflight >= 3) break;
+    if (inflight >= 6) break;
     if (it.sending || (it.nextTry && now < it.nextTry)) continue;
     inflight++;
     _chatSendItem(it);
   }
   _chatUpdateNetUi();
 }
-function _chatStartFlushTimer() { if (!_chatFlushTimer) _chatFlushTimer = setInterval(_chatFlushOutbox, 4000); }
+function _chatStartFlushTimer() { if (!_chatFlushTimer) _chatFlushTimer = setInterval(_chatFlushOutbox, 1500); }
 function _chatStopFlushTimer() { if (_chatFlushTimer) { clearInterval(_chatFlushTimer); _chatFlushTimer = null; } }
 // پیام‌های در صفِ یک گفتگو، به شکلِ پیامِ عادی (برای نمایش با علامتِ 🕐)
 function _chatPendingFor(scope, peer) {
@@ -39985,7 +39995,13 @@ function _chatPendingFor(scope, peer) {
 function _chatRenderScope(scope, peer) {
   try {
     if (scope === 'group') { if (_rbPaneVisible('group')) _renderChatList('groupList', _groupMsgs); }
-    else if (_rbPaneVisible('dm') && _rbActiveDmPeer() === peer) _dmRenderList(peer);
+    else if (_rbPaneVisible('dm')) {
+      if (_rbActiveDmPeer() === peer) _dmRenderList(peer);
+      /* نمایی که کاربر واقعاً می‌بیند همین است (msgrList)؛ تا حالا فقط لیستِ
+         پنهانِ قدیمی تازه می‌شد، پس صدا/عکسِ تازه‌فرستاده تا رندرِ بعدی — گاهی
+         یک دقیقه بعد — در گفت‌وگو پیدایش نمی‌شد و به نظر می‌رسید نرفته است. */
+      try { if (_msgrCur && _msgrPeerKeyOf(_msgrCur) === peer) _msgrPaintChat(); } catch (e) {}
+    }
   } catch (e) {}
 }
 // نوارِ وضعیت بالای چت: «آفلاین — n پیام در صف» / «در حالِ فرستادن…»
@@ -39994,16 +40010,14 @@ function _chatUpdateNetUi() {
   if (!bar) return;
   const q = _chatOutboxLoad().length;
   const on = !!(window.__pumpNet__ && window.__pumpNet__.connected());
-  if (on && !q) { bar.style.display = 'none'; return; }
+  /* نوارِ «در حالِ فرستادنِ n پیام» برداشته شد (خواستهٔ صاحب ریپو: «صفی نمی‌خواهد،
+     در جا برود»). وقتی وصل هستیم پیام همان لحظه می‌رود و نوار هیچ‌چیز به کاربر
+     اضافه نمی‌کرد. فقط حالتِ «خودم نت ندارم» می‌ماند — همان که خواسته بود. */
+  if (on) { bar.style.display = 'none'; return; }
   bar.style.display = 'block';
-  if (!on) {
-    bar.className = 'rb-net off';
-    bar.textContent = q ? ('📴 سرور وصل نیست — ' + n2fa(q) + ' پیام در صف است و به‌محضِ وصل شدن فرستاده می‌شود')
-                        : '📴 سرور وصل نیست — هرچه بنویسید در صف می‌ماند و بعداً فرستاده می‌شود';
-  } else {
-    bar.className = 'rb-net snd';
-    bar.textContent = '📤 در حالِ فرستادنِ ' + n2fa(q) + ' پیام...';
-  }
+  bar.className = 'rb-net off';
+  bar.textContent = q ? ('📴 نت/سرور وصل نیست — ' + n2fa(q) + ' پیام به‌محضِ آمدنِ نت خودش می‌رود')
+                      : '📴 نت/سرور وصل نیست — هرچه بنویسید به‌محضِ آمدنِ نت خودش می‌رود';
 }
 try {
   if (window.__pumpNet__) window.__pumpNet__.onChange(st => {
@@ -40467,16 +40481,20 @@ function _chMsgHtml(m, meId, scope, peer) {
    ظاهرِ پخش‌کنندهٔ کروم («انگار می‌خواهم آهنگ دانلود کنم») رفت. این یکی سه چیز
    دارد: دکمهٔ پخش/توقف، نوارِ زمانِ زدنی، و کلیدِ سرعت. هیچ داده‌ای عوض نمی‌شود —
    فقط نمایش. خودِ <audio> پنهان می‌ماند و همه‌کاره است. */
+/* آیکنِ پخش/توقف: مثلث و دو میلهٔ بُرداری (SVG). قبلاً حرفِ «▶» بود و روی گوشی
+   بدشکل و دندانه‌دار درمی‌آمد (گزارشِ صاحب ریپو: «کیفیتش خراب است»). */
+const _CHV_ICO_PLAY = '<svg class="chv-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.4 5.2a1 1 0 0 1 1.53-.85l8.2 6.8a1 1 0 0 1 0 1.7l-8.2 6.8a1 1 0 0 1-1.53-.85z"/></svg>';
+const _CHV_ICO_PAUSE = '<svg class="chv-ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="6.6" y="4.8" width="4.2" height="14.4" rx="1.5"/><rect x="13.2" y="4.8" width="4.2" height="14.4" rx="1.5"/></svg>';
 function _chVoiceHtml(src) {
   return '<div class="ch-voice">' +
-    '<button type="button" class="chv-play" onclick="_chvToggle(this)" title="پخش / توقف">▶</button>' +
+    '<button type="button" class="chv-play" onclick="_chvToggle(this)" title="پخش / توقف">' + _CHV_ICO_PLAY + '</button>' +
     '<div class="chv-mid">' +
       '<div class="chv-track" onclick="_chvSeek(event,this)" title="برای رفتن به هر جای صدا، روی نوار بزنید">' +
         '<i class="chv-fill"></i><i class="chv-knob"></i></div>' +
       '<div class="chv-row"><span class="chv-t">0:00</span><span class="chv-d">—</span></div>' +
     '</div>' +
     '<button type="button" class="chv-rate" onclick="_chvRate(this)" title="سرعتِ پخش — با هر زدن عوض می‌شود">1×</button>' +
-    '<audio src="' + src + '" preload="metadata"></audio>' +
+    '<audio src="' + src + '" preload="metadata" onloadedmetadata="_chvReady(this)"></audio>' +
   '</div>';
 }
 const _CHV_RATES = [1, 1.5, 2, 0.75];
@@ -40492,7 +40510,31 @@ function _chvPaint(box) {
   const knob = box.querySelector('.chv-knob'); if (knob) knob.style.left = pct + '%';
   const t = box.querySelector('.chv-t'); if (t) t.textContent = _chvFmt(a.currentTime);
   const d = box.querySelector('.chv-d'); if (d) d.textContent = dur ? _chvFmt(dur) : '—';
-  const b = box.querySelector('.chv-play'); if (b) b.textContent = a.paused ? '▶' : '⏸';
+  const b = box.querySelector('.chv-play');
+  if (b) {
+    const want = a.paused ? 'play' : 'pause';
+    if (b.dataset.ico !== want) { b.dataset.ico = want; b.innerHTML = a.paused ? _CHV_ICO_PLAY : _CHV_ICO_PAUSE; }
+  }
+}
+/* صدایی که خودِ گوشی ضبط کرده (webm) طولش را به مرورگر نمی‌گوید؛ مدت‌زمان «—»
+   می‌ماند و نوار هم پر نمی‌شود (در عکسِ گزارشِ صاحب ریپو هم پیداست). یک پرشِ
+   کوتاه به انتهای فایل مرورگر را وادار می‌کند طول را حساب کند. همین‌که متادیتا
+   بار شد انجام می‌شود — یعنی خیلی پیش از آن‌که کسی دکمهٔ پخش را بزند. */
+function _chvReady(a) {
+  const box = a && a.closest ? a.closest('.ch-voice') : null;
+  if (!box) return;
+  if (!a._chvFixed && !(isFinite(a.duration) && a.duration > 0)) {
+    a._chvFixed = 1;
+    const done = () => {
+      a.removeEventListener('durationchange', done);
+      try { if (a.currentTime > 1e5) a.currentTime = 0; } catch (e) {}
+      _chvPaint(box);
+    };
+    a.addEventListener('durationchange', done);
+    try { a.currentTime = 1e6; } catch (e) {}
+    setTimeout(done, 900);                 // اگر مرورگر جواب نداد، همه‌چیز سرِ جایش برگردد
+  }
+  _chvPaint(box);
 }
 function _chvToggle(btn) {
   const box = btn.closest('.ch-voice'); if (!box) return;
@@ -42447,12 +42489,20 @@ function _msgrPaintHeadDot() {
 /* ── صفِ فرستادن: پیامِ آفلاین گم نمی‌شود ─────────────────────────────────── */
 function _msgrOutbox() { return _msgrLsGet('pumpMsgrOutbox', []) || []; }
 function _msgrOutboxSet(v) { _msgrLsSet('pumpMsgrOutbox', (v || []).slice(-100)); }
+/* اگر فرستادن نگرفت، خودش هر ۲٫۵ ثانیه دوباره تلاش می‌کند تا برود. تا حالا فقط
+   با «آمدنِ اینترنت» یا برگشتن به برنامه دوباره تلاش می‌شد، پس یک پیام می‌توانست
+   دقیقه‌ها در صف بماند بی‌آن‌که کاری بشود کرد. */
+let _msgrFlushTimer = null;
+function _msgrFlushSoon() {
+  if (_msgrFlushTimer) return;
+  _msgrFlushTimer = setTimeout(() => { _msgrFlushTimer = null; _msgrFlush(); }, 2500);
+}
 function _msgrFlush() {
   const box = _msgrOutbox();
   if (!box.length) return;
   const it = box[0];
   _msgrPost(it).then(ok => {
-    if (!ok) return;                       // سرور نبود — دفعهٔ بعد
+    if (!ok) { _msgrFlushSoon(); return; }  // سرور نبود — خودش دوباره تلاش می‌کند
     // نشانِ «🕐 در صف» از روی همان حباب برداشته شود (وگرنه تا برگشتنِ پیام از
     // سوکت همان‌طور می‌ماند و کاربر فکر می‌کند نرفته)
     try {
@@ -42463,8 +42513,8 @@ function _msgrFlush() {
     } catch (e) {}
     const rest = _msgrOutbox().filter(x => x.key !== it.key);
     _msgrOutboxSet(rest);
-    if (rest.length) setTimeout(_msgrFlush, 250);
-    else _msgrPaintIfOpen(_msgrCur);
+    _msgrPaintIfOpen(_msgrCur);            // نشانِ 🕐 همان لحظه برداشته شود
+    if (rest.length) setTimeout(_msgrFlush, 120);
   });
 }
 /** یک پیام را واقعاً به سرورِ خانگی می‌فرستد (و برای گفت‌وگوی تک‌به‌تک، رونوشت به میرزا) */
@@ -42590,7 +42640,7 @@ function _msgrHoldStart(ev, id) {
   _msgrHoldTimer = setTimeout(function () { _msgrHoldTimer = null; msgrThreadMenu(e, id); }, 550);
 }
 function _msgrHoldEnd() { if (_msgrHoldTimer) { clearTimeout(_msgrHoldTimer); _msgrHoldTimer = null; } }
-/** بستنِ گفت‌وگویی که باز است (دکمهٔ 🗑️ سربرگ) */
+/** بستنِ یک گفت‌وگو — از منوی فهرست (نگه‌داشتنِ انگشت روی ردیف / کلیکِ راست) */
 function msgrCloseThread(id) {
   const t = id || _msgrCur;
   if (!t) return;
@@ -42955,16 +43005,26 @@ function _msgrLegacyMerge(thread, live) {
   if (!thread || thread.indexOf('p-') !== 0) return live;
   let old = [];
   try {
-    const hit = _msgrLegacyPeer(thread);
+    const hit = _msgrLegacyPeer(thread) || _msgrPeerKeyOf(thread);
     const cache = _dmMsgCache || {};
     const meId = (_chatMe() || {}).id;
     /* ⚠️ «k» و «d» هم همراه می‌آیند تا عکس/صدا/کارتِ حساب واقعاً دیده شوند،
-       نه این‌که آدرسِ خامِ base64 به‌جای عکس چاپ شود (باگی که بود). */
+       نه این‌که آدرسِ خامِ base64 به‌جای عکس چاپ شود (باگی که بود).
+       «_key» هم می‌آید تا دکمهٔ ⋮ِ همان پیام بتواند حذفش کند. */
+    const conv = (m, pend) => ({ at: m.ts || 0, from: m.n || '—', mine: m.f === meId, old: true,
+                   k: m.k || 'text', d: m.d || '', u: m.u || '', n: m.n || '', _key: m._key || '',
+                   pending: !!pend,
+                   text: String(m.t || (m.k && m.k !== 'text' ? '' : m.d) || '') });
     old = (hit ? (cache[hit] || []) : [])
       .filter(m => m && (m.t || m.d) && !m.del)
-      .map(m => ({ at: m.ts || 0, from: m.n || '—', mine: m.f === meId, old: true,
-                   k: m.k || 'text', d: m.d || '', u: m.u || '', n: m.n || '',
-                   text: String(m.t || (m.k && m.k !== 'text' ? '' : m.d) || '') }));
+      .map(m => conv(m, false));
+    /* پیامی که همین حالا فرستاده شده و هنوز جوابِ سرور نیامده هم فوراً دیده شود
+       (خواستهٔ صاحب ریپو: «صدا در جا برود»). تا حالا عکس/صدای تک‌به‌تک تا رسیدنِ
+       جوابِ سرور اصلاً در گفت‌وگو پیدایش نمی‌شد و کاربر فکر می‌کرد نرفته. */
+    if (hit) {
+      const have = new Set(old.map(m => m._key).filter(Boolean));
+      _chatPendingFor('dm', hit).forEach(p => { if (!have.has(p._key)) old.push(conv(p, true)); });
+    }
   } catch (e) { return live; }
   if (!old.length) return live;
   // پیامی که هر دو طرف دارند دو بار دیده نشود
@@ -43005,22 +43065,79 @@ function _msgrPaintChat() {
       return '<i style="opacity:.8">' + (m.k === 'image' ? '🖼️ عکس' : m.k === 'video' ? '🎬 ویدیو' : '🎤 پیام صوتی') + ' — برای دیدن به سرور وصل شوید</i>';
     return _esc(m.text || '');
   };
-  list.innerHTML = msgs.length
-    ? msgs.map(m => '<div class="msgr-row' + (m.mine ? ' me' : '') + '">'
+  // پیام‌هایی که کاربر «برای خودش» حذف کرده، دیده نمی‌شوند
+  const shown = msgs.filter(m => !_msgrMsgHidden(_msgrCur, m));
+  _msgrShown = shown;
+  list.innerHTML = shown.length
+    ? shown.map((m, i) => '<div class="msgr-row' + (m.mine ? ' me' : '') + '">'
         + '<div class="msgr-b">'
+        // ⋮ِ هر پیام: حذف برای من / حذف برای همه (خواستهٔ صاحب ریپو — تا حالا در
+        // چتِ تک‌نفره هیچ راهی برای حذفِ یک پیام یا یک صدا نبود)
+        + '<span class="msgr-mm" onclick="msgrMsgMenu(event,' + i + ')" title="گزینه‌ها">⋮</span>'
+        + '<div class="msgr-c">'
         + (m.mine ? '' : '<div class="msgr-from">' + _esc(m.from || '—') + '</div>')
         + '<div class="msgr-t">' + bodyOf(m) + '</div>'
-        + '<div class="msgr-w">' + _esc(_msgrWhen(m.at)) + (m.pending ? ' · 🕐 در صف' : '') + '</div>'
-        + '</div></div>').join('')
+        + '<div class="msgr-w">' + _esc(_msgrWhen(m.at)) + (m.pending ? ' · 🕐' : '') + '</div>'
+        + '</div></div></div>').join('')
     : '<div class="msgr-empty">هنوز پیامی رد و بدل نشده — اولین پیام را شما بنویسید.</div>';
   list.scrollTop = list.scrollHeight;
-  const st = document.getElementById('msgrState');
-  if (st) {
-    const q = _msgrOutbox().length;
-    st.textContent = _ntfLive()
-      ? (q ? ('🕐 ' + n2fa(q) + ' پیام در صف') : 'وصل به سرورِ خانگی')
-      : (q ? ('🕐 ' + n2fa(q) + ' پیام در صف — با وصل شدن می‌رود') : 'در حال وصل شدن…');
-  }
+}
+/* ── حذفِ یک پیام در چتِ تک‌نفره ────────────────────────────────────────────
+   دو حالت، دقیقاً مثل چتِ گروهی:
+     • «حذف برای من» — همه‌جور پیامی (متن، صدا، عکس، حساب) را از همین دستگاه
+       برمی‌دارد. برای پیامی که کلیدِ سروری ندارد (پیام‌های متنیِ اعلانی) تنها
+       راهِ ممکن همین است.
+     • «حذف برای همه» — فقط برای پیام‌های خودمان که کلیدِ سروری دارند (صدا،
+       عکس، کارتِ حساب و هر چه از راهِ چتِ سرورِ خانگی رفته). */
+let _msgrShown = [];
+function _msgrMsgKey(thread, m) {
+  if (m && m._key) return 'k:' + m._key;
+  return 't:' + String(thread || '') + ':' + (m && m.at || 0) + ':' + String((m && m.text) || '').slice(0, 24);
+}
+function _msgrHiddenMsgs() { return _msgrLsGet('pumpMsgrHiddenMsgs', []) || []; }
+function _msgrMsgHidden(thread, m) { return _msgrHiddenMsgs().indexOf(_msgrMsgKey(thread, m)) >= 0; }
+function _msgrCloseMsgMenu() { const el = document.getElementById('msgrMsgMenu'); if (el) el.remove(); }
+function msgrMsgMenu(ev, i) {
+  try { ev.stopPropagation(); } catch (e) {}
+  _msgrCloseMsgMenu();
+  const m = _msgrShown[i];
+  if (!m) return;
+  const menu = document.createElement('div');
+  menu.className = 'ch-msg-menu';
+  menu.id = 'msgrMsgMenu';
+  let html = '<button onclick="msgrHideMsg(' + i + ')">🙈 حذف برای من</button>';
+  if (m.mine && m._key) html += '<button class="ch-del-everyone" onclick="msgrDeleteMsgForAll(' + i + ')">🗑️ حذف برای همه</button>';
+  menu.innerHTML = html;
+  document.body.appendChild(menu);
+  try {
+    const r = ev.target.getBoundingClientRect();
+    menu.style.top = Math.min(r.bottom + 4, window.innerHeight - 100) + 'px';
+    menu.style.left = Math.max(8, Math.min(r.left - 60, window.innerWidth - 190)) + 'px';
+  } catch (e) {}
+  setTimeout(() => document.addEventListener('click', _msgrCloseMsgMenu, { once: true }), 0);
+}
+function _msgrHideKey(m) {
+  const h = _msgrHiddenMsgs();
+  const k = _msgrMsgKey(_msgrCur, m);
+  if (h.indexOf(k) < 0) h.push(k);
+  _msgrLsSet('pumpMsgrHiddenMsgs', h.slice(-600));
+  _msgrPaintChat();
+}
+function msgrHideMsg(i) {
+  _msgrCloseMsgMenu();
+  const m = _msgrShown[i];
+  if (!m) return;
+  _msgrHideKey(m);
+  showToast('🙈 برای شما حذف شد', '#38a169');
+}
+function msgrDeleteMsgForAll(i) {
+  _msgrCloseMsgMenu();
+  const m = _msgrShown[i];
+  if (!m || !m._key) return;
+  const peer = _msgrSyncLegacyPeer();
+  if (!peer) { showToast('این پیام از راهِ سرور نرفته — فقط «حذف برای من» ممکن است', '#e53e3e'); return; }
+  try { _chatDeleteForEveryone('dm', peer, m._key); } catch (e) {}
+  _msgrHideKey(m);   // همان لحظه از جلوی چشمِ خودمان هم برداشته شود
 }
 /** فهرستِ قرض‌داران برای شروعِ گفت‌وگوی تازه */
 function msgrPickPerson() {
@@ -43383,7 +43500,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.324';
+const APP_VERSION = '2.9.325';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -52364,6 +52481,14 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
 .msgr-from{ font-size:0.68rem; font-weight:800; color:var(--accent); margin-bottom:2px; }
 .msgr-t{ font-size:0.86rem; font-weight:600; color:var(--txt); line-height:1.75; white-space:pre-wrap; word-break:break-word; }
 .msgr-w{ font-size:0.63rem; color:var(--muted); margin-top:3px; }
+/* ⋮ِ هر پیام در چتِ تک‌نفره — همان منوی «حذف برای من / حذف برای همه»ی چتِ گروهی.
+   کنارِ محتوا می‌نشیند (نه رویش) تا با دکمهٔ پخشِ صدا تداخل نکند. */
+#msgrList .msgr-b{ display:flex; align-items:flex-start; gap:4px; }
+#msgrList .msgr-c{ flex:1; min-width:0; }
+.msgr-mm{ flex:0 0 auto; cursor:pointer; user-select:none; -webkit-user-select:none;
+  color:var(--muted); opacity:.65; font-size:1rem; line-height:1; padding:2px 3px; border-radius:7px;
+  -webkit-tap-highlight-color:transparent; }
+.msgr-mm:hover, .msgr-mm:active{ opacity:1; color:var(--accent); background:rgba(127,127,127,.15); }
 .msgr-comp{ display:flex; gap:7px; padding:9px 12px; border-top:1px solid var(--border); }
 .msgr-comp input{ flex:1; min-width:0; background:var(--card); border:1px solid var(--border); border-radius:9px;
   color:var(--txt); font-family:'Vazirmatn',sans-serif; font-size:0.86rem; font-weight:600; padding:8px 11px; }
