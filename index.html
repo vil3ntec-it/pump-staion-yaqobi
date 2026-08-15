@@ -43270,7 +43270,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.318';
+const APP_VERSION = '2.9.319';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -53033,9 +53033,19 @@ select:not(.native-sel){
 
     ensureSession()
       .then(function () {
-        return api('/ai/support/chat', {
-          method: 'POST',
-          body: { question: q, history: recentHistory() }
+        /* سؤالِ داده‌ای (الباقی، مخزن، قرض…) از مسیرِ عادی می‌رود، چون فقط آن
+           مسیر ابزارِ خواندنِ اعدادِ حساب را دارد. بقیه — که اکثریت‌اند و
+           کندترین هم هستند — پخشِ زنده می‌شوند. */
+        if (looksLikeDataQuestion(q)) {
+          return api('/ai/support/chat', { method: 'POST', body: { question: q, history: recentHistory() } });
+        }
+        // اگر سرویسِ روی سرور قدیمی باشد و این مسیر را نداشته باشد، خودکار به
+        // مسیرِ عادی برمی‌گردیم تا چیزی نشکند.
+        return askStreaming(q).catch(function (e) {
+          if (e && e.noStream) {
+            return api('/ai/support/chat', { method: 'POST', body: { question: q, history: recentHistory() } });
+          }
+          throw e;
         });
       })
       .then(function (res) {
@@ -53055,10 +53065,13 @@ select:not(.native-sel){
       })
       .then(function (w) {
         var res = w.fin || {};
-        var badge = res.cached ? 'از حافظه'
-          : (w.fromData || res.usedClientData) ? 'از حسابِ خودت'
-          : (res.degraded ? 'از مستندات' : null);
-        say('bot', res.text || 'جوابی نیامد.', { sources: res.sources, badge: badge });
+        // پخشِ زنده حباب را همان لحظه ساخته و پر کرده — دوباره نویسی نکن
+        if (!res._streamed) {
+          var badge = res.cached ? 'از حافظه'
+            : (w.fromData || res.usedClientData) ? 'از حسابِ خودت'
+            : (res.degraded ? 'از مستندات' : null);
+          say('bot', res.text || 'جوابی نیامد.', { sources: res.sources, badge: badge });
+        }
         state(res.ms ? ('پاسخ در ' + Math.round(res.ms / 100) / 10 + ' ثانیه' + (res.model ? ' · ' + res.model : '')) : '');
       })
       .catch(function (err) {
@@ -53082,6 +53095,79 @@ select:not(.native-sel){
       })
       .finally(function () { _busy = false; });
   };
+
+  /* پرسیدن با پخشِ زنده.
+     جواب توکن‌به‌توکن می‌آید و همان‌طور که می‌رسد روی صفحه نوشته می‌شود. روی
+     کامپیوترِ بدونِ کارتِ گرافیک، تولیدِ کاملِ جواب ده‌ها ثانیه است ولی اولین
+     کلمه چند ثانیه‌ای آماده است — تفاوتِ «انگار کار نمی‌کند» و «دارد می‌نویسد».
+
+     ⚠️ مثلِ بقیهٔ ویجت، هیچ‌جا innerHTML نیست؛ متن با textContent می‌نشیند. */
+  function askStreaming(q) {
+    return new Promise(function (resolve, reject) {
+      var headers = { 'content-type': 'application/json' };
+      if (_session && _session.token) headers.authorization = 'Bearer ' + _session.token;
+
+      fetch(baseUrl() + '/ai/support/chat/stream', {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({ question: q, history: recentHistory() }),
+        signal: AbortSignal.timeout(240000)
+      }).then(function (r) {
+        // سرویسِ قدیمی این مسیر را ندارد → به مسیرِ عادی برگرد
+        if (r.status === 404 || r.status === 405) { var e = new Error('بدونِ پخش'); e.noStream = true; throw e; }
+        if (!r.ok || !r.body) { var e2 = new Error('خطای ' + r.status); e2.noStream = true; throw e2; }
+
+        // حبابِ خالی می‌سازیم و همان‌جا می‌نویسیم
+        var msg = { who: 'bot', text: '' };
+        _msgs.push(msg);
+        render();
+        state('در حالِ نوشتن…');
+
+        var reader = r.body.getReader();
+        var dec = new TextDecoder();
+        var buf = '';
+        var finalEv = null;
+
+        function pump() {
+          return reader.read().then(function (res) {
+            if (res.done) {
+              var out = finalEv || { text: msg.text, sources: msg.sources };
+              out._streamed = true;      // ← تا لایهٔ بعد دوباره چاپش نکند
+              resolve(out);
+              return;
+            }
+            buf += dec.decode(res.value, { stream: true });
+            var lines = buf.split('\n');
+            buf = lines.pop() || '';
+            for (var i = 0; i < lines.length; i++) {
+              var line = lines[i];
+              if (line.indexOf('data: ') !== 0) continue;
+              var ev;
+              try { ev = JSON.parse(line.slice(6)); } catch (e) { continue; }
+              if (ev.type === 'delta') { msg.text += ev.text; render(); }
+              else if (ev.type === 'meta') { msg.sources = ev.sources; }
+              else if (ev.type === 'done') {
+                finalEv = ev;
+                // متنِ نهاییِ سرور مرجع است (پالایش‌شده)
+                if (ev.text) msg.text = ev.text;
+                if (ev.sources && ev.sources.length) msg.sources = ev.sources;
+                msg.badge = ev.cached ? 'از حافظه' : (ev.degraded ? 'از مستندات' : null);
+                render();
+              }
+            }
+            return pump();
+          });
+        }
+        return pump();
+      }).catch(reject);
+    });
+  }
+
+  /* آینهٔ needsDataTools در سرور. اگر اشتباه تشخیص دهد، بدترین اتفاق این است
+     که سؤال از مسیرِ کندتر برود — نه اینکه چیزی خراب شود. */
+  function looksLikeDataQuestion(q) {
+    return /الباقی|باقی|بردگی|رسید|قرض|حساب|مخزن|تیل|لیتر|موجودی|مصارف|مصرف|چند|چقدر|جمع|فیصدی|پیدا کن|بگرد/.test(String(q || ''));
+  }
 
   function recentHistory() {
     var out = [];

@@ -70,6 +70,41 @@ class Pool {
     }
   }
 
+  /**
+   * گرفتنِ نوبت به‌صورت دستی — برای پخشِ زنده.
+   *
+   * چرا لازم شد: `run(fn)` کار را داخلِ یک callback اجرا می‌کند و از داخلِ
+   * callback نمی‌شود yield کرد. پس برای مولّدها (generator) نوبت را دستی
+   * می‌گیریم و در finally پس می‌دهیم. همان چهار قاعدهٔ بالا این‌جا هم برقرار است.
+   *
+   * @returns {Promise<Function>} تابعِ آزادسازی — حتماً در finally صدایش بزن
+   */
+  async acquire({ bypassLoadCheck = false } = {}) {
+    const { maxConcurrent, maxQueue, queueTimeoutMs, loadLimit } = this.cfg.load;
+
+    if (!bypassLoadCheck && this.active === 0 && isSystemBusy(loadLimit)) {
+      this.stats.shed++;
+      throw new OverloadedError('کامپیوتر همین حالا مشغولِ کارِ دیگری است');
+    }
+    if (this.queue.length >= maxQueue) {
+      this.stats.shed++;
+      throw new OverloadedError('صفِ پرسش‌ها پر است');
+    }
+    if (this.active >= maxConcurrent) {
+      await this._waitTurn(queueTimeoutMs);
+    }
+
+    this.active++;
+    let released = false;
+    return () => {
+      if (released) return;        // آزادسازیِ دوباره نباید شمارنده را خراب کند
+      released = true;
+      this.active--;
+      this.stats.served++;
+      this._next();
+    };
+  }
+
   _waitTurn(timeoutMs) {
     return new Promise((resolve, reject) => {
       const entry = { resolve, reject, timer: null };

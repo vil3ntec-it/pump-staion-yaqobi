@@ -19,7 +19,7 @@ import { getProvider } from '../llm/provider.js';
 import { llmPool, OverloadedError } from '../llm/pool.js';
 import { answerCache } from '../llm/cache.js';
 import { packContext, Retriever } from '../rag/retriever.js';
-import { systemMessage, contextMessage, expansionMessages, parseExpansions } from './prompt.js';
+import { systemMessage, contextMessage } from './prompt.js';
 import { callTool } from './tools/router.js';
 import { toolSchemasFor } from './tools/registry.js';
 import { inspectUserInput, sanitizeUntrusted } from '../security/injection.js';
@@ -118,22 +118,23 @@ export class SupportAgent {
   // ───────────────────────────────────────────────────────────────────────
   async _generate({ question, results, level, user, history, memory, signal, flagged }) {
     const provider = getProvider();
-    const tools = toolSchemasFor(level, config.tools.whitelist);
+    // ابزار فقط وقتی به مدل داده می‌شود که سؤال واقعاً دربارهٔ **داده** باشد.
+    // روی CPU، هر دورِ ابزار ده‌ها ثانیه است؛ برای «چطور پی‌دی‌اف بگیرم؟» که
+    // جوابش در متنِ بازیابی‌شده هست، دادنِ ابزار فقط وقت تلف کردن است.
+    const wantsData = needsDataTools(question);
+    const tools = wantsData ? toolSchemasFor(level, config.tools.whitelist) : [];
+    // سؤالِ داده‌ای دستِ‌کم یک دورِ ابزار لازم دارد، حتی اگر پیکربندی صفر باشد.
+    // (پیش‌فرضِ صفر برای سرعتِ سؤال‌های مستنداتی است، نه برای بستنِ ابزار.)
+    const maxSteps = wantsData ? Math.max(1, config.agent.maxSteps) : 0;
     const usedTools = [];
     let sources = results;
 
-    // بسطِ پرسش فقط وقتی بازیابیِ اول ضعیف بوده — نه همیشه. یک فراخوانیِ اضافه
-    // برای سؤالی که جوابش پیدا شده، اتلافِ محض است.
-    if (results.length < 2) {
-      try {
-        const exp = await provider.chat({ messages: expansionMessages(question), signal, temperature: 0.3 });
-        const terms = parseExpansions(exp.text);
-        if (terms.length) {
-          const second = await this.retriever.search(question, { level, expansions: terms, signal });
-          if (second.results.length > results.length) { results = second.results; sources = results; }
-        }
-      } catch { /* بسط اختیاری است — شکستش نباید جواب را خراب کند */ }
-    }
+    /* بسطِ پرسش با مدل حذف شد.
+       قبلاً وقتی بازیابیِ اول ضعیف بود، یک فراخوانیِ اضافه به مدل می‌رفت تا
+       عبارت‌های جست‌وجوی بهتری پیشنهاد دهد. روی کامپیوترِ بدونِ کارتِ گرافیک
+       همان یک فراخوانی ۲۰ تا ۴۰ ثانیه بود — یعنی برای سؤالی که جوابش پیدا
+       نشده، دو برابر انتظار و آخرش همان «نمی‌دانم». مترادف‌هایی که در سربرگِ
+       اسناد نوشته شده‌اند همان کار را رایگان انجام می‌دهند. */
 
     const messages = [
       systemMessage({ level, appVersion: this.appVersion, memory, flagged }),
@@ -147,8 +148,8 @@ export class SupportAgent {
     // سقفِ دقیقِ فراخوانیِ مدل: maxSteps + 1. دورِ آخر عمداً **بدونِ ابزار**
     // اجرا می‌شود تا مدل مجبور شود جوابِ نهایی بنویسد — وگرنه یک مدلِ کوچک
     // می‌تواند بی‌نهایت ابزار صدا بزند و سرور را مشغول نگه دارد.
-    for (let step = 0; step <= config.agent.maxSteps; step++) {
-      const lastRound = step === config.agent.maxSteps;
+    for (let step = 0; step <= maxSteps; step++) {
+      const lastRound = step === maxSteps;
       const out = await provider.chat({ messages, tools: lastRound ? [] : tools, signal });
 
       if (lastRound || !out.toolCalls?.length) { final = out; break; }
@@ -199,6 +200,92 @@ export class SupportAgent {
       sources,
       usage: final?.usage,
     };
+  }
+
+  /**
+   * پاسخِ **پخشِ زنده** — همان منطقِ answer، ولی متن تکه‌تکه بیرون می‌آید.
+   *
+   * عمداً ساده‌تر از answer است: ابزار ندارد و فقط یک بار مدل را صدا می‌زند.
+   * دلیلش سرعت است — روی CPU هر دورِ اضافه ده‌ها ثانیه می‌شود، و کاربر برای
+   * سؤالِ مستنداتی به ابزار نیازی ندارد چون متنِ لازم از قبل بازیابی شده.
+   * سؤال‌های داده‌ای (الباقی، مخزن) خودشان به مسیرِ answer می‌روند.
+   *
+   * @yields {{type:'delta'|'done'|'meta', ...}}
+   */
+  async *answerStream({ question, level = 'PUBLIC', user = 'anon', history = [], memory = [], signal }) {
+    const started = Date.now();
+    const cleanQuestion = redactText(String(question || '').trim());
+    if (!cleanQuestion) {
+      yield { type: 'done', text: 'سؤالی ننوشتید.', mode: 'empty', sources: [], ms: 0 };
+      return;
+    }
+
+    const inj = inspectUserInput(cleanQuestion);
+    if (inj.flagged) audit({ kind: 'injection', user, where: 'user_input', matches: inj.matches });
+
+    // کش: جوابِ آماده را یک‌جا می‌فرستیم (بدونِ انتظار)
+    const cached = answerCache.get(cleanQuestion, level, this.kbVersion);
+    if (cached) {
+      yield { type: 'done', ...cached, cached: true, ms: Date.now() - started };
+      return;
+    }
+
+    const provider = getProvider();
+    const { results } = await this.retriever.search(cleanQuestion, { level, signal });
+
+    // منابع را زودتر می‌فرستیم تا ویجت بتواند «دارم از این سند می‌خوانم» را نشان دهد
+    yield { type: 'meta', sources: results.map(r => ({ title: r.title, section: r.heading, version: r.version })) };
+
+    const modelUp = typeof provider.chatStream === 'function' && await provider.available();
+    if (!modelUp) {
+      const out = this._extractive(results, cleanQuestion, {
+        started, level,
+        why: 'مدلِ زبانی در دسترس نیست.',
+      });
+      yield { type: 'done', ...out };
+      return;
+    }
+
+    const messages = [
+      systemMessage({ level, appVersion: this.appVersion, memory, flagged: inj.flagged }),
+      ...history.slice(-config.agent.historyTurns),
+      contextMessage(packContext(results)),
+      { role: 'user', content: cleanQuestion },
+    ];
+
+    let text = '';
+    let release = null;
+    try {
+      // نوبت را دستی می‌گیریم چون از داخلِ callback نمی‌شود yield کرد
+      release = await llmPool.acquire();
+      for await (const piece of provider.chatStream({ messages, signal })) {
+        text += piece;
+        yield { type: 'delta', text: piece };
+      }
+    } catch (e) {
+      if (e instanceof OverloadedError || e.degrade || e.code === 'NO_MODEL' || e.code === 'MODEL_MISSING') {
+        const out = this._extractive(results, cleanQuestion, { started, level, why: e.message });
+        yield { type: 'done', ...out };
+        return;
+      }
+      audit({ kind: 'error', user, where: 'stream', msg: e.message });
+      const out = this._extractive(results, cleanQuestion, { started, level, why: 'در تولیدِ پاسخ خطایی پیش آمد.' });
+      yield { type: 'done', ...out };
+      return;
+    } finally {
+      // اگر کاربر وسطِ کار تب را ببندد، این‌جا هم اجرا می‌شود و نوبت آزاد می‌شود.
+      // بدونِ این، یک قطعِ ناگهانی صف را برای همیشه قفل می‌کرد.
+      release?.();
+    }
+
+    const final = this._reply({
+      text: text.trim() || NO_ANSWER,
+      mode: 'model', model: provider.name, sources: results, started, level,
+    });
+    if (final.text && final.text !== NO_ANSWER) {
+      answerCache.set(cleanQuestion, level, this.kbVersion, { ...final, ms: undefined });
+    }
+    yield { type: 'done', ...final };
   }
 
   /**
@@ -311,6 +398,19 @@ export class SupportAgent {
       ms: Date.now() - started,
     };
   }
+}
+
+/**
+ * آیا این سؤال به اعدادِ زندهٔ برنامه نیاز دارد؟
+ *
+ * تشخیصِ کلیدواژه‌ای عمدی است و «هوشمند» نیست: تنها کارش این است که تصمیم
+ * بگیرد آیا ارزشِ **یک دورِ اضافهٔ مدل** را دارد یا نه. اگر اشتباه بگیرد،
+ * بدترین اتفاق این است که مدل بدونِ ابزار جواب می‌دهد و می‌گوید نمی‌دانم —
+ * نه اینکه چیزی خراب شود.
+ */
+function needsDataTools(q) {
+  const t = String(q || '');
+  return /الباقی|باقی|بردگی|رسید|قرض|حساب|مخزن|تیل|لیتر|موجودی|مصارف|مصرف|چند|چقدر|جمع|فیصدی|پیدا کن|بگرد/.test(t);
 }
 
 /** وقتی مدل نتوانست جمله بسازد، خودِ عددها را خوانا نشان بده — بهتر از هیچ */
