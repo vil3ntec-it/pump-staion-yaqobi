@@ -24387,8 +24387,939 @@ function _pumpDocOverlay(doc, title) {
   _pumpPushEsc(ov.__esc);
   try { document.body.style.overflow = 'hidden'; } catch (e) {}
 }
-/* رفتنِ مستقیم به پنجرهٔ چاپ — همان کارِ قبلیِ pumpOpenDoc */
+/* ══════════════════════════════════════════════════════════════════════════
+   🖨️  کارگاهِ چاپ — پنجرهٔ چاپِ برنامه، به سبکِ «Print» در اکسل
+   ──────────────────────────────────────────────────────────────────────────
+   همهٔ گزارش‌های برنامه از یک در رد می‌شوند: pumpOpenDoc → _pdfDoc →
+   _pumpDocPrint. پس این ماژول همان‌جا می‌نشیند و بدونِ دست زدن به منطقِ هیچ
+   بخشی، برای هر گزارش (گاوصندوق، شرکت‌ها، مصارف، ورق، …) یک پنجرهٔ چاپِ کامل
+   می‌سازد: تنظیمات سمتِ چپ، پیش‌نمایشِ زنده سمتِ راست.
+
+   ── چه چیزی واقعاً کار می‌کند (نه فقط دکمهٔ تزئینی) ────────────────────────
+   ورق‌بندی را خودِ همین ماژول انجام می‌دهد، نه مرورگر: محتوای گزارش اندازه‌گیری
+   و به ورق‌های واقعی بریده می‌شود. برای همین این‌ها همه واقعی‌اند:
+     • اندازهٔ کاغذ (A3/A4/A5/Letter/Legal/Tabloid/دلخواه) و جهتِ ورق
+     • حاشیه‌ها (عادی/باریک/پهن/دلخواه) + فاصلهٔ سربرگ و پاورقی
+     • مقیاس: بدون مقیاس · جا دادن همهٔ ستون‌ها · جا دادن همهٔ سطرها ·
+       جا دادن کلِ گزارش در یک ورق · درصدِ دلخواه
+     • تعدادِ نسخه ۱ تا ۹۹۹ و «مرتب/نامرتب» — با تکرارِ واقعیِ ورق‌ها
+     • بازهٔ ورق‌ها (از … تا …) و «فقط همین ورق»
+     • تکرارِ سطرِ عنوانِ جدول در همهٔ ورق‌ها
+     • سربرگ/پاورقیِ سه‌قسمتی با کدهای &[Page] &[Pages] &[Date] &[Time] &[File]
+     • خطوط جدول، و رنگی / خاکستری / سیاه‌وسفید
+     • زوم ۲۵٪ تا ۲۰۰٪، رفتن به ورقِ بعد/قبل، «۱ از ۱۰»، خط‌کشِ حاشیه و
+       خطِ شکستِ ورق
+     • ذخیره و بازیابیِ خودکارِ تنظیمات (localStorage)
+
+   ── چه چیزی روی «وب» شدنی نیست (و چرا) ───────────────────────────────────
+   مرورگر به‌عمد هیچ راهی به سخت‌افزارِ چاپگر نمی‌دهد. هیچ سایتی — نه این یکی و
+   نه هیچ سایتِ دیگری — نمی‌تواند:
+     • فهرستِ چاپگرهای ویندوز را بخواند یا وضعیتِ Ready/Offline را نشان دهد
+     • چاپگر را خودش انتخاب کند یا پنجرهٔ Printer Properties را باز کند
+     • DPI، دو-رو (Duplex) یا سینیِ کاغذ (Tray) را تعیین کند
+     • بدونِ نشان دادنِ پنجرهٔ چاپِ سیستم، مستقیم به چاپگر بفرستد
+   این‌ها همه در همان پنجرهٔ چاپِ ویندوز/مرورگر انجام می‌شوند و چاپگرِ پیش‌فرضِ
+   وصل‌شده هم همان‌جا از قبل انتخاب شده است. کاری که این ماژول می‌کند این است
+   که *همهٔ تصمیم‌های چیدمان* این‌جا گرفته شود و آن پنجره فقط یک تاییدِ آخر باشد؛
+   دیگر لازم نیست کسی با تنظیماتِ ویندوز کلنجار برود. برای همین ورق‌ها با
+   `@page{margin:0}` فرستاده می‌شوند: هرچه در پیش‌نمایش می‌بینید، مو‌به‌مو همان
+   روی کاغذ می‌رود.
+
+   ⚠️ «ذخیره به PDF» هم از همان پنجره انجام می‌شود — عمداً از jsPDF/html2canvas
+   استفاده نشده: اولی فارسی را نمی‌شناسد و دومی صفحه را عکس می‌کند (متنِ
+   غیرقابل‌جستجو و بی‌کیفیت). خروجیِ خودِ مرورگر PDF برداریِ واقعی با متنِ فارسیِ
+   سالم است.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+
+  var MM = 96 / 25.4;                       // میلی‌متر → پیکسل (۹۶ نقطه بر اینچ)
+  var PAPERS = {
+    A4:      [210, 297],   A5:   [148, 210],    A3:      [297, 420],
+    Letter:  [215.9, 279.4], Legal: [215.9, 355.6], Tabloid: [279.4, 431.8]
+  };
+  var PAPER_ORDER = ['A4', 'A5', 'A3', 'Letter', 'Legal', 'Tabloid', 'Custom'];
+  var MARGINS = {
+    normal: { t: 19.1, b: 19.1, l: 17.8, r: 17.8, h: 7.6,  f: 7.6  },
+    narrow: { t: 19.1, b: 19.1, l: 6.4,  r: 6.4,  h: 7.6,  f: 7.6  },
+    wide:   { t: 25.4, b: 25.4, l: 25.4, r: 25.4, h: 12.7, f: 12.7 }
+  };
+  var KEY = 'pumpPrintStudio_v1';
+  var DEF = {
+    copies: 1, collate: true, what: 'all', from: 1, to: 1,
+    orient: 'portrait', paper: 'A4', cw: 210, ch: 297,
+    margin: 'narrow', mt: 19.1, mb: 19.1, ml: 6.4, mr: 6.4, mh: 7.6, mf: 7.6,
+    /* پیش‌فرضِ «جا دادن همهٔ ستون‌ها»: جدول‌های این برنامه پهن‌اند و در حالتِ
+       «بدون مقیاس» از لبهٔ ورق بیرون می‌زنند. اکسل در آن حالت ستون‌ها را به
+       ورقِ اضافی می‌برد؛ این‌جا به‌جایش کوچک می‌شوند تا چیزی بریده نشود. */
+    scaleMode: 'fitCols', scalePct: 100,
+    gridlines: true, repeatHead: true, color: 'color',
+    hdrL: '', hdrC: '', hdrR: '',
+    ftrL: '', ftrC: 'ورق &[Page] از &[Pages]', ftrR: '&[Date]',
+    zoom: 'fit'
+  };
+
+  var S = null;            // تنظیماتِ جاری
+  var srcBody = '';        // بدنهٔ گزارش
+  var srcHead = '';        // استایل‌های گزارش
+  var docTitle = '';
+  var ov = null, frame = null, idoc = null;
+  var pageCount = 1, curPage = 1, lastScale = 1, overflowWarn = false;
+  var buildTimer = null, ready = false;
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c];
+    });
+  }
+
+  /* ── تضمینِ «هرچه می‌بینی، همان چاپ می‌شود» ────────────────────────────────
+     خودِ گزارش‌ها (و لایهٔ مشترکِ _pdfDoc) چند قاعده دارند که فقط سرِ چاپ یا فقط
+     روی صفحهٔ باریک فعال می‌شوند: `@page{margin:…}`، `@media print{th,td{
+     white-space:normal!important}}` و `@media screen and (max-width:820px)`.
+     اگر این‌ها بمانند، پیش‌نمایش یک چیز می‌شود و کاغذ چیزِ دیگر — و چیدمانی که
+     کاربر این‌جا تنظیم کرده سرِ چاپ به هم می‌ریزد. پس همین‌جا برداشته می‌شوند و
+     ورق‌بندی/حاشیه یکسره از همین کارگاه می‌آید.
+     ⚠️ فقط از سندِ چاپ برداشته می‌شود؛ به CSSِ خودِ برنامه دست نمی‌خورد. */
+  var STRIP = [/^@media[^{]*\bprint\b/i, /^@media\s+screen\s+and\s+\(max-width/i, /^@page\b/i];
+  function stripBlocks(css) {
+    var out = '', i = 0;
+    while (i < css.length) {
+      var at = css.indexOf('@', i);
+      if (at < 0) { out += css.slice(i); break; }
+      var brace = css.indexOf('{', at);
+      if (brace < 0) { out += css.slice(i); break; }
+      var prelude = css.slice(at, brace).replace(/\s+/g, ' ').trim();
+      var hit = false;
+      for (var t = 0; t < STRIP.length; t++) if (STRIP[t].test(prelude)) { hit = true; break; }
+      if (!hit) { out += css.slice(i, brace + 1); i = brace + 1; continue; }
+      var depth = 0, j = brace;
+      for (; j < css.length; j++) {
+        if (css[j] === '{') depth++;
+        else if (css[j] === '}') { depth--; if (!depth) { j++; break; } }
+      }
+      out += css.slice(i, at);
+      i = j;
+    }
+    return out;
+  }
+  function num(v, lo, hi, dflt) {
+    var n = parseFloat(String(v).replace(/[٠-٩۰-۹]/g, function (d) {
+      return String('٠١٢٣٤٥٦٧٨٩'.indexOf(d) >= 0 ? '٠١٢٣٤٥٦٧٨٩'.indexOf(d) : '۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+    }));
+    if (!isFinite(n)) n = dflt;
+    return Math.min(hi, Math.max(lo, n));
+  }
+  function load() {
+    var s = {};
+    for (var k in DEF) s[k] = DEF[k];
+    try {
+      var raw = JSON.parse(localStorage.getItem(KEY) || '{}');
+      for (var k2 in raw) if (k2 in DEF) s[k2] = raw[k2];
+    } catch (e) {}
+    return s;
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+  // ── هندسهٔ ورق (میلی‌متر) ────────────────────────────────────────────────
+  function geo() {
+    var p = (S.paper === 'Custom') ? [S.cw, S.ch] : (PAPERS[S.paper] || PAPERS.A4);
+    var w = p[0], h = p[1];
+    if (S.orient === 'landscape') { var t = w; w = h; h = t; }
+    var ml = S.ml, mr = S.mr, mt = S.mt, mb = S.mb;
+    // حاشیه هیچ‌وقت نباید از خودِ ورق بزرگ‌تر شود
+    if (ml + mr > w - 20) { ml = mr = Math.max(0, (w - 20) / 2); }
+    if (mt + mb > h - 20) { mt = mb = Math.max(0, (h - 20) / 2); }
+    // ⚠️ mh/mf هم باید برگردند — سربرگ و پاورقی مکانشان را از همین‌جا می‌گیرند
+    return { w: w, h: h, ml: ml, mr: mr, mt: mt, mb: mb,
+             mh: Math.min(S.mh, mt), mf: Math.min(S.mf, mb),
+             cw: w - ml - mr, ch: h - mt - mb };
+  }
+
+  /* ── سربرگ/پاورقی ─────────────────────────────────────────────────────────
+     کدها هم به شکلِ اکسل (&[Page]) و هم فارسی (&[ورق]) پذیرفته می‌شوند. */
+  function hfText(tpl, pageNo, total) {
+    var d = (typeof allDates === 'function') ? allDates() : { sh: '', mi: '' };
+    var now = new Date();
+    var time = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    var map = {
+      'Page': pageNo, 'ورق': pageNo, 'صفحه': pageNo,
+      'Pages': total, 'کل': total,
+      'Date': d.sh || '', 'تاریخ': d.sh || '',
+      'Time': time, 'ساعت': time,
+      'File': docTitle, 'نام': docTitle, 'Tab': docTitle
+    };
+    return esc(tpl).replace(/&amp;\[([^\]]+)\]/g, function (m, k) {
+      return (k in map) ? esc(map[k]) : m;
+    });
+  }
+
+  // ══ استایلِ خودِ پنجره (یک بار تزریق می‌شود) ═════════════════════════════
+  var CSS = [
+    '#xlpr{position:fixed;inset:0;z-index:100120;display:flex;flex-direction:column;',
+      'background:#fff;direction:ltr;font-family:"Segoe UI","Vazirmatn",Tahoma,sans-serif}',
+    '#xlpr *{box-sizing:border-box}',
+    // موبایل خودش نوشته‌ها را بزرگ نکند — چیدمانِ این پنجره اندازه‌های ثابت دارد
+    '#xlpr{-webkit-text-size-adjust:100%;text-size-adjust:100%}',
+    '#xlpr .xt{flex:0 0 auto;height:46px;background:#217346;color:#fff;display:flex;align-items:center;',
+      'justify-content:space-between;padding:0 12px;gap:10px}',
+    '#xlpr .xt b{font-size:0.95rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '#xlpr .xt .xt-r{display:flex;gap:8px;align-items:center}',
+    '#xlpr .xtb{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.35);color:#fff;',
+      'border-radius:4px;padding:6px 12px;font-family:inherit;font-size:0.82rem;font-weight:600;cursor:pointer}',
+    '#xlpr .xtb:hover{background:rgba(255,255,255,.28)}',
+    '#xlpr .xm{flex:1 1 auto;display:flex;min-height:0}',
+    '#xlpr .xs{flex:0 0 328px;width:328px;background:#fff;border-right:1px solid #e1dfdd;overflow:auto;',
+      'padding:14px 14px 26px;direction:rtl}',
+    '#xlpr .xp{flex:1 1 auto;background:#f3f2f1;min-width:0;display:flex;flex-direction:column}',
+    '#xlpr .xpv{flex:1 1 auto;overflow:hidden;position:relative}',
+    '#xlpr iframe{width:100%;height:100%;border:0;background:#f3f2f1;display:block}',
+    // نوارِ پایینِ پیش‌نمایش
+    '#xlpr .xb{flex:0 0 auto;height:42px;border-top:1px solid #e1dfdd;background:#faf9f8;display:flex;',
+      'align-items:center;justify-content:space-between;padding:0 12px;gap:10px;direction:rtl}',
+    '#xlpr .xb .g{display:flex;align-items:center;gap:6px}',
+    '#xlpr .xnav{width:28px;height:26px;border:1px solid #d2d0ce;background:#fff;border-radius:3px;',
+      'cursor:pointer;font-size:0.9rem;color:#323130;line-height:1}',
+    '#xlpr .xnav:disabled{opacity:.4;cursor:default}',
+    '#xlpr .xpg{font-size:0.8rem;color:#323130;min-width:86px;text-align:center;font-weight:600}',
+    '#xlpr .xzoom{border:1px solid #d2d0ce;background:#fff;border-radius:3px;padding:4px 6px;',
+      'font-family:inherit;font-size:0.78rem;color:#323130}',
+    // دکمهٔ بزرگِ چاپ
+    '#xlpr .xprint{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;',
+      'background:#217346;color:#fff;border:0;border-radius:4px;padding:13px;font-family:inherit;',
+      'font-size:1rem;font-weight:700;cursor:pointer;margin-bottom:4px}',
+    '#xlpr .xprint:hover{background:#1a5c38}',
+    '#xlpr .xsave{width:100%;background:#fff;color:#217346;border:1px solid #217346;border-radius:4px;',
+      'padding:9px;font-family:inherit;font-size:0.85rem;font-weight:700;cursor:pointer;margin-bottom:14px}',
+    '#xlpr .xsave:hover{background:#f3faf6}',
+    // گروه‌ها و فیلدها
+    '#xlpr .xg{border-top:1px solid #edebe9;padding-top:10px;margin-top:10px}',
+    '#xlpr .xg>h4{font-size:0.74rem;font-weight:700;color:#605e5c;margin:0 0 7px;letter-spacing:.2px}',
+    '#xlpr .xr{display:flex;align-items:center;gap:8px;margin-bottom:7px}',
+    '#xlpr .xr>label{flex:0 0 74px;font-size:0.76rem;color:#323130}',
+    '#xlpr select,#xlpr input[type=text],#xlpr input[type=number]{flex:1 1 auto;min-width:0;height:29px;',
+      'border:1px solid #d2d0ce;border-radius:3px;background:#fff;color:#201f1e;padding:0 7px;',
+      'font-family:inherit;font-size:0.79rem;direction:rtl}',
+    '#xlpr select:focus,#xlpr input:focus{outline:2px solid #217346;outline-offset:-2px}',
+    '#xlpr .xhint{font-size:0.68rem;color:#797775;line-height:1.6;margin:2px 0 6px}',
+    '#xlpr .xchk{display:flex;align-items:center;gap:7px;font-size:0.78rem;color:#323130;margin-bottom:6px;cursor:pointer}',
+    '#xlpr .xchk input{width:15px;height:15px;accent-color:#217346;margin:0;flex:0 0 auto}',
+    // direction:ltr تا «−» چپ و «+» راست بماند، مثل استپرِ اکسل
+    '#xlpr .xspin{display:flex;align-items:center;gap:0;flex:1 1 auto;min-width:0;direction:ltr}',
+    '#xlpr .xspin input{border-radius:0;text-align:center;flex:1 1 auto}',
+    '#xlpr .xspin button{width:28px;height:29px;border:1px solid #d2d0ce;background:#faf9f8;cursor:pointer;',
+      'font-size:0.95rem;color:#323130;line-height:1;font-family:inherit}',
+    '#xlpr .xspin button:hover{background:#edebe9}',
+    '#xlpr .xspin button:first-child{border-radius:0 3px 3px 0}',
+    '#xlpr .xspin button:last-child{border-radius:3px 0 0 3px}',
+    '#xlpr .x2{display:flex;gap:7px}',
+    '#xlpr .x2>div{flex:1 1 0;min-width:0}',
+    '#xlpr .x2 .xr>label{flex:0 0 32px}',
+    '#xlpr .xtok{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0 8px}',
+    '#xlpr .xtok button{border:1px solid #d2d0ce;background:#faf9f8;border-radius:12px;padding:3px 9px;',
+      'font-family:inherit;font-size:0.68rem;color:#323130;cursor:pointer}',
+    '#xlpr .xtok button:hover{border-color:#217346;color:#217346}',
+    '#xlpr .xwarn{background:#fff4ce;border:1px solid #f2d16b;border-radius:4px;padding:7px 9px;',
+      'font-size:0.72rem;color:#4b3d00;line-height:1.7;margin-bottom:10px}',
+    '#xlpr .xnote{background:#eff6fc;border:1px solid #b3d7f2;border-radius:4px;padding:7px 9px;',
+      'font-size:0.7rem;color:#1b3f5e;line-height:1.7;margin-bottom:10px}',
+    '#xlpr .xbusy{position:absolute;inset:0;display:none;align-items:center;justify-content:center;',
+      'background:rgba(243,242,241,.75);font-size:0.85rem;color:#323130;font-weight:600;z-index:3}',
+    '#xlpr.busy .xbusy{display:flex}',
+    // موبایل: تنظیمات به‌صورت کشوی تمام‌صفحه
+    '#xlpr .xtoggle{display:none}',
+    '@media (max-width:900px){',
+      // inset:0 است نه 46px — خودِ .xm از زیرِ نوارِ بالا شروع می‌شود
+      '#xlpr .xs{position:absolute;inset:0;width:100%;flex:none;z-index:4;display:none;',
+        'border-right:0;padding-bottom:40px}',
+      '#xlpr.side #xlpr-side,#xlpr.side .xs{display:block}',
+      '#xlpr .xm{position:relative}',
+      '#xlpr .xtoggle{display:inline-block}',
+    '}'
+  ].join('');
+
+  /* ── استایلی که داخلِ خودِ سندِ پیش‌نمایش می‌رود ─────────────────────────
+     (بعد از استایلِ خودِ گزارش می‌آید، پس با !important بر آن غالب است) */
+  function frameCss() {
+    return [
+      'html{background:#f3f2f1!important}',
+      'body{margin:0!important;padding:0!important;max-width:none!important;background:#f3f2f1!important}',
+      '#xlSrc{position:absolute!important;left:-200000px!important;top:0!important;visibility:hidden!important;',
+        'padding:0!important;margin:0!important;background:#fff}',
+      /* ⚠️ لنگرِ زوم باید «راست» باشد، نه «وسط»: سندِ گزارش rtl است، پس کادرِ
+         پهن‌ترِ زوم از لبهٔ راست به چپ باز می‌شود و با لنگرِ وسط، ورق روی
+         گوشی از سمتِ چپ بیرون می‌زد و بریده می‌شد. */
+      '#xlZoom{transform-origin:top right;padding:16px 0 26px}',
+      '#xlPages{display:flex;flex-direction:column;align-items:center;gap:16px}',
+      '.xpg-sheet{position:relative;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.28);overflow:hidden;flex:0 0 auto}',
+      '.xpg-content{position:absolute;overflow:hidden}',
+      '.xpg-scale{transform-origin:top right}',
+      /* direction:ltr تا «راست/وسط/چپ»ِ سربرگ دقیقاً همان‌جایی بنشیند که نامش
+         می‌گوید (سندِ گزارش rtl است و بدونِ این، جای راست و چپ عوض می‌شد) */
+      '.xpg-hf{position:absolute;display:flex;align-items:center;font-size:9pt;color:#333;',
+        'font-family:"Vazirmatn",Tahoma,sans-serif;gap:8px;direction:ltr}',
+      '.xpg-hf>span{flex:1 1 0;min-width:0;overflow:hidden;white-space:nowrap;direction:rtl}',
+      '.xpg-hf .c{text-align:center}.xpg-hf .l{text-align:left}.xpg-hf .r{text-align:right}',
+      // خط‌کشِ حاشیه و خطِ شکستِ ورق — فقط روی صفحه، نه روی کاغذ
+      '.xpg-guide{position:absolute;border:1px dashed #9aa0a6;pointer-events:none}',
+      '.xpg-num{position:absolute;left:0;bottom:-15px;font:600 10px "Segoe UI",Tahoma;color:#797775;direction:ltr}',
+      '@media print{',
+        'html,body{background:#fff!important}',
+        '#xlSrc{display:none!important}',
+        '#xlZoom{transform:none!important;padding:0!important}',
+        '#xlPages{display:block!important;gap:0!important}',
+        '.xpg-sheet{box-shadow:none!important;margin:0!important;break-after:page;page-break-after:always}',
+        '.xpg-sheet:last-child{break-after:auto;page-break-after:auto}',
+        '.xpg-guide,.xpg-num{display:none!important}',
+        /* ⚠️ _pdfDoc چند قاعدهٔ !important برای چاپ می‌گذارد (شکستنِ متنِ خانه‌ها).
+           این‌جا خنثی می‌شود، چون چیدمانِ ورق را همین کارگاه تعیین کرده و
+           پیش‌نمایش باید مو‌به‌مو همان چیزی باشد که چاپ می‌شود. */
+        'th,td{line-height:inherit!important}',
+      '}'
+    ].join('');
+  }
+
+  // ══ ساختِ پنجره ═════════════════════════════════════════════════════════
+  function sel(id, label, opts, val) {
+    var o = opts.map(function (p) {
+      return '<option value="' + esc(p[0]) + '"' + (String(p[0]) === String(val) ? ' selected' : '') + '>' + esc(p[1]) + '</option>';
+    }).join('');
+    return '<div class="xr"><label for="' + id + '">' + esc(label) + '</label><select id="' + id + '">' + o + '</select></div>';
+  }
+  function numRow(id, label, val, step) {
+    return '<div class="xr"><label for="' + id + '">' + esc(label) + '</label>' +
+      '<input type="number" id="' + id + '" value="' + esc(val) + '" step="' + (step || 1) + '"></div>';
+  }
+  function chk(id, label, on) {
+    return '<label class="xchk"><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '>' + esc(label) + '</label>';
+  }
+
+  function sidebarHtml() {
+    var mm = ' <span style="color:#797775">mm</span>';
+    var g = geo();
+    var papers = PAPER_ORDER.map(function (k) {
+      if (k === 'Custom') return ['Custom', 'دلخواه…'];
+      return [k, k + ' — ' + PAPERS[k][0] + ' × ' + PAPERS[k][1] + ' mm'];
+    });
+    return '' +
+      '<button type="button" class="xprint" id="xpr-print">🖨️ چاپ</button>' +
+      '<button type="button" class="xsave" id="xpr-save">⬇️ ذخیرهٔ فایلِ گزارش</button>' +
+
+      '<div class="xnote">چاپگر، تعدادِ کاغذِ سینی، دو-رو و کیفیت (DPI) را ویندوز تعیین می‌کند و در پنجرهٔ چاپ — که با زدنِ «چاپ» باز می‌شود — روی چاپگرِ پیش‌فرضِ وصل‌شده تنظیم است. هر چیزی که به <b>چیدمانِ ورق</b> مربوط است همین‌جا تعیین می‌شود و مو‌به‌مو همان چاپ می‌شود.</div>' +
+
+      '<div class="xg"><h4>نسخه‌ها</h4>' +
+        '<div class="xr"><label>تعداد</label><span class="xspin">' +
+          '<button type="button" id="xpr-cminus">−</button>' +
+          '<input type="number" id="xpr-copies" min="1" max="999" value="' + S.copies + '">' +
+          '<button type="button" id="xpr-cplus">+</button></span></div>' +
+        sel('xpr-collate', 'ترتیب', [['1', 'مرتب — ۱،۲،۳ / ۱،۲،۳'], ['0', 'نامرتب — ۱،۱ / ۲،۲']], S.collate ? '1' : '0') +
+      '</div>' +
+
+      '<div class="xg"><h4>چه چیزی چاپ شود</h4>' +
+        sel('xpr-what', 'محدوده', [['all', 'همهٔ گزارش'], ['current', 'فقط همین ورق'], ['range', 'بازهٔ ورق‌ها']], S.what) +
+        '<div class="x2" id="xpr-rangebox" style="' + (S.what === 'range' ? '' : 'display:none') + '">' +
+          '<div>' + numRow('xpr-from', 'از', S.from) + '</div>' +
+          '<div>' + numRow('xpr-to', 'تا', S.to) + '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="xg"><h4>ورق</h4>' +
+        sel('xpr-orient', 'جهت', [['portrait', 'ایستاده (Portrait)'], ['landscape', 'خوابیده (Landscape)']], S.orient) +
+        sel('xpr-paper', 'اندازه', papers, S.paper) +
+        '<div class="x2" id="xpr-custombox" style="' + (S.paper === 'Custom' ? '' : 'display:none') + '">' +
+          '<div>' + numRow('xpr-cw', 'عرض', S.cw, 0.1) + '</div>' +
+          '<div>' + numRow('xpr-ch', 'بلندی', S.ch, 0.1) + '</div>' +
+        '</div>' +
+        '<div class="xhint">ورقِ فعلی: ' + g.w.toFixed(1) + ' × ' + g.h.toFixed(1) + ' mm' + '</div>' +
+      '</div>' +
+
+      '<div class="xg"><h4>حاشیه‌ها</h4>' +
+        sel('xpr-margin', 'حالت', [['normal', 'عادی'], ['narrow', 'باریک'], ['wide', 'پهن'], ['custom', 'دلخواه…']], S.margin) +
+        '<div id="xpr-marginbox" style="' + (S.margin === 'custom' ? '' : 'display:none') + '">' +
+          '<div class="x2"><div>' + numRow('xpr-mt', 'بالا', S.mt, 0.1) + '</div><div>' + numRow('xpr-mb', 'پایین', S.mb, 0.1) + '</div></div>' +
+          '<div class="x2"><div>' + numRow('xpr-ml', 'چپ', S.ml, 0.1) + '</div><div>' + numRow('xpr-mr', 'راست', S.mr, 0.1) + '</div></div>' +
+          '<div class="x2"><div>' + numRow('xpr-mh', 'سربرگ', S.mh, 0.1) + '</div><div>' + numRow('xpr-mf', 'پاورقی', S.mf, 0.1) + '</div></div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="xg"><h4>مقیاس</h4>' +
+        sel('xpr-scale', 'حالت', [
+          ['none', 'بدون مقیاس'],
+          ['fitCols', 'جا دادن همهٔ ستون‌ها در یک ورق'],
+          ['fitRows', 'جا دادن همهٔ سطرها در یک ورق'],
+          ['fitAll', 'جا دادن کلِ گزارش در یک ورق'],
+          ['custom', 'درصدِ دلخواه…']], S.scaleMode) +
+        '<div class="xr" id="xpr-pctbox" style="' + (S.scaleMode === 'custom' ? '' : 'display:none') + '">' +
+          '<label>درصد</label><span class="xspin">' +
+            '<button type="button" id="xpr-pminus">−</button>' +
+            '<input type="number" id="xpr-pct" min="10" max="400" value="' + S.scalePct + '">' +
+            '<button type="button" id="xpr-pplus">+</button></span></div>' +
+        '<div class="xhint" id="xpr-scaleinfo"></div>' +
+      '</div>' +
+
+      '<div class="xg"><h4>سربرگ و پاورقی</h4>' +
+        '<div class="xr"><label>سربرگ راست</label><input type="text" id="xpr-hdrR" value="' + esc(S.hdrR) + '"></div>' +
+        '<div class="xr"><label>وسط</label><input type="text" id="xpr-hdrC" value="' + esc(S.hdrC) + '"></div>' +
+        '<div class="xr"><label>چپ</label><input type="text" id="xpr-hdrL" value="' + esc(S.hdrL) + '"></div>' +
+        '<div class="xr"><label>پاورقی راست</label><input type="text" id="xpr-ftrR" value="' + esc(S.ftrR) + '"></div>' +
+        '<div class="xr"><label>وسط</label><input type="text" id="xpr-ftrC" value="' + esc(S.ftrC) + '"></div>' +
+        '<div class="xr"><label>چپ</label><input type="text" id="xpr-ftrL" value="' + esc(S.ftrL) + '"></div>' +
+        '<div class="xtok" id="xpr-tokens">' +
+          '<button type="button" data-t="&[Page]">شمارهٔ ورق</button>' +
+          '<button type="button" data-t="&[Pages]">تعداد ورق</button>' +
+          '<button type="button" data-t="&[Date]">تاریخ</button>' +
+          '<button type="button" data-t="&[Time]">ساعت</button>' +
+          '<button type="button" data-t="&[File]">نامِ گزارش</button>' +
+        '</div>' +
+        '<div class="xhint">روی کادرِ دلخواه کلیک کنید، بعد یکی از این‌ها را بزنید تا همان‌جا افزوده شود.</div>' +
+      '</div>' +
+
+      '<div class="xg"><h4>جدول و رنگ</h4>' +
+        chk('xpr-grid', 'چاپِ خطوطِ جدول', S.gridlines) +
+        chk('xpr-rep', 'تکرارِ سطرِ عنوان در همهٔ ورق‌ها', S.repeatHead) +
+        sel('xpr-color', 'رنگ', [['color', 'رنگی'], ['gray', 'خاکستری'], ['bw', 'سیاه و سفید']], S.color) +
+      '</div>' +
+
+      '<div class="xg"><h4>بازگردانی</h4>' +
+        '<button type="button" class="xsave" style="margin:0" id="xpr-reset">↺ برگرداندن به تنظیماتِ پیش‌فرض</button>' +
+      '</div>';
+  }
+
+  function shell() {
+    if (!document.getElementById('xlprCss')) {
+      var st = document.createElement('style');
+      st.id = 'xlprCss'; st.textContent = CSS;
+      document.head.appendChild(st);
+    }
+    ov = document.createElement('div');
+    ov.id = 'xlpr';
+    ov.innerHTML =
+      '<div class="xt">' +
+        '<b>🖨️ چاپ — ' + esc(docTitle) + '</b>' +
+        '<span class="xt-r">' +
+          '<button type="button" class="xtb xtoggle" id="xpr-side">⚙ تنظیمات</button>' +
+          '<button type="button" class="xtb" id="xpr-close">✕ بستن</button>' +
+        '</span>' +
+      '</div>' +
+      '<div class="xm">' +
+        '<div class="xs" id="xpr-sidebar"></div>' +
+        '<div class="xp">' +
+          '<div class="xpv"><iframe id="xprFrame" title="پیش‌نمایش چاپ"></iframe>' +
+            '<div class="xbusy">⏳ در حالِ چیدنِ ورق‌ها…</div></div>' +
+          '<div class="xb">' +
+            '<span class="g">' +
+              '<button type="button" class="xnav" id="xpr-prev" title="ورق قبل">▶</button>' +
+              '<span class="xpg" id="xpr-pageno">۱ از ۱</span>' +
+              '<button type="button" class="xnav" id="xpr-next" title="ورق بعد">◀</button>' +
+            '</span>' +
+            '<span class="g">' +
+              '<label style="font-size:0.75rem;color:#605e5c">زوم</label>' +
+              '<select class="xzoom" id="xpr-zoom">' +
+                '<option value="fit">اندازهٔ پنجره</option>' +
+                '<option value="0.25">۲۵٪</option><option value="0.5">۵۰٪</option>' +
+                '<option value="0.75">۷۵٪</option><option value="1">۱۰۰٪</option>' +
+                '<option value="1.5">۱۵۰٪</option><option value="2">۲۰۰٪</option>' +
+              '</select>' +
+            '</span>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(ov);
+    document.getElementById('xpr-sidebar').innerHTML = sidebarHtml();
+    var z = document.getElementById('xpr-zoom'); if (z) z.value = String(S.zoom);
+    frame = document.getElementById('xprFrame');
+  }
+
+  // ══ سندِ پیش‌نمایش ═══════════════════════════════════════════════════════
+  function writeFrame(cb) {
+    var doc = '<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8">' +
+      srcHead + '<style>' + frameCss() + '</style></head>' +
+      '<body><div id="xlSrc"></div><div id="xlZoom"><div id="xlPages"></div></div></body></html>';
+    frame.onload = function () {
+      idoc = frame.contentDocument;
+      try { idoc.getElementById('xlSrc').innerHTML = srcBody; } catch (e) {}
+      ready = true;
+      cb && cb();
+    };
+    frame.srcdoc = doc;
+  }
+
+  // اندازه‌گیریِ یک‌بارهٔ همهٔ بلوک‌ها و سطرها در عرضِ داده‌شده
+  function measure(layoutW) {
+    var src = idoc.getElementById('xlSrc');
+    src.style.width = layoutW + 'px';
+    var out = [], kids = src.children;
+    for (var i = 0; i < kids.length; i++) {
+      var el = kids[i];
+      if (el.tagName === 'TABLE') {
+        var info = { type: 'table', el: el, head: 0, foot: 0, rows: [] };
+        if (el.tHead) info.head = el.tHead.getBoundingClientRect().height;
+        if (el.tFoot) info.foot = el.tFoot.getBoundingClientRect().height;
+        for (var b = 0; b < el.tBodies.length; b++) {
+          var rs = el.tBodies[b].rows;
+          for (var r = 0; r < rs.length; r++) info.rows.push({ tr: rs[r], h: rs[r].getBoundingClientRect().height });
+        }
+        out.push(info);
+      } else {
+        var cs = frame.contentWindow.getComputedStyle(el);
+        out.push({ type: 'block', el: el,
+          h: el.getBoundingClientRect().height + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0) });
+      }
+    }
+    return out;
+  }
+  function totalHeight(blocks) {
+    var t = 0;
+    blocks.forEach(function (b) {
+      if (b.type === 'block') t += b.h;
+      else { t += b.head + b.foot; b.rows.forEach(function (r) { t += r.h; }); }
+    });
+    return t;
+  }
+  /* عرضی که محتوا در عرضِ داده‌شده واقعاً اشغال می‌کند.
+     ⚠️ با «عرضِ خیلی زیاد» اندازه نگیرید: جدول‌های این برنامه width:100% دارند و
+     هر عرضی به آن‌ها بدهید، همان را پر می‌کنند — پس هر عددی بی‌معنا می‌شود.
+     معیارِ درست این است: در عرضِ L بچین و ببین آیا از L بیرون می‌زند یا نه. */
+  function naturalWidth(atW) {
+    var src = idoc.getElementById('xlSrc');
+    src.style.width = atW + 'px';
+    var w = src.scrollWidth || 0, kids = src.children;
+    for (var i = 0; i < kids.length; i++) w = Math.max(w, kids[i].scrollWidth || 0);
+    /* ⚠️ جدولِ با عرضِ ستونِ درصدی (table-layout:fixed) هیچ‌وقت «بیرون نمی‌زند» —
+       به‌جایش نوشتهٔ خانه را می‌بُرد. پس تنها اندازه‌گیریِ عرضِ جدول کافی نیست؛
+       باید دید کدام خانه بریده شده و جدول چند برابر باید پهن‌تر باشد تا هیچ
+       خانه‌ای بریده نشود. همین است که «جا دادن همهٔ ستون‌ها» را واقعی می‌کند. */
+    var cells = src.querySelectorAll('th,td'), ratio = 1;
+    for (var c = 0; c < cells.length; c++) {
+      var el = cells[c], cw = el.clientWidth;
+      if (cw > 4 && el.scrollWidth > cw) ratio = Math.max(ratio, el.scrollWidth / cw);
+    }
+    if (ratio > 1.001) w = Math.max(w, atW * Math.min(ratio, 6));
+    return Math.max(w, 1);
+  }
+  // بزرگ‌ترین مقیاسی که همهٔ ستون‌ها را داخلِ عرضِ ورق نگه می‌دارد
+  function fitColsScale(cwPx) {
+    var s = 1;
+    for (var k = 0; k < 5; k++) {
+      var L = cwPx / s;
+      var nat = naturalWidth(L);
+      if (nat <= L + 1) break;
+      var ns = Math.max(0.1, Math.min(1, cwPx / nat));
+      if (Math.abs(ns - s) < 0.004) { s = ns; break; }
+      s = ns;
+    }
+    return Math.max(0.1, Math.min(1, s));
+  }
+
+  function pickScale(cwPx, chPx) {
+    if (S.scaleMode === 'none') return 1;
+    if (S.scaleMode === 'custom') return num(S.scalePct, 10, 400, 100) / 100;
+    var sc = 1;
+    if (S.scaleMode === 'fitCols' || S.scaleMode === 'fitAll') sc = fitColsScale(cwPx);
+    if (S.scaleMode === 'fitRows' || S.scaleMode === 'fitAll') {
+      // جست‌وجوی دودویی: بزرگ‌ترین مقیاسی که کلِ گزارش را در یک ورق جا می‌دهد
+      var lo = 0.08, hi = sc, best = 0.08;
+      for (var k = 0; k < 7; k++) {
+        var mid = (lo + hi) / 2;
+        var h = totalHeight(measure(cwPx / mid));
+        if (h * mid <= chPx) { best = mid; lo = mid; } else { hi = mid; }
+      }
+      sc = best;
+    }
+    return Math.max(0.08, Math.min(4, sc));
+  }
+
+  /* بریدنِ محتوا به ورق‌ها — همان کاری که اکسل می‌کند، ولی این‌جا با اندازه‌گیریِ
+     واقعیِ هر سطر. جدولی که جا نشود، سطر‌به‌سطر بریده می‌شود و سرستونش (در صورت
+     روشن بودنِ «تکرارِ سطرِ عنوان») سرِ ورقِ بعدی دوباره می‌آید. */
+  function slice(blocks, layoutH) {
+    var pages = [[]], used = 0;
+    function nl() { pages.push([]); used = 0; }
+    function cur() { return pages[pages.length - 1]; }
+    blocks.forEach(function (bl) {
+      if (bl.type === 'block') {
+        if (used > 0 && used + bl.h > layoutH) nl();
+        cur().push({ kind: 'block', el: bl.el });
+        used += bl.h;
+        return;
+      }
+      var i = 0, rows = bl.rows;
+      if (!rows.length) {                       // جدولِ بی‌ردیف
+        if (used > 0 && used + bl.head + bl.foot > layoutH) nl();
+        cur().push({ kind: 'table', el: bl.el, head: true, rows: [], foot: true });
+        used += bl.head + bl.foot;
+        return;
+      }
+      while (i < rows.length) {
+        var first = (i === 0);
+        var withHead = S.repeatHead || first;
+        var hSum = withHead ? bl.head : 0;
+        var part = [];
+        while (i < rows.length) {
+          var isLastRow = (i === rows.length - 1);
+          var need = rows[i].h + (isLastRow ? bl.foot : 0);
+          if (part.length && used + hSum + need > layoutH) break;
+          part.push(rows[i]); hSum += rows[i].h; i++;
+        }
+        if (!part.length) { part.push(rows[i]); hSum += rows[i].h; i++; }   // سطرِ بلندتر از ورق
+        var last = (i >= rows.length);
+        cur().push({ kind: 'table', el: bl.el, head: withHead, rows: part, foot: last });
+        used += hSum + (last ? bl.foot : 0);
+        if (!last) nl();
+      }
+    });
+    if (pages.length > 1 && !pages[pages.length - 1].length) pages.pop();
+    return pages;
+  }
+
+  function buildTable(item) {
+    var t = item.el.cloneNode(false);
+    var cg = item.el.querySelector('colgroup');
+    if (cg) t.appendChild(cg.cloneNode(true));
+    if (item.head && item.el.tHead) t.appendChild(item.el.tHead.cloneNode(true));
+    var tb = idoc.createElement('tbody');
+    item.rows.forEach(function (r) { tb.appendChild(r.tr.cloneNode(true)); });
+    t.appendChild(tb);
+    if (item.foot && item.el.tFoot) t.appendChild(item.el.tFoot.cloneNode(true));
+    return t;
+  }
+
+  function render() {
+    if (!ready || !idoc) return;
+    var g = geo();
+    var pwPx = g.w * MM, phPx = g.h * MM;
+    var cwPx = g.cw * MM, chPx = g.ch * MM;
+    var s = pickScale(cwPx, chPx);
+    lastScale = s;
+    var layoutW = cwPx / s, layoutH = (chPx / s) - 0.5;
+    overflowWarn = (naturalWidth(layoutW) > layoutW + 2);
+    var blocks = measure(layoutW);
+    var pages = slice(blocks, layoutH);
+    pageCount = pages.length;
+    if (curPage > pageCount) curPage = pageCount;
+
+    var host = idoc.getElementById('xlPages');
+    host.textContent = '';
+    var filter = S.color === 'gray' ? 'grayscale(1)' : (S.color === 'bw' ? 'grayscale(1) contrast(3.2)' : '');
+    pages.forEach(function (items, pi) {
+      host.appendChild(sheet(items, pi + 1, pages.length, g, pwPx, phPx, cwPx, chPx, layoutW, s, filter, true));
+    });
+    applyDocStyle();
+    zoom();
+    paint();
+  }
+
+  // ساختِ یک ورق
+  function sheet(items, no, total, g, pwPx, phPx, cwPx, chPx, layoutW, s, filter, guides) {
+    var sh = idoc.createElement('div');
+    sh.className = 'xpg-sheet';
+    sh.style.width = pwPx + 'px';
+    sh.style.height = phPx + 'px';
+    if (filter) sh.style.filter = filter;
+
+    var band = function (cls, L, C, R, css) {
+      var d = idoc.createElement('div');
+      d.className = 'xpg-hf ' + cls;
+      d.style.cssText = css;
+      d.innerHTML = '<span class="l">' + hfText(L, no, total) + '</span>' +
+                    '<span class="c">' + hfText(C, no, total) + '</span>' +
+                    '<span class="r">' + hfText(R, no, total) + '</span>';
+      return d;
+    };
+    if (S.hdrL || S.hdrC || S.hdrR) {
+      sh.appendChild(band('h', S.hdrL, S.hdrC, S.hdrR,
+        'top:' + (g.mh * MM) + 'px;left:' + (g.ml * MM) + 'px;right:' + (g.mr * MM) + 'px;height:14px'));
+    }
+    if (S.ftrL || S.ftrC || S.ftrR) {
+      sh.appendChild(band('f', S.ftrL, S.ftrC, S.ftrR,
+        'bottom:' + (g.mf * MM) + 'px;left:' + (g.ml * MM) + 'px;right:' + (g.mr * MM) + 'px;height:14px'));
+    }
+
+    var box = idoc.createElement('div');
+    box.className = 'xpg-content';
+    box.style.cssText = 'top:' + (g.mt * MM) + 'px;right:' + (g.mr * MM) + 'px;' +
+      'width:' + cwPx + 'px;height:' + chPx + 'px';
+    var inner = idoc.createElement('div');
+    inner.className = 'xpg-scale';
+    inner.style.width = layoutW + 'px';
+    inner.style.transform = 'scale(' + s + ')';
+    items.forEach(function (it) {
+      inner.appendChild(it.kind === 'table' ? buildTable(it) : it.el.cloneNode(true));
+    });
+    box.appendChild(inner);
+    sh.appendChild(box);
+
+    if (guides) {
+      var gd = idoc.createElement('div');
+      gd.className = 'xpg-guide';
+      gd.style.cssText = 'top:' + (g.mt * MM) + 'px;right:' + (g.mr * MM) + 'px;' +
+        'width:' + cwPx + 'px;height:' + chPx + 'px';
+      sh.appendChild(gd);
+      var nm = idoc.createElement('div');
+      nm.className = 'xpg-num';
+      nm.textContent = no + ' / ' + total;
+      sh.appendChild(nm);
+    }
+    return sh;
+  }
+
+  // خطوطِ جدول + @page — روی خودِ سندِ پیش‌نمایش
+  function applyDocStyle() {
+    var g = geo();
+    var st = idoc.getElementById('xlprDyn');
+    if (!st) { st = idoc.createElement('style'); st.id = 'xlprDyn'; idoc.head.appendChild(st); }
+    st.textContent =
+      '@page{size:' + g.w + 'mm ' + g.h + 'mm;margin:0}' +
+      (S.gridlines ? '' : '.xpg-scale th,.xpg-scale td{border-color:transparent!important}');
+  }
+
+  function zoom() {
+    var z = idoc.getElementById('xlZoom');
+    if (!z) return;
+    var g = geo(), pwPx = g.w * MM;
+    var k;
+    if (S.zoom === 'fit') {
+      var avail = (frame.clientWidth || 800) - 40;
+      k = Math.min(1, avail / pwPx);
+    } else k = parseFloat(S.zoom) || 1;
+    z.style.transform = 'scale(' + k + ')';
+    z.style.width = (100 / k) + '%';
+    z.style.marginLeft = z.style.marginRight = 'auto';
+  }
+
+  function faNum(n) {
+    return (typeof n2fa === 'function') ? n2fa(n) : String(n);
+  }
+  function paint() {
+    var el = document.getElementById('xpr-pageno');
+    if (el) el.textContent = faNum(curPage) + ' از ' + faNum(pageCount);
+    var p = document.getElementById('xpr-prev'), n = document.getElementById('xpr-next');
+    if (p) p.disabled = curPage <= 1;
+    if (n) n.disabled = curPage >= pageCount;
+    var info = document.getElementById('xpr-scaleinfo');
+    if (info) {
+      info.innerHTML = 'مقیاسِ اعمال‌شده: <b>' + Math.round(lastScale * 100) + '٪</b> · ' +
+        'تعدادِ ورق: <b>' + faNum(pageCount) + '</b>' +
+        (overflowWarn ? '<br><span style="color:#a4262c">⚠ جدول از عرضِ ورق پهن‌تر است و لبه‌اش بریده می‌شود — «جا دادن همهٔ ستون‌ها» یا ورقِ خوابیده را بزنید.</span>' : '');
+    }
+    var f = document.getElementById('xpr-from'), t = document.getElementById('xpr-to');
+    if (f) f.max = pageCount;
+    if (t) { t.max = pageCount; if (!S.to || S.to > pageCount) { S.to = pageCount; t.value = pageCount; } }
+  }
+
+  function goto(n) {
+    curPage = Math.min(pageCount, Math.max(1, n));
+    var sh = idoc && idoc.querySelectorAll('.xpg-sheet')[curPage - 1];
+    if (sh) sh.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    paint();
+  }
+
+  // ══ چاپ ════════════════════════════════════════════════════════════════
+  /* ورق‌های چاپ از روی همان ورق‌های پیش‌نمایش ساخته می‌شوند (بازه + تعدادِ نسخه
+     + مرتب/نامرتب)، بعد window.print() صدا زده می‌شود. پنجرهٔ چاپِ سیستم — که
+     چاپگرِ پیش‌فرضِ وصل‌شده در آن انتخاب است — تنها جایی است که مرورگر اجازهٔ
+     رفتن به سخت‌افزار را می‌دهد. */
+  function doPrint() {
+    if (!idoc) return;
+    var host = idoc.getElementById('xlPages');
+    var all = Array.prototype.slice.call(host.children);
+    var from = 1, to = all.length;
+    if (S.what === 'current') { from = to = curPage; }
+    else if (S.what === 'range') {
+      from = num(S.from, 1, all.length, 1);
+      to = num(S.to, 1, all.length, all.length);
+      if (to < from) { var t0 = from; from = to; to = t0; }
+    }
+    var picked = all.slice(from - 1, to);
+    if (!picked.length) { try { showToast('هیچ ورقی در این بازه نیست', '#e53e3e'); } catch (e) {} return; }
+    var copies = num(S.copies, 1, 999, 1);
+
+    var order = [];
+    if (copies <= 1) order = picked.slice();
+    else if (S.collate) { for (var c = 0; c < copies; c++) picked.forEach(function (p) { order.push(p); }); }
+    else picked.forEach(function (p) { for (var c2 = 0; c2 < copies; c2++) order.push(p); });
+
+    var restore = all;
+    host.textContent = '';
+    order.forEach(function (p) { host.appendChild(p.cloneNode(true)); });
+
+    var back = function () {
+      host.textContent = '';
+      restore.forEach(function (p) { host.appendChild(p); });
+      zoom();
+      try { frame.contentWindow.removeEventListener('afterprint', back); } catch (e) {}
+    };
+    try { frame.contentWindow.addEventListener('afterprint', back); } catch (e) {}
+    try {
+      frame.contentWindow.focus();
+      frame.contentWindow.print();
+    } catch (e) {
+      try { showToast('چاپ از این دستگاه ممکن نشد', '#e53e3e'); } catch (e2) {}
+    }
+    setTimeout(back, 1500);       // مرورگرهایی که afterprint نمی‌دهند
+  }
+
+  // ══ رویدادها ═══════════════════════════════════════════════════════════
+  function schedule() {
+    if (buildTimer) clearTimeout(buildTimer);
+    ov.classList.add('busy');
+    buildTimer = setTimeout(function () {
+      buildTimer = null;
+      try { render(); } catch (e) { }
+      ov.classList.remove('busy');
+    }, 90);
+  }
+  function on(id, ev, fn) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener(ev, fn);
+  }
+  function val(id) { var e = document.getElementById(id); return e ? e.value : ''; }
+  function show(id, yes) { var e = document.getElementById(id); if (e) e.style.display = yes ? '' : 'none'; }
+
+  function wire() {
+    on('xpr-close', 'click', close);
+    on('xpr-side', 'click', function () { ov.classList.toggle('side'); });
+    on('xpr-print', 'click', doPrint);
+    on('xpr-save', 'click', function () {
+      try { _pumpDocSave(_pdfInlineFont(fullDoc()), docTitle); } catch (e) {}
+    });
+    on('xpr-reset', 'click', function () {
+      S = JSON.parse(JSON.stringify(DEF)); save();
+      document.getElementById('xpr-sidebar').innerHTML = sidebarHtml();
+      var z = document.getElementById('xpr-zoom'); if (z) z.value = String(S.zoom);
+      wireSidebar(); schedule();
+    });
+    on('xpr-prev', 'click', function () { goto(curPage - 1); });
+    on('xpr-next', 'click', function () { goto(curPage + 1); });
+    on('xpr-zoom', 'change', function () { S.zoom = val('xpr-zoom'); save(); zoom(); });
+    wireSidebar();
+    window.addEventListener('resize', zoom);
+  }
+
+  function wireSidebar() {
+    var spin = function (btnId, inpId, d, lo, hi, key) {
+      on(btnId, 'click', function () {
+        var e = document.getElementById(inpId);
+        e.value = num(parseFloat(e.value) + d, lo, hi, DEF[key]);
+        S[key] = num(e.value, lo, hi, DEF[key]); save(); schedule();
+      });
+    };
+    spin('xpr-cminus', 'xpr-copies', -1, 1, 999, 'copies');
+    spin('xpr-cplus', 'xpr-copies', 1, 1, 999, 'copies');
+    spin('xpr-pminus', 'xpr-pct', -5, 10, 400, 'scalePct');
+    spin('xpr-pplus', 'xpr-pct', 5, 10, 400, 'scalePct');
+
+    on('xpr-copies', 'input', function () { S.copies = num(val('xpr-copies'), 1, 999, 1); save(); });
+    on('xpr-collate', 'change', function () { S.collate = val('xpr-collate') === '1'; save(); });
+    on('xpr-what', 'change', function () {
+      S.what = val('xpr-what'); show('xpr-rangebox', S.what === 'range'); save();
+    });
+    on('xpr-from', 'input', function () { S.from = num(val('xpr-from'), 1, 9999, 1); save(); });
+    on('xpr-to', 'input', function () { S.to = num(val('xpr-to'), 1, 9999, 1); save(); });
+
+    on('xpr-orient', 'change', function () { S.orient = val('xpr-orient'); save(); schedule(); });
+    on('xpr-paper', 'change', function () {
+      S.paper = val('xpr-paper');
+      show('xpr-custombox', S.paper === 'Custom');
+      save(); schedule();
+    });
+    on('xpr-cw', 'input', function () { S.cw = num(val('xpr-cw'), 30, 2000, 210); save(); schedule(); });
+    on('xpr-ch', 'input', function () { S.ch = num(val('xpr-ch'), 30, 2000, 297); save(); schedule(); });
+
+    on('xpr-margin', 'change', function () {
+      S.margin = val('xpr-margin');
+      var m = MARGINS[S.margin];
+      if (m) { S.mt = m.t; S.mb = m.b; S.ml = m.l; S.mr = m.r; S.mh = m.h; S.mf = m.f; }
+      show('xpr-marginbox', S.margin === 'custom');
+      ['mt', 'mb', 'ml', 'mr', 'mh', 'mf'].forEach(function (k) {
+        var e = document.getElementById('xpr-' + k); if (e) e.value = S[k];
+      });
+      save(); schedule();
+    });
+    ['mt', 'mb', 'ml', 'mr', 'mh', 'mf'].forEach(function (k) {
+      on('xpr-' + k, 'input', function () { S[k] = num(val('xpr-' + k), 0, 100, DEF[k]); save(); schedule(); });
+    });
+
+    on('xpr-scale', 'change', function () {
+      S.scaleMode = val('xpr-scale'); show('xpr-pctbox', S.scaleMode === 'custom'); save(); schedule();
+    });
+    on('xpr-pct', 'input', function () { S.scalePct = num(val('xpr-pct'), 10, 400, 100); save(); schedule(); });
+
+    ['hdrL', 'hdrC', 'hdrR', 'ftrL', 'ftrC', 'ftrR'].forEach(function (k) {
+      on('xpr-' + k, 'input', function () { S[k] = val('xpr-' + k); save(); schedule(); });
+    });
+    var tk = document.getElementById('xpr-tokens');
+    if (tk) tk.addEventListener('mousedown', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      e.preventDefault();
+      var last = tk.__last || document.getElementById('xpr-ftrC');
+      if (!last) return;
+      last.value = (last.value || '') + b.getAttribute('data-t');
+      last.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    ['hdrL', 'hdrC', 'hdrR', 'ftrL', 'ftrC', 'ftrR'].forEach(function (k) {
+      on('xpr-' + k, 'focus', function () { if (tk) tk.__last = document.getElementById('xpr-' + k); });
+    });
+
+    on('xpr-grid', 'change', function () { S.gridlines = document.getElementById('xpr-grid').checked; save(); schedule(); });
+    on('xpr-rep', 'change', function () { S.repeatHead = document.getElementById('xpr-rep').checked; save(); schedule(); });
+    on('xpr-color', 'change', function () { S.color = val('xpr-color'); save(); schedule(); });
+  }
+
+  // سندِ کامل برای «ذخیرهٔ فایل» — همان گزارشِ اصلی، دست‌نخورده
+  function fullDoc() {
+    return '<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><title>' +
+      esc(docTitle) + '</title>' + srcHead + '</head><body>' + srcBody + '</body></html>';
+  }
+
+  function close() {
+    try { window.removeEventListener('resize', zoom); } catch (e) {}
+    if (ov) { try { _pumpPopEsc(ov.__esc); } catch (e) {} ov.remove(); }
+    ov = null; frame = null; idoc = null; ready = false;
+    try { document.body.style.overflow = ''; } catch (e) {}
+  }
+
+  // ══ ورودیِ عمومی ════════════════════════════════════════════════════════
+  window.pumpPrintStudio = function (doc, title) {
+    var d;
+    try { d = new DOMParser().parseFromString(String(doc || ''), 'text/html'); } catch (e) { return false; }
+    if (!d || !d.body) return false;
+    // اسکریپتِ «چاپِ خودکار» و هر اسکریپتِ دیگری از سند برداشته می‌شود
+    Array.prototype.slice.call(d.querySelectorAll('script')).forEach(function (s) { s.remove(); });
+    srcBody = d.body.innerHTML;
+    srcHead = Array.prototype.slice.call(d.head.children).filter(function (n) {
+      return /^(STYLE|LINK)$/.test(n.tagName);
+    }).map(function (n) {
+      if (n.tagName !== 'STYLE') return n.outerHTML;
+      return '<style>' + stripBlocks(n.textContent || '') + '</style>';
+    }).join('');
+    docTitle = title || (d.title || 'گزارش');
+
+    if (document.getElementById('xlpr')) close();
+    S = load();
+    curPage = 1; pageCount = 1; ready = false;
+    shell();
+    wire();
+    ov.__esc = close;
+    try { _pumpPushEsc(ov.__esc); } catch (e) {}
+    try { document.body.style.overflow = 'hidden'; } catch (e) {}
+    ov.classList.add('busy');
+    writeFrame(function () {
+      try { render(); } catch (e) {}
+      ov && ov.classList.remove('busy');
+    });
+    return true;
+  };
+})();
+
+/* رفتنِ مستقیم به پنجرهٔ چاپ.
+   ⚠️ اول کارگاهِ چاپ (پنجرهٔ سبکِ اکسل) امتحان می‌شود؛ اگر به هر دلیل بالا
+   نیامد، همان مسیرِ قدیمی — که سال‌ها کار کرده — دست‌نخورده اجرا می‌شود. */
 function _pumpDocPrint(doc, title) {
+  try { if (window.pumpPrintStudio && window.pumpPrintStudio(doc, title)) return true; } catch (e) {}
+  return _pumpDocPrintLegacy(doc, title);
+}
+function _pumpDocPrintLegacy(doc, title) {
   if (!_pumpIsMobileShell()) {
     let w = null;
     try { w = window.open('', '_blank'); } catch (e) {}
@@ -33894,12 +34825,15 @@ h1{font-size:1.25rem;font-weight:900;color:#805ad5;border-bottom:2px solid #805a
 /* ── جدول ─────────────────────────────────────────────────────────────────
    table-layout:fixed + عرضِ صریحِ هر ستون + nowrap: هیچ سرستونی («نرخ» → «نر/خ»)
    و هیچ عددی («$ 25,502.9» → دو خط) دیگر وسطِ خودش نمی‌شکند. */
-table{width:100%;border-collapse:collapse;font-size:0.7rem;table-layout:fixed}
-th{background:#2d3748;color:#e2e8f0;padding:7px 3px;text-align:center;font-weight:700;font-size:0.6rem;white-space:nowrap;line-height:1.3}
+/* ⚠️ اندازه‌ها به px است، نه rem: لایهٔ مشترکِ چاپ روی ریشه ۱۸ پیکسل می‌گذارد
+   و با rem همهٔ این عددها یک‌ونیم برابر می‌شدند و نوشتهٔ خانه‌ها — که عرضِ ستونشان
+   درصدی و ثابت است — بریده می‌شد. با px، چیدمان از فونتِ ریشه مستقل می‌ماند. */
+table{width:100%;border-collapse:collapse;font-size:9.5px;table-layout:fixed}
+th{background:#2d3748;color:#e2e8f0;padding:7px 3px;text-align:center;font-weight:700;font-size:8.6px;white-space:nowrap;line-height:1.3}
 td{padding:5px 4px;border-bottom:1px solid #e2e8f0;text-align:center;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 tr:nth-child(even) td{background:#faf5ff}
-td .sub{display:block;font-size:0.6rem;font-weight:800;opacity:.92}
-td .u{font-size:0.62rem;font-weight:800;color:#2b6cb0}
+td .sub{display:block;font-size:8.2px;font-weight:800;opacity:.92}
+td .u{font-size:8.6px;font-weight:800;color:#2b6cb0}
 /* نامِ طولانی به‌جای بریده‌شدن، سرِ فاصله به خطِ بعد می‌رود (هیچ‌وقت وسطِ کلمه) */
 td.nm{white-space:normal;word-break:keep-all;overflow-wrap:normal}
 tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 4px;text-align:center}
@@ -33990,12 +34924,15 @@ h1{font-size:1.25rem;font-weight:900;color:#805ad5;border-bottom:2px solid #805a
 .sum-box{min-width:0;min-height:74px;background:#faf5ff;border:1px solid #e9d8fd;border-radius:8px;padding:10px;text-align:center;display:flex;flex-direction:column;justify-content:center;gap:4px;box-sizing:border-box}
 .sum-box .l{font-size:0.62rem;color:#718096;line-height:1.3}.sum-box .v{font-size:1.05rem;font-weight:900;white-space:nowrap}
 /* عرضِ ثابتِ ستون‌ها + nowrap: نه سرستون می‌شکند نه عدد (همان قاعدهٔ پی‌دی‌افِ حسابِ زنده) */
-table{width:100%;border-collapse:collapse;font-size:0.7rem;table-layout:fixed}
-th{background:#2d3748;color:#e2e8f0;padding:7px 3px;text-align:center;font-weight:700;font-size:0.6rem;white-space:nowrap;line-height:1.3}
+/* ⚠️ اندازه‌ها به px است، نه rem: لایهٔ مشترکِ چاپ روی ریشه ۱۸ پیکسل می‌گذارد
+   و با rem همهٔ این عددها یک‌ونیم برابر می‌شدند و نوشتهٔ خانه‌ها — که عرضِ ستونشان
+   درصدی و ثابت است — بریده می‌شد. با px، چیدمان از فونتِ ریشه مستقل می‌ماند. */
+table{width:100%;border-collapse:collapse;font-size:9.5px;table-layout:fixed}
+th{background:#2d3748;color:#e2e8f0;padding:7px 3px;text-align:center;font-weight:700;font-size:8.6px;white-space:nowrap;line-height:1.3}
 td{padding:5px 4px;border-bottom:1px solid #e2e8f0;text-align:center;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 tr:nth-child(even) td{background:#faf5ff}
-td .sub{display:block;font-size:0.6rem;font-weight:800;opacity:.92}
-td .u{font-size:0.62rem;font-weight:800;color:#2b6cb0}
+td .sub{display:block;font-size:8.2px;font-weight:800;opacity:.92}
+td .u{font-size:8.6px;font-weight:800;color:#2b6cb0}
 td.nm{white-space:normal;word-break:keep-all;overflow-wrap:normal}
 tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 4px;text-align:center}
 tfoot td .sub{color:#cbd5e0}
@@ -43778,7 +44715,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.332';
+const APP_VERSION = '2.9.333';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
