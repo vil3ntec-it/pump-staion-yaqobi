@@ -18788,13 +18788,15 @@ body.boot-viewer #bootViewerSplash{
       <div id="safe-month-tabs" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px"></div>
       <!-- خلاصه -->
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
-        <div class="stat-box">
-          <div class="stat-label">💵 جمله بردگی</div>
-          <div class="stat-value" style="color:var(--green)" id="safe-total-bardagi">0</div>
-        </div>
+        <!-- جای این دو کادر عمداً عوض شده (خواستهٔ صاحب ریپو): «ماندگی» اول، «بردگی» دوم.
+             هر کادر با برچسب، رنگ و id خودش جابه‌جا شد تا هیچ منطقی دست نخورد. -->
         <div class="stat-box">
           <div class="stat-label">🏛️ جمله ماندگی</div>
           <div class="stat-value" style="color:var(--blue)" id="safe-total-mandagi">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">💵 جمله بردگی</div>
+          <div class="stat-value" style="color:var(--green)" id="safe-total-bardagi">0</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">🏦 موجودی خالص</div>
@@ -43609,7 +43611,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.328';
+const APP_VERSION = '2.9.329';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
