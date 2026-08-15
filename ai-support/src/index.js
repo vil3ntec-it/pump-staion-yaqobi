@@ -299,6 +299,64 @@ async function handle(req, res, url) {
     return send(res, 200, out);
   }
 
+  // ── چتِ پخشِ زنده ──────────────────────────────────────────────────────
+  // همان چت، ولی جواب توکن‌به‌توکن می‌آید. روی CPU، تولیدِ کاملِ جواب ۲۰ تا ۴۰
+  // ثانیه است ولی اولین کلمه بعد از ۲ تا ۴ ثانیه آماده است — با این مسیر
+  // کاربر از همان لحظه نوشته شدن را می‌بیند.
+  if (p === '/ai/support/chat/stream' && method === 'POST') {
+    const g = gate(req, res, { llm: true });
+    if (!g) return;
+
+    const body = validate(await readJsonBody(req, config.server.maxBodyBytes), CHAT_SCHEMA, 'چت');
+    if (!body.question) throw new ValidationError('«question» لازم است', 'question');
+
+    const history = (body.history || [])
+      .filter(m => m && typeof m.content === 'string' && ['user', 'assistant'].includes(m.role))
+      .map(m => ({ role: m.role, content: String(m.content).slice(0, 1500) }));
+
+    res.writeHead(200, {
+      'content-type': 'text/event-stream; charset=utf-8',
+      'cache-control': 'no-cache, no-transform',
+      'connection': 'keep-alive',
+      // جلوی بافر کردنِ پراکسی‌ها را می‌گیرد — وگرنه همه‌چیز آخرِ کار یک‌جا می‌رسد
+      'x-accel-buffering': 'no',
+      ...(res.getHeader('access-control-allow-origin') ? {} : {}),
+    });
+
+    const send = obj => {
+      try { res.write(`data: ${JSON.stringify(obj)}\n\n`); } catch { /* کاربر رفته */ }
+    };
+
+    // اگر کاربر تب را ببندد، تولید هم قطع شود — وگرنه CPU بی‌دلیل کار می‌کند
+    const ac = new AbortController();
+    req.on('close', () => ac.abort());
+
+    let finalOut = null;
+    try {
+      for await (const ev of agent.answerStream({
+        question: body.question,
+        level: g.session.lvl,
+        user: g.session.sub,
+        history,
+        memory: getMemory(g.session.sub),
+        signal: ac.signal,
+      })) {
+        if (ev.type === 'done') finalOut = ev;
+        send(ev);
+      }
+    } catch (e) {
+      audit({ kind: 'error', user: g.session.sub, where: 'chat_stream', msg: e.message });
+      send({ type: 'done', text: 'در تولیدِ پاسخ خطایی پیش آمد.', mode: 'error', sources: [] });
+    }
+
+    audit({
+      kind: 'chat', user: g.session.sub, level: g.session.lvl,
+      mode: finalOut?.mode, degraded: finalOut?.degraded, ms: finalOut?.ms, stream: true,
+    });
+    res.end();
+    return;
+  }
+
   // ── حافظهٔ کاربر (بیرون از دروازهٔ داده — مالِ خودِ کاربر است) ─────────
   if (p === '/ai/support/memory') {
     const g = gate(req, res);

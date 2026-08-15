@@ -67,10 +67,16 @@ const defaults = {
     openaiApiKey: '',
     openaiModel: '',
     temperature: 0.2,            // پشتیبانی جای خلاقیت نیست
-    numCtx: 2048,
-    maxTokens: 400,
-    keepAlive: '5m',
-    timeoutMs: 60000,
+
+    // ── این چهار عدد سرعت را تعیین می‌کنند ────────────────────────────────
+    // روی کامپیوترِ بدونِ کارتِ گرافیک، مدل روی CPU اجرا می‌شود و هر توکن
+    // زمان می‌برد. با maxTokens=400 یک جواب بیش از یک دقیقه طول می‌کشید و
+    // به مهلتِ ۶۰ ثانیه می‌خورد — یعنی هم کند بود، هم آخرش شکست می‌خورد و
+    // به پاسخِ استخراجی می‌افتاد. جوابِ پشتیبانی ذاتاً کوتاه است، پس:
+    numCtx: 1536,                // پنجرهٔ کوچک‌تر = پیش‌پردازشِ سریع‌تر
+    maxTokens: 200,              // جوابِ کوتاه و مفید، نه انشا
+    keepAlive: '30m',            // مدل گرم بماند؛ بار کردنِ دوباره ۱۰ ثانیه است
+    timeoutMs: 180000,           // مهلتِ سخاوتمند — با پخشِ زنده کاربر منتظر نمی‌ماند
   },
 
   // ترمزهای بار — قلبِ «کامپیوتر نسوزد»
@@ -84,9 +90,9 @@ const defaults = {
   },
 
   rag: {
-    topK: 6,                     // چند چانک پیشِ مدل برود
+    topK: 3,                     // چند چانک پیشِ مدل برود (کمتر = سریع‌تر)
     candidateK: 24,              // چند تا از هر بازیاب پیش از ادغام
-    maxContextChars: 4500,       // بودجهٔ متنِ بازیابی‌شده
+    maxContextChars: 1800,       // بودجهٔ متنِ بازیابی‌شده — روی CPU هر نویسه هزینه دارد
     minScore: 0.02,
     useEmbeddings: true,         // اگر مدلِ امبدینگ نبود، خودکار خاموش می‌شود
     chunkChars: 900,
@@ -94,8 +100,13 @@ const defaults = {
   },
 
   agent: {
-    maxSteps: 2,                 // سقفِ دورِ ابزار — هم امنیت هم مصرف
-    historyTurns: 6,
+    // سقفِ دورِ ابزار. صفر یعنی «فقط یک بار مدل را صدا بزن».
+    // چرا پیش‌فرض صفر شد: بازیابی از قبل متنِ لازم را جلوی مدل گذاشته، پس
+    // برای سؤال‌های مستنداتی ابزار لازم نیست. هر دورِ اضافه روی CPU ده‌ها
+    // ثانیه است. برای سؤال‌های داده‌ای (الباقی، مخزن…) خودِ عامل ابزار را
+    // روشن می‌کند — نگاه کن به needsDataTools در agent.js.
+    maxSteps: 0,
+    historyTurns: 4,
   },
 
   tools: {
@@ -183,6 +194,7 @@ cfg = deepMerge(cfg, {
     numCtx: num(E.AI_NUM_CTX, cfg.llm.numCtx),
     maxTokens: num(E.AI_MAX_TOKENS, cfg.llm.maxTokens),
     keepAlive: E.AI_KEEP_ALIVE || cfg.llm.keepAlive,
+    timeoutMs: num(E.AI_TIMEOUT_MS, cfg.llm.timeoutMs),
   },
   load: {
     maxConcurrent: num(E.AI_MAX_CONCURRENT, cfg.load.maxConcurrent),

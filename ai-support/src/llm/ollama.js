@@ -49,6 +49,63 @@ export class OllamaProvider {
   }
 
   /**
+   * پخشِ زنده — جواب توکن‌به‌توکن می‌آید.
+   *
+   * چرا این مهم‌ترین بهینه‌سازیِ سرعت است: روی CPU، تولیدِ یک جوابِ ۲۰۰ توکنی
+   * ۲۰ تا ۴۰ ثانیه طول می‌کشد و هیچ کاری هم نمی‌شود کرد که سریع‌تر شود. ولی
+   * **اولین** توکن بعد از ۲ تا ۴ ثانیه آماده است. با پخشِ زنده کاربر از همان
+   * ثانیهٔ دوم نوشته شدن را می‌بیند، به‌جای اینکه یک دقیقه به صفحهٔ خالی نگاه کند.
+   *
+   * @param {{messages: object[], signal?: AbortSignal, temperature?: number}} req
+   * @yields {string} تکه‌های متن
+   */
+  async *chatStream({ messages, signal, temperature }) {
+    const res = await fetch(`${this.base}/api/chat`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: this.model,
+        messages,
+        stream: true,
+        keep_alive: this.cfg.llm.keepAlive,
+        options: {
+          temperature: temperature ?? this.cfg.llm.temperature,
+          num_ctx: this.cfg.llm.numCtx,
+          num_predict: this.cfg.llm.maxTokens,
+        },
+      }),
+      signal: signal ?? AbortSignal.timeout(this.cfg.llm.timeoutMs),
+    });
+
+    if (!res.ok || !res.body) {
+      const e = new Error(`Ollama پاسخ نداد (${res.status})`);
+      e.code = res.status === 404 ? 'MODEL_MISSING' : 'PROVIDER_ERROR';
+      throw e;
+    }
+
+    // Ollama هر تکه را به‌صورت یک خطِ JSON می‌فرستد (NDJSON)
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop() || '';          // خطِ ناقص برای دورِ بعد بماند
+      for (const line of lines) {
+        const t = line.trim();
+        if (!t) continue;
+        let j;
+        try { j = JSON.parse(t); } catch { continue; }
+        const piece = j?.message?.content;
+        if (piece) yield piece;
+        if (j?.done) return;
+      }
+    }
+  }
+
+  /**
    * @param {{messages: object[], tools?: object[], signal?: AbortSignal, temperature?: number}} req
    * @returns {Promise<{text: string, toolCalls: object[], usage: object}>}
    */
