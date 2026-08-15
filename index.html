@@ -731,6 +731,16 @@ body.light-mode .suggest-item:hover,body.light-mode .suggest-item.active{backgro
 .safe-tbl th,.safe-tbl td{text-align:center;vertical-align:middle}
 .safe-tbl .xls-in{text-align:center}
 .safe-tbl thead th{white-space:normal;line-height:1.25}
+/* ── سربرگ‌های گاوصندوق وقتی دالر هم داخل حساب هست ──────────────────────────
+   گزارشِ صاحب ریپو: «ارزِ دالر که اضافه می‌شود، سربرگ‌ها جمع می‌آید و معلوم
+   نیست کدام عدد چیست». دلیلش این بود که هر دو ارز پشتِ سرِ هم در یک خط با
+   «+» می‌نشستند. حالا هر ارز خطِ خودش را دارد و زیر/کنارِ هر عدد نامِ ارزش
+   («افغانی» یا «دالر») نوشته می‌شود — حتی وقتی فقط افغانی هست. تبدیلِ خودکار
+   انجام نمی‌شود (عمدی)، پس هر عدد باید نامِ ارزش را با خود داشته باشد. */
+.sf-amt{display:flex;align-items:baseline;justify-content:center;gap:5px;line-height:1.2;white-space:nowrap}
+.sf-amt .sf-n{font-weight:900}
+.sf-amt .sf-c{font-style:normal;font-size:0.6em;font-weight:800;color:var(--muted)}
+.sf-amt + .sf-amt{margin-top:3px;padding-top:3px;border-top:1px dashed var(--border)}
 .xls-in.box{border:1.5px solid var(--accent);border-radius:8px;background:var(--card);padding:7px 9px}
 .xls-in.box::placeholder{color:var(--muted);font-weight:600;opacity:.75}
 .xls-in:focus{outline:2px solid var(--accent);border-radius:3px;background:#ffffff0a}
@@ -16233,17 +16243,20 @@ table thead th:first-child .col-resize-grip{ display:none; }
 }
 /* ── کادر و صفحهٔ یادداشت‌ها ────────────────────────────────────────────────
    دکمهٔ «یادداشت‌های این بخش» در همهٔ بخش‌ها یک شکل است؛ صفحه‌اش هم یکی است. */
-/* ── ستونِ «رسید»: کادرِ ارز دیده نمی‌شود، ولی سرِ جایش هست ─────────────────
+/* ── ستونِ «رسید»/«مبلغ»: کادرِ ارز دیده نمی‌شود، ولی سرِ جایش هست ───────────
    گزارشِ صاحب ریپو: «نوع ارز نصفِ ستونِ رسید را گرفته؛ کاری کن آن کادر نباشد،
-   ولی به منطقش دست نزن — روی رسید که بزنم آن‌ها بیایند، مثل دو کادرِ پیشنهادی،
-   و موقعِ نوشتنِ عدد هم باگ نگیرد.»
+   ولی به منطقش دست نزن.»
    پس خودِ <select> با همان مقدار و همان onchange در DOM می‌ماند (هیچ منطقی عوض
-   نشده) و فقط از چشم پنهان می‌شود؛ عددِ رسید تمامِ عرضِ ستون را می‌گیرد. با
-   زدن/فوکوس روی خانهٔ عدد، دو چیپِ «؋ افغانی» و «$ دالر» بالای همان خانه
-   می‌آیند و انتخابشان همان select را عوض می‌کند.
+   نشده) و فقط از چشم پنهان می‌شود؛ عدد تمامِ عرضِ ستون را می‌گیرد. به‌جایش یک
+   نشانِ کوچکِ «؋/$» گوشهٔ همان خانه می‌نشیند و با زدنش دو چیپِ «؋ افغانی» و
+   «$ دالر» می‌آیند و انتخابشان همان select را عوض می‌کند.
+   ⚠️ چیپ‌ها فقط با زدنِ همان نشان باز می‌شوند — نه با فوکوسِ کادرِ عدد. گزارشِ
+   بعدیِ صاحب ریپو این بود: «آن‌جا که ارزِ رسید را می‌گیرم، جدولِ دیگر را پنهان
+   می‌کند و نمی‌شود روی کادرِ بالایش کلیک کرد» — چون با هر بار فوکوس شدنِ کادرِ
+   عدد (یعنی موقعِ کارِ عادی) این چیپ‌ها روی ردیفِ بالایی می‌افتادند.
    ⚠️ select را از DOM برندارید — منطقِ poulCurrency از روی آن خوانده/نوشته می‌شود. */
 .cur-cell{ position:relative; display:flex; align-items:center; }
-.cur-cell .cur-amt{ flex:1 1 auto; min-width:0; width:100%; }
+.cur-cell .cur-amt{ flex:1 1 auto; min-width:0; width:100%; padding-inline-end:26px; }
 /* نه display:none: کادر باید واقعاً وجود داشته باشد تا مقدار/رویدادش کار کند */
 .cur-cell .cur-sel{
   position:absolute; inset-inline-end:0; top:0;
@@ -16251,20 +16264,28 @@ table thead th:first-child .col-resize-grip{ display:none; }
   padding:0 !important; margin:0 !important; border:0 !important;
   opacity:0; pointer-events:none; overflow:hidden;
 }
-/* نشانهٔ کوچکِ ارزِ فعلی، بدونِ گرفتنِ جا */
+/* نشانِ ارزِ فعلی — کوچک، گوشهٔ خانه، و خودش دکمهٔ عوض کردنِ ارز است */
 .cur-cell .cur-tag{
   position:absolute; inset-inline-end:2px; top:50%; transform:translateY(-50%);
-  font-size:0.7rem; font-weight:800; color:var(--muted); pointer-events:none; opacity:.75;
+  min-width:21px; height:20px; padding:0 4px; line-height:1;
+  display:inline-flex; align-items:center; justify-content:center;
+  font-family:'Vazirmatn',sans-serif; font-size:0.72rem; font-weight:900;
+  color:var(--muted); background:var(--dark); border:1px solid var(--border);
+  border-radius:6px; cursor:pointer; user-select:none; -webkit-user-select:none;
 }
-/* دو چیپِ پیشنهادی — مثل کادرهای پیشنهادِ نام */
+.cur-cell .cur-tag:hover{ color:var(--accent); border-color:var(--accent); }
+.cur-cell .cur-tag.is-usd{ color:var(--blue); border-color:var(--blue); }
+/* دو چیپِ پیشنهادی — مثل کادرهای پیشنهادِ نام.
+   ظرف pointer-events:none است تا فاصله‌های خالیِ دورِ دکمه‌ها جلوی کلیکِ خانه‌های
+   زیرش را نگیرد؛ فقط خودِ دو دکمه کلیک می‌گیرند. */
 .cur-pop{
-  position:fixed; z-index:100060; display:flex; gap:6px;
+  position:fixed; z-index:100060; display:flex; gap:6px; pointer-events:none;
   background:var(--card); border:1.5px solid var(--border); border-radius:10px;
   padding:5px; box-shadow:0 10px 28px rgba(0,0,0,.32);
 }
 .cur-pop button{
   border:1px solid var(--border); background:var(--dark); color:var(--txt);
-  border-radius:8px; padding:6px 12px; cursor:pointer;
+  border-radius:8px; padding:6px 12px; cursor:pointer; pointer-events:auto;
   font-family:'Vazirmatn',sans-serif; font-size:0.82rem; font-weight:800; white-space:nowrap;
 }
 .cur-pop button.on{ border-color:var(--accent); color:var(--accent); }
@@ -23167,6 +23188,10 @@ function showSection(id, btn) {
   }
   // منوی سه‌نقطهٔ موبایل را بعد از رفتن به بخش ببند
   try { closeMobileMenu(); } catch(e) {}
+  /* عرضِ ستون‌های جدولِ بخشی که تازه باز شد اعمال شود. باز/بسته شدنِ بخش فقط
+     display را عوض می‌کند (نه ساختارِ DOM را)، پس ناظرِ جدول‌ها خودش بیدار
+     نمی‌شود — این‌جا صریح صدایش می‌زنیم. */
+  try { if (typeof initAllTableResizers === 'function') requestAnimationFrame(function(){ initAllTableResizers(); }); } catch(e) {}
 }
 
 // ========== منوی سه‌نقطهٔ موبایل — لیست بخش‌ها از روی همان نوار ناوبری ==========
@@ -27122,9 +27147,28 @@ function initAllTableResizers(root){
       else initAllTableResizers();
     }, 150);
   }
+  /* ۳) محافظِ سوم: تغییری که هیچ ربطی به جدول‌ها ندارد اصلاً بیدارش نکند.
+     ساعتِ سربرگ، شمارندهٔ پیام‌ها، نامِ کاربر و مانندِ این‌ها هر ثانیه نوشته
+     می‌شوند؛ بدونِ این فیلتر، هر تیکِ ساعت یک بازسازیِ کاملِ عرضِ ستونِ همهٔ
+     جدول‌های سند را راه می‌انداخت — روی کامپیوتر و دادهٔ چندساله، همین یکی
+     برنامه را کند و بریده‌بریده می‌کرد. */
+  function touchesTable(node){
+    if(!node || node.nodeType !== 1) return false;
+    if(/^(TABLE|THEAD|TBODY|TFOOT|TR|TD|TH|COL|COLGROUP)$/.test(node.tagName)) return true;
+    return !!(node.querySelector && node.querySelector('table'));
+  }
+  function relevant(muts){
+    for(let i = 0; i < muts.length; i++){
+      const m = muts[i];
+      if(m.target && m.target.closest && m.target.closest('table')) return true;
+      for(let j = 0; j < m.addedNodes.length; j++) if(touchesTable(m.addedNodes[j])) return true;
+      for(let j = 0; j < m.removedNodes.length; j++) if(touchesTable(m.removedNodes[j])) return true;
+    }
+    return false;
+  }
   function startObs(){
     try{
-      new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+      new MutationObserver(function(muts){ if(relevant(muts)) schedule(); }).observe(document.body, { childList: true, subtree: true });
     }catch(e){}
     schedule();
   }
@@ -27387,14 +27431,27 @@ function initAllTableResizers(root){
   // ── انتخابِ کشیدنی مثل اکسل: موس را روی سلول‌ها پایین نگه دارید و بکشید ──
   // شروع از روی کادرهای تایپی هم مجاز است، اما انتخاب فقط وقتی فعال می‌شود که موس به
   // «سلولِ دیگری» برسد — تا کلیک/تایپ/انتخابِ متنِ داخلِ خودِ کادر دست‌نخورده بماند.
+  /* ⚠️ این حالت باید همیشه پاک شود، وگرنه selectstartِ پایین برای همیشه گرفته
+     می‌ماند و از آن لحظه به بعد در هیچ کادری نمی‌شود تایپ کرد (گزارشِ صاحب
+     ریپو: «برنامه فریز می‌شود و همهٔ کادرهای نوشتنی از کار می‌افتند»). رها
+     کردنِ دکمهٔ موس بیرونِ پنجره، رفتنِ فوکوس به پنجرهٔ دیگر یا کوچک شدنِ
+     برنامه، pointerup را به ما نمی‌رساند — پس همهٔ این راه‌ها هم تمامش می‌کنند. */
+  var ptrDown = false;
   function endDrag(){
     if(dragOn) dragEndAt = Date.now();
-    dragFrom = null; dragOn = false;
+    dragFrom = null; dragOn = false; ptrDown = false;
     document.body.classList.remove('cfm-noselect');
   }
+  window._cfmEndDrag = endDrag;
+  window._cfmRecentDrag = function(){ return (Date.now() - dragEndAt) < 400; };
+  window.addEventListener('blur', endDrag);
+  document.addEventListener('mouseup', endDrag);
+  document.addEventListener('visibilitychange', function(){ if(document.hidden) endDrag(); });
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') endDrag(); });
   document.addEventListener('pointerdown', function(e){
     if(e.pointerType && e.pointerType !== 'mouse') return;   // لمس/قلم → اسکرولِ عادیِ موبایل دست‌نخورده بماند
     if(e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    ptrDown = true;
     if(e.target.closest('select,button,a,label,.col-resize-grip,input[type="radio"],input[type="checkbox"]')) return;
     const cellEl = e.target.closest(CELL_SEL); if(!cellEl) return;
     const info = rowColOf(cellEl);
@@ -27428,8 +27485,10 @@ function initAllTableResizers(root){
   document.addEventListener('pointerup', endDrag);
   document.addEventListener('pointercancel', endDrag);
   // در حینِ کشیدنِ انتخاب، هیچ انتخابِ متنی‌ای شروع نشود
+  // (شرطِ ptrDown محافظِ دوم است: اگر به هر دلیل dragOn پاک نشده باشد، با رها
+  //  بودنِ دکمهٔ موس دیگر جلوی تایپ/انتخابِ کاربر را نمی‌گیرد)
   document.addEventListener('selectstart', function(e){
-    if(dragOn) e.preventDefault();
+    if(dragOn && ptrDown) e.preventDefault();
   });
   document.addEventListener('contextmenu', function(e){
     const cellEl = e.target.closest(CELL_SEL);
@@ -27451,6 +27510,35 @@ function initAllTableResizers(root){
       infos = [info];
     }
     openMenu(e.clientX, e.clientY, info.table, infos);
+  });
+})();
+/* ── محافظِ آخرِ کادرهای نوشتنی ──────────────────────────────────────────────
+   گزارشِ صاحب ریپو: «روی کامپیوتر برنامه فریز می‌شود و همهٔ کادرهای نوشتنی از
+   کار می‌افتند؛ باید برنامه را ببندم و باز کنم.»
+   ریشه‌های شناخته‌شده‌اش بالاتر درست شده‌اند (حلقهٔ بی‌پایانِ ناظرِ نشانِ ارز و
+   گیر کردنِ انتخابِ کشیدنی). این تکه فقط تورِ ایمنی است: اگر باز هم روی کادری
+   بزنی و فوکوس نگیرد، به‌جای بستن و باز کردنِ برنامه، همان لحظه حالت‌های
+   مسدودکننده پاک و خودِ کادر فوکوس می‌شود.
+   هیچ داده‌ای دست نمی‌خورد و در حالتِ عادی (که فوکوس درست می‌نشیند) اصلاً
+   کاری نمی‌کند. */
+(function () {
+  'use strict';
+  document.addEventListener('click', function (e) {
+    var el = e.target;
+    if (!el || !el.closest) return;
+    var box = el.closest('input,textarea');
+    if (!box || box.disabled || box.readOnly) return;
+    var t = (box.type || '').toLowerCase();
+    if (t === 'checkbox' || t === 'radio' || t === 'button' || t === 'submit' || t === 'file') return;
+    if (document.activeElement === box) return;                    // همه‌چیز عادی است
+    var ae = document.activeElement;
+    if (ae && ae !== document.body && ae !== document.documentElement) return;  // فوکوس عمداً جای دیگری رفته
+    try { if (window._cfmRecentDrag && window._cfmRecentDrag()) return; } catch (_) {}   // تازه انتخابِ کشیدنی تمام شده
+    if (!document.contains(box)) return;                           // جدول دوباره رسم شده
+    try { if (typeof window._cfmEndDrag === 'function') window._cfmEndDrag(); } catch (_) {}
+    try { document.body.classList.remove('cfm-noselect'); } catch (_) {}
+    try { Array.prototype.forEach.call(document.querySelectorAll('.cur-pop'), function (p) { p.remove(); }); } catch (_) {}
+    try { box.focus(); } catch (_) {}
   });
 })();
 function openPersonModal(type, id) {
@@ -32711,6 +32799,8 @@ function renderCompanyRows(company) {
     tbody.appendChild(tr);
   });
   _updateCompanyTotals(company);
+  // نشانِ ارزِ ستونِ «رسید» بی‌درنگ بیاید (نه با مکثِ ناظرِ عمومی)
+  try { if (window._curCellPaint) window._curCellPaint(); } catch (e) {}
 }
 
 // خریدهای تیلِ همین شرکت (از بخش مخزن) را بر اساس نام فروشنده و نوع تیلِ فعال پیدا می‌کند
@@ -35308,17 +35398,29 @@ const SAFE_ROWS_PER_BOX = 30; // کادر که پر شد، کادر بعدی خ�
 // تا خطای نرخ ارز باعث اشتباه در حساب نشود.
 function _safeCur(e) { return e && e.currency === 'usd' ? 'usd' : 'afn'; }
 function _safeAddAmt(totals, e) { totals[_safeCur(e)] += e.amount || 0; }
+/* هر ارز در خطِ خودش، با نامِ ارز کنارِ عدد — تا وقتی دالر هم داخل حساب هست،
+   سربرگ‌ها به هم نچسبند و معلوم باشد کدام عدد افغانی است و کدام دالر.
+   (نامِ ارز حتی وقتی فقط افغانی هست هم نوشته می‌شود — خواستهٔ صاحب ریپو.) */
+function safeAmtHtml(t, abs) {
+  const v = x => abs ? Math.abs(x || 0) : (x || 0);
+  const line = (num, cur) => '<div class="sf-amt"><b class="sf-n">' + num + '</b><i class="sf-c">' + cur + '</i></div>';
+  let out = '';
+  if (t.afn || !t.usd) out += line(n2fa(v(t.afn)), 'افغانی');
+  if (t.usd) out += line('$' + n2fa(v(t.usd)), 'دالر');
+  return out;
+}
+// نسخهٔ متنی (برای جاهایی مثل پیام/کپی که HTML نمی‌خورد)
 function fmtSafeTotal(t) {
   const parts = [];
   if (t.afn) parts.push(n2fa(t.afn) + ' افغانی');
-  if (t.usd) parts.push('$' + n2fa(t.usd));
+  if (t.usd) parts.push(n2fa(t.usd) + ' دالر');
   return parts.length ? parts.join(' + ') : '0 افغانی';
 }
 function fmtSafeNet(t) {
   const parts = [];
   if (t.afn || !t.usd) parts.push(n2fa(Math.abs(t.afn)) + ' افغانی');
-  if (t.usd) parts.push('$' + n2fa(Math.abs(t.usd)));
-  return { text: parts.join(' + '), ok: t.afn >= 0 && t.usd >= 0 };
+  if (t.usd) parts.push(n2fa(Math.abs(t.usd)) + ' دالر');
+  return { text: parts.join(' + '), html: safeAmtHtml(t, true), ok: t.afn >= 0 && t.usd >= 0 };
 }
 function renderSafe() {
   const entries = DB.safeEntries || [];
@@ -35389,9 +35491,9 @@ function renderSafe() {
         <td><select class="xls-in" style="min-width:90px;color:${e.type==='bardagi'?'var(--green)':'var(--blue)'};font-weight:700;padding:5px 4px;font-size:0.82rem" onchange="updateSafeEntry(${i},'type',this.value)"><option value="bardagi"${e.type==='bardagi'?' selected':''}>💵 بردگی</option><option value="mandagi"${e.type!=='bardagi'?' selected':''}>🏛️ ماندگی</option></select></td>
         <td><input class="xls-in" value="${(e.title||'').replace(/"/g,'&quot;')}" placeholder="نام" onchange="updateSafeEntry(${i},'title',this.value)"></td>
         <td>
-          <div style="display:flex;gap:3px;align-items:center;justify-content:center">
-            <input class="xls-in" type="number" value="${e.amount||''}" placeholder="0" style="min-width:55px;color:${e.type==='bardagi'?'var(--green)':'var(--blue)'}" onchange="updateSafeEntry(${i},'amount',this.value)">
-            <select class="xls-in xs" style="padding:5px 2px;min-width:44px" onchange="updateSafeEntry(${i},'currency',this.value)">
+          <div class="cur-cell">
+            <input class="xls-in cur-amt" type="number" value="${e.amount||''}" placeholder="0" style="color:${e.type==='bardagi'?'var(--green)':'var(--blue)'}" onchange="updateSafeEntry(${i},'amount',this.value)">
+            <select class="xls-in xs cur-sel" onchange="updateSafeEntry(${i},'currency',this.value)">
               <option value="afn" ${_safeCur(e)==='usd'?'':'selected'}>؋</option>
               <option value="usd" ${_safeCur(e)==='usd'?'selected':''}>$</option>
             </select>
@@ -35410,15 +35512,17 @@ function renderSafe() {
   const mNet = { afn: mBardagi.afn - mMandagi.afn, usd: mBardagi.usd - mMandagi.usd };
   // هر سه کادرِ بالا (جمع بردگی/جمع ماندگی/موجودی خالص) فقط ماهِ انتخاب‌شده را نشان
   // می‌دهند تا هر ماه کاملاً جدا باشد و اطلاعاتِ ماهِ قبل داخلش نیاید.
-  if (_sfEl('safe-total-bardagi')) _sfEl('safe-total-bardagi').textContent = fmtSafeTotal(mBardagi);
-  if (_sfEl('safe-total-mandagi')) _sfEl('safe-total-mandagi').textContent = fmtSafeTotal(mMandagi);
+  if (_sfEl('safe-total-bardagi')) _sfEl('safe-total-bardagi').innerHTML = safeAmtHtml(mBardagi);
+  if (_sfEl('safe-total-mandagi')) _sfEl('safe-total-mandagi').innerHTML = safeAmtHtml(mMandagi);
   const netEl = document.getElementById('safe-net');
   const netFmt = fmtSafeNet(mNet);
-  netEl.textContent = netFmt.text;
+  netEl.innerHTML = netFmt.html;
   netEl.style.color = netFmt.ok ? 'var(--green)' : 'var(--red)';
   const ftEl = document.getElementById('safe-ft-total');
-  if (ftEl) { const mNetFmt = fmtSafeNet(mNet); ftEl.textContent = mNetFmt.text; ftEl.style.color = mNetFmt.ok?'var(--green)':'var(--red)'; }
+  if (ftEl) { ftEl.innerHTML = netFmt.html; ftEl.style.color = netFmt.ok?'var(--green)':'var(--red)'; }
   _safeDockFooter();
+  // نشانِ ارزِ هر ردیف بی‌درنگ بیاید (نه با مکثِ ناظرِ عمومی)
+  try { if (window._curCellPaint) window._curCellPaint(); } catch (e) {}
 }
 /* ── ردیفِ «تمام حساب» باید به جدول بچسبد ──────────────────────────────────
    پیش از این، این ردیف یک جدولِ جدا در یک ظرفِ اسکرولِ جدا بود. یعنی جدولِ داده
@@ -35635,13 +35739,13 @@ function _recalcSafeTotals() {
   entries.forEach(e => { if (_ymMatch(_safeActiveMonth, safeMonthKey(e.date))) _safeAddAmt(e.type === 'bardagi' ? mBardagi : mMandagi, e); });
   const mNet = { afn: mBardagi.afn - mMandagi.afn, usd: mBardagi.usd - mMandagi.usd };
   const el = id => document.getElementById(id);
-  if (el('safe-total-bardagi')) el('safe-total-bardagi').textContent = fmtSafeTotal(mBardagi);
-  if (el('safe-total-mandagi')) el('safe-total-mandagi').textContent = fmtSafeTotal(mMandagi);
+  if (el('safe-total-bardagi')) el('safe-total-bardagi').innerHTML = safeAmtHtml(mBardagi);
+  if (el('safe-total-mandagi')) el('safe-total-mandagi').innerHTML = safeAmtHtml(mMandagi);
   const netFmt = fmtSafeNet(mNet);
   const netEl = el('safe-net');
-  if (netEl) { netEl.textContent = netFmt.text; netEl.style.color = netFmt.ok ? 'var(--green)' : 'var(--red)'; }
+  if (netEl) { netEl.innerHTML = netFmt.html; netEl.style.color = netFmt.ok ? 'var(--green)' : 'var(--red)'; }
   const ftEl = el('safe-ft-total');
-  if (ftEl) { ftEl.textContent = netFmt.text; ftEl.style.color = netFmt.ok?'var(--green)':'var(--red)'; }
+  if (ftEl) { ftEl.innerHTML = netFmt.html; ftEl.style.color = netFmt.ok?'var(--green)':'var(--red)'; }
 }
 function deleteSafe(i) {
   const entry = DB.safeEntries[i];
@@ -35675,7 +35779,7 @@ function printSafe(monthKey) {
   const rowsHtml = entries.map((e,i) => {
     const isBardagi = e.type === 'bardagi';
     const color = isBardagi ? '#276749' : '#2b6cb0';
-    const amtLabel = _safeCur(e) === 'usd' ? ('$' + n2fa(e.amount)) : (n2fa(e.amount) + ' افغانی');
+    const amtLabel = _safeCur(e) === 'usd' ? ('$' + n2fa(e.amount) + ' دالر') : (n2fa(e.amount) + ' افغانی');
     return `<tr>
       <td style="text-align:center;color:#718096">${i+1}</td>
       <td style="font-weight:700;color:#c07700">${e.date||'—'}</td>
@@ -35701,11 +35805,18 @@ h1{font-size:1.25rem;font-weight:900;color:#2b6cb0;border-bottom:2px solid #2b6c
 .sum-box{flex:1;min-width:120px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;gap:4px}
 .sum-box .l{font-size:0.62rem;color:#718096;line-height:1.3}
 .sum-box .v{font-size:1.1rem;font-weight:900;white-space:nowrap}
+/* هر ارز خطِ خودش، با نامِ ارز کنارِ عدد — مثل خودِ برنامه */
+.sf-amt{display:flex;align-items:baseline;justify-content:center;gap:5px;line-height:1.2;white-space:nowrap}
+.sf-amt .sf-n{font-weight:900}
+.sf-amt .sf-c{font-style:normal;font-size:0.6em;font-weight:800;color:#718096}
+.sf-amt + .sf-amt{margin-top:3px;padding-top:3px;border-top:1px dashed #cbd5e0}
 table{width:100%;border-collapse:collapse;font-size:0.72rem}
 th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:center;font-weight:700;border-bottom:2px solid #4a5568;white-space:nowrap}
 td{padding:6px 7px;border-bottom:1px solid #e2e8f0;white-space:nowrap;text-align:center}
 tr:nth-child(even) td{background:#f7fafc}
 tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border-top:2px solid #4a5568}
+tfoot .sf-amt .sf-c{color:#cbd5e0}
+tfoot .sf-amt + .sf-amt{border-top-color:#4a5568}
 .footer{margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
 @media print{body{padding:10px}@page{margin:1cm}}
 </style>
@@ -35714,10 +35825,9 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 <h1>🏦 پمپ یعقوبی — ${monthKey ? ('گاوصندوق ' + escFa(_monthLabelFa(monthKey))) : 'گزارش گاوصندوق'}</h1>
 <div class="meta">تاریخ چاپ: ${d.sh} | ${d.mi} | ${d.qa}</div>
 <div class="sum-row">
-  <div class="sum-box" style="border-color:#276749"><div class="l">💵 جمله بردگی</div><div class="v" style="color:#276749">${fmtSafeTotal(tbT)}</div></div>
-  <div class="sum-box" style="border-color:#2b6cb0"><div class="l">🏛️ جمله ماندگی</div><div class="v" style="color:#2b6cb0">${fmtSafeTotal(tmT)}</div></div>
-  <div class="sum-box" style="border-color:${netFmt.ok?'#276749':'#e53e3e'}"><div class="l">🏦 موجودی خالص</div><div class="v" style="color:${netFmt.ok?'#276749':'#e53e3e'}">${netFmt.text}</div></div>
-  <div class="sum-box"><div class="l">تعداد ردیف‌ها</div><div class="v" style="color:#718096">${n2fa(entries.length)}</div></div>
+  <div class="sum-box" style="border-color:#276749"><div class="l">💵 جمله بردگی</div><div class="v" style="color:#276749">${safeAmtHtml(tbT)}</div></div>
+  <div class="sum-box" style="border-color:#2b6cb0"><div class="l">🏛️ جمله ماندگی</div><div class="v" style="color:#2b6cb0">${safeAmtHtml(tmT)}</div></div>
+  <div class="sum-box" style="border-color:${netFmt.ok?'#276749':'#e53e3e'}"><div class="l">🏦 موجودی خالص</div><div class="v" style="color:${netFmt.ok?'#276749':'#e53e3e'}">${netFmt.html}</div></div>
 </div>
 <table>
 <thead>
@@ -35728,8 +35838,8 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 <tbody>${rowsHtml || '<tr><td colspan="6" style="text-align:center;padding:20px;color:#718096">هیچ ردیفی ثبت نشده</td></tr>'}</tbody>
 <tfoot>
   <tr>
-    <td colspan="4" style="text-align:right">موجودی خالص</td>
-    <td>${netFmt.ok?'💵':'📉'} ${netFmt.text}</td>
+    <td colspan="4" style="text-align:right">${netFmt.ok?'💵':'📉'} موجودی خالص</td>
+    <td>${netFmt.html}</td>
     <td></td>
   </tr>
 </tfoot>
@@ -43611,7 +43721,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.329';
+const APP_VERSION = '2.9.330';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -47498,27 +47608,51 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
   });
 });
 
-/* ── چیپ‌های ارزِ ستونِ «رسید» ───────────────────────────────────────────────
+/* ── چیپ‌های ارزِ ستونِ «رسید»/«مبلغ» ────────────────────────────────────────
    کادرِ <select> پنهان است ولی سرِ جایش می‌ماند؛ این‌جا فقط دو دکمه نشان داده
    می‌شود که همان select را عوض می‌کنند و رویدادِ change اش را می‌زنند — یعنی
    هیچ منطقی دور زده نشده و همان مسیرِ همیشگی اجرا می‌شود.
-   ⚠️ روی تایپ اثر ندارد: چیپ‌ها با mousedown انتخاب می‌شوند (نه click) تا کادرِ
-   عدد فوکوسش را از دست ندهد، و هیچ‌وقت مقدارِ عددی را دست نمی‌زنند. */
+
+   ⚠️ چیپ‌ها فقط با زدنِ نشانِ کوچکِ «؋/$» باز می‌شوند. قبلاً با هر بار فوکوس
+   شدنِ کادرِ عدد باز می‌شدند و چون بالای همان کادر می‌نشستند، ردیفِ بالایی را
+   می‌پوشاندند و کلیک روی آن کار نمی‌کرد (گزارشِ صاحب ریپو در بخشِ شرکت‌ها).
+   حالا هم فقط با خواستِ خودِ کاربر می‌آیند، هم اگر جا باشد زیرِ خانه باز
+   می‌شوند، هم با اولین کلیکِ بیرون بسته می‌شوند.
+   ⚠️ روی تایپ اثر ندارد: انتخاب با mousedown انجام می‌شود (نه click) تا کادرِ
+   عدد فوکوسش را از دست ندهد، و هیچ‌وقت مقدارِ عددی دست نمی‌خورد. */
 (function () {
   'use strict';
-  var pop = null, forInput = null;
-  function close() { if (pop) { pop.remove(); pop = null; forInput = null; } }
+  var pop = null, forCell = null;
+  function close() { if (pop) { pop.remove(); pop = null; forCell = null; } }
   function tagOf(sel) { return sel && sel.value === 'usd' ? '$' : '؋'; }
   function paintTag(cell) {
     var sel = cell.querySelector('.cur-sel'); if (!sel) return;
     var t = cell.querySelector('.cur-tag');
-    if (!t) { t = document.createElement('span'); t.className = 'cur-tag'; cell.appendChild(t); }
-    t.textContent = tagOf(sel);
+    if (!t || t.tagName !== 'BUTTON') {
+      if (t) t.remove();
+      t = document.createElement('button');
+      t.type = 'button';
+      t.className = 'cur-tag';
+      t.title = 'واحد پول — برای عوض کردن بزنید';
+      cell.appendChild(t);
+    }
+    /* ⚠️ فقط وقتی چیزی واقعاً عوض شده بنویس. این تابع را یک MutationObserverِ
+       روی کلِ <body> صدا می‌زند؛ اگر بی‌دلیل textContent را دوباره بنویسیم،
+       خودِ همان نوشتن یک تغییرِ تازهٔ DOM است و ناظر را دوباره بیدار می‌کند —
+       یعنی یک حلقهٔ بی‌پایانِ هر ۲۰۰ میلی‌ثانیه که ناظرهای دیگر (از جمله
+       بازسازیِ عرضِ ستونِ همهٔ جدول‌ها) را هم بی‌وقفه با خودش می‌بُرد و روی
+       کامپیوتر برنامه را کند/قفل می‌کرد. */
+    var usd = sel.value === 'usd';
+    var txt = tagOf(sel);
+    if (t.textContent !== txt) t.textContent = txt;
+    if (t.classList.contains('is-usd') !== usd) t.classList.toggle('is-usd', usd);
   }
-  function open(input) {
+  function open(cell) {
+    var wasOpen = (forCell === cell);
     close();
-    var cell = input.closest('.cur-cell'); if (!cell) return;
+    if (wasOpen) return;                                // زدنِ دوباره = بستن
     var sel = cell.querySelector('.cur-sel'); if (!sel) return;
+    var tag = cell.querySelector('.cur-tag'); if (!tag) return;
     pop = document.createElement('div');
     pop.className = 'cur-pop';
     var cur = sel.value === 'usd' ? 'usd' : 'afn';
@@ -47534,23 +47668,24 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
       close();
     });
     document.body.appendChild(pop);
-    var r = input.getBoundingClientRect(), pr = pop.getBoundingClientRect();
-    var top = r.top - pr.height - 6;
-    if (top < 6) top = r.bottom + 6;                    // جا نبود، زیرِ کادر
+    var r = tag.getBoundingClientRect(), pr = pop.getBoundingClientRect();
+    // اول زیرِ نشان (مثل کشوی معمولی)؛ اگر پایین جا نبود، بالایش
+    var top = r.bottom + 6;
+    if (top + pr.height > window.innerHeight - 6) top = Math.max(6, r.top - pr.height - 6);
     pop.style.top = Math.round(top) + 'px';
     pop.style.left = Math.round(Math.max(6, Math.min(r.left, window.innerWidth - pr.width - 6))) + 'px';
-    forInput = input;
+    forCell = cell;
   }
-  document.addEventListener('focusin', function (e) {
-    var el = e.target;
-    if (el && el.classList && el.classList.contains('cur-amt')) open(el);
-    else if (!pop || !pop.contains(el)) close();
-  });
-  document.addEventListener('focusout', function (e) {
-    if (e.target === forInput) setTimeout(function () {
-      if (forInput && document.activeElement !== forInput) close();
-    }, 120);
-  });
+  // فقط زدنِ نشانِ ارز چیپ‌ها را باز می‌کند؛ هر کلیکِ دیگری آن‌ها را می‌بندد
+  document.addEventListener('mousedown', function (e) {
+    var t = e.target && e.target.closest ? e.target.closest('.cur-tag') : null;
+    if (t) {
+      var cell = t.closest('.cur-cell');
+      if (cell) { e.preventDefault(); e.stopPropagation(); open(cell); return; }
+    }
+    if (pop && !pop.contains(e.target)) close();
+  }, true);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
   document.addEventListener('scroll', close, true);
   window.addEventListener('resize', close);
   // نشانهٔ ارز روی هر خانه، بعد از هر رندرِ جدول
