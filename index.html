@@ -33849,24 +33849,38 @@ function pdfCompany(fuelMode) {
   const sumAlbUsd = sumAlbUsdRaw - usdReceived;
   const sumAlb = sumAlbRaw - (usdReceived * convRate);
   // خطِ «بدهکارید/طلبکارید» به خواست کاربر از PDF حذف شد — فقط اعداد چاپ می‌شوند
+  /* ستون‌ها دقیقاً همان ستون‌های جدولِ خودِ برنامه‌اند و واحدها (کیلو، $، افغانی)
+     یک‌بار در سرستون نوشته می‌شوند — نه در تک‌تکِ خانه‌ها. گزارشِ صاحب ریپو:
+     «افغانی تو همه کادرها دیده می‌شه، علامتِ دالر هم همین‌طور» و همین تکرار،
+     ستون‌ها را تنگ می‌کرد و عددها را به خطِ بعد می‌انداخت. الباقیِ دالری هم
+     مثلِ خودِ برنامه زیرِ الباقیِ افغانی می‌نشیند (نه ستونِ جدا). */
   const rowsHtml = rows.map((r,i) => {
     const ton=cmpTon(r), tusd=cmpTotalUsd(r), tafn=cmpAfnTotal(r), ab=cmpAlbaqi(r, convRate), abUsd=cmpAlbaqiUsd(r, convRate);
     const ftCell = bothFuel ? `<td style="font-weight:700;color:${i >= petRows.length ? '#8B4513' : '#c07700'}">${i >= petRows.length ? '🟤 دیزل' : '⛽ پطرول'}</td>` : '';
+    const kg = (r.kg!=null && r.kg!=='' && +r.kg!==0) ? Math.round(parseFloat(r.kg)) : Math.round(ton*1000);
+    // رسید معمولاً افغانی است (واحدش در سرستون آمده)؛ فقط ردیفِ دالری نشانه می‌گیرد
+    const poul = Math.round(parseFloat(r.poul)||0);
+    const poulCell = r.poulCurrency === 'usd' ? `${n2fa(poul)} <span class="u">$</span>` : n2fa(poul);
+    const showUsdBaqi = (tusd || cmpPoulUsdPay(r, convRate));
     return `<tr>
-      <td style="text-align:center;color:#718096">${i+1}</td>
+      <td style="color:#718096">${i+1}</td>
       <td style="font-weight:700;color:#c07700">${r.date||'—'}</td>
-      <td style="font-weight:700">${escFa(r.name)||'—'}</td>
+      <td class="nm" style="font-weight:700">${escFa(r.name)||'—'}</td>
       ${ftCell}
-      <td style="color:#2b6cb0;font-weight:700">${n2fa(ton.toFixed(3))} تن</td>
-      <td style="color:#276749">${n2fa(r.usd||0)} $/تن</td>
-      <td style="color:#2b6cb0;font-weight:700">${n2fa(tusd.toFixed(1))} $</td>
+      <td style="color:#2b6cb0;font-weight:700">${kg?n2fa(kg):'—'}</td>
+      <td style="color:#276749">${n2fa(r.usd||0)}</td>
+      <td style="color:#2b6cb0;font-weight:700">${n2fa(tusd.toFixed(1))}</td>
       <td>${n2fa(r.rate||0)}</td>
       <td style="color:#805ad5">${n2fa(Math.round(tafn))}</td>
-      <td style="color:#276749;font-weight:700">${n2fa(Math.round(parseFloat(r.poul)||0))}${r.poulCurrency==='usd'?' $':' افغانی'}</td>
-      <td style="color:${ab>0?'#e53e3e':'#276749'};font-weight:700">${n2fa(Math.round(ab))}</td>
-      <td style="color:${abUsd>0?'#e53e3e':'#276749'};font-weight:700">${n2fa(abUsd.toFixed(1))} $</td>
+      <td style="color:#276749;font-weight:700">${poulCell}</td>
+      <td style="color:${ab>0?'#e53e3e':'#276749'};font-weight:700">${n2fa(Math.round(ab))}${showUsdBaqi?`<span class="sub">${n2fa(abUsd.toFixed(1))} $</span>`:''}</td>
     </tr>`;
   }).join('');
+  // عرضِ ستون‌ها ثابت است (table-layout:fixed) تا هیچ سرستون/عددی وسطِ خودش نشکند
+  const colW = bothFuel
+    ? ['3.5%','9%','10.5%','10%','9%','9.5%','10%','5.5%','11%','10.5%','11.5%']
+    : ['3.5%','9.5%','14%','10%','10%','10.5%','6%','12%','11%','13.5%'];
+  const colGroup = '<colgroup>' + colW.map(w => `<col style="width:${w}">`).join('') + '</colgroup>';
   const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8">
 <title>${escFa(company.name)} — شرکت تیل</title>
 <style>
@@ -33877,30 +33891,51 @@ h1{font-size:1.25rem;font-weight:900;color:#805ad5;border-bottom:2px solid #805a
 .sum-row{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:1fr;gap:10px;margin-bottom:16px}
 .sum-box{min-width:0;min-height:74px;background:#faf5ff;border:1px solid #e9d8fd;border-radius:8px;padding:10px;text-align:center;display:flex;flex-direction:column;justify-content:center;gap:4px;box-sizing:border-box}
 .sum-box .l{font-size:0.62rem;color:#718096;line-height:1.3}.sum-box .v{font-size:1.05rem;font-weight:900;white-space:nowrap}
-table{width:100%;border-collapse:collapse;font-size:0.72rem}th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:center;font-weight:700}
-td{padding:6px 7px;border-bottom:1px solid #e2e8f0;text-align:center;vertical-align:middle}tr:nth-child(even) td{background:#faf5ff}
-tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px;text-align:center}
+/* ── جدول ─────────────────────────────────────────────────────────────────
+   table-layout:fixed + عرضِ صریحِ هر ستون + nowrap: هیچ سرستونی («نرخ» → «نر/خ»)
+   و هیچ عددی («$ 25,502.9» → دو خط) دیگر وسطِ خودش نمی‌شکند. */
+table{width:100%;border-collapse:collapse;font-size:0.7rem;table-layout:fixed}
+th{background:#2d3748;color:#e2e8f0;padding:7px 3px;text-align:center;font-weight:700;font-size:0.6rem;white-space:nowrap;line-height:1.3}
+td{padding:5px 4px;border-bottom:1px solid #e2e8f0;text-align:center;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+tr:nth-child(even) td{background:#faf5ff}
+td .sub{display:block;font-size:0.6rem;font-weight:800;opacity:.92}
+td .u{font-size:0.62rem;font-weight:800;color:#2b6cb0}
+/* نامِ طولانی به‌جای بریده‌شدن، سرِ فاصله به خطِ بعد می‌رود (هیچ‌وقت وسطِ کلمه) */
+td.nm{white-space:normal;word-break:keep-all;overflow-wrap:normal}
+tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 4px;text-align:center}
+tfoot td .sub{color:#cbd5e0}
+/* ── ورق‌بندی ──────────────────────────────────────────────────────────────
+   سرستون‌ها روی هر ورق تکرار می‌شوند (display:table-header-group)، هیچ ردیفی
+   بینِ دو ورق نصف نمی‌شود، و ردیفِ «جمله» فقط یک بار و در پایانِ گزارش می‌آید
+   — نه ته هر ورق (tfoot با table-row-group از تکرار شدن درمی‌آید). */
+thead{display:table-header-group}
+tfoot{display:table-row-group}
+tr{page-break-inside:avoid;break-inside:avoid}
+.sum-row,h1{page-break-inside:avoid;break-inside:avoid}
 .footer{margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
 @media print{@page{margin:0.5cm}}</style></head><body>
 <h1>🛢️ ${escFa(company.name)} — حساب شرکت تیل (${fuelLabel})</h1>
 <div class="meta">تاریخ چاپ: ${d.sh} | ${d.mi}</div>
 <div class="sum-row">
-  <div class="sum-box"><div class="l">جمله (تن)</div><div class="v" style="color:#2b6cb0">${n2fa(sumTon.toFixed(2))}</div></div>
+  <!-- برچسب و واحدِ کادرها دقیقاً همان‌هایی است که در خودِ صفحهٔ حساب دیده می‌شود -->
+  <div class="sum-box"><div class="l">جمله مقدار</div><div class="v" style="color:#2b6cb0">${n2fa(Math.round(sumTon*1000))} کیلو<small style="display:block;font-size:0.62rem;font-weight:700;color:#718096">(${n2fa(sumTon.toFixed(2))} تن)</small></div></div>
   <div class="sum-box"><div class="l">جمله کل دالر</div><div class="v" style="color:#276749">${n2fa(sumUsd.toFixed(1))} $</div></div>
-  <div class="sum-box"><div class="l">جمله (افغانی)</div><div class="v" style="color:#805ad5">${n2fa(Math.round(sumAfn))}</div></div>
-  <div class="sum-box"><div class="l">رسید</div><div class="v" style="color:#276749">${n2fa(Math.round(sumPoul))}</div></div>
+  <div class="sum-box"><div class="l">جمله کل (افغانی)</div><div class="v" style="color:#805ad5">${n2fa(Math.round(sumAfn))}</div></div>
+  <div class="sum-box"><div class="l">رسید (افغانی)</div><div class="v" style="color:#276749">${n2fa(Math.round(sumPoul))}</div></div>
   <div class="sum-box"><div class="l">باقی‌مانده دالر ($)</div><div class="v" style="color:${sumAlbUsd>=0?'#276749':'#e53e3e'}">${n2fa(sumAlbUsd.toFixed(1))} $</div></div>
   <!-- الباقیِ افغانی و دالر با هم در یک کادر (خواستهٔ صاحب ریپو) -->
   <div class="sum-box" style="border-color:${sumAlb>0?'#fc8181':'#9ae6b4'}"><div class="l">جمله الباقی</div><div class="v" style="color:${sumAlb>0?'#e53e3e':'#276749'}">${n2fa(Math.round(sumAlb))} AFN<small style="display:block;font-size:0.78rem;font-weight:900;color:${sumAlbUsd>=0?'#276749':'#e53e3e'}">${n2fa(sumAlbUsd.toFixed(1))} $</small></div></div>
 </div>
-<table><thead><tr>
-  <th>#</th><th>تاریخ</th><th>نام</th>${bothFuel ? '<th>نوع تیل</th>' : ''}<th>خرید به تن</th><th>قیمت تن ($)</th>
-  <th>کل ($)</th><th>نرخ</th><th>کل (افغانی)</th><th>رسید</th><th>الباقی</th><th>الباقی ($)</th>
+<table>${colGroup}<thead><tr>
+  <th>#</th><th>تاریخ</th><th>نام</th>${bothFuel ? '<th>نوع تیل</th>' : ''}<th>خرید (کیلو)</th><th>قیمت تن ($)</th>
+  <th>کل ($)</th><th>نرخ</th><th>کل (افغانی)</th><th>رسید (افغانی)</th><th>الباقی (افغانی)</th>
 </tr></thead>
-<tbody>${rowsHtml||`<tr><td colspan="${bothFuel?12:11}" style="text-align:center;padding:20px;color:#718096">ردیفی نیست</td></tr>`}</tbody>
-<tfoot><tr><td colspan="${bothFuel?4:3}">جمله</td><td>${n2fa(sumTon.toFixed(2))} تن</td><td></td>
-<td>${n2fa(sumUsd.toFixed(1))} $</td><td></td><td>${n2fa(Math.round(sumAfn))}</td>
-<td>${n2fa(Math.round(sumPoul))}</td><td>${n2fa(Math.round(sumAlb))}</td><td>${n2fa(sumAlbUsd.toFixed(1))} $</td></tr></tfoot></table>
+<tbody>${rowsHtml||`<tr><td colspan="${bothFuel?11:10}" style="text-align:center;padding:20px;color:#718096">ردیفی نیست</td></tr>`}</tbody>
+<tfoot><tr><td colspan="${bothFuel?4:3}">جمله</td>
+<td>${n2fa(Math.round(sumTon*1000))}<span class="sub">${n2fa(sumTon.toFixed(2))} تن</span></td><td></td>
+<td>${n2fa(sumUsd.toFixed(1))}</td><td></td><td>${n2fa(Math.round(sumAfn))}</td>
+<td>${n2fa(Math.round(sumPoul))}</td>
+<td>${n2fa(Math.round(sumAlb))}<span class="sub">${n2fa(sumAlbUsd.toFixed(1))} $</span></td></tr></tfoot></table>
 <div class="footer">پمپ یعقوبی — ${escFa(company.name)}</div>
 <script>window.onload=function(){window.print();}<\/script></body></html>`;
   pumpOpenDoc(html);
@@ -33925,19 +33960,24 @@ function pdfCompanyHistory(companyId, historyId){
     const ton=cmpTon(r), tu=cmpTotalUsd(r), ta=cmpAfnTotal(r), poul=cmpPoulAfn(r,rate), ab=cmpAlbaqi(r,rate);
     tTon+=ton; tUsd+=tu; tAfn+=ta; tPoul+=poul; tAlb+=ab; tAlbUsd += cmpAlbaqiUsd(r, rate);
     const kgShow = (r.kg!=null && r.kg!=='' && +r.kg!==0) ? r.kg : (r.ton ? Math.round(parseFloat(r.ton)*1000) : '');
+    const abU = cmpAlbaqiUsd(r, rate);
+    const showUsdBaqi = (tu || cmpPoulUsdPay(r, rate));
     return `<tr>
-      <td style="text-align:center;color:#718096">${i+1}${r.srcPurchaseId ? ' 📦' : ''}</td>
+      <td style="color:#718096">${i+1}${r.srcPurchaseId ? ' 📦' : ''}</td>
       <td style="font-weight:700;color:#c07700">${r.date||'—'}</td>
-      <td style="font-weight:700">${escFa(r.name)||'—'}</td>
-      <td style="color:#2b6cb0;font-weight:700">${kgShow!==''?n2fa(kgShow):''}</td>
-      <td style="color:#276749">${n2fa(r.usd||0)} $/تن</td>
-      <td style="color:#2b6cb0;font-weight:700">${n2fa(tu.toFixed(1))} $</td>
+      <td class="nm" style="font-weight:700">${escFa(r.name)||'—'}</td>
+      <td style="color:#2b6cb0;font-weight:700">${kgShow!==''?n2fa(kgShow):'—'}</td>
+      <td style="color:#276749">${n2fa(r.usd||0)}</td>
+      <td style="color:#2b6cb0;font-weight:700">${n2fa(tu.toFixed(1))}</td>
       <td>${n2fa(r.rate||0)}</td>
       <td style="color:#805ad5">${n2fa(Math.round(ta))}</td>
-      <td style="color:#276749;font-weight:700">${n2fa(Math.round(poul))}</td>
-      <td style="color:${ab>0?'#e53e3e':'#276749'};font-weight:700">${n2fa(Math.round(ab))}</td>
+      <td style="color:#276749;font-weight:700">${r.poulCurrency==='usd'?`${n2fa(Math.round(parseFloat(r.poul)||0))} <span class="u">$</span>`:n2fa(Math.round(poul))}</td>
+      <td style="color:${ab>0?'#e53e3e':'#276749'};font-weight:700">${n2fa(Math.round(ab))}${showUsdBaqi?`<span class="sub">${n2fa(abU.toFixed(1))} $</span>`:''}</td>
     </tr>`;
   }).join('');
+  // همان عرض‌های ثابتِ پی‌دی‌افِ حسابِ زنده — تا دو گزارش مو‌به‌مو یک‌شکل باشند
+  const colGroupH = '<colgroup>' + ['3.5%','9.5%','14%','10%','10%','10.5%','6%','12%','11%','13.5%']
+    .map(w => `<col style="width:${w}">`).join('') + '</colgroup>';
   const fuelLabel = h.fuel === 'diesel' ? '🟤 دیزل' : '⛽ پطرول';
   const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8">
 <title>${escFa(company.name)} — جدول آرشیو‌شده — شرکت تیل</title>
@@ -33949,9 +33989,21 @@ h1{font-size:1.25rem;font-weight:900;color:#805ad5;border-bottom:2px solid #805a
 .sum-row{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:1fr;gap:10px;margin-bottom:16px}
 .sum-box{min-width:0;min-height:74px;background:#faf5ff;border:1px solid #e9d8fd;border-radius:8px;padding:10px;text-align:center;display:flex;flex-direction:column;justify-content:center;gap:4px;box-sizing:border-box}
 .sum-box .l{font-size:0.62rem;color:#718096;line-height:1.3}.sum-box .v{font-size:1.05rem;font-weight:900;white-space:nowrap}
-table{width:100%;border-collapse:collapse;font-size:0.72rem}th{background:#2d3748;color:#e2e8f0;padding:7px 6px;text-align:center;font-weight:700}
-td{padding:6px 7px;border-bottom:1px solid #e2e8f0;text-align:center;vertical-align:middle}tr:nth-child(even) td{background:#faf5ff}
-tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px;text-align:center}
+/* عرضِ ثابتِ ستون‌ها + nowrap: نه سرستون می‌شکند نه عدد (همان قاعدهٔ پی‌دی‌افِ حسابِ زنده) */
+table{width:100%;border-collapse:collapse;font-size:0.7rem;table-layout:fixed}
+th{background:#2d3748;color:#e2e8f0;padding:7px 3px;text-align:center;font-weight:700;font-size:0.6rem;white-space:nowrap;line-height:1.3}
+td{padding:5px 4px;border-bottom:1px solid #e2e8f0;text-align:center;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+tr:nth-child(even) td{background:#faf5ff}
+td .sub{display:block;font-size:0.6rem;font-weight:800;opacity:.92}
+td .u{font-size:0.62rem;font-weight:800;color:#2b6cb0}
+td.nm{white-space:normal;word-break:keep-all;overflow-wrap:normal}
+tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 4px;text-align:center}
+tfoot td .sub{color:#cbd5e0}
+/* سرستون‌ها روی هر ورق تکرار شوند، ردیف نصف نشود، «جمله» فقط یک بار در پایان */
+thead{display:table-header-group}
+tfoot{display:table-row-group}
+tr{page-break-inside:avoid;break-inside:avoid}
+.sum-row,h1{page-break-inside:avoid;break-inside:avoid}
 .footer{margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
 @media print{@page{margin:0.5cm}}</style></head><body>
 <h1>🗂️ ${escFa(company.name)} — جدول آرشیو‌شده (${fuelLabel})</h1>
@@ -33961,18 +34013,20 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px;text-align
   <div class="sum-box"><div class="l">جمله کل دالر</div><div class="v" style="color:#2b6cb0">${n2fa(tUsd.toFixed(1))} $</div></div>
   <div class="sum-box"><div class="l">باقی‌مانده دالر ($)</div><div class="v" style="color:${tAlbUsd>=0?'#276749':'#e53e3e'}">${n2fa(tAlbUsd.toFixed(1))} $</div></div>
   <div class="sum-box"><div class="l">جمله کل (افغانی)</div><div class="v" style="color:#805ad5">${n2fa(Math.round(tAfn))}</div></div>
-  <div class="sum-box"><div class="l">رسید</div><div class="v" style="color:#276749">${n2fa(Math.round(tPoul))}</div></div>
+  <div class="sum-box"><div class="l">رسید (افغانی)</div><div class="v" style="color:#276749">${n2fa(Math.round(tPoul))}</div></div>
   <!-- الباقیِ افغانی و دالر با هم در یک کادر (خواستهٔ صاحب ریپو) -->
   <div class="sum-box" style="border-color:${tAlb>0?'#fc8181':'#9ae6b4'}"><div class="l">جمله الباقی</div><div class="v" style="color:${tAlb>0?'#e53e3e':'#276749'}">${n2fa(Math.round(tAlb))} AFN<small style="display:block;font-size:0.78rem;font-weight:900;color:${tAlbUsd>=0?'#276749':'#e53e3e'}">${n2fa(tAlbUsd.toFixed(1))} $</small></div></div>
 </div>
-<table><thead><tr>
-  <th>#</th><th>تاریخ</th><th>نام</th><th>خرید(کیلو)</th><th>قیمت تن ($)</th>
-  <th>کل ($)</th><th>نرخ</th><th>کل (افغانی)</th><th>رسید</th><th>الباقی</th>
+<table>${colGroupH}<thead><tr>
+  <th>#</th><th>تاریخ</th><th>نام</th><th>خرید (کیلو)</th><th>قیمت تن ($)</th>
+  <th>کل ($)</th><th>نرخ</th><th>کل (افغانی)</th><th>رسید (افغانی)</th><th>الباقی (افغانی)</th>
 </tr></thead>
 <tbody>${rowsHtml||'<tr><td colspan="10" style="text-align:center;padding:20px;color:#718096">ردیفی نیست</td></tr>'}</tbody>
-<tfoot><tr><td colspan="3">جمله</td><td>${n2fa(Math.round(tTon*1000))}</td><td></td>
-<td>${n2fa(tUsd.toFixed(1))} $</td><td></td><td>${n2fa(Math.round(tAfn))}</td>
-<td>${n2fa(Math.round(tPoul))}</td><td>${n2fa(Math.round(tAlb))} AFN<div style="font-size:0.66rem;font-weight:700">${n2fa(tAlbUsd.toFixed(1))} $</div></td></tr></tfoot></table>
+<tfoot><tr><td colspan="3">جمله</td>
+<td>${n2fa(Math.round(tTon*1000))}<span class="sub">${n2fa(tTon.toFixed(2))} تن</span></td><td></td>
+<td>${n2fa(tUsd.toFixed(1))}</td><td></td><td>${n2fa(Math.round(tAfn))}</td>
+<td>${n2fa(Math.round(tPoul))}</td>
+<td>${n2fa(Math.round(tAlb))}<span class="sub">${n2fa(tAlbUsd.toFixed(1))} $</span></td></tr></tfoot></table>
 <div class="footer">پمپ یعقوبی — ${escFa(company.name)} — جدول آرشیو‌شده</div>
 <script>window.onload=function(){window.print();}<\/script></body></html>`;
   pumpOpenDoc(html);
@@ -43724,7 +43778,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.331';
+const APP_VERSION = '2.9.332';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
