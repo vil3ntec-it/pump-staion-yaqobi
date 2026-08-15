@@ -24750,16 +24750,39 @@ function _pumpDocOverlay(doc, title) {
     if (!isFinite(n)) n = dflt;
     return Math.min(hi, Math.max(lo, n));
   }
+  /* ── ماندگاریِ تنظیم‌ها ───────────────────────────────────────────────────
+     گلایهٔ صاحب ریپو: «کادرِ تنظیمِ ورق هیچی رو ثبت نمی‌کنه، هر بار باید هر کدوم
+     رو تنظیم کنم». ریشه‌اش این بود که تنها راهِ ذخیره، localStorage بود و
+     خطایش هم بی‌صدا بلعیده می‌شد؛ روی دستگاهی که حافظهٔ مرورگرش پر است (کشِ
+     خودِ برنامه تا ۴ مگابایت آن‌جاست) هیچ‌کدام از تنظیم‌ها نمی‌نشست. حالا سه
+     پله دارد و اگر یکی نشد، بعدی می‌گیرد:
+       ۱) MEM — همین نشستِ برنامه (همیشه کار می‌کند)
+       ۲) localStorage — برای دفعه‌های بعد
+       ۳) sessionStorage — اگر localStorage جا نداشت
+     خواندن هم به همین ترتیب است: تازه‌ترین چیزی که داریم برنده است. */
+  var MEM = null;
+  function _put(json) {
+    try { localStorage.setItem(KEY, json); return true; } catch (e) {}
+    // حافظه پر بود؟ نسخهٔ کهنه را بردار و همان‌جا دوباره امتحان کن
+    try { localStorage.removeItem(KEY); localStorage.setItem(KEY, json); return true; } catch (e) {}
+    try { sessionStorage.setItem(KEY, json); } catch (e) {}
+    return false;
+  }
   function load() {
     var s = {};
     for (var k in DEF) s[k] = DEF[k];
-    try {
-      var raw = JSON.parse(localStorage.getItem(KEY) || '{}');
-      for (var k2 in raw) if (k2 in DEF) s[k2] = raw[k2];
-    } catch (e) {}
+    var raw = null;
+    if (MEM) raw = MEM;
+    if (!raw) try { raw = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
+    if (!raw) try { raw = JSON.parse(sessionStorage.getItem(KEY) || 'null'); } catch (e) {}
+    if (raw) for (var k2 in raw) if (k2 in DEF) s[k2] = raw[k2];
     return s;
   }
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+  function save() {
+    var json = '';
+    try { json = JSON.stringify(S); MEM = JSON.parse(json); } catch (e) { return; }
+    _put(json);
+  }
 
   // ── هندسهٔ ورق (میلی‌متر) ────────────────────────────────────────────────
   function geo() {
@@ -24802,8 +24825,12 @@ function _pumpDocOverlay(doc, title) {
      و کادرهای دوخطیِ آیکون‌دار با فلشِ کشویی. رنگ‌ها و اندازه‌ها از خودِ آفیس
      برداشته شده‌اند: سبزِ اکسل #217346، خاکستریِ متن #323130، خطوط #d2d0ce. */
   var CSS = [
+    /* ⚠️ فونت باید «وزیرمتن» باشد، نه Segoe UI: وزیرمتن درونِ خودِ برنامه جاسازی
+       شده و همهٔ برنامه با آن نوشته می‌شود. اگر Segoe UI اول بیاید، ویندوز فارسی
+       را با همان می‌کشد و نوشته‌های این پنجره با بقیهٔ برنامه فرق می‌کند
+       (گزارشِ صاحب ریپو: «نوشته‌های بخش پرینت وزیری نیست»). */
     '#xlpr{position:fixed;inset:0;z-index:100120;display:flex;flex-direction:column;',
-      'background:#fff;direction:ltr;font-family:"Segoe UI","Vazirmatn",Tahoma,sans-serif;color:#323130}',
+      'background:#fff;direction:ltr;font-family:"Vazirmatn","Segoe UI",Tahoma,sans-serif;color:#323130}',
     '#xlpr *{box-sizing:border-box}',
     '#xlpr{-webkit-text-size-adjust:100%;text-size-adjust:100%}',
     '#xlpr .xt{flex:0 0 auto;height:44px;background:#217346;color:#fff;display:flex;align-items:center;',
@@ -24906,6 +24933,25 @@ function _pumpDocOverlay(doc, title) {
       'font-size:0.8rem;color:#323130;line-height:1;font-family:inherit;padding:0}',
     '#xlpr .xspin button:hover{background:#edebe9}',
 
+    /* ── کادرهای عددیِ «بالا/پایین‌دار» ─────────────────────────────────────
+       دو دلیل که این‌جا لازم شد:
+       ۱) لایهٔ «جداکنندهٔ هزارگان» همهٔ input[type=number]های برنامه را به کادرِ
+          متنی تبدیل می‌کند؛ با آن تبدیل، کلیدهای ↑ ↓ و فلش‌های خودِ مرورگر
+          می‌میرند. کلاسِ keep-spin همان لایه را کنار می‌زند.
+       ۲) فلشِ پیش‌فرضِ مرورگر فقط با موس و آن هم روی هاور دیده می‌شود. این دو
+          دکمهٔ کوچک همیشه سرِ جایشان‌اند — مثل خودِ Page Setup اکسل. */
+    '#xlpr input[type=number]{-moz-appearance:textfield}',
+    '#xlpr input[type=number]::-webkit-outer-spin-button,',
+      '#xlpr input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}',
+    '#xlpr .xnum{display:inline-flex;align-items:stretch;direction:ltr;flex:1 1 auto;min-width:0}',
+    '#xlpr .xnum>input{flex:1 1 auto;width:auto;min-width:0;border-radius:0;text-align:center}',
+    '#xlpr .xnum .xnb{display:flex;flex-direction:column;flex:0 0 19px;width:19px}',
+    '#xlpr .xnum .xnb button{flex:1 1 0;border:1px solid #d2d0ce;background:#faf9f8;cursor:pointer;',
+      'font-size:7px;line-height:1;color:#605e5c;padding:0;font-family:inherit;height:13.5px}',
+    '#xlpr .xnum .xnb button:first-child{border-bottom:0}',
+    '#xlpr .xnum .xnb button:hover{background:#e7f1ec;border-color:#217346;color:#217346}',
+    '#xlpr .xnum .xnb button:active{background:#d7e9e0}',
+
     '#xlpr .xhint{font-size:0.72rem;color:#797775;line-height:1.7;margin:2px 0 8px}',
     '#xlpr .xnote{background:#eff6fc;border:1px solid #b3d7f2;border-radius:2px;padding:8px 10px;',
       'font-size:0.72rem;color:#1b3f5e;line-height:1.8;margin:8px 0 4px}',
@@ -24960,6 +25006,12 @@ function _pumpDocOverlay(doc, title) {
     '#xlpr .xdlg-f button{border:1px solid #d2d0ce;background:#fff;padding:6px 20px;font-family:inherit;',
       'font-size:0.8rem;cursor:pointer;border-radius:2px}',
     '#xlpr .xdlg-f button.ok{background:#217346;border-color:#217346;color:#fff;font-weight:600}',
+    // پیامِ کوتاهِ «ثبت شد» — بیرونِ خودِ پنجرهٔ تنظیم می‌نشیند تا بعد از بسته
+    // شدنِ آن هم دیده شود
+    '#xlpr .xsaved{position:fixed;top:54px;left:50%;transform:translateX(-50%);background:#107c10;color:#fff;',
+      'padding:6px 15px;border-radius:14px;font-size:0.78rem;font-weight:700;opacity:0;pointer-events:none;',
+      'transition:opacity .25s;z-index:100130}',
+    '#xlpr .xsaved.on{opacity:1}',
     // ── اجزای پنجرهٔ تنظیمِ ورق، به سبکِ همان دیالوگِ اکسل ────────────────
     '#xlpr fieldset{border:1px solid #e1dfdd;border-radius:2px;padding:9px 11px 4px;margin:0 0 11px}',
     '#xlpr legend{font-size:0.75rem;color:#605e5c;padding:0 5px}',
@@ -25014,7 +25066,7 @@ function _pumpDocOverlay(doc, title) {
       '.xpg-hf .c{text-align:center}.xpg-hf .l{text-align:left}.xpg-hf .r{text-align:right}',
       // خط‌کشِ حاشیه و خطِ شکستِ ورق — فقط روی صفحه، نه روی کاغذ
       '.xpg-guide{position:absolute;border:1px dashed #9aa0a6;pointer-events:none}',
-      '.xpg-num{position:absolute;left:0;bottom:-15px;font:600 10px "Segoe UI",Tahoma;color:#797775;direction:ltr}',
+      '.xpg-num{position:absolute;left:0;bottom:-15px;font:600 10px "Vazirmatn","Segoe UI",Tahoma;color:#797775;direction:ltr}',
       '@media print{',
         'html,body{background:#fff!important}',
         '#xlSrc{display:none!important}',
@@ -25175,13 +25227,40 @@ function _pumpDocOverlay(doc, title) {
       closeMenu();
     });
   }
+  /* ── بسته شدنِ کشو با کلیک در هر جای دیگر ──────────────────────────────────
+     گلایهٔ صاحب ریپو: «کشو را که باز می‌کنم، باید حتماً یکی را انتخاب کنم؛ جای
+     دیگر کلیک کنم بسته نمی‌شود». علتش این بود که شنونده فقط روی خودِ پنجره
+     نشسته بود، و بخشِ بزرگِ پنجره یک iframe (پیش‌نمایشِ ورق) است — کلیکِ داخلِ
+     iframe اصلاً به این سند نمی‌رسد. حالا چهار راهِ بسته شدن هست:
+       • کلیک هرجای این سند، بیرونِ کشو
+       • کلیک داخلِ سندِ پیش‌نمایش (در writeFrame وصل می‌شود)
+       • از دست رفتنِ فوکوسِ پنجره (کلیک بیرونِ خودِ مرورگر)
+       • اسکرول/تغییرِ اندازه — چون جای کشو به کادرش سنجاق است
+     ⚠️ کلیک روی خودِ کادر استثناست: آن‌جا باید «باز/بسته» شود، نه این‌که این
+     شنونده ببندد و شنوندهٔ بعدی دوباره بازش کند. */
+  var _menuWired = false;
+  function _menuOutside(e) {
+    if (!_menuOpenFor) return;
+    var t = e.target;
+    if (t && t.closest && (t.closest('#xpr-menu') || t.closest('.xcard[data-for]'))) return;
+    closeMenu();
+  }
   function wireMenus() {
     ov.addEventListener('mousedown', function (e) {
       var card = e.target.closest ? e.target.closest('.xcard[data-for]') : null;
-      if (card) { e.preventDefault(); openMenu(card); return; }
-      if (!e.target.closest('#xpr-menu')) closeMenu();
+      if (card) { e.preventDefault(); openMenu(card); }
     });
+    if (_menuWired) return;
+    _menuWired = true;
+    document.addEventListener('pointerdown', _menuOutside, true);
+    document.addEventListener('mousedown', _menuOutside, true);
+    document.addEventListener('touchstart', _menuOutside, true);
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenu(); });
+    document.addEventListener('scroll', function (e) {
+      if (e.target && e.target.id === 'xpr-menu') return;   // اسکرولِ خودِ کشو
+      closeMenu();
+    }, true);
+    window.addEventListener('blur', closeMenu);
     window.addEventListener('resize', closeMenu);
   }
 
@@ -25226,9 +25305,34 @@ function _pumpDocOverlay(doc, title) {
     set('xpr-scale', sc, S.scaleMode);
   }
 
-  function numRow(id, label, val, step) {
+  /* کادرِ عددی با دو دکمهٔ ▲▼ — کلیدهای ↑ ↓ هم همین‌ها را می‌زنند.
+     ⚠️ کلاسِ keep-spin را برندارید: بدونِ آن، لایهٔ «جداکنندهٔ هزارگان» کادر را
+     به متنی تبدیل می‌کند و کم/زیاد شدن با کلید از کار می‌افتد. */
+  function numBox(id, val, step, lo, hi, css) {
+    return '<span class="xnum"' + (css ? ' style="' + css + '"' : '') + '>' +
+      '<input type="number" class="xnumi keep-spin" id="' + id + '" value="' + esc(val) + '"' +
+        ' step="' + (step || 1) + '" min="' + lo + '" max="' + hi + '">' +
+      '<span class="xnb">' +
+        '<button type="button" data-dir="1" tabindex="-1" aria-label="زیاد">▲</button>' +
+        '<button type="button" data-dir="-1" tabindex="-1" aria-label="کم">▼</button>' +
+      '</span></span>';
+  }
+  function numRow(id, label, val, step, lo, hi) {
     return '<div class="xr"><label for="' + id + '">' + esc(label) + '</label>' +
-      '<input type="number" id="' + id + '" value="' + esc(val) + '" step="' + (step || 1) + '"></div>';
+      numBox(id, val, step, lo, hi) + '</div>';
+  }
+  /* یک پله بالا/پایین رفتنِ کادرِ عددی. رویدادِ input را خودش می‌فرستد، پس
+     همان مسیرِ همیشگی (ثبت در تنظیمات + بازچینیِ پیش‌نمایش) طی می‌شود. */
+  function stepField(inp, dir) {
+    if (!inp) return;
+    var st = parseFloat(inp.getAttribute('step')) || 1;
+    var lo = parseFloat(inp.getAttribute('min')); if (!isFinite(lo)) lo = -1e9;
+    var hi = parseFloat(inp.getAttribute('max')); if (!isFinite(hi)) hi = 1e9;
+    var v = num(inp.value, lo, hi, 0) + dir * st;
+    v = Math.round(v * 1000) / 1000;            // 19.1 + 0.1 = 19.200000000000003
+    inp.value = Math.min(hi, Math.max(lo, v));
+    inp.dispatchEvent(new Event('input', { bubbles: true }));
+    inp.dispatchEvent(new Event('change', { bubbles: true }));
   }
   function chk(id, label, on) {
     return '<label class="xchk"><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '>' + esc(label) + '</label>';
@@ -25248,7 +25352,7 @@ function _pumpDocOverlay(doc, title) {
         '<button type="button" class="xprint" id="xpr-print">' + IC.printer + '<span>چاپ</span></button>' +
         '<span class="xcopies"><span>تعدادِ نسخه:</span><span class="xspin">' +
           '<button type="button" id="xpr-cminus">−</button>' +
-          '<input type="number" id="xpr-copies" min="1" max="999" value="' + S.copies + '">' +
+          '<input type="number" class="xnumi keep-spin" id="xpr-copies" min="1" max="999" value="' + S.copies + '">' +
           '<button type="button" id="xpr-cplus">+</button></span></span>' +
       '</div>' +
       // ساختنِ PDF کارِ چاپگر نیست، پس هیچ پنجرهٔ ویندوزی لازم ندارد
@@ -25262,8 +25366,8 @@ function _pumpDocOverlay(doc, title) {
       '<div class="xh2">تنظیمات</div>' +
       cardHtml('xpr-what', IC.sheets, WHAT, S.what) +
       '<div class="xpages"><span>ورق‌ها:</span>' +
-        '<input type="number" id="xpr-from" min="1" value="' + S.from + '"><span>تا</span>' +
-        '<input type="number" id="xpr-to" min="1" value="' + S.to + '"></div>' +
+        numBox('xpr-from', S.from, 1, 1, 9999, 'width:78px') + '<span>تا</span>' +
+        numBox('xpr-to', S.to, 1, 1, 9999, 'width:78px') + '</div>' +
       cardHtml('xpr-collate', IC.collate, COLL, S.collate ? '1' : '0') +
       cardHtml('xpr-orient', S.orient === 'landscape' ? IC.landscape : IC.portrait, ORI, S.orient) +
       cardHtml('xpr-paper', IC.paper, paperOpts(), S.paper) +
@@ -25273,8 +25377,8 @@ function _pumpDocOverlay(doc, title) {
       '<div class="xhint" id="xpr-scaleinfo"></div>' +
       '<button type="button" class="xlink c" id="xpr-save">⬇️ ذخیرهٔ فایلِ گزارش</button>' +
 
-      '<div class="xnote"><b>⬇️ ساختنِ فایلِ PDF</b> کاملاً همین‌جا انجام می‌شود — هیچ پنجرهٔ ویندوزی باز نمی‌شود و چاپگر هم لازم نیست؛ فایل مستقیم ذخیره می‌شود.<br><br>' +
-        '<b>🖨️ چاپ</b> یعنی فرستادنِ کاغذ به چاپگر، و این کار فقط از راهِ پنجرهٔ چاپِ ویندوز ممکن است — <b>هیچ سایتی</b> اجازهٔ دست زدن به چاپگر ندارد (قانونِ خودِ مرورگر، نه کمبودِ برنامه). آن پنجره چاپگرِ وصل‌شده را از پیش انتخاب کرده و فقط یک «تایید» می‌خواهد؛ همهٔ تصمیم‌های چیدمان همین‌جا گرفته شده و مو‌به‌مو همان چاپ می‌شود.</div>' +
+      /* ⚠️ کادرِ آبیِ «توضیحِ استفاده» ته پنل به خواستهٔ صریحِ صاحب ریپو برداشته
+         شد؛ برنگردانش. توضیحِ همان‌ها بالای همین ماژول نوشته است. */
 
       // ── پنجرهٔ «تنظیمِ ورق» — چهار زبانه، مو‌به‌مو مثل Page Setup اکسل ──────
       '<div class="xdlg" id="xpr-dlg"><div class="xdlg-box">' +
@@ -25294,30 +25398,30 @@ function _pumpDocOverlay(doc, title) {
           '</fieldset>' +
           '<fieldset><legend>مقیاس</legend>' +
             '<div class="xr"><label class="xrad"><input type="radio" name="xsc" id="xpr-sc-pct"' + (S.scaleMode !== 'fitPages' ? ' checked' : '') + '>اندازهٔ دلخواه:</label>' +
-              '<input type="number" id="xpr-pct" min="10" max="400" value="' + S.scalePct + '" style="width:70px"><span class="xu">٪ از اندازهٔ عادی</span></div>' +
+              numBox('xpr-pct', S.scalePct, 5, 10, 400, 'flex:0 0 84px;width:84px') + '<span class="xu">٪ از اندازهٔ عادی</span></div>' +
             '<div class="xr"><label class="xrad"><input type="radio" name="xsc" id="xpr-sc-fit"' + (S.scaleMode === 'fitPages' ? ' checked' : '') + '>جا دادن در:</label>' +
-              '<input type="number" id="xpr-fitw" min="1" max="20" value="' + S.fitW + '" style="width:56px"><span class="xu">ورق پهنا در</span>' +
-              '<input type="number" id="xpr-fith" min="1" max="99" value="' + S.fitH + '" style="width:56px"><span class="xu">ورق بلندا</span></div>' +
+              numBox('xpr-fitw', S.fitW, 1, 1, 20, 'flex:0 0 70px;width:70px') + '<span class="xu">ورق پهنا در</span>' +
+              numBox('xpr-fith', S.fitH, 1, 1, 99, 'flex:0 0 70px;width:70px') + '<span class="xu">ورق بلندا</span></div>' +
             '<div class="xhint">حالت‌های آمادهٔ «جا دادن همهٔ ستون‌ها / سطرها» را از کادرِ مقیاس در پنلِ کناری بزنید.</div>' +
           '</fieldset>' +
           selRow('xpr-paper2', 'اندازهٔ کاغذ', PAPER_ORDER.map(function (k) {
             return [k, k === 'Custom' ? 'دلخواه…' : (k + ' — ' + PAPERS[k][0] + ' × ' + PAPERS[k][1] + ' mm')];
           }), S.paper) +
           '<div class="x2" id="xpr-custombox" style="' + (S.paper === 'Custom' ? '' : 'display:none') + '">' +
-            '<div>' + numRow('xpr-cw', 'عرض', S.cw, 0.1) + '</div>' +
-            '<div>' + numRow('xpr-ch', 'بلندی', S.ch, 0.1) + '</div></div>' +
+            '<div>' + numRow('xpr-cw', 'عرض', S.cw, 0.1, 30, 2000) + '</div>' +
+            '<div>' + numRow('xpr-ch', 'بلندی', S.ch, 0.1, 30, 2000) + '</div></div>' +
           selRow('xpr-dpi', 'کیفیتِ چاپ', [['100', '۱۰۰ dpi — سبک'], ['150', '۱۵۰ dpi'], ['200', '۲۰۰ dpi — پیشنهادی'], ['300', '۳۰۰ dpi — پرکیفیت'], ['600', '۶۰۰ dpi — خیلی سنگین']], String(S.dpi)) +
           '<div class="xhint">کیفیت فقط روی فایلِ PDFِ ساخته‌شده اثر دارد؛ چاپِ روی کاغذ را خودِ چاپگر تعیین می‌کند.</div>' +
-          numRow('xpr-firstpage', 'شمارهٔ ورقِ اول', S.firstPage) +
+          numRow('xpr-firstpage', 'شمارهٔ ورقِ اول', S.firstPage, 1, 1, 9999) +
         '</div>' +
 
         // ── زبانهٔ «حاشیه‌ها» ────────────────────────────────────────────────
         '<div class="xtab" data-tab="marg">' +
           '<div class="xmargwrap">' +
             '<div class="xmargfields">' +
-              '<div class="x2"><div>' + numRow('xpr-mt', 'بالا', S.mt, 0.1) + '</div><div>' + numRow('xpr-mh', 'سربرگ', S.mh, 0.1) + '</div></div>' +
-              '<div class="x2"><div>' + numRow('xpr-ml', 'چپ', S.ml, 0.1) + '</div><div>' + numRow('xpr-mr', 'راست', S.mr, 0.1) + '</div></div>' +
-              '<div class="x2"><div>' + numRow('xpr-mb', 'پایین', S.mb, 0.1) + '</div><div>' + numRow('xpr-mf', 'پاورقی', S.mf, 0.1) + '</div></div>' +
+              '<div class="x2"><div>' + numRow('xpr-mt', 'بالا', S.mt, 0.1, 0, 100) + '</div><div>' + numRow('xpr-mh', 'سربرگ', S.mh, 0.1, 0, 100) + '</div></div>' +
+              '<div class="x2"><div>' + numRow('xpr-ml', 'چپ', S.ml, 0.1, 0, 100) + '</div><div>' + numRow('xpr-mr', 'راست', S.mr, 0.1, 0, 100) + '</div></div>' +
+              '<div class="x2"><div>' + numRow('xpr-mb', 'پایین', S.mb, 0.1, 0, 100) + '</div><div>' + numRow('xpr-mf', 'پاورقی', S.mf, 0.1, 0, 100) + '</div></div>' +
             '</div>' +
             '<div class="xmargprev" id="xpr-margprev"><div class="mp-page"><div class="mp-hdr"></div><div class="mp-body"></div><div class="mp-ftr"></div></div></div>' +
           '</div>' +
@@ -25390,6 +25494,7 @@ function _pumpDocOverlay(doc, title) {
           '<button type="button" class="xtb" id="xpr-close">✕ بستن</button>' +
         '</span>' +
       '</div>' +
+      '<div class="xsaved" id="xpr-saved">✓ ثبت شد</div>' +
       '<div class="xm">' +
         '<div class="xs" id="xpr-sidebar"></div>' +
         '<div class="xp">' +
@@ -25399,7 +25504,7 @@ function _pumpDocOverlay(doc, title) {
           '<div class="xb">' +
             '<span class="g">' +
               '<button type="button" class="xnav" id="xpr-prev" title="ورق قبل">◀</button>' +
-              '<input type="number" id="xpr-pageinput" min="1" value="1">' +
+              '<input type="number" class="xnumi keep-spin" id="xpr-pageinput" min="1" value="1">' +
               '<span class="of">از <b id="xpr-pagecount">1</b></span>' +
               '<button type="button" class="xnav" id="xpr-next" title="ورق بعد">▶</button>' +
             '</span>' +
@@ -25423,6 +25528,12 @@ function _pumpDocOverlay(doc, title) {
     frame.onload = function () {
       idoc = frame.contentDocument;
       try { idoc.getElementById('xlSrc').innerHTML = srcBody; } catch (e) {}
+      // کلیک روی خودِ ورقِ پیش‌نمایش هم کشوی باز را می‌بندد (رویدادِ داخلِ
+      // iframe به سندِ بیرونی نمی‌رسد، پس این‌جا جداگانه وصل می‌شود)
+      try {
+        idoc.addEventListener('pointerdown', closeMenu, true);
+        idoc.addEventListener('mousedown', closeMenu, true);
+      } catch (e) {}
       ready = true;
       cb && cb();
     };
@@ -26042,6 +26153,27 @@ function _pumpDocOverlay(doc, title) {
     // «انتخابِ چاپگر و تنظیماتش» — همان پنجرهٔ چاپِ سیستم، تنها جایی که چاپگر
     // و ویژگی‌هایش (Printer Properties) در آن انتخاب می‌شوند
     on('xpr-props', 'click', doPrint);
+    /* ── کم و زیاد کردنِ کادرهای عددی ────────────────────────────────────────
+       با دکمه‌های ▲▼ و با کلیدهای ↑ ↓. stopPropagation لازم است: ناوبریِ
+       اکسل‌مانندِ فرم‌های برنامه روی همین کلیدها نشسته و اگر جلویش گرفته نشود،
+       به‌جای کم/زیاد شدنِ عدد، فوکوس به کادرِ بعدی می‌پرد. */
+    ov.addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('.xnb button[data-dir]') : null;
+      if (!b) return;
+      var box = b.closest('.xnum');
+      var inp = box && box.querySelector('input');
+      if (!inp) return;
+      stepField(inp, parseFloat(b.getAttribute('data-dir')) || 0);
+      try { inp.focus(); } catch (e2) {}
+    });
+    ov.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      var el = e.target;
+      if (!el || !el.classList || !el.classList.contains('xnumi')) return;
+      e.preventDefault(); e.stopPropagation();
+      stepField(el, e.key === 'ArrowUp' ? 1 : -1);
+    });
     wireSidebar();
     wireMenus();
     window.addEventListener('resize', zoom);
@@ -26058,12 +26190,66 @@ function _pumpDocOverlay(doc, title) {
       Array.prototype.forEach.call(d.querySelectorAll('.xtab'), function (x) { x.classList.toggle('on', x.getAttribute('data-tab') === tab); });
     }
   }
+  /* ── «تایید» یعنی همه‌چیزِ این پنجره ثبت شود ──────────────────────────────
+     پیش از این، هر کادر فقط با رویدادِ input/change خودش ثبت می‌شد؛ اگر مقدارِ
+     کادری بدونِ آن رویداد عوض می‌شد (چسباندن، تکمیلِ خودکار، یا کلیدهای بالا و
+     پایین که کار نمی‌کردند) بی‌صدا گم می‌شد. حالا با بسته شدنِ پنجره — چه با
+     «تایید»، چه با ✕، چه با کلیک روی پس‌زمینه — همهٔ کادرها یک‌بار از روی خودِ
+     صفحه خوانده و ذخیره می‌شوند. */
+  function readDlg() {
+    if (!document.getElementById('xpr-dlg')) return;
+    var g = function (id) { var e = document.getElementById(id); return e ? e.value : null; };
+    var c = function (id) { var e = document.getElementById(id); return e ? !!e.checked : null; };
+    var setN = function (id, key, lo, hi) { var v = g(id); if (v != null && v !== '') S[key] = num(v, lo, hi, DEF[key]); };
+    var setB = function (id, key) { var v = c(id); if (v != null) S[key] = v; };
+    var setS = function (id, key) { var v = g(id); if (v != null) S[key] = v; };
+
+    // زبانهٔ «ورق»
+    var oriL = document.getElementById('xpr-ori-l');
+    if (oriL) S.orient = oriL.checked ? 'landscape' : 'portrait';
+    setS('xpr-paper2', 'paper');
+    setN('xpr-cw', 'cw', 30, 2000); setN('xpr-ch', 'ch', 30, 2000);
+    setN('xpr-dpi', 'dpi', 72, 600);
+    setN('xpr-firstpage', 'firstPage', 1, 9999);
+    setN('xpr-pct', 'scalePct', 10, 400);
+    setN('xpr-fitw', 'fitW', 1, 20); setN('xpr-fith', 'fitH', 1, 99);
+    var fit = document.getElementById('xpr-sc-fit');
+    if (fit && fit.checked) S.scaleMode = 'fitPages';
+    else if (S.scaleMode === 'fitPages') S.scaleMode = 'custom';
+
+    // زبانهٔ «حاشیه‌ها» — اگر عددها با هیچ حالتِ آماده‌ای نخواند، «دلخواه» است
+    ['mt', 'mb', 'ml', 'mr', 'mh', 'mf'].forEach(function (k) { setN('xpr-' + k, k, 0, 100); });
+    var pre = MARGINS[S.margin];
+    if (!pre || pre.t !== S.mt || pre.b !== S.mb || pre.l !== S.ml ||
+        pre.r !== S.mr || pre.h !== S.mh || pre.f !== S.mf) S.margin = 'custom';
+    setB('xpr-centerh', 'centerH'); setB('xpr-centerv', 'centerV');
+
+    // زبانهٔ «سربرگ/پاورقی» و زبانهٔ «جدول»
+    ['hdrL', 'hdrC', 'hdrR', 'ftrL', 'ftrC', 'ftrR'].forEach(function (k) { setS('xpr-' + k, k); });
+    setB('xpr-hffirst', 'hfSkipFirst');
+    setB('xpr-rep', 'repeatHead'); setB('xpr-grid', 'gridlines');
+    setS('xpr-color', 'color'); setS('xpr-tw', 'tableWidth');
+
+    save();
+    // کادرهای پنلِ کناری هم دقیقاً همین‌ها را نشان بدهند
+    var sync = function (id, v) { var e = document.getElementById(id); if (e) e.value = v; };
+    sync('xpr-orient', S.orient); sync('xpr-paper', S.paper);
+    sync('xpr-margin', S.margin); sync('xpr-scale', S.scaleMode);
+    show('xpr-custombox', S.paper === 'Custom');
+    refreshCards(); schedule();
+  }
+  function savedFlash() {
+    var e = document.getElementById('xpr-saved');
+    if (!e) return;
+    e.classList.add('on');
+    setTimeout(function () { e.classList.remove('on'); }, 1400);
+  }
   function wireDialog() {
     on('xpr-setup', 'click', function () { dlg(true); });
-    on('xpr-dlg-x', 'click', function () { dlg(false); });
-    on('xpr-dlg-ok', 'click', function () { dlg(false); });
+    on('xpr-dlg-x', 'click', function () { readDlg(); dlg(false); });
+    on('xpr-dlg-ok', 'click', function () { readDlg(); savedFlash(); dlg(false); });
     var d = document.getElementById('xpr-dlg');
-    if (d) d.addEventListener('click', function (e) { if (e.target === d) dlg(false); });
+    if (d) d.addEventListener('click', function (e) { if (e.target === d) { readDlg(); dlg(false); } });
     var tabs = d && d.querySelector('.xtabs');
     if (tabs) tabs.addEventListener('click', function (e) {
       var b = e.target.closest('button[data-tab]'); if (!b) return;
@@ -46272,7 +46458,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.339';
+const APP_VERSION = '2.9.340';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
