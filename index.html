@@ -16542,6 +16542,27 @@ body.light-mode{
   --lg-head-txt:#243040;   --lg-head-txt:color-mix(in srgb, var(--accent) 72%, #0b1119);
   --lg-foot-bg:#dde3ec;    --lg-foot-bg:color-mix(in srgb, var(--accent) 32%, #ffffff);
 }
+/* ══════════════════════════════════════════════════════════════════════════
+   🩹 بومِ صفحه در تمِ روشن هرگز سیاه نشود
+   ─────────────────────────────────────────────────────────────────────────
+   گزارشِ صاحب ریپو: «باگِ بک‌گراندِ سیاه در برنامه است، نمی‌دانم از کجا آمده».
+   ریشه‌اش: #siteBg رنگِ بومِ صفحه را می‌کشد و مقدارش var(--dark) است؛ در تمِ
+   روشن این متغیر یک کرِمِ روشن (#fbf4e7) است، ولی فیلترِ brightness(.22) که
+   برای تمِ تیره گذاشته شده بود همان کرِم را تقریباً سیاه می‌کرد. روی گوشی
+   بدتر بود، چون قاعدهٔ داخلِ @media همان فیلتر را با !important تحمیل می‌کرد و
+   حتی لایه‌های گرافیکیِ روشن هم از آن فرار نمی‌کردند. نتیجه: هر جای صفحه که
+   کارتی رویش نبود، سیاه دیده می‌شد.
+   درمان: در تمِ روشن فیلترِ تیره‌کننده برداشته می‌شود (بوم همان کرِمِ خودِ تم
+   می‌ماند — همان قاعدهٔ ثابتِ این ریپو: «بوم هم‌رنگِ صفحه»). تمِ تیره یک ذره
+   هم عوض نمی‌شود.
+   ⚠️ این بلاک باید بعد از قاعده‌های @media و gfx بماند تا بر !importantِ آن‌ها
+   غلبه کند. ══════════════════════════════════════════════════════════════ */
+body.light-mode #siteBg{ filter:none!important; }
+/* لایهٔ «فوق‌العاده» ظاهرِ روشنِ خودش را دارد — همان می‌ماند، فقط دیگر روی گوشی
+   با !importantِ @media تیره نمی‌شود */
+body.light-mode.gfx-ultra #siteBg{ filter:blur(26px) brightness(1.04) saturate(1.08)!important; }
+body.light-mode.gfx-standard #siteBg{ filter:blur(24px) brightness(1.02) saturate(.95)!important; }
+
 /* در حالت تاریک هم همان سیستم، فقط با پایهٔ روشن روی زمینهٔ تیره */
 body:not(.light-mode){
   --lg-brd:rgba(255,255,255,.30);        --lg-brd:color-mix(in srgb, var(--accent) 42%, rgba(255,255,255,.30));
@@ -43001,6 +43022,31 @@ function _msgrLegacyPeer(thread) {
     return keys.find(k => NTF_TOPIC_PERSON(k) === t) || null;
   } catch (e) { return null; }
 }
+/* ── «صدا فرستاد» دو بار دیده نشود ─────────────────────────────────────────
+   وقتی صدا/عکس فرستاده می‌شود، کنارِ خودِ پیام یک اعلانِ کوتاه هم به سرور می‌رود
+   («🎤 پیام صوتی») تا روی گوشیِ خاموش هم خبر برسد. همان اعلان در چتِ تک‌نفره یک
+   حبابِ متنیِ جدا می‌ساخت و کاربر دو چیز می‌دید: یکی می‌گفت «صدا فرستاد» و یکی
+   خودِ صدا (گزارشِ صاحب ریپو). حالا اگر خودِ صدا/عکس در همین گفت‌وگو و نزدیکِ
+   همان زمان باشد، آن حبابِ خبری برداشته می‌شود و همان نوشته داخلِ خودِ حبابِ صدا
+   می‌نشیند. اگر رسانه به این دستگاه نرسیده باشد، خبر سرِ جایش می‌ماند تا کاربر
+   دست‌کم بداند چیزی فرستاده شده. */
+const _MSGR_ECHO_KIND = { '🎤 پیام صوتی': 'audio', '🖼️ عکس': 'image', '🎬 ویدیو': 'video' };
+const _MSGR_ECHO_WIN = 300000;                       // ۵ دقیقه
+function _msgrEchoKind(m) {
+  if (!m || (m.k && m.k !== 'text')) return '';
+  const t = String(m.text || '').trim();
+  if (_MSGR_ECHO_KIND[t]) return _MSGR_ECHO_KIND[t];
+  return /^📄 حساب(\s|$)/.test(t) ? 'acct' : '';
+}
+function _msgrDropMediaEchoes(list) {
+  const media = (list || []).filter(m => m.k && m.k !== 'text');
+  if (!media.length) return list;
+  return list.filter(m => {
+    const kind = _msgrEchoKind(m);
+    if (!kind) return true;
+    return !media.some(x => x.k === kind && Math.abs((x.at || 0) - (m.at || 0)) < _MSGR_ECHO_WIN);
+  });
+}
 function _msgrLegacyMerge(thread, live) {
   if (!thread || thread.indexOf('p-') !== 0) return live;
   let old = [];
@@ -43059,14 +43105,15 @@ function _msgrPaintChat() {
     const d = (typeof m.d === 'string' && m.d.slice(0, 5) === 'data:') ? _esc(m.d) : '';
     if (m.k === 'image' && d) return '<img class="msgr-img" src="' + d + '" alt="عکس">';
     if (m.k === 'video' && d) return '<video class="msgr-img" src="' + d + '" controls playsinline preload="metadata"></video>';
-    if (m.k === 'audio' && d) { try { return _chVoiceHtml(d); } catch (e) { return '🎤 پیام صوتی'; } }
+    // نوشتهٔ «پیام صوتی» داخلِ خودِ حبابِ صداست، نه یک پیامِ جدا (خواستهٔ صاحب ریپو)
+    if (m.k === 'audio' && d) { try { return '<div class="msgr-mk">🎤 پیام صوتی</div>' + _chVoiceHtml(d); } catch (e) { return '🎤 پیام صوتی'; } }
     if (m.k === 'acct' && m.u) { try { return _chAcctCardHtml(m); } catch (e) { return '📇 حساب'; } }
     if (!d && (m.k === 'image' || m.k === 'video' || m.k === 'audio'))
       return '<i style="opacity:.8">' + (m.k === 'image' ? '🖼️ عکس' : m.k === 'video' ? '🎬 ویدیو' : '🎤 پیام صوتی') + ' — برای دیدن به سرور وصل شوید</i>';
     return _esc(m.text || '');
   };
-  // پیام‌هایی که کاربر «برای خودش» حذف کرده، دیده نمی‌شوند
-  const shown = msgs.filter(m => !_msgrMsgHidden(_msgrCur, m));
+  // پیام‌هایی که کاربر «برای خودش» حذف کرده، و خبرهای تکراریِ «صدا/عکس فرستاد»
+  const shown = _msgrDropMediaEchoes(msgs).filter(m => !_msgrMsgHidden(_msgrCur, m));
   _msgrShown = shown;
   list.innerHTML = shown.length
     ? shown.map((m, i) => '<div class="msgr-row' + (m.mine ? ' me' : '') + '">'
@@ -43500,7 +43547,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.325';
+const APP_VERSION = '2.9.326';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -52489,6 +52536,8 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
   color:var(--muted); opacity:.65; font-size:1rem; line-height:1; padding:2px 3px; border-radius:7px;
   -webkit-tap-highlight-color:transparent; }
 .msgr-mm:hover, .msgr-mm:active{ opacity:1; color:var(--accent); background:rgba(127,127,127,.15); }
+/* برچسبِ کوچکِ «🎤 پیام صوتی» داخلِ خودِ حبابِ صدا */
+.msgr-mk{ font-size:0.68rem; font-weight:800; color:var(--muted); margin-bottom:3px; }
 .msgr-comp{ display:flex; gap:7px; padding:9px 12px; border-top:1px solid var(--border); }
 .msgr-comp input{ flex:1; min-width:0; background:var(--card); border:1px solid var(--border); border-radius:9px;
   color:var(--txt); font-family:'Vazirmatn',sans-serif; font-size:0.86rem; font-weight:600; padding:8px 11px; }
