@@ -24434,11 +24434,17 @@ function _pumpDocOverlay(doc, title) {
   'use strict';
 
   var MM = 96 / 25.4;                       // میلی‌متر → پیکسل (۹۶ نقطه بر اینچ)
+  /* اندازه‌های استانداردِ کاغذ (میلی‌متر، ورقِ ایستاده). پیش‌نمایش و خودِ چاپ هر
+     دو از همین جدول می‌آیند، پس هر کدام را بزنی، ورق دقیقاً به همان اندازه
+     می‌شود — نه بزرگ‌نماییِ ساختگی. */
   var PAPERS = {
-    A4:      [210, 297],   A5:   [148, 210],    A3:      [297, 420],
-    Letter:  [215.9, 279.4], Legal: [215.9, 355.6], Tabloid: [279.4, 431.8]
+    A3: [297, 420], A4: [210, 297], A5: [148, 210], A6: [105, 148], A2: [420, 594],
+    B4: [250, 353], B5: [176, 250],
+    Letter: [215.9, 279.4], Legal: [215.9, 355.6], Tabloid: [279.4, 431.8],
+    Executive: [184.1, 266.7], Statement: [139.7, 215.9], Folio: [215.9, 330.2]
   };
-  var PAPER_ORDER = ['A4', 'A5', 'A3', 'Letter', 'Legal', 'Tabloid', 'Custom'];
+  var PAPER_ORDER = ['A4', 'A5', 'A3', 'A6', 'A2', 'B4', 'B5',
+                     'Letter', 'Legal', 'Tabloid', 'Executive', 'Statement', 'Folio', 'Custom'];
   var MARGINS = {
     normal: { t: 19.1, b: 19.1, l: 17.8, r: 17.8, h: 7.6,  f: 7.6  },
     narrow: { t: 19.1, b: 19.1, l: 6.4,  r: 6.4,  h: 7.6,  f: 7.6  },
@@ -24833,7 +24839,12 @@ function _pumpDocOverlay(doc, title) {
       var ic = document.getElementById(id + '-ic');
       if (ic && icon) ic.innerHTML = icon;
     };
-    set('xpr-what', WHAT, S.what);
+    // زیرنویسِ کادرِ اول صریح می‌گوید دقیقاً کدام ورق‌ها چاپ می‌شوند
+    var w = WHAT.slice();
+    if (S.what === 'range') w[2] = ['range', 'چاپِ بازهٔ ورق‌ها', 'ورقِ ' + S.from + ' تا ' + S.to + ' چاپ می‌شود'];
+    else if (S.what === 'current') w[1] = ['current', 'چاپِ همین ورق', 'فقط ورقِ ' + curPage + ' چاپ می‌شود'];
+    else w[0] = ['all', 'چاپِ همهٔ گزارش', 'هر ' + pageCount + ' ورق چاپ می‌شود'];
+    set('xpr-what', w, S.what);
     set('xpr-collate', COLL, S.collate ? '1' : '0');
     set('xpr-orient', ORI, S.orient, S.orient === 'landscape' ? IC.landscape : IC.portrait);
     set('xpr-paper', paperOpts(), S.paper);
@@ -25625,8 +25636,18 @@ function _pumpDocOverlay(doc, title) {
     on('xpr-copies', 'input', function () { S.copies = num(val('xpr-copies'), 1, 999, 1); save(); });
     on('xpr-collate', 'change', function () { S.collate = val('xpr-collate') === '1'; save(); refreshCards(); });
     on('xpr-what', 'change', function () { S.what = val('xpr-what'); save(); refreshCards(); });
-    on('xpr-from', 'input', function () { S.from = num(val('xpr-from'), 1, 9999, 1); save(); });
-    on('xpr-to', 'input', function () { S.to = num(val('xpr-to'), 1, 9999, 1); save(); });
+    /* ⚠️ تایپ کردن در «ورق‌ها: از … تا …» خودش حالت را روی «بازهٔ ورق‌ها»
+       می‌گذارد — همان کاری که اکسل می‌کند. پیش از این، عددها را می‌زدی ولی چون
+       حالت روی «همهٔ گزارش» مانده بود، بی‌صدا نادیده گرفته می‌شدند و هر سه ورق
+       چاپ می‌شد (گزارشِ صاحب ریپو: «اون عددها کار میکنن؟»). */
+    var toRange = function () {
+      if (S.what === 'range') return;
+      S.what = 'range';
+      var w = document.getElementById('xpr-what'); if (w) w.value = 'range';
+      refreshCards();
+    };
+    on('xpr-from', 'input', function () { toRange(); S.from = num(val('xpr-from'), 1, 9999, 1); save(); refreshCards(); });
+    on('xpr-to', 'input', function () { toRange(); S.to = num(val('xpr-to'), 1, 9999, 1); save(); refreshCards(); });
 
     // جهت / کاغذ / حاشیه / مقیاس: هم از کادرِ کناری، هم از زبانهٔ «تنظیمِ ورق»
     var setOrient = function (v) { S.orient = v; mirror('xpr-orient', 'xpr-orient2'); mirror('xpr-orient2', 'xpr-orient'); save(); schedule(); };
@@ -45142,7 +45163,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.336';
+const APP_VERSION = '2.9.337';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
