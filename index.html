@@ -21190,8 +21190,9 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <div id="qr-canvas-wrap"></div>
     <!-- «کپیِ حساب» از سربرگِ مودالِ شخص به این‌جا آمد (خواستهٔ صاحب ریپو) -->
     <button id="qr-acct-btn" onclick="_qrOpenAcctCard()" title="گرفتن کپیِ همین حساب برای بردن به برنامهٔ دیگر" style="width:100%;padding:10px;border-radius:9px;border:none;background:#276749;color:#fff;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer;margin-bottom:8px">📇 کپیِ حساب</button>
-    <!-- کیو‌آرِ پیام‌رسانِ شخصیِ همین مشتری — فقط خبرِ حسابِ خودش -->
-    <button id="qr-msg-btn" onclick="showPersonMessengerQR()" title="کیو‌آرِ پیام‌رسانِ شخصیِ همین حساب" style="width:100%;padding:10px;border-radius:9px;border:none;background:#5a4599;color:#fff;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer;margin-bottom:8px">📨 کیو‌آرِ پیام‌رسانِ این مشتری</button>
+    <!-- ⚠️ دکمهٔ «کیو‌آرِ پیام‌رسانِ این مشتری» برداشته شد (خواستهٔ صریحِ صاحب
+         ریپو: «همان چت تک‌به‌تک است، این اضافه است»). گفت‌وگو با هر مشتری از
+         تبِ «چت تک‌نفره»ی رباتِ دستیار انجام می‌شود. برنگردانش. -->
     <button id="qr-share-btn" onclick="_qrShare()" style="width:100%;padding:10px;border-radius:9px;border:none;background:#2b6cb0;color:#fff;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer;margin-bottom:8px">📤 اشتراک‌گذاری کیو‌آر</button>
     <button id="qr-pdf-btn" onclick="_qrPrintPDF()" style="width:100%;padding:10px;border-radius:9px;border:none;background:#38a169;color:#fff;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer;margin-bottom:8px">🖨️ پرینت / دانلود PDF</button>
     <button onclick="document.getElementById('qrModal').classList.remove('open')" style="width:100%;padding:10px;border-radius:9px;border:none;background:var(--accent);color:#000;font-family:'Vazirmatn',sans-serif;font-weight:900;cursor:pointer">✔ بستن</button>
@@ -40666,7 +40667,6 @@ function showCompanyQR(id) {
   const _cpdf = document.getElementById('qr-pdf-btn'); if (_cpdf) _cpdf.style.display = '';
   _qrAcctBtnShow(true);
   _qrHideAcctPick();                    // شرکت حسابِ فرعی ندارد
-  _qrMsgBtnShow(false);
   document.getElementById('qr-person-name').textContent = '📲 ' + c.name;
   const wrap = document.getElementById('qr-canvas-wrap');
   wrap.innerHTML = '';
@@ -40996,7 +40996,6 @@ function showPersonQR(type, id, subId) {
   const sub = subId ? (person.subs || []).find(s => s && s.id === subId) : null;
   if (!sub) _qrCurrentSub = null;
   _qrFillAcctPick(person, _qrCurrentSub);
-  _qrMsgBtnShow(true);                  // این حساب می‌تواند پیام‌رسانِ شخصی داشته باشد
   // کیو‌آرِ حسابِ فرعی فقط نامِ خودِ همان حساب را نشان می‌دهد (حساب‌ها جدا هستند)
   document.getElementById('qr-person-name').textContent = sub ? ('📲 📄 ' + (sub.name || 'حساب')) : ('📲 ' + person.name);
   // اگر قبلاً کیو‌آر صفحهٔ کارمند باز شده بود، دکمه/متن مخصوص شخص برگردد
@@ -41432,7 +41431,6 @@ function showStaffQR() {
   const pdfBtn = document.getElementById('qr-pdf-btn'); if (pdfBtn) pdfBtn.style.display = 'none';
   _qrAcctBtnShow(false);
   _qrHideAcctPick();                    // صفحهٔ کارمند حساب نیست
-  _qrMsgBtnShow(false);
   const desc = document.querySelector('#qrModal .qr-box p'); if (desc) desc.textContent = 'با اسکن این کد، صفحهٔ کارمند (فقط دیدن) باز می‌شود' + ((DB.staffPassword||'').trim() ? ' — رمز صفحهٔ کارمند لازم است' : '');
   if (typeof QRCode !== 'undefined') {
     new QRCode(wrap, { text: url, width: 220, height: 220, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
@@ -43125,20 +43123,6 @@ function showStaffMessengerQR() {
   _qrShowLink(_messengerLink('staff'), '👷 پیام‌رسانِ کارمندان',
     'کارمند با اسکنِ این کد، برنامهٔ پیام‌رسان را باز می‌کند و فقط چت گروهی و هشدارها را می‌گیرد — نه چت‌های تک‌نفرهٔ شما.');
 }
-/* کیو‌آرِ پیام‌رسانِ شخصیِ یک مشتری — فقط خبرِ حسابِ خودش */
-function showPersonMessengerQR() {
-  if (!_qrCurrentType || !_qrCurrentId) return;
-  const list = _qrCurrentType === 'debt' ? DB.debtPersons : DB.noinvPersons;
-  const person = (list || []).find(p => p.id === _qrCurrentId);
-  if (!person) return;
-  const sub = _qrCurrentSub ? (person.subs || []).find(s => s && s.id === _qrCurrentSub) : null;
-  // دقیقاً همان «peer»ی که نمای کیو‌آرِ حساب هم می‌سازد — وگرنه موضوعِ اعلانِ
-  // مشتری با موضوعی که برنامه به آن پیام می‌فرستد یکی نمی‌شد
-  const peer = _peerKey(_qrCurrentType + '-' + _qrCurrentId + (sub ? ('~' + sub.id) : ''));
-  const nm = sub ? (sub.name || 'حساب') : person.name;
-  _qrShowLink(_messengerLink('p', peer), '📨 پیام‌رسانِ ' + nm,
-    'این کد را به همین مشتری بدهید — فقط خبرِ حسابِ خودش و جوابِ شما به خودش را می‌گیرد.');
-}
 /** نمایشِ یک لینکِ دلخواه در همان پنجرهٔ کیو‌آر */
 function _qrShowLink(url, title, desc) {
   const wrap = document.getElementById('qr-canvas-wrap');
@@ -43149,7 +43133,6 @@ function _qrShowLink(url, title, desc) {
   const pdfBtn = document.getElementById('qr-pdf-btn'); if (pdfBtn) pdfBtn.style.display = 'none';
   _qrAcctBtnShow(false);
   _qrHideAcctPick();
-  _qrMsgBtnShow(false);
   const d = document.querySelector('#qrModal .qr-box p'); if (d) d.textContent = desc;
   if (typeof QRCode !== 'undefined') {
     new QRCode(wrap, { text: url, width: 220, height: 220, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
@@ -43157,10 +43140,6 @@ function _qrShowLink(url, title, desc) {
     wrap.innerHTML = '<div style="padding:20px;color:var(--muted);font-size:0.8rem">کتابخانه QR در دسترس نیست</div>';
   }
   document.getElementById('qrModal').classList.add('open');
-}
-function _qrMsgBtnShow(on) {
-  const b = document.getElementById('qr-msg-btn');
-  if (b) b.style.display = on ? '' : 'none';
 }
 /* ── روشن شدنِ خودکارِ اعلانِ این دستگاه ────────────────────────────────────
    جای دکمهٔ 🔔 که برداشته شد. دو حالت دارد:
@@ -46458,7 +46437,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.340';
+const APP_VERSION = '2.9.341';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -48375,10 +48354,35 @@ document.addEventListener('keydown', function(e){
       'border-right-width:' + cs.borderRightWidth + ';border-bottom-width:' + cs.borderBottomWidth + ';' +
       'border-left-width:' + cs.borderLeftWidth + ';' +
       'white-space:' + (el.tagName.toLowerCase() === 'textarea' ? 'pre-wrap' : 'pre') + ';';
+    /* ⚠️ «ادامه» باید به دُمِ متنِ تایپ‌شده آویزان شود، نه این‌که با آن در یک
+       خطِ عادی بنشیند. باگی که گزارش شد از همین‌جا بود: خانه‌های جدول
+       وسط‌چین‌اند؛ کادر فقط «با» را وسط می‌گذاشت ولی لایهٔ سایه کلِ «بابت نان»
+       را وسط می‌گذاشت، پس تکهٔ نامرئی روی متنِ تایپ‌شده نمی‌افتاد و دو نوشته
+       روی هم می‌آمدند — هیچ‌کدام خوانده نمی‌شد.
+       حالا خطِ سایه فقط همان چیزی را دارد که کاربر نوشته (پس دقیقاً مثل خودِ
+       کادر چیده می‌شود، چه وسط‌چین چه راست‌چین چه چپ‌چین) و «ادامه» با
+       position:absolute از لبهٔ پایانیِ همان می‌رویَد، بی‌آنکه چیدمان را
+       جابه‌جا کند. */
     g.textContent = '';
-    var a = document.createElement('span'); a.style.cssText = 'color:transparent'; a.textContent = typed;
-    var b = document.createElement('span'); b.className = 'stx-rest'; b.textContent = full.slice(typed.length);
-    g.appendChild(a); g.appendChild(b);
+    var a = document.createElement('span');
+    a.style.cssText = 'color:transparent';
+    a.textContent = typed;
+    var b = document.createElement('span');
+    b.className = 'stx-rest';
+    b.textContent = full.slice(typed.length);
+    // ⚠️ رنگ صریح لازم است: در حالتِ تک‌خطی، «ادامه» داخلِ تکهٔ نامرئی می‌نشیند
+    // و اگر رنگش را خودش نگیرد، رنگِ شفافِ همان را به ارث می‌برد و دیده نمی‌شود.
+    b.style.color = cs.color;
+    if (el.tagName.toLowerCase() === 'textarea') {
+      // متنِ چندخطی: همان جریانِ عادی درست است (چیدمانش وسط‌چین نمی‌شود)
+      g.appendChild(a); g.appendChild(b);
+    } else {
+      a.style.cssText += ';position:relative;white-space:pre';
+      b.style.cssText += ';position:absolute;top:0;white-space:pre;' +
+        (cs.direction === 'rtl' ? 'right:100%' : 'left:100%');
+      a.appendChild(b);
+      g.appendChild(a);
+    }
     g.style.display = '';
   }
 
@@ -48411,9 +48415,19 @@ document.addEventListener('keydown', function(e){
   function stxPosition() {
     if (!_el || !_box) return;
     var r = _el.getBoundingClientRect();
-    _box.style.left = Math.round(r.left) + 'px';
+    /* پهنای لیست دستِ‌کم ۲۲۰ پیکسل باشد: خانه‌های جدول باریک‌اند و پیشنهاد در
+       آن‌ها به «با…» بریده می‌شد — یعنی همان چیزی که باید خوانده شود، خوانده
+       نمی‌شد. لیست از لبهٔ راستِ کادر باز می‌شود (سندِ برنامه راست‌به‌چپ است) و
+       هیچ‌وقت از دو طرفِ صفحه بیرون نمی‌زند. */
+    var vw = document.documentElement.clientWidth || window.innerWidth;
+    var w = Math.min(Math.max(r.width, 220), vw - 12);
+    var rtl = true;
+    try { rtl = getComputedStyle(_el).direction === 'rtl'; } catch (e) {}
+    var left = rtl ? (r.right - w) : r.left;
+    left = Math.max(6, Math.min(left, vw - w - 6));
+    _box.style.left = Math.round(left) + 'px';
     _box.style.top = Math.round(r.bottom + 4) + 'px';
-    _box.style.width = Math.round(r.width) + 'px';
+    _box.style.width = Math.round(w) + 'px';
     if (_open) stxGhostShow(_el, _cands[_active] && _cands[_active].score >= GHOST_MIN ? _cands[_active].text : '');
   }
 
