@@ -22534,7 +22534,8 @@ function addExpenseRowsBulkDirect() {
   const today = persianDate();
   const todayMon = _monthKey(today);
   let d = today;
-  if (_activeExpenseMonth && _activeExpenseMonth !== todayMon) d = _activeExpenseMonth + '/01';
+  // «همهٔ ماه‌ها» یک ماهِ واقعی نیست — ردیفِ تازه به تاریخِ امروز می‌نشیند
+  if (!_ymIsAll(_activeExpenseMonth) && _activeExpenseMonth !== todayMon) d = _activeExpenseMonth + '/01';
   for (let i=0;i<n;i++) DB.expenses.push({ date: d, title:'', amount:0, note:'' });
   save(); renderExpenses(); updateBanner();
   showToast('✅ ' + n + ' ردیف افزوده شد','#38a169');
@@ -22543,7 +22544,8 @@ function addExpenseRowsBulkDirect() {
 function _safeNewRowDate() {
   const today = allDates().sh;
   const todayMon = safeMonthKey(today);
-  if (typeof _safeActiveMonth !== 'undefined' && _safeActiveMonth && _safeActiveMonth !== todayMon) return _safeActiveMonth + '/01';
+  // «همهٔ ماه‌ها» یک ماهِ واقعی نیست — ردیفِ تازه به تاریخِ امروز می‌نشیند
+  if (typeof _safeActiveMonth !== 'undefined' && !_ymIsAll(_safeActiveMonth) && _safeActiveMonth !== todayMon) return _safeActiveMonth + '/01';
   return today;
 }
 function addSafeRowDirect() {
@@ -22943,7 +22945,7 @@ function renderHistoryView() {
     seen[k] = 1; months.push(k);
   });
   months.sort().reverse();
-  if (_hcMonth && months.indexOf(_hcMonth) === -1) _hcMonth = '';
+  if (_hcMonth && !_ymValid(_hcMonth, months)) _hcMonth = '';
   if (monWrap) {
     // کشویِ سال + کشویِ ماه (خواستهٔ کاربر): با انتخابِ سال، فقط ماه‌های همان سال می‌آیند
     monWrap.innerHTML = months.length
@@ -22953,7 +22955,7 @@ function renderHistoryView() {
     const _hvSel = document.getElementById('hv-month');
     if (_hvSel) _hvSel.onchange = function () { setHistoryMonth(this.value); };
   }
-  const rows = _hcMonth ? all.filter(function (r) { return _monthKey(r.date || '') === _hcMonth; }) : all;
+  const rows = _hcMonth ? all.filter(function (r) { return _ymMatch(_hcMonth, _monthKey(r.date || '')); }) : all;
   if (sum) sum.textContent = rows.length
     ? 'مجموعاً ' + n2fa(rows.length) + ' ردیف' + (_hcMonth ? ' در ' + _monthLabelFa(_hcMonth) : '') + ' — از تازه به کهنه'
     : '';
@@ -31114,18 +31116,22 @@ function _faNumPlain(s) { return toEnDigits(String(s == null ? '' : s)); }
 // برچسبِ ماه با سال، برای همهٔ کشوها و سربرگ‌های ماهانه: «سرطان 1405 (1405/04)»
 // خواستهٔ کاربر: هر جا ماه هست، سال هم کنارش نوشته شود تا ماه‌های سال‌های مختلف قاطی نشوند.
 function _monthLabelFa(key) {
+  const yAll = _ymAllOfYear(key);
+  if (yAll) return 'همهٔ ماه‌های ' + _faNumPlain(yAll);
   const p = String(key == null ? '' : key).split('/');
   if (p.length === 2 && /\d/.test(p[0])) {
     const m = parseInt(p[1]) || 0;
     return (SHAMSI_MONTHS[m - 1] || p[1]) + ' ' + _faNumPlain(p[0]);
   }
-  return String(key == null ? '' : key);
+  if (key === '' || key == null) return 'همهٔ ماه‌ها';
+  return String(key);
 }
 /* همان برچسب + کلیدِ عددی برای وضوح بیشتر در کشوها.
    سالْ یک‌بار نوشته می‌شود: قبلاً «قوس 1405 — 1405/09» بود و 1405 دو بار تکرار
    می‌شد (کنارِ نامِ ماه و داخلِ کلید). حالا «قوس — 1405/09» — سال سرِ جایش هست،
    فقط تکرارش برداشته شد. کشویِ «سال» هم که کنارِ همین کشو است سال را نشان می‌دهد. */
 function _monthOptionLabel(key) {
+  if (_ymAllOfYear(key)) return _monthLabelFa(key);
   const p = String(key == null ? '' : key).split('/');
   const raw = _faNumPlain(key);
   if (p.length === 2 && /\d/.test(p[0])) {
@@ -31134,6 +31140,45 @@ function _monthOptionLabel(key) {
   }
   const lbl = _monthLabelFa(key);
   return lbl === raw ? lbl : (lbl + ' — ' + raw);
+}
+
+/* ══════ «همهٔ ماه‌ها» دو معنی دارد ══════════════════════════════════════════
+   خواستهٔ صاحب ریپو: «از یک سالِ جدا می‌خواهم تمامِ ماه‌هایش را یک‌جا ببینم؛ الان
+   خودکار می‌رود روی همهٔ سال‌ها و این اذیت می‌کند».
+     • ''        → همهٔ ماه‌های همهٔ سال‌ها (مثل قبل)
+     • 'YYYY/*'  → همهٔ ماه‌های همان یک سال (تازه)
+   با انتخابِ «همهٔ ماه‌ها» دیگر سال از دست نمی‌رود؛ کشویِ سال روی همان سال می‌ماند
+   و فقط ماه‌های همان سال دیده می‌شوند. هیچ محاسبه‌ای عوض نمی‌شود — فقط این‌که
+   کدام ردیف‌ها نشان داده می‌شوند. ═══════════════════════════════════════════ */
+/** برچسبِ گزینهٔ «همه» با سال: «همهٔ ماه‌ها» + 1405 → «همهٔ ماه‌های 1405» */
+function _ymAllLabel(allLabel, year) {
+  if (!year) return allLabel;
+  return allLabel.indexOf('ماه‌ها') >= 0
+    ? allLabel.replace('ماه‌ها', 'ماه‌های ' + _faNumPlain(year))
+    : (allLabel + ' ' + _faNumPlain(year));
+}
+function _ymIsAll(v) { return !v || String(v).slice(-2) === '/*'; }
+function _ymAllOfYear(v) { const s = String(v == null ? '' : v); return s.slice(-2) === '/*' ? s.slice(0, -2) : ''; }
+/** آیا این کلیدِ ماه با انتخابِ فعلی جور است؟ */
+function _ymMatch(active, key) {
+  if (!active) return true;                       // همهٔ سال‌ها
+  const y = _ymAllOfYear(active);
+  return y ? (_ymYearOf(key) === y) : (String(key) === String(active));
+}
+/** کلیدهای ماهی که باید نشان داده شوند */
+function _ymKeys(active, keys) { return (keys || []).filter(k => _ymMatch(active, k)); }
+/** آیا انتخابِ فعلی هنوز معنی دارد؟ (وگرنه بخش خودش به ماهِ جاری برمی‌گردد) */
+function _ymValid(active, keys) {
+  if (active === '') return true;
+  const y = _ymAllOfYear(active);
+  if (y) return (keys || []).some(k => _ymYearOf(k) === y);
+  return (keys || []).indexOf(active) >= 0;
+}
+/** یک کلیدِ ماهِ واقعی برای دکمه‌هایی مثل «+ ردیف» و «PDF» (وقتی «همهٔ ماه‌ها» است) */
+function _ymOneKey(active, keys, fallback) {
+  if (!_ymIsAll(active)) return active;
+  const list = _ymKeys(active, keys);
+  return list.length ? list[0] : (fallback || '');
 }
 
 // ══════ کشویِ «سال» کنارِ کشویِ «ماه» ══════
@@ -31160,7 +31205,9 @@ function _ymSelectsHtml(monthId, keys, active, color, minWidth, allLabel) {
   const years = [];
   all.forEach(k => { const y = _ymYearOf(k); if (y && years.indexOf(y) === -1) years.push(y); });
   years.sort().reverse();
-  const curYear = _ymYearOf(active) || (allLabel ? '' : (years[0] || ''));
+  /* سالِ انتخاب‌شده با «همهٔ ماه‌ها» هم از دست نمی‌رود: 'YYYY/*' یعنی همهٔ ماه‌های
+     همان سال، پس کشویِ سال روی همان سال می‌ماند (خواستهٔ صاحب ریپو). */
+  const curYear = _ymAllOfYear(active) || _ymYearOf(active) || (allLabel ? '' : (years[0] || ''));
   const monthsOfYear = curYear ? all.filter(k => _ymYearOf(k) === curYear) : all;
   const yearSel = years.length
     ? '<select id="' + monthId + '-year" class="ym-select" style="' + box + ';min-width:96px" onchange="_ymYearChanged(\'' + monthId + '\',this.value)">'
@@ -31168,8 +31215,10 @@ function _ymSelectsHtml(monthId, keys, active, color, minWidth, allLabel) {
       + years.map(y => '<option value="' + y + '"' + (y === curYear ? ' selected' : '') + '>📆 ' + _faNumPlain(y) + '</option>').join('')
       + '</select>'
     : '';
+  const allVal = curYear ? (curYear + '/*') : '';
+  const allTxt = _ymAllLabel(allLabel, curYear);
   const monSel = '<select id="' + monthId + '" class="ym-select" style="' + box + ';min-width:' + mw + 'px">'
-    + (allLabel ? '<option value=""' + (active ? '' : ' selected') + '>' + escFa(allLabel) + '</option>' : '')
+    + (allLabel ? '<option value="' + allVal + '"' + (_ymIsAll(active) ? ' selected' : '') + '>' + escFa(allTxt) + '</option>' : '')
     + monthsOfYear.map(k => '<option value="' + k + '"' + (k === active ? ' selected' : '') + '>'
         + escFa(_monthOptionLabel(k)) + '</option>').join('')
     + '</select>';
@@ -31186,9 +31235,15 @@ function _ymYearChanged(monthId, year) {
   const inYear = y ? all.filter(k => _ymYearOf(k) === y) : all.slice();
   if (!inYear.length && !allLabel) return;
   const curM = _ymMonthOf(sel.value);
-  // بدونِ سال (همهٔ سال‌ها) → همان «همهٔ ماه‌ها»؛ با سال → هم‌شمارهٔ ماهِ قبلی وگرنه اولی
-  const want = !y && allLabel ? '' : (inYear.filter(k => _ymMonthOf(k) === curM)[0] || inYear[0] || '');
-  sel.innerHTML = (allLabel ? '<option value=""' + (want ? '' : ' selected') + '>' + escFa(allLabel) + '</option>' : '')
+  /* اگر روی «همهٔ ماه‌ها» بودیم، با عوض کردنِ سال باز هم «همهٔ ماه‌ها» می‌مانیم —
+     ولی این بار فقط ماه‌های همان سالِ تازه. وگرنه هم‌شمارهٔ ماهِ قبلی در سالِ تازه
+     (و اگر نبود، اولین ماهِ همان سال). */
+  const wasAll = _ymIsAll(sel.value);
+  const allVal = y ? (y + '/*') : '';
+  const want = wasAll ? allVal
+                      : (inYear.filter(k => _ymMonthOf(k) === curM)[0] || inYear[0] || allVal);
+  const allTxt = _ymAllLabel(allLabel, y);
+  sel.innerHTML = (allLabel ? '<option value="' + allVal + '"' + (_ymIsAll(want) ? ' selected' : '') + '>' + escFa(allTxt) + '</option>' : '')
     + inYear.map(k => '<option value="' + k + '"' + (k === want ? ' selected' : '') + '>'
         + escFa(_monthOptionLabel(k)) + '</option>').join('');
   sel.value = want;
@@ -31221,14 +31276,15 @@ function renderExpenses() {
   if (_expLastAutoMonth !== curMonth) { _activeExpenseMonth = curMonth; _expLastAutoMonth = curMonth; }
   /* null یعنی «هنوز انتخاب نشده» → ماهِ جاری. رشتهٔ خالی یعنی کاربر خودش
      «همهٔ ماه‌ها» را انتخاب کرده و باید همان بماند. */
-  if (_activeExpenseMonth == null || (_activeExpenseMonth !== '' && !keys.includes(_activeExpenseMonth))) {
+  if (_activeExpenseMonth == null || !_ymValid(_activeExpenseMonth, keys)) {
     _activeExpenseMonth = keys.includes(curMonth) ? curMonth : keys[0];
   }
+  // ماه‌هایی که باید نشان داده شوند: یک ماه، همهٔ ماه‌های یک سال، یا همه
+  const _expKeys = _ymKeys(_activeExpenseMonth, keys);
   // «مصرف این ماه» باید جمعِ همان ماهی باشد که در کشوی «انتخاب ماه» انتخاب شده،
   // نه همیشه ماهِ تقویمیِ جاری — وگرنه وقتی ماهِ جدید (خالی) را می‌بینی، باز هم
   // جمعِ ماهِ قبل نمایش داده می‌شد و مثل «آمدنِ اطلاعاتِ ماه قبل» دیده می‌شد
-  const _expShownList = _activeExpenseMonth ? (groups[_activeExpenseMonth] || [])
-    : keys.reduce((acc, k) => acc.concat(groups[k] || []), []);   // خالی = همهٔ ماه‌ها
+  const _expShownList = _expKeys.reduce((acc, k) => acc.concat(groups[k] || []), []);
   const _activeMonthTotal = _expShownList.reduce((a, {e}) => a + (e.amount || 0), 0);
   if (_expEl('exp-week')) _expEl('exp-week').textContent = n2fa(Math.round(_activeMonthTotal)) + ' افغانی';
   // «مصارف کل» هم طبق خواستهٔ کاربر فقط ماهِ انتخاب‌شده را نشان دهد (نه جمعِ همهٔ ماه‌ها)
@@ -31239,7 +31295,9 @@ function renderExpenses() {
     ${_ymSelectsHtml('exp-month-select', keys, _activeExpenseMonth, 'var(--accent)', 180, 'همهٔ ماه‌ها')}`;
   wrap.appendChild(_selWrap);
   _selWrap.querySelector('#exp-month-select').onchange = function(){ _activeExpenseMonth = this.value; renderExpenses(); };
-  [_activeExpenseMonth].forEach(k => {
+  /* با «همهٔ ماه‌ها» هر ماه جدولِ خودش را دارد (خواستهٔ صاحب ریپو: «تمامِ ماه‌های
+     همان سال را یک‌جا ببینم»). قبلاً این حالت یک جدولِ خالی نشان می‌داد. */
+  _expKeys.forEach(k => {
     const items = groups[k] || [];
     const monthTotal2 = items.reduce((a,{e})=>a+(e.amount||0), 0);
     const kid = k.replace('/','_');
@@ -31283,7 +31341,7 @@ function addExpenseRow() {
   const today = persianDate();
   const todayMon = _monthKey(today);
   let date = today;
-  if (_activeExpenseMonth && _activeExpenseMonth !== todayMon) date = _activeExpenseMonth + '/01';
+  if (!_ymIsAll(_activeExpenseMonth) && _activeExpenseMonth !== todayMon) date = _activeExpenseMonth + '/01';
   DB.expenses.push({ date, title: '', amount: 0, note: '' });
   save(); renderExpenses(); updateBanner();
 }
@@ -31340,7 +31398,7 @@ function renderChakana() {
   if (_chakanaLastAutoMonth !== curMonth) { _activeChakanaMonth = curMonth; _chakanaLastAutoMonth = curMonth; }
   /* null یعنی «هنوز انتخاب نشده» → ماهِ جاری. رشتهٔ خالی یعنی کاربر خودش
      «همهٔ ماه‌ها» را انتخاب کرده و باید همان بماند. */
-  if (_activeChakanaMonth == null || (_activeChakanaMonth !== '' && !keys.includes(_activeChakanaMonth))) {
+  if (_activeChakanaMonth == null || !_ymValid(_activeChakanaMonth, keys)) {
     _activeChakanaMonth = keys.includes(curMonth) ? curMonth : keys[0];
   }
   const _selWrap = document.createElement('div');
@@ -31349,22 +31407,24 @@ function renderChakana() {
     ${_ymSelectsHtml('chakana-month-select', keys, _activeChakanaMonth, 'var(--purple)', 180, 'همهٔ ماه‌ها')}`;
   wrap.appendChild(_selWrap);
   _selWrap.querySelector('#chakana-month-select').onchange = function(){ _activeChakanaMonth = this.value; renderChakana(); };
-  const items = _activeChakanaMonth ? (groups[_activeChakanaMonth] || [])
-    : keys.reduce((acc, k) => acc.concat(groups[k] || []), []);   // خالی = همهٔ ماه‌ها
+  // یک ماه، همهٔ ماه‌های یک سال، یا همه — همه از یک راه
+  const items = _ymKeys(_activeChakanaMonth, keys).reduce((acc, k) => acc.concat(groups[k] || []), []);
   const totBord = items.reduce((a,{e})=>a+_chakanaBardagi(e), 0);
   const totRasid = items.reduce((a,{e})=>a+(parseFloat(e.rasid)||0), 0);
   const totAlb = totBord - totRasid;
   const k = _activeChakanaMonth;
-  const kid = String(k).replace('/','_');
+  // دکمه‌های «+ ردیف» و «PDF» به یک ماهِ واقعی نیاز دارند، نه به «همهٔ ماه‌ها»
+  const kOne = _ymOneKey(k, keys, curMonth);
+  const kid = String(k).replace(/[/*]/g,'_');
   const section = document.createElement('div');
   section.style.cssText = 'margin-bottom:18px';
   section.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--dark);border-radius:10px 10px 0 0;border:1px solid var(--border);border-bottom:none;flex-wrap:wrap;gap:8px">
       <span style="font-weight:800;color:var(--purple)">📅 ${escFa(_monthOptionLabel(k))}</span>
       <span style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <button style="background:var(--blue);color:#fff;border:none;border-radius:7px;padding:3px 10px;font-size:0.76rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="pdfChakana('${k}')">📄 PDF</button>
-        <button style="background:var(--green);color:#fff;border:none;border-radius:7px;padding:3px 10px;font-size:0.76rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="addChakanaRowToMonth('${k}')">+ ردیف</button>
+        <button style="background:var(--blue);color:#fff;border:none;border-radius:7px;padding:3px 10px;font-size:0.76rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="pdfChakana('${kOne}')">📄 PDF</button>
+        <button style="background:var(--green);color:#fff;border:none;border-radius:7px;padding:3px 10px;font-size:0.76rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="addChakanaRowToMonth('${kOne}')">+ ردیف</button>
         <input id="ck-bulk-${kid}" type="number" value="5" min="1" max="50" title="تعداد ردیف برای افزودنِ چندتایی" style="width:52px;text-align:center;padding:3px 6px;border:1px solid var(--border);border-radius:7px;background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.76rem;font-weight:700">
-        <button style="background:linear-gradient(135deg,#f6a623,#c97d00);color:#fff;border:none;border-radius:7px;padding:3px 10px;font-size:0.76rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="addChakanaRowsBulk('${k}')">++ چندتایی</button>
+        <button style="background:linear-gradient(135deg,#f6a623,#c97d00);color:#fff;border:none;border-radius:7px;padding:3px 10px;font-size:0.76rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="addChakanaRowsBulk('${kOne}')">++ چندتایی</button>
         <span id="ck-hdralb-${kid}" style="font-size:0.82rem;font-weight:700;color:${totAlb>0?'var(--red)':'var(--green)'}">الباقی: ${n2fa(Math.round(totAlb))}</span>
       </span>
     </div>
@@ -31501,7 +31561,7 @@ function deleteChakana(idx) {
 }
 function pdfChakana(monthKey) {
   DB.chakanaRows = DB.chakanaRows || [];
-  const rows = DB.chakanaRows.filter(e => !monthKey || _monthKey(e.date) === monthKey)
+  const rows = DB.chakanaRows.filter(e => _ymMatch(monthKey, _monthKey(e.date)))
     .slice().sort((a,b)=>_dateSortKey(a.date) - _dateSortKey(b.date));
   let totB = 0, totR = 0;
   const body = rows.map((e, i) => {
@@ -31867,18 +31927,19 @@ function renderDebtRasid() {
     if (_drLastAutoMonth !== curMonth) { _drActiveMonth = curMonth; _drLastAutoMonth = curMonth; }
   /* null یعنی «هنوز انتخاب نشده» → ماهِ جاری. رشتهٔ خالی یعنی کاربر خودش
      «همهٔ ماه‌ها» را انتخاب کرده و باید همان بماند. */
-    if (_drActiveMonth == null || (_drActiveMonth !== '' && !keys.includes(_drActiveMonth))) {
+    if (_drActiveMonth == null || !_ymValid(_drActiveMonth, keys)) {
       _drActiveMonth = keys.includes(curMonth) ? curMonth : keys[0];
     }
-    const items = _drActiveMonth ? (groups[_drActiveMonth] || [])
-      : keys.reduce((acc, k) => acc.concat(groups[k] || []), []);   // خالی = همهٔ ماه‌ها
+    // یک ماه، همهٔ ماه‌های یک سال، یا همه
+    const items = _ymKeys(_drActiveMonth, keys).reduce((acc, k) => acc.concat(groups[k] || []), []);
+    const _drOne = _ymOneKey(_drActiveMonth, keys, curMonth);   // برای PDF (یک ماهِ واقعی)
     const monTotal = items.reduce((a,r)=>a+(r.amount||0), 0);
     const selWrap = document.createElement('div');
     selWrap.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px';
     selWrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">📅 سال و ماه:</label>
       ${_ymSelectsHtml('dr-month-select', keys, _drActiveMonth, 'var(--accent)', 180, 'همهٔ ماه‌ها')}
       <button class="add-btn" style="background:var(--blue);color:#fff" onclick="addDebtRasidMonth()">📅 ماه جدید</button>
-      <button style="background:var(--blue);color:#fff;border:none;border-radius:7px;padding:8px 12px;font-size:0.8rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="pdfDebtRasid('${_drActiveMonth}')">📄 PDF ماه</button>
+      <button style="background:var(--blue);color:#fff;border:none;border-radius:7px;padding:8px 12px;font-size:0.8rem;font-family:'Vazirmatn',sans-serif;font-weight:700;cursor:pointer" onclick="pdfDebtRasid('${_drOne}')">📄 PDF ماه</button>
       <span style="font-size:0.85rem;font-weight:700;color:var(--green)">جمله ${escFa(_monthLabelFa(_drActiveMonth))}: ${n2fa(Math.round(monTotal*100)/100)}</span>`;
     monWrap.appendChild(selWrap);
     selWrap.querySelector('#dr-month-select').onchange = function(){ _drActiveMonth = this.value; renderDebtRasid(); };
@@ -31930,7 +31991,7 @@ function undoDebtRasid(id) {
 function pdfDebtRasid(monthKey) {
   const d = allDates();
   let rows = ensureDebtRasid().slice();
-  if (monthKey) rows = rows.filter(r => _monthKey(r.date) === monthKey);
+  if (monthKey) rows = rows.filter(r => _ymMatch(monthKey, _monthKey(r.date)));
   const total = rows.reduce((a,r)=>a+(r.amount||0), 0);
   const rowsHtml = rows.map((r,i) => `<tr>
     <td style="text-align:center;color:#718096">${n2fa(i+1)}</td>
@@ -34579,7 +34640,7 @@ ${splitBoxesHtml}
 function pdfExpenses(monthKey) {
   const d = allDates();
   let expenses = DB.expenses || [];
-  if (monthKey) expenses = expenses.filter(e => _monthKey(e.date) === monthKey);
+  if (monthKey) expenses = expenses.filter(e => _ymMatch(monthKey, _monthKey(e.date)));
   const total = expenses.reduce((a,e)=>a+(e.amount||0), 0);
   const today = expenses.filter(e=>e.date===d.sh).reduce((a,e)=>a+(e.amount||0),0);
 
@@ -35210,7 +35271,7 @@ function renderSafeMonthTabs() {
   if (_safeLastAutoMonth !== curMonth) { _safeActiveMonth = curMonth; _safeLastAutoMonth = curMonth; }
   /* null یعنی «هنوز انتخاب نشده» → ماهِ جاری. رشتهٔ خالی یعنی کاربر خودش
      «همهٔ ماه‌ها» را انتخاب کرده و باید همان بماند. */
-  if (_safeActiveMonth == null || (_safeActiveMonth !== '' && !months.includes(_safeActiveMonth))) {
+  if (_safeActiveMonth == null || !_ymValid(_safeActiveMonth, months)) {
     _safeActiveMonth = months.includes(curMonth) ? curMonth : months[months.length - 1];
   }
   wrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">📅 سال و ماه:</label>
@@ -35273,7 +35334,7 @@ function renderSafe() {
   const monthRows = [];                     // ردیف‌های ماه فعال، با اندیس اصلی‌شان در DB.safeEntries
   entries.forEach((e, i) => {
     _safeAddAmt(e.type === 'bardagi' ? totalBardagi : totalMandagi, e);
-    if (_safeActiveMonth && safeMonthKey(e.date) !== _safeActiveMonth) return;   // خالی = همهٔ ماه‌ها
+    if (!_ymMatch(_safeActiveMonth, safeMonthKey(e.date))) return;   // یک ماه / یک سال / همه
     _safeAddAmt(e.type === 'bardagi' ? mBardagi : mMandagi, e);
     monthRows.push({ i, e });
   });
@@ -35569,7 +35630,7 @@ function _recalcSafeTotals() {
   // جمعِ کلِ همهٔ ماه‌ها را روی کادرها ننویسد و اطلاعاتِ ماهِ قبل در ماهِ جدید دیده نشود
   const entries = DB.safeEntries || [];
   let mBardagi = { afn: 0, usd: 0 }, mMandagi = { afn: 0, usd: 0 };
-  entries.forEach(e => { if (!_safeActiveMonth || safeMonthKey(e.date) === _safeActiveMonth) _safeAddAmt(e.type === 'bardagi' ? mBardagi : mMandagi, e); });
+  entries.forEach(e => { if (_ymMatch(_safeActiveMonth, safeMonthKey(e.date))) _safeAddAmt(e.type === 'bardagi' ? mBardagi : mMandagi, e); });
   const mNet = { afn: mBardagi.afn - mMandagi.afn, usd: mBardagi.usd - mMandagi.usd };
   const el = id => document.getElementById(id);
   if (el('safe-total-bardagi')) el('safe-total-bardagi').textContent = fmtSafeTotal(mBardagi);
@@ -35602,7 +35663,8 @@ function deleteSafe(i) {
 function printSafe(monthKey) {
   const d = allDates();
   let entries = DB.safeEntries || [];
-  if (monthKey) entries = entries.filter(e => safeMonthKey(e.date) === monthKey);
+  // monthKey می‌تواند یک ماه، «همهٔ ماه‌های یک سال» (YYYY/*) یا خالی (همه) باشد
+  if (monthKey) entries = entries.filter(e => _ymMatch(monthKey, safeMonthKey(e.date)));
   let tbT = { afn: 0, usd: 0 }, tmT = { afn: 0, usd: 0 };
   entries.forEach(e => _safeAddAmt(e.type==='bardagi' ? tbT : tmT, e));
   const netT = { afn: tbT.afn - tmT.afn, usd: tbT.usd - tmT.usd };
@@ -35647,7 +35709,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 </style>
 </head>
 <body>
-<h1>🏦 پمپ یعقوبی — ${monthKey ? ('گاوصندوق ماه ' + monthKey) : 'گزارش گاوصندوق'}</h1>
+<h1>🏦 پمپ یعقوبی — ${monthKey ? ('گاوصندوق ' + escFa(_monthLabelFa(monthKey))) : 'گزارش گاوصندوق'}</h1>
 <div class="meta">تاریخ چاپ: ${d.sh} | ${d.mi} | ${d.qa}</div>
 <div class="sum-row">
   <div class="sum-box" style="border-color:#276749"><div class="l">💵 جمله بردگی</div><div class="v" style="color:#276749">${fmtSafeTotal(tbT)}</div></div>
@@ -35719,7 +35781,7 @@ function renderSarrafiMonthTabs() {
   months.sort().reverse();
   /* null یعنی «هنوز انتخاب نشده» → ماهِ جاری. رشتهٔ خالی یعنی کاربر خودش
      «همهٔ ماه‌ها» را انتخاب کرده و باید همان بماند. */
-  if (_sarrafiActiveMonth == null || (_sarrafiActiveMonth !== '' && !months.includes(_sarrafiActiveMonth))) _sarrafiActiveMonth = curMonth;
+  if (_sarrafiActiveMonth == null || !_ymValid(_sarrafiActiveMonth, months)) _sarrafiActiveMonth = curMonth;
   wrap.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px';
   wrap.innerHTML = `<label style="font-size:0.82rem;color:var(--muted);font-weight:700">🗓️ سال و ماه:</label>
     ${_ymSelectsHtml('sarrafi-month-select', months, _sarrafiActiveMonth, 'var(--accent)', 170, 'همهٔ ماه‌ها')}`;
@@ -35748,7 +35810,7 @@ function renderSarrafi() {
      onchange/oninput می‌ماند — داده با همان بسته می‌شود، نه با این شماره. */
   let seq = 0;
   rows.forEach((r, i) => {
-    if (_sarrafiActiveMonth && sarrafiMonthKey(r.date) !== _sarrafiActiveMonth) return;   // خالی = همهٔ ماه‌ها
+    if (!_ymMatch(_sarrafiActiveMonth, sarrafiMonthKey(r.date))) return;   // یک ماه / یک سال / همه
     seq++;
     const broken = sarrafiBroken(r);
     const tr = document.createElement('tr');
@@ -35795,7 +35857,7 @@ function _sarrafiRepaint() {
   const rows = sarrafiRows();
   let sumBardagi = 0, sumBaqi = 0, sumUsd = 0, sumBardagiUsd = 0;
   rows.forEach((r, i) => {
-    if (_sarrafiActiveMonth && sarrafiMonthKey(r.date) !== _sarrafiActiveMonth) return;   // خالی = همهٔ ماه‌ها
+    if (!_ymMatch(_sarrafiActiveMonth, sarrafiMonthKey(r.date))) return;   // یک ماه / یک سال / همه
     const broken = sarrafiBroken(r);
     const rate = parseFloat(r.rate) || 0;
     sumBardagi += parseFloat(r.bardagi) || 0;
@@ -35864,7 +35926,7 @@ function addSarrafiMonth() {
 function _sarrafiNewRowDate() {
   const today = allDates().sh;
   const todayMon = sarrafiMonthKey(today);
-  if (_sarrafiActiveMonth && _sarrafiActiveMonth !== todayMon) return _sarrafiActiveMonth + '/01';
+  if (!_ymIsAll(_sarrafiActiveMonth) && _sarrafiActiveMonth !== todayMon) return _sarrafiActiveMonth + '/01';
   return today;
 }
 function addSarrafiRow() {
@@ -35994,7 +36056,7 @@ function syncSarrafiToCompany(row) {
 }
 function printSarrafi() {
   const d = allDates();
-  const rows = sarrafiRows().filter(r => sarrafiMonthKey(r.date) === _sarrafiActiveMonth);
+  const rows = sarrafiRows().filter(r => _ymMatch(_sarrafiActiveMonth, sarrafiMonthKey(r.date)));
   let sumBardagi = 0, sumBaqi = 0, sumUsd = 0, sumBardagiUsd = 0;
   const rowsHtml = rows.map((r, i) => {
     const broken = sarrafiBroken(r);
@@ -36018,7 +36080,7 @@ function printSarrafi() {
     ? '🟢 الباقی صرافی نزد پمپ: ' + n2fa(Math.round(sumBaqi)) + ' $'
     : '🔴 بدهیِ پمپ به صرافی: ' + n2fa(Math.abs(Math.round(sumBaqi))) + ' $';
   const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8">
-<title>صرافی — ${_sarrafiActiveMonth} — پمپ یعقوبی</title>
+<title>صرافی — ${_monthLabelFa(_sarrafiActiveMonth)} — پمپ یعقوبی</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:24px;font-size:13.5px}
 h1{font-size:1.25rem;font-weight:900;color:#2b6cb0;border-bottom:2px solid #2b6cb0;padding-bottom:8px;margin-bottom:6px}
@@ -36031,7 +36093,7 @@ table{width:100%;border-collapse:collapse;font-size:0.74rem}th{background:#2d374
 td{padding:6px 7px;border-bottom:1px solid #e2e8f0;text-align:center}tr:nth-child(even) td{background:#f7fafc}
 tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px}
 @media print{@page{margin:0.5cm}}</style></head><body>
-<h1>💱 صرافی — ${_sarrafiActiveMonth}</h1>
+<h1>💱 صرافی — ${escFa(_monthLabelFa(_sarrafiActiveMonth))}</h1>
 <div class="meta">تاریخ چاپ: ${d.sh} | ${d.mi}</div>
 <div class="sum-row">
   <div class="sum-box"><div class="l">💲 جمله دالر این ماه</div><div class="v">${n2fa(sumUsd.toFixed(2))} $</div></div>
@@ -36238,7 +36300,7 @@ function renderWaraqList() {
   if (wrapEl) {
     const keys = Array.from(new Set((DB.waraqEntries || []).map(_waraqMonthKey).filter(Boolean))).sort().reverse();
     const cur = renderWaraqList._month || '';
-    if (cur && keys.indexOf(cur) === -1) { renderWaraqList._month = ''; }
+    if (cur && !_ymValid(cur, keys)) { renderWaraqList._month = ''; }
     wrapEl.innerHTML = keys.length ? _ymSelectsHtml('wq-month-filter', keys, renderWaraqList._month || '', 'var(--accent)', 170, 'همهٔ ماه‌ها') : '';
     const selEl = document.getElementById('wq-month-filter');
     if (selEl) selEl.onchange = function () { setWaraqMonthFilter(this.value); };
@@ -36251,7 +36313,7 @@ function renderWaraqList() {
   if (!renderWaraqList._limit) renderWaraqList._limit = 60;
   const _monthSel = renderWaraqList._month || '';
   let _wqAll = [...DB.waraqEntries].reverse();
-  if (_monthSel) _wqAll = _wqAll.filter(w => _waraqMonthKey(w) === _monthSel);
+  if (_monthSel) _wqAll = _wqAll.filter(w => _ymMatch(_monthSel, _waraqMonthKey(w)));
   if (!_wqAll.length) {
     grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:0.9rem">در این ماه ورقی ثبت نشده</div>';
     return;
@@ -43547,7 +43609,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.327';
+const APP_VERSION = '2.9.328';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
