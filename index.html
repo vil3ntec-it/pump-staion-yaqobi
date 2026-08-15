@@ -24594,6 +24594,11 @@ function _pumpDocOverlay(doc, title) {
     '#xlpr .xprint:hover{background:#f3f2f1;border-color:#217346}',
     '#xlpr .xprint svg{width:42px;height:42px;stroke:#323130;fill:none;stroke-width:1.2}',
     '#xlpr .xcopies{display:flex;align-items:center;gap:8px;padding-top:10px}',
+    '#xlpr .xpdf{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:#fff;',
+      'color:#217346;border:1.5px solid #217346;border-radius:2px;padding:10px;font-family:inherit;',
+      'font-size:0.9rem;font-weight:700;cursor:pointer;margin:10px 0 2px}',
+    '#xlpr .xpdf:hover{background:#f3faf6}',
+    '#xlpr .xpdf small{font-weight:600;font-size:0.7rem;color:#605e5c}',
     '#xlpr .xcopies>span{font-size:0.85rem;color:#323130}',
 
     // کادرِ دوخطیِ آیکون‌دار — قلبِ ظاهرِ اکسل
@@ -24606,8 +24611,13 @@ function _pumpDocOverlay(doc, title) {
     '#xlpr .xcard .xcard-tx{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:1px}',
     '#xlpr .xcard .xcard-tx b{font-size:0.86rem;font-weight:600;color:#201f1e;',
       'white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    /* ⚠️ unicode-bidi:plaintext لازم است. زیرنویسِ کادرها عدد و واحد را با هم
+       دارند («210 × 297 mm») و چون پنل راست‌به‌چپ است، مرورگر «mm» را می‌بُرد
+       اولِ خط و کاربر «297 × 210 mm» می‌دید — یعنی عددِ غلط. با plaintext جهتِ
+       هر زیرنویس از خودِ نوشته‌اش تعیین می‌شود: خطِ فارسی راست‌به‌چپ، خطِ
+       عددی/انگلیسی چپ‌به‌راست. */
     '#xlpr .xcard .xcard-tx i{font-style:normal;font-size:0.73rem;color:#605e5c;',
-      'white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;unicode-bidi:plaintext;text-align:start}',
     '#xlpr .xcard .xcard-ca{flex:0 0 14px;color:#605e5c;font-size:0.7rem;line-height:1}',
     '#xlpr .xcard>select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;',
       'border:0;padding:0;margin:0;font-family:inherit;direction:rtl}',
@@ -24779,19 +24789,22 @@ function _pumpDocOverlay(doc, title) {
     ['custom', 'مقیاسِ دلخواه', 'درصدش را در «تنظیمِ ورق» بگذارید']
   ];
   function inch(mm) { return (mm / 25.4).toFixed(2); }
+  /* زیرنویس‌ها عمداً طوری نوشته می‌شوند که جهتشان یکدست باشد: خطِ اندازهٔ کاغذ
+     سرتاسر لاتین است، و خطِ حاشیه‌ها با کلمهٔ فارسی تمام می‌شود (نه با «mm»).
+     وگرنه در پنلِ راست‌به‌چپ، واحد می‌پرید اولِ خط و عدد برعکس خوانده می‌شد. */
   function paperOpts() {
     return PAPER_ORDER.map(function (k) {
       if (k === 'Custom') return ['Custom', 'اندازهٔ دلخواه', S.cw + ' × ' + S.ch + ' mm'];
-      return [k, k, PAPERS[k][0] + ' × ' + PAPERS[k][1] + ' mm  (' + inch(PAPERS[k][0]) + '" × ' + inch(PAPERS[k][1]) + '")'];
+      return [k, k, PAPERS[k][0] + ' × ' + PAPERS[k][1] + ' mm  ·  ' + inch(PAPERS[k][0]) + '" × ' + inch(PAPERS[k][1]) + '"'];
     });
   }
   function marginOpts() {
-    var d = function (m) { return 'چپ ' + m.l + '  راست ' + m.r + '  بالا ' + m.t + '  پایین ' + m.b + ' mm'; };
+    var d = function (m) { return 'چپ ' + m.l + ' · راست ' + m.r + ' · بالا ' + m.t + ' · پایین ' + m.b + ' میلی‌متر'; };
     return [
       ['normal', 'حاشیهٔ عادی', d(MARGINS.normal)],
       ['narrow', 'حاشیهٔ باریک', d(MARGINS.narrow)],
       ['wide', 'حاشیهٔ پهن', d(MARGINS.wide)],
-      ['custom', 'حاشیهٔ دلخواه', 'چپ ' + S.ml + '  راست ' + S.mr + '  بالا ' + S.mt + '  پایین ' + S.mb + ' mm']
+      ['custom', 'حاشیهٔ دلخواه', d({ l: S.ml, r: S.mr, t: S.mt, b: S.mb })]
     ];
   }
 
@@ -24855,6 +24868,8 @@ function _pumpDocOverlay(doc, title) {
           '<input type="number" id="xpr-copies" min="1" max="999" value="' + S.copies + '">' +
           '<button type="button" id="xpr-cplus">+</button></span></span>' +
       '</div>' +
+      // ساختنِ PDF کارِ چاپگر نیست، پس هیچ پنجرهٔ ویندوزی لازم ندارد
+      '<button type="button" class="xpdf" id="xpr-pdf">⬇️ ساختنِ فایلِ PDF <small>بدونِ پنجرهٔ ویندوز</small></button>' +
 
       '<div class="xh2">چاپگر</div>' +
       '<div class="xprn">' + IC.printer +
@@ -24875,7 +24890,8 @@ function _pumpDocOverlay(doc, title) {
       '<div class="xhint" id="xpr-scaleinfo"></div>' +
       '<button type="button" class="xlink c" id="xpr-save">⬇️ ذخیرهٔ فایلِ گزارش</button>' +
 
-      '<div class="xnote">چاپگر، سینیِ کاغذ، دو-رو و کیفیت (DPI) را ویندوز تعیین می‌کند و در پنجرهٔ چاپ — که با زدنِ «چاپ» باز می‌شود — روی چاپگرِ پیش‌فرضِ وصل‌شده تنظیم است. هر چیزی که به <b>چیدمانِ ورق</b> مربوط است همین‌جا تعیین می‌شود و مو‌به‌مو همان چاپ می‌شود.</div>' +
+      '<div class="xnote"><b>⬇️ ساختنِ فایلِ PDF</b> کاملاً همین‌جا انجام می‌شود — هیچ پنجرهٔ ویندوزی باز نمی‌شود و چاپگر هم لازم نیست؛ فایل مستقیم ذخیره می‌شود.<br><br>' +
+        '<b>🖨️ چاپ</b> یعنی فرستادنِ کاغذ به چاپگر، و این کار فقط از راهِ پنجرهٔ چاپِ ویندوز ممکن است — <b>هیچ سایتی</b> اجازهٔ دست زدن به چاپگر ندارد (قانونِ خودِ مرورگر، نه کمبودِ برنامه). آن پنجره چاپگرِ وصل‌شده را از پیش انتخاب کرده و فقط یک «تایید» می‌خواهد؛ همهٔ تصمیم‌های چیدمان همین‌جا گرفته شده و مو‌به‌مو همان چاپ می‌شود.</div>' +
 
       // ── پنجرهٔ «تنظیمِ ورق» — چهار زبانه، مثل Page Setup اکسل ──────────────
       '<div class="xdlg" id="xpr-dlg"><div class="xdlg-box">' +
@@ -25278,6 +25294,205 @@ function _pumpDocOverlay(doc, title) {
     paint();
   }
 
+  /* ══ ساختنِ فایلِ PDF داخلِ خودِ برنامه — بدونِ هیچ پنجرهٔ ویندوزی ══════════
+     گزارشِ صاحب ریپو: «چرا پرینت که می‌زنم مستقیم پرینت نمی‌شود و دوباره پنجرهٔ
+     پرینتِ ویندوز می‌آید بالا؟ گفتم مستقیم از این‌جا همه‌چیزش انتخاب یا پرینت شود.»
+
+     حقیقتِ فنی: فرستادنِ کاغذ به چاپگر فقط از راهِ پنجرهٔ چاپِ سیستم ممکن است —
+     هیچ سایتی اجازهٔ دست زدن به چاپگر ندارد. ولی «ساختنِ فایلِ PDF» اصلاً ربطی
+     به چاپگر ندارد و می‌شود کاملاً همین‌جا انجامش داد. پس این دکمه اضافه شد:
+     ورق‌های همین پیش‌نمایش، مو‌به‌مو، به یک فایلِ PDF تبدیل و ذخیره می‌شوند —
+     نه پنجرهٔ ویندوزی، نه انتخابِ چاپگر، نه چیزی.
+
+     چطور کار می‌کند: هر ورق داخلِ یک <foreignObject> به تصویر تبدیل می‌شود
+     (یعنی همان چیزی که مرورگر نشان می‌دهد، نه یک بازسازیِ تقریبی)، و بعد
+     تصویرها با یک نویسندهٔ کوچکِ PDF — که همین‌جا نوشته شده و هیچ کتابخانهٔ
+     بیرونی ندارد — کنارِ هم در فایل می‌نشینند.
+     فونتِ فارسی هم به‌صورت base64 داخلِ همان تصویر جاسازی می‌شود؛ اگر شبکه نبود
+     با فونتِ سیستم کشیده می‌شود (خوانا، فقط کمی متفاوت). ══════════════════ */
+  var _fontCssEmbedded = null;
+  function b64(buf) {
+    var bytes = new Uint8Array(buf), s = '', CH = 0x8000;
+    for (var i = 0; i < bytes.length; i += CH) s += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+    return btoa(s);
+  }
+  function embedFontCss(cb) {
+    if (_fontCssEmbedded !== null) return cb(_fontCssEmbedded);
+    var css = '';
+    try { css = (typeof _pdfFontText === 'string') ? _pdfFontText : ''; } catch (e) {}
+    if (!css) { _fontCssEmbedded = ''; return cb(''); }
+    var urls = [];
+    css.replace(/url\((https?:[^)"']+)\)/g, function (m, u) { if (urls.indexOf(u) < 0) urls.push(u); return m; });
+    if (!urls.length) { _fontCssEmbedded = css; return cb(css); }
+    var done = 0, map = {};
+    var finish = function () {
+      if (++done < urls.length) return;
+      _fontCssEmbedded = css.replace(/url\((https?:[^)"']+)\)/g, function (m, u) {
+        return map[u] ? 'url(' + map[u] + ')' : m;
+      });
+      cb(_fontCssEmbedded);
+    };
+    urls.forEach(function (u) {
+      fetch(u).then(function (r) { return r.ok ? r.arrayBuffer() : null; })
+        .then(function (buf) { if (buf) map[u] = 'data:font/woff2;base64,' + b64(buf); })
+        .catch(function () {})
+        .then(finish);
+    });
+  }
+
+  // همهٔ استایل‌های سندِ پیش‌نمایش، به‌علاوهٔ فونتِ جاسازی‌شده
+  function allCss(fontCss) {
+    var out = fontCss || '';
+    try {
+      Array.prototype.forEach.call(idoc.querySelectorAll('style'), function (s) { out += '\n' + s.textContent; });
+    } catch (e) {}
+    return out;
+  }
+
+  // یک ورق → تصویرِ JPEG (همان چیزی که در پیش‌نمایش دیده می‌شود)
+  function sheetToJpeg(sheet, css, scale, cb) {
+    var w = Math.round(sheet.offsetWidth), h = Math.round(sheet.offsetHeight);
+    var clone = sheet.cloneNode(true);
+    clone.style.boxShadow = 'none';
+    clone.style.margin = '0';
+    // خط‌کشِ حاشیه و شمارهٔ گوشه فقط برای صفحه‌اند، نه فایل
+    Array.prototype.forEach.call(clone.querySelectorAll('.xpg-guide,.xpg-num'), function (n) { n.remove(); });
+    var body;
+    try { body = new XMLSerializer().serializeToString(clone); }
+    catch (e) { return cb(null); }
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + Math.round(w * scale) + '" height="' + Math.round(h * scale) + '" viewBox="0 0 ' + w + ' ' + h + '">' +
+      '<foreignObject x="0" y="0" width="' + w + '" height="' + h + '">' +
+      '<div xmlns="http://www.w3.org/1999/xhtml" dir="rtl" style="width:' + w + 'px;height:' + h + 'px;background:#fff">' +
+      '<style type="text/css">' + css.replace(/]]>/g, '') + '</style>' + body + '</div>' +
+      '</foreignObject></svg>';
+    var img = new Image();
+    img.onload = function () {
+      try {
+        var cv = document.createElement('canvas');
+        cv.width = Math.round(w * scale); cv.height = Math.round(h * scale);
+        var g = cv.getContext('2d');
+        g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+        g.drawImage(img, 0, 0, cv.width, cv.height);
+        var url = cv.toDataURL('image/jpeg', 0.93);
+        var bin = atob(url.slice(url.indexOf(',') + 1));
+        var arr = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+        cb({ data: arr, w: cv.width, h: cv.height });
+      } catch (e) { cb(null); }
+    };
+    img.onerror = function () { cb(null); };
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  }
+
+  /* نویسندهٔ کوچکِ PDF: هر ورق یک صفحه با یک تصویرِ JPEG تمام‌قد.
+     اندازهٔ صفحه به «پوینت» است (۱ اینچ = ۷۲ پوینت)، پس ورقِ A4 دقیقاً
+     595×842 پوینت درمی‌آید — همان اندازه‌ای که چاپخانه/آکروبات می‌شناسد. */
+  function buildPdf(pages, wMm, hMm) {
+    var enc = new TextEncoder();
+    var chunks = [], len = 0, off = {};
+    function put(x) {
+      var u = (typeof x === 'string') ? enc.encode(x) : x;
+      chunks.push(u); len += u.length;
+    }
+    function startObj(n) { off[n] = len; put(n + ' 0 obj\n'); }
+    function endObj() { put('\nendobj\n'); }
+    var wPt = wMm * 72 / 25.4, hPt = hMm * 72 / 25.4;
+    put(new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34, 0x0A, 0x25, 0xE2, 0xE3, 0xCF, 0xD3, 0x0A]));
+
+    var n = 3, pageIds = [], objs = [];
+    pages.forEach(function () {
+      objs.push({ page: n++, content: n++, img: n++ });
+    });
+    objs.forEach(function (o) { pageIds.push(o.page + ' 0 R'); });
+
+    startObj(1); put('<< /Type /Catalog /Pages 2 0 R >>'); endObj();
+    startObj(2); put('<< /Type /Pages /Kids [' + pageIds.join(' ') + '] /Count ' + pages.length + ' >>'); endObj();
+
+    pages.forEach(function (pg, i) {
+      var o = objs[i];
+      startObj(o.page);
+      put('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + wPt.toFixed(2) + ' ' + hPt.toFixed(2) + ']' +
+          ' /Resources << /XObject << /X0 ' + o.img + ' 0 R >> >> /Contents ' + o.content + ' 0 R >>');
+      endObj();
+      var cs = 'q ' + wPt.toFixed(2) + ' 0 0 ' + hPt.toFixed(2) + ' 0 0 cm /X0 Do Q';
+      startObj(o.content);
+      put('<< /Length ' + cs.length + ' >>\nstream\n' + cs + '\nendstream');
+      endObj();
+      startObj(o.img);
+      put('<< /Type /XObject /Subtype /Image /Width ' + pg.w + ' /Height ' + pg.h +
+          ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + pg.data.length + ' >>\nstream\n');
+      put(pg.data);
+      put('\nendstream');
+      endObj();
+    });
+
+    var maxN = n - 1, xref = len;
+    put('xref\n0 ' + (maxN + 1) + '\n0000000000 65535 f \n');
+    for (var k = 1; k <= maxN; k++) {
+      put(String(off[k] || 0).padStart(10, '0') + ' 00000 n \n');
+    }
+    put('trailer\n<< /Size ' + (maxN + 1) + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF\n');
+
+    var out = new Uint8Array(len), p = 0;
+    chunks.forEach(function (c) { out.set(c, p); p += c.length; });
+    return out;
+  }
+
+  function busyText(t) {
+    var el = ov && ov.querySelector('.xbusy');
+    if (el) el.textContent = t;
+    if (ov) ov.classList.add('busy');
+  }
+  function busyOff() { if (ov) { ov.classList.remove('busy'); var e = ov.querySelector('.xbusy'); if (e) e.textContent = '⏳ در حالِ چیدنِ ورق‌ها…'; } }
+
+  function exportPdf() {
+    if (!idoc) return;
+    var all = Array.prototype.slice.call(idoc.getElementById('xlPages').children);
+    var from = 1, to = all.length;
+    if (S.what === 'current') { from = to = curPage; }
+    else if (S.what === 'range') {
+      from = num(S.from, 1, all.length, 1); to = num(S.to, 1, all.length, all.length);
+      if (to < from) { var t0 = from; from = to; to = t0; }
+    }
+    var sheets = all.slice(from - 1, to);
+    if (!sheets.length) { try { showToast('هیچ ورقی در این بازه نیست', '#e53e3e'); } catch (e) {} return; }
+
+    var g = geo();
+    busyText('⏳ در حالِ ساختنِ PDF…');
+    embedFontCss(function (fontCss) {
+      var css = allCss(fontCss);
+      var out = [], i = 0;
+      var step = function () {
+        if (i >= sheets.length) {
+          if (!out.length) { busyOff(); try { showToast('ساختنِ PDF ممکن نشد — از دکمهٔ «چاپ» استفاده کنید', '#e53e3e'); } catch (e) {} return; }
+          var bytes;
+          try { bytes = buildPdf(out, g.w, g.h); }
+          catch (e) { busyOff(); try { showToast('ساختنِ PDF ممکن نشد', '#e53e3e'); } catch (e2) {} return; }
+          var base = String(docTitle || 'گزارش').replace(/[\\/:*?"<>|\n\r\t]+/g, '-').trim().slice(0, 60) || 'گزارش';
+          var name = base + ' — ' + (typeof persianDate === 'function' ? persianDate() : '').replace(/\//g, '-') + '.pdf';
+          try {
+            var blob = new Blob([bytes], { type: 'application/pdf' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url; a.download = name; a.style.display = 'none';
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(function () { try { URL.revokeObjectURL(url); } catch (e) {} }, 8000);
+            try { showToast('✅ PDF ساخته شد: ' + name, '#38a169'); } catch (e) {}
+          } catch (e) { try { showToast('ذخیرهٔ فایل ممکن نشد', '#e53e3e'); } catch (e2) {} }
+          busyOff();
+          return;
+        }
+        busyText('⏳ ساختنِ PDF — ورق ' + (i + 1) + ' از ' + sheets.length);
+        sheetToJpeg(sheets[i], css, 2, function (res) {
+          if (res) out.push(res);
+          i++;
+          setTimeout(step, 0);
+        });
+      };
+      step();
+    });
+  }
+
   // ══ چاپ ════════════════════════════════════════════════════════════════
   /* ورق‌های چاپ از روی همان ورق‌های پیش‌نمایش ساخته می‌شوند (بازه + تعدادِ نسخه
      + مرتب/نامرتب)، بعد window.print() صدا زده می‌شود. پنجرهٔ چاپِ سیستم — که
@@ -25344,6 +25559,7 @@ function _pumpDocOverlay(doc, title) {
     on('xpr-close', 'click', close);
     on('xpr-side', 'click', function () { ov.classList.toggle('side'); });
     on('xpr-print', 'click', doPrint);
+    on('xpr-pdf', 'click', exportPdf);
     on('xpr-save', 'click', function () {
       try { _pumpDocSave(_pdfInlineFont(fullDoc()), docTitle); } catch (e) {}
     });
@@ -44926,7 +45142,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.335';
+const APP_VERSION = '2.9.336';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
