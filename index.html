@@ -43547,7 +43547,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.326';
+const APP_VERSION = '2.9.327';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -52532,10 +52532,15 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
    کنارِ محتوا می‌نشیند (نه رویش) تا با دکمهٔ پخشِ صدا تداخل نکند. */
 #msgrList .msgr-b{ display:flex; align-items:flex-start; gap:4px; }
 #msgrList .msgr-c{ flex:1; min-width:0; }
+/* ⋮ کم‌رنگ و گم بود (گزارشِ صاحب ریپو: «به خوبی دیده نمی‌شود»). حالا یک دکمهٔ
+   کوچکِ واقعی است: کادرِ گرد، رنگِ متنِ خودِ برنامه و اندازهٔ انگشتی. */
 .msgr-mm{ flex:0 0 auto; cursor:pointer; user-select:none; -webkit-user-select:none;
-  color:var(--muted); opacity:.65; font-size:1rem; line-height:1; padding:2px 3px; border-radius:7px;
+  color:var(--txt); font-size:1.02rem; font-weight:900; line-height:1; text-align:center;
+  min-width:24px; padding:4px 3px; border-radius:8px;
+  background:color-mix(in srgb, var(--txt) 10%, transparent);
+  border:1px solid var(--border);
   -webkit-tap-highlight-color:transparent; }
-.msgr-mm:hover, .msgr-mm:active{ opacity:1; color:var(--accent); background:rgba(127,127,127,.15); }
+.msgr-mm:hover, .msgr-mm:active{ background:var(--accent); border-color:var(--accent); color:#231703; }
 /* برچسبِ کوچکِ «🎤 پیام صوتی» داخلِ خودِ حبابِ صدا */
 .msgr-mk{ font-size:0.68rem; font-weight:800; color:var(--muted); margin-bottom:3px; }
 .msgr-comp{ display:flex; gap:7px; padding:9px 12px; border-top:1px solid var(--border); }
@@ -52560,7 +52565,10 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
 .msgr-comp .msgr-ib svg{ width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.8; }
 .msgr-comp .msgr-ib:hover{ border-color:var(--accent); color:var(--accent); }
 .msgr-comp .msgr-ib.rec{ border-color:var(--red); color:var(--red); }
-.msgr-t img.msgr-img, .msgr-t video.msgr-img{ max-width:min(240px,60vw); border-radius:9px; display:block; }
+/* عکس/ویدیوی چت هیچ‌وقت از حبابِ خودش بیرون نزند. سقفش «۶۰٪ عرضِ صفحه» بود —
+   عرضِ صفحه، نه عرضِ پنلِ ربات؛ پس با کوچک کردنِ پنل، عکس از کادر بیرون می‌زد و
+   بریده می‌شد (گزارشِ صاحب ریپو). حالا سقفش عرضِ خودِ حباب است. */
+.msgr-t img.msgr-img, .msgr-t video.msgr-img{ max-width:min(240px,100%); height:auto; border-radius:9px; display:block; }
 .msgr-comp button{ background:var(--green); border:none; border-radius:9px; color:#fff;
   font-family:'Vazirmatn',sans-serif; font-weight:800; font-size:0.82rem; padding:8px 14px; cursor:pointer; white-space:nowrap; }
 .msgr-comp button:active{ transform:scale(.96); }
