@@ -38836,7 +38836,34 @@ function closeStaffAcct() {
 // می‌دهد پیام به میرزا برود و می‌گوید «در زودترین فرصت جواب شما را خواهیم داد».
 let _rbMode = 'staff';          // admin | staff | person
 let _rbPersonPeer = null;       // نمای کیو‌آر: {peer, type, id, name}
-let _rbTab = 'ai';   // تبِ پیش‌فرض؛ «سوال و جواب» برداشته شده و دیگر وجود ندارد
+/* ═══════════════ کلیدِ روشن/خاموشِ «پشتیبانی هوشمند» ═══════════════
+   خواستهٔ صاحبِ ریپو: فعلاً در دسترس نباشد، ولی کدش در برنامه بماند.
+
+   برای برگرداندنش فقط همین یک خط را true کن — هیچ جای دیگری دست نزن.
+   با false: تب دیده نمی‌شود، پنلش باز نمی‌شود، و هیچ درخواستی به سرویسِ
+   دستیار نمی‌رود. کلِ کدش سرِ جایش می‌ماند و دست‌نخورده است.
+   ═══════════════════════════════════════════════════════════════════ */
+const AI_SUPPORT_ON = false;
+
+let _rbTab = AI_SUPPORT_ON ? 'ai' : 'group';   // تبِ پیش‌فرضِ ربات
+
+/* وضعیتِ اولیهٔ نشانه‌گذاری. در خودِ HTML، تبِ «پشتیبانی هوشمند» با کلاسِ
+   active نوشته شده؛ اگر خاموش باشد باید همان لحظه — پیش از اینکه کاربر
+   ربات را باز کند — کنار برود. وگرنه تا اجرای _rbSetMode یک لحظه دیده می‌شد. */
+(function _rbApplyAiSwitch() {
+  if (AI_SUPPORT_ON) return;
+  try {
+    const btn = document.getElementById('rbTabBtn-ai');
+    if (btn) { btn.style.display = 'none'; btn.classList.remove('active'); }
+    const pane = document.getElementById('rbPane-ai');
+    if (pane) pane.classList.remove('active');
+    // تبِ بعدی جایش را می‌گیرد تا پنلِ ربات هیچ‌وقت خالی باز نشود
+    const gb = document.getElementById('rbTabBtn-group');
+    if (gb) gb.classList.add('active');
+    const gp = document.getElementById('rbPane-group');
+    if (gp) gp.classList.add('active');
+  } catch (e) { /* اگر نشانه‌گذاری عوض شد، بی‌صدا رد شو */ }
+})();
 let _rbCurrentDm = null;        // چت تک‌نفرهٔ باز (سمت مدیر)
 let _qaMsgs = [];
 let _qaPendingMirza = null;
@@ -38886,6 +38913,8 @@ function toggleRobotSize() {
 function rbShowTab(tab) {
   // نمای کیو‌آر شخص (مشتری/قرض‌دار): فقط چت تک‌نفره — نه چت گروهی، نه حتی سوال‌وجواب
   if (_rbMode === 'person' && tab !== 'dm') tab = 'dm';
+  // تبِ خاموش حتی با صدا زدنِ مستقیمِ rbShowTab('ai') هم باز نمی‌شود
+  if (tab === 'ai' && !AI_SUPPORT_ON) tab = 'group';
   _rbTab = tab;
   ['group', 'dm', 'pub', 'ai'].forEach(t => {
     const b = document.getElementById('rbTabBtn-' + t);
@@ -38917,7 +38946,7 @@ function _rbSetMode(mode, personCtx) {
   if (gt) gt.style.display = mode === 'person' ? 'none' : 'flex';
   // مشتریِ کیو‌آر فقط «چت با میرزا» را می‌بیند — دستیارِ پشتیبانی هم برایش نیست
   const at = document.getElementById('rbTabBtn-ai');
-  if (at) at.style.display = mode === 'person' ? 'none' : 'flex';
+  if (at) at.style.display = (!AI_SUPPORT_ON || mode === 'person') ? 'none' : 'flex';
   // نمای کیو‌آر (مشتری): هیچ تب و کلمهٔ «ربات»ی دیده نمی‌شود — فقط «چت با میرزا».
   // جواب‌گوی خودکار جای میرزا جواب می‌دهد و با هر بار باز شدن صفحه از نو فعال است.
   const tabsBar = document.getElementById('rbTabs');
@@ -43270,7 +43299,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.319';
+const APP_VERSION = '2.9.320';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
