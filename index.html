@@ -19520,8 +19520,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <symbol id="invp-car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 17.2V14a2 2 0 0 1 .3-1.1l2.6-4.2a2 2 0 0 1 1.7-1h8.4a2 2 0 0 1 1.7 1l2.6 4.2a2 2 0 0 1 .3 1.1v3.2"/><path d="M3.8 13.2h16.4"/><circle cx="7.4" cy="17.4" r="2.1"/><circle cx="16.6" cy="17.4" r="2.1"/><path d="M9.5 17.4h5"/></symbol>
     <symbol id="invp-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 3.4h-2A1.6 1.6 0 0 0 3 5c0 8.8 7.2 16 16 16a1.6 1.6 0 0 0 1.6-1.6v-2a1.6 1.6 0 0 0-1.3-1.6l-2.6-.5a1.6 1.6 0 0 0-1.6.7l-.8 1.2a12.6 12.6 0 0 1-5.4-5.4l1.2-.8a1.6 1.6 0 0 0 .7-1.6L10.2 4.7a1.6 1.6 0 0 0-1.6-1.3z"/></symbol>
     <symbol id="invp-calc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2.6" width="16" height="18.8" rx="2.6"/><rect x="7" y="5.4" width="10" height="3.6" rx="1.2"/><path d="M8 13.2h.01M12 13.2h.01M16 13.2h.01M8 17.4h.01M12 17.4h.01M16 17.4h.01" stroke-width="2.6"/></symbol>
-    <!-- «ثبت در حساب»: دفترِ حساب — «به نام دیگر»: کارتِ نام -->
-    <symbol id="invp-ledger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.4h12a2 2 0 0 1 2 2v15.2a2 2 0 0 0-2-2H5z"/><path d="M5 3.4A1.6 1.6 0 0 0 3.4 5v14a1.6 1.6 0 0 0 1.6 1.6h12"/><path d="M8.4 8h7.2M8.4 11.4h7.2M8.4 14.8h4.4"/></symbol>
+    <!-- «به نام دیگر»: کارتِ نام -->
     <symbol id="invp-tag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.6" y="5.6" width="18.8" height="13.4" rx="2.6"/><path d="M9 2.6v3.2M15 2.6v3.2"/><circle cx="8.8" cy="11.4" r="1.9"/><path d="M5.8 16.4c.5-1.6 1.6-2.4 3-2.4s2.5.8 3 2.4"/><path d="M14.6 10.4h4M14.6 14h3"/></symbol>
   </defs></svg>
 
@@ -19546,15 +19545,11 @@ body.viewer-mode .inv-admin-only{display:none!important}
             <datalist id="inv-cust-names"></datalist>
           </div>
           <div id="inv-cust-suggest" style="display:none;font-size:.72rem;margin:-2px 0 4px;padding:7px 11px;border-radius:9px;background:rgba(56,161,105,.12);color:#276749;font-weight:700;line-height:1.7"></div>
-          <!-- خواستهٔ صاحب ریپو: همین‌جا — موقعِ ساختنِ فاکتور — بشود فاکتور را با
-               نامِ دیگری و در حسابِ شخصِ دیگری ثبت کرد. تا حالا این دو کادر فقط بعد
-               از ثبت، داخلِ صفحهٔ ویرایشِ فاکتور بودند. -->
-          <div class="invp-meta-line">
-            <span class="k"><svg class="ico"><use href="#invp-ledger"/></svg> ثبت در حساب:</span>
-            <select class="invp-in" id="inv-target" style="flex:1;min-width:170px" title="فاکتور در حسابِ کدام شخص ثبت شود" onchange="invTargetHint()">
-              <option value="">🔄 خودکار — حسابِ هم‌نامِ مشتری</option>
-            </select>
-          </div>
+          <!-- کشویِ «ثبت در حساب» برداشته شد (خواستهٔ صاحب ریپو): «همان نام مشتری
+               را می‌زنم، بس است — همان باید کارش را بکند». حالا حسابِ مقصد فقط از
+               روی نام تعیین می‌شود: حسابِ هم‌نام پیدا می‌شود و اگر نبود ساخته
+               می‌شود. کادرِ «به نام دیگر» مانده تا اگر لازم شد فاکتور با نامِ
+               دیگری ثبت شود. -->
           <div class="invp-meta-line">
             <span class="k"><svg class="ico"><use href="#invp-tag"/></svg> به نام دیگر:</span>
             <input class="invp-in" id="inv-alias" placeholder="اختیاری — خالی یعنی همان نام مشتری" style="flex:1;min-width:170px" autocomplete="off" title="نامی که این فاکتور با آن در جدولِ حساب ثبت می‌شود" oninput="invTargetHint()">
@@ -43388,7 +43383,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.323';
+const APP_VERSION = '2.9.324';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -44393,6 +44388,14 @@ const PL_BOX_SEL = '.stat-box, .msumbox, .pl-card, .sum-box, .ro-sum-box, .cmhs-
 function _isBoxEl(el) {
   try { return !!(el.closest && el.closest(PL_BOX_SEL)); } catch (e) { return false; }
 }
+/* کادرهای کشویی از همهٔ A−/A+ها بیرون‌اند (بخش، مودالِ شخص/شرکت، مودالِ ورق).
+   خواستهٔ صاحب ریپو: کشوها فونتِ خودشان را دارند و با بزرگ‌شدنِ نوشته‌ها نباید
+   بزرگ شوند. اندازهٔ دلخواهِ تک‌عنصری (نوارِ A−/A+ِ انتخابی) سرِ جایش هست — اگر
+   کسی خواست یک کشوی خاص را بزرگ کند، از همان راه می‌تواند. */
+function _isDropdownEl(el) {
+  const t = el && el.tagName;
+  return t === 'SELECT' || t === 'OPTION' || t === 'OPTGROUP';
+}
 // عنصرهایی که «خودشان» نوشته دارند — کادرها و لایه‌های چیدمان کاری‌شان نداریم
 function _secFontEls(sec, mode) {
   // mode: 'box' ⇒ فقط داخلِ کادرها ، 'rest' ⇒ همه‌چیز به‌جز کادرها
@@ -44410,9 +44413,14 @@ function _secFontEls(sec, mode) {
        بزرگ‌شدن، سربرگ را به چند خط می‌شکستند و از کادر بیرون می‌زدند. فقط خودِ
        دکمه‌ها؛ عنوانِ کارت و نوشته‌های دیگر مثل قبل بزرگ می‌شوند. */
     if (el.closest('.card-head') && el.closest('button')) continue;
+    /* کادرهای کشویی (select) — خواستهٔ صاحب ریپو: «وقتی فونتِ نوشته‌ها را بزرگ
+       می‌کنم کادرهای کشویی هم بزرگ می‌شوند؛ نباید بشوند، خودشان یک فونتِ جدا
+       دارند». پس A−/A+ِ بخش هیچ‌وقت به کشوها دست نمی‌زند و همان اندازهٔ خودشان
+       را نگه می‌دارند (کشویِ سال/ماه، نوع تیل، واحد و مانندِ این‌ها). */
+    if (_isDropdownEl(el)) continue;
     if (mode === 'box' && !_isBoxEl(el)) continue;
     if (mode === 'rest' && _isBoxEl(el)) continue;
-    if (t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA' || t === 'OPTION' || t === 'BUTTON') { out.push(el); continue; }
+    if (t === 'INPUT' || t === 'TEXTAREA' || t === 'BUTTON') { out.push(el); continue; }
     for (let n = el.firstChild; n; n = n.nextSibling) {
       if (n.nodeType === 3 && n.nodeValue && n.nodeValue.trim()) { out.push(el); break; }
     }
@@ -44752,6 +44760,7 @@ function adjModalFont(delta) {
   modals.forEach(modal => {
     if (!modal || !modal.classList.contains('open')) return;
     modal.querySelectorAll('th,td,.xls-in,.xls-calc,.xls-num,.fs-head,.fs-cell .l,.fs-cell .v,.msumbox .ml,.msumbox .mv').forEach(el => {
+      if (_isDropdownEl(el)) return;   // کشوها فونتِ خودشان را دارند
       if (!el.dataset.origFs) el.dataset.origFs = parseFloat(getComputedStyle(el).fontSize);
       el.style.setProperty('font-size', (parseFloat(el.dataset.origFs) * _modalFontScale) + 'px', 'important');
     });
@@ -44759,6 +44768,7 @@ function adjModalFont(delta) {
   // scale archive sections (inline-styled elements)
   const hw = document.getElementById('pm-history-wrap');
   if (hw) hw.querySelectorAll('*').forEach(el => {
+    if (_isDropdownEl(el)) return;   // کشوها فونتِ خودشان را دارند
     if (el.style.fontSize) {
       if (!el.dataset.origFs) el.dataset.origFs = parseFloat(getComputedStyle(el).fontSize);
       el.style.setProperty('font-size', (parseFloat(el.dataset.origFs) * _modalFontScale) + 'px', 'important');
@@ -46048,6 +46058,7 @@ function adjWaraqFont(delta) {
   const modal = document.getElementById('waraqModal');
   if (!modal) return;
   modal.querySelectorAll('th,td,.xls-in,.xls-calc,.xls-num,.stat-label,.stat-value').forEach(el => {
+    if (_isDropdownEl(el)) return;   // کشوها فونتِ خودشان را دارند
     if (!el.dataset.origFs) el.dataset.origFs = parseFloat(getComputedStyle(el).fontSize);
     el.style.fontSize = (parseFloat(el.dataset.origFs) * _waraqFontScale) + 'px';
   });
@@ -46125,6 +46136,7 @@ function applyFontScale(val) {
     '.pname,.pdebt,.cmp-fig,.msumbox .mv,.msumbox .ml,.xls-in,.xls-calc,.xls-num,.fs-cell .v,.fs-cell .l,.stat-value,.stat-label,.tb-value,.tb-label'
   );
   textEls.forEach(el => {
+    if (_isDropdownEl(el)) return;   // کشوها فونتِ خودشان را دارند
     const base = parseFloat(el.dataset.baseFontSize || getComputedStyle(el).fontSize);
     if (!el.dataset.baseFontSize) el.dataset.baseFontSize = base;
     el.style.fontSize = (base * scale) + 'px';
@@ -49404,30 +49416,19 @@ function renderInvoices() {
   // فهرست نام قرض‌داران برای پیشنهادِ خودکارِ کادرِ نام مشتری
   const dl = document.getElementById('inv-cust-names');
   if (dl) dl.innerHTML = (DB.debtPersons || []).map(p => '<option value="' + escFa(p.name) + '">').join('');
-  // کشویِ «ثبت در حساب» — با هر رندر تازه می‌شود ولی انتخابِ کاربر حفظ می‌گردد.
-  // وقتی خودِ کشو باز/فوکوس است دست نمی‌خورد تا وسطِ انتخاب بسته نشود.
-  const tsel = document.getElementById('inv-target');
-  if (tsel && document.activeElement !== tsel) {
-    const keep = tsel.value;
-    tsel.innerHTML = '<option value="">🔄 خودکار — حسابِ هم‌نامِ مشتری</option>' +
-      (DB.debtPersons || []).map(p => '<option value="' + escFa(p.id) + '">👤 ' + escFa(p.name || '—') + '</option>').join('');
-    if (keep && Array.prototype.some.call(tsel.options, o => o.value === keep)) tsel.value = keep;
-  }
   invTargetHint();
   invCalcTotal();
 }
-/* یک خطِ راهنما زیرِ «ثبت در حساب» و «به نام دیگر»: دقیقاً می‌گوید این فاکتور با
+/* یک خطِ راهنما زیرِ نامِ مشتری و «به نام دیگر»: دقیقاً می‌گوید این فاکتور با
    تایید شدن، در حسابِ چه کسی و به چه نامی می‌نشیند — تا مدیر قبل از ثبت مطمئن شود. */
 function invTargetHint() {
   const el = document.getElementById('inv-target-note');
   if (!el) return;
-  const tid   = ((document.getElementById('inv-target') || {}).value || '').trim();
   const alias = ((document.getElementById('inv-alias') || {}).value || '').trim();
   const cust  = ((document.getElementById('inv-customer') || {}).value || '').trim();
   const rowName = alias || cust;
-  if (!tid && !alias && !cust) { el.style.display = 'none'; el.innerHTML = ''; return; }
-  let acc = tid ? ((DB.debtPersons || []).find(x => x.id === tid) || null) : null;
-  if (!acc) acc = _findDebtPersonByName(rowName);
+  if (!alias && !cust) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  const acc = _findDebtPersonByName(rowName);
   el.style.display = '';
   el.innerHTML = '🧾 با تایید، این فاکتور در حساب «<b>' + escFa((acc && acc.name) || rowName || 'مشتری') + '</b>»' +
     (acc ? '' : ' <span style="font-weight:600">(حسابِ تازه ساخته می‌شود)</span>') +
@@ -49457,10 +49458,8 @@ function invPickDebtPerson(pid) {
   if (!p) return;
   const ci = document.getElementById('inv-customer'); if (ci) ci.value = p.name;
   if (p.phone) { const ph = document.getElementById('inv-phone'); if (ph && !ph.value.trim()) ph.value = p.phone; }
-  // «همین حساب باشد ✓» از این به بعد واقعاً حساب را قفل می‌کند (نه فقط نام را
-  // کپی می‌کند) — کشویِ «ثبت در حساب» روی همین شخص می‌نشیند.
-  const ts = document.getElementById('inv-target');
-  if (ts && Array.prototype.some.call(ts.options, o => o.value === p.id)) ts.value = p.id;
+  // «همین حساب باشد ✓» نامِ دقیقِ همان حساب را داخلِ کادرِ نام می‌گذارد — و چون
+  // حسابِ مقصد از روی نام پیدا می‌شود، فاکتور در همین حساب می‌نشیند.
   invCustomerSuggest(p.name);
   invTargetHint();
 }
@@ -49484,8 +49483,8 @@ function invSubmit() {
   const amount = parseFloat((document.getElementById('inv-amount') || {}).value);
   const vehicle = (document.getElementById('inv-vehicle').value || '').trim();
   const phone = (document.getElementById('inv-phone').value || '').trim();
-  // حسابِ مقصد و نامِ روی ردیفِ حساب — همان دو کادرِ بالای فرم
-  const targetId = ((document.getElementById('inv-target') || {}).value || '').trim();
+  // نامِ روی ردیفِ حساب — خالی یعنی همان نامِ مشتری. حسابِ مقصد هم از روی همین نام
+  // پیدا/ساخته می‌شود (کشویِ «ثبت در حساب» برداشته شد — خواستهٔ صاحب ریپو).
   const alias = ((document.getElementById('inv-alias') || {}).value || '').trim();
   if (!name) { showToast('❌ نام مشتری را وارد کنید', '#e53e3e'); document.getElementById('inv-customer').focus(); return; }
   // باگ 12: فاکتور می‌تواند بخشِ تیل (فی+لیتر → رسید تیل) و بخشِ پول (مبلغ → رسید پول)
@@ -49524,7 +49523,7 @@ function invSubmit() {
     by_money: byMoney,                       // فاکتور «فقط مبلغ» — اعتبار مشتری
     vehicle_type: vehicle,
     phone: phone,
-    debt_target_id: targetId || null,        // حسابِ مقصد (خالی = حسابِ هم‌نامِ مشتری)
+    debt_target_id: null,                    // حسابِ مقصد همیشه از روی نام تعیین می‌شود
     debt_alias: alias,                       // نامِ روی ردیفِ حساب (خالی = نامِ مشتری)
     status: 'pending',                       // پیش‌فرض: در صف تایید
     created_at: new Date().toISOString(),    // خودکار
@@ -49542,7 +49541,6 @@ function invResetForm(toast) {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   const f = document.getElementById('inv-fuel'); if (f) f.value = 'petrol';
-  const t = document.getElementById('inv-target'); if (t) t.value = '';
   const cs = document.getElementById('inv-cust-suggest'); if (cs) { cs.style.display = 'none'; cs.innerHTML = ''; }
   // شمارهٔ فاکتور به حالت خودکار برگردد تا دوباره با شمارهٔ بعدی پر شود
   const ni = document.getElementById('inv-number'); if (ni) { ni.value = ''; delete ni.dataset.userSet; }
@@ -49718,14 +49716,8 @@ function _invPaperHtml(v, opts) {
           ${edit ? `<input class="invp-in" id="invd-name" value="${escFa(v.customer_name)}" style="flex:1;min-width:150px">` : `<span style="font-weight:900">${escFa(v.customer_name) || '—'}</span>`}
         </div>
         ${edit ? `
-        <!-- خواستهٔ صاحب ریپو: بشود همین فاکتور را با نامِ دیگر و در حسابِ دیگری ثبت کرد -->
-        <div class="invp-meta-line">
-          <span class="k"><svg class="ico"><use href="#invp-ledger"/></svg> ثبت در حساب:</span>
-          <select class="invp-in" id="invd-target" style="flex:1;min-width:150px">
-            <option value=""${!v.debt_target_id ? ' selected' : ''}>🔄 خودکار — حسابِ هم‌نامِ مشتری</option>
-            ${(DB.debtPersons || []).map(p => `<option value="${escFa(p.id)}"${v.debt_target_id === p.id ? ' selected' : ''}>👤 ${escFa(p.name || '—')}</option>`).join('')}
-          </select>
-        </div>
+        <!-- کشویِ «ثبت در حساب» برداشته شد (خواستهٔ صاحب ریپو): حسابِ مقصد از روی
+             نامِ مشتری (یا «به نام دیگر») تعیین می‌شود، نه از یک کشویِ جدا. -->
         <div class="invp-meta-line">
           <span class="k"><svg class="ico"><use href="#invp-tag"/></svg> به نام دیگر:</span>
           <input class="invp-in" id="invd-alias" value="${escFa(v.debt_alias || '')}" placeholder="اختیاری — خالی بماند یعنی همان نام مشتری" style="flex:1;min-width:150px">
@@ -49809,11 +49801,12 @@ function _findDebtPersonByName(name) {
 function _invDebtName(v) {
   return ((v && v.debt_alias) || '').trim() || ((v && v.customer_name) || '').trim();
 }
-/* حسابِ مقصدِ فاکتور. خواستهٔ صاحب ریپو: بشود فاکتور را به حسابِ دلخواه فرستاد،
-   نه فقط به حسابِ هم‌نامِ مشتری. ترتیبِ انتخاب:
-     ۱) حسابی که مدیر در کشویِ «ثبت در حساب» انتخاب کرده (debt_target_id)
-     ۲) حسابِ هم‌نام با «نام دیگر» یا نامِ مشتری
-     ۳) اگر نبود، حسابِ تازه با همان نام ساخته می‌شود (رفتار قبلی) */
+/* حسابِ مقصدِ فاکتور. خواستهٔ صاحب ریپو: «همان نام مشتری را می‌زنم، بس است — همان
+   باید کارش را بکند». پس مقصد از روی نام تعیین می‌شود:
+     ۱) حسابِ هم‌نام با «نام دیگر» یا نامِ مشتری
+     ۲) اگر نبود، حسابِ تازه با همان نام ساخته می‌شود
+   `debt_target_id` فقط برای فاکتورهای قدیمی خوانده می‌شود (وقتی هنوز کشویِ «ثبت در
+   حساب» وجود داشت) تا حسابشان جابه‌جا نشود؛ فاکتورهای تازه آن را ندارند. */
 function _ensureDebtPersonForInvoice(v) {
   let p = null;
   if (v.debt_target_id) p = (DB.debtPersons || []).find(x => x.id === v.debt_target_id) || null;
@@ -50004,9 +49997,10 @@ function invSaveEdits(id) {
   if (g('invd-amount'))  v.amount          = Math.max(0, parseFloat(g('invd-amount').value) || 0);
   if (g('invd-vehicle')) v.vehicle_type   = (g('invd-vehicle').value || '').trim();
   if (g('invd-phone'))   v.phone          = (g('invd-phone').value || '').trim();
-  // حساب و نامِ مقصد در بخشِ قرض‌داران (خواستهٔ صاحب ریپو)
-  if (g('invd-target'))  v.debt_target_id = (g('invd-target').value || '') || null;
+  // نامِ مقصد در بخشِ قرض‌داران. کشویِ «ثبت در حساب» برداشته شده، پس اگر فاکتورِ
+  // قدیمی حسابِ دستی داشت، با همین ذخیره به قاعدهٔ تازه برمی‌گردد: حساب از روی نام.
   if (g('invd-alias'))   v.debt_alias     = (g('invd-alias').value || '').trim();
+  v.debt_target_id = null;
   // «فقط مبلغ» دوباره از روی محتوای فاکتور محاسبه شود (تیل حذف/اضافه شده باشد) — باگ 12
   v.by_money = ((parseFloat(v.amount) || 0) > 0) && !((parseFloat(v.price_per_liter) || 0) > 0 && (parseFloat(v.liters) || 0) > 0);
   // اگر فاکتور قبلاً تایید شده، رسیدِ تیلِ ثبت‌شده در حساب قرض‌دار هم با تغییرات هماهنگ شود
