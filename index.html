@@ -1551,11 +1551,41 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
 
 /* ── کادرِ هر حساب ─────────────────────────────────────────────────────────
    هر حساب یک کادرِ کامل با سربرگِ خودش. کادرِ تازه زیرِ قبلی می‌نشیند. */
-.am-acc{background:var(--dark);border:1.5px solid var(--border);border-radius:13px;
-  padding:0;margin-bottom:14px;overflow:hidden}
-.am-acc.pt{border-color:var(--accent)}
-.am-acc.dz{border-color:var(--night)}
-.am-acc-head{padding:11px 12px;border-bottom:1.5px solid var(--border);background:var(--card)}
+/* ── کارتِ حساب — همان شکلِ کارتِ قرض‌دار ─────────────────────────────────
+   خواستهٔ صاحب ریپو: «مثل قرض‌داران، هر حساب یک کارت». پس همان .person-card
+   به کار می‌رود و این‌جا فقط خط‌های مخصوصِ تیل امانت اضافه می‌شود. */
+.am-card-acc{padding-bottom:30px!important}
+.am-card-acc.ok{border-color:var(--green)}
+.am-card-acc.bad{border-color:var(--red)}
+.am-card-acc.warn{border-color:var(--accent)}
+.am-card-acc .pname{font-size:1.15rem;margin-bottom:6px}
+.am-card-acc .pdebt{font-size:0.95rem}
+.am-card-state{font-size:0.74rem;font-weight:800;margin-top:6px;line-height:1.7;color:var(--muted)}
+.am-card-state.ok{color:var(--green)}
+.am-card-state.bad{color:var(--red)}
+.am-card-state.warn{color:var(--accent)}
+.am-card-nums{display:flex;justify-content:center;gap:12px;margin-top:7px;font-size:0.78rem;font-weight:800;color:var(--txt)}
+.am-card-pct{margin-top:6px;font-size:0.72rem;color:var(--muted);font-weight:700;line-height:1.7}
+.am-card-pct b{color:var(--green);font-size:0.85rem}
+
+/* ── صفحهٔ یک حساب (تمام‌صفحه، مثل حسابِ قرض‌دار) ────────────────────────
+   قدِ پرده با dvh گرفته می‌شود، نه vh — وگرنه روی گوشی تهِ پنجره زیرِ نوارِ
+   مرورگر می‌ماند و اسکرول «گیرکرده» به‌نظر می‌رسد. */
+#amanatAccModal{padding:0;align-items:stretch;height:100vh}
+@supports (height:100dvh){ #amanatAccModal{height:100dvh} }
+#amanatAccModal .modal{max-width:100%!important;width:100%!important;height:100%!important;
+  max-height:100%!important;border-radius:0!important;border:none!important;box-shadow:none!important}
+#amanatAccModal .modal-body{overflow-y:auto;padding:12px 14px 26px}
+.am-md-sec{background:var(--dark);border:1.5px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px}
+.am-md-t{font-size:0.82rem;font-weight:900;color:var(--label);margin-bottom:10px;display:flex;
+  align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.am-md-btns{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.am-md-btn{background:transparent;border:1.5px solid var(--border);border-radius:9px;color:var(--muted);
+  font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.78rem;padding:8px 13px;cursor:pointer}
+.am-md-btn.grn{border-color:var(--green);color:var(--green)}
+.am-md-btn.red{border-color:var(--red);color:var(--red)}
+.am-md-btn.blue{border-color:var(--blue);color:var(--blue)}
+.am-md-btn.pur{border-color:var(--purple);color:var(--purple)}
 .am-acc-r1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .am-acc-n{flex-shrink:0;width:27px;height:27px;border-radius:8px;background:var(--dark);border:1px solid var(--border);
   display:flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:900;color:var(--muted)}
@@ -1589,15 +1619,6 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
 .am-acc-pct .vd.ok{color:var(--green)}
 .am-acc-pct .vd.bad{color:var(--red)}
 .am-acc-body{padding:0}
-.am-acc.shut{opacity:.94}
-.am-acc.shut .am-acc-head{border-bottom:none;padding:9px 12px}
-/* کادرِ بسته: فقط نام و یک خطِ خلاصه — بقیه وقتی باز شد می‌آید */
-.am-acc.shut .am-acc-pct,.am-acc.shut .am-acc-btns,.am-acc.shut .am-acc-foot{display:none}
-.am-acc.shut .am-acc-chips{margin-top:7px}
-/* دکمهٔ باز/بستهٔ کادر — هم‌شکلِ شمارهٔ کنارش تا سربرگ به هم نریزد */
-.am-acc-toggle{cursor:pointer;font-family:'Vazirmatn',sans-serif;color:var(--purple);
-  border-color:var(--purple);-webkit-tap-highlight-color:transparent;font-size:0.9rem;line-height:1}
-.am-acc-toggle:active{transform:scale(.94)}
 /* سرِ پنل‌های کشویی — تمام‌عرض، تا روی گوشی هم راحت زده شود */
 .am-fold{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;
   background:transparent;border:none;padding:0;cursor:pointer;font-family:'Vazirmatn',sans-serif;
@@ -19201,20 +19222,14 @@ body.boot-viewer #bootViewerSplash{
           <button class="am-tab" data-f="petrol" onclick="setAmanatFuel('petrol')">⛽ پطرول</button>
           <button class="am-tab" data-f="diesel" onclick="setAmanatFuel('diesel')">🟤 دیزل</button>
         </div>
-        <div class="am-tabs" id="am-rowf-tabs">
-          <button class="am-tab" data-r="all" onclick="setAmanatRowFilter('all')">همهٔ ردیف‌ها</button>
-          <button class="am-tab" data-r="open" onclick="setAmanatRowFilter('open')">فقط باز</button>
-          <button class="am-tab" data-r="closed" onclick="setAmanatRowFilter('closed')">فقط بسته</button>
-        </div>
-        <button class="am-tab" id="am-measure-btn" onclick="toggleAmanatMeasure()" title="ستون‌های «موجودی واقعی» و «اختلاف»">📏 اندازه‌گیری</button>
         <input class="am-search" id="am-search" type="search" placeholder="🔍 جست‌وجوی نام حساب…" oninput="setAmanatSearch(this.value)">
       </div>
 
       <div id="am-summary" class="am-summary"></div>
       <div id="am-warns"></div>
 
-      <!-- هر حساب یک کادر، با سربرگ و جدولِ خودش -->
-      <div id="am-accounts"></div>
+      <!-- هر حساب یک کارت — دقیقاً مثل قرض‌داران. زدنِ کارت، صفحهٔ حساب را باز می‌کند. -->
+      <div class="persons-grid" id="am-grid" style="padding-bottom:8px"></div>
     </div>
   </div>
   <div class="sec-note-box" style="padding:10px 2px 12px">
@@ -19228,6 +19243,19 @@ body.boot-viewer #bootViewerSplash{
   </div>
   <div class="row-add-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 2px 16px">
     <button class="add-btn" onclick="addAmanatAccount()">➕ حساب جدید</button>
+  </div>
+</div>
+
+<!-- ═══ صفحهٔ یک حسابِ تیل امانت ═══════════════════════════════════════════
+     تمام‌صفحه، مثل حسابِ قرض‌دار: مشخصات، تحلیلِ فیصدی، جدولِ رسیدها و
+     نرخ‌های مرجع. ═══════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="amanatAccModal">
+  <div class="modal">
+    <div class="modal-head">
+      <button class="modal-close" onclick="closeAmanatAccount()">✕</button>
+      <h2 id="am-acc-title">🛢️ حسابِ تیل امانت</h2>
+    </div>
+    <div class="modal-body" id="am-acc-body"></div>
   </div>
 </div>
 
@@ -38434,9 +38462,32 @@ function amRowCalc(row, acc, s) {
   const realLoss  = hasActual ? (liters - taken - actual) : null;
   const diff      = hasActual ? (realLoss - loss) : null;   // + یعنی واقعی بیشتر از تخمین
 
+  /* ══ فیصدی — نکتهٔ اصلی که اول اشتباه بود ═══════════════════════════════
+     «فیصدیِ من» هدفِ شماست، یعنی چقدر باید *بعد از* بخار برایتان بماند.
+     بخار از این سهم کم نمی‌شود؛ روی آن سوار می‌شود.
+
+     گفتهٔ خودِ صاحب ریپو: «۳ فیصد که ۳۰۰۰ تایش به من می‌رسه… اگر ۵۵۰ بخار
+     شود، این ۳۰۰۰ به من نمی‌رسد؛ بگو فیصدی را ببر به ۳٫۶ که ۳۰۰۰ لیتر برایم
+     بماند.»  پس:
+
+         فیصدیِ لازم = فیصدیِ هدف + درصد بخار
+
+     همین یک خط، همهٔ عددها را به هم وصل می‌کند: ۳٪ + ۰٫۵۵٪ = ۳٫۵۵٪ ← گِردشده ۳٫۶٪
+     ════════════════════════════════════════════════════════════════════ */
+  const myRaw  = _amHas(row.myPct) ? _amNum(row.myPct) : (_amHas(acc.myPct) ? _amNum(acc.myPct) : null);
+  const myPct  = myRaw;
+  const targetL  = (myPct == null) ? null : (liters * myPct / 100);   // چقدر باید برایتان بماند
+  const needPct  = (myPct == null) ? null : (myPct + lossPct);        // چقدر باید بگیرید
+  const askPct   = (needPct == null) ? null : (Math.ceil(needPct * 10) / 10);  // گِردشده به یک دهم
+  const netIfMy  = (targetL == null) ? null : (targetL - loss);       // اگر همان هدف را بگیرید
+  const askL     = (askPct == null) ? null : (liters * askPct / 100);
+  const netIfAsk = (askL == null) ? null : (askL - loss);
+
   return { fuel, liters, taken, days, autoDays, manual, temp, base, closed,
            dateOk: startTs > 0, loss, lossPct, rest,
-           hasActual, actual, realLoss, diff };
+           hasActual, actual, realLoss, diff,
+           myPct, targetL, needPct, askPct, netIfMy, askL, netIfAsk,
+           rowOwnPct: _amHas(row.myPct) };
 }
 /* ردیف‌های یک حساب به ترتیبِ تاریخ، همراه با اندیسِ واقعی‌شان در آرایه.
    ردیفِ بی‌تاریخ آخر می‌آید و ردیف‌های هم‌تاریخ ترتیبِ تایپِ خودشان را
@@ -38459,13 +38510,20 @@ function amAccCalc(acc, s, onlyRows) {
     t.liters += c.liters; t.taken += c.taken; t.loss += c.loss; t.rest += c.rest;
     if (c.hasActual) { t.hasActual = true; t.actual += c.actual; t.realLoss += c.realLoss; t.realDiff += c.diff; }
   });
-  t.lossPct  = t.liters > 0 ? (t.loss / t.liters) * 100 : 0;   // فیصدیِ سربه‌سر
-  t.needPct  = t.lossPct;
-  t.safePct  = t.needPct * (1 + s.safetyPct / 100);            // فیصدیِ پیشنهادی
+  t.lossPct  = t.liters > 0 ? (t.loss / t.liters) * 100 : 0;   // درصدِ بخار
   const my    = _amHas(acc && acc.myPct) ? _amNum(acc.myPct) : null;
-  t.myPct     = my;
-  t.myLiters  = (my == null) ? null : (t.liters * my / 100);
-  t.diff      = (my == null) ? null : (t.myLiters - t.loss);   // + یعنی اضافه می‌آید
+  t.myPct     = my;                                            // فیصدیِ هدف (خالص)
+  t.targetL   = (my == null) ? null : (t.liters * my / 100);   // چقدر باید برایتان بماند
+  t.needPct   = (my == null) ? null : (my + t.lossPct);        // چقدر باید بگیرید
+  t.askPct    = (t.needPct == null) ? null : (Math.ceil(t.needPct * 10) / 10);
+  t.askL      = (t.askPct == null) ? null : (t.liters * t.askPct / 100);
+  t.netIfMy   = (t.targetL == null) ? null : (t.targetL - t.loss);
+  t.netIfAsk  = (t.askL == null) ? null : (t.askL - t.loss);
+  t.short     = (t.netIfMy == null) ? null : (t.targetL - t.netIfMy);   // = خودِ بخار
+  // برای سازگاری با جاهایی که هنوز از نام‌های قبلی می‌خوانند
+  t.myLiters  = t.targetL;
+  t.diff      = t.netIfMy;
+  t.safePct   = t.askPct
   /* نرخِ هر لیتر فقط برای «به پول گفتن» است — روی هیچ حساب لیتری اثر ندارد.
      خالی که باشد، هیچ عددِ پولی نشان داده نمی‌شود. */
   const rate  = _amHas(acc && acc.rate) ? _amNum(acc.rate) : null;
@@ -38480,11 +38538,7 @@ function amAccCalc(acc, s, onlyRows) {
 let _amFuelFilter = 'all';
 let _amRowFilter = 'all';      // all | open | closed — کدام ردیف‌ها دیده شوند
 let _amShowMeasure = false;    // ستون‌های «موجودی واقعی» و «اختلاف»
-/* کدام کادر باز است. خواستهٔ صاحب ریپو: «کادرهای دیگر کشویی باشد تا صفحه خیلی
-   بزرگ نباشد، فقط جدول باشد» — پس هر لحظه یکی باز است و بقیه بسته. */
-let _amOpenAcc = null;
-let _amFeeOpen = false;        // پنلِ «سیستم فیصدی» — پیش‌فرض بسته
-let _amAnalysisOpen = {};      // تحلیلِ هر حساب، جدا
+let _amFeeOpen = false;        // پنلِ «ماشین‌حسابِ فیصدی» — پیش‌فرض بسته
 let _amSearch = '';
 try {
   if (localStorage.getItem('amMeasure') === '1') _amShowMeasure = true;
@@ -38492,15 +38546,6 @@ try {
   if (_rf === 'open' || _rf === 'closed') _amRowFilter = _rf;
 } catch (e) {}
 function setAmanatFuel(f) { _amFuelFilter = (f === 'petrol' || f === 'diesel') ? f : 'all'; renderAmanat(); }
-// آکاردئون: زدنِ سربرگِ یک کادر بازش می‌کند و بقیه بسته می‌شوند
-function toggleAmanatAcc(id) {
-  _amOpenAcc = (_amOpenAcc === id) ? null : id;
-  renderAmanat();
-  if (_amOpenAcc) setTimeout(() => {
-    const el = document.getElementById('am-accbox-' + id);
-    if (el) { try { el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {} }
-  }, 40);
-}
 function toggleAmanatFee() {
   _amFeeOpen = !_amFeeOpen;
   const b = document.getElementById('am-fee-body');
@@ -38508,14 +38553,6 @@ function toggleAmanatFee() {
   if (b) b.style.display = _amFeeOpen ? '' : 'none';
   if (h) h.textContent = _amFeeOpen ? '▾' : '◂';
   if (_amFeeOpen) renderAmanatFee();
-}
-function toggleAmanatAnalysis(id) {
-  _amAnalysisOpen[id] = !_amAnalysisOpen[id];
-  const b = document.getElementById('am-an-body-' + id);
-  const h = document.getElementById('am-an-caret-' + id);
-  if (b) b.style.display = _amAnalysisOpen[id] ? '' : 'none';
-  if (h) h.textContent = _amAnalysisOpen[id] ? '▾' : '◂';
-  _amPaint();
 }
 function setAmanatRowFilter(f) {
   _amRowFilter = (f === 'open' || f === 'closed') ? f : 'all';
@@ -38775,238 +38812,90 @@ function renderAmanatFee() {
   }
 }
 
-/* ══ رندر ═════════════════════════════════════════════════════════════════ */
+/* ══ رندر ═════════════════════════════════════════════════════════════════
+   چیدمان دقیقاً مثل «قرض‌داران»: هر حساب یک کارت در شبکهٔ کارت‌ها، و با زدنِ
+   کارت، صفحهٔ کاملِ همان حساب باز می‌شود (جدول + تحلیل). خواستهٔ صاحب ریپو:
+   «این مدل باشه، هر بخش تیل امانتی برای هر حساب». ═════════════════════════ */
+let _amAccIdx = null;   // کدام حساب در صفحهٔ حساب باز است
+
 function renderAmanat() {
   const list = amAccounts();
-  const wrap = document.getElementById('am-accounts');
-  if (!wrap) return;
+  const grid = document.getElementById('am-grid');
+  if (!grid) return;
   document.querySelectorAll('#am-fuel-tabs .am-tab').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-f') === _amFuelFilter));
-  document.querySelectorAll('#am-rowf-tabs .am-tab').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-r') === _amRowFilter));
-  const mb = document.getElementById('am-measure-btn');
-  if (mb) mb.classList.toggle('active', _amShowMeasure);
   const sb = document.getElementById('am-search');
   if (sb && document.activeElement !== sb) sb.value = _amSearch;
 
   const s = amSettings();
-  let shown = 0;
-  const html = list.map((a, ai) => {
+  let seq = 0;
+  const cards = list.map((a, ai) => {
     if (!a || !_amAccMatch(a)) return '';
-    shown++;
-    return _amAccountHtml(a, ai, shown, s);
+    seq++;
+    return _amCardHtml(a, ai, seq, s);
   }).join('');
-  wrap.innerHTML = html || ('<div class="am-empty">' + _amEmptyText() + '</div>');
+  grid.innerHTML = cards || ('<div class="am-empty" style="grid-column:1/-1">' + _amEmptyText() + '</div>');
 
   fillAmanatSettings();
   renderAmanatFee();
   _amPaint();
+  _amAccPaint();
 }
 function _amEmptyText() {
   if (_amSearch.trim()) return 'با «' + escFa(_amSearch.trim()) + '» حسابی پیدا نشد.';
   if (_amFuelFilter !== 'all') return 'برای ' + (_amFuelFilter === 'diesel' ? 'دیزل' : 'پطرول') + ' حسابی نیست — دکمهٔ «➕ حساب جدید» را بزنید.';
   return 'هنوز حسابی ثبت نشده — دکمهٔ «➕ حساب جدید» را بزنید.';
 }
-/* یک کادرِ کامل: سربرگ (نام، نوع تیل، جمع‌ها، فیصدی) + جدولِ ردیف‌ها + جمع */
-function _amAccountHtml(a, ai, seq, s) {
+/* کارتِ یک حساب — همان شکلِ کارتِ قرض‌دار: نام وسط، عددِ بزرگ، وضعیت، و
+   شمارهٔ کارت پایین. زدنِ کارت، صفحهٔ حساب را باز می‌کند. */
+function _amCardHtml(a, ai, seq, s) {
+  const t = amAccCalc(a, s);
   const fuel = amFuelKey(a);
-  /* ردیف‌ها به ترتیبِ تاریخ چیده می‌شوند (مثل گاوصندوق)، ولی اندیسِ واقعیِ
-     ردیف در آرایه (ri) دست‌نخورده در onchange/oninput می‌ماند — داده با همان
-     بسته می‌شود، نه با شمارهٔ نمایشی. پس ردیفی که تاریخش را عوض می‌کنید سرِ
-     جای درستش می‌پرد بی‌آن‌که حسابِ ردیف دیگری به هم بخورد. */
-  const view = _amSortedRows(a).filter(({ r }) =>
-    _amRowFilter === 'all' || ((r.state === 'closed') ? 'closed' : 'open') === _amRowFilter);
-  const M = _amShowMeasure;
-  const rows = view.map(({ r, ri }, k) => {
-    const closed = (r.state === 'closed');
-    return `<tr>
-      <td style="text-align:center;color:var(--muted)">${n2fa(k + 1)}</td>
-      <td><input class="xls-in sm" value="${cmpEsc(r.date)}" placeholder="تاریخ" onchange="updateAmanatRow(${ai},${ri},'date',this.value);renderAmanat()"></td>
-      <td><input class="xls-in" value="${cmpEsc(r.name)}" placeholder="نام" oninput="updateAmanatRow(${ai},${ri},'name',this.value)"></td>
-      <td><input class="xls-in" value="${cmpEsc(r.toAcct)}" placeholder="به حسابهٔ…" oninput="updateAmanatRow(${ai},${ri},'toAcct',this.value)"></td>
-      <td><input class="xls-in sm" id="am-in-liters-${ai}-${ri}" type="number" step="0.01" value="${cmpEsc(r.liters)}" placeholder="0" oninput="updateAmanatRow(${ai},${ri},'liters',this.value)"></td>
-      <td><input class="xls-in sm" type="number" step="0.01" value="${cmpEsc(r.taken)}" placeholder="0" title="چقدرش را برده‌اند — از باقی تیل کم می‌شود" oninput="updateAmanatRow(${ai},${ri},'taken',this.value)"></td>
-      <td><input class="xls-in xs" id="am-in-days-${ai}-${ri}" type="number" step="1" value="${cmpEsc(r.days)}" placeholder="خودکار" title="خالی = خودکار از تاریخ تا امروز" oninput="updateAmanatRow(${ai},${ri},'days',this.value)"></td>
-      <td><input class="xls-in xs" type="number" step="0.1" value="${cmpEsc(r.temp)}" placeholder="${_amFmt(s.defTemp)}" title="خالی = گرمای پیش‌فرضِ تنظیمات" oninput="updateAmanatRow(${ai},${ri},'temp',this.value)"></td>
-      <td>
-        <div class="am-state">
-          <button class="${closed ? '' : 'on open'}" onclick="setAmanatRowState(${ai},${ri},'open')">باز</button>
-          <button class="${closed ? 'on shut' : ''}" onclick="setAmanatRowState(${ai},${ri},'closed')">بسته</button>
-        </div>
-      </td>
-      <td class="am-calc" id="am-c-pct-${ai}-${ri}">—</td>
-      <td class="am-calc" id="am-c-rest-${ai}-${ri}">—</td>
-      ${M ? `<td><input class="xls-in sm" type="number" step="0.01" value="${cmpEsc(r.actual)}" placeholder="ثبت نشده" title="عددی که خودتان از مخزن اندازه گرفته‌اید" oninput="updateAmanatRow(${ai},${ri},'actual',this.value)"></td>
-      <td class="am-calc" id="am-c-diff-${ai}-${ri}">—</td>` : ''}
-      <td><input class="xls-in xs" type="number" step="0.01" value="${cmpEsc(r.basePct)}" placeholder="${_amFmt(s.basePct, 3)}" title="خالی = پایهٔ تنظیمات" oninput="updateAmanatRow(${ai},${ri},'basePct',this.value)"></td>
-      <td><input class="xls-in" value="${cmpEsc(r.note)}" placeholder="یادداشت" oninput="updateAmanatRow(${ai},${ri},'note',this.value)"></td>
-      <td style="text-align:center"><button class="del-btn" onclick="deleteAmanatRow(${ai},${ri})">🗑️</button></td>
-    </tr>`;
-  }).join('');
-  const hidden = (a.rows || []).length - view.length;
-
-  const open = (_amOpenAcc === a.id);
-  return `<div class="am-acc ${fuel === 'diesel' ? 'dz' : 'pt'}${open ? '' : ' shut'}" id="am-acc-${ai}" data-box="am-accbox-${cmpEsc(a.id)}">
-    <div class="am-acc-head" id="am-accbox-${cmpEsc(a.id)}">
-      <div class="am-acc-r1">
-        <button class="am-acc-n am-acc-toggle" title="${open ? 'بستن' : 'باز کردن'}" onclick="toggleAmanatAcc('${cmpEsc(a.id)}')">${open ? '▾' : '◂'}</button>
-        <span class="am-acc-n">${n2fa(seq)}</span>
-        <input class="am-acc-name" id="am-acc-name-${ai}" value="${cmpEsc(a.name)}" placeholder="نام حساب / صاحب تیل" oninput="updateAmanatAccount(${ai},'name',this.value)">
-        <select class="am-acc-fuel" onchange="updateAmanatAccount(${ai},'fuel',this.value);renderAmanat()">
-          <option value="petrol" ${fuel !== 'diesel' ? 'selected' : ''}>⛽ پطرول</option>
-          <option value="diesel" ${fuel === 'diesel' ? 'selected' : ''}>🟤 دیزل</option>
-        </select>
-        <div class="am-acc-btns">
-          <button class="am-acc-btn grn" onclick="addAmanatRow(${ai})">➕ ردیف</button>
-          <button class="am-acc-btn blue" onclick="printAmanatAccount(${ai})">📄</button>
-          <button class="am-acc-btn red" onclick="deleteAmanatAccount(${ai})">🗑️</button>
-        </div>
-      </div>
-      <div class="am-acc-chips" id="am-acc-chips-${ai}"></div>
-      <div class="am-acc-pct">
-        <span>فیصدیِ من (٪)</span>
-        <input type="number" step="0.01" value="${cmpEsc(a.myPct)}" placeholder="0" oninput="updateAmanatAccount(${ai},'myPct',this.value)">
-        <span>نرخ هر لیتر</span>
-        <input type="number" step="0.01" value="${cmpEsc(a.rate)}" placeholder="خالی" title="فقط برای «به پول گفتن» — روی هیچ حساب لیتری اثر ندارد" oninput="updateAmanatAccount(${ai},'rate',this.value)">
-        <span class="vd" id="am-acc-vd-${ai}"></span>
-      </div>
+  /* وضعیتِ کارت روی «هدف» سنجیده می‌شود، نه روی «صفر نشدن». اگر بخار بخشی از
+     سهمِ شما را بخورد، هرچند هنوز مثبت است، باز هم هدفتان به دستتان نرسیده —
+     پس کارت همان‌جا می‌گوید چند فیصد بگیرید. */
+  let state, cls;
+  if (!t.liters) { state = '➕ هنوز تیلی ثبت نشده'; cls = ''; }
+  else if (t.myPct == null) { state = '⚠️ فیصدی ثبت نشده'; cls = 'warn'; }
+  else if (t.loss <= 0.0001) { state = '✅ ' + _amFmt(t.myPct, 2) + '٪ کافی است'; cls = 'ok'; }
+  else if (t.netIfMy < 0) { state = '❌ ضرر — ' + _amFmt(t.askPct, 1) + '٪ بگیرید'; cls = 'bad'; }
+  else { state = '🔸 ' + _amFmt2(t.loss) + ' ل از سهمتان می‌رود'; cls = 'warn'; }
+  return `<div class="person-card am-card-acc ${cls}" onclick="openAmanatAccount(${ai})">
+    <button class="person-del" title="حذف حساب" onclick="event.stopPropagation();deleteAmanatAccount(${ai})">✕</button>
+    <div class="pname">${escFa(String(a.name || '').trim() || 'بی‌نام')}</div>
+    <div class="pdebt ${t.rest > 0 ? 'clear' : ''}">باقی: ${_amFmt2(t.rest)} لیتر</div>
+    <div class="am-card-state ${cls}">${state}</div>
+    <div class="am-card-nums">
+      <span title="رسید کل">${fuel === 'diesel' ? '🟤' : '⛽'} ${_amFmt(t.liters, 0)}</span>
+      <span title="بخارِ تخمینی" style="color:var(--accent)">💨 ${_amFmt2(t.loss)}</span>
     </div>
-    <div class="am-acc-body" ${open ? '' : 'style="display:none"'}>
-      <!-- ── تحلیلِ فیصدی، کشویی ────────────────────────────────────────── -->
-      <div class="am-an">
-        <button type="button" class="am-an-head" onclick="toggleAmanatAnalysis('${cmpEsc(a.id)}')">
-          <span>🧮 تحلیل — چند فیصد بگیرم که ضرر نکنم؟</span>
-          <span id="am-an-caret-${cmpEsc(a.id)}">${_amAnalysisOpen[a.id] ? '▾' : '◂'}</span>
-        </button>
-        <div class="am-an-body" id="am-an-body-${cmpEsc(a.id)}" ${_amAnalysisOpen[a.id] ? '' : 'style="display:none"'}></div>
-      </div>
-      <div class="xls-wrap" style="overflow:auto">
-        <table class="xls-tbl" style="min-width:${M ? 1250 : 1090}px">
-          <thead><tr>
-            <th style="width:30px">#</th>
-            <th style="width:88px">تاریخ</th>
-            <th style="min-width:96px">نام</th>
-            <th style="min-width:96px">به حسابهٔ</th>
-            <th style="width:88px">رسید تیل</th>
-            <th style="width:84px" title="چقدرش را برده‌اند">برده شده</th>
-            <th style="width:74px">مدت زمان</th>
-            <th style="width:74px">درجه گرما</th>
-            <th style="width:96px">در مخزن</th>
-            <th style="width:88px">درصد کمبودی</th>
-            <th style="width:92px">باقی تیل</th>
-            ${M ? '<th style="width:96px">موجودی واقعی</th><th style="width:92px">اختلاف</th>' : ''}
-            <th style="width:68px">پایه</th>
-            <th style="min-width:120px">یادداشت</th>
-            <th style="width:42px">حذف</th>
-          </tr></thead>
-          <tbody>${rows || ('<tr><td colspan="' + (M ? 16 : 14) + '" class="am-empty">ردیفی با این فیلتر نیست.</td></tr>')}</tbody>
-          <tfoot class="xls-foot"><tr>
-            <td colspan="4" style="padding:8px 7px">${hidden > 0 ? 'جملهٔ ردیف‌های دیده‌شده' : 'جمله'}</td>
-            <td class="xls-calc" id="am-ft-liters-${ai}">0</td>
-            <td class="xls-calc" id="am-ft-taken-${ai}">0</td>
-            <td colspan="3"></td>
-            <td class="xls-calc" id="am-ft-loss-${ai}">0</td>
-            <td class="xls-calc" id="am-ft-rest-${ai}">0</td>
-            ${M ? `<td class="xls-calc" id="am-ft-actual-${ai}">0</td><td class="xls-calc" id="am-ft-diff-${ai}">0</td>` : ''}
-            <td colspan="3"></td>
-          </tr></tfoot>
-        </table>
-      </div>
-      ${hidden > 0 ? ('<div style="padding:7px 12px;font-size:0.72rem;color:var(--muted)">🔎 ' + n2fa(hidden)
-        + ' ردیفِ دیگر با فیلترِ «' + (_amRowFilter === 'open' ? 'فقط باز' : 'فقط بسته') + '» پنهان است — کادرهای بالای جدول همیشه کلِ حساب را می‌گویند.</div>') : ''}
-    </div>
-    <div class="am-acc-foot">
-      <button class="am-acc-btn grn" onclick="addAmanatRow(${ai})">➕ ردیف تازه</button>
-      <button class="am-acc-btn" onclick="amApplySuggested(${ai})" title="فیصدیِ پیشنهادی را در خانهٔ «فیصدیِ من» بگذار">🧮 فیصدیِ پیشنهادی را بگذار</button>
-    </div>
+    <div class="am-card-pct">${t.myPct == null ? 'فیصدی: —' : ('فیصدیِ شما ' + _amFmt(t.myPct, 2) + '٪ → بگیرید <b>' + _amFmt(t.askPct, 1) + '٪</b>')}</div>
+    <div class="acct-num-badge">${n2fa(seq)}</div>
   </div>`;
 }
-/* فقط خانه‌های محاسبه‌شده، جمع‌ها و سربرگ‌ها را تازه می‌کند — بدونِ ساختنِ
-   دوبارهٔ ردیف‌ها، وگرنه با هر حرفی که تایپ می‌شود خانه از دستِ کاربر می‌پرید
-   (همان کاری که صرافی و گاوصندوق می‌کنند). */
+/* کادرهای خلاصهٔ بالای صفحه و هشدارها */
 function _amPaint() {
   const list = amAccounts();
   const s = amSettings();
   const per = { petrol: { n:0, liters:0, taken:0, loss:0, rest:0 }, diesel: { n:0, liters:0, taken:0, loss:0, rest:0 } };
   const err = [], warn = [];
-
-  list.forEach((a, ai) => {
+  list.forEach(a => {
     const fuel = amFuelKey(a);
     const t = amAccCalc(a, s);
     per[fuel].n++; per[fuel].liters += t.liters; per[fuel].taken += t.taken; per[fuel].loss += t.loss; per[fuel].rest += t.rest;
     if (!_amAccMatch(a)) return;
-
     (a.rows || []).forEach((r, ri) => {
       const c = amRowCalc(r, a, s);
-      const pe = document.getElementById('am-c-pct-' + ai + '-' + ri);
-      if (pe) { pe.textContent = _amFmt(c.lossPct, 3) + '٪'; pe.style.color = 'var(--accent)'; }
-      const re = document.getElementById('am-c-rest-' + ai + '-' + ri);
-      if (re) { re.textContent = _amFmt2(c.rest); re.style.color = c.rest < -0.0001 ? 'var(--red)' : 'var(--green)'; }
-      /* اختلاف = کمبودیِ واقعی منهای کمبودیِ تخمینی. سبز یعنی برآورد درست
-         درآمده، قرمز یعنی واقعی بیشتر بوده، آبی یعنی کمتر. */
-      const dfe = document.getElementById('am-c-diff-' + ai + '-' + ri);
-      if (dfe) {
-        dfe.textContent = c.hasActual ? _amFmt2(c.diff) : '—';
-        dfe.style.color = !c.hasActual ? 'var(--muted)'
-          : (Math.abs(c.diff) < 0.005 ? 'var(--green)' : (c.diff > 0 ? 'var(--red)' : 'var(--blue)'));
-      }
-      if (c.taken > c.liters + 0.0001) err.push(amAccLabel(a) + ' — ردیفِ ' + n2fa(ri + 1) + ': برده شده از رسید تیل بیشتر است.');
-      // «مدت زمان»ِ خودکار داخل همان خانه نشان داده می‌شود (بدون بازنویسیِ تایپ)
-      const de = document.getElementById('am-in-days-' + ai + '-' + ri);
-      if (de && de !== document.activeElement && !c.manual) de.placeholder = n2fa(c.autoDays) + ' روز';
-      if (c.liters > 0 && !c.dateOk && !c.manual) warn.push(amAccLabel(a) + ' — ردیفِ ' + n2fa(ri + 1) + ': تاریخ ثبت نشده، پس مدت زمان خودکار شمرده نمی‌شود.');
       if (_amNum(r.liters) < 0) err.push(amAccLabel(a) + ' — ردیفِ ' + n2fa(ri + 1) + ': رسید تیل نمی‌تواند کمتر از صفر باشد.');
+      if (c.taken > c.liters + 0.0001) err.push(amAccLabel(a) + ' — ردیفِ ' + n2fa(ri + 1) + ': برده شده از رسید تیل بیشتر است.');
+      if (c.liters > 0 && !c.dateOk && !c.manual) warn.push(amAccLabel(a) + ' — ردیفِ ' + n2fa(ri + 1) + ': تاریخ ثبت نشده، پس مدت زمان خودکار شمرده نمی‌شود.');
       if (_amHas(r.temp) && (_amNum(r.temp) < -50 || _amNum(r.temp) > 80)) warn.push(amAccLabel(a) + ' — ردیفِ ' + n2fa(ri + 1) + ': درجه گرمای واردشده غیرعادی است.');
+      /* هشدارِ عددِ بی‌ربط: اگر بخار از بالاترین حدِ منتشرشده (۳٪ برای کلِ
+         انبارش و جابه‌جایی) بگذرد، تقریباً همیشه یعنی «پایه» یا «مدت زمان»
+         اشتباه تایپ شده — نه این‌که واقعاً آن‌قدر بخار شده باشد. */
+      if (c.lossPct > 3) warn.push(amAccLabel(a) + ' — ردیفِ ' + n2fa(ri + 1) + ': بخارِ ' + _amFmt(c.lossPct, 2)
+        + '٪ از بالاترین حدِ منتشرشده (۳٪) بیشتر است — «پایه» یا «مدت زمان» را یک بار ببینید.');
     });
-
-    /* جمعِ زیرِ جدول فقط ردیف‌های دیده‌شده را می‌شمارد (وقتی فیلترِ باز/بسته
-       روشن است)، ولی کادرهای سربرگ همیشه کلِ حساب را می‌گویند — تا هیچ‌وقت
-       حسابی به‌خاطرِ یک فیلتر «خالی» به‌نظر نرسد. */
-    const vis = (a.rows || []).filter(r => _amRowFilter === 'all' || ((r.state === 'closed') ? 'closed' : 'open') === _amRowFilter);
-    const tv = (vis.length === (a.rows || []).length) ? t : amAccCalc(a, s, vis);
-    const ft = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    ft('am-ft-liters-' + ai, _amFmt2(tv.liters));
-    ft('am-ft-taken-' + ai, _amFmt2(tv.taken));
-    ft('am-ft-loss-' + ai, _amFmt(tv.lossPct, 3) + '٪');
-    ft('am-ft-rest-' + ai, _amFmt2(tv.rest));
-    ft('am-ft-actual-' + ai, tv.hasActual ? _amFmt2(tv.actual) : '—');
-    ft('am-ft-diff-' + ai, tv.hasActual ? _amFmt2(tv.realDiff) : '—');
-
-    const chips = document.getElementById('am-acc-chips-' + ai);
-    if (chips && _amOpenAcc !== a.id) {
-      /* کادرِ بسته فقط یک خطِ جمع‌وجور می‌شود — خواستهٔ صاحب ریپو: «کادرهای
-         دیگر کشویی باشد تا صفحه خیلی بزرگ نباشد». خودِ خط هم بازکننده است. */
-      const vd = (t.myPct == null) ? '<span class="am-acc-chip">فیصدی ثبت نشده</span>'
-        : (t.diff >= 0
-            ? '<span class="am-acc-chip grn">✅ ' + _amFmt(t.myPct, 3) + '٪ — ' + _amFmt2(t.diff) + ' ل می‌ماند</span>'
-            : '<span class="am-acc-chip red">❌ ' + _amFmt(t.myPct, 3) + '٪ — ' + _amFmt2(Math.abs(t.diff)) + ' ل از جیبِ خودتان</span>');
-      chips.innerHTML = '<span class="am-acc-chip">رسید کل <b>' + _amFmt2(t.liters) + '</b> ل</span>'
-        + '<span class="am-acc-chip acc">بخار <b>' + _amFmt2(t.loss) + '</b> ل</span>'
-        + vd + '<span class="am-acc-chip">' + n2fa(t.n) + ' ردیف</span>';
-      chips.style.cursor = 'pointer';
-      chips.onclick = () => toggleAmanatAcc(a.id);
-    } else if (chips) {
-      chips.style.cursor = ''; chips.onclick = null;
-      chips.innerHTML =
-          '<span class="am-acc-chip">رسید کل <b>' + _amFmt2(t.liters) + '</b> ل</span>'
-        + (t.taken ? ('<span class="am-acc-chip red">برده شده <b>' + _amFmt2(t.taken) + '</b> ل</span>') : '')
-        + '<span class="am-acc-chip acc">کمبودی <b>' + _amFmt2(t.loss) + '</b> ل'
-          + (t.lossMoney == null ? '' : (' · <b>' + _amFmt(t.lossMoney, 0) + '</b> پول')) + '</span>'
-        + '<span class="am-acc-chip grn">باقی تیل <b>' + _amFmt2(t.rest) + '</b> ل</span>'
-        + (t.hasActual ? ('<span class="am-acc-chip blue">اندازه‌گیری واقعی <b>' + _amFmt2(t.actual) + '</b> ل · اختلاف <b>'
-            + _amFmt2(t.realDiff) + '</b> ل</span>') : '')
-        + '<span class="am-acc-chip blue">فیصدیِ سربه‌سر <b>' + _amFmt(t.needPct, 3) + '٪</b></span>'
-        + '<span class="am-acc-chip">پیشنهادی <b>' + _amFmt(t.safePct, 3) + '٪</b></span>'
-        + '<span class="am-acc-chip">' + n2fa(t.n) + ' ردیف · ' + n2fa(t.open) + ' باز</span>';
-    }
-    _amPaintAnalysis(a, t, s);
-    const vd = document.getElementById('am-acc-vd-' + ai);
-    if (vd) {
-      const money = (x) => (t.rate == null) ? '' : (' (' + _amFmt(Math.abs(x), 0) + ' پول)');
-      if (t.myPct == null) { vd.className = 'vd'; vd.textContent = 'بنویسید تا بگوید کم می‌آید یا اضافه'; }
-      else if (t.diff >= 0) { vd.className = 'vd ok'; vd.textContent = '✅ ' + _amFmt2(t.myLiters) + ' ل می‌گیرید — ' + _amFmt2(t.diff) + ' ل اضافه می‌آید' + money(t.diffMoney); }
-      else { vd.className = 'vd bad'; vd.textContent = '❌ ' + _amFmt2(t.myLiters) + ' ل می‌گیرید — ' + _amFmt2(Math.abs(t.diff)) + ' ل کم می‌آورید' + money(t.diffMoney); }
-    }
   });
-
   const sum = document.getElementById('am-summary');
   if (sum) {
     sum.innerHTML = _amSumCardHtml('⛽ پطرول', 'var(--accent)', per.petrol, s)
@@ -39020,83 +38909,16 @@ function _amPaint() {
     wbox.innerHTML = h;
   }
 }
-/* ══ تحلیلِ فیصدیِ یک حساب ══════════════════════════════════════════════
-   خواستهٔ صاحب ریپو، با مثالِ خودش: «۱۰۰٬۰۰۰ تیل به من دادند… فیصدیِ خودم را
-   می‌زنم مثلاً ۳ فیصد که ۳٬۰۰۰ تایش به من می‌رسد، و این سه هزار آنالیز شود که
-   می‌صرفد یا در آن ضرر می‌کنم؛ اگر ضرر کردم بگوید یک فیصد بیشتر بگیر.»
-
-   خطرِ اصلی هم همان است که خودش گفت: اگر بخار از فیصدی بیشتر شود، تیلِ مردم را
-   باید از جیبِ خود بدهی. پس این تحلیل، «از جیبِ خودتان» را صریح می‌نویسد.
-   ══════════════════════════════════════════════════════════════════════ */
-function _amPaintAnalysis(a, t, s) {
-  const box = document.getElementById('am-an-body-' + a.id);
-  if (!box || box.style.display === 'none') return;
-  const L = v => _amFmt2(v) + ' لیتر';
-  const money = v => (t.rate == null) ? '' : (' <i style="color:var(--muted);font-style:normal">(' + _amFmt(Math.abs(v) * t.rate, 0) + ' پول)</i>');
-
-  if (!t.liters) {
-    box.innerHTML = '<div class="am-an-note">اول در جدولِ زیر «رسید تیل» را بنویسید تا تحلیل شود.</div>';
-    return;
-  }
-  const th = amThermal(t.liters, null, amFuelKey(a), s);   // با گرمای پیش‌فرض
-  const rows = [
-    ['تیلی که گرفته‌اید', L(t.liters)],
-    ['<b>بخارِ تخمینی</b>', '<b style="color:var(--accent)">' + L(t.loss) + money(t.loss) + '</b>'],
-    ['یعنی فیصدیِ سربه‌سر', '<b>' + _amFmt(t.needPct, 3) + '٪</b>'],
-    ['فیصدیِ پیشنهادی (با حاشیهٔ اطمینان ' + _amFmt(s.safetyPct) + '٪)', '<b style="color:var(--green)">' + _amFmt(t.safePct, 3) + '٪</b>']
-  ];
-  let verdict;
-  if (t.myPct == null) {
-    verdict = '<div class="am-an-v">در سربرگ «فیصدیِ من» را بنویسید تا بگویم می‌صرفد یا ضرر می‌کنید.'
-      + ' اگر <b>' + _amFmt(t.safePct, 3) + '٪</b> بگیرید، <b>' + L(t.liters * t.safePct / 100)
-      + '</b> به شما می‌رسد و بخار جبران می‌شود.</div>';
-  } else {
-    rows.push(['فیصدیِ شما (' + _amFmt(t.myPct, 3) + '٪)', '<b>' + L(t.myLiters) + money(t.myLiters) + '</b>']);
-    rows.push(['sep']);
-    if (t.diff >= 0) {
-      rows.push(['<b>برایتان می‌ماند</b>', '<b style="color:var(--green)">' + L(t.diff) + money(t.diff) + '</b>']);
-      const extra = t.myPct - t.needPct;
-      verdict = '<div class="am-an-v ok">✅ می‌صرفد. از <b>' + L(t.liters) + '</b> حدود <b>' + L(t.loss)
-        + '</b> بخار می‌شود و شما <b>' + L(t.myLiters) + '</b> می‌گیرید — <b>' + L(t.diff)
-        + '</b> برای خودتان می‌ماند' + money(t.diff) + '.'
-        + ' <span style="color:var(--muted)">(' + _amFmt(extra, 3) + '٪ بالاتر از سربه‌سر هستید.)</span></div>';
-    } else {
-      const short = Math.abs(t.diff);
-      const needMore = t.needPct - t.myPct;
-      const safeMore = t.safePct - t.myPct;
-      rows.push(['<b>از جیبِ خودتان</b>', '<b style="color:var(--red)">' + L(short) + money(short) + '</b>']);
-      verdict = '<div class="am-an-v bad">❌ ضرر می‌کنید. بخار <b>' + L(t.loss) + '</b> است ولی با <b>'
-        + _amFmt(t.myPct, 3) + '٪</b> فقط <b>' + L(t.myLiters) + '</b> می‌گیرید — <b>' + L(short)
-        + '</b> باید از جیبِ خودتان بدهید' + money(short) + '.<br>'
-        + '↩️ دستِ‌کم <b>' + _amFmt(t.needPct, 3) + '٪</b> بگیرید (<b>' + _amFmt(needMore, 3)
-        + '٪</b> بیشتر از حالا)، و برای اطمینان <b>' + _amFmt(t.safePct, 3) + '٪</b> ('
-        + _amFmt(safeMore, 3) + '٪ بیشتر).</div>';
-    }
-  }
-  box.innerHTML = '<div class="am-rows">'
-    + rows.map(r => r[0] === 'sep' ? '<span class="sep"></span>'
-                 : ('<span class="l">' + r[0] + '</span><span class="v">' + r[1] + '</span>')).join('')
-    + '</div>' + verdict
-    + '<div class="am-an-btns">'
-    + '<button class="am-md-btn grn" onclick="amApplySuggested(' + (amAccounts().indexOf(a)) + ')">🧮 فیصدیِ پیشنهادی را بگذار</button>'
-    + '</div>'
-    + '<div class="am-an-note">🌡️ جدا از بخار: با گرمای <b>' + _amFmt(th.temp) + '°C</b> خودِ عددِ لیتر حدود <b>'
-    + _amFmt(Math.abs(th.pct), 2) + '٪</b> (' + _amFmt2(Math.abs(th.liters)) + ' لیتر) '
-    + (th.liters >= 0 ? 'بیشتر' : 'کمتر') + ' از دمای مرجع (۱۵٫۶°C) نشان می‌دهد. این <b>بخار نیست</b> '
-    + 'و با سرد شدنِ هوا برمی‌گردد — روی فیصدی حسابش نکنید.</div>'
-    + '<div class="am-an-note">بخارِ تخمینی یک برآورد است، نه اندازه‌گیریِ واقعی. ضریب‌ها و منابعشان در «⚙️ تنظیمات مدیر» نوشته شده‌اند.</div>';
-}
 function _amSumCardHtml(title, color, t, s) {
   const pct = t.liters > 0 ? (t.loss / t.liters) * 100 : 0;
   const rows = [
     ['رسید کل', _amFmt2(t.liters) + ' ل'],
     ['برده شده', _amFmt2(t.taken) + ' ل'],
-    ['کمبودیِ تخمینی', _amFmt2(t.loss) + ' ل'],
+    ['بخارِ تخمینی', _amFmt2(t.loss) + ' ل'],
     ['باقی تیل', _amFmt2(t.rest) + ' ل'],
     ['sep'],
-    ['درصد کمبودی', _amFmt(pct, 3) + '٪'],
-    ['فیصدیِ سربه‌سر', _amFmt(pct, 3) + '٪'],
-    ['فیصدیِ پیشنهادی', _amFmt(pct * (1 + s.safetyPct / 100), 3) + '٪']
+    ['درصد بخار', _amFmt(pct, 3) + '٪'],
+    ['یعنی روی هر فیصدی', '+' + _amFmt(pct, 3) + '٪ بگیرید']
   ];
   return '<div class="am-card" style="border-color:' + color + '">'
     + '<div class="am-card-t" style="color:' + color + '">' + title
@@ -39106,17 +38928,306 @@ function _amSumCardHtml(title, color, t, s) {
                  : ('<span class="l">' + r[0] + '</span><span class="v">' + r[1] + '</span>')).join('')
     + '</div></div>';
 }
-// فیصدیِ پیشنهادیِ همین حساب را در خانهٔ «فیصدیِ من» می‌گذارد
-function amApplySuggested(ai) {
+
+/* ══ صفحهٔ یک حساب ════════════════════════════════════════════════════════ */
+function openAmanatAccount(ai) {
   const a = amAccounts()[ai];
   if (!a) return;
-  const t = amAccCalc(a);
-  if (!t.liters) { showToast('❌ اول رسید تیل را بنویسید', '#e53e3e'); return; }
-  a.myPct = Math.round(t.safePct * 1000) / 1000;
-  save(); renderAmanat();
-  showToast('🧮 فیصدیِ پیشنهادی گذاشته شد: ' + _amFmt(a.myPct, 3) + '٪', '#38a169');
+  _amAccIdx = ai;
+  const ov = document.getElementById('amanatAccModal');
+  if (ov) ov.classList.add('open');   // اول باز، بعد ساخته — وگرنه خانه‌های محاسبه خالی می‌مانند
+  _amAccBuild();
 }
+function closeAmanatAccount() {
+  const ov = document.getElementById('amanatAccModal');
+  if (ov) ov.classList.remove('open');
+  _amAccIdx = null;
+  renderAmanat();
+}
+function _amAccRefresh() {
+  const ov = document.getElementById('amanatAccModal');
+  if (!ov || !ov.classList.contains('open') || _amAccIdx == null) return;
+  _amAccBuild();
+}
+function _amAccBuild() {
+  const ai = _amAccIdx;
+  const a = (ai == null) ? null : amAccounts()[ai];
+  const box = document.getElementById('am-acc-body');
+  if (!box) return;
+  if (!a) { box.innerHTML = ''; return; }
+  const s = amSettings();
+  const fuel = amFuelKey(a);
+  const ttl = document.getElementById('am-acc-title');
+  if (ttl) ttl.textContent = '🛢️ ' + (String(a.name || '').trim() || 'حسابِ بی‌نام');
 
+  const view = _amSortedRows(a).filter(({ r }) =>
+    _amRowFilter === 'all' || ((r.state === 'closed') ? 'closed' : 'open') === _amRowFilter);
+  const M = _amShowMeasure;
+  const rows = view.map(({ r, ri }, k) => {
+    const closed = (r.state === 'closed');
+    return `<tr>
+      <td style="text-align:center;color:var(--muted)">${n2fa(k + 1)}</td>
+      <td><input class="xls-in sm" value="${cmpEsc(r.date)}" placeholder="تاریخ" onchange="updateAmanatRow(${ai},${ri},'date',this.value);_amAccRefresh()"></td>
+      <td><input class="xls-in" value="${cmpEsc(r.name)}" placeholder="نام" oninput="updateAmanatRow(${ai},${ri},'name',this.value)"></td>
+      <td><input class="xls-in" value="${cmpEsc(r.toAcct)}" placeholder="به حسابهٔ…" oninput="updateAmanatRow(${ai},${ri},'toAcct',this.value)"></td>
+      <td><input class="xls-in sm" id="am-in-liters-${ai}-${ri}" type="number" step="0.01" value="${cmpEsc(r.liters)}" placeholder="0" oninput="updateAmanatRow(${ai},${ri},'liters',this.value)"></td>
+      <td><input class="xls-in sm" type="number" step="0.01" value="${cmpEsc(r.taken)}" placeholder="0" title="چقدرش را برده‌اند" oninput="updateAmanatRow(${ai},${ri},'taken',this.value)"></td>
+      <td><input class="xls-in xs" id="am-in-days-${ai}-${ri}" type="number" step="1" value="${cmpEsc(r.days)}" placeholder="خودکار" title="خالی = خودکار از تاریخ تا امروز" oninput="updateAmanatRow(${ai},${ri},'days',this.value)"></td>
+      <td><input class="xls-in xs" type="number" step="0.1" value="${cmpEsc(r.temp)}" placeholder="${_amFmt(s.defTemp)}" title="خالی = گرمای پیش‌فرضِ تنظیمات" oninput="updateAmanatRow(${ai},${ri},'temp',this.value)"></td>
+      <td>
+        <div class="am-state">
+          <button class="${closed ? '' : 'on open'}" onclick="setAmanatRowState(${ai},${ri},'open')">باز</button>
+          <button class="${closed ? 'on shut' : ''}" onclick="setAmanatRowState(${ai},${ri},'closed')">بسته</button>
+        </div>
+      </td>
+      <td class="am-calc" id="am-c-loss-${ai}-${ri}">—</td>
+      <td class="am-calc" id="am-c-pct-${ai}-${ri}">—</td>
+      <td><input class="xls-in xs" type="number" step="0.1" value="${cmpEsc(r.myPct)}" placeholder="${a.myPct === '' || a.myPct == null ? '0' : _amFmt(_amNum(a.myPct), 2)}" title="فیصدیِ هدف — چقدر باید بعد از بخار برایتان بماند. خالی = فیصدیِ خودِ حساب" oninput="updateAmanatRow(${ai},${ri},'myPct',this.value)"></td>
+      <td class="am-calc" id="am-c-need-${ai}-${ri}">—</td>
+      <td class="am-calc" id="am-c-net-${ai}-${ri}">—</td>
+      <td class="am-calc" id="am-c-rest-${ai}-${ri}">—</td>
+      ${M ? `<td><input class="xls-in sm" type="number" step="0.01" value="${cmpEsc(r.actual)}" placeholder="ثبت نشده" oninput="updateAmanatRow(${ai},${ri},'actual',this.value)"></td>
+      <td class="am-calc" id="am-c-diff-${ai}-${ri}">—</td>` : ''}
+      <td><input class="xls-in xs" type="number" step="0.01" value="${cmpEsc(r.basePct)}" placeholder="${_amFmt(s.basePct, 3)}" title="خالی = پایهٔ تنظیمات" oninput="updateAmanatRow(${ai},${ri},'basePct',this.value)"></td>
+      <td><input class="xls-in" value="${cmpEsc(r.note)}" placeholder="یادداشت" oninput="updateAmanatRow(${ai},${ri},'note',this.value)"></td>
+      <td style="text-align:center"><button class="del-btn" onclick="deleteAmanatRow(${ai},${ri})">🗑️</button></td>
+    </tr>`;
+  }).join('');
+  const hidden = (a.rows || []).length - view.length;
+
+  box.innerHTML = `
+  <!-- مشخصات و فیصدیِ حساب -->
+  <div class="am-md-sec">
+    <div class="am-acc-r1">
+      <input class="am-acc-name" value="${cmpEsc(a.name)}" placeholder="نام حساب / صاحب تیل" oninput="updateAmanatAccount(${ai},'name',this.value);_amAccPaint()">
+      <select class="am-acc-fuel" onchange="updateAmanatAccount(${ai},'fuel',this.value);_amAccRefresh()">
+        <option value="petrol" ${fuel !== 'diesel' ? 'selected' : ''}>⛽ پطرول</option>
+        <option value="diesel" ${fuel === 'diesel' ? 'selected' : ''}>🟤 دیزل</option>
+      </select>
+      <div class="am-acc-btns">
+        <button class="am-acc-btn grn" onclick="addAmanatRow(${ai})">➕ ردیف</button>
+        <button class="am-acc-btn blue" onclick="printAmanatAccount(${ai})">📄 PDF</button>
+        <button class="am-acc-btn red" onclick="deleteAmanatAccount(${ai})">🗑️ حذف حساب</button>
+      </div>
+    </div>
+    <div class="am-acc-chips" id="am-acc-chips"></div>
+    <div class="am-acc-pct">
+      <span>فیصدیِ من (٪) — چقدر باید برایم بماند</span>
+      <input type="number" step="0.1" value="${cmpEsc(a.myPct)}" placeholder="0" oninput="updateAmanatAccount(${ai},'myPct',this.value);_amAccPaint()">
+      <span>نرخ هر لیتر</span>
+      <input type="number" step="0.01" value="${cmpEsc(a.rate)}" placeholder="خالی" title="فقط برای «به پول گفتن»" oninput="updateAmanatAccount(${ai},'rate',this.value);_amAccPaint()">
+    </div>
+  </div>
+
+  <!-- تحلیل -->
+  <div class="am-md-sec" style="border-color:var(--green)">
+    <div class="am-md-t" style="color:var(--green)">🧮 تحلیل — چند فیصد بگیرم که ضرر نکنم؟</div>
+    <div id="am-acc-analysis"></div>
+  </div>
+
+  <!-- جدول -->
+  <div class="am-md-sec">
+    <div class="am-md-t">📊 جدولِ رسیدها
+      <div class="am-tabs">
+        <button class="am-tab" data-r="all" onclick="setAmanatRowFilter('all');_amAccRefresh()">همه</button>
+        <button class="am-tab" data-r="open" onclick="setAmanatRowFilter('open');_amAccRefresh()">فقط باز</button>
+        <button class="am-tab" data-r="closed" onclick="setAmanatRowFilter('closed');_amAccRefresh()">فقط بسته</button>
+        <button class="am-tab" id="am-measure-btn" onclick="toggleAmanatMeasure();_amAccRefresh()">📏 اندازه‌گیری</button>
+      </div>
+    </div>
+    <div class="xls-wrap" style="overflow:auto">
+      <table class="xls-tbl" style="min-width:${M ? 1560 : 1400}px">
+        <thead><tr>
+          <th style="width:30px">#</th>
+          <th style="width:88px">تاریخ</th>
+          <th style="min-width:96px">نام</th>
+          <th style="min-width:96px">به حسابهٔ</th>
+          <th style="width:88px">رسید تیل</th>
+          <th style="width:80px">برده شده</th>
+          <th style="width:74px">مدت زمان</th>
+          <th style="width:74px">درجه گرما</th>
+          <th style="width:92px">در مخزن</th>
+          <th style="width:84px" title="چند لیتر بخار می‌شود">بخار (ل)</th>
+          <th style="width:80px">درصد بخار</th>
+          <th style="width:78px" title="چقدر باید بعد از بخار برایتان بماند">فیصدیِ من</th>
+          <th style="width:86px" title="فیصدیِ من + درصد بخار">فیصدیِ لازم</th>
+          <th style="width:92px" title="اگر همین فیصدیِ من را بگیرید، بعد از بخار چقدر می‌ماند">به من می‌رسد</th>
+          <th style="width:92px">باقی تیل</th>
+          ${M ? '<th style="width:92px">موجودی واقعی</th><th style="width:88px">اختلاف</th>' : ''}
+          <th style="width:66px">پایه</th>
+          <th style="min-width:110px">یادداشت</th>
+          <th style="width:42px">حذف</th>
+        </tr></thead>
+        <tbody>${rows || ('<tr><td colspan="' + (M ? 20 : 18) + '" class="am-empty">ردیفی با این فیلتر نیست.</td></tr>')}</tbody>
+        <tfoot class="xls-foot"><tr>
+          <td colspan="4" style="padding:8px 7px">${hidden > 0 ? 'جملهٔ ردیف‌های دیده‌شده' : 'جمله'}</td>
+          <td class="xls-calc" id="am-ft-liters">0</td>
+          <td class="xls-calc" id="am-ft-taken">0</td>
+          <td colspan="3"></td>
+          <td class="xls-calc" id="am-ft-loss">0</td>
+          <td class="xls-calc" id="am-ft-losspct">0</td>
+          <td></td>
+          <td class="xls-calc" id="am-ft-need">0</td>
+          <td class="xls-calc" id="am-ft-net">0</td>
+          <td class="xls-calc" id="am-ft-rest">0</td>
+          ${M ? '<td class="xls-calc" id="am-ft-actual">0</td><td class="xls-calc" id="am-ft-diff">0</td>' : ''}
+          <td colspan="3"></td>
+        </tr></tfoot>
+      </table>
+    </div>
+    ${hidden > 0 ? ('<div style="padding:7px 2px 0;font-size:0.72rem;color:var(--muted)">🔎 ' + n2fa(hidden)
+      + ' ردیفِ دیگر پنهان است — کادرهای بالا همیشه کلِ حساب را می‌گویند.</div>') : ''}
+    <div class="am-md-btns">
+      <button class="am-md-btn grn" onclick="addAmanatRow(${ai})">➕ ردیف تازه</button>
+    </div>
+  </div>
+
+  <!-- نرخ‌های مرجع -->
+  <div class="am-md-sec">
+    <button type="button" class="am-an-head am-fold" style="background:transparent;border:none;padding:0;color:var(--blue)" onclick="amToggleRef()">
+      <span>📚 نرخ‌های مرجع — دیگران چقدر می‌گیرند؟</span><span id="am-ref-caret">◂</span>
+    </button>
+    <div id="am-ref-body" style="display:none;margin-top:10px">${_amRefTableHtml()}</div>
+  </div>`;
+
+  document.querySelectorAll('#amanatAccModal .am-tabs .am-tab[data-r]').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-r') === _amRowFilter));
+  const mb = document.getElementById('am-measure-btn');
+  if (mb) mb.classList.toggle('active', _amShowMeasure);
+  _amAccPaint();
+}
+function amToggleRef() {
+  const b = document.getElementById('am-ref-body');
+  const c = document.getElementById('am-ref-caret');
+  if (!b) return;
+  const on = (b.style.display === 'none');
+  b.style.display = on ? '' : 'none';
+  if (c) c.textContent = on ? '▾' : '◂';
+}
+/* نرخ‌هایی که جاهای دیگر رسماً برای «کمبودیِ انبارش و جابه‌جایی» قبول می‌کنند —
+   تا فیصدیِ خودتان را با یک عددِ بیرونی بسنجید، نه فقط با حدسِ برنامه. */
+function _amRefTableHtml() {
+  const rows = [
+    ['خطِ لولهٔ نفت (کمبودیِ مسیر، عینِ همین کار)', '۰٫۱٪ تا ۰٫۲٪', 'همان مقدارِ تیل که بابتِ بخار و خطای اندازه‌گیری نزدِ حمل‌کننده می‌ماند'],
+    ['کالیفرنیا — کمبودیِ عادیِ انبارش', '۰٫۵٪', 'وقتی کمبودیِ واقعی دقیق معلوم نباشد، ۰٫۵٪ِ کلِ گردش پذیرفته است'],
+    ['دلاور — سقفِ کمبودیِ انبارش و جابه‌جایی', 'پطرول ۱٪ · دیزل ۰٫۵٪', 'روی موجودیِ اول دوره + رسیدها، در ۱۲ ماه'],
+    ['ایندیانا — کمبودیِ انبارش و جابه‌جایی', '۱٫۶٪', 'یک نرخِ ثابت برای کلِ کمبودی و هزینهٔ جمع‌آوری'],
+    ['آرکانزاس — سقفِ کمبودیِ انبارش و جابه‌جایی', '۳٪', 'بالاترین نرخِ پیداشده؛ فقط برای اولین یک میلیون گالن'],
+    ['حدِ مجازِ اختلافِ موجودیِ مخزن', 'روزانه ۰٫۵٪ · ماهانه ۱٪', 'بیشتر از این یعنی یک جای کار می‌لنگد، نه بخارِ عادی']
+  ];
+  return '<div class="xls-wrap" style="overflow:auto"><table class="am-guide" style="min-width:560px">'
+    + '<thead><tr><th>کجا</th><th>چند فیصد</th><th>توضیح</th></tr></thead><tbody>'
+    + rows.map(r => '<tr><td style="text-align:right">' + r[0] + '</td><td style="color:var(--green);font-weight:900">'
+        + r[1] + '</td><td style="text-align:right;white-space:normal;font-weight:600;color:var(--muted)">' + r[2] + '</td></tr>').join('')
+    + '</tbody></table></div>'
+    + '<div class="am-an-note">این نرخ‌ها برای <b>کلِ</b> کمبودیِ انبارش و جابه‌جایی‌اند (بخار + خطای اندازه‌گیری + ریخت‌وپاش)، پس معمولاً از بخارِ خالی بالاترند. '
+    + 'فیصدیِ شما باید بخار را بپوشاند و سودِ خودتان هم رویش باشد — برای همین طبیعی است که از این‌ها بالاتر باشد. لینکِ منابع در «⚙️ تنظیمات مدیر».</div>';
+}
+/* خانه‌های محاسبه‌شدهٔ صفحهٔ حساب — بدونِ ساختنِ دوبارهٔ ردیف‌ها */
+function _amAccPaint() {
+  const ov = document.getElementById('amanatAccModal');
+  if (!ov || !ov.classList.contains('open') || _amAccIdx == null) return;
+  const ai = _amAccIdx;
+  const a = amAccounts()[ai];
+  if (!a) return;
+  const s = amSettings();
+  const t = amAccCalc(a, s);
+  const ttl = document.getElementById('am-acc-title');
+  if (ttl) ttl.textContent = '🛢️ ' + (String(a.name || '').trim() || 'حسابِ بی‌نام');
+
+  (a.rows || []).forEach((r, ri) => {
+    const c = amRowCalc(r, a, s);
+    const set = (k, txt, col) => { const el = document.getElementById('am-c-' + k + '-' + ai + '-' + ri); if (el) { el.textContent = txt; el.style.color = col; } };
+    set('loss', _amFmt2(c.loss), 'var(--accent)');
+    set('pct', _amFmt(c.lossPct, 3) + '٪', 'var(--accent)');
+    set('need', c.needPct == null ? '—' : (_amFmt(c.needPct, 3) + '٪'), 'var(--blue)');
+    set('net', c.netIfMy == null ? '—' : _amFmt2(c.netIfMy), c.netIfMy == null ? 'var(--muted)' : (c.netIfMy < 0 ? 'var(--red)' : 'var(--green)'));
+    set('rest', _amFmt2(c.rest), c.rest < -0.0001 ? 'var(--red)' : 'var(--green)');
+    set('diff', c.hasActual ? _amFmt2(c.diff) : '—',
+        !c.hasActual ? 'var(--muted)' : (Math.abs(c.diff) < 0.005 ? 'var(--green)' : (c.diff > 0 ? 'var(--red)' : 'var(--blue)')));
+    const de = document.getElementById('am-in-days-' + ai + '-' + ri);
+    if (de && de !== document.activeElement && !c.manual) de.placeholder = n2fa(c.autoDays) + ' روز';
+  });
+
+  const vis = (a.rows || []).filter(r => _amRowFilter === 'all' || ((r.state === 'closed') ? 'closed' : 'open') === _amRowFilter);
+  const tv = (vis.length === (a.rows || []).length) ? t : amAccCalc(a, s, vis);
+  const ft = (id, v) => { const el = document.getElementById('am-ft-' + id); if (el) el.textContent = v; };
+  ft('liters', _amFmt2(tv.liters));
+  ft('taken', _amFmt2(tv.taken));
+  ft('loss', _amFmt2(tv.loss));
+  ft('losspct', _amFmt(tv.lossPct, 3) + '٪');
+  ft('need', tv.needPct == null ? '—' : (_amFmt(tv.needPct, 3) + '٪'));
+  ft('net', tv.netIfMy == null ? '—' : _amFmt2(tv.netIfMy));
+  ft('rest', _amFmt2(tv.rest));
+  ft('actual', tv.hasActual ? _amFmt2(tv.actual) : '—');
+  ft('diff', tv.hasActual ? _amFmt2(tv.realDiff) : '—');
+
+  const chips = document.getElementById('am-acc-chips');
+  if (chips) {
+    chips.innerHTML =
+        '<span class="am-acc-chip">رسید کل <b>' + _amFmt2(t.liters) + '</b> ل</span>'
+      + (t.taken ? ('<span class="am-acc-chip red">برده شده <b>' + _amFmt2(t.taken) + '</b> ل</span>') : '')
+      + '<span class="am-acc-chip acc">بخار <b>' + _amFmt2(t.loss) + '</b> ل · <b>' + _amFmt(t.lossPct, 3) + '٪</b></span>'
+      + '<span class="am-acc-chip grn">باقی تیل <b>' + _amFmt2(t.rest) + '</b> ل</span>'
+      + (t.hasActual ? ('<span class="am-acc-chip blue">اندازه‌گیری واقعی <b>' + _amFmt2(t.actual) + '</b> ل · اختلاف <b>' + _amFmt2(t.realDiff) + '</b> ل</span>') : '')
+      + '<span class="am-acc-chip">' + n2fa(t.n) + ' ردیف · ' + n2fa(t.open) + ' باز</span>';
+  }
+  _amPaintAnalysis(a, t, s);
+}
+/* ══ تحلیلِ فیصدی ═════════════════════════════════════════════════════════
+   گفتهٔ خودِ صاحب ریپو، کلمه‌به‌کلمه پیاده شده:
+   «الان ۵۵۰ بخار می‌شود… بگو این‌همه کم بود، ۳۰۰۰ تا به تو نمی‌رسد، این فیصدی
+    را ببر به ۳٫۶ فیصد که ۳۰۰۰ لیتر تو بماند.»
+   ══════════════════════════════════════════════════════════════════════ */
+function _amPaintAnalysis(a, t, s) {
+  const box = document.getElementById('am-acc-analysis');
+  if (!box) return;
+  const L = v => _amFmt2(v) + ' لیتر';
+  const money = v => (t.rate == null) ? '' : (' <i style="color:var(--muted);font-style:normal">(' + _amFmt(Math.abs(v) * t.rate, 0) + ' پول)</i>');
+
+  if (!t.liters) { box.innerHTML = '<div class="am-an-note">اول در جدولِ زیر «رسید تیل» را بنویسید تا تحلیل شود.</div>'; return; }
+  if (t.myPct == null) {
+    box.innerHTML = '<div class="am-rows">'
+      + '<span class="l">تیلی که گرفته‌اید</span><span class="v">' + L(t.liters) + '</span>'
+      + '<span class="l">بخارِ تخمینی</span><span class="v" style="color:var(--accent)">' + L(t.loss) + ' · ' + _amFmt(t.lossPct, 3) + '٪</span>'
+      + '</div><div class="am-an-v">بالا در «فیصدیِ من» بنویسید چقدر می‌خواهید <b>برایتان بماند</b> — مثلاً ۳٪. '
+      + 'بعد خودش می‌گوید برای رسیدن به همان، چند فیصد باید بگیرید.</div>';
+    return;
+  }
+  const enough = (t.netIfMy >= -0.0001);
+  const rows = [
+    ['تیلی که گرفته‌اید', L(t.liters)],
+    ['<b>بخارِ تخمینی</b>', '<b style="color:var(--accent)">' + L(t.loss) + ' · ' + _amFmt(t.lossPct, 3) + '٪' + money(t.loss) + '</b>'],
+    ['sep'],
+    ['فیصدیِ شما (هدف) ' + _amFmt(t.myPct, 2) + '٪', '<b>' + L(t.targetL) + money(t.targetL) + '</b>'],
+    ['اگر همین ' + _amFmt(t.myPct, 2) + '٪ را بگیرید، بعد از بخار می‌ماند',
+     '<b style="color:' + (enough ? 'var(--green)' : 'var(--red)') + '">' + L(t.netIfMy) + '</b>'],
+    ['sep'],
+    ['<b>فیصدیِ لازم</b> (' + _amFmt(t.myPct, 2) + '٪ + ' + _amFmt(t.lossPct, 3) + '٪)', '<b style="color:var(--blue)">' + _amFmt(t.needPct, 3) + '٪</b>'],
+    ['<b>گِردشده — همین را بگیرید</b>', '<b style="color:var(--green);font-size:1.05rem">' + _amFmt(t.askPct, 1) + '٪</b>'],
+    ['با ' + _amFmt(t.askPct, 1) + '٪ می‌گیرید', L(t.askL) + money(t.askL)],
+    ['<b>و بعد از بخار برایتان می‌ماند</b>', '<b style="color:var(--green)">' + L(t.netIfAsk) + money(t.netIfAsk) + '</b>']
+  ];
+  const verdict = enough
+    ? '<div class="am-an-v ok">✅ با <b>' + _amFmt(t.myPct, 2) + '٪</b> هم ضرر نمی‌کنید، ولی <b>' + L(t.loss)
+      + '</b> از سهمتان را بخار می‌خورد و فقط <b>' + L(t.netIfMy) + '</b> برایتان می‌ماند.<br>'
+      + '↩️ اگر <b>' + _amFmt(t.askPct, 1) + '٪</b> بگیرید، کلِ <b>' + L(t.targetL)
+      + '</b> که می‌خواستید سالم برایتان می‌ماند (در واقع ' + L(t.netIfAsk) + ').</div>'
+    : '<div class="am-an-v bad">❌ <b>' + L(t.targetL) + '</b> که می‌خواستید به شما نمی‌رسد — بخار <b>' + L(t.loss)
+      + '</b> است و فقط <b>' + L(t.netIfMy) + '</b> می‌ماند' + money(t.netIfMy) + '.<br>'
+      + '↩️ فیصدی را ببرید به <b>' + _amFmt(t.askPct, 1) + '٪</b> تا کلِ <b>' + L(t.targetL) + '</b> برایتان بماند.</div>';
+
+  box.innerHTML = '<div class="am-rows">'
+    + rows.map(r => r[0] === 'sep' ? '<span class="sep"></span>'
+                 : ('<span class="l">' + r[0] + '</span><span class="v">' + r[1] + '</span>')).join('')
+    + '</div>' + verdict
+    + '<div class="am-an-note">🌡️ جدا از بخار: با گرمای <b>' + _amFmt(s.defTemp) + '°C</b> خودِ عددِ لیتر حدود <b>'
+    + _amFmt(Math.abs(amThermal(100, null, amFuelKey(a), s).pct), 2) + '٪</b> با دمای مرجع (۱۵٫۶°C) فرق می‌کند. '
+    + 'این <b>بخار نیست</b> و با سرد شدنِ هوا برمی‌گردد — رویش فیصدی نگیرید.</div>';
+}
+/* ⚠️ دکمهٔ «فیصدیِ پیشنهادی را بگذار» برداشته شد و برنگردد.
+   حالا «فیصدیِ من» هدف است، نه نرخی که می‌گیرید. اگر فیصدیِ لازم را روی هدف
+   بنویسیم، دفعهٔ بعد لازم = هدفِ تازه + بخار می‌شود و عدد بی‌پایان بالا می‌رود.
+   «فیصدیِ لازم» فقط خوانده می‌شود — همان را به مشتری بگویید. */
 /* ══ PDF ══════════════════════════════════════════════════════════════════ */
 function _amPdfShell(title, inner) {
   const d = (typeof allDates === 'function') ? allDates() : { sh:'', mi:'', qa:'' };
@@ -39165,7 +39276,11 @@ function _amAccPdfBlock(a, s) {
       <td>${n2fa(c.days)}</td>
       <td>${_amFmt(c.temp)}</td>
       <td style="font-weight:700;color:${c.closed ? '#c53030' : '#276749'}">${c.closed ? 'بسته' : 'باز'}</td>
-      <td style="color:#b7791f;font-weight:700">${_amFmt(c.lossPct, 3)}٪</td>
+      <td style="color:#b7791f;font-weight:700">${_amFmt2(c.loss)}</td>
+      <td style="color:#b7791f">${_amFmt(c.lossPct, 3)}٪</td>
+      <td>${c.myPct == null ? '—' : (_amFmt(c.myPct, 2) + '٪')}</td>
+      <td style="color:#2b6cb0;font-weight:700">${c.needPct == null ? '—' : (_amFmt(c.needPct, 3) + '٪')}</td>
+      <td style="font-weight:700">${c.netIfMy == null ? '—' : _amFmt2(c.netIfMy)}</td>
       <td style="color:#276749;font-weight:700">${_amFmt2(c.rest)}</td>
       <td>${c.hasActual ? _amFmt2(c.actual) : '—'}</td>
       <td>${c.hasActual ? _amFmt2(c.diff) : '—'}</td>
@@ -39177,16 +39292,18 @@ function _amAccPdfBlock(a, s) {
 <div class="chips">رسید کل <b>${_amFmt2(t.liters)}</b> ل · برده شده <b>${_amFmt2(t.taken)}</b> ل ·
 کمبودی <b>${_amFmt2(t.loss)}</b> ل${t.lossMoney == null ? '' : (' (' + _amFmt(t.lossMoney, 0) + ' پول)')} ·
 باقی تیل <b>${_amFmt2(t.rest)}</b> ل${t.hasActual ? (' · اندازه‌گیری واقعی <b>' + _amFmt2(t.actual) + '</b> ل · اختلاف <b>' + _amFmt2(t.realDiff) + '</b> ل') : ''} ·
-فیصدیِ سربه‌سر <b>${_amFmt(t.needPct, 3)}٪</b> ·
-پیشنهادی <b>${_amFmt(t.safePct, 3)}٪</b>${t.myPct == null ? '' : (' · فیصدیِ شما <b>' + _amFmt(t.myPct, 3) + '٪</b> → '
-  + (t.diff >= 0 ? ('جبران می‌شود، ' + _amFmt2(t.diff) + ' ل اضافه') : (_amFmt2(Math.abs(t.diff)) + ' ل کم')))}</div>
+${t.myPct == null ? 'فیصدی ثبت نشده' : ('فیصدیِ شما (هدف) <b>' + _amFmt(t.myPct, 2) + '٪</b> = <b>' + _amFmt2(t.targetL)
+  + '</b> ل · <b>فیصدیِ لازم ' + _amFmt(t.needPct, 3) + '٪</b> → گِردشده <b>' + _amFmt(t.askPct, 1)
+  + '٪</b> · با آن بعد از بخار <b>' + _amFmt2(t.netIfAsk) + '</b> ل برایتان می‌ماند')}</div>
 <table>
 <thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>به حسابهٔ</th><th>رسید تیل</th><th>برده شده</th><th>مدت زمان</th>
-<th>درجه گرما</th><th>در مخزن</th><th>درصد کمبودی</th><th>باقی تیل</th><th>موجودی واقعی</th><th>اختلاف</th>
-<th>پایه</th><th>یادداشت</th></tr></thead>
-<tbody>${rows || '<tr><td colspan="15" style="padding:14px;color:#718096">ردیفی ثبت نشده</td></tr>'}</tbody>
+<th>درجه گرما</th><th>در مخزن</th><th>بخار (ل)</th><th>درصد بخار</th><th>فیصدیِ من</th><th>فیصدیِ لازم</th>
+<th>به من می‌رسد</th><th>باقی تیل</th><th>موجودی واقعی</th><th>اختلاف</th><th>پایه</th><th>یادداشت</th></tr></thead>
+<tbody>${rows || '<tr><td colspan="19" style="padding:14px;color:#718096">ردیفی ثبت نشده</td></tr>'}</tbody>
 <tfoot><tr><td colspan="4">جمله</td><td>${_amFmt2(t.liters)}</td><td>${_amFmt2(t.taken)}</td><td colspan="3"></td>
-<td>${_amFmt(t.lossPct, 3)}٪</td><td>${_amFmt2(t.rest)}</td>
+<td>${_amFmt2(t.loss)}</td><td>${_amFmt(t.lossPct, 3)}٪</td><td></td>
+<td>${t.needPct == null ? '—' : (_amFmt(t.needPct, 3) + '٪')}</td>
+<td>${t.netIfMy == null ? '—' : _amFmt2(t.netIfMy)}</td><td>${_amFmt2(t.rest)}</td>
 <td>${t.hasActual ? _amFmt2(t.actual) : '—'}</td><td>${t.hasActual ? _amFmt2(t.realDiff) : '—'}</td>
 <td colspan="2"></td></tr></tfoot>
 </table>`;
@@ -47060,7 +47177,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.347';
+const APP_VERSION = '2.9.348';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
