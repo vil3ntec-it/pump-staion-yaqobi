@@ -38638,6 +38638,37 @@ function _amAccMatch(a) {
   return hay.indexOf(q) >= 0;
 }
 
+/* ── ذخیرهٔ تأخیری ────────────────────────────────────────────────────────
+   ⚠️ این را برنگردانید به save()ِ مستقیم داخلِ oninput.
+
+   ایرادِ گزارش‌شده: «یک ساعت دارد لود می‌شود، بالا نمی‌آید». ریشه‌اش این بود که
+   خانه‌های عددیِ این بخش با oninput کار می‌کنند (تا عددها زنده باشند) و هر
+   حرفِ تایپ‌شده یک save() کامل می‌زد — یعنی سریال‌کردن و فرستادنِ کلِ دیتابیس
+   به سرورِ خانگی. نوشتنِ یک عددِ شش‌رقمی = شش بار فرستادنِ کلِ دیتابیس. روی
+   اینترنتِ کند، خطِ کاربر پر می‌شد و برنامه قفل به‌نظر می‌رسید.
+
+   حالا: نقاشیِ عددها همان لحظه (رایگان)، ولی ذخیره ۶۰۰ میلی‌ثانیه بعد از
+   ایستادنِ دست. بستنِ صفحهٔ حساب و رفتن از بخش هم اول فلاش می‌کنند، پس هیچ
+   نوشته‌ای از دست نمی‌رود. (بخش‌های دیگر همین را با onchange حل کرده‌اند؛
+   این‌جا چون باید زنده باشد، با تأخیر.) */
+let _amSaveTimer = null;
+function _amSaveSoon() {
+  if (_amSaveTimer) clearTimeout(_amSaveTimer);
+  _amSaveTimer = setTimeout(() => { _amSaveTimer = null; try { save(); } catch (e) {} }, 600);
+}
+function amFlushSave() {
+  if (!_amSaveTimer) return;
+  clearTimeout(_amSaveTimer); _amSaveTimer = null;
+  try { save(); } catch (e) {}
+}
+try { window.addEventListener('beforeunload', amFlushSave); } catch (e) {}
+/** آیا صفحهٔ یک حساب باز است؟ وقتی باز است، کارت‌های پشتش دیده نمی‌شوند و
+    نباید با هر حرفِ تایپ دوباره حساب شوند. */
+function _amAccOpen() {
+  const ov = document.getElementById('amanatAccModal');
+  return !!(ov && ov.classList.contains('open'));
+}
+
 /* ── ویرایش ──────────────────────────────────────────────────────────────── */
 function addAmanatAccount() {
   const list = amAccounts();
@@ -38672,9 +38703,9 @@ function updateAmanatAccount(ai, field, val) {
     a[field] = (raw === '' || !isFinite(n)) ? '' : n;
   }
   else a[field] = String(val == null ? '' : val).trim();
-  save();
+  _amSaveSoon();
   _amAccPaint();
-  _amPaint();
+  if (!_amAccOpen()) _amPaint();
 }
 function addAmanatRow(ai) {
   const a = amAccounts()[ai];
@@ -38713,7 +38744,7 @@ function updateAmanatRow(ai, ri, field, val) {
     const n = parseFloat(toEnDigits(raw));
     r[field] = (raw === '' || !isFinite(n)) ? '' : n;
   }
-  save();
+  _amSaveSoon();
   /* ⚠️ هر دو تازه‌سازی لازم است و هیچ‌کدام نباید حذف شود:
      _amAccPaint خانه‌های محاسبه‌شدهٔ همین صفحهٔ حساب را همان لحظه به‌روز می‌کند
      (بخار، درصد، فیصدیِ لازم، به من می‌رسد، باقی، جمع‌ها و تحلیل) و _amPaint
@@ -38722,7 +38753,7 @@ function updateAmanatRow(ai, ri, field, val) {
      «هرچی می‌نویسم تو کادرها نوشته می‌شود اما جلو رویم هیچ اتفاقی نمی‌افتد».
      هیچ‌کدام ردیف‌ها را دوباره نمی‌سازند، پس خانهٔ زیرِ دستِ کاربر نمی‌پرد. */
   _amAccPaint();
-  _amPaint();
+  if (!_amAccOpen()) _amPaint();   // کارت‌های پشتِ صفحهٔ حساب دیده نمی‌شوند
 }
 /* «در مخزن»: دو کادرِ باز/بسته داخلِ همان خانه. «بسته» یعنی تیل از مخزن
    بیرون رفته — از همان تاریخ، مدت زمان دیگر جلو نمی‌رود و کمبودی ثابت می‌ماند.
@@ -38743,7 +38774,7 @@ function setAmanatRowState(ai, ri, st) {
     if (r.state === 'open') return;
     r.state = 'open'; r.closeDate = '';
   }
-  save();
+  _amSaveSoon();
   const cell = document.getElementById('am-st-' + ai + '-' + ri);
   if (cell) {
     /* classList، نه className — وگرنه کلاس‌هایی که خودِ برنامه بعداً روی دکمه
@@ -38754,7 +38785,7 @@ function setAmanatRowState(ai, ri, st) {
     if (btns[1]) { btns[1].classList.toggle('on', closed); btns[1].classList.toggle('shut', closed); }
   }
   _amAccPaint();
-  _amPaint();
+  if (!_amAccOpen()) _amPaint();
   showToast(st === 'closed' ? '🔒 ردیف بسته شد — مدت زمان ایستاد' : '🔓 ردیف باز شد', '#805ad5');
 }
 
@@ -38823,8 +38854,9 @@ function _amTempTableHtml(s, fuel) {
 function setAmanatSetting(key, val) {
   if (!DB.amanatSettings || typeof DB.amanatSettings !== 'object') DB.amanatSettings = {};
   DB.amanatSettings[key] = String(val == null ? '' : val).trim();
-  save();
+  _amSaveSoon();          // خانه‌های تنظیمات هم oninput هستند — همان قاعده
   _amPaint();
+  _amAccPaint();
   renderAmanatFee();
   const f = document.getElementById('am-set-formula');
   if (f) fillAmanatSettings();
@@ -38942,19 +38974,28 @@ function renderAmanat() {
         + (_amFuelFilter === 'diesel' ? '🟤 فقط دیزل' : '⛽ فقط پطرول') + ' ✕</button>';
   }
 
+  /* حسابِ هر کادر یک‌بار انجام و به هر دو مصرف‌کننده داده می‌شود (کارت و
+     کادرهای خلاصه). پیش از این amAccCalc برای هر حساب دو بار اجرا می‌شد. */
   const s = amSettings();
+  const calc = list.map(a => (a ? amAccCalc(a, s) : null));
   let seq = 0;
   const cards = list.map((a, ai) => {
     if (!a || !_amAccMatch(a)) return '';
     seq++;
-    return _amCardHtml(a, ai, seq, s);
+    return _amCardHtml(a, ai, seq, s, calc[ai]);
   }).join('');
   grid.innerHTML = cards || ('<div class="am-empty" style="grid-column:1/-1">' + _amEmptyText() + '</div>');
 
-  fillAmanatSettings();
-  renderAmanatFee();
-  _amPaint();
+  /* ⚠️ جدولِ تنظیمات و ماشین‌حساب فقط داخلِ صفحهٔ «خلاصه و ابزارها» دیده
+     می‌شوند. ساختنشان در هر رندر (جدولِ ۱۰ردیفهٔ گرما + فهرستِ منابع) کارِ
+     بی‌مصرفی بود که روی گوشی حس می‌شد. */
+  if (_amToolsOpen()) { fillAmanatSettings(); renderAmanatFee(); }
+  _amPaint(calc);
   _amAccPaint();
+}
+function _amToolsOpen() {
+  const ov = document.getElementById('amanatToolsModal');
+  return !!(ov && ov.classList.contains('open'));
 }
 function _amEmptyText() {
   if (_amSearch.trim()) return 'با «' + escFa(_amSearch.trim()) + '» حسابی پیدا نشد.';
@@ -38963,8 +39004,8 @@ function _amEmptyText() {
 }
 /* کارتِ یک حساب — همان شکلِ کارتِ قرض‌دار: نام وسط، عددِ بزرگ، وضعیت، و
    شمارهٔ کارت پایین. زدنِ کارت، صفحهٔ حساب را باز می‌کند. */
-function _amCardHtml(a, ai, seq, s) {
-  const t = amAccCalc(a, s);
+function _amCardHtml(a, ai, seq, s, pre) {
+  const t = pre || amAccCalc(a, s);
   const fuel = amFuelKey(a);
   /* وضعیتِ کارت روی «هدف» سنجیده می‌شود، نه روی «صفر نشدن». اگر بخار بخشی از
      سهمِ شما را بخورد، هرچند هنوز مثبت است، باز هم هدفتان به دستتان نرسیده —
@@ -38989,14 +39030,14 @@ function _amCardHtml(a, ai, seq, s) {
   </div>`;
 }
 /* کادرهای خلاصهٔ بالای صفحه و هشدارها */
-function _amPaint() {
+function _amPaint(pre) {
   const list = amAccounts();
   const s = amSettings();
   const per = { petrol: { n:0, liters:0, taken:0, loss:0, rest:0 }, diesel: { n:0, liters:0, taken:0, loss:0, rest:0 } };
   const err = [], warn = [];
-  list.forEach(a => {
+  list.forEach((a, _ai) => {
     const fuel = amFuelKey(a);
-    const t = amAccCalc(a, s);
+    const t = (pre && pre[_ai]) || amAccCalc(a, s);
     per[fuel].n++; per[fuel].liters += t.liters; per[fuel].taken += t.taken; per[fuel].loss += t.loss; per[fuel].rest += t.rest;
     if (!_amAccMatch(a)) return;
     (a.rows || []).forEach((r, ri) => {
@@ -39050,12 +39091,13 @@ function _amSumCardHtml(title, color, t, s) {
    تنظیماتِ مدیر همه این‌جا هستند (خواستهٔ صاحب ریپو). ══════════════════════ */
 function openAmanatTools() {
   const ov = document.getElementById('amanatToolsModal');
-  if (ov) ov.classList.add('open');
+  if (ov) ov.classList.add('open');   // اول باز، بعد پر — رندر فقط وقتی باز است می‌سازد
   fillAmanatSettings();
   renderAmanatFee();
   _amPaint();
 }
 function closeAmanatTools() {
+  amFlushSave();
   const ov = document.getElementById('amanatToolsModal');
   if (ov) ov.classList.remove('open');
   renderAmanat();
@@ -39071,6 +39113,7 @@ function openAmanatAccount(ai) {
   _amAccBuild();
 }
 function closeAmanatAccount() {
+  amFlushSave();                    // هرچه تایپ شده، پیش از بستن ذخیره شود
   const ov = document.getElementById('amanatAccModal');
   if (ov) ov.classList.remove('open');
   _amAccIdx = null;
@@ -47299,7 +47342,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.350';
+const APP_VERSION = '2.9.351';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }

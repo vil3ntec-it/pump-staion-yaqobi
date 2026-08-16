@@ -1,7 +1,7 @@
 // سرویس‌ورکر پمپ یعقوبی — پوستهٔ برنامه (این صفحه + آیکون‌ها) را کش می‌کند تا
 // برنامه بعد از نصب، هم آنلاین و هم کاملاً آفلاین باز شود. نسخهٔ کش را هر بار
 // که APP_VERSION در index.html عوض می‌شود، این‌جا هم عوض کنید تا کش کهنه پاک شود.
-const CACHE_NAME = 'pump-yaqobi-shell-v2.9.350';
+const CACHE_NAME = 'pump-yaqobi-shell-v2.9.351';
 /* کشِ دارایی‌های سنگین و بی‌تغییر (فونتِ صفحه‌های چاپ/PDF). عمداً نسخه ندارد: با
    هر نسخهٔ تازهٔ برنامه پاک نمی‌شود، پس یک‌بار گرفته می‌شود و برای همیشه می‌ماند —
    حتی برای چاپِ آفلاین. */
@@ -90,6 +90,31 @@ function _maybeLazy(event) {
   try { event.waitUntil(new Promise(r => setTimeout(r, 10000)).then(_prefetchLazy)); } catch (e) {}
 }
 
+/* نسخهٔ index.htmlِ داخلِ کش، جدا و کوچک نگه داشته می‌شود تا برای فهمیدنِ
+   «تازه است یا نه» لازم نباشد ۴ مگابایت از کش خوانده و اسکن شود. */
+const VER_KEY = './__cached-version';
+function _swRememberVersion(v) {
+  try { return caches.open(CACHE_NAME).then(c => c.put(VER_KEY, new Response(String(v)))).catch(() => {}); }
+  catch (e) { return Promise.resolve(); }
+}
+function _swCachedVersion() {
+  return caches.open(CACHE_NAME)
+    .then(c => c.match(VER_KEY))
+    .then(r => r ? r.text() : '')
+    /* اگر هنوز ثبت نشده (اولین باز شدن بعد از این نسخه)، یک‌بار از خودِ
+       index.htmlِ کش‌شده درش می‌آوریم و ثبتش می‌کنیم — از دفعهٔ بعد رایگان است. */
+    .then(v => v || caches.open(CACHE_NAME)
+      .then(c => c.match('./index.html').then(hit => hit || c.match('./')))
+      .then(hit => hit ? hit.text() : '')
+      .then(txt => {
+        const m = txt && txt.match(/const\s+APP_VERSION\s*=\s*['"]([0-9.]+)['"]/);
+        const found = m ? m[1] : '';
+        if (found) _swRememberVersion(found);
+        return found;
+      }).catch(() => ''))
+    .catch(() => '');
+}
+
 self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
@@ -160,32 +185,59 @@ self.addEventListener('fetch', event => {
         // بدون AbortController، fetch روی شبکهٔ کند/قطع می‌توانست دقیقه‌ها معلق
         // بماند. این مهلت فقط تا رسیدنِ سرآیندهاست؛ بعد از آن دانلودِ بدنه با
         // خیال راحت تا آخر ادامه پیدا می‌کند (clearTimeout پایین).
-        const ctrl = new AbortController();
-        const timeout = setTimeout(() => ctrl.abort(), 15000);
-        const networkUpdate = fetch(req.url, { cache: 'reload', signal: ctrl.signal }).then(res => {
-          clearTimeout(timeout);
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(req, copy)).catch(() => {});
-          // نسخهٔ تازه در کش نشست — همین حالا به خودِ برنامه خبر بده تا کاربر
-          // بتواند با یک زدن آن را بیاورد (قبلاً باید برنامه را می‌بست و باز
-          // می‌کرد و اصلاً نمی‌دانست نسخهٔ تازه‌ای آمده است).
-          try {
-            res.clone().text().then(txt => {
-              const m = txt.match(/const\s+APP_VERSION\s*=\s*['"]([0-9.]+)['"]/);
-              if (!m) return;
-              self.clients.matchAll({ includeUncontrolled: true }).then(cs => {
-                cs.forEach(c => { try { c.postMessage({ type: 'app-version', version: m[1] }); } catch (e) {} });
-              });
-            }).catch(() => {});
-          } catch (e) {}
-          return res;
-        }).catch(() => { clearTimeout(timeout); return null; });
+        const fullDownload = () => {
+          const ctrl = new AbortController();
+          const timeout = setTimeout(() => ctrl.abort(), 15000);
+          return fetch(req.url, { cache: 'reload', signal: ctrl.signal }).then(res => {
+            clearTimeout(timeout);
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(req, copy)).catch(() => {});
+            // نسخهٔ تازه در کش نشست — همین حالا به خودِ برنامه خبر بده تا کاربر
+            // بتواند با یک زدن آن را بیاورد (قبلاً باید برنامه را می‌بست و باز
+            // می‌کرد و اصلاً نمی‌دانست نسخهٔ تازه‌ای آمده است).
+            try {
+              res.clone().text().then(txt => {
+                const m = txt.match(/const\s+APP_VERSION\s*=\s*['"]([0-9.]+)['"]/);
+                if (!m) return;
+                _swRememberVersion(m[1]);
+                self.clients.matchAll({ includeUncontrolled: true }).then(cs => {
+                  cs.forEach(c => { try { c.postMessage({ type: 'app-version', version: m[1] }); } catch (e) {} });
+                });
+              }).catch(() => {});
+            } catch (e) {}
+            return res;
+          }).catch(() => { clearTimeout(timeout); return null; });
+        };
 
-        if (!cached) return networkUpdate.then(res => res || caches.match('./index.html'));
+        if (!cached) return fullDownload().then(res => res || caches.match('./index.html'));
 
-        // کش هست → همین حالا سرو شود. دانلودِ نسخهٔ تازه در پس‌زمینه ادامه
-        // می‌یابد (waitUntil تا تمام شدنش سرویس‌ورکر را زنده نگه می‌دارد).
-        event.waitUntil(networkUpdate);
+        /* ── چرا دیگر هر بار کلِ صفحه دوباره دانلود نمی‌شود ──────────────────
+           گزارشِ صاحب ریپو: «یک ساعت دارد لود می‌شود، بالا نمی‌آید».
+           پیش از این، در هر بار باز شدنِ برنامه این‌جا کلِ index.html (نزدیکِ
+           ۴ مگابایت) دوباره از شبکه گرفته می‌شد — حتی وقتی هیچ نسخهٔ تازه‌ای
+           نیامده بود. روی اینترنتِ کند، همان دانلودِ پس‌زمینه کلِ خطِ کاربر را
+           می‌گرفت و همگام‌سازی با سرورِ خانگی و بقیهٔ کارها پشتش می‌ماندند.
+
+           حالا اول version.json پرسیده می‌شود (چند صد بایت، هیچ‌وقت کش نمی‌شود).
+           اگر نسخه با آنچه در کش داریم یکی بود، هیچ دانلودی انجام نمی‌شود.
+           فقط وقتی واقعاً نسخهٔ تازه‌ای آمده باشد، آن ۴ مگابایت گرفته می‌شود.
+           آفلاین هم که باشد، version.json شکست می‌خورد و باز هم دانلودی نیست. */
+        event.waitUntil(
+          _swCachedVersion().then(known => fetch('./version.json', { cache: 'no-store' })
+            .then(r => r.ok ? r.json() : null)
+            .then(v => {
+              const fresh = v && v.version ? String(v.version) : '';
+              if (!fresh) return fullDownload();          // نگفت چه نسخه‌ای — محتاطانه بگیر
+              if (known && fresh === known) {
+                // چیزی عوض نشده. فقط به برنامه بگو نسخه‌اش تازه است.
+                return self.clients.matchAll({ includeUncontrolled: true }).then(cs => {
+                  cs.forEach(c => { try { c.postMessage({ type: 'app-version', version: fresh }); } catch (e) {} });
+                });
+              }
+              return fullDownload();
+            })
+            .catch(() => null))                            // آفلاین → هیچ دانلودی
+        );
         return cached;
       })
     );
