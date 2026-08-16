@@ -1486,7 +1486,11 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
 
 /* ── تیل امانت ───────────────────────────────────────────────────────────────
    هیچ رنگِ ثابتی این‌جا نیست؛ همه از متغیرهای پوسته می‌آیند تا در حالت روشن/تیره
-   و همهٔ پوسته‌ها هم‌رنگِ بقیهٔ صفحه بماند. */
+   و همهٔ پوسته‌ها هم‌رنگِ بقیهٔ صفحه بماند.
+
+   چیدمان دقیقاً همان چیزی است که صاحب ریپو خواست: «جدول‌محور، با سربرگ مثل
+   بخش قرض‌داران، و هر حساب جدید کادرِ جدید». پس هر حسابِ امانت یک کادر است
+   با سربرگِ خودش و جدولِ خودش. */
 .am-disclaimer{background:var(--dark);border:1px solid var(--border);border-right:3px solid var(--accent);
   border-radius:9px;padding:9px 12px;font-size:0.76rem;color:var(--muted);line-height:1.8;margin-bottom:12px}
 .am-disclaimer b{color:var(--accent)}
@@ -1505,7 +1509,6 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
 .am-set-note{margin-top:11px;font-size:0.72rem;color:var(--muted);line-height:1.9;
   background:var(--card);border:1px dashed var(--border);border-radius:8px;padding:8px 11px}
 
-/* نوارِ ابزار: سوخت / وضعیت / جست‌وجو / نما — همه در یک خط و روی گوشی می‌شکند */
 .am-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
 .am-tabs{display:flex;gap:6px;flex-wrap:wrap}
 .am-tab{background:var(--dark);border:1.5px solid var(--border);border-radius:9px;padding:7px 14px;
@@ -1516,108 +1519,99 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
   padding:8px 12px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;font-weight:700;outline:none}
 .am-search:focus{border-color:var(--purple)}
 
-.am-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:14px}
-.am-card{background:var(--dark);border:1.5px solid var(--border);border-radius:12px;padding:13px}
-.am-card-t{font-size:0.84rem;font-weight:900;margin-bottom:10px}
-.am-rows{display:grid;grid-template-columns:1fr auto;gap:5px 10px;font-size:0.78rem}
-.am-rows .l{color:var(--muted)}
-.am-rows .v{font-weight:900;text-align:left;white-space:nowrap}
-.am-rows .sep{grid-column:1/-1;height:1px;background:var(--border);margin:4px 0}
+/* ── سیستمِ فیصدی ──────────────────────────────────────────────────────────
+   «روی این مقدار تیل چند فیصد بگیرم تا کمبودی جبران شود؟» — همان چیزی که
+   صاحب ریپو خواست. چون کمبودی با مدت و گرما کم و زیاد می‌شود، جدولِ راهنما
+   هم کنارش هست تا فیصدیِ لازم برای مدت‌های مختلف یک‌جا دیده شود. */
+.am-fee{background:var(--dark);border:1.5px solid var(--green);border-radius:12px;padding:13px;margin-bottom:14px}
+.am-fee-head{font-size:0.86rem;font-weight:900;color:var(--green);margin-bottom:4px}
+.am-fee-sub{font-size:0.72rem;color:var(--muted);line-height:1.8;margin-bottom:11px}
+.am-fee-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:9px;margin-bottom:11px}
+.am-fee-f{display:flex;flex-direction:column;gap:4px}
+.am-fee-f>span{font-size:0.71rem;color:var(--label);font-weight:700}
+.am-fee-f>input,.am-fee-f>select{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 9px;
+  color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.9rem;font-weight:800;text-align:center;outline:none}
+.am-fee-f>input:focus,.am-fee-f>select:focus{border-color:var(--green)}
+.am-fee-out{display:grid;grid-template-columns:repeat(auto-fit,minmax(146px,1fr));gap:9px;margin-bottom:11px}
+.am-fee-box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 11px;text-align:center}
+.am-fee-box .l{font-size:0.71rem;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.am-fee-box .v{font-size:1.15rem;font-weight:900;display:block;line-height:1.35}
+.am-fee-box.big{border-color:var(--green)}
+.am-fee-box.big .v{color:var(--green);font-size:1.4rem}
+.am-fee-verdict{border-radius:9px;padding:9px 12px;font-size:0.8rem;font-weight:800;line-height:1.9;
+  border:1px solid var(--border);background:var(--card);margin-bottom:11px}
+.am-fee-verdict.ok{border-color:var(--green);color:var(--green)}
+.am-fee-verdict.bad{border-color:var(--red);color:var(--red)}
+.am-guide{width:100%;border-collapse:collapse;font-size:0.75rem}
+.am-guide th{background:var(--card);color:var(--muted);font-weight:800;padding:6px 5px;
+  border-bottom:1.5px solid var(--border);white-space:nowrap}
+.am-guide td{padding:6px 5px;border-bottom:1px solid var(--border);text-align:center;
+  white-space:nowrap;font-weight:800;color:var(--txt)}
+.am-guide tr.now td{background:var(--card);color:var(--green)}
 
-/* «صاحبانِ تیل» — یک صاحب می‌تواند چند محموله داشته باشد؛ این کادر همه را
-   زیرِ نامِ خودش جمع می‌کند. با زدنِ هر نام، فهرست روی همان نام فیلتر می‌شود. */
-.am-owners{background:var(--dark);border:1.5px solid var(--border);border-radius:12px;padding:11px 12px;margin-bottom:14px}
-.am-owners-t{font-size:0.8rem;font-weight:900;color:var(--label);margin-bottom:9px}
-.am-owner-chips{display:flex;gap:8px;flex-wrap:wrap}
-.am-owner{background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:7px 11px;cursor:pointer;
-  font-family:'Vazirmatn',sans-serif;text-align:right;color:var(--txt);line-height:1.7;-webkit-tap-highlight-color:transparent}
-.am-owner:hover,.am-owner.on{border-color:var(--purple)}
-.am-owner b{display:block;font-size:0.8rem;font-weight:900}
-.am-owner span{font-size:0.7rem;color:var(--muted);white-space:nowrap}
+/* ── کادرِ هر حساب ─────────────────────────────────────────────────────────
+   هر حساب یک کادرِ کامل با سربرگِ خودش. کادرِ تازه زیرِ قبلی می‌نشیند. */
+.am-acc{background:var(--dark);border:1.5px solid var(--border);border-radius:13px;
+  padding:0;margin-bottom:14px;overflow:hidden}
+.am-acc.pt{border-color:var(--accent)}
+.am-acc.dz{border-color:var(--night)}
+.am-acc-head{padding:11px 12px;border-bottom:1.5px solid var(--border);background:var(--card)}
+.am-acc-r1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.am-acc-n{flex-shrink:0;width:27px;height:27px;border-radius:8px;background:var(--dark);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:900;color:var(--muted)}
+.am-acc-name{flex:1;min-width:130px;background:var(--dark);border:1.5px solid var(--border);border-radius:9px;
+  padding:8px 11px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.95rem;font-weight:900;outline:none}
+.am-acc-name:focus{border-color:var(--purple)}
+.am-acc-fuel{background:var(--dark);border:1.5px solid var(--border);border-radius:9px;padding:8px 7px;
+  color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;font-weight:800;outline:none}
+.am-acc-btns{display:flex;gap:6px;flex-wrap:wrap}
+.am-acc-btn{background:transparent;border:1.5px solid var(--border);border-radius:9px;color:var(--muted);
+  font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.76rem;padding:8px 12px;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;white-space:nowrap}
+.am-acc-btn:active{transform:scale(.96)}
+.am-acc-btn.grn{border-color:var(--green);color:var(--green)}
+.am-acc-btn.blue{border-color:var(--blue);color:var(--blue)}
+.am-acc-btn.red{border-color:var(--red);color:var(--red)}
+.am-acc-chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+.am-acc-chip{background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:6px 10px;
+  font-size:0.73rem;color:var(--muted);font-weight:700;white-space:nowrap}
+.am-acc-chip b{color:var(--txt);font-weight:900;font-size:0.85rem;margin-right:4px}
+.am-acc-chip.acc b{color:var(--accent)}
+.am-acc-chip.grn b{color:var(--green)}
+.am-acc-chip.red b{color:var(--red)}
+.am-acc-chip.blue b{color:var(--blue)}
+.am-acc-pct{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:9px;
+  background:var(--dark);border:1px dashed var(--border);border-radius:9px;padding:7px 10px}
+.am-acc-pct>span{font-size:0.73rem;color:var(--label);font-weight:800}
+.am-acc-pct input{width:82px;background:var(--card);border:1.5px solid var(--green);border-radius:8px;padding:6px 8px;
+  color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.88rem;font-weight:900;text-align:center;outline:none}
+.am-acc-pct .vd{font-size:0.73rem;font-weight:800;line-height:1.7}
+.am-acc-pct .vd.ok{color:var(--green)}
+.am-acc-pct .vd.bad{color:var(--red)}
+.am-acc-body{padding:0}
+.am-acc-foot{padding:9px 12px;display:flex;gap:7px;flex-wrap:wrap;border-top:1px solid var(--border)}
+
+/* کادرِ «در مخزن»: دو دکمهٔ باز/بسته، هر دو داخل همان خانه */
+.am-state{display:flex;gap:4px;justify-content:center}
+.am-state button{background:transparent;border:1.5px solid var(--border);border-radius:7px;color:var(--muted);
+  font-family:'Vazirmatn',sans-serif;font-size:0.72rem;font-weight:800;padding:5px 8px;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;line-height:1.4}
+.am-state button.on.open{border-color:var(--green);color:var(--green);background:var(--dark)}
+.am-state button.on.shut{border-color:var(--red);color:var(--red);background:var(--dark)}
 
 .am-warn{background:var(--dark);border:1px solid var(--red);border-radius:9px;padding:9px 12px;
   font-size:0.76rem;color:var(--red);line-height:1.9;margin-bottom:12px;font-weight:700}
 .am-warn.soft{border-color:var(--accent);color:var(--accent)}
 .am-warn div{margin:2px 0}
 .am-calc{font-weight:800;white-space:nowrap;text-align:center;font-size:0.9rem}
-.am-mini{background:transparent;border:1px solid var(--border);border-radius:7px;color:var(--muted);
-  font-family:'Vazirmatn',sans-serif;font-size:0.72rem;font-weight:800;padding:4px 8px;cursor:pointer}
-.am-mini.on{border-color:var(--green);color:var(--green)}
-.am-empty{text-align:center;padding:26px 14px;color:var(--muted);font-size:0.84rem;line-height:2}
-
-/* ── نمای کارتی ─────────────────────────────────────────────────────────────
-   جدولِ ۲۵ستونی روی گوشی خوانده نمی‌شد (باید تا آخر کشیده می‌شد تا عددِ باقی
-   دیده شود). نمای کارتی پیش‌فرض است و همان اعداد را در یک نگاه نشان می‌دهد؛
-   نمای جدولی هم برای کامپیوتر سرِ جایش مانده. */
-.am-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:12px}
-.am-b{background:var(--dark);border:1.5px solid var(--border);border-radius:13px;padding:12px 13px;
-  display:flex;flex-direction:column;gap:9px}
-.am-b.closed{border-style:dashed;opacity:.78}
-.am-b-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.am-b-name{font-weight:900;font-size:0.95rem;color:var(--txt);flex:1;min-width:0;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.am-chip{border:1px solid var(--border);border-radius:20px;padding:2px 9px;font-size:0.68rem;
-  font-weight:800;color:var(--muted);white-space:nowrap}
-.am-chip.p{border-color:var(--accent);color:var(--accent)}
-.am-chip.d{border-color:var(--night);color:var(--night)}
-.am-chip.ok{border-color:var(--green);color:var(--green)}
-.am-chip.cl{border-color:var(--muted);color:var(--muted)}
-.am-chip.warn{border-color:var(--red);color:var(--red)}
-.am-b-meta{font-size:0.72rem;color:var(--muted);line-height:1.8}
-.am-b-big{display:flex;align-items:baseline;gap:6px;padding:6px 0 2px;border-bottom:1px solid var(--border)}
-.am-b-big b{font-size:1.45rem;font-weight:900;color:var(--green);line-height:1.2}
-.am-b-big i{font-style:normal;font-size:0.72rem;color:var(--muted)}
-.am-b-grid{display:grid;grid-template-columns:1fr auto;gap:3px 10px;font-size:0.75rem}
-.am-b-grid .l{color:var(--muted)}
-.am-b-grid .v{font-weight:800;text-align:left;white-space:nowrap}
-.am-b-acts{display:flex;gap:6px;flex-wrap:wrap}
-.am-b-acts button{flex:1;min-width:62px;background:transparent;border:1.5px solid var(--border);border-radius:8px;
-  color:var(--muted);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.74rem;padding:7px 4px;
-  cursor:pointer;-webkit-tap-highlight-color:transparent}
-.am-b-acts button:active{transform:scale(.96)}
-.am-b-acts button.go{border-color:var(--purple);color:var(--purple)}
-.am-b-acts button.inb{border-color:var(--green);color:var(--green)}
-.am-b-acts button.outb{border-color:var(--red);color:var(--red)}
-
-/* ── پروندهٔ محموله (تمام‌صفحه، مثل حسابِ قرض‌دار) ─────────────────────────
-   قدِ پرده با dvh گرفته می‌شود، نه vh — وگرنه روی گوشی تهِ پنجره زیرِ نوارِ
-   مرورگر می‌ماند و اسکرول «گیرکرده» به‌نظر می‌رسد (همان درسِ صفحهٔ آرشیو). */
-#amanatBatchModal{padding:0;align-items:stretch;height:100vh}
-@supports (height:100dvh){ #amanatBatchModal{height:100dvh} }
-#amanatBatchModal .modal{max-width:100%!important;width:100%!important;height:100%!important;
-  max-height:100%!important;border-radius:0!important;border:none!important;box-shadow:none!important}
-#amanatBatchModal .modal-body{overflow-y:auto;padding:12px 14px 26px}
-.am-md-sec{background:var(--dark);border:1.5px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px}
-.am-md-t{font-size:0.82rem;font-weight:900;color:var(--label);margin-bottom:10px;display:flex;
-  align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
-.am-md-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px}
-.am-md-f{display:flex;flex-direction:column;gap:4px}
-.am-md-f>span{font-size:0.71rem;color:var(--muted);font-weight:700}
-.am-md-f>input,.am-md-f>select,.am-md-f>textarea{background:var(--card);border:1px solid var(--border);border-radius:8px;
-  padding:8px 9px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.86rem;font-weight:700;outline:none}
-.am-md-f>input:focus,.am-md-f>select:focus,.am-md-f>textarea:focus{border-color:var(--purple)}
-.am-md-f>textarea{resize:vertical;min-height:56px;font-weight:600}
-.am-md-btns{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
-.am-md-btn{background:transparent;border:1.5px solid var(--border);border-radius:9px;color:var(--muted);
-  font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.78rem;padding:8px 13px;cursor:pointer}
-.am-md-btn.grn{border-color:var(--green);color:var(--green)}
-.am-md-btn.red{border-color:var(--red);color:var(--red)}
-.am-md-btn.blue{border-color:var(--blue);color:var(--blue)}
-.am-md-btn.pur{border-color:var(--purple);color:var(--purple)}
-.am-md-btn.on{background:var(--green);border-color:var(--green);color:#fff}
-.am-steps{width:100%;border-collapse:collapse;font-size:0.74rem}
-.am-steps th{color:var(--muted);font-weight:800;padding:5px 6px;border-bottom:1px solid var(--border);white-space:nowrap}
-.am-steps td{padding:5px 6px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;font-weight:700}
-.am-steps tfoot td{border-bottom:none;color:var(--accent);font-weight:900}
-.am-formula{margin-top:9px;font-size:0.73rem;color:var(--muted);line-height:2;
-  background:var(--card);border:1px dashed var(--border);border-radius:8px;padding:8px 11px;direction:rtl}
-.am-formula b{color:var(--accent)}
-.am-res-rows{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:0.83rem;line-height:1.9}
-.am-res-rows .l{color:var(--muted)}
-.am-res-rows .v{font-weight:900;text-align:left;white-space:nowrap}
-.am-res-rows .sep{grid-column:1/-1;height:1px;background:var(--border);margin:5px 0}
-.am-res-msg{margin-top:12px;background:var(--card);border:1px solid var(--border);border-radius:9px;
-  padding:9px 12px;font-size:0.78rem;color:var(--label);line-height:1.9}
+.am-empty{text-align:center;padding:22px 14px;color:var(--muted);font-size:0.82rem;line-height:2}
+.am-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:14px}
+.am-card{background:var(--dark);border:1.5px solid var(--border);border-radius:12px;padding:13px}
+.am-card-t{font-size:0.84rem;font-weight:900;margin-bottom:10px}
+.am-rows{display:grid;grid-template-columns:1fr auto;gap:5px 10px;font-size:0.78rem}
+.am-rows .l{color:var(--muted)}
+.am-rows .v{font-weight:900;text-align:left;white-space:nowrap}
+.am-rows .sep{grid-column:1/-1;height:1px;background:var(--border);margin:4px 0}
 
 .pl-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:16px}
 @media(max-width:500px){.pl-grid{grid-template-columns:1fr}}
@@ -19074,8 +19068,15 @@ body.boot-viewer #bootViewerSplash{
 <!-- ═══ تیل امانت ═══════════════════════════════════════════════════════════
      حسابِ سوختی که مالِ کسِ دیگری است و فقط در مخزنِ ما «امانت» می‌ماند.
      عمداً بینِ «گاوصندوق» و «شرکت ها تیل» نشسته (خواستهٔ صاحب ریپو).
-     هر محموله یک شناسه دارد و پطرول و دیزل کاملاً جدا حساب می‌شوند.
-     ⚠️ افتِ این‌جا «تخمینی» است، نه اندازه‌گیریِ واقعی — هیچ‌جا نباید
+
+     چیدمان دقیقاً همان چیزی است که صاحب ریپو خواست:
+       • جدول‌محور، با سربرگ مثل بخش قرض‌داران
+       • هر حسابِ جدید یک کادرِ جدید، با جدولِ خودش
+       • ستون‌ها: # · تاریخ · نام · به حسابهٔ · رسید تیل · مدت زمان · درجه گرما
+                  · در مخزن (باز/بسته) · درصد کمبودی · باقی تیل · پایه
+       • «سیستم فیصدی»: چند فیصد بگیرم تا کمبودی جبران شود
+
+     ⚠️ کمبودی این‌جا «تخمینی» است، نه اندازه‌گیریِ واقعی — هیچ‌جا نباید
      «تبخیرِ دقیق» نوشته شود. ═══════════════════════════════════════════ -->
 <div class="section" id="sec-amanat">
   <div class="card" style="border-color:var(--purple)">
@@ -19085,46 +19086,70 @@ body.boot-viewer #bootViewerSplash{
         <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('amanat',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('amanat',0.08)">A+</button></span>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <button class="add-btn" style="border-color:var(--blue);color:var(--blue);background:transparent" onclick="openSectionHistory('amanat')" title="تاریخچهٔ محموله‌های امانتی">🕘 تاریخچه</button>
+        <button class="add-btn" style="border-color:var(--blue);color:var(--blue);background:transparent" onclick="openSectionHistory('amanat')" title="تاریخچهٔ تیل امانت">🕘 تاریخچه</button>
         <button class="add-btn" style="border-color:var(--purple);color:var(--purple);background:transparent" onclick="toggleAmanatSettings()">⚙️ تنظیمات مدیر</button>
         <button class="add-btn" style="background:var(--blue);color:#fff" onclick="printAmanat()">📄 PDF</button>
-        <button class="add-btn" style="background:var(--green);color:#fff" onclick="addAmanatBatch()">➕ محمولهٔ جدید</button>
+        <button class="add-btn" style="background:var(--green);color:#fff" onclick="addAmanatAccount()">➕ حساب جدید</button>
       </div>
     </div>
     <div style="padding:14px">
       <div class="am-disclaimer">
-        <b>افت تخمینی</b> — این مقدار یک برآورد محاسباتی است و جایگزین اندازه‌گیری واقعی موجودی نمی‌شود.
+        <b>درصد کمبودی</b> — این مقدار یک برآورد محاسباتی است و جایگزین اندازه‌گیری واقعی موجودی نمی‌شود.
         مقدار تبخیر واقعی بدون اندازه‌گیری فیزیکی قابل تعیین قطعی نیست.
       </div>
 
-      <!-- ── تنظیمات مدیر (§۲۰): همهٔ ضریب‌ها این‌جا عوض می‌شوند و در محاسبه‌های بعدی به کار می‌روند ── -->
+      <!-- ── سیستمِ فیصدی ─────────────────────────────────────────────────── -->
+      <div class="am-fee">
+        <div class="am-fee-head">🧮 سیستم فیصدی — چند فیصد بگیرم؟</div>
+        <div class="am-fee-sub">
+          مقدار تیل و مدت و گرما را بنویسید؛ می‌گوید کمبودی چقدر می‌شود و برای جبرانش
+          <b>چند فیصد</b> باید بگیرید. اگر فیصدیِ خودتان را هم بنویسید، می‌گوید کم می‌آید یا اضافه.
+        </div>
+        <div class="am-fee-grid">
+          <label class="am-fee-f"><span>مقدار تیل (لیتر)</span>
+            <input type="number" step="0.01" id="am-fee-liters" placeholder="10000" oninput="renderAmanatFee()"></label>
+          <label class="am-fee-f"><span>مدت زمان (روز)</span>
+            <input type="number" step="1" id="am-fee-days" placeholder="30" oninput="renderAmanatFee()"></label>
+          <label class="am-fee-f"><span>درجه گرما (°C)</span>
+            <input type="number" step="0.5" id="am-fee-temp" placeholder="25" oninput="renderAmanatFee()"></label>
+          <label class="am-fee-f"><span>نوع تیل</span>
+            <select id="am-fee-fuel" onchange="renderAmanatFee()">
+              <option value="petrol">⛽ پطرول</option>
+              <option value="diesel">🟤 دیزل</option>
+            </select></label>
+          <label class="am-fee-f"><span>فیصدیِ من (٪)</span>
+            <input type="number" step="0.01" id="am-fee-my" placeholder="0" oninput="renderAmanatFee()"></label>
+        </div>
+        <div class="am-fee-out" id="am-fee-out"></div>
+        <div id="am-fee-verdict"></div>
+        <div style="font-size:0.74rem;color:var(--label);font-weight:800;margin-bottom:6px">📋 جدولِ راهنما — کمبودی با مدت کم و زیاد می‌شود</div>
+        <div class="xls-wrap" style="overflow:auto"><div id="am-fee-guide"></div></div>
+      </div>
+
+      <!-- ── تنظیمات مدیر (§۲۰) ──────────────────────────────────────────── -->
       <div id="am-settings" class="am-settings" style="display:none">
         <div class="am-set-head">⚙️ تنظیمات مدیر — ضریب‌های محاسبه</div>
         <div class="am-set-grid">
-          <label class="am-set-f"><span>درصد پایهٔ افت ماهانه (٪)</span>
+          <label class="am-set-f"><span>پایه: درصد کمبودی ماهانه (٪)</span>
             <input type="number" step="0.01" id="am-set-basePct" oninput="setAmanatSetting('basePct',this.value)"></label>
           <label class="am-set-f"><span>ضریب پطرول</span>
             <input type="number" step="0.01" id="am-set-fPetrol" oninput="setAmanatSetting('fPetrol',this.value)"></label>
           <label class="am-set-f"><span>ضریب دیزل</span>
             <input type="number" step="0.01" id="am-set-fDiesel" oninput="setAmanatSetting('fDiesel',this.value)"></label>
-          <label class="am-set-f"><span>دمای پیش‌فرض (°C)</span>
+          <label class="am-set-f"><span>درجه گرمای پیش‌فرض (°C)</span>
             <input type="number" step="0.5" id="am-set-defTemp" oninput="setAmanatSetting('defTemp',this.value)"></label>
-          <label class="am-set-f"><span>آستانهٔ دمای ۱ (°C)</span>
+          <label class="am-set-f"><span>حاشیهٔ اطمینانِ فیصدی (٪)</span>
+            <input type="number" step="1" id="am-set-safetyPct" title="فیصدیِ پیشنهادی = فیصدیِ سربه‌سر + همین درصد از خودش" oninput="setAmanatSetting('safetyPct',this.value)"></label>
+          <label class="am-set-f"><span>آستانهٔ گرمای ۱ (°C)</span>
             <input type="number" step="0.1" id="am-set-t1" oninput="setAmanatSetting('t1',this.value)"></label>
-          <label class="am-set-f"><span>آستانهٔ دمای ۲ (°C)</span>
+          <label class="am-set-f"><span>آستانهٔ گرمای ۲ (°C)</span>
             <input type="number" step="0.1" id="am-set-t2" oninput="setAmanatSetting('t2',this.value)"></label>
-          <label class="am-set-f"><span>ضریب دمای پایین (تا آستانهٔ ۱)</span>
+          <label class="am-set-f"><span>ضریب گرمای پایین (تا آستانهٔ ۱)</span>
             <input type="number" step="0.01" id="am-set-tfLow" oninput="setAmanatSetting('tfLow',this.value)"></label>
-          <label class="am-set-f"><span>ضریب دمای میانه (به ازای هر درجه)</span>
+          <label class="am-set-f"><span>ضریب گرمای میانه (هر درجه)</span>
             <input type="number" step="0.001" id="am-set-tfMed" oninput="setAmanatSetting('tfMed',this.value)"></label>
-          <label class="am-set-f"><span>ضریب دمای بالا (به ازای هر درجه)</span>
+          <label class="am-set-f"><span>ضریب گرمای بالا (هر درجه)</span>
             <input type="number" step="0.001" id="am-set-tfHigh" oninput="setAmanatSetting('tfHigh',this.value)"></label>
-        </div>
-        <div class="am-set-toggles">
-          <label class="am-set-tg"><input type="checkbox" id="am-set-inv" onchange="setAmanatSetting('applyLossToInventory',this.checked)">
-            <span>افتِ <b>تأییدشده</b> از موجودی مالیِ امانت کم شود <i>(apply_estimated_loss_to_inventory)</i></span></label>
-          <label class="am-set-tg"><input type="checkbox" id="am-set-prof" onchange="setAmanatSetting('applyLossToProfit',this.checked)">
-            <span>بهای افتِ تخمینی از سود کم شود <i>(apply_loss_to_profit)</i></span></label>
         </div>
         <div class="am-set-note" id="am-set-formula"></div>
         <div style="display:flex;justify-content:flex-end;margin-top:10px">
@@ -19132,77 +19157,21 @@ body.boot-viewer #bootViewerSplash{
         </div>
       </div>
 
-      <!-- ── نوارِ ابزار: سوخت (§۱ fuel_type) · وضعیت · جست‌وجو · نما ── -->
+      <!-- ── فیلترها ──────────────────────────────────────────────────────── -->
       <div class="am-bar">
         <div class="am-tabs" id="am-fuel-tabs">
           <button class="am-tab" data-f="all" onclick="setAmanatFuel('all')">همه</button>
           <button class="am-tab" data-f="petrol" onclick="setAmanatFuel('petrol')">⛽ پطرول</button>
           <button class="am-tab" data-f="diesel" onclick="setAmanatFuel('diesel')">🟤 دیزل</button>
         </div>
-        <div class="am-tabs" id="am-status-tabs">
-          <button class="am-tab" data-s="open" onclick="setAmanatStatus('open')">باز</button>
-          <button class="am-tab" data-s="closed" onclick="setAmanatStatus('closed')">تسویه‌شده</button>
-          <button class="am-tab" data-s="all" onclick="setAmanatStatus('all')">همه</button>
-        </div>
-        <input class="am-search" id="am-search" type="search" placeholder="🔍 جست‌وجوی نام صاحب تیل…" oninput="setAmanatSearch(this.value)">
-        <div class="am-tabs" id="am-view-tabs">
-          <button class="am-tab" data-v="cards" onclick="setAmanatView('cards')">🗂️ کارتی</button>
-          <button class="am-tab" data-v="table" onclick="setAmanatView('table')">📊 جدولی</button>
-        </div>
+        <input class="am-search" id="am-search" type="search" placeholder="🔍 جست‌وجوی نام حساب…" oninput="setAmanatSearch(this.value)">
       </div>
 
       <div id="am-summary" class="am-summary"></div>
-      <div id="am-owners"></div>
       <div id="am-warns"></div>
 
-      <!-- نمای کارتی — پیش‌فرض، مخصوصِ گوشی -->
-      <div id="am-cards" class="am-cards"></div>
-
-      <!-- نمای جدولی — همهٔ ستون‌ها، مخصوصِ کامپیوتر و PDF -->
-      <div id="am-table-wrap" class="xls-wrap" style="overflow:auto;display:none">
-        <table class="xls-tbl" id="am-tbl" style="min-width:1680px">
-          <thead><tr>
-            <th style="min-width:26px">#</th>
-            <th style="min-width:92px">تاریخ شروع</th>
-            <th style="min-width:120px">صاحب تیل</th>
-            <th style="min-width:86px">نوع سوخت</th>
-            <th style="min-width:88px" title="جمعِ همهٔ ردیف‌های رسیدِ دفترِ همین محموله">رسید کل</th>
-            <th style="min-width:88px" title="جمعِ همهٔ ردیف‌های برداشتِ دفترِ همین محموله">برداشت کل</th>
-            <th style="min-width:70px" title="خودکار از تاریخ شروع تا امروز (یا تا تاریخ تسویه)">روز</th>
-            <th style="min-width:74px" title="خالی = دمای پیش‌فرضِ تنظیمات">دما °C</th>
-            <th style="min-width:80px" title="اگر خالی بماند، درصد پایهٔ تنظیمات به کار می‌رود">٪ پایه</th>
-            <th style="min-width:100px" title="برآورد محاسباتی بر پایهٔ لیتر-روز — نه اندازه‌گیری واقعی">افت تخمینی</th>
-            <th style="min-width:110px">موجودی مورد انتظار</th>
-            <th style="min-width:96px">موجودی واقعی</th>
-            <th style="min-width:88px">افت واقعی</th>
-            <th style="min-width:92px">اختلاف</th>
-            <th style="min-width:82px">٪ اختلاف</th>
-            <th style="min-width:104px" title="افتِ تخمینی خودکار از این عدد کم نمی‌شود">موجودی مالی</th>
-            <th style="min-width:104px">سود نهایی</th>
-            <th style="min-width:110px">افت تأییدشده</th>
-            <th style="min-width:74px">وضعیت</th>
-            <th style="min-width:62px">پرونده</th>
-            <th style="min-width:52px">حذف</th>
-          </tr></thead>
-          <tbody id="am-body"></tbody>
-          <tfoot class="xls-foot"><tr id="am-foot">
-            <td colspan="4" style="padding:8px 7px">جمله</td>
-            <td class="xls-calc" id="am-ft-in">0</td>
-            <td class="xls-calc" id="am-ft-out">0</td>
-            <td colspan="3"></td>
-            <td class="xls-calc" id="am-ft-loss">0</td>
-            <td class="xls-calc" id="am-ft-expected">0</td>
-            <td class="xls-calc" id="am-ft-actual">0</td>
-            <td class="xls-calc" id="am-ft-actualloss">0</td>
-            <td class="xls-calc" id="am-ft-variance">0</td>
-            <td></td>
-            <td class="xls-calc" id="am-ft-balance">0</td>
-            <td class="xls-calc" id="am-ft-profit">0</td>
-            <td class="xls-calc" id="am-ft-approved">0</td>
-            <td colspan="3"></td>
-          </tr></tfoot>
-        </table>
-      </div>
+      <!-- هر حساب یک کادر، با سربرگ و جدولِ خودش -->
+      <div id="am-accounts"></div>
     </div>
   </div>
   <div class="sec-note-box" style="padding:10px 2px 12px">
@@ -19215,30 +19184,7 @@ body.boot-viewer #bootViewerSplash{
     </div>
   </div>
   <div class="row-add-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 2px 16px">
-    <button class="add-btn" onclick="addAmanatBatch()">➕ محمولهٔ جدید</button>
-    <div style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
-      <span style="font-size:0.78rem;color:var(--muted)">تعداد:</span>
-      <input type="number" id="am-bulk-count" value="3" min="1" max="50" style="width:55px;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;text-align:center">
-      <button class="add-btn" style="background:var(--green);color:#fff" onclick="addAmanatBatchesBulk()">➕➕ چندتایی</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ پروندهٔ یک محمولهٔ امانتی ═════════════════════════════════════════════
-     همه‌چیزِ یک محموله در یک صفحه: مشخصات، دفترِ رسید و برداشت (هر حرکت با
-     تاریخِ خودش)، ریزِ محاسبهٔ افت، اندازه‌گیریِ واقعی، تأییدِ افت و حسابِ سود.
-     ⚠️ اعدادِ این صفحه از همان amCalc() می‌آیند که جدول و کارت‌ها هم از آن
-     می‌خوانند — هیچ فرمولی این‌جا دوباره نوشته نمی‌شود. ══════════════════ -->
-<div class="modal-overlay" id="amanatBatchModal">
-  <div class="modal">
-    <div class="modal-head">
-      <button class="modal-close" onclick="closeModal('amanatBatchModal')">✕</button>
-      <h2 id="am-md-title">🧾 پروندهٔ محموله</h2>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="am-md-btn blue" onclick="printAmanatBatch()">📄 PDF</button>
-      </div>
-    </div>
-    <div class="modal-body" id="am-md-body"></div>
+    <button class="add-btn" onclick="addAmanatAccount()">➕ حساب جدید</button>
   </div>
 </div>
 
@@ -20376,7 +20322,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <option value="expenses">💸 مصارف</option>
         <option value="sarrafiRows">💱 صرافی</option>
         <option value="safeEntries">🏦 گاوصندوق</option>
-        <option value="amanatBatches">🛢️ تیل امانت</option>
+        <option value="amanatAccounts">🛢️ تیل امانت</option>
         <option value="parchaReceipts">🧾 رسید پارچه‌ها</option>
         <option value="chakanaRows">🛒 چکنه</option>
         <option value="extraIncomes">📈 عایدات دیگر</option>
@@ -21571,7 +21517,10 @@ const DB = {
   expenses: [],
   chakanaRows: [],
   safeEntries: [],
-  // تیل امانت — محموله‌های امانتی و ضریب‌های محاسبهٔ افتِ تخمینی
+  // تیل امانت — کادرهای حساب (هر حساب ردیف‌های خودش را دارد) و ضریب‌های
+  // محاسبهٔ کمبودیِ تخمینی. amanatBatches ساختارِ نسخه‌های قبلی است و فقط برای
+  // ترجمهٔ یک‌بارهٔ داده نگه داشته می‌شود — دیگر نوشته نمی‌شود.
+  amanatAccounts: [],
   amanatBatches: [],
   amanatSettings: {},
   waraqEntries: [],
@@ -21641,7 +21590,7 @@ function _dbRecordCount(db) {
   if (!db) return 0;
   var n = 0;
   ['reports','shifts','debtPersons','noinvPersons','tilCompanies','sarrafiRows',
-   'waraqEntries','expenses','safeEntries','amanatBatches','fuelEntries','invoices','attendance',
+   'waraqEntries','expenses','safeEntries','amanatAccounts','fuelEntries','invoices','attendance',
    'staffMembers','debtRasidRows','chakanaRows'].forEach(function(k){
     if (Array.isArray(db[k])) n += db[k].length;
   });
@@ -23071,34 +23020,26 @@ function _hcFeed(kind) {
       Math.round(amt), ' افغانی', isIn ? 'in' : 'out'));
   });
 
-  /* تیل امانت — دو جور ردیف:
-       ۱) خودِ حرکت‌های دفتر (رسید و برداشت) با تاریخِ همان حرکت، تا در تاریخچه
-          معلوم باشد کِی چه مقدار آمد و کِی برده شد؛
-       ۲) یک ردیفِ خلاصه برای هر محموله که عددِ کنارش «افت تخمینی» است (نه افت
-          واقعی). */
-  if (want('amanat')) (DB.amanatBatches || []).forEach(function (b) {
-    if (!b) return;
-    var c = amCalc(b);
-    var who = String(b.owner || '').trim() || 'محمولهٔ بی‌نام';
-    if (!c.totalIn && !c.totalOut && !String(b.owner || '').trim()) return;
-    (typeof amMoves === 'function' ? amMoves(b) : []).forEach(function (m) {
-      if (!m) return;
-      var q = Math.abs(_amNum(m.qty));
-      if (!q) return;
-      var isIn = (m.kind !== 'out');
-      out.push(_hcItem('amanat', m.date || b.date, who + ' — ' + (isIn ? 'رسید تیل امانت' : 'برداشت از تیل امانت'),
-        (isIn ? '⬅️ رسید' : '➡️ برداشت') + ' · ' + amFuelLabel(b) + (m.note ? ' · ' + m.note : ''),
-        Math.round(q * 100) / 100, ' لیتر', isIn ? 'in' : 'out'));
+  /* تیل امانت — هر ردیفِ رسید با تاریخِ خودش، تا در تاریخچه معلوم باشد کِی چه
+     مقدار تیل به امانت آمد. عددِ کنارش «رسید تیل» است و درصد کمبودی در توضیح
+     می‌آید (کمبودی تخمینی است، نه اندازه‌گیریِ واقعی). */
+  if (want('amanat')) (DB.amanatAccounts || []).forEach(function (a) {
+    if (!a) return;
+    var who = String(a.name || '').trim() || 'حسابِ بی‌نام';
+    (Array.isArray(a.rows) ? a.rows : []).forEach(function (r) {
+      if (!r) return;
+      var c = amRowCalc(r, a);
+      if (!c.liters) return;
+      var det = '⬅️ رسید تیل امانت · ' + amFuelLabel(a)
+        + (r.name ? ' · ' + r.name : '')
+        + (r.toAcct ? ' · به حسابهٔ ' + r.toAcct : '')
+        + ' · ' + n2fa(c.days) + ' روز · ' + _amFmt(c.temp) + '°C'
+        + ' · ' + (c.closed ? 'بسته' : 'در مخزن (باز)')
+        + ' · کمبودی ' + _amFmt(c.lossPct, 3) + '٪ (' + _amFmt2(c.loss) + ' ل)'
+        + ' · باقی ' + _amFmt2(c.rest) + ' ل';
+      out.push(_hcItem('amanat', r.date, who + ' — رسید تیل امانت',
+        det, Math.round(c.liters * 100) / 100, ' لیتر', 'in'));
     });
-    var det = 'رسید کل ' + _amFmt2(c.totalIn) + ' ل · برداشت کل ' + _amFmt2(c.totalOut) + ' ل · باقی '
-      + _amFmt2(c.balanceRaw) + ' ل · ' + amFuelLabel(b)
-      + ' · ' + n2fa(c.days) + ' روز · ' + _amFmt(c.temp) + '°C'
-      + ' · مورد انتظار ' + _amFmt2(c.expected) + ' ل'
-      + (c.hasActual ? (' · واقعی ' + _amFmt2(c.actual) + ' ل · اختلاف ' + _amFmt2(c.variance) + ' ل') : ' · موجودی واقعی ثبت نشده')
-      + (c.lossApproved ? (' · افت تأییدشده ' + _amFmt2(c.approvedLoss) + ' ل') : '')
-      + (c.closed ? ' · تسویه‌شده' : '');
-    out.push(_hcItem('amanat', b.date, who + ' — افت تخمینی',
-      det, Math.round(c.estLoss * 100) / 100, ' لیتر', 'out'));
   });
 
   if (want('sarrafi')) (DB.sarrafiRows || []).forEach(function (r) {
@@ -36669,7 +36610,7 @@ async function renderStorageStatus() {
     ['ردیف‌های صرافی', (DB.sarrafiRows || []).length],
     ['مصارف', (DB.expenses || []).length],
     ['ردیف‌های گاوصندوق', (DB.safeEntries || []).length],
-    ['محموله‌های تیل امانت', (DB.amanatBatches || []).length],
+    ['حساب‌های تیل امانت', (DB.amanatAccounts || []).length],
     ['ورق‌های روزانه', (DB.waraqEntries || []).length],
   ];
   var countsHTML = counts.filter(function (c) { return c[1] > 0; })
@@ -37480,7 +37421,7 @@ function saveProfitPassword() {
 // دریافت از سرور (آرایه/آبجکتِ خالی ذخیره نمی‌شود؛ نبودنِ کلید یعنی خالی بودن)
 const _DB_COLLECTIONS = {
   shifts: [], reports: [], fuelEntries: [], debtPersons: [], noinvPersons: [], tilCompanies: [],
-  sarrafiRows: [], expenses: [], chakanaRows: [], safeEntries: [], amanatBatches: [], waraqEntries: [], trash: [], invoices: [],
+  sarrafiRows: [], expenses: [], chakanaRows: [], safeEntries: [], amanatAccounts: [], amanatBatches: [], waraqEntries: [], trash: [], invoices: [],
   extraIncomes: [], parchaReceipts: [], debtQuickReceipts: [], debtRasidMonths: [],
   staffMembers: [], attendance: [], salaryPayments: [], cameras: [], staffShortSettles: [],
   sectionNotes: {}, debtAlertState: {}
@@ -38154,76 +38095,54 @@ tfoot .sf-amt + .sf-amt{border-top-color:#4a5568}
 /* ══════════════════════════════════════════════════════════════════════════
    🛢️ تیل امانت — حسابِ سوختی که مالِ کسِ دیگری است و در مخزنِ ما امانت می‌ماند
    ──────────────────────────────────────────────────────────────────────────
-   این بخش هیچ سنسور و سخت‌افزاری ندارد؛ همهٔ عددها فقط از روی چیزی که کاربر
-   تایپ می‌کند حساب می‌شوند. برای همین سه چیز عمداً از هم جدا نگه داشته شده‌اند
-   و هرگز نباید یکی شوند:
+   چیدمانِ این بخش دقیقاً همان چیزی است که صاحب ریپو خواست:
 
-     ۱) افت تخمینی  (estimated) — نتیجهٔ فرمول. یک برآوردِ حسابداری است.
-     ۲) افت واقعی   (actual)    — از روی موجودیِ واقعیِ ثبت‌شده به دست می‌آید.
-     ۳) افت تأییدشده(approved)  — فقط چیزی که مدیر دستی تأیید کرده و اجازه دارد
-                                   از حسابِ مالیِ امانت کم شود.
+     • جدول‌محور، با سربرگ مثل بخش قرض‌داران.
+     • هر حسابِ جدید یک «کادرِ» جدید، با جدولِ خودش.
+     • ستون‌ها: # · تاریخ · نام · به حسابهٔ · رسید تیل · مدت زمان · درجه گرما
+                · در مخزن (باز/بسته) · درصد کمبودی · باقی تیل · پایه
+     • «سیستم فیصدی»: روی این مقدار تیل چند فیصد بگیرم تا کمبودی جبران شود.
 
-   ⚠️ افتِ تخمینی هرگز خودبه‌خود «افت واقعی» ثبت نمی‌شود و خودبه‌خود از موجودی
-   مالی کم نمی‌شود. «موجودی مورد انتظار» و «موجودی واقعی» هم دو ستونِ جدا
-   می‌مانند و هیچ‌جا با هم جمع/جای‌گزین نمی‌شوند.
+   هر ردیف یک محمولهٔ رسیده است؛ حسابِ کمبودیِ هر ردیف جدا از بقیه است چون
+   مدت و گرمای خودش را دارد.
 
-   ⚠️ در هیچ نوشته‌ای «تبخیر دقیق» نوشته نمی‌شود — همه‌جا «افت تخمینی».
-
-   پطرول و دیزل دو دفترِ جدا هستند: ضریبِ سوختِ هرکدام جداست و کادرهای خلاصه
-   همیشه هر دو را تفکیک‌شده نشان می‌دهند.
-
-   ── چرا این بخش بازنویسی شد (نسخهٔ ۲) ────────────────────────────────────
-   نسخهٔ اول سه ایرادِ کاری داشت که باعث می‌شد «کار نکند»:
-
-     • «روز» را باید دستی تایپ می‌کردی. هیچ‌کس هر روز نمی‌نشیند عددِ روزِ همهٔ
-       محموله‌ها را یکی‌یکی زیاد کند، پس افتِ تخمینی همیشه کهنه می‌ماند. حالا
-       روز خودکار از «تاریخ شروع» تا امروز (یا تا تاریخِ تسویه) شمرده می‌شود.
-
-     • رسید و برداشت فقط دو عددِ درهم‌ریخته بودند. تیلِ امانتی یک‌بار می‌آید و
-       چند بار برده می‌شود؛ بدون تاریخِ هر حرکت نه می‌شد فهمید کِی چه شد، نه
-       افت را درست حساب کرد. حالا هر محموله «دفتر» دارد: هر رسید و هر برداشت
-       یک ردیفِ تاریخ‌دار است.
-
-     • افت روی «مقدار اولیه» حساب می‌شد، انگار تیل تا آخرِ دوره دست‌نخورده در
-       مخزن مانده. اگر نصفش روزِ دوم برده شده باشد، این عدد تقریباً دو برابرِ
-       واقعیت می‌شد. حالا مبنا «لیتر-روز» است: هر بازه، به اندازهٔ همان مقداری
-       که در همان بازه واقعاً در مخزن ایستاده، افت می‌گیرد.
-
-   حسابِ محموله‌های قدیمی دست نمی‌خورد: هر محموله‌ای که از قبل «روز»ِ دستی
-   داشته، روی همان حالتِ دستی و همان فرمولِ قبلی می‌ماند و عددش عوض نمی‌شود.
+   ⚠️ سه چیز عمداً از هم جدا نگه داشته شده‌اند و هرگز نباید یکی شوند:
+     ۱) کمبودیِ تخمینی — نتیجهٔ فرمول. یک برآوردِ حسابداری است.
+     ۲) کمبودیِ واقعی  — فقط از اندازه‌گیریِ فیزیکیِ مخزن به دست می‌آید.
+     ۳) فیصدی          — چیزی که از مشتری می‌گیریم تا کمبودی جبران شود.
+   کمبودیِ تخمینی خودبه‌خود جای اندازه‌گیریِ واقعی را نمی‌گیرد و در هیچ نوشته‌ای
+   «تبخیر دقیق» نوشته نمی‌شود.
    ══════════════════════════════════════════════════════════════════════════ */
 
 // مقدارهای پیش‌فرض — فقط یک تنظیمِ حسابداری‌اند، نه نرخِ علمیِ قطعیِ تبخیر.
-// مدیر می‌تواند همه‌شان را از «⚙️ تنظیمات مدیر» عوض کند.
 const AM_DEFAULTS = {
-  basePct: 0.10,   // درصد پایهٔ افت ماهانه (٪) → base_rate = basePct / 100
+  basePct: 0.10,   // پایه: درصد کمبودی ماهانه (٪)
   fPetrol: 1.00,   // ضریب پطرول
   fDiesel: 0.20,   // ضریب دیزل
-  defTemp: 25,     // دمای پیش‌فرض وقتی کادر دمای محموله خالی است
-  t1: 25,          // آستانهٔ دمای ۱
-  t2: 40,          // آستانهٔ دمای ۲
-  tfLow: 1.00,     // ضریب دما تا آستانهٔ ۱
-  tfMed: 0.02,     // شیبِ ضریب بین آستانهٔ ۱ و ۲ (به ازای هر درجه)
-  tfHigh: 0.03,    // شیبِ ضریب بالاتر از آستانهٔ ۲ (به ازای هر درجه)
-  applyLossToInventory: false,  // آیا افتِ تأییدشده از موجودی مالی کم شود؟
-  applyLossToProfit: false      // آیا بهای افتِ تخمینی از سود کم شود؟
+  defTemp: 25,     // درجه گرمای پیش‌فرض وقتی خانهٔ گرما خالی است
+  safetyPct: 25,   // حاشیهٔ اطمینان: فیصدیِ پیشنهادی = سربه‌سر × (۱ + این ÷ ۱۰۰)
+  t1: 25,          // آستانهٔ گرمای ۱
+  t2: 40,          // آستانهٔ گرمای ۲
+  tfLow: 1.00,     // ضریب گرما تا آستانهٔ ۱
+  tfMed: 0.02,     // شیبِ ضریب بین آستانهٔ ۱ و ۲ (هر درجه)
+  tfHigh: 0.03     // شیبِ ضریب بالاتر از آستانهٔ ۲ (هر درجه)
 };
 const AM_FUELS = { petrol: 'پطرول', diesel: 'دیزل' };
 const AM_DAY = 86400000;
+const AM_GUIDE_DAYS = [7, 15, 30, 45, 60, 90, 120, 180];
 
 function amSettings() {
   if (!DB.amanatSettings || typeof DB.amanatSettings !== 'object') DB.amanatSettings = {};
   const out = {};
   Object.keys(AM_DEFAULTS).forEach(k => {
     const v = DB.amanatSettings[k];
-    if (typeof AM_DEFAULTS[k] === 'boolean') { out[k] = (v === true); return; }
     const n = parseFloat(toEnDigits(String(v == null ? '' : v)));
     out[k] = isFinite(n) ? n : AM_DEFAULTS[k];
   });
   return out;
 }
-// عددخوانیِ کادرها: کادرِ خالی «۰» است، ولی «خالی بودن» خودش هم باید قابلِ
-// تشخیص باشد (موجودی واقعیِ ثبت‌نشده با موجودی واقعیِ صفر یکی نیست).
+// عددخوانیِ خانه‌ها: خانهٔ خالی «۰» است، ولی «خالی بودن» خودش هم باید قابلِ
+// تشخیص باشد (پایهٔ ثبت‌نشده با پایهٔ صفر یکی نیست).
 function _amNum(v) { const n = parseFloat(toEnDigits(String(v == null ? '' : v))); return isFinite(n) ? n : 0; }
 function _amHas(v) {
   if (v === '' || v == null) return false;
@@ -38237,105 +38156,115 @@ function _amFmt2(n) {
   const v = isFinite(Number(n)) ? Number(n) : 0;
   return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
-function amFuelLabel(b) { return AM_FUELS[(b && b.fuel === 'diesel') ? 'diesel' : 'petrol']; }
-function amFuelKey(b) { return (b && b.fuel === 'diesel') ? 'diesel' : 'petrol'; }
-function amBatchLabel(b) {
-  const who = String((b && b.owner) || '').trim();
-  return (who || 'محمولهٔ بی‌نام') + ' (' + amFuelLabel(b) + ')';
-}
+function amFuelKey(x) { return (x && x.fuel === 'diesel') ? 'diesel' : 'petrol'; }
+function amFuelLabel(x) { return AM_FUELS[amFuelKey(x)]; }
+function amAccLabel(a) { return (String((a && a.name) || '').trim() || 'حسابِ بی‌نام') + ' (' + amFuelLabel(a) + ')'; }
 
-/* ── تاریخ ─────────────────────────────────────────────────────────────────
-   همه‌جا از همان مبدلِ شمسیِ خودِ برنامه استفاده می‌شود (_jalaliStrToTs)، پس
-   «۱۴۰۴/۰۵/۰۳» و «1404/5/3» یکی حساب می‌شوند و تاریخِ بی‌معنی صفر برمی‌گرداند. */
+/* ── تاریخ ───────────────────────────────────────────────────────────────── */
 function _amTs(dateStr) {
   try { return (typeof _jalaliStrToTs === 'function') ? (_jalaliStrToTs(dateStr) || 0) : 0; }
   catch (e) { return 0; }
-}
-function _amTodayTs() {
-  const d = (typeof allDates === 'function') ? allDates() : { sh: '' };
-  return _amTs(d.sh) || Date.now();
 }
 function _amTodayStr() {
   const d = (typeof allDates === 'function') ? allDates() : { sh: '' };
   return d.sh || '';
 }
-function _amDateTxt(ts) {
-  if (!ts) return '—';
-  try { return (typeof _jalaliStrFromTs === 'function') ? _jalaliStrFromTs(ts) : '—'; }
-  catch (e) { return '—'; }
-}
+function _amTodayTs() { return _amTs(_amTodayStr()) || Date.now(); }
 
-/* ── دفترِ حرکت‌ها ─────────────────────────────────────────────────────────
-   هر محموله یک آرایهٔ moves دارد: { id, date, kind:'in'|'out', qty, note }.
-   «رسید» تیلی است که صاحبش می‌گذارد، «برداشت» تیلی که می‌برد.
-   محموله‌های نسخهٔ قدیمی (initial/added/withdrawn) همان بارِ اول به همین شکل
-   ترجمه می‌شوند و مقدارشان دست‌نخورده می‌ماند. */
-let _amMvSeq = 0;
-function _amMvId() { _amMvSeq++; return 'MV-' + Date.now().toString(36) + '-' + _amMvSeq; }
-function _amMigrateBatch(b) {
-  if (!b || typeof b !== 'object') return false;
-  let changed = false;
-  if (!Array.isArray(b.moves)) {
-    const d = b.date || '';
-    const mv = [];
-    const init = _amNum(b.initial), add = _amNum(b.added), out = _amNum(b.withdrawn);
-    if (init || (!add && !out)) mv.push({ id: _amMvId(), date: d, kind: 'in',  qty: init, note: 'مقدار اولیه' });
-    if (add)                    mv.push({ id: _amMvId(), date: d, kind: 'in',  qty: add,  note: 'اضافه‌شده' });
-    if (out)                    mv.push({ id: _amMvId(), date: d, kind: 'out', qty: out,  note: 'برداشت‌شده' });
-    b.moves = mv;
-    changed = true;
-  }
-  if (b.daysMode !== 'auto' && b.daysMode !== 'manual') {
-    /* محمولهٔ قدیمی که «روز» دستی داشته، روی همان می‌ماند تا عددِ افتش تکان
-       نخورد. محمولهٔ تازه و محمولهٔ بی‌روز، خودکار می‌شود. */
-    b.daysMode = (_amHas(b.days) && _amNum(b.days) > 0) ? 'manual' : 'auto';
-    changed = true;
-  }
-  if (b.closed !== true) { if (b.closed !== false) { b.closed = false; changed = true; } }
-  if (typeof b.closeDate !== 'string') { b.closeDate = ''; changed = true; }
-  return changed;
+/* ── داده ─────────────────────────────────────────────────────────────────
+   DB.amanatAccounts = [ { id, name, fuel, myPct, note, rows:[…] } ]
+   هر ردیف: { id, date, name, toAcct, liters, days, temp, state, closeDate, basePct }
+
+   نسخه‌های قبلی (DB.amanatBatches) یک‌بار به همین شکل ترجمه می‌شوند. آرایهٔ
+   قدیمی پاک نمی‌شود — دست‌نخورده سرِ جایش می‌ماند تا اگر چیزی از قلم افتاده
+   بود، از دست نرفته باشد. */
+let _amRowSeq = 0;
+function _amNewId(p) { _amRowSeq++; return (p || 'AMR') + '-' + Date.now().toString(36) + '-' + _amRowSeq; }
+
+function _amNewRow(seedDate) {
+  return { id: _amNewId('AMR'), date: seedDate || _amTodayStr(), name: '', toAcct: '',
+           liters: '', days: '', temp: '', state: 'open', closeDate: '', basePct: '', note: '' };
 }
-function amBatches() {
-  if (!Array.isArray(DB.amanatBatches)) DB.amanatBatches = [];
-  let changed = false;
-  DB.amanatBatches.forEach(b => { if (_amMigrateBatch(b)) changed = true; });
-  // ترجمهٔ نسخهٔ قدیمی کارِ خودِ برنامه است، نه تایپِ کاربر → _saveQuiet
+function _amNewAccount(fuel) {
+  return { id: _amNewId('AMA'), name: '', fuel: (fuel === 'diesel') ? 'diesel' : 'petrol',
+           myPct: '', note: '', rows: [_amNewRow()] };
+}
+/* ترجمهٔ ساختارِ قدیمی → کادرهای حساب. هر محمولهٔ قدیمی یک ردیف می‌شود و
+   محموله‌های هم‌نام و هم‌سوخت زیرِ یک کادر جمع می‌شوند. */
+function _amMigrateOld() {
+  if (DB.amanatAccountsReady === true) return false;
+  const old = Array.isArray(DB.amanatBatches) ? DB.amanatBatches : [];
+  if (!Array.isArray(DB.amanatAccounts)) DB.amanatAccounts = [];
+  if (!DB.amanatAccounts.length && old.length) {
+    const byKey = {};
+    old.forEach(b => {
+      if (!b || typeof b !== 'object') return;
+      const fuel = (b.fuel === 'diesel') ? 'diesel' : 'petrol';
+      const nm = String(b.owner || '').trim();
+      const key = nm + '|' + fuel;
+      if (!byKey[key]) {
+        byKey[key] = { id: _amNewId('AMA'), name: nm, fuel: fuel, myPct: '', note: String(b.note || ''), rows: [] };
+        DB.amanatAccounts.push(byKey[key]);
+      }
+      const acc = byKey[key];
+      // مقدارِ رسیده: از دفترِ نسخهٔ دوم، وگرنه از مقدارهای نسخهٔ اول
+      const mv = Array.isArray(b.moves) ? b.moves : null;
+      const closed = (b.closed === true);
+      if (mv && mv.length) {
+        mv.forEach(m => {
+          if (!m || m.kind === 'out') return;
+          const q = _amNum(m.qty);
+          if (!q) return;
+          const r = _amNewRow(m.date || b.date || '');
+          r.liters = q; r.name = nm; r.temp = _amHas(b.temp) ? _amNum(b.temp) : '';
+          r.basePct = _amHas(b.basePct) ? _amNum(b.basePct) : '';
+          r.note = String(m.note || '');
+          if (closed) { r.state = 'closed'; r.closeDate = String(b.closeDate || ''); }
+          acc.rows.push(r);
+        });
+      } else {
+        const q = _amNum(b.initial) + _amNum(b.added);
+        const r = _amNewRow(b.date || '');
+        r.liters = q || ''; r.name = nm; r.temp = _amHas(b.temp) ? _amNum(b.temp) : '';
+        r.basePct = _amHas(b.basePct) ? _amNum(b.basePct) : '';
+        if (_amHas(b.days) && _amNum(b.days) > 0) r.days = _amNum(b.days);
+        if (closed) { r.state = 'closed'; r.closeDate = String(b.closeDate || ''); }
+        acc.rows.push(r);
+      }
+    });
+    DB.amanatAccounts.forEach(a => { if (!a.rows.length) a.rows.push(_amNewRow()); });
+  }
+  DB.amanatAccountsReady = true;
+  return true;
+}
+function amAccounts() {
+  if (!Array.isArray(DB.amanatAccounts)) DB.amanatAccounts = [];
+  const migrated = _amMigrateOld();
+  let changed = migrated;
+  DB.amanatAccounts.forEach(a => {
+    if (!a || typeof a !== 'object') return;
+    if (!Array.isArray(a.rows)) { a.rows = [_amNewRow()]; changed = true; }
+    let first = '';
+    a.rows.forEach(r => {
+      if (!r || typeof r !== 'object') return;
+      if (!r.id) { r.id = _amNewId('AMR'); changed = true; }
+      if (r.state !== 'open' && r.state !== 'closed') { r.state = 'open'; changed = true; }
+      if (typeof r.closeDate !== 'string') { r.closeDate = ''; changed = true; }
+      const ts = _amTs(r.date);
+      if (ts && (!first || ts < _amTs(first))) first = String(r.date);
+    });
+    /* تاریخِ خودِ کادر = تاریخِ اولین ردیفش. خودِ بخش از این نمی‌خواند؛ «کارتِ
+       حساب» (کپیِ بخش به دستگاه دیگر) از روی همین ماه و سال را درمی‌آورد. */
+    if (first && a.date !== first) { a.date = first; changed = true; }
+  });
+  // ترجمهٔ ساختارِ قدیمی کارِ خودِ برنامه است، نه تایپِ کاربر → _saveQuiet
   if (changed) { try { if (typeof _saveQuiet === 'function') _saveQuiet(); } catch (e) {} }
-  return DB.amanatBatches;
-}
-function amMoves(b) {
-  if (!b) return [];
-  if (!Array.isArray(b.moves)) _amMigrateBatch(b);
-  return b.moves;
-}
-/* حرکت‌ها به ترتیبِ تاریخ. حرکتِ بی‌تاریخ سرِ جای خودش در دفتر می‌ماند (روی
-   تاریخِ شروع می‌نشیند) — با مرتب‌سازیِ پایدار، ردیف‌های هم‌تاریخ جابه‌جا
-   نمی‌شوند و کاربر ترتیبِ تایپِ خودش را می‌بیند. */
-function _amOrdered(b, startTs) {
-  const list = amMoves(b).map((m, idx) => ({
-    m: m, idx: idx,
-    ts: _amTs(m && m.date) || startTs || 0,
-    q: Math.max(0, _amNum(m && m.qty)),
-    kind: (m && m.kind === 'out') ? 'out' : 'in'
-  }));
-  list.sort((a, c) => (a.ts - c.ts) || (a.idx - c.idx));
-  return list;
-}
-function _amStartTs(b) {
-  let ts = _amTs(b && b.date);
-  amMoves(b).forEach(m => { const t = _amTs(m && m.date); if (t && (!ts || t < ts)) ts = t; });
-  return ts || 0;
-}
-function _amEndTs(b, startTs) {
-  const closeTs = (b && b.closed) ? _amTs(b.closeDate) : 0;
-  const end = closeTs || _amTodayTs();
-  return Math.max(end, startTs || 0);
+  return DB.amanatAccounts;
 }
 
-/* ضریب دما — سه پله. پلهٔ سوم دقیقاً از همان‌جایی شروع می‌شود که پلهٔ دوم تمام
-   شده، پس منحنی پیوسته است: با مقدارهای پیش‌فرض در ۴۰ درجه هر دو ۱٫۳۰ می‌دهند
-   (۱ + ۰٫۰۲×۱۵). اگر مدیر آستانه‌ها را عوض کند، پایهٔ پلهٔ سوم هم خودش
-   جابه‌جا می‌شود و پرشِ ناگهانی در نمودار پیش نمی‌آید. */
+/* ── ضریب گرما ────────────────────────────────────────────────────────────
+   سه پله. پلهٔ سوم دقیقاً از همان‌جایی شروع می‌شود که پلهٔ دوم تمام شده، پس
+   منحنی پیوسته است: با مقدارهای پیش‌فرض در ۴۰ درجه هر دو ۱٫۳۰ می‌دهند. */
 function amTempFactor(T, s) {
   s = s || amSettings();
   const t1 = s.t1, t2 = Math.max(s.t2, s.t1);
@@ -38349,161 +38278,175 @@ function amFuelFactor(fuel, s) {
   return (fuel === 'diesel') ? s.fDiesel : s.fPetrol;
 }
 
-/* همهٔ عددهای یک محموله در یک جا — تنها جایی که فرمول‌ها نوشته می‌شوند.
-   هر جای دیگرِ برنامه (جدول، کارت، پرونده، PDF، تاریخچه) فقط از خروجیِ همین
-   تابع می‌خواند؛ هیچ فرمولی جای دیگری تکرار نمی‌شود.
+/* ── قلبِ محاسبه ──────────────────────────────────────────────────────────
+   تنها جایی که فرمول نوشته می‌شود. هر جای دیگرِ برنامه (جدول، سربرگ، سیستم
+   فیصدی، PDF، تاریخچه) فقط از خروجیِ همین دو تابع می‌خواند.
 
-   مبنای افت «لیتر-روز» است: مقدارِ هر بازه × طولِ همان بازه به روز. اگر تیل
-   تا آخر دست‌نخورده مانده باشد، این دقیقاً همان «مقدار اولیه × روز»ِ قبلی
-   می‌شود؛ اگر وسطِ راه کم و زیاد شده باشد، فقط به اندازهٔ همان چیزی که
-   واقعاً ایستاده افت می‌گیرد. */
-function amCalc(b, s) {
+       کمبودی = مقدار تیل × (پایه ÷ ۱۰۰) × (روز ÷ ۳۰) × ضریب گرما × ضریب تیل
+
+   «۳۰ روز» یعنی یک دورهٔ کاملِ درصدِ پایه. */
+function amLoss(liters, days, temp, fuel, basePct, s) {
   s = s || amSettings();
-  b = b || {};
+  const L = Math.max(0, _amNum(liters));
+  const D = Math.max(0, _amNum(days));
+  const p = _amHas(basePct) ? _amNum(basePct) : s.basePct;
+  let loss = L * (p / 100) * (D / 30) * amTempFactor(_amHas(temp) ? _amNum(temp) : s.defTemp, s) * amFuelFactor(fuel, s);
+  if (!isFinite(loss) || loss < 0) loss = 0;
+  if (loss > L) loss = L;      // کمبودی هرگز از خودِ تیل بیشتر نمی‌شود
+  return loss;
+}
+/* «مدت زمان» خودکار از تاریخِ ردیف تا امروز شمرده می‌شود — کسی نمی‌نشیند هر
+   روز عددِ روزِ همهٔ ردیف‌ها را دستی زیاد کند. اگر ردیف «بسته» شد، شمارش روی
+   تاریخِ بسته‌شدن می‌ایستد. اگر کاربر خودش عددی در خانهٔ روز بنویسد، همان
+   می‌ماند و خودکار دست نمی‌زند. */
+function amRowCalc(row, acc, s) {
+  s = s || amSettings();
+  row = row || {}; acc = acc || {};
+  const fuel = amFuelKey(acc);
+  const startTs = _amTs(row.date);
+  const closed = (row.state === 'closed');
+  const endTs = closed ? (_amTs(row.closeDate) || _amTodayTs()) : _amTodayTs();
+  const autoDays = startTs ? Math.max(0, Math.round((Math.max(endTs, startTs) - startTs) / AM_DAY)) : 0;
+  const manual = _amHas(row.days);
+  const days = manual ? Math.max(0, _amNum(row.days)) : autoDays;
 
-  const startTs = _amStartTs(b);
-  const endTs   = _amEndTs(b, startTs);
-  const ordered = _amOrdered(b, startTs);
-
-  // ── جمع‌های دفتر ────────────────────────────────────────────────────────
-  let totalIn = 0, totalOut = 0, initial = 0, firstInSeen = false;
-  ordered.forEach(e => {
-    if (e.kind === 'out') { totalOut += e.q; return; }
-    totalIn += e.q;
-    if (!firstInSeen) { initial = e.q; firstInSeen = true; }
+  const liters = Math.max(0, _amNum(row.liters));
+  const temp   = _amHas(row.temp) ? _amNum(row.temp) : s.defTemp;
+  const base   = _amHas(row.basePct) ? _amNum(row.basePct) : s.basePct;
+  const loss   = amLoss(liters, days, temp, fuel, base, s);
+  const lossPct = liters > 0 ? (loss / liters) * 100 : 0;
+  return { fuel, liters, days, autoDays, manual, temp, base, closed,
+           dateOk: startTs > 0, loss, lossPct, rest: liters - loss };
+}
+// جمعِ یک حساب — همان چیزی که در سربرگِ کادر نوشته می‌شود
+function amAccCalc(acc, s) {
+  s = s || amSettings();
+  const t = { n: 0, open: 0, liters: 0, loss: 0, rest: 0, litersOpen: 0 };
+  (acc && Array.isArray(acc.rows) ? acc.rows : []).forEach(r => {
+    const c = amRowCalc(r, acc, s);
+    t.n++;
+    if (!c.closed) { t.open++; t.litersOpen += c.liters; }
+    t.liters += c.liters; t.loss += c.loss; t.rest += c.rest;
   });
-  const added      = Math.max(0, totalIn - initial);
-  const withdrawn  = totalOut;
-  const balanceRaw = totalIn - totalOut;
+  t.lossPct  = t.liters > 0 ? (t.loss / t.liters) * 100 : 0;   // فیصدیِ سربه‌سر
+  t.needPct  = t.lossPct;
+  t.safePct  = t.needPct * (1 + s.safetyPct / 100);            // فیصدیِ پیشنهادی
+  const my    = _amHas(acc && acc.myPct) ? _amNum(acc.myPct) : null;
+  t.myPct     = my;
+  t.myLiters  = (my == null) ? null : (t.liters * my / 100);
+  t.diff      = (my == null) ? null : (t.myLiters - t.loss);   // + یعنی اضافه می‌آید
+  return t;
+}
 
-  // ── روز ────────────────────────────────────────────────────────────────
-  const autoDays   = startTs ? Math.max(0, Math.round((endTs - startTs) / AM_DAY)) : 0;
-  const manualDays = _amNum(b.days);
-  const dateOk     = startTs > 0;
-  const autoMode   = (b.daysMode !== 'manual') && dateOk;
-  const days       = autoMode ? autoDays : manualDays;
+/* ── فیلترها ─────────────────────────────────────────────────────────────── */
+let _amFuelFilter = 'all';
+let _amSearch = '';
+function setAmanatFuel(f) { _amFuelFilter = (f === 'petrol' || f === 'diesel') ? f : 'all'; renderAmanat(); }
+function setAmanatSearch(v) {
+  _amSearch = String(v == null ? '' : v);
+  renderAmanat();
+  const el = document.getElementById('am-search');
+  if (el && document.activeElement !== el) el.value = _amSearch;
+}
+function _amAccMatch(a) {
+  if (_amFuelFilter !== 'all' && amFuelKey(a) !== _amFuelFilter) return false;
+  const q = (typeof normFa === 'function') ? normFa(_amSearch) : String(_amSearch).trim().toLowerCase();
+  if (!q) return true;
+  const names = [String(a.name || ''), String(a.note || '')]
+    .concat((a.rows || []).map(r => String((r && r.name) || '') + ' ' + String((r && r.toAcct) || '')));
+  const hay = (typeof normFa === 'function') ? normFa(names.join(' ')) : names.join(' ').toLowerCase();
+  return hay.indexOf(q) >= 0;
+}
 
-  // ── ضریب‌ها ────────────────────────────────────────────────────────────
-  const basePct    = _amHas(b.basePct) ? _amNum(b.basePct) : s.basePct;
-  const baseRate   = basePct / 100;             // §۳ — مثلاً ۰٫۱۰٪ = ۰٫۰۰۱
-  const temp       = _amHas(b.temp) ? _amNum(b.temp) : s.defTemp;
-  const tempFactor = amTempFactor(temp, s);     // §۴
-  const fuelFactor = amFuelFactor(b.fuel, s);   // §۵
-
-  /* ── لیتر-روز ───────────────────────────────────────────────────────────
-     در حالتِ خودکار، خطِ زمانِ محموله بازه‌بازه پیموده می‌شود. در حالتِ دستی
-     (محموله‌های قدیمی) همان مدلِ سادهٔ قبلی می‌ماند: مقدار اولیه × روز. */
-  const steps = [];
-  let literDays = 0;
-  if (autoMode) {
-    let vol = 0, cur = startTs;
-    const push = (to) => {
-      if (to <= cur) return;
-      const dd = (to - cur) / AM_DAY;
-      steps.push({ from: cur, to: to, days: dd, vol: vol });
-      literDays += Math.max(0, vol) * dd;
-      cur = to;
-    };
-    ordered.forEach(e => {
-      const t = Math.min(Math.max(e.ts, startTs), endTs);
-      push(t);
-      vol += (e.kind === 'out' ? -e.q : e.q);
-    });
-    push(endTs);
-    if (!steps.length) steps.push({ from: startTs, to: endTs, days: 0, vol: balanceRaw });
+/* ── ویرایش ──────────────────────────────────────────────────────────────── */
+function addAmanatAccount() {
+  const list = amAccounts();
+  list.push(_amNewAccount(_amFuelFilter === 'diesel' ? 'diesel' : 'petrol'));
+  save(); renderAmanat();
+  showToast('✅ کادرِ حسابِ جدید ساخته شد', '#38a169');
+  setTimeout(() => {
+    const el = document.getElementById('am-acc-name-' + (list.length - 1));
+    if (el) { try { el.focus(); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {} }
+  }, 80);
+}
+function deleteAmanatAccount(ai) {
+  const list = amAccounts();
+  const a = list[ai];
+  if (!a) return;
+  if (!confirm('کادرِ حسابِ «' + amAccLabel(a) + '» با همهٔ ردیف‌هایش پاک شود؟')) return;
+  list.splice(ai, 1);
+  save(); renderAmanat();
+  showToast('🗑️ حساب پاک شد', '#e53e3e');
+}
+function updateAmanatAccount(ai, field, val) {
+  const a = amAccounts()[ai];
+  if (!a) return;
+  if (field === 'fuel') a.fuel = (val === 'diesel') ? 'diesel' : 'petrol';
+  else if (field === 'myPct') {
+    const raw = String(val == null ? '' : val).trim();
+    const n = parseFloat(toEnDigits(raw));
+    a.myPct = (raw === '' || !isFinite(n)) ? '' : n;
+  }
+  else a[field] = String(val == null ? '' : val).trim();
+  save();
+  _amPaint();
+}
+function addAmanatRow(ai) {
+  const a = amAccounts()[ai];
+  if (!a) return;
+  if (!Array.isArray(a.rows)) a.rows = [];
+  a.rows.push(_amNewRow());
+  save(); renderAmanat();
+  setTimeout(() => {
+    const el = document.getElementById('am-in-liters-' + ai + '-' + (a.rows.length - 1));
+    if (el) { try { el.focus(); el.scrollIntoView({ block: 'center' }); } catch (e) {} }
+  }, 60);
+}
+function deleteAmanatRow(ai, ri) {
+  const a = amAccounts()[ai];
+  if (!a || !a.rows || !a.rows[ri]) return;
+  if (!confirm('این ردیف پاک شود؟')) return;
+  a.rows.splice(ri, 1);
+  if (!a.rows.length) a.rows.push(_amNewRow());
+  save(); renderAmanat();
+}
+function updateAmanatRow(ai, ri, field, val) {
+  const a = amAccounts()[ai];
+  if (!a || !a.rows || !a.rows[ri]) return;
+  const r = a.rows[ri];
+  if (field === 'date' || field === 'name' || field === 'toAcct' || field === 'note') {
+    r[field] = String(val == null ? '' : val).trim();
   } else {
-    literDays = initial * manualDays;
-    steps.push({ from: startTs, to: endTs, days: manualDays, vol: initial });
+    /* عددها به‌صورت عدد ذخیره می‌شوند ولی خانهٔ خالی «خالی» می‌ماند و «۰»
+       نمی‌شود — «پایهٔ ثبت‌نشده» با «پایهٔ صفر» یکی نیست.
+       ⚠️ خودِ خانه همین‌جا بازنویسی نمی‌شود، پس تایپِ نیمه‌کاره («12.») از دست
+       نمی‌رود؛ در رندرِ بعدی مرتب می‌شود. */
+    const raw = String(val == null ? '' : val).trim();
+    const n = parseFloat(toEnDigits(raw));
+    r[field] = (raw === '' || !isFinite(n)) ? '' : n;
   }
-  const avgVolume = days > 0 ? (literDays / days) : (autoMode ? Math.max(0, balanceRaw) : initial);
-
-  // §۷ — افت تخمینی (۳۰ روز = یک دورهٔ کاملِ درصدِ پایه)
-  let estLoss = (literDays / 30) * baseRate * tempFactor * fuelFactor;
-  // §۸ — کنترل مقدار افت: نه منفی، نه بیشتر از کلِ تیلی که وارد شده
-  if (!isFinite(estLoss) || estLoss < 0) estLoss = 0;
-  if (estLoss > totalIn) estLoss = totalIn;
-
-  // §۹ — موجودی مورد انتظار (محاسبه‌ای)
-  const expected = balanceRaw - estLoss;
-
-  // §۱۰ — افت واقعی: فقط وقتی موجودی واقعی ثبت شده باشد
-  const hasActual  = _amHas(b.actual);
-  const actual     = hasActual ? _amNum(b.actual) : null;
-  const actualLoss = hasActual ? (balanceRaw - actual) : null;
-
-  // §۱۱ و §۱۲ — اختلاف و درصدِ آن (تقسیم بر صفر هرگز اتفاق نمی‌افتد)
-  const variance    = hasActual ? (actualLoss - estLoss) : null;
-  const variancePct = (hasActual && totalIn > 0) ? (variance / totalIn) * 100 : 0;
-
-  // §۱۴ — سود
-  const buy            = _amNum(b.buyPrice);
-  const profitPct      = _amNum(b.profitPct);
-  const sold           = _amNum(b.sold);
-  const profitPerLiter = buy * (profitPct / 100);
-  const sellPrice      = buy + profitPerLiter;
-  const totalProfit    = sold * profitPerLiter;
-
-  // §۱۵ — تأثیر افت روی سود (قابل خاموش/روشن کردن)
-  const lossCost       = estLoss * buy;
-  const adjustedProfit = s.applyLossToProfit ? (totalProfit - lossCost) : totalProfit;
-
-  /* §۱۶ — موجودی مالی. افتِ تخمینی هرگز خودکار از این عدد کم نمی‌شود؛ فقط
-     افتی که مدیر تأیید کرده، و آن هم فقط اگر کلیدِ تنظیماتش روشن باشد. */
-  const approvedLoss = (b.lossApproved === true) ? _amNum(b.approvedLoss) : 0;
-  const balance      = s.applyLossToInventory ? (balanceRaw - approvedLoss) : balanceRaw;
-
-  return { startTs, endTs, ordered, steps, moveCount: ordered.length,
-           initial, added, withdrawn, totalIn, totalOut, balanceRaw,
-           days, autoDays, manualDays, autoMode, dateOk, literDays, avgVolume, temp,
-           basePct, baseRate, tempFactor, fuelFactor,
-           estLoss, expected, hasActual, actual, actualLoss, variance, variancePct,
-           buy, profitPct, sold, profitPerLiter, sellPrice, totalProfit, lossCost, adjustedProfit,
-           approvedLoss, lossApproved: (b.lossApproved === true),
-           closed: (b.closed === true), balance };
+  save();
+  _amPaint();
+}
+/* «در مخزن»: دو کادرِ باز/بسته داخلِ همان خانه. «بسته» یعنی تیل از مخزن
+   بیرون رفته — از همان تاریخ، مدت زمان دیگر جلو نمی‌رود و کمبودی ثابت می‌ماند. */
+function setAmanatRowState(ai, ri, st) {
+  const a = amAccounts()[ai];
+  if (!a || !a.rows || !a.rows[ri]) return;
+  const r = a.rows[ri];
+  if (st === 'closed') {
+    if (r.state === 'closed') return;
+    r.state = 'closed';
+    if (!r.closeDate) r.closeDate = _amTodayStr();
+  } else {
+    if (r.state === 'open') return;
+    r.state = 'open'; r.closeDate = '';
+  }
+  save(); renderAmanat();
+  showToast(st === 'closed' ? '🔒 ردیف بسته شد — مدت زمان ایستاد' : '🔓 ردیف باز شد', '#805ad5');
 }
 
-// §۱۷ — جلوگیری از خطای ورود اطلاعات. «خطا» جلوی کار را نمی‌گیرد، ولی بالای
-// جدول قرمز نوشته می‌شود تا از چشم نیفتد؛ «هشدار» زردِ ملایم است.
-function amWarnings(b, c) {
-  const err = [], warn = [];
-  const who = amBatchLabel(b);
-  c = c || amCalc(b);
-
-  amMoves(b).forEach((m, k) => {
-    if (_amNum(m.qty) < 0) err.push(who + ' — ردیفِ ' + n2fa(k + 1) + 'ِ دفتر مقدارِ منفی دارد.');
-    if (m.date && !_amTs(m.date)) warn.push(who + ' — تاریخِ ردیفِ ' + n2fa(k + 1) + 'ِ دفتر خوانده نشد: «' + String(m.date) + '».');
-  });
-  if (!c.autoMode && !c.dateOk && c.totalIn > 0) {
-    warn.push(who + ' — تاریخِ شروع ثبت نشده، پس روز خودکار شمرده نمی‌شود.');
-  }
-  if (_amNum(b.days) < 0) err.push(who + ' — مدت نگهداری نمی‌تواند کمتر از صفر باشد.');
-
-  // برداشتِ بیشتر از موجودیِ همان لحظه — یعنی جایی از دفتر جا افتاده
-  let run = 0, over = false;
-  c.ordered.forEach(e => { run += (e.kind === 'out' ? -e.q : e.q); if (run < -0.0001) over = true; });
-  if (over) err.push(who + ' — در دفتر جایی بیشتر از موجودیِ همان تاریخ برداشت شده است.');
-
-  if (_amHas(b.temp)) {
-    const t = _amNum(b.temp);
-    if (t < -50 || t > 80) warn.push(who + ' — دمای واردشده غیرعادی است (' + _amFmt(t) + '°C).');
-  }
-  if (c.hasActual && c.actual > c.totalIn) {
-    warn.push(who + ' — موجودی ثبت‌شده بیشتر از کلِ تیلِ رسیده است.');
-  }
-  if (c.closed && Math.abs(c.balanceRaw) > 0.0001) {
-    warn.push(who + ' — حساب تسویه‌شده علامت خورده ولی هنوز ' + _amFmt2(c.balanceRaw) + ' لیتر باقی دارد.');
-  }
-  return { err, warn };
-}
-
-// §۱۱ — جملهٔ فارسیِ اختلاف
-function amVarianceMsg(c) {
-  if (!c.hasActual) return 'موجودی واقعی هنوز ثبت نشده — اختلاف قابل محاسبه نیست.';
-  if (Math.abs(c.variance) < 0.005) return 'موجودی مطابق برآورد است.';
-  return c.variance > 0 ? 'افت واقعی بیشتر از افت تخمینی است.' : 'افت واقعی کمتر از افت تخمینی است.';
-}
-
-// ── تنظیمات مدیر ──────────────────────────────────────────────────────────
+/* ── تنظیمات مدیر ────────────────────────────────────────────────────────── */
 function toggleAmanatSettings() {
   const p = document.getElementById('am-settings');
   if (!p) return;
@@ -38515,31 +38458,29 @@ function fillAmanatSettings() {
   const s = amSettings();
   const set = (id, val) => {
     const el = document.getElementById(id);
-    if (!el || el === document.activeElement) return;   // دستِ کاربر روی همان کادر است
-    if (el.type === 'checkbox') el.checked = !!val; else el.value = val;
+    if (!el || el === document.activeElement) return;   // دستِ کاربر روی همان خانه است
+    el.value = val;
   };
-  ['basePct','fPetrol','fDiesel','defTemp','t1','t2','tfLow','tfMed','tfHigh'].forEach(k => set('am-set-' + k, s[k]));
-  set('am-set-inv', s.applyLossToInventory);
-  set('am-set-prof', s.applyLossToProfit);
+  ['basePct','fPetrol','fDiesel','defTemp','safetyPct','t1','t2','tfLow','tfMed','tfHigh'].forEach(k => set('am-set-' + k, s[k]));
   const f = document.getElementById('am-set-formula');
   if (f) {
-    f.innerHTML = 'ضریب دما: تا <b>' + _amFmt(s.t1) + '°C</b> برابر <b>' + _amFmt(s.tfLow, 3) + '</b> · '
+    f.innerHTML = 'ضریب گرما: تا <b>' + _amFmt(s.t1) + '°C</b> برابر <b>' + _amFmt(s.tfLow, 3) + '</b> · '
       + 'بین <b>' + _amFmt(s.t1) + '</b> و <b>' + _amFmt(s.t2) + '</b> برابر ' + _amFmt(s.tfLow, 3)
-      + ' + ' + _amFmt(s.tfMed, 3) + ' × (دما − ' + _amFmt(s.t1) + ') · '
+      + ' + ' + _amFmt(s.tfMed, 3) + ' × (گرما − ' + _amFmt(s.t1) + ') · '
       + 'بالاتر از <b>' + _amFmt(s.t2) + '</b> برابر ' + _amFmt(amTempFactor(s.t2, s), 3)
-      + ' + ' + _amFmt(s.tfHigh, 3) + ' × (دما − ' + _amFmt(s.t2) + ')'
-      + '<br>لیتر-روز = جمعِ (مقدارِ هر بازه × روزهای همان بازه)'
-      + '<br>افت تخمینی = (لیتر-روز ÷ ۳۰) × (٪ پایه ÷ ۱۰۰) × ضریب دما × ضریب سوخت'
+      + ' + ' + _amFmt(s.tfHigh, 3) + ' × (گرما − ' + _amFmt(s.t2) + ')'
+      + '<br>کمبودی = مقدار تیل × (پایه ÷ ۱۰۰) × (روز ÷ ۳۰) × ضریب گرما × ضریب تیل'
+      + '<br>فیصدیِ سربه‌سر = کمبودی ÷ مقدار تیل × ۱۰۰ · فیصدیِ پیشنهادی = سربه‌سر × (۱ + '
+      + _amFmt(s.safetyPct) + '٪)'
       + '<br><b>این ضریب‌ها یک مدل تخمینی‌اند و نرخِ علمیِ قطعیِ تبخیر نیستند.</b>';
   }
 }
 function setAmanatSetting(key, val) {
   if (!DB.amanatSettings || typeof DB.amanatSettings !== 'object') DB.amanatSettings = {};
-  if (typeof AM_DEFAULTS[key] === 'boolean') DB.amanatSettings[key] = (val === true);
-  else DB.amanatSettings[key] = String(val == null ? '' : val).trim();
+  DB.amanatSettings[key] = String(val == null ? '' : val).trim();
   save();
   _amPaint();
-  _amModalPaint();
+  renderAmanatFee();
   const f = document.getElementById('am-set-formula');
   if (f) fillAmanatSettings();
 }
@@ -38553,387 +38494,254 @@ function resetAmanatSettings() {
   showToast('↺ تنظیمات تیل امانت به پیش‌فرض برگشت', '#805ad5');
 }
 
-// ── فیلترها و نما ─────────────────────────────────────────────────────────
-let _amFuelFilter = 'all';       // all | petrol | diesel
-let _amStatusFilter = 'open';    // open | closed | all
-let _amSearch = '';
-let _amView = 'cards';           // cards | table
-let _amModalIdx = null;
+/* ══ سیستمِ فیصدی ═════════════════════════════════════════════════════════
+   خواستهٔ صاحب ریپو: «چه مقداری بر روی این مقدار تیل چند فیصد بگیرم تا با آن
+   بخارها ضرر جبران شود» و «چون کمبودی زیاد یا کم می‌شود».
 
-function setAmanatFuel(f) { _amFuelFilter = (f === 'petrol' || f === 'diesel') ? f : 'all'; renderAmanat(); }
-function setAmanatStatus(s) { _amStatusFilter = (s === 'closed' || s === 'all') ? s : 'open'; renderAmanat(); }
-function setAmanatSearch(v) {
-  _amSearch = String(v == null ? '' : v);
-  renderAmanat();
-  const el = document.getElementById('am-search');
-  if (el && document.activeElement !== el) el.value = _amSearch;
+   دو طرفِ حساب:
+     • فیصدیِ سربه‌سر  = کمبودی ÷ مقدار تیل × ۱۰۰  ← دقیقاً همان‌قدر که کم می‌آید
+     • با فیصدیِ شما   = مقدار تیل × فیصدی ÷ ۱۰۰   ← چقدر واقعاً می‌گیرید
+   تفاوتِ این دو، همان چیزی است که یا اضافه می‌آید یا کم.
+   جدولِ راهنما هم همین حساب را برای مدت‌های مختلف نشان می‌دهد، چون کمبودی با
+   بالا رفتنِ مدت و گرما بالا می‌رود. ═══════════════════════════════════════ */
+function amFeeAdvice(liters, days, temp, fuel, myPct, s) {
+  s = s || amSettings();
+  const L = Math.max(0, _amNum(liters));
+  const loss = amLoss(L, days, temp, fuel, null, s);
+  const needPct = L > 0 ? (loss / L) * 100 : 0;
+  const safePct = needPct * (1 + s.safetyPct / 100);
+  const my = _amHas(myPct) ? _amNum(myPct) : null;
+  const myLiters = (my == null) ? null : (L * my / 100);
+  const diff = (my == null) ? null : (myLiters - loss);
+  return { liters: L, loss, needPct, safePct, myPct: my, myLiters, diff };
 }
-function setAmanatView(v) {
-  _amView = (v === 'table') ? 'table' : 'cards';
-  try { localStorage.setItem('amView', _amView); } catch (e) {}
-  renderAmanat();
-}
-try { const _v = localStorage.getItem('amView'); if (_v === 'table' || _v === 'cards') _amView = _v; } catch (e) {}
-
-function _amMatch(b) {
-  if (_amFuelFilter !== 'all' && amFuelKey(b) !== _amFuelFilter) return false;
-  const closed = (b.closed === true);
-  if (_amStatusFilter === 'open' && closed) return false;
-  if (_amStatusFilter === 'closed' && !closed) return false;
-  const q = (typeof normFa === 'function') ? normFa(_amSearch) : String(_amSearch).trim().toLowerCase();
-  if (q) {
-    const hay = (typeof normFa === 'function')
-      ? normFa(String(b.owner || '') + ' ' + String(b.note || '') + ' ' + String(b.id || ''))
-      : String((b.owner || '') + ' ' + (b.note || '') + ' ' + (b.id || '')).toLowerCase();
-    if (hay.indexOf(q) < 0) return false;
-  }
-  return true;
-}
-
-// ── محموله‌ها ─────────────────────────────────────────────────────────────
-// §۲۲ — هر محموله شناسهٔ خودش را دارد تا جداگانه قابل پیگیری باشد
-function _amNewBatch(seed) {
-  const today = _amTodayStr();
-  return {
-    id: 'AM-' + (Date.now() + (seed || 0)),
-    date: today, owner: '',
-    fuel: (_amFuelFilter === 'diesel') ? 'diesel' : 'petrol',
-    // دفتر با یک ردیفِ رسیدِ خالی باز می‌شود تا فقط عددش تایپ شود
-    moves: [{ id: _amMvId(), date: today, kind: 'in', qty: '', note: '' }],
-    initial: '', added: '', withdrawn: '',
-    days: '', daysMode: 'auto', temp: '', basePct: '', actual: '',
-    buyPrice: '', profitPct: '', sold: '',
-    approvedLoss: 0, lossApproved: false,
-    closed: false, closeDate: '', note: ''
-  };
-}
-function addAmanatBatch() {
-  const b = _amNewBatch(0);
-  amBatches().push(b);
-  save(); renderAmanat();
-  showToast('✅ محمولهٔ امانتی جدید ساخته شد', '#38a169');
-  openAmanatBatch(amBatches().length - 1);
-}
-function addAmanatBatchesBulk() {
-  const el = document.getElementById('am-bulk-count');
-  const n = Math.max(1, Math.min(50, parseInt(toEnDigits(el ? el.value : '3'), 10) || 3));
-  const list = amBatches();
-  for (let i = 0; i < n; i++) list.push(_amNewBatch(i));
-  save(); renderAmanat();
-  showToast('✅ ' + n + ' محمولهٔ امانتی ساخته شد', '#38a169');
-}
-/* مقدارهای قدیمیِ initial/added/withdrawn دیگر تایپ نمی‌شوند ولی هم‌گام نگه
-   داشته می‌شوند: فایل‌های کپی، نسخه‌های قدیمیِ برنامه روی دستگاه‌های دیگر و
-   بیرون‌دهیِ داده هنوز از همان‌ها می‌خوانند. */
-function _amSyncLegacy(b) {
-  const c = amCalc(b);
-  b.initial   = c.initial;
-  b.added     = c.added;
-  b.withdrawn = c.withdrawn;
-  if (b.daysMode !== 'manual') b.days = c.autoDays;
-}
-function updateAmanatRow(i, field, val) {
-  const list = amBatches();
-  if (!list[i]) return;
-  if (field === 'fuel') { list[i].fuel = (val === 'diesel') ? 'diesel' : 'petrol'; }
-  else if (field === 'daysMode') { list[i].daysMode = (val === 'manual') ? 'manual' : 'auto'; }
-  else if (field === 'owner' || field === 'date' || field === 'note' || field === 'closeDate') {
-    list[i][field] = String(val == null ? '' : val).trim();
-  }
-  else {
-    /* عددها به‌صورت عدد ذخیره می‌شوند (نه «1,000»ِ جداکنندهٔ کادر) ولی کادرِ
-       خالی «خالی» می‌ماند و «۰» نمی‌شود — «موجودی واقعیِ ثبت‌نشده» با
-       «موجودی واقعیِ صفر» یکی نیست و افتِ واقعی نباید سرِ خود حساب شود.
-       ⚠️ خودِ کادر همین‌جا بازنویسی نمی‌شود، پس تایپِ نیمه‌کاره («12.») از دست
-       نمی‌رود؛ در رندرِ بعدی مرتب می‌شود. */
-    const raw = String(val == null ? '' : val).trim();
-    const n = parseFloat(toEnDigits(raw));
-    list[i][field] = (raw === '' || !isFinite(n)) ? '' : n;
-  }
-  _amSyncLegacy(list[i]);
-  save();
-  _amPaint();
-  _amModalPaint();
-}
-function deleteAmanatBatch(i) {
-  const list = amBatches();
-  const b = list[i];
-  if (!b) return;
-  if (!confirm('محمولهٔ «' + amBatchLabel(b) + '» با همهٔ ردیف‌های دفترش پاک شود؟')) return;
-  list.splice(i, 1);
-  if (_amModalIdx === i) { _amModalIdx = null; closeModal('amanatBatchModal'); }
-  else if (_amModalIdx != null && _amModalIdx > i) _amModalIdx--;
-  save(); renderAmanat();
-  showToast('🗑️ محموله پاک شد', '#e53e3e');
-}
-/* §۲۴ — تأیید افت. تنها راهی است که یک عدد از «افت تخمینی» به «افت تأییدشده»
-   تبدیل می‌شود، و فقط از همین‌جا (دستِ مدیر) اتفاق می‌افتد. */
-function toggleAmanatApprove(i) {
-  const list = amBatches();
-  const b = list[i];
-  if (!b) return;
-  if (b.lossApproved) {
-    b.lossApproved = false; b.approvedLoss = 0;
-    save(); _amPaint(); _amModalPaint();
-    showToast('↩️ تأیید افت برداشته شد', '#805ad5');
-    return;
-  }
-  const c = amCalc(b);
-  if (!confirm('افت تخمینیِ ' + _amFmt2(c.estLoss) + ' لیتر برای «' + amBatchLabel(b) + '» تأیید شود؟\n'
-    + 'فقط افتِ تأییدشده اجازه دارد از حساب مالیِ امانت کم شود.')) return;
-  b.approvedLoss = Math.round(c.estLoss * 1000) / 1000;
-  b.lossApproved = true;
-  save(); _amPaint(); _amModalPaint();
-  showToast('✅ افت تأیید شد: ' + _amFmt2(b.approvedLoss) + ' لیتر', '#38a169');
-}
-/* تسویه: از این لحظه به بعد روزِ محموله دیگر جلو نمی‌رود، پس افتِ تخمینی هم
-   ثابت می‌ماند. حسابِ بسته پاک نمی‌شود — با کشوی «تسویه‌شده» دیده می‌شود و
-   هر وقت لازم شد باز می‌شود. */
-function toggleAmanatClose(i) {
-  const list = amBatches();
-  const b = list[i];
-  if (!b) return;
-  if (b.closed) {
-    if (!confirm('حسابِ «' + amBatchLabel(b) + '» دوباره باز شود؟\nاز امروز دوباره روز شمرده می‌شود.')) return;
-    b.closed = false; b.closeDate = '';
-    save(); renderAmanat(); _amModalOpenRefresh();
-    showToast('↩️ حساب دوباره باز شد', '#805ad5');
-    return;
-  }
-  const c = amCalc(b);
-  const rest = Math.abs(c.balanceRaw) > 0.0001
-    ? ('\n⚠️ هنوز ' + _amFmt2(c.balanceRaw) + ' لیتر باقی است.') : '';
-  if (!confirm('حسابِ «' + amBatchLabel(b) + '» تسویه‌شده علامت بخورد؟\n'
-    + 'از امروز روز شمرده نمی‌شود و افت تخمینی ثابت می‌ماند.' + rest)) return;
-  b.closed = true; b.closeDate = _amTodayStr();
-  save(); renderAmanat(); _amModalOpenRefresh();
-  showToast('✔ حساب تسویه‌شده علامت خورد', '#38a169');
-}
-
-// ── دفترِ رسید و برداشت ───────────────────────────────────────────────────
-function amAddMove(i, kind) {
-  const b = amBatches()[i];
-  if (!b) return;
-  const mv = amMoves(b);
-  const id = _amMvId();
-  mv.push({ id: id, date: _amTodayStr(), kind: (kind === 'out') ? 'out' : 'in', qty: '', note: '' });
-  _amSyncLegacy(b);
-  save();
-  if (_amModalIdx === i) { _amModalOpenRefresh(); _amFocusMove(id); }
-  else renderAmanat();
-}
-function amUpdateMove(i, mid, field, val) {
-  const b = amBatches()[i];
-  if (!b) return;
-  const m = amMoves(b).find(x => x && x.id === mid);
-  if (!m) return;
-  if (field === 'kind') m.kind = (val === 'out') ? 'out' : 'in';
-  else if (field === 'qty') {
-    const raw = String(val == null ? '' : val).trim();
-    const n = parseFloat(toEnDigits(raw));
-    m.qty = (raw === '' || !isFinite(n)) ? '' : n;
-  }
-  else m[field] = String(val == null ? '' : val).trim();
-  _amSyncLegacy(b);
-  save();
-  _amPaint();
-  // تاریخ و نوع، ترتیبِ دفتر را عوض می‌کنند → دفتر دوباره چیده می‌شود
-  if (field === 'date' || field === 'kind') _amModalOpenRefresh();
-  else _amModalPaint();
-}
-function amDeleteMove(i, mid) {
-  const b = amBatches()[i];
-  if (!b) return;
-  const mv = amMoves(b);
-  const k = mv.findIndex(x => x && x.id === mid);
-  if (k < 0) return;
-  if (!confirm('این ردیفِ دفتر پاک شود؟')) return;
-  mv.splice(k, 1);
-  _amSyncLegacy(b);
-  save();
-  _amModalOpenRefresh();
-  renderAmanat();
-}
-function _amFocusMove(mid) {
-  setTimeout(() => {
-    const el = document.getElementById('am-mv-qty-' + mid);
-    if (el) { try { el.focus(); el.select(); } catch (e) {} }
-  }, 60);
-}
-// از روی کارت: یک ردیفِ رسید/برداشتِ تازه بساز و پرونده را روی همان باز کن
-function amQuickMove(i, kind) {
-  openAmanatBatch(i);
-  amAddMove(i, kind);
-}
-
-// ── رندر ──────────────────────────────────────────────────────────────────
-function _amBlank() {
-  return { n:0, closedN:0, totalIn:0, totalOut:0, estLoss:0, expected:0, actual:0, actualLoss:0,
-           variance:0, balance:0, balanceRaw:0, sold:0, profit:0, approved:0, hasActual:false };
-}
-function _amAccum(t, c) {
-  t.n++;
-  if (c.closed) t.closedN++;
-  t.totalIn += c.totalIn; t.totalOut += c.totalOut;
-  t.estLoss += c.estLoss; t.expected += c.expected;
-  t.balance += c.balance; t.balanceRaw += c.balanceRaw;
-  t.sold += c.sold; t.profit += c.adjustedProfit; t.approved += c.approvedLoss;
-  if (c.hasActual) { t.hasActual = true; t.actual += c.actual; t.actualLoss += c.actualLoss; t.variance += c.variance; }
-}
-function _amCell(id, text, color) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.textContent = text;
-  if (color) el.style.color = color;
-}
-function _amStatusChip(c) {
-  if (c.closed) return '<span class="am-chip cl">✔ تسویه‌شده</span>';
-  if (c.lossApproved) return '<span class="am-chip ok">✔ افت تأییدشده</span>';
-  return '<span class="am-chip">باز</span>';
-}
-function renderAmanat() {
-  const list = amBatches();
+function renderAmanatFee() {
+  const box = document.getElementById('am-fee-out');
+  if (!box) return;
   const s = amSettings();
+  const g = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  const liters = _amHas(g('am-fee-liters')) ? _amNum(g('am-fee-liters')) : 10000;
+  const days   = _amHas(g('am-fee-days'))   ? _amNum(g('am-fee-days'))   : 30;
+  const temp   = _amHas(g('am-fee-temp'))   ? _amNum(g('am-fee-temp'))   : s.defTemp;
+  const fuel   = (g('am-fee-fuel') === 'diesel') ? 'diesel' : 'petrol';
+  const myRaw  = g('am-fee-my');
+  const a = amFeeAdvice(liters, days, temp, fuel, myRaw, s);
 
+  const bx = (l, v, cls) => '<div class="am-fee-box' + (cls ? ' ' + cls : '') + '"><span class="l">' + l + '</span><span class="v">' + v + '</span></div>';
+  box.innerHTML =
+      bx('کمبودیِ تخمینی', _amFmt2(a.loss) + ' ل')
+    + bx('فیصدیِ سربه‌سر', _amFmt(a.needPct, 3) + '٪')
+    + bx('فیصدیِ پیشنهادی', _amFmt(a.safePct, 3) + '٪', 'big')
+    + bx('با فیصدیِ شما', (a.myPct == null ? '—' : (_amFmt2(a.myLiters) + ' ل')))
+    + bx('کم / اضافه', (a.diff == null ? '—' : ((a.diff >= 0 ? '+' : '−') + _amFmt2(Math.abs(a.diff)) + ' ل')));
+
+  const vd = document.getElementById('am-fee-verdict');
+  if (vd) {
+    if (a.myPct == null) {
+      vd.className = 'am-fee-verdict';
+      vd.innerHTML = 'روی <b>' + _amFmt2(a.liters) + '</b> لیتر که <b>' + n2fa(Math.round(days))
+        + '</b> روز در <b>' + _amFmt(temp) + '°C</b> بماند، حدود <b>' + _amFmt2(a.loss)
+        + '</b> لیتر کم می‌آید. برای جبرانش دستِ‌کم <b>' + _amFmt(a.needPct, 3)
+        + '٪</b> بگیرید؛ با حاشیهٔ اطمینان <b>' + _amFmt(a.safePct, 3) + '٪</b> پیشنهاد می‌شود.';
+    } else if (a.diff >= 0) {
+      vd.className = 'am-fee-verdict ok';
+      vd.innerHTML = '✅ با <b>' + _amFmt(a.myPct, 3) + '٪</b> کمبودی جبران می‌شود و <b>'
+        + _amFmt2(a.diff) + '</b> لیتر هم اضافه می‌آید.';
+    } else {
+      vd.className = 'am-fee-verdict bad';
+      vd.innerHTML = '❌ با <b>' + _amFmt(a.myPct, 3) + '٪</b> به اندازهٔ <b>' + _amFmt2(Math.abs(a.diff))
+        + '</b> لیتر کم می‌آورید. دستِ‌کم <b>' + _amFmt(a.needPct, 3) + '٪</b> لازم است.';
+    }
+  }
+
+  const gd = document.getElementById('am-fee-guide');
+  if (gd) {
+    const near = AM_GUIDE_DAYS.reduce((p, c) => Math.abs(c - days) < Math.abs(p - days) ? c : p, AM_GUIDE_DAYS[0]);
+    const rows = AM_GUIDE_DAYS.map(d => {
+      const x = amFeeAdvice(liters, d, temp, fuel, myRaw, s);
+      const cover = (x.myPct == null) ? '—'
+        : ((x.diff >= 0 ? '<span style="color:var(--green)">جبران می‌شود</span>'
+                        : '<span style="color:var(--red)">' + _amFmt2(Math.abs(x.diff)) + ' ل کم</span>'));
+      return '<tr' + (d === near ? ' class="now"' : '') + '>'
+        + '<td>' + n2fa(d) + ' روز</td>'
+        + '<td>' + _amFmt2(x.loss) + ' ل</td>'
+        + '<td>' + _amFmt(x.needPct, 3) + '٪</td>'
+        + '<td>' + _amFmt(x.safePct, 3) + '٪</td>'
+        + '<td>' + cover + '</td></tr>';
+    }).join('');
+    gd.innerHTML = '<table class="am-guide" style="min-width:520px">'
+      + '<thead><tr><th>مدت زمان</th><th>کمبودی</th><th>فیصدیِ سربه‌سر</th><th>فیصدیِ پیشنهادی</th><th>با فیصدیِ شما</th></tr></thead>'
+      + '<tbody>' + rows + '</tbody></table>';
+  }
+}
+
+/* ══ رندر ═════════════════════════════════════════════════════════════════ */
+function renderAmanat() {
+  const list = amAccounts();
+  const wrap = document.getElementById('am-accounts');
+  if (!wrap) return;
   document.querySelectorAll('#am-fuel-tabs .am-tab').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-f') === _amFuelFilter));
-  document.querySelectorAll('#am-status-tabs .am-tab').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-s') === _amStatusFilter));
-  document.querySelectorAll('#am-view-tabs .am-tab').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-v') === _amView));
   const sb = document.getElementById('am-search');
   if (sb && document.activeElement !== sb) sb.value = _amSearch;
-  const tw = document.getElementById('am-table-wrap');
-  const cw = document.getElementById('am-cards');
-  if (tw) tw.style.display = (_amView === 'table') ? '' : 'none';
-  if (cw) cw.style.display = (_amView === 'cards') ? '' : 'none';
 
-  // ── نمای جدولی ─────────────────────────────────────────────────────────
-  const tbody = document.getElementById('am-body');
-  if (tbody) {
-    tbody.innerHTML = '';
-    let seq = 0;
-    list.forEach((b, i) => {
-      if (!_amMatch(b)) return;
-      seq++;
-      const c = amCalc(b, s);
-      const tr = document.createElement('tr');
-      if (c.closed) tr.style.opacity = '.72';
-      tr.innerHTML = `
-        <td style="text-align:center;color:var(--muted)" title="شناسهٔ محموله: ${cmpEsc(b.id)}">${n2fa(seq)}</td>
-        <td><input class="xls-in sm" value="${cmpEsc(b.date)}" placeholder="تاریخ" onchange="updateAmanatRow(${i},'date',this.value);renderAmanat()"></td>
-        <td><input class="xls-in" value="${cmpEsc(b.owner)}" placeholder="نام صاحب تیل" oninput="updateAmanatRow(${i},'owner',this.value)"></td>
-        <td><select class="xls-in xs" style="padding:6px 2px" onchange="updateAmanatRow(${i},'fuel',this.value);renderAmanat()">
-              <option value="petrol" ${b.fuel!=='diesel'?'selected':''}>پطرول</option>
-              <option value="diesel" ${b.fuel==='diesel'?'selected':''}>دیزل</option>
-            </select></td>
-        <td class="am-calc" id="am-c-in-${i}">—</td>
-        <td class="am-calc" id="am-c-out-${i}">—</td>
-        <td class="am-calc" id="am-c-days-${i}">—</td>
-        <td><input class="xls-in xs" type="number" step="0.1" value="${cmpEsc(b.temp)}" placeholder="${_amFmt(s.defTemp)}" title="خالی = دمای پیش‌فرضِ تنظیمات" oninput="updateAmanatRow(${i},'temp',this.value)"></td>
-        <td><input class="xls-in xs" type="number" step="0.01" value="${cmpEsc(b.basePct)}" placeholder="پیش‌فرض" title="خالی = درصد پایهٔ تنظیمات" oninput="updateAmanatRow(${i},'basePct',this.value)"></td>
-        <td class="am-calc" id="am-c-loss-${i}">—</td>
-        <td class="am-calc" id="am-c-expected-${i}">—</td>
-        <td><input class="xls-in sm" type="number" step="0.01" value="${cmpEsc(b.actual)}" placeholder="ثبت نشده" oninput="updateAmanatRow(${i},'actual',this.value)"></td>
-        <td class="am-calc" id="am-c-actualloss-${i}">—</td>
-        <td class="am-calc" id="am-c-variance-${i}">—</td>
-        <td class="am-calc" id="am-c-variancepct-${i}">—</td>
-        <td class="am-calc" id="am-c-balance-${i}">—</td>
-        <td class="am-calc" id="am-c-profit-${i}">—</td>
-        <td id="am-c-appr-${i}" style="text-align:center"></td>
-        <td id="am-c-state-${i}" style="text-align:center"></td>
-        <td style="text-align:center"><button class="am-mini" title="پروندهٔ کاملِ این محموله" onclick="openAmanatBatch(${i})">📋</button></td>
-        <td style="text-align:center"><button class="del-btn" onclick="deleteAmanatBatch(${i})">🗑️</button></td>`;
-      tbody.appendChild(tr);
-    });
-    if (!seq) tbody.innerHTML = '<tr><td colspan="21" class="am-empty">' + _amEmptyText() + '</td></tr>';
-  }
+  const s = amSettings();
+  let shown = 0;
+  const html = list.map((a, ai) => {
+    if (!a || !_amAccMatch(a)) return '';
+    shown++;
+    return _amAccountHtml(a, ai, shown, s);
+  }).join('');
+  wrap.innerHTML = html || ('<div class="am-empty">' + _amEmptyText() + '</div>');
+
   fillAmanatSettings();
+  renderAmanatFee();
   _amPaint();
 }
 function _amEmptyText() {
-  if (_amSearch.trim()) return 'با «' + escFa(_amSearch.trim()) + '» چیزی پیدا نشد.';
-  if (_amStatusFilter === 'closed') return 'هنوز حسابِ تسویه‌شده‌ای نیست.';
-  if (_amFuelFilter !== 'all') return 'برای ' + (_amFuelFilter === 'diesel' ? 'دیزل' : 'پطرول') + ' محموله‌ای ثبت نشده — دکمهٔ «➕ محمولهٔ جدید» را بزنید.';
-  return 'هنوز محموله‌ای ثبت نشده — دکمهٔ «➕ محمولهٔ جدید» را بزنید.';
+  if (_amSearch.trim()) return 'با «' + escFa(_amSearch.trim()) + '» حسابی پیدا نشد.';
+  if (_amFuelFilter !== 'all') return 'برای ' + (_amFuelFilter === 'diesel' ? 'دیزل' : 'پطرول') + ' حسابی نیست — دکمهٔ «➕ حساب جدید» را بزنید.';
+  return 'هنوز حسابی ثبت نشده — دکمهٔ «➕ حساب جدید» را بزنید.';
 }
-/* فقط خانه‌های محاسبه‌شده، جمع‌ها، کارت‌ها و کادرهای خلاصه را تازه می‌کند —
-   بدونِ ساختنِ دوبارهٔ ردیف‌های جدول، وگرنه با هر حرفی که تایپ می‌شود کادر از
-   دستِ کاربر می‌پرید (همان کاری که صرافی و گاوصندوق می‌کنند). */
+/* یک کادرِ کامل: سربرگ (نام، نوع تیل، جمع‌ها، فیصدی) + جدولِ ردیف‌ها + جمع */
+function _amAccountHtml(a, ai, seq, s) {
+  const fuel = amFuelKey(a);
+  const rows = (a.rows || []).map((r, ri) => {
+    const closed = (r.state === 'closed');
+    return `<tr>
+      <td style="text-align:center;color:var(--muted)">${n2fa(ri + 1)}</td>
+      <td><input class="xls-in sm" value="${cmpEsc(r.date)}" placeholder="تاریخ" onchange="updateAmanatRow(${ai},${ri},'date',this.value);renderAmanat()"></td>
+      <td><input class="xls-in" value="${cmpEsc(r.name)}" placeholder="نام" oninput="updateAmanatRow(${ai},${ri},'name',this.value)"></td>
+      <td><input class="xls-in" value="${cmpEsc(r.toAcct)}" placeholder="به حسابهٔ…" oninput="updateAmanatRow(${ai},${ri},'toAcct',this.value)"></td>
+      <td><input class="xls-in sm" id="am-in-liters-${ai}-${ri}" type="number" step="0.01" value="${cmpEsc(r.liters)}" placeholder="0" oninput="updateAmanatRow(${ai},${ri},'liters',this.value)"></td>
+      <td><input class="xls-in xs" type="number" step="1" value="${cmpEsc(r.days)}" placeholder="خودکار" title="خالی = خودکار از تاریخ تا امروز" oninput="updateAmanatRow(${ai},${ri},'days',this.value)"></td>
+      <td><input class="xls-in xs" type="number" step="0.1" value="${cmpEsc(r.temp)}" placeholder="${_amFmt(s.defTemp)}" title="خالی = گرمای پیش‌فرضِ تنظیمات" oninput="updateAmanatRow(${ai},${ri},'temp',this.value)"></td>
+      <td>
+        <div class="am-state">
+          <button class="${closed ? '' : 'on open'}" onclick="setAmanatRowState(${ai},${ri},'open')">باز</button>
+          <button class="${closed ? 'on shut' : ''}" onclick="setAmanatRowState(${ai},${ri},'closed')">بسته</button>
+        </div>
+      </td>
+      <td class="am-calc" id="am-c-pct-${ai}-${ri}">—</td>
+      <td class="am-calc" id="am-c-rest-${ai}-${ri}">—</td>
+      <td><input class="xls-in xs" type="number" step="0.01" value="${cmpEsc(r.basePct)}" placeholder="${_amFmt(s.basePct, 3)}" title="خالی = پایهٔ تنظیمات" oninput="updateAmanatRow(${ai},${ri},'basePct',this.value)"></td>
+      <td style="text-align:center"><button class="del-btn" onclick="deleteAmanatRow(${ai},${ri})">🗑️</button></td>
+    </tr>`;
+  }).join('');
+
+  return `<div class="am-acc ${fuel === 'diesel' ? 'dz' : 'pt'}" id="am-acc-${ai}">
+    <div class="am-acc-head">
+      <div class="am-acc-r1">
+        <span class="am-acc-n">${n2fa(seq)}</span>
+        <input class="am-acc-name" id="am-acc-name-${ai}" value="${cmpEsc(a.name)}" placeholder="نام حساب / صاحب تیل" oninput="updateAmanatAccount(${ai},'name',this.value)">
+        <select class="am-acc-fuel" onchange="updateAmanatAccount(${ai},'fuel',this.value);renderAmanat()">
+          <option value="petrol" ${fuel !== 'diesel' ? 'selected' : ''}>⛽ پطرول</option>
+          <option value="diesel" ${fuel === 'diesel' ? 'selected' : ''}>🟤 دیزل</option>
+        </select>
+        <div class="am-acc-btns">
+          <button class="am-acc-btn grn" onclick="addAmanatRow(${ai})">➕ ردیف</button>
+          <button class="am-acc-btn blue" onclick="printAmanatAccount(${ai})">📄</button>
+          <button class="am-acc-btn red" onclick="deleteAmanatAccount(${ai})">🗑️</button>
+        </div>
+      </div>
+      <div class="am-acc-chips" id="am-acc-chips-${ai}"></div>
+      <div class="am-acc-pct">
+        <span>فیصدیِ من (٪)</span>
+        <input type="number" step="0.01" value="${cmpEsc(a.myPct)}" placeholder="0" oninput="updateAmanatAccount(${ai},'myPct',this.value)">
+        <span class="vd" id="am-acc-vd-${ai}"></span>
+      </div>
+    </div>
+    <div class="am-acc-body">
+      <div class="xls-wrap" style="overflow:auto">
+        <table class="xls-tbl" style="min-width:930px">
+          <thead><tr>
+            <th style="width:30px">#</th>
+            <th style="width:88px">تاریخ</th>
+            <th style="min-width:96px">نام</th>
+            <th style="min-width:96px">به حسابهٔ</th>
+            <th style="width:88px">رسید تیل</th>
+            <th style="width:74px">مدت زمان</th>
+            <th style="width:74px">درجه گرما</th>
+            <th style="width:96px">در مخزن</th>
+            <th style="width:88px">درصد کمبودی</th>
+            <th style="width:92px">باقی تیل</th>
+            <th style="width:68px">پایه</th>
+            <th style="width:42px">حذف</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+          <tfoot class="xls-foot"><tr>
+            <td colspan="4" style="padding:8px 7px">جمله</td>
+            <td class="xls-calc" id="am-ft-liters-${ai}">0</td>
+            <td colspan="3"></td>
+            <td class="xls-calc" id="am-ft-loss-${ai}">0</td>
+            <td class="xls-calc" id="am-ft-rest-${ai}">0</td>
+            <td colspan="2"></td>
+          </tr></tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="am-acc-foot">
+      <button class="am-acc-btn grn" onclick="addAmanatRow(${ai})">➕ ردیف تازه</button>
+      <button class="am-acc-btn" onclick="amApplySuggested(${ai})" title="فیصدیِ پیشنهادی را در خانهٔ «فیصدیِ من» بگذار">🧮 فیصدیِ پیشنهادی را بگذار</button>
+    </div>
+  </div>`;
+}
+/* فقط خانه‌های محاسبه‌شده، جمع‌ها و سربرگ‌ها را تازه می‌کند — بدونِ ساختنِ
+   دوبارهٔ ردیف‌ها، وگرنه با هر حرفی که تایپ می‌شود خانه از دستِ کاربر می‌پرید
+   (همان کاری که صرافی و گاوصندوق می‌کنند). */
 function _amPaint() {
-  const list = amBatches();
+  const list = amAccounts();
   const s = amSettings();
-  const tot = _amBlank();
-  const per = { petrol: _amBlank(), diesel: _amBlank() };
-  const owners = {};
+  const per = { petrol: { n:0, liters:0, loss:0, rest:0 }, diesel: { n:0, liters:0, loss:0, rest:0 } };
   const err = [], warn = [];
-  const cards = [];
 
-  list.forEach((b, i) => {
-    const c = amCalc(b, s);
-    const fuel = amFuelKey(b);
-    _amAccum(per[fuel], c);   // کادرهای خلاصه همیشه پطرول و دیزل را جدا نگه می‌دارند
+  list.forEach((a, ai) => {
+    const fuel = amFuelKey(a);
+    const t = amAccCalc(a, s);
+    per[fuel].n++; per[fuel].liters += t.liters; per[fuel].loss += t.loss; per[fuel].rest += t.rest;
+    if (!_amAccMatch(a)) return;
 
-    // صاحبانِ تیل — فقط حساب‌های باز، چون «چقدر امانتِ مردم دستِ ماست» مهم است
-    if (!c.closed) {
-      const nm = String(b.owner || '').trim() || 'بی‌نام';
-      if (!owners[nm]) owners[nm] = { n: 0, petrol: 0, diesel: 0 };
-      owners[nm].n++;
-      owners[nm][fuel] += c.balanceRaw;
+    (a.rows || []).forEach((r, ri) => {
+      const c = amRowCalc(r, a, s);
+      const pe = document.getElementById('am-c-pct-' + ai + '-' + ri);
+      if (pe) { pe.textContent = _amFmt(c.lossPct, 3) + '٪'; pe.style.color = 'var(--accent)'; }
+      const re = document.getElementById('am-c-rest-' + ai + '-' + ri);
+      if (re) { re.textContent = _amFmt2(c.rest); re.style.color = 'var(--green)'; }
+      // «مدت زمان»ِ خودکار داخل همان خانه نشان داده می‌شود (بدون بازنویسیِ تایپ)
+      const de = document.querySelector('#am-acc-' + ai + ' tbody tr:nth-child(' + (ri + 1) + ') td:nth-child(6) input');
+      if (de && de !== document.activeElement && !c.manual) de.placeholder = n2fa(c.autoDays) + ' روز';
+      if (c.liters > 0 && !c.dateOk && !c.manual) warn.push(amAccLabel(a) + ' — ردیفِ ' + n2fa(ri + 1) + ': تاریخ ثبت نشده، پس مدت زمان خودکار شمرده نمی‌شود.');
+      if (_amNum(r.liters) < 0) err.push(amAccLabel(a) + ' — ردیفِ ' + n2fa(ri + 1) + ': رسید تیل نمی‌تواند کمتر از صفر باشد.');
+      if (_amHas(r.temp) && (_amNum(r.temp) < -50 || _amNum(r.temp) > 80)) warn.push(amAccLabel(a) + ' — ردیفِ ' + n2fa(ri + 1) + ': درجه گرمای واردشده غیرعادی است.');
+    });
+
+    const ft = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    ft('am-ft-liters-' + ai, _amFmt2(t.liters));
+    ft('am-ft-loss-' + ai, _amFmt(t.lossPct, 3) + '٪');
+    ft('am-ft-rest-' + ai, _amFmt2(t.rest));
+
+    const chips = document.getElementById('am-acc-chips-' + ai);
+    if (chips) {
+      chips.innerHTML =
+          '<span class="am-acc-chip">رسید کل <b>' + _amFmt2(t.liters) + '</b> ل</span>'
+        + '<span class="am-acc-chip acc">کمبودی <b>' + _amFmt2(t.loss) + '</b> ل</span>'
+        + '<span class="am-acc-chip grn">باقی تیل <b>' + _amFmt2(t.rest) + '</b> ل</span>'
+        + '<span class="am-acc-chip blue">فیصدیِ سربه‌سر <b>' + _amFmt(t.needPct, 3) + '٪</b></span>'
+        + '<span class="am-acc-chip">پیشنهادی <b>' + _amFmt(t.safePct, 3) + '٪</b></span>'
+        + '<span class="am-acc-chip">' + n2fa(t.n) + ' ردیف · ' + n2fa(t.open) + ' باز</span>';
     }
-    if (!_amMatch(b)) return;
-
-    _amAccum(tot, c);
-    const w = amWarnings(b, c);
-    w.err.forEach(m => err.push(m));
-    w.warn.forEach(m => warn.push(m));
-
-    // خانه‌های جدول
-    _amCell('am-c-in-' + i, _amFmt2(c.totalIn), 'var(--green)');
-    _amCell('am-c-out-' + i, _amFmt2(c.totalOut), 'var(--red)');
-    _amCell('am-c-days-' + i, n2fa(c.days) + (c.autoMode ? '' : ' *'), 'var(--muted)');
-    _amCell('am-c-loss-' + i, _amFmt2(c.estLoss), 'var(--accent)');
-    _amCell('am-c-expected-' + i, _amFmt2(c.expected), 'var(--blue)');
-    _amCell('am-c-actualloss-' + i, c.hasActual ? _amFmt2(c.actualLoss) : '—', 'var(--txt)');
-    _amCell('am-c-variance-' + i, c.hasActual ? _amFmt2(c.variance) : '—',
-            c.hasActual ? (Math.abs(c.variance) < 0.005 ? 'var(--green)' : (c.variance > 0 ? 'var(--red)' : 'var(--blue)')) : 'var(--muted)');
-    _amCell('am-c-variancepct-' + i, c.hasActual ? (_amFmt2(c.variancePct) + '٪') : '—', 'var(--muted)');
-    _amCell('am-c-balance-' + i, _amFmt2(c.balance), 'var(--green)');
-    _amCell('am-c-profit-' + i, _amFmt(c.adjustedProfit), c.adjustedProfit < 0 ? 'var(--red)' : 'var(--green)');
-    const ap = document.getElementById('am-c-appr-' + i);
-    if (ap) {
-      ap.innerHTML = '<button class="am-mini' + (c.lossApproved ? ' on' : '') + '" onclick="toggleAmanatApprove(' + i + ')">'
-        + (c.lossApproved ? ('✔ ' + _amFmt2(c.approvedLoss)) : 'تأیید افت') + '</button>';
+    const vd = document.getElementById('am-acc-vd-' + ai);
+    if (vd) {
+      if (t.myPct == null) { vd.className = 'vd'; vd.textContent = 'بنویسید تا بگوید کم می‌آید یا اضافه'; }
+      else if (t.diff >= 0) { vd.className = 'vd ok'; vd.textContent = '✅ ' + _amFmt2(t.myLiters) + ' ل می‌گیرید — ' + _amFmt2(t.diff) + ' ل اضافه می‌آید'; }
+      else { vd.className = 'vd bad'; vd.textContent = '❌ ' + _amFmt2(t.myLiters) + ' ل می‌گیرید — ' + _amFmt2(Math.abs(t.diff)) + ' ل کم می‌آورید'; }
     }
-    const st = document.getElementById('am-c-state-' + i);
-    if (st) {
-      st.innerHTML = '<button class="am-mini' + (c.closed ? ' on' : '') + '" onclick="toggleAmanatClose(' + i + ')">'
-        + (c.closed ? '✔ تسویه' : 'باز') + '</button>';
-    }
-    cards.push(_amCardBatchHtml(b, c, i));
   });
-
-  // کارت‌ها
-  const cw = document.getElementById('am-cards');
-  if (cw) cw.innerHTML = cards.length ? cards.join('') : ('<div class="am-empty">' + _amEmptyText() + '</div>');
-
-  // جمع‌های جدول
-  const ft = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  ft('am-ft-in', _amFmt2(tot.totalIn));
-  ft('am-ft-out', _amFmt2(tot.totalOut));
-  ft('am-ft-loss', _amFmt2(tot.estLoss));
-  ft('am-ft-expected', _amFmt2(tot.expected));
-  ft('am-ft-actual', tot.hasActual ? _amFmt2(tot.actual) : '—');
-  ft('am-ft-actualloss', tot.hasActual ? _amFmt2(tot.actualLoss) : '—');
-  ft('am-ft-variance', tot.hasActual ? _amFmt2(tot.variance) : '—');
-  ft('am-ft-balance', _amFmt2(tot.balance));
-  ft('am-ft-profit', _amFmt(tot.profit));
-  ft('am-ft-approved', _amFmt2(tot.approved));
 
   const sum = document.getElementById('am-summary');
   if (sum) {
-    sum.innerHTML = _amCardHtml('⛽ پطرول', 'var(--accent)', per.petrol, s)
-                  + _amCardHtml('🟤 دیزل', 'var(--night)', per.diesel, s);
+    sum.innerHTML = _amSumCardHtml('⛽ پطرول', 'var(--accent)', per.petrol, s)
+                  + _amSumCardHtml('🟤 دیزل', 'var(--night)', per.diesel, s);
   }
-  _amPaintOwners(owners);
-
   const wbox = document.getElementById('am-warns');
   if (wbox) {
     let h = '';
@@ -38942,334 +38750,37 @@ function _amPaint() {
     wbox.innerHTML = h;
   }
 }
-function _amPaintOwners(owners) {
-  const box = document.getElementById('am-owners');
-  if (!box) return;
-  const names = Object.keys(owners).sort((a, b) =>
-    ((owners[b].petrol + owners[b].diesel) - (owners[a].petrol + owners[a].diesel)) || a.localeCompare(b, 'fa'));
-  if (!names.length) { box.innerHTML = ''; return; }
-  const q = (typeof normFa === 'function') ? normFa(_amSearch) : String(_amSearch).trim().toLowerCase();
-  const chips = names.map(nm => {
-    const o = owners[nm];
-    const parts = [];
-    if (o.petrol) parts.push('⛽ ' + _amFmt2(o.petrol) + ' ل');
-    if (o.diesel) parts.push('🟤 ' + _amFmt2(o.diesel) + ' ل');
-    if (!parts.length) parts.push('بدون باقی‌مانده');
-    const on = (q && ((typeof normFa === 'function') ? normFa(nm) : nm.toLowerCase()) === q) ? ' on' : '';
-    return '<button type="button" class="am-owner' + on + '" onclick="setAmanatSearch(' + escFa(JSON.stringify(nm)) + ')">'
-      + '<b>' + escFa(nm) + '</b><span>' + parts.join(' · ') + ' · ' + n2fa(o.n) + ' محموله</span></button>';
-  }).join('');
-  box.innerHTML = '<div class="am-owners"><div class="am-owners-t">👤 صاحبانِ تیل — باقی‌ماندهٔ حساب‌های باز '
-    + '<span style="color:var(--muted);font-weight:700">(برای فیلتر، روی نام بزنید)</span></div>'
-    + '<div class="am-owner-chips">' + chips + '</div></div>';
-}
-function _amCardBatchHtml(b, c, i) {
-  const fuel = amFuelKey(b);
+function _amSumCardHtml(title, color, t, s) {
+  const pct = t.liters > 0 ? (t.loss / t.liters) * 100 : 0;
   const rows = [
-    ['رسید کل', _amFmt2(c.totalIn) + ' ل'],
-    ['برداشت کل', _amFmt2(c.totalOut) + ' ل'],
-    ['افت تخمینی', _amFmt2(c.estLoss) + ' ل'],
-    ['موجودی مورد انتظار', _amFmt2(c.expected) + ' ل'],
-    ['موجودی واقعی', c.hasActual ? (_amFmt2(c.actual) + ' ل') : 'ثبت نشده']
-  ];
-  if (c.hasActual) rows.push(['اختلاف', _amFmt2(c.variance) + ' ل · ' + _amFmt2(c.variancePct) + '٪']);
-  if (c.lossApproved) rows.push(['افت تأییدشده', _amFmt2(c.approvedLoss) + ' ل']);
-  return '<div class="am-b' + (c.closed ? ' closed' : '') + '">'
-    + '<div class="am-b-top"><span class="am-b-name">' + escFa(String(b.owner || '').trim() || 'محمولهٔ بی‌نام') + '</span>'
-    + '<span class="am-chip ' + (fuel === 'diesel' ? 'd' : 'p') + '">' + (fuel === 'diesel' ? '🟤 دیزل' : '⛽ پطرول') + '</span>'
-    + _amStatusChip(c) + '</div>'
-    + '<div class="am-b-meta">📅 ' + escFa(b.date || '—') + ' · ' + n2fa(c.days) + ' روز'
-    + (c.autoMode ? '' : ' (دستی)') + ' · 🌡️ ' + _amFmt(c.temp) + '°C · '
-    + n2fa(c.moveCount) + ' حرکت در دفتر</div>'
-    + '<div class="am-b-big"><b>' + _amFmt2(c.balanceRaw) + '</b><i>لیتر باقی‌مانده</i></div>'
-    + '<div class="am-b-grid">'
-    + rows.map(r => '<span class="l">' + r[0] + '</span><span class="v">' + r[1] + '</span>').join('')
-    + '</div>'
-    + '<div class="am-b-acts">'
-    + '<button class="go" onclick="openAmanatBatch(' + i + ')">📋 پرونده</button>'
-    + '<button class="inb" onclick="amQuickMove(' + i + ',\'in\')">➕ رسید</button>'
-    + '<button class="outb" onclick="amQuickMove(' + i + ',\'out\')">➖ برداشت</button>'
-    + '</div></div>';
-}
-function _amCardHtml(title, color, t, s) {
-  const varPct = (t.totalIn > 0) ? (t.variance / t.totalIn) * 100 : 0;
-  const rows = [
-    ['رسید کل', _amFmt2(t.totalIn) + ' ل'],
-    ['برداشت کل', _amFmt2(t.totalOut) + ' ل'],
-    ['باقی‌مانده', _amFmt2(t.balanceRaw) + ' ل'],
+    ['رسید کل', _amFmt2(t.liters) + ' ل'],
+    ['کمبودیِ تخمینی', _amFmt2(t.loss) + ' ل'],
+    ['باقی تیل', _amFmt2(t.rest) + ' ل'],
     ['sep'],
-    ['افت تخمینی', _amFmt2(t.estLoss) + ' ل'],
-    ['موجودی مورد انتظار', _amFmt2(t.expected) + ' ل'],
-    ['موجودی واقعی', t.hasActual ? (_amFmt2(t.actual) + ' ل') : 'ثبت نشده'],
-    ['افت واقعی', t.hasActual ? (_amFmt2(t.actualLoss) + ' ل') : '—'],
-    ['اختلاف موجودی', t.hasActual ? (_amFmt2(t.variance) + ' ل · ' + _amFmt2(varPct) + '٪') : '—'],
-    ['sep'],
-    ['افت تأییدشده', _amFmt2(t.approved) + ' ل'],
-    ['موجودی مالی', _amFmt2(t.balance) + ' ل'],
-    ['فروخته‌شده', _amFmt2(t.sold) + ' ل'],
-    [s.applyLossToProfit ? 'سود (پس از کسر افت)' : 'سود کل', _amFmt(t.profit)]
+    ['درصد کمبودی', _amFmt(pct, 3) + '٪'],
+    ['فیصدیِ سربه‌سر', _amFmt(pct, 3) + '٪'],
+    ['فیصدیِ پیشنهادی', _amFmt(pct * (1 + s.safetyPct / 100), 3) + '٪']
   ];
   return '<div class="am-card" style="border-color:' + color + '">'
     + '<div class="am-card-t" style="color:' + color + '">' + title
-    + ' <span style="color:var(--muted);font-weight:700;font-size:0.74rem">(' + n2fa(t.n) + ' محموله'
-    + (t.closedN ? ('، ' + n2fa(t.closedN) + ' تسویه‌شده') : '') + ')</span></div>'
+    + ' <span style="color:var(--muted);font-weight:700;font-size:0.74rem">(' + n2fa(t.n) + ' حساب)</span></div>'
     + '<div class="am-rows">'
     + rows.map(r => r[0] === 'sep' ? '<span class="sep"></span>'
                  : ('<span class="l">' + r[0] + '</span><span class="v">' + r[1] + '</span>')).join('')
     + '</div></div>';
 }
-
-/* ══ پروندهٔ محموله ═══════════════════════════════════════════════════════
-   دفترِ رسید/برداشت، ریزِ محاسبهٔ افت، اندازه‌گیریِ واقعی، تأییدِ افت و سود —
-   همه در یک صفحه. ═══════════════════════════════════════════════════════ */
-function openAmanatBatch(i) {
-  const b = amBatches()[i];
-  if (!b) return;
-  _amModalIdx = i;
-  /* ⚠️ اول پرده باز شود، بعد ساخته شود. _amModalPaint فقط وقتی کار می‌کند که
-     پرده «open» باشد؛ اگر ترتیب برعکس شود، همهٔ خانه‌های محاسبه‌شده (خلاصهٔ
-     حساب، ریزِ افت، اندازه‌گیری واقعی و سود) خالی باز می‌شوند. */
-  const ov = document.getElementById('amanatBatchModal');
-  if (ov) ov.classList.add('open');
-  _amModalBuild();
-}
-// نامِ قدیمی — جایی از برنامه ممکن است هنوز صدایش بزند
-function openAmanatResult(i) { openAmanatBatch(i); }
-function _amModalOpenRefresh() {
-  const ov = document.getElementById('amanatBatchModal');
-  if (!ov || !ov.classList.contains('open') || _amModalIdx == null) return;
-  _amModalBuild();
-}
-function _amModalBuild() {
-  const i = _amModalIdx;
-  const b = (i == null) ? null : amBatches()[i];
-  const box = document.getElementById('am-md-body');
-  if (!box) return;
-  if (!b) { box.innerHTML = ''; return; }
-  const s = amSettings();
-  const c = amCalc(b, s);
-  const ttl = document.getElementById('am-md-title');
-  if (ttl) ttl.textContent = '🧾 ' + amBatchLabel(b);
-
-  const mvRows = c.ordered.map(e => {
-    const m = e.m;
-    return `<tr>
-      <td><input class="xls-in sm" value="${cmpEsc(m.date)}" placeholder="تاریخ" onchange="amUpdateMove(${i},'${cmpEsc(m.id)}','date',this.value)"></td>
-      <td><select class="xls-in xs" style="padding:6px 2px" onchange="amUpdateMove(${i},'${cmpEsc(m.id)}','kind',this.value)">
-            <option value="in" ${m.kind!=='out'?'selected':''}>رسید</option>
-            <option value="out" ${m.kind==='out'?'selected':''}>برداشت</option>
-          </select></td>
-      <td><input class="xls-in sm" id="am-mv-qty-${cmpEsc(m.id)}" type="number" step="0.01" value="${cmpEsc(m.qty)}" placeholder="0" oninput="amUpdateMove(${i},'${cmpEsc(m.id)}','qty',this.value)"></td>
-      <td class="am-calc" id="am-mv-bal-${cmpEsc(m.id)}">—</td>
-      <td><input class="xls-in" value="${cmpEsc(m.note)}" placeholder="یادداشت" oninput="amUpdateMove(${i},'${cmpEsc(m.id)}','note',this.value)"></td>
-      <td style="text-align:center"><button class="del-btn" onclick="amDeleteMove(${i},'${cmpEsc(m.id)}')">🗑️</button></td>
-    </tr>`;
-  }).join('');
-
-  box.innerHTML = `
-  <!-- مشخصات -->
-  <div class="am-md-sec">
-    <div class="am-md-t">📌 مشخصات محموله
-      <span style="color:var(--muted);font-weight:700;font-size:0.7rem" dir="ltr">${escFa(b.id || '')}</span></div>
-    <div class="am-md-grid">
-      <label class="am-md-f"><span>صاحب تیل</span>
-        <input value="${cmpEsc(b.owner)}" placeholder="نام صاحب تیل" oninput="updateAmanatRow(${i},'owner',this.value)"></label>
-      <label class="am-md-f"><span>نوع سوخت</span>
-        <select onchange="updateAmanatRow(${i},'fuel',this.value);_amModalOpenRefresh();renderAmanat()">
-          <option value="petrol" ${b.fuel!=='diesel'?'selected':''}>⛽ پطرول</option>
-          <option value="diesel" ${b.fuel==='diesel'?'selected':''}>🟤 دیزل</option>
-        </select></label>
-      <label class="am-md-f"><span>تاریخ شروع امانت</span>
-        <input value="${cmpEsc(b.date)}" placeholder="1404/05/03" onchange="updateAmanatRow(${i},'date',this.value);_amModalOpenRefresh();renderAmanat()"></label>
-      <label class="am-md-f"><span>میانگین دما °C (خالی = ${_amFmt(s.defTemp)})</span>
-        <input type="number" step="0.1" value="${cmpEsc(b.temp)}" placeholder="${_amFmt(s.defTemp)}" oninput="updateAmanatRow(${i},'temp',this.value)"></label>
-      <label class="am-md-f"><span>٪ پایهٔ افت (خالی = ${_amFmt(s.basePct, 3)})</span>
-        <input type="number" step="0.01" value="${cmpEsc(b.basePct)}" placeholder="${_amFmt(s.basePct, 3)}" oninput="updateAmanatRow(${i},'basePct',this.value)"></label>
-      <label class="am-md-f"><span>شمارشِ روز</span>
-        <select onchange="updateAmanatRow(${i},'daysMode',this.value);_amModalOpenRefresh();renderAmanat()">
-          <option value="auto" ${b.daysMode!=='manual'?'selected':''}>خودکار از تاریخ</option>
-          <option value="manual" ${b.daysMode==='manual'?'selected':''}>دستی</option>
-        </select></label>
-      <label class="am-md-f" id="am-md-daysbox" style="${b.daysMode==='manual'?'':'display:none'}"><span>روزِ دستی</span>
-        <input type="number" step="1" value="${cmpEsc(b.days)}" placeholder="0" oninput="updateAmanatRow(${i},'days',this.value)"></label>
-    </div>
-    <label class="am-md-f" style="margin-top:9px"><span>یادداشت این محموله</span>
-      <textarea placeholder="مثلاً: تیلِ شرکتِ … — تحویل با تانکر" oninput="updateAmanatRow(${i},'note',this.value)">${escFa(b.note || '')}</textarea></label>
-    <div class="am-md-btns">
-      <button class="am-md-btn ${c.closed ? 'on' : 'grn'}" onclick="toggleAmanatClose(${i})">${c.closed ? '↩️ باز کردن دوبارهٔ حساب' : '✔ تسویه‌شده علامت بزن'}</button>
-      <button class="am-md-btn red" onclick="deleteAmanatBatch(${i})">🗑️ حذف محموله</button>
-    </div>
-    ${c.closed ? '<div class="am-formula">این حساب در تاریخ <b>' + escFa(b.closeDate || '—') + '</b> تسویه‌شده علامت خورده؛ از آن تاریخ روز شمرده نمی‌شود و افتِ تخمینی ثابت مانده.</div>' : ''}
-  </div>
-
-  <!-- خلاصه -->
-  <div class="am-md-sec">
-    <div class="am-md-t">📊 خلاصهٔ حساب</div>
-    <div class="am-rows" id="am-md-sum"></div>
-  </div>
-
-  <!-- دفتر -->
-  <div class="am-md-sec">
-    <div class="am-md-t">📒 دفترِ رسید و برداشت
-      <span style="color:var(--muted);font-weight:700;font-size:0.7rem">هر حرکت با تاریخِ خودش — همین‌ها مبنای افت‌اند</span></div>
-    <div class="xls-wrap" style="overflow:auto">
-      <table class="xls-tbl" style="min-width:540px">
-        <thead><tr>
-          <th style="min-width:88px">تاریخ</th>
-          <th style="min-width:78px">نوع</th>
-          <th style="min-width:82px">مقدار (لیتر)</th>
-          <th style="min-width:92px">موجودی پس از آن</th>
-          <th style="min-width:110px">یادداشت</th>
-          <th style="min-width:44px">حذف</th>
-        </tr></thead>
-        <tbody>${mvRows || '<tr><td colspan="6" class="am-empty">دفتر خالی است — با دکمه‌های زیر ردیف بسازید.</td></tr>'}</tbody>
-      </table>
-    </div>
-    <div class="am-md-btns">
-      <button class="am-md-btn grn" onclick="amAddMove(${i},'in')">➕ ردیف رسید</button>
-      <button class="am-md-btn red" onclick="amAddMove(${i},'out')">➖ ردیف برداشت</button>
-    </div>
-  </div>
-
-  <!-- ریزِ محاسبهٔ افت -->
-  <div class="am-md-sec">
-    <div class="am-md-t">🧮 افت تخمینی چطور حساب شد؟</div>
-    <div class="xls-wrap" style="overflow:auto"><div id="am-md-steps"></div></div>
-    <div class="am-formula" id="am-md-formula"></div>
-  </div>
-
-  <!-- اندازه‌گیری واقعی -->
-  <div class="am-md-sec">
-    <div class="am-md-t">📏 اندازه‌گیریِ واقعی و تأییدِ افت</div>
-    <div class="am-md-grid">
-      <label class="am-md-f"><span>موجودی واقعیِ اندازه‌گیری‌شده (لیتر)</span>
-        <input type="number" step="0.01" value="${cmpEsc(b.actual)}" placeholder="ثبت نشده" oninput="updateAmanatRow(${i},'actual',this.value)"></label>
-    </div>
-    <div class="am-rows" id="am-md-actual" style="margin-top:10px"></div>
-    <div class="am-md-btns">
-      <button class="am-md-btn ${c.lossApproved ? 'on' : 'pur'}" id="am-md-approve" onclick="toggleAmanatApprove(${i})">${c.lossApproved ? '↩️ برداشتن تأیید افت' : '✔ تأیید افت'}</button>
-    </div>
-  </div>
-
-  <!-- سود -->
-  <div class="am-md-sec">
-    <div class="am-md-t">💰 قیمت و سود</div>
-    <div class="am-md-grid">
-      <label class="am-md-f"><span>قیمت خرید هر لیتر</span>
-        <input type="number" step="0.01" value="${cmpEsc(b.buyPrice)}" placeholder="0" oninput="updateAmanatRow(${i},'buyPrice',this.value)"></label>
-      <label class="am-md-f"><span>درصد سود (٪)</span>
-        <input type="number" step="0.01" value="${cmpEsc(b.profitPct)}" placeholder="0" oninput="updateAmanatRow(${i},'profitPct',this.value)"></label>
-      <label class="am-md-f"><span>مقدار فروخته‌شده (لیتر)</span>
-        <input type="number" step="0.01" value="${cmpEsc(b.sold)}" placeholder="0" oninput="updateAmanatRow(${i},'sold',this.value)"></label>
-    </div>
-    <div class="am-rows" id="am-md-profit" style="margin-top:10px"></div>
-  </div>
-
-  <div class="am-res-msg" id="am-md-msg"></div>`;
-
-  _amModalPaint();
-}
-function _amModalPaint() {
-  const i = _amModalIdx;
-  const ov = document.getElementById('amanatBatchModal');
-  if (!ov || !ov.classList.contains('open') || i == null) return;
-  const b = amBatches()[i];
-  if (!b) return;
-  const s = amSettings();
-  const c = amCalc(b, s);
-  const L = v => _amFmt2(v) + ' ل';
-  const put = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
-  const grid = rows => rows.map(r => r[0] === 'sep' ? '<span class="sep"></span>'
-    : ('<span class="l">' + r[0] + '</span><span class="v">' + r[1] + '</span>')).join('');
-
-  // موجودیِ پس از هر حرکت
-  let run = 0;
-  c.ordered.forEach(e => {
-    run += (e.kind === 'out' ? -e.q : e.q);
-    _amCell('am-mv-bal-' + e.m.id, _amFmt2(run), run < -0.0001 ? 'var(--red)' : 'var(--txt)');
-  });
-
-  put('am-md-sum', grid([
-    ['رسید کل', L(c.totalIn)],
-    ['برداشت کل', L(c.totalOut)],
-    ['<b>باقی‌مانده</b>', '<b style="color:var(--green)">' + L(c.balanceRaw) + '</b>'],
-    ['sep'],
-    ['مدت نگهداری', n2fa(c.days) + ' روز' + (c.autoMode ? ' (خودکار)' : ' (دستی)')],
-    ['میانگین موجودی در این مدت', L(c.avgVolume)],
-    ['<b>افت تخمینی</b>', '<b style="color:var(--accent)">' + L(c.estLoss) + '</b>'],
-    ['موجودی مورد انتظار', '<span style="color:var(--blue)">' + L(c.expected) + '</span>'],
-    ['sep'],
-    ['افت تأییدشدهٔ مدیر', c.lossApproved ? L(c.approvedLoss) : 'تأیید نشده'],
-    ['موجودی مالی', '<span style="color:var(--green)">' + L(c.balance) + '</span>']
-  ]));
-
-  // ریزِ بازه‌ها
-  const stepRows = c.steps.filter(st => st.days > 0.0001 || c.steps.length === 1).map(st => `<tr>
-      <td dir="ltr">${escFa(_amDateTxt(st.from))}</td>
-      <td dir="ltr">${escFa(_amDateTxt(st.to))}</td>
-      <td>${_amFmt(st.days, 2)}</td>
-      <td>${_amFmt2(Math.max(0, st.vol))}</td>
-      <td>${_amFmt2(Math.max(0, st.vol) * st.days)}</td>
-    </tr>`).join('');
-  put('am-md-steps', `<table class="am-steps">
-      <thead><tr><th>از</th><th>تا</th><th>روز</th><th>مقدار در مخزن</th><th>لیتر-روز</th></tr></thead>
-      <tbody>${stepRows || '<tr><td colspan="5">—</td></tr>'}</tbody>
-      <tfoot><tr><td colspan="4">جمعِ لیتر-روز</td><td>${_amFmt2(c.literDays)}</td></tr></tfoot>
-    </table>`);
-  /* ⚠️ فرمول عمداً «یک خطِ ریاضی» نوشته نمی‌شود: خطی که هم عددِ لاتین دارد هم
-     نوشتهٔ فارسی، در چیدمانِ راست‌به‌چپ جابه‌جا دیده می‌شود و خواندنش سخت است.
-     هر ضریب در خطِ خودش می‌نشیند تا معلوم باشد کدام عدد از کجا آمد. */
-  put('am-md-formula',
-    (c.autoMode
-      ? 'روز خودکار از <b>' + escFa(b.date || '—') + '</b> تا <b>' + escFa(c.closed ? (b.closeDate || '—') : _amTodayStr()) + '</b> شمرده شد — ' + n2fa(c.days) + ' روز.'
-      : 'این محموله روی «روزِ دستی» است، پس مبنا <b>مقدار اولیه × روز</b> ماند (مثل نسخهٔ قبل).')
-    + '<div style="margin:7px 0 4px">افت تخمینی = (لیتر-روز ÷ ۳۰) × (٪ پایه ÷ ۱۰۰) × ضریب دما × ضریب سوخت</div>'
-    + '<div class="am-rows">' + grid([
-        ['لیتر-روز', _amFmt2(c.literDays)],
-        ['٪ پایهٔ افت', _amFmt(c.basePct, 3) + '٪'],
-        ['ضریب دما (' + _amFmt(c.temp) + '°C)', _amFmt(c.tempFactor, 3)],
-        ['ضریب سوخت (' + amFuelLabel(b) + ')', _amFmt(c.fuelFactor, 3)],
-        ['sep'],
-        ['<b>افت تخمینی</b>', '<b style="color:var(--accent)">' + _amFmt2(c.estLoss) + ' لیتر</b>']
-      ]) + '</div>'
-    + '<div style="margin-top:7px"><b>افت تخمینی</b> یک برآورد محاسباتی است و جایگزین اندازه‌گیری واقعی موجودی نمی‌شود.</div>');
-
-  put('am-md-actual', grid([
-    ['موجودی مورد انتظار', L(c.expected)],
-    ['موجودی واقعی', c.hasActual ? L(c.actual) : 'ثبت نشده'],
-    ['افت واقعی', c.hasActual ? L(c.actualLoss) : '—'],
-    ['اختلافِ افتِ واقعی و تخمینی', c.hasActual
-      ? ('<span style="color:' + (Math.abs(c.variance) < 0.005 ? 'var(--green)' : (c.variance > 0 ? 'var(--red)' : 'var(--blue)')) + '">'
-         + L(c.variance) + ' · ' + _amFmt2(c.variancePct) + '٪</span>')
-      : '—']
-  ]));
-
-  put('am-md-profit', grid([
-    ['سود هر لیتر', _amFmt(c.profitPerLiter)],
-    ['قیمت فروش هر لیتر', _amFmt(c.sellPrice)],
-    ['سود کل', _amFmt(c.totalProfit)],
-    ['بهای افت تخمینی', _amFmt(c.lossCost) + (s.applyLossToProfit ? ' (از سود کم شد)' : ' (از سود کم نشد)')],
-    ['sep'],
-    ['<b>سود نهایی</b>', '<b style="color:' + (c.adjustedProfit < 0 ? 'var(--red)' : 'var(--green)') + '">' + _amFmt(c.adjustedProfit) + '</b>']
-  ]));
-
-  const w = amWarnings(b, c);
-  const msg = document.getElementById('am-md-msg');
-  if (msg) {
-    msg.innerHTML = escFa(amVarianceMsg(c))
-      + (w.err.length ? ('<br><span style="color:var(--red);font-weight:800">❌ ' + w.err.map(escFa).join('<br>❌ ') + '</span>') : '')
-      + (w.warn.length ? ('<br><span style="color:var(--accent);font-weight:800">⚠️ ' + w.warn.map(escFa).join('<br>⚠️ ') + '</span>') : '');
-  }
-  const db = document.getElementById('am-md-daysbox');
-  if (db) db.style.display = (b.daysMode === 'manual') ? '' : 'none';
-  const ab = document.getElementById('am-md-approve');
-  if (ab) {
-    ab.textContent = c.lossApproved ? '↩️ برداشتن تأیید افت' : '✔ تأیید افت';
-    ab.className = 'am-md-btn ' + (c.lossApproved ? 'on' : 'pur');
-  }
+// فیصدیِ پیشنهادیِ همین حساب را در خانهٔ «فیصدیِ من» می‌گذارد
+function amApplySuggested(ai) {
+  const a = amAccounts()[ai];
+  if (!a) return;
+  const t = amAccCalc(a);
+  if (!t.liters) { showToast('❌ اول رسید تیل را بنویسید', '#e53e3e'); return; }
+  a.myPct = Math.round(t.safePct * 1000) / 1000;
+  save(); renderAmanat();
+  showToast('🧮 فیصدیِ پیشنهادی گذاشته شد: ' + _amFmt(a.myPct, 3) + '٪', '#38a169');
 }
 
-// ── PDF ───────────────────────────────────────────────────────────────────
+/* ══ PDF ══════════════════════════════════════════════════════════════════ */
 function _amPdfShell(title, inner) {
   const d = (typeof allDates === 'function') ? allDates() : { sh:'', mi:'', qa:'' };
   return `<!DOCTYPE html>
@@ -39281,16 +38792,16 @@ function _amPdfShell(title, inner) {
 *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:22px;font-size:13px}
 h1{font-size:1.2rem;font-weight:900;color:#805ad5;border-bottom:2px solid #805ad5;padding-bottom:8px;margin-bottom:6px}
-h2{font-size:0.92rem;font-weight:900;color:#4a5568;margin:16px 0 7px}
+h2{font-size:0.95rem;font-weight:900;color:#2d3748;margin:16px 0 6px;border-right:3px solid #805ad5;padding-right:8px}
 .meta{font-size:0.7rem;color:#718096;margin-bottom:12px}
 .disc{background:#faf5ff;border:1px solid #d6bcfa;border-right:3px solid #805ad5;border-radius:7px;padding:8px 11px;font-size:0.7rem;color:#4a5568;line-height:1.8;margin-bottom:14px}
-table{width:100%;border-collapse:collapse;font-size:0.66rem;margin-bottom:6px}
+.chips{font-size:0.72rem;color:#4a5568;margin-bottom:6px;line-height:2}
+.chips b{color:#1a202c}
+table{width:100%;border-collapse:collapse;font-size:0.68rem;margin-bottom:8px}
 th{background:#2d3748;color:#e2e8f0;padding:6px 4px;text-align:center;font-weight:700;border-bottom:2px solid #4a5568;white-space:nowrap}
 td{padding:5px 4px;border-bottom:1px solid #e2e8f0;white-space:nowrap;text-align:center}
 tr:nth-child(even) td{background:#f7fafc}
 tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;border-top:2px solid #4a5568}
-.kv{display:grid;grid-template-columns:1fr auto;gap:4px 14px;font-size:0.72rem;border:1px solid #e2e8f0;border-radius:7px;padding:9px 12px}
-.kv .l{color:#718096}.kv .v{font-weight:800;text-align:left}
 .footer{margin-top:14px;font-size:0.63rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
 @media print{body{padding:10px}@page{margin:1cm}}
 </style>
@@ -39303,135 +38814,54 @@ ${inner}
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
 }
-function printAmanat() {
-  const s = amSettings();
-  const list = amBatches().filter(_amMatch);
-  const tot = _amBlank();
-  const rowsHtml = list.map((b, n) => {
-    const c = amCalc(b, s);
-    _amAccum(tot, c);
+function _amAccPdfBlock(a, s) {
+  const t = amAccCalc(a, s);
+  const rows = (a.rows || []).map((r, ri) => {
+    const c = amRowCalc(r, a, s);
     return `<tr>
-      <td>${n2fa(n + 1)}</td>
-      <td>${escFa(b.date || '—')}</td>
-      <td style="font-weight:700">${escFa(b.owner || '—')}</td>
-      <td>${amFuelLabel(b)}</td>
-      <td>${_amFmt2(c.totalIn)}</td>
-      <td>${_amFmt2(c.totalOut)}</td>
-      <td style="font-weight:700">${_amFmt2(c.balanceRaw)}</td>
+      <td>${n2fa(ri + 1)}</td>
+      <td>${escFa(r.date || '—')}</td>
+      <td>${escFa(r.name || '—')}</td>
+      <td>${escFa(r.toAcct || '—')}</td>
+      <td style="font-weight:700">${_amFmt2(c.liters)}</td>
       <td>${n2fa(c.days)}</td>
       <td>${_amFmt(c.temp)}</td>
-      <td style="color:#b7791f;font-weight:700">${_amFmt2(c.estLoss)}</td>
-      <td style="color:#2b6cb0;font-weight:700">${_amFmt2(c.expected)}</td>
-      <td>${c.hasActual ? _amFmt2(c.actual) : '—'}</td>
-      <td>${c.hasActual ? _amFmt2(c.actualLoss) : '—'}</td>
-      <td>${c.hasActual ? _amFmt2(c.variance) : '—'}</td>
-      <td>${c.hasActual ? (_amFmt2(c.variancePct) + '٪') : '—'}</td>
-      <td style="color:#276749;font-weight:700">${_amFmt2(c.balance)}</td>
-      <td>${_amFmt(c.buy)}</td>
-      <td>${_amFmt(c.sellPrice)}</td>
-      <td style="font-weight:700">${_amFmt(c.adjustedProfit)}</td>
-      <td>${c.closed ? 'تسویه‌شده' : 'باز'}</td>
+      <td style="font-weight:700;color:${c.closed ? '#c53030' : '#276749'}">${c.closed ? 'بسته' : 'باز'}</td>
+      <td style="color:#b7791f;font-weight:700">${_amFmt(c.lossPct, 3)}٪</td>
+      <td style="color:#276749;font-weight:700">${_amFmt2(c.rest)}</td>
+      <td>${_amFmt(c.base, 3)}٪</td>
     </tr>`;
   }).join('');
-  const fuelTitle = _amFuelFilter === 'petrol' ? ' — پطرول' : (_amFuelFilter === 'diesel' ? ' — دیزل' : '');
-  const stTitle = _amStatusFilter === 'open' ? ' (حساب‌های باز)' : (_amStatusFilter === 'closed' ? ' (تسویه‌شده‌ها)' : '');
-  const inner = `<div class="disc"><b>افت تخمینی</b> — این مقدار یک برآورد محاسباتی است و جایگزین اندازه‌گیری واقعی موجودی نمی‌شود.
-درصد پایهٔ افت ماهانه: ${_amFmt(s.basePct, 3)}٪ · ضریب پطرول: ${_amFmt(s.fPetrol, 3)} · ضریب دیزل: ${_amFmt(s.fDiesel, 3)}
-· مبنای محاسبه: لیتر-روز (مقدارِ هر بازه × روزهای همان بازه)</div>
+  return `<h2>${escFa(String(a.name || '').trim() || 'حسابِ بی‌نام')} — ${amFuelLabel(a)}</h2>
+<div class="chips">رسید کل <b>${_amFmt2(t.liters)}</b> ل · کمبودی <b>${_amFmt2(t.loss)}</b> ل ·
+باقی تیل <b>${_amFmt2(t.rest)}</b> ل · فیصدیِ سربه‌سر <b>${_amFmt(t.needPct, 3)}٪</b> ·
+پیشنهادی <b>${_amFmt(t.safePct, 3)}٪</b>${t.myPct == null ? '' : (' · فیصدیِ شما <b>' + _amFmt(t.myPct, 3) + '٪</b> → '
+  + (t.diff >= 0 ? ('جبران می‌شود، ' + _amFmt2(t.diff) + ' ل اضافه') : (_amFmt2(Math.abs(t.diff)) + ' ل کم')))}</div>
 <table>
-<thead><tr>
-<th>#</th><th>تاریخ</th><th>صاحب تیل</th><th>نوع</th><th>رسید کل</th><th>برداشت کل</th><th>باقی</th>
-<th>روز</th><th>دما</th><th>افت تخمینی</th><th>مورد انتظار</th><th>واقعی</th><th>افت واقعی</th>
-<th>اختلاف</th><th>٪ اختلاف</th><th>موجودی مالی</th><th>قیمت خرید</th><th>قیمت فروش</th><th>سود نهایی</th><th>وضعیت</th>
-</tr></thead>
-<tbody>${rowsHtml || '<tr><td colspan="20" style="padding:20px;color:#718096">هیچ محموله‌ای ثبت نشده</td></tr>'}</tbody>
-<tfoot><tr>
-<td colspan="4">جمله</td>
-<td>${_amFmt2(tot.totalIn)}</td><td>${_amFmt2(tot.totalOut)}</td><td>${_amFmt2(tot.balanceRaw)}</td>
-<td colspan="2"></td>
-<td>${_amFmt2(tot.estLoss)}</td><td>${_amFmt2(tot.expected)}</td>
-<td>${tot.hasActual ? _amFmt2(tot.actual) : '—'}</td><td>${tot.hasActual ? _amFmt2(tot.actualLoss) : '—'}</td>
-<td>${tot.hasActual ? _amFmt2(tot.variance) : '—'}</td><td></td>
-<td>${_amFmt2(tot.balance)}</td><td colspan="2"></td><td>${_amFmt(tot.profit)}</td><td></td>
-</tr></tfoot>
+<thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>به حسابهٔ</th><th>رسید تیل</th><th>مدت زمان</th>
+<th>درجه گرما</th><th>در مخزن</th><th>درصد کمبودی</th><th>باقی تیل</th><th>پایه</th></tr></thead>
+<tbody>${rows || '<tr><td colspan="11" style="padding:14px;color:#718096">ردیفی ثبت نشده</td></tr>'}</tbody>
+<tfoot><tr><td colspan="4">جمله</td><td>${_amFmt2(t.liters)}</td><td colspan="3"></td>
+<td>${_amFmt(t.lossPct, 3)}٪</td><td>${_amFmt2(t.rest)}</td><td></td></tr></tfoot>
 </table>`;
-  pumpOpenDoc(_amPdfShell('تیل امانت' + fuelTitle + stTitle, inner));
 }
-// پروندهٔ یک محموله روی کاغذ — با کلِ دفترش، برای دادن به صاحبِ تیل
-function printAmanatBatch(idx) {
-  const i = (idx == null) ? _amModalIdx : idx;
-  const b = (i == null) ? null : amBatches()[i];
-  if (!b) { showToast('❌ محموله‌ای باز نیست', '#e53e3e'); return; }
+function printAmanat() {
   const s = amSettings();
-  const c = amCalc(b, s);
-  const L = v => _amFmt2(v) + ' لیتر';
-  let run = 0;
-  const mv = c.ordered.map((e, n) => {
-    run += (e.kind === 'out' ? -e.q : e.q);
-    return `<tr>
-      <td>${n2fa(n + 1)}</td>
-      <td>${escFa(e.m.date || '—')}</td>
-      <td style="font-weight:700;color:${e.kind === 'out' ? '#c53030' : '#276749'}">${e.kind === 'out' ? 'برداشت' : 'رسید'}</td>
-      <td>${_amFmt2(e.q)}</td>
-      <td style="font-weight:700">${_amFmt2(run)}</td>
-      <td>${escFa(e.m.note || '')}</td>
-    </tr>`;
-  }).join('');
-  const kv = rows => '<div class="kv">' + rows.map(r => '<span class="l">' + r[0] + '</span><span class="v">' + r[1] + '</span>').join('') + '</div>';
-  const inner = `<div class="disc"><b>افت تخمینی</b> — برآورد محاسباتی بر پایهٔ لیتر-روز است و جایگزین اندازه‌گیری واقعی موجودی نمی‌شود.</div>
-<h2>📌 مشخصات</h2>
-${kv([
-  ['صاحب تیل', escFa(String(b.owner || '').trim() || '—')],
-  ['نوع سوخت', amFuelLabel(b)],
-  ['شناسهٔ محموله', escFa(b.id || '—')],
-  ['تاریخ شروع', escFa(b.date || '—')],
-  ['وضعیت', c.closed ? ('تسویه‌شده در ' + escFa(b.closeDate || '—')) : 'باز'],
-  ['مدت نگهداری', n2fa(c.days) + ' روز' + (c.autoMode ? ' (خودکار)' : ' (دستی)')],
-  ['میانگین دما', _amFmt(c.temp) + '°C'],
-  ['درصد پایهٔ افت', _amFmt(c.basePct, 3) + '٪']
-])}
-<h2>📒 دفترِ رسید و برداشت</h2>
-<table>
-<thead><tr><th>#</th><th>تاریخ</th><th>نوع</th><th>مقدار</th><th>موجودی پس از آن</th><th>یادداشت</th></tr></thead>
-<tbody>${mv || '<tr><td colspan="6" style="padding:16px;color:#718096">دفتر خالی است</td></tr>'}</tbody>
-<tfoot><tr><td colspan="3">جمله</td><td>رسید ${_amFmt2(c.totalIn)} · برداشت ${_amFmt2(c.totalOut)}</td><td>${_amFmt2(c.balanceRaw)}</td><td></td></tr></tfoot>
-</table>
-<h2>🧮 افت تخمینی</h2>
-<table>
-<thead><tr><th>از</th><th>تا</th><th>روز</th><th>مقدار در مخزن</th><th>لیتر-روز</th></tr></thead>
-<tbody>${c.steps.filter(st => st.days > 0.0001 || c.steps.length === 1).map(st => `<tr>
-  <td>${escFa(_amDateTxt(st.from))}</td><td>${escFa(_amDateTxt(st.to))}</td>
-  <td>${_amFmt(st.days, 2)}</td><td>${_amFmt2(Math.max(0, st.vol))}</td>
-  <td>${_amFmt2(Math.max(0, st.vol) * st.days)}</td></tr>`).join('') || '<tr><td colspan="5">—</td></tr>'}</tbody>
-<tfoot><tr><td colspan="4">جمعِ لیتر-روز</td><td>${_amFmt2(c.literDays)}</td></tr></tfoot>
-</table>
-<div class="disc">افت تخمینی = (لیتر-روز ÷ ۳۰) × (٪ پایه ÷ ۱۰۰) × ضریب دما × ضریب سوخت</div>
-${kv([
-  ['لیتر-روز', _amFmt2(c.literDays)],
-  ['٪ پایهٔ افت', _amFmt(c.basePct, 3) + '٪'],
-  ['ضریب دما (' + _amFmt(c.temp) + '°C)', _amFmt(c.tempFactor, 3)],
-  ['ضریب سوخت (' + amFuelLabel(b) + ')', _amFmt(c.fuelFactor, 3)],
-  ['<b>افت تخمینی</b>', '<b>' + _amFmt2(c.estLoss) + ' لیتر</b>']
-])}
-<h2>📊 نتیجه</h2>
-${kv([
-  ['رسید کل', L(c.totalIn)],
-  ['برداشت کل', L(c.totalOut)],
-  ['باقی‌مانده', L(c.balanceRaw)],
-  ['افت تخمینی', L(c.estLoss)],
-  ['موجودی مورد انتظار', L(c.expected)],
-  ['موجودی واقعی', c.hasActual ? L(c.actual) : 'ثبت نشده'],
-  ['افت واقعی', c.hasActual ? L(c.actualLoss) : '—'],
-  ['اختلاف', c.hasActual ? (L(c.variance) + ' · ' + _amFmt2(c.variancePct) + '٪') : '—'],
-  ['افت تأییدشدهٔ مدیر', c.lossApproved ? L(c.approvedLoss) : 'تأیید نشده'],
-  ['موجودی مالی', L(c.balance)],
-  ['قیمت خرید هر لیتر', _amFmt(c.buy)],
-  ['قیمت فروش هر لیتر', _amFmt(c.sellPrice)],
-  ['مقدار فروخته‌شده', L(c.sold)],
-  ['سود نهایی', _amFmt(c.adjustedProfit)]
-])}
-<div class="disc">${escFa(amVarianceMsg(c))}${b.note ? ('<br>یادداشت: ' + escFa(b.note)) : ''}</div>`;
-  pumpOpenDoc(_amPdfShell('پروندهٔ امانت — ' + (String(b.owner || '').trim() || 'بی‌نام'), inner));
+  const list = amAccounts().filter(_amAccMatch);
+  const fuelTitle = _amFuelFilter === 'petrol' ? ' — پطرول' : (_amFuelFilter === 'diesel' ? ' — دیزل' : '');
+  const inner = `<div class="disc"><b>درصد کمبودی</b> — برآورد محاسباتی است و جایگزین اندازه‌گیری واقعی موجودی نمی‌شود.
+پایه: ${_amFmt(s.basePct, 3)}٪ ماهانه · ضریب پطرول: ${_amFmt(s.fPetrol, 3)} · ضریب دیزل: ${_amFmt(s.fDiesel, 3)}
+· حاشیهٔ اطمینانِ فیصدی: ${_amFmt(s.safetyPct)}٪</div>`
+    + (list.map(a => _amAccPdfBlock(a, s)).join('') || '<div class="disc">هیچ حسابی ثبت نشده</div>');
+  pumpOpenDoc(_amPdfShell('تیل امانت' + fuelTitle, inner));
+}
+function printAmanatAccount(ai) {
+  const a = amAccounts()[ai];
+  if (!a) { showToast('❌ حساب پیدا نشد', '#e53e3e'); return; }
+  const s = amSettings();
+  const inner = `<div class="disc"><b>درصد کمبودی</b> — برآورد محاسباتی است و جایگزین اندازه‌گیری واقعی موجودی نمی‌شود.</div>`
+    + _amAccPdfBlock(a, s);
+  pumpOpenDoc(_amPdfShell('تیل امانت — ' + (String(a.name || '').trim() || 'بی‌نام'), inner));
 }
 
 // ========== صرافی ==========
@@ -43114,7 +42544,7 @@ const _BOT_SEARCH_SECTIONS = [
   { key: 'expenses',       label: 'مصارف' },
   { key: 'chakanaRows',    label: 'حساب‌های چکنه' },
   { key: 'safeEntries',    label: 'گاوصندوق' },
-  { key: 'amanatBatches',  label: 'تیل امانت' },
+  { key: 'amanatAccounts', label: 'تیل امانت' },
   { key: 'sarrafiRows',    label: 'صرافی' },
   { key: 'waraqEntries',   label: 'ورق روزانه' },
   { key: 'reports',        label: 'پارچه‌های پطرول' },
@@ -47284,7 +46714,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.343';
+const APP_VERSION = '2.9.344';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -55482,7 +54912,7 @@ body.light-mode #glassClock{
     expenses:       { label: 'مصارف' },
     sarrafiRows:    { label: 'صرافی' },
     safeEntries:    { label: 'گاوصندوق' },
-    amanatBatches:  { label: 'تیل امانت' },
+    amanatAccounts: { label: 'تیل امانت' },
     parchaReceipts: { label: 'رسید پارچه‌ها' },
     chakanaRows:    { label: 'چکنه' },
     extraIncomes:   { label: 'عایدات دیگر' },
