@@ -1589,6 +1589,35 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
 .am-acc-pct .vd.ok{color:var(--green)}
 .am-acc-pct .vd.bad{color:var(--red)}
 .am-acc-body{padding:0}
+.am-acc.shut{opacity:.94}
+.am-acc.shut .am-acc-head{border-bottom:none;padding:9px 12px}
+/* کادرِ بسته: فقط نام و یک خطِ خلاصه — بقیه وقتی باز شد می‌آید */
+.am-acc.shut .am-acc-pct,.am-acc.shut .am-acc-btns,.am-acc.shut .am-acc-foot{display:none}
+.am-acc.shut .am-acc-chips{margin-top:7px}
+/* دکمهٔ باز/بستهٔ کادر — هم‌شکلِ شمارهٔ کنارش تا سربرگ به هم نریزد */
+.am-acc-toggle{cursor:pointer;font-family:'Vazirmatn',sans-serif;color:var(--purple);
+  border-color:var(--purple);-webkit-tap-highlight-color:transparent;font-size:0.9rem;line-height:1}
+.am-acc-toggle:active{transform:scale(.94)}
+/* سرِ پنل‌های کشویی — تمام‌عرض، تا روی گوشی هم راحت زده شود */
+.am-fold{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;
+  background:transparent;border:none;padding:0;cursor:pointer;font-family:'Vazirmatn',sans-serif;
+  text-align:right;-webkit-tap-highlight-color:transparent}
+/* تحلیلِ فیصدیِ هر حساب */
+.am-an{border-bottom:1px solid var(--border)}
+.am-an-head{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;
+  background:var(--dark);border:none;border-bottom:1px dashed var(--border);padding:10px 12px;cursor:pointer;
+  font-family:'Vazirmatn',sans-serif;font-size:0.8rem;font-weight:900;color:var(--green);
+  text-align:right;-webkit-tap-highlight-color:transparent}
+.am-an-head:active{opacity:.8}
+.am-an-body{padding:11px 12px;background:var(--dark)}
+.am-an-v{margin-top:10px;border:1px solid var(--border);border-radius:9px;padding:9px 12px;
+  font-size:0.79rem;font-weight:700;line-height:2;color:var(--label);background:var(--card)}
+.am-an-v.ok{border-color:var(--green);color:var(--green)}
+.am-an-v.bad{border-color:var(--red);color:var(--red)}
+.am-an-v b{font-weight:900}
+.am-an-btns{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+.am-an-note{margin-top:9px;font-size:0.72rem;color:var(--muted);line-height:1.95;
+  background:var(--card);border:1px dashed var(--border);border-radius:8px;padding:7px 10px}
 .am-acc-foot{padding:9px 12px;display:flex;gap:7px;flex-wrap:wrap;border-top:1px solid var(--border)}
 
 /* کادرِ «در مخزن»: دو دکمهٔ باز/بسته، هر دو داخل همان خانه */
@@ -19100,10 +19129,15 @@ body.boot-viewer #bootViewerSplash{
 
       <!-- ── سیستمِ فیصدی ─────────────────────────────────────────────────── -->
       <div class="am-fee">
-        <div class="am-fee-head">🧮 سیستم فیصدی — چند فیصد بگیرم؟</div>
+        <button type="button" class="am-fee-head am-fold" onclick="toggleAmanatFee()">
+          <span>🧮 ماشین‌حسابِ فیصدی — برای تیلی که هنوز ثبت نشده</span>
+          <span id="am-fee-caret">◂</span>
+        </button>
+        <div id="am-fee-body" style="display:none">
         <div class="am-fee-sub">
-          مقدار تیل و مدت و گرما را بنویسید؛ می‌گوید کمبودی چقدر می‌شود و برای جبرانش
+          مقدار تیل و مدت و گرما را بنویسید؛ می‌گوید بخار چقدر می‌شود و برای جبرانش
           <b>چند فیصد</b> باید بگیرید. اگر فیصدیِ خودتان را هم بنویسید، می‌گوید کم می‌آید یا اضافه.
+          <br><span style="color:var(--muted)">برای حساب‌هایی که در جدول ثبت شده‌اند، همین تحلیل داخلِ خودِ کادرِ حساب هست.</span>
         </div>
         <div class="am-fee-grid">
           <label class="am-fee-f"><span>مقدار تیل (لیتر)</span>
@@ -19122,8 +19156,9 @@ body.boot-viewer #bootViewerSplash{
         </div>
         <div class="am-fee-out" id="am-fee-out"></div>
         <div id="am-fee-verdict"></div>
-        <div style="font-size:0.74rem;color:var(--label);font-weight:800;margin-bottom:6px">📋 جدولِ راهنما — کمبودی با مدت کم و زیاد می‌شود</div>
+        <div style="font-size:0.74rem;color:var(--label);font-weight:800;margin-bottom:6px">📋 جدولِ راهنما — بخار با مدت کم و زیاد می‌شود</div>
         <div class="xls-wrap" style="overflow:auto"><div id="am-fee-guide"></div></div>
+        </div>
       </div>
 
       <!-- ── تنظیمات مدیر (§۲۰) ──────────────────────────────────────────── -->
@@ -19136,6 +19171,8 @@ body.boot-viewer #bootViewerSplash{
             <input type="number" step="0.01" id="am-set-fPetrol" oninput="setAmanatSetting('fPetrol',this.value)"></label>
           <label class="am-set-f"><span>ضریب دیزل</span>
             <input type="number" step="0.01" id="am-set-fDiesel" oninput="setAmanatSetting('fDiesel',this.value)"></label>
+          <label class="am-set-f"><span>ضریب مخزن (۱ = روی زمین · ۰٫۵ = زیرزمینی)</span>
+            <input type="number" step="0.05" id="am-set-tankFactor" title="مخزن زیرزمینی آفتاب نمی‌خورد، پس بخارش کمتر است" oninput="setAmanatSetting('tankFactor',this.value)"></label>
           <label class="am-set-f"><span>درجه گرمای پیش‌فرض (°C)</span>
             <input type="number" step="0.5" id="am-set-defTemp" oninput="setAmanatSetting('defTemp',this.value)"></label>
           <label class="am-set-f"><span>حاشیهٔ اطمینانِ فیصدی (٪)</span>
@@ -19153,7 +19190,7 @@ body.boot-viewer #bootViewerSplash{
         </div>
         <div class="am-set-note" id="am-set-formula"></div>
         <div style="display:flex;justify-content:flex-end;margin-top:10px">
-          <button class="add-btn" style="border-color:var(--muted);color:var(--muted);background:transparent" onclick="resetAmanatSettings()">↺ برگشت به مقدارهای پیش‌فرض</button>
+          <button class="add-btn" style="border-color:var(--green);color:var(--green);background:transparent" onclick="resetAmanatSettings()">📚 برگشت به ضریب‌های منبع</button>
         </div>
       </div>
 
@@ -38123,18 +38160,65 @@ tfoot .sf-amt + .sf-amt{border-top-color:#4a5568}
    ══════════════════════════════════════════════════════════════════════════ */
 
 // مقدارهای پیش‌فرض — فقط یک تنظیمِ حسابداری‌اند، نه نرخِ علمیِ قطعیِ تبخیر.
+/* ⚠️ این عددها از خودِ برنامه درنیامده‌اند — از منابعِ منتشرشده گرفته شده‌اند.
+   خواستهٔ صریحِ صاحب ریپو: «اون پیشنهادی‌ها رو خودت نمی‌دی، می‌گردی تو سایت‌های
+   معتبر». هر عدد و منبعش:
+
+   • پایهٔ ۰٫۲۵٪ در ماه — همان «حدِ مجازِ وزارت» در پژوهشِ میدانیِ اندازه‌گیریِ
+     تبخیرِ مخزن (خرطوم، هوای ۳۲ تا ۴۰ درجه). همان پژوهش، تبخیرِ واقعیِ
+     اندازه‌گیری‌شده را ۰٫۵٪ گزارش کرده — یعنی در گرمای بالا حدوداً دو برابرِ
+     پایه. ضریب‌های گرمای زیر روی همین بنا شده‌اند: در ۴۰ درجه ضریب ۲ می‌شود،
+     پس ۰٫۲۵٪ × ۲ = همان ۰٫۵٪ِ اندازه‌گیری‌شده.
+
+   • ضریب دیزل ۰٫۱ — منابع، تبخیرِ دیزل را در برابرِ پطرول «ناچیز» می‌خوانند
+     (فشارِ بخارش خیلی پایین‌تر است و در محاسبه‌های آلایندگی صفر گرفته می‌شود).
+     صفر نگذاشتیم تا حسابِ عملی محتاط بماند.
+
+   • ضریب مخزنِ زیرزمینی ۰٫۵ — در محاسبه‌های استاندارد، برای مخزنِ زیرزمینی
+     اثرِ تابشِ آفتاب برداشته می‌شود و فقط اثرِ دما می‌ماند؛ برای همین تبخیرش
+     به‌روشنی کمتر از مخزنِ روی زمین است.
+
+   • حاشیهٔ اطمینان ۲۵٪ — عرفِ «حدِ مجازِ اختلاف» در حساب‌کشیِ پمپ‌ها: روزانه
+     ±۰٫۵٪ و ماهانه ±۱٪. یعنی خودِ اندازه‌گیری هم خطا دارد و فیصدی باید کمی
+     بالاتر از سربه‌سر باشد.
+
+   فهرستِ کاملِ منابع با لینک، داخلِ «⚙️ تنظیمات مدیر» نوشته شده. */
 const AM_DEFAULTS = {
-  basePct: 0.10,   // پایه: درصد کمبودی ماهانه (٪)
+  basePct: 0.25,   // پایه: درصد بخار در ماه (٪) — حدِ مجازِ منبع
   fPetrol: 1.00,   // ضریب پطرول
-  fDiesel: 0.20,   // ضریب دیزل
+  fDiesel: 0.10,   // ضریب دیزل — منابع: در برابر پطرول ناچیز
+  tankFactor: 1.0, // ۱ = مخزن روی زمین · ۰٫۵ = مخزن زیرزمینی
   defTemp: 25,     // درجه گرمای پیش‌فرض وقتی خانهٔ گرما خالی است
   safetyPct: 25,   // حاشیهٔ اطمینان: فیصدیِ پیشنهادی = سربه‌سر × (۱ + این ÷ ۱۰۰)
-  t1: 25,          // آستانهٔ گرمای ۱
+  t1: 20,          // آستانهٔ گرمای ۱
   t2: 40,          // آستانهٔ گرمای ۲
   tfLow: 1.00,     // ضریب گرما تا آستانهٔ ۱
-  tfMed: 0.02,     // شیبِ ضریب بین آستانهٔ ۱ و ۲ (هر درجه)
-  tfHigh: 0.03     // شیبِ ضریب بالاتر از آستانهٔ ۲ (هر درجه)
+  tfMed: 0.05,     // شیبِ ضریب بین آستانهٔ ۱ و ۲ (هر درجه) → در ۴۰ درجه ضریب ۲
+  tfHigh: 0.06     // شیبِ ضریب بالاتر از آستانهٔ ۲ (هر درجه)
 };
+/* انبساط/انقباضِ گرماییِ خودِ تیل — این «بخار» نیست و برنمی‌گردد به کمبودی.
+   فقط وقتی مخزن را در هوای گرم یا سرد اندازه می‌گیرید، عددِ لیتر خودش فرق
+   می‌کند. در تحلیل نوشته می‌شود تا با کمبودیِ واقعی اشتباه گرفته نشود.
+   منبع: پطرول ~۱٫۲ میلی‌لیتر و دیزل ~۰٫۸۵ میلی‌لیتر در هر لیتر به ازای هر
+   درجهٔ سانتی‌گراد؛ دمای مرجعِ جهانیِ داد‌وستد ۶۰°F (۱۵٫۶°C) است. */
+const AM_THERMAL = { petrol: 0.0012, diesel: 0.00085, refTemp: 15.6 };
+/* منابع — در تنظیمات مدیر نشان داده می‌شوند */
+const AM_SOURCES = [
+  ['پژوهشِ اندازه‌گیریِ تبخیرِ مخزنِ پطرول (۰٫۵٪ اندازه‌گیری‌شده در برابر ۰٫۲۵٪ حدِ مجاز)',
+   'https://www.researchgate.net/publication/274376940_MANAGEMENT_OF_EVAPORATION_LOSSES_OF_GASOLINE\'S_STORAGE_TANKS'],
+  ['تبخیرِ پطرول و دیزل در انبارش — دیزل در برابر پطرول ناچیز',
+   'https://link.springer.com/article/10.1007/s10553-021-01304-0'],
+  ['EPA — منبع‌های تبخیر و مخزن‌های نگهداریِ فرآورده‌های نفتی (AP-42)',
+   'https://www.epa.gov/air-emissions-factors-and-quantification/ap-42-fifth-edition-volume-i-chapter-4-evaporation-loss-0'],
+  ['EPA — حساب‌کشیِ آماریِ موجودیِ مخزن‌های زیرزمینی',
+   'https://www.epa.gov/ust/introduction-statistical-inventory-reconciliation-underground-storage-tanks'],
+  ['حدِ مجازِ اختلافِ موجودی: روزانه ۰٫۵٪ (مقرراتِ مخزن‌های زیرزمینی)',
+   'https://portal.ct.gov/-/media/deep/underground_storage_tanks/ustinventoryreconciliationformpdf.pdf'],
+  ['انبساطِ گرماییِ تیل — پطرول ۱٫۲ و دیزل ۰٫۸۵ میلی‌لیتر در لیتر بر درجه',
+   'https://www.ricochetfuel.com/blog/the-facts-about-fuel-expansion-and-contraction/'],
+  ['NIST — اثرِ گرما بر حجمِ تیل در داد‌وستد (دمای مرجع ۶۰°F)',
+   'https://www.nist.gov/speech-testimony/hot-fuels-impact-commercial-transactions-thermal-expansion-gasoline']
+];
 const AM_FUELS = { petrol: 'پطرول', diesel: 'دیزل' };
 const AM_DAY = 86400000;
 const AM_GUIDE_DAYS = [7, 15, 30, 45, 60, 90, 120, 180];
@@ -38299,10 +38383,22 @@ function amLoss(liters, days, temp, fuel, basePct, s) {
   const L = Math.max(0, _amNum(liters));
   const D = Math.max(0, _amNum(days));
   const p = _amHas(basePct) ? _amNum(basePct) : s.basePct;
-  let loss = L * (p / 100) * (D / 30) * amTempFactor(_amHas(temp) ? _amNum(temp) : s.defTemp, s) * amFuelFactor(fuel, s);
+  let loss = L * (p / 100) * (D / 30) * amTempFactor(_amHas(temp) ? _amNum(temp) : s.defTemp, s)
+             * amFuelFactor(fuel, s) * (isFinite(s.tankFactor) ? s.tankFactor : 1);
   if (!isFinite(loss) || loss < 0) loss = 0;
   if (loss > L) loss = L;      // کمبودی هرگز از خودِ تیل بیشتر نمی‌شود
   return loss;
+}
+/* انبساطِ گرمایی — «بخار» نیست، فقط عددِ لیتر با گرما کم و زیاد می‌شود و با
+   برگشتنِ هوا به حالِ اول، خودش برمی‌گردد. جدا نگه داشته می‌شود تا با کمبودیِ
+   واقعی قاطی نشود. مثبت یعنی هوا از دمای مرجع گرم‌تر است و لیتر بیشتر نشان
+   می‌دهد؛ منفی یعنی سردتر و کمتر. */
+function amThermal(liters, temp, fuel, s) {
+  s = s || amSettings();
+  const L = Math.max(0, _amNum(liters));
+  const t = _amHas(temp) ? _amNum(temp) : s.defTemp;
+  const k = (fuel === 'diesel') ? AM_THERMAL.diesel : AM_THERMAL.petrol;
+  return { liters: L * k * (t - AM_THERMAL.refTemp), pct: k * (t - AM_THERMAL.refTemp) * 100, temp: t };
 }
 /* «مدت زمان» خودکار از تاریخِ ردیف تا امروز شمرده می‌شود — کسی نمی‌نشیند هر
    روز عددِ روزِ همهٔ ردیف‌ها را دستی زیاد کند. اگر ردیف «بسته» شد، شمارش روی
@@ -38384,6 +38480,11 @@ function amAccCalc(acc, s, onlyRows) {
 let _amFuelFilter = 'all';
 let _amRowFilter = 'all';      // all | open | closed — کدام ردیف‌ها دیده شوند
 let _amShowMeasure = false;    // ستون‌های «موجودی واقعی» و «اختلاف»
+/* کدام کادر باز است. خواستهٔ صاحب ریپو: «کادرهای دیگر کشویی باشد تا صفحه خیلی
+   بزرگ نباشد، فقط جدول باشد» — پس هر لحظه یکی باز است و بقیه بسته. */
+let _amOpenAcc = null;
+let _amFeeOpen = false;        // پنلِ «سیستم فیصدی» — پیش‌فرض بسته
+let _amAnalysisOpen = {};      // تحلیلِ هر حساب، جدا
 let _amSearch = '';
 try {
   if (localStorage.getItem('amMeasure') === '1') _amShowMeasure = true;
@@ -38391,6 +38492,31 @@ try {
   if (_rf === 'open' || _rf === 'closed') _amRowFilter = _rf;
 } catch (e) {}
 function setAmanatFuel(f) { _amFuelFilter = (f === 'petrol' || f === 'diesel') ? f : 'all'; renderAmanat(); }
+// آکاردئون: زدنِ سربرگِ یک کادر بازش می‌کند و بقیه بسته می‌شوند
+function toggleAmanatAcc(id) {
+  _amOpenAcc = (_amOpenAcc === id) ? null : id;
+  renderAmanat();
+  if (_amOpenAcc) setTimeout(() => {
+    const el = document.getElementById('am-accbox-' + id);
+    if (el) { try { el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {} }
+  }, 40);
+}
+function toggleAmanatFee() {
+  _amFeeOpen = !_amFeeOpen;
+  const b = document.getElementById('am-fee-body');
+  const h = document.getElementById('am-fee-caret');
+  if (b) b.style.display = _amFeeOpen ? '' : 'none';
+  if (h) h.textContent = _amFeeOpen ? '▾' : '◂';
+  if (_amFeeOpen) renderAmanatFee();
+}
+function toggleAmanatAnalysis(id) {
+  _amAnalysisOpen[id] = !_amAnalysisOpen[id];
+  const b = document.getElementById('am-an-body-' + id);
+  const h = document.getElementById('am-an-caret-' + id);
+  if (b) b.style.display = _amAnalysisOpen[id] ? '' : 'none';
+  if (h) h.textContent = _amAnalysisOpen[id] ? '▾' : '◂';
+  _amPaint();
+}
 function setAmanatRowFilter(f) {
   _amRowFilter = (f === 'open' || f === 'closed') ? f : 'all';
   try { localStorage.setItem('amRowFilter', _amRowFilter); } catch (e) {}
@@ -38530,7 +38656,7 @@ function fillAmanatSettings() {
     if (!el || el === document.activeElement) return;   // دستِ کاربر روی همان خانه است
     el.value = val;
   };
-  ['basePct','fPetrol','fDiesel','defTemp','safetyPct','t1','t2','tfLow','tfMed','tfHigh'].forEach(k => set('am-set-' + k, s[k]));
+  ['basePct','fPetrol','fDiesel','tankFactor','defTemp','safetyPct','t1','t2','tfLow','tfMed','tfHigh'].forEach(k => set('am-set-' + k, s[k]));
   const f = document.getElementById('am-set-formula');
   if (f) {
     f.innerHTML = 'ضریب گرما: تا <b>' + _amFmt(s.t1) + '°C</b> برابر <b>' + _amFmt(s.tfLow, 3) + '</b> · '
@@ -38538,10 +38664,15 @@ function fillAmanatSettings() {
       + ' + ' + _amFmt(s.tfMed, 3) + ' × (گرما − ' + _amFmt(s.t1) + ') · '
       + 'بالاتر از <b>' + _amFmt(s.t2) + '</b> برابر ' + _amFmt(amTempFactor(s.t2, s), 3)
       + ' + ' + _amFmt(s.tfHigh, 3) + ' × (گرما − ' + _amFmt(s.t2) + ')'
-      + '<br>کمبودی = مقدار تیل × (پایه ÷ ۱۰۰) × (روز ÷ ۳۰) × ضریب گرما × ضریب تیل'
+      + '<br>کمبودی = مقدار تیل × (پایه ÷ ۱۰۰) × (روز ÷ ۳۰) × ضریب گرما × ضریب تیل × ضریب مخزن'
       + '<br>فیصدیِ سربه‌سر = کمبودی ÷ مقدار تیل × ۱۰۰ · فیصدیِ پیشنهادی = سربه‌سر × (۱ + '
       + _amFmt(s.safetyPct) + '٪)'
-      + '<br><b>این ضریب‌ها یک مدل تخمینی‌اند و نرخِ علمیِ قطعیِ تبخیر نیستند.</b>';
+      + '<br><b>این ضریب‌ها یک مدل تخمینی‌اند و نرخِ علمیِ قطعیِ تبخیر نیستند.</b>'
+      + '<div style="margin-top:9px;padding-top:8px;border-top:1px dashed var(--border)">'
+      + '<b style="color:var(--green)">📚 این عددها از کجا آمده‌اند</b><br>'
+      + AM_SOURCES.map(x => '• <a href="' + escFa(x[1]) + '" target="_blank" rel="noopener" '
+          + 'style="color:var(--blue);text-decoration:underline">' + escFa(x[0]) + '</a>').join('<br>')
+      + '</div>';
   }
 }
 function setAmanatSetting(key, val) {
@@ -38712,9 +38843,11 @@ function _amAccountHtml(a, ai, seq, s) {
   }).join('');
   const hidden = (a.rows || []).length - view.length;
 
-  return `<div class="am-acc ${fuel === 'diesel' ? 'dz' : 'pt'}" id="am-acc-${ai}">
-    <div class="am-acc-head">
+  const open = (_amOpenAcc === a.id);
+  return `<div class="am-acc ${fuel === 'diesel' ? 'dz' : 'pt'}${open ? '' : ' shut'}" id="am-acc-${ai}" data-box="am-accbox-${cmpEsc(a.id)}">
+    <div class="am-acc-head" id="am-accbox-${cmpEsc(a.id)}">
       <div class="am-acc-r1">
+        <button class="am-acc-n am-acc-toggle" title="${open ? 'بستن' : 'باز کردن'}" onclick="toggleAmanatAcc('${cmpEsc(a.id)}')">${open ? '▾' : '◂'}</button>
         <span class="am-acc-n">${n2fa(seq)}</span>
         <input class="am-acc-name" id="am-acc-name-${ai}" value="${cmpEsc(a.name)}" placeholder="نام حساب / صاحب تیل" oninput="updateAmanatAccount(${ai},'name',this.value)">
         <select class="am-acc-fuel" onchange="updateAmanatAccount(${ai},'fuel',this.value);renderAmanat()">
@@ -38736,7 +38869,15 @@ function _amAccountHtml(a, ai, seq, s) {
         <span class="vd" id="am-acc-vd-${ai}"></span>
       </div>
     </div>
-    <div class="am-acc-body">
+    <div class="am-acc-body" ${open ? '' : 'style="display:none"'}>
+      <!-- ── تحلیلِ فیصدی، کشویی ────────────────────────────────────────── -->
+      <div class="am-an">
+        <button type="button" class="am-an-head" onclick="toggleAmanatAnalysis('${cmpEsc(a.id)}')">
+          <span>🧮 تحلیل — چند فیصد بگیرم که ضرر نکنم؟</span>
+          <span id="am-an-caret-${cmpEsc(a.id)}">${_amAnalysisOpen[a.id] ? '▾' : '◂'}</span>
+        </button>
+        <div class="am-an-body" id="am-an-body-${cmpEsc(a.id)}" ${_amAnalysisOpen[a.id] ? '' : 'style="display:none"'}></div>
+      </div>
       <div class="xls-wrap" style="overflow:auto">
         <table class="xls-tbl" style="min-width:${M ? 1250 : 1090}px">
           <thead><tr>
@@ -38830,7 +38971,20 @@ function _amPaint() {
     ft('am-ft-diff-' + ai, tv.hasActual ? _amFmt2(tv.realDiff) : '—');
 
     const chips = document.getElementById('am-acc-chips-' + ai);
-    if (chips) {
+    if (chips && _amOpenAcc !== a.id) {
+      /* کادرِ بسته فقط یک خطِ جمع‌وجور می‌شود — خواستهٔ صاحب ریپو: «کادرهای
+         دیگر کشویی باشد تا صفحه خیلی بزرگ نباشد». خودِ خط هم بازکننده است. */
+      const vd = (t.myPct == null) ? '<span class="am-acc-chip">فیصدی ثبت نشده</span>'
+        : (t.diff >= 0
+            ? '<span class="am-acc-chip grn">✅ ' + _amFmt(t.myPct, 3) + '٪ — ' + _amFmt2(t.diff) + ' ل می‌ماند</span>'
+            : '<span class="am-acc-chip red">❌ ' + _amFmt(t.myPct, 3) + '٪ — ' + _amFmt2(Math.abs(t.diff)) + ' ل از جیبِ خودتان</span>');
+      chips.innerHTML = '<span class="am-acc-chip">رسید کل <b>' + _amFmt2(t.liters) + '</b> ل</span>'
+        + '<span class="am-acc-chip acc">بخار <b>' + _amFmt2(t.loss) + '</b> ل</span>'
+        + vd + '<span class="am-acc-chip">' + n2fa(t.n) + ' ردیف</span>';
+      chips.style.cursor = 'pointer';
+      chips.onclick = () => toggleAmanatAcc(a.id);
+    } else if (chips) {
+      chips.style.cursor = ''; chips.onclick = null;
       chips.innerHTML =
           '<span class="am-acc-chip">رسید کل <b>' + _amFmt2(t.liters) + '</b> ل</span>'
         + (t.taken ? ('<span class="am-acc-chip red">برده شده <b>' + _amFmt2(t.taken) + '</b> ل</span>') : '')
@@ -38843,6 +38997,7 @@ function _amPaint() {
         + '<span class="am-acc-chip">پیشنهادی <b>' + _amFmt(t.safePct, 3) + '٪</b></span>'
         + '<span class="am-acc-chip">' + n2fa(t.n) + ' ردیف · ' + n2fa(t.open) + ' باز</span>';
     }
+    _amPaintAnalysis(a, t, s);
     const vd = document.getElementById('am-acc-vd-' + ai);
     if (vd) {
       const money = (x) => (t.rate == null) ? '' : (' (' + _amFmt(Math.abs(x), 0) + ' پول)');
@@ -38864,6 +39019,72 @@ function _amPaint() {
     if (warn.length) h += '<div class="am-warn soft">⚠️ ' + warn.map(escFa).join('</div><div>⚠️ ') + '</div>';
     wbox.innerHTML = h;
   }
+}
+/* ══ تحلیلِ فیصدیِ یک حساب ══════════════════════════════════════════════
+   خواستهٔ صاحب ریپو، با مثالِ خودش: «۱۰۰٬۰۰۰ تیل به من دادند… فیصدیِ خودم را
+   می‌زنم مثلاً ۳ فیصد که ۳٬۰۰۰ تایش به من می‌رسد، و این سه هزار آنالیز شود که
+   می‌صرفد یا در آن ضرر می‌کنم؛ اگر ضرر کردم بگوید یک فیصد بیشتر بگیر.»
+
+   خطرِ اصلی هم همان است که خودش گفت: اگر بخار از فیصدی بیشتر شود، تیلِ مردم را
+   باید از جیبِ خود بدهی. پس این تحلیل، «از جیبِ خودتان» را صریح می‌نویسد.
+   ══════════════════════════════════════════════════════════════════════ */
+function _amPaintAnalysis(a, t, s) {
+  const box = document.getElementById('am-an-body-' + a.id);
+  if (!box || box.style.display === 'none') return;
+  const L = v => _amFmt2(v) + ' لیتر';
+  const money = v => (t.rate == null) ? '' : (' <i style="color:var(--muted);font-style:normal">(' + _amFmt(Math.abs(v) * t.rate, 0) + ' پول)</i>');
+
+  if (!t.liters) {
+    box.innerHTML = '<div class="am-an-note">اول در جدولِ زیر «رسید تیل» را بنویسید تا تحلیل شود.</div>';
+    return;
+  }
+  const th = amThermal(t.liters, null, amFuelKey(a), s);   // با گرمای پیش‌فرض
+  const rows = [
+    ['تیلی که گرفته‌اید', L(t.liters)],
+    ['<b>بخارِ تخمینی</b>', '<b style="color:var(--accent)">' + L(t.loss) + money(t.loss) + '</b>'],
+    ['یعنی فیصدیِ سربه‌سر', '<b>' + _amFmt(t.needPct, 3) + '٪</b>'],
+    ['فیصدیِ پیشنهادی (با حاشیهٔ اطمینان ' + _amFmt(s.safetyPct) + '٪)', '<b style="color:var(--green)">' + _amFmt(t.safePct, 3) + '٪</b>']
+  ];
+  let verdict;
+  if (t.myPct == null) {
+    verdict = '<div class="am-an-v">در سربرگ «فیصدیِ من» را بنویسید تا بگویم می‌صرفد یا ضرر می‌کنید.'
+      + ' اگر <b>' + _amFmt(t.safePct, 3) + '٪</b> بگیرید، <b>' + L(t.liters * t.safePct / 100)
+      + '</b> به شما می‌رسد و بخار جبران می‌شود.</div>';
+  } else {
+    rows.push(['فیصدیِ شما (' + _amFmt(t.myPct, 3) + '٪)', '<b>' + L(t.myLiters) + money(t.myLiters) + '</b>']);
+    rows.push(['sep']);
+    if (t.diff >= 0) {
+      rows.push(['<b>برایتان می‌ماند</b>', '<b style="color:var(--green)">' + L(t.diff) + money(t.diff) + '</b>']);
+      const extra = t.myPct - t.needPct;
+      verdict = '<div class="am-an-v ok">✅ می‌صرفد. از <b>' + L(t.liters) + '</b> حدود <b>' + L(t.loss)
+        + '</b> بخار می‌شود و شما <b>' + L(t.myLiters) + '</b> می‌گیرید — <b>' + L(t.diff)
+        + '</b> برای خودتان می‌ماند' + money(t.diff) + '.'
+        + ' <span style="color:var(--muted)">(' + _amFmt(extra, 3) + '٪ بالاتر از سربه‌سر هستید.)</span></div>';
+    } else {
+      const short = Math.abs(t.diff);
+      const needMore = t.needPct - t.myPct;
+      const safeMore = t.safePct - t.myPct;
+      rows.push(['<b>از جیبِ خودتان</b>', '<b style="color:var(--red)">' + L(short) + money(short) + '</b>']);
+      verdict = '<div class="am-an-v bad">❌ ضرر می‌کنید. بخار <b>' + L(t.loss) + '</b> است ولی با <b>'
+        + _amFmt(t.myPct, 3) + '٪</b> فقط <b>' + L(t.myLiters) + '</b> می‌گیرید — <b>' + L(short)
+        + '</b> باید از جیبِ خودتان بدهید' + money(short) + '.<br>'
+        + '↩️ دستِ‌کم <b>' + _amFmt(t.needPct, 3) + '٪</b> بگیرید (<b>' + _amFmt(needMore, 3)
+        + '٪</b> بیشتر از حالا)، و برای اطمینان <b>' + _amFmt(t.safePct, 3) + '٪</b> ('
+        + _amFmt(safeMore, 3) + '٪ بیشتر).</div>';
+    }
+  }
+  box.innerHTML = '<div class="am-rows">'
+    + rows.map(r => r[0] === 'sep' ? '<span class="sep"></span>'
+                 : ('<span class="l">' + r[0] + '</span><span class="v">' + r[1] + '</span>')).join('')
+    + '</div>' + verdict
+    + '<div class="am-an-btns">'
+    + '<button class="am-md-btn grn" onclick="amApplySuggested(' + (amAccounts().indexOf(a)) + ')">🧮 فیصدیِ پیشنهادی را بگذار</button>'
+    + '</div>'
+    + '<div class="am-an-note">🌡️ جدا از بخار: با گرمای <b>' + _amFmt(th.temp) + '°C</b> خودِ عددِ لیتر حدود <b>'
+    + _amFmt(Math.abs(th.pct), 2) + '٪</b> (' + _amFmt2(Math.abs(th.liters)) + ' لیتر) '
+    + (th.liters >= 0 ? 'بیشتر' : 'کمتر') + ' از دمای مرجع (۱۵٫۶°C) نشان می‌دهد. این <b>بخار نیست</b> '
+    + 'و با سرد شدنِ هوا برمی‌گردد — روی فیصدی حسابش نکنید.</div>'
+    + '<div class="am-an-note">بخارِ تخمینی یک برآورد است، نه اندازه‌گیریِ واقعی. ضریب‌ها و منابعشان در «⚙️ تنظیمات مدیر» نوشته شده‌اند.</div>';
 }
 function _amSumCardHtml(title, color, t, s) {
   const pct = t.liters > 0 ? (t.loss / t.liters) * 100 : 0;
@@ -46839,7 +47060,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.346';
+const APP_VERSION = '2.9.347';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
