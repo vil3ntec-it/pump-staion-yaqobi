@@ -38419,6 +38419,12 @@ function amAccounts() {
       if (!r.id) { r.id = _amNewId('AMR'); changed = true; }
       if (r.state !== 'open' && r.state !== 'closed') { r.state = 'open'; changed = true; }
       if (typeof r.closeDate !== 'string') { r.closeDate = ''; changed = true; }
+      /* ردیف‌های بسته‌ای که از قبل مانده‌اند و فیصدیِ خودشان را ننوشته‌اند: همین
+         حالا فیصدیِ فعلی رویشان نوشته می‌شود. هیچ عددی امروز عوض نمی‌شود —
+         فقط همین وضع قفل می‌شود تا با عوض کردنِ فیصدیِ حساب عقب‌گرد نکند. */
+      if (r.state === 'closed' && !_amHas(r.myPct) && _amHas(a.myPct)) {
+        r.myPct = _amNum(a.myPct); changed = true;
+      }
       const ts = _amTs(r.date);
       if (ts && (!first || ts < _amTs(first))) first = String(r.date);
     });
@@ -38785,6 +38791,18 @@ function setAmanatRowState(ai, ri, st) {
     if (r.state === 'closed') return;
     r.state = 'closed';
     if (!r.closeDate) r.closeDate = _amTodayStr();
+    /* ⚠️ فیصدی هم مثلِ مدت زمان قفل می‌شود و این را برندارید.
+       گزارشِ صاحب ریپو: «فیصدیِ یکی را زدم و آن دیگر رفته؛ می‌خواهم فیصدیِ
+       جدید به کادرِ جدید بدهم — آن قبلی که خراب نمی‌شود؟»
+       می‌شد: ردیفی که فیصدیِ خودش را ننوشته بود از فیصدیِ حساب ارث می‌برد، پس
+       با عوض کردنِ فیصدیِ حساب برای محمولهٔ تازه، حسابِ محموله‌های تمام‌شده هم
+       عقب‌گرد می‌کرد (۳٬۰۰۰ می‌شد ۵٬۰۰۰).
+       حالا لحظهٔ بستن، همان فیصدیِ آن روز روی خودِ ردیف نوشته می‌شود و دیگر
+       هیچ‌وقت تکان نمی‌خورد. */
+    if (!_amHas(r.myPct)) {
+      const eff = _amHas(a.myPct) ? _amNum(a.myPct) : null;
+      if (eff != null) r.myPct = eff;
+    }
   } else {
     if (r.state === 'open') return;
     r.state = 'open'; r.closeDate = '';
@@ -38801,7 +38819,10 @@ function setAmanatRowState(ai, ri, st) {
   }
   _amAccPaint();
   if (!_amAccOpen()) _amPaint();
-  showToast(st === 'closed' ? '🔒 ردیف بسته شد — مدت زمان ایستاد' : '🔓 ردیف باز شد', '#805ad5');
+  showToast(st === 'closed'
+    ? ('🔒 ردیف بسته شد — مدت زمان و فیصدی' + (_amHas(r.myPct) ? (' (' + _amFmt(_amNum(r.myPct), 2) + '٪)') : '') + ' قفل شد')
+    : '🔓 ردیف باز شد', '#805ad5');
+  _amAccRefresh();   // خانهٔ فیصدی حالا عددِ قفل‌شده را نشان می‌دهد
 }
 
 /* ── تنظیمات مدیر ────────────────────────────────────────────────────────── */
@@ -39174,7 +39195,7 @@ function _amAccBuild() {
       </td>
       <td class="am-calc" id="am-c-loss-${ai}-${ri}">—</td>
       <td class="am-calc" id="am-c-pct-${ai}-${ri}">—</td>
-      <td><input class="xls-in xs" type="number" step="0.1" value="${cmpEsc(r.myPct)}" placeholder="${a.myPct === '' || a.myPct == null ? 'ننوشته' : ('↑' + _amFmt(_amNum(a.myPct), 2))}" title="فیصدیِ هدفِ همین ردیف. خالی بگذارید تا فیصدیِ خودِ حساب (بالای صفحه) به کار برود — آن وقت این‌جا با نشانِ ↑ نشان داده می‌شود، یعنی نوشتهٔ شما نیست." oninput="updateAmanatRow(${ai},${ri},'myPct',this.value)"></td>
+      <td><input class="xls-in xs" type="number" step="0.1" value="${cmpEsc(r.myPct)}" placeholder="${a.myPct === '' || a.myPct == null ? 'ننوشته' : ('↑' + _amFmt(_amNum(a.myPct), 2))}" title="${closed ? '🔒 این ردیف بسته است — فیصدی‌اش قفل شده و با عوض کردنِ فیصدیِ حساب تکان نمی‌خورد. اگر لازم شد، همین‌جا دستی عوضش کنید.' : 'فیصدیِ هدفِ همین ردیف. خالی بگذارید تا فیصدیِ خودِ حساب (بالای صفحه) به کار برود — آن وقت با نشانِ ↑ می‌آید، یعنی نوشتهٔ شما نیست. لحظه‌ای که ردیف را «بسته» کنید، همان فیصدی رویش قفل می‌شود.'}" oninput="updateAmanatRow(${ai},${ri},'myPct',this.value)"></td>
       <td class="am-calc" id="am-c-need-${ai}-${ri}">—</td>
       <td class="am-calc" id="am-c-share-${ai}-${ri}">—</td>
       <td class="am-calc" id="am-c-net-${ai}-${ri}">—</td>
@@ -47399,7 +47420,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.354';
+const APP_VERSION = '2.9.355';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
