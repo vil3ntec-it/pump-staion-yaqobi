@@ -39174,8 +39174,9 @@ function _amAccBuild() {
       </td>
       <td class="am-calc" id="am-c-loss-${ai}-${ri}">—</td>
       <td class="am-calc" id="am-c-pct-${ai}-${ri}">—</td>
-      <td><input class="xls-in xs" type="number" step="0.1" value="${cmpEsc(r.myPct)}" placeholder="${a.myPct === '' || a.myPct == null ? '0' : _amFmt(_amNum(a.myPct), 2)}" title="فیصدیِ هدف — چقدر باید بعد از بخار برایتان بماند. خالی = فیصدیِ خودِ حساب" oninput="updateAmanatRow(${ai},${ri},'myPct',this.value)"></td>
+      <td><input class="xls-in xs" type="number" step="0.1" value="${cmpEsc(r.myPct)}" placeholder="${a.myPct === '' || a.myPct == null ? 'ننوشته' : ('↑' + _amFmt(_amNum(a.myPct), 2))}" title="فیصدیِ هدفِ همین ردیف. خالی بگذارید تا فیصدیِ خودِ حساب (بالای صفحه) به کار برود — آن وقت این‌جا با نشانِ ↑ نشان داده می‌شود، یعنی نوشتهٔ شما نیست." oninput="updateAmanatRow(${ai},${ri},'myPct',this.value)"></td>
       <td class="am-calc" id="am-c-need-${ai}-${ri}">—</td>
+      <td class="am-calc" id="am-c-share-${ai}-${ri}">—</td>
       <td class="am-calc" id="am-c-net-${ai}-${ri}">—</td>
       <td class="am-calc" id="am-c-rest-${ai}-${ri}">—</td>
       ${M ? `<td><input class="xls-in sm" type="number" step="0.01" value="${cmpEsc(r.actual)}" placeholder="ثبت نشده" oninput="updateAmanatRow(${ai},${ri},'actual',this.value)"></td>
@@ -39228,7 +39229,7 @@ function _amAccBuild() {
       </div>
     </div>
     <div class="xls-wrap" style="overflow:auto">
-      <table class="xls-tbl" style="min-width:${M ? 1560 : 1400}px">
+      <table class="xls-tbl" style="min-width:${M ? 1655 : 1495}px">
         <thead><tr>
           <th style="width:30px">#</th>
           <th style="width:88px">تاریخ</th>
@@ -39241,16 +39242,17 @@ function _amAccBuild() {
           <th style="width:92px">در مخزن</th>
           <th style="width:84px" title="چند لیتر بخار می‌شود">بخار (ل)</th>
           <th style="width:80px">درصد بخار</th>
-          <th style="width:78px" title="چقدر باید بعد از بخار برایتان بماند">فیصدیِ من</th>
+          <th style="width:82px" title="فیصدیِ هدف — چقدر باید بعد از بخار برایتان بماند. خانهٔ خالی یعنی از فیصدیِ خودِ حساب (بالای صفحه) می‌آید و با ↑ نشان داده می‌شود.">فیصدیِ من</th>
           <th style="width:86px" title="فیصدیِ من + درصد بخار">فیصدیِ لازم</th>
-          <th style="width:92px" title="سهمِ شما منهای بخار — بخار فقط از سهمِ شما کم می‌شود">به من می‌رسد</th>
+          <th style="width:92px" title="فیصدیِ من × رسید تیل — هنوز بخار از آن کم نشده. همین عدد است که از باقی تیلِ مشتری کم می‌شود.">سهمِ من (ل)</th>
+          <th style="width:92px" title="سهمِ من منهای بخار — بخار فقط از سهمِ شما کم می‌شود">به من می‌رسد</th>
           <th style="width:96px" title="تیلِ خودِ مشتری = رسید − برده شده − سهمِ شما. بخار این‌جا کم نمی‌شود.">باقی تیلِ مشتری</th>
           ${M ? '<th style="width:92px">موجودی واقعی</th><th style="width:88px">اختلاف</th>' : ''}
           <th style="width:82px" title="پایهٔ بخار: چند درصد در ماه، در دمای مرجع. خالی = همان عددِ تنظیماتِ مدیر. فقط اگر تیلِ این ردیف با بقیه فرق دارد دست بزنید.">پایهٔ بخار ٪ ماه</th>
           <th style="min-width:110px">یادداشت</th>
           <th style="width:42px">حذف</th>
         </tr></thead>
-        <tbody>${rows || ('<tr><td colspan="' + (M ? 20 : 18) + '" class="am-empty">ردیفی با این فیلتر نیست.</td></tr>')}</tbody>
+        <tbody>${rows || ('<tr><td colspan="' + (M ? 21 : 19) + '" class="am-empty">ردیفی با این فیلتر نیست.</td></tr>')}</tbody>
         <tfoot class="xls-foot"><tr>
           <td colspan="4" style="padding:8px 7px">${hidden > 0 ? 'جملهٔ ردیف‌های دیده‌شده' : 'جمله'}</td>
           <td class="xls-calc" id="am-ft-liters">0</td>
@@ -39260,6 +39262,7 @@ function _amAccBuild() {
           <td class="xls-calc" id="am-ft-losspct">0</td>
           <td></td>
           <td class="xls-calc" id="am-ft-need">0</td>
+          <td class="xls-calc" id="am-ft-share">0</td>
           <td class="xls-calc" id="am-ft-net">0</td>
           <td class="xls-calc" id="am-ft-rest">0</td>
           ${M ? '<td class="xls-calc" id="am-ft-actual">0</td><td class="xls-calc" id="am-ft-diff">0</td>' : ''}
@@ -39320,6 +39323,7 @@ function _amAccPaint() {
     set('loss', _amFmt2(c.loss), 'var(--accent)');
     set('pct', _amFmt(c.lossPct, 3) + '٪', 'var(--accent)');
     set('need', c.needPct == null ? '—' : (_amFmt(c.needPct, 3) + '٪'), 'var(--blue)');
+    set('share', c.targetL == null ? '—' : _amFmt2(c.targetL), 'var(--blue)');
     set('net', c.netIfMy == null ? '—' : _amFmt2(c.netIfMy), c.netIfMy == null ? 'var(--muted)' : (c.netIfMy < 0 ? 'var(--red)' : 'var(--green)'));
     set('rest', _amFmt2(c.rest), c.rest < -0.0001 ? 'var(--red)' : 'var(--green)');
     set('diff', c.hasActual ? _amFmt2(c.diff) : '—',
@@ -39336,6 +39340,7 @@ function _amAccPaint() {
   ft('loss', _amFmt2(tv.loss));
   ft('losspct', _amFmt(tv.lossPct, 3) + '٪');
   ft('need', tv.needPct == null ? '—' : (_amFmt(tv.needPct, 3) + '٪'));
+  ft('share', tv.share ? _amFmt2(tv.share) : '—');
   ft('net', tv.netIfMy == null ? '—' : _amFmt2(tv.netIfMy));
   ft('rest', _amFmt2(tv.rest));
   ft('actual', tv.hasActual ? _amFmt2(tv.actual) : '—');
@@ -39464,6 +39469,7 @@ function _amAccPdfBlock(a, s) {
       <td style="color:#b7791f">${_amFmt(c.lossPct, 3)}٪</td>
       <td>${c.myPct == null ? '—' : (_amFmt(c.myPct, 2) + '٪')}</td>
       <td style="color:#2b6cb0;font-weight:700">${c.needPct == null ? '—' : (_amFmt(c.needPct, 3) + '٪')}</td>
+      <td style="font-weight:700">${c.targetL == null ? '—' : _amFmt2(c.targetL)}</td>
       <td style="font-weight:700">${c.netIfMy == null ? '—' : _amFmt2(c.netIfMy)}</td>
       <td style="color:#276749;font-weight:700">${_amFmt2(c.rest)}</td>
       <td>${c.hasActual ? _amFmt2(c.actual) : '—'}</td>
@@ -39482,11 +39488,12 @@ ${t.myPct == null ? 'فیصدی ثبت نشده' : ('فیصدیِ شما (هدف
 <table>
 <thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>به حسابهٔ</th><th>رسید تیل</th><th>برده شده</th><th>مدت زمان</th>
 <th>درجه گرما</th><th>در مخزن</th><th>بخار (ل)</th><th>درصد بخار</th><th>فیصدیِ من</th><th>فیصدیِ لازم</th>
-<th>به من می‌رسد</th><th>باقی تیلِ مشتری</th><th>موجودی واقعی</th><th>اختلاف</th><th>پایهٔ بخار</th><th>یادداشت</th></tr></thead>
-<tbody>${rows || '<tr><td colspan="19" style="padding:14px;color:#718096">ردیفی ثبت نشده</td></tr>'}</tbody>
+<th>سهمِ من</th><th>به من می‌رسد</th><th>باقی تیلِ مشتری</th><th>موجودی واقعی</th><th>اختلاف</th><th>پایهٔ بخار</th><th>یادداشت</th></tr></thead>
+<tbody>${rows || '<tr><td colspan="20" style="padding:14px;color:#718096">ردیفی ثبت نشده</td></tr>'}</tbody>
 <tfoot><tr><td colspan="4">جمله</td><td>${_amFmt2(t.liters)}</td><td>${_amFmt2(t.taken)}</td><td colspan="3"></td>
 <td>${_amFmt2(t.loss)}</td><td>${_amFmt(t.lossPct, 3)}٪</td><td></td>
 <td>${t.needPct == null ? '—' : (_amFmt(t.needPct, 3) + '٪')}</td>
+<td>${t.share ? _amFmt2(t.share) : '—'}</td>
 <td>${t.netIfMy == null ? '—' : _amFmt2(t.netIfMy)}</td><td>${_amFmt2(t.rest)}</td>
 <td>${t.hasActual ? _amFmt2(t.actual) : '—'}</td><td>${t.hasActual ? _amFmt2(t.realDiff) : '—'}</td>
 <td colspan="2"></td></tr></tfoot>
@@ -47392,7 +47399,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.353';
+const APP_VERSION = '2.9.354';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
