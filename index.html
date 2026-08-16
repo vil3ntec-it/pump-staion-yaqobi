@@ -1352,6 +1352,14 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
 .pl-loss-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;touch-action:pan-x pan-y;border:1px solid var(--border);border-radius:10px}
 .pl-loss-tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:0.86rem;min-width:1120px}
 .pl-loss-tbl th{background:var(--dark);color:var(--label);font-weight:800;font-size:0.8rem;padding:11px 9px;border-bottom:1px solid var(--border);white-space:nowrap;line-height:1.5}
+/* ── خطِ عمودی بینِ ستون‌ها ────────────────────────────────────────────────
+   گزارشِ صاحب ریپو: «کادرهای عمودی‌شان نیست». این جدول‌ها فقط خطِ افقی داشتند،
+   پس در ردیف‌های بلند چشم نمی‌فهمید هر عدد زیرِ کدام ستون است — به‌خصوص در دو
+   ستونِ «نرخ اتحادیه روز رسید» و «زیان» که کنارِ هم‌اند و هر دو عددی. خط روی
+   لبهٔ *آغازِ* هر خانه می‌نشیند (سندِ راست‌به‌چپ ⇒ inline-start) و خانهٔ اولِ هر
+   ردیف خطِ اضافه نمی‌گیرد تا قابِ جدول دوبار کشیده نشود. */
+.pl-loss-tbl th + th,.pl-loss-tbl td + td,
+.pl-sub-tbl th + th,.pl-sub-tbl td + td{border-inline-start:1px solid var(--border)}
 .pl-loss-tbl th small{font-size:0.7rem;font-weight:700;color:var(--muted)}
 .pl-loss-tbl td{padding:10px 9px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;line-height:1.55}
 .pl-loss-tbl tbody tr:hover td{background:var(--dark)}
@@ -28453,6 +28461,22 @@ function debtFuelStatus(p) {
     check((parseFloat(a.rasidMoneyP) || 0) * effP + t.petrol.rasid, t.petrol.bardagi, 'money');
     check((parseFloat(a.rasidMoneyD) || 0) * effD + t.diesel.rasid, t.diesel.bardagi, 'money');
   });
+  /* ── حسابِ تسویه‌شده «تمام‌شده» نیست ────────────────────────────────────────
+     گزارشِ صاحب ریپو: «حسابِ طرف تسویه شده، ولی کارتش هنوز سرخ مانده — باید
+     معمولی می‌شد». علتش این بود که معیارِ بالا فقط می‌پرسید «از آنچه داده چیزی
+     مانده؟»؛ کسی که دقیقاً به‌اندازهٔ رسیدش برده، الباقی‌اش صفر است ولی
+     مانده‌اش هم صفر است، پس سرخ می‌شد.
+     هشدارِ سرخ برای کسی است که *بدهکار* است. اگر الباقیِ کارت صفر یا منفی
+     باشد (تسویه/پیش‌پرداخت)، حالت به «عادی» برمی‌گردد. «کم مانده»ی زرد دست
+     نمی‌خورد: آن هشدارِ «اعتبارش رو به تمام شدن است» هنوز به‌جاست.
+     این‌جا نشسته (نه در ساختِ کارت) تا نشانِ روی دکمهٔ «قرض‌داران» و اطلاعیهٔ
+     خودکار هم دقیقاً همین را بگویند. */
+  if (worst === 'out') {
+    try {
+      const alb = _debtSumFigures(p).albaqi;
+      if (!(alb > 0)) { worst = 'ok'; kinds = {}; }
+    } catch (e) {}
+  }
   return { st: worst, kinds };
 }
 // برچسب فارسی نوع کمبود: تیل / پول / هر دو
@@ -31481,11 +31505,17 @@ function _plDetailTablesHtml(x) {
         : (p.sameDay ? st('green', '✅ رسیدِ همان روز', 'برداشت و رسید در یک روز — بدون زیان افزایش قیمت')
         : (p.loss > 0 ? st('red', '📉 زیان', 'نرخِ اتحادیهٔ روزِ رسید از نرخِ خودِ این برداشت بالاتر رفته')
                       : st('muted', '✅ بدون زیان', 'نرخِ روزِ رسید از نرخِ این برداشت بالاتر نرفته'))));
+      /* وقتی نرخِ آن روز نیست، خانه فقط «—» بود و همین گیج می‌کرد: کاربر خیال
+         می‌کرد «رسید نخورده». رسید خورده — تاریخش در ستونِ کناری هست — آنچه
+         نیست نرخِ اتحادیهٔ همان روز است. پس همین‌جا نوشته می‌شود. */
       const refTxt = p.ref > 0
         ? '<span title="' + (p.refLocked ? 'نرخِ قفل‌شدهٔ همان روزِ ثبتِ رسید/فاکتور'
             : ('نرخِ ثبت‌شدهٔ اتحادیه در ' + esc(p.refOn || p.date) + (p.refOn && p.refOn !== p.date ? ' — تا روزِ رسید عوض نشده' : ''))) + '">'
           + n2fa(rnd2(p.ref)) + '</span>'
-        : '—';
+        : (p.noRate
+            ? '<span title="' + esc(p.why || 'نرخ اتحادیه برای این تاریخ موجود نیست')
+              + '">—<br><small style="color:var(--muted)">نرخِ اتحادیهٔ آن روز ثبت نشده</small></span>'
+            : '—');
       line(_plC('مقدار باقی‌مانده', n2fa(rnd2(p.qty)) + ' ل'
               + (multi ? '<br><small style="color:var(--muted)">بخش ' + n2fa(pi + 1) + ' از ' + n2fa(it.parts.length) + '</small>' : ''),
               'color:var(--blue);font-weight:800')
@@ -32351,14 +32381,27 @@ function _rerenderStackedPreserveFocus(person) {
 /* خانهٔ «الباقی»ِ فوترِ جدول‌های آرشیو — دو خطی و سبز/سرخ، درست مثل فوترِ جدولِ
    اصلی (pm-ft-albaqi). یک تابعِ مشترک است تا رسمِ اولیه و به‌روزرسانیِ درجای
    حینِ تایپ (_histRepaint) هرگز از هم جدا نیفتند.
-   عدد همان «رسید − بردگی»ِ ردیف‌های همین جدول است — دست‌نخورده از قبل. چون هر
-   دو طرفش پولی‌اند، برچسبش در واحد پول «الباقی پول» است و در واحد تیل — که
-   ستونِ دیده‌شده «رسید تیل» است و این عدد از آن نمی‌آید — فقط «الباقی». */
+
+   ⚠️ باگی که گزارش شد: این عدد فقط «رسید − بردگیِ ردیف‌های خودِ جدول» بود —
+   نه رسیدِ سربرگ در آن بود و نه فیصدی. برای همین وقتی مشتری کلِ بردش را رسید
+   می‌داد، فوتر «۰» می‌گفت ولی سربرگِ همان آرشیو هنوز فیصدی را طلبکار بود
+   («رسید را می‌دهد ولی باز رویش فیصدی می‌افتد» — دو عدد با یک نام، در یک
+   جدول). حالا هر دو از یک جا می‌آیند: _histFigures. */
+function _histFootNet(person, h, hFilter) {
+  const f = _histFigures(person, h);
+  const inc = k => (hFilter !== 'petrol' && hFilter !== 'diesel') || hFilter === k;
+  // rem = برد + فیصدی − رسید (بدهی مثبت است)؛ الباقیِ فوتر قرینه‌اش است
+  const rem = (inc('petrol') ? f.remP : 0) + (inc('diesel') ? f.remD : 0);
+  return { net: -rem, money: f.hMoney };
+}
 function _histFootAlbHtml(net, money) {
-  const v = Math.round(net) || 0;
+  const v = money ? (Math.round(net) || 0) : ((Math.round(net * 100) / 100) || 0);
   const c = v < 0 ? 'var(--red)' : 'var(--green)';
-  return '<div style="font-size:0.78rem;line-height:1.5;color:' + c + '">'
-    + (money ? 'الباقی پول:' : 'الباقی:') + '<br>' + n2fa(v) + '</div>';
+  // همان برچسبِ گویای فوترِ جدولِ اصلی، تا علامتِ منفی/مثبت خوانده شود
+  const tip = v < 0 ? 'این‌قدر بیشتر برده (بدهکار) — رسیدِ سربرگ و فیصدی هم در این عدد هست'
+                    : 'این‌قدر مانده/پیش‌پرداخت دارد — رسیدِ سربرگ و فیصدی هم در این عدد هست';
+  return '<div title="' + tip + '" style="font-size:0.78rem;line-height:1.5;color:' + c + '">'
+    + (money ? 'الباقی پول:' : 'الباقی تیل:') + '<br>' + n2fa(v) + (money ? '' : ' ل') + '</div>';
 }
 /* ریاضیِ سربرگِ هر جدولِ آرشیو — یک جا، تا رسمِ اولیه و به‌روزرسانیِ درجا
    (_histRepaint) هرگز دو عددِ متفاوت نشان ندهند. هیچ فرمولی این‌جا عوض نشده؛
@@ -32558,7 +32601,6 @@ function _renderHistoryPanel(person) {
       </tr>`;
     }).join('');
     if (!rowsHtml) rowsHtml = `<tr><td colspan="${showFt?11:10}" style="text-align:center;padding:12px;color:var(--muted);font-size:0.82rem">${hFilter==='petrol'?'⛽ هیچ ردیف پطرولی ثبت نشده':(hFilter==='diesel'?'🟤 هیچ ردیف دیزلی ثبت نشده':'هیچ ردیفی ثبت نشده')}</td></tr>`;
-    const viewAlbaqi = viewRows.reduce((s, x) => s + ((x.r.byMoney ? (x.r.bardagi||0) : _personRowBardagi(x.r)) - (x.r.rasid||0)), 0);
     /* ── جمعِ ستون‌های فوتر — همان کاری که جدولِ اصلی می‌کند ────────────────────
        گزارشِ صاحب ریپو: «جدول‌های آرشیو جمع کل تیل برده‌شده ندارد، جمع رسید ندارد،
        جمع برد هم ندارد». فوتر فقط یک عددِ الباقی داشت و بقیهٔ ستون‌ها زیرشان خالی
@@ -32597,7 +32639,7 @@ function _renderHistoryPanel(person) {
               <td class="xls-calc">—</td>
               <td class="xls-calc" id="hist-ftb-${pid}-${h.id}">${n2fa(rnd(ftBard))}</td>
               <td class="xls-calc" id="hist-ftr-${pid}-${h.id}">${n2fa(rnd(ftRasid))}</td>
-              <td class="xls-calc hist-ft-alb" id="hist-ft-${pid}-${h.id}" style="font-weight:800">${_histFootAlbHtml(-viewAlbaqi, hMoney)}</td>
+              <td class="xls-calc hist-ft-alb" id="hist-ft-${pid}-${h.id}" style="font-weight:800">${(fn => _histFootAlbHtml(fn.net, fn.money))(_histFootNet(person, h, hFilter))}</td>
               <td></td>
             </tr></tfoot>
           </table>
@@ -33049,11 +33091,10 @@ function _histRepaint(pid, hid) {
   if (!tbl) { _rerenderHistoryPreserveFocus(person); return; }   // جدول در DOM نیست → همان راهِ قبلی
   const hFilter = h.viewFilter || h.fuel || currentPersonFilter || 'all';
   const hMoney = (h.viewMoney != null) ? h.viewMoney : _acctModeMoney(person, _acctOf(person));
-  let viewAlbaqi = 0, ftFuel = 0, ftBard = 0, ftRasid = 0;
+  let ftFuel = 0, ftBard = 0, ftRasid = 0;
   (h.rows || []).forEach((r, ri) => {
     if (hFilter !== 'all' && (r.ftype || 'petrol') !== hFilter) return;
     const bard = r.byMoney ? (r.bardagi || 0) : _personRowBardagi(r);
-    viewAlbaqi += bard - (r.rasid || 0);
     // همان سه جمعِ فوتر که _renderHistoryPanel می‌سازد — این‌جا هم باید هم‌گام
     // بمانند، وگرنه حینِ تایپ جمع‌ها عقب می‌ماندند تا رندرِ بعدی
     ftFuel  += parseFloat(r.fuel) || 0;
@@ -33073,7 +33114,7 @@ function _histRepaint(pid, hid) {
   setFt('hist-ftb', n2fa(rnd2(ftBard)));
   setFt('hist-ftr', n2fa(rnd2(ftRasid)));
   const ft = document.getElementById('hist-ft-' + pid + '-' + hid);
-  if (ft) ft.innerHTML = _histFootAlbHtml(-viewAlbaqi, hMoney);
+  if (ft) { const fn = _histFootNet(person, h, hFilter); ft.innerHTML = _histFootAlbHtml(fn.net, fn.money); }
   _histRepaintHead(person, pid, hid, h);
 }
 /* سربرگِ خلاصهٔ همان یک آرشیو (کارت‌های پطرول/دیزل و دو جملهٔ نوار) در جای خود
@@ -46437,7 +46478,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.341';
+const APP_VERSION = '2.9.342';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
