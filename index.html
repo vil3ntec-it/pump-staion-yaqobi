@@ -1981,12 +1981,12 @@ body[class*="theme-"] #sec-settings::before{
 }
 
 /* base interactive button style */
-button:not(.del-btn):not(.modal-close):not(.person-del):not(.theme-toggle):not(.lock-btn):not(.nav-btn){
+button:not(.del-btn):not(.modal-close):not(.person-del):not(.theme-toggle):not(.lock-btn):not(.nav-btn):not(.nav-order-btn){
   position:relative;
   overflow:hidden;
   transition: transform .15s ease, box-shadow .2s ease, background .2s, opacity .2s !important;
 }
-button:not(.del-btn):not(.modal-close):not(.person-del):not(.theme-toggle):not(.lock-btn):not(.nav-btn):active{
+button:not(.del-btn):not(.modal-close):not(.person-del):not(.theme-toggle):not(.lock-btn):not(.nav-btn):not(.nav-order-btn):active{
   animation: btnPress .25s ease forwards;
 }
 
@@ -17388,6 +17388,9 @@ body.boot-viewer #bootViewerSplash{
   <button class="nav-btn" onclick="showSection('profit',this)"><svg class="nav-ic ia-rise"><use href="#ic-profit"/></svg> مفاد / ضرر / اتحادیه</button>
   <button class="nav-btn" onclick="showSection('settings',this)"><svg class="nav-ic ia-spin"><use href="#ic-settings"/></svg> تنظیمات</button>
   <button class="nav-btn" onclick="showSection('history',this)">🕘 تاریخچه‌ها</button>
+  <!-- ⇅ چیدمان — عمداً کلاسِ nav-btn ندارد تا نه بخش حساب شود، نه در جابه‌جایی
+       بیاید، نه شمارهٔ میان‌بُرهای صفحه‌کلید را به هم بزند. -->
+  <button type="button" class="nav-order-btn" onclick="openNavOrder()" title="چیدمانِ بخش‌ها — هر بخشی را هر جا خواستید بگذارید" aria-label="چیدمانِ بخش‌ها">⇅ چیدمان</button>
 </div>
 
 <!-- کشوی منوی بخش‌ها (با دکمهٔ سه‌نقطهٔ داخل سربرگ باز می‌شود) -->
@@ -17395,11 +17398,385 @@ body.boot-viewer #bootViewerSplash{
   <div class="m-menu-panel">
     <div class="m-menu-head">
       <span>📂 بخش‌ها</span>
-      <button class="m-menu-close" onclick="closeMobileMenu()" aria-label="بستن">✕</button>
+      <span style="display:inline-flex;align-items:center;gap:8px">
+        <button class="m-menu-close nord-open" onclick="openNavOrder()" aria-label="چیدمانِ بخش‌ها" title="چیدمانِ بخش‌ها">⇅</button>
+        <button class="m-menu-close" onclick="closeMobileMenu()" aria-label="بستن">✕</button>
+      </span>
     </div>
     <div class="m-menu-list" id="mMenuList"></div>
   </div>
 </div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     🧩 چیدمانِ دلخواهِ بخش‌ها
+     خواستهٔ صاحب ریپو: «هر بخشی را هر جا خواستم بگذارم — آن‌هایی که زیاد لازم
+     دارم اولِ ردیف یا آخرِ ردیف بیایند؛ روی کامپیوتر هم همین‌طور.»
+     ══════════════════════════════════════════════════════════════════════ -->
+<style id="nord-style">
+/* دکمهٔ ⇅ در انتهای نوارِ بخش‌ها (فقط کامپیوتر/تبلت — نوار در موبایل نیست).
+   sticky با left:0 یعنی هر قدر هم نوار را افقی بکشید، این دکمه گوشهٔ چپ
+   می‌ماند و گم نمی‌شود. */
+.nav-order-btn{
+  position:sticky;left:0;z-index:3;flex-shrink:0;margin-inline-start:4px;
+  padding:8px 12px;border-radius:7px;cursor:pointer;white-space:nowrap;
+  font-family:'Vazirmatn',sans-serif;font-size:0.86rem;font-weight:700;
+  border:1.5px dashed var(--border);background:var(--panel);color:var(--muted);
+  /* سایهٔ نرم به سمتِ نوشته‌ها تا وقتی دکمه‌ای زیرش رد می‌شود، عمداً دیده شود */
+  box-shadow:7px 0 13px -8px rgba(0,0,0,.75);
+  transition:color .2s,border-color .2s,background .2s;
+}
+.nav-order-btn:hover{color:var(--accent);border-color:var(--accent);background:var(--card)}
+.nav-order-btn:active{transform:scale(.95)}
+@media (max-width:768px){ .nav-order-btn{display:none} }
+/* دکمهٔ ⇅ داخل سرِ کشوی موبایل — همان قالبِ دکمهٔ ✕، فقط رنگِ لهجه */
+.m-menu-close.nord-open{border-color:var(--accent);color:var(--accent);font-weight:800}
+
+.nord-hint{
+  font-size:0.82rem;color:var(--muted);line-height:1.9;
+  background:var(--card);border:1px solid var(--border);border-radius:11px;
+  padding:10px 12px;margin-bottom:12px;
+}
+.nord-list{
+  display:flex;flex-direction:column;gap:6px;
+  max-height:52vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:4px;border:1px solid var(--border);border-radius:12px;background:var(--dark);
+}
+.nord-row{
+  display:flex;align-items:center;gap:8px;
+  background:var(--card);border:1.5px solid var(--border);border-radius:11px;
+  padding:6px 8px;min-height:52px;
+  /* جابه‌جایی نرم دیده شود؛ ردیفی که زیرِ دست است بی‌انیمیشن حرکت می‌کند */
+  transition:border-color .18s,box-shadow .18s,background .18s;
+}
+.nord-row.nord-dragging{
+  border-color:var(--accent);background:var(--panel);
+  box-shadow:0 10px 26px -12px rgba(0,0,0,.8);opacity:.96;
+}
+.nord-num{
+  flex-shrink:0;width:26px;text-align:center;
+  font-weight:900;font-size:0.82rem;color:var(--accent);
+}
+.nord-grip{
+  flex-shrink:0;width:40px;align-self:stretch;min-height:44px;
+  display:inline-flex;align-items:center;justify-content:center;
+  border:none;background:transparent;color:var(--muted);
+  font-size:1.15rem;line-height:1;cursor:grab;border-radius:9px;
+  /* لمس روی دستگیره نباید لیست را اسکرول کند — وگرنه کشیدن با انگشت کار نمی‌کند */
+  touch-action:none;-webkit-tap-highlight-color:transparent;user-select:none;
+}
+.nord-grip:active{cursor:grabbing;background:var(--dark);color:var(--accent)}
+.nord-label{
+  flex:1;min-width:0;display:flex;align-items:center;gap:9px;
+  font-size:0.94rem;font-weight:700;color:var(--txt);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.nord-label .nav-ic{width:1.3em;height:1.3em;flex-shrink:0}
+.nord-btns{flex-shrink:0;display:flex;gap:4px}
+.nord-b{
+  width:32px;height:32px;padding:0;border-radius:8px;cursor:pointer;
+  border:1px solid var(--border);background:var(--dark);color:var(--txt);
+  font-family:'Vazirmatn',sans-serif;font-size:0.9rem;line-height:1;
+}
+.nord-b:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.nord-b:active:not(:disabled){transform:scale(.9)}
+.nord-b:disabled{opacity:.28;cursor:default}
+.nord-foot{display:flex;gap:10px;flex-wrap:wrap;margin-top:13px}
+@media (max-width:480px){
+  .nord-label{font-size:0.88rem}
+  .nord-b{width:30px;height:30px;font-size:0.84rem}
+  .nord-grip{width:34px}
+}
+</style>
+<div class="modal-overlay" id="navOrderModal">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-head">
+      <button class="modal-close" onclick="closeNavOrder()">✕</button>
+      <h2>🧩 چیدمانِ بخش‌ها</h2>
+    </div>
+    <div class="modal-body">
+      <div class="nord-hint">
+        هر بخش را با دستگیرهٔ <b>⠿</b> بگیرید و هر جای فهرست که خواستید بگذارید — یا با
+        <b>▲ ▼</b> یکی‌یکی بالا/پایینش ببرید و با <b>⤒ ⤓</b> یک‌ضرب به اولِ ردیف یا آخرِ ردیف بفرستید.
+        بخش‌هایی که زیاد لازم دارید را بیاورید اول.<br>
+        همین چیدمان هم روی نوارِ بالای کامپیوتر می‌نشیند، هم روی فهرستِ 📂 بخش‌های موبایل.
+        <b>فقط روی همین دستگاه</b> ذخیره می‌شود، پس چیدمانِ شما روی گوشیِ کسِ دیگر نمی‌رود
+        و هیچ حساب و دیتایی با آن جابه‌جا نمی‌شود.
+      </div>
+      <div class="nord-list" id="navOrderList"></div>
+      <div class="nord-foot">
+        <button type="button" class="pw-btn" style="background:var(--accent);color:#000" onclick="closeNavOrder()">✅ تمام</button>
+        <button type="button" class="pw-btn" style="background:transparent;border:1px solid var(--border);color:var(--muted)" onclick="resetNavOrder()">↩️ برگشت به چیدمانِ اصلی</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   🧩 چیدمانِ دلخواهِ بخش‌ها — منطقِ برنامه اصلاً دست نمی‌خورد
+   --------------------------------------------------------------------------
+   قاعدهٔ اصلی که این ماژول را بی‌خطر نگه می‌دارد: خودِ دکمه‌های نوار جابه‌جا
+   می‌شوند (appendChild روی همان گره)، نه این‌که کپی یا از نو ساخته شوند. پس:
+     • onclick و کلاسِ active و نشانِ قرمزِ قرض‌داران دست‌نخورده می‌مانند؛
+     • فهرستِ 📂 بخش‌های موبایل که از روی همین دکمه‌ها ساخته می‌شود، خودکار
+       هم‌ترتیب می‌شود؛
+     • میان‌بُرهای صفحه‌کلید (Ctrl+عدد و فلشِ چپ/راست) هم که ترتیبِ همین نوار را
+       می‌خوانند، با همان چیدمانِ دیده‌شده جور درمی‌آیند.
+   ذخیره فقط در localStorage همین دستگاه است — نه در DB و نه در همگام‌سازی، تا
+   هیچ داده‌ای جابه‌جا نشود و چیدمانِ یک نفر روی دستگاهِ دیگری ننشیند.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+  var KEY = 'pump_nav_order_v1';
+  var _defaultOrder = null;   // ترتیبِ اصلیِ خودِ برنامه (پیش از اعمالِ چیدمانِ کاربر)
+
+  function navEl() { return document.querySelector('.nav'); }
+  function navBtns() {
+    var n = navEl();
+    return n ? Array.prototype.slice.call(n.querySelectorAll(':scope > .nav-btn')) : [];
+  }
+  /* شناسهٔ هر بخش از روی همان showSection('…') خوانده می‌شود تا لازم نباشد
+     نشانهٔ تازه‌ای به قالب اضافه شود و ترتیب با نامِ بخش‌ها گره بخورد نه با شماره. */
+  function keyOf(btn) {
+    var s = btn.getAttribute('onclick') || '';
+    var m = s.match(/showSection\(\s*['"]([^'"]+)['"]/);
+    return m ? m[1] : '';
+  }
+  function load() {
+    try {
+      var v = JSON.parse(localStorage.getItem(KEY) || 'null');
+      return (Array.isArray(v) && v.length) ? v.filter(function (x) { return typeof x === 'string' && x; }) : null;
+    } catch (e) { return null; }
+  }
+  function save(arr) {
+    try {
+      if (arr && arr.length) localStorage.setItem(KEY, JSON.stringify(arr));
+      else localStorage.removeItem(KEY);
+    } catch (e) {}
+  }
+
+  /* چیدمانِ ذخیره‌شده را روی نوار می‌نشاند.
+     — شناسه‌هایی که دیگر وجود ندارند نادیده گرفته می‌شوند؛
+     — بخشی که در نسخهٔ تازه اضافه شده و در چیدمانِ ذخیره‌شده نیست، آخرِ ردیف
+       می‌آید (گم نمی‌شود و از داخل همین صفحه هر جا خواستند می‌بردندش). */
+  function apply() {
+    var nav = navEl(); if (!nav) return;
+    var cur = navBtns(); if (!cur.length) return;
+    var order = load(); if (!order) return;
+
+    var byKey = Object.create(null);
+    cur.forEach(function (b) { var k = keyOf(b); if (k && !byKey[k]) byKey[k] = b; });
+
+    var seq = [], taken = Object.create(null);
+    order.forEach(function (k) {
+      if (byKey[k] && !taken[k]) { taken[k] = 1; seq.push(byKey[k]); }
+    });
+    cur.forEach(function (b) { var k = keyOf(b); if (!k || !taken[k]) seq.push(b); });
+
+    var same = (seq.length === cur.length) && seq.every(function (b, i) { return b === cur[i]; });
+    if (same) return;
+
+    var frag = document.createDocumentFragment();
+    seq.forEach(function (b) { frag.appendChild(b); });   // appendChild گره را «می‌بَرَد»، کپی نمی‌کند
+    var anchor = nav.querySelector('.nav-order-btn');     // دکمهٔ ⇅ همیشه آخر بماند
+    if (anchor) nav.insertBefore(frag, anchor); else nav.appendChild(frag);
+  }
+
+  /* ── فهرستِ داخلِ صفحهٔ چیدمان ─────────────────────────────────────────── */
+  function labelOf(btn) {
+    var t = document.createElement('span');
+    t.className = 'nord-label';
+    t.innerHTML = btn.innerHTML;
+    // نشانِ شمارشِ قرض‌داران و هر id تکراری از نسخهٔ نمایشی برداشته شود
+    t.querySelectorAll('.nav-badge').forEach(function (e) { e.remove(); });
+    t.querySelectorAll('[id]').forEach(function (e) { e.removeAttribute('id'); });
+    return t;
+  }
+  function listEl() { return document.getElementById('navOrderList'); }
+  function rows() {
+    var l = listEl();
+    return l ? Array.prototype.slice.call(l.children) : [];
+  }
+  function renumber() {
+    var rs = rows();
+    rs.forEach(function (row, i) {
+      var num = row.querySelector('.nord-num');
+      if (num) num.textContent = (typeof n2fa === 'function') ? n2fa(i + 1) : String(i + 1);
+      var bs = row.querySelectorAll('.nord-b');
+      if (bs[0]) bs[0].disabled = (i === 0);          // ⤒ به اول
+      if (bs[1]) bs[1].disabled = (i === 0);          // ▲
+      if (bs[2]) bs[2].disabled = (i === rs.length - 1); // ▼
+      if (bs[3]) bs[3].disabled = (i === rs.length - 1); // ⤓ به آخر
+    });
+  }
+  /* یک نقطهٔ واحد برای «ثبتِ چیدمانِ فعلیِ فهرست»: ذخیره + نشاندن روی نوار +
+     تازه کردنِ فهرستِ موبایل اگر باز باشد. */
+  function commit() {
+    var order = rows().map(function (r) { return r.getAttribute('data-key'); }).filter(Boolean);
+    if (!order.length) return;
+    save(order);
+    apply();
+    renumber();
+    try {
+      var ov = document.getElementById('mMenuOverlay');
+      if (ov && ov.classList.contains('open') && typeof buildMobileMenu === 'function') buildMobileMenu();
+    } catch (e) {}
+  }
+  function move(row, where) {
+    var l = listEl(); if (!l || !row) return;
+    if (where === 'top') l.insertBefore(row, l.firstChild);
+    else if (where === 'bottom') l.appendChild(row);
+    else if (where === 'up') { var p = row.previousElementSibling; if (!p) return; l.insertBefore(row, p); }
+    else if (where === 'down') { var nx = row.nextElementSibling; if (!nx) return; l.insertBefore(nx, row); }
+    commit();
+    try { row.scrollIntoView({ block: 'nearest' }); } catch (e) {}
+  }
+
+  function build() {
+    var l = listEl(); if (!l) return;
+    l.innerHTML = '';
+    navBtns().forEach(function (btn) {
+      var key = keyOf(btn); if (!key) return;
+      var row = document.createElement('div');
+      row.className = 'nord-row';
+      row.setAttribute('data-key', key);
+
+      var num = document.createElement('span'); num.className = 'nord-num'; num.textContent = '';
+      var grip = document.createElement('button');
+      grip.type = 'button'; grip.className = 'nord-grip'; grip.textContent = '⠿';
+      grip.setAttribute('aria-label', 'کشیدن و جابه‌جا کردن');
+      grip.title = 'بگیرید و بکشید';
+      grip.addEventListener('pointerdown', function (e) { dragStart(e, row, grip); });
+
+      var btns = document.createElement('span'); btns.className = 'nord-btns';
+      [['⤒', 'top', 'به اولِ ردیف'], ['▲', 'up', 'یکی بالاتر'],
+       ['▼', 'down', 'یکی پایین‌تر'], ['⤓', 'bottom', 'به آخرِ ردیف']]
+        .forEach(function (d) {
+          var b = document.createElement('button');
+          b.type = 'button'; b.className = 'nord-b'; b.textContent = d[0]; b.title = d[2];
+          b.setAttribute('aria-label', d[2]);
+          b.addEventListener('click', function () { move(row, d[1]); });
+          btns.appendChild(b);
+        });
+
+      row.appendChild(num);
+      row.appendChild(grip);
+      row.appendChild(labelOf(btn));
+      row.appendChild(btns);
+      l.appendChild(row);
+    });
+    renumber();
+  }
+
+  /* ── کشیدن با ماوس و با انگشت (یک کد برای هر دو: Pointer Events) ───────── */
+  var drag = null, raf = 0, ptrY = 0;
+  function sortTo(y) {
+    if (!drag) return;
+    var l = drag.list, row = drag.row, before = null;
+    var kids = Array.prototype.slice.call(l.children);
+    for (var i = 0; i < kids.length; i++) {
+      if (kids[i] === row) continue;
+      var r = kids[i].getBoundingClientRect();
+      if (y < r.top + r.height / 2) { before = kids[i]; break; }
+    }
+    if (before) { if (row.nextSibling !== before) l.insertBefore(row, before); }
+    else if (l.lastChild !== row) l.appendChild(row);
+  }
+  function autoScroll() {
+    raf = 0;
+    if (!drag) return;
+    var l = drag.list, r = l.getBoundingClientRect(), edge = 46, dy = 0;
+    if (ptrY < r.top + edge) dy = -Math.min(16, (r.top + edge - ptrY) / 2.2);
+    else if (ptrY > r.bottom - edge) dy = Math.min(16, (ptrY - (r.bottom - edge)) / 2.2);
+    if (dy) {
+      var before = l.scrollTop;
+      l.scrollTop += dy;
+      if (l.scrollTop !== before) sortTo(ptrY);
+    }
+    raf = requestAnimationFrame(autoScroll);
+  }
+  /* ⚠️ گیرِ اشاره‌گر (setPointerCapture) روی خودِ دستگیره گذاشته نمی‌شود و
+     شنونده‌ها هم روی آن نمی‌نشینند. علتش را با آزمایش دیدیم: لحظه‌ای که ردیف در
+     فهرست جابه‌جا می‌شود، مرورگر آن را «برداشتن و دوباره گذاشتن» می‌بیند و گیرِ
+     اشاره‌گرِ روی همان ردیف را رها می‌کند؛ از آن به بعد نه حرکتِ بعدی می‌رسید و نه
+     رها کردنِ انگشت — یعنی ردیف فقط یک پله جابه‌جا می‌شد و بعد گیر می‌کرد.
+     پس گیر روی خودِ فهرست است (که هیچ‌وقت جابه‌جا نمی‌شود) و شنونده‌ها روی
+     document — این‌ها زیر پای درگ از بین نمی‌روند. */
+  function dragStart(e, row, grip) {
+    if (drag) dragEnd(null);
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    var l = listEl(); if (!l) return;
+    e.preventDefault();
+    drag = { row: row, list: l, id: e.pointerId, grip: grip };
+    ptrY = e.clientY;
+    row.classList.add('nord-dragging');
+    try { l.setPointerCapture(e.pointerId); } catch (_) {}
+    document.addEventListener('pointermove', dragMove, { passive: false });
+    document.addEventListener('pointerup', dragEnd);
+    document.addEventListener('pointercancel', dragEnd);
+    if (!raf) raf = requestAnimationFrame(autoScroll);
+  }
+  function dragMove(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    if (e.cancelable) e.preventDefault();
+    ptrY = e.clientY;
+    sortTo(ptrY);
+  }
+  function dragEnd(e) {
+    if (!drag) return;
+    if (e && e.pointerId != null && e.pointerId !== drag.id) return;
+    var d = drag;
+    drag = null;                       // اول خالی شود تا هیچ رویدادِ دیرکرده دوباره وارد نشود
+    document.removeEventListener('pointermove', dragMove, { passive: false });
+    document.removeEventListener('pointerup', dragEnd);
+    document.removeEventListener('pointercancel', dragEnd);
+    try { d.list.releasePointerCapture(d.id); } catch (_) {}
+    d.row.classList.remove('nord-dragging');
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    commit();
+  }
+
+  /* ── باز/بسته و برگشت به حالتِ اصلی ───────────────────────────────────── */
+  window.openNavOrder = function () {
+    // روی موبایل کشوی بخش‌ها لایه‌اش بالاتر از مودال است؛ اول بسته شود
+    try { if (typeof closeMobileMenu === 'function') closeMobileMenu(); } catch (e) {}
+    build();
+    var ov = document.getElementById('navOrderModal');
+    if (!ov || ov.classList.contains('open')) return;
+    ov.classList.add('open');
+    // دکمهٔ برگشتِ گوشی و کلیدِ Esc همین صفحه را ببندند، نه چیزِ دیگری را
+    try { if (typeof _pumpPushEsc === 'function') _pumpPushEsc(window.closeNavOrder); } catch (e) {}
+  };
+  window.closeNavOrder = function () {
+    if (drag) dragEnd(null);
+    var ov = document.getElementById('navOrderModal');
+    if (ov) ov.classList.remove('open');
+    try { if (typeof _pumpPopEsc === 'function') _pumpPopEsc(window.closeNavOrder); } catch (e) {}
+  };
+  window.resetNavOrder = function () {
+    save(null);
+    var nav = navEl();
+    if (nav && _defaultOrder) {
+      var byKey = Object.create(null);
+      navBtns().forEach(function (b) { var k = keyOf(b); if (k && !byKey[k]) byKey[k] = b; });
+      var frag = document.createDocumentFragment(), taken = Object.create(null);
+      _defaultOrder.forEach(function (k) { if (byKey[k] && !taken[k]) { taken[k] = 1; frag.appendChild(byKey[k]); } });
+      navBtns().forEach(function (b) { var k = keyOf(b); if (!k || !taken[k]) frag.appendChild(b); });
+      var anchor = nav.querySelector('.nav-order-btn');
+      if (anchor) nav.insertBefore(frag, anchor); else nav.appendChild(frag);
+    }
+    build();
+    try {
+      var ov = document.getElementById('mMenuOverlay');
+      if (ov && ov.classList.contains('open') && typeof buildMobileMenu === 'function') buildMobileMenu();
+    } catch (e) {}
+    try { if (typeof showToast === 'function') showToast('↩️ چیدمانِ بخش‌ها به حالتِ اصلی برگشت', '#805ad5'); } catch (e) {}
+  };
+
+  // ترتیبِ اصلی پیش از هر جابه‌جایی برداشته می‌شود تا «برگشت به چیدمانِ اصلی» دقیق باشد
+  _defaultOrder = navBtns().map(keyOf).filter(Boolean);
+  apply();
+})();
+</script>
 
 <div class="main">
 
@@ -20122,6 +20499,11 @@ body.viewer-mode .inv-admin-only{display:none!important}
       اگر نسخهٔ تازه مشکلی داشت، برنامه خودکار به نسخهٔ سالمِ قبلی برمی‌گردد.
       <button class="pw-btn" style="padding:4px 10px;font-size:0.72rem;background:transparent;border:1px solid var(--border);color:var(--muted)" onclick="deskUpdRollback()">↩️ برگشت به نسخهٔ همراهِ نصب</button>
     </div>
+  </div>
+  <div class="settings-card" id="navorder-launcher" style="border-color:var(--purple)">
+    <div class="settings-title" style="color:var(--purple)">🧩 چیدمانِ بخش‌ها</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">ترتیبِ بخش‌ها را خودتان بچینید — بخش‌هایی که زیاد لازم دارید بروند اولِ ردیف یا آخرِ ردیف. همین چیدمان هم روی نوارِ بالای کامپیوتر می‌نشیند، هم روی فهرستِ 📂 بخش‌های موبایل. فقط روی همین دستگاه ذخیره می‌شود.</div>
+    <button class="pw-btn" style="background:var(--purple);color:#fff" onclick="openNavOrder()">🧩 باز کردن چیدمانِ بخش‌ها</button>
   </div>
   <div class="settings-card" id="appearance-launcher" style="border-color:var(--accent)">
     <div class="settings-title">🎨 ظاهر و گرافیک</div>
@@ -38776,6 +39158,13 @@ function updateAmanatRow(ai, ri, field, val) {
   _amAccPaint();
   if (!_amAccOpen()) _amPaint();   // کارت‌های پشتِ صفحهٔ حساب دیده نمی‌شوند
 }
+/* نوشتهٔ راهنمای خانهٔ «فیصدیِ من» — یک جا نوشته شده تا وقتی ردیف باز/بسته
+   می‌شود، همان جمله بدون ساختنِ دوبارهٔ جدول عوض شود. */
+function _amPctTitle(closed) {
+  return closed
+    ? '🔒 این ردیف بسته است — فیصدی‌اش قفل شده و با عوض کردنِ فیصدیِ حساب تکان نمی‌خورد. اگر لازم شد، همین‌جا دستی عوضش کنید.'
+    : 'فیصدیِ هدفِ همین ردیف. خالی بگذارید تا فیصدیِ خودِ حساب (بالای صفحه) به کار برود — آن وقت با نشانِ ↑ می‌آید، یعنی نوشتهٔ شما نیست. لحظه‌ای که ردیف را «بسته» کنید، همان فیصدی رویش قفل می‌شود.';
+}
 /* «در مخزن»: دو کادرِ باز/بسته داخلِ همان خانه. «بسته» یعنی تیل از مخزن
    بیرون رفته — از همان تاریخ، مدت زمان دیگر جلو نمی‌رود و کمبودی ثابت می‌ماند.
 
@@ -38817,12 +39206,26 @@ function setAmanatRowState(ai, ri, st) {
     if (btns[0]) { btns[0].classList.toggle('on', !closed); btns[0].classList.toggle('open', !closed); }
     if (btns[1]) { btns[1].classList.toggle('on', closed); btns[1].classList.toggle('shut', closed); }
   }
+  /* خانهٔ «فیصدیِ من» همین ردیف را دستی تازه می‌کنیم — نه با ساختنِ دوبارهٔ جدول.
+     ⚠️ این‌جا قبلاً _amAccRefresh() صدا زده می‌شد و همان یک خط، همهٔ زحمتِ بالا را
+     خنثی می‌کرد: کلِ جدول از نو ساخته می‌شد، پس جای اسکرولِ صفحه و جدول صفر
+     می‌شد و کیبوردِ گوشی بسته می‌شد — گزارشِ صاحب ریپو: «وقتی باز/بسته را
+     می‌زنم صفحه تازه می‌شود یا می‌پرد و کیبورد می‌رود». */
+  const pctIn = document.getElementById('am-in-mypct-' + ai + '-' + ri);
+  if (pctIn) {
+    pctIn.title = _amPctTitle(r.state === 'closed');
+    // اگر دستِ کاربر داخلِ همان خانه است، نوشته‌اش را زیر انگشتش عوض نکن
+    if (pctIn !== document.activeElement) pctIn.value = _amHas(r.myPct) ? String(r.myPct) : '';
+  }
   _amAccPaint();
   if (!_amAccOpen()) _amPaint();
   showToast(st === 'closed'
     ? ('🔒 ردیف بسته شد — مدت زمان و فیصدی' + (_amHas(r.myPct) ? (' (' + _amFmt(_amNum(r.myPct), 2) + '٪)') : '') + ' قفل شد')
     : '🔓 ردیف باز شد', '#805ad5');
-  _amAccRefresh();   // خانهٔ فیصدی حالا عددِ قفل‌شده را نشان می‌دهد
+  /* تنها حالتی که ساختنِ دوباره چاره‌ای ندارد: فیلترِ «فقط باز»/«فقط بسته» روشن
+     است و این ردیف دیگر به آن فیلتر نمی‌خورد، پس باید از لیست برود. با فیلترِ
+     «همه» — یعنی حالتِ همیشگی — هیچ‌چیز از نو ساخته نمی‌شود. */
+  if (_amRowFilter !== 'all') _amAccRefresh();
 }
 
 /* ── تنظیمات مدیر ────────────────────────────────────────────────────────── */
@@ -39168,6 +39571,12 @@ function _amAccBuild() {
   const box = document.getElementById('am-acc-body');
   if (!box) return;
   if (!a) { box.innerHTML = ''; return; }
+  /* هر جا این تابع ناچار است جدول را از نو بسازد (عوض شدنِ فیلتر، اندازه‌گیری،
+     نوعِ تیل…)، جای اسکرولِ صفحه و جای اسکرولِ افقیِ جدول نگه داشته و همان‌جا
+     برگردانده می‌شود — وگرنه صفحه به بالا می‌پرد و انگار «تازه» شده. */
+  const keepTop = box.scrollTop;
+  const oldWrap = box.querySelector('.xls-wrap');
+  const keepLeft = oldWrap ? oldWrap.scrollLeft : 0;
   const s = amSettings();
   const fuel = amFuelKey(a);
   const ttl = document.getElementById('am-acc-title');
@@ -39189,13 +39598,13 @@ function _amAccBuild() {
       <td><input class="xls-in xs" type="number" step="0.1" value="${cmpEsc(r.temp)}" placeholder="${_amFmt(s.defTemp)}" title="خالی = گرمای پیش‌فرضِ تنظیمات" oninput="updateAmanatRow(${ai},${ri},'temp',this.value)"></td>
       <td>
         <div class="am-state" id="am-st-${ai}-${ri}">
-          <button class="${closed ? '' : 'on open'}" onclick="setAmanatRowState(${ai},${ri},'open')">باز</button>
-          <button class="${closed ? 'on shut' : ''}" onclick="setAmanatRowState(${ai},${ri},'closed')">بسته</button>
+          <button type="button" class="${closed ? '' : 'on open'}" onclick="setAmanatRowState(${ai},${ri},'open')">باز</button>
+          <button type="button" class="${closed ? 'on shut' : ''}" onclick="setAmanatRowState(${ai},${ri},'closed')">بسته</button>
         </div>
       </td>
       <td class="am-calc" id="am-c-loss-${ai}-${ri}">—</td>
       <td class="am-calc" id="am-c-pct-${ai}-${ri}">—</td>
-      <td><input class="xls-in xs" type="number" step="0.1" value="${cmpEsc(r.myPct)}" placeholder="${a.myPct === '' || a.myPct == null ? 'ننوشته' : ('↑' + _amFmt(_amNum(a.myPct), 2))}" title="${closed ? '🔒 این ردیف بسته است — فیصدی‌اش قفل شده و با عوض کردنِ فیصدیِ حساب تکان نمی‌خورد. اگر لازم شد، همین‌جا دستی عوضش کنید.' : 'فیصدیِ هدفِ همین ردیف. خالی بگذارید تا فیصدیِ خودِ حساب (بالای صفحه) به کار برود — آن وقت با نشانِ ↑ می‌آید، یعنی نوشتهٔ شما نیست. لحظه‌ای که ردیف را «بسته» کنید، همان فیصدی رویش قفل می‌شود.'}" oninput="updateAmanatRow(${ai},${ri},'myPct',this.value)"></td>
+      <td><input class="xls-in xs" id="am-in-mypct-${ai}-${ri}" type="number" step="0.1" value="${cmpEsc(r.myPct)}" placeholder="${a.myPct === '' || a.myPct == null ? 'ننوشته' : ('↑' + _amFmt(_amNum(a.myPct), 2))}" title="${_amPctTitle(closed)}" oninput="updateAmanatRow(${ai},${ri},'myPct',this.value)"></td>
       <td class="am-calc" id="am-c-need-${ai}-${ri}">—</td>
       <td class="am-calc" id="am-c-share-${ai}-${ri}">—</td>
       <td class="am-calc" id="am-c-net-${ai}-${ri}">—</td>
@@ -39309,6 +39718,9 @@ function _amAccBuild() {
   document.querySelectorAll('#amanatAccModal .am-tabs .am-tab[data-r]').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-r') === _amRowFilter));
   const mb = document.getElementById('am-measure-btn');
   if (mb) mb.classList.toggle('active', _amShowMeasure);
+  // جای اسکرولِ قبلی برگردانده شود (بالا توضیح داده شد)
+  if (keepTop) box.scrollTop = keepTop;
+  if (keepLeft) { const w = box.querySelector('.xls-wrap'); if (w) w.scrollLeft = keepLeft; }
   _amAccPaint();
 }
 function amToggleRef() {
@@ -47420,7 +47832,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.355';
+const APP_VERSION = '2.9.356';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
