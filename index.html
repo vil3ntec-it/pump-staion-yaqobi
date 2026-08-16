@@ -1571,11 +1571,11 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
 /* ── صفحهٔ یک حساب (تمام‌صفحه، مثل حسابِ قرض‌دار) ────────────────────────
    قدِ پرده با dvh گرفته می‌شود، نه vh — وگرنه روی گوشی تهِ پنجره زیرِ نوارِ
    مرورگر می‌ماند و اسکرول «گیرکرده» به‌نظر می‌رسد. */
-#amanatAccModal{padding:0;align-items:stretch;height:100vh}
-@supports (height:100dvh){ #amanatAccModal{height:100dvh} }
-#amanatAccModal .modal{max-width:100%!important;width:100%!important;height:100%!important;
+#amanatAccModal,#amanatToolsModal{padding:0;align-items:stretch;height:100vh}
+@supports (height:100dvh){ #amanatAccModal,#amanatToolsModal{height:100dvh} }
+#amanatAccModal .modal,#amanatToolsModal .modal{max-width:100%!important;width:100%!important;height:100%!important;
   max-height:100%!important;border-radius:0!important;border:none!important;box-shadow:none!important}
-#amanatAccModal .modal-body{overflow-y:auto;padding:12px 14px 26px}
+#amanatAccModal .modal-body,#amanatToolsModal .modal-body{overflow-y:auto;padding:12px 14px 26px}
 .am-md-sec{background:var(--dark);border:1.5px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px}
 .am-md-t{font-size:0.82rem;font-weight:900;color:var(--label);margin-bottom:10px;display:flex;
   align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
@@ -19137,12 +19137,60 @@ body.boot-viewer #bootViewerSplash{
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
         <button class="add-btn" style="border-color:var(--blue);color:var(--blue);background:transparent" onclick="openSectionHistory('amanat')" title="تاریخچهٔ تیل امانت">🕘 تاریخچه</button>
-        <button class="add-btn" style="border-color:var(--purple);color:var(--purple);background:transparent" onclick="toggleAmanatSettings()">⚙️ تنظیمات مدیر</button>
+        <button class="add-btn" style="border-color:var(--accent);color:var(--accent);background:transparent" onclick="openAmanatTools()">📊 خلاصه و ابزارها</button>
         <button class="add-btn" style="background:var(--blue);color:#fff" onclick="printAmanat()">📄 PDF</button>
         <button class="add-btn" style="background:var(--green);color:#fff" onclick="addAmanatAccount()">➕ حساب جدید</button>
       </div>
     </div>
     <div style="padding:14px">
+      <!-- ── جست‌وجو ─ یک خط، درست مثل قرض‌داران ─────────────────────────── -->
+      <div class="am-bar">
+        <input class="am-search" id="am-search" type="search" placeholder="🔍 جست‌وجوی نام حساب…" oninput="setAmanatSearch(this.value)">
+        <span id="am-filter-chip"></span>
+      </div>
+
+      <!-- هر حساب یک کارت — دقیقاً مثل قرض‌داران. زدنِ کارت، صفحهٔ حساب را باز می‌کند. -->
+      <div class="persons-grid" id="am-grid" style="padding-bottom:8px"></div>
+    </div>
+  </div>
+  <div class="sec-note-box" style="padding:10px 2px 12px">
+    <div class="sec-note-head">📝 یادداشت این بخش</div>
+    <textarea id="secnote-amanat" class="note-field sec-note-draft" rows="2" placeholder="یادداشت شما…"
+      oninput="saveNoteDraft('amanat', this.value)"></textarea>
+    <div class="sec-note-acts">
+      <button type="button" class="sec-note-btn add" onclick="sendNoteToBox('amanat')">📨 فرستادن به صندوق نوت‌ها</button>
+      <button type="button" class="sec-note-btn" onclick="openNotes('amanat')">📋 لیست نوت‌ها <span class="sec-note-count" id="secnote-n-amanat"></span></button>
+    </div>
+  </div>
+  <div class="row-add-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 2px 16px">
+    <button class="add-btn" onclick="addAmanatAccount()">➕ حساب جدید</button>
+  </div>
+</div>
+
+
+<!-- ═══ خلاصه و ابزارهای تیل امانت ═══════════════════════════════════════
+     خواستهٔ صاحب ریپو: صفحهٔ اصلی فقط کارتِ حساب‌ها باشد و توضیح‌ها و
+     ماشین‌حساب و کادرهای خلاصه در یک صفحهٔ جدا. ══════════════════════════ -->
+<div class="modal-overlay" id="amanatToolsModal">
+  <div class="modal">
+    <div class="modal-head">
+      <button class="modal-close" onclick="closeAmanatTools()">✕</button>
+      <h2>📊 خلاصه و ابزارهای تیل امانت</h2>
+    </div>
+    <div class="modal-body" id="am-tools-body">
+      <!-- ── کدام سوخت ────────────────────────────────────────────────── -->
+      <div class="am-bar">
+        <div class="am-tabs" id="am-fuel-tabs">
+          <button class="am-tab" data-f="all" onclick="setAmanatFuel('all')">همه</button>
+          <button class="am-tab" data-f="petrol" onclick="setAmanatFuel('petrol')">⛽ پطرول</button>
+          <button class="am-tab" data-f="diesel" onclick="setAmanatFuel('diesel')">🟤 دیزل</button>
+        </div>
+        <button class="am-tab" style="border-color:var(--purple);color:var(--purple)" onclick="toggleAmanatSettings()">⚙️ تنظیمات مدیر</button>
+      </div>
+
+      <div id="am-summary" class="am-summary"></div>
+      <div id="am-warns"></div>
+
       <div class="am-disclaimer">
         <b>درصد کمبودی</b> — این مقدار یک برآورد محاسباتی است و جایگزین اندازه‌گیری واقعی موجودی نمی‌شود.
         مقدار تبخیر واقعی بدون اندازه‌گیری فیزیکی قابل تعیین قطعی نیست.
@@ -19215,34 +19263,7 @@ body.boot-viewer #bootViewerSplash{
         </div>
       </div>
 
-      <!-- ── فیلترها ──────────────────────────────────────────────────────── -->
-      <div class="am-bar">
-        <div class="am-tabs" id="am-fuel-tabs">
-          <button class="am-tab" data-f="all" onclick="setAmanatFuel('all')">همه</button>
-          <button class="am-tab" data-f="petrol" onclick="setAmanatFuel('petrol')">⛽ پطرول</button>
-          <button class="am-tab" data-f="diesel" onclick="setAmanatFuel('diesel')">🟤 دیزل</button>
-        </div>
-        <input class="am-search" id="am-search" type="search" placeholder="🔍 جست‌وجوی نام حساب…" oninput="setAmanatSearch(this.value)">
-      </div>
-
-      <div id="am-summary" class="am-summary"></div>
-      <div id="am-warns"></div>
-
-      <!-- هر حساب یک کارت — دقیقاً مثل قرض‌داران. زدنِ کارت، صفحهٔ حساب را باز می‌کند. -->
-      <div class="persons-grid" id="am-grid" style="padding-bottom:8px"></div>
     </div>
-  </div>
-  <div class="sec-note-box" style="padding:10px 2px 12px">
-    <div class="sec-note-head">📝 یادداشت این بخش</div>
-    <textarea id="secnote-amanat" class="note-field sec-note-draft" rows="2" placeholder="یادداشت شما…"
-      oninput="saveNoteDraft('amanat', this.value)"></textarea>
-    <div class="sec-note-acts">
-      <button type="button" class="sec-note-btn add" onclick="sendNoteToBox('amanat')">📨 فرستادن به صندوق نوت‌ها</button>
-      <button type="button" class="sec-note-btn" onclick="openNotes('amanat')">📋 لیست نوت‌ها <span class="sec-note-count" id="secnote-n-amanat"></span></button>
-    </div>
-  </div>
-  <div class="row-add-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 2px 16px">
-    <button class="add-btn" onclick="addAmanatAccount()">➕ حساب جدید</button>
   </div>
 </div>
 
@@ -38618,6 +38639,7 @@ function updateAmanatAccount(ai, field, val) {
   }
   else a[field] = String(val == null ? '' : val).trim();
   save();
+  _amAccPaint();
   _amPaint();
 }
 function addAmanatRow(ai) {
@@ -38625,7 +38647,7 @@ function addAmanatRow(ai) {
   if (!a) return;
   if (!Array.isArray(a.rows)) a.rows = [];
   a.rows.push(_amNewRow());
-  save(); renderAmanat();
+  save(); _amAccRefresh(); renderAmanat();
   setTimeout(() => {
     const el = document.getElementById('am-in-liters-' + ai + '-' + (a.rows.length - 1));
     if (el) { try { el.focus(); el.scrollIntoView({ block: 'center' }); } catch (e) {} }
@@ -38639,7 +38661,7 @@ function deleteAmanatRow(ai, ri) {
   try { _addToTrash('amanatrow', { accId: a.id, accName: a.name, fuel: a.fuel, row: a.rows[ri] }); } catch (e) {}
   a.rows.splice(ri, 1);
   if (!a.rows.length) a.rows.push(_amNewRow());
-  save(); renderAmanat();
+  save(); _amAccRefresh(); renderAmanat();
   showToast('🗑️ ردیف به سطل زباله رفت', '#e53e3e');
 }
 function updateAmanatRow(ai, ri, field, val) {
@@ -38658,10 +38680,23 @@ function updateAmanatRow(ai, ri, field, val) {
     r[field] = (raw === '' || !isFinite(n)) ? '' : n;
   }
   save();
+  /* ⚠️ هر دو تازه‌سازی لازم است و هیچ‌کدام نباید حذف شود:
+     _amAccPaint خانه‌های محاسبه‌شدهٔ همین صفحهٔ حساب را همان لحظه به‌روز می‌کند
+     (بخار، درصد، فیصدیِ لازم، به من می‌رسد، باقی، جمع‌ها و تحلیل) و _amPaint
+     کارت‌ها و کادرهای خلاصه را. اگر _amAccPaint نباشد، عددها فقط بعد از بیرون
+     رفتن و برگشتن به حساب درست می‌شوند — همان ایرادی که گزارش شد:
+     «هرچی می‌نویسم تو کادرها نوشته می‌شود اما جلو رویم هیچ اتفاقی نمی‌افتد».
+     هیچ‌کدام ردیف‌ها را دوباره نمی‌سازند، پس خانهٔ زیرِ دستِ کاربر نمی‌پرد. */
+  _amAccPaint();
   _amPaint();
 }
 /* «در مخزن»: دو کادرِ باز/بسته داخلِ همان خانه. «بسته» یعنی تیل از مخزن
-   بیرون رفته — از همان تاریخ، مدت زمان دیگر جلو نمی‌رود و کمبودی ثابت می‌ماند. */
+   بیرون رفته — از همان تاریخ، مدت زمان دیگر جلو نمی‌رود و کمبودی ثابت می‌ماند.
+
+   ⚠️ این‌جا renderAmanat/_amAccBuild صدا زده نمی‌شود. با ساختنِ دوبارهٔ
+   ردیف‌ها، خانه‌ای که کاربر داخلش تایپ می‌کرد از بین می‌رفت و کیبوردِ گوشی
+   بسته می‌شد (ایرادِ گزارش‌شده: «کیبورد می‌بره وقتی باز یا بسته را می‌زنم»).
+   فقط همان دو دکمه و خانه‌های محاسبه‌شده تازه می‌شوند. */
 function setAmanatRowState(ai, ri, st) {
   const a = amAccounts()[ai];
   if (!a || !a.rows || !a.rows[ri]) return;
@@ -38674,7 +38709,18 @@ function setAmanatRowState(ai, ri, st) {
     if (r.state === 'open') return;
     r.state = 'open'; r.closeDate = '';
   }
-  save(); renderAmanat();
+  save();
+  const cell = document.getElementById('am-st-' + ai + '-' + ri);
+  if (cell) {
+    /* classList، نه className — وگرنه کلاس‌هایی که خودِ برنامه بعداً روی دکمه
+       می‌گذارد (مثل موجِ لمس) پاک می‌شوند. */
+    const closed = (r.state === 'closed');
+    const btns = cell.querySelectorAll('button');
+    if (btns[0]) { btns[0].classList.toggle('on', !closed); btns[0].classList.toggle('open', !closed); }
+    if (btns[1]) { btns[1].classList.toggle('on', closed); btns[1].classList.toggle('shut', closed); }
+  }
+  _amAccPaint();
+  _amPaint();
   showToast(st === 'closed' ? '🔒 ردیف بسته شد — مدت زمان ایستاد' : '🔓 ردیف باز شد', '#805ad5');
 }
 
@@ -38825,6 +38871,14 @@ function renderAmanat() {
   document.querySelectorAll('#am-fuel-tabs .am-tab').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-f') === _amFuelFilter));
   const sb = document.getElementById('am-search');
   if (sb && document.activeElement !== sb) sb.value = _amSearch;
+  /* اگر از صفحهٔ «خلاصه و ابزارها» فیلترِ سوخت روشن مانده باشد، این‌جا نشانش
+     می‌دهیم — وگرنه کاربر می‌بیند حسابش نیست و نمی‌داند چرا. */
+  const chip = document.getElementById('am-filter-chip');
+  if (chip) {
+    chip.innerHTML = (_amFuelFilter === 'all') ? ''
+      : '<button class="am-tab active" onclick="setAmanatFuel(\'all\')">'
+        + (_amFuelFilter === 'diesel' ? '🟤 فقط دیزل' : '⛽ فقط پطرول') + ' ✕</button>';
+  }
 
   const s = amSettings();
   let seq = 0;
@@ -38929,6 +38983,22 @@ function _amSumCardHtml(title, color, t, s) {
     + '</div></div>';
 }
 
+/* ══ صفحهٔ «خلاصه و ابزارها» ══════════════════════════════════════════════
+   صفحهٔ اصلی فقط کارتِ حساب‌هاست؛ توضیح‌ها، ماشین‌حسابِ فیصدی، کادرهای خلاصه و
+   تنظیماتِ مدیر همه این‌جا هستند (خواستهٔ صاحب ریپو). ══════════════════════ */
+function openAmanatTools() {
+  const ov = document.getElementById('amanatToolsModal');
+  if (ov) ov.classList.add('open');
+  fillAmanatSettings();
+  renderAmanatFee();
+  _amPaint();
+}
+function closeAmanatTools() {
+  const ov = document.getElementById('amanatToolsModal');
+  if (ov) ov.classList.remove('open');
+  renderAmanat();
+}
+
 /* ══ صفحهٔ یک حساب ════════════════════════════════════════════════════════ */
 function openAmanatAccount(ai) {
   const a = amAccounts()[ai];
@@ -38975,7 +39045,7 @@ function _amAccBuild() {
       <td><input class="xls-in xs" id="am-in-days-${ai}-${ri}" type="number" step="1" value="${cmpEsc(r.days)}" placeholder="خودکار" title="خالی = خودکار از تاریخ تا امروز" oninput="updateAmanatRow(${ai},${ri},'days',this.value)"></td>
       <td><input class="xls-in xs" type="number" step="0.1" value="${cmpEsc(r.temp)}" placeholder="${_amFmt(s.defTemp)}" title="خالی = گرمای پیش‌فرضِ تنظیمات" oninput="updateAmanatRow(${ai},${ri},'temp',this.value)"></td>
       <td>
-        <div class="am-state">
+        <div class="am-state" id="am-st-${ai}-${ri}">
           <button class="${closed ? '' : 'on open'}" onclick="setAmanatRowState(${ai},${ri},'open')">باز</button>
           <button class="${closed ? 'on shut' : ''}" onclick="setAmanatRowState(${ai},${ri},'closed')">بسته</button>
         </div>
@@ -47177,7 +47247,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.348';
+const APP_VERSION = '2.9.349';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
