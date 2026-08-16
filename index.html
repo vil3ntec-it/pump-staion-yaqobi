@@ -38318,6 +38318,14 @@ function amRowCalc(row, acc, s) {
   return { fuel, liters, days, autoDays, manual, temp, base, closed,
            dateOk: startTs > 0, loss, lossPct, rest: liters - loss };
 }
+/* ردیف‌های یک حساب به ترتیبِ تاریخ، همراه با اندیسِ واقعی‌شان در آرایه.
+   ردیفِ بی‌تاریخ آخر می‌آید و ردیف‌های هم‌تاریخ ترتیبِ تایپِ خودشان را
+   نگه می‌دارند (مرتب‌سازیِ پایدار). */
+function _amSortedRows(a) {
+  const list = (a && Array.isArray(a.rows) ? a.rows : []).map((r, ri) => ({ r, ri, ts: _amTs(r && r.date) || Infinity }));
+  list.sort((x, y) => (x.ts - y.ts) || (x.ri - y.ri));
+  return list;
+}
 // جمعِ یک حساب — همان چیزی که در سربرگِ کادر نوشته می‌شود
 function amAccCalc(acc, s) {
   s = s || amSettings();
@@ -38369,14 +38377,18 @@ function addAmanatAccount() {
     if (el) { try { el.focus(); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {} }
   }, 80);
 }
+/* حذف → سطل زباله، مثل همهٔ بخش‌های دیگر (قرض‌دار، شرکت، گاوصندوق، صرافی…).
+   کادرِ پاک‌شده تا ۳۰ روز از «تنظیمات → سطل زباله» برمی‌گردد؛ پیش از این تنها
+   بخشی بود که حذفش برگشت نداشت. */
 function deleteAmanatAccount(ai) {
   const list = amAccounts();
   const a = list[ai];
   if (!a) return;
-  if (!confirm('کادرِ حسابِ «' + amAccLabel(a) + '» با همهٔ ردیف‌هایش پاک شود؟')) return;
+  if (!confirm('کادرِ حسابِ «' + amAccLabel(a) + '» با همهٔ ردیف‌هایش پاک شود؟\nتا ۳۰ روز در سطل زباله می‌ماند.')) return;
+  try { _addToTrash('amanat', a); } catch (e) {}
   list.splice(ai, 1);
   save(); renderAmanat();
-  showToast('🗑️ حساب پاک شد', '#e53e3e');
+  showToast('🗑️ حساب به سطل زباله رفت', '#e53e3e');
 }
 function updateAmanatAccount(ai, field, val) {
   const a = amAccounts()[ai];
@@ -38405,10 +38417,13 @@ function addAmanatRow(ai) {
 function deleteAmanatRow(ai, ri) {
   const a = amAccounts()[ai];
   if (!a || !a.rows || !a.rows[ri]) return;
-  if (!confirm('این ردیف پاک شود؟')) return;
+  if (!confirm('این ردیف پاک شود؟\nتا ۳۰ روز در سطل زباله می‌ماند.')) return;
+  // ردیف با شناسهٔ حسابش ذخیره می‌شود تا سرِ همان کادر برگردد
+  try { _addToTrash('amanatrow', { accId: a.id, accName: a.name, fuel: a.fuel, row: a.rows[ri] }); } catch (e) {}
   a.rows.splice(ri, 1);
   if (!a.rows.length) a.rows.push(_amNewRow());
   save(); renderAmanat();
+  showToast('🗑️ ردیف به سطل زباله رفت', '#e53e3e');
 }
 function updateAmanatRow(ai, ri, field, val) {
   const a = amAccounts()[ai];
@@ -38605,15 +38620,19 @@ function _amEmptyText() {
 /* یک کادرِ کامل: سربرگ (نام، نوع تیل، جمع‌ها، فیصدی) + جدولِ ردیف‌ها + جمع */
 function _amAccountHtml(a, ai, seq, s) {
   const fuel = amFuelKey(a);
-  const rows = (a.rows || []).map((r, ri) => {
+  /* ردیف‌ها به ترتیبِ تاریخ چیده می‌شوند (مثل گاوصندوق)، ولی اندیسِ واقعیِ
+     ردیف در آرایه (ri) دست‌نخورده در onchange/oninput می‌ماند — داده با همان
+     بسته می‌شود، نه با شمارهٔ نمایشی. پس ردیفی که تاریخش را عوض می‌کنید سرِ
+     جای درستش می‌پرد بی‌آن‌که حسابِ ردیف دیگری به هم بخورد. */
+  const rows = _amSortedRows(a).map(({ r, ri }, k) => {
     const closed = (r.state === 'closed');
     return `<tr>
-      <td style="text-align:center;color:var(--muted)">${n2fa(ri + 1)}</td>
+      <td style="text-align:center;color:var(--muted)">${n2fa(k + 1)}</td>
       <td><input class="xls-in sm" value="${cmpEsc(r.date)}" placeholder="تاریخ" onchange="updateAmanatRow(${ai},${ri},'date',this.value);renderAmanat()"></td>
       <td><input class="xls-in" value="${cmpEsc(r.name)}" placeholder="نام" oninput="updateAmanatRow(${ai},${ri},'name',this.value)"></td>
       <td><input class="xls-in" value="${cmpEsc(r.toAcct)}" placeholder="به حسابهٔ…" oninput="updateAmanatRow(${ai},${ri},'toAcct',this.value)"></td>
       <td><input class="xls-in sm" id="am-in-liters-${ai}-${ri}" type="number" step="0.01" value="${cmpEsc(r.liters)}" placeholder="0" oninput="updateAmanatRow(${ai},${ri},'liters',this.value)"></td>
-      <td><input class="xls-in xs" type="number" step="1" value="${cmpEsc(r.days)}" placeholder="خودکار" title="خالی = خودکار از تاریخ تا امروز" oninput="updateAmanatRow(${ai},${ri},'days',this.value)"></td>
+      <td><input class="xls-in xs" id="am-in-days-${ai}-${ri}" type="number" step="1" value="${cmpEsc(r.days)}" placeholder="خودکار" title="خالی = خودکار از تاریخ تا امروز" oninput="updateAmanatRow(${ai},${ri},'days',this.value)"></td>
       <td><input class="xls-in xs" type="number" step="0.1" value="${cmpEsc(r.temp)}" placeholder="${_amFmt(s.defTemp)}" title="خالی = گرمای پیش‌فرضِ تنظیمات" oninput="updateAmanatRow(${ai},${ri},'temp',this.value)"></td>
       <td>
         <div class="am-state">
@@ -38624,6 +38643,7 @@ function _amAccountHtml(a, ai, seq, s) {
       <td class="am-calc" id="am-c-pct-${ai}-${ri}">—</td>
       <td class="am-calc" id="am-c-rest-${ai}-${ri}">—</td>
       <td><input class="xls-in xs" type="number" step="0.01" value="${cmpEsc(r.basePct)}" placeholder="${_amFmt(s.basePct, 3)}" title="خالی = پایهٔ تنظیمات" oninput="updateAmanatRow(${ai},${ri},'basePct',this.value)"></td>
+      <td><input class="xls-in" value="${cmpEsc(r.note)}" placeholder="یادداشت" oninput="updateAmanatRow(${ai},${ri},'note',this.value)"></td>
       <td style="text-align:center"><button class="del-btn" onclick="deleteAmanatRow(${ai},${ri})">🗑️</button></td>
     </tr>`;
   }).join('');
@@ -38652,7 +38672,7 @@ function _amAccountHtml(a, ai, seq, s) {
     </div>
     <div class="am-acc-body">
       <div class="xls-wrap" style="overflow:auto">
-        <table class="xls-tbl" style="min-width:930px">
+        <table class="xls-tbl" style="min-width:1050px">
           <thead><tr>
             <th style="width:30px">#</th>
             <th style="width:88px">تاریخ</th>
@@ -38665,6 +38685,7 @@ function _amAccountHtml(a, ai, seq, s) {
             <th style="width:88px">درصد کمبودی</th>
             <th style="width:92px">باقی تیل</th>
             <th style="width:68px">پایه</th>
+            <th style="min-width:120px">یادداشت</th>
             <th style="width:42px">حذف</th>
           </tr></thead>
           <tbody>${rows}</tbody>
@@ -38674,7 +38695,7 @@ function _amAccountHtml(a, ai, seq, s) {
             <td colspan="3"></td>
             <td class="xls-calc" id="am-ft-loss-${ai}">0</td>
             <td class="xls-calc" id="am-ft-rest-${ai}">0</td>
-            <td colspan="2"></td>
+            <td colspan="3"></td>
           </tr></tfoot>
         </table>
       </div>
@@ -38707,7 +38728,7 @@ function _amPaint() {
       const re = document.getElementById('am-c-rest-' + ai + '-' + ri);
       if (re) { re.textContent = _amFmt2(c.rest); re.style.color = 'var(--green)'; }
       // «مدت زمان»ِ خودکار داخل همان خانه نشان داده می‌شود (بدون بازنویسیِ تایپ)
-      const de = document.querySelector('#am-acc-' + ai + ' tbody tr:nth-child(' + (ri + 1) + ') td:nth-child(6) input');
+      const de = document.getElementById('am-in-days-' + ai + '-' + ri);
       if (de && de !== document.activeElement && !c.manual) de.placeholder = n2fa(c.autoDays) + ' روز';
       if (c.liters > 0 && !c.dateOk && !c.manual) warn.push(amAccLabel(a) + ' — ردیفِ ' + n2fa(ri + 1) + ': تاریخ ثبت نشده، پس مدت زمان خودکار شمرده نمی‌شود.');
       if (_amNum(r.liters) < 0) err.push(amAccLabel(a) + ' — ردیفِ ' + n2fa(ri + 1) + ': رسید تیل نمی‌تواند کمتر از صفر باشد.');
@@ -38816,10 +38837,10 @@ ${inner}
 }
 function _amAccPdfBlock(a, s) {
   const t = amAccCalc(a, s);
-  const rows = (a.rows || []).map((r, ri) => {
+  const rows = _amSortedRows(a).map(({ r }, k) => {
     const c = amRowCalc(r, a, s);
     return `<tr>
-      <td>${n2fa(ri + 1)}</td>
+      <td>${n2fa(k + 1)}</td>
       <td>${escFa(r.date || '—')}</td>
       <td>${escFa(r.name || '—')}</td>
       <td>${escFa(r.toAcct || '—')}</td>
@@ -38830,6 +38851,7 @@ function _amAccPdfBlock(a, s) {
       <td style="color:#b7791f;font-weight:700">${_amFmt(c.lossPct, 3)}٪</td>
       <td style="color:#276749;font-weight:700">${_amFmt2(c.rest)}</td>
       <td>${_amFmt(c.base, 3)}٪</td>
+      <td style="white-space:normal">${escFa(r.note || '')}</td>
     </tr>`;
   }).join('');
   return `<h2>${escFa(String(a.name || '').trim() || 'حسابِ بی‌نام')} — ${amFuelLabel(a)}</h2>
@@ -38839,10 +38861,10 @@ function _amAccPdfBlock(a, s) {
   + (t.diff >= 0 ? ('جبران می‌شود، ' + _amFmt2(t.diff) + ' ل اضافه') : (_amFmt2(Math.abs(t.diff)) + ' ل کم')))}</div>
 <table>
 <thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>به حسابهٔ</th><th>رسید تیل</th><th>مدت زمان</th>
-<th>درجه گرما</th><th>در مخزن</th><th>درصد کمبودی</th><th>باقی تیل</th><th>پایه</th></tr></thead>
-<tbody>${rows || '<tr><td colspan="11" style="padding:14px;color:#718096">ردیفی ثبت نشده</td></tr>'}</tbody>
+<th>درجه گرما</th><th>در مخزن</th><th>درصد کمبودی</th><th>باقی تیل</th><th>پایه</th><th>یادداشت</th></tr></thead>
+<tbody>${rows || '<tr><td colspan="12" style="padding:14px;color:#718096">ردیفی ثبت نشده</td></tr>'}</tbody>
 <tfoot><tr><td colspan="4">جمله</td><td>${_amFmt2(t.liters)}</td><td colspan="3"></td>
-<td>${_amFmt(t.lossPct, 3)}٪</td><td>${_amFmt2(t.rest)}</td><td></td></tr></tfoot>
+<td>${_amFmt(t.lossPct, 3)}٪</td><td>${_amFmt2(t.rest)}</td><td colspan="2"></td></tr></tfoot>
 </table>`;
 }
 function printAmanat() {
@@ -46714,7 +46736,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.344';
+const APP_VERSION = '2.9.345';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
@@ -49255,7 +49277,8 @@ const _TRASH_DAYS = 15;
 const _TRASH_KIND_LABEL = {
   person: 'حساب شخصی', company: 'شرکت', waraq: 'ورق',
   expense: 'مصرف', safe: 'گاوصندوق', sarrafi: 'صرافی',
-  shift: 'پارچه ⛽', diesel: 'پارچه 🟤', report: 'گزارش', purchase: 'خرید تیل'
+  shift: 'پارچه ⛽', diesel: 'پارچه 🟤', report: 'گزارش', purchase: 'خرید تیل',
+  amanat: '🛢️ تیل امانت', amanatrow: '🛢️ ردیفِ تیل امانت'
 };
 function _trashName(item) {
   const d = item.data;
@@ -49270,6 +49293,9 @@ function _trashName(item) {
     case 'diesel':  return 'پارچه 🟤 ' + (d.date || '');
     case 'report':  return 'گزارش ' + (d.date || '');
     case 'purchase':return 'خرید ' + (d.fuelType === 'diesel' ? '🟤 ' : '⛽ ') + (d.date || '');
+    case 'amanat':  return 'تیل امانت — ' + (String(d.name || '').trim() || 'حسابِ بی‌نام');
+    case 'amanatrow': return 'ردیفِ تیل امانت — ' + (String(d.accName || '').trim() || 'حسابِ بی‌نام')
+                             + ((d.row && d.row.date) ? (' · ' + d.row.date) : '');
     default:        return item.kind;
   }
 }
@@ -49335,6 +49361,25 @@ function _restoreFromTrash(trashId) {
       DB.fuelEntries = DB.fuelEntries||[]; DB.fuelEntries.push(d);
       try { save(); renderStorage(); updateBanner(); } catch(e){}
       break;
+    case 'amanat':
+      DB.amanatAccounts = DB.amanatAccounts||[]; DB.amanatAccounts.push(d);
+      try { save(); renderAmanat(); } catch(e){}
+      break;
+    case 'amanatrow': {
+      /* ردیف سرِ همان کادرِ خودش برمی‌گردد. اگر خودِ کادر هم پاک شده باشد،
+         کادری با همان نام ساخته می‌شود تا ردیف بی‌خانه نماند. */
+      DB.amanatAccounts = DB.amanatAccounts||[];
+      var _acc = DB.amanatAccounts.filter(function(x){ return x && String(x.id) === String(d.accId); })[0];
+      if (!_acc) {
+        _acc = { id: d.accId || ('AMA-' + Date.now()), name: d.accName || '', fuel: (d.fuel === 'diesel' ? 'diesel' : 'petrol'),
+                 myPct: '', note: '', rows: [] };
+        DB.amanatAccounts.push(_acc);
+      }
+      if (!Array.isArray(_acc.rows)) _acc.rows = [];
+      _acc.rows.push(d.row);
+      try { save(); renderAmanat(); } catch(e){}
+      break;
+    }
   }
   DB.trash.splice(idx, 1);
   save();
