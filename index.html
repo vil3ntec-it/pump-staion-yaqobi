@@ -19164,6 +19164,12 @@ body.boot-viewer #bootViewerSplash{
           <button class="am-tab" data-f="petrol" onclick="setAmanatFuel('petrol')">⛽ پطرول</button>
           <button class="am-tab" data-f="diesel" onclick="setAmanatFuel('diesel')">🟤 دیزل</button>
         </div>
+        <div class="am-tabs" id="am-rowf-tabs">
+          <button class="am-tab" data-r="all" onclick="setAmanatRowFilter('all')">همهٔ ردیف‌ها</button>
+          <button class="am-tab" data-r="open" onclick="setAmanatRowFilter('open')">فقط باز</button>
+          <button class="am-tab" data-r="closed" onclick="setAmanatRowFilter('closed')">فقط بسته</button>
+        </div>
+        <button class="am-tab" id="am-measure-btn" onclick="toggleAmanatMeasure()" title="ستون‌های «موجودی واقعی» و «اختلاف»">📏 اندازه‌گیری</button>
         <input class="am-search" id="am-search" type="search" placeholder="🔍 جست‌وجوی نام حساب…" oninput="setAmanatSearch(this.value)">
       </div>
 
@@ -23035,8 +23041,10 @@ function _hcFeed(kind) {
         + (r.toAcct ? ' · به حسابهٔ ' + r.toAcct : '')
         + ' · ' + n2fa(c.days) + ' روز · ' + _amFmt(c.temp) + '°C'
         + ' · ' + (c.closed ? 'بسته' : 'در مخزن (باز)')
+        + (c.taken ? (' · برده شده ' + _amFmt2(c.taken) + ' ل') : '')
         + ' · کمبودی ' + _amFmt(c.lossPct, 3) + '٪ (' + _amFmt2(c.loss) + ' ل)'
-        + ' · باقی ' + _amFmt2(c.rest) + ' ل';
+        + ' · باقی ' + _amFmt2(c.rest) + ' ل'
+        + (c.hasActual ? (' · اندازه‌گیری واقعی ' + _amFmt2(c.actual) + ' ل · اختلاف ' + _amFmt2(c.diff) + ' ل') : '');
       out.push(_hcItem('amanat', r.date, who + ' — رسید تیل امانت',
         det, Math.round(c.liters * 100) / 100, ' لیتر', 'in'));
     });
@@ -38183,11 +38191,12 @@ function _amNewId(p) { _amRowSeq++; return (p || 'AMR') + '-' + Date.now().toStr
 
 function _amNewRow(seedDate) {
   return { id: _amNewId('AMR'), date: seedDate || _amTodayStr(), name: '', toAcct: '',
-           liters: '', days: '', temp: '', state: 'open', closeDate: '', basePct: '', note: '' };
+           liters: '', taken: '', days: '', temp: '', state: 'open', closeDate: '',
+           basePct: '', actual: '', note: '' };
 }
 function _amNewAccount(fuel) {
   return { id: _amNewId('AMA'), name: '', fuel: (fuel === 'diesel') ? 'diesel' : 'petrol',
-           myPct: '', note: '', rows: [_amNewRow()] };
+           myPct: '', rate: '', note: '', rows: [_amNewRow()] };
 }
 /* ترجمهٔ ساختارِ قدیمی → کادرهای حساب. هر محمولهٔ قدیمی یک ردیف می‌شود و
    محموله‌های هم‌نام و هم‌سوخت زیرِ یک کادر جمع می‌شوند. */
@@ -38311,12 +38320,27 @@ function amRowCalc(row, acc, s) {
   const days = manual ? Math.max(0, _amNum(row.days)) : autoDays;
 
   const liters = Math.max(0, _amNum(row.liters));
+  const taken  = Math.max(0, _amNum(row.taken));   // چقدرش را برده‌اند
   const temp   = _amHas(row.temp) ? _amNum(row.temp) : s.defTemp;
   const base   = _amHas(row.basePct) ? _amNum(row.basePct) : s.basePct;
+  /* کمبودی روی «رسید تیل» حساب می‌شود، نه روی باقی‌مانده: تیل به اندازهٔ همان
+     مقدار و همان مدت در مخزنِ ما بوده و همان‌قدر بخار شده. «برده شده» فقط از
+     باقی کم می‌شود. اگر ردیف «بسته» شود، مدت زمان می‌ایستد و کمبودی هم. */
   const loss   = amLoss(liters, days, temp, fuel, base, s);
   const lossPct = liters > 0 ? (loss / liters) * 100 : 0;
-  return { fuel, liters, days, autoDays, manual, temp, base, closed,
-           dateOk: startTs > 0, loss, lossPct, rest: liters - loss };
+  const rest   = liters - taken - loss;
+
+  /* موجودی واقعی — عددی که خودتان از مخزن اندازه گرفته‌اید. عمداً جدا از
+     کمبودیِ تخمینی می‌ماند و جایش را نمی‌گیرد؛ فقط کنارِ هم گذاشته می‌شوند تا
+     معلوم شود برآورد از واقعیت بیشتر بوده یا کمتر. */
+  const hasActual = _amHas(row.actual);
+  const actual    = hasActual ? _amNum(row.actual) : null;
+  const realLoss  = hasActual ? (liters - taken - actual) : null;
+  const diff      = hasActual ? (realLoss - loss) : null;   // + یعنی واقعی بیشتر از تخمین
+
+  return { fuel, liters, taken, days, autoDays, manual, temp, base, closed,
+           dateOk: startTs > 0, loss, lossPct, rest,
+           hasActual, actual, realLoss, diff };
 }
 /* ردیف‌های یک حساب به ترتیبِ تاریخ، همراه با اندیسِ واقعی‌شان در آرایه.
    ردیفِ بی‌تاریخ آخر می‌آید و ردیف‌های هم‌تاریخ ترتیبِ تایپِ خودشان را
@@ -38327,14 +38351,17 @@ function _amSortedRows(a) {
   return list;
 }
 // جمعِ یک حساب — همان چیزی که در سربرگِ کادر نوشته می‌شود
-function amAccCalc(acc, s) {
+function amAccCalc(acc, s, onlyRows) {
   s = s || amSettings();
-  const t = { n: 0, open: 0, liters: 0, loss: 0, rest: 0, litersOpen: 0 };
-  (acc && Array.isArray(acc.rows) ? acc.rows : []).forEach(r => {
+  const t = { n: 0, open: 0, liters: 0, taken: 0, loss: 0, rest: 0, litersOpen: 0,
+              hasActual: false, actual: 0, realLoss: 0, realDiff: 0 };
+  const src = onlyRows || (acc && Array.isArray(acc.rows) ? acc.rows : []);
+  src.forEach(r => {
     const c = amRowCalc(r, acc, s);
     t.n++;
     if (!c.closed) { t.open++; t.litersOpen += c.liters; }
-    t.liters += c.liters; t.loss += c.loss; t.rest += c.rest;
+    t.liters += c.liters; t.taken += c.taken; t.loss += c.loss; t.rest += c.rest;
+    if (c.hasActual) { t.hasActual = true; t.actual += c.actual; t.realLoss += c.realLoss; t.realDiff += c.diff; }
   });
   t.lossPct  = t.liters > 0 ? (t.loss / t.liters) * 100 : 0;   // فیصدیِ سربه‌سر
   t.needPct  = t.lossPct;
@@ -38343,13 +38370,40 @@ function amAccCalc(acc, s) {
   t.myPct     = my;
   t.myLiters  = (my == null) ? null : (t.liters * my / 100);
   t.diff      = (my == null) ? null : (t.myLiters - t.loss);   // + یعنی اضافه می‌آید
+  /* نرخِ هر لیتر فقط برای «به پول گفتن» است — روی هیچ حساب لیتری اثر ندارد.
+     خالی که باشد، هیچ عددِ پولی نشان داده نمی‌شود. */
+  const rate  = _amHas(acc && acc.rate) ? _amNum(acc.rate) : null;
+  t.rate      = rate;
+  t.lossMoney = (rate == null) ? null : (t.loss * rate);
+  t.myMoney   = (rate == null || my == null) ? null : (t.myLiters * rate);
+  t.diffMoney = (rate == null || my == null) ? null : (t.diff * rate);
   return t;
 }
 
 /* ── فیلترها ─────────────────────────────────────────────────────────────── */
 let _amFuelFilter = 'all';
+let _amRowFilter = 'all';      // all | open | closed — کدام ردیف‌ها دیده شوند
+let _amShowMeasure = false;    // ستون‌های «موجودی واقعی» و «اختلاف»
 let _amSearch = '';
+try {
+  if (localStorage.getItem('amMeasure') === '1') _amShowMeasure = true;
+  const _rf = localStorage.getItem('amRowFilter');
+  if (_rf === 'open' || _rf === 'closed') _amRowFilter = _rf;
+} catch (e) {}
 function setAmanatFuel(f) { _amFuelFilter = (f === 'petrol' || f === 'diesel') ? f : 'all'; renderAmanat(); }
+function setAmanatRowFilter(f) {
+  _amRowFilter = (f === 'open' || f === 'closed') ? f : 'all';
+  try { localStorage.setItem('amRowFilter', _amRowFilter); } catch (e) {}
+  renderAmanat();
+}
+/* ستون‌های اندازه‌گیری پیش‌فرض خاموش‌اند تا جدول همان چیزی بماند که هست؛ هر وقت
+   مخزن را واقعاً اندازه گرفتید، با همین دکمه روشنشان کنید. */
+function toggleAmanatMeasure() {
+  _amShowMeasure = !_amShowMeasure;
+  try { localStorage.setItem('amMeasure', _amShowMeasure ? '1' : '0'); } catch (e) {}
+  renderAmanat();
+  showToast(_amShowMeasure ? '📏 ستون‌های اندازه‌گیری آمد' : '📏 ستون‌های اندازه‌گیری رفت', '#805ad5');
+}
 function setAmanatSearch(v) {
   _amSearch = String(v == null ? '' : v);
   renderAmanat();
@@ -38394,10 +38448,10 @@ function updateAmanatAccount(ai, field, val) {
   const a = amAccounts()[ai];
   if (!a) return;
   if (field === 'fuel') a.fuel = (val === 'diesel') ? 'diesel' : 'petrol';
-  else if (field === 'myPct') {
+  else if (field === 'myPct' || field === 'rate') {
     const raw = String(val == null ? '' : val).trim();
     const n = parseFloat(toEnDigits(raw));
-    a.myPct = (raw === '' || !isFinite(n)) ? '' : n;
+    a[field] = (raw === '' || !isFinite(n)) ? '' : n;
   }
   else a[field] = String(val == null ? '' : val).trim();
   save();
@@ -38596,6 +38650,9 @@ function renderAmanat() {
   const wrap = document.getElementById('am-accounts');
   if (!wrap) return;
   document.querySelectorAll('#am-fuel-tabs .am-tab').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-f') === _amFuelFilter));
+  document.querySelectorAll('#am-rowf-tabs .am-tab').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-r') === _amRowFilter));
+  const mb = document.getElementById('am-measure-btn');
+  if (mb) mb.classList.toggle('active', _amShowMeasure);
   const sb = document.getElementById('am-search');
   if (sb && document.activeElement !== sb) sb.value = _amSearch;
 
@@ -38624,7 +38681,10 @@ function _amAccountHtml(a, ai, seq, s) {
      ردیف در آرایه (ri) دست‌نخورده در onchange/oninput می‌ماند — داده با همان
      بسته می‌شود، نه با شمارهٔ نمایشی. پس ردیفی که تاریخش را عوض می‌کنید سرِ
      جای درستش می‌پرد بی‌آن‌که حسابِ ردیف دیگری به هم بخورد. */
-  const rows = _amSortedRows(a).map(({ r, ri }, k) => {
+  const view = _amSortedRows(a).filter(({ r }) =>
+    _amRowFilter === 'all' || ((r.state === 'closed') ? 'closed' : 'open') === _amRowFilter);
+  const M = _amShowMeasure;
+  const rows = view.map(({ r, ri }, k) => {
     const closed = (r.state === 'closed');
     return `<tr>
       <td style="text-align:center;color:var(--muted)">${n2fa(k + 1)}</td>
@@ -38632,6 +38692,7 @@ function _amAccountHtml(a, ai, seq, s) {
       <td><input class="xls-in" value="${cmpEsc(r.name)}" placeholder="نام" oninput="updateAmanatRow(${ai},${ri},'name',this.value)"></td>
       <td><input class="xls-in" value="${cmpEsc(r.toAcct)}" placeholder="به حسابهٔ…" oninput="updateAmanatRow(${ai},${ri},'toAcct',this.value)"></td>
       <td><input class="xls-in sm" id="am-in-liters-${ai}-${ri}" type="number" step="0.01" value="${cmpEsc(r.liters)}" placeholder="0" oninput="updateAmanatRow(${ai},${ri},'liters',this.value)"></td>
+      <td><input class="xls-in sm" type="number" step="0.01" value="${cmpEsc(r.taken)}" placeholder="0" title="چقدرش را برده‌اند — از باقی تیل کم می‌شود" oninput="updateAmanatRow(${ai},${ri},'taken',this.value)"></td>
       <td><input class="xls-in xs" id="am-in-days-${ai}-${ri}" type="number" step="1" value="${cmpEsc(r.days)}" placeholder="خودکار" title="خالی = خودکار از تاریخ تا امروز" oninput="updateAmanatRow(${ai},${ri},'days',this.value)"></td>
       <td><input class="xls-in xs" type="number" step="0.1" value="${cmpEsc(r.temp)}" placeholder="${_amFmt(s.defTemp)}" title="خالی = گرمای پیش‌فرضِ تنظیمات" oninput="updateAmanatRow(${ai},${ri},'temp',this.value)"></td>
       <td>
@@ -38642,11 +38703,14 @@ function _amAccountHtml(a, ai, seq, s) {
       </td>
       <td class="am-calc" id="am-c-pct-${ai}-${ri}">—</td>
       <td class="am-calc" id="am-c-rest-${ai}-${ri}">—</td>
+      ${M ? `<td><input class="xls-in sm" type="number" step="0.01" value="${cmpEsc(r.actual)}" placeholder="ثبت نشده" title="عددی که خودتان از مخزن اندازه گرفته‌اید" oninput="updateAmanatRow(${ai},${ri},'actual',this.value)"></td>
+      <td class="am-calc" id="am-c-diff-${ai}-${ri}">—</td>` : ''}
       <td><input class="xls-in xs" type="number" step="0.01" value="${cmpEsc(r.basePct)}" placeholder="${_amFmt(s.basePct, 3)}" title="خالی = پایهٔ تنظیمات" oninput="updateAmanatRow(${ai},${ri},'basePct',this.value)"></td>
       <td><input class="xls-in" value="${cmpEsc(r.note)}" placeholder="یادداشت" oninput="updateAmanatRow(${ai},${ri},'note',this.value)"></td>
       <td style="text-align:center"><button class="del-btn" onclick="deleteAmanatRow(${ai},${ri})">🗑️</button></td>
     </tr>`;
   }).join('');
+  const hidden = (a.rows || []).length - view.length;
 
   return `<div class="am-acc ${fuel === 'diesel' ? 'dz' : 'pt'}" id="am-acc-${ai}">
     <div class="am-acc-head">
@@ -38667,38 +38731,46 @@ function _amAccountHtml(a, ai, seq, s) {
       <div class="am-acc-pct">
         <span>فیصدیِ من (٪)</span>
         <input type="number" step="0.01" value="${cmpEsc(a.myPct)}" placeholder="0" oninput="updateAmanatAccount(${ai},'myPct',this.value)">
+        <span>نرخ هر لیتر</span>
+        <input type="number" step="0.01" value="${cmpEsc(a.rate)}" placeholder="خالی" title="فقط برای «به پول گفتن» — روی هیچ حساب لیتری اثر ندارد" oninput="updateAmanatAccount(${ai},'rate',this.value)">
         <span class="vd" id="am-acc-vd-${ai}"></span>
       </div>
     </div>
     <div class="am-acc-body">
       <div class="xls-wrap" style="overflow:auto">
-        <table class="xls-tbl" style="min-width:1050px">
+        <table class="xls-tbl" style="min-width:${M ? 1250 : 1090}px">
           <thead><tr>
             <th style="width:30px">#</th>
             <th style="width:88px">تاریخ</th>
             <th style="min-width:96px">نام</th>
             <th style="min-width:96px">به حسابهٔ</th>
             <th style="width:88px">رسید تیل</th>
+            <th style="width:84px" title="چقدرش را برده‌اند">برده شده</th>
             <th style="width:74px">مدت زمان</th>
             <th style="width:74px">درجه گرما</th>
             <th style="width:96px">در مخزن</th>
             <th style="width:88px">درصد کمبودی</th>
             <th style="width:92px">باقی تیل</th>
+            ${M ? '<th style="width:96px">موجودی واقعی</th><th style="width:92px">اختلاف</th>' : ''}
             <th style="width:68px">پایه</th>
             <th style="min-width:120px">یادداشت</th>
             <th style="width:42px">حذف</th>
           </tr></thead>
-          <tbody>${rows}</tbody>
+          <tbody>${rows || ('<tr><td colspan="' + (M ? 16 : 14) + '" class="am-empty">ردیفی با این فیلتر نیست.</td></tr>')}</tbody>
           <tfoot class="xls-foot"><tr>
-            <td colspan="4" style="padding:8px 7px">جمله</td>
+            <td colspan="4" style="padding:8px 7px">${hidden > 0 ? 'جملهٔ ردیف‌های دیده‌شده' : 'جمله'}</td>
             <td class="xls-calc" id="am-ft-liters-${ai}">0</td>
+            <td class="xls-calc" id="am-ft-taken-${ai}">0</td>
             <td colspan="3"></td>
             <td class="xls-calc" id="am-ft-loss-${ai}">0</td>
             <td class="xls-calc" id="am-ft-rest-${ai}">0</td>
+            ${M ? `<td class="xls-calc" id="am-ft-actual-${ai}">0</td><td class="xls-calc" id="am-ft-diff-${ai}">0</td>` : ''}
             <td colspan="3"></td>
           </tr></tfoot>
         </table>
       </div>
+      ${hidden > 0 ? ('<div style="padding:7px 12px;font-size:0.72rem;color:var(--muted)">🔎 ' + n2fa(hidden)
+        + ' ردیفِ دیگر با فیلترِ «' + (_amRowFilter === 'open' ? 'فقط باز' : 'فقط بسته') + '» پنهان است — کادرهای بالای جدول همیشه کلِ حساب را می‌گویند.</div>') : ''}
     </div>
     <div class="am-acc-foot">
       <button class="am-acc-btn grn" onclick="addAmanatRow(${ai})">➕ ردیف تازه</button>
@@ -38712,13 +38784,13 @@ function _amAccountHtml(a, ai, seq, s) {
 function _amPaint() {
   const list = amAccounts();
   const s = amSettings();
-  const per = { petrol: { n:0, liters:0, loss:0, rest:0 }, diesel: { n:0, liters:0, loss:0, rest:0 } };
+  const per = { petrol: { n:0, liters:0, taken:0, loss:0, rest:0 }, diesel: { n:0, liters:0, taken:0, loss:0, rest:0 } };
   const err = [], warn = [];
 
   list.forEach((a, ai) => {
     const fuel = amFuelKey(a);
     const t = amAccCalc(a, s);
-    per[fuel].n++; per[fuel].liters += t.liters; per[fuel].loss += t.loss; per[fuel].rest += t.rest;
+    per[fuel].n++; per[fuel].liters += t.liters; per[fuel].taken += t.taken; per[fuel].loss += t.loss; per[fuel].rest += t.rest;
     if (!_amAccMatch(a)) return;
 
     (a.rows || []).forEach((r, ri) => {
@@ -38726,7 +38798,16 @@ function _amPaint() {
       const pe = document.getElementById('am-c-pct-' + ai + '-' + ri);
       if (pe) { pe.textContent = _amFmt(c.lossPct, 3) + '٪'; pe.style.color = 'var(--accent)'; }
       const re = document.getElementById('am-c-rest-' + ai + '-' + ri);
-      if (re) { re.textContent = _amFmt2(c.rest); re.style.color = 'var(--green)'; }
+      if (re) { re.textContent = _amFmt2(c.rest); re.style.color = c.rest < -0.0001 ? 'var(--red)' : 'var(--green)'; }
+      /* اختلاف = کمبودیِ واقعی منهای کمبودیِ تخمینی. سبز یعنی برآورد درست
+         درآمده، قرمز یعنی واقعی بیشتر بوده، آبی یعنی کمتر. */
+      const dfe = document.getElementById('am-c-diff-' + ai + '-' + ri);
+      if (dfe) {
+        dfe.textContent = c.hasActual ? _amFmt2(c.diff) : '—';
+        dfe.style.color = !c.hasActual ? 'var(--muted)'
+          : (Math.abs(c.diff) < 0.005 ? 'var(--green)' : (c.diff > 0 ? 'var(--red)' : 'var(--blue)'));
+      }
+      if (c.taken > c.liters + 0.0001) err.push(amAccLabel(a) + ' — ردیفِ ' + n2fa(ri + 1) + ': برده شده از رسید تیل بیشتر است.');
       // «مدت زمان»ِ خودکار داخل همان خانه نشان داده می‌شود (بدون بازنویسیِ تایپ)
       const de = document.getElementById('am-in-days-' + ai + '-' + ri);
       if (de && de !== document.activeElement && !c.manual) de.placeholder = n2fa(c.autoDays) + ' روز';
@@ -38735,26 +38816,39 @@ function _amPaint() {
       if (_amHas(r.temp) && (_amNum(r.temp) < -50 || _amNum(r.temp) > 80)) warn.push(amAccLabel(a) + ' — ردیفِ ' + n2fa(ri + 1) + ': درجه گرمای واردشده غیرعادی است.');
     });
 
+    /* جمعِ زیرِ جدول فقط ردیف‌های دیده‌شده را می‌شمارد (وقتی فیلترِ باز/بسته
+       روشن است)، ولی کادرهای سربرگ همیشه کلِ حساب را می‌گویند — تا هیچ‌وقت
+       حسابی به‌خاطرِ یک فیلتر «خالی» به‌نظر نرسد. */
+    const vis = (a.rows || []).filter(r => _amRowFilter === 'all' || ((r.state === 'closed') ? 'closed' : 'open') === _amRowFilter);
+    const tv = (vis.length === (a.rows || []).length) ? t : amAccCalc(a, s, vis);
     const ft = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    ft('am-ft-liters-' + ai, _amFmt2(t.liters));
-    ft('am-ft-loss-' + ai, _amFmt(t.lossPct, 3) + '٪');
-    ft('am-ft-rest-' + ai, _amFmt2(t.rest));
+    ft('am-ft-liters-' + ai, _amFmt2(tv.liters));
+    ft('am-ft-taken-' + ai, _amFmt2(tv.taken));
+    ft('am-ft-loss-' + ai, _amFmt(tv.lossPct, 3) + '٪');
+    ft('am-ft-rest-' + ai, _amFmt2(tv.rest));
+    ft('am-ft-actual-' + ai, tv.hasActual ? _amFmt2(tv.actual) : '—');
+    ft('am-ft-diff-' + ai, tv.hasActual ? _amFmt2(tv.realDiff) : '—');
 
     const chips = document.getElementById('am-acc-chips-' + ai);
     if (chips) {
       chips.innerHTML =
           '<span class="am-acc-chip">رسید کل <b>' + _amFmt2(t.liters) + '</b> ل</span>'
-        + '<span class="am-acc-chip acc">کمبودی <b>' + _amFmt2(t.loss) + '</b> ل</span>'
+        + (t.taken ? ('<span class="am-acc-chip red">برده شده <b>' + _amFmt2(t.taken) + '</b> ل</span>') : '')
+        + '<span class="am-acc-chip acc">کمبودی <b>' + _amFmt2(t.loss) + '</b> ل'
+          + (t.lossMoney == null ? '' : (' · <b>' + _amFmt(t.lossMoney, 0) + '</b> پول')) + '</span>'
         + '<span class="am-acc-chip grn">باقی تیل <b>' + _amFmt2(t.rest) + '</b> ل</span>'
+        + (t.hasActual ? ('<span class="am-acc-chip blue">اندازه‌گیری واقعی <b>' + _amFmt2(t.actual) + '</b> ل · اختلاف <b>'
+            + _amFmt2(t.realDiff) + '</b> ل</span>') : '')
         + '<span class="am-acc-chip blue">فیصدیِ سربه‌سر <b>' + _amFmt(t.needPct, 3) + '٪</b></span>'
         + '<span class="am-acc-chip">پیشنهادی <b>' + _amFmt(t.safePct, 3) + '٪</b></span>'
         + '<span class="am-acc-chip">' + n2fa(t.n) + ' ردیف · ' + n2fa(t.open) + ' باز</span>';
     }
     const vd = document.getElementById('am-acc-vd-' + ai);
     if (vd) {
+      const money = (x) => (t.rate == null) ? '' : (' (' + _amFmt(Math.abs(x), 0) + ' پول)');
       if (t.myPct == null) { vd.className = 'vd'; vd.textContent = 'بنویسید تا بگوید کم می‌آید یا اضافه'; }
-      else if (t.diff >= 0) { vd.className = 'vd ok'; vd.textContent = '✅ ' + _amFmt2(t.myLiters) + ' ل می‌گیرید — ' + _amFmt2(t.diff) + ' ل اضافه می‌آید'; }
-      else { vd.className = 'vd bad'; vd.textContent = '❌ ' + _amFmt2(t.myLiters) + ' ل می‌گیرید — ' + _amFmt2(Math.abs(t.diff)) + ' ل کم می‌آورید'; }
+      else if (t.diff >= 0) { vd.className = 'vd ok'; vd.textContent = '✅ ' + _amFmt2(t.myLiters) + ' ل می‌گیرید — ' + _amFmt2(t.diff) + ' ل اضافه می‌آید' + money(t.diffMoney); }
+      else { vd.className = 'vd bad'; vd.textContent = '❌ ' + _amFmt2(t.myLiters) + ' ل می‌گیرید — ' + _amFmt2(Math.abs(t.diff)) + ' ل کم می‌آورید' + money(t.diffMoney); }
     }
   });
 
@@ -38775,6 +38869,7 @@ function _amSumCardHtml(title, color, t, s) {
   const pct = t.liters > 0 ? (t.loss / t.liters) * 100 : 0;
   const rows = [
     ['رسید کل', _amFmt2(t.liters) + ' ل'],
+    ['برده شده', _amFmt2(t.taken) + ' ل'],
     ['کمبودیِ تخمینی', _amFmt2(t.loss) + ' ل'],
     ['باقی تیل', _amFmt2(t.rest) + ' ل'],
     ['sep'],
@@ -38845,26 +38940,34 @@ function _amAccPdfBlock(a, s) {
       <td>${escFa(r.name || '—')}</td>
       <td>${escFa(r.toAcct || '—')}</td>
       <td style="font-weight:700">${_amFmt2(c.liters)}</td>
+      <td>${_amFmt2(c.taken)}</td>
       <td>${n2fa(c.days)}</td>
       <td>${_amFmt(c.temp)}</td>
       <td style="font-weight:700;color:${c.closed ? '#c53030' : '#276749'}">${c.closed ? 'بسته' : 'باز'}</td>
       <td style="color:#b7791f;font-weight:700">${_amFmt(c.lossPct, 3)}٪</td>
       <td style="color:#276749;font-weight:700">${_amFmt2(c.rest)}</td>
+      <td>${c.hasActual ? _amFmt2(c.actual) : '—'}</td>
+      <td>${c.hasActual ? _amFmt2(c.diff) : '—'}</td>
       <td>${_amFmt(c.base, 3)}٪</td>
       <td style="white-space:normal">${escFa(r.note || '')}</td>
     </tr>`;
   }).join('');
   return `<h2>${escFa(String(a.name || '').trim() || 'حسابِ بی‌نام')} — ${amFuelLabel(a)}</h2>
-<div class="chips">رسید کل <b>${_amFmt2(t.liters)}</b> ل · کمبودی <b>${_amFmt2(t.loss)}</b> ل ·
-باقی تیل <b>${_amFmt2(t.rest)}</b> ل · فیصدیِ سربه‌سر <b>${_amFmt(t.needPct, 3)}٪</b> ·
+<div class="chips">رسید کل <b>${_amFmt2(t.liters)}</b> ل · برده شده <b>${_amFmt2(t.taken)}</b> ل ·
+کمبودی <b>${_amFmt2(t.loss)}</b> ل${t.lossMoney == null ? '' : (' (' + _amFmt(t.lossMoney, 0) + ' پول)')} ·
+باقی تیل <b>${_amFmt2(t.rest)}</b> ل${t.hasActual ? (' · اندازه‌گیری واقعی <b>' + _amFmt2(t.actual) + '</b> ل · اختلاف <b>' + _amFmt2(t.realDiff) + '</b> ل') : ''} ·
+فیصدیِ سربه‌سر <b>${_amFmt(t.needPct, 3)}٪</b> ·
 پیشنهادی <b>${_amFmt(t.safePct, 3)}٪</b>${t.myPct == null ? '' : (' · فیصدیِ شما <b>' + _amFmt(t.myPct, 3) + '٪</b> → '
   + (t.diff >= 0 ? ('جبران می‌شود، ' + _amFmt2(t.diff) + ' ل اضافه') : (_amFmt2(Math.abs(t.diff)) + ' ل کم')))}</div>
 <table>
-<thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>به حسابهٔ</th><th>رسید تیل</th><th>مدت زمان</th>
-<th>درجه گرما</th><th>در مخزن</th><th>درصد کمبودی</th><th>باقی تیل</th><th>پایه</th><th>یادداشت</th></tr></thead>
-<tbody>${rows || '<tr><td colspan="12" style="padding:14px;color:#718096">ردیفی ثبت نشده</td></tr>'}</tbody>
-<tfoot><tr><td colspan="4">جمله</td><td>${_amFmt2(t.liters)}</td><td colspan="3"></td>
-<td>${_amFmt(t.lossPct, 3)}٪</td><td>${_amFmt2(t.rest)}</td><td colspan="2"></td></tr></tfoot>
+<thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>به حسابهٔ</th><th>رسید تیل</th><th>برده شده</th><th>مدت زمان</th>
+<th>درجه گرما</th><th>در مخزن</th><th>درصد کمبودی</th><th>باقی تیل</th><th>موجودی واقعی</th><th>اختلاف</th>
+<th>پایه</th><th>یادداشت</th></tr></thead>
+<tbody>${rows || '<tr><td colspan="15" style="padding:14px;color:#718096">ردیفی ثبت نشده</td></tr>'}</tbody>
+<tfoot><tr><td colspan="4">جمله</td><td>${_amFmt2(t.liters)}</td><td>${_amFmt2(t.taken)}</td><td colspan="3"></td>
+<td>${_amFmt(t.lossPct, 3)}٪</td><td>${_amFmt2(t.rest)}</td>
+<td>${t.hasActual ? _amFmt2(t.actual) : '—'}</td><td>${t.hasActual ? _amFmt2(t.realDiff) : '—'}</td>
+<td colspan="2"></td></tr></tfoot>
 </table>`;
 }
 function printAmanat() {
@@ -46736,7 +46839,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.345';
+const APP_VERSION = '2.9.346';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
