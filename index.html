@@ -45250,6 +45250,7 @@ async function _pumpOfferUpdate(ver, alreadyCached, loud) {
     setTimeout(() => { try { pumpApplyWebUpdate(); } catch (e) {} }, 900);
     return;
   }
+  if (!_pumpPendingSince) _pumpPendingSince = Date.now();
   _pumpUpdBar('🎉 نسخهٔ تازهٔ برنامه (' + ver + ') آماده است' +
     '<button onclick="pumpApplyWebUpdate()">آپدیت کن</button>' +
     '<button class="later" onclick="this.parentNode.remove()">بعداً</button>');
@@ -45271,9 +45272,21 @@ function _pumpWatchPending(ver) {
   try { if (sessionStorage.getItem('pumpAutoUpd') === ver) return; } catch (e) {}
   _pumpPendingVer = ver;
   if (_pumpPendingTimer) return;
+  if (!_pumpPendingSince) _pumpPendingSince = Date.now();
   const tick = () => {
     if (!_pumpPendingVer) return;
-    if (!_pumpSafeToReload()) return;
+    if (!_pumpSafeToReload()) {
+      /* نوار اگر «بعداً» خورده باشد دیگر برنمی‌گشت و کاربر فراموش می‌کرد.
+         هر بار که آماده است ولی هنوز نمی‌شود سوار کرد، دوباره نشانش می‌دهیم. */
+      if (!document.getElementById('appUpdBar')) {
+        try {
+          _pumpUpdBar('🎉 نسخهٔ تازهٔ برنامه (' + _pumpPendingVer + ') آماده است' +
+            '<button onclick="pumpApplyWebUpdate()">آپدیت کن</button>' +
+            '<button class="later" onclick="this.parentNode.remove()">بعداً</button>');
+        } catch (e) {}
+      }
+      return;
+    }
     clearInterval(_pumpPendingTimer); _pumpPendingTimer = null;
     try { sessionStorage.setItem('pumpAutoUpd', _pumpPendingVer); } catch (e) {}
     try { showToast('🎉 نسخهٔ ' + _pumpPendingVer + ' آمد — تازه‌سازی…', '#2b6cb0'); } catch (e) {}
@@ -45309,6 +45322,8 @@ async function _pumpWebPullFresh() {
   return null;
 }
 // آیا همین حالا رفرشِ خودکار بی‌خطر است؟ (وسطِ کارِ کاربر نپرد)
+/* از کِی یک نسخهٔ تازه آمادهٔ سوار شدن است — برای گاردِ «مودالِ باز» پایین */
+let _pumpPendingSince = 0;
 function _pumpSafeToReload() {
   try {
     // بی‌خطرترین لحظهٔ ممکن: صفحهٔ قفل باز است و هنوز رمزی نوشته نشده — کاربر
@@ -45334,9 +45349,25 @@ function _pumpSafeToReload() {
     const ae = document.activeElement;
     if (ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName) && String(ae.value || '').trim() !== '') return false;
     if (ae && ae.isContentEditable) return false;
-    if (document.querySelector('.modal-overlay.open, .qr-overlay.open, .inv-overlay.open, .ro-overlay.open, .sm-overlay.open')) return false;
-    const rp = document.getElementById('robotPanel');
-    if (rp && rp.classList.contains('open')) return false;
+    /* ── چرا گاردِ «مودالِ باز» مهلت‌دار شد ─────────────────────────────────
+       گزارشِ صاحب ریپو: «هیچی تغییر نکرد، هنوز همان‌جوری است» — چند نسخه پشتِ
+       سرِ هم منتشر شده بود ولی هیچ‌کدام به دستش نمی‌رسید.
+
+       ریشه: صفحه‌های تمام‌صفحهٔ برنامه (حسابِ قرض‌دار، حسابِ تیل امانت، …) خودشان
+       .modal-overlay.open هستند. تا وقتی کاربر داخلِ یکی از آن‌هاست — یعنی
+       ساعت‌ها — این خط برمی‌گرداند false و آپدیت هرگز خودکار سوار نمی‌شود. نوارِ
+       «آپدیت کن» هم اگر یک‌بار «بعداً» زده شود دیگر برنمی‌گردد.
+
+       حالا مودالِ باز فقط سه دقیقهٔ اول جلویش را می‌گیرد. بعد از آن، تا وقتی
+       کاربر واقعاً چیزی تایپ نکرده (شرطِ بالا سرِ جایش است) نسخهٔ تازه سوار
+       می‌شود. هیچ داده‌ای هم از دست نمی‌رود: pumpApplyWebUpdate پیش از رفرش
+       save() می‌کند. */
+    const waited = _pumpPendingSince ? (Date.now() - _pumpPendingSince) : 0;
+    if (waited < 180000) {
+      if (document.querySelector('.modal-overlay.open, .qr-overlay.open, .inv-overlay.open, .ro-overlay.open, .sm-overlay.open')) return false;
+      const rp = document.getElementById('robotPanel');
+      if (rp && rp.classList.contains('open')) return false;
+    }
     return true;
   } catch (e) { return false; }
 }
@@ -47361,9 +47392,22 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.352';
+const APP_VERSION = '2.9.353';
 function _stampVersion() {
-  document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
+  /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
+     وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
+     (گزارشِ صاحب ریپو: «هیچی تغییر نکرد، هنوز همان‌جوری است».) */
+  document.querySelectorAll('.app-version').forEach(el => {
+    el.textContent = 'نسخه ' + APP_VERSION;
+    if (el.dataset.updTap) return;
+    el.dataset.updTap = '1';
+    el.style.cursor = 'pointer';
+    el.title = 'برای گرفتنِ نسخهٔ تازه بزنید';
+    el.addEventListener('click', function () {
+      try { showToast('⏳ در حال بررسیِ نسخهٔ تازه…', '#2b6cb0'); } catch (e) {}
+      try { pumpCheckUpdate(true); } catch (e) {}
+    });
+  });
 }
 
 // ========== سطل آشغال چت گروهی: 10 روز → سطل → 10 روز → حذف دائم ==========
