@@ -19246,16 +19246,12 @@ body.boot-viewer #bootViewerSplash{
             <input type="number" step="0.5" id="am-set-defTemp" oninput="setAmanatSetting('defTemp',this.value)"></label>
           <label class="am-set-f"><span>حاشیهٔ اطمینانِ فیصدی (٪)</span>
             <input type="number" step="1" id="am-set-safetyPct" title="فیصدیِ پیشنهادی = فیصدیِ سربه‌سر + همین درصد از خودش" oninput="setAmanatSetting('safetyPct',this.value)"></label>
-          <label class="am-set-f"><span>آستانهٔ گرمای ۱ (°C)</span>
-            <input type="number" step="0.1" id="am-set-t1" oninput="setAmanatSetting('t1',this.value)"></label>
-          <label class="am-set-f"><span>آستانهٔ گرمای ۲ (°C)</span>
-            <input type="number" step="0.1" id="am-set-t2" oninput="setAmanatSetting('t2',this.value)"></label>
-          <label class="am-set-f"><span>ضریب گرمای پایین (تا آستانهٔ ۱)</span>
-            <input type="number" step="0.01" id="am-set-tfLow" oninput="setAmanatSetting('tfLow',this.value)"></label>
-          <label class="am-set-f"><span>ضریب گرمای میانه (هر درجه)</span>
-            <input type="number" step="0.001" id="am-set-tfMed" oninput="setAmanatSetting('tfMed',this.value)"></label>
-          <label class="am-set-f"><span>ضریب گرمای بالا (هر درجه)</span>
-            <input type="number" step="0.001" id="am-set-tfHigh" oninput="setAmanatSetting('tfHigh',this.value)"></label>
+          <label class="am-set-f"><span>دمای مرجعِ پایه (°C)</span>
+            <input type="number" step="1" id="am-set-refTemp" title="پایه در همین دما شمرده می‌شود" oninput="setAmanatSetting('refTemp',this.value)"></label>
+          <label class="am-set-f"><span>هر چند درجه، تبخیر دو برابر</span>
+            <input type="number" step="1" id="am-set-tDouble" title="فشارِ بخارِ پطرول تقریباً هر ۱۰ درجه دو برابر می‌شود" oninput="setAmanatSetting('tDouble',this.value)"></label>
+          <label class="am-set-f"><span>کمبودیِ اندازه‌گیری و ریخت‌وپاش (٪)</span>
+            <input type="number" step="0.01" id="am-set-handlingPct" title="تبخیر نیست — خطای پیمانه و ریخت‌وپاش. روی «فیصدیِ لازم» اضافه می‌شود." oninput="setAmanatSetting('handlingPct',this.value)"></label>
         </div>
         <div class="am-set-note" id="am-set-formula"></div>
         <div style="display:flex;justify-content:flex-end;margin-top:10px">
@@ -38209,60 +38205,83 @@ tfoot .sf-amt + .sf-amt{border-top-color:#4a5568}
    ══════════════════════════════════════════════════════════════════════════ */
 
 // مقدارهای پیش‌فرض — فقط یک تنظیمِ حسابداری‌اند، نه نرخِ علمیِ قطعیِ تبخیر.
-/* ⚠️ این عددها از خودِ برنامه درنیامده‌اند — از منابعِ منتشرشده گرفته شده‌اند.
-   خواستهٔ صریحِ صاحب ریپو: «اون پیشنهادی‌ها رو خودت نمی‌دی، می‌گردی تو سایت‌های
-   معتبر». هر عدد و منبعش:
+/* ⚠️ این عددها از خودِ برنامه درنیامده‌اند — از اندازه‌گیری‌های منتشرشده.
+   خواستهٔ صریحِ صاحب ریپو: «سایت‌های معتبر که می‌گویند در هر دما چقدر تبخیرِ
+   تیل وجود دارد».
 
-   • پایهٔ ۰٫۲۵٪ در ماه — همان «حدِ مجازِ وزارت» در پژوهشِ میدانیِ اندازه‌گیریِ
-     تبخیرِ مخزن (خرطوم، هوای ۳۲ تا ۴۰ درجه). همان پژوهش، تبخیرِ واقعیِ
-     اندازه‌گیری‌شده را ۰٫۵٪ گزارش کرده — یعنی در گرمای بالا حدوداً دو برابرِ
-     پایه. ضریب‌های گرمای زیر روی همین بنا شده‌اند: در ۴۰ درجه ضریب ۲ می‌شود،
-     پس ۰٫۲۵٪ × ۲ = همان ۰٫۵٪ِ اندازه‌گیری‌شده.
+   ── چرا کلِ مقیاس عوض شد ────────────────────────────────────────────────
+   نسخهٔ قبل پایه را ۰٫۲۵٪ «در ماه» گذاشته بود. آن ۰٫۲۵٪ در منبع، عددِ یک
+   دورهٔ کامل بود، نه یک ماه؛ با ماهانه گرفتنش، تبخیر حدودِ ۱۲ برابرِ واقعیت
+   درمی‌آمد و عددهای بی‌معنی می‌ساخت (همان ۱۰٫۶۷٪ِ گزارش‌شده). عددهای درست:
 
-   • ضریب دیزل ۰٫۱ — منابع، تبخیرِ دیزل را در برابرِ پطرول «ناچیز» می‌خوانند
-     (فشارِ بخارش خیلی پایین‌تر است و در محاسبه‌های آلایندگی صفر گرفته می‌شود).
-     صفر نگذاشتیم تا حسابِ عملی محتاط بماند.
+     • پژوهشِ میدانی: با میانگین دمای ۳۲٫۶ درجه، تبخیر «بیش از ۰٫۵۲٪ در سال».
+     • همان پژوهش برای مخزنِ سقف‌شناور در هوای گرم: ۰٫۵٪ کل.
+     • مدلِ EPA در آمارِ رسمیِ کانادا: کلِ تبخیرِ یک پمپ ۰٫۱۵٪ِ گردشِ تیل.
 
-   • ضریب مخزنِ زیرزمینی ۰٫۵ — در محاسبه‌های استاندارد، برای مخزنِ زیرزمینی
-     اثرِ تابشِ آفتاب برداشته می‌شود و فقط اثرِ دما می‌ماند؛ برای همین تبخیرش
-     به‌روشنی کمتر از مخزنِ روی زمین است.
+   یعنی تبخیرِ واقعی در حدِ چند دهمِ درصد در «سال» است، نه در ماه.
 
-   • حاشیهٔ اطمینان ۲۵٪ — عرفِ «حدِ مجازِ اختلاف» در حساب‌کشیِ پمپ‌ها: روزانه
-     ±۰٫۵٪ و ماهانه ±۱٪. یعنی خودِ اندازه‌گیری هم خطا دارد و فیصدی باید کمی
-     بالاتر از سربه‌سر باشد.
+   ── ضریبِ گرما: هر ۱۰ درجه، دو برابر ────────────────────────────────────
+   فشارِ بخارِ پطرول با گرما بالا می‌رود و تقریباً هر ۱۰ درجه دو برابر می‌شود.
+   پس به‌جای پله‌های دست‌ساز:
 
-   فهرستِ کاملِ منابع با لینک، داخلِ «⚙️ تنظیمات مدیر» نوشته شده. */
+       ضریب گرما = ۲ ^ ((گرما − ۲۰) ÷ ۱۰)
+
+   با پایهٔ ۰٫۰۲٪ در ماه در ۲۰ درجه، در ۳۰ درجه می‌شود ۰٫۰۴٪ در ماه یعنی
+   ۰٫۴۸٪ در سال — همان چیزی که پژوهشِ میدانی اندازه گرفته. ✔
+
+   ── دیزل ───────────────────────────────────────────────────────────────
+   منابع تبخیرِ دیزل را در برابرِ پطرول «ناچیز» می‌خوانند (فشارِ بخارش بسیار
+   پایین‌تر است و در محاسبه‌های آلایندگی صفر گرفته می‌شود). ۰٫۰۲ گذاشته شد،
+   نه صفر، تا حسابِ عملی محتاط بماند.
+
+   ── مخزنِ زیرزمینی ─────────────────────────────────────────────────────
+   اندازه‌گیری‌ها می‌گویند هوای داخلِ مخزنِ زیرزمینی در فصلِ گرم حدودِ ۱۲ درجه
+   خنک‌تر از بیرون است. با همان قاعدهٔ «هر ۱۰ درجه دو برابر»، ۱۲ درجه خنک‌تر
+   یعنی ضریبِ ۲^(−۱٫۲) ≈ ۰٫۴۴. پس ۰٫۴۴ حدس نیست، از همان قاعده درآمده.
+
+   ── چیزی که تبخیر نیست ولی به چشمِ کمبودی می‌آید ─────────────────────────
+   «انقباض و انبساطِ گرماییِ» خودِ تیل (پطرول ۱٫۲ و دیزل ۰٫۸۵ میلی‌لیتر در هر
+   لیتر به ازای هر درجه) و خطای اندازه‌گیری و ریخت‌وپاش. این‌ها جدا نگه داشته
+   می‌شوند: اولی برمی‌گردد و نباید رویش فیصدی گرفت، دومی خانهٔ تنظیمِ خودش را
+   دارد (handlingPct).
+
+   فهرستِ منابع با لینک، داخلِ «⚙️ تنظیمات مدیر». */
 const AM_DEFAULTS = {
-  basePct: 0.25,   // پایه: درصد بخار در ماه (٪) — حدِ مجازِ منبع
-  fPetrol: 1.00,   // ضریب پطرول
-  fDiesel: 0.10,   // ضریب دیزل — منابع: در برابر پطرول ناچیز
-  tankFactor: 1.0, // ۱ = مخزن روی زمین · ۰٫۵ = مخزن زیرزمینی
-  defTemp: 25,     // درجه گرمای پیش‌فرض وقتی خانهٔ گرما خالی است
-  safetyPct: 25,   // حاشیهٔ اطمینان: فیصدیِ پیشنهادی = سربه‌سر × (۱ + این ÷ ۱۰۰)
-  t1: 20,          // آستانهٔ گرمای ۱
-  t2: 40,          // آستانهٔ گرمای ۲
-  tfLow: 1.00,     // ضریب گرما تا آستانهٔ ۱
-  tfMed: 0.05,     // شیبِ ضریب بین آستانهٔ ۱ و ۲ (هر درجه) → در ۴۰ درجه ضریب ۲
-  tfHigh: 0.06     // شیبِ ضریب بالاتر از آستانهٔ ۲ (هر درجه)
+  basePct: 0.02,     // ٪ تبخیر در ماه، در دمای مرجع
+  refTemp: 20,       // دمای مرجعِ پایه (°C)
+  tDouble: 10,       // هر چند درجه، تبخیر دو برابر می‌شود
+  fPetrol: 1.00,     // ضریب پطرول
+  fDiesel: 0.02,     // ضریب دیزل — منابع: در برابر پطرول ناچیز
+  tankFactor: 1.0,   // ۱ = مخزن روی زمین · ۰٫۴۴ = زیرزمینی
+  handlingPct: 0,    // کمبودیِ اندازه‌گیری و ریخت‌وپاش (٪) — تبخیر نیست
+  defTemp: 25,       // درجه گرمای پیش‌فرض وقتی خانهٔ گرما خالی است
+  safetyPct: 25      // حاشیهٔ اطمینانِ ماشین‌حساب
 };
-/* انبساط/انقباضِ گرماییِ خودِ تیل — این «بخار» نیست و برنمی‌گردد به کمبودی.
-   فقط وقتی مخزن را در هوای گرم یا سرد اندازه می‌گیرید، عددِ لیتر خودش فرق
-   می‌کند. در تحلیل نوشته می‌شود تا با کمبودیِ واقعی اشتباه گرفته نشود.
-   منبع: پطرول ~۱٫۲ میلی‌لیتر و دیزل ~۰٫۸۵ میلی‌لیتر در هر لیتر به ازای هر
-   درجهٔ سانتی‌گراد؛ دمای مرجعِ جهانیِ داد‌وستد ۶۰°F (۱۵٫۶°C) است. */
+/* نسخهٔ تنظیمات. با بالا رفتنش، ضریب‌های عددیِ کهنه یک‌بار پاک می‌شوند تا
+   مقیاسِ تازه به کار بیفتد — وگرنه پایهٔ ۰٫۲۵ِ نسخهٔ قبل می‌ماند و تبخیر
+   ۱۲ برابر حساب می‌شود. نوشته‌های دیگرِ کاربر دست نمی‌خورند. */
+const AM_SETTINGS_VER = 3;
+const AM_VER_KEYS = ['basePct','refTemp','tDouble','fPetrol','fDiesel','tankFactor','t1','t2','tfLow','tfMed','tfHigh'];
+/* انبساط/انقباضِ گرماییِ خودِ تیل — تبخیر نیست و برمی‌گردد.
+   منبع: پطرول ~۱٫۲ و دیزل ~۰٫۸۵ میلی‌لیتر در هر لیتر بر هر درجهٔ سانتی‌گراد؛
+   دمای مرجعِ جهانیِ داد‌وستد ۶۰°F (۱۵٫۶°C). */
 const AM_THERMAL = { petrol: 0.0012, diesel: 0.00085, refTemp: 15.6 };
+/* دماهایی که در جدولِ «تبخیر در هر گرما» نشان داده می‌شوند */
+const AM_TEMP_ROWS = [0, 10, 15, 20, 25, 30, 35, 40, 45, 50];
 /* منابع — در تنظیمات مدیر نشان داده می‌شوند */
 const AM_SOURCES = [
-  ['پژوهشِ اندازه‌گیریِ تبخیرِ مخزنِ پطرول (۰٫۵٪ اندازه‌گیری‌شده در برابر ۰٫۲۵٪ حدِ مجاز)',
+  ['پژوهشِ میدانیِ تبخیرِ مخزنِ پطرول — با میانگین دمای ۳۲٫۶°C، بیش از ۰٫۵۲٪ در سال',
    'https://www.researchgate.net/publication/274376940_MANAGEMENT_OF_EVAPORATION_LOSSES_OF_GASOLINE\'S_STORAGE_TANKS'],
   ['تبخیرِ پطرول و دیزل در انبارش — دیزل در برابر پطرول ناچیز',
    'https://link.springer.com/article/10.1007/s10553-021-01304-0'],
-  ['EPA — منبع‌های تبخیر و مخزن‌های نگهداریِ فرآورده‌های نفتی (AP-42)',
+  ['آمارِ رسمیِ کانادا با مدلِ EPA — کلِ تبخیرِ یک پمپ ۰٫۱۵٪ِ گردشِ تیل',
+   'https://www150.statcan.gc.ca/n1/pub/16-001-m/2012015/part-partie1-eng.htm'],
+  ['همان — روشِ محاسبهٔ تبخیر و اثرِ دمای مخزنِ زیرزمینی',
+   'https://www150.statcan.gc.ca/n1/pub/16-001-m/2012015/appendix-appendice1-eng.htm'],
+  ['EPA — مخزن‌های نگهداریِ فرآورده‌های نفتی و تبخیرِ آن‌ها (AP-42)',
    'https://www.epa.gov/air-emissions-factors-and-quantification/ap-42-fifth-edition-volume-i-chapter-4-evaporation-loss-0'],
-  ['EPA — حساب‌کشیِ آماریِ موجودیِ مخزن‌های زیرزمینی',
-   'https://www.epa.gov/ust/introduction-statistical-inventory-reconciliation-underground-storage-tanks'],
-  ['حدِ مجازِ اختلافِ موجودی: روزانه ۰٫۵٪ (مقرراتِ مخزن‌های زیرزمینی)',
-   'https://portal.ct.gov/-/media/deep/underground_storage_tanks/ustinventoryreconciliationformpdf.pdf'],
+  ['فشارِ بخارِ پطرول (Reid) — پایهٔ این‌که تبخیر با گرما بالا می‌رود',
+   'https://en.wikipedia.org/wiki/Reid_vapor_pressure'],
   ['انبساطِ گرماییِ تیل — پطرول ۱٫۲ و دیزل ۰٫۸۵ میلی‌لیتر در لیتر بر درجه',
    'https://www.ricochetfuel.com/blog/the-facts-about-fuel-expansion-and-contraction/'],
   ['NIST — اثرِ گرما بر حجمِ تیل در داد‌وستد (دمای مرجع ۶۰°F)',
@@ -38274,6 +38293,14 @@ const AM_GUIDE_DAYS = [7, 15, 30, 45, 60, 90, 120, 180];
 
 function amSettings() {
   if (!DB.amanatSettings || typeof DB.amanatSettings !== 'object') DB.amanatSettings = {};
+  /* مقیاسِ ضریب‌ها عوض شده (پایه از «٪ در ماه»ِ اشتباه به عددِ درست). اگر
+     تنظیماتِ ذخیره‌شده از نسخهٔ کهنه باشد، فقط همان ضریب‌های عددی یک‌بار پاک
+     می‌شوند تا مقدارهای تازه به کار بیفتند. */
+  if (_amNum(DB.amanatSettings.ver) !== AM_SETTINGS_VER) {
+    AM_VER_KEYS.forEach(k => { delete DB.amanatSettings[k]; });
+    DB.amanatSettings.ver = AM_SETTINGS_VER;
+    try { if (typeof _saveQuiet === 'function') _saveQuiet(); } catch (e) {}
+  }
   const out = {};
   Object.keys(AM_DEFAULTS).forEach(k => {
     const v = DB.amanatSettings[k];
@@ -38405,15 +38432,18 @@ function amAccounts() {
 }
 
 /* ── ضریب گرما ────────────────────────────────────────────────────────────
-   سه پله. پلهٔ سوم دقیقاً از همان‌جایی شروع می‌شود که پلهٔ دوم تمام شده، پس
-   منحنی پیوسته است: با مقدارهای پیش‌فرض در ۴۰ درجه هر دو ۱٫۳۰ می‌دهند. */
+   فشارِ بخارِ پطرول با گرما بالا می‌رود و تقریباً هر ۱۰ درجه دو برابر می‌شود.
+   پس یک منحنیِ ساده و پیوسته، نه پله‌های دست‌ساز:
+
+       ضریب = ۲ ^ ((گرما − دمای مرجع) ÷ «هر چند درجه دو برابر»)
+
+   در ۲۰ درجه ۱، در ۳۰ درجه ۲، در ۴۰ درجه ۴، در ۱۰ درجه ۰٫۵ … */
 function amTempFactor(T, s) {
   s = s || amSettings();
-  const t1 = s.t1, t2 = Math.max(s.t2, s.t1);
+  const step = (isFinite(s.tDouble) && s.tDouble > 0) ? s.tDouble : 10;
   const t = isFinite(T) ? T : 0;
-  if (t <= t1) return s.tfLow;
-  if (t <= t2) return s.tfLow + s.tfMed * (t - t1);
-  return s.tfLow + s.tfMed * (t2 - t1) + s.tfHigh * (t - t2);
+  const f = Math.pow(2, (t - s.refTemp) / step);
+  return (isFinite(f) && f > 0) ? f : 0;
 }
 function amFuelFactor(fuel, s) {
   s = s || amSettings();
@@ -38498,7 +38528,10 @@ function amRowCalc(row, acc, s) {
   const myRaw  = _amHas(row.myPct) ? _amNum(row.myPct) : (_amHas(acc.myPct) ? _amNum(acc.myPct) : null);
   const myPct  = myRaw;
   const targetL  = (myPct == null) ? null : (liters * myPct / 100);   // چقدر باید برایتان بماند
-  const needPct  = (myPct == null) ? null : (myPct + lossPct);        // چقدر باید بگیرید
+  /* فیصدیِ لازم = هدفِ شما + تبخیر + (اگر گذاشته باشید) خطای اندازه‌گیری و
+     ریخت‌وپاش. آن آخری تبخیر نیست، برای همین در ستونِ «تبخیر» شمرده نمی‌شود. */
+  const handling = _amNum(s.handlingPct);
+  const needPct  = (myPct == null) ? null : (myPct + lossPct + handling);
   const askPct   = (needPct == null) ? null : (Math.ceil(needPct * 10) / 10);  // گِردشده به یک دهم
   const netIfMy  = (targetL == null) ? null : (targetL - loss);       // اگر همان هدف را بگیرید
   const askL     = (askPct == null) ? null : (liters * askPct / 100);
@@ -38535,7 +38568,8 @@ function amAccCalc(acc, s, onlyRows) {
   const my    = _amHas(acc && acc.myPct) ? _amNum(acc.myPct) : null;
   t.myPct     = my;                                            // فیصدیِ هدف (خالص)
   t.targetL   = (my == null) ? null : (t.liters * my / 100);   // چقدر باید برایتان بماند
-  t.needPct   = (my == null) ? null : (my + t.lossPct);        // چقدر باید بگیرید
+  t.handling  = _amNum(s.handlingPct);
+  t.needPct   = (my == null) ? null : (my + t.lossPct + t.handling);
   t.askPct    = (t.needPct == null) ? null : (Math.ceil(t.needPct * 10) / 10);
   t.askL      = (t.askPct == null) ? null : (t.liters * t.askPct / 100);
   t.netIfMy   = (t.targetL == null) ? null : (t.targetL - t.loss);
@@ -38739,24 +38773,52 @@ function fillAmanatSettings() {
     if (!el || el === document.activeElement) return;   // دستِ کاربر روی همان خانه است
     el.value = val;
   };
-  ['basePct','fPetrol','fDiesel','tankFactor','defTemp','safetyPct','t1','t2','tfLow','tfMed','tfHigh'].forEach(k => set('am-set-' + k, s[k]));
+  ['basePct','fPetrol','fDiesel','tankFactor','defTemp','safetyPct','refTemp','tDouble','handlingPct'].forEach(k => set('am-set-' + k, s[k]));
   const f = document.getElementById('am-set-formula');
   if (f) {
-    f.innerHTML = 'ضریب گرما: تا <b>' + _amFmt(s.t1) + '°C</b> برابر <b>' + _amFmt(s.tfLow, 3) + '</b> · '
-      + 'بین <b>' + _amFmt(s.t1) + '</b> و <b>' + _amFmt(s.t2) + '</b> برابر ' + _amFmt(s.tfLow, 3)
-      + ' + ' + _amFmt(s.tfMed, 3) + ' × (گرما − ' + _amFmt(s.t1) + ') · '
-      + 'بالاتر از <b>' + _amFmt(s.t2) + '</b> برابر ' + _amFmt(amTempFactor(s.t2, s), 3)
-      + ' + ' + _amFmt(s.tfHigh, 3) + ' × (گرما − ' + _amFmt(s.t2) + ')'
-      + '<br>کمبودی = مقدار تیل × (پایه ÷ ۱۰۰) × (روز ÷ ۳۰) × ضریب گرما × ضریب تیل × ضریب مخزن'
-      + '<br>فیصدیِ سربه‌سر = کمبودی ÷ مقدار تیل × ۱۰۰ · فیصدیِ پیشنهادی = سربه‌سر × (۱ + '
-      + _amFmt(s.safetyPct) + '٪)'
-      + '<br><b>این ضریب‌ها یک مدل تخمینی‌اند و نرخِ علمیِ قطعیِ تبخیر نیستند.</b>'
+    f.innerHTML = 'ضریب گرما = ۲ ^ ((گرما − <b>' + _amFmt(s.refTemp) + '</b>) ÷ <b>' + _amFmt(s.tDouble) + '</b>)'
+      + ' — یعنی هر ' + _amFmt(s.tDouble) + ' درجه، تبخیر دو برابر می‌شود.'
+      + '<br>تبخیر = مقدار تیل × (پایه ÷ ۱۰۰) × (روز ÷ ۳۰) × ضریب گرما × ضریب تیل × ضریب مخزن'
+      + '<br>فیصدیِ لازم = فیصدیِ هدفِ شما + درصد تبخیر'
+      + (s.handlingPct ? (' + ' + _amFmt(s.handlingPct, 2) + '٪ (اندازه‌گیری و ریخت‌وپاش)') : '')
+      + '<div style="margin-top:9px;padding-top:8px;border-top:1px dashed var(--border)">'
+      + '<b style="color:var(--green)">🌡️ تبخیر در هر گرما — با همین تنظیمات</b>'
+      + _amTempTableHtml(s) + '</div>'
       + '<div style="margin-top:9px;padding-top:8px;border-top:1px dashed var(--border)">'
       + '<b style="color:var(--green)">📚 این عددها از کجا آمده‌اند</b><br>'
       + AM_SOURCES.map(x => '• <a href="' + escFa(x[1]) + '" target="_blank" rel="noopener" '
           + 'style="color:var(--blue);text-decoration:underline">' + escFa(x[0]) + '</a>').join('<br>')
       + '</div>';
   }
+}
+/* ══ جدولِ «در هر گرما چقدر تبخیر می‌شود» ═════════════════════════════════
+   همان چیزی که صاحب ریپو خواست. سه ستونِ آخر عمداً کنارِ هم‌اند تا معلوم شود
+   کدام «تبخیر» است (و برنمی‌گردد) و کدام فقط «انبساطِ گرمایی» (و برمی‌گردد).
+   ══════════════════════════════════════════════════════════════════════ */
+function _amTempTableHtml(s, fuel) {
+  s = s || amSettings();
+  const fk = (fuel === 'diesel') ? 'diesel' : 'petrol';
+  const ff = amFuelFactor(fk, s);
+  const now = _amNum(s.defTemp);
+  const rows = AM_TEMP_ROWS.map(T => {
+    const f = amTempFactor(T, s);
+    const perMonth = s.basePct * f * ff * s.tankFactor;      // ٪ در ماه
+    const th = AM_THERMAL[fk] * (T - AM_THERMAL.refTemp) * 100;
+    const near = Math.abs(T - now) < 2.5;
+    return '<tr' + (near ? ' class="now"' : '') + '>'
+      + '<td>' + n2fa(T) + '°C</td>'
+      + '<td>' + _amFmt(f, 2) + '×</td>'
+      + '<td>' + _amFmt(perMonth, 3) + '٪</td>'
+      + '<td>' + _amFmt(perMonth * 12, 3) + '٪</td>'
+      + '<td style="color:var(--muted)">' + (th >= 0 ? '+' : '−') + _amFmt(Math.abs(th), 2) + '٪</td></tr>';
+  }).join('');
+  return '<div class="xls-wrap" style="overflow:auto"><table class="am-guide" style="min-width:520px">'
+    + '<thead><tr><th>گرما</th><th>ضریب</th><th>تبخیر در ماه</th><th>تبخیر در سال</th>'
+    + '<th title="تبخیر نیست — با سرد شدن برمی‌گردد">انبساط گرمایی</th></tr></thead>'
+    + '<tbody>' + rows + '</tbody></table></div>'
+    + '<div class="am-an-note">ستونِ <b>تبخیر</b> واقعاً از بین می‌رود. ستونِ <b>انبساط گرمایی</b> فقط عددِ لیتر را '
+    + 'نسبت به دمای مرجعِ ۱۵٫۶°C کم و زیاد نشان می‌دهد و با سرد شدنِ هوا برمی‌گردد — رویش فیصدی نگیرید. '
+    + 'عددها برای ' + (fk === 'diesel' ? 'دیزل' : 'پطرول') + ' و با ضریبِ مخزنِ ' + _amFmt(s.tankFactor, 2) + ' حساب شده‌اند.</div>';
 }
 function setAmanatSetting(key, val) {
   if (!DB.amanatSettings || typeof DB.amanatSettings !== 'object') DB.amanatSettings = {};
@@ -38943,11 +39005,11 @@ function _amPaint() {
       if (c.taken > c.liters + 0.0001) err.push(amAccLabel(a) + ' — ردیفِ ' + n2fa(ri + 1) + ': برده شده از رسید تیل بیشتر است.');
       if (c.liters > 0 && !c.dateOk && !c.manual) warn.push(amAccLabel(a) + ' — ردیفِ ' + n2fa(ri + 1) + ': تاریخ ثبت نشده، پس مدت زمان خودکار شمرده نمی‌شود.');
       if (_amHas(r.temp) && (_amNum(r.temp) < -50 || _amNum(r.temp) > 80)) warn.push(amAccLabel(a) + ' — ردیفِ ' + n2fa(ri + 1) + ': درجه گرمای واردشده غیرعادی است.');
-      /* هشدارِ عددِ بی‌ربط: اگر بخار از بالاترین حدِ منتشرشده (۳٪ برای کلِ
-         انبارش و جابه‌جایی) بگذرد، تقریباً همیشه یعنی «پایه» یا «مدت زمان»
-         اشتباه تایپ شده — نه این‌که واقعاً آن‌قدر بخار شده باشد. */
-      if (c.lossPct > 3) warn.push(amAccLabel(a) + ' — ردیفِ ' + n2fa(ri + 1) + ': بخارِ ' + _amFmt(c.lossPct, 2)
-        + '٪ از بالاترین حدِ منتشرشده (۳٪) بیشتر است — «پایه» یا «مدت زمان» را یک بار ببینید.');
+      /* هشدارِ عددِ بی‌ربط: اندازه‌گیری‌های منتشرشده تبخیر را چند دهمِ درصد در
+         «سال» می‌گویند. اگر یک ردیف از ۱٪ بگذرد، تقریباً همیشه یعنی «پایه»
+         یا «مدت زمان» یا «درجه گرما» اشتباه تایپ شده. */
+      if (c.lossPct > 1) warn.push(amAccLabel(a) + ' — ردیفِ ' + n2fa(ri + 1) + ': تبخیرِ ' + _amFmt(c.lossPct, 2)
+        + '٪ خیلی بالاتر از اندازه‌گیری‌های منتشرشده است — «پایه»، «مدت زمان» یا «درجه گرما» را یک بار ببینید.');
     });
   });
   const sum = document.getElementById('am-summary');
@@ -39155,9 +39217,9 @@ function _amAccBuild() {
   <!-- نرخ‌های مرجع -->
   <div class="am-md-sec">
     <button type="button" class="am-an-head am-fold" style="background:transparent;border:none;padding:0;color:var(--blue)" onclick="amToggleRef()">
-      <span>📚 نرخ‌های مرجع — دیگران چقدر می‌گیرند؟</span><span id="am-ref-caret">◂</span>
+      <span>🌡️ در هر گرما چقدر تبخیر می‌شود؟</span><span id="am-ref-caret">◂</span>
     </button>
-    <div id="am-ref-body" style="display:none;margin-top:10px">${_amRefTableHtml()}</div>
+    <div id="am-ref-body" style="display:none;margin-top:10px">${_amRefTableHtml(a)}</div>
   </div>`;
 
   document.querySelectorAll('#amanatAccModal .am-tabs .am-tab[data-r]').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-r') === _amRowFilter));
@@ -39173,24 +39235,12 @@ function amToggleRef() {
   b.style.display = on ? '' : 'none';
   if (c) c.textContent = on ? '▾' : '◂';
 }
-/* نرخ‌هایی که جاهای دیگر رسماً برای «کمبودیِ انبارش و جابه‌جایی» قبول می‌کنند —
-   تا فیصدیِ خودتان را با یک عددِ بیرونی بسنجید، نه فقط با حدسِ برنامه. */
-function _amRefTableHtml() {
-  const rows = [
-    ['خطِ لولهٔ نفت (کمبودیِ مسیر، عینِ همین کار)', '۰٫۱٪ تا ۰٫۲٪', 'همان مقدارِ تیل که بابتِ بخار و خطای اندازه‌گیری نزدِ حمل‌کننده می‌ماند'],
-    ['کالیفرنیا — کمبودیِ عادیِ انبارش', '۰٫۵٪', 'وقتی کمبودیِ واقعی دقیق معلوم نباشد، ۰٫۵٪ِ کلِ گردش پذیرفته است'],
-    ['دلاور — سقفِ کمبودیِ انبارش و جابه‌جایی', 'پطرول ۱٪ · دیزل ۰٫۵٪', 'روی موجودیِ اول دوره + رسیدها، در ۱۲ ماه'],
-    ['ایندیانا — کمبودیِ انبارش و جابه‌جایی', '۱٫۶٪', 'یک نرخِ ثابت برای کلِ کمبودی و هزینهٔ جمع‌آوری'],
-    ['آرکانزاس — سقفِ کمبودیِ انبارش و جابه‌جایی', '۳٪', 'بالاترین نرخِ پیداشده؛ فقط برای اولین یک میلیون گالن'],
-    ['حدِ مجازِ اختلافِ موجودیِ مخزن', 'روزانه ۰٫۵٪ · ماهانه ۱٪', 'بیشتر از این یعنی یک جای کار می‌لنگد، نه بخارِ عادی']
-  ];
-  return '<div class="xls-wrap" style="overflow:auto"><table class="am-guide" style="min-width:560px">'
-    + '<thead><tr><th>کجا</th><th>چند فیصد</th><th>توضیح</th></tr></thead><tbody>'
-    + rows.map(r => '<tr><td style="text-align:right">' + r[0] + '</td><td style="color:var(--green);font-weight:900">'
-        + r[1] + '</td><td style="text-align:right;white-space:normal;font-weight:600;color:var(--muted)">' + r[2] + '</td></tr>').join('')
-    + '</tbody></table></div>'
-    + '<div class="am-an-note">این نرخ‌ها برای <b>کلِ</b> کمبودیِ انبارش و جابه‌جایی‌اند (بخار + خطای اندازه‌گیری + ریخت‌وپاش)، پس معمولاً از بخارِ خالی بالاترند. '
-    + 'فیصدیِ شما باید بخار را بپوشاند و سودِ خودتان هم رویش باشد — برای همین طبیعی است که از این‌ها بالاتر باشد. لینکِ منابع در «⚙️ تنظیمات مدیر».</div>';
+/* ⚠️ این‌جا یک‌بار جدولِ «کسرِ مالیاتیِ ایالت‌های آمریکا» گذاشته شده بود
+   (کالیفرنیا ۰٫۵٪، ایندیانا ۱٫۶٪، آرکانزاس ۳٪ …). آن عددها قانونِ مالیات
+   بودند، نه اندازه‌گیریِ تبخیر، و هیچ ربطی به پمپِ این‌جا نداشتند. برنگردند.
+   خواستهٔ صاحب ریپو همین جدولِ زیر است: «در هر دما چقدر تبخیر وجود دارد». */
+function _amRefTableHtml(a) {
+  return _amTempTableHtml(amSettings(), amFuelKey(a));
 }
 /* خانه‌های محاسبه‌شدهٔ صفحهٔ حساب — بدونِ ساختنِ دوبارهٔ ردیف‌ها */
 function _amAccPaint() {
@@ -39272,7 +39322,9 @@ function _amPaintAnalysis(a, t, s) {
     ['اگر همین ' + _amFmt(t.myPct, 2) + '٪ را بگیرید، بعد از بخار می‌ماند',
      '<b style="color:' + (enough ? 'var(--green)' : 'var(--red)') + '">' + L(t.netIfMy) + '</b>'],
     ['sep'],
-    ['<b>فیصدیِ لازم</b> (' + _amFmt(t.myPct, 2) + '٪ + ' + _amFmt(t.lossPct, 3) + '٪)', '<b style="color:var(--blue)">' + _amFmt(t.needPct, 3) + '٪</b>'],
+    ['<b>فیصدیِ لازم</b> (' + _amFmt(t.myPct, 2) + '٪ + ' + _amFmt(t.lossPct, 3) + '٪ تبخیر'
+      + (t.handling ? (' + ' + _amFmt(t.handling, 2) + '٪ اندازه‌گیری') : '') + ')',
+     '<b style="color:var(--blue)">' + _amFmt(t.needPct, 3) + '٪</b>'],
     ['<b>گِردشده — همین را بگیرید</b>', '<b style="color:var(--green);font-size:1.05rem">' + _amFmt(t.askPct, 1) + '٪</b>'],
     ['با ' + _amFmt(t.askPct, 1) + '٪ می‌گیرید', L(t.askL) + money(t.askL)],
     ['<b>و بعد از بخار برایتان می‌ماند</b>', '<b style="color:var(--green)">' + L(t.netIfAsk) + money(t.netIfAsk) + '</b>']
@@ -47247,7 +47299,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.349';
+const APP_VERSION = '2.9.350';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
