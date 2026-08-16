@@ -14570,7 +14570,10 @@ html, body {
   .m-menu-item .nav-ic{width:1.35em;height:1.35em;flex-shrink:0}
   .m-menu-item:active{background:var(--card)}
   .m-menu-item.active{background:var(--accent);color:#000;font-weight:800}
-  .m-menu-item .nav-badge{position:static;margin-right:auto}
+  /* نشانِ قرمزِ شمار می‌رود سمتِ چپِ همان ردیف (order آخر + مارجینِ خودکار).
+     پیش از این margin-right:auto روی نشانِ «اولِ ردیف» بود و کلِ نوشته و آیکونِ
+     قرض‌داران را به چپ هُل می‌داد؛ آن ردیف با بقیه هم‌تراز نبود. */
+  .m-menu-item .nav-badge{position:static;order:2;margin:0;margin-inline-start:auto}
   body.m-menu-lock{overflow:hidden}
 
   /* --- شیفت روز و شب کنار هم و فشرده (نه یک‌ستونه) --- */
@@ -16981,7 +16984,7 @@ body.gfx-performance .xls-foot td{
   }
   .m-menu-item:active{ background:var(--card); }
   .m-menu-item.active{ background:var(--accent); color:#000; font-weight:800; }
-  .m-menu-item .nav-badge{ position:static; margin-right:auto; }
+  .m-menu-item .nav-badge{ position:static; order:2; margin:0; margin-inline-start:auto; }
   .m-menu-item .nav-ic{ width:1.4em; height:1.4em; flex-shrink:0; }
   html.m-menu-lock, body.m-menu-lock{ overflow:hidden; }
 }
@@ -17400,6 +17403,286 @@ body.boot-viewer #bootViewerSplash{
     <div class="m-menu-list" id="mMenuList"></div>
   </div>
 </div>
+<!-- ══════════════════════════════════════════════════════════════════════════
+     ↕️ جابه‌جا کردنِ خودِ بخش‌ها — بدون هیچ صفحه و کادرِ جدا
+     خواستهٔ صاحب ریپو: «سه خط روی کادرِ بخش‌ها بگذار؛ دست که رویش گذاشتم بتوانم
+     بالا و پایین ببرمش. برای کامپیوتر هم یک تا یک‌ونیم ثانیه که روی همان کادر
+     نگه داشتم، به چپ و راست حرکت کند. ساده باشد، برای هر چیزی کادر نساز.»
+     ══════════════════════════════════════════════════════════════════════ -->
+<style id="nord-style">
+/* دستگیرهٔ سه‌خط، سمتِ چپِ هر بخش در کشوی 📂 بخش‌ها */
+.m-grip{
+  flex-shrink:0;order:3;margin-inline-start:auto;
+  width:38px;min-height:38px;border-radius:9px;
+  display:inline-flex;align-items:center;justify-content:center;gap:3px;
+  flex-direction:column;color:var(--muted);
+  /* لمس روی دستگیره نباید فهرست را اسکرول کند، وگرنه کشیدن با انگشت کار نمی‌کند */
+  touch-action:none;-webkit-tap-highlight-color:transparent;cursor:grab;
+}
+.m-grip i{display:block;width:17px;height:2px;border-radius:2px;background:currentColor;opacity:.75}
+.m-menu-item.nord-on .m-grip{color:var(--accent);cursor:grabbing}
+.m-menu-item.nord-on .m-grip i{opacity:1}
+/* بخشی که زیرِ دست است */
+.m-menu-item.nord-on{
+  outline:2px dashed var(--accent);outline-offset:-2px;
+  box-shadow:0 10px 24px -12px rgba(0,0,0,.75);opacity:.97;
+}
+/* نوشته و آیکونِ هر بخش با هم، سمتِ راست — نشانِ قرمزِ شمار می‌رود سمتِ چپ */
+.m-menu-body{flex:1;min-width:0;display:flex;align-items:center;gap:12px;overflow:hidden}
+.m-menu-body .nav-badge{position:static;order:2;margin-inline-start:auto;flex-shrink:0}
+
+/* روی کامپیوتر: نگه داشتنِ ۱٫۲ ثانیه روی یک بخش، آن را برای جابه‌جایی آزاد می‌کند */
+.nav-btn.nord-on{
+  outline:2px dashed var(--accent) !important;outline-offset:2px;
+  transform:translateY(-2px) scale(1.03) !important;
+  box-shadow:0 12px 26px -14px rgba(0,0,0,.85) !important;
+  cursor:grabbing !important;z-index:5;
+}
+</style>
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   ↕️ چیدمانِ دلخواهِ بخش‌ها — منطقِ برنامه اصلاً دست نمی‌خورد
+   --------------------------------------------------------------------------
+   قاعده‌ای که این ماژول را بی‌خطر نگه می‌دارد: خودِ دکمه‌های نوار جابه‌جا می‌شوند
+   (appendChild روی همان گره)، نه این‌که کپی یا از نو ساخته شوند. پس onclick و
+   کلاسِ active و نشانِ قرمزِ قرض‌داران دست‌نخورده می‌مانند، و هرچه ترتیبِ همین نوار
+   را می‌خواند — فهرستِ 📂 موبایل، Ctrl+عدد، فلشِ چپ/راست — خودکار هم‌ترتیب می‌شود.
+   ذخیره فقط در localStorage همین دستگاه است: نه در دیتابیس، نه در همگام‌سازی.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+  var KEY = 'pump_nav_order_v1';
+  var HOLD_MS = 1200;          // نگه داشتن روی کامپیوتر تا آزاد شدنِ بخش
+  var HOLD_SLOP = 9;           // اگر پیش از آن بیشتر از این تکان خورد، یعنی کشیدنِ نوار است
+
+  function navEl() { return document.querySelector('.nav'); }
+  function navBtns() {
+    var n = navEl();
+    return n ? Array.prototype.slice.call(n.querySelectorAll(':scope > .nav-btn')) : [];
+  }
+  /* شناسهٔ هر بخش از روی همان showSection('…') خوانده می‌شود تا ترتیب با نامِ
+     بخش‌ها گره بخورد، نه با شماره‌ای که با هر تغییرِ قالب عوض می‌شود. */
+  function keyOf(btn) {
+    var m = (btn.getAttribute('onclick') || '').match(/showSection\(\s*['"]([^'"]+)['"]/);
+    return m ? m[1] : '';
+  }
+  function load() {
+    try {
+      var v = JSON.parse(localStorage.getItem(KEY) || 'null');
+      return (Array.isArray(v) && v.length) ? v.filter(function (x) { return typeof x === 'string' && x; }) : null;
+    } catch (e) { return null; }
+  }
+  function saveOrder() {
+    var order = navBtns().map(keyOf).filter(Boolean);
+    if (!order.length) return;
+    try { localStorage.setItem(KEY, JSON.stringify(order)); } catch (e) {}
+  }
+  /* خطِ نشانگرِ زیرِ بخشِ فعال (glider) بعد از هر جابه‌جایی سرِ جای تازه بنشیند */
+  function repaintGlider() {
+    try { if (typeof window._navPlaceGlider === 'function') window._navPlaceGlider(); } catch (e) {}
+  }
+
+  /* چیدمانِ ذخیره‌شده را روی نوار می‌نشاند.
+     — شناسه‌ای که دیگر وجود ندارد نادیده گرفته می‌شود؛
+     — بخشی که در نسخهٔ تازه اضافه شده و در چیدمانِ ذخیره‌شده نیست، گم نمی‌شود:
+       آخرِ ردیف می‌آید و از همان‌جا هر کجا خواستند می‌برندش. */
+  function apply() {
+    var nav = navEl(); if (!nav) return;
+    var cur = navBtns(); if (!cur.length) return;
+    var order = load(); if (!order) return;
+
+    var byKey = Object.create(null);
+    cur.forEach(function (b) { var k = keyOf(b); if (k && !byKey[k]) byKey[k] = b; });
+
+    var seq = [], taken = Object.create(null);
+    order.forEach(function (k) { if (byKey[k] && !taken[k]) { taken[k] = 1; seq.push(byKey[k]); } });
+    cur.forEach(function (b) { var k = keyOf(b); if (!k || !taken[k]) seq.push(b); });
+
+    if (seq.length === cur.length && seq.every(function (b, i) { return b === cur[i]; })) return;
+    var frag = document.createDocumentFragment();
+    seq.forEach(function (b) { frag.appendChild(b); });   // appendChild گره را «می‌بَرَد»، کپی نمی‌کند
+    nav.appendChild(frag);
+    repaintGlider();
+  }
+
+  /* ══ ۱) کشوی موبایل: دستگیرهٔ سه‌خط، بالا/پایین ══════════════════════════ */
+  var mDrag = null, mRaf = 0, mY = 0;
+  /* زمانِ پایانِ آخرین جابه‌جایی — تا رها کردنِ انگشت، «کلیکِ» ناخواسته نشود و
+     برنامه بی‌اجازه به آن بخش نپرد. */
+  var mJustDragged = 0;
+  window.__navGripJustDragged = function () { return Date.now() - mJustDragged < 400; };
+
+  function mSort(y) {
+    if (!mDrag) return;
+    var l = mDrag.list, row = mDrag.row, before = null;
+    var kids = l.children;
+    for (var i = 0; i < kids.length; i++) {
+      if (kids[i] === row) continue;
+      var r = kids[i].getBoundingClientRect();
+      if (y < r.top + r.height / 2) { before = kids[i]; break; }
+    }
+    if (before) { if (row.nextSibling !== before) l.insertBefore(row, before); }
+    else if (l.lastChild !== row) l.appendChild(row);
+  }
+  function mAuto() {
+    mRaf = 0; if (!mDrag) return;
+    var l = mDrag.list, r = l.getBoundingClientRect(), edge = 48, dy = 0;
+    if (mY < r.top + edge) dy = -Math.min(17, (r.top + edge - mY) / 2.2);
+    else if (mY > r.bottom - edge) dy = Math.min(17, (mY - (r.bottom - edge)) / 2.2);
+    if (dy) { var b4 = l.scrollTop; l.scrollTop += dy; if (l.scrollTop !== b4) mSort(mY); }
+    mRaf = requestAnimationFrame(mAuto);
+  }
+  function mMove(e) {
+    if (!mDrag || e.pointerId !== mDrag.id) return;
+    if (e.cancelable) e.preventDefault();
+    mY = e.clientY; mSort(mY);
+  }
+  function mEnd(e) {
+    if (!mDrag) return;
+    if (e && e.pointerId != null && e.pointerId !== mDrag.id) return;
+    var d = mDrag; mDrag = null;
+    document.removeEventListener('pointermove', mMove, { passive: false });
+    document.removeEventListener('pointerup', mEnd);
+    document.removeEventListener('pointercancel', mEnd);
+    try { d.list.releasePointerCapture(d.id); } catch (_) {}
+    d.row.classList.remove('nord-on');
+    if (mRaf) { cancelAnimationFrame(mRaf); mRaf = 0; }
+    mJustDragged = Date.now();
+    // ترتیبِ فهرست را روی خودِ نوار بنشان، بعد ذخیره کن
+    var nav = navEl();
+    if (nav) {
+      var frag = document.createDocumentFragment();
+      Array.prototype.forEach.call(d.list.children, function (it) { if (it.__navBtn) frag.appendChild(it.__navBtn); });
+      nav.appendChild(frag);
+      saveOrder(); repaintGlider();
+    }
+  }
+  /* ⚠️ گیرِ اشاره‌گر روی خودِ ردیف گذاشته نمی‌شود و شنونده‌ها هم روی آن نمی‌نشینند:
+     لحظه‌ای که ردیف در فهرست جابه‌جا می‌شود مرورگر آن را «برداشتن و دوباره گذاشتن»
+     می‌بیند و گیر را رها می‌کند — آن وقت ردیف یک پله می‌رفت و گیر می‌کرد. پس گیر
+     روی خودِ فهرست است (که جابه‌جا نمی‌شود) و شنونده‌ها روی document. */
+  window.__navGripDown = function (e, row) {
+    if (mDrag) mEnd(null);
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    var l = row.parentNode; if (!l) return;
+    e.preventDefault(); e.stopPropagation();
+    mDrag = { row: row, list: l, id: e.pointerId };
+    mY = e.clientY;
+    row.classList.add('nord-on');
+    try { l.setPointerCapture(e.pointerId); } catch (_) {}
+    document.addEventListener('pointermove', mMove, { passive: false });
+    document.addEventListener('pointerup', mEnd);
+    document.addEventListener('pointercancel', mEnd);
+    if (!mRaf) mRaf = requestAnimationFrame(mAuto);
+  };
+
+  /* ══ ۲) کامپیوتر: نگه داشتنِ ۱٫۲ ثانیه روی یک بخش، بعد چپ و راست ═════════ */
+  var dTimer = 0, dCand = null, dStart = null, dDrag = null, dRaf = 0, dX = 0;
+  var dJustDragged = 0, dRTL = false;
+  // نوارِ اسکرولِ افقیِ خودِ نوار نباید هم‌زمان با جابه‌جایی بجنگد — این پرچم را
+  // همان کدِ «کشیدنِ نوار» می‌خواند و کنار می‌کشد.
+  window.__navReorderActive = false;
+
+  function dSort(x) {
+    if (!dDrag) return;
+    var nav = navEl(), btn = dDrag.btn, before = null;
+    var kids = navBtns();
+    for (var i = 0; i < kids.length; i++) {
+      if (kids[i] === btn) continue;
+      var r = kids[i].getBoundingClientRect(), mid = r.left + r.width / 2;
+      if (dRTL ? (x > mid) : (x < mid)) { before = kids[i]; break; }
+    }
+    if (before) { if (btn.nextSibling !== before) nav.insertBefore(btn, before); }
+    else if (nav.lastElementChild !== btn) nav.appendChild(btn);
+  }
+  function dAuto() {
+    dRaf = 0; if (!dDrag) return;
+    var nav = navEl(), r = nav.getBoundingClientRect(), edge = 60, d = 0;
+    if (dX < r.left + edge) d = -Math.min(18, (r.left + edge - dX) / 2.2);
+    else if (dX > r.right - edge) d = Math.min(18, (dX - (r.right - edge)) / 2.2);
+    if (d) {
+      // در RTL مقدارِ scrollLeft منفی است؛ با «مقدارِ مطلق» کار می‌کنیم
+      var max = nav.scrollWidth - nav.clientWidth, mag = Math.abs(nav.scrollLeft);
+      var next = Math.min(max, Math.max(0, mag + (dRTL ? -d : d)));
+      var b4 = nav.scrollLeft;
+      nav.scrollLeft = dRTL ? -next : next;
+      if (nav.scrollLeft !== b4) dSort(dX);
+    }
+    dRaf = requestAnimationFrame(dAuto);
+  }
+  function dCancelHold() {
+    if (dTimer) { clearTimeout(dTimer); dTimer = 0; }
+    dCand = null; dStart = null;
+  }
+  function dBegin() {
+    dTimer = 0;
+    var nav = navEl(); if (!nav || !dCand) return;
+    dRTL = getComputedStyle(nav).direction === 'rtl';
+    dDrag = { btn: dCand, id: dStart.id };
+    window.__navReorderActive = true;
+    dCand.classList.add('nord-on');
+    /* تا وقتی دستِ کاربر روی بخش است، خودِ نوار زیرِ انگشت/موس نلغزد.
+       اسکرولِ نرمِ لبه‌ها را خودمان با scrollLeft انجام می‌دهیم و آن با
+       overflow:hidden هم کار می‌کند. */
+    nav.style.touchAction = 'none';
+    nav.style.overflowX = 'hidden';
+    try { if (navigator.vibrate) navigator.vibrate(18); } catch (e) {}
+    try { if (typeof showToast === 'function') showToast('✋ حالا بکشید — هر جا رها کنید همان‌جا می‌ماند', '#805ad5'); } catch (e) {}
+    if (!dRaf) dRaf = requestAnimationFrame(dAuto);
+    dSort(dX);
+  }
+  function dMove(e) {
+    if (dTimer && dStart && e.pointerId === dStart.id) {
+      // هنوز در حالِ نگه داشتن است: تکانِ زیاد یعنی کاربر دارد نوار را می‌کشد
+      if (Math.abs(e.clientX - dStart.x) > HOLD_SLOP || Math.abs(e.clientY - dStart.y) > HOLD_SLOP) dCancelHold();
+      return;
+    }
+    if (!dDrag || e.pointerId !== dDrag.id) return;
+    if (e.cancelable) e.preventDefault();
+    dX = e.clientX; dSort(dX);
+  }
+  function dEnd(e) {
+    if (dTimer && (!e || !dStart || e.pointerId === dStart.id)) dCancelHold();
+    if (!dDrag) return;
+    if (e && e.pointerId != null && e.pointerId !== dDrag.id) return;
+    var nav = navEl(), btn = dDrag.btn;
+    dDrag = null;
+    if (dRaf) { cancelAnimationFrame(dRaf); dRaf = 0; }
+    btn.classList.remove('nord-on');
+    if (nav) { nav.style.touchAction = ''; nav.style.overflowX = ''; }
+    window.__navReorderActive = false;
+    dJustDragged = Date.now();
+    saveOrder(); repaintGlider();
+  }
+
+  function initDesktopHold() {
+    var nav = navEl(); if (!nav) return;
+    nav.addEventListener('pointerdown', function (e) {
+      if (dDrag || dTimer) return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      var btn = e.target && e.target.closest ? e.target.closest('.nav-btn') : null;
+      if (!btn || btn.parentNode !== nav) return;
+      dCand = btn; dX = e.clientX;
+      dStart = { x: e.clientX, y: e.clientY, id: e.pointerId };
+      dTimer = setTimeout(dBegin, HOLD_MS);
+    });
+    document.addEventListener('pointermove', dMove, { passive: false });
+    document.addEventListener('pointerup', dEnd);
+    document.addEventListener('pointercancel', dEnd);
+    /* کلیکِ بعد از جابه‌جایی نباید کاربر را به آن بخش ببرد. این شنونده در فازِ
+       «گرفتن» روی خودِ نوار است، پس پیش از onclickِ دکمه اجرا می‌شود. */
+    nav.addEventListener('click', function (e) {
+      if (Date.now() - dJustDragged < 400) { e.preventDefault(); e.stopPropagation(); }
+    }, true);
+    // اگر پنجره تغییر کرد یا تمرکز رفت، هیچ درگی نیمه‌کاره نماند
+    window.addEventListener('blur', function () { dEnd(null); });
+  }
+
+  apply();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initDesktopHold);
+  else initDesktopHold();
+})();
+</script>
 
 <div class="main">
 
@@ -23579,6 +23862,8 @@ function showSection(id, btn) {
 
 // ========== منوی سه‌نقطهٔ موبایل — لیست بخش‌ها از روی همان نوار ناوبری ==========
 // آیتم‌ها از روی .nav-btn ساخته می‌شوند تا همیشه با نوار اصلی هماهنگ بمانند.
+// هر آیتم یک دستگیرهٔ سه‌خط (☰) هم دارد: با گرفتنِ آن، همان بخش بالا و پایین
+// می‌رود و چیدمانِ تازه روی خودِ نوار هم می‌نشیند (ماژولِ «چیدمانِ بخش‌ها» بالاتر).
 function buildMobileMenu() {
   const list = document.getElementById('mMenuList');
   if (!list) return;
@@ -23587,8 +23872,28 @@ function buildMobileMenu() {
   btns.forEach(btn => {
     const item = document.createElement('button');
     item.className = 'm-menu-item' + (btn.classList.contains('active') ? ' active' : '');
-    item.innerHTML = btn.innerHTML;
-    item.addEventListener('click', () => { btn.click(); closeMobileMenu(); });
+    // نوشته و آیکون در یک ظرف تا نشانِ قرمزِ شمار برود سمتِ چپ و بقیه سمتِ راست
+    // بماند — پیش از این، بخشِ «قرض‌داران» به‌خاطر همان نشان کج و تنها می‌افتاد.
+    const body = document.createElement('span');
+    body.className = 'm-menu-body';
+    body.innerHTML = btn.innerHTML;
+    const grip = document.createElement('span');
+    grip.className = 'm-grip';
+    grip.setAttribute('aria-hidden', 'true');
+    grip.title = 'بگیرید و بالا/پایین ببرید';
+    grip.innerHTML = '<i></i><i></i><i></i>';
+    grip.addEventListener('pointerdown', e => {
+      try { window.__navGripDown(e, item); } catch (err) {}
+    });
+    item.appendChild(body);
+    item.appendChild(grip);
+    item.__navBtn = btn;                       // مرجعِ همان دکمهٔ نوار، برای جابه‌جایی
+    item.addEventListener('click', e => {
+      // دست روی دستگیره بود یا تازه جابه‌جا شد ⇒ این کلیک «رفتن به بخش» نیست
+      if (e.target && e.target.closest && e.target.closest('.m-grip')) return;
+      try { if (window.__navGripJustDragged()) return; } catch (err) {}
+      btn.click(); closeMobileMenu();
+    });
     list.appendChild(item);
   });
 }
@@ -38776,6 +39081,13 @@ function updateAmanatRow(ai, ri, field, val) {
   _amAccPaint();
   if (!_amAccOpen()) _amPaint();   // کارت‌های پشتِ صفحهٔ حساب دیده نمی‌شوند
 }
+/* نوشتهٔ راهنمای خانهٔ «فیصدیِ من» — یک جا نوشته شده تا وقتی ردیف باز/بسته
+   می‌شود، همان جمله بدون ساختنِ دوبارهٔ جدول عوض شود. */
+function _amPctTitle(closed) {
+  return closed
+    ? '🔒 این ردیف بسته است — فیصدی‌اش قفل شده و با عوض کردنِ فیصدیِ حساب تکان نمی‌خورد. اگر لازم شد، همین‌جا دستی عوضش کنید.'
+    : 'فیصدیِ هدفِ همین ردیف. خالی بگذارید تا فیصدیِ خودِ حساب (بالای صفحه) به کار برود — آن وقت با نشانِ ↑ می‌آید، یعنی نوشتهٔ شما نیست. لحظه‌ای که ردیف را «بسته» کنید، همان فیصدی رویش قفل می‌شود.';
+}
 /* «در مخزن»: دو کادرِ باز/بسته داخلِ همان خانه. «بسته» یعنی تیل از مخزن
    بیرون رفته — از همان تاریخ، مدت زمان دیگر جلو نمی‌رود و کمبودی ثابت می‌ماند.
 
@@ -38817,12 +39129,26 @@ function setAmanatRowState(ai, ri, st) {
     if (btns[0]) { btns[0].classList.toggle('on', !closed); btns[0].classList.toggle('open', !closed); }
     if (btns[1]) { btns[1].classList.toggle('on', closed); btns[1].classList.toggle('shut', closed); }
   }
+  /* خانهٔ «فیصدیِ من» همین ردیف را دستی تازه می‌کنیم — نه با ساختنِ دوبارهٔ جدول.
+     ⚠️ این‌جا قبلاً _amAccRefresh() صدا زده می‌شد و همان یک خط، همهٔ زحمتِ بالا را
+     خنثی می‌کرد: کلِ جدول از نو ساخته می‌شد، پس جای اسکرولِ صفحه و جدول صفر
+     می‌شد و کیبوردِ گوشی بسته می‌شد — گزارشِ صاحب ریپو: «وقتی باز/بسته را
+     می‌زنم صفحه تازه می‌شود یا می‌پرد و کیبورد می‌رود». */
+  const pctIn = document.getElementById('am-in-mypct-' + ai + '-' + ri);
+  if (pctIn) {
+    pctIn.title = _amPctTitle(r.state === 'closed');
+    // اگر دستِ کاربر داخلِ همان خانه است، نوشته‌اش را زیر انگشتش عوض نکن
+    if (pctIn !== document.activeElement) pctIn.value = _amHas(r.myPct) ? String(r.myPct) : '';
+  }
   _amAccPaint();
   if (!_amAccOpen()) _amPaint();
   showToast(st === 'closed'
     ? ('🔒 ردیف بسته شد — مدت زمان و فیصدی' + (_amHas(r.myPct) ? (' (' + _amFmt(_amNum(r.myPct), 2) + '٪)') : '') + ' قفل شد')
     : '🔓 ردیف باز شد', '#805ad5');
-  _amAccRefresh();   // خانهٔ فیصدی حالا عددِ قفل‌شده را نشان می‌دهد
+  /* تنها حالتی که ساختنِ دوباره چاره‌ای ندارد: فیلترِ «فقط باز»/«فقط بسته» روشن
+     است و این ردیف دیگر به آن فیلتر نمی‌خورد، پس باید از لیست برود. با فیلترِ
+     «همه» — یعنی حالتِ همیشگی — هیچ‌چیز از نو ساخته نمی‌شود. */
+  if (_amRowFilter !== 'all') _amAccRefresh();
 }
 
 /* ── تنظیمات مدیر ────────────────────────────────────────────────────────── */
@@ -39168,6 +39494,12 @@ function _amAccBuild() {
   const box = document.getElementById('am-acc-body');
   if (!box) return;
   if (!a) { box.innerHTML = ''; return; }
+  /* هر جا این تابع ناچار است جدول را از نو بسازد (عوض شدنِ فیلتر، اندازه‌گیری،
+     نوعِ تیل…)، جای اسکرولِ صفحه و جای اسکرولِ افقیِ جدول نگه داشته و همان‌جا
+     برگردانده می‌شود — وگرنه صفحه به بالا می‌پرد و انگار «تازه» شده. */
+  const keepTop = box.scrollTop;
+  const oldWrap = box.querySelector('.xls-wrap');
+  const keepLeft = oldWrap ? oldWrap.scrollLeft : 0;
   const s = amSettings();
   const fuel = amFuelKey(a);
   const ttl = document.getElementById('am-acc-title');
@@ -39189,13 +39521,13 @@ function _amAccBuild() {
       <td><input class="xls-in xs" type="number" step="0.1" value="${cmpEsc(r.temp)}" placeholder="${_amFmt(s.defTemp)}" title="خالی = گرمای پیش‌فرضِ تنظیمات" oninput="updateAmanatRow(${ai},${ri},'temp',this.value)"></td>
       <td>
         <div class="am-state" id="am-st-${ai}-${ri}">
-          <button class="${closed ? '' : 'on open'}" onclick="setAmanatRowState(${ai},${ri},'open')">باز</button>
-          <button class="${closed ? 'on shut' : ''}" onclick="setAmanatRowState(${ai},${ri},'closed')">بسته</button>
+          <button type="button" class="${closed ? '' : 'on open'}" onclick="setAmanatRowState(${ai},${ri},'open')">باز</button>
+          <button type="button" class="${closed ? 'on shut' : ''}" onclick="setAmanatRowState(${ai},${ri},'closed')">بسته</button>
         </div>
       </td>
       <td class="am-calc" id="am-c-loss-${ai}-${ri}">—</td>
       <td class="am-calc" id="am-c-pct-${ai}-${ri}">—</td>
-      <td><input class="xls-in xs" type="number" step="0.1" value="${cmpEsc(r.myPct)}" placeholder="${a.myPct === '' || a.myPct == null ? 'ننوشته' : ('↑' + _amFmt(_amNum(a.myPct), 2))}" title="${closed ? '🔒 این ردیف بسته است — فیصدی‌اش قفل شده و با عوض کردنِ فیصدیِ حساب تکان نمی‌خورد. اگر لازم شد، همین‌جا دستی عوضش کنید.' : 'فیصدیِ هدفِ همین ردیف. خالی بگذارید تا فیصدیِ خودِ حساب (بالای صفحه) به کار برود — آن وقت با نشانِ ↑ می‌آید، یعنی نوشتهٔ شما نیست. لحظه‌ای که ردیف را «بسته» کنید، همان فیصدی رویش قفل می‌شود.'}" oninput="updateAmanatRow(${ai},${ri},'myPct',this.value)"></td>
+      <td><input class="xls-in xs" id="am-in-mypct-${ai}-${ri}" type="number" step="0.1" value="${cmpEsc(r.myPct)}" placeholder="${a.myPct === '' || a.myPct == null ? 'ننوشته' : ('↑' + _amFmt(_amNum(a.myPct), 2))}" title="${_amPctTitle(closed)}" oninput="updateAmanatRow(${ai},${ri},'myPct',this.value)"></td>
       <td class="am-calc" id="am-c-need-${ai}-${ri}">—</td>
       <td class="am-calc" id="am-c-share-${ai}-${ri}">—</td>
       <td class="am-calc" id="am-c-net-${ai}-${ri}">—</td>
@@ -39309,6 +39641,9 @@ function _amAccBuild() {
   document.querySelectorAll('#amanatAccModal .am-tabs .am-tab[data-r]').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-r') === _amRowFilter));
   const mb = document.getElementById('am-measure-btn');
   if (mb) mb.classList.toggle('active', _amShowMeasure);
+  // جای اسکرولِ قبلی برگردانده شود (بالا توضیح داده شد)
+  if (keepTop) box.scrollTop = keepTop;
+  if (keepLeft) { const w = box.querySelector('.xls-wrap'); if (w) w.scrollLeft = keepLeft; }
   _amAccPaint();
 }
 function amToggleRef() {
@@ -47420,7 +47755,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.355';
+const APP_VERSION = '2.9.356';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -53388,6 +53723,9 @@ body:not(.light-mode):not([class*="theme-"]).gfx-standard .top-banner{
     };
   }
   window.addEventListener('resize', function(){ try { placeGlider(); } catch(e) {} });
+  // ماژولِ «چیدمانِ بخش‌ها» بعد از هر جابه‌جایی این را صدا می‌زند تا خطِ نشانگر
+  // زیرِ بخشِ فعال سرِ جای تازه‌اش بنشیند.
+  window._navPlaceGlider = placeGlider;
   // جای اولیه: بعد از بازشدن قفل هم یک‌بار (وقتی nav قابل اندازه‌گیری شد)
   setTimeout(placeGlider, 60);
   setTimeout(placeGlider, 800);
@@ -53421,6 +53759,10 @@ body:not(.light-mode):not([class*="theme-"]).gfx-standard .top-banner{
   });
   nav.addEventListener('pointermove', function(e){
     if (!dragging) return;
+    /* اگر کاربر یک بخش را نگه داشته و دارد جابه‌جایش می‌کند («چیدمانِ بخش‌ها»)،
+       نوار نباید هم‌زمان زیرِ دستش بلغزد — آن‌جا اسکرولِ لبه‌ها را خودش انجام
+       می‌دهد. این تنها نقطهٔ برخوردِ آن ماژول با کدِ نوار است. */
+    if (window.__navReorderActive) return;
     var dx = e.clientX - startX;
     moved += Math.abs(dx);
     nav.scrollLeft = startScroll - dx;
