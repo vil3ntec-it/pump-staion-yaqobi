@@ -38503,7 +38503,6 @@ function amRowCalc(row, acc, s) {
      باقی کم می‌شود. اگر ردیف «بسته» شود، مدت زمان می‌ایستد و کمبودی هم. */
   const loss   = amLoss(liters, days, temp, fuel, base, s);
   const lossPct = liters > 0 ? (loss / liters) * 100 : 0;
-  const rest   = liters - taken - loss;
 
   /* موجودی واقعی — عددی که خودتان از مخزن اندازه گرفته‌اید. عمداً جدا از
      کمبودیِ تخمینی می‌ماند و جایش را نمی‌گیرد؛ فقط کنارِ هم گذاشته می‌شوند تا
@@ -38537,6 +38536,21 @@ function amRowCalc(row, acc, s) {
   const askL     = (askPct == null) ? null : (liters * askPct / 100);
   const netIfAsk = (askL == null) ? null : (askL - loss);
 
+  /* ══ «باقی تیل» یعنی تیلِ خودِ مشتری ═══════════════════════════════════
+     ⚠️ بخار را این‌جا کم نکنید. یک‌بار این اشتباه شد و گزارش آمد:
+     «تیل بخارشده روی الباقی و به من می‌رسد، روی هر دو حساب می‌شود؛ فقط برای
+      به من می‌رسد کم بشه بسه — و سهمِ من از الباقی کم شود.»
+
+     درست است: بخار از سهمِ *شما* خورده می‌شود، نه از تیلِ مشتری. برای همین
+     است که اصلاً فیصدی می‌گیرید. پس هر عدد فقط یک‌جا شمرده می‌شود:
+
+        باقی تیل    = رسید − برده شده − سهمِ شما      ← مالِ مشتری
+        به من می‌رسد = سهمِ شما − بخار                 ← مالِ شما
+
+     اگر «فیصدیِ من» هنوز نوشته نشده باشد، سهمی برداشته نمی‌شود و باقی تیل
+     همان رسید منهای برده‌شده است. */
+  const rest = liters - taken - (targetL == null ? 0 : targetL);
+
   return { fuel, liters, taken, days, autoDays, manual, temp, base, closed,
            dateOk: startTs > 0, loss, lossPct, rest,
            hasActual, actual, realLoss, diff,
@@ -38554,7 +38568,7 @@ function _amSortedRows(a) {
 // جمعِ یک حساب — همان چیزی که در سربرگِ کادر نوشته می‌شود
 function amAccCalc(acc, s, onlyRows) {
   s = s || amSettings();
-  const t = { n: 0, open: 0, liters: 0, taken: 0, loss: 0, rest: 0, litersOpen: 0,
+  const t = { n: 0, open: 0, liters: 0, taken: 0, loss: 0, rest: 0, share: 0, litersOpen: 0,
               hasActual: false, actual: 0, realLoss: 0, realDiff: 0 };
   const src = onlyRows || (acc && Array.isArray(acc.rows) ? acc.rows : []);
   src.forEach(r => {
@@ -38562,6 +38576,7 @@ function amAccCalc(acc, s, onlyRows) {
     t.n++;
     if (!c.closed) { t.open++; t.litersOpen += c.liters; }
     t.liters += c.liters; t.taken += c.taken; t.loss += c.loss; t.rest += c.rest;
+    t.share += (c.targetL == null ? 0 : c.targetL);
     if (c.hasActual) { t.hasActual = true; t.actual += c.actual; t.realLoss += c.realLoss; t.realDiff += c.diff; }
   });
   t.lossPct  = t.liters > 0 ? (t.loss / t.liters) * 100 : 0;   // درصدِ بخار
@@ -39019,7 +39034,7 @@ function _amCardHtml(a, ai, seq, s, pre) {
   return `<div class="person-card am-card-acc ${cls}" onclick="openAmanatAccount(${ai})">
     <button class="person-del" title="حذف حساب" onclick="event.stopPropagation();deleteAmanatAccount(${ai})">✕</button>
     <div class="pname">${escFa(String(a.name || '').trim() || 'بی‌نام')}</div>
-    <div class="pdebt ${t.rest > 0 ? 'clear' : ''}">باقی: ${_amFmt2(t.rest)} لیتر</div>
+    <div class="pdebt ${t.rest > 0 ? 'clear' : ''}">باقیِ مشتری: ${_amFmt2(t.rest)} لیتر</div>
     <div class="am-card-state ${cls}">${state}</div>
     <div class="am-card-nums">
       <span title="رسید کل">${fuel === 'diesel' ? '🟤' : '⛽'} ${_amFmt(t.liters, 0)}</span>
@@ -39033,12 +39048,13 @@ function _amCardHtml(a, ai, seq, s, pre) {
 function _amPaint(pre) {
   const list = amAccounts();
   const s = amSettings();
-  const per = { petrol: { n:0, liters:0, taken:0, loss:0, rest:0 }, diesel: { n:0, liters:0, taken:0, loss:0, rest:0 } };
+  const per = { petrol: { n:0, liters:0, taken:0, loss:0, rest:0, share:0 }, diesel: { n:0, liters:0, taken:0, loss:0, rest:0, share:0 } };
   const err = [], warn = [];
   list.forEach((a, _ai) => {
     const fuel = amFuelKey(a);
     const t = (pre && pre[_ai]) || amAccCalc(a, s);
-    per[fuel].n++; per[fuel].liters += t.liters; per[fuel].taken += t.taken; per[fuel].loss += t.loss; per[fuel].rest += t.rest;
+    per[fuel].n++; per[fuel].liters += t.liters; per[fuel].taken += t.taken; per[fuel].loss += t.loss;
+    per[fuel].rest += t.rest; per[fuel].share += t.share;
     if (!_amAccMatch(a)) return;
     (a.rows || []).forEach((r, ri) => {
       const c = amRowCalc(r, a, s);
@@ -39072,7 +39088,8 @@ function _amSumCardHtml(title, color, t, s) {
     ['رسید کل', _amFmt2(t.liters) + ' ل'],
     ['برده شده', _amFmt2(t.taken) + ' ل'],
     ['بخارِ تخمینی', _amFmt2(t.loss) + ' ل'],
-    ['باقی تیل', _amFmt2(t.rest) + ' ل'],
+    ['سهمِ شما (فیصدی)', _amFmt2(t.share) + ' ل'],
+    ['باقی تیلِ مشتری', _amFmt2(t.rest) + ' ل'],
     ['sep'],
     ['درصد بخار', _amFmt(pct, 3) + '٪'],
     ['یعنی روی هر فیصدی', '+' + _amFmt(pct, 3) + '٪ بگیرید']
@@ -39163,7 +39180,7 @@ function _amAccBuild() {
       <td class="am-calc" id="am-c-rest-${ai}-${ri}">—</td>
       ${M ? `<td><input class="xls-in sm" type="number" step="0.01" value="${cmpEsc(r.actual)}" placeholder="ثبت نشده" oninput="updateAmanatRow(${ai},${ri},'actual',this.value)"></td>
       <td class="am-calc" id="am-c-diff-${ai}-${ri}">—</td>` : ''}
-      <td><input class="xls-in xs" type="number" step="0.01" value="${cmpEsc(r.basePct)}" placeholder="${_amFmt(s.basePct, 3)}" title="خالی = پایهٔ تنظیمات" oninput="updateAmanatRow(${ai},${ri},'basePct',this.value)"></td>
+      <td><input class="xls-in xs" type="number" step="0.01" value="${cmpEsc(r.basePct)}" placeholder="${_amFmt(s.basePct, 3)}" title="پایهٔ بخار برای همین ردیف — چند درصد در ماه، در دمای مرجع. خالی بگذارید تا عددِ تنظیماتِ مدیر (${_amFmt(s.basePct, 3)}٪) به کار برود." oninput="updateAmanatRow(${ai},${ri},'basePct',this.value)"></td>
       <td><input class="xls-in" value="${cmpEsc(r.note)}" placeholder="یادداشت" oninput="updateAmanatRow(${ai},${ri},'note',this.value)"></td>
       <td style="text-align:center"><button class="del-btn" onclick="deleteAmanatRow(${ai},${ri})">🗑️</button></td>
     </tr>`;
@@ -39226,10 +39243,10 @@ function _amAccBuild() {
           <th style="width:80px">درصد بخار</th>
           <th style="width:78px" title="چقدر باید بعد از بخار برایتان بماند">فیصدیِ من</th>
           <th style="width:86px" title="فیصدیِ من + درصد بخار">فیصدیِ لازم</th>
-          <th style="width:92px" title="اگر همین فیصدیِ من را بگیرید، بعد از بخار چقدر می‌ماند">به من می‌رسد</th>
-          <th style="width:92px">باقی تیل</th>
+          <th style="width:92px" title="سهمِ شما منهای بخار — بخار فقط از سهمِ شما کم می‌شود">به من می‌رسد</th>
+          <th style="width:96px" title="تیلِ خودِ مشتری = رسید − برده شده − سهمِ شما. بخار این‌جا کم نمی‌شود.">باقی تیلِ مشتری</th>
           ${M ? '<th style="width:92px">موجودی واقعی</th><th style="width:88px">اختلاف</th>' : ''}
-          <th style="width:66px">پایه</th>
+          <th style="width:82px" title="پایهٔ بخار: چند درصد در ماه، در دمای مرجع. خالی = همان عددِ تنظیماتِ مدیر. فقط اگر تیلِ این ردیف با بقیه فرق دارد دست بزنید.">پایهٔ بخار ٪ ماه</th>
           <th style="min-width:110px">یادداشت</th>
           <th style="width:42px">حذف</th>
         </tr></thead>
@@ -39330,7 +39347,8 @@ function _amAccPaint() {
         '<span class="am-acc-chip">رسید کل <b>' + _amFmt2(t.liters) + '</b> ل</span>'
       + (t.taken ? ('<span class="am-acc-chip red">برده شده <b>' + _amFmt2(t.taken) + '</b> ل</span>') : '')
       + '<span class="am-acc-chip acc">بخار <b>' + _amFmt2(t.loss) + '</b> ل · <b>' + _amFmt(t.lossPct, 3) + '٪</b></span>'
-      + '<span class="am-acc-chip grn">باقی تیل <b>' + _amFmt2(t.rest) + '</b> ل</span>'
+      + (t.share ? ('<span class="am-acc-chip blue">سهمِ شما <b>' + _amFmt2(t.share) + '</b> ل</span>') : '')
+      + '<span class="am-acc-chip grn">باقی تیلِ مشتری <b>' + _amFmt2(t.rest) + '</b> ل</span>'
       + (t.hasActual ? ('<span class="am-acc-chip blue">اندازه‌گیری واقعی <b>' + _amFmt2(t.actual) + '</b> ل · اختلاف <b>' + _amFmt2(t.realDiff) + '</b> ل</span>') : '')
       + '<span class="am-acc-chip">' + n2fa(t.n) + ' ردیف · ' + n2fa(t.open) + ' باز</span>';
   }
@@ -39360,6 +39378,7 @@ function _amPaintAnalysis(a, t, s) {
   const rows = [
     ['تیلی که گرفته‌اید', L(t.liters)],
     ['<b>بخارِ تخمینی</b>', '<b style="color:var(--accent)">' + L(t.loss) + ' · ' + _amFmt(t.lossPct, 3) + '٪' + money(t.loss) + '</b>'],
+    ['باقی تیلِ مشتری (رسید − برده − سهمِ شما)', '<b style="color:var(--green)">' + L(t.rest) + '</b>'],
     ['sep'],
     ['فیصدیِ شما (هدف) ' + _amFmt(t.myPct, 2) + '٪', '<b>' + L(t.targetL) + money(t.targetL) + '</b>'],
     ['اگر همین ' + _amFmt(t.myPct, 2) + '٪ را بگیرید، بعد از بخار می‌ماند',
@@ -39463,7 +39482,7 @@ ${t.myPct == null ? 'فیصدی ثبت نشده' : ('فیصدیِ شما (هدف
 <table>
 <thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>به حسابهٔ</th><th>رسید تیل</th><th>برده شده</th><th>مدت زمان</th>
 <th>درجه گرما</th><th>در مخزن</th><th>بخار (ل)</th><th>درصد بخار</th><th>فیصدیِ من</th><th>فیصدیِ لازم</th>
-<th>به من می‌رسد</th><th>باقی تیل</th><th>موجودی واقعی</th><th>اختلاف</th><th>پایه</th><th>یادداشت</th></tr></thead>
+<th>به من می‌رسد</th><th>باقی تیلِ مشتری</th><th>موجودی واقعی</th><th>اختلاف</th><th>پایهٔ بخار</th><th>یادداشت</th></tr></thead>
 <tbody>${rows || '<tr><td colspan="19" style="padding:14px;color:#718096">ردیفی ثبت نشده</td></tr>'}</tbody>
 <tfoot><tr><td colspan="4">جمله</td><td>${_amFmt2(t.liters)}</td><td>${_amFmt2(t.taken)}</td><td colspan="3"></td>
 <td>${_amFmt2(t.loss)}</td><td>${_amFmt(t.lossPct, 3)}٪</td><td></td>
@@ -47342,7 +47361,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.351';
+const APP_VERSION = '2.9.352';
 function _stampVersion() {
   document.querySelectorAll('.app-version').forEach(el => { el.textContent = 'نسخه ' + APP_VERSION; });
 }
