@@ -2628,8 +2628,48 @@ body.light-mode #pl-result.pl-loss .pl-particle{ background:radial-gradient(circ
          بزرگ‌تر از سقف با ‎-1‎ علامت می‌خورد و دیگر هرگز رشته نمی‌شود.
        • خودِ نوشتن روی دیسک در وقتِ بیکاری انجام می‌شود، نه وسطِ کارِ کاربر.
      ⚠️ رشته‌کردنِ بی‌شرطِ همهٔ آیتم‌ها را برنگردانید. */
+  /* ⚠️ «کفِ طولِ JSON» — بدونِ ساختنِ خودِ رشته ─────────────────────────────
+     __sLen هزینه را برای *همان* آیتم یک‌بار می‌کرد، ولی آیتمِ غول‌پیکر هر بار
+     یک آیتمِ تازه است (هر همگام‌سازیِ خودکار یک عکسِ نو از دیتابیس می‌سازد)، پس
+     آن یک‌بار، هر بار تکرار می‌شد. در پروفایلِ ۲۵ تایپ روی دادهٔ ۱۲ مگابایتی،
+     همین یک تابع ۱٬۷۴۰ میلی‌ثانیه بود — بزرگ‌ترین تکه‌ی «فریز».
+     حالا اول با یک پیمایشِ زودخاتمه فقط می‌پرسیم «از سقف رد می‌شود؟». عددی که
+     می‌شمارد عمداً *کف* است، نه تخمین:
+       رشته  → دست‌کم len+2  (کوتیشن‌ها؛ کاراکترِ فراری فقط اضافه می‌کند)
+       عدد   → دست‌کم ۱ نویسه
+       true/false/null → دست‌کم ۴
+       آرایه → دست‌کم ۲ + ویرگول‌ها
+       شیء   → دست‌کم ۲ + برای هر کلید "k": و ویرگول‌ها
+     پس اگر این عدد از سقف رد شد، رشتهٔ واقعی هم حتماً رد شده — بی‌هیچ حاشیهٔ
+     اطمینانی. اگر رد نشد، دقیقاً همان راهِ قدیم اجرا می‌شود.
+     ⚠️ این کف را «تخمینِ دقیق‌تر» نکنید؛ درستیِ کار به کف بودنش بند است. */
+  function outqJsonOver(v, cap){
+    var n = 0, stack = [v], x, i, ks, k;
+    while (stack.length){
+      x = stack.pop();
+      if (x === null || x === undefined) n += 4;
+      else if (typeof x === 'string') n += x.length + 2;
+      else if (typeof x === 'number') n += 1;
+      else if (typeof x === 'boolean') n += 4;
+      else if (typeof x === 'function' || typeof x === 'symbol') n += 0;
+      else if (Array.isArray(x)){
+        n += 2 + (x.length > 1 ? x.length - 1 : 0);
+        for (i = 0; i < x.length; i++) stack.push(x[i]);
+      } else if (typeof x === 'object'){
+        ks = Object.keys(x);
+        n += 2 + (ks.length > 1 ? ks.length - 1 : 0);
+        for (i = 0; i < ks.length; i++){ k = ks[i]; n += k.length + 3; stack.push(x[k]); }
+      }
+      if (n > cap) return true;
+    }
+    return false;
+  }
+  /* همین سنجه چند جای دیگرِ برنامه هم لازم است (تاریخچهٔ برگشت، کشِ مرورگر)،
+     پس یک‌بار این‌جا ساخته و همان‌جا در دسترس گذاشته می‌شود. */
+  try { window._jsonOverCap = outqJsonOver; } catch(e){}
   function outqItemLen(it){
     if (it.__sLen === undefined){
+      if (outqJsonOver(it, OUTQ_BYTES)) { it.__sLen = -1; return -1; }
       var s = '';
       try { s = JSON.stringify(it); } catch(e){ s = ''; }
       it.__sLen = (!s || s.length > OUTQ_BYTES) ? -1 : s.length;
@@ -22397,6 +22437,42 @@ function _saveQuiet() {
    جلوتر باشد همان را برمی‌دارد. یعنی حتی اگر تب ناگهانی کشته شود، داده از
    IndexedDB برمی‌گردد — نه از کش.
    ⚠️ این نوشتن را به مسیرِ ذخیره برنگردانید. */
+/* ══ صفِ کارهای سنگینِ پس‌زمینه — هر بارِ بیکاری فقط یکی ═════════════════════
+   گزارشِ صاحب ریپو: «برنامه وسطِ کار یک‌دفعه می‌ایستد.»
+   اندازه‌گیری (۱۲۰ قرض‌دار، ۱۲ مگابایت، CPU چهار برابر کندتر، ۲۵ بار تایپ):
+   بدترین وقفهٔ نخِ اصلی ۱٬۸۴۱ms بود. ولی وقتی *هر کدام* از این چهار کار را
+   جداگانه خاموش می‌کردیم، همان وقفه به ~۳۸۰ms می‌افتاد — حتی خاموش‌کردنِ
+   هر چهارتا هم بهتر از این نمی‌شد. یعنی هیچ‌کدام به‌تنهایی مقصر نبودند:
+   همه‌شان با requestIdleCallbackِ خودشان صدا می‌زدند و در *یک* لحظهٔ بیکاری
+   پشتِ سرِ هم در یک وظیفهٔ واحد جمع می‌شدند و روی‌هم یک فریزِ دو‌ثانیه‌ای
+   می‌ساختند.
+   حالا همه از یک صف رد می‌شوند: هر بارِ بیکاری یک کار، و بینشان یک تیک فاصله
+   تا مرورگر بتواند صفحه را بکشد و به لمسِ کاربر جواب بدهد.
+   ⚠️ هیچ کاری حذف یا رد نمی‌شود — فقط پشتِ سرِ هم در یک وظیفه نمی‌نشینند.
+   ⚠️ کارهای سنگینِ تازه را هم از همین‌جا رد کنید، نه با requestIdleCallbackِ
+      مستقیم؛ وگرنه همان پشته دوباره ساخته می‌شود. */
+const _bgQueue = [];
+let _bgBusy = false;
+function _bgRun(fn, key) {
+  if (typeof fn !== 'function') return;
+  // کارِ هم‌نامِ در صف، دوباره صف نمی‌شود (تازه‌ترین نسخه‌اش کافی است)
+  if (key) { for (let i = 0; i < _bgQueue.length; i++) if (_bgQueue[i].key === key) { _bgQueue[i].fn = fn; return; } }
+  _bgQueue.push({ fn: fn, key: key || null });
+  _bgKick();
+}
+function _bgKick() {
+  if (_bgBusy || !_bgQueue.length) return;
+  _bgBusy = true;
+  const step = function () {
+    const job = _bgQueue.shift();
+    _bgBusy = false;
+    if (job) { try { job.fn(); } catch (e) {} }
+    // یک تیکِ کامل فاصله: مرورگر بین دو کارِ سنگین نفس می‌کشد
+    if (_bgQueue.length) setTimeout(_bgKick, 0);
+  };
+  if (typeof requestIdleCallback === 'function') requestIdleCallback(step, { timeout: 3000 });
+  else setTimeout(step, 0);
+}
 let _lsCacheDirty = false, _lsCacheTimer = null, _lsCacheLastWrite = 0;
 const _LS_CACHE_MIN_GAP = 4000;
 function _writeLsCacheNow() {
@@ -22412,6 +22488,15 @@ function _writeLsCacheNow() {
     if (Date.now() - _lsCacheProbeAt < 600000) return;
     _lsCacheProbeAt = Date.now();
   }
+  /* ⚠️ اول با سنجهٔ ارزان بپرس، بعد رشته بساز.
+     پیش از این حتی وقتی حساب چند برابرِ سقف بود، هر ۱۰ دقیقه یک
+     JSON.stringifyِ کاملِ چند‌مگابایتی زده می‌شد فقط تا همان جوابِ همیشگی
+     («جا نمی‌شود») گرفته شود. سنجه کفِ طولِ JSON را می‌دهد، پس «رد شده»اش
+     همیشه درست است و رشته‌ای هم ساخته نمی‌شود. */
+  if (typeof window._jsonOverCap === 'function' && window._jsonOverCap(DB, _LS_CACHE_MAX)) {
+    _lsCacheOff = true;
+    return;
+  }
   let snap;
   try { snap = JSON.stringify(DB); } catch (e) { return; }
   _lastSnapLen = snap.length;
@@ -22425,10 +22510,8 @@ function _scheduleLsCache() {
   _lsCacheTimer = setTimeout(function () {
     _lsCacheTimer = null;
     if (!_lsCacheDirty) return;
-    const run = function () { if (_lsCacheDirty) _writeLsCacheNow(); };
-    // در وقتِ بیکاریِ مرورگر — هرگز وسطِ تایپ یا اسکرول
-    if (typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: 3000 });
-    else run();
+    // از صفِ پس‌زمینه — هرگز وسطِ تایپ، و هرگز هم‌زمان با کارِ سنگینِ دیگر
+    _bgRun(function () { if (_lsCacheDirty) _writeLsCacheNow(); }, 'lsCache');
   }, wait);
 }
 function _flushSave(force) {
@@ -29576,8 +29659,7 @@ function _scheduleBgRefresh() {
       try { renderPersons(currentPersonType); } catch (e) {}
       try { updateBanner(); } catch (e) {}
     };
-    if (typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: 1500 });
-    else run();
+    _bgRun(run, 'bgRefresh');
   }, 400);
 }
 function renderPersons(type) {
@@ -30288,8 +30370,7 @@ function initAllTableResizers(root){
     if(_trTimer) return;
     _trTimer = setTimeout(function(){
       _trTimer = null;
-      if (typeof requestIdleCallback === 'function') requestIdleCallback(function(){ initAllTableResizers(); }, { timeout: 1200 });
-      else initAllTableResizers();
+      _bgRun(function(){ initAllTableResizers(); }, 'tableResizers');
     }, 150);
   }
   /* ۳) محافظِ سوم: تغییری که هیچ ربطی به جدول‌ها ندارد اصلاً بیدارش نکند.
@@ -37595,9 +37676,16 @@ function updateBanner() {
     if (!cr) { for (const r of rows){ const rr=(parseFloat(r.payRate)||0)||(parseFloat(r.rate)||0); if(rr){cr=rr;break;} } }
     return a + rows.reduce((b,r)=>b+cmpAlbaqi(r, cr),0);
   }, 0);
+  /* ⚠️ جمعِ الباقی بدونِ کپی‌کردنِ ردیف‌ها.
+     پیش از این برای هر قرض‌دار _allRows صدا زده می‌شد: یک آرایهٔ تازه از همهٔ
+     ردیف‌های او و حساب‌های فرعی‌اش، به‌علاوهٔ یک شیءِ تازه به‌ازای هر ردیفِ
+     دفترِ پول. این نوار بعد از هر رگبارِ تایپ دوباره کشیده می‌شود، پس روی
+     دادهٔ ۱۲ مگابایتی ~۲۷۰ms در هر بار می‌بُرد.
+     _sumAcctTotals همان ردیف‌ها را در جا جمع می‌زند و t.all.albaqi دقیقاً همان
+     عددِ قبلی است (_splitTotals هم albaqiِ ردیف‌های پول را کامل می‌شمرد). */
   const debtTotal = DB.debtPersons.reduce((a,p) => {
-    const rows = _allRows(p);
-    return a + rows.reduce((b,r) => b+(r.albaqi||0), 0);
+    const t = _sumAcctTotals([p, ...((p && p.subs) || [])]);
+    return a + (t.all.albaqi || 0);
   }, 0);
   const todayProfit = (() => {
     if (!DB.reports) return 0;
@@ -48941,7 +49029,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.379';
+const APP_VERSION = '2.9.380';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -53051,7 +53139,13 @@ loadTheme();
 setTimeout(function(){ try { _autoDailyBackup(); } catch(e){} }, 4000);
 setInterval(function(){ try { _autoDailyBackup(); } catch(e){} }, 10 * 60 * 1000);
 // بکاپ ابری خودکار: روزی یک‌بار (اولین فرصتی که اینترنت و سرور آماده باشند)
-setTimeout(function(){ try { _autoCloudBackup(); } catch(e){} }, 12000);
+/* ⚠️ بکاپِ ابری کلِ دیتابیس را رشته می‌کند. روی دادهٔ ۱۲ مگابایتی ~۶۷۰ms —
+   و دقیقاً ۱۲ ثانیه بعد از باز شدنِ برنامه، یعنی همان‌وقتی که کاربر تازه دارد
+   کار می‌کند. حالا منتظرِ بیکاریِ مرورگر می‌ماند؛ روزی یک‌بار است و عجله‌ای
+   ندارد. (اگر مرورگر بیکار نشد، ۱۵ ثانیه بعد به‌هر‌حال اجرا می‌شود.) */
+setTimeout(function(){
+  _bgRun(function(){ try { _autoCloudBackup(); } catch(e){} }, 'cloudBackup');
+}, 12000);
 setInterval(function(){ try { _autoCloudBackup(); } catch(e){} }, 60 * 60 * 1000);
 window.addEventListener('online', function(){ setTimeout(function(){ try { _autoCloudBackup(); } catch(e){} }, 6000); });
 try { applyHexFx(); } catch(e) {}
@@ -56738,13 +56832,22 @@ tfoot td{background:${accent}14;font-weight:900;font-size:.88rem}
   var _histBytes = 0, _histOff = false;
   function _dbJson(){ try { return JSON.stringify(DB); } catch(e){ return null; } }
   function _histReset(){ _hist = []; _hi = -1; _histBytes = 0; }
+  /* ⚠️ حسابِ بزرگ‌تر از سقف، بدونِ ساختنِ رشته تشخیص داده می‌شود.
+     پیش از این برای فهمیدنِ «بزرگ است» یک JSON.stringifyِ کاملِ دیتابیس زده
+     می‌شد و بعد دور انداخته می‌شد — روی دادهٔ ۱۲ مگابایتی ~۲۱۰ms در هر بار.
+     رفتار عوض نشده: هر حسابی که از سقف رد شود، مثل قبل تاریخچه‌اش خاموش است. */
+  function _histTooBig(){
+    return (typeof window._jsonOverCap === 'function') && window._jsonOverCap(DB, _HIST_MAX_DB);
+  }
   function _histSeed(){
+    if (_histTooBig()){ _histOff = true; _histReset(); return; }
     var j = _dbJson(); if (j == null) return;
     if (j.length > _HIST_MAX_DB){ _histOff = true; _histReset(); return; }
     _hist = [j]; _hi = 0; _histBytes = j.length;
   }
   function _histIdle(fn){
-    if (typeof requestIdleCallback === 'function') requestIdleCallback(fn, { timeout: 4000 });
+    if (typeof _bgRun === 'function') _bgRun(fn, 'undoHistory');
+    else if (typeof requestIdleCallback === 'function') requestIdleCallback(fn, { timeout: 4000 });
     else setTimeout(fn, 0);
   }
   function _histNote(){
@@ -56754,6 +56857,7 @@ tfoot td{background:${accent}14;font-weight:900;font-size:.88rem}
   }
   function _histCommit(){
     if (_histRestoring || _histOff) return;
+    if (_histTooBig()){ _histOff = true; _histReset(); return; }
     var j = _dbJson(); if (j == null) return;
     if (j.length > _HIST_MAX_DB){          // حساب بزرگ شد → از این به بعد خاموش
       _histOff = true; _histReset(); return;
