@@ -26262,6 +26262,32 @@ function _pumpDocOverlay(doc, title) {
   }
 
   // اندازه‌گیریِ یک‌بارهٔ همهٔ بلوک‌ها و سطرها در عرضِ داده‌شده
+  /* ══ پهنای واقعیِ ستون‌های یک جدول ═══════════════════════════════════════
+     گزارشِ صاحب ریپو: «وقتی جدول در یک ورق جا نمی‌شود و می‌رود ورقِ بعد، آن‌جا
+     هیچ ستونی با ورقِ قبلی یکی نیست — اندازه‌هاشان برابر نیست.»
+     ریشه: هر ورق یک <table>ِ تازه است که فقط ردیف‌های همان ورق را دارد. مرورگر
+     با چیدمانِ خودکار، پهنای ستون‌ها را از روی محتوای همان چند ردیف حساب می‌کند،
+     پس هر ورق پهناهای خودش را می‌گیرد. تنها راهِ درست، قفل کردنِ پهناهاست:
+     یک‌بار از جدولِ کاملِ اصلی اندازه می‌گیریم و همان را به همهٔ ورق‌ها می‌دهیم.
+     ردیفی مبنا قرار می‌گیرد که «یک خانه برای هر ستون» داشته باشد (بدونِ
+     colspan) — وگرنه سربرگ‌های گروهیِ دوطبقه عدد را خراب می‌کنند. */
+  function colWidths(el) {
+    var cands = [];
+    for (var b = 0; b < el.tBodies.length; b++) {
+      if (el.tBodies[b].rows.length) { cands.push(el.tBodies[b].rows[0]); break; }
+    }
+    if (el.tHead && el.tHead.rows.length) cands.push(el.tHead.rows[el.tHead.rows.length - 1]);
+    if (el.tFoot && el.tFoot.rows.length) cands.push(el.tFoot.rows[0]);
+    for (var k = 0; k < cands.length; k++) {
+      var cells = cands[k].cells, ok = true, w = [];
+      for (var c = 0; c < cells.length; c++) {
+        if ((cells[c].colSpan || 1) > 1) { ok = false; break; }
+        w.push(cells[c].getBoundingClientRect().width);
+      }
+      if (ok && w.length) return w;
+    }
+    return null;
+  }
   function measure(layoutW) {
     var src = idoc.getElementById('xlSrc');
     src.style.width = layoutW + 'px';
@@ -26269,7 +26295,7 @@ function _pumpDocOverlay(doc, title) {
     for (var i = 0; i < kids.length; i++) {
       var el = kids[i];
       if (el.tagName === 'TABLE') {
-        var info = { type: 'table', el: el, head: 0, foot: 0, rows: [] };
+        var info = { type: 'table', el: el, head: 0, foot: 0, rows: [], cols: colWidths(el) };
         if (el.tHead) info.head = el.tHead.getBoundingClientRect().height;
         if (el.tFoot) info.foot = el.tFoot.getBoundingClientRect().height;
         for (var b = 0; b < el.tBodies.length; b++) {
@@ -26377,7 +26403,7 @@ function _pumpDocOverlay(doc, title) {
       var i = 0, rows = bl.rows;
       if (!rows.length) {                       // جدولِ بی‌ردیف
         if (used > 0 && used + bl.head + bl.foot > layoutH) nl();
-        cur().push({ kind: 'table', el: bl.el, head: true, rows: [], foot: true });
+        cur().push({ kind: 'table', el: bl.el, cols: bl.cols, head: true, rows: [], foot: true });
         used += bl.head + bl.foot;
         return;
       }
@@ -26394,7 +26420,7 @@ function _pumpDocOverlay(doc, title) {
         }
         if (!part.length) { part.push(rows[i]); hSum += rows[i].h; i++; }   // سطرِ بلندتر از ورق
         var last = (i >= rows.length);
-        cur().push({ kind: 'table', el: bl.el, head: withHead, rows: part, foot: last });
+        cur().push({ kind: 'table', el: bl.el, cols: bl.cols, head: withHead, rows: part, foot: last });
         used += hSum + (last ? bl.foot : 0);
         if (!last) nl();
       }
@@ -26408,6 +26434,25 @@ function _pumpDocOverlay(doc, title) {
     var t = item.el.cloneNode(false);
     var cg = item.el.querySelector('colgroup');
     if (cg) t.appendChild(cg.cloneNode(true));
+    else if (item.cols && item.cols.length) {
+      /* جدولِ اصلی colgroup ندارد، پس یکی از روی پهناهای اندازه‌گرفته‌شده
+         می‌سازیم و روی همهٔ ورق‌ها یکی می‌گذاریم — این همان چیزی است که
+         ستون‌های ورقِ دوم را با ورقِ اول هم‌راستا می‌کند. با table-layout:fixed
+         مرورگر دیگر خودش پهنا حساب نمی‌کند و همین‌ها را عیناً به کار می‌برد. */
+      var tot = 0, ci;
+      for (ci = 0; ci < item.cols.length; ci++) tot += item.cols[ci];
+      if (tot > 0) {
+        var g2 = idoc.createElement('colgroup');
+        for (ci = 0; ci < item.cols.length; ci++) {
+          var cEl = idoc.createElement('col');
+          cEl.style.width = ((item.cols[ci] / tot) * 100).toFixed(4) + '%';
+          g2.appendChild(cEl);
+        }
+        t.appendChild(g2);
+        t.style.tableLayout = 'fixed';
+        t.style.width = '100%';
+      }
+    }
     if (item.head && item.el.tHead) t.appendChild(item.el.tHead.cloneNode(true));
     var tb = idoc.createElement('tbody');
     item.rows.forEach(function (r) { tb.appendChild(r.tr.cloneNode(true)); });
@@ -48583,7 +48628,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.370';
+const APP_VERSION = '2.9.371';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
