@@ -16603,6 +16603,54 @@ table thead th:first-child .col-resize-grip{ display:none; }
   background:var(--accent); color:#1a1102; font-size:0.76rem; font-weight:900;
 }
 .sec-note-count:empty{ display:none; }
+
+/* ══ یادداشتِ چسبان (کاغذِ زرد با سنجاق) ═══════════════════════════════════
+   خواستهٔ صاحب ریپو: «یک آیکونِ داینامیک مثل این عکس با یک سنجاقِ سرخ روی آن،
+   که هر جای صفحه خواستم بگذارم؛ با زدنش یک صفحهٔ کوچک باز شود و نوت را
+   بنویسم.» دو حالتِ جای‌گذاری هم خواست: «سرِ همان‌جا که گذاشتم قفل بماند» و
+   «آن که همه‌جا هست حتی با اسکرول».
+     .stk-note        → حالتِ «چسبیده به صفحه» (absolute: با اسکرول می‌رود)
+     .stk-note.fix    → حالتِ «همیشه پیدا»    (fixed: با اسکرول می‌ماند)     */
+.stk-note{position:absolute;z-index:9400;width:62px;height:62px;cursor:grab;
+  touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+.stk-note.fix{position:fixed}
+.stk-note.drag{cursor:grabbing;z-index:9402}
+.stk-note.drag .stk-paper{transform:scale(1.06) rotate(-2deg)}
+/* خودِ کاغذ: زردِ روشن با نوارِ تیره‌ترِ بالا و گوشهٔ برگشتهٔ پایین‑چپ */
+.stk-paper{position:absolute;inset:0;border-radius:2px 2px 2px 0;
+  background:linear-gradient(180deg,#f7d117 0%,#f7d724 16%,#fbe64e 62%,#fdf07e 100%);
+  box-shadow:0 6px 14px -6px rgba(0,0,0,.55),0 1px 3px rgba(0,0,0,.3);
+  transition:transform .14s cubic-bezier(.2,.8,.2,1)}
+.stk-paper::after{content:'';position:absolute;left:0;bottom:0;width:17px;height:17px;
+  background:linear-gradient(45deg,#e0bb0d 0%,#f2d43c 55%,rgba(0,0,0,0) 56%);
+  border-radius:0 0 0 3px;filter:drop-shadow(-1px -1px 1px rgba(0,0,0,.18))}
+.stk-pin{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:1.15rem;
+  line-height:1;filter:drop-shadow(0 2px 2px rgba(0,0,0,.45));pointer-events:none}
+/* چند خطِ اولِ نوت روی خودِ کاغذ — تا بی‌آنکه بازش کنی بدانی چه نوشته‌ای */
+.stk-peek{position:absolute;left:5px;right:5px;top:13px;bottom:6px;overflow:hidden;
+  font-family:'Vazirmatn',sans-serif;font-size:0.5rem;line-height:1.5;color:#4a3a00;
+  font-weight:700;text-align:right;word-break:break-word;pointer-events:none}
+.stk-note.empty .stk-peek{opacity:.55}
+
+/* پنجرهٔ کوچکِ نوشتن */
+.stk-pop{position:fixed;z-index:9403;width:min(320px,92vw);background:var(--panel);
+  border:1.5px solid var(--accent);border-radius:13px;padding:11px;
+  box-shadow:0 18px 44px -12px rgba(0,0,0,.75)}
+.stk-pop-h{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.stk-pop-h b{flex:1;font-size:0.78rem;color:var(--accent);font-weight:900;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stk-pop-x{background:transparent;border:1.5px solid var(--red);border-radius:7px;color:var(--red);
+  font-size:0.76rem;font-weight:800;cursor:pointer;padding:3px 8px;line-height:1}
+.stk-pop textarea{width:100%;min-height:104px;resize:vertical;box-sizing:border-box;
+  background:#fdf3bf;border:1px solid #d9bb27;border-radius:9px;padding:9px 10px;color:#3b2f00;
+  font-family:'Vazirmatn',sans-serif;font-size:0.86rem;font-weight:700;line-height:1.9;outline:none}
+.stk-pop-f{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.stk-b{flex:1 1 auto;background:var(--card);border:1.5px solid var(--border);border-radius:9px;
+  color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.74rem;font-weight:800;
+  padding:7px 9px;cursor:pointer;white-space:nowrap}
+.stk-b.on{border-color:var(--accent);color:var(--accent)}
+.stk-b.warn{border-color:var(--red);color:var(--red)}
+.stk-hint{font-size:0.66rem;color:var(--muted);margin-top:7px;line-height:1.7}
 .notes-add{ margin-bottom:14px; }
 .notes-list{ display:flex; flex-direction:column; gap:8px; }
 .note-card{
@@ -48481,7 +48529,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.365';
+const APP_VERSION = '2.9.366';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -49771,6 +49819,293 @@ function sendNoteToBox(key) {
   save(); _loadSectionNotes();
   try { showToast('📨 در صندوق نوت‌ها ثبت شد', '#38a169'); } catch (e) {}
 }
+/* ══════════════════════════════════════════════════════════════════════════
+   📌 یادداشتِ چسبان — کاغذِ زردِ سنجاق‌دار
+   ──────────────────────────────────────────────────────────────────────────
+   خواستهٔ صاحب ریپو:
+     «یک آیکونِ داینامیک مثل این عکس با یک سنجاقِ سرخ روی آن، که هر جای صفحه
+      خواستم بگذارم؛ با زدنش یک صفحهٔ کوچک باز شود و نوت را همان‌جا بنویسم.»
+     «برای هر جدول، هر حساب، هر ماه یا سالش برای خودش باشد — داخلِ حسابِ هارون
+      نوتِ خودش، حسابِ کسِ دیگر نوتِ دیگری.»
+     «قابلیتِ پنهان شدن هم داشته باشد و برای فعال کردنش از آخرِ جدول، جای
+      نوت‌ها، پس بیاید.»
+     «اگر اولِ صفحه گذاشتمش همان‌جا قفل بماند و با رفتن به آخرِ جدول نباشد —
+      یا دوقابلیته: هم این مدل، هم آن که همه‌جا هست حتی با اسکرول.»
+
+   ⚠️ این ماژول عمداً به هیچ تابعِ موجودی دست نمی‌زند و هیچ‌کدام را صدا هم
+   نمی‌زند جز save()/showToast. «کدام حساب باز است» را خودش هر نیم‌ثانیه از
+   روی همان متغیرهای موجود می‌خواند (نه با وصل شدن به showSection/openPerson…)،
+   تا هیچ مسیرِ کارکنندهٔ فعلی عوض نشود و باگی از این‌جا وارد نشود.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function () {
+  const MODE_PAGE = 'page';   // چسبیده به خودِ صفحه — با اسکرول می‌رود
+  const MODE_FIX  = 'fix';    // همیشه پیدا — با اسکرول می‌ماند
+
+  function all() { if (!DB.stickyNotes || typeof DB.stickyNotes !== 'object') DB.stickyNotes = {}; return DB.stickyNotes; }
+  function isOpen(id) { const e = document.getElementById(id); return !!(e && e.classList.contains('open')); }
+  function nm(s, fb) { s = String(s == null ? '' : s).trim(); return s || fb; }
+
+  /* کلیدِ «کجا هستیم». درونی‌ترین صفحهٔ باز برنده است، چون همان چیزی است که
+     کاربر جلوِ چشمش دارد. هر شاخه داخلِ try است تا اگر متغیری در نسخه‌ای نبود،
+     کلِ یادداشت از کار نیفتد. */
+  function scope() {
+    try {
+      if (isOpen('amanatAccModal') && typeof _amAccIdx !== 'undefined' && _amAccIdx != null) {
+        const a = (typeof amAccounts === 'function') ? amAccounts()[_amAccIdx] : null;
+        if (a) return { key: 'amanat:' + (a.id || _amAccIdx), label: '🛢️ ' + nm(a.name, 'حسابِ تیل امانت') };
+      }
+    } catch (e) {}
+    try {
+      if (isOpen('companyModal') && typeof currentCompanyId !== 'undefined' && currentCompanyId) {
+        const c = (DB.tilCompanies || []).find(x => x && x.id === currentCompanyId);
+        const f = (typeof currentCompanyFuel !== 'undefined') ? currentCompanyFuel : '';
+        return { key: 'company:' + currentCompanyId + ':' + f, label: '🏢 ' + nm(c && c.name, 'شرکت') + (f === 'diesel' ? ' — دیزل' : ' — پطرول') };
+      }
+    } catch (e) {}
+    try {
+      if (isOpen('personModal') && typeof currentPersonId !== 'undefined' && currentPersonId != null) {
+        const list = (typeof currentPersonType !== 'undefined' && currentPersonType === 'debt')
+          ? (DB.debtPersons || []) : (DB.debtPersons || []);
+        const p = list.find(x => x && String(x.id) === String(currentPersonId));
+        const sub = (typeof currentSubId !== 'undefined' && currentSubId)
+          ? ((p && p.subs) || []).find(s => s && s.id === currentSubId) : null;
+        return {
+          key: 'person:' + (typeof currentPersonType !== 'undefined' ? currentPersonType : 'debt')
+               + ':' + currentPersonId + (currentSubId ? (':' + currentSubId) : ''),
+          label: '👤 ' + nm(p && p.name, 'حساب') + (sub ? (' › ' + nm(sub.name, 'حسابِ جدا')) : '')
+        };
+      }
+    } catch (e) {}
+    // هیچ صفحه‌ای باز نیست → بخشی که دیده می‌شود. ماه‌دارها ماهشان هم در کلید می‌آید.
+    let id = 'dash';
+    try { const s = document.querySelector('.section.visible'); if (s) id = s.id.replace(/^sec-/, ''); } catch (e) {}
+    /* نامِ فارسیِ بخش: _SEC_LABEL کامل‌ترین فهرست است (همان که کشوی بخش‌ها از آن
+       می‌خواند). اگر بخشی در آن نبود، سراغِ فهرستِ نوت‌ها می‌رویم. */
+    let ttl = id;
+    try { if (typeof _secLabel === 'function') ttl = _secLabel(id) || id; } catch (e) {}
+    if (ttl === id && typeof SECTION_NOTE_TITLES !== 'undefined' && SECTION_NOTE_TITLES[id]) ttl = SECTION_NOTE_TITLES[id];
+    try {
+      if (id === 'safe' && typeof _safeActiveMonth !== 'undefined' && _safeActiveMonth)
+        return { key: 'sec:safe:' + _safeActiveMonth, label: ttl + ' — ' + _safeActiveMonth };
+      if (id === 'sarrafi' && typeof _sarrafiActiveMonth !== 'undefined' && _sarrafiActiveMonth)
+        return { key: 'sec:sarrafi:' + _sarrafiActiveMonth, label: ttl + ' — ' + _sarrafiActiveMonth };
+    } catch (e) {}
+    return { key: 'sec:' + id, label: ttl };
+  }
+
+  let curKey = '', el = null, pop = null, dragging = false;
+
+  function rec(key, make) {
+    const a = all();
+    if (!a[key] && make) a[key] = { t: '', x: null, y: null, mode: MODE_FIX, hidden: true };
+    return a[key];
+  }
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  function place(r) {
+    if (!el) return;
+    const fix = (r.mode === MODE_FIX);
+    el.classList.toggle('fix', fix);
+    const W = window.innerWidth, H = window.innerHeight, SZ = 62;
+    let x = r.x, y = r.y;
+    if (x == null || y == null) {          // جای پیش‌فرضِ اولِ کار
+      x = (fix ? 0 : window.scrollX) + 14;
+      y = (fix ? 0 : window.scrollY) + Math.max(90, H - 250);
+    }
+    if (fix) { x = clamp(x, 2, Math.max(2, W - SZ - 2)); y = clamp(y, 2, Math.max(2, H - SZ - 2)); }
+    else { x = Math.max(2, x); y = Math.max(2, y); }
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+  }
+
+  function paint() {
+    const r = all()[curKey];
+    if (!el) return;
+    const txt = (r && r.t) || '';
+    el.classList.toggle('empty', !txt.trim());
+    const pk = el.querySelector('.stk-peek');
+    if (pk) pk.textContent = txt.trim() || 'یادداشت…';
+    el.title = (txt.trim() ? txt.trim().slice(0, 120) : 'یادداشتِ این صفحه') + ' — بکشید تا جابه‌جا شود';
+  }
+
+  function build() {
+    if (el) return;
+    el = document.createElement('div');
+    el.className = 'stk-note';
+    el.innerHTML = '<div class="stk-paper"></div><span class="stk-pin">📌</span><div class="stk-peek"></div>';
+    document.body.appendChild(el);
+
+    // کشیدن با انگشت/موس. اگر جابه‌جا نشد، «زدن» حساب می‌شود و پنجره باز می‌شود.
+    let sx = 0, sy = 0, ox = 0, oy = 0, moved = false, pid = null;
+    el.addEventListener('pointerdown', ev => {
+      const r = all()[curKey]; if (!r) return;
+      pid = ev.pointerId; moved = false; dragging = true;
+      sx = ev.clientX; sy = ev.clientY;
+      ox = parseFloat(el.style.left) || 0; oy = parseFloat(el.style.top) || 0;
+      el.classList.add('drag');
+      try { el.setPointerCapture(pid); } catch (e) {}
+      ev.preventDefault();
+    });
+    el.addEventListener('pointermove', ev => {
+      if (!dragging || ev.pointerId !== pid) return;
+      const dx = ev.clientX - sx, dy = ev.clientY - sy;
+      if (!moved && Math.abs(dx) + Math.abs(dy) < 5) return;   // لرزشِ انگشت ≠ کشیدن
+      moved = true;
+      el.style.left = (ox + dx) + 'px';
+      el.style.top = (oy + dy) + 'px';
+    });
+    const end = ev => {
+      if (!dragging || (pid !== null && ev.pointerId !== pid)) return;
+      dragging = false; el.classList.remove('drag');
+      try { el.releasePointerCapture(pid); } catch (e) {}
+      pid = null;
+      const r = all()[curKey]; if (!r) return;
+      if (moved) {
+        r.x = parseFloat(el.style.left) || 0;
+        r.y = parseFloat(el.style.top) || 0;
+        place(r); r.x = parseFloat(el.style.left); r.y = parseFloat(el.style.top);
+        save();
+      } else { openPop(); }
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+  }
+
+  function show() {
+    const r = all()[curKey];
+    if (!r || r.hidden) { if (el) el.style.display = 'none'; return; }
+    build();
+    el.style.display = '';
+    place(r); paint();
+  }
+
+  function closePop() { if (pop) { pop.remove(); pop = null; } }
+  function openPop() {
+    closePop();
+    const r = rec(curKey, true); if (!r) return;
+    const sc = scope();
+    pop = document.createElement('div');
+    pop.className = 'stk-pop';
+    pop.innerHTML =
+      '<div class="stk-pop-h"><span>📌</span><b></b>'
+      + '<button type="button" class="stk-pop-x">✕</button></div>'
+      + '<textarea placeholder="یادداشتِ همین صفحه…"></textarea>'
+      + '<div class="stk-pop-f">'
+      +   '<button type="button" class="stk-b" data-m="fix">🌐 همه‌جا پیدا</button>'
+      +   '<button type="button" class="stk-b" data-m="page">📍 قفل سرِ جایش</button>'
+      +   '<button type="button" class="stk-b" data-a="hide">🙈 پنهان</button>'
+      +   '<button type="button" class="stk-b warn" data-a="del">🗑️ پاک</button>'
+      + '</div>'
+      + '<div class="stk-hint"></div>';
+    pop.querySelector('b').textContent = sc.label;
+    const ta = pop.querySelector('textarea');
+    ta.value = r.t || '';
+    document.body.appendChild(pop);
+
+    const syncModes = () => pop.querySelectorAll('[data-m]').forEach(b =>
+      b.classList.toggle('on', b.getAttribute('data-m') === (r.mode || MODE_FIX)));
+    const syncHint = () => { pop.querySelector('.stk-hint').textContent = (r.mode === MODE_PAGE)
+      ? 'قفل سرِ جایش: همان‌جای صفحه می‌ماند و با اسکرول از دید بیرون می‌رود.'
+      : 'همه‌جا پیدا: با اسکرول هم گوشهٔ صفحه می‌ماند.'; };
+    syncModes(); syncHint();
+
+    // جای پنجره: کنارِ خودِ کاغذ، ولی هرگز بیرونِ صفحه
+    const b = el ? el.getBoundingClientRect() : { left: 20, top: 80, bottom: 142 };
+    pop.style.visibility = 'hidden';
+    requestAnimationFrame(() => {
+      const pw = pop.offsetWidth, ph = pop.offsetHeight;
+      pop.style.left = clamp(b.left, 8, Math.max(8, window.innerWidth - pw - 8)) + 'px';
+      pop.style.top = clamp((b.bottom + 8 + ph < window.innerHeight) ? (b.bottom + 8) : (b.top - ph - 8),
+                            8, Math.max(8, window.innerHeight - ph - 8)) + 'px';
+      pop.style.visibility = '';
+      try { ta.focus(); } catch (e) {}
+    });
+
+    ta.addEventListener('input', () => { r.t = ta.value; paint(); save(); });
+    pop.querySelector('.stk-pop-x').onclick = closePop;
+    pop.querySelectorAll('[data-m]').forEach(btn => btn.onclick = () => {
+      const want = btn.getAttribute('data-m');
+      if (r.mode === want) return;
+      /* جای کاغذ باید سرِ همان نقطه‌ای بماند که کاربر می‌بیند: از مختصاتِ صفحه
+         به مختصاتِ پنجره (و برعکس) ترجمه می‌شود، نه این که بپرد. */
+      const bb = el ? el.getBoundingClientRect() : null;
+      r.mode = want;
+      if (bb) { r.x = (want === MODE_FIX) ? bb.left : (bb.left + window.scrollX);
+                r.y = (want === MODE_FIX) ? bb.top  : (bb.top  + window.scrollY); }
+      show(); syncModes(); syncHint(); save();
+    });
+    pop.querySelector('[data-a="hide"]').onclick = () => {
+      r.hidden = true; show(); closePop(); save();
+      try { showToast('🙈 یادداشت پنهان شد — از «جای نوت‌ها» دوباره بیاوریدش', '#805ad5'); } catch (e) {}
+    };
+    pop.querySelector('[data-a="del"]').onclick = () => {
+      delete all()[curKey]; closePop(); if (el) el.style.display = 'none'; save();
+      try { showToast('🗑️ یادداشت پاک شد', '#e53e3e'); } catch (e) {}
+    };
+  }
+
+  // بیرونِ پنجره زدی → بسته شود (ولی کشیدنِ خودِ کاغذ نبندد)
+  document.addEventListener('pointerdown', ev => {
+    if (!pop || dragging) return;
+    if (pop.contains(ev.target) || (el && el.contains(ev.target))) return;
+    closePop();
+  }, true);
+  window.addEventListener('resize', () => { const r = all()[curKey]; if (r && !r.hidden) { place(r); } closePop(); });
+
+  /* دکمهٔ «📌 یادداشتِ چسبان» — همان که از جای نوت‌ها فعالش می‌کند */
+  window.pumpStickyToggle = function () {
+    const r = rec(scope().key, true);
+    curKey = scope().key;
+    r.hidden = false;
+    if (r.x == null) { r.mode = r.mode || MODE_FIX; }
+    show(); save(); openPop();
+  };
+
+  /* هر نیم‌ثانیه: «کجا هستیم» عوض شده؟ اگر آری، کاغذِ همان‌جا را نشان بده.
+     عمداً به‌جای وصل شدن به ده‌ها تابعِ موجود — تا هیچ مسیری دست نخورد. */
+  function tick() {
+    const k = scope().key;
+    if (k === curKey) return;
+    curKey = k; closePop(); show();
+  }
+  setInterval(tick, 500);
+
+  /* دکمه را به «جای نوت‌ها»ی همهٔ بخش‌ها می‌چسباند + سربرگِ صفحه‌های حساب.
+     چون در HTML دست نمی‌بریم، اضافه‌شدنش هیچ‌جا را جابه‌جا نمی‌کند. */
+  function mountButtons() {
+    // ۱) «جای نوت‌ها»ی آخرِ هر جدول — همان‌جایی که صاحب ریپو خواست
+    document.querySelectorAll('.sec-note-acts').forEach(box => {
+      if (box.querySelector('.stk-mount')) return;
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'sec-note-btn stk-mount';
+      b.textContent = '📌 یادداشتِ چسبان';
+      b.title = 'یک کاغذِ زردِ سنجاق‌دار برای همین صفحه — هر جا خواستید بگذارید';
+      b.onclick = () => window.pumpStickyToggle();
+      box.appendChild(b);
+    });
+    /* ۲) صفحه‌های حساب (قرض‌دار، شرکت، تیل امانت) «جای نوت» ندارند، ولی خواستهٔ
+       صاحب ریپو دقیقاً همان‌جاست: «داخلِ حسابِ هارون نوتِ خودش». پس یک دکمهٔ
+       کوچک در سربرگِ همان صفحه‌ها. */
+    [['#personModal .pm-head-btns', 'add-row-btn'],
+     ['#companyModal .modal-head > div:first-child', 'add-row-btn'],
+     ['#amanatAccModal .am-acc-btns', 'am-acc-btn']].forEach(([sel, cls]) => {
+      const host = document.querySelector(sel);
+      if (!host || host.querySelector('.stk-mount')) return;
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = cls + ' stk-mount';
+      b.style.cssText = 'margin:0;border-color:var(--accent);color:var(--accent);padding:5px 10px;font-size:0.78rem';
+      b.textContent = '📌 نوت';
+      b.title = 'یادداشتِ چسبانِ همین حساب';
+      b.onclick = () => window.pumpStickyToggle();
+      host.appendChild(b);
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountButtons);
+  else mountButtons();
+  // صفحه‌های حساب هر بار از نو ساخته می‌شوند، پس دکمه هم هر بار دوباره سوار شود
+  setInterval(mountButtons, 900);
+  tick();
+})();
+
 let _notesKey = '';
 function openNotes(key) {
   _notesKey = key;
