@@ -16584,9 +16584,22 @@ table thead th:first-child .col-resize-grip{ display:none; }
   display:flex; flex-direction:column; align-items:stretch; gap:8px;
 }
 .person-card .pcard-foot > *{ margin:0 !important; }
+/* ⛽/🟤 ────────────────────────────────────────────────────────────────────
+   گزارشِ صاحب ریپو: «یکی تیل‌ها را جلوِ ایموجی می‌گذارد و یکی زیرشان.» ریشه‌اش
+   این بود که هیچ‌چیز جلوِ شکستنِ خطِ داخلِ خودِ span را نمی‌گرفت: تا عدد یک رقم
+   بلندتر می‌شد، ایموجی بالا می‌ماند و عدد می‌افتاد خطِ بعد — و چون کارتِ دارایِ
+   حسابِ فرعی ۴۰ پیکسل باریک‌تر است، این اتفاق فقط در بعضی کارت‌ها می‌افتاد.
+   حالا: white-space:nowrap ایموجی و عدد را کنارِ هم نگه می‌دارد و فونت (مثلِ
+   ردیفِ وضعیت) به‌اندازهٔ جا کوچک می‌شود، پس هر دو عدد همیشه روی یک خط‌اند.
+   min-height ثابت است تا کفِ همهٔ کارت‌ها هم‌تراز بماند. */
 .person-card .pcard-figs{
-  display:flex; gap:10px; justify-content:center; align-items:center;
+  display:flex; flex-wrap:wrap; gap:2px 10px; justify-content:center; align-items:center;
   font-size:0.95rem; font-weight:700; min-height:1.5em;
+  width:100%; box-sizing:border-box; container-type:inline-size;
+}
+.person-card .pcard-figs > span{
+  white-space:nowrap; flex:0 0 auto;
+  font-size:clamp(0.62rem, calc((100cqi - 16px) / var(--figs-k, 10)), 0.95rem);
 }
 /* ── کادر و صفحهٔ یادداشت‌ها ────────────────────────────────────────────────
    دکمهٔ «یادداشت‌های این بخش» در همهٔ بخش‌ها یک شکل است؛ صفحه‌اش هم یکی است. */
@@ -29550,14 +29563,42 @@ function pcardStepAcct(type, id, dir) {
   if (nv === 'all') delete _pcardView[k]; else _pcardView[k] = nv;
   try { renderPersons(type); } catch (e) {}
 }
+/* پهنایِ یک نوشته بر حسبِ em — برایِ همان حسابِ جایی که در _pcardStatusHtml
+   توضیح داده شده. عددها اندازه‌گیریِ واقعیِ وزیرمتن‌اند: رقمِ لاتین ۰٫۵۸۵em
+   (همهٔ رقم‌ها هم‌پهنا)، کامای هزار ۰٫۲۶em، و ایموجی به‌علاوهٔ فاصله‌اش ۱٫۵۳em. */
+function _figEmWidth(txt) {
+  let w = 0;
+  for (const ch of String(txt)) w += (ch === ',' ? 0.26 : ch === '.' ? 0.31 : ch === '-' ? 0.49 : 0.585);
+  return w;
+}
 function _pcardStatusHtml(stInfo) {
-  const line = (s, out, low) => s === 'out' ? '<span class="pstatus-label out">⛔ ' + out + '</span>'
-                              : s === 'low' ? '<span class="pstatus-label low">⚠️ ' + low + '</span>' : '';
-  /* دو خط کنارِ هم با کمی فاصله، نه زیرِ هم (خواستهٔ صاحب ریپو). اگر جا نشد
-     خودشان می‌شکنند و زیرِ هم می‌روند، پس کارتِ باریک هم خراب نمی‌شود. */
-  const h = line(stInfo && stInfo.fuelSt, 'اتمام تیل', 'در حال اتمام تیل')
-          + line(stInfo && stInfo.moneySt, 'اتمام پول', 'در حال اتمام پول');
-  return h ? '<div class="pstatus-row">' + h + '</div>' : '';
+  /* ⚠️ چرا پهنایِ نوشته‌ها اینجا حساب می‌شود ──────────────────────
+     گزارشِ صاحب ریپو: «اتمام تیل و اتمام پول روبه‌روی هم باشند، نه زیرِ هم».
+     پیش از این ردیف هر جا تنگ می‌شد می‌شکست و دومی می‌رفت خطِ بعد. چون کارتِ
+     دارایِ حسابِ فرعی ۴۰ پیکسل باریک‌تر است (پدینگِ نوارهایِ گردش)، بعضی
+     کارت‌ها یک‌خطی می‌شدند و بعضی دوخطی — همان «هر کارت یک مدل» که گزارش شد.
+     درمان: به‌جایِ شکستن، فونتِ ردیف دقیقاً به‌اندازهٔ جایِ موجود کوچک می‌شود: پهنایِ
+     هر نوشته (بر حسبِ em، از اندازه‌گیریِ واقعیِ وزیرمتن در وزنِ ۸۰۰) در جدولِ زیر
+     آمده و جمعشان در --st-k می‌نشیند؛ خودِ CSS با container query پهنایِ کارت را
+     می‌خواند و اندازه را بیرون می‌دهد.
+     ⚠️ اگر متنِ یکی از این چهار عبارت را عوض کردی، عددِ کنارش را هم دوباره
+     اندازه بگیر (وگرنه یا بیرون می‌زند یا بی‌جهت ریز می‌شود). */
+  const TXT = {
+    fuel:  { out: ['اتمام تیل', 3.67], low: ['در حال اتمام تیل', 6.67] },
+    money: { out: ['اتمام پول', 3.75], low: ['در حال اتمام پول', 6.75] }
+  };
+  const EM_ICON = 1.53;          // ⛔/⚠️ به‌علاوهٔ فاصله‌اش (اندازه‌گیری‌شده)
+  let k = 0, h = '';
+  const put = (st, kind) => {
+    const d = st && TXT[kind] && TXT[kind][st];
+    if (!d) return;
+    k += d[1] + EM_ICON;
+    h += '<span class="pstatus-label ' + st + '">' + (st === 'out' ? '⛔ ' : '⚠️ ') + d[0] + '</span>';
+  };
+  /* ترتیب همیشه یکی است: تیل راست، پول چپ — در همهٔ کارت‌ها */
+  put(stInfo && stInfo.fuelSt, 'fuel');
+  put(stInfo && stInfo.moneySt, 'money');
+  return h ? '<div class="pstatus-row" style="--st-k:' + k.toFixed(2) + '">' + h + '</div>' : '';
 }
 function _debtKindLabel(kinds) {
   const f = kinds && kinds.fuel, m = kinds && kinds.money;
@@ -29750,7 +29791,9 @@ function renderPersons(type) {
            کارت یک‌خطی باشد چه دوخطی و چه خطِ «تمام شده» داشته باشد، در همهٔ
            کارت‌ها روی یک خط تراز می‌مانند (خواستهٔ صاحب ریپو) -->
       <div class="pcard-foot">
-        <div class="pcard-figs">
+        <!-- ⛽/🟤 همیشه «ایموجی و بعد عدد، روی یک خط» — در همهٔ کارت‌ها یک شکل.
+             --figs-k همان حسابِ جاست که در _pcardStatusHtml توضیح داده شده -->
+        <div class="pcard-figs" style="--figs-k:${(_figEmWidth(n2fa(pBal)) + _figEmWidth(n2fa(dBal)) + 3.06).toFixed(2)}">
           <span style="color:var(--green)">⛽ ${n2fa(pBal)}</span>
           <span style="color:#b7791f">🟤 ${n2fa(dBal)}</span>
         </div>
@@ -49029,7 +49072,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.380';
+const APP_VERSION = '2.9.381';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -54914,12 +54957,29 @@ body .person-card.fuel-out.fuel-out{
 }
 .pstatus-dot.low{background:#f6c000;box-shadow:0 0 9px #f6c000}
 .pstatus-dot.out{background:#e53e3e;box-shadow:0 0 9px #e53e3e}
-/* «اتمام تیل» و «اتمام پول» رو‌به‌روی هم با کمی فاصله — نه زیرِ هم */
+/* «اتمام تیل» و «اتمام پول» رو‌به‌روی هم — همیشه یک خط، در همهٔ کارت‌ها ────────
+   جای شکستنِ ردیف (که کارتِ باریک را دوخطی و کارتِ پهن را یک‌خطی می‌کرد و ظاهرِ
+   کارت‌ها را ناهمگون)، فونتِ همین ردیف به‌اندازهٔ جایِ موجود کوچک می‌شود:
+   --st-k جمعِ پهنایِ نوشته‌ها بر حسبِ em است و در _pcardStatusHtml حساب می‌شود،
+   100cqi هم پهنایِ خودِ ردیف. flex-wrap:wrap فقط برایِ مرورگرِ خیلی قدیمی که
+   container query ندارد باقی مانده — آنجا مثل قبل می‌شکند، نه اینکه بیرون بزند. */
 .pstatus-row{
-  display:flex; flex-wrap:wrap; justify-content:center; align-items:center;
-  gap:2px 12px; margin-top:6px; width:100%;
+  display:flex; flex-wrap:wrap; justify-content:center; align-items:baseline;
+  gap:2px 8px; margin-top:6px; width:100%;
+  container-type:inline-size;
+  pointer-events:none;         /* کلیک از رویش به خودِ کارت می‌رسد */
 }
-.pstatus-row .pstatus-label{ margin-top:0; white-space:nowrap; }
+.pstatus-row .pstatus-label{
+  margin-top:0; white-space:nowrap; flex:0 0 auto;
+  font-size:clamp(0.6rem, calc((100cqi - 14px) / var(--st-k, 12)), 0.8rem);
+}
+/* کارتِ دارایِ حسابِ فرعی از دو پهلو ۳۲ پیکسل پدینگ دارد (جایِ نوارهایِ گردش) و
+   همان باعث می‌شد این ردیف زودتر بشکند. فقط همین یک ردیف تا نزدیکِ لبهٔ کارت باز
+   می‌شود — نه نام و نه چیزِ دیگری — و چون pointer-events ندارد، نوارهایِ گردش
+   همچنان کلیک‌پذیرند. (پدینگِ خودِ .has-subs را دست نزنید؛ توضیحش بالاست.) */
+.person-card.has-subs .pstatus-row{
+  align-self:stretch; width:auto; max-width:none; margin-inline:-20px;
+}
 .pstatus-label{margin-top:6px;font-size:0.8rem;font-weight:800}
 .pstatus-label.low{color:#e6b800}
 .pstatus-label.out{color:#e53e3e}
