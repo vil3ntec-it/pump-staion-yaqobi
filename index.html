@@ -372,6 +372,24 @@ body.light-mode #lsStaffBtn{
 .header-date{font-size:0.8rem;color:var(--muted)}
 .lock-btn{padding:6px 14px;background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--muted);font-family:'Vazirmatn',sans-serif;font-size:0.8rem;cursor:pointer}
 .lock-btn:hover{color:var(--red);border-color:var(--red)}
+/* ── دو دستهٔ سربرگ ─────────────────────────────────────────────────────────
+   هر دسته یک واحد است: درونش فاصله کم، بیرونش فاصله بیشتر (gap خودِ
+   .header-right). اگر سربرگ روی گوشی به خط بعد شکست، هر دسته یکپارچه
+   می‌شکند و دکمه‌هایش از هم جدا نمی‌افتند. */
+.hdr-group{display:inline-flex;align-items:center;gap:6px;flex-wrap:nowrap}
+/* ── دکمهٔ «قفل» هم‌مدلِ «نقش» و «تم روز/شب» ────────────────────────────────
+   گلایهٔ صاحب ریپو: «کادر قفل را هم به شکل آن دو تا درست کن.» آن دو کپسولِ
+   پُررنگ‌اند (.role-badge با border-radius:999px و .daynight-toggle) ولی قفل
+   یک مستطیلِ گِردِ کم‌رنگ بود و در نگاه اول با ↺ و 🔎 یکی دیده می‌شد.
+   حالا همان کپسول است: گِردیِ کامل، پُررنگ، متنِ سفیدِ درشت و همان سایهٔ
+   role-badge. فقط #lockBtn — نه همهٔ .lock-btn‌ها — تا ↺ و 🔎 دست‌نخورده
+   بمانند. */
+#lockBtn{
+  padding:5px 13px;border:none;border-radius:999px;background:var(--red);color:#fff;
+  font-size:0.78rem;font-weight:800;white-space:nowrap;
+  box-shadow:0 2px 10px -2px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.18);
+}
+#lockBtn:hover{color:#fff;border-color:transparent;filter:brightness(1.12)}
 
 .top-banner{background:linear-gradient(135deg,#1c2230,#1a1040);border-bottom:1px solid #553c9a55;padding:8px 20px;display:flex;gap:20px;overflow-x:auto;flex-wrap:wrap}
 .tb-item{display:flex;flex-direction:column;min-width:140px}
@@ -1844,6 +1862,8 @@ body.light-mode .header-title{ color:#ffd060!important; }
    زمینهٔ روشن بود و چشم را اذیت می‌کرد */
 body.light-mode .header-date{ color:#111 !important; opacity:1 !important; text-shadow:none !important; }
 body.light-mode .lock-btn{ background:#4a2e00!important; border-color:#7a5010!important; color:#e8c070!important; }
+/* «قفل» در تمِ روز هم کپسولِ پُررنگ می‌ماند — نه قهوه‌ایِ بقیهٔ .lock-btn‌ها */
+body.light-mode #lockBtn{ background:var(--red)!important; border-color:transparent!important; color:#fff!important; }
 
 /* ── TOP BANNER ── */
 .top-banner{
@@ -13592,6 +13612,9 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter
   background:var(--grad-amber);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
   filter:drop-shadow(0 2px 10px rgba(255,150,40,.35))}
 .theme-toggle,.lock-btn{border-radius:10px!important;transition:all .2s cubic-bezier(.2,.8,.2,1)!important}
+/* ⚠️ استثنای «قفل»: این قاعده همهٔ .lock-btn‌ها را مستطیلِ گِرد می‌کند، ولی قفل
+   باید کپسول بماند تا هم‌مدلِ «نقش» و «تم» باشد (خواستهٔ صاحب ریپو). */
+#lockBtn{border-radius:999px!important}
 .theme-toggle:hover,.lock-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px -8px rgba(0,0,0,.8)}
 .role-badge{border-radius:999px!important;box-shadow:0 2px 10px -2px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.18)}
 
@@ -14536,7 +14559,17 @@ html, body {
     box-sizing:border-box !important; text-align:center !important;
     font-size:0.9rem !important; padding:6px 10px !important;
   }
-  .header .header-right{ gap:7px !important; flex-wrap:wrap !important; justify-content:flex-end !important; }
+  /* فاصلهٔ بینِ دو دسته بیشتر از فاصلهٔ درونشان است تا روی گوشیِ باریک هم دو
+     دسته دیده شوند، نه یک ردیفِ درهم */
+  .header .header-right{ gap:11px !important; flex-wrap:wrap !important; justify-content:flex-end !important; }
+  /* ⚠️ «قفل» از قاعدهٔ ۴۰پیکسلیِ بالا کنار گذاشته می‌شود: کنارش «نقش» و «تم
+     روز/شب» می‌نشینند که ۳۰ پیکسل‌اند، و یک دکمهٔ ۴۰پیکسلیِ بلندتر همان
+     ناهم‌مدلی‌ای بود که صاحب ریپو گرفتش. پهنایش با نوشتهٔ «🔒 قفل» به‌قدرِ
+     کافی برای لمس هست. */
+  .header #lockBtn{ min-height:30px !important; min-width:0 !important;
+    font-size:0.78rem !important; padding:5px 12px !important; }
+  /* دسته‌ها یکپارچه بشکنند — نه این که وسطشان به خط بعد بیفتد */
+  .header .hdr-group{ gap:4px !important; flex:0 0 auto !important; }
 
   /* روکش تیره + کشوی بخش‌ها */
   /* ⚠️ backdrop-filter از این روکش برداشته شد. روی گوشی، تارکردنِ کلِ صفحه
@@ -17126,28 +17159,40 @@ body.boot-viewer #bootViewerSplash{
         <div class="header-date" id="headerDateQamari" style="font-size:0.78rem;opacity:.75"></div>
       </div>
     </div>
-    <button class="theme-toggle" id="zodiacHeaderBtn" onclick="showSection('zodiac',null);document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'))" title="تقویم و برج فلکی" style="padding:6px 10px;border-radius:7px;border:1px solid var(--border);background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.85rem;cursor:pointer"><svg class="nav-ic ia-tilt"><use href="#ic-moonstar"/></svg></button>
-    <button class="daynight-toggle" id="themeBtn" onclick="toggleTheme()" title="تغییر تم روز/شب" aria-label="تغییر تم روز/شب">
-      <span class="dn-sky" aria-hidden="true">
-        <span class="dn-stars"><i></i><i></i><i></i><i></i><i></i></span>
-        <span class="dn-cloud dn-cloud-1"></span>
-        <span class="dn-cloud dn-cloud-2"></span>
-        <svg class="dn-bird dn-bird-1" viewBox="0 0 24 12"><path d="M1 8 Q6 1 12 7 Q18 1 23 8"/></svg>
-        <svg class="dn-bird dn-bird-2" viewBox="0 0 24 12"><path d="M1 8 Q6 1 12 7 Q18 1 23 8"/></svg>
-        <span class="dn-moon-mark"></span>
-        <span class="dn-sun-mark"></span>
-      </span>
-      <span class="dn-thumb" aria-hidden="true"></span>
-    </button>
-    <!-- زنگِ اعلان از سربرگ برداشته شد؛ فهرستِ خبرهای سرور از «تنظیمات › اعلان‌ها» باز می‌شود.
-         خودِ خبرها مثل قبل زنده می‌رسند (توست وقتی برنامه باز است، نوتیفیکیشن وقتی بسته است). -->
-    <span class="role-badge" id="roleBadge" style="background:var(--green)">🛡️ مدیر</span>
-    <button class="lock-btn" id="adminUnlockBtn" onclick="promptAdminUnlock()" style="display:none;background:var(--green)">🔓 ورود مدیر</button>
-    <!-- «اندازهٔ دلخواهِ هر کادر» از تنظیمات به این‌جا آمد: از هر بخشی در دسترس
-         باشد، نه فقط از تنظیمات. کوتاه و نشانه‌ای، تا سربرگ روی گوشی شلوغ نشود. -->
-    <button class="lock-btn" id="uf-toggle" onclick="ufToggle()" title="روشن کردن حالتِ انتخاب — بعد روی هر چیزی بزنید و با A− / A+ اندازه‌اش را بگیرید" style="background:var(--blue)">🔎</button>
-    <button class="lock-btn" id="uf-reset" onclick="ufResetAll()" title="برگرداندن همه به اندازهٔ عادی" style="background:transparent;border:1px solid var(--red);color:var(--red)">↺</button>
-    <button class="lock-btn" id="lockBtn" onclick="lockApp()">🔒 قفل</button>
+    <!-- ══ دو دستهٔ سربرگ ═════════════════════════════════════════════════
+         خواستهٔ صاحب ریپو: «آن سه کادر را کنار هم بگذار و آن سه تا را هم کنار
+         هم.» پس دکمه‌ها دیگر درهم نیستند و در دو دستهٔ جدا می‌نشینند:
+           ابزار  → 🌙 تقویم · 🔎 اندازهٔ دلخواه · ↺ برگرداندن
+           حساب   → ☀️/🌙 تم · 🛡️ نقش · 🔒 قفل
+         فاصلهٔ درونِ هر دسته کم و فاصلهٔ بینِ دو دسته بیشتر است تا چشم خودش
+         مرزشان را ببیند. جای دو سرِ نوار عوض نشده: تقویم همچنان کنارِ تاریخ
+         و قفل همچنان انتهای نوار است. -->
+    <span class="hdr-group hdr-group-tools">
+      <button class="theme-toggle" id="zodiacHeaderBtn" onclick="showSection('zodiac',null);document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'))" title="تقویم و برج فلکی" style="padding:6px 10px;border-radius:7px;border:1px solid var(--border);background:var(--card);color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.85rem;cursor:pointer"><svg class="nav-ic ia-tilt"><use href="#ic-moonstar"/></svg></button>
+      <!-- «اندازهٔ دلخواهِ هر کادر» از تنظیمات به این‌جا آمد: از هر بخشی در دسترس
+           باشد، نه فقط از تنظیمات. کوتاه و نشانه‌ای، تا سربرگ روی گوشی شلوغ نشود. -->
+      <button class="lock-btn" id="uf-toggle" onclick="ufToggle()" title="روشن کردن حالتِ انتخاب — بعد روی هر چیزی بزنید و با A− / A+ اندازه‌اش را بگیرید" style="background:var(--blue)">🔎</button>
+      <button class="lock-btn" id="uf-reset" onclick="ufResetAll()" title="برگرداندن همه به اندازهٔ عادی" style="background:transparent;border:1px solid var(--red);color:var(--red)">↺</button>
+    </span>
+    <span class="hdr-group hdr-group-acct">
+      <button class="daynight-toggle" id="themeBtn" onclick="toggleTheme()" title="تغییر تم روز/شب" aria-label="تغییر تم روز/شب">
+        <span class="dn-sky" aria-hidden="true">
+          <span class="dn-stars"><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="dn-cloud dn-cloud-1"></span>
+          <span class="dn-cloud dn-cloud-2"></span>
+          <svg class="dn-bird dn-bird-1" viewBox="0 0 24 12"><path d="M1 8 Q6 1 12 7 Q18 1 23 8"/></svg>
+          <svg class="dn-bird dn-bird-2" viewBox="0 0 24 12"><path d="M1 8 Q6 1 12 7 Q18 1 23 8"/></svg>
+          <span class="dn-moon-mark"></span>
+          <span class="dn-sun-mark"></span>
+        </span>
+        <span class="dn-thumb" aria-hidden="true"></span>
+      </button>
+      <!-- زنگِ اعلان از سربرگ برداشته شد؛ فهرستِ خبرهای سرور از «تنظیمات › اعلان‌ها» باز می‌شود.
+           خودِ خبرها مثل قبل زنده می‌رسند (توست وقتی برنامه باز است، نوتیفیکیشن وقتی بسته است). -->
+      <span class="role-badge" id="roleBadge" style="background:var(--green)">🛡️ مدیر</span>
+      <button class="lock-btn" id="adminUnlockBtn" onclick="promptAdminUnlock()" style="display:none;background:var(--green)">🔓 ورود مدیر</button>
+      <button class="lock-btn" id="lockBtn" onclick="lockApp()">🔒 قفل</button>
+    </span>
   </div>
 </div>
 
@@ -47970,7 +48015,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.358';
+const APP_VERSION = '2.9.359';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
