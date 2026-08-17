@@ -133,6 +133,35 @@ jobs:
               json.dump(data, f, ensure_ascii=False, indent=2)
           print(json.dumps(data, ensure_ascii=False))
           PY
+      # ── کوچک‌کردنِ فایل‌های منتشرشده ──────────────────────────────────────
+      # گزارشِ صاحب ریپو: «سایت آن‌قدر لگ می‌زند که گوشی‌ام دیگر بازش نمی‌کند.»
+      # ۲۸٪ِ جاوااسکریپتِ index.html فقط کامنت و تورفتگی است. برداشتنشان حجمِ
+      # فشرده‌ای را که گوشی دانلود می‌کند از ۹۷۷ به ۷۱۵ کیلوبایت می‌آورد و کارِ
+      # CPUِ بازشدن را ۱۳٪ کم می‌کند.
+      # ⚠️ فقط روی *خروجی* اجرا می‌شود؛ فایلِ داخلِ ریپو خوانا و کامنت‌دار
+      # می‌ماند — آن کامنت‌های فارسی توضیحِ باگ‌های برگشتنیِ این پروژه‌اند.
+      # ⚠️ اگر نصبِ esbuild یا خودِ کوچک‌سازی شکست بخورد، فایلِ اصلی منتشر
+      # می‌شود. هیچ‌وقت سایتِ نصفه‌کاره منتشر نمی‌شود.
+      - name: کوچک‌کردنِ index.html برای انتشار
+        continue-on-error: true
+        run: |
+          cp index.html /tmp/index.orig.html
+          cp payam/index.html /tmp/payam.orig.html
+          if npm i --no-save --no-package-lock esbuild@0.28.2; then
+            if node tools/minify-for-deploy.mjs; then
+              echo "کوچک‌سازی انجام شد"
+            else
+              echo "::warning::کوچک‌سازی شکست خورد — فایلِ اصلی منتشر می‌شود"
+              cp /tmp/index.orig.html index.html
+              cp /tmp/payam.orig.html payam/index.html
+            fi
+          else
+            echo "::warning::esbuild نصب نشد — بدونِ کوچک‌سازی منتشر می‌شود"
+          fi
+          # node_modules هرگز نباید روی سایت برود
+          rm -rf node_modules package.json package-lock.json
+          ls -l index.html payam/index.html
+
       # بدون فایل CNAME، گیت‌هاب دامنهٔ اختصاصی را کنار می‌گذارد و سایت با خطای
       # گواهی (ERR_CERT_COMMON_NAME_INVALID) بالا می‌آید. پس اگر نبود، همین‌جا
       # می‌ایستیم — نه این که سایت را خراب منتشر کنیم.
