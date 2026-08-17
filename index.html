@@ -24272,12 +24272,12 @@ function _dashDebtInfo() {
   });
   return { total, persons: (DB.debtPersons || []).length, invoices: (DB.invoices || []).length, comps };
 }
-// موجودی کل گاوصندوق (بردگی − ماندگی) به تفکیک ارز — همان جهتِ «موجودی خالص» بخش گاوصندوق
+// موجودی کل گاوصندوق (ماندگی − بردگی) به تفکیک ارز — همان جهتِ «موجودی خالص» بخش گاوصندوق
 function _dashSafeBalance() {
   const t = { afn: 0, usd: 0 };
   (DB.safeEntries || []).forEach(e => {
     if (!e) return;
-    t[e.currency === 'usd' ? 'usd' : 'afn'] += (e.type === 'bardagi' ? 1 : -1) * (e.amount || 0);
+    t[e.currency === 'usd' ? 'usd' : 'afn'] += (e.type === 'bardagi' ? -1 : 1) * (e.amount || 0);
   });
   return t;
 }
@@ -38227,9 +38227,12 @@ function _safeAddAmt(totals, e) { totals[_safeCur(e)] += e.amount || 0; }
 function safeAmtHtml(t, abs) {
   const v = x => abs ? Math.abs(x || 0) : (x || 0);
   const line = (num, cur) => '<div class="sf-amt"><b class="sf-n">' + num + '</b><i class="sf-c">' + cur + '</i></div>';
+  /* علامتِ منفی پیش از $ می‌نشیند، نه بعدش: «‎−$2,826» خوانده می‌شود،
+     «$-2,826» نه. */
+  const usd = x => (x < 0 ? '−' : '') + '$' + n2fa(Math.abs(x || 0));
   let out = '';
   if (t.afn || !t.usd) out += line(n2fa(v(t.afn)), 'افغانی');
-  if (t.usd) out += line('$' + n2fa(v(t.usd)), 'دالر');
+  if (t.usd) out += line(usd(v(t.usd)), 'دالر');
   return out;
 }
 // نسخهٔ متنی (برای جاهایی مثل پیام/کپی که HTML نمی‌خورد)
@@ -38239,11 +38242,15 @@ function fmtSafeTotal(t) {
   if (t.usd) parts.push(n2fa(t.usd) + ' دالر');
   return parts.length ? parts.join(' + ') : '0 افغانی';
 }
+/* ⚠️ «موجودی خالص» علامتش را نگه می‌دارد و Math.abs نمی‌خورد.
+   گلایهٔ صاحب ریپو: «آن مقدار دالر را بردم، باز هم می‌گوید این‌قدر دالر داری.»
+   ریشه‌اش همین بود: خالص منفی بود ولی با abs مثبت نوشته می‌شد و عینِ حالتِ
+   مثبت دیده می‌شد — فقط رنگش فرق می‌کرد و کسی از رنگ عدد نمی‌خواند. */
 function fmtSafeNet(t) {
   const parts = [];
-  if (t.afn || !t.usd) parts.push(n2fa(Math.abs(t.afn)) + ' افغانی');
-  if (t.usd) parts.push(n2fa(Math.abs(t.usd)) + ' دالر');
-  return { text: parts.join(' + '), html: safeAmtHtml(t, true), ok: t.afn >= 0 && t.usd >= 0 };
+  if (t.afn || !t.usd) parts.push(n2fa(t.afn || 0) + ' افغانی');
+  if (t.usd) parts.push(((t.usd < 0 ? '−' : '') + '$' + n2fa(Math.abs(t.usd))) + ' دالر');
+  return { text: parts.join(' + '), html: safeAmtHtml(t, false), ok: t.afn >= 0 && t.usd >= 0 };
 }
 function renderSafe() {
   const entries = DB.safeEntries || [];
@@ -38332,7 +38339,11 @@ function renderSafe() {
   }
   boxesEl.appendChild(boxesFrag);
   const _sfEl = id => document.getElementById(id);
-  const mNet = { afn: mBardagi.afn - mMandagi.afn, usd: mBardagi.usd - mMandagi.usd };
+  /* ⚠️ جهت: «موجودی خالص» یعنی چقدر در گاوصندوق مانده — پس ماندگی اضافه
+     می‌کند و بردگی کم. پیش از این برعکس بود (بردگی − ماندگی) و گزارشِ صاحب
+     ریپو همین بود: «آن مقدار دالر را بردم، باز هم می‌گوید این‌قدر دالر داری؛
+     این باید صفر می‌شد چون همه‌اش را بردگی گرفتم نه ماندگی.» */
+  const mNet = { afn: mMandagi.afn - mBardagi.afn, usd: mMandagi.usd - mBardagi.usd };
   // هر سه کادرِ بالا (جمع بردگی/جمع ماندگی/موجودی خالص) فقط ماهِ انتخاب‌شده را نشان
   // می‌دهند تا هر ماه کاملاً جدا باشد و اطلاعاتِ ماهِ قبل داخلش نیاید.
   if (_sfEl('safe-total-bardagi')) _sfEl('safe-total-bardagi').innerHTML = safeAmtHtml(mBardagi);
@@ -38560,7 +38571,8 @@ function _recalcSafeTotals() {
   const entries = DB.safeEntries || [];
   let mBardagi = { afn: 0, usd: 0 }, mMandagi = { afn: 0, usd: 0 };
   entries.forEach(e => { if (_ymMatch(_safeActiveMonth, safeMonthKey(e.date))) _safeAddAmt(e.type === 'bardagi' ? mBardagi : mMandagi, e); });
-  const mNet = { afn: mBardagi.afn - mMandagi.afn, usd: mBardagi.usd - mMandagi.usd };
+  // همان جهتِ renderSafe: ماندگی − بردگی (این دو هرگز نباید از هم جدا شوند)
+  const mNet = { afn: mMandagi.afn - mBardagi.afn, usd: mMandagi.usd - mBardagi.usd };
   const el = id => document.getElementById(id);
   if (el('safe-total-bardagi')) el('safe-total-bardagi').innerHTML = safeAmtHtml(mBardagi);
   if (el('safe-total-mandagi')) el('safe-total-mandagi').innerHTML = safeAmtHtml(mMandagi);
@@ -38596,7 +38608,7 @@ function printSafe(monthKey) {
   if (monthKey) entries = entries.filter(e => _ymMatch(monthKey, safeMonthKey(e.date)));
   let tbT = { afn: 0, usd: 0 }, tmT = { afn: 0, usd: 0 };
   entries.forEach(e => _safeAddAmt(e.type==='bardagi' ? tbT : tmT, e));
-  const netT = { afn: tbT.afn - tmT.afn, usd: tbT.usd - tmT.usd };
+  const netT = { afn: tmT.afn - tbT.afn, usd: tmT.usd - tbT.usd };   // ماندگی − بردگی
   const netFmt = fmtSafeNet(netT);
 
   const rowsHtml = entries.map((e,i) => {
@@ -48399,7 +48411,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.363';
+const APP_VERSION = '2.9.364';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
