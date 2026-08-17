@@ -16604,6 +16604,13 @@ table thead th:first-child .col-resize-grip{ display:none; }
 }
 .sec-note-count:empty{ display:none; }
 
+/* «بردگی پمپ بنزین ($)» خانهٔ تایپی است، پس علامتِ دالر کنارِ کادر می‌نشیند نه
+   داخلش — وگرنه عدد خوانده نمی‌شد. بقیهٔ ستون‌های دالریِ صرافی متنی‌اند و
+   علامت را همان‌جا در متنشان دارند. */
+.sr-usd{display:flex;align-items:center;gap:4px}
+.sr-usd input{flex:1;min-width:0}
+.sr-usd i{font-style:normal;color:var(--green);font-weight:900;font-size:0.82rem;flex:0 0 auto}
+
 /* ══ یادداشتِ چسبان (کاغذِ زرد با سنجاق) ═══════════════════════════════════
    خواستهٔ صاحب ریپو: «یک آیکونِ داینامیک مثل این عکس با یک سنجاقِ سرخ روی آن،
    که هر جای صفحه خواستم بگذارم؛ با زدنش یک صفحهٔ کوچک باز شود و نوت را
@@ -40536,9 +40543,9 @@ function renderSarrafi() {
         </select>
       </td>
       <td><input class="xls-in xs" type="number" step="0.01" value="${r.rate||''}" placeholder="0" oninput="updateSarrafiRow(${i},'rate',this.value)"></td>
-      <td id="sarrafi-usd-${i}" style="font-weight:700;color:var(--blue);min-width:85px;font-size:0.92rem">${broken ? n2fa(broken.toFixed(2)) : '—'}</td>
+      <td id="sarrafi-usd-${i}" style="font-weight:700;color:var(--blue);min-width:85px;font-size:0.92rem">${broken ? n2fa(broken.toFixed(2)) + ' $' : '—'}</td>
       <td id="sarrafi-rasid-${i}" style="font-weight:700;color:var(--green);min-width:115px;font-size:0.92rem">${broken ? n2fa(broken.toFixed(2)) + ' $' : '—'}</td>
-      <td><input class="xls-in sm" type="number" value="${r.bardagi||''}" placeholder="0" oninput="updateSarrafiRow(${i},'bardagi',this.value)"></td>
+      <td><div class="sr-usd"><input class="xls-in sm" type="number" value="${r.bardagi||''}" placeholder="0" oninput="updateSarrafiRow(${i},'bardagi',this.value)"><i>$</i></div></td>
       <td style="min-width:115px"></td>
       <td><button class="del-btn" onclick="deleteSarrafiRow(${i})">🗑️</button></td>
     `;
@@ -40574,7 +40581,7 @@ function _sarrafiRepaint() {
     sumUsd += broken;
     sumBardagiUsd += rate ? (parseFloat(r.bardagi) || 0) / rate : 0;
     const usdEl = document.getElementById('sarrafi-usd-' + i);
-    if (usdEl) usdEl.textContent = broken ? n2fa(broken.toFixed(2)) : '—';
+    if (usdEl) usdEl.textContent = broken ? n2fa(broken.toFixed(2)) + ' $' : '—';
     const rasidEl = document.getElementById('sarrafi-rasid-' + i);
     if (rasidEl) rasidEl.textContent = broken ? n2fa(broken.toFixed(2)) + ' $' : '—';
     /* ستونِ الباقی در خودِ ردیف‌ها هیچ عددی نمی‌گیرد — خواستهٔ صریحِ صاحب ریپو:
@@ -48529,7 +48536,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.367';
+const APP_VERSION = '2.9.368';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -49986,21 +49993,49 @@ function sendNoteToBox(key) {
   function closePop() { if (pop) { pop.remove(); pop = null; } }
   /* جای پنجرهٔ نوشتن را (دوباره) حساب می‌کند — هم موقعِ باز شدن، هم وقتی کیبورد
      بالا می‌آید. ملاکِ «صفحهٔ دیده‌شده» visualViewport است اگر باشد. */
-  function positionPop() {
-    if (!pop) return;
+  /* ══ جای پنجرهٔ نوشتن ══════════════════════════════════════════════════════
+     گلایهٔ صاحب ریپو: «اول پایین است، بعد کیبورد می‌آید، می‌رود بالا و یک لگ
+     می‌زند. کاری کن همان‌جایی که قبلاً گذاشتمش دوباره همان‌جا باز شود، نه پایین.»
+
+     دو کار با هم:
+       ۱) جای پنجره را خودِ کاربر تعیین می‌کند — سربرگش را می‌کشد و همان جا
+          برای همان نوت ذخیره می‌شود (px/py). دفعهٔ بعد دقیقاً همان‌جا باز
+          می‌شود، نه کنارِ کاغذ.
+       ۲) پیش‌فرضِ بارِ اول هم بالای صفحه است، نه پایین — چون پایین همان جایی
+          است که کیبورد می‌گیرد و باعثِ همان پرش می‌شد. با این پیش‌فرض، بازِ
+          کیبورد دیگر هیچ جابه‌جایی لازم ندارد.
+     پس در حالتِ عادی پنجره هیچ‌وقت تکان نمی‌خورد؛ فقط اگر واقعاً زیرِ کیبورد
+     بیفتد، حداقلِ لازم بالا کشیده می‌شود. */
+  function vp() {
     const vv = window.visualViewport;
-    const VW = (vv && vv.width) || window.innerWidth;
-    const VH = (vv && vv.height) || window.innerHeight;
-    const VT = (vv && vv.offsetTop) || 0;
-    const b = el && el.style.display !== 'none'
-      ? el.getBoundingClientRect() : { left: 20, top: VT + 60, bottom: VT + 122 };
-    const pw = pop.offsetWidth, ph = pop.offsetHeight;
-    pop.style.left = clamp(b.left, 8, Math.max(8, VW - pw - 8)) + 'px';
-    const below = b.bottom + 8, above = b.top - ph - 8;
-    pop.style.top = clamp((below + ph < VT + VH) ? below : above,
-                          VT + 8, Math.max(VT + 8, VT + VH - ph - 8)) + 'px';
+    return { W: (vv && vv.width) || window.innerWidth,
+             H: (vv && vv.height) || window.innerHeight,
+             T: (vv && vv.offsetTop) || 0 };
   }
-  try { if (window.visualViewport) window.visualViewport.addEventListener('resize', () => { if (pop) positionPop(); }); } catch (e) {}
+  function positionPop(force) {
+    if (!pop) return;
+    const v = vp(), pw = pop.offsetWidth, ph = pop.offsetHeight;
+    const r = all()[curKey];
+    if (!force && r && r.px != null && r.py != null) {
+      // جایی که خودِ کاربر گذاشته — فقط اگر بیرونِ دید بود داخل آورده می‌شود
+      pop.style.left = clamp(r.px, 8, Math.max(8, v.W - pw - 8)) + 'px';
+      pop.style.top = clamp(r.py, v.T + 8, Math.max(v.T + 8, v.T + v.H - ph - 8)) + 'px';
+      return;
+    }
+    // پیش‌فرض: بالای صفحه، هم‌راستا با کاغذ — جایی که کیبورد نمی‌گیردش
+    const b = (el && el.style.display !== 'none') ? el.getBoundingClientRect() : null;
+    pop.style.left = clamp(b ? b.left : 12, 8, Math.max(8, v.W - pw - 8)) + 'px';
+    pop.style.top = (v.T + 10) + 'px';
+  }
+  /* بازِ کیبورد: فقط اگر پنجره واقعاً زیرش رفته باشد کمی بالا می‌آید — وگرنه
+     دست نمی‌خورد. همان چیزی که «لگ زدن» را حذف می‌کند. */
+  function keepPopVisible() {
+    if (!pop) return;
+    const v = vp(), b = pop.getBoundingClientRect();
+    const maxTop = v.T + v.H - b.height - 8;
+    if (b.top > maxTop) pop.style.top = Math.max(v.T + 8, maxTop) + 'px';
+  }
+  try { if (window.visualViewport) window.visualViewport.addEventListener('resize', keepPopVisible); } catch (e) {}
   function openPop() {
     closePop();
     const r = rec(curKey, true); if (!r) return;
@@ -50008,7 +50043,7 @@ function sendNoteToBox(key) {
     pop = document.createElement('div');
     pop.className = 'stk-pop';
     pop.innerHTML =
-      '<div class="stk-pop-h"><span>📌</span><b></b>'
+      '<div class="stk-pop-h" title="از همین نوار بکشید تا پنجره هر جا خواستید بنشیند — همان‌جا یادش می‌ماند"><span>📌</span><b></b>'
       + '<button type="button" class="stk-pop-x">✕</button></div>'
       + '<textarea placeholder="یادداشتِ همین صفحه…"></textarea>'
       + '<div class="stk-pop-f">'
@@ -50022,6 +50057,40 @@ function sendNoteToBox(key) {
     const ta = pop.querySelector('textarea');
     ta.value = r.t || '';
     document.body.appendChild(pop);
+
+    /* سربرگِ پنجره دستهٔ کشیدن است: هر جا بگذاریدش، همان‌جا برای همین نوت
+       ذخیره می‌شود و دفعهٔ بعد همان‌جا باز می‌شود. */
+    (function () {
+      const h = pop.querySelector('.stk-pop-h');
+      h.style.cursor = 'grab'; h.style.touchAction = 'none';
+      let sx = 0, sy = 0, ox = 0, oy = 0, pid = null, mv = false;
+      h.addEventListener('pointerdown', ev => {
+        if (ev.target.closest('.stk-pop-x')) return;      // ✕ کشیدن نیست
+        pid = ev.pointerId; mv = false;
+        sx = ev.clientX; sy = ev.clientY;
+        const b2 = pop.getBoundingClientRect(); ox = b2.left; oy = b2.top;
+        h.style.cursor = 'grabbing';
+        try { h.setPointerCapture(pid); } catch (e) {}
+        ev.preventDefault();
+      });
+      h.addEventListener('pointermove', ev => {
+        if (pid === null || ev.pointerId !== pid) return;
+        const dx = ev.clientX - sx, dy = ev.clientY - sy;
+        if (!mv && Math.abs(dx) + Math.abs(dy) < 6) return;
+        mv = true;
+        const v = vp(), pw = pop.offsetWidth, ph = pop.offsetHeight;
+        pop.style.left = clamp(ox + dx, 8, Math.max(8, v.W - pw - 8)) + 'px';
+        pop.style.top = clamp(oy + dy, v.T + 8, Math.max(v.T + 8, v.T + v.H - ph - 8)) + 'px';
+      });
+      const stop = ev => {
+        if (pid === null || (ev && ev.pointerId !== pid)) return;
+        try { h.releasePointerCapture(pid); } catch (e) {}
+        pid = null; h.style.cursor = 'grab';
+        if (mv) { r.px = parseFloat(pop.style.left) || 0; r.py = parseFloat(pop.style.top) || 0; save(); }
+      };
+      h.addEventListener('pointerup', stop);
+      h.addEventListener('pointercancel', stop);
+    })();
 
     const syncModes = () => pop.querySelectorAll('[data-m]').forEach(b =>
       b.classList.toggle('on', b.getAttribute('data-m') === (r.mode || MODE_FIX)));
@@ -50075,7 +50144,7 @@ function sendNoteToBox(key) {
      بسته نمی‌شود — فقط جای خودِ پنجره تازه می‌شود تا زیرِ کیبورد نماند.
      چرخاندنِ گوشی (که پنجره‌اش باز نیست) مثل قبل کاغذ را داخلِ دید می‌آورد. */
   window.addEventListener('resize', () => {
-    if (pop) { positionPop(); return; }
+    if (pop) { keepPopVisible(); return; }   // پنجره باز است → فقط اگر زیرِ کیبورد رفت
     const r = all()[curKey];
     if (r && !r.hidden) place(r);
   });
