@@ -517,7 +517,7 @@ body.staff-view .qr-overlay{z-index:10020}
 .grid-more button{padding:7px 18px;border-radius:9px;border:1px solid var(--border);background:var(--card);
   color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.86rem;cursor:pointer}
 .grid-more button:active{transform:scale(.97)}
-.persons-grid{display:grid;grid-template-columns:repeat(auto-fill,175px);justify-content:start;gap:10px;padding-bottom:100px}
+.persons-grid{display:grid;grid-template-columns:repeat(auto-fill,208px);justify-content:start;gap:10px;padding-bottom:100px}
 /* بخش‌های دارای کارت حساب تمام‌عرض شوند تا کارت‌ها از راست و در کل صفحه بچینند */
 #sec-debt.section.visible,#sec-noinv.section.visible,#sec-waraq.section.visible,#sec-expenses.section.visible,#sec-debtrasid.section.visible,#sec-debtsum.section.visible,#sec-storage.section.visible,#sec-storage-diesel.section.visible,#sec-profit.section.visible,#sec-extraincome.section.visible{margin-left:calc(48% - 48vw / var(--secz,1));margin-right:calc(48% - 48vw / var(--secz,1));padding-left:18px;padding-right:18px;box-sizing:border-box}
 .person-card{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:14px 12px;cursor:pointer;transition:all .2s;text-align:center;position:relative}
@@ -525,6 +525,15 @@ body.staff-view .qr-overlay{z-index:10020}
 .person-card .pname{font-size:1.5rem;font-weight:700;margin-bottom:8px}
 .person-card .pdebt{font-size:1.1rem;color:var(--red);font-weight:700}
 .person-card .pdebt.clear{color:var(--green)}
+/* دکمهٔ «گردش بینِ حساب‌ها» روی کارت — فقط وقتی شخص حسابِ فرعی دارد ساخته
+   می‌شود. باریک و کم‌رنگ است تا خودِ عددهای کارت را تحت‌الشعاع نگیرد؛ وقتی
+   روی یکی از حساب‌ها قفل است پررنگ می‌شود تا معلوم باشد کلِ حساب را نمی‌بینید. */
+.person-card .pcard-acct{display:block;width:100%;margin:6px 0 0;padding:4px 6px;
+  background:transparent;border:1px dashed var(--border);border-radius:7px;color:var(--muted);
+  font-family:'Vazirmatn',sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.person-card .pcard-acct:hover{border-color:var(--accent);color:var(--accent)}
+.person-card .pcard-acct.on{border-style:solid;border-color:var(--purple);color:var(--purple)}
 .person-search-input{background:var(--dark);border:1.5px solid var(--border);border-radius:0;padding:9px 14px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.9rem;width:220px;transition:border-color .2s}
 .person-search-input:focus{outline:none;border-color:var(--accent)}
 .person-search-input::placeholder{color:var(--muted)}
@@ -14389,7 +14398,7 @@ html, body {
 
   /* گرید کارت‌های افراد — یک ستونه در موبایل */
   .persons-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+    grid-template-columns: repeat(auto-fill, minmax(166px, 1fr)) !important;
     width: 100% !important;
   }
 
@@ -14711,7 +14720,7 @@ html, body {
 /* دسکتاپ و تبلت بزرگ — نمایش اصلی بدون تغییر */
 @media (min-width: 769px) {
   .persons-grid {
-    grid-template-columns: repeat(auto-fill, 175px) !important;
+    grid-template-columns: repeat(auto-fill, 208px) !important;
   }
   #sec-debt.section.visible,
   #sec-noinv.section.visible,
@@ -29211,7 +29220,7 @@ function _paintMoreBar(id, grid, shown, total, onMore, allFn, word) {
 //   • پرداخت‌های پولی داخل جدول (ستون رسید) در برابر جمع بردگی
 // هر معیار: باقی‌مانده ≤ صفر → «تمام شده» (سرخ)؛ ≤ 20٪ رسید → «کم مانده» (زرد).
 // بدترین وضعیت برنده است و نوع آن (تیل/پول/هر دو) هم برگردانده می‌شود.
-function debtFuelStatus(p) {
+function debtFuelStatus(p, acctList) {
   const rank = { none: 0, ok: 1, low: 2, out: 3 };
   let worst = 'none', kinds = {};
   /* حالِ هر دفتر جداگانه هم نگه داشته می‌شود تا کارتِ قرض‌دار بتواند برای تیل و
@@ -29227,7 +29236,11 @@ function debtFuelStatus(p) {
     if (rank[st] > rank[worst]) { worst = st; kinds = {}; if (rank[st] >= 2) kinds[kind] = true; }
     else if (st === worst && rank[st] >= 2) kinds[kind] = true;
   };
-  [p, ...(p.subs || [])].forEach(a => {
+  /* acctList اختیاری است: کارت با آن فقط حالِ «همان حسابی» را می‌پرسد که روی
+     کارت باز است (اصلی یا یکی از فرعی‌ها). بدونِ آن، رفتار دقیقاً مثل قبل است
+     و همهٔ حساب‌ها با هم دیده می‌شوند — پس نشانِ دکمهٔ قرض‌داران و اطلاعیه‌ها
+     تکان نمی‌خورند. */
+  (acctList || [p, ...(p.subs || [])]).forEach(a => {
     if (!a) return;
     // لیترِ ردیف‌های دفترِ پول در «تیلِ مصرف‌شده» شمرده نمی‌شود (دو دفتر جدا)
     const t = _splitTotals((a.rows || []).concat((a.moneyRows || []).map(_noFuel)));
@@ -29251,7 +29264,7 @@ function debtFuelStatus(p) {
      خودکار هم دقیقاً همین را بگویند. */
   if (worst === 'out') {
     try {
-      const alb = _debtSumFigures(p).albaqi;
+      const alb = acctList ? _debtBalancesOf(acctList).fuel : _debtSumFigures(p).albaqi;
       if (!(alb > 0)) { worst = 'ok'; kinds = {}; }
     } catch (e) {}
   }
@@ -29259,7 +29272,7 @@ function debtFuelStatus(p) {
      نیست — تسویه است. وگرنه کارتِ کسی که درست به‌اندازهٔ رسیدش برده، بی‌جهت
      «اتمام» می‌خورد. */
   try {
-    const b = _debtBalances(p);
+    const b = acctList ? _debtBalancesOf(acctList) : _debtBalances(p);
     if (per.fuel === 'out' && !(b.fuel > 0)) per.fuel = 'ok';
     if (per.money === 'out' && !(b.money > 0)) per.money = 'ok';
   } catch (e) {}
@@ -29269,6 +29282,54 @@ function debtFuelStatus(p) {
    ⚠️ کارت پیش از این فقط یکی از این دو را نگاه می‌کرد (بسته به p.mode) و برای
    همین «✅ تسویه» دروغ می‌گفت: حسابی که تیلش صاف بود ولی پولِ زیادی بدهکار
    بود، تسویه نشان داده می‌شد. گزارشِ صاحب ریپو دقیقاً همین بود. */
+/* ══ دیدنِ حساب‌های فرعی روی خودِ کارت ═══════════════════════════════════════
+   خواستهٔ صاحب ریپو: «یک دکمه بساز که بزنم حساب فرعی را در همان کارت بیاورد؛
+   هر چند تا فرعی هست دانه‌دانه، و به حساب اصلی هم پس بیاید.»
+   پس کارت می‌تواند سه‌جور نگاه کند و دکمه بینشان می‌چرخد:
+     'all'  → همهٔ حساب‌ها با هم (همان چیزی که همیشه بوده — پیش‌فرض)
+     'main' → فقط حسابِ اصلیِ خودِ شخص
+     عدد    → فقط همان حسابِ فرعی
+   هیچ داده‌ای عوض نمی‌شود؛ فقط «کدام حساب‌ها جمع زده شوند» فرق می‌کند. */
+function _pcardAccts(p, view) {
+  const subs = ((p && p.subs) || []).filter(Boolean);
+  if (view === 'main') return [p];
+  if (typeof view === 'number' && subs[view]) return [subs[view]];
+  return [p].concat(subs);
+}
+function _pcardViewName(p, view) {
+  const subs = ((p && p.subs) || []).filter(Boolean);
+  if (view === 'main') return 'حساب اصلی';
+  if (typeof view === 'number' && subs[view])
+    return (String(subs[view].name || '').trim() || ('فرعی ' + n2fa(view + 1)));
+  return 'همه';
+}
+/* دورِ بعدیِ دکمه: همه → اصلی → فرعی ۱ → … → فرعی n → همه */
+function _pcardNextView(p, view) {
+  const n = ((p && p.subs) || []).filter(Boolean).length;
+  if (!n) return 'all';
+  if (view === 'main') return n ? 0 : 'all';
+  if (typeof view === 'number') return (view + 1 < n) ? (view + 1) : 'all';
+  return 'main';
+}
+function _rowsOfAccts(list) {
+  let rows = [];
+  (list || []).forEach(a => {
+    if (!a) return;
+    if (Array.isArray(a.rows)) rows = rows.concat(a.rows);
+    if (Array.isArray(a.moneyRows)) rows = rows.concat(a.moneyRows.map(_noFuel));
+  });
+  return rows;
+}
+/** همان _debtBalances ولی روی یک فهرستِ دلخواه از حساب‌ها */
+function _debtBalancesOf(list) {
+  const t = _splitTotals(_rowsOfAccts(list));
+  let rasidL = 0;
+  (list || []).forEach(a => {
+    if (a) rasidL += (parseFloat(a.rasidFuelP) || 0) + (parseFloat(a.rasidFuelD) || 0);
+  });
+  return { money: Math.round((t.all.albaqi || 0) * 100) / 100,
+           fuel:  Math.round(((t.all.fuel || 0) - rasidL) * 100) / 100, t: t };
+}
 function _debtBalances(p) {
   const t = _splitTotals(_allRows(p));
   let rasidL = 0;
@@ -29286,6 +29347,17 @@ function _debtBalances(p) {
    خواستهٔ صاحب ریپو: «اگر تیلش تمام شد بنویسد اتمام تیل و اگر کم مانده بود
    بنویسد در حال اتمام تیل؛ برای پول هم همین مدل.»
    جای «⛔ تیل و پولش تمام شده»ی قبلی را می‌گیرد که خواست برداشته شود. */
+/* کدام حساب روی هر کارت باز است — فقط نمایش، هیچ‌جا ذخیره نمی‌شود */
+const _pcardView = {};
+function pcardCycleAcct(type, id) {
+  const list = (type === 'debt') ? (DB.debtPersons || []) : (DB.noinvPersons || []);
+  const p = list.find(x => x && String(x.id) === String(id));
+  if (!p) return;
+  const k = type + ':' + id;
+  _pcardView[k] = _pcardNextView(p, _pcardView[k]);
+  if (_pcardView[k] === 'all') delete _pcardView[k];
+  try { renderPersons(type); } catch (e) {}
+}
 function _pcardStatusHtml(stInfo) {
   const line = (s, out, low) => s === 'out' ? '<div class="pstatus-label out">⛔ ' + out + '</div>'
                               : s === 'low' ? '<div class="pstatus-label low">⚠️ ' + low + '</div>' : '';
@@ -29415,19 +29487,23 @@ function renderPersons(type) {
        شد؛ عددها بدونِ هیچ کلمه‌ای می‌مانند؛ ⛽/🟤 الباقیِ تیل را نشان می‌دهند
        نه بردِ تیل؛ و جای «تمام شده/کم مانده»، «اتمام تیل / در حال اتمام تیل» و
        همان دو برای پول می‌آید. */
-    const rows = _allRows(p);
-    const t = _splitTotals(rows);
-    const bal = _debtBalances(p);
+    /* کدام حساب روی این کارت باز است؟ پیش‌فرض «همه» — دقیقاً مثل همیشه. */
+    const view = _pcardView[type + ':' + p.id];
+    const accts = _pcardAccts(p, view);
+    const scoped = (view !== undefined && view !== 'all');
+    const t = _splitTotals(_rowsOfAccts(accts));
+    const bal = _debtBalancesOf(accts);
     const moneyBal = bal.money;      // افغانی
     const fuelBal  = bal.fuel;       // لیتر
     const settled  = !(moneyBal > 0) && !(fuelBal > 0);
+    const subCount = ((p.subs || []).filter(Boolean)).length;
     // ⛽/🟤 همیشه «الباقیِ لیترِ» هر نوع‌اند (بردهٔ تیل − رسیدِ تیلِ همان نوع) —
     // پیش از این در حالتِ پول، بردِ پولی نشان داده می‌شد و گمراه‌کننده بود.
     let _rLP = 0, _rLD = 0;
-    [p, ...(p.subs || [])].forEach(a => { if (a) { _rLP += parseFloat(a.rasidFuelP) || 0; _rLD += parseFloat(a.rasidFuelD) || 0; } });
+    accts.forEach(a => { if (a) { _rLP += parseFloat(a.rasidFuelP) || 0; _rLD += parseFloat(a.rasidFuelD) || 0; } });
     const pBal = Math.round((t.petrol.fuel - _rLP) * 100) / 100;
     const dBal = Math.round((t.diesel.fuel - _rLD) * 100) / 100;
-    const stInfo = type === 'debt' ? debtFuelStatus(p) : { st: 'none', kinds: {} };
+    const stInfo = type === 'debt' ? debtFuelStatus(p, scoped ? accts : null) : { st: 'none', kinds: {} };
     const st = stInfo.st;
     const who = _debtKindLabel(stInfo.kinds);
     const card = document.createElement('div');
@@ -29441,6 +29517,8 @@ function renderPersons(type) {
         : ((moneyBal > 0 ? '<div class="pdebt">💵 ' + n2fa(moneyBal) + '</div>' : '')
          + (fuelBal  > 0 ? '<div class="pdebt">🛢️ ' + n2fa(fuelBal)  + '</div>' : ''))}
       ${_pcardStatusHtml(stInfo)}
+      ${subCount ? `<button class="pcard-acct${scoped ? ' on' : ''}" title="گردش بینِ حساب‌ها: همه ← اصلی ← فرعی‌ها ← همه"
+        onclick="event.stopPropagation();pcardCycleAcct('${type}','${p.id}')">🔁 ${escFa(_pcardViewName(p, view))}</button>` : ''}
       <!-- ⛽/🟤 و دکمهٔ کیوآر یک بلوک‌اند و همان بلوک کفِ کارت می‌چسبد، پس چه نامِ
            کارت یک‌خطی باشد چه دوخطی و چه خطِ «تمام شده» داشته باشد، در همهٔ
            کارت‌ها روی یک خط تراز می‌مانند (خواستهٔ صاحب ریپو) -->
@@ -48692,7 +48770,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.373';
+const APP_VERSION = '2.9.374';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
