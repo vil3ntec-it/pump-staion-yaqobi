@@ -46254,8 +46254,27 @@ async function _pumpOfferUpdate(ver, alreadyCached, loud) {
   if (!ver || ver === APP_VERSION || _pumpVerCmp(ver, APP_VERSION) <= 0) return;
   if (_swNewVersion === ver && document.getElementById('appUpdBar')) return;
   _swNewVersion = ver;
+  /* ══ چرا این‌جا اول کش را نگاه می‌کنیم ═══════════════════════════════════
+     گزارشِ صاحب ریپو: «با هر بار آپدیت، ده دقیقه می‌چرخد تا سایت باز شود.»
+     ریشه‌اش دو دانلودِ همزمانِ ۴ مگابایتی بود:
+       ۱) سرویس‌ورکر خودش index.htmlِ تازه را می‌گرفت و در کش می‌نشاند، بعد با
+          پیامِ app-version خبر می‌داد (یعنی alreadyCached=true).
+       ۲) همین‌جا _pumpWebPullFresh بی‌قید‌و‌شرط صدا زده می‌شد و همان ۴ مگابایت
+          را دوباره — این بار با no-store و ?ts= — از نو می‌گرفت.
+     یعنی روی خطِ کاربر ۸ مگابایت پشتِ سرِ هم می‌رفت، برای فایلی که همان لحظه
+     در کش نشسته بود. حالا اول از کش می‌پرسیم؛ اگر نسخهٔ تازه آن‌جاست، هیچ
+     دانلودی انجام نمی‌شود و فقط وقتی واقعاً در کش نباشد از شبکه گرفته می‌شود. */
   let ok = !!alreadyCached;
-  const pulled = await _pumpWebPullFresh();
+  let pulled = await _pumpFreshInCache();
+  /* اگر هنوز در کش نیست ولی سرویس‌ورکر سرِ کار است، خودش دارد همان فایل را
+     می‌گیرد — منتظرش می‌مانیم و دانلودِ دومِ موازی راه نمی‌اندازیم. فقط اگر
+     سرویس‌ورکری نباشد (یا شکست بخورد) خودمان از شبکه می‌گیریم. */
+  if (!pulled) {
+    let hasSw = false;
+    try { hasSw = !!(navigator.serviceWorker && navigator.serviceWorker.controller); } catch (e) {}
+    if (hasSw) pulled = await _pumpAwaitFreshInCache(180000);
+  }
+  if (!pulled) pulled = await _pumpWebPullFresh();
   if (pulled) { ok = true; ver = pulled; }
   if (!ok) { _swNewVersion = null; if (loud) showToast('نسخهٔ تازه گرفته نشد — اینترنت را بررسی کنید', '#e53e3e'); return; }
   // اگر تازه برنامه را باز کرده و مشغولِ کاری نیست، همان‌جا و خودکار سوار شود.
@@ -46317,6 +46336,57 @@ function _pumpWatchPending(ver) {
 // نسخهٔ تازهٔ index.html را می‌گیرد و در همهٔ کش‌های پوستهٔ برنامه می‌نشاند تا
 // رفرشِ بعدی «واقعاً» نسخهٔ تازه را بالا بیاورد. اگر چیزی درست نبود (فایل ناقص
 // یا نسخهٔ قدیمی‌تر)، هیچ دست نمی‌زند و null برمی‌گرداند.
+/* آیا نسخهٔ تازه همین حالا داخلِ کشِ پوسته هست؟ (بدونِ یک بایت شبکه)
+   سرویس‌ورکر پیش از فرستادنِ پیامِ app-version، فایلِ تازه را در کش نشانده؛ پس
+   در حالتِ عادی جواب همیشه «بله» است و دانلودِ دوم اصلاً لازم نمی‌شود.
+   خواندنِ ۴ مگابایت از کشِ محلی چند ده میلی‌ثانیه است — در برابرِ چند دقیقه
+   دانلودِ دوباره روی اینترنتِ کند، رایگان حساب می‌شود. */
+/* نسخه‌ای که سرویس‌ورکر در کش نشانده — از کلیدِ کوچکِ خودش، نه با خواندنِ
+   ۴ مگابایت. برای «منتظر ماندن» باید ارزان باشد، چون هر چند ثانیه پرسیده می‌شود. */
+async function _pumpCachedVerKey() {
+  if (!window.caches) return '';
+  try {
+    const keys = (await caches.keys()).filter(k => /^pump-yaqobi-shell/.test(k));
+    for (const k of keys) {
+      const c = await caches.open(k);
+      const r = await c.match('./__cached-version');
+      if (r) { const v = (await r.text()).trim(); if (v) return v; }
+    }
+  } catch (e) {}
+  return '';
+}
+/* سرویس‌ورکر همین حالا مشغولِ گرفتنِ نسخهٔ تازه است — به‌جای راه انداختنِ یک
+   دانلودِ موازیِ ۴ مگابایتی، منتظرِ همان می‌مانیم. صفحه در این مدت باز و قابلِ
+   استفاده است؛ فقط نوارِ «نسخهٔ تازه آماده است» دیرتر می‌آید. */
+async function _pumpAwaitFreshInCache(ms) {
+  const t0 = Date.now();
+  for (;;) {
+    const k = await _pumpCachedVerKey();
+    if (k && _pumpVerCmp(k, APP_VERSION) > 0) {
+      const hit = await _pumpFreshInCache();     // تاییدِ نهایی با خودِ فایل
+      if (hit) return hit;
+    }
+    if (Date.now() - t0 > ms) return null;
+    await new Promise(r => setTimeout(r, 1500));
+  }
+}
+async function _pumpFreshInCache() {
+  if (!window.caches) return null;
+  try {
+    const keys = (await caches.keys()).filter(k => /^pump-yaqobi-shell/.test(k));
+    const here = location.href.replace(/[^/]*$/, '');
+    for (const k of keys) {
+      const c = await caches.open(k);
+      const hit = (await c.match(here + 'index.html')) || (await c.match(here))
+               || (await c.match('./index.html')) || (await c.match('./'));
+      if (!hit) continue;
+      const t = await hit.text();
+      const m = t.match(/const\s+APP_VERSION\s*=\s*['"]([0-9.]+)['"]/);
+      if (t.length > 200000 && m && _pumpVerCmp(m[1], APP_VERSION) > 0) return m[1];
+    }
+  } catch (e) {}
+  return null;
+}
 async function _pumpWebPullFresh() {
   if (!window.caches) return null;
   for (const base of _pumpUpdateBases()) {
@@ -48411,7 +48481,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.364';
+const APP_VERSION = '2.9.365';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
