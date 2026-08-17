@@ -48529,7 +48529,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.366';
+const APP_VERSION = '2.9.367';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -49911,6 +49911,9 @@ function sendNoteToBox(key) {
     if (x == null || y == null) {          // جای پیش‌فرضِ اولِ کار
       x = (fix ? 0 : window.scrollX) + 14;
       y = (fix ? 0 : window.scrollY) + Math.max(90, H - 250);
+      /* همان‌جا ثبت می‌شود، وگرنه هر بار از نو حساب می‌شد و با هر تغییرِ قدِ
+         پنجره (مثلاً بازِ کیبورد) کاغذ جای دیگری می‌افتاد. */
+      r.x = x; r.y = y;
     }
     if (fix) { x = clamp(x, 2, Math.max(2, W - SZ - 2)); y = clamp(y, 2, Math.max(2, H - SZ - 2)); }
     else { x = Math.max(2, x); y = Math.max(2, y); }
@@ -49948,7 +49951,9 @@ function sendNoteToBox(key) {
     el.addEventListener('pointermove', ev => {
       if (!dragging || ev.pointerId !== pid) return;
       const dx = ev.clientX - sx, dy = ev.clientY - sy;
-      if (!moved && Math.abs(dx) + Math.abs(dy) < 5) return;   // لرزشِ انگشت ≠ کشیدن
+      /* ۸ پیکسل، نه ۵: انگشت همیشه کمی می‌لرزد و با آستانهٔ تنگ، «زدن» اشتباهی
+         «کشیدن» حساب می‌شد و پنجره باز نمی‌شد. */
+      if (!moved && Math.abs(dx) + Math.abs(dy) < 8) return;
       moved = true;
       el.style.left = (ox + dx) + 'px';
       el.style.top = (oy + dy) + 'px';
@@ -49979,6 +49984,23 @@ function sendNoteToBox(key) {
   }
 
   function closePop() { if (pop) { pop.remove(); pop = null; } }
+  /* جای پنجرهٔ نوشتن را (دوباره) حساب می‌کند — هم موقعِ باز شدن، هم وقتی کیبورد
+     بالا می‌آید. ملاکِ «صفحهٔ دیده‌شده» visualViewport است اگر باشد. */
+  function positionPop() {
+    if (!pop) return;
+    const vv = window.visualViewport;
+    const VW = (vv && vv.width) || window.innerWidth;
+    const VH = (vv && vv.height) || window.innerHeight;
+    const VT = (vv && vv.offsetTop) || 0;
+    const b = el && el.style.display !== 'none'
+      ? el.getBoundingClientRect() : { left: 20, top: VT + 60, bottom: VT + 122 };
+    const pw = pop.offsetWidth, ph = pop.offsetHeight;
+    pop.style.left = clamp(b.left, 8, Math.max(8, VW - pw - 8)) + 'px';
+    const below = b.bottom + 8, above = b.top - ph - 8;
+    pop.style.top = clamp((below + ph < VT + VH) ? below : above,
+                          VT + 8, Math.max(VT + 8, VT + VH - ph - 8)) + 'px';
+  }
+  try { if (window.visualViewport) window.visualViewport.addEventListener('resize', () => { if (pop) positionPop(); }); } catch (e) {}
   function openPop() {
     closePop();
     const r = rec(curKey, true); if (!r) return;
@@ -50008,17 +50030,11 @@ function sendNoteToBox(key) {
       : 'همه‌جا پیدا: با اسکرول هم گوشهٔ صفحه می‌ماند.'; };
     syncModes(); syncHint();
 
-    // جای پنجره: کنارِ خودِ کاغذ، ولی هرگز بیرونِ صفحه
-    const b = el ? el.getBoundingClientRect() : { left: 20, top: 80, bottom: 142 };
+    /* جای پنجره: کنارِ خودِ کاغذ، ولی هرگز بیرونِ صفحه و هرگز زیرِ کیبورد.
+       اگر مرورگر visualViewport بدهد (گوشی‌ها می‌دهند)، همان را ملاک می‌گیریم
+       چون بازِ کیبورد را هم حساب می‌کند. */
     pop.style.visibility = 'hidden';
-    requestAnimationFrame(() => {
-      const pw = pop.offsetWidth, ph = pop.offsetHeight;
-      pop.style.left = clamp(b.left, 8, Math.max(8, window.innerWidth - pw - 8)) + 'px';
-      pop.style.top = clamp((b.bottom + 8 + ph < window.innerHeight) ? (b.bottom + 8) : (b.top - ph - 8),
-                            8, Math.max(8, window.innerHeight - ph - 8)) + 'px';
-      pop.style.visibility = '';
-      try { ta.focus(); } catch (e) {}
-    });
+    requestAnimationFrame(() => { positionPop(); pop.style.visibility = ''; try { ta.focus(); } catch (e) {} });
 
     ta.addEventListener('input', () => { r.t = ta.value; paint(); save(); });
     pop.querySelector('.stk-pop-x').onclick = closePop;
@@ -50049,7 +50065,20 @@ function sendNoteToBox(key) {
     if (pop.contains(ev.target) || (el && el.contains(ev.target))) return;
     closePop();
   }, true);
-  window.addEventListener('resize', () => { const r = all()[curKey]; if (r && !r.hidden) { place(r); } closePop(); });
+  /* ⚠️ اینجا یک‌بار باگ داد و گزارشش این بود: «روش می‌زنم می‌پره».
+     ریشه: روی گوشی، زدنِ کاغذ پنجره را باز می‌کند و پنجره کیبورد را — و بازِ
+     کیبورد یک رویدادِ resize می‌فرستد. آن‌وقت این خط دو کارِ غلط می‌کرد:
+       ۱) place() کاغذ را دوباره داخلِ پنجرهٔ کوچک‌شده «حبس» می‌کرد و کاغذ
+          می‌پرید بالا؛
+       ۲) closePop() همان پنجره‌ای را که کاربر تازه باز کرده بود می‌بست.
+     حالا تا وقتی پنجرهٔ نوشتن باز است، کاغذ اصلاً تکان نمی‌خورد و پنجره هم
+     بسته نمی‌شود — فقط جای خودِ پنجره تازه می‌شود تا زیرِ کیبورد نماند.
+     چرخاندنِ گوشی (که پنجره‌اش باز نیست) مثل قبل کاغذ را داخلِ دید می‌آورد. */
+  window.addEventListener('resize', () => {
+    if (pop) { positionPop(); return; }
+    const r = all()[curKey];
+    if (r && !r.hidden) place(r);
+  });
 
   /* دکمهٔ «📌 یادداشتِ چسبان» — همان که از جای نوت‌ها فعالش می‌کند */
   window.pumpStickyToggle = function () {
