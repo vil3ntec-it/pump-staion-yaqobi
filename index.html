@@ -29214,11 +29214,16 @@ function _paintMoreBar(id, grid, shown, total, onMore, allFn, word) {
 function debtFuelStatus(p) {
   const rank = { none: 0, ok: 1, low: 2, out: 3 };
   let worst = 'none', kinds = {};
+  /* حالِ هر دفتر جداگانه هم نگه داشته می‌شود تا کارتِ قرض‌دار بتواند برای تیل و
+     پول دو خطِ جدا بنویسد. مقدارِ برگشتیِ قبلی (st و kinds) دست‌نخورده است، پس
+     نشانِ روی دکمهٔ قرض‌داران و اطلاعیهٔ خودکار مثل قبل کار می‌کنند. */
+  const per = { fuel: 'none', money: 'none' };
   const check = (deposit, used, kind) => {
     deposit = parseFloat(deposit) || 0;
     if (deposit <= 0) return;
     const rem = deposit - (parseFloat(used) || 0);
     const st = rem <= 0 ? 'out' : (rem <= deposit * 0.2 ? 'low' : 'ok');
+    if (rank[st] > rank[per[kind]]) per[kind] = st;
     if (rank[st] > rank[worst]) { worst = st; kinds = {}; if (rank[st] >= 2) kinds[kind] = true; }
     else if (st === worst && rank[st] >= 2) kinds[kind] = true;
   };
@@ -29250,9 +29255,43 @@ function debtFuelStatus(p) {
       if (!(alb > 0)) { worst = 'ok'; kinds = {}; }
     } catch (e) {}
   }
-  return { st: worst, kinds };
+  /* همان قاعده برای هر دفتر جدا: دفتری که بدهی‌اش صفر یا منفی است «تمام‌شده»
+     نیست — تسویه است. وگرنه کارتِ کسی که درست به‌اندازهٔ رسیدش برده، بی‌جهت
+     «اتمام» می‌خورد. */
+  try {
+    const b = _debtBalances(p);
+    if (per.fuel === 'out' && !(b.fuel > 0)) per.fuel = 'ok';
+    if (per.money === 'out' && !(b.money > 0)) per.money = 'ok';
+  } catch (e) {}
+  return { st: worst, kinds, fuelSt: per.fuel, moneySt: per.money };
+}
+/* الباقیِ هر دو دفترِ یک شخص — تیل به لیتر، پول به افغانی.
+   ⚠️ کارت پیش از این فقط یکی از این دو را نگاه می‌کرد (بسته به p.mode) و برای
+   همین «✅ تسویه» دروغ می‌گفت: حسابی که تیلش صاف بود ولی پولِ زیادی بدهکار
+   بود، تسویه نشان داده می‌شد. گزارشِ صاحب ریپو دقیقاً همین بود. */
+function _debtBalances(p) {
+  const t = _splitTotals(_allRows(p));
+  let rasidL = 0;
+  [p, ...((p && p.subs) || [])].forEach(a => {
+    if (a) rasidL += (parseFloat(a.rasidFuelP) || 0) + (parseFloat(a.rasidFuelD) || 0);
+  });
+  /* ⚠️ _splitTotals سه بسته می‌دهد: petrol / diesel / all. لیترِ کل در
+     t.all.fuel است، نه t.fuel — یک‌بار همین اشتباه شد و چون undefined − عدد
+     برابرِ NaN است و NaN > 0 هم false، همهٔ کارت‌ها «تسویه» نشان می‌دادند. */
+  return { money: Math.round((t.all.albaqi || 0) * 100) / 100,
+           fuel:  Math.round(((t.all.fuel || 0) - rasidL) * 100) / 100, t: t };
 }
 // برچسب فارسی نوع کمبود: تیل / پول / هر دو
+/* خطِ حالِ کارت — برای هر دفتر جدا.
+   خواستهٔ صاحب ریپو: «اگر تیلش تمام شد بنویسد اتمام تیل و اگر کم مانده بود
+   بنویسد در حال اتمام تیل؛ برای پول هم همین مدل.»
+   جای «⛔ تیل و پولش تمام شده»ی قبلی را می‌گیرد که خواست برداشته شود. */
+function _pcardStatusHtml(stInfo) {
+  const line = (s, out, low) => s === 'out' ? '<div class="pstatus-label out">⛔ ' + out + '</div>'
+                              : s === 'low' ? '<div class="pstatus-label low">⚠️ ' + low + '</div>' : '';
+  return line(stInfo && stInfo.fuelSt, 'اتمام تیل', 'در حال اتمام تیل')
+       + line(stInfo && stInfo.moneySt, 'اتمام پول', 'در حال اتمام پول');
+}
 function _debtKindLabel(kinds) {
   const f = kinds && kinds.fuel, m = kinds && kinds.money;
   return (f && m) ? 'تیل و پولش' : (m ? 'پولش' : 'تیلش');
@@ -29368,24 +29407,26 @@ function renderPersons(type) {
   const frag = document.createDocumentFragment();
   pageList.forEach(p => {
    try {
+    /* ══ کارتِ قرض‌دار — بازنویسیِ نمایش (خواستهٔ صاحب ریپو) ══════════════════
+       «آن که می‌گوید تسویه دروغ می‌گوید — فقط تیل را دیده، ولی از واحدِ پول
+        خیلی بیشتر از آنچه فکر کنی قرض‌دار است و این را نشان نمی‌دهد.»
+       پس هر دو دفتر با هم دیده می‌شوند: تسویه فقط وقتی که هر دو صاف باشند.
+       بقیهٔ خواسته‌ها: جملهٔ «الباقی … افغانی» و «تیل و پولش تمام شده» برداشته
+       شد؛ عددها بدونِ هیچ کلمه‌ای می‌مانند؛ ⛽/🟤 الباقیِ تیل را نشان می‌دهند
+       نه بردِ تیل؛ و جای «تمام شده/کم مانده»، «اتمام تیل / در حال اتمام تیل» و
+       همان دو برای پول می‌آید. */
     const rows = _allRows(p);
     const t = _splitTotals(rows);
-    // حساب «واحد تیل»: الباقی روی کارت به لیتر (برد تیل − رسید تیل) — نه مبلغِ لیتر×فی
-    const isMoneyP = p.mode === 'money';
-    const fuelFig = isMoneyP ? null : _debtSumFigures(p);
-    const albaqi  = isMoneyP ? t.all.albaqi : fuelFig.albaqi;
-    const albaqiUnit = isMoneyP ? ' افغانی' : ' لیتر';
-    // ⛽/🟤 روی کارت: در واحدِ پول همان الباقیِ پولیِ هر نوع تیل؛ در واحدِ تیل «الباقیِ
-    // لیتر»ِ هر نوع = بردهٔ تیل − رسیدِ تیلِ همان نوع (رسیدهای هدرِ پطرول/دیزل هم کم
-    // می‌شوند) تا رسیدی که کاربر می‌زند، روی کارتِ قرض‌دار هم دیده شود (خواستهٔ کاربر).
-    let pBal, dBal;
-    if (isMoneyP) { pBal = t.petrol.albaqi; dBal = t.diesel.albaqi; }
-    else {
-      let _rLP = 0, _rLD = 0;
-      [p, ...(p.subs || [])].forEach(a => { if (a) { _rLP += parseFloat(a.rasidFuelP) || 0; _rLD += parseFloat(a.rasidFuelD) || 0; } });
-      pBal = Math.round((t.petrol.fuel - _rLP) * 100) / 100;
-      dBal = Math.round((t.diesel.fuel - _rLD) * 100) / 100;
-    }
+    const bal = _debtBalances(p);
+    const moneyBal = bal.money;      // افغانی
+    const fuelBal  = bal.fuel;       // لیتر
+    const settled  = !(moneyBal > 0) && !(fuelBal > 0);
+    // ⛽/🟤 همیشه «الباقیِ لیترِ» هر نوع‌اند (بردهٔ تیل − رسیدِ تیلِ همان نوع) —
+    // پیش از این در حالتِ پول، بردِ پولی نشان داده می‌شد و گمراه‌کننده بود.
+    let _rLP = 0, _rLD = 0;
+    [p, ...(p.subs || [])].forEach(a => { if (a) { _rLP += parseFloat(a.rasidFuelP) || 0; _rLD += parseFloat(a.rasidFuelD) || 0; } });
+    const pBal = Math.round((t.petrol.fuel - _rLP) * 100) / 100;
+    const dBal = Math.round((t.diesel.fuel - _rLD) * 100) / 100;
     const stInfo = type === 'debt' ? debtFuelStatus(p) : { st: 'none', kinds: {} };
     const st = stInfo.st;
     const who = _debtKindLabel(stInfo.kinds);
@@ -29395,8 +29436,11 @@ function renderPersons(type) {
       <button class="person-del" onclick="event.stopPropagation();deletePerson('${type}','${p.id}')">✕</button>
       ${st==='low' ? `<span class="pstatus-dot low" title="${who} کم مانده"></span>` : st==='out' ? `<span class="pstatus-dot out" title="${who} تمام شده"></span>` : ''}
       ${_pcardNameHtml(p.name)}
-      <div class="pdebt ${albaqi<=0?'clear':''}">${albaqi<=0 ? '✅ تسویه' : 'الباقی: '+n2fa(Math.round(albaqi*100)/100)+albaqiUnit}</div>
-      ${st==='low' ? `<div class="pstatus-label low">⚠️ ${who} کم مانده</div>` : st==='out' ? `<div class="pstatus-label out">⛔ ${who} تمام شده</div>` : ''}
+      ${settled
+        ? '<div class="pdebt clear">✅ تسویه</div>'
+        : ((moneyBal > 0 ? '<div class="pdebt">💵 ' + n2fa(moneyBal) + '</div>' : '')
+         + (fuelBal  > 0 ? '<div class="pdebt">🛢️ ' + n2fa(fuelBal)  + '</div>' : ''))}
+      ${_pcardStatusHtml(stInfo)}
       <!-- ⛽/🟤 و دکمهٔ کیوآر یک بلوک‌اند و همان بلوک کفِ کارت می‌چسبد، پس چه نامِ
            کارت یک‌خطی باشد چه دوخطی و چه خطِ «تمام شده» داشته باشد، در همهٔ
            کارت‌ها روی یک خط تراز می‌مانند (خواستهٔ صاحب ریپو) -->
@@ -48648,7 +48692,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.372';
+const APP_VERSION = '2.9.373';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
