@@ -525,15 +525,47 @@ body.staff-view .qr-overlay{z-index:10020}
 .person-card .pname{font-size:1.5rem;font-weight:700;margin-bottom:8px}
 .person-card .pdebt{font-size:1.1rem;color:var(--red);font-weight:700}
 .person-card .pdebt.clear{color:var(--green)}
-/* دکمهٔ «گردش بینِ حساب‌ها» روی کارت — فقط وقتی شخص حسابِ فرعی دارد ساخته
-   می‌شود. باریک و کم‌رنگ است تا خودِ عددهای کارت را تحت‌الشعاع نگیرد؛ وقتی
-   روی یکی از حساب‌ها قفل است پررنگ می‌شود تا معلوم باشد کلِ حساب را نمی‌بینید. */
-.person-card .pcard-acct{display:block;width:100%;margin:6px 0 0;padding:4px 6px;
-  background:transparent;border:1px dashed var(--border);border-radius:7px;color:var(--muted);
-  font-family:'Vazirmatn',sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.person-card .pcard-acct:hover{border-color:var(--accent);color:var(--accent)}
-.person-card .pcard-acct.on{border-style:solid;border-color:var(--purple);color:var(--purple)}
+/* ══ گردش بینِ حساب‌های یک شخص — دو نوارِ نامرئی در دو لبهٔ کارت ═════════════
+   خواستهٔ صاحب ریپو: «دکمه نه — دو کادر بده در دو لبهٔ کارت که نامری باشند، و
+   همان سمتی که می‌روم یک نشانهٔ خیلی کم‌رنگ بیاید؛ یکی برود حسابِ فرعی و
+   برعکسش پس برگردد.»
+   ⚠️ سه چیزی که نباید به آن‌ها بخورد (صریح گفته شد): دکمهٔ ✕ِ حذف، دکمهٔ کیوآر،
+   و خودِ نوشته‌ها. پس:
+     • نوار فقط در «حاشیهٔ» کارت می‌نشیند و کارتِ دارای فرعی پدینگِ افقیِ
+       بیشتری می‌گیرد (.has-subs)، پس هیچ نوشته‌ای زیرِ نوار نمی‌رود.
+     • بالای نوار از ۴۴ پیکسل شروع می‌شود (✕ تا ۳۷ پیکسل است) و ۹۴ پیکسل
+       مانده به کف تمام می‌شود — یعنی بالاتر از بلوکِ ⛽/🟤 و دکمهٔ کیوآر و
+       شمارهٔ کارت (۶۳ پیکسل بلوکِ کف + ۳۰ پیکسل padding-bottomِ کارت).
+   ⚠️ پدینگ‌های .has-subs را برندارید — نوار می‌افتد روی نام. */
+.person-card.has-subs{ padding-left:24px !important; padding-right:24px !important; }
+.person-card .pcard-nav{
+  position:absolute; top:44px; bottom:94px; width:20px; padding:0; margin:0;
+  display:flex; align-items:center; justify-content:center;
+  background:transparent; border:none; border-radius:8px;
+  color:var(--txt); font-family:'Vazirmatn',sans-serif; font-size:1.05rem;
+  font-weight:900; line-height:1; cursor:pointer;
+  opacity:.08; transition:opacity .18s, background-color .18s;
+  -webkit-tap-highlight-color:transparent; z-index:4;
+}
+.person-card .pcard-nav.next{ left:1px; }
+.person-card .pcard-nav.prev{ right:1px; }
+.person-card:hover .pcard-nav{ opacity:.2; }
+.person-card .pcard-nav:hover,
+.person-card .pcard-nav:focus-visible{ opacity:.8; background:#8080801f; outline:none; }
+.person-card .pcard-nav:active{ opacity:1; background:#80808033; }
+/* روی حسابِ فرعی کمی بیشتر دیده شوند تا راهِ برگشت گم نشود */
+.person-card.pcard-scoped .pcard-nav{ opacity:.28; }
+.person-card.pcard-scoped .pcard-nav:hover{ opacity:.95; }
+/* روی لمس hover نداریم؛ کمی پیداتر تا اصلاً کشف بشوند */
+@media (hover:none){
+  .person-card .pcard-nav{ opacity:.14; width:18px; }
+  .person-card.pcard-scoped .pcard-nav{ opacity:.34; }
+}
+/* خطِ ریزِ زیرِ نام: می‌گوید همین حالا کدام حساب روی کارت باز است */
+.person-card .pcard-owner{
+  margin:-4px 0 5px; font-size:0.66rem; font-weight:800; color:var(--purple);
+  opacity:.9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
 .person-search-input{background:var(--dark);border:1.5px solid var(--border);border-radius:0;padding:9px 14px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.9rem;width:220px;transition:border-color .2s}
 .person-search-input:focus{outline:none;border-color:var(--accent)}
 .person-search-input::placeholder{color:var(--muted)}
@@ -2076,13 +2108,18 @@ body[class*="theme-"] #sec-settings::before{
   50%    { box-shadow:0 0 22px rgba(255,179,0,.7); }
 }
 
-/* base interactive button style */
-button:not(.del-btn):not(.modal-close):not(.person-del):not(.theme-toggle):not(.lock-btn):not(.nav-btn){
+/* base interactive button style
+   ⚠️ .pcard-nav هم مثل بقیهٔ نام‌های این فهرست بیرون است: این قاعده به هر دکمه
+   position:relative می‌دهد و چون شش‌تا :not دارد، وزنش از هر قاعدهٔ کلاسیِ
+   معمولی بیشتر است — نوارهای لبهٔ کارت را از absolute می‌انداخت و وسطِ کارت
+   می‌نشاند. اگر روزی دکمهٔ absolute دیگری ساختید، آن را هم همین‌جا بیرون بگذارید
+   یا با !important بنویسید. */
+button:not(.del-btn):not(.modal-close):not(.person-del):not(.pcard-nav):not(.theme-toggle):not(.lock-btn):not(.nav-btn){
   position:relative;
   overflow:hidden;
   transition: transform .15s ease, box-shadow .2s ease, background .2s, opacity .2s !important;
 }
-button:not(.del-btn):not(.modal-close):not(.person-del):not(.theme-toggle):not(.lock-btn):not(.nav-btn):active{
+button:not(.del-btn):not(.modal-close):not(.person-del):not(.pcard-nav):not(.theme-toggle):not(.lock-btn):not(.nav-btn):active{
   animation: btnPress .25s ease forwards;
 }
 
@@ -29303,13 +29340,22 @@ function _pcardViewName(p, view) {
     return (String(subs[view].name || '').trim() || ('فرعی ' + n2fa(view + 1)));
   return 'همه';
 }
-/* دورِ بعدیِ دکمه: همه → اصلی → فرعی ۱ → … → فرعی n → همه */
-function _pcardNextView(p, view) {
+/* ترتیبِ گردش: همه → اصلی → فرعی ۱ → … → فرعی n → (دوباره همه).
+   دو نوارِ لبهٔ کارت همین فهرست را جلو و عقب می‌روند، پس هر راهی که رفتی از
+   همان راه هم برمی‌گردی. */
+function _pcardViewList(p) {
   const n = ((p && p.subs) || []).filter(Boolean).length;
-  if (!n) return 'all';
-  if (view === 'main') return n ? 0 : 'all';
-  if (typeof view === 'number') return (view + 1 < n) ? (view + 1) : 'all';
-  return 'main';
+  if (!n) return ['all'];
+  const l = ['all', 'main'];
+  for (let i = 0; i < n; i++) l.push(i);
+  return l;
+}
+function _pcardStepView(p, view, dir) {
+  const l = _pcardViewList(p);
+  let cur = l.indexOf(view === undefined ? 'all' : view);
+  if (cur < 0) cur = 0;
+  const i = cur + (dir < 0 ? -1 : 1);
+  return l[((i % l.length) + l.length) % l.length];
 }
 function _rowsOfAccts(list) {
   let rows = [];
@@ -29349,13 +29395,15 @@ function _debtBalances(p) {
    جای «⛔ تیل و پولش تمام شده»ی قبلی را می‌گیرد که خواست برداشته شود. */
 /* کدام حساب روی هر کارت باز است — فقط نمایش، هیچ‌جا ذخیره نمی‌شود */
 const _pcardView = {};
-function pcardCycleAcct(type, id) {
+function pcardStepAcct(type, id, dir) {
   const list = (type === 'debt') ? (DB.debtPersons || []) : (DB.noinvPersons || []);
   const p = list.find(x => x && String(x.id) === String(id));
   if (!p) return;
   const k = type + ':' + id;
-  _pcardView[k] = _pcardNextView(p, _pcardView[k]);
-  if (_pcardView[k] === 'all') delete _pcardView[k];
+  const nv = _pcardStepView(p, _pcardView[k], dir);
+  /* «همه» حالتِ پیش‌فرض است و کلید نگه نمی‌دارد — تا نمایِ کارت‌ها با هیچ
+     ذخیره‌سازی‌ای قاطی نشود؛ این فقط یک نمایِ موقتِ حافظه است. */
+  if (nv === 'all') delete _pcardView[k]; else _pcardView[k] = nv;
   try { renderPersons(type); } catch (e) {}
 }
 function _pcardStatusHtml(stInfo) {
@@ -29487,8 +29535,17 @@ function renderPersons(type) {
        شد؛ عددها بدونِ هیچ کلمه‌ای می‌مانند؛ ⛽/🟤 الباقیِ تیل را نشان می‌دهند
        نه بردِ تیل؛ و جای «تمام شده/کم مانده»، «اتمام تیل / در حال اتمام تیل» و
        همان دو برای پول می‌آید. */
-    /* کدام حساب روی این کارت باز است؟ پیش‌فرض «همه» — دقیقاً مثل همیشه. */
-    const view = _pcardView[type + ':' + p.id];
+    /* کدام حساب روی این کارت باز است؟ پیش‌فرض «همه» — دقیقاً مثل همیشه.
+       ⚠️ اگر همان فرعی بعداً پاک شده باشد (یا شخص دیگر هیچ فرعی نداشته باشد)
+       نما به «همه» برمی‌گردد؛ وگرنه کارت روی حسابی قفل می‌ماند که دیگر نیست و
+       نوارِ برگشتی هم ساخته نمی‌شود. */
+    let view = _pcardView[type + ':' + p.id];
+    if (view !== undefined) {
+      const _subs = (p.subs || []).filter(Boolean);
+      if (!_subs.length || (typeof view === 'number' && !_subs[view])) {
+        view = undefined; delete _pcardView[type + ':' + p.id];
+      }
+    }
     const accts = _pcardAccts(p, view);
     const scoped = (view !== undefined && view !== 'all');
     const t = _splitTotals(_rowsOfAccts(accts));
@@ -29507,18 +29564,33 @@ function renderPersons(type) {
     const st = stInfo.st;
     const who = _debtKindLabel(stInfo.kinds);
     const card = document.createElement('div');
-    card.className = 'person-card' + (st==='low' ? ' fuel-low' : st==='out' ? ' fuel-out' : '');
+    card.className = 'person-card' + (st==='low' ? ' fuel-low' : st==='out' ? ' fuel-out' : '')
+      + (subCount ? ' has-subs' : '') + (scoped ? ' pcard-scoped' : '');
+    /* وقتی کارت روی یک حسابِ فرعی است، خودِ همان فرعی را نشان می‌دهد — نام و
+       عدد و وضعیتش، عینِ حسابِ اصلی (خواستهٔ صریحِ صاحب ریپو). یک خطِ ریز هم
+       زیرش می‌گوید این فرعیِ کیست، تا معلوم باشد کجاییم. */
+    const cardName = (typeof view === 'number') ? _pcardViewName(p, view) : p.name;
     card.innerHTML = `
       <button class="person-del" onclick="event.stopPropagation();deletePerson('${type}','${p.id}')">✕</button>
       ${st==='low' ? `<span class="pstatus-dot low" title="${who} کم مانده"></span>` : st==='out' ? `<span class="pstatus-dot out" title="${who} تمام شده"></span>` : ''}
-      ${_pcardNameHtml(p.name)}
+      ${subCount ? `
+      <button class="pcard-nav prev" tabindex="-1" aria-label="حسابِ قبلی"
+        title="حسابِ قبلی — ${escFa(_pcardViewName(p, _pcardStepView(p, view, -1)))}"
+        onclick="event.stopPropagation();pcardStepAcct('${type}','${p.id}',-1)"
+        ontouchstart="event.stopPropagation()"
+        oncontextmenu="event.preventDefault();event.stopPropagation();return false">›</button>
+      <button class="pcard-nav next" tabindex="-1" aria-label="حسابِ بعدی"
+        title="حسابِ بعدی — ${escFa(_pcardViewName(p, _pcardStepView(p, view, 1)))}"
+        onclick="event.stopPropagation();pcardStepAcct('${type}','${p.id}',1)"
+        ontouchstart="event.stopPropagation()"
+        oncontextmenu="event.preventDefault();event.stopPropagation();return false">‹</button>` : ''}
+      ${_pcardNameHtml(cardName)}
+      ${scoped ? `<div class="pcard-owner" title="${escFa(p.name)}">${view === 'main' ? '⌂ فقط حسابِ اصلی' : '↳ فرعیِ ' + escFa(p.name)}</div>` : ''}
       ${settled
         ? '<div class="pdebt clear">✅ تسویه</div>'
         : ((moneyBal > 0 ? '<div class="pdebt">💵 ' + n2fa(moneyBal) + '</div>' : '')
          + (fuelBal  > 0 ? '<div class="pdebt">🛢️ ' + n2fa(fuelBal)  + '</div>' : ''))}
       ${_pcardStatusHtml(stInfo)}
-      ${subCount ? `<button class="pcard-acct${scoped ? ' on' : ''}" title="گردش بینِ حساب‌ها: همه ← اصلی ← فرعی‌ها ← همه"
-        onclick="event.stopPropagation();pcardCycleAcct('${type}','${p.id}')">🔁 ${escFa(_pcardViewName(p, view))}</button>` : ''}
       <!-- ⛽/🟤 و دکمهٔ کیوآر یک بلوک‌اند و همان بلوک کفِ کارت می‌چسبد، پس چه نامِ
            کارت یک‌خطی باشد چه دوخطی و چه خطِ «تمام شده» داشته باشد، در همهٔ
            کارت‌ها روی یک خط تراز می‌مانند (خواستهٔ صاحب ریپو) -->
@@ -29531,7 +29603,14 @@ function renderPersons(type) {
       </div>
     `;
     // کلیک معمولی حساب را باز می‌کند؛ راست‌کلیک (یا نگه‌داشتن انگشت) منوی گزینه‌ها را
-    card.onclick = () => openPersonModal(type, p.id);
+    // اگر کارت روی یک فرعی باز است، خودِ همان فرعی هم داخلِ صفحه باز می‌شود
+    card.onclick = () => {
+      openPersonModal(type, p.id);
+      if (typeof view === 'number') {
+        const _s = ((p.subs || []).filter(Boolean))[view];
+        if (_s) { try { switchPersonSub(_s.id); } catch (e) {} }
+      }
+    };
     _acctAttachMenu(card, 'person', type, p.id);
     frag.appendChild(card);
    } catch (err) {
@@ -48770,7 +48849,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.374';
+const APP_VERSION = '2.9.375';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
