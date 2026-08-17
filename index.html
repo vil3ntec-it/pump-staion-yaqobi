@@ -1714,6 +1714,25 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
   font-size:0.82rem;font-weight:800;line-height:2;color:var(--label);background:var(--card)}
 .am-wi-v.ok{border-color:var(--green);color:var(--green)}
 .am-wi-v.bad{border-color:var(--red);color:var(--red)}
+/* تحلیل داخلِ همین کادرِ کشویی می‌نشیند، با یک خطِ جدا از نتیجه‌های بالا */
+.am-wi-an:not(:empty){margin-top:12px;padding-top:11px;border-top:1px dashed var(--border)}
+
+/* ── سربرگِ حساب: کارت‌های هم‌شکلِ «شرکت‌های تیل» ─────────────────────────────
+   .msumbox و .modal-summary از همان پنجرهٔ شرکت می‌آیند؛ این‌جا فقط دو چیزِ
+   تازه لازم است: خطِ زیرنویسِ کارت، و کارتِ «دو عددی» (فیصدیِ من + فیصدیِ بخار،
+   و سهمیهٔ من + به من می‌رسد) که خودِ صاحب ریپو خواست کنارِ هم در یک کارت باشند. */
+.am-sum{border-bottom:none;padding:9px 0 0}
+.am-sum .msumbox{border:1px solid var(--border)}
+.am-sum .msub{font-size:0.7rem;color:var(--muted);font-weight:700;margin-top:3px}
+.am-sum .msub b{font-weight:900}
+.am-sum .mpair{display:flex;flex-direction:column;gap:2px;margin-top:2px}
+.am-sum .mpair span{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.am-sum .mpair i{font-style:normal;font-size:0.7rem;color:var(--muted);font-weight:700;white-space:nowrap}
+.am-sum .mpair b{font-size:0.95rem;font-weight:900;white-space:nowrap}
+/* کارت‌های دو عددی نوشتهٔ بیشتری دارند، پس کمی پهن‌تر شروع می‌کنند تا برچسبشان
+   («به من می‌رسد») دو خط نشود */
+.am-sum{grid-template-columns:repeat(auto-fit,minmax(172px,1fr))}
+@media (min-width:1024px){ .am-sum .mpair b{font-size:1.1rem} .am-sum .mpair i{font-size:0.78rem} }
 
 .am-warn{background:var(--dark);border:1px solid var(--red);border-radius:9px;padding:9px 12px;
   font-size:0.76rem;color:var(--red);line-height:1.9;margin-bottom:12px;font-weight:700}
@@ -39795,7 +39814,12 @@ function _amAccBuild() {
         <button class="am-acc-btn red" onclick="deleteAmanatAccount(${ai})">🗑️ حذف حساب</button>
       </div>
     </div>
-    <div class="am-acc-chips" id="am-acc-chips"></div>
+    <!-- ══ سربرگِ حساب — کارت‌ها، مثل «شرکت‌های تیل» ═════════════════════════
+         خواستهٔ صاحب ریپو: «سربرگ را این‌مدلی می‌خواهم، مثل شرکت‌های تیل.»
+         پس همان .modal-summary/.msumbox‌ِ پنجرهٔ شرکت است، نه چیپ‌های ریزِ قبلی.
+         و همان‌طور که گفت، «فیصدیِ من و فیصدیِ بخار» یک کارت‌اند و «سهمیهٔ من و
+         به من می‌رسد» هم یک کارت. -->
+    <div class="modal-summary am-sum" id="am-acc-chips"></div>
     <div class="am-acc-pct">
       <span>فیصدیِ من (٪) — چقدر باید برایم بماند</span>
       <input type="number" step="0.1" value="${cmpEsc(a.myPct)}" placeholder="0" oninput="updateAmanatAccount(${ai},'myPct',this.value);_amAccPaint()">
@@ -39817,12 +39841,6 @@ function _amAccBuild() {
       <span id="am-wi-caret" style="color:var(--purple);font-weight:900">◂</span>
     </button>
     <div id="am-wi-body" style="display:none;margin-top:10px"></div>
-  </div>
-
-  <!-- تحلیل -->
-  <div class="am-md-sec" style="border-color:var(--green)">
-    <div class="am-md-t" style="color:var(--green)">🧮 تحلیل — چند فیصد بگیرم که ضرر نکنم؟</div>
-    <div id="am-acc-analysis"></div>
   </div>
 
   <!-- جدول -->
@@ -40008,6 +40026,10 @@ function _amWhatIfBuild() {
       </div>
     </div>
     <div id="am-wi-out" class="am-wi-out"></div>
+    <!-- تحلیل داخلِ همین کادر است، نه بیرون: «آن تحلیل را هم توی برآورد دستی
+         بگذار، این و آن با هم مربوط شوند، و تحلیل به سربرگ و جدول کاری
+         نداشته باشد.» پس فقط از همین عددهای بالا تغذیه می‌شود. -->
+    <div class="am-wi-an" id="am-wi-analysis"></div>
     <div style="display:flex;justify-content:flex-end;margin-top:9px">
       <button class="add-btn" style="border-color:var(--muted);color:var(--muted);background:transparent" onclick="amWhatIfReset()">↺ پاک کردن</button>
     </div>`;
@@ -40066,6 +40088,16 @@ function _amWhatIfPaint() {
       + '٪ نه سود می‌کنید نه ضرر. برای سود، بالاتر از <b>' + _amFmt(askPct, 1) + '٪</b> بگیرید.</div>';
   }
   out.innerHTML = html;
+
+  // تحلیل — از همین عددهای دستی، نه از جدول
+  const an = document.getElementById('am-wi-analysis');
+  if (an) an.innerHTML = _amAnalysisHtml({
+    liters: L, loss, lossPct, rest, myPct,
+    targetL: share, netIfMy: net, needPct, askPct,
+    askL: (askPct == null) ? null : (L * askPct / 100),
+    netIfAsk: (askPct == null) ? null : (L * askPct / 100 - loss),
+    handling: _amNum(s.handlingPct), rate, temp
+  }, s, fuel);
 }
 /* ⚠️ این‌جا یک‌بار جدولِ «کسرِ مالیاتیِ ایالت‌های آمریکا» گذاشته شده بود
    (کالیفرنیا ۰٫۵٪، ایندیانا ۱٫۶٪، آرکانزاس ۳٪ …). آن عددها قانونِ مالیات
@@ -40117,42 +40149,68 @@ function _amAccPaint() {
 
   const chips = document.getElementById('am-acc-chips');
   if (chips) {
+    /* کارت‌های سربرگ — هم‌شکلِ پنجرهٔ «شرکت‌های تیل». دو کارت عمداً دو عددی‌اند،
+       چون خودِ صاحب ریپو خواست: «فیصدیِ من و بخار توی یک سربرگ باشند، سهمیهٔ من
+       و به من می‌رسد هم توی یک سربرگ.» */
+    const box = (lbl, val, col, sub) =>
+        '<div class="msumbox"><div class="ml">' + lbl + '</div>'
+      + '<div class="mv" style="color:' + col + '">' + val + '</div>'
+      + (sub ? ('<div class="msub">' + sub + '</div>') : '') + '</div>';
+    const box2 = (lbl, l1, v1, c1, l2, v2, c2) =>
+        '<div class="msumbox"><div class="ml">' + lbl + '</div><div class="mpair">'
+      + '<span><i>' + l1 + '</i><b style="color:' + c1 + '">' + v1 + '</b></span>'
+      + '<span><i>' + l2 + '</i><b style="color:' + c2 + '">' + v2 + '</b></span>'
+      + '</div></div>';
     chips.innerHTML =
-        '<span class="am-acc-chip">رسید کل <b>' + _amFmt2(t.liters) + '</b> ل</span>'
-      + (t.taken ? ('<span class="am-acc-chip red">برده شده <b>' + _amFmt2(t.taken) + '</b> ل</span>') : '')
-      + '<span class="am-acc-chip acc">بخار <b>' + _amFmt2(t.loss) + '</b> ل · <b>' + _amFmt(t.lossPct, 3) + '٪</b></span>'
-      + (t.share ? ('<span class="am-acc-chip blue">سهمِ شما <b>' + _amFmt2(t.share) + '</b> ل</span>') : '')
-      + '<span class="am-acc-chip grn">باقی تیلِ مشتری <b>' + _amFmt2(t.rest) + '</b> ل</span>'
-      + (t.hasActual ? ('<span class="am-acc-chip blue">اندازه‌گیری واقعی <b>' + _amFmt2(t.actual) + '</b> ل · اختلاف <b>' + _amFmt2(t.realDiff) + '</b> ل</span>') : '')
-      + '<span class="am-acc-chip">' + n2fa(t.n) + ' ردیف · ' + n2fa(t.open) + ' باز</span>';
+        box('🛢️ رسید کل', _amFmt2(t.liters) + ' ل', 'var(--txt)',
+            t.taken ? ('برده شده: <b style="color:var(--red)">' + _amFmt2(t.taken) + '</b> ل') : '')
+      + box('💨 تیلِ بخار', _amFmt2(t.loss) + ' ل', 'var(--accent)',
+            t.lossMoney == null ? '' : (_amFmt(t.lossMoney, 0) + ' پول'))
+      + box2('٪ فیصدی‌ها',
+             'فیصدیِ من', t.myPct == null ? '—' : (_amFmt(t.myPct, 2) + '٪'), 'var(--blue)',
+             'فیصدیِ بخار', _amFmt(t.lossPct, 3) + '٪', 'var(--accent)')
+      + box2('سهمِ من (ل)',
+             'سهمیهٔ من', t.targetL == null ? '—' : _amFmt2(t.targetL), 'var(--blue)',
+             'به من می‌رسد', t.netIfMy == null ? '—' : _amFmt2(t.netIfMy),
+             (t.netIfMy != null && t.netIfMy < 0) ? 'var(--red)' : 'var(--green)')
+      + box('الباقیِ طرف', _amFmt2(t.rest) + ' ل', t.rest < -0.0001 ? 'var(--red)' : 'var(--green)', '')
+      + (t.hasActual
+          ? box2('📏 اندازه‌گیری',
+                 'موجودی واقعی', _amFmt2(t.actual), 'var(--purple)',
+                 'اختلاف', _amFmt2(t.realDiff),
+                 Math.abs(t.realDiff) < 0.005 ? 'var(--green)' : 'var(--red)')
+          : '')
+      + box('ردیف‌ها', n2fa(t.n), 'var(--muted)', n2fa(t.open) + ' باز');
   }
-  _amPaintAnalysis(a, t, s);
 }
 /* ══ تحلیلِ فیصدی ═════════════════════════════════════════════════════════
    گفتهٔ خودِ صاحب ریپو، کلمه‌به‌کلمه پیاده شده:
    «الان ۵۵۰ بخار می‌شود… بگو این‌همه کم بود، ۳۰۰۰ تا به تو نمی‌رسد، این فیصدی
     را ببر به ۳٫۶ فیصد که ۳۰۰۰ لیتر تو بماند.»
    ══════════════════════════════════════════════════════════════════════ */
-function _amPaintAnalysis(a, t, s) {
-  const box = document.getElementById('am-acc-analysis');
-  if (!box) return;
+/* ⚠️ این تحلیل دیگر به سربرگ و جدول وصل نیست — خواستهٔ صریحِ صاحب ریپو:
+   «آن تحلیل را هم توی برآورد دستی بگذار، این و آن با هم مربوط شوند، و تحلیل
+    به سربرگ و جدول کاری نداشته باشد.»
+   پس به‌جای خواندنِ جمعِ حساب، یک «بستهٔ عدد» می‌گیرد و همان را می‌نویسد؛
+   تنها صداکننده‌اش _amWhatIfPaint است که عددها را از کادرهای دستی می‌سازد. */
+function _amAnalysisHtml(t, s, fuel) {
   const L = v => _amFmt2(v) + ' لیتر';
   const money = v => (t.rate == null) ? '' : (' <i style="color:var(--muted);font-style:normal">(' + _amFmt(Math.abs(v) * t.rate, 0) + ' پول)</i>');
+  const head = '<div class="am-md-t" style="color:var(--green);margin-bottom:8px">🧮 تحلیل — چند فیصد بگیرم که ضرر نکنم؟</div>';
 
-  if (!t.liters) { box.innerHTML = '<div class="am-an-note">اول در جدولِ زیر «رسید تیل» را بنویسید تا تحلیل شود.</div>'; return; }
+  if (!t.liters) return '';
   if (t.myPct == null) {
-    box.innerHTML = '<div class="am-rows">'
-      + '<span class="l">تیلی که گرفته‌اید</span><span class="v">' + L(t.liters) + '</span>'
+    return head + '<div class="am-rows">'
+      + '<span class="l">تیلی که می‌گیرید</span><span class="v">' + L(t.liters) + '</span>'
       + '<span class="l">بخارِ تخمینی</span><span class="v" style="color:var(--accent)">' + L(t.loss) + ' · ' + _amFmt(t.lossPct, 3) + '٪</span>'
-      + '</div><div class="am-an-v">بالا در «فیصدیِ من» بنویسید چقدر می‌خواهید <b>برایتان بماند</b> — مثلاً ۳٪. '
+      + '</div><div class="am-an-v">بالا در «٪ فیصدیِ من» بنویسید چقدر می‌خواهید <b>برایتان بماند</b> — مثلاً ۳٪. '
       + 'بعد خودش می‌گوید برای رسیدن به همان، چند فیصد باید بگیرید.</div>';
-    return;
   }
   const enough = (t.netIfMy >= -0.0001);
   const rows = [
-    ['تیلی که گرفته‌اید', L(t.liters)],
+    ['تیلی که می‌گیرید', L(t.liters)],
     ['<b>بخارِ تخمینی</b>', '<b style="color:var(--accent)">' + L(t.loss) + ' · ' + _amFmt(t.lossPct, 3) + '٪' + money(t.loss) + '</b>'],
-    ['باقی تیلِ مشتری (رسید − برده − سهمِ شما)', '<b style="color:var(--green)">' + L(t.rest) + '</b>'],
+    ['الباقیِ طرف (تیل − سهمِ شما)', '<b style="color:var(--green)">' + L(t.rest) + '</b>'],
     ['sep'],
     ['فیصدیِ شما (هدف) ' + _amFmt(t.myPct, 2) + '٪', '<b>' + L(t.targetL) + money(t.targetL) + '</b>'],
     ['اگر همین ' + _amFmt(t.myPct, 2) + '٪ را بگیرید، بعد از بخار می‌ماند',
@@ -40174,12 +40232,13 @@ function _amPaintAnalysis(a, t, s) {
       + '</b> است و فقط <b>' + L(t.netIfMy) + '</b> می‌ماند' + money(t.netIfMy) + '.<br>'
       + '↩️ فیصدی را ببرید به <b>' + _amFmt(t.askPct, 1) + '٪</b> تا کلِ <b>' + L(t.targetL) + '</b> برایتان بماند.</div>';
 
-  box.innerHTML = '<div class="am-rows">'
+  const th = _amFmt(Math.abs(amThermal(100, t.temp, fuel, s).pct), 2);
+  return head + '<div class="am-rows">'
     + rows.map(r => r[0] === 'sep' ? '<span class="sep"></span>'
                  : ('<span class="l">' + r[0] + '</span><span class="v">' + r[1] + '</span>')).join('')
     + '</div>' + verdict
-    + '<div class="am-an-note">🌡️ جدا از بخار: با گرمای <b>' + _amFmt(s.defTemp) + '°C</b> خودِ عددِ لیتر حدود <b>'
-    + _amFmt(Math.abs(amThermal(100, null, amFuelKey(a), s).pct), 2) + '٪</b> با دمای مرجع (۱۵٫۶°C) فرق می‌کند. '
+    + '<div class="am-an-note">🌡️ جدا از بخار: با گرمای <b>' + _amFmt(t.temp) + '°C</b> خودِ عددِ لیتر حدود <b>'
+    + th + '٪</b> با دمای مرجع (۱۵٫۶°C) فرق می‌کند. '
     + 'این <b>بخار نیست</b> و با سرد شدنِ هوا برمی‌گردد — رویش فیصدی نگیرید.</div>';
 }
 /* ⚠️ دکمهٔ «فیصدیِ پیشنهادی را بگذار» برداشته شد و برنگردد.
@@ -48338,7 +48397,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.360';
+const APP_VERSION = '2.9.361';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
