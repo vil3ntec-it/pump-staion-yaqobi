@@ -533,33 +533,43 @@ body.staff-view .qr-overlay{z-index:10020}
    و خودِ نوشته‌ها. پس:
      • نوار فقط در «حاشیهٔ» کارت می‌نشیند و کارتِ دارای فرعی پدینگِ افقیِ
        بیشتری می‌گیرد (.has-subs)، پس هیچ نوشته‌ای زیرِ نوار نمی‌رود.
-     • بالای نوار از ۴۴ پیکسل شروع می‌شود (✕ تا ۳۷ پیکسل است) و ۹۴ پیکسل
-       مانده به کف تمام می‌شود — یعنی بالاتر از بلوکِ ⛽/🟤 و دکمهٔ کیوآر و
-       شمارهٔ کارت (۶۳ پیکسل بلوکِ کف + ۳۰ پیکسل padding-bottomِ کارت).
+     • بالای نوار از ۴۴ پیکسل شروع می‌شود (✕ و نقطهٔ وضعیت تا ۳۷ پیکسل‌اند) و
+       ۲۸ پیکسل مانده به کف تمام می‌شود (شمارهٔ کارت). بلوکِ ⛽/🟤 و دکمهٔ کیوآر
+       داخلِ پدینگِ کارت‌اند، پس نوار از پهلو اصلاً به آن‌ها نمی‌رسد.
    ⚠️ پدینگ‌های .has-subs را برندارید — نوار می‌افتد روی نام. */
-.person-card.has-subs{ padding-left:24px !important; padding-right:24px !important; }
+.person-card.has-subs{ padding-left:32px !important; padding-right:32px !important; }
 .person-card .pcard-nav{
-  position:absolute; top:44px; bottom:94px; width:20px; padding:0; margin:0;
+  position:absolute; top:44px; bottom:28px; width:28px; padding:0; margin:0;
   display:flex; align-items:center; justify-content:center;
-  background:transparent; border:none; border-radius:8px;
-  color:var(--txt); font-family:'Vazirmatn',sans-serif; font-size:1.05rem;
-  font-weight:900; line-height:1; cursor:pointer;
-  opacity:.08; transition:opacity .18s, background-color .18s;
+  background:transparent; border:none; border-radius:9px;
+  color:var(--txt); cursor:pointer;
+  opacity:.1; transition:opacity .18s, background-color .18s;
   -webkit-tap-highlight-color:transparent; z-index:4;
 }
-.person-card .pcard-nav.next{ left:1px; }
-.person-card .pcard-nav.prev{ right:1px; }
-.person-card:hover .pcard-nav{ opacity:.2; }
+/* ⚠️ نشانه با خطِ CSS کشیده می‌شود، نه با کاراکترِ «‹»/«›» ─────────────────
+   گزارشِ صاحب ریپو: «سمت‌شان را خراب کشیدی، برعکس است.» درست بود: آن دو
+   کاراکتر جزوِ حروفِ «آینه‌شونده»ی یونیکدند و داخلِ متنِ راست‌چینِ برنامه
+   خودبه‌خود برعکس کشیده می‌شدند. مربعِ چرخیده هیچ‌وقت آینه نمی‌شود. */
+.person-card .pcard-nav::before{
+  content:''; width:9px; height:9px;
+  border-top:2.5px solid currentColor; border-right:2.5px solid currentColor;
+  border-radius:1.5px;
+}
+.person-card .pcard-nav.next{ left:2px; }              /* لبهٔ چپ → جلو */
+.person-card .pcard-nav.next::before{ transform:rotate(-135deg); margin-left:4px; }
+.person-card .pcard-nav.prev{ right:2px; }             /* لبهٔ راست → پس */
+.person-card .pcard-nav.prev::before{ transform:rotate(45deg); margin-right:4px; }
+.person-card:hover .pcard-nav{ opacity:.22; }
 .person-card .pcard-nav:hover,
 .person-card .pcard-nav:focus-visible{ opacity:.8; background:#8080801f; outline:none; }
 .person-card .pcard-nav:active{ opacity:1; background:#80808033; }
 /* روی حسابِ فرعی کمی بیشتر دیده شوند تا راهِ برگشت گم نشود */
-.person-card.pcard-scoped .pcard-nav{ opacity:.28; }
+.person-card.pcard-scoped .pcard-nav{ opacity:.3; }
 .person-card.pcard-scoped .pcard-nav:hover{ opacity:.95; }
 /* روی لمس hover نداریم؛ کمی پیداتر تا اصلاً کشف بشوند */
 @media (hover:none){
-  .person-card .pcard-nav{ opacity:.14; width:18px; }
-  .person-card.pcard-scoped .pcard-nav{ opacity:.34; }
+  .person-card .pcard-nav{ opacity:.16; }
+  .person-card.pcard-scoped .pcard-nav{ opacity:.36; }
 }
 /* خطِ ریزِ زیرِ نام: می‌گوید همین حالا کدام حساب روی کارت باز است */
 .person-card .pcard-owner{
@@ -29320,33 +29330,36 @@ function debtFuelStatus(p, acctList) {
    همین «✅ تسویه» دروغ می‌گفت: حسابی که تیلش صاف بود ولی پولِ زیادی بدهکار
    بود، تسویه نشان داده می‌شد. گزارشِ صاحب ریپو دقیقاً همین بود. */
 /* ══ دیدنِ حساب‌های فرعی روی خودِ کارت ═══════════════════════════════════════
-   خواستهٔ صاحب ریپو: «یک دکمه بساز که بزنم حساب فرعی را در همان کارت بیاورد؛
-   هر چند تا فرعی هست دانه‌دانه، و به حساب اصلی هم پس بیاید.»
-   پس کارت می‌تواند سه‌جور نگاه کند و دکمه بینشان می‌چرخد:
-     'all'  → همهٔ حساب‌ها با هم (همان چیزی که همیشه بوده — پیش‌فرض)
-     'main' → فقط حسابِ اصلیِ خودِ شخص
-     عدد    → فقط همان حسابِ فرعی
+   خواستهٔ صاحب ریپو: «حساب فرعی را در همان کارت بیاور؛ هر چند تا فرعی هست
+   دانه‌دانه، و به حساب اصلی هم پس بیاید.»
+   پس کارت دو جور نگاه می‌کند و نوارهای لبه بینشان می‌چرخند:
+     'all' → خودِ حساب با همهٔ فرعی‌هایش (همان چیزی که همیشه بوده — پیش‌فرض)
+     عدد   → فقط همان حسابِ فرعی
    هیچ داده‌ای عوض نمی‌شود؛ فقط «کدام حساب‌ها جمع زده شوند» فرق می‌کند. */
 function _pcardAccts(p, view) {
   const subs = ((p && p.subs) || []).filter(Boolean);
-  if (view === 'main') return [p];
   if (typeof view === 'number' && subs[view]) return [subs[view]];
   return [p].concat(subs);
 }
 function _pcardViewName(p, view) {
   const subs = ((p && p.subs) || []).filter(Boolean);
-  if (view === 'main') return 'حساب اصلی';
   if (typeof view === 'number' && subs[view])
     return (String(subs[view].name || '').trim() || ('فرعی ' + n2fa(view + 1)));
-  return 'همه';
+  return (String((p && p.name) || '').trim() || 'حساب');
 }
-/* ترتیبِ گردش: همه → اصلی → فرعی ۱ → … → فرعی n → (دوباره همه).
+/* ترتیبِ گردش: خودِ حساب → فرعی ۱ → … → فرعی n → (دوباره خودِ حساب).
    دو نوارِ لبهٔ کارت همین فهرست را جلو و عقب می‌روند، پس هر راهی که رفتی از
-   همان راه هم برمی‌گردی. */
+   همان راه هم برمی‌گردی.
+   ⚠️ اینجا یک حالتِ «فقط حسابِ اصلی» هم بود و برداشته شد. گزارشِ صاحب ریپو:
+   «دو فرعی و یک اصلی دارم ولی چهار تا می‌شود؛ یک اصلیِ دیگر می‌آید که با
+   حسابِ اصلی هیچ شباهتی ندارد و هر دو یک اسم دارند.» درست هم می‌گفت: نمای
+   پیش‌فرضِ کارت از اول جمعِ همهٔ حساب‌ها بوده و کاربر همان را «حسابِ اصلی»
+   می‌شناسد، پس نمای «فقط اصلیِ بدونِ فرعی‌ها» یک حسابِ چهارمِ خیالی می‌ساخت
+   با همان نام ولی عددِ دیگر. حالا تعدادِ نماها دقیقاً برابرِ تعدادِ حساب‌هاست.
+   ⚠️ این حالت را برنگردانید. */
 function _pcardViewList(p) {
   const n = ((p && p.subs) || []).filter(Boolean).length;
-  if (!n) return ['all'];
-  const l = ['all', 'main'];
+  const l = ['all'];
   for (let i = 0; i < n; i++) l.push(i);
   return l;
 }
@@ -29542,12 +29555,12 @@ function renderPersons(type) {
     let view = _pcardView[type + ':' + p.id];
     if (view !== undefined) {
       const _subs = (p.subs || []).filter(Boolean);
-      if (!_subs.length || (typeof view === 'number' && !_subs[view])) {
+      if (typeof view !== 'number' || !_subs[view]) {
         view = undefined; delete _pcardView[type + ':' + p.id];
       }
     }
     const accts = _pcardAccts(p, view);
-    const scoped = (view !== undefined && view !== 'all');
+    const scoped = (typeof view === 'number');
     const t = _splitTotals(_rowsOfAccts(accts));
     const bal = _debtBalancesOf(accts);
     const moneyBal = bal.money;      // افغانی
@@ -29578,14 +29591,14 @@ function renderPersons(type) {
         title="حسابِ قبلی — ${escFa(_pcardViewName(p, _pcardStepView(p, view, -1)))}"
         onclick="event.stopPropagation();pcardStepAcct('${type}','${p.id}',-1)"
         ontouchstart="event.stopPropagation()"
-        oncontextmenu="event.preventDefault();event.stopPropagation();return false">›</button>
+        oncontextmenu="event.preventDefault();event.stopPropagation();return false"></button>
       <button class="pcard-nav next" tabindex="-1" aria-label="حسابِ بعدی"
         title="حسابِ بعدی — ${escFa(_pcardViewName(p, _pcardStepView(p, view, 1)))}"
         onclick="event.stopPropagation();pcardStepAcct('${type}','${p.id}',1)"
         ontouchstart="event.stopPropagation()"
-        oncontextmenu="event.preventDefault();event.stopPropagation();return false">‹</button>` : ''}
+        oncontextmenu="event.preventDefault();event.stopPropagation();return false"></button>` : ''}
       ${_pcardNameHtml(cardName)}
-      ${scoped ? `<div class="pcard-owner" title="${escFa(p.name)}">${view === 'main' ? '⌂ فقط حسابِ اصلی' : '↳ فرعیِ ' + escFa(p.name)}</div>` : ''}
+      ${scoped ? `<div class="pcard-owner" title="${escFa(p.name)}">↳ فرعیِ ${escFa(p.name)}</div>` : ''}
       ${settled
         ? '<div class="pdebt clear">✅ تسویه</div>'
         : ((moneyBal > 0 ? '<div class="pdebt">💵 ' + n2fa(moneyBal) + '</div>' : '')
@@ -48849,7 +48862,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.375';
+const APP_VERSION = '2.9.376';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
