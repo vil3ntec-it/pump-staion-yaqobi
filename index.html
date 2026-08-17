@@ -29269,19 +29269,20 @@ function _paintMoreBar(id, grid, shown, total, onMore, allFn, word) {
 // بدترین وضعیت برنده است و نوع آن (تیل/پول/هر دو) هم برگردانده می‌شود.
 function debtFuelStatus(p, acctList) {
   const rank = { none: 0, ok: 1, low: 2, out: 3 };
-  let worst = 'none', kinds = {};
-  /* حالِ هر دفتر جداگانه هم نگه داشته می‌شود تا کارتِ قرض‌دار بتواند برای تیل و
-     پول دو خطِ جدا بنویسد. مقدارِ برگشتیِ قبلی (st و kinds) دست‌نخورده است، پس
-     نشانِ روی دکمهٔ قرض‌داران و اطلاعیهٔ خودکار مثل قبل کار می‌کنند. */
-  const per = { fuel: 'none', money: 'none' };
+  /* حالِ هر دفتر جداگانه نگه داشته می‌شود تا کارتِ قرض‌دار برای تیل و پول دو
+     خطِ جدا بنویسد — و پطرول و دیزل هم جدا، چون دو دفترِ بی‌ربط‌اند. */
+  const per = { petrol: 'none', diesel: 'none', money: 'none' };
   const check = (deposit, used, kind) => {
     deposit = parseFloat(deposit) || 0;
-    if (deposit <= 0) return;
-    const rem = deposit - (parseFloat(used) || 0);
+    used = parseFloat(used) || 0;
+    /* ⚠️ «رسیدِ صفر» یعنی هیچ اعتباری نگذاشته — اگر با این حال تیل/پول برده،
+       همان لحظه «تمام‌شده» است. این خط پیش از این `if (deposit <= 0) return`
+       بود و دقیقاً همین حالت را نادیده می‌گرفت؛ گزارشِ صاحب ریپو: «یارو
+       این‌قدر تیلِ اضافه از دیزل برده ولی کادرش هیچ رنگی نگرفته.» */
+    if (deposit <= 0 && used <= 0) return;
+    const rem = deposit - used;
     const st = rem <= 0 ? 'out' : (rem <= deposit * 0.2 ? 'low' : 'ok');
     if (rank[st] > rank[per[kind]]) per[kind] = st;
-    if (rank[st] > rank[worst]) { worst = st; kinds = {}; if (rank[st] >= 2) kinds[kind] = true; }
-    else if (st === worst && rank[st] >= 2) kinds[kind] = true;
   };
   /* acctList اختیاری است: کارت با آن فقط حالِ «همان حسابی» را می‌پرسد که روی
      کارت باز است (اصلی یا یکی از فرعی‌ها). بدونِ آن، رفتار دقیقاً مثل قبل است
@@ -29293,8 +29294,8 @@ function debtFuelStatus(p, acctList) {
     const t = _splitTotals((a.rows || []).concat((a.moneyRows || []).map(_noFuel)));
     const effP = 1 - (_acctPct(a, 'petrol') / 100);   // فیصدیِ هر تیل، جدا کم می‌شود
     const effD = 1 - (_acctPct(a, 'diesel') / 100);
-    check((parseFloat(a.rasidFuelP)  || 0) * effP, t.petrol.fuel,    'fuel');
-    check((parseFloat(a.rasidFuelD)  || 0) * effD, t.diesel.fuel,    'fuel');
+    check((parseFloat(a.rasidFuelP)  || 0) * effP, t.petrol.fuel,    'petrol');
+    check((parseFloat(a.rasidFuelD)  || 0) * effD, t.diesel.fuel,    'diesel');
     // رسیدهای داخل جدول (پول آورده‌شده) هم جزو رسید پول حساب می‌شود — مثل الباقی حساب
     check((parseFloat(a.rasidMoneyP) || 0) * effP + t.petrol.rasid, t.petrol.bardagi, 'money');
     check((parseFloat(a.rasidMoneyD) || 0) * effD + t.diesel.rasid, t.diesel.bardagi, 'money');
@@ -29304,26 +29305,30 @@ function debtFuelStatus(p, acctList) {
      معمولی می‌شد». علتش این بود که معیارِ بالا فقط می‌پرسید «از آنچه داده چیزی
      مانده؟»؛ کسی که دقیقاً به‌اندازهٔ رسیدش برده، الباقی‌اش صفر است ولی
      مانده‌اش هم صفر است، پس سرخ می‌شد.
-     هشدارِ سرخ برای کسی است که *بدهکار* است. اگر الباقیِ کارت صفر یا منفی
-     باشد (تسویه/پیش‌پرداخت)، حالت به «عادی» برمی‌گردد. «کم مانده»ی زرد دست
+     هشدارِ سرخ برای کسی است که *بدهکار* است. اگر الباقیِ همان دفتر صفر یا منفی
+     باشد (تسویه/پیش‌پرداخت)، حالتش به «عادی» برمی‌گردد. «کم مانده»ی زرد دست
      نمی‌خورد: آن هشدارِ «اعتبارش رو به تمام شدن است» هنوز به‌جاست.
-     این‌جا نشسته (نه در ساختِ کارت) تا نشانِ روی دکمهٔ «قرض‌داران» و اطلاعیهٔ
-     خودکار هم دقیقاً همین را بگویند. */
-  if (worst === 'out') {
-    try {
-      const alb = acctList ? _debtBalancesOf(acctList).fuel : _debtSumFigures(p).albaqi;
-      if (!(alb > 0)) { worst = 'ok'; kinds = {}; }
-    } catch (e) {}
-  }
-  /* همان قاعده برای هر دفتر جدا: دفتری که بدهی‌اش صفر یا منفی است «تمام‌شده»
-     نیست — تسویه است. وگرنه کارتِ کسی که درست به‌اندازهٔ رسیدش برده، بی‌جهت
-     «اتمام» می‌خورد. */
+     ⚠️ هر سه دفتر با الباقیِ *خودشان* سنجیده می‌شوند، نه با جمعشان: پیش از این
+     الباقیِ تیل جمعِ پطرول و دیزل بود و بدهیِ دیزل با پیش‌پرداختِ پطرول پاک
+     می‌شد. */
   try {
     const b = acctList ? _debtBalancesOf(acctList) : _debtBalances(p);
-    if (per.fuel === 'out' && !(b.fuel > 0)) per.fuel = 'ok';
-    if (per.money === 'out' && !(b.money > 0)) per.money = 'ok';
+    if (per.petrol === 'out' && !(b.petrol > 0)) per.petrol = 'ok';
+    if (per.diesel === 'out' && !(b.diesel > 0)) per.diesel = 'ok';
+    if (per.money  === 'out' && !(b.money  > 0)) per.money  = 'ok';
   } catch (e) {}
-  return { st: worst, kinds, fuelSt: per.fuel, moneySt: per.money };
+  /* بدترینِ سه دفتر رنگِ کارت و نشانِ دکمهٔ «قرض‌داران» را می‌سازد — پس فرقی
+     نمی‌کند کدام‌یک (پول، پطرول یا دیزل) کم مانده یا تمام شده یا اضافه رفته:
+     کارت واکنش نشان می‌دهد (خواستهٔ صریحِ صاحب ریپو). */
+  const fuelSt = rank[per.petrol] >= rank[per.diesel] ? per.petrol : per.diesel;
+  const worst  = rank[fuelSt] >= rank[per.money] ? fuelSt : per.money;
+  const kinds = {};
+  if (rank[worst] >= 2) {
+    if (fuelSt === worst) kinds.fuel = true;
+    if (per.money === worst) kinds.money = true;
+  }
+  return { st: worst, kinds, fuelSt: fuelSt, moneySt: per.money,
+           petrolSt: per.petrol, dieselSt: per.diesel };
 }
 /* الباقیِ هر دو دفترِ یک شخص — تیل به لیتر، پول به افغانی.
    ⚠️ کارت پیش از این فقط یکی از این دو را نگاه می‌کرد (بسته به p.mode) و برای
@@ -29379,27 +29384,38 @@ function _rowsOfAccts(list) {
   });
   return rows;
 }
-/** همان _debtBalances ولی روی یک فهرستِ دلخواه از حساب‌ها */
-function _debtBalancesOf(list) {
-  const t = _splitTotals(_rowsOfAccts(list));
-  let rasidL = 0;
+/* ⚠️ پطرول و دیزل هرگز با هم جمع/تفریق نشوند ───────────────────────────────
+   گزارشِ صاحب ریپو: «پطرول و دیزل از هم جدا هستند و تو داری این‌ها را از هم
+   منفی می‌کنی و یک الباقیِ اشتباه تحویل می‌دهی؛ این‌ها ربطی به هم ندارند.»
+   درست هم می‌گفت: کارت یک خطِ «🛢️ الباقیِ تیل» داشت که جمعِ لیترِ پطرول و
+   دیزل بود، و چون یکی مثبت و دیگری منفی می‌شد همدیگر را می‌خوردند — مثلاً
+   ۳۶۸ لیتر بدهیِ دیزل با ۲۲۶ لیتر پیش‌پرداختِ پطرول «۱۴۲» نشان داده می‌شد.
+   حالا هر دو جدا برمی‌گردند و هیچ‌جا با هم جمع نمی‌شوند.
+   ⚠️ fuel (جمعِ هر دو) فقط برای سازگاریِ کدِ قدیمی مانده — برای تصمیم‌گیری
+   از petrol و diesel استفاده کنید، نه از آن. */
+function _debtBalancesFrom(t, list) {
+  let rP = 0, rD = 0;
   (list || []).forEach(a => {
-    if (a) rasidL += (parseFloat(a.rasidFuelP) || 0) + (parseFloat(a.rasidFuelD) || 0);
+    if (!a) return;
+    rP += parseFloat(a.rasidFuelP) || 0;
+    rD += parseFloat(a.rasidFuelD) || 0;
   });
-  return { money: Math.round((t.all.albaqi || 0) * 100) / 100,
-           fuel:  Math.round(((t.all.fuel || 0) - rasidL) * 100) / 100, t: t };
-}
-function _debtBalances(p) {
-  const t = _splitTotals(_allRows(p));
-  let rasidL = 0;
-  [p, ...((p && p.subs) || [])].forEach(a => {
-    if (a) rasidL += (parseFloat(a.rasidFuelP) || 0) + (parseFloat(a.rasidFuelD) || 0);
-  });
+  const r2 = v => Math.round(v * 100) / 100;
   /* ⚠️ _splitTotals سه بسته می‌دهد: petrol / diesel / all. لیترِ کل در
      t.all.fuel است، نه t.fuel — یک‌بار همین اشتباه شد و چون undefined − عدد
      برابرِ NaN است و NaN > 0 هم false، همهٔ کارت‌ها «تسویه» نشان می‌دادند. */
-  return { money: Math.round((t.all.albaqi || 0) * 100) / 100,
-           fuel:  Math.round(((t.all.fuel || 0) - rasidL) * 100) / 100, t: t };
+  return { money:  r2(t.all.albaqi || 0),
+           petrol: r2((t.petrol.fuel || 0) - rP),
+           diesel: r2((t.diesel.fuel || 0) - rD),
+           fuel:   r2((t.all.fuel || 0) - rP - rD),
+           t: t };
+}
+/** همان _debtBalances ولی روی یک فهرستِ دلخواه از حساب‌ها */
+function _debtBalancesOf(list) {
+  return _debtBalancesFrom(_splitTotals(_rowsOfAccts(list)), list);
+}
+function _debtBalances(p) {
+  return _debtBalancesFrom(_splitTotals(_allRows(p)), [p, ...((p && p.subs) || [])]);
 }
 // برچسب فارسی نوع کمبود: تیل / پول / هر دو
 /* خطِ حالِ کارت — برای هر دفتر جدا.
@@ -29420,10 +29436,13 @@ function pcardStepAcct(type, id, dir) {
   try { renderPersons(type); } catch (e) {}
 }
 function _pcardStatusHtml(stInfo) {
-  const line = (s, out, low) => s === 'out' ? '<div class="pstatus-label out">⛔ ' + out + '</div>'
-                              : s === 'low' ? '<div class="pstatus-label low">⚠️ ' + low + '</div>' : '';
-  return line(stInfo && stInfo.fuelSt, 'اتمام تیل', 'در حال اتمام تیل')
-       + line(stInfo && stInfo.moneySt, 'اتمام پول', 'در حال اتمام پول');
+  const line = (s, out, low) => s === 'out' ? '<span class="pstatus-label out">⛔ ' + out + '</span>'
+                              : s === 'low' ? '<span class="pstatus-label low">⚠️ ' + low + '</span>' : '';
+  /* دو خط کنارِ هم با کمی فاصله، نه زیرِ هم (خواستهٔ صاحب ریپو). اگر جا نشد
+     خودشان می‌شکنند و زیرِ هم می‌روند، پس کارتِ باریک هم خراب نمی‌شود. */
+  const h = line(stInfo && stInfo.fuelSt, 'اتمام تیل', 'در حال اتمام تیل')
+          + line(stInfo && stInfo.moneySt, 'اتمام پول', 'در حال اتمام پول');
+  return h ? '<div class="pstatus-row">' + h + '</div>' : '';
 }
 function _debtKindLabel(kinds) {
   const f = kinds && kinds.fuel, m = kinds && kinds.money;
@@ -29561,18 +29580,16 @@ function renderPersons(type) {
     }
     const accts = _pcardAccts(p, view);
     const scoped = (typeof view === 'number');
-    const t = _splitTotals(_rowsOfAccts(accts));
     const bal = _debtBalancesOf(accts);
     const moneyBal = bal.money;      // افغانی
-    const fuelBal  = bal.fuel;       // لیتر
-    const settled  = !(moneyBal > 0) && !(fuelBal > 0);
+    /* ⛽/🟤 «الباقیِ لیترِ» هر نوع‌اند (بردهٔ تیل − رسیدِ تیلِ همان نوع)، هر کدام
+       جدا. ⚠️ خطِ «🛢️ الباقیِ تیل» که جمعِ این دو بود برداشته شد: پطرول و دیزل
+       دو دفترِ بی‌ربط‌اند و جمعشان بدهیِ یکی را با پیش‌پرداختِ دیگری پاک
+       می‌کرد (گزارشِ صاحب ریپو). همان دو عددِ زیر همه‌چیز را می‌گویند. */
+    const pBal = bal.petrol;
+    const dBal = bal.diesel;
+    const settled = !(moneyBal > 0) && !(pBal > 0) && !(dBal > 0);
     const subCount = ((p.subs || []).filter(Boolean)).length;
-    // ⛽/🟤 همیشه «الباقیِ لیترِ» هر نوع‌اند (بردهٔ تیل − رسیدِ تیلِ همان نوع) —
-    // پیش از این در حالتِ پول، بردِ پولی نشان داده می‌شد و گمراه‌کننده بود.
-    let _rLP = 0, _rLD = 0;
-    accts.forEach(a => { if (a) { _rLP += parseFloat(a.rasidFuelP) || 0; _rLD += parseFloat(a.rasidFuelD) || 0; } });
-    const pBal = Math.round((t.petrol.fuel - _rLP) * 100) / 100;
-    const dBal = Math.round((t.diesel.fuel - _rLD) * 100) / 100;
     const stInfo = type === 'debt' ? debtFuelStatus(p, scoped ? accts : null) : { st: 'none', kinds: {} };
     const st = stInfo.st;
     const who = _debtKindLabel(stInfo.kinds);
@@ -29601,8 +29618,7 @@ function renderPersons(type) {
       ${scoped ? `<div class="pcard-owner" title="${escFa(p.name)}">↳ فرعیِ ${escFa(p.name)}</div>` : ''}
       ${settled
         ? '<div class="pdebt clear">✅ تسویه</div>'
-        : ((moneyBal > 0 ? '<div class="pdebt">💵 ' + n2fa(moneyBal) + '</div>' : '')
-         + (fuelBal  > 0 ? '<div class="pdebt">🛢️ ' + n2fa(fuelBal)  + '</div>' : ''))}
+        : (moneyBal > 0 ? '<div class="pdebt">💵 ' + n2fa(moneyBal) + '</div>' : '')}
       ${_pcardStatusHtml(stInfo)}
       <!-- ⛽/🟤 و دکمهٔ کیوآر یک بلوک‌اند و همان بلوک کفِ کارت می‌چسبد، پس چه نامِ
            کارت یک‌خطی باشد چه دوخطی و چه خطِ «تمام شده» داشته باشد، در همهٔ
@@ -48862,7 +48878,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.376';
+const APP_VERSION = '2.9.377';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -54741,6 +54757,12 @@ body .person-card.fuel-out.fuel-out{
 }
 .pstatus-dot.low{background:#f6c000;box-shadow:0 0 9px #f6c000}
 .pstatus-dot.out{background:#e53e3e;box-shadow:0 0 9px #e53e3e}
+/* «اتمام تیل» و «اتمام پول» رو‌به‌روی هم با کمی فاصله — نه زیرِ هم */
+.pstatus-row{
+  display:flex; flex-wrap:wrap; justify-content:center; align-items:center;
+  gap:2px 12px; margin-top:6px; width:100%;
+}
+.pstatus-row .pstatus-label{ margin-top:0; white-space:nowrap; }
 .pstatus-label{margin-top:6px;font-size:0.8rem;font-weight:800}
 .pstatus-label.low{color:#e6b800}
 .pstatus-label.out{color:#e53e3e}
