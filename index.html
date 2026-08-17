@@ -18294,8 +18294,8 @@ body.boot-viewer #bootViewerSplash{
               <button onclick="transferBase('d','n')" title="انتقال به شروع شب" style="padding:6px 10px;background:var(--night);color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:0.75rem;white-space:nowrap">→ به شب</button>
             </div>
           </div>
-          <div class="field-row"><label class="field-label">فی لیتر (افغانی)</label><input class="field-input" id="d-price" type="number" placeholder="0" oninput="calcShift('d');liveWaraqSync('d')"></div>
           <div class="field-row"><label class="field-label">جمله قرض (افغانی)</label><input class="field-input" id="d-debt" type="number" placeholder="0" oninput="calcShift('d');liveWaraqSync('d')"></div>
+          <div class="field-row"><label class="field-label">فی لیتر (افغانی)</label><input class="field-input" id="d-price" type="number" placeholder="0" oninput="calcShift('d');liveWaraqSync('d')"></div>
           <div class="field-row">
             <label class="field-label">فایده فی لیتر (افغانی) — اتومات از مخزن</label>
             <input class="field-input" id="d-profit-per" type="number" placeholder="اتومات پر می‌شه" oninput="onProfitPerManual('d')">
@@ -18336,8 +18336,8 @@ body.boot-viewer #bootViewerSplash{
               <button onclick="transferBase('n','d')" title="انتقال به شروع روز" style="padding:6px 10px;background:var(--day);color:#000;border:none;border-radius:7px;cursor:pointer;font-size:0.75rem;white-space:nowrap">→ به روز</button>
             </div>
           </div>
-          <div class="field-row"><label class="field-label">فی لیتر (افغانی)</label><input class="field-input" id="n-price" type="number" placeholder="0" oninput="calcShift('n');liveWaraqSync('n')"></div>
           <div class="field-row"><label class="field-label">جمله قرض (افغانی)</label><input class="field-input" id="n-debt" type="number" placeholder="0" oninput="calcShift('n');liveWaraqSync('n')"></div>
+          <div class="field-row"><label class="field-label">فی لیتر (افغانی)</label><input class="field-input" id="n-price" type="number" placeholder="0" oninput="calcShift('n');liveWaraqSync('n')"></div>
           <div class="field-row">
             <label class="field-label">فایده فی لیتر (افغانی) — اتومات از مخزن</label>
             <input class="field-input" id="n-profit-per" type="number" placeholder="اتومات پر می‌شه" oninput="onProfitPerManual('n')">
@@ -18427,8 +18427,8 @@ body.boot-viewer #bootViewerSplash{
             <button onclick="transferBase('dd','dn')" title="انتقال به شروع شب دیزل" style="padding:6px 10px;background:#553c9a;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:0.75rem;white-space:nowrap">→ به شب</button>
           </div>
         </div>
-        <div class="field-row"><label class="field-label">فی لیتر (افغانی)</label><input class="field-input" id="dd-price" type="number" placeholder="0" oninput="calcShift('dd');liveWaraqSync('dd')"></div>
         <div class="field-row"><label class="field-label">جمله قرض (افغانی)</label><input class="field-input" id="dd-debt" type="number" placeholder="0" oninput="calcShift('dd');liveWaraqSync('dd')"></div>
+        <div class="field-row"><label class="field-label">فی لیتر (افغانی)</label><input class="field-input" id="dd-price" type="number" placeholder="0" oninput="calcShift('dd');liveWaraqSync('dd')"></div>
         <div class="field-row">
           <label class="field-label">فایده فی لیتر (افغانی) — اتومات از مخزن</label>
           <input class="field-input" id="dd-profit-per" type="number" placeholder="اتومات پر می‌شه" oninput="onProfitPerManual('dd')">
@@ -18468,8 +18468,8 @@ body.boot-viewer #bootViewerSplash{
             <button onclick="transferBase('dn','dd')" title="انتقال به شروع روز دیزل" style="padding:6px 10px;background:#b7791f;color:#000;border:none;border-radius:7px;cursor:pointer;font-size:0.75rem;white-space:nowrap">→ به روز</button>
           </div>
         </div>
-        <div class="field-row"><label class="field-label">فی لیتر (افغانی)</label><input class="field-input" id="dn-price" type="number" placeholder="0" oninput="calcShift('dn');liveWaraqSync('dn')"></div>
         <div class="field-row"><label class="field-label">جمله قرض (افغانی)</label><input class="field-input" id="dn-debt" type="number" placeholder="0" oninput="calcShift('dn');liveWaraqSync('dn')"></div>
+        <div class="field-row"><label class="field-label">فی لیتر (افغانی)</label><input class="field-input" id="dn-price" type="number" placeholder="0" oninput="calcShift('dn');liveWaraqSync('dn')"></div>
         <div class="field-row">
           <label class="field-label">فایده فی لیتر (افغانی) — اتومات از مخزن</label>
           <input class="field-input" id="dn-profit-per" type="number" placeholder="اتومات پر می‌شه" oninput="onProfitPerManual('dn')">
@@ -25516,6 +25516,13 @@ function _pumpDocOverlay(doc, title) {
       'body{margin:0!important;padding:0!important;max-width:none!important;background:#f3f2f1!important}',
       '#xlSrc{position:absolute!important;left:-200000px!important;top:0!important;visibility:hidden!important;',
         'padding:0!important;margin:0!important;background:#fff}',
+      /* ⚠️ دکمه‌های «چاپ / ذخیره PDF» و راهنمای Ctrl+P مالِ صفحه‌اند، نه مالِ
+         ورق. سندها آن‌ها را با @media print پنهان می‌کردند، ولی این کارگاه
+         خودش «حالتِ چاپ» است و رسانه‌اش screen می‌ماند — پس دکمه هم اندازه
+         می‌گرفت و هم روی ورقِ پیش‌نمایش دیده می‌شد. این‌جا پیش از اندازه‌گیری
+         حذفشان می‌کنیم تا پیش‌نمایش مو‌به‌مو همان چیزی باشد که چاپ می‌شود.
+         (خودِ سندِ اصلی دست‌نخورده می‌ماند — fullDoc از srcBody می‌سازد.) */
+      '.no-print,.hdr-print,.save-wrap,.save-hint{display:none!important}',
       /* ⚠️ لنگرِ زوم باید «راست» باشد، نه «وسط»: سندِ گزارش rtl است، پس کادرِ
          پهن‌ترِ زوم از لبهٔ راست به چپ باز می‌شود و با لنگرِ وسط، ورق روی
          گوشی از سمتِ چپ بیرون می‌زد و بریده می‌شد. */
@@ -27762,44 +27769,51 @@ function pdfDieselShifts() {
   const css = `
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{font-family:'Vazirmatn',sans-serif;background:#111827;color:#f3f4f6;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.page{padding:18px;display:flex;flex-direction:column;gap:12px;
+/* ⚠️ این سند سفید است، نه سیاه. گلایهٔ صاحب ریپو: «گزارش‌های پی‌دی‌افِ پارچه‌ها
+   سیاه‌اند و ورق‌شان بی‌استفاده مانده.» ورقِ سیاه هم تونر را می‌خورد و هم چون
+   کارتِ هر روز بلند بود، فقط یکی در هر ورق جا می‌شد و بقیهٔ ورق سفید می‌ماند.
+   حالا مثل بقیهٔ پی‌دی‌اف‌های برنامه (مخزن، گزارشِ تکی) بومِ سفید و متنِ تیره
+   است و کارت‌ها فشرده‌اند تا چند تا در یک ورق بنشیند. */
+body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{padding:10px 12px;display:flex;flex-direction:column;gap:7px;border:1px solid #d6dae1;border-radius:10px;
+  background:#fff;margin-bottom:8px;
   /* گزارشِ هر روز یک «کارت» است. کارت از وسط دو نیم نمی‌شود، ولی ورقِ تازه هم
      باز نمی‌کند: تا ورق جا دارد، کارتِ بعدی همان‌جا می‌نشیند (پیش از این هر
      کارت page-break-after داشت و نصفِ هر ورق سفید می‌ماند). */
   page-break-inside:avoid;break-inside:avoid}
-.page-hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #d97706;padding-bottom:10px}
-.page-title{font-size:1.05rem;font-weight:900;color:#d97706}
-.page-meta{font-size:0.72rem;color:#9ca3af;margin-top:3px}
-.page-num{font-size:0.72rem;color:#6b7280;background:#1f2937;border:1px solid #374151;border-radius:7px;padding:4px 12px}
-.halves{display:flex;gap:12px}
-.half{flex:1;background:#1f2937;border-radius:12px;overflow:hidden;border:1.5px solid #374151;display:flex;flex-direction:column}
-.shift-hdr{padding:10px 16px;font-weight:900;font-size:0.92rem}
-.shift-hdr.day{background:linear-gradient(135deg,#744210,#b7791f);color:#000}
-.shift-hdr.night{background:linear-gradient(135deg,#3d2000,#744210);color:#fff}
-.shift-body{padding:12px 16px;display:flex;flex-direction:column;gap:0;flex:1}
-.row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #2d3748}
+.page-hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #c05621;padding-bottom:7px}
+.page-title{font-size:0.95rem;font-weight:900;color:#c05621}
+.page-meta{font-size:0.68rem;color:#5b6472;margin-top:2px}
+.page-num{font-size:0.68rem;color:#5b6472;background:#f7fafc;border:1px solid #d6dae1;border-radius:7px;padding:3px 10px}
+.halves{display:flex;gap:8px}
+.half{flex:1;background:#fff;border-radius:9px;overflow:hidden;border:1px solid #d6dae1;display:flex;flex-direction:column}
+.shift-hdr{padding:6px 12px;font-weight:900;font-size:0.8rem;color:#fff}
+.shift-hdr.day{background:#b7791f}
+.shift-hdr.night{background:#744210}
+.shift-body{padding:7px 12px;display:flex;flex-direction:column;gap:0;flex:1}
+.row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #eceff3}
 .row.last{border-bottom:none}
-.lbl{font-size:0.76rem;color:#9ca3af}
-.val{font-size:0.8rem;font-weight:700;color:#f3f4f6}
-.val.blue{color:#60a5fa}.val.amber{color:#fbbf24}.val.green{color:#34d399}.val.red{color:#f87171}
-.val.fw9{font-size:0.9rem;font-weight:900}
-.no-data{color:#6b7280;font-size:0.8rem;font-style:italic;padding:14px 0}
-.note{font-size:0.7rem;color:#6b7280;font-style:italic;margin-top:6px;padding-top:4px;border-top:1px dashed #374151}
-.summary{background:#1f2937;border:1.5px solid #374151;border-radius:10px;padding:12px 18px;display:flex;gap:24px;justify-content:center;flex-wrap:wrap}
-.sum-item{display:flex;align-items:center;gap:6px}
-.sum-lbl{font-size:0.78rem;color:#9ca3af}
-.sum-val{font-size:1rem;font-weight:900}
-.sum-val.blue{color:#60a5fa}.sum-val.amber{color:#fbbf24}.sum-val.green{color:#34d399}
+.lbl{font-size:0.7rem;color:#5b6472}
+.val{font-size:0.74rem;font-weight:700;color:#1a202c}
+.val.blue{color:#1a4f9c}.val.amber{color:#9c6208}.val.green{color:#0f7a4d}.val.red{color:#b3261e}
+.val.fw9{font-size:0.8rem;font-weight:900}
+.no-data{color:#7b8494;font-size:0.74rem;font-style:italic;padding:10px 0}
+.note{font-size:0.66rem;color:#5b6472;font-style:italic;margin-top:5px;padding-top:4px;border-top:1px dashed #d6dae1}
+.summary{background:#f7fafc;border:1px solid #d6dae1;border-radius:9px;padding:7px 14px;display:flex;gap:18px;justify-content:center;flex-wrap:wrap}
+.sum-item{display:flex;align-items:center;gap:5px}
+.sum-lbl{font-size:0.72rem;color:#5b6472}
+.sum-val{font-size:0.88rem;font-weight:900}
+.sum-val.blue{color:#1a4f9c}.sum-val.amber{color:#9c6208}.sum-val.green{color:#0f7a4d}
 @media print{
-  body{background:#111827}
-  .page{padding:8px;gap:6px}
+  body{background:#fff}
+  /* روی کاغذ همه‌چیز یک درجه جمع‌تر می‌شود تا کارتِ بعدی هم در همان ورق جا شود */
+  .page{padding:7px 9px;gap:5px;margin-bottom:6px}
   @page{margin:0.6cm;size:A4 portrait}
   .halves{gap:6px}
-  .row{padding:3px 0}
-  .shift-hdr{padding:6px 10px}
-  .shift-body{padding:6px 10px}
-  .summary{padding:6px 12px;gap:14px}
+  .row{padding:2px 0}
+  .shift-hdr{padding:5px 9px}
+  .shift-body{padding:5px 9px}
+  .summary{padding:5px 10px;gap:12px}
 }`;
 
   const totalM = shifts.reduce((a,s)=>a+(s.money||0),0);
@@ -27826,33 +27840,35 @@ body{font-family:'Vazirmatn',sans-serif;background:#111827;color:#f3f4f6;-webkit
       </div>
     </div>
     <div class="ov-stats">
-      <div class="ov-stat"><div class="ov-l">تعداد روزها</div><div class="ov-v" style="color:#d97706">${n2fa(dates.length)}</div></div>
-      <div class="ov-stat"><div class="ov-l">جمله فروش</div><div class="ov-v" style="color:#60a5fa">${n2fa(Math.round(totalS))} ل</div></div>
-      <div class="ov-stat"><div class="ov-l">جمله پول</div><div class="ov-v" style="color:#fbbf24">${n2fa(Math.round(totalM))} افغ</div></div>
-      <div class="ov-stat" style="border-color:#065f46"><div class="ov-l">جمله فایده</div><div class="ov-v" style="color:#34d399">${n2fa(Math.round(totalP))} افغ</div></div>
+      <div class="ov-stat"><div class="ov-l">تعداد روزها</div><div class="ov-v" style="color:#c05621">${n2fa(dates.length)}</div></div>
+      <div class="ov-stat"><div class="ov-l">جمله فروش</div><div class="ov-v" style="color:#1a4f9c">${n2fa(Math.round(totalS))} ل</div></div>
+      <div class="ov-stat"><div class="ov-l">جمله پول</div><div class="ov-v" style="color:#9c6208">${n2fa(Math.round(totalM))} افغ</div></div>
+      <div class="ov-stat" style="border-color:#9ae6b4"><div class="ov-l">جمله فایده</div><div class="ov-v" style="color:#0f7a4d">${n2fa(Math.round(totalP))} افغ</div></div>
     </div>
     <div class="rep-hdr"><span class="rr-i">#</span><span class="rr-date">تاریخ</span><span class="rr-v">فروش</span><span class="rr-v">پول</span><span class="rr-v">فایده</span></div>
-    ${summaryRows || '<div style="text-align:center;padding:20px;color:#6b7280">خالی</div>'}
+    ${summaryRows || '<div style="text-align:center;padding:20px;color:#7b8494">خالی</div>'}
   </div>`;
 
   const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><title>گزارش دیزل — پمپ یعقوبی</title><style>${css}
+body{padding:14px}
 .save-wrap{position:fixed;top:12px;left:12px;z-index:999}
-.save-wrap button{padding:8px 18px;background:#d97706;color:#000;border:none;border-radius:8px;font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.9rem;cursor:pointer}
-.ov-stats{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
-.ov-stat{flex:1;min-width:120px;background:#1f2937;border:1.5px solid #374151;border-radius:10px;padding:12px;text-align:center}
-.ov-l{font-size:0.65rem;color:#9ca3af;margin-bottom:4px}
-.ov-v{font-size:1.05rem;font-weight:900}
-.rep-hdr{display:flex;gap:8px;padding:6px 10px;background:#374151;border-radius:7px 7px 0 0;font-size:0.7rem;color:#9ca3af;font-weight:700}
-.rep-row{display:flex;gap:8px;padding:7px 10px;border-bottom:1px solid #2d3748;font-size:0.82rem}
+.save-wrap button{padding:8px 18px;background:#c05621;color:#fff;border:none;border-radius:8px;font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.9rem;cursor:pointer}
+.ov-stats{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.ov-stat{flex:1;min-width:110px;background:#f7fafc;border:1px solid #d6dae1;border-radius:9px;padding:9px;text-align:center}
+.ov-l{font-size:0.63rem;color:#5b6472;margin-bottom:3px}
+.ov-v{font-size:0.95rem;font-weight:900}
+.rep-hdr{display:flex;gap:8px;padding:5px 10px;background:#2d3748;color:#e2e8f0;border-radius:7px 7px 0 0;font-size:0.66rem;font-weight:700}
+.rep-row{display:flex;gap:8px;padding:4px 10px;border-bottom:1px solid #eceff3;font-size:0.75rem}
+.rep-row:nth-child(2n){background:#fafbfc}
 .rep-row:last-child{border-bottom:none}
-.rr-i{min-width:26px;color:#6b7280}
-.rr-date{flex:2;font-weight:700;color:#d97706}
+.rr-i{min-width:24px;color:#7b8494}
+.rr-date{flex:2;font-weight:700;color:#c05621}
 .rr-v{flex:2;font-weight:700;text-align:left}
-.rr-v.blue{color:#60a5fa}.rr-v.amber{color:#fbbf24}.rr-v.green{color:#34d399}
-@media print{.save-wrap{display:none}}
+.rr-v.blue{color:#1a4f9c}.rr-v.amber{color:#9c6208}.rr-v.green{color:#0f7a4d}
+@media print{.save-wrap{display:none}body{padding:0}}
 </style></head><body>
 <div class="save-wrap"><button onclick="window.print()">💾 ذخیره / چاپ</button></div>
-${dates.length ? summaryPage + pages : '<div style="text-align:center;padding:40px;color:#6b7280">هیچ پارچه دیزلی ثبت نشده</div>'}
+${dates.length ? summaryPage + pages : '<div style="text-align:center;padding:40px;color:#7b8494">هیچ پارچه دیزلی ثبت نشده</div>'}
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
 
@@ -27985,7 +28001,7 @@ function pdfShifts() {
     const rep0 = reps[0];
     const allDone = allDays.length>0 && allNights.length>0;
     const statusTxt = allDone ? '✅ کامل' : '⏳ ناقص';
-    const statusClr = allDone ? '#34d399' : '#f87171';
+    const statusClr = allDone ? '#0f7a4d' : '#b3261e';
 
     return `<div class="page">
       <div class="page-hdr">
@@ -28028,54 +28044,59 @@ function pdfShifts() {
   const css = `
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{font-family:'Vazirmatn',sans-serif;background:#111827;color:#f3f4f6;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+/* ⚠️ بومِ سفید — نه سیاه. گلایهٔ صاحب ریپو: «گزارش‌های پی‌دی‌افِ پارچه‌ها سیاه‌اند
+   و ورق‌شان بی‌استفاده مانده.» کارتِ هر روز آن‌قدر بلند بود که فقط یکی در هر ورق
+   جا می‌شد و نیمهٔ پایینِ هر ورق سفید می‌ماند. حالا مثل بقیهٔ پی‌دی‌اف‌های برنامه
+   سفید و فشرده است تا چند گزارش در یک ورق بنشیند و تونر هم حرام نشود. */
+body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .page-row{display:block}
-.page{padding:12px 14px;display:flex;flex-direction:column;gap:8px;border:1px solid #374151;border-radius:10px;background:#161e2e;margin-bottom:10px;page-break-inside:avoid;break-inside:avoid}
-.page-hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #f59e0b;padding-bottom:10px}
-.page-title{font-size:1rem;font-weight:900;color:#f59e0b}
-.page-meta{font-size:0.7rem;color:#9ca3af;margin-top:3px}
-.page-num{font-size:0.7rem;color:#6b7280;background:#1f2937;border:1px solid #374151;border-radius:7px;padding:4px 10px}
-.status{font-size:0.7rem;font-weight:700;border:1px solid;border-radius:5px;padding:3px 8px}
-.sec-lbl{font-size:0.7rem;font-weight:700;color:#f59e0b;padding:2px 0;border-bottom:1px dashed #37415144}
-.sec-lbl.dsl{color:#d97706}
-.halves{display:flex;gap:10px}
-.half{flex:1;background:#1f2937;border-radius:10px;overflow:hidden;border:1.5px solid #374151;display:flex;flex-direction:column}
-.shift-hdr{padding:9px 14px;font-weight:900;font-size:0.88rem}
-.shift-hdr.day{background:linear-gradient(135deg,#dd6b20,#f6a623);color:#000}
-.shift-hdr.night{background:linear-gradient(135deg,#553c9a,#805ad5);color:#fff}
-.shift-hdr.day-d{background:linear-gradient(135deg,#744210,#b7791f);color:#000}
-.shift-hdr.night-d{background:linear-gradient(135deg,#3d2000,#744210);color:#fff}
-.shift-body{padding:10px 14px;display:flex;flex-direction:column;flex:1}
-.row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #2d3748}
+.page{padding:9px 11px;display:flex;flex-direction:column;gap:6px;border:1px solid #d6dae1;border-radius:10px;background:#fff;margin-bottom:8px;page-break-inside:avoid;break-inside:avoid}
+.page-hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #b7791f;padding-bottom:6px}
+.page-title{font-size:0.92rem;font-weight:900;color:#b7791f}
+.page-meta{font-size:0.66rem;color:#5b6472;margin-top:2px}
+.page-num{font-size:0.66rem;color:#5b6472;background:#f7fafc;border:1px solid #d6dae1;border-radius:7px;padding:3px 9px}
+.status{font-size:0.66rem;font-weight:700;border:1px solid;border-radius:5px;padding:2px 8px}
+.sec-lbl{font-size:0.66rem;font-weight:700;color:#b7791f;padding:1px 0;border-bottom:1px dashed #d6dae1}
+.sec-lbl.dsl{color:#c05621}
+.halves{display:flex;gap:8px}
+.half{flex:1;background:#fff;border-radius:9px;overflow:hidden;border:1px solid #d6dae1;display:flex;flex-direction:column}
+.shift-hdr{padding:5px 11px;font-weight:900;font-size:0.78rem;color:#fff}
+.shift-hdr.day{background:#c05621}
+.shift-hdr.night{background:#553c9a}
+.shift-hdr.day-d{background:#b7791f}
+.shift-hdr.night-d{background:#744210}
+.shift-body{padding:6px 11px;display:flex;flex-direction:column;flex:1}
+.row{display:flex;justify-content:space-between;align-items:center;padding:2.5px 0;border-bottom:1px solid #eceff3}
 .row.last{border-bottom:none}
-.lbl{font-size:0.73rem;color:#9ca3af}
-.val{font-size:0.78rem;font-weight:700;color:#f3f4f6}
-.val.blue{color:#60a5fa}.val.amber{color:#fbbf24}.val.green{color:#34d399}.val.red{color:#f87171}
-.val.fw9{font-size:0.88rem;font-weight:900}
-.no-data{color:#6b7280;font-size:0.78rem;font-style:italic;padding:12px 0}
-.note{font-size:0.68rem;color:#6b7280;font-style:italic;margin-top:5px;padding-top:4px;border-top:1px dashed #374151}
-.summary{background:#1f2937;border:1.5px solid #374151;border-radius:10px;padding:10px 14px;display:flex;gap:8px;flex-wrap:wrap}
-.sg{flex:1;min-width:150px;background:#111827;border-radius:8px;padding:8px 10px}
-.sg.grand{background:#064e3b;border:1px solid #065f46}
-.sg-t{font-size:0.7rem;font-weight:700;color:#f59e0b;margin-bottom:5px}
-.sg-t.dsl{color:#d97706}
-.grand-t{color:#f3f4f6}
+.lbl{font-size:0.68rem;color:#5b6472}
+.val{font-size:0.72rem;font-weight:700;color:#1a202c}
+.val.blue{color:#1a4f9c}.val.amber{color:#9c6208}.val.green{color:#0f7a4d}.val.red{color:#b3261e}
+.val.fw9{font-size:0.78rem;font-weight:900}
+.no-data{color:#7b8494;font-size:0.72rem;font-style:italic;padding:10px 0}
+.note{font-size:0.64rem;color:#5b6472;font-style:italic;margin-top:4px;padding-top:3px;border-top:1px dashed #d6dae1}
+.summary{background:#f7fafc;border:1px solid #d6dae1;border-radius:9px;padding:7px 11px;display:flex;gap:7px;flex-wrap:wrap}
+.sg{flex:1;min-width:145px;background:#fff;border:1px solid #e3e6eb;border-radius:8px;padding:6px 9px}
+.sg.grand{background:#f0fff4;border:1px solid #9ae6b4}
+.sg-t{font-size:0.66rem;font-weight:700;color:#b7791f;margin-bottom:4px}
+.sg-t.dsl{color:#c05621}
+.grand-t{color:#0f7a4d}
 .sg-r{display:flex;gap:8px;flex-wrap:wrap}
 .si{display:flex;align-items:center;gap:4px}
-.sl{font-size:0.68rem;color:#9ca3af}
-.sv{font-size:0.78rem;font-weight:700}
-.sv.blue{color:#60a5fa}.sv.amber{color:#fbbf24}.sv.green{color:#34d399}
-.sv.fw9{font-size:0.88rem;font-weight:900}
+.sl{font-size:0.65rem;color:#5b6472}
+.sv{font-size:0.72rem;font-weight:700}
+.sv.blue{color:#1a4f9c}.sv.amber{color:#9c6208}.sv.green{color:#0f7a4d}
+.sv.fw9{font-size:0.8rem;font-weight:900}
 @media print{
-  body{background:#111827}
+  body{background:#fff;padding:0}
   .page-row{display:block}
-  .page{padding:8px 10px;gap:4px;margin-bottom:6px;page-break-inside:avoid;break-inside:avoid}
+  /* روی کاغذ یک درجه جمع‌تر تا گزارشِ بعدی هم در همان ورق جا شود */
+  .page{padding:6px 8px;gap:4px;margin-bottom:6px;page-break-inside:avoid;break-inside:avoid}
   @page{margin:0.6cm;size:A4 portrait}
-  .halves{gap:7px}
-  .row{padding:3px 0}
-  .shift-hdr{padding:7px 12px}
-  .shift-body{padding:7px 12px}
-  .summary{padding:8px 10px;gap:6px}
+  .halves{gap:6px}
+  .row{padding:2px 0}
+  .shift-hdr{padding:4px 9px}
+  .shift-body{padding:5px 9px}
+  .summary{padding:6px 9px;gap:5px}
 }`;
 
   const totalM = reports.reduce((a,r)=>{ const ds=getDieselForDate(r.date); return a+(r.day?.money||0)+(r.night?.money||0)+(ds.day?.money||0)+(ds.night?.money||0); },0);
@@ -28092,7 +28113,7 @@ body{font-family:'Vazirmatn',sans-serif;background:#111827;color:#f3f4f6;-webkit
     return `<div class="rep-row">
       <span class="rr-i">${n2fa(i+1)}</span>
       <span class="rr-date">${dt}</span>
-      <span class="rr-st" style="color:${ok?'#34d399':'#f87171'}">${ok?'✅':'⏳'}</span>
+      <span class="rr-st" style="color:${ok?'#0f7a4d':'#b3261e'}">${ok?'✅':'⏳'}</span>
       <span class="rr-v blue">${n2fa(Math.round(gS))} ل</span>
       <span class="rr-v amber">${n2fa(Math.round(gM))} افغ</span>
       <span class="rr-v green">${n2fa(Math.round(gP))} افغ</span>
@@ -28107,34 +28128,36 @@ body{font-family:'Vazirmatn',sans-serif;background:#111827;color:#f3f4f6;-webkit
       </div>
     </div>
     <div class="ov-stats">
-      <div class="ov-stat"><div class="ov-l">تعداد گزارش‌ها</div><div class="ov-v" style="color:#f59e0b">${n2fa(reports.length)}</div></div>
-      <div class="ov-stat"><div class="ov-l">جمله فروش کل</div><div class="ov-v" style="color:#60a5fa">${n2fa(Math.round(totalS))} ل</div></div>
-      <div class="ov-stat"><div class="ov-l">جمله پول کل</div><div class="ov-v" style="color:#fbbf24">${n2fa(Math.round(totalM))} افغ</div></div>
-      <div class="ov-stat" style="border-color:#065f46"><div class="ov-l">جمله فایده کل</div><div class="ov-v" style="color:#34d399">${n2fa(Math.round(totalP))} افغ</div></div>
+      <div class="ov-stat"><div class="ov-l">تعداد گزارش‌ها</div><div class="ov-v" style="color:#b7791f">${n2fa(reports.length)}</div></div>
+      <div class="ov-stat"><div class="ov-l">جمله فروش کل</div><div class="ov-v" style="color:#1a4f9c">${n2fa(Math.round(totalS))} ل</div></div>
+      <div class="ov-stat"><div class="ov-l">جمله پول کل</div><div class="ov-v" style="color:#9c6208">${n2fa(Math.round(totalM))} افغ</div></div>
+      <div class="ov-stat" style="border-color:#9ae6b4"><div class="ov-l">جمله فایده کل</div><div class="ov-v" style="color:#0f7a4d">${n2fa(Math.round(totalP))} افغ</div></div>
     </div>
     <div class="rep-hdr"><span class="rr-i">#</span><span class="rr-date">تاریخ</span><span class="rr-st">وضع</span><span class="rr-v">فروش</span><span class="rr-v">پول</span><span class="rr-v">فایده</span></div>
-    ${summaryRows || '<div style="text-align:center;padding:20px;color:#6b7280">خالی</div>'}
+    ${summaryRows || '<div style="text-align:center;padding:20px;color:#7b8494">خالی</div>'}
   </div>`;
 
   const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><title>گزارش 24 ساعته — پمپ یعقوبی</title><style>${css}
+body{padding:14px}
 .save-wrap{position:fixed;top:12px;left:12px;z-index:999}
-.save-wrap button{padding:8px 18px;background:#f59e0b;color:#000;border:none;border-radius:8px;font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.9rem;cursor:pointer}
-.ov-stats{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
-.ov-stat{flex:1;min-width:120px;background:#1f2937;border:1.5px solid #374151;border-radius:10px;padding:12px;text-align:center}
-.ov-l{font-size:0.65rem;color:#9ca3af;margin-bottom:4px}
-.ov-v{font-size:1.05rem;font-weight:900}
-.rep-hdr{display:flex;gap:8px;padding:6px 10px;background:#374151;border-radius:7px 7px 0 0;font-size:0.7rem;color:#9ca3af;font-weight:700}
-.rep-row{display:flex;gap:8px;padding:7px 10px;border-bottom:1px solid #2d3748;font-size:0.82rem}
+.save-wrap button{padding:8px 18px;background:#b7791f;color:#fff;border:none;border-radius:8px;font-family:'Vazirmatn',sans-serif;font-weight:900;font-size:0.9rem;cursor:pointer}
+.ov-stats{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.ov-stat{flex:1;min-width:110px;background:#f7fafc;border:1px solid #d6dae1;border-radius:9px;padding:9px;text-align:center}
+.ov-l{font-size:0.63rem;color:#5b6472;margin-bottom:3px}
+.ov-v{font-size:0.95rem;font-weight:900}
+.rep-hdr{display:flex;gap:8px;padding:5px 10px;background:#2d3748;color:#e2e8f0;border-radius:7px 7px 0 0;font-size:0.66rem;font-weight:700}
+.rep-row{display:flex;gap:8px;padding:4px 10px;border-bottom:1px solid #eceff3;font-size:0.75rem}
+.rep-row:nth-child(2n){background:#fafbfc}
 .rep-row:last-child{border-bottom:none}
-.rr-i{min-width:26px;color:#6b7280}
-.rr-date{flex:2;font-weight:700;color:#f59e0b}
+.rr-i{min-width:24px;color:#7b8494}
+.rr-date{flex:2;font-weight:700;color:#b7791f}
 .rr-st{min-width:30px;text-align:center}
 .rr-v{flex:2;font-weight:700;text-align:left}
-.rr-v.blue{color:#60a5fa}.rr-v.amber{color:#fbbf24}.rr-v.green{color:#34d399}
-@media print{.save-wrap{display:none}}
+.rr-v.blue{color:#1a4f9c}.rr-v.amber{color:#9c6208}.rr-v.green{color:#0f7a4d}
+@media print{.save-wrap{display:none}body{padding:0}}
 </style></head><body>
 <div class="save-wrap"><button onclick="window.print()">💾 ذخیره / چاپ</button></div>
-${reports.length ? summaryPage + pages : '<div style="text-align:center;padding:40px;color:#6b7280">هیچ گزارشی ثبت نشده</div>'}
+${reports.length ? summaryPage + pages : '<div style="text-align:center;padding:40px;color:#7b8494">هیچ گزارشی ثبت نشده</div>'}
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
 
@@ -47755,7 +47778,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.356';
+const APP_VERSION = '2.9.357';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
