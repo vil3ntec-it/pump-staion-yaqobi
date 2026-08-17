@@ -29509,9 +29509,17 @@ function _pcardNameHtml(name) {
   const cls = L > 20 ? ' xlong' : (L > 12 ? ' long' : '');
   return '<div class="pname' + cls + '" title="' + escFa(n) + '"><span>' + escFa(n) + '</span></div>';
 }
-/* سقفِ ردیف‌های ساخته‌شدهٔ جدولِ یک حساب. ۴۰۰ عمداً سخاوتمند است: بیشترِ
-   حساب‌ها از این کوچک‌ترند و اصلاً پنجره‌ای نمی‌شوند. */
-const _PM_ROW_PAGE = 400;
+/* سقفِ ردیف‌های ساخته‌شدهٔ جدولِ یک حساب — تازه‌ترین‌ها. بقیه با دکمهٔ
+   «⬆️ ردیف‌های قدیمی‌تر» یا «نمایش همه» می‌آیند.
+   ⚠️ چرا ۱۲۰ و نه ۴۰۰: گزارشِ صاحب ریپو «بازکردنِ حساب کُند است». اندازه‌گیری
+   روی حسابی با ۳٬۰۰۰ ردیف، CPU چهار برابر کندتر (میانهٔ ۵ بار):
+        پنجره ۴۰۰ → بازکردن ۲۱۹ms، ۳٬۶۰۶ کادرِ ورودی، هر تایپ ۱۷ms
+        پنجره ۲۰۰ → بازکردن ۱۱۵ms، ۱٬۸۰۶ کادر،        هر تایپ ۷٫۹ms
+        پنجره ۱۲۰ → بازکردن  ۸۴ms،  ۱٬۰۸۶ کادر،        هر تایپ ۷٫۵ms
+        پنجره  ۸۰ → بازکردن  ۶۴ms،    ۷۲۶ کادر،        هر تایپ ۵٫۹ms
+   ۱۲۰ نقطهٔ تعادل است: هنوز یک صفحهٔ کاریِ کامل جلوی چشم است، ولی بازکردن
+   ۲٫۶ برابر و تایپ ۲٫۳ برابر سبک‌تر شد. */
+const _PM_ROW_PAGE = 120;
 let _pmRowShown = _PM_ROW_PAGE;
 function _resetPmRowWindow() { _pmRowShown = _PM_ROW_PAGE; }
 window.pmShowAllRows = function () {
@@ -30919,11 +30927,17 @@ function renderPersonRows(person) {
     // شود؛ وگرنه فیِ حساب (بردگی ÷ تیل) خراب و «مقدار رسید تیل» چند برابر نمایش داده می‌شد
     if (r.byMoney && !(parseFloat(r.bardagi)||0) && (parseFloat(r.fuel)||0) > 0) { r.byMoney = false; _healed = true; }
     // ردیف «پولی» (byMoney): بردگی مستقیم پول است، نه ضربِ لیتر×فی
-    const bardagi = (r.byMoney ? (parseFloat(r.bardagi)||0) : _personRowBardagi(r)).toFixed(0);
-    const albaqi  = (parseFloat(bardagi) - (r.rasid||0)).toFixed(0);
+    /* ⚠️ _round0 دقیقاً همان parseFloat(x.toFixed(0))ِ قبلی است — فقط وقتی عدد
+       از قبل صحیح باشد، رشته‌سازی را رد می‌کند. این حلقه روی *همهٔ* ردیف‌های
+       حساب می‌رود (نه فقط ردیف‌های داخلِ پنجره)، پس روی حسابِ بزرگ دو رشته به
+       ازای هر ردیف ساخته می‌شد. بیشترِ ردیف‌ها از قبل نرمال و صحیح‌اند.
+       ⚠️ با Math.round عوض نکنید: (-2.5).toFixed(0) برابر «-3» است ولی
+       Math.round(-2.5) برابر -2 — یعنی عددِ حساب عوض می‌شد. */
+    const bardagi = _round0(r.byMoney ? (parseFloat(r.bardagi)||0) : _personRowBardagi(r));
+    const albaqi  = _round0(bardagi - (r.rasid||0));
     // auto-store calculated values
-    if (r.bardagi !== parseFloat(bardagi)) { r.bardagi = parseFloat(bardagi); _healed = true; }
-    if (r.albaqi  !== parseFloat(albaqi))  { r.albaqi  = parseFloat(albaqi); _healed = true; }
+    if (r.bardagi !== bardagi) { r.bardagi = bardagi; _healed = true; }
+    if (r.albaqi  !== albaqi)  { r.albaqi  = albaqi; _healed = true; }
     if (!r.ftype) { r.ftype = 'petrol'; _healed = true; }
 
     // فیلتر حساب جداگانه: فقط ردیف‌های نوع تیلِ انتخاب‌شده نمایش داده شوند
@@ -30938,7 +30952,7 @@ function renderPersonRows(person) {
     const r = rows[i];
     shown = _from + wi + 1;          // شمارهٔ واقعیِ ردیف در فهرستِ فیلترشده
     // حلقهٔ بالا ردیف‌ها را درمان و نرمال کرده؛ این‌جا فقط همان مقدارِ ذخیره‌شده خوانده می‌شود
-    const bardagi = (r.byMoney ? (parseFloat(r.bardagi)||0) : _personRowBardagi(r)).toFixed(0);
+    const bardagi = _round0(r.byMoney ? (parseFloat(r.bardagi)||0) : _personRowBardagi(r));
 
     const isP = r.ftype !== 'diesel';
     const rn = 'ft-' + person.id + '-' + i;
@@ -31501,6 +31515,19 @@ function _manualizeDebtorRates(){
 }
 // بردگیِ ردیفِ لیتردار = مقدار تیل × فیِ مؤثر (نرخِ اتحادیهٔ قفل‌شده وقتی فیِ دستی نباشد).
 // خواستهٔ کاربر: در «واحد تیل» با نوشتنِ فقط «مقدار تیل»، پول = مقدار تیل × نرخِ اتحادیه.
+/* گِردکردن به عددِ صحیح — مو‌به‌مو برابرِ parseFloat(x.toFixed(0)).
+   وقتی x از قبل صحیح باشد، x.toFixed(0) همان رشتهٔ خودِ x است و parseFloat هم
+   همان عدد را برمی‌گرداند، پس این میان‌بُر ثابت‌شده بی‌خطر است.
+   ⚠️ Math.round جایگزینش نیست — روی نیم‌های منفی فرق می‌کند و عددِ حساب را
+   عوض می‌کند. */
+function _round0(x){
+  const n = +x;
+  if (!isFinite(n)) return parseFloat(String(n));
+  /* ⚠️ «n === 0 ? 0 : n» شوخی نیست: ورودیِ منفیِ صفر (-0) در راهِ قدیم از
+     "-0" رد می‌شد و parseFloat آن را +0 برمی‌گرداند. بدونِ این خط، -0 سالم
+     می‌ماند و برابری با راهِ قدیم می‌شکند. آزمونِ ۳۰۰٬۰۰۰تاییِ همین را گرفت. */
+  return Number.isInteger(n) ? (n === 0 ? 0 : n) : parseFloat(n.toFixed(0));
+}
 function _personRowBardagi(r){
   const f = parseFloat(r && r.fuel) || 0;
   return f > 0 ? f * _personRowFee(r) : 0;
@@ -48914,7 +48941,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.378';
+const APP_VERSION = '2.9.379';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
