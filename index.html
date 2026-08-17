@@ -478,7 +478,13 @@ body.staff-view .qr-overlay{z-index:10020}
 .grid-more button{padding:7px 18px;border-radius:9px;border:1px solid var(--border);background:var(--card);
   color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.86rem;cursor:pointer}
 .grid-more button:active{transform:scale(.97)}
-.persons-grid{display:grid;grid-template-columns:repeat(auto-fill,208px);justify-content:start;gap:10px;padding-bottom:100px}
+/* ⚠️ ستون‌ها «کششی»اند، نه پهنای ثابت ────────────────────────────────────
+   گزارشِ صاحب ریپو (کامپیوتر): «توی بخش قرض‌داران آن جای خالی هنوز است».
+   با پهنایِ ثابتِ ۲۰۸ پیکسل، باقیماندهٔ هر سطر (تا ۲۰۷ پیکسل) خالی می‌ماند و
+   چون صفحه راست‌چین است، آن نوارِ خالی می‌افتاد سمتِ چپِ کارت‌ها. با
+   minmax(208px,1fr) تعدادِ ستون‌ها همان است ولی خودشان پهن می‌شوند و سطر را
+   پر می‌کنند — هم جای خالی می‌رود، هم نوشته‌های داخلِ کارت جای بیشتری دارند. */
+.persons-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(208px,1fr));justify-content:start;gap:10px;padding-bottom:100px}
 /* بخش‌های دارای کارت حساب تمام‌عرض شوند تا کارت‌ها از راست و در کل صفحه بچینند */
 #sec-debt.section.visible,#sec-noinv.section.visible,#sec-waraq.section.visible,#sec-expenses.section.visible,#sec-debtrasid.section.visible,#sec-debtsum.section.visible,#sec-storage.section.visible,#sec-storage-diesel.section.visible,#sec-profit.section.visible,#sec-extraincome.section.visible{margin-left:calc(48% - 48vw / var(--secz,1));margin-right:calc(48% - 48vw / var(--secz,1));padding-left:18px;padding-right:18px;box-sizing:border-box}
 .person-card{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:14px 12px;cursor:pointer;transition:all .2s;text-align:center;position:relative}
@@ -499,6 +505,14 @@ body.staff-view .qr-overlay{z-index:10020}
        داخلِ پدینگِ کارت‌اند، پس نوار از پهلو اصلاً به آن‌ها نمی‌رسد.
    ⚠️ پدینگ‌های .has-subs را برندارید — نوار می‌افتد روی نام. */
 .person-card.has-subs{ padding-left:32px !important; padding-right:32px !important; }
+/* روی گوشیِ باریک خودِ کارت ~۱۷۰ پیکسل است و ۶۴ پیکسل پدینگ چیزی از آن باقی
+   نمی‌گذارد (عددها آن‌قدر ریز می‌شدند که می‌شکستند). پس هم نوار باریک‌تر می‌شود
+   هم پدینگ — نسبتشان (۲ پیکسل فاصله از لبه + پهنای نوار) دست‌نخورده می‌ماند،
+   پس باز هم هیچ نوشته‌ای زیرِ نوار نمی‌رود. */
+@media (max-width: 560px){
+  .person-card.has-subs{ padding-left:22px !important; padding-right:22px !important; }
+  .person-card .pcard-nav{ width:20px; }
+}
 .person-card .pcard-nav{
   position:absolute; top:44px; bottom:28px; width:28px; padding:0; margin:0;
   display:flex; align-items:center; justify-content:center;
@@ -14768,7 +14782,7 @@ html, body {
 /* دسکتاپ و تبلت بزرگ — نمایش اصلی بدون تغییر */
 @media (min-width: 769px) {
   .persons-grid {
-    grid-template-columns: repeat(auto-fill, 208px) !important;
+    grid-template-columns: repeat(auto-fill, minmax(208px, 1fr)) !important;
   }
   #sec-debt.section.visible,
   #sec-noinv.section.visible,
@@ -16590,16 +16604,17 @@ table thead th:first-child .col-resize-grip{ display:none; }
    بلندتر می‌شد، ایموجی بالا می‌ماند و عدد می‌افتاد خطِ بعد — و چون کارتِ دارایِ
    حسابِ فرعی ۴۰ پیکسل باریک‌تر است، این اتفاق فقط در بعضی کارت‌ها می‌افتاد.
    حالا: white-space:nowrap ایموجی و عدد را کنارِ هم نگه می‌دارد و فونت (مثلِ
-   ردیفِ وضعیت) به‌اندازهٔ جا کوچک می‌شود، پس هر دو عدد همیشه روی یک خط‌اند.
-   min-height ثابت است تا کفِ همهٔ کارت‌ها هم‌تراز بماند. */
+   ردیفِ وضعیت) با --fit-figs به‌اندازهٔ جا کوچک می‌شود — یک اندازه برایِ همهٔ
+   کارت‌ها — پس هر دو عدد همیشه روی یک خط‌اند و هیچ کارتی با بغلی‌اش فرق ندارد.
+   min-height ثابت است (نسبت به ۰٫۹۵rem) تا کفِ همهٔ کارت‌ها هم‌تراز بماند. */
 .person-card .pcard-figs{
   display:flex; flex-wrap:wrap; gap:2px 10px; justify-content:center; align-items:center;
   font-size:0.95rem; font-weight:700; min-height:1.5em;
-  width:100%; box-sizing:border-box; container-type:inline-size;
+  width:100%; box-sizing:border-box;
 }
 .person-card .pcard-figs > span{
   white-space:nowrap; flex:0 0 auto;
-  font-size:clamp(0.62rem, calc((100cqi - 16px) / var(--figs-k, 10)), 0.95rem);
+  font-size:var(--fit-figs, 1em);
 }
 /* ── کادر و صفحهٔ یادداشت‌ها ────────────────────────────────────────────────
    دکمهٔ «یادداشت‌های این بخش» در همهٔ بخش‌ها یک شکل است؛ صفحه‌اش هم یکی است. */
@@ -29571,6 +29586,65 @@ function _figEmWidth(txt) {
   for (const ch of String(txt)) w += (ch === ',' ? 0.26 : ch === '.' ? 0.31 : ch === '-' ? 0.49 : 0.585);
   return w;
 }
+/* پهنایِ یک عنصر بر حسبِ em ِ خودش ─────────────────────────────────────────
+   با نسبتِ دو مستطیل سنجیده می‌شود (خودِ عنصر و یک خط‌کشِ ۱۰em داخلش)، پس
+   بزرگ‌نماییِ مرورگر و zoomِ خودِ بخش («فونتِ بخش» در نوارِ قرض‌داران) رویش اثر
+   ندارد — هر دو مستطیل یک‌جور بزرگ می‌شوند و نسبتشان همان می‌ماند. */
+function _emWidthOf(el) {
+  const r = document.createElement('i');
+  r.style.cssText = 'position:absolute;width:10em;height:0;visibility:hidden;pointer-events:none';
+  el.appendChild(r);
+  const w = el.getBoundingClientRect().width, u = r.getBoundingClientRect().width;
+  r.remove();
+  return (u > 0 && w > 0) ? (w / u) * 10 : 0;
+}
+/* اندازهٔ نوشته‌هایِ داخلِ کارت‌ها — یک‌بار در هر رندر ─────────────────────────
+   گزارشِ صاحب ریپو (از کامپیوتر): «عددهایِ پطرول و دیزل بالا و پایینِ هم شدند».
+   نسخهٔ پیشین این کار را با container query می‌کرد؛ آن روی هر موتوری که این
+   برنامه رویش اجرا می‌شود (وب‌ویوِ اندروید، پوستهٔ کامپیوتر) نبود و هر جا نبود،
+   نوشته با اندازهٔ کامل می‌ماند و ردیف می‌شکست. حالا پهنا مستقیم سنجیده می‌شود،
+   پس همه‌جا یک نتیجه می‌دهد. سودِ دومش: پهنایِ کارت در موبایل ثابت نیست
+   (ستون‌ها کششی‌اند) و سنجش با آن هم می‌سازد، ولی عددِ ثابت نمی‌ساخت.
+   ⚠️ یک اندازه برایِ همهٔ کارت‌هایِ صفحه (کوچک‌ترینِ لازم) — خواستهٔ صریحِ صاحب
+   ریپو که نوشته‌ها «همه یک مدل» باشند، نه هر کارت یک اندازه.
+   ⚠️ اول همه‌چیز خوانده می‌شود و بعد نوشته؛ وسطش چیزی روی صفحه تغییر نکند،
+   وگرنه مرورگر برایِ هر کارت یک‌بار چیدمان را از نو حساب می‌کند. */
+function _pcardFitText(grid) {
+  if (!grid || !grid.firstElementChild) return;
+  const fit = (rowSel, kVar, outVar, padEm) => {
+    const rows = grid.querySelectorAll(rowSel);
+    if (!rows.length) return;
+    let k = 0;
+    rows.forEach(el => { const v = parseFloat(el.style.getPropertyValue(kVar)); if (v > k) k = v; });
+    /* همهٔ کارت‌های یک ردیف هم‌پهنا هستند؛ ولی کارتِ دارایِ حسابِ فرعی پدینگِ
+       بیشتری دارد، پس باریک‌ترینِ ردیف‌ها را می‌گیریم تا هیچ‌کدام نشکند. */
+    let avail = 0;
+    [rows[0], grid.querySelector('.person-card.has-subs ' + rowSel)].forEach(el => {
+      if (!el) return;
+      const w = _emWidthOf(el);
+      if (w > 0 && (!avail || w < avail)) avail = w;
+    });
+    if (!(k > 0) || !(avail > 0)) return;   // بخش پنهان است — مقدارِ قبلی بماند
+    const v = Math.max(0.62, Math.min(1, (avail - padEm) / k));
+    grid.style.setProperty(outVar, v.toFixed(3) + 'em');
+  };
+  /* padEm = فاصلهٔ بینِ دو نوشته + کمی حاشیهٔ اطمینان (حاشیهٔ کارت، ضخامتِ
+     text-stroke روی کامپیوتر و گردکردنِ زیرپیکسلی) */
+  fit('.pcard-figs', '--figs-k', '--fit-figs', 1.10);
+  fit('.pstatus-row', '--st-k', '--fit-st', 1.00);
+}
+/* اگر پنجره اندازه عوض کرد (چرخاندنِ گوشی، تغییرِ اندازهٔ پنجرهٔ کامپیوتر)،
+   پهنایِ کارت‌ها عوض می‌شود و اندازهٔ نوشته باید دوباره سنجیده شود. */
+let _pcardFitTimer = 0;
+window.addEventListener('resize', () => {
+  clearTimeout(_pcardFitTimer);
+  _pcardFitTimer = setTimeout(() => {
+    ['debt-grid', 'noinv-grid', 'waraq-grid'].forEach(id => {
+      const g = document.getElementById(id);
+      if (g && g.offsetParent) _pcardFitText(g);
+    });
+  }, 180);
+});
 function _pcardStatusHtml(stInfo) {
   /* ⚠️ چرا پهنایِ نوشته‌ها اینجا حساب می‌شود ──────────────────────
      گزارشِ صاحب ریپو: «اتمام تیل و اتمام پول روبه‌روی هم باشند، نه زیرِ هم».
@@ -29820,6 +29894,7 @@ function renderPersons(type) {
   });
   grid.innerHTML = '';
   grid.appendChild(frag);
+  _pcardFitText(grid);      // اندازهٔ نوشته‌ها، پس از این‌که کارت‌ها سرِ جایشان نشستند
   if (q && !pageList.length) {
     grid.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:0.9rem">حسابی یافت نشد</div>';
   }
@@ -49072,7 +49147,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.381';
+const APP_VERSION = '2.9.382';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -54959,19 +55034,21 @@ body .person-card.fuel-out.fuel-out{
 .pstatus-dot.out{background:#e53e3e;box-shadow:0 0 9px #e53e3e}
 /* «اتمام تیل» و «اتمام پول» رو‌به‌روی هم — همیشه یک خط، در همهٔ کارت‌ها ────────
    جای شکستنِ ردیف (که کارتِ باریک را دوخطی و کارتِ پهن را یک‌خطی می‌کرد و ظاهرِ
-   کارت‌ها را ناهمگون)، فونتِ همین ردیف به‌اندازهٔ جایِ موجود کوچک می‌شود:
-   --st-k جمعِ پهنایِ نوشته‌ها بر حسبِ em است و در _pcardStatusHtml حساب می‌شود،
-   100cqi هم پهنایِ خودِ ردیف. flex-wrap:wrap فقط برایِ مرورگرِ خیلی قدیمی که
-   container query ندارد باقی مانده — آنجا مثل قبل می‌شکند، نه اینکه بیرون بزند. */
+   کارت‌ها را ناهمگون)، فونتِ نوشته‌ها به‌اندازهٔ جایِ موجود کوچک می‌شود:
+   --st-k جمعِ پهنایِ نوشته‌ها بر حسبِ em است (در _pcardStatusHtml حساب می‌شود) و
+   --fit-st اندازهٔ نهایی که _pcardFitText پس از سنجشِ پهنایِ واقعیِ کارت می‌گذارد —
+   یکی برایِ همهٔ کارت‌های صفحه، تا نوشته‌ها «همه یک مدل» باشند.
+   flex-wrap:wrap فقط تورِ ایمنی است؛ اگر روزی جاوااسکریپت نرسید، ردیف می‌شکند
+   نه اینکه از کارت بیرون بزند. */
 .pstatus-row{
   display:flex; flex-wrap:wrap; justify-content:center; align-items:baseline;
   gap:2px 8px; margin-top:6px; width:100%;
-  container-type:inline-size;
+  font-size:0.8rem;            /* پایهٔ em ِ این ردیف — --fit-st نسبت به همین است */
   pointer-events:none;         /* کلیک از رویش به خودِ کارت می‌رسد */
 }
 .pstatus-row .pstatus-label{
   margin-top:0; white-space:nowrap; flex:0 0 auto;
-  font-size:clamp(0.6rem, calc((100cqi - 14px) / var(--st-k, 12)), 0.8rem);
+  font-size:var(--fit-st, 1em);
 }
 /* کارتِ دارایِ حسابِ فرعی از دو پهلو ۳۲ پیکسل پدینگ دارد (جایِ نوارهایِ گردش) و
    همان باعث می‌شد این ردیف زودتر بشکند. فقط همین یک ردیف تا نزدیکِ لبهٔ کارت باز
