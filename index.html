@@ -23573,10 +23573,10 @@ function _hcFeed(kind) {
         + (r.toAcct ? ' · به حسابهٔ ' + r.toAcct : '')
         + ' · ' + n2fa(c.days) + ' روز · ' + _amFmt(c.temp) + '°C'
         + ' · ' + (c.closed ? 'بسته' : 'در مخزن (باز)')
-        + (c.taken ? (' · برده شده ' + _amFmt2(c.taken) + ' ل') : '')
-        + ' · کمبودی ' + _amFmt(c.lossPct, 3) + '٪ (' + _amFmt2(c.loss) + ' ل)'
-        + ' · باقی ' + _amFmt2(c.rest) + ' ل'
-        + (c.hasActual ? (' · اندازه‌گیری واقعی ' + _amFmt2(c.actual) + ' ل · اختلاف ' + _amFmt2(c.diff) + ' ل') : '');
+        + (c.taken ? (' · برده شده ' + _amFmt2(c.taken) + ' لیتر') : '')
+        + ' · کمبودی ' + _amFmt(c.lossPct, 3) + '٪ (' + _amFmt2(c.loss) + ' لیتر)'
+        + ' · باقی ' + _amFmt2(c.rest) + ' لیتر'
+        + (c.hasActual ? (' · اندازه‌گیری واقعی ' + _amFmt2(c.actual) + ' لیتر · اختلاف ' + _amFmt2(c.diff) + ' لیتر') : '');
       out.push(_hcItem('amanat', r.date, who + ' — رسید تیل امانت',
         det, Math.round(c.liters * 100) / 100, ' لیتر', 'in'));
     });
@@ -24414,8 +24414,8 @@ function _renderDashFuelStatus() {
       +     '<span class="fs-state">' + state + '</span></span>'
       +     '<span class="fs-pct">' + n2fa(pct) + '٪</span></span>'
       +   '<span class="fs-bar"><i style="width:' + pct + '%"></i></span>'
-      +   '<span class="fs-nums"><span>موجودی: <b>' + n2fa(Math.round(t.cur)) + ' ل</b></span>'
-      +     '<span>ظرفیت: <b>' + n2fa(Math.round(cap)) + ' ل</b></span></span>'
+      +   '<span class="fs-nums"><span>موجودی: <b>' + n2fa(Math.round(t.cur)) + ' لیتر</b></span>'
+      +     '<span>ظرفیت: <b>' + n2fa(Math.round(cap)) + ' لیتر</b></span></span>'
       + '</span></button>';
   }).join('');
 }
@@ -24505,7 +24505,7 @@ function _renderDashRecent() {
   host.innerHTML = '<table class="dash-recent"><thead><tr>'
     + '<th>تاریخ</th><th>وقت</th><th>سوخت</th><th>مبلغ</th><th>مقدار</th><th></th></tr></thead><tbody>'
     + top.map(r => '<tr><td>' + escFa(r.date) + '</td><td>' + r.w + '</td><td>' + r.fuel + '</td>'
-      + '<td>' + n2fa(Math.round(r.m)) + '</td><td>' + n2fa(Math.round(r.l)) + ' ل</td>'
+      + '<td>' + n2fa(Math.round(r.m)) + '</td><td>' + n2fa(Math.round(r.l)) + ' لیتر</td>'
       + '<td><button class="r-go" title="رفتن به پارچه‌ها" onclick="showSection(\'' + r.sec + '\')">👁</button></td></tr>').join('')
     + '</tbody></table>';
 }
@@ -24538,7 +24538,7 @@ function _renderDashChart(disp, sel, skipAnim) {
   wrap.innerHTML = disp.map((b, i) => {
     const v = vals[i];
     const ha = Math.round(v.a / maxA * 100);
-    const tip = `📅 ${b.full} — 💰 ${n2fa(Math.round(v.a))} افغانی · 🛢️ ${n2fa(Math.round(v.l))} ل · 📈 ${n2fa(Math.round(v.p))} مفاد · 🧾 ${n2fa(v.c)} ثبت`;
+    const tip = `📅 ${b.full} — 💰 ${n2fa(Math.round(v.a))} افغانی · 🛢️ ${n2fa(Math.round(v.l))} لیتر · 📈 ${n2fa(Math.round(v.p))} مفاد · 🧾 ${n2fa(v.c)} ثبت`;
     return `<div class="db-col ${i === sel ? 'sel' : ''}" onclick="dashSelectBar(${i})">
       <div class="db-barwrap"><span class="db-tip">${tip}</span><div class="db-bar amt" data-h="${ha}"></div></div>
       <span class="db-lbl">${b.label}</span></div>`;
@@ -24584,7 +24584,7 @@ function renderDashboard(skipAnim) {
   // 1) فروش — بر حسبِ تیل (لیتر)، نه پول
   setT('dct-sales', 'فروش تیل ' + bucketWord);
   setT('dcv-sales', n2fa(Math.round(cur.l)) + ' لیتر');
-  setT('dcs-sales', '⛽ ' + n2fa(Math.round(selB.petrol.l)) + ' ل · 🟤 ' + n2fa(Math.round(selB.diesel.l)) + ' ل');
+  setT('dcs-sales', '⛽ ' + n2fa(Math.round(selB.petrol.l)) + ' لیتر · 🟤 ' + n2fa(Math.round(selB.diesel.l)) + ' لیتر');
   _dashDelta('dcd-sales', _dashGrowth(cur.l, prev.l), perWord);
 
   // 2) کارتِ «مبلغ فروش» به خواستهٔ صاحب ریپو از داشبورد برداشته شد — خودِ
@@ -24625,7 +24625,7 @@ function renderDashboard(skipAnim) {
     const gCol = (gPct == null || gPct === 0) ? 'var(--muted)' : (gPct > 0 ? 'var(--k-green)' : 'var(--k-red)');
     dEl.innerHTML = `<b>📅 ${selB.full}</b>` +
       `<span>💰 فروش: <b>${n2fa(Math.round(cur.a))} افغانی</b></span>` +
-      `<span>🛢️ لیتر: <b>${n2fa(Math.round(cur.l))} ل</b> (⛽ ${n2fa(Math.round(selB.petrol.l))} · 🟤 ${n2fa(Math.round(selB.diesel.l))})</span>` +
+      `<span>🛢️ لیتر: <b>${n2fa(Math.round(cur.l))} لیتر</b> (⛽ ${n2fa(Math.round(selB.petrol.l))} · 🟤 ${n2fa(Math.round(selB.diesel.l))})</span>` +
       `<span>🧾 تعداد ثبت: <b>${n2fa(cur.c)}</b></span>` +
       `<span>سوخت: <b>${_dashFuelWord()}</b></span>` +
       `<span>📈 رشد نسبت به ${perWord}: <b style="color:${gCol}">${gTxt}</b></span>`;
@@ -27675,7 +27675,7 @@ function renderLog() {
             ${rep.day ? `
               <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${escFa(day.name)||'—'}</span>${day.pumpNum?` <span style="background:var(--border);border-radius:4px;padding:1px 6px;font-size:0.7rem;color:var(--accent);font-weight:700">پایه #${n2fa(day.pumpNum)}</span>`:''}</div>
               <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">پایه: <span style="color:var(--txt)">${n2fa(day.start)} → ${n2fa(day.end)}</span></div>
-              <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فروش: <span style="color:var(--blue);font-weight:700">${n2fa(day.sale)} ل</span></div>
+              <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فروش: <span style="color:var(--blue);font-weight:700">${n2fa(day.sale)} لیتر</span></div>
               <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فی فروش: <span style="color:var(--accent);font-weight:600">${n2fa(day.price||0)} ؋</span></div>
               <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فی خرید: <span style="color:var(--red);font-weight:600">${day.buyPerLiter ? n2fa(day.buyPerLiter.toFixed(1)) + ' ؋' : '—'}</span></div>
               <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فایده فی لیتر: <span style="color:var(--green);font-weight:700">${n2fa(day.profitPer||0)} ؋</span></div>
@@ -27691,7 +27691,7 @@ function renderLog() {
             ${rep.night ? `
               <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${escFa(night.name)||'—'}</span>${night.pumpNum?` <span style="background:var(--border);border-radius:4px;padding:1px 6px;font-size:0.7rem;color:var(--accent);font-weight:700">پایه #${n2fa(night.pumpNum)}</span>`:''}</div>
               <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">پایه: <span style="color:var(--txt)">${n2fa(night.start)} → ${n2fa(night.end)}</span></div>
-              <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فروش: <span style="color:var(--blue);font-weight:700">${n2fa(night.sale)} ل</span></div>
+              <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فروش: <span style="color:var(--blue);font-weight:700">${n2fa(night.sale)} لیتر</span></div>
               <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فی فروش: <span style="color:var(--accent);font-weight:600">${n2fa(night.price||0)} ؋</span></div>
               <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فی خرید: <span style="color:var(--red);font-weight:600">${night.buyPerLiter ? n2fa(night.buyPerLiter.toFixed(1)) + ' ؋' : '—'}</span></div>
               <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فایده فی لیتر: <span style="color:var(--green);font-weight:700">${n2fa(night.profitPer||0)} ؋</span></div>
@@ -27705,7 +27705,7 @@ function renderLog() {
         </div>
         <!-- خلاصه این گزارش -->
         <div style="padding:6px 12px 8px;border-top:1px dashed var(--border);display:flex;gap:12px;flex-wrap:wrap;background:#ffffff05">
-          <span style="font-size:0.72rem;color:var(--blue)">فروش: ${n2fa(totalSale)} ل</span>
+          <span style="font-size:0.72rem;color:var(--blue)">فروش: ${n2fa(totalSale)} لیتر</span>
           <span style="font-size:0.72rem;color:var(--accent)">پول: ${n2fa(totalMoney)}</span>
           <span style="font-size:0.72rem;color:var(--green)">فایده: ${n2fa(totalProfit)}</span>
         </div>
@@ -27723,7 +27723,7 @@ function renderLog() {
           ${dsl.day ? `
             <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${escFa(dDay.name)||'—'}</span>${dDay.pumpNum?` <span style="background:var(--border);border-radius:4px;padding:1px 6px;font-size:0.7rem;color:var(--accent);font-weight:700">پایه #${n2fa(dDay.pumpNum)}</span>`:''}</div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">پایه: <span style="color:var(--txt)">${n2fa(dDay.start)} → ${n2fa(dDay.end)}</span></div>
-            <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فروش: <span style="color:var(--blue);font-weight:700">${n2fa(dDay.sale)} ل</span></div>
+            <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فروش: <span style="color:var(--blue);font-weight:700">${n2fa(dDay.sale)} لیتر</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فی فروش: <span style="color:var(--accent);font-weight:600">${n2fa(dDay.price||0)} ؋</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فی خرید: <span style="color:var(--red);font-weight:600">${dDay.buyPerLiter ? n2fa(dDay.buyPerLiter.toFixed(1)) + ' ؋' : '—'}</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فایده فی لیتر: <span style="color:var(--green);font-weight:700">${n2fa(dDay.profitPer||0)} ؋</span></div>
@@ -27737,7 +27737,7 @@ function renderLog() {
           ${dsl.night ? `
             <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${escFa(dNight.name)||'—'}</span>${dNight.pumpNum?` <span style="background:var(--border);border-radius:4px;padding:1px 6px;font-size:0.7rem;color:var(--accent);font-weight:700">پایه #${n2fa(dNight.pumpNum)}</span>`:''}</div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">پایه: <span style="color:var(--txt)">${n2fa(dNight.start)} → ${n2fa(dNight.end)}</span></div>
-            <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فروش: <span style="color:var(--blue);font-weight:700">${n2fa(dNight.sale)} ل</span></div>
+            <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فروش: <span style="color:var(--blue);font-weight:700">${n2fa(dNight.sale)} لیتر</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فی فروش: <span style="color:var(--accent);font-weight:600">${n2fa(dNight.price||0)} ؋</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فی خرید: <span style="color:var(--red);font-weight:600">${dNight.buyPerLiter ? n2fa(dNight.buyPerLiter.toFixed(1)) + ' ؋' : '—'}</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">فایده فی لیتر: <span style="color:var(--green);font-weight:700">${n2fa(dNight.profitPer||0)} ؋</span></div>
@@ -27753,19 +27753,19 @@ function renderLog() {
       <div style="padding:10px 14px;border-top:2px solid var(--border);display:flex;flex-direction:column;gap:6px;background:var(--card)">
         <div style="display:flex;gap:14px;flex-wrap:wrap">
           <span style="font-size:0.7rem;color:var(--muted)">⛽ پطرول (جمله ${n2fa(reps.length)} گزارش):</span>
-          <span style="font-size:0.72rem;color:var(--blue)">فروش ${n2fa(dateTotalSale)} ل</span>
+          <span style="font-size:0.72rem;color:var(--blue)">فروش ${n2fa(dateTotalSale)} لیتر</span>
           <span style="font-size:0.72rem;color:var(--accent)">پول ${n2fa(dateTotalMoney)}</span>
           <span style="font-size:0.72rem;color:var(--green)">فایده ${n2fa(dateTotalProfit)}</span>
         </div>
         <div style="display:flex;gap:14px;flex-wrap:wrap">
           <span style="font-size:0.7rem;color:var(--muted)">🟤 دیزل:</span>
-          <span style="font-size:0.72rem;color:var(--blue)">فروش ${n2fa(dieselSale)} ل</span>
+          <span style="font-size:0.72rem;color:var(--blue)">فروش ${n2fa(dieselSale)} لیتر</span>
           <span style="font-size:0.72rem;color:var(--accent)">پول ${n2fa(dieselMoney)}</span>
           <span style="font-size:0.72rem;color:var(--green)">فایده ${n2fa(dieselProfit)}</span>
         </div>
         <div style="display:flex;gap:14px;flex-wrap:wrap;border-top:1px dashed var(--border);padding-top:6px">
           <span style="font-size:0.8rem;color:var(--muted);font-weight:700">جمله کل 24 ساعت:</span>
-          <span style="font-size:0.8rem;color:var(--blue);font-weight:700">فروش: ${n2fa(dateGrandSale)} ل</span>
+          <span style="font-size:0.8rem;color:var(--blue);font-weight:700">فروش: ${n2fa(dateGrandSale)} لیتر</span>
           <span style="font-size:0.8rem;color:var(--accent);font-weight:700">پول: ${n2fa(dateGrandMoney)} افغانی</span>
           <span style="font-size:0.8rem;color:var(--green);font-weight:700">فایده: ${n2fa(dateGrandProfit)} افغانی</span>
         </div>
@@ -27827,7 +27827,7 @@ function renderDieselLog() {
           ${day ? `
             <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${escFa(day.name)||'—'}</span>${day.pumpNum?` <span style="background:var(--border);border-radius:4px;padding:1px 6px;font-size:0.7rem;color:var(--accent);font-weight:700">پایه #${n2fa(day.pumpNum)}</span>`:''}</div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">پایه: <span style="color:var(--txt)">${n2fa(day.start)} → ${n2fa(day.end)}</span></div>
-            <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فروش: <span style="color:var(--blue);font-weight:700">${n2fa(day.sale)} ل</span></div>
+            <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فروش: <span style="color:var(--blue);font-weight:700">${n2fa(day.sale)} لیتر</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فی فروش: <span style="color:var(--accent);font-weight:600">${n2fa(day.price||0)} ؋</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فی خرید: <span style="color:var(--red);font-weight:600">${day.buyPerLiter ? n2fa(day.buyPerLiter.toFixed(1)) + ' ؋' : '—'}</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فایده فی لیتر: <span style="color:var(--green);font-weight:700">${n2fa(day.profitPer||0)} ؋</span></div>
@@ -27842,7 +27842,7 @@ function renderDieselLog() {
           ${night ? `
             <div style="font-size:0.78rem;color:var(--muted)">کارمند: <span style="color:var(--txt);font-weight:600">${escFa(night.name)||'—'}</span>${night.pumpNum?` <span style="background:var(--border);border-radius:4px;padding:1px 6px;font-size:0.7rem;color:var(--accent);font-weight:700">پایه #${n2fa(night.pumpNum)}</span>`:''}</div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">پایه: <span style="color:var(--txt)">${n2fa(night.start)} → ${n2fa(night.end)}</span></div>
-            <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فروش: <span style="color:var(--blue);font-weight:700">${n2fa(night.sale)} ل</span></div>
+            <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فروش: <span style="color:var(--blue);font-weight:700">${n2fa(night.sale)} لیتر</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فی فروش: <span style="color:var(--accent);font-weight:600">${n2fa(night.price||0)} ؋</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فی خرید: <span style="color:var(--red);font-weight:600">${night.buyPerLiter ? n2fa(night.buyPerLiter.toFixed(1)) + ' ؋' : '—'}</span></div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:3px">فایده فی لیتر: <span style="color:var(--green);font-weight:700">${n2fa(night.profitPer||0)} ؋</span></div>
@@ -27855,7 +27855,7 @@ function renderDieselLog() {
       </div>
       <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:16px;flex-wrap:wrap;background:var(--card)">
         <span style="font-size:0.8rem;color:var(--muted)">جمله 24 ساعت:</span>
-        <span style="font-size:0.8rem;color:var(--blue);font-weight:700">فروش: ${n2fa(totalSale)} ل</span>
+        <span style="font-size:0.8rem;color:var(--blue);font-weight:700">فروش: ${n2fa(totalSale)} لیتر</span>
         <span style="font-size:0.8rem;color:var(--accent);font-weight:700">پول: ${n2fa(totalMoney)} افغانی</span>
         <span style="font-size:0.8rem;color:var(--green);font-weight:700">فایده: ${n2fa(totalProfit)} افغانی</span>
       </div>
@@ -27896,8 +27896,8 @@ function pdfDieselShifts() {
       <div class="shift-hdr ${hdrClass}">${label}</div>
       <div class="shift-body">
         <div class="row"><span class="lbl">کارمند</span><span class="val">${escFa(s.name)||'—'}${s.pumpNum?' (پایه #'+n2fa(s.pumpNum)+')':''}</span></div>
-        <div class="row"><span class="lbl">پایه (شروع ← ختم)</span><span class="val">${n2fa(s.start||0)} ← ${n2fa(s.end||0)} ل</span></div>
-        <div class="row"><span class="lbl">فروش</span><span class="val blue">${n2fa(s.sale||0)} ل</span></div>
+        <div class="row"><span class="lbl">پایه (شروع ← ختم)</span><span class="val">${n2fa(s.start||0)} ← ${n2fa(s.end||0)} لیتر</span></div>
+        <div class="row"><span class="lbl">فروش</span><span class="val blue">${n2fa(s.sale||0)} لیتر</span></div>
         <div class="row"><span class="lbl">فی فروش</span><span class="val amber">${n2fa(s.price||0)} ؋</span></div>
         <div class="row"><span class="lbl">فی خرید</span><span class="val red">${s.buyPerLiter?n2fa(s.buyPerLiter.toFixed(1))+' ؋':'—'}</span></div>
         <div class="row"><span class="lbl">فایده / لیتر</span><span class="val green">${n2fa(s.profitPer||0)} ؋</span></div>
@@ -27926,7 +27926,7 @@ function pdfDieselShifts() {
         ${shiftBlock(ni, '🌙 شیفت شبانه (دیزل)', 'night')}
       </div>
       <div class="summary">
-        <span class="sum-item"><span class="sum-lbl">فروش کل:</span><span class="sum-val blue">${n2fa(ts)} ل</span></span>
+        <span class="sum-item"><span class="sum-lbl">فروش کل:</span><span class="sum-val blue">${n2fa(ts)} لیتر</span></span>
         <span class="sum-item"><span class="sum-lbl">پول کل:</span><span class="sum-val amber">${n2fa(tm)} افغانی</span></span>
         <span class="sum-item"><span class="sum-lbl">فایده کل:</span><span class="sum-val green">${n2fa(tp)} افغانی</span></span>
       </div>
@@ -27993,7 +27993,7 @@ body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;-webkit-pr
     return `<div class="rep-row">
       <span class="rr-i">${n2fa(i+1)}</span>
       <span class="rr-date">${dt}</span>
-      <span class="rr-v blue">${n2fa(ts)} ل</span>
+      <span class="rr-v blue">${n2fa(ts)} لیتر</span>
       <span class="rr-v amber">${n2fa(tm)} افغ</span>
       <span class="rr-v green">${n2fa(tp)} افغ</span>
     </div>`;
@@ -28008,7 +28008,7 @@ body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;-webkit-pr
     </div>
     <div class="ov-stats">
       <div class="ov-stat"><div class="ov-l">تعداد روزها</div><div class="ov-v" style="color:#c05621">${n2fa(dates.length)}</div></div>
-      <div class="ov-stat"><div class="ov-l">جمله فروش</div><div class="ov-v" style="color:#1a4f9c">${n2fa(Math.round(totalS))} ل</div></div>
+      <div class="ov-stat"><div class="ov-l">جمله فروش</div><div class="ov-v" style="color:#1a4f9c">${n2fa(Math.round(totalS))} لیتر</div></div>
       <div class="ov-stat"><div class="ov-l">جمله پول</div><div class="ov-v" style="color:#9c6208">${n2fa(Math.round(totalM))} افغ</div></div>
       <div class="ov-stat" style="border-color:#9ae6b4"><div class="ov-l">جمله فایده</div><div class="ov-v" style="color:#0f7a4d">${n2fa(Math.round(totalP))} افغ</div></div>
     </div>
@@ -28079,8 +28079,8 @@ function printDieselShifts() {
       <th colspan="3" class="total-th">جمله 24 ساعت</th>
     </tr>
     <tr>
-      <th class="day-th">کارمند</th><th class="day-th">شروع</th><th class="day-th">ختم</th><th class="day-th">فروش</th><th class="day-th">فی فروش</th><th class="day-th">فی خرید</th><th class="day-th">فایده/ل</th><th class="day-th">پول</th><th class="day-th">فایده</th>
-      <th class="night-th">کارمند</th><th class="night-th">شروع</th><th class="night-th">ختم</th><th class="night-th">فروش</th><th class="night-th">فی فروش</th><th class="night-th">فی خرید</th><th class="night-th">فایده/ل</th><th class="night-th">پول</th><th class="night-th">فایده</th>
+      <th class="day-th">کارمند</th><th class="day-th">شروع</th><th class="day-th">ختم</th><th class="day-th">فروش</th><th class="day-th">فی فروش</th><th class="day-th">فی خرید</th><th class="day-th">فایده/لیتر</th><th class="day-th">پول</th><th class="day-th">فایده</th>
+      <th class="night-th">کارمند</th><th class="night-th">شروع</th><th class="night-th">ختم</th><th class="night-th">فروش</th><th class="night-th">فی فروش</th><th class="night-th">فی خرید</th><th class="night-th">فایده/لیتر</th><th class="night-th">پول</th><th class="night-th">فایده</th>
       <th class="total-th">فروش</th><th class="total-th">پول</th><th class="total-th">فایده</th>
     </tr>
   </thead><tbody>${rows||'<tr><td colspan="22" style="text-align:center">خالی</td></tr>'}</tbody>
@@ -28119,8 +28119,8 @@ function pdfShifts() {
       <div class="shift-hdr ${hdrClass}">${label}</div>
       <div class="shift-body">
         <div class="row"><span class="lbl">کارمند</span><span class="val">${escFa(s.name)||'—'}${s.pumpNum?' (پایه #'+n2fa(s.pumpNum)+')':''}</span></div>
-        <div class="row"><span class="lbl">پایه (شروع ← ختم)</span><span class="val">${n2fa(s.start||0)} ← ${n2fa(s.end||0)} ل</span></div>
-        <div class="row"><span class="lbl">فروش</span><span class="val blue">${n2fa(s.sale||0)} ل</span></div>
+        <div class="row"><span class="lbl">پایه (شروع ← ختم)</span><span class="val">${n2fa(s.start||0)} ← ${n2fa(s.end||0)} لیتر</span></div>
+        <div class="row"><span class="lbl">فروش</span><span class="val blue">${n2fa(s.sale||0)} لیتر</span></div>
         <div class="row"><span class="lbl">فی فروش</span><span class="val amber">${n2fa(s.price||0)} ؋</span></div>
         <div class="row"><span class="lbl">فی خرید</span><span class="val red">${s.buyPerLiter?n2fa(s.buyPerLiter.toFixed(1))+' ؋':'—'}</span></div>
         <div class="row"><span class="lbl">فایده / لیتر</span><span class="val green">${n2fa(s.profitPer||0)} ؋</span></div>
@@ -28190,17 +28190,17 @@ function pdfShifts() {
       </div>` : ''}
       <div class="summary">
         <div class="sg"><div class="sg-t">⛽ پطرول</div><div class="sg-r">
-          <span class="si"><span class="sl">فروش:</span><span class="sv blue">${n2fa(pS)} ل</span></span>
+          <span class="si"><span class="sl">فروش:</span><span class="sv blue">${n2fa(pS)} لیتر</span></span>
           <span class="si"><span class="sl">پول:</span><span class="sv amber">${n2fa(pM)} افغ</span></span>
           <span class="si"><span class="sl">فایده:</span><span class="sv green">${n2fa(pP)} افغ</span></span>
         </div></div>
         ${hasDiesel ? `<div class="sg"><div class="sg-t dsl">🟤 دیزل</div><div class="sg-r">
-          <span class="si"><span class="sl">فروش:</span><span class="sv blue">${n2fa(dS)} ل</span></span>
+          <span class="si"><span class="sl">فروش:</span><span class="sv blue">${n2fa(dS)} لیتر</span></span>
           <span class="si"><span class="sl">پول:</span><span class="sv amber">${n2fa(dM)} افغ</span></span>
           <span class="si"><span class="sl">فایده:</span><span class="sv green">${n2fa(dP)} افغ</span></span>
         </div></div>` : ''}
         <div class="sg grand"><div class="sg-t grand-t">جمله کل 24 ساعت</div><div class="sg-r">
-          <span class="si"><span class="sl">فروش:</span><span class="sv blue fw9">${n2fa(gS)} ل</span></span>
+          <span class="si"><span class="sl">فروش:</span><span class="sv blue fw9">${n2fa(gS)} لیتر</span></span>
           <span class="si"><span class="sl">پول:</span><span class="sv amber fw9">${n2fa(gM)} افغانی</span></span>
           <span class="si"><span class="sl">فایده:</span><span class="sv green fw9">${n2fa(gP)} افغانی</span></span>
         </div></div>
@@ -28281,7 +28281,7 @@ body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;-webkit-pr
       <span class="rr-i">${n2fa(i+1)}</span>
       <span class="rr-date">${dt}</span>
       <span class="rr-st" style="color:${ok?'#0f7a4d':'#b3261e'}">${ok?'✅':'⏳'}</span>
-      <span class="rr-v blue">${n2fa(Math.round(gS))} ل</span>
+      <span class="rr-v blue">${n2fa(Math.round(gS))} لیتر</span>
       <span class="rr-v amber">${n2fa(Math.round(gM))} افغ</span>
       <span class="rr-v green">${n2fa(Math.round(gP))} افغ</span>
     </div>`;
@@ -28296,7 +28296,7 @@ body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;-webkit-pr
     </div>
     <div class="ov-stats">
       <div class="ov-stat"><div class="ov-l">تعداد گزارش‌ها</div><div class="ov-v" style="color:#b7791f">${n2fa(reports.length)}</div></div>
-      <div class="ov-stat"><div class="ov-l">جمله فروش کل</div><div class="ov-v" style="color:#1a4f9c">${n2fa(Math.round(totalS))} ل</div></div>
+      <div class="ov-stat"><div class="ov-l">جمله فروش کل</div><div class="ov-v" style="color:#1a4f9c">${n2fa(Math.round(totalS))} لیتر</div></div>
       <div class="ov-stat"><div class="ov-l">جمله پول کل</div><div class="ov-v" style="color:#9c6208">${n2fa(Math.round(totalM))} افغ</div></div>
       <div class="ov-stat" style="border-color:#9ae6b4"><div class="ov-l">جمله فایده کل</div><div class="ov-v" style="color:#0f7a4d">${n2fa(Math.round(totalP))} افغ</div></div>
     </div>
@@ -28395,10 +28395,10 @@ function printShifts() {
         <th colspan="3" class="total-th">جمله 24 ساعت</th>
       </tr>
       <tr>
-        <th class="day-th">کارمند</th><th class="day-th">شروع</th><th class="day-th">ختم</th><th class="day-th">فروش</th><th class="day-th">فی فروش</th><th class="day-th">فی خرید</th><th class="day-th">فایده/ل</th><th class="day-th">پول</th><th class="day-th">فایده</th>
-        <th class="night-th">کارمند</th><th class="night-th">شروع</th><th class="night-th">ختم</th><th class="night-th">فروش</th><th class="night-th">فی فروش</th><th class="night-th">فی خرید</th><th class="night-th">فایده/ل</th><th class="night-th">پول</th><th class="night-th">فایده</th>
-        <th class="dday-th">کارمند</th><th class="dday-th">شروع</th><th class="dday-th">ختم</th><th class="dday-th">فروش</th><th class="dday-th">فی فروش</th><th class="dday-th">فی خرید</th><th class="dday-th">فایده/ل</th><th class="dday-th">پول</th><th class="dday-th">فایده</th>
-        <th class="dnight-th">کارمند</th><th class="dnight-th">شروع</th><th class="dnight-th">ختم</th><th class="dnight-th">فروش</th><th class="dnight-th">فی فروش</th><th class="dnight-th">فی خرید</th><th class="dnight-th">فایده/ل</th><th class="dnight-th">پول</th><th class="dnight-th">فایده</th>
+        <th class="day-th">کارمند</th><th class="day-th">شروع</th><th class="day-th">ختم</th><th class="day-th">فروش</th><th class="day-th">فی فروش</th><th class="day-th">فی خرید</th><th class="day-th">فایده/لیتر</th><th class="day-th">پول</th><th class="day-th">فایده</th>
+        <th class="night-th">کارمند</th><th class="night-th">شروع</th><th class="night-th">ختم</th><th class="night-th">فروش</th><th class="night-th">فی فروش</th><th class="night-th">فی خرید</th><th class="night-th">فایده/لیتر</th><th class="night-th">پول</th><th class="night-th">فایده</th>
+        <th class="dday-th">کارمند</th><th class="dday-th">شروع</th><th class="dday-th">ختم</th><th class="dday-th">فروش</th><th class="dday-th">فی فروش</th><th class="dday-th">فی خرید</th><th class="dday-th">فایده/لیتر</th><th class="dday-th">پول</th><th class="dday-th">فایده</th>
+        <th class="dnight-th">کارمند</th><th class="dnight-th">شروع</th><th class="dnight-th">ختم</th><th class="dnight-th">فروش</th><th class="dnight-th">فی فروش</th><th class="dnight-th">فی خرید</th><th class="dnight-th">فایده/لیتر</th><th class="dnight-th">پول</th><th class="dnight-th">فایده</th>
         <th class="total-th">فروش</th><th class="total-th">پول</th><th class="total-th">فایده</th>
       </tr>
     </thead>
@@ -28657,8 +28657,8 @@ function _renderFuelSection(fuelType, containerId, label) {
     <div style="font-size:1rem;color:${isLow?'#ffd6d6':'var(--muted)'};margin-top:4px">لیتر</div>
     ${isLow ? `<div style="margin-top:12px;background:#00000040;border:1.5px solid #fff8;border-radius:10px;padding:9px 12px;font-size:0.9rem;font-weight:900;color:#fff;text-shadow:0 1px 4px #000">⚠️ ${current<=0 ? 'مخزن تمام شده است!' : 'فقط '+n2fa(Math.round(current))+' لیتر باقی مانده'}</div>` : ''}
     <div style="display:flex;justify-content:center;gap:24px;margin-top:16px;flex-wrap:wrap">
-      <div><div style="font-size:0.68rem;color:${isLow?'#ffd6d6':'var(--muted)'}">جمله ورودی</div><div style="font-weight:700;color:${isLow?'#9ae6b4':'var(--green)'}">${n2fa(Math.round(totalIn))} ل</div></div>
-      <div><div style="font-size:0.68rem;color:${isLow?'#ffd6d6':'var(--muted)'}">جمله فروش</div><div style="font-weight:700;color:${isLow?'#feb2b2':'var(--red)'}">${n2fa(Math.round(totalOut))} ل</div></div>
+      <div><div style="font-size:0.68rem;color:${isLow?'#ffd6d6':'var(--muted)'}">جمله ورودی</div><div style="font-weight:700;color:${isLow?'#9ae6b4':'var(--green)'}">${n2fa(Math.round(totalIn))} لیتر</div></div>
+      <div><div style="font-size:0.68rem;color:${isLow?'#ffd6d6':'var(--muted)'}">جمله فروش</div><div style="font-weight:700;color:${isLow?'#feb2b2':'var(--red)'}">${n2fa(Math.round(totalOut))} لیتر</div></div>
     </div>
     <div class="tank-hero-wave" aria-hidden="true">
       <div class="thw-layer w1" style="background-image:linear-gradient(180deg,${wavePal},transparent)"></div>
@@ -30847,7 +30847,7 @@ function pdfStackedAcct(pid, acctId) {
       <td style="color:#c07700;font-weight:700">${n2fa(r.bardagi||0)}</td>
       <td style="color:#276749;font-weight:700">${n2fa(r.rasid||0)}</td>
       <td style="color:${albaqiColor};font-weight:700">${n2fa(-(r.albaqi||0))}</td>` : `
-      <td style="color:#2b6cb0;font-weight:700">${n2fa(r.fuel||0)} ل</td>`;
+      <td style="color:#2b6cb0;font-weight:700">${n2fa(r.fuel||0)} لیتر</td>`;
     return `<tr>
       <td style="text-align:center;color:#718096">${i+1}</td>
       <td>${r.date||'—'}</td>
@@ -30945,9 +30945,9 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
   <div class="sum-box" style="border-color:#276749"><div class="l">جمله بردگی</div><div class="v" style="color:#c07700">${n2fa(rnd(ft.bardagi))}</div></div>
   <div class="sum-box" style="border-color:#276749"><div class="l">جمله رسید</div><div class="v" style="color:#276749">${n2fa(rnd(ft.rasid))}</div></div>
   <div class="sum-box" style="border-color:#e53e3e"><div class="l">جمله الباقی</div><div class="v" style="color:#e53e3e">${n2fa(rnd(-ft.albaqi))}</div></div>` : `
-  <div class="sum-box" style="border-color:#276749"><div class="l">جمله تیل (لیتر)</div><div class="v" style="color:#c07700">${n2fa(rnd(ft.fuel))} ل</div></div>
-  <div class="sum-box" style="border-color:#276749"><div class="l">رسید تیل (لیتر)</div><div class="v" style="color:#276749">${n2fa(rnd(rasidP+rasidD))} ل</div></div>
-  <div class="sum-box" style="border-color:#e53e3e"><div class="l">الباقی تیل (لیتر)</div><div class="v" style="color:#e53e3e">${n2fa(rnd(rasidP+rasidD-ft.fuel))} ل</div></div>`}
+  <div class="sum-box" style="border-color:#276749"><div class="l">جمله تیل (لیتر)</div><div class="v" style="color:#c07700">${n2fa(rnd(ft.fuel))} لیتر</div></div>
+  <div class="sum-box" style="border-color:#276749"><div class="l">رسید تیل (لیتر)</div><div class="v" style="color:#276749">${n2fa(rnd(rasidP+rasidD))} لیتر</div></div>
+  <div class="sum-box" style="border-color:#e53e3e"><div class="l">الباقی تیل (لیتر)</div><div class="v" style="color:#e53e3e">${n2fa(rnd(rasidP+rasidD-ft.fuel))} لیتر</div></div>`}
   <div class="sum-box" style="border-color:#2b6cb0"><div class="l">تعداد ردیف</div><div class="v" style="color:#2b6cb0">${n2fa(rows.length)}</div></div>
 </div>
 <table>
@@ -32163,7 +32163,7 @@ function _plDetailTablesHtml(x) {
             ? '<span title="' + esc(p.why || 'نرخ اتحادیه برای این تاریخ موجود نیست')
               + '">—<br><small style="color:var(--muted)">نرخِ اتحادیهٔ آن روز ثبت نشده</small></span>'
             : '—');
-      line(_plC('مقدار باقی‌مانده', n2fa(rnd2(p.qty)) + ' ل'
+      line(_plC('مقدار باقی‌مانده', n2fa(rnd2(p.qty)) + ' لیتر'
               + (multi ? '<br><small style="color:var(--muted)">بخش ' + n2fa(pi + 1) + ' از ' + n2fa(it.parts.length) + '</small>' : ''),
               'color:var(--blue);font-weight:800')
         + _plC('نرخ برداشت', saleTxt)
@@ -32177,7 +32177,7 @@ function _plDetailTablesHtml(x) {
         + _plC('ارزش با نرخ رسید', (p.noRate ? '—' : afn(p.refValue)), 'color:var(--purple)'));
     });
     if (it.remain > 0) {
-      line(_plC('مقدار باقی‌مانده', n2fa(rnd2(it.remain)) + ' ل', 'color:var(--blue);font-weight:800')
+      line(_plC('مقدار باقی‌مانده', n2fa(rnd2(it.remain)) + ' لیتر', 'color:var(--blue);font-weight:800')
         + _plC('نرخ برداشت', saleTxt)
         + _plC('تاریخ رسید', '— هنوز نیامده', 'color:var(--muted)')
         + _plC('نرخ اتحادیه روز رسید', '—')
@@ -32190,7 +32190,7 @@ function _plDetailTablesHtml(x) {
 
   const detFoot = '<tr>'
     + '<td colspan="2" class="plc-head" data-l="" style="text-align:right">جمعِ ' + esc(x.name) + '</td>'
-    + _plC('مقدار باقی‌مانده', n2fa(rnd2(x.t.fuel)) + ' ل', 'color:var(--blue)')
+    + _plC('مقدار باقی‌مانده', n2fa(rnd2(x.t.fuel)) + ' لیتر', 'color:var(--blue)')
     + _plC('نرخ برداشت', '—')
     + _plC('تاریخ رسید', '—')
     + _plC('نرخ اتحادیه روز رسید', '—')
@@ -32238,7 +32238,7 @@ function _plDetailTablesHtml(x) {
     return '<tr>'
       + _plC('شماره', '🧾 فاکتور ' + n2fa(v.no), '', 'plc-head')
       + _plC('تاریخ', (esc(v.date) || '—'))
-      + _plC('مقدار', n2fa(rnd2(v.liters)) + ' ل', 'color:var(--blue);font-weight:800')
+      + _plC('مقدار', n2fa(rnd2(v.liters)) + ' لیتر', 'color:var(--blue);font-weight:800')
       + _plC('نرخ ثبت فاکتور', (v.rc > 0 ? n2fa(rnd2(v.rc)) : '—'), 'font-weight:800')
       + _plC('نرخ اتحادیه روز تایید', raCell, 'font-weight:800')
       + _plC('تفاوت هر لیتر', dplCell)
@@ -32396,8 +32396,8 @@ function renderPriceLossPage() {
       + ' onclick="_plRowTap(event,\'' + k + '\')">'
       + _plC('ردیف', n2fa(i + 1), 'color:var(--muted)')
       + _plC('قرض‌دار', esc(x.name), 'text-align:right;font-weight:900', 'plc-head')
-      + _plC('تیل باقی‌مانده', n2fa(rnd2(x.t.fuel)) + ' ل'
-          + (x.t.openFuel > 0 ? '<br><small style="color:var(--muted)">' + n2fa(rnd2(x.t.openFuel)) + ' ل تسویه‌نشده</small>' : ''),
+      + _plC('تیل باقی‌مانده', n2fa(rnd2(x.t.fuel)) + ' لیتر'
+          + (x.t.openFuel > 0 ? '<br><small style="color:var(--muted)">' + n2fa(rnd2(x.t.openFuel)) + ' لیتر تسویه‌نشده</small>' : ''),
           'color:var(--blue);font-weight:800')
       + _plC('مبلغ ثبت‌شده', afn(x.t.principal), 'color:var(--accent);font-weight:800')
       + _plC('ارزش با نرخ رسید', afn(x.t.refValue), 'color:var(--purple);font-weight:800')
@@ -32434,7 +32434,7 @@ function renderPriceLossPage() {
       + '<tbody>' + (bodyHtml || '<tr><td colspan="10" style="color:var(--muted);padding:14px">در این نما قرض‌داری نیست</td></tr>') + '</tbody>'
       + '<tfoot><tr>'
         + '<td colspan="2" class="plc-head" data-l="" style="text-align:right">جمعِ نمای «' + fLabel + '» — ' + n2fa(list.length) + ' قرض‌دار</td>'
-        + _plC('تیل باقی‌مانده', n2fa(rnd2(shown.fuel)) + ' ل', 'color:var(--blue)')
+        + _plC('تیل باقی‌مانده', n2fa(rnd2(shown.fuel)) + ' لیتر', 'color:var(--blue)')
         + _plC('مبلغ ثبت‌شده', afn(shown.principal), 'color:var(--accent)')
         + _plC('ارزش با نرخ رسید', afn(shown.refValue), 'color:var(--purple)')
         + _plC('زیان افزایش قیمت', afn(shown.loss), 'color:' + (shown.loss > 0 ? 'var(--red)' : 'var(--muted)'))
@@ -32644,7 +32644,7 @@ function _updatePersonTotals(person) {
   const t = _splitTotals(rows);
   const pctP = _acctPct(acct, 'petrol'), pctD = _acctPct(acct, 'diesel');
   const money = _acctModeMoney(person, acct);
-  const unit = money ? ' افغانی' : ' ل';
+  const unit = money ? ' افغانی' : ' لیتر';
   const setV = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
   const setL = (id,txt) => { const el=document.getElementById(id); if(el) el.textContent=txt; };
   const setInput = (id,v) => { const el=document.getElementById(id); if(el && document.activeElement!==el) el.value = (v||v===0)?v:''; };
@@ -32877,7 +32877,7 @@ function _updatePersonTotals(person) {
       const _commF = (_incP ? commP : 0) + (_incD ? commD : 0);
       const netL = (Math.round((tf.rasidFuel + _hdrRasidF - tf.fuel - _moneyBardLF + _rasidMoneyLF - _commF) * 100) / 100) || 0;
       ftAlbEl.innerHTML =
-        '<div style="font-size:0.78rem;font-weight:800;line-height:1.5;color:' + (netL < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی تیل:<br>' + n2fa(netL) + ' ل</div>';
+        '<div style="font-size:0.78rem;font-weight:800;line-height:1.5;color:' + (netL < 0 ? 'var(--red)' : 'var(--green)') + '">الباقی تیل:<br>' + n2fa(netL) + ' لیتر</div>';
     }
   }
   const ftAlbEl2 = document.getElementById('pm-ft-albaqi2');
@@ -33048,7 +33048,7 @@ function _histFootAlbHtml(net, money) {
   const tip = v < 0 ? 'این‌قدر بیشتر برده (بدهکار) — رسیدِ سربرگ و فیصدی هم در این عدد هست'
                     : 'این‌قدر مانده/پیش‌پرداخت دارد — رسیدِ سربرگ و فیصدی هم در این عدد هست';
   return '<div title="' + tip + '" style="font-size:0.78rem;line-height:1.5;color:' + c + '">'
-    + (money ? 'الباقی پول:' : 'الباقی تیل:') + '<br>' + n2fa(v) + (money ? '' : ' ل') + '</div>';
+    + (money ? 'الباقی پول:' : 'الباقی تیل:') + '<br>' + n2fa(v) + (money ? '' : ' لیتر') + '</div>';
 }
 /* ریاضیِ سربرگِ هر جدولِ آرشیو — یک جا، تا رسمِ اولیه و به‌روزرسانیِ درجا
    (_histRepaint) هرگز دو عددِ متفاوت نشان ندهند. هیچ فرمولی این‌جا عوض نشده؛
@@ -33150,7 +33150,7 @@ function _renderHistoryPanel(person) {
     const commP = _f.commP, commD = _f.commD, remP = _f.remP, remD = _f.remD;
     // آرشیوهای قدیمی «فیِ خرید» را ذخیره نکرده‌اند — از خودِ شخص نشان داده می‌شود
     const hBuyFee = (h.buyFeeNote != null) ? h.buyFeeNote : (person.buyFeeNote || '');
-    const unit = hMoney ? ' افغانی' : ' ل';
+    const unit = hMoney ? ' افغانی' : ' لیتر';
     /* ── سربرگِ خلاصهٔ هر جدولِ آرشیو ─────────────────────────────────────────
        گزارشِ صاحب ریپو: «جدول‌های آرشیو اصلاً شبیه اصلی‌ها نیست — همهٔ کادرها و
        سربرگ‌ها را مثل جدولِ اصلی کن». ریشه‌اش این بود که این‌جا یک چیدمانِ
@@ -34944,7 +34944,7 @@ function pdfDebtSummary(kind) {
   // دو PDF کاملاً جدا: «واحد تیل» و «واحد پول» — هرگز قاطی نمی‌شوند
   const money = kind === 'money';
   const unitTitle = money ? 'واحد پول' : 'واحد تیل';
-  const u = money ? '' : ' ل';
+  const u = money ? '' : ' لیتر';
   const d = allDates();
   const rnd = x => Math.round(x*100)/100;
   const list = (DB.debtPersons || []).filter(p => {
@@ -35056,7 +35056,7 @@ function renderDebtSummary(kind) {
     // خیلی بزرگ فقط CAP ردیفِ اول در DOM رندر می‌شود (بقیه در بخش قرض‌داران/جست‌وجو).
     const CAP = 400;
     const frag = document.createDocumentFragment();
-    const u = money ? '' : ' ل';
+    const u = money ? '' : ' لیتر';
     list.forEach((p, i) => {
       const f = _debtSumFigures(p);
       totBardagi += f.bardagi; totRasid += f.rasid; totAlbaqi += f.albaqi;
@@ -35087,7 +35087,7 @@ function renderDebtSummary(kind) {
   const setTot = (id, v) => {
     const el = document.getElementById(id); if (!el) return;
     el.style.verticalAlign = 'middle';
-    el.innerHTML = n2fa(rnd(v)||0) + (money ? '' : ' ل');
+    el.innerHTML = n2fa(rnd(v)||0) + (money ? '' : ' لیتر');
   };
   const _lblTd = document.querySelector('#sec-' + pfx + ' tfoot td');
   if (_lblTd) _lblTd.style.verticalAlign = 'middle';
@@ -36846,7 +36846,7 @@ function renderExtraIncomes() {
     const seller = (e.seller != null) ? e.seller : _eiSeller(e.qty, e.buy);
     sumSeller += parseFloat(seller)||0; sumIncome += parseFloat(e.amount)||0;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${n2fa(i+1)}</td><td>${e.date||'—'}</td><td>${n2fa(e.qty)} ل</td><td>${n2fa(e.buy)}</td><td>${n2fa(e.market)}</td><td style="color:var(--accent);font-weight:700">${n2fa(seller)} افغانی</td><td style="color:var(--green);font-weight:700">${n2fa(e.amount)} افغانی</td><td><button class="del-btn" onclick="deleteExtraIncome(${i})">🗑️</button></td>`;
+    tr.innerHTML = `<td>${n2fa(i+1)}</td><td>${e.date||'—'}</td><td>${n2fa(e.qty)} لیتر</td><td>${n2fa(e.buy)}</td><td>${n2fa(e.market)}</td><td style="color:var(--accent);font-weight:700">${n2fa(seller)} افغانی</td><td style="color:var(--green);font-weight:700">${n2fa(e.amount)} افغانی</td><td><button class="del-btn" onclick="deleteExtraIncome(${i})">🗑️</button></td>`;
     tb.appendChild(tr);
   });
   setF('ei-ft-seller', Math.round(sumSeller)); setF('ei-ft-income', Math.round(sumIncome));
@@ -37797,8 +37797,8 @@ function pdfSingleReport(repId) {
       <div style="padding:12px 16px;flex:1;min-width:200px">
         <div style="font-size:0.85rem;font-weight:900;color:${hColor};margin-bottom:10px">${label}</div>
         <div style="font-size:0.82rem;color:#718096;margin-bottom:4px">کارمند: <span style="color:#1a202c;font-weight:700">${escFa(s.name)||'—'}</span></div>
-        <div style="font-size:0.82rem;color:#718096;margin-bottom:4px">پایه: <span style="color:#1a202c">${n2fa(s.start||0)} → ${n2fa(s.end||0)} ل</span></div>
-        <div style="font-size:0.82rem;color:#718096;margin-bottom:4px">فروش: <span style="color:#2b6cb0;font-weight:900">${n2fa(s.sale||0)} ل</span></div>
+        <div style="font-size:0.82rem;color:#718096;margin-bottom:4px">پایه: <span style="color:#1a202c">${n2fa(s.start||0)} → ${n2fa(s.end||0)} لیتر</span></div>
+        <div style="font-size:0.82rem;color:#718096;margin-bottom:4px">فروش: <span style="color:#2b6cb0;font-weight:900">${n2fa(s.sale||0)} لیتر</span></div>
         <div style="font-size:0.82rem;color:#718096;margin-bottom:4px">فی فروش: <span style="color:#b7791f;font-weight:700">${n2fa(s.price||0)} ؋</span></div>
         <div style="font-size:0.82rem;color:#718096;margin-bottom:4px">فی خرید: <span style="color:#c53030;font-weight:600">${s.buyPerLiter?n2fa(s.buyPerLiter.toFixed(1))+' ؋':'—'}</span></div>
         <div style="font-size:0.82rem;color:#718096;margin-bottom:4px">فایده / لیتر: <span style="color:#276749;font-weight:700">${n2fa(s.profitPer||0)} ؋</span></div>
@@ -37881,7 +37881,7 @@ body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:20
 <div class="stat-row">
   <div class="stat-box" style="border-color:#2b6cb0">
     <div class="sl">⛽ فروش پطرول</div>
-    <div class="sv" style="color:#2b6cb0">${n2fa(pS)} ل</div>
+    <div class="sv" style="color:#2b6cb0">${n2fa(pS)} لیتر</div>
   </div>
   <div class="stat-box" style="border-color:#b7791f">
     <div class="sl">⛽ پول پطرول</div>
@@ -37889,7 +37889,7 @@ body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:20
   </div>
   <div class="stat-box" style="border-color:#c05621">
     <div class="sl">🟤 فروش دیزل</div>
-    <div class="sv" style="color:#2b6cb0">${n2fa(dS)} ل</div>
+    <div class="sv" style="color:#2b6cb0">${n2fa(dS)} لیتر</div>
   </div>
   <div class="stat-box" style="border-color:#c05621">
     <div class="sl">🟤 پول دیزل</div>
@@ -37919,19 +37919,19 @@ body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:20
   <div class="summary-bar">
     <div class="sum-line">
       <span class="sum-label">⛽ پطرول:</span>
-      <span class="sum-val" style="color:#2b6cb0">فروش ${n2fa(pS)} ل</span>
+      <span class="sum-val" style="color:#2b6cb0">فروش ${n2fa(pS)} لیتر</span>
       <span class="sum-val" style="color:#b7791f">پول ${n2fa(pM)}</span>
       <span class="sum-val" style="color:#276749">فایده ${n2fa(pP)}</span>
     </div>
     <div class="sum-line">
       <span class="sum-label">🟤 دیزل:</span>
-      <span class="sum-val" style="color:#2b6cb0">فروش ${n2fa(dS)} ل</span>
+      <span class="sum-val" style="color:#2b6cb0">فروش ${n2fa(dS)} لیتر</span>
       <span class="sum-val" style="color:#b7791f">پول ${n2fa(dM)}</span>
       <span class="sum-val" style="color:#276749">فایده ${n2fa(dP)}</span>
     </div>
     <div class="grand-line">
       <span class="sum-label" style="font-weight:900;color:#1a202c">جمله کل 24 ساعت:</span>
-      <span class="sum-val" style="color:#2b6cb0;font-size:0.85rem">فروش: ${n2fa(gS)} ل</span>
+      <span class="sum-val" style="color:#2b6cb0;font-size:0.85rem">فروش: ${n2fa(gS)} لیتر</span>
       <span class="sum-val" style="color:#b7791f;font-size:0.85rem">پول: ${n2fa(gM)} افغانی</span>
       <span class="sum-val" style="color:#276749;font-size:0.85rem">فایده: ${n2fa(gP)} افغانی</span>
     </div>
@@ -39518,11 +39518,11 @@ function renderAmanatFee() {
 
   const bx = (l, v, cls) => '<div class="am-fee-box' + (cls ? ' ' + cls : '') + '"><span class="l">' + l + '</span><span class="v">' + v + '</span></div>';
   box.innerHTML =
-      bx('کمبودیِ تخمینی', _amFmt2(a.loss) + ' ل')
+      bx('کمبودیِ تخمینی', _amFmt2(a.loss) + ' لیتر')
     + bx('فیصدیِ سربه‌سر', _amFmt(a.needPct, 3) + '٪')
     + bx('فیصدیِ پیشنهادی', _amFmt(a.safePct, 3) + '٪', 'big')
-    + bx('با فیصدیِ شما', (a.myPct == null ? '—' : (_amFmt2(a.myLiters) + ' ل')))
-    + bx('کم / اضافه', (a.diff == null ? '—' : ((a.diff >= 0 ? '+' : '−') + _amFmt2(Math.abs(a.diff)) + ' ل')));
+    + bx('با فیصدیِ شما', (a.myPct == null ? '—' : (_amFmt2(a.myLiters) + ' لیتر')))
+    + bx('کم / اضافه', (a.diff == null ? '—' : ((a.diff >= 0 ? '+' : '−') + _amFmt2(Math.abs(a.diff)) + ' لیتر')));
 
   const vd = document.getElementById('am-fee-verdict');
   if (vd) {
@@ -39550,10 +39550,10 @@ function renderAmanatFee() {
       const x = amFeeAdvice(liters, d, temp, fuel, myRaw, s);
       const cover = (x.myPct == null) ? '—'
         : ((x.diff >= 0 ? '<span style="color:var(--green)">جبران می‌شود</span>'
-                        : '<span style="color:var(--red)">' + _amFmt2(Math.abs(x.diff)) + ' ل کم</span>'));
+                        : '<span style="color:var(--red)">' + _amFmt2(Math.abs(x.diff)) + ' لیتر کم</span>'));
       return '<tr' + (d === near ? ' class="now"' : '') + '>'
         + '<td>' + n2fa(d) + ' روز</td>'
-        + '<td>' + _amFmt2(x.loss) + ' ل</td>'
+        + '<td>' + _amFmt2(x.loss) + ' لیتر</td>'
         + '<td>' + _amFmt(x.needPct, 3) + '٪</td>'
         + '<td>' + _amFmt(x.safePct, 3) + '٪</td>'
         + '<td>' + cover + '</td></tr>';
@@ -39627,7 +39627,7 @@ function _amCardHtml(a, ai, seq, s, pre) {
   else if (t.myPct == null) { state = '⚠️ فیصدی ثبت نشده'; cls = 'warn'; }
   else if (t.loss <= 0.0001) { state = '✅ ' + _amFmt(t.myPct, 2) + '٪ کافی است'; cls = 'ok'; }
   else if (t.netIfMy < 0) { state = '❌ ضرر — ' + _amFmt(t.askPct, 1) + '٪ بگیرید'; cls = 'bad'; }
-  else { state = '🔸 ' + _amFmt2(t.loss) + ' ل از سهمتان می‌رود'; cls = 'warn'; }
+  else { state = '🔸 ' + _amFmt2(t.loss) + ' لیتر از سهمتان می‌رود'; cls = 'warn'; }
   return `<div class="person-card am-card-acc ${cls}" onclick="openAmanatAccount(${ai})">
     <button class="person-del" title="حذف حساب" onclick="event.stopPropagation();deleteAmanatAccount(${ai})">✕</button>
     <div class="pname">${escFa(String(a.name || '').trim() || 'بی‌نام')}</div>
@@ -39682,11 +39682,11 @@ function _amPaint(pre) {
 function _amSumCardHtml(title, color, t, s) {
   const pct = t.liters > 0 ? (t.loss / t.liters) * 100 : 0;
   const rows = [
-    ['رسید کل', _amFmt2(t.liters) + ' ل'],
-    ['برده شده', _amFmt2(t.taken) + ' ل'],
-    ['بخارِ تخمینی', _amFmt2(t.loss) + ' ل'],
-    ['سهمِ شما (فیصدی)', _amFmt2(t.share) + ' ل'],
-    ['باقی تیلِ مشتری', _amFmt2(t.rest) + ' ل'],
+    ['رسید کل', _amFmt2(t.liters) + ' لیتر'],
+    ['برده شده', _amFmt2(t.taken) + ' لیتر'],
+    ['بخارِ تخمینی', _amFmt2(t.loss) + ' لیتر'],
+    ['سهمِ شما (فیصدی)', _amFmt2(t.share) + ' لیتر'],
+    ['باقی تیلِ مشتری', _amFmt2(t.rest) + ' لیتر'],
     ['sep'],
     ['درصد بخار', _amFmt(pct, 3) + '٪'],
     ['یعنی روی هر فیصدی', '+' + _amFmt(pct, 3) + '٪ بگیرید']
@@ -39859,18 +39859,18 @@ function _amAccBuild() {
             سربرگ باشند، سهمیهٔ من و به من می‌رسد هم توی یک سربرگ؛ تیلِ بخار و
             الباقیِ طرف هم نشان داده شوند.»
            پس ستون‌ها زیرِ چند «سرگروه» دسته شدند و «درصد بخار» از کنارِ
-           «بخار (ل)» آمد کنارِ «فیصدیِ من» — چون هر دو فیصدی‌اند. -->
+           «بخار (لیتر)» آمد کنارِ «فیصدیِ من» — چون هر دو فیصدی‌اند. -->
       <table class="xls-tbl am-tbl2" style="min-width:${M ? 1700 : 1540}px">
         <thead>
           <tr class="am-hgrp">
             <th rowspan="2" style="width:30px">#</th>
             <th colspan="3" class="g-id">شناسه</th>
-            <th colspan="2" class="g-oil">🛢️ تیل (ل)</th>
+            <th colspan="2" class="g-oil">🛢️ تیل (لیتر)</th>
             <th colspan="3" class="g-cond">🌡️ شرایطِ نگهداری</th>
-            <th rowspan="2" style="width:84px" class="g-vap" title="چند لیتر از تیل بخار شده — همین از سهمِ شما کم می‌شود">تیلِ بخار (ل)</th>
+            <th rowspan="2" style="width:84px" class="g-vap" title="چند لیتر از تیل بخار شده — همین از سهمِ شما کم می‌شود">تیلِ بخار (لیتر)</th>
             <th colspan="3" class="g-pct">٪ فیصدی‌ها</th>
-            <th colspan="2" class="g-mine">سهمِ من (ل)</th>
-            <th rowspan="2" style="width:96px" class="g-rest" title="تیلِ خودِ مشتری = رسید − برده شده − سهمِ شما. بخار این‌جا کم نمی‌شود.">الباقیِ طرف (ل)</th>
+            <th colspan="2" class="g-mine">سهمِ من (لیتر)</th>
+            <th rowspan="2" style="width:96px" class="g-rest" title="تیلِ خودِ مشتری = رسید − برده شده − سهمِ شما. بخار این‌جا کم نمی‌شود.">الباقیِ طرف (لیتر)</th>
             ${M ? '<th colspan="2" class="g-msr">📏 اندازه‌گیری</th>' : ''}
             <th colspan="4" class="g-etc">دیگر</th>
           </tr>
@@ -40063,11 +40063,11 @@ function _amWhatIfPaint() {
 
   const cell = (lbl, val, col) => '<div class="am-wi-c"><span>' + lbl + '</span><b style="color:' + col + '">' + val + '</b></div>';
   let html = '<div class="am-wi-cells">'
-    + cell('🛢️ تیلِ بخار', _amFmt2(loss) + ' ل', 'var(--accent)')
+    + cell('🛢️ تیلِ بخار', _amFmt2(loss) + ' لیتر', 'var(--accent)')
     + cell('٪ فیصدیِ بخار', _amFmt(lossPct, 3) + '٪', 'var(--accent)')
-    + (share == null ? '' : cell('سهمیهٔ من', _amFmt2(share) + ' ل', 'var(--blue)'))
-    + (net == null ? '' : cell('به من می‌رسد', _amFmt2(net) + ' ل', net < 0 ? 'var(--red)' : 'var(--green)'))
-    + cell('الباقیِ طرف', _amFmt2(rest) + ' ل', 'var(--green)')
+    + (share == null ? '' : cell('سهمیهٔ من', _amFmt2(share) + ' لیتر', 'var(--blue)'))
+    + (net == null ? '' : cell('به من می‌رسد', _amFmt2(net) + ' لیتر', net < 0 ? 'var(--red)' : 'var(--green)'))
+    + cell('الباقیِ طرف', _amFmt2(rest) + ' لیتر', 'var(--green)')
     + (needPct == null ? '' : cell('٪ فیصدیِ لازم', _amFmt(needPct, 3) + '٪', 'var(--blue)'))
     + '</div>';
 
@@ -40080,7 +40080,7 @@ function _amWhatIfPaint() {
       + _amFmt2(net) + ' لیتر</b> برایتان می‌ماند' + money(net) + '.</div>';
   } else if (net < -0.0001) {
     html += '<div class="am-wi-v bad">⛔ ضرر می‌کنید — با ' + _amFmt(myPct, 2) + '٪، بخار (<b>'
-      + _amFmt2(loss) + ' ل</b>) از سهمِ شما بیشتر است و <b>' + _amFmt2(Math.abs(net))
+      + _amFmt2(loss) + ' لیتر</b>) از سهمِ شما بیشتر است و <b>' + _amFmt2(Math.abs(net))
       + ' لیتر</b> از جیبتان می‌رود' + money(net) + '.<br>فیصدی را دستِ‌کم به <b>'
       + _amFmt(askPct, 1) + '٪</b> ببرید تا ضرر نکنید.</div>';
   } else {
@@ -40162,18 +40162,18 @@ function _amAccPaint() {
       + '<span><i>' + l2 + '</i><b style="color:' + c2 + '">' + v2 + '</b></span>'
       + '</div></div>';
     chips.innerHTML =
-        box('🛢️ رسید کل', _amFmt2(t.liters) + ' ل', 'var(--txt)',
-            t.taken ? ('برده شده: <b style="color:var(--red)">' + _amFmt2(t.taken) + '</b> ل') : '')
-      + box('💨 تیلِ بخار', _amFmt2(t.loss) + ' ل', 'var(--accent)',
+        box('🛢️ رسید کل', _amFmt2(t.liters) + ' لیتر', 'var(--txt)',
+            t.taken ? ('برده شده: <b style="color:var(--red)">' + _amFmt2(t.taken) + '</b> لیتر') : '')
+      + box('💨 تیلِ بخار', _amFmt2(t.loss) + ' لیتر', 'var(--accent)',
             t.lossMoney == null ? '' : (_amFmt(t.lossMoney, 0) + ' پول'))
       + box2('٪ فیصدی‌ها',
              'فیصدیِ من', t.myPct == null ? '—' : (_amFmt(t.myPct, 2) + '٪'), 'var(--blue)',
              'فیصدیِ بخار', _amFmt(t.lossPct, 3) + '٪', 'var(--accent)')
-      + box2('سهمِ من (ل)',
+      + box2('سهمِ من (لیتر)',
              'سهمیهٔ من', t.targetL == null ? '—' : _amFmt2(t.targetL), 'var(--blue)',
              'به من می‌رسد', t.netIfMy == null ? '—' : _amFmt2(t.netIfMy),
              (t.netIfMy != null && t.netIfMy < 0) ? 'var(--red)' : 'var(--green)')
-      + box('الباقیِ طرف', _amFmt2(t.rest) + ' ل', t.rest < -0.0001 ? 'var(--red)' : 'var(--green)', '')
+      + box('الباقیِ طرف', _amFmt2(t.rest) + ' لیتر', t.rest < -0.0001 ? 'var(--red)' : 'var(--green)', '')
       + (t.hasActual
           ? box2('📏 اندازه‌گیری',
                  'موجودی واقعی', _amFmt2(t.actual), 'var(--purple)',
@@ -40329,12 +40329,12 @@ function _amAccPdfBlock(a, s) {
     </tr>`;
   }).join('');
   return `<h2>${escFa(String(a.name || '').trim() || 'حسابِ بی‌نام')} — ${amFuelLabel(a)}</h2>
-<div class="chips">رسید کل <b>${_amFmt2(t.liters)}</b> ل · برده شده <b>${_amFmt2(t.taken)}</b> ل ·
-کمبودی <b>${_amFmt2(t.loss)}</b> ل${t.lossMoney == null ? '' : (' (' + _amFmt(t.lossMoney, 0) + ' پول)')} ·
-باقی تیل <b>${_amFmt2(t.rest)}</b> ل${t.hasActual ? (' · اندازه‌گیری واقعی <b>' + _amFmt2(t.actual) + '</b> ل · اختلاف <b>' + _amFmt2(t.realDiff) + '</b> ل') : ''} ·
+<div class="chips">رسید کل <b>${_amFmt2(t.liters)}</b> لیتر · برده شده <b>${_amFmt2(t.taken)}</b> لیتر ·
+کمبودی <b>${_amFmt2(t.loss)}</b> لیتر${t.lossMoney == null ? '' : (' (' + _amFmt(t.lossMoney, 0) + ' پول)')} ·
+باقی تیل <b>${_amFmt2(t.rest)}</b> لیتر${t.hasActual ? (' · اندازه‌گیری واقعی <b>' + _amFmt2(t.actual) + '</b> لیتر · اختلاف <b>' + _amFmt2(t.realDiff) + '</b> لیتر') : ''} ·
 ${t.myPct == null ? 'فیصدی ثبت نشده' : ('فیصدیِ شما (هدف) <b>' + _amFmt(t.myPct, 2) + '٪</b> = <b>' + _amFmt2(t.targetL)
-  + '</b> ل · <b>فیصدیِ لازم ' + _amFmt(t.needPct, 3) + '٪</b> → گِردشده <b>' + _amFmt(t.askPct, 1)
-  + '٪</b> · با آن بعد از بخار <b>' + _amFmt2(t.netIfAsk) + '</b> ل برایتان می‌ماند')}</div>
+  + '</b> لیتر · <b>فیصدیِ لازم ' + _amFmt(t.needPct, 3) + '٪</b> → گِردشده <b>' + _amFmt(t.askPct, 1)
+  + '٪</b> · با آن بعد از بخار <b>' + _amFmt2(t.netIfAsk) + '</b> لیتر برایتان می‌ماند')}</div>
 <div class="tw"><table>
 <!-- با table-layout:fixed پهنا خودش پخش می‌شود و «۱۰۰٬۰۰۰٫۰۰» از وسط دو نیم
      می‌شد. این پهناها به هر ستون به‌اندازهٔ چیزی که واقعاً در آن می‌نشیند جا
@@ -40351,9 +40351,9 @@ ${t.myPct == null ? 'فیصدی ثبت نشده' : ('فیصدیِ شما (هدف
 <col style="width:4%"><col style="width:3.5%"><col style="width:8%">
 </colgroup>
 <thead>
-<tr class="hgrp"><th rowspan="2">#</th><th colspan="3">شناسه</th><th colspan="2">🛢️ تیل (ل)</th>
-<th colspan="3">🌡️ شرایطِ نگهداری</th><th rowspan="2">تیلِ بخار (ل)</th><th colspan="3">٪ فیصدی‌ها</th>
-<th colspan="2">سهمِ من (ل)</th><th rowspan="2">الباقیِ طرف (ل)</th><th colspan="2">📏 اندازه‌گیری</th>
+<tr class="hgrp"><th rowspan="2">#</th><th colspan="3">شناسه</th><th colspan="2">🛢️ تیل (لیتر)</th>
+<th colspan="3">🌡️ شرایطِ نگهداری</th><th rowspan="2">تیلِ بخار (لیتر)</th><th colspan="3">٪ فیصدی‌ها</th>
+<th colspan="2">سهمِ من (لیتر)</th><th rowspan="2">الباقیِ طرف (لیتر)</th><th colspan="2">📏 اندازه‌گیری</th>
 <th colspan="3">دیگر</th></tr>
 <tr><th>تاریخ</th><th>نام</th><th>به حسابهٔ</th><th>رسید تیل</th><th>برده شده</th><th>مدت زمان</th>
 <th>درجه گرما</th><th>سرِ مخزن</th><th>فیصدیِ من</th><th>فیصدیِ بخار</th><th>فیصدیِ لازم</th>
@@ -43084,7 +43084,7 @@ function _renderROViewer() {
     `;
   } else {
     sumEl.innerHTML = `
-      <div class="ro-sum-box"><div class="l">جمله مقدار تیل</div><div class="v" style="color:var(--blue)">${n2fa(t.all.fuel)} ل</div></div>
+      <div class="ro-sum-box"><div class="l">جمله مقدار تیل</div><div class="v" style="color:var(--blue)">${n2fa(t.all.fuel)} لیتر</div></div>
       <div class="ro-sum-box"><div class="l">جمله بردگی</div><div class="v" style="color:var(--accent)">${n2fa(t.all.bardagi)} افغانی</div></div>
       <div class="ro-sum-box"><div class="l">جمله رسید</div><div class="v" style="color:var(--green)">${n2fa(t.all.rasid)} افغانی</div></div>
       <div class="ro-sum-box"><div class="l">الباقی</div><div class="v" style="color:${t.all.albaqi>0?'var(--red)':'var(--green)'}">${n2fa(t.all.albaqi)} افغانی</div></div>
@@ -43136,7 +43136,7 @@ function _renderROViewer() {
   }
   // Footer totals — با فیلترِ فعال هماهنگ باشد
   const ft = filterActive ? t[_roFilter] : t.all;
-  document.getElementById('ro-ft-fuel').textContent    = (ft.fuel > 0) ? (n2fa(ft.fuel) + ' ل') : '—';
+  document.getElementById('ro-ft-fuel').textContent    = (ft.fuel > 0) ? (n2fa(ft.fuel) + ' لیتر') : '—';
   document.getElementById('ro-ft-bardagi').textContent = n2fa(ft.bardagi);
   document.getElementById('ro-ft-rasid').textContent   = n2fa(ft.rasid);
   document.getElementById('ro-ft-albaqi').textContent  = n2fa(ft.albaqi);
@@ -43158,7 +43158,7 @@ function _roArchivesHtml(acct) {
     // چهار کادر خلاصه مثل بالای صفحه — برای همین ماه (خواستهٔ کاربر)
     const sumBox = (l, v, c) => `<div class="ro-sum-box"><div class="l">${l}</div><div class="v" style="color:${c}">${v}</div></div>`;
     const sums =
-      sumBox('جمله مقدار تیل', n2fa(t.all.fuel) + ' ل', 'var(--blue)') +
+      sumBox('جمله مقدار تیل', n2fa(t.all.fuel) + ' لیتر', 'var(--blue)') +
       sumBox('جمله بردگی', n2fa(t.all.bardagi) + ' افغانی', 'var(--accent)') +
       sumBox('جمله رسید', n2fa(t.all.rasid) + ' افغانی', 'var(--green)') +
       sumBox('الباقی', n2fa(t.all.albaqi) + ' افغانی', t.all.albaqi > 0 ? 'var(--red)' : 'var(--green)');
@@ -43169,19 +43169,19 @@ function _roArchivesHtml(acct) {
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;padding:10px 12px;border-bottom:1px solid var(--border)">${sums}</div>
       <div style="overflow-x:auto"><table class="ro-tbl" style="min-width:max(560px,100%);width:max-content">
-        <thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>تیل (ل)</th><th>بردگی</th><th>رسید</th><th>الباقی</th></tr></thead>
+        <thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>تیل (لیتر)</th><th>بردگی</th><th>رسید</th><th>الباقی</th></tr></thead>
         <tbody>${rows.map((r, i) => `<tr>
           <td style="color:var(--muted);text-align:center">${n2fa(i + 1)}</td>
           <td>${escFa(String(r.date || '—'))}</td>
           <td>${escFa(r.name || '—')}</td>
-          <td style="color:var(--blue)">${(r.fuel || 0) > 0 ? n2fa(r.fuel) + ' ل' : '—'}</td>
+          <td style="color:var(--blue)">${(r.fuel || 0) > 0 ? n2fa(r.fuel) + ' لیتر' : '—'}</td>
           <td style="color:var(--accent)">${n2fa(r.bardagi || 0)}</td>
           <td style="color:var(--green)">${n2fa(r.rasid || 0)}</td>
           <td style="color:${(r.albaqi || 0) > 0 ? 'var(--red)' : 'var(--green)'}">${n2fa(r.albaqi || 0)}</td>
         </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:14px">خالی</td></tr>'}</tbody>
         <tfoot><tr style="background:var(--dark);font-weight:900">
           <td colspan="3" style="padding:8px 7px">جمله</td>
-          <td style="padding:8px 7px;color:var(--blue)">${n2fa(t.all.fuel)} ل</td>
+          <td style="padding:8px 7px;color:var(--blue)">${n2fa(t.all.fuel)} لیتر</td>
           <td style="padding:8px 7px;color:var(--accent)">${n2fa(t.all.bardagi)}</td>
           <td style="padding:8px 7px;color:var(--green)">${n2fa(t.all.rasid)}</td>
           <td style="padding:8px 7px;color:${t.all.albaqi > 0 ? 'var(--red)' : 'var(--green)'}">${n2fa(t.all.albaqi)}</td>
@@ -43439,7 +43439,7 @@ function _staffSumsTableHtml(mode) {
   let head = '', body = '', foot = '', cols = 5;
   if (mode === 'both') {
     cols = 8;
-    head = '<tr><th>#</th><th>نام قرض‌دار</th><th>بردگی (پول)</th><th>رسید (پول)</th><th>الباقی (پول)</th><th>بردگی تیل (ل)</th><th>رسید تیل (ل)</th><th>الباقی تیل (ل)</th></tr>';
+    head = '<tr><th>#</th><th>نام قرض‌دار</th><th>بردگی (پول)</th><th>رسید (پول)</th><th>الباقی (پول)</th><th>بردگی تیل (لیتر)</th><th>رسید تیل (لیتر)</th><th>الباقی تیل (لیتر)</th></tr>';
     let mB = 0, mR = 0, mA = 0, fB = 0, fR = 0, fA = 0;
     body = list.map((p, i) => {
       const u = _debtUnitFigures(p);
@@ -43450,13 +43450,13 @@ function _staffSumsTableHtml(mode) {
         ? `<td style="color:var(--accent);font-weight:700">${n2fa(z(u.money.bardagi))}</td><td style="color:var(--green);font-weight:700">${n2fa(z(u.money.rasid))}</td><td style="color:${albColor(u.money.albaqi)};font-weight:700">${n2fa(z(-u.money.albaqi))}</td>`
         : dash + dash + dash;
       const fc = u.fuel.has
-        ? `<td style="color:var(--accent);font-weight:700">${n2fa(z(u.fuel.bardagi))} ل</td><td style="color:var(--green);font-weight:700">${n2fa(z(u.fuel.rasid))} ل</td><td style="color:${albColor(u.fuel.albaqi)};font-weight:700">${n2fa(z(-u.fuel.albaqi))} ل</td>`
+        ? `<td style="color:var(--accent);font-weight:700">${n2fa(z(u.fuel.bardagi))} لیتر</td><td style="color:var(--green);font-weight:700">${n2fa(z(u.fuel.rasid))} لیتر</td><td style="color:${albColor(u.fuel.albaqi)};font-weight:700">${n2fa(z(-u.fuel.albaqi))} لیتر</td>`
         : dash + dash + dash;
       return `<tr${rowAttr(p)}><td>${n2fa(i + 1)}</td><td style="font-weight:700">${escFa(p.name)}</td>${mc}${fc}</tr>`;
     }).join('');
     foot = `<tr style="font-weight:800;border-top:2px solid var(--border)"><td colspan="2">جمله کل</td>
       <td style="color:var(--accent);vertical-align:middle">${n2fa(z(mB))}</td><td style="color:var(--green);vertical-align:middle">${n2fa(z(mR))}</td><td style="color:${albColor(mA)};vertical-align:middle">${n2fa(z(-mA))}</td>
-      <td style="color:var(--accent);vertical-align:middle">${n2fa(z(fB))} ل</td><td style="color:var(--green);vertical-align:middle">${n2fa(z(fR))} ل</td><td style="color:${albColor(fA)};vertical-align:middle">${n2fa(z(-fA))} ل</td></tr>`;
+      <td style="color:var(--accent);vertical-align:middle">${n2fa(z(fB))} لیتر</td><td style="color:var(--green);vertical-align:middle">${n2fa(z(fR))} لیتر</td><td style="color:${albColor(fA)};vertical-align:middle">${n2fa(z(-fA))} لیتر</td></tr>`;
   } else if (mode === 'petrol' || mode === 'diesel') {
     // حساب جداگانهٔ یک نوع تیل — فقط نمایش؛ همان ردیف‌های حساب با فیلتر نوع تیل
     cols = 6;
@@ -43468,14 +43468,14 @@ function _staffSumsTableHtml(mode) {
       if (!(u.fuel || u.bardagi || u.rasid || u.albaqi)) return '';
       n++; sL += u.fuel; sB += u.bardagi; sR += u.rasid; sA += u.albaqi;
       return `<tr${rowAttr(p)}><td>${n2fa(n)}</td><td style="font-weight:700">${escFa(p.name)}</td>
-        <td style="color:var(--blue);font-weight:700">${n2fa(z(u.fuel))} ل</td>
+        <td style="color:var(--blue);font-weight:700">${n2fa(z(u.fuel))} لیتر</td>
         <td style="color:var(--accent);font-weight:700">${n2fa(z(u.bardagi))}</td>
         <td style="color:var(--green);font-weight:700">${n2fa(z(u.rasid))}</td>
         <td style="color:${albColor(u.albaqi)};font-weight:700">${n2fa(z(-u.albaqi))}</td></tr>`;
     }).join('');
     if (!body) body = `<tr><td colspan="6" style="text-align:center;padding:18px;color:var(--muted)">هیچ حسابِ ${lbl} نیست</td></tr>`;
     foot = `<tr style="font-weight:800;border-top:2px solid var(--border)"><td colspan="2">جمله کل</td>
-      <td style="color:var(--blue);vertical-align:middle">${n2fa(z(sL))} ل</td>
+      <td style="color:var(--blue);vertical-align:middle">${n2fa(z(sL))} لیتر</td>
       <td style="color:var(--accent);vertical-align:middle">${n2fa(z(sB))}</td>
       <td style="color:var(--green);vertical-align:middle">${n2fa(z(sR))}</td>
       <td style="color:${albColor(sA)};vertical-align:middle">${n2fa(z(-sA))}</td></tr>`;
@@ -43499,7 +43499,7 @@ function _staffSumsTableHtml(mode) {
       const f = _debtSumFigures(p);
       if (f.money) { anyM = true; tB += f.bardagi; tR += f.rasid; tA += f.albaqi; }
       else { anyF = true; lB += f.bardagi; lR += f.rasid; lA += f.albaqi; }
-      const u = f.money ? '' : ' ل';
+      const u = f.money ? '' : ' لیتر';
       return `<tr${rowAttr(p)}><td>${n2fa(i + 1)}</td>
         <td style="font-weight:700">${escFa(p.name)}${f.money ? ' <span style="font-size:0.78em;color:var(--green);font-weight:700">(واحد پول)</span>' : ' <span style="font-size:0.78em;color:var(--blue);font-weight:700">(واحد تیل)</span>'}</td>
         <td style="color:var(--accent);font-weight:700">${n2fa(z(f.bardagi))}${u}</td><td style="color:var(--green);font-weight:700">${n2fa(z(f.rasid))}${u}</td>
@@ -43509,7 +43509,7 @@ function _staffSumsTableHtml(mode) {
     const cell = (m, l, color) => {
       const parts = [];
       if (anyM) parts.push(`<span style="color:${color}">${n2fa(z(m))}</span>`);
-      if (anyF) parts.push(`<span style="color:var(--blue);${anyM ? 'font-size:0.82em;display:block' : ''}">${n2fa(z(l))} ل</span>`);
+      if (anyF) parts.push(`<span style="color:var(--blue);${anyM ? 'font-size:0.82em;display:block' : ''}">${n2fa(z(l))} لیتر</span>`);
       return parts.join('') || '0';
     };
     foot = `<tr style="font-weight:800;border-top:2px solid var(--border)"><td colspan="2" style="vertical-align:middle">جمله کل</td>
@@ -43598,11 +43598,11 @@ function openStaffAccount(pid, subId) {
     <div class="ro-sum-box"><div class="l">💵 بردگی (پول)</div><div class="v" style="color:var(--accent)">${n2fa(t.all.bardagi)}</div></div>
     <div class="ro-sum-box"><div class="l">💵 رسید (پول)</div><div class="v" style="color:var(--green)">${n2fa(t.all.rasid)}</div></div>
     <div class="ro-sum-box"><div class="l">💵 الباقی (پول)</div><div class="v" style="color:${t.all.albaqi > 0 ? 'var(--red)' : 'var(--green)'}">${t.all.albaqi > 0 ? n2fa(t.all.albaqi) : (t.all.albaqi < 0 ? n2fa(_r2(-t.all.albaqi)) + ' دارد' : '✅ تسویه')}</div></div>
-    <div class="ro-sum-box"><div class="l">🛢️ بردگی تیل (لیتر)</div><div class="v" style="color:var(--accent)">${n2fa(t.all.fuel)} ل</div>${_fsub(t.petrol.fuel, t.diesel.fuel)}</div>
-    <div class="ro-sum-box"><div class="l">🛢️ رسید تیل (لیتر)</div><div class="v" style="color:var(--green)">${n2fa(rasidL)} ل</div>${_fsub(rasidLP, rasidLD)}</div>
-    <div class="ro-sum-box"><div class="l">🛢️ الباقی تیل (لیتر)</div><div class="v" style="color:${albaqiL > 0 ? 'var(--red)' : 'var(--green)'}">${albaqiL > 0 ? n2fa(albaqiL) + ' ل' : (albaqiL < 0 ? n2fa(_r2(-albaqiL)) + ' ل دارد' : '✅ تسویه')}</div>${_fsub(t.petrol.fuel - rasidLP, t.diesel.fuel - rasidLD)}</div>`;
-  if (fl.hasP) sum += `<div class="ro-sum-box"><div class="l">⛽ باقی تیل پطرول</div><div class="v" style="color:var(--green)">${n2fa(Math.round(fl.petrol))} ل</div></div>`;
-  if (fl.hasD) sum += `<div class="ro-sum-box"><div class="l">🟤 باقی تیل دیزل</div><div class="v" style="color:#b7791f">${n2fa(Math.round(fl.diesel))} ل</div></div>`;
+    <div class="ro-sum-box"><div class="l">🛢️ بردگی تیل (لیتر)</div><div class="v" style="color:var(--accent)">${n2fa(t.all.fuel)} لیتر</div>${_fsub(t.petrol.fuel, t.diesel.fuel)}</div>
+    <div class="ro-sum-box"><div class="l">🛢️ رسید تیل (لیتر)</div><div class="v" style="color:var(--green)">${n2fa(rasidL)} لیتر</div>${_fsub(rasidLP, rasidLD)}</div>
+    <div class="ro-sum-box"><div class="l">🛢️ الباقی تیل (لیتر)</div><div class="v" style="color:${albaqiL > 0 ? 'var(--red)' : 'var(--green)'}">${albaqiL > 0 ? n2fa(albaqiL) + ' لیتر' : (albaqiL < 0 ? n2fa(_r2(-albaqiL)) + ' لیتر دارد' : '✅ تسویه')}</div>${_fsub(t.petrol.fuel - rasidLP, t.diesel.fuel - rasidLD)}</div>`;
+  if (fl.hasP) sum += `<div class="ro-sum-box"><div class="l">⛽ باقی تیل پطرول</div><div class="v" style="color:var(--green)">${n2fa(Math.round(fl.petrol))} لیتر</div></div>`;
+  if (fl.hasD) sum += `<div class="ro-sum-box"><div class="l">🟤 باقی تیل دیزل</div><div class="v" style="color:#b7791f">${n2fa(Math.round(fl.diesel))} لیتر</div></div>`;
   document.getElementById('sa-sum').innerHTML = sum;
   // خواستهٔ کاربر: کادرهای کوچکِ «قرض جمع کل / واحد پول / هر دو واحد / پطرول جدا /
   // دیزل جدا» داخل حسابِ خودِ هر شخص — ارقام فقط از همین حساب (دو دفترِ جدا:
@@ -43624,21 +43624,21 @@ function openStaffAccount(pid, subId) {
     ucWrap.innerHTML =
       _ub('var(--accent)', '💰 قرض جمله کل',
         _ln('الباقی پول', n2fa(z(mAlb)), albC(mAlb)) +
-        _ln('الباقی تیل', n2fa(z(fAlb)) + ' ل', albC(fAlb))) +
+        _ln('الباقی تیل', n2fa(z(fAlb)) + ' لیتر', albC(fAlb))) +
       _ub('var(--green)', '💵 واحد پول',
         _ln('بردگی', n2fa(z(mB)), 'var(--accent)') +
         _ln('رسید', n2fa(z(mR)), 'var(--green)') +
         _ln('الباقی', n2fa(z(mAlb)), albC(mAlb))) +
       _ub('var(--blue)', '💰🛢️ هر دو واحد',
         _ln('بردگی پول', n2fa(z(mB)), 'var(--accent)') + _ln('الباقی پول', n2fa(z(mAlb)), albC(mAlb)) +
-        _ln('بردگی تیل', n2fa(z(fB2)) + ' ل', 'var(--accent)') + _ln('الباقی تیل', n2fa(z(fAlb)) + ' ل', albC(fAlb))) +
+        _ln('بردگی تیل', n2fa(z(fB2)) + ' لیتر', 'var(--accent)') + _ln('الباقی تیل', n2fa(z(fAlb)) + ' لیتر', albC(fAlb))) +
       _ub('#38a169', '⛽ حساب جداگانهٔ پطرول',
-        _ln('تیل', n2fa(z(spP.fuel)) + ' ل', 'var(--blue)') +
+        _ln('تیل', n2fa(z(spP.fuel)) + ' لیتر', 'var(--blue)') +
         _ln('بردگی', n2fa(z(spP.bardagi)), 'var(--accent)') +
         _ln('رسید', n2fa(z(spP.rasid)), 'var(--green)') +
         _ln('الباقی', n2fa(z(-spP.albaqi)), albC(-spP.albaqi))) +
       _ub('#b7791f', '🟤 حساب جداگانهٔ دیزل',
-        _ln('تیل', n2fa(z(spD.fuel)) + ' ل', 'var(--blue)') +
+        _ln('تیل', n2fa(z(spD.fuel)) + ' لیتر', 'var(--blue)') +
         _ln('بردگی', n2fa(z(spD.bardagi)), 'var(--accent)') +
         _ln('رسید', n2fa(z(spD.rasid)), 'var(--green)') +
         _ln('الباقی', n2fa(z(-spD.albaqi)), albC(-spD.albaqi)));
@@ -43651,14 +43651,14 @@ function openStaffAccount(pid, subId) {
     <td style="color:var(--muted);text-align:center">${n2fa(i + 1)}</td>
     <td>${r.date || '—'}</td>
     <td>${(r.fuel || 0) > 0 || !r.byMoney ? (r.ftype === 'diesel' ? '🟤 دیزل' : '⛽ پطرول') : '—'}</td>
-    <td style="color:var(--blue)">${(r.fuel || 0) > 0 ? n2fa(r.fuel) + ' ل' : '—'}</td>
+    <td style="color:var(--blue)">${(r.fuel || 0) > 0 ? n2fa(r.fuel) + ' لیتر' : '—'}</td>
     <td style="color:var(--accent)">${n2fa(r.bardagi || 0)}</td>
     <td style="color:var(--green)">${n2fa(r.rasid || 0)}</td>
     <td style="color:${(r.albaqi || 0) > 0 ? 'var(--red)' : 'var(--green)'}">${n2fa(r.albaqi || 0)}</td>
   </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">هیچ ردیفی ثبت نشده</td></tr>';
   document.getElementById('sa-foot').innerHTML =
     `<td colspan="3" style="padding:12px 10px">جمله</td>` +
-    `<td style="color:var(--blue);padding:12px 10px">${n2fa(t.all.fuel)} ل</td>` +
+    `<td style="color:var(--blue);padding:12px 10px">${n2fa(t.all.fuel)} لیتر</td>` +
     `<td style="color:var(--accent);padding:12px 10px">${n2fa(t.all.bardagi)}</td>` +
     `<td style="color:var(--green);padding:12px 10px">${n2fa(t.all.rasid)}</td>` +
     `<td style="color:${t.all.albaqi > 0 ? 'var(--red)' : 'var(--green)'};padding:12px 10px">${n2fa(t.all.albaqi)}</td>`;
@@ -48399,7 +48399,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.362';
+const APP_VERSION = '2.9.363';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -49299,16 +49299,16 @@ function _staffCard(p, sub) {
   const _seg = [];
   if (moneyBal > 0) _seg.push('🛑 بدهکار ' + n2fa(Math.round(moneyBal)) + ' پول');
   else if (moneyBal < 0) _seg.push('💰 ' + n2fa(Math.round(-moneyBal)) + ' پول دارد');
-  if (fuelBal > 0) _seg.push('🛑 برد اضافی ' + n2fa(fuelBal) + ' ل تیل');
-  else if (fuelBal < 0) _seg.push('🛢️ ' + n2fa(-fuelBal) + ' ل تیل دارد');
+  if (fuelBal > 0) _seg.push('🛑 برد اضافی ' + n2fa(fuelBal) + ' لیتر تیل');
+  else if (fuelBal < 0) _seg.push('🛢️ ' + n2fa(-fuelBal) + ' لیتر تیل دارد');
   const _owe = moneyBal > 0 || fuelBal > 0;
   const badge = !_seg.length
     ? `<span class="staff-badge ok">✅ تسویه</span>`
     : `<span class="staff-badge ${_owe ? 'out' : 'ok'}">${_seg.join(' · ')}</span>`;
   const fl = _staffAcctFuelLeft(a);
   const rows = [];
-  if (fl.hasP) rows.push(`<span style="color:var(--green)">⛽ باقی تیل پطرول: ${n2fa(Math.round(fl.petrol))} ل</span>`);
-  if (fl.hasD) rows.push(`<span style="color:#b7791f">🟤 باقی تیل دیزل: ${n2fa(Math.round(fl.diesel))} ل</span>`);
+  if (fl.hasP) rows.push(`<span style="color:var(--green)">⛽ باقی تیل پطرول: ${n2fa(Math.round(fl.petrol))} لیتر</span>`);
+  if (fl.hasD) rows.push(`<span style="color:#b7791f">🟤 باقی تیل دیزل: ${n2fa(Math.round(fl.diesel))} لیتر</span>`);
   // حساب فرعی: فقط نام حساب فرعی نمایش داده می‌شود (نام حساب اصلی ابتدای آن تکرار نمی‌شود)
   const title = sub ? escFa(sub.name || 'حساب فرعی') : escFa(p.name);
   const chip = sub ? 'حساب فرعی' : ((p.subs && p.subs.length) ? 'حساب اصلی' : 'قرض‌دار');
@@ -49327,9 +49327,9 @@ function _staffCard(p, sub) {
     <div class="ms"><div class="l">💵 الباقی (پول)</div><div class="v" style="color:${moneyBal > 0 ? 'var(--red)' : 'var(--green)'}">${moneyBal > 0 ? n2fa(moneyBal) : (moneyBal < 0 ? n2fa(_r2(-moneyBal)) : '✅')}</div></div>
   </div>
   <div class="staff-mini-sums">
-    <div class="ms"><div class="l">🛢️ بردگی تیل (ل)</div><div class="v" style="color:var(--accent)">${n2fa(t.all.fuel)}</div>${_fsub(t.petrol.fuel, t.diesel.fuel)}</div>
-    <div class="ms"><div class="l">🛢️ رسید تیل (ل)</div><div class="v" style="color:var(--green)">${n2fa(rasidL)}</div>${_fsub(rasidLP, rasidLD)}</div>
-    <div class="ms"><div class="l">🛢️ الباقی تیل (ل)</div><div class="v" style="color:${albaqiL > 0 ? 'var(--red)' : 'var(--green)'}">${albaqiL > 0 ? n2fa(albaqiL) : (albaqiL < 0 ? n2fa(_r2(-albaqiL)) : '✅')}</div>${_fsub(t.petrol.fuel - rasidLP, t.diesel.fuel - rasidLD)}</div>
+    <div class="ms"><div class="l">🛢️ بردگی تیل (لیتر)</div><div class="v" style="color:var(--accent)">${n2fa(t.all.fuel)}</div>${_fsub(t.petrol.fuel, t.diesel.fuel)}</div>
+    <div class="ms"><div class="l">🛢️ رسید تیل (لیتر)</div><div class="v" style="color:var(--green)">${n2fa(rasidL)}</div>${_fsub(rasidLP, rasidLD)}</div>
+    <div class="ms"><div class="l">🛢️ الباقی تیل (لیتر)</div><div class="v" style="color:${albaqiL > 0 ? 'var(--red)' : 'var(--green)'}">${albaqiL > 0 ? n2fa(albaqiL) : (albaqiL < 0 ? n2fa(_r2(-albaqiL)) : '✅')}</div>${_fsub(t.petrol.fuel - rasidLP, t.diesel.fuel - rasidLD)}</div>
   </div>`;
   return `<div class="staff-card" onclick="openStaffAccount('${escFa(p.id)}','${sub ? escFa(String(sub.id)) : ''}')">
     <div class="nm"><span>${title}</span><span class="tp">${chip}</span></div>
@@ -51543,7 +51543,7 @@ function confirmTankDip() {
   DB.tankDips.unshift(rec);
   if (DB.tankDips.length > 60) DB.tankDips.length = 60;
   save();
-  if (c.over) showToast('🚨 اختلاف ' + n2fa(Math.abs(c.diff)) + ' لیتر — بیشتر از حد مجاز (' + n2fa(c.allowed) + ' ل)! بررسی کنید', '#e53e3e');
+  if (c.over) showToast('🚨 اختلاف ' + n2fa(Math.abs(c.diff)) + ' لیتر — بیشتر از حد مجاز (' + n2fa(c.allowed) + ' لیتر)! بررسی کنید', '#e53e3e');
   else showToast(c.diff < 0 ? ('⚠️ ' + n2fa(-c.diff) + ' لیتر کم‌آمد نسبت به دفتر' + (rec.adjId ? ' — دفتر برابر شد' : '')) : ('✅ ثبت شد — فرق: ' + n2fa(c.diff) + ' لیتر' + (rec.adjId ? ' — دفتر برابر شد' : '')), c.diff < 0 ? '#d97706' : '#38a169');
   const ia = document.getElementById('dip-actual'); if (ia) ia.value = '';
   const inn = document.getElementById('dip-note'); if (inn) inn.value = '';
@@ -51570,7 +51570,7 @@ function _renderDipPanel() {
     return `<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:6px 2px;border-bottom:1px dashed var(--border);flex-wrap:wrap">
       <span>${x.fuel === 'diesel' ? '🟤' : '⛽'} ${_faDateWithWeekday(x.date)}${time ? ' · 🕐 ' + time : ''}</span>
       <span>واقعی: <b>${n2fa(x.actual)}</b> · دفتری: ${n2fa(x.book)}</span>
-      <b style="color:${d < 0 ? 'var(--red)' : 'var(--green)'}">${d < 0 ? ('کم‌آمد ' + n2fa(-d)) : ('+' + n2fa(d))} ل</b>
+      <b style="color:${d < 0 ? 'var(--red)' : 'var(--green)'}">${d < 0 ? ('کم‌آمد ' + n2fa(-d)) : ('+' + n2fa(d))} لیتر</b>
       ${x.adjId ? '<span style="color:var(--blue);font-size:0.7rem;font-weight:800">📌 دفتر برابر شد</span>' : ''}
       ${x.user ? `<span style="color:var(--muted);font-size:0.7rem">👤 ${escFa(x.user)}</span>` : ''}
       ${x.note ? `<span style="color:var(--muted);font-size:0.72rem">${escFa(x.note)}</span>` : ''}
@@ -51637,7 +51637,7 @@ function _renderAgingPanel(filter, elId) {
   if (!el) return;
   const rows = _agingRows(filter);
   el.innerHTML = rows.length ? rows.map(({ p, f, days }) => {
-    const u = f.money ? '' : ' ل';
+    const u = f.money ? '' : ' لیتر';
     const hasNum = !!_waNumber(p.phone || '');
     return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px dashed var(--border);flex-wrap:wrap">
       <span style="font-weight:700;cursor:pointer" onclick="openPersonModal('debt','${p.id}')">${escFa(p.name)}</span>
@@ -51663,7 +51663,7 @@ function pdfOldLoans(filter) {
     return `<tr>
       <td style="text-align:center;color:#718096">${n2fa(i + 1)}</td>
       <td style="font-weight:700">${escFa(p.name)}</td>
-      <td style="color:#e53e3e;font-weight:900">${n2fa(Math.round(f.albaqi))}${isMoney ? '' : ' ل'}</td>
+      <td style="color:#e53e3e;font-weight:900">${n2fa(Math.round(f.albaqi))}${isMoney ? '' : ' لیتر'}</td>
       <td style="color:${dc};font-weight:800">${days < 0 ? 'بی‌تاریخ' : n2fa(days) + ' روز'}</td>
       <td style="direction:ltr;text-align:right">${escFa(p.phone || '—')}</td>
     </tr>`;
@@ -51714,7 +51714,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px;border-top
 </thead>
 <tbody>${rowsHtml || '<tr><td colspan="5" style="text-align:center;padding:20px;color:#718096">هیچ بدهکاری نیست 🎉</td></tr>'}</tbody>
 <tfoot>
-  <tr><td colspan="2">جمله کل</td><td>${n2fa(Math.round(tot))}${isMoney ? '' : ' ل'}</td><td colspan="2"></td></tr>
+  <tr><td colspan="2">جمله کل</td><td>${n2fa(Math.round(tot))}${isMoney ? '' : ' لیتر'}</td><td colspan="2"></td></tr>
 </tfoot>
 </table>
 <div class="footer">پمپ یعقوبی — این سند به صورت خودکار تولید شده است</div>
@@ -52062,7 +52062,7 @@ function renderMonthReport() {
     box('🛒 درآمد اضافی', n2fa(Math.round(cur.extra)) + ' افغانی', 'خرید عمده از مشتری') +
     box('💸 مصارف', n2fa(Math.round(cur.exp)) + ' افغانی', 'نسبت به ماه قبل: ' + g(cur.exp, prev.exp), 'var(--red)') +
     box('🧾 رسید نقدی قرض‌داران', n2fa(Math.round(cur.rasid)) + ' افغانی', n2fa(cur.rasidC) + ' رسید در این ماه') +
-    box('🛢️ خرید تیل', n2fa(Math.round(cur.buyP.l + cur.buyD.l)) + ' لیتر', '⛽ ' + n2fa(Math.round(cur.buyP.l)) + ' ل · 🟤 ' + n2fa(Math.round(cur.buyD.l)) + ' ل — جمله ' + n2fa(Math.round(cur.buyP.a + cur.buyD.a)) + ' افغانی') +
+    box('🛢️ خرید تیل', n2fa(Math.round(cur.buyP.l + cur.buyD.l)) + ' لیتر', '⛽ ' + n2fa(Math.round(cur.buyP.l)) + ' لیتر · 🟤 ' + n2fa(Math.round(cur.buyD.l)) + ' لیتر — جمله ' + n2fa(Math.round(cur.buyP.a + cur.buyD.a)) + ' افغانی') +
     box('🔐 گاوصندوق (افغانی)', 'ورود ' + n2fa(Math.round(cur.sin)), 'خروج ' + n2fa(Math.round(cur.sout))) +
     box('🚚 تخلیهٔ تانکر', n2fa(cur.tkCount) + ' تخلیه', cur.tkShort ? ('⚠️ جمله کم‌آمد: ' + n2fa(Math.round(cur.tkShort)) + ' لیتر') : 'کم‌آمدی ثبت نشده') +
     `</div>
@@ -52900,7 +52900,7 @@ document.addEventListener('click', function(e) {
               + '<span class="tank-bubble" style="--i:3;left:74%"></span>'
               + '<span class="tank-bubble" style="--i:4;left:48%"></span>'
             + '</div>'
-            + '<div class="tank-th'+(thLabelFlip?' tank-th-flip':'')+'" style="bottom:'+thPct+'%"><span>حد هشدار: '+num(th)+' ل</span></div>'
+            + '<div class="tank-th'+(thLabelFlip?' tank-th-flip':'')+'" style="bottom:'+thPct+'%"><span>حد هشدار: '+num(th)+' لیتر</span></div>'
             + '<div class="tank-pct">'+Math.round(pct)+'٪</div>'
           + '</div>'
         + '</div>'
@@ -52910,9 +52910,9 @@ document.addEventListener('click', function(e) {
               + num(currentDisplay) + '<small>لیتر باقی‌مانده</small></div>'
           + '<div class="tank-chip '+chipCls+'">'+chipTxt+'</div>'
           + '<div class="tank-meta">'
-            + '<div>جمله ورودی<b style="color:var(--green)">'+num(totalIn)+' ل</b></div>'
-            + '<div>جمله فروش<b style="color:var(--red)">'+num(totalOut)+' ل</b></div>'
-            + '<div>ظرفیت<b>'+num(cap)+' ل</b></div>'
+            + '<div>جمله ورودی<b style="color:var(--green)">'+num(totalIn)+' لیتر</b></div>'
+            + '<div>جمله فروش<b style="color:var(--red)">'+num(totalOut)+' لیتر</b></div>'
+            + '<div>ظرفیت<b>'+num(cap)+' لیتر</b></div>'
           + '</div>'
           + '<div class="tank-cap">ظرفیت مخزن (لیتر): '
             + '<input type="number" min="1" value="'+cap+'" '
@@ -52984,7 +52984,7 @@ document.addEventListener('click', function(e) {
     var pctEl = host.querySelector('.tank-pct'); if(pctEl) pctEl.textContent = Math.round(pct)+'٪';
     var thEl  = host.querySelector('.tank-th');  if(thEl)  thEl.style.bottom = (cap>0?clamp(th/cap*100,0,100):0)+'%';
     var metaBs = host.querySelectorAll('.tank-meta b');
-    if(metaBs && metaBs.length>=3) metaBs[2].textContent = num(cap)+' ل';
+    if(metaBs && metaBs.length>=3) metaBs[2].textContent = num(cap)+' لیتر';
   }
   window.__updateTankFill = updateTankFill;
 
