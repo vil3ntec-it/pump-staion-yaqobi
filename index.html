@@ -548,10 +548,21 @@ body.staff-view .qr-overlay{z-index:10020}
    قدِ پنجره ۱۰۰٪ِ همان پرده. پس هر چه داخلش است همیشه در دسترسِ اسکرول می‌ماند.
    ⚠️ به 100vh برنگردانید. ══ */
 #personModal,#companyModal,#companyPurchasesModal,#companyArchiveModal,#personArchiveModal,
-#pumpHistoryModal,#waraqModal{ height:100vh; }
+#pumpHistoryModal,#waraqModal,#parchaHistoryModal{ height:100vh; }
 @supports (height:100dvh){
   #personModal,#companyModal,#companyPurchasesModal,#companyArchiveModal,#personArchiveModal,
-  #pumpHistoryModal,#waraqModal{ height:100dvh; }
+  #pumpHistoryModal,#waraqModal,#parchaHistoryModal{ height:100dvh; }
+}
+/* تاریخچهٔ پایه‌های پارچه‌ها: پطرول و دیزل کنارِ هم؛ روی گوشی زیرِ هم.
+   هر کادر جدولِ خودش را دارد و جداگانه اسکرول می‌شود، پس ردیف‌های زیادِ یکی،
+   دیگری را از دسترس بیرون نمی‌برد. */
+.pah-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.pah-box{margin:0;display:flex;flex-direction:column;min-width:0}
+.pah-box .xls-wrap{max-height:66vh;overflow:auto}
+.pah-box .xls-tbl thead th{position:sticky;top:0;z-index:1}
+@media (max-width:760px){
+  .pah-grid{grid-template-columns:1fr}
+  .pah-box .xls-wrap{max-height:44vh}
 }
 /* صفحهٔ آرشیو و جستجوی خرید باید روی نمای اسکنِ کیوآر (z-index:10000) هم دیده شوند */
 #companyArchiveModal,#cmpSearchModal,#personArchiveModal{z-index:10050}
@@ -18248,6 +18259,7 @@ body.boot-viewer #bootViewerSplash{
   <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <button class="goto-btn" onclick="showSection('shifts-diesel')">🟤 دیزل</button>
+      <button class="goto-btn" onclick="openParchaHistory()" title="فقط شمارهٔ شروع/ختمِ پایه‌ها — پطرول و دیزل در یک صفحه">🕘 تاریخچهٔ پایه‌ها</button>
       <button class="goto-btn" style="background:var(--green);color:#fff;border-color:var(--green)" onclick="pdfShifts()">📄 PDF همه گزارش‌ها</button>
       <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('shifts',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('shifts',0.08)">A+</button></span>
     </div>
@@ -18383,6 +18395,7 @@ body.boot-viewer #bootViewerSplash{
   <div class="section-title" style="color:var(--accent);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="goto-btn" onclick="showSection('shifts')">⛽ رفتن به پطرول</button>
+      <button class="goto-btn" onclick="openParchaHistory()" title="فقط شمارهٔ شروع/ختمِ پایه‌ها — پطرول و دیزل در یک صفحه">🕘 تاریخچهٔ پایه‌ها</button>
       <button class="goto-btn" style="background:var(--green);color:#fff;border-color:var(--green)" onclick="pdfDieselShifts()">📄 PDF دیزل</button>
     </div>
     <span style="display:inline-flex;align-items:center;gap:10px">🟤 پارچه‌های دیزل — تاریخ: <span id="todayDate2"></span>
@@ -19712,6 +19725,55 @@ body.boot-viewer #bootViewerSplash{
         </tr></thead>
         <tbody id="ph-body"></tbody>
       </table></div>
+    </div>
+  </div>
+</div>
+
+<!-- تاریخچهٔ پایه‌های پارچه‌ها — فقط شمارهٔ شروع/ختم، هیچ پول و فایده‌ای.
+     خواستهٔ صاحب ریپو: پطرول و دیزل هر کدام کادرِ خودشان را دارند و هر دو در
+     همین یک صفحه‌اند — برای دیدنِ دیزل نباید به بخشِ دیگری رفت. دکمهٔ PDF هم
+     داخلِ خودِ همین تاریخچه است. -->
+<div class="modal-overlay" id="parchaHistoryModal">
+  <div class="modal" style="max-width:100%;width:100%;height:100%;max-height:100%;border-radius:0;border:none;display:flex;flex-direction:column">
+    <div class="modal-head" style="gap:10px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green);padding:5px 10px;font-size:0.78rem" onclick="pdfParchaHistory()">📄 PDF تاریخچه</button>
+        <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('parcha-history',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('parcha-history',0.08)">A+</button></span>
+      </div>
+      <h2 style="flex:1;text-align:center;font-size:0.95rem">🕘 تاریخچهٔ پایه‌های پارچه‌ها</h2>
+      <button class="modal-close" onclick="closeModal('parchaHistoryModal')">✕</button>
+    </div>
+    <div class="modal-body" id="sec-parcha-history">
+      <div id="pah-summary" style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;text-align:center"></div>
+      <!-- دو کادرِ کنارِ هم؛ روی گوشی زیرِ هم می‌نشینند -->
+      <div class="pah-grid">
+        <div class="card pah-box">
+          <div class="card-head"><div class="card-title">⛽ پطرول</div><span id="pah-count-p" style="font-size:0.74rem;color:var(--muted)"></span></div>
+          <div class="xls-wrap"><table class="xls-tbl" style="min-width:0">
+            <thead><tr>
+              <th>تاریخ</th>
+              <th style="width:64px">شیفت</th>
+              <th style="width:46px">پایه</th>
+              <th style="width:82px">شروع</th>
+              <th style="width:82px">ختم</th>
+            </tr></thead>
+            <tbody id="pah-body-p"></tbody>
+          </table></div>
+        </div>
+        <div class="card pah-box">
+          <div class="card-head"><div class="card-title" style="color:var(--accent)">🟤 دیزل</div><span id="pah-count-d" style="font-size:0.74rem;color:var(--muted)"></span></div>
+          <div class="xls-wrap"><table class="xls-tbl" style="min-width:0">
+            <thead><tr>
+              <th>تاریخ</th>
+              <th style="width:64px">شیفت</th>
+              <th style="width:46px">پایه</th>
+              <th style="width:82px">شروع</th>
+              <th style="width:82px">ختم</th>
+            </tr></thead>
+            <tbody id="pah-body-d"></tbody>
+          </table></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -40568,6 +40630,136 @@ function openPumpHistoryEntry(wid, shift) {
   openWaraqModal(wid);
   if (shift === 'night' || shift === 'day') switchWaraqShift(shift);
 }
+
+/* ══ تاریخچهٔ پایه‌های پارچه‌ها ═══════════════════════════════════════════════
+   خواستهٔ صاحب ریپو: «یک تاریخچه که فقط شمارهٔ پایه‌ها را برساند — شروع و ختمِ
+   شیفتِ روز و شب؛ دیزل هم در همان تاریخچه کادرِ جداگانهٔ خودش را داشته باشد تا
+   مجبور نشوم به صفحهٔ جدا بروم؛ پی‌دی‌اف هم داخلِ خودِ تاریخچه باشد.»
+
+   ⚠️ این‌جا هیچ محاسبه‌ای نمی‌شود — نه پول، نه فایده، نه قرض. فقط عددی که خودِ
+   کارمند در «شروع پایه» و «ختم پایه» نوشته، عیناً خوانده می‌شود. «فروش» هم
+   جداگانه حساب نمی‌شود؛ همان end-start است که در ذخیرهٔ پارچه ثبت شده.
+
+   دو دفتر جدا هستند و باید جدا بمانند:
+     پطرول → DB.reports (هر گزارش یک day و یک night دارد)
+     دیزل  → DB.shifts  (هر ردیف خودش type دارد: day یا night)
+   ── */
+function _parchaHistoryRows(fuel) {
+  const out = [];
+  if (fuel === 'diesel') {
+    (DB.shifts || []).forEach(s => {
+      if ((s.fuel || 'petrol') !== 'diesel') return;
+      if (!s || (!s.start && !s.end && !s.name)) return;
+      out.push({ date: s.date || '', shift: s.type === 'night' ? 'night' : 'day',
+        worker: s.name || '', num: s.pumpNum || 0, start: s.start || 0, end: s.end || 0 });
+    });
+  } else {
+    (DB.reports || []).forEach(r => {
+      if ((r.fuel || 'petrol') !== 'petrol') return;
+      ['day', 'night'].forEach(k => {
+        const s = r[k];
+        if (!s || (!s.start && !s.end && !s.name)) return;
+        out.push({ date: r.date || '', shift: k, repNum: r.reportNum || 0,
+          worker: s.name || '', num: s.pumpNum || 0, start: s.start || 0, end: s.end || 0 });
+      });
+    });
+  }
+  // جدیدترین اول؛ در یک روز، شیفتِ شب بعد از روز می‌آید
+  out.sort((a, b) => (_dateSortKey(b.date) - _dateSortKey(a.date))
+    || ((a.shift === 'night' ? 1 : 0) - (b.shift === 'night' ? 1 : 0)));
+  return out;
+}
+const PAH_CAP = 800;   // بیش از این، DOM سنگین و اسکرول کند می‌شود
+function _parchaHistoryTbody(rows) {
+  const shown = rows.slice(0, PAH_CAP);
+  if (!shown.length) {
+    return `<tr><td colspan="5" style="text-align:center;padding:18px;color:var(--muted)">هنوز پایه‌ای ثبت نشده</td></tr>`;
+  }
+  return shown.map(r => `<tr title="${escFa(r.worker) || '—'}">
+      <td style="font-weight:700">${_faDateWithWeekday(r.date)}</td>
+      <td>${r.shift === 'night' ? '🌙 شب' : '☀️ روز'}</td>
+      <td>${r.num ? n2fa(r.num) : '—'}</td>
+      <td style="color:var(--green);font-weight:800">${n2fa(r.start)}</td>
+      <td style="color:var(--red);font-weight:800">${n2fa(r.end)}</td>
+    </tr>`).join('');
+}
+function openParchaHistory() {
+  const rp = _parchaHistoryRows('petrol');
+  const rd = _parchaHistoryRows('diesel');
+  const set = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+  const txt = (id, s) => { const el = document.getElementById(id); if (el) el.textContent = s; };
+  set('pah-body-p', _parchaHistoryTbody(rp));
+  set('pah-body-d', _parchaHistoryTbody(rd));
+  const cap = n => n > PAH_CAP ? ' (تازه‌ترین ' + n2fa(PAH_CAP) + ' تا)' : '';
+  txt('pah-count-p', n2fa(rp.length) + ' پایه' + cap(rp.length));
+  txt('pah-count-d', n2fa(rd.length) + ' پایه' + cap(rd.length));
+  txt('pah-summary', 'فقط شمارهٔ شروع و ختمِ پایه‌ها — جدیدترین اول · پطرول ' + n2fa(rp.length) + ' · دیزل ' + n2fa(rd.length));
+  const m = document.getElementById('parchaHistoryModal'); if (m) m.classList.add('open');
+}
+/* پی‌دی‌افِ همین تاریخچه — سفید و دو ستونه، مثل بقیهٔ پی‌دی‌اف‌های برنامه */
+function pdfParchaHistory() {
+  const d = allDates();
+  const rp = _parchaHistoryRows('petrol');
+  const rd = _parchaHistoryRows('diesel');
+  const rowsHtml = rows => rows.length
+    ? rows.map(r => `<tr>
+        <td class="c">${escFa(r.date) || '—'}</td>
+        <td class="c">${r.shift === 'night' ? 'شب' : 'روز'}</td>
+        <td class="c">${r.num ? n2fa(r.num) : '—'}</td>
+        <td class="c b st">${n2fa(r.start)}</td>
+        <td class="c b en">${n2fa(r.end)}</td>
+      </tr>`).join('')
+    : '<tr><td class="c" colspan="5" style="padding:14px;color:#7b8494">هنوز پایه‌ای ثبت نشده</td></tr>';
+  const table = (icon, label, color, rows) => `<div class="blk">
+      <div class="blk-t" style="color:${color}">${icon} ${label} — ${n2fa(rows.length)} پایه</div>
+      <table><thead><tr>
+        <th>تاریخ</th><th>شیفت</th><th>پایه</th><th>شروع</th><th>ختم</th>
+      </tr></thead><tbody>${rowsHtml(rows)}</tbody></table>
+    </div>`;
+
+  const html = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8">
+<title>تاریخچهٔ پایه‌ها — پمپ یعقوبی</title><style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;padding:14px;font-size:12px}
+.page-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+  border-bottom:2px solid #b7791f;padding-bottom:8px;margin-bottom:12px}
+.page-title{font-size:1rem;font-weight:900;color:#b7791f}
+.page-sub{font-size:0.72rem;color:#5b6472;margin-top:3px}
+.page-meta{font-size:0.68rem;color:#5b6472;text-align:left}
+/* دو کادر کنارِ هم؛ هر کدام روی ورق از وسط دو نیم نمی‌شود */
+.cols{display:flex;gap:12px;align-items:flex-start}
+.blk{flex:1;min-width:0}
+.blk-t{font-size:0.82rem;font-weight:900;margin-bottom:5px}
+table{width:100%;border-collapse:collapse;font-size:0.72rem}
+th{background:#2d3748;color:#e2e8f0;font-weight:800;font-size:0.66rem;padding:5px 4px;
+  border:1px solid #4a5568;white-space:nowrap}
+td{padding:4px;border:1px solid #e3e6eb;line-height:1.4}
+td.c{text-align:center;white-space:nowrap}
+td.b{font-weight:800}
+td.st{color:#0f7a4d}
+td.en{color:#b3261e}
+tbody tr:nth-child(2n) td{background:#fafbfc}
+@media print{
+  body{padding:0}
+  @page{margin:0.8cm;size:A4 portrait}
+  tr{page-break-inside:avoid}
+  thead{display:table-header-group}
+}
+</style></head><body>
+<div class="page-hdr">
+  <div>
+    <div class="page-title">🕘 پمپ یعقوبی — تاریخچهٔ پایه‌های پارچه‌ها</div>
+    <div class="page-sub">فقط شمارهٔ شروع و ختمِ پایه‌ها (روز و شب) — جدیدترین اول</div>
+  </div>
+  <div class="page-meta">تاریخ چاپ: ${d.sh}<br>${d.mi}</div>
+</div>
+<div class="cols">
+  ${table('⛽', 'پطرول', '#b7791f', rp)}
+  ${table('🟤', 'دیزل', '#c05621', rd)}
+</div>
+</body></html>`;
+  pumpOpenDoc(html);
+}
 function calcWaraqTotalSales(w) {
   ensureWaraqShifts(w);
   return computeShiftTotals(w.day).sales + computeShiftTotals(w.night).sales;
@@ -47778,7 +47970,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.357';
+const APP_VERSION = '2.9.358';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
