@@ -16612,13 +16612,30 @@ table thead th:first-child .col-resize-grip{ display:none; }
    داده شد و وسطش خالی ماند — گلایهٔ صاحب ریپو: «اینها چرا فرق دارند؟».
    حالا کادر به‌اندازهٔ عددش جمع می‌شود و نوشته‌اش چپ‌چین است، پس عدد دقیقاً
    کنارِ $ می‌نشیند و کلِ جفت وسطِ خانه می‌آید — هم‌شکلِ «$ 65.72»ِ ستونِ بغلی. */
-/* ⚠️ ویژگیِ انتخابگر مهم است: قاعدهٔ عمومیِ «.xls-tbl .xls-in{text-align:center
-   !important}» ویژگی (۰,۲,۰) دارد. اگر این‌جا «.sr-usd input» بنویسیم (۰,۱,۱)
-   بازنده است و علامت دوباره از عدد جدا می‌افتد. پس عمداً بلندتر نوشته شده. */
-.sr-usd{display:flex;align-items:center;justify-content:center;gap:3px}
-.xls-tbl td .sr-usd input{flex:0 1 auto;width:100%;max-width:82px;min-width:38px;
-  text-align:left!important;padding-left:2px!important;padding-right:2px!important}
-.sr-usd i{font-style:normal;color:var(--green);font-weight:900;font-size:0.82rem;flex:0 0 auto}
+/* ══ ستونِ «بردگی پمپ بنزین ($)» ═══════════════════════════════════════════
+   باید مو‌به‌مو مثلِ ستونِ «رسید به صرافی» دیده شود: «$ 1,707» وسطِ خانه، با
+   یک رنگ. فرقش این است که آن یکی متنِ ساده است و این یکی کادرِ تایپی، و در
+   کادر نمی‌شود علامت را داخلِ خودِ مقدار گذاشت (عدد دیگر خوانده نمی‌شد).
+
+   دو تلاشِ قبلی و چرا غلط بودند:
+     ۱) کادر flex:1 → تمامِ عرض را می‌خورد و $ تا لبهٔ چپ هل داده می‌شد.
+     ۲) کادر چپ‌چین → علامت چسبید ولی نوشته از وسطِ خانه درآمد و به‌هم‌ریخته
+        دیده می‌شد (گلایهٔ صاحب ریپو: «نوشته‌ها را خراب نشان می‌دهد و وسطِ
+        کادرشان نیست»).
+   حالا خودِ کادر به‌اندازهٔ عددش جمع می‌شود (پهنایش با JS از طولِ نوشته حساب
+   می‌شود)، پس جفتِ «$ عدد» یک واحدِ به‌هم‌چسبیده است و با justify-content
+   دقیقاً وسطِ خانه می‌نشیند — همان‌جایی که «$ 65.72» می‌نشیند.
+   ⚠️ ویژگیِ انتخابگر عمداً بلند است: قاعدهٔ عمومیِ «.xls-tbl .xls-in» با
+   !important و ویژگیِ (۰,۲,۰) وگرنه برنده می‌شود. */
+.sr-usd{display:flex;align-items:center;justify-content:center;gap:2px}
+.xls-tbl td .sr-usd input{flex:0 0 auto;max-width:100%;
+  /* ⚠️ !important لازم است: یک قاعدهٔ دیگر min-width را روی ۹۲ پیکسل قفل
+     می‌کند و بدونِ آن، کادر پهن می‌ماند و عدد از $ فاصله می‌گیرد. */
+  min-width:2ch!important;
+  text-align:center!important;padding-left:2px!important;padding-right:2px!important}
+/* دقیقاً هم‌رنگِ خودِ عدد (همان var(--txt)ِ .xls-in) — پیش از این سبز بود و
+   کنارِ عددِ سفید به چشم می‌زد؛ ارث‌بردن هم رنگِ کمی متفاوتِ خانه را می‌گرفت. */
+.sr-usd i{font-style:normal;color:var(--txt);font-weight:700;flex:0 0 auto}
 
 /* ══ یادداشتِ چسبان (کاغذِ زرد با سنجاق) ═══════════════════════════════════
    خواستهٔ صاحب ریپو: «یک آیکونِ داینامیک مثل این عکس با یک سنجاقِ سرخ روی آن،
@@ -40554,13 +40571,34 @@ function renderSarrafi() {
       <td><input class="xls-in xs" type="number" step="0.01" value="${r.rate||''}" placeholder="0" oninput="updateSarrafiRow(${i},'rate',this.value)"></td>
       <td id="sarrafi-usd-${i}" style="font-weight:700;color:var(--blue);min-width:85px;font-size:0.92rem">${broken ? n2fa(broken.toFixed(2)) + ' $' : '—'}</td>
       <td id="sarrafi-rasid-${i}" style="font-weight:700;color:var(--green);min-width:115px;font-size:0.92rem">${broken ? n2fa(broken.toFixed(2)) + ' $' : '—'}</td>
-      <td><div class="sr-usd"><input class="xls-in sm" type="number" value="${r.bardagi||''}" placeholder="0" oninput="updateSarrafiRow(${i},'bardagi',this.value)"><i>$</i></div></td>
+      <td><div class="sr-usd"><input class="xls-in sm" type="number" value="${r.bardagi||''}" placeholder="0" oninput="_srUsdFit(this);updateSarrafiRow(${i},'bardagi',this.value)"><i>$</i></div></td>
       <td style="min-width:115px"></td>
       <td><button class="del-btn" onclick="deleteSarrafiRow(${i})">🗑️</button></td>
     `;
     tbody.appendChild(tr);
   });
+  // کادرهای «بردگی» به‌اندازهٔ عددشان جمع شوند تا «$ عدد» وسطِ خانه بنشیند
+  tbody.querySelectorAll('.sr-usd input').forEach(_srUsdFit);
   _sarrafiRepaint();
+}
+/* پهنای کادرِ «بردگی» را از خودِ نوشته می‌گیرد تا جفتِ «$ عدد» یک واحدِ
+   به‌هم‌چسبیده باشد و وسطِ خانه بنشیند.
+   ⚠️ با واحدِ ch اندازه نگیرید: ch پهنای «۰» است، ولی رقم‌های این فونت کمی
+   پهن‌ترند و کادر ۲ پیکسل از نوشته کوتاه‌تر می‌شد و عدد بریده می‌شد. پس خودِ
+   متن با canvas اندازه گرفته می‌شود — دقیق و مستقل از فونت. */
+let _srCv = null;
+function _srUsdFit(inp) {
+  if (!inp) return;
+  const t = String(inp.value || inp.placeholder || '0');
+  let w = 0;
+  try {
+    if (!_srCv) _srCv = document.createElement('canvas').getContext('2d');
+    const cs = getComputedStyle(inp);
+    _srCv.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+    w = _srCv.measureText(t).width;
+  } catch (e) { w = t.length * 10; }
+  // ‎+۶ پیکسل: ۲+۲ پدینگِ خودِ کادر و کمی جا تا رقمِ آخر به لبه نچسبد
+  inp.style.setProperty('width', Math.max(16, Math.ceil(w) + 6) + 'px', 'important');
 }
 /* ══════════════════════════════════════════════════════════════════════════
    جمع‌ها و ستونِ الباقیِ صرافی — تنها جایی که این عددها نوشته می‌شوند
@@ -48545,7 +48583,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.369';
+const APP_VERSION = '2.9.370';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
