@@ -29809,50 +29809,260 @@ function _pcardNameHtml(name) {
   const cls = L > 20 ? ' xlong' : (L > 12 ? ' long' : '');
   return '<div class="pname' + cls + '" title="' + escFa(n) + '"><span>' + escFa(n) + '</span></div>';
 }
-/* سقفِ ردیف‌های ساخته‌شدهٔ جدولِ یک حساب — تازه‌ترین‌ها. بقیه با دکمهٔ
-   «⬆️ ردیف‌های قدیمی‌تر» یا «نمایش همه» می‌آیند.
-   ⚠️ چرا ۱۲۰ و نه ۴۰۰: گزارشِ صاحب ریپو «بازکردنِ حساب کُند است». اندازه‌گیری
-   روی حسابی با ۳٬۰۰۰ ردیف، CPU چهار برابر کندتر (میانهٔ ۵ بار):
-        پنجره ۴۰۰ → بازکردن ۲۱۹ms، ۳٬۶۰۶ کادرِ ورودی، هر تایپ ۱۷ms
-        پنجره ۲۰۰ → بازکردن ۱۱۵ms، ۱٬۸۰۶ کادر،        هر تایپ ۷٫۹ms
-        پنجره ۱۲۰ → بازکردن  ۸۴ms،  ۱٬۰۸۶ کادر،        هر تایپ ۷٫۵ms
-        پنجره  ۸۰ → بازکردن  ۶۴ms،    ۷۲۶ کادر،        هر تایپ ۵٫۹ms
-   ۱۲۰ نقطهٔ تعادل است: هنوز یک صفحهٔ کاریِ کامل جلوی چشم است، ولی بازکردن
-   ۲٫۶ برابر و تایپ ۲٫۳ برابر سبک‌تر شد. */
-const _PM_ROW_PAGE = 120;
-let _pmRowShown = _PM_ROW_PAGE;
-function _resetPmRowWindow() { _pmRowShown = _PM_ROW_PAGE; }
-window.pmShowAllRows = function () {
-  _pmRowShown = Infinity;
-  const p = _curPerson(); if (p) renderPersonRows(p);
-};
-window.pmShowOlderRows = function () {
-  _pmRowShown = (_pmRowShown === Infinity ? Infinity : _pmRowShown + _PM_ROW_PAGE);
-  const p = _curPerson(); if (p) renderPersonRows(p);
-};
-/* نوارِ «قدیمی‌ترها» بالای جدول — با همان الگوی نوارِ کارت‌ها: با اسکرول به
-   بالا خودش دستهٔ بعدی را می‌آورد، و دکمهٔ «نمایش همه» هم دارد. */
-function _paintPmRowBar(person, total, shownCount) {
-  const wrap = document.querySelector('#personModal .xls-wrap');
-  const old = document.getElementById('pm-row-more');
-  if (old) old.remove();
-  if (!wrap || total <= _PM_ROW_PAGE) return;
-  const bar = document.createElement('div');
-  bar.id = 'pm-row-more';
-  bar.className = 'grid-more';
-  if (shownCount < total) {
-    /* ⚠️ این نوار عمداً با دکمه کار می‌کند، نه با اسکرول. نوارِ کارت‌ها زیرِ
-       گرید است و با رسیدنِ اسکرول به آن، دستهٔ بعدی می‌آید؛ ولی این یکی *بالای*
-       جدول است و از همان لحظهٔ باز شدن دیده می‌شود — با ناظرِ اسکرول بی‌درنگ
-       همه‌چیز را بار می‌کرد و پنجره بی‌فایده می‌شد. */
-    bar.innerHTML = '<span>' + n2fa(shownCount) + ' ردیفِ آخر از ' + n2fa(total) + ' نشان داده شده</span>' +
-      '<button type="button" onclick="pmShowOlderRows()">⬆️ ' + n2fa(_PM_ROW_PAGE) + ' ردیفِ قدیمی‌تر</button>' +
-      '<button type="button" onclick="pmShowAllRows()">نمایش همه</button>';
-    wrap.before(bar);
-  } else {
-    bar.innerHTML = '<span>✅ همهٔ ' + n2fa(total) + ' ردیف نشان داده شد</span>';
-    wrap.before(bar);
+/* ══ جدولِ حساب: فقط همان ردیف‌هایی ساخته می‌شوند که جلوی چشم‌اند ═══════════
+   گزارشِ صاحب ریپو: «از ۷۰۰ ردیف که بیشتر می‌شود لگ می‌زند و کار نمی‌کند. اکسل
+   میلیون‌ها خانه را بدون هیچ کندی می‌آورد. آن «۱۲۰تا ۱۲۰تا» را هم بردار — وقت
+   ندارم هر بار کلیک کنم؛ همه را نشان بده و هیچ‌چیز کند نشود.»
+
+   اندازه‌گیریِ واقعی (کروم، CPU شش برابر کندتر ≈ گوشی، حسابِ ۸۰۰ ردیفی، همهٔ
+   ردیف‌ها ساخته‌شده):
+       ساختِ HTML ردیف‌ها ............   ۸۷۲ms
+       چیدمانِ ۷٬۲۰۰ کادرِ ورودی ...... ۸٬۹۷۷ms   ← گرانی این‌جاست
+       هر کلیدِ تایپ ..................    ۷۲ms
+   یعنی ساختنِ ردیف‌ها گران نیست؛ *بودنِ* هزاران <input> در صفحه گران است. از آن
+   لحظه به بعد هر کارِ مرورگر (هر چیدمان، هر اسکرول، هر تایپ) روی همان هزاران
+   عنصر انجام می‌شود. اکسل هم دقیقاً همین کار را می‌کند: میلیون‌ها خانه دارد ولی
+   فقط همان چهل خانه‌ای را که در قاب است می‌سازد.
+
+   پس صفحه‌بندیِ دستی («۱۲۰ ردیفِ قدیمی‌تر / نمایش همه») برداشته شد و جایش را
+   «پنجرهٔ اسکرول» گرفت:
+     • همهٔ ردیف‌ها در فهرست‌اند و شمارهٔ همه‌شان درست است.
+     • فقط ردیف‌های داخلِ قاب + کمی حاشیه ساخته می‌شوند.
+     • بالا و پایینشان دو ردیفِ «فاصله‌انداز» به بلندیِ دقیقِ ردیف‌های نساخته
+       می‌نشیند، پس نوارِ اسکرول و جای همه‌چیز همان است که با جدولِ کامل بود.
+     • با اسکرول، پنجره جابه‌جا می‌شود (در rAF، پس هرگز جا نمی‌ماند).
+   ⚠️ همهٔ کارها (ویرایش، حذف، فیصدی، جمع‌ها) با data-idx کار می‌کنند و data-idx
+   شمارهٔ واقعیِ ردیف در داده است — نه جای فیزیکی‌اش. پس پنجره‌ای‌شدن هیچ
+   محاسبه‌ای را دست نمی‌زند.
+   ⚠️ اگر روزی این را برداشتید، حسابِ ۸۰۰ ردیفی روی گوشی دوباره ۹ ثانیه یخ
+   می‌زند. همان باگی که گزارش شد. */
+const _PM_BUF = 10;        // چند ردیف بالا و پایینِ قاب، از پیش آماده باشد
+const _PM_MINWIN = 30;     // کمینهٔ ردیف‌های ساخته‌شده
+const _pmV = { person: null, rows: null, idx: [], showFt: true, money: false, cols: 11,
+               emptyMsg: '', rowH: 0, bodyTop: null, from: -1, to: -1,
+               autoN: 0, autoTotal: 0, autoAt: -1 };
+function _resetPmRowWindow() { _pmV.from = -1; _pmV.to = -1; _pmV.rowH = 0; _pmV.bodyTop = null; _pmV.autoN = 0; _pmV.autoTotal = 0; _pmV.autoAt = -1; }
+function _pmScrollBox() {
+  const m = document.getElementById('personModal');
+  return m ? m.querySelector('.modal-body') : null;
+}
+/* HTML یک ردیف — مو‌به‌مو همان چیزی که پیش از این داخلِ حلقه ساخته می‌شد.
+   zebra: راه‌راهِ جدول از شمارهٔ واقعیِ ردیف می‌آید، نه از جای فیزیکی‌اش —
+   وگرنه با آمدنِ ردیفِ فاصله‌انداز، یک‌درمیانیِ رنگ‌ها با هر اسکرول می‌پرید. */
+function _pmRowHtml(person, r, i, shown, showFtCol, money, zebra) {
+  const bardagi = _round0(r.byMoney ? (parseFloat(r.bardagi)||0) : _personRowBardagi(r));
+  const isP = r.ftype !== 'diesel';
+  const rn = 'ft-' + person.id + '-' + i;
+  const ftCell = showFtCol ? `
+      <td>
+        <div class="ft-pick">
+          <label class="ft-opt petrol ${isP?'active':''}"><input type="radio" name="${rn}" ${isP?'checked':''} onchange="setRowFuel('${person.id}',${i},'petrol')">⛽ پطرول</label>
+          <label class="ft-opt diesel ${!isP?'active':''}"><input type="radio" name="${rn}" ${!isP?'checked':''} onchange="setRowFuel('${person.id}',${i},'diesel')">🟤 دیزل</label>
+        </div>
+      </td>` : '';
+  return `<tr data-idx="${i}"${zebra ? ' class="pm-zebra"' : ''}>
+      <td class="xls-num" style="cursor:pointer" title="فیِ این ردیف (دستی) — بزنید تا وارد/عوض کنید" onclick="rowRateEditor(this,'${person.id}',${i})">${n2fa(shown)}</td>
+      <td><input class="xls-in" value="${r.date||''}" onchange="updatePersonRow('${person.id}',${i},'date',this.value)"></td>
+      <td><input class="xls-in" value="${escFa(r.name)}" placeholder="نام" style="min-width:140px" onchange="updatePersonRow('${person.id}',${i},'name',this.value)"></td>
+      <td><input class="xls-in" value="${(r.hawala||'').toString().replace(/"/g,'&quot;')}" placeholder="متن یا عدد" style="min-width:56px" onchange="updatePersonRow('${person.id}',${i},'hawala',this.value)"></td>
+      ${ftCell}
+      <td><input class="xls-in" type="number" value="${r.fuel||''}" placeholder="0" style="min-width:46px" oninput="calcPersonRow('${person.id}',${i},'fuel',this.value)"></td>
+      <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="0" title="فیِ دستی — اگر خالی باشد بردگیِ پولیِ این ردیف صفر می‌ماند (نرخِ خودکار حذف شده)" style="min-width:44px" oninput="calcPersonRow('${person.id}',${i},'priceper',this.value)"></td>
+      <td><input class="xls-in pm-bardagi-cell" type="number" value="${parseFloat(bardagi)||''}" placeholder="0" style="color:var(--accent);font-weight:700" oninput="calcPersonRow('${person.id}',${i},'bardagi',this.value)"></td>
+      ${money ? `<td><input class="xls-in" type="number" value="${r.rasid||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasid',this.value)"></td>` : ''}
+      ${money ? '' : `<td><input class="xls-in" type="number" value="${r.rasidFuel||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasidFuel',this.value)"></td>`}
+      <td class="pm-albaqi-cell"></td>
+      <td><button class="del-btn" onclick="deletePersonRow('${person.id}',${i})">🗑️</button></td>
+    </tr>`;
+}
+function _pmSpacer(h) {
+  return '<tr class="pm-vsp" aria-hidden="true" style="height:' + Math.max(0, Math.round(h)) + 'px"><td colspan="' + _pmV.cols + '"></td></tr>';
+}
+/* آیا این ردیف «خالی» است؟ همان معیارِ قبلی، ولی از خودِ داده خوانده می‌شود نه
+   از کادرهای صفحه — چون حالا همهٔ ردیف‌ها ساخته نمی‌شوند. */
+function _pmRowIsEmpty(r) {
+  if (!r) return true;
+  if (String(r.name || '').trim() || String(r.hawala || '').trim()) return false;
+  return !(parseFloat(r.fuel) || 0) && !(parseFloat(r.priceper) || 0) &&
+         !(parseFloat(r.bardagi) || 0) && !(parseFloat(r.rasid) || 0) && !(parseFloat(r.rasidFuel) || 0);
+}
+/* جای ردیف‌های خودکارِ رسید/فیصدی: اولین ردیفِ خالی از ته (همان قاعدهٔ قبلی) */
+function _pmAutoAnchorPos() {
+  const V = _pmV;
+  let pos = V.idx.length;
+  for (let k = V.idx.length - 1; k >= 0; k--) {
+    if (!_pmRowIsEmpty(V.rows[V.idx[k]])) break;
+    pos = k;
   }
+  return pos;
+}
+/* بلندیِ میانگینِ یک ردیف — از خودِ ردیف‌های ساخته‌شده ─────────────────────
+   ⚠️ همه‌جا همین یک تابع سنجش می‌کند و همه‌جا هم getBoundingClientRect. یک‌بار
+   یک جا offsetHeight بود و جای دیگر رکت: آن دو برای ردیفِ جدول ۵ پیکسل فرق
+   داشتند و هر ۲۰۰ میلی‌ثانیه جدول را بین دو اندازه می‌چرخاندند. */
+function _pmMeasureRowH(tb) {
+  const trs = tb ? tb.querySelectorAll('tr[data-idx]') : null;
+  if (!trs || !trs.length) return 0;
+  const a = trs[0].getBoundingClientRect(), z = trs[trs.length - 1].getBoundingClientRect();
+  const h = (z.bottom - a.top) / trs.length;
+  return (h > 8) ? h : 0;
+}
+function _pmRenderWindow(full) {
+  const V = _pmV;
+  const person = V.person;
+  const tbody = document.getElementById('pm-body');
+  if (!person || !tbody) return;
+  const n = V.idx.length;
+  if (!n) {
+    const nb0 = document.createElement('tbody'); nb0.id = 'pm-body';
+    nb0.innerHTML = '<tr><td colspan="' + V.cols + '" style="text-align:center;padding:16px;color:var(--muted);font-size:0.85rem">' + V.emptyMsg + '</td></tr>';
+    tbody.replaceWith(nb0);
+    V.from = 0; V.to = 0;
+    return;
+  }
+  const sc = _pmScrollBox();
+  const rowH = V.rowH || 41;
+  let from = 0, to = n;
+  if (sc && V.bodyTop != null) {
+    const y = sc.scrollTop - V.bodyTop;
+    from = Math.max(0, Math.floor(y / rowH) - _PM_BUF);
+    to = Math.min(n, Math.ceil((y + sc.clientHeight) / rowH) + _PM_BUF);
+  } else {
+    to = Math.min(n, _PM_MINWIN + _PM_BUF * 2);      // اولین ساخت، تا اندازه‌ها سنجیده شوند
+  }
+  if (to - from < _PM_MINWIN) { to = Math.min(n, from + _PM_MINWIN); from = Math.max(0, to - _PM_MINWIN); }
+  /* دو سرِ فهرست: بلندیِ ردیف‌ها یک‌دست نیست (ردیفِ اول چند پیکسل بلندتر است)،
+     پس تخمینِ جای پنجره در دو سر ممکن است چند ردیف کم بیاورد و ته جدول خالی
+     دیده شود. چند ردیفِ آخر و اول همیشه ساخته می‌شوند — هزینه‌اش هیچ است. */
+  if (n - to < 6) to = n;
+  if (from < 6) from = 0;
+  if (!full && from === V.from && to === V.to) return;
+
+  /* کادری که دستِ کاربر داخلش است ─────────────────────────────────────────
+     پیش از عوض کردنِ ردیف‌ها blur می‌شود تا مقدارِ تایپ‌شده (که با onchange
+     ثبت می‌شود) از دست نرود؛ بعد اگر همان ردیف داخلِ پنجرهٔ تازه باشد، فوکوس
+     و جای مکان‌نما سرِ جایش برمی‌گردد. */
+  let keep = null;
+  const ae = document.activeElement;
+  if (ae && tbody.contains(ae) && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) {
+    const tr = ae.closest('tr[data-idx]');
+    const td = ae.closest('td');
+    if (tr && td) {
+      let ss = null, se = null;
+      try { ss = ae.selectionStart; se = ae.selectionEnd; } catch (e) {}
+      keep = { idx: tr.getAttribute('data-idx'), col: Array.prototype.indexOf.call(tr.children, td), ss: ss, se: se };
+    }
+    try { ae.blur(); } catch (e) {}
+  }
+
+  const html = [];
+  if (from > 0) html.push(_pmSpacer(from * rowH));
+  for (let k = from; k < to; k++) {
+    const i = V.idx[k];
+    html.push(_pmRowHtml(person, V.rows[i], i, k + 1, V.showFt, V.money, (k % 2) === 1));
+  }
+  if (to < n) html.push(_pmSpacer((n - to) * rowH));
+  const nb = document.createElement('tbody');
+  nb.id = 'pm-body';
+  nb.innerHTML = html.join('');
+  tbody.replaceWith(nb);
+  V.from = from; V.to = to;
+
+  /* ردیف‌های خودکارِ رسید/فیصدی دوباره سرِ جای خودشان می‌نشینند — tbody عوض شده
+     و آن‌ها با آن رفته‌اند. با همان عددهای آخرین محاسبه (نه حسابِ دوباره). */
+  try {
+    const lr = V.lastRasid;
+    if (lr && lr.acct && lr.acct === _acctOf(V.person)) _renderRasidLog(lr.acct, lr.o);
+  } catch (e) {}
+
+  /* رنگ/فونتِ خانه‌هایی که کاربر خودش تنظیم کرده، روی ردیف‌های تازه‌ساخته هم
+     دوباره می‌نشیند — وگرنه با اسکرول، رنگِ ذخیره‌شده از ردیف‌ها می‌پرید. */
+  try { if (window._applyCellFormatting) window._applyCellFormatting(document.getElementById('pm-tbl'), 'pm'); } catch (e) {}
+
+  if (keep) {
+    const tr2 = nb.querySelector('tr[data-idx="' + keep.idx + '"]');
+    const td2 = tr2 && tr2.children[keep.col];
+    const in2 = td2 && td2.querySelector('input,textarea');
+    if (in2) {
+      try { in2.focus({ preventScroll: true }); if (keep.ss != null) in2.setSelectionRange(keep.ss, keep.se); } catch (e) {}
+    }
+  }
+
+  /* ⚠️ اندازه‌ها فقط یک‌بار سنجیده می‌شوند، نه با هر اسکرول ────────────────
+     خواندنِ offsetHeight یا getBoundingClientRect مرورگر را وادار می‌کند همان
+     لحظه کلِ صفحه را از نو بچیند. اندازه‌گیری‌شده روی همان حسابِ ۸۰۰ ردیفی
+     (CPU شش برابر کندتر): ساختِ ردیف‌ها ۱٫۶ms، تجزیهٔ HTML ۲۹ms، جابه‌جایی
+     ۲۱ms — ولی همان یک offsetHeight ۳۱۰ms. یعنی ۸۵٪ِ هزینهٔ هر پرشِ اسکرول
+     فقط همین یک خط بود. حالا فقط در ساختِ کامل (باز شدنِ حساب، عوض شدنِ فیلتر)
+     سنجیده می‌شود و پنجرهٔ اسکرول از همان عددها استفاده می‌کند. */
+  if (sc) {
+    if (full || !V.rowH || V.bodyTop == null) {
+      const h0 = _pmMeasureRowH(nb);
+      if (h0) V.rowH = h0;
+      /* اگر همان لحظه چیزی اندازه‌گیری نشد (مثلاً جدول هنوز روی صفحه نیامده)،
+         یک بار در فریمِ بعد دوباره تلاش می‌شود — وگرنه بلندیِ ردیف نامعلوم
+         می‌ماند و جای فاصله‌اندازها غلط می‌شود. */
+      if (!V.rowH && !V._remeasure) {
+        V._remeasure = true;
+        requestAnimationFrame(function () { V._remeasure = false; try { _pmRenderWindow(true); } catch (e) {} });
+      }
+      /* جای آغازِ فهرست (خودِ tbody) نسبت به بالای ظرفِ اسکرول. فاصله‌اندازِ
+         بالا داخلِ همین tbody است، پس این عدد با جابه‌جا شدنِ پنجره عوض
+         نمی‌شود — و نباید چیزی از آن کم شود. */
+      V.bodyTop = nb.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop;
+    }
+    if (!sc.__pmVirt) {
+      sc.__pmVirt = true;
+      sc.addEventListener('scroll', _pmOnScroll, { passive: true });
+      window.addEventListener('resize', _pmOnScroll);
+    }
+    if (full) _pmRenderWindow(false);      // یک‌بار، با اندازه‌های تازه
+    _pmScheduleSettle();
+  }
+}
+/* ── خودتنظیمی: بعد از ایستادنِ اسکرول، اندازه‌ها یک‌بار سنجیده می‌شوند ────────
+   بلندیِ ردیف می‌تواند بعد از رندرِ اول عوض شود (رسیدنِ فونت، عوض شدنِ فیلتر،
+   بزرگ‌نماییِ مرورگر، A−/A+). اگر عددِ کهنه بماند، جای فاصله‌اندازها کم‌کم با
+   واقعیت فاصله می‌گیرد. این‌جا فقط وقتی دست از اسکرول برداشته شد یک‌بار
+   اندازه گرفته می‌شود (یک چیدمانِ اجباری، آن هم در وقتِ بی‌کاری) و اگر عدد
+   واقعاً فرق کرده بود، جدول از نو با اندازهٔ درست چیده می‌شود. */
+let _pmSettleTimer = 0;
+function _pmScheduleSettle() {
+  clearTimeout(_pmSettleTimer);
+  _pmSettleTimer = setTimeout(function () {
+    const V = _pmV;
+    const tb = document.getElementById('pm-body');
+    const sc = _pmScrollBox();
+    if (!tb || !sc || !V.person) return;
+    const h = _pmMeasureRowH(tb);
+    if (h && Math.abs(h - V.rowH) > 0.5) {
+      V.rowH = h;
+      V.bodyTop = tb.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - V.from * h;
+      try { _pmRenderWindow(true); } catch (e) {}
+    }
+  }, 200);
+}
+let _pmScrollRaf = 0;
+function _pmOnScroll() {
+  if (_pmScrollRaf) return;
+  _pmScrollRaf = requestAnimationFrame(function () {
+    _pmScrollRaf = 0;
+    const m = document.getElementById('personModal');
+    if (!m || !m.classList.contains('open') || !_pmV.person) return;
+    try { _pmRenderWindow(false); } catch (e) {}
+    /* ردیف‌های خودکارِ رسید/فیصدی هم با پنجره جابه‌جا می‌شوند.
+       ⚠️ این‌جا _updatePersonTotals صدا زده نمی‌شود: آن همهٔ ردیف‌های حساب را
+       از نو جمع می‌زند و روی حسابِ ۸۰۰ ردیفی هر پرشِ اسکرول را ۳۴۵ms می‌کرد.
+       جمع‌ها با اسکرول عوض نمی‌شوند؛ ردیف‌های خودکارِ رسید/فیصدی را هم خودِ
+       _pmRenderWindow با آخرین عددهای حساب‌شده سرِ جایشان می‌گذارد. */
+    _pmScheduleSettle();
+  });
+}
+/* رفتن به تهِ جدول — بعد از افزودنِ ردیفِ تازه */
+function _pmScrollToEnd() {
+  const sc = _pmScrollBox();
+  if (!sc) return;
+  requestAnimationFrame(function () { sc.scrollTop = sc.scrollHeight; _pmOnScroll(); });
 }
 /* ── تازه‌سازیِ «پس‌زمینه»: کارت‌های فهرست + نوارِ بالای صفحه ─────────────────
    گزارشِ صاحب ریپو: «باز هم یخ زد، تو بخش قرض‌داران بودم با ۳ تب باز.»
@@ -31005,8 +31215,12 @@ function openPersonModal(type, id) {
   try { _renderPersonMembership(person); } catch (e) {}
   _updatePersonFilterBtns();
   _renderSubBar(person);
-  renderPersonRows(person);
+  /* ⚠️ اول پنجره باز شود، بعد جدول ساخته شود ───────────────────────────────
+     تا وقتی مودال display:none است، بلندیِ ردیف صفر اندازه‌گیری می‌شود و
+     جدولِ مجازی نمی‌داند هر ردیف چند پیکسل است — نوارِ اسکرول کوتاه درمی‌آمد و
+     با اولین حرکت می‌پرید. (همین درس یک‌بار در صفحهٔ تیل امانت هم گرفته شد.) */
   document.getElementById('personModal').classList.add('open');
+  renderPersonRows(person);
   try { pmTogglePct(false); } catch (e) {}   // کشویی فیصدی هر بار بسته باز شود
   // کشویی‌های «آرشیو» و «فاکتورهای در صف» هم هر بار بسته باز می‌شوند تا صفحه
   // کوتاه بماند و دکمهٔ «➕ ردیف جدید» همیشه نزدیک باشد
@@ -31245,60 +31459,21 @@ function renderPersonRows(person) {
     if (currentPersonFilter !== 'all' && r.ftype !== currentPersonFilter) return;
     _visIdx.push(i);
   });
-  // پنجره: آخرین _pmRowShown ردیف (تازه‌ترین‌ها) — بقیه با اسکرول/«نمایش همه»
+  /* ══ از این‌جا به بعد کارِ «جدولِ مجازی» است ═══════════════════════════════
+     همهٔ ردیف‌ها هستند — شماره، جمع، اسکرول و جای همه‌چیز مو‌به‌مو مثل وقتی که
+     کلِ جدول ساخته می‌شد — ولی در هر لحظه فقط پنجرهٔ جلوی چشم ساخته می‌شود.
+     توضیحِ کامل بالای _pmRenderWindow نوشته شده. */
   const _visTotal = _visIdx.length;
-  const _cap = Math.min(Math.max(_pmRowShown || _PM_ROW_PAGE, _PM_ROW_PAGE), _visTotal);
-  const _from = Math.max(0, _visTotal - _cap);
-  _visIdx.slice(_from).forEach((i, wi) => {
-    const r = rows[i];
-    shown = _from + wi + 1;          // شمارهٔ واقعیِ ردیف در فهرستِ فیلترشده
-    // حلقهٔ بالا ردیف‌ها را درمان و نرمال کرده؛ این‌جا فقط همان مقدارِ ذخیره‌شده خوانده می‌شود
-    const bardagi = _round0(r.byMoney ? (parseFloat(r.bardagi)||0) : _personRowBardagi(r));
-
-    const isP = r.ftype !== 'diesel';
-    const rn = 'ft-' + person.id + '-' + i;
-    // نرخِ خودکار/اتحادیه حذف شد — «فی لیتر» فقط دستی است.
-    const ftCell = showFtCol ? `
-      <td>
-        <div class="ft-pick">
-          <label class="ft-opt petrol ${isP?'active':''}"><input type="radio" name="${rn}" ${isP?'checked':''} onchange="setRowFuel('${person.id}',${i},'petrol')">⛽ پطرول</label>
-          <label class="ft-opt diesel ${!isP?'active':''}"><input type="radio" name="${rn}" ${!isP?'checked':''} onchange="setRowFuel('${person.id}',${i},'diesel')">🟤 دیزل</label>
-        </div>
-      </td>` : '';
-    _rowHtml.push(`<tr data-idx="${i}">
-      <td class="xls-num" style="cursor:pointer" title="فیِ این ردیف (دستی) — بزنید تا وارد/عوض کنید" onclick="rowRateEditor(this,'${person.id}',${i})">${n2fa(shown)}</td>
-      <td><input class="xls-in" value="${r.date||''}" onchange="updatePersonRow('${person.id}',${i},'date',this.value)"></td>
-      <td><input class="xls-in" value="${escFa(r.name)}" placeholder="نام" style="min-width:140px" onchange="updatePersonRow('${person.id}',${i},'name',this.value)"></td>
-      <td><input class="xls-in" value="${(r.hawala||'').toString().replace(/"/g,'&quot;')}" placeholder="متن یا عدد" style="min-width:56px" onchange="updatePersonRow('${person.id}',${i},'hawala',this.value)"></td>
-      ${ftCell}
-      <td><input class="xls-in" type="number" value="${r.fuel||''}" placeholder="0" style="min-width:46px" oninput="calcPersonRow('${person.id}',${i},'fuel',this.value)"></td>
-      <td><input class="xls-in sm" type="number" value="${r.priceper||''}" placeholder="0" title="فیِ دستی — اگر خالی باشد بردگیِ پولیِ این ردیف صفر می‌ماند (نرخِ خودکار حذف شده)" style="min-width:44px" oninput="calcPersonRow('${person.id}',${i},'priceper',this.value)"></td>
-      <td><input class="xls-in pm-bardagi-cell" type="number" value="${parseFloat(bardagi)||''}" placeholder="0" style="color:var(--accent);font-weight:700" oninput="calcPersonRow('${person.id}',${i},'bardagi',this.value)"></td>
-      ${money ? `<td><input class="xls-in" type="number" value="${r.rasid||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasid',this.value)"></td>` : ''}
-      ${money ? '' : `<td><input class="xls-in" type="number" value="${r.rasidFuel||''}" placeholder="0" oninput="calcPersonRow('${person.id}',${i},'rasidFuel',this.value)"></td>`}
-      <td class="pm-albaqi-cell"></td>
-      <td><button class="del-btn" onclick="deletePersonRow('${person.id}',${i})">🗑️</button></td>
-    </tr>`);
-  });
-  if (_visTotal === 0) {
-    const label = currentPersonFilter === 'petrol' ? '⛽ هیچ ردیف پطرولی ثبت نشده' : (currentPersonFilter === 'diesel' ? '🟤 هیچ ردیف دیزلی ثبت نشده' : 'هیچ ردیفی ثبت نشده');
-    _rowHtml.push(`<tr><td colspan="${showFtCol?11:10}" style="text-align:center;padding:16px;color:var(--muted);font-size:0.85rem">${label}</td></tr>`);
-  }
-  /* ⚠️ یک‌بار نوشتن، نه ۱۵۰۰ بار appendChild ────────────────────────────────
-     پیش از این برای هر ردیف یک <tr> ساخته و جداگانه به جدولِ زنده چسبانده
-     می‌شد؛ یعنی به‌ازای هر ردیف یک تجزیهٔ HTML و یک بی‌اعتبار کردنِ چیدمان.
-     روی حسابِ ۱۵۰۰ ردیفی ۴۱۳ms طول می‌کشید. با ساختنِ یک رشته و یک‌بار
-     نوشتن، خروجی مو‌به‌مو همان است ولی مرورگر یک‌بار کار می‌کند.
-     ردیف‌ها هیچ هندلرِ جاوااسکریپتیِ چسبیده ندارند (همه inline اند)، پس این
-     تغییر هیچ رفتاری را عوض نمی‌کند. */
-  /* نوشتن روی یک <tbody>ِ جدا و بعد جابه‌جایی: نوشتنِ مستقیم روی جدولِ زنده
-     چهار برابر گران‌تر بود (۱۴۱ms در برابر ۳۵ms برای همان محتوا)، چون مرورگر
-     وسطِ کار مجبور به بی‌اعتبار کردنِ چیدمانِ صفحه می‌شد. */
-  const _newBody = document.createElement('tbody');
-  _newBody.id = 'pm-body';
-  _newBody.innerHTML = _rowHtml.join('');
-  tbody.replaceWith(_newBody);
-  _paintPmRowBar(person, _visTotal, _cap);
+  _pmV.person   = person;
+  _pmV.rows     = rows;
+  _pmV.idx      = _visIdx;
+  _pmV.showFt   = showFtCol;
+  _pmV.money    = money;
+  _pmV.cols     = showFtCol ? 11 : 10;
+  _pmV.emptyMsg = currentPersonFilter === 'petrol' ? '⛽ هیچ ردیف پطرولی ثبت نشده'
+                : (currentPersonFilter === 'diesel' ? '🟤 هیچ ردیف دیزلی ثبت نشده' : 'هیچ ردیفی ثبت نشده');
+  shown = _visTotal;
+  _pmRenderWindow(true);
   // اصلاحِ بالا روی دیسک هم بنشیند تا همگام‌سازیِ بعدی آن را پس نگیرد
   if (_healed && currentRole !== 'viewer') { try { _saveQuiet(); } catch (e) {} }
   // جمع‌ها بعد از حلقهٔ ردیف‌ها حساب می‌شوند — حلقه بردگی/الباقیِ هر ردیف را
@@ -33278,18 +33453,17 @@ function _renderRasidLog(acct, o) {
      می‌شود، آخر نیاید». پس درست بعدِ آخرین ردیفِ پرشده می‌نشینند و ردیف‌های
      خالی زیرشان می‌مانند. ردیفِ «خالی» یعنی نه نام دارد نه حواله نه هیچ عددی —
      تاریخِ خودکار و دکمهٔ نوع تیل به‌حساب نمی‌آیند. */
+  /* ⚠️ جای لنگر از خودِ داده حساب می‌شود، نه از کادرهای صفحه ────────────────
+     جدول «مجازی» است و همهٔ ردیف‌ها ساخته نمی‌شوند، پس اسکنِ DOM ردیفِ درست را
+     پیدا نمی‌کرد و این ردیف‌ها وسطِ صفحه می‌افتادند. معیارِ «خالی» همان است که
+     پایین‌تر نوشته شده، فقط از داده خوانده می‌شود (_pmRowIsEmpty).
+     اگر لنگر بیرونِ پنجرهٔ ساخته‌شده باشد، این ردیف‌ها هم ساخته نمی‌شوند —
+     خودشان هم بیرونِ قاب‌اند — و جایشان را فاصله‌اندازها نگه می‌دارند. */
+  const _anchorPos = _pmAutoAnchorPos();
+  _pmV.autoAt = _anchorPos;
+  if (_anchorPos < _pmV.from || _anchorPos >= _pmV.to) { _pmV.autoN = 0; _pmFixSpacers(); return; }
   const anchor = (function () {
-    const trs = Array.prototype.slice.call(tbody.querySelectorAll('tr[data-idx]'));
-    let a = null;
-    for (let i = trs.length - 1; i >= 0; i--) {
-      const ins = trs[i].querySelectorAll('input[type=number], input[placeholder="نام"], input[placeholder="متن یا عدد"]');
-      const empty = Array.prototype.every.call(ins, inp => {
-        const v = String(inp.value || '').trim();
-        return v === '' || v === '0';
-      });
-      if (!empty) break;
-      a = trs[i];
-    }
+    const a = tbody.querySelector('tr[data-idx="' + _pmV.idx[_anchorPos] + '"]');
     /* ⚠️ اینجا یک‌بار برعکس شد و باید همین بماند.
        قبلاً اگر «همهٔ» ردیف‌ها خالی بودند، رسید می‌رفت ته جدول (a = null) تا
        بالای جدولِ خالی یک ردیفِ تنها سبز نشود. ولی خواستهٔ تازه و صریحِ صاحب
@@ -33299,7 +33473,9 @@ function _renderRasidLog(acct, o) {
        کادر ردیفِ اول باشد چه وسطِ جدول. */
     return a;
   })();
+  let _autoN = 0;
   const line = (ftype, when, name, cells, tip, delId) => {
+    _autoN++;
     const tr = document.createElement('tr');
     tr.className = 'pm-auto-row';
     tr.title = tip;
@@ -33345,6 +33521,31 @@ function _renderRasidLog(acct, o) {
   };
   one('petrol', '⛽', 'پطرول', o.rasidP, o.commP, o.pctP);
   one('diesel', '🟤', 'دیزل', o.rasidD, o.commD, o.pctD);
+  /* چند ردیف واقعاً ساخته شد — فاصله‌اندازِ پایین به همین اندازه کوتاه می‌شود
+     تا بلندیِ کلِ جدول (و نوارِ اسکرول) با آمدن و رفتنِ این ردیف‌ها نپرد. */
+  _pmV.autoN = _autoN;
+  _pmV.autoTotal = _autoN;     // شمارهٔ درست — تا وقتی بیرونِ پنجره‌اند هم همین جا را نگه می‌دارد
+  _pmFixSpacers();
+}
+/* بلندیِ فاصله‌اندازها: بالا = ردیف‌های نساخته‌شدهٔ بالای پنجره، پایین = پایینِ
+   پنجره. اگر ردیف‌های خودکار داخلِ پنجره ساخته شده باشند، جای خودشان را در
+   جدول گرفته‌اند؛ اگر بیرونِ پنجره باشند، بلندیشان به همان فاصله‌اندازی اضافه
+   می‌شود که آن طرف را نگه داشته — پس کلِ بلندیِ جدول همیشه یکی است. */
+function _pmFixSpacers() {
+  const V = _pmV;
+  const tb = document.getElementById('pm-body');
+  if (!tb || V.from < 0) return;
+  const rowH = V.rowH || 41;
+  const n = V.idx.length;
+  const at = V.autoAt;
+  const autoH = (V.autoTotal || 0) * rowH;
+  const inWin = (at >= V.from && at < V.to);
+  const sps = tb.querySelectorAll('tr.pm-vsp');
+  if (!sps.length) return;
+  const topH = V.from * rowH + ((!inWin && at >= 0 && at < V.from) ? autoH : 0);
+  const botH = (n - V.to) * rowH + ((!inWin && at >= V.to) ? autoH : 0);
+  if (V.from > 0 && sps[0]) sps[0].style.height = Math.max(0, Math.round(topH)) + 'px';
+  if (V.to < n && sps[sps.length - 1]) sps[sps.length - 1].style.height = Math.max(0, Math.round(botH)) + 'px';
 }
 /* ══ رسیدِ یک‌جا — پطرول و دیزل با یک مبلغ ═══════════════════════════════════
    مشکل (خواستهٔ صاحب ریپو): مشتری هم پطرول برده هم دیزل — مثلاً ۶۰۰۰ پطرول و
@@ -33476,7 +33677,9 @@ function _updatePersonTotals(person) {
   setL('pm-d-comm-l', 'فیصدی ما (' + n2fa(rnd(pctD)) + '٪)');
   setL('pm-bord-sum-l', money ? 'جمله کل برد پول' : 'جمله کل برد تیل');
   // ثبتِ تاریخ‌دارِ رسیدهای سربرگ و فیصدی‌شان، درست زیرِ جدول
-  try { _renderRasidLog(acct, { money, unit, pctP, pctD, rasidP, rasidD, commP, commD, rnd }); } catch (e) {}
+  /* همان آرگومان‌ها برای وقتی که فقط اسکرول شده و جمع‌ها عوض نشده‌اند */
+  _pmV.lastRasid = { acct, o: { money, unit, pctP, pctD, rasidP, rasidD, commP, commD, rnd } };
+  try { _renderRasidLog(acct, _pmV.lastRasid.o); } catch (e) {}
   const modeBtn = document.getElementById('pm-mode-btn');
   if (modeBtn) modeBtn.textContent = money ? '🔁 تیل' : '🔁 پول';
   // در «واحد پول»، کادر «مقدار رسید پول» مجموعِ رسیدِ دستیِ هدر + رسیدهای داخلِ جدول را
@@ -34648,6 +34851,7 @@ function addPersonRow() {
   const ft = (currentPersonFilter === 'diesel') ? 'diesel' : 'petrol';
   _acctRows(person).push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, rasidFuel: 0, albaqi: 0, byMoney: _acctModeMoney(person) });
   save(); renderPersonRows(person);
+  _pmScrollToEnd();          // ردیفِ تازه ته جدول است — همان‌جا برویم
   _ntfAccountTouched(person);
 }
 function setAllRowsFuel(type) {
@@ -34674,6 +34878,7 @@ function addPersonRowsBulk() {
     rowsArr.push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, rasidFuel: 0, albaqi: 0, byMoney: _acctModeMoney(person) });
   }
   save(); renderPersonRows(person);
+  _pmScrollToEnd();
   _ntfAccountTouched(person);
   showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
 }
@@ -49419,7 +49624,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.386';
+const APP_VERSION = '2.9.387';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -58857,6 +59062,14 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
    ردیف‌های تایپیِ خودتان تشخیص داده شود. هیچ داده‌ای پشتش نیست: از «مقدار رسید»
    سربرگ ساخته می‌شود و در جمع‌های جدول شمرده نمی‌شود (جمع‌ها از خودِ ردیف‌ها
    می‌آیند و الباقیِ سربرگ از قبل این رسید را حساب کرده است). */
+/* ══ جدولِ مجازی: فاصله‌اندازها و راه‌راه ═════════════════════════════════
+   ردیفِ فاصله‌انداز فقط «جا» است: نه حاشیه دارد، نه پدینگ، نه رنگ. و چون یک
+   ردیفِ اضافه بالای ردیف‌های واقعی می‌نشیند، یک‌درمیانیِ nth-child جابه‌جا
+   می‌شد و رنگ‌ها با هر اسکرول می‌پریدند — پس راه‌راه از شمارهٔ واقعیِ ردیف
+   می‌آید (کلاس pm-zebra که هنگام ساختِ ردیف گذاشته می‌شود). */
+#pm-body > tr.pm-vsp > td{ padding:0 !important; border:none !important; background:transparent !important; }
+#pm-body > tr:nth-child(even):not(.pm-auto-row) > td{ background:transparent !important; }
+#pm-body > tr.pm-zebra:not(.pm-auto-row) > td{ background:var(--gx-zebra, rgba(255,255,255,.018)) !important; }
 .xls-tbl tr.pm-auto-row td{
   background:color-mix(in srgb, var(--accent) 9%, transparent);
   color:var(--txt); cursor:default;
