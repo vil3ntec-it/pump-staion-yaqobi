@@ -190,7 +190,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--dark);color:var(--txt);
    روی دسکتاپ، چرخ ماوس روی هر جدولی که زیر نشانگر بود دیگر به صفحه منتقل
    نمی‌شد (فقط بالای سربرگ/نوار تب‌ها اسکرول کار می‌کرد). فقط محور افقی را
    می‌بندیم تا عمودی همیشه طبیعی به صفحه زنجیر شود. */
-.tbl-wrap,.xls-wrap,
+.tbl-wrap,.xls-wrap,.pg-host .pg-scroll,
 [style*="overflow-x:auto"],[style*="overflow-x: auto"],
 [style*="overflow:auto"],[style*="overflow: auto"]{
   overscroll-behavior-x:none;
@@ -13904,6 +13904,11 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter
 /* ---------- 9. TABLES (sticky glass head, zebra, row glow) ---------- */
 .tbl-wrap,.xls-wrap{border:1px solid var(--glass-brd)!important;border-radius:var(--r-md)!important;
   overflow:auto!important;background:rgba(10,14,22,.35);box-shadow:inset 0 0 0 1px rgba(255,255,255,.02)}
+/* ⚠️ .pg-host عمداً از قاعدهٔ بالا بیرون است: آن قاعده overflow:auto دارد و با
+   هر overflow، ظرفِ موتورِ سریع خودش «ظرفِ اسکرول» می‌شود و پنجرهٔ چسبانِ
+   داخلش به جای مودال به او می‌چسبد — یعنی دوباره کادرِ ثابتی که نمی‌رود. */
+.pg-host{border:1px solid var(--glass-brd)!important;border-radius:var(--r-md)!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.02)}
 .tbl,.xls-tbl{border-collapse:separate!important;border-spacing:0!important}
 .tbl th,.xls-tbl th{
   position:sticky;top:0;z-index:5;
@@ -14346,7 +14351,7 @@ body.light-mode{
 body.light-mode .card-head{ background:linear-gradient(180deg, rgba(255,247,232,.7), transparent) !important; }
 
 /* ---- table container = a clean, readable solid surface (NOT a faint glass tint) ---- */
-.tbl-wrap, .xls-wrap{
+.tbl-wrap, .xls-wrap, .pg-host{
   background:var(--gx-tbl-surface) !important;
   border:1px solid var(--gx-brd-strong) !important;
   -webkit-backdrop-filter:none !important;
@@ -15643,7 +15648,8 @@ body.gfx-performance .xls-foot td{
   border-top:1px solid var(--border) !important;
 }
 body.gfx-performance .tbl-wrap,
-body.gfx-performance .xls-wrap{
+body.gfx-performance .xls-wrap,
+body.gfx-performance .pg-host{
   background:var(--card) !important;
   border:1px solid var(--border) !important;
   box-shadow:none !important;
@@ -17171,7 +17177,7 @@ body .modal-summary, body .list-header, body .pm-acct-bar{ border-color:var(--lg
 body .pm-arc-in{ border-color:var(--lg-brd) !important; }
 
 /* ── 2) جدول‌ها: هم کادرِ دورِ جدول، هم خطوطِ داخلی، هم سرستون‌ها ─────────── */
-body .tbl-wrap, body .xls-wrap, body .ro-wrap{
+body .tbl-wrap, body .xls-wrap, body .ro-wrap, body .pg-host{
   border:2px solid var(--lg-brd) !important;
 }
 /* سرستون‌ها («#»، «تاریخ»، «توضیحات»، «مبلغ» …): پس‌زمینهٔ هم‌رنگِ تم + متنِ پررنگ */
@@ -17270,7 +17276,8 @@ body.gfx-performance .msumbox,
 body.gfx-performance .person-card,
 body.gfx-performance .tank-card,
 body.gfx-performance .tbl-wrap,
-body.gfx-performance .xls-wrap{ border-color:var(--lg-brd) !important; border-width:2px !important; }
+body.gfx-performance .xls-wrap,
+body.gfx-performance .pg-host{ border-color:var(--lg-brd) !important; border-width:2px !important; }
 body.gfx-performance .card-head{ border-bottom:2px solid var(--lg-brd) !important; }
 body.gfx-performance .tbl th,
 body.gfx-performance .xls-tbl th,
@@ -30158,7 +30165,7 @@ const PumpGrid = (function () {
     this.rowH = spec.rowH || 30;
     this.headH = spec.headH || 34;
     this.footH = spec.footH || 30;
-    this.scrollTop = 0; this.scrollLeft = 0;
+    this.scrollTop = 0; this.scrollLeft = 0; this._hover = -1;
     this.edit = { r: -1, c: -1 };
     this._raf = 0;
     this._build();
@@ -30166,10 +30173,23 @@ const PumpGrid = (function () {
   Grid.prototype._build = function () {
     const h = this.host;
     h.classList.add('pg-host');
+    /* ── چیدمان: چرا «پنجرهٔ چسبان» ───────────────────────────────────────────
+       گزارشِ صاحب ریپو: «این بخش که تو کادر کشیدم نمی‌رود، این هم ثابت است».
+       نسخهٔ پیشین یک کادرِ سقف‌دار بود که *خودش* اسکرول می‌شد، پس هرچه بالای
+       جدول بود (شمارهٔ تماس، فیِ خرید، فیصدی، آرشیو، نوارِ فاکتورها) سرِ جایش
+       می‌ماند. جدولِ همیشگی این‌طور نیست: تمامِ بلندیِ خودش را می‌گیرد و کلِ
+       مودال اسکرول می‌شود.
+       حالا هم همان: ظرف (.pg-host) به بلندیِ *کلِ* جدول است و هیچ اسکرولی از
+       خودش ندارد، پس مودال مثل همیشه اسکرول می‌شود و همه‌چیز با هم می‌رود.
+       بومِ نقاشی هم نمی‌تواند میلیون‌پیکسل بلند باشد، پس داخلِ ظرف یک «پنجرهٔ
+       چسبان» (position:sticky) هست به اندازهٔ صفحه که همیشه جلوی چشم می‌ماند و
+       فقط همان تکه از جدول را می‌کشد. فاصلهٔ همین پنجره از سرِ ظرف = همان
+       «اسکرولِ» جدول. اسکرولِ افقی (که جدولِ همیشگی هم دارد) داخلِ پنجره است. */
     h.innerHTML =
-      '<canvas class="pg-cv"></canvas>' +
+      '<div class="pg-vp"><canvas class="pg-cv"></canvas>' +
       '<div class="pg-scroll"><div class="pg-space">' +
-      '<input class="pg-edit" spellcheck="false" autocomplete="off"></div></div>';
+      '<input class="pg-edit" spellcheck="false" autocomplete="off"></div></div></div>';
+    this.vp = h.querySelector('.pg-vp');
     this.cv = h.querySelector('.pg-cv');
     this.ctx = this.cv.getContext('2d');
     this.sc = h.querySelector('.pg-scroll');
@@ -30183,10 +30203,16 @@ const PumpGrid = (function () {
        ریپو: «چپ و راست اسکرول نمی‌شود»). حالا فاصلهٔ واقعیِ لبهٔ محتوا از لبهٔ
        کادر اندازه گرفته می‌شود — با هر قراردادی درست است. */
     this.sc.addEventListener('scroll', function () {
-      self.scrollTop = self.sc.scrollTop;
       self.scrollLeft = self._xOff();
       self.paint();
+      self._placeEditor();
     }, { passive: true });
+    /* اسکرولِ عمودی دستِ خودِ مودال است، نه این کادر. هر اسکرولی در هر جای صفحه
+       (capture) می‌تواند جای پنجرهٔ چسبان را عوض کند، پس همان‌جا دوباره حساب
+       می‌شود. */
+    this._onScroll = function () { self._syncTop(); };
+    window.addEventListener('scroll', this._onScroll, { capture: true, passive: true });
+    window.addEventListener('resize', this._onScroll, { passive: true });
     /* ⚠️ روی گوشی، هر اسکرول با یک pointerdown شروع می‌شود. نسخهٔ اول همان‌جا
        کادرِ تایپ را باز می‌کرد، پس با هر دست‌زدن کیبورد بالا می‌آمد و کشیدنِ
        چپ‌وراست هم گیر می‌کرد (گزارشِ صاحب ریپو). حالا فقط وقتی کادر باز می‌شود
@@ -30194,12 +30220,22 @@ const PumpGrid = (function () {
        ۶۰۰ میلی‌ثانیه روی صفحه بوده. کشیدن — به هر طرف — دست‌نخورده به خودِ
        ظرفِ اسکرول می‌رسد. */
     this.sc.addEventListener('pointerdown', function (e) {
-      self._tap = { x: e.clientX, y: e.clientY, t: Date.now(), sl: self.sc.scrollLeft, st: self.sc.scrollTop, ok: true };
+      self._tap = { x: e.clientX, y: e.clientY, t: Date.now(), sl: self.sc.scrollLeft, st: self.scrollTop, ok: true };
     }, { passive: true });
     this.sc.addEventListener('pointermove', function (e) {
+      /* راه‌راهِ «ردیفِ زیرِ نشانگر» — جدولِ همیشگی این را دارد
+         (.xls-tbl tbody tr:hover td) و نبودش روی کامپیوتر تو چشم می‌زد. */
+      if (e.pointerType === 'mouse') {
+        const at = self._at(e);
+        const hr = at ? at.r : -1;
+        if (hr !== self._hover) { self._hover = hr; self.paint(); }
+      }
       const t = self._tap;
       if (!t || !t.ok) return;
       if (Math.abs(e.clientX - t.x) > 8 || Math.abs(e.clientY - t.y) > 8) t.ok = false;
+    }, { passive: true });
+    this.sc.addEventListener('pointerleave', function () {
+      if (self._hover !== -1) { self._hover = -1; self.paint(); }
     }, { passive: true });
     this.sc.addEventListener('pointercancel', function () { if (self._tap) self._tap.ok = false; }, { passive: true });
     this.sc.addEventListener('pointerup', function (e) {
@@ -30207,7 +30243,8 @@ const PumpGrid = (function () {
       self._tap = null;
       if (!t || !t.ok) return;
       if (Date.now() - t.t > 600) return;
-      if (Math.abs(self.sc.scrollLeft - t.sl) > 2 || Math.abs(self.sc.scrollTop - t.st) > 2) return;
+      self._syncTop();
+      if (Math.abs(self.sc.scrollLeft - t.sl) > 2 || Math.abs(self.scrollTop - t.st) > 2) return;
       self._hit(e);
     });
     this.inp.addEventListener('keydown', function (e) { self._key(e); });
@@ -30219,8 +30256,8 @@ const PumpGrid = (function () {
        دوباره اندازه بگیرد — وگرنه نصفِ جدول کشیده می‌شود یا کشیده می‌ماند. */
     if (typeof ResizeObserver === 'function') {
       this._ro = new ResizeObserver(function () {
-        // بلندی‌ای که خودمان گذاشته‌ایم، «تغییرِ اندازه» حساب نمی‌شود (وگرنه حلقه)
-        if (self.host.clientWidth === self._w && Math.abs(self.host.clientHeight - (self._setH || 0)) < 2) return;
+        // بلندیِ ظرف را خودمان می‌گذاریم، پس فقط پهنا «تغییرِ اندازه» است
+        if (self.host.clientWidth === self._hw) return;
         self.resize();
       });
       this._ro.observe(h);
@@ -30265,7 +30302,8 @@ const PumpGrid = (function () {
     return out;
   };
   Grid.prototype._sizeCanvas = function () {
-    const w = Math.max(1, this.host.clientWidth), h = Math.max(1, this.host.clientHeight);
+    const w = Math.max(1, this.vp.clientWidth), h = Math.max(1, this.vp.clientHeight);
+    this._hw = this.host.clientWidth;
     if (w === this._w && h === this._h && this._sized) return;
     const d = DPR();
     this._w = w; this._h = h; this._sized = true;
@@ -30295,27 +30333,69 @@ const PumpGrid = (function () {
     }
     this.layout();
     const n = this.spec.count();
-    /* ── بلندیِ ظرف = بلندیِ خودِ جدول ────────────────────────────────────────
-       گزارشِ صاحب ریپو: «همهٔ جدول توی یک کادرِ کوچک جا شده». پس ظرف دیگر یک
-       بلندیِ ثابت ندارد: تا وقتی جدول در صفحه جا شود، ظرف دقیقاً به اندازهٔ
-       خودش بلند می‌شود (پس نوارِ اسکرولِ داخلی هم ندارد — عیناً مثل جدولِ
-       همیشگی). فقط وقتی جدول از صفحه بلندتر شد، تا سقفِ «۷۸٪ بلندیِ صفحه»
-       می‌ایستد و بقیه‌اش داخلِ خودش اسکرول می‌شود — و آن‌وقت هم سربرگ و ردیفِ
-       جمله با محتوا می‌روند و می‌آیند، نه چسبیده. */
-    const natural = Math.round(this.headH + n * this.rowH + this.footH + 2);
-    const maxH = (this.spec.maxHeight ? this.spec.maxHeight() : 600);
-    const want = Math.max(120, Math.min(natural, maxH));
-    if (this._setH !== want) {
-      this._setH = want;
-      this.host.style.height = want + 'px';
-      this._sized = false;
-    }
+    /* ── بلندیِ ظرف = بلندیِ کلِ جدول، مثل جدولِ همیشگی ───────────────────────
+       هیچ سقفی نیست و هیچ اسکرولی از خودش ندارد: کلِ مودال اسکرول می‌شود و
+       نوارِ بالای جدول (شمارهٔ تماس، فیصدی، آرشیو، فاکتورها) هم با آن می‌رود.
+       فقط «پنجرهٔ چسبان» به اندازهٔ صفحه است تا بوم بی‌اندازه بزرگ نشود. */
+    const natural = Math.max(60, Math.round(this.headH + n * this.rowH + this.footH + 2));
+    const viewH = Math.min(natural, this._viewH());
+    if (this._setH !== natural) { this._setH = natural; this.host.style.height = natural + 'px'; }
+    if (this._setV !== viewH) { this._setV = viewH; this.vp.style.height = viewH + 'px'; this._sized = false; }
+    this._natural = natural;
     this._sizeCanvas();
     this.space.style.width = this._W + 'px';
-    this.space.style.height = natural.toFixed(0) + 'px';
     this.scrollLeft = this._xOff();
+    this._syncTop(true);
     this.paint();
     this._placeEditor();
+  };
+  /* بلندیِ «صفحه‌ای» که جدول در آن دیده می‌شود = ظرفِ اسکرولِ بالادست (بدنهٔ
+     مودال)، وگرنه خودِ پنجرهٔ مرورگر. */
+  Grid.prototype._sp = function () {
+    if (this._spEl !== undefined) return this._spEl;
+    let p = this.host.parentNode;
+    while (p && p.nodeType === 1) {
+      let ov = '';
+      try { ov = getComputedStyle(p).overflowY; } catch (e) {}
+      if (/(auto|scroll|overlay)/.test(ov)) { this._spEl = p; return p; }
+      p = p.parentNode;
+    }
+    this._spEl = null;
+    return null;
+  };
+  Grid.prototype._viewH = function () {
+    const p = this._sp();
+    const h = p ? p.clientHeight : (document.documentElement.clientHeight || window.innerHeight || 600);
+    return Math.max(180, h);
+  };
+  /* فاصلهٔ پنجرهٔ چسبان از سرِ ظرف = همان مقدارِ «اسکرول‌شدهٔ» جدول. خودِ مرورگر
+     آن را بین صفر و (بلندیِ جدول − بلندیِ پنجره) نگه می‌دارد، پس نیازی به
+     محاسبهٔ دستی نیست. */
+  Grid.prototype._syncTop = function (force) {
+    let t = 0;
+    try {
+      const a = this.vp.getBoundingClientRect(), b = this.host.getBoundingClientRect();
+      t = Math.max(0, Math.round(a.top - b.top - (this.host.clientTop || 0)));
+    } catch (e) { return; }
+    if (!force && t === this.scrollTop) return;
+    this.scrollTop = t;
+    this.paint();
+    this._placeEditor();
+  };
+  /* خانهٔ باز‌شده اگر بیرونِ پنجره افتاد، خودِ مودال کمی اسکرول می‌شود تا دیده
+     شود — همان کاری که مرورگر برای کادرهای تایپیِ جدولِ همیشگی می‌کند. */
+  Grid.prototype._reveal = function () {
+    const e = this.edit;
+    if (e.r < 0) return;
+    const y = this.headH + e.r * this.rowH - this.scrollTop;
+    const vh = this._h || this.vp.clientHeight;
+    let d = 0;
+    if (y < 0) d = y - 8;
+    else if (y + this.rowH > vh) d = y + this.rowH - vh + 8;
+    if (!d) return;
+    const p = this._sp();
+    if (p) p.scrollTop += d; else window.scrollBy(0, d);
+    this._syncTop();
   };
   Grid.prototype.paint = function () {
     const self = this;
@@ -30342,7 +30422,8 @@ const PumpGrid = (function () {
       headBg: CSS(host, '--dark', '#0d1117'),
       headTxt: CSS(host, '--gx-head-txt', '') || CSS(host, '--txt', '#e6edf3'),
       footBg: CSS(host, '--dark', '#0d1117'),
-      zebra: CSS(host, '--gx-zebra', 'rgba(255,255,255,.02)')
+      zebra: CSS(host, '--gx-zebra', 'rgba(255,255,255,.02)'),
+      hover: CSS(host, '--gx-hover', 'rgba(255,180,61,.10)')
     };
     return this._palC;
   };
@@ -30392,6 +30473,7 @@ const PumpGrid = (function () {
       const c0 = sp.cell(r, cols[0].col);
       if (c0 && c0.auto) { if (m.autoBg) { _pgFill(ctx, m.autoBg, 0, y, w, rowH); } }
       else if (r % 2) { _pgFill(ctx, c.zebra, 0, y, w, rowH); }
+      if (r === this._hover) { _pgFill(ctx, c.hover, 0, y, w, rowH); }
       for (let i = 0; i < cols.length; i++) {
         const cc = cols[i], cx = cc.x - x0;
         if (cx + cc.w < 0 || cx > w) continue;
@@ -30554,11 +30636,7 @@ const PumpGrid = (function () {
        کادر بی‌صدا بسته می‌شود (باگ: «می‌زنم ولی چیزی باز نمی‌شود»). */
     const self0 = this;
     setTimeout(function () { try { self0.inp.focus(); self0.inp.select(); } catch (e) {} }, 0);
-    // خانهٔ بازشده باید دیده شود (اگر لبهٔ کادر است، کادر خودش می‌آید)
-    const top = this.headH + r * this.rowH;
-    if (top - this.scrollTop < this.headH) this.sc.scrollTop = top - this.headH;
-    else if (top + this.rowH - this.scrollTop > (this._h || this.host.clientHeight) - this.footH)
-      this.sc.scrollTop = top + this.rowH - (this._h || this.host.clientHeight) + this.footH;
+    this._reveal();   // خانهٔ بازشده اگر بیرونِ پنجره است، مودال کمی می‌آید
   };
   Grid.prototype._placeEditor = function () {
     const e = this.edit;
@@ -30570,7 +30648,8 @@ const PumpGrid = (function () {
     const m = this._m || {};
     const ih = Math.min(this.rowH - 6, Math.max(24, m.inpH || (this.rowH - 10)));
     this.inp.style.left = (cc.x + 3) + 'px';
-    this.inp.style.top = (this.headH + e.r * this.rowH + (this.rowH - ih) / 2) + 'px';
+    // ⚠️ افقی: مختصاتِ محتوا (داخلِ ظرفِ اسکرولِ افقی) — عمودی: مختصاتِ پنجره
+    this.inp.style.top = (this.headH + e.r * this.rowH + (this.rowH - ih) / 2 - this.scrollTop) + 'px';
     this.inp.style.width = (cc.w - 6) + 'px';
     this.inp.style.height = ih + 'px';
     if (m.inpFontSize) this.inp.style.fontSize = m.inpFontSize;
@@ -30613,11 +30692,7 @@ const PumpGrid = (function () {
       if (nr < 0 || nr >= n) nr = Math.min(Math.max(0, r), n - 1);
       if (nr < 0) { this._commit(false); return; }
       this._load(nr, nc);
-      // خانهٔ تازه اگر زیرِ لبه است، خودش بالا بیاید
-      const top = this.headH + nr * this.rowH;
-      if (top - this.scrollTop < this.headH) this.sc.scrollTop = top - this.headH;
-      else if (top + this.rowH - this.scrollTop > (this._h || this.host.clientHeight) - this.footH)
-        this.sc.scrollTop = top + this.rowH - (this._h || this.host.clientHeight) + this.footH;
+      this._reveal();          // خانهٔ تازه اگر بیرونِ پنجره است، خودش دیده شود
       this.paint();
       try { this.inp.select(); } catch (err) {}
     };
@@ -30629,6 +30704,10 @@ const PumpGrid = (function () {
   };
   Grid.prototype.destroy = function () {
     try { if (this._ro) this._ro.disconnect(); } catch (e) {}
+    try {
+      window.removeEventListener('scroll', this._onScroll, true);
+      window.removeEventListener('resize', this._onScroll);
+    } catch (e) {}
     this.host.innerHTML = '';
     this.host.classList.remove('pg-host');
   };
@@ -30913,7 +30992,6 @@ function _pmGridSpec() {
   return {
     rowH: 32, headH: 36, footH: 32, fontSize: 13,
     metrics: _pmGridMetrics,
-    maxHeight: function () { return Math.max(320, Math.round((window.innerHeight || 800) * 0.78)); },
     cols: _pmGridCols,
     count: function () { return (_pmV.idx || []).length + (_pmGridAuto || []).length; },
     emptyText: function () { return _pmV.emptyMsg || 'هیچ ردیفی ثبت نشده'; },
@@ -50349,7 +50427,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.402';
+const APP_VERSION = '2.9.403';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -59839,14 +59917,18 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
 /* بلندی را خودِ موتور می‌گذارد (به اندازهٔ جدول، تا سقفِ ۷۸٪ صفحه) */
 /* ⚠️ قابِ کادر هم باید همانِ قابِ .xls-wrap باشد — رنگِ کارت با «سطحِ جدول»
    یکی نیست و اگر این‌جا رنگِ کارت بماند، تهِ جدولِ سریع با جدولِ همیشگی فرق
-   می‌کند (گزارشِ صاحب ریپو دربارهٔ رنگ‌بندی). */
-.pg-host{ position:relative; overflow:hidden; height:320px;
-  border:1px solid var(--gx-brd-strong, var(--border)); border-radius:var(--r-md, 10px);
-  background:var(--gx-tbl-surface, var(--card)); }
+   می‌کند (گزارشِ صاحب ریپو دربارهٔ رنگ‌بندی).
+   ⚠️ و هیچ overflow روی .pg-host نگذارید: با overflow، خودش «ظرفِ اسکرول»
+   می‌شود و پنجرهٔ چسبانِ داخلش به جای مودال به او می‌چسبد — یعنی دوباره همان
+   کادرِ ثابتی که صاحب ریپو گفت نمی‌رود. بلندیِ این ظرف = بلندیِ کلِ جدول. */
+.pg-host{ position:relative; overflow:visible !important;
+  border-radius:var(--r-md, 10px); background:var(--gx-tbl-surface, var(--card)); }
+.pg-host .pg-vp{ position:sticky; top:0; z-index:0; overflow:hidden;
+  border-radius:inherit; }
 .pg-host .pg-cv{ position:absolute; inset:0; display:block; }
-.pg-host .pg-scroll{ position:absolute; inset:0; overflow:auto; -webkit-overflow-scrolling:touch;
-  scrollbar-gutter:stable; }
-.pg-host .pg-space{ position:relative; pointer-events:none; }
+.pg-host .pg-scroll{ position:absolute; inset:0; overflow-x:auto; overflow-y:hidden;
+  -webkit-overflow-scrolling:touch; }
+.pg-host .pg-space{ position:relative; height:100%; pointer-events:none; }
 .pg-host .pg-edit{
   position:absolute; display:none; box-sizing:border-box; z-index:3;
   pointer-events:auto;     /* .pg-space کلیک نمی‌گیرد؛ خودِ کادرِ تایپ باید بگیرد */
