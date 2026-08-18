@@ -29809,6 +29809,167 @@ function _pcardNameHtml(name) {
   const cls = L > 20 ? ' xlong' : (L > 12 ? ' long' : '');
   return '<div class="pname' + cls + '" title="' + escFa(n) + '"><span>' + escFa(n) + '</span></div>';
 }
+/* ══ پنجرهٔ عمومیِ جدول‌ها — «هر بخشی که جدولِ بلند دارد» ══════════════════
+   گزارشِ صاحب ریپو: «همهٔ بخش‌ها همین‌قدر کند می‌شوند، همه را درست کن؛ به منطقِ
+   سایت دست نخورد.»
+
+   اندازه‌گیری (کروم، بدونِ کندسازی؛ روی گوشی ≈ شش برابر این عددها):
+       گاوصندوق   ۸۰۰ ردیف → ساخت ۲۰۸ms + چیدمان ۱٬۳۳۹ms
+       صرافی      ۸۰۰ ردیف → ساخت ۱٬۴۰۴ms
+       چکنه       ۸۰۰ ردیف → ساخت   ۶۲۳ms
+       مصارف      ۸۰۰ ردیف → ساخت   ۴۲۳ms
+   همان ریشهٔ جدولِ حساب: هزاران <input> در صفحه، و از آن به بعد هر کارِ مرورگر
+   روی همان هزاران عنصر.
+
+   این تابع همان درمان را می‌دهد، ولی *بدونِ دست‌زدن به منطق یا شکلِ هیچ بخشی*:
+   ردیف‌ها را دقیقاً همان‌طور که خودِ بخش ساخته تحویل می‌گیرد، از جدول بیرونشان
+   می‌کشد و فقط آن‌هایی را که جلوی چشم‌اند برمی‌گرداند؛ جای بقیه با دو ردیفِ
+   فاصله‌انداز پر می‌شود تا نوارِ اسکرول و بلندیِ صفحه همان بماند.
+   ⚠️ ردیف‌ها همان گره‌های اصلی‌اند (نه کپی)، پس هر چه داخلشان است — مقدارِ
+   تایپ‌شده، هندلرها، کلاس‌ها — دست‌نخورده می‌ماند.
+   ⚠️ صدا زدنش باید *آخرین* کارِ رندرِ هر بخش باشد؛ بعد از آن دیگر با
+   tbody.querySelector سراغِ ردیف‌ها نروید (بیشترشان روی صفحه نیستند).
+   ⚠️ زیرِ _VT_MIN ردیف اصلاً کاری نمی‌کند — جدولِ کوچک همان است که بود. */
+const _VT_MIN = 70;      // از این کمتر، ارزشِ پنجره‌ای‌کردن ندارد
+const _VT_BUF = 8;       // چند ردیف بالا و پایینِ قاب، آماده باشد
+const _VT_MINWIN = 26;
+function _vtScrollBoxOf(el) {
+  for (let n = el.parentNode; n && n !== document.body; n = n.parentNode) {
+    if (n.nodeType !== 1) continue;
+    const st = getComputedStyle(n);
+    if (/(auto|scroll)/.test(st.overflowY) && n.scrollHeight > n.clientHeight + 4) return n;
+  }
+  return document.scrollingElement || document.documentElement;
+}
+function _vtColsOf(tr) {
+  let c = 0;
+  Array.prototype.forEach.call(tr.children, td => { c += (td.colSpan || 1); });
+  return c || 1;
+}
+function _vtSpacer(cols, h) {
+  const tr = document.createElement('tr');
+  tr.className = 'vt-spacer';
+  tr.setAttribute('aria-hidden', 'true');
+  tr.style.height = Math.max(0, Math.round(h)) + 'px';
+  const td = document.createElement('td');
+  td.colSpan = cols;
+  tr.appendChild(td);
+  return tr;
+}
+function _vtAdopt(tbody) {
+  if (!tbody || !tbody.children) return;
+  const rows = Array.prototype.filter.call(tbody.children, el => el.tagName === 'TR' && !el.classList.contains('vt-spacer'));
+  if (rows.length < _VT_MIN) { tbody.__vt = null; return; }
+  const cols = _vtColsOf(rows[0]);
+  /* ⚠️ اول همهٔ ردیف‌ها با یک حرکت از جدول بیرون می‌روند، بعد هر چیزی که
+     «اندازه» می‌خواهد ─────────────────────────────────────────────────────
+     اولین نسخهٔ همین تابع ردیف‌ها را یکی‌یکی جدا می‌کرد و پیش از آن هم برای
+     پیدا کردنِ ظرفِ اسکرول getComputedStyle می‌خواند. هر دوی این‌ها وقتی
+     ۸۰۰ ردیف هنوز در صفحه‌اند، مرورگر را وادار به چیدنِ دوبارهٔ همان ۸۰۰ ردیف
+     می‌کند — اندازه‌گیری‌شده: چکنه از ۶۲۳ms رفت به ۲٬۷۱۴ms، یعنی خودِ درمان
+     بدتر از درد شد. با replaceChildren همه با یک عمل جدا می‌شوند و از آن به
+     بعد هر اندازه‌گیری فقط روی چهل ردیفِ داخلِ قاب است. */
+  if (tbody.replaceChildren) tbody.replaceChildren();
+  else { while (tbody.firstChild) tbody.removeChild(tbody.firstChild); }
+  const sc = _vtScrollBoxOf(tbody);
+  tbody.classList.add('vt-body');     // برای خاموش‌کردنِ لنگرِ اسکرول (CSS)
+  tbody.__vt = { rows: rows, cols: cols, rowH: 0, from: -1, to: -1, sc: sc, top: null };
+  _vtPaint(tbody, true);
+  if (!sc.__vtSet) {
+    sc.__vtSet = new Set();
+    const onScroll = function () {
+      if (sc.__vtRaf) return;
+      sc.__vtRaf = requestAnimationFrame(function () {
+        sc.__vtRaf = 0;
+        sc.__vtSet.forEach(function (tb) {
+          if (!tb.isConnected || !tb.__vt) { sc.__vtSet.delete(tb); return; }
+          try { _vtPaint(tb, false); } catch (e) {}
+        });
+      });
+    };
+    sc.addEventListener('scroll', onScroll, { passive: true });
+    if (sc === (document.scrollingElement || document.documentElement)) window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+  }
+  sc.__vtSet.add(tbody);
+}
+function _vtPaint(tbody, first) {
+  const st = tbody.__vt;
+  if (!st) return;
+  const n = st.rows.length;
+  const sc = st.sc;
+  const rowH = st.rowH || 34;
+  const isDoc = (sc === document.scrollingElement || sc === document.documentElement);
+  const scTop = isDoc ? (window.scrollY || document.documentElement.scrollTop || 0) : sc.scrollTop;
+  const scH = isDoc ? window.innerHeight : sc.clientHeight;
+  let from = 0, to = n;
+  if (st.top != null) {
+    const y = scTop - st.top;
+    from = Math.max(0, Math.floor(y / rowH) - _VT_BUF);
+    to = Math.min(n, Math.ceil((y + scH) / rowH) + _VT_BUF);
+  } else {
+    to = Math.min(n, _VT_MINWIN + _VT_BUF * 2);
+  }
+  if (to - from < _VT_MINWIN) { to = Math.min(n, from + _VT_MINWIN); from = Math.max(0, to - _VT_MINWIN); }
+  if (n - to < 5) to = n;
+  if (from < 5) from = 0;
+  if (!first && from === st.from && to === st.to) return;
+
+  /* کادری که دستِ کاربر داخلش است، پیش از بیرون‌رفتنِ ردیفش blur می‌شود تا
+     مقدارِ onchange ثبت شود؛ اگر ردیفش در پنجرهٔ تازه بماند، فوکوس برمی‌گردد. */
+  let keep = null;
+  const ae = document.activeElement;
+  if (ae && tbody.contains(ae) && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT')) {
+    const tr = ae.closest('tr');
+    const td = ae.closest('td');
+    if (tr && td) {
+      let ss = null, se = null;
+      try { ss = ae.selectionStart; se = ae.selectionEnd; } catch (e) {}
+      keep = { row: st.rows.indexOf(tr), col: Array.prototype.indexOf.call(tr.children, td),
+               inp: Array.prototype.indexOf.call(td.querySelectorAll('input,select,textarea'), ae), ss: ss, se: se };
+    }
+    try { ae.blur(); } catch (e) {}
+  }
+
+  /* یک عمل: هرچه هست برداشته می‌شود و پنجرهٔ تازه می‌نشیند. ردیف‌هایی که بیرون
+     می‌مانند پاک نمی‌شوند — همان گره‌ها در st.rows نگه داشته شده‌اند. */
+  const list = [];
+  if (from > 0) list.push(_vtSpacer(st.cols, from * rowH));
+  for (let k = from; k < to; k++) list.push(st.rows[k]);
+  if (to < n) list.push(_vtSpacer(st.cols, (n - to) * rowH));
+  if (tbody.replaceChildren) tbody.replaceChildren.apply(tbody, list);
+  else {
+    while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+    list.forEach(x => tbody.appendChild(x));
+  }
+  st.from = from; st.to = to;
+
+  if (keep && keep.row >= from && keep.row < to) {
+    const tr2 = st.rows[keep.row];
+    const td2 = tr2 && tr2.children[keep.col];
+    const in2 = td2 && td2.querySelectorAll('input,select,textarea')[keep.inp < 0 ? 0 : keep.inp];
+    if (in2) { try { in2.focus({ preventScroll: true }); if (keep.ss != null && in2.setSelectionRange) in2.setSelectionRange(keep.ss, keep.se); } catch (e) {} }
+  }
+
+  /* اندازه‌ها فقط یک‌بار سنجیده می‌شوند — خواندنِ اندازه، مرورگر را وادار به
+     چیدنِ دوبارهٔ صفحه می‌کند و اگر با هر اسکرول انجام شود، همان کندی برمی‌گردد. */
+  if (first || !st.rowH || st.top == null) {
+    const mounted = tbody.querySelectorAll('tr:not(.vt-spacer)');
+    if (mounted.length) {
+      const a = mounted[0].getBoundingClientRect(), z = mounted[mounted.length - 1].getBoundingClientRect();
+      const h = (z.bottom - a.top) / mounted.length;
+      if (h > 6) st.rowH = h;
+    }
+    const r = tbody.getBoundingClientRect();
+    st.top = isDoc ? (r.top + scTop) : (r.top - sc.getBoundingClientRect().top + scTop);
+    if (first && st.rowH) _vtPaint(tbody, false);
+  }
+}
+/* همهٔ جدول‌های یک ظرف را یک‌جا پنجره‌ای می‌کند */
+function _vtAdoptAll(root) {
+  if (!root) return;
+  try { root.querySelectorAll('tbody').forEach(_vtAdopt); } catch (e) {}
+}
 /* ══ جدولِ حساب: فقط همان ردیف‌هایی ساخته می‌شوند که جلوی چشم‌اند ═══════════
    گزارشِ صاحب ریپو: «از ۷۰۰ ردیف که بیشتر می‌شود لگ می‌زند و کار نمی‌کند. اکسل
    میلیون‌ها خانه را بدون هیچ کندی می‌آورد. آن «۱۲۰تا ۱۲۰تا» را هم بردار — وقت
@@ -35130,6 +35291,7 @@ function renderExpenses() {
       expFrag.appendChild(tr);
     });
     tbody.appendChild(expFrag);
+    _vtAdopt(tbody);   // پنجرهٔ ردیف‌ها — جدولِ هر ماه جدا (توضیح کنارِ _vtAdopt)
   });
 }
 // اضافه کردن یک ردیف جدید به مصارف (به ماه فعال یا امروز)
@@ -35263,6 +35425,7 @@ function renderChakana() {
     frag.appendChild(tr);
   });
   tbody.appendChild(frag);
+  _vtAdopt(tbody);   // پنجرهٔ ردیف‌ها — آخرین کارِ رندر (توضیح کنارِ _vtAdopt)
 }
 function updateChakana(idx, field, value) {
   if (typeof requireAdmin === 'function' && !requireAdmin()) return;
@@ -35513,6 +35676,7 @@ function renderRasid() {
     `;
     tb.appendChild(tr);
   });
+  _vtAdopt(tb);   // پنجرهٔ ردیف‌ها — آخرین کارِ رندر (توضیح کنارِ _vtAdopt)
 }
 function addRasidRow() { ensureRasid().push(_newRasidRow()); save(); renderRasid(); }
 function addRasidRowsBulk() {
@@ -37796,6 +37960,7 @@ function renderExtraIncomes() {
   });
   setF('ei-ft-seller', Math.round(sumSeller)); setF('ei-ft-income', Math.round(sumIncome));
   setF('ei-profit-sum', Math.round(sumIncome));
+  _vtAdopt(tb);   // پنجرهٔ ردیف‌ها — آخرین کارِ رندر (توضیح کنارِ _vtAdopt)
 }
 
 // ========== PROFIT/LOSS ==========
@@ -41621,6 +41786,9 @@ function renderSarrafi() {
   // کادرهای «بردگی» به‌اندازهٔ عددشان جمع شوند تا «$ عدد» وسطِ خانه بنشیند
   tbody.querySelectorAll('.sr-usd input').forEach(_srUsdFit);
   _sarrafiRepaint();
+  /* ⚠️ پنجرهٔ ردیف‌ها آخرین کار است — هر دو خطِ بالا باید پیش از آن اجرا شوند،
+     چون هر دو با پیمایشِ ردیف‌های داخلِ صفحه کار می‌کنند. */
+  _vtAdopt(tbody);
 }
 /* پهنای کادرِ «بردگی» را از خودِ نوشته می‌گیرد تا جفتِ «$ عدد» یک واحدِ
    به‌هم‌چسبیده باشد و وسطِ خانه بنشیند.
@@ -49624,7 +49792,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.387';
+const APP_VERSION = '2.9.388';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -59062,6 +59230,23 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
    ردیف‌های تایپیِ خودتان تشخیص داده شود. هیچ داده‌ای پشتش نیست: از «مقدار رسید»
    سربرگ ساخته می‌شود و در جمع‌های جدول شمرده نمی‌شود (جمع‌ها از خودِ ردیف‌ها
    می‌آیند و الباقیِ سربرگ از قبل این رسید را حساب کرده است). */
+/* ردیفِ فاصله‌اندازِ جدول‌های پنجره‌ای (_vtAdopt): فقط «جا» است */
+#app tr.vt-spacer > td{ padding:0 !important; border:none !important; background:transparent !important; }
+/* ⚠️ «لنگرِ اسکرول»ِ مرورگر روی جدولِ پنجره‌ای خاموش می‌شود ────────────────
+   مرورگر وقتی محتوای بالای قاب عوض شود، خودش اسکرول را جابه‌جا می‌کند تا
+   «چیزی که می‌بینی سرِ جایش بماند». روی جدولِ پنجره‌ای این دقیقاً برعکسِ چیزی
+   است که می‌خواهیم: هر بار که ردیف‌های بالا با فاصله‌انداز عوض می‌شوند، اسکرول
+   را پس می‌کشد و صفحه به جای خواسته‌شده نمی‌رسد (آزمایش: اسکرول به ۱۲٬۰۰۰
+   روی ۲٬۲۱۰ می‌ایستاد). با overflow-anchor:none، اسکرول همان‌جا می‌ماند که
+   کاربر گذاشته و پنجره خودش را با آن تطبیق می‌دهد. */
+#pm-body, #app tbody.vt-body{ overflow-anchor:none; }
+/* ══ کادرهای گاوصندوق: آن‌که بیرونِ قاب است اصلاً چیده نشود ══════════════════
+   گاوصندوق ردیف‌ها را کادرکادر (هر کادر ۳۰ ردیف) می‌سازد. با ۸۰۰ ردیف یعنی ۲۷
+   جدولِ کامل در صفحه. اندازه‌گیری‌شده (کروم، بدونِ کندسازی): چیدنِ همان‌ها
+   ۱٬۳۳۹ms بود؛ با همین دو خط شد ۷۲ms — یعنی ۱۸ برابر سبک‌تر، بدونِ یک خط
+   جاوااسکریپت. مرورگر کادرِ بیرونِ قاب را نمی‌چیند و جایش را با اندازهٔ
+   به‌یادسپرده نگه می‌دارد (contain-intrinsic-size: auto). */
+#safe-boxes > .tbl-wrap{ content-visibility:auto; contain-intrinsic-size: auto 1200px; }
 /* ══ جدولِ مجازی: فاصله‌اندازها و راه‌راه ═════════════════════════════════
    ردیفِ فاصله‌انداز فقط «جا» است: نه حاشیه دارد، نه پدینگ، نه رنگ. و چون یک
    ردیفِ اضافه بالای ردیف‌های واقعی می‌نشیند، یک‌درمیانیِ nth-child جابه‌جا
