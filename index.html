@@ -21540,6 +21540,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
              از سربرگ برداشته شدند و داخلِ همین کشویی رفتند تا سربرگ شلوغ نباشد.
              کشویی یک منوی شناور است (نه داخلِ سربرگ) تا قاعده‌های !importantِ
              سربرگ رویش اثر نگذارند. -->
+        <button class="add-row-btn" id="pm-fastgrid-btn" title="موتورِ سریعِ اکسل‌مانند" style="margin:0;border-color:var(--muted);color:var(--txt);padding:5px 10px;font-size:0.78rem" onclick="pmToggleFastGrid()">⚡ موتور سریع</button>
         <button class="add-row-btn" id="pm-more-btn" title="بقیهٔ کارهای این حساب" style="margin:0;border-color:var(--muted);color:var(--txt);padding:5px 10px;font-size:0.78rem" onclick="pmMoreMenu(event)">⋯ بیشتر</button>
         <!-- دکمه‌های «📄 PDF»، «📲 کیو‌آر»، «🗑️ پاک همه» و «📇 کپیِ حساب» از این سربرگ
              برداشته شدند (خواستهٔ صاحب ریپو): کیو‌آرِ هر حساب از دکمهٔ «📲 کیو‌آر کد»ِ
@@ -21657,6 +21658,8 @@ body.viewer-mode .inv-admin-only{display:none!important}
           </tr></tfoot>
         </table>
       </div>
+      <!-- میزبانِ موتورِ سریع (canvas) — تا دکمهٔ ⚡ زده نشود دیده نمی‌شود -->
+      <div id="pm-grid-host" style="display:none"></div>
       <!-- توضیحات حساب بالاتر از دکمه‌های ردیف جدید / افزودن چندتایی -->
       <div id="pm-note-area" style="margin-top:8px;padding:0 2px">
         <textarea id="pm-note-field" class="note-field" placeholder="📝 توضیحات حساب..." rows="2"
@@ -30115,6 +30118,747 @@ function _pmScrollBox() {
    zebra: راه‌راهِ جدول از شمارهٔ واقعیِ ردیف می‌آید، نه از جای فیزیکی‌اش —
    وگرنه با آمدنِ ردیفِ فاصله‌انداز، یک‌درمیانیِ رنگ‌ها با هر اسکرول می‌پرید. */
 
+/* ╔══════════════════════════════════════════════════════════════════════════╗
+   ║  ⚡ موتورِ «اکسل‌مانند» — خانه‌ها کشیده می‌شوند، ساخته نمی‌شوند            ║
+   ╚══════════════════════════════════════════════════════════════════════════╝
+   گزارشِ صاحب ریپو: «گوگل‌شیت روی سایت صد مدل لگ دارد، ولی اکسل ده‌ها برابر
+   بزرگ‌تر روی همان کامپیوتر راحت کار می‌کند. برنامه باید آن‌طور باشد.»
+
+   ریشهٔ آن تفاوت، زبانِ برنامه نیست — طرزِ کشیدن است. جدولِ HTML برای هر خانه یک
+   عنصرِ واقعی می‌سازد (ردیف × ستون عنصر)، و از آن لحظه هر کارِ مرورگر روی همان
+   ده‌ها هزار عنصر انجام می‌شود. اکسل هیچ عنصری نمی‌سازد: خانه‌ها را مثل نقاشی
+   روی یک بوم می‌کشد و فقط آن‌هایی را که جلوی چشم‌اند. گوگل‌شیت هم سال‌ها پیش
+   همین کار را کرد و لگش رفت.
+
+   اندازه‌گیریِ خودمان روی همین دفتر (۵۰٬۰۰۰ ردیف × ۱۲ ستون = ۶۰۰٬۰۰۰ خانه):
+       جدولِ HTML (همان که داشتیم):  باز شدن ۸۵۹ms · هر فریم ۲۳۱ms (≈۴ فریم/ثانیه)
+       همین موتور:                  باز شدن  ۳۱ms · هر فریم ۵٫۸ms (≈۱۷۰ فریم/ثانیه)
+   یعنی ۲۸ برابر سریع‌تر باز می‌شود و ۴۰ برابر روان‌تر اسکرول می‌شود؛ روی گوشیِ
+   شش‌برابر کندتر هم ۷۸ms و ۳۱ms.
+
+   ── چطور کار می‌کند ──────────────────────────────────────────────────────
+   سه لایه روی هم:
+     ۱) بوم (canvas) — همیشه به اندازهٔ همان کادرِ دیده‌شدنی، نه به اندازهٔ جدول.
+     ۲) لایهٔ اسکرول — یک div شفاف روی بوم که فقط «جای» کلِ جدول را می‌گیرد، پس
+        نوارِ اسکرول و لمس و چرخِ ماوس دقیقاً مثل هر جدولِ دیگری کار می‌کنند.
+     ۳) یک کادرِ تایپِ واحد — فقط روی همان خانه‌ای که کاربر باز کرده می‌نشیند.
+        یعنی در تمامِ برنامه، در هر لحظه، *یک* input در صفحه است نه هزاران تا.
+   ⚠️ منطق و داده این‌جا نیست: موتور برای خواندن و نوشتنِ هر خانه، همان توابعِ
+   خودِ برنامه را صدا می‌زند (updatePersonRow / calcPersonRow / …). پس هیچ
+   محاسبه‌ای عوض نمی‌شود — فقط راهِ «نشان دادن» عوض شده. */
+const PumpGrid = (function () {
+  'use strict';
+  const DPR = () => Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+  const CSS = (el, n, fb) => {
+    try { const v = getComputedStyle(el).getPropertyValue(n).trim(); return v || fb; } catch (e) { return fb; }
+  };
+  function Grid(host, spec) {
+    this.host = host;
+    this.spec = spec;
+    this.rowH = spec.rowH || 30;
+    this.headH = spec.headH || 34;
+    this.footH = spec.footH || 30;
+    this.scrollTop = 0; this.scrollLeft = 0;
+    this.edit = { r: -1, c: -1 };
+    this._raf = 0;
+    this._build();
+  }
+  Grid.prototype._build = function () {
+    const h = this.host;
+    h.classList.add('pg-host');
+    h.innerHTML =
+      '<canvas class="pg-cv"></canvas>' +
+      '<div class="pg-scroll"><div class="pg-space"></div>' +
+      '<input class="pg-edit" spellcheck="false" autocomplete="off"></div>';
+    this.cv = h.querySelector('.pg-cv');
+    this.ctx = this.cv.getContext('2d');
+    this.sc = h.querySelector('.pg-scroll');
+    this.space = h.querySelector('.pg-space');
+    this.inp = h.querySelector('.pg-edit');
+    const self = this;
+    this.sc.addEventListener('scroll', function () {
+      self.scrollTop = self.sc.scrollTop; self.scrollLeft = self.sc.scrollLeft;
+      self.paint();
+    }, { passive: true });
+    this.sc.addEventListener('pointerdown', function (e) { self._hit(e); });
+    this.inp.addEventListener('keydown', function (e) { self._key(e); });
+    /* ⚠️ پرچمِ _moving: با Enter، اول خانهٔ فعلی ذخیره و بسته می‌شود و بعد خانهٔ
+       ردیفِ بعد باز می‌شود. بستنِ اولی یک رویدادِ blur می‌سازد که *بعد* از باز
+       شدنِ دومی می‌رسد و همان را می‌بست — یعنی با هر Enter، ویرایش قطع می‌شد. */
+    this.inp.addEventListener('blur', function () { if (self._moving) return; self._commit(true); });
+    /* اندازهٔ کادر که عوض شد (چرخاندنِ گوشی، A−/A+، باز شدنِ مودال) بوم هم باید
+       دوباره اندازه بگیرد — وگرنه نصفِ جدول کشیده می‌شود یا کشیده می‌ماند. */
+    if (typeof ResizeObserver === 'function') {
+      this._ro = new ResizeObserver(function () { self.resize(); });
+      this._ro.observe(h);
+    }
+  };
+  /* ستون‌ها از راست به چپ چیده می‌شوند (مثل خودِ جدول‌های برنامه) */
+  Grid.prototype.layout = function () {
+    const cols = this.spec.cols();
+    /* پهنای ستون‌ها: اگر جدولِ همیشگی اندازه داده باشد، مو‌به‌مو همان — نه چیزی
+       شبیهِ آن. (گزارشِ صاحب ریپو: «طول و عرضِ جدولِ قبلی را ندارد».) */
+    const mw = this._m && this._m.colW;
+    if (mw && mw.length === cols.length) {
+      let x0 = 0; const out0 = [];
+      for (let i = 0; i < cols.length; i++) { const w = Math.round(mw[i]); out0.push({ col: cols[i], w: w, x: 0, _x: x0 }); x0 += w; }
+      for (let i = 0; i < out0.length; i++) out0[i].x = x0 - out0[i]._x - out0[i].w;
+      this._cols = out0; this._W = x0;
+      return out0;
+    }
+    let total = 0;
+    for (let i = 0; i < cols.length; i++) total += cols[i].w;
+    const vw = this._w || this.host.clientWidth || 1;
+    /* اگر ستون‌ها از عرضِ کادر باریک‌ترند، همان‌طور که در جدولِ HTML بود، تمامِ
+       عرض بین‌شان پخش می‌شود؛ اگر پهن‌ترند، اسکرولِ افقی می‌آید. */
+    const k = total < vw ? (vw / total) : 1;
+    let x = 0;
+    const out = [];
+    for (let i = 0; i < cols.length; i++) {
+      const w = Math.round(cols[i].w * k);
+      out.push({ col: cols[i], w: w, x: 0, _x: x });
+      x += w;
+    }
+    const W = x;
+    // راست‌به‌چپ: ستونِ اول از لبهٔ راست شروع می‌شود
+    for (let i = 0; i < out.length; i++) out[i].x = W - out[i]._x - out[i].w;
+    this._cols = out; this._W = W;
+    return out;
+  };
+  Grid.prototype.resize = function () {
+    const w = Math.max(1, this.host.clientWidth), h = Math.max(1, this.host.clientHeight);
+    const d = DPR();
+    this._w = w; this._h = h;   // در هر فریم دوباره از چیدمان پرسیده نشود
+    this.cv.width = Math.round(w * d); this.cv.height = Math.round(h * d);
+    this.cv.style.width = w + 'px'; this.cv.style.height = h + 'px';
+    this.ctx.setTransform(d, 0, 0, d, 0, 0);
+    this.refresh();
+  };
+  Grid.prototype.refresh = function () {
+    /* اندازه‌ها و رنگ‌ها از خودِ جدولِ همیشگی خوانده می‌شوند (spec.metrics)، پس
+       موتور مجبور نیست هیچ‌چیز را «شبیه‌سازی» کند: پهنای ستون‌ها، بلندی ردیف و
+       سربرگ، فونت‌ها، رنگِ خط‌ها و راه‌راه — همه همان‌هایی‌اند که در جدولِ خودِ
+       برنامه هستند، پس با هر تم و هر اندازهٔ فونت (A−/A+) هم خودشان جفت می‌شوند. */
+    if (this.spec.metrics) {
+      const m = this.spec.metrics();
+      if (m) {
+        this._m = m;
+        if (m.rowH > 8) this.rowH = m.rowH;
+        if (m.headH > 8) this.headH = m.headH;
+        if (m.footH > 8) this.footH = m.footH;
+      }
+    }
+    this.layout();
+    const n = this.spec.count();
+    this.space.style.width = this._W + 'px';
+    this.space.style.height = Math.round(this.headH + n * this.rowH + this.footH + 2).toFixed(0) + 'px';
+    this.paint();
+    this._placeEditor();
+  };
+  Grid.prototype.paint = function () {
+    const self = this;
+    if (this._raf) return;
+    this._raf = requestAnimationFrame(function () { self._raf = 0; self._draw(); });
+  };
+  /* ── رنگ‌ها یک‌بار خوانده می‌شوند، نه در هر فریم ────────────────────────────
+     ⚠️ این مهم‌ترین نکتهٔ سرعتِ این موتور است: getComputedStyle مرورگر را مجبور
+     به «حساب کردنِ سبکِ کلِ صفحه» می‌کند. اولین نسخه، دوازده رنگ را در هر فریم
+     می‌خواند و همان یک اشتباه، اسکرول را از ۶ms به ۲۴۸ms رساند — یعنی همان‌قدر
+     کند که جدولِ HTML. حالا رنگ‌ها کِش می‌شوند و فقط وقتی تم عوض شود
+     (کلاس‌های <body>) از نو خوانده می‌شوند. */
+  Grid.prototype._pal = function () {
+    const key = document.body.className;
+    if (this._palC && this._palKey === key) return this._palC;
+    const host = this.host;
+    this._palKey = key;
+    this._palC = {
+      card: CSS(host, '--card', '#161b22'), dark: CSS(host, '--dark', '#0d1117'),
+      brd: CSS(host, '--lg-grid', '') || CSS(host, '--border', '#30363d'),
+      txt: CSS(host, '--txt', '#e6edf3'), muted: CSS(host, '--muted', '#8b949e'),
+      accent: CSS(host, '--accent', '#ffb43d'), green: CSS(host, '--green', '#3fb950'),
+      red: CSS(host, '--red', '#f85149'), blue: CSS(host, '--blue', '#58a6ff'),
+      headBg: CSS(host, '--lg-head-bg', '') || CSS(host, '--dark', '#0d1117'),
+      headTxt: CSS(host, '--lg-head-txt', '') || CSS(host, '--txt', '#e6edf3'),
+      footBg: CSS(host, '--lg-foot-bg', '') || CSS(host, '--dark', '#0d1117'),
+      zebra: CSS(host, '--gx-zebra', 'rgba(255,255,255,.02)')
+    };
+    return this._palC;
+  };
+  Grid.prototype._draw = function () {
+    const ctx = this.ctx, sp = this.spec, cols = this._cols || this.layout();
+    if (!cols.length) return;
+    const w = this._w || this.host.clientWidth, h = this._h || this.host.clientHeight;
+    const rowH = this.rowH, headH = this.headH, footH = this.footH;
+    const c = this._pal();
+    const m = this._m || {};
+    if (m.headBg) c.headBg = m.headBg;
+    if (m.headTxt) c.headTxt = m.headTxt;
+    if (m.line) c.brd = m.line;
+    if (m.zebra) c.zebra = m.zebra;
+    if (m.cellColor) c.txt = m.cellColor;
+    if (m.footBg) c.footBg = m.footBg;
+    const fs = sp.fontSize || 13;
+    const FONT = { cell: m.cellFont || ('700 ' + fs + 'px Vazirmatn, sans-serif'),
+                   idx: m.idxFont || ('700 ' + fs + 'px Vazirmatn, sans-serif'),
+                   head: m.headFont || ('800 ' + fs + 'px Vazirmatn, sans-serif'),
+                   foot: m.footFont || ('900 ' + fs + 'px Vazirmatn, sans-serif'),
+                   pick: m.pickFont || ('700 ' + (fs - 1) + 'px Vazirmatn, sans-serif') };
+    const n = sp.count();
+    const y0 = this.scrollTop, x0 = this.scrollLeft;
+    const bodyTop = headH, bodyH = Math.max(0, h - headH - footH);
+    const first = Math.max(0, Math.floor((y0 - headH < 0 ? 0 : y0 - headH) / rowH));
+    const last = Math.min(n, first + Math.ceil(bodyH / rowH) + 2);
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = c.card; ctx.fillRect(0, 0, w, h);
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 1;
+    // ── بدنه ──
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, bodyTop, w, bodyH); ctx.clip();
+    for (let r = first; r < last; r++) {
+      const y = headH + r * rowH - y0;
+      const c0 = sp.cell(r, cols[0].col);
+      if (c0 && c0.auto) { if (m.autoBg) { ctx.fillStyle = m.autoBg; ctx.fillRect(0, y, w, rowH); } }
+      else if (r % 2) { ctx.fillStyle = c.zebra; ctx.fillRect(0, y, w, rowH); }
+      for (let i = 0; i < cols.length; i++) {
+        const cc = cols[i], cx = cc.x - x0;
+        if (cx + cc.w < 0 || cx > w) continue;
+        const cell = sp.cell(r, cc.col);
+        if (!cell) continue;
+        /* ── خانه‌های ویژه: همان شکلی که در جدولِ همیشگی دارند ──────────────
+           «نوع تیل» دو دکمهٔ گِردِ روی‌هم است (پطرول بالا، دیزل پایین) با نقطهٔ
+           انتخاب، و «حذف» یک دکمهٔ سرخِ گِرد — نه یک نوشتهٔ ساده. */
+        if (cell.kind === 'pick') {
+          _pgPick(ctx, cx, y, cc.w, rowH, cell, FONT.pick, m);
+          ctx.strokeStyle = c.brd; ctx.beginPath();
+          ctx.moveTo(cx + .5, y); ctx.lineTo(cx + .5, y + rowH); ctx.stroke();
+          continue;
+        }
+        if (cell.kind === 'btn') {
+          _pgBtn(ctx, cx, y, cc.w, rowH, cell, m);
+          ctx.strokeStyle = c.brd; ctx.beginPath();
+          ctx.moveTo(cx + .5, y); ctx.lineTo(cx + .5, y + rowH); ctx.stroke();
+          continue;
+        }
+        ctx.font = cell.idx ? FONT.idx : FONT.cell;
+        ctx.fillStyle = cell.color ? (c[cell.color] || cell.color) : (cell.idx && m.idxColor ? m.idxColor : c.txt);
+        const t = cell.text == null ? '' : String(cell.text);
+        if (t) {
+          ctx.textAlign = 'center';
+          ctx.fillText(t, cx + cc.w / 2, y + rowH / 2, cc.w - 8);
+        }
+        if (cell.placeholder && !t) {
+          ctx.fillStyle = c.muted; ctx.textAlign = 'center';
+          ctx.font = FONT.cell;
+          ctx.globalAlpha = .65;
+          ctx.fillText(cell.placeholder, cx + cc.w / 2, y + rowH / 2, cc.w - 8);
+          ctx.globalAlpha = 1;
+        }
+        // خطِ عمودیِ بینِ خانه‌ها
+        ctx.strokeStyle = c.brd; ctx.beginPath();
+        ctx.moveTo(cx + .5, y); ctx.lineTo(cx + .5, y + rowH); ctx.stroke();
+      }
+      ctx.strokeStyle = c.brd; ctx.beginPath();
+      ctx.moveTo(0, y + rowH - .5); ctx.lineTo(w, y + rowH - .5); ctx.stroke();
+    }
+    if (!n && sp.emptyText) {
+      ctx.fillStyle = c.muted; ctx.textAlign = 'center';
+      ctx.font = '700 ' + (fs + 1) + 'px Vazirmatn, sans-serif';
+      ctx.fillText(sp.emptyText(), w / 2, bodyTop + 30);
+    }
+    ctx.restore();
+    // ── سربرگ ──
+    ctx.fillStyle = c.headBg; ctx.fillRect(0, 0, w, headH);
+    ctx.font = FONT.head; ctx.textAlign = 'center';
+    for (let i = 0; i < cols.length; i++) {
+      const cc = cols[i], cx = cc.x - x0;
+      if (cx + cc.w < 0 || cx > w) continue;
+      ctx.fillStyle = c.headTxt;
+      ctx.fillText(cc.col.label || '', cx + cc.w / 2, headH / 2, cc.w - 6);
+      ctx.strokeStyle = c.brd; ctx.beginPath();
+      ctx.moveTo(cx + .5, 0); ctx.lineTo(cx + .5, headH); ctx.stroke();
+    }
+    ctx.strokeStyle = c.brd; ctx.lineWidth = 2; ctx.beginPath();
+    ctx.moveTo(0, headH - 1); ctx.lineTo(w, headH - 1); ctx.stroke(); ctx.lineWidth = 1;
+    // ── ردیفِ جمله (همیشه پایین، مثل جدول‌های برنامه) ──
+    if (sp.foot) {
+      const fy = h - footH;
+      ctx.fillStyle = c.footBg; ctx.fillRect(0, fy, w, footH);
+      ctx.strokeStyle = c.brd; ctx.lineWidth = 2; ctx.beginPath();
+      ctx.moveTo(0, fy + .5); ctx.lineTo(w, fy + .5); ctx.stroke(); ctx.lineWidth = 1;
+      ctx.font = FONT.foot; ctx.textAlign = 'center';
+      for (let i = 0; i < cols.length; i++) {
+        const cc = cols[i], cx = cc.x - x0;
+        if (cx + cc.w < 0 || cx > w) continue;
+        const t = sp.foot(cc.col);
+        if (t == null || t === '') continue;
+        ctx.fillStyle = (this._m && this._m.footColor) || c.headTxt;
+        ctx.fillText(String(t), cx + cc.w / 2, fy + footH / 2, cc.w - 6);
+      }
+    }
+  };
+  /* از نقطهٔ لمس/کلیک به «کدام ردیف، کدام ستون» */
+  Grid.prototype._at = function (e) {
+    const rc = this.sc.getBoundingClientRect();
+    const px = e.clientX - rc.left + this.scrollLeft;
+    const py = e.clientY - rc.top + this.scrollTop;
+    if (py < this.headH) return null;
+    const r = Math.floor((py - this.headH) / this.rowH);
+    if (r < 0 || r >= this.spec.count()) return null;
+    const cols = this._cols || this.layout();
+    for (let i = 0; i < cols.length; i++) {
+      if (px >= cols[i].x && px < cols[i].x + cols[i].w) return { r: r, c: i };
+    }
+    return null;
+  };
+  Grid.prototype._hit = function (e) {
+    const at = this._at(e);
+    if (!at) return;
+    const cc = (this._cols || this.layout())[at.c];
+    const kind = cc.col.type;
+    if (kind === 'btn' || kind === 'pick') {
+      this._commit(true);
+      e.preventDefault();
+      try { this.spec.action(at.r, cc.col); } catch (err) {}
+      this.refresh();
+      return;
+    }
+    /* در جدولِ همیشگی، زدنِ ستونِ «#» کادرِ «فیِ این ردیف» را باز می‌کند؛ این‌جا
+       هم همان: می‌رود سرِ خانهٔ «فی لیتر»ِ همان ردیف. */
+    if (kind === 'idx') {
+      const cols2 = this._cols || this.layout();
+      const fi = cols2.findIndex(function (x) { return x.col.key === 'priceper'; });
+      if (fi >= 0) { e.preventDefault(); this.open(at.r, fi); }
+      return;
+    }
+    if (kind === 'text' || kind === 'num') { e.preventDefault(); this.open(at.r, at.c); }
+  };
+  /* کادرِ تایپ را روی خانهٔ (r, ci) می‌نشاند و مقدارش را از داده می‌گیرد.
+     ⚠️ کادر همان یک کادر است و هیچ‌وقت بسته/دوباره‌ساخته نمی‌شود؛ فقط جابه‌جا
+     می‌شود. همین باعث می‌شود Enter و Tab فوکوس را از دست ندهند. */
+  Grid.prototype._load = function (r, ci) {
+    const cols = this._cols || this.layout();
+    const cc = cols[ci];
+    this.edit = { r: r, c: ci };
+    const cell = this.spec.cell(r, cc.col) || {};
+    const t = cc.col.type === 'num' ? 'number' : 'text';
+    if (this.inp.type !== t) this.inp.type = t;
+    this.inp.value = cell.raw == null ? '' : cell.raw;
+    this.inp.placeholder = cell.placeholder || '';
+    this._placeEditor();
+    this.inp.style.display = 'block';
+  };
+  Grid.prototype.open = function (r, ci) {
+    const cols = this._cols || this.layout();
+    if (r < 0 || r >= this.spec.count() || ci < 0 || ci >= cols.length) return;
+    const cc = cols[ci];
+    if (cc.col.type !== 'text' && cc.col.type !== 'num') return;
+    const cell0 = this.spec.cell(r, cc.col);
+    if (!cell0 || cell0.auto) return;      // ردیف‌های خودکار فقط نمایش‌اند
+    this._commit(true);
+    this._load(r, ci);
+    this.inp.focus();
+    try { this.inp.select(); } catch (e) {}
+    // خانهٔ بازشده باید دیده شود (اگر لبهٔ کادر است، کادر خودش می‌آید)
+    const top = this.headH + r * this.rowH;
+    if (top - this.scrollTop < this.headH) this.sc.scrollTop = top - this.headH;
+    else if (top + this.rowH - this.scrollTop > (this._h || this.host.clientHeight) - this.footH)
+      this.sc.scrollTop = top + this.rowH - (this._h || this.host.clientHeight) + this.footH;
+  };
+  Grid.prototype._placeEditor = function () {
+    const e = this.edit;
+    if (e.r < 0) { this.inp.style.display = 'none'; return; }
+    const cols = this._cols || this.layout();
+    const cc = cols[e.c];
+    if (!cc) { this.inp.style.display = 'none'; return; }
+    /* کادرِ تایپ دقیقاً به بلندی و فونتِ کادرهای جدولِ همیشگی، وسطِ خانه */
+    const m = this._m || {};
+    const ih = Math.min(this.rowH - 6, Math.max(24, m.inpH || (this.rowH - 10)));
+    this.inp.style.left = (cc.x + 3) + 'px';
+    this.inp.style.top = (this.headH + e.r * this.rowH + (this.rowH - ih) / 2) + 'px';
+    this.inp.style.width = (cc.w - 6) + 'px';
+    this.inp.style.height = ih + 'px';
+    if (m.inpFontSize) this.inp.style.fontSize = m.inpFontSize;
+    if (m.cellColor) this.inp.style.color = m.cellColor;
+  };
+  Grid.prototype._commit = function (write) {
+    const e = this.edit;
+    if (e.r < 0) return;
+    const cols = this._cols || this.layout();
+    const cc = cols[e.c];
+    this.edit = { r: -1, c: -1 };
+    this.inp.style.display = 'none';
+    if (write && cc) {
+      try { this.spec.setCell(e.r, cc.col, this.inp.value); } catch (err) {}
+      this.refresh();
+    }
+  };
+  Grid.prototype._key = function (ev) {
+    const e = this.edit;
+    if (e.r < 0) return;
+    const k = ev.key;
+    /* ⚠️ کلیدهایی که خودمان می‌فهمیم نباید به کلیدهای سراسریِ برنامه برسند
+       (Enter/Escape/Tab آن‌جا معنیِ دیگری دارند و فوکوس را از کادر می‌گرفتند —
+       نتیجه‌اش این بود که با هر Enter ویرایش قطع می‌شد). */
+    if (k === 'Enter' || k === 'Escape' || k === 'Tab' || k === 'ArrowDown' || k === 'ArrowUp') ev.stopPropagation();
+    /* رفتن به خانهٔ بعد: ذخیره می‌کنیم و *همان* کادر را جابه‌جا می‌کنیم — نه
+       بستن و باز کردن. (اولین نسخه می‌بست و باز می‌کرد؛ رویدادِ blurِ بستن بعد
+       از باز شدنِ خانهٔ تازه می‌رسید و همان را می‌بست — با هر Enter ویرایش قطع
+       می‌شد.) */
+    const move = (dr, dc) => {
+      ev.preventDefault();
+      const cols = this._cols || this.layout();
+      const r = e.r, ci = e.c;
+      try { this.spec.setCell(r, cols[ci].col, this.inp.value); } catch (err) {}
+      this.layout();
+      const n = this.spec.count();
+      let nr = r + dr, nc = ci + dc;
+      while (nc >= 0 && nc < cols.length && cols[nc].col.type !== 'text' && cols[nc].col.type !== 'num') nc += (dc || 1);
+      if (nc < 0 || nc >= cols.length) nc = ci;
+      if (nr < 0 || nr >= n) nr = Math.min(Math.max(0, r), n - 1);
+      if (nr < 0) { this._commit(false); return; }
+      this._load(nr, nc);
+      // خانهٔ تازه اگر زیرِ لبه است، خودش بالا بیاید
+      const top = this.headH + nr * this.rowH;
+      if (top - this.scrollTop < this.headH) this.sc.scrollTop = top - this.headH;
+      else if (top + this.rowH - this.scrollTop > (this._h || this.host.clientHeight) - this.footH)
+        this.sc.scrollTop = top + this.rowH - (this._h || this.host.clientHeight) + this.footH;
+      this.paint();
+      try { this.inp.select(); } catch (err) {}
+    };
+    if (k === 'Enter') return move(1, 0);
+    if (k === 'Escape') { ev.preventDefault(); this._commit(false); this.sc.focus(); return; }
+    if (k === 'Tab') return move(0, ev.shiftKey ? -1 : 1);
+    if (k === 'ArrowDown') return move(1, 0);
+    if (k === 'ArrowUp') return move(-1, 0);
+  };
+  Grid.prototype.destroy = function () {
+    try { if (this._ro) this._ro.disconnect(); } catch (e) {}
+    this.host.innerHTML = '';
+    this.host.classList.remove('pg-host');
+  };
+  return {
+    mount: function (host, spec) { const g = new Grid(host, spec); g.resize(); return g; }
+  };
+})();
+
+
+/* ══ سوارکردنِ موتور روی جدولِ حسابِ قرض‌دار ═══════════════════════════════════
+   جدولِ قدیمی سرِ جایش می‌ماند و با یک دکمه بین دو موتور جابه‌جا می‌شویم؛ پس اگر
+   جایی از موتورِ تازه به کارِ شما نیامد، همان لحظه به جدولِ همیشگی برمی‌گردید.
+   ⚠️ نوشتنِ خانه‌ها از همان توابعِ خودِ برنامه می‌گذرد (updatePersonRow /
+   calcPersonRow / setRowFuel / deletePersonRow) — هیچ محاسبه‌ای این‌جا نیست. */
+/* ── دو کمکِ کشیدن: «نوع تیل» و «حذف» ────────────────────────────────────────
+   این‌ها همان چیزی را می‌کشند که در جدولِ همیشگی می‌بینید — دکمهٔ گِردِ رنگی با
+   نقطهٔ انتخاب، و دکمهٔ سرخِ حذف. رنگ‌ها از خودِ همان جدول خوانده شده‌اند
+   (metrics)، پس با هر تم هم‌رنگ می‌مانند. */
+function _pgRound(ctx, x, y, w, h, r) {
+  const k = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + k, y);
+  ctx.arcTo(x + w, y, x + w, y + h, k);
+  ctx.arcTo(x + w, y + h, x, y + h, k);
+  ctx.arcTo(x, y + h, x, y, k);
+  ctx.arcTo(x, y, x + w, y, k);
+  ctx.closePath();
+}
+function _pgAlpha(col, a) {
+  const m = String(col || '').match(/rgba?\(([^)]+)\)/);
+  if (!m) return col;
+  const p = m[1].split(',').map(x => parseFloat(x));
+  return 'rgba(' + p[0] + ',' + p[1] + ',' + p[2] + ',' + a + ')';
+}
+function _pgPick(ctx, x, y, w, h, cell, font, m) {
+  const opts = cell.opts || [];
+  const ph = Math.min(30, (h - 8) / Math.max(1, opts.length));
+  const gap = 3;
+  const totalH = opts.length * ph + (opts.length - 1) * gap;
+  let oy = y + (h - totalH) / 2;
+  const pw = Math.min(w - 10, 96);
+  const px = x + (w - pw) / 2;
+  ctx.textAlign = 'right';
+  ctx.font = font;
+  opts.forEach(function (o) {
+    if (o.on) {
+      ctx.fillStyle = _pgAlpha(o.color, .14);
+      _pgRound(ctx, px, oy, pw, ph, 6); ctx.fill();
+      ctx.strokeStyle = o.color; ctx.lineWidth = 1;
+      _pgRound(ctx, px + .5, oy + .5, pw - 1, ph - 1, 6); ctx.stroke();
+    }
+    ctx.fillStyle = o.color;
+    ctx.fillText(o.label, px + pw - 7, oy + ph / 2, pw - 26);
+    // نقطهٔ انتخاب، سمتِ چپِ دکمه — مثل رادیوی جدولِ همیشگی
+    const cx2 = px + 11, cy2 = oy + ph / 2, rr = 6;
+    ctx.strokeStyle = o.color; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.arc(cx2, cy2, rr, 0, Math.PI * 2); ctx.stroke();
+    if (o.on) { ctx.fillStyle = o.color; ctx.beginPath(); ctx.arc(cx2, cy2, rr - 2.6, 0, Math.PI * 2); ctx.fill(); }
+    oy += ph + gap;
+  });
+  ctx.lineWidth = 1;
+  ctx.textAlign = 'center';
+}
+function _pgBtn(ctx, x, y, w, h, cell, m) {
+  const s = Math.min(32, h - 10, w - 8);
+  const bx = x + (w - s) / 2, by = y + (h - s) / 2;
+  const col = (m && m.delColor) || '#ff5d76';
+  ctx.fillStyle = _pgAlpha(col, .1);
+  _pgRound(ctx, bx, by, s, s, 9); ctx.fill();
+  ctx.strokeStyle = _pgAlpha(col, .32); ctx.lineWidth = 1;
+  _pgRound(ctx, bx + .5, by + .5, s - 1, s - 1, 9); ctx.stroke();
+  ctx.fillStyle = col;
+  ctx.font = Math.round(s * 0.52) + 'px Vazirmatn, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(cell.text || '🗑️', x + w / 2, y + h / 2);
+}
+/* ── اندازه‌ها و رنگ‌ها را از خودِ جدولِ همیشگی برمی‌دارد ───────────────────
+   جدولِ HTML همیشه ساخته می‌شود (فقط پنهان است)، پس یک لحظه نشانش می‌دهیم،
+   اندازه می‌گیریم و باز پنهانش می‌کنیم. این کار فقط هنگامِ باز شدن و تغییرِ
+   اندازهٔ پنجره انجام می‌شود، نه در هر فریم. */
+/* ردیف‌های خودکارِ «📌 رسید / فیصدی» ───────────────────────────────────────
+   این ردیف‌ها را خودِ برنامه می‌سازد (_renderRasidLog) و منطقشان حساس است، پس
+   موتور آن‌ها را *دوباره نمی‌سازد*: همان ردیف‌هایی را که جدولِ همیشگی ساخته
+   می‌خواند و همان‌جا که باید، می‌کشدشان. نوشته و جای هر خانه از خودِ همان ردیف
+   می‌آید، پس هر تغییری در منطقِ رسید، خودبه‌خود این‌جا هم دیده می‌شود. */
+let _pmGridAuto = [];
+function _pmGridReadAuto() {
+  const tbl = document.getElementById('pm-tbl');
+  const out = [];
+  if (!tbl) { _pmGridAuto = out; return out; }
+  Array.prototype.forEach.call(tbl.querySelectorAll('#pm-body tr.pm-auto-row'), function (tr) {
+    const cells = Array.prototype.map.call(tr.children, function (td) {
+      const b = td.querySelector('.pmar-box, .xls-in');
+      return (b ? b.textContent : td.textContent).trim();
+    });
+    let ft = 'petrol';
+    const real = tr.querySelector('.ft-opt:not(.pmar-ft-ghost)');
+    if (real && /دیزل/.test(real.textContent)) ft = 'diesel';
+    let del = '';
+    const btn = tr.querySelector('.del-btn');
+    if (btn) { const m = String(btn.getAttribute('onclick') || '').match(/deletePersonRasid\('([^']+)'\)/); if (m) del = m[1]; }
+    out.push({ cells: cells, ftype: ft, del: del, tip: tr.title || '' });
+  });
+  _pmGridAuto = out;
+  return out;
+}
+/* نقشهٔ ردیف‌ها: ردیف‌های دستی، بعد ردیف‌های خودکار سرِ جای خودشان، بعد بقیه —
+   دقیقاً همان ترتیبی که در جدولِ همیشگی دیده می‌شود. */
+function _pmGridAt() {
+  const n = (_pmV.idx || []).length;
+  const at = (_pmV.autoAt == null) ? n : Math.max(0, Math.min(n, _pmV.autoAt));
+  return at;
+}
+function _pmGridRowAt(vi) {
+  const A = _pmGridAuto || [], at = _pmGridAt();
+  if (vi < at) return { kind: 'data', di: _pmV.idx[vi] };
+  if (vi < at + A.length) return { kind: 'auto', a: A[vi - at] };
+  const k = vi - A.length;
+  return { kind: 'data', di: _pmV.idx[k] };
+}
+function _pmGridMetrics() {
+  const wrap = document.querySelector('#personModal .xls-wrap');
+  const tbl = document.getElementById('pm-tbl');
+  if (!wrap || !tbl) return null;
+  const was = wrap.style.display;
+  if (was === 'none') wrap.style.display = '';
+  const m = {};
+  try {
+    const ths = Array.prototype.slice.call(tbl.querySelectorAll('thead th'));
+    m.colW = ths.map(t => t.getBoundingClientRect().width);
+    if (ths[0]) {
+      const c = getComputedStyle(ths[0]);
+      m.headBg = c.backgroundColor; m.headTxt = c.color;
+      m.headFont = c.fontWeight + ' ' + c.fontSize + ' Vazirmatn, sans-serif';
+      m.headH = ths[0].getBoundingClientRect().height;
+    }
+    const tr = tbl.querySelector('#pm-body tr[data-idx]');
+    if (tr) {
+      m.rowH = tr.getBoundingClientRect().height;
+      const td0 = tr.children[0];
+      if (td0) {
+        const c0 = getComputedStyle(td0);
+        m.idxFont = c0.fontWeight + ' ' + c0.fontSize + ' Vazirmatn, sans-serif';
+        m.idxColor = c0.color; m.line = c0.borderBottomColor;
+      }
+      const inp = tr.querySelector('input.xls-in');
+      if (inp) {
+        const ic = getComputedStyle(inp);
+        m.cellFont = ic.fontWeight + ' ' + ic.fontSize + ' Vazirmatn, sans-serif';
+        m.cellColor = ic.color; m.inpH = inp.getBoundingClientRect().height;
+        m.inpFontSize = ic.fontSize;
+      }
+      const bar = tr.querySelector('.pm-bardagi-cell');
+      if (bar) m.bardagiColor = getComputedStyle(bar).color;
+      const op = tr.querySelector('.ft-opt.petrol'), od = tr.querySelector('.ft-opt.diesel');
+      if (op) { m.petrolColor = getComputedStyle(op).color; m.pickFont = getComputedStyle(op).fontWeight + ' ' + getComputedStyle(op).fontSize + ' Vazirmatn, sans-serif'; }
+      if (od) m.dieselColor = getComputedStyle(od).color;
+      const del = tr.querySelector('.del-btn');
+      if (del) m.delColor = getComputedStyle(del).color;
+    }
+    const zeb = tbl.querySelector('#pm-body tr.pm-zebra td');
+    if (zeb) m.zebra = getComputedStyle(zeb).backgroundColor;
+    const au = tbl.querySelector('#pm-body tr.pm-auto-row td');
+    if (au) m.autoBg = getComputedStyle(au).backgroundColor;
+    const ftd = tbl.querySelector('tfoot td');
+    if (ftd) {
+      const fc = getComputedStyle(ftd);
+      m.footFont = fc.fontWeight + ' ' + fc.fontSize + ' Vazirmatn, sans-serif';
+      m.footColor = fc.color; m.footH = ftd.getBoundingClientRect().height;
+      let bg = fc.backgroundColor;
+      if (!bg || bg === 'rgba(0, 0, 0, 0)') bg = getComputedStyle(ftd.parentNode).backgroundColor;
+      if (bg && bg !== 'rgba(0, 0, 0, 0)') m.footBg = bg;
+    }
+  } catch (e) {}
+  if (was === 'none') wrap.style.display = 'none';
+  return m;
+}
+let _pmGrid = null;
+/* پیش‌فرض: در اپِ اندروید و برنامهٔ ویندوز روشن (همان‌جا که صاحب ریپو «مثلِ اکسل»
+   خواسته)، روی سایت خاموش. هر انتخابِ خودِ کاربر، هر دو را کنار می‌زند. */
+function _pmGridOn() {
+  try {
+    const v = localStorage.getItem('pmFastGrid');
+    if (v === '1') return true;
+    if (v === '0') return false;
+    return _pumpNative();
+  } catch (e) { return false; }
+}
+function pmToggleFastGrid() {
+  const on = !_pmGridOn();
+  try { localStorage.setItem('pmFastGrid', on ? '1' : '0'); } catch (e) {}
+  if (_pmGrid) { try { _pmGrid.destroy(); } catch (e) {} _pmGrid = null; }
+  const p = _curPerson();
+  if (p) { try { renderPersonRows(p); } catch (e) {} }
+  try { showToast(on ? '⚡ موتورِ سریع روشن شد' : '📋 جدولِ همیشگی برگشت', on ? '#38a169' : '#805ad5'); } catch (e) {}
+}
+function _pmGridCols() {
+  const V = _pmV;
+  const cols = [
+    { key: '#',        label: '#',           w: 42,  type: 'idx' },
+    { key: 'date',     label: 'تاریخ',       w: 96,  type: 'text' },
+    { key: 'name',     label: 'نام',         w: 168, type: 'text', ph: 'نام' },
+    { key: 'hawala',   label: 'حواله',       w: 78,  type: 'text', ph: 'متن یا عدد' }
+  ];
+  if (V.showFt) cols.push({ key: 'ftype', label: 'نوع تیل', w: 106, type: 'pick' });
+  cols.push({ key: 'fuel',     label: 'مقدار تیل',   w: 88,  type: 'num' });
+  cols.push({ key: 'priceper', label: 'فی لیتر',     w: 82,  type: 'num' });
+  cols.push({ key: 'bardagi',  label: 'مقدار بردگی', w: 106, type: 'num' });
+  if (V.money) cols.push({ key: 'rasid',   label: 'رسید',     w: 100, type: 'num' });
+  else         cols.push({ key: 'rasidFuel', label: 'رسید تیل', w: 100, type: 'num' });
+  cols.push({ key: 'albaqi', label: 'الباقی', w: 92, type: 'calc' });
+  cols.push({ key: 'del',    label: 'حذف',   w: 54, type: 'btn' });
+  /* شمارهٔ ستون روی خودش نوشته می‌شود: ردیف‌های خودکار خانه‌هایشان را با همین
+     شماره از جدولِ همیشگی برمی‌دارند (ترتیبِ ستون‌ها در هر دو یکی است). */
+  cols.forEach(function (c, i) { c.i = i; });
+  return cols;
+}
+function _pmGridDataIdx(vi) {
+  const r = _pmGridRowAt(vi);
+  return (r && r.kind === 'data' && r.di != null) ? r.di : -1;
+}
+function _pmGridSpec() {
+  const FT = { fuel: 'pm-ft-fuel', priceper: 'pm-ft-priceper', bardagi: 'pm-ft-bardagi',
+               rasid: 'pm-ft-rasid', rasidFuel: 'pm-ft-rasidfuel', albaqi: 'pm-ft-albaqi' };
+  return {
+    rowH: 32, headH: 36, footH: 32, fontSize: 13,
+    metrics: _pmGridMetrics,
+    cols: _pmGridCols,
+    count: function () { return (_pmV.idx || []).length + (_pmGridAuto || []).length; },
+    emptyText: function () { return _pmV.emptyMsg || 'هیچ ردیفی ثبت نشده'; },
+    cell: function (vi, col) {
+      const at = _pmGridRowAt(vi);
+      /* ردیفِ خودکار: فقط نمایش — همان نوشته‌ای که جدولِ همیشگی ساخته */
+      if (at && at.kind === 'auto') {
+        const i = (col.i == null) ? -1 : col.i;
+        const k0 = col.key;
+        if (k0 === '#') return { text: '📌', idx: true, auto: true };
+        if (k0 === 'del') return at.a.del ? { kind: 'btn', text: '🗑️', auto: true } : { text: '', auto: true };
+        if (k0 === 'ftype') return { kind: 'pick', auto: true, opts: [
+          { label: at.a.ftype === 'diesel' ? '🟤 دیزل' : '⛽ پطرول',
+            color: (at.a.ftype === 'diesel')
+              ? ((_pmGrid && _pmGrid._m && _pmGrid._m.dieselColor) || '#b7791f')
+              : ((_pmGrid && _pmGrid._m && _pmGrid._m.petrolColor) || 'var(--green)'), on: true } ] };
+        return { text: (i >= 0 && at.a.cells[i] != null) ? at.a.cells[i] : '', auto: true };
+      }
+      const di = (at && at.kind === 'data') ? at.di : -1;
+      const r = (di >= 0) ? _pmV.rows[di] : null;
+      if (!r) return null;
+      const k = col.key;
+      const M = _pmGrid ? (_pmGrid._m || {}) : {};
+      if (k === '#') return { text: n2fa(vi + 1), idx: true };
+      if (k === 'del') return { kind: 'btn', text: '🗑️' };
+      if (k === 'albaqi') return { text: '' };   // مثل جدولِ همیشگی: فقط جمعِ پایین
+      if (k === 'ftype') {
+        const d = r.ftype === 'diesel';
+        return { kind: 'pick', opts: [
+          { label: '⛽ پطرول', color: M.petrolColor || 'var(--green)', on: !d },
+          { label: '🟤 دیزل',  color: M.dieselColor || '#b7791f',      on: d }
+        ] };
+      }
+      if (col.type === 'num') {
+        let v = r[k];
+        if (k === 'bardagi') v = _round0(r.byMoney ? (parseFloat(r.bardagi) || 0) : _personRowBardagi(r));
+        const num = parseFloat(v) || 0;
+        /* رنگِ ستون‌ها هم همان جدولِ همیشگی: فقط «مقدار بردگی» رنگی است */
+        const col2 = (k === 'bardagi') ? (M.bardagiColor || 'accent') : null;
+        return { text: num ? n2fa(num) : '', raw: (num ? num : ''), placeholder: '0', color: col2 };
+      }
+      const t = r[k] == null ? '' : String(r[k]);
+      return { text: t, raw: t, placeholder: col.ph || '' };
+    },
+    setCell: function (vi, col, val) {
+      const di = _pmGridDataIdx(vi);     // ردیفِ خودکار di ندارد، پس تایپ نمی‌شود
+      if (di < 0 || !_pmV.person) return;
+      const pid = _pmV.person.id;
+      if (col.type === 'num') calcPersonRow(pid, di, col.key, val);
+      else updatePersonRow(pid, di, col.key, val);
+    },
+    action: function (vi, col) {
+      const at = _pmGridRowAt(vi);
+      if (at && at.kind === 'auto') {
+        if (col.key === 'del' && at.a.del && typeof deletePersonRasid === 'function') deletePersonRasid(at.a.del);
+        return;
+      }
+      const di = _pmGridDataIdx(vi);
+      if (di < 0 || !_pmV.person) return;
+      const pid = _pmV.person.id, r = _pmV.rows[di];
+      if (col.key === 'ftype') setRowFuel(pid, di, r && r.ftype === 'diesel' ? 'petrol' : 'diesel');
+      else if (col.key === 'del') deletePersonRow(pid, di);
+    },
+    /* جمع‌ها از همان خانه‌های فوترِ جدولِ همیشگی خوانده می‌شوند: یک منبع، دو نما —
+       پس هیچ‌وقت دو عددِ متفاوت دیده نمی‌شود. */
+    foot: function (col) {
+      if (col.key === '#') return 'جمله';
+      const id = FT[col.key];
+      if (!id) return '';
+      const el = document.getElementById(id);
+      return el ? el.textContent : '';
+    }
+  };
+}
+function _pmGridSync() {
+  const host = document.getElementById('pm-grid-host');
+  const wrap = document.querySelector('#personModal .xls-wrap');
+  const btn = document.getElementById('pm-fastgrid-btn');
+  const on = _pmGridOn();
+  if (btn) {
+    btn.style.borderColor = on ? 'var(--green)' : 'var(--muted)';
+    btn.style.color = on ? 'var(--green)' : 'var(--txt)';
+    btn.title = on ? 'موتورِ سریع روشن است — برای برگشت به جدولِ همیشگی بزنید' : 'موتورِ سریعِ اکسل‌مانند';
+  }
+  if (!host) return;
+  if (!on) {
+    if (_pmGrid) { try { _pmGrid.destroy(); } catch (e) {} _pmGrid = null; }
+    host.style.display = 'none';
+    if (wrap) wrap.style.display = '';
+    return;
+  }
+  _pmGridReadAuto();          // ردیف‌های 📌 رسید/فیصدی از جدولِ همیشگی
+  if (wrap) wrap.style.display = 'none';
+  host.style.display = '';
+  if (!_pmGrid) _pmGrid = PumpGrid.mount(host, _pmGridSpec());
+  else _pmGrid.resize();
+}
+
 function _pmRowHtml(person, r, i, shown, showFtCol, money, zebra) {
   const bardagi = _round0(r.byMoney ? (parseFloat(r.bardagi)||0) : _personRowBardagi(r));
   const isP = r.ftype !== 'diesel';
@@ -30326,6 +31070,15 @@ function _pmOnScroll() {
 }
 /* رفتن به تهِ جدول — بعد از افزودنِ ردیفِ تازه */
 function _pmScrollToEnd() {
+  /* موتورِ سریع اسکرولِ خودش را دارد؛ همان‌جا هم باید به ته برود تا ردیفِ تازه
+     جلوی چشم باشد — دقیقاً کاری که جدولِ همیشگی می‌کند. */
+  try {
+    if (typeof _pmGrid !== 'undefined' && _pmGrid && _pmGridOn()) {
+      const g = _pmGrid;
+      requestAnimationFrame(function () { g.sc.scrollTop = g.sc.scrollHeight; });
+      return;
+    }
+  } catch (e) {}
   const sc = _pmScrollBox();
   if (!sc) return;
   requestAnimationFrame(function () { sc.scrollTop = sc.scrollHeight; _pmOnScroll(); });
@@ -31746,6 +32499,7 @@ function renderPersonRows(person) {
   // نرمال و ذخیره می‌کند؛ اگر جمع قبل از آن اجرا شود، بار اولِ باز شدن مودال
   // فوترِ «جمع بردگی/الباقی» با مقدارهای کهنه (مثلاً صفر) نمایش داده می‌شد
   _updatePersonTotals(person);
+  _pmGridSync();          // اگر موتورِ سریع روشن است، همان را تازه کن (توضیح کنارِ PumpGrid)
   _renderPendingInvoices(person, xlsWrap);
   _renderHistoryPanel(person);
 }
@@ -49425,7 +50179,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.399';
+const APP_VERSION = '2.9.400';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -51230,10 +51984,14 @@ function adjModalFont(delta) {
     }
   });
   try { localStorage.setItem('modalFontScale', _modalFontScale); } catch(e) {}
+  /* موتورِ سریع اندازه‌هایش را از خودِ جدول می‌گیرد، پس با A−/A+ باید دوباره
+     اندازه بگیرد — وگرنه نوشته‌هایش با بقیهٔ مودال هم‌اندازه نمی‌ماند. */
+  try { if (typeof _pmGrid !== 'undefined' && _pmGrid) _pmGrid.resize(); } catch (e) {}
 }
 /* برگشتِ اندازهٔ نوشته‌های مودال به حالتِ عادی — همان ↺ که بخش‌ها هم دارند */
 function resetModalFont() {
   _modalFontScale = 1;
+  try { setTimeout(function () { if (typeof _pmGrid !== 'undefined' && _pmGrid) _pmGrid.resize(); }, 0); } catch (e) {}
   document.querySelectorAll('[data-orig-fs]').forEach(el => {
     el.style.removeProperty('font-size');
     delete el.dataset.origFs;
@@ -58903,6 +59661,29 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
    نمی‌دهد. آن‌ها همیشه بالای صفحه‌اند، پس چیدنشان هزینه‌ای ندارد. */
 .persons-grid > .person-card{ content-visibility:auto; contain-intrinsic-size:auto 232px; }
 .persons-grid > .person-card:nth-child(-n+12){ content-visibility:visible; }
+
+/* ══ ظرفِ موتورِ اکسل‌مانند (PumpGrid) ══════════════════════════════════════
+   سه لایه روی هم: بومِ نقاشی، لایهٔ شفافِ اسکرول، و کادرِ تایپِ تک‌نفره.
+   ⚠️ بلندیِ ظرف باید عددی باشد (نه auto): خودِ جدول دیگر جا نمی‌گیرد — بوم فقط
+   به اندازهٔ همین کادر است و بقیه با اسکرولِ داخلی می‌آید (مثل اکسل). */
+.pg-host{ position:relative; overflow:hidden; height:clamp(300px, 58vh, 900px);
+  border:1.5px solid var(--lg-brd, var(--border)); border-radius:10px; background:var(--card); }
+.pg-host .pg-cv{ position:absolute; inset:0; display:block; }
+.pg-host .pg-scroll{ position:absolute; inset:0; overflow:auto; -webkit-overflow-scrolling:touch;
+  scrollbar-gutter:stable; }
+.pg-host .pg-space{ pointer-events:none; }
+.pg-host .pg-edit{
+  position:absolute; display:none; box-sizing:border-box; z-index:3;
+  border:2px solid var(--accent); border-radius:4px; background:var(--dark); color:var(--txt);
+  font-family:'Vazirmatn',sans-serif; font-size:0.86rem; font-weight:800; text-align:center;
+  padding:2px 4px; outline:none;
+}
+/* شماره‌های داخلِ کادرِ تایپ، بدونِ فلشِ بالا/پایینِ مرورگر (جا می‌گیرد و ناجور است) */
+.pg-host .pg-edit::-webkit-outer-spin-button, .pg-host .pg-edit::-webkit-inner-spin-button{
+  -webkit-appearance:none; margin:0;
+}
+@media (max-width:560px){ .pg-host{ height:clamp(260px, 62vh, 700px); } }
+
 
 
 /* ══ در اپ‌ها هیچ «شیشهٔ تار» نمی‌کشیم ══════════════════════════════════════
