@@ -555,9 +555,14 @@ body.staff-view .qr-overlay{z-index:10020}
   .person-card .pcard-nav{ opacity:.16; }
   .person-card.pcard-scoped .pcard-nav{ opacity:.36; }
 }
-/* خطِ ریزِ زیرِ نام: می‌گوید همین حالا کدام حساب روی کارت باز است */
+/* خطِ ریزِ «فرعیِ فلانی»: می‌گوید همین حالا کدام حساب روی کارت باز است.
+   ⚠️ جایش نوارِ خالیِ بالای کارت است (خواستهٔ صاحب ریپو) — همان چهل پیکسلی که
+   برای دکمهٔ ✕ و نقطهٔ وضعیت رزرو شده و وسطش خالی می‌ماند. چون absolute است،
+   نه نام را پایین می‌بَرد و نه قدِ کارت‌ها را با هم ناتراز می‌کند؛ و چون از دو
+   طرف به اندازهٔ ✕ (چپ) و نقطه (راست) فاصله دارد، رویشان نمی‌افتد. */
 .person-card .pcard-owner{
-  margin:-4px 0 5px; font-size:0.66rem; font-weight:800; color:var(--purple);
+  position:absolute; top:12px; left:42px; right:26px; margin:0;
+  font-size:0.66rem; font-weight:800; color:var(--purple); text-align:center;
   opacity:.9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .person-search-input{background:var(--dark);border:1.5px solid var(--border);border-radius:0;padding:9px 14px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.9rem;width:220px;transition:border-color .2s}
@@ -1757,7 +1762,13 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
 
 /* ── برآوردِ دستی (کادرِ کشویی) ────────────────────────────────────────────── */
 .am-wi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px}
-.am-wi-f{display:flex;flex-direction:column;gap:3px}
+/* ⚠️ نوشتهٔ بالای بعضی کادرها دوخطی می‌شود («سودِ هدف …») و پیش از این خودِ
+   کادرِ زیرش را پایین می‌بُرد — پس کادرها با هم یک‌تراز نبودند و یکی از بقیه
+   کوتاه‌تر می‌شد (گزارشِ صاحب ریپو). نوشته فضای خالی را می‌گیرد و کادر به کفِ
+   خانه می‌چسبد، پس چه نوشته یک‌خطی باشد چه دوخطی، همهٔ کادرها یک قد و یک تراز. */
+.am-wi-f{display:flex;flex-direction:column;gap:3px;justify-content:flex-end}
+.am-wi-f>span{flex:1 1 auto}
+.am-wi-f input{margin-top:auto}
 .am-wi-f>span{font-size:0.72rem;color:var(--muted);font-weight:700}
 .am-wi-f>span i{font-style:normal;opacity:.7}
 .am-wi-f input{background:var(--card);border:1.5px solid var(--purple);border-radius:8px;padding:7px 9px;
@@ -29006,7 +29017,7 @@ function _renderFuelSection(fuelType, containerId, label) {
       </div>
       <div style="padding:10px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
         <div class="stat-box"><div class="stat-label">وزن (کگ)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.kg||0)}</div></div>
-        <div class="stat-box"><div class="stat-label">وزن (تن)</div><div style="font-weight:800;font-size:0.92rem;color:var(--blue)">${n2fa(((e.kg||0)/1000).toFixed(3))}</div></div>
+        <div class="stat-box"><div class="stat-label">وزن (تن)</div><div style="font-weight:800;font-size:0.92rem;color:var(--blue)">${_tonFa(e.kg)}</div></div>
         <div class="stat-box"><div class="stat-label">ثقلت</div><div style="font-weight:800;font-size:0.92rem">${e.density != null ? n2fa(e.density) : "—"}</div></div>
         <div class="stat-box"><div class="stat-label">لیتر</div><div style="font-weight:800;font-size:0.92rem;color:var(--green)">${n2fa(Math.round(e.liters||0))}</div></div>
         <div class="stat-box"><div class="stat-label">فی تن ($)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.priceTon||0)}</div></div>
@@ -30297,8 +30308,8 @@ function renderPersons(type) {
         onclick="event.stopPropagation();pcardStepAcct('${type}','${p.id}',1)"
         ontouchstart="event.stopPropagation()"
         oncontextmenu="event.preventDefault();event.stopPropagation();return false"></button>` : ''}
-      ${_pcardNameHtml(cardName)}
       ${scoped ? `<div class="pcard-owner" title="${escFa(p.name)}">↳ فرعیِ ${escFa(p.name)}</div>` : ''}
+      ${_pcardNameHtml(cardName)}
       ${settled
         ? '<div class="pdebt clear">✅ تسویه</div>'
         : (moneyBal > 0 ? '<div class="pdebt">💵 ' + n2fa(moneyBal) + '</div>' : '')}
@@ -36754,7 +36765,7 @@ function _companyPurchaseSection(entries, fuel, alwaysShow){
       </div>
       <div style="padding:10px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
         <div class="stat-box"><div class="stat-label">وزن (کگ)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.kg||0)}</div></div>
-        <div class="stat-box"><div class="stat-label">وزن (تن)</div><div style="font-weight:800;font-size:0.92rem;color:var(--blue)">${n2fa(((e.kg||0)/1000).toFixed(3))}</div></div>
+        <div class="stat-box"><div class="stat-label">وزن (تن)</div><div style="font-weight:800;font-size:0.92rem;color:var(--blue)">${_tonFa(e.kg)}</div></div>
         <div class="stat-box"><div class="stat-label">ثقلت</div><div style="font-weight:800;font-size:0.92rem">${e.density != null ? n2fa(e.density) : "—"}</div></div>
         <div class="stat-box"><div class="stat-label">لیتر</div><div style="font-weight:800;font-size:0.92rem;color:var(--green)">${n2fa(Math.round(e.liters||0))}</div></div>
         <div class="stat-box"><div class="stat-label">فی تن ($)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.priceTon||0)}</div></div>
@@ -38742,7 +38753,7 @@ function pdfStorage(fuelType) {
       <td class="c nowrap">${escFa(e.date || '—')}</td>
       <td class="name">${escFa(e.seller || '—')}</td>
       <td class="c">${n2fa(e.kg||0)}</td>
-      <td class="c">${n2fa((e.ton||0).toFixed(2))}</td>
+      <td class="c">${_tonFa(e.kg != null ? e.kg : (e.ton || 0) * 1000)}</td>
       <td class="c">${n2fa(e.density||0)}</td>
       <td class="c b">${n2fa(Math.round(e.liters||0))}</td>
       <td class="c">${n2fa(e.priceTon||0)}</td>
@@ -40243,14 +40254,12 @@ function amAccCalc(acc, s, onlyRows) {
 
 /* ── فیلترها ─────────────────────────────────────────────────────────────── */
 let _amFuelFilter = 'all';
-let _amRowFilter = 'all';      // all | open | closed — کدام ردیف‌ها دیده شوند
 let _amShowMeasure = false;    // ستون‌های «موجودی واقعی» و «اختلاف»
 let _amFeeOpen = false;        // پنلِ «ماشین‌حسابِ فیصدی» — پیش‌فرض بسته
 let _amSearch = '';
 try {
   if (localStorage.getItem('amMeasure') === '1') _amShowMeasure = true;
-  const _rf = localStorage.getItem('amRowFilter');
-  if (_rf === 'open' || _rf === 'closed') _amRowFilter = _rf;
+  localStorage.removeItem('amRowFilter');   // فیلترِ باز/بسته دیگر نیست
 } catch (e) {}
 function setAmanatFuel(f) { _amFuelFilter = (f === 'petrol' || f === 'diesel') ? f : 'all'; renderAmanat(); }
 function toggleAmanatFee() {
@@ -40260,11 +40269,6 @@ function toggleAmanatFee() {
   if (b) b.style.display = _amFeeOpen ? '' : 'none';
   if (h) h.textContent = _amFeeOpen ? '▾' : '◂';
   if (_amFeeOpen) renderAmanatFee();
-}
-function setAmanatRowFilter(f) {
-  _amRowFilter = (f === 'open' || f === 'closed') ? f : 'all';
-  try { localStorage.setItem('amRowFilter', _amRowFilter); } catch (e) {}
-  renderAmanat();
 }
 /* ستون‌های اندازه‌گیری پیش‌فرض خاموش‌اند تا جدول همان چیزی بماند که هست؛ هر وقت
    مخزن را واقعاً اندازه گرفتید، با همین دکمه روشنشان کنید. */
@@ -40831,8 +40835,7 @@ function _amAccBuild() {
   const ttl = document.getElementById('am-acc-title');
   if (ttl) ttl.textContent = '🛢️ ' + (String(a.name || '').trim() || 'حسابِ بی‌نام');
 
-  const view = _amSortedRows(a).filter(({ r }) =>
-    _amRowFilter === 'all' || ((r.state === 'closed') ? 'closed' : 'open') === _amRowFilter);
+  const view = _amSortedRows(a);
   const M = _amShowMeasure;
   const rows = view.map(({ r, ri }, k) => {
     const closed = (r.state === 'closed');
@@ -40912,10 +40915,9 @@ function _amAccBuild() {
   <!-- جدول -->
   <div class="am-md-sec">
     <div class="am-md-t">📊 جدولِ رسیدها
+      <!-- ⚠️ سه دکمهٔ «همه / فقط باز / فقط بسته» برداشته شد: مخزن همیشه بسته
+           است، پس فیلترِ باز/بسته چیزی برای جدا کردن نداشت (خواستهٔ صاحب ریپو). -->
       <div class="am-tabs">
-        <button class="am-tab" data-r="all" onclick="setAmanatRowFilter('all');_amAccRefresh()">همه</button>
-        <button class="am-tab" data-r="open" onclick="setAmanatRowFilter('open');_amAccRefresh()">فقط باز</button>
-        <button class="am-tab" data-r="closed" onclick="setAmanatRowFilter('closed');_amAccRefresh()">فقط بسته</button>
         <button class="am-tab" id="am-measure-btn" onclick="toggleAmanatMeasure();_amAccRefresh()">📏 اندازه‌گیری</button>
       </div>
     </div>
@@ -41015,7 +41017,6 @@ function _amAccBuild() {
     if (wc) wc.textContent = '▾';
     _amWhatIfBuild();
   }
-  document.querySelectorAll('#amanatAccModal .am-tabs .am-tab[data-r]').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-r') === _amRowFilter));
   const mb = document.getElementById('am-measure-btn');
   if (mb) mb.classList.toggle('active', _amShowMeasure);
   // جای اسکرولِ قبلی برگردانده شود (بالا توضیح داده شد)
@@ -41273,8 +41274,7 @@ function _amAccPaint() {
     }
   });
 
-  const vis = (a.rows || []).filter(r => _amRowFilter === 'all' || ((r.state === 'closed') ? 'closed' : 'open') === _amRowFilter);
-  const tv = (vis.length === (a.rows || []).length) ? t : amAccCalc(a, s, vis);
+  const tv = t;
   const ft = (id, v) => { const el = document.getElementById('am-ft-' + id); if (el) el.textContent = v; };
   ft('liters', _amFmt2(tv.liters));
   ft('taken', _amFmt2(tv.taken));
@@ -43330,6 +43330,14 @@ function renderZodiacGrid() {
 // ========== HELPERS ==========
 function n2fa(n) {
   return Number(n).toLocaleString('en-US');
+}
+/* وزنِ خرید بر حسبِ تن — همیشه دقیقاً سه رقمِ اعشار.
+   ⚠️ پیش از این n2fa((kg/1000).toFixed(3)) نوشته می‌شد و همان toFixed را دوباره
+   عدد می‌کرد؛ پس ۲۶٬۰۰۰ کیلو «26» در‌می‌آمد و ۳۱٬۱۸۴ کیلو «31.184» — دو خریدِ
+   پشتِ هم، دو شکلِ متفاوت (گزارشِ صاحب ریپو). حالا هر دو «26.000» و «31.184». */
+function _tonFa(kg) {
+  return (Number(kg) || 0) / 1000 === 0 ? '0.000'
+    : ((Number(kg) || 0) / 1000).toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 }
 function toEnDigits(str) {
   return String(str).replace(/[۰-۹]/g, d => d.charCodeAt(0) - 1776).replace(/[٠-٩]/g, d => d.charCodeAt(0) - 1632);
@@ -49271,7 +49279,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.392';
+const APP_VERSION = '2.9.393';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
