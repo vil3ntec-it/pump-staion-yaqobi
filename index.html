@@ -511,7 +511,6 @@ body.staff-view .qr-overlay{z-index:10020}
    پس باز هم هیچ نوشته‌ای زیرِ نوار نمی‌رود. */
 @media (max-width: 560px){
   .person-card.has-subs{ padding-left:22px !important; padding-right:22px !important; }
-  .person-card .pcard-nav{ width:20px; }
 }
 .person-card .pcard-nav{
   position:absolute; top:44px; bottom:28px; width:28px; padding:0; margin:0;
@@ -541,6 +540,16 @@ body.staff-view .qr-overlay{z-index:10020}
 /* روی حسابِ فرعی کمی بیشتر دیده شوند تا راهِ برگشت گم نشود */
 .person-card.pcard-scoped .pcard-nav{ opacity:.3; }
 .person-card.pcard-scoped .pcard-nav:hover{ opacity:.95; }
+/* ⚠️ باریک‌شدنِ نوار روی گوشی این‌جاست، نه بالای قاعدهٔ اصلی ────────────────
+   این خط قبلاً داخلِ همان @media بالا بود، ولی *پیش از* قاعدهٔ پایه نوشته شده
+   بود. وزنشان برابر است (هر دو .person-card .pcard-nav)، پس هرچه پایین‌تر
+   باشد برنده است — یعنی نوار روی گوشی هم ۲۸ پیکسل می‌ماند در حالی که پدینگِ
+   کارت به ۲۲ رفته بود. نتیجه: نوارِ سمتِ راست می‌افتاد روی دکمهٔ کیوآر و روی
+   عددها و نام. آزمونِ هم‌پوشانی همین را گرفت.
+   ⚠️ این قاعده را بالاتر از قاعدهٔ پایه نبرید. */
+@media (max-width: 560px){
+  .person-card .pcard-nav{ width:20px; }
+}
 /* روی لمس hover نداریم؛ کمی پیداتر تا اصلاً کشف بشوند */
 @media (hover:none){
   .person-card .pcard-nav{ opacity:.16; }
@@ -29624,7 +29633,7 @@ function _pcardFitText(grid) {
     const sc = sec && _secFontScales[sec.id.replace(/^sec-/, '')];
     if (sc > 0) cap = sc;
   } catch (e) {}
-  const fit = (rowSel, kVar, outVar, padEm) => {
+  const fit = (rowSel, kVar, outVar, padEm, verify) => {
     const rows = grid.querySelectorAll(rowSel);
     if (!rows.length) return;
     let k = 0;
@@ -29640,13 +29649,46 @@ function _pcardFitText(grid) {
     if (!(k > 0) || !(avail > 0)) return;   // بخش پنهان است — مقدارِ قبلی بماند
     /* سقف = ضریبِ A−/A+ِ همین بخش. یعنی این دو ردیف هم با دکمه‌های اندازه
        بزرگ و کوچک می‌شوند، ولی هرگز بزرگ‌تر از جای موجود نمی‌شوند. */
-    const v = Math.min(cap, Math.max(Math.min(0.62, cap), (avail - padEm) / k));
+    let v = Math.min(cap, Math.max(Math.min(0.62, cap), (avail - padEm) / k));
     grid.style.setProperty(outVar, v.toFixed(3) + 'em');
+    /* ── تصحیح با اندازهٔ واقعیِ صفحه ──────────────────────────────────────
+       k از یک جدولِ اندازه‌گیری‌شده می‌آید و پهنایِ ایموجی در آن یک عددِ ثابت
+       است (۳٫۰۶em برایِ ⛽/🟤 و ۱٫۵۳em برایِ ⛔/⚠️). ولی ایموجی روی هر سیستمی
+       پهنایِ خودش را دارد — روی ویندوز محسوس پهن‌تر از لینوکس/اندروید. پس آن
+       عددِ ثابت آن‌جا کم می‌آورد و ردیف باز هم می‌شکند: در آزمون، کارتی با
+       عددِ پنج‌رقمیِ تیل دوخطی می‌شد و قدش با کارتِ بغلی فرق می‌کرد.
+       این حلقه بعد از اعمالِ اندازه، *واقعاً* نگاه می‌کند که ردیف شکسته یا نه
+       (بچه‌هایش روی یک خط‌اند؟) و تا وقتی شکسته باشد کمی کوچک‌ترش می‌کند.
+       پس دیگر به هیچ عددِ ثابتی برایِ پهنایِ ایموجی بند نیست.
+       ⚠️ حلقه سقفِ شمارش دارد و فقط یک ردیفِ «نماینده» را می‌سنجد (تنگ‌ترین:
+       کارتِ دارایِ حسابِ فرعی، و در میانشان آن که نوشته‌اش بلندتر است)، تا
+       چیدمانِ صفحه چند بار از نو حساب نشود. */
+    const broke = el => {
+      const c = el.children;
+      if (!c || c.length < 2) return false;
+      const t0 = c[0].offsetTop;
+      for (let i = 1; i < c.length; i++) if (Math.abs(c[i].offsetTop - t0) > 1) return true;
+      return false;
+    };
+    if (!verify) return;
+    let probe = null, best = -1;
+    rows.forEach(el => {
+      const kk = parseFloat(el.style.getPropertyValue(kVar)) || 0;
+      const score = kk + (el.closest('.person-card.has-subs') ? 1000 : 0);
+      if (score > best) { best = score; probe = el; }
+    });
+    for (let i = 0; probe && i < 6 && broke(probe); i++) {
+      v = Math.max(0.45, v * 0.93);
+      grid.style.setProperty(outVar, v.toFixed(3) + 'em');
+    }
   };
   /* padEm = فاصلهٔ بینِ دو نوشته + کمی حاشیهٔ اطمینان (حاشیهٔ کارت، ضخامتِ
      text-stroke روی کامپیوتر و گردکردنِ زیرپیکسلی) */
-  fit('.pcard-figs', '--figs-k', '--fit-figs', 1.10);
-  fit('.pstatus-row', '--st-k', '--fit-st', 1.00);
+  /* فقط ردیفِ عددها با اندازهٔ واقعی تصحیح می‌شود: در آزمون تنها همان می‌شکست
+     (عددِ پنج‌رقمی + ایموجیِ پهنِ ویندوز)، و هر تصحیح یک چیدمانِ اجباریِ دیگر
+     است. ردیفِ وضعیت حاشیهٔ کافی دارد و حتی با ایموجیِ خیلی پهن‌تر هم نشکست. */
+  fit('.pcard-figs', '--figs-k', '--fit-figs', 1.10, true);
+  fit('.pstatus-row', '--st-k', '--fit-st', 1.00, false);
 }
 /* اگر پنجره اندازه عوض کرد (چرخاندنِ گوشی، تغییرِ اندازهٔ پنجرهٔ کامپیوتر)،
    پهنایِ کارت‌ها عوض می‌شود و اندازهٔ نوشته باید دوباره سنجیده شود. */
@@ -49162,7 +49204,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.383';
+const APP_VERSION = '2.9.384';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
