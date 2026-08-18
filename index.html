@@ -19334,9 +19334,9 @@ body.boot-viewer #bootViewerSplash{
   <!-- کادرهای «ردیف جدید / چندتایی» طبقِ خواستهٔ صاحب ریپو از سربرگ آمدند پایینِ
        توضیحات، تا سربرگ شلوغ نباشد و دستِ آدم موقعِ کار به آن‌ها نخورد. -->
   <div class="row-add-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 2px 16px"><button class="add-btn" onclick="addExpenseRow()">+ ردیف</button>
-    <div style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
+    <div class="bulk-box" style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
       <span style="font-size:0.78rem;color:var(--muted)">تعداد:</span>
-      <input type="number" id="exp-bulk-count" min="1" value="5" style="width:55px;padding:6px;background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--txt);font-family:'Vazirmatn',sans-serif;text-align:center">
+      <input type="number" class="bulk-n" id="exp-bulk-count" min="1" value="5" style="width:55px;padding:6px;background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--txt);font-family:'Vazirmatn',sans-serif;text-align:center">
       <button class="add-btn" onclick="addExpenseRowsBulkDirect()">++ چندتایی</button>
     </div></div>
 
@@ -19381,9 +19381,9 @@ body.boot-viewer #bootViewerSplash{
   <!-- کادرهای «ردیف جدید / چندتایی» طبقِ خواستهٔ صاحب ریپو از سربرگ آمدند پایینِ
        توضیحات، تا سربرگ شلوغ نباشد و دستِ آدم موقعِ کار به آن‌ها نخورد. -->
   <div class="row-add-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 2px 16px"><button class="add-btn" onclick="addRasidRow()">➕ ردیف</button>
-    <div style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
+    <div class="bulk-box" style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
       <span style="font-size:0.78rem;color:var(--muted)">تعداد:</span>
-      <input type="number" id="rasid-bulk" min="1" value="5" title="تعداد ردیف" style="width:55px;padding:6px;background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--txt);font-family:'Vazirmatn',sans-serif;text-align:center">
+      <input type="number" class="bulk-n" id="rasid-bulk" min="1" value="5" title="تعداد ردیف" style="width:55px;padding:6px;background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--txt);font-family:'Vazirmatn',sans-serif;text-align:center">
       <button class="add-btn" style="background:var(--blue);color:#fff" onclick="addRasidRowsBulk()">➕➕ چندتایی</button>
     </div></div>
 
@@ -19679,9 +19679,9 @@ body.boot-viewer #bootViewerSplash{
   <!-- کادرهای «ردیف جدید / چندتایی» طبقِ خواستهٔ صاحب ریپو از سربرگ آمدند پایینِ
        توضیحات، تا سربرگ شلوغ نباشد و دستِ آدم موقعِ کار به آن‌ها نخورد. -->
   <div class="row-add-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 2px 16px"><button class="add-btn" onclick="addSafeRowDirect()">+ ردیف</button>
-    <div style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
+    <div class="bulk-box" style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
       <span style="font-size:0.78rem;color:var(--muted)">تعداد:</span>
-      <input type="number" id="safe-bulk-count" min="1" value="3" style="width:55px;padding:6px;background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--txt);font-family:'Vazirmatn',sans-serif;text-align:center">
+      <input type="number" class="bulk-n" id="safe-bulk-count" min="1" value="3" style="width:55px;padding:6px;background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--txt);font-family:'Vazirmatn',sans-serif;text-align:center">
       <button class="add-btn" onclick="addSafeRowsBulkDirect()">++ چندتایی</button>
     </div></div>
 
@@ -19979,9 +19979,9 @@ body.boot-viewer #bootViewerSplash{
   <!-- کادرهای «ردیف جدید / چندتایی» طبقِ خواستهٔ صاحب ریپو از سربرگ آمدند پایینِ
        توضیحات، تا سربرگ شلوغ نباشد و دستِ آدم موقعِ کار به آن‌ها نخورد. -->
   <div class="row-add-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 2px 16px"><button class="add-btn" onclick="addSarrafiRow()">➕ ردیف جدید</button>
-    <div style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
+    <div class="bulk-box" style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
       <span style="font-size:0.78rem;color:var(--muted)">تعداد:</span>
-      <input type="number" id="sarrafi-bulk-count" value="5" min="1" max="100" style="width:55px;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;text-align:center">
+      <input type="number" class="bulk-n" id="sarrafi-bulk-count" value="5" min="1" max="100" style="width:55px;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;text-align:center">
       <button class="add-btn" style="background:var(--green);color:#fff" onclick="addSarrafiRowsBulk()">➕➕ چندتایی</button>
     </div></div>
 
@@ -20179,7 +20179,7 @@ body.boot-viewer #bootViewerSplash{
         <span id="wq-trans-title">📋 تراکنش‌ها — ☀️ روز</span>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
           <button onclick="addWaraqRow()" style="padding:3px 10px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:700">➕ اضافه</button>
-          <input type="number" id="wq-bulk-count" min="1" value="5" title="تعداد ردیف" style="width:52px;padding:3px 6px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.75rem;text-align:center">
+          <input type="number" class="bulk-n" id="wq-bulk-count" min="1" value="5" title="تعداد ردیف" style="width:52px;padding:3px 6px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.75rem;text-align:center">
           <button onclick="addWaraqRowsBulk()" style="padding:3px 10px;background:var(--blue);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:700">➕➕ چندتایی</button>
           <button onclick="removeWaraqRow()" style="padding:3px 10px;background:var(--red);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:700">➖ کم</button>
         </div>
@@ -21642,9 +21642,9 @@ body.viewer-mode .inv-admin-only{display:none!important}
       </div>
       <div id="pm-add-row-area" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
         <button class="add-row-btn" style="margin:0" onclick="addPersonRow()">➕ ردیف جدید</button>
-        <div style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
+        <div class="bulk-box" style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
           <span style="font-size:0.78rem;color:var(--muted)">تعداد:</span>
-          <input type="number" id="pm-bulk-count" value="10" min="1" max="200" style="width:62px;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;text-align:center">
+          <input type="number" class="bulk-n" id="pm-bulk-count" value="10" min="1" max="200" style="width:62px;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;text-align:center">
           <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green)" onclick="addPersonRowsBulk()">➕ افزودن چندتایی</button>
         </div>
       </div>
@@ -21756,9 +21756,9 @@ body.viewer-mode .inv-admin-only{display:none!important}
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
         <button class="add-row-btn" style="margin:0" onclick="addCompanyRow()">➕ ردیف جدید</button>
-        <div style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
+        <div class="bulk-box" style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
           <span style="font-size:0.78rem;color:var(--muted)">تعداد:</span>
-          <input type="number" id="cm-bulk-count" value="5" min="1" max="100" style="width:55px;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;text-align:center">
+          <input type="number" class="bulk-n" id="cm-bulk-count" value="5" min="1" max="100" style="width:55px;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;text-align:center">
           <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green)" onclick="addCompanyRowsBulk()">➕ افزودن چندتایی</button>
         </div>
       </div>
@@ -34387,9 +34387,9 @@ function _renderHistoryPanel(person) {
       </div>
       <div style="padding:4px 10px 6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <button class="add-row-btn" style="margin:0" onclick="addHistoryRow('${pid}','${h.id}')">➕ ردیف جدید</button>
-        <div style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
+        <div class="bulk-box" style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
           <span style="font-size:0.78rem;color:var(--muted)">تعداد:</span>
-          <input type="number" id="hbulk-${h.id}" value="10" min="1" max="200" style="width:62px;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;text-align:center">
+          <input type="number" class="bulk-n" id="hbulk-${h.id}" value="10" min="1" max="200" style="width:62px;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;text-align:center">
           <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green)" onclick="addHistoryRowsBulk('${pid}','${h.id}')">➕ افزودن چندتایی</button>
         </div>
       </div>
@@ -49294,7 +49294,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.394';
+const APP_VERSION = '2.9.395';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -59221,6 +59221,46 @@ select:not(.native-sel){
   font-family:'Vazirmatn',sans-serif; color:inherit;
 }
 #rbPane-ai .ai-chip:active{ transform:scale(.97); }
+
+/* ══ کادرهای تایپیِ «بیرونِ جدول» باید دیده شوند ═══════════════════════════
+   گزارشِ صاحب ریپو (روی برنامهٔ کامپیوتر، تمِ روشن): «کادرِ یادداشت این بخش و
+   آن کادری که عدد می‌زنم تا ردیفِ چندگانه اضافه شود، نشان داده نمی‌شوند.»
+   ریشه: در تم‌های روشن، رنگِ خودِ کادر (var(--dark)) و رنگِ کارتِ زیرش
+   (var(--card)) تقریباً یکی‌اند و مرزشان var(--border)ِ خیلی کم‌رنگ است — روی
+   نمایشگرِ بزرگ و روشنِ کامپیوتر این تفاوت اصلاً دیده نمی‌شود و کاربر نمی‌فهمد
+   آنجا جای نوشتن است.
+   درمان: همان مرزِ هم‌رنگِ تم که جدول‌ها و کارت‌ها دارند (var(--lg-brd)) به این
+   دو کادر هم داده می‌شود، به‌علاوهٔ یک تهْ‌رنگِ ملایم از رنگِ تم تا از کارتِ زیرش
+   جدا شود. روی کامپیوتر نوشته‌شان هم بزرگ‌تر می‌شود.
+   ⚠️ فقط کادرهای «بیرونِ جدول». خانه‌های تایپیِ داخلِ جدول عمداً بی‌کادرند
+   (خواستهٔ صاحب ریپو) و این بلاک به آن‌ها دست نمی‌زند. */
+.note-field,
+.bulk-box,
+.bulk-n{
+  border:2px solid var(--lg-brd) !important;
+  border-radius:9px !important;
+  background:color-mix(in srgb, var(--accent) 7%, var(--dark)) !important;
+  box-sizing:border-box;
+}
+/* کادرِ عددیِ داخلِ نوارِ «++ چندتایی» یک پله روشن‌تر از قابِ دورش تا خودش هم
+   جدا دیده شود (وگرنه دو کادرِ تودرتو با یک رنگ، باز یک لکهٔ یک‌دست می‌شد) */
+.bulk-n{
+  background:color-mix(in srgb, var(--accent) 3%, var(--card)) !important;
+  font-weight:800;
+}
+.note-field::placeholder, .bulk-n::placeholder{ color:var(--muted); opacity:.85; }
+.note-field:focus, .bulk-n:focus{
+  outline:none; border-color:var(--accent) !important;
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+@media (min-width:1025px){
+  .sec-note-box .sec-note-draft{
+    font-size:calc(0.98rem * var(--note-font-scale, 1)) !important;
+    min-height:74px; padding:9px 12px !important;
+  }
+  .bulk-n{ width:66px !important; padding:7px 6px !important; font-size:0.95rem !important; }
+  .bulk-box > span{ font-size:0.88rem !important; }
+}
 </style>
 
 <script>
