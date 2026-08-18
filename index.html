@@ -441,6 +441,21 @@ body.staff-view .qr-overlay{z-index:10020}
 .save-btn:hover{opacity:.88;transform:translateY(-1px)}
 
 .stat-box{background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;min-height:86px;display:flex;flex-direction:column;justify-content:center;box-sizing:border-box}
+/* ── کادرهای کارتِ خرید (خریدهای تیل و صفحهٔ شرکت) ────────────────────────
+   گزارشِ صاحب ریپو: «تو کامپیوتر خیلی کوچک‌اند و نصفشان خالی است؛ تو گوشی خوب‌اند.»
+   ریشه: auto-fill به‌اندازهٔ عرضِ صفحه ستون می‌ساخت — روی ۱۴۰۰ پیکسل دوازده ستون —
+   و پنج کادرِ واقعی فقط چند تای اولش را پر می‌کرد؛ بقیه ستونِ خالی می‌ماند و
+   کادرها هم به همان کفِ ۱۱۰ پیکسل می‌چسبیدند. auto-fit ستونِ خالی را جمع می‌کند،
+   پس همان چند کادر تمامِ عرض را بین خودشان تقسیم می‌کنند و بزرگ می‌شوند.
+   ⚠️ کفِ ۱۱۰ پیکسل را بالا نبرید: روی کامپیوتر کارتِ نُه‌کادره را دوردیفه می‌کند
+   و باز همان جای خالی برمی‌گردد. بزرگ‌ترشدنِ نوشته‌ها کارِ قاعدهٔ زیر است. */
+.pu-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;padding:10px 14px}
+@media (min-width:1025px){
+  .pu-stats{gap:10px}
+  .pu-stats .stat-box{min-height:96px;padding:14px 12px}
+  .pu-stats .stat-label{font-size:0.86rem!important;margin-bottom:5px}
+  .pu-stats .stat-box>div:last-child{font-size:1.12rem!important}
+}
 .stat-label{font-size:0.88rem;color:var(--muted);margin-bottom:6px}
 .stat-value{font-size:1.35rem;font-weight:900;color:var(--accent)}
 .stat-value.green{color:var(--green)}.stat-value.red{color:var(--red)}
@@ -29015,7 +29030,7 @@ function _renderFuelSection(fuelType, containerId, label) {
         </div>
         <button class="del-btn" style="font-size:1rem;padding:4px 8px" onclick="deletePurchase(${e.id})">🗑️</button>
       </div>
-      <div style="padding:10px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
+      <div class="pu-stats">
         <div class="stat-box"><div class="stat-label">وزن (کگ)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.kg||0)}</div></div>
         <div class="stat-box"><div class="stat-label">وزن (تن)</div><div style="font-weight:800;font-size:0.92rem;color:var(--blue)">${_tonFa(e.kg)}</div></div>
         <div class="stat-box"><div class="stat-label">ثقلت</div><div style="font-weight:800;font-size:0.92rem">${e.density != null ? n2fa(e.density) : "—"}</div></div>
@@ -36763,7 +36778,7 @@ function _companyPurchaseSection(entries, fuel, alwaysShow){
         </div>
         <button class="del-btn" style="font-size:1rem;padding:4px 8px" onclick="deletePurchase(${e.id})">🗑️</button>
       </div>
-      <div style="padding:10px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
+      <div class="pu-stats">
         <div class="stat-box"><div class="stat-label">وزن (کگ)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(e.kg||0)}</div></div>
         <div class="stat-box"><div class="stat-label">وزن (تن)</div><div style="font-weight:800;font-size:0.92rem;color:var(--blue)">${_tonFa(e.kg)}</div></div>
         <div class="stat-box"><div class="stat-label">ثقلت</div><div style="font-weight:800;font-size:0.92rem">${e.density != null ? n2fa(e.density) : "—"}</div></div>
@@ -36811,8 +36826,8 @@ function _companyManualRowSection(rows, fuel){
           ${r.name ? `<span style="font-size:0.75rem;color:var(--blue)">👤 ${escFa(r.name)}</span>` : ''}
         </div>
       </div>
-      <div style="padding:10px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
-        <div class="stat-box"><div class="stat-label">مقدار (تن)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(ton.toFixed(3))}</div></div>
+      <div class="pu-stats">
+        <div class="stat-box"><div class="stat-label">مقدار (تن)</div><div style="font-weight:800;font-size:0.92rem">${_tonFmt(ton)}</div></div>
         <div class="stat-box"><div class="stat-label">فی تن ($)</div><div style="font-weight:800;font-size:0.92rem">${n2fa(parseFloat(r.usd)||0)}</div></div>
         <div class="stat-box"><div class="stat-label">نرخ دالر</div><div style="font-weight:800;font-size:0.92rem">${n2fa(parseFloat(r.rate)||0)}</div></div>
         <div class="stat-box"><div class="stat-label">کل (دالر)</div><div style="font-weight:800;font-size:0.92rem;color:var(--blue)">${n2fa(totalUsd.toFixed(2))} $</div></div>
@@ -36826,7 +36841,7 @@ function _companyManualRowSection(rows, fuel){
       <div style="font-size:1rem;font-weight:800;color:${color};margin:0 2px 10px">${icon} خریدهای ${label}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
         <span style="font-size:0.8rem;background:var(--dark);border:1px solid ${color};border-radius:9px;padding:7px 12px">تعداد: <b style="color:${color}">${n2fa(count)}</b></span>
-        <span style="font-size:0.8rem;background:var(--dark);border:1px solid ${color};border-radius:9px;padding:7px 12px">جمله (تن): <b style="color:var(--green)">${n2fa(sumTon.toFixed(3))}</b></span>
+        <span style="font-size:0.8rem;background:var(--dark);border:1px solid ${color};border-radius:9px;padding:7px 12px">جمله (تن): <b style="color:var(--green)">${_tonFmt(sumTon)}</b></span>
         <span style="font-size:0.8rem;background:var(--dark);border:1px solid ${color};border-radius:9px;padding:7px 12px">جمله کل دالر: <b style="color:var(--blue)">${n2fa(sumUsd.toFixed(1))} $</b></span>
         <span style="font-size:0.8rem;background:var(--dark);border:1px solid ${color};border-radius:9px;padding:7px 12px">جمله کل افغانی: <b style="color:${color}">${n2fa(Math.round(sumAfn))}</b></span>
       </div>
@@ -36897,13 +36912,13 @@ function pdfCompanyPurchases(){
         if (!ton && !tu) return;
         cnt++; sT+=ton; sU+=tu; sA+=ta;
         rows += `<tr><td style="text-align:center;color:#718096">${n2fa(cnt)}</td><td>${escFa(r.date||'—')}</td><td>${escFa(r.name||'—')}</td>
-          <td>${n2fa(ton.toFixed(3))}</td><td>${n2fa(parseFloat(r.usd)||0)}</td><td>${n2fa(parseFloat(r.rate)||0)}</td>
+          <td>${_tonFmt(ton)}</td><td>${n2fa(parseFloat(r.usd)||0)}</td><td>${n2fa(parseFloat(r.rate)||0)}</td>
           <td style="font-weight:800">${n2fa(tu.toFixed(1))} $</td><td style="font-weight:800;color:${color}">${n2fa(Math.round(ta))}</td></tr>`;
       });
       if (cnt) out += `<h3 style="font-size:0.82rem;font-weight:800;color:#718096;margin:10px 0 6px">ردیف‌های دستی جدول</h3>
         <table><thead><tr><th>#</th><th>تاریخ</th><th>نام</th><th>مقدار (تن)</th><th>فی تن ($)</th><th>نرخ</th><th>کل ($)</th><th>کل (افغانی)</th></tr></thead>
         <tbody>${rows}</tbody>
-        <tfoot><tr><td colspan="3">جمله</td><td>${n2fa(sT.toFixed(3))}</td><td></td><td></td><td>${n2fa(sU.toFixed(1))} $</td><td>${n2fa(Math.round(sA))}</td></tr></tfoot></table>`;
+        <tfoot><tr><td colspan="3">جمله</td><td>${_tonFmt(sT)}</td><td></td><td></td><td>${n2fa(sU.toFixed(1))} $</td><td>${n2fa(Math.round(sA))}</td></tr></tfoot></table>`;
     }
     return out;
   };
@@ -43335,10 +43350,10 @@ function n2fa(n) {
    ⚠️ پیش از این n2fa((kg/1000).toFixed(3)) نوشته می‌شد و همان toFixed را دوباره
    عدد می‌کرد؛ پس ۲۶٬۰۰۰ کیلو «26» در‌می‌آمد و ۳۱٬۱۸۴ کیلو «31.184» — دو خریدِ
    پشتِ هم، دو شکلِ متفاوت (گزارشِ صاحب ریپو). حالا هر دو «26.000» و «31.184». */
-function _tonFa(kg) {
-  return (Number(kg) || 0) / 1000 === 0 ? '0.000'
-    : ((Number(kg) || 0) / 1000).toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+function _tonFmt(ton) {
+  return (Number(ton) || 0).toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 }
+function _tonFa(kg) { return _tonFmt((Number(kg) || 0) / 1000); }
 function toEnDigits(str) {
   return String(str).replace(/[۰-۹]/g, d => d.charCodeAt(0) - 1776).replace(/[٠-٩]/g, d => d.charCodeAt(0) - 1632);
 }
@@ -43867,7 +43882,7 @@ function openCompanyROViewer(id) {
     const abUsd = cmpAlbaqiUsd(r, convRate);   // الباقیِ همین ردیف به دالر — کنارِ افغانی نشان داده می‌شود
     const isD = showFtCol ? (i >= petRows.length) : (_cmpRoFilter === 'diesel');
     const ftCell = showFtCol ? `<td style="color:${isD?'#a05a2c':'var(--accent)'}">${isD?'🟤 دیزل':'⛽ پطرول'}</td>` : '';
-    return `<tr><td style="text-align:center;color:var(--muted)">${n2fa(i+1)}</td><td>${r.date||'—'}</td><td>${escFa(r.name)||'—'}</td>${ftCell}<td style="color:var(--blue)">${n2fa(ton.toFixed(3))} تن</td><td>${n2fa(r.usd||0)} $</td><td style="color:var(--blue)">${n2fa(tusd.toFixed(1))} $</td><td>${n2fa(r.rate||0)}</td><td style="color:var(--purple)">${n2fa(Math.round(tafn))}</td><td style="color:var(--green)">${n2fa(Math.round(parseFloat(r.poul)||0))}${r.poulCurrency==='usd'?' $':''}</td><td style="color:${ab>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(ab))}<small style="display:block;font-size:0.7rem;font-weight:800;opacity:.9">${n2fa(abUsd.toFixed(1))} $</small></td></tr>`;
+    return `<tr><td style="text-align:center;color:var(--muted)">${n2fa(i+1)}</td><td>${r.date||'—'}</td><td>${escFa(r.name)||'—'}</td>${ftCell}<td style="color:var(--blue)">${_tonFmt(ton)} تن</td><td>${n2fa(r.usd||0)} $</td><td style="color:var(--blue)">${n2fa(tusd.toFixed(1))} $</td><td>${n2fa(r.rate||0)}</td><td style="color:var(--purple)">${n2fa(Math.round(tafn))}</td><td style="color:var(--green)">${n2fa(Math.round(parseFloat(r.poul)||0))}${r.poulCurrency==='usd'?' $':''}</td><td style="color:${ab>0?'var(--red)':'var(--green)'}">${n2fa(Math.round(ab))}<small style="display:block;font-size:0.7rem;font-weight:800;opacity:.9">${n2fa(abUsd.toFixed(1))} $</small></td></tr>`;
   }).join('');
   const emptyTxt = _cmpRoFilter === 'petrol' ? '⛽ هیچ ردیف پطرولی ثبت نشده' : (_cmpRoFilter === 'diesel' ? '🟤 هیچ ردیف دیزلی ثبت نشده' : 'ردیفی نیست');
   document.getElementById('company-ro-table-wrap').innerHTML =
@@ -43921,7 +43936,7 @@ function _cmpRoArcBlocks(company) {
         <td style="text-align:center;color:var(--muted)">${n2fa(num)}${linked ? '<div style="font-size:0.6rem;color:var(--accent);line-height:1">📦</div>' : ''}</td>
         <td>${escFa(String(r.date || '—'))}</td>
         <td>${escFa(r.name || '') || '—'}</td>
-        <td style="color:var(--blue)">${n2fa(ton.toFixed(3))} تن</td>
+        <td style="color:var(--blue)">${_tonFmt(ton)} تن</td>
         <td>${n2fa(parseFloat(r.usd) || 0)} $</td>
         <td style="color:var(--blue)">${n2fa(tu.toFixed(1))} $</td>
         <td>${n2fa(parseFloat(r.rate) || 0)}</td>
@@ -43951,7 +43966,7 @@ function _cmpRoArcBlocks(company) {
         <tbody>${body || '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:14px">فقط خرید — ردیفی برای نمایش نیست</td></tr>'}</tbody>
         <tfoot><tr style="background:var(--dark);font-weight:900">
           <td colspan="3" style="padding:8px 7px">جمله</td>
-          <td style="padding:8px 7px;color:var(--blue)">${n2fa(tTon.toFixed(3))} تن</td>
+          <td style="padding:8px 7px;color:var(--blue)">${_tonFmt(tTon)} تن</td>
           <td style="padding:8px 7px">—</td>
           <td style="padding:8px 7px;color:var(--blue)">${n2fa(tUsd.toFixed(1))} $</td>
           <td style="padding:8px 7px">—</td>
@@ -49279,7 +49294,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.393';
+const APP_VERSION = '2.9.394';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
