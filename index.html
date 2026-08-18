@@ -22199,6 +22199,47 @@ window.addEventListener('unhandledrejection', function(e) {
   e.preventDefault();
 });
 
+/* ══ «برنامهٔ نصب‌شده» بی‌محدودیت کار کند ═══════════════════════════════════
+   خواستهٔ صاحب ریپو: «داخلِ مرورگر هرچه محدودیت هست باشد، ولی در اپِ اندروید و
+   برنامهٔ ویندوز یک ذره هم محدودیت نبینم.»
+
+   چرا اصلاً محدودیتی بود؟ در تبِ مرورگر، حافظه و عمرِ صفحه دستِ ما نیست: تب در
+   پس‌زمینه کند می‌شود، سهمِ حافظه‌اش کم است و اگر ده‌هزار ردیف را یک‌جا بسازیم
+   مرورگر همان تب را می‌کُشد. برای همین چند فهرست «سقف» داشتند (۶۰۰ ردیفِ
+   تاریخچه، ۴۰۰ قرض‌دار در خلاصه، ۸۰۰ پایه، ۶۰ ورق، ۳۰ شیفت…).
+
+   داخلِ اپ‌ها هیچ‌کدامِ این‌ها صدق نمی‌کند: همهٔ فایل‌ها روی خودِ دستگاه‌اند،
+   موتور مالِ خودمان است، حافظه را خودمان تعیین می‌کنیم و هیچ تبِ دیگری هم رقیب
+   نیست. پس همان سقف‌ها ده برابر می‌شوند. برای اینکه این ده‌برابر شدن خودش کُند
+   نکند، جدول‌های بلند «پنجره‌ای» شده‌اند (_vtAdopt) و ردیف‌های بیرونِ قاب اصلاً
+   چیده نمی‌شوند (content-visibility).
+   ⚠️ _cap و _pumpNative تابعِ اعلانی‌اند (hoisted) تا هر سقفی، هرجای فایل، بتواند
+   صدایشان بزند — حتی بالاتر از خودشان. */
+function _pumpNative() {
+  try { return !!(window.pumpDesktop || window.PumpAndroid); } catch (e) { return false; }
+}
+function _cap(n) { return _pumpNative() ? n * 10 : n; }
+/* برنامهٔ ویندوز (Electron) — نه گوشی. آنجا پردازندهٔ واقعیِ کامپیوتر هست، پس
+   «دستهٔ اولِ» فهرست‌ها سه برابر ساخته می‌شود: کاربر با اسکرولِ تند هم به تهِ
+   دسته نمی‌رسد. روی گوشی همان دستهٔ معمولی می‌ماند (اسکرول خودش دستهٔ بعدی را
+   می‌آورد) تا اولین باز شدنِ صفحه سریع بماند. */
+function _pumpDesk() { try { return !!window.pumpDesktop; } catch (e) { return false; } }
+function _chunk(n) { return _pumpDesk() ? n * 3 : n; }
+/* در اپ‌ها، مرورگر اجازه ندارد دادهٔ برنامه را برای «جا باز کردن» دور بیندازد */
+try {
+  if (_pumpNative() && navigator.storage && navigator.storage.persist) {
+    navigator.storage.persisted().then(function (ok) { if (!ok) navigator.storage.persist(); }).catch(function () {});
+  }
+} catch (e) {}
+/* نشانِ روی <body> — فقط برای CSS (چیدنِ تنبلِ فهرست‌های بلند) */
+try {
+  if (_pumpNative()) {
+    document.addEventListener('DOMContentLoaded', function () {
+      try { document.body.classList.add('pump-native'); } catch (e) {}
+    });
+  }
+} catch (e) {}
+
 // امن‌سازی متنِ واردشدهٔ کاربر برای قرارگرفتن داخل HTML:
 // اگر نام/یادداشتی شامل < > " ' & باشد، دیگر جدول/کارت را خراب نمی‌کند
 function escFa(s) {
@@ -23763,10 +23804,23 @@ const HC_KINDS = [
 ];
 let _hcKind = 'all';
 let _hcMonth = '';     // فیلترِ ماه/سالِ صفحهٔ تاریخچه ('' = همهٔ ماه‌ها)
-function setHistoryKind(k) { _hcKind = k; renderHistoryView(); }
-function setHistoryMonth(v) { _hcMonth = v || ''; renderHistoryView(); }
+/* ══ «سقف» جایش را به «دسته» داد ═══════════════════════════════════════════
+   پیش از این ۶۰۰ ردیفِ اول ساخته می‌شد و بقیه با یک جملهٔ خشک کنار می‌رفتند
+   («… ۵٬۴۰۰ ردیفِ قدیمی‌تر نشان داده نشد»). حالا همان ۶۰۰تا فقط «دستهٔ اول»
+   است: تا اسکرول به تهِ فهرست نزدیک شود، دستهٔ بعدی خودش می‌آید — پس هیچ
+   سقفی وجود ندارد و هیچ ردیفی هم گم نمی‌شود.
+   چرا یک‌جا همه را نمی‌سازیم؟ اندازه‌گیری (کندسازیِ ۶ برابر ≈ گوشی):
+   ۶۰۰ ردیف ۱٬۳۷۸ms و ۶٬۰۰۰ ردیف ۵٬۴۱۵ms. یعنی ساختِ ردیف کارِ واقعی است و
+   یک‌جا ساختنِ همه فقط انتظارِ اول را بلند می‌کند — بی‌آنکه کاربر آن‌ها را
+   ببیند. دسته‌ای، هم بی‌سقف است و هم همیشه سریع. */
+const _HC_CHUNK = _chunk(600);
+let _hcShown = _HC_CHUNK;
+function _hcResetShown() { _hcShown = _HC_CHUNK; }
+function _hcMore() { _hcShown += _HC_CHUNK; renderHistoryView(); }
+function setHistoryKind(k) { _hcKind = k; _hcResetShown(); renderHistoryView(); }
+function setHistoryMonth(v) { _hcMonth = v || ''; _hcResetShown(); renderHistoryView(); }
 // از هر بخش، رفتن به تاریخچهٔ همان بخش
-function openSectionHistory(k) { _hcKind = k || 'safe'; _hcMonth = ''; showSection('historyview'); }
+function openSectionHistory(k) { _hcKind = k || 'safe'; _hcMonth = ''; _hcResetShown(); showSection('historyview'); }
 
 // «تاریخ + روز هفته + هفتهٔ چندمِ ماه» — خواستهٔ کاربر: در همهٔ تاریخچه‌ها نوشته شود
 function _hcDateLabel(dateStr) {
@@ -24090,7 +24144,7 @@ function renderHistoryView() {
     return;
   }
   let lastDate = ' ';
-  const CAP = 600;
+  const CAP = Math.max(_HC_CHUNK, _hcShown);
   list.innerHTML = rows.slice(0, CAP).map(function (r) {
     let head = '';
     if (r.date !== lastDate) {
@@ -24109,7 +24163,10 @@ function renderHistoryView() {
       + (amt ? '<div class="hc-side">' + amt + '</div>' : '') + '</div>'
       + (r.detail ? '<div class="hc-d">' + escFa(r.detail) + '</div>' : '') + stamp + '</div>';
   }).join('') + (rows.length > CAP
-    ? '<div style="text-align:center;color:var(--muted);padding:12px;font-size:0.78rem">… ' + n2fa(rows.length - CAP) + ' ردیفِ قدیمی‌تر نشان داده نشد — با کشویِ ماه، ماهِ دلخواه را انتخاب کنید</div>' : '');
+    ? '<div id="hv-more" style="text-align:center;color:var(--muted);padding:12px;font-size:0.78rem">'
+      + n2fa(CAP) + ' از ' + n2fa(rows.length) + ' ردیف — بقیه با اسکرول می‌آید</div>' : '');
+  /* نشانهٔ تهِ فهرست: تا به دیدِ کاربر نزدیک شود، دستهٔ بعدی ساخته می‌شود */
+  if (rows.length > CAP) { const more = document.getElementById('hv-more'); if (more) _observeMore(more, _hcMore); }
 }
 
 // ══════ دکمه‌های «برگشت» که به بخشِ آمده‌ازش برمی‌گردند ══════
@@ -24250,8 +24307,8 @@ function showSection(id, btn) {
   if (id === 'shifts-diesel') _secRun('ورق دیزل', renderDieselLog);
   if (id === 'debt') _secRun('قرض‌داران', () => renderPersons('debt'));
   if (id === 'debtrasid') _secRun('رسید قرض‌داران', renderDebtRasid);
-  if (id === 'debtsum') _secRun('خلاصهٔ تیل', () => renderDebtSummary('fuel'));
-  if (id === 'debtsummoney') _secRun('خلاصهٔ پول', () => renderDebtSummary('money'));
+  if (id === 'debtsum') _secRun('خلاصهٔ تیل', () => { _dsumReset(); renderDebtSummary('fuel'); });
+  if (id === 'debtsummoney') _secRun('خلاصهٔ پول', () => { _dsumReset(); renderDebtSummary('money'); });
   if (id === 'noinv') { _secRun('همگام‌سازی خریدها', syncAllPurchasesToCompanies); _secRun('شرکت ها تیل', renderCompanies); }
   if (id === 'safe') _secRun('گاوصندوق', renderSafe);
   if (id === 'amanat') _secRun('تیل امانت', renderAmanat);
@@ -27940,7 +27997,7 @@ function renderLog() {
   const _repPalette = ['#3182ce','#38a169','#d69e2e','#805ad5','#dd6b20','#319795','#e53e3e','#d53f8c'];
 
   // رندر محدود: فقط روزهای اخیر ساخته می‌شوند تا بعد از ماه‌ها/سال‌ها کار، صفحه سنگین نشود
-  if (!renderLog._limit) renderLog._limit = 30;
+  if (!renderLog._limit) renderLog._limit = 30;   // کارت‌های سنگین — دستهٔ بعدی با دکمه/اسکرول
   const _logMore = dateOrder.length - renderLog._limit;
   dateOrder.slice(0, renderLog._limit).forEach(dateKey => {
     const reps = byDate[dateKey];
@@ -29370,7 +29427,11 @@ function _allRows(person){
    حالا با نزدیک شدن به تهِ فهرست، دستهٔ بعدی خودش می‌آید (مثل هر برنامهٔ گوشی)،
    و یک دکمهٔ «نمایش همه» هم هست. سرعت هم حفظ می‌شود چون کارت‌ها هنوز دسته‌دسته
    ساخته می‌شوند، نه هزارتا با هم. ===== */
-const _PERSON_PAGE = 50;                     // اندازهٔ هر دسته
+const _PERSON_PAGE = _chunk(50);             // اندازهٔ هر دستهٔ کارت‌ها
+/* ⚠️ این عدد با _cap ده‌برابر نمی‌شود و نباید بشود: هر کارت یک محاسبهٔ واقعی
+   دارد (جمعِ ردیف‌های همان شخص)، پس پانصد کارت واقعاً پنج برابرِ پنجاه‌تا کار
+   می‌بَرد — اندازه‌گیری شد: ۶۸۱ms در برابرِ ۱٬۱۳۶ms. و لازم هم نیست: دستهٔ بعدی
+   خودش با نزدیک شدنِ اسکرول می‌آید (_observeMore)، پس کاربر هیچ سقفی نمی‌بیند. */
 const _personShown = { debt: _PERSON_PAGE, noinv: _PERSON_PAGE };
 function _goPersonPage(type) { _showAllPersons(type); }   // سازگاری با کدِ قدیمی
 function _showAllPersons(type) {
@@ -35662,7 +35723,7 @@ function renderRasid() {
     return;
   }
   // رندر محدود: ردیف‌های آخر (جدیدتر) نمایش داده می‌شوند؛ قدیمی‌ترها با دکمه باز می‌شوند
-  if (!renderRasid._limit) renderRasid._limit = 200;
+  if (!renderRasid._limit) renderRasid._limit = _cap(200);
   const _rsStart = Math.max(0, rows.length - renderRasid._limit);
   if (_rsStart > 0) {
     const tr0 = document.createElement('tr');
@@ -36158,6 +36219,11 @@ function _debtAgeInfo(p) {
   const days = Math.max(0, Math.floor((Date.now() - minTs) / 86400000));
   return { txt: _membershipText(minTs) || 'امروز', days, from: minStr };
 }
+/* دستهٔ ردیف‌های «خلاصهٔ قرض‌داران» — مثل تاریخچه: سقف نیست، دسته است.
+   با هر بار باز شدنِ صفحه از دستهٔ اول شروع می‌شود. */
+const _DSUM_CHUNK = _chunk(400);
+const _dsumShown = { debtsum: _DSUM_CHUNK, debtsummoney: _DSUM_CHUNK };
+function _dsumReset() { _dsumShown.debtsum = _DSUM_CHUNK; _dsumShown.debtsummoney = _DSUM_CHUNK; }
 function renderDebtSummary(kind) {
   // kind: 'money' = صفحهٔ واحد پول، وگرنه صفحهٔ واحد تیل. دو صفحهٔ کاملاً جدا هستند
   // تا پول و تیل هرگز در یک جدول قاطی نشوند (خواستهٔ کاربر).
@@ -36179,7 +36245,9 @@ function renderDebtSummary(kind) {
   } else {
     // جمع‌ها روی «همهٔ» قرض‌داران حساب می‌شوند، ولی برای جلوگیری از قفل‌شدن با داده‌های
     // خیلی بزرگ فقط CAP ردیفِ اول در DOM رندر می‌شود (بقیه در بخش قرض‌داران/جست‌وجو).
-    const CAP = 400;
+    /* «سقف» نیست، «دسته» است: ردیفِ آخر که به دیدِ کاربر نزدیک شود، چهارصدتای
+       بعدی خودش می‌آید. پس نه سقفی هست و نه انتظارِ ساختِ چند هزار ردیف. */
+    const CAP = Math.max(_DSUM_CHUNK, _dsumShown[pfx] || _DSUM_CHUNK);
     const frag = document.createDocumentFragment();
     const u = money ? '' : ' لیتر';
     list.forEach((p, i) => {
@@ -36205,8 +36273,10 @@ function renderDebtSummary(kind) {
     tb.appendChild(frag);
     if (list.length > CAP) {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td colspan="6" style="text-align:center;padding:10px;color:var(--muted)">نمایش ${n2fa(CAP)} از ${n2fa(list.length)} قرض‌دار — جمله‌های پایین شاملِ همه است</td>`;
+      tr.id = pfx + '-more';
+      tr.innerHTML = `<td colspan="6" style="text-align:center;padding:10px;color:var(--muted)">${n2fa(CAP)} از ${n2fa(list.length)} قرض‌دار — بقیه با اسکرول می‌آید (جمله‌های پایین شاملِ همه است)</td>`;
       tb.appendChild(tr);
+      _observeMore(tr, function () { _dsumShown[pfx] = CAP + _DSUM_CHUNK; renderDebtSummary(money ? 'money' : ''); });
     }
   }
   const setTot = (id, v) => {
@@ -36214,6 +36284,7 @@ function renderDebtSummary(kind) {
     el.style.verticalAlign = 'middle';
     el.innerHTML = n2fa(rnd(v)||0) + (money ? '' : ' لیتر');
   };
+  _vtAdopt(tb);   // پنجرهٔ ردیف‌ها — آخرین کارِ ساختنِ جدول (توضیح کنارِ _vtAdopt)
   const _lblTd = document.querySelector('#sec-' + pfx + ' tfoot td');
   if (_lblTd) _lblTd.style.verticalAlign = 'middle';
   setTot(pfx + '-tot-bardagi', totBardagi);
@@ -42202,11 +42273,17 @@ function _pumpHistoryRows() {
   out.sort((a, b) => _dateSortKey(b.date) - _dateSortKey(a.date));   // جدیدترین اول
   return out;
 }
+const _PH_CHUNK = _chunk(800);
+let _phShown = _PH_CHUNK;
 function openPumpHistory() {
+  if (!openPumpHistory._keep) _phShown = _PH_CHUNK;   // هر بار که تازه باز می‌شود، از دستهٔ اول
+  openPumpHistory._keep = false;
   const rows = _pumpHistoryRows();
   const body = document.getElementById('ph-body');
   const sum = document.getElementById('ph-summary');
-  const PH_CAP = 800;   // بیش از این، DOM سنگین و اسکرول کند می‌شود
+  /* دستهٔ ۸۰۰تایی که خودش رشد می‌کند — نه سقف. (ساختنِ ۸٬۰۰۰ ردیف یک‌جا روی
+     گوشی ۹۷۱ms می‌بُرد در برابرِ ۵۴۳ms؛ دسته‌ای هم بی‌سقف است هم سریع.) */
+  const PH_CAP = Math.max(_PH_CHUNK, _phShown);
   const shown = rows.slice(0, PH_CAP);
   if (sum) sum.textContent = 'مجموعاً ' + n2fa(rows.length) + ' پایه — جدیدترین اول'
     + (rows.length > PH_CAP ? ' (تازه‌ترین ' + n2fa(PH_CAP) + ' تا نشان داده می‌شود)' : '');
@@ -42224,6 +42301,17 @@ function openPumpHistory() {
       : `<tr><td colspan="7" style="text-align:center;padding:18px;color:var(--muted)">هنوز هیچ پایه‌ای با شروع/ختم ثبت نشده</td></tr>`;
   }
   const m = document.getElementById('pumpHistoryModal'); if (m) m.classList.add('open');
+  /* نشانهٔ تهِ جدول: نزدیک شدنش به دیدِ کاربر، دستهٔ بعدی را می‌آورد. باید *پیش*
+     از _vtAdopt گذاشته شود، چون بعدش ردیف‌ها از جدول بیرون کشیده می‌شوند. */
+  if (body && rows.length > PH_CAP) {
+    const tr = document.createElement('tr');
+    tr.id = 'ph-more';
+    tr.innerHTML = '<td colspan="8" style="text-align:center;padding:10px;color:var(--muted)">'
+      + n2fa(PH_CAP) + ' از ' + n2fa(rows.length) + ' پایه — بقیه با اسکرول می‌آید</td>';
+    body.appendChild(tr);
+    _observeMore(tr, function () { _phShown = PH_CAP + _PH_CHUNK; openPumpHistory._keep = true; openPumpHistory(); });
+  }
+  if (body) _vtAdopt(body);   // پنجرهٔ ردیف‌ها — آخرین کارِ ساختِ جدول
 }
 // از تاریخچه، کلیک روی یک ردیف → بستنِ این صفحه و بازکردنِ همان ورق روی همان شیفتی که پایه در آن ثبت شده
 function openPumpHistoryEntry(wid, shift) {
@@ -42270,7 +42358,7 @@ function _parchaHistoryRows(fuel) {
     || ((a.shift === 'night' ? 1 : 0) - (b.shift === 'night' ? 1 : 0)));
   return out;
 }
-const PAH_CAP = 800;   // بیش از این، DOM سنگین و اسکرول کند می‌شود
+const PAH_CAP = _cap(800);   // در مرورگر ۸۰۰، در اپ ۸٬۰۰۰ (جدول پنجره‌ای است)
 function _parchaHistoryTbody(rows) {
   const shown = rows.slice(0, PAH_CAP);
   if (!shown.length) {
@@ -42296,6 +42384,7 @@ function openParchaHistory() {
   txt('pah-count-d', n2fa(rd.length) + ' پایه' + cap(rd.length));
   txt('pah-summary', 'فقط شمارهٔ شروع و ختمِ پایه‌ها — جدیدترین اول · پطرول ' + n2fa(rp.length) + ' · دیزل ' + n2fa(rd.length));
   const m = document.getElementById('parchaHistoryModal'); if (m) m.classList.add('open');
+  ['pah-body-p', 'pah-body-d'].forEach(id => { const tb = document.getElementById(id); if (tb) _vtAdopt(tb); });
 }
 /* پی‌دی‌افِ همین تاریخچه — سفید و دو ستونه، مثل بقیهٔ پی‌دی‌اف‌های برنامه */
 function pdfParchaHistory() {
@@ -49311,7 +49400,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.396';
+const APP_VERSION = '2.9.397';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -58766,6 +58855,29 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
    جاوااسکریپت. مرورگر کادرِ بیرونِ قاب را نمی‌چیند و جایش را با اندازهٔ
    به‌یادسپرده نگه می‌دارد (contain-intrinsic-size: auto). */
 #safe-boxes > .tbl-wrap{ content-visibility:auto; contain-intrinsic-size: auto 1200px; }
+/* ══ فهرست‌های بلندِ کارتی: آن‌که بیرونِ قاب است چیده نشود ═══════════════════
+   همان درمانِ گاوصندوق، این‌بار برای «تاریخچه» — که ردیفِ کارتی دارد نه جدول،
+   پس پنجرهٔ جدول (_vtAdopt) به کارش نمی‌آید. مرورگر بلندیِ ردیف را به یاد
+   می‌سپارد و تا وقتی به دیدِ کاربر نزدیک نشده، محتوایش را نمی‌چیند: با سقفِ
+   تازهٔ اپ (۶٬۰۰۰ ردیف) هم اسکرول همان‌قدر سبک می‌ماند که با ۶۰۰ تا.
+   ⚠️ روی کارت‌های قرض‌دار این کار را نکنید: آن‌ها اندازه‌گیری می‌شوند
+   (_pcardFitText) و کارتِ نچیده اندازهٔ واقعی نمی‌دهد. */
+#hv-list .hc-row{ content-visibility:auto; contain-intrinsic-size:auto 74px; }
+/* ══ کارت‌های فهرست‌ها (قرض‌داران، شرکت‌ها، ورق‌ها، تیل امانت) ═══════════════
+   همان درمان، این‌بار برای گریدِ کارت‌ها — و بزرگ‌ترین بردِ همهٔ این کارها.
+   اندازه‌گیری (کروم با کندسازیِ ۶ برابر ≈ گوشی، ۳٬۰۰۰ قرض‌دار):
+        ۵۰ کارت: ۲٬۸۸۹ms → ۱٬۴۶۲ms
+       ۱۵۰ کارت: ۶٬۰۵۶ms → ۱٬۲۲۹ms
+       ۳۰۰ کارت: ۳٬۴۵۸ms → ۱٬۳۶۳ms
+       ۶۰۰ کارت: ۵٬۱۶۹ms → ۱٬۴۳۵ms
+   یعنی هزینه از «هرچه کارت بیشتر، کندتر» به «ثابت» تبدیل شد: ششصد کارت همان‌قدر
+   می‌بَرد که پنجاه‌تا. مرورگر بلندیِ کارت را به یاد می‌سپارد (auto) و تا وقتی به
+   دیدِ کاربر نزدیک نشده، داخلش را نمی‌چیند.
+   ⚠️ دوازده کارتِ اول استثناءاند: _pcardFitText برایِ هم‌اندازه کردنِ نوشته‌ها
+   پهنایِ واقعیِ ردیف‌های همان کارت‌ها را می‌سنجد و کارتِ نچیده اندازهٔ واقعی
+   نمی‌دهد. آن‌ها همیشه بالای صفحه‌اند، پس چیدنشان هزینه‌ای ندارد. */
+.persons-grid > .person-card{ content-visibility:auto; contain-intrinsic-size:auto 232px; }
+.persons-grid > .person-card:nth-child(-n+12){ content-visibility:visible; }
 /* ══ جدولِ مجازی: فاصله‌اندازها و راه‌راه ═════════════════════════════════
    ردیفِ فاصله‌انداز فقط «جا» است: نه حاشیه دارد، نه پدینگ، نه رنگ. و چون یک
    ردیفِ اضافه بالای ردیف‌های واقعی می‌نشیند، یک‌درمیانیِ nth-child جابه‌جا

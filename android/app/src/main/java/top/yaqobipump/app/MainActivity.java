@@ -21,6 +21,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.app.Activity;
+import android.view.View;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -83,6 +84,7 @@ public class MainActivity extends Activity {
     s.setSupportZoom(false);
     s.setBuiltInZoomControls(false);
     s.setCacheMode(WebSettings.LOAD_DEFAULT);
+    tuneForSpeed(s);
 
     web.setWebViewClient(new WebViewClient());
     web.addJavascriptInterface(new Bridge(), "PumpAndroid");
@@ -99,6 +101,29 @@ public class MainActivity extends Activity {
     requestNeededPermissions();
 
     web.loadUrl(pickStartUrl());
+  }
+
+  /**
+   * سرعت — چیزهایی که فقط «برنامهٔ نصب‌شده» می‌تواند داشته باشد.
+   *
+   * خواستهٔ صاحب ریپو: «در مرورگر هر محدودیتی هست باشد، ولی در اپ یک ذره هم
+   * محدودیت نبینم.» مرورگرِ گوشی برای ده‌ها تبِ ناشناس محتاط است؛ این‌جا فقط
+   * یک برنامه هست و همهٔ فایل‌هایش روی خودِ گوشی:
+   *   • setOffscreenPreRaster: چیزی که همین حالا زیرِ لبهٔ صفحه است، از پیش
+   *     کشیده می‌شود — اسکرولِ جدول‌های بلند دیگر «تکه‌تکه» بالا نمی‌آید.
+   *   • RenderPriority.HIGH: رندرِ صفحه اولویت می‌گیرد، نه کارهای پس‌زمینه.
+   *   • OVER_SCROLL_NEVER: کشِ سبزِ ته‌ی اسکرول (و کارِ رسمِ آن) حذف می‌شود؛
+   *     خودِ برنامه هم چنین حسی ندارد.
+   *   • پس‌زمینهٔ تیره: بینِ باز شدن و آمدنِ صفحه، آن فلاشِ سفید دیده نشود.
+   * (largeHeap و hardwareAccelerated در AndroidManifest روشن‌اند.)
+   */
+  private void tuneForSpeed(WebSettings s) {
+    try { s.setRenderPriority(WebSettings.RenderPriority.HIGH); } catch (Throwable ignored) { }
+    try { if (Build.VERSION.SDK_INT >= 23) s.setOffscreenPreRaster(true); } catch (Throwable ignored) { }
+    try { s.setLoadsImagesAutomatically(true); } catch (Throwable ignored) { }
+    try { s.setBlockNetworkImage(false); } catch (Throwable ignored) { }
+    try { web.setOverScrollMode(View.OVER_SCROLL_NEVER); } catch (Throwable ignored) { }
+    try { web.setBackgroundColor(0xFF0B0F17); } catch (Throwable ignored) { }
   }
 
   /**
