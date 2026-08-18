@@ -1643,6 +1643,13 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
 .am-card-acc.bad{border-color:var(--red)}
 .am-card-acc.warn{border-color:var(--accent)}
 .am-card-acc .pname{font-size:1.15rem;margin-bottom:6px}
+/* دکمهٔ پی‌دی‌افِ کارت — هم‌اندازه و هم‌ترازِ دکمهٔ ✕، فقط آن‌طرفِ نوارِ بالا */
+.am-card-acc .am-card-pdf{
+  position:absolute; top:7px; right:7px; display:inline-flex; align-items:center; justify-content:center;
+  width:30px; height:30px; background:var(--card); border:1px solid var(--border); border-radius:8px;
+  color:var(--muted); cursor:pointer; font-size:0.95rem; transition:all .15s;
+}
+.am-card-acc .am-card-pdf:hover{ background:var(--green); color:#fff; border-color:var(--green); }
 .am-card-acc .pdebt{font-size:0.95rem}
 .am-card-state{font-size:0.74rem;font-weight:800;margin-top:6px;line-height:1.7;color:var(--muted)}
 .am-card-state.ok{color:var(--green)}
@@ -2163,12 +2170,12 @@ body[class*="theme-"] #sec-settings::before{
    معمولی بیشتر است — نوارهای لبهٔ کارت را از absolute می‌انداخت و وسطِ کارت
    می‌نشاند. اگر روزی دکمهٔ absolute دیگری ساختید، آن را هم همین‌جا بیرون بگذارید
    یا با !important بنویسید. */
-button:not(.del-btn):not(.modal-close):not(.person-del):not(.pcard-nav):not(.theme-toggle):not(.lock-btn):not(.nav-btn){
+button:not(.del-btn):not(.modal-close):not(.person-del):not(.am-card-pdf):not(.pcard-nav):not(.theme-toggle):not(.lock-btn):not(.nav-btn){
   position:relative;
   overflow:hidden;
   transition: transform .15s ease, box-shadow .2s ease, background .2s, opacity .2s !important;
 }
-button:not(.del-btn):not(.modal-close):not(.person-del):not(.pcard-nav):not(.theme-toggle):not(.lock-btn):not(.nav-btn):active{
+button:not(.del-btn):not(.modal-close):not(.person-del):not(.am-card-pdf):not(.pcard-nav):not(.theme-toggle):not(.lock-btn):not(.nav-btn):active{
   animation: btnPress .25s ease forwards;
 }
 
@@ -21692,9 +21699,13 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <div class="modal-summary">
       <div class="msumbox"><div class="ml">جمله مقدار (تن)</div><div class="mv blue" id="cm-total-ton">0</div></div>
       <div class="msumbox"><div class="ml">جمله کل دالر</div><div class="mv blue" id="cm-total-usd">0</div></div>
-      <div class="msumbox"><div class="ml">باقی‌مانده دالر ($)</div><div class="mv" id="cm-usd-remaining" style="color:var(--green)">0</div></div>
+      <!-- ⚠️ جای این دو کادر به خواستهٔ صاحب ریپو عوض شد: «جمله کل افغانی» کنارِ
+           «جمله کل دالر» بنشیند و دو کادرِ رسید (دالر و افغانی) کنارِ هم. و کادرِ
+           «باقی‌مانده دالر» برداشته شد چون خودِ «جمله الباقی» همان عدد را زیرِ
+           الباقیِ افغانی می‌گوید؛ جایش «رسیدِ دالری‌ای که داده شده» نشسته. -->
       <div class="msumbox"><div class="ml">جمله کل (افغانی)</div><div class="mv acc" id="cm-total-afn">0</div></div>
-      <div class="msumbox"><div class="ml">رسید</div><div class="mv grn" id="cm-total-poul">0</div></div>
+      <div class="msumbox"><div class="ml">رسید دالر</div><div class="mv" id="cm-usd-received-sum" style="color:var(--green)">0</div></div>
+      <div class="msumbox"><div class="ml">رسید (افغانی)</div><div class="mv grn" id="cm-total-poul">0</div></div>
       <!-- کادر جمع الباقی مثل بخش صرافی رنگ می‌گیرد: سرخ = بدهکار، سبز = طلبکار/تسویه -->
       <div class="msumbox" id="cm-albaqi-box"><div class="ml">جمله الباقی</div><div class="mv red" id="cm-total-albaqi">0</div><div style="font-size:0.8rem;font-weight:700;margin-top:3px" id="cm-total-albaqi-usd"></div><div id="cm-albaqi-status" style="font-size:0.72rem;font-weight:700;margin-top:3px;color:var(--muted)"></div></div>
     </div>
@@ -25571,7 +25582,11 @@ function _pumpDocOverlay(doc, title) {
   };
   /* v2: پیش‌فرضِ «تکرارِ سطرِ عنوان» خاموش شد؛ با بالا بردنِ شمارهٔ کلید،
      تنظیماتِ ذخیره‌شدهٔ قدیمی (که روشن بودند) دیگر آن را برنمی‌گردانند. */
-  var KEY = 'pumpPrintStudio_v2';
+  /* ⚠️ نسخهٔ کلید بالا رفت چون پیش‌فرضِ سربرگ/پاورقی عوض شد (سه تاریخ). با
+     کلیدِ قدیمی، تنظیماتِ ذخیره‌شدهٔ کاربر پیش‌فرضِ تازه را نمی‌گرفت و تاریخ‌ها
+     اصلاً نمی‌آمدند. تنظیماتِ دستیِ کاربر (حاشیه، مقیاس …) یک‌بار به پیش‌فرض
+     برمی‌گردد؛ همه‌شان از همان پنجرهٔ «تنظیمات» دوباره در دسترس‌اند. */
+  var KEY = 'pumpPrintStudio_v3';
   var DEF = {
     copies: 1, collate: true, what: 'all', from: 1, to: 1,
     orient: 'portrait', paper: 'A4', cw: 210, ch: 297,
@@ -25584,8 +25599,11 @@ function _pumpDocOverlay(doc, title) {
        «چرا آن سربرگِ جدول در صفحهٔ دیگر هم هست؟ نباید باشد، گیج‌کننده می‌شود.»
        گزینه‌اش سرِ جایش هست (زبانهٔ «جدول» در تنظیمِ ورق)، فقط پیش‌فرض خاموش است. */
     gridlines: true, repeatHead: false, color: 'color',
-    hdrL: '', hdrC: '', hdrR: '',
-    ftrL: '', ftrC: 'ورق &[Page] از &[Pages]', ftrR: '&[Date]',
+    /* سه تاریخ روی هر ورق (خواستهٔ صاحب ریپو): شمسی بالا و وسطِ سربرگ،
+       قمری و میلادی کنجِ پایینِ سمتِ راست. تاریخِ داخلِ خودِ سند برداشته شد،
+       پس این‌جا تنها جای تاریخ است و ورق هم شلوغ نمی‌شود. */
+    hdrL: '', hdrC: '&[Date]', hdrR: '',
+    ftrL: '', ftrC: 'ورق &[Page] از &[Pages]', ftrR: '&[قمری] · &[میلادی]',
     /* گزینه‌های تازه — همان‌هایی که در Page Setup اکسل هست و تا حالا نبود */
     centerH: false, centerV: false,      // وسط‌چین روی ورق (افقی/عمودی)
     fitW: 1, fitH: 1,                    // «جا دادن در N ورق پهنا × M ورق بلندا»
@@ -25708,7 +25726,10 @@ function _pumpDocOverlay(doc, title) {
     var map = {
       'Page': pageNo, 'ورق': pageNo, 'صفحه': pageNo,
       'Pages': total, 'کل': total,
-      'Date': d.sh || '', 'تاریخ': d.sh || '',
+      'Date': d.sh || '', 'تاریخ': d.sh || '', 'شمسی': d.sh || '',
+      /* دو تاریخِ دیگر هم کد دارند تا هرکس هرجای سربرگ/پاورقی خواست بگذارد */
+      'DateM': d.mi || '', 'میلادی': d.mi || '',
+      'DateQ': d.qa || '', 'قمری': d.qa || '',
       'Time': time, 'ساعت': time,
       'File': docTitle, 'نام': docTitle, 'Tab': docTitle
     };
@@ -27522,13 +27543,20 @@ function pdfMembershipList(){
     th{background:#2d3748;color:#e2e8f0;padding:7px;text-align:center;font-weight:900}
     td{padding:6px 7px;border-bottom:1px solid #cbd5e0;font-weight:700;text-align:center}
     tr:nth-child(even) td{background:#f7fafc}@media print{@page{margin:.5cm}}</style></head><body>
-    <h1>⏳ مدت عضویتِ قرض‌داران</h1><div class="meta">تاریخ چاپ: ${escFa(today)} — مجموعاً ${n2fa(rows.length)} قرض‌دار (قدیمی‌ترین اول)</div>
+    <h1>⏳ مدت عضویتِ قرض‌داران</h1><div class="meta">مجموعاً ${n2fa(rows.length)} قرض‌دار (قدیمی‌ترین اول)</div>
     <table><thead><tr><th>#</th><th>تاریخ شروع</th><th>نام قرض‌دار</th><th>مدت عضویت</th></tr></thead><tbody>${trs}</tbody></table>
     </body></html>`;
   pumpOpenDoc(html);
 }
+/* تاریخ میلادی — «سال/ماه/روز»، دقیقاً مثل شمسی و قمری.
+   ⚠️ پیش از این en-GB می‌داد یعنی «روز/ماه/سال» (۱۸/۰۸/۲۰۲۶). کنارِ دو تاریخِ
+   دیگر که سال‌اولند، چشم آن را برعکس می‌خواند و «۱/۲/۲۰۲۶» به نظر می‌رسید
+   (گزارشِ صاحب ریپو: «تاریخ میلادی از راست شروع شده و خراب نوشته شده»).
+   حالا هر سه تاریخ یک ترتیب دارند و هیچ‌کدام وارونه خوانده نمی‌شود. */
 function miladiDate() {
-  return new Date().toLocaleDateString('en-GB', {day:'2-digit',month:'2-digit',year:'numeric'});
+  const d = new Date();
+  return d.getFullYear() + '/' + String(d.getMonth() + 1).padStart(2, '0')
+       + '/' + String(d.getDate()).padStart(2, '0');
 }
 function _qamariParts(date) {
   try {
@@ -27546,7 +27574,7 @@ function qamariMonthName() { const p = _qamariParts(); return p ? (QAMARI_MONTHS
 function allDates() {
   const sh = persianDate(), mi = miladiDate(), qa = qamariDate();
   const shM = parseInt(toEnDigits(sh).split('/')[1]) || 0;
-  const miM = parseInt((mi.split('/')[1])) || 0;   // en-GB = dd/mm/yyyy
+  const miM = parseInt((mi.split('/')[1])) || 0;   // yyyy/mm/dd — خانهٔ وسط ماه است
   return { sh, mi, qa, shName: SHAMSI_MONTHS[shM-1]||'', miName: MILADI_MONTHS[miM-1]||'', qaName: qamariMonthName() };
 }
 function initDate() {
@@ -28312,7 +28340,6 @@ body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;-webkit-pr
     <div class="page-hdr">
       <div>
         <div class="page-title">🟤 پمپ یعقوبی — گزارش کل دیزل</div>
-        <div class="page-meta">تاریخ چاپ: ${d.sh} | ${d.mi}</div>
       </div>
     </div>
     <div class="ov-stats">
@@ -28378,7 +28405,6 @@ function printDieselShifts() {
   @media print{.no-print{display:none}@page{size:A4 landscape;margin:0.6cm}
     th,td{padding:3px 4px!important;font-size:10px}}</style></head><body>
   <h2>🟤 گزارش دیزل — پمپ یعقوبی</h2>
-  <div style="text-align:center;font-size:10px;color:#555">تاریخ: ${d.sh} | ${d.mi}</div>
   <button class="no-print" onclick="window.print()" style="margin:8px 0;padding:8px 20px;background:#38a169;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:13px">📄 ذخیره PDF</button>
   <table><thead>
     <tr>
@@ -28600,7 +28626,6 @@ body{font-family:'Vazirmatn',sans-serif;background:#fff;color:#1a202c;-webkit-pr
     <div class="page-hdr">
       <div>
         <div class="page-title">⛽ پمپ یعقوبی — همه گزارش‌های 24 ساعته</div>
-        <div class="page-meta">تاریخ چاپ: ${d.sh} | ${d.mi} | ${d.qa}</div>
       </div>
     </div>
     <div class="ov-stats">
@@ -28691,7 +28716,6 @@ function printShifts() {
       th,td{padding:2px 3px!important;font-size:9.5px}}
   </style></head><body>
   <h2>⛽ گزارش 24 ساعته (پطرول + دیزل) — پمپ یعقوبی</h2>
-  <div class="dates">تاریخ چاپ: ${d.sh} | ${d.mi}</div>
   <button class="no-print" onclick="window.print()" style="margin-bottom:10px;padding:8px 20px;background:#38a169;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:13px">📄 ذخیره PDF</button>
   <table>
     <thead>
@@ -31957,7 +31981,6 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 </head>
 <body>
 <h1>⛽ پمپ یعقوبی — ${docTitle}</h1>
-<div class="meta">تاریخ چاپ: ${printDate} | قرض‌دار</div>
 <div class="split-row">
   <div class="split-box petrol-box">
     <div class="split-title">⛽ حساب پطرول</div>
@@ -35991,7 +36014,6 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 </head>
 <body>
 <h1>🧾 پمپ یعقوبی — ${title}</h1>
-<div class="meta">تاریخ چاپ: ${d.sh} | ${d.mi}</div>
 <div class="sum-row">
   <div class="sum-box"><div class="l">تعداد رسیدها</div><div class="v" style="color:#718096">${n2fa(rows.length)}</div></div>
   <div class="sum-box"><div class="l">جمله کل رسیدها</div><div class="v" style="color:#38a169">${n2fa(total)} افغانی</div></div>
@@ -36104,7 +36126,6 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 </head>
 <body>
 <h1>📊 پمپ یعقوبی — قرض‌های دسته‌جمعی (${unitTitle})</h1>
-<div class="meta">تاریخ چاپ: ${d.sh} | ${d.mi}</div>
 <div class="sum-row">
   <div class="sum-box"><div class="l">تعداد قرض‌داران</div><div class="v" style="color:#718096">${n2fa(list.length)}</div></div>
   <div class="sum-box"><div class="l">جمله بردگی</div><div class="v" style="color:#c07700">${n2fa(rnd(totBardagi))}${u}</div></div>
@@ -36946,7 +36967,6 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px;border-top
 @media print{body{padding:6px}@page{margin:0.5cm}tr{page-break-inside:avoid}h1{font-size:1rem}}
 </style></head><body>
 <h1>📦 پمپ یعقوبی — ${title}</h1>
-<div class="meta">تاریخ چاپ: ${dts.sh} | ${dts.mi||''}</div>
 ${bodyHtml}
 <div class="footer">پمپ یعقوبی — این گزارش به صورت خودکار تولید شده است</div>
 <script>window.onload=function(){window.print();}<\/script>
@@ -37563,10 +37583,8 @@ function _updateCompanyTotals(company) {
   set('cm-total-afn',    n2fa(Math.round(sumAfn)) + ' افغانی');
   set('cm-total-poul',   n2fa(Math.round(sumPoul)) + ' افغانی');
   // «جمع مقدار» و «رسید» با واحدِ روشن — تا شش کادرِ بالا هرکدام یک چیزِ مشخص بگویند
-  const _usdRecvNow = parseFloat(company.usdReceived) || 0;
-  const _poulBox = document.getElementById('cm-total-poul');
-  if (_poulBox) _poulBox.innerHTML = n2fa(Math.round(sumPoul)) + ' افغانی'
-    + (_usdRecvNow ? '<div style="font-size:0.72rem;color:var(--blue);font-weight:700;margin-top:2px">+ ' + n2fa(_usdRecvNow.toFixed(1)) + ' $ دالرِ گرفته‌شده</div>' : '');
+  /* ⚠️ خطِ «+ … $ دالرِ گرفته‌شده» از زیرِ این کادر برداشته شد: حالا خودش یک
+     کادرِ جدا دارد («رسید دالر») و دو جا یک عدد را نمی‌گویند. */
   set('cm-ft-ton',    n2fa(Math.round(sumTon*1000)));
   set('cm-ft-usd',    n2fa(sumUsd.toFixed(1)) + ' $');
   set('cm-ft-afn',    n2fa(Math.round(sumAfn)));
@@ -37580,9 +37598,9 @@ function _updateCompanyTotals(company) {
   const afnDeducted  = usdReceived * convRate;
   const usdRemaining = sumAlbUsd - usdReceived;          // الباقی نهایی دالر
   const afnAfterUsd  = sumAlb - afnDeducted;             // الباقی نهایی افغانی
-  set('cm-usd-remaining', n2fa(usdRemaining.toFixed(1)) + ' $');
-  const remEl = document.getElementById('cm-usd-remaining');
-  if (remEl) remEl.style.color = usdRemaining >= 0 ? 'var(--green)' : 'var(--red)';
+  /* کادرِ «رسید دالر» = همان دالری که داده‌ایم (کادرِ دستیِ بالای جدول).
+     الباقیِ دالر جای خودش در کادرِ «جمله الباقی» است، پس این‌جا تکرار نمی‌شود. */
+  set('cm-usd-received-sum', n2fa(usdReceived.toFixed(1)) + ' $');
   const albaqiUsdEl = document.getElementById('cm-total-albaqi-usd');
   if (albaqiUsdEl) { albaqiUsdEl.textContent = n2fa(usdRemaining.toFixed(1)) + ' $'; albaqiUsdEl.style.color = usdRemaining >= 0 ? 'var(--green)' : 'var(--red)'; }
   // جمع الباقی = الباقیِ نهاییِ افغانی (و معادلِ دالریِ آن کنارش)؛ هر دو یک چیز را می‌گویند
@@ -37784,14 +37802,13 @@ tr{page-break-inside:avoid;break-inside:avoid}
 .footer{margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
 @media print{@page{margin:0.5cm}}</style></head><body>
 <h1>🛢️ ${escFa(company.name)} — حساب شرکت تیل (${fuelLabel})</h1>
-<div class="meta">تاریخ چاپ: ${d.sh} | ${d.mi}</div>
 <div class="sum-row">
   <!-- برچسب و واحدِ کادرها دقیقاً همان‌هایی است که در خودِ صفحهٔ حساب دیده می‌شود -->
   <div class="sum-box"><div class="l">جمله مقدار</div><div class="v" style="color:#2b6cb0">${n2fa(Math.round(sumTon*1000))} کیلو<small style="display:block;font-size:0.62rem;font-weight:700;color:#718096">(${n2fa(sumTon.toFixed(2))} تن)</small></div></div>
   <div class="sum-box"><div class="l">جمله کل دالر</div><div class="v" style="color:#276749">${n2fa(sumUsd.toFixed(1))} $</div></div>
   <div class="sum-box"><div class="l">جمله کل (افغانی)</div><div class="v" style="color:#805ad5">${n2fa(Math.round(sumAfn))}</div></div>
   <div class="sum-box"><div class="l">رسید (افغانی)</div><div class="v" style="color:#276749">${n2fa(Math.round(sumPoul))}</div></div>
-  <div class="sum-box"><div class="l">باقی‌مانده دالر ($)</div><div class="v" style="color:${sumAlbUsd>=0?'#276749':'#e53e3e'}">${n2fa(sumAlbUsd.toFixed(1))} $</div></div>
+  <div class="sum-box"><div class="l">رسید دالر</div><div class="v" style="color:#276749">${n2fa((parseFloat(company.usdReceived)||0).toFixed(1))} $</div></div>
   <!-- الباقیِ افغانی و دالر با هم در یک کادر (خواستهٔ صاحب ریپو) -->
   <div class="sum-box" style="border-color:${sumAlb>0?'#fc8181':'#9ae6b4'}"><div class="l">جمله الباقی</div><div class="v" style="color:${sumAlb>0?'#e53e3e':'#276749'}">${n2fa(Math.round(sumAlb))} AFN<small style="display:block;font-size:0.78rem;font-weight:900;color:${sumAlbUsd>=0?'#276749':'#e53e3e'}">${n2fa(sumAlbUsd.toFixed(1))} $</small></div></div>
 </div>
@@ -37879,11 +37896,10 @@ tr{page-break-inside:avoid;break-inside:avoid}
 .footer{margin-top:16px;font-size:0.65rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
 @media print{@page{margin:0.5cm}}</style></head><body>
 <h1>🗂️ ${escFa(company.name)} — جدول آرشیو‌شده (${fuelLabel})</h1>
-<div class="meta">تاریخ ساخته‌شدنِ جدول: ${escFa(_archDateLabel(h.createdAt) || (h.createdAt||'—'))} | تاریخ چاپ: ${d.sh} | ${d.mi}</div>
+<div class="meta">تاریخ ساخته‌شدنِ جدول: ${escFa(_archDateLabel(h.createdAt) || (h.createdAt||'—'))}</div>
 <div class="sum-row">
   <div class="sum-box"><div class="l">جمله مقدار</div><div class="v" style="color:#2b6cb0">${n2fa(Math.round(tTon*1000))} کیلو<small style="display:block;font-size:0.62rem;font-weight:700;color:#718096">(${n2fa((Math.round(tTon*100)/100).toString())} تن)</small></div></div>
   <div class="sum-box"><div class="l">جمله کل دالر</div><div class="v" style="color:#2b6cb0">${n2fa(tUsd.toFixed(1))} $</div></div>
-  <div class="sum-box"><div class="l">باقی‌مانده دالر ($)</div><div class="v" style="color:${tAlbUsd>=0?'#276749':'#e53e3e'}">${n2fa(tAlbUsd.toFixed(1))} $</div></div>
   <div class="sum-box"><div class="l">جمله کل (افغانی)</div><div class="v" style="color:#805ad5">${n2fa(Math.round(tAfn))}</div></div>
   <div class="sum-box"><div class="l">رسید (افغانی)</div><div class="v" style="color:#276749">${n2fa(Math.round(tPoul))}</div></div>
   <!-- الباقیِ افغانی و دالر با هم در یک کادر (خواستهٔ صاحب ریپو) -->
@@ -38640,7 +38656,6 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 5px;border
     <div class="page-title">⛽ پمپ یعقوبی — ${acctTitle}${fuelTitle}</div>
     <div class="page-sub">${type === 'debt' ? 'حساب قرض‌دار' : 'حساب بدون پارچه'} — ${money ? 'واحد پول' : 'واحد تیل'}</div>
   </div>
-  <div class="page-meta">تاریخ چاپ: ${printDate}</div>
 </div>
 <!-- نوارِ «فیصدی ٪» برداشته شد: همان عدد در خودِ سربرگِ حساب («فیصدی ما») هست
      و دوباره‌نویسی‌اش فقط ورق را شلوغ می‌کرد (خواستهٔ صاحب ریپو). -->
@@ -38715,7 +38730,6 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px 7px;border
 </head>
 <body>
 <h1>💸 پمپ یعقوبی — ${monthKey ? ('مصارف ماه ' + monthKey) : 'گزارش مصارف'}</h1>
-<div class="meta">تاریخ چاپ: ${d.sh} | ${d.mi}</div>
 <div class="sum-row">
   <div class="sum-box"><div class="l">تعداد مصارف</div><div class="v" style="color:#718096">${n2fa(expenses.length)}</div></div>
   <div class="sum-box" style="border-color:#fc8181"><div class="l">مصارف امروز</div><div class="v" style="color:#e53e3e">${n2fa(today)} افغانی</div></div>
@@ -38840,8 +38854,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;border:1px solid #4a55
     <div class="page-title">🛢️ پمپ یعقوبی — مخزن ${label}</div>
     <div class="page-sub">گزارش موجودی و تاریخچهٔ خریدها</div>
   </div>
-  <div><div class="page-meta">تاریخ چاپ: ${d.sh}<br>${d.mi}</div>
-    <button class="hdr-print" onclick="window.print()">🖨️ چاپ / ذخیره PDF</button></div>
+  <div><button class="hdr-print" onclick="window.print()">🖨️ چاپ / ذخیره PDF</button></div>
 </div>
 <div class="hero">
   <div class="hero-main">
@@ -39773,7 +39786,6 @@ tfoot .sf-amt + .sf-amt{border-top-color:#4a5568}
 </head>
 <body>
 <h1>🏦 پمپ یعقوبی — ${monthKey ? ('گاوصندوق ' + escFa(_monthLabelFa(monthKey))) : 'گزارش گاوصندوق'}</h1>
-<div class="meta">تاریخ چاپ: ${d.sh} | ${d.mi} | ${d.qa}</div>
 <div class="sum-row">
   <div class="sum-box" style="border-color:#276749"><div class="l">💵 جمله بردگی</div><div class="v" style="color:#276749">${safeAmtHtml(tbT)}</div></div>
   <div class="sum-box" style="border-color:#2b6cb0"><div class="l">🏛️ جمله ماندگی</div><div class="v" style="color:#2b6cb0">${safeAmtHtml(tmT)}</div></div>
@@ -40723,6 +40735,9 @@ function _amCardHtml(a, ai, seq, s, pre) {
   else { state = '🔸 ' + _amFmt2(t.loss) + ' لیتر از سهمتان می‌رود'; cls = 'warn'; }
   return `<div class="person-card am-card-acc ${cls}" onclick="openAmanatAccount(${ai})">
     <button class="person-del" title="حذف حساب" onclick="event.stopPropagation();deleteAmanatAccount(${ai})">✕</button>
+    <!-- پی‌دی‌افِ خودِ همین حساب، بدونِ باز کردنِ صفحه‌اش (خواستهٔ صاحب ریپو).
+         قرینهٔ دکمهٔ ✕ در گوشهٔ دیگرِ همان نوارِ بالای کارت می‌نشیند. -->
+    <button class="am-card-pdf" title="PDF این حساب" onclick="event.stopPropagation();printAmanatAccount(${ai})">📄</button>
     <div class="pname">${escFa(String(a.name || '').trim() || 'بی‌نام')}</div>
     <div class="pdebt ${t.rest > 0 ? 'clear' : ''}">باقیِ مشتری: ${_amFmt2(t.rest)} لیتر</div>
     <div class="am-card-state ${cls}">${state}</div>
@@ -41452,13 +41467,17 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;border-top:2px solid #
 </head>
 <body>
 <h1>🛢️ ${escFa(DB.stationName || 'پمپ یعقوبی')} — ${escFa(title)}</h1>
-<div class="meta">تاریخ چاپ: ${escFa(d.sh)} | ${escFa(d.mi)} | ${escFa(d.qa)}</div>
 ${inner}
 <div class="footer">${escFa(DB.stationName || 'پمپ یعقوبی')} — این سند به صورت خودکار تولید شده است</div>
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
 }
-function _amAccPdfBlock(a, s) {
+/* ⚠️ head=false یعنی «سربرگِ حساب و خطِ خلاصه را نساز» — برای پی‌دی‌افِ تکِ یک
+   حساب، که نامِ حساب همان بالا در تیترِ سند هست و خطِ خلاصه هم مو‌به‌مو همان
+   عددهای ردیفِ «جمله» است. صاحب ریپو همین دو را دور کشید: «جای خالی و بی‌درد
+   نخور ورق را می‌گیرند». در پی‌دی‌افِ همهٔ حساب‌ها سرِ جایشان می‌مانند، وگرنه
+   معلوم نمی‌شود کدام جدول برای کدام حساب است. */
+function _amAccPdfBlock(a, s, head) {
   const t = amAccCalc(a, s);
   const rows = _amSortedRows(a).map(({ r }, k) => {
     const c = amRowCalc(r, a, s);
@@ -41482,13 +41501,14 @@ function _amAccPdfBlock(a, s) {
       <td>${c.hasActual ? _amFmt2(c.diff) : '—'}</td>
     </tr>`;
   }).join('');
-  return `<h2>${escFa(String(a.name || '').trim() || 'حسابِ بی‌نام')} — ${amFuelLabel(a)}</h2>
+  const headHtml = (head === false) ? '' : `<h2>${escFa(String(a.name || '').trim() || 'حسابِ بی‌نام')} — ${amFuelLabel(a)}</h2>
 <div class="chips">رسید کل <b>${_amFmt2(t.liters)}</b> لیتر · برده شده <b>${_amFmt2(t.taken)}</b> لیتر ·
 کمبودی <b>${_amFmt2(t.loss)}</b> لیتر${t.lossMoney == null ? '' : (' (' + _amFmt(t.lossMoney, 0) + ' پول)')} ·
 باقی تیل <b>${_amFmt2(t.rest)}</b> لیتر${t.hasActual ? (' · اندازه‌گیری واقعی <b>' + _amFmt2(t.actual) + '</b> لیتر · اختلاف <b>' + _amFmt2(t.realDiff) + '</b> لیتر') : ''} ·
 ${t.myPct == null ? 'فیصدی ثبت نشده' : ('فیصدیِ شما (هدف) <b>' + _amFmt(t.myPct, 2) + '٪</b> = <b>' + _amFmt2(t.targetL)
   + '</b> لیتر · <b>فیصدیِ لازم ' + _amFmt(t.needPct, 3) + '٪</b> → گِردشده <b>' + _amFmt(t.askPct, 1)
-  + '٪</b> · با آن بعد از بخار <b>' + _amFmt2(t.netIfAsk) + '</b> لیتر برایتان می‌ماند')}</div>
+  + '٪</b> · با آن بعد از بخار <b>' + _amFmt2(t.netIfAsk) + '</b> لیتر برایتان می‌ماند')}</div>`;
+  return `${headHtml}
 <div class="tw"><table>
 <!-- با table-layout:fixed پهنا خودش پخش می‌شود و «۱۰۰٬۰۰۰٫۰۰» از وسط دو نیم
      می‌شد. این پهناها به هر ستون به‌اندازهٔ چیزی که واقعاً در آن می‌نشیند جا
@@ -41534,8 +41554,7 @@ function printAmanatAccount(ai) {
   const a = amAccounts()[ai];
   if (!a) { showToast('❌ حساب پیدا نشد', '#e53e3e'); return; }
   const s = amSettings();
-  const inner = `<div class="disc"><b>درصد کمبودی</b> — برآورد محاسباتی است و جایگزین اندازه‌گیری واقعی موجودی نمی‌شود.</div>`
-    + _amAccPdfBlock(a, s);
+  const inner = _amAccPdfBlock(a, s, false);
   pumpOpenDoc(_amPdfShell('تیل امانت — ' + (String(a.name || '').trim() || 'بی‌نام'), inner));
 }
 
@@ -41897,7 +41916,6 @@ td{padding:6px 7px;border-bottom:1px solid #e2e8f0;text-align:center}tr:nth-chil
 tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px}
 @media print{@page{margin:0.5cm}}</style></head><body>
 <h1>💱 صرافی — ${escFa(_monthLabelFa(_sarrafiActiveMonth))}</h1>
-<div class="meta">تاریخ چاپ: ${d.sh} | ${d.mi}</div>
 <div class="sum-row">
   <div class="sum-box"><div class="l">💲 جمله دالر این ماه</div><div class="v">${n2fa(sumUsd.toFixed(2))} $</div></div>
   <!-- دقیقاً همان دو کادرِ خودِ صفحه. قبلاً این‌جا دو کادرِ بردگی بود: یکی
@@ -42334,7 +42352,6 @@ tbody tr:nth-child(2n) td{background:#fafbfc}
     <div class="page-title">🕘 پمپ یعقوبی — تاریخچهٔ پایه‌های پارچه‌ها</div>
     <div class="page-sub">فقط شمارهٔ شروع و ختمِ پایه‌ها (روز و شب) — جدیدترین اول</div>
   </div>
-  <div class="page-meta">تاریخ چاپ: ${d.sh}<br>${d.mi}</div>
 </div>
 <div class="cols">
   ${table('⛽', 'پطرول', '#b7791f', rp)}
@@ -49294,7 +49311,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.395';
+const APP_VERSION = '2.9.396';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -53005,7 +53022,7 @@ tfoot td{background:#2d3748;color:#e2e8f0;font-weight:900;padding:7px;border-top
 </head>
 <body>
 <h1>${isMoney ? '💵' : '⏰'} پمپ یعقوبی — قرض‌های کهنهٔ ${isMoney ? 'پول (واحد پول)' : 'تیل (واحد تیل)'}</h1>
-<div class="meta">تاریخ چاپ: ${d.sh} | ${d.mi}<br>به ترتیبِ «چند روز است هیچ ردیف تازه‌ای ندارند» — بی‌حرکت‌ها اول</div>
+<div class="meta">به ترتیبِ «چند روز است هیچ ردیف تازه‌ای ندارند» — بی‌حرکت‌ها اول</div>
 <div class="sum-row">
   <div class="sum-box"><div class="l">تعداد بدهکاران</div><div class="v" style="color:#718096">${n2fa(rows.length)}</div></div>
   <div class="sum-box"><div class="l">جمله الباقی (${unit})</div><div class="v" style="color:#e53e3e">${n2fa(Math.round(tot))}</div></div>
@@ -53390,7 +53407,7 @@ function pdfMonthReport() {
     @media print{body{padding:0}}
   </style></head><body>
     <h1>🛢️ پمپ یعقوبی — گزارش پایان ماه</h1>
-    <div class="sub">${_monthLabel(key)} · چاپ: ${escFa(persianDate())}</div>
+    <div class="sub">${_monthLabel(key)}</div>
     <div class="net">نتیجهٔ خالص: ${n2fa(Math.round(cur.net))} افغانی — ${cur.net >= 0 ? 'مفاد' : 'ضرر'} (نسبت به ماه قبل: ${gtxt(cur.net, prev.net)})</div>
     <table>
       ${row('💰 جمله فروش', n2fa(Math.round(cur.sales)) + ' افغانی', n2fa(Math.round(cur.liters)) + ' لیتر · رشد: ' + gtxt(cur.sales, prev.sales))}
