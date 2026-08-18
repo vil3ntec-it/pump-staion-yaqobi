@@ -1685,6 +1685,25 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
 .am-acc-body{padding:0}
 /* جدولِ «اگر بیشتر بماند» داخلِ برآوردِ دستی */
 .am-sug-tw{margin-top:9px;overflow-x:auto}
+/* ── روی کامپیوتر، نوشته‌های صفحهٔ حسابِ تیل امانت یک پله بزرگ‌تر ────────────
+   گزارشِ صاحب ریپو: «در کامپیوتر نوشته‌های این بخش‌ها را بزرگ کن تا راحت دیده
+   شود.» جای زیاد هست و این‌ها ریزترین نوشته‌های برنامه بودند. روی گوشی
+   دست‌نخورده می‌ماند (آن‌جا جا تنگ است) و A−/A+ِ خودِ صفحه هم مثل قبل کار
+   می‌کند — این فقط اندازهٔ پایه را بالا می‌برد. */
+@media (min-width:1025px){
+  #amanatAccModal .am-md-t{font-size:0.95rem}
+  #amanatAccModal .am-wi-f>span{font-size:0.85rem}
+  #amanatAccModal .am-wi-f input{font-size:1rem}
+  #amanatAccModal .am-wi-c>span{font-size:0.82rem}
+  #amanatAccModal .am-wi-c>b{font-size:1.1rem}
+  #amanatAccModal .am-rows{font-size:0.9rem}
+  #amanatAccModal .am-wi-v,
+  #amanatAccModal .am-an-v{font-size:0.92rem}
+  #amanatAccModal .am-an-note{font-size:0.82rem}
+  #amanatAccModal .am-guide{font-size:0.88rem}
+  #amanatAccModal .am-guide th,
+  #amanatAccModal .am-guide td{padding:8px 7px}
+}
 /* «سودِ هدف» — تنها عددِ دلخواهِ این حساب، پس از بقیهٔ کادرها جدا دیده می‌شود */
 .am-wi-f.want input{border-color:var(--green)}
 /* چیپِ پیشنهادِ هر ردیف — زیرِ کادرِ «فیصدیِ من» */
@@ -1793,10 +1812,17 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
 .am-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:14px}
 .am-card{background:var(--dark);border:1.5px solid var(--border);border-radius:12px;padding:13px}
 .am-card-t{font-size:0.84rem;font-weight:900;margin-bottom:10px}
-.am-rows{display:grid;grid-template-columns:1fr auto;gap:5px 10px;font-size:0.78rem}
-.am-rows .l{color:var(--muted)}
-.am-rows .v{font-weight:900;text-align:left;white-space:nowrap}
-.am-rows .sep{grid-column:1/-1;height:1px;background:var(--border);margin:4px 0}
+/* ⚠️ برچسب و عددش با هم و وسط‌چین ─────────────────────────────────────────
+   پیش از این دو ستون بود: برچسب چسبیده به راست، عدد چسبیده به چپ — روی صفحهٔ
+   پهن، چشم باید کلِ خط را دنبال می‌کرد. گزارشِ صاحب ریپو: «یکی این سرِ صفحه
+   است یکی آن سر، نمی‌توانم خط را دنبال کنم؛ نزدیکِ هم و وسط‌چینشان کن.»
+   حالا هر جفت یک کادرِ کوچکِ وسط‌چین است و کادرها کنارِ هم می‌چینند. */
+.am-rows{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:8px;font-size:0.78rem}
+.am-rows .am-r{background:var(--card);border:1px solid var(--border);border-radius:9px;
+  padding:7px 9px;text-align:center;display:flex;flex-direction:column;gap:2px;justify-content:center}
+.am-rows .l{color:var(--muted);font-weight:700;line-height:1.7}
+.am-rows .v{font-weight:900;line-height:1.6}
+.am-rows .sep{grid-column:1/-1;height:1px;background:var(--border);margin:2px 0}
 
 .pl-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:16px}
 @media(max-width:500px){.pl-grid{grid-template-columns:1fr}}
@@ -40248,7 +40274,17 @@ function resetAmanatSettings() {
        با فیصدیِ p ⇒ خالص = تیل × p٪ − بخار
 
    «سربه‌سر» تنها عددِ قطعیِ این‌جاست: زیرش قطعاً ضرر است. «پیشنهاد» یک عددِ
-   دلخواه است که از سودِ هدفِ خودتان ساخته می‌شود — نه حکم. */
+   دلخواه است که از سودِ هدفِ خودتان ساخته می‌شود — نه حکم.
+
+   ⚠️ «هدف» یکی است، نه دوتا ─────────────────────────────────────────────
+   گزارشِ صاحب ریپو با عکس: «۱۸۰ روز نوشته‌ام ولی در جدول یک فیصدیِ دیگر
+   نشانم می‌دهی؛ این طرف را گیج می‌کند.» یک ریشه‌اش برچسبِ ردیف‌ها بود (پایین‌تر
+   درست شد) و ریشهٔ دومش این‌جا: «فیصدیِ من» و «سودِ هدف» هر دو یک چیز را
+   می‌پرسیدند (چقدر خالص برایت بماند) و دو پیشنهادِ متفاوت می‌ساختند —
+   ۵٫۷٪ از سودِ هدف و ۷٫۱٪ از فیصدیِ من.
+   حالا هر جا «فیصدیِ من» نوشته شده باشد، هدف همان است و پیشنهاد دقیقاً همان
+   «فیصدیِ لازمِ گِردشده» می‌شود — یک عدد و بس. «سودِ هدف» فقط وقتی به کار
+   می‌آید که فیصدیِ من خالی باشد (برای کسی که اصلاً نمی‌داند چه بنویسد). */
 function amSuggest(liters, days, temp, fuel, lid, basePct, s, wantPct) {
   s = s || amSettings();
   const L = Math.max(0, _amNum(liters));
@@ -40837,8 +40873,8 @@ function _amWhatIfBuild() {
         <input type="number" step="0.1" value="${cmpEsc(w.myPct)}" placeholder="مثلاً 3" oninput="amWhatIfSet('myPct',this.value)"></label>
       <!-- تنها عددِ «دلخواه»ِ این حساب: بقیه اندازه‌گیری‌اند. پیشنهادِ فیصدی و
            چیپِ کنارِ ردیف‌های جدول، هر دو از روی همین ساخته می‌شوند. -->
-      <label class="am-wi-f want"><span>🎯 سودِ هدفِ من (٪)</span>
-        <input type="number" step="0.1" min="0" value="${cmpEsc(_amNum(s.profitPct))}" title="بعد از کم شدنِ بخار، چند درصدِ خودِ تیل خالص برایتان بماند" oninput="amSetProfitPct(this.value)"></label>
+      <label class="am-wi-f want"><span>🎯 سودِ هدف <i>(وقتی «فیصدیِ من» خالی باشد)</i></span>
+        <input type="number" step="0.1" min="0" value="${cmpEsc(_amNum(s.profitPct))}" title="اگر «فیصدیِ من» را ننویسید، پیشنهاد از روی همین ساخته می‌شود: سربه‌سر + همین عدد. اگر «فیصدیِ من» نوشته شده باشد، هدف همان است و این عدد کاری نمی‌کند." oninput="amSetProfitPct(this.value)"></label>
       <label class="am-wi-f"><span>💰 نرخ هر لیتر <i>(دلخواه)</i></span>
         <input type="number" step="0.01" value="${cmpEsc(w.rate)}" placeholder="خالی" oninput="amWhatIfSet('rate',this.value)"></label>
       <div class="am-wi-f"><span>🛢️ سرِ مخزن</span>
@@ -40888,7 +40924,7 @@ function _amWhatIfPaint() {
      خواستهٔ صاحب ریپو: «این‌ها را خودِ برآوردِ دستی بگوید» — پس کادرِ جدا برداشته
      شد و همان سه عدد (سربه‌سر، پیشنهاد، سودِ هدف) و جدولِ «اگر بیشتر بماند» آمدند
      همین‌جا، کنارِ عددهای خودِ برآورد. */
-  const sug = amSuggest(L, days, temp, fuel, lid, null, s);
+  const sug = amSuggest(L, days, temp, fuel, lid, null, s, hasPct ? myPct : null);
   const cell = (lbl, val, col) => '<div class="am-wi-c"><span>' + lbl + '</span><b style="color:' + col + '">' + val + '</b></div>';
   let html = '<div class="am-wi-cells">'
     + cell('🛢️ تیلِ بخار', _amFmt2(loss) + ' لیتر', 'var(--accent)')
@@ -40905,7 +40941,7 @@ function _amWhatIfPaint() {
     html += '<div class="am-an-note">«فیصدیِ من» را هم بنویسید تا بگوید با آن فیصدی سود می‌کنید یا ضرر.'
       + ' با این تیل و این شرایط، دستِ‌کم <b style="color:var(--red)">'
       + _amFmt(sug.evenPct, 3) + '٪</b> لازم است تا فقط سربه‌سر شوید؛ با سودِ هدفِ '
-      + _amFmt(sug.want, 2) + '٪، پیشنهاد <b style="color:var(--green)">' + _amFmt(sug.pct, 1)
+      + _amFmt(sug.want, 2) + '٪ (کادرِ بالا)، پیشنهاد <b style="color:var(--green)">' + _amFmt(sug.pct, 1)
       + '٪</b> می‌شود و آن‌وقت <b>' + _amFmt2(sug.netAt(sug.pct)) + ' لیتر</b>'
       + money(sug.netAt(sug.pct)) + ' برایتان می‌ماند.</div>';
   } else if (net > 0.0001) {
@@ -40921,16 +40957,22 @@ function _amWhatIfPaint() {
       + '٪ نه سود می‌کنید نه ضرر. برای سود، بالاتر از <b>' + _amFmt(askPct, 1) + '٪</b> بگیرید.</div>';
   }
   /* «مرورِ زمان» — تیل که بیشتر بماند، بخار بیشتر می‌شود و سودِ همین فیصدی آب
-     می‌رود. همان روزی که بالا نوشته‌اید، به‌علاوهٔ چند دورهٔ بعدی. */
+     می‌رود.
+     ⚠️ ستونِ اول «روزِ کل» است، نه «+چند روز». گزارشِ صاحب ریپو با عکس:
+     «۱۸۰ روز نوشته‌ام، ولی در جدول یک فیصدیِ دیگر نشانم می‌دهی — این طرف را
+      گیج می‌کند.» دلیلش همین بود: ردیفِ «۱۸۰ روز (همین)» و ردیفِ «+۱۸۰ روز»
+     (که در واقع ۳۶۰ روز بود) هر دو عددِ ۱۸۰ داشتند و دو بخارِ متفاوت نشان
+     می‌دادند. حالا هر ردیف روزِ کلِ خودش را می‌گوید و ردیفِ خودتان هم نشان
+     دارد. این را به «+» برنگردانید. */
   const fRows = [0, 30, 60, 90, 180].map(add => {
     const d = days + add;
     const lo = amLoss(L, d, temp, fuel, null, s, lid);
     const lp = L > 0 ? (lo / L) * 100 : 0;
     const ev = lp + _amNum(s.handlingPct);
-    const sg2 = Math.ceil((ev + Math.max(0, _amNum(s.profitPct))) * 10) / 10;
+    const sg2 = Math.ceil((ev + Math.max(0, (myPct == null) ? _amNum(s.profitPct) : myPct)) * 10) / 10;
     const n2 = (myPct == null) ? null : (L * myPct / 100 - lo);
     return '<tr' + (add === 0 ? ' class="now"' : '') + '>'
-      + '<td>' + (add === 0 ? (n2fa(Math.round(d)) + ' روز (همین)') : ('+' + n2fa(add) + ' روز')) + '</td>'
+      + '<td>' + n2fa(Math.round(d)) + ' روز' + (add === 0 ? ' <b>← همین که نوشتید</b>' : '') + '</td>'
       + '<td>' + _amFmt2(lo) + ' لیتر</td>'
       + '<td>' + _amFmt(ev, 3) + '٪</td>'
       + '<td>' + _amFmt(sg2, 1) + '٪</td>'
@@ -40938,9 +40980,10 @@ function _amWhatIfPaint() {
       + (n2 == null ? '—' : (_amFmt2(n2) + ' لیتر')) + '</td></tr>';
   }).join('');
   html += '<div class="am-sug-tw"><table class="am-guide"><thead><tr>'
-    + '<th>اگر بماند</th><th>بخار</th><th>سربه‌سر</th><th>پیشنهاد</th><th>با فیصدیِ شما</th>'
+    + '<th>اگر رویِ‌هم این‌قدر بماند</th><th>بخار</th><th>سربه‌سر</th><th>پیشنهاد</th><th>با فیصدیِ شما</th>'
     + '</tr></thead><tbody>' + fRows + '</tbody></table></div>'
-    + '<div class="am-an-note">این‌ها فقط راهنمایی‌اند — هر فیصدی که خودتان بخواهید همان می‌ماند و برنامه چیزی را عوض نمی‌کند.'
+    + '<div class="am-an-note">ردیفِ نشان‌دار همان چیزی است که بالا نوشته‌اید؛ ردیف‌های بعدی می‌گویند «اگر از دستتان در رفت و بیشتر ماند، چه». '
+    + 'این‌ها فقط راهنمایی‌اند — هر فیصدی که خودتان بخواهید همان می‌ماند و برنامه چیزی را عوض نمی‌کند.'
     + ' برای نوشتنِ پیشنهاد روی یک ردیفِ جدول، دکمهٔ ریزِ زیرِ خانهٔ «فیصدیِ من»ِ همان ردیف را بزنید.</div>';
 
   out.innerHTML = html;
@@ -40995,14 +41038,19 @@ function _amAccPaint() {
     if (sg) {
       if (!c.liters) { sg.innerHTML = ''; sg.className = 'am-sg'; }
       else {
-        const adv = amSuggest(c.liters, c.days, c.temp, c.fuel, c.lid, r.basePct, s);
+        /* هدفِ همین ردیف = فیصدیِ خودش (اگر نوشته شده)، وگرنه سودِ هدفِ
+           پیش‌فرض. پس پیشنهادِ چیپ دقیقاً همان «فیصدیِ لازم»ِ همان ردیف است و
+           دو عددِ متفاوت جلوی چشمِ کاربر نمی‌آید. */
         const cur = c.myPct;
+        const adv = amSuggest(c.liters, c.days, c.temp, c.fuel, c.lid, r.basePct, s, cur);
         const net = (cur == null) ? null : adv.netAt(cur);
         const cls = (cur == null) ? '' : (net > 0.0001 ? ' ok' : (net < -0.0001 ? ' bad' : ' even'));
         sg.className = 'am-sg' + cls;
         sg.innerHTML = '<button type="button" title="' + cmpEsc(
               'زیرِ ' + _amFmt(adv.evenPct, 3) + '٪ ضرر است (بخارِ همین ردیف). '
-            + 'با سودِ هدفِ ' + _amFmt(adv.want, 2) + '٪، پیشنهاد ' + _amFmt(adv.pct, 1) + '٪ می‌شود'
+            + (cur == null
+                ? ('فیصدیِ این ردیف خالی است، پس با سودِ هدفِ ' + _amFmt(adv.want, 2) + '٪ حساب شد: پیشنهاد ' + _amFmt(adv.pct, 1) + '٪')
+                : ('برای اینکه واقعاً ' + _amFmt(cur, 2) + '٪ برایتان بماند، ' + _amFmt(adv.pct, 1) + '٪ لازم است'))
             + (net == null ? '. خانه خالی است.' : ('. با ' + _amFmt(cur, 2) + '٪ فعلی، '
                 + (net >= 0 ? 'برایتان می‌ماند: ' : 'از جیبتان می‌رود: ') + _amFmt2(Math.abs(net)) + ' لیتر.'))
             + ' زدنِ این دکمه فقط عدد را در همین خانه می‌نویسد.')
@@ -41113,9 +41161,12 @@ function _amAnalysisHtml(t, s, fuel) {
       + '↩️ فیصدی را ببرید به <b>' + _amFmt(t.askPct, 1) + '٪</b> تا کلِ <b>' + L(t.targetL) + '</b> برایتان بماند.</div>';
 
   const th = _amFmt(Math.abs(amThermal(100, t.temp, fuel, s).pct), 2);
+  /* ⚠️ برچسب و عدد داخلِ یک کادرِ کوچک و وسط‌چین می‌نشینند، نه دو سرِ صفحه.
+     گزارشِ صاحب ریپو: «یکی این سرِ صفحه است یکی آن سر؛ از آن طرف که کار
+     می‌کنم نمی‌توانم خط را دنبال کنم.» پس هر جفت با هم یک کادر شد. */
   return head + '<div class="am-rows">'
     + rows.map(r => r[0] === 'sep' ? '<span class="sep"></span>'
-                 : ('<span class="l">' + r[0] + '</span><span class="v">' + r[1] + '</span>')).join('')
+                 : ('<div class="am-r"><span class="l">' + r[0] + '</span><span class="v">' + r[1] + '</span></div>')).join('')
     + '</div>' + verdict
     + '<div class="am-an-note">🌡️ جدا از بخار: با گرمای <b>' + _amFmt(t.temp) + '°C</b> خودِ عددِ لیتر حدود <b>'
     + th + '٪</b> با دمای مرجع (۱۵٫۶°C) فرق می‌کند. '
@@ -49368,7 +49419,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.385';
+const APP_VERSION = '2.9.386';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
