@@ -19857,10 +19857,6 @@ body.boot-viewer #bootViewerSplash{
             <input type="number" step="1" id="am-set-tDouble" title="فشارِ بخارِ پطرول تقریباً هر ۱۰ درجه دو برابر می‌شود" oninput="setAmanatSetting('tDouble',this.value)"></label>
           <label class="am-set-f"><span>کمبودیِ اندازه‌گیری و ریخت‌وپاش (٪)</span>
             <input type="number" step="0.01" id="am-set-handlingPct" title="تبخیر نیست — خطای پیمانه و ریخت‌وپاش. روی «فیصدیِ لازم» اضافه می‌شود." oninput="setAmanatSetting('handlingPct',this.value)"></label>
-          <label class="am-set-f"><span>ضریبِ سرِ مخزنِ باز</span>
-            <input type="number" step="0.05" id="am-set-lidOpenF" title="سرِ مخزن باز باشد بخار آزادانه بیرون می‌رود. ۱ = همان بخارِ کاملِ محاسبه." oninput="setAmanatSetting('lidOpenF',this.value)"></label>
-          <label class="am-set-f"><span>ضریبِ سرِ مخزنِ بسته</span>
-            <input type="number" step="0.05" id="am-set-lidClosedF" title="سرِ مخزن بسته باشد بخار کمتری بیرون می‌آید. مثلاً ۰٫۳۵ یعنی حدود یک‌سومِ حالتِ باز." oninput="setAmanatSetting('lidClosedF',this.value)"></label>
         </div>
         <div class="am-set-note" id="am-set-formula"></div>
         <div style="display:flex;justify-content:flex-end;margin-top:10px">
@@ -39861,10 +39857,7 @@ const AM_DEFAULTS = {
      گفتهٔ صاحب ریپو: «این از تیل است که در بسته باشه بخار کمتری میاد بیرون یا
      باز باشه بیشتر.» پس «در مخزن» یک حالتِ فیزیکیِ خودِ مخزن است و مستقیم روی
      بخار اثر می‌گذارد — هیچ ربطی به قفل شدنِ ردیفِ جدول ندارد.
-     بازِ پیش‌فرض ۱ است تا حسابِ ردیف‌های قدیمی (که هنوز این خانه را ندارند)
-     مو‌به‌مو همان بماند که بود. */
-  lidOpenF: 1.00,    // سرِ مخزن باز — بخار کامل
-  lidClosedF: 0.35   // سرِ مخزن بسته — بخار کمتر
+     ⚠️ ضریبِ سرِ مخزن از این‌جا برداشته شد — توضیحِ کاملش کنارِ amLoss. */
 };
 /* نسخهٔ تنظیمات. با بالا رفتنش، ضریب‌های عددیِ کهنه یک‌بار پاک می‌شوند تا
    مقیاسِ تازه به کار بیفتد — وگرنه پایهٔ ۰٫۲۵ِ نسخهٔ قبل می‌ماند و تبخیر
@@ -39894,7 +39887,13 @@ const AM_SOURCES = [
   ['انبساطِ گرماییِ تیل — پطرول ۱٫۲ و دیزل ۰٫۸۵ میلی‌لیتر در لیتر بر درجه',
    'https://www.ricochetfuel.com/blog/the-facts-about-fuel-expansion-and-contraction/'],
   ['NIST — اثرِ گرما بر حجمِ تیل در داد‌وستد (دمای مرجع ۶۰°F)',
-   'https://www.nist.gov/speech-testimony/hot-fuels-impact-commercial-transactions-thermal-expansion-gasoline']
+   'https://www.nist.gov/speech-testimony/hot-fuels-impact-commercial-transactions-thermal-expansion-gasoline'],
+  /* این دو تا وقتی اضافه شدند که صاحب ریپو پرسید «فرقِ درِ باز و بسته واقعاً
+     این‌قدر است؟» — و جوابش این شد که هیچ مرجعی آن نسبت را با عدد نمی‌دهد. */
+  ['EPA AP-42 بخش ۵٫۲ — تنفسِ مخزنِ زیرزمینیِ جایگاه: ۱۲۰ میلی‌گرم در هر لیترِ گردشِ تیل (≈ ۰٫۰۱۶٪)',
+   'https://www.epa.gov/sites/default/files/2020-09/documents/5.2_transportation_and_marketing_of_petroleum_liquids.pdf'],
+  ['EPA AP-42 بخش ۷٫۱ — مخزنِ «آزادانه تنفس‌کننده» در برابرِ مخزنِ دارایِ شیرِ فشار/خلأ (بدونِ ضریبِ ثابت)',
+   'https://www.epa.gov/sites/default/files/2020-10/documents/ch07s01.pdf']
 ];
 const AM_FUELS = { petrol: 'پطرول', diesel: 'دیزل' };
 const AM_DAY = 86400000;
@@ -40076,26 +40075,30 @@ function amFuelFactor(fuel, s) {
    ردیف‌های قدیمی که این خانه را ندارند حسابشان تکان نخورد. */
 /* ⚠️ سرِ مخزن همیشه بسته است ────────────────────────────────────────────
    گفتهٔ صریحِ صاحب ریپو: «مخزن همیشه در‌ش بسته است؛ این کادر که باز و بسته
-   دارد اضافی است، بردار.» پس ستونِ باز/بسته از جدول و از برآوردِ دستی
-   برداشته شد و محاسبه همیشه ضریبِ «بسته» را می‌گیرد (lidClosedF، پیش‌فرض
-   ۰٫۳۵ — یعنی حدودِ یک‌سومِ حالتِ باز).
-   ⚠️ عددِ بخارِ حساب‌های قدیمی که «باز» ثبت شده بودند از این به بعد کمتر
-   درمی‌آید — همین خواسته شده بود. خودِ r.lid در داده دست نمی‌خورد؛ فقط دیگر
-   خوانده نمی‌شود. */
-function amLidKey() { return 'closed'; }
-function amLidFactor(lid, s) {
-  s = s || amSettings();
-  const f = (lid === 'closed') ? s.lidClosedF : s.lidOpenF;
-  return isFinite(f) && f >= 0 ? f : 1;
-}
-function amLoss(liters, days, temp, fuel, basePct, s, lid) {
+   دارد اضافی است، بردار.» پس ستونِ باز/بسته از جدول و از برآوردِ دستی رفت.
+
+   ⚠️ و ضریبِ «سرِ مخزن» هم کلاً از فرمول بیرون رفت — چرا ────────────────────
+   بعد از برداشتنِ ستون، یک لحظه ضریبِ ۰٫۳۵ («بسته») روی همه‌چیز نشست و صاحب
+   ریپو درست پرسید: «این فرمول معتبر است؟ فرقشان خیلی زیاد است.» رفتم دنبالِ
+   منبع؛ نتیجه صادقانه این است:
+     • هیچ مرجعی نسبتِ «درِ باز به درِ بسته» را با یک عدد نمی‌دهد. EPA AP-42
+       (فصل ۷٫۱) فقط مخزنِ «آزادانه تنفس‌کننده» را از مخزنِ دارایِ شیرِ
+       فشار/خلأ جدا می‌کند و اثرش را داخلِ خودِ فرمولِ K_E می‌برد — نه با یک
+       ضریبِ ثابت، و نه به بزرگیِ سه برابر.
+     • پس آن ۰٫۳۵ حدسِ ما بود، نه عددِ منبع.
+   و مهم‌تر: «پایهٔ بخار»ِ برنامه (۰٫۰۲٪ در ماه) از اول طوری چیده شده بود که با
+   ضریبِ ۱ به پژوهشِ میدانیِ مخزنِ پطرول بخورد (۰٫۵۲٪ در سال با میانگینِ ۳۲٫۶
+   درجه؛ خروجیِ برنامه با ضریبِ ۱ در همان دما ۰٫۵۷٪ در سال است). با ۰٫۳۵ روی
+   آن، برنامه یک‌سومِ منبع را می‌گفت — یعنی کمتر از واقعیت، به ضررِ صاحبِ پمپ.
+   حالا مخزن همیشه بسته است و «پایهٔ بخار» خودش همان مخزنِ بسته را توصیف
+   می‌کند؛ پس هیچ ضریبِ اضافه‌ای رویش نمی‌نشیند. یک عدد، یک جا. */
+function amLoss(liters, days, temp, fuel, basePct, s) {
   s = s || amSettings();
   const L = Math.max(0, _amNum(liters));
   const D = Math.max(0, _amNum(days));
   const p = _amHas(basePct) ? _amNum(basePct) : s.basePct;
   let loss = L * (p / 100) * (D / 30) * amTempFactor(_amHas(temp) ? _amNum(temp) : s.defTemp, s)
-             * amFuelFactor(fuel, s) * (isFinite(s.tankFactor) ? s.tankFactor : 1)
-             * amLidFactor(lid === 'closed' ? 'closed' : 'open', s);
+             * amFuelFactor(fuel, s) * (isFinite(s.tankFactor) ? s.tankFactor : 1);
   if (!isFinite(loss) || loss < 0) loss = 0;
   if (loss > L) loss = L;      // کمبودی هرگز از خودِ تیل بیشتر نمی‌شود
   return loss;
@@ -40135,8 +40138,7 @@ function amRowCalc(row, acc, s) {
      باقی کم می‌شود. اگر ردیف «بسته» شود، مدت زمان می‌ایستد و کمبودی هم. */
   /* سرِ مخزن باز/بسته — حالتِ فیزیکیِ خودِ مخزن، نه قفلِ ردیف. بسته یعنی بخارِ
      کمتر. (r.state جداست و فقط ردیف را قفل می‌کند.) */
-  const lid    = amLidKey(row);
-  const loss   = amLoss(liters, days, temp, fuel, base, s, lid);
+  const loss   = amLoss(liters, days, temp, fuel, base, s);
   const lossPct = liters > 0 ? (loss / liters) * 100 : 0;
 
   /* موجودی واقعی — عددی که خودتان از مخزن اندازه گرفته‌اید. عمداً جدا از
@@ -40186,7 +40188,7 @@ function amRowCalc(row, acc, s) {
      همان رسید منهای برده‌شده است. */
   const rest = liters - taken - (targetL == null ? 0 : targetL);
 
-  return { fuel, liters, taken, days, autoDays, manual, temp, base, closed, lid,
+  return { fuel, liters, taken, days, autoDays, manual, temp, base, closed,
            dateOk: startTs > 0, loss, lossPct, rest,
            hasActual, actual, realLoss, diff,
            myPct, targetL, needPct, askPct, netIfMy, askL, netIfAsk,
@@ -40428,14 +40430,14 @@ function fillAmanatSettings() {
     if (!el || el === document.activeElement) return;   // دستِ کاربر روی همان خانه است
     el.value = val;
   };
-  ['basePct','fPetrol','fDiesel','tankFactor','defTemp','safetyPct','refTemp','tDouble','handlingPct',
-   'lidOpenF','lidClosedF'].forEach(k => set('am-set-' + k, s[k]));
+  ['basePct','fPetrol','fDiesel','tankFactor','defTemp','safetyPct','refTemp','tDouble','handlingPct'
+   ].forEach(k => set('am-set-' + k, s[k]));
   const f = document.getElementById('am-set-formula');
   if (f) {
     f.innerHTML = 'ضریب گرما = ۲ ^ ((گرما − <b>' + _amFmt(s.refTemp) + '</b>) ÷ <b>' + _amFmt(s.tDouble) + '</b>)'
       + ' — یعنی هر ' + _amFmt(s.tDouble) + ' درجه، تبخیر دو برابر می‌شود.'
       + '<br>تبخیر = مقدار تیل × (پایه ÷ ۱۰۰) × (روز ÷ ۳۰) × ضریب گرما × ضریب تیل × ضریب مخزن × ضریبِ سرِ مخزن'
-      + '<br><span style="color:var(--muted)">سرِ مخزن: باز <b>' + _amFmt(s.lidOpenF, 2) + '</b> · بسته <b>' + _amFmt(s.lidClosedF, 2) + '</b></span>'
+
       + '<br>فیصدیِ لازم = فیصدیِ هدفِ شما + درصد تبخیر'
       + (s.handlingPct ? (' + ' + _amFmt(s.handlingPct, 2) + '٪ (اندازه‌گیری و ریخت‌وپاش)') : '')
       + '<div style="margin-top:9px;padding-top:8px;border-top:1px dashed var(--border)">'
@@ -40536,10 +40538,10 @@ function resetAmanatSettings() {
    حالا هر جا «فیصدیِ من» نوشته شده باشد، هدف همان است و پیشنهاد دقیقاً همان
    «فیصدیِ لازمِ گِردشده» می‌شود — یک عدد و بس. «سودِ هدف» فقط وقتی به کار
    می‌آید که فیصدیِ من خالی باشد (برای کسی که اصلاً نمی‌داند چه بنویسد). */
-function amSuggest(liters, days, temp, fuel, lid, basePct, s, wantPct) {
+function amSuggest(liters, days, temp, fuel, basePct, s, wantPct) {
   s = s || amSettings();
   const L = Math.max(0, _amNum(liters));
-  const loss = amLoss(L, days, temp, fuel, basePct, s, lid);
+  const loss = amLoss(L, days, temp, fuel, basePct, s);
   const lossPct = L > 0 ? (loss / L) * 100 : 0;
   const handling = _amNum(s.handlingPct);
   const evenPct = lossPct + handling;
@@ -41120,8 +41122,7 @@ function _amWhatIfPaint() {
 
   const days = Math.max(0, _amNum(w.days));
   const temp = _amHas(w.temp) ? _amNum(w.temp) : s.defTemp;
-  const lid  = amLidKey();     // همیشه «بسته» — توضیحش کنارِ amLidKey
-  const loss = amLoss(L, days, temp, fuel, null, s, lid);
+  const loss = amLoss(L, days, temp, fuel, null, s);
   const lossPct = L > 0 ? (loss / L) * 100 : 0;
   const hasPct = _amHas(w.myPct);
   const myPct = hasPct ? _amNum(w.myPct) : null;
@@ -41137,7 +41138,7 @@ function _amWhatIfPaint() {
      خواستهٔ صاحب ریپو: «این‌ها را خودِ برآوردِ دستی بگوید» — پس کادرِ جدا برداشته
      شد و همان سه عدد (سربه‌سر، پیشنهاد، سودِ هدف) و جدولِ «اگر بیشتر بماند» آمدند
      همین‌جا، کنارِ عددهای خودِ برآورد. */
-  const sug = amSuggest(L, days, temp, fuel, lid, null, s, hasPct ? myPct : null);
+  const sug = amSuggest(L, days, temp, fuel, null, s, hasPct ? myPct : null);
   const cell = (lbl, val, col) => '<div class="am-wi-c"><span>' + lbl + '</span><b style="color:' + col + '">' + val + '</b></div>';
   let html = '<div class="am-wi-cells">'
     + cell('🛢️ تیلِ بخار', _amFmt2(loss) + ' لیتر', 'var(--accent)')
@@ -41179,7 +41180,7 @@ function _amWhatIfPaint() {
      دارد. این را به «+» برنگردانید. */
   const fRows = [0, 30, 60, 90, 180].map(add => {
     const d = days + add;
-    const lo = amLoss(L, d, temp, fuel, null, s, lid);
+    const lo = amLoss(L, d, temp, fuel, null, s);
     const lp = L > 0 ? (lo / L) * 100 : 0;
     const ev = lp + _amNum(s.handlingPct);
     const sg2 = Math.ceil((ev + Math.max(0, (myPct == null) ? _amNum(s.profitPct) : myPct)) * 10) / 10;
@@ -41255,7 +41256,7 @@ function _amAccPaint() {
            پیش‌فرض. پس پیشنهادِ چیپ دقیقاً همان «فیصدیِ لازم»ِ همان ردیف است و
            دو عددِ متفاوت جلوی چشمِ کاربر نمی‌آید. */
         const cur = c.myPct;
-        const adv = amSuggest(c.liters, c.days, c.temp, c.fuel, c.lid, r.basePct, s, cur);
+        const adv = amSuggest(c.liters, c.days, c.temp, c.fuel, r.basePct, s, cur);
         const net = (cur == null) ? null : adv.netAt(cur);
         const cls = (cur == null) ? '' : (net > 0.0001 ? ' ok' : (net < -0.0001 ? ' bad' : ' even'));
         sg.className = 'am-sg' + cls;
@@ -41455,7 +41456,6 @@ function _amAccPdfBlock(a, s) {
       <td>${_amFmt2(c.taken)}</td>
       <td>${n2fa(c.days)}</td>
       <td>${_amFmt(c.temp)}</td>
-      <td style="font-weight:700;color:${c.lid === 'closed' ? '#c53030' : '#276749'}">${c.lid === 'closed' ? 'بسته' : 'باز'}</td>
       <td style="color:#b7791f;font-weight:700">${_amFmt2(c.loss)}</td>
       <td>${c.myPct == null ? '—' : (_amFmt(c.myPct, 2) + '٪')}</td>
       <td style="color:#b7791f">${_amFmt(c.lossPct, 3)}٪</td>
@@ -41465,9 +41465,6 @@ function _amAccPdfBlock(a, s) {
       <td style="color:#276749;font-weight:700">${_amFmt2(c.rest)}</td>
       <td>${c.hasActual ? _amFmt2(c.actual) : '—'}</td>
       <td>${c.hasActual ? _amFmt2(c.diff) : '—'}</td>
-      <td>${_amFmt(c.base, 3)}٪</td>
-      <td style="font-weight:700;color:${c.closed ? '#805ad5' : '#a0aec0'}">${c.closed ? 'قفل' : 'باز'}</td>
-      <td style="white-space:normal">${escFa(r.note || '')}</td>
     </tr>`;
   }).join('');
   return `<h2>${escFa(String(a.name || '').trim() || 'حسابِ بی‌نام')} — ${amFuelLabel(a)}</h2>
@@ -41482,33 +41479,30 @@ ${t.myPct == null ? 'فیصدی ثبت نشده' : ('فیصدیِ شما (هدف
      می‌شد. این پهناها به هر ستون به‌اندازهٔ چیزی که واقعاً در آن می‌نشیند جا
      می‌دهند: عددها یک‌خطی می‌مانند و یادداشت — که تنها متنِ بلند است — می‌شکند. -->
 <colgroup>
-<col style="width:2%"><col style="width:5%"><col style="width:4%"><col style="width:4.5%">
-<col style="width:6%"><col style="width:5%">
-<col style="width:4%"><col style="width:4%"><col style="width:4%">
-<col style="width:5%">
-<col style="width:4.5%"><col style="width:4.5%"><col style="width:4.5%">
+<col style="width:3%"><col style="width:7%"><col style="width:6%"><col style="width:6%">
+<col style="width:8%"><col style="width:6.5%">
 <col style="width:5.5%"><col style="width:5.5%">
-<col style="width:6%">
-<col style="width:5.5%"><col style="width:5%">
-<col style="width:4%"><col style="width:3.5%"><col style="width:8%">
+<col style="width:7%">
+<col style="width:6%"><col style="width:6%"><col style="width:6%">
+<col style="width:7%"><col style="width:7%">
+<col style="width:7.5%">
+<col style="width:7%"><col style="width:6.5%">
 </colgroup>
 <thead>
 <tr class="hgrp"><th rowspan="2">#</th><th colspan="3">شناسه</th><th colspan="2">🛢️ تیل (لیتر)</th>
-<th colspan="3">🌡️ شرایطِ نگهداری</th><th rowspan="2">تیلِ بخار (لیتر)</th><th colspan="3">٪ فیصدی‌ها</th>
-<th colspan="2">سهمِ من (لیتر)</th><th rowspan="2">الباقیِ طرف (لیتر)</th><th colspan="2">📏 اندازه‌گیری</th>
-<th colspan="3">دیگر</th></tr>
+<th colspan="2">🌡️ شرایطِ نگهداری</th><th rowspan="2">تیلِ بخار (لیتر)</th><th colspan="3">٪ فیصدی‌ها</th>
+<th colspan="2">سهمِ من (لیتر)</th><th rowspan="2">الباقیِ طرف (لیتر)</th><th colspan="2">📏 اندازه‌گیری</th></tr>
 <tr><th>تاریخ</th><th>نام</th><th>به حسابهٔ</th><th>رسید تیل</th><th>برده شده</th><th>مدت زمان</th>
-<th>درجه گرما</th><th>سرِ مخزن</th><th>فیصدیِ من</th><th>فیصدیِ بخار</th><th>فیصدیِ لازم</th>
-<th>سهمیهٔ من</th><th>به من می‌رسد</th><th>موجودی واقعی</th><th>اختلاف</th><th>پایهٔ بخار</th><th>قفلِ ردیف</th><th>یادداشت</th></tr>
+<th>درجه گرما</th><th>فیصدیِ من</th><th>فیصدیِ بخار</th><th>فیصدیِ لازم</th>
+<th>سهمیهٔ من</th><th>به من می‌رسد</th><th>موجودی واقعی</th><th>اختلاف</th></tr>
 </thead>
-<tbody>${rows || '<tr><td colspan="21" style="padding:14px;color:#718096">ردیفی ثبت نشده</td></tr>'}</tbody>
-<tfoot><tr><td colspan="4">جمله</td><td>${_amFmt2(t.liters)}</td><td>${_amFmt2(t.taken)}</td><td colspan="3"></td>
+<tbody>${rows || '<tr><td colspan="17" style="padding:14px;color:#718096">ردیفی ثبت نشده</td></tr>'}</tbody>
+<tfoot><tr><td colspan="4">جمله</td><td>${_amFmt2(t.liters)}</td><td>${_amFmt2(t.taken)}</td><td colspan="2"></td>
 <td>${_amFmt2(t.loss)}</td><td></td><td>${_amFmt(t.lossPct, 3)}٪</td>
 <td>${t.needPct == null ? '—' : (_amFmt(t.needPct, 3) + '٪')}</td>
 <td>${t.share ? _amFmt2(t.share) : '—'}</td>
 <td>${t.netIfMy == null ? '—' : _amFmt2(t.netIfMy)}</td><td>${_amFmt2(t.rest)}</td>
-<td>${t.hasActual ? _amFmt2(t.actual) : '—'}</td><td>${t.hasActual ? _amFmt2(t.realDiff) : '—'}</td>
-<td colspan="3"></td></tr></tfoot>
+<td>${t.hasActual ? _amFmt2(t.actual) : '—'}</td><td>${t.hasActual ? _amFmt2(t.realDiff) : '—'}</td></tr></tfoot>
 </table></div>`;
 }
 function printAmanat() {
@@ -49277,7 +49271,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.391';
+const APP_VERSION = '2.9.392';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
