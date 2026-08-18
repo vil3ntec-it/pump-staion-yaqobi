@@ -1683,23 +1683,10 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
 .am-acc-pct .vd.ok{color:var(--green)}
 .am-acc-pct .vd.bad{color:var(--red)}
 .am-acc-body{padding:0}
-/* ══ پیشنهادِ فیصدی ═══════════════════════════════════════════════════════ */
-.am-sug{border-color:var(--green)}
-.am-sug-cells{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
-.am-sug-c{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px 10px;text-align:center}
-.am-sug-c>span{display:block;font-size:0.7rem;color:var(--muted);font-weight:800;margin-bottom:3px}
-.am-sug-c>b{display:block;font-size:1.1rem;font-weight:900;line-height:1.4}
-.am-sug-c>i{display:block;font-style:normal;font-size:0.66rem;color:var(--muted);font-weight:700;margin-top:2px}
-.am-sug-c.want{border-color:var(--green);border-style:dashed}
-.am-sug-c.want input{width:88px;background:var(--dark);border:1.5px solid var(--green);border-radius:8px;padding:5px 8px;
-  color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.95rem;font-weight:900;text-align:center;outline:none}
-.am-sug-m{color:var(--muted);font-style:normal}
-.am-sug-v{margin-top:9px;border:1px solid var(--border);border-radius:9px;padding:9px 12px;background:var(--card);
-  font-size:0.79rem;font-weight:700;line-height:2;color:var(--label)}
-.am-sug-v.ok{border-color:var(--green);color:var(--green)}
-.am-sug-v.bad{border-color:var(--red);color:var(--red)}
-.am-sug-v b{font-weight:900}
+/* جدولِ «اگر بیشتر بماند» داخلِ برآوردِ دستی */
 .am-sug-tw{margin-top:9px;overflow-x:auto}
+/* «سودِ هدف» — تنها عددِ دلخواهِ این حساب، پس از بقیهٔ کادرها جدا دیده می‌شود */
+.am-wi-f.want input{border-color:var(--green)}
 /* چیپِ پیشنهادِ هر ردیف — زیرِ کادرِ «فیصدیِ من» */
 .am-sg{margin-top:3px;display:flex;justify-content:center}
 .am-sg button{background:transparent;border:1px dashed var(--border);border-radius:7px;color:var(--muted);
@@ -40281,7 +40268,8 @@ function amSetProfitPct(v) {
   const n = parseFloat(toEnDigits(raw));
   DB.amanatSettings.profitPct = (raw === '' || !isFinite(n)) ? AM_DEFAULTS.profitPct : Math.max(0, n);
   _amSaveSoon();
-  _amSugPaint();
+  _amWhatIfPaint();   // پیشنهادِ داخلِ برآوردِ دستی
+  _amAccPaint();      // و چیپِ کنارِ ردیف‌های جدول
 }
 /* نوشتنِ عددِ پیشنهادی در خانهٔ فیصدیِ همان ردیف — با یک زدن، و بس.
    هیچ‌جا خودکار نوشته نمی‌شود؛ تا خودتان نزنید، خانه دستِ خودتان است. */
@@ -40289,27 +40277,6 @@ function amUseSuggest(ai, ri, pct) {
   const el = document.getElementById('am-in-mypct-' + ai + '-' + ri);
   if (el) el.value = pct;
   updateAmanatRow(ai, ri, 'myPct', pct);
-}
-function amUseSuggestAcc(ai, pct) {
-  updateAmanatAccount(ai, 'myPct', pct);
-  _amAccRefresh();
-}
-/* «اگر این تیل چند روزِ دیگر هم بماند چه؟» — همان حساب، فقط با روزِ بیشتر.
-   فقط ردیف‌های باز جلو می‌روند؛ ردیفِ قفل‌شده ایستاده است. */
-function _amForecast(a, s, addDays) {
-  s = s || amSettings();
-  const fuel = amFuelKey(a);
-  let L = 0, loss = 0, share = 0;
-  (a.rows || []).forEach(r => {
-    const c = amRowCalc(r, a, s);
-    if (!c.liters) return;
-    const days = c.closed ? c.days : (c.days + Math.max(0, addDays || 0));
-    L += c.liters;
-    loss += amLoss(c.liters, days, c.temp, fuel, r.basePct, s, c.lid);
-    share += (c.targetL == null ? 0 : c.targetL);
-  });
-  const lossPct = L > 0 ? (loss / L) * 100 : 0;
-  return { liters: L, loss, lossPct, evenPct: lossPct + _amNum(s.handlingPct), share, net: share - loss };
 }
 function amFeeAdvice(liters, days, temp, fuel, myPct, s) {
   s = s || amSettings();
@@ -40652,12 +40619,6 @@ function _amAccBuild() {
          خودِ جدول نوشته می‌شود. -->
   </div>
 
-  <!-- ══ پیشنهادِ فیصدی — خودکار، از روی همین حساب ═════════════════════════
-       هیچ‌چیز این‌جا تایپ نمی‌شود جز «سودِ هدف»: تیل و روز و درجهٔ همین جدول را
-       می‌خواند و می‌گوید زیرِ چه عددی ضرر است و با فیصدیِ فعلی چقدر می‌ماند.
-       (برادرِ کوچکش «برآوردِ دستی» است که برای تیلی است که هنوز نگرفته‌اید.) -->
-  <div class="am-md-sec am-sug" id="am-sug"></div>
-
   <!-- ══ برآوردِ دستی — «تیلِ این طرف را قبول کنم یا نه؟» ═══════════════════
        خواستهٔ صاحب ریپو: «می‌خواهم دستی برسانم و ببینم توش چقدر فایده یا ضرر
        است… تیل را آن‌جا برسانم و روز و درجه و فیصدیِ خودم را، و دیده شود که
@@ -40667,7 +40628,7 @@ function _amAccBuild() {
        یک دفترِ پیش‌نویس است، فقط برای تصمیم گرفتن. -->
   <div class="am-md-sec" style="border-color:var(--purple)">
     <button type="button" class="am-fold" onclick="amToggleWhatIf()">
-      <span class="am-md-t" style="color:var(--purple);margin:0">🧾 برآوردِ دستی — تیلِ این طرف را قبول کنم؟</span>
+      <span class="am-md-t" style="color:var(--purple);margin:0">🧾 برآوردِ دستی — قبول کنم؟ چند فیصد بگیرم؟</span>
       <span id="am-wi-caret" style="color:var(--purple);font-weight:900">◂</span>
     </button>
     <div id="am-wi-body" style="display:none;margin-top:10px"></div>
@@ -40874,6 +40835,10 @@ function _amWhatIfBuild() {
         <input type="number" step="0.5" value="${cmpEsc(w.temp)}" placeholder="${_amFmt(s.defTemp)}" oninput="amWhatIfSet('temp',this.value)"></label>
       <label class="am-wi-f"><span>٪ فیصدیِ من</span>
         <input type="number" step="0.1" value="${cmpEsc(w.myPct)}" placeholder="مثلاً 3" oninput="amWhatIfSet('myPct',this.value)"></label>
+      <!-- تنها عددِ «دلخواه»ِ این حساب: بقیه اندازه‌گیری‌اند. پیشنهادِ فیصدی و
+           چیپِ کنارِ ردیف‌های جدول، هر دو از روی همین ساخته می‌شوند. -->
+      <label class="am-wi-f want"><span>🎯 سودِ هدفِ من (٪)</span>
+        <input type="number" step="0.1" min="0" value="${cmpEsc(_amNum(s.profitPct))}" title="بعد از کم شدنِ بخار، چند درصدِ خودِ تیل خالص برایتان بماند" oninput="amSetProfitPct(this.value)"></label>
       <label class="am-wi-f"><span>💰 نرخ هر لیتر <i>(دلخواه)</i></span>
         <input type="number" step="0.01" value="${cmpEsc(w.rate)}" placeholder="خالی" oninput="amWhatIfSet('rate',this.value)"></label>
       <div class="am-wi-f"><span>🛢️ سرِ مخزن</span>
@@ -40919,10 +40884,17 @@ function _amWhatIfPaint() {
   const rate = _amHas(w.rate) ? _amNum(w.rate) : null;
   const money = v => (rate == null) ? '' : (' <i style="color:var(--muted);font-style:normal">(' + _amFmt(Math.abs(v) * rate, 0) + ' پول)</i>');
 
+  /* ⛔ سربه‌سر و ✅ پیشنهاد ─────────────────────────────────────────────────
+     خواستهٔ صاحب ریپو: «این‌ها را خودِ برآوردِ دستی بگوید» — پس کادرِ جدا برداشته
+     شد و همان سه عدد (سربه‌سر، پیشنهاد، سودِ هدف) و جدولِ «اگر بیشتر بماند» آمدند
+     همین‌جا، کنارِ عددهای خودِ برآورد. */
+  const sug = amSuggest(L, days, temp, fuel, lid, null, s);
   const cell = (lbl, val, col) => '<div class="am-wi-c"><span>' + lbl + '</span><b style="color:' + col + '">' + val + '</b></div>';
   let html = '<div class="am-wi-cells">'
     + cell('🛢️ تیلِ بخار', _amFmt2(loss) + ' لیتر', 'var(--accent)')
     + cell('٪ فیصدیِ بخار', _amFmt(lossPct, 3) + '٪', 'var(--accent)')
+    + cell('⛔ سربه‌سر — زیرش ضرر', _amFmt(sug.evenPct, 3) + '٪', 'var(--red)')
+    + cell('✅ پیشنهاد', _amFmt(sug.pct, 1) + '٪', 'var(--green)')
     + (share == null ? '' : cell('سهمیهٔ من', _amFmt2(share) + ' لیتر', 'var(--blue)'))
     + (net == null ? '' : cell('به من می‌رسد', _amFmt2(net) + ' لیتر', net < 0 ? 'var(--red)' : 'var(--green)'))
     + cell('الباقیِ طرف', _amFmt2(rest) + ' لیتر', 'var(--green)')
@@ -40931,8 +40903,11 @@ function _amWhatIfPaint() {
 
   if (myPct == null) {
     html += '<div class="am-an-note">«فیصدیِ من» را هم بنویسید تا بگوید با آن فیصدی سود می‌کنید یا ضرر.'
-      + ' با این تیل و این شرایط، دستِ‌کم <b style="color:var(--blue)">'
-      + _amFmt(lossPct + _amNum(s.handlingPct), 3) + '٪</b> لازم است تا فقط سربه‌سر شوید.</div>';
+      + ' با این تیل و این شرایط، دستِ‌کم <b style="color:var(--red)">'
+      + _amFmt(sug.evenPct, 3) + '٪</b> لازم است تا فقط سربه‌سر شوید؛ با سودِ هدفِ '
+      + _amFmt(sug.want, 2) + '٪، پیشنهاد <b style="color:var(--green)">' + _amFmt(sug.pct, 1)
+      + '٪</b> می‌شود و آن‌وقت <b>' + _amFmt2(sug.netAt(sug.pct)) + ' لیتر</b>'
+      + money(sug.netAt(sug.pct)) + ' برایتان می‌ماند.</div>';
   } else if (net > 0.0001) {
     html += '<div class="am-wi-v ok">✅ قبول کنید — با ' + _amFmt(myPct, 2) + '٪، بعد از بخار <b>'
       + _amFmt2(net) + ' لیتر</b> برایتان می‌ماند' + money(net) + '.</div>';
@@ -40945,6 +40920,29 @@ function _amWhatIfPaint() {
     html += '<div class="am-wi-v">➖ سربه‌سر — با ' + _amFmt(myPct, 2)
       + '٪ نه سود می‌کنید نه ضرر. برای سود، بالاتر از <b>' + _amFmt(askPct, 1) + '٪</b> بگیرید.</div>';
   }
+  /* «مرورِ زمان» — تیل که بیشتر بماند، بخار بیشتر می‌شود و سودِ همین فیصدی آب
+     می‌رود. همان روزی که بالا نوشته‌اید، به‌علاوهٔ چند دورهٔ بعدی. */
+  const fRows = [0, 30, 60, 90, 180].map(add => {
+    const d = days + add;
+    const lo = amLoss(L, d, temp, fuel, null, s, lid);
+    const lp = L > 0 ? (lo / L) * 100 : 0;
+    const ev = lp + _amNum(s.handlingPct);
+    const sg2 = Math.ceil((ev + Math.max(0, _amNum(s.profitPct))) * 10) / 10;
+    const n2 = (myPct == null) ? null : (L * myPct / 100 - lo);
+    return '<tr' + (add === 0 ? ' class="now"' : '') + '>'
+      + '<td>' + (add === 0 ? (n2fa(Math.round(d)) + ' روز (همین)') : ('+' + n2fa(add) + ' روز')) + '</td>'
+      + '<td>' + _amFmt2(lo) + ' لیتر</td>'
+      + '<td>' + _amFmt(ev, 3) + '٪</td>'
+      + '<td>' + _amFmt(sg2, 1) + '٪</td>'
+      + '<td style="color:' + (n2 == null ? 'var(--muted)' : (n2 < 0 ? 'var(--red)' : 'var(--green)')) + '">'
+      + (n2 == null ? '—' : (_amFmt2(n2) + ' لیتر')) + '</td></tr>';
+  }).join('');
+  html += '<div class="am-sug-tw"><table class="am-guide"><thead><tr>'
+    + '<th>اگر بماند</th><th>بخار</th><th>سربه‌سر</th><th>پیشنهاد</th><th>با فیصدیِ شما</th>'
+    + '</tr></thead><tbody>' + fRows + '</tbody></table></div>'
+    + '<div class="am-an-note">این‌ها فقط راهنمایی‌اند — هر فیصدی که خودتان بخواهید همان می‌ماند و برنامه چیزی را عوض نمی‌کند.'
+    + ' برای نوشتنِ پیشنهاد روی یک ردیفِ جدول، دکمهٔ ریزِ زیرِ خانهٔ «فیصدیِ من»ِ همان ردیف را بزنید.</div>';
+
   out.innerHTML = html;
 
   // تحلیل — از همین عددهای دستی، نه از جدول
@@ -41027,8 +41025,6 @@ function _amAccPaint() {
   ft('actual', tv.hasActual ? _amFmt2(tv.actual) : '—');
   ft('diff', tv.hasActual ? _amFmt2(tv.realDiff) : '—');
 
-  _amSugPaint();
-
   const chips = document.getElementById('am-acc-chips');
   if (chips) {
     /* کارت‌های سربرگ — هم‌شکلِ پنجرهٔ «شرکت‌های تیل». دو کارت عمداً دو عددی‌اند،
@@ -41066,90 +41062,6 @@ function _amAccPaint() {
        فقط نمایش بود؛ t.n و t.open همچنان محاسبه می‌شوند و جای دیگری که از آن‌ها
        استفاده می‌کند دست نخورده است. */
   }
-}
-/* ══ کادرِ «پیشنهادِ فیصدی» ════════════════════════════════════════════════
-   خودکار از روی همین حساب پر می‌شود — نه چیزی برای تایپ دارد نه کشویی برای
-   باز کردن. سه عددِ اصلی و یک جمله، و بعد «اگر بیشتر بماند چه؟».
-   ⚠️ این کادر هیچ عددی را در جدول نمی‌نویسد. تنها راهِ نوشتن، زدنِ دکمهٔ
-   پیشنهاد است — خواستهٔ صریحِ صاحب ریپو که اختیارِ عدد دستِ خودش بماند. */
-function _amSugPaint() {
-  const box = document.getElementById('am-sug');
-  if (!box || _amAccIdx == null) return;
-  const ai = _amAccIdx;
-  const a = amAccounts()[ai];
-  if (!a) { box.innerHTML = ''; return; }
-  const s = amSettings();
-  const t = amAccCalc(a, s);
-  const rate = t.rate;
-  const money = v => (rate == null) ? '' : (' <i class="am-sug-m">(' + _amFmt(Math.abs(v) * rate, 0) + ' پول)</i>');
-  const head = '<div class="am-md-t" style="color:var(--green);margin:0 0 9px">💡 پیشنهادِ فیصدی — چند بگیرم که ضرر نکنم؟</div>';
-
-  if (!t.liters) {
-    box.innerHTML = head + '<div class="am-an-note" style="margin-top:0">مقدارِ تیل و تاریخِ ردیف را که نوشتید، همین‌جا می‌گوید زیرِ چه فیصدی ضرر می‌کنید و چه عددی به سودِ شماست.</div>';
-    return;
-  }
-  const adv = amSuggest(t.liters, 0, s.defTemp, amFuelKey(a), 'open', null, s);   // فقط برای سودِ هدف
-  const even = t.lossPct + _amNum(s.handlingPct);
-  const sug  = Math.ceil((even + Math.max(0, _amNum(s.profitPct))) * 10) / 10;
-  const cur  = t.myPct;
-  const net  = (cur == null) ? null : (t.liters * cur / 100 - t.loss);
-
-  const c = (lbl, val, col, sub) => '<div class="am-sug-c"><span>' + lbl + '</span><b style="color:' + col + '">'
-      + val + '</b>' + (sub ? '<i>' + sub + '</i>' : '') + '</div>';
-  let html = head + '<div class="am-sug-cells">'
-    + c('💨 بخارِ این حساب', _amFmt2(t.loss) + ' لیتر', 'var(--accent)', _amFmt(t.lossPct, 3) + '٪ از تیل')
-    + c('⛔ سربه‌سر — زیرش ضرر', _amFmt(even, 3) + '٪', 'var(--red)', 'کمترین چیزی که فقط بخار را می‌پوشاند')
-    + c('✅ پیشنهاد', _amFmt(sug, 1) + '٪', 'var(--green)', 'سربه‌سر + سودِ هدف')
-    + '<label class="am-sug-c want"><span>🎯 سودِ هدفِ من</span>'
-    + '<input type="number" step="0.1" min="0" value="' + cmpEsc(_amNum(s.profitPct)) + '" oninput="amSetProfitPct(this.value)">'
-    + '<i>چند درصدِ تیل، خالص برایتان بماند</i></label>'
-    + '</div>';
-
-  /* جملهٔ اصلی — همان چیزی که خواسته شده بود: «چقدر درآمد، چقدر ضرر» */
-  if (cur == null) {
-    html += '<div class="am-sug-v">فیصدیِ این حساب هنوز نوشته نشده. روی <b>' + _amFmt2(t.liters)
-      + '</b> لیتر، زیرِ <b style="color:var(--red)">' + _amFmt(even, 3)
-      + '٪</b> ضرر می‌کنید. با <b style="color:var(--green)">' + _amFmt(sug, 1) + '٪</b> حدودِ <b>'
-      + _amFmt2(t.liters * sug / 100 - t.loss) + ' لیتر</b>' + money(t.liters * sug / 100 - t.loss)
-      + ' برایتان می‌ماند.</div>';
-  } else if (net > 0.0001) {
-    html += '<div class="am-sug-v ok">با فیصدیِ فعلیِ شما (<b>' + _amFmt(cur, 2) + '٪</b>) بعد از بخار <b>'
-      + _amFmt2(net) + ' لیتر</b>' + money(net) + ' برایتان می‌ماند — یعنی سود.'
-      + (cur < sug ? (' اگر <b>' + _amFmt(sug, 1) + '٪</b> بگیرید، <b>' + _amFmt2(t.liters * sug / 100 - t.loss)
-        + ' لیتر</b> می‌شود.') : '') + '</div>';
-  } else if (net < -0.0001) {
-    html += '<div class="am-sug-v bad">با فیصدیِ فعلیِ شما (<b>' + _amFmt(cur, 2) + '٪</b>) <b>'
-      + _amFmt2(Math.abs(net)) + ' لیتر</b>' + money(net) + ' از جیبِ خودتان می‌رود — بخار از سهمتان بیشتر است. '
-      + 'دستِ‌کم <b>' + _amFmt(even, 3) + '٪</b> لازم است و <b>' + _amFmt(sug, 1) + '٪</b> پیشنهاد می‌شود.</div>';
-  } else {
-    html += '<div class="am-sug-v">با <b>' + _amFmt(cur, 2) + '٪</b> نه سود می‌کنید نه ضرر. برای سود، بالاتر از <b>'
-      + _amFmt(even, 3) + '٪</b> بگیرید.</div>';
-  }
-
-  /* «مرورِ زمان» — تیل که بیشتر بماند، بخار بیشتر می‌شود و سودِ همین فیصدی آب
-     می‌رود. ردیف‌های قفل‌شده جلو نمی‌روند. */
-  const rowsHtml = [0, 30, 60, 90, 180].map(d => {
-    const f = _amForecast(a, s, d);
-    const n = (cur == null) ? null : (f.liters * cur / 100 - f.loss);
-    const sg2 = Math.ceil((f.evenPct + Math.max(0, _amNum(s.profitPct))) * 10) / 10;
-    return '<tr' + (d === 0 ? ' class="now"' : '') + '>'
-      + '<td>' + (d === 0 ? 'امروز' : ('+' + n2fa(d) + ' روز')) + '</td>'
-      + '<td>' + _amFmt2(f.loss) + ' لیتر</td>'
-      + '<td>' + _amFmt(f.evenPct, 3) + '٪</td>'
-      + '<td>' + _amFmt(sg2, 1) + '٪</td>'
-      + '<td style="color:' + (n == null ? 'var(--muted)' : (n < 0 ? 'var(--red)' : 'var(--green)')) + '">'
-      + (n == null ? '—' : (_amFmt2(n) + ' لیتر')) + '</td></tr>';
-  }).join('');
-  html += '<div class="am-sug-tw"><table class="am-guide"><thead><tr>'
-    + '<th>اگر بماند</th><th>بخار</th><th>سربه‌سر</th><th>پیشنهاد</th><th>با فیصدیِ فعلیِ شما</th>'
-    + '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>'
-    + '<div class="am-an-note">این‌ها فقط راهنمایی‌اند؛ هر عددی که خودتان می‌خواهید بنویسید همان می‌ماند و برنامه چیزی را عوض نمی‌کند.'
-    /* دکمهٔ «روی خودِ حساب بنویس» فقط وقتی می‌آید که واقعاً بالاتر از عددِ
-       فعلی باشد — وگرنه پیشنهادی که فیصدیِ شما را پایین بیاورد، پیشنهاد نیست. */
-    + ((cur != null && cur >= sug - 0.0001) ? ''
-        : ('<br>برای نوشتنِ پیشنهاد روی خودِ حساب: <button type="button" class="am-md-btn grn" style="padding:4px 10px;font-size:0.72rem" onclick="amUseSuggestAcc(' + ai + ',' + sug + ')">↪ ' + _amFmt(sug, 1) + '٪ روی این حساب</button>'))
-    + '</div>';
-  box.innerHTML = html;
 }
 /* ══ تحلیلِ فیصدی ═════════════════════════════════════════════════════════
    گفتهٔ خودِ صاحب ریپو، کلمه‌به‌کلمه پیاده شده:
@@ -49456,7 +49368,7 @@ try { window.__pumpSeed__ = seedDemoData; } catch (e) {}
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.384';
+const APP_VERSION = '2.9.385';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -51245,7 +51157,7 @@ function adjModalFont(delta) {
                   document.getElementById('amanatAccModal'), document.getElementById('amanatToolsModal')];
   modals.forEach(modal => {
     if (!modal || !modal.classList.contains('open')) return;
-    modal.querySelectorAll('th,td,.xls-in,.xls-calc,.xls-num,.fs-head,.fs-cell .l,.fs-cell .v,.msumbox .ml,.msumbox .mv,.am-calc,.am-sug-c span,.am-sug-c b,.am-an-v,.am-rows .l,.am-rows .v,.am-wi-c span,.am-wi-c b').forEach(el => {
+    modal.querySelectorAll('th,td,.xls-in,.xls-calc,.xls-num,.fs-head,.fs-cell .l,.fs-cell .v,.msumbox .ml,.msumbox .mv,.am-calc,.am-an-v,.am-an-note,.am-rows .l,.am-rows .v,.am-wi-c span,.am-wi-c b,.am-wi-f span').forEach(el => {
       if (_isDropdownEl(el)) return;   // کشوها فونتِ خودشان را دارند
       if (!el.dataset.origFs) el.dataset.origFs = parseFloat(getComputedStyle(el).fontSize);
       el.style.setProperty('font-size', (parseFloat(el.dataset.origFs) * _modalFontScale) + 'px', 'important');
