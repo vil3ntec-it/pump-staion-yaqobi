@@ -1739,18 +1739,6 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
   background:var(--card);border:1px dashed var(--border);border-radius:8px;padding:7px 10px}
 .am-acc-foot{padding:9px 12px;display:flex;gap:7px;flex-wrap:wrap;border-top:1px solid var(--border)}
 
-/* کادرِ «در مخزن»: دو دکمهٔ باز/بسته، هر دو داخل همان خانه */
-.am-state{display:flex;gap:4px;justify-content:center}
-.am-state button{background:transparent;border:1.5px solid var(--border);border-radius:7px;color:var(--muted);
-  font-family:'Vazirmatn',sans-serif;font-size:0.72rem;font-weight:800;padding:5px 8px;cursor:pointer;
-  -webkit-tap-highlight-color:transparent;line-height:1.4}
-.am-state button.on.open{border-color:var(--green);color:var(--green);background:var(--dark)}
-.am-state button.on.shut{border-color:var(--red);color:var(--red);background:var(--dark)}
-/* قفلِ ردیف — یک دکمهٔ کوچک، جدا از «سرِ مخزن». پیش از این هر دو یک شکل بودند
-   و صاحب ریپو حق داشت که «باز/بسته»ی مخزن را با قفلِ ردیف اشتباه بگیرد. */
-.am-lockbtn{background:transparent;border:1.5px solid var(--border);border-radius:7px;color:var(--muted);
-  font-size:0.85rem;padding:4px 7px;cursor:pointer;line-height:1.2;-webkit-tap-highlight-color:transparent}
-.am-lockbtn.on{border-color:var(--purple);color:var(--purple);background:var(--dark)}
 /* ── سربرگِ دوطبقهٔ جدولِ تیل امانت ─────────────────────────────────────────
    طبقهٔ اول سرگروه‌هاست و طبقهٔ دوم نامِ خودِ ستون‌ها. هر سرگروه رنگِ خودش را
    دارد تا در جدولِ پهن، چشم گم نشود. */
@@ -39973,7 +39961,7 @@ function _amNewId(p) { _amRowSeq++; return (p || 'AMR') + '-' + Date.now().toStr
 function _amNewRow(seedDate) {
   return { id: _amNewId('AMR'), date: seedDate || _amTodayStr(), name: '', toAcct: '',
            liters: '', taken: '', days: '', temp: '', state: 'open', closeDate: '',
-           lid: 'open', basePct: '', actual: '', note: '' };
+           lid: 'closed', basePct: '', actual: '', note: '' };
 }
 function _amNewAccount(fuel) {
   return { id: _amNewId('AMA'), name: '', fuel: (fuel === 'diesel') ? 'diesel' : 'petrol',
@@ -40086,7 +40074,15 @@ function amFuelFactor(fuel, s) {
    «۳۰ روز» یعنی یک دورهٔ کاملِ درصدِ پایه. */
 /* سرِ مخزن: 'closed' فقط وقتی صریح نوشته شده باشد؛ هر چیز دیگر «باز» است تا
    ردیف‌های قدیمی که این خانه را ندارند حسابشان تکان نخورد. */
-function amLidKey(x) { return (x && x.lid === 'closed') ? 'closed' : 'open'; }
+/* ⚠️ سرِ مخزن همیشه بسته است ────────────────────────────────────────────
+   گفتهٔ صریحِ صاحب ریپو: «مخزن همیشه در‌ش بسته است؛ این کادر که باز و بسته
+   دارد اضافی است، بردار.» پس ستونِ باز/بسته از جدول و از برآوردِ دستی
+   برداشته شد و محاسبه همیشه ضریبِ «بسته» را می‌گیرد (lidClosedF، پیش‌فرض
+   ۰٫۳۵ — یعنی حدودِ یک‌سومِ حالتِ باز).
+   ⚠️ عددِ بخارِ حساب‌های قدیمی که «باز» ثبت شده بودند از این به بعد کمتر
+   درمی‌آید — همین خواسته شده بود. خودِ r.lid در داده دست نمی‌خورد؛ فقط دیگر
+   خوانده نمی‌شود. */
+function amLidKey() { return 'closed'; }
 function amLidFactor(lid, s) {
   s = s || amSettings();
   const f = (lid === 'closed') ? s.lidClosedF : s.lidOpenF;
@@ -40415,106 +40411,6 @@ function _amPctTitle(closed) {
   return closed
     ? '🔒 این ردیف بسته است — فیصدی‌اش قفل شده و با عوض کردنِ فیصدیِ حساب تکان نمی‌خورد. اگر لازم شد، همین‌جا دستی عوضش کنید.'
     : 'فیصدیِ هدفِ همین ردیف. خالی بگذارید تا فیصدیِ خودِ حساب (بالای صفحه) به کار برود — آن وقت با نشانِ ↑ می‌آید، یعنی نوشتهٔ شما نیست. لحظه‌ای که ردیف را «بسته» کنید، همان فیصدی رویش قفل می‌شود.';
-}
-/* «در مخزن»: دو کادرِ باز/بسته داخلِ همان خانه. «بسته» یعنی تیل از مخزن
-   بیرون رفته — از همان تاریخ، مدت زمان دیگر جلو نمی‌رود و کمبودی ثابت می‌ماند.
-
-   ⚠️ این‌جا renderAmanat/_amAccBuild صدا زده نمی‌شود. با ساختنِ دوبارهٔ
-   ردیف‌ها، خانه‌ای که کاربر داخلش تایپ می‌کرد از بین می‌رفت و کیبوردِ گوشی
-   بسته می‌شد (ایرادِ گزارش‌شده: «کیبورد می‌بره وقتی باز یا بسته را می‌زنم»).
-   فقط همان دو دکمه و خانه‌های محاسبه‌شده تازه می‌شوند. */
-/* ══ سرِ مخزن باز / بسته ═══════════════════════════════════════════════════
-   گلایهٔ صاحب ریپو: «آن باز و بسته کاری نمی‌کند؛ به‌جای این که بگوید درِ مخزن
-   بسته شد، می‌گوید ردیف قفل شد. این ربطی به ردیف و جدول ندارد — این از تیل
-   است که در بسته باشد بخار کمتری بیرون می‌آید و باز باشد بیشتر.»
-
-   پس این‌جا هیچ ردیفی قفل نمی‌شود: فقط حالتِ فیزیکیِ مخزن عوض می‌شود و
-   مستقیم روی محاسبهٔ بخار می‌نشیند (amLidFactor). قفلِ ردیف کارِ
-   setAmanatRowState است و ستونِ جداگانهٔ خودش را دارد.
-   ═══════════════════════════════════════════════════════════════════════ */
-function setAmanatRowLid(ai, ri, lid) {
-  const a = amAccounts()[ai];
-  if (!a || !a.rows || !a.rows[ri]) return;
-  const r = a.rows[ri];
-  const want = (lid === 'closed') ? 'closed' : 'open';
-  if (amLidKey(r) === want) return;
-  r.lid = want;
-  _amSaveSoon();
-  /* فقط همین دو دکمه و خانه‌های محاسبه تازه می‌شوند — جدول از نو ساخته نمی‌شود،
-     وگرنه صفحه می‌پرد و کیبوردِ گوشی بسته می‌شود (همان باگِ باز/بستهٔ ردیف). */
-  const cell = document.getElementById('am-lid-' + ai + '-' + ri);
-  if (cell) {
-    const closed = (want === 'closed');
-    const btns = cell.querySelectorAll('button');
-    if (btns[0]) { btns[0].classList.toggle('on', !closed); btns[0].classList.toggle('open', !closed); }
-    if (btns[1]) { btns[1].classList.toggle('on', closed); btns[1].classList.toggle('shut', closed); }
-  }
-  _amAccPaint();
-  if (!_amAccOpen()) _amPaint();
-  const s = amSettings();
-  showToast(want === 'closed'
-    ? ('🛢️ سرِ مخزن بسته شد — بخار کمتر (ضریب ' + _amFmt(amLidFactor('closed', s), 2) + ')')
-    : ('🛢️ سرِ مخزن باز شد — بخار بیشتر (ضریب ' + _amFmt(amLidFactor('open', s), 2) + ')'), '#805ad5');
-}
-function setAmanatRowState(ai, ri, st) {
-  const a = amAccounts()[ai];
-  if (!a || !a.rows || !a.rows[ri]) return;
-  const r = a.rows[ri];
-  if (st === 'closed') {
-    if (r.state === 'closed') return;
-    r.state = 'closed';
-    if (!r.closeDate) r.closeDate = _amTodayStr();
-    /* ⚠️ فیصدی هم مثلِ مدت زمان قفل می‌شود و این را برندارید.
-       گزارشِ صاحب ریپو: «فیصدیِ یکی را زدم و آن دیگر رفته؛ می‌خواهم فیصدیِ
-       جدید به کادرِ جدید بدهم — آن قبلی که خراب نمی‌شود؟»
-       می‌شد: ردیفی که فیصدیِ خودش را ننوشته بود از فیصدیِ حساب ارث می‌برد، پس
-       با عوض کردنِ فیصدیِ حساب برای محمولهٔ تازه، حسابِ محموله‌های تمام‌شده هم
-       عقب‌گرد می‌کرد (۳٬۰۰۰ می‌شد ۵٬۰۰۰).
-       حالا لحظهٔ بستن، همان فیصدیِ آن روز روی خودِ ردیف نوشته می‌شود و دیگر
-       هیچ‌وقت تکان نمی‌خورد. */
-    if (!_amHas(r.myPct)) {
-      const eff = _amHas(a.myPct) ? _amNum(a.myPct) : null;
-      if (eff != null) r.myPct = eff;
-    }
-  } else {
-    if (r.state === 'open') return;
-    r.state = 'open'; r.closeDate = '';
-  }
-  _amSaveSoon();
-  /* ⚠️ این‌جا حالا یک دکمهٔ قفل است، نه دو دکمهٔ باز/بسته — آن دو رفتند به ستونِ
-     «سرِ مخزن» که کارِ دیگری می‌کند. */
-  const btn = document.getElementById('am-st-' + ai + '-' + ri);
-  if (btn) {
-    /* classList، نه className — وگرنه کلاس‌هایی که خودِ برنامه بعداً روی دکمه
-       می‌گذارد (مثل موجِ لمس) پاک می‌شوند. */
-    const closed = (r.state === 'closed');
-    btn.classList.toggle('on', closed);
-    btn.textContent = closed ? '🔒' : '🔓';
-    btn.title = closed
-      ? 'ردیف قفل است — مدت زمان و فیصدی ایستاده‌اند. بزنید تا باز شود.'
-      : 'قفل کردنِ ردیف — مدت زمان و فیصدی همین‌جا می‌ایستند. (ربطی به سرِ مخزن ندارد.)';
-    btn.setAttribute('onclick', 'setAmanatRowState(' + ai + ',' + ri + ",'" + (closed ? 'open' : 'closed') + "')");
-  }
-  /* خانهٔ «فیصدیِ من» همین ردیف را دستی تازه می‌کنیم — نه با ساختنِ دوبارهٔ جدول.
-     ⚠️ این‌جا قبلاً _amAccRefresh() صدا زده می‌شد و همان یک خط، همهٔ زحمتِ بالا را
-     خنثی می‌کرد: کلِ جدول از نو ساخته می‌شد، پس جای اسکرولِ صفحه و جدول صفر
-     می‌شد و کیبوردِ گوشی بسته می‌شد — گزارشِ صاحب ریپو: «وقتی باز/بسته را
-     می‌زنم صفحه تازه می‌شود یا می‌پرد و کیبورد می‌رود». */
-  const pctIn = document.getElementById('am-in-mypct-' + ai + '-' + ri);
-  if (pctIn) {
-    pctIn.title = _amPctTitle(r.state === 'closed');
-    // اگر دستِ کاربر داخلِ همان خانه است، نوشته‌اش را زیر انگشتش عوض نکن
-    if (pctIn !== document.activeElement) pctIn.value = _amHas(r.myPct) ? String(r.myPct) : '';
-  }
-  _amAccPaint();
-  if (!_amAccOpen()) _amPaint();
-  showToast(st === 'closed'
-    ? ('🔒 ردیف بسته شد — مدت زمان و فیصدی' + (_amHas(r.myPct) ? (' (' + _amFmt(_amNum(r.myPct), 2) + '٪)') : '') + ' قفل شد')
-    : '🔓 ردیف باز شد', '#805ad5');
-  /* تنها حالتی که ساختنِ دوباره چاره‌ای ندارد: فیلترِ «فقط باز»/«فقط بسته» روشن
-     است و این ردیف دیگر به آن فیلتر نمی‌خورد، پس باید از لیست برود. با فیلترِ
-     «همه» — یعنی حالتِ همیشگی — هیچ‌چیز از نو ساخته نمی‌شود. */
-  if (_amRowFilter !== 'all') _amAccRefresh();
 }
 
 /* ── تنظیمات مدیر ────────────────────────────────────────────────────────── */
@@ -40938,7 +40834,6 @@ function _amAccBuild() {
   const M = _amShowMeasure;
   const rows = view.map(({ r, ri }, k) => {
     const closed = (r.state === 'closed');
-    const lidClosed = (amLidKey(r) === 'closed');
     return `<tr>
       <td style="text-align:center;color:var(--muted)">${n2fa(k + 1)}</td>
       <td><input class="xls-in sm" value="${cmpEsc(r.date)}" placeholder="تاریخ" onchange="updateAmanatRow(${ai},${ri},'date',this.value);_amAccRefresh()"></td>
@@ -40948,12 +40843,6 @@ function _amAccBuild() {
       <td><input class="xls-in sm" type="number" step="0.01" value="${cmpEsc(r.taken)}" placeholder="0" title="چقدرش را برده‌اند" oninput="updateAmanatRow(${ai},${ri},'taken',this.value)"></td>
       <td><input class="xls-in xs" id="am-in-days-${ai}-${ri}" type="number" step="1" value="${cmpEsc(r.days)}" placeholder="خودکار" title="خالی = خودکار از تاریخ تا امروز" oninput="updateAmanatRow(${ai},${ri},'days',this.value)"></td>
       <td><input class="xls-in xs" type="number" step="0.1" value="${cmpEsc(r.temp)}" placeholder="${_amFmt(s.defTemp)}" title="خالی = گرمای پیش‌فرضِ تنظیمات" oninput="updateAmanatRow(${ai},${ri},'temp',this.value)"></td>
-      <td>
-        <div class="am-state" id="am-lid-${ai}-${ri}" title="سرِ مخزن باز باشد بخار بیشتر بیرون می‌رود، بسته باشد کمتر. این حالتِ خودِ مخزن است و ردیف را قفل نمی‌کند.">
-          <button type="button" class="${lidClosed ? '' : 'on open'}" onclick="setAmanatRowLid(${ai},${ri},'open')">باز</button>
-          <button type="button" class="${lidClosed ? 'on shut' : ''}" onclick="setAmanatRowLid(${ai},${ri},'closed')">بسته</button>
-        </div>
-      </td>
       <td class="am-calc" id="am-c-loss-${ai}-${ri}">—</td>
       <td><input class="xls-in xs" id="am-in-mypct-${ai}-${ri}" type="number" step="0.1" value="${cmpEsc(r.myPct)}" placeholder="${a.myPct === '' || a.myPct == null ? 'ننوشته' : ('↑' + _amFmt(_amNum(a.myPct), 2))}" title="${_amPctTitle(closed)}" oninput="updateAmanatRow(${ai},${ri},'myPct',this.value)">
         <!-- پیشنهادِ همین ردیف — با زدنش داخلِ کادرِ بالا می‌نشیند. تا نزنید،
@@ -40966,13 +40855,6 @@ function _amAccBuild() {
       <td class="am-calc" id="am-c-rest-${ai}-${ri}">—</td>
       ${M ? `<td><input class="xls-in sm" type="number" step="0.01" value="${cmpEsc(r.actual)}" placeholder="ثبت نشده" oninput="updateAmanatRow(${ai},${ri},'actual',this.value)"></td>
       <td class="am-calc" id="am-c-diff-${ai}-${ri}">—</td>` : ''}
-      <td><input class="xls-in xs" type="number" step="0.01" value="${cmpEsc(r.basePct)}" placeholder="${_amFmt(s.basePct, 3)}" title="پایهٔ بخار برای همین ردیف — چند درصد در ماه، در دمای مرجع. خالی بگذارید تا عددِ تنظیماتِ مدیر (${_amFmt(s.basePct, 3)}٪) به کار برود." oninput="updateAmanatRow(${ai},${ri},'basePct',this.value)"></td>
-      <td><input class="xls-in" value="${cmpEsc(r.note)}" placeholder="یادداشت" oninput="updateAmanatRow(${ai},${ri},'note',this.value)"></td>
-      <td style="text-align:center">
-        <button type="button" class="am-lockbtn${closed ? ' on' : ''}" id="am-st-${ai}-${ri}"
-          title="${closed ? 'ردیف قفل است — مدت زمان و فیصدی ایستاده‌اند. بزنید تا باز شود.' : 'قفل کردنِ ردیف — مدت زمان و فیصدی همین‌جا می‌ایستند. (ربطی به سرِ مخزن ندارد.)'}"
-          onclick="setAmanatRowState(${ai},${ri},'${closed ? 'open' : 'closed'}')">${closed ? '🔒' : '🔓'}</button>
-      </td>
       <td style="text-align:center"><button class="del-btn" onclick="deleteAmanatRow(${ai},${ri})">🗑️</button></td>
     </tr>`;
   }).join('');
@@ -41042,19 +40924,19 @@ function _amAccBuild() {
             الباقیِ طرف هم نشان داده شوند.»
            پس ستون‌ها زیرِ چند «سرگروه» دسته شدند و «درصد بخار» از کنارِ
            «بخار (لیتر)» آمد کنارِ «فیصدیِ من» — چون هر دو فیصدی‌اند. -->
-      <table class="xls-tbl am-tbl2" style="min-width:${M ? 1700 : 1540}px">
+      <table class="xls-tbl am-tbl2" style="min-width:${M ? 1360 : 1200}px">
         <thead>
           <tr class="am-hgrp">
             <th rowspan="2" style="width:30px">#</th>
             <th colspan="3" class="g-id">شناسه</th>
             <th colspan="2" class="g-oil">🛢️ تیل (لیتر)</th>
-            <th colspan="3" class="g-cond">🌡️ شرایطِ نگهداری</th>
+            <th colspan="2" class="g-cond">🌡️ شرایطِ نگهداری</th>
             <th rowspan="2" style="width:84px" class="g-vap" title="چند لیتر از تیل بخار شده — همین از سهمِ شما کم می‌شود">تیلِ بخار (لیتر)</th>
             <th colspan="3" class="g-pct">٪ فیصدی‌ها</th>
             <th colspan="2" class="g-mine">سهمِ من (لیتر)</th>
             <th rowspan="2" style="width:96px" class="g-rest" title="تیلِ خودِ مشتری = رسید − برده شده − سهمِ شما. بخار این‌جا کم نمی‌شود.">الباقیِ طرف (لیتر)</th>
             ${M ? '<th colspan="2" class="g-msr">📏 اندازه‌گیری</th>' : ''}
-            <th colspan="4" class="g-etc">دیگر</th>
+            <th rowspan="2" style="width:42px" class="g-etc">حذف</th>
           </tr>
           <tr>
             <th style="width:88px">تاریخ</th>
@@ -41064,25 +40946,20 @@ function _amAccBuild() {
             <th style="width:80px">برده شده</th>
             <th style="width:74px">مدت زمان</th>
             <th style="width:74px">درجه گرما</th>
-            <th style="width:92px" title="سرِ مخزن باز است یا بسته — بسته باشد بخار کمتری بیرون می‌آید. ردیف را قفل نمی‌کند.">سرِ مخزن</th>
             <th style="width:82px" title="فیصدیِ هدف — چقدر باید بعد از بخار برایتان بماند. خانهٔ خالی یعنی از فیصدیِ خودِ حساب (بالای صفحه) می‌آید و با ↑ نشان داده می‌شود.">فیصدیِ من</th>
             <th style="width:80px" title="بخار چند درصدِ رسیدِ همین ردیف است">فیصدیِ بخار</th>
             <th style="width:86px" title="فیصدیِ من + فیصدیِ بخار">فیصدیِ لازم</th>
             <th style="width:92px" title="فیصدیِ من × رسید تیل — هنوز بخار از آن کم نشده. همین عدد است که از الباقیِ طرف کم می‌شود.">سهمیهٔ من</th>
             <th style="width:92px" title="سهمیهٔ من منهای بخار — بخار فقط از سهمِ شما کم می‌شود">به من می‌رسد</th>
             ${M ? '<th style="width:92px">موجودی واقعی</th><th style="width:88px">اختلاف</th>' : ''}
-            <th style="width:82px" title="پایهٔ بخار: چند درصد در ماه، در دمای مرجع. خالی = همان عددِ تنظیماتِ مدیر. فقط اگر تیلِ این ردیف با بقیه فرق دارد دست بزنید.">پایهٔ بخار ٪ ماه</th>
-            <th style="min-width:110px">یادداشت</th>
-            <th style="width:44px" title="قفلِ ردیف — مدت زمان و فیصدی را می‌ایستاند. ربطی به سرِ مخزن ندارد.">قفل</th>
-            <th style="width:42px">حذف</th>
           </tr>
         </thead>
-        <tbody>${rows || ('<tr><td colspan="' + (M ? 22 : 20) + '" class="am-empty">ردیفی با این فیلتر نیست.</td></tr>')}</tbody>
+        <tbody>${rows || ('<tr><td colspan="' + (M ? 18 : 16) + '" class="am-empty">ردیفی با این فیلتر نیست.</td></tr>')}</tbody>
         <tfoot class="xls-foot"><tr>
           <td colspan="4" style="padding:8px 7px">${hidden > 0 ? 'جملهٔ ردیف‌های دیده‌شده' : 'جمله'}</td>
           <td class="xls-calc" id="am-ft-liters">0</td>
           <td class="xls-calc" id="am-ft-taken">0</td>
-          <td colspan="3"></td>
+          <td colspan="2"></td>
           <td class="xls-calc" id="am-ft-loss">0</td>
           <td></td>
           <td class="xls-calc" id="am-ft-losspct">0</td>
@@ -41091,7 +40968,7 @@ function _amAccBuild() {
           <td class="xls-calc" id="am-ft-net">0</td>
           <td class="xls-calc" id="am-ft-rest">0</td>
           ${M ? '<td class="xls-calc" id="am-ft-actual">0</td><td class="xls-calc" id="am-ft-diff">0</td>' : ''}
-          <td colspan="4"></td>
+          <td></td>
         </tr></tfoot>
       </table>
     </div>
@@ -41175,7 +41052,7 @@ let _amWhatIf = null;   // { liters, days, temp, myPct, lid, rate }
 function _amWhatIfSeed(a, s) {
   return { liters: '', days: '30', temp: String(s.defTemp),
            myPct: _amHas(a && a.myPct) ? String(a.myPct) : '',
-           lid: 'open', rate: _amHas(a && a.rate) ? String(a.rate) : '' };
+           lid: 'closed', rate: _amHas(a && a.rate) ? String(a.rate) : '' };
 }
 function amToggleWhatIf() {
   _amWhatIfOpen = !_amWhatIfOpen;
@@ -41190,18 +41067,6 @@ function amWhatIfSet(k, v) {
   _amWhatIf[k] = v;
   _amWhatIfPaint();            // فقط نتیجه‌ها — کادرهای تایپ دست نمی‌خورند
 }
-function amWhatIfLid(lid) {
-  if (!_amWhatIf) return;
-  _amWhatIf.lid = (lid === 'closed') ? 'closed' : 'open';
-  const cell = document.getElementById('am-wi-lid');
-  if (cell) {
-    const closed = (_amWhatIf.lid === 'closed');
-    const btns = cell.querySelectorAll('button');
-    if (btns[0]) { btns[0].classList.toggle('on', !closed); btns[0].classList.toggle('open', !closed); }
-    if (btns[1]) { btns[1].classList.toggle('on', closed); btns[1].classList.toggle('shut', closed); }
-  }
-  _amWhatIfPaint();
-}
 function amWhatIfReset() {
   const a = amAccounts()[_amAccIdx];
   _amWhatIf = _amWhatIfSeed(a, amSettings());
@@ -41215,7 +41080,6 @@ function _amWhatIfBuild() {
   const s = amSettings();
   if (!_amWhatIf) _amWhatIf = _amWhatIfSeed(a, s);
   const w = _amWhatIf;
-  const closed = (w.lid === 'closed');
   box.innerHTML = `
     <div class="am-wi-grid">
       <label class="am-wi-f"><span>🛢️ تیلِ طرف (لیتر)</span>
@@ -41232,12 +41096,6 @@ function _amWhatIfBuild() {
         <input type="number" step="0.1" min="0" value="${cmpEsc(_amNum(s.profitPct))}" title="اگر «فیصدیِ من» را ننویسید، پیشنهاد از روی همین ساخته می‌شود: سربه‌سر + همین عدد. اگر «فیصدیِ من» نوشته شده باشد، هدف همان است و این عدد کاری نمی‌کند." oninput="amSetProfitPct(this.value)"></label>
       <label class="am-wi-f"><span>💰 نرخ هر لیتر <i>(دلخواه)</i></span>
         <input type="number" step="0.01" value="${cmpEsc(w.rate)}" placeholder="خالی" oninput="amWhatIfSet('rate',this.value)"></label>
-      <div class="am-wi-f"><span>🛢️ سرِ مخزن</span>
-        <div class="am-state" id="am-wi-lid" style="justify-content:flex-start;margin-top:3px">
-          <button type="button" class="${closed ? '' : 'on open'}" onclick="amWhatIfLid('open')">باز</button>
-          <button type="button" class="${closed ? 'on shut' : ''}" onclick="amWhatIfLid('closed')">بسته</button>
-        </div>
-      </div>
     </div>
     <div id="am-wi-out" class="am-wi-out"></div>
     <!-- تحلیل داخلِ همین کادر است، نه بیرون: «آن تحلیل را هم توی برآورد دستی
@@ -41262,7 +41120,7 @@ function _amWhatIfPaint() {
 
   const days = Math.max(0, _amNum(w.days));
   const temp = _amHas(w.temp) ? _amNum(w.temp) : s.defTemp;
-  const lid  = (w.lid === 'closed') ? 'closed' : 'open';
+  const lid  = amLidKey();     // همیشه «بسته» — توضیحش کنارِ amLidKey
   const loss = amLoss(L, days, temp, fuel, null, s, lid);
   const lossPct = L > 0 ? (loss / L) * 100 : 0;
   const hasPct = _amHas(w.myPct);
@@ -49419,7 +49277,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.390';
+const APP_VERSION = '2.9.391';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
