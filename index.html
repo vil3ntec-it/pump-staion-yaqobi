@@ -30168,19 +30168,48 @@ const PumpGrid = (function () {
     h.classList.add('pg-host');
     h.innerHTML =
       '<canvas class="pg-cv"></canvas>' +
-      '<div class="pg-scroll"><div class="pg-space"></div>' +
-      '<input class="pg-edit" spellcheck="false" autocomplete="off"></div>';
+      '<div class="pg-scroll"><div class="pg-space">' +
+      '<input class="pg-edit" spellcheck="false" autocomplete="off"></div></div>';
     this.cv = h.querySelector('.pg-cv');
     this.ctx = this.cv.getContext('2d');
     this.sc = h.querySelector('.pg-scroll');
     this.space = h.querySelector('.pg-space');
     this.inp = h.querySelector('.pg-edit');
     const self = this;
+    /* ⚠️ آفستِ افقی از scrollLeft خوانده نمی‌شود: صفحهٔ برنامه راست‌به‌چپ است و
+       در راست‌به‌چپ، کروم scrollLeft را *منفی* می‌دهد (و موتورهای دیگر هر کدام
+       یک قرارداد). نتیجه‌اش این بود که ستون‌هایی که کشیده می‌شدند با جایی که
+       انگشت می‌خورد یکی نبود و اصلاً از سمتِ اشتباه شروع می‌شد (گزارشِ صاحب
+       ریپو: «چپ و راست اسکرول نمی‌شود»). حالا فاصلهٔ واقعیِ لبهٔ محتوا از لبهٔ
+       کادر اندازه گرفته می‌شود — با هر قراردادی درست است. */
     this.sc.addEventListener('scroll', function () {
-      self.scrollTop = self.sc.scrollTop; self.scrollLeft = self.sc.scrollLeft;
+      self.scrollTop = self.sc.scrollTop;
+      self.scrollLeft = self._xOff();
       self.paint();
     }, { passive: true });
-    this.sc.addEventListener('pointerdown', function (e) { self._hit(e); });
+    /* ⚠️ روی گوشی، هر اسکرول با یک pointerdown شروع می‌شود. نسخهٔ اول همان‌جا
+       کادرِ تایپ را باز می‌کرد، پس با هر دست‌زدن کیبورد بالا می‌آمد و کشیدنِ
+       چپ‌وراست هم گیر می‌کرد (گزارشِ صاحب ریپو). حالا فقط وقتی کادر باز می‌شود
+       که کاربر واقعاً «زده» باشد: انگشت کمتر از ۸ پیکسل جابه‌جا شده و کمتر از
+       ۶۰۰ میلی‌ثانیه روی صفحه بوده. کشیدن — به هر طرف — دست‌نخورده به خودِ
+       ظرفِ اسکرول می‌رسد. */
+    this.sc.addEventListener('pointerdown', function (e) {
+      self._tap = { x: e.clientX, y: e.clientY, t: Date.now(), sl: self.sc.scrollLeft, st: self.sc.scrollTop, ok: true };
+    }, { passive: true });
+    this.sc.addEventListener('pointermove', function (e) {
+      const t = self._tap;
+      if (!t || !t.ok) return;
+      if (Math.abs(e.clientX - t.x) > 8 || Math.abs(e.clientY - t.y) > 8) t.ok = false;
+    }, { passive: true });
+    this.sc.addEventListener('pointercancel', function () { if (self._tap) self._tap.ok = false; }, { passive: true });
+    this.sc.addEventListener('pointerup', function (e) {
+      const t = self._tap;
+      self._tap = null;
+      if (!t || !t.ok) return;
+      if (Date.now() - t.t > 600) return;
+      if (Math.abs(self.sc.scrollLeft - t.sl) > 2 || Math.abs(self.sc.scrollTop - t.st) > 2) return;
+      self._hit(e);
+    });
     this.inp.addEventListener('keydown', function (e) { self._key(e); });
     /* ⚠️ پرچمِ _moving: با Enter، اول خانهٔ فعلی ذخیره و بسته می‌شود و بعد خانهٔ
        ردیفِ بعد باز می‌شود. بستنِ اولی یک رویدادِ blur می‌سازد که *بعد* از باز
@@ -30189,9 +30218,19 @@ const PumpGrid = (function () {
     /* اندازهٔ کادر که عوض شد (چرخاندنِ گوشی، A−/A+، باز شدنِ مودال) بوم هم باید
        دوباره اندازه بگیرد — وگرنه نصفِ جدول کشیده می‌شود یا کشیده می‌ماند. */
     if (typeof ResizeObserver === 'function') {
-      this._ro = new ResizeObserver(function () { self.resize(); });
+      this._ro = new ResizeObserver(function () {
+        // بلندی‌ای که خودمان گذاشته‌ایم، «تغییرِ اندازه» حساب نمی‌شود (وگرنه حلقه)
+        if (self.host.clientWidth === self._w && Math.abs(self.host.clientHeight - (self._setH || 0)) < 2) return;
+        self.resize();
+      });
       this._ro.observe(h);
     }
+  };
+  Grid.prototype._xOff = function () {
+    try {
+      const a = this.sc.getBoundingClientRect(), b = this.space.getBoundingClientRect();
+      return Math.max(0, Math.round(a.left - b.left));
+    } catch (e) { return 0; }
   };
   /* ستون‌ها از راست به چپ چیده می‌شوند (مثل خودِ جدول‌های برنامه) */
   Grid.prototype.layout = function () {
@@ -30225,13 +30264,19 @@ const PumpGrid = (function () {
     this._cols = out; this._W = W;
     return out;
   };
-  Grid.prototype.resize = function () {
+  Grid.prototype._sizeCanvas = function () {
     const w = Math.max(1, this.host.clientWidth), h = Math.max(1, this.host.clientHeight);
+    if (w === this._w && h === this._h && this._sized) return;
     const d = DPR();
-    this._w = w; this._h = h;   // در هر فریم دوباره از چیدمان پرسیده نشود
+    this._w = w; this._h = h; this._sized = true;
     this.cv.width = Math.round(w * d); this.cv.height = Math.round(h * d);
     this.cv.style.width = w + 'px'; this.cv.style.height = h + 'px';
     this.ctx.setTransform(d, 0, 0, d, 0, 0);
+    this._palC = null;   // رنگ‌ها دوباره خوانده شوند
+  };
+  Grid.prototype.resize = function () {
+    this._sized = false;
+    this._sizeCanvas();
     this.refresh();
   };
   Grid.prototype.refresh = function () {
@@ -30250,8 +30295,25 @@ const PumpGrid = (function () {
     }
     this.layout();
     const n = this.spec.count();
+    /* ── بلندیِ ظرف = بلندیِ خودِ جدول ────────────────────────────────────────
+       گزارشِ صاحب ریپو: «همهٔ جدول توی یک کادرِ کوچک جا شده». پس ظرف دیگر یک
+       بلندیِ ثابت ندارد: تا وقتی جدول در صفحه جا شود، ظرف دقیقاً به اندازهٔ
+       خودش بلند می‌شود (پس نه نوارِ اسکرولِ داخلی دارد و نه سربرگ و جمله جایی
+       را می‌گیرند — عیناً مثل جدولِ همیشگی). فقط وقتی جدول از صفحه بلندتر شد،
+       تا سقفِ «۷۸٪ بلندیِ صفحه» می‌ایستد و بقیه‌اش داخلِ خودش اسکرول می‌شود —
+       که همان‌جا هم سربرگ و جمله جلوی چشم می‌مانند. */
+    const natural = Math.round(this.headH + n * this.rowH + this.footH + 2);
+    const maxH = (this.spec.maxHeight ? this.spec.maxHeight() : 600);
+    const want = Math.max(120, Math.min(natural, maxH));
+    if (this._setH !== want) {
+      this._setH = want;
+      this.host.style.height = want + 'px';
+      this._sized = false;
+    }
+    this._sizeCanvas();
     this.space.style.width = this._W + 'px';
-    this.space.style.height = Math.round(this.headH + n * this.rowH + this.footH + 2).toFixed(0) + 'px';
+    this.space.style.height = natural.toFixed(0) + 'px';
+    this.scrollLeft = this._xOff();
     this.paint();
     this._placeEditor();
   };
@@ -30345,13 +30407,13 @@ const PumpGrid = (function () {
         const t = cell.text == null ? '' : String(cell.text);
         if (t) {
           ctx.textAlign = 'center';
-          ctx.fillText(t, cx + cc.w / 2, y + rowH / 2, cc.w - 8);
+          ctx.fillText(_pgFit(ctx, t, cc.w - 10), cx + cc.w / 2, y + rowH / 2);
         }
         if (cell.placeholder && !t) {
           ctx.fillStyle = c.muted; ctx.textAlign = 'center';
           ctx.font = FONT.cell;
           ctx.globalAlpha = .65;
-          ctx.fillText(cell.placeholder, cx + cc.w / 2, y + rowH / 2, cc.w - 8);
+          ctx.fillText(_pgFit(ctx, cell.placeholder, cc.w - 10), cx + cc.w / 2, y + rowH / 2);
           ctx.globalAlpha = 1;
         }
         // خطِ عمودیِ بینِ خانه‌ها
@@ -30374,7 +30436,7 @@ const PumpGrid = (function () {
       const cc = cols[i], cx = cc.x - x0;
       if (cx + cc.w < 0 || cx > w) continue;
       ctx.fillStyle = c.headTxt;
-      ctx.fillText(cc.col.label || '', cx + cc.w / 2, headH / 2, cc.w - 6);
+      ctx.fillText(_pgFit(ctx, cc.col.label || '', cc.w - 4), cx + cc.w / 2, headH / 2);
       ctx.strokeStyle = c.brd; ctx.beginPath();
       ctx.moveTo(cx + .5, 0); ctx.lineTo(cx + .5, headH); ctx.stroke();
     }
@@ -30393,16 +30455,24 @@ const PumpGrid = (function () {
         const t = sp.foot(cc.col);
         if (t == null || t === '') continue;
         ctx.fillStyle = (this._m && this._m.footColor) || c.headTxt;
-        ctx.fillText(String(t), cx + cc.w / 2, fy + footH / 2, cc.w - 6);
+        ctx.fillText(_pgFit(ctx, String(t), cc.w - 8), cx + cc.w / 2, fy + footH / 2);
       }
     }
   };
   /* از نقطهٔ لمس/کلیک به «کدام ردیف، کدام ستون» */
   Grid.prototype._at = function (e) {
     const rc = this.sc.getBoundingClientRect();
-    const px = e.clientX - rc.left + this.scrollLeft;
-    const py = e.clientY - rc.top + this.scrollTop;
-    if (py < this.headH) return null;
+    /* ⚠️ سربرگ و ردیفِ جمله روی صفحه «چسبیده»اند، پس جایشان را باید با مختصاتِ
+       *دیده‌شده* سنجید نه با مختصاتِ محتوا. پیش از این با مختصاتِ محتوا سنجیده
+       می‌شد و به‌محضِ اینکه جدول اسکرول می‌خورد، زدنِ روی سربرگ هم «ردیف» حساب
+       می‌شد و کادرِ تایپ باز می‌کرد (گزارشِ صاحب ریپو: «روی هدر می‌زنم، کیبورد
+       باز می‌شود»). */
+    const vy = e.clientY - rc.top;
+    const vh = this._h || this.host.clientHeight;
+    if (vy < this.headH) return null;                 // سربرگ
+    if (vy > vh - this.footH) return null;            // ردیفِ جمله
+    const px = e.clientX - rc.left + this._xOff();
+    const py = vy + this.scrollTop;
     const r = Math.floor((py - this.headH) / this.rowH);
     if (r < 0 || r >= this.spec.count()) return null;
     const cols = this._cols || this.layout();
@@ -30457,8 +30527,11 @@ const PumpGrid = (function () {
     if (!cell0 || cell0.auto) return;      // ردیف‌های خودکار فقط نمایش‌اند
     this._commit(true);
     this._load(r, ci);
-    this.inp.focus();
-    try { this.inp.select(); } catch (e) {}
+    /* ⚠️ فوکوس یک تیک دیرتر: روی گوشی، بعد از pointerup هنوز یک رویدادِ click
+       در راه است؛ اگر همان لحظه فوکوس بدهیم، همان click فوکوس را می‌گیرد و
+       کادر بی‌صدا بسته می‌شود (باگ: «می‌زنم ولی چیزی باز نمی‌شود»). */
+    const self0 = this;
+    setTimeout(function () { try { self0.inp.focus(); self0.inp.select(); } catch (e) {} }, 0);
     // خانهٔ بازشده باید دیده شود (اگر لبهٔ کادر است، کادر خودش می‌آید)
     const top = this.headH + r * this.rowH;
     if (top - this.scrollTop < this.headH) this.sc.scrollTop = top - this.headH;
@@ -30552,6 +30625,20 @@ const PumpGrid = (function () {
    این‌ها همان چیزی را می‌کشند که در جدولِ همیشگی می‌بینید — دکمهٔ گِردِ رنگی با
    نقطهٔ انتخاب، و دکمهٔ سرخِ حذف. رنگ‌ها از خودِ همان جدول خوانده شده‌اند
    (metrics)، پس با هر تم هم‌رنگ می‌مانند. */
+/* نوشته هرگز از خانه‌اش بیرون نزند: اگر جا نشد، مثل خودِ جدول با «…» بریده
+   می‌شود — نه اینکه له شود و نه اینکه روی خانهٔ بغلی بیفتد.
+   (گزارشِ صاحب ریپو: «کادرها از خطشان می‌زنند بیرون».) */
+function _pgFit(ctx, t, maxW) {
+  t = String(t == null ? '' : t);
+  if (!t || maxW <= 0) return t;
+  if (ctx.measureText(t).width <= maxW) return t;
+  let lo = 0, hi = t.length;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (ctx.measureText(t.slice(0, mid) + '…').width <= maxW) lo = mid; else hi = mid - 1;
+  }
+  return lo > 0 ? (t.slice(0, lo) + '…') : '';
+}
 function _pgRound(ctx, x, y, w, h, r) {
   const k = Math.min(r, w / 2, h / 2);
   ctx.beginPath();
@@ -30574,7 +30661,7 @@ function _pgPick(ctx, x, y, w, h, cell, font, m) {
   const gap = 3;
   const totalH = opts.length * ph + (opts.length - 1) * gap;
   let oy = y + (h - totalH) / 2;
-  const pw = Math.min(w - 10, 96);
+  const pw = Math.min(w - 6, 118);
   const px = x + (w - pw) / 2;
   ctx.textAlign = 'right';
   ctx.font = font;
@@ -30586,9 +30673,9 @@ function _pgPick(ctx, x, y, w, h, cell, font, m) {
       _pgRound(ctx, px + .5, oy + .5, pw - 1, ph - 1, 6); ctx.stroke();
     }
     ctx.fillStyle = o.color;
-    ctx.fillText(o.label, px + pw - 7, oy + ph / 2, pw - 26);
+    ctx.fillText(_pgFit(ctx, o.label, pw - 24), px + pw - 6, oy + ph / 2);
     // نقطهٔ انتخاب، سمتِ چپِ دکمه — مثل رادیوی جدولِ همیشگی
-    const cx2 = px + 11, cy2 = oy + ph / 2, rr = 6;
+    const cx2 = px + 10, cy2 = oy + ph / 2, rr = 5.5;
     ctx.strokeStyle = o.color; ctx.lineWidth = 1.4;
     ctx.beginPath(); ctx.arc(cx2, cy2, rr, 0, Math.PI * 2); ctx.stroke();
     if (o.on) { ctx.fillStyle = o.color; ctx.beginPath(); ctx.arc(cx2, cy2, rr - 2.6, 0, Math.PI * 2); ctx.fill(); }
@@ -30761,6 +30848,7 @@ function _pmGridSpec() {
   return {
     rowH: 32, headH: 36, footH: 32, fontSize: 13,
     metrics: _pmGridMetrics,
+    maxHeight: function () { return Math.max(320, Math.round((window.innerHeight || 800) * 0.78)); },
     cols: _pmGridCols,
     count: function () { return (_pmV.idx || []).length + (_pmGridAuto || []).length; },
     emptyText: function () { return _pmV.emptyMsg || 'هیچ ردیفی ثبت نشده'; },
@@ -50179,7 +50267,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.400';
+const APP_VERSION = '2.9.401';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -59666,14 +59754,16 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
    سه لایه روی هم: بومِ نقاشی، لایهٔ شفافِ اسکرول، و کادرِ تایپِ تک‌نفره.
    ⚠️ بلندیِ ظرف باید عددی باشد (نه auto): خودِ جدول دیگر جا نمی‌گیرد — بوم فقط
    به اندازهٔ همین کادر است و بقیه با اسکرولِ داخلی می‌آید (مثل اکسل). */
-.pg-host{ position:relative; overflow:hidden; height:clamp(300px, 58vh, 900px);
+/* بلندی را خودِ موتور می‌گذارد (به اندازهٔ جدول، تا سقفِ ۷۸٪ صفحه) */
+.pg-host{ position:relative; overflow:hidden; height:320px;
   border:1.5px solid var(--lg-brd, var(--border)); border-radius:10px; background:var(--card); }
 .pg-host .pg-cv{ position:absolute; inset:0; display:block; }
 .pg-host .pg-scroll{ position:absolute; inset:0; overflow:auto; -webkit-overflow-scrolling:touch;
   scrollbar-gutter:stable; }
-.pg-host .pg-space{ pointer-events:none; }
+.pg-host .pg-space{ position:relative; pointer-events:none; }
 .pg-host .pg-edit{
   position:absolute; display:none; box-sizing:border-box; z-index:3;
+  pointer-events:auto;     /* .pg-space کلیک نمی‌گیرد؛ خودِ کادرِ تایپ باید بگیرد */
   border:2px solid var(--accent); border-radius:4px; background:var(--dark); color:var(--txt);
   font-family:'Vazirmatn',sans-serif; font-size:0.86rem; font-weight:800; text-align:center;
   padding:2px 4px; outline:none;
@@ -59682,7 +59772,6 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
 .pg-host .pg-edit::-webkit-outer-spin-button, .pg-host .pg-edit::-webkit-inner-spin-button{
   -webkit-appearance:none; margin:0;
 }
-@media (max-width:560px){ .pg-host{ height:clamp(260px, 62vh, 700px); } }
 
 
 
