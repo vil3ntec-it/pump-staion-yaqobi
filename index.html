@@ -21143,6 +21143,20 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <button class="goto-btn" onclick="showSection('settings')">→ برگشت به تنظیمات</button>
     <span style="display:inline-flex;align-items:center;gap:10px">🎨 ظاهر و گرافیک</span>
   </div>
+  <!-- ⚡ موتورِ جدول‌ها — اولین کادرِ همین صفحه (خواستهٔ صاحب ریپو: انتخابش این‌جا
+       باشد و برای همهٔ بخش‌هایی که جدول دارند به کار برود) -->
+  <div class="settings-card" id="fastgrid-card" style="border-color:var(--accent)">
+    <div class="settings-title">⚡ موتور جدول‌ها</div>
+    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
+      «موتور سریع» همهٔ جدول‌های برنامه را مثل اکسل روی یک بوم می‌کشد؛ با هزاران ردیف هم اسکرول و تایپ روان می‌ماند.
+      ظاهر، اندازه‌ها و رنگ‌ها عیناً همان جدول همیشگی است و <b>هیچ محاسبه‌ای عوض نمی‌شود</b> — نوشتن هم روی همان
+      کادرهای خود برنامه انجام می‌گیرد. انتخاب شما ذخیره می‌شود و روی همهٔ بخش‌ها اعمال می‌گردد.
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button type="button" id="fgOn" class="fg-set-btn" onclick="setFastGrid(true)" style="flex:1;min-width:150px;padding:11px;border-radius:10px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">⚡ موتور سریع</button>
+      <button type="button" id="fgOff" class="fg-set-btn" onclick="setFastGrid(false)" style="flex:1;min-width:150px;padding:11px;border-radius:10px;border:1.5px solid var(--muted);background:transparent;color:var(--muted);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">📋 جدول‌های همیشگی</button>
+    </div>
+  </div>
   <div class="settings-card" id="theme-card" style="border-color:var(--accent)">
     <div class="settings-title">🎨 تم رنگی</div>
     <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
@@ -21547,7 +21561,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
              از سربرگ برداشته شدند و داخلِ همین کشویی رفتند تا سربرگ شلوغ نباشد.
              کشویی یک منوی شناور است (نه داخلِ سربرگ) تا قاعده‌های !importantِ
              سربرگ رویش اثر نگذارند. -->
-        <button class="add-row-btn" id="pm-fastgrid-btn" title="موتورِ سریعِ اکسل‌مانند" style="margin:0;border-color:var(--muted);color:var(--txt);padding:5px 10px;font-size:0.78rem" onclick="pmToggleFastGrid()">⚡ موتور سریع</button>
         <button class="add-row-btn" id="pm-more-btn" title="بقیهٔ کارهای این حساب" style="margin:0;border-color:var(--muted);color:var(--txt);padding:5px 10px;font-size:0.78rem" onclick="pmMoreMenu(event)">⋯ بیشتر</button>
         <!-- دکمه‌های «📄 PDF»، «📲 کیو‌آر»، «🗑️ پاک همه» و «📇 کپیِ حساب» از این سربرگ
              برداشته شدند (خواستهٔ صاحب ریپو): کیو‌آرِ هر حساب از دکمهٔ «📲 کیو‌آر کد»ِ
@@ -24281,6 +24294,8 @@ function showSection(id, btn) {
   const sec = document.getElementById('sec-' + id);
   if (sec) sec.classList.add('visible');
   if (sec) _syncBackButtons(sec, id);
+  /* جدول‌های همین بخش، اگر «موتور سریع» روشن است، آینه شوند */
+  try { if (typeof _pgMirrorSoon === 'function') _pgMirrorSoon(); if (id === 'appearance') _pgSyncFastBtns(); } catch (e) {}
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   let navId = id;
   if (id === 'shifts-diesel') navId = 'shifts';
@@ -30519,10 +30534,22 @@ const PumpGrid = (function () {
         ctx.font = cell.idx ? FONT.idx : FONT.cell;
         ctx.fillStyle = cell.color ? (c[cell.color] || cell.color) : (cell.idx && m.idxColor ? m.idxColor : c.txt);
         const t = cell.text == null ? '' : String(cell.text);
-        if (t) {
+        /* خانه‌های چندخطی (مثلِ «الباقی»ِ جدولِ شرکت‌ها: افغانی بالا، دالر پایین) */
+        if (cell.lines && cell.lines.length > 1) {
+          const L = cell.lines, lh = Math.min(20, rowP / (L.length + .35));
+          let ly = y + rowP / 2 - (L.length - 1) * lh / 2;
           ctx.textAlign = 'center';
-          ctx.fillText(_pgFit(ctx, t, cc.w - 10), cx + cc.w / 2, y + rowP / 2);
+          for (let q = 0; q < L.length; q++) {
+            if (cell.lineColors && cell.lineColors[q]) ctx.fillStyle = cell.lineColors[q];
+            ctx.fillText(_pgFit(ctx, L[q], cc.w - 10), cx + cc.w / 2, ly);
+            ly += lh;
+          }
+        } else if (t) {
+          ctx.textAlign = 'center';
+          const cw2 = cc.w - (cell.chip ? _pgChipW(m) + 6 : 0);
+          ctx.fillText(_pgFit(ctx, t, cw2 - 10), cx + (cc.w - cw2) + cw2 / 2, y + rowP / 2);
         }
+        if (cell.chip) _pgChip(ctx, cx, y, cc.w, rowP, cell.chip, m);
         if (cell.placeholder && !t) {
           ctx.fillStyle = c.muted; ctx.textAlign = 'center';
           ctx.font = FONT.cell;
@@ -30584,6 +30611,7 @@ const PumpGrid = (function () {
         const lh = Math.min(20, footP / (lines.length + .35));
         let ly = fy + footP / 2 - (lines.length - 1) * lh / 2;
         for (let k = 0; k < lines.length; k++) {
+          if (f.lineColors && f.lineColors[k]) ctx.fillStyle = f.lineColors[k];
           ctx.fillText(_pgFit(ctx, lines[k], cw - 8), cx + cw / 2, ly);
           ly += lh;
         }
@@ -30604,7 +30632,20 @@ const PumpGrid = (function () {
     if (r < 0 || r >= this.spec.count()) return null; // بیرونِ ردیف‌ها / ردیفِ جمله
     const cols = this._cols || this.layout();
     for (let i = 0; i < cols.length; i++) {
-      if (px >= cols[i].x && px < cols[i].x + cols[i].w) return { r: r, c: i };
+      if (px >= cols[i].x && px < cols[i].x + cols[i].w) {
+        const hit = { r: r, c: i };
+        // زدنِ دکمهٔ ریزِ کنارِ کادر (چیپ) از زدنِ خودِ کادر جدا است
+        try {
+          const cell = this.spec.cell(r, cols[i].col);
+          if (cell && cell.chip) {
+            const rowP = this._rowY(r + 1) - this._rowY(r);
+            const b = _pgChipBox(cols[i].x, this._rowY(r), cols[i].w, rowP, this._m || {});
+            const ly = py - 0;
+            if (px >= b.x && px < b.x + b.w && ly >= b.y && ly < b.y + b.h) hit.chip = true;
+          }
+        } catch (e) {}
+        return hit;
+      }
     }
     return null;
   };
@@ -30612,6 +30653,13 @@ const PumpGrid = (function () {
     const at = this._at(e);
     if (!at) return;
     const cc = (this._cols || this.layout())[at.c];
+    if (at.chip && this.spec.chipAction) {
+      this._commit(true);
+      e.preventDefault();
+      try { this.spec.chipAction(at.r, cc.col); } catch (err) {}
+      this.refresh();
+      return;
+    }
     const kind = cc.col.type;
     if (kind === 'btn' || kind === 'pick') {
       this._commit(true);
@@ -30765,7 +30813,8 @@ function _pgFit(ctx, t, maxW) {
   return lo > 0 ? (t.slice(0, lo) + '…') : '';
 }
 function _pgRound(ctx, x, y, w, h, r) {
-  const k = Math.min(r, w / 2, h / 2);
+  if (!(w > 0) || !(h > 0)) { ctx.beginPath(); return; }   // ستونِ خیلی باریک
+  const k = Math.max(0, Math.min(r, w / 2, h / 2));
   ctx.beginPath();
   ctx.moveTo(x + k, y);
   ctx.arcTo(x + w, y, x + w, y + h, k);
@@ -30840,7 +30889,7 @@ function _pgPick(ctx, x, y, w, h, cell, font, m) {
     //    الکی با «…» بریده می‌شد.
     const tw = Math.ceil(ctx.measureText(o.label).width);
     let pw = tw + fixed;
-    if (pw > w - 2) pw = w - 2;
+    if (pw > w - 2) pw = Math.max(12, w - 2);
     const px = Math.round(x + (w - pw) / 2);
     if (o.on) {
       ctx.fillStyle = o.bg || _pgAlpha(o.color, .133);
@@ -30869,10 +30918,27 @@ function _pgPick(ctx, x, y, w, h, cell, font, m) {
   ctx.lineWidth = 1;
   ctx.textAlign = 'center';
 }
+/* دکمهٔ ریزِ کنارِ کادرِ تایپ (چیپ) — سمتِ چپِ خانه، همان‌جا که در جدولِ HTML است */
+function _pgChipW(m) { return (m && m.chipW) || 22; }
+function _pgChipBox(x, y, w, h, m) {
+  const cw = _pgChipW(m), ch = Math.min((m && m.chipH) || 20, h - 6);
+  return { x: x + 4, y: y + (h - ch) / 2, w: cw, h: ch };
+}
+function _pgChip(ctx, x, y, w, h, chip, m) {
+  const b = _pgChipBox(x, y, w, h, m);
+  ctx.fillStyle = (m && m.chipBg) || 'rgba(88,166,255,.12)';
+  _pgRound(ctx, b.x, b.y, b.w, b.h, (m && m.chipRadius) || 6); ctx.fill();
+  ctx.strokeStyle = (m && m.chipBrd) || ((m && m.chipColor) || '#58a6ff'); ctx.lineWidth = 1;
+  _pgRound(ctx, b.x + .5, b.y + .5, b.w - 1, b.h - 1, (m && m.chipRadius) || 6); ctx.stroke();
+  ctx.fillStyle = (m && m.chipColor) || '#58a6ff';
+  ctx.font = (m && m.chipFont) || '700 11px Vazirmatn, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(_pgFit(ctx, chip.text || '$', b.w - 3), b.x + b.w / 2, b.y + b.h / 2);
+}
 function _pgBtn(ctx, x, y, w, h, cell, m) {
   // اندازه، گِردی و رنگ‌های دکمهٔ حذف، همان‌هایی که .del-btn دارد
-  const bw = Math.min((m && m.delW) || 32, w - 8);
-  const bh = Math.min((m && m.delH) || 32, h - 8);
+  const bw = Math.max(10, Math.min((m && m.delW) || 32, w - 8));
+  const bh = Math.max(10, Math.min((m && m.delH) || 32, h - 8));
   const col = (m && m.delColor) || '#ff5d76';
   const rad = (m && m.delRadius) || 9;
   const bx = Math.round(x + (w - bw) / 2), by = Math.round(y + (h - bh) / 2);
@@ -31046,24 +31112,9 @@ function _pmGridMetrics() {
   return m;
 }
 let _pmGrid = null;
-/* پیش‌فرض: در اپِ اندروید و برنامهٔ ویندوز روشن (همان‌جا که صاحب ریپو «مثلِ اکسل»
-   خواسته)، روی سایت خاموش. هر انتخابِ خودِ کاربر، هر دو را کنار می‌زند. */
-function _pmGridOn() {
-  try {
-    const v = localStorage.getItem('pmFastGrid');
-    if (v === '1') return true;
-    if (v === '0') return false;
-    return _pumpNative();
-  } catch (e) { return false; }
-}
-function pmToggleFastGrid() {
-  const on = !_pmGridOn();
-  try { localStorage.setItem('pmFastGrid', on ? '1' : '0'); } catch (e) {}
-  if (_pmGrid) { try { _pmGrid.destroy(); } catch (e) {} _pmGrid = null; }
-  const p = _curPerson();
-  if (p) { try { renderPersonRows(p); } catch (e) {} }
-  try { showToast(on ? '⚡ موتورِ سریع روشن شد' : '📋 جدولِ همیشگی برگشت', on ? '#38a169' : '#805ad5'); } catch (e) {}
-}
+/* یک تنظیمِ سراسری برای همهٔ جدول‌ها — از «تنظیمات ← ظاهر و گرافیک» انتخاب
+   می‌شود (خواستهٔ صاحب ریپو). _pgFastOn پایینِ همین فایل تعریف شده. */
+function _pmGridOn() { return _pgFastOn(); }
 function _pmGridCols() {
   const V = _pmV;
   const cols = [
@@ -31195,13 +31246,7 @@ function _pmGridSpec() {
 function _pmGridSync() {
   const host = document.getElementById('pm-grid-host');
   const wrap = document.querySelector('#personModal .xls-wrap');
-  const btn = document.getElementById('pm-fastgrid-btn');
   const on = _pmGridOn();
-  if (btn) {
-    btn.style.borderColor = on ? 'var(--green)' : 'var(--muted)';
-    btn.style.color = on ? 'var(--green)' : 'var(--txt)';
-    btn.title = on ? 'موتورِ سریع روشن است — برای برگشت به جدولِ همیشگی بزنید' : 'موتورِ سریعِ اکسل‌مانند';
-  }
   if (!host) return;
   if (!on) {
     if (_pmGrid) { try { _pmGrid.destroy(); } catch (e) {} _pmGrid = null; }
@@ -31215,6 +31260,485 @@ function _pmGridSync() {
   if (!_pmGrid) _pmGrid = PumpGrid.mount(host, _pmGridSpec());
   else _pmGrid.resize();
 }
+
+
+/* ══ موتورِ سریع برای «همهٔ» جدول‌های برنامه ═══════════════════════════════════
+   خواستهٔ صاحب ریپو: دکمهٔ انتخابِ موتور از سربرگِ مودالِ شخص برداشته شود و برود
+   به «تنظیمات ← ظاهر و گرافیک» (اولین کادر)، و همان انتخاب برای *همهٔ* بخش‌هایی
+   که جدول دارند به کار برود.
+
+   چطور برای همهٔ جدول‌ها کار می‌کند — «آینه»:
+   نوشتنِ یک spec دستی برای هر جدول (صرافی، مصارف، رسید، صندوق، ورق، شرکت‌ها،
+   امانت، …) هم غیرممکن بود و هم خطرِ دست‌خوردنِ منطق داشت. پس این‌جا برعکس عمل
+   می‌شود: خودِ جدولِ HTML سرِ جایش می‌ماند (فقط دیده نمی‌شود) و بوم، *آینهٔ* همان
+   جدول را می‌کشد؛ هر تایپ هم روی همان input واقعیِ زیرین نوشته می‌شود و رویدادِ
+   خودش (oninput/onchange) اجرا می‌شود. یعنی هیچ محاسبه‌ای این‌جا نیست و نمی‌تواند
+   باشد — تمامِ منطق همان منطقِ همیشگیِ برنامه است.
+
+   ⚠️ محافظه‌کارانه: هر جدولی که ساختارش عادی نباشد (سربرگِ چندردیفی، colspan در
+   بدنه، جدول/تصویر/نمودار داخلِ خانه، تعدادِ خانه‌های ناهم‌خوان) دست‌نخورده رها
+   می‌شود و همان جدولِ HTML می‌ماند. بهتر است چند جدول آینه نشوند تا اینکه یکی
+   اشتباه نشان داده شود. */
+const _PG_MIRRORS = new Map();     // <table> → { grid, holder, cols, rows, snapKey }
+let _pgMirrorRaf = 0, _pgObs = null;
+
+/* تنظیمِ سراسری. پیش‌فرض: در اپِ اندروید و برنامهٔ ویندوز روشن، روی سایت خاموش —
+   هر انتخابِ خودِ کاربر بر هر دو مقدم است. کلیدِ قدیمیِ pmFastGrid هم خوانده
+   می‌شود تا انتخابِ قبلیِ کاربر از دست نرود. */
+function _pgFastOn() {
+  try {
+    let v = localStorage.getItem('pumpFastGrid');
+    if (v === null) v = localStorage.getItem('pmFastGrid');
+    if (v === '1') return true;
+    if (v === '0') return false;
+    return _pumpNative();
+  } catch (e) { return false; }
+}
+function _pgSyncFastBtns() {
+  const b1 = document.getElementById('fgOn'), b2 = document.getElementById('fgOff');
+  if (!b1 || !b2) return;
+  const on = _pgFastOn();
+  b1.classList.toggle('active', on);
+  b2.classList.toggle('active', !on);
+}
+function setFastGrid(on) {
+  on = !!on;
+  try { localStorage.setItem('pumpFastGrid', on ? '1' : '0'); localStorage.setItem('pmFastGrid', on ? '1' : '0'); } catch (e) {}
+  _pgSyncFastBtns();
+  if (!on) {
+    _pgMirrorOff();
+    if (_pmGrid) { try { _pmGrid.destroy(); } catch (e) {} _pmGrid = null; }
+  } else _pgObserve();
+  /* جدولِ شخص موتورِ اختصاصیِ خودش را دارد؛ اگر باز است از نو ساخته شود */
+  try { const p = (typeof _curPerson === 'function') ? _curPerson() : null; if (p) renderPersonRows(p); } catch (e) {}
+  _pgMirrorSoon();
+  try { showToast(on ? '⚡ موتورِ سریع برای همهٔ جدول‌ها روشن شد' : '📋 جدول‌های همیشگی برگشتند', on ? '#38a169' : '#805ad5'); } catch (e) {}
+}
+
+/* ── آیا این جدول را می‌توان آینه کرد؟ ─────────────────────────────────────── */
+function _pgEligible(tbl) {
+  try {
+    if (!tbl || tbl.id === 'pm-tbl') return false;          // موتورِ اختصاصیِ خودش را دارد
+    if (tbl.getAttribute('data-pg') === 'no') return false;
+    const hd = tbl.tHead;
+    if (!hd || hd.rows.length !== 1) return false;
+    const th = hd.rows[0].cells, nc = th.length;
+    if (nc < 2 || nc > 24) return false;
+    for (let i = 0; i < nc; i++) if (th[i].colSpan > 1 || th[i].rowSpan > 1) return false;
+    const body = tbl.tBodies[0];
+    if (!body) return false;
+    const rows = body.rows, n = rows.length;
+    if (!n || n > 5000) return false;
+    for (let r = 0; r < n; r++) {
+      const cs = rows[r].cells;
+      if (cs.length !== nc) return false;
+      for (let i = 0; i < cs.length; i++) if (cs[i].colSpan > 1 || cs[i].rowSpan > 1) return false;
+    }
+    // خانه‌های «غیرمتنی» فقط در چند ردیفِ اول سنجیده می‌شوند (بی‌خودی کند نشود)
+    const deep = Math.min(n, 3);
+    for (let r = 0; r < deep; r++) {
+      if (rows[r].querySelector('table,canvas,svg,img,progress,meter')) return false;
+      /* ⚠️ اگر یک خانه هم کادرِ تایپ داشته باشد هم دکمه/کشویی (مثلِ ستونِ «رسید»ِ
+         جدولِ شرکت‌ها که کنارِ عدد یک دکمهٔ ریزِ «$/افغانی» دارد)، آینه یکی از دو
+         را از دست می‌داد. چنین جدولی دست‌نخورده رها می‌شود: بهتر است یک جدول
+         آینه نشود تا اینکه دکمه‌اش گم شود. */
+      const cs2 = rows[r].cells;
+      for (let i = 0; i < cs2.length; i++) {
+        const td = cs2[i];
+        if (!_pgInpOf(td)) continue;
+        if (td.querySelector('select,input[type=radio],input[type=checkbox],a[href]')) return false;
+        if (td.querySelectorAll('input,textarea').length > 1) return false;
+        if (td.querySelectorAll('button').length > 1) return false;
+      }
+    }
+    if (tbl.tFoot && tbl.tFoot.rows.length > 1) return false;
+    return true;
+  } catch (e) { return false; }
+}
+function _pgVisible(tbl) {
+  try { return !!(tbl.offsetParent || tbl.getClientRects().length); } catch (e) { return false; }
+}
+
+/* ── خواندنِ یک خانه از DOM ────────────────────────────────────────────────── */
+function _pgInpOf(td) {
+  return td ? td.querySelector('input:not([type=radio]):not([type=checkbox]),textarea') : null;
+}
+/* ── رنگِ نوشتهٔ یک خانه ─────────────────────────────────────────────────────
+   ⚠️ رنگِ داخلِ style را نمی‌توان باور کرد: در این برنامه قاعده‌هایی مثل
+   «.tbl td{color:var(--gx-tbl-txt)!important}» رنگِ inline را کنار می‌زنند، و
+   بومِ نقاشی هم var(--red) را نمی‌فهمد. پس رنگِ *محاسبه‌شده* خوانده می‌شود — ولی
+   نه برای هر خانه: خانه‌هایی که «امضای» یکسان دارند (همان رنگِ inline و همان
+   کلاس‌ها) یک‌بار سنجیده می‌شوند و بقیه از کِش می‌آیند. پس در یک جدولِ هزارردیفی
+   هم چند بار getComputedStyle صدا زده می‌شود، نه هزاران بار. */
+function _pgColorOf(el, ci, cache) {
+  if (!el) return '';
+  const sig = ci + '|' + (el.style ? (el.style.color || '') : '') + '|' + (el.className || '') + '|' + el.tagName;
+  let v = cache[sig];
+  if (v === undefined) {
+    try { v = getComputedStyle(el).color || ''; } catch (e) { v = ''; }
+    cache[sig] = v;
+  }
+  return v;
+}
+function _pgReadCell(td, cache, ci, vc) {
+  if (!td) return { text: '' };
+  const inp = _pgInpOf(td);
+  if (inp) {
+    const out = { kind: 'in', text: inp.value, raw: inp.value,
+                  placeholder: inp.getAttribute('placeholder') || '',
+                  color: _pgColorOf(inp, ci, vc) };
+    /* دکمهٔ ریزِ کنارِ کادر (مثلِ «$ / افغانی»ِ ستونِ رسیدِ شرکت‌ها) هم کشیده
+       می‌شود و زدنش همان دکمهٔ واقعی را می‌زند — وگرنه گم می‌شد. */
+    const chip = td.querySelector('button');
+    if (chip) out.chip = { text: (chip.textContent || '').replace(/\s+/g, ' ').trim() };
+    return out;
+  }
+  const sel = td.querySelector('select');
+  if (sel) {
+    const o = sel.options[sel.selectedIndex];
+    return { text: o ? (o.textContent || '').trim() : sel.value };
+  }
+  const rds = td.querySelectorAll('input[type=radio]');
+  if (rds.length) {
+    const opts = [];
+    for (let i = 0; i < rds.length; i++) {
+      const rd = rds[i], on = rd.checked;
+      const lab = rd.closest('label') || rd.parentNode;
+      const key = ci + ':' + i + ':' + (on ? 1 : 0);
+      let sty = cache[key];
+      if (!sty) {
+        const cs = lab ? getComputedStyle(lab) : null;
+        sty = cache[key] = cs ? { color: cs.color, bg: on ? _pgBg(cs) : '', brd: on ? cs.borderTopColor : '' } : {};
+      }
+      opts.push({ label: (lab ? lab.textContent : '').replace(/\s+/g, ' ').trim(),
+                  on: on, color: sty.color, bg: sty.bg, brd: sty.brd });
+    }
+    return { kind: 'pick', opts: opts };
+  }
+  const bt = td.querySelector('button');
+  if (bt) return { kind: 'btn', text: (bt.textContent || '').trim() };
+  const html = td.innerHTML;
+  const kid = td.firstElementChild;
+  const col = _pgColorOf(kid || td, ci, vc);
+  if (html.indexOf('<br') >= 0 || html.indexOf('<BR') >= 0) {
+    const lines = html.split(/<br\s*\/?>/i).map(function (h) { return h.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim(); })
+                      .filter(function (t) { return t; });
+    if (lines.length > 1) return { lines: lines, color: col };
+  }
+  /* خانه‌هایی که چند <div> تو‌در‌تو دارند (مثلِ «الباقی»ِ شرکت‌ها: افغانی بالا،
+     دالر پایین) هم چندخطی‌اند، هرچند <br> ندارند. */
+  if (td.children.length > 1) {
+    const lines = [], cols = [];
+    for (let i = 0; i < td.children.length && lines.length < 3; i++) {
+      const t = (td.children[i].textContent || '').replace(/\s+/g, ' ').trim();
+      if (t) { lines.push(t); cols.push(_pgColorOf(td.children[i], ci + 'x' + i, vc)); }
+    }
+    if (lines.length > 1) return { lines: lines, lineColors: cols, color: col };
+  }
+  return { text: (td.textContent || '').replace(/\s+/g, ' ').trim(), color: col };
+}
+
+/* ── ستون‌ها و عکسِ لحظه‌ایِ ردیف‌ها ────────────────────────────────────────── */
+function _pgBuildCols(tbl) {
+  const th = tbl.tHead.rows[0].cells;
+  const row0 = tbl.tBodies[0].rows[0];
+  const cols = [];
+  for (let i = 0; i < th.length; i++) {
+    const td = row0 ? row0.cells[i] : null;
+    let type = 'calc';
+    if (td) {
+      const inp = _pgInpOf(td);
+      if (inp) type = (inp.type === 'number') ? 'num' : 'text';
+      else if (td.querySelector('input[type=radio]')) type = 'pick';
+      else if (td.querySelector('button')) type = 'btn';
+    }
+    cols.push({ key: 'c' + i, i: i, label: (th[i].textContent || '').replace(/\s+/g, ' ').trim(),
+                w: 90, type: type });
+  }
+  return cols;
+}
+function _pgBuildRows(tbl, st) {
+  const rows = tbl.tBodies[0].rows, nc = st.cols.length, out = [];
+  st.styCache = st.styCache || {};
+  st.varCache = st.varCache || {};
+  for (let r = 0; r < rows.length; r++) {
+    const cs = rows[r].cells, one = [];
+    for (let i = 0; i < nc; i++) one.push(_pgReadCell(cs[i], st.styCache, i, st.varCache));
+    out.push(one);
+  }
+  return out;
+}
+function _pgFootOf(tbl, st) {
+  const tf = tbl.tFoot;
+  if (!tf || !tf.rows.length) return null;
+  const cells = tf.rows[0].cells, out = {}, nc = st.cols.length;
+  const vc = st.varCache = st.varCache || {};
+  let ci = 0;
+  for (let i = 0; i < cells.length && ci < nc; i++) {
+    const td = cells[i], span = Math.max(1, td.colSpan);
+    const kid = td.firstElementChild;
+    const html = td.innerHTML;
+    let val = null;
+    if (html.indexOf('<br') >= 0 || html.indexOf('<BR') >= 0) {
+      const lines = html.split(/<br\s*\/?>/i).map(function (h) { return h.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim(); })
+                        .filter(function (t) { return t; });
+      if (lines.length) val = { lines: lines, color: _pgColorOf(kid || td, 'f' + i, vc) };
+    }
+    if (!val) {
+      const t = (td.textContent || '').replace(/\s+/g, ' ').trim();
+      val = { text: t, color: _pgColorOf(kid || td, 'f' + i, vc) };
+    }
+    if (span > 1) val.span = span;
+    if (val.text !== '' || val.lines) out[ci] = val;
+    ci += span;
+  }
+  return out;
+}
+
+/* ── اندازه‌ها و رنگ‌ها، از خودِ همان جدول ─────────────────────────────────── */
+function _pgTblMetrics(tbl, st) {
+  const hold = st.holder;
+  const prev = hold.style.display;
+  if (prev === 'none') hold.style.display = '';
+  const m = {};
+  try {
+    const rc = tbl.getBoundingClientRect();
+    const k = (rc.width > 1) ? (tbl.offsetWidth / rc.width) : 1;
+    const ths = tbl.tHead.rows[0].cells;
+    m.colW = Array.prototype.map.call(ths, function (t) { return t.getBoundingClientRect().width * k; });
+    m.surface = _pgBg(getComputedStyle(tbl)) || _pgBg(getComputedStyle(hold));
+    m.muted = getComputedStyle(tbl).getPropertyValue('--muted').trim() || '#8b949e';
+    const c = getComputedStyle(ths[0]);
+    m.headBg = _pgBg(c); m.headTxt = c.color;
+    m.headBrd = c.borderBottomColor; m.headVline = c.borderLeftColor;
+    m.headFont = c.fontWeight + ' ' + c.fontSize + ' Vazirmatn, sans-serif';
+    m.headLS = c.letterSpacing === 'normal' ? '0px' : c.letterSpacing;
+    m.headH = ths[0].getBoundingClientRect().height * k;
+    const trs = tbl.tBodies[0].rows;
+    if (trs.length) {
+      const a0 = trs[0].getBoundingClientRect(), z0 = trs[trs.length - 1].getBoundingClientRect();
+      m.rowH = (z0.bottom - a0.top) / trs.length * k;
+      const td0 = trs[0].cells[0];
+      if (td0) {
+        const c0 = getComputedStyle(td0);
+        m.idxFont = c0.fontWeight + ' ' + c0.fontSize + ' Vazirmatn, sans-serif';
+        m.idxColor = c0.color; m.line = c0.borderBottomColor; m.vline = c0.borderLeftColor;
+        m.cellFont = m.idxFont; m.cellColor = c0.color;
+        m.cellLS = c0.letterSpacing === 'normal' ? '0px' : c0.letterSpacing;
+      }
+      const inp = _pgInpOf(trs[0]) || trs[0].querySelector('input,textarea');
+      if (inp && inp.type !== 'radio' && inp.type !== 'checkbox') {
+        const ic = getComputedStyle(inp);
+        m.cellFont = ic.fontWeight + ' ' + ic.fontSize + ' Vazirmatn, sans-serif';
+        m.cellColor = ic.color; m.inpH = inp.getBoundingClientRect().height * k;
+        m.inpFontSize = ic.fontSize;
+        m.cellLS = ic.letterSpacing === 'normal' ? '0px' : ic.letterSpacing;
+      }
+      _pgSampleWidgets(tbl, trs[0], m, k);
+      const zeb = trs[1] && trs[1].cells[0];
+      if (zeb) { const zb = _pgBg(getComputedStyle(zeb)); if (zb) m.zebra = zb; }
+    }
+    const ftd = tbl.tFoot && tbl.tFoot.rows[0] && tbl.tFoot.rows[0].cells[0];
+    if (ftd) {
+      const fc = getComputedStyle(ftd);
+      m.footFont = fc.fontWeight + ' ' + fc.fontSize + ' Vazirmatn, sans-serif';
+      m.footColor = fc.color; m.footH = ftd.getBoundingClientRect().height * k;
+      m.footBrd = fc.borderTopColor;
+      m.footLS = fc.letterSpacing === 'normal' ? '0px' : fc.letterSpacing;
+      const bg = _pgBg(fc) || _pgBg(getComputedStyle(ftd.parentNode));
+      if (bg) m.footBg = bg;
+    }
+  } catch (e) {}
+  if (prev === 'none') hold.style.display = 'none';
+  return m;
+}
+/* اندازه و رنگِ دکمه‌های رادیویی و دکمه‌های کوچکِ داخلِ ردیف — همان‌هایی که در
+   خودِ جدول هستند. (همان کاری که برای جدولِ شخص انجام می‌شود.) */
+function _pgSampleWidgets(tbl, tr, m, k) {
+  try {
+    const rd = tr.querySelector('input[type=radio]');
+    if (rd) {
+      const lab = rd.closest('label') || rd.parentNode;
+      const box = lab && lab.parentNode;
+      const oc = getComputedStyle(lab), pc = box ? getComputedStyle(box) : oc;
+      m.pickOptH = lab.getBoundingClientRect().height * k;
+      m.pickGapY = parseFloat(pc.rowGap || pc.gap) || 3;
+      m.pickPadY = parseFloat(pc.paddingTop) || 3;
+      m.pickPadX = parseFloat(oc.paddingLeft) || 7;
+      m.pickGapX = parseFloat(oc.columnGap || oc.gap) || 4;
+      m.pickBrd = parseFloat(oc.borderTopWidth) || 1;
+      m.pickRadius = parseFloat(oc.borderRadius) || 6;
+      m.pickDot = rd.getBoundingClientRect().width * k;
+      m.pickFont = oc.fontWeight + ' ' + oc.fontSize + ' Vazirmatn, sans-serif';
+      if (rd.accentColor && rd.accentColor !== 'auto') m.radioOn = rd.accentColor;
+      const rcs = getComputedStyle(rd);
+      if (rcs.accentColor && rcs.accentColor !== 'auto') m.radioOn = rcs.accentColor;
+    }
+    let bt = null, chip = null;
+    const tds = tr.cells;
+    for (let i = 0; i < tds.length; i++) {
+      const b2 = tds[i].querySelector('button');
+      if (!b2) continue;
+      if (_pgInpOf(tds[i])) { if (!chip) chip = b2; }
+      else if (!bt) bt = b2;
+    }
+    if (bt) {
+      const dc = getComputedStyle(bt), br = bt.getBoundingClientRect();
+      m.delColor = dc.color; m.delW = br.width * k; m.delH = br.height * k;
+      m.delBg = _pgBg(dc) || dc.backgroundColor; m.delBrd = dc.borderTopColor;
+      m.delRadius = parseFloat(dc.borderRadius) || 9;
+      m.delFont = dc.fontSize;
+    }
+    if (chip) {
+      const cc2 = getComputedStyle(chip), cr = chip.getBoundingClientRect();
+      m.chipW = Math.max(14, cr.width * k); m.chipH = Math.max(12, cr.height * k);
+      m.chipColor = cc2.color; m.chipBg = _pgBg(cc2) || cc2.backgroundColor;
+      m.chipBrd = cc2.borderTopColor; m.chipRadius = parseFloat(cc2.borderRadius) || 6;
+      m.chipFont = cc2.fontWeight + ' ' + cc2.fontSize + ' Vazirmatn, sans-serif';
+    }
+  } catch (e) {}
+}
+
+/* ── سوارکردن و برداشتنِ آینه ─────────────────────────────────────────────── */
+function _pgHolderOf(tbl) {
+  const w = tbl.parentNode;
+  if (w && w.nodeType === 1 && /\b(xls-wrap|tbl-wrap|ro-wrap)\b/.test(w.className || '')
+      && w.querySelectorAll('table').length === 1) return w;
+  return tbl;
+}
+function _pgMirrorSpec(tbl, st) {
+  const TD = function (r, ci) {
+    const tr = tbl.tBodies[0] && tbl.tBodies[0].rows[r];
+    return tr ? tr.cells[ci] : null;
+  };
+  return {
+    rowH: 30, headH: 34, footH: 30, fontSize: 13,
+    metrics: function () { return _pgTblMetrics(tbl, st); },
+    cols: function () { return st.cols; },
+    count: function () { return st.rows.length; },
+    cell: function (r, col) { const row = st.rows[r]; return row ? (row[col.i] || null) : null; },
+    /* ⚠️ نوشتن *فقط* روی خودِ input واقعی و با رویدادهای خودش — پس همان تابعِ
+       همیشگیِ برنامه اجرا می‌شود و هیچ محاسبه‌ای این‌جا تکرار نمی‌شود. */
+    setCell: function (r, col, val) {
+      const td = TD(r, col.i); if (!td) return;
+      const inp = _pgInpOf(td); if (!inp) return;
+      if (String(inp.value) === String(val)) return;
+      inp.value = val;
+      const hasIn = inp.hasAttribute('oninput'), hasCh = inp.hasAttribute('onchange');
+      const fire = function (t) { try { inp.dispatchEvent(new Event(t, { bubbles: true })); } catch (e) {} };
+      if (hasIn) fire('input');
+      if (hasCh) fire('change');
+      if (!hasIn && !hasCh) { fire('input'); fire('change'); }
+    },
+    chipAction: function (r, col) {
+      const td = TD(r, col.i); if (!td) return;
+      const bt = td.querySelector('button'); if (bt) bt.click();
+    },
+    action: function (r, col) {
+      const td = TD(r, col.i); if (!td) return;
+      const bt = td.querySelector('button'); if (bt) { bt.click(); return; }
+      const rds = td.querySelectorAll('input[type=radio]');
+      if (rds.length > 1) {
+        let at = 0;
+        for (let i = 0; i < rds.length; i++) if (rds[i].checked) at = i;
+        rds[(at + 1) % rds.length].click();
+      } else if (rds.length === 1) rds[0].click();
+    },
+    foot: function (col) { return st.foot ? (st.foot[col.i] || '') : ''; }
+  };
+}
+function _pgMirrorMount(tbl) {
+  const holder = _pgHolderOf(tbl);
+  if (!holder.parentNode) return;
+  const st = { holder: holder, cols: _pgBuildCols(tbl), rows: [], foot: null };
+  st.rows = _pgBuildRows(tbl, st);
+  st.foot = _pgFootOf(tbl, st);
+  const host = document.createElement('div');
+  host.className = 'pg-mirror-host';
+  holder.parentNode.insertBefore(host, holder.nextSibling);
+  holder.style.display = 'none';
+  const grid = PumpGrid.mount(host, _pgMirrorSpec(tbl, st));
+  st.grid = grid; st.host = host; st.prevDisp = '';
+  _PG_MIRRORS.set(tbl, st);
+}
+function _pgMirrorRefresh(tbl) {
+  const st = _PG_MIRRORS.get(tbl);
+  if (!st) return;
+  // بخشی که روی صفحه نیست، بی‌خودی از نو خوانده نشود (showSection خودش صدا می‌زند)
+  if (!st.host || !st.host.offsetParent) return;
+  if (!_pgEligible(tbl)) { _pgUnmirror(tbl); return; }
+  st.styCache = {}; st.varCache = {};
+  st.cols = _pgBuildCols(tbl);
+  st.rows = _pgBuildRows(tbl, st);
+  st.foot = _pgFootOf(tbl, st);
+  try { st.grid.refresh(); } catch (e) {}
+}
+function _pgUnmirror(tbl) {
+  const st = _PG_MIRRORS.get(tbl);
+  if (!st) return;
+  _PG_MIRRORS.delete(tbl);
+  try { st.grid.destroy(); } catch (e) {}
+  try { if (st.host && st.host.parentNode) st.host.parentNode.removeChild(st.host); } catch (e) {}
+  try { st.holder.style.display = ''; } catch (e) {}
+}
+function _pgMirrorOff() {
+  Array.from(_PG_MIRRORS.keys()).forEach(_pgUnmirror);
+  if (_pgObs) { try { _pgObs.disconnect(); } catch (e) {} _pgObs = null; }
+}
+const _PG_TBL_SEL = 'table.xls-tbl, table.tbl, table.ro-tbl';
+function _pgMirrorAll() {
+  _pgMirrorRaf = 0;
+  if (!_pgFastOn()) { _pgMirrorOff(); return; }
+  /* جدول‌هایی که از DOM رفته‌اند */
+  Array.from(_PG_MIRRORS.keys()).forEach(function (t) {
+    if (!document.body.contains(t)) _pgUnmirror(t);
+  });
+  /* ⚠️ روی document.body، نه #app: مودال‌ها (شرکت، امانت، آرشیو، …) بیرونِ #app
+     هستند و با محدود کردن به #app جدولِ آن‌ها هرگز آینه نمی‌شد. */
+  const all = document.body.querySelectorAll(_PG_TBL_SEL);
+  for (let i = 0; i < all.length; i++) {
+    const tbl = all[i];
+    if (_PG_MIRRORS.has(tbl)) { _pgMirrorRefresh(tbl); continue; }
+    if (!_pgVisible(tbl)) continue;
+    if (!_pgEligible(tbl)) continue;
+    _pgMirrorMount(tbl);
+  }
+}
+function _pgMirrorSoon() {
+  if (_pgMirrorRaf) return;
+  _pgMirrorRaf = requestAnimationFrame(_pgMirrorAll);
+}
+/* هر تغییری در جدول‌های صفحه، آینه را تازه می‌کند — پس لازم نیست دهها تابعِ
+   رندرِ برنامه دست بخورند. تغییرهای خودِ آینه نادیده گرفته می‌شوند. */
+function _pgObserve() {
+  if (_pgObs || typeof MutationObserver !== 'function') return;
+  _pgObs = new MutationObserver(function (recs) {
+    for (let i = 0; i < recs.length; i++) {
+      const r = recs[i], t = r.target;
+      if (!t || t.nodeType !== 1) continue;
+      if (t.closest && t.closest('.pg-host')) continue;      // تغییرِ خودِ آینه
+      /* ⚠️ فقط تغییرهایی که به جدول‌ها ربط دارند. بدونِ این صافی، تیک‌تیکِ
+         ساعتِ شیشه‌ای هم هر ثانیه کلِ آینه‌ها را از نو می‌ساخت. */
+      if (t.closest && t.closest('table')) { _pgMirrorSoon(); return; }
+      let has = false;
+      const chk = function (list) {
+        for (let j = 0; j < list.length && !has; j++) {
+          const n = list[j];
+          if (n.nodeType === 1 && (n.tagName === 'TABLE' || (n.querySelector && n.querySelector('table')))) has = true;
+        }
+      };
+      chk(r.addedNodes); if (!has) chk(r.removedNodes);
+      if (has) { _pgMirrorSoon(); return; }
+    }
+  });
+  try { _pgObs.observe(document.body, { childList: true, subtree: true }); } catch (e) {}
+}
+function _pgBoot() {
+  _pgSyncFastBtns();
+  if (_pgFastOn()) { _pgObserve(); _pgMirrorSoon(); }
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _pgBoot);
+else setTimeout(_pgBoot, 0);
 
 function _pmRowHtml(person, r, i, shown, showFtCol, money, zebra) {
   const bardagi = _round0(r.byMoney ? (parseFloat(r.bardagi)||0) : _personRowBardagi(r));
@@ -50536,7 +51060,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.404';
+const APP_VERSION = '2.9.405';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -58676,6 +59200,10 @@ body.light-mode #glassClock{
 }
 /* دکمه‌های کارتِ تنظیماتِ ساعت */
 #gcSetOn.active{ background:var(--green) !important; color:#fff !important; }
+#fgOn.active{ background:var(--accent) !important; color:var(--on-accent, #000) !important; }
+#fgOff.active{ background:var(--muted) !important; color:var(--card) !important; }
+/* ظرفِ آینهٔ موتورِ سریع: خودش قاب و رنگ ندارد — قاب را .pg-host می‌کشد */
+.pg-mirror-host{ display:block; }
 #gcSetOff.active{ background:var(--muted) !important; color:#fff !important; }
 @media print{ #glassClock, #gcMenu, #gcDlg{ display:none !important; } }
 </style>
