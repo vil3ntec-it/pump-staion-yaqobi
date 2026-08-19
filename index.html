@@ -19020,14 +19020,16 @@ body.boot-viewer #bootViewerSplash{
       <div class="list-title"><svg class="nav-ic ia-bounce"><use href="#ic-debt"/></svg> قرض‌داران</div>
       <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('debt',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('debt',0.08)">A+</button></span>
     </div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <!-- خواستهٔ صاحب ریپو: این پنج کادر بغلِ سربرگ بمانند، نه اینکه به ردیفِ
+         بعدی بیفتند — پس روی کامپیوتر جمع‌وجورتر می‌شوند (کلاسِ sec-head-acts) -->
+    <div class="sec-head-acts" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <input type="search" id="debt-search" class="person-search-input" placeholder="🔍 جستجوی نام..." oninput="searchPerson('debt',this.value)">
       <button class="add-btn" style="border-color:var(--green);color:var(--green)" onclick="openMembershipList()" title="یک صفحهٔ جدا با مدت عضویتِ همهٔ قرض‌داران">⏳ مدت عضویت همه</button>
       <button class="add-btn" onclick="openAddPerson('debt')">➕ افزودن شخص</button>
       <!-- فقط روی کامپیوتر (جای خالی زیاد است): همین دو کادرِ قرض‌های کهنه، بغلِ «مدت عضویت همه» -->
-      <button type="button" class="tool-link-card debt-oldloan-desktop" style="border-color:var(--red);color:var(--red)" onclick="showSection('oldloans')"><span title="⏰ قرض‌های کهنهٔ تیل — بی‌حرکت‌ها اول (واحد تیل)">⏰ قرض‌های کهنه — تیل</span><span class="tlc-go"><i>‹</i></span></button>
-      <button type="button" class="tool-link-card debt-oldloan-desktop" style="border-color:var(--green);color:var(--green)" onclick="showSection('oldloansmoney')"><span title="💵 قرض‌های کهنهٔ پول — بی‌حرکت‌ها اول (واحد پول)">💵 قرض‌های کهنه — پول</span><span class="tlc-go"><i>‹</i></span></button>
-      <button type="button" class="tool-link-card debt-oldloan-desktop" style="border-color:var(--purple);color:var(--purple)" onclick="showSection('priceloss')"><span title="📉 زیان ناشی از افزایش قیمت — تیلی که قرضی رفته، امروز چقدر گران‌تر شده">📉 زیان افزایش قیمت</span><span class="tlc-go"><i>‹</i></span></button>
+      <button type="button" class="tool-link-card tlc-slim debt-oldloan-desktop" style="border-color:var(--red);color:var(--red)" onclick="showSection('oldloans')"><span title="⏰ قرض‌های کهنهٔ تیل — بی‌حرکت‌ها اول (واحد تیل)">⏰ قرض‌های کهنه — تیل</span><span class="tlc-go"><i>‹</i></span></button>
+      <button type="button" class="tool-link-card tlc-slim debt-oldloan-desktop" style="border-color:var(--green);color:var(--green)" onclick="showSection('oldloansmoney')"><span title="💵 قرض‌های کهنهٔ پول — بی‌حرکت‌ها اول (واحد پول)">💵 قرض‌های کهنه — پول</span><span class="tlc-go"><i>‹</i></span></button>
+      <button type="button" class="tool-link-card tlc-slim debt-oldloan-desktop" style="border-color:var(--purple);color:var(--purple)" onclick="showSection('priceloss')"><span title="📉 زیان ناشی از افزایش قیمت — تیلی که قرضی رفته، امروز چقدر گران‌تر شده">📉 زیان افزایش قیمت</span><span class="tlc-go"><i>‹</i></span></button>
     </div>
   </div>
   <!-- موبایل/تبلت: همین دو کادر مثل قبل، زیرِ سربرگ (خواستهٔ کاربر: این‌جا دست‌نخورده بماند) -->
@@ -19079,12 +19081,15 @@ body.boot-viewer #bootViewerSplash{
 <div class="section" id="sec-debtrasid">
   <datalist id="debtrasid-names"></datalist>
   <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-    <button class="goto-btn" onclick="showSection('debtsum')">📊 رفتن به قرض‌های دسته‌جمعی</button>
+    <!-- خواستهٔ صاحب ریپو: کادرهای «حساب‌های چکنه» و «تاریخچهٔ رسیدها» از ردیفِ
+         جداگانهٔ زیرِ سربرگ آمدند بغلِ همین دکمه — یک ردیف کمتر و همه‌چیز جلوِ چشم -->
+    <span class="sec-head-links">
+      <button class="goto-btn" onclick="showSection('debtsum')">📊 رفتن به قرض‌های دسته‌جمعی</button>
+      <button type="button" class="tool-link-card tlc-slim" style="border-color:var(--purple);color:var(--purple)" onclick="showSection('chakana')"><span>🧾 حساب‌های چکنه</span><span class="tlc-go"><i>‹</i></span></button>
+      <button type="button" class="tool-link-card tlc-slim" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('rasid')"><span title="🕘 تاریخچهٔ رسیدها — با تاریخ و روز هفته">🕘 تاریخچهٔ رسیدها</span><span class="tlc-go"><i>‹</i></span></button>
+    </span>
     <span><svg class="nav-ic ia-wobble"><use href="#ic-rasid"/></svg> رسید قرض‌داران / چکنه</span>
   </div>
-  <!-- کادر حساب‌های چکنه — صفحهٔ جداگانه (خواستهٔ کاربر) -->
-  <button type="button" class="tool-link-card" style="border-color:var(--purple);color:var(--purple)" onclick="showSection('chakana')"><span>🧾 حساب‌های چکنه</span><span class="tlc-go"><i>‹</i></span></button>
-  <button type="button" class="tool-link-card" style="border-color:var(--blue);color:var(--blue)" onclick="openSectionHistory('rasid')"><span title="🕘 تاریخچهٔ رسیدها — با تاریخ و روز هفته">🕘 تاریخچهٔ رسیدها</span><span class="tlc-go"><i>‹</i></span></button>
   <div class="card">
     <div class="card-head">
       <div style="display:flex;align-items:center;gap:10px">
@@ -20526,35 +20531,44 @@ body.viewer-mode .inv-admin-only{display:none!important}
 .inv-act.del{border-color:#e53e3e66;color:var(--red)}
 .inv-act.del:hover{background:#e53e3e;color:#fff}
 .inv-empty{text-align:center;color:var(--muted);padding:46px 14px;font-size:.9rem;background:var(--card);border:1.5px dashed var(--border);border-radius:16px}
-/* ── صفحهٔ تمام‌صفحهٔ فاکتور — روی صفحهٔ لیست (z-index:10070) باز می‌شود ──
-   خواستهٔ صاحب برنامه: فاکتور داخلِ برنامه تمام‌صفحه دیده شود تا اطلاعات کامل،
-   خوانا و حرفه‌ای باشد. سربرگ ثابت می‌ماند و بدنه اسکرول می‌شود؛ روی هر اندازه
-   صفحه‌ای (کامپیوتر، تبلت، موبایل) برگه هم‌اندازهٔ همان دستگاه بزرگ می‌شود. */
-#invDetailModal.inv-fullpage{z-index:10080;padding:0;align-items:stretch;justify-content:stretch;background:var(--dark)}
+/* ── پنجرهٔ فاکتور — کادرِ جمع‌وجورِ وسطِ صفحه ─────────────────────────────
+   خواستهٔ صاحب ریپو: «فاکتور را از تمام‌صفحه جدا کن و نصف صفحه بشود، وسط —
+   کادرش را کوچک کن، مثل بارِ اول که درست شد.»
+   پس همان کلاسِ inv-fullpage می‌ماند (هیچ جاوااسکریپتی دست نمی‌خورد) ولی
+   به‌جای «کلِ صفحه» یک پنجرهٔ وسط‌چینِ حدوداً نصفِ عرضِ صفحه می‌سازد: سربرگ
+   ثابت، بدنه اسکرول، و برگه در همان اندازهٔ چاپی‌اش (نصفِ A4).
+   روی گوشی همان تمام‌صفحهٔ قبلی می‌ماند — آن‌جا «نصف صفحه» معنا ندارد. */
+#invDetailModal.inv-fullpage{z-index:10080;padding:18px;align-items:center;justify-content:center}
 #invDetailModal.inv-fullpage .modal{
-  background:transparent!important;border:none!important;box-shadow:none!important;border-radius:0!important;
-  max-width:none!important;width:100%!important;max-height:none!important;height:100%!important;
+  width:min(760px, 94vw)!important; max-width:min(760px, 94vw)!important;
+  max-height:min(88vh, 900px)!important; height:auto!important;
   display:flex;flex-direction:column;overflow:hidden;padding:0!important;margin:0!important}
 #invDetailModal.inv-fullpage .modal-head{
-  background:var(--panel)!important;border-radius:0!important;flex-shrink:0;
-  display:flex;align-items:center;justify-content:space-between;gap:10px;
-  padding:calc(12px + env(safe-area-inset-top,0px)) 18px 12px;border-bottom:2px solid var(--accent);font-size:1.1rem}
+  flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:11px 16px;border-bottom:2px solid var(--accent);font-size:1rem}
 #invDetailModal.inv-fullpage .modal-close{
-  background:var(--red);border:none;color:#fff;border-radius:10px;padding:9px 16px;
-  font-family:'Vazirmatn',sans-serif;font-size:.86rem;font-weight:900;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  background:var(--red);border:none;color:#fff;border-radius:9px;padding:7px 13px;
+  font-family:'Vazirmatn',sans-serif;font-size:.82rem;font-weight:900;cursor:pointer;-webkit-tap-highlight-color:transparent}
 #invDetailModal.inv-fullpage #inv-detail-body{
   flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
-  padding:22px 18px calc(28px + env(safe-area-inset-bottom,0px));width:100%;max-width:1000px;margin:0 auto;box-sizing:border-box}
-/* برگه در حالت تمام‌صفحه بزرگ‌تر و خواناتر — نه ریز مثل مودال قدیمی */
-#invDetailModal.inv-fullpage .invp-frame{padding:30px 32px 200px}
-#invDetailModal.inv-fullpage .invp-title{font-size:2rem}
-#invDetailModal.inv-fullpage .invp-grid{grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
-#invDetailModal.inv-fullpage .invp-row{padding:13px 16px}
-#invDetailModal.inv-fullpage .invp-row .k{font-size:.86rem}
-#invDetailModal.inv-fullpage .invp-in,#invDetailModal.inv-fullpage .invp-row .v{font-size:1.06rem}
-#invDetailModal.inv-fullpage .invp-total{padding:15px 20px}
-#invDetailModal.inv-fullpage .invp-total .tv{font-size:1.5rem}
+  padding:16px 16px 20px;width:100%;box-sizing:border-box}
+#invDetailModal.inv-fullpage .invp-frame{padding:18px 20px 150px}
+#invDetailModal.inv-fullpage .invp-title{font-size:1.32rem}
+#invDetailModal.inv-fullpage .invp-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+#invDetailModal.inv-fullpage .invp-row{padding:9px 12px}
+#invDetailModal.inv-fullpage .invp-row .k{font-size:.78rem}
+#invDetailModal.inv-fullpage .invp-in,#invDetailModal.inv-fullpage .invp-row .v{font-size:.94rem}
+#invDetailModal.inv-fullpage .invp-total{padding:11px 15px}
+#invDetailModal.inv-fullpage .invp-total .tv{font-size:1.18rem}
+/* گوشی و تبلتِ باریک: همان تمام‌صفحهٔ قبلی (کادرِ کوچک آن‌جا فایده ندارد) */
 @media(max-width:900px){
+  #invDetailModal.inv-fullpage{padding:0;align-items:stretch;justify-content:stretch;background:var(--dark)}
+  #invDetailModal.inv-fullpage .modal{
+    background:transparent!important;border:none!important;box-shadow:none!important;border-radius:0!important;
+    width:100%!important;max-width:none!important;max-height:none!important;height:100%!important}
+  #invDetailModal.inv-fullpage .modal-head{
+    background:var(--panel)!important;border-radius:0!important;
+    padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px}
   #invDetailModal.inv-fullpage #inv-detail-body{padding:16px 12px calc(24px + env(safe-area-inset-bottom,0px))}
   #invDetailModal.inv-fullpage .invp-frame{padding:20px 16px 170px}
   #invDetailModal.inv-fullpage .invp-title{font-size:1.5rem}
@@ -20743,6 +20757,40 @@ body.viewer-mode .inv-admin-only{display:none!important}
       <div class="ic">🟢</div>
       <div><div class="lbl">فاکتورهای تایید شده</div><div class="cnt" id="inv-cnt-approved">0</div></div>
       <div class="go">مشاهده ←</div>
+    </div>
+    <!-- خواستهٔ صاحب ریپو: «کسی با نرخ ۶۰ فاکتور می‌گیرد و پولش را دیر می‌آورد؛
+         وقتِ تایید با نرخِ اتحادیهٔ همان روز مقایسه شود که چقدر فرق کرده — یک
+         کادرِ جدا در بخش فاکتورها و با زدنش یک صفحهٔ جداگانه.» -->
+    <div class="inv-stat" onclick="showSection('invrate')" role="button" tabindex="0"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showSection('invrate')}"
+         title="مقایسهٔ فیِ فاکتور با نرخِ اتحادیهٔ روزِ تایید" style="border-color:color-mix(in srgb,var(--purple) 45%,var(--border))">
+      <div class="ic">📉</div>
+      <div><div class="lbl">مقایسهٔ نرخ فاکتورها</div><div class="cnt" id="inv-cnt-rate">0</div></div>
+      <div class="go">مشاهده ←</div>
+    </div>
+  </div>
+</div>
+
+<!-- 📉 مقایسهٔ نرخ فاکتورها — صفحهٔ جداگانه (از کادرِ بخشِ فاکتورها باز می‌شود) -->
+<div class="section" id="sec-invrate">
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <button class="goto-btn" onclick="showSection('invoices')">🧾 برگشت به فاکتورها</button>
+    <span>📉 مقایسهٔ نرخ فاکتورها</span>
+  </div>
+  <div class="card" style="border-color:var(--purple)">
+    <div class="card-head">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="card-title" style="color:var(--purple)">📉 فیِ فاکتور در برابر نرخِ اتحادیهٔ روزِ تایید</div>
+        <span class="sec-font-ctrl"><button class="sec-font-btn" onclick="adjSecFont('invrate',-0.08)">A-</button><button class="sec-font-btn" onclick="adjSecFont('invrate',0.08)">A+</button></span>
+      </div>
+      <span class="pl-loss-filter">
+        <button class="pm-filter-btn active" id="irf-all" onclick="setInvRateFilter('all')">📋 همه</button>
+        <button class="pm-filter-btn" id="irf-loss" onclick="setInvRateFilter('loss')">🔴 زیان</button>
+        <button class="pm-filter-btn" id="irf-gain" onclick="setInvRateFilter('gain')">🟢 مفاد</button>
+      </span>
+    </div>
+    <div style="padding:14px">
+      <div id="invrate-page"></div>
     </div>
   </div>
 </div>
@@ -24323,6 +24371,7 @@ function showSection(id, btn) {
   if (id === 'chakana') navId = 'debtrasid';
   if (id === 'staffshort') navId = 'attendance';
   if (id === 'ratehist' || id === 'monthreport') navId = 'profit';
+  if (id === 'invrate') navId = 'invoices';
   if (id === 'historyview') navId = 'history';
   // نوار بخش‌ها هنگام اسکرول بالا بچسبد — به‌جز ورق، قرض‌داران و شرکت‌ها تیل
   /* نوارِ بخش‌ها در همهٔ بخش‌ها بالا می‌چسبد ─────────────────────────────────
@@ -24336,7 +24385,7 @@ function showSection(id, btn) {
   // از کادرها به صفحهٔ جدا می‌روند «تمام صفحه» نبودند). فقط همین صفحه‌ها؛ بقیه 1000px می‌مانند.
   // داشبورد هم تمام‌عرض است تا کارت‌هایش روی کامپیوتر بزرگ و خوانا بمانند
   // (خودِ #sec-dashboard حداکثر 1440px است، پس روی نمایشگرِ خیلی پهن هم کش نمی‌آید)
-  const _WIDE = ['dashboard','rasid','debtrasid','chakana','oldloans','oldloansmoney','debtsum','debtsummoney','priceloss','plsource','plperson'];
+  const _WIDE = ['dashboard','rasid','debtrasid','chakana','oldloans','oldloansmoney','debtsum','debtsummoney','priceloss','plsource','plperson','invrate'];
   document.body.classList.toggle('sec-wide', _WIDE.indexOf(id) !== -1);
   if (btn) {
     btn.classList.add('active');
@@ -24351,6 +24400,7 @@ function showSection(id, btn) {
   if (id === 'priceloss') { try { renderPriceLossPage(); } catch(e) {} }   // فقط وقتی PRICE_LOSS_ON روشن باشد به این‌جا می‌رسد
   if (id === 'plperson') { try { renderPlPersonPage(); } catch(e) {} }
   if (id === 'plsource') { try { renderPLBreakdown(); } catch(e) {} }
+  if (id === 'invrate') { try { renderInvRatePage(); } catch(e) {} }
   if (id === 'oldloans') { try { _renderAgingPanel('fuel', 'aging-list'); } catch(e) {} }
   if (id === 'oldloansmoney') { try { _renderAgingPanel('money', 'aging-list-money'); } catch(e) {} }
   if (id === 'chakana') { try { renderChakana(); } catch(e) {} }
@@ -31696,6 +31746,18 @@ function _updatePersonFilterBtns() {
   });
 }
 // ===== حساب‌های جداگانه داخل یک شخص (هر کدام دفتر مستقل) =====
+/* نامِ نمایشیِ یک حسابِ فرعی ─────────────────────────────────────────────────
+   گزارشِ صاحب ریپو: «وقتی آن هدر را به فرعی تغییر می‌دهم، در کادرِ بالا خالی
+   است — بنویسد فرعی.» حسابِ فرعیِ بی‌نام تا امروز «حساب» نوشته می‌شد که با
+   حسابِ اصلی اشتباه می‌شد. حالا خودش را معرفی می‌کند؛ اگر چند فرعی باشد،
+   شمارهٔ خودش هم می‌آید. هیچ داده‌ای این‌جا نوشته نمی‌شود — فقط نمایش. */
+function _subDisplayName(person, sub) {
+  const nm = String((sub && sub.name) || '').trim();
+  if (nm) return nm;
+  const subs = ((person && person.subs) || []).filter(Boolean);
+  const i = subs.indexOf(sub);
+  return (subs.length > 1 && i >= 0) ? ('فرعی ' + n2fa(i + 1)) : 'فرعی';
+}
 function _renderSubBar(person) {
   const sel = document.getElementById('pm-acct-select');
   if (!person) return;
@@ -31712,7 +31774,7 @@ function _renderSubBar(person) {
       sel.style.display = '';
       let html = '<option value="">📒 حساب اصلی</option>';
       subs.forEach(s => {
-        const nm = (s.name || 'حساب').replace(/</g, '&lt;');
+        const nm = _subDisplayName(person, s).replace(/</g, '&lt;');
         html += '<option value="' + s.id + '"' + (s.id === currentSubId ? ' selected' : '') + '>📄 ' + nm + '</option>';
       });
       sel.innerHTML = html;
@@ -31738,7 +31800,7 @@ function _pmUpdateNames(person, sub) {
   const ttl = document.getElementById('personModalTitle');
   const bn = document.getElementById('pm-bigname');
   if (sub) {
-    const nm = sub.name || 'حساب';
+    const nm = _subDisplayName(person, sub);
     if (ttl) ttl.textContent = '📄 ' + nm;
     if (bn) bn.textContent = '📄 ' + nm;
     return;
@@ -33402,6 +33464,134 @@ function _plReportAll() {
   list.sort((a, b) => ((b.t.loss + b.iv.loss) - (a.t.loss + a.iv.loss))
                    || (b.t.principal - a.t.principal) || (b.t.openFuel - a.t.openFuel));
   return { list: list, g: g };
+}
+
+/* ══ صفحهٔ «مقایسهٔ نرخ فاکتورها» ═══════════════════════════════════════════
+   گزارشِ صاحب ریپو: «کسی با نرخ ۶۰ از من فاکتور می‌گیرد و پولش را دیر می‌آورد؛
+   وقتِ تایید با نرخِ اتحادیهٔ همان روز مقایسه شود که چقدر در نرخِ تیل و قیمت فرق
+   افتاده — یک کادرِ جدا در بخشِ فاکتورها و با زدنش یک صفحهٔ جداگانه.»
+
+   ⚠️ این‌جا هیچ عددی ساخته یا ذخیره نمی‌شود. هر دو نرخ از قبل روی خودِ فاکتور
+   قفل شده‌اند و همان‌ها خوانده می‌شوند:
+     • rate_on_create  — فیِ خودِ فاکتور در روزِ ثبت (اگر نبود، price_per_liter)
+     • rate_on_approve — نرخِ اتحادیهٔ روزی که دکمهٔ «تایید» زده شد
+   هر دو را invApprove می‌نویسد و invRevert پاک می‌کند؛ همان چیزی که گزارشِ
+   «زیان افزایش قیمت» هم از آن استفاده می‌کند (_plInvView). پس عددِ این صفحه با
+   آن گزارش همیشه یکی است.
+   فاکتورِ در صف نرخِ تایید ندارد — فقط یک پیش‌نمایش با نرخِ اتحادیهٔ همین لحظه
+   نشان داده می‌شود و در هیچ جمعی شمرده نمی‌شود. */
+let _invRateFilter = 'all';   // all | loss | gain
+function setInvRateFilter(f) {
+  _invRateFilter = f;
+  ['all', 'loss', 'gain'].forEach(k => {
+    const el = document.getElementById('irf-' + k);
+    if (el) el.classList.toggle('active', k === f);
+  });
+  renderInvRatePage();
+}
+/* فهرستِ فاکتورها با هر دو نرخ — تازه‌ترین اول */
+function _invRateRows() {
+  return _invList().map(v => {
+    const w = _plInvView(v);
+    w.name = (v.customer_name || '').trim();
+    w.money = !!v.by_money;
+    return w;
+  }).sort((a, b) => (b.no || 0) - (a.no || 0));
+}
+/* جمع‌های همین صفحه — کارتِ بخشِ فاکتورها هم از همین می‌خواند */
+function _invRateTotals() {
+  let loss = 0, gain = 0, n = 0, pend = 0, liters = 0;
+  _invRateRows().forEach(r => {
+    if (!r.approved) { pend++; return; }
+    if (!r.hasDiff) return;
+    n++; liters += r.liters;
+    if (r.diff > 0) loss += r.diff; else gain += -r.diff;
+  });
+  return { loss: loss, gain: gain, net: loss - gain, n: n, pend: pend, liters: liters };
+}
+function renderInvRatePage() {
+  const wrap = document.getElementById('invrate-page');
+  if (!wrap) return;
+  const afn = _plAfn, rnd2 = _plRnd2;
+  const all = _invRateRows();
+  const t = _invRateTotals();
+
+  if (!all.length) {
+    wrap.innerHTML = '<div style="text-align:center;padding:26px;color:var(--muted);font-size:0.86rem">'
+      + 'هنوز فاکتوری ثبت نشده — این صفحه با اولین فاکتور پر می‌شود.</div>';
+    return;
+  }
+
+  const cards = '<div class="pl-loss-sum">'
+    + _plCard('فاکتورهای سنجیده‌شده', n2fa(t.n) + ' فاکتور', 'var(--blue)',
+        'فاکتورهایی که تایید شده‌اند و هم فیِ خودشان و هم نرخِ اتحادیهٔ روزِ تایید را دارند')
+    + _plCard('مجموع لیتر', n2fa(rnd2(t.liters)) + ' لیتر', 'var(--accent)',
+        'لیترِ همان فاکتورهای سنجیده‌شده')
+    + _plCard('زیان اختلاف نرخ', afn(t.loss), t.loss > 0 ? 'var(--red)' : 'var(--green)',
+        'جمعِ فاکتورهایی که نرخِ اتحادیهٔ روزِ تایید از فیِ خودِ فاکتور بالاتر بوده')
+    + _plCard('مفاد اختلاف نرخ', afn(t.gain), 'var(--green)',
+        'جمعِ فاکتورهایی که نرخِ اتحادیهٔ روزِ تایید از فیِ خودِ فاکتور پایین‌تر بوده')
+    + _plCard('خالص', afn(t.net), t.net > 0 ? 'var(--red)' : 'var(--green)',
+        'زیان منهای مفاد — مثبت یعنی روی هم زیان کرده‌اید', '(زیان − مفاد)')
+    + _plCard('در صفِ تایید', n2fa(t.pend) + ' فاکتور', 'var(--muted)',
+        'تا تایید نشوند نرخِ تاییدی ندارند و در هیچ جمعی شمرده نمی‌شوند', '(بی‌جمع)')
+    + '</div>';
+
+  const list = all.filter(r => {
+    if (_invRateFilter === 'loss') return r.approved && r.hasDiff && r.diff > 0;
+    if (_invRateFilter === 'gain') return r.approved && r.hasDiff && r.diff < 0;
+    return true;
+  });
+
+  const rows = list.map((r, i) => {
+    const ft = r.ftype === 'diesel' ? '🟤 دیزل' : '⛽ پطرول';
+    let ra, dpl, tot, note;
+    if (r.approved && r.hasDiff) {
+      const c = r.diff > 0 ? 'var(--red)' : (r.diff < 0 ? 'var(--green)' : 'var(--muted)');
+      ra  = n2fa(rnd2(r.ra));
+      dpl = '<span style="color:' + c + ';font-weight:900">' + (r.dpl > 0 ? '+' : '') + n2fa(rnd2(r.dpl)) + '</span>';
+      tot = '<span style="color:' + c + ';font-weight:900">' + (r.diff > 0 ? '+' : '') + n2fa(Math.round(r.diff)) + '</span>';
+      note = r.diff > 0 ? '🔴 زیان' : (r.diff < 0 ? '🟢 مفاد' : '⚪ بی‌تفاوت');
+    } else if (!r.approved) {
+      ra  = r.nowRate > 0 ? '<span style="color:var(--muted)">' + n2fa(rnd2(r.nowRate)) + '</span>' : '—';
+      dpl = r.pdpl ? '<span style="color:var(--muted)">' + (r.pdpl > 0 ? '+' : '') + n2fa(rnd2(r.pdpl)) + '</span>' : '—';
+      tot = r.pendDiff ? '<span style="color:var(--muted)">' + (r.pendDiff > 0 ? '+' : '') + n2fa(Math.round(r.pendDiff)) + '</span>' : '—';
+      note = '🟡 در صف — پیش‌نمایش با نرخِ امروز';
+    } else {
+      ra = '—'; dpl = '—'; tot = '—';
+      note = '⚪ نرخِ روزِ تایید ثبت نشده';
+    }
+    return '<tr>'
+      + '<td>' + n2fa(i + 1) + '</td>'
+      + '<td style="font-weight:900;color:var(--accent)">' + n2fa(r.no) + '</td>'
+      + '<td>' + escFa(r.date || '—') + '</td>'
+      + '<td style="font-weight:700">' + escFa(r.name || '—') + '</td>'
+      + '<td>' + ft + '</td>'
+      + '<td>' + (r.liters ? n2fa(rnd2(r.liters)) : '—') + '</td>'
+      + '<td style="font-weight:800">' + (r.rc ? n2fa(rnd2(r.rc)) : '—') + '</td>'
+      + '<td style="font-weight:800">' + ra + '</td>'
+      + '<td>' + dpl + '</td>'
+      + '<td>' + tot + '</td>'
+      + '<td style="font-size:0.78rem">' + note + '</td>'
+      + '</tr>';
+  }).join('');
+
+  wrap.innerHTML = cards
+    + '<div style="font-size:0.76rem;color:var(--muted);margin:2px 0 10px;line-height:1.8">'
+    + 'هر ردیف فیِ خودِ فاکتور را با نرخِ اتحادیهٔ <b>روزی که تاییدش کردید</b> می‌سنجد. '
+    + '«تفاوت هر لیتر» مثبت یعنی تیل تا روزِ تایید گران‌تر شده (زیان) و منفی یعنی ارزان‌تر شده (مفاد). '
+    + 'فاکتورهای در صف فقط پیش‌نمایش‌اند و در هیچ جمعی نیستند.'
+    + '</div>'
+    + '<div class="pl-loss-wrap"><table class="pl-loss-tbl" style="min-width:940px"><thead><tr>'
+    + '<th>#</th><th>شماره فاکتور</th><th>تاریخ</th><th>مشتری</th><th>نوع تیل</th><th>لیتر</th>'
+    + '<th>فیِ فاکتور<br><small>روزِ ثبت</small></th><th>نرخ اتحادیه<br><small>روزِ تایید</small></th>'
+    + '<th>تفاوت هر لیتر</th><th>تفاوت کل<br><small>افغانی</small></th><th>وضعیت</th>'
+    + '</tr></thead><tbody>'
+    + (rows || '<tr><td colspan="11" style="padding:18px;color:var(--muted)">در این فیلتر چیزی نیست</td></tr>')
+    + '</tbody><tfoot><tr>'
+    + '<td colspan="9" style="text-align:center">خالص (زیان − مفاد)</td>'
+    + '<td style="color:' + (t.net > 0 ? 'var(--red)' : 'var(--green)') + '">' + n2fa(Math.round(t.net)) + '</td>'
+    + '<td></td></tr></tfoot></table></div>';
 }
 
 // ── صفحهٔ جداگانهٔ گزارش ──────────────────────────────────────────────────────
@@ -44874,6 +45064,15 @@ function openStaffPage() {
   try { if ((window.location.hash || '') !== '#staff') history.replaceState(null, '', '#staff'); } catch (e) {}
   // صفحهٔ کارمند همیشه و بدون استثنا فقط‌خواندنی است — حتی اگر مدیر قبلاً وارد
   // شده باشد، با باز شدن این صفحه نقش به نظاره‌گر برمی‌گردد (مدیر با رمز برمی‌گردد)
+  /* ⚠️ نقشِ پیشین نگه داشته می‌شود تا با بستنِ همین صفحه پس بیاید ─────────────
+     گزارشِ صاحب ریپو: «برنامه یخ می‌زند، کادرها کار می‌کنند ولی هیچ چیزی در
+     هیچ کادری نوشته نمی‌شود و برنامه شده مثل بخشِ نظاره‌گر.»
+     ریشه‌اش همین‌جا بود: این‌جا نقش به «نظاره‌گر» می‌رفت ولی closeStaffPage هرگز
+     پسش نمی‌آورد. یک‌بار باز و بستهٔ صفحهٔ کارمند کافی بود تا کلِ برنامه در
+     حالتِ فقط‌خواندنی بماند — و چون قاعدهٔ CSSِ نظاره‌گر
+     (input/textarea/select{pointer-events:none}) بی‌سروصداست، به‌نظر «یخ‌زدن»
+     می‌آمد نه قفلِ نقش. تنها راهِ برگشت، رفرشِ برنامه بود. */
+  if (!_staffPrevRole) _staffPrevRole = currentRole;
   currentRole = 'viewer';
   applyRole();
   document.body.classList.add('staff-view');
@@ -44892,12 +45091,24 @@ function closeStaffPage() {
   try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) {}
   // اگر برنامهٔ اصلی باز نیست (کارمند بدون رمز آمده بود)، برگرد به صفحهٔ قفل
   const app = document.getElementById('app');
-  if (!app || app.style.display === 'none') {
+  const appOpen = !!(app && app.style.display !== 'none');
+  if (!appOpen) {
     const ls = document.getElementById('lockScreen');
     if (ls) ls.style.display = 'flex';
     try { _showChatFabs(false); _lsCalcBtnShow(true); } catch (e) {}
   }
+  /* نقشِ پیش از صفحهٔ کارمند پس می‌آید — توضیحِ کاملش کنارِ openStaffPage.
+     فقط وقتی برنامهٔ اصلی روی صفحه است؛ اگر کارمند بدون رمز آمده بود، صفحهٔ
+     قفل برمی‌گردد و نقش باید همان «نظاره‌گر» بماند. */
+  const back = _staffPrevRole;
+  _staffPrevRole = null;
+  if (appOpen && back && back !== currentRole) {
+    currentRole = back;
+    try { applyRole(); } catch (e) {}
+  }
 }
+/* نقشِ کاربر پیش از باز شدنِ صفحهٔ کارمند (تا با بستنش همان پس بیاید) */
+let _staffPrevRole = null;
 // وقتی داده از سرور یا هم‌گام‌سازی تازه شد، صفحهٔ کارمند هم (اگر باز است) تازه شود
 function _staffRefresh() {
   const el = document.getElementById('staffOverlay');
@@ -49627,7 +49838,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.408';
+const APP_VERSION = '2.9.409';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -56188,6 +56399,10 @@ function renderInvoices() {
   const ca = document.getElementById('inv-cnt-approved');
   if (cp) cp.textContent = n2fa(p);
   if (ca) ca.textContent = n2fa(a);
+  // عددِ کارتِ «مقایسهٔ نرخ فاکتورها»: خالصِ تفاوت (زیان منهای مفاد) — همان
+  // عددی که در صفحهٔ خودش هم پایینِ جدول نوشته می‌شود
+  const cr = document.getElementById('inv-cnt-rate');
+  if (cr) { try { const t = _invRateTotals(); cr.textContent = n2fa(Math.round(t.net)); } catch (e) { cr.textContent = '0'; } }
   // شمارهٔ فاکتور: خودکار پر می‌شود ولی قابل ویرایش است — اگر کاربر خودش شماره‌ای
   // نوشته (dataset.userSet) یا در حال تایپ است، دست نمی‌زنیم
   const ni = document.getElementById('inv-number');
@@ -59626,13 +59841,35 @@ select:not(.native-sel){
   outline:none; border-color:var(--accent) !important;
   box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
 }
+/* ══ کادرهای لینکِ کنارِ سربرگ ═════════════════════════════════════════════
+   خواستهٔ صاحب ریپو: «کادرِ حساب‌های چکنه و تاریخچهٔ رسید را بگذار بغلِ کادرِ
+   رفتن به قرض‌های دسته‌جمعی» و «پنج کادرِ بالای قرض‌داران هم همان‌جا، با همان
+   اندازهٔ فونت». پس این کادرها در ردیفِ سربرگ می‌نشینند و برای اینکه به ردیفِ
+   بعدی نیفتند، جمع‌وجورتر از کادرهای تمام‌عرضِ زیرِ سربرگ‌اند. */
+.sec-head-links{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.tool-link-card.tlc-slim{
+  margin:0 !important; white-space:nowrap;
+  padding:7px 12px !important; font-size:.8rem !important; border-radius:10px !important;
+}
+.tool-link-card.tlc-slim .tlc-go i{ font-size:.72rem }
 @media (min-width:1025px){
+  /* سربرگِ قرض‌داران: جستجو و دو دکمهٔ نارنجی هم‌قدِ همان کادرها شوند تا هر پنج
+     تا در یک ردیف بمانند */
+  .sec-head-acts .person-search-input{ width:180px; padding:7px 11px; font-size:.82rem }
+  .sec-head-acts .add-btn{ padding:7px 12px; font-size:.82rem }
+}
+@media (min-width:1025px){
+  /* ⚠️ این‌ها یک‌بار عمداً درشت شدند (چون در تمِ روشن دیده نمی‌شدند) و بعد
+     گزارش شد «خیلی بزرگ‌اند». قابِ پررنگ و تهْ‌رنگشان — که کارِ دیده‌شدن را
+     می‌کند — سرِ جایش است؛ فقط اندازه به بقیهٔ برنامه برگشت. */
   .sec-note-box .sec-note-draft{
-    font-size:calc(0.98rem * var(--note-font-scale, 1)) !important;
-    min-height:74px; padding:9px 12px !important;
+    font-size:calc(0.86rem * var(--note-font-scale, 1)) !important;
+    min-height:52px; padding:7px 11px !important;
   }
-  .bulk-n{ width:66px !important; padding:7px 6px !important; font-size:0.95rem !important; }
-  .bulk-box > span{ font-size:0.88rem !important; }
+  .sec-note-btn{ padding:7px 11px; font-size:.78rem }
+  .sec-note-acts .sec-note-btn{ flex:1 1 170px }
+  .bulk-n{ width:58px !important; padding:5px 6px !important; font-size:0.84rem !important; }
+  .bulk-box > span{ font-size:0.8rem !important; }
 }
 </style>
 
