@@ -1362,6 +1362,20 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
 .pm-arc-in{text-align:center;border:1px solid var(--border);border-radius:7px;background:var(--card);color:var(--txt);
   font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;padding:6px 10px;box-sizing:border-box}
 .pm-arc-in.pct{width:64px;color:var(--accent);font-weight:800}
+/* ── کادرِ کشوییِ هر جدولِ آرشیو ─────────────────────────────────────────────
+   نوار = کلیدِ باز/بسته. روی آن فقط تاریخ، روزِ هفته، ماه و شمارهٔ جدول است
+   (خواستهٔ صریحِ صاحب ریپو)؛ باقیِ چیزها داخلِ کشو می‌مانند و تا باز نشود
+   ساخته هم نمی‌شوند. */
+.harc-blk{margin-bottom:10px;border:2px solid var(--border);border-radius:13px;overflow:hidden}
+.harc-bar{display:flex;align-items:center;gap:8px;padding:11px 12px;cursor:pointer;user-select:none;
+  color:#fff;font-weight:800;font-size:0.84rem;line-height:1.7}
+.harc-bar .harc-caret{flex:0 0 auto;font-size:0.9rem;opacity:.95}
+.harc-bar .harc-lbl{flex:1;min-width:0}
+/* نوارِ ابزارِ داخلِ کشو: کادرِ توضیحات و دکمه‌ها، روی پس‌زمینهٔ خودِ کشو */
+.harc-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;row-gap:6px;padding:8px 10px;
+  border-bottom:1px solid var(--border)}
+.harc-note{flex:1;min-width:140px;background:var(--card);border:1px dashed var(--border);border-radius:8px;
+  padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;box-sizing:border-box}
 
 /* ═══ صفحهٔ «زیان ناشی از افزایش قیمت» — فقط بخش قرض‌داران، فقط گزارشی ═════════
    این صفحه هیچ نقشی در محاسبات ندارد: نه بدهی مشتری را عوض می‌کند نه الباقی را.
@@ -23877,6 +23891,33 @@ function _hcDateLabel(dateStr) {
    گزارشِ صاحب ریپو: «بالای آرشیو نوشته هفتهٔ ۴مِ ماه — این یعنی چی؟» یعنی
    همان تاریخ در هفتهٔ چندمِ ماه بوده؛ ولی «۴م» شبیهِ یک عددِ حسابی دیده می‌شد.
    حالا «هفتهٔ چهارمِ ماه» نوشته می‌شود که خودش خودش را توضیح می‌دهد. */
+/* ── نوشتهٔ نوارِ کشوییِ هر جدولِ آرشیو ─────────────────────────────────────
+   خواستهٔ صریحِ صاحب ریپو: روی نوار فقط چهار چیز باشد و بس —
+   «۱۴۰۵/۹/۹ · یکشنبه · ماه اسد · جدول دوم». هرچه دیگر بود (دکمه‌ها، شمارِ
+   ردیف، کادرهای خلاصهٔ پطرول/دیزل، نوارِ فیِ خرید، کادرِ توضیحات) داخلِ همان
+   کشو رفت و تا باز نشود دیده نمی‌شود.
+   شمارهٔ جدول از ترتیبِ *ساخته‌شدن* می‌آید (قدیمی‌ترین = جدولِ اول) تا با
+   آرشیوِ تازه، شمارهٔ جدول‌های قبلی جابه‌جا نشود. */
+const _ARCH_ORD = ['اول','دوم','سوم','چهارم','پنجم','ششم','هفتم','هشتم','نهم','دهم',
+                   'یازدهم','دوازدهم','سیزدهم','چهاردهم','پانزدهم'];
+function _archOrdWord(no) {
+  return (no > 0 && _ARCH_ORD[no - 1]) ? _ARCH_ORD[no - 1] : n2fa(no);
+}
+function _archBarLabel(dateStr, no) {
+  const s = String(dateStr == null ? '' : dateStr).trim();
+  const bits = [];
+  if (s && /\d/.test(s)) {
+    bits.push(escFa(s));
+    let wd = '';
+    try { wd = _faWeekdayOf(s) || ''; } catch (e) {}
+    if (wd) bits.push(escFa(wd));
+    const mo = parseInt(toEnDigits(s).split('/')[1], 10);
+    const mName = (mo >= 1 && mo <= 12) ? (SHAMSI_MONTHS[mo - 1] || '') : '';
+    if (mName) bits.push('ماه ' + escFa(mName));
+  } else bits.push('بی‌تاریخ');
+  if (no > 0) bits.push('جدول ' + _archOrdWord(no));
+  return bits.join(' · ');
+}
 function _archDateLabel(dateStr) {
   const s = String(dateStr == null ? '' : dateStr).trim();
   if (!s || !/\d/.test(s)) return '';
@@ -30224,8 +30265,7 @@ const PumpGrid = (function () {
        کادر اندازه گرفته می‌شود — با هر قراردادی درست است. */
     this.sc.addEventListener('scroll', function () {
       self.scrollLeft = self._xOff();
-      self.paint();
-      self._placeEditor();
+      self.paint();     // جای کادرِ تایپ هم داخلِ همان رسم گذاشته می‌شود
     }, { passive: true });
     /* اسکرولِ عمودی دستِ خودِ مودال است، نه این کادر. هر اسکرولی در هر جای صفحه
        (capture) می‌تواند جای پنجرهٔ چسبان را عوض کند، پس همان‌جا دوباره حساب
@@ -30380,8 +30420,7 @@ const PumpGrid = (function () {
     this.space.style.width = this._W + 'px';
     this.scrollLeft = this._xOff();
     this._syncTop(true);
-    this.paint();
-    this._placeEditor();
+    this.paint();     // جای کادرِ تایپ همان‌جا و با همان عددِ اسکرول گذاشته می‌شود
   };
   /* بلندیِ «صفحه‌ای» که جدول در آن دیده می‌شود = ظرفِ اسکرولِ بالادست (بدنهٔ
      مودال)، وگرنه خودِ پنجرهٔ مرورگر. */
@@ -30405,16 +30444,17 @@ const PumpGrid = (function () {
   /* فاصلهٔ پنجرهٔ چسبان از سرِ ظرف = همان مقدارِ «اسکرول‌شدهٔ» جدول. خودِ مرورگر
      آن را بین صفر و (بلندیِ جدول − بلندیِ پنجره) نگه می‌دارد، پس نیازی به
      محاسبهٔ دستی نیست. */
-  Grid.prototype._syncTop = function (force) {
-    let t = 0;
+  Grid.prototype._topOff = function () {
     try {
       const a = this.vp.getBoundingClientRect(), b = this.host.getBoundingClientRect();
-      t = Math.max(0, Math.round(a.top - b.top - (this.host.clientTop || 0)));
-    } catch (e) { return; }
+      return Math.max(0, Math.round(a.top - b.top - (this.host.clientTop || 0)));
+    } catch (e) { return this.scrollTop || 0; }
+  };
+  Grid.prototype._syncTop = function (force) {
+    const t = this._topOff();
     if (!force && t === this.scrollTop) return;
     this.scrollTop = t;
-    this.paint();
-    this._placeEditor();
+    this.paint();     // جای کادرِ تایپ هم داخلِ همان رسم گذاشته می‌شود
   };
   /* خانهٔ باز‌شده اگر بیرونِ پنجره افتاد، خودِ مودال کمی اسکرول می‌شود تا دیده
      شود — همان کاری که مرورگر برای کادرهای تایپیِ جدولِ همیشگی می‌کند. */
@@ -30494,6 +30534,17 @@ const PumpGrid = (function () {
                    pick: m.pickFont || ('700 ' + (fs - 1) + 'px Vazirmatn, sans-serif') };
     const n = sp.count();
     const ed = this.edit || { r: -1, c: -1 };
+    /* ⚠️ آفستِ اسکرول همین‌جا و *تازه* خوانده می‌شود، نه از مقدارِ ذخیره‌شده ──
+       گزارشِ صاحب ریپو: «کادرهای نوشتاری با اسکرول جابه‌جا می‌شن».
+       ریشه‌اش این بود: مقدارِ ذخیره‌شده فقط با رویدادِ اسکرول یا refresh تازه
+       می‌شد، ولی جای محتوا با چیزهای دیگری هم عوض می‌شود — عرضِ ذخیره‌شدهٔ
+       ستون‌ها که یک فریم بعد اعمال می‌شود، باز شدنِ کشوی آرشیو، تغییرِ اندازهٔ
+       فونت. بعد از آن‌ها بوم با آفستِ کهنه کشیده می‌شد ولی کادرِ تایپ (که
+       *داخلِ* خودِ محتوا می‌نشیند) سرِ جای درستش بود — یعنی کادر روی خانهٔ
+       دیگری می‌افتاد؛ در یک اندازه‌گیریِ واقعی ۳۳ پیکسل اختلاف دیده شد.
+       حالا هر دو از یک عددِ تازه می‌آیند، پس هرگز از هم جدا نمی‌شوند. */
+    this.scrollLeft = this._xOff();
+    this.scrollTop = this._topOff();
     const y0 = this.scrollTop, x0 = this.scrollLeft;
     const headP = Math.round(headH);      // بلندیِ سربرگ روی پرده
     const hy = -y0;                       // بالای سربرگ، در مختصاتِ دیده‌شده
@@ -30636,6 +30687,15 @@ const PumpGrid = (function () {
       ctx.strokeStyle = footBrd; ctx.beginPath();
       ctx.moveTo(0, fy + footP - .5); ctx.lineTo(w, fy + footP - .5); ctx.stroke();
     }
+    /* ⚠️ جای کادرِ تایپ *در همین فریم* گذاشته می‌شود، نه جدا ────────────────
+       گزارشِ صاحب ریپو: «کادرهای نوشتاری با اسکرول جابه‌جا می‌شن، سرِ جاشون
+       ثابت وایستن». ریشه: بوم با requestAnimationFrame کشیده می‌شد ولی جای
+       کادر همان لحظهٔ رویدادِ اسکرول عوض می‌شد — یعنی یک فریم زودتر. با هر
+       اسکرول، کادر یک فریم جلوتر از خانه‌اش می‌افتاد و روی گوشی (که اسکرولش
+       چندین فریم جلوتر از جاوااسکریپت است) این اختلاف دیده می‌شد و کادر از
+       خانه‌اش می‌لغزید. حالا هر دو با هم و از روی *یک* مقدارِ اسکرول انجام
+       می‌شوند، پس کادر هرگز از خانه‌اش جدا نمی‌شود. */
+    this._placeEditor();
   };
   /* از نقطهٔ لمس/کلیک به «کدام ردیف، کدام ستون» */
   Grid.prototype._at = function (e) {
@@ -30709,8 +30769,8 @@ const PumpGrid = (function () {
     if (this.inp.type !== t) this.inp.type = t;
     this.inp.value = cell.raw == null ? '' : cell.raw;
     this.inp.placeholder = cell.placeholder || '';
-    this._placeEditor();
     this.inp.style.display = 'block';
+    this.paint();     // جای کادر را همان رسم می‌گذارد (تکِ منبعِ حقیقت)
   };
   Grid.prototype.open = function (r, ci) {
     const cols = this._cols || this.layout();
@@ -31623,11 +31683,36 @@ function _pgSampleWidgets(tbl, tr, m, k) {
 }
 
 /* ── سوارکردن و برداشتنِ آینه ─────────────────────────────────────────────── */
+/* ── ظرفِ جدول: بومِ آینه باید *بیرونِ* هر ظرفِ اسکرول/برش بنشیند ────────────
+   گزارشِ صاحب ریپو دربارهٔ جدول‌های آرشیو: «زیرِ جدول یک جای خالیِ بزرگ می‌ماند
+   و بقیهٔ ردیف‌ها اصلاً دیده نمی‌شوند».
+   ریشه: جدولِ آرشیو دو پوسته دارد — `<div class="xls-wrap" style="overflow:hidden">`
+   و داخلش `<div style="overflow-x:auto">`. نسخهٔ پیشین فقط پوستهٔ اول را
+   می‌شناخت (آن هم تنها وقتی والدِ بی‌واسطهٔ جدول بود)، پس بوم داخلِ همان
+   `overflow-x:auto` می‌نشست. هر عنصری که overflow دارد برای `position:sticky`
+   یک «ظرفِ اسکرول» است، و «پنجرهٔ چسبانِ» موتور به‌جای مودال به همان دیوِ ریز
+   می‌چسبید: پنجره هیچ‌وقت تکان نمی‌خورد، پس فقط همان یک تکهٔ اولِ جدول کشیده
+   می‌شد و بقیهٔ بلندیِ ظرف خالی می‌ماند — دقیقاً همان «جای خالیِ بزرگ».
+   حالا از خودِ جدول بالا می‌رویم تا وقتی والد «فقط پوستهٔ همین جدول» است
+   (یک فرزند، یک جدول) و یا کلاسِ ظرف دارد یا برش/اسکرول می‌زند. پس بوم بیرونِ
+   همهٔ آن‌ها می‌نشیند و پنجرهٔ چسبانش دوباره به خودِ مودال می‌چسبد.
+   ⚠️ شرطِ «یک فرزند» جدی است: بدونِ آن ممکن بود تا یک کارتِ کامل بالا برویم و
+   با پنهان کردنِ ظرف، عنوان و دکمه‌های همان کارت هم ناپدید شوند. */
 function _pgHolderOf(tbl) {
-  const w = tbl.parentNode;
-  if (w && w.nodeType === 1 && /\b(xls-wrap|tbl-wrap|ro-wrap)\b/.test(w.className || '')
-      && w.querySelectorAll('table').length === 1) return w;
-  return tbl;
+  var node = tbl, p = tbl.parentNode;
+  for (var i = 0; i < 4 && p && p.nodeType === 1 && p !== document.body; i++) {
+    if (p.children.length !== 1) break;
+    if (p.querySelectorAll('table').length !== 1) break;
+    var wrap = /\b(xls-wrap|tbl-wrap|ro-wrap)\b/.test(p.className || '');
+    var clip = false;
+    try {
+      var cs = getComputedStyle(p);
+      clip = /(auto|scroll|hidden|overlay)/.test(cs.overflowX + ' ' + cs.overflowY);
+    } catch (e) {}
+    if (!wrap && !clip) break;
+    node = p; p = p.parentNode;
+  }
+  return node;
 }
 function _pgMirrorSpec(tbl, st) {
   const TD = function (r, ci) {
@@ -36164,32 +36249,37 @@ function _renderHistoryPanel(person) {
         <textarea id="hnb-${h.id}" class="note-field" placeholder="📝 توضیحات این جدول..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;resize:none;box-sizing:border-box" oninput="updateHistoryNote('${pid}','${h.id}',this.value)">${escFa(h.note||'')}</textarea>
       </div>`;
     /* ── سربرگِ هر جدولِ آرشیو ────────────────────────────────────────────────
-       خواستهٔ صریحِ صاحب ریپو (این سیزن): «آن کادرِ ↩️ برگشت به حساب چیست؟ از آن
-       بردار، نمی‌خواهم. یک کادرِ دیگر هم هست: باز کردن — آن را هم بردار.»
-       پس هر دو دکمه از سربرگ رفتند. باز و بستهٔ جدول از دست نرفته: خودِ نوارِ
-       سربرگ (تاریخ و شمارِ ردیف) کلیدِ باز/بسته است — یک نشانهٔ ▾/▸ هم کنارش
-       است. این عمدی است و «فقط زیبایی» نیست: جدولِ آرشیوِ بسته اصلاً ساخته
-       نمی‌شود و همین چیزی است که برنامه را با ده‌ها آرشیو روان نگه می‌دارد
-       (توضیحش بالاتر، کنارِ _histIsOpen). دکمه‌ای برنگردانید — نوار خودش کلید است.
-       نوشتهٔ تاریخ هم می‌گوید این تاریخ چیست («بسته شد: …») — پیش از این فقط یک
-       تاریخِ لخت بود و صاحب ریپو پرسید «این یعنی چه؟». */
-    const _headTip = _open ? 'بستنِ جدولِ این آرشیو' : 'باز کردنِ جدولِ این آرشیو';
-    return `<div id="hist-blk-${pid}-${h.id}" style="margin-bottom:16px;border:2px solid ${ac};border-radius:13px;overflow:hidden">
-      <div style="background:${ac};padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
-        <span onclick="toggleHistoryOpen('${h.id}')" title="${_headTip}" style="font-weight:800;font-size:0.82rem;color:#fff;white-space:nowrap;cursor:pointer;user-select:none">${_open ? '▾' : '▸'} 📋 بسته شد: ${escFa(_archDateLabel(h.createdAt) || (h.createdAt||''))}</span>
-        <input id="hn-${h.id}" value="${escFa(h.headerNote||'')}" placeholder="📝 توضیحات این جدول..." oninput="updateHistoryHeaderNote('${pid}','${h.id}',this.value)"
-          style="flex:1;min-width:130px;background:rgba(255,255,255,0.16);border:1px dashed rgba(255,255,255,0.6);border-radius:7px;padding:4px 10px;color:#fff;font-family:'Vazirmatn',sans-serif;font-size:0.78rem;font-weight:700;box-sizing:border-box">
-        <div style="display:flex;align-items:center;gap:6px">
-          <span onclick="toggleHistoryOpen('${h.id}')" title="${_headTip}" style="font-size:0.72rem;color:rgba(255,255,255,0.85);cursor:pointer;user-select:none">${n2fa(rows.length)} ردیف</span>
-          <button onclick="toggleHistoryMode('${pid}','${h.id}')" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.5);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">🔁 ${hMoney?'تیل':'پول'}</button>
-          <button onclick="pdfPersonHistory('${pid}','${h.id}')" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.5);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">📄 PDF</button>
-          <button onclick="deletePersonHistory('${pid}','${h.id}')" style="background:transparent;border:1px solid rgba(255,255,255,0.45);border-radius:5px;color:#fff;cursor:pointer;padding:2px 7px;font-size:0.7rem;font-family:'Vazirmatn',sans-serif">🗑️ حذف کل</button>
-        </div>
+       خواستهٔ صریحِ صاحب ریپو (این سیزن): «کادرهای کشویی کن — بزنم جدولِ آرشیو
+       بیاید. آن‌هایی که در کادرِ قرمزند روی صفحه نباشند؛ روی کادرِ کشویی فقط
+       این‌ها باشند: ۱۴۰۵/۹/۹ و بغلش یکشنبه، ماه اسد، جدول دوم.»
+       پس نوار فقط همان چهار تکه است و *هرچه دیگر* — کادرِ توضیحات، شمارِ ردیف،
+       دکمه‌های 🔁/PDF/حذف، کادرهای خلاصهٔ پطرول و دیزل، نوارِ فیِ خرید و فیصدی،
+       فیلترِ پطرول/دیزل، خودِ جدول و کادرِ یادداشت — داخلِ کشو رفت.
+       دکمه‌ای برای باز/بسته برنگردانید: خودِ نوار کلید است (نشانهٔ ▾/▸ کنارش).
+       این عمدی است و «فقط زیبایی» نیست: آرشیوِ بسته حالا *هیچ* عنصری نمی‌سازد
+       (پیش از این هم جدولش ساخته نمی‌شد، ولی کادرهای خلاصه‌اش می‌ماند)، و همین
+       است که برنامه را با ده‌ها آرشیو روان نگه می‌دارد. */
+    const _headTip = _open ? 'بستنِ این جدولِ آرشیو' : 'باز کردنِ این جدولِ آرشیو';
+    /* شمارهٔ جدول از ترتیبِ ساخته‌شدن (نه از ترتیبِ نمایش) — فهرست معکوس نشان
+       داده می‌شود، پس شمارهٔ هر جدول با آمدنِ آرشیوِ تازه عوض نمی‌شود. */
+    const hNo = history.length - hi;
+    const _btn = `background:transparent;border:1.5px solid ${ac}77;border-radius:7px;color:${ac};cursor:pointer;padding:4px 9px;font-size:0.74rem;font-weight:800;font-family:'Vazirmatn',sans-serif`;
+    return `<div id="hist-blk-${pid}-${h.id}" class="harc-blk" style="border-color:${ac}">
+      <div class="harc-bar" onclick="toggleHistoryOpen('${h.id}')" title="${_headTip}" style="background:${ac}">
+        <span class="harc-caret">${_open ? '▾' : '▸'}</span>
+        <span class="harc-lbl">📋 ${_archBarLabel(h.createdAt, hNo)}</span>
       </div>
-      <div style="background:var(--dark)">${fuelHtml}${_open ? '' :
-        `<div onclick="toggleHistoryOpen('${h.id}')" style="padding:8px 12px 12px;color:var(--muted);font-size:0.78rem;font-weight:700;cursor:pointer;user-select:none">
-           ▸ برای دیدنِ جدولِ این آرشیو (${n2fa(rows.length)} ردیف) روی همین نوار یا سربرگِ بالا بزنید
-         </div>`}${tableHtml}</div>
+      ${!_open ? '' : `<div style="background:var(--dark)">
+        <div class="harc-tools">
+          <input id="hn-${h.id}" class="harc-note" value="${escFa(h.headerNote||'')}" placeholder="📝 توضیحات این جدول..."
+            oninput="updateHistoryHeaderNote('${pid}','${h.id}',this.value)">
+          <span class="pm-arc-lbl">${n2fa(rows.length)} ردیف</span>
+          <button type="button" onclick="toggleHistoryMode('${pid}','${h.id}')" style="${_btn}">🔁 ${hMoney?'تیل':'پول'}</button>
+          <button type="button" onclick="pdfPersonHistory('${pid}','${h.id}')" style="${_btn}">📄 PDF</button>
+          <button type="button" onclick="deletePersonHistory('${pid}','${h.id}')" style="${_btn};border-color:var(--red);color:var(--red)">🗑️ حذف کل</button>
+        </div>
+        ${fuelHtml}${tableHtml}
+      </div>`}
     </div>`;
   }).join('');
   /* ردیف‌های خودکارِ «رسید/فیصدی» بعد از ساخته‌شدنِ جدول‌ها گذاشته می‌شوند —
@@ -36313,11 +36403,25 @@ function _histIsOpen(hid, hi) {
   if (_histOpenSet === null) return hi === 0;
   return _histOpenSet.has(hid) || (hi === 0 && !_histOpenSet.has('!' + hid));
 }
+/* ⚠️ باز/بسته از *وضعِ دیده‌شده* حساب می‌شود، نه از بودن در فهرست ────────────
+   باگ: تازه‌ترین آرشیو پیش‌فرض باز است ولی نامش در _histOpenSet نیست؛ نسخهٔ
+   پیشین «نبودن در فهرست» را «بسته» می‌گرفت، پس اولین زدنِ نوارِ همان آرشیو
+   بازش می‌کرد (یعنی هیچ اتفاقی نمی‌افتاد) و باید دوبار می‌زدی تا بسته شود.
+   حالا همان تابعی که هنگام رسم تصمیم می‌گیرد (_histIsOpen) این‌جا هم پرسیده
+   می‌شود، پس یک زدن همیشه وضع را برعکس می‌کند. */
 function toggleHistoryOpen(hid) {
+  const p = _curPerson();
+  let hi = -1;
+  try {
+    const hs = ((_acctOf(p) || {}).tableHistory) || [];
+    const k = hs.findIndex(x => x && x.id === hid);
+    if (k >= 0) hi = hs.length - 1 - k;      // فهرست معکوس نشان داده می‌شود
+  } catch (e) {}
+  const wasOpen = _histIsOpen(hid, hi);
   if (_histOpenSet === null) _histOpenSet = new Set();
-  if (_histOpenSet.has(hid)) { _histOpenSet.delete(hid); _histOpenSet.add('!' + hid); }
+  if (wasOpen) { _histOpenSet.delete(hid); _histOpenSet.add('!' + hid); }
   else { _histOpenSet.delete('!' + hid); _histOpenSet.add(hid); }
-  const p = _curPerson(); if (p) _renderHistoryPanel(p);
+  if (p) _renderHistoryPanel(p);
 }
 function _resetHistOpen() { _histOpenSet = null; }
 // ویرایشِ «فیِ خرید»ِ یک آرشیو — فقط یادداشت، در هیچ محاسبه‌ای نیست
@@ -51083,7 +51187,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.406';
+const APP_VERSION = '2.9.407';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
