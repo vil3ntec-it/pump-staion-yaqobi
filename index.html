@@ -25692,7 +25692,7 @@ function _pumpDocOverlay(doc, title) {
      کلیدِ قدیمی، تنظیماتِ ذخیره‌شدهٔ کاربر پیش‌فرضِ تازه را نمی‌گرفت و تاریخ‌ها
      اصلاً نمی‌آمدند. تنظیماتِ دستیِ کاربر (حاشیه، مقیاس …) یک‌بار به پیش‌فرض
      برمی‌گردد؛ همه‌شان از همان پنجرهٔ «تنظیمات» دوباره در دسترس‌اند. */
-  var KEY = 'pumpPrintStudio_v3';
+  var KEY = 'pumpPrintStudio_v4';
   var DEF = {
     copies: 1, collate: true, what: 'all', from: 1, to: 1,
     orient: 'portrait', paper: 'A4', cw: 210, ch: 297,
@@ -25705,11 +25705,14 @@ function _pumpDocOverlay(doc, title) {
        «چرا آن سربرگِ جدول در صفحهٔ دیگر هم هست؟ نباید باشد، گیج‌کننده می‌شود.»
        گزینه‌اش سرِ جایش هست (زبانهٔ «جدول» در تنظیمِ ورق)، فقط پیش‌فرض خاموش است. */
     gridlines: true, repeatHead: false, color: 'color',
-    /* سه تاریخ روی هر ورق (خواستهٔ صاحب ریپو): شمسی بالا و وسطِ سربرگ،
-       قمری و میلادی کنجِ پایینِ سمتِ راست. تاریخِ داخلِ خودِ سند برداشته شد،
-       پس این‌جا تنها جای تاریخ است و ورق هم شلوغ نمی‌شود. */
-    hdrL: '', hdrC: '&[Date]', hdrR: '',
-    ftrL: '', ftrC: 'ورق &[Page] از &[Pages]', ftrR: '&[قمری] · &[میلادی]',
+    /* هر سه تاریخ کنجِ پایینِ سمتِ راست، هم‌خط با شمارهٔ ورق (خواستهٔ صاحب ریپو).
+       پیش از این شمسی وسطِ سربرگ می‌نشست و درست روی تیترِ خودِ سند می‌افتاد
+       («ورق روز — پمپ یعقوبی — تاریخ: …») — دو تاریخ در یک نگاه و روی هم.
+       حالا سربرگ خالی است (پس اصلاً کشیده نمی‌شود) و هر سه تاریخ پهلوی هم در
+       پاورقی‌اند. فاصله‌شان «em space» است نه فاصلهٔ ساده: فاصلهٔ ساده در HTML
+       جمع می‌شود و هر سه به هم می‌چسبیدند. */
+    hdrL: '', hdrC: '', hdrR: '',
+    ftrL: '', ftrC: 'ورق &[Page] از &[Pages]', ftrR: '&[شمسی] · &[قمری] · &[میلادی]',
     /* گزینه‌های تازه — همان‌هایی که در Page Setup اکسل هست و تا حالا نبود */
     centerH: false, centerV: false,      // وسط‌چین روی ورق (افقی/عمودی)
     fitW: 1, fitH: 1,                    // «جا دادن در N ورق پهنا × M ورق بلندا»
@@ -26479,7 +26482,9 @@ function _pumpDocOverlay(doc, title) {
           '<div class="xtok" id="xpr-tokens">' +
             '<button type="button" data-t="&[Page]">شمارهٔ ورق</button>' +
             '<button type="button" data-t="&[Pages]">تعداد ورق</button>' +
-            '<button type="button" data-t="&[Date]">تاریخ</button>' +
+            '<button type="button" data-t="&[Date]">تاریخ شمسی</button>' +
+            '<button type="button" data-t="&[قمری]">تاریخ قمری</button>' +
+            '<button type="button" data-t="&[میلادی]">تاریخ میلادی</button>' +
             '<button type="button" data-t="&[Time]">ساعت</button>' +
             '<button type="button" data-t="&[File]">نامِ گزارش</button>' +
           '</div>' +
@@ -30480,6 +30485,7 @@ const PumpGrid = (function () {
     const headV = m.headVline || vline;           // خطِ عمودیِ سربرگ
     const headBrd = m.headBrd || c.brd;           // خطِ ضخیمِ زیرِ سربرگ
     const footBrd = m.footBrd || headBrd;         // خطِ ضخیمِ بالای ردیفِ جمله
+    const footV = m.footVline || headV;           // خطِ عمودیِ بینِ خانه‌های جمله
     const fs = sp.fontSize || 13;
     const FONT = { cell: m.cellFont || ('700 ' + fs + 'px Vazirmatn, sans-serif'),
                    idx: m.idxFont || ('700 ' + fs + 'px Vazirmatn, sans-serif'),
@@ -30487,6 +30493,7 @@ const PumpGrid = (function () {
                    foot: m.footFont || ('900 ' + fs + 'px Vazirmatn, sans-serif'),
                    pick: m.pickFont || ('700 ' + (fs - 1) + 'px Vazirmatn, sans-serif') };
     const n = sp.count();
+    const ed = this.edit || { r: -1, c: -1 };
     const y0 = this.scrollTop, x0 = this.scrollLeft;
     const headP = Math.round(headH);      // بلندیِ سربرگ روی پرده
     const hy = -y0;                       // بالای سربرگ، در مختصاتِ دیده‌شده
@@ -30533,9 +30540,13 @@ const PumpGrid = (function () {
         }
         ctx.font = cell.idx ? FONT.idx : FONT.cell;
         ctx.fillStyle = cell.color ? (c[cell.color] || cell.color) : (cell.idx && m.idxColor ? m.idxColor : c.txt);
-        const t = cell.text == null ? '' : String(cell.text);
+        /* ⚠️ خانه‌ای که همین حالا در حالِ تایپ است، نوشته‌اش کشیده نمی‌شود: کادرِ
+           تایپ نامرئی و بی‌پس‌زمینه است و روی همین خانه نشسته، پس اگر بوم هم
+           نوشته را بکشد، دو نوشته روی هم می‌افتد. */
+        const inEdit = (ed.r === r && ed.c === i);
+        const t = inEdit ? '' : (cell.text == null ? '' : String(cell.text));
         /* خانه‌های چندخطی (مثلِ «الباقی»ِ جدولِ شرکت‌ها: افغانی بالا، دالر پایین) */
-        if (cell.lines && cell.lines.length > 1) {
+        if (!inEdit && cell.lines && cell.lines.length > 1) {
           const L = cell.lines, lh = Math.min(20, rowP / (L.length + .35));
           let ly = y + rowP / 2 - (L.length - 1) * lh / 2;
           ctx.textAlign = 'center';
@@ -30550,7 +30561,7 @@ const PumpGrid = (function () {
           ctx.fillText(_pgFit(ctx, t, cw2 - 10), cx + (cc.w - cw2) + cw2 / 2, y + rowP / 2);
         }
         if (cell.chip) _pgChip(ctx, cx, y, cc.w, rowP, cell.chip, m);
-        if (cell.placeholder && !t) {
+        if (!inEdit && cell.placeholder && !t) {
           ctx.fillStyle = c.muted; ctx.textAlign = 'center';
           ctx.font = FONT.cell;
           ctx.globalAlpha = .65;
@@ -30594,17 +30605,22 @@ const PumpGrid = (function () {
       const dfCol = (this._m && this._m.footColor) || c.headTxt;
       for (let i = 0; i < cols.length; i++) {
         const f0 = sp.foot(cols[i].col);
-        if (f0 == null || f0 === '') continue;
-        const f = (typeof f0 === 'object') ? f0 : { text: String(f0) };
         /* خانه‌های فوتر می‌توانند مثل جدولِ همیشگی چند ستون را با هم بگیرند
            (خانهٔ «جمله» colspan دارد) و متنِ چندخطی و رنگ و فونتِ خودشان را
            داشته باشند (خانهٔ «الباقی»). */
-        const span = Math.max(1, Math.min(f.span || 1, cols.length - i));
+        const f = (f0 == null || f0 === '') ? null
+                : ((typeof f0 === 'object') ? f0 : { text: String(f0) });
+        const span = f ? Math.max(1, Math.min(f.span || 1, cols.length - i)) : 1;
         let cw = 0;
         for (let k = 0; k < span; k++) cw += cols[i + k].w;
         const cx = cols[i + span - 1].x - x0;
         i += span - 1;
         if (cx + cw < 0 || cx > w) continue;
+        /* ⚠️ خطِ عمودی برای *هر* خانه کشیده می‌شود، حتی خانهٔ خالی (مثلِ ستونِ
+           «حذف») — وگرنه شبکهٔ ردیفِ جمله وسطِ راه قطع می‌شد. */
+        ctx.strokeStyle = footV; ctx.beginPath();
+        ctx.moveTo(cx + .5, fy); ctx.lineTo(cx + .5, fy + footP); ctx.stroke();
+        if (!f) continue;
         ctx.font = f.font || FONT.foot;
         ctx.fillStyle = f.color || dfCol;
         const lines = f.lines && f.lines.length ? f.lines : [f.text == null ? '' : String(f.text)];
@@ -30616,6 +30632,9 @@ const PumpGrid = (function () {
           ly += lh;
         }
       }
+      /* خطِ بستنِ زیرِ ردیفِ جمله — تهِ جدول باز نماند */
+      ctx.strokeStyle = footBrd; ctx.beginPath();
+      ctx.moveTo(0, fy + footP - .5); ctx.lineTo(w, fy + footP - .5); ctx.stroke();
     }
   };
   /* از نقطهٔ لمس/کلیک به «کدام ردیف، کدام ستون» */
@@ -30702,6 +30721,9 @@ const PumpGrid = (function () {
     if (!cell0 || cell0.auto) return;      // ردیف‌های خودکار فقط نمایش‌اند
     this._commit(true);
     this._load(r, ci);
+    /* نوشتهٔ همان خانه باید فوراً از بوم برداشته شود (کادرِ تایپِ نامرئی جایش
+       را می‌گیرد)، وگرنه تا اولین بازکشیدن، دو نوشته روی هم دیده می‌شود. */
+    this.paint();
     /* ⚠️ فوکوس یک تیک دیرتر: روی گوشی، بعد از pointerup هنوز یک رویدادِ click
        در راه است؛ اگر همان لحظه فوکوس بدهیم، همان click فوکوس را می‌گیرد و
        کادر بی‌صدا بسته می‌شود (باگ: «می‌زنم ولی چیزی باز نمی‌شود»). */
@@ -30715,15 +30737,16 @@ const PumpGrid = (function () {
     const cols = this._cols || this.layout();
     const cc = cols[e.c];
     if (!cc) { this.inp.style.display = 'none'; return; }
-    /* کادرِ تایپ دقیقاً به بلندی و فونتِ کادرهای جدولِ همیشگی، وسطِ خانه */
+    /* ⚠️ کادرِ تایپ دقیقاً روی *کلِ* خانه می‌نشیند، نه یک مستطیلِ کوچک‌ترِ وسطِ
+       آن. چون نامرئی است، هر پیکسل کوچک‌تر بودن یعنی نوشته کمی جابه‌جا دیده
+       شود و لمس هم به لبه‌های خانه نرسد. */
     const m = this._m || {};
     const rowP = this._rowY(e.r + 1) - this._rowY(e.r);
-    const ih = Math.round(Math.min(rowP - 6, Math.max(24, m.inpH || (rowP - 10))));
-    this.inp.style.left = (cc.x + 3) + 'px';
+    this.inp.style.left = (cc.x + 1) + 'px';
     // ⚠️ افقی: مختصاتِ محتوا (داخلِ ظرفِ اسکرولِ افقی) — عمودی: مختصاتِ پنجره
-    this.inp.style.top = (this._rowY(e.r) + Math.round((rowP - ih) / 2) - this.scrollTop) + 'px';
-    this.inp.style.width = (cc.w - 6) + 'px';
-    this.inp.style.height = ih + 'px';
+    this.inp.style.top = (this._rowY(e.r) + 1 - this.scrollTop) + 'px';
+    this.inp.style.width = (cc.w - 2) + 'px';
+    this.inp.style.height = Math.max(18, rowP - 2) + 'px';
     if (m.inpFontSize) this.inp.style.fontSize = m.inpFontSize;
     if (m.cellColor) this.inp.style.color = m.cellColor;
   };
@@ -30737,7 +30760,7 @@ const PumpGrid = (function () {
     if (write && cc) {
       try { this.spec.setCell(e.r, cc.col, this.inp.value); } catch (err) {}
       this.refresh();
-    }
+    } else this.paint();   // نوشتهٔ خانه که هنگام تایپ کشیده نمی‌شد، برگردد
   };
   Grid.prototype._key = function (ev) {
     const e = this.edit;
@@ -31103,7 +31126,7 @@ function _pmGridMetrics() {
       m.footFont = fc.fontWeight + ' ' + fc.fontSize + ' Vazirmatn, sans-serif';
       m.footColor = fc.color; m.footH = ftd.getBoundingClientRect().height * k;
       m.footLS = fc.letterSpacing === 'normal' ? '0px' : fc.letterSpacing;
-      m.footBrd = fc.borderTopColor;
+      m.footBrd = fc.borderTopColor; m.footVline = fc.borderLeftColor;
       const bg = _pgBg(fc) || _pgBg(getComputedStyle(ftd.parentNode));
       if (bg) m.footBg = bg;
     }
@@ -31543,7 +31566,7 @@ function _pgTblMetrics(tbl, st) {
       const fc = getComputedStyle(ftd);
       m.footFont = fc.fontWeight + ' ' + fc.fontSize + ' Vazirmatn, sans-serif';
       m.footColor = fc.color; m.footH = ftd.getBoundingClientRect().height * k;
-      m.footBrd = fc.borderTopColor;
+      m.footBrd = fc.borderTopColor; m.footVline = fc.borderLeftColor;
       m.footLS = fc.letterSpacing === 'normal' ? '0px' : fc.letterSpacing;
       const bg = _pgBg(fc) || _pgBg(getComputedStyle(ftd.parentNode));
       if (bg) m.footBg = bg;
@@ -51060,7 +51083,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.405';
+const APP_VERSION = '2.9.406';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -60566,12 +60589,21 @@ body.uf-picking .uf-target{ outline:2px solid var(--green) !important; outline-o
 .pg-host .pg-scroll{ position:absolute; inset:0; overflow-x:auto; overflow-y:hidden;
   -webkit-overflow-scrolling:touch; }
 .pg-host .pg-space{ position:relative; height:100%; pointer-events:none; }
+/* ⚠️ کادرِ تایپ «نامرئی» است — خواستهٔ صریحِ صاحب ریپو: «اون کادر نوشتاری خیلی
+   تیره است و دیده می‌شه، اونو نامرئی کن». پیش از این یک مستطیلِ دورش با رنگِ
+   accent (در تمِ آمیتیست: بنفش) و پس‌زمینهٔ var(--dark) (در تمِ روشن: سفید)
+   داشت که *کوچک‌تر از خودِ خانه* بود، پس با هر دست‌زدن یک کادرِ سفیدِ نصفه وسطِ
+   خانه ظاهر می‌شد. حالا نه مرز دارد نه رنگ و دقیقاً اندازهٔ خودِ خانه است، پس
+   تایپ کردن مثل جدولِ همیشگی بی‌سروصدا انجام می‌شود.
+   پس‌زمینهٔ شفاف تنها وقتی درست است که بوم نوشتهٔ همان خانه را *نکشد* — وگرنه
+   دو نوشته روی هم می‌افتاد؛ همین کار در _draw انجام می‌شود (خانهٔ در حالِ
+   ویرایش رد می‌شود). */
 .pg-host .pg-edit{
   position:absolute; display:none; box-sizing:border-box; z-index:3;
   pointer-events:auto;     /* .pg-space کلیک نمی‌گیرد؛ خودِ کادرِ تایپ باید بگیرد */
-  border:2px solid var(--accent); border-radius:4px; background:var(--dark); color:var(--txt);
+  border:0; border-radius:0; background:transparent; color:var(--txt);
   font-family:'Vazirmatn',sans-serif; font-size:0.86rem; font-weight:800; text-align:center;
-  padding:2px 4px; outline:none;
+  padding:0 4px; outline:none; caret-color:var(--accent);
 }
 /* شماره‌های داخلِ کادرِ تایپ، بدونِ فلشِ بالا/پایینِ مرورگر (جا می‌گیرد و ناجور است) */
 .pg-host .pg-edit::-webkit-outer-spin-button, .pg-host .pg-edit::-webkit-inner-spin-button{
