@@ -30266,9 +30266,16 @@ const PumpGrid = (function () {
   Grid.prototype._xOff = function () {
     try {
       const a = this.sc.getBoundingClientRect(), b = this.space.getBoundingClientRect();
-      return Math.max(0, Math.round(a.left - b.left));
+      /* ⚠️ بدونِ Math.max(0,…): وقتی جدول از کادر باریک‌تر است، در چیدمانِ
+         راست‌به‌چپ محتوا به لبهٔ راست می‌چسبد و این عدد منفی می‌شود. صفر کردنش
+         کلِ جدول را حدودِ ۱۰ پیکسل نسبت به جدولِ همیشگی جابه‌جا می‌کرد (همان
+         جای خالیِ نوارِ اسکرول که ظرفِ جدول سمتِ چپ نگه می‌دارد). */
+      return Math.round(a.left - b.left);
     } catch (e) { return 0; }
   };
+  /* بالای ردیفِ r در مختصاتِ محتوا. بلندیِ ردیف اعشاری است، پس گِرد کردن فقط
+     همین‌جا انجام می‌شود تا خط‌ها تیز بمانند و خطا هم جمع نشود. */
+  Grid.prototype._rowY = function (r) { return Math.round(this.headH + r * this.rowH); };
   /* ستون‌ها از راست به چپ چیده می‌شوند (مثل خودِ جدول‌های برنامه) */
   Grid.prototype.layout = function () {
     const cols = this.spec.cols();
@@ -30276,10 +30283,17 @@ const PumpGrid = (function () {
        شبیهِ آن. (گزارشِ صاحب ریپو: «طول و عرضِ جدولِ قبلی را ندارد».) */
     const mw = this._m && this._m.colW;
     if (mw && mw.length === cols.length) {
-      let x0 = 0; const out0 = [];
-      for (let i = 0; i < cols.length; i++) { const w = Math.round(mw[i]); out0.push({ col: cols[i], w: w, x: 0, _x: x0 }); x0 += w; }
-      for (let i = 0; i < out0.length; i++) out0[i].x = x0 - out0[i]._x - out0[i].w;
-      this._cols = out0; this._W = x0;
+      /* پهناها اعشاری‌اند؛ مرزها یک‌بار گِرد می‌شوند تا مجموع دقیقاً همان پهنای
+         جدولِ همیشگی بماند و هیچ ستونی یک پیکسل نلغزد. */
+      let acc = 0; const out0 = [];
+      for (let i = 0; i < cols.length; i++) {
+        const x1 = Math.round(acc), x2 = Math.round(acc + mw[i]);
+        out0.push({ col: cols[i], w: x2 - x1, x: 0, _x: x1 });
+        acc += mw[i];
+      }
+      const W0 = Math.round(acc);
+      for (let i = 0; i < out0.length; i++) out0[i].x = W0 - out0[i]._x - out0[i].w;
+      this._cols = out0; this._W = W0;
       return out0;
     }
     let total = 0;
@@ -30326,7 +30340,7 @@ const PumpGrid = (function () {
       const m = this.spec.metrics();
       if (m) {
         this._m = m;
-        if (m.rowH > 8) this.rowH = m.rowH;
+        if (m.rowH > 8) this.rowH = m.rowH;      // اعشاری می‌ماند — عمداً
         if (m.headH > 8) this.headH = m.headH;
         if (m.footH > 8) this.footH = m.footH;
       }
@@ -30337,7 +30351,7 @@ const PumpGrid = (function () {
        هیچ سقفی نیست و هیچ اسکرولی از خودش ندارد: کلِ مودال اسکرول می‌شود و
        نوارِ بالای جدول (شمارهٔ تماس، فیصدی، آرشیو، فاکتورها) هم با آن می‌رود.
        فقط «پنجرهٔ چسبان» به اندازهٔ صفحه است تا بوم بی‌اندازه بزرگ نشود. */
-    const natural = Math.max(60, Math.round(this.headH + n * this.rowH + this.footH + 2));
+    const natural = Math.max(60, Math.round(this.headH + n * this.rowH + this.footH) + 2);
     const viewH = Math.min(natural, this._viewH());
     if (this._setH !== natural) { this._setH = natural; this.host.style.height = natural + 'px'; }
     if (this._setV !== viewH) { this._setV = viewH; this.vp.style.height = viewH + 'px'; this._sized = false; }
@@ -30387,7 +30401,7 @@ const PumpGrid = (function () {
   Grid.prototype._reveal = function () {
     const e = this.edit;
     if (e.r < 0) return;
-    const y = this.headH + e.r * this.rowH - this.scrollTop;
+    const y = this._rowY(e.r) - this.scrollTop;
     const vh = this._h || this.vp.clientHeight;
     let d = 0;
     if (y < 0) d = y - 8;
@@ -30459,21 +30473,29 @@ const PumpGrid = (function () {
                    pick: m.pickFont || ('700 ' + (fs - 1) + 'px Vazirmatn, sans-serif') };
     const n = sp.count();
     const y0 = this.scrollTop, x0 = this.scrollLeft;
+    const headP = Math.round(headH);      // بلندیِ سربرگ روی پرده
     const hy = -y0;                       // بالای سربرگ، در مختصاتِ دیده‌شده
-    const fy = headH + n * rowH - y0;     // بالای ردیفِ جمله
+    const fy = this._rowY(n) - y0;        // بالای ردیفِ جمله
+    const footP = Math.round(headH + n * rowH + footH) - this._rowY(n);
     const first = Math.max(0, Math.floor((y0 - headH) / rowH));
     const last = Math.min(n, Math.ceil((y0 + h - headH) / rowH) + 1);
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = surface; ctx.fillRect(0, 0, w, h);
     ctx.textBaseline = 'middle';
     ctx.lineWidth = 1;
+    /* فاصلهٔ حروف هم از خودِ جدول می‌آید (سرستون‌ها letter-spacing دارند) —
+       بی آن، پهنای نوشتهٔ سربرگ‌ها با جدولِ همیشگی یکی نمی‌شد. */
+    const LS = { cell: m.cellLS || '0px', head: m.headLS || '0px', foot: m.footLS || '0px' };
+    const setLS = function (v) { try { ctx.letterSpacing = v; } catch (e) {} };
+    setLS(LS.cell);
     // ── بدنه ──
     for (let r = first; r < last; r++) {
-      const y = headH + r * rowH - y0;
+      const y = this._rowY(r) - y0;
+      const rowP = this._rowY(r + 1) - this._rowY(r);   // ۷۱ و ۷۰ یک‌درمیان، مثل خودِ جدول
       const c0 = sp.cell(r, cols[0].col);
-      if (c0 && c0.auto) { if (m.autoBg) { _pgFill(ctx, m.autoBg, 0, y, w, rowH); } }
-      else if (r % 2) { _pgFill(ctx, c.zebra, 0, y, w, rowH); }
-      if (r === this._hover) { _pgFill(ctx, c.hover, 0, y, w, rowH); }
+      if (c0 && c0.auto) { if (m.autoBg) { _pgFill(ctx, m.autoBg, 0, y, w, rowP); } }
+      else if (r % 2) { _pgFill(ctx, c.zebra, 0, y, w, rowP); }
+      if (r === this._hover) { _pgFill(ctx, c.hover, 0, y, w, rowP); }
       for (let i = 0; i < cols.length; i++) {
         const cc = cols[i], cx = cc.x - x0;
         if (cx + cc.w < 0 || cx > w) continue;
@@ -30483,15 +30505,15 @@ const PumpGrid = (function () {
            «نوع تیل» دو دکمهٔ گِردِ روی‌هم است (پطرول بالا، دیزل پایین) با نقطهٔ
            انتخاب، و «حذف» یک دکمهٔ سرخِ گِرد — نه یک نوشتهٔ ساده. */
         if (cell.kind === 'pick') {
-          _pgPick(ctx, cx, y, cc.w, rowH, cell, FONT.pick, m);
+          _pgPick(ctx, cx, y, cc.w, rowP, cell, FONT.pick, m);
           ctx.strokeStyle = vline; ctx.beginPath();
-          ctx.moveTo(cx + .5, y); ctx.lineTo(cx + .5, y + rowH); ctx.stroke();
+          ctx.moveTo(cx + .5, y); ctx.lineTo(cx + .5, y + rowP); ctx.stroke();
           continue;
         }
         if (cell.kind === 'btn') {
-          _pgBtn(ctx, cx, y, cc.w, rowH, cell, m);
+          _pgBtn(ctx, cx, y, cc.w, rowP, cell, m);
           ctx.strokeStyle = vline; ctx.beginPath();
-          ctx.moveTo(cx + .5, y); ctx.lineTo(cx + .5, y + rowH); ctx.stroke();
+          ctx.moveTo(cx + .5, y); ctx.lineTo(cx + .5, y + rowP); ctx.stroke();
           continue;
         }
         ctx.font = cell.idx ? FONT.idx : FONT.cell;
@@ -30499,48 +30521,49 @@ const PumpGrid = (function () {
         const t = cell.text == null ? '' : String(cell.text);
         if (t) {
           ctx.textAlign = 'center';
-          ctx.fillText(_pgFit(ctx, t, cc.w - 10), cx + cc.w / 2, y + rowH / 2);
+          ctx.fillText(_pgFit(ctx, t, cc.w - 10), cx + cc.w / 2, y + rowP / 2);
         }
         if (cell.placeholder && !t) {
           ctx.fillStyle = c.muted; ctx.textAlign = 'center';
           ctx.font = FONT.cell;
           ctx.globalAlpha = .65;
-          ctx.fillText(_pgFit(ctx, cell.placeholder, cc.w - 10), cx + cc.w / 2, y + rowH / 2);
+          ctx.fillText(_pgFit(ctx, cell.placeholder, cc.w - 10), cx + cc.w / 2, y + rowP / 2);
           ctx.globalAlpha = 1;
         }
         // خطِ عمودیِ بینِ خانه‌ها
         ctx.strokeStyle = vline; ctx.beginPath();
-        ctx.moveTo(cx + .5, y); ctx.lineTo(cx + .5, y + rowH); ctx.stroke();
+        ctx.moveTo(cx + .5, y); ctx.lineTo(cx + .5, y + rowP); ctx.stroke();
       }
       ctx.strokeStyle = c.brd; ctx.beginPath();
-      ctx.moveTo(0, y + rowH - .5); ctx.lineTo(w, y + rowH - .5); ctx.stroke();
+      ctx.moveTo(0, y + rowP - .5); ctx.lineTo(w, y + rowP - .5); ctx.stroke();
     }
     if (!n && sp.emptyText) {
       ctx.fillStyle = c.muted; ctx.textAlign = 'center';
       ctx.font = '700 ' + (fs + 1) + 'px Vazirmatn, sans-serif';
-      ctx.fillText(sp.emptyText(), w / 2, headH - y0 + 30);
+      ctx.fillText(sp.emptyText(), w / 2, headP - y0 + 30);
     }
     // ── سربرگ (بالای محتوا؛ با اسکرول بالا می‌رود، مثل جدولِ همیشگی) ──
-    if (hy + headH > 0 && hy < h) {
-      _pgFill(ctx, c.headBg, 0, hy, w, headH);
-      ctx.font = FONT.head; ctx.textAlign = 'center';
+    if (hy + headP > 0 && hy < h) {
+      _pgFill(ctx, c.headBg, 0, hy, w, headP);
+      ctx.font = FONT.head; ctx.textAlign = 'center'; setLS(LS.head);
       for (let i = 0; i < cols.length; i++) {
         const cc = cols[i], cx = cc.x - x0;
         if (cx + cc.w < 0 || cx > w) continue;
         ctx.fillStyle = c.headTxt;
-        ctx.fillText(_pgFit(ctx, cc.col.label || '', cc.w - 4), cx + cc.w / 2, hy + headH / 2);
+        ctx.fillText(_pgFit(ctx, cc.col.label || '', cc.w - 4), cx + cc.w / 2, hy + headP / 2);
         ctx.strokeStyle = headV; ctx.beginPath();
-        ctx.moveTo(cx + .5, hy); ctx.lineTo(cx + .5, hy + headH); ctx.stroke();
+        ctx.moveTo(cx + .5, hy); ctx.lineTo(cx + .5, hy + headP); ctx.stroke();
       }
       ctx.strokeStyle = headBrd; ctx.lineWidth = 2; ctx.beginPath();
-      ctx.moveTo(0, hy + headH - 1); ctx.lineTo(w, hy + headH - 1); ctx.stroke(); ctx.lineWidth = 1;
+      ctx.moveTo(0, hy + headP - 1); ctx.lineTo(w, hy + headP - 1); ctx.stroke(); ctx.lineWidth = 1;
+      setLS(LS.cell);
     }
     // ── ردیفِ جمله: درست بعد از آخرین ردیف، نه چسبیده به کفِ کادر ──
-    if (sp.foot && fy < h && fy + footH > 0) {
-      _pgFill(ctx, c.footBg, 0, fy, w, footH);
+    if (sp.foot && fy < h && fy + footP > 0) {
+      _pgFill(ctx, c.footBg, 0, fy, w, footP);
       ctx.strokeStyle = footBrd; ctx.lineWidth = 2; ctx.beginPath();
       ctx.moveTo(0, fy + .5); ctx.lineTo(w, fy + .5); ctx.stroke(); ctx.lineWidth = 1;
-      ctx.textAlign = 'center';
+      ctx.textAlign = 'center'; setLS(LS.foot);
       const dfCol = (this._m && this._m.footColor) || c.headTxt;
       for (let i = 0; i < cols.length; i++) {
         const f0 = sp.foot(cols[i].col);
@@ -30558,8 +30581,8 @@ const PumpGrid = (function () {
         ctx.font = f.font || FONT.foot;
         ctx.fillStyle = f.color || dfCol;
         const lines = f.lines && f.lines.length ? f.lines : [f.text == null ? '' : String(f.text)];
-        const lh = Math.min(20, footH / (lines.length + .35));
-        let ly = fy + footH / 2 - (lines.length - 1) * lh / 2;
+        const lh = Math.min(20, footP / (lines.length + .35));
+        let ly = fy + footP / 2 - (lines.length - 1) * lh / 2;
         for (let k = 0; k < lines.length; k++) {
           ctx.fillText(_pgFit(ctx, lines[k], cw - 8), cx + cw / 2, ly);
           ly += lh;
@@ -30646,10 +30669,11 @@ const PumpGrid = (function () {
     if (!cc) { this.inp.style.display = 'none'; return; }
     /* کادرِ تایپ دقیقاً به بلندی و فونتِ کادرهای جدولِ همیشگی، وسطِ خانه */
     const m = this._m || {};
-    const ih = Math.min(this.rowH - 6, Math.max(24, m.inpH || (this.rowH - 10)));
+    const rowP = this._rowY(e.r + 1) - this._rowY(e.r);
+    const ih = Math.round(Math.min(rowP - 6, Math.max(24, m.inpH || (rowP - 10))));
     this.inp.style.left = (cc.x + 3) + 'px';
     // ⚠️ افقی: مختصاتِ محتوا (داخلِ ظرفِ اسکرولِ افقی) — عمودی: مختصاتِ پنجره
-    this.inp.style.top = (this.headH + e.r * this.rowH + (this.rowH - ih) / 2 - this.scrollTop) + 'px';
+    this.inp.style.top = (this._rowY(e.r) + Math.round((rowP - ih) / 2) - this.scrollTop) + 'px';
     this.inp.style.width = (cc.w - 6) + 'px';
     this.inp.style.height = ih + 'px';
     if (m.inpFontSize) this.inp.style.fontSize = m.inpFontSize;
@@ -30789,45 +30813,75 @@ function _pgFill(ctx, bg, x, y, w, h) {
   ctx.fillRect(x, y, w, h);
 }
 function _pgPick(ctx, x, y, w, h, cell, font, m) {
+  /* ── دقیقاً هم‌اندازهٔ دکمه‌های «نوع تیل»ِ جدولِ همیشگی ──────────────────────
+     پهنای هر دکمه در جدولِ اصلی به اندازهٔ نوشتهٔ خودش است (پطرول پهن‌تر از
+     دیزل)، نه یک پهنای ثابت؛ بلندی، فاصله، پدینگ، گِردی و قطرِ دایرهٔ انتخاب هم
+     از همان‌جا خوانده شده‌اند (metrics). پیش از این همه یک پهنای ثابتِ حدسی
+     داشتند و همین بود که «اندازهٔ کادرها» را با جدولِ اصلی فرق می‌داد. */
   const opts = cell.opts || [];
-  const ph = Math.min(30, (h - 8) / Math.max(1, opts.length));
-  const gap = 3;
-  const totalH = opts.length * ph + (opts.length - 1) * gap;
-  let oy = y + (h - totalH) / 2;
-  const pw = Math.min(w - 6, 118);
-  const px = x + (w - pw) / 2;
-  ctx.textAlign = 'right';
+  if (!opts.length) return;
+  const bw = (m && m.pickBrd) || 1;
+  const padX = (m && m.pickPadX) || 7;
+  const gapX = (m && m.pickGapX) || 4;
+  const dot = (m && m.pickDot) || 13;
+  const gapY = (m && m.pickGapY) || 3;
+  const rad = (m && m.pickRadius) || 6;
+  const ph = Math.min((m && m.pickOptH) || 30, (h - 2 * ((m && m.pickPadY) || 3) - (opts.length - 1) * gapY) / opts.length);
+  const totalH = opts.length * ph + (opts.length - 1) * gapY;
+  let oy = Math.round(y + (h - totalH) / 2);
   ctx.font = font;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  try { ctx.letterSpacing = '0px'; } catch (e) {}
+  const fixed = gapX + dot + 2 * padX + 2 * bw;
+  const surf = (m && m.surface) || '#fff';
   opts.forEach(function (o) {
+    // ⚠️ ceil، نه round: با round پهنا نیم‌پیکسل کم می‌شد و نوشتهٔ «⛽ پطرول»
+    //    الکی با «…» بریده می‌شد.
+    const tw = Math.ceil(ctx.measureText(o.label).width);
+    let pw = tw + fixed;
+    if (pw > w - 2) pw = w - 2;
+    const px = Math.round(x + (w - pw) / 2);
     if (o.on) {
-      ctx.fillStyle = _pgAlpha(o.color, .14);
-      _pgRound(ctx, px, oy, pw, ph, 6); ctx.fill();
-      ctx.strokeStyle = o.color; ctx.lineWidth = 1;
-      _pgRound(ctx, px + .5, oy + .5, pw - 1, ph - 1, 6); ctx.stroke();
+      ctx.fillStyle = o.bg || _pgAlpha(o.color, .133);
+      _pgRound(ctx, px, oy, pw, ph, rad); ctx.fill();
+      ctx.strokeStyle = o.brd || o.color; ctx.lineWidth = bw;
+      _pgRound(ctx, px + bw / 2, oy + bw / 2, pw - bw, ph - bw, rad); ctx.stroke();
     }
+    const cx2 = px + pw - bw - padX - dot / 2, cy2 = oy + ph / 2, rr = dot / 2 - .5;
     ctx.fillStyle = o.color;
-    ctx.fillText(_pgFit(ctx, o.label, pw - 28), px + pw - 24, oy + ph / 2);
-    /* نقطهٔ انتخاب سمتِ راستِ دکمه می‌نشیند — در جدولِ همیشگی رادیو اولین چیزِ
-       داخلِ برچسب است و در چیدمانِ راست‌به‌چپ همان‌جا دیده می‌شود. */
-    const cx2 = px + pw - 12, cy2 = oy + ph / 2, rr = 5.5;
-    ctx.strokeStyle = o.color; ctx.lineWidth = 1.4;
+    ctx.fillText(_pgFit(ctx, o.label, pw - fixed), px + pw - bw - padX - dot - gapX, cy2);
+    /* دایرهٔ انتخاب، سمتِ راستِ دکمه و به شکلِ همان رادیوی خودِ مرورگر:
+       نچیده = دایرهٔ هم‌رنگِ سطحِ جدول با حلقهٔ نازک، چیده = دایرهٔ پُر با
+       نقطهٔ روشنِ وسط. */
+    ctx.beginPath(); ctx.arc(cx2, cy2, rr, 0, Math.PI * 2);
+    ctx.fillStyle = o.on ? ((m && m.radioOn) || o.color) : surf;
+    ctx.fill();
+    ctx.strokeStyle = o.on ? ((m && m.radioOn) || o.color) : ((m && m.muted) || o.color);
+    ctx.lineWidth = 1.2;
     ctx.beginPath(); ctx.arc(cx2, cy2, rr, 0, Math.PI * 2); ctx.stroke();
-    if (o.on) { ctx.fillStyle = o.color; ctx.beginPath(); ctx.arc(cx2, cy2, rr - 2.6, 0, Math.PI * 2); ctx.fill(); }
-    oy += ph + gap;
+    if (o.on) {
+      ctx.fillStyle = surf;
+      ctx.beginPath(); ctx.arc(cx2, cy2, Math.max(1.4, rr * 0.38), 0, Math.PI * 2); ctx.fill();
+    }
+    oy += ph + gapY;
   });
   ctx.lineWidth = 1;
   ctx.textAlign = 'center';
 }
 function _pgBtn(ctx, x, y, w, h, cell, m) {
-  const s = Math.min(32, h - 10, w - 8);
-  const bx = x + (w - s) / 2, by = y + (h - s) / 2;
+  // اندازه، گِردی و رنگ‌های دکمهٔ حذف، همان‌هایی که .del-btn دارد
+  const bw = Math.min((m && m.delW) || 32, w - 8);
+  const bh = Math.min((m && m.delH) || 32, h - 8);
   const col = (m && m.delColor) || '#ff5d76';
-  ctx.fillStyle = _pgAlpha(col, .1);
-  _pgRound(ctx, bx, by, s, s, 9); ctx.fill();
-  ctx.strokeStyle = _pgAlpha(col, .32); ctx.lineWidth = 1;
-  _pgRound(ctx, bx + .5, by + .5, s - 1, s - 1, 9); ctx.stroke();
+  const rad = (m && m.delRadius) || 9;
+  const bx = Math.round(x + (w - bw) / 2), by = Math.round(y + (h - bh) / 2);
+  ctx.fillStyle = (m && m.delBg) || _pgAlpha(col, .1);
+  _pgRound(ctx, bx, by, bw, bh, rad); ctx.fill();
+  ctx.strokeStyle = (m && m.delBrd) || _pgAlpha(col, .32); ctx.lineWidth = 1;
+  _pgRound(ctx, bx + .5, by + .5, bw - 1, bh - 1, rad); ctx.stroke();
   ctx.fillStyle = col;
-  ctx.font = Math.round(s * 0.52) + 'px Vazirmatn, sans-serif';
+  ctx.font = ((m && m.delFont) || '16.8px') + ' Vazirmatn, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText(cell.text || '🗑️', x + w / 2, y + h / 2);
 }
@@ -30883,26 +30937,39 @@ function _pmGridMetrics() {
   if (was === 'none') wrap.style.display = '';
   const m = {};
   try {
-    /* ⚠️ offsetWidth، نه getBoundingClientRect: مودالِ شخص با یک انیمیشنِ
-       transform باز می‌شود و rect همان لحظه اندازه‌ها را کوچک‌شده گزارش می‌کند —
-       برای همین ستون‌های موتورِ سریع حدودِ ۷٪ باریک‌تر از جدولِ همیشگی درمی‌آمدند
-       و نوشتهٔ سربرگ‌ها با «…» بریده می‌شد. offsetWidth از transform اثر نمی‌گیرد. */
+    /* ⚠️ اندازه‌ها «اعشاری» خوانده می‌شوند، نه گِرد ────────────────────────────
+       offsetWidth/offsetHeight عددِ گِردشده می‌دهند و همین، خطا را ردیف‌به‌ردیف
+       جمع می‌کرد: بلندیِ واقعیِ ردیف ۷۰٫۱۲۵ است ولی ۷۱ خوانده می‌شد، پس ردیفِ
+       دهمِ موتورِ سریع حدودِ ۹ پیکسل پایین‌تر از ردیفِ دهمِ جدولِ همیشگی می‌افتاد
+       («اندازه‌های کادرها یکی نیست»). حالا از rect خوانده می‌شود و چون مودال با
+       transform باز می‌شود، ضریبِ k آن را خنثی می‌کند. */
+    const _r = tbl.getBoundingClientRect();
+    const k = (_r.width > 1) ? (tbl.offsetWidth / _r.width) : 1;
+    m.scale = k;
     const ths = Array.prototype.slice.call(tbl.querySelectorAll('thead th'));
-    m.colW = ths.map(t => t.offsetWidth);
+    m.colW = ths.map(t => t.getBoundingClientRect().width * k);
     /* رنگِ «بومِ» جدول: خودِ جدول یک سطحِ پُررنگ دارد (--gx-tbl-surface) که با
        رنگِ کارت یکی نیست. پیش از این بوم با رنگِ کارت پُر می‌شد و همین، تهِ
        جدولِ سریع را از جدولِ همیشگی جدا می‌کرد. */
     m.surface = _pgBg(getComputedStyle(tbl)) || _pgBg(getComputedStyle(wrap));
+    m.muted = getComputedStyle(tbl).getPropertyValue('--muted').trim() || '#8b949e';
     if (ths[0]) {
       const c = getComputedStyle(ths[0]);
       m.headBg = _pgBg(c); m.headTxt = c.color;
       m.headBrd = c.borderBottomColor; m.headVline = c.borderLeftColor;
       m.headFont = c.fontWeight + ' ' + c.fontSize + ' Vazirmatn, sans-serif';
-      m.headH = ths[0].offsetHeight;
+      m.headLS = c.letterSpacing === 'normal' ? '0px' : c.letterSpacing;
+      m.headH = ths[0].getBoundingClientRect().height * k;
     }
     const tr = tbl.querySelector('#pm-body tr[data-idx]');
     if (tr) {
-      m.rowH = tr.offsetHeight;
+      /* بلندیِ ردیف از «کلِ ردیف‌ها تقسیم بر تعداد» درمی‌آید، نه از یک ردیف —
+         این‌طور خطای زیرپیکسلی هم پخش می‌شود و جدول در ردیفِ صدم هم جفت است. */
+      const _trs = tbl.querySelectorAll('#pm-body tr[data-idx]');
+      if (_trs.length > 1) {
+        const a0 = _trs[0].getBoundingClientRect(), z0 = _trs[_trs.length - 1].getBoundingClientRect();
+        m.rowH = (z0.bottom - a0.top) / _trs.length * k;
+      } else m.rowH = tr.getBoundingClientRect().height * k;
       const td0 = tr.children[0];
       if (td0) {
         const c0 = getComputedStyle(td0);
@@ -30914,7 +30981,8 @@ function _pmGridMetrics() {
       if (inp) {
         const ic = getComputedStyle(inp);
         m.cellFont = ic.fontWeight + ' ' + ic.fontSize + ' Vazirmatn, sans-serif';
-        m.cellColor = ic.color; m.inpH = inp.offsetHeight;
+        m.cellColor = ic.color; m.inpH = inp.getBoundingClientRect().height * k;
+        m.cellLS = ic.letterSpacing === 'normal' ? '0px' : ic.letterSpacing;
         m.inpFontSize = ic.fontSize;
       }
       const bar = tr.querySelector('.pm-bardagi-cell');
@@ -30922,8 +30990,42 @@ function _pmGridMetrics() {
       const op = tr.querySelector('.ft-opt.petrol'), od = tr.querySelector('.ft-opt.diesel');
       if (op) { m.petrolColor = getComputedStyle(op).color; m.pickFont = getComputedStyle(op).fontWeight + ' ' + getComputedStyle(op).fontSize + ' Vazirmatn, sans-serif'; }
       if (od) m.dieselColor = getComputedStyle(od).color;
+      /* اندازه‌های واقعیِ دکمه‌های «نوع تیل»: بلندی، فاصله، پدینگ، گِردی، و
+         اندازهٔ خودِ دایرهٔ انتخاب — تا کادرها مو‌به‌مو هم‌اندازهٔ جدولِ همیشگی
+         باشند (پیش از این همه یک پهنای ثابت داشتند). */
+      const pk = tr.querySelector('.ft-pick');
+      if (pk && op) {
+        const pc = getComputedStyle(pk), oc = getComputedStyle(op);
+        m.pickOptH = op.getBoundingClientRect().height * k;
+        m.pickGapY = parseFloat(pc.rowGap || pc.gap) || 3;
+        m.pickPadY = parseFloat(pc.paddingTop) || 3;
+        m.pickPadX = parseFloat(oc.paddingLeft) || 7;
+        m.pickGapX = parseFloat(oc.columnGap || oc.gap) || 4;
+        m.pickBrd = parseFloat(oc.borderTopWidth) || 1;
+        m.pickRadius = parseFloat(oc.borderRadius) || 6;
+        const rd = op.querySelector('input[type=radio]');
+        if (rd) {
+          m.pickDot = rd.getBoundingClientRect().width * k;
+          /* رنگِ خودِ دایرهٔ انتخاب هم از همان رادیوی واقعی: accent-color رنگِ
+             پُرشدهٔ حالتِ انتخاب است و در تمِ روشن سیاه، در تمِ تیره روشن. */
+          const rc2 = getComputedStyle(rd);
+          if (rc2.accentColor && rc2.accentColor !== 'auto') m.radioOn = rc2.accentColor;
+        }
+        const onP = tbl.querySelector('#pm-body tr[data-idx] .ft-opt.petrol.active');
+        const onD = tbl.querySelector('#pm-body tr[data-idx] .ft-opt.diesel.active');
+        if (onP) { const c1 = getComputedStyle(onP); m.petrolOnBg = c1.backgroundColor; m.petrolOnBrd = c1.borderTopColor; }
+        if (onD) { const c2 = getComputedStyle(onD); m.dieselOnBg = c2.backgroundColor; m.dieselOnBrd = c2.borderTopColor; }
+      }
       const del = tr.querySelector('.del-btn');
-      if (del) m.delColor = getComputedStyle(del).color;
+      if (del) {
+        const dc = getComputedStyle(del);
+        m.delColor = dc.color;
+        m.delW = del.getBoundingClientRect().width * k;
+        m.delH = del.getBoundingClientRect().height * k;
+        m.delBg = dc.backgroundColor; m.delBrd = dc.borderTopColor;
+        m.delRadius = parseFloat(dc.borderRadius) || 9;
+        m.delFont = dc.fontSize;
+      }
     }
     const zeb = tbl.querySelector('#pm-body tr.pm-zebra td');
     if (zeb) m.zebra = getComputedStyle(zeb).backgroundColor;
@@ -30933,7 +31035,8 @@ function _pmGridMetrics() {
     if (ftd) {
       const fc = getComputedStyle(ftd);
       m.footFont = fc.fontWeight + ' ' + fc.fontSize + ' Vazirmatn, sans-serif';
-      m.footColor = fc.color; m.footH = ftd.offsetHeight;
+      m.footColor = fc.color; m.footH = ftd.getBoundingClientRect().height * k;
+      m.footLS = fc.letterSpacing === 'normal' ? '0px' : fc.letterSpacing;
       m.footBrd = fc.borderTopColor;
       const bg = _pgBg(fc) || _pgBg(getComputedStyle(ftd.parentNode));
       if (bg) m.footBg = bg;
@@ -31003,11 +31106,15 @@ function _pmGridSpec() {
         const k0 = col.key;
         if (k0 === '#') return { text: '📌', idx: true, auto: true };
         if (k0 === 'del') return at.a.del ? { kind: 'btn', text: '🗑️', auto: true } : { text: '', auto: true };
-        if (k0 === 'ftype') return { kind: 'pick', auto: true, opts: [
-          { label: at.a.ftype === 'diesel' ? '🟤 دیزل' : '⛽ پطرول',
-            color: (at.a.ftype === 'diesel')
-              ? ((_pmGrid && _pmGrid._m && _pmGrid._m.dieselColor) || '#b7791f')
-              : ((_pmGrid && _pmGrid._m && _pmGrid._m.petrolColor) || 'var(--green)'), on: true } ] };
+        if (k0 === 'ftype') {
+          const M0 = (_pmGrid && _pmGrid._m) || {};
+          const dz = at.a.ftype === 'diesel';
+          return { kind: 'pick', auto: true, opts: [
+            { label: dz ? '🟤 دیزل' : '⛽ پطرول',
+              color: dz ? (M0.dieselColor || '#b7791f') : (M0.petrolColor || 'var(--green)'),
+              bg: dz ? M0.dieselOnBg : M0.petrolOnBg,
+              brd: dz ? M0.dieselOnBrd : M0.petrolOnBrd, on: true } ] };
+        }
         return { text: (i >= 0 && at.a.cells[i] != null) ? at.a.cells[i] : '', auto: true };
       }
       const di = (at && at.kind === 'data') ? at.di : -1;
@@ -31021,8 +31128,10 @@ function _pmGridSpec() {
       if (k === 'ftype') {
         const d = r.ftype === 'diesel';
         return { kind: 'pick', opts: [
-          { label: '⛽ پطرول', color: M.petrolColor || 'var(--green)', on: !d },
-          { label: '🟤 دیزل',  color: M.dieselColor || '#b7791f',      on: d }
+          { label: '⛽ پطرول', color: M.petrolColor || 'var(--green)', on: !d,
+            bg: M.petrolOnBg, brd: M.petrolOnBrd },
+          { label: '🟤 دیزل',  color: M.dieselColor || '#b7791f',      on: d,
+            bg: M.dieselOnBg, brd: M.dieselOnBrd }
         ] };
       }
       if (col.type === 'num') {
@@ -50427,7 +50536,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.403';
+const APP_VERSION = '2.9.404';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
