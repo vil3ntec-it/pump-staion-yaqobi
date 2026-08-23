@@ -22303,6 +22303,15 @@ function _cap(n) { return _pumpNative() ? n * 10 : n; }
    می‌آورد) تا اولین باز شدنِ صفحه سریع بماند. */
 function _pumpDesk() { try { return !!window.pumpDesktop; } catch (e) { return false; } }
 function _chunk(n) { return _pumpDesk() ? n * 3 : n; }
+/* ── خبر دادنِ مرحله‌های واقعیِ بالا آمدن به پوستهٔ برنامه ──────────────────
+   نوارِ لودینگِ برنامهٔ کامپیوتری و اپِ اندروید باید همان چیزی را نشان بدهد که
+   واقعاً انجام شده، نه یک انیمیشنِ تزئینی. هر بار که یک مرحلهٔ واقعی تمام
+   می‌شود همین صدا زده می‌شود و پوسته نوار را جلو می‌برد؛ با 'ready' پنجره باز
+   می‌شود / صفحهٔ لودینگ برداشته می‌شود. در مرورگر هیچ کاری نمی‌کند. */
+function _deskBoot(step) {
+  try { if (window.pumpDesktop && window.pumpDesktop.boot) window.pumpDesktop.boot(step); } catch (e) {}
+  try { if (window.PumpAndroid && window.PumpAndroid.boot) window.PumpAndroid.boot(step); } catch (e) {}
+}
 /* در اپ‌ها، مرورگر اجازه ندارد دادهٔ برنامه را برای «جا باز کردن» دور بیندازد */
 try {
   if (_pumpNative() && navigator.storage && navigator.storage.persist) {
@@ -25656,25 +25665,101 @@ function pumpCloseDoc() {
   if (ov) { _pumpPopEsc(ov.__esc); ov.remove(); }
   try { document.body.style.overflow = ''; } catch (e) {}
 }
+/* ── چاپ در نسخهٔ ویندوز ────────────────────────────────────────────────────
+   باگِ گزارش‌شده: در برنامهٔ کامپیوتری، زدنِ «چاپ / PDF» کلِ برنامه را یخ
+   می‌زد. علتش هم روشن است: در Electron، ‎window.print()‎ که از داخلِ خودِ صفحه
+   صدا زده شود رشتهٔ اجرای همان صفحه را می‌بندد و تا بسته شدنِ پنجرهٔ چاپِ
+   ویندوز هیچ کدِ دیگری اجرا نمی‌شود (آزموده شد: حتی ساده‌ترین دستورِ بعدی هم
+   اجرا نشد). اگر چاپگری نصب نبود یا پنجره پشتِ برنامه می‌ماند، تنها راه بستنِ
+   برنامه بود.
+   حالا سند به خودِ پوستهٔ برنامه سپرده می‌شود؛ چاپ در یک پنجرهٔ جدا انجام
+   می‌گیرد و خودِ برنامه یک لحظه هم از کار نمی‌افتد. روی گوشی و مرورگر همان
+   مسیرِ همیشگی است. */
+function _pumpDocHtml() {
+  const ov = document.getElementById('pumpDocOverlay');
+  const fr = document.getElementById('pumpDocFrame');
+  try {
+    const d = fr && fr.contentDocument;
+    if (d && d.documentElement) return '<!DOCTYPE html>\n' + d.documentElement.outerHTML;
+  } catch (e) {}
+  return (ov && ov.__html) || '';
+}
+function _pumpDocName() {
+  const t = document.querySelector('#pumpDocOverlay .pdoc-title');
+  return ((t && t.textContent) || 'سند').replace(/^[^\u0600-\u06FFa-zA-Z0-9]+/, '').trim() || 'سند';
+}
 function pumpPrintDoc() {
+  if (window.pumpDesktop && window.pumpDesktop.printDoc) {
+    const html = _pumpDocHtml();
+    if (!html) return;
+    try { showToast('🖨️ پنجرهٔ چاپ باز می‌شود…', '#3182ce'); } catch (e) {}
+    window.pumpDesktop.printDoc(html, _pumpDocName()).then(function (r) {
+      if (r && r.ok === false) { try { showToast('چاپ انجام نشد — ' + (r.error || ''), '#e53e3e'); } catch (e) {} }
+    }).catch(function () {});
+    return;
+  }
   const fr = document.getElementById('pumpDocFrame');
   if (!fr || !fr.contentWindow) return;
-  try { fr.contentWindow.focus(); fr.contentWindow.print(); }
+  try {
+    fr.contentWindow.focus();
+    const w = fr.contentWindow;
+    (w.__pumpRealPrint || w.print).call(w);
+  }
   catch (e) { try { showToast('چاپ از این دستگاه ممکن نشد', '#e53e3e'); } catch (e2) {} }
 }
+/* «ذخیرهٔ PDF» فقط در نسخهٔ ویندوز: یک فایلِ پی‌دی‌افِ واقعی با پنجرهٔ ذخیرهٔ
+   خودِ ویندوز — نه وابسته به اینکه «Microsoft Print to PDF» نصب باشد. */
+function pumpSavePdfDoc() {
+  if (!(window.pumpDesktop && window.pumpDesktop.savePdf)) return;
+  const html = _pumpDocHtml();
+  if (!html) return;
+  try { showToast('📄 در حال ساختنِ پی‌دی‌اف…', '#3182ce'); } catch (e) {}
+  window.pumpDesktop.savePdf(html, _pumpDocName()).then(function (r) {
+    if (!r || r.cancelled) return;
+    if (r.ok && r.path) {
+      try { showToast('📄 پی‌دی‌اف ذخیره شد', '#38a169'); } catch (e) {}
+      try { window.pumpDesktop.revealFile(r.path); } catch (e) {}
+    } else {
+      try { showToast('ذخیره نشد — ' + ((r && r.error) || ''), '#e53e3e'); } catch (e) {}
+    }
+  }).catch(function () {});
+}
+/* دکمه‌های «چاپ»ِ داخلِ خودِ سند (‎onclick="window.print()"‎) هم باید از همین
+   مسیر بروند، وگرنه در ویندوز همان یخ‌زدگی از داخلِ سند تکرار می‌شود. */
+try {
+  window.addEventListener('message', function (e) {
+    if (e && e.data && e.data.__pumpPrint) { try { pumpPrintDoc(); } catch (er) {} }
+  });
+} catch (e) {}
 function _pumpDocOverlay(doc, title) {
   pumpCloseDoc();
   // اسکریپتِ «چاپِ خودکار» را برمی‌داریم: داخلِ برنامه، کاربر خودش دکمهٔ چاپ را
   // می‌زند — وگرنه پنجرهٔ چاپ بلافاصله می‌پرید بالا و بستنش روی گوشی سخت بود
-  const safe = String(doc).replace(
+  let safe = String(doc).replace(
     /<script>\s*window\.onload\s*=\s*function\s*\(\s*\)\s*\{\s*window\.print\(\)\s*;?\s*\}\s*;?\s*<\/script>/gi, '');
+  /* خودِ سند هم دکمهٔ «چاپ» دارد (‎onclick="window.print()"‎). آن فراخوانی را
+     برمی‌گردانیم به همین صفحه تا در نسخهٔ ویندوز از مسیرِ پوسته برود و برنامه
+     یخ نزند؛ نسخهٔ اصلی زیرِ ‎__pumpRealPrint‎ می‌ماند تا در مرورگر/گوشی همان
+     رفتارِ همیشگی باشد. */
+  const printHook = '<script>(function(){var r=window.print;'
+    + 'window.__pumpRealPrint=function(){try{r.call(window)}catch(e){}};'
+    + 'window.print=function(){try{parent.postMessage({__pumpPrint:1},"*")}catch(e){}};'
+    + '})();<\/script>';
+  const mHead0 = safe.match(/<head[^>]*>/i);
+  if (mHead0) safe = safe.replace(mHead0[0], mHead0[0] + printHook);
+  else safe = printHook + safe;
+
   const ov = document.createElement('div');
   ov.id = 'pumpDocOverlay';
+  ov.__html = safe;
+  const pdfBtn = (window.pumpDesktop && window.pumpDesktop.savePdf)
+    ? '<button type="button" class="pdoc-btn print" onclick="pumpSavePdfDoc()">📄 ذخیرهٔ PDF</button>' : '';
   ov.innerHTML =
     '<div class="pdoc-head">' +
       '<span class="pdoc-title">' + (title ? String(title) : '📄 پیش‌نمایش سند') + '</span>' +
       '<span class="pdoc-acts">' +
-        '<button type="button" class="pdoc-btn print" onclick="pumpPrintDoc()">🖨️ چاپ / PDF</button>' +
+        pdfBtn +
+        '<button type="button" class="pdoc-btn print" onclick="pumpPrintDoc()">🖨️ چاپ' + (pdfBtn ? '' : ' / PDF') + '</button>' +
         '<button type="button" class="pdoc-btn close" onclick="pumpCloseDoc()">✕ بستن</button>' +
       '</span>' +
     '</div>' +
@@ -27251,6 +27336,21 @@ function _pumpDocOverlay(doc, title) {
       zoom();
       try { frame.contentWindow.removeEventListener('afterprint', back); } catch (e) {}
     };
+    /* در برنامهٔ ویندوز، ‎print()‎ از داخلِ صفحه کلِ برنامه را تا بسته شدنِ
+       پنجرهٔ چاپ یخ می‌زند. پس همان ورق‌های چیده‌شده را به پوستهٔ برنامه
+       می‌سپاریم: چاپ در پنجرهٔ خودش انجام می‌شود و این‌جا هیچ‌چیز قفل نمی‌شود. */
+    if (window.pumpDesktop && window.pumpDesktop.printDoc) {
+      var docHtml = '';
+      try { docHtml = '<!DOCTYPE html>\n' + frame.contentDocument.documentElement.outerHTML; } catch (e) {}
+      back();
+      if (docHtml) {
+        try { showToast('🖨️ پنجرهٔ چاپ باز می‌شود…', '#3182ce'); } catch (e) {}
+        window.pumpDesktop.printDoc(docHtml, 'ورق‌های چاپ').then(function (r) {
+          if (r && r.ok === false) { try { showToast('چاپ انجام نشد — ' + (r.error || ''), '#e53e3e'); } catch (e) {} }
+        }).catch(function () {});
+      }
+      return;
+    }
     try { frame.contentWindow.addEventListener('afterprint', back); } catch (e) {}
     try {
       frame.contentWindow.focus();
@@ -47664,11 +47764,29 @@ async function deskUpdInit() {
   try {
     window.pumpDesktop.onUpdateAvailable(info => {
       _deskUpdLatest = info && info.latest;
-      _deskUpdBtns(true, false);
-      _deskUpdSet('🎉 نسخهٔ ' + _deskUpdLatest + ' آماده است (نسخهٔ شما: ' + (info.current || APP_VERSION) + ')', 'var(--green)');
-      try { showTopToast('🎉 نسخهٔ تازهٔ برنامه (' + _deskUpdLatest + ') آماده است — تنظیمات › آپدیت برنامه', '#38a169', 8000); } catch (e) {}
+      /* پوسته نسخهٔ تازه را خودش گرفته است. سوار کردنش وسطِ کار اجباری نیست —
+         دفعهٔ بعد که برنامه باز شود خودش بالا می‌آید — ولی دکمهٔ «الان سوار کن»
+         هم سرِ جایش است. */
+      const got = !!(info && info.downloaded);
+      _deskUpdBtns(!got, got);
+      _deskUpdSet((got ? '✅ نسخهٔ ' + _deskUpdLatest + ' گرفته شد — با باز شدنِ بعدیِ برنامه سوار می‌شود'
+                       : '🎉 نسخهٔ ' + _deskUpdLatest + ' آماده است')
+                  + ' (نسخهٔ شما: ' + (info.current || APP_VERSION) + ')', 'var(--green)');
+      try {
+        showTopToast(got
+          ? '🎉 نسخهٔ ' + _deskUpdLatest + ' گرفته شد — با باز شدنِ بعدیِ برنامه خودش می‌آید'
+          : '🎉 نسخهٔ تازهٔ برنامه (' + _deskUpdLatest + ') آماده است — تنظیمات › آپدیت برنامه', '#38a169', 8000);
+      } catch (e) {}
     });
     window.pumpDesktop.onOpenPanel(() => { try { showSection('settings'); } catch (e) {} deskUpdCheck(true); });
+    /* فایلی که برنامه ذخیره کرد (بکاپ، اکسل، …) — پیش از این هیچ خبری از
+       سرانجامش نمی‌رسید و معلوم نبود کجا رفت. */
+    if (window.pumpDesktop.onFileSaved) {
+      window.pumpDesktop.onFileSaved(function (f) {
+        if (!f || !f.name) return;
+        try { showTopToast('💾 «' + f.name + '» ذخیره شد', '#38a169', 6000); } catch (e) {}
+      });
+    }
   } catch (e) {}
 }
 async function deskUpdCheck(loud) {
@@ -49838,7 +49956,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.409';
+const APP_VERSION = '2.9.410';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -53973,8 +54091,10 @@ function pdfMonthReport() {
   }
 });
 
+_deskBoot('script');          // نوارِ لودینگِ نسخهٔ ویندوز: «اجرای برنامه»
 load();
 loadTheme();
+_deskBoot('data');            // دفترها از حافظه خوانده شد
 // بکاپ خودکار روزانه: چند ثانیه بعد از باز شدن + هر 10 دقیقه نسخهٔ همان روز تازه می‌شود
 setTimeout(function(){ try { _autoDailyBackup(); } catch(e){} }, 4000);
 setInterval(function(){ try { _autoDailyBackup(); } catch(e){} }, 10 * 60 * 1000);
@@ -54058,6 +54178,14 @@ if (_isMirzaHash) {
 _initCalcDrag();
 try { _initRobotDrag(); _makeResizable('calcPanel'); _makeResizable('robotPanel'); _chatImgLightboxInit(); } catch (e) {}
 try { _stampVersion(); } catch (e) {}
+_deskBoot('render');          // بخش‌ها ساخته و چیده شدند
+/* «آماده» یعنی مرورگر واقعاً اولین قابِ صفحه را کشیده — نه یک تایمر. تا این
+   لحظه نرسد، پنجرهٔ برنامهٔ ویندوز باز نمی‌شود و کاربر صفحهٔ نیم‌ساخته نمی‌بیند. */
+/* «آماده» = رویدادِ load — یعنی همهٔ فایل و همهٔ راه‌اندازی تمام شده. عمداً
+   منتظرِ requestAnimationFrame نمی‌مانیم: تا وقتی پنجرهٔ برنامه پنهان است
+   مرورگر قابِ تصویر را به یک‌بار در ثانیه کُند می‌کند، و آن انتظار دو ثانیه‌ای
+   هیچ کارِ واقعی‌ای نبود — فقط باز شدنِ برنامه را عقب می‌انداخت. */
+window.addEventListener('load', function () { _deskBoot('ready'); });
 
 // ── ترمیمِ یک‌بارهٔ نسخهٔ 2.9.102 ────────────────────────────────────────────────
 // 1) ردیف‌های رسیدِ پولیِ فاکتورها که در نسخه‌های قبل اشتباهاً داخلِ دفترِ «واحد تیل»

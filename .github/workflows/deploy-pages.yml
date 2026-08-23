@@ -91,6 +91,7 @@ jobs:
           grab('android-latest', '.apk', 'PumpYaqobi.apk')
           grab('android-latest', 'version.txt', 'apk-version.txt')
           grab('desktop-latest', '.exe', 'PumpYaqobi-Setup.exe')
+          grab('desktop-latest', 'version.txt', 'exe-version.txt')
           PY
 
       # ── نسخهٔ سایت به‌صورت خودکار ─────────────────────────────────────────
@@ -110,23 +111,28 @@ jobs:
               return {'url': './' + path.replace(os.sep, '/'),
                       'size': os.path.getsize(path),
                       'name': os.path.basename(path)}
-          # نسخهٔ خودِ فایلِ نصبِ اندروید (کنارِ خودش منتشر می‌شود). اگر با نسخهٔ
+          # نسخهٔ خودِ هر فایلِ نصب (کنارِ خودش منتشر می‌شود). اگر با نسخهٔ
           # سایت یکی نباشد، صفحهٔ دریافت همان‌جا می‌گوید — تا دوباره پیش نیاید که
           # کاربر فایلِ نصبِ ده‌ها نسخه عقب‌تر را بگیرد.
-          apk_ver = ''
-          try:
-              apk_ver = open('downloads/apk-version.txt', encoding='utf-8').read().strip()
-          except Exception:
-              pass
+          def side_version(name):
+              try:
+                  return open('downloads/' + name, encoding='utf-8').read().strip()
+              except Exception:
+                  return ''
           android = finfo('downloads/PumpYaqobi.apk')
+          apk_ver = side_version('apk-version.txt')
           if android and apk_ver:
               android['appVersion'] = apk_ver
+          windows = finfo('downloads/PumpYaqobi-Setup.exe')
+          exe_ver = side_version('exe-version.txt')
+          if windows and exe_ver:
+              windows['appVersion'] = exe_ver
           data = {
               'version': ver,
               'buildTime': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
               'commit': (os.environ.get('GITHUB_SHA') or '')[:8],
               'android': android,
-              'windows': finfo('downloads/PumpYaqobi-Setup.exe'),
+              'windows': windows,
               'ios': {'mode': 'pwa'}
           }
           with open('version.json', 'w', encoding='utf-8') as f:

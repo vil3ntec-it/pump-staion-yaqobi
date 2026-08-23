@@ -25,6 +25,26 @@ contextBridge.exposeInMainWorld('pumpDesktop', {
   },
 
   openExternal: (url) => ipcRenderer.invoke('shell:open', url),
+
+  // ── مرحله‌های واقعیِ بالا آمدن ──
+  // خودِ برنامه این‌ها را در همان لحظه‌ای صدا می‌زند که کار واقعاً تمام شده
+  // (دفترها خوانده شد، جدول‌ها چیده شد، آمادهٔ کار است) و نوارِ لودینگ دقیقاً
+  // همان را نشان می‌دهد. اگر صدا زده نشود، پوسته خودش بعد از مهلتی تمامش می‌کند.
+  boot: (step) => { try { ipcRenderer.send('boot:step', String(step || '')); } catch (e) {} },
+
+  // ── چاپ و ذخیرهٔ پی‌دی‌اف (کارِ خودِ پوسته، نه صفحه) ──
+  // window.print()‎ی که از داخلِ صفحه صدا زده شود، رشتهٔ اجرای خودِ برنامه را
+  // قفل می‌کند و تا بسته شدنِ پنجرهٔ چاپ همه‌چیز یخ می‌زند. این دو، سند را به
+  // فرایندِ اصلی می‌سپارند: برنامه یک لحظه هم از کار نمی‌افتد.
+  printDoc: (html, title) => ipcRenderer.invoke('doc:print', { html: String(html || ''), title: String(title || '') }),
+  savePdf:  (html, name)  => ipcRenderer.invoke('doc:pdf',   { html: String(html || ''), name: String(name || '') }),
+
+  // فایلی که برنامه ذخیره کرد → پوسته خبر می‌دهد تا خودِ برنامه پیام بدهد
+  onFileSaved: (cb) => {
+    if (typeof cb !== 'function') return;
+    ipcRenderer.on('file:saved', (_e, info) => { try { cb(info); } catch (e) {} });
+  },
+  revealFile: (p) => ipcRenderer.invoke('shell:reveal', p),
 });
 
 // ── فوکوسِ کادرهای متنی ──────────────────────────────────────────────────────

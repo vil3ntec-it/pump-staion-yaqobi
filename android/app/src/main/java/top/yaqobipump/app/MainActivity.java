@@ -21,7 +21,13 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.app.Activity;
+import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -64,13 +70,28 @@ public class MainActivity extends Activity {
   private WebView web;
   private boolean usingUpdate = false;
 
+  // ── لودینگِ واقعی ────────────────────────────────────────────────────────
+  // نوارش همان درصدی است که WebView واقعاً بار کرده، و با «آماده»ی خودِ برنامه
+  // برداشته می‌شود — نه با یک تایمر. پیش از این هیچ لودینگی نبود و کاربر چند
+  // ثانیه یک صفحهٔ خالیِ تیره می‌دید.
+  private View splash;
+  private ProgressBar splashBar;
+  private TextView splashStage;
+  private boolean splashGone = false;
+  private static final int SPLASH_MAX_MS = 30000;
+
   @SuppressLint("SetJavaScriptEnabled")
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
 
     web = new WebView(this);
-    setContentView(web);
+    FrameLayout root = new FrameLayout(this);
+    root.addView(web, new FrameLayout.LayoutParams(
+        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+    root.addView(buildSplash(), new FrameLayout.LayoutParams(
+        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+    setContentView(root);
 
     WebSettings s = web.getSettings();
     s.setJavaScriptEnabled(true);
@@ -96,11 +117,94 @@ public class MainActivity extends Activity {
       public void onPermissionRequest(final PermissionRequest request) {
         runOnUiThread(() -> request.grant(request.getResources()));
       }
+      /** درصدِ واقعیِ بار شدنِ صفحه — تا ۸۵٪ِ نوار، بقیه‌اش دستِ خودِ برنامه است */
+      @Override
+      public void onProgressChanged(WebView v, int p) {
+        bootProgress(Math.min(85, (p * 85) / 100), p < 100 ? "خواندنِ فایلِ برنامه…" : "راه‌اندازیِ برنامه…");
+      }
     });
 
     requestNeededPermissions();
 
     web.loadUrl(pickStartUrl());
+    // اگر نسخهٔ بالا‌آمده آن‌قدر کهنه باشد که «آماده» را خبر ندهد، کسی پشتِ
+    // صفحهٔ لودینگ گیر نکند
+    web.postDelayed(this::hideSplash, SPLASH_MAX_MS);
+  }
+
+  /**
+   * صفحهٔ لودینگ — بدونِ فایلِ layout ساخته می‌شود تا هیچ وابستگیِ تازه‌ای به
+   * پروژه اضافه نشود. نوارش «تعیین‌شده» است، نه چرخانِ بی‌پایان: عددش همان
+   * چیزی است که واقعاً بار شده.
+   */
+  private View buildSplash() {
+    LinearLayout box = new LinearLayout(this);
+    box.setOrientation(LinearLayout.VERTICAL);
+    box.setGravity(Gravity.CENTER);
+    box.setBackgroundColor(0xFF0B0F17);
+    box.setClickable(true);              // لمس به صفحهٔ زیرش نرسد
+    int pad = (int) (24 * getResources().getDisplayMetrics().density);
+    box.setPadding(pad, pad, pad, pad);
+
+    TextView title = new TextView(this);
+    title.setText("پمپ یعقوبی");
+    title.setTextColor(0xFFFFB300);
+    title.setTextSize(22);
+    title.setGravity(Gravity.CENTER);
+    box.addView(title);
+
+    TextView sub = new TextView(this);
+    sub.setText("نرم‌افزار مدیریت پمپ بنزین");
+    sub.setTextColor(0xFF9FB0C7);
+    sub.setTextSize(12);
+    sub.setGravity(Gravity.CENTER);
+    sub.setPadding(0, (int) (6 * getResources().getDisplayMetrics().density), 0, 0);
+    box.addView(sub);
+
+    splashBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+    splashBar.setMax(100);
+    splashBar.setProgress(0);
+    LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(
+        (int) (220 * getResources().getDisplayMetrics().density),
+        ViewGroup.LayoutParams.WRAP_CONTENT);
+    bp.topMargin = (int) (18 * getResources().getDisplayMetrics().density);
+    splashBar.setLayoutParams(bp);
+    box.addView(splashBar);
+
+    splashStage = new TextView(this);
+    splashStage.setText("آماده‌سازی…");
+    splashStage.setTextColor(0xFF7F90A8);
+    splashStage.setTextSize(11);
+    splashStage.setGravity(Gravity.CENTER);
+    splashStage.setPadding(0, (int) (10 * getResources().getDisplayMetrics().density), 0, 0);
+    box.addView(splashStage);
+
+    splash = box;
+    return box;
+  }
+
+  /** درصد هرگز عقب نمی‌رود — هر عدد یک کارِ واقعیِ انجام‌شده است */
+  private void bootProgress(final int pct, final String stage) {
+    runOnUiThread(() -> {
+      if (splashGone || splashBar == null) return;
+      if (pct > splashBar.getProgress()) splashBar.setProgress(pct);
+      if (stage != null && splashStage != null) splashStage.setText(stage);
+    });
+  }
+
+  private void hideSplash() {
+    runOnUiThread(() -> {
+      if (splashGone || splash == null) return;
+      splashGone = true;
+      if (splashBar != null) splashBar.setProgress(100);
+      splash.animate().alpha(0f).setDuration(160).withEndAction(() -> {
+        try {
+          ViewGroup parent = (ViewGroup) splash.getParent();
+          if (parent != null) parent.removeView(splash);
+        } catch (Throwable ignored) { }
+        splash = null; splashBar = null; splashStage = null;
+      }).start();
+    });
   }
 
   /**
@@ -311,6 +415,19 @@ public class MainActivity extends Activity {
 
     @JavascriptInterface
     public String platform() { return "android"; }
+
+    /** مرحله‌های واقعیِ بالا آمدن — خودِ برنامه در همان لحظه صدایشان می‌زند */
+    @JavascriptInterface
+    public void boot(String step) {
+      if (step == null) return;
+      switch (step) {
+        case "script": bootProgress(88, "اجرای برنامه…"); break;
+        case "data":   bootProgress(92, "خواندنِ دفترها…"); break;
+        case "render": bootProgress(97, "چیدنِ بخش‌ها…"); break;
+        case "ready":  hideSplash(); break;
+        default: break;
+      }
+    }
 
     /** {usingUpdate, version, tries} — برنامه می‌داند الان کدام نسخه بالا آمده */
     @JavascriptInterface
