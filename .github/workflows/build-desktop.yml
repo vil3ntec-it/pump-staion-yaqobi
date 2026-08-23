@@ -71,13 +71,38 @@ jobs:
         working-directory: desktop
         run: npm install
 
+      # electron-builder موتورِ الکترون و ابزارهای NSIS را از Releasesِ گیت‌هاب
+      # می‌گیرد (بیش از ۱۲۰ مگابایت). حالا که این ورک‌فلو با هر تغییر اجرا
+      # می‌شود، همان دانلودها هم هر بار تکرار می‌شدند — هم کُند، و هم دقیقاً
+      # همان‌جایی که ساختِ اول شکست («connection forcibly closed»). با کش،
+      # اجراهای بعدی اصلاً سراغِ شبکه نمی‌روند.
+      - name: کشِ موتورِ الکترون و ابزارهای ساخت
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~\AppData\Local\electron\Cache
+            ~\AppData\Local\electron-builder\Cache
+          key: ${{ runner.os }}-eb-${{ hashFiles('desktop/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-eb-
+
       - name: ساخت نصب‌کنندهٔ ویندوز
         working-directory: desktop
+        shell: bash
         # انتشار توسط خودِ electron-builder خاموش است (publish never)؛ انتشار Release
         # را در مرحلهٔ جداگانهٔ پایین با action-gh-release انجام می‌دهیم.
+        #
+        # سه تلاش: دانلودِ ابزارهای ساخت از گیت‌هاب گاهی وسطِ کار قطع می‌شود و
+        # electron-builder برای همهٔ آن‌ها خودش دوباره تلاش نمی‌کند. تلاشِ دوم
+        # چیزی را که در تلاشِ اول رسیده از کش برمی‌دارد، پس تکرار ارزان است.
         run: |
           npm run prepare-app
-          npx electron-builder --win nsis --publish never
+          for i in 1 2 3; do
+            if npx electron-builder --win nsis --publish never; then exit 0; fi
+            echo "::warning::ساختِ نصب‌کننده در تلاشِ $i نشد — دوباره تلاش می‌کنیم"
+            sleep 15
+          done
+          echo "::error::ساختِ نصب‌کننده بعد از سه تلاش هم نشد"
+          exit 1
 
       - name: نام‌گذاری فایل
         shell: bash
