@@ -108,14 +108,19 @@ jobs:
         shell: bash
         run: |
           mkdir -p out
-          # نامِ خودِ electron-builder نسخه‌دار است (PumpYaqobi-Setup-2.9.x.exe)؛
-          # یک نامِ ثابت هم کنارش می‌گذاریم تا لینکِ دانلودِ سایت هیچ‌وقت نشکند
-          cp desktop/dist/*.exe out/
-          cp desktop/dist/*.exe "out/PumpYaqobi-Setup.exe"
+          # نامِ خودِ electron-builder نسخه‌دار است (PumpYaqobi-Setup-2.9.x.exe) و
+          # همان به‌عنوان Artifactِ همین اجرا نگه داشته می‌شود. ولی در Releases
+          # فقط نامِ ثابت منتشر می‌شود: حالا که با هر تغییر ساخته می‌شود، فایلِ
+          # نسخه‌دار هر بار ۸۰ مگابایتِ تازه به انتشار اضافه می‌کرد و تا صدها
+          # گیگابایت بالا می‌رفت. نامِ ثابت هر بار جای قبلی را می‌گیرد، و لینکِ
+          # دانلودِ سایت هم هیچ‌وقت نمی‌شکند.
+          cp desktop/dist/*.exe "out/PumpYaqobi-Setup-${{ steps.ver.outputs.version }}.exe"
+          mkdir -p rel
+          cp desktop/dist/*.exe "rel/PumpYaqobi-Setup.exe"
           # نسخهٔ خودِ فایلِ نصب کنارش منتشر می‌شود تا صفحهٔ دریافت بتواند
           # بنویسد «نسخهٔ فایل نصب: …» و هر عقب‌ماندگی فوری دیده شود
-          printf '%s' "${{ steps.ver.outputs.version }}" > "out/PumpYaqobi-version.txt"
-          ls -la out/
+          printf '%s' "${{ steps.ver.outputs.version }}" > "rel/PumpYaqobi-version.txt"
+          ls -la out/ rel/
 
       - name: بارگذاری فایل نصب به‌عنوان Artifact
         uses: actions/upload-artifact@v4
@@ -139,8 +144,8 @@ jobs:
             هیچ نوارِ آدرس یا سربرگِ مرورگری در کار نیست. نسخه‌های بعدی را هم خودش
             در پس‌زمینه می‌گیرد — دیگر برای هر تغییر نباید دوباره نصبش کنید.
           files: |
-            out/*.exe
-            out/PumpYaqobi-version.txt
+            rel/PumpYaqobi-Setup.exe
+            rel/PumpYaqobi-version.txt
           make_latest: false
 
       # سایت فایلِ نصب را از همین انتشار برمی‌دارد. دیپلویِ سایت هم‌زمان با این
