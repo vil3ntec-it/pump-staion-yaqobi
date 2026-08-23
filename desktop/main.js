@@ -5,11 +5,16 @@
 //  • برنامه از یک «پروتکل امنِ اختصاصی» (app://) سرو می‌شود، نه از file://،
 //    تا Chromium ذخیره‌سازی IndexedDB/localStorage را مثل یک سایتِ واقعیِ امن
 //    پایدار نگه دارد و سهمیهٔ ذخیره‌سازی بر اساس فضای دیسک باشد، نه سقفِ تب.
-//  • یک صفحهٔ لودینگ (اسپلش) هنگام باز شدن نمایش داده می‌شود (مثل اکسل).
+//  • صفحهٔ لودینگ (اسپلش) «واقعی» است: نوارش دقیقاً همان کاری را نشان می‌دهد
+//    که همین حالا انجام شده — بایت‌های خوانده‌شدهٔ فایلِ برنامه، ساخته‌شدنِ
+//    صفحه، خوانده‌شدنِ دفترها و چیده‌شدنِ جدول‌ها. هیچ تایمر و هیچ نوارِ
+//    «همیشه در حال حرکت»ی در کار نیست و پنجره دقیقاً وقتی باز می‌شود که
+//    برنامه واقعاً آمادهٔ کار است، نه یک ثانیه زودتر یا دیرتر.
 //  • آپدیتِ داخلِ برنامه: نسخهٔ تازهٔ سایت را خودش می‌گیرد و با یک دکمه سوار
 //    می‌کند — دیگر برای هر تغییرِ کوچک نباید برنامه را از نو نصب کرد.
 // ============================================================================
 const { app, BrowserWindow, protocol, net, Menu, shell, session, ipcMain, dialog } = require('electron');
+const os = require('node:os');
 const path = require('node:path');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
@@ -18,7 +23,12 @@ const { pathToFileURL } = require('node:url');
 const APP_DIR = path.join(__dirname, 'app');          // نسخهٔ همراهِ نصب‌کننده
 const SCHEME = 'app';
 const START_URL = 'app://local/index.html';
-const MIN_SPLASH_MS = 1400;
+// اگر خودِ برنامه (نسخهٔ کهنه‌ای که هنوز مرحله‌هایش را خبر نمی‌دهد) هیچ خبری
+// نداد، بیشتر از این منتظرش نمی‌مانیم و پنجره را باز می‌کنیم.
+const READY_FALLBACK_MS = 4000;
+// و اگر کلاً چیزی بالا نیامد، پنجره بعد از این باز می‌شود تا کاربر پشتِ
+// اسپلش گیر نکند.
+const HARD_TIMEOUT_MS = 45000;
 
 // منبعِ آپدیت — به ترتیب امتحان می‌شود (اولی دامنهٔ خودمان، دومی گیت‌هاب)
 const DEFAULT_UPDATE_BASES = [
@@ -136,16 +146,139 @@ async function downloadUpdate() {
 }
 
 // ---------------------------------------------------------------------------
+//  پیشرفتِ واقعیِ بالا آمدن
+//  ---------------------------------------------------------------------------
+//  گلایهٔ صاحب ریپو: «نه لودینگِ واقعی دارد، نه مثل برنامهٔ واقعی است — الکی
+//  می‌گوید من لودینگ دارم.» درست بود: نوارِ قبلی یک انیمیشنِ بی‌پایان بود و
+//  پنجره با یک تایمرِ ۱٫۴ ثانیه‌ای باز می‌شد، حتی اگر برنامه زودتر آماده شده
+//  بود یا هنوز نشده بود.
+//
+//  حالا هر درصدی که روی نوار می‌بینید یک کارِ واقعیِ تمام‌شده است:
+//    ۰…۵    پوستهٔ برنامه و پیدا کردنِ فایل
+//    ۵…۴۵   خواندنِ خودِ فایلِ برنامه — دقیقاً بر اساسِ بایت‌هایی که خوانده شده
+//    ۵۵…۸۵  مرحله‌هایی که خودِ برنامه خبر می‌دهد: اجرای برنامه، خواندنِ دفترها،
+//           چیده شدنِ بخش‌ها
+//    ۹۰…۹۵  ساخته شدنِ صفحه (dom-ready / بارگذاری کامل)
+//    ۱۰۰    آمادهٔ کار — همین‌جا پنجره باز می‌شود و اسپلش می‌رود
+//  اگر نسخهٔ کهنه‌ای بالا بیاید که مرحله‌هایش را خبر نمی‌دهد، پس از
+//  READY_FALLBACK_MS خودمان تمامش می‌کنیم تا کسی پشتِ اسپلش گیر نکند.
+// ---------------------------------------------------------------------------
+let splashReady = false;      // خودِ صفحهٔ اسپلش بار شده؟
+let splashQueue = null;       // آخرین خبری که پیش از بار شدنش رسید
+let bootPct = 0;
+let bootDone = false;
+let readyFallbackTimer = null;
+let hardTimeoutTimer = null;
+
+function pushSplash(patch) {
+  if (!splashWin || splashWin.isDestroyed()) return;
+  if (!splashReady) { splashQueue = Object.assign(splashQueue || {}, patch); return; }
+  try {
+    splashWin.webContents.executeJavaScript(
+      'window.__pumpSplash && window.__pumpSplash(' + JSON.stringify(patch) + ')', true
+    ).catch(() => {});
+  } catch (e) {}
+}
+
+/** یک مرحلهٔ واقعی. درصد هرگز عقب نمی‌رود. */
+function bootMark(pct, stage, detail) {
+  if (bootDone) return;
+  const p = Math.max(bootPct, Math.min(100, Math.round(pct)));
+  const patch = { pct: p };
+  if (stage) patch.stage = stage;
+  if (typeof detail === 'string') patch.detail = detail;
+  bootPct = p;
+  pushSplash(patch);
+}
+
+function humanSize(n) {
+  if (n >= 1048576) return (n / 1048576).toFixed(1) + ' مگابایت';
+  return Math.round(n / 1024) + ' کیلوبایت';
+}
+
+/** خودِ فایلِ برنامه را تکه‌تکه می‌دهد و هر تکه را روی نوار خبر می‌کند.
+    اگر به هر دلیلی نشد، null برمی‌گرداند تا مسیرِ همیشگی کار کند. */
+function streamAppFile(filePath) {
+  let total = 0;
+  try { total = fs.statSync(filePath).size; } catch (e) { return null; }
+  if (!total) return null;
+  bootMark(5, 'خواندنِ فایلِ برنامه', humanSize(total));
+  let read = 0, lastPct = 5;
+  let node;
+  try { node = fs.createReadStream(filePath); } catch (e) { return null; }
+  const body = new ReadableStream({
+    start(controller) {
+      node.on('data', (chunk) => {
+        read += chunk.length;
+        controller.enqueue(new Uint8Array(chunk));
+        const pct = 5 + Math.floor((read / total) * 40);
+        if (pct > lastPct) {                    // فقط وقتی عددِ روی نوار عوض شود
+          lastPct = pct;
+          bootMark(pct, 'خواندنِ فایلِ برنامه', humanSize(read) + ' از ' + humanSize(total));
+        }
+      });
+      node.on('end', () => { try { controller.close(); } catch (e) {} });
+      node.on('error', (err) => { try { controller.error(err); } catch (e) {} });
+    },
+    cancel() { try { node.destroy(); } catch (e) {} },
+  });
+  return new Response(body, {
+    headers: { 'content-type': 'text/html; charset=utf-8', 'content-length': String(total) },
+  });
+}
+
+/** برنامه آماده است → پنجره باز، اسپلش بسته. فقط یک‌بار. */
+function bootFinish(why) {
+  if (bootDone) return;
+  bootDone = true;
+  clearTimeout(readyFallbackTimer); readyFallbackTimer = null;
+  clearTimeout(hardTimeoutTimer);   hardTimeoutTimer = null;
+  bootPct = 100;
+  pushSplash({ pct: 100, stage: 'آماده', detail: '' });
+  // یک پلکِ کوتاه فقط برای اینکه ۱۰۰٪ دیده شود، نه برای وقت‌کشی
+  setTimeout(() => {
+    if (splashWin && !splashWin.isDestroyed()) splashWin.close();
+    if (mainWin && !mainWin.isDestroyed()) { mainWin.show(); mainWin.focus(); }
+  }, 140);
+  if (why) console.log('[لودینگ] پایان:', why);
+}
+
+/** خودِ برنامه مرحله‌هایش را از همین‌جا خبر می‌دهد (از طریقِ preload) */
+ipcMain.on('boot:step', (_e, step) => {
+  switch (String(step || '')) {
+    case 'script':  bootMark(55, 'اجرای برنامه'); break;
+    case 'data':    bootMark(70, 'خواندنِ دفترها'); break;
+    case 'render':  bootMark(85, 'چیدنِ بخش‌ها'); break;
+    case 'ready':   bootFinish('خودِ برنامه گفت آماده است'); break;
+    default: break;
+  }
+  // تا وقتی خبر می‌رسد یعنی برنامه زنده است — مهلتِ «نسخهٔ کهنه» را عقب می‌بریم
+  if (readyFallbackTimer) {
+    clearTimeout(readyFallbackTimer);
+    readyFallbackTimer = setTimeout(() => bootFinish('مهلتِ مرحلهٔ بعدی تمام شد'), READY_FALLBACK_MS);
+  }
+});
+
+// ---------------------------------------------------------------------------
 //  پنجره‌ها
 // ---------------------------------------------------------------------------
 function createSplash() {
+  // هر بار که برنامه از نو بالا می‌آید (مثلاً روی مک با کلیکِ دوباره روی آیکون)
+  // شمارشِ لودینگ هم از صفر شروع شود، وگرنه اسپلش هرگز بسته نمی‌شد.
+  bootDone = false; bootPct = 0; splashReady = false; splashQueue = null;
   splashWin = new BrowserWindow({
     width: 460, height: 320, frame: false, resizable: false, center: true,
     alwaysOnTop: true, backgroundColor: '#0b0f17', show: true,
     webPreferences: { contextIsolation: true },
   });
   splashWin.loadFile(path.join(__dirname, 'splash.html'));
-  splashWin.on('closed', () => { splashWin = null; });
+  splashWin.webContents.once('did-finish-load', () => {
+    splashReady = true;
+    const first = Object.assign({ pct: bootPct, version: activeVersion() }, splashQueue || {});
+    splashQueue = null;
+    pushSplash(first);
+  });
+  splashWin.on('closed', () => { splashWin = null; splashReady = false; });
 }
 
 // نوارِ منو («برنامه / ویرایش / نما») به‌طور کامل برداشته شد — نه دیده می‌شود و
@@ -221,19 +354,24 @@ function createMainWindow() {
   stripMenu();
   bindShortcuts(mainWin);
 
-  const startedAt = Date.now();
   const usingUpdate = activeIndexPath() === updIndex();
   if (usingUpdate) { try { fs.writeFileSync(updFlagFile(), String(Date.now())); } catch (e) {} }
+
+  // ── مرحله‌های واقعیِ خودِ موتورِ صفحه ──
+  mainWin.webContents.on('dom-ready', () => bootMark(90, 'ساختنِ صفحه'));
+  hardTimeoutTimer = setTimeout(() => bootFinish('مهلتِ کلی تمام شد'), HARD_TIMEOUT_MS);
+
   mainWin.loadURL(START_URL);
 
   mainWin.webContents.once('did-finish-load', () => {
     // نسخهٔ تازه سالم بالا آمد → نشانهٔ «امتحان‌نشده» برداشته می‌شود
     try { if (fs.existsSync(updFlagFile())) fs.unlinkSync(updFlagFile()); } catch (e) {}
-    const wait = Math.max(0, MIN_SPLASH_MS - (Date.now() - startedAt));
-    setTimeout(() => {
-      if (splashWin) splashWin.close();
-      if (mainWin) { mainWin.show(); mainWin.focus(); }
-    }, wait);
+    bootMark(95, 'آخرین آماده‌سازی');
+    /* از این‌جا به بعد خودِ برنامه خبر می‌دهد (boot:step). اگر نسخهٔ بالا‌آمده
+       آن‌قدر کهنه باشد که این خبرها را ندهد، بعد از این مهلت خودمان تمامش
+       می‌کنیم — پنجره باز می‌شود و کاربر پشتِ اسپلش نمی‌ماند. */
+    clearTimeout(readyFallbackTimer);
+    readyFallbackTimer = setTimeout(() => bootFinish('نسخهٔ بالا‌آمده مرحله‌هایش را خبر نداد'), READY_FALLBACK_MS);
     scheduleUpdateChecks();
   });
 
@@ -245,8 +383,7 @@ function createMainWindow() {
       if (mainWin) mainWin.loadURL(START_URL);
       return;
     }
-    if (splashWin) splashWin.close();
-    if (mainWin) mainWin.show();
+    bootFinish('صفحه بار نشد: ' + desc);
   });
 
   // هیچ خطای رندری نباید پنجره را سفید و بی‌استفاده بگذارد
@@ -264,6 +401,89 @@ function createMainWindow() {
   mainWin.on('closed', () => { mainWin = null; });
 }
 
+// ---------------------------------------------------------------------------
+//  چاپ و «ذخیرهٔ PDF» — کارِ خودِ برنامه، نه یک صفحهٔ وب
+//  ---------------------------------------------------------------------------
+//  باگِ واقعیِ نسخهٔ قبل: سندِ چاپ داخلِ یک <iframe> باز می‌شد و دکمهٔ چاپ
+//  window.print()ِ همان iframe را صدا می‌زد. در Electron این فراخوانی رشتهٔ
+//  اجرای صفحه را می‌بندد: از همان لحظه تا وقتی پنجرهٔ چاپِ ویندوز بسته نشود،
+//  کلِ برنامه یخ می‌زند (آزموده شد — حتی ساده‌ترین کدِ بعدی هم اجرا نمی‌شد).
+//  اگر چاپگری نصب نبود یا کاربر پنجره را نمی‌دید، تنها راهِ خلاصی بستنِ
+//  برنامه بود.
+//
+//  حالا سند به خودِ پوسته سپرده می‌شود: در یک پنجرهٔ پنهان بار می‌شود و
+//    • «چاپ» → پنجرهٔ چاپِ خودِ ویندوز، بدونِ قفل شدنِ برنامه
+//    • «ذخیرهٔ PDF» → یک فایلِ پی‌دی‌افِ واقعی با پنجرهٔ ذخیرهٔ ویندوز
+//  و خودِ برنامه در تمامِ این مدت زنده و قابلِ استفاده می‌ماند.
+// ---------------------------------------------------------------------------
+let docSeq = 0;
+
+/** سند را در یک پنجرهٔ پنهان بار می‌کند. مسیرِ فایلِ موقت هم برگردانده می‌شود. */
+async function loadDocWindow(html) {
+  const file = path.join(os.tmpdir(), 'pump-doc-' + Date.now() + '-' + (++docSeq) + '.html');
+  await fsp.writeFile(file, String(html || ''), 'utf8');
+  const win = new BrowserWindow({
+    show: false,
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true, javascript: true },
+  });
+  const done = new Promise((resolve) => {
+    win.webContents.once('did-finish-load', resolve);
+    win.webContents.once('did-fail-load', resolve);
+  });
+  await win.loadFile(file).catch(() => {});
+  await done;
+  // یک نفس تا فونت و چیدمان بنشیند (وگرنه ورقِ اول گاهی خام چاپ می‌شود)
+  await new Promise((r) => setTimeout(r, 250));
+  return { win, file };
+}
+
+function cleanupDoc(win, file) {
+  try { if (win && !win.isDestroyed()) win.destroy(); } catch (e) {}
+  try { fs.unlinkSync(file); } catch (e) {}
+}
+
+async function printDocument(html) {
+  const { win, file } = await loadDocWindow(html);
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (r) => { if (settled) return; settled = true; clearTimeout(guard); cleanupDoc(win, file); resolve(r); };
+    /* اگر پنجرهٔ چاپِ ویندوز باز بماند و هیچ‌وقت جوابی برنگردد، پنجرهٔ پنهان
+       تا بسته شدنِ برنامه می‌ماند. این نگهبان فقط جلوی همان را می‌گیرد؛ روی
+       کارِ عادیِ چاپ اثری ندارد (کاربر خیلی زودتر از این تصمیم می‌گیرد). */
+    const guard = setTimeout(() => finish({ ok: true, cancelled: true }), 10 * 60 * 1000);
+    try {
+      win.webContents.print({ silent: false, printBackground: true }, (ok, reason) => {
+        if (ok) return finish({ ok: true });
+        // «cancelled» یعنی خودِ کاربر بستش — خطا نیست
+        if (/cancel/i.test(String(reason || ''))) return finish({ ok: true, cancelled: true });
+        finish({ ok: false, error: String(reason || 'چاپ انجام نشد') });
+      });
+    } catch (e) { finish({ ok: false, error: String((e && e.message) || e) }); }
+  });
+}
+
+async function savePdfDocument(html, name) {
+  const safe = String(name || 'سند').replace(/[\\/:*?"<>|]/g, '-').slice(0, 80) || 'سند';
+  const target = await dialog.showSaveDialog(mainWin && !mainWin.isDestroyed() ? mainWin : undefined, {
+    title: 'ذخیرهٔ PDF',
+    defaultPath: path.join(app.getPath('downloads'), safe + '.pdf'),
+    filters: [{ name: 'PDF', extensions: ['pdf'] }],
+  });
+  if (target.canceled || !target.filePath) return { ok: true, cancelled: true };
+  const { win, file } = await loadDocWindow(html);
+  try {
+    const buf = await win.webContents.printToPDF({
+      printBackground: true, pageSize: 'A4', margins: { marginType: 'default' },
+    });
+    await fsp.writeFile(target.filePath, buf);
+    return { ok: true, path: target.filePath };
+  } catch (e) {
+    return { ok: false, error: String((e && e.message) || e) };
+  } finally {
+    cleanupDoc(win, file);
+  }
+}
+
 // بررسیِ خودکار: ۸ ثانیه بعد از باز شدن، سپس هر ۶ ساعت. فقط خبر می‌دهد؛
 // دانلود و سوار کردن با تصمیمِ خودِ کاربر انجام می‌شود.
 function scheduleUpdateChecks() {
@@ -271,7 +491,16 @@ function scheduleUpdateChecks() {
   const run = async () => {
     try {
       const r = await checkUpdate();
-      if (r.ok && r.hasUpdate && mainWin && !mainWin.isDestroyed()) mainWin.webContents.send('update:available', r);
+      if (!r.ok || !r.hasUpdate) return;
+      /* خودش می‌گیردش. سوار کردنش با خودِ کاربر است (دکمهٔ «الان سوار کن»)، ولی
+         حتی اگر هیچ‌وقت آن دکمه را نزند، دفعهٔ بعد که برنامه را باز کند نسخهٔ
+         تازه بالا می‌آید — چون activeIndexPath همیشه تازه‌ترینِ سالم را
+         برمی‌دارد و اگر خراب باشد خودش به نسخهٔ همراهِ نصب برمی‌گردد.
+         این همان چیزی است که نگذاشت نسخهٔ نصب‌شده یک ماه عقب بماند. */
+      const d = await downloadUpdate().catch(() => ({ ok: false }));
+      if (mainWin && !mainWin.isDestroyed()) {
+        mainWin.webContents.send('update:available', Object.assign({}, r, { downloaded: !!(d && d.downloaded) }));
+      }
     } catch (e) {}
   };
   setTimeout(run, 8000);
@@ -340,6 +569,12 @@ app.whenReady().then(() => {
       filePath = (upd.startsWith(updDir()) && fs.existsSync(upd)) ? upd : path.normalize(path.join(APP_DIR, rel));
     }
     if (!filePath.startsWith(APP_DIR) && !filePath.startsWith(updDir())) return new Response('403 Forbidden', { status: 403 });
+    // خودِ فایلِ برنامه، تنها بارِ اول: تکه‌تکه خوانده می‌شود تا نوارِ لودینگ
+    // واقعاً «بایت‌های خوانده‌شده» را نشان بدهد، نه یک انیمیشنِ تزئینی.
+    if (rel === '/index.html' && !bootDone) {
+      const streamed = streamAppFile(filePath);
+      if (streamed) return streamed;
+    }
     return net.fetch(pathToFileURL(filePath).toString());
   });
 
@@ -373,8 +608,40 @@ app.whenReady().then(() => {
     if (/^https?:\/\//i.test(String(url || ''))) { shell.openExternal(url); return { ok: true }; }
     return { ok: false };
   });
+  ipcMain.handle('shell:reveal', (_e, p) => {
+    try { shell.showItemInFolder(String(p || '')); return { ok: true }; } catch (e) { return { ok: false }; }
+  });
+  ipcMain.handle('doc:print', async (_e, a) => {
+    try { return await printDocument(a && a.html); }
+    catch (e) { return { ok: false, error: String((e && e.message) || e) }; }
+  });
+  ipcMain.handle('doc:pdf', async (_e, a) => {
+    try { return await savePdfDocument(a && a.html, a && a.name); }
+    catch (e) { return { ok: false, error: String((e && e.message) || e) }; }
+  });
+
+  /* دانلودِ فایل از داخلِ برنامه (بکاپ، اکسل، …): پنجرهٔ ذخیرهٔ ویندوز با نامِ
+     درست و پوشهٔ Downloads به‌عنوان پیش‌فرض باز می‌شود، و وقتی فایل نشست خودِ
+     برنامه پیامش را نشان می‌دهد. پیش از این هیچ خبری از سرانجامِ دانلود
+     نمی‌رسید و کاربر نمی‌دانست فایل کجا رفت. */
+  session.defaultSession.on('will-download', (_ev, item) => {
+    try {
+      item.setSaveDialogOptions({
+        title: 'ذخیرهٔ فایل',
+        defaultPath: path.join(app.getPath('downloads'), item.getFilename()),
+      });
+    } catch (e) {}
+    item.once('done', (_e2, state) => {
+      if (!mainWin || mainWin.isDestroyed()) return;
+      if (state !== 'completed') return;              // لغوِ کاربر → بی‌صدا
+      try {
+        mainWin.webContents.send('file:saved', { name: item.getFilename(), path: item.getSavePath() });
+      } catch (e) {}
+    });
+  });
 
   createSplash();
+  bootMark(3, 'آماده‌سازیِ پوسته');
   createMainWindow();
 
   app.on('activate', () => {

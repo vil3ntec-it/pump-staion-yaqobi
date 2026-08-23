@@ -1,15 +1,40 @@
 name: ساخت برنامهٔ کامپیوتری (ویندوز)
 
 # نصب‌کنندهٔ ویندوز (.exe) را می‌سازد و به‌صورت یک Release قابل‌دانلود منتشر می‌کند.
-# اجرا: از تب Actions دکمهٔ «Run workflow» را بزنید، یا یک تگ با پیشوند desktop-v پوش کنید.
+#
+# ── چرا خودکار شد ────────────────────────────────────────────────────────────
+# خودِ برنامه (index.html) داخلِ همین فایلِ نصب بسته می‌شود، پس نصب‌کننده فقط
+# وقتی تازه می‌شود که این ورک‌فلو اجرا شود. قبلاً فقط دستی/با تگ اجرا می‌شد و
+# نتیجه‌اش این بود که فایلِ نصبِ روی سایت یک ماه و ده‌ها نسخه عقب ماند: کسی که
+# آن را نصب کرده بود نه یادداشت‌ها را داشت، نه اصلاً به‌روزرسانیِ داخلِ برنامه را.
+# حالا دقیقاً مثل اپِ اندروید، با هر تغییرِ خودِ برنامه روی main دوباره ساخته و
+# منتشر می‌شود و بعد دیپلویِ سایت را صدا می‌زند تا همان فایلِ تازه کنارِ سایت
+# بنشیند.
 on:
   workflow_dispatch:
   push:
     tags:
       - 'desktop-v*'
+    branches:
+      - main
+    paths:
+      - 'index.html'
+      - 'sw.js'
+      - 'manifest.json'
+      - 'favicon.png'
+      - 'icons/**'
+      - 'desktop/**'
+      - '.github/workflows/build-desktop.yml'
 
+# actions: write برای صدا زدنِ دیپلویِ سایت بعد از ساخته شدنِ نصب‌کننده
 permissions:
   contents: write
+  actions: write
+
+# اگر چند تغییر پشتِ سرِ هم مرج شد، فقط آخری ساخته شود
+concurrency:
+  group: desktop-exe
+  cancel-in-progress: true
 
 jobs:
   build-windows:
@@ -23,6 +48,25 @@ jobs:
         with:
           node-version: '20'
 
+      # نسخهٔ نصب‌کننده همیشه همان نسخهٔ خودِ برنامه است — دستی تنظیم نمی‌شود.
+      # (نامِ فایلِ خروجی و «About»ِ ویندوز از همین package.json خوانده می‌شوند.)
+      - name: هم‌نسخه کردنِ نصب‌کننده با خودِ برنامه
+        id: ver
+        shell: bash
+        run: |
+          node -e "
+            const fs = require('fs');
+            const html = fs.readFileSync('index.html', 'utf8');
+            const m = html.match(/const\s+APP_VERSION\s*=\s*['\"]([0-9.]+)['\"]/);
+            const v = m ? m[1] : '0.0.1';
+            const p = 'desktop/package.json';
+            const j = JSON.parse(fs.readFileSync(p, 'utf8'));
+            j.version = v;
+            fs.writeFileSync(p, JSON.stringify(j, null, 2) + '\n');
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'version=' + v + '\n');
+            console.log('نسخهٔ برنامه: ' + v);
+          "
+
       - name: نصب وابستگی‌ها
         working-directory: desktop
         run: npm install
@@ -35,11 +79,24 @@ jobs:
           npm run prepare-app
           npx electron-builder --win nsis --publish never
 
+      - name: نام‌گذاری فایل
+        shell: bash
+        run: |
+          mkdir -p out
+          # نامِ خودِ electron-builder نسخه‌دار است (PumpYaqobi-Setup-2.9.x.exe)؛
+          # یک نامِ ثابت هم کنارش می‌گذاریم تا لینکِ دانلودِ سایت هیچ‌وقت نشکند
+          cp desktop/dist/*.exe out/
+          cp desktop/dist/*.exe "out/PumpYaqobi-Setup.exe"
+          # نسخهٔ خودِ فایلِ نصب کنارش منتشر می‌شود تا صفحهٔ دریافت بتواند
+          # بنویسد «نسخهٔ فایل نصب: …» و هر عقب‌ماندگی فوری دیده شود
+          printf '%s' "${{ steps.ver.outputs.version }}" > "out/PumpYaqobi-version.txt"
+          ls -la out/
+
       - name: بارگذاری فایل نصب به‌عنوان Artifact
         uses: actions/upload-artifact@v4
         with:
           name: PumpYaqobi-Windows-Setup
-          path: desktop/dist/*.exe
+          path: out/*.exe
           if-no-files-found: error
 
       - name: انتشار در Releases
@@ -48,7 +105,27 @@ jobs:
           tag_name: desktop-latest
           name: برنامهٔ کامپیوتری پمپ یعقوبی (آخرین نسخه)
           body: |
-            نصب‌کنندهٔ ویندوز برنامهٔ پمپ یعقوبی.
-            فایل `PumpYaqobi-Setup-*.exe` را دانلود و اجرا کنید؛ هنگام نصب می‌توانید درایو و مسیر نصب را انتخاب کنید.
-          files: desktop/dist/*.exe
-          make_latest: true
+            نصب‌کنندهٔ ویندوز برنامهٔ پمپ یعقوبی — نسخهٔ ${{ steps.ver.outputs.version }}.
+
+            فایل `PumpYaqobi-Setup.exe` را دانلود و اجرا کنید؛ هنگام نصب می‌توانید
+            درایو و مسیر نصب را انتخاب کنید.
+
+            خودِ برنامه داخلِ همین فایل است، پس بدون اینترنت هم کامل کار می‌کند و
+            هیچ نوارِ آدرس یا سربرگِ مرورگری در کار نیست. نسخه‌های بعدی را هم خودش
+            در پس‌زمینه می‌گیرد — دیگر برای هر تغییر نباید دوباره نصبش کنید.
+          files: |
+            out/*.exe
+            out/PumpYaqobi-version.txt
+          make_latest: false
+
+      # سایت فایلِ نصب را از همین انتشار برمی‌دارد. دیپلویِ سایت هم‌زمان با این
+      # ساخت شروع شده بود، پس نسخهٔ کهنه را برداشته؛ حالا که فایلِ تازه منتشر
+      # شد، یک‌بار دیگر صدایش می‌زنیم تا فایلِ تازه کنارِ سایت بنشیند.
+      - name: تازه‌سازیِ سایت با فایلِ نصبِ تازه
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run deploy-pages.yml --ref main \
+            && echo "دیپلوی سایت صدا زده شد" \
+            || echo "::warning::دیپلوی سایت صدا زده نشد — سایت با دیپلوی بعدی تازه می‌شود"
