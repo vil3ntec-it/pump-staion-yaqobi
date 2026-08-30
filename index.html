@@ -49956,7 +49956,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.411';
+const APP_VERSION = '2.9.412';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -55428,7 +55428,9 @@ document.addEventListener('click', function(e) {
     {id:'light-slate',  light:true,  name:'بلور آمیتیست (Amethyst Crystal)', bg:'#ffffff', ac:'#7c4dff'},
     {id:'golden-dune',  light:true,  name:'تپهٔ طلایی (Golden Dune)',        bg:'#fff2e2', ac:'#dfa35e'},
     {id:'burgundy',     light:true,  name:'شرابی کِرِم (Burgundy)',          bg:'#fff3e1', ac:'#8a0d0d'},
-    {id:'deep-ocean',   light:false, name:'اقیانوس عمیق (Deep Ocean)',       bg:'#063a61', ac:'#c9c1b0'}
+    {id:'deep-ocean',   light:false, name:'اقیانوس عمیق (Deep Ocean)',       bg:'#063a61', ac:'#c9c1b0'},
+    {id:'enterprise',      light:true,  name:'اجرایی روشن (Enterprise)',      bg:'#f6f8fb', ac:'#2563eb'},
+    {id:'enterprise-dark', light:false, name:'اجرایی تیره (Enterprise Dark)', bg:'#0e141b', ac:'#3b82f6'}
   ];
   function allClasses(){ return PALETTES.map(function(p){ return 'theme-'+p.id; }); }
   function find(id){ for(var i=0;i<PALETTES.length;i++){ if(PALETTES[i].id===id) return PALETTES[i]; } return null; }
@@ -60683,6 +60685,146 @@ select:not(.native-sel){
   .person-card, .person-del, .person-nav-btn, .sec-font-btn, .ft-opt,
   .add-row-btn, .pm-filter-btn, .hexfx-toggle, .inv-act, .modal-close,
   .tools-btn, .pw-btn, .btn-ok, .toast{ transition-duration:1ms !important; }
+}
+</style>
+
+<style id="ds-enterprise">
+/* ═══════════════════════════════════════════════════════════════════════════
+   دیزاین‌سیستمِ اجرایی (نسخه 2.9.412) — هندسه، تایپوگرافی، حالت‌ها و پالتِ تازه.
+
+   ⛔ فقط CSS. هیچ منطق، فرمول، محاسبه، داده یا رفتارِ دکمه‌ای عوض نمی‌شود؛
+      هیچ چیزی هم جابه‌جا یا حذف نمی‌شود. جای هر دکمه و هر ستون همان است که
+      بود — فقط اندازه/گردی/فاصله/حالت‌هایشان یک‌دست می‌شود.
+   ⛔ مخزن دست‌نخورده (نگهبان: node tools/check-motion.mjs).
+
+   چرا: در همان یک صفحه، دکمه‌ها با شش ارتفاع و پنج شعاعِ گوشهٔ متفاوت کنار هم
+   می‌نشستند (‎.add-btn‎ ۹/۱۸، ‎.goto-btn‎ ۶/۱۲، ‎.sec-font-btn‎ ۵/۱۰، شعاع‌های
+   ۷ و ۸ و ۹ و ۱۲ و ۱۴ و ۱۶). چشم این را «شلوغی» می‌بیند حتی وقتی نمی‌تواند
+   بگوید چرا. این‌جا همه روی یک نردبان می‌نشینند.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── ۱) نردبانِ هندسه ─────────────────────────────────────────────────── */
+:root{
+  --ds-r-btn:8px;  --ds-r-in:8px;  --ds-r-card:12px;  --ds-r-modal:16px;
+  --ds-h-btn:40px; --ds-h-in:42px; --ds-h-row:48px;   --ds-h-th:44px;
+  --ds-sp-1:4px; --ds-sp-2:8px; --ds-sp-3:12px; --ds-sp-4:16px;
+  --ds-sp-5:20px; --ds-sp-6:24px; --ds-sp-7:32px;
+}
+
+/* ── ۲) دکمه‌ها: یک ارتفاع، یک شعاع، یک ریتم ───────────────────────────
+   ‎min-height‎ نه ‎height‎ — دکمهٔ دوخطی هنوز خودش را جا می‌دهد. */
+.add-btn, .save-btn, .goto-btn, .add-row-btn, .person-nav-btn, .sec-font-btn,
+.pm-filter-btn, .inv-act, .tools-btn, .hexfx-toggle, .theme-toggle, .lock-btn,
+.btn-ok, .pw-btn, .fuel-add-btn{
+  min-height:var(--ds-h-btn);
+  border-radius:var(--ds-r-btn) !important;
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  line-height:1.2;
+}
+.nav-btn{ min-height:42px; border-radius:var(--ds-r-btn) !important; }
+/* دکمه‌های مربعیِ کوچک (حذف/بستن) مربع می‌مانند — کشیده نشوند */
+.del-btn, .person-del, .modal-close{ border-radius:var(--ds-r-btn) !important; }
+/* داخلِ جدول‌ها هیچ‌کدام از این ارتفاع‌ها اعمال نمی‌شود — ردیف را باد می‌کرد */
+.xls-tbl .add-row-btn, .tbl .add-row-btn,
+.xls-tbl button, .tbl button, .ro-tbl button{ min-height:0; }
+
+/* ── ۳) ورودی‌ها: ارتفاعِ یکسان و شعاعِ یکسان ─────────────────────────── */
+input[type=text], input[type=number], input[type=tel], input[type=search],
+input[type=password], input[type=date], select, textarea{
+  min-height:var(--ds-h-in);
+  border-radius:var(--ds-r-in);
+}
+textarea{ min-height:calc(var(--ds-h-in) * 2); }
+/* خانه‌های جدول و کادرهای ریزِ داخلِ ردیف‌ها استثنا — ردیف نباید بلند شود */
+.xls-tbl input, .xls-tbl select, .xls-tbl textarea,
+.tbl input, .tbl select, .tbl textarea,
+.ro-tbl input, .ro-tbl select,
+.xls-in, .pm-edit, .tank-cap input, .pstatus-row input{
+  min-height:0; border-radius:inherit;
+}
+
+/* ── ۴) کارت و پنجره: شعاعِ یکسان ─────────────────────────────────────── */
+.card, .settings-card, .shift-card, .pl-card, .stat-box, .msumbox,
+.person-card, .company-card, .tool-link-card, .fs-group, .split-box{
+  border-radius:var(--ds-r-card);
+}
+.modal{ border-radius:var(--ds-r-modal); }
+
+/* ── ۵) جدول‌ها: ارتفاعِ سرستون و ردیف طبقِ استانداردِ داشبورد ───────────
+   ‎height‎ روی ‎td/th‎ در جدول‌ها مثل ‎min-height‎ عمل می‌کند: ردیفِ کوتاه بالا
+   می‌آید، ردیفِ پُر (مثلاً با کادرِ انتخابِ پطرول/دیزل) دست‌نخورده می‌ماند. */
+.xls-tbl th, .tbl th, .ro-tbl th{ height:var(--ds-h-th); }
+.xls-tbl td, .tbl td, .ro-tbl td{ height:var(--ds-h-row); }
+/* عددها هم‌عرض — ستون‌های مالی دیگر موقعِ تایپ نمی‌لرزند */
+.xls-tbl td, .tbl td, .ro-tbl td, .xls-tbl tfoot td,
+.stat-box .v, .msumbox b, .pl-value{ font-variant-numeric:tabular-nums; }
+
+/* ── ۶) فوکوس: یک حلقهٔ واحد برای صفحه‌کلید (دسترس‌پذیری) ───────────────
+   ‎:focus-visible‎ یعنی فقط با Tab دیده می‌شود، نه با کلیکِ موس. */
+.add-btn:focus-visible, .save-btn:focus-visible, .goto-btn:focus-visible,
+.add-row-btn:focus-visible, .person-nav-btn:focus-visible,
+.sec-font-btn:focus-visible, .pm-filter-btn:focus-visible,
+.inv-act:focus-visible, .tools-btn:focus-visible, .nav-btn:focus-visible,
+.del-btn:focus-visible, .person-del:focus-visible, .modal-close:focus-visible,
+.person-card:focus-visible, input:focus-visible, select:focus-visible,
+textarea:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+}
+
+/* ── ۷) صفحهٔ لمسی: هدفِ لمس هیچ‌جا کوچک‌تر از ۴۴ نشود (WCAG) ──────────── */
+@media (pointer:coarse){
+  :root{ --ds-h-btn:44px; --ds-h-in:46px; }
+  .del-btn, .person-del, .modal-close{ min-width:44px; min-height:44px; }
+  .xls-tbl .del-btn, .tbl .del-btn{ min-width:0; min-height:0; }
+}
+
+/* ═══ ۸) پالتِ اجرایی — دقیقاً با رنگ‌هایی که خواسته شد ═══════════════════
+   Primary #163B65 · Accent #2563EB · Success #168A55 · Warning #C98200
+   Danger #C93C3C · Info #3178C6 · BG #F6F8FB · Surface #fff · Border #E3E8EF
+   Text #17202A · Secondary #657180 · Dark #0E141B / #151D26 / #293544
+   دو تمِ تازه کنارِ تم‌های قبلی نشستند — هیچ تمی حذف یا عوض نشد. */
+body.theme-enterprise{
+  --dark:#F6F8FB !important; --panel:#FFFFFF !important; --card:#FFFFFF !important;
+  --border:#E3E8EF !important; --txt:#17202A !important; --muted:#657180 !important;
+  --label:#163B65 !important; --accent:#2563EB !important;
+  --grad-amber:linear-gradient(135deg,#3B82F6 0%,#2563EB 50%,#163B65 100%) !important;
+  --on-accent:#FFFFFF !important; --hdr-title:#FFFFFF !important;
+  --chrome-brd:rgba(22,59,101,.28) !important;
+  --hdr-bg:linear-gradient(90deg,#12314F,#163B65,#12314F) !important;
+  --banner-bg:linear-gradient(90deg,#0F2A45,#143352,#0F2A45) !important;
+  --nav-bg:linear-gradient(90deg,#EEF3FA,#F8FAFD,#EEF3FA) !important;
+  --app-bg:radial-gradient(ellipse at 50% 16%, #FFFFFF 0%, transparent 60%),
+           linear-gradient(175deg,#F6F8FB 0%,#EDF1F7 55%,#E6ECF4 100%) !important;
+  --fx-hue:205deg !important;
+  --atmo-beam:rgba(37,99,235,.14); --atmo-geo:rgba(37,99,235,.45);
+  --green:#168A55 !important; --red:#C93C3C !important; --blue:#3178C6 !important;
+}
+/* بلوکِ عمومیِ روشن (‎body.light-mode[class*="theme-"]‎) سطح‌ها را خنثی می‌کند؛
+   این‌جا دوباره سطحِ سفید و بومِ #F6F8FB برمی‌گردد — مثل کاری که خودِ
+   Golden Dune و Burgundy می‌کنند. */
+body.light-mode.theme-enterprise{
+  --dark:#F6F8FB !important; --card:#FFFFFF !important; --panel:#FFFFFF !important;
+  --border:#E3E8EF !important; --hdr-title:#FFFFFF !important;
+  --app-bg:radial-gradient(ellipse at 50% 16%, #FFFFFF 0%, transparent 60%),
+           linear-gradient(175deg,#F6F8FB 0%,#EDF1F7 55%,#E6ECF4 100%) !important;
+}
+body.theme-enterprise-dark{
+  --dark:#0E141B !important; --panel:#151D26 !important; --card:#151D26 !important;
+  --border:#293544 !important; --txt:#E8EDF3 !important; --muted:#8A97A6 !important;
+  --label:#A9C2E4 !important; --accent:#3B82F6 !important;
+  --grad-amber:linear-gradient(135deg,#93B8F5 0%,#3B82F6 50%,#1D4ED8 100%) !important;
+  --on-accent:#0B1119 !important; --hdr-title:#DCE7F7 !important;
+  --chrome-brd:rgba(59,130,246,.30) !important;
+  --hdr-bg:linear-gradient(90deg,#0B1119,#131C27,#0B1119) !important;
+  --banner-bg:linear-gradient(90deg,#0A1017,#111926,#0A1017) !important;
+  --nav-bg:linear-gradient(90deg,#0B1119,#121A24,#0B1119) !important;
+  --app-bg:radial-gradient(ellipse at 50% 8%, rgba(255,255,255,.05) 0%, transparent 55%),
+           radial-gradient(ellipse at 50% 100%, rgba(0,0,0,.35) 0%, transparent 60%),
+           linear-gradient(175deg,#131B24 0%,#0E141B 45%,#0A0F15 100%) !important;
+  --fx-hue:205deg !important;
+  --atmo-beam:rgba(59,130,246,.16); --atmo-geo:rgba(59,130,246,.5);
+  --green:#22A96B !important; --red:#E05555 !important; --blue:#4A9AE0 !important;
 }
 </style>
 
