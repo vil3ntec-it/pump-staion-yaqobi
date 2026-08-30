@@ -49956,7 +49956,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.410';
+const APP_VERSION = '2.9.411';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -60577,6 +60577,114 @@ select:not(.native-sel){
   }
 })();
 </script>
+
+<style id="motion-refine">
+/* ═══════════════════════════════════════════════════════════════════════════
+   پالایشِ حرکت‌ها (نسخه 2.9.411) — فقط انیمیشن و گذر.
+
+   ⛔ هیچ منطق، فرمول، داده، چیدمان یا رفتارِ دکمه‌ای این‌جا لمس نمی‌شود:
+      این بلوک هیچ جاوااسکریپتی ندارد و هیچ ویژگیِ چیدمانی (width/height/
+      padding/margin/font-size/display/position) را عوض نمی‌کند.
+
+   ⛔ مخزن دست‌نخورده است. هیچ گزینشگری در این بلوک به ‎.tank-*‎ نمی‌خورد —
+      نه موجِ سطح (tankWave)، نه جریانِ مایع (tankFlow)، نه تپشِ هشدار
+      (tankPulse / gfxTankDangerStd). خواستهٔ صریحِ صاحب ریپو بود.
+      نگهبانش: ‎node tools/check-motion.mjs‎ — اگر روزی کسی این‌جا اسمِ مخزن
+      را بیاورد یا آن قاعده‌ها را عوض کند، همان‌جا شکست می‌خورد.
+
+   سه چیز این‌جا بهتر می‌شود، هر سه بدونِ عوض کردنِ ظاهرِ حالتِ عادی:
+
+   ۱) ‎transition:all‎ برداشته شد (نه خودِ گذر — فقط دامنه‌اش).
+      ‎all‎ یعنی «هر ویژگی‌ای که عوض شد را انیمیت کن»، و در همین فایل
+      اندازه‌ها/فونت‌ها با ‎!important‎ از چند بلوکِ دیگر و از متغیرهایی مثل
+      ‎--fit-st‎ روی همین دکمه‌ها و کارت‌ها عوض می‌شوند. نتیجه‌اش لرزشِ ریزِ
+      نوشته و بازچینیِ صفحه سرِ هر هاور بود — گران‌ترین کارِ ممکن روی گوشیِ
+      ضعیف. حالا فقط رنگ/مرز/سایه/جابه‌جایی/شفافیت گذر می‌کنند؛ اینها روی
+      GPU انجام می‌شوند و صفحه را بازچینی نمی‌کنند. ظاهرِ هاور همان است.
+
+   ۲) هاورِ چسبیده روی صفحهٔ لمسی. روی موبایل ‎:hover‎ بعد از لمس روی همان
+      عنصر می‌مانَد؛ برای دکمه‌های ناوبری یعنی آیکونش تا ابد می‌چرخد (باتری)
+      و برای کارت‌ها یعنی یکی‌شان همیشه بالاتر از بقیه می‌ماند. با
+      ‎(hover:none)‎ فقط روی همان دستگاه‌ها برداشته می‌شود؛ کامپیوتر
+      دست‌نخورده است. آیکونِ بخشِ فعال (‎.active‎) عمداً بیرون از این قاعده
+      است — آن حرکت خواسته شده بود.
+
+   ۳) «کاهشِ حرکت» کامل شد. بلوک‌های قبلی هرکدام فقط حرکت‌های خودشان را
+      خاموش می‌کردند؛ تزئینی‌های همیشه‌درحال‌اجرا (ایموجی‌ها، آذرخش، ستارهٔ
+      دنباله‌دار، تپشِ نقطهٔ وضعیت، برقِ سرصفحه و…) روشن می‌ماندند. حالا
+      برای کسی که در سیستمش «کاهشِ حرکت» را روشن کرده همه می‌ایستند.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root{
+  /* یک نردبانِ زمانی برای همهٔ گذرهای تعاملی — عددهای پراکندهٔ قبلی
+     (‎.15s/.16s/.18s/.2s/.22s‎) همه در همین سه پله می‌نشینند */
+  --mo-fast:140ms;   /* لمس و هاور — باید «فوری» حس شود */
+  --mo-base:180ms;   /* گذرهای معمولِ رنگ و سایه */
+  --mo-slow:240ms;   /* نوارِ پیام و چیزهای بزرگ‌تر */
+  --mo-ease:cubic-bezier(.2,.8,.2,1);   /* همان منحنیِ خودِ برنامه */
+}
+
+/* ── ۱) دامنهٔ گذرها: به‌جای «هر چیزی» فقط ویژگی‌های GPUدوست ────────────────
+   ‎!important‎ فقط چون چند بلوکِ بالاتر خودشان ‎transition:all …!important‎
+   نوشته‌اند؛ بدونش این قاعده اصلاً به آن‌ها نمی‌رسد. */
+.theme-toggle, .lock-btn, .nav-btn, .goto-btn, .save-btn, .del-btn, .add-btn,
+.person-card, .person-del, .person-nav-btn, .sec-font-btn, .ft-opt,
+.add-row-btn, .pm-filter-btn, .hexfx-toggle, .inv-act, .modal-close,
+.tools-btn, .pw-btn, .btn-ok{
+  transition-property: background-color, border-color, color, box-shadow, transform, opacity !important;
+  transition-duration: var(--mo-fast) !important;
+  transition-timing-function: var(--mo-ease) !important;
+}
+
+/* نوارِ پیام: همان ورود و خروج، فقط با منحنیِ یکسانِ بقیهٔ برنامه */
+.toast{ transition:transform var(--mo-slow) var(--mo-ease),
+                   opacity var(--mo-slow) var(--mo-ease),
+                   bottom var(--mo-base) var(--mo-ease); }
+
+/* ── ۲) صفحهٔ لمسی: هاور نچسبد ─────────────────────────────────────────── */
+@media (hover:none){
+  /* بالاآمدنِ کارت/دکمه فقط برای موشِ واقعی معنا دارد */
+  .person-card:hover, .theme-swatch:hover, .add-row-btn:hover{ transform:none; }
+  .nav-btn:hover:not(.active) .nav-ic{ transform:none; }
+  /* آیکونِ دکمه‌ای که فقط لمس شده (و فعال نیست) نباید تا ابد بچرخد */
+  .nav-btn:hover:not(.active) .ia-wobble,
+  .nav-btn:hover:not(.active) .ia-write,
+  .nav-btn:hover:not(.active) .ia-bounce,
+  .nav-btn:hover:not(.active) .ia-flip,
+  .nav-btn:hover:not(.active) .ia-fly,
+  .nav-btn:hover:not(.active) .ia-shake,
+  .nav-btn:hover:not(.active) .ia-tilt,
+  .nav-btn:hover:not(.active) .ia-pulse,
+  .nav-btn:hover:not(.active) .ia-rise,
+  .nav-btn:hover:not(.active) .ia-spin{ animation:none; }
+}
+
+/* ── ۳) کاهشِ حرکت: تزئینی‌ها می‌ایستند ─────────────────────────────────
+   فهرست عمداً دستی و کامل نوشته شده (نه ‎*‎) تا معلوم باشد دقیقاً چه چیزی
+   خاموش می‌شود — و تا هیچ‌وقت به عناصرِ مخزن نرسد. */
+@media (prefers-reduced-motion: reduce){
+  .emj-spin, .emj-write, .emj-fly, .emj-bounce, .emj-truck,
+  .emj-rise, .emj-wobble, .emj-shake, .emj-tilt,
+  .pstatus-dot, .fx-bolts i, .fx-stars i,
+  .pl-arrow, .pl-aurora, .pl-money i,
+  .ls-icon, .ls-bar::after, .ls-tape, .ls-brand-icon,
+  .ch-ib.rec-on, .vx-row button.rec, .staff-mic.listening,
+  .gfx-um-orb, .gfx-confirm-bar,
+  .daynight-toggle .dn-bird-1, .daynight-toggle .dn-bird-2,
+  .daynight-toggle .dn-cloud, .daynight-toggle .dn-stars i,
+  .daynight-toggle .dn-thumb,
+  .nav-btn:hover .nav-ic, .nav-btn.active .nav-ic,
+  .section.visible .card-title .nav-ic,
+  .section.visible .list-title .nav-ic,
+  .section.visible .pl-result-label .nav-ic{ animation:none !important; }
+
+  /* گذرهای بند ۱ هم بی‌درنگ شوند */
+  .theme-toggle, .lock-btn, .nav-btn, .goto-btn, .save-btn, .del-btn, .add-btn,
+  .person-card, .person-del, .person-nav-btn, .sec-font-btn, .ft-opt,
+  .add-row-btn, .pm-filter-btn, .hexfx-toggle, .inv-act, .modal-close,
+  .tools-btn, .pw-btn, .btn-ok, .toast{ transition-duration:1ms !important; }
+}
+</style>
 
 </body>
 </html>
