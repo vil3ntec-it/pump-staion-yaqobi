@@ -48,7 +48,6 @@ function updIndex()    { return path.join(updDir(), 'index.html'); }
 function updMetaFile() { return path.join(updDir(), 'meta.json'); }
 function updFlagFile() { return path.join(updDir(), 'verify.flag'); }   // نشانهٔ «هنوز امتحان نشده»
 function updCfgFile()  { return path.join(app.getPath('userData'), 'update-config.json'); }
-function winStateFile(){ return path.join(app.getPath('userData'), 'window-state.json'); }
 
 function readJson(file, fallback) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { return fallback; }
@@ -311,9 +310,6 @@ function bindShortcuts(win) {
     const mod = process.platform === 'darwin' ? input.meta : input.control;
 
     if (key === 'f11') { win.setFullScreen(!win.isFullScreen()); event.preventDefault(); return; }
-    // Esc نوارِ جست‌وجو را می‌بندد — ولی فقط وقتی باز است، وگرنه دستِ خودِ برنامه
-    if (key === 'escape' && findWin && !findWin.isDestroyed()) { closeFindBar(); event.preventDefault(); return; }
-    if (key === 'f3') { openFindBar(); event.preventDefault(); return; }
     if (!mod || input.alt) return;
 
     const run = (fn) => { fn(); event.preventDefault(); };
@@ -321,8 +317,6 @@ function bindShortcuts(win) {
     if (key === 'c') return run(() => wc.copy());
     if (key === 'v') return run(() => (input.shift ? wc.pasteAndMatchStyle() : wc.paste()));
     if (key === 'a') return run(() => wc.selectAll());
-    // Ctrl+F: در برنامه میانبرِ دیگری ندارد (بررسی شد) → جست‌وجوی کلِ صفحه
-    if (key === 'f') return run(() => openFindBar());
     if (key === 'y') return run(() => wc.redo());
     if (key === 'r') return run(() => wc.reload());
     // بزرگ‌نمایی: هم ردیفِ عددها (+ - 0) و هم کلیدهای numpad
@@ -338,160 +332,9 @@ function bindShortcuts(win) {
   win.webContents.on('did-start-navigation', () => { editableFocus = false; });
 }
 
-// ---------------------------------------------------------------------------
-//  یادِ پنجره — اندازه، جا و «تمام‌صفحه بودن»
-//
-//  کارِ نسخهٔ کامپیوتری با نسخهٔ وب فرق دارد: کاربر پنجره را یک‌بار همان‌طور
-//  که می‌خواهد می‌گذارد (مثلاً تمام‌صفحه روی مانیتورِ دوم) و انتظار دارد دفعهٔ
-//  بعد همان‌جا باز شود. تا حالا هر بار از صفر ۱۳۶۰×۹۰۰ وسطِ صفحهٔ اول باز
-//  می‌شد. مرورگر چنین چیزی ندارد؛ این یکی از کارهایی است که فقط پوستهٔ
-//  کامپیوتری می‌تواند بکند.
-//
-//  ⚠️ ایمنی: جای ذخیره‌شده فقط وقتی به کار می‌رود که واقعاً روی یکی از
-//  نمایشگرهای همین لحظه بیفتد. وگرنه (مانیتورِ دوم جدا شده، رزولوشن عوض
-//  شده) پنجره بیرونِ دیدِ کاربر باز می‌شد و برنامه «باز نمی‌شود» به نظر
-//  می‌رسید. در آن حالت به همان اندازهٔ پیش‌فرضِ وسطِ صفحه برمی‌گردیم.
-// ---------------------------------------------------------------------------
-const WIN_DEFAULT = { width: 1360, height: 900 };
-
-function loadWinState() {
-  const st = readJson(winStateFile(), null);
-  if (!st || typeof st !== 'object') return null;
-  const b = st.bounds;
-  if (!b || !Number.isFinite(b.x) || !Number.isFinite(b.y)
-        || !Number.isFinite(b.width) || !Number.isFinite(b.height)) return null;
-  if (b.width < 600 || b.height < 400) return null;
-  // آیا این مستطیل روی یکی از نمایشگرهای موجود دیده می‌شود؟
-  let visible = false;
-  try {
-    const { screen } = require('electron');
-    visible = screen.getAllDisplays().some((d) => {
-      const w = d.workArea;
-      return b.x < w.x + w.width && b.x + b.width > w.x
-          && b.y < w.y + w.height && b.y + b.height > w.y;
-    });
-  } catch (e) { visible = false; }
-  if (!visible) return null;
-  return { bounds: b, maximized: Boolean(st.maximized), fullScreen: Boolean(st.fullScreen) };
-}
-
-/** ذخیره با تاخیر — هنگام کشیدن/تغییرِ اندازه ده‌ها رویداد می‌آید و نباید
- *  برای هرکدام روی دیسک بنویسیم. */
-let winSaveTimer = null;
-function rememberWin(win) {
-  if (!win || win.isDestroyed()) return;
-  clearTimeout(winSaveTimer);
-  winSaveTimer = setTimeout(() => {
-    try {
-      if (!win || win.isDestroyed()) return;
-      // اندازهٔ «عادی» را می‌خواهیم، نه اندازهٔ تمام‌صفحه
-      const bounds = win.isMaximized() || win.isFullScreen() ? win.getNormalBounds() : win.getBounds();
-      fs.writeFileSync(winStateFile(), JSON.stringify({
-        bounds, maximized: win.isMaximized(), fullScreen: win.isFullScreen(),
-      }), 'utf8');
-    } catch (e) {}
-  }, 400);
-}
-
-function bindWinState(win) {
-  ['resize', 'move', 'maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen']
-    .forEach((ev) => win.on(ev, () => rememberWin(win)));
-  // بستنِ برنامه: بدونِ تاخیر، وگرنه آخرین تغییر از دست می‌رود
-  win.on('close', () => {
-    clearTimeout(winSaveTimer);
-    try {
-      const bounds = win.isMaximized() || win.isFullScreen() ? win.getNormalBounds() : win.getBounds();
-      fs.writeFileSync(winStateFile(), JSON.stringify({
-        bounds, maximized: win.isMaximized(), fullScreen: win.isFullScreen(),
-      }), 'utf8');
-    } catch (e) {}
-  });
-}
-
-// ---------------------------------------------------------------------------
-//  جست‌وجو در صفحه (Ctrl+F) — کارِ خودِ پوسته، نه برنامه
-//
-//  در مرورگر این کار را خودِ مرورگر می‌کند؛ در پوستهٔ کامپیوتری هیچ‌کس
-//  نمی‌کرد و Ctrl+F عملاً بی‌اثر بود. حالا نوارِ کوچکی بالا-چپِ پنجره باز
-//  می‌شود و از موتورِ خودِ کروم (findInPage) استفاده می‌کند: همان جست‌وجوی
-//  «کلِ صفحه» با شمارشِ نتیجه‌ها و رفت‌وبرگشت.
-//
-//  ⚠️ هیچ ربطی به جست‌وجوهای خودِ برنامه ندارد و هیچ کدی از index.html را
-//  صدا نمی‌زند — پس نه منطقی عوض می‌شود و نه فیلترهای هر بخش.
-// ---------------------------------------------------------------------------
-let findWin = null;
-
-function findBarBounds() {
-  const b = mainWin.getContentBounds();
-  const w = Math.min(430, Math.max(300, b.width - 48));
-  return { x: b.x + 24, y: b.y + 18, width: w, height: 52 };
-}
-
-function openFindBar() {
-  if (!mainWin || mainWin.isDestroyed()) return;
-  if (findWin && !findWin.isDestroyed()) {
-    findWin.show();
-    findWin.webContents.send('find:focus');
-    return;
-  }
-  findWin = new BrowserWindow(Object.assign({
-    parent: mainWin, frame: false, resizable: false, movable: true,
-    minimizable: false, maximizable: false, fullscreenable: false,
-    skipTaskbar: true, transparent: true, backgroundColor: '#00000000',
-    show: false, webPreferences: {
-      preload: path.join(__dirname, 'find-preload.js'),
-      contextIsolation: true, nodeIntegration: false, spellcheck: false,
-    },
-  }, findBarBounds()));
-  findWin.setMenu && findWin.setMenu(null);
-  findWin.loadFile(path.join(__dirname, 'find.html'));
-  findWin.once('ready-to-show', () => { findWin.show(); findWin.focus(); });
-  findWin.on('closed', () => { findWin = null; });
-}
-
-function closeFindBar() {
-  try { if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.stopFindInPage('clearSelection'); } catch (e) {}
-  if (findWin && !findWin.isDestroyed()) { try { findWin.close(); } catch (e) {} }
-  findWin = null;
-  try { if (mainWin && !mainWin.isDestroyed()) mainWin.focus(); } catch (e) {}
-}
-
-/** نوار با پنجره جابه‌جا و هم‌اندازه می‌ماند */
-function syncFindBar() {
-  if (!findWin || findWin.isDestroyed() || !mainWin || mainWin.isDestroyed()) return;
-  try { findWin.setBounds(findBarBounds()); } catch (e) {}
-}
-
-ipcMain.on('find:query', (_e, { text, findNext, forward }) => {
-  if (!mainWin || mainWin.isDestroyed() || !text) return;
-  try { mainWin.webContents.findInPage(text, { findNext, forward, matchCase: false }); } catch (e) {}
-});
-ipcMain.on('find:stop', () => {
-  try { if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.stopFindInPage('clearSelection'); } catch (e) {}
-});
-ipcMain.on('find:close', () => closeFindBar());
-
-function bindFind(win) {
-  win.webContents.on('found-in-page', (_e, r) => {
-    if (findWin && !findWin.isDestroyed()) {
-      findWin.webContents.send('find:result', { matches: r.matches || 0, active: r.activeMatchOrdinal || 0 });
-    }
-    if (process.env.PUMP_BENCH) console.log('[یافتن] نتیجه:', r.activeMatchOrdinal + '/' + r.matches);
-  });
-  // صفحه که عوض شد، نوار بی‌معنا می‌شود
-  win.webContents.on('did-start-navigation', () => { if (findWin) closeFindBar(); });
-  ['move', 'resize', 'maximize', 'unmaximize'].forEach((ev) => win.on(ev, syncFindBar));
-  win.on('closed', () => { if (findWin && !findWin.isDestroyed()) { try { findWin.destroy(); } catch (e) {} } findWin = null; });
-}
-
 function createMainWindow() {
-  const saved = loadWinState();
   mainWin = new BrowserWindow({
-    width: (saved && saved.bounds.width) || WIN_DEFAULT.width,
-    height: (saved && saved.bounds.height) || WIN_DEFAULT.height,
-    x: saved ? saved.bounds.x : undefined,
-    y: saved ? saved.bounds.y : undefined,
-    minWidth: 900, minHeight: 600,
+    width: 1360, height: 900, minWidth: 900, minHeight: 600,
     backgroundColor: '#0b0f17', title: 'پمپ یعقوبی',
     autoHideMenuBar: true,   // هیچ نوارِ منویی — نه در دید، نه با Alt
     icon: path.join(__dirname, 'build', 'icon.png'), show: false,
@@ -510,17 +353,6 @@ function createMainWindow() {
 
   stripMenu();
   bindShortcuts(mainWin);
-  if (saved && saved.maximized) mainWin.maximize();
-  if (saved && saved.fullScreen) mainWin.setFullScreen(true);
-  bindWinState(mainWin);
-  bindFind(mainWin);
-  // اگر فایلِ ذخیره‌شده کهنه یا بیرونِ دید بود و نادیده گرفته شد، همین اول با
-  // جای واقعیِ پنجره اصلاحش می‌کنیم — نه اینکه تا اولین جابه‌جاییِ کاربر غلط
-  // بماند.
-  // ⚠️ فقط در همین حالت. اگر حالتِ ذخیره‌شده معتبر بود این‌جا چیزی نمی‌نویسیم:
-  //   maximize() روی X11/ویندوز آنی نیست و در همین لحظه isMaximized() هنوز
-  //   false است — یک نوشتنِ زودهنگام «بیشینه بودن» را پاک می‌کرد (آزموده شد).
-  if (!saved) rememberWin(mainWin);
 
   const usingUpdate = activeIndexPath() === updIndex();
   if (usingUpdate) { try { fs.writeFileSync(updFlagFile(), String(Date.now())); } catch (e) {} }
@@ -541,17 +373,6 @@ function createMainWindow() {
     clearTimeout(readyFallbackTimer);
     readyFallbackTimer = setTimeout(() => bootFinish('نسخهٔ بالا‌آمده مرحله‌هایش را خبر نداد'), READY_FALLBACK_MS);
     scheduleUpdateChecks();
-    /* راهِ آزمودنِ خودکارِ نوارِ جست‌وجو (فقط با PUMP_BENCH=find، وگرنه هرگز
-       اجرا نمی‌شود): نوار را باز می‌کند و یک واژهٔ حتماً موجود را می‌جوید تا
-       شمارشِ نتیجه در لاگ چاپ شود. tools/check-desktop-find.mjs همین را می‌سنجد. */
-    if (process.env.PUMP_BENCH === 'find') {
-      setTimeout(() => {
-        try {
-          openFindBar();
-          setTimeout(() => { try { mainWin.webContents.findInPage('پمپ', {}); } catch (e) {} }, 900);
-        } catch (e) { console.log('[یافتن] باز نشد:', e && e.message); }
-      }, 1200);
-    }
   });
 
   mainWin.webContents.on('did-fail-load', (_e, code, desc, url, isMainFrame) => {
