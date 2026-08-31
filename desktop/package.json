@@ -21,6 +21,11 @@
     "artifactName": "PumpYaqobi-Setup-${version}.${ext}",
     "publish": null,
     "asar": false,
+    "compression": "maximum",
+    "electronLanguages": [
+      "en-US",
+      "fa"
+    ],
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -29,6 +34,8 @@
       "main.js",
       "preload.js",
       "splash.html",
+      "find.html",
+      "find-preload.js",
       "app/**/*"
     ],
     "win": {
