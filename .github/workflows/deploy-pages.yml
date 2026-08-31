@@ -91,6 +91,7 @@ jobs:
           grab('android-latest', '.apk', 'PumpYaqobi.apk')
           grab('android-latest', 'version.txt', 'apk-version.txt')
           grab('desktop-latest', '.exe', 'PumpYaqobi-Setup.exe')
+          grab('desktop-latest', '.zip', 'PumpYaqobi-Portable.zip')
           grab('desktop-latest', 'version.txt', 'exe-version.txt')
           PY
 
