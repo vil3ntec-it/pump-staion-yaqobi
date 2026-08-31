@@ -97,7 +97,10 @@ jobs:
         run: |
           npm run prepare-app
           for i in 1 2 3; do
-            if npx electron-builder --win nsis --publish never; then exit 0; fi
+            # ⚠️ هر دو هدف این‌جا نوشته می‌شود. اگر فقط «nsis» بنویسی، همین یک
+            # هدف روی فهرستِ package.json می‌نشیند و زیپ اصلاً ساخته نمی‌شود —
+            # همان چیزی که ساختِ ۲.۹.۴۱۹ را شکست (cp: '*.zip': No such file).
+            if npx electron-builder --win nsis zip --publish never; then exit 0; fi
             echo "::warning::ساختِ نصب‌کننده در تلاشِ $i نشد — دوباره تلاش می‌کنیم"
             sleep 15
           done
@@ -120,6 +123,11 @@ jobs:
           # نسخهٔ «بدونِ نصب» (زیپ): همان برنامه، فقط بدونِ نصب‌کننده — باز
           # می‌کنی و «Pump Yaqobi.exe» را می‌زنی. برای کسی که نمی‌خواهد نصب کند
           # یا اجازهٔ نصب ندارد. هیچ چیزی کم یا زیاد ندارد.
+          if ! ls desktop/dist/*.zip >/dev/null 2>&1; then
+            echo "::error::زیپِ «بدونِ نصب» ساخته نشد. electron-builder باید با هر دو هدف اجرا شود: --win nsis zip"
+            ls -la desktop/dist/ || true
+            exit 1
+          fi
           cp desktop/dist/*.zip "rel/PumpYaqobi-Portable.zip"
           # نسخهٔ خودِ فایلِ نصب کنارش منتشر می‌شود تا صفحهٔ دریافت بتواند
           # بنویسد «نسخهٔ فایل نصب: …» و هر عقب‌ماندگی فوری دیده شود
