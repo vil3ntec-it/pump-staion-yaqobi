@@ -311,6 +311,9 @@ function bindShortcuts(win) {
     const mod = process.platform === 'darwin' ? input.meta : input.control;
 
     if (key === 'f11') { win.setFullScreen(!win.isFullScreen()); event.preventDefault(); return; }
+    // Esc نوارِ جست‌وجو را می‌بندد — ولی فقط وقتی باز است، وگرنه دستِ خودِ برنامه
+    if (key === 'escape' && findWin && !findWin.isDestroyed()) { closeFindBar(); event.preventDefault(); return; }
+    if (key === 'f3') { openFindBar(); event.preventDefault(); return; }
     if (!mod || input.alt) return;
 
     const run = (fn) => { fn(); event.preventDefault(); };
@@ -318,6 +321,8 @@ function bindShortcuts(win) {
     if (key === 'c') return run(() => wc.copy());
     if (key === 'v') return run(() => (input.shift ? wc.pasteAndMatchStyle() : wc.paste()));
     if (key === 'a') return run(() => wc.selectAll());
+    // Ctrl+F: در برنامه میانبرِ دیگری ندارد (بررسی شد) → جست‌وجوی کلِ صفحه
+    if (key === 'f') return run(() => openFindBar());
     if (key === 'y') return run(() => wc.redo());
     if (key === 'r') return run(() => wc.reload());
     // بزرگ‌نمایی: هم ردیفِ عددها (+ - 0) و هم کلیدهای numpad
@@ -403,6 +408,82 @@ function bindWinState(win) {
   });
 }
 
+// ---------------------------------------------------------------------------
+//  جست‌وجو در صفحه (Ctrl+F) — کارِ خودِ پوسته، نه برنامه
+//
+//  در مرورگر این کار را خودِ مرورگر می‌کند؛ در پوستهٔ کامپیوتری هیچ‌کس
+//  نمی‌کرد و Ctrl+F عملاً بی‌اثر بود. حالا نوارِ کوچکی بالا-چپِ پنجره باز
+//  می‌شود و از موتورِ خودِ کروم (findInPage) استفاده می‌کند: همان جست‌وجوی
+//  «کلِ صفحه» با شمارشِ نتیجه‌ها و رفت‌وبرگشت.
+//
+//  ⚠️ هیچ ربطی به جست‌وجوهای خودِ برنامه ندارد و هیچ کدی از index.html را
+//  صدا نمی‌زند — پس نه منطقی عوض می‌شود و نه فیلترهای هر بخش.
+// ---------------------------------------------------------------------------
+let findWin = null;
+
+function findBarBounds() {
+  const b = mainWin.getContentBounds();
+  const w = Math.min(430, Math.max(300, b.width - 48));
+  return { x: b.x + 24, y: b.y + 18, width: w, height: 52 };
+}
+
+function openFindBar() {
+  if (!mainWin || mainWin.isDestroyed()) return;
+  if (findWin && !findWin.isDestroyed()) {
+    findWin.show();
+    findWin.webContents.send('find:focus');
+    return;
+  }
+  findWin = new BrowserWindow(Object.assign({
+    parent: mainWin, frame: false, resizable: false, movable: true,
+    minimizable: false, maximizable: false, fullscreenable: false,
+    skipTaskbar: true, transparent: true, backgroundColor: '#00000000',
+    show: false, webPreferences: {
+      preload: path.join(__dirname, 'find-preload.js'),
+      contextIsolation: true, nodeIntegration: false, spellcheck: false,
+    },
+  }, findBarBounds()));
+  findWin.setMenu && findWin.setMenu(null);
+  findWin.loadFile(path.join(__dirname, 'find.html'));
+  findWin.once('ready-to-show', () => { findWin.show(); findWin.focus(); });
+  findWin.on('closed', () => { findWin = null; });
+}
+
+function closeFindBar() {
+  try { if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.stopFindInPage('clearSelection'); } catch (e) {}
+  if (findWin && !findWin.isDestroyed()) { try { findWin.close(); } catch (e) {} }
+  findWin = null;
+  try { if (mainWin && !mainWin.isDestroyed()) mainWin.focus(); } catch (e) {}
+}
+
+/** نوار با پنجره جابه‌جا و هم‌اندازه می‌ماند */
+function syncFindBar() {
+  if (!findWin || findWin.isDestroyed() || !mainWin || mainWin.isDestroyed()) return;
+  try { findWin.setBounds(findBarBounds()); } catch (e) {}
+}
+
+ipcMain.on('find:query', (_e, { text, findNext, forward }) => {
+  if (!mainWin || mainWin.isDestroyed() || !text) return;
+  try { mainWin.webContents.findInPage(text, { findNext, forward, matchCase: false }); } catch (e) {}
+});
+ipcMain.on('find:stop', () => {
+  try { if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.stopFindInPage('clearSelection'); } catch (e) {}
+});
+ipcMain.on('find:close', () => closeFindBar());
+
+function bindFind(win) {
+  win.webContents.on('found-in-page', (_e, r) => {
+    if (findWin && !findWin.isDestroyed()) {
+      findWin.webContents.send('find:result', { matches: r.matches || 0, active: r.activeMatchOrdinal || 0 });
+    }
+    if (process.env.PUMP_BENCH) console.log('[یافتن] نتیجه:', r.activeMatchOrdinal + '/' + r.matches);
+  });
+  // صفحه که عوض شد، نوار بی‌معنا می‌شود
+  win.webContents.on('did-start-navigation', () => { if (findWin) closeFindBar(); });
+  ['move', 'resize', 'maximize', 'unmaximize'].forEach((ev) => win.on(ev, syncFindBar));
+  win.on('closed', () => { if (findWin && !findWin.isDestroyed()) { try { findWin.destroy(); } catch (e) {} } findWin = null; });
+}
+
 function createMainWindow() {
   const saved = loadWinState();
   mainWin = new BrowserWindow({
@@ -432,6 +513,7 @@ function createMainWindow() {
   if (saved && saved.maximized) mainWin.maximize();
   if (saved && saved.fullScreen) mainWin.setFullScreen(true);
   bindWinState(mainWin);
+  bindFind(mainWin);
   // اگر فایلِ ذخیره‌شده کهنه یا بیرونِ دید بود و نادیده گرفته شد، همین اول با
   // جای واقعیِ پنجره اصلاحش می‌کنیم — نه اینکه تا اولین جابه‌جاییِ کاربر غلط
   // بماند.
@@ -459,6 +541,17 @@ function createMainWindow() {
     clearTimeout(readyFallbackTimer);
     readyFallbackTimer = setTimeout(() => bootFinish('نسخهٔ بالا‌آمده مرحله‌هایش را خبر نداد'), READY_FALLBACK_MS);
     scheduleUpdateChecks();
+    /* راهِ آزمودنِ خودکارِ نوارِ جست‌وجو (فقط با PUMP_BENCH=find، وگرنه هرگز
+       اجرا نمی‌شود): نوار را باز می‌کند و یک واژهٔ حتماً موجود را می‌جوید تا
+       شمارشِ نتیجه در لاگ چاپ شود. tools/check-desktop-find.mjs همین را می‌سنجد. */
+    if (process.env.PUMP_BENCH === 'find') {
+      setTimeout(() => {
+        try {
+          openFindBar();
+          setTimeout(() => { try { mainWin.webContents.findInPage('پمپ', {}); } catch (e) {} }, 900);
+        } catch (e) { console.log('[یافتن] باز نشد:', e && e.message); }
+      }, 1200);
+    }
   });
 
   mainWin.webContents.on('did-fail-load', (_e, code, desc, url, isMainFrame) => {
