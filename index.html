@@ -49999,7 +49999,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.416';
+const APP_VERSION = '2.9.417';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -60823,7 +60823,6 @@ select:not(.native-sel){
 
 /* ── ۱) نردبانِ هندسه ─────────────────────────────────────────────────── */
 :root{
-  --ds-r-btn:8px;  --ds-r-in:8px;  --ds-r-card:12px;  --ds-r-modal:16px;
   --ds-h-btn:40px; --ds-h-in:42px; --ds-h-row:48px;   --ds-h-th:44px;
   --ds-sp-1:4px; --ds-sp-2:8px; --ds-sp-3:12px; --ds-sp-4:16px;
   --ds-sp-5:20px; --ds-sp-6:24px; --ds-sp-7:32px;
@@ -60831,17 +60830,18 @@ select:not(.native-sel){
 
 /* ── ۲) دکمه‌ها: یک ارتفاع، یک شعاع، یک ریتم ───────────────────────────
    ‎min-height‎ نه ‎height‎ — دکمهٔ دوخطی هنوز خودش را جا می‌دهد. */
+/* ⚠️ فقط «ارتفاع». شعاعِ گوشه و چیدمانِ درونی عمداً دست نمی‌خورد.
+   نسخهٔ اول این بلوک شعاعِ همه را هم یکی کرده بود و نتیجه‌اش بدتر شد: کارت‌های
+   اصلی از ۱۴ به ۱۲ رفتند (یعنی «مربعی‌تر» دیده شدند) و چیپ‌های کوچکِ ۸ به ۱۲
+   رفتند (گوشهٔ بزرگ روی کادرِ کوچک، همان «کنج اضافه»). گزارشِ صاحب ریپو همین
+   بود و درست بود. شعاع‌ها به همان چیزی که خودِ برنامه داشت برگشتند. */
 .add-btn, .save-btn, .goto-btn, .add-row-btn, .person-nav-btn, .sec-font-btn,
 .pm-filter-btn, .inv-act, .tools-btn, .hexfx-toggle, .theme-toggle, .lock-btn,
 .btn-ok, .pw-btn, .fuel-add-btn{
   min-height:var(--ds-h-btn);
-  border-radius:var(--ds-r-btn) !important;
-  display:inline-flex; align-items:center; justify-content:center; gap:6px;
   line-height:1.2;
 }
-.nav-btn{ min-height:42px; border-radius:var(--ds-r-btn) !important; }
-/* دکمه‌های مربعیِ کوچک (حذف/بستن) مربع می‌مانند — کشیده نشوند */
-.del-btn, .person-del, .modal-close{ border-radius:var(--ds-r-btn) !important; }
+.nav-btn{ min-height:42px; }
 /* داخلِ جدول‌ها هیچ‌کدام از این ارتفاع‌ها اعمال نمی‌شود — ردیف را باد می‌کرد */
 .xls-tbl .add-row-btn, .tbl .add-row-btn,
 .xls-tbl button, .tbl button, .ro-tbl button{ min-height:0; }
@@ -60850,7 +60850,6 @@ select:not(.native-sel){
 input[type=text], input[type=number], input[type=tel], input[type=search],
 input[type=password], input[type=date], select, textarea{
   min-height:var(--ds-h-in);
-  border-radius:var(--ds-r-in);
 }
 textarea{ min-height:calc(var(--ds-h-in) * 2); }
 /* خانه‌های جدول و کادرهای ریزِ داخلِ ردیف‌ها استثنا — ردیف نباید بلند شود */
@@ -60858,15 +60857,13 @@ textarea{ min-height:calc(var(--ds-h-in) * 2); }
 .tbl input, .tbl select, .tbl textarea,
 .ro-tbl input, .ro-tbl select,
 .xls-in, .pm-edit, .tank-cap input, .pstatus-row input{
-  min-height:0; border-radius:inherit;
+  min-height:0;
 }
 
-/* ── ۴) کارت و پنجره: شعاعِ یکسان ─────────────────────────────────────── */
-.card, .settings-card, .shift-card, .pl-card, .stat-box, .msumbox,
-.person-card, .company-card, .tool-link-card, .fs-group, .split-box{
-  border-radius:var(--ds-r-card);
-}
-.modal{ border-radius:var(--ds-r-modal); }
+/* ── ۴) شعاعِ کارت‌ها و پنجره‌ها: عمداً هیچ ──────────────────────────────
+   هر کادرِ این برنامه شعاعِ سنجیدهٔ خودش را دارد (کارت ۱۴، چیپ ۸، خلاصه ۹…).
+   یکی کردنشان «نظم» نساخت، فقط ظاهرِ آشنا را خراب کرد. این‌جا هیچ شعاعی
+   تحمیل نمی‌شود. */
 
 /* ── ۵) جدول‌ها: ارتفاعِ سرستون و ردیف طبقِ استانداردِ داشبورد ───────────
    ‎height‎ روی ‎td/th‎ در جدول‌ها مثل ‎min-height‎ عمل می‌کند: ردیفِ کوتاه بالا
@@ -60895,6 +60892,76 @@ textarea:focus-visible{
   :root{ --ds-h-btn:44px; --ds-h-in:46px; }
   .del-btn, .person-del, .modal-close{ min-width:44px; min-height:44px; }
   .xls-tbl .del-btn, .tbl .del-btn{ min-width:0; min-height:0; }
+}
+
+/* ── ۷ب) دکمهٔ حذفِ کارت‌های رنگی: دیگر «لکهٔ سفید» نیست ────────────────
+   کارتِ «اتمام تیل» سرخ می‌شود و «کم مانده» زرد، ولی دکمهٔ ✕ گوشه‌اش
+   ‎background:var(--card)‎ می‌ماند — روی تمِ روشن یعنی یک مربعِ سفیدِ درخشان
+   وسطِ کارتِ سرخ. گزارشِ صاحب ریپو دقیقاً همین بود.
+   حالا شفاف است و رنگِ خودِ وضعیت را می‌گیرد، پس بخشی از کارت دیده می‌شود.
+   با موس که رویش بروی، پُررنگ و کاملاً خوانا می‌شود. */
+.person-card .person-del,
+.company-card .person-del{
+  background:transparent;
+  color:var(--muted);
+}
+.person-card.fuel-low .person-del{
+  border-color:rgba(230,184,0,.75);
+  color:#c99a00;
+}
+.person-card.fuel-out .person-del{
+  border-color:rgba(229,62,62,.75);
+  color:#d64545;
+}
+body:not(.light-mode) .person-card.fuel-low .person-del{ color:#f6c000; }
+body:not(.light-mode) .person-card.fuel-out .person-del{ color:#ff7a7a; }
+.person-card .person-del:hover{
+  background:color-mix(in srgb, currentColor 16%, transparent);
+}
+
+/* ── ۷ب‌ب) دکمه‌های کوچکِ سربرگ در تم‌های روشن ─────────────────────────
+   یک قاعدهٔ قدیمی (‎body.light-mode .lock-btn‎) این دکمه‌ها را قهوه‌ایِ تیره
+   می‌کرد: ‎#4a2e00‎ با نوشتهٔ طلایی. آن رنگ برای تمِ «طلای سلطنتی» انتخاب شده
+   بود، ولی حالا ده‌ها تمِ روشن هست و همان قهوه‌ای روی تمِ آبی/سبز/بنفش یک
+   لکهٔ بی‌ربط است — همان چیزی که دیده می‌شد.
+   حالا رنگِ خودِ تم را می‌گیرند، مثلِ ‎.goto-btn‎ که از قبل همین کار را می‌کرد.
+   ⚠️ ‎#lockBtn‎ (دکمهٔ سرخِ «قفل») قاعدهٔ شناسه‌دارِ خودش را دارد و برنده
+   می‌ماند — سرخیِ آن عمدی است. */
+body.light-mode .lock-btn{
+  background:color-mix(in srgb, var(--accent) 12%, #ffffff) !important;
+  border-color:color-mix(in srgb, var(--accent) 42%, transparent) !important;
+  color:var(--accent) !important;
+}
+body.light-mode .lock-btn:hover{
+  background:var(--accent) !important;
+  color:var(--on-accent, #ffffff) !important;
+}
+
+/* ── ۷ج) کیفیتِ کارت‌ها در «گرافیک سبک» ────────────────────────────────
+   آن حالت عمداً بدونِ سایه و گرادیان است (برای دستگاهِ ضعیف) و همین باعث شده
+   کارت‌ها بی‌رمق دیده شوند: مرزِ کم‌رنگ روی زمینهٔ هم‌رنگ. راهِ درستش سایه
+   نیست — مرزِ واضح‌تر و سرکادرِ جداشده است. هر دو هزینهٔ رسمِ صفر دارند و
+   خاصیتِ «سبک بودن» را خراب نمی‌کنند. */
+body.gfx-performance .card,
+body.gfx-performance .settings-card,
+body.gfx-performance .shift-card,
+body.gfx-performance .pl-card,
+body.gfx-performance .person-card,
+body.gfx-performance .company-card,
+body.gfx-performance .tank-card,
+body.gfx-performance .modal{
+  border-color:color-mix(in srgb, var(--txt) 26%, transparent) !important;
+}
+body.gfx-performance .card-head,
+body.gfx-performance .modal-head,
+body.gfx-performance .list-header{
+  border-bottom:1.5px solid color-mix(in srgb, var(--txt) 20%, transparent) !important;
+}
+/* سرستونِ جدول در همین حالت هم از بدنه جدا دیده شود */
+body.gfx-performance .xls-tbl th,
+body.gfx-performance .tbl th{
+  border-bottom-width:2px !important;
+  border-bottom-color:color-mix(in srgb, var(--txt) 30%, transparent) !important;
 }
 
 /* ═══ ۸) پالتِ اجرایی — دقیقاً با رنگ‌هایی که خواسته شد ═══════════════════
