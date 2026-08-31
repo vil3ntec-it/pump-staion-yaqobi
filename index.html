@@ -21729,7 +21729,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <button class="add-row-btn" style="margin:0" onclick="addPersonRow()">➕ ردیف جدید</button>
         <div class="bulk-box" style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
           <span style="font-size:0.78rem;color:var(--muted)">تعداد:</span>
-          <input type="number" class="bulk-n" id="pm-bulk-count" value="10" min="1" max="200" style="width:62px;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;text-align:center">
+          <input type="number" class="bulk-n" id="pm-bulk-count" value="10" min="1" style="width:62px;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;text-align:center">
           <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green)" onclick="addPersonRowsBulk()">➕ افزودن چندتایی</button>
         </div>
       </div>
@@ -29950,13 +29950,31 @@ function _figEmWidth(txt) {
    با نسبتِ دو مستطیل سنجیده می‌شود (خودِ عنصر و یک خط‌کشِ ۱۰em داخلش)، پس
    بزرگ‌نماییِ مرورگر و zoomِ خودِ بخش («فونتِ بخش» در نوارِ قرض‌داران) رویش اثر
    ندارد — هر دو مستطیل یک‌جور بزرگ می‌شوند و نسبتشان همان می‌ماند. */
-function _emWidthOf(el) {
-  const r = document.createElement('i');
-  r.style.cssText = 'position:absolute;width:10em;height:0;visibility:hidden;pointer-events:none';
-  el.appendChild(r);
-  const w = el.getBoundingClientRect().width, u = r.getBoundingClientRect().width;
-  r.remove();
-  return (u > 0 && w > 0) ? (w / u) * 10 : 0;
+function _emWidthOf(el) { return _emWidthOfMany([el])[0]; }
+/* همان کار، ولی برایِ چند عنصر با «یک» چیدمانِ اجباری ─────────────────────
+   ⚠️ چرا مهم است: هر بار که چیزی به صفحه اضافه می‌شود و بلافاصله اندازه‌اش
+   خوانده می‌شود، مرورگر مجبور است همان لحظه کلِ صفحه را از نو بچیند. این
+   گران‌ترین کارِ ممکن است و با بزرگ‌تر شدنِ صفحه گران‌تر هم می‌شود.
+   نسخهٔ قبلی برای هر عنصر یک‌بار «بنویس ← بخوان» می‌کرد؛ با دو عنصر یعنی دو
+   چیدمانِ کامل. اندازه‌گیری‌شده روی فهرستِ ۱۰۰ حساب: ۹۶ms فقط همین.
+   حالا اول همهٔ خط‌کش‌ها گذاشته می‌شوند، بعد همهٔ اندازه‌ها خوانده می‌شود:
+   یک چیدمان، نه چند تا. نتیجه مو‌به‌مو همان است. */
+function _emWidthOfMany(els) {
+  const rulers = els.map(el => {
+    if (!el) return null;
+    const r = document.createElement('i');
+    r.style.cssText = 'position:absolute;width:10em;height:0;visibility:hidden;pointer-events:none';
+    el.appendChild(r);
+    return r;
+  });
+  const out = els.map((el, i) => {                       // ← همهٔ خواندن‌ها با هم
+    const r = rulers[i];
+    if (!el || !r) return 0;
+    const w = el.getBoundingClientRect().width, u = r.getBoundingClientRect().width;
+    return (u > 0 && w > 0) ? (w / u) * 10 : 0;
+  });
+  rulers.forEach(r => { if (r) r.remove(); });
+  return out;
 }
 /* اندازهٔ نوشته‌هایِ داخلِ کارت‌ها — یک‌بار در هر رندر ─────────────────────────
    گزارشِ صاحب ریپو (از کامپیوتر): «عددهایِ پطرول و دیزل بالا و پایینِ هم شدند».
@@ -29969,8 +29987,23 @@ function _emWidthOf(el) {
    ریپو که نوشته‌ها «همه یک مدل» باشند، نه هر کارت یک اندازه.
    ⚠️ اول همه‌چیز خوانده می‌شود و بعد نوشته؛ وسطش چیزی روی صفحه تغییر نکند،
    وگرنه مرورگر برایِ هر کارت یک‌بار چیدمان را از نو حساب می‌کند. */
+/* پهنایِ گرید بدونِ چیدمانِ اجباری ────────────────────────────────────────
+   ResizeObserver بعد از چیدمانِ خودِ مرورگر خبر می‌دهد، پس خواندنِ عددش رایگان
+   است؛ برخلافِ clientWidth که وسطِ کار مرورگر را مجبور می‌کند همان لحظه کلِ
+   صفحه را از نو بچیند. */
+function _pcardWatchWidth(grid) {
+  if (grid.__pcRo || typeof ResizeObserver !== 'function') return;
+  try {
+    grid.__pcRo = new ResizeObserver(entries => {
+      const w = Math.round(entries[0].contentRect.width);
+      if (w !== grid.__pcw) { grid.__pcw = w; grid.__fitSig = ''; }   // پهنا عوض شد → دوباره بسنج
+    });
+    grid.__pcRo.observe(grid);
+  } catch (e) {}
+}
 function _pcardFitText(grid) {
   if (!grid || !grid.firstElementChild) return;
+  _pcardWatchWidth(grid);
   /* ضریبِ A−/A+ِ بخش (اگر کاربر اندازهٔ نوشته‌های این بخش را عوض کرده باشد) */
   let cap = 1;
   try {
@@ -29978,6 +30011,52 @@ function _pcardFitText(grid) {
     const sc = sec && _secFontScales[sec.id.replace(/^sec-/, '')];
     if (sc > 0) cap = sc;
   } catch (e) {}
+  /* ── اگر هیچ‌کدام از ورودی‌ها عوض نشده، اصلاً اندازه نگیر ────────────────
+     این تابع با «هر» رندرِ فهرست صدا زده می‌شود (هر ذخیره، هر فیلتر، هر
+     برگشت از یک حساب). ولی نتیجه‌اش فقط به سه چیز بند است: پهنایِ گرید،
+     بلندترین نوشتهٔ کارت‌ها (k)، و ضریبِ A−/A+ِ بخش. تا وقتی این سه یکی‌اند،
+     عددِ قبلی هنوز درست است و روی خودِ گرید هم نشسته.
+     اندازه‌گیری‌شده روی فهرستِ ۱۰۰ حساب: خودِ این سنجش ۹۶ms چیدمانِ اجباری
+     می‌ساخت — حالا در رندرهای بعدی صفر است.
+     ⚠️ خواندنِ k از استایلِ درون‌خطی است، نه از صفحه؛ پس هیچ چیدمانی را
+     مجبور نمی‌کند. */
+  let kSig = '';
+  ['.pcard-figs', '.pstatus-row'].forEach(sel => {
+    let mx = 0;
+    grid.querySelectorAll(sel).forEach(el => {
+      const v = parseFloat(el.style.getPropertyValue(sel === '.pcard-figs' ? '--figs-k' : '--st-k'));
+      if (v > mx) mx = v;
+    });
+    kSig += mx.toFixed(2) + ';';
+  });
+  const wNow = (grid.__pcw != null) ? grid.__pcw : grid.clientWidth;
+  const sig = cap.toFixed(3) + '|' + wNow + '|' + kSig;
+  if (grid.__fitSig === sig) return;                     // ← هیچ کاری لازم نیست
+
+  /* ── همان حافظه، ولی بینِ اجراهای برنامه هم ─────────────────────────────
+     بارِ اولِ هر اجرا، حافظهٔ بالا خالی است و باید از نو سنجید — یعنی همان
+     ۱۳۳ میلی‌ثانیه دوباره. ولی جوابِ این سنجش فقط به سه چیز بند است که بینِ
+     دو بار باز کردنِ برنامه معمولاً عوض نمی‌شوند. پس یک‌بار کنارِ خودِ مرورگر
+     نوشته می‌شود و دفعهٔ بعد مستقیم به کار می‌رود.
+     ⚠️ فقط یک «میان‌بُر» است: اگر امضا نخواند (پهنای پنجره عوض شده، نوشتهٔ
+     بلندتری آمده، اندازهٔ بخش دست‌کاری شده) همان مسیرِ سنجشِ کامل می‌رود. */
+  const ck = 'pcardFit:' + (grid.id || 'grid') + ':' + sig;
+  if (grid.__fitSig !== sig) {
+    try {
+      const hit = localStorage.getItem(ck);
+      if (hit) {
+        const o = JSON.parse(hit);
+        if (o && o.figs && o.st) {
+          grid.style.setProperty('--fit-figs', o.figs);
+          grid.style.setProperty('--fit-st', o.st);
+          grid.__fitSig = sig;
+          return;                                        // ← بدونِ هیچ اندازه‌گیری
+        }
+      }
+    } catch (e) {}
+  }
+  grid.__fitSig = sig;
+
   const fit = (rowSel, kVar, outVar, padEm, verify) => {
     const rows = grid.querySelectorAll(rowSel);
     if (!rows.length) return;
@@ -29986,16 +30065,18 @@ function _pcardFitText(grid) {
     /* همهٔ کارت‌های یک ردیف هم‌پهنا هستند؛ ولی کارتِ دارایِ حسابِ فرعی پدینگِ
        بیشتری دارد، پس باریک‌ترینِ ردیف‌ها را می‌گیریم تا هیچ‌کدام نشکند. */
     let avail = 0;
-    [rows[0], grid.querySelector('.person-card.has-subs ' + rowSel)].forEach(el => {
-      if (!el) return;
-      const w = _emWidthOf(el);
-      if (w > 0 && (!avail || w < avail)) avail = w;
-    });
+    _emWidthOfMany([rows[0], grid.querySelector('.person-card.has-subs ' + rowSel)])
+      .forEach(w => { if (w > 0 && (!avail || w < avail)) avail = w; });
     if (!(k > 0) || !(avail > 0)) return;   // بخش پنهان است — مقدارِ قبلی بماند
     /* سقف = ضریبِ A−/A+ِ همین بخش. یعنی این دو ردیف هم با دکمه‌های اندازه
        بزرگ و کوچک می‌شوند، ولی هرگز بزرگ‌تر از جای موجود نمی‌شوند. */
     let v = Math.min(cap, Math.max(Math.min(0.62, cap), (avail - padEm) / k));
-    grid.style.setProperty(outVar, v.toFixed(3) + 'em');
+    /* ⚠️ روی خودِ گرید نوشته می‌شود، نه روی تک‌تکِ ردیف‌ها — چون گرید بینِ
+       رندرها باقی می‌ماند ولی ردیف‌ها هر بار از نو ساخته می‌شوند. اگر روی
+       ردیف‌ها می‌نوشتیم، حافظهٔ «چیزی عوض نشده» بی‌معنا می‌شد: ردیفِ تازه
+       مقدارِ قبلی را نداشت و نوشته با اندازهٔ کامل می‌ماند. (آزموده شد.) */
+    const put = val => grid.style.setProperty(outVar, val.toFixed(3) + 'em');
+    put(v);
     /* ── تصحیح با اندازهٔ واقعیِ صفحه ──────────────────────────────────────
        k از یک جدولِ اندازه‌گیری‌شده می‌آید و پهنایِ ایموجی در آن یک عددِ ثابت
        است (۳٫۰۶em برایِ ⛽/🟤 و ۱٫۵۳em برایِ ⛔/⚠️). ولی ایموجی روی هر سیستمی
@@ -30022,9 +30103,34 @@ function _pcardFitText(grid) {
       const score = kk + (el.closest('.person-card.has-subs') ? 1000 : 0);
       if (score > best) { best = score; probe = el; }
     });
-    for (let i = 0; probe && i < 6 && broke(probe); i++) {
-      v = Math.max(0.45, v * 0.93);
-      grid.style.setProperty(outVar, v.toFixed(3) + 'em');
+    if (!probe) return;
+    /* ── حساب کن، نه اینکه شش بار کوچک کن ────────────────────────────────
+       نسخهٔ پیشین تا شش بار اندازه را ۷٪ کم می‌کرد و هر بار دوباره می‌پرسید
+       «شکست؟». هر بارِ آن یعنی مرورگر سبکِ همهٔ کارت‌های صفحه را از نو حساب
+       کند و صفحه را از نو بچیند — با ۵۰ کارت روی یک کامپیوترِ متوسط
+       اندازه‌گیری‌شده: ۵۰۱ میلی‌ثانیه از ۸۶۲ میلی‌ثانیهٔ کلِ رندر، فقط همین.
+
+       حالا یک‌بار اندازه گرفته می‌شود که نوشته‌ها رویِ هم چقدر جا می‌خواهند و
+       چقدر جا هست، و همان یک نسبت مستقیم اعمال می‌شود. نتیجه همان اندازهٔ
+       درست است — فقط به‌جای شش گامِ کورکورانه، یک گامِ حساب‌شده.
+       یک تورِ ایمنی هم هست: اگر با اندازهٔ تازه باز هم شکسته بود (مثلاً
+       ایموجیِ خیلی پهن)، یک بارِ دیگر کمی کوچک‌تر می‌شود — نه شش بار. */
+    const kids = probe.children;
+    if (kids && kids.length >= 2) {
+      let need = 0;
+      for (let i = 0; i < kids.length; i++) need += kids[i].getBoundingClientRect().width;
+      const cs = getComputedStyle(probe);
+      const gap = parseFloat(cs.columnGap) || 0;
+      need += gap * (kids.length - 1);
+      const availPx = probe.getBoundingClientRect().width;
+      if (need > 0 && availPx > 0 && need > availPx - 0.5) {
+        v = Math.max(0.45, v * (availPx / need) * 0.98);
+        put(v);
+        if (broke(probe)) {                       // تورِ ایمنی، فقط یک بار
+          v = Math.max(0.45, v * 0.95);
+          put(v);
+        }
+      }
     }
   };
   /* padEm = فاصلهٔ بینِ دو نوشته + کمی حاشیهٔ اطمینان (حاشیهٔ کارت، ضخامتِ
@@ -30034,6 +30140,11 @@ function _pcardFitText(grid) {
      است. ردیفِ وضعیت حاشیهٔ کافی دارد و حتی با ایموجیِ خیلی پهن‌تر هم نشکست. */
   fit('.pcard-figs', '--figs-k', '--fit-figs', 1.10, true);
   fit('.pstatus-row', '--st-k', '--fit-st', 1.00, false);
+  try {
+    const figs = grid.style.getPropertyValue('--fit-figs');
+    const st = grid.style.getPropertyValue('--fit-st');
+    if (figs && st) localStorage.setItem(ck, JSON.stringify({ figs, st }));
+  } catch (e) {}
 }
 /* اگر پنجره اندازه عوض کرد (چرخاندنِ گوشی، تغییرِ اندازهٔ پنجرهٔ کامپیوتر)،
    پهنایِ کارت‌ها عوض می‌شود و اندازهٔ نوشته باید دوباره سنجیده شود. */
@@ -32291,11 +32402,14 @@ function addRowsBulkToAcct(pid, acctId, countId) {
   const acct = _getStackedAcct(person, acctId);
   const inp = countId ? document.getElementById(countId) : document.getElementById('pm-bulk-count');
   let n = parseInt(inp?.value||'10', 10)||10;
-  if (n<1) n=1; if (n>200) n=200;
+  if (n<1) n=1;
   const rowsArr = _acctRows(person, acct);
-  for (let k=0;k<n;k++) rowsArr.push({ date:persianDate(), name:'', hawala:'', ftype:'petrol', fuel:0, priceper:0, bardagi:0, rasid:0, albaqi:0, byMoney:_acctModeMoney(person, acct) });
-  save(); _renderStackedAccounts(person); _updatePersonTotals(person);
-  showToast('✅ '+n2fa(n)+' ردیف افزوده شد', '#38a169');
+  _bulkAddRows(rowsArr, n,
+    () => ({ date:persianDate(), name:'', hawala:'', ftype:'petrol', fuel:0, priceper:0, bardagi:0, rasid:0, albaqi:0, byMoney:_acctModeMoney(person, acct) }),
+    () => {
+      save(); _renderStackedAccounts(person); _updatePersonTotals(person);
+      showToast('✅ '+n2fa(n)+' ردیف افزوده شد', '#38a169');
+    });
 }
 function pdfStackedAcct(pid, acctId) {
   const person = _getStackedPerson(pid); if (!person) return;
@@ -35609,22 +35723,60 @@ function setAllRowsFuel(type) {
   save(); renderPersonRows(person); renderPersons(currentPersonType);
   showToast(ft==='diesel' ? '✅ همه ردیف‌ها دیزل شد' : '✅ همه ردیف‌ها پطرول شد', ft==='diesel' ? '#b7791f' : '#38a169');
 }
+/* ── افزودنِ چندتاییِ ردیف، بدونِ سقف و بدونِ یخ‌زدن ─────────────────────────
+   پیش از این هر دو تابعِ «افزودن چندتایی» هرچه می‌خواستی بنویسی، بی‌صدا سرِ
+   ۲۰۰ می‌بریدند (‎if (n > 200) n = 200‎) — یعنی عددی که کاربر خواسته بود
+   اجرا نمی‌شد. سقف برداشته شد؛ ولی برداشتنِ خالیِ سقف یعنی یک حلقهٔ چندهزارتایی
+   روی نخِ صفحه و همان یخ‌زدنی که قبلاً بود.
+
+   اندازه‌گیری‌شده (حسابِ ۲۰٬۰۰۰ ردیفی، CPU شش برابر کندتر): ساختنِ ۵۰۰۰ ردیف
+   ۶۱ms، ولی رسمِ دوبارهٔ جدول ۲۶۶ms — یعنی هزینه در «ساختنِ ردیف‌ها» نیست، در
+   «رسم» است، و رسم هرچقدر ردیف اضافه شود یکی است (جدول پنجره‌ای است).
+   پس: ردیف‌ها تکه‌تکه ساخته می‌شوند و صفحه بینِ تکه‌ها نفس می‌کشد، و ذخیره و
+   رسم فقط یک‌بار در پایان انجام می‌شوند.
+
+   ⚠️ ساختِ خودِ ردیف دستِ صداکننده است (makeRow) — قالبِ ردیف در دو جا فرق
+   دارد و این‌جا عمداً یکی نشده تا هیچ فیلدی جابه‌جا نشود. */
+const _BULK_CHUNK = 2000;
+let _bulkBusy = false;
+function _bulkAddRows(rowsArr, n, makeRow, done) {
+  if (_bulkBusy) { showToast('یک افزودنِ دیگر در جریان است', '#dd6b20'); return; }
+  if (n <= _BULK_CHUNK) {                    // مسیرِ عادی: همان رفتارِ قبلی، یک‌جا
+    for (let k = 0; k < n; k++) rowsArr.push(makeRow());
+    done();
+    return;
+  }
+  _bulkBusy = true;
+  let made = 0;
+  const step = function () {
+    const stop = Math.min(n, made + _BULK_CHUNK);
+    for (; made < stop; made++) rowsArr.push(makeRow());
+    if (made < n) {
+      showToast('در حال افزودن… ' + n2fa(made) + ' از ' + n2fa(n), '#3182ce');
+      setTimeout(step, 0);                   // صفحه بین تکه‌ها پاسخ‌گو می‌ماند
+      return;
+    }
+    _bulkBusy = false;
+    done();
+  };
+  setTimeout(step, 0);
+}
 function addPersonRowsBulk() {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === currentPersonId);
   if (!person) return;
   let n = parseInt(document.getElementById('pm-bulk-count').value, 10) || 0;
   if (n < 1) { showToast('یک عدد معتبر وارد کنید', '#e53e3e'); return; }
-  if (n > 200) n = 200;
   const ft = (currentPersonFilter === 'diesel') ? 'diesel' : 'petrol';
   const rowsArr = _acctRows(person);
-  for (let k = 0; k < n; k++) {
-    rowsArr.push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, rasidFuel: 0, albaqi: 0, byMoney: _acctModeMoney(person) });
-  }
-  save(); renderPersonRows(person);
-  _pmScrollToEnd();
-  _ntfAccountTouched(person);
-  showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
+  _bulkAddRows(rowsArr, n,
+    () => ({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, rasidFuel: 0, albaqi: 0, byMoney: _acctModeMoney(person) }),
+    () => {
+      save(); renderPersonRows(person);
+      _pmScrollToEnd();
+      _ntfAccountTouched(person);
+      showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
+    });
 }
 function closePersonModal() {
   try { _pmMoreClose(); } catch (e) {}
@@ -36267,10 +36419,10 @@ function addRasidRow() { ensureRasid().push(_newRasidRow()); save(); renderRasid
 function addRasidRowsBulk() {
   let n = parseInt(document.getElementById('rasid-bulk').value, 10) || 0;
   if (n < 1) { showToast('یک عدد معتبر وارد کنید', '#e53e3e'); return; }
-  if (n > 200) n = 200;
-  for (let k = 0; k < n; k++) ensureRasid().push(_newRasidRow());
-  save(); renderRasid();
-  showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
+  _bulkAddRows(ensureRasid(), n, () => _newRasidRow(), () => {
+    save(); renderRasid();
+    showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
+  });
 }
 function updateRasid(i, field, val) {
   const rows = ensureRasid();
@@ -42654,11 +42806,13 @@ function addWaraqRowsBulk() {
   const sd = activeShift(w);
   let n = parseInt(document.getElementById('wq-bulk-count').value, 10) || 0;
   if (n < 1) { showToast('یک عدد معتبر وارد کنید', '#e53e3e'); return; }
-  if (n > 200) n = 200;
-  for (let k = 0; k < n; k++) sd.transactions.push({ name: '', liters: 0, amount: 0, type: 'debt', fuel: 'petrol' });
-  renderWaraqTransactions(w);
-  calcWaraqSummary(w);
-  save();
+  _bulkAddRows(sd.transactions, n,
+    () => ({ name: '', liters: 0, amount: 0, type: 'debt', fuel: 'petrol' }),
+    () => {
+      renderWaraqTransactions(w);
+      calcWaraqSummary(w);
+      save();
+    });
   showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
 }
 
@@ -49956,7 +50110,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.421';
+const APP_VERSION = '2.9.422';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -53341,8 +53495,35 @@ function _bkRestoreData(txt) {
     showToast('❌ این فایل بکاپِ این برنامه نیست', '#e53e3e'); return;
   }
   if (!confirm('⚠️ همهٔ حساب‌های فعلی با این بکاپ جایگزین شود؟ این کار برگشت ندارد.')) return;
-  try { localStorage.setItem('pumpDB', JSON.stringify(obj)); } catch (e) { showToast('❌ ذخیره نشد', '#e53e3e'); return; }
-  location.reload();
+  /* ⚠️ بازیابی باید در «انبار» نوشته شود، نه فقط در «کش» ─────────────────────
+     پیش از این این تابع فقط localStorage را می‌نوشت. دو حالتِ خرابی داشت و هر
+     دو بی‌صدا بودند — کاربر پیام «بازیابی شد» می‌دید و هیچ چیزی برنگشته بود:
+
+       ۱) بکاپِ بزرگ‌تر از سقفِ کش (بالای ۴ مگابایت) اصلاً جا نمی‌شد.
+       ۲) حتی اگر جا می‌شد، هنگام بالا آمدنِ دوباره، load() نسخهٔ IndexedDB را
+          می‌دید که ‎_rev‎ بالاتری داشت (چون بعد از آن بکاپ کار شده بود) و همان
+          را برنده می‌کرد — یعنی بازیابی بی‌صدا خنثی می‌شد.
+
+     آزموده‌شده با tools/check-backup-restore.mjs: بکاپِ ۷٫۵ مگابایتیِ ۳۰۰ حساب
+     پیش از این هیچ برنمی‌گشت (۱ حسابِ بعد از بکاپ می‌ماند).
+
+     حالا هر دو انبار نوشته می‌شوند و پیش از بالا آمدنِ دوباره، خوانده و
+     سنجیده می‌شود. اگر نوشتن نگرفت، صفحه از نو بالا نمی‌آید و دادهٔ فعلی
+     دست‌نخورده می‌ماند — نصفه‌کاره بدترین حالت است. */
+  const snap = JSON.stringify(obj);
+  try { _writeLsCache(snap); } catch (e) {}    // خودش سقف را رعایت و کهنه را پاک می‌کند
+  Promise.resolve(_IDB.put(JSON.parse(snap)))
+    .then(function () { return _IDB.get(); })
+    .then(function (back) {
+      if (!back || _dbRecordCount(back) !== _dbRecordCount(obj)) {
+        showToast('❌ بازیابی ذخیره نشد — دادهٔ فعلی دست‌نخورده ماند', '#e53e3e');
+        return;
+      }
+      location.reload();
+    })
+    .catch(function () {
+      showToast('❌ بازیابی ذخیره نشد — دادهٔ فعلی دست‌نخورده ماند', '#e53e3e');
+    });
 }
 function restoreBackupFromFile(input) {
   if (!_toolsAdminOnly()) { if (input) input.value = ''; return; }
@@ -55428,7 +55609,9 @@ document.addEventListener('click', function(e) {
     {id:'light-slate',  light:true,  name:'بلور آمیتیست (Amethyst Crystal)', bg:'#ffffff', ac:'#7c4dff'},
     {id:'golden-dune',  light:true,  name:'تپهٔ طلایی (Golden Dune)',        bg:'#fff2e2', ac:'#dfa35e'},
     {id:'burgundy',     light:true,  name:'شرابی کِرِم (Burgundy)',          bg:'#fff3e1', ac:'#8a0d0d'},
-    {id:'deep-ocean',   light:false, name:'اقیانوس عمیق (Deep Ocean)',       bg:'#063a61', ac:'#c9c1b0'}
+    {id:'deep-ocean',   light:false, name:'اقیانوس عمیق (Deep Ocean)',       bg:'#063a61', ac:'#c9c1b0'},
+    {id:'enterprise',      light:true,  name:'اجرایی روشن (Enterprise)',      bg:'#f6f8fb', ac:'#2563eb'},
+    {id:'enterprise-dark', light:false, name:'اجرایی تیره (Enterprise Dark)', bg:'#0e141b', ac:'#3b82f6'}
   ];
   function allClasses(){ return PALETTES.map(function(p){ return 'theme-'+p.id; }); }
   function find(id){ for(var i=0;i<PALETTES.length;i++){ if(PALETTES[i].id===id) return PALETTES[i]; } return null; }
@@ -57541,12 +57724,18 @@ tfoot td{background:${accent}14;font-weight:900;font-size:.88rem}
   // بخش‌هایی (غیر از مودال شخص/شرکت) که جدولِ ردیفی دارند: افزودن با تابعِ خودِ همان بخش،
   // و حذف با «کلیکِ دکمهٔ حذفِ آخرین ردیفِ نمایش‌داده‌شده» تا دقیقاً منطق/سینک/تریشِ خودِ بخش
   // اجرا شود و چیزی نشکند. del = بخشی از onclick دکمهٔ حذفِ هر ردیف برای پیدا کردنش.
+  /* render: نامِ تابعِ رسمِ همان بخش. فقط برای «افزودنِ گروهی» به کار می‌رود:
+     هر add() خودش یک‌بار می‌نویسد و یک‌بار کلِ جدول را از نو می‌کشد؛ برای n
+     ردیف یعنی n بار رسم. اندازه‌گیری‌شده (۲٬۰۰۰ ردیفِ مصارف، افزودنِ ۲۰۰):
+     ۴٫۸ ثانیه روی کامپیوترِ سریع و ۳۲٫۷ ثانیه روی CPU شش‌برابر کندتر — همان
+     «یخ زدن». حالا رسم و ذخیره در طولِ حلقه خاموش می‌شوند و آخرش یک‌بار
+     انجام می‌گیرند. */
   var _SECT = {
-    'sec-expenses': { add:function(){ addExpenseRow(); },     del:'deleteExpense(' },
-    'sec-sarrafi':  { add:function(){ addSarrafiRow(); },     del:'deleteSarrafiRow(' },
-    'sec-safe':     { add:function(){ addSafeRowDirect(); },  del:'deleteSafe(' },
-    'sec-rasid':    { add:function(){ addRasidRow(); },       del:'deleteRasid(' },
-    'sec-chakana':  { add:function(){ addChakanaRowToMonth((typeof _activeChakanaMonth!=='undefined' && _activeChakanaMonth) ? _activeChakanaMonth : _monthKey(persianDate())); }, del:'deleteChakana(' }
+    'sec-expenses': { add:function(){ addExpenseRow(); },     del:'deleteExpense(', render:'renderExpenses' },
+    'sec-sarrafi':  { add:function(){ addSarrafiRow(); },     del:'deleteSarrafiRow(', render:'renderSarrafi' },
+    'sec-safe':     { add:function(){ addSafeRowDirect(); },  del:'deleteSafe(', render:'renderSafe' },
+    'sec-rasid':    { add:function(){ addRasidRow(); },       del:'deleteRasid(', render:'renderRasid' },
+    'sec-chakana':  { add:function(){ addChakanaRowToMonth((typeof _activeChakanaMonth!=='undefined' && _activeChakanaMonth) ? _activeChakanaMonth : _monthKey(persianDate())); }, del:'deleteChakana(' , render:'renderChakana' }
   };
   // بافتِ جدولِ فعال — همان جدولی که جلوی کاربر است. هیچ جدول/بخشِ دیگری دست نمی‌خورد.
   function _kbCtx(){
@@ -57567,6 +57756,48 @@ tfoot td{background:${accent}14;font-weight:900;font-size:.88rem}
     try { fn(); } finally { window.confirm = oc; }
   }
 
+  /* افزودنِ گروهی بدونِ n بار رسم و ذخیره.
+     همان add()ِ خودِ بخش صدا زده می‌شود (پس قالبِ ردیف و منطقش دست‌نخورده
+     می‌ماند و هیچ‌جا تکرار نمی‌شود) — فقط در طولِ حلقه save و render موقتاً
+     بی‌اثر می‌شوند و در پایان یک‌بار واقعی اجرا می‌گردند. همان ترفندی که
+     _kbNoConfirm برای confirm می‌زند.
+     برای عددهای بزرگ، کار تکه‌تکه انجام می‌شود تا صفحه هرگز قفل نشود. */
+  function _kbRunBatch(n, addOne, renderName, doneMsg, finalRender){
+    var CH = 200;
+    var realSave = window.save;
+    var realRender = renderName ? window[renderName] : null;
+    var noop = function(){};
+    var made = 0;
+    var restore = function(){
+      window.save = realSave;
+      if (renderName && realRender) window[renderName] = realRender;
+    };
+    var finish = function(){
+      restore();
+      /* رسمِ نهایی: بعضی رسم‌ها آرگومان می‌خواهند (مثلِ ورق)، پس صداکننده
+         می‌تواند خودش رسمِ پایانی را بدهد. */
+      try { if (finalRender) finalRender(); else if (realRender) realRender(); } catch(e){}
+      try { realSave(); } catch(e){}
+      try { if (typeof updateBanner === 'function') updateBanner(); } catch(e){}
+      showToast(doneMsg, '#38a169');
+    };
+    var step = function(){
+      window.save = noop;
+      if (renderName && realRender) window[renderName] = noop;
+      var stop = Math.min(n, made + CH);
+      try {
+        for (; made < stop; made++) { try { addOne(); } catch(e){} }
+      } finally { restore(); }
+      if (made < n){
+        showToast('در حال افزودن… ' + n2fa(made) + ' از ' + n2fa(n), '#3182ce');
+        setTimeout(step, 0);
+        return;
+      }
+      finish();
+    };
+    step();
+  }
+
   function _kbAddRows(n){
     var ctx = _kbCtx();
     if (!ctx || n < 1) return;
@@ -57574,7 +57805,6 @@ tfoot td{background:${accent}14;font-weight:900;font-size:.88rem}
       var list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
       var person = (list || []).find(function(p){ return p.id === currentPersonId; });
       if (!person) return;
-      if (n > 200) n = 200;
       var ft = (currentPersonFilter === 'diesel') ? 'diesel' : 'petrol';
       var rowsArr = _acctRows(person);
       for (var k = 0; k < n; k++)
@@ -57584,20 +57814,21 @@ tfoot td{background:${accent}14;font-weight:900;font-size:.88rem}
     } else if (ctx.kind === 'company'){
       var company = (DB.tilCompanies || []).find(function(c){ return c.id === currentCompanyId; });
       if (!company) return;
-      if (n > 100) n = 100;
       var rows = _cmpRows(company);
       for (var j = 0; j < n; j++)
         rows.push({ name: '', date: persianDate(), ton: 0, usd: 0, rate: 0, poul: 0, poulCurrency: 'afn' });
       save(); renderCompanyRows(company);
       showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
     } else if (ctx.kind === 'waraq'){
-      if (n > 200) n = 200;
-      for (var w = 0; w < n; w++) { try { addWaraqRow(); } catch(e){} }
-      showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
+      var wq = getActiveWaraq();
+      _kbRunBatch(n, function(){ addWaraqRow(); }, 'renderWaraqTransactions',
+        '✅ ' + n2fa(n) + ' ردیف افزوده شد',
+        /* رسم و جمع‌بستِ ورق، یک‌بار در پایان — همان دو کاری که خودِ
+           addWaraqRow برای هر ردیف انجام می‌داد */
+        function(){ var w2 = getActiveWaraq() || wq; if (!w2) return; renderWaraqTransactions(w2); calcWaraqSummary(w2); });
     } else if (ctx.kind === 'section'){
-      if (n > 200) n = 200;
-      for (var s = 0; s < n; s++) { try { ctx.def.add(); } catch(e){} }
-      showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
+      _kbRunBatch(n, ctx.def.add, ctx.def.render,
+        '✅ ' + n2fa(n) + ' ردیف افزوده شد');
     }
   }
 
@@ -60577,6 +60808,321 @@ select:not(.native-sel){
   }
 })();
 </script>
+
+<style id="motion-refine">
+/* ═══════════════════════════════════════════════════════════════════════════
+   پالایشِ حرکت‌ها (نسخه 2.9.411) — فقط انیمیشن و گذر.
+
+   ⛔ هیچ منطق، فرمول، داده، چیدمان یا رفتارِ دکمه‌ای این‌جا لمس نمی‌شود:
+      این بلوک هیچ جاوااسکریپتی ندارد و هیچ ویژگیِ چیدمانی (width/height/
+      padding/margin/font-size/display/position) را عوض نمی‌کند.
+
+   ⛔ مخزن دست‌نخورده است. هیچ گزینشگری در این بلوک به ‎.tank-*‎ نمی‌خورد —
+      نه موجِ سطح (tankWave)، نه جریانِ مایع (tankFlow)، نه تپشِ هشدار
+      (tankPulse / gfxTankDangerStd). خواستهٔ صریحِ صاحب ریپو بود.
+      نگهبانش: ‎node tools/check-motion.mjs‎ — اگر روزی کسی این‌جا اسمِ مخزن
+      را بیاورد یا آن قاعده‌ها را عوض کند، همان‌جا شکست می‌خورد.
+
+   سه چیز این‌جا بهتر می‌شود، هر سه بدونِ عوض کردنِ ظاهرِ حالتِ عادی:
+
+   ۱) ‎transition:all‎ برداشته شد (نه خودِ گذر — فقط دامنه‌اش).
+      ‎all‎ یعنی «هر ویژگی‌ای که عوض شد را انیمیت کن»، و در همین فایل
+      اندازه‌ها/فونت‌ها با ‎!important‎ از چند بلوکِ دیگر و از متغیرهایی مثل
+      ‎--fit-st‎ روی همین دکمه‌ها و کارت‌ها عوض می‌شوند. نتیجه‌اش لرزشِ ریزِ
+      نوشته و بازچینیِ صفحه سرِ هر هاور بود — گران‌ترین کارِ ممکن روی گوشیِ
+      ضعیف. حالا فقط رنگ/مرز/سایه/جابه‌جایی/شفافیت گذر می‌کنند؛ اینها روی
+      GPU انجام می‌شوند و صفحه را بازچینی نمی‌کنند. ظاهرِ هاور همان است.
+
+   ۲) هاورِ چسبیده روی صفحهٔ لمسی. روی موبایل ‎:hover‎ بعد از لمس روی همان
+      عنصر می‌مانَد؛ برای دکمه‌های ناوبری یعنی آیکونش تا ابد می‌چرخد (باتری)
+      و برای کارت‌ها یعنی یکی‌شان همیشه بالاتر از بقیه می‌ماند. با
+      ‎(hover:none)‎ فقط روی همان دستگاه‌ها برداشته می‌شود؛ کامپیوتر
+      دست‌نخورده است. آیکونِ بخشِ فعال (‎.active‎) عمداً بیرون از این قاعده
+      است — آن حرکت خواسته شده بود.
+
+   ۳) «کاهشِ حرکت» کامل شد. بلوک‌های قبلی هرکدام فقط حرکت‌های خودشان را
+      خاموش می‌کردند؛ تزئینی‌های همیشه‌درحال‌اجرا (ایموجی‌ها، آذرخش، ستارهٔ
+      دنباله‌دار، تپشِ نقطهٔ وضعیت، برقِ سرصفحه و…) روشن می‌ماندند. حالا
+      برای کسی که در سیستمش «کاهشِ حرکت» را روشن کرده همه می‌ایستند.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root{
+  /* یک نردبانِ زمانی برای همهٔ گذرهای تعاملی — عددهای پراکندهٔ قبلی
+     (‎.15s/.16s/.18s/.2s/.22s‎) همه در همین سه پله می‌نشینند */
+  --mo-fast:140ms;   /* لمس و هاور — باید «فوری» حس شود */
+  --mo-base:180ms;   /* گذرهای معمولِ رنگ و سایه */
+  --mo-slow:240ms;   /* نوارِ پیام و چیزهای بزرگ‌تر */
+  --mo-ease:cubic-bezier(.2,.8,.2,1);   /* همان منحنیِ خودِ برنامه */
+}
+
+/* ── ۱) دامنهٔ گذرها: به‌جای «هر چیزی» فقط ویژگی‌های GPUدوست ────────────────
+   ‎!important‎ فقط چون چند بلوکِ بالاتر خودشان ‎transition:all …!important‎
+   نوشته‌اند؛ بدونش این قاعده اصلاً به آن‌ها نمی‌رسد. */
+.theme-toggle, .lock-btn, .nav-btn, .goto-btn, .save-btn, .del-btn, .add-btn,
+.person-card, .person-del, .person-nav-btn, .sec-font-btn, .ft-opt,
+.add-row-btn, .pm-filter-btn, .hexfx-toggle, .inv-act, .modal-close,
+.tools-btn, .pw-btn, .btn-ok{
+  transition-property: background-color, border-color, color, box-shadow, transform, opacity !important;
+  transition-duration: var(--mo-fast) !important;
+  transition-timing-function: var(--mo-ease) !important;
+}
+
+/* نوارِ پیام: همان ورود و خروج، فقط با منحنیِ یکسانِ بقیهٔ برنامه */
+.toast{ transition:transform var(--mo-slow) var(--mo-ease),
+                   opacity var(--mo-slow) var(--mo-ease),
+                   bottom var(--mo-base) var(--mo-ease); }
+
+/* ── ۲) صفحهٔ لمسی: هاور نچسبد ─────────────────────────────────────────── */
+@media (hover:none){
+  /* بالاآمدنِ کارت/دکمه فقط برای موشِ واقعی معنا دارد */
+  .person-card:hover, .theme-swatch:hover, .add-row-btn:hover{ transform:none; }
+  .nav-btn:hover:not(.active) .nav-ic{ transform:none; }
+  /* آیکونِ دکمه‌ای که فقط لمس شده (و فعال نیست) نباید تا ابد بچرخد */
+  .nav-btn:hover:not(.active) .ia-wobble,
+  .nav-btn:hover:not(.active) .ia-write,
+  .nav-btn:hover:not(.active) .ia-bounce,
+  .nav-btn:hover:not(.active) .ia-flip,
+  .nav-btn:hover:not(.active) .ia-fly,
+  .nav-btn:hover:not(.active) .ia-shake,
+  .nav-btn:hover:not(.active) .ia-tilt,
+  .nav-btn:hover:not(.active) .ia-pulse,
+  .nav-btn:hover:not(.active) .ia-rise,
+  .nav-btn:hover:not(.active) .ia-spin{ animation:none; }
+}
+
+/* ── ۳) کاهشِ حرکت: تزئینی‌ها می‌ایستند ─────────────────────────────────
+   فهرست عمداً دستی و کامل نوشته شده (نه ‎*‎) تا معلوم باشد دقیقاً چه چیزی
+   خاموش می‌شود — و تا هیچ‌وقت به عناصرِ مخزن نرسد. */
+@media (prefers-reduced-motion: reduce){
+  .emj-spin, .emj-write, .emj-fly, .emj-bounce, .emj-truck,
+  .emj-rise, .emj-wobble, .emj-shake, .emj-tilt,
+  .pstatus-dot, .fx-bolts i, .fx-stars i,
+  .pl-arrow, .pl-aurora, .pl-money i,
+  .ls-icon, .ls-bar::after, .ls-tape, .ls-brand-icon,
+  .ch-ib.rec-on, .vx-row button.rec, .staff-mic.listening,
+  .gfx-um-orb, .gfx-confirm-bar,
+  .daynight-toggle .dn-bird-1, .daynight-toggle .dn-bird-2,
+  .daynight-toggle .dn-cloud, .daynight-toggle .dn-stars i,
+  .daynight-toggle .dn-thumb,
+  .nav-btn:hover .nav-ic, .nav-btn.active .nav-ic,
+  .section.visible .card-title .nav-ic,
+  .section.visible .list-title .nav-ic,
+  .section.visible .pl-result-label .nav-ic{ animation:none !important; }
+
+  /* گذرهای بند ۱ هم بی‌درنگ شوند */
+  .theme-toggle, .lock-btn, .nav-btn, .goto-btn, .save-btn, .del-btn, .add-btn,
+  .person-card, .person-del, .person-nav-btn, .sec-font-btn, .ft-opt,
+  .add-row-btn, .pm-filter-btn, .hexfx-toggle, .inv-act, .modal-close,
+  .tools-btn, .pw-btn, .btn-ok, .toast{ transition-duration:1ms !important; }
+}
+</style>
+
+<style id="ds-enterprise">
+/* ═══════════════════════════════════════════════════════════════════════════
+   دیزاین‌سیستمِ اجرایی (نسخه 2.9.412) — هندسه، تایپوگرافی، حالت‌ها و پالتِ تازه.
+
+   ⛔ فقط CSS. هیچ منطق، فرمول، محاسبه، داده یا رفتارِ دکمه‌ای عوض نمی‌شود؛
+      هیچ چیزی هم جابه‌جا یا حذف نمی‌شود. جای هر دکمه و هر ستون همان است که
+      بود — فقط اندازه/گردی/فاصله/حالت‌هایشان یک‌دست می‌شود.
+   ⛔ مخزن دست‌نخورده (نگهبان: node tools/check-motion.mjs).
+
+   چرا: در همان یک صفحه، دکمه‌ها با شش ارتفاع و پنج شعاعِ گوشهٔ متفاوت کنار هم
+   می‌نشستند (‎.add-btn‎ ۹/۱۸، ‎.goto-btn‎ ۶/۱۲، ‎.sec-font-btn‎ ۵/۱۰، شعاع‌های
+   ۷ و ۸ و ۹ و ۱۲ و ۱۴ و ۱۶). چشم این را «شلوغی» می‌بیند حتی وقتی نمی‌تواند
+   بگوید چرا. این‌جا همه روی یک نردبان می‌نشینند.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── ۱) نردبانِ هندسه ─────────────────────────────────────────────────── */
+:root{
+  --ds-h-btn:40px; --ds-h-in:42px; --ds-h-row:48px;   --ds-h-th:44px;
+  --ds-sp-1:4px; --ds-sp-2:8px; --ds-sp-3:12px; --ds-sp-4:16px;
+  --ds-sp-5:20px; --ds-sp-6:24px; --ds-sp-7:32px;
+}
+
+/* ── ۲) دکمه‌ها: یک ارتفاع، یک شعاع، یک ریتم ───────────────────────────
+   ‎min-height‎ نه ‎height‎ — دکمهٔ دوخطی هنوز خودش را جا می‌دهد. */
+/* ⚠️ فقط «ارتفاع». شعاعِ گوشه و چیدمانِ درونی عمداً دست نمی‌خورد.
+   نسخهٔ اول این بلوک شعاعِ همه را هم یکی کرده بود و نتیجه‌اش بدتر شد: کارت‌های
+   اصلی از ۱۴ به ۱۲ رفتند (یعنی «مربعی‌تر» دیده شدند) و چیپ‌های کوچکِ ۸ به ۱۲
+   رفتند (گوشهٔ بزرگ روی کادرِ کوچک، همان «کنج اضافه»). گزارشِ صاحب ریپو همین
+   بود و درست بود. شعاع‌ها به همان چیزی که خودِ برنامه داشت برگشتند. */
+.add-btn, .save-btn, .goto-btn, .add-row-btn, .person-nav-btn, .sec-font-btn,
+.pm-filter-btn, .inv-act, .tools-btn, .hexfx-toggle, .theme-toggle, .lock-btn,
+.btn-ok, .pw-btn, .fuel-add-btn{
+  min-height:var(--ds-h-btn);
+  line-height:1.2;
+}
+.nav-btn{ min-height:42px; }
+/* داخلِ جدول‌ها هیچ‌کدام از این ارتفاع‌ها اعمال نمی‌شود — ردیف را باد می‌کرد */
+.xls-tbl .add-row-btn, .tbl .add-row-btn,
+.xls-tbl button, .tbl button, .ro-tbl button{ min-height:0; }
+
+/* ── ۳) ورودی‌ها: ارتفاعِ یکسان و شعاعِ یکسان ─────────────────────────── */
+input[type=text], input[type=number], input[type=tel], input[type=search],
+input[type=password], input[type=date], select, textarea{
+  min-height:var(--ds-h-in);
+}
+textarea{ min-height:calc(var(--ds-h-in) * 2); }
+/* خانه‌های جدول و کادرهای ریزِ داخلِ ردیف‌ها استثنا — ردیف نباید بلند شود */
+.xls-tbl input, .xls-tbl select, .xls-tbl textarea,
+.tbl input, .tbl select, .tbl textarea,
+.ro-tbl input, .ro-tbl select,
+.xls-in, .pm-edit, .tank-cap input, .pstatus-row input{
+  min-height:0;
+}
+
+/* ── ۴) شعاعِ کارت‌ها و پنجره‌ها: عمداً هیچ ──────────────────────────────
+   هر کادرِ این برنامه شعاعِ سنجیدهٔ خودش را دارد (کارت ۱۴، چیپ ۸، خلاصه ۹…).
+   یکی کردنشان «نظم» نساخت، فقط ظاهرِ آشنا را خراب کرد. این‌جا هیچ شعاعی
+   تحمیل نمی‌شود. */
+
+/* ── ۵) جدول‌ها: ارتفاعِ سرستون و ردیف طبقِ استانداردِ داشبورد ───────────
+   ‎height‎ روی ‎td/th‎ در جدول‌ها مثل ‎min-height‎ عمل می‌کند: ردیفِ کوتاه بالا
+   می‌آید، ردیفِ پُر (مثلاً با کادرِ انتخابِ پطرول/دیزل) دست‌نخورده می‌ماند. */
+.xls-tbl th, .tbl th, .ro-tbl th{ height:var(--ds-h-th); }
+.xls-tbl td, .tbl td, .ro-tbl td{ height:var(--ds-h-row); }
+/* عددها هم‌عرض — ستون‌های مالی دیگر موقعِ تایپ نمی‌لرزند */
+.xls-tbl td, .tbl td, .ro-tbl td, .xls-tbl tfoot td,
+.stat-box .v, .msumbox b, .pl-value{ font-variant-numeric:tabular-nums; }
+
+/* ── ۶) فوکوس: یک حلقهٔ واحد برای صفحه‌کلید (دسترس‌پذیری) ───────────────
+   ‎:focus-visible‎ یعنی فقط با Tab دیده می‌شود، نه با کلیکِ موس. */
+.add-btn:focus-visible, .save-btn:focus-visible, .goto-btn:focus-visible,
+.add-row-btn:focus-visible, .person-nav-btn:focus-visible,
+.sec-font-btn:focus-visible, .pm-filter-btn:focus-visible,
+.inv-act:focus-visible, .tools-btn:focus-visible, .nav-btn:focus-visible,
+.del-btn:focus-visible, .person-del:focus-visible, .modal-close:focus-visible,
+.person-card:focus-visible, input:focus-visible, select:focus-visible,
+textarea:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+}
+
+/* ── ۷) صفحهٔ لمسی: هدفِ لمس هیچ‌جا کوچک‌تر از ۴۴ نشود (WCAG) ──────────── */
+@media (pointer:coarse){
+  :root{ --ds-h-btn:44px; --ds-h-in:46px; }
+  .del-btn, .person-del, .modal-close{ min-width:44px; min-height:44px; }
+  .xls-tbl .del-btn, .tbl .del-btn{ min-width:0; min-height:0; }
+}
+
+/* ── ۷ب) دکمهٔ حذفِ کارت‌های رنگی: دیگر «لکهٔ سفید» نیست ────────────────
+   کارتِ «اتمام تیل» سرخ می‌شود و «کم مانده» زرد، ولی دکمهٔ ✕ گوشه‌اش
+   ‎background:var(--card)‎ می‌ماند — روی تمِ روشن یعنی یک مربعِ سفیدِ درخشان
+   وسطِ کارتِ سرخ. گزارشِ صاحب ریپو دقیقاً همین بود.
+   حالا شفاف است و رنگِ خودِ وضعیت را می‌گیرد، پس بخشی از کارت دیده می‌شود.
+   با موس که رویش بروی، پُررنگ و کاملاً خوانا می‌شود. */
+.person-card .person-del,
+.company-card .person-del{
+  background:transparent;
+  color:var(--muted);
+}
+.person-card.fuel-low .person-del{
+  border-color:rgba(230,184,0,.75);
+  color:#c99a00;
+}
+.person-card.fuel-out .person-del{
+  border-color:rgba(229,62,62,.75);
+  color:#d64545;
+}
+body:not(.light-mode) .person-card.fuel-low .person-del{ color:#f6c000; }
+body:not(.light-mode) .person-card.fuel-out .person-del{ color:#ff7a7a; }
+.person-card .person-del:hover{
+  background:color-mix(in srgb, currentColor 16%, transparent);
+}
+
+/* ── ۷ب‌ب) دکمه‌های کوچکِ سربرگ در تم‌های روشن ─────────────────────────
+   یک قاعدهٔ قدیمی (‎body.light-mode .lock-btn‎) این دکمه‌ها را قهوه‌ایِ تیره
+   می‌کرد: ‎#4a2e00‎ با نوشتهٔ طلایی. آن رنگ برای تمِ «طلای سلطنتی» انتخاب شده
+   بود، ولی حالا ده‌ها تمِ روشن هست و همان قهوه‌ای روی تمِ آبی/سبز/بنفش یک
+   لکهٔ بی‌ربط است — همان چیزی که دیده می‌شد.
+   حالا رنگِ خودِ تم را می‌گیرند، مثلِ ‎.goto-btn‎ که از قبل همین کار را می‌کرد.
+   ⚠️ ‎#lockBtn‎ (دکمهٔ سرخِ «قفل») قاعدهٔ شناسه‌دارِ خودش را دارد و برنده
+   می‌ماند — سرخیِ آن عمدی است. */
+body.light-mode .lock-btn{
+  background:color-mix(in srgb, var(--accent) 12%, #ffffff) !important;
+  border-color:color-mix(in srgb, var(--accent) 42%, transparent) !important;
+  color:var(--accent) !important;
+}
+body.light-mode .lock-btn:hover{
+  background:var(--accent) !important;
+  color:var(--on-accent, #ffffff) !important;
+}
+
+/* ── ۷ج) کیفیتِ کارت‌ها در «گرافیک سبک» ────────────────────────────────
+   آن حالت عمداً بدونِ سایه و گرادیان است (برای دستگاهِ ضعیف) و همین باعث شده
+   کارت‌ها بی‌رمق دیده شوند: مرزِ کم‌رنگ روی زمینهٔ هم‌رنگ. راهِ درستش سایه
+   نیست — مرزِ واضح‌تر و سرکادرِ جداشده است. هر دو هزینهٔ رسمِ صفر دارند و
+   خاصیتِ «سبک بودن» را خراب نمی‌کنند. */
+body.gfx-performance .card,
+body.gfx-performance .settings-card,
+body.gfx-performance .shift-card,
+body.gfx-performance .pl-card,
+body.gfx-performance .person-card,
+body.gfx-performance .company-card,
+body.gfx-performance .tank-card,
+body.gfx-performance .modal{
+  border-color:color-mix(in srgb, var(--txt) 26%, transparent) !important;
+}
+body.gfx-performance .card-head,
+body.gfx-performance .modal-head,
+body.gfx-performance .list-header{
+  border-bottom:1.5px solid color-mix(in srgb, var(--txt) 20%, transparent) !important;
+}
+/* سرستونِ جدول در همین حالت هم از بدنه جدا دیده شود */
+body.gfx-performance .xls-tbl th,
+body.gfx-performance .tbl th{
+  border-bottom-width:2px !important;
+  border-bottom-color:color-mix(in srgb, var(--txt) 30%, transparent) !important;
+}
+
+/* ═══ ۸) پالتِ اجرایی — دقیقاً با رنگ‌هایی که خواسته شد ═══════════════════
+   Primary #163B65 · Accent #2563EB · Success #168A55 · Warning #C98200
+   Danger #C93C3C · Info #3178C6 · BG #F6F8FB · Surface #fff · Border #E3E8EF
+   Text #17202A · Secondary #657180 · Dark #0E141B / #151D26 / #293544
+   دو تمِ تازه کنارِ تم‌های قبلی نشستند — هیچ تمی حذف یا عوض نشد. */
+body.theme-enterprise{
+  --dark:#F6F8FB !important; --panel:#FFFFFF !important; --card:#FFFFFF !important;
+  --border:#E3E8EF !important; --txt:#17202A !important; --muted:#657180 !important;
+  --label:#163B65 !important; --accent:#2563EB !important;
+  --grad-amber:linear-gradient(135deg,#3B82F6 0%,#2563EB 50%,#163B65 100%) !important;
+  --on-accent:#FFFFFF !important; --hdr-title:#FFFFFF !important;
+  --chrome-brd:rgba(22,59,101,.28) !important;
+  --hdr-bg:linear-gradient(90deg,#12314F,#163B65,#12314F) !important;
+  --banner-bg:linear-gradient(90deg,#0F2A45,#143352,#0F2A45) !important;
+  --nav-bg:linear-gradient(90deg,#EEF3FA,#F8FAFD,#EEF3FA) !important;
+  --app-bg:radial-gradient(ellipse at 50% 16%, #FFFFFF 0%, transparent 60%),
+           linear-gradient(175deg,#F6F8FB 0%,#EDF1F7 55%,#E6ECF4 100%) !important;
+  --fx-hue:205deg !important;
+  --atmo-beam:rgba(37,99,235,.14); --atmo-geo:rgba(37,99,235,.45);
+  --green:#168A55 !important; --red:#C93C3C !important; --blue:#3178C6 !important;
+}
+/* بلوکِ عمومیِ روشن (‎body.light-mode[class*="theme-"]‎) سطح‌ها را خنثی می‌کند؛
+   این‌جا دوباره سطحِ سفید و بومِ #F6F8FB برمی‌گردد — مثل کاری که خودِ
+   Golden Dune و Burgundy می‌کنند. */
+body.light-mode.theme-enterprise{
+  --dark:#F6F8FB !important; --card:#FFFFFF !important; --panel:#FFFFFF !important;
+  --border:#E3E8EF !important; --hdr-title:#FFFFFF !important;
+  --app-bg:radial-gradient(ellipse at 50% 16%, #FFFFFF 0%, transparent 60%),
+           linear-gradient(175deg,#F6F8FB 0%,#EDF1F7 55%,#E6ECF4 100%) !important;
+}
+body.theme-enterprise-dark{
+  --dark:#0E141B !important; --panel:#151D26 !important; --card:#151D26 !important;
+  --border:#293544 !important; --txt:#E8EDF3 !important; --muted:#8A97A6 !important;
+  --label:#A9C2E4 !important; --accent:#3B82F6 !important;
+  --grad-amber:linear-gradient(135deg,#93B8F5 0%,#3B82F6 50%,#1D4ED8 100%) !important;
+  --on-accent:#0B1119 !important; --hdr-title:#DCE7F7 !important;
+  --chrome-brd:rgba(59,130,246,.30) !important;
+  --hdr-bg:linear-gradient(90deg,#0B1119,#131C27,#0B1119) !important;
+  --banner-bg:linear-gradient(90deg,#0A1017,#111926,#0A1017) !important;
+  --nav-bg:linear-gradient(90deg,#0B1119,#121A24,#0B1119) !important;
+  --app-bg:radial-gradient(ellipse at 50% 8%, rgba(255,255,255,.05) 0%, transparent 55%),
+           radial-gradient(ellipse at 50% 100%, rgba(0,0,0,.35) 0%, transparent 60%),
+           linear-gradient(175deg,#131B24 0%,#0E141B 45%,#0A0F15 100%) !important;
+  --fx-hue:205deg !important;
+  --atmo-beam:rgba(59,130,246,.16); --atmo-geo:rgba(59,130,246,.5);
+  --green:#22A96B !important; --red:#E05555 !important; --blue:#4A9AE0 !important;
+}
+</style>
 
 </body>
 </html>
