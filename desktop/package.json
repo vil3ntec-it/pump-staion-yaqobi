@@ -34,8 +34,6 @@
       "main.js",
       "preload.js",
       "splash.html",
-      "find.html",
-      "find-preload.js",
       "app/**/*"
     ],
     "win": {
