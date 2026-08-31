@@ -11,6 +11,10 @@
 //
 //      1366×768 · 1920×1080 · 2560×1440
 //
+//  و بزرگ‌نماییِ ویندوز (DPI Scaling) هم: ۱۰۰٪ · ۱۲۵٪ · ۱۵۰٪ — همان تنظیمی
+//  که روی بیشترِ لپ‌تاپ‌های تازه پیش‌فرض ۱۲۵٪ است و اگر چیزی بشکند، همان‌جا
+//  می‌شکند.
+//
 //  هر بار: باز کردنِ حسابِ بزرگ، ده گامِ اسکرول، یک جست‌وجو، مصرفِ حافظه،
 //  خطاهای جاوااسکریپت، و سرریزِ افقیِ صفحه.
 //  هیچ چیزی را عوض نمی‌کند و روی دادهٔ واقعیِ کاربر هم نمی‌نویسد (هر اجرا با
@@ -28,6 +32,9 @@ const bin = path.join(dir, 'node_modules', 'electron', 'dist', 'electron');
 const ROWS = Number(process.env.ROWS || 50000);
 const ACCOUNTS = Number(process.env.ACCOUNTS || 10000);
 const SCREENS = [[1366, 768], [1920, 1080], [2560, 1440]];
+// بزرگ‌نماییِ ویندوز روی رزولوشنِ رایج آزموده می‌شود (بیشتر از این، اجرا را
+// بی‌دلیل طولانی می‌کند و چیزِ تازه‌ای نشان نمی‌دهد)
+const SCALES = (process.env.SCALES || '1.25,1.5').split(',').map(Number).filter(Boolean);
 const PORT = Number(process.env.CDP_PORT || 9333);
 
 if (!fs.existsSync(bin)) { console.log('الکترون نصب نیست (npm i در پوشهٔ desktop).'); process.exit(1); }
@@ -35,16 +42,18 @@ if (!fs.existsSync(bin)) { console.log('الکترون نصب نیست (npm i د
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const med = (a) => (a.length ? [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)] : null);
 
-async function runOne(w, h) {
+async function runOne(w, h, scale) {
   const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'pump-stress-'));
   const useXvfb = !process.env.DISPLAY && fs.existsSync('/usr/bin/xvfb-run');
-  const eArgs = ['--no-sandbox', `--remote-debugging-port=${PORT}`, `--user-data-dir=${userData}`, dir];
+  const eArgs = ['--no-sandbox', `--remote-debugging-port=${PORT}`, `--user-data-dir=${userData}`];
+  if (scale && scale !== 1) eArgs.push(`--force-device-scale-factor=${scale}`);
+  eArgs.push(dir);
   const cmd = useXvfb ? 'xvfb-run' : bin;
   const args = useXvfb ? ['-a', '-s', `-screen 0 ${w}x${h}x24`, bin, ...eArgs] : eArgs;
   const proc = spawn(cmd, args, { cwd: dir, detached: true, env: { ...process.env } });
   const killAll = (sig) => { try { process.kill(-proc.pid, sig); } catch (e) { try { proc.kill(sig); } catch (e2) {} } };
 
-  let browser = null, out = { screen: `${w}×${h}` };
+  let browser = null, out = { screen: `${w}×${h}` + (scale && scale !== 1 ? ` @ ${Math.round(scale * 100)}٪` : '') };
   try {
     // انتظار برای بالا آمدنِ درگاهِ اشکال‌زدایی
     for (let i = 0; i < 60 && !browser; i++) {
@@ -116,11 +125,24 @@ async function runOne(w, h) {
     });
     await sleep(400);
 
-    const st = await page.evaluate(() => ({
-      heapMB: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : null,
-      nodes: document.getElementsByTagName('*').length,
-      overflowX: document.documentElement.scrollWidth > document.documentElement.clientWidth + 2,
-    }));
+    const st = await page.evaluate(() => {
+      /* بریدگی: آیا چیزی از سربرگ/ناوبری/کارت‌ها بیرونِ پهنای دید افتاده؟
+         در بزرگ‌نماییِ ۱۲۵٪ و ۱۵۰٪ همین اولین چیزی است که خراب می‌شود. */
+      const vw = document.documentElement.clientWidth;
+      let clipped = 0;
+      document.querySelectorAll('.header, .nav, .top-banner, .card, .person-card, .modal').forEach((el) => {
+        if (el.offsetParent === null && el.tagName !== 'BODY') return;
+        const r = el.getBoundingClientRect();
+        if (r.width > 0 && (r.right > vw + 4 || r.left < -4)) clipped++;
+      });
+      return {
+        heapMB: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : null,
+        nodes: document.getElementsByTagName('*').length,
+        overflowX: document.documentElement.scrollWidth > vw + 2,
+        clipped,
+        dpr: window.devicePixelRatio,
+      };
+    });
     Object.assign(out, st);
     out.errs = errs.slice(0, 3);
   } catch (e) {
@@ -136,17 +158,21 @@ async function runOne(w, h) {
 
 console.log(`\n── فشارِ برنامهٔ کامپیوتری: ${ROWS.toLocaleString('fa')} ردیف در یک حساب، ${ACCOUNTS.toLocaleString('fa')} حساب ──\n`);
 let bad = 0;
-for (const [w, h] of SCREENS) {
-  const r = await runOne(w, h);
+const RUNS = [];
+for (const [w, h] of SCREENS) RUNS.push([w, h, 1]);
+for (const sc of SCALES) RUNS.push([1920, 1080, sc]);   // بزرگ‌نماییِ ویندوز
+for (const [w, h, sc] of RUNS) {
+  const r = await runOne(w, h, sc);
   if (r.error) { bad++; console.log(`  ${r.screen}  ❌ ${r.error}`); continue; }
   const problems = [];
   if (r.errs && r.errs.length) problems.push('خطای جاوااسکریپت: ' + r.errs[0]);
   if (r.overflowX) problems.push('سرریزِ افقیِ صفحه');
+  if (r.clipped) problems.push(r.clipped + ' کادر بیرونِ دید افتاده');
   if (r.scrollStepMs != null && r.scrollStepMs > 16) problems.push('گامِ اسکرول از ۱۶ms بیشتر');
   if (problems.length) bad++;
   console.log(`  ${r.screen}`);
   console.log(`     فهرستِ حساب‌ها ${r.listMs}ms · باز کردنِ حساب (سرد) ${r.openColdMs}ms · (گرم) ${r.openWarmMs}ms`);
-  console.log(`     هر گامِ اسکرول ${r.scrollStepMs}ms · جست‌وجو ${r.searchMs}ms · حافظه ${r.heapMB}MB · گره‌های صفحه ${r.nodes}`);
+  console.log(`     هر گامِ اسکرول ${r.scrollStepMs}ms · جست‌وجو ${r.searchMs}ms · حافظه ${r.heapMB}MB · گره‌های صفحه ${r.nodes} · نسبتِ پیکسل ${r.dpr}`);
   console.log(`     ${problems.length ? '❌ ' + problems.join(' · ') : '✅ بدونِ خطا، بدونِ سرریز، اسکرول زیرِ یک فریم'}`);
 }
 console.log('');
