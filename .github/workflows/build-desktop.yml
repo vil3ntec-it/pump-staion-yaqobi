@@ -117,6 +117,10 @@ jobs:
           cp desktop/dist/*.exe "out/PumpYaqobi-Setup-${{ steps.ver.outputs.version }}.exe"
           mkdir -p rel
           cp desktop/dist/*.exe "rel/PumpYaqobi-Setup.exe"
+          # نسخهٔ «بدونِ نصب» (زیپ): همان برنامه، فقط بدونِ نصب‌کننده — باز
+          # می‌کنی و «Pump Yaqobi.exe» را می‌زنی. برای کسی که نمی‌خواهد نصب کند
+          # یا اجازهٔ نصب ندارد. هیچ چیزی کم یا زیاد ندارد.
+          cp desktop/dist/*.zip "rel/PumpYaqobi-Portable.zip"
           # نسخهٔ خودِ فایلِ نصب کنارش منتشر می‌شود تا صفحهٔ دریافت بتواند
           # بنویسد «نسخهٔ فایل نصب: …» و هر عقب‌ماندگی فوری دیده شود
           printf '%s' "${{ steps.ver.outputs.version }}" > "rel/PumpYaqobi-version.txt"
@@ -143,8 +147,12 @@ jobs:
             خودِ برنامه داخلِ همین فایل است، پس بدون اینترنت هم کامل کار می‌کند و
             هیچ نوارِ آدرس یا سربرگِ مرورگری در کار نیست. نسخه‌های بعدی را هم خودش
             در پس‌زمینه می‌گیرد — دیگر برای هر تغییر نباید دوباره نصبش کنید.
+
+            اگر نصب نمی‌خواهید: `PumpYaqobi-Portable.zip` را بگیرید، باز کنید و
+            `Pump Yaqobi.exe` داخلش را بزنید. همان برنامه است، بدونِ نصب‌کننده.
           files: |
             rel/PumpYaqobi-Setup.exe
+            rel/PumpYaqobi-Portable.zip
             rel/PumpYaqobi-version.txt
           make_latest: false
 

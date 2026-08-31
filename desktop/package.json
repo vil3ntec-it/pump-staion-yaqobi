@@ -39,7 +39,7 @@
       "app/**/*"
     ],
     "win": {
-      "target": ["nsis"],
+      "target": ["nsis", "zip"],
       "icon": "build/icon.png"
     },
     "nsis": {
