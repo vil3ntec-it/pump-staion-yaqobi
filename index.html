@@ -21264,7 +21264,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button type="button" class="gfx-mode-btn" data-gfx="performance" onclick="setGraphicsMode('performance')" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🍃 Performance — سبک<br><span style="font-weight:600;font-size:0.74rem">کاملاً فلت، صفر انیمیشن، سریع‌ترین</span></button>
       <button type="button" class="gfx-mode-btn" data-gfx="standard" onclick="setGraphicsMode('standard')" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--purple);background:transparent;color:var(--purple);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">✨ Standard — متوسط<br><span style="font-weight:600;font-size:0.74rem">شیشه‌ای با ترنزیشن‌های ملایم</span></button>
-      <button type="button" class="gfx-mode-btn" data-gfx="ultra" onclick="confirmUltraMode()" style="flex:1;min-width:140px;padding:12px;border-radius:10px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🎬 Ultra Premium — فوق‌العاده<br><span style="font-weight:600;font-size:0.74rem">سینمایی: مایع زنده، ذرات نئونی، پارالاکس با موس</span></button>
+      <!-- دکمهٔ «الترا» برداشته شد (نسخه 2.9.423) — نگاه کن به normalize() -->
     </div>
   </div>
 
@@ -50110,7 +50110,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.422';
+const APP_VERSION = '2.9.423';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -55810,6 +55810,13 @@ document.addEventListener('click', function(e) {
   var LEGACY = { low:'performance', medium:'standard' };
   function normalize(v){
     v = LEGACY[v] || v;
+    /* ⚠️ «الترا» برداشته شد — خواستهٔ صاحب ریپو: «کیفیت الترا رو بردار، لازم
+       نیست؛ همان استاندارد هم همان مدل است». دلیلِ فنی‌اش هم بود: الترا تنها
+       حالتی است که در بی‌کاری هم ۹٪ یک هسته می‌خورد (اندازه‌گیری‌شده)، در حالی
+       که استاندارد ۱٫۲٪ و پرفورمنس ۰٫۵٪.
+       هر کسی که قبلاً روی الترا بوده، خودکار روی استاندارد می‌آید؛ کدِ خودِ
+       الترا پاک نشده تا اگر روزی خواسته شد، فقط همین یک خط برگردد. */
+    if(v === 'ultra') v = 'standard';
     return TIERS.indexOf(v) !== -1 ? v : 'standard';
   }
 
@@ -55861,6 +55868,30 @@ document.addEventListener('click', function(e) {
     };
   })();
 
+  /* ── خاموش کردنِ انیمیشن‌های SVG وقتی لازم نیستند ─────────────────────────
+     ⚠️ باگِ «لپ‌تاپ داغ می‌کند» ریشه‌اش همین بود، و پیدا کردنش سخت بود چون
+     چیزی دیده نمی‌شد: اسپرایتِ ‎#gfxUltraIconSprite‎ (آیکون‌های متحرکِ حالتِ
+     Ultra) با ‎display:none‎ پنهان است، ولی انیمیشنِ SMIL برخلافِ انیمیشنِ CSS
+     در عنصرِ پنهان هم می‌چرخد. ۲۹ انیمیشنِ بی‌پایان، در هر سه حالتِ گرافیکی،
+     حتی وقتی کاربر دست به برنامه نمی‌زد.
+
+     اندازه‌گیریِ واقعی (برنامهٔ بی‌کار، سه ثانیه، حالتِ Performance):
+         پیش:  ۱۲۷۰ بار بازحسابیِ سبک · ۱۶۷ms CPU  (~۵٫۷٪ یک هسته)
+         پس:      ۳ بار              ·  ۱۴ms CPU
+     برای مقایسه، یک صفحهٔ کاملاً خالی صفر و صفر بود.
+
+     حالا فقط وقتی می‌چرخند که واقعاً به کار بیایند، و با کوچک شدن/پنهان شدنِ
+     پنجره هم می‌ایستند (برای باتریِ لپ‌تاپ). */
+  function svgAnimIdle(pause){
+    var sp = document.getElementById('gfxUltraIconSprite');
+    if(!sp) return;
+    try { pause ? sp.pauseAnimations() : sp.unpauseAnimations(); } catch(e){}
+  }
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden) svgAnimIdle(true);
+    else svgAnimIdle((window.__gfxTier || 'performance') !== 'ultra');
+  });
+
   /* ---------- tier switch core ---------- */
   function apply(tier, rerender){
     var b = document.body;
@@ -55879,6 +55910,7 @@ document.addEventListener('click', function(e) {
        کمی عقب می‌افتد تا اول خودِ صفحه فوری رسم شود — قبلاً همین شروعِ
        هم‌زمان باعث می‌شد Ultra خیلی دیرتر از دو حالت دیگر بالا بیاید. */
     if(tier === 'ultra'){
+      svgAnimIdle(false);
       setTimeout(function(){
         if(window.__gfxTier !== 'ultra') return;   // وسطِ تاخیر، حالت عوض شده
         if(typeof window._gfxStartUltraFx === 'function') window._gfxStartUltraFx();
@@ -55887,6 +55919,7 @@ document.addEventListener('click', function(e) {
     } else {
       if(typeof window._gfxStopUltraFx === 'function') window._gfxStopUltraFx();
       UltraNavIcons.stop();
+      svgAnimIdle(true);                            // ← دیگر بی‌خود نمی‌چرخند
     }
     /* tier-dependent components re-render so the switch changes them
        inside and out (tank bars, profit/loss visuals) */

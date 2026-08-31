@@ -471,6 +471,49 @@ ipcMain.on('find:stop', () => {
 });
 ipcMain.on('find:close', () => closeFindBar());
 
+// ---------------------------------------------------------------------------
+//  منویِ راست‌کلیک — کاری که فقط برنامهٔ کامپیوتری می‌تواند بکند
+//
+//  گلایهٔ صاحب ریپو: «چرا برنامهٔ کامپیوتری شبیهِ سایت است؟». یکی از
+//  ملموس‌ترین فرق‌های یک برنامهٔ واقعیِ ویندوز با یک صفحهٔ وب همین است: روی هر
+//  کادر راست‌کلیک می‌کنی و منویِ خودِ ویندوز می‌آید. تا حالا راست‌کلیک در این
+//  پوسته هیچ کاری نمی‌کرد.
+//
+//  ⚠️ هیچ ربطی به خودِ برنامه ندارد: نه تابعی از index.html صدا زده می‌شود و
+//  نه چیزی در صفحه عوض می‌شود. همهٔ کارها را خودِ موتورِ پوسته انجام می‌دهد.
+// ---------------------------------------------------------------------------
+function bindContextMenu(win) {
+  win.webContents.on('context-menu', (_e, params) => {
+    const wc = win.webContents;
+    const f = params.editFlags || {};
+    const sel = (params.selectionText || '').trim();
+    const items = [];
+
+    if (params.isEditable) {
+      items.push({ label: 'واگرد', accelerator: 'CmdOrCtrl+Z', enabled: !!f.canUndo, click: () => wc.undo() });
+      items.push({ label: 'ازنو', accelerator: 'CmdOrCtrl+Y', enabled: !!f.canRedo, click: () => wc.redo() });
+      items.push({ type: 'separator' });
+      items.push({ label: 'بریدن', accelerator: 'CmdOrCtrl+X', enabled: !!f.canCut, click: () => wc.cut() });
+    }
+    items.push({ label: 'کپی', accelerator: 'CmdOrCtrl+C', enabled: !!f.canCopy, click: () => wc.copy() });
+    if (params.isEditable) {
+      items.push({ label: 'چسباندن', accelerator: 'CmdOrCtrl+V', enabled: !!f.canPaste, click: () => wc.paste() });
+      items.push({ label: 'انتخابِ همه', accelerator: 'CmdOrCtrl+A', click: () => wc.selectAll() });
+    }
+    items.push({ type: 'separator' });
+    items.push({
+      label: sel ? ('جست‌وجوی «' + (sel.length > 24 ? sel.slice(0, 24) + '…' : sel) + '» در صفحه') : 'جست‌وجو در صفحه',
+      accelerator: 'CmdOrCtrl+F',
+      click: () => {
+        openFindBar();
+        if (sel) setTimeout(() => { try { win.webContents.findInPage(sel, {}); } catch (e) {} }, 700);
+      },
+    });
+
+    try { Menu.buildFromTemplate(items).popup({ window: win }); } catch (e) {}
+  });
+}
+
 function bindFind(win) {
   win.webContents.on('found-in-page', (_e, r) => {
     if (findWin && !findWin.isDestroyed()) {
@@ -514,6 +557,7 @@ function createMainWindow() {
   if (saved && saved.fullScreen) mainWin.setFullScreen(true);
   bindWinState(mainWin);
   bindFind(mainWin);
+  bindContextMenu(mainWin);
   // اگر فایلِ ذخیره‌شده کهنه یا بیرونِ دید بود و نادیده گرفته شد، همین اول با
   // جای واقعیِ پنجره اصلاحش می‌کنیم — نه اینکه تا اولین جابه‌جاییِ کاربر غلط
   // بماند.
