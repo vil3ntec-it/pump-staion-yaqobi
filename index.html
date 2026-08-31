@@ -21729,7 +21729,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
         <button class="add-row-btn" style="margin:0" onclick="addPersonRow()">➕ ردیف جدید</button>
         <div class="bulk-box" style="display:flex;gap:6px;align-items:center;background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:5px 8px">
           <span style="font-size:0.78rem;color:var(--muted)">تعداد:</span>
-          <input type="number" class="bulk-n" id="pm-bulk-count" value="10" min="1" max="200" style="width:62px;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;text-align:center">
+          <input type="number" class="bulk-n" id="pm-bulk-count" value="10" min="1" style="width:62px;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.82rem;text-align:center">
           <button class="add-row-btn" style="margin:0;border-color:var(--green);color:var(--green)" onclick="addPersonRowsBulk()">➕ افزودن چندتایی</button>
         </div>
       </div>
@@ -32291,11 +32291,14 @@ function addRowsBulkToAcct(pid, acctId, countId) {
   const acct = _getStackedAcct(person, acctId);
   const inp = countId ? document.getElementById(countId) : document.getElementById('pm-bulk-count');
   let n = parseInt(inp?.value||'10', 10)||10;
-  if (n<1) n=1; if (n>200) n=200;
+  if (n<1) n=1;
   const rowsArr = _acctRows(person, acct);
-  for (let k=0;k<n;k++) rowsArr.push({ date:persianDate(), name:'', hawala:'', ftype:'petrol', fuel:0, priceper:0, bardagi:0, rasid:0, albaqi:0, byMoney:_acctModeMoney(person, acct) });
-  save(); _renderStackedAccounts(person); _updatePersonTotals(person);
-  showToast('✅ '+n2fa(n)+' ردیف افزوده شد', '#38a169');
+  _bulkAddRows(rowsArr, n,
+    () => ({ date:persianDate(), name:'', hawala:'', ftype:'petrol', fuel:0, priceper:0, bardagi:0, rasid:0, albaqi:0, byMoney:_acctModeMoney(person, acct) }),
+    () => {
+      save(); _renderStackedAccounts(person); _updatePersonTotals(person);
+      showToast('✅ '+n2fa(n)+' ردیف افزوده شد', '#38a169');
+    });
 }
 function pdfStackedAcct(pid, acctId) {
   const person = _getStackedPerson(pid); if (!person) return;
@@ -35609,22 +35612,60 @@ function setAllRowsFuel(type) {
   save(); renderPersonRows(person); renderPersons(currentPersonType);
   showToast(ft==='diesel' ? '✅ همه ردیف‌ها دیزل شد' : '✅ همه ردیف‌ها پطرول شد', ft==='diesel' ? '#b7791f' : '#38a169');
 }
+/* ── افزودنِ چندتاییِ ردیف، بدونِ سقف و بدونِ یخ‌زدن ─────────────────────────
+   پیش از این هر دو تابعِ «افزودن چندتایی» هرچه می‌خواستی بنویسی، بی‌صدا سرِ
+   ۲۰۰ می‌بریدند (‎if (n > 200) n = 200‎) — یعنی عددی که کاربر خواسته بود
+   اجرا نمی‌شد. سقف برداشته شد؛ ولی برداشتنِ خالیِ سقف یعنی یک حلقهٔ چندهزارتایی
+   روی نخِ صفحه و همان یخ‌زدنی که قبلاً بود.
+
+   اندازه‌گیری‌شده (حسابِ ۲۰٬۰۰۰ ردیفی، CPU شش برابر کندتر): ساختنِ ۵۰۰۰ ردیف
+   ۶۱ms، ولی رسمِ دوبارهٔ جدول ۲۶۶ms — یعنی هزینه در «ساختنِ ردیف‌ها» نیست، در
+   «رسم» است، و رسم هرچقدر ردیف اضافه شود یکی است (جدول پنجره‌ای است).
+   پس: ردیف‌ها تکه‌تکه ساخته می‌شوند و صفحه بینِ تکه‌ها نفس می‌کشد، و ذخیره و
+   رسم فقط یک‌بار در پایان انجام می‌شوند.
+
+   ⚠️ ساختِ خودِ ردیف دستِ صداکننده است (makeRow) — قالبِ ردیف در دو جا فرق
+   دارد و این‌جا عمداً یکی نشده تا هیچ فیلدی جابه‌جا نشود. */
+const _BULK_CHUNK = 2000;
+let _bulkBusy = false;
+function _bulkAddRows(rowsArr, n, makeRow, done) {
+  if (_bulkBusy) { showToast('یک افزودنِ دیگر در جریان است', '#dd6b20'); return; }
+  if (n <= _BULK_CHUNK) {                    // مسیرِ عادی: همان رفتارِ قبلی، یک‌جا
+    for (let k = 0; k < n; k++) rowsArr.push(makeRow());
+    done();
+    return;
+  }
+  _bulkBusy = true;
+  let made = 0;
+  const step = function () {
+    const stop = Math.min(n, made + _BULK_CHUNK);
+    for (; made < stop; made++) rowsArr.push(makeRow());
+    if (made < n) {
+      showToast('در حال افزودن… ' + n2fa(made) + ' از ' + n2fa(n), '#3182ce');
+      setTimeout(step, 0);                   // صفحه بین تکه‌ها پاسخ‌گو می‌ماند
+      return;
+    }
+    _bulkBusy = false;
+    done();
+  };
+  setTimeout(step, 0);
+}
 function addPersonRowsBulk() {
   const list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
   const person = list.find(p => p.id === currentPersonId);
   if (!person) return;
   let n = parseInt(document.getElementById('pm-bulk-count').value, 10) || 0;
   if (n < 1) { showToast('یک عدد معتبر وارد کنید', '#e53e3e'); return; }
-  if (n > 200) n = 200;
   const ft = (currentPersonFilter === 'diesel') ? 'diesel' : 'petrol';
   const rowsArr = _acctRows(person);
-  for (let k = 0; k < n; k++) {
-    rowsArr.push({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, rasidFuel: 0, albaqi: 0, byMoney: _acctModeMoney(person) });
-  }
-  save(); renderPersonRows(person);
-  _pmScrollToEnd();
-  _ntfAccountTouched(person);
-  showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
+  _bulkAddRows(rowsArr, n,
+    () => ({ date: persianDate(), name: '', hawala: '', ftype: ft, fuel: 0, priceper: 0, bardagi: 0, rasid: 0, rasidFuel: 0, albaqi: 0, byMoney: _acctModeMoney(person) }),
+    () => {
+      save(); renderPersonRows(person);
+      _pmScrollToEnd();
+      _ntfAccountTouched(person);
+      showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
+    });
 }
 function closePersonModal() {
   try { _pmMoreClose(); } catch (e) {}
@@ -36267,10 +36308,10 @@ function addRasidRow() { ensureRasid().push(_newRasidRow()); save(); renderRasid
 function addRasidRowsBulk() {
   let n = parseInt(document.getElementById('rasid-bulk').value, 10) || 0;
   if (n < 1) { showToast('یک عدد معتبر وارد کنید', '#e53e3e'); return; }
-  if (n > 200) n = 200;
-  for (let k = 0; k < n; k++) ensureRasid().push(_newRasidRow());
-  save(); renderRasid();
-  showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
+  _bulkAddRows(ensureRasid(), n, () => _newRasidRow(), () => {
+    save(); renderRasid();
+    showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
+  });
 }
 function updateRasid(i, field, val) {
   const rows = ensureRasid();
@@ -42654,11 +42695,13 @@ function addWaraqRowsBulk() {
   const sd = activeShift(w);
   let n = parseInt(document.getElementById('wq-bulk-count').value, 10) || 0;
   if (n < 1) { showToast('یک عدد معتبر وارد کنید', '#e53e3e'); return; }
-  if (n > 200) n = 200;
-  for (let k = 0; k < n; k++) sd.transactions.push({ name: '', liters: 0, amount: 0, type: 'debt', fuel: 'petrol' });
-  renderWaraqTransactions(w);
-  calcWaraqSummary(w);
-  save();
+  _bulkAddRows(sd.transactions, n,
+    () => ({ name: '', liters: 0, amount: 0, type: 'debt', fuel: 'petrol' }),
+    () => {
+      renderWaraqTransactions(w);
+      calcWaraqSummary(w);
+      save();
+    });
   showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
 }
 
@@ -49956,7 +49999,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.414';
+const APP_VERSION = '2.9.415';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -57543,12 +57586,18 @@ tfoot td{background:${accent}14;font-weight:900;font-size:.88rem}
   // بخش‌هایی (غیر از مودال شخص/شرکت) که جدولِ ردیفی دارند: افزودن با تابعِ خودِ همان بخش،
   // و حذف با «کلیکِ دکمهٔ حذفِ آخرین ردیفِ نمایش‌داده‌شده» تا دقیقاً منطق/سینک/تریشِ خودِ بخش
   // اجرا شود و چیزی نشکند. del = بخشی از onclick دکمهٔ حذفِ هر ردیف برای پیدا کردنش.
+  /* render: نامِ تابعِ رسمِ همان بخش. فقط برای «افزودنِ گروهی» به کار می‌رود:
+     هر add() خودش یک‌بار می‌نویسد و یک‌بار کلِ جدول را از نو می‌کشد؛ برای n
+     ردیف یعنی n بار رسم. اندازه‌گیری‌شده (۲٬۰۰۰ ردیفِ مصارف، افزودنِ ۲۰۰):
+     ۴٫۸ ثانیه روی کامپیوترِ سریع و ۳۲٫۷ ثانیه روی CPU شش‌برابر کندتر — همان
+     «یخ زدن». حالا رسم و ذخیره در طولِ حلقه خاموش می‌شوند و آخرش یک‌بار
+     انجام می‌گیرند. */
   var _SECT = {
-    'sec-expenses': { add:function(){ addExpenseRow(); },     del:'deleteExpense(' },
-    'sec-sarrafi':  { add:function(){ addSarrafiRow(); },     del:'deleteSarrafiRow(' },
-    'sec-safe':     { add:function(){ addSafeRowDirect(); },  del:'deleteSafe(' },
-    'sec-rasid':    { add:function(){ addRasidRow(); },       del:'deleteRasid(' },
-    'sec-chakana':  { add:function(){ addChakanaRowToMonth((typeof _activeChakanaMonth!=='undefined' && _activeChakanaMonth) ? _activeChakanaMonth : _monthKey(persianDate())); }, del:'deleteChakana(' }
+    'sec-expenses': { add:function(){ addExpenseRow(); },     del:'deleteExpense(', render:'renderExpenses' },
+    'sec-sarrafi':  { add:function(){ addSarrafiRow(); },     del:'deleteSarrafiRow(', render:'renderSarrafi' },
+    'sec-safe':     { add:function(){ addSafeRowDirect(); },  del:'deleteSafe(', render:'renderSafe' },
+    'sec-rasid':    { add:function(){ addRasidRow(); },       del:'deleteRasid(', render:'renderRasid' },
+    'sec-chakana':  { add:function(){ addChakanaRowToMonth((typeof _activeChakanaMonth!=='undefined' && _activeChakanaMonth) ? _activeChakanaMonth : _monthKey(persianDate())); }, del:'deleteChakana(' , render:'renderChakana' }
   };
   // بافتِ جدولِ فعال — همان جدولی که جلوی کاربر است. هیچ جدول/بخشِ دیگری دست نمی‌خورد.
   function _kbCtx(){
@@ -57569,6 +57618,48 @@ tfoot td{background:${accent}14;font-weight:900;font-size:.88rem}
     try { fn(); } finally { window.confirm = oc; }
   }
 
+  /* افزودنِ گروهی بدونِ n بار رسم و ذخیره.
+     همان add()ِ خودِ بخش صدا زده می‌شود (پس قالبِ ردیف و منطقش دست‌نخورده
+     می‌ماند و هیچ‌جا تکرار نمی‌شود) — فقط در طولِ حلقه save و render موقتاً
+     بی‌اثر می‌شوند و در پایان یک‌بار واقعی اجرا می‌گردند. همان ترفندی که
+     _kbNoConfirm برای confirm می‌زند.
+     برای عددهای بزرگ، کار تکه‌تکه انجام می‌شود تا صفحه هرگز قفل نشود. */
+  function _kbRunBatch(n, addOne, renderName, doneMsg, finalRender){
+    var CH = 200;
+    var realSave = window.save;
+    var realRender = renderName ? window[renderName] : null;
+    var noop = function(){};
+    var made = 0;
+    var restore = function(){
+      window.save = realSave;
+      if (renderName && realRender) window[renderName] = realRender;
+    };
+    var finish = function(){
+      restore();
+      /* رسمِ نهایی: بعضی رسم‌ها آرگومان می‌خواهند (مثلِ ورق)، پس صداکننده
+         می‌تواند خودش رسمِ پایانی را بدهد. */
+      try { if (finalRender) finalRender(); else if (realRender) realRender(); } catch(e){}
+      try { realSave(); } catch(e){}
+      try { if (typeof updateBanner === 'function') updateBanner(); } catch(e){}
+      showToast(doneMsg, '#38a169');
+    };
+    var step = function(){
+      window.save = noop;
+      if (renderName && realRender) window[renderName] = noop;
+      var stop = Math.min(n, made + CH);
+      try {
+        for (; made < stop; made++) { try { addOne(); } catch(e){} }
+      } finally { restore(); }
+      if (made < n){
+        showToast('در حال افزودن… ' + n2fa(made) + ' از ' + n2fa(n), '#3182ce');
+        setTimeout(step, 0);
+        return;
+      }
+      finish();
+    };
+    step();
+  }
+
   function _kbAddRows(n){
     var ctx = _kbCtx();
     if (!ctx || n < 1) return;
@@ -57576,7 +57667,6 @@ tfoot td{background:${accent}14;font-weight:900;font-size:.88rem}
       var list = currentPersonType === 'debt' ? DB.debtPersons : DB.noinvPersons;
       var person = (list || []).find(function(p){ return p.id === currentPersonId; });
       if (!person) return;
-      if (n > 200) n = 200;
       var ft = (currentPersonFilter === 'diesel') ? 'diesel' : 'petrol';
       var rowsArr = _acctRows(person);
       for (var k = 0; k < n; k++)
@@ -57586,20 +57676,21 @@ tfoot td{background:${accent}14;font-weight:900;font-size:.88rem}
     } else if (ctx.kind === 'company'){
       var company = (DB.tilCompanies || []).find(function(c){ return c.id === currentCompanyId; });
       if (!company) return;
-      if (n > 100) n = 100;
       var rows = _cmpRows(company);
       for (var j = 0; j < n; j++)
         rows.push({ name: '', date: persianDate(), ton: 0, usd: 0, rate: 0, poul: 0, poulCurrency: 'afn' });
       save(); renderCompanyRows(company);
       showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
     } else if (ctx.kind === 'waraq'){
-      if (n > 200) n = 200;
-      for (var w = 0; w < n; w++) { try { addWaraqRow(); } catch(e){} }
-      showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
+      var wq = getActiveWaraq();
+      _kbRunBatch(n, function(){ addWaraqRow(); }, 'renderWaraqTransactions',
+        '✅ ' + n2fa(n) + ' ردیف افزوده شد',
+        /* رسم و جمع‌بستِ ورق، یک‌بار در پایان — همان دو کاری که خودِ
+           addWaraqRow برای هر ردیف انجام می‌داد */
+        function(){ var w2 = getActiveWaraq() || wq; if (!w2) return; renderWaraqTransactions(w2); calcWaraqSummary(w2); });
     } else if (ctx.kind === 'section'){
-      if (n > 200) n = 200;
-      for (var s = 0; s < n; s++) { try { ctx.def.add(); } catch(e){} }
-      showToast('✅ ' + n2fa(n) + ' ردیف افزوده شد', '#38a169');
+      _kbRunBatch(n, ctx.def.add, ctx.def.render,
+        '✅ ' + n2fa(n) + ' ردیف افزوده شد');
     }
   }
 
