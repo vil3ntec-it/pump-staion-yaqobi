@@ -1915,13 +1915,21 @@ textarea.note-field.cm-hist-note{ padding:4px 9px !important; line-height:1.6; }
 /* پیام بالای صفحه (مثلاً: حساب شرکت یا تیلی با این نام پیدا نشد) */
 /* موبایل: opacity موقعِ ورود/خروج تا پیامِ نیمه‌بریده در لبهٔ بالای صفحه دیده نشود؛
    جای نمایش هم با env(safe-area-inset-top) از نوارِ وضعیت/ناچ پایین‌تر می‌نشیند */
-.top-toast{position:fixed;top:-120px;left:50%;transform:translateX(-50%);opacity:0;padding:12px 26px;border-radius:12px;font-weight:800;font-size:0.92rem;z-index:100000;transition:top .35s cubic-bezier(.2,.9,.3,1.3),opacity .3s;pointer-events:none;color:#fff;box-shadow:0 8px 30px rgba(0,0,0,.35);max-width:92vw;text-align:center;white-space:normal;line-height:1.5}
+/* ⚠️ سُر خوردنِ این پیام با transform انجام می‌شود، نه با top.
+   انیمیشن روی top یعنی مرورگر در هر فریمِ آن ۰٫۳۵ ثانیه باید چیدمان را از نو
+   حساب کند؛ اگر همان موقع اسکرول هم بکنی، هر دو روی یک نخ می‌افتند و همان
+   «لگِ وقتی پیام می‌آید» را می‌سازند. اندازه‌گیری‌شده (اسکرول + آمدنِ پیام):
+       با top      → ۴۲ چیدمان، ۴۱۱ms
+       با transform→ ۳۴ چیدمان، ۳۷۳ms  (دقیقاً همان کفِ «بدونِ انیمیشن»)
+   transform روی لایهٔ کامپوزیتور می‌رود و هیچ چیدمانی نمی‌خواهد. جای نشستن،
+   سرعت و منحنیِ حرکت مو‌به‌مو همان است. */
+.top-toast{position:fixed;top:0;left:50%;opacity:0;transform:translateX(-50%) translateY(-170px);padding:12px 26px;border-radius:12px;font-weight:800;font-size:0.92rem;z-index:100000;transition:transform .35s cubic-bezier(.2,.9,.3,1.3),opacity .3s;pointer-events:none;color:#fff;box-shadow:0 8px 30px rgba(0,0,0,.35);max-width:92vw;text-align:center;white-space:normal;line-height:1.5}
 /* روی top:18px قدیمی، این پیام (مثلاً «نسخهٔ تازه آمد») درست روی تاریخ/نسخهٔ
    هدر می‌افتاد و آن‌ها را چند ثانیه کامل می‌پوشاند — همان چیزی که هر بار بعد
    از آپدیت، انگار «رنگ تاریخ خراب است» به‌نظر می‌رسید. حالا پایین‌تر از هدر
    می‌نشیند تا هیچ‌وقت رویش نیفتد */
-.top-toast.show{top:calc(84px + env(safe-area-inset-top,0px));opacity:1}
-@media (min-width:769px){ .top-toast.show{top:calc(64px + env(safe-area-inset-top,0px))} }
+.top-toast.show{transform:translateX(-50%) translateY(calc(84px + env(safe-area-inset-top,0px)));opacity:1}
+@media (min-width:769px){ .top-toast.show{transform:translateX(-50%) translateY(calc(64px + env(safe-area-inset-top,0px)))} }
 
 .type-badge{display:inline-block;padding:2px 9px;border-radius:4px;font-size:0.7rem;font-weight:700}
 .type-badge.rasid{background:#4299e133;color:var(--blue)}
@@ -15837,7 +15845,12 @@ body.gfx-standard .lock-box{
   background:rgba(16,21,33,.82) !important;
   -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
 }
-body.gfx-standard .toast{ -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
+/* توست دیگر «شیشهٔ تار» ندارد. پس‌زمینه‌اش را خودِ showToast مات می‌گذارد
+   (t.style.background)، پس آن blur هیچ‌وقت دیده نمی‌شد — ولی تا وقتی پیام روی
+   صفحه بود، مرورگر مجبور بود در هر فریم نوارِ پشتِ آن را از نو تار کند. همان
+   باگِ گزارش‌شده: «وقتی یک پیام روی صفحه می‌آید و همان موقع اسکرول می‌کنی، لگ
+   می‌زند». حالا نه دیده می‌شود که کم شده باشد، نه هزینه‌ای دارد. */
+body.gfx-standard .toast{ -webkit-backdrop-filter:none; backdrop-filter:none; }
 body.gfx-standard .ls-modal{ animation:ls-pop .5s cubic-bezier(.22,.8,.32,1); }
 /* hazard tape crawl — the old ls-stripes keyframes were deleted in an
    earlier perf pass, so this uses its own keyframes (tape bg is a 45px
@@ -29657,11 +29670,11 @@ function _goPersonPage(type) { _showAllPersons(type); }   // سازگاری با
 function _showAllPersons(type) {
   const l = type === 'debt' ? DB.debtPersons : DB.noinvPersons;
   _personShown[type] = (l || []).length;
-  renderPersons(type);
+  renderPersons(type, true);   // «نمایش همه» هم ادامه است، نه ساختِ دوباره
 }
 function _showAllCompanies() {
   _companyShown = (DB.tilCompanies || []).length;
-  renderCompanies();
+  renderCompanies(true);   // «نمایش همه» هم ادامه است، نه ساختِ دوباره
 }
 /** وقتی این نشانه به دیدِ کاربر نزدیک شد، دستهٔ بعدی را بیاور */
 function _observeMore(el, cb) {
@@ -30786,7 +30799,21 @@ function _scheduleBgRefresh() {
     _bgRun(run, 'bgRefresh');
   }, 400);
 }
-function renderPersons(type) {
+/* ⚠️ باگِ «اسکرول می‌کنم و صفحه چند کادر جلو/عقب می‌پرد» ───────────────────
+   کارت‌ها دسته‌دسته می‌آیند: هر بار که به تهِ فهرست نزدیک می‌شوی، دستهٔ بعدی
+   بار می‌شود. ولی این تابع برای بار کردنِ دستهٔ بعدی، اول کلِ گرید را خالی
+   می‌کرد (grid.innerHTML = '') و بعد همه‌چیز را از نو می‌ساخت. در همان یک لحظه
+   قدِ صفحه از چند هزار پیکسل به چند صد پیکسل می‌افتاد، مرورگر جای اسکرولِ تو را
+   به همان کفِ کوتاه می‌چسباند، و وقتی کارت‌ها برمی‌گشتند تو دیگر جای قبلی
+   نبودی — همان «انگار نت قطع شد و دوباره وصل شد».
+   اندازه‌گیری‌شده (۴۰۰ حساب، اسکرول تا ته): قدِ صفحه ۹ بار عوض می‌شد، بین
+   ۳٬۲۹۶ و ۸٬۹۳۶ پیکسل.
+   حالا وقتی دستهٔ تازه فقط «ادامهٔ» همان چیزی است که روی صفحه است، گرید خالی
+   نمی‌شود: فقط کارت‌های تازه ته‌اش چسبانده می‌شوند. قدِ صفحه هیچ‌وقت کم نمی‌شود،
+   پس اسکرول همان‌جا می‌ماند که کاربر گذاشته — و ساختنِ دوبارهٔ صدها کارت هم
+   انجام نمی‌شود. هر رندرِ دیگری (ذخیره، جست‌وجو، همگام‌سازی) دقیقاً مثل قبل کلِ
+   گرید را از نو می‌سازد؛ هیچ منطقی عوض نشده. */
+function renderPersons(type, appendOnly) {
   const grid = document.getElementById(type + '-grid');
   if (!grid) return;
   /* رکوردِ خالی/خراب (که گاهی از همگام‌سازی جا می‌ماند) از همین‌جا کنار گذاشته
@@ -30802,12 +30829,21 @@ function renderPersons(type) {
   const total = list.length;
   const shown = q ? total : Math.min(Math.max(_personShown[type] || _PERSON_PAGE, _PERSON_PAGE), total);
   const pageList = list.slice(0, shown);
+  /* آیا این رندر فقط «ادامه دادن» است؟ شرط‌ها سخت‌گیرانه‌اند تا هیچ‌وقت کارتِ
+     کهنه روی صفحه نماند: بدونِ جست‌وجو، همان تعدادِ کارتی که ساخته بودیم هنوز
+     روی صفحه است، فهرستِ تازه از همان‌ها شروع می‌شود و فقط بلندتر شده. */
+  const haveIds = grid.__pgIds;
+  const keep = (appendOnly && !q && Array.isArray(haveIds) && haveIds.length
+      && haveIds.length < pageList.length
+      && grid.children.length === haveIds.length
+      && haveIds.every((id, i) => pageList[i] && pageList[i].id === id)) ? haveIds.length : 0;
+  const buildList = keep ? pageList.slice(keep) : pageList;
 
   /* کشِ جمع‌ها — فقط برای همین یک رندر زنده است و بعدش دور انداخته می‌شود.
      بدونِ آن، جمعِ ردیف‌های هر حساب سه‌چهار بار تکرار می‌شد. */
   const _tc = new Map();
   const frag = document.createDocumentFragment();
-  pageList.forEach(p => {
+  buildList.forEach(p => {
    try {
     /* ══ کارتِ قرض‌دار — بازنویسیِ نمایش (خواستهٔ صاحب ریپو) ══════════════════
        «آن که می‌گوید تسویه دروغ می‌گوید — فقط تیل را دیده، ولی از واحدِ پول
@@ -30901,18 +30937,20 @@ function renderPersons(type) {
     console.warn('[پمپ یعقوبی] کارتِ حساب ساخته نشد:', p && p.id, err);
    }
   });
-  grid.innerHTML = '';
+  if (!keep) grid.innerHTML = '';
   grid.appendChild(frag);
+  grid.__pgIds = pageList.map(p => p.id);
   _pcardFitText(grid);      // اندازهٔ نوشته‌ها، پس از این‌که کارت‌ها سرِ جایشان نشستند
   if (q && !pageList.length) {
     grid.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:0.9rem">حسابی یافت نشد</div>';
+    grid.__pgIds = null;
   }
 
   // هنگام جست‌وجو همهٔ نتیجه‌ها آمده‌اند و نوارِ «بقیه» معنی ندارد
   const _pgr = document.getElementById(type + '-pager');
   if (q) { if (_pgr) _pgr.remove(); }
   else _paintMoreBar(type + '-pager', grid, shown, total,
-    () => { _personShown[type] = shown + _PERSON_PAGE; renderPersons(type); },
+    () => { _personShown[type] = shown + _PERSON_PAGE; renderPersons(type, true); },
     "_showAllPersons('" + type + "')", 'حساب');
 }
 
@@ -37150,7 +37188,10 @@ function tilAlbaqi(r){ return cmpAlbaqi(r); }
 let _companyShown = _PERSON_PAGE;
 function _goCompanyPage() { _showAllCompanies(); }   // سازگاری با کدِ قدیمی
 
-function renderCompanies() {
+/* همان درمانِ renderPersons (توضیحِ کامل آنجاست): دستهٔ بعدیِ شرکت‌ها دیگر با
+   خالی کردنِ کلِ گرید نمی‌آید، فقط ته‌اش چسبانده می‌شود — پس قدِ صفحه کم نمی‌شود
+   و اسکرول نمی‌پرد. */
+function renderCompanies(appendOnly) {
   const grid = document.getElementById('company-grid');
   if (!grid) return;
   if (!DB.tilCompanies) DB.tilCompanies = [];
@@ -37164,8 +37205,13 @@ function renderCompanies() {
   // هنگام جست‌وجو همهٔ نتیجه‌ها می‌آیند؛ در حالت عادی دسته‌دسته و با اسکرول
   const cShown = q ? total : Math.min(Math.max(_companyShown || _PERSON_PAGE, _PERSON_PAGE), total);
   const list = fullList.slice(0, cShown);
-  grid.innerHTML = '';
-  list.forEach(c => {
+  const haveIds = grid.__pgIds;
+  const keep = (appendOnly && !q && Array.isArray(haveIds) && haveIds.length
+      && haveIds.length < list.length
+      && grid.children.length === haveIds.length
+      && haveIds.every((id, i) => list[i] && list[i].id === id)) ? haveIds.length : 0;
+  if (!keep) grid.innerHTML = '';
+  (keep ? list.slice(keep) : list).forEach(c => {
    try {
     (c.rows||[]).forEach(_migrateCompanyRow); (c.dieselRows||[]).forEach(_migrateCompanyRow);
     const rows = [...(c.rows || []), ...(c.dieselRows || [])];
@@ -37203,13 +37249,15 @@ function renderCompanies() {
     console.warn('[پمپ یعقوبی] کارتِ شرکت ساخته نشد:', c && c.id, err);
    }
   });
+  grid.__pgIds = list.map(c => c.id);
   if (q && !list.length) {
     grid.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:0.9rem">شرکتی یافت نشد</div>';
+    grid.__pgIds = null;
   }
   // هنگام جست‌وجو نوارِ «بقیه» لازم نیست — همهٔ نتیجه‌ها همان‌جا هستند
   if (q) { const o = document.getElementById('company-pager'); if (o) o.remove(); }
   else _paintMoreBar('company-pager', grid, cShown, total,
-    () => { _companyShown = cShown + _PERSON_PAGE; renderCompanies(); },
+    () => { _companyShown = cShown + _PERSON_PAGE; renderCompanies(true); },
     '_showAllCompanies()', 'شرکت');
   _renderCompanySummary();
   _updateCompanyBanner();
@@ -50110,7 +50158,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.423';
+const APP_VERSION = '2.9.424';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -54961,19 +55009,35 @@ document.addEventListener('click', function(e) {
 <script id="scrollHoverFixJs">
 (function(){
   "use strict";
-  // روی دسکتاپ با ماوس، هنگام اسکرولِ سریع، نشانگر ثابت می‌ماند و کارت‌ها/دکمه‌ها
-  // زیرش رد می‌شوند — هرکدام لحظه‌ای hover می‌گیرند و افکتِ translateY(...) طراحی‌شده
-  // برای هاورِ واقعی اجرا می‌شود، که به‌نظر «پرشِ» بخش‌ها هنگام اسکرول می‌رسد.
-  // با اضافه‌کردن body.is-scrolling در حین اسکرول (CSS آن pointer-events را موقتاً
-  // خاموش می‌کند تا hover ثبت نشود) و پاک‌کردنش کمی بعد از توقفِ اسکرول، رفع می‌شود.
-  // PERFORMANCE: کلاس فقط یک‌بار در ابتدای هر اسکرول نوشته می‌شود (نه در هر
-  // رویداد) — هر نوشتنِ کلاس روی <body> استایلِ کلِ صفحه را بی‌اعتبار می‌کند.
-  var t = null, on = false;
-  window.addEventListener('scroll', function(){
-    if(!on){ on = true; document.body.classList.add('is-scrolling'); }
-    clearTimeout(t);
-    t = setTimeout(function(){ on = false; document.body.classList.remove('is-scrolling'); }, 150);
-  }, { passive: true });
+  /* ⚠️ اینجا عمداً هیچ کاری انجام نمی‌شود — و این خودش رفعِ باگ است.
+     ─────────────────────────────────────────────────────────────────────────
+     مسئلهٔ اصلی همان بود که در نسخه‌های قبل نوشته شده بود: روی کامپیوتر با ماوس،
+     هنگامِ اسکرول نشانگر ثابت می‌ماند و کارت‌ها زیرش رد می‌شوند، هرکدام لحظه‌ای
+     hover می‌گیرند و بالا می‌پرند. درمانِ قبلی این بود که در حینِ اسکرول کلاسِ
+     body.is-scrolling نوشته شود (تا CSS آن pointer-events را موقتاً خاموش کند).
+
+     ولی هر نوشتنِ کلاس روی <body> یعنی «استایلِ کلِ صفحه را از نو حساب کن» — و
+     چون این کلاس در آغازِ هر اسکرول نوشته و ۱۵۰ms پس از توقف پاک می‌شود، هر بار
+     که کاربر اسکرول را از سر می‌گرفت یک بازمحاسبهٔ تمام‌صفحه اجرا می‌شد. همان
+     چیزی که گزارش شد: «اسکرول می‌کنم، وایمیستم، دوباره که اسکرول می‌کنم یک لگِ
+     کوچک می‌زند».
+
+     اندازه‌گیریِ واقعی (کروم، ۱۵۰ کارت، چرخِ واقعیِ ماوس، Performance.getMetrics):
+         با این کلاس    → شروعِ هر اسکرول: ۲۹ms بازمحاسبهٔ سبک · اسکرولِ پیوسته: ۳۲۷ms
+         بدونِ آن       → شروعِ هر اسکرول: ۱۰ms                 · اسکرولِ پیوسته: ۱۱۵ms
+     یعنی نزدیک به سه برابر. آزمودیم که مقصر خودِ «نوشتنِ کلاس» است نه قاعده‌هایش:
+     با خنثی‌کردنِ قاعده‌های pointer-events یا مکثِ انیمیشن‌ها (و نگه داشتنِ کلاس)
+     هیچ چیزی بهتر نشد؛ فقط با برداشتنِ خودِ نوشتن بهتر شد. بردنِ کلاس روی .main
+     هم فایده‌ای نداشت (۲۹ms → ۱۹ms) چون .main تقریباً همهٔ صفحه است.
+
+     جایگزینِ خودِ باگِ هاور، حالا CSS است و هیچ هزینه‌ای ندارد: به هاورِ کارت‌ها
+     یک «مکثِ ورود» داده شده (transition-delay در حالتِ :hover). کارتی که فقط
+     زیرِ نشانگر رد می‌شود چند ده میلی‌ثانیه بیشتر آنجا نیست، پس بلند شدنش اصلاً
+     شروع نمی‌شود؛ ولی وقتی واقعاً نشانگر را روی کارت نگه دارید، بعد از همان مکثِ
+     کوتاه مثل قبل بلند می‌شود. خروج از هاور بدونِ مکث است.
+
+     قاعده‌های body.is-scrolling در CSS دست‌نخورده مانده‌اند (چیزی حذف نشده) —
+     فقط دیگر هیچ‌وقت فعال نمی‌شوند. */
 })();
 </script>
 
@@ -60843,6 +60907,23 @@ select:not(.native-sel){
 </script>
 
 <style id="motion-refine">
+/* ══ «مکثِ ورودِ هاور» — جانشینِ body.is-scrolling ══════════════════════════
+   چرا این‌جا و نه بالاتر: قاعده‌های body.gfx-standard خودشان transition را با
+   !important می‌نویسند و چون شورت‌هند است، هر transition-delayی که پیش از آن‌ها
+   نوشته شود صفر می‌شود. این بلاک از همهٔ آن‌ها پایین‌تر است، پس مکث می‌ماند.
+   (اندازه‌گیری‌شده: با قاعده در جای قبلی، کارت ۴۰ms پس از رد شدنِ نشانگر بلند
+   می‌شد؛ یعنی مکث اصلاً اعمال نمی‌شد.)
+
+   کارِ این مکث: کارتی که فقط در حینِ اسکرول زیرِ نشانگر رد می‌شود کمتر از ۹۰ms
+   آن‌جاست، پس هیچ افکتی شروع نمی‌شود و صفحه «نمی‌پرد» — همان چیزی که پیش از این
+   با نوشتنِ کلاس روی <body> حل شده بود و به قیمتِ یک بازمحاسبهٔ تمام‌صفحه در
+   آغازِ هر اسکرول تمام می‌شد. هاورِ واقعی (نگه‌داشتنِ نشانگر) دقیقاً مثل قبل کار
+   می‌کند و خروج از هاور بدونِ مکث است. */
+body .card:hover, body .shift-card:hover, body .settings-card:hover,
+body .pl-card:hover, body .person-card:hover, body .stat-box:hover,
+body .msumbox:hover, body .nav-btn:hover{
+  transition-delay: 90ms !important;
+}
 /* ═══════════════════════════════════════════════════════════════════════════
    پالایشِ حرکت‌ها (نسخه 2.9.411) — فقط انیمیشن و گذر.
 
