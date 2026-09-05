@@ -13678,6 +13678,47 @@ html{background:transparent!important}
    ⛔ عنصرهای نشان‌دار را پاک نکنید — «پنهان» عمدی است، نه فراموش‌شده. */
 .ui-internal-only{display:none!important}
 
+/* ══ فهرست‌های بلند: چیزی که بیرونِ قاب است اصلاً چیده و رنگ نشود ══════════
+   گزارشِ صاحب ریپو: «بعضی بخش‌ها انقدر دیر باز می‌شوند که نگو و نپرس.»
+
+   بخشِ «مخزن» با ۴۰۰ خرید، ۸۰۰ کارت می‌ساخت (هر کدام ~۳۰ گره). خودِ ساختنشان
+   گران نبود — چیدن و رنگ‌زدنِ همه‌شان گران بود، حتی آن‌هایی که کاربر هرگز
+   نمی‌دید. اندازه‌گیری (کرومیوم، ۴۰۰ خرید): باز شدنِ بخش ۳۵۶ms → ۱۷۴ms.
+
+   content-visibility:auto به مرورگر می‌گوید «تا وقتی این کارت به قابِ دید
+   نزدیک نشده، اصلاً چیدنش نکن». contain-intrinsic-size قدِ حدسی می‌دهد تا
+   نوارِ اسکرول از اول درست باشد و با نزدیک شدن نپرد. محتوا و ظاهر مو‌به‌مو
+   همان است — فقط زمانِ کشیدنش عقب می‌افتد.
+
+   ⚠️ عمداً فقط روی «کارت‌های تکرارشوندهٔ فهرست» است، نه هر جایی:
+   روی چیزی که جاوااسکریپت قدش را اندازه می‌گیرد (مثلِ کادرهای گاوصندوق که
+   موتورِ vgrid می‌سنجدشان) گذاشته نمی‌شود، چون عنصرِ چیده‌نشده قدِ صفر
+   برمی‌گرداند و حسابِ جا خراب می‌شود. */
+#fuel-purchases-list > .card,
+#diesel-purchases-list > .card{
+  content-visibility:auto;
+  contain-intrinsic-size:auto 168px;
+}
+#am-grid > .am-card{
+  content-visibility:auto;
+  contain-intrinsic-size:auto 150px;
+}
+/* فاصله‌اندازهای موتورِ vgrid — فقط قد دارند و هیچ چیزِ دیگری */
+.vg-spacer{width:100%;pointer-events:none}
+/* ظرفِ فهرستِ مجازی: جبرانِ خودکارِ اسکرولِ مرورگر این‌جا باید خاموش باشد —
+   توضیحِ کامل کنارِ vgridAttach. بدونِ این، برگشتن به سرِ فهرست کار نمی‌کند. */
+.vg-host{overflow-anchor:none}
+.vg-host > *{overflow-anchor:none}
+/* ⚠️ داخلِ ظرفِ مجازی، content-visibility باید خاموش باشد ────────────────────
+   این دو با هم جمع نمی‌شوند و ترکیبشان یک باگِ خاموش می‌سازد: عنصری که
+   content-visibility:auto دارد و بیرونِ قاب است، به‌جای قدِ واقعی همان
+   contain-intrinsic-size را برمی‌گرداند. موتورِ vgrid قدِ کادر را اندازه
+   می‌گیرد تا جای فاصله‌اندازها را حساب کند، پس عددِ ساختگی می‌گرفت (۱٬۲۰۴ به‌جای
+   ۱٬۸۴۹) و قدِ کلِ فهرست با هر اسکرول ~۳٬۶۰۰px بالا و پایین می‌شد.
+   حالا که خودِ vgrid کادرهای بیرونِ قاب را اصلاً نمی‌سازد، content-visibility
+   این‌جا کاری هم ندارد که بکند — فقط اندازه‌گیری را خراب می‌کرد. */
+.vg-host > *{content-visibility:visible!important}
+
 /* ---------- 3. TYPOGRAPHY ---------- */
 body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter-spacing:.1px}
 .tb-value,.stat-value,.mv,.calc-row,.pl-result-value,.field-input,.xls-in,.tbl .editable,
@@ -27397,11 +27438,40 @@ function miladiDate() {
   return d.getFullYear() + '/' + String(d.getMonth() + 1).padStart(2, '0')
        + '/' + String(d.getDate()).padStart(2, '0');
 }
+/* ══ تاریخِ قمری — یک‌بار ساخته می‌شود، نه در هر صدا زدن ═══════════════════
+   این تابع گران‌ترین تکه‌ی کلِ برنامه بود و هیچ‌کس نمی‌دانست. با پروفایلرِ
+   واقعیِ کروم روی دادهٔ ۴۰۰ ردیفی:
+       بخشِ «تیل امانت»   ۸۳۲ms از ۱٬۱۶۹ms  ← فقط همین یک تابع
+       بخشِ «تاریخچه»     ۴۱۵ms از ۷۸۱ms    ← باز هم همین
+   دلیلش یک خط بود: `new Intl.DateTimeFormat(...)` داخلِ تابع. ساختنِ یک
+   فرمت‌کنندهٔ Intl گران‌ترین کارِ ممکن است (دادهٔ زبان و تقویم را بار می‌کند)
+   و این‌جا برای *هر ردیف* از نو ساخته می‌شد.
+
+   درمان، بدونِ یک ذره تغییر در خروجی:
+     ۱) فرمت‌کننده یک‌بار ساخته و نگه داشته می‌شود (تنبل — تا اولین نیاز).
+     ۲) نتیجه بر اساس «همان روز» کش می‌شود. تاریخِ قمریِ یک روزِ مشخص هرگز
+        عوض نمی‌شود، پس کش هیچ‌وقت کهنه نمی‌شود.
+   اگر مرورگر این تقویم را نشناسد، دقیقاً مثل قبل null برمی‌گردد. */
+let _qamFmt, _qamFmtTried = false;
+const _qamCache = new Map();
 function _qamariParts(date) {
   try {
-    const fmt = new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura', {day:'numeric',month:'numeric',year:'numeric'});
-    const o = {}; fmt.formatToParts(date||new Date()).forEach(p => { if (p.type!=='literal') o[p.type]=p.value; });
-    return { y: parseInt(o.year), m: parseInt(o.month), d: parseInt(o.day) };
+    const dt = date || new Date();
+    const key = dt.getFullYear() + '-' + dt.getMonth() + '-' + dt.getDate();
+    const hit = _qamCache.get(key);
+    if (hit !== undefined) return hit;
+    if (!_qamFmtTried) {
+      _qamFmtTried = true;
+      _qamFmt = new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura', {day:'numeric',month:'numeric',year:'numeric'});
+    }
+    if (!_qamFmt) return null;
+    const o = {}; _qamFmt.formatToParts(dt).forEach(p => { if (p.type!=='literal') o[p.type]=p.value; });
+    const res = { y: parseInt(o.year), m: parseInt(o.month), d: parseInt(o.day) };
+    /* کش عمداً سقف دارد: روی دادهٔ چندساله هزاران روزِ جدا دیده می‌شود و کشِ
+       بی‌مرز خودش به نشتِ حافظه تبدیل می‌شود. */
+    if (_qamCache.size > 4000) _qamCache.clear();
+    _qamCache.set(key, res);
+    return res;
   } catch(e) { return null; }
 }
 function qamariDate() {
@@ -39774,6 +39844,166 @@ function addSafeMonth() {
   renderSafe();
   showToast('✅ ماه ' + _safeActiveMonth + ' باز شد', '#38a169');
 }
+/* ══════════════════════════════════════════════════════════════════════════
+   موتورِ مشترکِ «جدولِ مجازی» — vgrid
+   ══════════════════════════════════════════════════════════════════════════
+   گزارشِ صاحب ریپو: «اکسل را باز کردم، ۱۰۰۰ ردیف را اسکرول کردم یک درصد لگ
+   نزد. برنامهٔ خودم با ۱۰۰ تا لگ می‌زند. گاوصندوق ۴۰۰ ردیف دارد و سه ثانیه
+   بعد باز می‌شود.»
+
+   حق با ایشان بود. اندازه‌گیریِ واقعی روی گاوصندوق با ۴۰۰ ردیف (کرومیومِ
+   دسکتاپ — روی گوشی چند برابر):
+       باز شدنِ بخش  ۷۹۸ms،  از این ۷۰۰ms کارِ خودِ مرورگر بود نه جاوااسکریپت
+       ۳٬۲۱۷ کادر/دکمهٔ واقعی در صفحه ساخته می‌شد (هر ردیف ۸ تا)
+   یعنی همان چیزی که خودِ صاحب ریپو گفت نباید باشد: «برای هر سلول یک UI Object».
+
+   کاری که اکسل می‌کند و این‌جا هم همان شد: فقط چیزی که در قابِ دید است ساخته
+   می‌شود. بقیه دو «فاصله‌اندازِ» ساده‌اند که فقط قد دارند و هیچ محتوایی ندارند.
+
+   ── چرا «کادر» (box) و نه «ردیف»؟ ────────────────────────────────────────
+   گاوصندوق (و چند بخشِ دیگر) عمداً هر ۳۰ ردیف را در یک جدولِ جدا می‌گذارند —
+   این ظاهرِ خواسته‌شده است و نباید عوض شود. پس واحدِ مجازی‌سازی همان «کادر»
+   است، نه ردیف: کادرهای هم‌اندازه، پس حسابِ جا ساده و دقیق می‌ماند.
+
+   ── دو چیزی که همیشه ساخته می‌شوند ───────────────────────────────────────
+   ۱) کادرِ آخر: ردیفِ «تمام حساب» (tfoot) داخلِ آخرین جدول می‌نشیند تا با آن
+      هم‌اسکرول بماند. اگر کادرِ آخر ساخته نشود، آن ردیف خانه‌اش را گم می‌کند.
+   ۲) کادری که کاربر همین حالا داخلش تایپ می‌کند — وگرنه با یک اسکرول، کادرِ
+      زیرِ دستِ کاربر برداشته می‌شد و نوشته‌اش می‌پرید.
+   ══════════════════════════════════════════════════════════════════════════ */
+const _vg = Object.create(null);          // key → وضعیتِ همان جدول
+const _VG_BUF = 1;                        // چند کادر بالا و پایینِ قاب، از پیش آماده
+
+function _vgSpacer(h) {
+  const d = document.createElement('div');
+  d.className = 'vg-spacer';
+  d.setAttribute('aria-hidden', 'true');
+  d.style.height = Math.max(0, Math.round(h)) + 'px';
+  return d;
+}
+/* کدام کادر زیرِ دستِ کاربر است؟ (‑۱ یعنی هیچ‌کدام) */
+function _vgFocusBox(st) {
+  const ae = document.activeElement;
+  if (!ae || !st.host.contains(ae)) return -1;
+  const b = ae.closest('[data-vgbox]');
+  return b ? (+b.getAttribute('data-vgbox')) : -1;
+}
+/* ثبت/به‌روزرسانیِ یک جدولِ مجازی. همان key دوباره صدا زده شود = رندرِ تازه. */
+function vgridAttach(key, opts) {
+  const host = opts.host;
+  if (!host) return;
+  let st = _vg[key];
+  if (!st) {
+    st = _vg[key] = { key: key, boxH: 0, first: -1, last: -1 };
+    /* یک بار برای همیشه: به اسکرولِ صفحه گوش بده. برداشتنِ شنونده لازم نیست —
+       اگر بخش پنهان یا جدول عوض شده باشد، خودِ رندر بی‌صدا برمی‌گردد. */
+    st.onScroll = function () {
+      if (st.raf) return;
+      st.raf = requestAnimationFrame(function () { st.raf = 0; _vgRender(key, false); });
+    };
+    window.addEventListener('scroll', st.onScroll, { passive: true });
+    window.addEventListener('resize', st.onScroll);
+  }
+  st.host = host;
+  /* ⚠️ «لنگرِ اسکرول» باید روی این ظرف خاموش باشد ─────────────────────────
+     مرورگر خودش یک قابلیت دارد: اگر قدِ چیزی بالای صفحه عوض شود، جای اسکرول
+     را جبران می‌کند تا آنچه می‌بینی نپرد. برای صفحهٔ معمولی عالی است، برای
+     فهرستِ مجازی فاجعه: ما عمداً کادرها را کم و زیاد می‌کنیم، و مرورگر هر بار
+     اسکرول را «اصلاح» می‌کرد. اندازه‌گیری‌شده: بعد از رفتن به ته جدول و
+     برگشتن با scrollTo(0,0)، صفحه به‌جای ۰ روی ۳٬۴۰۲ می‌ایستاد و ردیفِ اول
+     دیده نمی‌شد. overflow-anchor:none همان قابلیت را فقط برای همین ظرف
+     خاموش می‌کند. */
+  host.classList.add('vg-host');
+  st.total = opts.total | 0;
+  st.perBox = Math.max(1, opts.perBox | 0);
+  st.buildBox = opts.buildBox;
+  st.afterRender = opts.afterRender || null;
+  st.nBoxes = Math.ceil(st.total / st.perBox) || 0;
+  st.first = -1; st.last = -1;             // پنجره از نو
+  st.boxH = 0;                             // اندازه دوباره سنجیده شود
+  _vgRender(key, true);
+}
+function _vgRender(key, full) {
+  const st = _vg[key];
+  if (!st || !st.host || !st.host.isConnected) return;
+  const host = st.host, n = st.nBoxes;
+  if (!n) { if (full) host.innerHTML = ''; st.first = st.last = -1; return; }
+
+  /* اندازه‌گیریِ «گامِ کادر» — تنها اندازه‌گیریِ اجباری، یک بار در هر رندرِ کامل.
+     ⚠️ عمداً «قدِ یک کادر» سنجیده نمی‌شود بلکه «فاصلهٔ دو کادرِ پشتِ سرِ هم».
+     چرا: getBoundingClientRect حاشیه (margin) را نمی‌شمارد، ولی کادرها بینشان
+     ۱۴px حاشیه دارند. اگر قدِ تکی گرفته شود، حسابِ جای فاصله‌اندازها به‌اندازهٔ
+     ۱۴px در هر کادر کم می‌آید و قدِ کلِ فهرست با هر اسکرول کمی بالا و پایین
+     می‌شود — یعنی صفحه زیرِ دستِ کاربر می‌لرزد. اندازه‌گیری‌شده: قدِ سند بینِ
+     ۱۷٬۹۴۶ و ۲۰٬۵۴۰ نوسان می‌کرد. با «گام»، این نوسان صفر می‌شود. */
+  if (!st.boxH) {
+    host.innerHTML = '';
+    const p0 = st.buildBox(0, Math.min(st.perBox, st.total));
+    p0.setAttribute('data-vgbox', '0');
+    host.appendChild(p0);
+    if (n > 1) {
+      const start1 = st.perBox;
+      const p1 = st.buildBox(start1, Math.min(st.perBox, st.total - start1));
+      p1.setAttribute('data-vgbox', '1');
+      host.appendChild(p1);
+      st.boxH = p1.getBoundingClientRect().top - p0.getBoundingClientRect().top;
+      st.first = 0; st.last = 1;
+    } else {
+      st.boxH = p0.getBoundingClientRect().height || 0;
+      st.first = 0; st.last = 0;
+    }
+    if (!(st.boxH > 0)) { st.boxH = 0; return; }           // هنوز روی صفحه نیست
+  }
+
+  /* قابِ دید بر حسبِ «شمارهٔ کادر» */
+  const rect = host.getBoundingClientRect();
+  const relTop = -rect.top;                                  // چقدر از بالای فهرست رد شده
+  const viewH = window.innerHeight || 800;
+  const last = n - 1;                                        // کادرِ آخر همیشه ساخته می‌شود
+  /* ⚠️ قدِ کلِ فهرست باید همیشه دقیقاً همان بماند، در هر جای اسکرول:
+         first*boxH + (پنجره) + (کادرهای پریده) + کادرِ آخر  =  last*boxH + قدِ آخر
+     برای اینکه این تساوی همیشه برقرار باشد، پنجره فقط روی کادرهای ۰ تا last-1
+     حرکت می‌کند و کادرِ آخر جدا و همیشه ته می‌نشیند. اگر first تا خودِ last
+     برود، همان کادر دو بار ساخته می‌شود و قدِ فهرست می‌پرد — که یعنی صفحه
+     زیرِ دستِ کاربر بالا و پایین می‌شود. پس هر دو سر به last-1 بریده می‌شوند. */
+  let first = 0, lastVis = -1;
+  if (last > 0) {
+    first = Math.floor(relTop / st.boxH) - _VG_BUF;
+    lastVis = Math.ceil((relTop + viewH) / st.boxH) + _VG_BUF;
+    first = Math.max(0, Math.min(first, last - 1));
+    lastVis = Math.max(first, Math.min(lastVis, last - 1));
+    const fb = _vgFocusBox(st);                              // کادرِ زیرِ دستِ کاربر
+    if (fb >= 0 && fb <= last - 1) { first = Math.min(first, fb); lastVis = Math.max(lastVis, fb); }
+  }
+
+  if (!full && first === st.first && lastVis === st.last) return;   // پنجره عوض نشده
+  st.first = first; st.last = lastVis;
+
+  const frag = document.createDocumentFragment();
+  if (first > 0) frag.appendChild(_vgSpacer(first * st.boxH));
+  for (let b = first; b <= lastVis; b++) {
+    const start = b * st.perBox;
+    const el = st.buildBox(start, Math.min(st.perBox, st.total - start));
+    el.setAttribute('data-vgbox', String(b));
+    frag.appendChild(el);
+  }
+  /* فاصلهٔ بینِ آخرین کادرِ ساخته‌شده و کادرِ آخر */
+  const gap = (last - 1) - lastVis;
+  if (gap > 0) frag.appendChild(_vgSpacer(gap * st.boxH));
+  if (last > 0) {                                            // خودِ کادرِ آخر
+    const start = last * st.perBox;
+    const el = st.buildBox(start, Math.min(st.perBox, st.total - start));
+    el.setAttribute('data-vgbox', String(last));
+    frag.appendChild(el);
+  }
+  host.innerHTML = '';
+  host.appendChild(frag);
+  /* هر چیزی که باید بعد از جابه‌جا شدنِ کادرها سرِ جایش برگردد (مثلِ ردیفِ
+     «تمام حساب» که داخلِ آخرین جدول می‌نشیند) — نه فقط در رندرِ کامل، بلکه در
+     هر بار عوض شدنِ پنجره، چون کادرِ آخر تازه ساخته شده است. */
+  if (st.afterRender) { try { st.afterRender(); } catch (e) {} }
+}
+
 const SAFE_ROWS_PER_BOX = 30; // کادر که پر شد، کادر بعدی خودکار زیرش ساخته می‌شود
 // چند-ارزی: هر ردیف علاوه بر مبلغ، واحد پول خودش را دارد (؋ افغانی یا $ دالر)؛
 // جمع‌ها جدا جدا برای هر ارز نگه‌داشته می‌شوند — تبدیل خودکار با نرخ انجام نمی‌شود
@@ -39839,9 +40069,12 @@ function renderSafe() {
     return m ? ((+m[1]) * 10000 + (+m[2]) * 100 + (+m[3])) : Infinity;
   };
   monthRows.sort((a, b) => (_safeDateKey(a.e.date) - _safeDateKey(b.e.date)) || (a.i - b.i));
-  const boxesFrag = document.createDocumentFragment();
-  for (let start = 0; start < monthRows.length; start += SAFE_ROWS_PER_BOX) {
-    const chunk = monthRows.slice(start, start + SAFE_ROWS_PER_BOX);
+  /* ── ساختِ یک کادر ─────────────────────────────────────────────────────
+     دقیقاً همان HTMLِ قبلی، مو‌به‌مو — فقط از داخلِ حلقه به یک تابع منتقل شد
+     تا موتورِ مجازی هر وقت لازم شد همان را بسازد. هیچ ستون، کلاس، استایل یا
+     onchange‌ای عوض نشده؛ شمارهٔ ردیف و اندیسِ اصلیِ i هم همان‌طور می‌آیند. */
+  const buildSafeBox = (start, count) => {
+    const chunk = monthRows.slice(start, start + count);
     const wrap = document.createElement('div');
     wrap.className = 'tbl-wrap';
     if (start > 0) wrap.style.marginTop = '14px';
@@ -39894,9 +40127,19 @@ function renderSafe() {
       rowsFrag.appendChild(tr);
     });
     tbody.appendChild(rowsFrag);
-    boxesFrag.appendChild(wrap);
-  }
-  boxesEl.appendChild(boxesFrag);
+    /* رنگ/فونتِ خانه‌ها و نشانِ ارز روی کادرِ تازه‌ساخته هم بنشیند */
+    try { if (window._curCellPaint) window._curCellPaint(); } catch (e) {}
+    return wrap;
+  };
+  /* ⚠️ به‌جای ساختنِ همهٔ کادرها، فقط آن‌هایی که در قابِ دید هستند ساخته
+     می‌شوند. با ۴۰۰ ردیف این یعنی ۳٬۲۱۷ کادرِ واقعی → حدودِ ۳۰۰ تا. */
+  vgridAttach('safe', {
+    host: boxesEl,
+    total: monthRows.length,
+    perBox: SAFE_ROWS_PER_BOX,
+    buildBox: buildSafeBox,
+    afterRender: function () { try { _safeDockFooter(); } catch (e) {} }
+  });
   const _sfEl = id => document.getElementById(id);
   /* ⚠️ جهت: «موجودی خالص» یعنی چقدر در گاوصندوق مانده — پس ماندگی اضافه
      می‌کند و بردگی کم. پیش از این برعکس بود (بردگی − ماندگی) و گزارشِ صاحب
@@ -49809,7 +50052,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.426';
+const APP_VERSION = '2.9.427';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
