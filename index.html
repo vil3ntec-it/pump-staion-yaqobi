@@ -14381,7 +14381,29 @@ body::after {
   animation: none !important;
   display: none !important;
 }
-html { scroll-behavior: smooth; }
+/* ══ اسکرولِ «نرمِ» مرورگر از ریشه برداشته شد ═══════════════════════════════
+   گزارشِ صاحب ریپو: «در بخش قرض‌داران اسکرول کردنش صد مدل گیر و لگ و وایستادن
+   دارد… تند که اسکرول می‌کنم نمی‌تواند ردیف‌های زیر را بکشد، می‌ایستد و بعد
+   یک‌دفعه جلو تلپورت می‌شود.»
+
+   ریشه همین یک خط بود. با scroll-behavior:smooth روی <html>، *هر* جابه‌جاییِ
+   اسکرول تبدیل به یک انیمیشنِ خودِ مرورگر می‌شود:
+     • هر نُچِ غلتک انیمیشنِ قبلی را نصفه‌کاره می‌شکند و از نو شروع می‌کند —
+       همان حسِ «گیر کردن» و «کش آمدن».
+     • در فهرستِ قرض‌داران که کارت‌ها با content-visibility کم‌کم واقعی می‌شوند،
+       قدِ صفحه مدام عوض می‌شود و هدفِ همان انیمیشن زیرِ پایش تکان می‌خورد —
+       نتیجه‌اش پرش و «تلپورت» بود.
+     • و بدتر: اسکرول هیچ‌وقت واقعاً به ته نمی‌رسید. اندازه‌گیری شد —
+       scrollTop = scrollHeight گذاشتیم و مرورگر روی ۲٬۹۴۸ نگه داشت در حالی که
+       سقف ۴٬۰۹۶ بود. برای همین «نشانهٔ بارِ دستهٔ بعدی» هرگز به دیدِ ناظر
+       نمی‌آمد و فهرستِ ۴۰۰ حسابی روی ۳۵۰ تا گیر می‌کرد (نگهبانِ check-scroll
+       ماه‌ها همین را قرمز نشان می‌داد و کسی ریشه‌اش را پیدا نکرده بود).
+
+   حالا اسکرولِ صفحه دقیقاً همان چیزی است که انگشت/غلتک می‌گوید — بی‌واسطه.
+   هر جایی که واقعاً انیمیشن می‌خواهد، خودش صریح behavior:'smooth' می‌دهد
+   (مثلِ scrollIntoView‌ها) و دست‌نخورده کار می‌کند.
+   ⛔ این خط را برنگردانید. */</style>
+<style>
 </style>
 
 <style id="mobile-responsive-fix">
@@ -30368,6 +30390,7 @@ const PumpGrid = (function () {
     this._onScroll = function () { self._syncTop(); };
     window.addEventListener('scroll', this._onScroll, { capture: true, passive: true });
     window.addEventListener('resize', this._onScroll, { passive: true });
+    this._initWheel();          // اسکرولِ نرم و سُرخورِ غلتک (توضیح کنارِ _glide)
     /* ⚠️ روی گوشی، هر اسکرول با یک pointerdown شروع می‌شود. نسخهٔ اول همان‌جا
        کادرِ تایپ را باز می‌کرد، پس با هر دست‌زدن کیبورد بالا می‌آمد و کشیدنِ
        چپ‌وراست هم گیر می‌کرد (گزارشِ صاحب ریپو). حالا فقط وقتی کادر باز می‌شود
@@ -30544,6 +30567,93 @@ const PumpGrid = (function () {
       const a = this.vp.getBoundingClientRect(), b = this.host.getBoundingClientRect();
       return Math.max(0, Math.round(a.top - b.top - (this.host.clientTop || 0)));
     } catch (e) { return this.scrollTop || 0; }
+  };
+  /* ══ اسکرولِ نرم و «سُرخور» — همان حسِ اکسل ═════════════════════════════════
+     گزارشِ صاحب ریپو: «در اکسل موقعِ اسکرول اگر بایستی، جدول کمی باز هم جلو
+     می‌رود؛ در برنامهٔ من همین که ول کنم درجا وایمیستد. اکسل به سرعتِ چرخشِ
+     غلتک توجه می‌کند — یواش بچرخانی یواش می‌رود، تند بچرخانی تند می‌رود. و
+     وقتی تند اسکرول می‌کنم نمی‌تواند ردیف‌های زیر را بکشد، می‌ایستد و بعد
+     یک‌دفعه جلو تلپورت می‌شود.»
+
+     هر سهِ این‌ها یک ریشه داشت: اسکرولِ عمودی «خامِ» مرورگر بود.
+       • مرورگر برای غلتک هیچ لَختی‌ای ندارد — با ایستادنِ دست، همان لحظه می‌ایستد.
+       • هر نُچِ غلتک یک مقدارِ ثابت است؛ تندتر چرخاندن فقط تعدادِ نُچ‌ها را زیاد
+         می‌کند، نه اندازهٔ هر گام را.
+       • رویدادِ scroll و کشیدنِ بوم دو کارِ جدا بودند: مرورگر جای پنجرهٔ چسبان را
+         عوض می‌کرد و کشیدنِ محتوا یک فریم عقب می‌افتاد — همان «تلپورت».
+
+     درمان: خودِ موتور اسکرول را می‌راند.
+       ۱) «هدف» (_sTo) نگه داشته می‌شود، نه جای فعلی. هر نُچِ غلتک هدف را جلو
+          می‌برد و جای فعلی نرم به سمتِ هدف می‌رود. پس وقتی دست می‌ایستد، هنوز
+          فاصله‌ای تا هدف مانده و جدول «کمی باز هم جلو می‌رود» — همان سُرخوردنِ اکسل.
+       ۲) نُچ‌هایی که پشتِ سرِ هم و تند می‌آیند ضریب می‌گیرند (تا سه برابر). یواش
+          بچرخانی ضریب یک است. یعنی گام به سرعتِ چرخش بستگی دارد، نه فقط تعدادش.
+       ۳) جابه‌جایی و کشیدن در *یک* فریم انجام می‌شوند: اول scrollTop گذاشته
+          می‌شود، بعد بلافاصله در همان فریم بوم کشیده می‌شود. پس هیچ‌وقت محتوای
+          فریمِ قبل روی جای تازه دیده نمی‌شود و چیزی تلپورت نمی‌کند.
+
+     ⚠️ وقتی به سر یا تهِ جدول رسیده‌ایم، رویداد را نمی‌گیریم (preventDefault
+     نمی‌کنیم) تا اسکرول مثل همیشه به خودِ صفحه/مودال زنجیر شود.
+     ⚠️ لمس دست‌نخورده است: مرورگر خودش روی لمس لَختی دارد و بهترش نمی‌کنیم. */
+  Grid.prototype._canScroll = function () {
+    const p = this._sp();
+    if (!p) return false;
+    return (p.scrollHeight - p.clientHeight) > 2;
+  };
+  Grid.prototype._glide = function () {
+    const self = this;
+    if (this._sRaf) return;
+    this._sRaf = requestAnimationFrame(function step() {
+      self._sRaf = 0;
+      const p = self._sp();
+      if (!p) return;
+      const max = p.scrollHeight - p.clientHeight;
+      let to = Math.max(0, Math.min(self._sTo, max));
+      const cur = p.scrollTop;
+      const d = to - cur;
+      if (Math.abs(d) < 0.6) { p.scrollTop = to; self._syncTop(true); self._sTo = to; self._sActive = false; return; }
+      /* نرمیِ حرکت: هر فریم بخشی از فاصله طی می‌شود (میرایی نمایی). ۰٫۲۲ از
+         روی حس انتخاب شد — کمتر، شل و کش‌دار می‌شود؛ بیشتر، دوباره خشک. */
+      p.scrollTop = cur + d * 0.22;
+      self._syncTop(true);          // کشیدن در همان فریمِ جابه‌جایی — بی‌تلپورت
+      self._sRaf = requestAnimationFrame(step);
+    });
+  };
+  Grid.prototype._initWheel = function () {
+    const self = this;
+    this._sTo = 0; this._sLast = 0; this._sRaf = 0; this._sActive = false;
+    this._onWheel = function (e) {
+      if (e.ctrlKey) return;                       // بزرگ‌نماییِ مرورگر
+      if (!self._canScroll()) return;
+      const p = self._sp();
+      const max = p.scrollHeight - p.clientHeight;
+      /* واحدِ دلتا در مرورگرها فرق می‌کند: پیکسل، خط یا صفحه */
+      let dy = e.deltaY;
+      if (e.deltaMode === 1) dy *= self.rowH || 30;        // خط
+      else if (e.deltaMode === 2) dy *= p.clientHeight;    // صفحه
+      if (!dy) return;
+      /* ⚠️ پایهٔ گامِ تازه «هدفِ فعلی» است، نه جای فعلیِ اسکرول ────────────────
+         اگر جای فعلی پایه گرفته شود، نُچ‌هایی که تندتر از یک فریم می‌آیند روی هم
+         جمع نمی‌شوند: هر کدام از جایی حساب می‌شود که هنوز حرکت نکرده، و تندچرخاندن
+         هیچ فرقی با یواش‌چرخاندن نمی‌کند. (اندازه‌گیری شد: سه نُچِ تند ۲۹۳px و سه
+         نُچِ یواش ۲۹۸px — یعنی ضریبِ سرعت اصلاً اثر نداشت.)
+         پرچمِ _sActive جداست و نه _sRaf: _sRaf در آغازِ هر فریم صفر می‌شود، پس
+         درست وسطِ همان لحظه‌ها پایه به جای فعلی می‌افتاد. */
+      const base = (self._sActive ? self._sTo : p.scrollTop);
+      if ((dy < 0 && base <= 0.5) || (dy > 0 && base >= max - 0.5)) return;
+      /* ضریبِ سرعت: نُچ‌های پشتِ سرِ هم (زیر ۹۰ms) تا سه برابر شتاب می‌گیرند */
+      const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+      const gap = now - (self._sLast || 0);
+      self._sLast = now;
+      let k = 1;
+      if (gap < 90) k = 1 + Math.min(2, (90 - gap) / 45);
+      e.preventDefault();
+      self._sActive = true;
+      self._sTo = Math.max(0, Math.min(base + dy * k, max));
+      self._glide();
+    };
+    /* passive:false لازم است چون preventDefault می‌کنیم */
+    this.host.addEventListener('wheel', this._onWheel, { passive: false });
   };
   Grid.prototype._syncTop = function (force) {
     const t = this._topOff();
@@ -30961,6 +31071,10 @@ const PumpGrid = (function () {
       window.removeEventListener('scroll', this._onScroll, true);
       window.removeEventListener('resize', this._onScroll);
     } catch (e) {}
+    /* حلقهٔ سُرخوردن و شنوندهٔ غلتک هم برداشته شوند — وگرنه بعد از بستنِ جدول
+       همچنان فریم می‌خواهند و به عنصرِ رفته دست می‌زنند. */
+    try { if (this._sRaf) cancelAnimationFrame(this._sRaf); this._sRaf = 0; } catch (e) {}
+    try { if (this._onWheel) this.host.removeEventListener('wheel', this._onWheel, { passive: false }); } catch (e) {}
     this.host.innerHTML = '';
     this.host.classList.remove('pg-host');
   };
@@ -51904,7 +52018,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.428';
+const APP_VERSION = '2.9.429';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
