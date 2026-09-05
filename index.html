@@ -30086,10 +30086,84 @@ function _vtAdoptAll(root) {
 const _PM_BUF = 26;        // چند ردیف بالا و پایینِ قاب، از پیش آماده باشد
 const _PM_EDGE = 6;        // تا این نزدیکیِ لبهٔ پنجره نرسد، از نو ساخته نمی‌شود
 const _PM_MINWIN = 30;     // کمینهٔ ردیف‌های ساخته‌شده
+/* ══ سقفِ قدِ جدول ═══════════════════════════════════════════════════════════
+   تا امروز قدِ جدول مستقیم از تعدادِ ردیف می‌آمد: n × بلندیِ ردیف. روی حسابِ
+   بزرگ این عدد نجومی می‌شد و دو چیز خراب می‌کرد — و هر دو اندازه‌گیری شدند
+   (کروم، Performance.getMetrics، هر بار ۵۰ گامِ ۲۵۰ پیکسلی از سرِ جدول):
+
+       ۲٬۰۰۰ ردیف   قدِ جدول ~۱۴۰٬۰۰۰px    هر گامِ اسکرول ۲۰ms
+      ۲۰٬۰۰۰ ردیف   قدِ جدول ~۱٫۴M px      هر گامِ اسکرول ۲۱ms
+     ۱۰۰٬۰۰۰ ردیف   قدِ جدول ~۷M px        هر گامِ اسکرول ۱۹ms
+     ۴۰۰٬۰۰۰ ردیف   قدِ جدول ~۲۸M px       هر گامِ اسکرول ۸۸ms   ← کند شد
+   ۱٬۰۰۰٬۰۰۰ ردیف   قدِ جدول ~۷۰M px       هر گامِ اسکرول ۲۰۲ms  ← هم کند، هم خراب
+
+   ⚠️ سطرِ آخر فقط «کند» نبود، غلط بود: کروم قدِ هر عنصر را روی ۳۳٬۵۵۴٬۴۳۲px
+   (۲ به توانِ ۲۵) می‌بُرد. جدول بلندتر از این می‌خواست، پس ردیف‌های آخر بیرونِ
+   نوارِ اسکرول می‌افتادند و با هیچ کاری دیده نمی‌شدند. اندازه‌گیریِ واقعی روی
+   یک‌میلیون ردیف: ته جدول روی ردیفِ ۷۸۳٬۹۰۵ می‌ایستاد — ۲۱۶٬۰۹۵ ردیفِ آخر
+   دست‌نیافتنی بودند.
+
+   ⚠️ سطرِ ۴۰۰٬۰۰۰ عمداً درمان نشد: آن‌جا جدول کند است ولی *درست* است، و سقف
+   زدنِ زودهنگام هر حسابِ سالمی را هم وارد مسیرِ نگاشت می‌کرد. اندازه‌گیری شد:
+   با سقفِ زودهنگام، همان حسابِ ۴۰۰٬۰۰۰ ردیفی ~۲۳٪ گران‌تر می‌شد. پس سقف تا
+   بالاترین جای ممکن عقب رفت.
+
+   درمان: قدِ جدول سقف می‌خورد و «جای مجازی» به «جای فیزیکی» نگاشت می‌شود
+   (همان کاری که هر گریدِ بزرگ می‌کند). تا وقتی قدِ واقعی زیرِ سقف است هیچ
+   نگاشتی در کار نیست و scale دقیقاً ۱ می‌ماند — یعنی برای هر حسابِ واقعی
+   رفتار مو‌به‌مو همان است که بود.
+
+   سقف ۳۰M پیکسل است و عمداً درست زیرِ همان مرزِ ۳۳٬۵۵۴٬۴۳۲ مرورگر گذاشته شد،
+   نه پایین‌تر. قاعده‌ای که این عدد از آن آمد: «هر حسابی که امروز درست کار
+   می‌کند باید مو‌به‌مو همان بماند.» پس تا ~۷۳۰٬۰۰۰ ردیف، scale دقیقاً ۱ است و
+   کد از همان مسیرِ قبلی می‌رود — بدونِ یک خط تفاوت در رفتار یا هزینه.
+   نگاشت فقط آن‌جا روشن می‌شود که بدونش جدول *خراب* است (ردیف‌ها بیرونِ نوارِ
+   اسکرول می‌افتند)، نه صرفاً کند. در یک‌میلیون ردیف هر ردیف ~۳۰px می‌گیرد
+   به‌جای ۴۱ — هنوز کاملاً نرم، و مهم‌تر: ردیف‌های آخر بالاخره دیده می‌شوند.
+   ⚠️ این عدد را بالاتر نبرید؛ بالای ۳۳٫۵M خودِ مرورگر می‌بُرد و باگ برمی‌گردد. */
+const _PM_MAXH = 30000000;
+/* نسبتِ «پیکسلِ فیزیکی به پیکسلِ مجازی». همیشه ≤ ۱. */
+function _pmScale() {
+  const V = _pmV;
+  const rowH = V.rowH || 41;
+  const total = (V.idx.length + (V.autoTotal || 0)) * rowH;
+  return (total > _PM_MAXH) ? (_PM_MAXH / total) : 1;
+}
 const _pmV = { person: null, rows: null, idx: [], showFt: true, money: false, cols: 11,
                emptyMsg: '', rowH: 0, bodyTop: null, from: -1, to: -1,
-               autoN: 0, autoTotal: 0, autoAt: -1 };
-function _resetPmRowWindow() { _pmV.from = -1; _pmV.to = -1; _pmV.rowH = 0; _pmV.bodyTop = null; _pmV.autoN = 0; _pmV.autoTotal = 0; _pmV.autoAt = -1; }
+               autoN: 0, autoTotal: 0, autoAt: -1, scale: 1, topH: 0 };
+function _resetPmRowWindow() { _pmV.from = -1; _pmV.to = -1; _pmV.rowH = 0; _pmV.bodyTop = null; _pmV.autoN = 0; _pmV.autoTotal = 0; _pmV.autoAt = -1; _pmV.scale = 1; _pmV.topH = 0; }
+/* ── قدِ دو فاصله‌انداز، در یک جا ────────────────────────────────────────────
+   هم _pmRenderWindow و هم _pmFixSpacers از همین یکی می‌خوانند، وگرنه دو جا دو
+   جور حساب می‌کردند و جدول بینشان می‌پرید.
+   • scale === 1 (هر حسابِ واقعی): دقیقاً همان فرمولِ قبلی، بی‌کم‌وکاست.
+   • scale < 1 (حسابِ غول): فاصله‌اندازِ بالا از خودِ جای اسکرول ساخته می‌شود تا
+     ردیفِ vis0 درست زیرِ لبهٔ بالای قاب بنشیند، و فاصله‌اندازِ پایین بقیهٔ سقف
+     را پر می‌کند. جمعشان همیشه _PM_MAXH است، پس نوارِ اسکرول ثابت می‌ماند و
+     نمی‌پرد. */
+function _pmSpacerHeights(vis0) {
+  const V = _pmV;
+  const rowH = V.rowH || 41;
+  const n = V.idx.length;
+  const at = V.autoAt;
+  const autoH = (V.autoTotal || 0) * rowH;
+  const inWin = (at >= V.from && at < V.to);
+  if ((V.scale || 1) >= 1) {
+    return { topH: V.from * rowH + ((!inWin && at >= 0 && at < V.from) ? autoH : 0),
+             botH: (n - V.to) * rowH + ((!inWin && at >= V.to) ? autoH : 0) };
+  }
+  const winH = (V.to - V.from) * rowH + (inWin ? autoH : 0);
+  if (vis0 == null) vis0 = V.vis0 || V.from;
+  let topH = V.topH;
+  if (vis0 != null) {
+    const sc = _pmScrollBox();
+    const y = (sc && V.bodyTop != null) ? (sc.scrollTop - V.bodyTop) : 0;
+    topH = y - (vis0 - V.from) * rowH;
+  }
+  topH = Math.max(0, Math.min(topH, _PM_MAXH - winH));
+  V.topH = topH;
+  return { topH: topH, botH: Math.max(0, _PM_MAXH - topH - winH) };
+}
 function _pmScrollBox() {
   const m = document.getElementById('personModal');
   return m ? m.querySelector('.modal-body') : null;
@@ -30171,18 +30245,30 @@ function _pmRenderWindow(full) {
   }
   const sc = _pmScrollBox();
   const rowH = V.rowH || 41;
+  const scale = _pmScale();
+  V.scale = scale;
   let from = 0, to = n, vis0 = 0, vis1 = n;
   if (sc && V.bodyTop != null) {
+    /* y جای فیزیکیِ اسکرول است؛ vy همان جا در «فضای مجازیِ» ردیف‌ها.
+       ⚠️ فقط جای شروع نگاشت می‌شود، نه قدِ قاب: ردیف‌های ساخته‌شده اندازهٔ
+       طبیعیِ خودشان را دارند، پس در هر قاب همان clientHeight/rowH ردیف
+       دیده می‌شود — چه scale یک باشد چه کمتر. */
     const y = sc.scrollTop - V.bodyTop;
-    vis0 = Math.floor(y / rowH);
-    vis1 = Math.ceil((y + sc.clientHeight) / rowH);
+    const vy = (scale >= 1) ? y : (y / scale);
+    vis0 = Math.floor(vy / rowH);
+    vis1 = Math.ceil((vy + sc.clientHeight) / rowH);
     from = Math.max(0, vis0 - _PM_BUF);
     to = Math.min(n, vis1 + _PM_BUF);
-    /* قاب هنوز خوب داخلِ پنجرهٔ ساخته‌شده است ⇒ هیچ کاری لازم نیست */
+    V.vis0 = vis0;
+    /* قاب هنوز خوب داخلِ پنجرهٔ ساخته‌شده است ⇒ هیچ کاری لازم نیست.
+       ⚠️ فقط وقتی scale یک است. در حالتِ نگاشت‌شده، قدِ فاصله‌اندازِ بالا خودش
+       تابعِ جای اسکرول است، پس حتی با پنجرهٔ دست‌نخورده باید تازه شود — وگرنه
+       ردیف‌ها زیرِ لبهٔ قاب سُر می‌خورند. تازه کردنِ قدِ دو فاصله‌انداز هیچ
+       ردیفی را از نو نمی‌سازد. */
     if (!full && V.from >= 0 && V.to > V.from) {
       const topOk = (V.from === 0) || (vis0 >= V.from + _PM_EDGE);
       const botOk = (V.to === n) || (vis1 <= V.to - _PM_EDGE);
-      if (topOk && botOk) return;
+      if (topOk && botOk) { if (scale < 1) _pmFixSpacers(vis0); return; }
     }
   } else {
     /* اولین ساخت فقط برای سنجیدنِ اندازه‌هاست، پس کوچک می‌ماند — پنجرهٔ واقعی
@@ -30214,13 +30300,21 @@ function _pmRenderWindow(full) {
     try { ae.blur(); } catch (e) {}
   }
 
+  /* قدِ فاصله‌اندازها از همان یک تابعِ مشترک می‌آید (توضیحش کنارِ خودش).
+     V.from/V.to باید پیش از صدا زدنش تازه باشند. */
+  const _oF = V.from, _oT = V.to;
+  V.from = from; V.to = to;
+  const _sp = _pmSpacerHeights(vis0);
+  V.from = _oF; V.to = _oT;
+  V._topPx = Math.max(0, Math.round(_sp.topH));   // tbody از نو ساخته می‌شود ⇒ کشِ قدها هم‌گام شود
+  V._botPx = Math.max(0, Math.round(_sp.botH));
   const html = [];
-  if (from > 0) html.push(_pmSpacer(from * rowH));
+  if (from > 0) html.push(_pmSpacer(_sp.topH));
   for (let k = from; k < to; k++) {
     const i = V.idx[k];
     html.push(_pmRowHtml(person, V.rows[i], i, k + 1, V.showFt, V.money, (k % 2) === 1));
   }
-  if (to < n) html.push(_pmSpacer((n - to) * rowH));
+  if (to < n) html.push(_pmSpacer(_sp.botH));
   const nb = document.createElement('tbody');
   nb.id = 'pm-body';
   nb.innerHTML = html.join('');
@@ -33964,21 +34058,22 @@ function _renderRasidLog(acct, o) {
    پنجره. اگر ردیف‌های خودکار داخلِ پنجره ساخته شده باشند، جای خودشان را در
    جدول گرفته‌اند؛ اگر بیرونِ پنجره باشند، بلندیشان به همان فاصله‌اندازی اضافه
    می‌شود که آن طرف را نگه داشته — پس کلِ بلندیِ جدول همیشه یکی است. */
-function _pmFixSpacers() {
+function _pmFixSpacers(vis0) {
   const V = _pmV;
   const tb = document.getElementById('pm-body');
   if (!tb || V.from < 0) return;
-  const rowH = V.rowH || 41;
   const n = V.idx.length;
-  const at = V.autoAt;
-  const autoH = (V.autoTotal || 0) * rowH;
-  const inWin = (at >= V.from && at < V.to);
   const sps = tb.querySelectorAll('tr.pm-vsp');
   if (!sps.length) return;
-  const topH = V.from * rowH + ((!inWin && at >= 0 && at < V.from) ? autoH : 0);
-  const botH = (n - V.to) * rowH + ((!inWin && at >= V.to) ? autoH : 0);
-  if (V.from > 0 && sps[0]) sps[0].style.height = Math.max(0, Math.round(topH)) + 'px';
-  if (V.to < n && sps[sps.length - 1]) sps[sps.length - 1].style.height = Math.max(0, Math.round(botH)) + 'px';
+  const h = _pmSpacerHeights(vis0);
+  const topPx = Math.max(0, Math.round(h.topH));
+  const botPx = Math.max(0, Math.round(h.botH));
+  /* ⚠️ نوشتنِ همان عددی که از قبل هست هم یک «تغییرِ چیدمان» حساب می‌شود و
+     مرورگر را وادار می‌کند جدول را از نو بچیند. در حالتِ نگاشت‌شده این تابع با
+     هر رویدادِ اسکرول صدا زده می‌شود، پس عددِ آخر نگه داشته می‌شود و اگر عوض
+     نشده باشد اصلاً دست به DOM نمی‌خورد. */
+  if (V.from > 0 && sps[0] && V._topPx !== topPx) { sps[0].style.height = topPx + 'px'; V._topPx = topPx; }
+  if (V.to < n && sps[sps.length - 1] && V._botPx !== botPx) { sps[sps.length - 1].style.height = botPx + 'px'; V._botPx = botPx; }
 }
 /* ══ رسیدِ یک‌جا — پطرول و دیزل با یک مبلغ ═══════════════════════════════════
    مشکل (خواستهٔ صاحب ریپو): مشتری هم پطرول برده هم دیزل — مثلاً ۶۰۰۰ پطرول و
@@ -49714,7 +49809,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.425';
+const APP_VERSION = '2.9.426';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
