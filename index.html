@@ -13661,171 +13661,22 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
    برمی‌گرداند، چون رنگِ بوم دوباره با رنگِ صفحه فرق می‌کند. */
 html{background:transparent!important}
 
-/* ---------- 2. PREMIUM AMBIENT BACKGROUND — soft mesh, organic drift ---------- */
-/* z-index:0, not -1: body has no stacking context of its own, so a
-   NEGATIVE z-index here would fall through to the root stacking context
-   and paint underneath body's own CSS background (the oil/leather wash),
-   making the whole layer invisible. 0 keeps it a normal painted layer that
-   sits in DOM order — #fxLayer is inserted as one of body's first children,
-   so it still paints behind every real UI element that follows it (cards,
-   header z-index:100, nav z-index:250, lock screen z-index:9999, etc.). */
-/* height:100dvh (dynamic viewport height) instead of relying purely on
-   inset:0's implicit sizing — on mobile, the address bar hiding/showing
-   changes the viewport, and without dvh these fixed layers can be sized
-   to the "large" viewport while the visible one is still smaller, which
-   reads as the background grid/blobs jumping the instant a scroll starts.
-   translateZ(0)+will-change promote each layer to its own GPU compositor
-   layer so scrolling never needs to repaint them — the other cause of
-   fixed decoration visibly lagging/sliding during scroll on mobile. */
-/* +140px عمدی: این لایه یک «تهٔ رنگِ» ملایم (fx-vignette) روی کلِ صفحه می‌اندازد و
-   چون position:fixed است، قدش به ویوپورت بسته می‌شود. روی گوشی، ویوپورتِ چیدمان و
-   ویوپورتِ دیده‌شده هم‌قد نیستند (نوار آدرس/نوار ایمایی جمع و باز می‌شود)، پس یک
-   نوارِ باریکِ پایینِ صفحه بی‌رنگ می‌ماند و چون بقیهٔ صفحه ته‌رنگ دارد، آن نوار
-   به‌صورت یک «لایهٔ رنگیِ» جدا در انتهای اسکرول دیده می‌شد. با این سرریز، لایه در
-   هر حالتی از کفِ صفحه پایین‌تر است. */
-/* ⚠️ عمداً lvh و نه dvh: dvh با پنهان/آشکار شدنِ نوارِ آدرسِ مرورگر کم‌وزیاد
-   می‌شود، یعنی این دو لایهٔ تمام‌صفحه — که filter و mix-blend-mode دارند —
-   دقیقاً در حینِ اسکرول دوباره اندازه‌گیری و بازرسم می‌شدند؛ همان «پرپرک»ِ
-   هنگام اسکرول. lvh بزرگ‌ترین حالتِ ویوپورت است: همیشه از صفحهٔ دیده‌شده
-   بلندتر یا مساوی است (پس هیچ نوارِ بی‌رنگی نمی‌ماند) و هرگز عوض نمی‌شود.
-   با همین، تابعِ pinFxToVisualViewport هم دیگر لازم نیست و حذف شد. */
-#fxLayer{position:fixed;inset:0;height:calc(100lvh + 140px);z-index:0;pointer-events:none;overflow:hidden;transform:translateZ(0);will-change:transform}
-#fxLayerTop{position:fixed;inset:0;height:calc(100lvh + 140px);pointer-events:none;overflow:hidden;transform:translateZ(0);will-change:transform}
-#fxCanvas{position:absolute;inset:0;width:100%;height:100%;opacity:.9}
+/* ---------- 2. لایهٔ تزئینیِ پس‌زمینه — برداشته شد ----------
+   خواستهٔ صریحِ صاحب ریپو: «بخش نور پس‌زمینه را کاملاً حذف کن.»
+   این‌جا سه شفقِ تمام‌صفحه (blur(40px) + mix-blend-mode:screen)، یک لایهٔ مه با
+   blur(28px)، بومِ ذرات، ته‌رنگ، شکل‌های شناور، هشت رعد و برق و پنج ستارهٔ
+   دنباله‌دار بودند. اندازه‌گیریِ خودِ همین مخزن: با این لایه هر فریم ۶۶٫۶ms
+   (۱۵fps)، بدونِ آن ۱۶٫۷ms (۶۰fps) — چهار برابر روانیِ کلِ برنامه، در هر بخش
+   و هر جدول و هر اسکرول. حالا نه عنصرش ساخته می‌شود و نه استایلی برایش هست.
+   ⚠️ برنگردانیدش. */
 
-/* atmospheric blur wash sitting behind the blobs for extra depth
-   PERFORMANCE FIX: this layer is now fully static (no opacity animation,
-   no continuous repaint) and uses a much lighter blur radius so it no
-   longer competes with scrolling/zooming/table rendering for the GPU. */
-.fx-atmos{position:absolute;inset:-10%;opacity:.35;filter:blur(28px);
-  background:
-    radial-gradient(ellipse 60% 45% at 20% 15%, rgba(255,150,60,.10), transparent 70%),
-    radial-gradient(ellipse 55% 50% at 82% 78%, rgba(120,80,255,.09), transparent 70%)}
-
-/* organic mesh blobs — irregular multi-gradient shapes, not plain circles.
-   PERFORMANCE FIX: animation removed entirely (was running 24/7 with a
-   95px blur on every section of the site, this was the single biggest
-   cause of scroll/zoom lag and crashes). Blobs are now static decoration
-   painted once; blur radius cut sharply so repaint cost near them
-   (scrolling, opening modals, zoom) is much cheaper. */
-.fx-aurora{position:absolute;border-radius:42% 58% 55% 45%/48% 42% 58% 52%;
-  filter:blur(40px);opacity:.18;mix-blend-mode:screen}
-.fx-a1{width:48vmax;height:44vmax;left:-10vmax;top:-14vmax;
-  background:
-    radial-gradient(ellipse 60% 55% at 35% 30%, rgba(255,160,60,.55), transparent 68%),
-    radial-gradient(ellipse 50% 45% at 70% 65%, rgba(255,110,40,.30), transparent 70%)}
-.fx-a2{width:52vmax;height:48vmax;right:-14vmax;top:16vmax;
-  background:
-    radial-gradient(ellipse 58% 52% at 40% 35%, rgba(120,86,255,.48), transparent 68%),
-    radial-gradient(ellipse 48% 44% at 68% 70%, rgba(90,60,220,.26), transparent 70%)}
-.fx-a3{width:42vmax;height:40vmax;left:22vmax;bottom:-18vmax;
-  background:
-    radial-gradient(ellipse 55% 50% at 32% 38%, rgba(255,190,80,.38), transparent 66%),
-    radial-gradient(ellipse 46% 42% at 66% 64%, rgba(255,150,50,.22), transparent 70%)}
-/* small fourth accent blob — softens transitions, adds parallax depth */
-.fx-a4{width:26vmax;height:26vmax;left:48vmax;top:6vmax;
-  background:radial-gradient(ellipse 60% 55% at 45% 40%, rgba(255,210,140,.30), transparent 70%);
-  opacity:.30}
-/* hexagon circuit grid — lines are fully invisible at idle (no ambient
-   halo). ONE rainbow (هفت‌رنگ) sweep: a diagonal light front starts at the
-   top-right CORNER and sweeps corner-to-corner to the bottom-left, painting
-   the hex lines in rainbow bands as it passes. Once fully lit it holds for
-   ~1.3s, then simply FADES OUT in place (no retreating wipe — the light
-   never crawls back the way it came), rests dark for a moment and repeats.
-   A soft white drop-shadow bloom keeps every colour reading as neon. */
-/* ── «شبکهٔ شش‌ضلعی» کاملاً برداشته شد ────────────────────────────────────
-   خواستهٔ صاحب ریپو: «این نوارهای شش‌ضلعی را نمی‌خواهم — حذفش کن.»
-   قبلاً این مدل فقط با کلاسِ body پنهان می‌شد، یعنی اگر تنظیمِ ذخیره‌شدهٔ کهنه‌ای
-   روی دستگاه می‌ماند یا مقدارِ ناشناخته‌ای در pumpHexFx می‌نشست، هیچ‌کدام از
-   کلاس‌های hexfx-pattern-* گذاشته نمی‌شد و شش‌ضلعی‌ها دوباره پیدا می‌شدند.
-   حالا نه عنصرش ساخته می‌شود، نه استایلی برایش هست و نه انیمیشنی — پس با هیچ
-   تنظیمی برنمی‌گردد. مدل‌های «رعد و برق» و «ستارهٔ دنباله‌دار» سرِ جایشان‌اند. */
-/* ---- مدل‌های دیگر نور پس‌زمینه: رعد و برق / ستارهٔ دنباله‌دار ----
-   --hexfx-a/-b/-c (و نسخه‌های -light) سه رنگِ پخش‌شده از رنگ‌بندیِ
-   انتخاب‌شده‌اند که applyHexFx می‌چیند؛ سرعت همان --hexfx-dur مشترک است. */
-.fx-bolts,.fx-stars{position:absolute;inset:0;display:none;pointer-events:none}
-body.hexfx-pattern-bolt .fx-bolts{display:block}
-body.hexfx-pattern-stars .fx-stars{display:block}
-body.hexfx-off .fx-bolts,body.hexfx-off .fx-stars{display:none!important}
-/* ══ «خاموش» یعنی واقعاً خاموش — و این گران‌ترین چیزِ کلِ برنامه بود ═════════
-   اندازه‌گیریِ واقعی (کروم، کامپیوترِ سریع، میانهٔ ۶۰ فریمِ پشتِ سرِ هم):
-       با لایهٔ تزئینی:      هر فریم ۶۶٫۶ms  → ۱۵ فریم در ثانیه
-       بدونِ لایهٔ تزئینی:   هر فریم ۱۶٫۷ms  → ۶۰ فریم در ثانیه
-   یعنی چهار برابرِ روانیِ کلِ برنامه — در هر بخش، هر جدول، هر اسکرول — فقط از
-   همین یک لایه. دلیلش: سه «شفقِ» تمام‌صفحه با blur و mix-blend-mode؛ هر بار که
-   هر چیزی در صفحه عوض شود (یک عدد، یک نقطهٔ چشمک‌زن، ساعت)، مرورگر مجبور است
-   کلِ آن سه لایه را از نو بکشد و با پس‌زمینه ترکیب کند.
-   پیش از این، کلیدِ «🌑 خاموش باشد» فقط رعد و برق و ستاره را پنهان می‌کرد و آن
-   سه شفق سرِ جایشان می‌ماندند — یعنی خاموش کردن، سرعت را برنمی‌گرداند. حالا
-   خاموش، کلِ لایه را برمی‌دارد. */
-body.hexfx-off #fxLayer{ display:none !important; }
-/* رعد و برق نئونی: آذرخش یک شکلِ پُر نیست — یک «لولهٔ نئون» است: خطِ
-   زیگزاگیِ نازک (SVG stroke که به‌صورت ماسک استفاده می‌شود، مثل خود شبکهٔ
-   شش‌ضلعی) با مغزِ سفیدِ داغ و سه لایه هالهٔ رنگی دور خودش. سه آذرخش با
-   رنگ/جا/تاخیر متفاوت، هر کدام در هر دور یک دابل-فلش می‌زنند. */
-.fx-bolts{--bolt-line:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 320'%3E%3Cg fill='none' stroke='white' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath stroke-width='6' d='M70 0 L52 96 L74 104 L44 208 L60 214 L34 320'/%3E%3Cpath stroke-width='3.5' d='M52 96 L24 148'/%3E%3Cpath stroke-width='3.5' d='M44 208 L78 252'/%3E%3C/g%3E%3C/svg%3E")}
-.fx-bolts i{position:absolute;display:block;opacity:0;
-  -webkit-mask-image:var(--bolt-line);mask-image:var(--bolt-line);
-  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
-  -webkit-mask-size:100% 100%;mask-size:100% 100%;
-  background:linear-gradient(180deg,#ffffff 0%,#ffffff 35%,var(--bolt-c,#9ad8ff) 100%);
-  filter:drop-shadow(0 0 3px var(--bolt-c,#9ad8ff)) drop-shadow(0 0 12px var(--bolt-c,#9ad8ff));
-  transform:translateZ(0);will-change:opacity;
-  animation:boltFlash var(--hexfx-dur,6s) linear infinite}
-/* هشت آذرخش پخش‌شده روی تمام پهنا و ارتفاع صفحه — رنگ‌ها می‌چرخند، تاخیرها
-   در طول دور پخش‌اند و چندتایشان آینه‌ای‌اند تا هر بار «یک جای دیگر» بزند */
-.fx-bolts .b1{--bolt-c:var(--hexfx-a,#9ad8ff);left:2%;top:-3%;width:88px;height:52vh}
-.fx-bolts .b2{--bolt-c:var(--hexfx-b,#c05bff);left:15%;top:22%;width:60px;height:38vh;transform:scaleX(-1) translateZ(0);animation-delay:calc(var(--hexfx-dur,6s) * -0.13)}
-.fx-bolts .b3{--bolt-c:var(--hexfx-c,#22ccff);left:29%;top:-5%;width:74px;height:60vh;animation-delay:calc(var(--hexfx-dur,6s) * -0.26)}
-.fx-bolts .b4{--bolt-c:var(--hexfx-a,#9ad8ff);left:43%;top:34%;width:56px;height:44vh;transform:scaleX(-1) translateZ(0);animation-delay:calc(var(--hexfx-dur,6s) * -0.38)}
-.fx-bolts .b5{--bolt-c:var(--hexfx-b,#c05bff);left:55%;top:-2%;width:80px;height:48vh;animation-delay:calc(var(--hexfx-dur,6s) * -0.51)}
-.fx-bolts .b6{--bolt-c:var(--hexfx-c,#22ccff);left:68%;top:28%;width:62px;height:40vh;animation-delay:calc(var(--hexfx-dur,6s) * -0.64)}
-.fx-bolts .b7{--bolt-c:var(--hexfx-a,#9ad8ff);left:80%;top:-4%;width:84px;height:56vh;transform:scaleX(-1) translateZ(0);animation-delay:calc(var(--hexfx-dur,6s) * -0.77)}
-.fx-bolts .b8{--bolt-c:var(--hexfx-b,#c05bff);left:91%;top:18%;width:58px;height:42vh;animation-delay:calc(var(--hexfx-dur,6s) * -0.89)}
-/* در تم روشن مغز سفید دیده نمی‌شود — لوله همرنگ خودِ نئون شود */
-body.light-mode .fx-bolts i{background:var(--bolt-c,#0077b0)}
-body.light-mode .fx-bolts .b1{--bolt-c:var(--hexfx-a-light,#0077b0)}
-body.light-mode .fx-bolts .b2{--bolt-c:var(--hexfx-b-light,#7a1fd0)}
-body.light-mode .fx-bolts .b3{--bolt-c:var(--hexfx-c-light,#0092c7)}
-@keyframes boltFlash{0%,86%{opacity:0}88%{opacity:1}90%{opacity:.25}93%{opacity:.95}97%,100%{opacity:0}}
-/* ستارهٔ دنباله‌دار: خط نور با سرِ درخشان که از آسمان به سمت پایین-چپ می‌افتد؛
-   rotate(135deg) یعنی translateX در طول همان مسیرِ مورب حرکت می‌کند */
-.fx-stars i{position:absolute;display:block;width:150px;height:2.5px;border-radius:3px;opacity:0;
-  background:linear-gradient(90deg,transparent,var(--star-c,#9ad8ff) 55%,#fff);
-  filter:drop-shadow(0 0 4px var(--star-c,#9ad8ff));
-  transform:rotate(135deg) translateX(-8vmax);
-  will-change:transform,opacity;
-  animation:starFall var(--hexfx-dur,6s) linear infinite}
-.fx-stars i::after{content:"";position:absolute;right:-3px;top:50%;width:5px;height:5px;margin-top:-2.5px;border-radius:50%;background:#fff;box-shadow:0 0 9px 2px var(--star-c,#9ad8ff)}
-.fx-stars .s1{--star-c:var(--hexfx-a,#9ad8ff);left:62%;top:-4%}
-.fx-stars .s2{--star-c:var(--hexfx-b,#c05bff);left:88%;top:8%;width:120px;animation-delay:calc(var(--hexfx-dur,6s) * -0.2)}
-.fx-stars .s3{--star-c:var(--hexfx-c,#22ccff);left:30%;top:-6%;animation-delay:calc(var(--hexfx-dur,6s) * -0.44)}
-.fx-stars .s4{--star-c:var(--hexfx-a,#9ad8ff);left:97%;top:28%;width:105px;height:2px;animation-delay:calc(var(--hexfx-dur,6s) * -0.58)}
-.fx-stars .s5{--star-c:var(--hexfx-b,#c05bff);left:45%;top:-2%;width:130px;animation-delay:calc(var(--hexfx-dur,6s) * -0.8)}
-body.light-mode .fx-stars i{background:linear-gradient(90deg,transparent,var(--star-c,#0077b0))}
-body.light-mode .fx-stars i::after{background:var(--star-c,#0077b0)}
-body.light-mode .fx-stars .s1,body.light-mode .fx-stars .s4{--star-c:var(--hexfx-a-light,#0077b0)}
-body.light-mode .fx-stars .s2,body.light-mode .fx-stars .s5{--star-c:var(--hexfx-b-light,#7a1fd0)}
-body.light-mode .fx-stars .s3{--star-c:var(--hexfx-c-light,#0092c7)}
-@keyframes starFall{
-  0%{transform:rotate(135deg) translateX(-8vmax);opacity:0}
-  6%{opacity:1}
-  55%{opacity:1}
-  72%{opacity:0}
-  100%{transform:rotate(135deg) translateX(115vmax);opacity:0}
-}
-/* controls of the «نور شش‌ضلعی» settings card */
-.hexfx-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.hexfx-lbl{font-size:0.85rem;font-weight:800;color:var(--txt);min-width:130px}
-.hexfx-toggle{padding:8px 18px;border-radius:9px;border:1.5px solid var(--border);background:transparent;color:var(--muted);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer;transition:all .15s}
-.hexfx-toggle.active{border-color:var(--blue);color:var(--blue);background:#2b6cb022}
-.hexfx-select{flex:1;min-width:200px;background:var(--dark);border:1.5px solid var(--border);border-radius:9px;padding:9px 10px;color:var(--txt);font-family:'Vazirmatn',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer}
-.hexfx-select:focus{outline:none;border-color:var(--blue)}
-#hexfx-dur{flex:1;min-width:150px;accent-color:var(--blue)}
-.fx-vignette{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,transparent 40%,rgba(4,6,11,.55) 100%)}
-body.light-mode #fxLayer{opacity:.55}
-body.light-mode .fx-vignette{background:radial-gradient(ellipse at 50% 30%,transparent 45%,rgba(120,80,20,.10) 100%)}
-body.light-mode .fx-atmos{opacity:.35}
+/* ══ «هست ولی دیده نمی‌شود» ═══════════════════════════════════════════════
+   خواستهٔ صریحِ صاحب ریپو: بخش‌هایی که خودش نام برد باید «داخلی و فعال بمانند
+   ولی از دید و کنترلِ کاربر بیرون بروند» — نه حذف شوند. این کلاس دقیقاً همین
+   کار را می‌کند: عنصر و شناسه‌اش در DOM می‌مانند (پس هر کدی که به آن‌ها
+   می‌نویسد سالم است) ولی هیچ‌جا دیده نمی‌شوند و صفحه‌خوان هم نمی‌خواندشان.
+   ⛔ عنصرهای نشان‌دار را پاک نکنید — «پنهان» عمدی است، نه فراموش‌شده. */
+.ui-internal-only{display:none!important}
 
 /* ---------- 3. TYPOGRAPHY ---------- */
 body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter-spacing:.1px}
@@ -14091,9 +13942,7 @@ body.light-mode *::-webkit-scrollbar-thumb{background:rgba(200,120,0,.4)}
 
 /* ---------- 17. REDUCED MOTION ---------- */
 @media (prefers-reduced-motion: reduce){
-  .fx-aurora,.shift-header::after,.ls-brand-icon{animation:none!important}
-  .fx-bolts i,.fx-stars i{animation:none!important}
-  #fxCanvas{display:none!important}
+  .shift-header::after, .ls-brand-icon{animation:none!important}
   .reveal-fx{opacity:1!important;transform:none!important;transition:none!important}
   .nav-btn,.card,.shift-card,.settings-card{animation:none!important}
 }
@@ -14230,19 +14079,6 @@ body.viewer-mode .tank-cap{ display:none; }
 }
 
 /* ---------- 6. LIGHT-MODE background parity ---------- */
-body.light-mode .fx-aurora{ opacity:.12; mix-blend-mode:multiply; }
-body.light-mode .fx-a1{ background:
-    radial-gradient(ellipse 60% 55% at 35% 30%, rgba(255,170,70,.40), transparent 68%),
-    radial-gradient(ellipse 50% 45% at 70% 65%, rgba(255,130,50,.22), transparent 70%); }
-body.light-mode .fx-a2{ background:
-    radial-gradient(ellipse 58% 52% at 40% 35%, rgba(150,110,255,.30), transparent 68%),
-    radial-gradient(ellipse 48% 44% at 68% 70%, rgba(120,80,230,.18), transparent 70%); }
-body.light-mode .fx-a3{ background:
-    radial-gradient(ellipse 55% 50% at 32% 38%, rgba(255,200,100,.32), transparent 66%),
-    radial-gradient(ellipse 46% 42% at 66% 64%, rgba(255,170,70,.18), transparent 70%); }
-body.light-mode .fx-a4{ background:radial-gradient(ellipse 60% 55% at 45% 40%, rgba(255,220,160,.28), transparent 70%); }
-body.light-mode .fx-atmos{ opacity:.30; }
-body.light-mode .fx-vignette{ background:radial-gradient(ellipse at 50% 30%,transparent 48%,rgba(150,100,30,.10) 100%); }
 
 /* ---------- 7. LOCK SCREEN polish ---------- */
 .lock-box input:focus{ box-shadow:0 0 0 3px rgba(246,166,35,.28), 0 0 18px rgba(246,166,35,.18)!important; }
@@ -14288,7 +14124,6 @@ body.light-mode .fx-vignette{ background:radial-gradient(ellipse at 50% 30%,tran
   .sm-modal{max-width:94vw}
   /* کاهش افکت‌های سنگینِ پس‌زمینه در موبایل (سرعت بیشتر و نمایشِ درست) */
   #siteBg{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;transform:none!important;filter:brightness(.22) saturate(.7)!important;background:var(--dark)!important}
-  .fx-aurora,.fx-atmos{display:none!important}
   .ls-bg{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 }
 /* موبایل — شیفت‌ها یک ستونه (زیر 600px) */
@@ -14454,23 +14289,11 @@ body.light-mode .ro-tbl tr:nth-child(even) td{ background:rgba(150,110,40,.05) !
 <style id="perf-fix">
 /* ===== FIX: جلوگیری از لگ اسکرول و لرزش جدول ===== */
 
-.fx-aurora, .fx-a1, .fx-a2, .fx-a3, .fx-a4 {
-  animation: none !important;
-  will-change: auto !important;
-  filter: none !important;
-  -webkit-filter: none !important;
-  transform: none !important;
-  opacity: 0.22 !important;
-}
-.fx-atmos {
-  animation: none !important;
-  filter: blur(8px) !important;
-}
 body::after {
   animation: none !important;
   display: none !important;
 }
-.fx-aurora, .fx-atmos, .ls-bg {
+.ls-bg{
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
@@ -14508,9 +14331,6 @@ body::after {
 }
 .shift-header::after {
   animation: none !important;
-  display: none !important;
-}
-#fxCanvas {
   display: none !important;
 }
 html { scroll-behavior: smooth; }
@@ -14956,70 +14776,6 @@ body.theme-dark-amber{
   --fx-hue:0deg !important;
   --atmo-beam:rgba(255,180,61,.16); --atmo-geo:rgba(255,180,61,.5);
 }
-/* زمرد سایبری — Cyber Emerald: گرافیت تیره + سبز نئون */
-body.theme-dark-emerald{
-  --dark:#08120f !important; --panel:#0c1814 !important; --card:#102019 !important; --border:#1f3a30 !important;
-  --txt:#e7fbf3 !important; --muted:#7fa597 !important; --label:#a9cbbf !important; --accent:#2fe39c !important;
-  --grad-amber:linear-gradient(135deg,#7bf5cf 0%,#2fe39c 45%,#13b07a 100%) !important;
-  --on-accent:#042018 !important; --hdr-title:#34e3a0 !important; --chrome-brd:rgba(47,227,156,.30) !important;
-  --hdr-bg:linear-gradient(90deg,#04140f,#082019,#04140f) !important;
-  --banner-bg:linear-gradient(90deg,#03110d,#071c16,#03110d) !important;
-  --nav-bg:linear-gradient(90deg,#030f0c,#061813,#030f0c) !important;
-  --app-bg:
-    radial-gradient(ellipse at 50% 8%, rgba(255,255,255,.05) 0%, transparent 55%),
-    radial-gradient(ellipse at 50% 100%, rgba(0,0,0,.35) 0%, transparent 60%),
-    linear-gradient(175deg, #131417 0%, #0d0e10 30%, #0a0b0d 60%, #060708 100%) !important;
-  --fx-hue:95deg !important;
-  --atmo-beam:rgba(47,227,156,.16); --atmo-geo:rgba(47,227,156,.5);
-}
-/* اقیانوس نیمه‌شب — Midnight Ocean: سرمه‌ای تیره + آبی برق‌آسا */
-body.theme-dark-teal{
-  --dark:#071416 !important; --panel:#0a1c1f !important; --card:#0e262b !important; --border:#1d4047 !important;
-  --txt:#e4fbff !important; --muted:#7aa3a9 !important; --label:#a6cdd3 !important; --accent:#22d3ee !important;
-  --grad-amber:linear-gradient(135deg,#7af0ff 0%,#22d3ee 50%,#0e9bb5 100%) !important;
-  --on-accent:#04222a !important; --hdr-title:#3fe0f5 !important; --chrome-brd:rgba(34,211,238,.30) !important;
-  --hdr-bg:linear-gradient(90deg,#03131a,#072329,#03131a) !important;
-  --banner-bg:linear-gradient(90deg,#021016,#061d23,#021016) !important;
-  --nav-bg:linear-gradient(90deg,#020e13,#051a20,#020e13) !important;
-  --app-bg:
-    radial-gradient(ellipse at 50% 8%, rgba(255,255,255,.05) 0%, transparent 55%),
-    radial-gradient(ellipse at 50% 100%, rgba(0,0,0,.35) 0%, transparent 60%),
-    linear-gradient(175deg, #131417 0%, #0d0e10 30%, #0a0b0d 60%, #060708 100%) !important;
-  --fx-hue:150deg !important;
-  --atmo-beam:rgba(34,211,238,.16); --atmo-geo:rgba(34,211,238,.5);
-}
-/* شب یاقوتی — Crimson Night: مشکی + قرمز تیره، قدرتمند و لوکس */
-body.theme-dark-crimson{
-  --dark:#120a0c !important; --panel:#1a0e11 !important; --card:#241318 !important; --border:#46232b !important;
-  --txt:#ffecee !important; --muted:#b08088 !important; --label:#e0b3ba !important; --accent:#ff5d62 !important;
-  --grad-amber:linear-gradient(135deg,#ff9a6b 0%,#ff5d62 50%,#e0322f 100%) !important;
-  --on-accent:#ffffff !important; --hdr-title:#ff7a7e !important; --chrome-brd:rgba(255,93,98,.32) !important;
-  --hdr-bg:linear-gradient(90deg,#140809,#220e12,#140809) !important;
-  --banner-bg:linear-gradient(90deg,#100708,#1c0c0f,#100708) !important;
-  --nav-bg:linear-gradient(90deg,#0e0607,#190b0d,#0e0607) !important;
-  --app-bg:
-    radial-gradient(ellipse at 50% 8%, rgba(255,255,255,.05) 0%, transparent 55%),
-    radial-gradient(ellipse at 50% 100%, rgba(0,0,0,.35) 0%, transparent 60%),
-    linear-gradient(175deg, #131417 0%, #0d0e10 30%, #0a0b0d 60%, #060708 100%) !important;
-  --fx-hue:-20deg !important;
-  --atmo-beam:rgba(255,93,98,.16); --atmo-geo:rgba(255,93,98,.5);
-}
-/* نقره‌ای تیتانیوم — Titanium Silver: خاکستری تیتانیومی + نقره‌ای، لاکچری مینیمال */
-body.theme-dark-indigo{
-  --dark:#0d0e12 !important; --panel:#14161c !important; --card:#1b1e26 !important; --border:#343841 !important;
-  --txt:#eef0f3 !important; --muted:#8b909b !important; --label:#c3c8d0 !important; --accent:#c3cbd6 !important;
-  --grad-amber:linear-gradient(135deg,#eef2f6 0%,#c3cbd6 45%,#8f96a3 100%) !important;
-  --on-accent:#12141a !important; --hdr-title:#dfe3e8 !important; --chrome-brd:rgba(195,203,214,.32) !important;
-  --hdr-bg:linear-gradient(90deg,#0a0b0e,#14161b,#0a0b0e) !important;
-  --banner-bg:linear-gradient(90deg,#08090b,#111318,#08090b) !important;
-  --nav-bg:linear-gradient(90deg,#07080a,#0d0f13,#07080a) !important;
-  --app-bg:
-    radial-gradient(ellipse at 50% 8%, rgba(255,255,255,.05) 0%, transparent 55%),
-    radial-gradient(ellipse at 50% 100%, rgba(0,0,0,.35) 0%, transparent 60%),
-    linear-gradient(175deg, #131417 0%, #0d0e10 30%, #0a0b0d 60%, #060708 100%) !important;
-  --fx-hue:0deg !important;
-  --atmo-beam:rgba(200,208,218,.16); --atmo-geo:rgba(205,212,222,.5);
-}
 /* ===== LIGHT ===== */
 /* طلای سلطنتی — Royal Gold: هتل لوکس */
 body.theme-light-cream{
@@ -15034,72 +14790,7 @@ body.theme-light-cream{
   --fx-hue:0deg !important;
   --atmo-beam:rgba(217,119,6,.16); --atmo-geo:rgba(217,119,6,.5);
 }
-/* زمرد لوکس — Emerald Luxury: طبیعت و تکنولوژی */
-body.theme-light-mint{
-  --dark:#eef7f1 !important; --panel:#ffffff !important; --card:#f1faf5 !important; --border:#cfe6d8 !important;
-  --txt:#0f2419 !important; --muted:#5a7a68 !important; --label:#2c4a3a !important; --accent:#10a05a !important;
-  --grad-amber:linear-gradient(135deg,#7fe3b0 0%,#10a05a 50%,#0a7a44 100%) !important;
-  --on-accent:#ffffff !important; --hdr-title:#d6ffe9 !important; --chrome-brd:rgba(16,160,90,.32) !important;
-  --hdr-bg:linear-gradient(90deg,#0a6e3e,#0d8a4f,#0a6e3e) !important;
-  --banner-bg:linear-gradient(90deg,#085f36,#0a7544,#085f36) !important;
-  --nav-bg:linear-gradient(90deg,#e7f6ee,#f2fbf6,#e7f6ee) !important;
-  --app-bg:radial-gradient(ellipse at 50% 20%, rgba(255,255,255,.9) 0%, transparent 55%),radial-gradient(ellipse at 50% 100%, rgba(150,150,155,.18) 0%, transparent 60%),linear-gradient(175deg,#eeeeef 0%,#e4e4e6 30%,#dcdce0 65%,#d4d4d8 100%) !important;
-  --fx-hue:95deg !important;
-  --atmo-beam:rgba(16,160,90,.16); --atmo-geo:rgba(16,160,90,.5);
-}
-/* یاقوت کبود سلطنتی — Royal Sapphire: سازمانی و رسمی */
-body.theme-light-sky{
-  --dark:#eef3fb !important; --panel:#ffffff !important; --card:#f1f6fd !important; --border:#cad9ef !important;
-  --txt:#0e1f33 !important; --muted:#5a6b85 !important; --label:#27406a !important; --accent:#2b7fff !important;
-  --grad-amber:linear-gradient(135deg,#7db4ff 0%,#2b7fff 50%,#1860d0 100%) !important;
-  --on-accent:#ffffff !important; --hdr-title:#d6e9ff !important; --chrome-brd:rgba(43,127,255,.32) !important;
-  --hdr-bg:linear-gradient(90deg,#1257a8,#1a6ccd,#1257a8) !important;
-  --banner-bg:linear-gradient(90deg,#0f4d93,#1560b8,#0f4d93) !important;
-  --nav-bg:linear-gradient(90deg,#e7f0fc,#f2f7fe,#e7f0fc) !important;
-  --app-bg:radial-gradient(ellipse at 50% 20%, rgba(255,255,255,.9) 0%, transparent 55%),radial-gradient(ellipse at 50% 100%, rgba(150,150,155,.18) 0%, transparent 60%),linear-gradient(175deg,#eeeeef 0%,#e4e4e6 30%,#dcdce0 65%,#d4d4d8 100%) !important;
-  --fx-hue:200deg !important;
-  --atmo-beam:rgba(43,127,255,.16); --atmo-geo:rgba(43,127,255,.5);
-}
-/* یاقوت اجرایی — Ruby Executive: داشبورد مدیریتی */
-body.theme-light-peach{
-  --dark:#fdf0f1 !important; --panel:#fffafa !important; --card:#fff1f3 !important; --border:#f0c9cf !important;
-  --txt:#33090f !important; --muted:#8a5a60 !important; --label:#7a1f28 !important; --accent:#c81e3a !important;
-  --grad-amber:linear-gradient(135deg,#ff8fa3 0%,#c81e3a 50%,#8e0f26 100%) !important;
-  --on-accent:#ffffff !important; --hdr-title:#ffd9de !important; --chrome-brd:rgba(200,30,58,.32) !important;
-  --hdr-bg:linear-gradient(90deg,#7a0f1e,#960f26,#7a0f1e) !important;
-  --banner-bg:linear-gradient(90deg,#6b0c1a,#850e22,#6b0c1a) !important;
-  --nav-bg:linear-gradient(90deg,#fce7e9,#fff3f4,#fce7e9) !important;
-  --app-bg:radial-gradient(ellipse at 50% 20%, rgba(255,255,255,.9) 0%, transparent 55%),radial-gradient(ellipse at 50% 100%, rgba(150,150,155,.18) 0%, transparent 60%),linear-gradient(175deg,#eeeeef 0%,#e4e4e6 30%,#dcdce0 65%,#d4d4d8 100%) !important;
-  --fx-hue:-15deg !important;
-  --atmo-beam:rgba(200,30,58,.16); --atmo-geo:rgba(210,50,70,.5);
-}
-/* بلور آمیتیست — Amethyst Crystal: فوتوریستیک لوکس */
-body.theme-light-slate{
-  --dark:#f4f0fb !important; --panel:#ffffff !important; --card:#f6f2fc !important; --border:#ddd0f2 !important;
-  --txt:#241645 !important; --muted:#6e5c8a !important; --label:#4a2e78 !important; --accent:#7c4dff !important;
-  --grad-amber:linear-gradient(135deg,#c3aaff 0%,#7c4dff 50%,#5a2fe0 100%) !important;
-  --on-accent:#ffffff !important; --hdr-title:#e6d9ff !important; --chrome-brd:rgba(124,77,255,.32) !important;
-  --hdr-bg:linear-gradient(90deg,#3d2170,#4d2b8c,#3d2170) !important;
-  --banner-bg:linear-gradient(90deg,#351d63,#452680,#351d63) !important;
-  --nav-bg:linear-gradient(90deg,#f1eafd,#f9f6fe,#f1eafd) !important;
-  --app-bg:radial-gradient(ellipse at 50% 20%, rgba(255,255,255,.9) 0%, transparent 55%),radial-gradient(ellipse at 50% 100%, rgba(150,150,155,.18) 0%, transparent 60%),linear-gradient(175deg,#eeeeef 0%,#e4e4e6 30%,#dcdce0 65%,#d4d4d8 100%) !important;
-  --fx-hue:-60deg !important;
-  --atmo-beam:rgba(124,77,255,.16); --atmo-geo:rgba(140,100,255,.5);
-}
 /* ===== سه مدلِ رنگِ جدید (از پالت‌های کاربر) ===== */
-/* تپهٔ طلایی — Golden Dune: پس‌زمینهٔ کِرِم + نارنجیِ وانیلی (Warm Vanilla) */
-body.theme-golden-dune{
-  --dark:#fff2e2 !important; --panel:#fffaf1 !important; --card:#fff7ea !important; --border:#e7cfa6 !important;
-  --txt:#402c14 !important; --muted:#94764f !important; --label:#6b4f28 !important; --accent:#dfa35e !important;
-  --grad-amber:linear-gradient(135deg,#f2c88f 0%,#dfa35e 50%,#c07f38 100%) !important;
-  --on-accent:#3a2510 !important; --hdr-title:#fff2e2 !important; --chrome-brd:rgba(223,163,94,.42) !important;
-  --hdr-bg:linear-gradient(90deg,#a06a2e,#c0863f,#a06a2e) !important;
-  --banner-bg:linear-gradient(90deg,#8f5d26,#a86f33,#8f5d26) !important;
-  --nav-bg:linear-gradient(90deg,#fbe6cf,#fff5e6,#fbe6cf) !important;
-  --app-bg:radial-gradient(ellipse at 50% 20%, rgba(255,255,255,.9) 0%, transparent 55%),radial-gradient(ellipse at 50% 100%, rgba(150,150,155,.18) 0%, transparent 60%),linear-gradient(175deg,#eeeeef 0%,#e4e4e6 30%,#dcdce0 65%,#d4d4d8 100%) !important;
-  --fx-hue:28deg !important;
-  --atmo-beam:rgba(223,163,94,.18); --atmo-geo:rgba(223,163,94,.5);
-}
 /* شرابیِ کِرِم — Burgundy & Cream Mist: پس‌زمینهٔ کِرِم + شرابیِ عمیق */
 body.theme-burgundy{
   --dark:#fff3e1 !important; --panel:#fffbf5 !important; --card:#fdf4e8 !important; --border:#e6ccbd !important;
@@ -15160,13 +14851,6 @@ body.light-mode[class*="theme-"]{
     color-mix(in srgb, var(--accent) 16%, #ffffff)) !important;
   --hdr-title:var(--accent) !important;
   --app-bg:radial-gradient(ellipse at 50% 20%, rgba(255,255,255,.9) 0%, transparent 55%),radial-gradient(ellipse at 50% 100%, rgba(150,150,155,.18) 0%, transparent 60%),linear-gradient(175deg,#eeeeef 0%,#e4e4e6 30%,#dcdce0 65%,#d4d4d8 100%) !important;
-}
-/* پالت‌های کاربر (Golden Dune / Burgundy): پس‌زمینهٔ کِرِمِ گرمِ خودِ پالت به‌جای
-   کانواسِ خنثیِ خاکستری — رنگِ اصلیِ تم در هدر/دکمه/سرستون‌ها همان‌طور خوانا می‌ماند.
-   بعد از بلوکِ بالا آمده تا با تساویِ specificity، همین (متأخرتر) برنده شود. */
-body.light-mode.theme-golden-dune{
-  --dark:#fff2e2 !important; --card:#fff6e8 !important; --panel:#fffaf1 !important;
-  --app-bg:radial-gradient(ellipse at 50% 16%, #fff9ee 0%, transparent 60%),linear-gradient(175deg,#fff2e2 0%,#f6e6cf 55%,#eed9b9 100%) !important;
 }
 body.light-mode.theme-burgundy{
   --dark:#fff3e1 !important; --card:#fdf3e6 !important; --panel:#fffaf3 !important;
@@ -15258,7 +14942,6 @@ body[class*="theme-"] .calc-key.eq,
 body[class*="theme-"] .lock-box button{ color:var(--on-accent)!important; }
 body.light-mode[class*="theme-"] .nav-btn{ color:var(--label)!important; }
 body.light-mode[class*="theme-"] .nav-btn.active{ color:var(--on-accent)!important; }
-body[class*="theme-"] #fxLayer{ filter:hue-rotate(var(--fx-hue,0deg)); }
 
 /* tables + account surfaces: re-tint the glassx (--gx-*) variables to the
    active theme's accent so data tables/totals/zebra/hover match the theme.
@@ -15590,7 +15273,6 @@ body.gfx-performance .reveal-fx{ opacity:1 !important; transform:none !important
 body.gfx-performance .btn-ripple::after{ display:none !important; }
 
 /* -- 1.2 no ambient background layers at all ------------------------- */
-body.gfx-performance #fxLayer{ display:none !important; }
 
 /* -- 1.3 FLAT chrome: header / banner / nav -------------------------- */
 body.gfx-performance .header,
@@ -15779,18 +15461,6 @@ body.gfx-standard #siteBg{
    A *static* blurred layer only costs one paint, not a per-frame one, and
    giving it its own compositor layer (will-change+translateZ) stops it
    from visibly lagging behind page content while scrolling on mobile. */
-body.gfx-standard #fxLayer{ display:block; }
-body.gfx-standard .fx-aurora{
-  /* ⚠️ blur برداشته شد: خودِ این شفق‌ها گرادیانِ شعاعیِ نرم‌اند و بلورِ ۳۰
-     پیکسلی تقریباً هیچ تفاوتِ دیدنی نمی‌ساخت، ولی هر فریم ~۱۷ms می‌بُرد
-     (اندازه‌گیری‌شده: ۶۶٫۶ms → ۵۰ms برای هر فریم). اگر روزی خواستید نرم‌ترش
-     کنید، ایستِ گرادیان را بازتر کنید، بلور برنگردانید. */
-  filter:none !important;
-  will-change:transform !important;
-  transform:translateZ(0) !important;
-  opacity:.30 !important;
-}
-body.gfx-standard.light-mode .fx-aurora{ opacity:.13 !important; }
 
 /* -- 2.2 glass chrome -------------------------------------------------- */
 body.gfx-standard .header{ -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
@@ -15952,31 +15622,13 @@ body.gfx-ultra.light-mode #siteBg{
   background:linear-gradient(135deg, rgba(255,255,255,.65), rgba(255,246,228,.35));
   filter:blur(26px) brightness(1.04) saturate(1.08);
 }
-body.gfx-ultra #fxLayer{
-  display:block !important;
-  animation:gfxHueDrift 36s ease-in-out infinite;
-}
 @keyframes gfxHueDrift{
   0%,100%{ filter:hue-rotate(var(--fx-hue,0deg)); }
   50%    { filter:hue-rotate(calc(var(--fx-hue,0deg) + 26deg)); }
 }
-body.gfx-ultra #fxCanvas{ display:block !important; }
-body.gfx-ultra.light-mode #fxCanvas{ opacity:.5; }
 /* blobs move with the cursor: the FX engine writes --gfx-px/--gfx-py per
    blob (inline transforms are blocked by #perf-fix's !important reset) */
-body.gfx-ultra .fx-aurora{
-  opacity:.5 !important;
-  filter:blur(52px) !important;
-  transform:translate3d(var(--gfx-px,0px), var(--gfx-py,0px), 0) !important;
-  will-change:transform !important;
-}
-body.gfx-ultra.light-mode .fx-aurora{ opacity:.28 !important; }
 /* dynamic cursor spotlight (position driven by --gfx-mx/--gfx-my) */
-body.gfx-ultra #fxLayer::after{
-  content:""; position:absolute; inset:0; pointer-events:none; z-index:2;
-  background:radial-gradient(circle at var(--gfx-mx,50%) var(--gfx-my,50%), rgba(255,180,70,.13), transparent 45%);
-  background:radial-gradient(circle at var(--gfx-mx,50%) var(--gfx-my,50%), color-mix(in srgb, var(--accent) 14%, transparent), transparent 45%);
-}
 
 /* -- 3.2 CINEMATIC CHROME: animated ACCENT gradient, layered depth ----- */
 body.gfx-ultra .header,
@@ -16513,18 +16165,6 @@ body.gfx-performance[class*="theme-"] .nav{
 }
 
 /* -- Ambient app background: soft floating geometry (Ultra only) ------- */
-.fx-geo{
-  position:absolute; opacity:0; pointer-events:none; will-change:transform;
-  border:1.5px solid var(--atmo-geo, rgba(255,255,255,.4));
-  border-radius:26% 74% 62% 38%/38% 42% 58% 62%;
-}
-.fx-geo-1{ width:130px; height:130px; top:10%; left:6%; }
-.fx-geo-2{ width:88px;  height:88px;  top:62%; left:84%; }
-.fx-geo-3{ width:56px;  height:56px;  top:78%; left:20%; border-radius:50%; }
-body.gfx-ultra .fx-geo{ opacity:.30; animation:atmoGeoFloat 18s ease-in-out infinite; }
-body.gfx-ultra .fx-geo-2{ animation-duration:22s; animation-delay:-5s; }
-body.gfx-ultra .fx-geo-3{ animation-duration:15s; animation-delay:-9s; }
-body.gfx-ultra.light-mode .fx-geo{ opacity:.20; }
 @keyframes atmoGeoFloat{
   0%,100%{ transform:translate(0,0) rotate(0deg); }
   50%    { transform:translate(16px,-20px) rotate(22deg); }
@@ -20906,15 +20546,23 @@ body.viewer-mode .inv-admin-only{display:none!important}
   </div>
   <div class="settings-card" id="appearance-launcher" style="border-color:var(--accent)">
     <div class="settings-title">🎨 ظاهر و گرافیک</div>
-    <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">تم رنگی، نور پس‌زمینه (شش‌ضلعی / رعد و برق / ستارهٔ دنباله‌دار)، کیفیت گرافیک و وضعیت حافظه — همه در یک صفحهٔ جداگانه تا تنظیمات شلوغ نشود.</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">تم رنگی (چهار تم)، کیفیت گرافیک و وضعیت حافظه — همه در یک صفحهٔ جداگانه تا تنظیمات شلوغ نشود.</div>
     <button class="pw-btn" style="background:var(--accent);color:#000" onclick="showSection('appearance')">🎨 باز کردن صفحهٔ ظاهر و گرافیک</button>
   </div>
   <div class="settings-card" id="serverservices-launcher" style="border-color:var(--blue)">
     <div class="settings-title" style="color:var(--blue)">🖥️ خدمات سرور</div>
-    <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">هم‌زمان‌سازی آنلاین، سرور شخصی، دانلود برنامهٔ سرور و بکاپ خودکار حساب‌ها (هر روز) — همه در یک صفحهٔ جداگانه.</div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">بکاپ خودکار حساب‌ها (هر روز) و بکاپ ابری — در یک صفحهٔ جداگانه.</div>
     <button class="pw-btn" style="background:var(--blue);color:#fff" onclick="showSection('serverservices')">🖥️ باز کردن خدمات سرور</button>
   </div>
-  <div class="settings-card" id="notifications-launcher" style="border-color:var(--green)">
+  <!-- 🔔 «اعلان‌ها» از دیدِ کاربر برداشته شد — خواستهٔ صریحِ صاحب ریپو:
+       «اعلان‌ها باید داخلی و اجباری روشن باشند و کاربر نتواند تنظیماتشان را
+       ببیند یا دستکاری کند.» خودِ قابلیت‌ها هیچ‌کدام حذف نشده‌اند: خبرهای
+       سرور، پیام‌رسانِ یعقوبی، صدا و اعلان، اعلانِ برنامه‌بسته و قفلِ نقشِ
+       «چه کسی چه پیامی را می‌بیند» همگی کار می‌کنند. اجازهٔ اعلانِ دستگاه هم
+       از قبل خودکار گرفته می‌شود (_ntfAutoPush در بوت و در باز شدنِ ربات)،
+       پس بدونِ این دکمه هم دستگاه ثبت می‌شود. ⛔ خودِ صفحه (#sec-notifications)
+       پاک نشده چون کدِ اعلان به عنصرهایش می‌نویسد. -->
+  <div class="settings-card ui-internal-only" id="notifications-launcher" style="border-color:var(--green)">
     <div class="settings-title" style="color:var(--green)">🔔 اعلان‌ها</div>
     <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">پیام‌های اعلان (صدا و اعلان) و اعلان بیرون از برنامه — همه در یک صفحهٔ جداگانه.</div>
     <button class="pw-btn" style="background:var(--green);color:#fff" onclick="showSection('notifications')">🔔 باز کردن اعلان‌ها</button>
@@ -20952,7 +20600,15 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <button class="goto-btn" onclick="showSection('settings')">→ برگشت به تنظیمات</button>
     <span style="display:inline-flex;align-items:center;gap:10px">🖥️ خدمات سرور</span>
   </div>
-  <div class="settings-card" style="border-color:var(--blue)">
+  <!-- ══ «هم‌زمان‌سازی آنلاین» و «آدرس سرور» از دیدِ کاربر برداشته شدند ═══════
+       خواستهٔ صاحب ریپو: «دامنه تهیه کرده‌ام و بعداً می‌گویم برنامه چطور به آن
+       وصل شود. فعلاً این بخش نمایش داده نشود و منطقِ فعلی‌اش را دست نزن.»
+       پس کارت فقط پنهان شده — پاک نشده. همهٔ کادرها و شناسه‌ها (server-url،
+       server-token، sync-msg، sync-diag، sync-station-code و …) سرِ جایشان‌اند
+       و کدِ هم‌زمان‌سازی مو‌به‌مو همان‌طور که بود می‌خواند و می‌نویسد؛ فقط چشمِ
+       کاربر نمی‌بیندش. ⛔ این کارت را پاک نکنید — کدِ هم‌زمان‌سازی به همین
+       عنصرها پیام و وضعیت می‌نویسد و با نبودشان مسیرها می‌شکنند. -->
+  <div class="settings-card ui-internal-only" style="border-color:var(--blue)">
     <div class="settings-title">☁️ هم‌زمان‌سازی آنلاین</div>
     <div style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;line-height:1.9">
       اطلاعات شما خودکار با سرور هم‌زمان می‌شود. هر وقت اینترنت وصل شود، آخرین اطلاعات از سرور بارگذاری می‌شود — نیازی به تنظیم دستی نیست.
@@ -20985,13 +20641,10 @@ body.viewer-mode .inv-admin-only{display:none!important}
       </div>
     </div>
   </div>
-  <div class="settings-card">
-    <div class="settings-title">⬇️ دانلود برنامه</div>
-    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;line-height:1.8">یک نسخه از برنامه را روی کامپیوتر خود ذخیره کنید تا بدون اینترنت هم باز شود. فایل دانلودشده را با مرورگر باز کنید.</div>
-    <button class="pw-btn" style="background:var(--green);color:#fff" onclick="downloadApp()">⬇️ دانلود برنامه (HTML)</button>
-    <div style="margin-top:10px;font-size:0.8rem;color:var(--muted);line-height:1.8">📌 فایلِ دانلودشده همین حساب فعلی شما را در خود دارد؛ روی هر دستگاهی که باز یا کپی شود همین حساب را نشان می‌دهد (نه حساب خالی).</div>
-    <div id="dl-msg" style="margin-top:10px;font-size:0.83rem;min-height:18px"></div>
-  </div>
+  <!-- ⬇️ «دانلود برنامه (HTML)» برداشته شد — خواستهٔ صریحِ صاحب ریپو.
+       جایش «💾 بکاپ حساب‌ها»ی پایین است و منطقِ بکاپ دست‌نخورده مانده.
+       ⚠️ خودِ تابعِ downloadApp() عمداً در کد مانده: مسیرِ «فعال‌سازیِ نسخهٔ
+       خراب» (_brokenLogoTap) هنوز صدایش می‌زند. -->
   <div class="settings-card" id="backup-settings-card" style="border-color:var(--blue)">
     <div class="settings-title" style="color:var(--blue)">💾 بکاپ حساب‌ها — هر روز خودکار</div>
     <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">هر روز یک نسخهٔ خودکار داخل خود دستگاه نگه داشته می‌شود (14 روز اخیر). برای امنیت بیشتر، هر چند روز یک‌بار فایل بکاپ را دانلود و جای امن (تلگرام/واتساپ خودتان) بفرستید.</div>
@@ -21020,12 +20673,12 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <span style="display:inline-flex;align-items:center;gap:10px">🔔 اعلان‌ها</span>
   </div>
   <!-- جای زنگِ سربرگ (که برداشته شد): فهرستِ خبرهای رسیده از سرور خانگی -->
-  <div class="settings-card" style="border-color:var(--blue)">
+  <div class="settings-card ui-internal-only" style="border-color:var(--blue)">
     <div class="settings-title" style="color:var(--blue)">📨 خبرهای سرور</div>
     <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">فهرستِ اعلان‌هایی که از سرور خانگی رسیده و روشن کردنِ اعلان روی همین دستگاه.</div>
     <button class="pw-btn" style="background:var(--blue);color:#fff" onclick="ntfOpen()">📨 دیدن خبرهای سرور</button>
   </div>
-  <div class="settings-card" style="border-color:var(--green)">
+  <div class="settings-card ui-internal-only" style="border-color:var(--green)">
     <div class="settings-title" style="color:var(--green)">📨 پیام‌رسان یعقوبی <span id="msgrDot" style="display:none;background:var(--red);color:#fff;border-radius:11px;min-width:20px;height:20px;align-items:center;justify-content:center;font-size:0.68rem;font-weight:800;padding:0 5px"></span></div>
     <div style="font-size:0.85rem;color:var(--muted);line-height:1.9;margin-bottom:12px">
       چتِ کارمندان و چتِ تک‌به‌تک با هر قرض‌دار — همه روی <b>سرورِ خانگیِ خودتان</b>. هر پیام همان لحظه اعلان هم می‌شود، حتی وقتی برنامه بسته است. پیامی که آفلاین بنویسید در صف می‌ماند و با وصل شدن خودش می‌رود.
@@ -21033,7 +20686,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
     <button class="pw-btn" style="background:var(--green);color:#fff" onclick="msgrOpen()">📨 باز کردن پیام‌رسان</button>
     <div style="font-size:0.76rem;color:var(--muted);margin-top:8px">جایش داخلِ خودِ رباتِ دستیار است — تبِ «چت تک‌نفره».</div>
   </div>
-  <div class="settings-card">
+  <div class="settings-card ui-internal-only">
     <div class="settings-title">🔔 صدا و اعلان</div>
     <div style="font-size:0.85rem;color:var(--muted);line-height:1.8;margin-bottom:12px">
       برای اینکه هشدار تیل، هشدار قرض‌داران (همان کادر زرد/سرخ لیست قرض‌داران) و پیام‌های چت با صدا و اعلان روی نوار گوشی/کامپیوتر بیایند، باید یک‌بار اجازهٔ اعلان را بدهید. هشدار قرض‌داران خودکار است — نیازی به تنظیم حد نیست.
@@ -21046,7 +20699,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
        ntfy از ریشه برداشته شد (خواستهٔ صاحب ریپو): نه برنامهٔ جانبی نصب می‌شود،
        نه کدِ اشتراک، نه سرورِ کسِ دیگری. همه‌چیز روی سرورِ خودمان.
        ══════════════════════════════════════════════════════════════════════ -->
-  <div class="settings-card" id="ext-push-card" style="border-color:var(--green)">
+  <div class="settings-card ui-internal-only" id="ext-push-card" style="border-color:var(--green)">
     <div class="settings-title" style="color:var(--green)">📨 پیام‌رسان یعقوبی — اعلان حتی وقتی برنامه بسته است</div>
     <div style="font-size:0.85rem;color:var(--muted);line-height:2;margin-bottom:12px">
       <b style="color:var(--green)">همیشه روشن است و کلیدِ خاموش کردن ندارد.</b> هر پیامی که کارمند یا مشتری در چت بفرستد و هر هشداری که ربات بدهد، همان لحظه روی گوشی/کامپیوتر شما می‌نشیند — <b>حتی وقتی برنامه کاملاً بسته باشد</b>.<br>
@@ -21068,7 +20721,7 @@ body.viewer-mode .inv-admin-only{display:none!important}
   <!-- ══════════════════════════════════════════════════════════════════════
        چه کسی چه پیامی را می‌بیند — قفلِ نقشِ پیام‌رسان
        ══════════════════════════════════════════════════════════════════════ -->
-  <div class="settings-card" id="ntf-roles-card" style="border-color:var(--blue)">
+  <div class="settings-card ui-internal-only" id="ntf-roles-card" style="border-color:var(--blue)">
     <div class="settings-title" style="color:var(--blue)">🔐 چه کسی چه پیامی را می‌بیند</div>
     <div style="font-size:0.85rem;color:var(--muted);line-height:2;margin-bottom:12px">
       برنامهٔ پیام‌رسان یکی است، ولی <b>نقشِ هر دستگاه با لینک/کیو‌آرِ فعال‌سازی</b> تعیین می‌شود و بعد قفل می‌ماند:<br>
@@ -21230,43 +20883,6 @@ body.viewer-mode .inv-admin-only{display:none!important}
       <button type="button" id="gcSetOn" class="gc-set-btn" onclick="setGlassClock(true)" style="flex:1;min-width:130px;padding:11px;border-radius:10px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🕒 نمایش ساعت</button>
       <button type="button" id="gcSetOff" class="gc-set-btn" onclick="setGlassClock(false)" style="flex:1;min-width:130px;padding:11px;border-radius:10px;border:1.5px solid var(--muted);background:transparent;color:var(--muted);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">🙈 پنهان باشد</button>
       <button type="button" onclick="resetGlassClockPos()" style="flex:1;min-width:130px;padding:11px;border-radius:10px;border:1.5px solid var(--blue);background:transparent;color:var(--blue);font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer">✥ برگشت به جای اول</button>
-    </div>
-  </div>
-  <div class="settings-card" id="hexfx-card" style="border-color:var(--blue)">
-    <div class="settings-title" style="color:var(--blue)">✨ نور پس‌زمینه</div>
-    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.9">
-      نور متحرک پس‌زمینهٔ برنامه — اینجا می‌توانید خاموش/روشنش کنید، مدلش را عوض کنید (رعد و برق یا ستارهٔ دنباله‌دار) و رنگ‌بندی و سرعتش را تغییر دهید. هر تغییری همان لحظه اعمال و ذخیره می‌شود.
-    </div>
-    <div style="display:flex;flex-direction:column;gap:13px">
-      <div class="hexfx-row">
-        <span class="hexfx-lbl">نمایش نور:</span>
-        <button type="button" id="hexfx-on-btn" class="hexfx-toggle" onclick="setHexFx('on',true)">🌟 روشن باشد</button>
-        <button type="button" id="hexfx-off-btn" class="hexfx-toggle" onclick="setHexFx('on',false)">🌑 خاموش باشد</button>
-      </div>
-      <div class="hexfx-row">
-        <span class="hexfx-lbl">مدل نور:</span>
-        <select id="hexfx-pattern" class="hexfx-select" onchange="setHexFx('pattern',this.value)">
-          <option value="bolt">⚡ رعد و برق</option>
-          <option value="stars">☄️ ستاره‌های دنباله‌دار</option>
-        </select>
-      </div>
-      <div class="hexfx-row">
-        <span class="hexfx-lbl">رنگ‌بندی:</span>
-        <select id="hexfx-color" class="hexfx-select" onchange="setHexFx('color',this.value)">
-          <option value="rainbow">🌈 هفت‌رنگ (رنگین‌کمان)</option>
-          <option value="theme">🎨 رنگ تمِ فعلی</option>
-          <option value="gold">🟡 طلایی</option>
-          <option value="blue">🔵 آبی</option>
-          <option value="green">🟢 سبز</option>
-          <option value="purple">🟣 بنفش</option>
-          <option value="red">🔴 سرخ</option>
-        </select>
-      </div>
-      <div class="hexfx-row">
-        <span class="hexfx-lbl">سرعت (طول هر دور):</span>
-        <input type="range" id="hexfx-dur" min="3" max="15" step="1" oninput="setHexFx('dur',this.value)">
-        <span id="hexfx-dur-lbl" style="font-size:0.85rem;font-weight:900;color:var(--blue);min-width:70px"></span>
-      </div>
     </div>
   </div>
   <div class="settings-card" id="gfx-quality-card" style="border-color:var(--purple)">
@@ -25278,98 +24894,31 @@ function loadTheme() {
   } catch(e) {}
 }
 
-// ========== تنظیمات نور شش‌ضلعی پس‌زمینه ==========
-// همه‌چیز در localStorage (pumpHexFx) نگه داشته می‌شود — جدا از DB، مثل تم.
-// applyHexFx فقط متغیرهای CSS و کلاس‌های body را می‌چیند؛ خود انیمیشن در CSS است.
-// مدلِ «شبکهٔ شش‌ضلعی» حذف شد — پیش‌فرض و هر تنظیمِ ذخیره‌شدهٔ قدیمیِ hex به «رعد و برق» می‌رود
-const _HEXFX_DEFAULT = { on: true, pattern: 'bolt', color: 'rainbow', dir: 'tr-bl', mode: 'sweep', dur: 6 };
-const _HEXFX_DIRS = {
-  'tr-bl': { angle: 225, c0: 'polygon(100% 0,100% 0,100% 0)',          c1: 'polygon(-120% 0,100% 0,100% 220%)' },
-  'tl-br': { angle: 135, c0: 'polygon(0 0,0 0,0 0)',                   c1: 'polygon(220% 0,0 0,0 220%)' },
-  'br-tl': { angle: 315, c0: 'polygon(100% 100%,100% 100%,100% 100%)', c1: 'polygon(-120% 100%,100% 100%,100% -120%)' },
-  'bl-tr': { angle: 45,  c0: 'polygon(0 100%,0 100%,0 100%)',          c1: 'polygon(220% 100%,0 100%,0 -120%)' },
-  'r-l':   { angle: 270, c0: 'inset(0 0 0 100%)', c1: 'inset(0 0 0 0%)' },
-  'l-r':   { angle: 90,  c0: 'inset(0 100% 0 0)', c1: 'inset(0 0% 0 0)' },
-  't-b':   { angle: 180, c0: 'inset(0 0 100% 0)', c1: 'inset(0 0 0% 0)' },
-  'b-t':   { angle: 0,   c0: 'inset(100% 0 0 0)', c1: 'inset(0% 0 0 0)' }
-};
-const _HEXFX_COLORS = {
-  rainbow: { dark: ['#ff2d78','#ff8a00','#ffe14d','#2de37a','#22ccff','#5b7bff','#c05bff'],
-             light: ['#e0004f','#e07800','#c7a500','#00a659','#0092c7','#3b55e6','#8f2fd9'] },
-  theme:   { dark: ['var(--hexglow-a)','#eafcff','var(--hexglow-a)'],
-             light: ['var(--hexglow-a)','var(--hexglow-a)'] },
-  gold:    { dark: ['#ffb84d','#fff3c4','#ffd75e'],  light: ['#c78a00','#e0b000','#c78a00'] },
-  blue:    { dark: ['#22ccff','#eafcff','#5b7bff'],  light: ['#0077b0','#008fd0','#2b49d0'] },
-  green:   { dark: ['#2de37a','#d8ffe9','#00e0a0'],  light: ['#008a4d','#00a659','#008a70'] },
-  purple:  { dark: ['#c05bff','#f0e0ff','#7b7bff'],  light: ['#7a1fd0','#9a3fe0','#4b3fd0'] },
-  red:     { dark: ['#ff2d5e','#ffd0da','#ff7a4d'],  light: ['#c70036','#e0304f','#c74a00'] }
-};
-function _hexFxLoad() {
-  let p, saved = null;
-  try { saved = localStorage.getItem('pumpHexFx'); } catch (e) {}
-  try { p = Object.assign({}, _HEXFX_DEFAULT, JSON.parse(saved || '{}')); }
-  catch (e) { p = Object.assign({}, _HEXFX_DEFAULT); }
-  if (p.pattern === 'hex') p.pattern = 'bolt';   // مدل شش‌ضلعی حذف شده
-  /* در اپِ اندروید و برنامهٔ ویندوز، پیش‌فرض «خاموش» است — خواستهٔ صاحب ریپو:
-     «در برنامه‌ها یک ذره هم لگ نبینم.» جلوهٔ پس‌زمینه چهار برابر روانیِ کلِ
-     برنامه را می‌بَرد (۱۶٫۷ms → ۶۶٫۶ms در هر فریم)، پس در اپ‌ها تا خودِ کاربر
-     روشنش نکند نمی‌آید. روی سایت، همان‌طور که بود، روشن است.
-     ⚠️ فقط وقتی «هیچ تنظیمی ذخیره نشده» — اگر کاربر یک بار خودش انتخاب کرده
-     باشد (روشن یا خاموش)، همان انتخاب برنده است. */
-  if (!saved && _pumpNative()) p.on = false;
-  return p;
-}
-function _hexFxGradient(cols, angle) {
-  const n = cols.length;
-  const stops = n === 1 ? cols[0] + ' 0%,' + cols[0] + ' 100%'
-    : cols.map((c, i) => c + ' ' + Math.round(i * 100 / (n - 1)) + '%').join(',');
-  return 'linear-gradient(' + angle + 'deg,' + stops + ')';
-}
+/* ══ «نور پس‌زمینه» کاملاً حذف شد ═══════════════════════════════════════════
+   خواستهٔ صریحِ صاحب ریپو: «بخش نور پس‌زمینه را کاملاً حذف کن — ضروری نیست و
+   حذفش برنامه را سبک‌تر و سریع‌تر می‌کند.»
+   اندازه‌گیریِ خودِ همین مخزن (کروم، میانهٔ ۶۰ فریمِ پشتِ سر هم) می‌گفت این لایه
+   چهار برابرِ روانیِ کلِ برنامه را می‌برد: ۱۶٫۷ms در هر فریم بدونِ آن، ۶۶٫۶ms با
+   آن — چون سه «شفقِ» تمام‌صفحه با blur و mix-blend-mode داشت و هر تغییرِ کوچکی
+   در صفحه (یک عدد، یک ساعت) کلِ آن سطح را دوباره می‌کشید.
+   حالا نه عنصری ساخته می‌شود، نه انیمیشنی هست و نه تنظیمی — با هیچ مقدارِ
+   ذخیره‌شده‌ای برنمی‌گردد. کلید pumpHexFx هم یک‌بار از دستگاه پاک می‌شود.
+   ⚠️ applyHexFx/setHexFx فقط به‌عنوان «هیچ‌کار» مانده‌اند چون چند جای دیگر
+   (بوت، بازیابیِ بکاپ) صدایشان می‌زنند؛ حذفشان کارِ آن مسیرها را می‌شکند. */
+try { localStorage.removeItem('pumpHexFx'); } catch (e) {}
 function applyHexFx() {
-  const p = _hexFxLoad();
-  const b = document.body;
-  b.classList.toggle('hexfx-off', !p.on);
-  // کلاس‌های hexfx-mode-* فقط برای شبکهٔ شش‌ضلعی بودند که حذف شد
-  b.classList.toggle('hexfx-pattern-bolt', p.pattern === 'bolt');
-  b.classList.toggle('hexfx-pattern-stars', p.pattern === 'stars');
-  const d = _HEXFX_DIRS[p.dir] || _HEXFX_DIRS['tr-bl'];
-  const c = _HEXFX_COLORS[p.color] || _HEXFX_COLORS.rainbow;
-  b.style.setProperty('--hexclip-0', d.c0);
-  b.style.setProperty('--hexclip-1', d.c1);
-  b.style.setProperty('--hexfx-bg', _hexFxGradient(c.dark, d.angle));
-  b.style.setProperty('--hexfx-bg-light', _hexFxGradient(c.light, d.angle));
-  b.style.setProperty('--hexfx-dur', (parseFloat(p.dur) || 6) + 's');
-  // سه رنگ پخش‌شده از رنگ‌بندی — برای رعد و برق و ستاره‌های دنباله‌دار
-  const mid = a => a[Math.floor((a.length - 1) / 2)];
-  b.style.setProperty('--hexfx-a', c.dark[0]);
-  b.style.setProperty('--hexfx-b', mid(c.dark));
-  b.style.setProperty('--hexfx-c', c.dark[c.dark.length - 1]);
-  b.style.setProperty('--hexfx-a-light', c.light[0]);
-  b.style.setProperty('--hexfx-b-light', mid(c.light));
-  b.style.setProperty('--hexfx-c-light', c.light[c.light.length - 1]);
-  // انیمیشن از نو شروع شود تا مقدار جدیدِ متغیرها همان لحظه دیده شود
-  document.querySelectorAll('.fx-bolts,.fx-stars').forEach(g => {
-    g.style.display = 'none'; void g.offsetHeight; g.style.display = '';
-  });
-  _hexFxSyncUI(p);
+  // اگر از نسخهٔ قبلی کلاس یا متغیری روی صفحه مانده باشد، همین‌جا پاک می‌شود
+  try {
+    const b = document.body;
+    b.classList.remove('hexfx-off', 'hexfx-pattern-bolt', 'hexfx-pattern-stars');
+    ['--hexclip-0','--hexclip-1','--hexfx-bg','--hexfx-bg-light','--hexfx-dur',
+     '--hexfx-a','--hexfx-b','--hexfx-c','--hexfx-a-light','--hexfx-b-light','--hexfx-c-light']
+      .forEach(v => b.style.removeProperty(v));
+  } catch (e) {}
 }
-function setHexFx(key, val) {
-  const p = _hexFxLoad();
-  p[key] = (key === 'dur') ? (parseFloat(val) || 6) : val;
-  try { localStorage.setItem('pumpHexFx', JSON.stringify(p)); } catch (e) {}
-  applyHexFx();
-}
-function _hexFxSyncUI(p) {
-  const onB = document.getElementById('hexfx-on-btn');
-  const offB = document.getElementById('hexfx-off-btn');
-  if (onB) onB.classList.toggle('active', !!p.on);
-  if (offB) offB.classList.toggle('active', !p.on);
-  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
-  set('hexfx-pattern', p.pattern || 'bolt');
-  set('hexfx-color', p.color); set('hexfx-dur', p.dur);
-  const l = document.getElementById('hexfx-dur-lbl');
-  if (l) l.textContent = n2fa(p.dur) + ' ثانیه';
-}
+function setHexFx() { /* تنظیمی نمانده */ }
+function _hexFxLoad() { return { on: false }; }
+function _hexFxSyncUI() {}
 
 // ========== DATE HELPERS ==========
 function persianDate() {
@@ -32085,6 +31634,13 @@ function newPersonSub() {
   _updatePersonFilterBtns();
   _renderSubBar(person);
   renderPersonRows(person);
+  /* ⚠️ فهرستِ کارت‌ها هم باید از نو ساخته شود — وگرنه کارتِ همان شخص پشتِ مودال
+     بدونِ کلاسِ has-subs و بدونِ نوارهای «حسابِ قبلی/بعدی» می‌ماند و حسابِ فرعیِ
+     تازه هیچ‌جا دیده نمی‌شود؛ گزارشِ صاحب ریپو «حساب فرعی ساخته نمی‌شود» دقیقاً
+     همین بود. حذف و تغییرِ نام از قبل این کار را می‌کردند، فقط «ساختن» جا مانده
+     بود. هیچ محاسبه‌ای عوض نمی‌شود — فقط دوباره‌کشیدنِ همان فهرست. */
+  renderPersons(currentPersonType);
+  updateBanner();
   if (typeof showToast === 'function') showToast('✅ حساب «' + sub.name + '» ساخته شد — جدول‌ها انباشته شدند', '#38a169');
   try { _botAnnounce('حساب فرعی جدید «' + sub.name + '» برای «' + (person.name || '') + '» ساخته شد.'); } catch (e) {}
   // scroll stacked wrap to top
@@ -50158,7 +49714,7 @@ try {
 // ========== نسخهٔ برنامه ==========
 // با هر تغییر یا امکان جدید، این عدد بالا می‌رود و همه‌جا (صفحهٔ قفل، سربرگ،
 // صفحهٔ کارمند، ربات و پایین صفحه) دیده می‌شود.
-const APP_VERSION = '2.9.424';
+const APP_VERSION = '2.9.425';
 function _stampVersion() {
   /* زدنِ خودِ شمارهٔ نسخه = «همین حالا آپدیت کن». راهِ دستیِ همیشه‌دردسترس، برای
      وقتی که نوارِ آپدیت گم شده یا کاربر ساعت‌ها داخلِ یک صفحهٔ تمام‌صفحه بوده.
@@ -54700,39 +54256,18 @@ document.addEventListener('click', function(e) {
      صفحهٔ دیده‌شده بلندتر یا مساوی است، پس هیچ نوارِ بی‌رنگی نمی‌ماند و هیچ‌وقت
      هم عوض نمی‌شود. یعنی این هم‌گام‌سازی به‌کل لازم نیست و برداشته شد. */
 
+  /* ══ لایهٔ تزئینیِ پس‌زمینه ساخته نمی‌شود ═════════════════════════════════
+     همان «نور پس‌زمینه»ای که صاحب ریپو خواست کاملاً برداشته شود. سه شفقِ
+     تمام‌صفحه (blur + mix-blend-mode)، بومِ ذرات، ته‌رنگ و شکل‌های شناور همگی
+     روی هر بازرسمِ صفحه دوباره کشیده می‌شدند — سنگین‌ترین چیزِ کلِ برنامه.
+     تابع عمداً باقی مانده و «هیچ‌کار» است، چون از دو جا (بوت و صفحهٔ قفل)
+     صدا زده می‌شود؛ اگر بعداً چیزی خواستید، از همین‌جا شروع کنید.
+     ⚠️ اگر از نسخهٔ قبلی لایه‌ای در صفحه مانده باشد، همین‌جا برداشته می‌شود. */
   function buildFx(){
-    if(document.getElementById('fxLayer')) return;
-    var fx = document.createElement('div');
-    fx.id = 'fxLayer';
-    fx.setAttribute('aria-hidden','true');
-    fx.innerHTML =
-      '<div class="fx-aurora fx-a1"></div>'+
-      '<div class="fx-aurora fx-a2"></div>'+
-      '<div class="fx-aurora fx-a3"></div>'+
-      '<div class="fx-bolts"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i><i class="b5"></i><i class="b6"></i><i class="b7"></i><i class="b8"></i></div>'+
-      '<div class="fx-stars"><i class="s1"></i><i class="s2"></i><i class="s3"></i><i class="s4"></i><i class="s5"></i></div>'+
-      '<canvas id="fxCanvas"></canvas>'+
-      '<div class="fx-vignette"></div>';
-    var siteBg = document.getElementById('siteBg');
-    if(siteBg && siteBg.parentNode){ siteBg.parentNode.insertBefore(fx, siteBg.nextSibling); }
-    else { document.body.insertBefore(fx, document.body.firstChild); }
-
-    /* <body> has no position/z-index of its own, so it never becomes a
-       stacking context — its own CSS background (the day themes' white +
-       hexagon pattern) paints ABOVE #fxLayer's z-index:-1 content, hiding
-       it completely on every light theme. floating geometry + the hex-glow
-       sweep need to sit above that background, so they get their own
-       normal-stacking (z-index:auto, NOT negative) fixed layer instead. */
-    if(!document.getElementById('fxLayerTop')){
-      var fxTop = document.createElement('div');
-      fxTop.id = 'fxLayerTop';
-      fxTop.setAttribute('aria-hidden','true');
-      fxTop.innerHTML =
-        '<div class="fx-geo fx-geo-1"></div>'+
-        '<div class="fx-geo fx-geo-2"></div>'+
-        '<div class="fx-geo fx-geo-3"></div>';
-      fx.parentNode.insertBefore(fxTop, fx.nextSibling);
-    }
+    ['fxLayer','fxLayerTop'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el && el.parentNode) el.parentNode.removeChild(el);
+    });
   }
 
   /* ---------- 2. Ember / vapor particle field ----------
@@ -54858,10 +54393,6 @@ document.addEventListener('click', function(e) {
   function stopParallax(){
     if(_pxMouseHandler){ window.removeEventListener('mousemove', _pxMouseHandler); _pxMouseHandler = null; }
     if(_pxParallaxRAF){ cancelAnimationFrame(_pxParallaxRAF); _pxParallaxRAF = null; }
-    [].slice.call(document.querySelectorAll('.fx-aurora')).forEach(function(b){
-      b.style.removeProperty('--gfx-px');
-      b.style.removeProperty('--gfx-py');
-    });
     _gfxCursorSeen = false;
   }
   /* Exposed so #gfx-quality-js can start/stop these purely from the
@@ -55660,25 +55191,44 @@ document.addEventListener('click', function(e) {
   var RM = false;
 
   // id, light?, preview bg, accent dot, <html> background colour
+  /* ── فقط چهار تم ─────────────────────────────────────────────────────────
+     خواستهٔ صریحِ صاحب ریپو: «فقط این ۴ تم بماند، بقیه کاملاً حذف شود.»
+     ۱) دارک مودِ طلایی مشکی   ۲) اقیانوس عмیق
+     ۳) لایت مودِ طلاییِ سلطنتی ۴) شرابیِ کِرِم
+     یازده تمِ دیگر (زمرد، اقیانوس نیمه‌شب، یاقوتی، تیتانیوم، مینت، آسمانی،
+     هلویی، آمیتیست، تپهٔ طلایی، اجراییِ روشن/تیره) هم از این فهرست و هم از
+     CSS برداشته شدند. تم برنگردانید مگر خودِ صاحب ریپو بگوید. */
   var PALETTES = [
     {id:'dark-amber',   light:false, name:'طلای مشکی (Obsidian Gold)',      bg:'#0b0904', ac:'#ffb43d'},
-    {id:'dark-emerald', light:false, name:'زمرد سایبری (Cyber Emerald)',    bg:'#0c1814', ac:'#2fe39c'},
-    {id:'dark-teal',    light:false, name:'اقیانوس نیمه‌شب (Midnight Ocean)', bg:'#0a1c1f', ac:'#22d3ee'},
-    {id:'dark-crimson', light:false, name:'شب یاقوتی (Crimson Night)',      bg:'#1a0e11', ac:'#ff5d62'},
-    {id:'dark-indigo',  light:false, name:'نقره‌ای تیتانیوم (Titanium Silver)', bg:'#14161c', ac:'#c3cbd6'},
+    {id:'deep-ocean',   light:false, name:'اقیانوس عمیق (Deep Ocean)',      bg:'#063a61', ac:'#c9c1b0'},
     {id:'light-cream',  light:true,  name:'طلای سلطنتی (Royal Gold)',       bg:'#fffdf8', ac:'#d97706'},
-    {id:'light-mint',   light:true,  name:'زمرد لوکس (Emerald Luxury)',     bg:'#ffffff', ac:'#10a05a'},
-    {id:'light-sky',    light:true,  name:'یاقوت کبود سلطنتی (Royal Sapphire)', bg:'#ffffff', ac:'#2b7fff'},
-    {id:'light-peach',  light:true,  name:'یاقوت اجرایی (Ruby Executive)',  bg:'#fffafa', ac:'#c81e3a'},
-    {id:'light-slate',  light:true,  name:'بلور آمیتیست (Amethyst Crystal)', bg:'#ffffff', ac:'#7c4dff'},
-    {id:'golden-dune',  light:true,  name:'تپهٔ طلایی (Golden Dune)',        bg:'#fff2e2', ac:'#dfa35e'},
-    {id:'burgundy',     light:true,  name:'شرابی کِرِم (Burgundy)',          bg:'#fff3e1', ac:'#8a0d0d'},
-    {id:'deep-ocean',   light:false, name:'اقیانوس عمیق (Deep Ocean)',       bg:'#063a61', ac:'#c9c1b0'},
-    {id:'enterprise',      light:true,  name:'اجرایی روشن (Enterprise)',      bg:'#f6f8fb', ac:'#2563eb'},
-    {id:'enterprise-dark', light:false, name:'اجرایی تیره (Enterprise Dark)', bg:'#0e141b', ac:'#3b82f6'}
+    {id:'burgundy',     light:true,  name:'شرابی کِرِم (Burgundy)',          bg:'#fff3e1', ac:'#8a0d0d'}
   ];
-  function allClasses(){ return PALETTES.map(function(p){ return 'theme-'+p.id; }); }
+  /* دستگاه‌هایی که یکی از تم‌های حذف‌شده را ذخیره کرده‌اند نباید بی‌تم بمانند —
+     هر کدام به نزدیک‌ترین تمِ باقی‌مانده (هم‌حالتِ خودش) نگاشت می‌شود. یک‌بار
+     خوانده و همان‌جا در localStorage تصحیح می‌شود، پس دفعهٔ بعد کاری نمی‌ماند. */
+  var _PAL_RETIRED = {
+    'dark-emerald':'dark-amber', 'dark-teal':'deep-ocean', 'dark-crimson':'dark-amber',
+    'dark-indigo':'dark-amber', 'enterprise-dark':'deep-ocean',
+    'light-mint':'light-cream', 'light-sky':'light-cream', 'light-peach':'burgundy',
+    'light-slate':'light-cream', 'golden-dune':'light-cream', 'enterprise':'light-cream'
+  };
+  function allClasses(){
+    // کلاس‌های تم‌های حذف‌شده هم پاک می‌شوند تا از دستگاهی که به‌روز می‌شود چیزی نماند
+    return PALETTES.map(function(p){ return 'theme-'+p.id; })
+      .concat(Object.keys(_PAL_RETIRED).map(function(id){ return 'theme-'+id; }));
+  }
   function find(id){ for(var i=0;i<PALETTES.length;i++){ if(PALETTES[i].id===id) return PALETTES[i]; } return null; }
+  /* شناسهٔ ذخیره‌شده را می‌خواند و اگر تمِ حذف‌شده باشد، جایگزینش را برمی‌گرداند */
+  function readPal(key){
+    var id = null;
+    try { id = localStorage.getItem(key); } catch(e) {}
+    if (!id) return null;
+    if (find(id)) return id;
+    var alt = _PAL_RETIRED[id];
+    if (alt) { try { localStorage.setItem(key, alt); } catch(e) {} return alt; }
+    return null;
+  }
 
   // Visually apply a palette: swaps the body theme class and syncs
   // light-mode + pumpTheme + themeBtn so the whole UI matches. Also records
@@ -55714,8 +55264,8 @@ document.addEventListener('click', function(e) {
   // Mark the saved dark theme active in the dark row AND the saved light
   // theme active in the light row (both rows can show their selection).
   function markSwatches(){
-    var d = (function(){ try{ return localStorage.getItem('pumpPaletteDark'); }catch(e){ return null; } })();
-    var l = (function(){ try{ return localStorage.getItem('pumpPaletteLight'); }catch(e){ return null; } })();
+    var d = readPal('pumpPaletteDark');
+    var l = readPal('pumpPaletteLight');
     var nodes = document.querySelectorAll('.theme-swatch');
     for(var i=0;i<nodes.length;i++){
       var pid = nodes[i].getAttribute('data-pal'); var pp = find(pid);
@@ -55743,8 +55293,8 @@ document.addEventListener('click', function(e) {
   // keep the app's original look (no theme class) but still mark the swatches.
   function initPalette(){
     var nowLight = document.body.classList.contains('light-mode');
-    var remembered = (function(){ try{ return localStorage.getItem(nowLight ? 'pumpPaletteLight' : 'pumpPaletteDark'); }catch(e){ return null; } })();
-    if(remembered && find(remembered)) applyPaletteVisual(remembered);
+    var remembered = readPal(nowLight ? 'pumpPaletteLight' : 'pumpPaletteDark');
+    if(remembered) applyPaletteVisual(remembered);
     else markSwatches();
   }
 
@@ -55755,8 +55305,8 @@ document.addEventListener('click', function(e) {
     window.toggleTheme = function(){
       var r = _origToggle.apply(this, arguments);
       var nowLight = document.body.classList.contains('light-mode');
-      var remembered = (function(){ try{ return localStorage.getItem(nowLight ? 'pumpPaletteLight' : 'pumpPaletteDark'); }catch(e){ return null; } })();
-      if(remembered && find(remembered)){ applyPaletteVisual(remembered); }
+      var remembered = readPal(nowLight ? 'pumpPaletteLight' : 'pumpPaletteDark');
+      if(remembered){ applyPaletteVisual(remembered); }
       else { allClasses().forEach(function(c){ document.body.classList.remove(c); }); markSwatches(); }
       return r;
     };
@@ -56435,7 +55985,6 @@ body.is-scrolling.gfx-standard .daynight-toggle .dn-stars i,
 body.is-scrolling.gfx-standard .daynight-toggle .dn-thumb{
   animation-play-state:paused !important;
 }
-body.gfx-ultra #fxLayer{ will-change:filter; }
 
 /* همان منطقِ بالا برای سنگین‌ترین انیمیشنِ پس‌زمینه: جاروی نورِ شش‌ضلعی/رعد/
    ستاره یک لایهٔ تمام‌صفحه با mask و mix-blend-mode است و هر فریمش کلِ صفحه را
@@ -56443,9 +55992,6 @@ body.gfx-ultra #fxLayer{ will-change:filter; }
    می‌ساخت. حالا فقط تا وقتی انگشت روی صفحه اسکرول می‌کند مکث می‌کند و ~150ms
    بعد از توقف دقیقاً از همان‌جا ادامه می‌دهد؛ رنگ، شکل و سرعتش عوض نمی‌شود. */
 body.is-scrolling .fx-bolts i,
-body.is-scrolling .fx-stars i{
-  animation-play-state:paused !important;
-}
 
 /* contain:layout paint از این دو لایه برداشته شد. هر دو از قبل overflow:hidden
    و pointer-events:none هستند، پس چیزی به بُرِش اضافه نمی‌کرد؛ ولی contain:paint
@@ -61189,53 +60735,65 @@ body.gfx-performance .tbl th{
   border-bottom-color:color-mix(in srgb, var(--txt) 30%, transparent) !important;
 }
 
-/* ═══ ۸) پالتِ اجرایی — دقیقاً با رنگ‌هایی که خواسته شد ═══════════════════
-   Primary #163B65 · Accent #2563EB · Success #168A55 · Warning #C98200
-   Danger #C93C3C · Info #3178C6 · BG #F6F8FB · Surface #fff · Border #E3E8EF
-   Text #17202A · Secondary #657180 · Dark #0E141B / #151D26 / #293544
-   دو تمِ تازه کنارِ تم‌های قبلی نشستند — هیچ تمی حذف یا عوض نشد. */
-body.theme-enterprise{
-  --dark:#F6F8FB !important; --panel:#FFFFFF !important; --card:#FFFFFF !important;
-  --border:#E3E8EF !important; --txt:#17202A !important; --muted:#657180 !important;
-  --label:#163B65 !important; --accent:#2563EB !important;
-  --grad-amber:linear-gradient(135deg,#3B82F6 0%,#2563EB 50%,#163B65 100%) !important;
-  --on-accent:#FFFFFF !important; --hdr-title:#FFFFFF !important;
-  --chrome-brd:rgba(22,59,101,.28) !important;
-  --hdr-bg:linear-gradient(90deg,#12314F,#163B65,#12314F) !important;
-  --banner-bg:linear-gradient(90deg,#0F2A45,#143352,#0F2A45) !important;
-  --nav-bg:linear-gradient(90deg,#EEF3FA,#F8FAFD,#EEF3FA) !important;
-  --app-bg:radial-gradient(ellipse at 50% 16%, #FFFFFF 0%, transparent 60%),
-           linear-gradient(175deg,#F6F8FB 0%,#EDF1F7 55%,#E6ECF4 100%) !important;
-  --fx-hue:205deg !important;
-  --atmo-beam:rgba(37,99,235,.14); --atmo-geo:rgba(37,99,235,.45);
-  --green:#168A55 !important; --red:#C93C3C !important; --blue:#3178C6 !important;
+</style>
+
+
+<style id="perf-lean">
+/* ═══════════════════════════════════════════════════════════════════════════
+   سبک‌سازیِ ظاهر — خواستهٔ صریحِ صاحب ریپو (نسخه 2.9.425)
+
+   «گرافیک، Animation، Effects، Background Effects، Shadow و Blur ِ غیرضروری
+    را بهینه یا حذف کن؛ برنامه سریع‌تر و سبک‌تر شود، بدون اینکه ظاهر حرفه‌ای و
+    چهار تم از بین برود.»
+
+   این بلوک آخرین استایلِ فایل است تا بر همهٔ لایه‌های قبلی برنده باشد. فقط
+   «چیزهایی که همیشه و بی‌دلیل کار می‌کنند» را می‌بندد؛ به رنگ، چیدمان، اندازه،
+   جای هیچ دکمه‌ای و به هیچ منطقی دست نمی‌زند.
+
+   ⚠️ چرا هر کدام برداشته شد (اندازه‌گیریِ واقعی با کروم، Performance.getMetrics،
+      حسابِ ۲۰٬۰۰۰ ردیفی باز):  کارِ نخِ اصلی در حالتِ بی‌کار ۱۸ms در هر ثانیه بود؛
+      با بستنِ همین‌ها به ۸ms رسید — یعنی نصف. روی گوشی این تفاوت چند برابر است.
+
+   ⛔ چیزهایی که عمداً دست‌نخورده ماندند، چون «خبر» می‌دهند نه تزئین:
+      هشدارِ مخزنِ کم (tankPulse / gfxTankDangerStd)، چراغِ ضبطِ صدا (micPulse)،
+      نوارهای لودینگ، و همهٔ گذرهای کوتاهِ کلیک/هاور.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ۱) «برقِ» تمام‌صفحه: یک نوارِ نور که ۱۲ ثانیه یک‌بار از این سرِ صفحه تا آن سر
+      می‌رفت — با انیمیشنِ left، یعنی مرورگر در هر فریم کلِ صفحه را دوباره
+      می‌چید. گران‌ترین انیمیشنِ همیشه‌روشنِ برنامه بود و اصلاً دیده نمی‌شد
+      (شفافیتش ۰٫۰۲ است). */
+body::after{ animation:none!important; display:none!important; }
+
+/* ۲) کلیدِ روز/شب: پرنده، ابر، ستاره و نفس‌کشیدنِ گویش. یک ویجتِ ۶۰ پیکسلی که
+      شش انیمیشنِ بی‌پایان داشت و همیشه در سربرگ دیده می‌شود، پس هیچ‌وقت
+      نمی‌ایستاد. خودِ کلید و ظاهرش هیچ فرقی نکرده — فقط دیگر تکان نمی‌خورد. */
+.daynight-toggle .dn-bird-1, .daynight-toggle .dn-bird-2,
+.daynight-toggle .dn-cloud, .daynight-toggle .dn-stars i,
+.daynight-toggle .dn-thumb{ animation:none!important; }
+
+/* ۳) تپشِ آیکونِ دکمهٔ فعالِ ناوبری — همیشه یکی از دکمه‌ها فعال است، پس این هم
+      هیچ‌وقت نمی‌ایستاد. */
+.nav-btn:hover .ia-pulse, .nav-btn.active .ia-pulse{ animation:none!important; }
+
+/* ۴) «برقِ» نوارِ شیفت و ایموجی‌های متحرکِ برچسب‌ها — تزئینِ محض، ولی روی هر
+      صفحه چند ده عنصر بودند و هر کدام یک انیمیشنِ بی‌پایان. */
+.shift-header::after{ animation:none!important; }
+.emj-spin,.emj-write,.emj-fly,.emj-bounce,.emj-truck,
+.emj-rise,.emj-wobble,.emj-shake,.emj-tilt{ animation:none!important; }
+
+/* ۵) تارکردنِ پشتِ سربرگ/نوارِ بالا/ناوبری (backdrop-filter). این سه نوار همیشه
+      روی صفحه‌اند و چسبانده‌شده‌اند، پس مرورگر باید در هر اسکرول هرچه پشتشان
+      است را دوباره تار کند — سنگین‌ترین کارِ ممکن روی گوشی. رنگ و شفافیتِ
+      خودشان سرِ جایش است، فقط تاریِ پشتشان برداشته شد. */
+.header, .top-banner, .nav{
+  -webkit-backdrop-filter:none!important; backdrop-filter:none!important;
 }
-/* بلوکِ عمومیِ روشن (‎body.light-mode[class*="theme-"]‎) سطح‌ها را خنثی می‌کند؛
-   این‌جا دوباره سطحِ سفید و بومِ #F6F8FB برمی‌گردد — مثل کاری که خودِ
-   Golden Dune و Burgundy می‌کنند. */
-body.light-mode.theme-enterprise{
-  --dark:#F6F8FB !important; --card:#FFFFFF !important; --panel:#FFFFFF !important;
-  --border:#E3E8EF !important; --hdr-title:#FFFFFF !important;
-  --app-bg:radial-gradient(ellipse at 50% 16%, #FFFFFF 0%, transparent 60%),
-           linear-gradient(175deg,#F6F8FB 0%,#EDF1F7 55%,#E6ECF4 100%) !important;
-}
-body.theme-enterprise-dark{
-  --dark:#0E141B !important; --panel:#151D26 !important; --card:#151D26 !important;
-  --border:#293544 !important; --txt:#E8EDF3 !important; --muted:#8A97A6 !important;
-  --label:#A9C2E4 !important; --accent:#3B82F6 !important;
-  --grad-amber:linear-gradient(135deg,#93B8F5 0%,#3B82F6 50%,#1D4ED8 100%) !important;
-  --on-accent:#0B1119 !important; --hdr-title:#DCE7F7 !important;
-  --chrome-brd:rgba(59,130,246,.30) !important;
-  --hdr-bg:linear-gradient(90deg,#0B1119,#131C27,#0B1119) !important;
-  --banner-bg:linear-gradient(90deg,#0A1017,#111926,#0A1017) !important;
-  --nav-bg:linear-gradient(90deg,#0B1119,#121A24,#0B1119) !important;
-  --app-bg:radial-gradient(ellipse at 50% 8%, rgba(255,255,255,.05) 0%, transparent 55%),
-           radial-gradient(ellipse at 50% 100%, rgba(0,0,0,.35) 0%, transparent 60%),
-           linear-gradient(175deg,#131B24 0%,#0E141B 45%,#0A0F15 100%) !important;
-  --fx-hue:205deg !important;
-  --atmo-beam:rgba(59,130,246,.16); --atmo-geo:rgba(59,130,246,.5);
-  --green:#22A96B !important; --red:#E05555 !important; --blue:#4A9AE0 !important;
-}
+
+/* ۶) سایه‌های خیلی گسترده روی عنصرهایی که «زیاد»اند (کارتِ هر قرض‌دار، هر ردیفِ
+      جدول). سایه می‌ماند، ولی کوتاه‌تر — چشم فرقش را سخت می‌بیند و مرورگر
+      سطحِ خیلی کمتری را رنگ می‌زند. */
+.person-card{ box-shadow:0 2px 6px rgba(0,0,0,.18)!important; }
 </style>
 
 </body>
