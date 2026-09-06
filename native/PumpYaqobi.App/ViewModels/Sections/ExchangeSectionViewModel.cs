@@ -47,7 +47,7 @@ public sealed partial class ExchangeRowViewModel : RowViewModel
         OnPropertyChanged(nameof(RateText));
         OnPropertyChanged(nameof(BardagiText));
         OnPropertyChanged(nameof(UsdText));
-        OnPropertyChanged(nameof(BaqiText));
+        OnPropertyChanged(nameof(RasidText));
     }
 
     public string AmountText  { get => Shamsi.Money(Amount);  set => Amount = Shamsi.Num(value); }
@@ -56,8 +56,12 @@ public sealed partial class ExchangeRowViewModel : RowViewModel
 
     /// <summary>دالرِ شکسته — مبلغ ÷ فی.</summary>
     public string UsdText => Shamsi.Money(Math.Round(_owner.Calc.ToUsd(_e), 2));
-    /// <summary>الباقی — شکسته − بردگی.</summary>
-    public string BaqiText => Shamsi.Money(Math.Round(_owner.Calc.RowBaqi(_e), 2));
+    /// <summary>
+    /// «رسید به صرافی» — همان دالرِ شکسته. در نسخهٔ وب هم همین یک عدد دو بار
+    /// در دو ستون می‌آید: یکی «دالر» و یکی «رسید به صرافی». ستونِ «الباقی» در
+    /// ردیف‌ها عمداً خالی است و فقط ردیفِ «جمله» عدد دارد.
+    /// </summary>
+    public string RasidText => UsdText;
 
     public string CurrencyText
     {
@@ -109,10 +113,32 @@ public sealed partial class ExchangeSectionViewModel
     public string TotalBardagiUsd => Shamsi.Money(Math.Round(Summary.TotalBardagiUsd, 2));
     public string Baqi => Shamsi.Money(Math.Round(Summary.Baqi, 2));
 
+    /// <summary>
+    /// جملهٔ زیرِ کادرها. مثبت یعنی طلبِ پمپ از صرافی (سبز) و منفی یعنی بدهیِ
+    /// پمپ به صرافی (سرخ) — مو‌به‌مو همان دو جملهٔ نسخهٔ وب.
+    /// </summary>
+    public string BaqiSentence
+    {
+        get
+        {
+            var net = Math.Round(Summary.Baqi, 0, MidpointRounding.AwayFromZero);
+            return net >= 0
+                ? "🟢 الباقی صرافی نزد پمپ: " + Shamsi.Money(net) + " $"
+                : "🔴 الباقی پمپ نزد صرافی: " + Shamsi.Money(Math.Abs(net)) + " $";
+        }
+    }
+
+    public string BaqiSentenceNote =>
+        Summary.Baqi >= 0 ? "این مقدار طلبِ شما از صرافی است" : "این مقدار را به صرافی بدهکارید";
+
+    public string BaqiSentenceBrushKey => Summary.Baqi >= 0 ? "Pump.Ok" : "Pump.Danger";
+
     partial void OnSummaryChanged(ExchangeSummary v)
     {
         OnPropertyChanged(nameof(TotalUsd)); OnPropertyChanged(nameof(TotalBardagi));
         OnPropertyChanged(nameof(TotalBardagiUsd)); OnPropertyChanged(nameof(Baqi));
+        OnPropertyChanged(nameof(BaqiSentence)); OnPropertyChanged(nameof(BaqiSentenceNote));
+        OnPropertyChanged(nameof(BaqiSentenceBrushKey));
     }
 
     protected override ExchangeRowViewModel Wrap(ExchangeRow e) => new(e, this);

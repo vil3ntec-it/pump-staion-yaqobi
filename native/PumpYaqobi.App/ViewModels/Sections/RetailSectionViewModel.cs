@@ -44,10 +44,17 @@ public sealed partial class RetailRowViewModel : RowViewModel
     partial void OnDateShamsiChanged(string v) => Touch();
     partial void OnNameChanged(string v) => Touch();
     partial void OnFuelChanged(FuelType v) { Touch(); OnPropertyChanged(nameof(FuelText)); }
-    partial void OnLitersChanged(decimal v) { Touch(); Refresh(); }
-    partial void OnPricePerLiterChanged(decimal v) { Touch(); Refresh(); }
+    // ⚠️ همان قاعدهٔ ‎updateChakana‎: نوشتن در «مقدار بردگی» یعنی حالتِ دستی،
+    // و نوشتنِ دوبارهٔ تیل/فی حالتِ خودکار (تیل×فی) را برمی‌گرداند.
+    partial void OnLitersChanged(decimal v) { Touch(); AutoIfMeasured(); Refresh(); }
+    partial void OnPricePerLiterChanged(decimal v) { Touch(); AutoIfMeasured(); Refresh(); }
     partial void OnByMoneyChanged(bool v) { Touch(); Refresh(); }
     partial void OnManualBardagiChanged(decimal v) { Touch(); Refresh(); }
+
+    private void AutoIfMeasured()
+    {
+        if (Liters > 0m && (PricePerLiter > 0m || ManualBardagi == 0m)) ByMoney = false;
+    }
     partial void OnRasidChanged(decimal v) { Touch(); Refresh(); }
     partial void OnNoteChanged(string v) => Touch();
 
@@ -63,7 +70,15 @@ public sealed partial class RetailRowViewModel : RowViewModel
     public string ManualBardagiText { get => Shamsi.Money(ManualBardagi); set => ManualBardagi = Shamsi.Num(value); }
     public string RasidText { get => Shamsi.Money(Rasid); set => Rasid = Shamsi.Num(value); }
 
-    public string BardagiText => Shamsi.Money(_owner.Calc.Bardagi(_e));
+    /// <summary>
+    /// «مقدار بردگی» — یک خانهٔ ویرایش‌پذیر، درست مثلِ نسخهٔ وب: خوانده‌شدنش
+    /// عددِ محاسبه‌شده است و نوشتنِ دستی رویش، ردیف را «پولی» می‌کند.
+    /// </summary>
+    public string BardagiText
+    {
+        get => Shamsi.Money(_owner.Calc.Bardagi(_e));
+        set { ManualBardagi = Shamsi.Num(value); ByMoney = true; }
+    }
     public string AlbaqiText => Shamsi.Money(_owner.Calc.Albaqi(_e));
 
     public string FuelText

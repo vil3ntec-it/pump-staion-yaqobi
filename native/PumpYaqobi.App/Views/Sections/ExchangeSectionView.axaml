@@ -2,13 +2,19 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
              xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
              x:Class="PumpYaqobi.App.Views.Sections.ExchangeSectionView"
              x:DataType="vm:ExchangeSectionViewModel">
 
   <c:SectionPage Header="صرافی" SubHeader="مبلغ به ارزِ خودش وارد می‌شود و با «فی» شکسته می‌شود — فیِ صفر یعنی صفر">
 
     <c:SectionPage.Toolbar>
-      <Button Classes="accent" Content="ردیفِ تازه" Command="{Binding AddRowCommand}" />
+      <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+        <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,0,6,0" />
+        <Button Classes="ghost" Content="📅 ماه بعد" Margin="0,0,6,0" />
+        <Button Classes="ghost info" Content="📄 PDF" Margin="0,0,6,0" />
+        <Button Classes="accent" Content="➕ ردیف جدید" Command="{Binding AddRowCommand}" />
+      </WrapPanel>
     </c:SectionPage.Toolbar>
 
     <c:SectionPage.Filters>
@@ -18,25 +24,32 @@
       </StackPanel>
     </c:SectionPage.Filters>
 
+    <!-- دو کادرِ بالای جدول و جملهٔ الباقی — همان سه چیزی که نسخهٔ وب دارد -->
     <c:SectionPage.Summary>
-      <StackPanel Orientation="Horizontal" Spacing="12">
-        <Border Classes="stat">
+      <StackPanel Spacing="10">
+        <Grid ColumnDefinitions="*,12,*">
+          <Border Grid.Column="0" Classes="stat" HorizontalAlignment="Stretch">
+            <StackPanel Spacing="3">
+              <TextBlock Text="💲 جمله دالر این ماه" Classes="label" />
+              <TextBlock Text="{Binding TotalUsd}" Classes="num"
+                         Foreground="{DynamicResource Pump.Info}" />
+            </StackPanel>
+          </Border>
+          <Border Grid.Column="2" Classes="stat" HorizontalAlignment="Stretch">
+            <StackPanel Spacing="3">
+              <TextBlock Text="💵 جمله بردگی این ماه" Classes="label" />
+              <TextBlock Text="{Binding TotalBardagi}" Classes="num"
+                         Foreground="{DynamicResource Pump.Ok}" />
+            </StackPanel>
+          </Border>
+        </Grid>
+        <Border Classes="panel" Padding="14,12" HorizontalAlignment="Stretch">
           <StackPanel Spacing="3">
-            <TextBlock Text="جمعِ شکسته" Classes="label" />
-            <TextBlock Text="{Binding TotalUsd, StringFormat={}{0} دالر}" Classes="num" />
-          </StackPanel>
-        </Border>
-        <Border Classes="stat">
-          <StackPanel Spacing="3">
-            <TextBlock Text="بردگی" Classes="label" />
-            <TextBlock Text="{Binding TotalBardagi, StringFormat={}{0} دالر}" Classes="num" />
-            <TextBlock Text="{Binding TotalBardagiUsd, StringFormat=به دالر: {0}}" Classes="muted" />
-          </StackPanel>
-        </Border>
-        <Border Classes="stat">
-          <StackPanel Spacing="3">
-            <TextBlock Text="الباقی" Classes="label" />
-            <TextBlock Text="{Binding Baqi, StringFormat={}{0} دالر}" Classes="num" />
+            <TextBlock Text="{Binding BaqiSentence}" FontWeight="Bold" FontSize="15"
+                       HorizontalAlignment="Center"
+                       Foreground="{Binding BaqiSentenceBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+            <TextBlock Text="{Binding BaqiSentenceNote}" Classes="muted" FontSize="11.5"
+                       HorizontalAlignment="Center" />
           </StackPanel>
         </Border>
       </StackPanel>
@@ -45,7 +58,7 @@
     <c:ExcelGrid ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False">
       <DataGrid.Columns>
         <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="120" />
-        <DataGridTextColumn Header="شرح"   Binding="{Binding Description}" Width="*" />
+        <DataGridTextColumn Header="توضیحات" Binding="{Binding Description}" Width="*" />
         <DataGridTextColumn Header="مبلغ"  Binding="{Binding AmountText}" Width="130" />
         <DataGridTemplateColumn Header="واحد" Width="100">
           <DataGridTemplateColumn.CellTemplate>
@@ -64,9 +77,9 @@
           </DataGridTemplateColumn.CellEditingTemplate>
         </DataGridTemplateColumn>
         <DataGridTextColumn Header="فی"      Binding="{Binding RateText}" Width="110" />
-        <DataGridTextColumn Header="شکسته ($)" Binding="{Binding UsdText}" Width="130" IsReadOnly="True" />
-        <DataGridTextColumn Header="بردگی"   Binding="{Binding BardagiText}" Width="120" />
-        <DataGridTextColumn Header="الباقی"  Binding="{Binding BaqiText}" Width="130" IsReadOnly="True" />
+        <DataGridTextColumn Header="دالر" Binding="{Binding UsdText}" Width="115" IsReadOnly="True" />
+        <DataGridTextColumn Header="رسید به صرافی" Binding="{Binding RasidText}" Width="135" IsReadOnly="True" />
+        <DataGridTextColumn Header="بردگی پمپ بنزین ($)" Binding="{Binding BardagiText}" Width="165" />
         <DataGridTemplateColumn Header="" Width="60" IsReadOnly="True">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate>
