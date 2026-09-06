@@ -77,6 +77,62 @@ public class UpdateTests
     }
 
     /// <summary>
+    /// «هر بار اپ رو از سر دانلود نکنم» — کاربر باید ببیند چه چیزی گرفته
+    /// می‌شود. اگر این نوشته نباشد، بستهٔ کوچک هست ولی کسی خبر ندارد.
+    /// </summary>
+    [Theory]
+    [InlineData(true, 2_200_000, "به‌روزرسانیِ کوچک — 2.1 مگابایت")]
+    [InlineData(false, 59_000_000, "بستهٔ کامل — 56.3 مگابایت")]
+    public void TheUserIsToldWhetherItIsTheSmallPackage(bool small, long size, string expected)
+    {
+        var info = new PumpYaqobi.App.Update.UpdateInfo(
+            true, "3.1.1", "3.1.2", "https://example.invalid/x.zip", size, null, small);
+        Assert.Equal(expected, info.PackageText);
+    }
+
+    /// <summary>وقتی نسخهٔ تازه‌ای نیست، نوشتهٔ بسته هم نباید چیزی بگوید.</summary>
+    [Fact]
+    public void NoUpdateMeansNoPackageText()
+    {
+        var info = new PumpYaqobi.App.Update.UpdateInfo(false, "3.1.1", "3.1.1", null, 0, null);
+        Assert.Equal("", info.PackageText);
+    }
+
+    /// <summary>
+    /// کاربر می‌تواند برنامه را هرجا نصب کند. پس باید بشود فهمید آن پوشه
+    /// اجازهٔ نوشتن می‌دهد یا نه — وگرنه به‌روزرسانی بی‌صدا شکست می‌خورد و
+    /// برنامه با نسخهٔ کهنه باز می‌شود، بدونِ آنکه کسی بفهمد.
+    /// </summary>
+    [Fact]
+    public void AWritableFolderIsRecognisedAsWritable()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "pump-w-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(dir);
+        try { Assert.True(PumpYaqobi.App.Update.UpdateService.IsWritable(dir)); }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void AMissingFolderIsNotWritable()
+        => Assert.False(PumpYaqobi.App.Update.UpdateService.IsWritable(
+               Path.Combine(Path.GetTempPath(), "pump-does-not-exist-" + Guid.NewGuid().ToString("N"))));
+
+    /// <summary>
+    /// اگر پوشهٔ نصب اجازهٔ مدیر بخواهد، دستورِ جای‌گزینی باید با اجازه اجرا
+    /// شود و نتیجه‌اش نوشته شود. این‌جا خودِ کد خوانده می‌شود چون اجرایش
+    /// ویندوز می‌خواهد — ولی نبودِ این دو خط یعنی همان شکستِ بی‌صدا.
+    /// </summary>
+    [Fact]
+    public void TheUpdaterAsksForPermissionInsteadOfFailingSilently()
+    {
+        var svc = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        Assert.Contains("\"runas\"", svc);                 // اجازهٔ مدیر
+        Assert.Contains("IsWritable(appDir)", svc);       // فقط وقتی لازم است
+        Assert.Contains("if %RC% GEQ 8", svc);            // نتیجهٔ robocopy سنجیده می‌شود
+        Assert.Contains("ConsumeLastFailure", svc);       // و به کاربر گفته می‌شود
+    }
+
+    /// <summary>
     /// نامِ بستهٔ کوچک باید شناسهٔ پایه را بدهد و نامِ بستهٔ کامل هیچ.
     ///
     /// اگر این را اشتباه بخوانیم، بدترین حالت پیش می‌آید: فایل‌های تازهٔ

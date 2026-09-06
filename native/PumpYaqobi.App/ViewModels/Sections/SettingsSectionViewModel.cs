@@ -28,6 +28,17 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
         _currentVersion = AppVersion.Current;
         Themes = new System.Collections.ObjectModel.ObservableCollection<PumpTheme>(PumpTheme.All);
         _selectedTheme = ThemeManager.Current;
+
+        // پوشهٔ نصب را خودِ کاربر موقعِ نصب انتخاب می‌کند، پس این‌جا نشان
+        // داده می‌شود — و اگر جایی باشد که نوشتن در آن اجازهٔ مدیر می‌خواهد،
+        // همان‌جا گفته می‌شود، نه وسطِ به‌روزرسانی.
+        _installDir = UpdateService.InstallDir;
+        _installNote = UpdateService.InstallDirWritable
+            ? ""
+            : "این پوشه اجازهٔ مدیر می‌خواهد؛ هنگامِ به‌روزرسانی ویندوز اجازه می‌پرسد.";
+
+        // اگر به‌روزرسانیِ گذشته نیمه‌کاره مانده، همین حالا گفته شود
+        _lastFailure = UpdateService.ConsumeLastFailure() ?? "";
     }
 
     public System.Collections.ObjectModel.ObservableCollection<PumpTheme> Themes { get; }
@@ -52,6 +63,18 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
     [ObservableProperty] private bool _downloading;
     [ObservableProperty] private double _downloadPercent;
     [ObservableProperty] private bool _readyToInstall;
+
+    /// <summary>پوشه‌ای که کاربر موقعِ نصب انتخاب کرده.</summary>
+    [ObservableProperty] private string _installDir = "";
+
+    /// <summary>خالی یعنی همه‌چیز رو‌به‌راه است.</summary>
+    [ObservableProperty] private string _installNote = "";
+
+    /// <summary>«به‌روزرسانیِ کوچک — ۲٫۱ مگابایت» یا «بستهٔ کامل — ۵۷ مگابایت».</summary>
+    [ObservableProperty] private string _packageText = "";
+
+    /// <summary>پیامِ به‌روزرسانیِ ناتمامِ دفعهٔ پیش.</summary>
+    [ObservableProperty] private string _lastFailure = "";
 
     partial void OnSelectedThemeChanged(PumpTheme value) => ThemeManager.Apply(value);
 
@@ -90,6 +113,7 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
         {
             _info = await _update.CheckAsync();
             UpdateAvailable = _info.Available;
+            PackageText = _info.PackageText;
             UpdateStatus = _info.Available
                 ? $"نسخهٔ تازه آماده است: {_info.LatestVersion}"
                 : "برنامه به‌روز است";
@@ -130,6 +154,7 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
     private void InstallUpdate()
     {
         if (_downloaded is null) return;
+        LastFailure = "";
         if (!UpdateService.Launch(_downloaded)) { UpdateStatus = "نصبِ نسخهٔ تازه انجام نشد"; return; }
 
         UpdateStatus = "برنامه بسته می‌شود و با نسخهٔ تازه باز می‌شود";

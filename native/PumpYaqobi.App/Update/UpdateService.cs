@@ -5,9 +5,26 @@ using System.Text.Json;
 namespace PumpYaqobi.App.Update;
 
 /// <summary>نتیجهٔ بررسیِ به‌روزرسانی.</summary>
+/// <param name="IsSmallPackage">
+/// بستهٔ کوچک است (فقط فایل‌های خودِ برنامه، چند مگابایت) نه بستهٔ کامل.
+/// این را کاربر باید ببیند — همان چیزی که «هر بار از سر دانلود نکنم» یعنی.
+/// </param>
 public sealed record UpdateInfo(
     bool Available, string CurrentVersion, string LatestVersion,
-    string? DownloadUrl, long SizeBytes, string? Notes);
+    string? DownloadUrl, long SizeBytes, string? Notes, bool IsSmallPackage = false)
+{
+    /// <summary>«۲٫۱ مگابایت» — اندازهٔ خواندنی.</summary>
+    public string SizeText => SizeBytes <= 0
+        ? ""
+        : (SizeBytes / 1048576.0).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)
+          + " مگابایت";
+
+    /// <summary>«به‌روزرسانیِ کوچک — ۲٫۱ مگابایت» یا «بستهٔ کامل — ۵۷ مگابایت».</summary>
+    public string PackageText => !Available
+        ? ""
+        : (IsSmallPackage ? "به‌روزرسانیِ کوچک" : "بستهٔ کامل")
+          + (SizeText.Length > 0 ? " — " + SizeText : "");
+}
 
 /// <summary>
 /// ══ به‌روزرسانیِ خودکار ══════════════════════════════════════════════════════
@@ -89,11 +106,12 @@ public sealed class UpdateService
                     }
                 }
 
+            var small = url is not null;      // بستهٔ کوچکِ هم‌پایه پیدا شد
             if (url is null) { url = fullUrl; size = fullSize; }
 
             var notes = root.TryGetProperty("body", out var b) ? b.GetString() : null;
             var newer = Compare(latest, current) > 0;
-            return new UpdateInfo(newer && url is not null, current, latest, url, size, notes);
+            return new UpdateInfo(newer && url is not null, current, latest, url, size, notes, small);
         }
         catch (Exception)
         {
@@ -103,6 +121,63 @@ public sealed class UpdateService
     }
 
     private static UpdateInfo None(string current) => new(false, current, current, null, 0, null);
+
+    // ══ پوشهٔ نصب ═══════════════════════════════════════════════════════════
+    // کاربر خودش انتخاب می‌کند برنامه کجا نصب شود. اگر جایی را انتخاب کند که
+    // نوشتن در آن اجازهٔ مدیر می‌خواهد (‎Program Files‎)، به‌روزرسانی باید
+    // اجازه بگیرد — نه اینکه بی‌صدا هیچ نکند و کاربر خیال کند به‌روز شده.
+
+    /// <summary>پوشه‌ای که فایل‌های برنامه در آن نشسته‌اند.</summary>
+    public static string InstallDir =>
+        Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
+
+    /// <summary>آیا می‌شود بی اجازهٔ مدیر در پوشهٔ نصب نوشت؟</summary>
+    public static bool InstallDirWritable => IsWritable(InstallDir);
+
+    /// <summary>
+    /// آیا می‌شود بی اجازهٔ مدیر در این پوشه نوشت؟ با نوشتنِ واقعیِ یک فایلِ
+    /// کوچک سنجیده می‌شود، نه با نگاه به مسیر — چون اجازه‌ها را می‌شود دستی
+    /// عوض کرد و مسیر تنها چیزی را ثابت نمی‌کند.
+    /// </summary>
+    public static bool IsWritable(string dir)
+    {
+        try
+        {
+            var probe = Path.Combine(dir, ".pump-write-test-" + Guid.NewGuid().ToString("N")[..8]);
+            using (File.Create(probe, 1, FileOptions.DeleteOnClose)) { }
+            return true;
+        }
+        catch { return false; }
+    }
+
+    /// <summary>مسیرِ فایلی که نتیجهٔ آخرین جای‌گزینی در آن نوشته می‌شود.</summary>
+    private static string ResultFile =>
+        Path.Combine(Services.AppSettings.Dir, "updates", "apply-result.txt");
+
+    /// <summary>
+    /// اگر آخرین به‌روزرسانی شکست خورده باشد، پیامش را می‌دهد و نشانه را
+    /// پاک می‌کند. برنامه هنگامِ باز شدن این را می‌پرسد.
+    ///
+    /// ⚠️ پیش از این، جای‌گزینی در پوشهٔ بی‌اجازه بی‌صدا شکست می‌خورد و
+    /// برنامه با همان نسخهٔ کهنه باز می‌شد — بدترین حالت، چون کاربر خیال
+    /// می‌کرد به‌روز شده است.
+    /// </summary>
+    public static string? ConsumeLastFailure()
+    {
+        try
+        {
+            var f = ResultFile;
+            if (!File.Exists(f)) return null;
+            var code = File.ReadAllText(f).Trim();
+            File.Delete(f);
+            return code.Length == 0 || code == "0"
+                ? null
+                : "به‌روزرسانیِ گذشته کامل نشد — فایل‌ها جای‌گزین نشدند. "
+                  + "اگر برنامه در پوشه‌ای نصب است که اجازهٔ مدیر می‌خواهد، "
+                  + "یک‌بار برنامه را «به‌عنوان مدیر» باز کنید و دوباره بزنید.";
+        }
+        catch { return null; }
+    }
 
     /// <summary>«v2.9.430» یا «2.9.430» → «2.9.430».</summary>
     private static string NormalizeVersion(string tag)
@@ -202,6 +277,13 @@ public sealed class UpdateService
         catch { return false; }
     }
 
+    /// <summary>
+    /// جای‌گزینیِ فایل‌ها با بستهٔ زیپ.
+    ///
+    /// اگر پوشهٔ نصب اجازهٔ نوشتن ندهد (کاربر برنامه را در ‎Program Files‎
+    /// گذاشته)، همان دستور با اجازهٔ مدیر اجرا می‌شود. و نتیجه‌اش — چه موفق
+    /// چه نه — در فایلی نوشته می‌شود که برنامه هنگامِ باز شدنِ بعدی می‌خواند.
+    /// </summary>
     private static bool LaunchZip(string zipPath)
     {
         var exe = Environment.ProcessPath;
@@ -219,7 +301,13 @@ public sealed class UpdateService
 
         var pid = Environment.ProcessId;
         var script = Path.Combine(Path.GetDirectoryName(zipPath)!, "apply-update.cmd");
-        // ‎robocopy‎ کدِ خروجیِ ۰ تا ۷ را «موفق» می‌شمارد، پس با ‎exit /b 0‎ بسته می‌شود
+        var result = ResultFile;
+        Directory.CreateDirectory(Path.GetDirectoryName(result)!);
+        // نشانهٔ کهنه پاک شود تا نتیجهٔ همین بار خوانده شود، نه نتیجهٔ دفعهٔ پیش
+        try { if (File.Exists(result)) File.Delete(result); } catch { }
+
+        // ‎robocopy‎ کدِ خروجیِ ۰ تا ۷ را «موفق» می‌شمارد و ۸ به بالا یعنی
+        // شکست؛ پس همان عدد نوشته می‌شود و اسکریپت با ‎exit /b 0‎ بسته می‌شود.
         File.WriteAllText(script, $"""
             @echo off
             chcp 65001 >nul
@@ -230,19 +318,42 @@ public sealed class UpdateService
               goto wait
             )
             robocopy "{src}" "{appDir}" /E /IS /IT /R:3 /W:2 >nul
+            set RC=%ERRORLEVEL%
+            if %RC% GEQ 8 (>"{result}" echo %RC%) else (del "{result}" >nul 2>&1)
             start "" "{exe}"
             rmdir /s /q "{staging}" >nul 2>&1
             exit /b 0
             """, System.Text.Encoding.UTF8);
 
-        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+        var writable = IsWritable(appDir);
+        var psi = new System.Diagnostics.ProcessStartInfo
         {
             FileName = "cmd.exe",
             Arguments = "/c \"" + script + "\"",
-            UseShellExecute = false,
-            CreateNoWindow = true,
             WorkingDirectory = appDir,
-        });
+        };
+
+        if (writable)
+        {
+            psi.UseShellExecute = false;
+            psi.CreateNoWindow = true;
+        }
+        else
+        {
+            // پوشهٔ نصب اجازهٔ مدیر می‌خواهد — بی این، ‎robocopy‎ بی‌صدا
+            // شکست می‌خورد و برنامه با نسخهٔ کهنه باز می‌شود.
+            psi.UseShellExecute = true;
+            psi.Verb = "runas";
+            psi.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+        }
+
+        try { System.Diagnostics.Process.Start(psi); }
+        catch
+        {
+            // کاربر پنجرهٔ اجازهٔ مدیر را رد کرد
+            try { File.WriteAllText(result, "8"); } catch { }
+            return false;
+        }
         return true;
     }
 }

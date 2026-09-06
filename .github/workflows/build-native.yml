@@ -37,13 +37,19 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      # شمارهٔ نسخه از شمارهٔ همین ساخت می‌آید، پس همیشه از قبلی بزرگ‌تر است و
-      # به‌روزرسانیِ داخلِ برنامه (که نسخه‌ها را عددی مقایسه می‌کند) می‌فهمد
-      # نسخهٔ تازه‌ای آمده.
+      # شمارهٔ نسخه از ‎native/VERSION‎ و شمارهٔ همین ساخت می‌آید، پس همیشه از
+      # قبلی بزرگ‌تر است و به‌روزرسانیِ داخلِ برنامه (که نسخه‌ها را عددی
+      # مقایسه می‌کند) می‌فهمد نسخهٔ تازه‌ای آمده. توضیحِ عددها در همان فایل.
       - name: شمارهٔ نسخه
         id: ver
         shell: bash
-        run: echo "version=1.0.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+        run: |
+          set -euo pipefail
+          source native/VERSION
+          patch=$(( GITHUB_RUN_NUMBER - RUN_OFFSET ))
+          if [ "$patch" -lt 1 ]; then patch=1; fi
+          echo "version=${MAJOR_MINOR}.${patch}" >> "$GITHUB_OUTPUT"
+          echo "نسخهٔ این ساخت: ${MAJOR_MINOR}.${patch}"
 
       - name: آزمون‌ها
         working-directory: native

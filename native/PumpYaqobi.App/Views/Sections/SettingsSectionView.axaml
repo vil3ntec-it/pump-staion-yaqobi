@@ -98,8 +98,26 @@
             </Border>
             <StackPanel Margin="14" Spacing="10">
               <TextBlock Text="{Binding CurrentVersion, StringFormat=نسخهٔ فعلی: {0}}" />
+
+              <!-- کجا نصب است و آیا خودش می‌تواند خودش را عوض کند -->
+              <TextBlock Text="{Binding InstallDir, StringFormat=پوشهٔ نصب: {0}}" Classes="muted"
+                         TextWrapping="Wrap" />
+              <TextBlock Text="{Binding InstallNote}" Classes="muted" TextWrapping="Wrap"
+                         IsVisible="{Binding InstallNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                         Foreground="{DynamicResource Pump.Warn}" />
+
               <TextBlock Text="{Binding UpdateStatus}" Classes="muted"
                          IsVisible="{Binding UpdateStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+              <!-- «به‌روزرسانیِ کوچک — ۲٫۱ مگابایت» یا «بستهٔ کامل — ۵۷ مگابایت» -->
+              <TextBlock Text="{Binding PackageText}" FontWeight="Bold"
+                         Foreground="{DynamicResource Pump.Ok}"
+                         IsVisible="{Binding PackageText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+              <TextBlock Text="{Binding LastFailure}" TextWrapping="Wrap"
+                         Foreground="{DynamicResource Pump.Danger}"
+                         IsVisible="{Binding LastFailure, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
               <ProgressBar Value="{Binding DownloadPercent}" Maximum="100" Height="7"
                            IsVisible="{Binding Downloading}" />
               <StackPanel Orientation="Horizontal" Spacing="8">
