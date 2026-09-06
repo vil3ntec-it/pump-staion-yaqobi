@@ -333,6 +333,43 @@ public sealed partial class WaraqPageViewModel : ObservableObject
 /// ══ بخشِ ورق‌های روزانه ═════════════════════════════════════════════════════
 /// فهرستِ ورق‌ها و صفحهٔ هر ورق. یک ورق برای هر روز — ورقِ تکراری ساخته نمی‌شود.
 /// </summary>
+/// <summary>
+/// کارتِ یک ورق در فهرست — مو‌به‌مو همان کارتی که <c>renderWaraqList</c>
+/// می‌سازد: «☀️🌙 تاریخ»، نامِ جایگاه و کارمندان، مبلغِ فروشِ هر دو شیفت،
+/// و خطِ «قرض / مصرف».
+/// </summary>
+public sealed class WaraqCardViewModel
+{
+    public WaraqCardViewModel(WaraqEntry w, WaraqService calc)
+    {
+        Entity = w;
+        Title = "☀️🌙 " + (string.IsNullOrWhiteSpace(w.DateShamsi) ? "—" : w.DateShamsi);
+
+        var day = w.Shifts.FirstOrDefault(s => s.Kind == ShiftKind.Day);
+        var night = w.Shifts.FirstOrDefault(s => s.Kind == ShiftKind.Night);
+        var d = day is null ? default : calc.ShiftTotals(day);
+        var n = night is null ? default : calc.ShiftTotals(night);
+
+        var workers = new[] { day?.WorkerName, night?.WorkerName }
+            .Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
+        SubText = (w.Station ?? "") + (workers.Length > 0 ? " — " + string.Join(" / ", workers) : "");
+
+        SalesText = Money(d.Sales + n.Sales) + " افغانی";
+        DebtText = "قرض: " + Money(d.Debt + n.Debt);
+        ExpenseText = "مصرف: " + Money(d.Expenses + n.Expenses);
+    }
+
+    private static string Money(decimal v) =>
+        Shamsi.Money(Math.Round(v, 0, MidpointRounding.AwayFromZero));
+
+    public WaraqEntry Entity { get; }
+    public string Title { get; }
+    public string SubText { get; }
+    public string SalesText { get; }
+    public string DebtText { get; }
+    public string ExpenseText { get; }
+}
+
 public sealed partial class WaraqSectionViewModel : SectionViewModel
 {
     private readonly AppHost _host;
@@ -344,6 +381,9 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
     }
 
     public ObservableCollection<WaraqEntry> Sheets { get; } = new();
+    /// <summary>کارت‌های همان ورق‌ها، با جمعِ هر دو شیفت.</summary>
+    public ObservableCollection<WaraqCardViewModel> Cards { get; } = new();
+    public bool IsEmpty => Cards.Count == 0;
     public ObservableCollection<string> Months { get; } = new();
 
     [ObservableProperty] private string _month;
@@ -365,8 +405,20 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
     public async Task ReloadAsync()
     {
         Sheets.Clear();
-        foreach (var w in await _host.WaraqData.ListAsync(Month)) Sheets.Add(w);
+        Cards.Clear();
+        foreach (var w in await _host.WaraqData.ListAsync(Month))
+        {
+            Sheets.Add(w);
+            Cards.Add(new WaraqCardViewModel(w, _host.Waraq));
+        }
+        OnPropertyChanged(nameof(IsEmpty));
     }
+
+    [RelayCommand]
+    private Task OpenCardAsync(WaraqCardViewModel? c) => OpenAsync(c?.Entity);
+
+    [RelayCommand]
+    private Task DeleteCardAsync(WaraqCardViewModel? c) => DeleteSheetAsync(c?.Entity);
 
     [RelayCommand]
     private async Task OpenAsync(WaraqEntry? w)

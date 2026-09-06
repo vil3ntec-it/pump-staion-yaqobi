@@ -13,7 +13,11 @@
                    SubHeader="یک ورق برای هر روز — ورقِ تکراریِ همان تاریخ ساخته نمی‌شود">
 
       <c:SectionPage.Toolbar>
-        <Button Classes="accent" Content="ورقِ امروز" Command="{Binding NewSheetCommand}" />
+        <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+          <Button Classes="ghost" Content="🕘 تاریخچهٔ پایه‌ها" Margin="0,0,6,0"
+                  Foreground="{DynamicResource Pump.Ok}" BorderBrush="{DynamicResource Pump.Ok}" />
+          <Button Classes="accent" Content="➕ اضافه کردن" Command="{Binding NewSheetCommand}" />
+        </WrapPanel>
       </c:SectionPage.Toolbar>
 
       <c:SectionPage.Filters>
@@ -24,29 +28,50 @@
       </c:SectionPage.Filters>
 
       <ScrollViewer>
-        <ItemsControl ItemsSource="{Binding Sheets}">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="d:WaraqEntry">
-              <Border Classes="card" Width="238" Margin="0,0,12,12">
-                <StackPanel Spacing="8">
-                  <TextBlock Text="{Binding DateShamsi}" Classes="h2" />
-                  <TextBlock Text="{Binding Station}" Classes="muted" />
-                  <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
-                    <Button Classes="accent" Content="باز کردن" Padding="10,4" FontSize="12"
-                            Command="{Binding $parent[ItemsControl].((vm:WaraqSectionViewModel)DataContext).OpenCommand}"
-                            CommandParameter="{Binding}" />
-                    <Button Classes="ghost danger" Content="حذف" Padding="10,4" FontSize="12"
-                            Command="{Binding $parent[ItemsControl].((vm:WaraqSectionViewModel)DataContext).DeleteSheetCommand}"
-                            CommandParameter="{Binding}" />
-                  </StackPanel>
-                </StackPanel>
-              </Border>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
+        <Panel>
+          <TextBlock Text="هیچ ورقی ثبت نشده — از دکمهٔ بالا ورق جدید اضافه کنید"
+                     Classes="muted" HorizontalAlignment="Center" Margin="0,40,0,0"
+                     IsVisible="{Binding IsEmpty}" />
+          <ItemsControl ItemsSource="{Binding Cards}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:WaraqCardViewModel">
+                <Button Classes="card-shell" Width="252" Margin="0,0,12,12"
+                        Command="{Binding $parent[ItemsControl].((vm:WaraqSectionViewModel)DataContext).OpenCardCommand}"
+                        CommandParameter="{Binding}">
+                  <Border Classes="person-card">
+                    <Grid RowDefinitions="Auto,Auto,Auto,*">
+                      <Button Grid.Row="0" Classes="card-x" Content="✕" HorizontalAlignment="Left"
+                              Command="{Binding $parent[ItemsControl].((vm:WaraqSectionViewModel)DataContext).DeleteCardCommand}"
+                              CommandParameter="{Binding}" />
+
+                      <TextBlock Grid.Row="1" Text="{Binding Title}" FontWeight="Bold" FontSize="14"
+                                 TextAlignment="Center" Margin="0,6,0,0" />
+                      <TextBlock Grid.Row="2" Text="{Binding SubText}" Classes="muted" FontSize="11.5"
+                                 TextAlignment="Center" TextWrapping="Wrap" Margin="0,4,0,0" />
+
+                      <StackPanel Grid.Row="3" VerticalAlignment="Bottom" Spacing="7" Margin="0,10,0,0">
+                        <TextBlock Text="{Binding SalesText}" Classes="cmp-fig"
+                                   Foreground="{DynamicResource Pump.Danger}" />
+                        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                          <TextBlock Text="{Binding DebtText}" FontWeight="Bold" FontSize="12"
+                                     Foreground="{DynamicResource Pump.Danger}" />
+                          <TextBlock Text="{Binding ExpenseText}" FontWeight="Bold" FontSize="12"
+                                     Foreground="{DynamicResource Pump.Accent}" />
+                        </StackPanel>
+                        <Button Classes="qr" Content="📄 PDF" HorizontalAlignment="Stretch"
+                                Foreground="{DynamicResource Pump.Ok}"
+                                BorderBrush="{DynamicResource Pump.Ok}" />
+                      </StackPanel>
+                    </Grid>
+                  </Border>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Panel>
       </ScrollViewer>
     </c:SectionPage>
 
