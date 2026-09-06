@@ -6,8 +6,13 @@ namespace PumpYaqobi.Application.Services;
 public readonly record struct PurchaseNumbers(
     decimal Ton, decimal Liters, decimal TotalUsd, decimal TotalAfn, decimal PerLiter);
 
+/// <param name="DipAdjust">جمعِ اصلاح‌های میله‌زنی — مثبت یعنی مخزن بیشتر داشت.</param>
+/// <param name="HasPurchases">برای این سوخت اصلاً خریدی ثبت شده؟</param>
+/// <param name="IsNear">هنوز کم نیامده ولی تا ۲۰٪ بالای حد هشدار مانده.</param>
 public readonly record struct TankState(
-    decimal In, decimal Out, decimal Current, decimal Display, bool IsLow, decimal TotalUsd, decimal TotalAfn);
+    decimal In, decimal Out, decimal Current, decimal Display, bool IsLow,
+    decimal TotalUsd, decimal TotalAfn, decimal DipAdjust = 0m,
+    bool HasPurchases = false, bool IsNear = false);
 
 /// <summary>
 /// ══ مخزن ══════════════════════════════════════════════════════════════════
@@ -46,8 +51,12 @@ public sealed class StorageService
     /// <summary>
     /// حالِ مخزن. «فروش» جمعِ ‎sale‎ِ هر دو شیفتِ همهٔ پارچه‌های همان سوخت است.
     /// </summary>
+    /// <param name="dips">
+    /// میله‌زنی‌ها. تنها چیزی که از آن‌ها به موجودی می‌رسد
+    /// <see cref="TankDip.BookAdjust"/> است — همان ‎dipAdj‎ در ‎_fuelStock‎.
+    /// </param>
     public TankState Tank(IEnumerable<FuelPurchase> purchases, IEnumerable<ParchaReport> reports,
-                          decimal lowThreshold)
+                          decimal lowThreshold, IEnumerable<TankDip>? dips = null)
     {
         decimal inL = 0, usd = 0, afn = 0;
         var any = false;
@@ -66,9 +75,23 @@ public sealed class StorageService
             outL += r.NightShift?.Sale ?? 0m;
         }
 
-        var current = inL - outL;
+        // ── اصلاحِ میله‌زنی ────────────────────────────────────────────────
+        // ‎_fuelStock‎ در نسخهٔ وب سه جزء دارد، نه دو:
+        //     موجودی = ورودی − فروش + اصلاحِ میله‌زنی
+        // بی جزءِ سوم، «برابر کردنِ دفتر با عددِ واقعی» هیچ اثری نداشت و
+        // مخزن و داشبورد و هشدارِ کمبود همان عددِ کهنه را نشان می‌دادند.
+        decimal adj = 0;
+        if (dips is not null)
+            foreach (var d in dips)
+                if (d is not null) adj += d.BookAdjust;
+
+        var current = inL - outL + adj;
+
+        // ‎checkLowStock‎ فقط برای سوختی هشدار می‌دهد که خریدی برایش ثبت شده
         var low = (any || outL > 0m) && current <= lowThreshold;
-        return new TankState(inL, outL, current, Math.Max(0m, current), low, usd, afn);
+        var near = any && !low && current <= lowThreshold * 1.2m;
+        return new TankState(inL, outL, current, Math.Max(0m, current), low, usd, afn,
+                             adj, any, near);
     }
 
     /// <summary>

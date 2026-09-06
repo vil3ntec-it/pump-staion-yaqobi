@@ -65,21 +65,73 @@ public sealed class StorageDataService
         _settings.Set(p.Fuel == FuelType.Diesel
             ? SettingsService.BuyPerLiterDiesel : SettingsService.BuyPerLiterPetrol, p.PerLiter);
 
-        var seller = (p.Seller ?? "").Trim();
-        if (seller.Length > 0)
-        {
-            var company = await _companies.EnsureByNameAsync(seller, ct);
-            await _companies.PutReceiptAsync(company.Id, p.Fuel, new CompanyRow
-            {
-                Name = seller,
-                DateShamsi = p.DateShamsi,
-                Ton = p.Ton,
-                Usd = p.PriceTon,
-                Rate = p.UsdRate,
-                SourcePurchaseId = p.LegacyId,
-            }, ct);
-        }
+        await LinkToCompanyAsync(p, ct);
         return p;
+    }
+
+    /// <summary>
+    /// ‎syncPurchaseToCompany(entry)‎ — یک خرید را در حسابِ شرکتِ هم‌نامِ
+    /// فروشنده می‌نشاند. شرکت اگر نباشد ساخته می‌شود، و اگر باشد همان به کار
+    /// می‌رود (تطبیقِ چهارپله‌ای) تا شرکتِ تکراری ساخته نشود.
+    /// </summary>
+    private async Task<bool> LinkToCompanyAsync(FuelPurchase p, CancellationToken ct)
+    {
+        var seller = (p.Seller ?? "").Trim();
+        if (seller.Length == 0) return false;
+
+        var company = await _companies.EnsureByNameAsync(seller, ct);
+        await _companies.PutReceiptAsync(company.Id, p.Fuel, new CompanyRow
+        {
+            Name = seller,
+            DateShamsi = p.DateShamsi,
+            Ton = p.Ton,
+            Usd = p.PriceTon,
+            Rate = p.UsdRate,
+            SourcePurchaseId = p.LegacyId,
+        }, ct);
+        return true;
+    }
+
+    /// <summary>
+    /// ══ ‎syncAllPurchasesToCompanies()‎ ═════════════════════════════════════
+    /// هر خریدی که هنوز در حسابِ هیچ شرکتی نیست (خریدهای کهنه یا جامانده)
+    /// خودکار به حسابِ شرکتِ هم‌نامِ فروشنده اضافه می‌شود.
+    ///
+    /// دو چیز از قلم نمی‌افتد:
+    ///   • خریدی که از پیش وصل است دوباره وصل نمی‌شود (‎SourcePurchaseId‎).
+    ///   • خریدی که کاربر خودش ردیفش را از حساب پاک کرده، برنمی‌گردد
+    ///     (فهرستِ «دستی جدا شده»). بی این، کاربر هرگز نمی‌توانست ردیفی را
+    ///     برای همیشه بردارد.
+    /// </summary>
+    public async Task<int> SyncAllPurchasesToCompaniesAsync(CancellationToken ct = default)
+    {
+        _perm.Require(Permission.EditData);
+
+        List<FuelPurchase> entries;
+        HashSet<string> linked;
+        await using (var db = _dbf.Create())
+        {
+            entries = await db.FuelPurchases.AsNoTracking().OrderBy(e => e.Id).ToListAsync(ct);
+            if (entries.Count == 0) return 0;
+            linked = (await db.CompanyRows.AsNoTracking()
+                              .Where(r => r.SourcePurchaseId != null)
+                              .Select(r => r.SourcePurchaseId!).ToListAsync(ct))
+                     .ToHashSet(StringComparer.Ordinal);
+        }
+
+        var unlinked = await _companies.UnlinkedPurchasesAsync(ct);
+
+        var added = 0;
+        foreach (var e in entries)
+        {
+            var key = e.LegacyId ?? "";
+            if (key.Length == 0) continue;
+            if (linked.Contains(key)) continue;
+            if (unlinked.Contains(key)) continue;      // کاربر خودش برداشته
+            if (string.IsNullOrWhiteSpace(e.Seller)) continue;
+            if (await LinkToCompanyAsync(e, ct)) added++;
+        }
+        return added;
     }
 
     public async Task UpdatePurchaseAsync(FuelPurchase p, CancellationToken ct = default)

@@ -260,8 +260,12 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
 
         var pPur = await _host.StorageData.PurchasesAsync(FuelType.Petrol);
         var dPur = await _host.StorageData.PurchasesAsync(FuelType.Diesel);
-        _petrolStock = _host.Storage.Tank(pPur, petrolReports, _threshold).Current;
-        _dieselStock = _host.Storage.Tank(dPur, dieselReports, _threshold).Current;
+        // اصلاحِ میله‌زنی این‌جا هم شمرده می‌شود، وگرنه داشبورد و صفحهٔ مخزن
+        // دو عددِ مختلف نشان می‌دادند
+        var pDip = await _host.StorageData.DipsAsync(FuelType.Petrol);
+        var dDip = await _host.StorageData.DipsAsync(FuelType.Diesel);
+        _petrolStock = _host.Storage.Tank(pPur, petrolReports, _threshold, pDip).Current;
+        _dieselStock = _host.Storage.Tank(dPur, dieselReports, _threshold, dDip).Current;
         _petrolCap = _host.Settings.GetDecimal("tankCapacity_petrol", 0m);
         _dieselCap = _host.Settings.GetDecimal("tankCapacity_diesel", 0m);
 

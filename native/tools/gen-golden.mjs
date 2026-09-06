@@ -563,9 +563,14 @@ const shiftGolden = await page.evaluate(() => {
 
     const w = (DB.waraqEntries || []).find((x) => x.date === date);
     const sd = w ? w[type] : null;
+    // ⚠️ خودِ srcKey ذخیره نمی‌شود: وسطش Date.now() است، پس هر بار که این
+    // ابزار اجرا شود عوض می‌شود و فایلِ طلایی بی‌جهت تغییر می‌کند. آنچه
+    // اهمیت دارد شکلش است («d-…-night») و اینکه برای هر پارچه جدا باشد —
+    // و جدا بودنشان را آزمون از روی خودِ دیتابیس می‌سنجد.
+    const shape = (k) => (k || '').replace(/^([dp])-\d+-(day|night)$/, '$1-<id>-$2');
     const pumps = sd ? sd.pumps.map((e) => ({
       num: e.num, fuel: e.fuel, worker: e.worker, start: e.start, end: e.end,
-      pricePerLiter: e.pricePerLiter, debt: e.debt, srcKey: e.srcKey,
+      pricePerLiter: e.pricePerLiter, debt: e.debt, srcKeyShape: shape(e.srcKey),
     })) : [];
 
     saved.push({
@@ -592,6 +597,96 @@ const shiftGolden = await page.evaluate(() => {
 fs.writeFileSync(path.join(OUT, 'golden-shift.json'), JSON.stringify(shiftGolden));
 console.log('  ✔ golden-shift.json — ' + shiftGolden.calc.length + ' calcShift و '
             + shiftGolden.saved.length + ' saveShift');
+
+// ── خرید مخزن ← شرکت ─────────────────────────────────────────────────────
+// دو چیز سنجیده می‌شود، هر دو با خودِ توابعِ نسخهٔ وب:
+//   ۱. _findCompanyByName — چهار پلهٔ تطبیقِ نام. یک اشتباه این‌جا یعنی
+//      خریدِ یک شرکت در حسابِ شرکتِ دیگری می‌نشیند، یا شرکتِ تکراری ساخته
+//      می‌شود (هر دو را صاحب ریپو صریحاً ممنوع کرده).
+//   ۲. syncPurchaseToCompany — ردیفی که در حساب می‌نشیند، و این‌که در
+//      نخستین ردیفِ خالی می‌نشیند نه با بازنویسیِ ردیفِ پُر.
+const purchaseCompany = await page.evaluate(() => {
+  let seed = 88231;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+
+  const names = [
+    'ح قادر', 'ح قادر و شیر آقا', 'شرکت نفت هرات', 'نفت هرات',
+    'محمد يوسف', 'محمد یوسف زاده', 'كابل تيل', 'کابل تیل',
+    'برادران احمدی', 'احمدی', 'الفت', 'شرکت الفت جنوب',
+  ];
+
+  // ── ۱) تطبیقِ نام ────────────────────────────────────────────────────
+  const keepCompanies = DB.tilCompanies;
+  DB.tilCompanies = names.map((n, i) => ({ id: 'c' + i, name: n, rows: [], dieselRows: [] }));
+  const queries = names.concat([
+    'ح', 'قادر', 'ح قادر و', 'شرکت نفت', 'هرات', 'محمد یوسف',
+    'كابل', 'تیل کابل', 'برادران', 'الفت جنوب', 'هیچ‌کس', '', 'ا',
+    'شرکت   نفت   هرات', 'مـحمد یوسف',
+  ]);
+  const match = queries.map((q) => {
+    const c = _findCompanyByName(q);
+    return { q, name: c ? c.name : null };
+  });
+  DB.tilCompanies = keepCompanies;
+
+  // ── ۲) نشستنِ خرید در حساب ───────────────────────────────────────────
+  const sync = [];
+  for (let c = 0; c < 60; c++) {
+    const seller = names[Math.floor(rnd() * names.length)];
+    const fuel = rnd() < 0.5 ? 'diesel' : 'petrol';
+    const kg = Math.round(rnd() * 40000);
+    const density = Math.round((0.7 + rnd() * 0.15) * 1000) / 1000;
+    const priceTon = Math.round(rnd() * 900);
+    const usdRate = Math.round(rnd() * 90);
+    const date = '1405/06/' + String(1 + Math.floor(rnd() * 28)).padStart(2, '0');
+
+    // حسابِ شرکت گاهی از پیش چند ردیف دارد — بعضی خالی، بعضی پُر، و
+    // ⚠️ ترتیبشان مهم است: خرید در نخستین ردیفِ **خالی** می‌نشیند، پس
+    // همان ترتیب هم ذخیره می‌شود تا آزمون بتواند مو‌به‌مو بازش بسازد.
+    const preRows = [];
+    const preBlanks = [];
+    const pre = Math.floor(rnd() * 3);
+    for (let i = 0; i < pre; i++) {
+      const blank = rnd() < 0.5;
+      preBlanks.push(blank);
+      preRows.push(blank
+        ? { name: '', date: '', ton: 0, usd: 0, rate: 0, poul: 0 }
+        : { name: 'قبلی' + i, date: '1405/06/01', ton: 10 + i, usd: 500, rate: 70, poul: 0 });
+    }
+
+    DB.tilCompanies = [{ id: 'cx', name: seller, rows: fuel === 'petrol' ? preRows.slice() : [],
+                         dieselRows: fuel === 'diesel' ? preRows.slice() : [] }];
+
+    const ton = kg / 1000;
+    const liters = kg / density;
+    const totalUSD = ton * priceTon;
+    const totalAFN = totalUSD * usdRate;
+    const perLiter = liters > 0 ? totalAFN / liters : 0;
+    const entry = { id: 'p' + c, fuelType: fuel, date, seller, kg, density, priceTon,
+                    usdRate, ton, liters, totalUSD, totalAFN, perLiter, note: '' };
+
+    const ok = syncPurchaseToCompany(entry);
+    const rows = fuel === 'diesel' ? DB.tilCompanies[0].dieselRows : DB.tilCompanies[0].rows;
+    const idx = rows.findIndex((r) => r.srcPurchaseId === entry.id);
+
+    sync.push({
+      seller, fuel, date, kg, density, priceTon, usdRate,
+      ton, liters, totalUSD, totalAFN, perLiter,
+      preBlanks,
+      ok, landedAt: idx, rowCount: rows.length,
+      row: idx >= 0 ? { name: rows[idx].name, date: rows[idx].date, ton: rows[idx].ton,
+                        usd: rows[idx].usd, rate: rows[idx].rate, poul: rows[idx].poul } : null,
+      // ردیف‌های پُرِ پیشین باید دست‌نخورده مانده باشند
+      survivors: rows.filter((r) => (r.name || '').startsWith('قبلی')).map((r) => r.name),
+    });
+    DB.tilCompanies = keepCompanies;
+  }
+
+  return { match, sync };
+});
+fs.writeFileSync(path.join(OUT, 'golden-purchase-company.json'), JSON.stringify(purchaseCompany));
+console.log('  ✔ golden-purchase-company.json — ' + purchaseCompany.match.length
+            + ' تطبیقِ نام و ' + purchaseCompany.sync.length + ' خرید');
 
 console.log('\n  خطای جاوااسکریپت:', errs.length ? errs.slice(0, 3) : 'ندارد');
 await browser.close();

@@ -42,7 +42,7 @@ public class ShiftParityTests : IDisposable
 
     private sealed record Pump(
         int num, string fuel, string worker, double start, double end,
-        double pricePerLiter, double debt, string srcKey);
+        double pricePerLiter, double debt, string srcKeyShape);
 
     private sealed record SaveCase(
         string fuel, string type, string date, bool forceNew, int pumpNum,
@@ -177,6 +177,16 @@ public class ShiftParityTests : IDisposable
             Assert.Equal(c.rec.name, s.Name);
             Assert.Equal(c.pumpNum, s.PumpNum);
             Assert.Equal(c.date, s.SavedAt);
+
+            // ‎srcKey‎ همان صورتی را دارد که ورق با آن ردیفِ پارچه را
+            // می‌شناسد: «p-<گزارش>-day» و «d-<پارچه>-night». شکلش را از خودِ
+            // نسخهٔ وب گرفته‌ایم؛ شمارهٔ داخلش هر بار فرق می‌کند و مهم نیست.
+            var shape = System.Text.RegularExpressions.Regex.Replace(
+                res.SrcKey ?? "", @"^([dp])-\d+-(day|night)$", "$1-<id>-$2");
+            Assert.Equal((fuel == FuelType.Diesel ? "d" : "p") + "-<id>-" + c.type, shape);
+            Assert.All(c.pumps, p => Assert.Equal(
+                (p.fuel == "diesel" ? "d" : "p") + "-<id>-" + (p.srcKeyShape.EndsWith("night") ? "night" : "day"),
+                p.srcKeyShape));
 
             // شمارِ پارچه‌ها هم باید مو‌به‌مو یکی باشد — این همان چیزی است که
             // «پارچهٔ تازه کِی ساخته می‌شود» را می‌سنجد، نه فقط عددهای داخلش.
