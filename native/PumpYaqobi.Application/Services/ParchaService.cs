@@ -27,8 +27,15 @@ public readonly record struct ShiftCalc(
     public string ProfitText => Profit > 0m ? Shamsi.Money(Profit) : "—";
     public string AvailableText => Money > 0m ? Shamsi.Money(Available) : "—";
 
-    /// <summary>‎availEl.style.color = available >= 0 ? green : red‎</summary>
-    public bool AvailableIsNegative => Money > 0m && Available < 0m;
+    /// <summary>
+    /// ‎availEl.style.color = available >= 0 ? var(--green) : var(--red)‎
+    ///
+    /// ⚠️ رنگ **بی‌قید** نشانده می‌شود، حتی وقتی نوشتهٔ خانه «—» است (یعنی
+    /// ‎money‎ مثبت نیست). یک‌بار این‌جا شرطِ ‎Money > 0‎ گذاشته بودم که در
+    /// نسخهٔ وب نیست؛ همان ۱۴۶ حالتِ گرفته‌شده از خودِ صفحه نشان داد که رنگِ
+    /// سرخ در آن حالت‌ها هم نشسته است.
+    /// </summary>
+    public bool AvailableIsNegative => Available < 0m;
 
     /// <summary>دو حالتِ ‎p-buy-per-lbl‎ در نسخهٔ وب.</summary>
     public string BuyPerLabel =>
