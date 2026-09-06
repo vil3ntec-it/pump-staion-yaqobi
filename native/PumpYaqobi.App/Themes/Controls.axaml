@@ -388,6 +388,13 @@
     <Setter Property="Background" Value="Transparent" />
   </Style>
 
+  <!-- خانهٔ کارتِ خرید — برچسب بالا، مقدار پایین -->
+  <Style Selector="StackPanel.cell">
+    <Setter Property="Width" Value="126" />
+    <Setter Property="Spacing" Value="4" />
+    <Setter Property="Margin" Value="0,0,12,10" />
+  </Style>
+
   <Style Selector="ScrollBar">
     <Setter Property="Background" Value="Transparent" />
   </Style>
