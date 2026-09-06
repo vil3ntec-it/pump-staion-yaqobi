@@ -223,6 +223,23 @@ internal static class Seed
             if (i % 2 == 0) host.Invoices.ApproveAsync(v.Id, 62m).GetAwaiter().GetResult();
         }
 
+        // کارمندان و حاضری
+        for (var i = 1; i <= 4; i++)
+        {
+            var st = host.Attendance.AddStaffAsync("کارمندِ " + i, 12000 + i * 500)
+                         .GetAwaiter().GetResult();
+            for (var d = 1; d <= 6; d++)
+            {
+                host.Attendance.SaveRowAsync(new AttendanceRow
+                {
+                    StaffId = st.Id,
+                    DateShamsi = $"{month}/{d:00}",
+                    In = i % 2 == 0 ? "19:00" : "07:00",
+                    Out = i % 2 == 0 ? "07:00" : "19:00",
+                }).GetAwaiter().GetResult();
+            }
+        }
+
         _ = today;
     }
 }

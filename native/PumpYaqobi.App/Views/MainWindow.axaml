@@ -89,5 +89,14 @@
     <Panel IsVisible="{Binding IsLocked}">
       <v:LockView DataContext="{Binding Lock}" />
     </Panel>
+
+    <!-- ══ توست — پیامِ کوتاهِ پایینِ صفحه ══ -->
+    <Border DataContext="{Binding Toasts}" IsVisible="{Binding Visible}"
+            HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,26"
+            CornerRadius="10" Padding="18,10" MinWidth="220"
+            Background="{DynamicResource Pump.Panel}"
+            BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="1">
+      <TextBlock Text="{Binding Text}" HorizontalAlignment="Center" FontWeight="SemiBold" />
+    </Border>
   </Panel>
 </Window>

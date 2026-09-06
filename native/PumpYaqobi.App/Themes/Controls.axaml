@@ -2,7 +2,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:c="using:PumpYaqobi.App.Controls">
   <Styles.Resources>
-    <FontFamily x:Key="Pump.Font">avares://PumpYaqobi/Assets/Vazirmatn.ttf#Vazirmatn</FontFamily>
+    <!-- فونتِ برنامه + پشتیبانِ ایموجیِ سیستم. Vazirmatn ایموجی ندارد؛ روی
+         ویندوز «Segoe UI Emoji» و روی لینوکس «Noto Color Emoji» جایش را پر
+         می‌کنند، وگرنه نشانه‌ها (⛽ 🟤 💵) خالی دیده می‌شوند. -->
+    <FontFamily x:Key="Pump.Font">avares://PumpYaqobi/Assets/Vazirmatn.ttf#Vazirmatn, Segoe UI Emoji, Noto Color Emoji, Apple Color Emoji</FontFamily>
   </Styles.Resources>
   <!-- ══ سبکِ مشترکِ برنامه ═══════════════════════════════════════════════
        همه‌چیز از {DynamicResource Pump.*} رنگ می‌گیرد، پس تعویضِ تم آنی است.
@@ -254,6 +257,135 @@
   </Style>
   <Style Selector="ListBox.chips ListBoxItem:pointerover /template/ ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource Pump.Hover}" />
+  </Style>
+
+  <!-- ══ کارتِ شیفتِ پارچه — همان چیدمانِ نسخهٔ وب ══ -->
+  <Style Selector="Border.shift-card">
+    <Setter Property="Background" Value="{DynamicResource Pump.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.shift-header">
+    <Setter Property="Padding" Value="12,10" />
+    <Setter Property="CornerRadius" Value="13,13,0,0" />
+  </Style>
+  <!-- روز: نارنجی · شب: بنفش — همان دو رنگِ نسخهٔ وب -->
+  <Style Selector="Border.shift-header.day">
+    <Setter Property="Background" Value="#f0952b" />
+  </Style>
+  <Style Selector="Border.shift-header.day TextBlock">
+    <Setter Property="Foreground" Value="#1a1102" />
+  </Style>
+  <Style Selector="Border.shift-header.night">
+    <Setter Property="Background" Value="#7c4dbe" />
+  </Style>
+  <Style Selector="Border.shift-header.night TextBlock">
+    <Setter Property="Foreground" Value="#ffffff" />
+  </Style>
+
+  <Style Selector="TextBlock.fld">
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+
+  <!-- خانهٔ «خودکار» — خوانده می‌شود، تایپ نمی‌شود -->
+  <Style Selector="Border.calc">
+    <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="9,7" />
+  </Style>
+
+  <Style Selector="Border.saved-badge">
+    <Setter Property="Background" Value="#2038a169" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Ok}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="8,6" />
+  </Style>
+  <Style Selector="Border.saved-badge TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Ok}" />
+    <Setter Property="FontSize" Value="12.5" />
+  </Style>
+
+  <Style Selector="Button.save-btn">
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Padding" Value="12,9" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Button.save-btn.day /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#f0952b" />
+    <Setter Property="TextBlock.Foreground" Value="#1a1102" />
+  </Style>
+  <Style Selector="Button.save-btn.night /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#7c4dbe" />
+    <Setter Property="TextBlock.Foreground" Value="#ffffff" />
+  </Style>
+
+  <!-- سربرگِ داخلِ کارت -->
+  <Style Selector="Border.card-head">
+    <Setter Property="Background" Value="{DynamicResource Pump.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="CornerRadius" Value="12,12,0,0" />
+    <Setter Property="Padding" Value="14,10" />
+  </Style>
+
+  <Style Selector="Border.chip">
+    <Setter Property="Background" Value="{DynamicResource Pump.Dark}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="Padding" Value="10,4" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- ══ کارتِ قرض‌دار — رنگِ کارت از حالِ حساب می‌آید ══ -->
+  <Style Selector="Border.person-card">
+    <Setter Property="Background" Value="{DynamicResource Pump.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
+    <Setter Property="BorderThickness" Value="1.5" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="Padding" Value="12,10,12,12" />
+  </Style>
+  <Style Selector="Border.person-card.out">
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Danger}" />
+  </Style>
+  <Style Selector="Border.person-card.low">
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Warn}" />
+  </Style>
+  <Style Selector="Border.person-card.ok">
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Ok}" />
+  </Style>
+
+  <!-- دکمهٔ ✕ گوشهٔ کارت -->
+  <Style Selector="Button.card-x">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Danger}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="Padding" Value="9,3" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Danger}" />
+  </Style>
+  <Style Selector="Button.card-x /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <!-- دکمهٔ «کیوآر کد» — کادرِ آبیِ خالی، مثلِ نسخهٔ وب -->
+  <Style Selector="Button.qr">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Info}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Info}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Padding" Value="10,5" />
+  </Style>
+  <Style Selector="Button.qr /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
   </Style>
 
   <Style Selector="ScrollBar">

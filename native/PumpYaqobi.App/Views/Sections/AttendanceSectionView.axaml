@@ -1,0 +1,84 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             x:Class="PumpYaqobi.App.Views.Sections.AttendanceSectionView"
+             x:DataType="vm:AttendanceSectionViewModel">
+
+  <c:SectionPage Header="حاضری و معاش"
+                 SubHeader="شیفتی که از نیمه‌شب رد می‌شود، ساعتش درست شمرده می‌شود">
+
+    <c:SectionPage.Filters>
+      <Grid ColumnDefinitions="Auto,140,24,Auto,200,140,Auto">
+        <TextBlock Grid.Column="0" Text="ماه" Classes="label" VerticalAlignment="Center" Margin="0,0,8,0" />
+        <ComboBox Grid.Column="1" ItemsSource="{Binding Months}" SelectedItem="{Binding Month}" MinWidth="130" />
+        <TextBlock Grid.Column="3" Text="کارمندِ تازه" Classes="label" VerticalAlignment="Center" Margin="0,0,8,0" />
+        <TextBox Grid.Column="4" Text="{Binding NewName}" Watermark="نام" />
+        <TextBox Grid.Column="5" Text="{Binding NewSalary}" Watermark="معاش" Margin="8,0,0,0" />
+        <Button Grid.Column="6" Classes="accent" Content="افزودن" Margin="8,0,0,0"
+                Command="{Binding AddStaffCommand}" />
+      </Grid>
+    </c:SectionPage.Filters>
+
+    <Grid RowDefinitions="Auto,12,*">
+      <ScrollViewer Grid.Row="0" HorizontalScrollBarVisibility="Auto" MaxHeight="250">
+        <ItemsControl ItemsSource="{Binding Staff}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:StaffViewModel">
+              <Border Classes="card" Width="252" Margin="0,0,12,12">
+                <StackPanel Spacing="7">
+                  <TextBlock Text="{Binding Name}" Classes="h2" />
+                  <Grid ColumnDefinitions="*,*,*">
+                    <StackPanel Grid.Column="0" Spacing="1">
+                      <TextBlock Text="روز" Classes="label" FontSize="11" />
+                      <TextBlock Text="{Binding Days}" FontWeight="Bold" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="1">
+                      <TextBlock Text="ساعت" Classes="label" FontSize="11" />
+                      <TextBlock Text="{Binding HoursText}" FontWeight="Bold" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Spacing="1">
+                      <TextBlock Text="معاش" Classes="label" FontSize="11" />
+                      <TextBlock Text="{Binding SalaryText}" FontWeight="Bold" />
+                    </StackPanel>
+                  </Grid>
+                  <TextBlock Text="{Binding PaidText}" Classes="muted" />
+                  <TextBlock Text="{Binding ShortageText, StringFormat=کمبودی: {0}}" Classes="muted" />
+                  <WrapPanel Orientation="Horizontal">
+                    <Button Content="آمدن" Padding="9,3" FontSize="11" Margin="0,0,5,0"
+                            Command="{Binding $parent[ItemsControl].((vm:AttendanceSectionViewModel)DataContext).MarkInCommand}"
+                            CommandParameter="{Binding}" />
+                    <Button Content="رفتن" Padding="9,3" FontSize="11" Margin="0,0,5,0"
+                            Command="{Binding $parent[ItemsControl].((vm:AttendanceSectionViewModel)DataContext).MarkOutCommand}"
+                            CommandParameter="{Binding}" />
+                    <Button Classes="accent" Content="پرداختِ معاش" Padding="9,3" FontSize="11" Margin="0,0,5,0"
+                            IsVisible="{Binding NotPaid}"
+                            Command="{Binding $parent[ItemsControl].((vm:AttendanceSectionViewModel)DataContext).PaySalaryCommand}"
+                            CommandParameter="{Binding}" />
+                    <Button Classes="ghost danger" Content="حذف" Padding="9,3" FontSize="11"
+                            Command="{Binding $parent[ItemsControl].((vm:AttendanceSectionViewModel)DataContext).DeleteStaffCommand}"
+                            CommandParameter="{Binding}" />
+                  </WrapPanel>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <c:ExcelGrid Grid.Row="2" ItemsSource="{Binding Rows}" x:CompileBindings="False">
+        <DataGrid.Columns>
+          <DataGridTextColumn Header="کارمند" Binding="{Binding StaffName}" Width="*" IsReadOnly="True" />
+          <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="130" />
+          <DataGridTextColumn Header="آمدن" Binding="{Binding In}" Width="110" />
+          <DataGridTextColumn Header="رفتن" Binding="{Binding Out}" Width="110" />
+          <DataGridTextColumn Header="ساعت" Binding="{Binding HoursText}" Width="110" IsReadOnly="True" />
+          <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="250" />
+        </DataGrid.Columns>
+      </c:ExcelGrid>
+    </Grid>
+  </c:SectionPage>
+</UserControl>

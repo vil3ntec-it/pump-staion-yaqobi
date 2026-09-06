@@ -40,6 +40,9 @@ public sealed partial class MainViewModel : ObservableObject
 
     public LockViewModel Lock { get; }
 
+    /// <summary>پیام‌های کوتاهِ پایینِ صفحه.</summary>
+    public Services.ToastService Toasts => AppHost.Current.Toasts;
+
     /// <summary>خروج و برگشت به صفحهٔ قفل — بی آن‌که برنامه بسته شود.</summary>
     [RelayCommand]
     private void SignOut()
@@ -85,7 +88,7 @@ public sealed partial class MainViewModel : ObservableObject
         new CompanySectionViewModel(host),
         new StorageSectionViewModel(host),
         new PlaceholderSectionViewModel("cameras",   "دوربین‌ها"),
-        new PlaceholderSectionViewModel("attendance","حاضری و معاش"),
+        new AttendanceSectionViewModel(host),
         new PlaceholderSectionViewModel("profit",    "مفاد / ضرر / اتحادیه"),
         new PlaceholderSectionViewModel("settings",  "تنظیمات"),
         new PlaceholderSectionViewModel("history",   "تاریخچه‌ها"),

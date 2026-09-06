@@ -104,6 +104,15 @@ internal static class Program
             Shot(win, Path.Combine(outDir, "22-waraq-page.png"));
         }
 
+        if (vm.Sections.FirstOrDefault(s => s.Id == "shifts") is PumpYaqobi.App.ViewModels.Sections.ParchaSectionViewModel pr)
+        {
+            vm.GoCommand.Execute(pr);
+            Pump(win);
+            Dispatcher.UIThread.RunJobs();
+            Pump(win);
+            Shot(win, Path.Combine(outDir, "23-parcha.png"));
+        }
+
         Console.WriteLine("عکس‌ها در: " + Path.GetFullPath(outDir));
         return 0;
     }

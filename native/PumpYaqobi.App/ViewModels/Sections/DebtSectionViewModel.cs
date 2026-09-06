@@ -25,14 +25,24 @@ public sealed partial class DebtorCardViewModel : ObservableObject
 
         var st = calc.Status(accounts);
         Status = st.Worst;
-        StatusText = st.Worst switch
-        {
-            DebtStatus.Out => "تمام",
-            DebtStatus.Low => "کم",
-            DebtStatus.Ok => "روبه‌راه",
-            _ => "—",
-        };
+        // ⚠️ سه نشانِ جدا، دقیقاً مثلِ کارتِ نسخهٔ وب: «اتمام تیل» از حالِ پطرول
+        // و دیزل می‌آید و «اتمام پول» از حالِ دفترِ پول. یکی‌شان می‌تواند قرمز
+        // باشد و دیگری نه — با یک نشانِ واحد این تفکیک از دست می‌رفت.
+        var fuelSt = st.Petrol >= st.Diesel ? st.Petrol : st.Diesel;
+        FuelBadge = BadgeOf(fuelSt, "تیل");
+        MoneyBadge = BadgeOf(st.Money, "پول");
+        HasFuelBadge = fuelSt is DebtStatus.Out or DebtStatus.Low;
+        HasMoneyBadge = st.Money is DebtStatus.Out or DebtStatus.Low;
+        FuelBadgeIsOut = fuelSt == DebtStatus.Out;
+        MoneyBadgeIsOut = st.Money == DebtStatus.Out;
     }
+
+    private static string BadgeOf(DebtStatus s, string what) => s switch
+    {
+        DebtStatus.Out => "⛔ اتمام " + what,
+        DebtStatus.Low => "⚠️ کمِ " + what,
+        _ => "",
+    };
 
     public Debtor Entity { get; }
     public string Name { get; }
@@ -42,7 +52,15 @@ public sealed partial class DebtorCardViewModel : ObservableObject
     public string PetrolText { get; }
     public string DieselText { get; }
     public DebtStatus Status { get; }
-    public string StatusText { get; }
+    public string FuelBadge { get; private set; } = "";
+    public string MoneyBadge { get; private set; } = "";
+    public bool HasFuelBadge { get; private set; }
+    public bool HasMoneyBadge { get; private set; }
+    public bool FuelBadgeIsOut { get; private set; }
+    public bool MoneyBadgeIsOut { get; private set; }
+
+    /// <summary>شمارهٔ کارت در فهرست — همان عددِ پایینِ کارتِ نسخهٔ وب.</summary>
+    public int Index { get; set; }
 
     public bool IsOut => Status == DebtStatus.Out;
     public bool IsLow => Status == DebtStatus.Low;
@@ -106,6 +124,7 @@ public sealed partial class DebtSectionViewModel : SectionViewModel
 
         _all = people.Select(d => new DebtorCardViewModel(
             d, accounts.TryGetValue(d.Id, out var a) ? a : new List<DebtAccount>(), _host.Debt)).ToList();
+        for (var i = 0; i < _all.Count; i++) _all[i].Index = i + 1;
         ApplyFilter();
     }
 

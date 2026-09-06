@@ -130,3 +130,28 @@ public class AmanatParityTests
         Assert.Equal(1000m, svc.Loss(1000m, 3650m, 50m, FuelType.Petrol, null, s));
     }
 }
+
+/// <summary>
+/// حاضری — ساعتِ کارِ شیفتِ شب. این تنها جای این بخش است که می‌تواند اشتباه
+/// شود و در نسخهٔ وب هم با یک شرطِ صریح درست شده بود.
+/// </summary>
+public class AttendanceTests
+{
+    [Fact]
+    public void NightShift_WrapsPastMidnight()
+    {
+        var svc = new AttendanceService();
+        Assert.Equal(12m, svc.Hours(new AttendanceRow { In = "19:00", Out = "07:00" }));
+        Assert.Equal(12m, svc.Hours(new AttendanceRow { In = "07:00", Out = "19:00" }));
+        Assert.Equal(0m, svc.Hours(new AttendanceRow { In = "07:00" }));
+        Assert.Equal(0m, svc.Hours(new AttendanceRow()));
+        Assert.Equal(0.5m, svc.Hours(new AttendanceRow { In = "23:45", Out = "00:15" }));
+    }
+
+    [Fact]
+    public void PersianDigits_AreAccepted()
+    {
+        var svc = new AttendanceService();
+        Assert.Equal(2m, svc.Hours(new AttendanceRow { In = "۰۸:۰۰", Out = "۱۰:۰۰" }));
+    }
+}

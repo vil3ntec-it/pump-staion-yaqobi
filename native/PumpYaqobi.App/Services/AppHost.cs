@@ -21,6 +21,7 @@ public sealed class AppHost
         if (dbPath is not null) AppSettings.DirOverride = Path.GetDirectoryName(dbPath);
         Db = new PumpDbFactory(dbPath);
         Db.EnsureReady();
+        Toasts = new ToastService();
         Session = new UserSession();
         Permissions = new PermissionService(Session);
         Auth = new AuthService(Db, Session);
@@ -35,6 +36,7 @@ public sealed class AppHost
         Waraq = new WaraqService();
         Storage = new StorageService();
         AmanatCalc = new AmanatService();
+        AttendanceCalc = new AttendanceService();
         Trash = new TrashService(Db, Permissions, Session);
         Debtors = new DebtorService(Db, Permissions, Trash);
         Companies = new CompanyDataService(Db, Permissions, Trash);
@@ -43,6 +45,7 @@ public sealed class AppHost
         StorageData = new StorageDataService(Db, Permissions, Trash, Storage, Settings, Companies);
         Amanat = new AmanatDataService(Db, Permissions, Trash, Settings);
         Invoices = new InvoiceService(Db, Permissions, Trash, Debtors);
+        Attendance = new AttendanceDataService(Db, Permissions, Trash);
         SafeLedger = new LedgerService<SafeEntry>(Db, Permissions, Trash, "safe",
             r => (r.Title ?? "") + " — " + Shamsi.Money(r.Amount));
         ExchangeLedger = new LedgerService<ExchangeRow>(Db, Permissions, Trash, "sarrafi",
@@ -56,6 +59,10 @@ public sealed class AppHost
     }
 
     public PumpDbFactory Db { get; }
+    public ToastService Toasts { get; }
+
+    /// <summary>پیامِ کوتاهِ پایینِ صفحه — همان showToastِ نسخهٔ وب.</summary>
+    public void Toast(string text, ToastKind kind = ToastKind.Info) => Toasts.Show(text, kind);
     public UserSession Session { get; }
     public PermissionService Permissions { get; }
     public AuthService Auth { get; }
@@ -78,6 +85,8 @@ public sealed class AppHost
     public AmanatService AmanatCalc { get; }
     public AmanatDataService Amanat { get; }
     public InvoiceService Invoices { get; }
+    public AttendanceService AttendanceCalc { get; }
+    public AttendanceDataService Attendance { get; }
     public LedgerService<SafeEntry> SafeLedger { get; }
     public LedgerService<ExchangeRow> ExchangeLedger { get; }
     public LedgerService<Expense> ExpenseLedger { get; }
