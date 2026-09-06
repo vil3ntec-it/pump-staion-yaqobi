@@ -117,6 +117,21 @@ public sealed class WaraqDataService
         await db.SaveChangesAsync(ct);
     }
 
+    /// <summary>
+    /// برداشتنِ یک تراکنشِ ورق. تا امروز فقط «افزودن» بود چون دکمهٔ حذفی روی
+    /// جدولِ تراکنش‌ها نبود؛ میانبرِ ‎Shift+عدد‎ همان کاری را می‌کند که
+    /// <c>removeWaraqRow</c> در نسخهٔ وب می‌کرد، پس این‌جا هم لازم شد.
+    /// </summary>
+    public async Task DeleteTxnAsync(long id, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.DeleteData);
+        await using var db = _dbf.Create();
+        var t = await db.WaraqTransactions.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (t is null) return;
+        db.WaraqTransactions.Remove(t);
+        await db.SaveChangesAsync(ct);
+    }
+
     public async Task DeletePumpAsync(long id, CancellationToken ct = default)
     {
         _perm.Require(Permission.DeleteData);

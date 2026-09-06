@@ -43,6 +43,7 @@ internal static class Program
         vm.Lock.Password = "1234";
         vm.Lock.Confirm = "1234";
         vm.Lock.SubmitCommand.Execute(null);
+        Wait(win, Task.CompletedTask);
         Pump(win);
 
         Seed.Fill(PumpYaqobi.App.Services.AppHost.Current);
@@ -50,7 +51,7 @@ internal static class Program
         // داشبورد پیش از پر شدنِ دیتابیس ساخته شده بود — یک‌بار از نو بخواند
         if (vm.Sections.FirstOrDefault(s => s.Id == "dashboard")
             is PumpYaqobi.App.ViewModels.Sections.DashboardSectionViewModel dash)
-            dash.RefreshAsync().GetAwaiter().GetResult();
+            Wait(win, dash.RefreshAsync());
 
         // ۳) هر تم یک عکس از داشبورد
         foreach (var theme in PumpTheme.All)
@@ -65,7 +66,7 @@ internal static class Program
         var n = 0;
         foreach (var sec in vm.Sections)
         {
-            vm.GoAsync(sec).GetAwaiter().GetResult();
+            Wait(win, vm.GoAsync(sec));
             Pump(win);
             Dispatcher.UIThread.RunJobs();
             Pump(win);
@@ -75,9 +76,9 @@ internal static class Program
         // ۵) صفحهٔ حسابِ یک قرض‌دار — مهم‌ترین صفحهٔ برنامه
         if (vm.Sections.FirstOrDefault(s => s.Id == "debt") is PumpYaqobi.App.ViewModels.Sections.DebtSectionViewModel debt)
         {
-            vm.GoCommand.Execute(debt);
+            Wait(win, vm.GoAsync(debt));
             Pump(win);
-            debt.RefreshAsync().GetAwaiter().GetResult();
+            Wait(win, debt.RefreshAsync());
             debt.OpenCommand.Execute(debt.Cards.FirstOrDefault());
             Pump(win);
             Dispatcher.UIThread.RunJobs();
@@ -87,9 +88,9 @@ internal static class Program
 
         if (vm.Sections.FirstOrDefault(s => s.Id == "noinv") is PumpYaqobi.App.ViewModels.Sections.CompanySectionViewModel comp)
         {
-            vm.GoCommand.Execute(comp);
+            Wait(win, vm.GoAsync(comp));
             Pump(win);
-            comp.RefreshAsync().GetAwaiter().GetResult();
+            Wait(win, comp.RefreshAsync());
             comp.OpenCommand.Execute(comp.Cards.FirstOrDefault());
             Pump(win);
             Dispatcher.UIThread.RunJobs();
@@ -99,9 +100,9 @@ internal static class Program
 
         if (vm.Sections.FirstOrDefault(s => s.Id == "waraq") is PumpYaqobi.App.ViewModels.Sections.WaraqSectionViewModel wq)
         {
-            vm.GoCommand.Execute(wq);
+            Wait(win, vm.GoAsync(wq));
             Pump(win);
-            wq.ReloadAsync().GetAwaiter().GetResult();
+            Wait(win, wq.ReloadAsync());
             wq.OpenCommand.Execute(wq.Sheets.FirstOrDefault());
             Pump(win);
             Dispatcher.UIThread.RunJobs();
@@ -111,7 +112,7 @@ internal static class Program
 
         if (vm.Sections.FirstOrDefault(s => s.Id == "shifts") is PumpYaqobi.App.ViewModels.Sections.ParchaSectionViewModel pr)
         {
-            vm.GoCommand.Execute(pr);
+            Wait(win, vm.GoAsync(pr));
             Pump(win);
             Dispatcher.UIThread.RunJobs();
             Pump(win);
@@ -121,7 +122,7 @@ internal static class Program
         if (vm.Sections.FirstOrDefault(s => s.Id == "amanat")
             is PumpYaqobi.App.ViewModels.Sections.AmanatSectionViewModel am)
         {
-            vm.GoAsync(am).GetAwaiter().GetResult();
+            Wait(win, vm.GoAsync(am));
             Pump(win);
             am.OpenCommand.Execute(am.Cards.FirstOrDefault());
             Pump(win);
@@ -132,6 +133,27 @@ internal static class Program
 
         Console.WriteLine("عکس‌ها در: " + Path.GetFullPath(outDir));
         return 0;
+    }
+
+
+    /// <summary>
+    /// انتظارِ «پمپ‌شونده». نخِ رابط کاربری همین نخ است، پس
+    /// <c>GetAwaiter().GetResult()</c> رویِ کاری که ادامه‌اش را به همین نخ
+    /// برمی‌گرداند قفل می‌کرد و عکس‌گیری وسطِ کار می‌خوابید. این‌جا به‌جای
+    /// مسدود کردن، حلقهٔ رویداد چرخانده می‌شود تا کار واقعاً تمام شود.
+    /// </summary>
+    private static void Wait(Window w, Task t)
+    {
+        var end = DateTime.UtcNow + TimeSpan.FromSeconds(30);
+        while (!t.IsCompleted && DateTime.UtcNow < end)
+        {
+            Dispatcher.UIThread.RunJobs();
+            w.UpdateLayout();
+            Thread.Sleep(5);
+        }
+        if (!t.IsCompleted) { Console.WriteLine("  ⚠ کار در ۳۰ ثانیه تمام نشد"); return; }
+        t.GetAwaiter().GetResult();          // خطا اگر بود، همین‌جا بالا بیاید
+        Pump(w);
     }
 
     /// <summary>چند دورِ چیدمان/رسم تا صفحه واقعاً ساخته شود.</summary>

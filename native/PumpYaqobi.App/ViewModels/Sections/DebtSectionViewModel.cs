@@ -85,7 +85,7 @@ public sealed partial class DebtorCardViewModel : ObservableObject
 /// با ۲۰۰ حالتِ گرفته‌شده از خودِ نسخهٔ وب آزموده شده. هیچ جمعی این‌جا دستی
 /// زده نمی‌شود.
 /// </summary>
-public sealed partial class DebtSectionViewModel : SectionViewModel
+public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHost
 {
     private readonly AppHost _host;
     private readonly bool _noInvoice;
@@ -105,6 +105,9 @@ public sealed partial class DebtSectionViewModel : SectionViewModel
     [ObservableProperty] private string _newPhone = "";
 
     public bool IsListVisible => Person is null;
+
+    /// <summary>حسابِ شخص — تا باز است، میانبرهای ردیف به آن می‌روند نه به فهرست.</summary>
+    public override object? ActivePage => Person;
 
     partial void OnPersonChanged(PersonViewModel? v) => OnPropertyChanged(nameof(IsListVisible));
 
@@ -136,6 +139,18 @@ public sealed partial class DebtSectionViewModel : SectionViewModel
             if (s.Length == 0 || c.Name.Contains(s, StringComparison.OrdinalIgnoreCase)
                               || c.Phone.Contains(s, StringComparison.OrdinalIgnoreCase))
                 Cards.Add(c);
+    }
+
+
+    /// <summary>
+    /// ‎Alt+عدد‎ — کارتِ شمارهٔ ‎n‎ همان عددی است که زیرِ کارت نوشته شده، و
+    /// چون از روی فهرستِ <b>نمایش‌داده‌شده</b> شمرده می‌شود، با جست‌وجو هم
+    /// خودکار جابه‌جا می‌گردد.
+    /// </summary>
+    public Task OpenByNumberAsync(int number)
+    {
+        if (number < 1 || number > Cards.Count) return Task.CompletedTask;
+        return OpenAsync(Cards[number - 1]);
     }
 
     [RelayCommand]

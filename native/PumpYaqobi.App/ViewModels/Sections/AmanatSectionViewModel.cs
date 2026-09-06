@@ -142,7 +142,7 @@ public sealed class AmanatCardViewModel
     public string PctText { get; }
 }
 
-public sealed partial class AmanatAccountViewModel : ObservableObject
+public sealed partial class AmanatAccountViewModel : ObservableObject, IRowBatchHost
 {
     private readonly AppHost _host;
     private readonly AmanatSectionViewModel _section;
@@ -163,6 +163,22 @@ public sealed partial class AmanatAccountViewModel : ObservableObject
 
     public AmanatAccount Entity { get; }
     public ObservableCollection<AmanatRowViewModel> Rows { get; } = new();
+
+    public int RowCount => Rows.Count;
+
+    /// <summary>‎Ctrl+عدد‎ / ‎Shift+عدد‎ — افزودن و برداشتنِ گروهیِ ردیف.
+    /// حذف فقط وقتی ردیفِ کافی باشد؛ وگرنه هیچ.</summary>
+    public async Task AddRowsAsync(int count)
+    {
+        for (var i = 0; i < count; i++) await AddRowAsync();
+    }
+
+    public async Task DeleteRowsAsync(int count)
+    {
+        if (count < 1 || Rows.Count < count) return;
+        for (var i = 0; i < count; i++) await DeleteRowAsync(Rows[^1]);
+    }
+
 
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private decimal _myPct;
@@ -290,6 +306,9 @@ public sealed partial class AmanatSectionViewModel : SectionViewModel
     [ObservableProperty] private string _emptyText = "";
 
     public bool IsListVisible => Page is null;
+
+    /// <summary>حسابِ امانت — تا باز است، میانبرهای ردیف به آن می‌روند نه به فهرست.</summary>
+    public override object? ActivePage => Page;
     public bool IsAll => FuelFilter == "all";
     public bool IsPetrol => FuelFilter == "petrol";
     public bool IsDieselFilter => FuelFilter == "diesel";

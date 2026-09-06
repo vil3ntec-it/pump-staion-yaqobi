@@ -15,7 +15,7 @@ namespace PumpYaqobi.App.ViewModels;
 /// یک‌جا نوشته می‌شود تا همهٔ این بخش‌ها مو‌به‌مو یک رفتار داشته باشند و
 /// اصلاحِ یک نکته در همه‌شان با هم اعمال شود.
 /// </summary>
-public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionViewModel
+public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionViewModel, IRowBatchHost
     where TRow : RowViewModel
     where TEntity : EntityBase, ILedgerRow, new()
 {
@@ -99,6 +99,24 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
         await Service.DeleteAsync(EntityIdOf(row));
         Rows.Remove(row);
         Recalc();
+    }
+
+    public int RowCount => Rows.Count;
+
+    /// <summary>‎Ctrl+عدد‎ — همان ‎AddRowAsync‎، فقط ‎n‎ بار.</summary>
+    public async Task AddRowsAsync(int count)
+    {
+        for (var i = 0; i < count; i++) await AddRowAsync();
+    }
+
+    /// <summary>
+    /// ‎Shift+عدد‎ — ‎n‎ ردیفِ آخرِ <b>همان چیزی که روی صفحه دیده می‌شود</b>.
+    /// ردیفِ کافی نبود، هیچ (نه خطا، نه حذفِ ناقص).
+    /// </summary>
+    public async Task DeleteRowsAsync(int count)
+    {
+        if (count < 1 || Rows.Count < count) return;
+        for (var i = 0; i < count; i++) await DeleteRowAsync(Rows[^1]);
     }
 
     protected abstract long EntityIdOf(TRow row);

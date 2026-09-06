@@ -69,6 +69,14 @@ public sealed partial class MainViewModel : ObservableObject
 
     public LockViewModel Lock { get; }
 
+    /// <summary>
+    /// «جدولی که همین حالا جلوی کاربر است» — همان ‎_kbCtx()‎ِ نسخهٔ وب.
+    /// اولویت با صفحهٔ بازِ داخلِ بخش است (حسابِ شخص، شرکت، ورق، امانت)؛
+    /// اگر باز نباشد، خودِ بخش. هیچ جدولِ دیگری دست نمی‌خورد.
+    /// </summary>
+    public IRowBatchHost? RowHost =>
+        Current?.ActivePage as IRowBatchHost ?? Current as IRowBatchHost;
+
     /// <summary>پیام‌های کوتاهِ پایینِ صفحه.</summary>
     public Services.ToastService Toasts => AppHost.Current.Toasts;
 
