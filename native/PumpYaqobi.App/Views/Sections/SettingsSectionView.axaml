@@ -1,0 +1,121 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:th="using:PumpYaqobi.App.Themes"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             x:Class="PumpYaqobi.App.Views.Sections.SettingsSectionView"
+             x:DataType="vm:SettingsSectionViewModel">
+
+  <c:SectionPage Header="تنظیمات">
+
+    <c:SectionPage.Toolbar>
+      <Button Classes="accent" Content="💾 ذخیرهٔ تنظیمات" Command="{Binding SaveCommand}" />
+    </c:SectionPage.Toolbar>
+
+    <ScrollViewer>
+      <StackPanel Spacing="14">
+
+        <!-- مشخصاتِ پمپ -->
+        <Border Classes="panel" Padding="0">
+          <StackPanel>
+            <Border Classes="card-head">
+              <TextBlock Text="⛽ مشخصاتِ پمپ" FontWeight="Bold"
+                         Foreground="{DynamicResource Pump.Accent}" />
+            </Border>
+            <WrapPanel Orientation="Horizontal" Margin="14">
+              <StackPanel Classes="cell" Width="240">
+                <TextBlock Text="نامِ پمپ" Classes="label" />
+                <TextBox Text="{Binding StationName}" />
+              </StackPanel>
+              <StackPanel Classes="cell" Width="300">
+                <TextBlock Text="آدرس" Classes="label" />
+                <TextBox Text="{Binding StationAddress}" />
+              </StackPanel>
+              <StackPanel Classes="cell" Width="180">
+                <TextBlock Text="شمارهٔ تماس" Classes="label" />
+                <TextBox Text="{Binding StationPhone}" />
+              </StackPanel>
+            </WrapPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- نرخ‌ها -->
+        <Border Classes="panel" Padding="0">
+          <StackPanel>
+            <Border Classes="card-head">
+              <TextBlock Text="📈 نرخِ اتحادیه و آستانه‌ها" FontWeight="Bold"
+                         Foreground="{DynamicResource Pump.Accent}" />
+            </Border>
+            <WrapPanel Orientation="Horizontal" Margin="14">
+              <StackPanel Classes="cell" Width="170">
+                <TextBlock Text="نرخِ اتحادیه — پطرول" Classes="label" />
+                <TextBox Text="{Binding UnionRatePetrol}" />
+              </StackPanel>
+              <StackPanel Classes="cell" Width="170">
+                <TextBlock Text="نرخِ اتحادیه — دیزل" Classes="label" />
+                <TextBox Text="{Binding UnionRateDiesel}" />
+              </StackPanel>
+              <StackPanel Classes="cell" Width="200">
+                <TextBlock Text="آستانهٔ هشدارِ مخزن (لیتر)" Classes="label" />
+                <TextBox Text="{Binding LowStockThreshold}" />
+              </StackPanel>
+            </WrapPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- ظاهر -->
+        <Border Classes="panel" Padding="0">
+          <StackPanel>
+            <Border Classes="card-head">
+              <TextBlock Text="🎨 ظاهرِ برنامه" FontWeight="Bold"
+                         Foreground="{DynamicResource Pump.Accent}" />
+            </Border>
+            <StackPanel Margin="14" Spacing="6" HorizontalAlignment="Right">
+              <TextBlock Text="تم" Classes="label" />
+              <ComboBox ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}" MinWidth="240">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="th:PumpTheme">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <Border Width="14" Height="14" CornerRadius="7"
+                              Background="{Binding Accent, Converter={x:Static th:ColorToBrushConverter.Instance}}" />
+                      <TextBlock Text="{Binding Title}" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <TextBlock Text="چهار تم — نه بیشتر. «نور پس‌زمینه» برداشته شده است."
+                         Classes="muted" Margin="0,4,0,0" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- به‌روزرسانی — بدونِ هیچ نشانی یا نامِ منبع -->
+        <Border Classes="panel" Padding="0">
+          <StackPanel>
+            <Border Classes="card-head">
+              <TextBlock Text="⬇️ به‌روزرسانیِ برنامه" FontWeight="Bold"
+                         Foreground="{DynamicResource Pump.Accent}" />
+            </Border>
+            <StackPanel Margin="14" Spacing="10">
+              <TextBlock Text="{Binding CurrentVersion, StringFormat=نسخهٔ فعلی: {0}}" />
+              <TextBlock Text="{Binding UpdateStatus}" Classes="muted"
+                         IsVisible="{Binding UpdateStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              <ProgressBar Value="{Binding DownloadPercent}" Maximum="100" Height="7"
+                           IsVisible="{Binding Downloading}" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="بررسیِ به‌روزرسانی" Command="{Binding CheckUpdateCommand}"
+                        IsEnabled="{Binding !Checking}" />
+                <Button Classes="accent" Content="گرفتنِ نسخهٔ تازه"
+                        Command="{Binding DownloadUpdateCommand}"
+                        IsVisible="{Binding UpdateAvailable}" IsEnabled="{Binding !Downloading}" />
+                <Button Classes="accent" Content="نصب و راه‌اندازیِ دوباره"
+                        Command="{Binding InstallUpdateCommand}"
+                        IsVisible="{Binding ReadyToInstall}" />
+              </StackPanel>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+  </c:SectionPage>
+</UserControl>

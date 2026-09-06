@@ -30,6 +30,7 @@
     <ProjectReference Include="..\PumpYaqobi.Infrastructure\PumpYaqobi.Infrastructure.csproj" />
     <ProjectReference Include="..\PumpYaqobi.Reporting\PumpYaqobi.Reporting.csproj" />
     <ProjectReference Include="..\PumpYaqobi.Services\PumpYaqobi.Services.csproj" />
+    <ProjectReference Include="..\PumpYaqobi.App\PumpYaqobi.App.csproj" />
   </ItemGroup>
 
   <ItemGroup>

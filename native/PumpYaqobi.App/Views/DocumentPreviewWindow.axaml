@@ -1,0 +1,64 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:p="using:PumpYaqobi.App.Printing"
+        x:Class="PumpYaqobi.App.Views.DocumentPreviewWindow"
+        x:DataType="p:DocumentPreviewViewModel"
+        Width="1000" Height="900" WindowStartupLocation="CenterOwner"
+        FlowDirection="RightToLeft" Background="#f1f3f6">
+
+  <Grid RowDefinitions="Auto,*,Auto">
+
+    <!-- ══ نوارِ سبزِ بالا — همان نوارِ صفحهٔ چاپ ══ -->
+    <Border Grid.Row="0" Background="#1f7a4d" Padding="12,9">
+      <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+        <Button Grid.Column="0" Classes="doc-btn" Content="✕ بستن" Click="OnClose" Margin="0,0,8,0" />
+        <Button Grid.Column="1" Classes="doc-btn" Content="⚙ ذخیرهٔ PDF" Click="OnSave" />
+        <TextBlock Grid.Column="2" Text="{Binding Title}" HorizontalAlignment="Center"
+                   VerticalAlignment="Center" Foreground="White" FontWeight="Bold" FontSize="15" />
+        <Button Grid.Column="3" Classes="doc-btn" Content="🖨 چاپ" Click="OnPrint" />
+      </Grid>
+    </Border>
+
+    <!-- ══ ورق‌های سند ══ -->
+    <ScrollViewer Grid.Row="1" Padding="20">
+      <Border Background="White" BoxShadow="0 2 10 0 #22000000" HorizontalAlignment="Center">
+        <Image Source="{Binding CurrentPage}" Stretch="Uniform" MaxWidth="900" />
+      </Border>
+    </ScrollViewer>
+
+    <!-- ══ نوارِ شمارهٔ ورق ══ -->
+    <Border Grid.Row="2" Background="White" BorderBrush="#dfe3e8" BorderThickness="0,1,0,0" Padding="12,8">
+      <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+        <Button Classes="page-btn" Content="◀" Command="{Binding PrevCommand}" />
+        <TextBlock Text="{Binding PageLabel}" VerticalAlignment="Center" FontWeight="Bold"
+                   Foreground="#2d3748" />
+        <Button Classes="page-btn" Content="▶" Command="{Binding NextCommand}" />
+        <TextBlock Text="{Binding Status}" VerticalAlignment="Center" Foreground="#5b6472"
+                   Margin="16,0,0,0" />
+      </StackPanel>
+    </Border>
+  </Grid>
+
+  <Window.Styles>
+    <Style Selector="Button.doc-btn">
+      <Setter Property="Background" Value="#2f8f5f" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="BorderBrush" Value="#57ab7f" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="14,6" />
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+    <Style Selector="Button.doc-btn /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#2f8f5f" />
+    </Style>
+    <Style Selector="Button.page-btn">
+      <Setter Property="Background" Value="White" />
+      <Setter Property="Foreground" Value="#2b6cb0" />
+      <Setter Property="BorderBrush" Value="#2b6cb0" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="Padding" Value="14,4" />
+    </Style>
+  </Window.Styles>
+</Window>
