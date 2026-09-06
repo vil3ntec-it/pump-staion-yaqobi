@@ -72,6 +72,15 @@ public class DebtAccount : EntityBase
     /// <summary>فیصدیِ مشترکِ نسخه‌های قدیمی — فقط برای سازگاریِ داده.</summary>
     public decimal? PercentLegacy { get; set; }
 
+    /// <summary>
+    /// «سپردهٔ پول» همین حساب — ‎acct.moneyDeposit‎ در نسخهٔ وب.
+    ///
+    /// ⚠️ عمداً در هیچ محاسبه‌ای نیست؛ در نسخهٔ وب هم نبود (فقط نوشته و
+    /// نشان داده می‌شد). ولی مالِ **همین حساب** است، نه مالِ شخص — پس
+    /// عوض کردنش روی حساب‌های دیگرِ همان شخص اثر ندارد.
+    /// </summary>
+    public decimal? MoneyDeposit { get; set; }
+
     /// <summary>رسیدِ تیل و رسیدِ پول، هر کدام برای هر نوع سوخت جدا.</summary>
     public decimal RasidFuelPetrol { get; set; }
     public decimal RasidFuelDiesel { get; set; }

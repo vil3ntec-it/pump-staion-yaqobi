@@ -129,24 +129,37 @@ public sealed class LegacyBackupImporter
             IsNoInvoice = noInvoice,
         };
         // ⚠️ در HTML خودِ شیءِ شخص، «حسابِ اصلی» هم بود — پس همان فیلدها را دارد.
-        d.MainAccount = ReadAccount(p, null);
+        d.MainAccount = ReadAccount(p, null, null);
         if (p.TryGetProperty("subs", out var subs) && subs.ValueKind == JsonValueKind.Array)
             foreach (var s in subs.EnumerateArray())
             {
                 if (s.ValueKind != JsonValueKind.Object) continue;
-                d.SubAccounts.Add(ReadAccount(s, Str(s, "id") ?? Guid.NewGuid().ToString("N")));
+                // ‎_migrateAcctModes‎ — حسابِ فرعیِ بی‌واحد، واحدِ شخص را
+                // می‌گیرد. بی این، حسابِ فرعیِ «واحد پول» پس از مهاجرت «تیل»
+                // می‌شد و دفترِ پولش از جلوی چشمِ کاربر غیب می‌شد (خودِ
+                // ردیف‌ها سرِ جایشان بودند، ولی دیده نمی‌شدند).
+                d.SubAccounts.Add(ReadAccount(s, Str(s, "id") ?? Guid.NewGuid().ToString("N"),
+                                              d.MainAccount.Mode));
             }
         return d;
     }
 
-    private DebtAccount ReadAccount(JsonElement a, string? subId)
+    /// <param name="inheritMode">
+    /// واحدی که اگر خودِ حساب واحد نداشته باشد به ارث می‌رسد — برای
+    /// حساب‌های فرعیِ دادهٔ قدیمی. برای حسابِ اصلی ‎null‎ است.
+    /// </param>
+    private DebtAccount ReadAccount(JsonElement a, string? subId, LedgerMode? inheritMode)
     {
+        var rawMode = Str(a, "mode");
         var acc = new DebtAccount
         {
             LegacySubId = subId,
             Name = Str(a, "name"),
             Note = Str(a, "note"),
-            Mode = LedgerModeExtensions.FromLegacy(Str(a, "mode")),
+            Mode = string.IsNullOrEmpty(rawMode) && inheritMode is { } m
+                ? m
+                : LedgerModeExtensions.FromLegacy(rawMode),
+            MoneyDeposit = DecOrNull(a, "moneyDeposit"),
             PercentPetrol = DecOrNull(a, "percentP"),
             PercentDiesel = DecOrNull(a, "percentD"),
             PercentLegacy = DecOrNull(a, "percent"),
