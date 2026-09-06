@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:v="using:PumpYaqobi.App.Views.Sections"
+             x:Class="PumpYaqobi.App.Views.Sections.CompanySectionView"
+             x:DataType="vm:CompanySectionViewModel">
+  <Panel>
+
+    <c:SectionPage IsVisible="{Binding IsListVisible}"
+                   Header="شرکت‌ها تیل"
+                   SubHeader="هر شرکت دو دفترِ جدا دارد: پطرول و دیزل">
+
+      <c:SectionPage.Filters>
+        <Grid ColumnDefinitions="Auto,240,24,Auto,240,Auto">
+          <TextBlock Grid.Column="0" Text="جست‌وجو" Classes="label" VerticalAlignment="Center" Margin="0,0,8,0" />
+          <TextBox Grid.Column="1" Text="{Binding Search}" Watermark="نامِ شرکت" />
+          <TextBlock Grid.Column="3" Text="شرکتِ تازه" Classes="label" VerticalAlignment="Center" Margin="0,0,8,0" />
+          <TextBox Grid.Column="4" Text="{Binding NewName}" Watermark="نام" />
+          <Button Grid.Column="5" Classes="accent" Content="افزودن" Margin="8,0,0,0"
+                  Command="{Binding AddCompanyCommand}" />
+        </Grid>
+      </c:SectionPage.Filters>
+
+      <ScrollViewer>
+        <ItemsControl ItemsSource="{Binding Cards}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:CompanyCardViewModel">
+              <Border Classes="card" Width="286" Margin="0,0,12,12">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="{Binding Name}" Classes="h2" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Text="{Binding RowCount, StringFormat={}{0} ردیف}" Classes="muted" />
+                  <Grid ColumnDefinitions="*,*" Margin="0,4,0,0">
+                    <StackPanel Grid.Column="0" Spacing="1">
+                      <TextBlock Text="کلِ خرید" Classes="label" FontSize="11" />
+                      <TextBlock Text="{Binding TotalAfnText}" FontWeight="Bold" FontSize="13" />
+                      <TextBlock Text="{Binding TotalUsdText, StringFormat={}{0} $}" Classes="muted" FontSize="11" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="1">
+                      <TextBlock Text="الباقی" Classes="label" FontSize="11" />
+                      <TextBlock Text="{Binding AlbaqiAfnText}" FontWeight="Bold" FontSize="13"
+                                 Foreground="{DynamicResource Pump.Accent}" />
+                    </StackPanel>
+                  </Grid>
+                  <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
+                    <Button Classes="accent" Content="باز کردنِ حساب" Padding="10,4" FontSize="12"
+                            Command="{Binding $parent[ItemsControl].((vm:CompanySectionViewModel)DataContext).OpenCommand}"
+                            CommandParameter="{Binding}" />
+                    <Button Classes="ghost danger" Content="حذف" Padding="10,4" FontSize="12"
+                            Command="{Binding $parent[ItemsControl].((vm:CompanySectionViewModel)DataContext).DeleteCompanyCommand}"
+                            CommandParameter="{Binding}" />
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </c:SectionPage>
+
+    <Panel IsVisible="{Binding !IsListVisible}">
+      <v:CompanyPageView DataContext="{Binding Page}" />
+    </Panel>
+  </Panel>
+</UserControl>

@@ -91,6 +91,28 @@ internal static class Seed
             }
         }
 
+        // شرکت‌های تیل — دو دفترِ جدا
+        for (var k = 1; k <= 5; k++)
+        {
+            var comp = host.Companies.AddAsync("شرکتِ تیلِ " + k).GetAwaiter().GetResult();
+            for (var i = 1; i <= 6; i++)
+            {
+                host.Companies.SaveRowAsync(new CompanyRow
+                {
+                    CompanyId = comp.Id,
+                    Fuel = i % 3 == 0 ? PumpYaqobi.Domain.Enums.FuelType.Diesel
+                                      : PumpYaqobi.Domain.Enums.FuelType.Petrol,
+                    SortIndex = i,
+                    DateShamsi = $"{month}/{i:00}",
+                    Name = i % 2 == 0 ? "خرید" : "رسید",
+                    Kg = i % 2 == 0 ? 30000 : 0,
+                    Usd = i % 2 == 0 ? 690 + i : 0,
+                    Rate = 70,
+                    Poul = i % 2 == 0 ? 0 : 400000,
+                }).GetAwaiter().GetResult();
+            }
+        }
+
         _ = today;
     }
 }

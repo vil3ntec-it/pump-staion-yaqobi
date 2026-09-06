@@ -88,5 +88,44 @@ const rowHeal = await page.evaluate(() => {
 fs.writeFileSync(path.join(OUT, 'golden-debtrow.json'), JSON.stringify(rowHeal));
 console.log('  ✔ golden-debtrow.json — ' + rowHeal.length + ' ردیف');
 
+// ── شرکت‌های تیل ──────────────────────────────────────────────────────────
+const companies = await page.evaluate(() => {
+  let seed = 987654321;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  const cases = [];
+  for (let c = 0; c < 200; c++) {
+    const company = { name: 'ش' + c, usdRate: rnd() < 0.3 ? Math.round(rnd() * 80 * 100) / 100 : 0 };
+    const rows = [];
+    const n = 1 + Math.floor(rnd() * 7);
+    for (let i = 0; i < n; i++) {
+      const usdPay = rnd() < 0.35;
+      rows.push({
+        name: 'ر' + i,
+        kg: rnd() < 0.5 ? Math.round(rnd() * 40000) : 0,
+        ton: rnd() < 0.5 ? Math.round(rnd() * 40 * 1000) / 1000 : '',
+        usd: Math.round(rnd() * 900 * 100) / 100,
+        rate: rnd() < 0.85 ? Math.round(rnd() * 80 * 100) / 100 : 0,
+        payRate: rnd() < 0.3 ? Math.round(rnd() * 80 * 100) / 100 : 0,
+        poul: rnd() < 0.7 ? Math.round(rnd() * 200000 * 100) / 100 : 0,
+        poulCurrency: usdPay ? 'usd' : 'afn',
+      });
+    }
+    const rate = _companyConvRateOf(company, rows);
+    const perRow = rows.map((r) => ({
+      ton: cmpTon(r), usd: cmpTotalUsd(r), afn: cmpAfnTotal(r),
+      paidAfn: cmpPoulAfn(r, rate), paidUsd: cmpPoulUsd(r, rate),
+      albAfn: cmpAlbaqi(r, rate), albUsd: cmpAlbaqiUsd(r, rate),
+    }));
+    cases.push({ company, rows, rate, perRow,
+      totUsd: perRow.reduce((a, x) => a + x.usd, 0),
+      totAfn: perRow.reduce((a, x) => a + x.afn, 0),
+      paidAfn: perRow.reduce((a, x) => a + x.paidAfn, 0),
+      paidUsd: perRow.reduce((a, x) => a + x.paidUsd, 0) });
+  }
+  return cases;
+});
+fs.writeFileSync(path.join(OUT, 'golden-company.json'), JSON.stringify(companies));
+console.log('  ✔ golden-company.json — ' + companies.length + ' شرکت');
+
 console.log('\n  خطای جاوااسکریپت:', errs.length ? errs.slice(0, 3) : 'ندارد');
 await browser.close();

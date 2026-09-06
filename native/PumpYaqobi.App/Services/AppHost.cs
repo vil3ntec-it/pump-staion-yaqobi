@@ -30,8 +30,10 @@ public sealed class AppHost
         Exchange = new ExchangeService();
         Retail = new RetailService();
         Expenses = new ExpenseService();
+        Company = new CompanyService();
         Trash = new TrashService(Db, Permissions, Session);
         Debtors = new DebtorService(Db, Permissions, Trash);
+        Companies = new CompanyDataService(Db, Permissions, Trash);
         SafeLedger = new LedgerService<SafeEntry>(Db, Permissions, Trash, "safe",
             r => (r.Title ?? "") + " — " + Shamsi.Money(r.Amount));
         ExchangeLedger = new LedgerService<ExchangeRow>(Db, Permissions, Trash, "sarrafi",
@@ -56,6 +58,8 @@ public sealed class AppHost
     public ExpenseService Expenses { get; }
     public TrashService Trash { get; }
     public DebtorService Debtors { get; }
+    public CompanyDataService Companies { get; }
+    public CompanyService Company { get; }
     public LedgerService<SafeEntry> SafeLedger { get; }
     public LedgerService<ExchangeRow> ExchangeLedger { get; }
     public LedgerService<Expense> ExpenseLedger { get; }

@@ -106,6 +106,8 @@ public class TilCompany : EntityBase
     public string? LegacyId { get; set; }
     public string? Name { get; set; }
     public string? Note { get; set; }
+    /// <summary>نرخِ تبدیلِ دستیِ همین شرکت. صفر یعنی «از میانگینِ خریدها بگیر».</summary>
+    public decimal? UsdRate { get; set; }
     public List<CompanyRow> Rows { get; set; } = new();
 }
 
@@ -128,7 +130,19 @@ public class CompanyRow : EntityBase
     /// <summary>پرداختی.</summary>
     public decimal Poul { get; set; }
     public Currency PoulCurrency { get; set; } = Currency.Afn;
+    /// <summary>نرخِ پولِ ردیف — فقط برای دادهٔ کهنه؛ ستونش برداشته شده.</summary>
+    public decimal? PayRate { get; set; }
+    /// <summary>ردیفی که خودکار از «خریدِ مخزن» ساخته شده.</summary>
+    public string? SourcePurchaseId { get; set; }
+    /// <summary>ردیفی که خودکار از رسیدِ صرافی یا گاوصندوق ساخته شده.</summary>
+    public string? SourceReceiptId { get; set; }
     public string? Note { get; set; }
+
+    /// <summary>ردیفِ واقعاً خالی — ‎_isEmptyCompanyRow‎.</summary>
+    public bool IsEmpty =>
+        string.IsNullOrWhiteSpace(Name) && Ton == 0m && Kg == 0m && Usd == 0m
+        && Rate == 0m && Poul == 0m
+        && SourcePurchaseId is null && SourceReceiptId is null;
 }
 
 // ══ تیل امانت ═════════════════════════════════════════════════════════════════

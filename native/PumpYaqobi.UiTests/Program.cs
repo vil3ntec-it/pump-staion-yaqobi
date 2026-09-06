@@ -80,6 +80,18 @@ internal static class Program
             Shot(win, Path.Combine(outDir, "20-debt-person.png"));
         }
 
+        if (vm.Sections.FirstOrDefault(s => s.Id == "noinv") is PumpYaqobi.App.ViewModels.Sections.CompanySectionViewModel comp)
+        {
+            vm.GoCommand.Execute(comp);
+            Pump(win);
+            comp.RefreshAsync().GetAwaiter().GetResult();
+            comp.OpenCommand.Execute(comp.Cards.FirstOrDefault());
+            Pump(win);
+            Dispatcher.UIThread.RunJobs();
+            Pump(win);
+            Shot(win, Path.Combine(outDir, "21-company-page.png"));
+        }
+
         Console.WriteLine("عکس‌ها در: " + Path.GetFullPath(outDir));
         return 0;
     }
