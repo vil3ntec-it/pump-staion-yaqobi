@@ -152,7 +152,7 @@ public sealed partial class MainViewModel : ObservableObject
         new RetailSectionViewModel(host),
         new ExchangeSectionViewModel(host),
         new ExpenseSectionViewModel(host),
-        new PlaceholderSectionViewModel("rasid",     "رسید پارچه"),
+        new ParchaReceiptSectionViewModel(host),
         new SafeSectionViewModel(host),
         new AmanatSectionViewModel(host),
         new CompanySectionViewModel(host),

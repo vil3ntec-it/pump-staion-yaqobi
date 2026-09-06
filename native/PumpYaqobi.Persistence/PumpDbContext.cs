@@ -94,6 +94,8 @@ public sealed class PumpDbContext : DbContext
         {
             e.HasIndex(x => x.DateKey);
             e.HasIndex(x => x.Account);
+            // بدونِ این، رسیدِ ثبت‌شده (که فقط حذفِ نرم شده) در صف می‌ماند
+            e.HasQueryFilter(x => x.DeletedAt == null);
         });
 
         b.Entity<DebtRow>(e =>

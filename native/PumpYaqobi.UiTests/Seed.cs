@@ -267,6 +267,20 @@ internal static class Seed
             if (i % 2 == 0) host.Invoices.ApproveAsync(v.Id, 62m).GetAwaiter().GetResult();
         }
 
+        // رسید پارچه‌ها — صفِ رسیدهایی که هنوز واردِ حسابِ کسی نشده‌اند
+        for (var i = 1; i <= 5; i++)
+        {
+            var r = host.ParchaReceipts.AddAsync().GetAwaiter().GetResult();
+            r.DateShamsi = $"{month}/{i:00}";
+            r.Account = "قرض‌دارِ شمارهٔ " + i;
+            r.Name = i % 2 == 0 ? "دیزل حواله" : "بردگیِ روز";
+            r.Hawala = "ح" + (100 + i);
+            r.Liters = 100 * i;
+            r.PricePerLiter = 62;
+            r.Rasid = i % 2 == 0 ? 2000 : 0;
+            host.ParchaReceipts.SaveAsync(r).GetAwaiter().GetResult();
+        }
+
         // کارمندان و حاضری
         for (var i = 1; i <= 4; i++)
         {

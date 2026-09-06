@@ -45,6 +45,7 @@ public sealed class AppHost
         StorageData = new StorageDataService(Db, Permissions, Trash, Storage, Settings, Companies);
         Amanat = new AmanatDataService(Db, Permissions, Trash, Settings);
         Invoices = new InvoiceService(Db, Permissions, Trash, Debtors);
+        ParchaReceipts = new ParchaReceiptService(Db, Permissions, Trash, Debtors);
         Attendance = new AttendanceDataService(Db, Permissions, Trash);
         SafeLedger = new LedgerService<SafeEntry>(Db, Permissions, Trash, "safe",
             r => (r.Title ?? "") + " — " + Shamsi.Money(r.Amount));
@@ -85,6 +86,7 @@ public sealed class AppHost
     public AmanatService AmanatCalc { get; }
     public AmanatDataService Amanat { get; }
     public InvoiceService Invoices { get; }
+    public ParchaReceiptService ParchaReceipts { get; }
     public AttendanceService AttendanceCalc { get; }
     public AttendanceDataService Attendance { get; }
     public LedgerService<SafeEntry> SafeLedger { get; }
