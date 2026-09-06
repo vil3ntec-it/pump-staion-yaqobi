@@ -1,0 +1,52 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PumpYaqobi.Domain", "PumpYaqobi.Domain\PumpYaqobi.Domain.csproj", "{65F856A4-DE70-446E-9467-16653E179929}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PumpYaqobi.Application", "PumpYaqobi.Application\PumpYaqobi.Application.csproj", "{485DF20A-5FFB-4E1B-ADDB-58C9EF2E5916}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PumpYaqobi.Persistence", "PumpYaqobi.Persistence\PumpYaqobi.Persistence.csproj", "{2E8CDF90-5A14-4884-B3A6-9B19AD39343D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PumpYaqobi.Infrastructure", "PumpYaqobi.Infrastructure\PumpYaqobi.Infrastructure.csproj", "{09EB0F43-54C4-4DFE-9842-6FD30F5EE73F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PumpYaqobi.Reporting", "PumpYaqobi.Reporting\PumpYaqobi.Reporting.csproj", "{6778D9EA-D695-4F56-8E5F-1C138D288C4A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PumpYaqobi.Tests", "PumpYaqobi.Tests\PumpYaqobi.Tests.csproj", "{9CFB41A6-1474-41B9-BBB8-E722A63C3FA0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{65F856A4-DE70-446E-9467-16653E179929}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{65F856A4-DE70-446E-9467-16653E179929}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{65F856A4-DE70-446E-9467-16653E179929}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{65F856A4-DE70-446E-9467-16653E179929}.Release|Any CPU.Build.0 = Release|Any CPU
+		{485DF20A-5FFB-4E1B-ADDB-58C9EF2E5916}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{485DF20A-5FFB-4E1B-ADDB-58C9EF2E5916}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{485DF20A-5FFB-4E1B-ADDB-58C9EF2E5916}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{485DF20A-5FFB-4E1B-ADDB-58C9EF2E5916}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E8CDF90-5A14-4884-B3A6-9B19AD39343D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E8CDF90-5A14-4884-B3A6-9B19AD39343D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E8CDF90-5A14-4884-B3A6-9B19AD39343D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E8CDF90-5A14-4884-B3A6-9B19AD39343D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{09EB0F43-54C4-4DFE-9842-6FD30F5EE73F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{09EB0F43-54C4-4DFE-9842-6FD30F5EE73F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{09EB0F43-54C4-4DFE-9842-6FD30F5EE73F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{09EB0F43-54C4-4DFE-9842-6FD30F5EE73F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6778D9EA-D695-4F56-8E5F-1C138D288C4A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6778D9EA-D695-4F56-8E5F-1C138D288C4A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6778D9EA-D695-4F56-8E5F-1C138D288C4A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6778D9EA-D695-4F56-8E5F-1C138D288C4A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9CFB41A6-1474-41B9-BBB8-E722A63C3FA0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9CFB41A6-1474-41B9-BBB8-E722A63C3FA0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9CFB41A6-1474-41B9-BBB8-E722A63C3FA0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9CFB41A6-1474-41B9-BBB8-E722A63C3FA0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
