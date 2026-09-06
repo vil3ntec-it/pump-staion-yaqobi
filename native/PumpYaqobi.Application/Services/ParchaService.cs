@@ -37,11 +37,19 @@ public readonly record struct ShiftCalc(
     /// </summary>
     public bool AvailableIsNegative => Available < 0m;
 
-    /// <summary>دو حالتِ ‎p-buy-per-lbl‎ در نسخهٔ وب.</summary>
+    /// <summary>
+    /// دو حالتِ ‎p-buy-per-lbl‎ در نسخهٔ وب.
+    ///
+    /// ⚠️ نسخهٔ وب ‎n2fa(x.toFixed(1))‎ می‌نویسد و ‎n2fa‎ خودش
+    /// ‎Number(n).toLocaleString('en-US')‎ است — یعنی رشتهٔ ‎"17.0"‎ را دوباره
+    /// عدد می‌کند و «17» می‌نویسد، نه «17.0». پس این‌جا هم اول گرد می‌شود و
+    /// بعد بدونِ اعشارِ بی‌مصرف نوشته می‌شود. (همان تلهٔ ‎_tonFmt‎ که در خودِ
+    /// نسخهٔ وب هم یک‌بار گزارش شده بود.)
+    /// </summary>
     public string BuyPerLabel =>
         BuyPerLiter > 0m
-            ? "فی خرید: " + Shamsi.Money(ParchaService.Fixed1(BuyPerLiter), 1)
-              + " ؋  —  فایده فی لیتر: " + Shamsi.Money(ParchaService.Fixed1(ProfitPer), 1) + " ؋"
+            ? "فی خرید: " + Shamsi.Money(ParchaService.Fixed1(BuyPerLiter))
+              + " ؋  —  فایده فی لیتر: " + Shamsi.Money(ParchaService.Fixed1(ProfitPer)) + " ؋"
             : "هنوز خریدی در مخزن ثبت نشده";
 }
 
