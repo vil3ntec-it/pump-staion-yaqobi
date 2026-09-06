@@ -1,34 +1,34 @@
 namespace PumpYaqobi.Reporting.Pdf;
 
 /// <summary>
-/// کمک‌کارهای متنِ فارسی برای سند.
-/// نسخهٔ HTML اعدادِ فارسی را با ‎n2fa‎ می‌ساخت و همان شکل باید در PDF هم بیاید.
+/// قالبِ عددها در سندهای چاپ/PDF.
+///
+/// ⚠️ عمداً ارقامِ لاتین‌اند، نه فارسی: ‎n2fa‎ در نسخهٔ وب دقیقاً
+/// ‎Number(n).toLocaleString('en-US')‎ است، پس ورقِ چاپ همیشه «3,356» نشان
+/// می‌دهد نه «۳٬۳۵۶». یک‌بار فارسی نوشته شد و ورق با نسخهٔ وب فرق کرد.
 /// </summary>
 public static class PersianText
 {
-    private static readonly string[] Fa = { "۰","۱","۲","۳","۴","۵","۶","۷","۸","۹" };
-
-    /// <summary>‎n2fa‎ — عدد با جداکنندهٔ هزار و ارقامِ فارسی.</summary>
+    /// <summary>‎n2fa(n)‎ — عدد با جداکنندهٔ هزار، ارقامِ لاتین.</summary>
     public static string Num(decimal v, int decimals = 0)
     {
-        var s = v.ToString("N" + decimals, System.Globalization.CultureInfo.InvariantCulture);
-        return ToFa(s);
+        // عددِ صحیح، اعشارِ بی‌مصرف نگیرد (مثلِ خودِ toLocaleString)
+        if (decimals == 0 && v != decimal.Truncate(v))
+            return v.ToString("#,##0.##", System.Globalization.CultureInfo.InvariantCulture);
+        return v.ToString("N" + decimals, System.Globalization.CultureInfo.InvariantCulture);
     }
 
-    public static string ToFa(string s)
-    {
-        var b = new System.Text.StringBuilder(s.Length);
-        foreach (var c in s) b.Append(c is >= '0' and <= '9' ? Fa[c - '0'] : c.ToString());
-        return b.ToString();
-    }
+    /// <summary>‎_tonFmt‎ — وزنِ تن همیشه با سه رقمِ اعشار.</summary>
+    public static string Ton(decimal ton) =>
+        ton.ToString("N3", System.Globalization.CultureInfo.InvariantCulture);
 
-    /// <summary>‎toEnDigits‎ — برعکس، برای وقتی که باید عدد را پارس کنیم.</summary>
+    /// <summary>‎toEnDigits‎ — رقمِ فارسی/عربی ← لاتین، برای تجزیهٔ ورودی.</summary>
     public static string ToEn(string s)
     {
         var b = new System.Text.StringBuilder(s.Length);
         foreach (var c in s)
-            b.Append(c is >= '۰' and <= '۹' ? (char)('0' + (c - '۰'))
-                   : c is >= '٠' and <= '٩' ? (char)('0' + (c - '٠')) : c);
+            b.Append(c is >= '\u06F0' and <= '\u06F9' ? (char)('0' + (c - '\u06F0'))
+                   : c is >= '\u0660' and <= '\u0669' ? (char)('0' + (c - '\u0660')) : c);
         return b.ToString();
     }
 }
