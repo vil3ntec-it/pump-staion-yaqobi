@@ -138,18 +138,53 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     }
 
     /// <summary>⚠️ فیصدیِ پطرول و دیزل دو چیزِ جدا هستند و هرگز یکی نمی‌شوند.</summary>
+    /// <summary>وقتی کادرِ «هر دو» خودش این دو را می‌نویسد، دوباره ذخیره نشود.</summary>
+    private bool _settingBoth;
+
     partial void OnPercentPetrolChanged(decimal v)
     {
+        if (_settingBoth) return;
         _host.Debt.SetPercent(Entity, FuelType.Petrol, v == 0m ? null : v);
         SaveAccount();
-        OnPropertyChanged(nameof(PercentPetrolText));
+        PercentChanged();
     }
 
     partial void OnPercentDieselChanged(decimal v)
     {
+        if (_settingBoth) return;
         _host.Debt.SetPercent(Entity, FuelType.Diesel, v == 0m ? null : v);
         SaveAccount();
+        PercentChanged();
+    }
+
+    /// <summary>
+    /// کادرِ «هر دو» — میان‌بُرِ ‎_setAcctPct(a, 'both', val)‎.
+    ///
+    /// نوشتن در آن، همان لحظه هر دو فیصدی را می‌نویسد. و عمداً فقط وقتی عدد
+    /// نشان می‌دهد که فیصدیِ هر دو تیل یکی باشد — وگرنه خالی می‌ماند، چون
+    /// «هر دو» عددی ندارد که نشان بدهد.
+    /// </summary>
+    public string PercentBothText
+    {
+        get => PercentPetrolText == PercentDieselText ? PercentPetrolText : "";
+        set
+        {
+            var v = Shamsi.Num(value);
+            _host.Debt.SetPercent(Entity, null, v == 0m ? null : v);
+            _settingBoth = true;
+            PercentPetrol = v;
+            PercentDiesel = v;
+            _settingBoth = false;
+            SaveAccount();
+            PercentChanged();
+        }
+    }
+
+    private void PercentChanged()
+    {
+        OnPropertyChanged(nameof(PercentPetrolText));
         OnPropertyChanged(nameof(PercentDieselText));
+        OnPropertyChanged(nameof(PercentBothText));
     }
 
     partial void OnRasidFuelPetrolChanged(decimal v) { Entity.RasidFuelPetrol = v; SaveAccount(); OnPropertyChanged(nameof(RasidFuelPetrolText)); }
@@ -158,8 +193,36 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     partial void OnRasidMoneyDieselChanged(decimal v) { Entity.RasidMoneyDiesel = v; SaveAccount(); OnPropertyChanged(nameof(RasidMoneyDieselText)); }
 
     // نوشته‌های ورودی: عددِ خام بی «۰٫۰»، و پذیرشِ رقمِ فارسی و کاما
-    public string PercentPetrolText { get => Shamsi.Money(PercentPetrol); set => PercentPetrol = Shamsi.Num(value); }
-    public string PercentDieselText { get => Shamsi.Money(PercentDiesel); set => PercentDiesel = Shamsi.Num(value); }
+
+    /// <summary>
+    /// ‎_acctPctRaw‎ — کادرِ فیصدی وقتی فیصدی‌ای نیست باید **خالی** باشد، نه
+    /// «۰». صفر و خالی این‌جا یک معنا دارند («این تیل فیصدی ندارد») و نشان
+    /// دادنِ «۰» کاربر را به این گمان می‌انداخت که عددی ثبت شده.
+    /// </summary>
+    public string PercentPetrolText
+    {
+        get => PercentPetrol == 0m ? "" : Shamsi.Money(PercentPetrol);
+        set => PercentPetrol = Shamsi.Num(value);
+    }
+
+    public string PercentDieselText
+    {
+        get => PercentDiesel == 0m ? "" : Shamsi.Money(PercentDiesel);
+        set => PercentDiesel = Shamsi.Num(value);
+    }
+
+    /// <summary>سپردهٔ پولِ همین حساب — خالی یعنی چیزی نوشته نشده.</summary>
+    public string MoneyDepositText
+    {
+        get => Entity.MoneyDeposit is { } v && v != 0m ? Shamsi.Money(v) : "";
+        set
+        {
+            var v = Shamsi.Num(value);
+            Entity.MoneyDeposit = v == 0m ? null : v;
+            SaveAccount();
+            OnPropertyChanged(nameof(MoneyDepositText));
+        }
+    }
     public string RasidFuelPetrolText { get => Shamsi.Money(RasidFuelPetrol); set => RasidFuelPetrol = Shamsi.Num(value); }
     public string RasidFuelDieselText { get => Shamsi.Money(RasidFuelDiesel); set => RasidFuelDiesel = Shamsi.Num(value); }
     public string RasidMoneyPetrolText { get => Shamsi.Money(RasidMoneyPetrol); set => RasidMoneyPetrol = Shamsi.Num(value); }

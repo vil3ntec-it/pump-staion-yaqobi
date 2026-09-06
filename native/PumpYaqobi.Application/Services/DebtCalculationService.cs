@@ -57,16 +57,28 @@ public sealed class DebtCalculationService
 
     /// <summary>
     /// ‎_setAcctPct(a, fuel, val)‎ — نوشتنِ فیصدی.
+    ///
     /// ⚠️ اول ‎_pctSplit‎ اجرا می‌شود: اولین باری که دست به فیصدی می‌خورد، هر دو
     /// کادر صریح نوشته می‌شوند تا فیصدیِ مشترکِ قدیمی دوباره زنده نشود.
+    ///
+    /// ⚠️ **خالی کردنِ کادر یعنی صفر، نه «ثبت نشده».** در نسخهٔ وب کادرِ خالی
+    /// رشتهٔ ‎''‎ ذخیره می‌شود و ‎_acctPct‎ آن را ‎parseFloat('')||0‎ یعنی صفر
+    /// می‌خوانَد — ولی ‎undefined‎ را به فیصدیِ مشترکِ قدیمی برمی‌گردانَد. این
+    /// دو حالتِ جدا هستند. اگر خالی را هم ‎null‎ ذخیره کنیم، پاک کردنِ فیصدیِ
+    /// پطرول آن را به فیصدیِ قدیمی برمی‌گرداند — یعنی عددی که کاربر همین حالا
+    /// پاکش کرده، دوباره زنده می‌شود.
+    ///
+    /// پس ‎null‎ فقط معنیِ «هرگز دست نخورده» را دارد و خالی به‌صورتِ ‎0‎ ذخیره
+    /// می‌شود. برای خواندن هم یکی است، چون ‎parseFloat('')||0 == 0‎.
     /// </summary>
     public void SetPercent(DebtAccount a, FuelType? fuel, decimal? value)
     {
         if (a is null) return;
         SplitLegacyPercent(a);
-        if (fuel is null) { a.PercentPetrol = value; a.PercentDiesel = value; }   // میان‌بُرِ «هر دو»
-        else if (fuel == FuelType.Diesel) a.PercentDiesel = value;
-        else a.PercentPetrol = value;
+        var v = value ?? 0m;
+        if (fuel is null) { a.PercentPetrol = v; a.PercentDiesel = v; }   // میان‌بُرِ «هر دو»
+        else if (fuel == FuelType.Diesel) a.PercentDiesel = v;
+        else a.PercentPetrol = v;
         // فیصدیِ تک‌خانهٔ قدیمی هم‌گام می‌ماند (همان خطِ آخرِ _setAcctPct)
         var p = a.PercentPetrol ?? 0m;
         var d = a.PercentDiesel ?? 0m;
