@@ -146,3 +146,28 @@ public class DebtRow : EntityBase
     /// </summary>
     public long? InvoiceId { get; set; }
 }
+
+/// <summary>
+/// ══ رسیدِ نقدیِ قرض‌دار ═══════════════════════════════════════════════════════
+/// ‎DB.debtQuickReceipts‎ — پرداختِ نقدیِ مستقیم به حسابِ یک قرض‌دار، بی هیچ تیل.
+///
+/// این فقط «دفترچهٔ رسیدها»ست: خودِ اثرِ مالی همان لحظه به‌صورت یک ردیف در
+/// حسابِ قرض‌دار می‌نشیند (با ‎SrcKey = "debtQuick|&lt;id&gt;"‎). پس این جدول
+/// هیچ‌وقت در محاسبهٔ الباقی شمرده نمی‌شود — وگرنه هر رسید دو بار حساب می‌شد.
+/// </summary>
+public class DebtQuickReceipt : EntityBase
+{
+    /// <summary>شناسه‌ای که در ‎SrcKey‎ِ ردیفِ حساب می‌نشیند.</summary>
+    public string LegacyId { get; set; } = string.Empty;
+    public string? DateShamsi { get; set; }
+    public int DateKey { get; set; }
+    /// <summary>«1405/06» — برای منویِ ماه.</summary>
+    public string? MonthKey { get; set; }
+    /// <summary>نامِ قرض‌داری که رسید در حسابش نشست (نه متنی که کاربر تایپ کرد).</summary>
+    public string? Account { get; set; }
+    public string? Note { get; set; }
+    public decimal Amount { get; set; }
+
+    /// <summary>کلیدِ ردیفی که این رسید در حسابِ قرض‌دار ساخته.</summary>
+    public string SrcKey => "debtQuick|" + LegacyId;
+}

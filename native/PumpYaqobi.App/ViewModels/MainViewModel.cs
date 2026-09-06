@@ -189,6 +189,7 @@ public sealed partial class MainViewModel : ObservableObject
         new ExchangeSectionViewModel(host),
         new ExpenseSectionViewModel(host),
         new ParchaReceiptSectionViewModel(host),
+        new DebtReceiptSectionViewModel(host),
         new SafeSectionViewModel(host),
         new AmanatSectionViewModel(host),
         new CompanySectionViewModel(host),

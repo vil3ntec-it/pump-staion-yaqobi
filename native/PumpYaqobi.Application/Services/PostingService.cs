@@ -158,6 +158,33 @@ public sealed class PostingService
     ///   ۲) رسیدِ دستیِ کاربر روی ردیفِ هم‌منبع حفظ می‌شود، نه پاک.
     ///   ۳) اگر ردیفِ کاملاً خالی در دفتر باشد، همان پر می‌شود.
     /// </summary>
+    /// <summary>
+    /// ‎removePersonRowBySrcKey(srcKey)‎ — ردیفِ ساخته‌شده از یک منبع را از هر
+    /// دو دفترِ همهٔ حساب‌های شخص برمی‌دارد.
+    ///
+    /// برای «برگرداندنِ» یک رسید لازم است: خودِ رسید که پاک می‌شود، اثرش هم
+    /// باید از حساب برود — وگرنه پول در حساب می‌مانَد و در هیچ فهرستی دیده
+    /// نمی‌شود.
+    /// </summary>
+    /// <returns>ردیف‌هایی که برداشته شدند — تا فراخوان بتواند از دیتابیس هم پاکشان کند.</returns>
+    public static List<DebtRow> RemoveRowsBySrcKey(IEnumerable<Debtor> people, string? srcKey)
+    {
+        var gone = new List<DebtRow>();
+        if (string.IsNullOrEmpty(srcKey)) return gone;
+
+        foreach (var p in people)
+        {
+            if (p is null) continue;
+            foreach (var a in p.AllAccounts())
+                foreach (var list in new[] { a.FuelRows, a.MoneyRows })
+                {
+                    gone.AddRange(list.Where(r => r.SrcKey == srcKey));
+                    list.RemoveAll(r => r.SrcKey == srcKey);
+                }
+        }
+        return gone;
+    }
+
     public static DebtRow PlaceRow(Debtor person, DebtRow data, string? descText,
                                    DebtAccount? targetAccount, bool intoMoneyLedger = false)
     {

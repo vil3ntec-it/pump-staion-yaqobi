@@ -1,0 +1,94 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             x:Class="PumpYaqobi.App.Views.Sections.DebtReceiptSectionView"
+             x:DataType="vm:DebtReceiptSectionViewModel">
+
+  <c:SectionPage>
+    <c:SectionPage.Header>رسید قرض‌داران</c:SectionPage.Header>
+
+    <c:SectionPage.Toolbar>
+      <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <TextBlock Text="📅 ماه:" VerticalAlignment="Center" Classes="label" />
+        <ComboBox ItemsSource="{Binding Months}" SelectedItem="{Binding Month}" MinWidth="130" />
+      </StackPanel>
+    </c:SectionPage.Toolbar>
+
+    <StackPanel Spacing="10">
+
+      <!-- ورودِ سریع — بی هیچ دکمهٔ «ثبت»: با کامل شدنِ نام و مبلغ خودش می‌رود -->
+      <Border Classes="panel" Padding="12,10" BorderThickness="1" CornerRadius="10">
+        <StackPanel Spacing="8">
+          <TextBlock Text="نام قرض‌دار و مبلغ را بنویسید — همان لحظه در حسابش ثبت می‌شود"
+                     Classes="label" />
+          <WrapPanel Orientation="Horizontal">
+            <WrapPanel.Styles>
+              <Style Selector="StackPanel.q">
+                <Setter Property="Margin" Value="0,0,10,0" />
+              </Style>
+            </WrapPanel.Styles>
+
+            <StackPanel Classes="q" Spacing="3" Width="190">
+              <TextBlock Text="نام قرض‌دار" Classes="label" />
+              <TextBox x:Name="NameBox" Text="{Binding TypedName}" Watermark="نام…" />
+            </StackPanel>
+
+            <StackPanel Classes="q" Spacing="3" Width="140">
+              <TextBlock Text="مبلغ رسید" Classes="label" />
+              <TextBox x:Name="AmountBox" Text="{Binding AmountText}" Watermark="0" />
+            </StackPanel>
+
+            <StackPanel Classes="q" Spacing="3" Width="200">
+              <TextBlock Text="توضیحات" Classes="label" />
+              <TextBox Text="{Binding Note}" Watermark="اختیاری" />
+            </StackPanel>
+
+            <StackPanel Classes="q" Spacing="3" Width="120">
+              <TextBlock Text="تاریخ" Classes="label" />
+              <TextBox Text="{Binding DateShamsi}" HorizontalContentAlignment="Center" />
+            </StackPanel>
+          </WrapPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- فهرستِ ماه -->
+      <Border Classes="panel" Padding="0">
+        <Grid RowDefinitions="Auto,*,Auto">
+          <Border Grid.Row="0" Classes="card-head">
+            <TextBlock Text="رسیدهای این ماه" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Accent}" />
+          </Border>
+
+          <c:ExcelGrid Grid.Row="1" ItemsSource="{Binding Rows}" x:CompileBindings="False"
+                       IsReadOnly="True" BorderThickness="0" CornerRadius="0">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" />
+              <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
+              <DataGridTextColumn Header="نام قرض‌دار" Binding="{Binding Account}" Width="Auto" />
+              <DataGridTextColumn Header="توضیحات" Binding="{Binding Note}" Width="*" />
+              <DataGridTextColumn Header="مبلغ رسید" Binding="{Binding AmountText}" Width="Auto" />
+              <DataGridTemplateColumn Header="" Width="Auto">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <Button Classes="ghost danger" Content="برگرداندن" Padding="8,3" FontSize="11"
+                            Command="{Binding $parent[UserControl].DataContext.UndoCommand}"
+                            CommandParameter="{Binding}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+            </DataGrid.Columns>
+          </c:ExcelGrid>
+
+          <Border Grid.Row="2" Padding="12,8" Background="{DynamicResource Pump.Dark}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="جملهٔ ماه:" FontWeight="Bold" />
+              <TextBlock Text="{Binding TotalText}" FontWeight="Bold"
+                         Foreground="{DynamicResource Pump.Ok}" />
+            </StackPanel>
+          </Border>
+        </Grid>
+      </Border>
+    </StackPanel>
+  </c:SectionPage>
+</UserControl>
