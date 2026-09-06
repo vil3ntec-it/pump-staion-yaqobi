@@ -119,15 +119,46 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
         finally { Downloading = false; }
     }
 
+    /// <summary>
+    /// نصب و راه‌اندازیِ دوباره.
+    ///
+    /// ⚠️ برنامه باید همین‌جا بسته شود: تا وقتی باز است، فایل‌های خودش قفل‌اند
+    /// و جای‌گزینی شکست می‌خورد. کارِ جابه‌جایی و باز کردنِ دوبارهٔ برنامه به
+    /// دستورِ بیرونی سپرده شده که خودش منتظرِ بسته شدنِ ما می‌ماند.
+    /// </summary>
     [RelayCommand]
     private void InstallUpdate()
     {
         if (_downloaded is null) return;
-        if (UpdateService.Launch(_downloaded))
+        if (!UpdateService.Launch(_downloaded)) { UpdateStatus = "نصبِ نسخهٔ تازه انجام نشد"; return; }
+
+        UpdateStatus = "برنامه بسته می‌شود و با نسخهٔ تازه باز می‌شود";
+        _host.Toast("برنامه بسته می‌شود و با نسخهٔ تازه باز می‌شود", ToastKind.Info);
+
+        // یک لحظه فرصت بده پیام دیده شود، بعد ببند
+        _ = Task.Run(async () =>
         {
-            UpdateStatus = "نصاب باز شد — برنامه بسته می‌شود";
-            _host.Toast("برنامه برای نصبِ نسخهٔ تازه بسته می‌شود", ToastKind.Info);
-        }
-        else UpdateStatus = "باز کردنِ نصاب انجام نشد";
+            await Task.Delay(1200);
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (Avalonia.Application.Current?.ApplicationLifetime
+                    is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime d)
+                    d.Shutdown();
+                else Environment.Exit(0);
+            });
+        });
     }
+
+    /// <summary>
+    /// بررسیِ خودکار در پس‌زمینه — یک‌بار، هنگامِ بازکردنِ همین صفحه. بی‌صدا
+    /// است: اگر اینترنت نباشد یا نسخهٔ تازه‌ای نباشد، هیچ پیامی نمی‌آید.
+    /// </summary>
+    public override async Task OnActivatedAsync()
+    {
+        if (_autoChecked) return;
+        _autoChecked = true;
+        try { await CheckUpdateAsync(); } catch { }
+    }
+
+    private bool _autoChecked;
 }

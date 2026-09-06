@@ -11,6 +11,10 @@
     <AssemblyName>PumpYaqobi</AssemblyName>
     <RootNamespace>PumpYaqobi.App</RootNamespace>
     <InvariantGlobalization>false</InvariantGlobalization>
+    <!-- شمارهٔ نسخه. ساختِ خودکارِ گیت‌هاب این را با شمارهٔ همان ساخت جا‌به‌جا
+         می‌کند، پس هر انتشار عددِ بزرگ‌تری می‌گیرد و به‌روزرسانیِ داخلِ برنامه
+         می‌فهمد نسخهٔ تازه‌ای آمده. -->
+    <Version>1.0.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

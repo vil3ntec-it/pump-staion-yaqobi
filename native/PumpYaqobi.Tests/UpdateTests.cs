@@ -75,4 +75,22 @@ public class UpdateTests
             Assert.DoesNotContain("pump-staion", s, StringComparison.OrdinalIgnoreCase);
         }
     }
+
+    /// <summary>
+    /// نامِ بستهٔ کوچک باید شناسهٔ پایه را بدهد و نامِ بستهٔ کامل هیچ.
+    ///
+    /// اگر این را اشتباه بخوانیم، بدترین حالت پیش می‌آید: فایل‌های تازهٔ
+    /// برنامه روی پایه‌ای می‌نشینند که با آن ساخته نشده‌اند و برنامه بالا
+    /// نمی‌آید. برای همین قاعده‌اش صریح است: نامی که با «PumpYaqobi-app-»
+    /// شروع نشود، اصلاً بستهٔ کوچک نیست.
+    /// </summary>
+    [Theory]
+    [InlineData("PumpYaqobi-app-1a2b3c4d.zip", "1a2b3c4d")]
+    [InlineData("PumpYaqobi-app-ff00ff00.zip", "ff00ff00")]
+    [InlineData("PumpYaqobi-Windows.zip", null)]
+    [InlineData("PumpYaqobi-Setup.exe", null)]
+    [InlineData("version.txt", null)]
+    [InlineData("PumpYaqobi-app-.zip", null)]
+    public void OnlyTheSmallPackageCarriesABaseId(string name, string? expected)
+        => Assert.Equal(expected, PumpYaqobi.App.Update.AppBase.IdInAssetName(name));
 }

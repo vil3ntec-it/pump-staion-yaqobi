@@ -52,18 +52,36 @@ public sealed class UpdateService
             var latest = NormalizeVersion(tag);
             if (latest.Length == 0) return None(current);
 
-            string? url = null; long size = 0;
+            string? url = null, fullUrl = null;
+            long size = 0, fullSize = 0;
+            var localBase = AppBase.LocalId;
+
             if (root.TryGetProperty("assets", out var assets) && assets.ValueKind == JsonValueKind.Array)
                 foreach (var a in assets.EnumerateArray())
                 {
                     var name = a.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
-                    // فقط بستهٔ نصبِ ویندوز
-                    if (!name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
-                        && !name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) continue;
-                    url = a.TryGetProperty("browser_download_url", out var u) ? u.GetString() : null;
-                    size = a.TryGetProperty("size", out var s) ? s.GetInt64() : 0;
-                    if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) break;  // نصاب اولویت دارد
+                    if (!name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
+                        && !name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) continue;
+
+                    var u = a.TryGetProperty("browser_download_url", out var uu) ? uu.GetString() : null;
+                    var s = a.TryGetProperty("size", out var ss) ? ss.GetInt64() : 0;
+                    if (u is null) continue;
+
+                    // بستهٔ کوچک: فقط فایل‌های خودِ برنامه. نامش شناسهٔ «پایه»
+                    // را با خود دارد؛ فقط وقتی به کار می‌آید که پایهٔ نصب‌شده
+                    // دقیقاً همان باشد، وگرنه نیمی از فایل‌ها ناجور می‌شوند.
+                    var baseId = AppBase.IdInAssetName(name);
+                    if (baseId is not null)
+                    {
+                        if (localBase.Length > 0 && baseId == localBase) { url = u; size = s; }
+                        continue;
+                    }
+
+                    fullUrl ??= u;
+                    if (fullSize == 0) fullSize = s;
                 }
+
+            if (url is null) { url = fullUrl; size = fullSize; }
 
             var notes = root.TryGetProperty("body", out var b) ? b.GetString() : null;
             var newer = Compare(latest, current) > 0;
@@ -139,18 +157,77 @@ public sealed class UpdateService
         return path;
     }
 
-    /// <summary>اجرای نصاب. برنامه پس از این بسته می‌شود تا فایل‌هایش آزاد شوند.</summary>
-    public static bool Launch(string installerPath)
+    /// <summary>
+    /// نصبِ نسخهٔ گرفته‌شده و راه‌اندازیِ دوباره.
+    ///
+    /// دو حالت دارد:
+    ///   • ‎.exe‎ — نصاب است، همان اجرا می‌شود.
+    ///   • ‎.zip‎ — بستهٔ بی‌نصب. کنارِ برنامه باز می‌شود و یک دستورِ کوچک
+    ///     می‌نویسیم که صبر کند تا برنامه بسته شود، فایل‌های تازه را جای
+    ///     فایل‌های کهنه بگذارد و دوباره برنامه را باز کند.
+    ///
+    /// ⚠️ خودِ برنامه نمی‌تواند فایل‌های در حالِ اجرای خودش را جابه‌جا کند —
+    /// برای همین کار به آن دستورِ بیرونی سپرده می‌شود و برنامه بلافاصله بسته
+    /// می‌شود. اگر بستن را فراموش کنید، جابه‌جایی شکست می‌خورد.
+    /// </summary>
+    public static bool Launch(string packagePath)
     {
         try
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(installerPath)
+            if (packagePath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                return LaunchZip(packagePath);
+
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(packagePath)
             {
                 UseShellExecute = true,
             });
             return true;
         }
         catch { return false; }
+    }
+
+    private static bool LaunchZip(string zipPath)
+    {
+        var exe = Environment.ProcessPath;
+        if (exe is null) return false;
+        var appDir = Path.GetDirectoryName(exe)!;
+
+        // بسته در یک پوشهٔ کنارِ فایلِ زیپ باز می‌شود، نه روی خودِ برنامه
+        var staging = Path.Combine(Path.GetDirectoryName(zipPath)!, "staging");
+        if (Directory.Exists(staging)) Directory.Delete(staging, true);
+        System.IO.Compression.ZipFile.ExtractToDirectory(zipPath, staging);
+
+        // بعضی بسته‌ها یک پوشهٔ تکیِ بیرونی دارند — همان پوشه منبع است
+        var top = Directory.GetDirectories(staging);
+        var src = top.Length == 1 && Directory.GetFiles(staging).Length == 0 ? top[0] : staging;
+
+        var pid = Environment.ProcessId;
+        var script = Path.Combine(Path.GetDirectoryName(zipPath)!, "apply-update.cmd");
+        // ‎robocopy‎ کدِ خروجیِ ۰ تا ۷ را «موفق» می‌شمارد، پس با ‎exit /b 0‎ بسته می‌شود
+        File.WriteAllText(script, $"""
+            @echo off
+            chcp 65001 >nul
+            :wait
+            tasklist /FI "PID eq {pid}" | find "{pid}" >nul
+            if not errorlevel 1 (
+              timeout /t 1 /nobreak >nul
+              goto wait
+            )
+            robocopy "{src}" "{appDir}" /E /IS /IT /R:3 /W:2 >nul
+            start "" "{exe}"
+            rmdir /s /q "{staging}" >nul 2>&1
+            exit /b 0
+            """, System.Text.Encoding.UTF8);
+
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "cmd.exe",
+            Arguments = "/c \"" + script + "\"",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WorkingDirectory = appDir,
+        });
+        return true;
     }
 }
 
@@ -164,5 +241,48 @@ public static class AppVersion
             var v = typeof(AppVersion).Assembly.GetName().Version;
             return v is null ? "1.0.0" : $"{v.Major}.{v.Minor}.{v.Build}";
         }
+    }
+}
+
+/// <summary>
+/// ══ «پایه»ی نصب ═════════════════════════════════════════════════════════════
+/// بستهٔ کامل ۵۷ مگابایت است، ولی از هر ساخت به ساختِ بعدی معمولاً فقط دو
+/// مگابایتش عوض می‌شود: خودِ فایل‌های برنامه. بقیه — خودِ دات‌نت، اِوالونیا،
+/// اسکیا و بقیهٔ کتابخانه‌ها — همان‌اند و تا وقتی نسخهٔ بسته‌ها عوض نشود
+/// دست‌نخورده می‌مانند.
+///
+/// پس هر ساخت یک «شناسهٔ پایه» دارد که از همان فایل‌های ثابت ساخته می‌شود و
+/// در فایلِ ‎base.id‎ کنارِ برنامه می‌نشیند. بستهٔ کوچک هم همان شناسه را در
+/// نامش دارد. برنامه فقط وقتی بستهٔ کوچک را می‌گیرد که دو شناسه یکی باشند؛
+/// اگر پایه عوض شده باشد، خودبه‌خود می‌رود سراغِ بستهٔ کامل.
+///
+/// ⚠️ بستهٔ کوچک عمداً ‎base.id‎ ندارد — یعنی شناسهٔ روی دیسک همان می‌ماند و
+/// درست هم همین است: پایه که عوض نشده.
+/// </summary>
+public static class AppBase
+{
+    /// <summary>شناسهٔ پایهٔ همین نصب. خالی یعنی «نمی‌دانم» → بستهٔ کامل.</summary>
+    public static string LocalId
+    {
+        get
+        {
+            try
+            {
+                var dir = Path.GetDirectoryName(Environment.ProcessPath);
+                if (dir is null) return "";
+                var f = Path.Combine(dir, "base.id");
+                return File.Exists(f) ? File.ReadAllText(f).Trim() : "";
+            }
+            catch { return ""; }
+        }
+    }
+
+    /// <summary>«PumpYaqobi-app-1a2b3c4d.zip» → «1a2b3c4d»؛ وگرنه ‎null‎.</summary>
+    public static string? IdInAssetName(string name)
+    {
+        const string prefix = "PumpYaqobi-app-";
+        if (!name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return null;
+        var rest = Path.GetFileNameWithoutExtension(name)[prefix.Length..];
+        return rest.Length > 0 ? rest : null;
     }
 }

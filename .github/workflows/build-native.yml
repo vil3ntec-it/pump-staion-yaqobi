@@ -1,0 +1,116 @@
+name: ساخت برنامهٔ نیتیو (ویندوز)
+
+# ══ چرا این ورک‌فلو هست ══════════════════════════════════════════════════════
+# خواستهٔ صاحب ریپو: «هر تغییر این‌جا می‌دهم آن‌جا هم برود» و «هر بار دانلودِ
+# کامل وقت و نت می‌گیرد».
+#
+# پس: با هر تغییری در پوشهٔ native روی main، برنامه ساخته می‌شود، در یک بستهٔ
+# زیپ می‌نشیند و به‌عنوان «آخرین نسخه» منتشر می‌شود. کاربر فقط یک‌بار دانلود
+# می‌کند؛ از آن به بعد خودِ برنامه (تنظیمات › به‌روزرسانی) نسخهٔ تازه را
+# می‌گیرد و جایگزین می‌کند — نه نصبِ دوباره‌ای در کار است و نه دانلودِ دستی.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'native/**'
+      - '.github/workflows/build-native.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # شمارهٔ نسخه از شمارهٔ همین ساخت می‌آید، پس همیشه از قبلی بزرگ‌تر است و
+      # به‌روزرسانیِ داخلِ برنامه (که نسخه‌ها را عددی مقایسه می‌کند) می‌فهمد
+      # نسخهٔ تازه‌ای آمده.
+      - name: شمارهٔ نسخه
+        id: ver
+        shell: bash
+        run: echo "version=1.0.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: آزمون‌ها
+        working-directory: native
+        run: dotnet test PumpYaqobi.Tests -c Release --nologo
+
+      # self-contained تا روی ویندوزی که دات‌نت ندارد هم باز شود
+      - name: ساخت
+        working-directory: native
+        run: >
+          dotnet publish PumpYaqobi.App -c Release -r win-x64 --self-contained true
+          -p:Version=${{ steps.ver.outputs.version }}
+          -p:PublishSingleFile=false
+          -o publish
+
+      # ── دو بسته، نه یکی ────────────────────────────────────────────────
+      # بستهٔ کامل ~۵۷ مگابایت است ولی از هر ساخت به ساختِ بعدی معمولاً فقط
+      # دو مگابایتش عوض می‌شود (خودِ فایل‌های برنامه). پس یک بستهٔ کوچک هم
+      # ساخته می‌شود که برنامه در به‌روزرسانی‌های بعدی همان را می‌گیرد — تا
+      # هر بار ۵۷ مگابایت نت مصرف نشود.
+      #
+      # «شناسهٔ پایه» از فایل‌های ثابت (دات‌نت، اِوالونیا، اسکیا و …) ساخته
+      # می‌شود و در نامِ بستهٔ کوچک می‌نشیند. برنامه فقط وقتی بستهٔ کوچک را
+      # می‌گیرد که پایه‌اش دقیقاً همان باشد؛ اگر نسخهٔ کتابخانه‌ها عوض شده
+      # باشد شناسه فرق می‌کند و خودبه‌خود بستهٔ کامل گرفته می‌شود.
+      - name: بسته‌ها
+        id: pack
+        shell: pwsh
+        run: |
+          $pub = "native/publish"
+          New-Item -ItemType Directory -Force -Path rel | Out-Null
+
+          # فایل‌های خودِ برنامه در برابر فایل‌های پایه
+          $app  = Get-ChildItem $pub -File | Where-Object { $_.Name -like 'PumpYaqobi*' }
+          $base = Get-ChildItem $pub -Recurse -File | Where-Object { $_.Name -notlike 'PumpYaqobi*' }
+
+          $sb = [System.Text.StringBuilder]::new()
+          foreach ($f in ($base | Sort-Object FullName)) {
+            $h = (Get-FileHash $f.FullName -Algorithm SHA256).Hash
+            [void]$sb.AppendLine("$($f.Name):$($f.Length):$h")
+          }
+          $bytes  = [System.Text.Encoding]::UTF8.GetBytes($sb.ToString())
+          $sha    = [System.Security.Cryptography.SHA256]::Create().ComputeHash($bytes)
+          $baseId = -join ($sha[0..3] | ForEach-Object { $_.ToString('x2') })
+          echo "baseId=$baseId" >> $env:GITHUB_OUTPUT
+
+          # شناسه کنارِ برنامه می‌نشیند تا نصبِ کاربر بداند پایه‌اش کدام است
+          $baseId | Out-File -Encoding ascii -NoNewline "$pub/base.id"
+
+          Compress-Archive -Path "$pub/*" -DestinationPath rel/PumpYaqobi-Windows.zip -Force
+          Compress-Archive -Path $app.FullName -DestinationPath "rel/PumpYaqobi-app-$baseId.zip" -Force
+          "${{ steps.ver.outputs.version }}" | Out-File -Encoding ascii rel/version.txt
+
+          "بستهٔ کامل: {0:N1} مگابایت" -f ((Get-Item rel/PumpYaqobi-Windows.zip).Length/1MB)
+          "بستهٔ کوچک: {0:N1} مگابایت" -f ((Get-Item "rel/PumpYaqobi-app-$baseId.zip").Length/1MB)
+
+      - name: انتشار
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: پمپ یعقوبی — نسخهٔ ${{ steps.ver.outputs.version }}
+          body: |
+            برنامهٔ کامپیوتریِ پمپ یعقوبی، نسخهٔ ${{ steps.ver.outputs.version }}.
+
+            **بارِ اول:** فایل `PumpYaqobi-Windows.zip` را بگیرید، جایی باز کنید
+            (مثلاً `D:\PumpYaqobi`) و `PumpYaqobi.exe` را بزنید. دات‌نت لازم
+            ندارد؛ همه‌چیز داخلِ خودِ بسته است.
+
+            **بارهای بعد:** دیگر لازم نیست چیزی دانلود کنید. از داخلِ برنامه
+            «تنظیمات › به‌روزرسانی» را بزنید — خودش نسخهٔ تازه را می‌گیرد،
+            جایگزین می‌کند و دوباره باز می‌شود. آن‌جا هم فقط همان چند مگابایتی
+            که واقعاً عوض شده گرفته می‌شود، نه کلِ بسته.
+          files: |
+            rel/PumpYaqobi-Windows.zip
+            rel/PumpYaqobi-app-${{ steps.pack.outputs.baseId }}.zip
+            rel/version.txt
+          make_latest: true
