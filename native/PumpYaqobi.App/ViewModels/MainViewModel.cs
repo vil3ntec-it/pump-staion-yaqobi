@@ -68,13 +68,14 @@ public sealed partial class MainViewModel : ObservableObject
         _settings.LastSection = s.Id;
         _settings.Save();
         await s.EnsureLoadedAsync();
+        await s.OnActivatedAsync();
     }
 
     /// <summary>ترتیبِ نوار، مو‌به‌مو مثلِ <c>&lt;div class="nav"&gt;</c> در نسخهٔ وب.</summary>
     /// <summary>ترتیبِ نوار، مو‌به‌مو مثلِ <c>&lt;div class="nav"&gt;</c> در نسخهٔ وب.</summary>
-    private static IEnumerable<SectionViewModel> BuildSections(AppHost host) => new SectionViewModel[]
+    private IEnumerable<SectionViewModel> BuildSections(AppHost host) => new SectionViewModel[]
     {
-        new PlaceholderSectionViewModel("dashboard", "داشبورد"),
+        new DashboardSectionViewModel(host, this),
         new ParchaSectionViewModel(host),
         new WaraqSectionViewModel(host),
         new DebtSectionViewModel(host),

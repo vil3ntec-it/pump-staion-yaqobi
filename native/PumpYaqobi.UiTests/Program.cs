@@ -47,6 +47,11 @@ internal static class Program
 
         Seed.Fill(PumpYaqobi.App.Services.AppHost.Current);
 
+        // داشبورد پیش از پر شدنِ دیتابیس ساخته شده بود — یک‌بار از نو بخواند
+        if (vm.Sections.FirstOrDefault(s => s.Id == "dashboard")
+            is PumpYaqobi.App.ViewModels.Sections.DashboardSectionViewModel dash)
+            dash.RefreshAsync().GetAwaiter().GetResult();
+
         // ۳) هر تم یک عکس از داشبورد
         foreach (var theme in PumpTheme.All)
         {
@@ -60,7 +65,7 @@ internal static class Program
         var n = 0;
         foreach (var sec in vm.Sections)
         {
-            vm.GoCommand.Execute(sec);
+            vm.GoAsync(sec).GetAwaiter().GetResult();
             Pump(win);
             Dispatcher.UIThread.RunJobs();
             Pump(win);

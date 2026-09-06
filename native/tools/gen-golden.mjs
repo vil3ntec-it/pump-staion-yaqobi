@@ -256,5 +256,59 @@ const amanat = await page.evaluate(() => {
 fs.writeFileSync(path.join(OUT, 'golden-amanat.json'), JSON.stringify(amanat));
 console.log('  ✔ golden-amanat.json — ' + amanat.cases.length + ' ردیف');
 
+// ── داشبورد ───────────────────────────────────────────────────────────────
+// نکتهٔ ظریف: تقریباً همه‌چیزِ داشبورد به «امروز» بند است. پس خودِ لحظهٔ اجرا هم
+// در فایل نوشته می‌شود و آزمونِ سی‌شارپ همان لحظه را به سرویس می‌دهد — وگرنه
+// اگر آزمون درست سرِ نیمه‌شب اجرا شود، دو طرف دو «امروز» می‌بینند.
+const dash = await page.evaluate(() => {
+  let seed = 90210;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+
+  const growth = [];
+  for (let i = 0; i < 400; i++) {
+    const prev = rnd() < 0.12 ? 0 : Math.round((rnd() - 0.35) * 200000);
+    const cur  = rnd() < 0.10 ? 0 : Math.round((rnd() - 0.35) * 200000);
+    growth.push({ cur, prev, g: _dashGrowth(cur, prev) });
+  }
+
+  const ranges = ['day', 'week', 'month', 'year'];
+  const layout = ranges.map(r => {
+    const save = _dashRange; _dashRange = r;
+    const n = _dashCols();
+    const mk = _dashMakeBuckets();
+    _dashRange = save;
+    return { range: r, cols: n, slot: mk.slot,
+             labels: mk.buckets.map(b => b.label), fulls: mk.buckets.map(b => b.full) };
+  });
+
+  // مصارفِ ساختگی فقط برای همین مقایسه — چیزی در DB نوشته نمی‌شود
+  const exps = [];
+  for (let i = 0; i < 300; i++) {
+    const off = Math.round((rnd() - 0.5) * 800);
+    const p = _dashDayAt(off);
+    exps.push({ date: p.y + '/' + p.m + '/' + p.d, amount: Math.round(rnd() * 90000) });
+  }
+  const realExp = DB.expenses;
+  DB.expenses = exps;
+  const q = _dashExpQuick();
+  DB.expenses = realExp;
+
+  const safe = [];
+  for (let i = 0; i < 300; i++) {
+    safe.push({ date: '1405/01/01', amount: Math.round(rnd() * 70000),
+                currency: rnd() < 0.3 ? 'usd' : 'afn',
+                type: rnd() < 0.5 ? 'bardagi' : 'mandagi' });
+  }
+  const realSafe = DB.safeEntries;
+  DB.safeEntries = safe;
+  const sb = _dashSafeBalance();
+  DB.safeEntries = realSafe;
+
+  return { nowIso: new Date().toISOString(), today: persianDate(),
+           growth, layout, exps, expQuick: q, safe, safeBalance: sb };
+});
+fs.writeFileSync(path.join(OUT, 'golden-dash.json'), JSON.stringify(dash));
+console.log('  ✔ golden-dash.json — ' + dash.growth.length + ' رشد و ' + dash.layout.length + ' نوار');
+
 console.log('\n  خطای جاوااسکریپت:', errs.length ? errs.slice(0, 3) : 'ندارد');
 await browser.close();

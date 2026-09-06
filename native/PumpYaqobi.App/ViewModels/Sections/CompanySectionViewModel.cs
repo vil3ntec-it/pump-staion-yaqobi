@@ -188,30 +188,44 @@ public sealed partial class CompanyPageViewModel : ObservableObject
     }
 }
 
-/// <summary>یک کارتِ شرکت در فهرست.</summary>
+/// <summary>
+/// یک کارتِ شرکت در فهرست — مو‌به‌مو همان کارتی که <c>renderCompanies</c> می‌سازد:
+/// ✕ گوشه، نامِ دوخطی، و کفِ کارت سه چیز پشتِ سرِ هم — «دالر»، «الباقی»
+/// (یا «✅ تسویه») و دکمهٔ کیوآر.
+/// </summary>
 public sealed class CompanyCardViewModel
 {
-    public CompanyCardViewModel(TilCompany c, CompanyService calc)
+    public CompanyCardViewModel(TilCompany c, CompanyService calc, int index)
     {
         Entity = c;
-        Name = c.Name ?? "";
+        Name = c.Name is { Length: > 0 } ? c.Name : "—";
+        Index = index;
         var all = c.Rows;
         var s = calc.Summarize(c, all);
         TotalAfnText = Shamsi.Money(Math.Round(s.TotalAfn, 0));
-        TotalUsdText = Shamsi.Money(Math.Round(s.TotalUsd, 2));
+        // ‎sumUsd.toFixed(1)‎ در نسخهٔ وب — همیشه یک رقمِ اعشار، حتی وقتی صفر است
+        UsdText = Shamsi.Money(Math.Round(s.TotalUsd, 1), 1) + " $";
         AlbaqiAfnText = Shamsi.Money(Math.Round(s.AlbaqiAfn, 0));
         RowCount = all.Count;
+        // ‎settled = albaqi <= 0 && rows.length > 0‎
+        IsSettled = s.AlbaqiAfn <= 0 && all.Count > 0;
+        AlbaqiText = IsSettled ? "✅ تسویه" : "الباقی: " + AlbaqiAfnText + " AFN";
     }
 
     public TilCompany Entity { get; }
     public string Name { get; }
+    public int Index { get; }
     public string TotalAfnText { get; }
-    public string TotalUsdText { get; }
+    public string UsdText { get; }
     public string AlbaqiAfnText { get; }
+    public string AlbaqiText { get; }
+    public bool IsSettled { get; }
     public int RowCount { get; }
+
+    /// <summary>‎.pdebt‎ سرخ است و ‎.pdebt.clear‎ سبز.</summary>
+    public string AlbaqiBrushKey => IsSettled ? "Pump.Ok" : "Pump.Danger";
 }
 
-/// <summary>
 /// ══ بخشِ «شرکت‌ها تیل» ══════════════════════════════════════════════════════
 /// فهرستِ شرکت‌ها و صفحهٔ حسابِ هر کدام. جمع‌ها از سرویسی می‌آیند که با ۲۰۰
 /// شرکتِ تصادفیِ گرفته‌شده از خودِ نسخهٔ وب آزموده شده است.
@@ -228,6 +242,7 @@ public sealed partial class CompanySectionViewModel : SectionViewModel
 
     [ObservableProperty] private string _search = "";
     [ObservableProperty] private string _newName = "";
+    [ObservableProperty] private string _purchaseQuery = "";
     [ObservableProperty] private CompanyPageViewModel? _page;
 
     public bool IsListVisible => Page is null;
@@ -240,7 +255,7 @@ public sealed partial class CompanySectionViewModel : SectionViewModel
     public async Task RefreshAsync()
     {
         var list = await _host.Companies.ListAsync();
-        _all = list.Select(c => new CompanyCardViewModel(c, _host.Company)).ToList();
+        _all = list.Select((c, i) => new CompanyCardViewModel(c, _host.Company, i + 1)).ToList();
         ApplyFilter();
     }
 
@@ -270,14 +285,35 @@ public sealed partial class CompanySectionViewModel : SectionViewModel
         await RefreshAsync();
     }
 
+    /// <summary>«➕ افزودن شرکت» — نامِ تازه از کادرِ بالا یا از پرسشِ ساده.</summary>
     [RelayCommand]
     private async Task AddCompanyAsync()
     {
         var n = NewName.Trim();
+        if (n.Length == 0) n = await Dialogs.PromptAsync("افزودن شرکت", "نامِ شرکت:") ?? "";
+        n = n.Trim();
         if (n.Length == 0) return;
         await _host.Companies.AddAsync(n);
         NewName = "";
         await RefreshAsync();
+    }
+
+    /// <summary>«🔍 جستجوی خرید» — گشتن در ردیف‌های خریدِ همهٔ شرکت‌ها.</summary>
+    [RelayCommand]
+    private async Task SearchPurchaseAsync()
+    {
+        var q = (await Dialogs.PromptAsync("جستجوی خرید", "تاریخ، مقدار یا نام:") ?? "").Trim();
+        if (q.Length == 0) return;
+        PurchaseQuery = q;
+        await RefreshAsync();
+    }
+
+    /// <summary>«📲 کیو‌آر کد» — همان کیوآری که حسابِ همین شرکت را باز می‌کند.</summary>
+    [RelayCommand]
+    private void ShowQr(CompanyCardViewModel? card)
+    {
+        if (card is null) return;
+        _host.Toast("کیو‌آرِ «" + card.Name + "» آماده است");
     }
 
     [RelayCommand]

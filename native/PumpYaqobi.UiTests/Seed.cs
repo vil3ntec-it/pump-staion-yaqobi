@@ -132,6 +132,50 @@ internal static class Seed
             }).GetAwaiter().GetResult();
         }
 
+        // ── چند روزِ تازه، دقیقاً دورِ «امروز» ──────────────────────────────
+        // داشبورد پنجره‌اش هفت روزِ دورِ امروز است؛ بدونِ این‌ها همهٔ ستون‌ها صفر
+        // می‌مانند و عکسِ آزمون چیزی را ثابت نمی‌کند.
+        for (var o = -5; o <= 1; o++)
+        {
+            var day = Shamsi.Of(DateTime.Now.Date.AddDays(o));
+            var k = Math.Abs(o) + 1;
+            var rep = host.ParchaData.AddAsync(PumpYaqobi.Domain.Enums.FuelType.Petrol, day)
+                          .GetAwaiter().GetResult();
+            host.ParchaData.SaveShiftAsync(rep, ShiftKind.Day, new ShiftData
+            {
+                Name = "کارمندِ روز", PumpNum = 1,
+                Start = 300000, End = 300000 + 900 + k * 260,
+                Price = 62, ProfitPer = 2, Debt = 2000,
+            }).GetAwaiter().GetResult();
+            host.ParchaData.SaveShiftAsync(rep, ShiftKind.Night, new ShiftData
+            {
+                Name = "کارمندِ شب", PumpNum = 2,
+                Start = 400000, End = 400000 + 600 + k * 180,
+                Price = 62, ProfitPer = 2, Debt = 1200,
+            }).GetAwaiter().GetResult();
+
+            var dRep = host.ParchaData.AddAsync(PumpYaqobi.Domain.Enums.FuelType.Diesel, day)
+                           .GetAwaiter().GetResult();
+            host.ParchaData.SaveShiftAsync(dRep, ShiftKind.Day, new ShiftData
+            {
+                Name = "کارمندِ دیزل", PumpNum = 3,
+                Start = 500000, End = 500000 + 400 + k * 130,
+                Price = 58, ProfitPer = 1.5m, Debt = 900,
+            }).GetAwaiter().GetResult();
+
+            host.ExpenseLedger.AddAsync(new Expense
+            {
+                DateShamsi = day, Title = "مصرفِ روزانه", Amount = 4000 + k * 1300,
+            }).GetAwaiter().GetResult();
+
+            host.SafeLedger.AddAsync(new SafeEntry
+            {
+                DateShamsi = day,
+                Kind = o % 2 == 0 ? SafeEntryKind.Mandagi : SafeEntryKind.Bardagi,
+                Title = "جریانِ روز", Amount = 15000 + k * 2500,
+            }).GetAwaiter().GetResult();
+        }
+
         // ورقِ روزانه
         for (var i = 1; i <= 4; i++)
         {

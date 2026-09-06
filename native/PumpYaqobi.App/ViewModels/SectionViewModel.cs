@@ -34,6 +34,13 @@ public abstract partial class SectionViewModel : ObservableObject
 
     protected virtual Task LoadAsync() => Task.CompletedTask;
 
+    /// <summary>
+    /// هر بار که کاربر واردِ بخش می‌شود — نه فقط بارِ اول. بخش‌هایی که فقط
+    /// «خلاصه»ی دادهٔ بخش‌های دیگرند (مثلِ داشبورد) باید این‌جا خودشان را تازه
+    /// کنند، وگرنه عددهایشان روی عکسِ لحظهٔ ورودِ اولِ برنامه می‌ماند.
+    /// </summary>
+    public virtual Task OnActivatedAsync() => Task.CompletedTask;
+
     /// <summary>بارگیریِ دوباره (پس از واردکردن بکاپ یا هم‌گام‌سازی).</summary>
     public virtual async Task ReloadAsync()
     {

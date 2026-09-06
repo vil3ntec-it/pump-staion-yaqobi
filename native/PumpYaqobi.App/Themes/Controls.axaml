@@ -98,6 +98,26 @@
   <Style Selector="Button.ghost">
     <Setter Property="Background" Value="Transparent" />
   </Style>
+  <Style Selector="Button.info">
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Info}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Info}" />
+  </Style>
+  <!-- کارتی که خودش کلیک‌پذیر است: در نسخهٔ وب ‎card.onclick‎ حساب را باز
+       می‌کند، پس کارت داخلِ یک دکمهٔ بی‌چهره می‌نشیند. دکمه‌های درونِ کارت
+       (✕ و کیوآر) کلیکشان را خودشان مصرف می‌کنند و به این‌جا نمی‌رسد. -->
+  <Style Selector="Button.card-shell">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Button.card-shell /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
   <Style Selector="Button.danger">
     <Setter Property="Foreground" Value="{DynamicResource Pump.Danger}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.Danger}" />
@@ -386,6 +406,56 @@
   </Style>
   <Style Selector="Button.qr /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <!-- ‎.pname‎ — نامِ کارت. جای نام همیشه دو خط است (‎min-height:66px‎ در CSS)
+       تا کارت‌های یک ردیف هم‌قد بمانند، و همهٔ نام‌ها یک اندازه‌اند: نامِ بلندتر
+       ریز نمی‌شود، با «…» کوتاه می‌شود. -->
+  <Style Selector="TextBlock.pname">
+    <Setter Property="FontSize" Value="17" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    <Setter Property="MaxLines" Value="2" />
+    <Setter Property="MinHeight" Value="50" />
+    <Setter Property="Margin" Value="4,6,4,0" />
+  </Style>
+
+  <!-- ‎.cmp-fig‎ — کادرِ «دالر» و «الباقی» کارتِ شرکت: بی‌خط، وسط‌چین، هم‌قد -->
+  <Style Selector="TextBlock.cmp-fig">
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="MinHeight" Value="22" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
+
+  <!-- ‎.dash-seg‎ — دکمه‌های کوچکِ «همه/پطرول/دیزل» و «روزانه/هفتگی/…» -->
+  <Style Selector="Button.seg">
+    <Setter Property="Padding" Value="9,4" />
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
+  </Style>
+  <Style Selector="Button.seg.on">
+    <Setter Property="Foreground" Value="{DynamicResource Pump.OnAccent}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Accent}" />
+  </Style>
+  <Style Selector="Button.seg.on /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Pump.Accent}" />
+  </Style>
+
+  <!-- ستونِ نمودارِ فروشِ داشبورد -->
+  <Style Selector="Border.db-bar">
+    <Setter Property="Background" Value="{DynamicResource Pump.Info}" />
+    <Setter Property="Opacity" Value="0.62" />
+  </Style>
+  <Style Selector="Border.db-bar.sel">
+    <Setter Property="Background" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="Opacity" Value="1" />
   </Style>
 
   <!-- خانهٔ کارتِ خرید — برچسب بالا، مقدار پایین -->

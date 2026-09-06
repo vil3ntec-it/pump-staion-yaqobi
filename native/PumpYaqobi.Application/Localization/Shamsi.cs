@@ -81,6 +81,13 @@ public static class Shamsi
             ? decimal.Truncate(v).ToString("#,##0", CultureInfo.InvariantCulture)
             : v.ToString("#,##0.##", CultureInfo.InvariantCulture);
 
+    /// <summary>
+    /// عددِ پول با شمارِ اعشارِ ثابت — همتای ‎n2fa(x.toFixed(d))‎ نسخهٔ وب،
+    /// که «۰» را هم «0.0» می‌نویسد.
+    /// </summary>
+    public static string Money(decimal v, int decimals) =>
+        v.ToString("#,##0." + new string('0', decimals), CultureInfo.InvariantCulture);
+
     /// <summary>مقدارِ تایپ‌شده → عدد. مثل <c>parseFloat(x)||0</c>ِ نسخهٔ وب.</summary>
     public static decimal Num(string? s)
     {

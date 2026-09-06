@@ -3,24 +3,26 @@
              xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
              xmlns:c="using:PumpYaqobi.App.Controls"
              xmlns:v="using:PumpYaqobi.App.Views.Sections"
+             xmlns:th="using:PumpYaqobi.App.Themes"
              x:Class="PumpYaqobi.App.Views.Sections.CompanySectionView"
              x:DataType="vm:CompanySectionViewModel">
   <Panel>
 
-    <c:SectionPage IsVisible="{Binding IsListVisible}"
-                   Header="شرکت‌ها تیل"
-                   SubHeader="هر شرکت دو دفترِ جدا دارد: پطرول و دیزل">
+    <!-- ══ فهرستِ شرکت‌ها ══════════════════════════════════════════════════
+         سربرگ و کارت‌ها مو‌به‌مو از ‎#sec-noinv‎ و ‎renderCompanies‎:
+         نوارِ بالا فقط جست‌وجو و دو دکمه دارد (نه فیلترِ من‌درآوردی)، و هر کارت
+         نام، «دالر»، «الباقی/تسویه» و دکمهٔ کیوآر است. -->
+    <c:SectionPage IsVisible="{Binding IsListVisible}" Header="شرکت ها تیل">
 
-      <c:SectionPage.Filters>
-        <Grid ColumnDefinitions="Auto,240,24,Auto,240,Auto">
-          <TextBlock Grid.Column="0" Text="جست‌وجو" Classes="label" VerticalAlignment="Center" Margin="0,0,8,0" />
-          <TextBox Grid.Column="1" Text="{Binding Search}" Watermark="نامِ شرکت" />
-          <TextBlock Grid.Column="3" Text="شرکتِ تازه" Classes="label" VerticalAlignment="Center" Margin="0,0,8,0" />
-          <TextBox Grid.Column="4" Text="{Binding NewName}" Watermark="نام" />
-          <Button Grid.Column="5" Classes="accent" Content="افزودن" Margin="8,0,0,0"
+      <c:SectionPage.Toolbar>
+        <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+          <TextBox Width="230" Text="{Binding Search}" Watermark="🔍 جستجوی شرکت..." Margin="0,0,8,0" />
+          <Button Classes="ghost info" Content="🔍 جستجوی خرید" Margin="0,0,8,0"
+                  Command="{Binding SearchPurchaseCommand}" />
+          <Button Classes="accent" Content="➕ افزودن شرکت"
                   Command="{Binding AddCompanyCommand}" />
-        </Grid>
-      </c:SectionPage.Filters>
+        </WrapPanel>
+      </c:SectionPage.Toolbar>
 
       <ScrollViewer>
         <ItemsControl ItemsSource="{Binding Cards}">
@@ -29,32 +31,36 @@
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:CompanyCardViewModel">
-              <Border Classes="card" Width="286" Margin="0,0,12,12">
-                <StackPanel Spacing="8">
-                  <TextBlock Text="{Binding Name}" Classes="h2" TextTrimming="CharacterEllipsis" />
-                  <TextBlock Text="{Binding RowCount, StringFormat={}{0} ردیف}" Classes="muted" />
-                  <Grid ColumnDefinitions="*,*" Margin="0,4,0,0">
-                    <StackPanel Grid.Column="0" Spacing="1">
-                      <TextBlock Text="کلِ خرید" Classes="label" FontSize="11" />
-                      <TextBlock Text="{Binding TotalAfnText}" FontWeight="Bold" FontSize="13" />
-                      <TextBlock Text="{Binding TotalUsdText, StringFormat={}{0} $}" Classes="muted" FontSize="11" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Spacing="1">
-                      <TextBlock Text="الباقی" Classes="label" FontSize="11" />
-                      <TextBlock Text="{Binding AlbaqiAfnText}" FontWeight="Bold" FontSize="13"
-                                 Foreground="{DynamicResource Pump.Accent}" />
-                    </StackPanel>
-                  </Grid>
-                  <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
-                    <Button Classes="accent" Content="باز کردنِ حساب" Padding="10,4" FontSize="12"
-                            Command="{Binding $parent[ItemsControl].((vm:CompanySectionViewModel)DataContext).OpenCommand}"
-                            CommandParameter="{Binding}" />
-                    <Button Classes="ghost danger" Content="حذف" Padding="10,4" FontSize="12"
-                            Command="{Binding $parent[ItemsControl].((vm:CompanySectionViewModel)DataContext).DeleteCompanyCommand}"
+              <Button Classes="card-shell" Width="252" Margin="0,0,12,12"
+                      Command="{Binding $parent[ItemsControl].((vm:CompanySectionViewModel)DataContext).OpenCommand}"
+                      CommandParameter="{Binding}">
+              <Border Classes="person-card">
+                <!-- ردیفِ آخر ستاره است تا «کفِ کارت» (‎.pcard-foot‎ با
+                     ‎margin-top:auto‎) واقعاً پایین بچسبد و کارت‌های یک ردیف
+                     هم‌تراز بمانند — همان دردی که در CSS توضیح داده شده. -->
+                <Grid RowDefinitions="Auto,Auto,*">
+
+                  <Button Grid.Row="0" Classes="card-x" Content="✕" HorizontalAlignment="Left"
+                          Command="{Binding $parent[ItemsControl].((vm:CompanySectionViewModel)DataContext).DeleteCompanyCommand}"
+                          CommandParameter="{Binding}" />
+
+                  <!-- ‎.pname‎ — دقیقاً دو خط جا دارد؛ نامِ بلندتر با «…» بریده
+                       می‌شود ولی فونتش با بقیه یکی می‌ماند. -->
+                  <TextBlock Grid.Row="1" Text="{Binding Name}" Classes="pname"
+                             ToolTip.Tip="{Binding Name}" />
+
+                  <StackPanel Grid.Row="2" VerticalAlignment="Bottom" Spacing="8" Margin="0,8,0,0">
+                    <TextBlock Text="{Binding UsdText}" Classes="cmp-fig"
+                               Foreground="{DynamicResource Pump.Info}" />
+                    <TextBlock Text="{Binding AlbaqiText}" Classes="cmp-fig"
+                               Foreground="{Binding AlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                    <Button Classes="qr" Content="📲 کیو‌آر کد" HorizontalAlignment="Stretch"
+                            Command="{Binding $parent[ItemsControl].((vm:CompanySectionViewModel)DataContext).ShowQrCommand}"
                             CommandParameter="{Binding}" />
                   </StackPanel>
-                </StackPanel>
+                </Grid>
               </Border>
+              </Button>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
