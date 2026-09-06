@@ -16,7 +16,9 @@
     </c:SectionPage.Toolbar>
 
     <c:SectionPage.Summary>
-      <StackPanel Orientation="Horizontal" Spacing="12">
+      <!-- ‎Rows="1"‎ یعنی «همه در یک ردیف، با عرضِ مساوی» — کادرها تا لبه پخش
+           می‌شوند به‌جای آن‌که راست جمع شوند و کنارشان خالی بماند. -->
+      <UniformGrid Rows="1" Classes="stats">
         <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="الباقیِ پول" Classes="label" />
@@ -41,7 +43,7 @@
             <TextBlock Text="{Binding StatusText}" Classes="num" />
           </StackPanel>
         </Border>
-      </StackPanel>
+      </UniformGrid>
     </c:SectionPage.Summary>
 
     <Grid RowDefinitions="Auto,Auto,*">

@@ -12,12 +12,18 @@
        هیچ سایه/تاریِ سنگینی نیست (خواستهٔ صریحِ صاحب ریپو) — عمق با
        لبه و اختلافِ سطح ساخته می‌شود، نه با blur.                        -->
 
+  <!-- ══ مقیاسِ نوشته ═══════════════════════════════════════════════════════
+       اندازه‌ها از خودِ CSSِ نسخهٔ وب (شاخهٔ دسکتاپش) برداشته شده‌اند:
+         .stat-label 1rem · .stat-value 1.55rem · .card-title 1.05rem
+         .nav-btn 1rem   · .tbl 1.08rem
+       با پایهٔ ۱۶ پیکسلِ مرورگر. پیش از این همه حدودِ ۸۰٪ِ این عددها بودند و
+       برنامه کنارِ نسخهٔ وب «ریز و فشرده» دیده می‌شد.                       -->
   <Style Selector="Window">
     <Setter Property="FontFamily" Value="{StaticResource Pump.Font}" />
     <Setter Property="FlowDirection" Value="RightToLeft" />
     <Setter Property="Background" Value="{DynamicResource Pump.AppBg}" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
-    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontSize" Value="15" />
   </Style>
 
   <Style Selector="TextBlock">
@@ -27,39 +33,49 @@
   </Style>
   <Style Selector="TextBlock.muted">
     <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="12.5" />
   </Style>
   <Style Selector="TextBlock.label">
     <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
-    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontSize" Value="14" />
   </Style>
   <Style Selector="TextBlock.h1">
-    <Setter Property="FontSize" Value="21" />
+    <Setter Property="FontSize" Value="22" />
     <Setter Property="FontWeight" Value="Bold" />
   </Style>
   <Style Selector="TextBlock.h2">
-    <Setter Property="FontSize" Value="16" />
+    <Setter Property="FontSize" Value="17" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
+  <!-- ‎.card-title‎ — عنوانِ سربرگِ کادر: پررنگ و به رنگِ اکسنت، مثلِ نسخهٔ وب -->
+  <Style Selector="TextBlock.card-title">
+    <Setter Property="FontSize" Value="17" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Accent}" />
+  </Style>
   <Style Selector="TextBlock.num">
-    <Setter Property="FontSize" Value="19" />
+    <Setter Property="FontSize" Value="24" />
     <Setter Property="FontWeight" Value="Bold" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Accent}" />
   </Style>
 
-  <!-- کارت -->
+  <!-- ══ کارت — ‎.card‎ نسخهٔ وب ══
+       ‎border:1.5px solid var(-border); border-radius:14px; overflow:hidden‎
+       لبه از ‎Pump.Border‎ می‌آید نه ‎ChromeBorder‎: دومی رنگِ لبهٔ نوارهای
+       بالای پنجره است و روی کارت‌ها یک درجه پررنگ‌تر از نسخهٔ وب می‌افتاد. -->
   <Style Selector="Border.card">
     <Setter Property="Background" Value="{DynamicResource Pump.Card}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Border}" />
+    <Setter Property="BorderThickness" Value="1.5" />
+    <Setter Property="CornerRadius" Value="14" />
     <Setter Property="Padding" Value="14" />
+    <Setter Property="ClipToBounds" Value="True" />
   </Style>
   <Style Selector="Border.panel">
     <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Border}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="CornerRadius" Value="10" />
   </Style>
 
   <!-- دکمه‌ها -->
@@ -128,8 +144,8 @@
   <Style Selector="Button.nav">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="CornerRadius" Value="10" />
-    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="Padding" Value="16,8" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
   </Style>
@@ -183,21 +199,29 @@
     <Setter Property="GridLinesVisibility" Value="All" />
     <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource Pump.GridLine}" />
     <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource Pump.GridLine}" />
-    <Setter Property="RowHeight" Value="34" />
+    <Setter Property="RowHeight" Value="36" />
     <Setter Property="HeadersVisibility" Value="Column" />
+  </Style>
+  <!-- دکمهٔ درونِ خانهٔ جدول (حذف، ثبت، …) وسطِ خانه بنشیند و از آن بیرون
+       نزند. پیش از این دکمهٔ «حذف» از لبهٔ جدول بیرون می‌افتاد و روی خطِ
+       کادر می‌نشست — در هر جدولی که ستونِ حذف داشت. -->
+  <Style Selector="DataGridCell Button">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="2,0" />
   </Style>
   <Style Selector="DataGridColumnHeader">
     <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
-    <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="FontSize" Value="12.5" />
-    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="FontSize" Value="13.5" />
+    <Setter Property="Padding" Value="8,8" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="SeparatorBrush" Value="{DynamicResource Pump.GridLine}" />
   </Style>
   <Style Selector="DataGridCell">
-    <Setter Property="Padding" Value="6,2" />
-    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Padding" Value="8,2" />
+    <Setter Property="FontSize" Value="14.5" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
   </Style>
   <Style Selector="DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">
@@ -209,50 +233,94 @@
     <Setter Property="Opacity" Value="1" />
   </Style>
 
-  <!-- قالبِ مشترکِ بخش‌ها -->
+  <!-- ══ قالبِ مشترکِ بخش‌ها ═══════════════════════════════════════════════
+       ساختار مو‌به‌مو همان چیزی است که هر بخش در نسخهٔ وب دارد:
+
+           .card            ← یک کادرِ گِرد که کلِ بخش داخلش است
+             .card-head     ← عنوانِ رنگی راست، دکمه‌های کار چپ
+             (padding:14px) ← فیلتر، جمع‌ها، بدنه، پانویس
+
+       پیش از این، عنوان و دکمه‌ها بیرونِ هر کادری شناور بودند و بخش‌ها
+       «صفحهٔ وبِ کِش‌آمده» دیده می‌شدند نه پنجرهٔ یک برنامه. حالا هر بخش یک
+       واحدِ بسته است — و چون این‌جا یک‌جا تعریف شده، هر هجده بخش با هم
+       عوض می‌شوند.                                                        -->
   <Style Selector="c|SectionPage">
     <Setter Property="Template">
       <ControlTemplate>
-        <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="16,14,16,14">
-          <!-- عنوان + نوارِ ابزار -->
-          <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
-            <StackPanel Grid.Column="0" Spacing="2">
-              <TextBlock Text="{TemplateBinding Header}" Classes="h1" />
-              <TextBlock Text="{TemplateBinding SubHeader}" Classes="muted"
-                         IsVisible="{TemplateBinding SubHeader, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-            </StackPanel>
-            <ContentPresenter Grid.Column="1" Content="{TemplateBinding Toolbar}" VerticalAlignment="Center" />
+        <Border Classes="card" Margin="16,14" Padding="0">
+          <Grid RowDefinitions="Auto,*">
+
+            <!-- ══ سربرگِ کادر ══ -->
+            <Border Grid.Row="0" Classes="card-head">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                  <TextBlock Text="{TemplateBinding Header}" Classes="card-title" />
+                  <TextBlock Text="{TemplateBinding SubHeader}" Classes="muted"
+                             TextWrapping="Wrap"
+                             IsVisible="{TemplateBinding SubHeader, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </StackPanel>
+                <ContentPresenter Grid.Column="1" Content="{TemplateBinding Toolbar}"
+                                  VerticalAlignment="Center" Margin="12,0,0,0" />
+              </Grid>
+            </Border>
+
+            <!-- ══ بدنهٔ کادر ══ -->
+            <Grid Grid.Row="1" RowDefinitions="Auto,Auto,*,Auto" Margin="14">
+
+              <Border Grid.Row="0" Classes="panel" Padding="12,9" Margin="0,0,0,12"
+                      IsVisible="{TemplateBinding Filters, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <ContentPresenter Content="{TemplateBinding Filters}" />
+              </Border>
+
+              <ContentPresenter Grid.Row="1" Content="{TemplateBinding Summary}" Margin="0,0,0,12"
+                                IsVisible="{TemplateBinding Summary, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+              <ContentPresenter Grid.Row="2" Content="{TemplateBinding Body}" />
+
+              <ContentPresenter Grid.Row="3" Content="{TemplateBinding Footer}" Margin="0,12,0,0"
+                                IsVisible="{TemplateBinding Footer, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            </Grid>
           </Grid>
-
-          <!-- نوارِ فیلتر -->
-          <Border Grid.Row="1" Classes="panel" Padding="12,9" Margin="0,0,0,10"
-                  IsVisible="{TemplateBinding Filters, Converter={x:Static ObjectConverters.IsNotNull}}">
-            <ContentPresenter Content="{TemplateBinding Filters}" />
-          </Border>
-
-          <!-- کادرهای جمع -->
-          <ContentPresenter Grid.Row="2" Content="{TemplateBinding Summary}" Margin="0,0,0,10"
-                            IsVisible="{TemplateBinding Summary, Converter={x:Static ObjectConverters.IsNotNull}}" />
-
-          <!-- بدنه -->
-          <ContentPresenter Grid.Row="3" Content="{TemplateBinding Body}" />
-
-          <!-- پانویس -->
-          <ContentPresenter Grid.Row="4" Content="{TemplateBinding Footer}" Margin="0,10,0,0"
-                            IsVisible="{TemplateBinding Footer, Converter={x:Static ObjectConverters.IsNotNull}}" />
-        </Grid>
+        </Border>
       </ControlTemplate>
     </Setter>
   </Style>
 
-  <!-- کادرِ عددِ خلاصه -->
+  <!-- ══ کادرِ عددِ خلاصه — ‎.stat-box‎ نسخهٔ وب ═══════════════════════════
+       ‎background:var(-dark); border:1px solid var(-border);
+        border-radius:10px; padding:14px; text-align:center;
+        min-height:86px; justify-content:center‎
+
+       نکتهٔ مهم «وسط‌چین» است: تا امروز برچسب و عدد راست‌چین بودند و در یک
+       کادرِ کشیده، نوشته به یک گوشه می‌چسبید و سمتِ دیگر خالی می‌ماند —
+       همان چیزی که کادرها را ناجور نشان می‌داد.                            -->
   <Style Selector="Border.stat">
-    <Setter Property="Background" Value="{DynamicResource Pump.Card}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
+    <Setter Property="Background" Value="{DynamicResource Pump.Dark}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Border}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="12" />
-    <Setter Property="Padding" Value="14,11" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="14" />
     <Setter Property="MinWidth" Value="150" />
+    <Setter Property="MinHeight" Value="86" />
+  </Style>
+  <!-- فاصلهٔ بینِ کادرهای یک ردیفِ خلاصه. ‎UniformGrid‎ خودش فاصله ندارد، پس
+       هر کادر نصفِ فاصله را از هر طرف می‌گیرد و کادرهای دو سر با حاشیهٔ منفیِ
+       خودِ ردیف به لبه می‌چسبند. -->
+  <Style Selector="UniformGrid.stats">
+    <Setter Property="Margin" Value="-6,0" />
+  </Style>
+  <Style Selector="UniformGrid.stats > Border.stat">
+    <Setter Property="Margin" Value="6,0" />
+  </Style>
+
+  <!-- محتوای کادر وسطِ آن می‌نشیند و نوشته‌هایش وسط‌چین‌اند -->
+  <Style Selector="Border.stat > StackPanel">
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Border.stat TextBlock">
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
   </Style>
 
   <!-- تب‌های حساب: چیپ، نه فهرستِ ساده -->
@@ -345,13 +413,15 @@
     <Setter Property="TextBlock.Foreground" Value="#ffffff" />
   </Style>
 
-  <!-- سربرگِ داخلِ کارت -->
+  <!-- ══ سربرگِ داخلِ کارت — ‎.card-head‎ ══
+       ‎padding:12px 16px; border-bottom:1px solid var(-border)‎
+       زمینه یک پله تیره‌تر از خودِ کارت است تا سربرگ از بدنه جدا دیده شود —
+       همان کاری که در نسخهٔ وب اختلافِ ‎-panel‎ و ‎-card‎ می‌کرد. -->
   <Style Selector="Border.card-head">
-    <Setter Property="Background" Value="{DynamicResource Pump.Card}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
+    <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Border}" />
     <Setter Property="BorderThickness" Value="0,0,0,1" />
-    <Setter Property="CornerRadius" Value="12,12,0,0" />
-    <Setter Property="Padding" Value="14,10" />
+    <Setter Property="Padding" Value="16,12" />
   </Style>
 
   <Style Selector="Border.chip">
@@ -463,6 +533,53 @@
     <Setter Property="Width" Value="126" />
     <Setter Property="Spacing" Value="4" />
     <Setter Property="Margin" Value="0,0,12,10" />
+  </Style>
+
+  <!-- ══ جانِ حرکت ═══════════════════════════════════════════════════════════
+       نسخهٔ وب همه‌جا ‎transition‎ داشت و نسخهٔ نیتیو هیچ: دکمه‌ها آنی رنگ عوض
+       می‌کردند و کارت‌ها به لمسِ ماوس واکنشی نشان نمی‌دادند. همان زمان‌بندی‌های
+       خودِ CSS این‌جا آمده — نه بیشتر، تا برنامه «شلوغ» نشود:
+
+         دکمه   ‎transform .15s · background .2s‎ ، فشار ‎scale(.95)‎
+         ناوبری ‎.2s‎ ، فشار ‎scale(.93)‎
+         کارت   ‎border-color .3s‎ و روشن‌تر شدنِ لبه زیرِ ماوس
+
+       هیچ سایه/تاری اضافه نشده (خواستهٔ صریحِ صاحب ریپو) — حرکت از تغییرِ
+       اندازه و رنگِ لبه می‌آید، نه از blur.                                -->
+  <Style Selector="Button">
+    <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Button:pressed">
+    <Setter Property="RenderTransform" Value="scale(0.95)" />
+  </Style>
+  <Style Selector="Button.nav:pressed">
+    <Setter Property="RenderTransform" Value="scale(0.93)" />
+  </Style>
+
+  <Style Selector="Border.card, Border.person-card, Border.shift-card, Border.stat">
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.3" />
+        <BrushTransition Property="Background" Duration="0:0:0.3" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Border.person-card:pointerover, Border.shift-card:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Accent}" />
+  </Style>
+
+  <!-- ورودی‌ها هم نرم روشن شوند، نه پرشی -->
+  <Style Selector="TextBox">
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.2" />
+      </Transitions>
+    </Setter>
   </Style>
 
   <Style Selector="ScrollBar">

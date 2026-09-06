@@ -6,8 +6,13 @@
              x:Class="PumpYaqobi.App.Views.Sections.ProfitSectionView"
              x:DataType="vm:ProfitSectionViewModel">
 
-  <ScrollViewer>
-    <StackPanel Margin="14" Spacing="12">
+  <!-- این بخش تا امروز بیرونِ قالبِ مشترک بود: نه سربرگِ کادر داشت نه عنوان،
+       و محتوایش از لبهٔ پنجره شروع می‌شد. حالا مثلِ هفده بخشِ دیگر داخلِ
+       ‎SectionPage‎ است تا خودبه‌خود همان کادر و سربرگ را بگیرد. -->
+  <c:SectionPage Header="مفاد / ضرر / اتحادیه"
+                 SubHeader="درآمدها منهای مصارف — نرخِ اتحادیه هم از همین‌جا به پارچه‌ها می‌رود">
+    <ScrollViewer>
+      <StackPanel Spacing="12">
 
       <!-- ══ کادرِ بزرگِ «مفاد / ضرر خالص» ══════════════════════════════════
            همان ‎.pl-result‎: عنوان، عددِ بزرگ، جملهٔ حال و خطِ روند. -->
@@ -122,6 +127,7 @@
           </Grid>
         </StackPanel>
       </Border>
-    </StackPanel>
-  </ScrollViewer>
+      </StackPanel>
+    </ScrollViewer>
+  </c:SectionPage>
 </UserControl>

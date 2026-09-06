@@ -41,11 +41,11 @@
                      Margin="0,40,0,0" IsVisible="{Binding !Cards.Count}" />
           <ItemsControl ItemsSource="{Binding Cards}">
             <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+              <ItemsPanelTemplate><c:AutoFillPanel MinItemWidth="252" Gap="12" /></ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:AmanatCardViewModel">
-                <Button Classes="card-shell" Width="252" Margin="0,0,12,12"
+                <Button Classes="card-shell"
                         Command="{Binding $parent[ItemsControl].((vm:AmanatSectionViewModel)DataContext).OpenCommand}"
                         CommandParameter="{Binding}">
                   <Border Classes="person-card">

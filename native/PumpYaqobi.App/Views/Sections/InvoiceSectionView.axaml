@@ -21,7 +21,9 @@
     </c:SectionPage.Filters>
 
     <c:SectionPage.Summary>
-      <StackPanel Orientation="Horizontal" Spacing="12">
+      <!-- ‎Rows="1"‎ یعنی «همه در یک ردیف، با عرضِ مساوی» — کادرها تا لبه پخش
+           می‌شوند به‌جای آن‌که راست جمع شوند و کنارشان خالی بماند. -->
+      <UniformGrid Rows="1" Classes="stats">
         <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="در انتظارِ تایید" Classes="label" />
@@ -34,7 +36,7 @@
             <TextBlock Text="{Binding ApprovedCount}" Classes="num" />
           </StackPanel>
         </Border>
-      </StackPanel>
+      </UniformGrid>
     </c:SectionPage.Summary>
 
     <c:ExcelGrid ItemsSource="{Binding Rows}" x:CompileBindings="False">

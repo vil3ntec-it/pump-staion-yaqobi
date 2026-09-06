@@ -24,11 +24,11 @@
       <ScrollViewer Grid.Row="0" HorizontalScrollBarVisibility="Auto" MaxHeight="250">
         <ItemsControl ItemsSource="{Binding Staff}">
           <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+            <ItemsPanelTemplate><c:AutoFillPanel MinItemWidth="252" Gap="12" /></ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:StaffViewModel">
-              <Border Classes="card" Width="252" Margin="0,0,12,12">
+              <Border Classes="card">
                 <StackPanel Spacing="7">
                   <TextBlock Text="{Binding Name}" Classes="h2" />
                   <Grid ColumnDefinitions="*,*,*">
