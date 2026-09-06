@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             x:Class="PumpYaqobi.App.Views.Sections.ExpenseSectionView"
+             x:DataType="vm:ExpenseSectionViewModel">
+
+  <c:SectionPage Header="مصارف" SubHeader="مصارفِ ماه — همین جمع در «مفاد / ضرر» هم به کار می‌رود">
+
+    <c:SectionPage.Toolbar>
+      <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+        <Button Classes="ghost info" Content="📅 ماه جدید" Margin="0,0,6,0" />
+        <Button Classes="ghost" Content="📄 PDF" Margin="0,0,6,0"
+                Foreground="{DynamicResource Pump.Ok}" BorderBrush="{DynamicResource Pump.Ok}" />
+        <Button Classes="accent" Content="+ ردیف" Command="{Binding AddRowCommand}" />
+      </WrapPanel>
+    </c:SectionPage.Toolbar>
+
+    <c:SectionPage.Filters>
+      <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <TextBlock Text="ماه" Classes="label" VerticalAlignment="Center" />
+        <ComboBox ItemsSource="{Binding Months}" SelectedItem="{Binding Month}" MinWidth="140" />
+      </StackPanel>
+    </c:SectionPage.Filters>
+
+    <c:SectionPage.Summary>
+      <Grid ColumnDefinitions="*,12,*,12,*">
+        <Border Grid.Column="0" Classes="stat" HorizontalAlignment="Stretch">
+          <StackPanel Spacing="3">
+            <TextBlock Text="مصارف امروز" Classes="label" />
+            <TextBlock Text="{Binding TodayText, StringFormat={}{0} افغانی}" Classes="num"
+                       Foreground="{DynamicResource Pump.Danger}" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="2" Classes="stat" HorizontalAlignment="Stretch">
+          <StackPanel Spacing="3">
+            <TextBlock Text="مصرف این ماه" Classes="label" />
+            <TextBlock Text="{Binding TotalText, StringFormat={}{0} افغانی}" Classes="num" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="4" Classes="stat" HorizontalAlignment="Stretch">
+          <StackPanel Spacing="3">
+            <TextBlock Text="مصارف کل" Classes="label" />
+            <TextBlock Text="{Binding GrandText, StringFormat={}{0} افغانی}" Classes="num" />
+          </StackPanel>
+        </Border>
+      </Grid>
+    </c:SectionPage.Summary>
+
+    <c:ExcelGrid ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="120" />
+        <DataGridTextColumn Header="عنوان" Binding="{Binding Title}" Width="*" />
+        <DataGridTextColumn Header="مبلغ"  Binding="{Binding AmountText}" Width="150" />
+        <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="240" />
+        <DataGridTemplateColumn Header="" Width="60" IsReadOnly="True">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"
+                      Command="{Binding $parent[UserControl].DataContext.DeleteRowCommand}"
+                      CommandParameter="{Binding}" />
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+      </DataGrid.Columns>
+    </c:ExcelGrid>
+  </c:SectionPage>
+</UserControl>

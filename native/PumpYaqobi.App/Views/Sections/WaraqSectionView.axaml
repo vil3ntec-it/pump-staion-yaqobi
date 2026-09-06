@@ -1,0 +1,82 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:d="using:PumpYaqobi.Domain.Entities"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:v="using:PumpYaqobi.App.Views.Sections"
+             x:Class="PumpYaqobi.App.Views.Sections.WaraqSectionView"
+             x:DataType="vm:WaraqSectionViewModel">
+  <Panel>
+
+    <c:SectionPage IsVisible="{Binding IsListVisible}"
+                   Header="ورق‌های روزانه"
+                   SubHeader="یک ورق برای هر روز — ورقِ تکراریِ همان تاریخ ساخته نمی‌شود">
+
+      <c:SectionPage.Toolbar>
+        <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+          <Button Classes="ghost" Content="🕘 تاریخچهٔ پایه‌ها" Margin="0,0,6,0"
+                  Foreground="{DynamicResource Pump.Ok}" BorderBrush="{DynamicResource Pump.Ok}" />
+          <Button Classes="accent" Content="➕ اضافه کردن" Command="{Binding NewSheetCommand}" />
+        </WrapPanel>
+      </c:SectionPage.Toolbar>
+
+      <c:SectionPage.Filters>
+        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <TextBlock Text="ماه" Classes="label" VerticalAlignment="Center" />
+          <ComboBox ItemsSource="{Binding Months}" SelectedItem="{Binding Month}" MinWidth="140" />
+        </StackPanel>
+      </c:SectionPage.Filters>
+
+      <ScrollViewer>
+        <Panel>
+          <TextBlock Text="هیچ ورقی ثبت نشده — از دکمهٔ بالا ورق جدید اضافه کنید"
+                     Classes="muted" HorizontalAlignment="Center" Margin="0,40,0,0"
+                     IsVisible="{Binding IsEmpty}" />
+          <ItemsControl ItemsSource="{Binding Cards}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:WaraqCardViewModel">
+                <Button Classes="card-shell" Width="252" Margin="0,0,12,12"
+                        Command="{Binding $parent[ItemsControl].((vm:WaraqSectionViewModel)DataContext).OpenCardCommand}"
+                        CommandParameter="{Binding}">
+                  <Border Classes="person-card">
+                    <Grid RowDefinitions="Auto,Auto,Auto,*">
+                      <Button Grid.Row="0" Classes="card-x" Content="✕" HorizontalAlignment="Left"
+                              Command="{Binding $parent[ItemsControl].((vm:WaraqSectionViewModel)DataContext).DeleteCardCommand}"
+                              CommandParameter="{Binding}" />
+
+                      <TextBlock Grid.Row="1" Text="{Binding Title}" FontWeight="Bold" FontSize="14"
+                                 TextAlignment="Center" Margin="0,6,0,0" />
+                      <TextBlock Grid.Row="2" Text="{Binding SubText}" Classes="muted" FontSize="11.5"
+                                 TextAlignment="Center" TextWrapping="Wrap" Margin="0,4,0,0" />
+
+                      <StackPanel Grid.Row="3" VerticalAlignment="Bottom" Spacing="7" Margin="0,10,0,0">
+                        <TextBlock Text="{Binding SalesText}" Classes="cmp-fig"
+                                   Foreground="{DynamicResource Pump.Danger}" />
+                        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                          <TextBlock Text="{Binding DebtText}" FontWeight="Bold" FontSize="12"
+                                     Foreground="{DynamicResource Pump.Danger}" />
+                          <TextBlock Text="{Binding ExpenseText}" FontWeight="Bold" FontSize="12"
+                                     Foreground="{DynamicResource Pump.Accent}" />
+                        </StackPanel>
+                        <Button Classes="qr" Content="📄 PDF" HorizontalAlignment="Stretch"
+                                Foreground="{DynamicResource Pump.Ok}"
+                                BorderBrush="{DynamicResource Pump.Ok}" />
+                      </StackPanel>
+                    </Grid>
+                  </Border>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Panel>
+      </ScrollViewer>
+    </c:SectionPage>
+
+    <Panel IsVisible="{Binding !IsListVisible}">
+      <v:WaraqPageView DataContext="{Binding Page}" />
+    </Panel>
+  </Panel>
+</UserControl>

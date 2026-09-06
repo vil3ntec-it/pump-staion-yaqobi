@@ -1,0 +1,64 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
+             x:Class="PumpYaqobi.App.Views.Sections.ParchaReceiptSectionView"
+             x:DataType="vm:ParchaReceiptSectionViewModel">
+
+  <c:SectionPage Header="🧾 رسید پارچه‌ها"
+                 SubHeader="در ستون «به حساب» نام صاحب حساب را بنویس؛ با دکمهٔ 📥 رسید مستقیم وارد حساب همان شخص می‌شود. اگر همین رسید قبلاً از طریق ورق وارد شده باشد، دوباره ثبت نمی‌شود.">
+
+    <c:SectionPage.Toolbar>
+      <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+        <Button Classes="accent" Content="📥 ثبت همه در حساب‌ها" Margin="0,0,6,0"
+                Command="{Binding PostAllCommand}" />
+        <Button Classes="ghost" Content="➕ ردیف" Command="{Binding AddRowCommand}" />
+      </WrapPanel>
+    </c:SectionPage.Toolbar>
+
+    <Panel>
+      <TextBlock Text="رسیدی ثبت نشده — «➕ ردیف» را بزنید" Classes="muted"
+                 HorizontalAlignment="Center" Margin="0,40,0,0" IsVisible="{Binding IsEmpty}" />
+
+      <c:ExcelGrid ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False"
+                   IsVisible="{Binding !IsEmpty}">
+        <DataGrid.Columns>
+          <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="46" IsReadOnly="True" />
+          <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="110" />
+          <DataGridTextColumn Header="به حساب" Binding="{Binding Account}" Width="*" />
+          <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
+          <DataGridTextColumn Header="نمبر حواله" Binding="{Binding Hawala}" Width="105" />
+          <DataGridTextColumn Header="مقدار تیل" Binding="{Binding LitersText}" Width="110" />
+          <DataGridTextColumn Header="فی لیتر" Binding="{Binding PriceText}" Width="95" />
+          <DataGridTextColumn Header="بردگی" Binding="{Binding BardagiText}" Width="115" IsReadOnly="True" />
+          <DataGridTextColumn Header="رسید" Binding="{Binding RasidText}" Width="110" />
+          <DataGridTemplateColumn Header="الباقی" Width="115" IsReadOnly="True">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding AlbaqiText}" FontWeight="Bold" Margin="8,0"
+                           VerticalAlignment="Center"
+                           Foreground="{Binding AlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTemplateColumn Header="" Width="110" IsReadOnly="True">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                  <Button Classes="accent" Content="📥" Padding="8,3" FontSize="12"
+                          ToolTip.Tip="ثبت به حساب"
+                          Command="{Binding $parent[UserControl].DataContext.PostRowCommand}"
+                          CommandParameter="{Binding}" />
+                  <Button Classes="ghost danger" Content="🗑" Padding="8,3" FontSize="12"
+                          Command="{Binding $parent[UserControl].DataContext.DeleteRowCommand}"
+                          CommandParameter="{Binding}" />
+                </StackPanel>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+        </DataGrid.Columns>
+      </c:ExcelGrid>
+    </Panel>
+  </c:SectionPage>
+</UserControl>

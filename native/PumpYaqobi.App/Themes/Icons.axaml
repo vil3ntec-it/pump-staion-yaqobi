@@ -1,0 +1,24 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- آیکون‌های خطیِ ساده (۲۴×۲۴) — بدون تصویر، بدون فونتِ آیکون؛ خودِ مسیرِ برداری.
+       سبک‌اند و در هر اندازه و هر تم تیز می‌مانند. -->
+  <StreamGeometry x:Key="Icon.dashboard">M3,3 H10 V11 H3 Z M14,3 H21 V8 H14 Z M14,11 H21 V21 H14 Z M3,14 H10 V21 H3 Z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.shifts">M5,21 V6 A2,2 0 0 1 7,4 H12 A2,2 0 0 1 14,6 V21 M3,21 H16 M16,9 H18 A2,2 0 0 1 20,11 V17 A1.5,1.5 0 0 0 23,17 V10 L20,7 M6,9 H13</StreamGeometry>
+  <StreamGeometry x:Key="Icon.waraq">M6,2 H15 L19,6 V22 H6 Z M15,2 V6 H19 M9,11 H16 M9,15 H16 M9,19 H13</StreamGeometry>
+  <StreamGeometry x:Key="Icon.debt">M9,11 A4,4 0 1 0 9,3 A4,4 0 1 0 9,11 M2,21 V19 A5,5 0 0 1 7,14 H11 A5,5 0 0 1 16,19 V21 M17,4 A3.5,3.5 0 0 1 17,11 M18,14 A5,5 0 0 1 22,19 V21</StreamGeometry>
+  <StreamGeometry x:Key="Icon.invoices">M5,3 H19 V22 L16.5,20 L14,22 L12,20 L10,22 L7.5,20 L5,22 Z M8,8 H16 M8,12 H16 M8,16 H13</StreamGeometry>
+  <StreamGeometry x:Key="Icon.debtrasid">M4,4 H20 V18 H4 Z M4,8 H20 M8,12 H16 M8,15 H13 M7,21 H17</StreamGeometry>
+  <StreamGeometry x:Key="Icon.sarrafi">M3,7 H17 L14,4 M21,17 H7 L10,20 M12,14.5 A2.5,2.5 0 1 0 12,9.5 A2.5,2.5 0 1 0 12,14.5</StreamGeometry>
+  <StreamGeometry x:Key="Icon.expenses">M2,7 H22 V19 A2,2 0 0 1 20,21 H4 A2,2 0 0 1 2,19 Z M2,7 L5,3 H19 L22,7 M12,17 A3,3 0 1 0 12,11 A3,3 0 1 0 12,17</StreamGeometry>
+  <StreamGeometry x:Key="Icon.rasid">M5,2 H19 V21 L12,17 L5,21 Z M9,7 H15 M9,11 H15</StreamGeometry>
+  <StreamGeometry x:Key="Icon.safe">M3,4 H21 V20 H3 Z M12,16 A4,4 0 1 0 12,8 A4,4 0 1 0 12,16 M12,12 H15 M6,20 V22 M18,20 V22</StreamGeometry>
+  <StreamGeometry x:Key="Icon.amanat">M6,3 H18 A2,2 0 0 1 20,5 V19 A2,2 0 0 1 18,21 H6 A2,2 0 0 1 4,19 V5 A2,2 0 0 1 6,3 Z M4,8 H20 M4,16 H20</StreamGeometry>
+  <StreamGeometry x:Key="Icon.noinv">M3,21 V10 L10,6 V10 L17,6 V21 Z M21,21 V4 H17 V21 M7,14 H8 M12,14 H13 M7,18 H8 M12,18 H13</StreamGeometry>
+  <StreamGeometry x:Key="Icon.storage">M4,8 A8,4 0 1 0 20,8 A8,4 0 1 0 4,8 M4,8 V17 A8,4 0 0 0 20,17 V8 M4,12.5 A8,4 0 0 0 20,12.5</StreamGeometry>
+  <StreamGeometry x:Key="Icon.cameras">M3,7 H14 V17 H3 Z M14,10 L21,7 V17 L14,14 Z M6,19 H11</StreamGeometry>
+  <StreamGeometry x:Key="Icon.attendance">M12,11 A4,4 0 1 0 12,3 A4,4 0 1 0 12,11 M4,21 V19 A5,5 0 0 1 9,14 H15 A5,5 0 0 1 20,19 V21 M17,7 L19,9 L23,5</StreamGeometry>
+  <StreamGeometry x:Key="Icon.profit">M3,20 H21 M5,17 V11 M10,17 V7 M15,17 V13 M20,17 V4</StreamGeometry>
+  <StreamGeometry x:Key="Icon.settings">M12,15.5 A3.5,3.5 0 1 0 12,8.5 A3.5,3.5 0 1 0 12,15.5 M12,2 L13.4,4.6 L16.3,4.2 L16.8,7.1 L19.4,8.5 L18,11 L19.4,13.5 L16.8,14.9 L16.3,17.8 L13.4,17.4 L12,20 L10.6,17.4 L7.7,17.8 L7.2,14.9 L4.6,13.5 L6,11 L4.6,8.5 L7.2,7.1 L7.7,4.2 L10.6,4.6 Z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.history">M3,12 A9,9 0 1 0 6,5.2 M3,3 V8 H8 M12,7 V12 L15.5,14.5</StreamGeometry>
+  <StreamGeometry x:Key="Icon.fallback">M4,4 H20 V20 H4 Z</StreamGeometry>
+</ResourceDictionary>

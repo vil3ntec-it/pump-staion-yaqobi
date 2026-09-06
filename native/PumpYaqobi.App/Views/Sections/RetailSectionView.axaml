@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             x:Class="PumpYaqobi.App.Views.Sections.RetailSectionView"
+             x:DataType="vm:RetailSectionViewModel">
+
+  <c:SectionPage Header="🧾 حساب‌های چکنه" SubHeader="فروش چکنه (نقدی/خرد) — هر ردیف: مقدار تیل × فی = مقدار بردگی، و الباقی = بردگی − رسید">
+
+    <c:SectionPage.Toolbar>
+      <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+        <Button Classes="ghost info" Content="📄 PDF" Margin="0,0,6,0" />
+        <Button Classes="accent" Content="+ ردیف" Command="{Binding AddRowCommand}" />
+      </WrapPanel>
+    </c:SectionPage.Toolbar>
+
+    <c:SectionPage.Filters>
+      <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <TextBlock Text="ماه" Classes="label" VerticalAlignment="Center" />
+        <ComboBox ItemsSource="{Binding Months}" SelectedItem="{Binding Month}" MinWidth="140" />
+      </StackPanel>
+    </c:SectionPage.Filters>
+
+    <!-- ردیفِ «جمله ماه» — همان tfootِ جدولِ نسخهٔ وب -->
+    <c:SectionPage.Summary>
+      <StackPanel Orientation="Horizontal" Spacing="18">
+        <TextBlock Text="جمله ماه" FontWeight="Bold" VerticalAlignment="Center" />
+        <TextBlock Text="{Binding TotalBardagi, StringFormat=بردگی: {0}}" FontWeight="Bold"
+                   VerticalAlignment="Center" Foreground="{DynamicResource Pump.Accent}" />
+        <TextBlock Text="{Binding TotalRasid, StringFormat=رسید: {0}}" FontWeight="Bold"
+                   VerticalAlignment="Center" Foreground="{DynamicResource Pump.Ok}" />
+        <TextBlock Text="{Binding TotalAlbaqi, StringFormat=الباقی: {0}}" FontWeight="Bold"
+                   VerticalAlignment="Center" Foreground="{DynamicResource Pump.Danger}" />
+      </StackPanel>
+    </c:SectionPage.Summary>
+
+    <c:ExcelGrid ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="120" />
+        <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
+        <DataGridTextColumn Header="مقدار تیل" Binding="{Binding LitersText}" Width="120" />
+        <DataGridTextColumn Header="فی" Binding="{Binding PriceText}" Width="100" />
+        <DataGridTextColumn Header="مقدار بردگی" Binding="{Binding BardagiText}" Width="130" />
+        <DataGridTextColumn Header="رسید" Binding="{Binding RasidText}" Width="115" />
+        <DataGridTextColumn Header="الباقی" Binding="{Binding AlbaqiText}" Width="125" IsReadOnly="True" />
+        <DataGridTemplateColumn Header="" Width="60" IsReadOnly="True">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"
+                      Command="{Binding $parent[UserControl].DataContext.DeleteRowCommand}"
+                      CommandParameter="{Binding}" />
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+      </DataGrid.Columns>
+    </c:ExcelGrid>
+  </c:SectionPage>
+</UserControl>

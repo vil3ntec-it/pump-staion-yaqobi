@@ -47,4 +47,12 @@ public static class PdfEngine
     }
 
     public const string Font = "Vazirmatn";
+
+    /// <summary>
+    /// فونتِ پشتیبانِ ایموجی. وزیرمتن نشانه‌هایی مثل ⛽ و 🟤 و 💵 را ندارد و
+    /// بدونِ این، همان ستونِ «نوع تیل» در ورق خالی می‌ماند. فایل زیرمجموعه‌ای
+    /// از Noto Color Emoji است — فقط همان ۱۶۳ نشانه‌ای که این برنامه به کار
+    /// می‌برد، ۲۵۰ کیلوبایت به‌جای ۱۰ مگابایت.
+    /// </summary>
+    public const string EmojiFont = "Noto Color Emoji";
 }

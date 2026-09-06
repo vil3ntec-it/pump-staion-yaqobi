@@ -1,0 +1,21 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PumpYaqobi.App.Views.DialogWindow"
+        SizeToContent="Height" Width="420" CanResize="False"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        FlowDirection="RightToLeft"
+        Background="{DynamicResource Pump.Card}"
+        Title="پمپ یعقوبی">
+
+  <!-- پنجرهٔ کوچکِ «بپرس/تایید کن» — جانشینِ نیتیوِ prompt/confirm نسخهٔ وب.
+       هیچ متنی این‌جا از پیش نوشته نشده؛ همه‌اش را صداکننده می‌دهد. -->
+  <StackPanel Margin="20" Spacing="14">
+    <TextBlock x:Name="TitleText" Classes="h2" TextWrapping="Wrap" />
+    <TextBlock x:Name="MessageText" Classes="muted" TextWrapping="Wrap" />
+    <TextBox x:Name="Input" IsVisible="False" KeyDown="OnInputKey" />
+    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
+      <Button x:Name="OkBtn" Classes="accent" Content="تایید" Click="OnOk" MinWidth="92" />
+      <Button x:Name="CancelBtn" Content="انصراف" Click="OnCancel" MinWidth="92" />
+    </StackPanel>
+  </StackPanel>
+</Window>

@@ -1,0 +1,102 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             x:Class="PumpYaqobi.App.Views.Sections.SafeSectionView"
+             x:DataType="vm:SafeSectionViewModel">
+
+  <c:SectionPage Header="گاوصندوق" SubHeader="بردگی و ماندگی — افغانی و دالر هرگز با هم جمع نمی‌شوند">
+
+    <c:SectionPage.Toolbar>
+      <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+        <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,0,6,0" />
+        <Button Classes="ghost" Content="📅 ماه بعد" Margin="0,0,6,0" />
+        <Button Classes="ghost info" Content="📄 PDF این ماه" Margin="0,0,6,0" />
+        <Button Classes="accent" Content="+ ردیف" Command="{Binding AddRowCommand}" />
+      </WrapPanel>
+    </c:SectionPage.Toolbar>
+
+    <c:SectionPage.Filters>
+      <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <TextBlock Text="ماه" Classes="label" VerticalAlignment="Center" />
+        <ComboBox ItemsSource="{Binding Months}" SelectedItem="{Binding Month}" MinWidth="140" />
+      </StackPanel>
+    </c:SectionPage.Filters>
+
+    <c:SectionPage.Summary>
+      <Grid ColumnDefinitions="*,12,*,12,*">
+        <Border Grid.Column="0" Classes="stat" HorizontalAlignment="Stretch">
+          <StackPanel Spacing="3">
+            <TextBlock Text="🏛️ جمله ماندگی" Classes="label" />
+            <TextBlock Text="{Binding MandagiAfn, StringFormat={}{0} افغانی}" Classes="num"
+                       Foreground="{DynamicResource Pump.Info}" />
+            <TextBlock Text="{Binding MandagiUsd, StringFormat={}{0} دالر}" Classes="muted" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="2" Classes="stat" HorizontalAlignment="Stretch">
+          <StackPanel Spacing="3">
+            <TextBlock Text="💵 جمله بردگی" Classes="label" />
+            <TextBlock Text="{Binding BardagiAfn, StringFormat={}{0} افغانی}" Classes="num"
+                       Foreground="{DynamicResource Pump.Ok}" />
+            <TextBlock Text="{Binding BardagiUsd, StringFormat={}{0} دالر}" Classes="muted" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="4" Classes="stat" HorizontalAlignment="Stretch">
+          <StackPanel Spacing="3">
+            <TextBlock Text="🏦 موجودی خالص" Classes="label" />
+            <TextBlock Text="{Binding NetAfn, StringFormat={}{0} افغانی}" Classes="num" />
+            <TextBlock Text="{Binding NetUsd, StringFormat={}{0} دالر}" Classes="muted" />
+          </StackPanel>
+        </Border>
+      </Grid>
+    </c:SectionPage.Summary>
+
+    <c:ExcelGrid ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="تاریخ"  Binding="{Binding DateShamsi}" Width="120" />
+        <DataGridTemplateColumn Header="نوع" Width="110">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate x:DataType="vm:SafeRowViewModel">
+              <TextBlock Text="{Binding KindText}" VerticalAlignment="Center" Margin="6,0" />
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+          <DataGridTemplateColumn.CellEditingTemplate>
+            <DataTemplate x:DataType="vm:SafeRowViewModel">
+              <ComboBox SelectedItem="{Binding KindText}">
+                <ComboBoxItem Content="بردگی" />
+                <ComboBoxItem Content="ماندگی" />
+              </ComboBox>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellEditingTemplate>
+        </DataGridTemplateColumn>
+        <DataGridTextColumn Header="نام"   Binding="{Binding Title}"  Width="*" />
+        <DataGridTextColumn Header="مبلغ"  Binding="{Binding AmountText}" Width="140" />
+        <DataGridTemplateColumn Header="واحد" Width="100">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate x:DataType="vm:SafeRowViewModel">
+              <TextBlock Text="{Binding CurrencyText}" VerticalAlignment="Center" Margin="6,0" />
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+          <DataGridTemplateColumn.CellEditingTemplate>
+            <DataTemplate x:DataType="vm:SafeRowViewModel">
+              <ComboBox SelectedItem="{Binding CurrencyText}">
+                <ComboBoxItem Content="افغانی" />
+                <ComboBoxItem Content="دالر" />
+              </ComboBox>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellEditingTemplate>
+        </DataGridTemplateColumn>
+        <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="200" />
+        <DataGridTemplateColumn Header="" Width="60" IsReadOnly="True">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate x:DataType="vm:SafeRowViewModel">
+              <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"
+                      Command="{Binding $parent[UserControl].DataContext.DeleteRowCommand}"
+                      CommandParameter="{Binding}" />
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+      </DataGrid.Columns>
+    </c:ExcelGrid>
+  </c:SectionPage>
+</UserControl>

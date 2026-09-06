@@ -28,6 +28,33 @@ public sealed class PumpDbContext : DbContext
     public DbSet<ExchangeRow> ExchangeRows => Set<ExchangeRow>();
     public DbSet<Expense> Expenses => Set<Expense>();
     public DbSet<RetailRow> RetailRows => Set<RetailRow>();
+    public DbSet<ShiftData> ShiftDataSet => Set<ShiftData>();
+    public DbSet<ParchaReport> Reports => Set<ParchaReport>();
+    public DbSet<FuelPurchase> FuelPurchases => Set<FuelPurchase>();
+    public DbSet<TankDip> TankDips => Set<TankDip>();
+    public DbSet<TankerUnload> TankerUnloads => Set<TankerUnload>();
+    public DbSet<TilCompany> TilCompanies => Set<TilCompany>();
+    public DbSet<CompanyRow> CompanyRows => Set<CompanyRow>();
+    public DbSet<AmanatAccount> AmanatAccounts => Set<AmanatAccount>();
+    public DbSet<AmanatRow> AmanatRows => Set<AmanatRow>();
+    public DbSet<WaraqEntry> WaraqEntries => Set<WaraqEntry>();
+    /// <summary>صفِ «رسید پارچه‌ها» — ردیف‌هایی که هنوز واردِ حسابِ کسی نشده‌اند.</summary>
+    public DbSet<ParchaReceipt> ParchaReceipts => Set<ParchaReceipt>();
+    public DbSet<WaraqShift> WaraqShifts => Set<WaraqShift>();
+    public DbSet<WaraqPump> WaraqPumps => Set<WaraqPump>();
+    public DbSet<WaraqTransaction> WaraqTransactions => Set<WaraqTransaction>();
+    public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<StaffMember> StaffMembers => Set<StaffMember>();
+    public DbSet<AttendanceRow> Attendance => Set<AttendanceRow>();
+    public DbSet<SalaryPayment> SalaryPayments => Set<SalaryPayment>();
+    public DbSet<StaffShortage> StaffShortages => Set<StaffShortage>();
+    public DbSet<Camera> Cameras => Set<Camera>();
+    public DbSet<ExtraIncome> ExtraIncomes => Set<ExtraIncome>();
+    public DbSet<RateHistoryEntry> RateHistory => Set<RateHistoryEntry>();
+    public DbSet<TrashItem> Trash => Set<TrashItem>();
+    public DbSet<Setting> Settings => Set<Setting>();
+    public DbSet<AppUser> Users => Set<AppUser>();
+    public DbSet<AuditEntry> Audit => Set<AuditEntry>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -63,6 +90,14 @@ public sealed class PumpDbContext : DbContext
             e.HasQueryFilter(x => x.DeletedAt == null);
         });
 
+        b.Entity<ParchaReceipt>(e =>
+        {
+            e.HasIndex(x => x.DateKey);
+            e.HasIndex(x => x.Account);
+            // بدونِ این، رسیدِ ثبت‌شده (که فقط حذفِ نرم شده) در صف می‌ماند
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
         b.Entity<DebtRow>(e =>
         {
             e.HasKey(x => x.Id);
@@ -72,6 +107,8 @@ public sealed class PumpDbContext : DbContext
             e.HasIndex(x => new { x.FuelAccountId, x.SortIndex }); // ترتیبِ ردیف‌های یک حساب
             e.HasIndex(x => x.Fuel);                            // تفکیکِ پطرول/دیزل
             e.HasIndex(x => x.Name);
+            e.HasIndex(x => x.InvoiceId);
+            e.HasIndex(x => x.SrcKey);      // یافتنِ ردیفِ هم‌منبع هنگامِ ثبتِ دوباره
             e.Property(x => x.Fuel).HasConversion<int>();
             e.HasQueryFilter(x => x.DeletedAt == null);
         });
@@ -115,6 +152,246 @@ public sealed class PumpDbContext : DbContext
             e.HasQueryFilter(x => x.DeletedAt == null);
         });
 
+        // ── پارچه‌ها ──────────────────────────────────────────────────────
+        b.Entity<ShiftData>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Name);
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        b.Entity<ParchaReport>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.DateKey);
+            e.HasIndex(x => x.Fuel);
+            e.HasIndex(x => new { x.Fuel, x.DateKey });
+            e.HasIndex(x => x.LegacyId);
+            e.Property(x => x.Fuel).HasConversion<int>();
+            e.HasOne(x => x.DayShift).WithMany().HasForeignKey(x => x.DayShiftId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.NightShift).WithMany().HasForeignKey(x => x.NightShiftId).OnDelete(DeleteBehavior.SetNull);
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        // ── مخزن ──────────────────────────────────────────────────────────
+        b.Entity<FuelPurchase>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.DateKey);
+            e.HasIndex(x => x.Fuel);
+            e.HasIndex(x => x.Seller);
+            e.HasIndex(x => x.LegacyId);
+            e.Property(x => x.Fuel).HasConversion<int>();
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        b.Entity<TankDip>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.Fuel, x.DateKey });
+            e.HasIndex(x => x.MonthKey);
+            e.Property(x => x.Fuel).HasConversion<int>();
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        b.Entity<TankerUnload>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.Fuel, x.DateKey });
+            e.HasIndex(x => x.MonthKey);
+            e.Property(x => x.Fuel).HasConversion<int>();
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        // ── شرکت‌های تیل ──────────────────────────────────────────────────
+        b.Entity<TilCompany>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Name);
+            e.HasIndex(x => x.LegacyId);
+            e.HasMany(x => x.Rows).WithOne(x => x.Company!).HasForeignKey(x => x.CompanyId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        b.Entity<CompanyRow>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.CompanyId, x.Fuel, x.SortIndex });
+            e.HasIndex(x => x.DateKey);
+            e.Property(x => x.Fuel).HasConversion<int>();
+            e.Property(x => x.PoulCurrency).HasConversion<int>();
+            e.HasQueryFilter(x => x.DeletedAt == null && x.Company!.DeletedAt == null);
+        });
+
+        // ── تیل امانت ─────────────────────────────────────────────────────
+        b.Entity<AmanatAccount>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Name);
+            e.HasIndex(x => x.Fuel);
+            e.HasIndex(x => x.LegacyId);
+            e.Property(x => x.Fuel).HasConversion<int>();
+            e.HasMany(x => x.Rows).WithOne(x => x.Account!).HasForeignKey(x => x.AccountId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        b.Entity<AmanatRow>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.AccountId, x.SortIndex });
+            e.HasIndex(x => x.DateKey);
+            e.HasIndex(x => x.State);
+            e.Property(x => x.State).HasConversion<int>();
+            e.HasQueryFilter(x => x.DeletedAt == null && x.Account!.DeletedAt == null);
+        });
+
+        // ── ورقِ روزانه ───────────────────────────────────────────────────
+        b.Entity<WaraqEntry>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.DateKey);
+            e.HasIndex(x => x.LegacyId);
+            e.Property(x => x.ActiveShift).HasConversion<int>();
+            e.HasMany(x => x.Shifts).WithOne(x => x.Waraq!).HasForeignKey(x => x.WaraqId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        b.Entity<WaraqShift>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.WaraqId, x.Kind });
+            e.Property(x => x.Kind).HasConversion<int>();
+            e.HasMany(x => x.Pumps).WithOne(x => x.Shift!).HasForeignKey(x => x.ShiftId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(x => x.Transactions).WithOne(x => x.Shift!).HasForeignKey(x => x.ShiftId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasQueryFilter(x => x.DeletedAt == null && x.Waraq!.DeletedAt == null);
+        });
+
+        b.Entity<WaraqPump>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.ShiftId, x.SortIndex });
+            e.Property(x => x.Fuel).HasConversion<int>();
+            e.HasQueryFilter(x => x.DeletedAt == null && x.Shift!.DeletedAt == null);
+        });
+
+        b.Entity<WaraqTransaction>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.ShiftId, x.SortIndex });
+            e.Property(x => x.Fuel).HasConversion<int>();
+            e.Property(x => x.Type).HasConversion<int>();
+            e.HasQueryFilter(x => x.DeletedAt == null && x.Shift!.DeletedAt == null);
+        });
+
+        // ── فاکتورها ──────────────────────────────────────────────────────
+        b.Entity<Invoice>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.InvoiceNumber);
+            e.HasIndex(x => x.Status);
+            e.HasIndex(x => x.DateKey);
+            e.HasIndex(x => x.CustomerName);
+            e.HasIndex(x => x.Fuel);
+            e.HasIndex(x => x.LegacyId);
+            e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.Fuel).HasConversion<int>();
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        // ── کارمندان ──────────────────────────────────────────────────────
+        b.Entity<StaffMember>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Name);
+            e.HasIndex(x => x.LegacyId);
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        b.Entity<AttendanceRow>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.StaffId, x.DateKey });
+            e.HasIndex(x => x.DateKey);
+            e.HasOne(x => x.Staff).WithMany().HasForeignKey(x => x.StaffId).OnDelete(DeleteBehavior.Cascade);
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        b.Entity<SalaryPayment>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.StaffId, x.MonthKey });
+            e.HasOne(x => x.Staff).WithMany().HasForeignKey(x => x.StaffId).OnDelete(DeleteBehavior.Cascade);
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        b.Entity<StaffShortage>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.DateKey);
+            e.HasIndex(x => x.StaffId);
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        // ── دیگر ──────────────────────────────────────────────────────────
+        b.Entity<Camera>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.SortIndex);
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        b.Entity<ExtraIncome>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.DateKey);
+            e.HasIndex(x => x.MonthKey);
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        b.Entity<RateHistoryEntry>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.Fuel, x.DateKey });
+            e.HasIndex(x => x.MonthKey);
+            e.Property(x => x.Fuel).HasConversion<int>();
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        b.Entity<TrashItem>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Kind);
+            e.HasIndex(x => x.DeletedAtUtc);
+            // سطلِ زباله عمداً فیلترِ حذفِ نرم ندارد — خودش همان سطل است.
+        });
+
+        b.Entity<Setting>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Key).IsUnique();
+            e.Property(x => x.Key).IsRequired();
+        });
+
+        b.Entity<AppUser>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.UserName).IsUnique();
+            e.Property(x => x.Role).HasConversion<int>();
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        b.Entity<AuditEntry>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.AtUtc);
+            e.HasIndex(x => x.Action);
+        });
+
         base.OnModelCreating(b);
     }
 
@@ -137,7 +414,11 @@ public sealed class PumpDbContext : DbContext
             else if (entry.State == EntityState.Modified) entry.Entity.UpdatedAt = now;
             else if (entry.State == EntityState.Deleted)
             {
-                // حذفِ نرم: رکوردِ مالی هیچ‌وقت واقعاً پاک نمی‌شود
+                // سطلِ زباله و تاریخچه خودشان «بایگانی»اند؛ حذف از آن‌ها باید
+                // واقعاً حذف باشد، وگرنه «خالی کردنِ سطل» هیچ‌وقت خالی نمی‌کند.
+                if (entry.Entity is TrashItem or AuditEntry) continue;
+
+                // بقیه: حذفِ نرم — رکوردِ مالی هیچ‌وقت واقعاً پاک نمی‌شود
                 entry.State = EntityState.Modified;
                 entry.Entity.DeletedAt = now;
                 entry.Entity.UpdatedAt = now;

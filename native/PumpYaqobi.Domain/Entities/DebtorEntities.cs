@@ -118,4 +118,22 @@ public class DebtRow : EntityBase
     public decimal Albaqi { get; set; }
     /// <summary>این ردیف در دفترِ پول ثبت شده (r.byMoney در HTML).</summary>
     public bool ByMoney { get; set; }
+
+    /// <summary>
+    /// از کجا آمده: خالی یعنی دستیِ خودِ کاربر، «waraq» یعنی از ورقِ روزانه،
+    /// «parcha» یعنی از «رسید پارچه‌ها»، «debtQuick» یعنی ورودِ سریعِ رسید.
+    /// </summary>
+    public string? Src { get; set; }
+
+    /// <summary>
+    /// کلیدِ یکتای همان منبع («parcha|pr123»). هر بار که همان منبع دوباره ثبت
+    /// شود، ردیفِ قبلی به‌روز می‌شود — ردیفِ دوم ساخته نمی‌شود.
+    /// </summary>
+    public string? SrcKey { get; set; }
+
+    /// <summary>
+    /// اگر این ردیف را یک فاکتور ساخته باشد، شناسهٔ همان فاکتور.
+    /// با برگشت یا حذفِ فاکتور، دقیقاً همین ردیف برداشته می‌شود — نه ردیفِ دیگری.
+    /// </summary>
+    public long? InvoiceId { get; set; }
 }

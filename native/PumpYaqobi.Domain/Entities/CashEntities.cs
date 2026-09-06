@@ -10,7 +10,7 @@ public enum Currency { Afn = 1, Usd = 2 }
 public enum SafeEntryKind { Bardagi = 1, Mandagi = 2 }
 
 /// <summary>یک ردیفِ گاوصندوق (DB.safeEntries).</summary>
-public class SafeEntry : EntityBase
+public class SafeEntry : EntityBase, ILedgerRow
 {
     public string? DateShamsi { get; set; }
     public int DateKey { get; set; }
@@ -27,7 +27,7 @@ public class SafeEntry : EntityBase
 public enum ExchangeCurrency { Toman = 1, Kaldar = 2, Afghani = 3 }
 
 /// <summary>یک ردیفِ صرافی (DB.sarrafiRows).</summary>
-public class ExchangeRow : EntityBase
+public class ExchangeRow : EntityBase, ILedgerRow
 {
     public string? DateShamsi { get; set; }
     public int DateKey { get; set; }
@@ -43,7 +43,7 @@ public class ExchangeRow : EntityBase
 }
 
 /// <summary>یک مصرف (DB.expenses).</summary>
-public class Expense : EntityBase
+public class Expense : EntityBase, ILedgerRow
 {
     public string? DateShamsi { get; set; }
     public int DateKey { get; set; }
@@ -54,7 +54,7 @@ public class Expense : EntityBase
 }
 
 /// <summary>یک ردیفِ چکنه (DB.chakanaRows) — فروشِ خرد.</summary>
-public class RetailRow : EntityBase
+public class RetailRow : EntityBase, ILedgerRow
 {
     public string? DateShamsi { get; set; }
     public int DateKey { get; set; }
@@ -64,4 +64,10 @@ public class RetailRow : EntityBase
     public decimal Liters { get; set; }
     public decimal PricePerLiter { get; set; }
     public decimal Rasid { get; set; }
+    /// <summary>ردیفی که «به پول» ثبت شده — مقدارِ بردگی مستقیم نوشته می‌شود،
+    /// نه از لیتر×فی. همان <c>e.byMoney</c>ِ نسخهٔ وب.</summary>
+    public bool ByMoney { get; set; }
+    /// <summary>بردگیِ دستی؛ فقط وقتی <see cref="ByMoney"/> روشن است معنا دارد.</summary>
+    public decimal Bardagi { get; set; }
+    public string? Note { get; set; }
 }

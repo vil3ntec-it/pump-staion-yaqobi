@@ -29,6 +29,8 @@
     <ProjectReference Include="..\PumpYaqobi.Persistence\PumpYaqobi.Persistence.csproj" />
     <ProjectReference Include="..\PumpYaqobi.Infrastructure\PumpYaqobi.Infrastructure.csproj" />
     <ProjectReference Include="..\PumpYaqobi.Reporting\PumpYaqobi.Reporting.csproj" />
+    <ProjectReference Include="..\PumpYaqobi.Services\PumpYaqobi.Services.csproj" />
+    <ProjectReference Include="..\PumpYaqobi.App\PumpYaqobi.App.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -36,5 +38,15 @@
     <None Update="sample-backup-expected.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="sample-backup.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="golden-safe-exchange.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="golden-chakana.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="golden-debtrow.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="golden-company.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="golden-parcha.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="golden-waraq.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="golden-purchase.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="golden-amanat.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="golden-dash.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="golden-amanat-acc.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="golden-posting.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

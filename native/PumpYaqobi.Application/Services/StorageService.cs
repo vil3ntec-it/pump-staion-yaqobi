@@ -1,0 +1,78 @@
+using PumpYaqobi.Domain.Entities;
+using PumpYaqobi.Domain.Enums;
+
+namespace PumpYaqobi.Application.Services;
+
+public readonly record struct PurchaseNumbers(
+    decimal Ton, decimal Liters, decimal TotalUsd, decimal TotalAfn, decimal PerLiter);
+
+public readonly record struct TankState(
+    decimal In, decimal Out, decimal Current, decimal Display, bool IsLow, decimal TotalUsd, decimal TotalAfn);
+
+/// <summary>
+/// ══ مخزن ══════════════════════════════════════════════════════════════════
+/// رونوشتِ ‎confirmAddPurchase‎ و ‎_renderFuelSection‎.
+///
+///     تن     = کیلو ÷ ۱۰۰۰
+///     لیتر   = کیلو ÷ چگالی        (چگالیِ صفر ⇒ صفر)
+///     دالر   = تن × فیِ تن
+///     افغانی = دالر × نرخِ دالر
+///     فی‌لیتر = افغانی ÷ لیتر       (لیترِ صفر ⇒ صفر)
+///
+/// ⚠️ موجودیِ منفی برای نمایش صفر می‌شود، ولی خودِ موجودیِ واقعی (که ممکن است
+/// منفی باشد) پایهٔ هشدارِ کمبود است — همان تفکیکی که نسخهٔ وب داشت.
+/// </summary>
+public sealed class StorageService
+{
+    public PurchaseNumbers Compute(decimal kg, decimal density, decimal priceTon, decimal usdRate)
+    {
+        var ton = kg / 1000m;
+        var liters = density > 0m ? kg / density : 0m;
+        var usd = ton * priceTon;
+        var afn = usd * usdRate;
+        var perLiter = liters > 0m ? afn / liters : 0m;
+        return new PurchaseNumbers(ton, liters, usd, afn, perLiter);
+    }
+
+    /// <summary>عددهای حساب‌شده را روی خودِ خرید می‌نشاند.</summary>
+    public void Apply(FuelPurchase p)
+    {
+        if (p is null) return;
+        var n = Compute(p.Kg, p.Density, p.PriceTon, p.UsdRate);
+        p.Ton = n.Ton; p.Liters = n.Liters;
+        p.TotalUsd = n.TotalUsd; p.TotalAfn = n.TotalAfn; p.PerLiter = n.PerLiter;
+    }
+
+    /// <summary>
+    /// حالِ مخزن. «فروش» جمعِ ‎sale‎ِ هر دو شیفتِ همهٔ پارچه‌های همان سوخت است.
+    /// </summary>
+    public TankState Tank(IEnumerable<FuelPurchase> purchases, IEnumerable<ParchaReport> reports,
+                          decimal lowThreshold)
+    {
+        decimal inL = 0, usd = 0, afn = 0;
+        var any = false;
+        foreach (var p in purchases)
+        {
+            if (p is null) continue;
+            any = true;
+            inL += p.Liters; usd += p.TotalUsd; afn += p.TotalAfn;
+        }
+
+        decimal outL = 0;
+        foreach (var r in reports)
+        {
+            if (r is null) continue;
+            outL += r.DayShift?.Sale ?? 0m;
+            outL += r.NightShift?.Sale ?? 0m;
+        }
+
+        var current = inL - outL;
+        var low = (any || outL > 0m) && current <= lowThreshold;
+        return new TankState(inL, outL, current, Math.Max(0m, current), low, usd, afn);
+    }
+
+    /// <summary>
+    /// اختلافِ میله‌زنی با دفتر: مثبت یعنی مخزن بیشتر از دفتر دارد.
+    /// </summary>
+    public static decimal DipDifference(TankDip d) => d is null ? 0m : d.Measured - d.Expected;
+}

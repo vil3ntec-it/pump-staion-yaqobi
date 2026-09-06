@@ -1,0 +1,12 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels"
+             x:Class="PumpYaqobi.App.Views.PlaceholderView"
+             x:DataType="vm:SectionViewModel">
+  <Border Classes="panel" Margin="18">
+    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10">
+      <TextBlock Text="{Binding Title}" Classes="h1" HorizontalAlignment="Center" />
+      <TextBlock Text="این بخش هنوز ساخته نشده است." Classes="muted" HorizontalAlignment="Center" />
+    </StackPanel>
+  </Border>
+</UserControl>

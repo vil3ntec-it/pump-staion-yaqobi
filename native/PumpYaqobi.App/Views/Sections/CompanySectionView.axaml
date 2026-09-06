@@ -1,0 +1,74 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:v="using:PumpYaqobi.App.Views.Sections"
+             xmlns:th="using:PumpYaqobi.App.Themes"
+             x:Class="PumpYaqobi.App.Views.Sections.CompanySectionView"
+             x:DataType="vm:CompanySectionViewModel">
+  <Panel>
+
+    <!-- ══ فهرستِ شرکت‌ها ══════════════════════════════════════════════════
+         سربرگ و کارت‌ها مو‌به‌مو از ‎#sec-noinv‎ و ‎renderCompanies‎:
+         نوارِ بالا فقط جست‌وجو و دو دکمه دارد (نه فیلترِ من‌درآوردی)، و هر کارت
+         نام، «دالر»، «الباقی/تسویه» و دکمهٔ کیوآر است. -->
+    <c:SectionPage IsVisible="{Binding IsListVisible}" Header="شرکت ها تیل">
+
+      <c:SectionPage.Toolbar>
+        <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+          <TextBox Width="230" Text="{Binding Search}" Watermark="🔍 جستجوی شرکت..." Margin="0,0,8,0" />
+          <Button Classes="ghost info" Content="🔍 جستجوی خرید" Margin="0,0,8,0"
+                  Command="{Binding SearchPurchaseCommand}" />
+          <Button Classes="accent" Content="➕ افزودن شرکت"
+                  Command="{Binding AddCompanyCommand}" />
+        </WrapPanel>
+      </c:SectionPage.Toolbar>
+
+      <ScrollViewer>
+        <ItemsControl ItemsSource="{Binding Cards}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:CompanyCardViewModel">
+              <Button Classes="card-shell" Width="252" Margin="0,0,12,12"
+                      Command="{Binding $parent[ItemsControl].((vm:CompanySectionViewModel)DataContext).OpenCommand}"
+                      CommandParameter="{Binding}">
+              <Border Classes="person-card">
+                <!-- ردیفِ آخر ستاره است تا «کفِ کارت» (‎.pcard-foot‎ با
+                     ‎margin-top:auto‎) واقعاً پایین بچسبد و کارت‌های یک ردیف
+                     هم‌تراز بمانند — همان دردی که در CSS توضیح داده شده. -->
+                <Grid RowDefinitions="Auto,Auto,*">
+
+                  <Button Grid.Row="0" Classes="card-x" Content="✕" HorizontalAlignment="Left"
+                          Command="{Binding $parent[ItemsControl].((vm:CompanySectionViewModel)DataContext).DeleteCompanyCommand}"
+                          CommandParameter="{Binding}" />
+
+                  <!-- ‎.pname‎ — دقیقاً دو خط جا دارد؛ نامِ بلندتر با «…» بریده
+                       می‌شود ولی فونتش با بقیه یکی می‌ماند. -->
+                  <TextBlock Grid.Row="1" Text="{Binding Name}" Classes="pname"
+                             ToolTip.Tip="{Binding Name}" />
+
+                  <StackPanel Grid.Row="2" VerticalAlignment="Bottom" Spacing="8" Margin="0,8,0,0">
+                    <TextBlock Text="{Binding UsdText}" Classes="cmp-fig"
+                               Foreground="{DynamicResource Pump.Info}" />
+                    <TextBlock Text="{Binding AlbaqiText}" Classes="cmp-fig"
+                               Foreground="{Binding AlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                    <Button Classes="qr" Content="📲 کیو‌آر کد" HorizontalAlignment="Stretch"
+                            Command="{Binding $parent[ItemsControl].((vm:CompanySectionViewModel)DataContext).ShowQrCommand}"
+                            CommandParameter="{Binding}" />
+                  </StackPanel>
+                </Grid>
+              </Border>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </c:SectionPage>
+
+    <Panel IsVisible="{Binding !IsListVisible}">
+      <v:CompanyPageView DataContext="{Binding Page}" />
+    </Panel>
+  </Panel>
+</UserControl>

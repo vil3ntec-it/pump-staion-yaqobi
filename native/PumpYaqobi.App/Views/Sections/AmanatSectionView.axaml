@@ -1,0 +1,161 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
+             x:Class="PumpYaqobi.App.Views.Sections.AmanatSectionView"
+             x:DataType="vm:AmanatSectionViewModel">
+  <Panel>
+
+    <!-- ══ شبکهٔ کارت‌ها ══════════════════════════════════════════════════
+         صفحهٔ اصلیِ «تیل امانت» در نسخهٔ وب فقط کارتِ حساب‌هاست؛ جدول و
+         تحلیل با زدنِ کارت باز می‌شوند. -->
+    <c:SectionPage IsVisible="{Binding IsListVisible}" Header="تیل امانت">
+
+      <c:SectionPage.Toolbar>
+        <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+          <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,0,6,0" />
+          <Button Classes="ghost" Content="📊 خلاصه و ابزارها" Margin="0,0,6,0" />
+          <Button Classes="ghost info" Content="📄 PDF" Margin="0,0,6,0" />
+          <Button Classes="accent" Content="➕ حساب جدید" Command="{Binding AddAccountCommand}" />
+        </WrapPanel>
+      </c:SectionPage.Toolbar>
+
+      <c:SectionPage.Filters>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBox Width="250" Text="{Binding Search}" Watermark="🔍 جست‌وجوی نام حساب…" />
+          <Button Classes="seg" Classes.on="{Binding IsAll}" Content="همه"
+                  Command="{Binding SetFuelCommand}" CommandParameter="all" />
+          <Button Classes="seg" Classes.on="{Binding IsPetrol}" Content="⛽ پطرول"
+                  Command="{Binding SetFuelCommand}" CommandParameter="petrol" />
+          <Button Classes="seg" Classes.on="{Binding IsDieselFilter}" Content="🟤 دیزل"
+                  Command="{Binding SetFuelCommand}" CommandParameter="diesel" />
+          <Button Classes="seg on" Content="{Binding FuelChipText}" IsVisible="{Binding HasFuelChip}"
+                  Command="{Binding ClearFuelCommand}" />
+        </StackPanel>
+      </c:SectionPage.Filters>
+
+      <ScrollViewer>
+        <Panel>
+          <TextBlock Text="{Binding EmptyText}" Classes="muted" HorizontalAlignment="Center"
+                     Margin="0,40,0,0" IsVisible="{Binding !Cards.Count}" />
+          <ItemsControl ItemsSource="{Binding Cards}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:AmanatCardViewModel">
+                <Button Classes="card-shell" Width="252" Margin="0,0,12,12"
+                        Command="{Binding $parent[ItemsControl].((vm:AmanatSectionViewModel)DataContext).OpenCommand}"
+                        CommandParameter="{Binding}">
+                  <Border Classes="person-card">
+                    <Grid RowDefinitions="Auto,Auto,*">
+                      <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+                        <Button Grid.Column="0" Classes="card-x" Content="✕"
+                                Command="{Binding $parent[ItemsControl].((vm:AmanatSectionViewModel)DataContext).DeleteCardCommand}"
+                                CommandParameter="{Binding}" />
+                        <Button Grid.Column="2" Classes="qr" Content="📄" Padding="8,3" FontSize="12" />
+                      </Grid>
+
+                      <TextBlock Grid.Row="1" Text="{Binding Name}" Classes="pname"
+                                 ToolTip.Tip="{Binding Name}" />
+
+                      <StackPanel Grid.Row="2" VerticalAlignment="Bottom" Spacing="7" Margin="0,8,0,0">
+                        <TextBlock Text="{Binding RestText}" Classes="cmp-fig"
+                                   Foreground="{Binding RestBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                        <TextBlock Text="{Binding State}" FontSize="12" FontWeight="Bold"
+                                   TextAlignment="Center" TextWrapping="Wrap"
+                                   Foreground="{Binding StateBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                        <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Center">
+                          <TextBlock Text="{Binding LitersText}" FontWeight="Bold" FontSize="13" />
+                          <TextBlock Text="{Binding LossText}" FontWeight="Bold" FontSize="13"
+                                     Foreground="{DynamicResource Pump.Accent}" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding PctText}" Classes="muted" FontSize="11"
+                                   TextAlignment="Center" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Index}" HorizontalAlignment="Center" FontWeight="Bold"
+                                   FontSize="12" Foreground="{DynamicResource Pump.Accent}" />
+                      </StackPanel>
+                    </Grid>
+                  </Border>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Panel>
+      </ScrollViewer>
+    </c:SectionPage>
+
+    <!-- ══ صفحهٔ یک حساب ══ -->
+    <Panel IsVisible="{Binding !IsListVisible}">
+    <Grid RowDefinitions="Auto,Auto,*" DataContext="{Binding Page}" x:CompileBindings="False">
+
+      <Button Grid.Row="0" Classes="ghost" Content="← بازگشت به حساب‌ها" Margin="14,12,14,0"
+              HorizontalAlignment="Right" Command="{Binding BackCommand}" />
+
+      <Border Grid.Row="1" Classes="panel" Margin="14,10,14,0" Padding="12,10">
+        <WrapPanel Orientation="Horizontal">
+          <StackPanel Spacing="3" Width="230" Margin="0,0,14,0">
+            <TextBlock Text="نامِ حساب" Classes="label" />
+            <TextBox Text="{Binding Name}" />
+          </StackPanel>
+          <StackPanel Spacing="3" Width="110" Margin="0,0,14,0">
+            <TextBlock Text="فیصدیِ من" Classes="label" />
+            <TextBox Text="{Binding MyPctText}" />
+          </StackPanel>
+          <StackPanel Spacing="3" Width="130" Margin="0,0,14,0">
+            <TextBlock Text="کلِ رسید (لیتر)" Classes="label" />
+            <TextBlock Text="{Binding TotalLiters}" FontWeight="Bold" FontSize="15" Margin="0,4,0,0" />
+          </StackPanel>
+          <StackPanel Spacing="3" Width="120" Margin="0,0,14,0">
+            <TextBlock Text="کلِ بخار" Classes="label" />
+            <TextBlock Text="{Binding TotalLoss}" FontWeight="Bold" FontSize="15" Margin="0,4,0,0" />
+          </StackPanel>
+          <StackPanel Spacing="3" Width="130" Margin="0,0,14,0">
+            <TextBlock Text="سهمِ من" Classes="label" />
+            <TextBlock Text="{Binding TotalShare}" FontWeight="Bold" FontSize="15" Margin="0,4,0,0" />
+          </StackPanel>
+          <StackPanel Spacing="3" Width="140" Margin="0,0,14,0">
+            <TextBlock Text="باقیِ تیلِ مشتری" Classes="label" />
+            <TextBlock Text="{Binding TotalRest}" FontWeight="Bold" FontSize="15"
+                       Foreground="{DynamicResource Pump.Accent}" Margin="0,4,0,0" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom" Margin="0,0,0,4">
+            <Button Content="ردیفِ تازه" Command="{Binding AddRowCommand}" Padding="10,4" />
+            <Button Classes="ghost danger" Content="حذفِ حساب"
+                    Command="{Binding DeleteAccountCommand}" Padding="10,4" />
+          </StackPanel>
+        </WrapPanel>
+      </Border>
+
+      <c:ExcelGrid Grid.Row="2" ItemsSource="{Binding Rows}" Margin="14,10,14,14">
+        <DataGrid.Columns>
+          <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="115" />
+          <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
+          <DataGridTextColumn Header="رسید (لیتر)" Binding="{Binding LitersText}" Width="120" />
+          <DataGridTextColumn Header="برده‌شده" Binding="{Binding TakenText}" Width="110" />
+          <DataGridTextColumn Header="روز" Binding="{Binding DaysText}" Width="80" />
+          <DataGridTextColumn Header="گرما" Binding="{Binding TempText}" Width="80" />
+          <DataGridTextColumn Header="بخار" Binding="{Binding LossText}" Width="105" IsReadOnly="True" />
+          <DataGridTextColumn Header="٪ بخار" Binding="{Binding LossPctText}" Width="90" IsReadOnly="True" />
+          <DataGridTextColumn Header="سهمِ من" Binding="{Binding ShareText}" Width="105" IsReadOnly="True" />
+          <DataGridTextColumn Header="به من می‌رسد" Binding="{Binding NetText}" Width="120" IsReadOnly="True" />
+          <DataGridTextColumn Header="فیصدیِ لازم" Binding="{Binding AskPctText}" Width="110" IsReadOnly="True" />
+          <DataGridTextColumn Header="باقیِ تیل" Binding="{Binding RestText}" Width="115" IsReadOnly="True" />
+          <DataGridTextColumn Header="اندازهٔ واقعی" Binding="{Binding ActualText}" Width="120" />
+          <DataGridCheckBoxColumn Header="بسته" Binding="{Binding IsClosed}" Width="70" />
+          <DataGridTemplateColumn Header="" Width="60" IsReadOnly="True">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"
+                        Command="{Binding $parent[DataGrid].DataContext.DeleteRowCommand}"
+                        CommandParameter="{Binding}" />
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+        </DataGrid.Columns>
+      </c:ExcelGrid>
+    </Grid>
+    </Panel>
+  </Panel>
+</UserControl>

@@ -1,0 +1,106 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:v="using:PumpYaqobi.App.Views.Sections"
+             xmlns:th="using:PumpYaqobi.App.Themes"
+             x:Class="PumpYaqobi.App.Views.Sections.DebtSectionView"
+             x:DataType="vm:DebtSectionViewModel">
+  <Panel>
+
+    <!-- ══ فهرستِ کارت‌ها ══ -->
+    <c:SectionPage IsVisible="{Binding IsListVisible}" Header="{Binding Title}">
+
+      <c:SectionPage.Toolbar>
+        <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+          <Button Classes="accent" Content="➕ افزودن شخص" Margin="0,0,8,0"
+                  Command="{Binding AddDebtorCommand}" />
+          <Button Content="⏳ مدت عضویت همه" Margin="0,0,8,0" />
+          <Button Content="⏰ قرض‌های کهنه — تیل" Margin="0,0,8,0" />
+          <Button Content="💵 قرض‌های کهنه — پول" Margin="0,0,8,0" />
+          <Button Content="📉 زیان افزایش قیمت" />
+        </WrapPanel>
+      </c:SectionPage.Toolbar>
+
+      <c:SectionPage.Filters>
+        <Grid ColumnDefinitions="Auto,240,24,Auto,220,150">
+          <TextBlock Grid.Column="0" Text="🔍 جست‌وجو" Classes="label" VerticalAlignment="Center" Margin="0,0,8,0" />
+          <TextBox Grid.Column="1" Text="{Binding Search}" Watermark="نام یا شماره" />
+          <TextBlock Grid.Column="3" Text="حسابِ تازه" Classes="label" VerticalAlignment="Center" Margin="0,0,8,0" />
+          <TextBox Grid.Column="4" Text="{Binding NewName}" Watermark="نام" />
+          <TextBox Grid.Column="5" Text="{Binding NewPhone}" Watermark="شماره" Margin="8,0,0,0" />
+        </Grid>
+      </c:SectionPage.Filters>
+
+      <ScrollViewer>
+        <ItemsControl ItemsSource="{Binding Cards}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:DebtorCardViewModel">
+
+              <!-- کارتِ قرض‌دار — همان چیدمانِ نسخهٔ وب:
+                   ✕ بالا-راست (در RTL سمتِ چپِ دید)، نقطهٔ حال بالا-چپ،
+                   نام، مبلغِ بزرگ، دو نشانِ «اتمام تیل/پول»، دو عددِ سوخت،
+                   دکمهٔ کیوآر و شمارهٔ کارت در پایین. -->
+              <Border Classes="person-card"
+                      Classes.out="{Binding IsOut}"
+                      Classes.low="{Binding IsLow}"
+                      Classes.ok="{Binding IsOk}"
+                      Width="252" Margin="0,0,12,12">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+
+                  <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+                    <Button Grid.Column="0" Classes="card-x" Content="✕"
+                            Command="{Binding $parent[ItemsControl].((vm:DebtSectionViewModel)DataContext).DeleteDebtorCommand}"
+                            CommandParameter="{Binding}" />
+                    <Ellipse Grid.Column="2" Width="13" Height="13" VerticalAlignment="Top" Margin="0,4,2,0"
+                             IsVisible="{Binding HasStatus}"
+                             Fill="{Binding StatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                  </Grid>
+
+                  <TextBlock Grid.Row="1" Text="{Binding Name}" FontWeight="Bold" FontSize="16"
+                             HorizontalAlignment="Center" Margin="0,6,0,0" TextTrimming="CharacterEllipsis" />
+
+                  <TextBlock Grid.Row="2" Text="{Binding MoneyText, StringFormat=💵 {0}}"
+                             FontWeight="Bold" FontSize="21" HorizontalAlignment="Center" Margin="0,12,0,0"
+                             Foreground="{Binding StatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+
+                  <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="10" Margin="0,8,0,0"
+                              HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding MoneyBadge}" FontSize="12" FontWeight="Bold"
+                               IsVisible="{Binding HasMoneyBadge}"
+                               Foreground="{DynamicResource Pump.Danger}" />
+                    <TextBlock Text="{Binding FuelBadge}" FontSize="12" FontWeight="Bold"
+                               IsVisible="{Binding HasFuelBadge}"
+                               Foreground="{DynamicResource Pump.Danger}" />
+                  </StackPanel>
+
+                  <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="14" Margin="0,6,0,0"
+                              HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding PetrolText, StringFormat=⛽ {0}}" FontWeight="Bold" FontSize="13" />
+                    <TextBlock Text="{Binding DieselText, StringFormat=🟤 {0}}" FontWeight="Bold" FontSize="13" />
+                  </StackPanel>
+
+                  <StackPanel Grid.Row="5" Spacing="7" Margin="0,12,0,0">
+                    <Button Classes="accent" Content="باز کردنِ حساب" HorizontalAlignment="Stretch"
+                            Command="{Binding $parent[ItemsControl].((vm:DebtSectionViewModel)DataContext).OpenCommand}"
+                            CommandParameter="{Binding}" />
+                    <Button Classes="qr" Content="📱 کیوآر کد" HorizontalAlignment="Stretch" />
+                    <TextBlock Text="{Binding Index}" HorizontalAlignment="Center" FontWeight="Bold"
+                               FontSize="12" Foreground="{DynamicResource Pump.Accent}" />
+                  </StackPanel>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </c:SectionPage>
+
+    <Panel IsVisible="{Binding !IsListVisible}">
+      <v:PersonView DataContext="{Binding Person}" />
+    </Panel>
+  </Panel>
+</UserControl>

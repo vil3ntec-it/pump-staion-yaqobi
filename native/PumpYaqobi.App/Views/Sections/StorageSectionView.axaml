@@ -1,0 +1,169 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             x:Class="PumpYaqobi.App.Views.Sections.StorageSectionView"
+             x:DataType="vm:StorageSectionViewModel">
+
+  <c:SectionPage Header="مخزن">
+
+    <c:SectionPage.Toolbar>
+      <Button Content="{Binding FuelToggleText}" Command="{Binding ToggleFuelCommand}" />
+    </c:SectionPage.Toolbar>
+
+    <ScrollViewer>
+      <StackPanel Spacing="14">
+
+        <!-- ══ کارتِ مخزن با نوارِ پرشدگی ══ -->
+        <Border Classes="panel" Padding="16">
+          <Grid ColumnDefinitions="Auto,18,*">
+
+            <!-- نوارِ عمودیِ پرشدگی -->
+            <Border Grid.Column="0" Width="118" Height="196" CornerRadius="12"
+                    Background="{DynamicResource Pump.Dark}"
+                    BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="1"
+                    ClipToBounds="True">
+              <Grid>
+                <Border VerticalAlignment="Bottom" Background="{DynamicResource Pump.AccentGrad}"
+                        Height="{Binding FillPercent, Converter={x:Static vm:PercentToHeightConverter.Instance}}" />
+                <TextBlock Text="{Binding FillText}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           FontSize="26" FontWeight="Bold" Foreground="{DynamicResource Pump.Text}" />
+                <TextBlock Text="{Binding ThresholdText}" HorizontalAlignment="Center"
+                           VerticalAlignment="Bottom" Margin="0,0,0,7" FontSize="10"
+                           Foreground="{DynamicResource Pump.OnAccent}" Opacity="0.8" />
+              </Grid>
+            </Border>
+
+            <StackPanel Grid.Column="2" Spacing="6">
+              <TextBlock Text="{Binding TankTitle}" Classes="h2"
+                         Foreground="{DynamicResource Pump.Accent}" />
+              <TextBlock Text="{Binding Current}" FontSize="40" FontWeight="Bold"
+                         Foreground="{DynamicResource Pump.Accent}" />
+              <TextBlock Text="لیتر باقی‌مانده" Classes="muted" />
+              <Border CornerRadius="9" Padding="10,4" HorizontalAlignment="Right" Margin="0,4,0,0"
+                      Background="{DynamicResource Pump.Panel}"
+                      BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="1">
+                <TextBlock Text="{Binding StateText}" FontSize="12" FontWeight="SemiBold" />
+              </Border>
+
+              <WrapPanel Orientation="Horizontal" Margin="0,10,0,0">
+                <StackPanel Spacing="1" Margin="0,0,26,8">
+                  <TextBlock Text="جمله ورودی" Classes="label" FontSize="11" />
+                  <TextBlock Text="{Binding TotalIn, StringFormat={}{0} لیتر}" FontWeight="Bold"
+                             Foreground="{DynamicResource Pump.Ok}" />
+                </StackPanel>
+                <StackPanel Spacing="1" Margin="0,0,26,8">
+                  <TextBlock Text="جمله فروش" Classes="label" FontSize="11" />
+                  <TextBlock Text="{Binding TotalOut, StringFormat={}{0} لیتر}" FontWeight="Bold"
+                             Foreground="{DynamicResource Pump.Danger}" />
+                </StackPanel>
+                <StackPanel Spacing="1" Margin="0,0,26,8">
+                  <TextBlock Text="ظرفیت مخزن (لیتر)" Classes="label" FontSize="11" />
+                  <TextBox Text="{Binding Capacity}" Width="120" />
+                </StackPanel>
+              </WrapPanel>
+
+              <WrapPanel Orientation="Horizontal" Margin="0,8,0,0">
+                <Button Content="🚚 تخلیهٔ تانکر" Margin="0,0,8,8" />
+                <Button Content="📏 میله‌زنیِ تازه" Margin="0,0,8,8" Command="{Binding AddDipCommand}" />
+                <Button Content="🕘 تاریخچهٔ خریدهای مخزن" Margin="0,0,8,8" />
+                <Button Content="{Binding PdfText}" Margin="0,0,8,8" />
+                <Button Classes="accent" Content="{Binding AddBuyText}" Margin="0,0,8,8"
+                        Command="{Binding AddPurchaseCommand}" />
+              </WrapPanel>
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <!-- ══ خلاصه پول‌ها ══ -->
+        <Border Classes="panel" Padding="0">
+          <StackPanel>
+            <Border Classes="card-head">
+              <TextBlock Text="{Binding MoneyTitle}" FontWeight="Bold"
+                         Foreground="{DynamicResource Pump.Accent}" />
+            </Border>
+            <WrapPanel Orientation="Horizontal" Margin="14">
+              <Border Classes="stat" Margin="0,0,12,0">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="جمله کل (دالر)" Classes="label" />
+                  <TextBlock Text="{Binding TotalUsd, StringFormat=$ {0}}" Classes="num" />
+                </StackPanel>
+              </Border>
+              <Border Classes="stat" Margin="0,0,12,0">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="جمله کل (افغانی)" Classes="label" />
+                  <TextBlock Text="{Binding TotalAfn}" Classes="num" />
+                </StackPanel>
+              </Border>
+              <Border Classes="stat">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="فی لیتر خرید (افغانی)" Classes="label" />
+                  <TextBlock Text="{Binding PerLiter}" Classes="num" />
+                  <TextBlock Text="{Binding LastBuyDate, StringFormat=آخرین خرید: {0}}" Classes="muted" />
+                </StackPanel>
+              </Border>
+            </WrapPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- ══ خریدها — هر خرید یک کارت، مثلِ خودِ برنامه ══ -->
+        <ItemsControl ItemsSource="{Binding Purchases}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:PurchaseRowViewModel">
+              <Border Classes="panel" Margin="0,0,0,12" Padding="0">
+                <StackPanel>
+                  <Border Classes="card-head">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                      <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14">
+                        <TextBlock Text="{Binding HeadText}" FontWeight="Bold"
+                                   Foreground="{DynamicResource Pump.Accent}" />
+                        <TextBlock Text="{Binding DateShamsi, StringFormat=📅 {0}}" Classes="muted" />
+                        <TextBlock Text="{Binding Seller, StringFormat=👤 {0}}"
+                                   Foreground="{DynamicResource Pump.Info}" />
+                      </StackPanel>
+                      <Button Grid.Column="2" Classes="ghost danger" Content="🗑" Padding="9,2"
+                              Command="{Binding $parent[ItemsControl].((vm:StorageSectionViewModel)DataContext).DeletePurchaseCommand}"
+                              CommandParameter="{Binding}" />
+                    </Grid>
+                  </Border>
+
+                  <WrapPanel Orientation="Horizontal" Margin="14">
+                    <StackPanel Classes="cell"><TextBlock Text="وزن (کگ)" Classes="label" /><TextBox Text="{Binding KgText}" /></StackPanel>
+                    <StackPanel Classes="cell"><TextBlock Text="ثقلت" Classes="label" /><TextBox Text="{Binding DensityText}" /></StackPanel>
+                    <StackPanel Classes="cell"><TextBlock Text="وزن (تن)" Classes="label" /><Border Classes="calc"><TextBlock Text="{Binding TonText}" /></Border></StackPanel>
+                    <StackPanel Classes="cell"><TextBlock Text="لیتر" Classes="label" /><Border Classes="calc"><TextBlock Text="{Binding LitersText}" Foreground="{DynamicResource Pump.Ok}" /></Border></StackPanel>
+                    <StackPanel Classes="cell"><TextBlock Text="فی تن ($)" Classes="label" /><TextBox Text="{Binding PriceTonText}" /></StackPanel>
+                    <StackPanel Classes="cell"><TextBlock Text="نرخ دالر" Classes="label" /><TextBox Text="{Binding UsdRateText}" /></StackPanel>
+                    <StackPanel Classes="cell"><TextBlock Text="کل (دالر)" Classes="label" /><Border Classes="calc"><TextBlock Text="{Binding TotalUsdText}" Foreground="{DynamicResource Pump.Info}" /></Border></StackPanel>
+                    <StackPanel Classes="cell"><TextBlock Text="کل (افغانی)" Classes="label" /><Border Classes="calc"><TextBlock Text="{Binding TotalAfnText}" Foreground="{DynamicResource Pump.Accent}" /></Border></StackPanel>
+                    <StackPanel Classes="cell"><TextBlock Text="فی لیتر (افغانی)" Classes="label" /><Border Classes="calc"><TextBlock Text="{Binding PerLiterText}" Foreground="{DynamicResource Pump.Danger}" /></Border></StackPanel>
+                  </WrapPanel>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- ══ میله‌زنیِ مخزن ══ -->
+        <Border Classes="panel" Padding="0" MinHeight="180">
+          <Grid RowDefinitions="Auto,*">
+            <Border Grid.Row="0" Classes="card-head">
+              <TextBlock Text="📏 میله‌زنیِ مخزن" FontWeight="Bold"
+                         Foreground="{DynamicResource Pump.Accent}" />
+            </Border>
+            <c:ExcelGrid Grid.Row="1" ItemsSource="{Binding Dips}" x:CompileBindings="False"
+                         BorderThickness="0" CornerRadius="0">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="130" />
+                <DataGridTextColumn Header="اندازهٔ واقعی" Binding="{Binding MeasuredText}" Width="150" />
+                <DataGridTextColumn Header="اندازهٔ دفتری" Binding="{Binding ExpectedText}" Width="150" />
+                <DataGridTextColumn Header="اختلاف" Binding="{Binding DiffText}" Width="130" IsReadOnly="True" />
+                <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="*" />
+              </DataGrid.Columns>
+            </c:ExcelGrid>
+          </Grid>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+  </c:SectionPage>
+</UserControl>
