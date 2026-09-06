@@ -1,0 +1,127 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
+             x:Class="PumpYaqobi.App.Views.Sections.ProfitSectionView"
+             x:DataType="vm:ProfitSectionViewModel">
+
+  <ScrollViewer>
+    <StackPanel Margin="14" Spacing="12">
+
+      <!-- ══ کادرِ بزرگِ «مفاد / ضرر خالص» ══════════════════════════════════
+           همان ‎.pl-result‎: عنوان، عددِ بزرگ، جملهٔ حال و خطِ روند. -->
+      <Border Classes="card" Padding="18,16" MinHeight="180">
+        <Grid RowDefinitions="Auto,Auto,Auto,*">
+          <TextBlock Grid.Row="0" Text="مفاد / ضرر خالص" Classes="label" FontSize="13" />
+          <TextBlock Grid.Row="1" Text="{Binding NetText}" FontWeight="Bold" FontSize="34"
+                     Margin="0,8,0,0"
+                     Foreground="{Binding TrendBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+          <TextBlock Grid.Row="2" Text="{Binding NetCaption}" FontSize="13" Margin="0,4,0,0"
+                     Foreground="{Binding TrendBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+          <c:SparkChart Grid.Row="3" ShowAxis="False" FlowDirection="LeftToRight" MinHeight="80"
+                        Margin="0,10,0,0"
+                        Values="{Binding TrendValues}"
+                        LineBrush="{Binding TrendBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                        GridBrush="{DynamicResource Pump.GridLine}" />
+        </Grid>
+      </Border>
+
+      <!-- ══ درآمدها و مصارف ══ -->
+      <Grid ColumnDefinitions="*,12,*">
+        <Border Grid.Column="0" Classes="card" Padding="16,14">
+          <StackPanel Spacing="6">
+            <TextBlock Text="{Binding IncomeTitle}" Classes="label" FontSize="13" />
+            <TextBlock Text="{Binding IncomeText}" FontWeight="Bold" FontSize="24"
+                       Foreground="{Binding IncomeBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="2" Classes="card" Padding="16,14">
+          <StackPanel Spacing="6">
+            <TextBlock Text="💸 مصارف" Classes="label" FontSize="13" />
+            <TextBlock Text="{Binding ExpenseText}" FontWeight="Bold" FontSize="24"
+                       Foreground="{DynamicResource Pump.Danger}" />
+          </StackPanel>
+        </Border>
+      </Grid>
+
+      <!-- ══ نرخ اتحادیه ══ -->
+      <Border Classes="card" Padding="16,14">
+        <StackPanel Spacing="10">
+          <TextBlock Text="🏛️ نرخ اتحادیه" Classes="h2" />
+          <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                     Text="نرخ روزِ اتحادیه را این‌جا بنویس؛ خودکار در کادر «فی لیتر (افغانی)» بخش پارچه‌ها (روز و شب) قرار می‌گیرد." />
+          <Grid ColumnDefinitions="*,12,*" MaxWidth="420" HorizontalAlignment="Right">
+            <StackPanel Grid.Column="0" Spacing="4">
+              <TextBlock Text="⛽ پطرول" FontWeight="Bold" FontSize="12"
+                         Foreground="{DynamicResource Pump.Accent}" />
+              <TextBox Text="{Binding UnionPetrol}" Watermark="0" />
+            </StackPanel>
+            <StackPanel Grid.Column="2" Spacing="4">
+              <TextBlock Text="🟤 دیزل" FontWeight="Bold" FontSize="12"
+                         Foreground="{DynamicResource Pump.Warn}" />
+              <TextBox Text="{Binding UnionDiesel}" Watermark="0" />
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <!-- ══ خرید عمده از مشتریان ══ -->
+      <Border Classes="card" Padding="16,14">
+        <StackPanel Spacing="10">
+          <TextBlock Text="🛒 خرید عمده از مشتریان" Classes="h2" />
+          <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                     Text="یک نفر می‌خواهد تیلش را به تو بفروشد؛ تو عمده می‌گیری. درآمد اضافی = مقدار × (نرخ بازار − فی عمده)." />
+          <WrapPanel Orientation="Horizontal">
+            <StackPanel Spacing="4" Width="150" Margin="0,0,10,8">
+              <TextBlock Text="مقدار تیل (لیتر)" Classes="label" />
+              <TextBox Text="{Binding BulkQty}" Watermark="0" />
+            </StackPanel>
+            <StackPanel Spacing="4" Width="140" Margin="0,0,10,8">
+              <TextBlock Text="فی خرید عمده" Classes="label" />
+              <TextBox Text="{Binding BulkBuy}" Watermark="0" />
+            </StackPanel>
+            <StackPanel Spacing="4" Width="140" Margin="0,0,10,8">
+              <TextBlock Text="نرخ بازار" Classes="label" />
+              <TextBox Text="{Binding BulkMarket}" Watermark="0" />
+            </StackPanel>
+            <StackPanel Spacing="4" Width="180" Margin="0,0,10,8">
+              <TextBlock Text="پول فروشنده (قابل پرداخت)" Classes="label" />
+              <TextBlock Text="{Binding BulkSellerText}" FontWeight="Bold" FontSize="15"
+                         Margin="0,6,0,0" Foreground="{DynamicResource Pump.Accent}" />
+            </StackPanel>
+            <StackPanel Spacing="4" Width="150" Margin="0,0,10,8">
+              <TextBlock Text="درآمد اضافی" Classes="label" />
+              <TextBlock Text="{Binding BulkIncomeText}" FontWeight="Bold" FontSize="15"
+                         Margin="0,6,0,0" Foreground="{DynamicResource Pump.Ok}" />
+            </StackPanel>
+            <Button Classes="accent" Content="➕ ثبت" VerticalAlignment="Bottom" Margin="0,0,0,10"
+                    Command="{Binding AddBulkCommand}" />
+          </WrapPanel>
+          <TextBlock FontSize="12" Foreground="{DynamicResource Pump.Muted}">
+            <Run Text="جمله درآمد اضافی ثبت‌شده:" />
+            <Run Text="{Binding BulkSumText}" FontWeight="Bold"
+                 Foreground="{DynamicResource Pump.Ok}" />
+          </TextBlock>
+        </StackPanel>
+      </Border>
+
+      <!-- ══ درآمد و مصرف اضافی دستی ══ -->
+      <Border Classes="card" Padding="16,14">
+        <StackPanel Spacing="10">
+          <TextBlock Text="✍️ درآمد و مصرف اضافی دستی" Classes="h2" />
+          <Grid ColumnDefinitions="*,12,*" MaxWidth="420" HorizontalAlignment="Right">
+            <StackPanel Grid.Column="0" Spacing="4">
+              <TextBlock Text="درآمد اضافی دستی" Classes="label" />
+              <TextBox Text="{Binding ManualIncome}" Watermark="0" />
+            </StackPanel>
+            <StackPanel Grid.Column="2" Spacing="4">
+              <TextBlock Text="مصرف اضافی" Classes="label" />
+              <TextBox Text="{Binding ManualExpense}" Watermark="0" />
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

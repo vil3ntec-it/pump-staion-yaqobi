@@ -48,5 +48,6 @@
     <None Update="golden-dash.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="golden-amanat-acc.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="golden-posting.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="golden-profit.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

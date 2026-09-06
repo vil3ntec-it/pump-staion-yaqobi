@@ -409,5 +409,69 @@ const posting = await page.evaluate(() => {
 fs.writeFileSync(path.join(OUT, 'golden-posting.json'), JSON.stringify(posting));
 console.log('  ✔ golden-posting.json — ' + posting.cases.length + ' تطبیق و ' + posting.texts.length + ' متن');
 
+// ── مفاد / ضرر ────────────────────────────────────────────────────────────
+// جای لغزشش «اختلافِ نرخِ ثبت و تاییدِ فاکتور» است: یک عددِ علامت‌دار که مثبتش
+// به مصارف می‌رود و منفی‌اش به درآمدها، ولی هر دو کادر باید مثبت بمانند.
+const profit = await page.evaluate(() => {
+  let seed = 6060;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+
+  const cases = [];
+  for (let c = 0; c < 120; c++) {
+    const reports = [], shifts = [], noinv = [], extras = [], exps = [], invs = [];
+    for (let i = 0; i < 4; i++)
+      reports.push({ fuel: 'petrol', date: '1405/06/0' + (i + 1),
+                     day: { profit: Math.round((rnd() - 0.2) * 9000) },
+                     night: { profit: Math.round((rnd() - 0.2) * 9000) } });
+    for (let i = 0; i < 3; i++)
+      shifts.push({ fuel: 'diesel', date: '1405/06/0' + (i + 1),
+                    profit: Math.round((rnd() - 0.2) * 7000) });
+    noinv.push({ rows: [ { date: '1405/06/01', bardagi: Math.round(rnd() * 40000) },
+                         { date: '1405/06/02', bardagi: Math.round(rnd() * 40000) } ] });
+    extras.push({ date: '1405/06/03', amount: Math.round(rnd() * 30000) });
+    for (let i = 0; i < 3; i++)
+      exps.push({ date: '1405/06/0' + (i + 1), amount: Math.round(rnd() * 20000) });
+    for (let i = 0; i < 4; i++) {
+      const approved = rnd() < 0.7;
+      invs.push({ by_money: rnd() < 0.2, status: approved ? 'approved' : 'pending',
+                  liters: rnd() < 0.15 ? 0 : Math.round(rnd() * 900),
+                  price_per_liter: 60, rate_on_create: rnd() < 0.5 ? 60 : null,
+                  rate_on_approve: approved ? Math.round(55 + rnd() * 12) : 0,
+                  approved_at: '2026-09-01T00:00:00Z' });
+    }
+    const manualIn = Math.round(rnd() * 5000), manualExp = Math.round(rnd() * 5000);
+
+    const rReports = DB.reports, rShifts = DB.shifts, rNoinv = DB.noinvPersons,
+          rExtra = DB.extraIncomes, rExp = DB.expenses, rInv = DB.invoices;
+    DB.reports = reports; DB.shifts = shifts; DB.noinvPersons = noinv;
+    DB.extraIncomes = extras; DB.expenses = exps; DB.invoices = invs;
+
+    const diff = _plInvRateDiff(null);
+    const bd = _plBreakdownData(null);
+    const shiftProfit = reports.reduce((a, r) => a + (r.day.profit + r.night.profit), 0)
+                      + shifts.reduce((a, s) => a + s.profit, 0);
+    const noinvTotal = noinv.reduce((a, p) => a + p.rows.reduce((b, r) => b + r.bardagi, 0), 0);
+    const extraSum = extras.reduce((a, e) => a + e.amount, 0);
+    const expSum = exps.reduce((a, e) => a + e.amount, 0);
+    const income = shiftProfit + noinvTotal + extraSum + manualIn + Math.max(-diff, 0);
+    const expenses = expSum + manualExp + Math.max(diff, 0);
+
+    DB.reports = rReports; DB.shifts = rShifts; DB.noinvPersons = rNoinv;
+    DB.extraIncomes = rExtra; DB.expenses = rExp; DB.invoices = rInv;
+
+    cases.push({ reports, shifts, noinv, extras, exps, invs, manualIn, manualExp,
+                 diff, bd, income, expenses, net: income - expenses });
+  }
+
+  const bulk = [];
+  for (let i = 0; i < 60; i++) {
+    const qty = Math.round(rnd() * 20000), buy = Math.round(rnd() * 70), market = Math.round(rnd() * 80);
+    bulk.push({ qty, buy, market, seller: qty * buy, income: qty * (market - buy) });
+  }
+  return { cases, bulk };
+});
+fs.writeFileSync(path.join(OUT, 'golden-profit.json'), JSON.stringify(profit));
+console.log('  ✔ golden-profit.json — ' + profit.cases.length + ' حالت');
+
 console.log('\n  خطای جاوااسکریپت:', errs.length ? errs.slice(0, 3) : 'ندارد');
 await browser.close();
