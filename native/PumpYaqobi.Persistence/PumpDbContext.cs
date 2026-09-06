@@ -119,6 +119,7 @@ public sealed class PumpDbContext : DbContext
             e.HasIndex(x => x.DateKey);
             e.HasIndex(x => x.MonthKey);      // صفحه ماه‌به‌ماه فیلتر می‌شود
             e.HasIndex(x => x.Kind);
+            e.HasIndex(x => x.SrcKey);        // ردیفِ خودکارِ «فروشِ ورق»
             e.Property(x => x.Kind).HasConversion<int>();
             e.Property(x => x.Currency).HasConversion<int>();
             e.HasQueryFilter(x => x.DeletedAt == null);
@@ -275,6 +276,7 @@ public sealed class PumpDbContext : DbContext
         {
             e.HasKey(x => x.Id);
             e.HasIndex(x => new { x.ShiftId, x.SortIndex });
+            e.HasIndex(x => new { x.ShiftId, x.SrcKey });   // یافتنِ ردیفِ همان پارچه
             e.Property(x => x.Fuel).HasConversion<int>();
             e.HasQueryFilter(x => x.DeletedAt == null && x.Shift!.DeletedAt == null);
         });

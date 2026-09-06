@@ -473,5 +473,125 @@ const profit = await page.evaluate(() => {
 fs.writeFileSync(path.join(OUT, 'golden-profit.json'), JSON.stringify(profit));
 console.log('  ✔ golden-profit.json — ' + profit.cases.length + ' حالت');
 
+// ── پارچه: calcShift و saveShift ─────────────────────────────────────────
+// این‌جا هیچ فرمولی در جاوااسکریپت بازنویسی نمی‌شود: کادرهای واقعیِ صفحه پر
+// می‌شوند، خودِ calcShift/saveShift صدا زده می‌شوند، و بعد هرچه روی صفحه و
+// در DB نشسته خوانده می‌شود. پس اگر رفتارِ نیتیو با نسخهٔ وب فرق کند، همین
+// عددها لو می‌دهند.
+const shiftGolden = await page.evaluate(() => {
+  let seed = 31337;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  const en = (s) => (typeof toEnDigits === 'function' ? toEnDigits(String(s)) : String(s));
+  const num = (s) => { const v = parseFloat(en(s).replace(/[^0-9.\-]/g, '')); return isFinite(v) ? v : 0; };
+  const setV = (id, v) => { const e = document.getElementById(id); if (e) e.value = (v === '' ? '' : String(v)); };
+  const txt = (id) => { const e = document.getElementById(id); return e ? en(e.textContent).trim() : ''; };
+
+  const calc = [];
+  for (let c = 0; c < 400; c++) {
+    const p = ['d', 'n', 'dd', 'dn'][Math.floor(rnd() * 4)];
+    const fuel = (p === 'dd' || p === 'dn') ? 'diesel' : 'petrol';
+    const start = Math.round(rnd() * 900000 * 10) / 10;
+    const end = rnd() < 0.15 ? start - Math.round(rnd() * 500) : start + Math.round(rnd() * 9000 * 10) / 10;
+    const price = rnd() < 0.15 ? 0 : Math.round(rnd() * 95 * 10) / 10;
+    const debt = rnd() < 0.35 ? Math.round(rnd() * 400000) : 0;
+    const buy = rnd() < 0.25 ? 0 : Math.round(rnd() * 88 * 10) / 10;
+    const box = rnd() < 0.5 ? Math.round(rnd() * 20 * 10) / 10 : '';
+
+    DB.buyPerLiter_petrol = 0; DB.buyPerLiter_diesel = 0;
+    DB['buyPerLiter_' + fuel] = buy;
+    setV(p + '-start', start); setV(p + '-end', end); setV(p + '-price', price);
+    setV(p + '-debt', debt); setV(p + '-profit-per', box);
+    calcShift(p);
+
+    const availEl = document.getElementById(p + '-available');
+    calc.push({
+      p, fuel, start, end, price, debt, buy, box: box === '' ? 0 : box,
+      profitPerBox: parseFloat(document.getElementById(p + '-profit-per').value) || 0,
+      sale: txt(p + '-sale'), money: txt(p + '-money'),
+      profit: txt(p + '-profit-auto'), avail: txt(p + '-available'),
+      availNeg: !!(availEl && availEl.style.color.indexOf('red') >= 0),
+      buyLbl: txt(p + '-buy-per-lbl'),
+      saleN: num(txt(p + '-sale')), moneyN: num(txt(p + '-money')),
+      profitN: num(txt(p + '-profit-auto')), availN: num(txt(p + '-available')),
+    });
+  }
+
+  // ── saveShift: رکوردی که واقعاً ذخیره می‌شود ──────────────────────────
+  // ⚠️ ‎saveShift‎ در نسخهٔ وب پشتِ نقش است: ‎currentRole === 'viewer'‎ آن را
+  // بی‌صدا رد می‌کند. پس نقشِ مدیر لازم است — همان چیزی که در نیتیو
+  // ‎_perm.Require(Permission.EditData)‎ نگه می‌دارد.
+  try { currentRole = 'admin'; } catch (e) {}
+  DB.reports = []; DB.shifts = []; DB.waraqEntries = [];
+  const saved = [];
+  for (let c = 0; c < 120; c++) {
+    const fuel = rnd() < 0.5 ? 'petrol' : 'diesel';
+    const type = rnd() < 0.5 ? 'day' : 'night';
+    const p = fuel === 'diesel' ? (type === 'day' ? 'dd' : 'dn') : (type === 'day' ? 'd' : 'n');
+    const start = Math.round(rnd() * 500000);
+    const end = start + Math.round(rnd() * 6000);
+    const price = Math.round(rnd() * 90 * 10) / 10;
+    const debt = rnd() < 0.4 ? Math.round(rnd() * 200000) : 0;
+    const buy = rnd() < 0.3 ? 0 : Math.round(rnd() * 80 * 10) / 10;
+    const pumpNum = 1 + Math.floor(rnd() * 6);
+    const date = '1405/06/' + String(1 + Math.floor(rnd() * 28)).padStart(2, '0');
+    const forceNew = rnd() < 0.4;
+    // کادرِ فایده صریح نوشته می‌شود: وقتی فیِ خرید صفر است، calcShift دست به
+    // این کادر نمی‌زند و عددِ حالتِ پیش در آن می‌ماند. اگر این‌جا ننویسیم،
+    // دادهٔ طلایی به حالتِ پنهانِ قبلی بند می‌شود و بازپخش‌شدنی نیست.
+    const box = Math.round(rnd() * 25 * 10) / 10;
+
+    DB.buyPerLiter_petrol = 0; DB.buyPerLiter_diesel = 0;
+    DB['buyPerLiter_' + fuel] = buy;
+    setV(fuel === 'diesel' ? 'pa-date-diesel' : 'pa-date', date);
+    if (forceNew) newParcha(type, fuel);
+    setV(p + '-name', 'کارمند' + c); setV(p + '-pumpnum', pumpNum);
+    setV(p + '-start', start); setV(p + '-end', end);
+    setV(p + '-price', price); setV(p + '-debt', debt);
+    setV(p + '-profit-per', box);
+    calcShift(p);
+    saveShift(type, fuel);
+
+    // رکوردی که همین حالا نوشته شد — با همان قاعده‌ای که خودِ saveShift
+    // برای پیدا کردنش به کار می‌برد، نه «آخرین ردیفِ فهرست»: پارچهٔ دیزلِ
+    // بی‌پرچم ممکن است ردیفی وسطِ فهرست را به‌روز کرده باشد.
+    let rec = null;
+    if (fuel === 'petrol') { const r = getCurrentReport('petrol'); rec = r ? r[type] : null; }
+    else {
+      const l = DB.shifts.filter((s) => s.fuel === 'diesel' && s.type === type && s.date === date);
+      rec = l.length ? l[l.length - 1] : null;
+    }
+
+    const w = (DB.waraqEntries || []).find((x) => x.date === date);
+    const sd = w ? w[type] : null;
+    const pumps = sd ? sd.pumps.map((e) => ({
+      num: e.num, fuel: e.fuel, worker: e.worker, start: e.start, end: e.end,
+      pricePerLiter: e.pricePerLiter, debt: e.debt, srcKey: e.srcKey,
+    })) : [];
+
+    saved.push({
+      fuel, type, date, forceNew, pumpNum, start, end, price, debt, buy, box,
+      rec: rec && {
+        name: rec.name, pumpNum: rec.pumpNum, start: rec.start, end: rec.end,
+        price: rec.price, profitPer: rec.profitPer, buyPerLiter: rec.buyPerLiter,
+        sale: rec.sale, money: rec.money, debt: rec.debt, available: rec.available,
+        profit: rec.profit, savedAt: rec.savedAt,
+      },
+      reportCount: DB.reports.filter((r) => r.fuel === 'petrol').length,
+      dieselCount: DB.shifts.filter((s) => s.fuel === 'diesel').length,
+      pumps,
+      availableFromShift: sd ? (sd.availableFromShift || 0) : 0,
+      shiftPrice: sd ? (fuel === 'diesel' ? (sd.pricePerLiterDiesel || 0) : (sd.pricePerLiter || 0)) : 0,
+      workerName: sd ? (sd.workerName || '') : '',
+    });
+  }
+  // ‎ensureReport‎ پارچهٔ نخست را با تاریخِ **امروز** می‌سازد، پس دادهٔ طلایی
+  // به روزِ ساخته‌شدنش بند است. همان روز این‌جا نوشته می‌شود تا آزمون هر روز
+  // همان را بازپخش کند و به تقویمِ ماشینِ آزمون وابسته نباشد.
+  return { calc, saved, today: (typeof persianDate === 'function' ? persianDate() : '') };
+});
+fs.writeFileSync(path.join(OUT, 'golden-shift.json'), JSON.stringify(shiftGolden));
+console.log('  ✔ golden-shift.json — ' + shiftGolden.calc.length + ' calcShift و '
+            + shiftGolden.saved.length + ' saveShift');
+
 console.log('\n  خطای جاوااسکریپت:', errs.length ? errs.slice(0, 3) : 'ندارد');
 await browser.close();

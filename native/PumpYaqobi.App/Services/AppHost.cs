@@ -40,8 +40,9 @@ public sealed class AppHost
         Trash = new TrashService(Db, Permissions, Session);
         Debtors = new DebtorService(Db, Permissions, Trash);
         Companies = new CompanyDataService(Db, Permissions, Trash);
-        ParchaData = new ParchaDataService(Db, Permissions, Trash, Parcha);
         WaraqData = new WaraqDataService(Db, Permissions, Trash);
+        ShiftWaraqSync = new ShiftWaraqSyncService(Db, Permissions, Waraq, Settings);
+        ParchaData = new ParchaDataService(Db, Permissions, Trash, Parcha, ShiftWaraqSync);
         StorageData = new StorageDataService(Db, Permissions, Trash, Storage, Settings, Companies);
         Amanat = new AmanatDataService(Db, Permissions, Trash, Settings);
         Invoices = new InvoiceService(Db, Permissions, Trash, Debtors);
@@ -81,6 +82,9 @@ public sealed class AppHost
     public ParchaDataService ParchaData { get; }
     public WaraqService Waraq { get; }
     public WaraqDataService WaraqData { get; }
+
+    /// <summary>پارچه ← ورق ← گاوصندوق — همان زنجیرهٔ خودکارِ نسخهٔ وب.</summary>
+    public ShiftWaraqSyncService ShiftWaraqSync { get; }
     public StorageService Storage { get; }
     public StorageDataService StorageData { get; }
     public AmanatService AmanatCalc { get; }

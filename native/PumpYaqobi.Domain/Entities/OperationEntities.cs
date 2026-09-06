@@ -224,11 +224,25 @@ public class WaraqPump : EntityBase
     public int SortIndex { get; set; }
     public int Num { get; set; }
     public FuelType Fuel { get; set; } = FuelType.Petrol;
+    /// <summary>نامِ کارمندِ همین پایه — ستونِ «نام» در جدولِ پایه‌های ورق.</summary>
+    public string? Worker { get; set; }
+    /// <summary>تاریخِ همین پایه؛ خالی یعنی همان تاریخِ ورق.</summary>
+    public string? DateShamsi { get; set; }
     public string? Note { get; set; }
     public decimal Start { get; set; }
     public decimal End { get; set; }
     public decimal PricePerLiter { get; set; }
     public decimal Debt { get; set; }
+
+    /// <summary>
+    /// شناسهٔ پارچه‌ای که این ردیف را ساخته — همان <c>srcKey</c>ِ نسخهٔ وب:
+    /// «p-&lt;گزارش&gt;-day|night» برای پطرول و «d-&lt;پارچه&gt;-day|night» برای دیزل،
+    /// و «p-live-day» و مانندِ آن برای ردیفِ موقتِ پیش از ذخیره.
+    ///
+    /// ⚠️ بدونِ این، ذخیرهٔ پارچهٔ دومِ همان شیفت، ردیفِ پارچهٔ اول را در ورق
+    /// بازنویسی می‌کرد. نسخهٔ وب دقیقاً به همین دلیل این کلید را دارد.
+    /// </summary>
+    public string? SrcKey { get; set; }
 }
 
 public enum WaraqTxnType { Debt = 1, Expense = 2 }
