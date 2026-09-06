@@ -18,10 +18,24 @@ public sealed class LedgerService<T> where T : EntityBase, ILedgerRow, new()
     private readonly TrashService _trash;
     private readonly string _kind;
     private readonly Func<T, string> _label;
+    private readonly Permission _write;
+    private readonly Permission _delete;
 
+    /// <param name="writePermission">
+    /// اجازه‌ای که برای افزودن/ویرایش لازم است. پیش‌فرض ‎EditData‎ (کارمند هم
+    /// می‌تواند)، ولی دفترهایی که نسخهٔ وب ‎requireAdmin()‎ رویشان دارد با
+    /// <see cref="Permission.ManagerOnly"/> ساخته می‌شوند.
+    /// </param>
     public LedgerService(PumpDbFactory dbf, PermissionService perm, TrashService trash,
-                         string kind, Func<T, string> label)
-    { _dbf = dbf; _perm = perm; _trash = trash; _kind = kind; _label = label; }
+                         string kind, Func<T, string> label,
+                         Permission writePermission = Permission.EditData)
+    {
+        _dbf = dbf; _perm = perm; _trash = trash; _kind = kind; _label = label;
+        _write = writePermission;
+        // حذف دستِ‌کم به‌سختیِ نوشتن است: اگر نوشتن مدیر می‌خواهد، حذف هم.
+        _delete = writePermission == Permission.ManagerOnly
+            ? Permission.ManagerOnly : Permission.DeleteData;
+    }
 
     public async Task<List<T>> ListAsync(string? monthKey, CancellationToken ct = default)
     {
@@ -43,7 +57,7 @@ public sealed class LedgerService<T> where T : EntityBase, ILedgerRow, new()
 
     public async Task<T> AddAsync(T row, CancellationToken ct = default)
     {
-        _perm.Require(Permission.EditData);
+        _perm.Require(_write);
         Normalize(row);
         await using var db = _dbf.Create();
         db.Set<T>().Add(row);
@@ -53,7 +67,7 @@ public sealed class LedgerService<T> where T : EntityBase, ILedgerRow, new()
 
     public async Task UpdateAsync(T row, CancellationToken ct = default)
     {
-        _perm.Require(Permission.EditData);
+        _perm.Require(_write);
         Normalize(row);
         await using var db = _dbf.Create();
         db.Set<T>().Update(row);
@@ -62,7 +76,7 @@ public sealed class LedgerService<T> where T : EntityBase, ILedgerRow, new()
 
     public async Task DeleteAsync(long id, CancellationToken ct = default)
     {
-        _perm.Require(Permission.DeleteData);
+        _perm.Require(_delete);
         await using var db = _dbf.Create();
         var row = await db.Set<T>().FirstOrDefaultAsync(x => x.Id == id, ct);
         if (row is null) return;

@@ -48,6 +48,7 @@ public sealed class AppHost
         Invoices = new InvoiceService(Db, Permissions, Trash, Debtors);
         ParchaReceipts = new ParchaReceiptService(Db, Permissions, Trash, Debtors);
         DebtReceipts = new DebtQuickReceiptService(Db, Permissions, Trash);
+        ExchangeSync = new ExchangeCompanySyncService(Db, Permissions);
         Attendance = new AttendanceDataService(Db, Permissions, Trash);
         SafeLedger = new LedgerService<SafeEntry>(Db, Permissions, Trash, "safe",
             r => (r.Title ?? "") + " — " + Shamsi.Money(r.Amount));
@@ -55,8 +56,12 @@ public sealed class AppHost
             r => (r.Description ?? "") + " — " + Shamsi.Money(r.Amount));
         ExpenseLedger = new LedgerService<Expense>(Db, Permissions, Trash, "expense",
             r => (r.Title ?? "") + " — " + Shamsi.Money(r.Amount));
+        // ⚠️ چکنه پشتِ اجازهٔ مدیر است: در نسخهٔ وب ‎updateChakana‎ و همهٔ
+        // دکمه‌های افزودنِ ردیف/ماهش ‎requireAdmin()‎ دارند — برخلافِ مصارف و
+        // گاوصندوق و صرافی که ویرایششان برای کارمند هم باز است.
         RetailLedger = new LedgerService<RetailRow>(Db, Permissions, Trash, "chakana",
-            r => (r.Name ?? "") + " — " + Shamsi.Money(r.Liters) + " لیتر");
+            r => (r.Name ?? "") + " — " + Shamsi.Money(r.Liters) + " لیتر",
+            Permission.ManagerOnly);
         ExtraIncomeLedger = new LedgerService<ExtraIncome>(Db, Permissions, Trash, "extraincome",
             r => (r.Seller ?? "") + " — " + Shamsi.Money(r.Amount));
     }
@@ -95,6 +100,9 @@ public sealed class AppHost
 
     /// <summary>«رسید قرض‌داران» — پرداختِ نقدیِ مستقیم به حساب.</summary>
     public DebtQuickReceiptService DebtReceipts { get; }
+
+    /// <summary>صرافی ← حسابِ شرکت — بردگیِ دالریِ هر سطر.</summary>
+    public ExchangeCompanySyncService ExchangeSync { get; }
     public AttendanceService AttendanceCalc { get; }
     public AttendanceDataService Attendance { get; }
     public LedgerService<SafeEntry> SafeLedger { get; }

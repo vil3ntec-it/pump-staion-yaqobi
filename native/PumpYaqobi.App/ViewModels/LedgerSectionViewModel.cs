@@ -67,12 +67,18 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
     }
 
     /// <summary>ذخیرهٔ یک ردیف — تنها همان ردیف، نه کلِ جدول.</summary>
-    public async Task SaveEntityAsync(TEntity e)
+    public virtual async Task SaveEntityAsync(TEntity e)
     {
         if (e.Id == 0) await Service.AddAsync(e);
         else await Service.UpdateAsync(e);
         Recalc();
     }
+
+    /// <summary>
+    /// پیش از برداشتنِ یک ردیف — برای دفترهایی که ردیفِ خودکاری جای دیگری
+    /// ساخته‌اند و باید همان‌جا هم برداشته شود (مثلِ صرافی ← حسابِ شرکت).
+    /// </summary>
+    protected virtual Task BeforeDeleteAsync(TEntity e) => Task.CompletedTask;
 
     [RelayCommand]
     protected async Task AddRowAsync()
@@ -96,6 +102,7 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
     protected async Task DeleteRowAsync(TRow? row)
     {
         if (row is null) return;
+        await BeforeDeleteAsync(EntityOf(row));
         await Service.DeleteAsync(EntityIdOf(row));
         Rows.Remove(row);
         Recalc();
@@ -120,6 +127,9 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
     }
 
     protected abstract long EntityIdOf(TRow row);
+
+    /// <summary>خودِ موجودیتِ پشتِ یک ردیف — برای <see cref="BeforeDeleteAsync"/>.</summary>
+    protected abstract TEntity EntityOf(TRow row);
 
     /// <summary>هر ردیف که خانه‌ای‌اش عوض شود، جمع‌های بالای صفحه فوری تازه می‌شوند.</summary>
     private TRow Track(TRow row)

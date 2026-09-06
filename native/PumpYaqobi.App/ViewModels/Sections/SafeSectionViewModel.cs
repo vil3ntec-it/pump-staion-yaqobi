@@ -105,6 +105,7 @@ public sealed partial class SafeSectionViewModel : LedgerSectionViewModel<SafeRo
 
     protected override SafeRowViewModel Wrap(SafeEntry e) => new(e, this);
     protected override long EntityIdOf(SafeRowViewModel r) => r.Entity.Id;
+    protected override SafeEntry EntityOf(SafeRowViewModel r) => r.Entity;
     protected override SafeEntry NewEntity() =>
         new() { DateShamsi = Shamsi.Today(), Kind = SafeEntryKind.Mandagi };
 

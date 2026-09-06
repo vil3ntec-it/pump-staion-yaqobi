@@ -132,5 +132,6 @@ public sealed partial class RetailSectionViewModel
 
     protected override RetailRowViewModel Wrap(RetailRow e) => new(e, this);
     protected override long EntityIdOf(RetailRowViewModel r) => r.Entity.Id;
+    protected override RetailRow EntityOf(RetailRowViewModel r) => r.Entity;
     protected override void Recalc() => Summary = Calc.Summarize(Rows.Select(r => r.Entity));
 }

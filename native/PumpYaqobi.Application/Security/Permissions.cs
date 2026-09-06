@@ -11,6 +11,14 @@ public enum Permission
     ViewData = 1,
     EditData,
     DeleteData,
+    /// <summary>
+    /// کاری که فقط مدیر اجازه‌اش را دارد — همان ‎requireAdmin()‎ی نسخهٔ وب.
+    ///
+    /// ⚠️ ‎EditData‎ کافی نیست: کارمند آن را دارد. جایی که نسخهٔ وب صریحاً
+    /// ‎requireAdmin()‎ می‌گذارد، کارمند نباید بتواند — پنهان کردنِ دکمه هم
+    /// کافی نیست، چون قاعده در لایهٔ سرویس است نه در صفحه.
+    /// </summary>
+    ManagerOnly,
     /// <summary>خالی کردنِ سطلِ زباله / حذفِ همیشگی.</summary>
     PurgeData,
     ManageUsers,

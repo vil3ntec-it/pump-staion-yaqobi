@@ -80,6 +80,7 @@ public sealed partial class ExpenseSectionViewModel
 
     protected override ExpenseRowViewModel Wrap(Expense e) => new(e, this);
     protected override long EntityIdOf(ExpenseRowViewModel r) => r.Entity.Id;
+    protected override Expense EntityOf(ExpenseRowViewModel r) => r.Entity;
 
     protected override void Recalc()
     {
