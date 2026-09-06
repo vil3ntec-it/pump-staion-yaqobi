@@ -16,6 +16,9 @@ public sealed class AppHost
 {
     public AppHost(string? dbPath = null)
     {
+        // دیتابیسِ غیرپیش‌فرض یعنی «اجرای جدا» (عکس‌گیری/آزمون) — تنظیمات هم
+        // باید کنارِ همان باشد، نه در پوشهٔ واقعیِ کاربر.
+        if (dbPath is not null) AppSettings.DirOverride = Path.GetDirectoryName(dbPath);
         Db = new PumpDbFactory(dbPath);
         Db.EnsureReady();
         Session = new UserSession();
@@ -28,6 +31,7 @@ public sealed class AppHost
         Retail = new RetailService();
         Expenses = new ExpenseService();
         Trash = new TrashService(Db, Permissions, Session);
+        Debtors = new DebtorService(Db, Permissions, Trash);
         SafeLedger = new LedgerService<SafeEntry>(Db, Permissions, Trash, "safe",
             r => (r.Title ?? "") + " — " + Shamsi.Money(r.Amount));
         ExchangeLedger = new LedgerService<ExchangeRow>(Db, Permissions, Trash, "sarrafi",
@@ -51,6 +55,7 @@ public sealed class AppHost
     public RetailService Retail { get; }
     public ExpenseService Expenses { get; }
     public TrashService Trash { get; }
+    public DebtorService Debtors { get; }
     public LedgerService<SafeEntry> SafeLedger { get; }
     public LedgerService<ExchangeRow> ExchangeLedger { get; }
     public LedgerService<Expense> ExpenseLedger { get; }

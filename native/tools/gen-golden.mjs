@@ -61,5 +61,32 @@ const chakana = await page.evaluate(() => {
 fs.writeFileSync(path.join(OUT, 'golden-chakana.json'), JSON.stringify(chakana));
 console.log('  ✔ golden-chakana.json — ' + chakana.length + ' حالت');
 
+// ── خوددرمانیِ ردیفِ قرض‌دار (_round0 + بردگی + الباقی) ────────────────────
+const rowHeal = await page.evaluate(() => {
+  let seed = 424242;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  const cases = [];
+  for (let i = 0; i < 600; i++) {
+    const byMoney = rnd() < 0.35;
+    const r = {
+      byMoney,
+      ftype: rnd() < 0.4 ? 'diesel' : 'petrol',
+      fuel: rnd() < 0.15 ? 0 : Math.round(rnd() * 400 * 100) / 100,
+      priceper: rnd() < 0.2 ? '' : Math.round(rnd() * 95 * 100) / 100,
+      bardagi: byMoney && rnd() < 0.8 ? Math.round(rnd() * 90000 * 100) / 100 : 0,
+      rasid: rnd() < 0.6 ? Math.round(rnd() * 60000 * 100) / 100 : 0,
+      albaqi: 0,
+    };
+    const before = JSON.parse(JSON.stringify(r));
+    if (r.byMoney && !(parseFloat(r.bardagi) || 0) && (parseFloat(r.fuel) || 0) > 0) r.byMoney = false;
+    const bardagi = _round0(r.byMoney ? (parseFloat(r.bardagi) || 0) : _personRowBardagi(r));
+    const albaqi = _round0(bardagi - (r.rasid || 0));
+    cases.push({ before, byMoney: r.byMoney, bardagi, albaqi });
+  }
+  return cases;
+});
+fs.writeFileSync(path.join(OUT, 'golden-debtrow.json'), JSON.stringify(rowHeal));
+console.log('  ✔ golden-debtrow.json — ' + rowHeal.length + ' ردیف');
+
 console.log('\n  خطای جاوااسکریپت:', errs.length ? errs.slice(0, 3) : 'ندارد');
 await browser.close();

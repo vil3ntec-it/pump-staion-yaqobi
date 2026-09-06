@@ -38,5 +38,6 @@
     <None Update="sample-backup.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="golden-safe-exchange.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="golden-chakana.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="golden-debtrow.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

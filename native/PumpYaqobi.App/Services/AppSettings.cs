@@ -16,7 +16,13 @@ public sealed class AppSettings
 
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 
-    public static string Dir => Path.Combine(
+    /// <summary>
+    /// جای فایلِ تنظیمات. ابزارِ عکس‌گیری و آزمون‌ها آن را به یک پوشهٔ موقت
+    /// می‌برند تا هرگز تنظیماتِ واقعیِ کاربر را نخوانند و ننویسند.
+    /// </summary>
+    public static string? DirOverride { get; set; }
+
+    public static string Dir => DirOverride ?? Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PumpYaqobi");
 
     private static string File_ => Path.Combine(Dir, "settings.json");

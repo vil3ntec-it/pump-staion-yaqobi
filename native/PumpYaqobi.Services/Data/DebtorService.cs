@@ -1,0 +1,183 @@
+using Microsoft.EntityFrameworkCore;
+using PumpYaqobi.Application.Localization;
+using PumpYaqobi.Application.Security;
+using PumpYaqobi.Domain.Entities;
+using PumpYaqobi.Domain.Enums;
+
+namespace PumpYaqobi.Services.Data;
+
+/// <summary>
+/// ══ قرض‌داران ══════════════════════════════════════════════════════════════
+/// حساسیت‌های همیشگیِ این بخش که در نسخهٔ نیتیو هم باید سرِ جایشان بمانند:
+///
+///   • «واحد پول» و «واحد تیل» دو دفترِ کاملاً جدا هستند
+///     (<see cref="DebtAccount.FuelRows"/> و <see cref="DebtAccount.MoneyRows"/>).
+///     جمع‌های نمایشی نباید روی محاسبهٔ الباقی اثر بگذارند.
+///   • فیصدیِ پطرول و دیزل دو چیزِ جدا هستند؛ هرگز یکی نمی‌شوند.
+///   • ساختنِ حسابِ فرعی باید فوراً در فهرست دیده شود — همان باگی که در
+///     نسخهٔ وب گزارش شد و ریشه‌اش این بود که فهرست از نو کشیده نمی‌شد.
+/// </summary>
+public sealed class DebtorService
+{
+    private readonly PumpDbFactory _dbf;
+    private readonly PermissionService _perm;
+    private readonly TrashService _trash;
+
+    public DebtorService(PumpDbFactory dbf, PermissionService perm, TrashService trash)
+    { _dbf = dbf; _perm = perm; _trash = trash; }
+
+    /// <summary>فهرستِ کارت‌ها. ردیف‌ها بار نمی‌شوند — فقط چیزی که کارت لازم دارد.</summary>
+    public async Task<List<Debtor>> ListAsync(bool noInvoice = false, string? search = null,
+                                              CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        var q = db.Debtors.AsNoTracking().Where(d => d.IsNoInvoice == noInvoice);
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.Trim();
+            q = q.Where(d => d.Name!.Contains(s) || (d.Phone != null && d.Phone.Contains(s)));
+        }
+        return await q.OrderBy(d => d.Name).ToListAsync(ct);
+    }
+
+    /// <summary>یک قرض‌دار با همهٔ حساب‌ها و همهٔ ردیف‌هایش — برای مودالِ شخص.</summary>
+    public async Task<Debtor?> LoadFullAsync(long id, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        return await db.Debtors.AsNoTracking()
+            .Include(d => d.MainAccount).ThenInclude(a => a!.FuelRows)
+            .Include(d => d.MainAccount).ThenInclude(a => a!.MoneyRows)
+            .Include(d => d.SubAccounts).ThenInclude(a => a.FuelRows)
+            .Include(d => d.SubAccounts).ThenInclude(a => a.MoneyRows)
+            .FirstOrDefaultAsync(d => d.Id == id, ct);
+    }
+
+    /// <summary>حساب‌های همهٔ قرض‌داران، برای نشانِ حال (سبز/زرد/قرمز) روی کارت‌ها.</summary>
+    public async Task<Dictionary<long, List<DebtAccount>>> AccountsByDebtorAsync(
+        bool noInvoice = false, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        var ids = await db.Debtors.AsNoTracking()
+            .Where(d => d.IsNoInvoice == noInvoice).Select(d => d.Id).ToListAsync(ct);
+
+        var mains = await db.DebtAccounts.AsNoTracking()
+            .Include(a => a.FuelRows).Include(a => a.MoneyRows)
+            .Where(a => a.MainOfDebtorId != null && ids.Contains(a.MainOfDebtorId.Value))
+            .ToListAsync(ct);
+        var subs = await db.DebtAccounts.AsNoTracking()
+            .Include(a => a.FuelRows).Include(a => a.MoneyRows)
+            .Where(a => a.DebtorId != null && ids.Contains(a.DebtorId.Value))
+            .ToListAsync(ct);
+
+        var map = ids.ToDictionary(i => i, _ => new List<DebtAccount>());
+        foreach (var a in mains) map[a.MainOfDebtorId!.Value].Add(a);
+        foreach (var a in subs) map[a.DebtorId!.Value].Add(a);
+        return map;
+    }
+
+    public async Task<Debtor> AddDebtorAsync(string name, string? phone, bool noInvoice,
+                                             CancellationToken ct = default)
+    {
+        _perm.Require(Permission.EditData);
+        await using var db = _dbf.Create();
+        var d = new Debtor
+        {
+            Name = name.Trim(),
+            Phone = phone,
+            IsNoInvoice = noInvoice,
+            LegacyId = "d" + Guid.NewGuid().ToString("N")[..10],
+            MainAccount = new DebtAccount { Mode = LedgerMode.Fuel },
+        };
+        db.Debtors.Add(d);
+        await db.SaveChangesAsync(ct);
+        return d;
+    }
+
+    /// <summary>
+    /// حسابِ فرعیِ تازه. در نسخهٔ وب پس از ساختن، کارتِ فهرست تازه نمی‌شد و
+    /// کاربر فکر می‌کرد چیزی ساخته نشده؛ اینجا فهرست از خودِ دیتابیس خوانده
+    /// می‌شود، پس چنین چیزی ممکن نیست.
+    /// </summary>
+    public async Task<DebtAccount> AddSubAccountAsync(long debtorId, string? title,
+                                                      CancellationToken ct = default)
+    {
+        _perm.Require(Permission.EditData);
+        await using var db = _dbf.Create();
+        var n = await db.DebtAccounts.CountAsync(a => a.DebtorId == debtorId, ct);
+        var a = new DebtAccount
+        {
+            DebtorId = debtorId,
+            Name = string.IsNullOrWhiteSpace(title) ? $"حسابِ فرعیِ {n + 1}" : title.Trim(),
+            LegacySubId = "s" + Guid.NewGuid().ToString("N")[..8],
+            Mode = LedgerMode.Fuel,
+        };
+        db.DebtAccounts.Add(a);
+        await db.SaveChangesAsync(ct);
+        return a;
+    }
+
+    public async Task UpdateDebtorAsync(Debtor d, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.EditData);
+        await using var db = _dbf.Create();
+        db.Debtors.Attach(d);
+        db.Entry(d).State = EntityState.Modified;
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task UpdateAccountAsync(DebtAccount a, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.EditData);
+        await using var db = _dbf.Create();
+        db.DebtAccounts.Attach(a);
+        db.Entry(a).State = EntityState.Modified;
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>ذخیرهٔ یک ردیف — فقط همان ردیف، نه کلِ حساب.</summary>
+    public async Task SaveRowAsync(DebtRow r, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.EditData);
+        r.DateKey = Shamsi.Key(r.DateShamsi);
+        await using var db = _dbf.Create();
+        if (r.Id == 0) db.DebtRows.Add(r);
+        else { db.DebtRows.Attach(r); db.Entry(r).State = EntityState.Modified; }
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task DeleteRowAsync(long rowId, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.DeleteData);
+        await using var db = _dbf.Create();
+        var r = await db.DebtRows.FirstOrDefaultAsync(x => x.Id == rowId, ct);
+        if (r is null) return;
+        await _trash.RememberAsync(db, "debtrow", (r.Name ?? "") + " — " + (r.DateShamsi ?? ""), r, ct);
+        db.DebtRows.Remove(r);
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task DeleteDebtorAsync(long id, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.DeleteData);
+        await using var db = _dbf.Create();
+        var d = await db.Debtors.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (d is null) return;
+        await _trash.RememberAsync(db, "debtor", d.Name ?? "", d, ct);
+        db.Debtors.Remove(d);
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task DeleteAccountAsync(long accountId, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.DeleteData);
+        await using var db = _dbf.Create();
+        var a = await db.DebtAccounts.FirstOrDefaultAsync(x => x.Id == accountId, ct);
+        if (a is null || a.MainOfDebtorId != null) return;   // حسابِ اصلی حذف نمی‌شود
+        await _trash.RememberAsync(db, "debtaccount", a.Name ?? "", a, ct);
+        db.DebtAccounts.Remove(a);
+        await db.SaveChangesAsync(ct);
+    }
+}

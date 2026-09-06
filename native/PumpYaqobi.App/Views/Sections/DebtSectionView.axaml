@@ -1,0 +1,83 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
+             xmlns:v="using:PumpYaqobi.App.Views.Sections"
+             x:Class="PumpYaqobi.App.Views.Sections.DebtSectionView"
+             x:DataType="vm:DebtSectionViewModel">
+  <Panel>
+
+    <!-- ══ فهرستِ کارت‌ها ══ -->
+    <c:SectionPage IsVisible="{Binding IsListVisible}"
+                   Header="{Binding Title}"
+                   SubHeader="نشانِ حال از روی رسید و بردگیِ همان حساب حساب می‌شود">
+
+      <c:SectionPage.Filters>
+        <Grid ColumnDefinitions="Auto,220,20,Auto,200,Auto,150,Auto">
+          <TextBlock Grid.Column="0" Text="جست‌وجو" Classes="label" VerticalAlignment="Center" Margin="0,0,8,0" />
+          <TextBox Grid.Column="1" Text="{Binding Search}" Watermark="نام یا شماره" />
+          <TextBlock Grid.Column="3" Text="حسابِ تازه" Classes="label" VerticalAlignment="Center" Margin="0,0,8,0" />
+          <TextBox Grid.Column="4" Text="{Binding NewName}" Watermark="نام" />
+          <TextBox Grid.Column="6" Text="{Binding NewPhone}" Watermark="شماره" Margin="8,0,0,0" />
+          <Button Grid.Column="7" Classes="accent" Content="افزودن" Margin="8,0,0,0"
+                  Command="{Binding AddDebtorCommand}" />
+        </Grid>
+      </c:SectionPage.Filters>
+
+      <ScrollViewer>
+        <ItemsControl ItemsSource="{Binding Cards}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel Orientation="Horizontal" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:DebtorCardViewModel">
+              <Border Classes="card" Width="268" Margin="0,0,12,12">
+                <StackPanel Spacing="8">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="{Binding Name}" Classes="h2" TextTrimming="CharacterEllipsis" />
+                    <Border Grid.Column="1" CornerRadius="7" Padding="7,2" VerticalAlignment="Center"
+                            IsVisible="{Binding HasStatus}"
+                            Background="{Binding StatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}">
+                      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#0b0b0b" />
+                    </Border>
+                  </Grid>
+                  <TextBlock Text="{Binding Phone}" Classes="muted" />
+                  <Grid ColumnDefinitions="*,*,*" Margin="0,4,0,0">
+                    <StackPanel Grid.Column="0" Spacing="1">
+                      <TextBlock Text="پول" Classes="label" FontSize="11" />
+                      <TextBlock Text="{Binding MoneyText}" FontWeight="Bold" FontSize="13" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="1">
+                      <TextBlock Text="پطرول" Classes="label" FontSize="11" />
+                      <TextBlock Text="{Binding PetrolText}" FontWeight="Bold" FontSize="13" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Spacing="1">
+                      <TextBlock Text="دیزل" Classes="label" FontSize="11" />
+                      <TextBlock Text="{Binding DieselText}" FontWeight="Bold" FontSize="13" />
+                    </StackPanel>
+                  </Grid>
+                  <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
+                    <Button Classes="accent" Content="باز کردنِ حساب" Padding="10,4" FontSize="12"
+                            Command="{Binding $parent[ItemsControl].((vm:DebtSectionViewModel)DataContext).OpenCommand}"
+                            CommandParameter="{Binding}" />
+                    <Button Classes="ghost danger" Content="حذف" Padding="10,4" FontSize="12"
+                            Command="{Binding $parent[ItemsControl].((vm:DebtSectionViewModel)DataContext).DeleteDebtorCommand}"
+                            CommandParameter="{Binding}" />
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </c:SectionPage>
+
+    <!-- ══ صفحهٔ حسابِ یک شخص ══ -->
+    <Panel IsVisible="{Binding !IsListVisible}">
+      <v:PersonView DataContext="{Binding Person}" />
+    </Panel>
+  </Panel>
+</UserControl>

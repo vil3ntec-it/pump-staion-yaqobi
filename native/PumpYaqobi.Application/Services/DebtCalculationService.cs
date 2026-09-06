@@ -97,6 +97,46 @@ public sealed class DebtCalculationService
         return r.Liters * (r.PricePerLiter ?? 0m);
     }
 
+    /// <summary>
+    /// ‎_round0(x)‎ = ‎parseFloat(x.toFixed(0))‎.
+    /// ⚠️ با Math.Round(…, MidpointRounding.ToEven) عوض نکنید: در جاوااسکریپت
+    /// ‎(-2.5).toFixed(0)‎ برابر «-3» است، پس نصفه‌ها از صفر دور می‌شوند.
+    /// یک‌بار همین یک نکته عددِ حساب را عوض کرده بود.
+    /// </summary>
+    public static decimal Round0(decimal v) => Math.Round(v, 0, MidpointRounding.AwayFromZero);
+
+    /// <summary>
+    /// ‎خوددرمانیِ ردیف‎ — همان کاری که ‎renderPersonRows‎ پیش از کشیدنِ جدول
+    /// روی هر ردیف می‌کند:
+    ///   ۱) ردیفی که «پولی» علامت خورده ولی بردگی‌اش صفر و لیتر دارد، در اصل
+    ///      ردیفِ تیل است (وگرنه فیِ حساب خراب می‌شد).
+    ///   ۲) بردگی و الباقی محاسبه و گرد می‌شوند و روی خودِ ردیف می‌نشینند.
+    /// خروجی می‌گوید آیا چیزی عوض شد (تا فقط همان‌وقت ذخیره شود).
+    /// </summary>
+    public bool NormalizeRow(DebtRow r)
+    {
+        if (r is null) return false;
+        var healed = false;
+
+        if (r.ByMoney && r.Bardagi == 0m && r.Liters > 0m) { r.ByMoney = false; healed = true; }
+
+        var bardagi = Round0(r.ByMoney ? r.Bardagi : RowBardagi(r));
+        var albaqi = Round0(bardagi - r.Rasid);
+        if (r.Bardagi != bardagi) { r.Bardagi = bardagi; healed = true; }
+        if (r.Albaqi != albaqi) { r.Albaqi = albaqi; healed = true; }
+        return healed;
+    }
+
+    /// <summary>همان کار روی همهٔ ردیف‌های یک حساب (هر دو دفتر).</summary>
+    public bool NormalizeAccount(DebtAccount a)
+    {
+        if (a is null) return false;
+        var healed = false;
+        foreach (var r in a.FuelRows) healed |= NormalizeRow(r);
+        foreach (var r in a.MoneyRows) healed |= NormalizeRow(r);
+        return healed;
+    }
+
     // ── جمع‌ها ───────────────────────────────────────────────────────────────
     /// <summary>‎_splitTotals(rows)‎ — پطرول و دیزل جدا، بعد جمعِ کل.</summary>
     public SplitTotals SplitTotals(IEnumerable<DebtRow> rows)

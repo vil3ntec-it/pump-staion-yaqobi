@@ -67,6 +67,19 @@ internal static class Program
             Shot(win, Path.Combine(outDir, $"{++n:00}-{sec.Id}.png"));
         }
 
+        // ۵) صفحهٔ حسابِ یک قرض‌دار — مهم‌ترین صفحهٔ برنامه
+        if (vm.Sections.FirstOrDefault(s => s.Id == "debt") is PumpYaqobi.App.ViewModels.Sections.DebtSectionViewModel debt)
+        {
+            vm.GoCommand.Execute(debt);
+            Pump(win);
+            debt.RefreshAsync().GetAwaiter().GetResult();
+            debt.OpenCommand.Execute(debt.Cards.FirstOrDefault());
+            Pump(win);
+            Dispatcher.UIThread.RunJobs();
+            Pump(win);
+            Shot(win, Path.Combine(outDir, "20-debt-person.png"));
+        }
+
         Console.WriteLine("عکس‌ها در: " + Path.GetFullPath(outDir));
         return 0;
     }

@@ -232,6 +232,30 @@
     <Setter Property="MinWidth" Value="150" />
   </Style>
 
+  <!-- تب‌های حساب: چیپ، نه فهرستِ ساده -->
+  <Style Selector="ListBox.chips">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="ListBox.chips ListBoxItem">
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="Padding" Value="14,7" />
+    <Setter Property="Margin" Value="0,0,8,0" />
+    <Setter Property="Background" Value="{DynamicResource Pump.Card}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="ListBox.chips ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Pump.AccentGrad}" />
+    <Setter Property="TextBlock.Foreground" Value="{DynamicResource Pump.OnAccent}" />
+    <Setter Property="TextBlock.FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="ListBox.chips ListBoxItem:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Pump.Hover}" />
+  </Style>
+
   <Style Selector="ScrollBar">
     <Setter Property="Background" Value="Transparent" />
   </Style>

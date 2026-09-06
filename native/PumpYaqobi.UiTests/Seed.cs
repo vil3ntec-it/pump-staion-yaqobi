@@ -61,6 +61,36 @@ internal static class Seed
             }).GetAwaiter().GetResult();
         }
 
+        // چند قرض‌دار با دفترِ تیل و دفترِ پول
+        for (var p = 1; p <= 9; p++)
+        {
+            var d = host.Debtors.AddDebtorAsync("قرض‌دارِ شمارهٔ " + p, "070000000" + p, false)
+                        .GetAwaiter().GetResult();
+            var full = host.Debtors.LoadFullAsync(d.Id).GetAwaiter().GetResult()!;
+            var acc = full.MainAccount!;
+            acc.RasidFuelPetrol = 500 * p;
+            acc.RasidMoneyPetrol = 20000;
+            host.Debt.SetPercent(acc, PumpYaqobi.Domain.Enums.FuelType.Petrol, p % 3 == 0 ? 2 : null);
+            host.Debtors.UpdateAccountAsync(acc).GetAwaiter().GetResult();
+
+            for (var i = 1; i <= 6; i++)
+            {
+                host.Debtors.SaveRowAsync(new DebtRow
+                {
+                    FuelAccountId = acc.Id,
+                    SortIndex = i,
+                    DateShamsi = $"{month}/{i:00}",
+                    Name = "بردگیِ " + i,
+                    Hawala = "ح" + i,
+                    Fuel = i % 3 == 0 ? PumpYaqobi.Domain.Enums.FuelType.Diesel
+                                      : PumpYaqobi.Domain.Enums.FuelType.Petrol,
+                    Liters = 20 * i,
+                    PricePerLiter = 62,
+                    Rasid = i % 2 == 0 ? 500 : 0,
+                }).GetAwaiter().GetResult();
+            }
+        }
+
         _ = today;
     }
 }
