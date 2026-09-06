@@ -205,6 +205,24 @@ internal static class Seed
             }
         }
 
+        // فاکتورها
+        for (var i = 1; i <= 8; i++)
+        {
+            var v = host.Invoices.AddAsync(new Invoice
+            {
+                DateShamsi = $"{month}/{i:00}",
+                CustomerName = "مشتریِ " + i,
+                Fuel = i % 3 == 0 ? PumpYaqobi.Domain.Enums.FuelType.Diesel
+                                  : PumpYaqobi.Domain.Enums.FuelType.Petrol,
+                PricePerLiter = i % 4 == 0 ? 0 : 62,
+                Liters = i % 4 == 0 ? 0 : 100 * i,
+                Amount = i % 4 == 0 ? 25000 : 0,
+                VehicleType = i % 2 == 0 ? "لاری" : "موتر",
+                Phone = "070000010" + i,
+            }).GetAwaiter().GetResult();
+            if (i % 2 == 0) host.Invoices.ApproveAsync(v.Id, 62m).GetAwaiter().GetResult();
+        }
+
         _ = today;
     }
 }

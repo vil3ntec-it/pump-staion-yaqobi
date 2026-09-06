@@ -97,6 +97,7 @@ public sealed class PumpDbContext : DbContext
             e.HasIndex(x => new { x.FuelAccountId, x.SortIndex }); // ترتیبِ ردیف‌های یک حساب
             e.HasIndex(x => x.Fuel);                            // تفکیکِ پطرول/دیزل
             e.HasIndex(x => x.Name);
+            e.HasIndex(x => x.InvoiceId);
             e.Property(x => x.Fuel).HasConversion<int>();
             e.HasQueryFilter(x => x.DeletedAt == null);
         });

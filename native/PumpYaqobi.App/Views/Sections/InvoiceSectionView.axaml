@@ -1,0 +1,88 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             x:Class="PumpYaqobi.App.Views.Sections.InvoiceSectionView"
+             x:DataType="vm:InvoiceSectionViewModel">
+
+  <c:SectionPage Header="ثبت فاکتورها"
+                 SubHeader="تایید، بخشِ پولی را به دفترِ پول و بخشِ تیل را به «رسیدِ تیل»ِ همان حساب می‌برد">
+
+    <c:SectionPage.Toolbar>
+      <Button Classes="accent" Content="فاکتورِ تازه" Command="{Binding AddInvoiceCommand}" />
+    </c:SectionPage.Toolbar>
+
+    <c:SectionPage.Filters>
+      <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+        <TextBlock Text="جست‌وجو" Classes="label" VerticalAlignment="Center" />
+        <TextBox Text="{Binding Search}" Width="240" Watermark="نامِ مشتری یا شماره" />
+        <CheckBox Content="فقط در انتظارِ تایید" IsChecked="{Binding OnlyPending}" />
+      </StackPanel>
+    </c:SectionPage.Filters>
+
+    <c:SectionPage.Summary>
+      <StackPanel Orientation="Horizontal" Spacing="12">
+        <Border Classes="stat">
+          <StackPanel Spacing="3">
+            <TextBlock Text="در انتظارِ تایید" Classes="label" />
+            <TextBlock Text="{Binding PendingCount}" Classes="num" />
+          </StackPanel>
+        </Border>
+        <Border Classes="stat">
+          <StackPanel Spacing="3">
+            <TextBlock Text="تایید شده" Classes="label" />
+            <TextBlock Text="{Binding ApprovedCount}" Classes="num" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </c:SectionPage.Summary>
+
+    <c:ExcelGrid ItemsSource="{Binding Rows}" x:CompileBindings="False">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="شماره" Binding="{Binding Number}" Width="85" IsReadOnly="True" />
+        <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="115" />
+        <DataGridTextColumn Header="مشتری" Binding="{Binding Customer}" Width="*" />
+        <DataGridTextColumn Header="نامِ حساب" Binding="{Binding DebtAlias}" Width="150" />
+        <DataGridTemplateColumn Header="تیل" Width="95">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate><TextBlock Text="{Binding FuelText}" VerticalAlignment="Center" Margin="6,0" /></DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+          <DataGridTemplateColumn.CellEditingTemplate>
+            <DataTemplate>
+              <ComboBox SelectedItem="{Binding FuelText}">
+                <ComboBoxItem Content="پطرول" /><ComboBoxItem Content="دیزل" />
+              </ComboBox>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellEditingTemplate>
+        </DataGridTemplateColumn>
+        <DataGridTextColumn Header="فی" Binding="{Binding PriceText}" Width="95" />
+        <DataGridTextColumn Header="لیتر" Binding="{Binding LitersText}" Width="105" />
+        <DataGridTextColumn Header="مبلغ" Binding="{Binding AmountText}" Width="120" />
+        <DataGridTextColumn Header="نوع" Binding="{Binding KindText}" Width="95" IsReadOnly="True" />
+        <DataGridTextColumn Header="جمعِ کل" Binding="{Binding TotalText}" Width="130" IsReadOnly="True" />
+        <DataGridTextColumn Header="وسیله" Binding="{Binding Vehicle}" Width="120" />
+        <DataGridTextColumn Header="شماره تماس" Binding="{Binding Phone}" Width="130" />
+        <DataGridTextColumn Header="حال" Binding="{Binding StatusText}" Width="130" IsReadOnly="True" />
+        <DataGridTemplateColumn Header="" Width="190" IsReadOnly="True">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Button Classes="accent" Content="تایید" Padding="9,3" FontSize="11"
+                        IsVisible="{Binding IsPending}"
+                        Command="{Binding $parent[UserControl].DataContext.ApproveCommand}"
+                        CommandParameter="{Binding}" />
+                <Button Content="برگشت" Padding="9,3" FontSize="11"
+                        IsVisible="{Binding IsApproved}"
+                        Command="{Binding $parent[UserControl].DataContext.RevertCommand}"
+                        CommandParameter="{Binding}" />
+                <Button Classes="ghost danger" Content="حذف" Padding="9,3" FontSize="11"
+                        Command="{Binding $parent[UserControl].DataContext.DeleteInvoiceCommand}"
+                        CommandParameter="{Binding}" />
+              </StackPanel>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+      </DataGrid.Columns>
+    </c:ExcelGrid>
+  </c:SectionPage>
+</UserControl>

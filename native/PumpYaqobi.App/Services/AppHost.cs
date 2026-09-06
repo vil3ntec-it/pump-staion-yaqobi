@@ -42,6 +42,7 @@ public sealed class AppHost
         WaraqData = new WaraqDataService(Db, Permissions, Trash);
         StorageData = new StorageDataService(Db, Permissions, Trash, Storage, Settings, Companies);
         Amanat = new AmanatDataService(Db, Permissions, Trash, Settings);
+        Invoices = new InvoiceService(Db, Permissions, Trash, Debtors);
         SafeLedger = new LedgerService<SafeEntry>(Db, Permissions, Trash, "safe",
             r => (r.Title ?? "") + " — " + Shamsi.Money(r.Amount));
         ExchangeLedger = new LedgerService<ExchangeRow>(Db, Permissions, Trash, "sarrafi",
@@ -76,6 +77,7 @@ public sealed class AppHost
     public StorageDataService StorageData { get; }
     public AmanatService AmanatCalc { get; }
     public AmanatDataService Amanat { get; }
+    public InvoiceService Invoices { get; }
     public LedgerService<SafeEntry> SafeLedger { get; }
     public LedgerService<ExchangeRow> ExchangeLedger { get; }
     public LedgerService<Expense> ExpenseLedger { get; }

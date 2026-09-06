@@ -75,7 +75,7 @@ public sealed partial class MainViewModel : ObservableObject
         new ParchaSectionViewModel(host),
         new WaraqSectionViewModel(host),
         new DebtSectionViewModel(host),
-        new PlaceholderSectionViewModel("invoices",  "ثبت فاکتورها"),
+        new InvoiceSectionViewModel(host),
         new RetailSectionViewModel(host),
         new ExchangeSectionViewModel(host),
         new ExpenseSectionViewModel(host),

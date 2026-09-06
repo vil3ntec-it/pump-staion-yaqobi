@@ -276,6 +276,21 @@ public class Invoice : EntityBase
     public bool ByMoney { get; set; }
     public string? Note { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime? ApprovedAtUtc { get; set; }
+
+    /// <summary>نرخِ روزِ ثبت — هرگز جایگزین نمی‌شود.</summary>
+    public decimal? RateOnCreate { get; set; }
+    /// <summary>نرخِ روزِ تایید — اختلافش با بالایی «زیانِ افزایشِ قیمت» است.</summary>
+    public decimal? RateOnApprove { get; set; }
+
+    /// <summary>حسابِ قرض‌داری که فاکتور رویش نشسته.</summary>
+    public long? DebtAccountId { get; set; }
+    /// <summary>
+    /// لیترِ «رسیدِ تیل»ی که با تاییدِ این فاکتور به حساب اضافه شد.
+    /// با برگشت یا حذفِ فاکتور دقیقاً همین مقدار پس گرفته می‌شود
+    /// (‎posted_fuel_rasid‎ در نسخهٔ وب).
+    /// </summary>
+    public decimal? PostedFuelLiters { get; set; }
 }
 
 // ══ کارمندان ══════════════════════════════════════════════════════════════════
