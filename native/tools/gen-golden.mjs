@@ -127,5 +127,28 @@ const companies = await page.evaluate(() => {
 fs.writeFileSync(path.join(OUT, 'golden-company.json'), JSON.stringify(companies));
 console.log('  ✔ golden-company.json — ' + companies.length + ' شرکت');
 
+// ── پارچه (شیفت) ──────────────────────────────────────────────────────────
+const parcha = await page.evaluate(() => {
+  let seed = 13579;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  const cases = [];
+  for (let i = 0; i < 400; i++) {
+    const start = Math.round(rnd() * 900000 * 100) / 100;
+    const end = start + Math.round(rnd() * 20000 * 100) / 100;
+    const price = Math.round(rnd() * 90 * 100) / 100;
+    const profitPer = Math.round(rnd() * 6 * 100) / 100;
+    const debt = Math.round(rnd() * 60000 * 100) / 100;
+    // همان چهار خطِ saveShift
+    const sale = end - start;
+    const money = sale * price;
+    const profit = sale * profitPer;
+    const available = money - debt;
+    cases.push({ start, end, price, profitPer, debt, sale, money, profit, available });
+  }
+  return cases;
+});
+fs.writeFileSync(path.join(OUT, 'golden-parcha.json'), JSON.stringify(parcha));
+console.log('  ✔ golden-parcha.json — ' + parcha.length + ' شیفت');
+
 console.log('\n  خطای جاوااسکریپت:', errs.length ? errs.slice(0, 3) : 'ندارد');
 await browser.close();

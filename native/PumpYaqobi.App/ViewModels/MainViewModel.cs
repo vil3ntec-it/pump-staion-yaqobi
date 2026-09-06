@@ -72,7 +72,7 @@ public sealed partial class MainViewModel : ObservableObject
     private static IEnumerable<SectionViewModel> BuildSections(AppHost host) => new SectionViewModel[]
     {
         new PlaceholderSectionViewModel("dashboard", "داشبورد"),
-        new PlaceholderSectionViewModel("shifts",    "پارچه‌ها"),
+        new ParchaSectionViewModel(host),
         new PlaceholderSectionViewModel("waraq",     "ورق‌های روزانه"),
         new DebtSectionViewModel(host),
         new PlaceholderSectionViewModel("invoices",  "ثبت فاکتورها"),

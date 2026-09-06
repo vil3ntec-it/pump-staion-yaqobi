@@ -1,0 +1,89 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             x:Class="PumpYaqobi.App.Views.Sections.ParchaSectionView"
+             x:DataType="vm:ParchaSectionViewModel">
+
+  <c:SectionPage Header="پارچه‌ها"
+                 SubHeader="هر پارچه دو شیفت دارد — فروش = ختمِ پایه − شروع، پول = فروش × فی، رسیده = پول − قرض">
+
+    <c:SectionPage.Toolbar>
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <ToggleSwitch OnContent="دیزل" OffContent="پطرول" IsChecked="{Binding IsDiesel}" />
+        <Button Classes="accent" Content="پارچهٔ تازه" Command="{Binding AddParchaCommand}" />
+      </StackPanel>
+    </c:SectionPage.Toolbar>
+
+    <c:SectionPage.Filters>
+      <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <TextBlock Text="ماه" Classes="label" VerticalAlignment="Center" />
+        <ComboBox ItemsSource="{Binding Months}" SelectedItem="{Binding Month}" MinWidth="140" />
+      </StackPanel>
+    </c:SectionPage.Filters>
+
+    <c:SectionPage.Summary>
+      <StackPanel Orientation="Horizontal" Spacing="12">
+        <Border Classes="stat">
+          <StackPanel Spacing="3">
+            <TextBlock Text="فروش (لیتر)" Classes="label" />
+            <TextBlock Text="{Binding TotalSale}" Classes="num" />
+          </StackPanel>
+        </Border>
+        <Border Classes="stat">
+          <StackPanel Spacing="3">
+            <TextBlock Text="پول" Classes="label" />
+            <TextBlock Text="{Binding TotalMoney}" Classes="num" />
+          </StackPanel>
+        </Border>
+        <Border Classes="stat">
+          <StackPanel Spacing="3">
+            <TextBlock Text="قرض" Classes="label" />
+            <TextBlock Text="{Binding TotalDebt}" Classes="num" />
+          </StackPanel>
+        </Border>
+        <Border Classes="stat">
+          <StackPanel Spacing="3">
+            <TextBlock Text="رسیده" Classes="label" />
+            <TextBlock Text="{Binding TotalAvailable}" Classes="num" />
+          </StackPanel>
+        </Border>
+        <Border Classes="stat">
+          <StackPanel Spacing="3">
+            <TextBlock Text="فایده" Classes="label" />
+            <TextBlock Text="{Binding TotalProfit}" Classes="num" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </c:SectionPage.Summary>
+
+    <c:ExcelGrid ItemsSource="{Binding Rows}" x:CompileBindings="False">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="پارچه" Binding="{Binding ReportNum}" Width="75" IsReadOnly="True" />
+        <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="115" />
+        <DataGridTextColumn Header="شیفت" Binding="{Binding KindText}" Width="70" IsReadOnly="True" />
+        <DataGridTextColumn Header="کارمند" Binding="{Binding Name}" Width="*" />
+        <DataGridTextColumn Header="پایه" Binding="{Binding PumpNum}" Width="70" />
+        <DataGridTextColumn Header="شروع" Binding="{Binding StartText}" Width="110" />
+        <DataGridTextColumn Header="ختم" Binding="{Binding EndText}" Width="110" />
+        <DataGridTextColumn Header="فی" Binding="{Binding PriceText}" Width="85" />
+        <DataGridTextColumn Header="فروش" Binding="{Binding SaleText}" Width="105" IsReadOnly="True" />
+        <DataGridTextColumn Header="پول" Binding="{Binding MoneyText}" Width="120" IsReadOnly="True" />
+        <DataGridTextColumn Header="قرض" Binding="{Binding DebtText}" Width="110" />
+        <DataGridTextColumn Header="رسیده" Binding="{Binding AvailableText}" Width="120" IsReadOnly="True" />
+        <DataGridTextColumn Header="فایدهٔ فی‌لیتر" Binding="{Binding ProfitPerText}" Width="110" />
+        <DataGridTextColumn Header="فایده" Binding="{Binding ProfitText}" Width="110" IsReadOnly="True" />
+        <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="160" />
+        <DataGridTemplateColumn Header="" Width="60" IsReadOnly="True">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"
+                      Command="{Binding $parent[UserControl].DataContext.DeleteParchaCommand}"
+                      CommandParameter="{Binding}" />
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+      </DataGrid.Columns>
+    </c:ExcelGrid>
+  </c:SectionPage>
+</UserControl>

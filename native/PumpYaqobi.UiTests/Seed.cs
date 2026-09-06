@@ -113,6 +113,25 @@ internal static class Seed
             }
         }
 
+        // پارچه‌ها — روز و شب
+        for (var i = 1; i <= 10; i++)
+        {
+            var rep = host.ParchaData.AddAsync(PumpYaqobi.Domain.Enums.FuelType.Petrol,
+                          $"{month}/{i:00}").GetAwaiter().GetResult();
+            host.ParchaData.SaveShiftAsync(rep, ShiftKind.Day, new ShiftData
+            {
+                Name = "کارمندِ روز " + i, PumpNum = 1,
+                Start = 100000 + i * 1000, End = 100000 + i * 1000 + 1200,
+                Price = 62, ProfitPer = 2, Debt = 3000,
+            }).GetAwaiter().GetResult();
+            host.ParchaData.SaveShiftAsync(rep, ShiftKind.Night, new ShiftData
+            {
+                Name = "کارمندِ شب " + i, PumpNum = 2,
+                Start = 200000 + i * 900, End = 200000 + i * 900 + 800,
+                Price = 62, ProfitPer = 2, Debt = 1500,
+            }).GetAwaiter().GetResult();
+        }
+
         _ = today;
     }
 }
