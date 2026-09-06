@@ -100,11 +100,35 @@ public sealed partial class ExchangeRowViewModel : RowViewModel
 public sealed partial class ExchangeSectionViewModel
     : LedgerSectionViewModel<ExchangeRowViewModel, ExchangeRow>
 {
+    private readonly AppHost _host;
+
     public ExchangeSectionViewModel(AppHost host)
         : base("sarrafi", "sarrafi", "صرافی", host.ExchangeLedger)
-        => Calc = host.Exchange;
+    {
+        _host = host;
+        Calc = host.Exchange;
+    }
 
     internal ExchangeService Calc { get; }
+
+    /// <summary>
+    /// ‎updateSarrafiRow‎ — پس از هر ویرایش، همان سطر با حسابِ شرکت هم‌گام
+    /// می‌شود. در نسخهٔ وب این کار برای ‎desc‎ و ‎amount‎ و ‎rate‎ و ‎bardagi‎
+    /// انجام می‌شود؛ چون این‌جا ذخیره ردیف‌به‌ردیف است، همان یک مسیر کافی است.
+    /// </summary>
+    public override async Task SaveEntityAsync(ExchangeRow e)
+    {
+        await base.SaveEntityAsync(e);
+        await _host.ExchangeSync.SyncAsync(e);
+        if (e.LegacyId is { Length: > 0 }) await Service.UpdateAsync(e);   // شناسهٔ تازه بماند
+    }
+
+    /// <summary>
+    /// حذفِ یک سطر — ردیفِ خودکارش در حسابِ شرکت هم می‌رود.
+    /// ⚠️ وگرنه بردگی در حسابِ شرکت می‌مانَد بی آنکه سطری پشتش باشد.
+    /// </summary>
+    protected override async Task BeforeDeleteAsync(ExchangeRow e) =>
+        await _host.ExchangeSync.UnlinkAsync(e.LegacyId);
 
     [ObservableProperty] private ExchangeSummary _summary;
 
@@ -143,6 +167,7 @@ public sealed partial class ExchangeSectionViewModel
 
     protected override ExchangeRowViewModel Wrap(ExchangeRow e) => new(e, this);
     protected override long EntityIdOf(ExchangeRowViewModel r) => r.Entity.Id;
+    protected override ExchangeRow EntityOf(ExchangeRowViewModel r) => r.Entity;
 
     protected override void Recalc() => Summary = Calc.Summarize(Rows.Select(r => r.Entity));
 }

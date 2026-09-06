@@ -139,6 +139,7 @@ public sealed class PumpDbContext : DbContext
 
         b.Entity<ExchangeRow>(e =>
         {
+            e.HasIndex(x => x.LegacyId);       // پیوند با ردیفِ حسابِ شرکت
             e.HasKey(x => x.Id);
             e.HasIndex(x => x.DateKey);
             e.HasIndex(x => x.MonthKey);
@@ -232,6 +233,7 @@ public sealed class PumpDbContext : DbContext
             e.HasKey(x => x.Id);
             e.HasIndex(x => new { x.CompanyId, x.Fuel, x.SortIndex });
             e.HasIndex(x => x.DateKey);
+            e.HasIndex(x => x.SourceExchangeId);   // ردیفِ خودکارِ یک سطرِ صرافی
             e.Property(x => x.Fuel).HasConversion<int>();
             e.Property(x => x.PoulCurrency).HasConversion<int>();
             e.HasQueryFilter(x => x.DeletedAt == null && x.Company!.DeletedAt == null);

@@ -47,6 +47,12 @@ public class ExchangeRow : EntityBase, ILedgerRow
     public decimal Rate { get; set; }
     /// <summary>بردگیِ پمپ بنزین، به دالر.</summary>
     public decimal Bardagi { get; set; }
+
+    /// <summary>
+    /// شناسهٔ پایدارِ همین ردیف (‎row.id‎ در نسخهٔ وب) — ردیفِ خودکاری که در
+    /// حسابِ شرکت ساخته می‌شود با همین به این ردیف بند است.
+    /// </summary>
+    public string? LegacyId { get; set; }
 }
 
 /// <summary>یک مصرف (DB.expenses).</summary>

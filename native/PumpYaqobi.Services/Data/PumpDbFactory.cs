@@ -122,6 +122,8 @@ public sealed class PumpDbFactory
             ("SafeEntries", "SrcKey", "TEXT"),
             ("TankDips", "BookAdjust", "TEXT NOT NULL DEFAULT '0'"),
             ("DebtAccounts", "MoneyDeposit", "TEXT"),
+            ("ExchangeRows", "LegacyId", "TEXT"),
+            ("CompanyRows", "SourceExchangeId", "TEXT"),
         };
 
         foreach (var (table, column, type) in wanted)

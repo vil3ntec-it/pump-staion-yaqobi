@@ -149,13 +149,20 @@ public class CompanyRow : EntityBase
     public string? SourcePurchaseId { get; set; }
     /// <summary>ردیفی که خودکار از رسیدِ صرافی یا گاوصندوق ساخته شده.</summary>
     public string? SourceReceiptId { get; set; }
+
+    /// <summary>
+    /// ‎srcSarrafiId‎ — ردیفی که خودکار از یک سطرِ صرافی ساخته شده.
+    /// با ویرایش یا حذفِ همان سطر، همین ردیف هم به‌روز یا برداشته می‌شود.
+    /// </summary>
+    public string? SourceExchangeId { get; set; }
     public string? Note { get; set; }
 
     /// <summary>ردیفِ واقعاً خالی — ‎_isEmptyCompanyRow‎.</summary>
     public bool IsEmpty =>
         string.IsNullOrWhiteSpace(Name) && Ton == 0m && Kg == 0m && Usd == 0m
         && Rate == 0m && Poul == 0m
-        && SourcePurchaseId is null && SourceReceiptId is null;
+        && SourcePurchaseId is null && SourceReceiptId is null
+        && SourceExchangeId is null;
 }
 
 // ══ تیل امانت ═════════════════════════════════════════════════════════════════
