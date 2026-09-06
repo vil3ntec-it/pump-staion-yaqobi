@@ -16,9 +16,9 @@ public partial class MainWindow : Window
         _clock = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _clock.Tick += (_, _) =>
         {
-            if (DataContext is MainViewModel vm) vm.Clock = Localization.PersianDate.NowLabel();
+            if (DataContext is MainViewModel vm) vm.Clock = PumpYaqobi.App.Localization.Clock.Now();
         };
         _clock.Start();
-        if (DataContext is MainViewModel v) v.Clock = Localization.PersianDate.NowLabel();
+        if (DataContext is MainViewModel v) v.Clock = PumpYaqobi.App.Localization.Clock.Now();
     }
 }

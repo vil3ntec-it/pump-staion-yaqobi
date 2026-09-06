@@ -9,13 +9,14 @@ namespace PumpYaqobi.App.ViewModels;
 /// </summary>
 public abstract partial class SectionViewModel : ObservableObject
 {
-    protected SectionViewModel(string id, string icon, string title)
+    protected SectionViewModel(string id, string iconKey, string title)
     {
-        Id = id; Icon = icon; Title = title;
+        Id = id; IconKey = iconKey; Title = title;
     }
 
     public string Id { get; }
-    public string Icon { get; }
+    /// <summary>کلیدِ آیکون در <c>Icons.axaml</c> — معمولاً همان شناسهٔ بخش.</summary>
+    public string IconKey { get; }
     public string Title { get; }
 
     [ObservableProperty] private bool _isActive;

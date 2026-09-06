@@ -1,5 +1,6 @@
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:PumpYaqobi.App.Controls">
   <Styles.Resources>
     <FontFamily x:Key="Pump.Font">avares://PumpYaqobi/Assets/Vazirmatn.ttf#Vazirmatn</FontFamily>
   </Styles.Resources>
@@ -183,6 +184,52 @@
   <Style Selector="DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
     <Setter Property="Fill" Value="{DynamicResource Pump.Selected}" />
     <Setter Property="Opacity" Value="1" />
+  </Style>
+
+  <!-- قالبِ مشترکِ بخش‌ها -->
+  <Style Selector="c|SectionPage">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="16,14,16,14">
+          <!-- عنوان + نوارِ ابزار -->
+          <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+            <StackPanel Grid.Column="0" Spacing="2">
+              <TextBlock Text="{TemplateBinding Header}" Classes="h1" />
+              <TextBlock Text="{TemplateBinding SubHeader}" Classes="muted"
+                         IsVisible="{TemplateBinding SubHeader, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+            <ContentPresenter Grid.Column="1" Content="{TemplateBinding Toolbar}" VerticalAlignment="Center" />
+          </Grid>
+
+          <!-- نوارِ فیلتر -->
+          <Border Grid.Row="1" Classes="panel" Padding="12,9" Margin="0,0,0,10"
+                  IsVisible="{TemplateBinding Filters, Converter={x:Static ObjectConverters.IsNotNull}}">
+            <ContentPresenter Content="{TemplateBinding Filters}" />
+          </Border>
+
+          <!-- کادرهای جمع -->
+          <ContentPresenter Grid.Row="2" Content="{TemplateBinding Summary}" Margin="0,0,0,10"
+                            IsVisible="{TemplateBinding Summary, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+          <!-- بدنه -->
+          <ContentPresenter Grid.Row="3" Content="{TemplateBinding Body}" />
+
+          <!-- پانویس -->
+          <ContentPresenter Grid.Row="4" Content="{TemplateBinding Footer}" Margin="0,10,0,0"
+                            IsVisible="{TemplateBinding Footer, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        </Grid>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <!-- کادرِ عددِ خلاصه -->
+  <Style Selector="Border.stat">
+    <Setter Property="Background" Value="{DynamicResource Pump.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="14,11" />
+    <Setter Property="MinWidth" Value="150" />
   </Style>
 
   <Style Selector="ScrollBar">

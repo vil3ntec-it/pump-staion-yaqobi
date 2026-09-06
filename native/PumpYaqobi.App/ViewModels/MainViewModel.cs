@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.App.Themes;
+using PumpYaqobi.App.ViewModels.Sections;
 
 namespace PumpYaqobi.App.ViewModels;
 
@@ -21,7 +22,7 @@ public sealed partial class MainViewModel : ObservableObject
         Lock = new LockViewModel(AppHost.Current);
         Lock.SignedIn += () => IsLocked = false;
 
-        Sections = new ObservableCollection<SectionViewModel>(BuildSections());
+        Sections = new ObservableCollection<SectionViewModel>(BuildSections(AppHost.Current));
         Themes = new ObservableCollection<PumpTheme>(PumpTheme.All);
         _selectedTheme = PumpTheme.ById(_settings.ThemeId);
 
@@ -67,25 +68,26 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>ترتیبِ نوار، مو‌به‌مو مثلِ <c>&lt;div class="nav"&gt;</c> در نسخهٔ وب.</summary>
-    private static IEnumerable<SectionViewModel> BuildSections() => new SectionViewModel[]
+    /// <summary>ترتیبِ نوار، مو‌به‌مو مثلِ <c>&lt;div class="nav"&gt;</c> در نسخهٔ وب.</summary>
+    private static IEnumerable<SectionViewModel> BuildSections(AppHost host) => new SectionViewModel[]
     {
-        new PlaceholderSectionViewModel("dashboard", "", "داشبورد"),
-        new PlaceholderSectionViewModel("shifts",    "", "پارچه‌ها"),
-        new PlaceholderSectionViewModel("waraq",     "", "ورق‌های روزانه"),
-        new PlaceholderSectionViewModel("debt",      "", "قرض‌داران"),
-        new PlaceholderSectionViewModel("invoices",  "", "ثبت فاکتورها"),
-        new PlaceholderSectionViewModel("debtrasid", "", "رسید قرض‌داران / چکنه"),
-        new PlaceholderSectionViewModel("sarrafi",   "", "صرافی"),
-        new PlaceholderSectionViewModel("expenses",  "", "مصارف"),
-        new PlaceholderSectionViewModel("rasid",     "", "رسید پارچه"),
-        new PlaceholderSectionViewModel("safe",      "", "گاوصندوق"),
-        new PlaceholderSectionViewModel("amanat",    "", "تیل امانت"),
-        new PlaceholderSectionViewModel("noinv",     "", "شرکت‌ها تیل"),
-        new PlaceholderSectionViewModel("storage",   "", "مخزن"),
-        new PlaceholderSectionViewModel("cameras",   "", "دوربین‌ها"),
-        new PlaceholderSectionViewModel("attendance","", "حاضری و معاش"),
-        new PlaceholderSectionViewModel("profit",    "", "مفاد / ضرر / اتحادیه"),
-        new PlaceholderSectionViewModel("settings",  "", "تنظیمات"),
-        new PlaceholderSectionViewModel("history",   "", "تاریخچه‌ها"),
+        new PlaceholderSectionViewModel("dashboard", "داشبورد"),
+        new PlaceholderSectionViewModel("shifts",    "پارچه‌ها"),
+        new PlaceholderSectionViewModel("waraq",     "ورق‌های روزانه"),
+        new PlaceholderSectionViewModel("debt",      "قرض‌داران"),
+        new PlaceholderSectionViewModel("invoices",  "ثبت فاکتورها"),
+        new PlaceholderSectionViewModel("debtrasid", "رسید قرض‌داران / چکنه"),
+        new PlaceholderSectionViewModel("sarrafi",   "صرافی"),
+        new PlaceholderSectionViewModel("expenses",  "مصارف"),
+        new PlaceholderSectionViewModel("rasid",     "رسید پارچه"),
+        new SafeSectionViewModel(host),
+        new PlaceholderSectionViewModel("amanat",    "تیل امانت"),
+        new PlaceholderSectionViewModel("noinv",     "شرکت‌ها تیل"),
+        new PlaceholderSectionViewModel("storage",   "مخزن"),
+        new PlaceholderSectionViewModel("cameras",   "دوربین‌ها"),
+        new PlaceholderSectionViewModel("attendance","حاضری و معاش"),
+        new PlaceholderSectionViewModel("profit",    "مفاد / ضرر / اتحادیه"),
+        new PlaceholderSectionViewModel("settings",  "تنظیمات"),
+        new PlaceholderSectionViewModel("history",   "تاریخچه‌ها"),
     };
 }

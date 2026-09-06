@@ -69,7 +69,7 @@
                     <Binding Path="IsActive" />
                   </Classes.active>
                   <StackPanel Orientation="Horizontal" Spacing="11">
-                    <Path Data="{Binding Id, Converter={StaticResource IconLookup}}"
+                    <Path Data="{Binding IconKey, Converter={StaticResource IconLookup}}"
                           Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1.5"
                           Width="19" Height="19" Stretch="Uniform" VerticalAlignment="Center" />
                     <TextBlock Text="{Binding Title}" VerticalAlignment="Center" FontSize="13.5" />

@@ -21,7 +21,7 @@ public sealed class ViewLocator : IDataTemplate
         var name = data.GetType().FullName!
             .Replace("ViewModels", "Views")
             .Replace("ViewModel", "View");
-        var type = Type.GetType(name);
+        var type = Type.GetType(name) ?? data.GetType().Assembly.GetType(name);
         Control view = type is not null
             ? (Control)Activator.CreateInstance(type)!
             : new Views.PlaceholderView();

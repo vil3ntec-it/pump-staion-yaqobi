@@ -23,6 +23,8 @@ public sealed class AppHost
         Debt = new DebtCalculationService(Settings);
         Safe = new SafeService();
         Exchange = new ExchangeService();
+        Trash = new TrashService(Db, Permissions, Session);
+        SafeData = new SafeDataService(Db, Permissions, Trash);
     }
 
     public PumpDbFactory Db { get; }
@@ -33,9 +35,16 @@ public sealed class AppHost
     public DebtCalculationService Debt { get; }
     public SafeService Safe { get; }
     public ExchangeService Exchange { get; }
+    public TrashService Trash { get; }
+    public SafeDataService SafeData { get; }
 
     /// <summary>نمونهٔ زندهٔ برنامه.</summary>
     public static AppHost Current { get; private set; } = null!;
 
-    public static AppHost Start(string? dbPath = null) => Current = new AppHost(dbPath);
+    /// <summary>
+    /// اگر از پیش ساخته شده باشد همان می‌ماند — تا ابزارِ عکس‌گیری بتواند
+    /// پیش از بالا آمدنِ برنامه دیتابیسِ موقتِ خودش را بنشاند و هرگز به
+    /// دادهٔ واقعیِ کاربر دست نزند.
+    /// </summary>
+    public static AppHost Start(string? dbPath = null) => Current ??= new AppHost(dbPath);
 }

@@ -399,7 +399,11 @@ public sealed class PumpDbContext : DbContext
             else if (entry.State == EntityState.Modified) entry.Entity.UpdatedAt = now;
             else if (entry.State == EntityState.Deleted)
             {
-                // حذفِ نرم: رکوردِ مالی هیچ‌وقت واقعاً پاک نمی‌شود
+                // سطلِ زباله و تاریخچه خودشان «بایگانی»اند؛ حذف از آن‌ها باید
+                // واقعاً حذف باشد، وگرنه «خالی کردنِ سطل» هیچ‌وقت خالی نمی‌کند.
+                if (entry.Entity is TrashItem or AuditEntry) continue;
+
+                // بقیه: حذفِ نرم — رکوردِ مالی هیچ‌وقت واقعاً پاک نمی‌شود
                 entry.State = EntityState.Modified;
                 entry.Entity.DeletedAt = now;
                 entry.Entity.UpdatedAt = now;

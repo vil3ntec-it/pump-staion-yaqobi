@@ -45,11 +45,26 @@ internal static class Program
         vm.Lock.SubmitCommand.Execute(null);
         Pump(win);
 
+        Seed.Fill(PumpYaqobi.App.Services.AppHost.Current);
+
+        // ۳) هر تم یک عکس از داشبورد
         foreach (var theme in PumpTheme.All)
         {
             ThemeManager.Apply(theme);
             Pump(win);
             Shot(win, Path.Combine(outDir, "theme-" + theme.Id + ".png"));
+        }
+        ThemeManager.Apply(PumpTheme.DarkAmber);
+
+        // ۴) هر بخش یک عکس — چیزی تحویل نمی‌دهیم که ندیده باشیم
+        var n = 0;
+        foreach (var sec in vm.Sections)
+        {
+            vm.GoCommand.Execute(sec);
+            Pump(win);
+            Dispatcher.UIThread.RunJobs();
+            Pump(win);
+            Shot(win, Path.Combine(outDir, $"{++n:00}-{sec.Id}.png"));
         }
 
         Console.WriteLine("عکس‌ها در: " + Path.GetFullPath(outDir));
