@@ -75,8 +75,8 @@
     <Grid RowDefinitions="*,10,*">
       <c:ExcelGrid Grid.Row="0" ItemsSource="{Binding Pumps}" x:CompileBindings="False">
         <DataGrid.Columns>
-          <DataGridTextColumn Header="پایه" Binding="{Binding Num}" Width="70" />
-          <DataGridTemplateColumn Header="تیل" Width="95">
+          <DataGridTextColumn Header="پایه" Binding="{Binding Num}" Width="75" />
+          <DataGridTemplateColumn Header="تیل" Width="93">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate><TextBlock Text="{Binding FuelText}" VerticalAlignment="Center" Margin="6,0" /></DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
@@ -88,14 +88,14 @@
               </DataTemplate>
             </DataGridTemplateColumn.CellEditingTemplate>
           </DataGridTemplateColumn>
-          <DataGridTextColumn Header="شروع" Binding="{Binding StartText}" Width="130" />
-          <DataGridTextColumn Header="ختم" Binding="{Binding EndText}" Width="130" />
-          <DataGridTextColumn Header="لیتر" Binding="{Binding LitersText}" Width="110" IsReadOnly="True" />
-          <DataGridTextColumn Header="فی" Binding="{Binding PriceText}" Width="90" />
-          <DataGridTextColumn Header="فروش" Binding="{Binding SalesText}" Width="130" IsReadOnly="True" />
-          <DataGridTextColumn Header="قرضِ پایه" Binding="{Binding DebtText}" Width="120" />
+          <DataGridTextColumn Header="شروع" Binding="{Binding StartText}" Width="128" />
+          <DataGridTextColumn Header="ختم" Binding="{Binding EndText}" Width="128" />
+          <DataGridTextColumn Header="لیتر" Binding="{Binding LitersText}" Width="108" IsReadOnly="True" />
+          <DataGridTextColumn Header="فی" Binding="{Binding PriceText}" Width="88" />
+          <DataGridTextColumn Header="فروش" Binding="{Binding SalesText}" Width="128" IsReadOnly="True" />
+          <DataGridTextColumn Header="قرضِ پایه" Binding="{Binding DebtText}" Width="118" />
           <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="*" />
-          <DataGridTemplateColumn Header="" Width="60" IsReadOnly="True">
+          <DataGridTemplateColumn Header="" Width="75" IsReadOnly="True">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
                 <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"
@@ -110,7 +110,7 @@
       <c:ExcelGrid Grid.Row="2" ItemsSource="{Binding Txns}" x:CompileBindings="False">
         <DataGrid.Columns>
           <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
-          <DataGridTemplateColumn Header="نوع" Width="95">
+          <DataGridTemplateColumn Header="نوع" Width="93">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate><TextBlock Text="{Binding TypeText}" VerticalAlignment="Center" Margin="6,0" /></DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
@@ -122,7 +122,7 @@
               </DataTemplate>
             </DataGridTemplateColumn.CellEditingTemplate>
           </DataGridTemplateColumn>
-          <DataGridTemplateColumn Header="تیل" Width="95">
+          <DataGridTemplateColumn Header="تیل" Width="93">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate><TextBlock Text="{Binding FuelText}" VerticalAlignment="Center" Margin="6,0" /></DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
@@ -134,9 +134,9 @@
               </DataTemplate>
             </DataGridTemplateColumn.CellEditingTemplate>
           </DataGridTemplateColumn>
-          <DataGridTextColumn Header="لیتر" Binding="{Binding LitersText}" Width="110" />
-          <DataGridTextColumn Header="مبلغ" Binding="{Binding AmountText}" Width="130" />
-          <DataGridTextColumn Header="مبلغِ مؤثر" Binding="{Binding EffectiveAmountText}" Width="130" IsReadOnly="True" />
+          <DataGridTextColumn Header="لیتر" Binding="{Binding LitersText}" Width="108" />
+          <DataGridTextColumn Header="مبلغ" Binding="{Binding AmountText}" Width="128" />
+          <DataGridTextColumn Header="مبلغِ مؤثر" Binding="{Binding EffectiveAmountText}" Width="128" IsReadOnly="True" />
         </DataGrid.Columns>
       </c:ExcelGrid>
     </Grid>

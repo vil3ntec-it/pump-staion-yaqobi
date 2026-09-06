@@ -86,36 +86,41 @@
       </ScrollViewer>
     </c:SectionPage>
 
-    <!-- ══ صفحهٔ یک حساب ══ -->
+    <!-- ══ صفحهٔ یک حساب ══
+         مثلِ صفحهٔ قرض‌دار و شرکت، داخلِ همان قالبِ مشترک — تا سربرگ و کادر و
+         فاصله‌هایش با بقیهٔ برنامه یکی باشد. پیش از این تنها صفحه‌ای بود که
+         بی‌کادر و چسبیده به لبهٔ پنجره کشیده می‌شد. -->
     <Panel IsVisible="{Binding !IsListVisible}">
-    <Grid RowDefinitions="Auto,Auto,*" DataContext="{Binding Page}" x:CompileBindings="False">
+    <c:SectionPage DataContext="{Binding Page}" x:CompileBindings="False"
+                   Header="{Binding Name}" SubHeader="حسابِ تیلِ امانت">
 
-      <Button Grid.Row="0" Classes="ghost" Content="← بازگشت به حساب‌ها" Margin="14,12,14,0"
-              HorizontalAlignment="Right" Command="{Binding BackCommand}" />
+      <c:SectionPage.Toolbar>
+        <Button Classes="accent" Content="← بازگشت به حساب‌ها" Command="{Binding BackCommand}" />
+      </c:SectionPage.Toolbar>
 
-      <Border Grid.Row="1" Classes="panel" Margin="14,10,14,0" Padding="12,10">
-        <WrapPanel Orientation="Horizontal">
-          <StackPanel Spacing="3" Width="230" Margin="0,0,14,0">
+      <c:SectionPage.Filters>
+        <UniformGrid Rows="1" Classes="stats">
+          <StackPanel Spacing="3" Margin="6,0">
             <TextBlock Text="نامِ حساب" Classes="label" />
             <TextBox Text="{Binding Name}" />
           </StackPanel>
-          <StackPanel Spacing="3" Width="110" Margin="0,0,14,0">
+          <StackPanel Spacing="3" Margin="6,0">
             <TextBlock Text="فیصدیِ من" Classes="label" />
             <TextBox Text="{Binding MyPctText}" />
           </StackPanel>
-          <StackPanel Spacing="3" Width="130" Margin="0,0,14,0">
+          <StackPanel Spacing="3" Margin="6,0">
             <TextBlock Text="کلِ رسید (لیتر)" Classes="label" />
             <TextBlock Text="{Binding TotalLiters}" FontWeight="Bold" FontSize="15" Margin="0,4,0,0" />
           </StackPanel>
-          <StackPanel Spacing="3" Width="120" Margin="0,0,14,0">
+          <StackPanel Spacing="3" Margin="6,0">
             <TextBlock Text="کلِ بخار" Classes="label" />
             <TextBlock Text="{Binding TotalLoss}" FontWeight="Bold" FontSize="15" Margin="0,4,0,0" />
           </StackPanel>
-          <StackPanel Spacing="3" Width="130" Margin="0,0,14,0">
+          <StackPanel Spacing="3" Margin="6,0">
             <TextBlock Text="سهمِ من" Classes="label" />
             <TextBlock Text="{Binding TotalShare}" FontWeight="Bold" FontSize="15" Margin="0,4,0,0" />
           </StackPanel>
-          <StackPanel Spacing="3" Width="140" Margin="0,0,14,0">
+          <StackPanel Spacing="3" Margin="6,0">
             <TextBlock Text="باقیِ تیلِ مشتری" Classes="label" />
             <TextBlock Text="{Binding TotalRest}" FontWeight="Bold" FontSize="15"
                        Foreground="{DynamicResource Pump.Accent}" Margin="0,4,0,0" />
@@ -125,26 +130,26 @@
             <Button Classes="ghost danger" Content="حذفِ حساب"
                     Command="{Binding DeleteAccountCommand}" Padding="10,4" />
           </StackPanel>
-        </WrapPanel>
-      </Border>
+        </UniformGrid>
+      </c:SectionPage.Filters>
 
-      <c:ExcelGrid Grid.Row="2" ItemsSource="{Binding Rows}" Margin="14,10,14,14">
+      <c:ExcelGrid ItemsSource="{Binding Rows}">
         <DataGrid.Columns>
-          <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="115" />
+          <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="114" />
           <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
-          <DataGridTextColumn Header="رسید (لیتر)" Binding="{Binding LitersText}" Width="120" />
+          <DataGridTextColumn Header="رسید (لیتر)" Binding="{Binding LitersText}" Width="119" />
           <DataGridTextColumn Header="برده‌شده" Binding="{Binding TakenText}" Width="110" />
-          <DataGridTextColumn Header="روز" Binding="{Binding DaysText}" Width="80" />
-          <DataGridTextColumn Header="گرما" Binding="{Binding TempText}" Width="80" />
-          <DataGridTextColumn Header="بخار" Binding="{Binding LossText}" Width="105" IsReadOnly="True" />
-          <DataGridTextColumn Header="٪ بخار" Binding="{Binding LossPctText}" Width="90" IsReadOnly="True" />
-          <DataGridTextColumn Header="سهمِ من" Binding="{Binding ShareText}" Width="105" IsReadOnly="True" />
-          <DataGridTextColumn Header="به من می‌رسد" Binding="{Binding NetText}" Width="120" IsReadOnly="True" />
+          <DataGridTextColumn Header="روز" Binding="{Binding DaysText}" Width="79" />
+          <DataGridTextColumn Header="گرما" Binding="{Binding TempText}" Width="79" />
+          <DataGridTextColumn Header="بخار" Binding="{Binding LossText}" Width="104" IsReadOnly="True" />
+          <DataGridTextColumn Header="٪ بخار" Binding="{Binding LossPctText}" Width="89" IsReadOnly="True" />
+          <DataGridTextColumn Header="سهمِ من" Binding="{Binding ShareText}" Width="104" IsReadOnly="True" />
+          <DataGridTextColumn Header="به من می‌رسد" Binding="{Binding NetText}" Width="119" IsReadOnly="True" />
           <DataGridTextColumn Header="فیصدیِ لازم" Binding="{Binding AskPctText}" Width="110" IsReadOnly="True" />
-          <DataGridTextColumn Header="باقیِ تیل" Binding="{Binding RestText}" Width="115" IsReadOnly="True" />
-          <DataGridTextColumn Header="اندازهٔ واقعی" Binding="{Binding ActualText}" Width="120" />
-          <DataGridCheckBoxColumn Header="بسته" Binding="{Binding IsClosed}" Width="70" />
-          <DataGridTemplateColumn Header="" Width="60" IsReadOnly="True">
+          <DataGridTextColumn Header="باقیِ تیل" Binding="{Binding RestText}" Width="114" IsReadOnly="True" />
+          <DataGridTextColumn Header="اندازهٔ واقعی" Binding="{Binding ActualText}" Width="119" />
+          <DataGridCheckBoxColumn Header="بسته" Binding="{Binding IsClosed}" Width="71" />
+          <DataGridTemplateColumn Header="" Width="71" IsReadOnly="True">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
                 <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"
@@ -155,7 +160,7 @@
           </DataGridTemplateColumn>
         </DataGrid.Columns>
       </c:ExcelGrid>
-    </Grid>
+    </c:SectionPage>
     </Panel>
   </Panel>
 </UserControl>

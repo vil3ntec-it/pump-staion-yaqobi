@@ -534,6 +534,14 @@
     <Setter Property="Spacing" Value="4" />
     <Setter Property="Margin" Value="0,0,12,10" />
   </Style>
+  <!-- خانهٔ فرم داخلِ ردیفِ پخش‌شده پهنای ثابتِ ‎.cell‎ را کنار می‌گذارد و
+       عرضش را از خودِ ردیف می‌گیرد؛ وگرنه ۱۲۶ پیکسل می‌ماند و وسطِ خانه‌اش
+       شناور می‌شود. (‎NaN‎ در Avalonia یعنی «خودکار».) -->
+  <Style Selector="UniformGrid.stats > StackPanel.cell">
+    <Setter Property="Width" Value="NaN" />
+    <Setter Property="Margin" Value="6,0" />
+  </Style>
+
 
   <!-- ══ جانِ حرکت ═══════════════════════════════════════════════════════════
        نسخهٔ وب همه‌جا ‎transition‎ داشت و نسخهٔ نیتیو هیچ: دکمه‌ها آنی رنگ عوض
@@ -561,11 +569,15 @@
     <Setter Property="RenderTransform" Value="scale(0.93)" />
   </Style>
 
+  <!-- فقط رنگِ لبه نرم می‌شود، نه زمینه.
+       خودِ CSS هم همین است: ‎transition: transform .3s, box-shadow .3s,
+       border-color .3s‎ — زمینه در فهرست نیست. یک‌بار زمینه را هم گذاشتم و
+       نتیجه‌اش این شد که کارت‌ها هنگامِ باز شدنِ بخش از رنگِ اولیه به رنگِ
+       خودشان «محو» می‌شدند و صفحه یک لحظه مه‌آلود دیده می‌شد. -->
   <Style Selector="Border.card, Border.person-card, Border.shift-card, Border.stat">
     <Setter Property="Transitions">
       <Transitions>
         <BrushTransition Property="BorderBrush" Duration="0:0:0.3" />
-        <BrushTransition Property="Background" Duration="0:0:0.3" />
       </Transitions>
     </Setter>
   </Style>

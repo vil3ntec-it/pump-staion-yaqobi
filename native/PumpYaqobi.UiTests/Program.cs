@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Input;
 using Avalonia.Threading;
 using PumpYaqobi.App.Themes;
 using PumpYaqobi.App.ViewModels;
@@ -131,10 +132,101 @@ internal static class Program
             Shot(win, Path.Combine(outDir, "24-amanat-account.png"));
         }
 
+        var failures = CheckShortcuts(win, vm);
+
         Console.WriteLine("عکس‌ها در: " + Path.GetFullPath(outDir));
-        return 0;
+        return failures;
     }
 
+
+
+    /// <summary>
+    /// ══ آزمونِ میانبرها روی پنجرهٔ واقعی ═══════════════════════════════════
+    /// آزمون‌های ‎PumpYaqobi.Tests‎ قرارداد را می‌سنجند (‎IRowBatchHost‎ و…)، ولی
+    /// نه سیم‌کشی‌اش را: این‌که رویدادِ کلید اصلاً به ‎ShortcutService‎ می‌رسد،
+    /// که بافرِ چندرقمی درست جمع می‌شود، و که کار دقیقاً هنگامِ <b>رها شدنِ</b>
+    /// کلید انجام می‌گیرد. آن‌ها فقط با کلیدِ واقعی روی پنجرهٔ واقعی ثابت
+    /// می‌شوند — و همین‌جا می‌شود.
+    /// </summary>
+    private static int CheckShortcuts(Window win, MainViewModel vm)
+    {
+        var bad = 0;
+        void Check(string what, bool ok)
+        {
+            Console.WriteLine((ok ? "  ✔ " : "  ✖ ") + what);
+            if (!ok) bad++;
+        }
+
+        Console.WriteLine("── میانبرهای صفحه‌کلید ──");
+
+        // ── Ctrl+Shift+3 → بخشِ سوم (ورق‌های روزانه) ──
+        win.KeyPressQwerty(PhysicalKey.Digit3, RawInputModifiers.Control | RawInputModifiers.Shift);
+        win.KeyReleaseQwerty(PhysicalKey.Digit3, RawInputModifiers.Control | RawInputModifiers.Shift);
+        win.KeyReleaseQwerty(PhysicalKey.ControlLeft, RawInputModifiers.Shift);
+        win.KeyReleaseQwerty(PhysicalKey.ShiftLeft, RawInputModifiers.None);
+        Pump(win);
+        Check("Ctrl+Shift+3 → " + vm.Current?.Id, vm.Current?.Id == vm.Sections[2].Id);
+
+        // ── عددِ دو رقمی: Ctrl+Shift+1 سپس 2 → بخشِ دوازدهم ──
+        win.KeyPressQwerty(PhysicalKey.Digit1, RawInputModifiers.Control | RawInputModifiers.Shift);
+        win.KeyReleaseQwerty(PhysicalKey.Digit1, RawInputModifiers.Control | RawInputModifiers.Shift);
+        win.KeyPressQwerty(PhysicalKey.Digit2, RawInputModifiers.Control | RawInputModifiers.Shift);
+        win.KeyReleaseQwerty(PhysicalKey.Digit2, RawInputModifiers.Control | RawInputModifiers.Shift);
+        win.KeyReleaseQwerty(PhysicalKey.ControlLeft, RawInputModifiers.Shift);
+        win.KeyReleaseQwerty(PhysicalKey.ShiftLeft, RawInputModifiers.None);
+        Pump(win);
+        Check("Ctrl+Shift+1,2 → بخشِ ۱۲ (" + vm.Current?.Id + ")", vm.Current?.Id == vm.Sections[11].Id);
+
+        // ── «۰» یعنی دهمین بخش، نه صفرم ──
+        win.KeyPressQwerty(PhysicalKey.Digit0, RawInputModifiers.Control | RawInputModifiers.Shift);
+        win.KeyReleaseQwerty(PhysicalKey.Digit0, RawInputModifiers.Control | RawInputModifiers.Shift);
+        win.KeyReleaseQwerty(PhysicalKey.ControlLeft, RawInputModifiers.Shift);
+        win.KeyReleaseQwerty(PhysicalKey.ShiftLeft, RawInputModifiers.None);
+        Pump(win);
+        Check("Ctrl+Shift+0 → بخشِ ۱۰ (" + vm.Current?.Id + ")", vm.Current?.Id == vm.Sections[9].Id);
+
+        // ── Ctrl+عدد روی یک بخشِ دفتری: ردیف افزوده شود ──
+        var exp = vm.Sections.First(x => x.Id == "expenses");
+        Wait(win, vm.GoAsync(exp));
+        var table = vm.RowHost;
+        if (table is null) { Check("جدولِ «مصارف» شناخته نشد", false); return bad; }
+
+        var before = table.RowCount;
+        win.KeyPressQwerty(PhysicalKey.Digit4, RawInputModifiers.Control);
+        win.KeyReleaseQwerty(PhysicalKey.Digit4, RawInputModifiers.Control);
+        win.KeyReleaseQwerty(PhysicalKey.ControlLeft, RawInputModifiers.None);
+        Pump(win); Dispatcher.UIThread.RunJobs(); Pump(win);
+        Check($"Ctrl+4 → ۴ ردیف افزوده شد ({before} → {table.RowCount})", table.RowCount == before + 4);
+
+        // ── Shift+عدد: همان‌قدر برداشته شود ──
+        var mid = table.RowCount;
+        win.KeyPressQwerty(PhysicalKey.Digit3, RawInputModifiers.Shift);
+        win.KeyReleaseQwerty(PhysicalKey.Digit3, RawInputModifiers.Shift);
+        win.KeyReleaseQwerty(PhysicalKey.ShiftLeft, RawInputModifiers.None);
+        Pump(win); Dispatcher.UIThread.RunJobs(); Pump(win);
+        Check($"Shift+3 → ۳ ردیف حذف شد ({mid} → {table.RowCount})", table.RowCount == mid - 3);
+
+        // ── ردیفِ کافی نیست → هیچ کاری نکند ──
+        var keep = table.RowCount;
+        win.KeyPressQwerty(PhysicalKey.Digit9, RawInputModifiers.Shift);
+        win.KeyReleaseQwerty(PhysicalKey.Digit9, RawInputModifiers.Shift);
+        win.KeyPressQwerty(PhysicalKey.Digit9, RawInputModifiers.Shift);
+        win.KeyReleaseQwerty(PhysicalKey.Digit9, RawInputModifiers.Shift);
+        win.KeyReleaseQwerty(PhysicalKey.ShiftLeft, RawInputModifiers.None);
+        Pump(win); Dispatcher.UIThread.RunJobs(); Pump(win);
+        Check($"Shift+99 با ردیفِ ناکافی → دست‌نخورده ({keep})", table.RowCount == keep);
+
+        // ── Alt+عدد: حسابِ شمارهٔ ۱ در قرض‌داران باز شود ──
+        var debt = vm.Sections.First(x => x.Id == "debt");
+        Wait(win, vm.GoAsync(debt));
+        win.KeyPressQwerty(PhysicalKey.Digit1, RawInputModifiers.Alt);
+        win.KeyReleaseQwerty(PhysicalKey.Digit1, RawInputModifiers.Alt);
+        win.KeyReleaseQwerty(PhysicalKey.AltLeft, RawInputModifiers.None);
+        Pump(win); Dispatcher.UIThread.RunJobs(); Pump(win);
+        Check("Alt+1 → حسابِ کارتِ ۱ باز شد", debt.ActivePage is not null);
+
+        return bad;
+    }
 
     /// <summary>
     /// انتظارِ «پمپ‌شونده». نخِ رابط کاربری همین نخ است، پس

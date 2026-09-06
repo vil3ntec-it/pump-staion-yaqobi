@@ -52,13 +52,13 @@
       <DataGrid.Columns>
         <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="115" />
         <DataGridTextColumn Header="شرح"   Binding="{Binding Name}" Width="*" />
-        <DataGridTextColumn Header="کیلو"  Binding="{Binding KgText}" Width="110" />
+        <DataGridTextColumn Header="کیلو"  Binding="{Binding KgText}" Width="109" />
         <DataGridTextColumn Header="تن"    Binding="{Binding TonText}" Width="95" />
-        <DataGridTextColumn Header="فیِ تن ($)" Binding="{Binding UsdText}" Width="110" />
+        <DataGridTextColumn Header="فیِ تن ($)" Binding="{Binding UsdText}" Width="109" />
         <DataGridTextColumn Header="نرخ"   Binding="{Binding RateText}" Width="95" />
-        <DataGridTextColumn Header="کلِ دالر" Binding="{Binding TotalUsdText}" Width="120" IsReadOnly="True" />
-        <DataGridTextColumn Header="کلِ افغانی" Binding="{Binding TotalAfnText}" Width="130" IsReadOnly="True" />
-        <DataGridTextColumn Header="رسید"  Binding="{Binding PoulText}" Width="120" />
+        <DataGridTextColumn Header="کلِ دالر" Binding="{Binding TotalUsdText}" Width="119" IsReadOnly="True" />
+        <DataGridTextColumn Header="کلِ افغانی" Binding="{Binding TotalAfnText}" Width="129" IsReadOnly="True" />
+        <DataGridTextColumn Header="رسید"  Binding="{Binding PoulText}" Width="119" />
         <DataGridTemplateColumn Header="واحدِ رسید" Width="105">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate>
@@ -76,7 +76,7 @@
         </DataGridTemplateColumn>
         <DataGridTextColumn Header="الباقیِ افغانی" Binding="{Binding AlbaqiAfnText}" Width="135" IsReadOnly="True" />
         <DataGridTextColumn Header="الباقیِ دالر"  Binding="{Binding AlbaqiUsdText}" Width="125" IsReadOnly="True" />
-        <DataGridTemplateColumn Header="" Width="60" IsReadOnly="True">
+        <DataGridTemplateColumn Header="" Width="67" IsReadOnly="True">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate>
               <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"

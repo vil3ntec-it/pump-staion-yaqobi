@@ -22,20 +22,20 @@
               <TextBlock Text="⛽ مشخصاتِ پمپ" FontWeight="Bold"
                          Foreground="{DynamicResource Pump.Accent}" />
             </Border>
-            <WrapPanel Orientation="Horizontal" Margin="14">
-              <StackPanel Classes="cell" Width="240">
+            <UniformGrid Rows="1" Classes="stats" Margin="14">
+              <StackPanel Classes="cell">
                 <TextBlock Text="نامِ پمپ" Classes="label" />
                 <TextBox Text="{Binding StationName}" />
               </StackPanel>
-              <StackPanel Classes="cell" Width="300">
+              <StackPanel Classes="cell">
                 <TextBlock Text="آدرس" Classes="label" />
                 <TextBox Text="{Binding StationAddress}" />
               </StackPanel>
-              <StackPanel Classes="cell" Width="180">
+              <StackPanel Classes="cell">
                 <TextBlock Text="شمارهٔ تماس" Classes="label" />
                 <TextBox Text="{Binding StationPhone}" />
               </StackPanel>
-            </WrapPanel>
+            </UniformGrid>
           </StackPanel>
         </Border>
 
@@ -46,20 +46,20 @@
               <TextBlock Text="📈 نرخِ اتحادیه و آستانه‌ها" FontWeight="Bold"
                          Foreground="{DynamicResource Pump.Accent}" />
             </Border>
-            <WrapPanel Orientation="Horizontal" Margin="14">
-              <StackPanel Classes="cell" Width="170">
+            <UniformGrid Rows="1" Classes="stats" Margin="14">
+              <StackPanel Classes="cell">
                 <TextBlock Text="نرخِ اتحادیه — پطرول" Classes="label" />
                 <TextBox Text="{Binding UnionRatePetrol}" />
               </StackPanel>
-              <StackPanel Classes="cell" Width="170">
+              <StackPanel Classes="cell">
                 <TextBlock Text="نرخِ اتحادیه — دیزل" Classes="label" />
                 <TextBox Text="{Binding UnionRateDiesel}" />
               </StackPanel>
-              <StackPanel Classes="cell" Width="200">
+              <StackPanel Classes="cell">
                 <TextBlock Text="آستانهٔ هشدارِ مخزن (لیتر)" Classes="label" />
                 <TextBox Text="{Binding LowStockThreshold}" />
               </StackPanel>
-            </WrapPanel>
+            </UniformGrid>
           </StackPanel>
         </Border>
 
