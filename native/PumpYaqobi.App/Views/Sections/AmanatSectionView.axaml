@@ -1,0 +1,96 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             x:Class="PumpYaqobi.App.Views.Sections.AmanatSectionView"
+             x:DataType="vm:AmanatSectionViewModel">
+
+  <c:SectionPage Header="تیل امانت"
+                 SubHeader="بخار فقط از سهمِ شما کم می‌شود، نه از تیلِ مشتری — «فیصدیِ لازم = هدف + بخار»">
+
+    <c:SectionPage.Toolbar>
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <ToggleSwitch OnContent="دیزل" OffContent="پطرول" IsChecked="{Binding IsDiesel}" />
+        <Button Classes="accent" Content="کادرِ حسابِ تازه" Command="{Binding AddAccountCommand}" />
+      </StackPanel>
+    </c:SectionPage.Toolbar>
+
+    <ScrollViewer>
+      <ItemsControl ItemsSource="{Binding Accounts}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:AmanatAccountViewModel">
+            <Border Classes="panel" Margin="0,0,0,14" Padding="0">
+              <Grid RowDefinitions="Auto,Auto">
+
+                <Border Grid.Row="0" Padding="12,10" Background="{DynamicResource Pump.Card}"
+                        CornerRadius="12,12,0,0">
+                  <WrapPanel Orientation="Horizontal">
+                    <StackPanel Spacing="3" Width="230" Margin="0,0,14,0">
+                      <TextBlock Text="نامِ حساب" Classes="label" />
+                      <TextBox Text="{Binding Name}" />
+                    </StackPanel>
+                    <StackPanel Spacing="3" Width="110" Margin="0,0,14,0">
+                      <TextBlock Text="فیصدیِ من" Classes="label" />
+                      <TextBox Text="{Binding MyPctText}" />
+                    </StackPanel>
+                    <StackPanel Spacing="3" Width="130" Margin="0,0,14,0">
+                      <TextBlock Text="کلِ رسید (لیتر)" Classes="label" />
+                      <TextBlock Text="{Binding TotalLiters}" FontWeight="Bold" FontSize="15" Margin="0,4,0,0" />
+                    </StackPanel>
+                    <StackPanel Spacing="3" Width="120" Margin="0,0,14,0">
+                      <TextBlock Text="کلِ بخار" Classes="label" />
+                      <TextBlock Text="{Binding TotalLoss}" FontWeight="Bold" FontSize="15" Margin="0,4,0,0" />
+                    </StackPanel>
+                    <StackPanel Spacing="3" Width="130" Margin="0,0,14,0">
+                      <TextBlock Text="سهمِ من" Classes="label" />
+                      <TextBlock Text="{Binding TotalShare}" FontWeight="Bold" FontSize="15" Margin="0,4,0,0" />
+                    </StackPanel>
+                    <StackPanel Spacing="3" Width="140" Margin="0,0,14,0">
+                      <TextBlock Text="باقیِ تیلِ مشتری" Classes="label" />
+                      <TextBlock Text="{Binding TotalRest}" FontWeight="Bold" FontSize="15"
+                                 Foreground="{DynamicResource Pump.Accent}" Margin="0,4,0,0" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom" Margin="0,0,0,4">
+                      <Button Content="ردیفِ تازه" Command="{Binding AddRowCommand}" Padding="10,4" />
+                      <Button Classes="ghost danger" Content="حذفِ حساب"
+                              Command="{Binding DeleteAccountCommand}" Padding="10,4" />
+                    </StackPanel>
+                  </WrapPanel>
+                </Border>
+
+                <c:ExcelGrid Grid.Row="1" ItemsSource="{Binding Rows}" x:CompileBindings="False"
+                             BorderThickness="0" CornerRadius="0" MaxHeight="330">
+                  <DataGrid.Columns>
+                    <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="115" />
+                    <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
+                    <DataGridTextColumn Header="رسید (لیتر)" Binding="{Binding LitersText}" Width="120" />
+                    <DataGridTextColumn Header="برده‌شده" Binding="{Binding TakenText}" Width="110" />
+                    <DataGridTextColumn Header="روز" Binding="{Binding DaysText}" Width="80" />
+                    <DataGridTextColumn Header="گرما" Binding="{Binding TempText}" Width="80" />
+                    <DataGridTextColumn Header="بخار" Binding="{Binding LossText}" Width="105" IsReadOnly="True" />
+                    <DataGridTextColumn Header="٪ بخار" Binding="{Binding LossPctText}" Width="90" IsReadOnly="True" />
+                    <DataGridTextColumn Header="سهمِ من" Binding="{Binding ShareText}" Width="105" IsReadOnly="True" />
+                    <DataGridTextColumn Header="به من می‌رسد" Binding="{Binding NetText}" Width="120" IsReadOnly="True" />
+                    <DataGridTextColumn Header="فیصدیِ لازم" Binding="{Binding AskPctText}" Width="110" IsReadOnly="True" />
+                    <DataGridTextColumn Header="باقیِ تیل" Binding="{Binding RestText}" Width="115" IsReadOnly="True" />
+                    <DataGridTextColumn Header="اندازهٔ واقعی" Binding="{Binding ActualText}" Width="120" />
+                    <DataGridCheckBoxColumn Header="بسته" Binding="{Binding IsClosed}" Width="70" />
+                    <DataGridTemplateColumn Header="" Width="60" IsReadOnly="True">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                          <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"
+                                  Command="{Binding $parent[ItemsControl].DataContext.DeleteRowCommand}"
+                                  CommandParameter="{Binding}" />
+                        </DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                  </DataGrid.Columns>
+                </c:ExcelGrid>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </c:SectionPage>
+</UserControl>

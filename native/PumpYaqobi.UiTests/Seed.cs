@@ -182,6 +182,29 @@ internal static class Seed
             Note = "میله‌زنیِ آخرِ ماه",
         }).GetAwaiter().GetResult();
 
+        // تیل امانت
+        for (var a = 1; a <= 2; a++)
+        {
+            var acc = host.Amanat.AddAsync(PumpYaqobi.Domain.Enums.FuelType.Petrol)
+                          .GetAwaiter().GetResult();
+            acc.Name = "حاجی " + a;
+            acc.MyPct = 3;
+            host.Amanat.UpdateAccountAsync(acc).GetAwaiter().GetResult();
+            for (var i = 1; i <= 3; i++)
+            {
+                host.Amanat.SaveRowAsync(new AmanatRow
+                {
+                    AccountId = acc.Id, SortIndex = i,
+                    DateShamsi = $"{month}/{i:00}",
+                    Name = "محمولهٔ " + i,
+                    Liters = 40000 + i * 5000,
+                    Taken = i * 3000,
+                    Days = 30 * i,
+                    Temp = 25 + i,
+                }).GetAwaiter().GetResult();
+            }
+        }
+
         _ = today;
     }
 }

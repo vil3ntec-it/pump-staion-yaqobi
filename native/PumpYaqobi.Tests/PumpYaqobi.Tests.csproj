@@ -43,5 +43,6 @@
     <None Update="golden-parcha.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="golden-waraq.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="golden-purchase.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="golden-amanat.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

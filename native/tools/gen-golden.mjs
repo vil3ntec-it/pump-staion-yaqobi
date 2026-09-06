@@ -221,5 +221,40 @@ const purchase = await page.evaluate(() => {
 fs.writeFileSync(path.join(OUT, 'golden-purchase.json'), JSON.stringify(purchase));
 console.log('  ✔ golden-purchase.json — ' + purchase.length + ' خرید');
 
+// ── تیل امانت ─────────────────────────────────────────────────────────────
+const amanat = await page.evaluate(() => {
+  let seed = 5150;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  const s = amSettings();
+  const cases = [];
+  for (let i = 0; i < 400; i++) {
+    const acc = {
+      fuel: rnd() < 0.4 ? 'diesel' : 'petrol',
+      myPct: rnd() < 0.75 ? Math.round(rnd() * 6 * 100) / 100 : '',
+    };
+    const row = {
+      // «مدت زمان» دستی داده می‌شود تا آزمون به «امروز» بند نباشد
+      days: Math.round(rnd() * 400),
+      liters: rnd() < 0.08 ? 0 : Math.round(rnd() * 60000 * 100) / 100,
+      taken: rnd() < 0.5 ? Math.round(rnd() * 20000 * 100) / 100 : '',
+      temp: rnd() < 0.8 ? Math.round(rnd() * 55) : '',
+      basePct: rnd() < 0.3 ? Math.round(rnd() * 0.1 * 1000) / 1000 : '',
+      actual: rnd() < 0.4 ? Math.round(rnd() * 50000 * 100) / 100 : '',
+      state: rnd() < 0.25 ? 'closed' : 'open',
+      date: '', closeDate: '',
+    };
+    const c = amRowCalc(row, acc, s);
+    cases.push({ acc, row, c: {
+      liters: c.liters, taken: c.taken, days: c.days, temp: c.temp, base: c.base,
+      closed: c.closed, loss: c.loss, lossPct: c.lossPct, rest: c.rest,
+      hasActual: c.hasActual, actual: c.actual, realLoss: c.realLoss, diff: c.diff,
+      myPct: c.myPct, targetL: c.targetL, needPct: c.needPct, askPct: c.askPct,
+      netIfMy: c.netIfMy, askL: c.askL, netIfAsk: c.netIfAsk } });
+  }
+  return { settings: s, cases };
+});
+fs.writeFileSync(path.join(OUT, 'golden-amanat.json'), JSON.stringify(amanat));
+console.log('  ✔ golden-amanat.json — ' + amanat.cases.length + ' ردیف');
+
 console.log('\n  خطای جاوااسکریپت:', errs.length ? errs.slice(0, 3) : 'ندارد');
 await browser.close();
