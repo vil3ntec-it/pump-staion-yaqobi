@@ -118,6 +118,18 @@ internal static class Program
             Shot(win, Path.Combine(outDir, "23-parcha.png"));
         }
 
+        if (vm.Sections.FirstOrDefault(s => s.Id == "amanat")
+            is PumpYaqobi.App.ViewModels.Sections.AmanatSectionViewModel am)
+        {
+            vm.GoAsync(am).GetAwaiter().GetResult();
+            Pump(win);
+            am.OpenCommand.Execute(am.Cards.FirstOrDefault());
+            Pump(win);
+            Dispatcher.UIThread.RunJobs();
+            Pump(win);
+            Shot(win, Path.Combine(outDir, "24-amanat-account.png"));
+        }
+
         Console.WriteLine("عکس‌ها در: " + Path.GetFullPath(outDir));
         return 0;
     }

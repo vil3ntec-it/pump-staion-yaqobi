@@ -254,6 +254,48 @@ const amanat = await page.evaluate(() => {
   return { settings: s, cases };
 });
 fs.writeFileSync(path.join(OUT, 'golden-amanat.json'), JSON.stringify(amanat));
+
+// ── تیل امانت: جمعِ سربرگِ حساب (amAccCalc) ───────────────────────────────
+// کارتِ هر حساب همین عددها را نشان می‌دهد، و «فیصدیِ لازم» این‌جا روی درصدِ
+// بخارِ کلِ حساب حساب می‌شود نه جمعِ ردیف‌به‌ردیف — همان جایی که آسان اشتباه می‌شود.
+const amAcc = await page.evaluate(() => {
+  let seed = 31337;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  const s = amSettings();
+  const cases = [];
+  for (let i = 0; i < 200; i++) {
+    const acc = {
+      fuel: rnd() < 0.4 ? 'diesel' : 'petrol',
+      myPct: rnd() < 0.8 ? Math.round(rnd() * 6 * 100) / 100 : '',
+      rate: rnd() < 0.5 ? Math.round(rnd() * 90) : '',
+      rows: [],
+    };
+    const nRows = 1 + Math.floor(rnd() * 6);
+    for (let k = 0; k < nRows; k++) {
+      acc.rows.push({
+        days: Math.round(rnd() * 400),
+        liters: rnd() < 0.08 ? 0 : Math.round(rnd() * 60000 * 100) / 100,
+        taken: rnd() < 0.5 ? Math.round(rnd() * 20000 * 100) / 100 : '',
+        temp: rnd() < 0.8 ? Math.round(rnd() * 55) : '',
+        basePct: rnd() < 0.3 ? Math.round(rnd() * 0.1 * 1000) / 1000 : '',
+        actual: rnd() < 0.4 ? Math.round(rnd() * 50000 * 100) / 100 : '',
+        state: rnd() < 0.25 ? 'closed' : 'open',
+        date: '', closeDate: '',
+      });
+    }
+    const t = amAccCalc(acc, s);
+    cases.push({ acc, t: {
+      n: t.n, open: t.open, liters: t.liters, litersOpen: t.litersOpen, taken: t.taken,
+      loss: t.loss, lossPct: t.lossPct, rest: t.rest, share: t.share,
+      hasActual: t.hasActual, actual: t.actual, realLoss: t.realLoss, realDiff: t.realDiff,
+      myPct: t.myPct, targetL: t.targetL, needPct: t.needPct, askPct: t.askPct,
+      askL: t.askL, netIfMy: t.netIfMy, netIfAsk: t.netIfAsk,
+      rate: t.rate, lossMoney: t.lossMoney, myMoney: t.myMoney, diffMoney: t.diffMoney } });
+  }
+  return { settings: s, cases };
+});
+fs.writeFileSync(path.join(OUT, 'golden-amanat-acc.json'), JSON.stringify(amAcc));
+console.log('  ✔ golden-amanat-acc.json — ' + amAcc.cases.length + ' حساب');
 console.log('  ✔ golden-amanat.json — ' + amanat.cases.length + ' ردیف');
 
 // ── داشبورد ───────────────────────────────────────────────────────────────

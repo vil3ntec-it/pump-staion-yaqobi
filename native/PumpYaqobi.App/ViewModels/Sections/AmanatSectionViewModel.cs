@@ -92,6 +92,56 @@ public sealed partial class AmanatRowViewModel : RowViewModel
 }
 
 /// <summary>یک کادرِ حسابِ امانت.</summary>
+/// <summary>
+/// کارتِ یک حسابِ امانت در شبکهٔ کارت‌ها — مو‌به‌مو همان چیزی که
+/// <c>_amCardHtml</c> می‌سازد: نام، «باقیِ مشتری»، خطِ وضعیت، دو عددِ
+/// رسید/بخار، خطِ فیصدی و شمارهٔ کارت.
+/// </summary>
+public sealed class AmanatCardViewModel
+{
+    public AmanatCardViewModel(AmanatAccount a, AmanatAccountCalc t, int seq)
+    {
+        Entity = a;
+        Name = string.IsNullOrWhiteSpace(a.Name) ? "بی‌نام" : a.Name!.Trim();
+        Index = seq;
+        IsDiesel = a.Fuel == FuelType.Diesel;
+        RestText = "باقیِ مشتری: " + Fmt2(t.Rest) + " لیتر";
+        // ‎.pdebt.clear‎ سبز است وقتی چیزی برای مشتری مانده
+        RestBrushKey = t.Rest > 0 ? "Pump.Ok" : "Pump.Danger";
+        LitersText = (IsDiesel ? "🟤 " : "⛽ ") + Shamsi.Money(Math.Round(t.Liters, 0, MidpointRounding.AwayFromZero));
+        LossText = "💨 " + Fmt2(t.Loss);
+
+        // وضعیتِ کارت روی «هدف» سنجیده می‌شود، نه روی «صفر نشدن»
+        if (t.Liters == 0m) { State = "➕ هنوز تیلی ثبت نشده"; StateBrushKey = "Pump.Muted"; }
+        else if (t.MyPct is null) { State = "⚠️ فیصدی ثبت نشده"; StateBrushKey = "Pump.Warn"; }
+        else if (t.Loss <= 0.0001m) { State = "✅ " + Fmt(t.MyPct.Value, 2) + "٪ کافی است"; StateBrushKey = "Pump.Ok"; }
+        else if (t.NetIfMy < 0m) { State = "❌ ضرر — " + Fmt(t.AskPct ?? 0m, 1) + "٪ بگیرید"; StateBrushKey = "Pump.Danger"; }
+        else { State = "🔸 " + Fmt2(t.Loss) + " لیتر از سهمتان می‌رود"; StateBrushKey = "Pump.Warn"; }
+
+        PctText = t.MyPct is null
+            ? "فیصدی: —"
+            : "فیصدیِ شما " + Fmt(t.MyPct.Value, 2) + "٪ → بگیرید " + Fmt(t.AskPct ?? 0m, 1) + "٪";
+    }
+
+    /// <summary>‎_amFmt2‎ — دو رقمِ اعشار، بدونِ صفرهای بی‌مصرف.</summary>
+    private static string Fmt2(decimal v) => Fmt(v, 2);
+
+    private static string Fmt(decimal v, int d) =>
+        Shamsi.Money(Math.Round(v, d, MidpointRounding.AwayFromZero));
+
+    public AmanatAccount Entity { get; }
+    public string Name { get; }
+    public int Index { get; }
+    public bool IsDiesel { get; }
+    public string RestText { get; }
+    public string RestBrushKey { get; }
+    public string State { get; }
+    public string StateBrushKey { get; }
+    public string LitersText { get; }
+    public string LossText { get; }
+    public string PctText { get; }
+}
+
 public sealed partial class AmanatAccountViewModel : ObservableObject
 {
     private readonly AppHost _host;
@@ -157,9 +207,13 @@ public sealed partial class AmanatAccountViewModel : ObservableObject
     public AmanatRowCalc CalcOf(AmanatRow r) =>
         _host.AmanatCalc.RowCalc(r, Entity, _section.Settings, AutoDaysOf(r));
 
+    /// <summary>جمعِ سربرگ — کارتِ همین حساب هم از همین می‌خواند.</summary>
+    public AmanatAccountCalc Totals { get; private set; }
+
     public void Recalc()
     {
         var t = _host.AmanatCalc.AccountCalc(Entity, _section.Settings, AutoDaysOf);
+        Totals = t;
         TotalLiters = Shamsi.Money(Math.Round(t.Liters, 2));
         TotalLoss = Shamsi.Money(Math.Round(t.Loss, 2));
         TotalRest = Shamsi.Money(Math.Round(t.Rest, 2));
@@ -202,6 +256,10 @@ public sealed partial class AmanatAccountViewModel : ObservableObject
 
     [RelayCommand]
     private Task DeleteAccountAsync() => _section.DeleteAccountAsync(this);
+
+    /// <summary>«← بازگشت» به شبکهٔ کارت‌ها.</summary>
+    [RelayCommand]
+    private void Back() => _section.BackCommand.Execute(null);
 }
 
 /// <summary>
@@ -212,6 +270,7 @@ public sealed partial class AmanatAccountViewModel : ObservableObject
 public sealed partial class AmanatSectionViewModel : SectionViewModel
 {
     private readonly AppHost _host;
+    private List<AmanatAccountViewModel> _all = new();
 
     public AmanatSectionViewModel(AppHost host) : base("amanat", "amanat", "تیل امانت")
     {
@@ -221,32 +280,114 @@ public sealed partial class AmanatSectionViewModel : SectionViewModel
 
     public AmanatSettings Settings { get; private set; }
 
-    public ObservableCollection<AmanatAccountViewModel> Accounts { get; } = new();
+    /// <summary>کارت‌های دیده‌شده — پس از جست‌وجو و فیلترِ سوخت.</summary>
+    public ObservableCollection<AmanatCardViewModel> Cards { get; } = new();
 
-    [ObservableProperty] private bool _isDiesel;
+    [ObservableProperty] private string _search = "";
+    /// <summary>‎_amFuelFilter‎ — «all» / «petrol» / «diesel».</summary>
+    [ObservableProperty] private string _fuelFilter = "all";
+    [ObservableProperty] private AmanatAccountViewModel? _page;
+    [ObservableProperty] private string _emptyText = "";
 
-    public FuelType Fuel => IsDiesel ? FuelType.Diesel : FuelType.Petrol;
+    public bool IsListVisible => Page is null;
+    public bool IsAll => FuelFilter == "all";
+    public bool IsPetrol => FuelFilter == "petrol";
+    public bool IsDieselFilter => FuelFilter == "diesel";
+    /// <summary>نشانِ «فقط پطرول/دیزل» — تا کاربر نگوید «حسابم کجاست؟».</summary>
+    public bool HasFuelChip => FuelFilter != "all";
+    public string FuelChipText => FuelFilter == "diesel" ? "🟤 فقط دیزل ✕" : "⛽ فقط پطرول ✕";
 
-    partial void OnIsDieselChanged(bool v) => _ = LoadAsync();
+    partial void OnPageChanged(AmanatAccountViewModel? v) => OnPropertyChanged(nameof(IsListVisible));
+    partial void OnSearchChanged(string v) => ApplyFilter();
 
-    protected override async Task LoadAsync()
+    partial void OnFuelFilterChanged(string v)
+    {
+        foreach (var n in new[] { nameof(IsAll), nameof(IsPetrol), nameof(IsDieselFilter),
+                                  nameof(HasFuelChip), nameof(FuelChipText) })
+            OnPropertyChanged(n);
+        ApplyFilter();
+    }
+
+    [RelayCommand] private void SetFuel(string f) => FuelFilter = f;
+    [RelayCommand] private void ClearFuel() => FuelFilter = "all";
+
+    protected override Task LoadAsync() => RefreshAsync();
+
+    public async Task RefreshAsync()
     {
         Settings = _host.Amanat.Settings();
-        Accounts.Clear();
-        foreach (var a in await _host.Amanat.ListAsync(Fuel))
-            Accounts.Add(new AmanatAccountViewModel(_host, a, this));
+        var list = new List<AmanatAccountViewModel>();
+        foreach (var fuel in new[] { FuelType.Petrol, FuelType.Diesel })
+            foreach (var a in await _host.Amanat.ListAsync(fuel))
+                list.Add(new AmanatAccountViewModel(_host, a, this));
+        _all = list;
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        var q = Search.Trim();
+        Cards.Clear();
+        var seq = 0;
+        foreach (var a in _all)
+        {
+            if (FuelFilter == "petrol" && a.Entity.Fuel != FuelType.Petrol) continue;
+            if (FuelFilter == "diesel" && a.Entity.Fuel != FuelType.Diesel) continue;
+            if (q.Length > 0 && !(a.Entity.Name ?? "").Contains(q, StringComparison.OrdinalIgnoreCase)) continue;
+            Cards.Add(new AmanatCardViewModel(a.Entity, a.Totals, ++seq));
+        }
+
+        EmptyText = q.Length > 0 ? $"با «{q}» حسابی پیدا نشد."
+            : FuelFilter != "all"
+                ? "برای " + (FuelFilter == "diesel" ? "دیزل" : "پطرول") + " حسابی نیست — دکمهٔ «➕ حساب جدید» را بزنید."
+                : "هنوز حسابی ثبت نشده — دکمهٔ «➕ حساب جدید» را بزنید.";
     }
 
     [RelayCommand]
+    private void Open(AmanatCardViewModel? card)
+    {
+        if (card is null) return;
+        Page = _all.FirstOrDefault(a => a.Entity.Id == card.Entity.Id);
+    }
+
+    [RelayCommand]
+    private void Back()
+    {
+        Page = null;
+        ApplyFilter();   // عددهای کارت با آنچه در صفحهٔ حساب عوض شد جور شود
+    }
+
+    /// <summary>«➕ حساب جدید» — سوختِ حساب از فیلترِ همان لحظه گرفته می‌شود.</summary>
+    [RelayCommand]
     private async Task AddAccountAsync()
     {
-        var a = await _host.Amanat.AddAsync(Fuel);
-        Accounts.Add(new AmanatAccountViewModel(_host, a, this));
+        var fuel = FuelFilter == "diesel" ? FuelType.Diesel : FuelType.Petrol;
+        var a = await _host.Amanat.AddAsync(fuel);
+        var name = await Dialogs.PromptAsync("حساب جدید", "نامِ حساب:");
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            a.Name = name.Trim();
+            await _host.Amanat.UpdateAccountAsync(a);
+        }
+        _all.Add(new AmanatAccountViewModel(_host, a, this));
+        ApplyFilter();
+    }
+
+    [RelayCommand]
+    private async Task DeleteCardAsync(AmanatCardViewModel? card)
+    {
+        if (card is null) return;
+        if (!await Dialogs.ConfirmAsync("حذفِ حساب",
+                $"حسابِ «{card.Name}» با همهٔ محموله‌هایش پاک شود؟")) return;
+        var vm = _all.FirstOrDefault(a => a.Entity.Id == card.Entity.Id);
+        if (vm is not null) await DeleteAccountAsync(vm);
     }
 
     public async Task DeleteAccountAsync(AmanatAccountViewModel vm)
     {
         await _host.Amanat.DeleteAccountAsync(vm.Entity.Id);
-        Accounts.Remove(vm);
+        _all.Remove(vm);
+        if (ReferenceEquals(Page, vm)) Page = null;
+        ApplyFilter();
     }
 }

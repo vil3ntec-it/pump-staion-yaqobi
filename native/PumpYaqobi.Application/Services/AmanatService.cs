@@ -33,7 +33,11 @@ public readonly record struct AmanatRowCalc(
 public readonly record struct AmanatAccountCalc(
     int Count, int Open, decimal Liters, decimal LitersOpen, decimal Taken,
     decimal Loss, decimal LossPct, decimal Rest, decimal Share,
-    bool HasActual, decimal Actual, decimal RealLoss, decimal RealDiff);
+    bool HasActual, decimal Actual, decimal RealLoss, decimal RealDiff,
+    // ── همان چیزهایی که ‎amAccCalc‎ در سطحِ حساب می‌سازد و کارتِ حساب نشانشان می‌دهد
+    decimal? MyPct, decimal? TargetL, decimal? NeedPct, decimal? AskPct,
+    decimal? AskL, decimal? NetIfMy, decimal? NetIfAsk,
+    decimal? Rate, decimal? LossMoney, decimal? MyMoney, decimal? DiffMoney);
 
 /// <summary>
 /// ══ تیل امانت ═════════════════════════════════════════════════════════════
@@ -165,7 +169,26 @@ public sealed class AmanatService
         }
 
         var lossPct = liters > 0m ? loss / liters * 100m : 0m;
+
+        // ⚠️ در سطحِ حساب، «فیصدی» از خودِ حساب خوانده می‌شود و «فیصدیِ لازم»
+        // روی درصدِ بخارِ کلِ حساب حساب می‌شود — نه جمعِ ردیف‌به‌ردیف.
+        var myPct = acc.MyPct;
+        decimal? targetL = myPct is null ? null : liters * myPct.Value / 100m;
+        decimal? needPct = myPct is null ? null : myPct.Value + lossPct + s.HandlingPct;
+        decimal? askPct = needPct is null ? null : Math.Ceiling(needPct.Value * 10m) / 10m;
+        decimal? askL = askPct is null ? null : liters * askPct.Value / 100m;
+        decimal? netIfMy = targetL is null ? null : targetL.Value - loss;
+        decimal? netIfAsk = askL is null ? null : askL.Value - loss;
+
+        // نرخ فقط برای «به پول گفتن» است و روی هیچ حسابِ لیتری اثر ندارد
+        var rate = acc.Rate;
+        decimal? lossMoney = rate is null ? null : loss * rate.Value;
+        decimal? myMoney = rate is null || targetL is null ? null : targetL.Value * rate.Value;
+        decimal? diffMoney = rate is null || netIfMy is null ? null : netIfMy.Value * rate.Value;
+
         return new AmanatAccountCalc(n, open, liters, litersOpen, taken, loss, lossPct,
-            rest, share, hasActual, actual, realLoss, realDiff);
+            rest, share, hasActual, actual, realLoss, realDiff,
+            myPct, targetL, needPct, askPct, askL, netIfMy, netIfAsk,
+            rate, lossMoney, myMoney, diffMoney);
     }
 }
