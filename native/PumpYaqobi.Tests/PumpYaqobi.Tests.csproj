@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.11" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.6.0" />
+    <PackageReference Include="xunit" Version="2.4.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector" Version="6.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PumpYaqobi.Domain\PumpYaqobi.Domain.csproj" />
+    <ProjectReference Include="..\PumpYaqobi.Application\PumpYaqobi.Application.csproj" />
+    <ProjectReference Include="..\PumpYaqobi.Persistence\PumpYaqobi.Persistence.csproj" />
+    <ProjectReference Include="..\PumpYaqobi.Infrastructure\PumpYaqobi.Infrastructure.csproj" />
+    <ProjectReference Include="..\PumpYaqobi.Reporting\PumpYaqobi.Reporting.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="golden-from-html.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="sample-backup-expected.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="sample-backup.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="golden-safe-exchange.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
