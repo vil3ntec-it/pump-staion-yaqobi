@@ -73,7 +73,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         new PlaceholderSectionViewModel("dashboard", "داشبورد"),
         new ParchaSectionViewModel(host),
-        new PlaceholderSectionViewModel("waraq",     "ورق‌های روزانه"),
+        new WaraqSectionViewModel(host),
         new DebtSectionViewModel(host),
         new PlaceholderSectionViewModel("invoices",  "ثبت فاکتورها"),
         new RetailSectionViewModel(host),

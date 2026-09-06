@@ -92,6 +92,18 @@ internal static class Program
             Shot(win, Path.Combine(outDir, "21-company-page.png"));
         }
 
+        if (vm.Sections.FirstOrDefault(s => s.Id == "waraq") is PumpYaqobi.App.ViewModels.Sections.WaraqSectionViewModel wq)
+        {
+            vm.GoCommand.Execute(wq);
+            Pump(win);
+            wq.ReloadAsync().GetAwaiter().GetResult();
+            wq.OpenCommand.Execute(wq.Sheets.FirstOrDefault());
+            Pump(win);
+            Dispatcher.UIThread.RunJobs();
+            Pump(win);
+            Shot(win, Path.Combine(outDir, "22-waraq-page.png"));
+        }
+
         Console.WriteLine("عکس‌ها در: " + Path.GetFullPath(outDir));
         return 0;
     }

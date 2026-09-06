@@ -132,6 +132,38 @@ internal static class Seed
             }).GetAwaiter().GetResult();
         }
 
+        // ورقِ روزانه
+        for (var i = 1; i <= 4; i++)
+        {
+            var w = host.WaraqData.OpenOrCreateAsync($"{month}/{i:00}", "پمپ یعقوبی")
+                        .GetAwaiter().GetResult();
+            var day = w.Shifts.First(s2 => s2.Kind == ShiftKind.Day);
+            day.WorkerName = "کارمندِ روز";
+            day.FabricDebt = 12000;
+            host.WaraqData.SaveShiftAsync(day).GetAwaiter().GetResult();
+            for (var k = 1; k <= 3; k++)
+            {
+                host.WaraqData.SavePumpAsync(new WaraqPump
+                {
+                    ShiftId = day.Id, SortIndex = k, Num = k,
+                    Fuel = k == 3 ? PumpYaqobi.Domain.Enums.FuelType.Diesel
+                                  : PumpYaqobi.Domain.Enums.FuelType.Petrol,
+                    Start = 10000 * k, End = 10000 * k + 900 + k * 30,
+                    PricePerLiter = 62, Debt = 4000,
+                }).GetAwaiter().GetResult();
+            }
+            var txns = day.Transactions.OrderBy(t => t.SortIndex).Take(4).ToList();
+            for (var k = 0; k < txns.Count; k++)
+            {
+                txns[k].Name = k % 2 == 0 ? "قرضِ " + k : "مصرفِ " + k;
+                txns[k].Liters = k % 2 == 0 ? 20 + k : 0;
+                txns[k].Amount = k % 2 == 0 ? 0 : 900;
+                txns[k].Type = k % 2 == 0 ? WaraqTxnType.Debt : WaraqTxnType.Expense;
+                txns[k].AmountAuto = k % 2 == 0 ? true : false;
+                host.WaraqData.SaveTxnAsync(txns[k]).GetAwaiter().GetResult();
+            }
+        }
+
         _ = today;
     }
 }

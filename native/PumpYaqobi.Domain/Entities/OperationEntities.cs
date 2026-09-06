@@ -208,7 +208,10 @@ public class WaraqShift : EntityBase
     public decimal FabricDebt { get; set; }
     public decimal FabricAvailable { get; set; }
     public decimal AvailableFromShift { get; set; }
+    /// <summary>فیِ کهنهٔ پطرولِ همین شیفت — فقط برای شناختنِ مبلغِ خودکارِ قدیمی.</summary>
     public decimal PricePerLiter { get; set; }
+    /// <summary>فیِ کهنهٔ دیزلِ همین شیفت — همان کاربرد.</summary>
+    public decimal PricePerLiterDiesel { get; set; }
     public List<WaraqPump> Pumps { get; set; } = new();
     public List<WaraqTransaction> Transactions { get; set; } = new();
 }
@@ -241,6 +244,13 @@ public class WaraqTransaction : EntityBase
     public decimal Amount { get; set; }
     public WaraqTxnType Type { get; set; } = WaraqTxnType.Debt;
     public FuelType Fuel { get; set; } = FuelType.Petrol;
+
+    /// <summary>
+    /// null = «هنوز تصمیم نگرفته‌ایم» (دادهٔ کهنه)، true = مبلغ خودکار است،
+    /// false = کاربر خودش نوشته و هیچ‌وقت بازحساب نمی‌شود.
+    /// همان ‎t.amountAuto‎ی نسخهٔ وب — سه‌حالته، نه دوحالته.
+    /// </summary>
+    public bool? AmountAuto { get; set; }
 }
 
 // ══ فاکتورها ══════════════════════════════════════════════════════════════════

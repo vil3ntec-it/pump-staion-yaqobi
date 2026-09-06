@@ -150,5 +150,53 @@ const parcha = await page.evaluate(() => {
 fs.writeFileSync(path.join(OUT, 'golden-parcha.json'), JSON.stringify(parcha));
 console.log('  ✔ golden-parcha.json — ' + parcha.length + ' شیفت');
 
+// ── ورقِ روزانه ───────────────────────────────────────────────────────────
+const waraq = await page.evaluate(() => {
+  let seed = 2468013;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  const cases = [];
+  for (let c = 0; c < 250; c++) {
+    const sd = {
+      pumps: [], transactions: [], fabricDebt: Math.round(rnd() * 40000),
+      pricePerLiter: rnd() < 0.6 ? Math.round(rnd() * 90) : 0,
+      pricePerLiterDiesel: rnd() < 0.5 ? Math.round(rnd() * 90) : 0,
+    };
+    const np = 1 + Math.floor(rnd() * 5);
+    for (let i = 0; i < np; i++) {
+      const start = Math.round(rnd() * 500000);
+      sd.pumps.push({
+        num: i + 1,
+        fuel: rnd() < 0.4 ? 'diesel' : 'petrol',
+        start,
+        end: start + (rnd() < 0.1 ? -Math.round(rnd() * 100) : Math.round(rnd() * 4000)),
+        pricePerLiter: rnd() < 0.9 ? [60, 62, 65, 70][Math.floor(rnd() * 4)] : 0,
+        debt: Math.round(rnd() * 30000),
+      });
+    }
+    const nt = Math.floor(rnd() * 8);
+    for (let i = 0; i < nt; i++) {
+      const mode = rnd();
+      const liters = rnd() < 0.8 ? Math.round(rnd() * 300) : 0;
+      sd.transactions.push({
+        name: rnd() < 0.85 ? 'ت' + i : '',
+        liters,
+        amount: rnd() < 0.5 ? Math.round(rnd() * 40000) : 0,
+        type: rnd() < 0.6 ? 'debt' : 'expense',
+        fuel: rnd() < 0.4 ? 'diesel' : 'petrol',
+        amountAuto: mode < 0.33 ? true : (mode < 0.66 ? false : undefined),
+      });
+    }
+    const before = JSON.parse(JSON.stringify(sd));
+    const repP = _waraqRepPrice(sd, 'petrol');
+    const repD = _waraqRepPrice(sd, 'diesel');
+    const tot = computeShiftTotals(sd);
+    const sh = computeWaraqShortage(sd, tot);
+    cases.push({ before, repP, repD, tot, sh, after: sd.transactions });
+  }
+  return cases;
+});
+fs.writeFileSync(path.join(OUT, 'golden-waraq.json'), JSON.stringify(waraq));
+console.log('  ✔ golden-waraq.json — ' + waraq.length + ' ورق');
+
 console.log('\n  خطای جاوااسکریپت:', errs.length ? errs.slice(0, 3) : 'ندارد');
 await browser.close();

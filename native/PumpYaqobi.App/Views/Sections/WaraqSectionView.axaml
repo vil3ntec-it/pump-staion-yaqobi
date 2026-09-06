@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:d="using:PumpYaqobi.Domain.Entities"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:v="using:PumpYaqobi.App.Views.Sections"
+             x:Class="PumpYaqobi.App.Views.Sections.WaraqSectionView"
+             x:DataType="vm:WaraqSectionViewModel">
+  <Panel>
+
+    <c:SectionPage IsVisible="{Binding IsListVisible}"
+                   Header="ورق‌های روزانه"
+                   SubHeader="یک ورق برای هر روز — ورقِ تکراریِ همان تاریخ ساخته نمی‌شود">
+
+      <c:SectionPage.Toolbar>
+        <Button Classes="accent" Content="ورقِ امروز" Command="{Binding NewSheetCommand}" />
+      </c:SectionPage.Toolbar>
+
+      <c:SectionPage.Filters>
+        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <TextBlock Text="ماه" Classes="label" VerticalAlignment="Center" />
+          <ComboBox ItemsSource="{Binding Months}" SelectedItem="{Binding Month}" MinWidth="140" />
+        </StackPanel>
+      </c:SectionPage.Filters>
+
+      <ScrollViewer>
+        <ItemsControl ItemsSource="{Binding Sheets}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="d:WaraqEntry">
+              <Border Classes="card" Width="238" Margin="0,0,12,12">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="{Binding DateShamsi}" Classes="h2" />
+                  <TextBlock Text="{Binding Station}" Classes="muted" />
+                  <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
+                    <Button Classes="accent" Content="باز کردن" Padding="10,4" FontSize="12"
+                            Command="{Binding $parent[ItemsControl].((vm:WaraqSectionViewModel)DataContext).OpenCommand}"
+                            CommandParameter="{Binding}" />
+                    <Button Classes="ghost danger" Content="حذف" Padding="10,4" FontSize="12"
+                            Command="{Binding $parent[ItemsControl].((vm:WaraqSectionViewModel)DataContext).DeleteSheetCommand}"
+                            CommandParameter="{Binding}" />
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </c:SectionPage>
+
+    <Panel IsVisible="{Binding !IsListVisible}">
+      <v:WaraqPageView DataContext="{Binding Page}" />
+    </Panel>
+  </Panel>
+</UserControl>

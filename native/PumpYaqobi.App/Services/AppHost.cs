@@ -32,10 +32,12 @@ public sealed class AppHost
         Expenses = new ExpenseService();
         Company = new CompanyService();
         Parcha = new ParchaService();
+        Waraq = new WaraqService();
         Trash = new TrashService(Db, Permissions, Session);
         Debtors = new DebtorService(Db, Permissions, Trash);
         Companies = new CompanyDataService(Db, Permissions, Trash);
         ParchaData = new ParchaDataService(Db, Permissions, Trash, Parcha);
+        WaraqData = new WaraqDataService(Db, Permissions, Trash);
         SafeLedger = new LedgerService<SafeEntry>(Db, Permissions, Trash, "safe",
             r => (r.Title ?? "") + " — " + Shamsi.Money(r.Amount));
         ExchangeLedger = new LedgerService<ExchangeRow>(Db, Permissions, Trash, "sarrafi",
@@ -64,6 +66,8 @@ public sealed class AppHost
     public CompanyService Company { get; }
     public ParchaService Parcha { get; }
     public ParchaDataService ParchaData { get; }
+    public WaraqService Waraq { get; }
+    public WaraqDataService WaraqData { get; }
     public LedgerService<SafeEntry> SafeLedger { get; }
     public LedgerService<ExchangeRow> ExchangeLedger { get; }
     public LedgerService<Expense> ExpenseLedger { get; }
