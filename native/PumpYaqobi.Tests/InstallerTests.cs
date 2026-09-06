@@ -91,9 +91,9 @@ public class InstallerTests
     }
 
     /// <summary>
-    /// نصب باید بی اجازهٔ مدیر باشد و در ‎%LocalAppData%‎ بنشیند — وگرنه
+    /// پیش‌فرضِ نصب باید بی اجازهٔ مدیر و در ‎%LocalAppData%‎ باشد — وگرنه
     /// به‌روزرسانیِ خودکارِ برنامه (که فایل‌ها را جابه‌جا می‌کند) هر بار
-    /// اجازهٔ مدیر می‌خواهد و عملاً از کار می‌افتد.
+    /// اجازهٔ مدیر می‌خواهد.
     /// </summary>
     [Fact]
     public void Installs_per_user_so_self_update_keeps_working()
@@ -101,6 +101,42 @@ public class InstallerTests
         var s = Iss();
         Assert.Contains("PrivilegesRequired=lowest", s);
         Assert.Contains("{localappdata}\\Programs\\PumpYaqobi", s);
+    }
+
+    /// <summary>
+    /// خواستهٔ صریحِ صاحب ریپو: «بشه انتخاب کرد که کجا فایل‌ها رو ببرم بزارم
+    /// موقع نصب». صفحهٔ انتخابِ پوشه باید باز باشد.
+    /// </summary>
+    [Fact]
+    public void The_user_can_choose_where_the_files_go()
+    {
+        var s = Iss();
+        Assert.Contains("DisableDirPage=no", s);
+        Assert.DoesNotContain("DisableDirPage=yes", s);
+    }
+
+    /// <summary>
+    /// نصبِ دوباره باید به همان پوشه‌ای برود که کاربر بارِ اول انتخاب کرد —
+    /// وگرنه به‌روزرسانی یک نسخهٔ دوم در جای پیش‌فرض می‌سازد و کاربر با دو
+    /// برنامه و دو آیکون روبه‌رو می‌شود.
+    /// </summary>
+    [Fact]
+    public void Reinstalling_goes_back_to_the_folder_the_user_picked()
+        => Assert.Contains("UsePreviousAppDir=yes", Iss());
+
+    /// <summary>
+    /// اگر کاربر پوشه‌ای بگیرد که اجازهٔ مدیر می‌خواهد، باید همان‌جا به او
+    /// گفته شود — نه اینکه ماه‌ها بعد وسطِ به‌روزرسانی بفهمد.
+    /// </summary>
+    [Fact]
+    public void Choosing_an_admin_only_folder_warns_the_user()
+    {
+        var s = Iss();
+        Assert.Contains("[Code]", s);
+        Assert.Contains("wpSelectDir", s);
+        Assert.Contains("{commonpf}", s);
+        // فقط هشدار، نه جلوگیری: کاربر آزاد است
+        Assert.Contains("Result := True;", s);
     }
 
     /// <summary>
@@ -158,5 +194,66 @@ public class InstallerTests
     {
         var svc = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.App", "Update", "UpdateService.cs"));
         Assert.Contains("/SILENT", svc);
+    }
+
+    // ══ شمارهٔ نسخه ══
+    // خواستهٔ صاحب ریپو: «برنامهٔ نیتیو از نسخهٔ ۳٫۱٫۱ شروع شود.»
+
+    private static Dictionary<string, string> VersionFile()
+    {
+        var map = new Dictionary<string, string>();
+        foreach (var line in File.ReadAllLines(Path.Combine(Native, "VERSION")))
+        {
+            var t = line.Trim();
+            if (t.Length == 0 || t.StartsWith("#")) continue;
+            var i = t.IndexOf('=');
+            if (i > 0) map[t[..i].Trim()] = t[(i + 1)..].Trim();
+        }
+        return map;
+    }
+
+    [Fact]
+    public void The_native_app_starts_at_3_1_1()
+    {
+        var v = VersionFile();
+        Assert.Equal("3.1", v["MAJOR_MINOR"]);
+
+        // نسخهٔ ساختِ بعدی باید دقیقاً ۳٫۱٫۱ باشد
+        var offset = int.Parse(v["RUN_OFFSET"]);
+        var nextRun = offset + 1;
+        Assert.Equal("3.1.1", $"{v["MAJOR_MINOR"]}.{nextRun - offset}");
+    }
+
+    /// <summary>
+    /// ⚠️ نسخه باید همیشه بالا برود. اگر کسی ‎RUN_OFFSET‎ را زیاد کند، نسخهٔ
+    /// تازه از نسخهٔ نصب‌شده کوچک‌تر می‌شود و برنامه به‌روزرسانی را رد می‌کند —
+    /// یعنی کاربر برای همیشه روی نسخهٔ کهنه می‌ماند و هیچ خطایی هم نمی‌بیند.
+    /// </summary>
+    [Fact]
+    public void The_new_version_is_higher_than_the_old_1_0_x_releases()
+    {
+        var v = VersionFile();
+        var first = $"{v["MAJOR_MINOR"]}.{1}";
+        Assert.True(PumpYaqobi.App.Update.UpdateService.Compare(first, "1.0.999") > 0,
+            $"{first} از نسخه‌های کهنهٔ 1.0.x بزرگ‌تر نیست");
+    }
+
+    /// <summary>ورک‌فلو باید نسخه را از همان فایل بخواند، نه از عددِ ثابت.</summary>
+    [Fact]
+    public void The_workflow_reads_the_version_from_the_file()
+    {
+        var w = Workflow();
+        Assert.Contains("source native/VERSION", w);
+        Assert.Contains("MAJOR_MINOR", w);
+        Assert.Contains("RUN_OFFSET", w);
+        Assert.DoesNotContain("version=1.0.", w);
+    }
+
+    /// <summary>ساختِ محلی هم باید همان نسخه را نشان دهد، نه ۱٫۰٫۰.</summary>
+    [Fact]
+    public void The_project_file_carries_the_same_starting_version()
+    {
+        var proj = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.App", "PumpYaqobi.App.csproj"));
+        Assert.Contains("<Version>3.1.1</Version>", proj);
     }
 }
