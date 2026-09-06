@@ -1,0 +1,42 @@
+name: آزمون‌های نیتیو
+
+# ══ چرا جدا از build-native ══════════════════════════════════════════════════
+# ‎build-native.yml‎ فقط روی ‎main‎ اجرا می‌شود، چون کارش انتشارِ نسخهٔ تازه
+# است. ولی آن‌وقت هر تغییری تا **بعد از مرج** آزموده نمی‌شد — یعنی درست وقتی
+# که دیگر دیر شده و نسخهٔ خرابْ خودش را روی برنامهٔ کاربر می‌گذارد.
+#
+# این ورک‌فلو فقط می‌سازد و می‌آزماید (هیچ انتشاری ندارد) و روی برنچ و
+# Pull Request اجرا می‌شود، تا هیچ تغییری آزموده‌نشده به ‎main‎ نرود.
+#
+# روی لینوکس اجرا می‌شود چون اِوالونیا روی لینوکس هم ساخته می‌شود و نوبت
+# گرفتنِ ماشینِ ویندوز کندتر است. انتشارِ ویندوزی کارِ همان ورک‌فلوی دیگر است.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'native/**'
+      - '.github/workflows/test-native.yml'
+  push:
+    branches-ignore:
+      - main
+    paths:
+      - 'native/**'
+      - '.github/workflows/test-native.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: ساخت
+        working-directory: native
+        run: dotnet build PumpYaqobi.sln -c Release --nologo
+
+      - name: آزمون‌ها
+        working-directory: native
+        run: dotnet test PumpYaqobi.Tests -c Release --nologo --no-build
