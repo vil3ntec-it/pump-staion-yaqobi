@@ -35,7 +35,7 @@
       <ScrollViewer>
         <ItemsControl ItemsSource="{Binding Cards}">
           <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+            <ItemsPanelTemplate><c:AutoFillPanel MinItemWidth="252" Gap="12" /></ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:DebtorCardViewModel">
@@ -48,7 +48,7 @@
                       Classes.out="{Binding IsOut}"
                       Classes.low="{Binding IsLow}"
                       Classes.ok="{Binding IsOk}"
-                      Width="252" Margin="0,0,12,12">
+                     >
                 <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
 
                   <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">

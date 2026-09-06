@@ -46,22 +46,24 @@
                 <TextBlock Text="{Binding StateText}" FontSize="12" FontWeight="SemiBold" />
               </Border>
 
-              <WrapPanel Orientation="Horizontal" Margin="0,10,0,0">
-                <StackPanel Spacing="1" Margin="0,0,26,8">
+              <!-- سه عددِ مخزن، پخش‌شده در تمامِ عرضِ کارت. پیش از این کنارِ
+                   هم و چسبیده به راست بودند و وسطِ کارت خالی می‌ماند. -->
+              <UniformGrid Rows="1" Classes="stats" Margin="0,10,0,0">
+                <StackPanel Spacing="1" Margin="6,0">
                   <TextBlock Text="جمله ورودی" Classes="label" FontSize="11" />
                   <TextBlock Text="{Binding TotalIn, StringFormat={}{0} لیتر}" FontWeight="Bold"
                              Foreground="{DynamicResource Pump.Ok}" />
                 </StackPanel>
-                <StackPanel Spacing="1" Margin="0,0,26,8">
+                <StackPanel Spacing="1" Margin="6,0">
                   <TextBlock Text="جمله فروش" Classes="label" FontSize="11" />
                   <TextBlock Text="{Binding TotalOut, StringFormat={}{0} لیتر}" FontWeight="Bold"
                              Foreground="{DynamicResource Pump.Danger}" />
                 </StackPanel>
-                <StackPanel Spacing="1" Margin="0,0,26,8">
+                <StackPanel Spacing="1" Margin="6,0">
                   <TextBlock Text="ظرفیت مخزن (لیتر)" Classes="label" FontSize="11" />
-                  <TextBox Text="{Binding Capacity}" Width="120" />
+                  <TextBox Text="{Binding Capacity}" HorizontalAlignment="Stretch" />
                 </StackPanel>
-              </WrapPanel>
+              </UniformGrid>
 
               <WrapPanel Orientation="Horizontal" Margin="0,8,0,0">
                 <Button Content="🚚 تخلیهٔ تانکر" Margin="0,0,8,8" />
@@ -82,7 +84,7 @@
               <TextBlock Text="{Binding MoneyTitle}" FontWeight="Bold"
                          Foreground="{DynamicResource Pump.Accent}" />
             </Border>
-            <WrapPanel Orientation="Horizontal" Margin="14">
+            <UniformGrid Rows="1" Classes="stats" Margin="14">
               <Border Classes="stat" Margin="0,0,12,0">
                 <StackPanel Spacing="3">
                   <TextBlock Text="جمله کل (دالر)" Classes="label" />
@@ -102,7 +104,7 @@
                   <TextBlock Text="{Binding LastBuyDate, StringFormat=آخرین خرید: {0}}" Classes="muted" />
                 </StackPanel>
               </Border>
-            </WrapPanel>
+            </UniformGrid>
           </StackPanel>
         </Border>
 
@@ -154,10 +156,10 @@
             <c:ExcelGrid Grid.Row="1" ItemsSource="{Binding Dips}" x:CompileBindings="False"
                          BorderThickness="0" CornerRadius="0">
               <DataGrid.Columns>
-                <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="130" />
-                <DataGridTextColumn Header="اندازهٔ واقعی" Binding="{Binding MeasuredText}" Width="150" />
-                <DataGridTextColumn Header="اندازهٔ دفتری" Binding="{Binding ExpectedText}" Width="150" />
-                <DataGridTextColumn Header="اختلاف" Binding="{Binding DiffText}" Width="130" IsReadOnly="True" />
+                <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
+                <DataGridTextColumn Header="اندازهٔ واقعی" Binding="{Binding MeasuredText}" Width="Auto" />
+                <DataGridTextColumn Header="اندازهٔ دفتری" Binding="{Binding ExpectedText}" Width="Auto" />
+                <DataGridTextColumn Header="اختلاف" Binding="{Binding DiffText}" Width="Auto" IsReadOnly="True" />
                 <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="*" />
               </DataGrid.Columns>
             </c:ExcelGrid>

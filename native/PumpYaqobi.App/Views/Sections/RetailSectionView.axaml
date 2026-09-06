@@ -36,14 +36,14 @@
 
     <c:ExcelGrid ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False">
       <DataGrid.Columns>
-        <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="120" />
+        <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
         <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
-        <DataGridTextColumn Header="مقدار تیل" Binding="{Binding LitersText}" Width="120" />
-        <DataGridTextColumn Header="فی" Binding="{Binding PriceText}" Width="100" />
-        <DataGridTextColumn Header="مقدار بردگی" Binding="{Binding BardagiText}" Width="130" />
-        <DataGridTextColumn Header="رسید" Binding="{Binding RasidText}" Width="115" />
-        <DataGridTextColumn Header="الباقی" Binding="{Binding AlbaqiText}" Width="125" IsReadOnly="True" />
-        <DataGridTemplateColumn Header="" Width="60" IsReadOnly="True">
+        <DataGridTextColumn Header="مقدار تیل" Binding="{Binding LitersText}" Width="Auto" />
+        <DataGridTextColumn Header="فی" Binding="{Binding PriceText}" Width="Auto" />
+        <DataGridTextColumn Header="مقدار بردگی" Binding="{Binding BardagiText}" Width="Auto" />
+        <DataGridTextColumn Header="رسید" Binding="{Binding RasidText}" Width="Auto" />
+        <DataGridTextColumn Header="الباقی" Binding="{Binding AlbaqiText}" Width="Auto" IsReadOnly="True" />
+        <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate>
               <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"

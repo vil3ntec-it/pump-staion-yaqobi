@@ -16,24 +16,39 @@
   <Panel>
   <Grid RowDefinitions="Auto,Auto,Auto,*" IsVisible="{Binding !IsLocked}">
 
-    <!-- ══ سربرگ ══ -->
+    <!-- ══ سربرگ ══════════════════════════════════════════════════════════
+         اندازه‌ها اندازه‌گیری‌شده‌اند، نه حدس: در همان پنجرهٔ ۱۴۴۰ پیکسلی،
+         خودِ ‎index.html‎ این عددها را می‌دهد —
+           ‎.header‎ ۷۵ پیکسل بلند با ‎padding:12px 20px‎
+           عنوان ۲۱٫۱ پیکسل وزنِ ۹۰۰ · تاریخ ۱۵٫۷ وزنِ ۷۰۰
+           ‎#lockBtn‎ ۶۵×۴۰ ، ‎.role-badge‎ ۶۳×۳۰ ، هر دو کپسولی (‎r:999‎)
+         پیش از این سربرگِ نیتیو ۵۵ پیکسل بود و نه قفل داشت نه نشانِ نقش. -->
     <Border Grid.Row="0" Background="{DynamicResource Pump.HeaderBg}"
-            BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="0,0,0,1" Padding="18,10">
+            BorderBrush="{DynamicResource Pump.Accent}" BorderThickness="0,0,0,2" Padding="20,12">
       <Grid ColumnDefinitions="Auto,*,Auto">
-        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
           <Path Data="{StaticResource Icon.shifts}" Stroke="{DynamicResource Pump.HeaderTitle}"
-                StrokeThickness="1.6" Width="24" Height="24" Stretch="Uniform" />
-          <TextBlock Text="پمپ یعقوبی" FontSize="20" FontWeight="Bold"
+                StrokeThickness="1.6" Width="26" Height="26" Stretch="Uniform" />
+          <TextBlock Text="پمپ یعقوبی" FontSize="21" FontWeight="Black"
                      Foreground="{DynamicResource Pump.HeaderTitle}" VerticalAlignment="Center" />
         </StackPanel>
 
-        <TextBlock Grid.Column="1" Text="{Binding Current.Title}" Classes="h2"
+        <TextBlock Grid.Column="1" Text="{Binding Current.Title}"
+                   FontSize="17" FontWeight="Bold"
                    HorizontalAlignment="Center" VerticalAlignment="Center"
                    Foreground="{DynamicResource Pump.HeaderTitle}" Opacity="0.85" />
 
-        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-          <TextBlock Text="{Binding Clock}" Classes="muted" VerticalAlignment="Center"
-                     Foreground="{DynamicResource Pump.HeaderTitle}" Opacity="0.9" />
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+          <!-- بلوکِ تاریخ: دو خط، مثلِ نسخهٔ وب -->
+          <StackPanel Spacing="2" VerticalAlignment="Center">
+            <TextBlock Text="{Binding TodayText}" FontSize="15.7" FontWeight="Bold"
+                       TextAlignment="Left" HorizontalAlignment="Left"
+                       Foreground="{DynamicResource Pump.HeaderTitle}" />
+            <TextBlock Text="{Binding Clock}" FontSize="12.5"
+                       TextAlignment="Left" HorizontalAlignment="Left"
+                       Foreground="{DynamicResource Pump.HeaderTitle}" Opacity="0.75" />
+          </StackPanel>
+
           <ComboBox ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}" MinWidth="180">
             <ComboBox.ItemTemplate>
               <DataTemplate x:DataType="th:PumpTheme">
@@ -44,23 +59,37 @@
               </DataTemplate>
             </ComboBox.ItemTemplate>
           </ComboBox>
+
+          <!-- نشانِ نقش و دکمهٔ قفل — کپسولی، مثلِ نسخهٔ وب.
+               «قفل» به همان ‎SignOut‎ی وصل است که تا امروز ساخته شده بود ولی
+               هیچ دکمه‌ای صدایش نمی‌زد. -->
+          <Border Classes="pill" Background="{Binding RoleBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                  Padding="11,5">
+            <TextBlock Text="{Binding RoleText}" FontSize="12.5" FontWeight="ExtraBold" Foreground="White" />
+          </Border>
+          <Button Classes="pill-btn" Content="🔒 قفل" FontSize="12.5" FontWeight="ExtraBold"
+                  Padding="13,5" Command="{Binding SignOutCommand}" />
         </StackPanel>
       </Grid>
     </Border>
 
-    <!-- ══ نوارِ خبر — همان چهار عددِ ‎#topBanner‎ ══ -->
+    <!-- ══ نوارِ خبر — همان چهار عددِ ‎#topBanner‎ ══════════════════════════
+         اندازه‌گیریِ نسخهٔ وب: نوار ۷۴ پیکسل بلند با ‎padding:8px 20px‎، و هر
+         قلم <b>دو خطه</b> — برچسب ۱۶ پیکسل وزنِ ۸۰۰ بالا، عدد ۱۶٫۸ وزنِ ۸۰۰
+         پایین. تا امروز این‌جا یک خطه و ۱۲ پیکسلی بود، برای همین نوار ۳۰
+         پیکسل می‌شد و کنارِ نسخهٔ وب «ریز» دیده می‌شد. -->
     <Border Grid.Row="1" Background="{DynamicResource Pump.BannerBg}"
-            BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="0,0,0,1" Padding="18,6">
+            BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="0,0,0,1" Padding="20,8">
       <ItemsControl ItemsSource="{Binding Banner}" HorizontalAlignment="Center">
         <ItemsControl.ItemsPanel>
-          <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="30" /></ItemsPanelTemplate>
+          <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="20" /></ItemsPanelTemplate>
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:BannerItemViewModel">
-            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-              <TextBlock Text="{Binding Label}" Classes="muted" FontSize="12" VerticalAlignment="Center"
-                         Foreground="{DynamicResource Pump.HeaderTitle}" Opacity="0.75" />
-              <TextBlock Text="{Binding Value}" FontWeight="Bold" FontSize="13" VerticalAlignment="Center"
+            <StackPanel Spacing="2" MinWidth="140" VerticalAlignment="Center">
+              <TextBlock Text="{Binding Label}" FontSize="16" FontWeight="ExtraBold"
+                         Foreground="{DynamicResource Pump.Muted}" />
+              <TextBlock Text="{Binding Value}" FontWeight="ExtraBold" FontSize="16.8"
                          Foreground="{Binding ColorKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
             </StackPanel>
           </DataTemplate>
@@ -75,7 +104,7 @@
     <Border Grid.Row="2" Background="{DynamicResource Pump.NavBg}"
             BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="0,0,0,1">
       <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
-                    Padding="10,7,10,8">
+                    Padding="12,8">
         <ItemsControl ItemsSource="{Binding Sections}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
@@ -91,8 +120,8 @@
                 <StackPanel Orientation="Horizontal" Spacing="7">
                   <Path Data="{Binding IconKey, Converter={StaticResource IconLookup}}"
                         Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1.5"
-                        Width="17" Height="17" Stretch="Uniform" VerticalAlignment="Center" />
-                  <TextBlock Text="{Binding Title}" VerticalAlignment="Center" FontSize="13" />
+                        Width="19" Height="19" Stretch="Uniform" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding Title}" VerticalAlignment="Center" FontSize="16" />
                 </StackPanel>
               </Button>
             </DataTemplate>

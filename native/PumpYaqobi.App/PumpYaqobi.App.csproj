@@ -9,6 +9,18 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <AssemblyName>PumpYaqobi</AssemblyName>
+
+    <!-- ══ چهرهٔ برنامه در خودِ ویندوز ═══════════════════════════════════════
+         بدونِ این‌ها، فایلِ اجرایی آیکونِ خالیِ پیش‌فرض می‌گیرد و در «جزئیات»
+         و نوارِ وظیفه بی‌نام می‌ماند — همان چیزی که برنامه را «نصفه» نشان
+         می‌داد. آیکون چند اندازه دارد تا دسکتاپ، نوارِ وظیفه و فهرستِ
+         برنامه‌ها هر کدام اندازهٔ خودشان را بردارند. -->
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <Product>پمپ یعقوبی</Product>
+    <AssemblyTitle>پمپ یعقوبی</AssemblyTitle>
+    <Description>حسابداریِ پمپ یعقوبی</Description>
+    <Company>پمپ یعقوبی</Company>
+    <Copyright>© پمپ یعقوبی</Copyright>
     <RootNamespace>PumpYaqobi.App</RootNamespace>
     <InvariantGlobalization>false</InvariantGlobalization>
     <!-- شمارهٔ نسخه. ساختِ خودکارِ گیت‌هاب این را با شمارهٔ همان ساخت جا‌به‌جا

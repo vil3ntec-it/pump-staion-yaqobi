@@ -57,10 +57,10 @@
 
     <c:ExcelGrid ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False">
       <DataGrid.Columns>
-        <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="120" />
+        <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
         <DataGridTextColumn Header="توضیحات" Binding="{Binding Description}" Width="*" />
-        <DataGridTextColumn Header="مبلغ"  Binding="{Binding AmountText}" Width="130" />
-        <DataGridTemplateColumn Header="واحد" Width="100">
+        <DataGridTextColumn Header="مبلغ"  Binding="{Binding AmountText}" Width="Auto" />
+        <DataGridTemplateColumn Header="واحد" Width="Auto">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate>
               <TextBlock Text="{Binding CurrencyText}" VerticalAlignment="Center" Margin="6,0" />
@@ -76,11 +76,11 @@
             </DataTemplate>
           </DataGridTemplateColumn.CellEditingTemplate>
         </DataGridTemplateColumn>
-        <DataGridTextColumn Header="فی"      Binding="{Binding RateText}" Width="110" />
-        <DataGridTextColumn Header="دالر" Binding="{Binding UsdText}" Width="115" IsReadOnly="True" />
-        <DataGridTextColumn Header="رسید به صرافی" Binding="{Binding RasidText}" Width="135" IsReadOnly="True" />
-        <DataGridTextColumn Header="بردگی پمپ بنزین ($)" Binding="{Binding BardagiText}" Width="165" />
-        <DataGridTemplateColumn Header="" Width="60" IsReadOnly="True">
+        <DataGridTextColumn Header="فی"      Binding="{Binding RateText}" Width="Auto" />
+        <DataGridTextColumn Header="دالر" Binding="{Binding UsdText}" Width="Auto" IsReadOnly="True" />
+        <DataGridTextColumn Header="رسید به صرافی" Binding="{Binding RasidText}" Width="Auto" IsReadOnly="True" />
+        <DataGridTextColumn Header="بردگی پمپ بنزین ($)" Binding="{Binding BardagiText}" Width="Auto" />
+        <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate>
               <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"

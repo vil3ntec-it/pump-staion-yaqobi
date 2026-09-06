@@ -16,9 +16,21 @@
             <TextBlock Text="{Binding Title}" HorizontalAlignment="Center" FontWeight="Bold" FontSize="14" />
           </Border>
 
-          <StackPanel Grid.Row="1" Spacing="9" Margin="13,12,13,12">
+          <!-- ══ خانه‌های شیفت، دو‌ستونه ══════════════════════════════════
+               پیش از این یازده خانه روی هم چیده بودند و هر کدام تمامِ عرضِ
+               کارت را می‌گرفت: در پنجرهٔ ۱۴۴۰ پیکسلی، یک کادرِ ۶۲۵ پیکسلی
+               برای عددِ چهار‌رقمیِ «جمله قرض». دو‌ستونه، کادرها به اندازهٔ
+               عددی می‌شوند که تویشان می‌نشیند و کلِ فرم در یک نگاه جا
+               می‌شود — بی آن‌که چیزی از صفحه بیرون بماند.
 
-            <StackPanel Spacing="4">
+               ترتیبِ خانه‌ها دست‌نخورده است؛ فقط جفت‌های هم‌خانواده کنارِ هم
+               نشسته‌اند (شروع/ختمِ پایه، قرض/فی، فروش/موجودی، فایده/پول).  -->
+          <Grid Grid.Row="1" Margin="13,12,13,12"
+                ColumnDefinitions="*,11,*"
+                RowDefinitions="Auto,9,Auto,9,Auto,9,Auto,9,Auto,9,Auto,9,Auto,9,Auto">
+
+            <!-- نامِ کارمند + شمارهٔ پایه — تمامِ عرض -->
+            <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Spacing="4">
               <TextBlock Text="نام کارمند" Classes="fld" />
               <Grid ColumnDefinitions="*,10,Auto">
                 <TextBox Grid.Column="0" Text="{Binding Name}" Watermark="نام" />
@@ -31,7 +43,8 @@
               </Grid>
             </StackPanel>
 
-            <StackPanel Spacing="4">
+            <!-- شروعِ پایه | ختمِ پایه -->
+            <StackPanel Grid.Row="2" Grid.Column="0" Spacing="4">
               <TextBlock Text="شروع پایه (لیتر)" Classes="fld" />
               <Grid ColumnDefinitions="*,7,Auto">
                 <TextBox Grid.Column="0" Text="{Binding Start}" Watermark="0" />
@@ -41,7 +54,7 @@
               </Grid>
             </StackPanel>
 
-            <StackPanel Spacing="4">
+            <StackPanel Grid.Row="2" Grid.Column="2" Spacing="4">
               <TextBlock Text="ختم پایه (لیتر)" Classes="fld" />
               <Grid ColumnDefinitions="*,7,Auto">
                 <TextBox Grid.Column="0" Text="{Binding End}" Watermark="0" />
@@ -51,41 +64,48 @@
               </Grid>
             </StackPanel>
 
-            <StackPanel Spacing="4">
+            <!-- جملهٔ قرض | فیِ لیتر -->
+            <StackPanel Grid.Row="4" Grid.Column="0" Spacing="4">
               <TextBlock Text="جمله قرض (افغانی)" Classes="fld" />
               <TextBox Text="{Binding Debt}" Watermark="0" />
             </StackPanel>
 
-            <StackPanel Spacing="4">
+            <StackPanel Grid.Row="4" Grid.Column="2" Spacing="4">
               <TextBlock Text="فی لیتر (افغانی)" Classes="fld" />
               <TextBox Text="{Binding Price}" Watermark="0" />
             </StackPanel>
 
-            <StackPanel Spacing="4">
+            <!-- فایدهٔ فیِ لیتر — برچسبش بلند است، تمامِ عرض -->
+            <StackPanel Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3" Spacing="4">
               <TextBlock Text="فایده فی لیتر (افغانی) — اتومات از مخزن" Classes="fld" />
-              <TextBox Text="{Binding ProfitPer}" Watermark="اتومات پر می‌شه" />
-              <TextBlock Text="{Binding BuyPerLabel}" FontSize="11" FontStyle="Italic"
-                         Foreground="{DynamicResource Pump.Muted}" />
+              <Grid ColumnDefinitions="*,11,*">
+                <TextBox Grid.Column="0" Text="{Binding ProfitPer}" Watermark="اتومات پر می‌شه" />
+                <TextBlock Grid.Column="2" Text="{Binding BuyPerLabel}" FontSize="11" FontStyle="Italic"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource Pump.Muted}" />
+              </Grid>
             </StackPanel>
 
-            <StackPanel Spacing="4">
+            <!-- فروش | جملهٔ موجودی — هر دو خودکار -->
+            <StackPanel Grid.Row="8" Grid.Column="0" Spacing="4">
               <TextBlock Text="فروش (لیتر) — خودکار" Classes="fld" />
               <Border Classes="calc"><TextBlock Text="{Binding SaleText}" /></Border>
             </StackPanel>
 
-            <StackPanel Spacing="4">
+            <StackPanel Grid.Row="8" Grid.Column="2" Spacing="4">
               <TextBlock Text="جمله موجودی افغانی — خودکار" Classes="fld" />
               <Border Classes="calc"><TextBlock Text="{Binding MoneyText}" /></Border>
             </StackPanel>
 
-            <StackPanel Spacing="4">
+            <!-- فایده | پولِ موجود -->
+            <StackPanel Grid.Row="10" Grid.Column="0" Spacing="4">
               <TextBlock Text="فایده — خودکار" Classes="fld" />
               <Border Classes="calc">
                 <TextBlock Text="{Binding ProfitText}" Foreground="{DynamicResource Pump.Ok}" />
               </Border>
             </StackPanel>
 
-            <StackPanel Spacing="4">
+            <StackPanel Grid.Row="10" Grid.Column="2" Spacing="4">
               <TextBlock Text="💵 پول موجود افغانی — خودکار" Classes="fld"
                          Foreground="{DynamicResource Pump.Ok}" FontWeight="Bold" />
               <Border Classes="calc">
@@ -94,15 +114,17 @@
               </Border>
             </StackPanel>
 
-            <StackPanel Spacing="4">
+            <!-- یادداشت — تمامِ عرض -->
+            <StackPanel Grid.Row="12" Grid.Column="0" Grid.ColumnSpan="3" Spacing="4">
               <TextBlock Text="یادداشت" Classes="fld" />
               <TextBox Text="{Binding Note}" Watermark="..." />
             </StackPanel>
 
-            <Border Classes="saved-badge" IsVisible="{Binding Saved}">
+            <Border Grid.Row="14" Grid.Column="0" Grid.ColumnSpan="3"
+                    Classes="saved-badge" IsVisible="{Binding Saved}">
               <TextBlock Text="{Binding SavedText}" HorizontalAlignment="Center" />
             </Border>
-          </StackPanel>
+          </Grid>
 
           <Button Grid.Row="2" Classes="save-btn" Classes.day="{Binding IsDay}"
                   Classes.night="{Binding IsNight}"
@@ -176,11 +198,11 @@
           <ScrollViewer Grid.Row="1" Padding="12">
             <ItemsControl ItemsSource="{Binding Reports}">
               <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                <ItemsPanelTemplate><c:AutoFillPanel MinItemWidth="268" Gap="12" /></ItemsPanelTemplate>
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:ReportCardViewModel">
-                  <Border Classes="card" Width="268" Margin="0,0,12,12">
+                  <Border Classes="card">
                     <StackPanel Spacing="7">
                       <Grid ColumnDefinitions="*,Auto">
                         <TextBlock Grid.Column="0" Text="{Binding Title}" FontWeight="Bold" FontSize="13" />

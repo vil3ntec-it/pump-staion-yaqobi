@@ -54,6 +54,7 @@ public sealed class UpdateService
 
             string? url = null, fullUrl = null;
             long size = 0, fullSize = 0;
+            var fullIsSetup = false;
             var localBase = AppBase.LocalId;
 
             if (root.TryGetProperty("assets", out var assets) && assets.ValueKind == JsonValueKind.Array)
@@ -77,8 +78,15 @@ public sealed class UpdateService
                         continue;
                     }
 
-                    fullUrl ??= u;
-                    if (fullSize == 0) fullSize = s;
+                    // بستهٔ کامل. نصاب بر زیپ ترجیح دارد: نصاب میان‌برها و
+                    // ثبتِ «برنامه‌ها و قابلیت‌ها» را هم تازه می‌کند، ولی زیپ
+                    // فقط فایل‌ها را جابه‌جا می‌کند. پس اگر نصاب در انتشار
+                    // باشد، همان برداشته می‌شود — حتی اگر زیپ زودتر آمده باشد.
+                    var isSetup = name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
+                    if (fullUrl is null || (isSetup && !fullIsSetup))
+                    {
+                        fullUrl = u; fullSize = s; fullIsSetup = isSetup;
+                    }
                 }
 
             if (url is null) { url = fullUrl; size = fullSize; }
@@ -161,7 +169,8 @@ public sealed class UpdateService
     /// نصبِ نسخهٔ گرفته‌شده و راه‌اندازیِ دوباره.
     ///
     /// دو حالت دارد:
-    ///   • ‎.exe‎ — نصاب است، همان اجرا می‌شود.
+    ///   • ‎.exe‎ — نصاب است، بی‌صدا اجرا می‌شود (خودش برنامه را می‌بندد،
+    ///     جایگزین می‌کند و باز می‌کند).
     ///   • ‎.zip‎ — بستهٔ بی‌نصب. کنارِ برنامه باز می‌شود و یک دستورِ کوچک
     ///     می‌نویسیم که صبر کند تا برنامه بسته شود، فایل‌های تازه را جای
     ///     فایل‌های کهنه بگذارد و دوباره برنامه را باز کند.
@@ -177,8 +186,15 @@ public sealed class UpdateService
             if (packagePath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
                 return LaunchZip(packagePath);
 
+            // ── نصاب ──
+            // ‎/SILENT‎ تا کاربر وسطِ به‌روزرسانی با پنجرهٔ ویزارد روبه‌رو نشود؛
+            // نصابِ ما ‎CloseApplications=yes‎ دارد، پس خودش برنامهٔ باز را
+            // می‌بندد، فایل‌ها را عوض می‌کند و دوباره بازش می‌کند.
+            // (بارِ اول که کاربر خودش ‎setup.exe‎ را می‌زند، بی‌آرگومان اجرا
+            //  می‌شود و ویزارد کامل را می‌بیند — این مسیر فقط به‌روزرسانی است.)
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(packagePath)
             {
+                Arguments = "/SILENT /NORESTART /RESTARTAPPLICATIONS",
                 UseShellExecute = true,
             });
             return true;

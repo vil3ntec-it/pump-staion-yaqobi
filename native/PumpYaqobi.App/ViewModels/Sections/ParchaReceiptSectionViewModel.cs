@@ -90,7 +90,7 @@ public sealed partial class ParchaReceiptRowViewModel : RowViewModel
 /// حسابِ همان شخص می‌شود — نیازی به جست‌وجو یا رفتن داخلِ حساب نیست. اگر همان
 /// رسید پیش‌تر از راهِ ورق آمده باشد، دوباره ثبت نمی‌شود.
 /// </summary>
-public sealed partial class ParchaReceiptSectionViewModel : SectionViewModel
+public sealed partial class ParchaReceiptSectionViewModel : SectionViewModel, IRowBatchHost
 {
     private readonly AppHost _host;
 
@@ -133,6 +133,30 @@ public sealed partial class ParchaReceiptSectionViewModel : SectionViewModel
                       || e.Liters != 0;
         if (hasData && !await Dialogs.ConfirmAsync("حذفِ رسید", "این رسید حذف شود؟")) return;
         await _host.ParchaReceipts.DeleteAsync(e.Id);
+        await RefreshAsync();
+    }
+
+    public int RowCount => Rows.Count;
+
+    /// <summary>
+    /// ‎Ctrl+عدد‎ / ‎Shift+عدد‎ روی جدولِ رسیدها.
+    ///
+    /// حذفِ گروهی عمداً از راهِ ‎DeleteRowAsync‎ نمی‌رود: آن برای ردیفِ پرشده
+    /// پنجرهٔ «مطمئنی؟» باز می‌کند، و ‎n‎ پنجرهٔ پشتِ‌سرِ هم یعنی کارِ خوابیده.
+    /// همان کاری که ‎_kbNoConfirm‎ در نسخهٔ وب می‌کرد: در حذفِ گروهی پرسش
+    /// نمی‌شود — خودِ عددی که کاربر تایپ کرده تصمیمش است.
+    /// </summary>
+    public async Task AddRowsAsync(int count)
+    {
+        for (var i = 0; i < count; i++) await _host.ParchaReceipts.AddAsync();
+        await RefreshAsync();
+    }
+
+    public async Task DeleteRowsAsync(int count)
+    {
+        if (count < 1 || Rows.Count < count) return;
+        for (var i = 0; i < count; i++)
+            await _host.ParchaReceipts.DeleteAsync(Rows[Rows.Count - 1 - i].Entity.Id);
         await RefreshAsync();
     }
 

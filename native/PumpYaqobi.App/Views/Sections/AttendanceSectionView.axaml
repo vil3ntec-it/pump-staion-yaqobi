@@ -24,11 +24,11 @@
       <ScrollViewer Grid.Row="0" HorizontalScrollBarVisibility="Auto" MaxHeight="250">
         <ItemsControl ItemsSource="{Binding Staff}">
           <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+            <ItemsPanelTemplate><c:AutoFillPanel MinItemWidth="252" Gap="12" /></ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:StaffViewModel">
-              <Border Classes="card" Width="252" Margin="0,0,12,12">
+              <Border Classes="card">
                 <StackPanel Spacing="7">
                   <TextBlock Text="{Binding Name}" Classes="h2" />
                   <Grid ColumnDefinitions="*,*,*">
@@ -72,11 +72,11 @@
       <c:ExcelGrid Grid.Row="2" ItemsSource="{Binding Rows}" x:CompileBindings="False">
         <DataGrid.Columns>
           <DataGridTextColumn Header="کارمند" Binding="{Binding StaffName}" Width="*" IsReadOnly="True" />
-          <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="130" />
-          <DataGridTextColumn Header="آمدن" Binding="{Binding In}" Width="110" />
-          <DataGridTextColumn Header="رفتن" Binding="{Binding Out}" Width="110" />
-          <DataGridTextColumn Header="ساعت" Binding="{Binding HoursText}" Width="110" IsReadOnly="True" />
-          <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="250" />
+          <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
+          <DataGridTextColumn Header="آمدن" Binding="{Binding In}" Width="Auto" />
+          <DataGridTextColumn Header="رفتن" Binding="{Binding Out}" Width="Auto" />
+          <DataGridTextColumn Header="ساعت" Binding="{Binding HoursText}" Width="Auto" IsReadOnly="True" />
+          <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="Auto" />
         </DataGrid.Columns>
       </c:ExcelGrid>
     </Grid>

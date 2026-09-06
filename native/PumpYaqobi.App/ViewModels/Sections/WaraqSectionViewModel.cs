@@ -160,7 +160,7 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
 }
 
 /// <summary>صفحهٔ یک ورق — شیفتِ روز و شب، پایه‌ها و ردیف‌های قرض/مصرف.</summary>
-public sealed partial class WaraqPageViewModel : ObservableObject
+public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
 {
     private readonly AppHost _host;
     private readonly WaraqSectionViewModel _section;
@@ -320,6 +320,33 @@ public sealed partial class WaraqPageViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task DeleteTxnAsync(WaraqTxnViewModel? row)
+    {
+        if (row is null) return;
+        var sd = Shift;
+        if (sd is null) return;
+        await _host.WaraqData.DeleteTxnAsync(row.Entity.Id);
+        sd.Transactions.Remove(row.Entity);
+        Txns.Remove(row);
+        Recalc();
+    }
+
+    public int RowCount => Txns.Count;
+
+    /// <summary>‎Ctrl+عدد‎ / ‎Shift+عدد‎ روی جدولِ تراکنش‌های ورقِ باز.
+    /// مثلِ نسخهٔ وب دستِ‌کم یک ردیف می‌ماند و ردیفِ کافی نبود، هیچ.</summary>
+    public async Task AddRowsAsync(int count)
+    {
+        for (var i = 0; i < count; i++) await AddTxnAsync();
+    }
+
+    public async Task DeleteRowsAsync(int count)
+    {
+        if (count < 1 || Txns.Count - count < 1) return;
+        for (var i = 0; i < count; i++) await DeleteTxnAsync(Txns[^1]);
+    }
+
+    [RelayCommand]
     private Task BackAsync() => _section.BackCommand.ExecuteAsync(null);
 
     public async Task FlushAsync()
@@ -390,6 +417,9 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
     [ObservableProperty] private WaraqPageViewModel? _page;
 
     public bool IsListVisible => Page is null;
+
+    /// <summary>ورقِ باز — تا باز است، میانبرهای ردیف به آن می‌روند نه به فهرست.</summary>
+    public override object? ActivePage => Page;
 
     partial void OnPageChanged(WaraqPageViewModel? v) => OnPropertyChanged(nameof(IsListVisible));
     partial void OnMonthChanged(string v) => _ = ReloadAsync();

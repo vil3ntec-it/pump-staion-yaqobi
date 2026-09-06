@@ -97,7 +97,7 @@ public sealed partial class DebtRowViewModel : RowViewModel
 /// ⚠️ «واحد پول» و «واحد تیل» دو دفترِ کاملاً جدا هستند. عوض کردنِ واحد،
 /// دفترِ دیده‌شده را عوض می‌کند — نه اینکه ردیف‌ها را از یکی به دیگری ببرد.
 /// </summary>
-public sealed partial class AccountViewModel : ObservableObject
+public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
 {
     private readonly AppHost _host;
     private readonly PersonViewModel _person;
@@ -230,6 +230,21 @@ public sealed partial class AccountViewModel : ObservableObject
         _person.Recalc();
     }
 
+    public int RowCount => Rows.Count;
+
+    /// <summary>‎Ctrl+عدد‎ / ‎Shift+عدد‎ — افزودن و برداشتنِ گروهیِ ردیف.
+    /// حذف فقط وقتی ردیفِ کافی باشد؛ وگرنه هیچ.</summary>
+    public async Task AddRowsAsync(int count)
+    {
+        for (var i = 0; i < count; i++) await AddRowAsync();
+    }
+
+    public async Task DeleteRowsAsync(int count)
+    {
+        if (count < 1 || Rows.Count < count) return;
+        for (var i = 0; i < count; i++) await DeleteRowAsync(Rows[^1]);
+    }
+
     public async Task FlushAsync()
     {
         foreach (var r in Rows.ToList()) await r.FlushAsync();
@@ -241,7 +256,7 @@ public sealed partial class AccountViewModel : ObservableObject
 /// حسابِ اصلی و حساب‌های فرعی، هر کدام دفترِ خودش. عددهای بالای صفحه
 /// جمعِ همهٔ حساب‌هاست و از همان سرویسِ آزموده می‌آید.
 /// </summary>
-public sealed partial class PersonViewModel : ObservableObject
+public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
 {
     private readonly AppHost _host;
     private readonly DebtSectionViewModel _section;
@@ -282,6 +297,15 @@ public sealed partial class PersonViewModel : ObservableObject
             _ => "—",
         };
     }
+
+    /// <summary>
+    /// میانبرهای ردیف به «حسابِ باز» می‌روند — حسابِ اصلی یا هر حسابِ فرعی که
+    /// همین حالا جلوی چشمِ کاربر است. دو دفترِ «تیل» و «پول» جدا می‌مانند،
+    /// چون هر حساب ردیف‌های خودش را دارد.
+    /// </summary>
+    public int RowCount => Current?.RowCount ?? 0;
+    public Task AddRowsAsync(int count) => Current?.AddRowsAsync(count) ?? Task.CompletedTask;
+    public Task DeleteRowsAsync(int count) => Current?.DeleteRowsAsync(count) ?? Task.CompletedTask;
 
     /// <summary>برگشت به فهرست — از راهِ خودِ بخش، تا ذخیرهٔ نیمه‌کاره جا نماند.</summary>
     [RelayCommand]

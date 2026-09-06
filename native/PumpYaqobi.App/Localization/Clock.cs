@@ -2,12 +2,12 @@ using PumpYaqobi.Application.Localization;
 
 namespace PumpYaqobi.App.Localization;
 
-/// <summary>نوشتهٔ ساعت و تاریخِ سربرگ.</summary>
+/// <summary>
+/// ساعتِ سربرگ. فقط ساعت — تاریخ خطِ بالای همین بلوک است (مثلِ نسخهٔ وب که
+/// ‎#headerDate‎ و خطِ دومش جدا هستند). پیش از این تاریخ در هر دو خط تکرار
+/// می‌شد.
+/// </summary>
 public static class Clock
 {
-    public static string Now()
-    {
-        var n = DateTime.Now;
-        return $"{Shamsi.DayName(n)}  {Shamsi.Of(n)}  ·  {n:HH:mm:ss}";
-    }
+    public static string Now() => $"{DateTime.Now:HH:mm:ss}";
 }

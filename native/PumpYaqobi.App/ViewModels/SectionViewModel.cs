@@ -41,6 +41,16 @@ public abstract partial class SectionViewModel : ObservableObject
     /// </summary>
     public virtual Task OnActivatedAsync() => Task.CompletedTask;
 
+    /// <summary>
+    /// صفحهٔ بازِ درونِ بخش — حسابِ شخص، صفحهٔ شرکت، ورق، حسابِ امانت…
+    /// اگر کاربر در فهرستِ کارت‌ها باشد ‎null‎ است.
+    ///
+    /// میانبرهای صفحه‌کلید «جدولِ جلوی چشمِ کاربر» را از همین می‌شناسند: تا
+    /// وقتی حسابی باز است، ‎Ctrl+عدد‎ به همان حساب ردیف می‌افزاید، نه به جدولِ
+    /// پشتِ آن. همان اولویتی که ‎_kbCtx()‎ در نسخهٔ وب داشت.
+    /// </summary>
+    public virtual object? ActivePage => null;
+
     /// <summary>بارگیریِ دوباره (پس از واردکردن بکاپ یا هم‌گام‌سازی).</summary>
     public virtual async Task ReloadAsync()
     {

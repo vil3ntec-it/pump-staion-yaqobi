@@ -93,7 +93,7 @@ public sealed partial class CompanyRowViewModel : RowViewModel
 }
 
 /// <summary>صفحهٔ حسابِ یک شرکت — دو دفترِ جدا: پطرول و دیزل.</summary>
-public sealed partial class CompanyPageViewModel : ObservableObject
+public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHost
 {
     private readonly AppHost _host;
     private readonly CompanySectionViewModel _section;
@@ -118,6 +118,21 @@ public sealed partial class CompanyPageViewModel : ObservableObject
     [ObservableProperty] private string _albaqiAfn = "";
     [ObservableProperty] private string _albaqiUsd = "";
     [ObservableProperty] private string _convRate = "";
+
+    public int RowCount => Rows.Count;
+
+    /// <summary>‎Ctrl+عدد‎ / ‎Shift+عدد‎ — افزودن و برداشتنِ گروهیِ ردیف.
+    /// حذف فقط وقتی ردیفِ کافی باشد؛ وگرنه هیچ.</summary>
+    public async Task AddRowsAsync(int count)
+    {
+        for (var i = 0; i < count; i++) await AddRowAsync();
+    }
+
+    public async Task DeleteRowsAsync(int count)
+    {
+        if (count < 1 || Rows.Count < count) return;
+        for (var i = 0; i < count; i++) await DeleteRowAsync(Rows[^1]);
+    }
 
     public FuelType Fuel => IsDiesel ? FuelType.Diesel : FuelType.Petrol;
 
@@ -230,7 +245,7 @@ public sealed class CompanyCardViewModel
 /// فهرستِ شرکت‌ها و صفحهٔ حسابِ هر کدام. جمع‌ها از سرویسی می‌آیند که با ۲۰۰
 /// شرکتِ تصادفیِ گرفته‌شده از خودِ نسخهٔ وب آزموده شده است.
 /// </summary>
-public sealed partial class CompanySectionViewModel : SectionViewModel
+public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGridHost
 {
     private readonly AppHost _host;
     private List<CompanyCardViewModel> _all = new();
@@ -246,6 +261,9 @@ public sealed partial class CompanySectionViewModel : SectionViewModel
     [ObservableProperty] private CompanyPageViewModel? _page;
 
     public bool IsListVisible => Page is null;
+
+    /// <summary>صفحهٔ شرکت — تا باز است، میانبرهای ردیف به آن می‌روند نه به فهرست.</summary>
+    public override object? ActivePage => Page;
 
     partial void OnPageChanged(CompanyPageViewModel? v) => OnPropertyChanged(nameof(IsListVisible));
     partial void OnSearchChanged(string v) => ApplyFilter();
@@ -266,6 +284,18 @@ public sealed partial class CompanySectionViewModel : SectionViewModel
         foreach (var c in _all)
             if (s.Length == 0 || c.Name.Contains(s, StringComparison.OrdinalIgnoreCase))
                 Cards.Add(c);
+    }
+
+
+    /// <summary>
+    /// ‎Alt+عدد‎ — کارتِ شمارهٔ ‎n‎ همان عددی است که زیرِ کارت نوشته شده، و
+    /// چون از روی فهرستِ <b>نمایش‌داده‌شده</b> شمرده می‌شود، با جست‌وجو هم
+    /// خودکار جابه‌جا می‌گردد.
+    /// </summary>
+    public Task OpenByNumberAsync(int number)
+    {
+        if (number < 1 || number > Cards.Count) return Task.CompletedTask;
+        return OpenAsync(Cards[number - 1]);
     }
 
     [RelayCommand]
