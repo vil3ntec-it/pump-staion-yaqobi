@@ -21,6 +21,7 @@ public sealed partial class WaraqPumpViewModel : RowViewModel
         Loading = true;
         _num = p.Num; _fuel = p.Fuel; _start = p.Start; _end = p.End;
         _price = p.PricePerLiter; _debt = p.Debt; _note = p.Note ?? "";
+        _worker = p.Worker ?? ""; _pumpDate = p.DateShamsi ?? "";
         Loading = false;
     }
 
@@ -34,6 +35,14 @@ public sealed partial class WaraqPumpViewModel : RowViewModel
     [ObservableProperty] private decimal _debt;
     [ObservableProperty] private string _note = "";
 
+    /// <summary>ستونِ «نام» — کارمندِ همین پایه، مثلِ جدولِ ورق در نسخهٔ وب.</summary>
+    [ObservableProperty] private string _worker = "";
+
+    /// <summary>ستونِ «تاریخ» — خالی یعنی همان تاریخِ ورق.</summary>
+    [ObservableProperty] private string _pumpDate = "";
+
+    partial void OnWorkerChanged(string v) => Touch();
+    partial void OnPumpDateChanged(string v) => Touch();
     partial void OnNumChanged(int v) => Touch();
     partial void OnFuelChanged(FuelType v) { Touch(); OnPropertyChanged(nameof(FuelText)); }
     partial void OnStartChanged(decimal v) { Touch(); Refresh(); }
@@ -69,6 +78,7 @@ public sealed partial class WaraqPumpViewModel : RowViewModel
     {
         _p.Num = Num; _p.Fuel = Fuel; _p.Start = Start; _p.End = End;
         _p.PricePerLiter = Price; _p.Debt = Debt; _p.Note = Note;
+        _p.Worker = Worker; _p.DateShamsi = PumpDate;
     }
 
     protected override Task SaveAsync() => _owner.SavePumpAsync(_p);

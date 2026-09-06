@@ -46,46 +46,32 @@ public sealed partial class ShiftFormViewModel : ObservableObject
     [ObservableProperty] private string _note = "";
     [ObservableProperty] private bool _saved;
 
-    /// <summary>فایدهٔ فی‌لیتر را کاربر خودش نوشته — دیگر خودکار پر نمی‌شود.</summary>
-    private bool _profitPerManual;
+    /// <summary>جلوگیری از حلقه وقتی خودِ ‎calcShift‎ کادرِ فایده را می‌نویسد.</summary>
+    private bool _writingProfitPer;
 
     partial void OnStartChanged(string v) => Recalc();
     partial void OnEndChanged(string v) => Recalc();
     partial void OnDebtChanged(string v) => Recalc();
-    partial void OnProfitPerChanged(string v) => Recalc();
+    partial void OnPriceChanged(string v) => Recalc();
 
-    partial void OnPriceChanged(string v)
-    {
-        AutoFillProfitPer();
-        Recalc();
-    }
-
-    /// <summary>کاربر روی خانهٔ فایده تایپ کرد.</summary>
-    public void MarkProfitPerManual() => _profitPerManual = true;
+    /// <summary>
+    /// ‎oninput="onProfitPerManual(p)"‎ در نسخهٔ وب هم بلافاصله ‎calcShift‎ را
+    /// صدا می‌زد؛ پس تایپِ دستی هم از همین مسیر می‌گذرد و اگر فیِ خرید و فیِ
+    /// فروش هر دو مثبت باشند، همان لحظه پس زده می‌شود. عمداً همان.
+    /// </summary>
+    partial void OnProfitPerChanged(string v) { if (!_writingProfitPer) Recalc(); }
 
     /// <summary>دکمهٔ «ذخیره شیفت …» روی همین کارت.</summary>
     [RelayCommand]
     private Task SaveAsync() => _owner.SaveShiftAsync(this);
 
-    /// <summary>
-    /// ‎autoFillProfitPerFromBuy‎ — فایدهٔ فی‌لیتر = فیِ فروش − فیِ خریدِ مخزن.
-    /// اگر کاربر خودش نوشته باشد، دست نمی‌خورد.
-    /// </summary>
-    public void AutoFillProfitPer()
-    {
-        if (_profitPerManual) return;
-        var buy = _owner.BuyPerLiter;
-        if (buy <= 0m) return;
-        var price = Shamsi.Num(Price);
-        if (price <= 0m) return;
-        SetProfitPerQuiet((price - buy).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture));
-    }
-
     private void SetProfitPerQuiet(string v)
     {
         if (_profitPer == v) return;
+        _writingProfitPer = true;
         _profitPer = v;
         OnPropertyChanged(nameof(ProfitPer));
+        _writingProfitPer = false;
     }
 
     public decimal StartValue => Shamsi.Num(Start);
@@ -94,29 +80,39 @@ public sealed partial class ShiftFormViewModel : ObservableObject
     public decimal PriceValue => Shamsi.Num(Price);
     public decimal ProfitPerValue => Shamsi.Num(ProfitPer);
 
-    private ShiftNumbers N =>
-        _owner.Calc.Compute(StartValue, EndValue, PriceValue, ProfitPerValue, DebtValue);
+    /// <summary>‎calcShift(p)‎ با همان ورودی‌هایی که آن تابع از DOM می‌خواند.</summary>
+    public ShiftCalc N => _owner.Calc.CalcShift(
+        StartValue, EndValue, PriceValue, DebtValue, _owner.BuyPerLiter, ProfitPerValue);
 
-    /// <summary>خانه‌های خودکار — تا وقتی چیزی وارد نشده «—» می‌مانند، مثلِ نسخهٔ وب.</summary>
-    public string SaleText => Empty ? "—" : Shamsi.Money(N.Sale);
-    public string MoneyText => Empty ? "—" : Shamsi.Money(N.Money);
-    public string ProfitText => Empty ? "—" : Shamsi.Money(N.Profit);
-    public string AvailableText => Empty ? "—" : Shamsi.Money(N.Available);
+    // خانه‌های خودکار و نوشته‌هایشان از خودِ ShiftCalc می‌آیند تا آزمونِ
+    // برابری همان چیزی را بسنجد که این‌جا نشان داده می‌شود.
+    public string SaleText => N.SaleText;
+    public string MoneyText => N.MoneyText;
+    public string ProfitText => N.ProfitText;
+    public string AvailableText => N.AvailableText;
+    public string BuyPerLabel => N.BuyPerLabel;
 
-    private bool Empty => Start.Length == 0 && End.Length == 0;
+    /// <summary>‎availEl.style.color = available >= 0 ? var(--green) : var(--red)‎</summary>
+    public string AvailableBrushKey => N.AvailableIsNegative ? "Pump.Danger" : "Pump.Ok";
 
-    /// <summary>«فی خرید فعلی: ۳۰٫۱ ؋» — همان نوشتهٔ زیرِ خانهٔ فایده.</summary>
-    public string BuyPerLabel =>
-        _owner.BuyPerLiter > 0m
-            ? "فی خرید فعلی: " + Shamsi.Money(Math.Round(_owner.BuyPerLiter, 1)) + " ؋"
-            : "";
-
+    /// <summary>
+    /// همان کاری که ‎calcShift‎ می‌کرد: اول کادرِ فایده را (در صورتِ خودکار
+    /// بودن) می‌نویسد، بعد چهار خانهٔ محاسبه‌شده را تازه می‌کند.
+    /// </summary>
     public void Recalc()
     {
-        foreach (var n in new[] { nameof(SaleText), nameof(MoneyText), nameof(ProfitText),
-                                  nameof(AvailableText), nameof(BuyPerLabel) })
-            OnPropertyChanged(n);
+        var n = N;
+        if (n.ProfitPerIsAuto)
+            SetProfitPerQuiet(n.ProfitPerBox.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture));
+
+        foreach (var name in new[] { nameof(SaleText), nameof(MoneyText), nameof(ProfitText),
+                                     nameof(AvailableText), nameof(AvailableBrushKey),
+                                     nameof(BuyPerLabel) })
+            OnPropertyChanged(name);
     }
+
+    /// <summary>‎clearShiftInputs(p)‎ — و بعد نرخِ اتحادیه دوباره می‌نشیند.</summary>
+    public void Clear() => Load(null);
 
     public void Load(ShiftData? s)
     {
@@ -125,32 +121,31 @@ public sealed partial class ShiftFormViewModel : ObservableObject
         Start = s is null || s.Start == 0m ? "" : Shamsi.Money(s.Start);
         End = s is null || s.End == 0m ? "" : Shamsi.Money(s.End);
         Debt = s is null || s.Debt == 0m ? "" : Shamsi.Money(s.Debt);
-        Price = s is null || s.Price == 0m ? "" : Shamsi.Money(s.Price);
-        _profitPerManual = false;
-        ProfitPer = s is null || s.ProfitPer == 0m ? "" : Shamsi.Money(s.ProfitPer);
         Note = s?.Note ?? "";
         Saved = s is not null && s.Id != 0;
-        AutoFillProfitPer();
+
+        SetProfitPerQuiet(s is null || s.ProfitPer == 0m ? "" : Shamsi.Money(s.ProfitPer));
+
+        // ── باگ‌فیکسِ نسخهٔ وب که این‌جا هم لازم است ──────────────────────
+        // ‎clearShiftInputs‎ فی را پاک می‌کرد و بعد ‎reapplyUnionRateToPrefix‎
+        // نرخِ روزِ اتحادیه را دوباره می‌نشاند. اگر این نباشد، «پارچهٔ جدید»
+        // نرخِ روز را می‌بَرد و کارمند باید هر بار دستی بنویسد.
+        if (s is not null && s.Price != 0m) Price = Shamsi.Money(s.Price);
+        else ReapplyUnionRate();
+
         Recalc();
     }
 
-    public ShiftData ToEntity(ShiftData? existing) =>
-        (existing ?? new ShiftData()) is var s && s is not null
-            ? Fill(s) : new ShiftData();
-
-    private ShiftData Fill(ShiftData s)
+    /// <summary>
+    /// ‎reapplyUnionRateToPrefix(p)‎ — نرخِ اتحادیهٔ **همین سوخت** در کادرِ فی.
+    /// نرخِ پطرول و دیزل دو کلیدِ جدا هستند و هرگز جای هم نمی‌نشینند.
+    /// </summary>
+    public void ReapplyUnionRate()
     {
-        s.Name = Name.Trim();
-        s.PumpNum = (int)Shamsi.Num(PumpNum);
-        s.Start = StartValue;
-        s.End = EndValue;
-        s.Debt = DebtValue;
-        s.Price = PriceValue;
-        s.ProfitPer = ProfitPerValue;
-        s.BuyPerLiter = _owner.BuyPerLiter;
-        s.Note = Note.Trim();
-        return s;
+        var rate = _owner.UnionRate;
+        Price = rate > 0m ? Shamsi.Money(rate) : "";
     }
+
 }
 
 /// <summary>یک گزارشِ ۲۴ ساعته در فهرستِ پایینِ صفحه.</summary>
@@ -204,6 +199,21 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
 
     internal ParchaService Calc => _host.Parcha;
 
+    /// <summary>
+    /// ‎_forceNewParcha‎ و ‎_forceNewDiesel‎ — دو جفتِ کاملاً جدا. دکمهٔ «پارچهٔ
+    /// جدیدِ روز» فقط پرچمِ روزِ **همان سوخت** را بالا می‌برد؛ پس زدنش هرگز
+    /// پارچهٔ شب یا پارچهٔ سوختِ دیگر را دست نمی‌زند. خواستهٔ صریحِ صاحب ریپو.
+    /// </summary>
+    private readonly Dictionary<(FuelType, ShiftKind), bool> _forceNew = new();
+
+    private bool ForceNew(FuelType f, ShiftKind k) =>
+        _forceNew.TryGetValue((f, k), out var v) && v;
+
+    private void SetForceNew(FuelType f, ShiftKind k, bool v) => _forceNew[(f, k)] = v;
+
+    /// <summary>نرخِ اتحادیهٔ همین سوخت — ‎DB.unionRatePetrol‎ / ‎unionRateDiesel‎.</summary>
+    internal decimal UnionRate => _host.Settings.UnionRate(Fuel);
+
     public ShiftFormViewModel Day { get; }
     public ShiftFormViewModel Night { get; }
 
@@ -230,6 +240,7 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
         OnPropertyChanged(nameof(FuelToggleText));
         OnPropertyChanged(nameof(Day));
         OnPropertyChanged(nameof(Night));
+        OnPropertyChanged(nameof(UnionRate));
         Day.Recalc(); Night.Recalc();
         _ = LoadAsync();
     }
@@ -242,11 +253,14 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
         await ReloadLogAsync();
     }
 
-    /// <summary>پارچهٔ همان تاریخ اگر باشد باز می‌شود، وگرنه کارت خالی می‌ماند.</summary>
+    /// <summary>
+    /// ‎getCurrentReport(fuel)‎ — **آخرین** پارچهٔ همان سوخت، نه پارچهٔ تاریخِ
+    /// نوشته‌شده. نسخهٔ وب هم همین را می‌کند؛ تاریخِ کادر تازه هنگامِ ذخیره
+    /// سنجیده می‌شود و اگر فرق داشت، پارچهٔ تازه باز می‌شود.
+    /// </summary>
     private async Task LoadCurrentAsync()
     {
-        var list = await _host.ParchaData.ListAsync(Fuel, Shamsi.MonthKey(PaDate));
-        _current = list.FirstOrDefault(r => r.DateShamsi == PaDate);
+        _current = await _host.ParchaData.CurrentAsync(Fuel);
         ReportNumText = _current is null ? "—" : _current.ReportNum.ToString();
         Day.Load(_current?.DayShift);
         Night.Load(_current?.NightShift);
@@ -262,79 +276,148 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
                 Reports.Add(new ReportCardViewModel(r, Calc));
     }
 
-    /// <summary>گزارشِ جاری؛ اگر نبود ساخته می‌شود.</summary>
-    private async Task<ParchaReport> EnsureReportAsync()
-    {
-        if (_current is not null) return _current;
-        _current = await _host.ParchaData.AddAsync(Fuel, PaDate);
-        ReportNumText = _current.ReportNum.ToString();
-        return _current;
-    }
-
+    /// <summary>
+    /// دکمهٔ «ذخیره شیفت …». کلِ منطقِ ‎saveShift‎ در
+    /// <see cref="ParchaDataService.SaveShiftFlowAsync"/> است — همان‌جا که
+    /// آزمونِ برابری با نسخهٔ وب آن را می‌سنجد. این‌جا فقط کادرها خوانده و
+    /// نتیجه نشان داده می‌شود.
+    /// </summary>
     internal async Task SaveShiftAsync(ShiftFormViewModel form)
     {
-        if (form.Name.Trim().Length == 0) { _host.Toast("نام کارمند را وارد کنید", ToastKind.Error); return; }
-        if (form.EndValue < form.StartValue)
-        { _host.Toast("ختم پایه نمی‌تواند کمتر از شروع باشد", ToastKind.Error); return; }
+        var fuel = Fuel;
+        var kind = form.Kind;
 
-        var rep = await EnsureReportAsync();
-        var existing = form.Kind == ShiftKind.Day ? rep.DayShift : rep.NightShift;
-        var shift = form.ToEntity(existing);
-        await _host.ParchaData.SaveShiftAsync(rep, form.Kind, shift);
-        if (form.Kind == ShiftKind.Day) rep.DayShift = shift; else rep.NightShift = shift;
+        var res = await _host.ParchaData.SaveShiftFlowAsync(new ShiftSaveRequest(
+            Fuel: fuel,
+            Kind: kind,
+            DateShamsi: PaDate,
+            Name: form.Name,
+            PumpNum: (int)Shamsi.Num(form.PumpNum),
+            Start: form.StartValue,
+            End: form.EndValue,
+            Price: form.PriceValue,
+            Debt: form.DebtValue,
+            BoxProfitPer: form.ProfitPerValue,
+            AvailMan: 0m,
+            Note: form.Note,
+            BuyPerLiter: BuyPerLiter,
+            ForceNew: ForceNew(fuel, kind)));
+
+        if (!res.Ok) { _host.Toast(res.Error ?? "", ToastKind.Error); return; }
+
+        SetForceNew(fuel, kind, false);
+        _current = res.Report;
+        if (res.Report is not null) ReportNumText = res.Report.ReportNum.ToString();
+
         form.Saved = true;
-        _host.Toast("✅ شیفت " + (form.IsDay ? "روز" : "شب") + " ذخیره شد", ToastKind.Ok);
+        _host.Toast(fuel == FuelType.Diesel
+                        ? "✅ پارچه دیزل ذخیره شد"
+                        : "✅ شیفت " + (form.IsDay ? "روز" : "شب") + " ذخیره شد",
+                    ToastKind.Ok);
+
+        // نسخهٔ وب پس از ذخیرهٔ دیزل فرم را خالی می‌کند، پطرول را نه
+        if (fuel == FuelType.Diesel) form.Clear();
+
         await ReloadLogAsync();
     }
 
-    partial void OnPaDateChanged(string v) => _ = LoadCurrentAsync();
+    partial void OnPaDateChanged(string v) => _ = PaDateChangedAsync((v ?? "").Trim());
 
-    /// <summary>«➕ گزارش جدید» — پارچهٔ تازه با همان تاریخ.</summary>
+    private async Task PaDateChangedAsync(string newDate)
+    {
+        if (newDate.Length == 0) return;
+
+        if (_current is null)
+        {
+            _current = await _host.ParchaData.AddAsync(Fuel, newDate);
+            ReportNumText = _current.ReportNum.ToString();
+            SetForceNew(Fuel, ShiftKind.Day, false);
+            SetForceNew(Fuel, ShiftKind.Night, false);
+            await ReloadLogAsync();
+            return;
+        }
+
+        var hasData = _current.DayShift is not null || _current.NightShift is not null;
+        if (hasData)
+        {
+            if ((_current.DateShamsi ?? "") == newDate) return;
+            _current = await _host.ParchaData.AddAsync(Fuel, newDate);
+            ReportNumText = _current.ReportNum.ToString();
+            SetForceNew(Fuel, ShiftKind.Day, false);
+            SetForceNew(Fuel, ShiftKind.Night, false);
+            Day.Clear(); Night.Clear();
+            await ReloadLogAsync();
+            _host.Toast("🆕 گزارش جدید برای " + newDate + " باز شد", ToastKind.Ok);
+        }
+        else
+        {
+            _current.DateShamsi = newDate;
+            await _host.ParchaData.SaveReportAsync(_current);
+            await ReloadLogAsync();
+        }
+    }
+
+    /// <summary>«➕ گزارش جدید» — ‎startNewReport()‎.</summary>
     [RelayCommand]
     private async Task StartNewReportAsync()
     {
+        if (_current is not null && _current.DayShift is null && _current.NightShift is null)
+        { _host.Toast("گزارش فعلی هنوز خالی است", ToastKind.Error); return; }
+
         _current = await _host.ParchaData.AddAsync(Fuel, PaDate);
         ReportNumText = _current.ReportNum.ToString();
-        Day.Load(null); Night.Load(null);
+        Day.Clear(); Night.Clear();
         await ReloadLogAsync();
+        _host.Toast("✅ گزارش جدید شروع شد", ToastKind.Ok);
     }
 
-    /// <summary>«🆕 پارچهٔ جدید روز/شب» — کارت خالی می‌شود، پارچهٔ پیشین دست‌نخورده می‌ماند.</summary>
+    /// <summary>
+    /// «🆕 پارچهٔ جدید روز» — ‎newParcha('day', fuel)‎.
+    ///
+    /// ⚠️ این‌جا **هیچ رکوردی ساخته نمی‌شود**: فقط پرچم بالا می‌رود و همان یک
+    /// کارت خالی می‌شود. پیش از این، هر بار زدنِ این دکمه یک پارچهٔ خالی در
+    /// دیتابیس می‌ساخت و چون کارتِ دیگر هم از همان پارچهٔ تازه بار می‌شد،
+    /// دادهٔ شیفتِ دیگر از جلوی چشم می‌رفت. نسخهٔ وب چنین نمی‌کند.
+    /// </summary>
     [RelayCommand]
-    private async Task NewParchaDayAsync()
-    {
-        _current = await _host.ParchaData.AddAsync(Fuel, PaDate);
-        ReportNumText = _current.ReportNum.ToString();
-        Day.Load(null);
-        await ReloadLogAsync();
-    }
+    private void NewParchaDay() => NewParcha(ShiftKind.Day);
 
     [RelayCommand]
-    private async Task NewParchaNightAsync()
+    private void NewParchaNight() => NewParcha(ShiftKind.Night);
+
+    private void NewParcha(ShiftKind kind)
     {
-        _current = await _host.ParchaData.AddAsync(Fuel, PaDate);
-        ReportNumText = _current.ReportNum.ToString();
-        Night.Load(null);
-        await ReloadLogAsync();
+        SetForceNew(Fuel, kind, true);
+        (kind == ShiftKind.Day ? Day : Night).Clear();
+        _host.Toast("🆕 پارچهٔ " + (IsDiesel ? "دیزل " : "") + "جدید "
+                    + (kind == ShiftKind.Day ? "روز" : "شب")
+                    + " — فرم خالی شد، حالا پر و ذخیره کن", ToastKind.Info);
     }
 
-    /// <summary>«← از شب» / «→ به شب» — انتقالِ ختمِ یک شیفت به شروعِ دیگری.</summary>
+    /// <summary>
+    /// ‎transferBase(from, to)‎ + ‎confirmTransfer()‎ — ختمِ پایهٔ مبدا به شروعِ
+    /// پایهٔ مقصد، و بعد بازمحاسبهٔ مقصد. کادرِ خالیِ مبدا انتقال نمی‌دهد.
+    /// </summary>
     [RelayCommand]
     private void PullBase(ShiftFormViewModel? to)
     {
         if (to is null) return;
-        var from = to.IsDay ? Night : Day;
-        if (from.End.Trim().Length == 0) { _host.Toast("ختم پایه مبدا خالی است", ToastKind.Error); return; }
-        to.Start = from.End;
+        TransferBase(to.IsDay ? Night : Day, to);
     }
 
     [RelayCommand]
     private void PushBase(ShiftFormViewModel? from)
     {
         if (from is null) return;
-        var to = from.IsDay ? Night : Day;
+        TransferBase(from, from.IsDay ? Night : Day);
+    }
+
+    private void TransferBase(ShiftFormViewModel from, ShiftFormViewModel to)
+    {
         if (from.End.Trim().Length == 0) { _host.Toast("ختم پایه مبدا خالی است", ToastKind.Error); return; }
-        to.Start = from.End;
+        to.Start = from.End;     // نشستنِ مقدار خودش ‎calcShift(to)‎ را می‌آورد
+        to.Recalc();
+        _host.Toast("✅ پایه انتقال یافت", ToastKind.Ok);
     }
 
     [RelayCommand]

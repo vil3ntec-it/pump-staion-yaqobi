@@ -21,6 +21,13 @@ public class SafeEntry : EntityBase, ILedgerRow
     public decimal Amount { get; set; }
     public Currency Currency { get; set; } = Currency.Afn;
     public string? Note { get; set; }
+
+    /// <summary>
+    /// اگر این ردیف را خودِ برنامه ساخته باشد، شناسهٔ منبعش این‌جاست —
+    /// «wq-sales-&lt;ورق&gt;-day|night» برای ردیفِ خودکارِ «فروشِ ورق».
+    /// ثبتِ دوبارهٔ همان منبع همین ردیف را به‌روز می‌کند، نه ردیفِ تازه.
+    /// </summary>
+    public string? SrcKey { get; set; }
 }
 
 /// <summary>ارزِ مبلغِ ورودیِ صرافی.</summary>
