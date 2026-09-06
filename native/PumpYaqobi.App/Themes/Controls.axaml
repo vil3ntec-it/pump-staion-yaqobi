@@ -144,8 +144,9 @@
   <Style Selector="Button.nav">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="CornerRadius" Value="11" />
     <Setter Property="Padding" Value="16,8" />
+    <Setter Property="FontWeight" Value="ExtraBold" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
   </Style>
@@ -161,6 +162,28 @@
   </Style>
   <Style Selector="Button.nav.active /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource Pump.AccentGrad}" />
+  </Style>
+
+  <!-- ══ کپسول‌های سربرگ ══════════════════════════════════════════════════
+       ‎.role-badge‎ و ‎#lockBtn‎ در نسخهٔ وب هر دو ‎border-radius:999px‎ اند و
+       اندازه‌گیری‌شان ۶۳×۳۰ و ۶۵×۴۰ در می‌آید. شعاعِ بزرگ در Avalonia همان
+       کپسول را می‌سازد. -->
+  <Style Selector="Border.pill">
+    <Setter Property="CornerRadius" Value="999" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.pill TextBlock">
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.pill-btn">
+    <Setter Property="CornerRadius" Value="999" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Background" Value="{DynamicResource Pump.Danger}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.pill-btn /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Pump.Danger}" />
+    <Setter Property="TextBlock.Foreground" Value="White" />
   </Style>
 
   <!-- ورودی‌ها -->
@@ -199,7 +222,7 @@
     <Setter Property="GridLinesVisibility" Value="All" />
     <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource Pump.GridLine}" />
     <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource Pump.GridLine}" />
-    <Setter Property="RowHeight" Value="36" />
+    <Setter Property="RowHeight" Value="44" />
     <Setter Property="HeadersVisibility" Value="Column" />
   </Style>
   <!-- دکمهٔ درونِ خانهٔ جدول (حذف، ثبت، …) وسطِ خانه بنشیند و از آن بیرون
@@ -213,15 +236,16 @@
   <Style Selector="DataGridColumnHeader">
     <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
-    <Setter Property="FontWeight" Value="Bold" />
-    <Setter Property="FontSize" Value="13.5" />
-    <Setter Property="Padding" Value="8,8" />
+    <Setter Property="FontWeight" Value="ExtraBold" />
+    <Setter Property="FontSize" Value="17" />
+    <Setter Property="Padding" Value="8,9" />
+    <Setter Property="MinHeight" Value="44" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="SeparatorBrush" Value="{DynamicResource Pump.GridLine}" />
   </Style>
   <Style Selector="DataGridCell">
-    <Setter Property="Padding" Value="8,2" />
-    <Setter Property="FontSize" Value="14.5" />
+    <Setter Property="Padding" Value="10,4" />
+    <Setter Property="FontSize" Value="17" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
   </Style>
   <Style Selector="DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">

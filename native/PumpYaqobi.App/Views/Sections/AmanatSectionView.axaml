@@ -135,21 +135,21 @@
 
       <c:ExcelGrid ItemsSource="{Binding Rows}">
         <DataGrid.Columns>
-          <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="114" />
+          <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
           <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
-          <DataGridTextColumn Header="رسید (لیتر)" Binding="{Binding LitersText}" Width="119" />
-          <DataGridTextColumn Header="برده‌شده" Binding="{Binding TakenText}" Width="110" />
-          <DataGridTextColumn Header="روز" Binding="{Binding DaysText}" Width="79" />
-          <DataGridTextColumn Header="گرما" Binding="{Binding TempText}" Width="79" />
-          <DataGridTextColumn Header="بخار" Binding="{Binding LossText}" Width="104" IsReadOnly="True" />
-          <DataGridTextColumn Header="٪ بخار" Binding="{Binding LossPctText}" Width="89" IsReadOnly="True" />
-          <DataGridTextColumn Header="سهمِ من" Binding="{Binding ShareText}" Width="104" IsReadOnly="True" />
-          <DataGridTextColumn Header="به من می‌رسد" Binding="{Binding NetText}" Width="119" IsReadOnly="True" />
-          <DataGridTextColumn Header="فیصدیِ لازم" Binding="{Binding AskPctText}" Width="110" IsReadOnly="True" />
-          <DataGridTextColumn Header="باقیِ تیل" Binding="{Binding RestText}" Width="114" IsReadOnly="True" />
-          <DataGridTextColumn Header="اندازهٔ واقعی" Binding="{Binding ActualText}" Width="119" />
-          <DataGridCheckBoxColumn Header="بسته" Binding="{Binding IsClosed}" Width="71" />
-          <DataGridTemplateColumn Header="" Width="71" IsReadOnly="True">
+          <DataGridTextColumn Header="رسید (لیتر)" Binding="{Binding LitersText}" Width="Auto" />
+          <DataGridTextColumn Header="برده‌شده" Binding="{Binding TakenText}" Width="Auto" />
+          <DataGridTextColumn Header="روز" Binding="{Binding DaysText}" Width="Auto" />
+          <DataGridTextColumn Header="گرما" Binding="{Binding TempText}" Width="Auto" />
+          <DataGridTextColumn Header="بخار" Binding="{Binding LossText}" Width="Auto" IsReadOnly="True" />
+          <DataGridTextColumn Header="٪ بخار" Binding="{Binding LossPctText}" Width="Auto" IsReadOnly="True" />
+          <DataGridTextColumn Header="سهمِ من" Binding="{Binding ShareText}" Width="Auto" IsReadOnly="True" />
+          <DataGridTextColumn Header="به من می‌رسد" Binding="{Binding NetText}" Width="Auto" IsReadOnly="True" />
+          <DataGridTextColumn Header="فیصدیِ لازم" Binding="{Binding AskPctText}" Width="Auto" IsReadOnly="True" />
+          <DataGridTextColumn Header="باقیِ تیل" Binding="{Binding RestText}" Width="Auto" IsReadOnly="True" />
+          <DataGridTextColumn Header="اندازهٔ واقعی" Binding="{Binding ActualText}" Width="Auto" />
+          <DataGridCheckBoxColumn Header="بسته" Binding="{Binding IsClosed}" Width="Auto" />
+          <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
                 <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"

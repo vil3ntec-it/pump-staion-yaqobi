@@ -53,8 +53,8 @@
 
     <c:ExcelGrid ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False">
       <DataGrid.Columns>
-        <DataGridTextColumn Header="تاریخ"  Binding="{Binding DateShamsi}" Width="120" />
-        <DataGridTemplateColumn Header="نوع" Width="110">
+        <DataGridTextColumn Header="تاریخ"  Binding="{Binding DateShamsi}" Width="Auto" />
+        <DataGridTemplateColumn Header="نوع" Width="Auto">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate x:DataType="vm:SafeRowViewModel">
               <TextBlock Text="{Binding KindText}" VerticalAlignment="Center" Margin="6,0" />
@@ -70,8 +70,8 @@
           </DataGridTemplateColumn.CellEditingTemplate>
         </DataGridTemplateColumn>
         <DataGridTextColumn Header="نام"   Binding="{Binding Title}"  Width="*" />
-        <DataGridTextColumn Header="مبلغ"  Binding="{Binding AmountText}" Width="140" />
-        <DataGridTemplateColumn Header="واحد" Width="100">
+        <DataGridTextColumn Header="مبلغ"  Binding="{Binding AmountText}" Width="Auto" />
+        <DataGridTemplateColumn Header="واحد" Width="Auto">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate x:DataType="vm:SafeRowViewModel">
               <TextBlock Text="{Binding CurrencyText}" VerticalAlignment="Center" Margin="6,0" />
@@ -86,8 +86,8 @@
             </DataTemplate>
           </DataGridTemplateColumn.CellEditingTemplate>
         </DataGridTemplateColumn>
-        <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="200" />
-        <DataGridTemplateColumn Header="" Width="60" IsReadOnly="True">
+        <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="Auto" />
+        <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate x:DataType="vm:SafeRowViewModel">
               <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"

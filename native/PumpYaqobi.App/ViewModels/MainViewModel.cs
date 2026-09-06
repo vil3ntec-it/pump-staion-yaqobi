@@ -67,6 +67,34 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _clock = "";
     [ObservableProperty] private bool _isLocked = true;
 
+    /// <summary>
+    /// نامِ نقشِ کاربر برای نشانِ سربرگ — همان ‎.role-badge‎ نسخهٔ وب.
+    /// با هر بار باز و بسته شدنِ قفل تازه می‌شود.
+    /// </summary>
+    public string RoleText => AppHost.Current.Session.Role switch
+    {
+        UserRole.Admin  => "🛡️ مدیر",
+        UserRole.Staff  => "👤 کارمند",
+        _               => "👁️ نظاره‌گر",
+    };
+
+    /// <summary>رنگِ نشانِ نقش — مدیر سبز، کارمند آبی، نظاره‌گر خاکستری.</summary>
+    public string RoleBrushKey => AppHost.Current.Session.Role switch
+    {
+        UserRole.Admin => "Pump.Ok",
+        UserRole.Staff => "Pump.Info",
+        _              => "Pump.Muted",
+    };
+
+    partial void OnIsLockedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(RoleText));
+        OnPropertyChanged(nameof(RoleBrushKey));
+    }
+
+    /// <summary>تاریخِ شمسیِ امروز — خطِ اولِ بلوکِ تاریخِ سربرگ.</summary>
+    public string TodayText => Shamsi.DayName(DateTime.Now) + "، " + Shamsi.Today();
+
     public LockViewModel Lock { get; }
 
     /// <summary>

@@ -156,10 +156,10 @@
             <c:ExcelGrid Grid.Row="1" ItemsSource="{Binding Dips}" x:CompileBindings="False"
                          BorderThickness="0" CornerRadius="0">
               <DataGrid.Columns>
-                <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="130" />
-                <DataGridTextColumn Header="اندازهٔ واقعی" Binding="{Binding MeasuredText}" Width="150" />
-                <DataGridTextColumn Header="اندازهٔ دفتری" Binding="{Binding ExpectedText}" Width="150" />
-                <DataGridTextColumn Header="اختلاف" Binding="{Binding DiffText}" Width="130" IsReadOnly="True" />
+                <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
+                <DataGridTextColumn Header="اندازهٔ واقعی" Binding="{Binding MeasuredText}" Width="Auto" />
+                <DataGridTextColumn Header="اندازهٔ دفتری" Binding="{Binding ExpectedText}" Width="Auto" />
+                <DataGridTextColumn Header="اختلاف" Binding="{Binding DiffText}" Width="Auto" IsReadOnly="True" />
                 <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="*" />
               </DataGrid.Columns>
             </c:ExcelGrid>

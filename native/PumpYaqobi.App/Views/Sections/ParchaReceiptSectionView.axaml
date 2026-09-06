@@ -24,16 +24,16 @@
       <c:ExcelGrid ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False"
                    IsVisible="{Binding !IsEmpty}">
         <DataGrid.Columns>
-          <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="46" IsReadOnly="True" />
-          <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="110" />
+          <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" IsReadOnly="True" />
+          <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
           <DataGridTextColumn Header="به حساب" Binding="{Binding Account}" Width="*" />
           <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
-          <DataGridTextColumn Header="نمبر حواله" Binding="{Binding Hawala}" Width="105" />
-          <DataGridTextColumn Header="مقدار تیل" Binding="{Binding LitersText}" Width="110" />
-          <DataGridTextColumn Header="فی لیتر" Binding="{Binding PriceText}" Width="95" />
-          <DataGridTextColumn Header="بردگی" Binding="{Binding BardagiText}" Width="115" IsReadOnly="True" />
-          <DataGridTextColumn Header="رسید" Binding="{Binding RasidText}" Width="110" />
-          <DataGridTemplateColumn Header="الباقی" Width="115" IsReadOnly="True">
+          <DataGridTextColumn Header="نمبر حواله" Binding="{Binding Hawala}" Width="Auto" />
+          <DataGridTextColumn Header="مقدار تیل" Binding="{Binding LitersText}" Width="Auto" />
+          <DataGridTextColumn Header="فی لیتر" Binding="{Binding PriceText}" Width="Auto" />
+          <DataGridTextColumn Header="بردگی" Binding="{Binding BardagiText}" Width="Auto" IsReadOnly="True" />
+          <DataGridTextColumn Header="رسید" Binding="{Binding RasidText}" Width="Auto" />
+          <DataGridTemplateColumn Header="الباقی" Width="Auto" IsReadOnly="True">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
                 <TextBlock Text="{Binding AlbaqiText}" FontWeight="Bold" Margin="8,0"
@@ -42,7 +42,7 @@
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
-          <DataGridTemplateColumn Header="" Width="110" IsReadOnly="True">
+          <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
                 <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">

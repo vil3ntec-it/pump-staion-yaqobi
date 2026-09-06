@@ -49,11 +49,11 @@
 
     <c:ExcelGrid ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False">
       <DataGrid.Columns>
-        <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="120" />
+        <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
         <DataGridTextColumn Header="عنوان" Binding="{Binding Title}" Width="*" />
-        <DataGridTextColumn Header="مبلغ"  Binding="{Binding AmountText}" Width="150" />
-        <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="240" />
-        <DataGridTemplateColumn Header="" Width="60" IsReadOnly="True">
+        <DataGridTextColumn Header="مبلغ"  Binding="{Binding AmountText}" Width="Auto" />
+        <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="Auto" />
+        <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate>
               <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"

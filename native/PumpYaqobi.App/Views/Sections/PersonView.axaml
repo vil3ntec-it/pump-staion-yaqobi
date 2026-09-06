@@ -110,10 +110,10 @@
       <!-- دفترِ حسابِ باز -->
       <c:ExcelGrid Grid.Row="2" ItemsSource="{Binding Current.Rows}" GrowsOnEnter="True" x:CompileBindings="False">
         <DataGrid.Columns>
-          <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="115" />
+          <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
           <DataGridTextColumn Header="نام"   Binding="{Binding Name}" Width="*" />
-          <DataGridTextColumn Header="حواله" Binding="{Binding Hawala}" Width="120" />
-          <DataGridTemplateColumn Header="تیل" Width="95">
+          <DataGridTextColumn Header="حواله" Binding="{Binding Hawala}" Width="Auto" />
+          <DataGridTemplateColumn Header="تیل" Width="Auto">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
                 <TextBlock Text="{Binding FuelText}" VerticalAlignment="Center" Margin="6,0" />
@@ -128,13 +128,13 @@
               </DataTemplate>
             </DataGridTemplateColumn.CellEditingTemplate>
           </DataGridTemplateColumn>
-          <DataGridTextColumn Header="لیتر"  Binding="{Binding LitersText}" Width="100" />
-          <DataGridTextColumn Header="فی"    Binding="{Binding PriceText}" Width="95" />
-          <DataGridTextColumn Header="بردگیِ دستی" Binding="{Binding ManualBardagiText}" Width="120" />
-          <DataGridTextColumn Header="بردگی" Binding="{Binding BardagiText}" Width="120" IsReadOnly="True" />
-          <DataGridTextColumn Header="رسید"  Binding="{Binding RasidText}" Width="110" />
-          <DataGridTextColumn Header="رسیدِ تیل" Binding="{Binding RasidFuelText}" Width="110" />
-          <DataGridTemplateColumn Header="" Width="60" IsReadOnly="True">
+          <DataGridTextColumn Header="لیتر"  Binding="{Binding LitersText}" Width="Auto" />
+          <DataGridTextColumn Header="فی"    Binding="{Binding PriceText}" Width="Auto" />
+          <DataGridTextColumn Header="بردگیِ دستی" Binding="{Binding ManualBardagiText}" Width="Auto" />
+          <DataGridTextColumn Header="بردگی" Binding="{Binding BardagiText}" Width="Auto" IsReadOnly="True" />
+          <DataGridTextColumn Header="رسید"  Binding="{Binding RasidText}" Width="Auto" />
+          <DataGridTextColumn Header="رسیدِ تیل" Binding="{Binding RasidFuelText}" Width="Auto" />
+          <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
                 <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"

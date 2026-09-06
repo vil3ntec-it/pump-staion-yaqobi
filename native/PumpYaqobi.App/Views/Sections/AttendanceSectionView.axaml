@@ -72,11 +72,11 @@
       <c:ExcelGrid Grid.Row="2" ItemsSource="{Binding Rows}" x:CompileBindings="False">
         <DataGrid.Columns>
           <DataGridTextColumn Header="کارمند" Binding="{Binding StaffName}" Width="*" IsReadOnly="True" />
-          <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="130" />
-          <DataGridTextColumn Header="آمدن" Binding="{Binding In}" Width="110" />
-          <DataGridTextColumn Header="رفتن" Binding="{Binding Out}" Width="110" />
-          <DataGridTextColumn Header="ساعت" Binding="{Binding HoursText}" Width="110" IsReadOnly="True" />
-          <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="250" />
+          <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
+          <DataGridTextColumn Header="آمدن" Binding="{Binding In}" Width="Auto" />
+          <DataGridTextColumn Header="رفتن" Binding="{Binding Out}" Width="Auto" />
+          <DataGridTextColumn Header="ساعت" Binding="{Binding HoursText}" Width="Auto" IsReadOnly="True" />
+          <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="Auto" />
         </DataGrid.Columns>
       </c:ExcelGrid>
     </Grid>

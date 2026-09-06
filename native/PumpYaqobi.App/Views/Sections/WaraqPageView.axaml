@@ -75,8 +75,8 @@
     <Grid RowDefinitions="*,10,*">
       <c:ExcelGrid Grid.Row="0" ItemsSource="{Binding Pumps}" x:CompileBindings="False">
         <DataGrid.Columns>
-          <DataGridTextColumn Header="پایه" Binding="{Binding Num}" Width="75" />
-          <DataGridTemplateColumn Header="تیل" Width="93">
+          <DataGridTextColumn Header="پایه" Binding="{Binding Num}" Width="Auto" />
+          <DataGridTemplateColumn Header="تیل" Width="Auto">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate><TextBlock Text="{Binding FuelText}" VerticalAlignment="Center" Margin="6,0" /></DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
@@ -88,14 +88,14 @@
               </DataTemplate>
             </DataGridTemplateColumn.CellEditingTemplate>
           </DataGridTemplateColumn>
-          <DataGridTextColumn Header="شروع" Binding="{Binding StartText}" Width="128" />
-          <DataGridTextColumn Header="ختم" Binding="{Binding EndText}" Width="128" />
-          <DataGridTextColumn Header="لیتر" Binding="{Binding LitersText}" Width="108" IsReadOnly="True" />
-          <DataGridTextColumn Header="فی" Binding="{Binding PriceText}" Width="88" />
-          <DataGridTextColumn Header="فروش" Binding="{Binding SalesText}" Width="128" IsReadOnly="True" />
-          <DataGridTextColumn Header="قرضِ پایه" Binding="{Binding DebtText}" Width="118" />
+          <DataGridTextColumn Header="شروع" Binding="{Binding StartText}" Width="Auto" />
+          <DataGridTextColumn Header="ختم" Binding="{Binding EndText}" Width="Auto" />
+          <DataGridTextColumn Header="لیتر" Binding="{Binding LitersText}" Width="Auto" IsReadOnly="True" />
+          <DataGridTextColumn Header="فی" Binding="{Binding PriceText}" Width="Auto" />
+          <DataGridTextColumn Header="فروش" Binding="{Binding SalesText}" Width="Auto" IsReadOnly="True" />
+          <DataGridTextColumn Header="قرضِ پایه" Binding="{Binding DebtText}" Width="Auto" />
           <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="*" />
-          <DataGridTemplateColumn Header="" Width="75" IsReadOnly="True">
+          <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
                 <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"
