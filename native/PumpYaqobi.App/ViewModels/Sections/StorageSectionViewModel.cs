@@ -88,7 +88,7 @@ public sealed partial class DipRowViewModel : RowViewModel
         _d = d; _owner = owner;
         Loading = true;
         _dateShamsi = d.DateShamsi ?? ""; _measured = d.Measured; _expected = d.Expected;
-        _note = d.Note ?? "";
+        _note = d.Note ?? ""; _applyToBook = d.BookAdjust != 0m;
         Loading = false;
     }
 
@@ -99,17 +99,28 @@ public sealed partial class DipRowViewModel : RowViewModel
     [ObservableProperty] private decimal _expected;
     [ObservableProperty] private string _note = "";
 
+    /// <summary>
+    /// «دفتر برابر شود» — تیکِ همان کادرِ ‎dip-apply‎ی نسخهٔ وب. با زدنش،
+    /// اختلافِ همین میله‌زنی در موجودیِ مخزن شمرده می‌شود.
+    /// </summary>
+    [ObservableProperty] private bool _applyToBook;
+
     partial void OnDateShamsiChanged(string v) => Touch();
     partial void OnMeasuredChanged(decimal v) { Touch(); Refresh(); }
     partial void OnExpectedChanged(decimal v) { Touch(); Refresh(); }
     partial void OnNoteChanged(string v) => Touch();
+    partial void OnApplyToBookChanged(bool v) { Touch(); Refresh(); }
 
     private void Refresh()
     {
         OnPropertyChanged(nameof(MeasuredText));
         OnPropertyChanged(nameof(ExpectedText));
         OnPropertyChanged(nameof(DiffText));
+        OnPropertyChanged(nameof(BookAdjustText));
     }
+
+    /// <summary>چقدر از این میله‌زنی واقعاً به دفتر رفت — صفر یعنی هیچ.</summary>
+    public string BookAdjustText => ApplyToBook ? Shamsi.Money(Measured - Expected) : "—";
 
     public string MeasuredText { get => Shamsi.Money(Measured); set => Measured = Shamsi.Num(value); }
     public string ExpectedText { get => Shamsi.Money(Expected); set => Expected = Shamsi.Num(value); }
@@ -120,6 +131,7 @@ public sealed partial class DipRowViewModel : RowViewModel
     protected override void Apply()
     {
         _d.DateShamsi = DateShamsi; _d.Measured = Measured; _d.Expected = Expected; _d.Note = Note;
+        _d.BookAdjust = ApplyToBook ? Measured - Expected : 0m;
     }
 
     protected override Task SaveAsync() => _owner.SaveDipAsync(_d);
@@ -216,7 +228,9 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         var reports = await _host.StorageData.ReportsAsync(Fuel);
         var threshold = _host.Settings.GetDecimal(
             PumpYaqobi.Services.Data.SettingsService.LowStockThreshold, 1000m);
-        var t = Calc.Tank(Purchases.Select(p => p.Entity), reports, threshold);
+        // میله‌زنی‌ها هم به موجودی می‌رسند: «برابر کردنِ دفتر با عددِ واقعی»
+        var t = Calc.Tank(Purchases.Select(p => p.Entity), reports, threshold,
+                          Dips.Select(d => d.Entity));
 
         Current = Shamsi.Money(Math.Round(t.Display, 0, MidpointRounding.AwayFromZero));
         TotalIn = Shamsi.Money(Math.Round(t.In, 0, MidpointRounding.AwayFromZero));

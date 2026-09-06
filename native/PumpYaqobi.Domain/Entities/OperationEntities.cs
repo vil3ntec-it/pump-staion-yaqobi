@@ -82,6 +82,19 @@ public class TankDip : EntityBase, ILedgerRow
     public string? MonthKey { get; set; }
     public decimal Measured { get; set; }
     public decimal Expected { get; set; }
+
+    /// <summary>
+    /// «دفتر برابرِ عددِ واقعی شود» — همان ‎DB.tankAdjusts‎ی نسخهٔ وب.
+    ///
+    /// وقتی مدیر در میله‌زنی این را بزند، فرقِ میله‌زنی با دفتر این‌جا ثبت
+    /// می‌شود و از آن پس در موجودیِ مخزن، داشبورد و هشدارِ کمبود شمرده
+    /// می‌شود. صفر یعنی «فقط ثبت شد، دفتر دست نخورد».
+    ///
+    /// ⚠️ با برداشتنِ همین میله‌زنی، اصلاح هم برمی‌گردد — چون روی خودِ رکورد
+    /// نشسته، نه در فهرستی جدا.
+    /// </summary>
+    public decimal BookAdjust { get; set; }
+
     public string? Note { get; set; }
 }
 

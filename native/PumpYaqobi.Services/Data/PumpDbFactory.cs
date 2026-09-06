@@ -60,6 +60,7 @@ public sealed class PumpDbFactory
             ("WaraqPumps", "Worker", "TEXT"),
             ("WaraqPumps", "DateShamsi", "TEXT"),
             ("SafeEntries", "SrcKey", "TEXT"),
+            ("TankDips", "BookAdjust", "TEXT NOT NULL DEFAULT '0'"),
         };
 
         foreach (var (table, column, type) in wanted)

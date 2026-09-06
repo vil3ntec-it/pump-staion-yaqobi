@@ -160,6 +160,8 @@
                 <DataGridTextColumn Header="اندازهٔ واقعی" Binding="{Binding MeasuredText}" Width="Auto" />
                 <DataGridTextColumn Header="اندازهٔ دفتری" Binding="{Binding ExpectedText}" Width="Auto" />
                 <DataGridTextColumn Header="اختلاف" Binding="{Binding DiffText}" Width="Auto" IsReadOnly="True" />
+                <DataGridCheckBoxColumn Header="دفتر برابر شود" Binding="{Binding ApplyToBook}" Width="Auto" />
+                <DataGridTextColumn Header="رفته به دفتر" Binding="{Binding BookAdjustText}" Width="Auto" IsReadOnly="True" />
                 <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="*" />
               </DataGrid.Columns>
             </c:ExcelGrid>
