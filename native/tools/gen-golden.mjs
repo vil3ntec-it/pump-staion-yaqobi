@@ -352,5 +352,62 @@ const dash = await page.evaluate(() => {
 fs.writeFileSync(path.join(OUT, 'golden-dash.json'), JSON.stringify(dash));
 console.log('  ✔ golden-dash.json — ' + dash.growth.length + ' رشد و ' + dash.layout.length + ' نوار');
 
+// ── بردنِ ردیف به حسابِ صاحبش ─────────────────────────────────────────────
+// «رسید پارچه‌ها» و «ورق روزانه» هر دو از همین چند تابع رد می‌شوند. تطبیقِ نام
+// سه پله امتیاز دارد و ساده به‌نظر می‌رسد تا وقتی که یک حسابِ فرعیِ هم‌نام
+// وسط باشد — این‌جا همان حالت‌ها هم ساخته می‌شوند.
+const posting = await page.evaluate(() => {
+  let seed = 771;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  const pick = a => a[Math.floor(rnd() * a.length) % a.length];
+
+  const first = ['احمد', 'محمود', 'حاجی', 'نور', 'عبدالله', 'ولی', 'سید', 'گل'];
+  const last  = ['خان', 'محمد', 'الدین', 'آغا', 'جان', 'شاه'];
+  const noise = ['دیزل', 'پطرول', 'بنزین', 'حواله', 'نقد', ''];
+
+  // چند شخص با حساب‌های فرعی — سرِ همین‌ها تطبیق سخت می‌شود
+  const persons = [];
+  for (let i = 0; i < 14; i++) {
+    const nm = pick(first) + ' ' + pick(last);
+    const subs = [];
+    const nSub = Math.floor(rnd() * 3);
+    for (let k = 0; k < nSub; k++) subs.push({ id: 's' + i + k, name: nm + ' ' + pick(last), rows: [] });
+    persons.push({ id: 'p' + i, name: nm, subs, rows: [] });
+  }
+  const realPersons = DB.debtPersons;
+  DB.debtPersons = persons;
+
+  const cases = [];
+  for (let i = 0; i < 300; i++) {
+    const target = pick(persons);
+    const useSub = target.subs.length && rnd() < 0.45;
+    const base = useSub ? pick(target.subs).name : target.name;
+    // گاهی نامِ کامل، گاهی نصفه، گاهی با کلمهٔ اضافه
+    const mode = Math.floor(rnd() * 4);
+    const typed = mode === 0 ? base
+                : mode === 1 ? base.split(' ')[0]
+                : mode === 2 ? base + ' ' + pick(noise)
+                : pick(first) + ' ' + pick(last);
+    const raw = typed + ' ' + pick(noise);
+    const found = findDebtAcctForText(raw, typed);
+    cases.push({ raw, typed,
+                 person: found ? found.person.name : null,
+                 acct: found ? (found.acct.name || found.person.name) : null });
+  }
+
+  const texts = [];
+  for (let i = 0; i < 200; i++) {
+    const t = pick(first) + (rnd() < .5 ? '  ' : ' ') + pick(last)
+            + (rnd() < .5 ? ' ' + pick(noise) : '')
+            + (rnd() < .3 ? ' ۱۲۳' : '') + (rnd() < .3 ? ' ي ك' : '');
+    texts.push({ t, norm: normFa(t), strip: _stripFuelWords(t), fuel: _detectFuelType(t) });
+  }
+
+  DB.debtPersons = realPersons;
+  return { persons: persons.map(p => ({ name: p.name, subs: p.subs.map(s => s.name) })), cases, texts };
+});
+fs.writeFileSync(path.join(OUT, 'golden-posting.json'), JSON.stringify(posting));
+console.log('  ✔ golden-posting.json — ' + posting.cases.length + ' تطبیق و ' + posting.texts.length + ' متن');
+
 console.log('\n  خطای جاوااسکریپت:', errs.length ? errs.slice(0, 3) : 'ندارد');
 await browser.close();

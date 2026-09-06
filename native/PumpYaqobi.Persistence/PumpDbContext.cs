@@ -38,6 +38,8 @@ public sealed class PumpDbContext : DbContext
     public DbSet<AmanatAccount> AmanatAccounts => Set<AmanatAccount>();
     public DbSet<AmanatRow> AmanatRows => Set<AmanatRow>();
     public DbSet<WaraqEntry> WaraqEntries => Set<WaraqEntry>();
+    /// <summary>صفِ «رسید پارچه‌ها» — ردیف‌هایی که هنوز واردِ حسابِ کسی نشده‌اند.</summary>
+    public DbSet<ParchaReceipt> ParchaReceipts => Set<ParchaReceipt>();
     public DbSet<WaraqShift> WaraqShifts => Set<WaraqShift>();
     public DbSet<WaraqPump> WaraqPumps => Set<WaraqPump>();
     public DbSet<WaraqTransaction> WaraqTransactions => Set<WaraqTransaction>();
@@ -88,6 +90,12 @@ public sealed class PumpDbContext : DbContext
             e.HasQueryFilter(x => x.DeletedAt == null);
         });
 
+        b.Entity<ParchaReceipt>(e =>
+        {
+            e.HasIndex(x => x.DateKey);
+            e.HasIndex(x => x.Account);
+        });
+
         b.Entity<DebtRow>(e =>
         {
             e.HasKey(x => x.Id);
@@ -98,6 +106,7 @@ public sealed class PumpDbContext : DbContext
             e.HasIndex(x => x.Fuel);                            // تفکیکِ پطرول/دیزل
             e.HasIndex(x => x.Name);
             e.HasIndex(x => x.InvoiceId);
+            e.HasIndex(x => x.SrcKey);      // یافتنِ ردیفِ هم‌منبع هنگامِ ثبتِ دوباره
             e.Property(x => x.Fuel).HasConversion<int>();
             e.HasQueryFilter(x => x.DeletedAt == null);
         });

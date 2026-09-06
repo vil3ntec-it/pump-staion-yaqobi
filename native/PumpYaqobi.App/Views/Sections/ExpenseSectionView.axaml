@@ -8,7 +8,12 @@
   <c:SectionPage Header="مصارف" SubHeader="مصارفِ ماه — همین جمع در «مفاد / ضرر» هم به کار می‌رود">
 
     <c:SectionPage.Toolbar>
-      <Button Classes="accent" Content="ردیفِ تازه" Command="{Binding AddRowCommand}" />
+      <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+        <Button Classes="ghost info" Content="📅 ماه جدید" Margin="0,0,6,0" />
+        <Button Classes="ghost" Content="📄 PDF" Margin="0,0,6,0"
+                Foreground="{DynamicResource Pump.Ok}" BorderBrush="{DynamicResource Pump.Ok}" />
+        <Button Classes="accent" Content="+ ردیف" Command="{Binding AddRowCommand}" />
+      </WrapPanel>
     </c:SectionPage.Toolbar>
 
     <c:SectionPage.Filters>
@@ -19,12 +24,27 @@
     </c:SectionPage.Filters>
 
     <c:SectionPage.Summary>
-      <Border Classes="stat" HorizontalAlignment="Right">
-        <StackPanel Spacing="3">
-          <TextBlock Text="جمعِ مصارفِ ماه" Classes="label" />
-          <TextBlock Text="{Binding TotalText, StringFormat={}{0} افغانی}" Classes="num" />
-        </StackPanel>
-      </Border>
+      <Grid ColumnDefinitions="*,12,*,12,*">
+        <Border Grid.Column="0" Classes="stat" HorizontalAlignment="Stretch">
+          <StackPanel Spacing="3">
+            <TextBlock Text="مصارف امروز" Classes="label" />
+            <TextBlock Text="{Binding TodayText, StringFormat={}{0} افغانی}" Classes="num"
+                       Foreground="{DynamicResource Pump.Danger}" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="2" Classes="stat" HorizontalAlignment="Stretch">
+          <StackPanel Spacing="3">
+            <TextBlock Text="مصرف این ماه" Classes="label" />
+            <TextBlock Text="{Binding TotalText, StringFormat={}{0} افغانی}" Classes="num" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="4" Classes="stat" HorizontalAlignment="Stretch">
+          <StackPanel Spacing="3">
+            <TextBlock Text="مصارف کل" Classes="label" />
+            <TextBlock Text="{Binding GrandText, StringFormat={}{0} افغانی}" Classes="num" />
+          </StackPanel>
+        </Border>
+      </Grid>
     </c:SectionPage.Summary>
 
     <c:ExcelGrid ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False">

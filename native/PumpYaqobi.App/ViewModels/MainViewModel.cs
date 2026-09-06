@@ -4,12 +4,29 @@ using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.App.Themes;
 using PumpYaqobi.App.ViewModels.Sections;
+using PumpYaqobi.Application.Localization;
+using PumpYaqobi.Application.Services;
+using PumpYaqobi.Domain.Enums;
 
 namespace PumpYaqobi.App.ViewModels;
 
 /// <summary>
-/// پوستهٔ برنامه: سربرگ، نوارِ بخش‌ها و ناحیهٔ محتوا.
-/// همان هجده دکمهٔ نوارِ نسخهٔ وب، با همان ترتیب و همان نام‌ها.
+/// یک عددِ نوارِ خبرِ بالای صفحه (‎.tb-item‎) — برچسب، عدد و رنگِ همان عدد.
+/// </summary>
+public sealed partial class BannerItemViewModel : ObservableObject
+{
+    public BannerItemViewModel(string label, string colorKey)
+    { Label = label; ColorKey = colorKey; }
+
+    public string Label { get; }
+    public string ColorKey { get; }
+
+    [ObservableProperty] private string _value = "0";
+}
+
+/// <summary>
+/// پوستهٔ برنامه: سربرگ، نوارِ خبر، نوارِ افقیِ بخش‌ها و ناحیهٔ محتوا.
+/// همان چیدمانِ نسخهٔ وب — نوار بالا می‌ماند و فقط محتوا اسکرول می‌شود.
 /// </summary>
 public sealed partial class MainViewModel : ObservableObject
 {
@@ -31,6 +48,18 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     public ObservableCollection<SectionViewModel> Sections { get; }
+
+    /// <summary>
+    /// چهار عددِ نوارِ بالا — همان ‎#topBanner‎: الباقیِ شرکت‌ها، قرضِ کل،
+    /// مفادِ امروز و مصارفِ امروز. با هر بار عوض کردنِ بخش تازه می‌شوند.
+    /// </summary>
+    public ObservableCollection<BannerItemViewModel> Banner { get; } = new()
+    {
+        new BannerItemViewModel("شرکت ها تیل (الباقی)", "Pump.Accent"),
+        new BannerItemViewModel("قرض کل", "Pump.Danger"),
+        new BannerItemViewModel("مفاد امروز", "Pump.Ok"),
+        new BannerItemViewModel("مصارف امروز", "Pump.Warn"),
+    };
     public ObservableCollection<PumpTheme> Themes { get; }
 
     [ObservableProperty] private SectionViewModel? _current;
@@ -69,6 +98,46 @@ public sealed partial class MainViewModel : ObservableObject
         _settings.Save();
         await s.EnsureLoadedAsync();
         await s.OnActivatedAsync();
+        await RefreshBannerAsync();
+    }
+
+    /// <summary>
+    /// چهار عددِ نوارِ بالا — همان ‎updateBanner‎ِ نسخهٔ وب. فقط خواندنی است و
+    /// هر بار که کاربر بخشی را باز می‌کند تازه می‌شود.
+    /// </summary>
+    public async Task RefreshBannerAsync()
+    {
+        var host = AppHost.Current;
+        var calc = new DashboardService();
+
+        // ۱) الباقیِ شرکت‌های تیل
+        var companies = await host.Companies.ListAsync();
+        var compAlbaqi = companies.Sum(c => host.Company.Summarize(c, c.Rows).AlbaqiAfn);
+
+        // ۲) قرضِ کلِ قرض‌داران — با همان خوددرمانیِ کارت‌ها
+        var accounts = await host.Debtors.AccountsByDebtorAsync();
+        decimal debt = 0;
+        foreach (var list in accounts.Values)
+        {
+            foreach (var a in list) host.Debt.NormalizeAccount(a);
+            debt += host.Debt.SumTotals(list).All.Albaqi;
+        }
+
+        // ۳) مفادِ امروز — جمعِ فایدهٔ هر دو شیفتِ پارچه‌های همین تاریخ
+        var today = Shamsi.Today();
+        var reports = (await host.StorageData.ReportsAsync(FuelType.Petrol))
+            .Concat(await host.StorageData.ReportsAsync(FuelType.Diesel))
+            .Where(r => r.DateShamsi == today);
+        var profit = reports.Sum(r => (r.DayShift?.Profit ?? 0) + (r.NightShift?.Profit ?? 0));
+
+        // ۴) مصارفِ امروز
+        var expToday = calc.ExpQuick(await host.ExpenseLedger.ListAsync(null)).Day;
+
+        string M(decimal v) => Shamsi.Money(Math.Round(v, 0, MidpointRounding.AwayFromZero)) + " افغانی";
+        Banner[0].Value = M(compAlbaqi);
+        Banner[1].Value = M(debt);
+        Banner[2].Value = M(profit);
+        Banner[3].Value = M(expToday);
     }
 
     /// <summary>ترتیبِ نوار، مو‌به‌مو مثلِ <c>&lt;div class="nav"&gt;</c> در نسخهٔ وب.</summary>

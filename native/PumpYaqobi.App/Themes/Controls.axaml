@@ -124,13 +124,13 @@
   </Style>
 
   <!-- دکمه‌های ناوبری -->
+  <!-- نوارِ بخش‌ها افقی است، پس دکمه‌ها به اندازهٔ نوشتهٔ خودشان‌اند و کشیده نمی‌شوند -->
   <Style Selector="Button.nav">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="10" />
-    <Setter Property="Padding" Value="12,9" />
-    <Setter Property="HorizontalAlignment" Value="Stretch" />
-    <Setter Property="HorizontalContentAlignment" Value="Right" />
+    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
   </Style>
   <Style Selector="Button.nav /template/ ContentPresenter#PART_ContentPresenter">

@@ -420,3 +420,26 @@ public class AuditEntry : EntityBase
     public string? Target { get; set; }
     public string? Detail { get; set; }
 }
+
+/// <summary>
+/// یک ردیفِ «رسید پارچه‌ها» (‎DB.parchaReceipts‎).
+///
+/// این‌ها هنوز واردِ حسابِ کسی نشده‌اند — یک صفِ انتظارند. با «📥» یا «ثبت همه»
+/// به حسابِ صاحبشان می‌روند و از این صف برداشته می‌شوند.
+/// </summary>
+public class ParchaReceipt : EntityBase
+{
+    public string? LegacyId { get; set; }
+    public string? DateShamsi { get; set; }
+    public int DateKey { get; set; }
+    /// <summary>«به حساب» — نامی که ردیف باید به حسابِ او برود.</summary>
+    public string? Account { get; set; }
+    /// <summary>توضیحِ ردیف؛ نامِ حسابِ فرعی هم می‌تواند داخلش باشد.</summary>
+    public string? Name { get; set; }
+    public string? Hawala { get; set; }
+    public decimal Liters { get; set; }
+    public decimal PricePerLiter { get; set; }
+    public decimal Rasid { get; set; }
+    /// <summary>پس از ثبتِ موفق، ردیف از صف برداشته می‌شود؛ این فقط نشانِ دیداری است.</summary>
+    public bool Posted { get; set; }
+}
