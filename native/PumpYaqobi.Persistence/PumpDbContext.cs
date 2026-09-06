@@ -40,6 +40,8 @@ public sealed class PumpDbContext : DbContext
     public DbSet<WaraqEntry> WaraqEntries => Set<WaraqEntry>();
     /// <summary>صفِ «رسید پارچه‌ها» — ردیف‌هایی که هنوز واردِ حسابِ کسی نشده‌اند.</summary>
     public DbSet<ParchaReceipt> ParchaReceipts => Set<ParchaReceipt>();
+    /// <summary>«رسید قرض‌داران» — پرداختِ نقدیِ مستقیم به حساب.</summary>
+    public DbSet<DebtQuickReceipt> DebtQuickReceipts => Set<DebtQuickReceipt>();
     public DbSet<WaraqShift> WaraqShifts => Set<WaraqShift>();
     public DbSet<WaraqPump> WaraqPumps => Set<WaraqPump>();
     public DbSet<WaraqTransaction> WaraqTransactions => Set<WaraqTransaction>();
@@ -110,6 +112,16 @@ public sealed class PumpDbContext : DbContext
             e.HasIndex(x => x.InvoiceId);
             e.HasIndex(x => x.SrcKey);      // یافتنِ ردیفِ هم‌منبع هنگامِ ثبتِ دوباره
             e.Property(x => x.Fuel).HasConversion<int>();
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        b.Entity<DebtQuickReceipt>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.DateKey);
+            e.HasIndex(x => x.MonthKey);      // منویِ ماه
+            e.HasIndex(x => x.LegacyId).IsUnique();
+            e.Ignore(x => x.SrcKey);
             e.HasQueryFilter(x => x.DeletedAt == null);
         });
 

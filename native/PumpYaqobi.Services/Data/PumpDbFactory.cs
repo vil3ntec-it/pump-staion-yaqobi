@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using PumpYaqobi.Persistence;
 
@@ -37,7 +38,66 @@ public sealed class PumpDbFactory
         db.Database.EnsureCreated();
         db.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
         db.Database.ExecuteSqlRaw("PRAGMA foreign_keys=ON;");
+        PatchTables(db);
         PatchColumns(db);
+    }
+
+    /// <summary>
+    /// ══ جدول‌های تازه روی دیتابیسِ قدیمی ═══════════════════════════════════
+    /// <c>EnsureCreated()</c> یا کلِ دیتابیس را می‌سازد یا — اگر از پیش باشد —
+    /// هیچ نمی‌کند. پس موجودیتی که بعداً اضافه شود، روی نصبِ کاربر جدولی
+    /// ندارد و اولین Query با «no such table» می‌شکند.
+    ///
+    /// این‌جا خودِ EF نقشهٔ کاملِ ساخت را می‌دهد
+    /// (<c>GenerateCreateScript</c>) و فقط دستورهای مربوط به جدول‌هایی که
+    /// **نیستند** اجرا می‌شوند. جدولِ موجود اصلاً لمس نمی‌شود، پس هیچ داده‌ای
+    /// در خطر نیست.
+    /// </summary>
+    private static void PatchTables(PumpDbContext db)
+    {
+        var have = ExistingTables(db);
+        var script = db.Database.GenerateCreateScript();
+
+        foreach (var raw in script.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var stmt = raw.Trim();
+            if (stmt.Length == 0) continue;
+
+            var table = TableOf(stmt);
+            if (table is null || have.Contains(table)) continue;
+
+            try { db.Database.ExecuteSqlRaw(stmt + ";"); }
+            catch { /* دستورِ تکراری یا ناشناخته نباید برنامه را بشکند */ }
+        }
+    }
+
+    private const RegexOptions RxOpts = RegexOptions.IgnoreCase | RegexOptions.Singleline;
+
+    /// <summary>نامِ جدولِ یک دستورِ ‎CREATE TABLE‎ یا ‎CREATE INDEX … ON‎.</summary>
+    private static string? TableOf(string stmt)
+    {
+        var m = Regex.Match(stmt, "^CREATE\\s+TABLE\\s+\"(?<t>[^\"]+)\"", RxOpts);
+        if (m.Success) return m.Groups["t"].Value;
+
+        m = Regex.Match(stmt,
+            "^CREATE\\s+(?:UNIQUE\\s+)?INDEX\\s+\"[^\"]+\"\\s+ON\\s+\"(?<t>[^\"]+)\"", RxOpts);
+        return m.Success ? m.Groups["t"].Value : null;
+    }
+
+    private static HashSet<string> ExistingTables(PumpDbContext db)
+    {
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        using var cmd = db.Database.GetDbConnection().CreateCommand();
+        var opened = cmd.Connection!.State != System.Data.ConnectionState.Open;
+        if (opened) cmd.Connection.Open();
+        try
+        {
+            cmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table';";
+            using var r = cmd.ExecuteReader();
+            while (r.Read()) set.Add(r.GetString(0));
+        }
+        finally { if (opened) cmd.Connection.Close(); }
+        return set;
     }
 
     /// <summary>

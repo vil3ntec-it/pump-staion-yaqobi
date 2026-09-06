@@ -43,6 +43,53 @@ public class PersistenceTests : IDisposable
         Assert.Contains(names, n => n.Contains("SafeEntries") && n.Contains("MonthKey"));
     }
 
+    /// <summary>
+    /// ⚠️ ‎EnsureCreated‎ به دیتابیسِ موجود دست نمی‌زند: نه ستونِ تازه اضافه
+    /// می‌کند نه جدولِ تازه. پس نصبِ کاربر با هر موجودیتِ تازه‌ای می‌شکست —
+    /// «no such table» و برنامه اصلاً بالا نمی‌آمد.
+    ///
+    /// این‌جا همان حالت ساخته می‌شود: دیتابیسی که جدولِ تازه را ندارد، بعد
+    /// ‎EnsureReady‎ باید خودش بسازدش و دادهٔ قبلی هم سرِ جایش بماند.
+    /// </summary>
+    [Fact]
+    public void A_new_table_is_created_on_an_older_database()
+    {
+        var file = Path.Combine(Path.GetTempPath(), $"pump-patch-{Guid.NewGuid():N}.db");
+        try
+        {
+            var dbf = new PumpYaqobi.Services.Data.PumpDbFactory(file);
+            dbf.EnsureReady();
+
+            long id;
+            using (var db = dbf.Create())
+            {
+                var p = new Debtor { LegacyId = "p1", Name = "کریم" };
+                db.Debtors.Add(p);
+                db.SaveChanges();
+                id = p.Id;
+
+                // «دیتابیسِ قدیمی»: جدول را می‌اندازیم، انگار هرگز نبوده
+                db.Database.ExecuteSqlRaw("DROP TABLE IF EXISTS \"DebtQuickReceipts\";");
+            }
+
+            dbf.EnsureReady();          // باید دوباره بسازدش
+
+            using (var db = dbf.Create())
+            {
+                db.DebtQuickReceipts.Add(new DebtQuickReceipt
+                {
+                    LegacyId = "dr1", DateShamsi = "1405/06/12", DateKey = 14050612,
+                    MonthKey = "1405/06", Account = "کریم", Amount = 500m,
+                });
+                db.SaveChanges();
+
+                Assert.Single(db.DebtQuickReceipts.AsNoTracking().ToList());
+                Assert.Equal("کریم", db.Debtors.AsNoTracking().Single(x => x.Id == id).Name);
+            }
+        }
+        finally { try { if (File.Exists(file)) File.Delete(file); } catch { } }
+    }
+
     [Fact]
     public void Data_SurvivesCloseAndReopen()
     {

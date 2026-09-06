@@ -47,6 +47,7 @@ public sealed class AppHost
         Amanat = new AmanatDataService(Db, Permissions, Trash, Settings);
         Invoices = new InvoiceService(Db, Permissions, Trash, Debtors);
         ParchaReceipts = new ParchaReceiptService(Db, Permissions, Trash, Debtors);
+        DebtReceipts = new DebtQuickReceiptService(Db, Permissions, Trash);
         Attendance = new AttendanceDataService(Db, Permissions, Trash);
         SafeLedger = new LedgerService<SafeEntry>(Db, Permissions, Trash, "safe",
             r => (r.Title ?? "") + " — " + Shamsi.Money(r.Amount));
@@ -91,6 +92,9 @@ public sealed class AppHost
     public AmanatDataService Amanat { get; }
     public InvoiceService Invoices { get; }
     public ParchaReceiptService ParchaReceipts { get; }
+
+    /// <summary>«رسید قرض‌داران» — پرداختِ نقدیِ مستقیم به حساب.</summary>
+    public DebtQuickReceiptService DebtReceipts { get; }
     public AttendanceService AttendanceCalc { get; }
     public AttendanceDataService Attendance { get; }
     public LedgerService<SafeEntry> SafeLedger { get; }
