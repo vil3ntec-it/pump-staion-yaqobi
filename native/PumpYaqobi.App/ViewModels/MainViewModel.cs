@@ -83,7 +83,7 @@ public sealed partial class MainViewModel : ObservableObject
         new SafeSectionViewModel(host),
         new PlaceholderSectionViewModel("amanat",    "تیل امانت"),
         new CompanySectionViewModel(host),
-        new PlaceholderSectionViewModel("storage",   "مخزن"),
+        new StorageSectionViewModel(host),
         new PlaceholderSectionViewModel("cameras",   "دوربین‌ها"),
         new PlaceholderSectionViewModel("attendance","حاضری و معاش"),
         new PlaceholderSectionViewModel("profit",    "مفاد / ضرر / اتحادیه"),

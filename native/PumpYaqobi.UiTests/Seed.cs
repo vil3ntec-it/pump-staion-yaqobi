@@ -164,6 +164,24 @@ internal static class Seed
             }
         }
 
+        // خریدهای مخزن
+        for (var i = 1; i <= 5; i++)
+        {
+            host.StorageData.AddPurchaseAsync(new FuelPurchase
+            {
+                Fuel = PumpYaqobi.Domain.Enums.FuelType.Petrol,
+                DateShamsi = $"{month}/{i:00}",
+                Seller = "شرکتِ تیلِ " + ((i % 5) + 1),
+                Kg = 30000 + i * 1000, Density = 0.75m, PriceTon = 690 + i, UsdRate = 70,
+            }).GetAwaiter().GetResult();
+        }
+        host.StorageData.SaveDipAsync(new TankDip
+        {
+            Fuel = PumpYaqobi.Domain.Enums.FuelType.Petrol,
+            DateShamsi = $"{month}/05", Measured = 41800, Expected = 42000,
+            Note = "میله‌زنیِ آخرِ ماه",
+        }).GetAwaiter().GetResult();
+
         _ = today;
     }
 }

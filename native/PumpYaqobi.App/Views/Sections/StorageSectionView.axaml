@@ -1,0 +1,95 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             x:Class="PumpYaqobi.App.Views.Sections.StorageSectionView"
+             x:DataType="vm:StorageSectionViewModel">
+
+  <c:SectionPage Header="مخزن"
+                 SubHeader="موجودی = مجموعِ لیترِ خریدها − مجموعِ فروشِ پارچه‌های همان تیل">
+
+    <c:SectionPage.Toolbar>
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <ToggleSwitch OnContent="دیزل" OffContent="پطرول" IsChecked="{Binding IsDiesel}" />
+        <Button Content="میله‌زنیِ تازه" Command="{Binding AddDipCommand}" />
+        <Button Classes="accent" Content="خریدِ تازه" Command="{Binding AddPurchaseCommand}" />
+      </StackPanel>
+    </c:SectionPage.Toolbar>
+
+    <c:SectionPage.Summary>
+      <StackPanel Orientation="Horizontal" Spacing="12">
+        <Border Classes="stat" MinWidth="230">
+          <StackPanel Spacing="3">
+            <TextBlock Text="موجودیِ فعلیِ مخزن (لیتر)" Classes="label" />
+            <TextBlock Text="{Binding Current}" FontSize="34" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Accent}" />
+            <TextBlock Text="⚠ مخزن رو به تمام شدن است" Classes="muted"
+                       Foreground="{DynamicResource Pump.Danger}" IsVisible="{Binding IsLow}" />
+          </StackPanel>
+        </Border>
+        <Border Classes="stat">
+          <StackPanel Spacing="3">
+            <TextBlock Text="کلِ ورودی (لیتر)" Classes="label" />
+            <TextBlock Text="{Binding TotalIn}" Classes="num" />
+          </StackPanel>
+        </Border>
+        <Border Classes="stat">
+          <StackPanel Spacing="3">
+            <TextBlock Text="کلِ فروش (لیتر)" Classes="label" />
+            <TextBlock Text="{Binding TotalOut}" Classes="num" />
+          </StackPanel>
+        </Border>
+        <Border Classes="stat">
+          <StackPanel Spacing="3">
+            <TextBlock Text="هزینهٔ خرید" Classes="label" />
+            <TextBlock Text="{Binding TotalAfn, StringFormat={}{0} افغانی}" Classes="num" />
+            <TextBlock Text="{Binding TotalUsd, StringFormat={}{0} دالر}" Classes="muted" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </c:SectionPage.Summary>
+
+    <Grid RowDefinitions="*,10,Auto">
+      <c:ExcelGrid Grid.Row="0" ItemsSource="{Binding Purchases}" x:CompileBindings="False">
+        <DataGrid.Columns>
+          <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="115" />
+          <DataGridTextColumn Header="فروشنده" Binding="{Binding Seller}" Width="*" />
+          <DataGridTextColumn Header="کیلو" Binding="{Binding KgText}" Width="110" />
+          <DataGridTextColumn Header="چگالی" Binding="{Binding DensityText}" Width="90" />
+          <DataGridTextColumn Header="تن" Binding="{Binding TonText}" Width="90" IsReadOnly="True" />
+          <DataGridTextColumn Header="لیتر" Binding="{Binding LitersText}" Width="110" IsReadOnly="True" />
+          <DataGridTextColumn Header="فیِ تن ($)" Binding="{Binding PriceTonText}" Width="105" />
+          <DataGridTextColumn Header="نرخِ دالر" Binding="{Binding UsdRateText}" Width="95" />
+          <DataGridTextColumn Header="کلِ دالر" Binding="{Binding TotalUsdText}" Width="115" IsReadOnly="True" />
+          <DataGridTextColumn Header="کلِ افغانی" Binding="{Binding TotalAfnText}" Width="125" IsReadOnly="True" />
+          <DataGridTextColumn Header="فی لیتر" Binding="{Binding PerLiterText}" Width="105" IsReadOnly="True" />
+          <DataGridTemplateColumn Header="" Width="60" IsReadOnly="True">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"
+                        Command="{Binding $parent[UserControl].DataContext.DeletePurchaseCommand}"
+                        CommandParameter="{Binding}" />
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+        </DataGrid.Columns>
+      </c:ExcelGrid>
+
+      <Border Grid.Row="2" Classes="panel" Padding="0" MaxHeight="230">
+        <Grid RowDefinitions="Auto,*">
+          <TextBlock Grid.Row="0" Text="میله‌زنیِ مخزن" Classes="label" Margin="12,9,12,6" />
+          <c:ExcelGrid Grid.Row="1" ItemsSource="{Binding Dips}" x:CompileBindings="False"
+                       BorderThickness="0" CornerRadius="0">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="130" />
+              <DataGridTextColumn Header="اندازهٔ واقعی" Binding="{Binding MeasuredText}" Width="150" />
+              <DataGridTextColumn Header="اندازهٔ دفتری" Binding="{Binding ExpectedText}" Width="150" />
+              <DataGridTextColumn Header="اختلاف" Binding="{Binding DiffText}" Width="130" IsReadOnly="True" />
+              <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="*" />
+            </DataGrid.Columns>
+          </c:ExcelGrid>
+        </Grid>
+      </Border>
+    </Grid>
+  </c:SectionPage>
+</UserControl>

@@ -198,5 +198,28 @@ const waraq = await page.evaluate(() => {
 fs.writeFileSync(path.join(OUT, 'golden-waraq.json'), JSON.stringify(waraq));
 console.log('  ✔ golden-waraq.json — ' + waraq.length + ' ورق');
 
+// ── خریدِ تیل (مخزن) ──────────────────────────────────────────────────────
+const purchase = await page.evaluate(() => {
+  let seed = 777333;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  const cases = [];
+  for (let i = 0; i < 300; i++) {
+    const kg = Math.round(rnd() * 60000 * 100) / 100;
+    const density = rnd() < 0.1 ? 0 : Math.round(rnd() * 0.9 * 1000) / 1000;
+    const priceTon = Math.round(rnd() * 1200 * 100) / 100;
+    const usdRate = Math.round(rnd() * 90 * 100) / 100;
+    // همان پنج خطِ confirmAddPurchase
+    const ton = kg / 1000;
+    const liters = density > 0 ? kg / density : 0;
+    const totalUSD = ton * priceTon;
+    const totalAFN = totalUSD * usdRate;
+    const perLiter = liters > 0 ? totalAFN / liters : 0;
+    cases.push({ kg, density, priceTon, usdRate, ton, liters, totalUSD, totalAFN, perLiter });
+  }
+  return cases;
+});
+fs.writeFileSync(path.join(OUT, 'golden-purchase.json'), JSON.stringify(purchase));
+console.log('  ✔ golden-purchase.json — ' + purchase.length + ' خرید');
+
 console.log('\n  خطای جاوااسکریپت:', errs.length ? errs.slice(0, 3) : 'ندارد');
 await browser.close();
