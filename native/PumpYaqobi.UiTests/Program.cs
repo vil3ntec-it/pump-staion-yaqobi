@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Threading;
 using PumpYaqobi.App.Themes;
+using PumpYaqobi.App.ViewModels;
 using PumpYaqobi.App.Views;
 
 namespace PumpYaqobi.UiTests;
@@ -21,6 +22,10 @@ internal static class Program
         var outDir = args.Length > 0 ? args[0] : "shots";
         Directory.CreateDirectory(outDir);
 
+        // دیتابیسِ موقت — عکس‌گیری هرگز به دادهٔ واقعیِ کاربر دست نمی‌زند
+        var tmpDb = Path.Combine(Path.GetTempPath(), "pump-shots-" + Guid.NewGuid().ToString("N"), "pump.db");
+        PumpYaqobi.App.Services.AppHost.Start(tmpDb);
+
         AppBuilder.Configure<PumpYaqobi.App.App>()
             .UseSkia()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
@@ -28,6 +33,16 @@ internal static class Program
 
         var win = new MainWindow { Width = 1440, Height = 900 };
         win.Show();
+        Pump(win);
+
+        // ۱) صفحهٔ قفل — همان چیزی که کاربر اول می‌بیند
+        Shot(win, Path.Combine(outDir, "00-lock.png"));
+
+        // ۲) ورود با رمزِ نخستین اجرا، سپس هر تم یک عکس
+        var vm = (MainViewModel)win.DataContext!;
+        vm.Lock.Password = "1234";
+        vm.Lock.Confirm = "1234";
+        vm.Lock.SubmitCommand.Execute(null);
         Pump(win);
 
         foreach (var theme in PumpTheme.All)

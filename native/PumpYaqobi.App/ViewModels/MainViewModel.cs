@@ -18,6 +18,9 @@ public sealed partial class MainViewModel : ObservableObject
     {
         _settings = settings ?? AppSettings.Load();
 
+        Lock = new LockViewModel(AppHost.Current);
+        Lock.SignedIn += () => IsLocked = false;
+
         Sections = new ObservableCollection<SectionViewModel>(BuildSections());
         Themes = new ObservableCollection<PumpTheme>(PumpTheme.All);
         _selectedTheme = PumpTheme.ById(_settings.ThemeId);
@@ -32,6 +35,17 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private SectionViewModel? _current;
     [ObservableProperty] private PumpTheme _selectedTheme;
     [ObservableProperty] private string _clock = "";
+    [ObservableProperty] private bool _isLocked = true;
+
+    public LockViewModel Lock { get; }
+
+    /// <summary>خروج و برگشت به صفحهٔ قفل — بی آن‌که برنامه بسته شود.</summary>
+    [RelayCommand]
+    private void SignOut()
+    {
+        AppHost.Current.Auth.SignOut();
+        IsLocked = true;
+    }
 
     partial void OnSelectedThemeChanged(PumpTheme value)
     {

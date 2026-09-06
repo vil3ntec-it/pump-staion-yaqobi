@@ -13,7 +13,8 @@
     <th:IconLookupConverter x:Key="IconLookup" />
   </Window.Resources>
 
-  <Grid RowDefinitions="Auto,Auto,*">
+  <Panel>
+  <Grid RowDefinitions="Auto,Auto,*" IsVisible="{Binding !IsLocked}">
 
     <!-- ══ سربرگ ══ -->
     <Border Grid.Row="0" Background="{DynamicResource Pump.HeaderBg}"
@@ -83,4 +84,10 @@
       <ContentControl Grid.Column="1" Content="{Binding Current}" Margin="0" />
     </Grid>
   </Grid>
+
+    <!-- ══ قفل ══ -->
+    <Panel IsVisible="{Binding IsLocked}">
+      <v:LockView DataContext="{Binding Lock}" />
+    </Panel>
+  </Panel>
 </Window>

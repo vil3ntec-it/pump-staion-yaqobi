@@ -12,6 +12,7 @@ public partial class App : Avalonia.Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        Services.AppHost.Start();
         ThemeManager.Apply(PumpTheme.ById(Services.AppSettings.Load().ThemeId), this);
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
