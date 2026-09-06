@@ -1,0 +1,86 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PumpYaqobi.App.ViewModels"
+        xmlns:th="using:PumpYaqobi.App.Themes"
+        xmlns:v="using:PumpYaqobi.App.Views"
+        x:Class="PumpYaqobi.App.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="پمپ یعقوبی"
+        Width="1440" Height="900" MinWidth="1000" MinHeight="640"
+        FlowDirection="RightToLeft">
+
+  <Window.Resources>
+    <th:IconLookupConverter x:Key="IconLookup" />
+  </Window.Resources>
+
+  <Grid RowDefinitions="Auto,Auto,*">
+
+    <!-- ══ سربرگ ══ -->
+    <Border Grid.Row="0" Background="{DynamicResource Pump.HeaderBg}"
+            BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="0,0,0,1" Padding="18,10">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Path Data="{StaticResource Icon.shifts}" Stroke="{DynamicResource Pump.HeaderTitle}"
+                StrokeThickness="1.6" Width="24" Height="24" Stretch="Uniform" />
+          <TextBlock Text="پمپ یعقوبی" FontSize="20" FontWeight="Bold"
+                     Foreground="{DynamicResource Pump.HeaderTitle}" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <TextBlock Grid.Column="1" Text="{Binding Current.Title}" Classes="h2"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Foreground="{DynamicResource Pump.HeaderTitle}" Opacity="0.85" />
+
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <TextBlock Text="{Binding Clock}" Classes="muted" VerticalAlignment="Center"
+                     Foreground="{DynamicResource Pump.HeaderTitle}" Opacity="0.9" />
+          <ComboBox ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}" MinWidth="180">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="th:PumpTheme">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Border Width="14" Height="14" CornerRadius="7" Background="{Binding Accent, Converter={x:Static th:ColorToBrushConverter.Instance}}" />
+                  <TextBlock Text="{Binding Title}" />
+                </StackPanel>
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- ══ نوارِ خبر ══ -->
+    <Border Grid.Row="1" Background="{DynamicResource Pump.BannerBg}"
+            BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="0,0,0,1" Padding="18,6">
+      <TextBlock Text="" Classes="muted" Foreground="{DynamicResource Pump.HeaderTitle}" Opacity="0.75" />
+    </Border>
+
+    <!-- ══ نوارِ بخش‌ها + محتوا ══ -->
+    <Grid Grid.Row="2" ColumnDefinitions="238,*">
+      <Border Grid.Column="0" Background="{DynamicResource Pump.NavBg}"
+              BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="0,0,1,0">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="8">
+          <ItemsControl ItemsSource="{Binding Sections}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:SectionViewModel">
+                <Button Classes="nav" Margin="0,2"
+                        Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).GoCommand}"
+                        CommandParameter="{Binding}">
+                  <Classes.active>
+                    <Binding Path="IsActive" />
+                  </Classes.active>
+                  <StackPanel Orientation="Horizontal" Spacing="11">
+                    <Path Data="{Binding Id, Converter={StaticResource IconLookup}}"
+                          Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1.5"
+                          Width="19" Height="19" Stretch="Uniform" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Title}" VerticalAlignment="Center" FontSize="13.5" />
+                  </StackPanel>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Border>
+
+      <ContentControl Grid.Column="1" Content="{Binding Current}" Margin="0" />
+    </Grid>
+  </Grid>
+</Window>

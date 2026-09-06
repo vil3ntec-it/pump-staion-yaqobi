@@ -1,0 +1,191 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Styles.Resources>
+    <FontFamily x:Key="Pump.Font">avares://PumpYaqobi/Assets/Vazirmatn.ttf#Vazirmatn</FontFamily>
+  </Styles.Resources>
+  <!-- ══ سبکِ مشترکِ برنامه ═══════════════════════════════════════════════
+       همه‌چیز از {DynamicResource Pump.*} رنگ می‌گیرد، پس تعویضِ تم آنی است.
+       هیچ سایه/تاریِ سنگینی نیست (خواستهٔ صریحِ صاحب ریپو) — عمق با
+       لبه و اختلافِ سطح ساخته می‌شود، نه با blur.                        -->
+
+  <Style Selector="Window">
+    <Setter Property="FontFamily" Value="{StaticResource Pump.Font}" />
+    <Setter Property="FlowDirection" Value="RightToLeft" />
+    <Setter Property="Background" Value="{DynamicResource Pump.AppBg}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
+    <Setter Property="FontSize" Value="14" />
+  </Style>
+
+  <Style Selector="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource Pump.Font}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
+    <Setter Property="TextAlignment" Value="Right" />
+  </Style>
+  <Style Selector="TextBlock.muted">
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+  <Style Selector="TextBlock.label">
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
+    <Setter Property="FontSize" Value="12.5" />
+  </Style>
+  <Style Selector="TextBlock.h1">
+    <Setter Property="FontSize" Value="21" />
+    <Setter Property="FontWeight" Value="Bold" />
+  </Style>
+  <Style Selector="TextBlock.h2">
+    <Setter Property="FontSize" Value="16" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.num">
+    <Setter Property="FontSize" Value="19" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Accent}" />
+  </Style>
+
+  <!-- کارت -->
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{DynamicResource Pump.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="14" />
+  </Style>
+  <Style Selector="Border.panel">
+    <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="12" />
+  </Style>
+
+  <!-- دکمه‌ها -->
+  <Style Selector="Button">
+    <Setter Property="FontFamily" Value="{StaticResource Pump.Font}" />
+    <Setter Property="Background" Value="{DynamicResource Pump.Card}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="Padding" Value="14,7" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Pump.Hover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="TextBlock.Foreground" Value="{DynamicResource Pump.Text}" />
+  </Style>
+  <Style Selector="Button:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Pump.Selected}" />
+  </Style>
+  <Style Selector="Button.accent">
+    <Setter Property="Background" Value="{DynamicResource Pump.AccentGrad}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.OnAccent}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Button.accent /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Pump.AccentGrad}" />
+  </Style>
+  <Style Selector="Button.accent:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="TextBlock.Foreground" Value="{DynamicResource Pump.OnAccent}" />
+  </Style>
+  <Style Selector="Button.ghost">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.danger">
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Danger}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Danger}" />
+  </Style>
+
+  <!-- دکمه‌های ناوبری -->
+  <Style Selector="Button.nav">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="12,9" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Right" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
+  </Style>
+  <Style Selector="Button.nav /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.nav:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Pump.Hover}" />
+  </Style>
+  <Style Selector="Button.nav.active">
+    <Setter Property="Foreground" Value="{DynamicResource Pump.OnAccent}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Button.nav.active /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Pump.AccentGrad}" />
+  </Style>
+
+  <!-- ورودی‌ها -->
+  <Style Selector="TextBox">
+    <Setter Property="FontFamily" Value="{StaticResource Pump.Font}" />
+    <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="9,6" />
+    <Setter Property="SelectionBrush" Value="{DynamicResource Pump.Selected}" />
+    <Setter Property="CaretBrush" Value="{DynamicResource Pump.Accent}" />
+  </Style>
+  <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="BorderThickness" Value="1.6" />
+  </Style>
+  <Style Selector="ComboBox">
+    <Setter Property="FontFamily" Value="{StaticResource Pump.Font}" />
+    <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="MinHeight" Value="34" />
+  </Style>
+
+  <!-- جدول -->
+  <Style Selector="DataGrid">
+    <Setter Property="FontFamily" Value="{StaticResource Pump.Font}" />
+    <Setter Property="Background" Value="{DynamicResource Pump.Card}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="GridLinesVisibility" Value="All" />
+    <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource Pump.GridLine}" />
+    <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource Pump.GridLine}" />
+    <Setter Property="RowHeight" Value="34" />
+    <Setter Property="HeadersVisibility" Value="Column" />
+  </Style>
+  <Style Selector="DataGridColumnHeader">
+    <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="SeparatorBrush" Value="{DynamicResource Pump.GridLine}" />
+  </Style>
+  <Style Selector="DataGridCell">
+    <Setter Property="Padding" Value="6,2" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
+  </Style>
+  <Style Selector="DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">
+    <Setter Property="Fill" Value="{DynamicResource Pump.Hover}" />
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
+    <Setter Property="Fill" Value="{DynamicResource Pump.Selected}" />
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+
+  <Style Selector="ScrollBar">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+</Styles>

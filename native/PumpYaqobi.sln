@@ -15,6 +15,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PumpYaqobi.Reporting", "Pum
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PumpYaqobi.Tests", "PumpYaqobi.Tests\PumpYaqobi.Tests.csproj", "{9CFB41A6-1474-41B9-BBB8-E722A63C3FA0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PumpYaqobi.App", "PumpYaqobi.App\PumpYaqobi.App.csproj", "{8E86F349-343C-4FFB-983E-BBDDC5390081}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PumpYaqobi.UiTests", "PumpYaqobi.UiTests\PumpYaqobi.UiTests.csproj", "{1D32D6E9-55CD-4FA6-8314-958D0468981C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,5 +52,13 @@ Global
 		{9CFB41A6-1474-41B9-BBB8-E722A63C3FA0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9CFB41A6-1474-41B9-BBB8-E722A63C3FA0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9CFB41A6-1474-41B9-BBB8-E722A63C3FA0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8E86F349-343C-4FFB-983E-BBDDC5390081}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8E86F349-343C-4FFB-983E-BBDDC5390081}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8E86F349-343C-4FFB-983E-BBDDC5390081}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8E86F349-343C-4FFB-983E-BBDDC5390081}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1D32D6E9-55CD-4FA6-8314-958D0468981C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D32D6E9-55CD-4FA6-8314-958D0468981C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D32D6E9-55CD-4FA6-8314-958D0468981C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D32D6E9-55CD-4FA6-8314-958D0468981C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
