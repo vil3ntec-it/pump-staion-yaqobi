@@ -177,6 +177,7 @@ public sealed class PumpDbContext : DbContext
         {
             e.HasKey(x => x.Id);
             e.HasIndex(x => new { x.Fuel, x.DateKey });
+            e.HasIndex(x => x.MonthKey);
             e.Property(x => x.Fuel).HasConversion<int>();
             e.HasQueryFilter(x => x.DeletedAt == null);
         });
@@ -185,6 +186,7 @@ public sealed class PumpDbContext : DbContext
         {
             e.HasKey(x => x.Id);
             e.HasIndex(x => new { x.Fuel, x.DateKey });
+            e.HasIndex(x => x.MonthKey);
             e.Property(x => x.Fuel).HasConversion<int>();
             e.HasQueryFilter(x => x.DeletedAt == null);
         });
@@ -343,6 +345,7 @@ public sealed class PumpDbContext : DbContext
         {
             e.HasKey(x => x.Id);
             e.HasIndex(x => new { x.Fuel, x.DateKey });
+            e.HasIndex(x => x.MonthKey);
             e.Property(x => x.Fuel).HasConversion<int>();
             e.HasQueryFilter(x => x.DeletedAt == null);
         });

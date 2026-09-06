@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             x:Class="PumpYaqobi.App.Views.Sections.ExpenseSectionView"
+             x:DataType="vm:ExpenseSectionViewModel">
+
+  <c:SectionPage Header="مصارف" SubHeader="مصارفِ ماه — همین جمع در «مفاد / ضرر» هم به کار می‌رود">
+
+    <c:SectionPage.Toolbar>
+      <Button Classes="accent" Content="ردیفِ تازه" Command="{Binding AddRowCommand}" />
+    </c:SectionPage.Toolbar>
+
+    <c:SectionPage.Filters>
+      <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <TextBlock Text="ماه" Classes="label" VerticalAlignment="Center" />
+        <ComboBox ItemsSource="{Binding Months}" SelectedItem="{Binding Month}" MinWidth="140" />
+      </StackPanel>
+    </c:SectionPage.Filters>
+
+    <c:SectionPage.Summary>
+      <Border Classes="stat" HorizontalAlignment="Right">
+        <StackPanel Spacing="3">
+          <TextBlock Text="جمعِ مصارفِ ماه" Classes="label" />
+          <TextBlock Text="{Binding TotalText, StringFormat={}{0} افغانی}" Classes="num" />
+        </StackPanel>
+      </Border>
+    </c:SectionPage.Summary>
+
+    <c:ExcelGrid ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="120" />
+        <DataGridTextColumn Header="عنوان" Binding="{Binding Title}" Width="*" />
+        <DataGridTextColumn Header="مبلغ"  Binding="{Binding AmountText}" Width="150" />
+        <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="240" />
+        <DataGridTemplateColumn Header="" Width="60" IsReadOnly="True">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"
+                      Command="{Binding $parent[UserControl].DataContext.DeleteRowCommand}"
+                      CommandParameter="{Binding}" />
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+      </DataGrid.Columns>
+    </c:ExcelGrid>
+  </c:SectionPage>
+</UserControl>

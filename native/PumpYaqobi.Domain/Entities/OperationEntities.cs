@@ -74,22 +74,24 @@ public class FuelPurchase : EntityBase
 }
 
 /// <summary>میله‌زنیِ مخزن (DB.tankDips) — اندازهٔ واقعی در برابر اندازهٔ دفتری.</summary>
-public class TankDip : EntityBase
+public class TankDip : EntityBase, ILedgerRow
 {
     public FuelType Fuel { get; set; } = FuelType.Petrol;
     public string? DateShamsi { get; set; }
     public int DateKey { get; set; }
+    public string? MonthKey { get; set; }
     public decimal Measured { get; set; }
     public decimal Expected { get; set; }
     public string? Note { get; set; }
 }
 
 /// <summary>تخلیهٔ تانکر (DB.tankerUnloads).</summary>
-public class TankerUnload : EntityBase
+public class TankerUnload : EntityBase, ILedgerRow
 {
     public FuelType Fuel { get; set; } = FuelType.Petrol;
     public string? DateShamsi { get; set; }
     public int DateKey { get; set; }
+    public string? MonthKey { get; set; }
     public string? Driver { get; set; }
     public string? Plate { get; set; }
     public decimal Liters { get; set; }
@@ -313,7 +315,7 @@ public class Camera : EntityBase
 }
 
 /// <summary>درآمدِ اضافی (DB.extraIncomes).</summary>
-public class ExtraIncome : EntityBase
+public class ExtraIncome : EntityBase, ILedgerRow
 {
     public string? DateShamsi { get; set; }
     public int DateKey { get; set; }
@@ -327,11 +329,12 @@ public class ExtraIncome : EntityBase
 }
 
 /// <summary>تاریخچهٔ نرخِ اتحادیه (DB.rateHistory).</summary>
-public class RateHistoryEntry : EntityBase
+public class RateHistoryEntry : EntityBase, ILedgerRow
 {
     public FuelType Fuel { get; set; } = FuelType.Petrol;
     public string? DateShamsi { get; set; }
     public int DateKey { get; set; }
+    public string? MonthKey { get; set; }
     public decimal Rate { get; set; }
     public string? Note { get; set; }
 }

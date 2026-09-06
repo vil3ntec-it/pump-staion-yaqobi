@@ -1,6 +1,4 @@
-using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
@@ -37,10 +35,10 @@ public sealed partial class SafeRowViewModel : RowViewModel
     [ObservableProperty] private string _note = "";
 
     partial void OnDateShamsiChanged(string v) => Touch();
-    partial void OnIsBardagiChanged(bool v) => Touch();
+    partial void OnIsBardagiChanged(bool v) { Touch(); OnPropertyChanged(nameof(KindText)); }
     partial void OnTitleChanged(string v) => Touch();
     partial void OnAmountChanged(decimal v) { Touch(); OnPropertyChanged(nameof(AmountText)); }
-    partial void OnIsUsdChanged(bool v) => Touch();
+    partial void OnIsUsdChanged(bool v) { Touch(); OnPropertyChanged(nameof(CurrencyText)); }
     partial void OnNoteChanged(string v) => Touch();
 
     /// <summary>مبلغ برای نمایش و تایپ: با جداکنندهٔ هزارگان دیده می‌شود و
@@ -51,7 +49,6 @@ public sealed partial class SafeRowViewModel : RowViewModel
         set => Amount = Shamsi.Num(value);
     }
 
-    /// <summary>«بردگی» یا «ماندگی» — برای کشویِ ستونِ نوع.</summary>
     public string KindText
     {
         get => IsBardagi ? "بردگی" : "ماندگی";
@@ -64,7 +61,7 @@ public sealed partial class SafeRowViewModel : RowViewModel
         set => IsUsd = value == "دالر";
     }
 
-    protected override async Task SaveAsync()
+    protected override void Apply()
     {
         _e.DateShamsi = DateShamsi;
         _e.Kind = IsBardagi ? SafeEntryKind.Bardagi : SafeEntryKind.Mandagi;
@@ -72,29 +69,24 @@ public sealed partial class SafeRowViewModel : RowViewModel
         _e.Amount = Amount;
         _e.Currency = IsUsd ? Currency.Usd : Currency.Afn;
         _e.Note = Note;
-        await _owner.SaveRowAsync(this);
     }
+
+    protected override Task SaveAsync() => _owner.SaveEntityAsync(_e);
 }
 
 /// <summary>
 /// ══ بخشِ گاوصندوق ══════════════════════════════════════════════════════════
-/// همان صفحهٔ <c>renderSafe</c>ِ نسخهٔ وب: فهرستِ بردگی/ماندگیِ یک ماه و سه
-/// کادرِ جمع. دو ارز هرگز با هم جمع نمی‌شوند — قاعدهٔ ثابتِ برنامه.
+/// همان صفحهٔ <c>renderSafe</c>ِ نسخهٔ وب: بردگی/ماندگیِ یک ماه و سه کادرِ جمع.
+/// دو ارز هرگز با هم جمع نمی‌شوند — قاعدهٔ ثابتِ برنامه.
 /// </summary>
-public sealed partial class SafeSectionViewModel : SectionViewModel
+public sealed partial class SafeSectionViewModel : LedgerSectionViewModel<SafeRowViewModel, SafeEntry>
 {
-    private readonly AppHost _host;
+    private readonly SafeService _calc;
 
-    public SafeSectionViewModel(AppHost host) : base("safe", "safe", "گاوصندوق")
-    {
-        _host = host;
-        _month = Shamsi.ThisMonth();
-    }
+    public SafeSectionViewModel(AppHost host)
+        : base("safe", "safe", "گاوصندوق", host.SafeLedger)
+        => _calc = host.Safe;
 
-    public ObservableCollection<SafeRowViewModel> Rows { get; } = new();
-    public ObservableCollection<string> Months { get; } = new();
-
-    [ObservableProperty] private string _month;
     [ObservableProperty] private SafeSummary _summary;
 
     public string BardagiAfn => Shamsi.Money(Summary.Bardagi.Afn);
@@ -104,8 +96,6 @@ public sealed partial class SafeSectionViewModel : SectionViewModel
     public string NetAfn => Shamsi.Money(Summary.Net.Afn);
     public string NetUsd => Shamsi.Money(Summary.Net.Usd);
 
-    partial void OnMonthChanged(string value) => _ = ReloadRowsAsync();
-
     partial void OnSummaryChanged(SafeSummary value)
     {
         OnPropertyChanged(nameof(BardagiAfn)); OnPropertyChanged(nameof(BardagiUsd));
@@ -113,48 +103,11 @@ public sealed partial class SafeSectionViewModel : SectionViewModel
         OnPropertyChanged(nameof(NetAfn)); OnPropertyChanged(nameof(NetUsd));
     }
 
-    protected override async Task LoadAsync()
-    {
-        Months.Clear();
-        foreach (var m in await _host.SafeData.MonthsAsync()) Months.Add(m);
-        if (!Months.Contains(Month)) Months.Insert(0, Month);
-        await ReloadRowsAsync();
-    }
-
-    private async Task ReloadRowsAsync()
-    {
-        var list = await _host.SafeData.ListAsync(Month);
-        Rows.Clear();
-        foreach (var e in list) Rows.Add(new SafeRowViewModel(e, this));
-        Recalc();
-    }
+    protected override SafeRowViewModel Wrap(SafeEntry e) => new(e, this);
+    protected override long EntityIdOf(SafeRowViewModel r) => r.Entity.Id;
+    protected override SafeEntry NewEntity() =>
+        new() { DateShamsi = Shamsi.Today(), Kind = SafeEntryKind.Mandagi };
 
     /// <summary>جمع‌ها از همان سرویسِ آزمودهٔ لایهٔ Application می‌آیند.</summary>
-    public void Recalc() => Summary = _host.Safe.Summarize(Rows.Select(r => r.Entity));
-
-    internal async Task SaveRowAsync(SafeRowViewModel row)
-    {
-        if (row.Entity.Id == 0) await _host.SafeData.AddAsync(row.Entity);
-        else await _host.SafeData.UpdateAsync(row.Entity);
-        Recalc();
-    }
-
-    [RelayCommand]
-    private async Task AddRowAsync()
-    {
-        var e = new SafeEntry { DateShamsi = Shamsi.Today(), Kind = SafeEntryKind.Mandagi };
-        await _host.SafeData.AddAsync(e);
-        if (Shamsi.MonthKey(e.DateShamsi) != Month) Month = Shamsi.MonthKey(e.DateShamsi);
-        else Rows.Add(new SafeRowViewModel(e, this));
-        Recalc();
-    }
-
-    [RelayCommand]
-    private async Task DeleteRowAsync(SafeRowViewModel? row)
-    {
-        if (row is null) return;
-        await _host.SafeData.DeleteAsync(row.Entity.Id);
-        Rows.Remove(row);
-        Recalc();
-    }
+    protected override void Recalc() => Summary = _calc.Summarize(Rows.Select(r => r.Entity));
 }

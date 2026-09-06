@@ -1,0 +1,82 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             x:Class="PumpYaqobi.App.Views.Sections.ExchangeSectionView"
+             x:DataType="vm:ExchangeSectionViewModel">
+
+  <c:SectionPage Header="صرافی" SubHeader="مبلغ به ارزِ خودش وارد می‌شود و با «فی» شکسته می‌شود — فیِ صفر یعنی صفر">
+
+    <c:SectionPage.Toolbar>
+      <Button Classes="accent" Content="ردیفِ تازه" Command="{Binding AddRowCommand}" />
+    </c:SectionPage.Toolbar>
+
+    <c:SectionPage.Filters>
+      <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <TextBlock Text="ماه" Classes="label" VerticalAlignment="Center" />
+        <ComboBox ItemsSource="{Binding Months}" SelectedItem="{Binding Month}" MinWidth="140" />
+      </StackPanel>
+    </c:SectionPage.Filters>
+
+    <c:SectionPage.Summary>
+      <StackPanel Orientation="Horizontal" Spacing="12">
+        <Border Classes="stat">
+          <StackPanel Spacing="3">
+            <TextBlock Text="جمعِ شکسته" Classes="label" />
+            <TextBlock Text="{Binding TotalUsd, StringFormat={}{0} دالر}" Classes="num" />
+          </StackPanel>
+        </Border>
+        <Border Classes="stat">
+          <StackPanel Spacing="3">
+            <TextBlock Text="بردگی" Classes="label" />
+            <TextBlock Text="{Binding TotalBardagi, StringFormat={}{0} دالر}" Classes="num" />
+            <TextBlock Text="{Binding TotalBardagiUsd, StringFormat=به دالر: {0}}" Classes="muted" />
+          </StackPanel>
+        </Border>
+        <Border Classes="stat">
+          <StackPanel Spacing="3">
+            <TextBlock Text="الباقی" Classes="label" />
+            <TextBlock Text="{Binding Baqi, StringFormat={}{0} دالر}" Classes="num" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </c:SectionPage.Summary>
+
+    <c:ExcelGrid ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="120" />
+        <DataGridTextColumn Header="شرح"   Binding="{Binding Description}" Width="*" />
+        <DataGridTextColumn Header="مبلغ"  Binding="{Binding AmountText}" Width="130" />
+        <DataGridTemplateColumn Header="واحد" Width="100">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding CurrencyText}" VerticalAlignment="Center" Margin="6,0" />
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+          <DataGridTemplateColumn.CellEditingTemplate>
+            <DataTemplate>
+              <ComboBox SelectedItem="{Binding CurrencyText}">
+                <ComboBoxItem Content="تومان" />
+                <ComboBoxItem Content="کلدار" />
+                <ComboBoxItem Content="افغانی" />
+              </ComboBox>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellEditingTemplate>
+        </DataGridTemplateColumn>
+        <DataGridTextColumn Header="فی"      Binding="{Binding RateText}" Width="110" />
+        <DataGridTextColumn Header="شکسته ($)" Binding="{Binding UsdText}" Width="130" IsReadOnly="True" />
+        <DataGridTextColumn Header="بردگی"   Binding="{Binding BardagiText}" Width="120" />
+        <DataGridTextColumn Header="الباقی"  Binding="{Binding BaqiText}" Width="130" IsReadOnly="True" />
+        <DataGridTemplateColumn Header="" Width="60" IsReadOnly="True">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"
+                      Command="{Binding $parent[UserControl].DataContext.DeleteRowCommand}"
+                      CommandParameter="{Binding}" />
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+      </DataGrid.Columns>
+    </c:ExcelGrid>
+  </c:SectionPage>
+</UserControl>

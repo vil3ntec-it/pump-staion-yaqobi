@@ -15,9 +15,15 @@ public abstract partial class RowViewModel : ObservableObject
     /// <summary>وقتی true باشد، تغییرِ خانه‌ها ذخیره نمی‌شود (هنگامِ پر کردنِ اولیه).</summary>
     protected bool Loading { get; set; }
 
+    /// <summary>
+    /// یک خانه عوض شد: مقدار همان لحظه در موجودیت می‌نشیند (تا جمع‌های بالای
+    /// صفحه فوری درست شوند) و نوشتن در دیتابیس با کمی تأخیر انجام می‌شود.
+    /// </summary>
     protected void Touch()
     {
         if (Loading) return;
+        Apply();
+        Recalculated?.Invoke();
         _debounce?.Cancel();
         var cts = new CancellationTokenSource();
         _debounce = cts;
@@ -38,8 +44,15 @@ public abstract partial class RowViewModel : ObservableObject
     public async Task FlushAsync()
     {
         _debounce?.Cancel();
+        Apply();
         await SaveAsync();
     }
 
+    /// <summary>مقدارهای جدول را در موجودیت می‌نشاند.</summary>
+    protected abstract void Apply();
+
     protected abstract Task SaveAsync();
+
+    /// <summary>بخش با این خبردار می‌شود که جمع‌ها را دوباره حساب کند.</summary>
+    public event Action? Recalculated;
 }

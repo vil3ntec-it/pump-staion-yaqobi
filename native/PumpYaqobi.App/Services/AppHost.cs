@@ -1,5 +1,7 @@
 using PumpYaqobi.Application.Security;
 using PumpYaqobi.Application.Services;
+using PumpYaqobi.Application.Localization;
+using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Services.Data;
 using PumpYaqobi.Services.Security;
 
@@ -23,8 +25,19 @@ public sealed class AppHost
         Debt = new DebtCalculationService(Settings);
         Safe = new SafeService();
         Exchange = new ExchangeService();
+        Retail = new RetailService();
+        Expenses = new ExpenseService();
         Trash = new TrashService(Db, Permissions, Session);
-        SafeData = new SafeDataService(Db, Permissions, Trash);
+        SafeLedger = new LedgerService<SafeEntry>(Db, Permissions, Trash, "safe",
+            r => (r.Title ?? "") + " — " + Shamsi.Money(r.Amount));
+        ExchangeLedger = new LedgerService<ExchangeRow>(Db, Permissions, Trash, "sarrafi",
+            r => (r.Description ?? "") + " — " + Shamsi.Money(r.Amount));
+        ExpenseLedger = new LedgerService<Expense>(Db, Permissions, Trash, "expense",
+            r => (r.Title ?? "") + " — " + Shamsi.Money(r.Amount));
+        RetailLedger = new LedgerService<RetailRow>(Db, Permissions, Trash, "chakana",
+            r => (r.Name ?? "") + " — " + Shamsi.Money(r.Liters) + " لیتر");
+        ExtraIncomeLedger = new LedgerService<ExtraIncome>(Db, Permissions, Trash, "extraincome",
+            r => (r.Seller ?? "") + " — " + Shamsi.Money(r.Amount));
     }
 
     public PumpDbFactory Db { get; }
@@ -35,8 +48,14 @@ public sealed class AppHost
     public DebtCalculationService Debt { get; }
     public SafeService Safe { get; }
     public ExchangeService Exchange { get; }
+    public RetailService Retail { get; }
+    public ExpenseService Expenses { get; }
     public TrashService Trash { get; }
-    public SafeDataService SafeData { get; }
+    public LedgerService<SafeEntry> SafeLedger { get; }
+    public LedgerService<ExchangeRow> ExchangeLedger { get; }
+    public LedgerService<Expense> ExpenseLedger { get; }
+    public LedgerService<RetailRow> RetailLedger { get; }
+    public LedgerService<ExtraIncome> ExtraIncomeLedger { get; }
 
     /// <summary>نمونهٔ زندهٔ برنامه.</summary>
     public static AppHost Current { get; private set; } = null!;
