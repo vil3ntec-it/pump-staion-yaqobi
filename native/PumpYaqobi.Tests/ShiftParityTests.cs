@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using PumpYaqobi.Application.Security;
 using PumpYaqobi.Application.Services;
+using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
 using PumpYaqobi.Services.Data;
 using Xunit;
