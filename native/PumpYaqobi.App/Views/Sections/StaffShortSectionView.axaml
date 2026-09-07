@@ -12,8 +12,8 @@
     <StackPanel Spacing="10">
 
       <!-- راهنمای واضح: کاربر باید بداند با هر کدام چه کند -->
-      <WrapPanel Orientation="Horizontal">
-        <Border Classes="panel" Padding="10,8" Margin="0,0,8,8" Width="330">
+      <c:AutoFillPanel MinItemWidth="330" Gap="8">
+        <Border Classes="panel" Padding="10,8">
           <StackPanel Spacing="3">
             <TextBlock Text="🔴 کمبودی = کارمند بدهکار است" FontWeight="Bold"
                        Foreground="{DynamicResource Pump.Danger}" />
@@ -21,7 +21,7 @@
                        Text="پول کم آورده — با «💵 رسید کمبودی» مبلغی که از او می‌گیرید را ثبت کنید تا باقی‌مانده کم شود." />
           </StackPanel>
         </Border>
-        <Border Classes="panel" Padding="10,8" Margin="0,0,8,8" Width="330">
+        <Border Classes="panel" Padding="10,8">
           <StackPanel Spacing="3">
             <TextBlock Text="🟢 اضافی = پمپ بدهکار است" FontWeight="Bold"
                        Foreground="{DynamicResource Pump.Ok}" />
@@ -29,7 +29,7 @@
                        Text="پول زیاد داده — با «💸 پرداخت اضافی» مبلغی که به او برمی‌گردانید را ثبت کنید." />
           </StackPanel>
         </Border>
-      </WrapPanel>
+      </c:AutoFillPanel>
 
       <Border Classes="panel" Padding="0">
         <Grid RowDefinitions="Auto,*,Auto">
