@@ -51,6 +51,11 @@ public class VoiceParityTests
         return f;
     }
 
+    /// <summary>
+    /// همان ‎Close‎ ولی با دقتِ اعشارِ ۳۲بیتی — برای جاهایی که خروجی ‎float‎ است.
+    /// </summary>
+    private static void CloseF(double expected, float actual) => Close(expected, actual, 1e-6);
+
     private static void Close(double expected, double actual, double tol = 1e-9)
     {
         var t = Math.Max(tol, Math.Abs(expected) * tol);
@@ -95,9 +100,16 @@ public class VoiceParityTests
             VoiceEngine.Fft(re, im);
             for (var i = 0; i < re.Length; i++)
             {
-                // ورودی و خروجی هر دو ۳۲بیتی‌اند، پس مقایسه هم باید ۳۲بیتی باشد.
-                Assert.Equal((float)c.outRe[i], re[i]);
-                Assert.Equal((float)c.outIm[i], im[i]);
+                // ⚠️ برابریِ «مو‌به‌مو»ی اعشارِ ۳۲بیتی قابلِ حمل نیست: همین آزمون
+                // روی لینوکس سبز بود و روی رانرِ ویندوز قرمز می‌شد
+                // (‎4.08007956‎ در برابرِ ‎4.08008051‎)، چون ضرب‌وجمعِ داخلِ FFT
+                // بسته به CPU/JIT ممکن است در یک ثباتِ ۸۰بیتی یا با دستورِ FMA
+                // یک‌جا انجام شود و گردکردنِ میانی حذف گردد. آن‌چه واقعاً باید
+                // نگه داشته شود «همان جوابِ عددی» است، نه «همان بیت‌ها»؛ پس با
+                // خطای نسبیِ در حدِّ دقتِ float می‌سنجیم — یک میلیونیم، که هزاران
+                // برابر ریزتر از هر تفاوتی است که به ویژگی‌های صدا برسد.
+                CloseF(c.outRe[i], re[i]);
+                CloseF(c.outIm[i], im[i]);
             }
         }
     }
