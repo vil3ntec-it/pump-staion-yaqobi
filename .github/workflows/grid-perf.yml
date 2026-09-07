@@ -26,3 +26,7 @@ jobs:
       - name: سنجش
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- gridperf
+
+      - name: سنجشِ فهرست‌های کارتی
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- cardperf
