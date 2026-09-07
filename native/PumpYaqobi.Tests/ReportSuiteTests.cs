@@ -307,6 +307,64 @@ public class ReportSuiteTests
         Check(new ShiftsReport(new ShiftsReportInput(new List<ParchaReport>(), Dates)),
               "shifts-empty", 2000);
 
+    // ── ورقِ روزانه ───────────────────────────────────────────────────────
+    private static WaraqShift Waraq()
+    {
+        var sd = new WaraqShift
+        {
+            Kind = ShiftKind.Day,
+            WorkerName = "نصیر احمد",
+            FabricDebt = 6_000m,
+            PricePerLiter = 67m,
+            PricePerLiterDiesel = 61m,
+        };
+        sd.Pumps.Add(new WaraqPump { Num = 1, Worker = "نصیر", Fuel = FuelType.Petrol,
+                                     Start = 120_400m, End = 121_240m, PricePerLiter = 67m,
+                                     Debt = 32_000m, Note = "۰۶:۰۰ تا ۱۸:۰۰" });
+        sd.Pumps.Add(new WaraqPump { Num = 2, Worker = "شفیع", Fuel = FuelType.Petrol,
+                                     Start = 88_100m, End = 88_640m, PricePerLiter = 67m });
+        sd.Pumps.Add(new WaraqPump { Num = 3, Worker = "کریم", Fuel = FuelType.Diesel,
+                                     Start = 44_100m, End = 44_505m, PricePerLiter = 61m,
+                                     Debt = 9_500m });
+        for (var i = 1; i <= 9; i++)
+            sd.Transactions.Add(new WaraqTransaction
+            {
+                SortIndex = i, Name = "مشتری " + i, Liters = 10m * i,
+                Fuel = i % 3 == 0 ? FuelType.Diesel : FuelType.Petrol,
+                Type = i % 4 == 0 ? WaraqTxnType.Expense : WaraqTxnType.Debt,
+                AmountAuto = true,
+            });
+        return sd;
+    }
+
+    [Fact]
+    public void WaraqSheet_IsARealPdf() =>
+        Check(new WaraqReport(
+                  new WaraqReportInput("پمپ یعقوبی", "1405/06/09", ShiftKind.Day, Waraq(), Dates),
+                  new WaraqService()),
+              "waraq-day", 4000);
+
+    /// <summary>ورقِ شب همان ورق است با سربرگِ خودش — نه سندی جدا.</summary>
+    [Fact]
+    public void WaraqNightSheet_IsARealPdf()
+    {
+        var sd = Waraq();
+        sd.Kind = ShiftKind.Night;
+        Check(new WaraqReport(
+                  new WaraqReportInput("پمپ یعقوبی", "1405/06/09", ShiftKind.Night, sd, Dates),
+                  new WaraqService()),
+              "waraq-night", 4000);
+    }
+
+    /// <summary>ورقِ خالی هم باید ساخته شود — همان ورقی که تازه باز شده.</summary>
+    [Fact]
+    public void WaraqSheet_SurvivesAnEmptyShift() =>
+        Check(new WaraqReport(
+                  new WaraqReportInput("", "1405/06/10", ShiftKind.Day,
+                                       new WaraqShift { Kind = ShiftKind.Day }, Dates),
+                  new WaraqService()),
+              "waraq-empty", 2000);
+
     // ── گزارش پایان ماه ──────────────────────────────────────────────────
     private static MonthReport Month(decimal scale) => new(
         Petrol: new MonthFuel(1_840_000m * scale, 26_400m * scale, 148_000m * scale, 61),

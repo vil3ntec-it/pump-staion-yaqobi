@@ -63,7 +63,9 @@
                         </StackPanel>
                         <Button Classes="qr" Content="📄 PDF" HorizontalAlignment="Stretch"
                                 Foreground="{DynamicResource Pump.Ok}"
-                                BorderBrush="{DynamicResource Pump.Ok}" />
+                                BorderBrush="{DynamicResource Pump.Ok}"
+                                Command="{Binding $parent[ItemsControl].((vm:WaraqSectionViewModel)DataContext).PdfCardCommand}"
+                                CommandParameter="{Binding}" />
                       </StackPanel>
                     </Grid>
                   </Border>
