@@ -16,35 +16,97 @@
       </StackPanel>
     </c:SectionPage.Toolbar>
 
+    <!-- ══ سربرگِ دو حسابِ تیل — مو‌به‌مو مثلِ سایت ═══════════════════════════
+         در سایت این دو کارت **روی هم** هستند (پطرول بالا، دیزل پایین)، نه
+         بغلِ هم؛ و هرکدام دقیقاً چهار خانه دارد با همین ترتیب و همین نام‌ها.
+         پیش از این نیتیو چهار کادرِ دیگر (الباقیِ پول، پطرول، دیزل، حال) و یک
+         ردیفِ بلندِ کادرهای بی‌عنوان داشت که معلوم نبود هرکدام مالِ کدام حساب
+         است — همان چیزی که صاحب ریپو گفت «نامعلوم».
+
+         «مقدار رسید تیل» کادرِ ورودی است: عددی که آن‌جا نوشته شود ردیفِ تازه
+         می‌سازد، و حذفِ همان ردیف از جدول عدد را کم می‌کند.              -->
     <c:SectionPage.Summary>
-      <!-- ‎Rows="1"‎ یعنی «همه در یک ردیف، با عرضِ مساوی» — کادرها تا لبه پخش
-           می‌شوند به‌جای آن‌که راست جمع شوند و کنارشان خالی بماند. -->
-      <UniformGrid Rows="1" Classes="stats">
-        <Border Classes="stat">
-          <StackPanel Spacing="3">
-            <TextBlock Text="الباقیِ پول" Classes="label" />
-            <TextBlock Text="{Binding MoneyText}" Classes="num" />
-          </StackPanel>
+      <StackPanel Spacing="8" DataContext="{Binding Current}">
+        <StackPanel.Styles>
+          <Style Selector="Border.acct">
+            <Setter Property="Background" Value="{DynamicResource Pump.Dark}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Pump.Border}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="13" />
+            <Setter Property="Padding" Value="14,10" />
+          </Style>
+          <Style Selector="Border.acct TextBlock.cap">
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+          </Style>
+          <Style Selector="Border.acct TextBlock.val">
+            <Setter Property="FontSize" Value="17" />
+            <Setter Property="FontWeight" Value="ExtraBold" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+          </Style>
+          <Style Selector="Border.acct TextBox">
+            <Setter Property="FontSize" Value="17" />
+            <Setter Property="FontWeight" Value="ExtraBold" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+          </Style>
+        </StackPanel.Styles>
+
+        <!-- ── حساب پطرول ── -->
+        <Border Classes="acct">
+          <Grid ColumnDefinitions="Auto,*,*,*,*">
+            <TextBlock Grid.Column="0" Text="⛽ حساب پطرول" VerticalAlignment="Center"
+                       FontWeight="ExtraBold" FontSize="14" Margin="0,0,14,0"
+                       Foreground="{DynamicResource Pump.Ok}" />
+            <StackPanel Grid.Column="1" Spacing="2">
+              <TextBlock Text="فیصدی ما (٪)" Classes="cap" />
+              <TextBox Text="{Binding PercentPetrolText}" Watermark="۰" />
+            </StackPanel>
+            <StackPanel Grid.Column="2" Spacing="2">
+              <TextBlock Text="مقدار رسید تیل" Classes="cap" />
+              <TextBox Text="{Binding PetrolNewRasidText}" Watermark="رسید تازه…" />
+            </StackPanel>
+            <StackPanel Grid.Column="3" Spacing="2">
+              <TextBlock Text="برد" Classes="cap" />
+              <TextBlock Text="{Binding PetrolBordText}" Classes="val"
+                         Foreground="{DynamicResource Pump.Warn}" />
+            </StackPanel>
+            <StackPanel Grid.Column="4" Spacing="2">
+              <TextBlock Text="الباقی تیل" Classes="cap" />
+              <TextBlock Text="{Binding PetrolAlbaqiText}" Classes="val" />
+            </StackPanel>
+          </Grid>
         </Border>
-        <Border Classes="stat">
-          <StackPanel Spacing="3">
-            <TextBlock Text="الباقیِ پطرول (لیتر)" Classes="label" />
-            <TextBlock Text="{Binding PetrolText}" Classes="num" />
-          </StackPanel>
+
+        <!-- ── حساب دیزل ── -->
+        <Border Classes="acct">
+          <Grid ColumnDefinitions="Auto,*,*,*,*">
+            <TextBlock Grid.Column="0" Text="🟤 حساب دیزل" VerticalAlignment="Center"
+                       FontWeight="ExtraBold" FontSize="14" Margin="0,0,14,0"
+                       Foreground="{DynamicResource Pump.Accent}" />
+            <StackPanel Grid.Column="1" Spacing="2">
+              <TextBlock Text="فیصدی ما (٪)" Classes="cap" />
+              <TextBox Text="{Binding PercentDieselText}" Watermark="۰" />
+            </StackPanel>
+            <StackPanel Grid.Column="2" Spacing="2">
+              <TextBlock Text="مقدار رسید تیل" Classes="cap" />
+              <TextBox Text="{Binding DieselNewRasidText}" Watermark="رسید تازه…" />
+            </StackPanel>
+            <StackPanel Grid.Column="3" Spacing="2">
+              <TextBlock Text="برد" Classes="cap" />
+              <TextBlock Text="{Binding DieselBordText}" Classes="val"
+                         Foreground="{DynamicResource Pump.Warn}" />
+            </StackPanel>
+            <StackPanel Grid.Column="4" Spacing="2">
+              <TextBlock Text="الباقی تیل" Classes="cap" />
+              <TextBlock Text="{Binding DieselAlbaqiText}" Classes="val" />
+            </StackPanel>
+          </Grid>
         </Border>
-        <Border Classes="stat">
-          <StackPanel Spacing="3">
-            <TextBlock Text="الباقیِ دیزل (لیتر)" Classes="label" />
-            <TextBlock Text="{Binding DieselText}" Classes="num" />
-          </StackPanel>
-        </Border>
-        <Border Classes="stat">
-          <StackPanel Spacing="3">
-            <TextBlock Text="حال" Classes="label" />
-            <TextBlock Text="{Binding StatusText}" Classes="num" />
-          </StackPanel>
-        </Border>
-      </UniformGrid>
+      </StackPanel>
     </c:SectionPage.Summary>
 
     <Grid RowDefinitions="Auto,Auto,*">
@@ -62,41 +124,28 @@
         </ListBox.ItemTemplate>
       </ListBox>
 
-      <!-- فیصدی و رسیدِ همان حساب -->
+      <!-- ══ باقیِ کادرهای همین حساب ═════════════════════════════════════
+           فیصدی و رسیدِ تیل رفتند به سربرگ (همان‌جا که سایت گذاشته). این‌جا
+           فقط چیزهایی می‌مانند که سربرگ ندارد، و هرکدام برچسبِ خودش را دارد
+           تا معلوم باشد مالِ چیست.                                          -->
       <Border Grid.Row="1" Classes="panel" Padding="12,10" Margin="0,0,0,10"
               DataContext="{Binding Current}">
         <WrapPanel Orientation="Horizontal">
           <WrapPanel.Styles>
             <Style Selector="StackPanel.fld">
               <Setter Property="Margin" Value="0,0,14,0" />
-              <Setter Property="Width" Value="128" />
+              <Setter Property="Width" Value="132" />
             </Style>
             <Style Selector="StackPanel.fld > TextBox">
               <Setter Property="HorizontalAlignment" Value="Stretch" />
             </Style>
           </WrapPanel.Styles>
 
-          <StackPanel Classes="fld" Spacing="3">
-            <TextBlock Text="فیصدیِ پطرول" Classes="label" />
-            <TextBox Text="{Binding PercentPetrolText}" />
-          </StackPanel>
-          <StackPanel Classes="fld" Spacing="3">
-            <TextBlock Text="فیصدیِ دیزل" Classes="label" />
-            <TextBox Text="{Binding PercentDieselText}" />
-          </StackPanel>
           <!-- میان‌بُر: هر عددی این‌جا نوشته شود، همان لحظه روی هر دو تیل
                می‌نشیند. خالی می‌ماند اگر فیصدیِ دو تیل یکی نباشد. -->
           <StackPanel Classes="fld" Spacing="3">
-            <TextBlock Text="فیصدیِ هر دو" Classes="label" />
+            <TextBlock Text="فیصدیِ هر دو تیل" Classes="label" />
             <TextBox Text="{Binding PercentBothText}" Watermark="هر دو" />
-          </StackPanel>
-          <StackPanel Classes="fld" Spacing="3">
-            <TextBlock Text="رسیدِ تیلِ پطرول" Classes="label" />
-            <TextBox Text="{Binding RasidFuelPetrolText}" />
-          </StackPanel>
-          <StackPanel Classes="fld" Spacing="3">
-            <TextBlock Text="رسیدِ تیلِ دیزل" Classes="label" />
-            <TextBox Text="{Binding RasidFuelDieselText}" />
           </StackPanel>
           <StackPanel Classes="fld" Spacing="3">
             <TextBlock Text="رسیدِ پولِ پطرول" Classes="label" />
@@ -124,20 +173,22 @@
           <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
           <DataGridTextColumn Header="نام"   Binding="{Binding Name}" Width="Auto" MinWidth="150" MaxWidth="320" />
           <DataGridTextColumn Header="حواله" Binding="{Binding Hawala}" Width="Auto" />
+          <!-- ══ نوعِ تیل ══
+               دو دکمهٔ کوچکِ همیشه‌پیدا، مثلِ سایت. پیش از این یک ‎ComboBox‎ی
+               بود که فقط هنگامِ ویرایش باز می‌شد و خانه را بزرگ و ناجور
+               می‌کرد — همان چیزی که صاحب ریپو گفت «خیلی بزرگ میشه و خرابه». -->
           <DataGridTemplateColumn Header="تیل" Width="Auto">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
-                <TextBlock Text="{Binding FuelText}" VerticalAlignment="Center" Margin="6,0" />
+                <StackPanel Orientation="Horizontal" Spacing="6" Margin="6,1"
+                            VerticalAlignment="Center">
+                  <RadioButton Content="پطرول" FontSize="11" MinHeight="0" Padding="3,0"
+                               GroupName="{Binding FuelGroup}" IsChecked="{Binding IsPetrol}" />
+                  <RadioButton Content="دیزل" FontSize="11" MinHeight="0" Padding="3,0"
+                               GroupName="{Binding FuelGroup}" IsChecked="{Binding IsDiesel}" />
+                </StackPanel>
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
-            <DataGridTemplateColumn.CellEditingTemplate>
-              <DataTemplate>
-                <ComboBox SelectedItem="{Binding FuelText}">
-                  <ComboBoxItem Content="پطرول" />
-                  <ComboBoxItem Content="دیزل" />
-                </ComboBox>
-              </DataTemplate>
-            </DataGridTemplateColumn.CellEditingTemplate>
           </DataGridTemplateColumn>
           <DataGridTextColumn Header="لیتر"  Binding="{Binding LitersText}" Width="Auto" />
           <DataGridTextColumn Header="فی"    Binding="{Binding PriceText}" Width="Auto" />

@@ -55,6 +55,16 @@ public sealed partial class DebtRowViewModel : RowViewModel
     partial void OnRasidChanged(decimal v) { Touch(); Refresh(); }
     partial void OnRasidFuelChanged(decimal v) { Touch(); Refresh(); }
 
+    /// <summary>عوض شدنِ نوعِ تیل هم دکمه‌ها را تازه می‌کند هم جمع‌های سربرگ را.</summary>
+    partial void OnFuelChanged(FuelType v)
+    {
+        Touch();
+        OnPropertyChanged(nameof(FuelText));
+        OnPropertyChanged(nameof(IsPetrol));
+        OnPropertyChanged(nameof(IsDiesel));
+        Refresh();
+    }
+
     private void Refresh()
     {
         OnPropertyChanged(nameof(LitersText)); OnPropertyChanged(nameof(PriceText));
@@ -75,6 +85,25 @@ public sealed partial class DebtRowViewModel : RowViewModel
     {
         get => Fuel.ToPersian();
         set => Fuel = value == "دیزل" ? FuelType.Diesel : FuelType.Petrol;
+    }
+
+    // ══ دو دکمهٔ نوعِ تیل در خانهٔ جدول ═══════════════════════════════════════
+    //
+    // ⚠️ ‎GroupName‎ باید برای هر ردیف **یکتا** باشد. اگر همهٔ ردیف‌ها یک نام
+    // بگیرند، آوالونیا آن‌ها را یک گروه می‌بیند و زدنِ «دیزل» در یک ردیف،
+    // انتخابِ همهٔ ردیف‌های دیگر را برمی‌دارد.
+    public string FuelGroup => "fuel-" + _r.Id;
+
+    public bool IsPetrol
+    {
+        get => Fuel == FuelType.Petrol;
+        set { if (value) Fuel = FuelType.Petrol; }
+    }
+
+    public bool IsDiesel
+    {
+        get => Fuel == FuelType.Diesel;
+        set { if (value) Fuel = FuelType.Diesel; }
     }
 
     protected override void Apply()
@@ -230,6 +259,85 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     public string RasidMoneyPetrolText { get => Shamsi.Money(RasidMoneyPetrol); set => RasidMoneyPetrol = Shamsi.Num(value); }
     public string RasidMoneyDieselText { get => Shamsi.Money(RasidMoneyDiesel); set => RasidMoneyDiesel = Shamsi.Num(value); }
 
+    // ══════════════════════════════════════════════════════════════════════
+    //  سربرگِ دو حسابِ تیل — مو‌به‌مو مثلِ سایت
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  در سایت بالای دفترِ هر شخص دو کارتِ **رویِ هم** هست (پطرول بالا، دیزل
+    //  پایین) و هرکدام دقیقاً چهار خانه دارد:
+    //
+    //      فیصدی ما (٪) │ مقدار رسید تیل │ برد │ الباقی تیل
+    //
+    //  «مقدار رسید تیل» فقط یک عدد نیست، **کادرِ ورودی** است: هرچه آن‌جا
+    //  نوشته شود یک ردیفِ تازه با همان رسید به جدول اضافه می‌کند، و اگر آن
+    //  ردیف از جدول حذف شود عددِ سربرگ هم کم می‌شود. یعنی سربرگ و جدول یک
+    //  چیزند از دو راه.
+    //
+    //  ⚠️ عددِ سربرگ **جمعِ ستونِ «رسید تیل» جدول** است، نه فیلدِ
+    //  ‎RasidFuelPetrol/Diesel‎ی خودِ حساب. آن دو جای دیگری (در ‎Balances‎)
+    //  به کار می‌روند و اگر این‌جا هم جمع می‌شدند، رسید دوبار شمرده می‌شد.
+
+    private SplitTotals Totals => _host.Debt.SplitTotals(Rows.Select(r => r.Entity));
+
+    private static string Cell(decimal v) => Shamsi.Money(v);
+
+    public string PetrolBordText   => Cell(Totals.Petrol.Liters);
+    public string DieselBordText   => Cell(Totals.Diesel.Liters);
+    public string PetrolAlbaqiText => Cell(Totals.Petrol.RasidFuel - Totals.Petrol.Liters);
+    public string DieselAlbaqiText => Cell(Totals.Diesel.RasidFuel - Totals.Diesel.Liters);
+
+    /// <summary>
+    /// کادرِ «مقدار رسید تیل»ِ پطرول: می‌خواند = جمعِ ستونِ جدول، می‌نویسد =
+    /// ردیفِ تازه. خالی یا صفر هیچ ردیفی نمی‌سازد.
+    /// </summary>
+    public string PetrolNewRasidText
+    {
+        get { var v = Totals.Petrol.RasidFuel; return v == 0m ? "" : Cell(v); }
+        set => _ = AddRasidRowAsync(FuelType.Petrol, Shamsi.Num(value));
+    }
+
+    public string DieselNewRasidText
+    {
+        get { var v = Totals.Diesel.RasidFuel; return v == 0m ? "" : Cell(v); }
+        set => _ = AddRasidRowAsync(FuelType.Diesel, Shamsi.Num(value));
+    }
+
+    /// <summary>سربرگ را از نو بخوان — بعد از هر افزودن، حذف یا ویرایشِ ردیف.</summary>
+    public void RefreshHeader()
+    {
+        OnPropertyChanged(nameof(PetrolNewRasidText));
+        OnPropertyChanged(nameof(DieselNewRasidText));
+        OnPropertyChanged(nameof(PetrolBordText));
+        OnPropertyChanged(nameof(DieselBordText));
+        OnPropertyChanged(nameof(PetrolAlbaqiText));
+        OnPropertyChanged(nameof(DieselAlbaqiText));
+    }
+
+    private async Task AddRasidRowAsync(FuelType fuel, decimal amount)
+    {
+        if (amount == 0m) { RefreshHeader(); return; }
+
+        var r = new DebtRow
+        {
+            DateShamsi = Shamsi.Today(),
+            DateKey = Shamsi.Key(Shamsi.Today()),
+            SortIndex = Entity.ActiveRows().Count,
+            ByMoney = IsMoney,
+            Fuel = fuel,
+            RasidFuel = amount,
+        };
+        if (IsMoney) { r.MoneyAccountId = Entity.Id; Entity.MoneyRows.Add(r); }
+        else { r.FuelAccountId = Entity.Id; Entity.FuelRows.Add(r); }
+
+        _host.Debt.NormalizeRow(r);
+        await _host.Debtors.SaveRowAsync(r);
+
+        var vm = new DebtRowViewModel(r, this);
+        vm.Recalculated += _person.Recalc;
+        Rows.Add(vm);
+        _person.Recalc();
+    }
+
     private void SaveAccount()
     {
         _ = _host.Debtors.UpdateAccountAsync(Entity);
@@ -349,6 +457,7 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
     /// <summary>جمع‌ها و حال — همیشه از روی همهٔ حساب‌ها، نه فقط حسابِ باز.</summary>
     public void Recalc()
     {
+        Current?.RefreshHeader();     // سربرگ همیشه هم‌قدمِ جدول بماند
         var accounts = Accounts.Select(a => a.Entity).ToList();
         var b = _host.Debt.Balances(accounts);
         MoneyText = Shamsi.Money(b.Money);
