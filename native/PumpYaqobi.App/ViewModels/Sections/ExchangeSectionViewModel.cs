@@ -1,8 +1,11 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
+using PumpYaqobi.Reporting.Pdf;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -170,4 +173,14 @@ public sealed partial class ExchangeSectionViewModel
     protected override ExchangeRow EntityOf(ExchangeRowViewModel r) => r.Entity;
 
     protected override void Recalc() => Summary = Calc.Summarize(Rows.Select(r => r.Entity));
+
+    /// <summary>‎printSarrafi()‎ — ورقِ صرافیِ همین ماه.</summary>
+    [RelayCommand]
+    private Task PdfAsync()
+    {
+        var rows = Rows.Select(r => r.Entity).ToList();
+        var input = new ExchangeReportInput(Shamsi.MonthLabel(Month), rows, DocDates.Line());
+        return Documents.ShowAsync(() => new ExchangeReport(input, Calc),
+                                   "صرافی " + Shamsi.MonthLabel(Month));
+    }
 }

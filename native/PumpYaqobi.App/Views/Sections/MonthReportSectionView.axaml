@@ -13,6 +13,7 @@
       <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
         <TextBlock Text="📅 ماه:" VerticalAlignment="Center" Classes="label" />
         <ComboBox ItemsSource="{Binding Months}" SelectedItem="{Binding Month}" MinWidth="130" />
+        <Button Classes="ghost info" Content="📄 PDF" Command="{Binding PdfCommand}" />
       </StackPanel>
     </c:SectionPage.Toolbar>
 

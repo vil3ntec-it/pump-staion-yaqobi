@@ -17,6 +17,8 @@
                 CommandParameter="fuel" Classes.on="{Binding IsFuel}" />
         <Button Classes="seg" Content="💵 واحد پول" Command="{Binding SetFilterCommand}"
                 CommandParameter="money" Classes.on="{Binding IsMoney}" />
+        <Button Classes="ghost info" Content="📄 PDF" Margin="6,0,0,0"
+                Command="{Binding PdfCommand}" />
       </StackPanel>
     </c:SectionPage.Toolbar>
 

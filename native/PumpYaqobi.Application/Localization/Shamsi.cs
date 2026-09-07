@@ -98,6 +98,20 @@ public static class Shamsi
 
     public static string MonthName(int m) => m is >= 1 and <= 12 ? MonthNames[m - 1] : "";
 
+    /// <summary>
+    /// «1405/06» → «سنبله 1405» — همان ‎_monthLabel‎ / ‎_monthLabelFa‎ی نسخهٔ وب.
+    ///
+    /// کلیدی که ماهش خوانده نشود همان‌طور که هست برمی‌گردد، نه رشتهٔ خالی:
+    /// عنوانِ سند بی‌ماه بهتر از عنوانِ بی‌چیز است.
+    /// </summary>
+    public static string MonthLabel(string? key)
+    {
+        var p = ToEnDigits(key).Split('/');
+        if (p.Length != 2 || !int.TryParse(p[1], out var m)) return key ?? "";
+        var name = MonthName(m);
+        return (name.Length > 0 ? name : p[1]) + " " + p[0];
+    }
+
     /// <summary>عددِ پول با جداکنندهٔ هزارگان، بدونِ اعشارِ بی‌مصرف.</summary>
     public static string Money(decimal v) =>
         v == decimal.Truncate(v)

@@ -1,9 +1,12 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Security;
 using PumpYaqobi.Application.Services;
+using PumpYaqobi.Reporting.Pdf;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -82,19 +85,34 @@ public sealed partial class MonthReportSectionViewModel : SectionViewModel
     }
 
     /// <summary>«اسد 1405» — همان ‎_monthLabel‎ی نسخهٔ وب.</summary>
-    private static string Label(string? key)
-    {
-        var p = (key ?? "").Split('/');
-        if (p.Length != 2 || !int.TryParse(p[1], out var m)) return key ?? "";
-        var name = Shamsi.MonthName(m);
-        return (name.Length > 0 ? name : p[1]) + " " + p[0];
-    }
+    private static string Label(string? key) => Shamsi.MonthLabel(key);
 
     private static string Round(decimal v) =>
         Shamsi.Money(Math.Round(v, 0, MidpointRounding.AwayFromZero));
 
     private static string GrowthText(int? pct) =>
         pct is null ? "—" : (pct > 0 ? "+" : "") + Shamsi.Money(pct.Value) + "٪";
+
+    /// <summary>
+    /// ‎pdfMonthReport()‎ — ورقِ همین ماه.
+    ///
+    /// ⚠️ برخلافِ نسخهٔ وب که بی اجازهٔ «مفاد/ضرر» اصلاً سند نمی‌ساخت، این‌جا
+    /// ورق ساخته می‌شود و فقط همان دو خانهٔ قفلی «🔒» می‌مانند — بقیهٔ گزارش
+    /// قفلی ندارد و نگه داشتنش هیچ چیزی را محافظت نمی‌کرد.
+    /// </summary>
+    [RelayCommand]
+    private Task PdfAsync()
+    {
+        if (_src is null || Month is null) return Task.CompletedTask;
+
+        var src = _src;
+        var key = Month;
+        var cur = _host.Tools.Month(src, key);
+        var prev = _host.Tools.Month(src, MonthReportService.PrevKey(key));
+        var input = new MonthEndReportInput(Label(key), cur, prev, ProfitLocked, DocDates.Line());
+
+        return Documents.ShowAsync(() => new MonthEndReport(input), "گزارش ماه " + Label(key));
+    }
 
     private void Recalc()
     {
