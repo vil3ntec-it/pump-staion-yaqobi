@@ -27,8 +27,7 @@
         </StackPanel>
       </c:SectionPage.Filters>
 
-      <ScrollViewer>
-        <Panel>
+              <Panel>
           <TextBlock Text="هیچ ورقی ثبت نشده — از دکمهٔ بالا ورق جدید اضافه کنید"
                      Classes="muted" HorizontalAlignment="Center" Margin="0,40,0,0"
                      IsVisible="{Binding IsEmpty}" />
@@ -74,7 +73,7 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
         </Panel>
-      </ScrollViewer>
+      
     </c:SectionPage>
 
     <Panel IsVisible="{Binding !IsListVisible}">

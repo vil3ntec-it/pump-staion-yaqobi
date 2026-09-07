@@ -334,7 +334,7 @@ internal static class Program
         Seed.Fill(PumpYaqobi.App.Services.AppHost.Current);
 
         Console.WriteLine();
-        Console.WriteLine("بخش                  سرریز؟   بلندیِ صفحه / جا    اسکرول  جدول      می‌رسد؟");
+        Console.WriteLine("بخش                  سرریز؟   بلندیِ صفحه / جا    اسکرول  درونی     جدول      درست؟");
         Console.WriteLine(new string('-', 74));
 
         var broken = new List<string>();
@@ -375,13 +375,20 @@ internal static class Program
             var squashed = grid is not null
                         && gridH + 1 < Math.Min(MinGridHeight, gridWants);
 
-            // محتوا همیشه رسیدنی است، چون کلِ صفحه می‌لغزد؛ آنچه می‌تواند
-            // خراب باشد یا نبودِ همان اسکرول است یا جدولِ له‌شده.
-            var ok = page is not null && !squashed;
+            // ══ هیچ اسکرولِ درونی نباید بلغزد ══════════════════════════════
+            // قاعدهٔ صریحِ صاحب ریپو: «تا وقتی نوارِ بخش‌ها به سقف نچسبیده،
+            // محتوای بخش نباید تکان بخورد.» هر اسکرول‌ویورِ درونِ بخش این را
+            // می‌شکند، چون چرخِ ماوس اولْ آن را می‌لغزاند نه صفحه را. پس
+            // اسکرول‌ویورهایی را می‌شماریم که واقعاً چیزی برای لغزاندن دارند.
+            var inner = host.GetVisualDescendants().OfType<ScrollViewer>()
+                            .Count(v => v.Extent.Height > v.Viewport.Height + 1);
+
+            var ok = page is not null && !squashed && inner == 0;
 
             var mark = ok ? (overflows ? "✔" : "—") : "✖";
             Console.WriteLine($"{sec.Id,-20} {(overflows ? "بله" : "نه"),-8} "
                             + $"{wanted,6:0} / {avail,-6:0}      {(page is not null ? "صفحه" : "—"),-6} "
+                            + $"{(inner > 0 ? $"درونی {inner}" : "        "),-9} "
                             + $"{(grid is not null ? $"جدول {gridH,4:0}" : "         ")}  {mark}");
 
             if (!ok) broken.Add(sec.Id);
@@ -390,12 +397,13 @@ internal static class Program
         Console.WriteLine();
         if (broken.Count == 0)
         {
-            Console.WriteLine("✅ هر بخشی که سرریز می‌کند، راهی برای رسیدن به تهش دارد");
+            Console.WriteLine("✅ همهٔ بخش‌ها با اسکرولِ صفحه می‌لغزند و هیچ‌کدام اسکرولِ درونی ندارند");
             return 0;
         }
 
-        Console.WriteLine("❌ این بخش‌ها راهی به تهِ محتوا ندارند — یا اسکرولِ صفحه"
-                        + $" پیدا نشد یا جدولشان از {MinGridHeight:0} پیکسل کوتاه‌تر شده:");
+        Console.WriteLine("❌ این بخش‌ها با مدلِ سایت نمی‌خوانند — یا اسکرولِ صفحه پیدا"
+                        + $" نشد، یا اسکرولِ درونی دارند، یا جدولشان از {MinGridHeight:0}"
+                        + " پیکسل کوتاه‌تر شده:");
         foreach (var b in broken) Console.WriteLine("   • " + b);
         return 1;
     }

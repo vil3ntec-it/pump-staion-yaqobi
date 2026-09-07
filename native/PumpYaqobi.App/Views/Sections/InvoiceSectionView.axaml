@@ -45,8 +45,7 @@
          نامِ مشتری با خطِ جزئیاتش، نشانِ حال و دکمه‌ها.
          با جدولِ چهارده‌ستونه نه شبیهِ نسخهٔ وب بود و نه در ستونِ صفحه جا
          می‌شد — نصفِ ستون‌ها بیرون می‌ماندند. -->
-    <ScrollViewer>
-      <ItemsControl ItemsSource="{Binding Rows}">
+          <ItemsControl ItemsSource="{Binding Rows}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:InvoiceRowViewModel">
             <Border Classes="panel" Padding="12,10" Margin="0,0,0,9">
@@ -90,6 +89,6 @@
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
-    </ScrollViewer>
+    
   </c:SectionPage>
 </UserControl>

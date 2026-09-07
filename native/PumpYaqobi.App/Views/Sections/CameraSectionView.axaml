@@ -8,8 +8,7 @@
   <c:SectionPage Header="دوربین‌های مداربسته"
                  SubHeader="عکسِ زندهٔ دوربین‌های شبکه‌ای داخلِ برنامه می‌آید؛ HLS و RTSP به پخش‌کنندهٔ ویندوز سپرده می‌شوند">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-    <StackPanel Spacing="10">
+        <StackPanel Spacing="10">
 
       <!-- ══ افزودن ══ -->
       <Border Classes="panel" Padding="12,10">
@@ -123,6 +122,6 @@
                  IsVisible="{Binding IsEmpty}" TextWrapping="Wrap" TextAlignment="Center"
                  Text="هنوز دوربینی ثبت نشده — لینک را بنویسید یا از عکسِ کیو‌آرِ روی خودِ دوربین بخوانید" />
     </StackPanel>
-    </ScrollViewer>
+    
   </c:SectionPage>
 </UserControl>

@@ -296,21 +296,17 @@
              .card-head     ← عنوانِ رنگی راست، دکمه‌های کار چپ
              (padding:14px) ← فیلتر، جمع‌ها، بدنه، پانویس
 
-       دو قالب هست، نه یکی — و تفاوتشان فقط یک چیز است: سقفِ ارتفاعِ بدنه.
+       اسکرول اصلاً مالِ بخش نیست. یکی است و مالِ کلِ پنجره
+       (‎PageScroll‎ در ‎MainWindow‎) — مثلِ سایت: کلِ صفحه می‌لغزد، سربرگ و
+       نوارِ آمار هم با آن بالا می‌روند و فقط نوارِ بخش‌ها سرِ صفر قفل می‌شود.
+       بخش هیچ سقفی ندارد و فقط به بلندیِ محتوایش کِش می‌آید.
 
-       هیچ‌کدام اسکرولِ خودشان را ندارند. اسکرول یکی است و مالِ کلِ پنجره
-       (‎PageScroll‎ در ‎MainWindow‎) — مثلِ سایت که کلِ صفحه می‌لغزد و سربرگ
-       و نوارِ آمار هم با آن بالا می‌روند. بخش فقط به بلندیِ محتوایش کِش
-       می‌آید.
-
-       ۱) پیش‌فرض: بدنه هرقدر لازم دارد بلند می‌شود.
-
-       ۲) ‎ScrollBody=False‎ (بخش‌های جدول‌دار): بدنه سقفِ ارتفاع می‌گیرد، به
-          اندازهٔ پنجرهٔ دیدِ همان اسکرولِ صفحه. بی این سقف، جدولِ آوالونیا
-          با ارتفاعِ بی‌نهایت اندازه گرفته می‌شود، همهٔ ردیف‌ها را یک‌جا
-          می‌سازد و مجازی‌سازی از بین می‌رود — با هزاران قرض‌دار برنامه یخ
-          می‌زند. زیرِ سقف، جدول هم‌قدِ ردیف‌هایش است و اگر بلندتر شد،
-          خودش می‌لغزد.                                                    -->
+       ⚠️ اگر روزی وسوسه شدی این‌جا یا در یکی از بخش‌ها ‎ScrollViewer‎ بگذاری:
+       نگذار. صاحب ریپو دو بار همین را رد کرد — «تا وقتی نوارِ بخش‌ها به سقف
+       نچسبیده، محتوای بخش نباید تکان بخورد». هر اسکرولِ درونی همان قاعده را
+       می‌شکند، چون چرخِ ماوس اول آن را می‌لغزاند نه صفحه را. سنجشِ اسکرول
+       (‎PumpYaqobi.UiTests -- scroll‎) همین را می‌پاید و اگر برگردد قرمز
+       می‌شود.                                                              -->
   <Style Selector="c|SectionPage">
     <Setter Property="Template">
       <ControlTemplate>
@@ -343,58 +339,6 @@
                                   IsVisible="{TemplateBinding Summary, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
                 <ContentPresenter Grid.Row="2" Content="{TemplateBinding Body}" />
-
-                <ContentPresenter Grid.Row="3" Content="{TemplateBinding Footer}" Margin="0,12,0,0"
-                                  IsVisible="{TemplateBinding Footer, Converter={x:Static ObjectConverters.IsNotNull}}" />
-            </Grid>
-          </Grid>
-        </Border>
-      </ControlTemplate>
-    </Setter>
-  </Style>
-
-  <!-- ══ همان قالب، با سقفِ ارتفاع روی بدنه — برای بخش‌های جدول‌دار ═══════
-       تنها فرقش با قالبِ بالا یک ‎MaxHeight‎ روی بدنه است: جدول هرگز بلندتر
-       از پنجرهٔ دیدِ اسکرول‌ویور اندازه گرفته نمی‌شود، پس مجازی‌سازی‌اش سالم
-       می‌ماند. باقیِ چیزها — فیلتر، جمع‌ها، پانویس — با جدول یک‌جا می‌لغزند،
-       همان‌طور که در سایت کلِ صفحه می‌لغزد.                                -->
-  <Style Selector="c|SectionPage[ScrollBody=False]">
-    <Setter Property="Template">
-      <ControlTemplate>
-        <Border Classes="card flush" Margin="16,14">
-          <Grid RowDefinitions="Auto,*">
-
-            <Border Grid.Row="0" Classes="card-head">
-              <Grid ColumnDefinitions="*,Auto">
-                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
-                  <TextBlock Text="{TemplateBinding Header}" Classes="card-title" />
-                  <TextBlock Text="{TemplateBinding SubHeader}" Classes="muted"
-                             TextWrapping="Wrap"
-                             IsVisible="{TemplateBinding SubHeader, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                </StackPanel>
-                <ContentPresenter Grid.Column="1" Content="{TemplateBinding Toolbar}"
-                                  VerticalAlignment="Center" Margin="12,0,0,0" />
-              </Grid>
-            </Border>
-
-            <Grid Grid.Row="1" RowDefinitions="Auto,Auto,Auto,Auto" Margin="14">
-
-                <Border Grid.Row="0" Classes="panel" Padding="12,9" Margin="0,0,0,12"
-                        IsVisible="{TemplateBinding Filters, Converter={x:Static ObjectConverters.IsNotNull}}">
-                  <ContentPresenter Content="{TemplateBinding Filters}" />
-                </Border>
-
-                <ContentPresenter Grid.Row="1" Content="{TemplateBinding Summary}" Margin="0,0,0,12"
-                                  IsVisible="{TemplateBinding Summary, Converter={x:Static ObjectConverters.IsNotNull}}" />
-
-                <!-- ══ سقفِ ارتفاعِ بدنه ══
-                     برابرِ پنجرهٔ دیدِ اسکرولِ صفحه. ‎FallbackValue‎ برای وقتی
-                     است که این بخش بیرونِ آن اسکرول نشسته باشد (مثلاً در
-                     ابزارِ عکس‌گیری) — بی آن، سقف برداشته می‌شد و جدول
-                     دوباره همهٔ ردیف‌ها را یک‌جا می‌ساخت. -->
-                <ContentPresenter Grid.Row="2" Content="{TemplateBinding Body}"
-                                  MaxHeight="{Binding $parent[ScrollViewer].Viewport.Height,
-                                                     FallbackValue=560}" />
 
                 <ContentPresenter Grid.Row="3" Content="{TemplateBinding Footer}" Margin="0,12,0,0"
                                   IsVisible="{TemplateBinding Footer, Converter={x:Static ObjectConverters.IsNotNull}}" />

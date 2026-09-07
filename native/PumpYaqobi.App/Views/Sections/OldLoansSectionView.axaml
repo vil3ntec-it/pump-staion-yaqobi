@@ -6,7 +6,7 @@
              x:Class="PumpYaqobi.App.Views.Sections.OldLoansSectionView"
              x:DataType="vm:OldLoansSectionViewModel">
 
-  <c:SectionPage ScrollBody="False" Header="قرض‌های کهنه"
+  <c:SectionPage Header="قرض‌های کهنه"
                  SubHeader="به ترتیبِ «چند روز است هیچ ردیف تازه‌ای ندارند» — بی‌حرکت‌ها اول">
 
     <c:SectionPage.Toolbar>

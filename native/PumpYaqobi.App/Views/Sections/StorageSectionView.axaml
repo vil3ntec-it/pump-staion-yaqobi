@@ -6,14 +6,13 @@
              x:Class="PumpYaqobi.App.Views.Sections.StorageSectionView"
              x:DataType="vm:StorageSectionViewModel">
 
-  <c:SectionPage ScrollBody="False" Header="مخزن">
+  <c:SectionPage Header="مخزن">
 
     <c:SectionPage.Toolbar>
       <Button Content="{Binding FuelToggleText}" Command="{Binding ToggleFuelCommand}" />
     </c:SectionPage.Toolbar>
 
-    <ScrollViewer>
-      <StackPanel Spacing="14">
+          <StackPanel Spacing="14">
 
         <!-- ══ کارتِ مخزن با نوارِ پرشدگی ══ -->
         <Border Classes="panel" Padding="16">
@@ -223,6 +222,6 @@
           </Grid>
         </Border>
       </StackPanel>
-    </ScrollViewer>
+    
   </c:SectionPage>
 </UserControl>

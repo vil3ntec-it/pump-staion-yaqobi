@@ -6,7 +6,7 @@
              x:Class="PumpYaqobi.App.Views.Sections.TankerSectionView"
              x:DataType="vm:TankerSectionViewModel">
 
-  <c:SectionPage ScrollBody="False">
+  <c:SectionPage>
     <c:SectionPage.Header>تخلیهٔ تانکر</c:SectionPage.Header>
     <c:SectionPage.SubHeader>بارنامه در برابر تحویل — کم‌آمدِ راننده همین‌جا پیدا می‌شود</c:SectionPage.SubHeader>
 
