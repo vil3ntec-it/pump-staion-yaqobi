@@ -42,6 +42,15 @@ public abstract partial class SectionViewModel : ObservableObject
     public virtual Task OnActivatedAsync() => Task.CompletedTask;
 
     /// <summary>
+    /// وقتی کاربر از بخش بیرون می‌رود.
+    ///
+    /// بیشترِ بخش‌ها لازمش ندارند، ولی بخشی که چیزی را «باز» نگه می‌دارد —
+    /// مثلِ اتصالِ زندهٔ دوربین‌ها — باید همان‌جا ببنددش، وگرنه تا بسته شدنِ
+    /// برنامه باز می‌ماند و شبکه و باتری را می‌خورد.
+    /// </summary>
+    public virtual void OnDeactivated() { }
+
+    /// <summary>
     /// صفحهٔ بازِ درونِ بخش — حسابِ شخص، صفحهٔ شرکت، ورق، حسابِ امانت…
     /// اگر کاربر در فهرستِ کارت‌ها باشد ‎null‎ است.
     ///

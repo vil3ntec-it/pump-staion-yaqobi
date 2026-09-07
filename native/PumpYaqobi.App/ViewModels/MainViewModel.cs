@@ -127,7 +127,7 @@ public sealed partial class MainViewModel : ObservableObject
     public async Task GoAsync(SectionViewModel? s)
     {
         if (s is null || ReferenceEquals(s, Current)) return;
-        if (Current is not null) Current.IsActive = false;
+        if (Current is not null) { Current.IsActive = false; Current.OnDeactivated(); }
         s.IsActive = true;
         Current = s;                       // نمونه‌ها زنده می‌مانند: هیچ ساختِ دوباره‌ای نیست
         _settings.LastSection = s.Id;
@@ -195,7 +195,7 @@ public sealed partial class MainViewModel : ObservableObject
         new CompanySectionViewModel(host),
         new StorageSectionViewModel(host),
         new TankerSectionViewModel(host),
-        new PlaceholderSectionViewModel("cameras",   "دوربین‌ها"),
+        new CameraSectionViewModel(host),
         new AttendanceSectionViewModel(host),
         new StaffShortSectionViewModel(host),
         new OldLoansSectionViewModel(host),

@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Platform.Storage;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using PumpYaqobi.App.Views;
@@ -25,6 +26,37 @@ public static class Dialogs
         if (owner is null) return null;
         return await Dispatcher.UIThread.InvokeAsync(async () =>
             await DialogWindow.ForPrompt(title, message, initial, ok).ShowDialog<string?>(owner));
+    }
+
+    /// <summary>
+    /// انتخابِ یک فایلِ عکس از خودِ ویندوز — برای «افزودنِ دوربین با عکسِ کیو‌آر».
+    /// ‎null‎ یعنی کاربر انصراف داد یا پنجره‌ای در کار نیست (آزمونِ بی‌پنجره).
+    /// </summary>
+    public static async Task<string?> PickImageAsync(string title = "عکسِ کیو‌آر را انتخاب کنید")
+    {
+        var owner = Owner;
+        if (owner is null) return null;
+        return await Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            var top = TopLevel.GetTopLevel(owner);
+            if (top is null) return null;
+            var files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = title,
+                AllowMultiple = false,
+                FileTypeFilter = new[]
+                {
+                    new FilePickerFileType("عکس")
+                    {
+                        Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.webp", "*.bmp", "*.gif" },
+                    },
+                },
+            });
+            // ⚠️ ‎TryGetLocalPath‎ برای فایلی که واقعاً روی دیسک نیست (مثلاً
+            // از یک ارائه‌دهندهٔ ابری) ‎null‎ می‌دهد — همان‌جا انصراف می‌شود،
+            // نه یک مسیرِ ساختگی که بعداً باز نمی‌شود.
+            return files.Count > 0 ? files[0].TryGetLocalPath() : null;
+        });
     }
 
     /// <summary>«مطمئنی؟» — ‎true‎ فقط وقتی خودِ کاربر تایید کند.</summary>

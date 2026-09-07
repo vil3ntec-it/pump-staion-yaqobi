@@ -860,5 +860,69 @@ fs.writeFileSync(path.join(OUT, 'golden-tools.json'), JSON.stringify(tools));
 console.log('  ✔ golden-tools.json — ' + tools.dip.length + ' میله‌زنی، ' + tools.aging.length
             + ' قرض کهنه، ' + tools.staffShort.length + ' کمبودی و ' + tools.month.length + ' ماه');
 
+// ── بندِ ۱۵: شناختِ نوعِ لینکِ دوربین ────────────────────────────────────────
+//
+// ‎_camMount‎ کارِ اصلی‌اش یک تصمیمِ ساده است: این لینک عکس است، ویدیو است،
+// HLS است، RTSP است، یا صفحهٔ وبِ خودِ دوربین؟ همان تصمیم در نیتیو هم باید
+// مو‌به‌مو همین باشد، چون هر اشتباهش یعنی دوربینِ کاربر «تصویر نمی‌آید».
+//
+// ⚠️ ترتیبِ شرط‌ها هم مهم است، نه فقط خودِ الگوها: لینکی مثل
+// «…/cgi-bin/hls.m3u8» هم به شرطِ HLS می‌خورد هم به شرطِ عکس، و در نسخهٔ وب
+// چون HLS جلوتر است، HLS برنده می‌شود.
+const camera = await page.evaluate(() => {
+  const urls = [
+    '', '   ',
+    'rtsp://admin:1234@192.168.1.10:554/stream1',
+    'RTSP://192.168.1.10/live',
+    'http://cam.local/live/index.m3u8',
+    'https://cam.local/live/index.M3U8?token=abc',
+    'https://cam.local/live/index.m3u8#t=0',
+    'https://cam.local/video.mp4',
+    'https://cam.local/video.webm?x=1',
+    'https://cam.local/video.ogv',
+    'https://cam.local/video.ogg',
+    'https://cam.local/snap.jpg',
+    'https://cam.local/snap.JPEG?ts=9',
+    'https://cam.local/snap.png',
+    'https://cam.local/snap.gif',
+    'https://cam.local/snap.webp',
+    'http://192.168.1.9/mjpg/video.mjpg',
+    'http://192.168.1.9/videostream.cgi?user=a&pwd=b',
+    'http://192.168.1.9/cgi-bin/snapshot.cgi?channel=1',
+    'http://192.168.1.9/faststream.jpg?stream=full',
+    'http://192.168.1.9/cgi-bin/hls/index.m3u8',
+    'http://192.168.1.9/onvif/snapshot',
+    'http://192.168.1.9/',
+    'http://192.168.1.9/doc/page/login.asp',
+    'https://nvr.example.com:8443/ui/index.html',
+    'ftp://cam.local/x.jpg',
+    'http://cam.local/x.mp4.txt',
+    'http://cam.local/mjpeg',
+    'http://cam.local/MJPG/1',
+  ];
+
+  // همان زنجیرهٔ شرطِ ‎_camMount‎، خط‌به‌خط.
+  const kindOf = (raw) => {
+    const u = String(raw || '').trim();
+    if (!u) return 'none';
+    if (/^rtsp:/i.test(u)) return 'rtsp';
+    if (/\.m3u8(\?|#|$)/i.test(u)) return 'hls';
+    if (/\.(mp4|webm|ogv|ogg)(\?|#|$)/i.test(u)) return 'video';
+    if (/\.(jpe?g|png|gif|webp)(\?|#|$)/i.test(u)
+        || /mjpg|mjpeg|snapshot|faststream|videostream|\/cgi-bin\//i.test(u)) return 'image';
+    return 'webpage';
+  };
+
+  // «تازه کردن» همیشه باید عکسِ نو بیاورد، نه عکسِ کشِ مرورگر.
+  const bust = (u, t) => u + (u.indexOf('?') > -1 ? '&' : '?') + '_t=' + t;
+
+  return {
+    kinds: urls.map((u) => ({ url: u, kind: kindOf(u) })),
+    bust: urls.filter((u) => u.trim()).map((u) => ({ url: u, out: bust(u, 1700000000000) })),
+  };
+});
+fs.writeFileSync(path.join(OUT, 'golden-camera.json'), JSON.stringify(camera));
+console.log('  ✔ golden-camera.json — ' + camera.kinds.length + ' لینکِ دوربین');
+
 console.log('\n  خطای جاوااسکریپت:', errs.length ? errs.slice(0, 3) : 'ندارد');
 await browser.close();
