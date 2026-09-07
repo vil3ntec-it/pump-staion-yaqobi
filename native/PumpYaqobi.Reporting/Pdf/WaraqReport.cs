@@ -24,7 +24,7 @@ public sealed record WaraqReportInput(
 /// ⚠️ «قرضِ هر کارمند» نوارِ بالای صفحه است، نه ردیفِ جدا — خواستهٔ صاحب ریپو
 /// بود که جای خالیِ کنارِ نامِ کارمند استفاده شود تا ردیف‌های تراکنش کم نشوند.
 /// </summary>
-public sealed class WaraqReport : IDocument
+public sealed class WaraqReport : ISetupDocument
 {
     private const string Blue = "#2b6cb0";
     private const string Purple = "#805ad5";
@@ -35,6 +35,9 @@ public sealed class WaraqReport : IDocument
     public WaraqReport(WaraqReportInput input, WaraqService calc) { _in = input; _calc = calc; }
 
     private bool IsNight => _in.Kind == ShiftKind.Night;
+
+    /// <summary>تنظیمِ ورق — از «کارگاه چاپ». پیش‌فرض همان ورقی است که همیشه بود.</summary>
+    public PageSetup Setup { get; set; } = PageSetup.Default;
 
     public DocumentMetadata GetMetadata() => DocumentMetadata.Default;
 
@@ -50,7 +53,7 @@ public sealed class WaraqReport : IDocument
             + (string.IsNullOrWhiteSpace(_in.Station) ? "پمپ" : _in.Station),
             "تاریخ: " + DocStyle.Dash(_in.DateShamsi)
             + (string.IsNullOrWhiteSpace(_in.Shift.WorkerName) ? "" : "  ·  👷 " + _in.Shift.WorkerName),
-            _in.Dates, Body, landscape: true, titleColor: Blue);
+            _in.Dates, Body, landscape: true, titleColor: Blue, setup: Setup);
 
     private void Body(IContainer c) => c.Column(col =>
     {

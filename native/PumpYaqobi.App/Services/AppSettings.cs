@@ -1,4 +1,5 @@
 using System.Text.Json;
+using PumpYaqobi.Reporting.Pdf;
 
 namespace PumpYaqobi.App.Services;
 
@@ -13,6 +14,13 @@ public sealed class AppSettings
     public double WindowWidth { get; set; } = 1440;
     public double WindowHeight { get; set; } = 900;
     public bool WindowMaximized { get; set; } = true;
+
+    /// <summary>
+    /// «تنظیمِ ورق»ِ چاپ — همتای ‎pumpPrintStudio_v4‎ در ‎localStorage‎ی نسخهٔ وب.
+    /// کنارِ خودِ برنامه می‌نشیند، نه در دیتابیس: مالِ همین دستگاه است و
+    /// بکاپِ حساب‌ها نباید آن را با خود ببرد.
+    /// </summary>
+    public PageSetup? PrintSetup { get; set; }
 
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 
@@ -36,6 +44,20 @@ public sealed class AppSettings
         }
         catch { /* تنظیماتِ خراب هرگز نباید جلوی باز شدنِ برنامه را بگیرد */ }
         return new AppSettings();
+    }
+
+    /// <summary>تنظیمِ ورقِ ذخیره‌شده — نبود، همان پیش‌فرضِ همیشگی.</summary>
+    public static PageSetup LoadPrintSetup() => Load().PrintSetup ?? PageSetup.Default;
+
+    /// <summary>
+    /// فقط تنظیمِ ورق را عوض می‌کند و بقیهٔ فایل را دست‌نخورده نگه می‌دارد —
+    /// وگرنه تم و «آخرین بخش» پاک می‌شدند.
+    /// </summary>
+    public static void SavePrintSetup(PageSetup setup)
+    {
+        var a = Load();
+        a.PrintSetup = setup;
+        a.Save();
     }
 
     public void Save()

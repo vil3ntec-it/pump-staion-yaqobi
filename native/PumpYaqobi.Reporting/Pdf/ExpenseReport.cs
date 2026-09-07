@@ -16,18 +16,21 @@ public sealed record ExpenseReportInput(
 /// بازسازیِ ‎pdfExpenses(monthKey)‎: سربرگِ قرمز، سه کادرِ «تعداد مصارف»،
 /// «مصارف امروز» و «جمله کل مصارف»، و پنج ستون.
 /// </summary>
-public sealed class ExpenseReport : IDocument
+public sealed class ExpenseReport : ISetupDocument
 {
     private readonly ExpenseReportInput _in;
 
     public ExpenseReport(ExpenseReportInput input) => _in = input;
+
+    /// <summary>تنظیمِ ورق — از «کارگاه چاپ». پیش‌فرض همان ورقی است که همیشه بود.</summary>
+    public PageSetup Setup { get; set; } = PageSetup.Default;
 
     public DocumentMetadata GetMetadata() => DocumentMetadata.Default;
 
     public void Compose(IDocumentContainer container) =>
         DocStyle.Compose(container,
             "💸 پمپ یعقوبی — مصارف ماه " + _in.MonthLabel, null, _in.Dates, Body,
-            titleColor: DocStyle.Danger);
+            titleColor: DocStyle.Danger, setup: Setup);
 
     private void Body(IContainer c) => c.Column(col =>
     {

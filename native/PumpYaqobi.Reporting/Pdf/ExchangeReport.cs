@@ -15,7 +15,7 @@ public sealed record ExchangeReportInput(
 /// بازسازیِ ‎printSarrafi()‎: سربرگِ آبی، دو کادرِ «جمله دالر این ماه» و
 /// «جمله بردگی این ماه»، نوارِ سبزِ «الباقی صرافی نزد پمپ» و همان ده ستون.
 /// </summary>
-public sealed class ExchangeReport : IDocument
+public sealed class ExchangeReport : ISetupDocument
 {
     private const string Blue = "#1e4f8a";
     private const string BoxBg = "#eef5fd";
@@ -27,11 +27,14 @@ public sealed class ExchangeReport : IDocument
     public ExchangeReport(ExchangeReportInput input, ExchangeService calc)
     { _in = input; _calc = calc; }
 
+    /// <summary>تنظیمِ ورق — از «کارگاه چاپ». پیش‌فرض همان ورقی است که همیشه بود.</summary>
+    public PageSetup Setup { get; set; } = PageSetup.Default;
+
     public DocumentMetadata GetMetadata() => DocumentMetadata.Default;
 
     public void Compose(IDocumentContainer container) =>
         DocStyle.Compose(container, "💱 صرافی — " + _in.MonthLabel, null, _in.Dates, Body,
-                         titleColor: Blue);
+                         titleColor: Blue, setup: Setup);
 
     private void Body(IContainer c) => c.Column(col =>
     {

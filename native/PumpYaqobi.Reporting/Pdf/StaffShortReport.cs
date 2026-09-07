@@ -20,13 +20,16 @@ public sealed record StaffShortReportInput(
 /// ⚠️ کمبودی و اضافی دو ستونِ جدا هستند و هرگز با هم جمع نمی‌شوند — یکی
 /// بدهیِ کارمند به پمپ است و دیگری بدهیِ پمپ به کارمند.
 /// </summary>
-public sealed class StaffShortReport : IDocument
+public sealed class StaffShortReport : ISetupDocument
 {
     private const string Head = "#b45309";
 
     private readonly StaffShortReportInput _in;
 
     public StaffShortReport(StaffShortReportInput input) => _in = input;
+
+    /// <summary>تنظیمِ ورق — از «کارگاه چاپ». پیش‌فرض همان ورقی است که همیشه بود.</summary>
+    public PageSetup Setup { get; set; } = PageSetup.Default;
 
     public DocumentMetadata GetMetadata() => DocumentMetadata.Default;
 
@@ -38,7 +41,7 @@ public sealed class StaffShortReport : IDocument
     public void Compose(IDocumentContainer container) =>
         DocStyle.Compose(container, "👷 پمپ یعقوبی — کمبودی و اضافیِ کارمندان",
                          "از ورق‌های روزانه حساب می‌شود؛ تسویه‌ها فقط از باقی‌مانده کم می‌کنند",
-                         _in.Dates, Body, titleColor: Head);
+                         _in.Dates, Body, titleColor: Head, setup: Setup);
 
     private void Body(IContainer c) => c.Column(col =>
     {

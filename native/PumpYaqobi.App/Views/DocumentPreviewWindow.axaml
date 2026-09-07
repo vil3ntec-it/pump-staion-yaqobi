@@ -12,7 +12,10 @@
     <Border Grid.Row="0" Background="#1f7a4d" Padding="12,9">
       <Grid ColumnDefinitions="Auto,Auto,*,Auto">
         <Button Grid.Column="0" Classes="doc-btn" Content="✕ بستن" Click="OnClose" Margin="0,0,8,0" />
-        <Button Grid.Column="1" Classes="doc-btn" Content="⚙ ذخیرهٔ PDF" Click="OnSave" />
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+          <Button Classes="doc-btn" Content="⚙ تنظیمِ ورق" Click="OnSetup" />
+          <Button Classes="doc-btn" Content="💾 ذخیرهٔ PDF" Click="OnSave" />
+        </StackPanel>
         <TextBlock Grid.Column="2" Text="{Binding Title}" HorizontalAlignment="Center"
                    VerticalAlignment="Center" Foreground="White" FontWeight="Bold" FontSize="15" />
         <Button Grid.Column="3" Classes="doc-btn" Content="🖨 چاپ" Click="OnPrint" />

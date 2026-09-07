@@ -19,7 +19,7 @@ public sealed record SafeReportInput(
 /// ‎safeAmtHtml‎ در نسخهٔ وب. کادری که فقط یک ارز دارد فقط یک خط نشان می‌دهد،
 /// نه «۰ دالر»ی که کاربر را به اشتباه بیندازد.
 /// </summary>
-public sealed class SafeReport : IDocument
+public sealed class SafeReport : ISetupDocument
 {
     private const string Blue = "#2b6cb0";
 
@@ -28,12 +28,15 @@ public sealed class SafeReport : IDocument
 
     public SafeReport(SafeReportInput input, SafeService calc) { _in = input; _calc = calc; }
 
+    /// <summary>تنظیمِ ورق — از «کارگاه چاپ». پیش‌فرض همان ورقی است که همیشه بود.</summary>
+    public PageSetup Setup { get; set; } = PageSetup.Default;
+
     public DocumentMetadata GetMetadata() => DocumentMetadata.Default;
 
     public void Compose(IDocumentContainer container) =>
         DocStyle.Compose(container,
             "🏦 پمپ یعقوبی — گاوصندوق " + _in.MonthLabel, null, _in.Dates, Body,
-            titleColor: Blue);
+            titleColor: Blue, setup: Setup);
 
     /// <summary>«12,000 افغانی» و «$ 300 دالر» — هر ارز یک خط، هیچ‌کدام صفرِ الکی.</summary>
     private static string Pair(MoneyPair p)

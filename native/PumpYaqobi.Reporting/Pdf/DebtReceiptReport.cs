@@ -14,7 +14,7 @@ public sealed record DebtReceiptReportInput(
 /// بازسازیِ ‎pdfDebtRasid(monthKey)‎: سربرگِ سبز، دو کادرِ «تعداد رسیدها» و
 /// «جمله کل رسیدها»، و پنج ستون.
 /// </summary>
-public sealed class DebtReceiptReport : IDocument
+public sealed class DebtReceiptReport : ISetupDocument
 {
     private const string Green = "#38a169";
 
@@ -22,11 +22,14 @@ public sealed class DebtReceiptReport : IDocument
 
     public DebtReceiptReport(DebtReceiptReportInput input) => _in = input;
 
+    /// <summary>تنظیمِ ورق — از «کارگاه چاپ». پیش‌فرض همان ورقی است که همیشه بود.</summary>
+    public PageSetup Setup { get; set; } = PageSetup.Default;
+
     public DocumentMetadata GetMetadata() => DocumentMetadata.Default;
 
     public void Compose(IDocumentContainer container) =>
         DocStyle.Compose(container, "🧾 پمپ یعقوبی — رسید قرض‌داران " + _in.MonthLabel,
-                         null, _in.Dates, Body, titleColor: Green);
+                         null, _in.Dates, Body, titleColor: Green, setup: Setup);
 
     private void Body(IContainer c) => c.Column(col =>
     {

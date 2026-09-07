@@ -30,7 +30,7 @@ public sealed record ShiftsReportInput(
 /// ⚠️ کارتِ هر روز عمداً نمی‌شکند (‎ShowEntire‎): نیمهٔ یک گزارش در ته ورق و
 /// نیمهٔ دیگرش سرِ ورقِ بعد، همان چیزی بود که خواندنِ ورق را سخت می‌کرد.
 /// </summary>
-public sealed class ShiftsReport : IDocument
+public sealed class ShiftsReport : ISetupDocument
 {
     private const string Head = "#b7791f";
     private const string DayBg = "#fdf6e3";
@@ -43,6 +43,9 @@ public sealed class ShiftsReport : IDocument
     private readonly ShiftsReportInput _in;
 
     public ShiftsReport(ShiftsReportInput input) => _in = input;
+
+    /// <summary>تنظیمِ ورق — از «کارگاه چاپ». پیش‌فرض همان ورقی است که همیشه بود.</summary>
+    public PageSetup Setup { get; set; } = PageSetup.Default;
 
     public DocumentMetadata GetMetadata() => DocumentMetadata.Default;
 
@@ -62,7 +65,7 @@ public sealed class ShiftsReport : IDocument
                          PersianText.Num(days.Count) + " روز · "
                          + PersianText.Num(_in.Reports.Count) + " گزارش",
                          _in.Dates, Body,
-                         titleColor: _in.DieselOnly ? DocStyle.Diesel : Head);
+                         titleColor: _in.DieselOnly ? DocStyle.Diesel : Head, setup: Setup);
     }
 
     private void Body(IContainer c) => c.Column(col =>
