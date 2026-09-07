@@ -58,10 +58,11 @@ public class InvoiceParityTests : IDisposable
         return await db.DebtRows.AsNoTracking().ToListAsync();
     }
 
+    /// <summary>تنها حسابِ موجود — آزمون‌هایی که یک قرض‌دار بیشتر ندارند.</summary>
     private static async Task<DebtAccount> AccountAsync(PumpDbFactory dbf)
     {
         await using var db = dbf.Create();
-        return await db.DebtAccounts.AsNoTracking().FirstAsync();
+        return await db.DebtAccounts.AsNoTracking().OrderBy(a => a.Id).FirstAsync();
     }
 
     // ── ثبت ────────────────────────────────────────────────────────────────
@@ -338,18 +339,21 @@ public class InvoiceParityTests : IDisposable
     [Fact]
     public async Task RenamingTheCustomerMovesTheInvoiceToTheRightAccount()
     {
-        var (svc, debtors, dbf) = Host();
+        var (svc, _, dbf) = Host();
         var v = await svc.AddAsync(Fuel("کریم", 100m, 60m));
         await svc.ApproveAsync(v.Id, 62m);
 
         v.CustomerName = "احمد";
         await svc.UpdateAsync(v);
 
-        var people = await debtors.ListAsync();
-        var karim = people.Single(p => p.Name == "کریم");
-        var ahmad = people.Single(p => p.Name == "احمد");
-        Assert.Equal(0m, karim.MainAccount.RasidFuelPetrol);
-        Assert.Equal(100m, ahmad.MainAccount.RasidFuelPetrol);
+        // ⚠️ ‎ListAsync‎ حساب‌ها را همراه نمی‌آورد، پس از خودِ دیتابیس خوانده می‌شود
+        await using var db = dbf.Create();
+        var karim = await db.Debtors.AsNoTracking().Include(d => d.MainAccount)
+                            .SingleAsync(p => p.Name == "کریم");
+        var ahmad = await db.Debtors.AsNoTracking().Include(d => d.MainAccount)
+                            .SingleAsync(p => p.Name == "احمد");
+        Assert.Equal(0m, karim.MainAccount!.RasidFuelPetrol);
+        Assert.Equal(100m, ahmad.MainAccount!.RasidFuelPetrol);
     }
 
     // ── اجازه ──────────────────────────────────────────────────────────────

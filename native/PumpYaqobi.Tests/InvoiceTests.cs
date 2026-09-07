@@ -81,7 +81,14 @@ public class InvoiceTests : IDisposable
         using var db = _dbf.Create();
         var acc = db.DebtAccounts.Single();
         Assert.Equal(250m, acc.RasidFuelPetrol);
-        Assert.Empty(db.DebtRows);             // بخشِ پولی ندارد، پس ردیفی هم نمی‌سازد
+        // بخشِ پولی ندارد، پس ردیفِ رسیدِ پولی هم نیست — ولی ردیفِ **نمایشیِ**
+        // «رسید تیل» هست، تا کاربر در جدولِ حساب ببیند چند لیتر و از کدام
+        // فاکتور رسیده. آن ردیف هیچ عددی جز ستونِ «رسید تیل» ندارد، پس هیچ
+        // محاسبه‌ای را عوض نمی‌کند.
+        Assert.Empty(db.DebtRows.Where(r => r.InvoiceId == v.Id));
+        var shown = db.DebtRows.Single(r => r.InvoiceFuelId == v.Id);
+        Assert.Equal(250m, shown.RasidFuel);
+        Assert.Equal(0m, shown.Bardagi + shown.Rasid + shown.Liters + shown.Albaqi);
     }
 
     [Fact]
