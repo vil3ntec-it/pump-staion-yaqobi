@@ -52,7 +52,9 @@
       </Grid>
     </c:SectionPage.Summary>
 
-    <c:ExcelGrid ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False">
+    <!-- جدول + ردیفِ «جمله»ی ته آن — همتای ‎<tfoot class="xls-foot">‎ی سایت -->
+    <Grid RowDefinitions="*,Auto">
+    <c:ExcelGrid Grid.Row="0" ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False">
       <DataGrid.Columns>
         <DataGridTextColumn Header="تاریخ"  Binding="{Binding DateShamsi}" Width="Auto" />
         <DataGridTemplateColumn Header="نوع" Width="Auto">
@@ -99,5 +101,7 @@
         </DataGridTemplateColumn>
       </DataGrid.Columns>
     </c:ExcelGrid>
+    <c:TotalsBar Grid.Row="1" ItemsSource="{Binding TotalCells}" IsVisible="{Binding HasTotals}" />
+    </Grid>
   </c:SectionPage>
 </UserControl>

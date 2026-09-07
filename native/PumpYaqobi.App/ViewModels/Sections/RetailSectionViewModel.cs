@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using PumpYaqobi.App.Controls;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
@@ -137,6 +138,15 @@ public sealed partial class RetailSectionViewModel
     protected override long EntityIdOf(RetailRowViewModel r) => r.Entity.Id;
     protected override RetailRow EntityOf(RetailRowViewModel r) => r.Entity;
     protected override void Recalc() => Summary = Calc.Summarize(Rows.Select(r => r.Entity));
+
+    /// <summary>ردیفِ «جمله» — همان چهار عددِ بالای صفحه، ته جدول هم.</summary>
+    protected override IReadOnlyList<TotalCell> BuildTotals() => new[]
+    {
+        new TotalCell("مقدار تیل", TotalLiters),
+        new TotalCell("مقدار بردگی", TotalBardagi),
+        new TotalCell("رسید", TotalRasid, "Pump.Ok"),
+        new TotalCell("الباقی", TotalAlbaqi, Summary.Albaqi > 0m ? "Pump.Danger" : "Pump.Ok"),
+    };
 
     /// <summary>‎pdfChakana(monthKey)‎ — ورقِ چکنهٔ همین ماه.</summary>
     [RelayCommand]

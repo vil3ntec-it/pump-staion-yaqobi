@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using PumpYaqobi.App.Controls;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
@@ -96,6 +97,13 @@ public sealed partial class ExpenseSectionViewModel
     /// <summary>«مصارف کل» از همهٔ ماه‌ها خوانده می‌شود، نه از ردیف‌های روی صفحه.</summary>
     private async Task RefreshGrandAsync() =>
         GrandTotal = _calc.Total(await _host.ExpenseLedger.ListAsync(null));
+
+    /// <summary>ردیفِ «جمله» — جمعِ همین ماه؛ همان عددی که «مفاد/ضرر» می‌خواند.</summary>
+    protected override IReadOnlyList<TotalCell> BuildTotals() => new[]
+    {
+        new TotalCell("مبلغِ ماه", TotalText, "Pump.Warn"),
+        new TotalCell("امروز", TodayText),
+    };
 
     /// <summary>‎pdfExpenses(monthKey)‎ — ورقِ مصارفِ همین ماه.</summary>
     [RelayCommand]

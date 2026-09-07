@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using PumpYaqobi.App.Controls;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
@@ -163,6 +164,27 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
 
     public ObservableCollection<PurchaseRowViewModel> Purchases { get; } = new();
     public ObservableCollection<DipRowViewModel> Dips { get; } = new();
+
+    /// <summary>
+    /// ردیفِ «جمله»ی جدولِ اندازه‌گیری‌ها — شمار، جمعِ اختلاف، و آن بخشی که
+    /// «دفتر برابر شود» خورده و واقعاً به دفتر رفته است.
+    /// </summary>
+    public IReadOnlyList<TotalCell> DipTotalCells
+    {
+        get
+        {
+            var diff = Dips.Sum(d => d.Measured - d.Expected);
+            var applied = Dips.Where(d => d.ApplyToBook).Sum(d => d.Measured - d.Expected);
+            return new[]
+            {
+                new TotalCell("اندازه‌گیری‌ها", Shamsi.Money(Dips.Count)),
+                new TotalCell("جمعِ اختلاف", Shamsi.Money(diff), diff < 0m ? "Pump.Danger" : "Pump.Ok"),
+                new TotalCell("رفته به دفتر", Shamsi.Money(applied), "Pump.Info"),
+            };
+        }
+    }
+
+    public void RefreshDipTotals() => OnPropertyChanged(nameof(DipTotalCells));
 
     [ObservableProperty] private bool _isDiesel;
     [ObservableProperty] private string _current = "";
@@ -408,6 +430,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         var dips = await _host.StorageData.DipsAsync(Fuel);
         Dips.Clear();
         foreach (var d in dips) Dips.Add(new DipRowViewModel(d, this));
+        RefreshDipTotals();
 
         Capacity = Shamsi.Money(_host.Settings.GetDecimal(CapacityKey, 10000m));
         await RecalcAsync();

@@ -73,7 +73,7 @@
       </UniformGrid>
     </c:SectionPage.Summary>
 
-    <Grid RowDefinitions="*,10,*">
+    <Grid RowDefinitions="*,10,*,Auto">
       <c:ExcelGrid Grid.Row="0" ItemsSource="{Binding Pumps}" x:CompileBindings="False">
         <DataGrid.Columns>
           <DataGridTextColumn Header="پایه" Binding="{Binding Num}" Width="Auto" />
@@ -142,6 +142,9 @@
           <DataGridTextColumn Header="مبلغِ مؤثر" Binding="{Binding EffectiveAmountText}" Width="128" IsReadOnly="True" />
         </DataGrid.Columns>
       </c:ExcelGrid>
+
+      <!-- ردیفِ «جمله»ی همین شیفت — روز و شب با هم جمع نمی‌شوند -->
+      <c:TotalsBar Grid.Row="3" ItemsSource="{Binding TotalCells}" />
     </Grid>
   </c:SectionPage>
 </UserControl>

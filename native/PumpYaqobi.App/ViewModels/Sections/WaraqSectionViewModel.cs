@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using PumpYaqobi.App.Controls;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
@@ -282,7 +283,23 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         else { ShortageLabel = "کمبودی"; Shortage = "0"; }
 
         foreach (var x in Txns) x.RefreshEffective();
+        OnPropertyChanged(nameof(TotalCells));
     }
+
+    /// <summary>
+    /// ردیفِ «جمله»ی ته جدولِ ورق — همتای ‎&lt;tfoot class="xls-foot"&gt;‎ی سایت.
+    /// ⚠️ فقط شیفتی که باز است؛ روز و شب هرگز با هم جمع نمی‌شوند.
+    /// </summary>
+    public IReadOnlyList<TotalCell> TotalCells => new[]
+    {
+        new TotalCell("پطرول (لیتر)", PetrolLiters),
+        new TotalCell("دیزل (لیتر)", DieselLiters),
+        new TotalCell("فروش", Sales, "Pump.Ok"),
+        new TotalCell("قرض", Debt, "Pump.Warn"),
+        new TotalCell("مصارف", Expenses, "Pump.Warn"),
+        new TotalCell(ShortageLabel, Shortage,
+                      ShortageLabel == "کمبودی" ? "Pump.Danger" : "Pump.Ok"),
+    };
 
     /// <summary>
     /// ‎printWaraq()‎ — ورقِ **همان شیفتی که باز است** (روز یا شب)، نه هر دو.

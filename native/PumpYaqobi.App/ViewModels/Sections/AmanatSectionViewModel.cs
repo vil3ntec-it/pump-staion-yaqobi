@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using PumpYaqobi.App.Controls;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
@@ -236,7 +237,20 @@ public sealed partial class AmanatAccountViewModel : ObservableObject, IRowBatch
         TotalLoss = Shamsi.Money(Math.Round(t.Loss, 2));
         TotalRest = Shamsi.Money(Math.Round(t.Rest, 2));
         TotalShare = Shamsi.Money(Math.Round(t.Share, 2));
+        OnPropertyChanged(nameof(TotalCells));
     }
+
+    /// <summary>
+    /// ردیفِ «جمله»ی ته جدول — همتای ‎&lt;tfoot&gt;‎ی سایت.
+    /// ⚠️ حساب‌ها با هم جمع نمی‌شوند: هر حساب «جمله»ی خودش را دارد.
+    /// </summary>
+    public IReadOnlyList<TotalCell> TotalCells => new[]
+    {
+        new TotalCell("رسید (لیتر)", TotalLiters),
+        new TotalCell("بخار", TotalLoss, "Pump.Warn"),
+        new TotalCell("باقیِ تیل", TotalRest, "Pump.Info"),
+        new TotalCell("سهمِ من", TotalShare, "Pump.Ok"),
+    };
 
     public async Task SaveRowAsync(AmanatRow r)
     {

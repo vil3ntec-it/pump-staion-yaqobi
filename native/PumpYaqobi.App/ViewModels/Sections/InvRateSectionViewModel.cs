@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using PumpYaqobi.App.Controls;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
@@ -136,6 +137,19 @@ public sealed partial class InvRateSectionViewModel : SectionViewModel
     public decimal Net { get; private set; }
 
     public string NetBrushKey => Net > 0m ? "Pump.Danger" : "Pump.Ok";
+
+    /// <summary>ردیفِ «جمله»ی ته جدول — همان ‎_invRateTotals()‎ی سایت.</summary>
+    public IReadOnlyList<TotalCell> TotalCells => new[]
+    {
+        new TotalCell("فاکتورها", CountText),
+        new TotalCell("لیتر", LitersText),
+        new TotalCell("زیان", LossText, "Pump.Danger"),
+        new TotalCell("مفاد", GainText, "Pump.Ok"),
+        new TotalCell("خالص", NetText, NetBrushKey),
+        new TotalCell("در صف", PendingText, "Pump.Muted"),
+    };
+
+    partial void OnNetTextChanged(string v) => OnPropertyChanged(nameof(TotalCells));
 
     partial void OnFilterIndexChanged(int v)
     {

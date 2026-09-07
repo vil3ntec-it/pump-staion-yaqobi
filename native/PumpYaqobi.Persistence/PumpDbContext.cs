@@ -24,6 +24,7 @@ public sealed class PumpDbContext : DbContext
     public DbSet<Debtor> Debtors => Set<Debtor>();
     public DbSet<DebtAccount> DebtAccounts => Set<DebtAccount>();
     public DbSet<DebtRow> DebtRows => Set<DebtRow>();
+    public DbSet<DebtTableArchive> DebtTableArchives => Set<DebtTableArchive>();
     public DbSet<SafeEntry> SafeEntries => Set<SafeEntry>();
     public DbSet<ExchangeRow> ExchangeRows => Set<ExchangeRow>();
     public DbSet<Expense> Expenses => Set<Expense>();
@@ -114,6 +115,18 @@ public sealed class PumpDbContext : DbContext
             e.HasIndex(x => x.InvoiceId);
             e.HasIndex(x => x.SrcKey);      // یافتنِ ردیفِ هم‌منبع هنگامِ ثبتِ دوباره
             e.Property(x => x.Fuel).HasConversion<int>();
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        // جدول‌های آرشیوِ حساب — عکسِ گذشته، بی هیچ کلیدِ خارجی به ردیف‌های زنده
+        b.Entity<DebtTableArchive>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.AccountId);
+            foreach (var p in new[] { nameof(DebtTableArchive.PercentPetrol), nameof(DebtTableArchive.PercentDiesel),
+                                      nameof(DebtTableArchive.RasidFuelPetrol), nameof(DebtTableArchive.RasidFuelDiesel),
+                                      nameof(DebtTableArchive.RasidMoneyPetrol), nameof(DebtTableArchive.RasidMoneyDiesel) })
+                e.Property(p).HasColumnType("TEXT");
             e.HasQueryFilter(x => x.DeletedAt == null);
         });
 
