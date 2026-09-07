@@ -15,34 +15,28 @@
         <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
           <Button Classes="accent" Content="➕ افزودن شخص" Margin="0,0,8,0"
                   Command="{Binding AddDebtorCommand}" />
-          <Button Content="⏳ مدت عضویت همه" Margin="0,0,8,0" />
-          <Button Content="⏰ قرض‌های کهنه — تیل" Margin="0,0,8,0" />
-          <Button Content="💵 قرض‌های کهنه — پول" Margin="0,0,8,0" />
-          <Button Content="📉 زیان افزایش قیمت" />
+          <!-- «قرض‌های کهنه» از این‌جا رفت: حالا کارتِ زیربخشِ همین بخش است و
+               بالای فهرست می‌نشیند — مثلِ ‎.tool-link-card‎ نسخهٔ وب. سه دکمهٔ
+               مردهٔ قبلی (که هیچ فرمانی نداشتند) هم با آن رفتند. -->
+          <Button Content="⏳ مدت عضویت همه" />
         </WrapPanel>
       </c:SectionPage.Toolbar>
 
       <c:SectionPage.Filters>
-        <Grid ColumnDefinitions="Auto,240,Auto,Auto,24,Auto,220,150">
+        <Grid ColumnDefinitions="Auto,240,Auto,24,Auto,220,150">
           <TextBlock Grid.Column="0" Text="🔍 جست‌وجو" Classes="label" VerticalAlignment="Center" Margin="0,0,8,0" />
           <TextBox Grid.Column="1" Text="{Binding Search}" Watermark="نام یا شماره" />
 
           <!-- 🎤 جست‌وجوی صوتی — همه روی خودِ دستگاه، بی اینترنت و بی سرور.
-               اگر نشناخت، نامی که خودتان می‌زنید همان صدا را یاد می‌دهد. -->
+               صفحهٔ «آموزش صدا» برداشته شد؛ یادگیری خاموش و پشتِ پرده است. -->
           <Button Grid.Column="2" Margin="6,0,0,0" Padding="10,4"
                   Content="🎤" ToolTip.Tip="نام را بگویید — حسابش باز می‌شود"
                   Command="{Binding VoiceSearchCommand}"
                   Classes.danger="{Binding Listening}" />
 
-          <!-- 🎓 آموزش یکجا — فهرستِ همهٔ حساب‌ها با یک دکمهٔ ضبط جلوی هرکدام.
-               بی این، یاد دادنِ صد قرض‌دار یعنی صد بار «نشناختم». -->
-          <Button Grid.Column="3" Margin="6,0,0,0" Padding="10,4"
-                  Content="🎓" ToolTip.Tip="آموزش صدا — یکجا برای همهٔ حساب‌ها"
-                  Command="{Binding OpenVoiceTeachCommand}" />
-
-          <TextBlock Grid.Column="5" Text="حسابِ تازه" Classes="label" VerticalAlignment="Center" Margin="0,0,8,0" />
-          <TextBox Grid.Column="6" Text="{Binding NewName}" Watermark="نام" />
-          <TextBox Grid.Column="7" Text="{Binding NewPhone}" Watermark="شماره" Margin="8,0,0,0" />
+          <TextBlock Grid.Column="4" Text="حسابِ تازه" Classes="label" VerticalAlignment="Center" Margin="0,0,8,0" />
+          <TextBox Grid.Column="5" Text="{Binding NewName}" Watermark="نام" />
+          <TextBox Grid.Column="6" Text="{Binding NewPhone}" Watermark="شماره" Margin="8,0,0,0" />
         </Grid>
       </c:SectionPage.Filters>
 
@@ -58,6 +52,17 @@
                    ✕ بالا-راست (در RTL سمتِ چپِ دید)، نقطهٔ حال بالا-چپ،
                    نام، مبلغِ بزرگ، دو نشانِ «اتمام تیل/پول»، دو عددِ سوخت،
                    دکمهٔ کیوآر و شمارهٔ کارت در پایین. -->
+              <!-- ══ کلیک روی خودِ کارت ══════════════════════════════════
+                   خواستهٔ صریحِ صاحب ریپو: «روی کادرش کلیک کنم برود، نه این‌که
+                   یک کادر باشد به اسم باز کردن حساب». در سایت هم ‎card.onclick‎
+                   حساب را باز می‌کند و دکمه‌ای به این نام نیست.
+
+                   پس کارت داخلِ یک دکمهٔ بی‌چهره می‌نشیند (همان ‎card-shell‎ی
+                   که بخشِ شرکت‌ها از قبل داشت). دکمه‌های درونِ کارت — ✕ و
+                   کیو‌آر — کلیکشان را خودشان مصرف می‌کنند و به این نمی‌رسد. -->
+              <Button Classes="card-shell"
+                      Command="{Binding $parent[ItemsRepeater].((vm:DebtSectionViewModel)DataContext).OpenCommand}"
+                      CommandParameter="{Binding}">
               <Border Classes="person-card"
                       Classes.out="{Binding IsOut}"
                       Classes.low="{Binding IsLow}"
@@ -98,15 +103,13 @@
                   </StackPanel>
 
                   <StackPanel Grid.Row="5" Spacing="7" Margin="0,12,0,0">
-                    <Button Classes="accent" Content="باز کردنِ حساب" HorizontalAlignment="Stretch"
-                            Command="{Binding $parent[ItemsRepeater].((vm:DebtSectionViewModel)DataContext).OpenCommand}"
-                            CommandParameter="{Binding}" />
                     <Button Classes="qr" Content="📱 کیوآر کد" HorizontalAlignment="Stretch" />
                     <TextBlock Text="{Binding Index}" HorizontalAlignment="Center" FontWeight="Bold"
                                FontSize="12" Foreground="{DynamicResource Pump.Accent}" />
                   </StackPanel>
                 </Grid>
               </Border>
+              </Button>
             </DataTemplate>
           </ItemsRepeater.ItemTemplate>
         </ItemsRepeater>
