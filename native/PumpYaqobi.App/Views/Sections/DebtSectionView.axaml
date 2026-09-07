@@ -46,11 +46,12 @@
         </Grid>
       </c:SectionPage.Filters>
 
-              <ItemsControl ItemsSource="{Binding Cards}">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><c:AutoFillPanel MinItemWidth="252" Gap="12" /></ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
+              <ItemsRepeater ItemsSource="{Binding Cards}">
+          <ItemsRepeater.Layout>
+              <UniformGridLayout MinItemWidth="252" ItemsStretch="Fill"
+                                 MinColumnSpacing="12" MinRowSpacing="12" />
+            </ItemsRepeater.Layout>
+          <ItemsRepeater.ItemTemplate>
             <DataTemplate x:DataType="vm:DebtorCardViewModel">
 
               <!-- کارتِ قرض‌دار — همان چیدمانِ نسخهٔ وب:
@@ -66,7 +67,7 @@
 
                   <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
                     <Button Grid.Column="0" Classes="card-x" Content="✕"
-                            Command="{Binding $parent[ItemsControl].((vm:DebtSectionViewModel)DataContext).DeleteDebtorCommand}"
+                            Command="{Binding $parent[ItemsRepeater].((vm:DebtSectionViewModel)DataContext).DeleteDebtorCommand}"
                             CommandParameter="{Binding}" />
                     <Ellipse Grid.Column="2" Width="13" Height="13" VerticalAlignment="Top" Margin="0,4,2,0"
                              IsVisible="{Binding HasStatus}"
@@ -98,7 +99,7 @@
 
                   <StackPanel Grid.Row="5" Spacing="7" Margin="0,12,0,0">
                     <Button Classes="accent" Content="باز کردنِ حساب" HorizontalAlignment="Stretch"
-                            Command="{Binding $parent[ItemsControl].((vm:DebtSectionViewModel)DataContext).OpenCommand}"
+                            Command="{Binding $parent[ItemsRepeater].((vm:DebtSectionViewModel)DataContext).OpenCommand}"
                             CommandParameter="{Binding}" />
                     <Button Classes="qr" Content="📱 کیوآر کد" HorizontalAlignment="Stretch" />
                     <TextBlock Text="{Binding Index}" HorizontalAlignment="Center" FontWeight="Bold"
@@ -107,8 +108,8 @@
                 </Grid>
               </Border>
             </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
+          </ItemsRepeater.ItemTemplate>
+        </ItemsRepeater>
       
     </c:SectionPage>
 

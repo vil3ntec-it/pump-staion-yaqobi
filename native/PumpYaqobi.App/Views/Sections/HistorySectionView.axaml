@@ -12,11 +12,12 @@
          تاریخش؛ زدنِ کادر، تاریخچهٔ همان بخش را باز می‌کند. -->
     <c:SectionPage IsVisible="{Binding IsListVisible}" Header="تاریخچه‌ها"
                    SubHeader="هر بخش تاریخچهٔ خودش را دارد — از تازه به کهنه. فقط برای دیدن است؛ هیچ چیزی عوض یا پاک نمی‌شود.">
-              <ItemsControl ItemsSource="{Binding Cards}">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><c:AutoFillPanel MinItemWidth="272" Gap="12" /></ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
+              <ItemsRepeater ItemsSource="{Binding Cards}">
+          <ItemsRepeater.Layout>
+              <UniformGridLayout MinItemWidth="272" ItemsStretch="Fill"
+                                 MinColumnSpacing="12" MinRowSpacing="12" />
+            </ItemsRepeater.Layout>
+          <ItemsRepeater.ItemTemplate>
             <DataTemplate x:DataType="vm:HistoryCardViewModel">
               <Button Classes="card-shell" Command="{Binding OpenCommand}">
                 <Border Classes="card" Padding="14,12">
@@ -27,8 +28,8 @@
                 </Border>
               </Button>
             </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
+          </ItemsRepeater.ItemTemplate>
+        </ItemsRepeater>
       
     </c:SectionPage>
 

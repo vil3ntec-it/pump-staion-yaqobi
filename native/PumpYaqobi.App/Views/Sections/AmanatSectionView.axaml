@@ -39,23 +39,24 @@
               <Panel>
           <TextBlock Text="{Binding EmptyText}" Classes="muted" HorizontalAlignment="Center"
                      Margin="0,40,0,0" IsVisible="{Binding !Cards.Count}" />
-          <ItemsControl ItemsSource="{Binding Cards}">
-            <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate><c:AutoFillPanel MinItemWidth="252" Gap="12" /></ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
+          <ItemsRepeater ItemsSource="{Binding Cards}">
+            <ItemsRepeater.Layout>
+              <UniformGridLayout MinItemWidth="252" ItemsStretch="Fill"
+                                 MinColumnSpacing="12" MinRowSpacing="12" />
+            </ItemsRepeater.Layout>
+            <ItemsRepeater.ItemTemplate>
               <DataTemplate x:DataType="vm:AmanatCardViewModel">
                 <Button Classes="card-shell"
-                        Command="{Binding $parent[ItemsControl].((vm:AmanatSectionViewModel)DataContext).OpenCommand}"
+                        Command="{Binding $parent[ItemsRepeater].((vm:AmanatSectionViewModel)DataContext).OpenCommand}"
                         CommandParameter="{Binding}">
                   <Border Classes="person-card">
                     <Grid RowDefinitions="Auto,Auto,*">
                       <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
                         <Button Grid.Column="0" Classes="card-x" Content="✕"
-                                Command="{Binding $parent[ItemsControl].((vm:AmanatSectionViewModel)DataContext).DeleteCardCommand}"
+                                Command="{Binding $parent[ItemsRepeater].((vm:AmanatSectionViewModel)DataContext).DeleteCardCommand}"
                                 CommandParameter="{Binding}" />
                         <Button Grid.Column="2" Classes="qr" Content="📄" Padding="8,3" FontSize="12"
-                                Command="{Binding $parent[ItemsControl].((vm:AmanatSectionViewModel)DataContext).PdfCardCommand}"
+                                Command="{Binding $parent[ItemsRepeater].((vm:AmanatSectionViewModel)DataContext).PdfCardCommand}"
                                 CommandParameter="{Binding}" />
                       </Grid>
 
@@ -82,8 +83,8 @@
                   </Border>
                 </Button>
               </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
+            </ItemsRepeater.ItemTemplate>
+          </ItemsRepeater>
         </Panel>
       
     </c:SectionPage>
