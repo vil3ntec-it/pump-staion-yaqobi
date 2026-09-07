@@ -1,11 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Layout;
-using Avalonia.VisualTree;
 
 namespace PumpYaqobi.App.Controls;
 
@@ -89,6 +86,9 @@ public class ExcelGrid : DataGrid
     /// </summary>
     private sealed class FillerColumn : DataGridTemplateColumn { }
 
+    /// <summary>ستونی که آخرین بار با چرخِ افقی به آن رسیدیم.</summary>
+    private int _wheelCol;
+
     /// <summary>
     /// ══ اسکرولِ چپ و راست با چرخ و ترک‌پد ══════════════════════════════════
     ///
@@ -99,6 +99,11 @@ public class ExcelGrid : DataGrid
     /// نوارِ لغزشِ افقیِ خودِ ‎DataGrid‎ هست ولی فقط با کشیدنِ موشواره کار
     /// می‌کرد؛ حرکتِ افقیِ ترک‌پد (‎Delta.X‎) و ‎Shift+چرخ‎ — همان دو راهی که
     /// هر مرورگری می‌فهمد — به آن نمی‌رسید.
+    ///
+    /// جابه‌جایی ستون‌به‌ستون است، با ‎ScrollIntoView‎ی خودِ جدول: هم روشِ
+    /// رسمیِ Avalonia است، هم روی جدولی که ستون‌هایش پهنای متفاوت دارند
+    /// طبیعی‌تر از لغزشِ پیکسلی درمی‌آید — هر بار یک ستونِ کامل می‌آید تو،
+    /// نه نصفِ یک ستون.
     ///
     /// ⚠️ اول ‎base‎ صدا زده می‌شود: اگر خودِ ‎DataGrid‎ این حرکت را فهمید و
     /// مصرف کرد، این‌جا دیگر کاری نمی‌کنیم و دوبار اسکرول نمی‌شود.
@@ -113,21 +118,18 @@ public class ExcelGrid : DataGrid
         if (dx == 0 && e.KeyModifiers.HasFlag(KeyModifiers.Shift)) dx = e.Delta.Y;
         if (dx == 0) return;
 
-        var bar = this.GetVisualDescendants().OfType<ScrollBar>()
-                      .FirstOrDefault(b => b.Orientation == Orientation.Horizontal);
-        if (bar is null || bar.Maximum <= bar.Minimum) return;
+        var cols = Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).ToList();
+        if (cols.Count < 2) return;
 
-        // در راست‌به‌چپ هم «به چپ» یعنی همان جهتِ مثبتِ نوار — خودِ جدول
-        // ستون‌ها را برعکس می‌چیند، پس این‌جا وارونه‌سازی لازم نیست.
-        var step = Math.Max(60, bar.ViewportSize * 0.25);
-        var target = Math.Clamp(bar.Value - dx * step, bar.Minimum, bar.Maximum);
-        if (Math.Abs(target - bar.Value) < 0.5) return;
+        var item = SelectedItem ?? (ItemsSource as System.Collections.IEnumerable)?
+                                   .Cast<object>().FirstOrDefault();
+        if (item is null) return;
 
-        bar.Value = target;
-        // ‎DataGrid‎ فقط به رویدادِ ‎Scroll‎ گوش می‌دهد، نه به عوض شدنِ خودِ
-        // ‎Value‎ — بی این خط، نوار می‌لغزد و جدول سرِ جایش می‌ماند.
-        bar.RaiseEvent(new ScrollEventArgs(ScrollEventType.ThumbPosition, target)
-                       { RoutedEvent = ScrollBar.ScrollEvent });
+        var next = Math.Clamp(_wheelCol + (dx > 0 ? 1 : -1), 0, cols.Count - 1);
+        if (next == _wheelCol) return;      // به لبه رسیده‌ایم — بگذار صفحه اسکرول کند
+
+        _wheelCol = next;
+        ScrollIntoView(item, cols[next]);
         e.Handled = true;
     }
 
