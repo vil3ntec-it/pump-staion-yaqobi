@@ -1,10 +1,12 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
+using PumpYaqobi.Reporting.Pdf;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -96,6 +98,17 @@ public sealed partial class StaffShortSectionViewModel : SectionViewModel
 
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(HasSettles));
+    }
+
+    /// <summary>ورقِ همین جدول — با فهرستِ تسویه‌ها زیرش.</summary>
+    [RelayCommand]
+    private Task PdfAsync()
+    {
+        var input = new StaffShortReportInput(
+            Rows.Select(r => r.Row).ToList(),
+            Settles.Select(s => s.Entity).ToList(),
+            DocDates.Line());
+        return Documents.ShowAsync(() => new StaffShortReport(input), "کمبودی کارمندان");
     }
 
     /// <summary>«💵 رسید کمبودی» — مبلغ از پیش با باقی‌مانده پر می‌شود.</summary>

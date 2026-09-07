@@ -1,11 +1,13 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
+using PumpYaqobi.Reporting.Pdf;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -165,6 +167,34 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
     {
         await _host.Companies.SaveRowAsync(r);
         Recalc();
+    }
+
+    /// <summary>‎pdfCompany(fuelMode)‎ — ورقِ همان دفتری که باز است.</summary>
+    [RelayCommand]
+    private Task PdfAsync() => Sheet(Fuel);
+
+    /// <summary>
+    /// ‎pdfCompany('all')‎ — پطرول و دیزل در یک ورق، با ستونِ «نوع تیل».
+    /// ردیف‌های پطرول اول می‌آیند و بعد دیزل، مثلِ نسخهٔ وب.
+    /// </summary>
+    [RelayCommand]
+    private Task PdfBothAsync() => Sheet(null);
+
+    private Task Sheet(FuelType? fuel)
+    {
+        var rows = fuel is null
+            ? CompanyService.RowsOf(Entity, FuelType.Petrol)
+                  .Concat(CompanyService.RowsOf(Entity, FuelType.Diesel)).ToList()
+            : CompanyService.RowsOf(Entity, fuel.Value).ToList();
+
+        var input = new CompanyReportInput(Entity, fuel, rows, DocDates.Line());
+        var label = fuel switch
+        {
+            FuelType.Petrol => " — پطرول",
+            FuelType.Diesel => " — دیزل",
+            _ => " — هر دو",
+        };
+        return Documents.ShowAsync(() => new CompanyReport(input, Calc), Name + label);
     }
 
     [RelayCommand]
