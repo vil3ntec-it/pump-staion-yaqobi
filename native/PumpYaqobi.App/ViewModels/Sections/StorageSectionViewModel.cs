@@ -168,6 +168,26 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     [ObservableProperty] private string _fillText = "0%";
     [ObservableProperty] private string _thresholdText = "";
 
+    // ── میله‌زنی: محاسبهٔ زنده ─────────────────────────────────────────────
+    /// <summary>لیترِ میله‌زنیِ در حالِ تایپ — هنوز ثبت نشده.</summary>
+    [ObservableProperty] private string _dipMeasured = "";
+
+    /// <summary>«دفتر برابرِ عددِ واقعی شود» — تیکِ ‎dip-apply‎ی نسخهٔ وب.</summary>
+    [ObservableProperty] private bool _dipApplyToBook;
+
+    [ObservableProperty] private string _tankBookText = "—";
+    [ObservableProperty] private string _tankCapacityText = "—";
+    [ObservableProperty] private string _dipPercentText = "—";
+    [ObservableProperty] private string _dipEmptyText = "—";
+    [ObservableProperty] private string _dipDiffText = "—";
+    [ObservableProperty] private string _dipDiffBrushKey = "Pump.Text";
+    [ObservableProperty] private string _dipWarnText = "";
+    [ObservableProperty] private bool _dipWarnVisible;
+    [ObservableProperty] private bool _dipHasValue;
+
+    /// <summary>موجودیِ دفتریِ همین لحظه — پایهٔ «اختلاف با دفتر».</summary>
+    private decimal _bookNow;
+
     public FuelType Fuel => IsDiesel ? FuelType.Diesel : FuelType.Petrol;
     public string FuelLabel => IsDiesel ? "دیزل" : "پطرول";
     public string TankTitle => (IsDiesel ? "🟤 مخزن " : "⛽ مخزن ") + FuelLabel;
@@ -197,6 +217,48 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     }
 
     partial void OnIsLowChanged(bool v) => OnPropertyChanged(nameof(StateText));
+
+    partial void OnDipMeasuredChanged(string v) => RefreshDip();
+
+    /// <summary>
+    /// ‎dipLiveCalc‎ — همان چهار عددی که نسخهٔ وب هنگام تایپ نشان می‌داد:
+    /// درصدِ پر بودن، فضای خالی (= چقدر از تانکر می‌شود گرفت)، اختلاف با دفتر،
+    /// و هشدارِ «از حدِ مجاز گذشت».
+    ///
+    /// ⚠️ این‌جا هیچ چیزی ذخیره نمی‌شود؛ فقط حساب می‌شود. ثبت با دکمهٔ
+    /// «میله‌زنیِ تازه» است.
+    /// </summary>
+    private void RefreshDip()
+    {
+        var t = _host.TankDip.Info(Fuel, _bookNow, Shamsi.Num(Capacity),
+            _host.Settings.GetDecimal(
+                PumpYaqobi.Services.Data.SettingsService.LowStockThreshold, 1000m));
+
+        TankBookText = Shamsi.Money(Math.Round(t.Book, 0, MidpointRounding.AwayFromZero)) + " لیتر";
+        TankCapacityText = Shamsi.Money(Math.Round(t.Capacity, 0, MidpointRounding.AwayFromZero))
+                         + " لیتر" + (t.CapacityDefined ? "" : " (پیش‌فرض)");
+
+        var measured = Shamsi.Num(DipMeasured);
+        DipHasValue = measured > 0m;
+        if (!DipHasValue)
+        {
+            DipPercentText = DipEmptyText = DipDiffText = "—";
+            DipDiffBrushKey = "Pump.Text";
+            DipWarnVisible = false;
+            return;
+        }
+
+        var c = _host.TankDip.Calc(t, measured);
+        DipPercentText = Shamsi.Money(Math.Round(c.Percent, 0, MidpointRounding.AwayFromZero)) + "٪";
+        DipEmptyText = Shamsi.Money(Math.Round(c.Empty, 0, MidpointRounding.AwayFromZero)) + " لیتر";
+        DipDiffText = (c.Diff > 0m ? "+" : "") + Shamsi.Money(c.Diff) + " لیتر";
+        DipDiffBrushKey = c.Diff < 0m ? "Pump.Danger" : "Pump.Ok";
+        DipWarnVisible = c.Over;
+        DipWarnText = c.Over
+            ? "🚨 اختلافِ " + Shamsi.Money(Math.Abs(c.Diff)) + " لیتر از حدِ مجاز ("
+              + Shamsi.Money(c.Allowed) + " لیتر) بیشتر است — احتمالِ نشتی، دزدی یا خطای ثبت."
+            : "";
+    }
 
     [RelayCommand]
     private void ToggleFuel() => IsDiesel = !IsDiesel;
@@ -252,6 +314,11 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         var cap = Shamsi.Num(Capacity);
         FillPercent = cap > 0m ? (double)Math.Min(100m, Math.Max(0m, t.Display / cap * 100m)) : 0;
         FillText = Math.Round(FillPercent) + "%";
+
+        // موجودیِ دفتری برای میله‌زنی — همان ‎book‎ی ‎__tankInfo‎ که از
+        // ‎_fuelStock‎ می‌آید (خرید − فروش + اصلاحِ میله‌زنی‌های پیشین).
+        _bookNow = t.Current;
+        RefreshDip();
     }
 
     public async Task SavePurchaseAsync(FuelPurchase p)
@@ -280,11 +347,49 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         await RecalcAsync();
     }
 
+    /// <summary>
+    /// ‎confirmTankDip‎ — ثبتِ میله‌زنی با همان عددی که کاربر تایپ کرده.
+    ///
+    /// ⚠️ «دفتری» از خودِ برنامه پر می‌شود، نه دستِ کاربر: اختلاف فقط وقتی
+    /// معنی دارد که با موجودیِ همان لحظه سنجیده شود. پیش از این ستونِ دفتری
+    /// صفر می‌ماند و هر میله‌زنی «اختلافِ کلِ مخزن» نشان می‌داد.
+    /// </summary>
     [RelayCommand]
     private async Task AddDipAsync()
     {
-        var d = new TankDip { Fuel = Fuel, DateShamsi = Shamsi.Today() };
+        var measured = Shamsi.Num(DipMeasured);
+        if (measured <= 0m) { _host.Toast("لیتر میله‌زنی را بنویسید", ToastKind.Error); return; }
+
+        var expected = Math.Round(_bookNow, 0, MidpointRounding.AwayFromZero);
+        var diff = TankDipService.JsRound(measured - _bookNow);
+
+        var d = new TankDip
+        {
+            Fuel = Fuel, DateShamsi = Shamsi.Today(),
+            Measured = measured, Expected = expected,
+            BookAdjust = DipApplyToBook ? diff : 0m,
+        };
         await _host.StorageData.SaveDipAsync(d);
         Dips.Insert(0, new DipRowViewModel(d, this));
+
+        _host.Toast(diff < 0m
+            ? "⚠️ " + Shamsi.Money(-diff) + " لیتر کم‌آمد نسبت به دفتر"
+              + (DipApplyToBook ? " — دفتر برابر شد" : "")
+            : "✅ ثبت شد — فرق: " + Shamsi.Money(diff) + " لیتر"
+              + (DipApplyToBook ? " — دفتر برابر شد" : ""),
+            diff < 0m ? ToastKind.Warn : ToastKind.Ok);
+
+        DipMeasured = "";
+        await RecalcAsync();
+    }
+
+    /// <summary>حذفِ میله‌زنی — اصلاحِ دفترش هم با خودش برمی‌گردد.</summary>
+    [RelayCommand]
+    private async Task DeleteDipAsync(DipRowViewModel? row)
+    {
+        if (row is null) return;
+        await _host.Tools.DeleteDipAsync(row.Entity.Id);
+        Dips.Remove(row);
+        await RecalcAsync();
     }
 }

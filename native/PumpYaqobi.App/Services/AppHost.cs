@@ -37,6 +37,10 @@ public sealed class AppHost
         Storage = new StorageService();
         AmanatCalc = new AmanatService();
         AttendanceCalc = new AttendanceService();
+        Aging = new AgingService(Debt);
+        StaffShort = new StaffShortService(Waraq);
+        MonthReport = new MonthReportService();
+        TankDip = new TankDipService();
         Trash = new TrashService(Db, Permissions, Session);
         Debtors = new DebtorService(Db, Permissions, Trash);
         Companies = new CompanyDataService(Db, Permissions, Trash);
@@ -50,6 +54,7 @@ public sealed class AppHost
         DebtReceipts = new DebtQuickReceiptService(Db, Permissions, Trash);
         ExchangeSync = new ExchangeCompanySyncService(Db, Permissions);
         Attendance = new AttendanceDataService(Db, Permissions, Trash);
+        Tools = new ToolsDataService(Db, Permissions, Trash, Aging, StaffShort, MonthReport);
         SafeLedger = new LedgerService<SafeEntry>(Db, Permissions, Trash, "safe",
             r => (r.Title ?? "") + " — " + Shamsi.Money(r.Amount));
         ExchangeLedger = new LedgerService<ExchangeRow>(Db, Permissions, Trash, "sarrafi",
@@ -105,6 +110,21 @@ public sealed class AppHost
     public ExchangeCompanySyncService ExchangeSync { get; }
     public AttendanceService AttendanceCalc { get; }
     public AttendanceDataService Attendance { get; }
+
+    /// <summary>قرض‌های کهنه — «چند روز است هیچ ردیفی ندارد».</summary>
+    public AgingService Aging { get; }
+
+    /// <summary>کمبودی/اضافیِ کارمندان — از خودِ ورق‌ها، نه از دفترِ جدا.</summary>
+    public StaffShortService StaffShort { get; }
+
+    /// <summary>گزارشِ پایانِ ماه — فقط جمعِ ثبت‌های موجود.</summary>
+    public MonthReportService MonthReport { get; }
+
+    /// <summary>میله‌زنیِ مخزن و کم‌آمدِ تانکر.</summary>
+    public TankDipService TankDip { get; }
+
+    /// <summary>خوراکِ همهٔ ابزارهای بالا و دو دفترِ کوچکشان.</summary>
+    public ToolsDataService Tools { get; }
     public LedgerService<SafeEntry> SafeLedger { get; }
     public LedgerService<ExchangeRow> ExchangeLedger { get; }
     public LedgerService<Expense> ExpenseLedger { get; }

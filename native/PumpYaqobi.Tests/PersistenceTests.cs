@@ -190,7 +190,7 @@ public class FullSchemaTests : IDisposable
             });
             db.FuelPurchases.Add(new FuelPurchase { Fuel = FuelType.Petrol, Seller = "شرکت الف", Kg = 30000, Density = 0.75m, PriceTon = 700, UsdRate = 70, DateKey = 14050610 });
             db.TankDips.Add(new TankDip { Fuel = FuelType.Petrol, Measured = 1000, Expected = 1010, DateKey = 14050611 });
-            db.TankerUnloads.Add(new TankerUnload { Fuel = FuelType.Diesel, Driver = "کریم", Liters = 20000, DateKey = 14050612 });
+            db.TankerUnloads.Add(new TankerUnload { Fuel = FuelType.Diesel, Driver = "کریم", Manifest = 20000, Actual = 19940, DateKey = 14050612 });
 
             var comp = new TilCompany { Name = "شرکتِ بزرگ" };
             comp.Rows.Add(new CompanyRow { Fuel = FuelType.Petrol, SortIndex = 0, Ton = 30, Usd = 700, Rate = 70, Poul = 1000, DateKey = 14050610 });

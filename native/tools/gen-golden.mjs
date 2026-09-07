@@ -688,5 +688,177 @@ fs.writeFileSync(path.join(OUT, 'golden-purchase-company.json'), JSON.stringify(
 console.log('  ✔ golden-purchase-company.json — ' + purchaseCompany.match.length
             + ' تطبیقِ نام و ' + purchaseCompany.sync.length + ' خرید');
 
+// ── ابزارهای بندِ ۱۹: میله‌زنی، تخلیهٔ تانکر، قرض‌های کهنه، کمبودی، گزارش ماهانه ──
+//
+// چرا این‌ها با هم در یک فایل: هر پنجِ‌شان «خلاصه‌ای از ثبت‌های موجود»اند و
+// هیچ‌کدام دفترِ تازه‌ای نمی‌سازند. اگر یکی‌شان عدد را جور دیگری جمع بزند،
+// کاربر همان روزِ آخرِ ماه می‌فهمد — پس هر پنج از خودِ نسخهٔ وب پرسیده می‌شوند.
+const tools = await page.evaluate(() => {
+  let seed = 90190;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  const ri = (n) => Math.floor(rnd() * n);
+  const dt = () => '140' + (4 + ri(2)) + '/' + String(1 + ri(12)).padStart(2, '0')
+                 + '/' + String(1 + ri(28)).padStart(2, '0');
+
+  // ── ۱) میله‌زنیِ مخزن — TankDip.calc ────────────────────────────────────
+  // ظرفیتِ صفر عمداً هست: همان‌جا تقسیم بر صفر کمین کرده و «حد مجاز» به
+  // کفِ ۵۰ لیتری می‌افتد.
+  const dip = [];
+  const keepTank = window.__tankInfo;
+  for (let i = 0; i < 300; i++) {
+    const fuel = rnd() < 0.5 ? 'diesel' : 'petrol';
+    const capacity = ri(5) === 0 ? 0 : Math.round(rnd() * 40000);
+    const book = Math.round((rnd() * 2.2 - 0.2) * 15000);
+    const actual = Math.round(rnd() * 45000 * 100) / 100;
+    window.__tankInfo = () => ({
+      fuel, label: fuel === 'diesel' ? 'دیزل' : 'پطرول',
+      icon: fuel === 'diesel' ? '🟤' : '⛽',
+      book, capacity, capDefined: capacity > 0, threshold: 500,
+    });
+    const c = TankDip.calc(fuel, actual);
+    dip.push({ fuel, capacity, book, actual, pct: c.pct, empty: c.empty,
+               receivable: c.receivable, diff: c.diff, allowed: c.allowed, over: c.over });
+  }
+  window.__tankInfo = keepTank;
+
+  // ── ۲) قرض‌های کهنه — _agingRows ────────────────────────────────────────
+  const keepPersons = DB.debtPersons;
+  const mkRow = () => ({
+    date: rnd() < 0.12 ? '' : dt(),
+    ftype: rnd() < 0.4 ? 'diesel' : 'petrol',
+    fuel: Math.round(rnd() * 400 * 100) / 100,
+    rasid: rnd() < 0.5 ? Math.round(rnd() * 50000) : 0,
+    rasidFuel: rnd() < 0.3 ? Math.round(rnd() * 120) : 0,
+    bardagi: Math.round(rnd() * 60000),
+    albaqi: Math.round(rnd() * 60000),
+  });
+  const mkAcct = () => ({
+    rows: Array.from({ length: ri(4) }, mkRow),
+    moneyRows: Array.from({ length: ri(3) }, mkRow),
+    rasidFuelP: rnd() < 0.5 ? Math.round(rnd() * 200) : 0,
+    rasidFuelD: rnd() < 0.4 ? Math.round(rnd() * 200) : 0,
+  });
+  const aging = [];
+  for (let c = 0; c < 40; c++) {
+    const persons = [];
+    for (let i = 0; i < 1 + ri(12); i++) {
+      const p = Object.assign({ id: 'p' + c + '_' + i, name: 'شخص ' + c + '-' + i,
+                                phone: rnd() < 0.5 ? '070000000' + i : '',
+                                mode: rnd() < 0.35 ? 'money' : 'fuel',
+                                subs: Array.from({ length: ri(3) }, mkAcct) }, mkAcct());
+      persons.push(p);
+    }
+    DB.debtPersons = persons;
+    const take = (filter) => _agingRows(filter).map((r) => ({
+      id: r.p.id, albaqi: r.f.albaqi, money: r.f.money,
+      bardagi: r.f.bardagi, rasid: r.f.rasid, days: r.days,
+    }));
+    aging.push({ today: persianDate(), persons, all: take(''), fuel: take('fuel'), money: take('money') });
+  }
+  DB.debtPersons = keepPersons;
+
+  // ── ۳) کمبودی/اضافیِ کارمندان — همان جمعِ _renderStaffShortPanel ─────────
+  const keepWaraq = DB.waraqEntries, keepSettle = DB.staffShortSettles;
+  const mkShift = (name) => {
+    const sd = { workerName: name, pumps: [], transactions: [],
+                 fabricDebt: Math.round(rnd() * 40000),
+                 pricePerLiter: rnd() < 0.6 ? Math.round(rnd() * 90) : 0,
+                 pricePerLiterDiesel: rnd() < 0.5 ? Math.round(rnd() * 90) : 0 };
+    for (let i = 0; i < 1 + ri(4); i++) {
+      const start = Math.round(rnd() * 500000);
+      sd.pumps.push({ num: i + 1, fuel: rnd() < 0.4 ? 'diesel' : 'petrol', start,
+                      end: start + Math.round(rnd() * 4000),
+                      pricePerLiter: [60, 62, 65, 70][ri(4)], debt: Math.round(rnd() * 30000) });
+    }
+    for (let i = 0; i < ri(6); i++) {
+      const mode = rnd();
+      sd.transactions.push({ name: 'ت' + i, liters: Math.round(rnd() * 300),
+                             amount: rnd() < 0.5 ? Math.round(rnd() * 40000) : 0,
+                             type: rnd() < 0.6 ? 'debt' : 'expense',
+                             fuel: rnd() < 0.4 ? 'diesel' : 'petrol',
+                             amountAuto: mode < 0.33 ? true : (mode < 0.66 ? false : undefined) });
+    }
+    return sd;
+  };
+  // نام‌ها عمداً با «ي/ك» عربی و فاصلهٔ دوتایی هم می‌آیند: کلیدِ گروه‌بندی
+  // normFa است، پس «علي  احمد» و «علی احمد» باید یک نفر شمرده شوند.
+  const names = ['علی احمد', 'علي  احمد', 'محمود', 'كريم', 'کریم', '', 'نصیر'];
+  const staffShort = [];
+  for (let c = 0; c < 30; c++) {
+    const entries = [];
+    for (let w = 0; w < 1 + ri(6); w++) {
+      const e = { id: 'w' + w, date: dt() };
+      if (rnd() < 0.85) e.day = mkShift(names[ri(names.length)]);
+      if (rnd() < 0.7) e.night = mkShift(names[ri(names.length)]);
+      entries.push(e);
+    }
+    const settles = [];
+    for (let s = 0; s < ri(5); s++)
+      settles.push({ id: 'ss' + s, key: normFa(names[ri(names.length)]),
+                     name: names[ri(names.length)], amount: Math.round(rnd() * 20000),
+                     type: rnd() < 0.5 ? 'excess' : (rnd() < 0.5 ? 'short' : undefined),
+                     date: dt(), at: 1700000000 + s });
+    DB.waraqEntries = entries; DB.staffShortSettles = settles;
+    _ssSettleIdx = null;
+    _renderStaffShortPanel();
+    staffShort.push({
+      entries, settles,
+      rows: _staffShortRows.map((x) => ({ key: x.key, name: x.name, shifts: x.shifts,
+        short: x.short, excess: x.excess, paidShort: x.paidShort, paidExcess: x.paidExcess,
+        remainShort: x.remainShort, remainExcess: x.remainExcess })),
+    });
+  }
+  DB.waraqEntries = keepWaraq; DB.staffShortSettles = keepSettle;
+
+  // ── ۴) گزارش ماهانه — _mrCompute · _mrPrevKey · _mrAllKeys ──────────────
+  const keep = {};
+  ['reports', 'shifts', 'expenses', 'extraIncomes', 'fuelEntries',
+   'debtQuickReceipts', 'safeEntries', 'tankerLogs'].forEach((k) => { keep[k] = DB[k]; });
+  const month = [];
+  for (let c = 0; c < 30; c++) {
+    const shift = () => ({ money: Math.round(rnd() * 400000), sale: Math.round(rnd() * 6000),
+                           profit: Math.round(rnd() * 30000) });
+    // ⚠️ پطرول همیشه در ‎DB.reports‎ و دیزل همیشه در ‎DB.shifts‎ — چون
+    // ‎_mrCompute‎ هر رکوردِ «در جدولِ اشتباه» را بی‌صدا دور می‌ریزد. آن
+    // فیلتر یادگارِ دو جدولِ جدا بود؛ در نیتیو یک جدول با ستونِ سوخت است و
+    // چنین رکوردی اصلاً نمی‌تواند وجود داشته باشد.
+    DB.reports = Array.from({ length: 1 + ri(8) }, () => ({
+      fuel: 'petrol', date: dt(),
+      day: rnd() < 0.8 ? shift() : null, night: rnd() < 0.6 ? shift() : null }));
+    DB.shifts = Array.from({ length: ri(8) }, () => Object.assign(
+      { fuel: 'diesel', date: dt() }, shift()));
+    DB.expenses = Array.from({ length: ri(8) }, () => ({ date: dt(), amount: Math.round(rnd() * 9000) }));
+    DB.extraIncomes = Array.from({ length: ri(5) }, () => ({ date: dt(), amount: Math.round(rnd() * 9000) }));
+    DB.fuelEntries = Array.from({ length: ri(6) }, () => ({
+      date: dt(), fuelType: rnd() < 0.5 ? 'diesel' : 'petrol',
+      liters: Math.round(rnd() * 12000), totalAFN: Math.round(rnd() * 900000) }));
+    DB.debtQuickReceipts = Array.from({ length: ri(6) }, () => ({ date: dt(), amount: Math.round(rnd() * 50000) }));
+    DB.safeEntries = Array.from({ length: ri(8) }, () => ({
+      date: dt(), currency: rnd() < 0.25 ? 'usd' : 'afn',
+      type: rnd() < 0.5 ? 'bardagi' : 'rasid', amount: Math.round(rnd() * 70000) }));
+    DB.tankerLogs = Array.from({ length: ri(5) }, () => ({
+      date: dt(), fuel: rnd() < 0.5 ? 'diesel' : 'petrol',
+      manifest: Math.round(rnd() * 20000), actual: Math.round(rnd() * 20000) }));
+    const keys = _mrAllKeys();
+    const want = keys[ri(keys.length)];
+    month.push({
+      today: persianDate(),
+      db: { reports: DB.reports, shifts: DB.shifts, expenses: DB.expenses,
+            extraIncomes: DB.extraIncomes, fuelEntries: DB.fuelEntries,
+            debtQuickReceipts: DB.debtQuickReceipts, safeEntries: DB.safeEntries,
+            tankerLogs: DB.tankerLogs },
+      keys, key: want, prevKey: _mrPrevKey(want),
+      cur: _mrCompute(want), prev: _mrCompute(_mrPrevKey(want)),
+      growth: _dashGrowth(_mrCompute(want).net, _mrCompute(_mrPrevKey(want)).net),
+    });
+  }
+  Object.keys(keep).forEach((k) => { DB[k] = keep[k]; });
+
+  return { dip, aging, staffShort, month };
+});
+fs.writeFileSync(path.join(OUT, 'golden-tools.json'), JSON.stringify(tools));
+console.log('  ✔ golden-tools.json — ' + tools.dip.length + ' میله‌زنی، ' + tools.aging.length
+            + ' قرض کهنه، ' + tools.staffShort.length + ' کمبودی و ' + tools.month.length + ' ماه');
+
 console.log('\n  خطای جاوااسکریپت:', errs.length ? errs.slice(0, 3) : 'ندارد');
 await browser.close();

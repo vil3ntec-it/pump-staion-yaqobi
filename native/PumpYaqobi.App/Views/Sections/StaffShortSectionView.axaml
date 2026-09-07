@@ -1,0 +1,149 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
+             x:Class="PumpYaqobi.App.Views.Sections.StaffShortSectionView"
+             x:DataType="vm:StaffShortSectionViewModel">
+
+  <c:SectionPage Header="کمبودی و اضافیِ کارمندان"
+                 SubHeader="از خودِ ورق‌های روزانه — به هیچ ورقی دست زده نمی‌شود">
+
+    <StackPanel Spacing="10">
+
+      <!-- راهنمای واضح: کاربر باید بداند با هر کدام چه کند -->
+      <WrapPanel Orientation="Horizontal">
+        <Border Classes="panel" Padding="10,8" Margin="0,0,8,8" Width="330">
+          <StackPanel Spacing="3">
+            <TextBlock Text="🔴 کمبودی = کارمند بدهکار است" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Danger}" />
+            <TextBlock TextWrapping="Wrap" Classes="muted"
+                       Text="پول کم آورده — با «💵 رسید کمبودی» مبلغی که از او می‌گیرید را ثبت کنید تا باقی‌مانده کم شود." />
+          </StackPanel>
+        </Border>
+        <Border Classes="panel" Padding="10,8" Margin="0,0,8,8" Width="330">
+          <StackPanel Spacing="3">
+            <TextBlock Text="🟢 اضافی = پمپ بدهکار است" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Ok}" />
+            <TextBlock TextWrapping="Wrap" Classes="muted"
+                       Text="پول زیاد داده — با «💸 پرداخت اضافی» مبلغی که به او برمی‌گردانید را ثبت کنید." />
+          </StackPanel>
+        </Border>
+      </WrapPanel>
+
+      <Border Classes="panel" Padding="0">
+        <Grid RowDefinitions="Auto,*,Auto">
+          <Border Grid.Row="0" Classes="card-head">
+            <TextBlock Text="کارمندان" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Accent}" />
+          </Border>
+
+          <c:ExcelGrid Grid.Row="1" ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}"
+                       x:CompileBindings="False" IsReadOnly="True"
+                       BorderThickness="0" CornerRadius="0">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="کارمند" Binding="{Binding Name}" Width="*" />
+              <DataGridTextColumn Header="شیفت" Binding="{Binding ShiftsText}" Width="Auto" />
+              <DataGridTemplateColumn Header="🔴 کمبودیِ مانده" Width="Auto">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding ShortText}" FontWeight="Bold" VerticalAlignment="Center"
+                               Foreground="{Binding ShortBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTemplateColumn Header="🟢 اضافیِ مانده" Width="Auto">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding ExcessText}" FontWeight="Bold" VerticalAlignment="Center"
+                               Foreground="{Binding ExcessBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTemplateColumn Header="عمل" Width="Auto">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <Button Classes="ghost danger" Content="💵 رسید کمبودی" Padding="8,3" FontSize="11"
+                              IsVisible="{Binding CanSettleShort}"
+                              Command="{Binding $parent[UserControl].DataContext.PickShortCommand}"
+                              CommandParameter="{Binding}" />
+                      <Button Classes="ghost" Content="💸 پرداخت اضافی" Padding="8,3" FontSize="11"
+                              IsVisible="{Binding CanSettleExcess}"
+                              Command="{Binding $parent[UserControl].DataContext.PickExcessCommand}"
+                              CommandParameter="{Binding}" />
+                      <TextBlock Text="✅ تسویه شد" VerticalAlignment="Center" FontWeight="Bold"
+                                 IsVisible="{Binding IsSettled}"
+                                 Foreground="{DynamicResource Pump.Ok}" />
+                    </StackPanel>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+            </DataGrid.Columns>
+          </c:ExcelGrid>
+
+          <Border Grid.Row="2" Padding="12,8" Background="{DynamicResource Pump.Dark}">
+            <StackPanel Orientation="Horizontal" Spacing="14">
+              <TextBlock Text="جملهٔ کمبودی:" FontWeight="Bold" />
+              <TextBlock Text="{Binding TotalShort}" FontWeight="Bold"
+                         Foreground="{DynamicResource Pump.Danger}" />
+              <TextBlock Text="جملهٔ اضافی:" FontWeight="Bold" />
+              <TextBlock Text="{Binding TotalExcess}" FontWeight="Bold"
+                         Foreground="{DynamicResource Pump.Ok}" />
+            </StackPanel>
+          </Border>
+        </Grid>
+      </Border>
+
+      <TextBlock Text="هنوز ورقی با کمبودی/اضافی ثبت نشده" Classes="label"
+                 IsVisible="{Binding IsEmpty}" HorizontalAlignment="Center" Margin="0,10" />
+
+      <!-- ثبتِ تسویه -->
+      <Border Classes="panel" Padding="12,10">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock Text="مبلغ:" Classes="label" VerticalAlignment="Center" />
+          <TextBox Text="{Binding Amount}" Width="130" HorizontalContentAlignment="Center" />
+          <Button Classes="danger" Content="✔ رسید کمبودی گرفتم"
+                  Command="{Binding SettleShortCommand}" />
+          <Button Classes="accent" Content="✔ اضافی را پرداخت کردم"
+                  Command="{Binding SettleExcessCommand}" />
+        </StackPanel>
+      </Border>
+
+      <!-- دفترِ تسویه‌ها -->
+      <Border Classes="panel" Padding="0" IsVisible="{Binding HasSettles}">
+        <Grid RowDefinitions="Auto,*">
+          <Border Grid.Row="0" Classes="card-head">
+            <TextBlock Text="🧾 رسیدها و پرداخت‌های ثبت‌شده" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Accent}" />
+          </Border>
+          <c:ExcelGrid Grid.Row="1" ItemsSource="{Binding Settles}" x:CompileBindings="False"
+                       IsReadOnly="True" BorderThickness="0" CornerRadius="0">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="کارمند" Binding="{Binding Name}" Width="*" />
+              <DataGridTemplateColumn Header="نوع" Width="Auto">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding KindText}" FontWeight="Bold" VerticalAlignment="Center"
+                               Foreground="{Binding KindBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTextColumn Header="مبلغ" Binding="{Binding AmountText}" Width="Auto" />
+              <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
+              <DataGridTemplateColumn Header="" Width="Auto">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"
+                            Command="{Binding $parent[UserControl].DataContext.DeleteSettleCommand}"
+                            CommandParameter="{Binding}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+            </DataGrid.Columns>
+          </c:ExcelGrid>
+        </Grid>
+      </Border>
+    </StackPanel>
+  </c:SectionPage>
+</UserControl>

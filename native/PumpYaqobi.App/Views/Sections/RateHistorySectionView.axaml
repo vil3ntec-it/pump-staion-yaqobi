@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             x:Class="PumpYaqobi.App.Views.Sections.RateHistorySectionView"
+             x:DataType="vm:RateHistorySectionViewModel">
+
+  <c:SectionPage Header="تاریخچهٔ نرخ اتحادیه"
+                 SubHeader="با هر تغییرِ نرخ در «تنظیمات»، این‌جا خودکار ثبت می‌شود — روی هیچ محاسبه‌ای اثر ندارد">
+
+    <StackPanel Spacing="10">
+      <Border Classes="panel" Padding="0">
+        <c:ExcelGrid ItemsSource="{Binding Rows}" x:CompileBindings="False"
+                     IsReadOnly="True" BorderThickness="0" CornerRadius="0">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" />
+            <DataGridTextColumn Header="نوع تیل" Binding="{Binding FuelText}" Width="Auto" />
+            <DataGridTextColumn Header="نرخ" Binding="{Binding RateText}" Width="Auto" />
+            <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="*" />
+          </DataGrid.Columns>
+        </c:ExcelGrid>
+      </Border>
+
+      <TextBlock Text="هنوز نرخی ثبت نشده — نرخ اتحادیه را در «تنظیمات» بنویسید" Classes="label"
+                 IsVisible="{Binding IsEmpty}" HorizontalAlignment="Center" Margin="0,10" />
+    </StackPanel>
+  </c:SectionPage>
+</UserControl>

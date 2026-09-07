@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
              xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
              x:Class="PumpYaqobi.App.Views.Sections.StorageSectionView"
              x:DataType="vm:StorageSectionViewModel">
 
@@ -66,8 +67,7 @@
               </UniformGrid>
 
               <WrapPanel Orientation="Horizontal" Margin="0,8,0,0">
-                <Button Content="🚚 تخلیهٔ تانکر" Margin="0,0,8,8" />
-                <Button Content="📏 میله‌زنیِ تازه" Margin="0,0,8,8" Command="{Binding AddDipCommand}" />
+                <Button Content="📏 ثبتِ میله‌زنی" Margin="0,0,8,8" Command="{Binding AddDipCommand}" />
                 <Button Content="🕘 تاریخچهٔ خریدهای مخزن" Margin="0,0,8,8" />
                 <Button Content="{Binding PdfText}" Margin="0,0,8,8" />
                 <Button Classes="accent" Content="{Binding AddBuyText}" Margin="0,0,8,8"
@@ -147,13 +147,59 @@
         </ItemsControl>
 
         <!-- ══ میله‌زنیِ مخزن ══ -->
-        <Border Classes="panel" Padding="0" MinHeight="180">
-          <Grid RowDefinitions="Auto,*">
+        <Border Classes="panel" Padding="0" MinHeight="240">
+          <Grid RowDefinitions="Auto,Auto,*">
             <Border Grid.Row="0" Classes="card-head">
               <TextBlock Text="📏 میله‌زنیِ مخزن" FontWeight="Bold"
                          Foreground="{DynamicResource Pump.Accent}" />
             </Border>
-            <c:ExcelGrid Grid.Row="1" ItemsSource="{Binding Dips}" x:CompileBindings="False"
+
+            <!-- ══ محاسبهٔ زنده ══════════════════════════════════════════════
+                 همان کاری که ‎dipLiveCalc‎ می‌کرد: کاربر هنوز چیزی ثبت نکرده،
+                 ولی همان لحظه می‌بیند مخزن چقدر پر است، چقدر جا دارد، و چقدر
+                 با دفتر فرق دارد. اگر فرق از حدِ مجاز بگذرد، هشدارِ قرمز. -->
+            <StackPanel Grid.Row="1" Spacing="8" Margin="14,12">
+              <WrapPanel Orientation="Horizontal">
+                <StackPanel Spacing="3" Width="150" Margin="0,0,10,6">
+                  <TextBlock Text="لیترِ میله‌زنی" Classes="label" />
+                  <TextBox Text="{Binding DipMeasured}" Watermark="0" />
+                </StackPanel>
+                <StackPanel Spacing="3" Width="150" Margin="0,0,10,6">
+                  <TextBlock Text="موجودی دفتری" Classes="label" />
+                  <TextBlock Text="{Binding TankBookText}" FontWeight="Bold" Margin="0,6,0,0"
+                             Foreground="{DynamicResource Pump.Info}" />
+                </StackPanel>
+                <StackPanel Spacing="3" Width="170" Margin="0,0,10,6">
+                  <TextBlock Text="ظرفیت کل" Classes="label" />
+                  <TextBlock Text="{Binding TankCapacityText}" FontWeight="Bold" Margin="0,6,0,0"
+                             Foreground="{DynamicResource Pump.Accent}" />
+                </StackPanel>
+                <StackPanel Spacing="3" Width="120" Margin="0,0,10,6" IsVisible="{Binding DipHasValue}">
+                  <TextBlock Text="درصد پر بودن" Classes="label" />
+                  <TextBlock Text="{Binding DipPercentText}" FontWeight="Bold" Margin="0,6,0,0" />
+                </StackPanel>
+                <StackPanel Spacing="3" Width="170" Margin="0,0,10,6" IsVisible="{Binding DipHasValue}">
+                  <TextBlock Text="🚚 قابل دریافت از تانکر" Classes="label" />
+                  <TextBlock Text="{Binding DipEmptyText}" FontWeight="Bold" Margin="0,6,0,0" />
+                </StackPanel>
+                <StackPanel Spacing="3" Width="150" Margin="0,0,10,6" IsVisible="{Binding DipHasValue}">
+                  <TextBlock Text="اختلاف با دفتر" Classes="label" />
+                  <TextBlock Text="{Binding DipDiffText}" FontWeight="Bold" Margin="0,6,0,0"
+                             Foreground="{Binding DipDiffBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                </StackPanel>
+                <StackPanel Spacing="3" Width="190" Margin="0,0,10,6">
+                  <TextBlock Text=" " Classes="label" />
+                  <CheckBox Content="دفتر برابرِ عددِ واقعی شود"
+                            IsChecked="{Binding DipApplyToBook}" />
+                </StackPanel>
+              </WrapPanel>
+
+              <TextBlock Text="{Binding DipWarnText}" TextWrapping="Wrap" FontWeight="Bold"
+                         IsVisible="{Binding DipWarnVisible}"
+                         Foreground="{DynamicResource Pump.Danger}" />
+            </StackPanel>
+
+            <c:ExcelGrid Grid.Row="2" ItemsSource="{Binding Dips}" x:CompileBindings="False"
                          BorderThickness="0" CornerRadius="0">
               <DataGrid.Columns>
                 <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
@@ -163,6 +209,15 @@
                 <DataGridCheckBoxColumn Header="دفتر برابر شود" Binding="{Binding ApplyToBook}" Width="Auto" />
                 <DataGridTextColumn Header="رفته به دفتر" Binding="{Binding BookAdjustText}" Width="Auto" IsReadOnly="True" />
                 <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="*" />
+                <DataGridTemplateColumn Header="" Width="Auto">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"
+                              Command="{Binding $parent[UserControl].DataContext.DeleteDipCommand}"
+                              CommandParameter="{Binding}" />
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
               </DataGrid.Columns>
             </c:ExcelGrid>
           </Grid>

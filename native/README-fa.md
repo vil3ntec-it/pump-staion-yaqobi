@@ -8,11 +8,11 @@
 | لایه | وضعیت | آزموده شده؟ |
 |---|---|---|
 | `PumpYaqobi.Domain` — موجودیت‌ها و نوع‌های قوی | ✅ کامل | ✅ |
-| `PumpYaqobi.Application` — منطقِ مالی | 🟡 قرض‌داران، گاوصندوق، صرافی | ✅ برابریِ عددی با HTML |
+| `PumpYaqobi.Application` — منطقِ مالی | 🟡 قرض‌داران، گاوصندوق، صرافی، ابزارها | ✅ برابریِ عددی با HTML |
 | `PumpYaqobi.Persistence` — SQLite + EF Core | ✅ کامل | ✅ روی فایلِ واقعی |
 | `PumpYaqobi.Infrastructure` — ابزارِ مهاجرت | ✅ کامل | ✅ با بکاپِ واقعی |
 | `PumpYaqobi.Reporting` — PDF بومی | 🟡 صورتِ حسابِ قرض‌دار | ✅ فایلِ واقعی ساخته شد |
-| `PumpYaqobi.App` — رابط کاربری Avalonia | ✅ هجده بخش | ✅ عکسِ بی‌نمایشگر از هر بخش |
+| `PumpYaqobi.App` — رابط کاربری Avalonia | ✅ بیست‌وسه بخش | ✅ عکسِ بی‌نمایشگر از هر بخش |
 
 ## رابط کاربری
 

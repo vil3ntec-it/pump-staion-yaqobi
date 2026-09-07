@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using System.Globalization;
 using System.Text;
 
@@ -54,6 +55,28 @@ public static class Shamsi
 
     public static int Key(DateTime d) =>
         Cal.GetYear(d) * 10000 + Cal.GetMonth(d) * 100 + Cal.GetDayOfMonth(d);
+
+    /// <summary>
+    /// ‎_shDateKey(s)‎ — کلیدِ «تقریباً روز»: سال×۳۷۲ + ماه×۳۱ + روز.
+    ///
+    /// ⚠️ این با <see cref="Key(string)"/> یکی نیست و نباید یکی شود: آن برای
+    /// مرتب‌سازی است، این برای **تفریق**. «چند روز است این قرض‌دار هیچ ردیفی
+    /// نداشته» از تفاضلِ همین دو کلید درمی‌آید، پس ماه باید ۳۱ واحد باشد نه
+    /// ۱۰۰ — وگرنه هر ماه هفتاد روز به سنِ قرض اضافه می‌شد.
+    ///
+    /// تاریخِ خالی یا خراب صفر می‌دهد، همان‌طور که در نسخهٔ وب بود.
+    /// </summary>
+    public static int DayKey(string? shamsi)
+    {
+        var m = DayKeyRx.Match(ToEnDigits(shamsi));
+        return m.Success
+            ? int.Parse(m.Groups[1].Value) * 372
+              + int.Parse(m.Groups[2].Value) * 31
+              + int.Parse(m.Groups[3].Value)
+            : 0;
+    }
+
+    private static readonly Regex DayKeyRx = new(@"(\d{4})\D+(\d{1,2})\D+(\d{1,2})");
 
     /// <summary>«1404/06/15» → «1404/06». رشتهٔ خراب → رشتهٔ خالی.</summary>
     public static string MonthKey(string? shamsi)

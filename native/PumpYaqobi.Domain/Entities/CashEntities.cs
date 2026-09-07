@@ -64,6 +64,16 @@ public class Expense : EntityBase, ILedgerRow
     public string? Title { get; set; }
     public decimal Amount { get; set; }
     public string? Note { get; set; }
+
+    /// <summary>
+    /// اگر این مصرف را «پرداختِ معاش» ساخته باشد، کارمند و ماهش این‌جاست —
+    /// همان ‎salarySid‎ و ‎salaryMonth‎ی نسخهٔ وب.
+    ///
+    /// ⚠️ کارشان فقط جلوگیری از دوباره‌نویسی است: معاشِ یک ماهِ یک کارمند
+    /// باید دقیقاً یک مصرف داشته باشد، حتی اگر دکمه دو بار زده شود.
+    /// </summary>
+    public long? SalaryStaffId { get; set; }
+    public string? SalaryMonth { get; set; }
 }
 
 /// <summary>یک ردیفِ چکنه (DB.chakanaRows) — فروشِ خرد.</summary>

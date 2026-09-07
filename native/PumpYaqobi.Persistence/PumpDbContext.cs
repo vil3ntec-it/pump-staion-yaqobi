@@ -50,6 +50,7 @@ public sealed class PumpDbContext : DbContext
     public DbSet<AttendanceRow> Attendance => Set<AttendanceRow>();
     public DbSet<SalaryPayment> SalaryPayments => Set<SalaryPayment>();
     public DbSet<StaffShortage> StaffShortages => Set<StaffShortage>();
+    public DbSet<StaffShortSettle> StaffShortSettles => Set<StaffShortSettle>();
     public DbSet<Camera> Cameras => Set<Camera>();
     public DbSet<ExtraIncome> ExtraIncomes => Set<ExtraIncome>();
     public DbSet<RateHistoryEntry> RateHistory => Set<RateHistoryEntry>();
@@ -350,6 +351,15 @@ public sealed class PumpDbContext : DbContext
             e.HasKey(x => x.Id);
             e.HasIndex(x => x.DateKey);
             e.HasIndex(x => x.StaffId);
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        b.Entity<StaffShortSettle>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.NameKey);
+            e.HasIndex(x => x.DateKey);
+            e.Property(x => x.Kind).HasConversion<int>();
             e.HasQueryFilter(x => x.DeletedAt == null);
         });
 
