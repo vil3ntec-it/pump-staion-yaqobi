@@ -5,6 +5,18 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <!-- ══ خواندنِ کیو‌آر ══════════════════════════════════════════════════
+         ZXing.Net هیچ وابستگیِ دیگری ندارد و رمزگشا داخلِ خودِ برنامه می‌نشیند،
+         پس افزودنِ دوربین با کیو‌آر بی‌اینترنت هم کار می‌کند (نسخهٔ وب jsQR را
+         از سی‌دی‌ان می‌گرفت و بی‌اینترنت نمی‌خواند).
+
+         ⚠️ نسخهٔ SkiaSharp عمداً همانی است که اِوالونیا ۱۱٫۲٫۳ می‌آورد
+         (Avalonia.Skia → SkiaSharp 2.88.9). عددِ بالاتر (خطِ ۳ و ۴) با
+         کتابخانهٔ بومیِ اِوالونیا نمی‌خواند و برنامه هنگام باز شدن می‌افتد. -->
+    <PackageReference Include="ZXing.Net" Version="0.16.11" />
+    <PackageReference Include="SkiaSharp" Version="2.88.9" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\PumpYaqobi.Domain\PumpYaqobi.Domain.csproj" />
     <ProjectReference Include="..\PumpYaqobi.Application\PumpYaqobi.Application.csproj" />
     <ProjectReference Include="..\PumpYaqobi.Persistence\PumpYaqobi.Persistence.csproj" />
