@@ -92,7 +92,7 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
     }
 
     [RelayCommand]
-    private void Save()
+    private async Task SaveAsync()
     {
         var s = _host.Settings;
         s.Set(SettingsService.StationName, StationName.Trim());
@@ -101,7 +101,17 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
         s.Set(SettingsService.UnionRatePetrol, Shamsi.Num(UnionRatePetrol));
         s.Set(SettingsService.UnionRateDiesel, Shamsi.Num(UnionRateDiesel));
         s.Set(SettingsService.LowStockThreshold, Shamsi.Num(LowStockThreshold));
-        _host.Toast("✅ تنظیمات ذخیره شد", ToastKind.Ok);
+
+        // ── تاریخچهٔ نرخ ──────────────────────────────────────────────────
+        // همان کارِ ‎setUnionRate‎: نرخِ تازه اگر واقعاً عوض شده باشد ثبت
+        // می‌شود. روی هیچ محاسبه‌ای اثر ندارد؛ فقط دفترچهٔ «کِی چند بود».
+        var changed = await _host.Tools.RecordRateAsync(
+                          PumpYaqobi.Domain.Enums.FuelType.Petrol, Shamsi.Num(UnionRatePetrol))
+                    | await _host.Tools.RecordRateAsync(
+                          PumpYaqobi.Domain.Enums.FuelType.Diesel, Shamsi.Num(UnionRateDiesel));
+
+        _host.Toast(changed ? "✅ تنظیمات ذخیره شد — نرخِ تازه در تاریخچه ثبت شد"
+                            : "✅ تنظیمات ذخیره شد", ToastKind.Ok);
     }
 
     [RelayCommand]

@@ -98,7 +98,16 @@ public class TankDip : EntityBase, ILedgerRow
     public string? Note { get; set; }
 }
 
-/// <summary>تخلیهٔ تانکر (DB.tankerUnloads).</summary>
+/// <summary>
+/// تخلیهٔ تانکر (DB.tankerLogs).
+///
+/// دو عددِ جدا، و همین دو عدد کلِ ماجراست: چقدر در بارنامه نوشته شده و چقدر
+/// واقعاً در مخزن ریخته شد. کمتر بودنِ دومی از اولی «کم‌آمدِ تحویل» است و در
+/// گزارشِ ماهانه هم جمع می‌شود.
+///
+/// ⚠️ این‌جا هیچ عددی به موجودیِ مخزن نمی‌رود — موجودی از خودِ خریدها می‌آید.
+/// دفترِ تخلیه فقط برای پیدا کردنِ کم‌آمدِ راننده است، همان‌طور که در نسخهٔ وب بود.
+/// </summary>
 public class TankerUnload : EntityBase, ILedgerRow
 {
     public FuelType Fuel { get; set; } = FuelType.Petrol;
@@ -107,8 +116,21 @@ public class TankerUnload : EntityBase, ILedgerRow
     public string? MonthKey { get; set; }
     public string? Driver { get; set; }
     public string? Plate { get; set; }
-    public decimal Liters { get; set; }
+    /// <summary>لیترِ نوشته‌شده در بارنامه.</summary>
+    public decimal Manifest { get; set; }
+    /// <summary>لیتری که واقعاً تحویل گرفته شد.</summary>
+    public decimal Actual { get; set; }
     public string? Note { get; set; }
+
+    /// <summary>
+    /// ستونِ تک‌عددیِ نسخه‌های پیش از «بارنامه/تحویل».
+    ///
+    /// ⚠️ برداشته نمی‌شود: روی دیتابیسِ کاربری که از پیش برنامه را داشته این
+    /// ستون <c>NOT NULL</c> ساخته شده، و اگر از موجودیت پاک شود هر
+    /// <c>INSERT</c>ِ تازه با «NOT NULL constraint failed» رد می‌شود.
+    /// در هیچ محاسبه‌ای نیست.
+    /// </summary>
+    public decimal Liters { get; set; }
 }
 
 // ══ شرکت‌های تیل ══════════════════════════════════════════════════════════════
@@ -375,6 +397,35 @@ public class StaffShortage : EntityBase
     public decimal Paid { get; set; }
     public string? Note { get; set; }
 }
+
+/// <summary>
+/// یک «رسیدِ کمبودی» یا «پرداختِ اضافی» به کارمند — ‎DB.staffShortSettles‎.
+///
+/// خودِ کمبودی/اضافی هیچ‌جا ذخیره نمی‌شود: از ورق‌های روزانه حساب می‌شود
+/// (‎computeWaraqShortage‎). این جدول فقط دفترِ تسویه است و از ورق‌ها هیچ چیزی
+/// کم نمی‌کند — همان جداییِ نسخهٔ وب.
+///
+///   🔴 کمبودی (‎Short‎) = کارمند به پمپ بدهکار است → رسید از او می‌گیریم.
+///   🟢 اضافی  (‎Excess‎) = پمپ به کارمند بدهکار است → به او پرداخت می‌کنیم.
+///
+/// ⚠️ ثبت‌های قدیمیِ بی‌نوع «رسیدِ کمبودی» شمرده می‌شوند — دقیقاً همان
+/// ‎(s.type || 'short')‎ی نسخهٔ وب.
+/// </summary>
+public class StaffShortSettle : EntityBase, ILedgerRow
+{
+    public string? LegacyId { get; set; }
+    /// <summary>کلیدِ گروه‌بندی: نامِ نرمال‌شده (‎normFa‎) — نه شناسهٔ کارمند.</summary>
+    public string? NameKey { get; set; }
+    /// <summary>نامِ کارمند همان‌طور که در ورق نوشته شده.</summary>
+    public string? Name { get; set; }
+    public StaffSettleKind Kind { get; set; } = StaffSettleKind.Short;
+    public decimal Amount { get; set; }
+    public string? DateShamsi { get; set; }
+    public int DateKey { get; set; }
+    public string? MonthKey { get; set; }
+}
+
+public enum StaffSettleKind { Short = 1, Excess = 2 }
 
 // ══ دیگر ══════════════════════════════════════════════════════════════════════
 

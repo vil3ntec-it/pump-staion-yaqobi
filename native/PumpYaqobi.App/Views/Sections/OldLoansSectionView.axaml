@@ -1,0 +1,78 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
+             x:Class="PumpYaqobi.App.Views.Sections.OldLoansSectionView"
+             x:DataType="vm:OldLoansSectionViewModel">
+
+  <c:SectionPage Header="قرض‌های کهنه"
+                 SubHeader="به ترتیبِ «چند روز است هیچ ردیف تازه‌ای ندارند» — بی‌حرکت‌ها اول">
+
+    <c:SectionPage.Toolbar>
+      <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+        <Button Classes="seg" Content="همه" Command="{Binding SetFilterCommand}"
+                CommandParameter="all" Classes.on="{Binding IsAll}" />
+        <Button Classes="seg" Content="⛽ واحد تیل" Command="{Binding SetFilterCommand}"
+                CommandParameter="fuel" Classes.on="{Binding IsFuel}" />
+        <Button Classes="seg" Content="💵 واحد پول" Command="{Binding SetFilterCommand}"
+                CommandParameter="money" Classes.on="{Binding IsMoney}" />
+      </StackPanel>
+    </c:SectionPage.Toolbar>
+
+    <StackPanel Spacing="10">
+
+      <WrapPanel Orientation="Horizontal">
+        <Border Classes="stat" Margin="0,0,8,8">
+          <StackPanel Spacing="3">
+            <TextBlock Text="تعداد بدهکاران" Classes="label" />
+            <TextBlock Text="{Binding CountText}" Classes="num" />
+          </StackPanel>
+        </Border>
+        <Border Classes="stat" Margin="0,0,8,8">
+          <StackPanel Spacing="3">
+            <TextBlock Text="جمله الباقی" Classes="label" />
+            <TextBlock Text="{Binding TotalText}" Classes="num" />
+            <TextBlock Text="در حالتِ «همه» جمع نشان داده نمی‌شود — لیتر و افغانی جمع نمی‌شوند"
+                       Classes="muted" TextWrapping="Wrap" IsVisible="{Binding IsAll}" />
+          </StackPanel>
+        </Border>
+        <Border Classes="stat" Margin="0,0,8,8">
+          <StackPanel Spacing="3">
+            <TextBlock Text="بیشتر از ۳۰ روز بی‌حرکت" Classes="label" />
+            <TextBlock Text="{Binding Stale30}" Classes="num" />
+          </StackPanel>
+        </Border>
+        <Border Classes="stat" Margin="0,0,8,8">
+          <StackPanel Spacing="3">
+            <TextBlock Text="بیشتر از ۶۰ روز بی‌حرکت" Classes="label" />
+            <TextBlock Text="{Binding Stale60}" Classes="num" />
+          </StackPanel>
+        </Border>
+      </WrapPanel>
+
+      <Border Classes="panel" Padding="0">
+        <c:ExcelGrid ItemsSource="{Binding Rows}" x:CompileBindings="False"
+                     IsReadOnly="True" BorderThickness="0" CornerRadius="0">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" />
+            <DataGridTextColumn Header="نام قرض‌دار" Binding="{Binding Name}" Width="*" />
+            <DataGridTextColumn Header="الباقی" Binding="{Binding AlbaqiText}" Width="Auto" />
+            <DataGridTemplateColumn Header="بی‌حرکت" Width="Auto">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding IdleText}" FontWeight="Bold" VerticalAlignment="Center"
+                             Foreground="{Binding IdleBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTextColumn Header="شماره تماس" Binding="{Binding Phone}" Width="Auto" />
+          </DataGrid.Columns>
+        </c:ExcelGrid>
+      </Border>
+
+      <TextBlock Text="هیچ بدهکاری نیست 🎉" Classes="label"
+                 IsVisible="{Binding IsEmpty}" HorizontalAlignment="Center" Margin="0,10" />
+    </StackPanel>
+  </c:SectionPage>
+</UserControl>

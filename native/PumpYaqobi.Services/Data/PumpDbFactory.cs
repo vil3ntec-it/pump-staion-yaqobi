@@ -121,9 +121,13 @@ public sealed class PumpDbFactory
             ("WaraqPumps", "DateShamsi", "TEXT"),
             ("SafeEntries", "SrcKey", "TEXT"),
             ("TankDips", "BookAdjust", "TEXT NOT NULL DEFAULT '0'"),
+            ("TankerUnloads", "Manifest", "TEXT NOT NULL DEFAULT '0'"),
+            ("TankerUnloads", "Actual", "TEXT NOT NULL DEFAULT '0'"),
             ("DebtAccounts", "MoneyDeposit", "TEXT"),
             ("ExchangeRows", "LegacyId", "TEXT"),
             ("CompanyRows", "SourceExchangeId", "TEXT"),
+            ("Expenses", "SalaryStaffId", "INTEGER"),
+            ("Expenses", "SalaryMonth", "TEXT"),
         };
 
         foreach (var (table, column, type) in wanted)

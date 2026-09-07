@@ -110,7 +110,22 @@ public sealed class AttendanceDataService
         await db.SaveChangesAsync(ct);
     }
 
-    /// <summary>پرداختِ معاشِ یک ماه — دوباره ثبت نمی‌شود.</summary>
+    /// <summary>
+    /// پرداختِ معاشِ یک ماه — دوباره ثبت نمی‌شود.
+    ///
+    /// ══ و همان لحظه یک «مصرف» هم ثبت می‌شود ══════════════════════════════
+    /// این همان زنجیرهٔ ‎attPaySalary‎ی نسخهٔ وب است:
+    ///
+    ///     پرداختِ معاش → رکوردِ پرداخت → ردیفِ مصرف
+    ///
+    /// بدونِ حلقهٔ سوم، معاشِ پرداخت‌شده در «مصارف» و در «مفاد/ضرر» و در
+    /// گزارشِ ماهانه اصلاً دیده نمی‌شد و سودِ ماه به‌اندازهٔ کلِ معاش‌ها بیشتر
+    /// از واقعیت نشان داده می‌شد.
+    ///
+    /// ⚠️ و دقیقاً یک بار: مصرفِ معاش با ‎SalaryStaffId‎ + ‎SalaryMonth‎ نشان
+    /// می‌خورد و اگر از پیش باشد دوباره نوشته نمی‌شود — حتی اگر رکوردِ
+    /// پرداختش دستی پاک شده باشد.
+    /// </summary>
     public async Task<bool> PaySalaryAsync(long staffId, string monthKey, decimal amount,
                                            CancellationToken ct = default)
     {
@@ -118,13 +133,41 @@ public sealed class AttendanceDataService
         await using var db = _dbf.Create();
         if (await db.SalaryPayments.AnyAsync(p => p.StaffId == staffId && p.MonthKey == monthKey, ct))
             return false;
+
+        var today = Shamsi.Today();
         db.SalaryPayments.Add(new SalaryPayment
         {
             StaffId = staffId, MonthKey = monthKey,
-            DateShamsi = Shamsi.Today(), Amount = amount,
+            DateShamsi = today, Amount = amount,
         });
+
+        var already = await db.Expenses.AnyAsync(
+            e => e.SalaryStaffId == staffId && e.SalaryMonth == monthKey, ct);
+        if (!already)
+        {
+            var name = (await db.StaffMembers.AsNoTracking()
+                                .FirstOrDefaultAsync(s => s.Id == staffId, ct))?.Name ?? "";
+            db.Expenses.Add(new Expense
+            {
+                DateShamsi = today, DateKey = Shamsi.Key(today), MonthKey = Shamsi.MonthKey(today),
+                Title = "معاش " + name,
+                Amount = amount,
+                Note = "پرداخت معاش " + MonthLabel(monthKey),
+                SalaryStaffId = staffId, SalaryMonth = monthKey,
+            });
+        }
+
         await db.SaveChangesAsync(ct);
         return true;
+    }
+
+    /// <summary>‎_monthLabel(key)‎ — «اسد 1405».</summary>
+    private static string MonthLabel(string? key)
+    {
+        var p = (key ?? "").Split('/');
+        if (p.Length != 2 || !int.TryParse(p[1], out var m)) return key ?? "";
+        var name = Shamsi.MonthName(m);
+        return (name.Length > 0 ? name : p[1]) + " " + p[0];
     }
 
     public async Task SaveShortageAsync(StaffShortage s, CancellationToken ct = default)
