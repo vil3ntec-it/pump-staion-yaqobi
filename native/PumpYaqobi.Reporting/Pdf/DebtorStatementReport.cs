@@ -30,7 +30,7 @@ public sealed record DebtorStatementInput(
 /// ⚠️ ستونِ «الباقی» در ردیف‌ها عمداً خالی است — در خودِ جدولِ برنامه هم خالی
 /// است («عددِ ردیف‌به‌ردیف جلو نیاید، جمع شود»).
 /// </summary>
-public sealed class DebtorStatementReport : IDocument
+public sealed class DebtorStatementReport : ISetupDocument
 {
     private readonly DebtorStatementInput _in;
     private readonly DebtCalculationService _calc;
@@ -45,6 +45,9 @@ public sealed class DebtorStatementReport : IDocument
 
     private static decimal R2(decimal v) => Math.Round(v, 2, MidpointRounding.AwayFromZero);
 
+    /// <summary>تنظیمِ ورق — از «کارگاه چاپ». پیش‌فرض همان ورقی است که همیشه بود.</summary>
+    public PageSetup Setup { get; set; } = PageSetup.Default;
+
     public DocumentMetadata GetMetadata() => DocumentMetadata.Default;
 
     public void Compose(IDocumentContainer container)
@@ -58,7 +61,7 @@ public sealed class DebtorStatementReport : IDocument
                       _ => "",
                   };
 
-        DocStyle.Compose(container, title, sub, _in.Dates, Body);
+        DocStyle.Compose(container, title, sub, _in.Dates, Body, setup: Setup);
     }
 
     private void Body(IContainer c) => c.Column(col =>

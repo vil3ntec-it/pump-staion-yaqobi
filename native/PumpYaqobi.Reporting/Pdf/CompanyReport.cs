@@ -26,7 +26,7 @@ public sealed record CompanyReportInput(
 /// این تساوی لازم نیست برقرار باشد، چون ردیف‌ها نرخ‌های متفاوت دارند و نرخِ
 /// سربرگ یک نرخِ میانگین (یا نرخِ دستیِ شرکت) است.
 /// </summary>
-public sealed class CompanyReport : IDocument
+public sealed class CompanyReport : ISetupDocument
 {
     private const string Purple = "#805ad5";
     private const string BoxBg = "#faf5ff";
@@ -46,6 +46,9 @@ public sealed class CompanyReport : IDocument
         _ => "⛽ پطرول + 🟤 دیزل",
     };
 
+    /// <summary>تنظیمِ ورق — از «کارگاه چاپ». پیش‌فرض همان ورقی است که همیشه بود.</summary>
+    public PageSetup Setup { get; set; } = PageSetup.Default;
+
     public DocumentMetadata GetMetadata() => DocumentMetadata.Default;
 
     private static string R(decimal v) =>
@@ -54,7 +57,7 @@ public sealed class CompanyReport : IDocument
     public void Compose(IDocumentContainer container) =>
         DocStyle.Compose(container,
             "🛢️ " + DocStyle.Dash(_in.Company.Name) + " — حسابِ شرکتِ تیل (" + FuelLabel + ")",
-            null, _in.Dates, Body, landscape: BothFuels, titleColor: Purple);
+            null, _in.Dates, Body, landscape: BothFuels, titleColor: Purple, setup: Setup);
 
     private void Body(IContainer c) => c.Column(col =>
     {

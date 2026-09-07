@@ -21,7 +21,7 @@ public sealed record StorageReportInput(
 /// ساده می‌ماند — همان چیزی که صاحب ریپو خواست («ورقِ تمام‌سیاه رنگِ زیادی
 /// مصرف می‌کرد»).
 /// </summary>
-public sealed class StorageReport : IDocument
+public sealed class StorageReport : ISetupDocument
 {
     private readonly StorageReportInput _in;
     private readonly StorageService _calc;
@@ -33,12 +33,15 @@ public sealed class StorageReport : IDocument
     private string Color => IsPetrol ? DocStyle.Petrol : "#92400e";
     private string Label => IsPetrol ? "⛽ پطرول" : "🟤 دیزل";
 
+    /// <summary>تنظیمِ ورق — از «کارگاه چاپ». پیش‌فرض همان ورقی است که همیشه بود.</summary>
+    public PageSetup Setup { get; set; } = PageSetup.Default;
+
     public DocumentMetadata GetMetadata() => DocumentMetadata.Default;
 
     public void Compose(IDocumentContainer container) =>
         DocStyle.Compose(container,
             "🛢️ پمپ یعقوبی — مخزن " + Label, "گزارش موجودی و تاریخچهٔ خریدها",
-            _in.Dates, Body, landscape: true, titleColor: Color);
+            _in.Dates, Body, landscape: true, titleColor: Color, setup: Setup);
 
     private static string R(decimal v) =>
         PersianText.Num(Math.Round(v, 0, MidpointRounding.AwayFromZero));

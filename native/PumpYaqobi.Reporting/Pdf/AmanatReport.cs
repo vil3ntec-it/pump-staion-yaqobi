@@ -35,7 +35,7 @@ public sealed record AmanatReportInput(
 /// ⚠️ نوارِ بالای سند عمداً هست: «درصد کمبودی برآوردِ محاسباتی است و جایگزینِ
 /// اندازه‌گیریِ واقعی نمی‌شود». این جمله در نسخهٔ وب هم روی ورق چاپ می‌شد.
 /// </summary>
-public sealed class AmanatReport : IDocument
+public sealed class AmanatReport : ISetupDocument
 {
     private const string Head = "#0f766e";
     private const string Amber = "#b7791f";
@@ -43,6 +43,9 @@ public sealed class AmanatReport : IDocument
     private readonly AmanatReportInput _in;
 
     public AmanatReport(AmanatReportInput input) => _in = input;
+
+    /// <summary>تنظیمِ ورق — از «کارگاه چاپ». پیش‌فرض همان ورقی است که همیشه بود.</summary>
+    public PageSetup Setup { get; set; } = PageSetup.Default;
 
     public DocumentMetadata GetMetadata() => DocumentMetadata.Default;
 
@@ -64,7 +67,7 @@ public sealed class AmanatReport : IDocument
 
     public void Compose(IDocumentContainer container) =>
         DocStyle.Compose(container, "🛢️ پمپ یعقوبی — " + _in.Title, null, _in.Dates, Body,
-                         landscape: true, titleColor: Head);
+                         landscape: true, titleColor: Head, setup: Setup);
 
     private void Body(IContainer c) => c.Column(col =>
     {

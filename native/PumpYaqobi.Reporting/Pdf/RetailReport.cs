@@ -18,7 +18,7 @@ public sealed record RetailReportInput(
 /// ⚠️ ردیفِ «به پول» لیتر ندارد و بردگی‌اش همان عددِ نوشته‌شده است، نه لیتر×فی —
 /// همان قاعده‌ای که ‎RetailService‎ نگه می‌دارد و ورق هم از خودِ آن می‌پرسد.
 /// </summary>
-public sealed class RetailReport : IDocument
+public sealed class RetailReport : ISetupDocument
 {
     private const string Purple = "#805ad5";
 
@@ -27,11 +27,14 @@ public sealed class RetailReport : IDocument
 
     public RetailReport(RetailReportInput input, RetailService calc) { _in = input; _calc = calc; }
 
+    /// <summary>تنظیمِ ورق — از «کارگاه چاپ». پیش‌فرض همان ورقی است که همیشه بود.</summary>
+    public PageSetup Setup { get; set; } = PageSetup.Default;
+
     public DocumentMetadata GetMetadata() => DocumentMetadata.Default;
 
     public void Compose(IDocumentContainer container) =>
         DocStyle.Compose(container, "🧾 پمپ یعقوبی — حساب‌های چکنه " + _in.MonthLabel,
-                         null, _in.Dates, Body, titleColor: Purple);
+                         null, _in.Dates, Body, titleColor: Purple, setup: Setup);
 
     private static string R(decimal v) =>
         PersianText.Num(Math.Round(v, 0, MidpointRounding.AwayFromZero));

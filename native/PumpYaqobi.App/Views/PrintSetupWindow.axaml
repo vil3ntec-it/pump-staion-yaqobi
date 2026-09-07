@@ -1,0 +1,125 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:p="using:PumpYaqobi.App.Printing"
+        x:Class="PumpYaqobi.App.Views.PrintSetupWindow"
+        x:DataType="p:PrintSetupViewModel"
+        Width="560" Height="720" CanResize="True"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        FlowDirection="RightToLeft"
+        Background="{DynamicResource Pump.Card}"
+        Title="تنظیمِ ورق">
+
+  <!-- ══ تنظیمِ ورق ════════════════════════════════════════════════════════
+       همان چیزهایی که «کارگاه چاپ»ِ نسخهٔ وب داشت. هر کادر یک خطِ توضیح دارد
+       تا کاربر مجبور نباشد حدس بزند کدام کدام است. -->
+  <Grid RowDefinitions="Auto,*,Auto">
+
+    <Border Grid.Row="0" Background="#1f7a4d" Padding="12,9">
+      <TextBlock Text="⚙ تنظیمِ ورق" Foreground="White" FontWeight="Bold" FontSize="15" />
+    </Border>
+
+    <ScrollViewer Grid.Row="1" Padding="16">
+      <StackPanel Spacing="14">
+
+        <!-- ── کاغذ ── -->
+        <StackPanel Spacing="4">
+          <TextBlock Text="اندازهٔ کاغذ" Classes="label" />
+          <ComboBox ItemsSource="{Binding Papers}" SelectedItem="{Binding Paper}"
+                    HorizontalAlignment="Stretch" />
+          <TextBlock Text="{Binding Paper.Note}" Classes="muted" />
+        </StackPanel>
+
+        <UniformGrid Rows="1" IsVisible="{Binding IsCustomPaper}">
+          <StackPanel Spacing="3" Margin="0,0,8,0">
+            <TextBlock Text="عرض (میلی‌متر)" Classes="label" />
+            <TextBox Text="{Binding CustomWidth}" />
+          </StackPanel>
+          <StackPanel Spacing="3">
+            <TextBlock Text="بلندا (میلی‌متر)" Classes="label" />
+            <TextBox Text="{Binding CustomHeight}" />
+          </StackPanel>
+        </UniformGrid>
+
+        <!-- ── جهت ── -->
+        <StackPanel Spacing="4">
+          <TextBlock Text="جهتِ ورق" Classes="label" />
+          <ComboBox ItemsSource="{Binding Orientations}" SelectedItem="{Binding Orientation}"
+                    HorizontalAlignment="Stretch" />
+          <TextBlock Text="{Binding Orientation.Note}" Classes="muted" />
+        </StackPanel>
+
+        <!-- ── حاشیه ── -->
+        <StackPanel Spacing="4">
+          <TextBlock Text="حاشیه‌ها" Classes="label" />
+          <ComboBox ItemsSource="{Binding Margins}" SelectedItem="{Binding Margin}"
+                    HorizontalAlignment="Stretch" />
+          <TextBlock Text="{Binding Margin.Note}" Classes="muted" />
+        </StackPanel>
+
+        <UniformGrid Rows="1" IsVisible="{Binding IsCustomMargin}">
+          <StackPanel Spacing="3" Margin="0,0,6,0">
+            <TextBlock Text="بالا" Classes="label" />
+            <TextBox Text="{Binding Top}" />
+          </StackPanel>
+          <StackPanel Spacing="3" Margin="0,0,6,0">
+            <TextBlock Text="پایین" Classes="label" />
+            <TextBox Text="{Binding Bottom}" />
+          </StackPanel>
+          <StackPanel Spacing="3" Margin="0,0,6,0">
+            <TextBlock Text="چپ" Classes="label" />
+            <TextBox Text="{Binding Left}" />
+          </StackPanel>
+          <StackPanel Spacing="3">
+            <TextBlock Text="راست" Classes="label" />
+            <TextBox Text="{Binding Right}" />
+          </StackPanel>
+        </UniformGrid>
+
+        <!-- ── سربرگ ── -->
+        <StackPanel Spacing="4">
+          <TextBlock Text="سربرگِ ورق (راست · وسط · چپ)" Classes="label" />
+          <UniformGrid Rows="1">
+            <TextBox Text="{Binding HeaderRight}" Margin="0,0,6,0" Watermark="راست" />
+            <TextBox Text="{Binding HeaderCenter}" Margin="0,0,6,0" Watermark="وسط" />
+            <TextBox Text="{Binding HeaderLeft}" Watermark="چپ" />
+          </UniformGrid>
+        </StackPanel>
+
+        <!-- ── پاورقی ── -->
+        <StackPanel Spacing="4">
+          <TextBlock Text="پاورقیِ ورق (راست · وسط · چپ)" Classes="label" />
+          <UniformGrid Rows="1">
+            <TextBox Text="{Binding FooterRight}" Margin="0,0,6,0" Watermark="راست" />
+            <TextBox Text="{Binding FooterCenter}" Margin="0,0,6,0" Watermark="وسط" />
+            <TextBox Text="{Binding FooterLeft}" Watermark="چپ" />
+          </UniformGrid>
+          <TextBlock Text="{x:Static p:PrintSetupViewModel.TokenHelp}"
+                     Classes="muted" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <!-- ── بقیه ── -->
+        <UniformGrid Rows="1">
+          <StackPanel Spacing="3" Margin="0,0,8,0">
+            <TextBlock Text="شمارهٔ ورقِ اول" Classes="label" />
+            <TextBox Text="{Binding FirstPage}" />
+          </StackPanel>
+          <StackPanel Spacing="3">
+            <TextBlock Text="کیفیتِ پیش‌نمایش (DPI)" Classes="label" />
+            <TextBox Text="{Binding Dpi}" />
+          </StackPanel>
+        </UniformGrid>
+
+        <CheckBox IsChecked="{Binding SkipFirst}"
+                  Content="ورقِ اول سربرگ و پاورقی نداشته باشد" />
+      </StackPanel>
+    </ScrollViewer>
+
+    <Border Grid.Row="2" BorderBrush="{DynamicResource Pump.Border}" BorderThickness="0,1,0,0"
+            Padding="14,10">
+      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
+        <Button Classes="accent" Content="اعمال" Click="OnOk" MinWidth="96" />
+        <Button Content="انصراف" Click="OnCancel" MinWidth="96" />
+      </StackPanel>
+    </Border>
+  </Grid>
+</Window>

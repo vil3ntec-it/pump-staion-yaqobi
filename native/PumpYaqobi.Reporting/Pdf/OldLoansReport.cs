@@ -19,7 +19,7 @@ public sealed record OldLoansReportInput(
 /// بازسازیِ ‎pdfOldLoans(filter)‎: چهار کادرِ خلاصه و جدولی که بی‌حرکت‌ترین
 /// قرض‌داران را اول می‌آورد.
 /// </summary>
-public sealed class OldLoansReport : IDocument
+public sealed class OldLoansReport : ISetupDocument
 {
     private readonly OldLoansReportInput _in;
 
@@ -30,6 +30,9 @@ public sealed class OldLoansReport : IDocument
     private string Unit => IsMoney ? "افغانی" : "لیتر";
     private string Color => IsMoney ? "#38a169" : DocStyle.Danger;
 
+    /// <summary>تنظیمِ ورق — از «کارگاه چاپ». پیش‌فرض همان ورقی است که همیشه بود.</summary>
+    public PageSetup Setup { get; set; } = PageSetup.Default;
+
     public DocumentMetadata GetMetadata() => DocumentMetadata.Default;
 
     public void Compose(IDocumentContainer container) =>
@@ -37,7 +40,7 @@ public sealed class OldLoansReport : IDocument
             (IsMixed ? "📋" : IsMoney ? "💵" : "⏰") + " پمپ یعقوبی — قرض‌های کهنهٔ "
             + (IsMixed ? "همه" : IsMoney ? "پول (واحد پول)" : "تیل (واحد تیل)"),
             "به ترتیبِ «چند روز است هیچ ردیف تازه‌ای ندارند» — بی‌حرکت‌ها اول",
-            _in.Dates, Body, titleColor: IsMixed ? DocStyle.Title : Color);
+            _in.Dates, Body, titleColor: IsMixed ? DocStyle.Title : Color, setup: Setup);
 
     private static string R(decimal v) =>
         PersianText.Num(Math.Round(v, 0, MidpointRounding.AwayFromZero));

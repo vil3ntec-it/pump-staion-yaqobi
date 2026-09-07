@@ -21,17 +21,20 @@ public sealed record MonthEndReportInput(
 /// بازسازیِ ‎pdfMonthReport()‎: کادرِ بزرگِ «نتیجهٔ خالص» و ده ردیفِ
 /// «برچسب · عدد · توضیح».
 /// </summary>
-public sealed class MonthEndReport : IDocument
+public sealed class MonthEndReport : ISetupDocument
 {
     private readonly MonthEndReportInput _in;
 
     public MonthEndReport(MonthEndReportInput input) => _in = input;
 
+    /// <summary>تنظیمِ ورق — از «کارگاه چاپ». پیش‌فرض همان ورقی است که همیشه بود.</summary>
+    public PageSetup Setup { get; set; } = PageSetup.Default;
+
     public DocumentMetadata GetMetadata() => DocumentMetadata.Default;
 
     public void Compose(IDocumentContainer container) =>
         DocStyle.Compose(container, "🛢️ پمپ یعقوبی — گزارش پایان ماه",
-                         _in.MonthLabel, _in.Dates, Body);
+                         _in.MonthLabel, _in.Dates, Body, setup: Setup);
 
     private static string R(decimal v) =>
         PersianText.Num(Math.Round(v, 0, MidpointRounding.AwayFromZero));
