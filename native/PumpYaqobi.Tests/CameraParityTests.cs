@@ -74,13 +74,41 @@ public class CameraParityTests
         Assert.Equal(CameraKind.None, CameraService.KindOf("   "));
     }
 
+    /// <summary>
+    /// عکس/MJPEG بی هیچ پخش‌کننده‌ای نشان داده می‌شود — فقط یک زنجیرهٔ JPEG است.
+    /// </summary>
     [Fact]
-    public void OnlySnapshotStreams_ArePlayedInsideTheApp()
+    public void OnlySnapshotStreams_NeedNoPlayer()
     {
         Assert.True(CameraService.ShowsInApp(CameraKind.Image));
         foreach (var k in new[] { CameraKind.None, CameraKind.Rtsp, CameraKind.Hls,
                                   CameraKind.Video, CameraKind.WebPage })
             Assert.False(CameraService.ShowsInApp(k));
+    }
+
+    /// <summary>
+    /// RTSP و HLS و ویدیو رمزگشای ویدیو می‌خواهند — این‌ها همان‌هایی هستند که
+    /// ‎VlcVideoFeed‎ برایشان ساخته می‌شود.
+    ///
+    /// ⚠️ «صفحهٔ وب» عمداً بیرون است: آن اصلاً تصویر نیست، یک صفحهٔ HTML است و
+    /// دادنش به پخش‌کننده یعنی یک پنجرهٔ خالیِ گیج‌کننده.
+    /// </summary>
+    [Fact]
+    public void OnlyVideoStreams_NeedThePlayer()
+    {
+        foreach (var k in new[] { CameraKind.Rtsp, CameraKind.Hls, CameraKind.Video })
+            Assert.True(CameraService.NeedsPlayer(k));
+
+        foreach (var k in new[] { CameraKind.None, CameraKind.Image, CameraKind.WebPage })
+            Assert.False(CameraService.NeedsPlayer(k));
+    }
+
+    /// <summary>هیچ نوعی نباید هم‌زمان «بی‌پخش‌کننده» و «پخش‌کننده‌خواه» باشد.</summary>
+    [Fact]
+    public void NoKindIsBothAtOnce()
+    {
+        foreach (var k in Enum.GetValues<CameraKind>())
+            Assert.False(CameraService.ShowsInApp(k) && CameraService.NeedsPlayer(k));
     }
 
     [Fact]

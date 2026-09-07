@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using Avalonia;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -20,12 +22,26 @@ public sealed partial class CameraCardViewModel : ObservableObject, IDisposable
     private readonly CameraSectionViewModel _owner;
     private readonly CameraFeed _feed = new();
 
+    /// <summary>
+    /// پخش‌کنندهٔ ویدیو — فقط برای دوربینی که لینکش RTSP/HLS/ویدیو است، و
+    /// فقط وقتی کتابخانهٔ VLC واقعاً بالا آمده باشد. برای دوربینِ عکس/MJPEG
+    /// اصلاً ساخته نمی‌شود.
+    /// </summary>
+    private readonly VlcVideoFeed? _video;
+
     public CameraCardViewModel(Camera cam, CameraSectionViewModel owner)
     {
         Entity = cam; _owner = owner;
         _feed.FrameArrived += OnFrame;
         _feed.JpegArrived += OnJpeg;
         _feed.Failed += OnFailed;
+
+        if (CameraService.NeedsPlayer(CameraService.KindOf(cam.Url)) && VlcVideoFeed.Available)
+        {
+            _video = new VlcVideoFeed();
+            _video.FrameArrived += OnVideoFrame;
+            _video.Failed += OnFailed;
+        }
     }
 
     public Camera Entity { get; }
@@ -34,7 +50,15 @@ public sealed partial class CameraCardViewModel : ObservableObject, IDisposable
     public string Url => Entity.Url ?? "";
 
     public CameraKind Kind => CameraService.KindOf(Entity.Url);
-    public bool ShowsInApp => CameraService.ShowsInApp(Kind);
+
+    /// <summary>
+    /// تصویر را خودِ برنامه نشان می‌دهد؟
+    ///
+    /// عکس/MJPEG همیشه؛ RTSP/HLS/ویدیو فقط وقتی VLC بالا آمده باشد. اگر
+    /// نیامد، همان دکمهٔ «باز کردن در پخش‌کنندهٔ ویندوز» می‌ماند — نه یک
+    /// کادرِ سیاهِ بی‌توضیح.
+    /// </summary>
+    public bool ShowsInApp => CameraService.ShowsInApp(Kind) || _video is not null;
 
     /// <summary>«⛔ RTSP» / «▶️ HLS» / «🖼️ عکسِ زنده» — کاربر باید بداند چه دارد.</summary>
     public string KindText => Kind switch
@@ -54,11 +78,19 @@ public sealed partial class CameraCardViewModel : ObservableObject, IDisposable
     /// <summary>پیامِ ثابتِ نوعِ لینک، وقتی برنامه خودش نمی‌تواند نشانش دهد.</summary>
     public string Note => CameraService.NoteFor(Kind);
 
+    /// <summary>پخش از راهِ VLC است، نه از راهِ عکس/MJPEG.</summary>
+    private bool UsesVideo => _video is not null;
+
     partial void OnFrameChanged(Bitmap? oldValue, Bitmap? newValue)
     {
         // ⚠️ فریمِ قبلی باید آزاد شود: هر فریم یک بافرِ واقعیِ تصویر است و در
         // یک ساعت پخش، هزاران‌تا می‌شوند. بی این، حافظه بالا می‌رود تا برنامه بایستد.
-        if (!ReferenceEquals(oldValue, newValue)) oldValue?.Dispose();
+        //
+        // ولی دو بومِ VLC استثنا هستند: آن‌ها بارها دوباره نوشته می‌شوند و
+        // آزاد کردنشان یعنی فریمِ بعدی روی بومِ مرده بنشیند.
+        if (ReferenceEquals(oldValue, newValue)) return;
+        if (ReferenceEquals(oldValue, _canvasA) || ReferenceEquals(oldValue, _canvasB)) return;
+        oldValue?.Dispose();
     }
 
     private void OnFrame(Bitmap bmp) =>
@@ -78,7 +110,7 @@ public sealed partial class CameraCardViewModel : ObservableObject, IDisposable
         if (IsLive) { Stop(); return; }
         Status = "در حال گرفتنِ تصویر…";
         IsLive = true;
-        _feed.Start(Url);
+        if (UsesVideo) _video!.Start(Url); else _feed.Start(Url);
     }
 
     /// <summary>«⟳» — همان ‎camReload‎: اتصال بسته و از نو باز می‌شود.</summary>
@@ -86,15 +118,16 @@ public sealed partial class CameraCardViewModel : ObservableObject, IDisposable
     private void Reload()
     {
         if (!ShowsInApp) { _owner.OpenExternally(Url); return; }
-        _feed.Stop();
+        if (UsesVideo) _video!.Stop(); else _feed.Stop();
         Status = "در حال گرفتنِ تصویر…";
         IsLive = true;
-        _feed.Start(Url);
+        if (UsesVideo) _video!.Start(Url); else _feed.Start(Url);
     }
 
     public void Stop()
     {
         _feed.Stop();
+        _video?.Stop();
         IsLive = false;
         Scanning = false;
         Frame = null;
@@ -128,6 +161,61 @@ public sealed partial class CameraCardViewModel : ObservableObject, IDisposable
 
     /// <summary>پویش فقط روی تصویری که خودِ برنامه نشان می‌دهد معنا دارد.</summary>
     public bool CanScan => ShowsInApp;
+
+    // ══ تصویرِ VLC ══════════════════════════════════════════════════════════
+    // ⚠️ دو بومِ ثابت، نه یک بومِ تازه در هر فریم: در ۲۵ فریم بر ثانیه، هر
+    // فریمِ ۹۶۰×۵۴۰ حدود دو مگابایت است و ساختنِ بومِ تازه یعنی ۵۰ مگابایت
+    // زباله در هر ثانیه، برای هر دوربین. ولی اگر همان یک بوم دوباره نشانده
+    // شود، اِوالونیا «چیزی عوض نشده» می‌بیند و صفحه را از نو نمی‌کشد — پس
+    // بینِ دو بوم نوبتی می‌شود.
+    private WriteableBitmap? _canvasA, _canvasB;
+    private bool _useA;
+
+    /// <summary>یک فریم در هر لحظه روی نخِ رابط کاربری؛ بقیه رد می‌شوند.</summary>
+    private int _painting;
+
+    private static WriteableBitmap NewCanvas() => new(
+        new PixelSize((int)VlcVideoFeed.Width, (int)VlcVideoFeed.Height),
+        new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
+
+    private void OnVideoFrame(byte[] bgra)
+    {
+        // پویشِ کیو‌آر روی همین پیکسل‌ها — بی هیچ رمزگشاییِ دوباره.
+        if (Scanning && Interlocked.Exchange(ref _decoding, 1) == 0)
+            _ = Task.Run(() =>
+            {
+                string? text = null;
+                try { text = QrReader.DecodeBgra(bgra, (int)VlcVideoFeed.Width, (int)VlcVideoFeed.Height); }
+                catch { }
+                finally { Interlocked.Exchange(ref _decoding, 0); }
+
+                if (string.IsNullOrWhiteSpace(text)) return;
+                Dispatcher.UIThread.Post(() =>
+                {
+                    if (!Scanning) return;
+                    Scanning = false;
+                    Status = "";
+                    _owner.QrFound(text!);
+                });
+            });
+
+        if (Interlocked.Exchange(ref _painting, 1) == 1) return;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            try
+            {
+                var canvas = _useA ? (_canvasA ??= NewCanvas()) : (_canvasB ??= NewCanvas());
+                _useA = !_useA;
+                using (var fb = canvas.Lock())
+                    System.Runtime.InteropServices.Marshal.Copy(bgra, 0, fb.Address, bgra.Length);
+                Frame = canvas;
+                Status = "";
+            }
+            catch { /* فریمِ خراب — همان یکی رد می‌شود، پخش نمی‌ایستد */ }
+            finally { Interlocked.Exchange(ref _painting, 0); }
+        });
+    }
 
     [RelayCommand]
     private void ToggleScan()
@@ -171,7 +259,17 @@ public sealed partial class CameraCardViewModel : ObservableObject, IDisposable
         _feed.JpegArrived -= OnJpeg;
         _feed.Failed -= OnFailed;
         _feed.Dispose();
+
+        if (_video is not null)
+        {
+            _video.FrameArrived -= OnVideoFrame;
+            _video.Failed -= OnFailed;
+            _video.Dispose();
+        }
+
         Frame = null;
+        _canvasA?.Dispose(); _canvasB?.Dispose();
+        _canvasA = null; _canvasB = null;
     }
 }
 
@@ -183,8 +281,9 @@ public sealed partial class CameraCardViewModel : ObservableObject, IDisposable
 /// دو راهِ افزودن، هر دو مثلِ نسخهٔ وب: نوشتنِ لینک، یا خواندنِ کیو‌آر از عکس.
 /// خواندنِ کیو‌آر بومی است و اینترنت نمی‌خواهد.
 ///
-/// ⚠️ تصویرِ HLS و RTSP را خودِ برنامه پخش نمی‌کند و ادعایش را هم نمی‌کند:
-/// دکمهٔ «باز کردن در پخش‌کنندهٔ ویندوز» لینک را به خودِ سیستم می‌دهد. تصویرِ
+/// تصویرِ RTSP و HLS هم داخلِ خودِ برنامه پخش می‌شود (‎VlcVideoFeed‎) — همان
+/// چیزی که هر دوربینِ مداربستهٔ واقعی می‌دهد. اگر کتابخانهٔ پخش بالا نیاید،
+/// کارت به همان دکمهٔ «باز کردن در پخش‌کنندهٔ ویندوز» برمی‌گردد: تصویرِ
 /// نیامدهٔ بی‌توضیح بدتر از یک دکمهٔ صادق است.
 /// </summary>
 public sealed partial class CameraSectionViewModel : SectionViewModel
