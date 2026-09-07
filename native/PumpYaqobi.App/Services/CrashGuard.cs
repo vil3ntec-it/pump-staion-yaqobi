@@ -26,7 +26,21 @@ public static class CrashGuard
 {
     private static readonly object Lock = new();
 
-    /// <summary>پیشِ ساختنِ پنجره صدا زده می‌شود — در ‎Program.Main‎.</summary>
+    /// <summary>
+    /// ══ تورِ بی‌آوالونیا — در ‎Program.Main‎ ═══════════════════════════════
+    ///
+    /// فقط دو گیرندهٔ خودِ دات‌نت. عمداً هیچ چیزِ آوالونیا این‌جا لمس نمی‌شود.
+    ///
+    /// ⚠️ درسی که گران تمام شد: نسخهٔ اول همین‌جا ‎Dispatcher.UIThread‎ را هم
+    /// می‌گرفت. آوالونیا با همان دست زدن، دیسپچر را <b>همان لحظه</b> می‌سازد —
+    /// و چون هنوز ‎UsePlatformDetect()‎ اجرا نشده بود، دیسپچر به حلقهٔ پیام‌های
+    /// ویندوز وصل نمی‌شد. برنامه بالا می‌آمد، نوارِ عنوان می‌آمد، و بعد هیچ
+    /// کارِ چیدمان و رسمی اجرا نمی‌شد: <b>یک پنجرهٔ سفیدِ مرده</b>.
+    ///
+    /// روی CIِ لینوکسیِ بی‌نمایشگر پیدا نشد، چون آن‌جا دیسپچر دستی پمپ می‌شود.
+    /// پس گیرندهٔ نخِ رابط رفت به <see cref="InstallUi"/> که بعد از بالا آمدنِ
+    /// آوالونیا صدا زده می‌شود. این ترتیب را عوض نکنید.
+    /// </summary>
     public static void Install()
     {
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
@@ -38,8 +52,15 @@ public static class CrashGuard
             Write("Task", e.Exception);
             e.SetObserved();
         };
+    }
 
-        // خطای نخِ رابط: برنامه نباید بسته شود.
+    /// <summary>
+    /// گیرندهٔ خطای نخِ رابط — <b>فقط بعد از</b> راه‌اندازیِ آوالونیا
+    /// (‎App.OnFrameworkInitializationCompleted‎). این‌جا دیسپچر از قبل ساخته
+    /// شده و به پلتفرمِ درست وصل است، پس دست زدن به آن بی‌خطر است.
+    /// </summary>
+    public static void InstallUi()
+    {
         Dispatcher.UIThread.UnhandledException += (_, e) =>
         {
             Write("UI", e.Exception);
