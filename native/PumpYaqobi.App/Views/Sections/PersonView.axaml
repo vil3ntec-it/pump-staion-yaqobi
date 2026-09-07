@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
              xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
              x:Class="PumpYaqobi.App.Views.Sections.PersonView"
              x:DataType="vm:PersonViewModel">
 
@@ -9,7 +10,8 @@
 
     <c:SectionPage.Toolbar>
       <StackPanel Orientation="Horizontal" Spacing="8">
-        <Button Content="حسابِ فرعیِ تازه" Command="{Binding AddSubAccountCommand}" />
+        <Button Classes="accent" Content="🆕 جدول جدید"
+                Command="{Binding Current.NewTableCommand}" />
         <Button Classes="ghost info" Content="📄 PDF حساب" Command="{Binding PdfCommand}" />
         <Button Classes="accent" Content="بازگشت به فهرست"
                 Command="{Binding BackCommand}" />
@@ -17,50 +19,167 @@
     </c:SectionPage.Toolbar>
 
     <c:SectionPage.Summary>
-      <!-- ‎Rows="1"‎ یعنی «همه در یک ردیف، با عرضِ مساوی» — کادرها تا لبه پخش
-           می‌شوند به‌جای آن‌که راست جمع شوند و کنارشان خالی بماند. -->
-      <UniformGrid Rows="1" Classes="stats">
-        <Border Classes="stat">
-          <StackPanel Spacing="3">
-            <TextBlock Text="الباقیِ پول" Classes="label" />
-            <TextBlock Text="{Binding MoneyText}" Classes="num" />
+      <!-- ══ سربرگِ حساب — مو‌به‌مو ‎#pm-fuel-summary‎ی سایت ════════════════
+           دو کادر، رنگ‌به‌رنگ: «⛽ حساب پطرول» و «🟤 حساب دیزل». هر کدام همان
+           چهار عددِ سایت را دارد — فیصدیِ ما، مقدار رسید، برد، الباقی — و
+           «رسید» همین‌جا داخلِ سربرگ نوشته می‌شود، نه جای دیگر.
+
+           چهار کادرِ تختِ قبلی (الباقیِ پول/پطرول/دیزل/حال) رفتند: نه رنگ
+           داشتند، نه رسید را نشان می‌دادند، و نه دیزل و پطرول را از هم جدا
+           می‌کردند. -->
+      <Grid ColumnDefinitions="*,12,*" DataContext="{Binding Current}">
+
+        <Border Grid.Column="0" Classes="panel" Padding="14,12"
+                BorderBrush="{DynamicResource Pump.Ok}" BorderThickness="2">
+          <StackPanel Spacing="8">
+            <TextBlock Text="⛽ حساب پطرول" FontWeight="ExtraBold" FontSize="15"
+                       Foreground="{DynamicResource Pump.Ok}" />
+            <UniformGrid Rows="1">
+              <StackPanel Spacing="2">
+                <TextBlock Text="فیصدی ما (٪)" Classes="label" />
+                <TextBlock Text="{Binding HeadPetrolPercentText}" FontWeight="ExtraBold" FontSize="17"
+                           Foreground="{DynamicResource Pump.Info}" />
+              </StackPanel>
+              <StackPanel Spacing="2">
+                <TextBlock Text="مقدار رسید" Classes="label" />
+                <TextBlock Text="{Binding HeadPetrolRasidText}" FontWeight="ExtraBold" FontSize="17"
+                           Foreground="{DynamicResource Pump.Ok}" />
+              </StackPanel>
+              <StackPanel Spacing="2">
+                <TextBlock Text="برد" Classes="label" />
+                <TextBlock Text="{Binding HeadPetrolBordText}" FontWeight="ExtraBold" FontSize="17"
+                           Foreground="{DynamicResource Pump.Warn}" />
+              </StackPanel>
+              <StackPanel Spacing="2">
+                <TextBlock Text="الباقی" Classes="label" />
+                <TextBlock Text="{Binding HeadPetrolAlbaqiText}" FontWeight="ExtraBold" FontSize="17"
+                           Foreground="{Binding HeadPetrolAlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+              </StackPanel>
+            </UniformGrid>
           </StackPanel>
         </Border>
-        <Border Classes="stat">
-          <StackPanel Spacing="3">
-            <TextBlock Text="الباقیِ پطرول (لیتر)" Classes="label" />
-            <TextBlock Text="{Binding PetrolText}" Classes="num" />
+
+        <Border Grid.Column="2" Classes="panel" Padding="14,12"
+                BorderBrush="{DynamicResource Pump.Warn}" BorderThickness="2">
+          <StackPanel Spacing="8">
+            <TextBlock Text="🟤 حساب دیزل" FontWeight="ExtraBold" FontSize="15"
+                       Foreground="{DynamicResource Pump.Warn}" />
+            <UniformGrid Rows="1">
+              <StackPanel Spacing="2">
+                <TextBlock Text="فیصدی ما (٪)" Classes="label" />
+                <TextBlock Text="{Binding HeadDieselPercentText}" FontWeight="ExtraBold" FontSize="17"
+                           Foreground="{DynamicResource Pump.Info}" />
+              </StackPanel>
+              <StackPanel Spacing="2">
+                <TextBlock Text="مقدار رسید" Classes="label" />
+                <TextBlock Text="{Binding HeadDieselRasidText}" FontWeight="ExtraBold" FontSize="17"
+                           Foreground="{DynamicResource Pump.Ok}" />
+              </StackPanel>
+              <StackPanel Spacing="2">
+                <TextBlock Text="برد" Classes="label" />
+                <TextBlock Text="{Binding HeadDieselBordText}" FontWeight="ExtraBold" FontSize="17"
+                           Foreground="{DynamicResource Pump.Warn}" />
+              </StackPanel>
+              <StackPanel Spacing="2">
+                <TextBlock Text="الباقی" Classes="label" />
+                <TextBlock Text="{Binding HeadDieselAlbaqiText}" FontWeight="ExtraBold" FontSize="17"
+                           Foreground="{Binding HeadDieselAlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+              </StackPanel>
+            </UniformGrid>
           </StackPanel>
         </Border>
-        <Border Classes="stat">
-          <StackPanel Spacing="3">
-            <TextBlock Text="الباقیِ دیزل (لیتر)" Classes="label" />
-            <TextBlock Text="{Binding DieselText}" Classes="num" />
-          </StackPanel>
-        </Border>
-        <Border Classes="stat">
-          <StackPanel Spacing="3">
-            <TextBlock Text="حال" Classes="label" />
-            <TextBlock Text="{Binding StatusText}" Classes="num" />
-          </StackPanel>
-        </Border>
-      </UniformGrid>
+      </Grid>
     </c:SectionPage.Summary>
 
-    <Grid RowDefinitions="Auto,Auto,*">
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
 
-      <!-- حساب‌ها -->
-      <ListBox Grid.Row="0" Classes="chips" ItemsSource="{Binding Accounts}"
-               SelectedItem="{Binding Current}" Margin="0,0,0,10">
-        <ListBox.ItemsPanel>
-          <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
-        </ListBox.ItemsPanel>
-        <ListBox.ItemTemplate>
-          <DataTemplate x:DataType="vm:AccountViewModel">
-            <TextBlock Text="{Binding Title}" Margin="6,2" />
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
+      <!-- ══ نوارِ حساب — کشوییِ «حساب فرعی» + کادرِ «جدول‌های آرشیو» ══════════
+           گزارشِ صاحب ریپو، دو تا:
+             «حساب فرعی یک کادرِ کشویی است که از آن‌جا انتخاب بشود و آن حساب
+              کاملاً جدا است و باید یک اسمِ جدا هم داشته باشد.»
+             «کادرِ جدول‌های آرشیو هم یک کادرِ کشویی است؛ می‌زنم یک کادرِ دیگر
+              باز می‌شود و با زدنِ روی هر کدام کشویی باز می‌شوند.»
+
+           پیش از این چیپ‌های افقی بود: با چند حساب، نوار پهن‌تر از صفحه می‌شد
+           و اسمِ حساب‌ها هم دیده نمی‌شد. حالا دقیقاً مثلِ سایت، یک کشویی. -->
+      <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,10">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock Text="📒 حساب:" Classes="label" VerticalAlignment="Center" />
+          <ComboBox ItemsSource="{Binding Accounts}" SelectedItem="{Binding Current}"
+                    MinWidth="220">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:AccountViewModel">
+                <TextBlock Text="{Binding Title}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <Button Classes="ghost info" Content="➕ حساب جدید"
+                  Command="{Binding AddSubAccountCommand}" />
+          <Button Classes="ghost danger" Content="🗑️ حذفِ این حساب"
+                  Command="{Binding DeleteSubAccountCommand}"
+                  CommandParameter="{Binding Current}" />
+        </StackPanel>
+
+        <!-- کادرِ کشوییِ «جدول‌های آرشیو» — تا آرشیوی نباشد، اصلاً دیده نمی‌شود -->
+        <StackPanel Spacing="6" DataContext="{Binding Current}"
+                    IsVisible="{Binding HasArchives, FallbackValue=False}">
+          <Button Classes="ghost info" HorizontalAlignment="Stretch"
+                  Content="{Binding ArchiveToggleText}"
+                  Command="{Binding ToggleArchivesCommand}" />
+
+          <ItemsControl ItemsSource="{Binding Archives}" IsVisible="{Binding IsArchiveOpen}"
+                        x:CompileBindings="False">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Classes="panel" Margin="0,0,0,6" Padding="0">
+                  <StackPanel>
+                    <!-- عنوانِ کوچکِ هر آرشیو — با کلیک، آکاردئون باز می‌شود -->
+                    <Button Classes="tool-link" HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left" Padding="12,9"
+                            Command="{Binding ToggleCommand}">
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="{Binding CaretText}" FontWeight="ExtraBold" />
+                        <TextBlock Text="{Binding Title}" FontWeight="Bold" />
+                      </StackPanel>
+                    </Button>
+
+                    <StackPanel IsVisible="{Binding IsOpen}" Margin="12,0,12,12" Spacing="8">
+                      <TextBlock Text="{Binding PetrolHeadText}" TextWrapping="Wrap"
+                                 Foreground="{DynamicResource Pump.Ok}" FontWeight="Bold" />
+                      <TextBlock Text="{Binding DieselHeadText}" TextWrapping="Wrap"
+                                 Foreground="{DynamicResource Pump.Warn}" FontWeight="Bold" />
+                      <TextBlock Text="{Binding NoteText}" TextWrapping="Wrap"
+                                 IsVisible="{Binding HasNote}" Classes="label" />
+
+                      <!-- ⚠️ فقط برای دیدن — عکسِ گذشته ویرایش نمی‌شود -->
+                      <c:ExcelGrid ItemsSource="{Binding Rows}" IsReadOnly="True"
+                                   x:CompileBindings="False">
+                        <DataGrid.Columns>
+                          <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
+                          <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="Auto" MinWidth="140" />
+                          <DataGridTextColumn Header="حواله" Binding="{Binding Hawala}" Width="Auto" />
+                          <DataGridTextColumn Header="تیل" Binding="{Binding FuelText}" Width="Auto" />
+                          <DataGridTextColumn Header="مقدار" Binding="{Binding LitersText}" Width="Auto" />
+                          <DataGridTextColumn Header="فی" Binding="{Binding PriceText}" Width="Auto" />
+                          <DataGridTextColumn Header="بردگی" Binding="{Binding BardagiText}" Width="Auto" />
+                          <DataGridTextColumn Header="رسید" Binding="{Binding RasidText}" Width="Auto" />
+                          <DataGridTextColumn Header="رسیدِ تیل" Binding="{Binding RasidFuelText}" Width="Auto" />
+                        </DataGrid.Columns>
+                      </c:ExcelGrid>
+                      <c:TotalsBar ItemsSource="{Binding Totals}" />
+
+                      <Button Classes="ghost danger" Content="🗑️ حذفِ این آرشیو"
+                              HorizontalAlignment="Right" Padding="10,4" FontSize="11"
+                              Command="{Binding $parent[UserControl].DataContext.Current.DeleteArchiveCommand}"
+                              CommandParameter="{Binding}" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </StackPanel>
 
       <!-- فیصدی و رسیدِ همان حساب -->
       <Border Grid.Row="1" Classes="panel" Padding="12,10" Margin="0,0,0,10"
@@ -130,12 +249,17 @@
                 <TextBlock Text="{Binding FuelText}" VerticalAlignment="Center" Margin="6,0" />
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
+            <!-- ══ نوع تیل — دو کادرِ رادیویی، مثلِ سایت ═══════════════════
+                 «کادرهایی مثلِ رادیو دارند که یکی‌شان انتخاب می‌شود و آن‌یکی
+                 نمی‌شود.» هر دو روی همان یک ‎Fuel‎ می‌نشینند، پس روشن شدنِ
+                 یکی خودبه‌خود آن‌یکی را خاموش می‌کند. کشوییِ پیشین هم شبیهِ
+                 سایت نبود و هم برای هر تغییر دو بار کلیک می‌خواست. -->
             <DataGridTemplateColumn.CellEditingTemplate>
               <DataTemplate>
-                <ComboBox SelectedItem="{Binding FuelText}">
-                  <ComboBoxItem Content="پطرول" />
-                  <ComboBoxItem Content="دیزل" />
-                </ComboBox>
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="6,0">
+                  <RadioButton GroupName="rowFuel" Content="پطرول" IsChecked="{Binding IsPetrol}" />
+                  <RadioButton GroupName="rowFuel" Content="دیزل" IsChecked="{Binding IsDiesel}" />
+                </StackPanel>
               </DataTemplate>
             </DataGridTemplateColumn.CellEditingTemplate>
           </DataGridTemplateColumn>
@@ -156,6 +280,9 @@
           </DataGridTemplateColumn>
         </DataGrid.Columns>
       </c:ExcelGrid>
+
+      <!-- ردیفِ «جمله» — همتای ‎<tfoot class="xls-foot">‎ی سایت -->
+      <c:TotalsBar Grid.Row="3" ItemsSource="{Binding Current.TotalCells}" />
     </Grid>
   </c:SectionPage>
 </UserControl>

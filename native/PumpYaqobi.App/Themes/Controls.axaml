@@ -1,6 +1,7 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:c="using:PumpYaqobi.App.Controls">
+        xmlns:c="using:PumpYaqobi.App.Controls"
+        xmlns:th="using:PumpYaqobi.App.Themes">
   <Styles.Resources>
     <!-- فونتِ برنامه + پشتیبانِ ایموجیِ سیستم. Vazirmatn ایموجی ندارد؛ روی
          ویندوز «Segoe UI Emoji» و روی لینوکس «Noto Color Emoji» جایش را پر
@@ -775,4 +776,45 @@
   <Style Selector="ScrollBar">
     <Setter Property="Background" Value="Transparent" />
   </Style>
+
+  <!-- ══ ردیفِ «جمله»ی ته جدول ═══════════════════════════════════════════════
+       همتای ‎<tfoot class="xls-foot">‎ی سایت: نوارِ تیره‌تر با خطِ بالای پررنگ،
+       خانهٔ اولش «جمله» و بقیه جمعِ هر ستون. با ‎c:TotalsBar‎ زیرِ هر جدول
+       گذاشته می‌شود؛ هیچ‌وقت داخلِ خودِ جدول نمی‌رود (توضیحِ چرایی در
+       ‎Controls/TotalsBar.cs‎). -->
+  <Style Selector="c|TotalsBar">
+    <Setter Property="Margin" Value="0,-1,0,0" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{DynamicResource Pump.Panel}"
+                BorderBrush="{DynamicResource Pump.Border}"
+                BorderThickness="1,2,1,1"
+                CornerRadius="0,0,10,10" Padding="12,9">
+          <StackPanel Orientation="Horizontal" Spacing="18">
+            <TextBlock Text="{TemplateBinding Title}" FontWeight="ExtraBold" FontSize="14"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource Pump.Text}" />
+            <ItemsControl ItemsSource="{TemplateBinding ItemsSource}" x:CompileBindings="False">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <StackPanel Spacing="1" Margin="0,0,20,0" MinWidth="76">
+                    <TextBlock Text="{Binding Label}" FontSize="11"
+                               Foreground="{DynamicResource Pump.Muted}" />
+                    <TextBlock Text="{Binding Value}" FontWeight="ExtraBold" FontSize="14"
+                               Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
 </Styles>

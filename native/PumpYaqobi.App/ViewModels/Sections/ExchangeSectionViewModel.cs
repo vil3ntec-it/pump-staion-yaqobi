@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using PumpYaqobi.App.Controls;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
@@ -167,6 +168,15 @@ public sealed partial class ExchangeSectionViewModel
         OnPropertyChanged(nameof(BaqiSentence)); OnPropertyChanged(nameof(BaqiSentenceNote));
         OnPropertyChanged(nameof(BaqiSentenceBrushKey));
     }
+
+    /// <summary>ردیفِ «جمله» — همه‌چیزِ این صفحه دالر است.</summary>
+    protected override IReadOnlyList<TotalCell> BuildTotals() => new[]
+    {
+        new TotalCell("دالر", TotalUsd),
+        new TotalCell("رسید به صرافی", TotalBardagi, "Pump.Ok"),
+        new TotalCell("بردگی پمپ ($)", TotalBardagiUsd, "Pump.Warn"),
+        new TotalCell("الباقی ($)", Baqi, Summary.Baqi >= 0m ? "Pump.Ok" : "Pump.Danger"),
+    };
 
     protected override ExchangeRowViewModel Wrap(ExchangeRow e) => new(e, this);
     protected override long EntityIdOf(ExchangeRowViewModel r) => r.Entity.Id;

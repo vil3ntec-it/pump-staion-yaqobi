@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using PumpYaqobi.App.Controls;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
@@ -162,7 +163,24 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
         AlbaqiAfn = Shamsi.Money(Math.Round(s.AlbaqiAfn, 2));
         AlbaqiUsd = Shamsi.Money(Math.Round(s.AlbaqiUsd, 2));
         ConvRate = Shamsi.Money(Math.Round(s.ConvRate, 4));
+        _albaqiAfnRaw = s.AlbaqiAfn;
+        OnPropertyChanged(nameof(TotalCells));
     }
+
+    private decimal _albaqiAfnRaw;
+
+    /// <summary>
+    /// ردیفِ «جمله»ی ته دفترِ همین شرکت — همتای ‎&lt;tfoot class="xls-foot"&gt;‎ی
+    /// سایت. ⚠️ دو دفترِ پطرول و دیزل جدا هستند و «جمله» هم فقط مالِ دفترِ باز.
+    /// </summary>
+    public IReadOnlyList<TotalCell> TotalCells => new[]
+    {
+        new TotalCell("کلِ دالر", TotalUsd),
+        new TotalCell("کلِ افغانی", TotalAfn),
+        new TotalCell("رسید (افغانی)", PaidAfn, "Pump.Ok"),
+        new TotalCell("الباقیِ افغانی", AlbaqiAfn, _albaqiAfnRaw > 0m ? "Pump.Danger" : "Pump.Ok"),
+        new TotalCell("الباقیِ دالر", AlbaqiUsd, _albaqiAfnRaw > 0m ? "Pump.Danger" : "Pump.Ok"),
+    };
 
     public async Task SaveRowAsync(CompanyRow r)
     {

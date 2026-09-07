@@ -90,6 +90,20 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>زیربخشی باز است ⇒ نوارِ «‹ برگشت» بالای صفحه بیاید.</summary>
     public bool IsSubOpen => Current?.OpenSub is not null;
 
+    /// <summary>
+    /// ══ سربرگ و نوارها، وقتی حسابی باز است ═══════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «تو بخش‌هایی مثل قرض‌داران، تیل امانت، شرکت‌ها و ورق
+    /// آن سربرگ و بخش‌های بالا را نشان می‌دهد، ولی وقتی وارد یک حسابِ قرض‌دار
+    /// یا امانت یا شرکت می‌شوی نباید دیده شوند، چون جا می‌گیرند.»
+    ///
+    /// در سایت هم دقیقاً همین است: ‎#personModal .modal‎ صریحاً
+    /// ‎width:100%;height:100%‎ می‌گیرد و روی سربرگ و نوارِ آمار و نوارِ بخش‌ها
+    /// می‌افتد. پس این‌جا هم با باز شدنِ حسابِ درونِ بخش، هر سه می‌روند و کلِ
+    /// پنجره مالِ خودِ حساب می‌شود.
+    /// </summary>
+    public bool IsChromeVisible => Content?.IsPageOpen != true;
+
     /// <summary>نوشتهٔ دکمهٔ برگشت — «‹ برگشت به قرض‌داران».</summary>
     public string BackText => "‹ برگشت به " + (Current?.Title ?? "");
     [ObservableProperty] private PumpTheme _selectedTheme;
@@ -226,6 +240,15 @@ public sealed partial class MainViewModel : ObservableObject
         if (Current?.OpenSub is { } sub) _ = OpenSubAsync(sub);
     }
 
+    /// <summary>بخشی که همین حالا محتوا است — تا باز و بسته شدنِ حسابش را بشنویم.</summary>
+    private SectionViewModel? _watchedContent;
+
+    private void OnContentPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SectionViewModel.IsPageOpen))
+            OnPropertyChanged(nameof(IsChromeVisible));
+    }
+
     private async Task OpenSubAsync(SectionViewModel sub)
     {
         try
@@ -239,6 +262,17 @@ public sealed partial class MainViewModel : ObservableObject
     private void SyncContent()
     {
         Content = Current?.OpenSub ?? Current;
+
+        if (!ReferenceEquals(_watchedContent, Content))
+        {
+            if (_watchedContent is not null)
+                _watchedContent.PropertyChanged -= OnContentPropertyChanged;
+            _watchedContent = Content;
+            if (_watchedContent is not null)
+                _watchedContent.PropertyChanged += OnContentPropertyChanged;
+        }
+
+        OnPropertyChanged(nameof(IsChromeVisible));
         OnPropertyChanged(nameof(IsSubOpen));
         OnPropertyChanged(nameof(BackText));
         OnPropertyChanged(nameof(ActiveSection));

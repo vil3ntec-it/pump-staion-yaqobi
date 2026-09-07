@@ -205,7 +205,7 @@
 
         <!-- ══ میله‌زنیِ مخزن ══ -->
         <Border Classes="panel" Padding="0" MinHeight="240">
-          <Grid RowDefinitions="Auto,Auto,*">
+          <Grid RowDefinitions="Auto,Auto,*,Auto">
             <Border Grid.Row="0" Classes="card-head">
               <TextBlock Text="📏 میله‌زنیِ مخزن" FontWeight="Bold"
                          Foreground="{DynamicResource Pump.Accent}" />
@@ -277,6 +277,9 @@
                 </DataGridTemplateColumn>
               </DataGrid.Columns>
             </c:ExcelGrid>
+
+            <!-- ردیفِ «جمله»ی اندازه‌گیری‌ها -->
+            <c:TotalsBar Grid.Row="3" ItemsSource="{Binding DipTotalCells}" />
           </Grid>
         </Border>
       </StackPanel>

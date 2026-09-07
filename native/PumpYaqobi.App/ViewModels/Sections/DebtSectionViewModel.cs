@@ -186,38 +186,24 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
         if (full is null) return;
         Person = new PersonViewModel(_host, full, this);
 
-        // ‎_vxLearnFromTap‎ — زدنِ نام پس از یک صدای ناشناخته، همان را یاد می‌دهد
+        // ══ یادگیری، خاموش و بی‌سروصدا ══════════════════════════════════════
+        // خواستهٔ صریحِ صاحب ریپو: «آموزش صدا را از همه جا حذف کن — آموزش چیه،
+        // باید خودش بفهمه.» پس صفحهٔ آموزش و دکمه‌اش رفتند و هیچ توستی هم
+        // نمی‌گوید «یادم دادی».
+        //
+        // ولی خودِ یادگیری ماند و عمداً: موتورِ صدا اثرِ صداست، نه تشخیصِ گفتار.
+        // اگر هیچ صدایی ثبت نشود، دکمهٔ مایکروفون برای همیشه هیچ‌کس را
+        // نمی‌شناسد. حالا همان کارِ همیشگیِ کاربر — گفتنِ نام و بعد باز کردنِ
+        // حساب — خودش برنامه را یاد می‌دهد، بی آن‌که کاربر چیزی ببیند یا
+        // کاری کند.
         var teach = _pendingTeach;
         _pendingTeach = null;
         if (teach is not null)
-        {
             await _host.Voice.EnrollAsync(AccountKey(card.Entity.Id), card.Name, teach);
-            _host.Toast("🎓 صدای «" + card.Name + "» ثبت شد — دفعهٔ بعد خودش می‌شناسد", ToastKind.Ok);
-        }
     }
 
     /// <summary>کلیدِ صدا برای حسابِ اصلیِ یک شخص — همان ‎p&lt;id&gt;‎ی نسخهٔ وب.</summary>
     private static string AccountKey(long debtorId) => VoiceKeys.Of(debtorId);
-
-    /// <summary>
-    /// ══ 🎓 آموزش صدا ══════════════════════════════════════════════════════
-    /// فهرستِ همهٔ حساب‌ها با یک دکمهٔ ضبط جلوی هرکدام (‎vxOpenTeach‎).
-    ///
-    /// بی این، یاد دادنِ صد قرض‌دار یعنی صد بار «نشناختم» — چون تنها راهِ
-    /// یادگیری، زدنِ نام پس از یک صدای ناشناخته بود.
-    /// </summary>
-    [RelayCommand]
-    private async Task OpenVoiceTeachAsync()
-    {
-        await VoiceTeachWindow.ShowAsync(MainWindowOf(), new VoiceTeachViewModel(_host));
-        // ممکن است کاربر همان‌جا صدایی ثبت یا پاک کرده باشد — چیزی در فهرستِ
-        // قرض‌داران عوض نمی‌شود، پس تازه‌سازی لازم نیست.
-    }
-
-    private static Avalonia.Controls.Window? MainWindowOf() =>
-        Avalonia.Application.Current?.ApplicationLifetime
-            is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime d
-            ? d.MainWindow : null;
 
     /// <summary>
     /// بازکردنِ حسابی که صدا آن را شناخت — ‎_vxOpenKey‎.
@@ -290,9 +276,7 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
 
             if (matches.Count == 0)
             {
-                _host.Toast(await _host.Voice.AccountCountAsync() == 0
-                    ? "🎤 بارِ اول نام را از فهرست بزنید — همین صدای شما ثبت می‌شود"
-                    : "🎤 نشناختم — نام را بزنید تا یاد بگیرم", ToastKind.Warn);
+                _host.Toast("🎤 نشناختم — نام را بنویسید", ToastKind.Warn);
                 return;
             }
 
@@ -304,7 +288,7 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
                 Search = names.Count == 1 ? names[0] : "";
                 _host.Toast("🎤 مطمئن نیستم — " + (names.Count > 0
                     ? "کدام‌شان بود؟ " + string.Join(" · ", names)
-                    : "نام را بزنید تا یاد بگیرم"), ToastKind.Warn);
+                    : "نام را بنویسید"), ToastKind.Warn);
                 return;
             }
 

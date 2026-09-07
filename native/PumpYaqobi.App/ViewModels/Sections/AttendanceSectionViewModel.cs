@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using PumpYaqobi.App.Controls;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
@@ -96,6 +97,22 @@ public sealed partial class AttendanceSectionViewModel : SectionViewModel
     public ObservableCollection<StaffViewModel> Staff { get; } = new();
     public ObservableCollection<AttendanceRowViewModel> Rows { get; } = new();
 
+    /// <summary>ردیفِ «جمله»ی ته جدول — روزها و جمعِ ساعت‌های همین کارمند و ماه.</summary>
+    public IReadOnlyList<TotalCell> TotalCells
+    {
+        get
+        {
+            var hours = Rows.Sum(r => Calc.Hours(r.Entity));
+            return new[]
+            {
+                new TotalCell("روزها", Shamsi.Money(Rows.Count)),
+                new TotalCell("جمعِ ساعت", Shamsi.Money(Math.Round(hours, 2))),
+            };
+        }
+    }
+
+    public void RefreshTotals() => OnPropertyChanged(nameof(TotalCells));
+
     [ObservableProperty] private string _month;
     [ObservableProperty] private string _newName = "";
     [ObservableProperty] private string _newSalary = "";
@@ -117,9 +134,14 @@ public sealed partial class AttendanceSectionViewModel : SectionViewModel
         Rows.Clear();
         foreach (var r in rows)
             Rows.Add(new AttendanceRowViewModel(r, byId.TryGetValue(r.StaffId, out var n) ? n : "", this));
+        RefreshTotals();
     }
 
-    public Task SaveRowAsync(AttendanceRow r) => _host.Attendance.SaveRowAsync(r);
+    public Task SaveRowAsync(AttendanceRow r)
+    {
+        RefreshTotals();                      // ساعتِ ردیف عوض شد ⇒ «جمله» هم
+        return _host.Attendance.SaveRowAsync(r);
+    }
 
     [RelayCommand]
     private async Task AddStaffAsync()

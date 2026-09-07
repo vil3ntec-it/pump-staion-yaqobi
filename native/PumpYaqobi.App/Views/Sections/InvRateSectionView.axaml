@@ -104,6 +104,9 @@
         </c:ExcelGrid>
       </Border>
 
+      <!-- ردیفِ «جمله» — همان جمع‌های ‎_invRateTotals()‎ -->
+      <c:TotalsBar ItemsSource="{Binding TotalCells}" IsVisible="{Binding !IsEmpty}" />
+
       <TextBlock Text="هنوز فاکتوری ثبت نشده — این صفحه با اولین فاکتور پر می‌شود."
                  Classes="label" IsVisible="{Binding IsEmpty}"
                  HorizontalAlignment="Center" Margin="0,10" />

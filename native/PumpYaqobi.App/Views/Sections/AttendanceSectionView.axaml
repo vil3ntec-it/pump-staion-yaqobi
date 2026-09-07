@@ -20,7 +20,7 @@
       </Grid>
     </c:SectionPage.Filters>
 
-    <Grid RowDefinitions="Auto,12,*">
+    <Grid RowDefinitions="Auto,12,*,Auto">
       <Panel Grid.Row="0">
         <ItemsRepeater ItemsSource="{Binding Staff}">
           <ItemsRepeater.Layout>
@@ -80,6 +80,9 @@
           <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="Auto" />
         </DataGrid.Columns>
       </c:ExcelGrid>
+
+      <!-- ردیفِ «جمله» — روزها و جمعِ ساعت‌ها -->
+      <c:TotalsBar Grid.Row="3" ItemsSource="{Binding TotalCells}" />
     </Grid>
   </c:SectionPage>
 </UserControl>

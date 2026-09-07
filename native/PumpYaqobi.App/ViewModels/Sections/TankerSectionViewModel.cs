@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using PumpYaqobi.App.Controls;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
@@ -24,7 +25,7 @@ public sealed class TankerRowViewModel
     public string ManifestText => Shamsi.Money(Entity.Manifest);
     public string ActualText => Shamsi.Money(Entity.Actual);
 
-    private decimal Diff => TankDipService.UnloadDifference(Entity);
+    internal decimal Diff => TankDipService.UnloadDifference(Entity);
 
     /// <summary>«کم‌آمد ۶۰» یا «✅ کامل» — همان دو حالتِ نسخهٔ وب.</summary>
     public string DiffText => Diff < 0m ? "کم‌آمد " + Shamsi.Money(-Diff) : "✅ کامل";
@@ -47,6 +48,27 @@ public sealed partial class TankerSectionViewModel : SectionViewModel
         => _host = host;
 
     public ObservableCollection<TankerRowViewModel> Rows { get; } = new();
+
+    /// <summary>
+    /// ردیفِ «جمله»ی ته جدول — بارنامه، تحویل، و جمعِ کم‌آمد (همان عددی که
+    /// «گزارش پایان ماه» هم می‌خواند).
+    /// </summary>
+    public IReadOnlyList<TotalCell> TotalCells
+    {
+        get
+        {
+            var manifest = Rows.Sum(r => r.Entity.Manifest);
+            var actual = Rows.Sum(r => r.Entity.Actual);
+            var short_ = Rows.Sum(r => r.Diff < 0m ? -r.Diff : 0m);
+            return new[]
+            {
+                new TotalCell("تخلیه‌ها", Shamsi.Money(Rows.Count)),
+                new TotalCell("بارنامه", Shamsi.Money(manifest)),
+                new TotalCell("تحویل", Shamsi.Money(actual)),
+                new TotalCell("کم‌آمد", Shamsi.Money(short_), short_ > 0m ? "Pump.Danger" : "Pump.Ok"),
+            };
+        }
+    }
 
     [ObservableProperty] private bool _isDiesel;
     [ObservableProperty] private string _manifest = "";
@@ -97,6 +119,7 @@ public sealed partial class TankerSectionViewModel : SectionViewModel
         var i = 0;
         foreach (var u in await _host.Tools.UnloadsAsync()) Rows.Add(new TankerRowViewModel(u, ++i));
         OnPropertyChanged(nameof(IsEmpty));
+        OnPropertyChanged(nameof(TotalCells));
     }
 
     [RelayCommand]

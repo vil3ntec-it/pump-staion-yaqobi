@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using PumpYaqobi.App.Controls;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
@@ -70,6 +71,17 @@ public sealed partial class StaffShortSectionViewModel : SectionViewModel
     [ObservableProperty] private string _amount = "";
     [ObservableProperty] private string _totalShort = "—";
     [ObservableProperty] private string _totalExcess = "—";
+
+    /// <summary>ردیفِ «جمله»ی ته جدول — کمبودی و اضافی، جدا از هم.</summary>
+    public IReadOnlyList<TotalCell> TotalCells => new[]
+    {
+        new TotalCell("کارمندها", Shamsi.Money(Rows.Count)),
+        new TotalCell("🔴 کمبودیِ مانده", TotalShort, "Pump.Danger"),
+        new TotalCell("🟢 اضافیِ مانده", TotalExcess, "Pump.Ok"),
+    };
+
+    partial void OnTotalShortChanged(string v) => OnPropertyChanged(nameof(TotalCells));
+    partial void OnTotalExcessChanged(string v) => OnPropertyChanged(nameof(TotalCells));
 
     public bool IsEmpty => Rows.Count == 0;
     public bool HasSettles => Settles.Count > 0;

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using PumpYaqobi.App.Controls;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Domain.Entities;
@@ -46,6 +47,25 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
     /// <summary>جمع‌های بالای صفحه — هر بخش خودش می‌داند.</summary>
     protected virtual void Recalc() { }
 
+    /// <summary>
+    /// ══ ردیفِ «جمله»ی ته جدول ═══════════════════════════════════════════════
+    /// همتای ‎&lt;tfoot class="xls-foot"&gt;‎ی سایت. هر بخش خانه‌های خودش را
+    /// می‌دهد؛ بخشی که جمع معنا ندارد (فهرست‌های فقط‌خواندنی) چیزی نمی‌دهد و
+    /// نوار اصلاً دیده نمی‌شود.
+    /// </summary>
+    protected virtual IReadOnlyList<TotalCell> BuildTotals() => Array.Empty<TotalCell>();
+
+    public IReadOnlyList<TotalCell> TotalCells => BuildTotals();
+    public bool HasTotals => TotalCells.Count > 0;
+
+    /// <summary>جمع‌های بالای صفحه + ردیفِ «جمله»، با هم و همیشه هم‌زمان.</summary>
+    private void RecalcAll()
+    {
+        Recalc();
+        OnPropertyChanged(nameof(TotalCells));
+        OnPropertyChanged(nameof(HasTotals));
+    }
+
     /// <summary>فیلترِ جست‌وجو — بخش‌هایی که ستونِ نام دارند بازنویسی‌اش می‌کنند.</summary>
     protected virtual void ApplyFilter() { }
 
@@ -63,7 +83,7 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
         Rows.Clear();
         foreach (var e in list) Rows.Add(Track(Wrap(e)));
         ApplyFilter();
-        Recalc();
+        RecalcAll();
     }
 
     /// <summary>ذخیرهٔ یک ردیف — تنها همان ردیف، نه کلِ جدول.</summary>
@@ -71,7 +91,7 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
     {
         if (e.Id == 0) await Service.AddAsync(e);
         else await Service.UpdateAsync(e);
-        Recalc();
+        RecalcAll();
     }
 
     /// <summary>
@@ -94,7 +114,7 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
         else
         {
             Rows.Add(Track(Wrap(e)));
-            Recalc();
+            RecalcAll();
         }
     }
 
@@ -105,7 +125,7 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
         await BeforeDeleteAsync(EntityOf(row));
         await Service.DeleteAsync(EntityIdOf(row));
         Rows.Remove(row);
-        Recalc();
+        RecalcAll();
     }
 
     public int RowCount => Rows.Count;
@@ -134,7 +154,7 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
     /// <summary>هر ردیف که خانه‌ای‌اش عوض شود، جمع‌های بالای صفحه فوری تازه می‌شوند.</summary>
     private TRow Track(TRow row)
     {
-        row.Recalculated += Recalc;
+        row.Recalculated += RecalcAll;
         return row;
     }
 }
