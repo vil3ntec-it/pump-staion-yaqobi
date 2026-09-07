@@ -120,6 +120,48 @@ public class BackupTrashTests : IDisposable
         }
     }
 
+    /// <summary>
+    /// فرزندی که کاربر **جداگانه و پیش‌تر** پاک کرده بود، نباید با پدر برگردد.
+    ///
+    /// این همان چیزی است که «مُهرِ زمانِ یکسان» را لازم می‌کند: بی آن،
+    /// بازگرداندنِ یک قرض‌دار ردیف‌هایی را هم زنده می‌کرد که خودِ کاربر ماه‌ها
+    /// پیش عمداً پاک کرده بود.
+    /// </summary>
+    [Fact]
+    public async Task ARowDeletedEarlierOnPurposeDoesNotComeBackWithItsDebtor()
+    {
+        var (dbf, trash, _, debtors, _) = Host();
+        var p = await AddPersonAsync(dbf, "سلیم");
+
+        // یک ردیفِ دوم، که کاربر جداگانه پاکش می‌کند
+        long secondId;
+        await using (var db = dbf.Create())
+        {
+            var acct = await db.DebtAccounts.FirstAsync(a => a.MainOfDebtorId == p.Id);
+            var extra = new DebtRow
+            {
+                FuelAccountId = acct.Id, DateShamsi = "1405/06/13",
+                Name = "این را عمداً پاک کردم", Liters = 5m, PricePerLiter = 80m,
+            };
+            db.DebtRows.Add(extra);
+            await db.SaveChangesAsync();
+            secondId = extra.Id;
+        }
+
+        await debtors.DeleteRowAsync(secondId);          // حذفِ جداگانه
+        await debtors.DeleteDebtorAsync(p.Id);           // بعد حذفِ خودِ شخص
+
+        var personItem = (await trash.ListAsync()).First(x => x.Kind == "debtor");
+        Assert.Null(await trash.RestoreAsync(personItem.Id));
+
+        await using (var db = dbf.Create())
+        {
+            var rows = await db.DebtRows.ToListAsync();
+            Assert.Single(rows);                          // فقط ردیفِ اول برگشت
+            Assert.Equal("بردگی", rows[0].Name);
+        }
+    }
+
     /// <summary>پانزده روز — همان عددِ نسخهٔ وب؛ کهنه‌تر خودش می‌رود.</summary>
     [Fact]
     public async Task TrashKeepsFifteenDaysAndPrunesOlder()
