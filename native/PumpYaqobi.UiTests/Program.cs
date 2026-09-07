@@ -33,6 +33,7 @@ internal static class Program
         // اصلاً راهی برای رسیدن به بخشِ بیرون‌افتاده هست.
         if (outDir.Equals("scroll", StringComparison.OrdinalIgnoreCase)) return ScrollAudit();
         if (outDir.Equals("gridperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Run();
+        if (outDir.Equals("cardperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Cards();
 
         Directory.CreateDirectory(outDir);
 

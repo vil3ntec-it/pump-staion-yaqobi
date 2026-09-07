@@ -2,6 +2,9 @@ using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Layout;
+// ‎ItemsRepeater‎ و ‎UniformGridLayout‎ از بستهٔ جداگانهٔ خودشان می‌آیند
+using Avalonia.Controls.Templates;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using PumpYaqobi.App.Controls;
@@ -132,6 +135,77 @@ internal static class GridPerf
         {
             for (var i = 0; i < count; i++) yield return this[i]!;
         }
+    }
+
+    /// <summary>
+    /// ══ فهرست‌های کارتی ═════════════════════════════════════════════════════
+    /// قرض‌داران، شرکت‌ها، ورق‌ها و… جدول نیستند، ولی می‌توانند هزاران کارت
+    /// شوند. این‌جا دو چیدمان کنارِ هم سنجیده می‌شوند تا معلوم شود آیا عوض
+    /// کردنشان واقعاً چیزی عوض می‌کند یا نه:
+    ///
+    ///   • ‎ItemsControl‎ + ‎AutoFillPanel‎ — چیزی که امروز هست
+    ///   • ‎ItemsRepeater‎ + ‎UniformGridLayout‎ — پیشنهاد
+    ///
+    /// «کارتِ زنده» یعنی ‎Border‎ی که واقعاً در درختِ بصری ساخته شده.
+    /// </summary>
+    public static int Cards()
+    {
+        AppBuilder.Configure<PumpYaqobi.App.App>()
+            .UseSkia()
+            .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
+            .SetupWithoutStarting();
+
+        const int n = 50_000;
+        var data = new LazyRows(n);
+
+        var card = new Avalonia.Controls.Templates.FuncDataTemplate<object?>(
+            (_, _) => new Border { Height = 90, Child = new TextBlock { Text = "کارت" } }, true);
+
+        // ── امروز ──
+        var ic = new ItemsControl
+        {
+            ItemsSource = data,
+            ItemTemplate = card,
+            ItemsPanel = new Avalonia.Controls.Templates.FuncTemplate<Panel?>(
+                () => new PumpYaqobi.App.Controls.AutoFillPanel { MinItemWidth = 252, Gap = 12 }),
+        };
+        var w1 = new Window { Width = 1200, Height = 700,
+                              Content = new ScrollViewer { Name = "PageScroll", Content = ic } };
+        w1.Show();
+        var t1 = Stopwatch.StartNew();
+        Pump(w1);
+        t1.Stop();
+        var live1 = w1.GetVisualDescendants().OfType<Border>().Count(b => b.Height == 90);
+
+        // ── پیشنهاد ──
+        var ir = new ItemsRepeater
+        {
+            ItemsSource = data,
+            ItemTemplate = card,
+            Layout = new UniformGridLayout { MinItemWidth = 252, MinColumnSpacing = 12, MinRowSpacing = 12 },
+        };
+        var w2 = new Window { Width = 1200, Height = 700,
+                              Content = new ScrollViewer { Name = "PageScroll", Content = ir } };
+        w2.Show();
+        var t2 = Stopwatch.StartNew();
+        Pump(w2);
+        t2.Stop();
+        var live2 = w2.GetVisualDescendants().OfType<Border>().Count(b => b.Height == 90);
+
+        Console.WriteLine();
+        Console.WriteLine($"فهرستِ کارتی با {n:N0} آیتم");
+        Console.WriteLine(new string('-', 58));
+        Console.WriteLine($"ItemsControl + AutoFillPanel   {t1.ElapsedMilliseconds,6} ms   {live1,8} کارتِ زنده");
+        Console.WriteLine($"ItemsRepeater + UniformGrid    {t2.ElapsedMilliseconds,6} ms   {live2,8} کارتِ زنده");
+        Console.WriteLine();
+
+        if (live2 <= MaxLiveRows)
+        {
+            Console.WriteLine("✅ چیدمانِ پیشنهادی مجازی‌سازی می‌کند");
+            return 0;
+        }
+        Console.WriteLine("❌ چیدمانِ پیشنهادی هم مجازی‌سازی نمی‌کند — دنبالِ راهِ دیگری باید بود");
+        return 1;
     }
 
     private static void Pump(Window w)

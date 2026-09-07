@@ -24,14 +24,15 @@
         </WrapPanel>
       </c:SectionPage.Toolbar>
 
-              <ItemsControl ItemsSource="{Binding Cards}">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><c:AutoFillPanel MinItemWidth="252" Gap="12" /></ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
+              <ItemsRepeater ItemsSource="{Binding Cards}">
+          <ItemsRepeater.Layout>
+              <UniformGridLayout MinItemWidth="252" ItemsStretch="Fill"
+                                 MinColumnSpacing="12" MinRowSpacing="12" />
+            </ItemsRepeater.Layout>
+          <ItemsRepeater.ItemTemplate>
             <DataTemplate x:DataType="vm:CompanyCardViewModel">
               <Button Classes="card-shell"
-                      Command="{Binding $parent[ItemsControl].((vm:CompanySectionViewModel)DataContext).OpenCommand}"
+                      Command="{Binding $parent[ItemsRepeater].((vm:CompanySectionViewModel)DataContext).OpenCommand}"
                       CommandParameter="{Binding}">
               <Border Classes="person-card">
                 <!-- ردیفِ آخر ستاره است تا «کفِ کارت» (‎.pcard-foot‎ با
@@ -40,7 +41,7 @@
                 <Grid RowDefinitions="Auto,Auto,*">
 
                   <Button Grid.Row="0" Classes="card-x" Content="✕" HorizontalAlignment="Left"
-                          Command="{Binding $parent[ItemsControl].((vm:CompanySectionViewModel)DataContext).DeleteCompanyCommand}"
+                          Command="{Binding $parent[ItemsRepeater].((vm:CompanySectionViewModel)DataContext).DeleteCompanyCommand}"
                           CommandParameter="{Binding}" />
 
                   <!-- ‎.pname‎ — دقیقاً دو خط جا دارد؛ نامِ بلندتر با «…» بریده
@@ -54,15 +55,15 @@
                     <TextBlock Text="{Binding AlbaqiText}" Classes="cmp-fig"
                                Foreground="{Binding AlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
                     <Button Classes="qr" Content="📲 کیو‌آر کد" HorizontalAlignment="Stretch"
-                            Command="{Binding $parent[ItemsControl].((vm:CompanySectionViewModel)DataContext).ShowQrCommand}"
+                            Command="{Binding $parent[ItemsRepeater].((vm:CompanySectionViewModel)DataContext).ShowQrCommand}"
                             CommandParameter="{Binding}" />
                   </StackPanel>
                 </Grid>
               </Border>
               </Button>
             </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
+          </ItemsRepeater.ItemTemplate>
+        </ItemsRepeater>
       
     </c:SectionPage>
 
