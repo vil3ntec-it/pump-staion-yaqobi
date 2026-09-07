@@ -27,9 +27,13 @@
            چهار کادرِ تختِ قبلی (الباقیِ پول/پطرول/دیزل/حال) رفتند: نه رنگ
            داشتند، نه رسید را نشان می‌دادند، و نه دیزل و پطرول را از هم جدا
            می‌کردند. -->
-      <Grid ColumnDefinitions="*,12,*" DataContext="{Binding Current}">
+      <!-- ⚠️ روی هم، نه بغلِ هم. در سایت این دو کارت زیرِ هم‌اند (پطرول بالا،
+           دیزل پایین) و صاحب ریپو صریح گفت همان باشد: «هر دو بالا و پایین هم
+           استن نه بغل به بغل هم». بغل‌به‌بغل هر کارت نصفِ عرض می‌گرفت و چهار
+           عددش به هم می‌چسبید. -->
+      <Grid RowDefinitions="Auto,8,Auto" DataContext="{Binding Current}">
 
-        <Border Grid.Column="0" Classes="panel" Padding="14,12"
+        <Border Grid.Row="0" Classes="panel" Padding="14,12"
                 BorderBrush="{DynamicResource Pump.Ok}" BorderThickness="2">
           <StackPanel Spacing="8">
             <TextBlock Text="⛽ حساب پطرول" FontWeight="ExtraBold" FontSize="15"
@@ -41,9 +45,12 @@
                            Foreground="{DynamicResource Pump.Info}" />
               </StackPanel>
               <StackPanel Spacing="2">
-                <TextBlock Text="مقدار رسید" Classes="label" />
-                <TextBlock Text="{Binding HeadPetrolRasidText}" FontWeight="ExtraBold" FontSize="17"
-                           Foreground="{DynamicResource Pump.Ok}" />
+                <TextBlock Text="مقدار رسید تیل" Classes="label" />
+                <!-- در سایت رسید را همین‌جا در سربرگ می‌نویسند، نه در کادرِ
+                     دیگری پایین‌تر. پس این خانه خواندنی نیست، نوشتنی است. -->
+                <TextBox Text="{Binding HeadPetrolRasidEdit}" FontWeight="ExtraBold" FontSize="17"
+                         Background="Transparent" BorderThickness="0,0,0,1" Padding="0,1"
+                         Foreground="{DynamicResource Pump.Ok}" />
               </StackPanel>
               <StackPanel Spacing="2">
                 <TextBlock Text="برد" Classes="label" />
@@ -59,7 +66,7 @@
           </StackPanel>
         </Border>
 
-        <Border Grid.Column="2" Classes="panel" Padding="14,12"
+        <Border Grid.Row="2" Classes="panel" Padding="14,12"
                 BorderBrush="{DynamicResource Pump.Warn}" BorderThickness="2">
           <StackPanel Spacing="8">
             <TextBlock Text="🟤 حساب دیزل" FontWeight="ExtraBold" FontSize="15"
@@ -71,9 +78,12 @@
                            Foreground="{DynamicResource Pump.Info}" />
               </StackPanel>
               <StackPanel Spacing="2">
-                <TextBlock Text="مقدار رسید" Classes="label" />
-                <TextBlock Text="{Binding HeadDieselRasidText}" FontWeight="ExtraBold" FontSize="17"
-                           Foreground="{DynamicResource Pump.Ok}" />
+                <TextBlock Text="مقدار رسید تیل" Classes="label" />
+                <!-- در سایت رسید را همین‌جا در سربرگ می‌نویسند، نه در کادرِ
+                     دیگری پایین‌تر. پس این خانه خواندنی نیست، نوشتنی است. -->
+                <TextBox Text="{Binding HeadDieselRasidEdit}" FontWeight="ExtraBold" FontSize="17"
+                         Background="Transparent" BorderThickness="0,0,0,1" Padding="0,1"
+                         Foreground="{DynamicResource Pump.Ok}" />
               </StackPanel>
               <StackPanel Spacing="2">
                 <TextBlock Text="برد" Classes="label" />
@@ -246,7 +256,14 @@
           <DataGridTemplateColumn Header="تیل" Width="Auto">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
-                <TextBlock Text="{Binding FuelText}" VerticalAlignment="Center" Margin="6,0" />
+                <!-- همیشه پیدا، مثلِ سایت — نه فقط هنگامِ ویرایش. -->
+                <StackPanel Orientation="Horizontal" Spacing="6" Margin="6,1"
+                            VerticalAlignment="Center">
+                  <RadioButton GroupName="{Binding FuelGroup}" Content="پطرول"
+                               FontSize="11" MinHeight="0" Padding="3,0" IsChecked="{Binding IsPetrol}" />
+                  <RadioButton GroupName="{Binding FuelGroup}" Content="دیزل"
+                               FontSize="11" MinHeight="0" Padding="3,0" IsChecked="{Binding IsDiesel}" />
+                </StackPanel>
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
             <!-- ══ نوع تیل — دو کادرِ رادیویی، مثلِ سایت ═══════════════════
@@ -257,8 +274,8 @@
             <DataGridTemplateColumn.CellEditingTemplate>
               <DataTemplate>
                 <StackPanel Orientation="Horizontal" Spacing="8" Margin="6,0">
-                  <RadioButton GroupName="rowFuel" Content="پطرول" IsChecked="{Binding IsPetrol}" />
-                  <RadioButton GroupName="rowFuel" Content="دیزل" IsChecked="{Binding IsDiesel}" />
+                  <RadioButton GroupName="{Binding FuelGroup}" Content="پطرول" IsChecked="{Binding IsPetrol}" />
+                  <RadioButton GroupName="{Binding FuelGroup}" Content="دیزل" IsChecked="{Binding IsDiesel}" />
                 </StackPanel>
               </DataTemplate>
             </DataGridTemplateColumn.CellEditingTemplate>

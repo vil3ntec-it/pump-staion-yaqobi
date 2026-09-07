@@ -93,6 +93,15 @@ public sealed partial class DebtRowViewModel : RowViewModel
     /// هر دو روی همان یک ‎Fuel‎ می‌نشینند، پس ناسازگاری ممکن نیست: با روشن
     /// شدنِ یکی، آن‌یکی خودبه‌خود خاموش می‌شود.
     /// </summary>
+    /// <summary>
+    /// نامِ گروهِ دو دکمهٔ نوعِ تیلِ همین ردیف.
+    ///
+    /// ⚠️ باید برای هر ردیف **یکتا** باشد. تا امروز هر دو دکمه ‎GroupName‎ی
+    /// ثابت («rowFuel») داشتند، یعنی آوالونیا همهٔ ردیف‌های جدول را یک گروه
+    /// می‌دید و زدنِ «دیزل» در یک ردیف، انتخابِ همهٔ ردیف‌های دیگر را برمی‌داشت.
+    /// </summary>
+    public string FuelGroup => "rowFuel-" + _r.Id;
+
     public bool IsPetrol
     {
         get => Fuel == FuelType.Petrol;
@@ -376,12 +385,31 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     public string HeadPetrolAlbaqiBrushKey =>
         Totals.Petrol.Albaqi > 0m ? "Pump.Danger" : "Pump.Ok";
 
+    /// <summary>
+    /// همان «مقدار رسید»ِ سربرگ، ولی نوشتنی — چون در سایت رسید را همان‌جا در
+    /// سربرگ می‌نویسند، نه در یک کادرِ دیگر پایین‌تر.
+    ///
+    /// ⚠️ کدام فیلد را می‌نویسد به دفترِ باز بستگی دارد: دفترِ پول رسیدِ پول
+    /// را عوض می‌کند و دفترِ تیل رسیدِ تیل را. این دو هرگز یکی نمی‌شوند.
+    /// </summary>
+    public string HeadPetrolRasidEdit
+    {
+        get => HeadPetrolRasidText;
+        set { if (IsMoney) RasidMoneyPetrolText = value; else RasidFuelPetrolText = value; RefreshTotals(); }
+    }
+
     // ── 🟤 حساب دیزل ──────────────────────────────────────────────────────
     public string HeadDieselPercentText => PercentDiesel == 0m ? "0" : Shamsi.Money(PercentDiesel);
     public string HeadDieselRasidText =>
         Shamsi.Money(IsMoney ? RasidMoneyDiesel : RasidFuelDiesel);
     public string HeadDieselBordText =>
         Shamsi.Money(IsMoney ? Totals.Diesel.Bardagi : Totals.Diesel.Liters);
+    public string HeadDieselRasidEdit
+    {
+        get => HeadDieselRasidText;
+        set { if (IsMoney) RasidMoneyDieselText = value; else RasidFuelDieselText = value; RefreshTotals(); }
+    }
+
     public string HeadDieselAlbaqiText => Shamsi.Money(Totals.Diesel.Albaqi);
     public string HeadDieselAlbaqiBrushKey =>
         Totals.Diesel.Albaqi > 0m ? "Pump.Danger" : "Pump.Ok";
@@ -514,9 +542,9 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         foreach (var n in new[]
         {
             nameof(UnitText),
-            nameof(HeadPetrolPercentText), nameof(HeadPetrolRasidText),
+            nameof(HeadPetrolPercentText), nameof(HeadPetrolRasidText), nameof(HeadPetrolRasidEdit),
             nameof(HeadPetrolBordText), nameof(HeadPetrolAlbaqiText), nameof(HeadPetrolAlbaqiBrushKey),
-            nameof(HeadDieselPercentText), nameof(HeadDieselRasidText),
+            nameof(HeadDieselPercentText), nameof(HeadDieselRasidText), nameof(HeadDieselRasidEdit),
             nameof(HeadDieselBordText), nameof(HeadDieselAlbaqiText), nameof(HeadDieselAlbaqiBrushKey),
             nameof(SumLitersText), nameof(SumBardagiText), nameof(SumRasidText),
             nameof(SumRasidFuelText), nameof(SumAlbaqiText), nameof(TotalCells),

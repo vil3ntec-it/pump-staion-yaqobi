@@ -64,13 +64,24 @@ public class TotalsRowTests
         Assert.DoesNotContain("Classes=\"chips\"", v);
     }
 
-    /// <summary>«نوعِ تیل کادرهایی مثلِ رادیو دارد که یکی‌شان انتخاب می‌شود».</summary>
+    /// <summary>
+    /// «نوعِ تیل کادرهایی مثلِ رادیو دارد که یکی‌شان انتخاب می‌شود».
+    /// ⚠️ گروهِ رادیوها دیگر رشتهٔ ثابتِ «rowFuel» نیست: با نامِ ثابت، آوالونیا
+    /// همهٔ ردیف‌های جدول را یک گروه می‌دید و زدنِ «دیزل» در یک ردیف انتخابِ
+    /// همهٔ ردیف‌های دیگر را برمی‌داشت. حالا هر ردیف ‎FuelGroup‎ی یکتا دارد
+    /// (‎"rowFuel-" + Id‎)، پس این آزمون همان اتصال را می‌خواهد، نه رشتهٔ ثابت را.
+    /// </summary>
     [Fact]
     public void FuelTypeIsRadioButtons()
     {
         var v = View("PersonView");
-        Assert.Contains("<RadioButton GroupName=\"rowFuel\" Content=\"پطرول\"", v);
-        Assert.Contains("<RadioButton GroupName=\"rowFuel\" Content=\"دیزل\"", v);
+        Assert.Contains("<RadioButton GroupName=\"{Binding FuelGroup}\" Content=\"پطرول\"", v);
+        Assert.Contains("<RadioButton GroupName=\"{Binding FuelGroup}\" Content=\"دیزل\"", v);
+        Assert.DoesNotContain("GroupName=\"rowFuel\"", v);
+
+        var vm = File.ReadAllText(Path.Combine(
+            Root, "PumpYaqobi.App", "ViewModels", "Sections", "PersonViewModel.cs"));
+        Assert.Contains("public string FuelGroup", vm);
     }
 
     /// <summary>«کادرِ جدول‌های آرشیو» و دکمهٔ «جدول جدید» هر دو سرِ جایشان.</summary>
