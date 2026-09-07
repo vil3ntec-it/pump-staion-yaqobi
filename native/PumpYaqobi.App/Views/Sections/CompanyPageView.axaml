@@ -5,7 +5,7 @@
              x:Class="PumpYaqobi.App.Views.Sections.CompanyPageView"
              x:DataType="vm:CompanyPageViewModel">
 
-  <c:SectionPage ScrollBody="False" Header="{Binding Name}" SubHeader="دفترِ خرید و رسیدِ همین شرکت">
+  <c:SectionPage Header="{Binding Name}" SubHeader="دفترِ خرید و رسیدِ همین شرکت">
 
     <c:SectionPage.Toolbar>
       <StackPanel Orientation="Horizontal" Spacing="8">

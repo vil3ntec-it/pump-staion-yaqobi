@@ -6,7 +6,7 @@
              x:Class="PumpYaqobi.App.Views.Sections.ExchangeSectionView"
              x:DataType="vm:ExchangeSectionViewModel">
 
-  <c:SectionPage ScrollBody="False" Header="صرافی" SubHeader="مبلغ به ارزِ خودش وارد می‌شود و با «فی» شکسته می‌شود — فیِ صفر یعنی صفر">
+  <c:SectionPage Header="صرافی" SubHeader="مبلغ به ارزِ خودش وارد می‌شود و با «فی» شکسته می‌شود — فیِ صفر یعنی صفر">
 
     <c:SectionPage.Toolbar>
       <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">

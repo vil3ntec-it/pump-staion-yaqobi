@@ -5,7 +5,7 @@
              x:Class="PumpYaqobi.App.Views.Sections.AttendanceSectionView"
              x:DataType="vm:AttendanceSectionViewModel">
 
-  <c:SectionPage ScrollBody="False" Header="حاضری و معاش"
+  <c:SectionPage Header="حاضری و معاش"
                  SubHeader="شیفتی که از نیمه‌شب رد می‌شود، ساعتش درست شمرده می‌شود">
 
     <c:SectionPage.Filters>

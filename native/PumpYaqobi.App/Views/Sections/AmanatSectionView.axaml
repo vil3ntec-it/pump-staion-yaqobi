@@ -10,7 +10,7 @@
     <!-- ══ شبکهٔ کارت‌ها ══════════════════════════════════════════════════
          صفحهٔ اصلیِ «تیل امانت» در نسخهٔ وب فقط کارتِ حساب‌هاست؛ جدول و
          تحلیل با زدنِ کارت باز می‌شوند. -->
-    <c:SectionPage ScrollBody="False" IsVisible="{Binding IsListVisible}" Header="تیل امانت">
+    <c:SectionPage IsVisible="{Binding IsListVisible}" Header="تیل امانت">
 
       <c:SectionPage.Toolbar>
         <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
@@ -93,7 +93,7 @@
          فاصله‌هایش با بقیهٔ برنامه یکی باشد. پیش از این تنها صفحه‌ای بود که
          بی‌کادر و چسبیده به لبهٔ پنجره کشیده می‌شد. -->
     <Panel IsVisible="{Binding !IsListVisible}">
-    <c:SectionPage ScrollBody="False" DataContext="{Binding Page}" x:CompileBindings="False"
+    <c:SectionPage DataContext="{Binding Page}" x:CompileBindings="False"
                    Header="{Binding Name}" SubHeader="حسابِ تیلِ امانت">
 
       <c:SectionPage.Toolbar>

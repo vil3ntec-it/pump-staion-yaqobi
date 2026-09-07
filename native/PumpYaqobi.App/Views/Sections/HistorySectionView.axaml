@@ -10,7 +10,7 @@
     <!-- ══ کارت‌های بخش‌ها ═════════════════════════════════════════════════
          مو‌به‌مو مثلِ ‎#hc-cards‎: هر بخش یک کادر با شمارِ ردیف و تازه‌ترین
          تاریخش؛ زدنِ کادر، تاریخچهٔ همان بخش را باز می‌کند. -->
-    <c:SectionPage ScrollBody="False" IsVisible="{Binding IsListVisible}" Header="تاریخچه‌ها"
+    <c:SectionPage IsVisible="{Binding IsListVisible}" Header="تاریخچه‌ها"
                    SubHeader="هر بخش تاریخچهٔ خودش را دارد — از تازه به کهنه. فقط برای دیدن است؛ هیچ چیزی عوض یا پاک نمی‌شود.">
               <ItemsControl ItemsSource="{Binding Cards}">
           <ItemsControl.ItemsPanel>
@@ -34,7 +34,7 @@
 
     <!-- ══ تاریخچهٔ یک بخش ═════════════════════════════════════════════════
          همان ‎#sec-historyview‎: دکمهٔ برگشت، کشویِ ماه، خلاصه، و فهرست. -->
-    <c:SectionPage ScrollBody="False" IsVisible="{Binding !IsListVisible}" Header="{Binding PageTitle}">
+    <c:SectionPage IsVisible="{Binding !IsListVisible}" Header="{Binding PageTitle}">
 
       <c:SectionPage.Toolbar>
         <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
