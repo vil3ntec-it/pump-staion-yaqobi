@@ -9,6 +9,10 @@
   <c:SectionPage Header="کمبودی و اضافیِ کارمندان"
                  SubHeader="از خودِ ورق‌های روزانه — به هیچ ورقی دست زده نمی‌شود">
 
+    <c:SectionPage.Toolbar>
+      <Button Classes="ghost info" Content="📄 PDF" Command="{Binding PdfCommand}" />
+    </c:SectionPage.Toolbar>
+
     <StackPanel Spacing="10">
 
       <!-- راهنمای واضح: کاربر باید بداند با هر کدام چه کند -->

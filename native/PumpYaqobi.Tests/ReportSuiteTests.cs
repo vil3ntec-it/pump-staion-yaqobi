@@ -416,6 +416,96 @@ public class ReportSuiteTests
                   Array.Empty<AmanatReportAccount>(), Dates)),
               "amanat-empty", 2000);
 
+    // ── حسابِ شرکتِ تیل ────────────────────────────────────────────────────
+    private static TilCompany Company()
+    {
+        var c = new TilCompany { Name = "شرکت هرات", UsdRate = 71.4m };
+        c.Rows.Add(new CompanyRow { Fuel = FuelType.Petrol, SortIndex = 0,
+                                    DateShamsi = "1405/05/03", Name = "تانکر ۱",
+                                    Kg = 31_200m, Usd = 705m, Rate = 71.2m, Poul = 900_000m });
+        c.Rows.Add(new CompanyRow { Fuel = FuelType.Petrol, SortIndex = 1,
+                                    DateShamsi = "1405/06/12", Name = "تانکر ۲",
+                                    Kg = 24_800m, Usd = 720m, Rate = 71.5m,
+                                    Poul = 5_000m, PoulCurrency = Currency.Usd });
+        c.Rows.Add(new CompanyRow { Fuel = FuelType.Diesel, SortIndex = 0,
+                                    DateShamsi = "1405/06/05", Name = "تانکر دیزل",
+                                    Kg = 18_400m, Usd = 690m, Rate = 71.3m });
+        return c;
+    }
+
+    [Fact]
+    public void CompanySheet_IsARealPdf()
+    {
+        var c = Company();
+        var rows = CompanyService.RowsOf(c, FuelType.Petrol).ToList();
+        Check(new CompanyReport(new CompanyReportInput(c, FuelType.Petrol, rows, Dates),
+                                new CompanyService()),
+              "company-petrol", 3000);
+    }
+
+    /// <summary>‎pdfCompany('all')‎ — هر دو سوخت با ستونِ «نوع تیل».</summary>
+    [Fact]
+    public void CompanyBothFuelsSheet_IsARealPdf()
+    {
+        var c = Company();
+        var rows = CompanyService.RowsOf(c, FuelType.Petrol)
+                   .Concat(CompanyService.RowsOf(c, FuelType.Diesel)).ToList();
+        Check(new CompanyReport(new CompanyReportInput(c, null, rows, Dates),
+                                new CompanyService()),
+              "company-both", 3000);
+    }
+
+    /// <summary>
+    /// ⚠️ در هر ردیف «الباقیِ دالری × نرخِ همان ردیف = الباقیِ افغانی» — همان
+    /// چیزی که یک‌بار خراب شد و صاحب ریپو گزارشش کرد («چرا الباقیِ دالر با
+    /// افغانی برابر نیست؟»). ورق هر دو عدد را کنارِ هم می‌گذارد، پس اگر این
+    /// رابطه بشکند روی کاغذ هم دیده می‌شود.
+    ///
+    /// ⚠️ این رابطه فقط ردیف‌به‌ردیف برقرار است، نه روی جمعِ کل: ردیف‌ها
+    /// نرخ‌های متفاوت دارند و «نرخِ تبدیلِ» سربرگ یک نرخِ میانگین (یا نرخِ
+    /// دستیِ شرکت) است.
+    /// </summary>
+    [Fact]
+    public void CompanySheet_KeepsTheDollarAndAfghaniBalancesConsistent()
+    {
+        var c = Company();
+        var calc = new CompanyService();
+        var fb = calc.ConvRate(c, c.Rows);
+
+        foreach (var r in c.Rows.Where(r => r.Rate != 0m))
+            Assert.Equal(Math.Round(calc.AlbaqiUsd(r, fb) * r.Rate, 6),
+                         Math.Round(calc.AlbaqiAfn(r, fb), 6));
+    }
+
+    // ── کمبودی کارمندان ───────────────────────────────────────────────────
+    [Fact]
+    public void StaffShortSheet_IsARealPdf()
+    {
+        var rows = new List<StaffShortRow>
+        {
+            new("نصیر", "نصیر احمد", 18, 41_000m, 0m, 9_000m, 0m, 32_000m, 0m),
+            new("شفیع", "شفیع الله", 12, 0m, 7_500m, 0m, 2_500m, 0m, 5_000m),
+            new("کریم", "کریم", 6, 0m, 0m, 0m, 0m, 0m, 0m),
+        };
+        var settles = new List<StaffShortSettle>
+        {
+            new() { Name = "نصیر احمد", Kind = StaffSettleKind.Short,
+                    Amount = 9_000m, DateShamsi = "1405/06/03" },
+            new() { Name = "شفیع الله", Kind = StaffSettleKind.Excess,
+                    Amount = 2_500m, DateShamsi = "1405/06/06" },
+        };
+
+        Check(new StaffShortReport(new StaffShortReportInput(rows, settles, Dates)),
+              "staffshort", 3000);
+    }
+
+    /// <summary>بی هیچ کارمندی هم ورق ساخته می‌شود.</summary>
+    [Fact]
+    public void StaffShortSheet_SurvivesAnEmptyTable() =>
+        Check(new StaffShortReport(new StaffShortReportInput(
+                  Array.Empty<StaffShortRow>(), Array.Empty<StaffShortSettle>(), Dates)),
+              "staffshort-empty", 2000);
+
     // ── گزارش پایان ماه ──────────────────────────────────────────────────
     private static MonthReport Month(decimal scale) => new(
         Petrol: new MonthFuel(1_840_000m * scale, 26_400m * scale, 148_000m * scale, 61),
