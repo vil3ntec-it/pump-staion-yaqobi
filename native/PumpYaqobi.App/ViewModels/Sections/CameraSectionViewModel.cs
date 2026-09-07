@@ -24,6 +24,7 @@ public sealed partial class CameraCardViewModel : ObservableObject, IDisposable
     {
         Entity = cam; _owner = owner;
         _feed.FrameArrived += OnFrame;
+        _feed.JpegArrived += OnJpeg;
         _feed.Failed += OnFailed;
     }
 
@@ -95,13 +96,79 @@ public sealed partial class CameraCardViewModel : ObservableObject, IDisposable
     {
         _feed.Stop();
         IsLive = false;
+        Scanning = false;
         Frame = null;
         Status = "";
+    }
+
+    // ══ پویشِ زندهٔ کیو‌آر ═══════════════════════════════════════════════════
+    // همتای ‎camScanStart‎/‎camScanStop‎: کیو‌آر را جلوی همین دوربین بگیرید و
+    // لینکِ داخلش در کادرِ «دوربینِ تازه» می‌نشیند.
+    //
+    // ⚠️ نسخهٔ وب برای این کار دوربینِ **خودِ دستگاه** را باز می‌کرد
+    // (‎getUserMedia‎). در ویندوز باز کردنِ وب‌کم کتابخانهٔ گرفتنِ تصویر
+    // می‌خواهد که هنوز در برنامه نیست؛ ولی همین دوربینِ شبکه‌ای که تصویرش
+    // روی صفحه است، همان کار را می‌کند و هیچ وابستگیِ تازه‌ای نمی‌خواهد.
+
+    /// <summary>در حالِ پویشِ کیو‌آر روی تصویرِ زنده.</summary>
+    [ObservableProperty] private bool _scanning;
+
+    /// <summary>
+    /// یک فریم در هر لحظه خوانده می‌شود.
+    ///
+    /// ⚠️ بی این، هر فریمِ MJPEG (سی‌تا در ثانیه) یک رمزگشاییِ کامل راه
+    /// می‌انداخت و پردازنده را می‌خورد — و صف هم عقب می‌ماند.
+    /// </summary>
+    private int _decoding;
+
+    /// <summary>«🔍 پویشِ کیو‌آر» / «⏹ پایانِ پویش».</summary>
+    public string ScanText => Scanning ? "⏹ پایانِ پویش" : "🔍 پویشِ کیو‌آر";
+
+    partial void OnScanningChanged(bool value) => OnPropertyChanged(nameof(ScanText));
+
+    /// <summary>پویش فقط روی تصویری که خودِ برنامه نشان می‌دهد معنا دارد.</summary>
+    public bool CanScan => ShowsInApp;
+
+    [RelayCommand]
+    private void ToggleScan()
+    {
+        if (!ShowsInApp) return;
+        if (Scanning) { Scanning = false; Status = ""; return; }
+
+        if (!IsLive) Toggle();                 // پویش بی تصویر معنا ندارد
+        Scanning = true;
+        Status = "🔍 کیو‌آر را جلوی دوربین بگیرید…";
+    }
+
+    private void OnJpeg(byte[] bytes)
+    {
+        if (!Scanning) return;
+
+        // اگر رمزگشاییِ فریمِ قبلی هنوز تمام نشده، این فریم رد می‌شود.
+        if (Interlocked.Exchange(ref _decoding, 1) == 1) return;
+
+        _ = Task.Run(() =>
+        {
+            string? text = null;
+            try { text = QrReader.DecodeImageBytes(bytes); }
+            catch { }
+            finally { Interlocked.Exchange(ref _decoding, 0); }
+
+            if (string.IsNullOrWhiteSpace(text)) return;
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (!Scanning) return;         // کاربر همان لحظه پویش را بست
+                Scanning = false;
+                Status = "";
+                _owner.QrFound(text!);
+            });
+        });
     }
 
     public void Dispose()
     {
         _feed.FrameArrived -= OnFrame;
+        _feed.JpegArrived -= OnJpeg;
         _feed.Failed -= OnFailed;
         _feed.Dispose();
         Frame = null;
@@ -190,7 +257,19 @@ public sealed partial class CameraSectionViewModel : SectionViewModel
             return;
         }
 
-        NewUrl = text!;
+        QrFound(text!);
+    }
+
+    /// <summary>
+    /// ‎_camQRFound‎ — لینکِ خوانده‌شده در کادر می‌نشیند و نامش را کاربر
+    /// می‌نویسد. خودش ثبت نمی‌کند، همان‌طور که در نسخهٔ وب هم نمی‌کرد.
+    /// </summary>
+    public void QrFound(string text)
+    {
+        var t = (text ?? "").Trim();
+        if (t.Length == 0) return;
+        NewName = "";
+        NewUrl = t;
         _host.Toast("✅ کیو‌آر خوانده شد — نامِ دوربین را بنویسید و ذخیره کنید", ToastKind.Ok);
     }
 

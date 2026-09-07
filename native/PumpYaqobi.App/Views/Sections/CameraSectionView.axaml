@@ -93,6 +93,15 @@
                             HorizontalAlignment="Left"
                             IsVisible="{Binding !ShowsInApp}"
                             Command="{Binding ToggleCommand}" />
+
+                    <!-- 🔍 پویشِ زندهٔ کیو‌آر — کیو‌آرِ دوربینِ تازه را جلوی همین
+                         دوربین بگیرید؛ لینکش در کادرِ «دوربینِ تازه» می‌نشیند. -->
+                    <Button Classes="ghost" Content="{Binding ScanText}" Padding="8,3" FontSize="11"
+                            HorizontalAlignment="Left"
+                            IsVisible="{Binding CanScan}"
+                            Classes.danger="{Binding Scanning}"
+                            Command="{Binding ToggleScanCommand}"
+                            ToolTip.Tip="کیو‌آر را جلوی این دوربین بگیرید" />
                   </StackPanel>
                 </Border>
               </StackPanel>

@@ -39,6 +39,16 @@ public sealed class CameraFeed : IDisposable
     /// <summary>هر فریمِ تازه. روی نخِ رابط کاربری صدا زده نمی‌شود.</summary>
     public event Action<Bitmap>? FrameArrived;
 
+    /// <summary>
+    /// همان فریم، ولی هنوز فشرده (JPEG).
+    ///
+    /// پویشِ کیو‌آر از این می‌خواند نه از ‎FrameArrived‎: تصویرِ اِوالونیا برای
+    /// نشان دادن ساخته شده و پیکسل‌های خامش را پس نمی‌دهد، ولی خواندنِ کیو‌آر
+    /// دقیقاً همان پیکسل‌ها را می‌خواهد. جدا بودنشان یعنی پویش حتی وقتی کار
+    /// می‌کند که رمزگشاییِ تصویر برای نمایش شکست بخورد.
+    /// </summary>
+    public event Action<byte[]>? JpegArrived;
+
     /// <summary>پیامِ خطا برای نشان دادن زیرِ کارت.</summary>
     public event Action<string>? Failed;
 
@@ -135,6 +145,11 @@ public sealed class CameraFeed : IDisposable
     private void Publish(byte[] bytes)
     {
         if (bytes.Length == 0) return;
+
+        // ⚠️ پیش از رمزگشاییِ تصویر: اگر قالبِ فریم برای نمایش ناشناخته باشد،
+        // پویشِ کیو‌آر همچنان همان بایت‌ها را می‌بیند.
+        try { JpegArrived?.Invoke(bytes); } catch { }
+
         try
         {
             using var ms = new MemoryStream(bytes, writable: false);

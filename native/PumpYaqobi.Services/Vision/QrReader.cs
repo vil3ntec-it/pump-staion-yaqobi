@@ -69,9 +69,29 @@ public static class QrReader
     /// </summary>
     public static string? DecodeFile(string path)
     {
-        try
+        try { return Decode(SKBitmap.Decode(path)); }
+        catch { return null; }
+    }
+
+    /// <summary>
+    /// خواندنِ کیو‌آر از بایت‌های یک عکسِ فشرده — همان فریمِ JPEGی که از
+    /// دوربینِ شبکه‌ای می‌آید (‎_camDecodeCanvas‎ روی فریمِ زنده).
+    ///
+    /// ‎null‎ یعنی در این فریم کیو‌آری نبود؛ در پویشِ زنده این حالتِ عادی است،
+    /// نه خطا — فریمِ بعدی می‌آید.
+    /// </summary>
+    public static string? DecodeImageBytes(byte[]? encoded)
+    {
+        if (encoded is null || encoded.Length == 0) return null;
+        try { return Decode(SKBitmap.Decode(encoded)); }
+        catch { return null; }
+    }
+
+    /// <summary>کوچک کردن + بردن به BGRA + خواندن — تنها مسیرِ مشترکِ هر دو راه.</summary>
+    private static string? Decode(SKBitmap? raw)
+    {
+        using (raw)
         {
-            using var raw = SKBitmap.Decode(path);
             if (raw is null || raw.Width <= 0 || raw.Height <= 0) return null;
 
             var side = Math.Max(raw.Width, raw.Height);
@@ -84,10 +104,6 @@ public static class QrReader
             if (!raw.ScalePixels(dst, SKFilterQuality.High)) return null;
 
             return DecodeBgra(dst.Bytes, dst.Width, dst.Height);
-        }
-        catch
-        {
-            return null;
         }
     }
 }

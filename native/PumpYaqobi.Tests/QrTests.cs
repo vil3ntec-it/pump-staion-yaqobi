@@ -99,4 +99,49 @@ public class QrTests
     {
         Assert.Null(QrReader.DecodeFile(Path.Combine(Path.GetTempPath(), "no-such-qr-file.png")));
     }
+
+    // ══ پویشِ زندهٔ فریمِ دوربین ═══════════════════════════════════════════════
+    // فریمی که از دوربینِ شبکه‌ای می‌آید یک JPEGِ فشرده است، نه پیکسلِ خام.
+    // این آزمون همان مسیر را می‌رود: کیو‌آر → PNG/JPEG → بایت → رمزگشا.
+
+    /// <summary>همان کیو‌آر، این‌بار به‌صورت بایت‌های یک عکسِ فشرده.</summary>
+    private static byte[] Encode(string text, SkiaSharp.SKEncodedImageFormat format)
+    {
+        var (px, w, h) = Render(text);
+        using var bmp = new SkiaSharp.SKBitmap(
+            new SkiaSharp.SKImageInfo(w, h, SkiaSharp.SKColorType.Bgra8888,
+                                      SkiaSharp.SKAlphaType.Unpremul));
+        System.Runtime.InteropServices.Marshal.Copy(px, 0, bmp.GetPixels(), px.Length);
+        using var img = SkiaSharp.SKImage.FromBitmap(bmp);
+        using var data = img.Encode(format, 95);
+        return data.ToArray();
+    }
+
+    [Fact]
+    public void ALiveFrame_IsReadAsJpeg()
+    {
+        const string link = "http://192.168.1.44/mjpg/video.mjpg";
+        Assert.Equal(link, QrReader.DecodeImageBytes(
+            Encode(link, SkiaSharp.SKEncodedImageFormat.Jpeg)));
+    }
+
+    [Fact]
+    public void ALiveFrame_IsReadAsPng()
+    {
+        const string link = "http://192.168.1.45/snapshot.cgi";
+        Assert.Equal(link, QrReader.DecodeImageBytes(
+            Encode(link, SkiaSharp.SKEncodedImageFormat.Png)));
+    }
+
+    /// <summary>
+    /// فریمِ بی‌کیو‌آر و فریمِ نیم‌بند باید ‎null‎ بدهند، نه استثنا: در پویشِ
+    /// زنده این دو هر ثانیه پیش می‌آیند و یک استثنا پخش را می‌بست.
+    /// </summary>
+    [Fact]
+    public void AFrameWithoutAQr_GivesNull_NotAnException()
+    {
+        Assert.Null(QrReader.DecodeImageBytes(null));
+        Assert.Null(QrReader.DecodeImageBytes(Array.Empty<byte>()));
+        Assert.Null(QrReader.DecodeImageBytes(new byte[] { 0xFF, 0xD8, 1, 2, 3 }));   // JPEGِ نصفه
+    }
 }
