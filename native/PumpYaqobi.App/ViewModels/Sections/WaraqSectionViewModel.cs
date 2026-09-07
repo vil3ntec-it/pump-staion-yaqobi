@@ -1,11 +1,13 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
+using PumpYaqobi.Reporting.Pdf;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -282,6 +284,24 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         foreach (var x in Txns) x.RefreshEffective();
     }
 
+    /// <summary>
+    /// ‎printWaraq()‎ — ورقِ **همان شیفتی که باز است** (روز یا شب)، نه هر دو.
+    /// در نسخهٔ وب هم دقیقاً همین است: ‎sd = isNight ? w.night : w.day‎.
+    /// </summary>
+    [RelayCommand]
+    private Task PdfAsync()
+    {
+        var sd = Shift;
+        if (sd is null) return Task.CompletedTask;
+
+        var input = new WaraqReportInput(
+            Entity.Station ?? "", Entity.DateShamsi ?? "",
+            IsNight ? ShiftKind.Night : ShiftKind.Day, sd, DocDates.Line());
+
+        return Documents.ShowAsync(() => new WaraqReport(input, Calc),
+                                   (IsNight ? "ورق شب " : "ورق روز ") + (Entity.DateShamsi ?? ""));
+    }
+
     public async Task SavePumpAsync(WaraqPump p) { await _host.WaraqData.SavePumpAsync(p); Recalc(); }
     public async Task SaveTxnAsync(WaraqTransaction t) { await _host.WaraqData.SaveTxnAsync(t); Recalc(); }
 
@@ -464,6 +484,30 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
 
     [RelayCommand]
     private Task DeleteCardAsync(WaraqCardViewModel? c) => DeleteSheetAsync(c?.Entity);
+
+    /// <summary>
+    /// ‎printWaraqById(id)‎ — ورقِ یک کارت، بی باز کردنِ صفحه‌اش.
+    ///
+    /// ⚠️ کارتِ فهرست فقط جمع‌ها را دارد؛ پایه‌ها و ردیف‌های قرض/مصرف با یک
+    /// خواندنِ کامل می‌آیند، وگرنه ورق خالی چاپ می‌شود.
+    /// </summary>
+    [RelayCommand]
+    private async Task PdfCardAsync(WaraqCardViewModel? c)
+    {
+        if (c is null) return;
+        var full = await _host.WaraqData.LoadAsync(c.Entity.Id);
+        if (full is null) return;
+
+        var kind = full.ActiveShift;
+        var sd = full.Shifts.FirstOrDefault(s => s.Kind == kind);
+        if (sd is null) return;
+
+        var input = new WaraqReportInput(full.Station ?? "", full.DateShamsi ?? "",
+                                         kind, sd, DocDates.Line());
+        await Documents.ShowAsync(() => new WaraqReport(input, _host.Waraq),
+                                  (kind == ShiftKind.Night ? "ورق شب " : "ورق روز ")
+                                  + (full.DateShamsi ?? ""));
+    }
 
     [RelayCommand]
     private async Task OpenAsync(WaraqEntry? w)
