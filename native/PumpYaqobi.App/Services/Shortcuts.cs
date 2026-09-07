@@ -76,7 +76,10 @@ public sealed class ShortcutService
     private bool TryPdf()
     {
         // اول صفحهٔ بازِ درونِ بخش، بعد خودِ بخش — همان اولویتِ نسخهٔ وب.
-        foreach (var target in new object?[] { _vm.Current?.ActivePage, _vm.Current })
+        // «بخش» یعنی آن‌چه واقعاً جلوی چشم است: اگر زیربخشی باز باشد
+        // (قرض‌های کهنه، تخلیهٔ تانکر، گزارش ماهانه…) ‎Ctrl+P‎ باید ورقِ همان
+        // را بدهد، نه ورقِ بخشِ پشتِ آن.
+        foreach (var target in new object?[] { _vm.ActiveSection?.ActivePage, _vm.ActiveSection })
         {
             var cmd = PdfOf(target);
             if (cmd is null || !cmd.CanExecute(null)) continue;
@@ -216,7 +219,8 @@ public sealed class ShortcutService
 
     private async Task OpenCardAsync(int n)
     {
-        if (_vm.Current is ICardGridHost grid) await grid.OpenByNumberAsync(n);
+        // همان قاعده: زیربخشِ باز مقدم است بر بخشِ پشتِ آن.
+        if (_vm.ActiveSection is ICardGridHost grid) await grid.OpenByNumberAsync(n);
     }
 
     private async Task AddRowsAsync(int n)

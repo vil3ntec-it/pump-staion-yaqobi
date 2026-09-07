@@ -21,7 +21,11 @@
     </c:SectionPage.Filters>
 
     <Grid RowDefinitions="Auto,12,*">
-      <ScrollViewer Grid.Row="0" HorizontalScrollBarVisibility="Auto" MaxHeight="250">
+      <!-- ⚠️ افقی «Disabled» عمدی است: با «Auto» اسکرولر محتوا را در پهنای
+           بی‌نهایت اندازه می‌گیرد و کارت‌های کارمندان به‌جای پیچیدن، یک ردیفِ
+           بی‌انتها می‌شوند. چپ و راست جایی لازم است که واقعاً چیزی بیرون
+           بزند — یعنی جدول‌ها، که خودشان با ‎ExcelGrid‎ آن را دارند. -->
+      <ScrollViewer Grid.Row="0" HorizontalScrollBarVisibility="Disabled" MaxHeight="250">
         <ItemsControl ItemsSource="{Binding Staff}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate><c:AutoFillPanel MinItemWidth="252" Gap="12" /></ItemsPanelTemplate>

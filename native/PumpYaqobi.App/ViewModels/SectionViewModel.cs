@@ -1,4 +1,6 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace PumpYaqobi.App.ViewModels;
 
@@ -18,45 +20,94 @@ public abstract partial class SectionViewModel : ObservableObject
 
     /// <summary>
     /// ══ پهنای ستونِ محتوا ═══════════════════════════════════════════════════
-    /// در نسخهٔ وب ‎.main‎ عرضش ۱۰۰۰ پیکسل است و وسط می‌ایستد؛ فقط چند بخشِ
-    /// جدولی با کلاسِ ‎sec-wide‎ تمامِ عرض را می‌گیرند. همان فهرست، مو‌به‌مو:
+    /// هیچ سقفی. هر بخش تمامِ عرضِ پنجره را می‌گیرد.
     ///
-    ///   ‎const _WIDE = ['dashboard','rasid','debtrasid','chakana','oldloans',
-    ///                   'oldloansmoney','debtsum','debtsummoney','priceloss',
-    ///                   'plsource','plperson','invrate'];‎
+    /// ⚠️ این عمداً برگشتِ تصمیمِ قبلی است. تا دیروز اینجا ستونِ ۱۰۰۰ پیکسلیِ
+    /// وسط‌چینِ ‎.main‎ِ نسخهٔ وب تقلید می‌شد و فقط چند بخشِ جدولی تمام‌عرض
+    /// بودند. صاحب ریپو با عکس نشان داد که نتیجه‌اش روی لپ‌تاپ چه شد:
+    /// «چپ و راستِ هر بخش را ببینی تمام صفحه نیستن» — دو نوارِ خالی کنارِ هر
+    /// بخش. حالا همه تمام‌عرض‌اند و کارِ جا دادنِ محتوا با خودِ بخش است.
     ///
-    /// ⚠️ عمداً «همه‌چیز تمام‌عرض» نیست: صاحب ریپو گفت همین ستونِ وسط‌چینِ
-    /// نسخهٔ وب «خیلی بهتر است». فرمِ دوستونهٔ پارچه یا مخزن، کشیده روی یک
-    /// نمایشگرِ ۲۷ اینچی، خوانا نیست — چشم باید سر تا سرِ میز را بگردد.
+    /// خودِ خاصیت مانده (نه حذف) چون پوستهٔ برنامه به آن بند است و آزمونش
+    /// همین قاعده را قفل می‌کند.
     /// </summary>
-    private static readonly HashSet<string> WideSections = new()
-    {
-        "dashboard", "rasid", "debtrasid", "chakana", "oldloans", "oldloansmoney",
-        "debtsum", "debtsummoney", "priceloss", "plsource", "plperson", "invrate",
-    };
+    public double ContentMaxWidth => double.PositiveInfinity;
 
-    public bool IsWide => WideSections.Contains(Id);
-
-    /// <summary>
-    /// سقفِ پهنا. داشبورد تمام‌عرض است ولی خودش تا ۱۴۴۰ بند می‌شود تا روی
-    /// نمایشگرِ خیلی پهن کارت‌هایش بی‌جهت کش نیایند — همان قاعدهٔ نسخهٔ وب.
-    /// </summary>
     /// <summary>
     /// صفحهٔ درونیِ بخش (حسابِ شخص، شرکت، ورق، امانت) باز است.
-    ///
-    /// در نسخهٔ وب این‌ها مودالِ تمام‌صفحه‌اند — ‎#personModal .modal‎ صریحاً
-    /// ‎width:100%;height:100%;max-width:100%‎ می‌گیرد. جدولِ حسابِ شخص ده‌ها
-    /// ستون دارد و در ستونِ ۱۰۰۰ پیکسلی نصفش بیرون می‌ماند.
+    /// دیگر روی پهنا اثری ندارد — همه‌چیز تمام‌عرض است — ولی بخش‌ها با آن
+    /// می‌فهمند فهرستشان پشتِ یک صفحهٔ باز رفته.
     /// </summary>
     [ObservableProperty] private bool _isPageOpen;
 
     partial void OnIsPageOpenChanged(bool v) => OnPropertyChanged(nameof(ContentMaxWidth));
 
-    public double ContentMaxWidth =>
-        IsPageOpen ? double.PositiveInfinity
-        : Id == "dashboard" ? 1440
-        : IsWide ? double.PositiveInfinity
-        : 1000;
+    // ══ زیربخش‌ها ═══════════════════════════════════════════════════════════
+    //
+    // در سایت نوارِ بالا هجده دکمه دارد و بس. چیزهایی مثلِ «قرض‌های کهنه»،
+    // «تخلیهٔ تانکر»، «گزارش ماهانه»، «تاریخچهٔ نرخ»، «چکنه» و «مدیریت
+    // داده‌ها» دکمهٔ سرصفحه ندارند: هر کدام یک کارتِ ‎.tool-link-card‎ داخلِ
+    // بخشِ خودشان‌اند و با زدنش صفحهٔ خودشان باز می‌شود.
+    //
+    // در نیتیو این هفت‌تا دکمهٔ نوار گرفته بودند و نوار بیست‌وپنج‌تایی شده
+    // بود — همان چیزی که صاحب ریپو گفت «خیلی دارد اذیتم می‌کند». حالا هر
+    // کدام «زیربخشِ» بخشِ خودش است: در نوار نیست، کارتش بالای همان بخش
+    // می‌نشیند، و باز که شد نوارِ «‹ برگشت» بالایش می‌آید.
+    //
+    // ⚠️ نمونهٔ زیربخش هم مثلِ خودِ بخش‌ها زنده می‌ماند، پس رفت‌وبرگشت هیچ
+    // چیزی را دوباره بار نمی‌کند.
+    public ObservableCollection<SectionViewModel> SubSections { get; } = new();
+
+    public bool HasSubSections => SubSections.Count > 0;
+
+    /// <summary>
+    /// ردیفِ خودکارِ کارت‌های زیربخش بالای بخش نشان داده شود؟
+    ///
+    /// پیش‌فرض بله. بخشی که خودش کارتِ لینکش را جایی گذاشته — مثلِ فاکتورها
+    /// که «مقایسهٔ نرخ» را کارتِ سومِ ردیفِ آماری‌اش کرده، عینِ سایت — این را
+    /// خاموش می‌کند تا یک لینک دو بار پیدا نشود.
+    /// </summary>
+    protected virtual bool ShowSubLinks => true;
+
+    public bool ShowSubLinkCards => HasSubSections && ShowSubLinks;
+
+    /// <summary>بخشی که این یکی زیرِ آن نشسته — برای نوشتهٔ دکمهٔ برگشت.</summary>
+    public SectionViewModel? ParentSection { get; private set; }
+
+    /// <summary>زیربخشِ بازِ همین بخش. ‎null‎ یعنی خودِ بخش جلوی چشم است.</summary>
+    [ObservableProperty] private SectionViewModel? _openSub;
+
+    /// <summary>
+    /// نوشتهٔ روی کارتِ لینک. جدا از ‎Title‎ است چون سایت روی کارت چیزِ
+    /// گویاتری می‌نویسد («⏰ قرض‌های کهنه — تیل») و در سربرگِ خودِ صفحه
+    /// عنوانِ کوتاه را.
+    /// </summary>
+    public string LinkTitle { get; private set; } = "";
+
+    public void AddSub(SectionViewModel sub, string? linkTitle = null)
+    {
+        sub.ParentSection = this;
+        sub.LinkTitle = linkTitle ?? sub.Title;
+        SubSections.Add(sub);
+        OnPropertyChanged(nameof(HasSubSections));
+        OnPropertyChanged(nameof(ShowSubLinkCards));
+    }
+
+    /// <summary>
+    /// باز کردنِ یک زیربخش — همان ‎showSection('oldloans')‎ی سایت.
+    /// نامش ‎ShowSub‎ است نه ‎OpenSub‎، چون ‎OpenSub‎ خودِ خاصیتِ بالاست.
+    /// </summary>
+    [RelayCommand]
+    public void ShowSub(SectionViewModel? sub)
+    {
+        if (sub is null || !SubSections.Contains(sub)) return;
+        OpenSub = sub;
+    }
+
+    /// <summary>«‹ برگشت» — از زیربخش به خودِ بخش.</summary>
+    [RelayCommand]
+    public void CloseSub() => OpenSub = null;
+
     /// <summary>کلیدِ آیکون در <c>Icons.axaml</c> — معمولاً همان شناسهٔ بخش.</summary>
     public string IconKey { get; }
     public string Title { get; }

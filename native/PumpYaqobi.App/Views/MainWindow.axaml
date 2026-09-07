@@ -134,11 +134,31 @@
     </Border>
 
     <!-- ══ محتوا ══════════════════════════════════════════════════════════
-         ستونِ وسط‌چینِ ۱۰۰۰ پیکسلی، مثلِ ‎.main‎ نسخهٔ وب. بخش‌های جدولیِ
-         فهرست‌شده در ‎SectionViewModel.IsWide‎ تمامِ عرض را می‌گیرند. -->
-    <ContentControl Grid.Row="3" Content="{Binding Current}"
-                    HorizontalAlignment="Stretch"
-                    MaxWidth="{Binding Current.ContentMaxWidth, FallbackValue=1000}" />
+         تمامِ عرضِ پنجره، بی هیچ سقفی. ستونِ وسط‌چینِ ۱۰۰۰ پیکسلی برداشته شد:
+         صاحب ریپو با عکس نشان داد که روی لپ‌تاپ دو نوارِ خالی کنارِ هر بخش
+         می‌ماند («چپ و راستِ هر بخش را ببینی تمام صفحه نیستن»).
+
+         ردیفِ اولِ این Grid نوارِ «‹ برگشت» است و فقط وقتی پیدا می‌شود که
+         زیربخشی باز باشد — «قرض‌های کهنه»، «تخلیهٔ تانکر»، «مدیریت داده‌ها»
+         و مانندِ آن‌ها که دکمهٔ نوار ندارند و از دلِ بخشِ خودشان باز می‌شوند. -->
+    <Grid Grid.Row="3" RowDefinitions="Auto,*">
+
+      <Border Grid.Row="0" IsVisible="{Binding IsSubOpen}"
+              Background="{DynamicResource Pump.NavBg}"
+              BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="0,0,0,1"
+              Padding="16,8">
+        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+          <Button Classes="ghost" Content="{Binding BackText}" FontWeight="Bold"
+                  Command="{Binding Current.CloseSubCommand}" />
+          <TextBlock Text="{Binding Content.Title}" VerticalAlignment="Center"
+                     FontWeight="ExtraBold" FontSize="15"
+                     Foreground="{DynamicResource Pump.Accent}" />
+        </StackPanel>
+      </Border>
+
+      <ContentControl Grid.Row="1" Content="{Binding Content}"
+                      HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+    </Grid>
   </Grid>
 
     <!-- ══ قفل ══ -->

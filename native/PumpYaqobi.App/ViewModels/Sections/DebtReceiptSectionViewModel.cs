@@ -44,7 +44,7 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
 {
     private readonly AppHost _host;
 
-    public DebtReceiptSectionViewModel(AppHost host) : base("debtrasid", "debt", "رسید قرض‌داران")
+    public DebtReceiptSectionViewModel(AppHost host) : base("debtrasid", "debt", "رسید قرض‌داران / چکنه")
     {
         _host = host;
         _dateShamsi = Shamsi.Today();

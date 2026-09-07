@@ -15,10 +15,10 @@
         <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
           <Button Classes="accent" Content="➕ افزودن شخص" Margin="0,0,8,0"
                   Command="{Binding AddDebtorCommand}" />
-          <Button Content="⏳ مدت عضویت همه" Margin="0,0,8,0" />
-          <Button Content="⏰ قرض‌های کهنه — تیل" Margin="0,0,8,0" />
-          <Button Content="💵 قرض‌های کهنه — پول" Margin="0,0,8,0" />
-          <Button Content="📉 زیان افزایش قیمت" />
+          <!-- «قرض‌های کهنه» از این‌جا رفت: حالا کارتِ زیربخشِ همین بخش است و
+               بالای فهرست می‌نشیند — مثلِ ‎.tool-link-card‎ نسخهٔ وب. سه دکمهٔ
+               مردهٔ قبلی (که هیچ فرمانی نداشتند) هم با آن رفتند. -->
+          <Button Content="⏳ مدت عضویت همه" />
         </WrapPanel>
       </c:SectionPage.Toolbar>
 

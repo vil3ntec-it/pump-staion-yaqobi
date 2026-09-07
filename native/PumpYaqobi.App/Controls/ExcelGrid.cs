@@ -1,8 +1,11 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
+using Avalonia.VisualTree;
 
 namespace PumpYaqobi.App.Controls;
 
@@ -85,6 +88,48 @@ public class ExcelGrid : DataGrid
     /// «System.Object» بالای جدول می‌نشست).
     /// </summary>
     private sealed class FillerColumn : DataGridTemplateColumn { }
+
+    /// <summary>
+    /// ══ اسکرولِ چپ و راست با چرخ و ترک‌پد ══════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «برای لپ‌تاپ من با چپ و راست اسکرول می‌کنم و نمی‌شود؛
+    /// بالا و پایین را فقط دارد. من می‌خواهم هر دو باشند.»
+    ///
+    /// جدول‌های این برنامه ده‌ها ستون دارند و از پهنای پنجره بیرون می‌زنند.
+    /// نوارِ لغزشِ افقیِ خودِ ‎DataGrid‎ هست ولی فقط با کشیدنِ موشواره کار
+    /// می‌کرد؛ حرکتِ افقیِ ترک‌پد (‎Delta.X‎) و ‎Shift+چرخ‎ — همان دو راهی که
+    /// هر مرورگری می‌فهمد — به آن نمی‌رسید.
+    ///
+    /// ⚠️ اول ‎base‎ صدا زده می‌شود: اگر خودِ ‎DataGrid‎ این حرکت را فهمید و
+    /// مصرف کرد، این‌جا دیگر کاری نمی‌کنیم و دوبار اسکرول نمی‌شود.
+    /// </summary>
+    protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
+    {
+        base.OnPointerWheelChanged(e);
+        if (e.Handled) return;
+
+        // حرکتِ افقیِ ترک‌پد، یا ‎Shift+چرخ‎ (قاعدهٔ همیشگیِ مرورگرها)
+        var dx = e.Delta.X;
+        if (dx == 0 && e.KeyModifiers.HasFlag(KeyModifiers.Shift)) dx = e.Delta.Y;
+        if (dx == 0) return;
+
+        var bar = this.GetVisualDescendants().OfType<ScrollBar>()
+                      .FirstOrDefault(b => b.Orientation == Orientation.Horizontal);
+        if (bar is null || bar.Maximum <= bar.Minimum) return;
+
+        // در راست‌به‌چپ هم «به چپ» یعنی همان جهتِ مثبتِ نوار — خودِ جدول
+        // ستون‌ها را برعکس می‌چیند، پس این‌جا وارونه‌سازی لازم نیست.
+        var step = Math.Max(60, bar.ViewportSize * 0.25);
+        var target = Math.Clamp(bar.Value - dx * step, bar.Minimum, bar.Maximum);
+        if (Math.Abs(target - bar.Value) < 0.5) return;
+
+        bar.Value = target;
+        // ‎DataGrid‎ فقط به رویدادِ ‎Scroll‎ گوش می‌دهد، نه به عوض شدنِ خودِ
+        // ‎Value‎ — بی این خط، نوار می‌لغزد و جدول سرِ جایش می‌ماند.
+        bar.RaiseEvent(new ScrollEventArgs(ScrollEventType.ThumbPosition, target)
+                       { RoutedEvent = ScrollBar.ScrollEvent });
+        e.Handled = true;
+    }
 
     protected override void OnKeyDown(KeyEventArgs e)
     {

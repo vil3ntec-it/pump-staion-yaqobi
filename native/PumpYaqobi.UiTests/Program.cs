@@ -75,6 +75,23 @@ internal static class Program
             Shot(win, Path.Combine(outDir, $"{++n:00}-{sec.Id}.png"));
         }
 
+        // ۴٫۵) زیربخش‌ها — «قرض‌های کهنه»، «تخلیهٔ تانکر»، «مدیریت داده‌ها» و
+        //      مانندِ آن‌ها دکمهٔ نوار ندارند و از دلِ بخشِ خودشان باز می‌شوند.
+        //      بی این حلقه، هیچ عکسی از آن‌ها گرفته نمی‌شد.
+        foreach (var parent in vm.Sections)
+        {
+            foreach (var sub in parent.SubSections)
+            {
+                Wait(win, vm.GoAsync(parent));
+                parent.OpenSub = sub;
+                Pump(win);
+                Dispatcher.UIThread.RunJobs();
+                Pump(win);
+                Shot(win, Path.Combine(outDir, $"{++n:00}-sub-{sub.Id}.png"));
+                parent.OpenSub = null;
+            }
+        }
+
         // ۵) صفحهٔ حسابِ یک قرض‌دار — مهم‌ترین صفحهٔ برنامه
         if (vm.Sections.FirstOrDefault(s => s.Id == "debt") is PumpYaqobi.App.ViewModels.Sections.DebtSectionViewModel debt)
         {
