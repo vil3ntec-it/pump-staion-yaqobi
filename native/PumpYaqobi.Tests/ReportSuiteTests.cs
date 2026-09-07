@@ -248,6 +248,65 @@ public class ReportSuiteTests
               "debtrasid", 3000);
     }
 
+    // ── پارچه‌ها ──────────────────────────────────────────────────────────
+    private static ShiftData Shift(string name, decimal start, decimal end,
+                                   decimal price, decimal profitPer, decimal debt = 0m,
+                                   string? note = null)
+    {
+        var sale = end - start;
+        var money = sale * price;
+        return new ShiftData
+        {
+            Name = name, PumpNum = 2, Start = start, End = end, Price = price,
+            ProfitPer = profitPer, BuyPerLiter = price - profitPer,
+            Sale = sale, Money = money, Debt = debt, Available = money - debt,
+            Profit = sale * profitPer, Note = note,
+        };
+    }
+
+    private static List<ParchaReport> Shifts() => new()
+    {
+        new()
+        {
+            ReportNum = 1, DateShamsi = "1405/06/01", DateKey = 14050601,
+            DateMiladi = "2026/08/23", DateQamari = "1448/03/10", Fuel = FuelType.Petrol,
+            DayShift = Shift("نصیر", 120_400m, 121_780m, 67m, 4m, note: "پایه نو"),
+            NightShift = Shift("وحید", 121_780m, 122_910m, 67m, 4m, debt: 18_000m),
+        },
+        new()
+        {
+            ReportNum = 2, DateShamsi = "1405/06/01", DateKey = 14050601,
+            DateMiladi = "2026/08/23", DateQamari = "1448/03/10", Fuel = FuelType.Diesel,
+            DayShift = Shift("کریم", 44_100m, 44_690m, 61m, 3m),
+        },
+        // روزی که فقط شیفتِ روز دارد — ورق باید «⏳ ناقص» بنویسد، نه بترکد
+        new()
+        {
+            ReportNum = 3, DateShamsi = "1405/06/02", DateKey = 14050602,
+            DateMiladi = "2026/08/24", DateQamari = "1448/03/11", Fuel = FuelType.Petrol,
+            DayShift = Shift("نصیر", 122_910m, 124_050m, 67m, 4m),
+        },
+    };
+
+    [Fact]
+    public void ShiftsSheet_IsARealPdf() =>
+        Check(new ShiftsReport(new ShiftsReportInput(Shifts(), Dates)), "shifts", 4000);
+
+    /// <summary>ورقِ ‎pdfDieselShifts‎ — فقط دیزل، بی بخشِ پطرول.</summary>
+    [Fact]
+    public void DieselShiftsSheet_IsARealPdf()
+    {
+        var diesel = Shifts().Where(r => r.Fuel == FuelType.Diesel).ToList();
+        Check(new ShiftsReport(new ShiftsReportInput(diesel, Dates, DieselOnly: true)),
+              "shifts-diesel", 3000);
+    }
+
+    /// <summary>بی هیچ گزارشی هم ورق باید ساخته شود، نه اینکه بترکد.</summary>
+    [Fact]
+    public void ShiftsSheet_SurvivesAnEmptyLog() =>
+        Check(new ShiftsReport(new ShiftsReportInput(new List<ParchaReport>(), Dates)),
+              "shifts-empty", 2000);
+
     // ── گزارش پایان ماه ──────────────────────────────────────────────────
     private static MonthReport Month(decimal scale) => new(
         Petrol: new MonthFuel(1_840_000m * scale, 26_400m * scale, 148_000m * scale, 61),
