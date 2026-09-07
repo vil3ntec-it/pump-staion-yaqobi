@@ -58,6 +58,7 @@ public sealed class AppHost
         Cameras = new CameraDataService(Db, Permissions, Trash);
         Voice = new VoiceDataService(Db, Permissions);
         LegacyImport = new LegacyImportService(Db, Permissions, Settings);
+        Backup = new BackupService(Db, Permissions);
         SafeLedger = new LedgerService<SafeEntry>(Db, Permissions, Trash, "safe",
             r => (r.Title ?? "") + " — " + Shamsi.Money(r.Amount));
         ExchangeLedger = new LedgerService<ExchangeRow>(Db, Permissions, Trash, "sarrafi",
@@ -137,6 +138,9 @@ public sealed class AppHost
 
     /// <summary>آوردنِ دادهٔ نسخهٔ وب — یک‌بار، با بکاپ و سنجشِ شمارش.</summary>
     public LegacyImportService LegacyImport { get; }
+
+    /// <summary>بکاپ، عکسِ روزانه و بازگردانی — بندِ ۲۳.</summary>
+    public BackupService Backup { get; }
     public LedgerService<SafeEntry> SafeLedger { get; }
     public LedgerService<ExchangeRow> ExchangeLedger { get; }
     public LedgerService<Expense> ExpenseLedger { get; }

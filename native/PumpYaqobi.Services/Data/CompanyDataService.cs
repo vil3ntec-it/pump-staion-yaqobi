@@ -128,7 +128,9 @@ public sealed class CompanyDataService
     {
         _perm.Require(Permission.DeleteData);
         await using var db = _dbf.Create();
-        var c = await db.TilCompanies.FirstOrDefaultAsync(x => x.Id == id, ct);
+        // ردیف‌ها هم همراه می‌آیند تا «بازگرداندن از سطل» شرکتِ خالی ندهد.
+        var c = await db.TilCompanies.Include(x => x.Rows)
+                        .FirstOrDefaultAsync(x => x.Id == id, ct);
         if (c is null) return;
         await _trash.RememberAsync(db, "company", c.Name ?? "", c, ct);
         db.TilCompanies.Remove(c);

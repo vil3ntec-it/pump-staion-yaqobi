@@ -45,6 +45,12 @@ public sealed partial class MainViewModel : ObservableObject
         {
             IsLocked = false;
             _ = OpenStartSectionAsync();
+
+            // ══ عکسِ روزانه (بندِ ۲۳) ══════════════════════════════════════════
+            // همان ‎_autoDailyBackup‎ی نسخهٔ وب، ولی از فایلِ دیتابیس. روی نخِ
+            // دیگر می‌رود تا باز شدنِ برنامه معطلِ آن نماند، و خودش هیچ استثنایی
+            // بیرون نمی‌دهد — بکاپِ خودکار نباید ورودِ کاربر را بشکند.
+            _ = Task.Run(() => AppHost.Current.Backup.SnapshotToday());
         };
 
         Sections = new ObservableCollection<SectionViewModel>(BuildSections(AppHost.Current));
@@ -158,6 +164,36 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
+    /// ══ خواندنِ دوبارهٔ همهٔ بخش‌ها ═══════════════════════════════════════════
+    /// بعد از کاری که کلِ دیتابیس را عوض می‌کند — بازگردانیِ بکاپ، آوردنِ دادهٔ
+    /// نسخهٔ وب، یا برگرداندنِ چیزی از سطلِ زباله.
+    ///
+    /// ⚠️ نمونهٔ بخش‌ها زنده می‌مانند (تا چیدمان و جای اسکرول از دست نرود)، پس
+    /// بی این، صفحه‌ها عددِ دیتابیسِ **قبلی** را نشان می‌دهند و کاربر خیال
+    /// می‌کند بازگردانی نگرفته است.
+    ///
+    /// بخشی که همین حالا باز است، آخر و همان‌جا تازه می‌شود.
+    /// </summary>
+    public async Task ReloadAllAsync()
+    {
+        foreach (var s in Sections)
+        {
+            // بخشی که هرگز باز نشده، بارِ اولش را همان موقعِ ورودِ کاربر
+            // می‌گیرد — این‌جا فقط باید «کهنه» علامت بخورد.
+            if (!s.IsLoaded || ReferenceEquals(s, Current)) continue;
+            s.IsLoaded = false;
+        }
+
+        if (Current is not null)
+        {
+            try { await Current.ReloadAsync(); } catch { }
+            try { await Current.OnActivatedAsync(); } catch { }
+        }
+
+        await RefreshBannerAsync();
+    }
+
+    /// <summary>
     /// چهار عددِ نوارِ بالا — همان ‎updateBanner‎ِ نسخهٔ وب. فقط خواندنی است و
     /// هر بار که کاربر بخشی را باز می‌کند تازه می‌شود.
     /// </summary>
@@ -223,6 +259,7 @@ public sealed partial class MainViewModel : ObservableObject
         new RateHistorySectionViewModel(host),
         new ProfitSectionViewModel(host),
         new SettingsSectionViewModel(host),
+        new DataSectionViewModel(host, this),
         new PlaceholderSectionViewModel("history",   "تاریخچه‌ها"),
     };
 }
