@@ -43,7 +43,7 @@
       <DataGrid.Columns>
         <DataGridTextColumn Header="شماره" Binding="{Binding Number}" Width="Auto" IsReadOnly="True" />
         <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
-        <DataGridTextColumn Header="مشتری" Binding="{Binding Customer}" Width="*" />
+        <DataGridTextColumn Header="مشتری" Binding="{Binding Customer}" Width="Auto" MinWidth="150" MaxWidth="320" />
         <DataGridTextColumn Header="نامِ حساب" Binding="{Binding DebtAlias}" Width="Auto" />
         <DataGridTemplateColumn Header="تیل" Width="Auto">
           <DataGridTemplateColumn.CellTemplate>

@@ -96,7 +96,7 @@
           <DataGridTextColumn Header="فی" Binding="{Binding PriceText}" Width="Auto" />
           <DataGridTextColumn Header="فروش" Binding="{Binding SalesText}" Width="Auto" IsReadOnly="True" />
           <DataGridTextColumn Header="قرضِ پایه" Binding="{Binding DebtText}" Width="Auto" />
-          <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="*" />
+          <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="Auto" MinWidth="150" MaxWidth="320" />
           <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
@@ -111,7 +111,7 @@
 
       <c:ExcelGrid Grid.Row="2" ItemsSource="{Binding Txns}" x:CompileBindings="False">
         <DataGrid.Columns>
-          <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
+          <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="Auto" MinWidth="150" MaxWidth="320" />
           <DataGridTemplateColumn Header="نوع" Width="93">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate><TextBlock Text="{Binding TypeText}" VerticalAlignment="Center" Margin="6,0" /></DataTemplate>

@@ -69,7 +69,7 @@
             </DataTemplate>
           </DataGridTemplateColumn.CellEditingTemplate>
         </DataGridTemplateColumn>
-        <DataGridTextColumn Header="نام"   Binding="{Binding Title}"  Width="*" />
+        <DataGridTextColumn Header="نام"   Binding="{Binding Title}"  Width="Auto" MinWidth="150" MaxWidth="320" />
         <DataGridTextColumn Header="مبلغ"  Binding="{Binding AmountText}" Width="Auto" />
         <DataGridTemplateColumn Header="واحد" Width="Auto">
           <DataGridTemplateColumn.CellTemplate>

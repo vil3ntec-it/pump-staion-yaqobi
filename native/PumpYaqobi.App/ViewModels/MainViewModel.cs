@@ -37,15 +37,25 @@ public sealed partial class MainViewModel : ObservableObject
         _settings = settings ?? AppSettings.Load();
 
         Lock = new LockViewModel(AppHost.Current);
-        Lock.SignedIn += () => IsLocked = false;
+        // ⚠️ بخشِ آغازین بعد از ورود بار می‌شود، نه در سازنده. دو دلیل:
+        //   ۱) پیش از ورود هیچ اجازه‌ای نداریم و لایهٔ سرویس درست هم رد می‌کند.
+        //   ۲) وقتی در سازنده بار می‌شد، عددهای نوارِ بالا و داشبورد روی همان
+        //      لحظهٔ صفرِ پیش از ورود می‌ماندند و کاربر «۰ افغانی» می‌دید.
+        Lock.SignedIn += () =>
+        {
+            IsLocked = false;
+            _ = OpenStartSectionAsync();
+        };
 
         Sections = new ObservableCollection<SectionViewModel>(BuildSections(AppHost.Current));
         Themes = new ObservableCollection<PumpTheme>(PumpTheme.All);
         _selectedTheme = PumpTheme.ById(_settings.ThemeId);
 
-        var start = Sections.FirstOrDefault(s => s.Id == _settings.LastSection) ?? Sections[0];
-        _ = GoAsync(start);
     }
+
+    /// <summary>همان بخشی که کاربر دفعهٔ پیش داخلش بود.</summary>
+    public Task OpenStartSectionAsync() =>
+        GoAsync(Sections.FirstOrDefault(s => s.Id == _settings.LastSection) ?? Sections[0]);
 
     public ObservableCollection<SectionViewModel> Sections { get; }
 
@@ -126,7 +136,17 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     public async Task GoAsync(SectionViewModel? s)
     {
-        if (s is null || ReferenceEquals(s, Current)) return;
+        if (s is null) return;
+
+        // زدنِ دکمهٔ همان بخشی که باز است یعنی «تازه‌اش کن» — نه «هیچ کاری نکن».
+        // پیش از این این‌جا برمی‌گشتیم و نتیجه‌اش این بود که عددهای نوارِ بالا
+        // روی همان لحظهٔ بارِ اول می‌ماندند.
+        if (ReferenceEquals(s, Current))
+        {
+            await s.OnActivatedAsync();
+            await RefreshBannerAsync();
+            return;
+        }
         if (Current is not null) { Current.IsActive = false; Current.OnDeactivated(); }
         s.IsActive = true;
         Current = s;                       // نمونه‌ها زنده می‌مانند: هیچ ساختِ دوباره‌ای نیست

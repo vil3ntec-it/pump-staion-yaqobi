@@ -26,8 +26,8 @@
         <DataGrid.Columns>
           <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" IsReadOnly="True" />
           <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
-          <DataGridTextColumn Header="به حساب" Binding="{Binding Account}" Width="*" />
-          <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
+          <DataGridTextColumn Header="به حساب" Binding="{Binding Account}" Width="Auto" MinWidth="150" MaxWidth="320" />
+          <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="Auto" MinWidth="150" MaxWidth="320" />
           <DataGridTextColumn Header="نمبر حواله" Binding="{Binding Hawala}" Width="Auto" />
           <DataGridTextColumn Header="مقدار تیل" Binding="{Binding LitersText}" Width="Auto" />
           <DataGridTextColumn Header="فی لیتر" Binding="{Binding PriceText}" Width="Auto" />

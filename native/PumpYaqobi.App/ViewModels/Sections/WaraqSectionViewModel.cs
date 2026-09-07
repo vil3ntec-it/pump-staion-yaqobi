@@ -431,7 +431,12 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
     /// <summary>ورقِ باز — تا باز است، میانبرهای ردیف به آن می‌روند نه به فهرست.</summary>
     public override object? ActivePage => Page;
 
-    partial void OnPageChanged(WaraqPageViewModel? v) => OnPropertyChanged(nameof(IsListVisible));
+    partial void OnPageChanged(WaraqPageViewModel? v)
+    {
+        OnPropertyChanged(nameof(IsListVisible));
+        // صفحهٔ حساب تمام‌عرض است، مثلِ مودالِ تمام‌صفحهٔ نسخهٔ وب
+        IsPageOpen = v is not null;
+    }
     partial void OnMonthChanged(string v) => _ = ReloadAsync();
 
     protected override async Task LoadAsync()

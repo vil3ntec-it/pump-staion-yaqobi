@@ -138,7 +138,11 @@ public class SiteMetricsTests
             if (i < 0) continue;
             var end = s.IndexOf("</DataGrid.Columns>", i, StringComparison.Ordinal);
             var body = s[i..(end < 0 ? s.Length : end)];
-            var fixedW = Regex.Matches(body, "Width=\"\\d+\"").Count;
+            // ⚠️ «‎(?<![A-Za-z])‎» لازم است: بدونِ آن، ‎MinWidth="150"‎ و
+            // ‎MaxWidth="320"‎ هم شمرده می‌شدند. کفِ پهنا و سقفِ پهنا اشکالی
+            // ندارند — چیزی که ممنوع است پهنای *ثابت* است، چون سرِ ستون را
+            // با فونتِ واقعی می‌بُرد.
+            var fixedW = Regex.Matches(body, "(?<![A-Za-z])Width=\"\\d+\"").Count;
             if (fixedW > 0) offenders.Add($"{Path.GetFileName(f)}: {fixedW}");
         }
         Assert.True(offenders.Count == 0,

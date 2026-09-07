@@ -78,7 +78,7 @@
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
               <DataGridTextColumn Header="راننده" Binding="{Binding Driver}" Width="Auto" />
-              <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="*" />
+              <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="Auto" MinWidth="150" MaxWidth="320" />
               <DataGridTemplateColumn Header="" Width="Auto">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate>

@@ -86,9 +86,11 @@
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="9" />
-    <Setter Property="Padding" Value="14,7" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="MinHeight" Value="36" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Cursor" Value="Hand" />
   </Style>
   <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource Pump.Hover}" />
@@ -186,7 +188,10 @@
     <Setter Property="TextBlock.Foreground" Value="White" />
   </Style>
 
-  <!-- ورودی‌ها -->
+  <!-- ══ ورودی‌ها ═══════════════════════════════════════════════════════════
+       قدِ همهٔ کادرها و دکمه‌ها یکی است (۳۶ پیکسل) تا در یک ردیف هم‌تراز
+       بنشینند — همان چیزی که یک فرمِ مرتب را از یک فرمِ شلخته جدا می‌کند.
+       حلقهٔ فوکوس هم‌رنگِ برند است، مثلِ ‎.xls-in:focus‎ نسخهٔ وب. -->
   <Style Selector="TextBox">
     <Setter Property="FontFamily" Value="{StaticResource Pump.Font}" />
     <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
@@ -194,9 +199,23 @@
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="8" />
-    <Setter Property="Padding" Value="9,6" />
+    <Setter Property="Padding" Value="9,0" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="SelectionBrush" Value="{DynamicResource Pump.Selected}" />
     <Setter Property="CaretBrush" Value="{DynamicResource Pump.Accent}" />
+  </Style>
+  <Style Selector="TextBox:focus">
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Accent}" />
+  </Style>
+  <Style Selector="TextBox:pointerover /template/ Border#PART_BorderElement">
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="Opacity" Value="0.85" />
+  </Style>
+  <Style Selector="ComboBox">
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
   <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.Accent}" />
@@ -476,6 +495,10 @@
   </Style>
 
   <!-- دکمهٔ ✕ گوشهٔ کارت -->
+  <!-- دکمه‌های ریزِ داخلِ جدول/کارت از قاعدهٔ «۳۶ پیکسل» مستثنایند -->
+  <Style Selector="Button.card-x, Button.qr, Button.seg, Button.nav-edge">
+    <Setter Property="MinHeight" Value="0" />
+  </Style>
   <Style Selector="Button.card-x">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.Danger}" />
@@ -524,6 +547,51 @@
     <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="MinHeight" Value="22" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
+
+  <!-- ══ نوارِ بخش‌ها ═══════════════════════════════════════════════════════
+       ارتفاع ثابت است و نوارِ لغزش پنهان — وگرنه نوارِ لغزشِ افقی از پایین
+       ارتفاع را می‌خورد و زیرِ نوشتهٔ دکمه‌ها بریده می‌شد. دو دکمهٔ «‹ ›» فقط
+       وقتی پیدا می‌شوند که واقعاً بخشی بیرونِ قاب مانده باشد. -->
+  <Style Selector="c|NavStrip">
+    <Setter Property="Height" Value="52" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <!-- فلش‌ها بیرونِ ناحیهٔ لغزش‌اند، نه رویش. اگر رویش باشند، بخشِ فعالی
+             که تازه به لبه آمده زیرشان نیمه‌پنهان می‌ماند. ستونِ Auto با پنهان
+             شدنِ دکمه خودش صفر می‌شود، پس وقتی لغزشی در کار نیست هیچ جایی
+             هدر نمی‌رود. -->
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <Button Grid.Column="0" Name="PART_Prev" Classes="nav-edge" Content="›" IsVisible="False" />
+
+          <ScrollViewer Grid.Column="1" Name="PART_Scroll"
+                        HorizontalScrollBarVisibility="Hidden"
+                        VerticalScrollBarVisibility="Disabled"
+                        Padding="10,0">
+            <ContentPresenter Content="{TemplateBinding Content}" VerticalAlignment="Center" />
+          </ScrollViewer>
+
+          <Button Grid.Column="2" Name="PART_Next" Classes="nav-edge" Content="‹" IsVisible="False" />
+        </Grid>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button.nav-edge">
+    <Setter Property="Width" Value="26" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="FontSize" Value="17" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
+  </Style>
+  <Style Selector="Button.nav-edge /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Pump.NavBg}" />
+  </Style>
+  <Style Selector="Button.nav-edge:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Pump.Hover}" />
   </Style>
 
   <!-- ‎.dash-seg‎ — دکمه‌های کوچکِ «همه/پطرول/دیزل» و «روزانه/هفتگی/…» -->

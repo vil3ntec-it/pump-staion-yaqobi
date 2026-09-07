@@ -316,7 +316,12 @@ public sealed partial class AmanatSectionViewModel : SectionViewModel
     public bool HasFuelChip => FuelFilter != "all";
     public string FuelChipText => FuelFilter == "diesel" ? "🟤 فقط دیزل ✕" : "⛽ فقط پطرول ✕";
 
-    partial void OnPageChanged(AmanatAccountViewModel? v) => OnPropertyChanged(nameof(IsListVisible));
+    partial void OnPageChanged(AmanatAccountViewModel? v)
+    {
+        OnPropertyChanged(nameof(IsListVisible));
+        // صفحهٔ حساب تمام‌عرض است، مثلِ مودالِ تمام‌صفحهٔ نسخهٔ وب
+        IsPageOpen = v is not null;
+    }
     partial void OnSearchChanged(string v) => ApplyFilter();
 
     partial void OnFuelFilterChanged(string v)

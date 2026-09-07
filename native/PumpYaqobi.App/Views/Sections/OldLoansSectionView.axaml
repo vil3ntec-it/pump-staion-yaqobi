@@ -56,7 +56,7 @@
                      IsReadOnly="True" BorderThickness="0" CornerRadius="0">
           <DataGrid.Columns>
             <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" />
-            <DataGridTextColumn Header="نام قرض‌دار" Binding="{Binding Name}" Width="*" />
+            <DataGridTextColumn Header="نام قرض‌دار" Binding="{Binding Name}" Width="Auto" MinWidth="150" MaxWidth="320" />
             <DataGridTextColumn Header="الباقی" Binding="{Binding AlbaqiText}" Width="Auto" />
             <DataGridTemplateColumn Header="بی‌حرکت" Width="Auto">
               <DataGridTemplateColumn.CellTemplate>
