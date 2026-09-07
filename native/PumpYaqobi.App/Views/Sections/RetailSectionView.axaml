@@ -5,7 +5,7 @@
              x:Class="PumpYaqobi.App.Views.Sections.RetailSectionView"
              x:DataType="vm:RetailSectionViewModel">
 
-  <c:SectionPage Header="🧾 حساب‌های چکنه" SubHeader="فروش چکنه (نقدی/خرد) — هر ردیف: مقدار تیل × فی = مقدار بردگی، و الباقی = بردگی − رسید">
+  <c:SectionPage ScrollBody="False" Header="🧾 حساب‌های چکنه" SubHeader="فروش چکنه (نقدی/خرد) — هر ردیف: مقدار تیل × فی = مقدار بردگی، و الباقی = بردگی − رسید">
 
     <c:SectionPage.Toolbar>
       <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">

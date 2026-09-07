@@ -5,7 +5,7 @@
              x:Class="PumpYaqobi.App.Views.Sections.RateHistorySectionView"
              x:DataType="vm:RateHistorySectionViewModel">
 
-  <c:SectionPage Header="تاریخچهٔ نرخ اتحادیه"
+  <c:SectionPage ScrollBody="False" Header="تاریخچهٔ نرخ اتحادیه"
                  SubHeader="با هر تغییرِ نرخ در «تنظیمات»، این‌جا خودکار ثبت می‌شود — روی هیچ محاسبه‌ای اثر ندارد">
 
     <StackPanel Spacing="10">

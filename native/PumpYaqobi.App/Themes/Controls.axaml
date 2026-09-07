@@ -296,10 +296,20 @@
              .card-head     ← عنوانِ رنگی راست، دکمه‌های کار چپ
              (padding:14px) ← فیلتر، جمع‌ها، بدنه، پانویس
 
-       پیش از این، عنوان و دکمه‌ها بیرونِ هر کادری شناور بودند و بخش‌ها
-       «صفحهٔ وبِ کِش‌آمده» دیده می‌شدند نه پنجرهٔ یک برنامه. حالا هر بخش یک
-       واحدِ بسته است — و چون این‌جا یک‌جا تعریف شده، هر هجده بخش با هم
-       عوض می‌شوند.                                                        -->
+       دو قالب هست، نه یکی — و تفاوتشان فقط **اسکرول** است:
+
+       ۱) پیش‌فرض (‎ScrollBody=True‎): فیلتر و جمع‌ها و بدنه و پانویس همه با هم
+          داخلِ یک ‎ScrollViewer‎ می‌نشینند و همه‌شان با هم بالا و پایین
+          می‌روند — همان کاری که در سایت «کلِ صفحه» می‌کند.
+
+       ۲) ‎ScrollBody=False‎: چیدمانِ قدیمی، با ردیفِ ‎*‎ برای بدنه. این را
+          بخشی می‌گذارد که بدنه‌اش ‎DataGrid‎ است. جدولِ آوالونیا اسکرولِ
+          خودش را دارد و اگر داخلِ اسکرول‌ویور برود ارتفاعِ بی‌نهایت می‌گیرد،
+          همهٔ ردیف‌ها را یک‌جا می‌سازد و مجازی‌سازی از بین می‌رود.
+
+       چرا سربرگِ کادر بیرونِ اسکرول ماند: در سایت ‎.nav‎ چسبان است و همیشه
+       دیده می‌شود؛ این‌جا سربرگِ کادر همان نقش را دارد — دکمه‌های کار
+       (پی‌دی‌اف، افزودن، …) نباید با اسکرول از دسترس بروند.               -->
   <Style Selector="c|SectionPage">
     <Setter Property="Template">
       <ControlTemplate>
@@ -320,7 +330,55 @@
               </Grid>
             </Border>
 
-            <!-- ══ بدنهٔ کادر ══ -->
+            <!-- ══ بدنهٔ کادر — اسکرول‌شونده ══ -->
+            <ScrollViewer Grid.Row="1"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+              <Grid RowDefinitions="Auto,Auto,Auto,Auto" Margin="14">
+
+                <Border Grid.Row="0" Classes="panel" Padding="12,9" Margin="0,0,0,12"
+                        IsVisible="{TemplateBinding Filters, Converter={x:Static ObjectConverters.IsNotNull}}">
+                  <ContentPresenter Content="{TemplateBinding Filters}" />
+                </Border>
+
+                <ContentPresenter Grid.Row="1" Content="{TemplateBinding Summary}" Margin="0,0,0,12"
+                                  IsVisible="{TemplateBinding Summary, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+                <ContentPresenter Grid.Row="2" Content="{TemplateBinding Body}" />
+
+                <ContentPresenter Grid.Row="3" Content="{TemplateBinding Footer}" Margin="0,12,0,0"
+                                  IsVisible="{TemplateBinding Footer, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              </Grid>
+            </ScrollViewer>
+          </Grid>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <!-- ══ همان قالب، ولی بدونِ اسکرول‌ویور — برای بخش‌های جدول‌دار ══════════
+       بدنه ردیفِ ‎*‎ می‌گیرد تا جدول جای باقی‌مانده را پر کند و اسکرولِ
+       خودش را داشته باشد. فیلتر و جمع‌ها بالا ثابت می‌مانند، دقیقاً مثلِ
+       سایت که سرِ جدول ثابت است و فقط ردیف‌ها می‌لغزند.                    -->
+  <Style Selector="c|SectionPage[ScrollBody=False]">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Classes="card flush" Margin="16,14">
+          <Grid RowDefinitions="Auto,*">
+
+            <Border Grid.Row="0" Classes="card-head">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                  <TextBlock Text="{TemplateBinding Header}" Classes="card-title" />
+                  <TextBlock Text="{TemplateBinding SubHeader}" Classes="muted"
+                             TextWrapping="Wrap"
+                             IsVisible="{TemplateBinding SubHeader, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </StackPanel>
+                <ContentPresenter Grid.Column="1" Content="{TemplateBinding Toolbar}"
+                                  VerticalAlignment="Center" Margin="12,0,0,0" />
+              </Grid>
+            </Border>
+
             <Grid Grid.Row="1" RowDefinitions="Auto,Auto,*,Auto" Margin="14">
 
               <Border Grid.Row="0" Classes="panel" Padding="12,9" Margin="0,0,0,12"

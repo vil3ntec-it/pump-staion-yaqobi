@@ -5,7 +5,7 @@
              x:Class="PumpYaqobi.App.Views.Sections.DebtReceiptSectionView"
              x:DataType="vm:DebtReceiptSectionViewModel">
 
-  <c:SectionPage>
+  <c:SectionPage ScrollBody="False">
     <c:SectionPage.Header>رسید قرض‌داران</c:SectionPage.Header>
 
     <c:SectionPage.Toolbar>

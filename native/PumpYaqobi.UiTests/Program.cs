@@ -305,6 +305,12 @@ internal static class Program
     /// پنجره عمداً در کوچک‌ترین اندازهٔ مجاز (‎MinWidth×MinHeight‎) باز می‌شود:
     /// در ۱۴۴۰×۹۰۰ بیشترِ بخش‌ها اصلاً سرریز نمی‌کنند و سنجش بی‌نتیجه می‌ماند.
     /// </summary>
+    /// <summary>
+    /// کوتاه‌ترین بلندیِ پذیرفتنی برای جدولِ یک بخش. کمتر از این یعنی فیلتر و
+    /// جمع‌ها جای جدول را خورده‌اند و کاربر فقط سرِ ستون‌ها را می‌بیند.
+    /// </summary>
+    private const double MinGridHeight = 120;
+
     private static int ScrollAudit()
     {
         var tmpDb = Path.Combine(Path.GetTempPath(), "pump-scroll-" + Guid.NewGuid().ToString("N"), "pump.db");
@@ -358,15 +364,29 @@ internal static class Program
             var svs = host.GetVisualDescendants().OfType<ScrollViewer>().ToList();
             var reachable = svs.Any(sv => sv.Extent.Height > sv.Viewport.Height + 1);
 
-            // جدول خودش اسکرول دارد — آن را جدا می‌شماریم
-            var hasGrid = host.GetVisualDescendants()
-                              .Any(v => v.GetType().Name.Contains("DataGrid", StringComparison.Ordinal));
+            // ══ جدول یک استثنای واقعی است ═════════════════════════════════
+            // ‎DataGrid‎ی آوالونیا ‎ScrollViewer‎ نیست — نوارِ لغزانِ خودش را
+            // دارد. پس شمردنِ اسکرول‌ویورها دربارهٔ بخش‌های جدول‌دار چیزی
+            // نمی‌گوید و اگر همان معیار را به‌کار ببریم، هر بخشِ سالمِ
+            // جدول‌داری را هم «خراب» می‌خوانیم (اولین اجرا همین را کرد).
+            //
+            // معیارِ درست برای جدول این است: آیا **خودِ جدول** جای زنده‌ای
+            // دارد؟ اگر فیلتر و جمع‌ها آن‌قدر بالا را بگیرند که جدول به چند
+            // ده پیکسل برسد، کاربر عملاً چیزی نمی‌بیند — همان‌قدر شکسته.
+            var grid = host.GetVisualDescendants()
+                           .FirstOrDefault(v => v.GetType().Name == "DataGrid") as Layoutable;
+            var gridH = grid?.Bounds.Height ?? 0;
 
-            var mark = !overflows ? "—" : reachable ? "✔" : "✖";
+            bool ok;
+            if (grid is not null) ok = gridH >= MinGridHeight;
+            else ok = !overflows || reachable;
+
+            var mark = ok ? (overflows ? "✔" : "—") : "✖";
             Console.WriteLine($"{sec.Id,-20} {(overflows ? "بله" : "نه"),-8} "
-                            + $"{wanted,6:0} / {avail,-6:0}      {svs.Count,-2} {(hasGrid ? "+جدول" : "     ")}  {mark}");
+                            + $"{wanted,6:0} / {avail,-6:0}      {svs.Count,-2} "
+                            + $"{(grid is not null ? $"جدول {gridH,4:0}" : "         ")}  {mark}");
 
-            if (overflows && !reachable) broken.Add(sec.Id);
+            if (!ok) broken.Add(sec.Id);
         }
 
         Console.WriteLine();
@@ -376,7 +396,8 @@ internal static class Program
             return 0;
         }
 
-        Console.WriteLine("❌ این بخش‌ها سرریز می‌کنند ولی اسکرول ندارند — محتوا بریده می‌شود:");
+        Console.WriteLine("❌ این بخش‌ها راهی به تهِ محتوا ندارند — یا اسکرول ندارند"
+                        + $" یا جدولشان از {MinGridHeight:0} پیکسل کوتاه‌تر شده:");
         foreach (var b in broken) Console.WriteLine("   • " + b);
         return 1;
     }
