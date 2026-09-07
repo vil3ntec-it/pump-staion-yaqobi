@@ -114,6 +114,59 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
                             : "✅ تنظیمات ذخیره شد", ToastKind.Ok);
     }
 
+    // ── آوردنِ دادهٔ نسخهٔ وب ────────────────────────────────────────────────
+    [ObservableProperty] private bool _importBusy;
+    [ObservableProperty] private string _importStatus = "";
+
+    /// <summary>
+    /// فایلِ بکاپِ نسخهٔ وب (‎pump-backup-….json‎) را می‌آورد.
+    ///
+    /// اگر دیتابیس خالی نباشد، سرویس خودش جلویش را می‌گیرد و این‌جا صریح
+    /// پرسیده می‌شود — «جایگزین شود؟». بکاپِ خودکارِ پیش از مهاجرت همیشه
+    /// گرفته می‌شود و مسیرش همین‌جا نوشته می‌شود، تا اگر چیزی بد شد کاربر
+    /// بداند نسخهٔ سالمش کجاست.
+    /// </summary>
+    [RelayCommand]
+    private async Task ImportLegacyAsync()
+    {
+        var path = await Dialogs.PickJsonAsync();
+        if (path is null) return;
+
+        ImportBusy = true;
+        ImportStatus = "در حال خواندنِ فایل…";
+        try
+        {
+            var json = await File.ReadAllTextAsync(path);
+            var res = await _host.LegacyImport.ImportAsync(json);
+
+            if (!res.Ok && res.Message.Contains("خالی نیست"))
+            {
+                var yes = await Dialogs.ConfirmAsync(
+                    "جایگزینیِ همهٔ حساب‌ها",
+                    $"این فایل {res.SourceRecords} رکورد دارد و جای همهٔ حساب‌های فعلی را می‌گیرد. "
+                    + "پیش از جایگزینی، یک بکاپِ کامل از دادهٔ فعلی گرفته می‌شود. ادامه؟",
+                    "بله، جایگزین کن");
+                if (!yes) { ImportStatus = "انصراف داده شد — چیزی عوض نشد"; return; }
+                res = await _host.LegacyImport.ImportAsync(json, replaceExisting: true);
+            }
+
+            ImportStatus = res.Message
+                + (res.BackupPath is not null
+                    ? Environment.NewLine + "📦 بکاپِ پیش از مهاجرت: " + res.BackupPath : "")
+                + (res.Warnings.Count > 0
+                    ? Environment.NewLine + "⚠️ " + string.Join(" · ", res.Warnings.Take(5)) : "");
+            _host.Toast(res.Ok ? res.Message : "❌ " + res.Message,
+                        res.Ok ? ToastKind.Ok : ToastKind.Error);
+
+            if (res.Ok) _host.Toast("برای دیدنِ حساب‌ها، برنامه را ببندید و باز کنید", ToastKind.Info);
+        }
+        catch (Exception ex)
+        {
+            ImportStatus = "❌ " + ex.Message;
+        }
+        finally { ImportBusy = false; }
+    }
+
     [RelayCommand]
     private async Task CheckUpdateAsync()
     {

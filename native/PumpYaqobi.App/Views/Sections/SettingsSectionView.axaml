@@ -133,6 +133,29 @@
             </StackPanel>
           </StackPanel>
         </Border>
+
+        <!-- ══ آوردنِ دادهٔ نسخهٔ وب ══════════════════════════════════════════
+             سه ماه حسابِ کاربر در نسخهٔ وب است؛ بی این دکمه، برنامهٔ نیتیو
+             برایش خالی است. -->
+        <Border Classes="panel" Padding="0">
+          <StackPanel>
+            <Border Classes="card-head">
+              <TextBlock Text="📥 آوردنِ حساب‌ها از نسخهٔ وب" FontWeight="Bold"
+                         Foreground="{DynamicResource Pump.Accent}" />
+            </Border>
+            <StackPanel Margin="14" Spacing="9">
+              <TextBlock Classes="muted" TextWrapping="Wrap"
+                         Text="در نسخهٔ وب «دانلودِ بکاپ» را بزنید و فایلِ pump-backup-….json را این‌جا بدهید. پیش از هر نوشتنی یک بکاپِ کامل از دادهٔ فعلی گرفته می‌شود، و اگر شمارشِ رکوردها نخواند هیچ چیزی نوشته نمی‌شود." />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Classes="accent" Content="📂 انتخابِ فایلِ بکاپ"
+                        Command="{Binding ImportLegacyCommand}"
+                        IsEnabled="{Binding !ImportBusy}" />
+              </StackPanel>
+              <TextBlock Text="{Binding ImportStatus}" TextWrapping="Wrap" Classes="muted"
+                         IsVisible="{Binding ImportStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
       </StackPanel>
     </ScrollViewer>
   </c:SectionPage>

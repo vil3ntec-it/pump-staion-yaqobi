@@ -60,6 +60,14 @@ public sealed class LegacyBackupImporter
         return list;
     }
 
+    // ── همان کمکی‌ها، برای نیمهٔ دومِ مهاجرت ─────────────────────────────────
+    // ‎LegacyOperationsImporter‎ در همین اسمبلی است و باید همین قاعده‌ها را
+    // به کار ببرد، نه رونوشتِ دومی از آن‌ها که روزی از هم دور بیفتند.
+    internal static string? Str2(JsonElement e, string k) => Str(e, k);
+    internal static decimal Dec2(JsonElement e, string k) => Dec(e, k);
+    internal static decimal? DecOrNull2(JsonElement e, string k) => DecOrNull(e, k);
+    internal static bool Bool2(JsonElement e, string k) => Bool(e, k);
+
     // ── خواننده‌های کمکی: هر کدام دقیقاً همان پیش‌فرضِ HTML را می‌دهند ────────
     private static string? Str(JsonElement e, string k)
         => e.TryGetProperty(k, out var v) && v.ValueKind is JsonValueKind.String ? v.GetString() : null;

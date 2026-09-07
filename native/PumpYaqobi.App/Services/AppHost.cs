@@ -57,6 +57,7 @@ public sealed class AppHost
         Tools = new ToolsDataService(Db, Permissions, Trash, Aging, StaffShort, MonthReport);
         Cameras = new CameraDataService(Db, Permissions, Trash);
         Voice = new VoiceDataService(Db, Permissions);
+        LegacyImport = new LegacyImportService(Db, Permissions, Settings);
         SafeLedger = new LedgerService<SafeEntry>(Db, Permissions, Trash, "safe",
             r => (r.Title ?? "") + " — " + Shamsi.Money(r.Amount));
         ExchangeLedger = new LedgerService<ExchangeRow>(Db, Permissions, Trash, "sarrafi",
@@ -133,6 +134,9 @@ public sealed class AppHost
 
     /// <summary>صداهای ثبت‌شدهٔ جستجوی صوتی — همه روی خودِ دستگاه.</summary>
     public VoiceDataService Voice { get; }
+
+    /// <summary>آوردنِ دادهٔ نسخهٔ وب — یک‌بار، با بکاپ و سنجشِ شمارش.</summary>
+    public LegacyImportService LegacyImport { get; }
     public LedgerService<SafeEntry> SafeLedger { get; }
     public LedgerService<ExchangeRow> ExchangeLedger { get; }
     public LedgerService<Expense> ExpenseLedger { get; }

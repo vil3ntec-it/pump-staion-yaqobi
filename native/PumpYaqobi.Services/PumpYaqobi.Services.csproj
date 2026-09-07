@@ -20,5 +20,6 @@
     <ProjectReference Include="..\PumpYaqobi.Domain\PumpYaqobi.Domain.csproj" />
     <ProjectReference Include="..\PumpYaqobi.Application\PumpYaqobi.Application.csproj" />
     <ProjectReference Include="..\PumpYaqobi.Persistence\PumpYaqobi.Persistence.csproj" />
+    <ProjectReference Include="..\PumpYaqobi.Infrastructure\PumpYaqobi.Infrastructure.csproj" />
   </ItemGroup>
 </Project>
