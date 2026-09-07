@@ -22,14 +22,14 @@
 
     <StackPanel Spacing="10">
 
-      <WrapPanel Orientation="Horizontal">
-        <Border Classes="stat" Margin="0,0,8,8">
+      <c:AutoFillPanel MinItemWidth="240" Gap="8">
+        <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="تعداد بدهکاران" Classes="label" />
             <TextBlock Text="{Binding CountText}" Classes="num" />
           </StackPanel>
         </Border>
-        <Border Classes="stat" Margin="0,0,8,8">
+        <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="جمله الباقی" Classes="label" />
             <TextBlock Text="{Binding TotalText}" Classes="num" />
@@ -37,19 +37,19 @@
                        Classes="muted" TextWrapping="Wrap" IsVisible="{Binding IsAll}" />
           </StackPanel>
         </Border>
-        <Border Classes="stat" Margin="0,0,8,8">
+        <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="بیشتر از ۳۰ روز بی‌حرکت" Classes="label" />
             <TextBlock Text="{Binding Stale30}" Classes="num" />
           </StackPanel>
         </Border>
-        <Border Classes="stat" Margin="0,0,8,8">
+        <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="بیشتر از ۶۰ روز بی‌حرکت" Classes="label" />
             <TextBlock Text="{Binding Stale60}" Classes="num" />
           </StackPanel>
         </Border>
-      </WrapPanel>
+      </c:AutoFillPanel>
 
       <Border Classes="panel" Padding="0">
         <c:ExcelGrid ItemsSource="{Binding Rows}" x:CompileBindings="False"

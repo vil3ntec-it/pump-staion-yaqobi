@@ -45,7 +45,14 @@ public class AutoFillPanel : Panel
         AffectsMeasure<AutoFillPanel>(MinItemWidthProperty, GapProperty);
     }
 
-    /// <summary>شمارِ ستون‌هایی که در این پهنا جا می‌شوند — دستِ‌کم یکی.</summary>
+    /// <summary>
+    /// شمارِ ستون‌هایی که در این پهنا جا می‌شوند — دستِ‌کم یکی و حداکثر به
+    /// شمارِ خودِ کارت‌ها.
+    ///
+    /// سقفِ «شمارِ کارت‌ها» همان فرقِ ‎auto-fit‎ با ‎auto-fill‎ است: بی آن، در
+    /// پنجرهٔ پهن پنج ستون ساخته می‌شد ولی چهار کارت داشتیم و ستونِ پنجم خالی
+    /// می‌ماند — همان نوارِ خالیِ کنارِ کادرهای «قرض‌های کهنه».
+    /// </summary>
     private int Columns(double available)
     {
         var min = Math.Max(1, MinItemWidth);
@@ -53,7 +60,7 @@ public class AutoFillPanel : Panel
         if (double.IsInfinity(available) || available <= 0) return 1;
         // n ستون یعنی n×min + (n−1)×gap ≤ available
         var n = (int)Math.Floor((available + gap) / (min + gap));
-        return Math.Max(1, n);
+        return Math.Clamp(n, 1, Math.Max(1, Children.Count));
     }
 
     protected override Size MeasureOverride(Size availableSize)

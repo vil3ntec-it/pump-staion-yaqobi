@@ -29,78 +29,81 @@
         </StackPanel>
       </Border>
 
-      <WrapPanel Orientation="Horizontal">
-        <Border Classes="stat" Margin="0,0,8,8" Width="230">
+      <!-- شبکهٔ خودچین: در نسخهٔ وب این کادرها ‎repeat(auto-fit,minmax(230px,1fr))‎
+           هستند، یعنی پهنای اضافه بینشان پخش می‌شود. با ‎WrapPanel‎ و پهنای ثابتِ
+           ۲۳۰ یک نوارِ خالیِ ۲۳۰ پیکسلی کنارِ هر ردیف می‌ماند. -->
+      <c:AutoFillPanel MinItemWidth="230" Gap="8">
+        <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="💰 جمله فروش" Classes="label" />
             <TextBlock Text="{Binding SalesText}" Classes="num" />
             <TextBlock Text="{Binding SalesSubText}" Classes="muted" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
-        <Border Classes="stat" Margin="0,0,8,8" Width="230">
+        <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="⛽ فروش پطرول" Classes="label" />
             <TextBlock Text="{Binding PetrolText}" Classes="num" />
             <TextBlock Text="{Binding PetrolSubText}" Classes="muted" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
-        <Border Classes="stat" Margin="0,0,8,8" Width="230">
+        <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="🟤 فروش دیزل" Classes="label" />
             <TextBlock Text="{Binding DieselText}" Classes="num" />
             <TextBlock Text="{Binding DieselSubText}" Classes="muted" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
-        <Border Classes="stat" Margin="0,0,8,8" Width="230">
+        <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="📈 مفاد ثبت‌شده" Classes="label" />
             <TextBlock Text="{Binding ProfitText}" Classes="num" />
             <TextBlock Text="{Binding ProfitSubText}" Classes="muted" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
-        <Border Classes="stat" Margin="0,0,8,8" Width="230">
+        <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="🛒 درآمد اضافی" Classes="label" />
             <TextBlock Text="{Binding ExtraText}" Classes="num" />
             <TextBlock Text="خرید عمده از مشتری" Classes="muted" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
-        <Border Classes="stat" Margin="0,0,8,8" Width="230">
+        <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="💸 مصارف" Classes="label" />
             <TextBlock Text="{Binding ExpenseText}" Classes="num" />
             <TextBlock Text="{Binding ExpenseSubText}" Classes="muted" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
-        <Border Classes="stat" Margin="0,0,8,8" Width="230">
+        <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="🧾 رسید نقدی قرض‌داران" Classes="label" />
             <TextBlock Text="{Binding RasidText}" Classes="num" />
             <TextBlock Text="{Binding RasidSubText}" Classes="muted" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
-        <Border Classes="stat" Margin="0,0,8,8" Width="230">
+        <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="🛢️ خرید تیل" Classes="label" />
             <TextBlock Text="{Binding BuyText}" Classes="num" />
             <TextBlock Text="{Binding BuySubText}" Classes="muted" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
-        <Border Classes="stat" Margin="0,0,8,8" Width="230">
+        <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="🔐 گاوصندوق (افغانی)" Classes="label" />
             <TextBlock Text="{Binding SafeText}" Classes="num" />
             <TextBlock Text="{Binding SafeSubText}" Classes="muted" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
-        <Border Classes="stat" Margin="0,0,8,8" Width="230">
+        <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="🚚 تخلیهٔ تانکر" Classes="label" />
             <TextBlock Text="{Binding TankerText}" Classes="num" />
             <TextBlock Text="{Binding TankerSubText}" Classes="muted" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
-      </WrapPanel>
+      </c:AutoFillPanel>
 
       <TextBlock Classes="muted" TextWrapping="Wrap"
                  Text="این گزارش فقط نمایش است و روی هیچ حسابی اثر نمی‌گذارد." />

@@ -151,7 +151,7 @@
     <Grid RowDefinitions="Auto,14,*">
 
       <!-- ══ کارتِ «ثبت پارچه فعلی» ══ -->
-      <Border Grid.Row="0" Classes="panel">
+      <Border Grid.Row="0" Classes="panel" Padding="0">
         <Grid RowDefinitions="Auto,Auto">
 
           <!-- سربرگِ کارت: عنوان بالا، ابزار زیرش.
@@ -191,7 +191,7 @@
       </Border>
 
       <!-- ══ گزارش‌های ۲۴ ساعته ══ -->
-      <Border Grid.Row="2" Classes="panel">
+      <Border Grid.Row="2" Classes="panel" Padding="0">
         <Grid RowDefinitions="Auto,*">
           <Border Grid.Row="0" Classes="card-head">
             <Grid ColumnDefinitions="Auto,Auto,*">

@@ -71,6 +71,15 @@
     <Setter Property="Padding" Value="14" />
     <Setter Property="ClipToBounds" Value="True" />
   </Style>
+  <!-- کارتِ بیرونیِ یک بخش: بی‌بالشتک، تا سربرگِ رنگی به لبهٔ کارت بچسبد.
+       ⚠️ نوشتنِ ‎Padding="0"‎ روی همان ‎Border‎ داخلِ ‎ControlTemplate‎ کار نمی‌کند:
+       مقدارهای داخلِ قالب اولویتِ ‎Template‎ دارند و سبکِ ‎Border.card‎ از آن
+       بالاتر است، پس ۱۴ پیکسلِ سبک برنده می‌شد. نتیجه‌اش یک نوارِ خالیِ بی‌دلیل
+       بالای عنوانِ هر بخش بود و بدنه هم ۲۸ پیکسل تورفتگی می‌گرفت. -->
+  <Style Selector="Border.card.flush">
+    <Setter Property="Padding" Value="0" />
+  </Style>
+
   <Style Selector="Border.panel">
     <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.Border}" />
@@ -290,7 +299,7 @@
   <Style Selector="c|SectionPage">
     <Setter Property="Template">
       <ControlTemplate>
-        <Border Classes="card" Margin="16,14" Padding="0">
+        <Border Classes="card flush" Margin="16,14">
           <Grid RowDefinitions="Auto,*">
 
             <!-- ══ سربرگِ کادر ══ -->
@@ -566,9 +575,13 @@
 
           <ScrollViewer Grid.Column="1" Name="PART_Scroll"
                         HorizontalScrollBarVisibility="Hidden"
-                        VerticalScrollBarVisibility="Disabled"
-                        Padding="10,0">
-            <ContentPresenter Content="{TemplateBinding Content}" VerticalAlignment="Center" />
+                        VerticalScrollBarVisibility="Disabled">
+            <!-- ⚠️ فاصلهٔ دو سرِ نوار «حاشیهٔ محتوا» است نه ‎Padding‎ِ خودِ
+                 ScrollViewer: بالشتکِ ScrollViewer بیرونِ اندازهٔ محتوا می‌ماند،
+                 پس دکمهٔ آخر — که همیشه بخشِ «تاریخچه‌ها» بود — ده پیکسل بیرونِ
+                 دامنهٔ لغزش می‌افتاد و نصفه بریده می‌شد. -->
+            <ContentPresenter Content="{TemplateBinding Content}" VerticalAlignment="Center"
+                              Margin="10,0" />
           </ScrollViewer>
 
           <Button Grid.Column="2" Name="PART_Next" Classes="nav-edge" Content="‹" IsVisible="False" />

@@ -47,6 +47,11 @@ public class NavStrip : ContentControl
         if (_sv is not null)
         {
             _sv.ScrollChanged += (_, _) => UpdateArrows();
+            // ⚠️ فقط ‎ScrollChanged‎ کافی نیست: با عوض شدنِ بخش، نوشتهٔ دکمهٔ
+            // فعال پررنگ می‌شود و پهنای کلِ نوار تغییر می‌کند بی‌آن‌که لغزشی
+            // رخ دهد. آن‌وقت فلش‌ها روی حسابِ پهنای کهنه می‌ماندند و روی
+            // آخرین بخش هم «باز هم هست» نشان می‌دادند.
+            _sv.LayoutUpdated += (_, _) => UpdateArrows();
             // چرخِ ماوس → لغزشِ افقی
             _sv.AddHandler(PointerWheelChangedEvent, OnWheel, RoutingStrategies.Tunnel);
         }
@@ -94,7 +99,18 @@ public class NavStrip : ContentControl
             var active = this.GetVisualDescendants().OfType<Button>()
                              .FirstOrDefault(b => b.Classes.Contains("active"));
             active?.BringIntoView();
+
+            // حاشیهٔ ده‌پیکسلیِ دو سرِ نوار باعث می‌شد ‎BringIntoView‎ همان ده
+            // پیکسل به‌اضافهٔ حاشیهٔ خودِ دکمه کم بلغزد (اندازه‌گیری: ۱۳ پیکسل
+            // روی آخرین بخش)؛ نتیجه‌اش این بود که روی بخشِ اولی یا آخری، فلشِ
+            // «باز هم هست» بی‌خود روشن می‌ماند در حالی که چیزی جز فاصله نمانده
+            // بود. اگر تا لبه فقط همان فاصله‌ها مانده، تا ته می‌لغزیم.
+            const double edge = 24;
+            var max = Math.Max(0, _sv.Extent.Width - _sv.Viewport.Width);
+            if (_sv.Offset.X > max - edge) _sv.Offset = _sv.Offset.WithX(max);
+            else if (_sv.Offset.X < edge) _sv.Offset = _sv.Offset.WithX(0);
+
             UpdateArrows();
-        }, DispatcherPriority.Loaded);
+        }, DispatcherPriority.Background);
     }
 }
