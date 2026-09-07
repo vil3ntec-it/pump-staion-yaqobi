@@ -1,11 +1,13 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
+using PumpYaqobi.Reporting.Pdf;
 using PumpYaqobi.Services.Data;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
@@ -418,6 +420,45 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
         to.Start = from.End;     // نشستنِ مقدار خودش ‎calcShift(to)‎ را می‌آورد
         to.Recalc();
         _host.Toast("✅ پایه انتقال یافت", ToastKind.Ok);
+    }
+
+    /// <summary>
+    /// ‎pdfShifts()‎ / ‎pdfDieselShifts()‎ — ورقِ «همهٔ گزارش‌ها».
+    ///
+    /// در حالتِ پطرول، دیزلِ **همان روزها** هم کنارِ پطرول می‌آید (کارِ
+    /// ‎getDieselForDate‎ در نسخهٔ وب)؛ روزی که فقط دیزل دارد اصلاً کارت
+    /// نمی‌گیرد — وگرنه ورق پر می‌شد از کارت‌هایی که نیمهٔ پطرولشان «ثبت
+    /// نشده» است. در حالتِ دیزل، ورق فقط دیزل است و بخشِ پطرول ندارد.
+    ///
+    /// فیلترِ تاریخِ بالای فهرست روی ورق هم اثر می‌گذارد — چیزی که چاپ می‌شود
+    /// همانی است که روی صفحه دیده می‌شود.
+    /// </summary>
+    [RelayCommand]
+    private async Task PdfAsync()
+    {
+        var f = DateFilter.Trim();
+        bool Keep(ParchaReport r) => f.Length == 0 || (r.DateShamsi ?? "").Contains(f);
+
+        var diesel = (await _host.ParchaData.ListAsync(FuelType.Diesel, null)).Where(Keep).ToList();
+        List<ParchaReport> all;
+
+        if (IsDiesel)
+        {
+            all = diesel;
+        }
+        else
+        {
+            var petrol = (await _host.ParchaData.ListAsync(FuelType.Petrol, null))
+                         .Where(Keep).ToList();
+            var dates = petrol.Select(r => r.DateShamsi ?? "—").ToHashSet();
+            all = petrol.Concat(diesel.Where(r => dates.Contains(r.DateShamsi ?? "—"))).ToList();
+        }
+
+        all = all.OrderBy(r => r.DateKey).ThenBy(r => r.Id).ToList();
+
+        var input = new ShiftsReportInput(all, DocDates.Line(), IsDiesel);
+        await Documents.ShowAsync(() => new ShiftsReport(input),
+                                  "گزارش‌های پارچه — " + FuelLabel);
     }
 
     [RelayCommand]
