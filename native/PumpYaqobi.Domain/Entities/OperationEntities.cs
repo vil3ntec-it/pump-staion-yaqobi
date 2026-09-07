@@ -427,6 +427,30 @@ public class StaffShortSettle : EntityBase, ILedgerRow
 
 public enum StaffSettleKind { Short = 1, Excess = 2 }
 
+/// <summary>
+/// یک «صدای ثبت‌شده» برای جستجوی صوتیِ آفلاین — همان ‎DB.pumpVoiceTpl‎ی
+/// نسخهٔ وب که در ‎localStorage‎ می‌نشست.
+///
+/// خودِ صدا ذخیره نمی‌شود؛ فقط ویژگی‌های فشرده‌اش (‎MFCC + دلتا‎، هر مقدار یک
+/// بایت). پس نه حریمِ کسی می‌رود، نه دیسک پر می‌شود.
+///
+/// ⚠️ این‌ها با نسخهٔ موتور بی‌معنی می‌شوند: اگر روزی عددهای ‎VoiceEngine‎
+/// عوض شوند، ویژگی‌های کهنه با تازه هم‌جنس نیستند و باید دور ریخته شوند.
+/// برای همین <see cref="EngineVersion"/> کنارشان می‌نشیند.
+/// </summary>
+public class VoiceTemplate : EntityBase
+{
+    /// <summary>کلیدِ حساب («p12|s3») — همان کلیدی که ‎_vxLiveKey‎ می‌خواند.</summary>
+    public string? AccountKey { get; set; }
+    /// <summary>نامِ نمایشی، فقط برای پیامِ «🎤 فلانی».</summary>
+    public string? Name { get; set; }
+    public int Frames { get; set; }
+    public int Dim { get; set; }
+    /// <summary>‎Frames × Dim‎ بایتِ علامت‌دار.</summary>
+    public byte[] Data { get; set; } = Array.Empty<byte>();
+    public int EngineVersion { get; set; } = 1;
+}
+
 // ══ دیگر ══════════════════════════════════════════════════════════════════════
 
 public class Camera : EntityBase

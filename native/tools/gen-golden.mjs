@@ -924,5 +924,120 @@ const camera = await page.evaluate(() => {
 fs.writeFileSync(path.join(OUT, 'golden-camera.json'), JSON.stringify(camera));
 console.log('  ✔ golden-camera.json — ' + camera.kinds.length + ' لینکِ دوربین');
 
+// ── بندِ ۲۴: موتورِ صدای آفلاین ─────────────────────────────────────────────
+//
+// جستجوی صوتی در این برنامه سرور ندارد: صدا → بریدنِ سکوت → MFCC(+دلتا) →
+// مقایسهٔ DTW با صداهای ثبت‌شده. همه‌اش ریاضیِ محض است، پس همه‌اش هم می‌شود
+// مو‌به‌مو سنجید.
+//
+// ⚠️ ورودی عمداً عددِ صحیح ذخیره می‌شود (مثلِ نمونه‌های ۱۶بیتیِ واقعی) و هر دو
+// طرف با تقسیم بر ۳۲۷۶۸ به اعشار می‌برندش — وگرنه خودِ «ورودیِ آزمون» بینِ
+// جاوااسکریپت و سی‌شارپ یکی نمی‌ماند و آزمون چیزی را می‌سنجید که نباید.
+const voice = await page.evaluate(() => {
+  let seed = 7731;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+
+  // ── صداهای ساختگی ولی «صدا‌مانند»: سکوت، بعد چند فرمنت، بعد سکوت ──
+  const say = (n, f0, dur, noise) => {
+    const pcm = new Int16Array(n);
+    const start = Math.floor(n * 0.18), end = Math.min(n, start + dur);
+    for (let i = 0; i < n; i++) {
+      let v = (rnd() * 2 - 1) * noise;
+      if (i >= start && i < end) {
+        const t = (i - start) / 16000;
+        const env = Math.sin(Math.PI * (i - start) / (end - start));
+        v += env * (0.45 * Math.sin(2 * Math.PI * f0 * t)
+                  + 0.25 * Math.sin(2 * Math.PI * f0 * 2.7 * t)
+                  + 0.15 * Math.sin(2 * Math.PI * f0 * 5.1 * t));
+      }
+      pcm[i] = Math.max(-32768, Math.min(32767, Math.round(v * 32767)));
+    }
+    return Array.from(pcm);
+  };
+
+  const clips = [
+    { id: 'ahmad', pcm: say(6400, 140, 3000, 0.004) },
+    { id: 'karim', pcm: say(6400, 190, 2600, 0.004) },
+    { id: 'nasir', pcm: say(7000, 165, 3400, 0.006) },
+    { id: 'quiet', pcm: say(6400, 150, 3000, 0.0005) },
+    { id: 'silence', pcm: say(6400, 150, 0, 0.0009) },   // چیزی گفته نشد
+    { id: 'tiny', pcm: say(700, 150, 200, 0.004) },      // خیلی کوتاه
+  ];
+
+  const toF32 = (arr) => {
+    const f = new Float32Array(arr.length);
+    for (let i = 0; i < arr.length; i++) f[i] = arr[i] / 32768;
+    return f;
+  };
+
+  // ── ۱) بانکِ مِل — ثابت است و پایهٔ همهٔ ویژگی‌ها ──
+  const bank = _vxGetMelBank().map((b) => ({ idx: Array.from(b.idx), w: Array.from(b.w) }));
+
+  // ── ۲) FFT ──
+  const fft = [];
+  for (let c = 0; c < 4; c++) {
+    const n = 512;
+    const re = new Float32Array(n), im = new Float32Array(n);
+    const inRe = [], inIm = [];
+    for (let i = 0; i < n; i++) {
+      // مقدارهای «گِرد» تا خودِ ورودی بینِ دو زبان یکی بماند
+      const a = Math.round((rnd() * 2 - 1) * 1000) / 1000;
+      const b = c === 0 ? 0 : Math.round((rnd() * 2 - 1) * 1000) / 1000;
+      re[i] = a; im[i] = b; inRe.push(a); inIm.push(b);
+    }
+    _vxFft(re, im);
+    fft.push({ inRe, inIm, outRe: Array.from(re), outIm: Array.from(im) });
+  }
+
+  // ── ۳) بریدنِ سکوت ──
+  const trim = clips.map((c) => {
+    const f = toF32(c.pcm);
+    const t = _vxTrim(f);
+    return {
+      id: c.id,
+      ok: !!t,
+      off: t ? t.byteOffset / 4 : -1,
+      len: t ? t.length : 0,
+    };
+  });
+
+  // ── ۴) ویژگی‌ها (MFCC + دلتا، فشرده در یک بایت) ──
+  const feats = clips.map((c) => {
+    const f = _vxFeatures(toF32(c.pcm));
+    return { id: c.id, ok: !!f, n: f ? f.n : 0, dim: f ? f.dim : 0, d: f ? Array.from(f.d) : [] };
+  });
+
+  // ── ۵) فاصلهٔ DTW — هر صدا با همه، از جمله خودش ──
+  const live = clips.map((c) => ({ id: c.id, f: _vxFeatures(toF32(c.pcm)) })).filter((x) => x.f);
+  const dtw = [];
+  for (const a of live) for (const b of live) dtw.push({ a: a.id, b: b.id, d: _vxDtw(a.f, b.f) });
+
+  // ── ۶) کم کردنِ نرخِ نمونه به ۱۶ کیلوهرتز ──
+  const down = [44100, 48000, 16000, 22050].map((rate) => {
+    const src = clips[0].pcm.slice(0, 4000);
+    const f = toF32(src);
+    const out = _vxDownTo16k([f], rate, f.length);
+    return { rate, len: src.length, out: Array.from(out) };
+  });
+
+  // ── ۷) تطبیقِ نام (مسیرِ آنلاین: متن → نزدیک‌ترین حساب) ──
+  const names = ['احمد شاه', 'احمدولی', 'کریم', 'كريم خان', 'نصیر احمد', 'حاجی عبدالله',
+                 'محمد', 'محمود', '', 'گل‌آغا'];
+  const queries = ['احمد', 'احمدشاه', 'كريم', 'کریم خان', 'نصير', 'حاجي عبدالله',
+                   'محمود', 'محمد', 'قاسم', '', 'گلاغا'];
+  const lev = [], norm = [], score = [];
+  names.forEach((a) => queries.forEach((b) => lev.push({ a, b, d: _staffLev(a, b) })));
+  names.concat(queries).forEach((s) => norm.push({ s, out: _staffNorm(s) }));
+  names.forEach((n) => queries.forEach((q) => score.push({ name: n, q, sc: _staffScoreName(n, q) })));
+
+  return { bank, fft, trim, feats, dtw, down, lev, norm, score,
+           consts: { SR: _VX_SR, FRAME: _VX_FRAME, HOP: _VX_HOP, NFFT: _VX_NFFT,
+                     MEL: _VX_MEL, CEP: _VX_CEP, ACCEPT: _VX_ACCEPT, MARGIN: _VX_MARGIN },
+           clips };
+});
+fs.writeFileSync(path.join(OUT, 'golden-voice.json'), JSON.stringify(voice));
+console.log('  ✔ golden-voice.json — ' + voice.clips.length + ' صدا، ' + voice.dtw.length
+            + ' فاصلهٔ DTW و ' + voice.score.length + ' نمرهٔ نام');
+
 console.log('\n  خطای جاوااسکریپت:', errs.length ? errs.slice(0, 3) : 'ندارد');
 await browser.close();

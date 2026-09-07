@@ -56,6 +56,7 @@ public sealed class AppHost
         Attendance = new AttendanceDataService(Db, Permissions, Trash);
         Tools = new ToolsDataService(Db, Permissions, Trash, Aging, StaffShort, MonthReport);
         Cameras = new CameraDataService(Db, Permissions, Trash);
+        Voice = new VoiceDataService(Db, Permissions);
         SafeLedger = new LedgerService<SafeEntry>(Db, Permissions, Trash, "safe",
             r => (r.Title ?? "") + " — " + Shamsi.Money(r.Amount));
         ExchangeLedger = new LedgerService<ExchangeRow>(Db, Permissions, Trash, "sarrafi",
@@ -129,6 +130,9 @@ public sealed class AppHost
 
     /// <summary>دفترِ دوربین‌های مداربسته — افزودن و حذفش پشتِ اجازهٔ مدیر.</summary>
     public CameraDataService Cameras { get; }
+
+    /// <summary>صداهای ثبت‌شدهٔ جستجوی صوتی — همه روی خودِ دستگاه.</summary>
+    public VoiceDataService Voice { get; }
     public LedgerService<SafeEntry> SafeLedger { get; }
     public LedgerService<ExchangeRow> ExchangeLedger { get; }
     public LedgerService<Expense> ExpenseLedger { get; }
