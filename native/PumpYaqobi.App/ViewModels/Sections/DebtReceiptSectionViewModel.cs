@@ -1,9 +1,11 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Domain.Entities;
+using PumpYaqobi.Reporting.Pdf;
 using PumpYaqobi.Services.Data;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
@@ -109,6 +111,16 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
         TypedName = ""; AmountText = ""; Note = "";
         await LoadAsync();
         FocusNameRequested?.Invoke();
+    }
+
+    /// <summary>‎pdfDebtRasid(monthKey)‎ — ورقِ رسیدهای همین ماه.</summary>
+    [RelayCommand]
+    private Task PdfAsync()
+    {
+        var rows = Rows.Select(r => r.Entity).ToList();
+        var input = new DebtReceiptReportInput(Shamsi.MonthLabel(Month), rows, DocDates.Line());
+        return Documents.ShowAsync(() => new DebtReceiptReport(input),
+                                   "رسید قرض‌داران " + Shamsi.MonthLabel(Month));
     }
 
     /// <summary>‎undoDebtRasid‎ — رسید و اثرش روی حساب، هر دو با هم.</summary>
