@@ -2,6 +2,9 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Controls.Primitives;
+using Avalonia.Layout;
+using Avalonia.VisualTree;
 
 namespace PumpYaqobi.App.Controls;
 
@@ -51,8 +54,97 @@ public class ExcelGrid : DataGrid
         ClipboardCopyMode = DataGridClipboardCopyMode.ExcludeHeader;
 
         // جای اضافه بینِ ستون‌ها پخش می‌شود، نه در یک ستونِ خالیِ ته جدول
-        LayoutUpdated += (_, _) => SpreadColumns();
+        LayoutUpdated += (_, _) => { SpreadColumns(); CapToOneScreen(); };
     }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  مجازی‌سازیِ ردیف‌ها — و این‌که چرا جدول سقفِ ارتفاع دارد
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  ‎DataGrid‎ی آوالونیا ردیف‌هایش را مجازی‌سازی می‌کند: فقط ردیف‌های داخلِ
+    //  قاب (به‌اضافهٔ چند تا حاشیه) را می‌سازد و با اسکرول همان‌ها را بازیافت
+    //  می‌کند. پس صد هزار ردیف هم صد هزار عنصرِ زنده نمی‌سازد.
+    //
+    //  ⚠️ ولی این فقط وقتی کار می‌کند که **ارتفاعش محدود باشد**. اگر جدول
+    //  ارتفاعِ آزاد بگیرد (مثلاً مستقیم داخلِ یک ‎StackPanel‎ی اسکرول‌شونده)،
+    //  خودش را هم‌قدِ همهٔ ردیف‌ها اندازه می‌گیرد و آن‌وقت هر ردیف ساخته
+    //  می‌شود — همان چیزی که با یک میلیون ردیف برنامه را قفل می‌کند.
+    //
+    //  پس سقف لازم است. ولی سقف یعنی جدول اسکرولِ خودش را دارد، و صاحب ریپو
+    //  صریح گفت که تا نوارِ بخش‌ها به سقفِ پنجره نچسبیده، محتوای بخش نباید
+    //  تکان بخورد. این دو با هم جمع می‌شوند، به شرطِ «زنجیرهٔ اسکرول»:
+    //
+    //     پایین: اول صفحه می‌لغزد؛ وقتی صفحه ته کشید، ردیف‌ها می‌لغزند.
+    //     بالا:  اول ردیف‌ها برمی‌گردند؛ وقتی جدول سرِ خط آمد، صفحه بالا می‌رود.
+    //
+    //  نتیجه برای کاربر همان است که خواسته بود — سربرگ و نوارِ آمار می‌روند
+    //  بالا، نوار قفل می‌شود، بعد ردیف‌ها راه می‌افتند — و برای برنامه یعنی
+    //  مجازی‌سازی سرِ جایش می‌ماند. (‎OnPointerWheelChanged‎ پایین‌ترِ همین فایل.)
+
+    /// <summary>اسکرولِ صفحه در ‎MainWindow‎؛ یک‌بار پیدا می‌شود و نگه داشته می‌شود.</summary>
+    private ScrollViewer? _page;
+
+    private ScrollViewer? Page =>
+        _page ??= this.GetVisualAncestors().OfType<ScrollViewer>()
+                      .FirstOrDefault(v => v.Name == "PageScroll");
+
+    /// <summary>
+    /// سقفِ ارتفاعِ جدول = یک صفحه. بی این، جدول هم‌قدِ همهٔ ردیف‌هایش می‌شود و
+    /// مجازی‌سازی می‌میرد.
+    /// </summary>
+    private void CapToOneScreen()
+    {
+        var screen = Page?.Viewport.Height ?? 0;
+        if (screen <= 0) return;
+        if (Math.Abs(MaxHeight - screen) > 1) MaxHeight = screen;
+    }
+
+    /// <summary>
+    /// ══ زنجیرهٔ اسکرول ═══════════════════════════════════════════════════════
+    /// چرخِ ماوس روی جدول، اول به صفحه می‌رسد نه به ردیف‌ها — مگر آن‌که صفحه
+    /// در همان جهت جای رفتن نداشته باشد. برعکسش هم درست است: هنگامِ برگشتن
+    /// اول ردیف‌ها بالا می‌آیند و بعد صفحه.
+    /// </summary>
+    protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
+    {
+        var page = Page;
+        var dy = e.Delta.Y;
+
+        if (page is not null && Math.Abs(dy) > 0)
+        {
+            var max = Math.Max(0, page.Extent.Height - page.Viewport.Height);
+            // «جدول سرِ خط است؟» را از نوارِ لغزشِ خودِ جدول می‌پرسیم؛
+            // ‎DataGrid‎ آفستِ عمودی‌اش را بیرون نمی‌دهد.
+            var bar = VerticalBar;
+            var gridTop = bar is null || bar.Value <= 0.5;
+
+            // پایین می‌رویم: تا وقتی صفحه جا دارد، صفحه می‌لغزد.
+            // بالا می‌آییم: تا وقتی جدول سرِ خط نیامده، خودِ جدول می‌لغزد.
+            var pageFirst = dy < 0 ? page.Offset.Y < max - 0.5
+                                   : gridTop && page.Offset.Y > 0.5;
+
+            if (pageFirst)
+            {
+                var step = dy * WheelStep;
+                page.Offset = new Vector(page.Offset.X,
+                                         Math.Clamp(page.Offset.Y - step, 0, max));
+                e.Handled = true;
+                return;
+            }
+        }
+
+        base.OnPointerWheelChanged(e);
+    }
+
+    /// <summary>یک چرخِ ماوس چند پیکسل صفحه را می‌برد.</summary>
+    private const double WheelStep = 58;
+
+    private ScrollBar? _vbar;
+
+    /// <summary>نوارِ لغزشِ عمودیِ خودِ جدول (‎PART_VerticalScrollbar‎).</summary>
+    private ScrollBar? VerticalBar =>
+        _vbar ??= this.GetVisualDescendants().OfType<ScrollBar>()
+                      .FirstOrDefault(b => b.Orientation == Orientation.Vertical);
 
     /// <summary>هر جدول یک‌بار پهن می‌شود؛ بعدش ستون‌های ستاره‌ای خودشان
     /// با تغییرِ اندازهٔ پنجره تنظیم می‌شوند.</summary>
