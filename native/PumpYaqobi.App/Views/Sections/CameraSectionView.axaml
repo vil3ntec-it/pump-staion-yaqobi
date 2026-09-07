@@ -31,6 +31,15 @@
                       HorizontalAlignment="Stretch" />
             </StackPanel>
 
+            <!-- ➕ وب‌کم‌های وصل‌شده را می‌شمارد و هر کدام را که هنوز در فهرست
+                 نیست اضافه می‌کند — همان ‎refreshLocalCams‎ی نسخهٔ وب. -->
+            <StackPanel Spacing="3" Width="165" Margin="0,0,10,6">
+              <TextBlock Text=" " Classes="label" />
+              <Button Content="📷 دوربین‌های USB" Command="{Binding AddUsbCommand}"
+                      HorizontalAlignment="Stretch"
+                      ToolTip.Tip="وب‌کم‌های وصل‌شده را پیدا و اضافه می‌کند" />
+            </StackPanel>
+
             <StackPanel Spacing="3" Width="130" Margin="0,0,10,6">
               <TextBlock Text=" " Classes="label" />
               <Button Classes="accent" Content="➕ ذخیرهٔ دوربین" Command="{Binding AddCommand}"

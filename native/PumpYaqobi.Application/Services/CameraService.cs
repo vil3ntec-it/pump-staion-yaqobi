@@ -19,6 +19,8 @@ public enum CameraKind
     Image = 4,
     /// <summary>صفحهٔ وبِ خودِ دوربین یا NVR.</summary>
     WebPage = 5,
+    /// <summary>‎usb:&lt;شماره&gt;‎ — وب‌کمِ خودِ کامپیوتر.</summary>
+    Usb = 6,
 }
 
 /// <summary>
@@ -39,6 +41,7 @@ public sealed class CameraService
 
     // ⚠️ ‎\z‎ نه ‎$‎ : در دات‌نت ‎$‎ پیش از یک ‎\n‎ِ پایانی هم می‌گیرد، ولی
     // ‎$‎ِ جاوااسکریپت (بی‌پرچمِ m) فقط تهِ رشته است.
+    private static readonly Regex UsbRx = new(@"^usb:\d+\z", Rx);
     private static readonly Regex RtspRx = new(@"^rtsp:", Rx);
     private static readonly Regex HlsRx = new(@"\.m3u8(\?|#|\z)", Rx);
     private static readonly Regex VideoRx = new(@"\.(mp4|webm|ogv|ogg)(\?|#|\z)", Rx);
@@ -51,6 +54,9 @@ public sealed class CameraService
     {
         var u = (url ?? "").Trim();
         if (u.Length == 0) return CameraKind.None;
+        // ⚠️ اولِ همه: ‎usb:‎ لینکِ شبکه‌ای نیست و هیچ‌کدام از الگوهای زیر
+        // نباید رویش بیفتد.
+        if (UsbRx.IsMatch(u)) return CameraKind.Usb;
         if (RtspRx.IsMatch(u)) return CameraKind.Rtsp;
         if (HlsRx.IsMatch(u)) return CameraKind.Hls;
         if (VideoRx.IsMatch(u)) return CameraKind.Video;
@@ -62,7 +68,8 @@ public sealed class CameraService
     /// این نوع را برنامه **بی هیچ پخش‌کننده‌ای** نشان می‌دهد: عکسِ لحظه‌ای و
     /// MJPEG فقط یک زنجیرهٔ JPEG هستند و رمزگشایشان در خودِ برنامه هست.
     /// </summary>
-    public static bool ShowsInApp(CameraKind kind) => kind == CameraKind.Image;
+    public static bool ShowsInApp(CameraKind kind) =>
+        kind is CameraKind.Image or CameraKind.Usb;
 
     /// <summary>
     /// این نوع رمزگشای ویدیو می‌خواهد — RTSP، HLS و فایلِ ویدیو.
@@ -101,6 +108,8 @@ public sealed class CameraService
         CameraKind.Hls => "پخش‌کنندهٔ ویدیو بالا نیامد — با دکمهٔ زیر در پخش‌کنندهٔ ویندوز باز می‌شود",
         CameraKind.Video => "فایلِ ویدیو — با دکمهٔ زیر در پخش‌کنندهٔ ویندوز باز می‌شود",
         CameraKind.WebPage => "صفحهٔ وبِ خودِ دوربین — با دکمهٔ زیر در مرورگر باز می‌شود",
+        CameraKind.Usb => "دوربینِ USB باز نشد — کابلش را بررسی کنید و در تنظیماتِ "
+                        + "«حریم خصوصی › دوربین»ِ ویندوز اجازه بدهید",
         _ => "",
     };
 }

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Services;
 using Xunit;
 
@@ -109,6 +110,59 @@ public class CameraParityTests
     {
         foreach (var k in Enum.GetValues<CameraKind>())
             Assert.False(CameraService.ShowsInApp(k) && CameraService.NeedsPlayer(k));
+    }
+
+    // ══ دوربینِ USB ═══════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// ‎usb:&lt;شماره&gt;‎ پیش از هر الگوی دیگری سنجیده می‌شود — لینکِ شبکه‌ای نیست.
+    /// </summary>
+    [Fact]
+    public void AUsbLinkIsItsOwnKind()
+    {
+        Assert.Equal(CameraKind.Usb, CameraService.KindOf("usb:0"));
+        Assert.Equal(CameraKind.Usb, CameraService.KindOf("  USB:2 "));
+        Assert.True(CameraService.ShowsInApp(CameraKind.Usb));
+        Assert.False(CameraService.NeedsPlayer(CameraKind.Usb));
+    }
+
+    /// <summary>
+    /// چیزی که شبیهِ ‎usb:‎ است ولی شماره ندارد، دوربینِ USB نیست — وگرنه
+    /// برنامه دنبالِ وب‌کمِ شمارهٔ هیچ می‌گشت.
+    /// </summary>
+    [Theory]
+    [InlineData("usb:")]
+    [InlineData("usb:x")]
+    [InlineData("usb:1x")]
+    [InlineData("usbcam:1")]
+    public void ALinkThatOnlyLooksLikeUsbIsNot(string url) =>
+        Assert.NotEqual(CameraKind.Usb, CameraService.KindOf(url));
+
+    /// <summary>لینک و شماره باید دقیقاً همدیگر را پس بدهند.</summary>
+    [Fact]
+    public void TheUsbLinkRoundTrips()
+    {
+        Assert.Equal("usb:0", UsbCameraFeed.UrlOf(0));
+        Assert.Equal("usb:3", UsbCameraFeed.UrlOf(3));
+
+        Assert.Equal(0, UsbCameraFeed.IndexOf("usb:0"));
+        Assert.Equal(3, UsbCameraFeed.IndexOf(" USB:3 "));
+
+        Assert.Null(UsbCameraFeed.IndexOf("usb:"));
+        Assert.Null(UsbCameraFeed.IndexOf("usb:-1"));
+        Assert.Null(UsbCameraFeed.IndexOf("rtsp://x"));
+        Assert.Null(UsbCameraFeed.IndexOf(null));
+    }
+
+    /// <summary>
+    /// شمردنِ دوربین‌ها روی ماشینی که هیچ‌کدام را ندارد (مثلِ همین CI) باید
+    /// فهرستِ خالی بدهد، نه استثنا — وگرنه بخشِ دوربین‌ها اصلاً باز نمی‌شد.
+    /// </summary>
+    [Fact]
+    public void ListingUsbCamerasNeverThrows()
+    {
+        var found = UsbCameraFeed.List();
+        Assert.NotNull(found);
     }
 
     [Fact]
