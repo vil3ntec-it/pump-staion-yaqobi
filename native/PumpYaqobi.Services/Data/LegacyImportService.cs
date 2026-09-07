@@ -120,8 +120,11 @@ public sealed class LegacyImportService
         catch (Exception ex)
         {
             try { await tx.RollbackAsync(ct); } catch { }
+            // ⚠️ دلیلِ واقعی معمولاً در استثنای درونی است؛ بی آن، پیامِ
+            // «جزئیات را ببینید» هیچ کمکی به کاربر (و به عیب‌یابی) نمی‌کند.
+            var why = ex.InnerException?.Message ?? ex.Message;
             return new ImportOutcome(false, backup, bundle.SourceRecords, 0,
-                "مهاجرت ناتمام ماند و برگردانده شد: " + ex.Message, bundle.Report.Warnings);
+                "مهاجرت ناتمام ماند و برگردانده شد: " + why, bundle.Report.Warnings);
         }
 
         // تنظیم‌ها بیرونِ تراکنش‌اند چون در جدولِ خودشان و بی‌خطرند؛ نبودنشان
@@ -154,41 +157,58 @@ public sealed class LegacyImportService
         return n;
     }
 
+    /// <summary>
+    /// خالی کردنِ جدول‌ها پیش از جایگزینی.
+    ///
+    /// ⚠️ با ‎ExecuteDeleteAsync‎ انجام می‌شود، نه ‎RemoveRange‎ی معمولی — و
+    /// این عمدی است: ‎Debtor.MainAccount‎ در خودِ کلاس ‎= new()‎ دارد، پس
+    /// قرض‌داری که از دیتابیس خوانده شود یک «حسابِ اصلیِ خالیِ ردیابی‌نشده»
+    /// همراهش می‌آید. ‎SaveChanges‎ آن را تازه می‌بیند و می‌خواهد **درجش**
+    /// کند — همان لحظه که خودِ قرض‌دار در حالِ حذف است — و کلیدِ خارجی
+    /// می‌شکند. حذفِ مستقیمِ SQL اصلاً چیزی را نمی‌خواند، پس این تله را ندارد.
+    ///
+    /// ترتیب هم عمدی است: فرزند پیش از پدر، تا به آبشارِ SQLite تکیه نکنیم
+    /// (‎PRAGMA foreign_keys‎ مالِ هر اتصال است و تضمینی نیست روشن باشد).
+    /// </summary>
     private static async Task ClearAsync(Persistence.PumpDbContext db, CancellationToken ct)
     {
-        // ترتیب مهم نیست چون همه در یک تراکنش‌اند و کلیدهای خارجی آبشاری‌اند،
-        // ولی جدول‌های فرزند اول می‌روند تا خطای کلیدِ خارجی پیش نیاید.
-        db.DebtRows.RemoveRange(await db.DebtRows.ToListAsync(ct));
-        db.DebtAccounts.RemoveRange(await db.DebtAccounts.ToListAsync(ct));
-        db.Debtors.RemoveRange(await db.Debtors.ToListAsync(ct));
-        db.CompanyRows.RemoveRange(await db.CompanyRows.ToListAsync(ct));
-        db.TilCompanies.RemoveRange(await db.TilCompanies.ToListAsync(ct));
-        db.WaraqPumps.RemoveRange(await db.WaraqPumps.ToListAsync(ct));
-        db.WaraqTransactions.RemoveRange(await db.WaraqTransactions.ToListAsync(ct));
-        db.WaraqShifts.RemoveRange(await db.WaraqShifts.ToListAsync(ct));
-        db.WaraqEntries.RemoveRange(await db.WaraqEntries.ToListAsync(ct));
-        db.AmanatRows.RemoveRange(await db.AmanatRows.ToListAsync(ct));
-        db.AmanatAccounts.RemoveRange(await db.AmanatAccounts.ToListAsync(ct));
-        db.Attendance.RemoveRange(await db.Attendance.ToListAsync(ct));
-        db.SalaryPayments.RemoveRange(await db.SalaryPayments.ToListAsync(ct));
-        db.StaffMembers.RemoveRange(await db.StaffMembers.ToListAsync(ct));
-        db.Reports.RemoveRange(await db.Reports.ToListAsync(ct));
-        db.ShiftDataSet.RemoveRange(await db.ShiftDataSet.ToListAsync(ct));
-        db.FuelPurchases.RemoveRange(await db.FuelPurchases.ToListAsync(ct));
-        db.SafeEntries.RemoveRange(await db.SafeEntries.ToListAsync(ct));
-        db.ExchangeRows.RemoveRange(await db.ExchangeRows.ToListAsync(ct));
-        db.Expenses.RemoveRange(await db.Expenses.ToListAsync(ct));
-        db.RetailRows.RemoveRange(await db.RetailRows.ToListAsync(ct));
-        db.ExtraIncomes.RemoveRange(await db.ExtraIncomes.ToListAsync(ct));
-        db.ParchaReceipts.RemoveRange(await db.ParchaReceipts.ToListAsync(ct));
-        db.DebtQuickReceipts.RemoveRange(await db.DebtQuickReceipts.ToListAsync(ct));
-        db.Invoices.RemoveRange(await db.Invoices.ToListAsync(ct));
-        db.TankDips.RemoveRange(await db.TankDips.ToListAsync(ct));
-        db.TankerUnloads.RemoveRange(await db.TankerUnloads.ToListAsync(ct));
-        db.RateHistory.RemoveRange(await db.RateHistory.ToListAsync(ct));
-        db.StaffShortSettles.RemoveRange(await db.StaffShortSettles.ToListAsync(ct));
-        db.Cameras.RemoveRange(await db.Cameras.ToListAsync(ct));
-        await db.SaveChangesAsync(ct);
+        await db.DebtRows.ExecuteDeleteAsync(ct);
+        await db.DebtAccounts.ExecuteDeleteAsync(ct);
+        await db.Debtors.ExecuteDeleteAsync(ct);
+
+        await db.CompanyRows.ExecuteDeleteAsync(ct);
+        await db.TilCompanies.ExecuteDeleteAsync(ct);
+
+        await db.WaraqPumps.ExecuteDeleteAsync(ct);
+        await db.WaraqTransactions.ExecuteDeleteAsync(ct);
+        await db.WaraqShifts.ExecuteDeleteAsync(ct);
+        await db.WaraqEntries.ExecuteDeleteAsync(ct);
+
+        await db.AmanatRows.ExecuteDeleteAsync(ct);
+        await db.AmanatAccounts.ExecuteDeleteAsync(ct);
+
+        await db.Attendance.ExecuteDeleteAsync(ct);
+        await db.SalaryPayments.ExecuteDeleteAsync(ct);
+        await db.StaffMembers.ExecuteDeleteAsync(ct);
+
+        // پارچه کلیدِ شیفت را نگه می‌دارد، پس اول پارچه بعد شیفت
+        await db.Reports.ExecuteDeleteAsync(ct);
+        await db.ShiftDataSet.ExecuteDeleteAsync(ct);
+
+        await db.FuelPurchases.ExecuteDeleteAsync(ct);
+        await db.SafeEntries.ExecuteDeleteAsync(ct);
+        await db.ExchangeRows.ExecuteDeleteAsync(ct);
+        await db.Expenses.ExecuteDeleteAsync(ct);
+        await db.RetailRows.ExecuteDeleteAsync(ct);
+        await db.ExtraIncomes.ExecuteDeleteAsync(ct);
+        await db.ParchaReceipts.ExecuteDeleteAsync(ct);
+        await db.DebtQuickReceipts.ExecuteDeleteAsync(ct);
+        await db.Invoices.ExecuteDeleteAsync(ct);
+        await db.TankDips.ExecuteDeleteAsync(ct);
+        await db.TankerUnloads.ExecuteDeleteAsync(ct);
+        await db.RateHistory.ExecuteDeleteAsync(ct);
+        await db.StaffShortSettles.ExecuteDeleteAsync(ct);
+        await db.Cameras.ExecuteDeleteAsync(ct);
     }
 
     private static void Write(Persistence.PumpDbContext db, LegacyBundle b)
