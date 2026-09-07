@@ -1,0 +1,28 @@
+name: سنجشِ کاراییِ جدول‌ها
+
+# ══ چرا این ورک‌فلو هست ══════════════════════════════════════════════════════
+# خواستهٔ صریحِ صاحب ریپو: «عملکرد باید واقعاً آزمایش شود، نه اینکه فقط در کد
+# ادعا شود». پس با ۱۰۰۰ تا یک میلیون ردیف، جدولِ واقعی در پنجرهٔ واقعی ساخته
+# می‌شود و شمرده می‌شود که چند ردیفِ زنده در درختِ بصری هست.
+#
+# اگر روزی کسی سقفِ ارتفاعِ جدول را بردارد، مجازی‌سازی می‌میرد و همین‌جا
+# قرمز می‌شود — نه شش ماه بعد روی کامپیوترِ کاربر.
+on:
+  workflow_dispatch:
+  push:
+    branches-ignore: [main]
+    paths:
+      - 'native/**'
+      - '.github/workflows/grid-perf.yml'
+
+jobs:
+  perf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: سنجش
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- gridperf
