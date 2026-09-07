@@ -6,7 +6,7 @@
              x:DataType="vm:DebtReceiptSectionViewModel">
 
   <c:SectionPage>
-    <c:SectionPage.Header>رسید قرض‌داران</c:SectionPage.Header>
+    <c:SectionPage.Header>رسید قرض‌داران / چکنه</c:SectionPage.Header>
 
     <c:SectionPage.Toolbar>
       <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
@@ -81,13 +81,8 @@
             </DataGrid.Columns>
           </c:ExcelGrid>
 
-          <Border Grid.Row="2" Padding="12,8" Background="{DynamicResource Pump.Dark}">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <TextBlock Text="جملهٔ ماه:" FontWeight="Bold" />
-              <TextBlock Text="{Binding TotalText}" FontWeight="Bold"
-                         Foreground="{DynamicResource Pump.Ok}" />
-            </StackPanel>
-          </Border>
+          <!-- ردیفِ «جمله» — همان نوارِ یکسانِ همهٔ جدول‌های برنامه -->
+          <c:TotalsBar Grid.Row="2" Title="🧮 جملهٔ ماه" ItemsSource="{Binding TotalCells}" />
         </Grid>
       </Border>
     </StackPanel>

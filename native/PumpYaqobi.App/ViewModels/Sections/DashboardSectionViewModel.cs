@@ -219,11 +219,15 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
         Render();
     }
 
+    /// <summary>
+    /// لینک‌های داشبورد. شناسه می‌تواند زیربخش هم باشد (مثلاً ‎oldloans‎)، پس
+    /// از ‎GoByIdAsync‎ می‌رود که هر دو را می‌شناسد — نه از جست‌وجوی دستی در
+    /// ‎Sections‎ که فقط هجده بخشِ نوار را دارد.
+    /// </summary>
     [RelayCommand] private void Go(string? section)
     {
         if (string.IsNullOrEmpty(section)) return;
-        var s = _main.Sections.FirstOrDefault(x => x.Id == section);
-        if (s is not null) _ = _main.GoAsync(s);
+        _ = _main.GoByIdAsync(section);
     }
 
     /// <summary>زنگِ بالا — همان ‎dashBellClick‎: فهرستِ هشدارها در یک پیام.</summary>

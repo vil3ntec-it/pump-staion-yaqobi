@@ -1,6 +1,7 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:c="using:PumpYaqobi.App.Controls">
+        xmlns:c="using:PumpYaqobi.App.Controls"
+        xmlns:th="using:PumpYaqobi.App.Themes">
   <Styles.Resources>
     <!-- فونتِ برنامه + پشتیبانِ ایموجیِ سیستم. Vazirmatn ایموجی ندارد؛ روی
          ویندوز «Segoe UI Emoji» و روی لینوکس «Noto Color Emoji» جایش را پر
@@ -152,6 +153,29 @@
   <Style Selector="Button.danger">
     <Setter Property="Foreground" Value="{DynamicResource Pump.Danger}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.Danger}" />
+  </Style>
+
+  <!-- ══ کارتِ لینکِ زیربخش — ‎.tool-link-card‎ نسخهٔ وب ══════════════════════
+       نوشته سمتِ راست، فلشِ «‹» سمتِ چپ، و کلِ کارت کلیک‌پذیر. همان کادری که
+       در سایت «قرض‌های کهنه»، «تخلیهٔ تانکر»، «گزارش پایان ماه»، «تاریخچهٔ نرخ»،
+       «حساب‌های چکنه» و «مدیریت داده‌ها» را باز می‌کند.
+
+       ‎min-height:44px‎ و ‎border-radius:11px‎ از خودِ CSS برداشته شده‌اند. -->
+  <Style Selector="Button.tool-link">
+    <Setter Property="Background" Value="{DynamicResource Pump.Dark}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="11" />
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Button.tool-link:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Pump.Hover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="TextBlock.Foreground" Value="{DynamicResource Pump.Accent}" />
   </Style>
 
   <!-- دکمه‌های ناوبری -->
@@ -328,19 +352,54 @@
             </Border>
 
             <!-- ══ بدنهٔ کادر ══ -->
-            <Grid Grid.Row="1" RowDefinitions="Auto,Auto,Auto,Auto" Margin="14">
+            <!-- ردیفِ اول تازه است: کارت‌های زیربخش. بقیه همان چهارتای
+                 همیشگی‌اند و همه ‎Auto‎ می‌مانند — با اسکرولِ واحدِ کلِ صفحه،
+                 بخش باید به اندازهٔ محتوایش بلند شود، نه به اندازهٔ قاب. -->
+            <Grid Grid.Row="1" RowDefinitions="Auto,Auto,Auto,Auto,Auto" Margin="14">
 
-                <Border Grid.Row="0" Classes="panel" Padding="12,9" Margin="0,0,0,12"
+              <!-- ══ کارت‌های زیربخش ══════════════════════════════════════
+                   بخشی که زیربخش دارد (قرض‌داران، مخزن، مفاد/ضرر، تنظیمات،
+                   رسید قرض‌داران، حاضری) کارت‌هایشان همین بالا می‌آیند — مثلِ
+                   ‎.tool-link-card‎ نسخهٔ وب. بخشی که ندارد، این ردیف را
+                   اصلاً نمی‌بیند.
+
+                   ‎x:CompileBindings="False"‎ لازم است: داخلِ ControlTemplate
+                   نوعِ DataContext معلوم نیست، و این‌جا DataContext همان
+                   ViewModelِ بخش است که به SectionPage رسیده. -->
+              <ItemsControl Grid.Row="0" x:CompileBindings="False"
+                            ItemsSource="{Binding SubSections}"
+                            IsVisible="{Binding ShowSubLinkCards, FallbackValue=False}"
+                            Margin="0,0,0,12">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:CompileBindings="False">
+                    <Button Classes="tool-link" Margin="0,0,10,8" MinWidth="230"
+                            Command="{Binding ParentSection.ShowSubCommand}"
+                            CommandParameter="{Binding}">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0" Text="{Binding LinkTitle}"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="1" Text="‹" FontSize="17" Margin="10,0,0,0"
+                                   VerticalAlignment="Center" Opacity="0.7" />
+                      </Grid>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+                <Border Grid.Row="1" Classes="panel" Padding="12,9" Margin="0,0,0,12"
                         IsVisible="{TemplateBinding Filters, Converter={x:Static ObjectConverters.IsNotNull}}">
                   <ContentPresenter Content="{TemplateBinding Filters}" />
                 </Border>
 
-                <ContentPresenter Grid.Row="1" Content="{TemplateBinding Summary}" Margin="0,0,0,12"
+                <ContentPresenter Grid.Row="2" Content="{TemplateBinding Summary}" Margin="0,0,0,12"
                                   IsVisible="{TemplateBinding Summary, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
-                <ContentPresenter Grid.Row="2" Content="{TemplateBinding Body}" />
+                <ContentPresenter Grid.Row="3" Content="{TemplateBinding Body}" />
 
-                <ContentPresenter Grid.Row="3" Content="{TemplateBinding Footer}" Margin="0,12,0,0"
+                <ContentPresenter Grid.Row="4" Content="{TemplateBinding Footer}" Margin="0,12,0,0"
                                   IsVisible="{TemplateBinding Footer, Converter={x:Static ObjectConverters.IsNotNull}}" />
             </Grid>
           </Grid>
@@ -717,4 +776,45 @@
   <Style Selector="ScrollBar">
     <Setter Property="Background" Value="Transparent" />
   </Style>
+
+  <!-- ══ ردیفِ «جمله»ی ته جدول ═══════════════════════════════════════════════
+       همتای ‎<tfoot class="xls-foot">‎ی سایت: نوارِ تیره‌تر با خطِ بالای پررنگ،
+       خانهٔ اولش «جمله» و بقیه جمعِ هر ستون. با ‎c:TotalsBar‎ زیرِ هر جدول
+       گذاشته می‌شود؛ هیچ‌وقت داخلِ خودِ جدول نمی‌رود (توضیحِ چرایی در
+       ‎Controls/TotalsBar.cs‎). -->
+  <Style Selector="c|TotalsBar">
+    <Setter Property="Margin" Value="0,-1,0,0" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{DynamicResource Pump.Panel}"
+                BorderBrush="{DynamicResource Pump.Border}"
+                BorderThickness="1,2,1,1"
+                CornerRadius="0,0,10,10" Padding="12,9">
+          <StackPanel Orientation="Horizontal" Spacing="18">
+            <TextBlock Text="{TemplateBinding Title}" FontWeight="ExtraBold" FontSize="14"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource Pump.Text}" />
+            <ItemsControl ItemsSource="{TemplateBinding ItemsSource}" x:CompileBindings="False">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <StackPanel Spacing="1" Margin="0,0,20,0" MinWidth="76">
+                    <TextBlock Text="{Binding Label}" FontSize="11"
+                               Foreground="{DynamicResource Pump.Muted}" />
+                    <TextBlock Text="{Binding Value}" FontWeight="ExtraBold" FontSize="14"
+                               Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
 </Styles>

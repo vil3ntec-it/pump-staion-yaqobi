@@ -55,7 +55,7 @@
       </Border>
 
       <Border Classes="panel" Padding="0">
-        <Grid RowDefinitions="Auto,*">
+        <Grid RowDefinitions="Auto,*,Auto">
           <Border Grid.Row="0" Classes="card-head">
             <TextBlock Text="تخلیه‌های ثبت‌شده" FontWeight="Bold"
                        Foreground="{DynamicResource Pump.Accent}" />
@@ -90,6 +90,9 @@
               </DataGridTemplateColumn>
             </DataGrid.Columns>
           </c:ExcelGrid>
+
+          <!-- ردیفِ «جمله» — بارنامه، تحویل و جمعِ کم‌آمد -->
+          <c:TotalsBar Grid.Row="2" ItemsSource="{Binding TotalCells}" />
         </Grid>
       </Border>
 

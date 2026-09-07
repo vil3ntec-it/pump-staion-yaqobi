@@ -171,3 +171,45 @@ public class DebtQuickReceipt : EntityBase
     /// <summary>کلیدِ ردیفی که این رسید در حسابِ قرض‌دار ساخته.</summary>
     public string SrcKey => "debtQuick|" + LegacyId;
 }
+
+/// <summary>
+/// ══ یک جدولِ آرشیوشدهٔ حساب — ‎acct.tableHistory[]‎ی سایت ═══════════════════
+///
+/// دکمهٔ «جدول جدید» (‎newPersonTable()‎) جدولِ فعلی را عکس می‌گیرد، همین‌جا
+/// می‌گذارد و جدولِ زنده را خالی می‌کند. پس این‌ها **عکسِ گذشته** هستند:
+///
+///   ⚠️ هرگز در هیچ جمعِ زنده‌ای شمرده نمی‌شوند. الباقی و سربرگِ حساب فقط از
+///     ردیف‌های زندهٔ همان حساب می‌آید — درست مثل سایت، که در آن هم
+///     ‎tableHistory‎ فقط برای دیدن است.
+///
+/// ردیف‌ها به‌صورت JSON نگه داشته می‌شوند، نه رکوردِ جدا: عکسِ گذشته نباید
+/// با ویرایشِ حسابِ زنده تکان بخورد، و کلیدِ خارجی به ردیف‌های زنده دقیقاً
+/// همان تکان را می‌داد. سایت هم ‎JSON.parse(JSON.stringify(rows))‎ می‌کند.
+/// </summary>
+public class DebtTableArchive : EntityBase
+{
+    /// <summary>حسابی که این جدول از آن آرشیو شده.</summary>
+    public long AccountId { get; set; }
+
+    /// <summary>تاریخِ شمسیِ آرشیو شدن (‎h.createdAt‎).</summary>
+    public string? CreatedShamsi { get; set; }
+
+    /// <summary>واحدِ همان لحظه — ‎h.unitMode‎. عکس با واحدِ خودش می‌ماند.</summary>
+    public bool IsMoney { get; set; }
+
+    public decimal? PercentPetrol { get; set; }
+    public decimal? PercentDiesel { get; set; }
+    public decimal RasidFuelPetrol { get; set; }
+    public decimal RasidFuelDiesel { get; set; }
+    public decimal RasidMoneyPetrol { get; set; }
+    public decimal RasidMoneyDiesel { get; set; }
+
+    /// <summary>توضیحاتِ حساب در همان لحظه (‎h.note‎).</summary>
+    public string? Note { get; set; }
+
+    /// <summary>عکسِ ردیف‌ها — آرایهٔ JSONِ ‎DebtRow‎.</summary>
+    public string RowsJson { get; set; } = "[]";
+
+    /// <summary>شمارِ ردیف‌ها، تا فهرست بی باز کردنِ JSON هم عدد داشته باشد.</summary>
+    public int RowCount { get; set; }
+}

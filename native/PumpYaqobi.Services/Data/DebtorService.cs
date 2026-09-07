@@ -178,6 +178,94 @@ public sealed class DebtorService
         await db.SaveChangesAsync(ct);
     }
 
+    // ══ جدول‌های آرشیو — ‎newPersonTable()‎ و ‎acct.tableHistory‎ ═══════════════
+    //
+    // «جدول جدید» جدولِ زنده را عکس می‌گیرد، در آرشیو می‌گذارد و جدول را خالی
+    // می‌کند. دو نکتهٔ حساس، هر دو از خودِ سایت:
+    //
+    //   • فقط **دفترِ واحدِ فعال** پاک می‌شود. دفترِ آن‌یکی واحد (پول یا تیل)
+    //     دست‌نخورده می‌ماند — دو دفترِ کاملاً جدا هستند.
+    //   • رسیدهای سربرگ هم صفر می‌شوند، چون با همان جدول رفتند. اگر نمی‌شدند،
+    //     رسیدِ جدولِ آرشیوشده روی جدولِ نو دوباره شمرده می‌شد.
+
+    private static readonly System.Text.Json.JsonSerializerOptions ArchiveJson =
+        new() { WriteIndented = false };
+
+    /// <summary>عکس گرفتن از جدولِ زنده و خالی کردنِ آن — ‎newPersonTable()‎.</summary>
+    public async Task<DebtTableArchive> ArchiveTableAsync(long accountId, string createdShamsi,
+                                                          CancellationToken ct = default)
+    {
+        _perm.Require(Permission.EditData);
+        await using var db = _dbf.Create();
+        var a = await db.DebtAccounts.Include(x => x.FuelRows).Include(x => x.MoneyRows)
+                        .FirstOrDefaultAsync(x => x.Id == accountId, ct)
+                ?? throw new InvalidOperationException("حساب پیدا نشد");
+
+        var money = a.Mode.IsMoney();
+        var rows = money ? a.MoneyRows : a.FuelRows;
+
+        var snap = new DebtTableArchive
+        {
+            AccountId = a.Id,
+            CreatedShamsi = createdShamsi,
+            IsMoney = money,
+            PercentPetrol = a.PercentPetrol ?? a.PercentLegacy,
+            PercentDiesel = a.PercentDiesel ?? a.PercentLegacy,
+            RasidFuelPetrol = a.RasidFuelPetrol,
+            RasidFuelDiesel = a.RasidFuelDiesel,
+            RasidMoneyPetrol = a.RasidMoneyPetrol,
+            RasidMoneyDiesel = a.RasidMoneyDiesel,
+            Note = a.Note,
+            RowCount = rows.Count,
+            RowsJson = System.Text.Json.JsonSerializer.Serialize(rows, ArchiveJson),
+        };
+        db.DebtTableArchives.Add(snap);
+
+        // ⚠️ فهرستِ ناوبری عمداً پاک نمی‌شود: ردیف‌ها همین حالا «حذف‌شده» علامت
+        // خورده‌اند و دست زدن به ناوبری، EF را به‌جای حذف به «قطعِ رابطه»
+        // می‌اندازد (کلیدِ خارجی null و خطای NOT NULL).
+        db.DebtRows.RemoveRange(rows);
+        if (money) { a.RasidMoneyPetrol = 0m; a.RasidMoneyDiesel = 0m; }
+        else { a.RasidFuelPetrol = 0m; a.RasidFuelDiesel = 0m; }
+        a.Note = null;
+
+        await db.SaveChangesAsync(ct);
+        return snap;
+    }
+
+    /// <summary>فهرستِ جدول‌های آرشیوِ یک حساب — تازه‌ترین اول، مثل سایت.</summary>
+    public async Task<List<DebtTableArchive>> ListArchivesAsync(long accountId,
+                                                                CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        return await db.DebtTableArchives.AsNoTracking()
+            .Where(x => x.AccountId == accountId)
+            .OrderByDescending(x => x.Id).ToListAsync(ct);
+    }
+
+    /// <summary>ردیف‌های داخلِ یک آرشیو — فقط برای دیدن، بی کلید و بی ذخیره.</summary>
+    public static List<DebtRow> ArchiveRows(DebtTableArchive h)
+    {
+        try
+        {
+            var rows = System.Text.Json.JsonSerializer.Deserialize<List<DebtRow>>(h.RowsJson ?? "[]");
+            return rows ?? new List<DebtRow>();
+        }
+        catch { return new List<DebtRow>(); }
+    }
+
+    public async Task DeleteArchiveAsync(long archiveId, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.DeleteData);
+        await using var db = _dbf.Create();
+        var h = await db.DebtTableArchives.FirstOrDefaultAsync(x => x.Id == archiveId, ct);
+        if (h is null) return;
+        await _trash.RememberAsync(db, "debtarchive", h.CreatedShamsi ?? "", h, ct);
+        db.DebtTableArchives.Remove(h);
+        await db.SaveChangesAsync(ct);
+    }
+
     public async Task DeleteAccountAsync(long accountId, CancellationToken ct = default)
     {
         _perm.Require(Permission.DeleteData);

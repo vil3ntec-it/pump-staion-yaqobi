@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using PumpYaqobi.App.Controls;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
@@ -114,6 +115,20 @@ public sealed partial class SafeSectionViewModel : LedgerSectionViewModel<SafeRo
 
     /// <summary>جمع‌ها از همان سرویسِ آزمودهٔ لایهٔ Application می‌آیند.</summary>
     protected override void Recalc() => Summary = _calc.Summarize(Rows.Select(r => r.Entity));
+
+    /// <summary>
+    /// ردیفِ «جمله» — ⚠️ افغانی و دالر در دو خانهٔ جدا می‌مانند و هرگز با هم
+    /// جمع نمی‌شوند (همان قاعدهٔ سرویس: نرخ وارد حساب نمی‌شود).
+    /// </summary>
+    protected override IReadOnlyList<TotalCell> BuildTotals() => new[]
+    {
+        new TotalCell("بردگی (افغانی)", BardagiAfn, "Pump.Warn"),
+        new TotalCell("بردگی ($)", BardagiUsd, "Pump.Warn"),
+        new TotalCell("ماندگی (افغانی)", MandagiAfn, "Pump.Ok"),
+        new TotalCell("ماندگی ($)", MandagiUsd, "Pump.Ok"),
+        new TotalCell("خالص (افغانی)", NetAfn, Summary.Net.Afn < 0m ? "Pump.Danger" : "Pump.Ok"),
+        new TotalCell("خالص ($)", NetUsd, Summary.Net.Usd < 0m ? "Pump.Danger" : "Pump.Ok"),
+    };
 
     /// <summary>‎printSafe(monthKey)‎ — ورقِ همین ماه، همان‌طور که روی صفحه است.</summary>
     [RelayCommand]

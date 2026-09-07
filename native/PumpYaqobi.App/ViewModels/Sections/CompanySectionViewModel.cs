@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using PumpYaqobi.App.Controls;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
@@ -8,6 +9,7 @@ using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
 using PumpYaqobi.Reporting.Pdf;
+using PumpYaqobi.Services.Data;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -161,7 +163,24 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
         AlbaqiAfn = Shamsi.Money(Math.Round(s.AlbaqiAfn, 2));
         AlbaqiUsd = Shamsi.Money(Math.Round(s.AlbaqiUsd, 2));
         ConvRate = Shamsi.Money(Math.Round(s.ConvRate, 4));
+        _albaqiAfnRaw = s.AlbaqiAfn;
+        OnPropertyChanged(nameof(TotalCells));
     }
+
+    private decimal _albaqiAfnRaw;
+
+    /// <summary>
+    /// ردیفِ «جمله»ی ته دفترِ همین شرکت — همتای ‎&lt;tfoot class="xls-foot"&gt;‎ی
+    /// سایت. ⚠️ دو دفترِ پطرول و دیزل جدا هستند و «جمله» هم فقط مالِ دفترِ باز.
+    /// </summary>
+    public IReadOnlyList<TotalCell> TotalCells => new[]
+    {
+        new TotalCell("کلِ دالر", TotalUsd),
+        new TotalCell("کلِ افغانی", TotalAfn),
+        new TotalCell("رسید (افغانی)", PaidAfn, "Pump.Ok"),
+        new TotalCell("الباقیِ افغانی", AlbaqiAfn, _albaqiAfnRaw > 0m ? "Pump.Danger" : "Pump.Ok"),
+        new TotalCell("الباقیِ دالر", AlbaqiUsd, _albaqiAfnRaw > 0m ? "Pump.Danger" : "Pump.Ok"),
+    };
 
     public async Task SaveRowAsync(CompanyRow r)
     {
@@ -334,13 +353,13 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
     }
 
     [RelayCommand]
-    private async Task OpenAsync(CompanyCardViewModel? card)
+    private Task OpenAsync(CompanyCardViewModel? card) => CrashGuard.RunAsync("باز کردن حساب", async () =>
     {
         if (card is null) return;
         var full = await _host.Companies.LoadAsync(card.Entity.Id);
         if (full is null) return;
         Page = new CompanyPageViewModel(_host, full, this);
-    }
+    });
 
     [RelayCommand]
     private async Task BackAsync()
@@ -350,18 +369,43 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
         await RefreshAsync();
     }
 
-    /// <summary>«➕ افزودن شرکت» — نامِ تازه از کادرِ بالا یا از پرسشِ ساده.</summary>
+    /// <summary>
+    /// ══ «➕ افزودن شرکت» — مو‌به‌مو ‎confirmAddCompany()‎ ═══════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «بخشِ شرکت‌های تیل، می‌خواهم شرکتی اضافه کنم، از
+    /// برنامه می‌اندازد بیرون.» دو چیز درست شد:
+    ///
+    ///   ۱. <b>هیچ خطایی دیگر برنامه را نمی‌بندد.</b> کلِ کار داخلِ تورِ
+    ///      ‎CrashGuard‎ است؛ اگر چیزی شکست، پیامش پایینِ صفحه می‌آید و دفترِ
+    ///      باز سرِ جایش می‌ماند. (تورِ سراسری هم در ‎Program.Main‎ هست.)
+    ///
+    ///   ۲. <b>نامِ تکراری حسابِ دوم نمی‌سازد.</b> نسخهٔ وب با
+    ///      ‎_findCompanyByName‎ می‌گردد و اگر پیدا شد، همان حساب را باز
+    ///      می‌کند و می‌گوید «این حساب از قبل وجود دارد». نیتیو کورکورانه
+    ///      اضافه می‌کرد و دو «ح قادر» کنارِ هم می‌نشست.
+    /// </summary>
     [RelayCommand]
-    private async Task AddCompanyAsync()
+    private Task AddCompanyAsync() => CrashGuard.RunAsync("افزودن شرکت", async () =>
     {
         var n = NewName.Trim();
-        if (n.Length == 0) n = await Dialogs.PromptAsync("افزودن شرکت", "نامِ شرکت:") ?? "";
-        n = n.Trim();
-        if (n.Length == 0) return;
+        if (n.Length == 0) n = (await Dialogs.PromptAsync("افزودن شرکت", "نامِ شرکت:") ?? "").Trim();
+        if (n.Length == 0) { _host.Toast("نام شرکت را وارد کنید", ToastKind.Error); return; }
+
+        var all = await _host.Companies.ListAsync();
+        if (CompanyDataService.FindByName(all, n) is { } existing)
+        {
+            NewName = "";
+            _host.Toast("این حساب از قبل وجود دارد — همان حساب باز شد", ToastKind.Warn);
+            await RefreshAsync();
+            await OpenAsync(Cards.FirstOrDefault(c => c.Entity.Id == existing.Id));
+            return;
+        }
+
         await _host.Companies.AddAsync(n);
         NewName = "";
         await RefreshAsync();
-    }
+        _host.Toast("✅ شرکت افزوده شد", ToastKind.Ok);
+    });
 
     /// <summary>«🔍 جستجوی خرید» — گشتن در ردیف‌های خریدِ همهٔ شرکت‌ها.</summary>
     [RelayCommand]
@@ -382,10 +426,14 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
     }
 
     [RelayCommand]
-    private async Task DeleteCompanyAsync(CompanyCardViewModel? card)
-    {
-        if (card is null) return;
-        await _host.Companies.DeleteAsync(card.Entity.Id);
-        await RefreshAsync();
-    }
+    private Task DeleteCompanyAsync(CompanyCardViewModel? card) =>
+        CrashGuard.RunAsync("حذف شرکت", async () =>
+        {
+            if (card is null) return;
+            if (!await Dialogs.ConfirmAsync("حذف شرکت",
+                    "این شرکت و همه ردیف‌های آن حذف شود؟")) return;
+            await _host.Companies.DeleteAsync(card.Entity.Id);
+            await RefreshAsync();
+            _host.Toast("🗑️ حذف شد", ToastKind.Warn);
+        });
 }

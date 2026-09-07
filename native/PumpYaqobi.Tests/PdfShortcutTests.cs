@@ -75,7 +75,10 @@ public class PdfShortcutTests
     {
         var src = File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Services", "Shortcuts.cs"));
         var i = src.IndexOf("ActivePage", StringComparison.Ordinal);
-        var j = src.IndexOf("_vm.Current }", StringComparison.Ordinal);
+        // «بخش» یعنی آن‌چه جلوی چشم است: ‎ActiveSection‎ (زیربخشِ باز، وگرنه
+        // خودِ بخش). پیش از این ‎_vm.Current‎ بود و با آمدنِ زیربخش‌ها،
+        // ‎Ctrl+P‎ روی «قرض‌های کهنه» ورقِ «قرض‌داران» را می‌داد.
+        var j = src.IndexOf("_vm.ActiveSection }", StringComparison.Ordinal);
         Assert.True(i >= 0 && j > i, "ترتیبِ «صفحهٔ باز، بعد بخش» در ‎TryPdf‎ پیدا نشد");
     }
 }

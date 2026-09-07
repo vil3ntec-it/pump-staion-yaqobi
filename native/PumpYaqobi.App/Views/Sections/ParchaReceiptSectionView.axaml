@@ -21,7 +21,9 @@
       <TextBlock Text="رسیدی ثبت نشده — «➕ ردیف» را بزنید" Classes="muted"
                  HorizontalAlignment="Center" Margin="0,40,0,0" IsVisible="{Binding IsEmpty}" />
 
-      <c:ExcelGrid ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False"
+      <!-- جدول + ردیفِ «جمله» -->
+      <Grid RowDefinitions="*,Auto">
+      <c:ExcelGrid Grid.Row="0" ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False"
                    IsVisible="{Binding !IsEmpty}">
         <DataGrid.Columns>
           <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" IsReadOnly="True" />
@@ -59,6 +61,8 @@
           </DataGridTemplateColumn>
         </DataGrid.Columns>
       </c:ExcelGrid>
+      <c:TotalsBar Grid.Row="1" ItemsSource="{Binding TotalCells}" />
+      </Grid>
     </Panel>
   </c:SectionPage>
 </UserControl>

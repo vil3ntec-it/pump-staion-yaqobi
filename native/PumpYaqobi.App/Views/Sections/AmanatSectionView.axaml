@@ -139,7 +139,9 @@
         </UniformGrid>
       </c:SectionPage.Filters>
 
-      <c:ExcelGrid ItemsSource="{Binding Rows}">
+      <!-- جدول + ردیفِ «جمله»ی همین حساب (حساب‌ها با هم جمع نمی‌شوند) -->
+      <Grid RowDefinitions="*,Auto">
+      <c:ExcelGrid Grid.Row="0" ItemsSource="{Binding Rows}">
         <DataGrid.Columns>
           <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
           <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="Auto" MinWidth="150" MaxWidth="320" />
@@ -166,6 +168,8 @@
           </DataGridTemplateColumn>
         </DataGrid.Columns>
       </c:ExcelGrid>
+      <c:TotalsBar Grid.Row="1" ItemsSource="{Binding TotalCells}" />
+      </Grid>
     </c:SectionPage>
     </Panel>
   </Panel>

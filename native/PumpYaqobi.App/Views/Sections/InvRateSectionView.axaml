@@ -1,0 +1,115 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
+             x:Class="PumpYaqobi.App.Views.Sections.InvRateSectionView"
+             x:DataType="vm:InvRateSectionViewModel">
+
+  <!-- ══ 📉 مقایسهٔ نرخ فاکتورها ══════════════════════════════════════════════
+       همان ‎#sec-invrate‎ی نسخهٔ وب: شش کادرِ خلاصه، سه دکمهٔ فیلتر، و جدولی که
+       فیِ خودِ فاکتور را با نرخِ اتحادیهٔ روزِ تایید می‌سنجد.
+       فاکتورِ در صف فقط پیش‌نمایش است و در هیچ جمعی نیست. -->
+  <c:SectionPage Header="📉 فیِ فاکتور در برابر نرخِ اتحادیهٔ روزِ تایید"
+                 SubHeader="هر ردیف فیِ خودِ فاکتور را با نرخِ اتحادیهٔ روزی که تاییدش کردید می‌سنجد. «تفاوت هر لیتر» مثبت یعنی تیل تا روزِ تایید گران‌تر شده (زیان) و منفی یعنی ارزان‌تر شده (مفاد).">
+
+    <c:SectionPage.Toolbar>
+      <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+        <Button Classes="seg" Content="📋 همه" Command="{Binding SetFilterCommand}"
+                CommandParameter="all" Classes.on="{Binding IsAll}" />
+        <Button Classes="seg" Content="🔴 زیان" Command="{Binding SetFilterCommand}"
+                CommandParameter="loss" Classes.on="{Binding IsLoss}" />
+        <Button Classes="seg" Content="🟢 مفاد" Command="{Binding SetFilterCommand}"
+                CommandParameter="gain" Classes.on="{Binding IsGain}" />
+      </StackPanel>
+    </c:SectionPage.Toolbar>
+
+    <StackPanel Spacing="10">
+
+      <c:AutoFillPanel MinItemWidth="220" Gap="8">
+        <Border Classes="stat">
+          <StackPanel Spacing="3">
+            <TextBlock Text="فاکتورهای سنجیده‌شده" Classes="label" />
+            <TextBlock Text="{Binding CountText}" Classes="num"
+                       Foreground="{DynamicResource Pump.Info}" />
+          </StackPanel>
+        </Border>
+        <Border Classes="stat">
+          <StackPanel Spacing="3">
+            <TextBlock Text="مجموع لیتر" Classes="label" />
+            <TextBlock Text="{Binding LitersText}" Classes="num"
+                       Foreground="{DynamicResource Pump.Accent}" />
+          </StackPanel>
+        </Border>
+        <Border Classes="stat">
+          <StackPanel Spacing="3">
+            <TextBlock Text="زیان اختلاف نرخ" Classes="label" />
+            <TextBlock Text="{Binding LossText}" Classes="num"
+                       Foreground="{DynamicResource Pump.Danger}" />
+          </StackPanel>
+        </Border>
+        <Border Classes="stat">
+          <StackPanel Spacing="3">
+            <TextBlock Text="مفاد اختلاف نرخ" Classes="label" />
+            <TextBlock Text="{Binding GainText}" Classes="num"
+                       Foreground="{DynamicResource Pump.Ok}" />
+          </StackPanel>
+        </Border>
+        <Border Classes="stat">
+          <StackPanel Spacing="3">
+            <TextBlock Text="خالص (زیان − مفاد)" Classes="label" />
+            <TextBlock Text="{Binding NetText}" Classes="num"
+                       Foreground="{Binding NetBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+          </StackPanel>
+        </Border>
+        <Border Classes="stat">
+          <StackPanel Spacing="3">
+            <TextBlock Text="در صفِ تایید (بی‌جمع)" Classes="label" />
+            <TextBlock Text="{Binding PendingText}" Classes="num"
+                       Foreground="{DynamicResource Pump.Muted}" />
+          </StackPanel>
+        </Border>
+      </c:AutoFillPanel>
+
+      <Border Classes="panel" Padding="0">
+        <c:ExcelGrid ItemsSource="{Binding Rows}" x:CompileBindings="False"
+                     IsReadOnly="True" BorderThickness="0" CornerRadius="0">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="#" Binding="{Binding IndexText}" Width="Auto" />
+            <DataGridTextColumn Header="شماره فاکتور" Binding="{Binding NumberText}" Width="Auto" />
+            <DataGridTextColumn Header="تاریخ" Binding="{Binding DateText}" Width="Auto" MinWidth="110" />
+            <DataGridTextColumn Header="مشتری" Binding="{Binding CustomerText}" Width="Auto" MinWidth="150" MaxWidth="320" />
+            <DataGridTextColumn Header="نوع تیل" Binding="{Binding FuelText}" Width="Auto" />
+            <DataGridTextColumn Header="لیتر" Binding="{Binding LitersText}" Width="Auto" />
+            <DataGridTextColumn Header="فیِ فاکتور — روزِ ثبت" Binding="{Binding RcText}" Width="Auto" />
+            <DataGridTextColumn Header="نرخ اتحادیه — روزِ تایید" Binding="{Binding RaText}" Width="Auto" />
+            <DataGridTemplateColumn Header="تفاوت هر لیتر" Width="Auto">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding DplText}" FontWeight="Bold" VerticalAlignment="Center"
+                             Foreground="{Binding DiffBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTemplateColumn Header="تفاوت کل" Width="Auto">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding TotalText}" FontWeight="Bold" VerticalAlignment="Center"
+                             Foreground="{Binding DiffBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTextColumn Header="حال" Binding="{Binding NoteText}" Width="Auto" MinWidth="180" />
+          </DataGrid.Columns>
+        </c:ExcelGrid>
+      </Border>
+
+      <!-- ردیفِ «جمله» — همان جمع‌های ‎_invRateTotals()‎ -->
+      <c:TotalsBar ItemsSource="{Binding TotalCells}" IsVisible="{Binding !IsEmpty}" />
+
+      <TextBlock Text="هنوز فاکتوری ثبت نشده — این صفحه با اولین فاکتور پر می‌شود."
+                 Classes="label" IsVisible="{Binding IsEmpty}"
+                 HorizontalAlignment="Center" Margin="0,10" />
+    </StackPanel>
+  </c:SectionPage>
+</UserControl>

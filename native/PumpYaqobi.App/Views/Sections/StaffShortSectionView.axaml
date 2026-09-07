@@ -86,16 +86,8 @@
             </DataGrid.Columns>
           </c:ExcelGrid>
 
-          <Border Grid.Row="2" Padding="12,8" Background="{DynamicResource Pump.Dark}">
-            <StackPanel Orientation="Horizontal" Spacing="14">
-              <TextBlock Text="جملهٔ کمبودی:" FontWeight="Bold" />
-              <TextBlock Text="{Binding TotalShort}" FontWeight="Bold"
-                         Foreground="{DynamicResource Pump.Danger}" />
-              <TextBlock Text="جملهٔ اضافی:" FontWeight="Bold" />
-              <TextBlock Text="{Binding TotalExcess}" FontWeight="Bold"
-                         Foreground="{DynamicResource Pump.Ok}" />
-            </StackPanel>
-          </Border>
+          <!-- ردیفِ «جمله» — همان نوارِ یکسانِ همهٔ جدول‌های برنامه -->
+          <c:TotalsBar Grid.Row="2" ItemsSource="{Binding TotalCells}" />
         </Grid>
       </Border>
 

@@ -54,6 +54,7 @@ public sealed partial class MainViewModel : ObservableObject
         };
 
         Sections = new ObservableCollection<SectionViewModel>(BuildSections(AppHost.Current));
+        AttachSubSections(AppHost.Current);
         Themes = new ObservableCollection<PumpTheme>(PumpTheme.All);
         _selectedTheme = PumpTheme.ById(_settings.ThemeId);
 
@@ -79,6 +80,32 @@ public sealed partial class MainViewModel : ObservableObject
     public ObservableCollection<PumpTheme> Themes { get; }
 
     [ObservableProperty] private SectionViewModel? _current;
+
+    /// <summary>
+    /// چیزی که ناحیهٔ محتوا نشان می‌دهد — خودِ بخش، یا زیربخشِ بازش.
+    /// جدا از ‎Current‎ است تا با بسته شدنِ زیربخش، بخش دوباره ساخته نشود.
+    /// </summary>
+    [ObservableProperty] private SectionViewModel? _content;
+
+    /// <summary>زیربخشی باز است ⇒ نوارِ «‹ برگشت» بالای صفحه بیاید.</summary>
+    public bool IsSubOpen => Current?.OpenSub is not null;
+
+    /// <summary>
+    /// ══ سربرگ و نوارها، وقتی حسابی باز است ═══════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «تو بخش‌هایی مثل قرض‌داران، تیل امانت، شرکت‌ها و ورق
+    /// آن سربرگ و بخش‌های بالا را نشان می‌دهد، ولی وقتی وارد یک حسابِ قرض‌دار
+    /// یا امانت یا شرکت می‌شوی نباید دیده شوند، چون جا می‌گیرند.»
+    ///
+    /// در سایت هم دقیقاً همین است: ‎#personModal .modal‎ صریحاً
+    /// ‎width:100%;height:100%‎ می‌گیرد و روی سربرگ و نوارِ آمار و نوارِ بخش‌ها
+    /// می‌افتد. پس این‌جا هم با باز شدنِ حسابِ درونِ بخش، هر سه می‌روند و کلِ
+    /// پنجره مالِ خودِ حساب می‌شود.
+    /// </summary>
+    public bool IsChromeVisible => Content?.IsPageOpen != true;
+
+    /// <summary>نوشتهٔ دکمهٔ برگشت — «‹ برگشت به قرض‌داران».</summary>
+    public string BackText => "‹ برگشت به " + (Current?.Title ?? "");
     [ObservableProperty] private PumpTheme _selectedTheme;
     [ObservableProperty] private string _clock = "";
     [ObservableProperty] private bool _isLocked = true;
@@ -119,7 +146,13 @@ public sealed partial class MainViewModel : ObservableObject
     /// اگر باز نباشد، خودِ بخش. هیچ جدولِ دیگری دست نمی‌خورد.
     /// </summary>
     public IRowBatchHost? RowHost =>
-        Current?.ActivePage as IRowBatchHost ?? Current as IRowBatchHost;
+        ActiveSection?.ActivePage as IRowBatchHost ?? ActiveSection as IRowBatchHost;
+
+    /// <summary>
+    /// بخشی که واقعاً جلوی چشمِ کاربر است: اگر زیربخشی باز باشد همان، وگرنه
+    /// خودِ بخش. میانبرها و «جدولِ فعال» باید همین را ببینند، نه بخشِ پشتِ آن.
+    /// </summary>
+    public SectionViewModel? ActiveSection => Current?.OpenSub ?? Current;
 
     /// <summary>پیام‌های کوتاهِ پایینِ صفحه.</summary>
     public Services.ToastService Toasts => AppHost.Current.Toasts;
@@ -149,18 +182,101 @@ public sealed partial class MainViewModel : ObservableObject
         // روی همان لحظهٔ بارِ اول می‌ماندند.
         if (ReferenceEquals(s, Current))
         {
+            // زدنِ دکمهٔ بخشِ باز یعنی «از اول» — پس اگر زیربخشی باز مانده،
+            // بسته می‌شود. وگرنه کاربر روی «قرض‌داران» می‌زد و باز هم صفحهٔ
+            // «قرض‌های کهنه» جلویش می‌ماند.
+            s.OpenSub = null;
             await s.OnActivatedAsync();
             await RefreshBannerAsync();
             return;
         }
-        if (Current is not null) { Current.IsActive = false; Current.OnDeactivated(); }
+        if (Current is not null)
+        {
+            Current.PropertyChanged -= OnSectionPropertyChanged;
+            Current.IsActive = false;
+            Current.OnDeactivated();
+        }
         s.IsActive = true;
         Current = s;                       // نمونه‌ها زنده می‌مانند: هیچ ساختِ دوباره‌ای نیست
+        s.PropertyChanged += OnSectionPropertyChanged;
+        SyncContent();
         _settings.LastSection = s.Id;
         _settings.Save();
         await s.EnsureLoadedAsync();
         await s.OnActivatedAsync();
         await RefreshBannerAsync();
+    }
+
+    /// <summary>
+    /// ══ رفتن به بخشی با شناسه ══════════════════════════════════════════════
+    /// همان ‎showSection('x')‎ی نسخهٔ وب — و درست مثلِ آن، شناسه می‌تواند
+    /// زیربخش هم باشد («oldloans»، «monthreport»، «datamgmt»…). آن‌وقت اول
+    /// بخشِ میزبان باز می‌شود و بعد زیربخش رویش.
+    ///
+    /// ⚠️ بی این، لینک‌های داشبورد که به زیربخش‌ها می‌روند بی‌صدا هیچ کاری
+    /// نمی‌کردند: فهرستِ ‎Sections‎ دیگر آن‌ها را ندارد.
+    /// </summary>
+    public async Task GoByIdAsync(string id)
+    {
+        if (Sections.FirstOrDefault(x => x.Id == id) is { } top) { await GoAsync(top); return; }
+
+        foreach (var parent in Sections)
+            if (parent.SubSections.FirstOrDefault(x => x.Id == id) is { } sub)
+            {
+                await GoAsync(parent);
+                parent.OpenSub = sub;
+                return;
+            }
+    }
+
+    /// <summary>
+    /// باز و بسته شدنِ زیربخش. ناحیهٔ محتوا عوض می‌شود و زیربخشِ تازه — مثلِ
+    /// خودِ بخش‌ها — بارِ اولش را همان لحظه می‌گیرد، نه در سازنده.
+    /// </summary>
+    private void OnSectionPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(SectionViewModel.OpenSub)) return;
+        SyncContent();
+        if (Current?.OpenSub is { } sub) _ = OpenSubAsync(sub);
+    }
+
+    /// <summary>بخشی که همین حالا محتوا است — تا باز و بسته شدنِ حسابش را بشنویم.</summary>
+    private SectionViewModel? _watchedContent;
+
+    private void OnContentPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SectionViewModel.IsPageOpen))
+            OnPropertyChanged(nameof(IsChromeVisible));
+    }
+
+    private async Task OpenSubAsync(SectionViewModel sub)
+    {
+        try
+        {
+            await sub.EnsureLoadedAsync();
+            await sub.OnActivatedAsync();
+        }
+        catch (Exception ex) { AppHost.Current.Toast("باز نشد: " + ex.Message, ToastKind.Error); }
+    }
+
+    private void SyncContent()
+    {
+        Content = Current?.OpenSub ?? Current;
+
+        if (!ReferenceEquals(_watchedContent, Content))
+        {
+            if (_watchedContent is not null)
+                _watchedContent.PropertyChanged -= OnContentPropertyChanged;
+            _watchedContent = Content;
+            if (_watchedContent is not null)
+                _watchedContent.PropertyChanged += OnContentPropertyChanged;
+        }
+
+        OnPropertyChanged(nameof(IsChromeVisible));
+        OnPropertyChanged(nameof(IsSubOpen));
+        OnPropertyChanged(nameof(BackText));
+        OnPropertyChanged(nameof(ActiveSection));
+        OnPropertyChanged(nameof(RowHost));
     }
 
     /// <summary>
@@ -176,18 +292,21 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     public async Task ReloadAllAsync()
     {
-        foreach (var s in Sections)
+        // زیربخش‌ها هم بخش‌اند و دادهٔ خودشان را دارند — اگر این‌جا از قلم
+        // بیفتند، «قرض‌های کهنه» بعد از بازگردانیِ بکاپ عددِ دیتابیسِ قبلی را
+        // نشان می‌دهد.
+        foreach (var s in Sections.Concat(Sections.SelectMany(x => x.SubSections)))
         {
             // بخشی که هرگز باز نشده، بارِ اولش را همان موقعِ ورودِ کاربر
             // می‌گیرد — این‌جا فقط باید «کهنه» علامت بخورد.
-            if (!s.IsLoaded || ReferenceEquals(s, Current)) continue;
+            if (!s.IsLoaded || ReferenceEquals(s, Content)) continue;
             s.IsLoaded = false;
         }
 
-        if (Current is not null)
+        if (Content is not null)
         {
-            try { await Current.ReloadAsync(); } catch { }
-            try { await Current.OnActivatedAsync(); } catch { }
+            try { await Content.ReloadAsync(); } catch { }
+            try { await Content.OnActivatedAsync(); } catch { }
         }
 
         await RefreshBannerAsync();
@@ -232,8 +351,6 @@ public sealed partial class MainViewModel : ObservableObject
         Banner[3].Value = M(expToday);
     }
 
-    /// <summary>ترتیبِ نوار، مو‌به‌مو مثلِ <c>&lt;div class="nav"&gt;</c> در نسخهٔ وب.</summary>
-    /// <summary>ترتیبِ نوار، مو‌به‌مو مثلِ <c>&lt;div class="nav"&gt;</c> در نسخهٔ وب.</summary>
     /// <summary>
     /// ══ ترتیبِ نوار — مو‌به‌مو همان هجده دکمهٔ ‎&lt;div class="nav"&gt;‎ ═══════════
     ///
@@ -243,17 +360,18 @@ public sealed partial class MainViewModel : ObservableObject
     /// «رسید قرض‌داران» را باز می‌کرد — و همین‌طور تا هجده. کاربری که سال‌ها با
     /// این میانبرها کار کرده، هر بار بخشِ اشتباه را می‌گرفت.
     ///
-    /// هجده‌تای اول، به همان ترتیبِ سایت:
-    ///
     ///   ۱ داشبورد · ۲ پارچه‌ها · ۳ ورق‌های روزانه · ۴ قرض‌داران ·
-    ///   ۵ ثبت فاکتورها · ۶ رسید قرض‌داران · ۷ صرافی · ۸ مصارف ·
+    ///   ۵ ثبت فاکتورها · ۶ رسید قرض‌داران / چکنه · ۷ صرافی · ۸ مصارف ·
     ///   ۹ رسید پارچه · ۱۰ گاوصندوق · ۱۱ تیل امانت · ۱۲ شرکت‌ها تیل ·
     ///   ۱۳ مخزن · ۱۴ دوربین‌ها · ۱۵ حاضری و معاش · ۱۶ مفاد/ضرر ·
     ///   ۱۷ تنظیمات · ۱۸ تاریخچه‌ها
     ///
-    /// بقیه بعد از این‌ها می‌آیند: در نسخهٔ وب این‌ها بخشِ سرصفحه‌ای نیستند و از
-    /// دلِ بخش‌های دیگر باز می‌شوند، ولی در نیتیو صفحهٔ خودشان را دارند. چون
-    /// بعد از هجدهمی نشسته‌اند، هیچ‌کدام از میانبرهای سایت را جابه‌جا نمی‌کنند.
+    /// ⚠️ <b>هجده‌تا و بس.</b> تا دیروز هفت بخشِ دیگر هم ته این فهرست بودند و
+    /// نوار بیست‌وپنج دکمه‌ای شده بود. آن هفت‌تا در سایت هم دکمهٔ نوار ندارند:
+    /// هر کدام کارتی داخلِ بخشِ دیگری‌اند. حالا این‌جا هم همان‌اند و در
+    /// <see cref="AttachSubSections"/> به بخشِ خودشان بسته می‌شوند. اگر
+    /// دوباره یکی‌شان را به این فهرست اضافه کنید، هم نوار شلوغ می‌شود هم
+    /// آزمونِ ترتیبِ نوار قرمز.
     /// </summary>
     private IEnumerable<SectionViewModel> BuildSections(AppHost host) => new SectionViewModel[]
     {
@@ -275,14 +393,37 @@ public sealed partial class MainViewModel : ObservableObject
         new ProfitSectionViewModel(host),            // ۱۶
         new SettingsSectionViewModel(host),          // ۱۷
         new HistorySectionViewModel(host),           // ۱۸
-
-        // ── بخش‌هایی که در سایت دکمهٔ سرصفحه ندارند ──
-        new RetailSectionViewModel(host),
-        new TankerSectionViewModel(host),
-        new StaffShortSectionViewModel(host),
-        new OldLoansSectionViewModel(host),
-        new MonthReportSectionViewModel(host),
-        new RateHistorySectionViewModel(host),
-        new DataSectionViewModel(host, this),
     };
+
+    /// <summary>
+    /// ══ هفت زیربخش، هر کدام زیرِ بخشِ خودش ══════════════════════════════════
+    ///
+    /// جای هر کدام از خودِ سایت آمده — همان‌جایی که ‎.tool-link-card‎ش نشسته:
+    ///
+    ///   مقایسهٔ نرخ      → ثبت فاکتورها            (‎sec-invoices‎)
+    ///   چکنه            → رسید قرض‌داران / چکنه   (‎sec-debtrasid‎)
+    ///   تخلیهٔ تانکر     → مخزن                    (‎sec-storage‎)
+    ///   کمبودی کارمندان → حاضری و معاش            (‎sec-attendance‎)
+    ///   قرض‌های کهنه     → قرض‌داران                (‎sec-debt‎)
+    ///   گزارش ماهانه    → مفاد / ضرر              (‎sec-profit‎)
+    ///   تاریخچهٔ نرخ     → مفاد / ضرر              (‎sec-profit‎)
+    ///   مدیریت داده‌ها   → تنظیمات                 (‎sec-settings‎)
+    ///
+    /// ⚠️ نمونه‌ها این‌جا ساخته می‌شوند، نه در ‎BuildSections‎ — وگرنه آزمونِ
+    /// ترتیبِ نوار (که تنِ ‎BuildSections‎ را می‌خواند) آن‌ها را هم دکمهٔ نوار
+    /// می‌شمارد.
+    /// </summary>
+    private void AttachSubSections(AppHost host)
+    {
+        SectionViewModel? By(string id) => Sections.FirstOrDefault(s => s.Id == id);
+
+        By("invoices")?.AddSub(new InvRateSectionViewModel(host),      "📉 مقایسهٔ نرخ فاکتورها");
+        By("debtrasid")?.AddSub(new RetailSectionViewModel(host),      "🧾 حساب‌های چکنه");
+        By("storage")?.AddSub(new TankerSectionViewModel(host),        "🚚 تخلیهٔ تانکر");
+        By("attendance")?.AddSub(new StaffShortSectionViewModel(host), "👷 کمبودی کارمندان");
+        By("debt")?.AddSub(new OldLoansSectionViewModel(host),         "⏰ قرض‌های کهنه");
+        By("profit")?.AddSub(new MonthReportSectionViewModel(host),    "📅 گزارش پایان ماه");
+        By("profit")?.AddSub(new RateHistorySectionViewModel(host),    "📈 تاریخچهٔ نرخ اتحادیه");
+        By("settings")?.AddSub(new DataSectionViewModel(host, this),   "🗂️ مدیریت داده‌ها");
+    }
 }

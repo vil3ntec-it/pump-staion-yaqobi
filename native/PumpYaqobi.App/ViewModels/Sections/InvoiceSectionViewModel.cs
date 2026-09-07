@@ -84,6 +84,17 @@ public sealed partial class InvoiceRowViewModel : RowViewModel
         }
     }
 
+    /// <summary>
+    /// جست‌وجوی فهرست — همان کادرِ «شماره فاکتور، نام مشتری، شماره تماس یا
+    /// تاریخ» نسخهٔ وب: هر چهار تا، نه فقط نام.
+    /// </summary>
+    public bool Matches(string q) =>
+        Number.ToString().Contains(q, StringComparison.Ordinal)
+        || Customer.Contains(q, StringComparison.OrdinalIgnoreCase)
+        || Phone.Contains(q, StringComparison.OrdinalIgnoreCase)
+        || DateShamsi.Contains(q, StringComparison.Ordinal)
+        || Vehicle.Contains(q, StringComparison.OrdinalIgnoreCase);
+
     /// <summary>‎.inv-chip‎ — «🟢 تایید شده» یا «🟡 در صف».</summary>
     public string ChipText => IsApproved ? "🟢 تایید شده" : "🟡 در صف";
     public string ChipBrushKey => IsApproved ? "Pump.Ok" : "Pump.Warn";
@@ -117,11 +128,26 @@ public sealed partial class InvoiceRowViewModel : RowViewModel
     protected override Task SaveAsync() => _owner.SaveAsync(_v);
 }
 
+/// <summary>حالتِ صفحهٔ بخش: فرم، فهرستِ در صف، فهرستِ تایید شده، یا یک فاکتور.</summary>
+public enum InvoicePane { Form, Pending, Approved, Detail }
+
 /// <summary>
 /// ══ بخشِ فاکتورها ═══════════════════════════════════════════════════════════
-/// ثبت، تایید و برگشتِ فاکتور. تایید، بخشِ پولی را به دفترِ پولِ حسابِ قرض‌دار و
-/// بخشِ تیل را به «مقدار رسیدِ تیل»ِ همان حساب می‌برد؛ برگشت دقیقاً همان را
-/// پس می‌گیرد.
+///
+/// بازنویسیِ کامل تا «عینِ سایت» شود — خواستهٔ صریحِ صاحب ریپو: «ببین بخش
+/// فاکتورها آن مدلی است، باید عینِ همان باشد بدون حتی یک ذره تفاوت.»
+///
+/// پیش از این نیتیو فقط یک فهرستِ ساده بود: دکمهٔ «فاکتورِ تازه» یک ردیفِ خالی
+/// می‌ساخت و کاربر باید همان‌جا پرش می‌کرد. در سایت اما بخش سه تکه است:
+///
+///   ۱. <b>برگهٔ رسمیِ فاکتور</b> (‎.invp‎) — نام مشتری، به نام دیگر، شمارهٔ
+///      خودکار، تاریخ، نوع تیل، فی، لیتر، نوع ماشین، «مبلغ بدون تیل»، شمارهٔ
+///      تماس، و «جمله کل» که زنده حساب می‌شود.
+///   ۲. <b>سه کارتِ آماری</b> — در صف، تایید شده، و مقایسهٔ نرخ.
+///   ۳. <b>صفحهٔ فهرست</b> با جست‌وجو، و صفحهٔ تمام‌صفحهٔ خودِ فاکتور.
+///
+/// جمله کل مو‌به‌مو ‎invCalcTotal()‎: اگر فی و لیتر باشند ‎فی × لیتر‎، به‌اضافهٔ
+/// «مبلغ بدون تیل». فاکتوری که فقط مبلغ دارد ‎by_money‎ است و لیتر ندارد.
 /// </summary>
 public sealed partial class InvoiceSectionViewModel : SectionViewModel
 {
@@ -130,69 +156,250 @@ public sealed partial class InvoiceSectionViewModel : SectionViewModel
     public InvoiceSectionViewModel(AppHost host) : base("invoices", "invoices", "ثبت فاکتورها")
         => _host = host;
 
+    /// <summary>
+    /// کارتِ «مقایسهٔ نرخ» جای خودش را در ردیفِ آماری دارد (کارتِ سوم)، پس
+    /// ردیفِ خودکارِ کارت‌های زیربخش این‌جا لازم نیست — وگرنه یک لینک دو بار
+    /// پیدا می‌شود و با سایت فرق می‌کند.
+    /// </summary>
+    protected override bool ShowSubLinks => false;
+
     public ObservableCollection<InvoiceRowViewModel> Rows { get; } = new();
 
     [ObservableProperty] private string _search = "";
-    [ObservableProperty] private bool _onlyPending;
     [ObservableProperty] private int _pendingCount;
     [ObservableProperty] private int _approvedCount;
 
-    partial void OnSearchChanged(string v) => _ = LoadAsync();
-    partial void OnOnlyPendingChanged(bool v) => _ = LoadAsync();
+    /// <summary>همان عددها با رقمِ فارسی و جداکنندهٔ هزار — مثلِ ‎n2fa‎ی سایت.</summary>
+    public string PendingText => Shamsi.Money(PendingCount);
+    public string ApprovedText => Shamsi.Money(ApprovedCount);
+
+    partial void OnPendingCountChanged(int v) => OnPropertyChanged(nameof(PendingText));
+    partial void OnApprovedCountChanged(int v) => OnPropertyChanged(nameof(ApprovedText));
+
+    /// <summary>خالصِ «مقایسهٔ نرخ» — عددِ کارتِ سوم، از خودِ همان زیربخش.</summary>
+    [ObservableProperty] private string _rateNetText = "0";
+
+    // ══ برگهٔ فاکتور ═══════════════════════════════════════════════════════
+    [ObservableProperty] private string _fCustomer = "";
+    [ObservableProperty] private string _fAlias = "";
+    [ObservableProperty] private string _fNumber = "";
+    [ObservableProperty] private string _fDate = "";
+    [ObservableProperty] private bool _fIsDiesel;
+    [ObservableProperty] private string _fPrice = "";
+    [ObservableProperty] private string _fLiters = "";
+    [ObservableProperty] private string _fVehicle = "";
+    [ObservableProperty] private string _fAmount = "";
+    [ObservableProperty] private string _fPhone = "";
+    [ObservableProperty] private string _fTotalText = "0 افغانی";
+    [ObservableProperty] private string _numberHint = "(اولین فاکتور — قابل تغییر)";
+
+    partial void OnFPriceChanged(string v) => CalcTotal();
+    partial void OnFLitersChanged(string v) => CalcTotal();
+    partial void OnFAmountChanged(string v) => CalcTotal();
+    partial void OnSearchChanged(string v) => ApplyFilter();
+
+    /// <summary>
+    /// ‎invCalcTotal()‎ — «جمله کل (فی × لیتر)» به‌اضافهٔ «مبلغ بدون تیل».
+    /// همان دو خطِ نسخهٔ وب، بی کم و زیاد.
+    /// </summary>
+    private void CalcTotal()
+    {
+        var total = Shamsi.Num(FPrice) * Shamsi.Num(FLiters) + Shamsi.Num(FAmount);
+        FTotalText = Shamsi.Money(Math.Round(total, 0, MidpointRounding.AwayFromZero)) + " افغانی";
+    }
+
+    // ══ کدام صفحه جلوی چشم است ══════════════════════════════════════════════
+    [ObservableProperty] private InvoicePane _pane = InvoicePane.Form;
+    [ObservableProperty] private InvoiceRowViewModel? _detail;
+
+    partial void OnPaneChanged(InvoicePane v)
+    {
+        foreach (var n in new[] { nameof(IsForm), nameof(IsList), nameof(IsDetail),
+                                  nameof(ListTitle), nameof(ListCountText) })
+            OnPropertyChanged(n);
+        IsPageOpen = v != InvoicePane.Form;
+        ApplyFilter();
+    }
+
+    public bool IsForm => Pane == InvoicePane.Form;
+    public bool IsList => Pane is InvoicePane.Pending or InvoicePane.Approved;
+    public bool IsDetail => Pane == InvoicePane.Detail;
+
+    public string ListTitle => Pane == InvoicePane.Approved
+        ? "🟢 فاکتورهای تایید شده" : "🟡 فاکتورهای در صف";
+
+    public string ListCountText => Shamsi.Money(Rows.Count) + " فاکتور";
+
+    private List<InvoiceRowViewModel> _all = new();
 
     protected override async Task LoadAsync()
     {
-        var list = await _host.Invoices.ListAsync(OnlyPending ? InvoiceStatus.Pending : null, Search);
-        Rows.Clear();
-        foreach (var v in list) Rows.Add(new InvoiceRowViewModel(v, this));
+        var list = await _host.Invoices.ListAsync();
+        _all = list.Select(v => new InvoiceRowViewModel(v, this)).ToList();
 
-        var all = await _host.Invoices.ListAsync();
-        PendingCount = all.Count(v => v.Status == InvoiceStatus.Pending);
-        ApprovedCount = all.Count(v => v.Status == InvoiceStatus.Approved);
+        PendingCount = list.Count(v => v.Status == InvoiceStatus.Pending);
+        ApprovedCount = list.Count(v => v.Status == InvoiceStatus.Approved);
+
+        // شمارهٔ بعدی و راهنماییِ زیرش — همان ‎renderInvoices()‎
+        var next = await _host.Invoices.NextNumberAsync();
+        if (FNumber.Trim().Length == 0) FNumber = next.ToString();
+        NumberHint = next > 1
+            ? "خودکار — فاکتور قبلی: شماره " + Shamsi.Money(next - 1) + " (قابل تغییر)"
+            : "(اولین فاکتور — قابل تغییر)";
+        if (FDate.Trim().Length == 0) FDate = Shamsi.Today();
+        if (FPrice.Trim().Length == 0)
+            FPrice = Shamsi.Money(_host.Settings.UnionRate(FIsDiesel ? FuelType.Diesel : FuelType.Petrol));
+
+        RefreshRateCard();
+        ApplyFilter();
+    }
+
+    public override Task OnActivatedAsync() => ReloadAsync();
+
+    /// <summary>عددِ کارتِ «مقایسهٔ نرخ» از خودِ زیربخشِ همان صفحه می‌آید.</summary>
+    private void RefreshRateCard()
+    {
+        if (SubSections.OfType<InvRateSectionViewModel>().FirstOrDefault() is not { } rate) return;
+        _ = CrashGuard.RunAsync("مقایسهٔ نرخ", async () =>
+        {
+            await rate.RefreshAsync();
+            RateNetText = Shamsi.Money(Math.Round(rate.Net, 0, MidpointRounding.AwayFromZero));
+        });
+    }
+
+    /// <summary>فهرستِ همان صفحه‌ای که باز است، با جست‌وجوی خودش.</summary>
+    private void ApplyFilter()
+    {
+        var q = Search.Trim();
+        Rows.Clear();
+        foreach (var r in _all)
+        {
+            var okPane = Pane switch
+            {
+                InvoicePane.Pending => r.IsPending,
+                InvoicePane.Approved => r.IsApproved,
+                _ => true,
+            };
+            if (!okPane) continue;
+            if (q.Length > 0 && !r.Matches(q)) continue;
+            Rows.Add(r);
+        }
+        OnPropertyChanged(nameof(ListCountText));
     }
 
     public Task SaveAsync(Invoice v) => _host.Invoices.UpdateAsync(v);
 
+    // ══ فرمان‌های برگهٔ فاکتور ══════════════════════════════════════════════
+
+    /// <summary>«✅ ثبت فاکتور» — ‎invSubmit()‎.</summary>
     [RelayCommand]
-    private async Task AddInvoiceAsync()
+    private Task SubmitAsync() => CrashGuard.RunAsync("ثبت فاکتور", async () =>
     {
+        var name = FCustomer.Trim();
+        if (name.Length == 0) { _host.Toast("نام مشتری را بنویسید", ToastKind.Error); return; }
+
+        var price = Shamsi.Num(FPrice);
+        var liters = Shamsi.Num(FLiters);
+        var amount = Shamsi.Num(FAmount);
+        if (liters <= 0m && amount <= 0m)
+        {
+            _host.Toast("یا لیتر و فی را بنویسید، یا «مبلغ بدون تیل» را", ToastKind.Error);
+            return;
+        }
+
+        var number = (int)Shamsi.Num(FNumber);
         var v = await _host.Invoices.AddAsync(new Invoice
         {
-            DateShamsi = Shamsi.Today(),
-            PricePerLiter = _host.Settings.UnionRate(FuelType.Petrol),
+            InvoiceNumber = number,
+            DateShamsi = FDate.Trim().Length > 0 ? FDate.Trim() : Shamsi.Today(),
+            CustomerName = name,
+            DebtAlias = FAlias.Trim(),
+            VehicleType = FVehicle.Trim(),
+            Phone = FPhone.Trim(),
+            Fuel = FIsDiesel ? FuelType.Diesel : FuelType.Petrol,
+            PricePerLiter = price,
+            Liters = liters,
+            Amount = amount,
         });
-        Rows.Insert(0, new InvoiceRowViewModel(v, this));
-        PendingCount++;
-    }
 
+        ResetForm();
+        await ReloadAsync();
+        _host.Toast("✅ فاکتور شماره " + Shamsi.Money(v.InvoiceNumber) + " ثبت شد", ToastKind.Ok);
+    });
+
+    /// <summary>«🔄 پاک کردن فرم» — ‎invResetForm()‎.</summary>
     [RelayCommand]
-    private async Task ApproveAsync(InvoiceRowViewModel? row)
+    private void ResetForm()
     {
-        if (row is null || row.IsApproved) return;
-        await row.FlushAsync();
-        var rate = _host.Settings.UnionRate(row.Entity.Fuel);
-        await _host.Invoices.ApproveAsync(row.Entity.Id, rate);
-        row.Entity.Status = InvoiceStatus.Approved;
-        row.RefreshStatus();
-        PendingCount--; ApprovedCount++;
+        FCustomer = ""; FAlias = ""; FVehicle = ""; FPhone = "";
+        FLiters = ""; FAmount = "";
+        FNumber = ""; FDate = Shamsi.Today();
+        FPrice = Shamsi.Money(_host.Settings.UnionRate(FIsDiesel ? FuelType.Diesel : FuelType.Petrol));
+        CalcTotal();
     }
 
+    /// <summary>نوعِ تیل عوض شد ⇒ فیِ پیشنهادی هم همان نرخِ اتحادیهٔ خودش.</summary>
     [RelayCommand]
-    private async Task RevertAsync(InvoiceRowViewModel? row)
+    private void SetFuel(string? which)
     {
-        if (row is null || !row.IsApproved) return;
-        await _host.Invoices.RevertAsync(row.Entity.Id);
-        row.Entity.Status = InvoiceStatus.Pending;
-        row.RefreshStatus();
-        PendingCount++; ApprovedCount--;
+        FIsDiesel = which == "diesel";
+        FPrice = Shamsi.Money(_host.Settings.UnionRate(FIsDiesel ? FuelType.Diesel : FuelType.Petrol));
+    }
+
+    // ══ صفحه‌ها ═════════════════════════════════════════════════════════════
+
+    [RelayCommand]
+    private void OpenList(string? which)
+    {
+        Search = "";
+        Pane = which == "approved" ? InvoicePane.Approved : InvoicePane.Pending;
     }
 
     [RelayCommand]
-    private async Task DeleteInvoiceAsync(InvoiceRowViewModel? row)
+    private void CloseList() { Pane = InvoicePane.Form; Detail = null; }
+
+    [RelayCommand]
+    private void OpenDetail(InvoiceRowViewModel? row)
     {
         if (row is null) return;
-        await _host.Invoices.DeleteAsync(row.Entity.Id);
-        Rows.Remove(row);
-        await LoadAsync();
+        Detail = row;
+        Pane = InvoicePane.Detail;
     }
+
+    // ══ کارهای هر فاکتور ════════════════════════════════════════════════════
+
+    [RelayCommand]
+    private Task ApproveAsync(InvoiceRowViewModel? row) =>
+        CrashGuard.RunAsync("تایید فاکتور", async () =>
+        {
+            if (row is null || row.IsApproved) return;
+            await row.FlushAsync();
+            var rate = _host.Settings.UnionRate(row.Entity.Fuel);
+            await _host.Invoices.ApproveAsync(row.Entity.Id, rate);
+            await ReloadAsync();
+            _host.Toast("✅ فاکتور تایید شد", ToastKind.Ok);
+        });
+
+    [RelayCommand]
+    private Task RevertAsync(InvoiceRowViewModel? row) =>
+        CrashGuard.RunAsync("برگشت فاکتور", async () =>
+        {
+            if (row is null || !row.IsApproved) return;
+            await _host.Invoices.RevertAsync(row.Entity.Id);
+            await ReloadAsync();
+            _host.Toast("↩️ به صف برگشت", ToastKind.Warn);
+        });
+
+    [RelayCommand]
+    private Task DeleteInvoiceAsync(InvoiceRowViewModel? row) =>
+        CrashGuard.RunAsync("حذف فاکتور", async () =>
+        {
+            if (row is null) return;
+            if (!await Dialogs.ConfirmAsync("حذف فاکتور",
+                    "فاکتور شماره " + Shamsi.Money(row.Number) + " حذف شود؟")) return;
+            await _host.Invoices.DeleteAsync(row.Entity.Id);
+            if (ReferenceEquals(Detail, row)) { Detail = null; Pane = InvoicePane.Form; }
+            await ReloadAsync();
+            _host.Toast("🗑️ حذف شد", ToastKind.Warn);
+        });
 }

@@ -5,6 +5,7 @@
              xmlns:th="using:PumpYaqobi.App.Themes"
              x:Class="PumpYaqobi.App.Views.Sections.StorageSectionView"
              x:DataType="vm:StorageSectionViewModel">
+  <Panel>
 
   <c:SectionPage Header="مخزن">
 
@@ -65,12 +66,14 @@
                 </StackPanel>
               </UniformGrid>
 
+              <!-- «🕘 تاریخچهٔ خریدهای مخزن» برداشته شد: هیچ فرمانی نداشت و
+                   خودِ فهرستِ خریدها همین پایین است. «ثبت خرید» حالا پنجرهٔ
+                   کوچکِ سایت را باز می‌کند، نه یک ردیفِ خالی. -->
               <WrapPanel Orientation="Horizontal" Margin="0,8,0,0">
                 <Button Content="📏 ثبتِ میله‌زنی" Margin="0,0,8,8" Command="{Binding AddDipCommand}" />
-                <Button Content="🕘 تاریخچهٔ خریدهای مخزن" Margin="0,0,8,8" />
                 <Button Content="{Binding PdfText}" Margin="0,0,8,8" Command="{Binding PdfCommand}" />
                 <Button Classes="accent" Content="{Binding AddBuyText}" Margin="0,0,8,8"
-                        Command="{Binding AddPurchaseCommand}" />
+                        Command="{Binding OpenBuyCommand}" />
               </WrapPanel>
             </StackPanel>
           </Grid>
@@ -128,17 +131,72 @@
                     </Grid>
                   </Border>
 
-                  <WrapPanel Orientation="Horizontal" Margin="14">
-                    <StackPanel Classes="cell"><TextBlock Text="وزن (کگ)" Classes="label" /><TextBox Text="{Binding KgText}" /></StackPanel>
-                    <StackPanel Classes="cell"><TextBlock Text="ثقلت" Classes="label" /><TextBox Text="{Binding DensityText}" /></StackPanel>
-                    <StackPanel Classes="cell"><TextBlock Text="وزن (تن)" Classes="label" /><Border Classes="calc"><TextBlock Text="{Binding TonText}" /></Border></StackPanel>
-                    <StackPanel Classes="cell"><TextBlock Text="لیتر" Classes="label" /><Border Classes="calc"><TextBlock Text="{Binding LitersText}" Foreground="{DynamicResource Pump.Ok}" /></Border></StackPanel>
-                    <StackPanel Classes="cell"><TextBlock Text="فی تن ($)" Classes="label" /><TextBox Text="{Binding PriceTonText}" /></StackPanel>
-                    <StackPanel Classes="cell"><TextBlock Text="نرخ دالر" Classes="label" /><TextBox Text="{Binding UsdRateText}" /></StackPanel>
-                    <StackPanel Classes="cell"><TextBlock Text="کل (دالر)" Classes="label" /><Border Classes="calc"><TextBlock Text="{Binding TotalUsdText}" Foreground="{DynamicResource Pump.Info}" /></Border></StackPanel>
-                    <StackPanel Classes="cell"><TextBlock Text="کل (افغانی)" Classes="label" /><Border Classes="calc"><TextBlock Text="{Binding TotalAfnText}" Foreground="{DynamicResource Pump.Accent}" /></Border></StackPanel>
-                    <StackPanel Classes="cell"><TextBlock Text="فی لیتر (افغانی)" Classes="label" /><Border Classes="calc"><TextBlock Text="{Binding PerLiterText}" Foreground="{DynamicResource Pump.Danger}" /></Border></StackPanel>
-                  </WrapPanel>
+                  <!-- ══ ‎.pu-stats‎ — نُه کادرِ خواندنیِ سایت ═══════════════
+                       گزارشِ صاحب ریپو: «ببین خریدها را این مدلی نشان می‌دهد با
+                       همهٔ جزئیاتش.» در سایت هر خرید یک کارتِ **خواندنی** است،
+                       نه نُه کادرِ تایپی. ویرایشِ خرید هم در سایت نیست: خریدِ
+                       اشتباه پاک می‌شود و دوباره ثبت. -->
+                  <c:AutoFillPanel MinItemWidth="150" Gap="8" Margin="14">
+                    <Border Classes="stat" MinHeight="70">
+                      <StackPanel Spacing="3">
+                        <TextBlock Text="وزن (کگ)" Classes="label" />
+                        <TextBlock Text="{Binding KgText}" FontWeight="ExtraBold" />
+                      </StackPanel>
+                    </Border>
+                    <Border Classes="stat" MinHeight="70">
+                      <StackPanel Spacing="3">
+                        <TextBlock Text="وزن (تن)" Classes="label" />
+                        <TextBlock Text="{Binding TonText}" FontWeight="ExtraBold"
+                                   Foreground="{DynamicResource Pump.Info}" />
+                      </StackPanel>
+                    </Border>
+                    <Border Classes="stat" MinHeight="70">
+                      <StackPanel Spacing="3">
+                        <TextBlock Text="ثقلت" Classes="label" />
+                        <TextBlock Text="{Binding DensityText}" FontWeight="ExtraBold" />
+                      </StackPanel>
+                    </Border>
+                    <Border Classes="stat" MinHeight="70">
+                      <StackPanel Spacing="3">
+                        <TextBlock Text="لیتر" Classes="label" />
+                        <TextBlock Text="{Binding LitersText}" FontWeight="ExtraBold"
+                                   Foreground="{DynamicResource Pump.Ok}" />
+                      </StackPanel>
+                    </Border>
+                    <Border Classes="stat" MinHeight="70">
+                      <StackPanel Spacing="3">
+                        <TextBlock Text="فی تن ($)" Classes="label" />
+                        <TextBlock Text="{Binding PriceTonText}" FontWeight="ExtraBold" />
+                      </StackPanel>
+                    </Border>
+                    <Border Classes="stat" MinHeight="70">
+                      <StackPanel Spacing="3">
+                        <TextBlock Text="نرخ دالر" Classes="label" />
+                        <TextBlock Text="{Binding UsdRateText}" FontWeight="ExtraBold" />
+                      </StackPanel>
+                    </Border>
+                    <Border Classes="stat" MinHeight="70">
+                      <StackPanel Spacing="3">
+                        <TextBlock Text="کل (دالر)" Classes="label" />
+                        <TextBlock Text="{Binding TotalUsdText, StringFormat={}{0} $}" FontWeight="ExtraBold"
+                                   Foreground="{DynamicResource Pump.Info}" />
+                      </StackPanel>
+                    </Border>
+                    <Border Classes="stat" MinHeight="70">
+                      <StackPanel Spacing="3">
+                        <TextBlock Text="کل (افغانی)" Classes="label" />
+                        <TextBlock Text="{Binding TotalAfnText}" FontWeight="ExtraBold"
+                                   Foreground="{DynamicResource Pump.Accent}" />
+                      </StackPanel>
+                    </Border>
+                    <Border Classes="stat" MinHeight="70">
+                      <StackPanel Spacing="3">
+                        <TextBlock Text="فی لیتر (افغانی)" Classes="label" />
+                        <TextBlock Text="{Binding PerLiterText}" FontWeight="ExtraBold"
+                                   Foreground="{DynamicResource Pump.Danger}" />
+                      </StackPanel>
+                    </Border>
+                  </c:AutoFillPanel>
                 </StackPanel>
               </Border>
             </DataTemplate>
@@ -147,7 +205,7 @@
 
         <!-- ══ میله‌زنیِ مخزن ══ -->
         <Border Classes="panel" Padding="0" MinHeight="240">
-          <Grid RowDefinitions="Auto,Auto,*">
+          <Grid RowDefinitions="Auto,Auto,*,Auto">
             <Border Grid.Row="0" Classes="card-head">
               <TextBlock Text="📏 میله‌زنیِ مخزن" FontWeight="Bold"
                          Foreground="{DynamicResource Pump.Accent}" />
@@ -219,9 +277,121 @@
                 </DataGridTemplateColumn>
               </DataGrid.Columns>
             </c:ExcelGrid>
+
+            <!-- ردیفِ «جمله»ی اندازه‌گیری‌ها -->
+            <c:TotalsBar Grid.Row="3" ItemsSource="{Binding DipTotalCells}" />
           </Grid>
         </Border>
       </StackPanel>
     
   </c:SectionPage>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       🛢️ پنجرهٔ «ثبت خرید» — ‎#addPurchaseModal‎
+       صفحهٔ نسبتاً کوچکی که روی بخش می‌نشیند: بالا کادرهای تایپی، پایین
+       عددهایی که همان لحظه حساب می‌شوند، و دو دکمه. تا هر چهار عددِ لازم پر
+       نشوند، «ذخیره» چیزی ثبت نمی‌کند.
+       ══════════════════════════════════════════════════════════════════ -->
+  <Panel IsVisible="{Binding BuyOpen}" Background="#99000000">
+    <Border Width="620" MaxHeight="640" VerticalAlignment="Center" HorizontalAlignment="Center"
+            CornerRadius="16" Padding="0" Background="{DynamicResource Pump.Card}"
+            BorderBrush="{DynamicResource Pump.Accent}" BorderThickness="1">
+      <Grid RowDefinitions="Auto,*,Auto">
+
+        <Border Grid.Row="0" Classes="card-head">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" Text="{Binding BuyTitle}" Classes="card-title"
+                       VerticalAlignment="Center" />
+            <Button Grid.Column="1" Classes="ghost danger" Content="✕" Padding="10,2"
+                    Command="{Binding CancelBuyCommand}" />
+          </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" Padding="16">
+          <StackPanel Spacing="12">
+
+            <Grid ColumnDefinitions="*,12,*">
+              <StackPanel Grid.Column="0" Spacing="4">
+                <TextBlock Text="تاریخ" Classes="label" />
+                <TextBox Text="{Binding BuyDate}" />
+              </StackPanel>
+              <StackPanel Grid.Column="2" Spacing="4">
+                <TextBlock Text="نام فروشنده" Classes="label" />
+                <TextBox Text="{Binding BuySeller}" Watermark="نام فروشنده"
+                         ToolTip.Tip="خرید خودکار در حسابِ شرکتِ هم‌نامِ فروشنده هم ثبت می‌شود" />
+              </StackPanel>
+            </Grid>
+
+            <Grid ColumnDefinitions="*,12,*">
+              <StackPanel Grid.Column="0" Spacing="4">
+                <TextBlock Text="وزن (کیلوگرم)" Classes="label" />
+                <TextBox Text="{Binding BuyKg}" Watermark="مثلاً 5320" />
+              </StackPanel>
+              <StackPanel Grid.Column="2" Spacing="4">
+                <TextBlock Text="ثقلت (چگالی)" Classes="label" />
+                <TextBox Text="{Binding BuyDensity}" Watermark="مثلاً 0.73" />
+              </StackPanel>
+            </Grid>
+
+            <Grid ColumnDefinitions="*,12,*">
+              <StackPanel Grid.Column="0" Spacing="4">
+                <TextBlock Text="قیمت هر تن (دالر)" Classes="label" />
+                <TextBox Text="{Binding BuyPriceTon}" Watermark="مثلاً 1200" />
+              </StackPanel>
+              <StackPanel Grid.Column="2" Spacing="4">
+                <TextBlock Text="نرخ دالر (افغانی)" Classes="label" />
+                <TextBox Text="{Binding BuyUsdRate}" Watermark="مثلاً 65" />
+              </StackPanel>
+            </Grid>
+
+            <!-- عددهای خودکار — همان ‎pu-r-*‎ی سایت -->
+            <Border Classes="panel" Padding="14">
+              <Grid ColumnDefinitions="*,12,*" RowDefinitions="Auto,Auto,Auto">
+                <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2" Margin="0,0,0,10">
+                  <TextBlock Text="وزن به تن" Classes="label" />
+                  <TextBlock Text="{Binding BuyTonText}" FontWeight="ExtraBold"
+                             Foreground="{DynamicResource Pump.Info}" />
+                </StackPanel>
+                <StackPanel Grid.Row="0" Grid.Column="2" Spacing="2" Margin="0,0,0,10">
+                  <TextBlock Text="مقدار لیتر" Classes="label" />
+                  <TextBlock Text="{Binding BuyLitersText}" FontWeight="ExtraBold"
+                             Foreground="{DynamicResource Pump.Ok}" />
+                </StackPanel>
+                <StackPanel Grid.Row="1" Grid.Column="0" Spacing="2" Margin="0,0,0,10">
+                  <TextBlock Text="پول کل (دالر)" Classes="label" />
+                  <TextBlock Text="{Binding BuyUsdText}" FontWeight="ExtraBold"
+                             Foreground="{DynamicResource Pump.Info}" />
+                </StackPanel>
+                <StackPanel Grid.Row="1" Grid.Column="2" Spacing="2" Margin="0,0,0,10">
+                  <TextBlock Text="پول کل (افغانی)" Classes="label" />
+                  <TextBlock Text="{Binding BuyAfnText}" FontWeight="ExtraBold"
+                             Foreground="{DynamicResource Pump.Accent}" />
+                </StackPanel>
+                <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2">
+                  <TextBlock Text="قیمت هر لیتر (افغانی)" Classes="label" />
+                  <TextBlock Text="{Binding BuyPerLiterText}" FontWeight="ExtraBold"
+                             Foreground="{DynamicResource Pump.Danger}" />
+                </StackPanel>
+              </Grid>
+            </Border>
+
+            <StackPanel Spacing="4">
+              <TextBlock Text="یادداشت" Classes="label" />
+              <TextBox Text="{Binding BuyNote}" Watermark="..." />
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="2" Padding="16,12" BorderThickness="0,1,0,0"
+                BorderBrush="{DynamicResource Pump.ChromeBorder}">
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
+            <Button Classes="accent" Content="✔ ذخیره" MinWidth="120"
+                    Command="{Binding SaveBuyCommand}" />
+            <Button Content="انصراف" MinWidth="100" Command="{Binding CancelBuyCommand}" />
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Border>
+  </Panel>
+  </Panel>
 </UserControl>

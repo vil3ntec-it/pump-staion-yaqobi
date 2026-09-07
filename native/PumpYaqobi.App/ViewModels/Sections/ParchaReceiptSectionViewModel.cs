@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using PumpYaqobi.App.Controls;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
@@ -66,7 +67,7 @@ public sealed partial class ParchaReceiptRowViewModel : RowViewModel
     public string PriceText { get => Shamsi.Money(PricePerLiter); set => PricePerLiter = Shamsi.Num(value); }
     public string RasidText { get => Shamsi.Money(Rasid); set => Rasid = Shamsi.Num(value); }
 
-    private decimal Bardagi =>
+    internal decimal Bardagi =>
         Math.Round(PostingService.FuelBardagi(Liters, PricePerLiter), 0, MidpointRounding.AwayFromZero);
 
     public string BardagiText => Shamsi.Money(Bardagi);
@@ -101,6 +102,31 @@ public sealed partial class ParchaReceiptSectionViewModel : SectionViewModel, IR
 
     public bool IsEmpty => Rows.Count == 0;
 
+    /// <summary>
+    /// ردیفِ «جمله»ی ته جدول — همتای ‎&lt;tfoot class="xls-foot"&gt;‎ی سایت.
+    /// روی صفِ رسیدها حساب می‌شود، همان‌طور که دیده می‌شود.
+    /// </summary>
+    public IReadOnlyList<TotalCell> TotalCells
+    {
+        get
+        {
+            var liters = Rows.Sum(r => r.Liters);
+            var bardagi = Rows.Sum(r => r.Bardagi);
+            var rasid = Rows.Sum(r => r.Rasid);
+            var albaqi = bardagi - rasid;
+            return new[]
+            {
+                new TotalCell("مقدار تیل", Shamsi.Money(liters)),
+                new TotalCell("بردگی", Shamsi.Money(bardagi)),
+                new TotalCell("رسید", Shamsi.Money(rasid), "Pump.Ok"),
+                new TotalCell("الباقی", Shamsi.Money(albaqi), albaqi > 0m ? "Pump.Danger" : "Pump.Ok"),
+            };
+        }
+    }
+
+    /// <summary>هر ویرایشِ ردیف، «جمله» را هم تازه می‌کند.</summary>
+    public void RefreshTotals() => OnPropertyChanged(nameof(TotalCells));
+
     protected override Task LoadAsync() => RefreshAsync();
 
     public async Task RefreshAsync()
@@ -113,9 +139,14 @@ public sealed partial class ParchaReceiptSectionViewModel : SectionViewModel, IR
             Rows.Add(vm);
         }
         OnPropertyChanged(nameof(IsEmpty));
+        RefreshTotals();
     }
 
-    public Task SaveRowAsync(ParchaReceipt e) => _host.ParchaReceipts.SaveAsync(e);
+    public Task SaveRowAsync(ParchaReceipt e)
+    {
+        RefreshTotals();
+        return _host.ParchaReceipts.SaveAsync(e);
+    }
 
     [RelayCommand]
     private async Task AddRowAsync()

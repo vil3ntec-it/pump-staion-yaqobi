@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using PumpYaqobi.App.Controls;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
@@ -60,6 +61,18 @@ public sealed partial class OldLoansSectionViewModel : SectionViewModel
     [ObservableProperty] private string _stale30 = "0";
     [ObservableProperty] private string _stale60 = "0";
     [ObservableProperty] private string _countText = "0";
+
+    /// <summary>ردیفِ «جمله»ی ته جدول — همان جمع‌های بالای صفحه.</summary>
+    public IReadOnlyList<TotalCell> TotalCells => new[]
+    {
+        new TotalCell("قرض‌دارها", CountText),
+        new TotalCell("جمعِ الباقی", TotalText, "Pump.Danger"),
+        new TotalCell("بیش از ۳۰ روز", Stale30, "Pump.Warn"),
+        new TotalCell("بیش از ۶۰ روز", Stale60, "Pump.Danger"),
+    };
+
+    partial void OnTotalTextChanged(string v) => OnPropertyChanged(nameof(TotalCells));
+    partial void OnCountTextChanged(string v) => OnPropertyChanged(nameof(TotalCells));
 
     public bool IsEmpty => Rows.Count == 0;
     public bool IsAll => FilterIndex == 0;

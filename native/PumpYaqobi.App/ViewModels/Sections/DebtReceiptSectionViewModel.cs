@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using PumpYaqobi.App.Controls;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
@@ -44,7 +45,7 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
 {
     private readonly AppHost _host;
 
-    public DebtReceiptSectionViewModel(AppHost host) : base("debtrasid", "debt", "رسید قرض‌داران")
+    public DebtReceiptSectionViewModel(AppHost host) : base("debtrasid", "debt", "رسید قرض‌داران / چکنه")
     {
         _host = host;
         _dateShamsi = Shamsi.Today();
@@ -61,6 +62,15 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
 
     [ObservableProperty] private string _month = "";
     [ObservableProperty] private string _totalText = "0";
+
+    /// <summary>ردیفِ «جمله»ی ته جدول — جمعِ رسیدهای همین ماه.</summary>
+    public IReadOnlyList<TotalCell> TotalCells => new[]
+    {
+        new TotalCell("شمارِ رسیدها", Shamsi.Money(Rows.Count)),
+        new TotalCell("مبلغِ رسید", TotalText, "Pump.Ok"),
+    };
+
+    partial void OnTotalTextChanged(string v) => OnPropertyChanged(nameof(TotalCells));
 
     /// <summary>فوکوس باید به کادرِ «نام» برگردد — صفحه به آن گوش می‌دهد.</summary>
     public event Action? FocusNameRequested;

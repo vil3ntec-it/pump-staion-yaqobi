@@ -50,7 +50,9 @@
       </UniformGrid>
     </c:SectionPage.Summary>
 
-    <c:ExcelGrid ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False">
+    <!-- جدول + ردیفِ «جمله»ی همین دفتر (پطرول و دیزل جدا) -->
+    <Grid RowDefinitions="*,Auto">
+    <c:ExcelGrid Grid.Row="0" ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False">
       <DataGrid.Columns>
         <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
         <DataGridTextColumn Header="شرح"   Binding="{Binding Name}" Width="Auto" MinWidth="150" MaxWidth="320" />
@@ -89,5 +91,7 @@
         </DataGridTemplateColumn>
       </DataGrid.Columns>
     </c:ExcelGrid>
+    <c:TotalsBar Grid.Row="1" ItemsSource="{Binding TotalCells}" />
+    </Grid>
   </c:SectionPage>
 </UserControl>
