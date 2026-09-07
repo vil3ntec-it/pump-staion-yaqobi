@@ -80,10 +80,36 @@ public class SiteMetricsTests
     public void Stat_box_matches_the_site()
     {
         var c = Controls();
-        Assert.Equal("10", Setter(c, "Border.stat", "CornerRadius"));
+        // ‎.stat-box‎ — شعاعِ محاسبه‌شده روی هر ۱۷ کادرِ صفحه ‎13px‎ است.
+        // این‌جا ۱۰ قفل شده بود، پس آزمون سبز می‌ماند و اختلاف را نمی‌گرفت.
+        Assert.Equal("13", Setter(c, "Border.stat", "CornerRadius"));
         Assert.Equal("14", Setter(c, "Border.stat", "Padding"));
         Assert.Equal("86", Setter(c, "Border.stat", "MinHeight"));
     }
+
+    // ══ کارت ══
+    /// <summary>
+    /// ⚠️ این دو عدد همان تله‌ای هستند که در سربرگِ این فایل توضیح داده شده:
+    /// در CSS نوشته ‎border:1.5px; border-radius:14px‎، ولی مقدارِ **محاسبه‌شدهٔ**
+    /// مرورگر روی هر ۳۵ کارتِ صفحه ‎2px‎ و ‎18px‎ است. نیتیو عددِ نوشته‌شده در
+    /// CSS را برداشته بود، نه عددِ واقعی را — پس کارت‌ها یک درجه تیزتر و
+    /// نازک‌تر از نسخهٔ وب دیده می‌شدند.
+    /// </summary>
+    [Fact]
+    public void Card_radius_and_border_match_the_site()
+    {
+        var c = Controls();
+        Assert.Equal("18", Setter(c, "Border.card", "CornerRadius"));
+        Assert.Equal("2", Setter(c, "Border.card", "BorderThickness"));
+    }
+
+    /// <summary>
+    /// ‎.card-head‎ → ‎padding: 15.84px 22px‎ روی هر ۳۵ سربرگ. در اِوالونیا
+    /// ترتیب برعکس است (افقی، عمودی) پس ‎22,16‎.
+    /// </summary>
+    [Fact]
+    public void Card_head_padding_matches_the_site()
+        => Assert.Equal("22,16", Setter(Controls(), "Border.card-head", "Padding"));
 
     [Fact]
     public void Stat_value_font_matches_the_site()

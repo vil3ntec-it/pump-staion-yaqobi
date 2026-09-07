@@ -60,14 +60,18 @@
   </Style>
 
   <!-- ══ کارت — ‎.card‎ نسخهٔ وب ══
-       ‎border:1.5px solid var(-border); border-radius:14px; overflow:hidden‎
+       ⚠️ عددها از خودِ **مرورگر** آمده‌اند، نه از متنِ CSS. در CSS نوشته
+       ‎border:1.5px; border-radius:14px‎ ولی مقدارِ محاسبه‌شدهٔ واقعی روی هر
+       ۳۵ کارتِ صفحه ‎2px‎ و ‎18px‎ است — همان تله‌ای که در سربرگِ
+       ‎SiteMetricsTests‎ هشدارش داده شده و این‌جا خودمان در آن افتاده بودیم.
+
        لبه از ‎Pump.Border‎ می‌آید نه ‎ChromeBorder‎: دومی رنگِ لبهٔ نوارهای
        بالای پنجره است و روی کارت‌ها یک درجه پررنگ‌تر از نسخهٔ وب می‌افتاد. -->
   <Style Selector="Border.card">
     <Setter Property="Background" Value="{DynamicResource Pump.Card}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.Border}" />
-    <Setter Property="BorderThickness" Value="1.5" />
-    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="CornerRadius" Value="18" />
     <Setter Property="Padding" Value="14" />
     <Setter Property="ClipToBounds" Value="True" />
   </Style>
@@ -346,11 +350,12 @@
        نکتهٔ مهم «وسط‌چین» است: تا امروز برچسب و عدد راست‌چین بودند و در یک
        کادرِ کشیده، نوشته به یک گوشه می‌چسبید و سمتِ دیگر خالی می‌ماند —
        همان چیزی که کادرها را ناجور نشان می‌داد.                            -->
+  <!-- ‎.stat-box‎ — شعاعِ محاسبه‌شده روی هر ۱۷ کادر ‎13px‎ است، نه ۱۰. -->
   <Style Selector="Border.stat">
     <Setter Property="Background" Value="{DynamicResource Pump.Dark}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.Border}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="CornerRadius" Value="13" />
     <Setter Property="Padding" Value="14" />
     <Setter Property="MinWidth" Value="150" />
     <Setter Property="MinHeight" Value="86" />
@@ -469,11 +474,14 @@
        ‎padding:12px 16px; border-bottom:1px solid var(-border)‎
        زمینه یک پله تیره‌تر از خودِ کارت است تا سربرگ از بدنه جدا دیده شود —
        همان کاری که در نسخهٔ وب اختلافِ ‎-panel‎ و ‎-card‎ می‌کرد. -->
+  <!-- ‎.card-head‎ — مقدارِ محاسبه‌شدهٔ مرورگر روی هر ۳۵ سربرگ: ‎15.84px 22px‎
+       (یعنی افقی ۲۲، عمودی ۱۵٫۸۴). پیش از این ۱۶/۱۲ بود و عنوانِ هر کارت
+       شش پیکسل به لبه نزدیک‌تر می‌نشست. -->
   <Style Selector="Border.card-head">
     <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.Border}" />
     <Setter Property="BorderThickness" Value="0,0,0,1" />
-    <Setter Property="Padding" Value="16,12" />
+    <Setter Property="Padding" Value="22,16" />
   </Style>
 
   <Style Selector="Border.chip">
