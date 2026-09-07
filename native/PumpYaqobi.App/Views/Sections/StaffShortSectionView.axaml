@@ -42,7 +42,7 @@
                        x:CompileBindings="False" IsReadOnly="True"
                        BorderThickness="0" CornerRadius="0">
             <DataGrid.Columns>
-              <DataGridTextColumn Header="کارمند" Binding="{Binding Name}" Width="*" />
+              <DataGridTextColumn Header="کارمند" Binding="{Binding Name}" Width="Auto" MinWidth="150" MaxWidth="320" />
               <DataGridTextColumn Header="شیفت" Binding="{Binding ShiftsText}" Width="Auto" />
               <DataGridTemplateColumn Header="🔴 کمبودیِ مانده" Width="Auto">
                 <DataGridTemplateColumn.CellTemplate>
@@ -120,7 +120,7 @@
           <c:ExcelGrid Grid.Row="1" ItemsSource="{Binding Settles}" x:CompileBindings="False"
                        IsReadOnly="True" BorderThickness="0" CornerRadius="0">
             <DataGrid.Columns>
-              <DataGridTextColumn Header="کارمند" Binding="{Binding Name}" Width="*" />
+              <DataGridTextColumn Header="کارمند" Binding="{Binding Name}" Width="Auto" MinWidth="150" MaxWidth="320" />
               <DataGridTemplateColumn Header="نوع" Width="Auto">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate>

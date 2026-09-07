@@ -71,7 +71,7 @@
 
       <c:ExcelGrid Grid.Row="2" ItemsSource="{Binding Rows}" x:CompileBindings="False">
         <DataGrid.Columns>
-          <DataGridTextColumn Header="کارمند" Binding="{Binding StaffName}" Width="*" IsReadOnly="True" />
+          <DataGridTextColumn Header="کارمند" Binding="{Binding StaffName}" Width="Auto" MinWidth="150" MaxWidth="320" IsReadOnly="True" />
           <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
           <DataGridTextColumn Header="آمدن" Binding="{Binding In}" Width="Auto" />
           <DataGridTextColumn Header="رفتن" Binding="{Binding Out}" Width="Auto" />

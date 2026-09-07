@@ -1,3 +1,4 @@
+using Avalonia.VisualTree;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
@@ -133,6 +134,22 @@ internal static class Program
         }
 
         var failures = CheckShortcuts(win, vm);
+
+        if (Environment.GetEnvironmentVariable("PUMP_PROBE") == "1"
+            && vm.Sections.FirstOrDefault(s => s.Id == "chakana") is { } ck)
+        { Wait(win, vm.GoAsync(ck)); Pump(win); }
+
+        // ابزارِ عیب‌یابی: پهنای واقعیِ ستون‌های جدولِ چکنه
+        if (Environment.GetEnvironmentVariable("PUMP_PROBE") == "1")
+        {
+            foreach (var g in win.GetVisualDescendants().OfType<Avalonia.Controls.DataGrid>())
+            {
+                Console.WriteLine("— جدول —");
+                foreach (var c in g.Columns)
+                    Console.WriteLine($"   [{c.Header}] w={c.ActualWidth:0} type={c.GetType().Name}");
+                break;
+            }
+        }
 
         Console.WriteLine("عکس‌ها در: " + Path.GetFullPath(outDir));
         return failures;

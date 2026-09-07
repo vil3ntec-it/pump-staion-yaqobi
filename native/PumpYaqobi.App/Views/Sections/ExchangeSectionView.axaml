@@ -58,7 +58,7 @@
     <c:ExcelGrid ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False">
       <DataGrid.Columns>
         <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
-        <DataGridTextColumn Header="توضیحات" Binding="{Binding Description}" Width="*" />
+        <DataGridTextColumn Header="توضیحات" Binding="{Binding Description}" Width="Auto" MinWidth="150" MaxWidth="320" />
         <DataGridTextColumn Header="مبلغ"  Binding="{Binding AmountText}" Width="Auto" />
         <DataGridTemplateColumn Header="واحد" Width="Auto">
           <DataGridTemplateColumn.CellTemplate>

@@ -16,7 +16,7 @@
             <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" />
             <DataGridTextColumn Header="نوع تیل" Binding="{Binding FuelText}" Width="Auto" />
             <DataGridTextColumn Header="نرخ" Binding="{Binding RateText}" Width="Auto" />
-            <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="*" />
+            <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" MinWidth="150" MaxWidth="320" />
           </DataGrid.Columns>
         </c:ExcelGrid>
       </Border>

@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 
@@ -49,7 +50,41 @@ public class ExcelGrid : DataGrid
         IsReadOnly = false;
         HeadersVisibility = DataGridHeadersVisibility.Column;
         ClipboardCopyMode = DataGridClipboardCopyMode.ExcludeHeader;
+
+        // ⚠️ ستونِ «جاگیر» — بی آن، جدول جای اضافه را به ستونِ آخر می‌دهد و
+        // دکمهٔ حذف وسطِ یک ستونِ خالیِ ۴۰۰ پیکسلی شناور می‌شود، در حالی که
+        // ستون‌های عددی به هم فشرده‌اند. حالا جای اضافه در یک ستونِ خالیِ
+        // انتهایی جمع می‌شود و بقیهٔ ستون‌ها پهنای طبیعیِ خودشان را دارند —
+        // همان کاری که جدولِ نسخهٔ وب با ‎width:auto‎ می‌کرد.
+        Loaded += (_, _) => AddFillerColumn();
     }
+
+    private void AddFillerColumn()
+    {
+        if (Columns.Count == 0) return;
+        if (Columns[^1] is FillerColumn) return;
+        Columns.Add(new FillerColumn
+        {
+            Width = new DataGridLength(1, DataGridLengthUnitType.Star),
+            IsReadOnly = true,
+            CanUserResize = false,
+            CanUserReorder = false,
+            CanUserSort = false,
+            // ‎DataGridTemplateColumn‎ بدونِ قالب هنگامِ ساختِ خانه می‌ترکد،
+            // پس یک قالبِ خالی می‌گیرد.
+            CellTemplate = new FuncDataTemplate<object?>((_, _) => new Border(), true),
+        });
+    }
+
+    /// <summary>
+    /// ستونِ جاگیر — نوعِ خودش را دارد تا با ستونِ «حذف» اشتباه نشود.
+    ///
+    /// ⚠️ نه رشتهٔ خالی به‌عنوان نشانه (ستونِ حذفِ خیلی از جدول‌ها هم
+    /// ‎Header=""‎ دارد، پس جاگیر هرگز اضافه نمی‌شد) و نه یک ‎object‎ِ
+    /// نشانه‌گذار (خودِ جدول ‎ToString()‎ اش را در سرستون چاپ می‌کرد و
+    /// «System.Object» بالای جدول می‌نشست).
+    /// </summary>
+    private sealed class FillerColumn : DataGridTemplateColumn { }
 
     protected override void OnKeyDown(KeyEventArgs e)
     {

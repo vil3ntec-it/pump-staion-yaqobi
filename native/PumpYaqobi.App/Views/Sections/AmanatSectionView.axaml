@@ -136,7 +136,7 @@
       <c:ExcelGrid ItemsSource="{Binding Rows}">
         <DataGrid.Columns>
           <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
-          <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
+          <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="Auto" MinWidth="150" MaxWidth="320" />
           <DataGridTextColumn Header="رسید (لیتر)" Binding="{Binding LitersText}" Width="Auto" />
           <DataGridTextColumn Header="برده‌شده" Binding="{Binding TakenText}" Width="Auto" />
           <DataGridTextColumn Header="روز" Binding="{Binding DaysText}" Width="Auto" />

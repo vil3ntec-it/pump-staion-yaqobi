@@ -208,7 +208,7 @@
                 <DataGridTextColumn Header="اختلاف" Binding="{Binding DiffText}" Width="Auto" IsReadOnly="True" />
                 <DataGridCheckBoxColumn Header="دفتر برابر شود" Binding="{Binding ApplyToBook}" Width="Auto" />
                 <DataGridTextColumn Header="رفته به دفتر" Binding="{Binding BookAdjustText}" Width="Auto" IsReadOnly="True" />
-                <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="*" />
+                <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="Auto" MinWidth="150" MaxWidth="320" />
                 <DataGridTemplateColumn Header="" Width="Auto">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate>

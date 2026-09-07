@@ -66,7 +66,7 @@
               <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" />
               <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
               <DataGridTextColumn Header="نام قرض‌دار" Binding="{Binding Account}" Width="Auto" />
-              <DataGridTextColumn Header="توضیحات" Binding="{Binding Note}" Width="*" />
+              <DataGridTextColumn Header="توضیحات" Binding="{Binding Note}" Width="Auto" MinWidth="150" MaxWidth="320" />
               <DataGridTextColumn Header="مبلغ رسید" Binding="{Binding AmountText}" Width="Auto" />
               <DataGridTemplateColumn Header="" Width="Auto">
                 <DataGridTemplateColumn.CellTemplate>
