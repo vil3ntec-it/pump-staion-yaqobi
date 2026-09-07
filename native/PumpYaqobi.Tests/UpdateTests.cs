@@ -129,7 +129,60 @@ public class UpdateTests
         Assert.Contains("\"runas\"", svc);                 // اجازهٔ مدیر
         Assert.Contains("IsWritable(appDir)", svc);       // فقط وقتی لازم است
         Assert.Contains("if %RC% GEQ 8", svc);            // نتیجهٔ robocopy سنجیده می‌شود
-        Assert.Contains("ConsumeLastFailure", svc);       // و به کاربر گفته می‌شود
+        Assert.Contains("ConsumeLastResult", svc);        // و به کاربر گفته می‌شود
+    }
+
+    /// <summary>
+    /// ══ نصاب هم باید اجازهٔ مدیر بگیرد ═══════════════════════════════════════
+    /// مسیرِ زیپ از اول این را رعایت می‌کرد و مسیرِ نصاب نه. نتیجه‌اش این بود
+    /// که به‌روزرسانی در پوشه‌ای مثلِ ‎Program Files‎ **همیشه** شکست می‌خورد،
+    /// چون نصابِ ‎/SILENT‎ خودش نمی‌تواند پنجرهٔ اجازه را بالا بیاورد.
+    /// </summary>
+    [Fact]
+    public void TheSetupPathAlsoElevatesWhenTheFolderNeedsIt()
+    {
+        var svc = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        var i = svc.IndexOf("/SILENT", StringComparison.Ordinal);
+        Assert.True(i > 0, "اجرای نصاب پیدا نشد");
+        // در همان بلوکِ نصاب، شرطِ «پوشه اجازه می‌خواهد» باید باشد
+        var block = svc[i..Math.Min(svc.Length, i + 1200)];
+        Assert.Contains("InstallDirWritable", block);
+        Assert.Contains("runas", block);
+    }
+
+    /// <summary>
+    /// ══ «واقعاً به‌روز شد؟» با نسخه سنجیده شود، نه با کدِ اسکریپت ═══════════
+    ///
+    /// کدِ خروجی را فقط مسیرِ زیپ می‌نوشت. اگر به‌روزرسانی از راهِ نصاب
+    /// می‌رفت و شکست می‌خورد، هیچ فایلی نوشته نمی‌شد و برنامه با نسخهٔ کهنه و
+    /// **بی هیچ پیامی** باز می‌شد — یعنی همان چیزی که قرار بود جلویش گرفته شود.
+    ///
+    /// مقایسهٔ نسخه هر دو مسیر را می‌پوشاند.
+    /// </summary>
+    [Fact]
+    public void TheResultIsJudgedByVersion_NotByTheScriptExitCode()
+    {
+        var svc = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        Assert.Contains("MarkPending", svc);
+        Assert.Contains("Compare(AppVersion.Current, target)", svc);
+
+        // و نسخهٔ هدف باید واقعاً از رابط کاربری پاس داده شود
+        var vm = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections",
+                                               "SettingsSectionViewModel.cs"));
+        Assert.Contains("Launch(_downloaded, _info?.LatestVersion)", vm);
+    }
+
+    /// <summary>
+    /// هر دو حالت به کاربر گفته می‌شود — گرفتن و نگرفتن. تاییدِ «به‌روز شد»
+    /// همان‌قدر لازم است که هشدارِ «نشد»: بی آن، کاربر راهی ندارد بفهمد.
+    /// </summary>
+    [Fact]
+    public void BothOutcomesReachTheUser()
+    {
+        var view = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections",
+                                                 "SettingsSectionView.axaml"));
+        Assert.Contains("LastSuccess", view);
+        Assert.Contains("LastFailure", view);
     }
 
     /// <summary>

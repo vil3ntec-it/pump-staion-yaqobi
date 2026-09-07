@@ -37,8 +37,11 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
             ? ""
             : "این پوشه اجازهٔ مدیر می‌خواهد؛ هنگامِ به‌روزرسانی ویندوز اجازه می‌پرسد.";
 
-        // اگر به‌روزرسانیِ گذشته نیمه‌کاره مانده، همین حالا گفته شود
-        _lastFailure = UpdateService.ConsumeLastFailure() ?? "";
+        // نتیجهٔ به‌روزرسانیِ گذشته — چه گرفت چه نگرفت، همین حالا گفته شود.
+        // «هیچ نگفتن» بدترین حالت است: کاربر خیال می‌کند به‌روز شده.
+        var last = UpdateService.ConsumeLastResult();
+        _lastFailure = last is null || last.Ok ? "" : last.Message;
+        _lastSuccess = last is not null && last.Ok ? last.Message : "";
     }
 
     public System.Collections.ObjectModel.ObservableCollection<PumpTheme> Themes { get; }
@@ -75,6 +78,9 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
 
     /// <summary>پیامِ به‌روزرسانیِ ناتمامِ دفعهٔ پیش.</summary>
     [ObservableProperty] private string _lastFailure = "";
+
+    /// <summary>«✅ برنامه به نسخهٔ … به‌روز شد» — تاییدِ دفعهٔ پیش.</summary>
+    [ObservableProperty] private string _lastSuccess = "";
 
     partial void OnSelectedThemeChanged(PumpTheme value) => ThemeManager.Apply(value);
 
@@ -218,7 +224,13 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
     {
         if (_downloaded is null) return;
         LastFailure = "";
-        if (!UpdateService.Launch(_downloaded)) { UpdateStatus = "نصبِ نسخهٔ تازه انجام نشد"; return; }
+        // نسخهٔ هدف همراهش می‌رود: دفعهٔ بعد که برنامه باز شود، خودش می‌سنجد
+        // که واقعاً به همان نسخه رسیده یا نه.
+        if (!UpdateService.Launch(_downloaded, _info?.LatestVersion))
+        {
+            UpdateStatus = "نصبِ نسخهٔ تازه انجام نشد";
+            return;
+        }
 
         UpdateStatus = "برنامه بسته می‌شود و با نسخهٔ تازه باز می‌شود";
         _host.Toast("برنامه بسته می‌شود و با نسخهٔ تازه باز می‌شود", ToastKind.Info);

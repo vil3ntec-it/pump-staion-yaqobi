@@ -155,26 +155,82 @@ public sealed class UpdateService
         Path.Combine(Services.AppSettings.Dir, "updates", "apply-result.txt");
 
     /// <summary>
-    /// اگر آخرین به‌روزرسانی شکست خورده باشد، پیامش را می‌دهد و نشانه را
-    /// پاک می‌کند. برنامه هنگامِ باز شدن این را می‌پرسد.
-    ///
-    /// ⚠️ پیش از این، جای‌گزینی در پوشهٔ بی‌اجازه بی‌صدا شکست می‌خورد و
-    /// برنامه با همان نسخهٔ کهنه باز می‌شد — بدترین حالت، چون کاربر خیال
-    /// می‌کرد به‌روز شده است.
+    /// نسخه‌ای که آخرین بار «قرار بود» نصب شود. بعد از باز شدنِ دوبارهٔ
+    /// برنامه، همین با نسخهٔ واقعی سنجیده می‌شود.
     /// </summary>
-    public static string? ConsumeLastFailure()
+    private static string PendingFile =>
+        Path.Combine(Services.AppSettings.Dir, "updates", "pending.txt");
+
+    /// <summary>
+    /// ══ «قرار است به این نسخه برویم» ═══════════════════════════════════════
+    /// پیش از هر تلاشی نوشته می‌شود. تنها راهِ فهمیدنِ اینکه به‌روزرسانی
+    /// **واقعاً** گرفت یا نه، همین است: بعد از باز شدنِ دوباره، نسخهٔ در حالِ
+    /// اجرا با این عدد سنجیده می‌شود.
+    /// </summary>
+    public static void MarkPending(string targetVersion)
     {
         try
         {
-            var f = ResultFile;
-            if (!File.Exists(f)) return null;
-            var code = File.ReadAllText(f).Trim();
-            File.Delete(f);
-            return code.Length == 0 || code == "0"
-                ? null
-                : "به‌روزرسانیِ گذشته کامل نشد — فایل‌ها جای‌گزین نشدند. "
-                  + "اگر برنامه در پوشه‌ای نصب است که اجازهٔ مدیر می‌خواهد، "
-                  + "یک‌بار برنامه را «به‌عنوان مدیر» باز کنید و دوباره بزنید.";
+            Directory.CreateDirectory(Path.GetDirectoryName(PendingFile)!);
+            File.WriteAllText(PendingFile, targetVersion);
+        }
+        catch { /* ننوشتنش نباید جلوی خودِ به‌روزرسانی را بگیرد */ }
+    }
+
+    /// <summary>
+    /// نتیجهٔ آخرین به‌روزرسانی: گرفت یا نگرفت، و چه بگوییم.
+    /// ‎null‎ یعنی اصلاً به‌روزرسانی‌ای در کار نبوده.
+    /// </summary>
+    public sealed record Outcome(bool Ok, string Message);
+
+    /// <summary>
+    /// ══ واقعاً به‌روز شد؟ ══════════════════════════════════════════════════
+    /// برنامه هنگامِ باز شدن این را می‌پرسد.
+    ///
+    /// ⚠️ سنجش با **نسخه** است، نه با کدِ خروجیِ جای‌گزینی. دلیلش یک سوراخِ
+    /// واقعی بود: کدِ خروجی را فقط مسیرِ زیپ می‌نوشت. اگر به‌روزرسانی از راهِ
+    /// نصاب (‎.exe‎) می‌رفت و شکست می‌خورد — کاربر پنجرهٔ اجازهٔ مدیر را رد
+    /// می‌کرد، یا نصابِ بی‌صدا نمی‌توانست در ‎Program Files‎ بنویسد — هیچ
+    /// فایلی نوشته نمی‌شد، برنامه با نسخهٔ کهنه باز می‌شد و **هیچ نمی‌گفت**.
+    /// یعنی دقیقاً همان چیزی که قرار بود جلویش گرفته شود: کاربر خیال می‌کرد
+    /// به‌روز شده است.
+    ///
+    /// مقایسهٔ نسخه هر دو مسیر را با هم می‌پوشاند و به هیچ جزئیاتِ درونیِ
+    /// نصاب یا اسکریپت بند نیست.
+    /// </summary>
+    public static Outcome? ConsumeLastResult()
+    {
+        try
+        {
+            var pendingPath = PendingFile;
+            if (!File.Exists(pendingPath)) return null;
+
+            var target = File.ReadAllText(pendingPath).Trim();
+            File.Delete(pendingPath);
+
+            // کدِ خروجیِ اسکریپتِ زیپ، اگر بود — فقط برای پیامِ دقیق‌تر
+            var code = "";
+            try
+            {
+                if (File.Exists(ResultFile)) { code = File.ReadAllText(ResultFile).Trim(); File.Delete(ResultFile); }
+            }
+            catch { }
+
+            if (target.Length == 0) return null;
+
+            // گرفت؟ نسخهٔ در حالِ اجرا باید به هدف رسیده باشد (یا از آن جلوتر)
+            if (Compare(AppVersion.Current, target) >= 0)
+                return new Outcome(true, "✅ برنامه به نسخهٔ " + AppVersion.Current + " به‌روز شد");
+
+            var why = code.Length > 0 && code != "0"
+                ? " (فایل‌ها جای‌گزین نشدند)"
+                : "";
+
+            return new Outcome(false,
+                "به‌روزرسانی کامل نشد" + why + " — برنامه هنوز روی نسخهٔ "
+                + AppVersion.Current + " است، نه " + target + ". "
+                + "اگر برنامه در پوشه‌ای نصب است که اجازهٔ مدیر می‌خواهد، "
+                + "یک‌بار برنامه را «به‌عنوان مدیر» باز کنید و دوباره بزنید.");
         }
         catch { return null; }
     }
@@ -254,10 +310,15 @@ public sealed class UpdateService
     /// برای همین کار به آن دستورِ بیرونی سپرده می‌شود و برنامه بلافاصله بسته
     /// می‌شود. اگر بستن را فراموش کنید، جابه‌جایی شکست می‌خورد.
     /// </summary>
-    public static bool Launch(string packagePath)
+    public static bool Launch(string packagePath, string? targetVersion = null)
     {
         try
         {
+            // ⚠️ پیش از هر کاری: «قرار است به این نسخه برویم». اگر این تلاش
+            // بگیرد، دفعهٔ بعد که برنامه باز شود خودش می‌فهمد؛ و اگر نگیرد،
+            // به کاربر گفته می‌شود به‌جای آنکه بی‌صدا روی نسخهٔ کهنه بماند.
+            if (!string.IsNullOrWhiteSpace(targetVersion)) MarkPending(targetVersion!);
+
             if (packagePath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
                 return LaunchZip(packagePath);
 
@@ -267,14 +328,31 @@ public sealed class UpdateService
             // می‌بندد، فایل‌ها را عوض می‌کند و دوباره بازش می‌کند.
             // (بارِ اول که کاربر خودش ‎setup.exe‎ را می‌زند، بی‌آرگومان اجرا
             //  می‌شود و ویزارد کامل را می‌بیند — این مسیر فقط به‌روزرسانی است.)
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(packagePath)
+            var psi = new System.Diagnostics.ProcessStartInfo(packagePath)
             {
                 Arguments = "/SILENT /NORESTART /RESTARTAPPLICATIONS",
                 UseShellExecute = true,
-            });
+            };
+
+            // ⚠️ اگر پوشهٔ نصب اجازهٔ مدیر بخواهد (‎Program Files‎)، نصابِ
+            // بی‌صدا **نمی‌تواند** خودش پنجرهٔ اجازه را بالا بیاورد و کارش
+            // نیمه‌کاره می‌ماند. مسیرِ زیپ این را از اول رعایت می‌کرد و این
+            // مسیر نه — پس به‌روزرسانیِ نصابی در چنان پوشه‌ای همیشه شکست
+            // می‌خورد، بی آنکه کسی بفهمد.
+            if (!InstallDirWritable)
+            {
+                psi.Verb = "runas";
+                psi.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+            }
+
+            System.Diagnostics.Process.Start(psi);
             return true;
         }
-        catch { return false; }
+        catch
+        {
+            // کاربر پنجرهٔ اجازهٔ مدیر را رد کرد، یا نصاب اصلاً بالا نیامد
+            return false;
+        }
     }
 
     /// <summary>
