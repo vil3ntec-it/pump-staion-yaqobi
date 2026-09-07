@@ -50,7 +50,7 @@ public sealed partial class InvoiceRowViewModel : RowViewModel
     private void Refresh()
     {
         foreach (var n in new[] { nameof(PriceText), nameof(LitersText), nameof(AmountText),
-                                  nameof(TotalText), nameof(KindText) })
+                                  nameof(TotalText), nameof(KindText), nameof(PartsText) })
             OnPropertyChanged(n);
     }
 
@@ -65,6 +65,28 @@ public sealed partial class InvoiceRowViewModel : RowViewModel
 
     /// <summary>«فقط مبلغ» یا «تیل» — همان تفکیکی که همهٔ رفتارها به آن بند است.</summary>
     public string KindText => InvoiceService.IsMoneyOnly(_v) ? "فقط مبلغ" : "تیل";
+
+    /// <summary>
+    /// خطِ زیرِ نامِ مشتری در فهرست — همان ‎.mt‎ نسخهٔ وب: بخش‌های فاکتور،
+    /// جمعِ کل و تاریخ، پشتِ سرِ هم.
+    /// </summary>
+    public string PartsText
+    {
+        get
+        {
+            var parts = new List<string>();
+            if (Liters > 0) parts.Add((Fuel == FuelType.Diesel ? "🟤 " : "⛽ ")
+                                      + Shamsi.Money(Liters) + " لیتر × " + Shamsi.Money(Price));
+            if (Amount > 0) parts.Add("💵 " + Shamsi.Money(Amount) + " افغانی");
+            parts.Add("💰 " + TotalText + " افغانی");
+            parts.Add("📅 " + (DateShamsi.Length > 0 ? DateShamsi : "—"));
+            return string.Join("   ·   ", parts);
+        }
+    }
+
+    /// <summary>‎.inv-chip‎ — «🟢 تایید شده» یا «🟡 در صف».</summary>
+    public string ChipText => IsApproved ? "🟢 تایید شده" : "🟡 در صف";
+    public string ChipBrushKey => IsApproved ? "Pump.Ok" : "Pump.Warn";
 
     /// <summary>جمعِ کل: فاکتورِ «فقط مبلغ» همان مبلغ، وگرنه فی × لیتر.</summary>
     public string TotalText =>
@@ -81,6 +103,8 @@ public sealed partial class InvoiceRowViewModel : RowViewModel
         OnPropertyChanged(nameof(IsApproved));
         OnPropertyChanged(nameof(IsPending));
         OnPropertyChanged(nameof(StatusText));
+        OnPropertyChanged(nameof(ChipText));
+        OnPropertyChanged(nameof(ChipBrushKey));
     }
 
     protected override void Apply()
