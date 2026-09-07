@@ -48,18 +48,39 @@ public sealed class LegacyImportService
             || await db.TilCompanies.AnyAsync(ct);
     }
 
-    /// <summary>کپیِ فایلِ دیتابیس، کنارِ خودش، با مهرِ زمان.</summary>
+    /// <summary>
+    /// کپیِ فایلِ دیتابیس، کنارِ خودش، با مهرِ زمان.
+    ///
+    /// ⚠️ مهرِ زمان تا «ثانیه» است، پس دو مهاجرت در یک ثانیه به یک نام می‌رسند.
+    /// ‎overwrite: false‎ عمدی است — بکاپِ قبلی هرگز پاک نمی‌شود؛ به‌جایش نام
+    /// شماره می‌گیرد («…-2.db»، «…-3.db»). پیش از این، همان برخورد یک استثنا
+    /// می‌شد و مهاجرت با پیامِ «بکاپ گرفته نشد» رد می‌شد — بی آنکه چیزی واقعاً
+    /// خراب باشد. (همین برخورد آزمونِ ‎ExistingData_IsNotOverwrittenSilently‎
+    /// را گاهی قرمز می‌کرد: دو مهاجرتش در یک ثانیه می‌افتاد.)
+    /// </summary>
     public string? BackupNow()
     {
         try
         {
             if (!File.Exists(_dbf.DbPath)) return null;
             var dir = Path.GetDirectoryName(_dbf.DbPath) ?? ".";
-            var name = Path.GetFileNameWithoutExtension(_dbf.DbPath)
-                     + "-پیش‌از‌مهاجرت-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".db";
-            var target = Path.Combine(dir, name);
-            File.Copy(_dbf.DbPath, target, overwrite: false);
-            return target;
+            var stem = Path.GetFileNameWithoutExtension(_dbf.DbPath)
+                     + "-پیش‌از‌مهاجرت-" + DateTime.Now.ToString("yyyyMMdd-HHmmss");
+
+            for (var n = 1; n <= 200; n++)
+            {
+                var target = Path.Combine(dir, n == 1 ? stem + ".db" : $"{stem}-{n}.db");
+                try
+                {
+                    File.Copy(_dbf.DbPath, target, overwrite: false);
+                    return target;
+                }
+                catch (IOException) when (File.Exists(target))
+                {
+                    // همان ثانیه، بکاپی از پیش هست — شمارهٔ بعدی
+                }
+            }
+            return null;
         }
         catch
         {

@@ -337,6 +337,29 @@ public class LegacyFullImportTests : IDisposable
         Assert.True(File.Exists(res.BackupPath!), "فایلِ بکاپ ساخته نشد");
     }
 
+    /// <summary>
+    /// دو بکاپ در یک ثانیه هر دو باید بنشینند و هیچ‌کدام دیگری را پاک نکند.
+    ///
+    /// ⚠️ این آزمون از یک باگِ واقعی درآمد: نامِ بکاپ تا «ثانیه» مهرِ زمان دارد
+    /// و دو مهاجرتِ پشتِ‌سرِ‌هم به یک نام می‌رسیدند؛ کپیِ دوم استثنا می‌داد و
+    /// مهاجرت با «بکاپ گرفته نشد» رد می‌شد — بی آنکه چیزی خراب باشد. روی CI
+    /// همین برخورد ‎ExistingData_IsNotOverwrittenSilently‎ را گاهی قرمز می‌کرد
+    /// و گاهی نه، فقط بسته به اینکه دو صدا زدن در یک ثانیه بیفتند یا نه.
+    /// </summary>
+    [Fact]
+    public void TwoBackupsInTheSameSecond_BothSurvive()
+    {
+        var svc = Service();
+        var first = svc.BackupNow();
+        var second = svc.BackupNow();
+
+        Assert.NotNull(first);
+        Assert.NotNull(second);
+        Assert.NotEqual(first, second);
+        Assert.True(File.Exists(first!), "بکاپِ اول پاک شده");
+        Assert.True(File.Exists(second!), "بکاپِ دوم ساخته نشده");
+    }
+
     [Fact]
     public async Task OnlySomeoneWithImportRights_CanMigrate()
     {
