@@ -1,8 +1,10 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Controls.Primitives;
+using Avalonia.Layout;
+using Avalonia.VisualTree;
 
 namespace PumpYaqobi.App.Controls;
 
@@ -51,40 +53,147 @@ public class ExcelGrid : DataGrid
         HeadersVisibility = DataGridHeadersVisibility.Column;
         ClipboardCopyMode = DataGridClipboardCopyMode.ExcludeHeader;
 
-        // ⚠️ ستونِ «جاگیر» — بی آن، جدول جای اضافه را به ستونِ آخر می‌دهد و
-        // دکمهٔ حذف وسطِ یک ستونِ خالیِ ۴۰۰ پیکسلی شناور می‌شود، در حالی که
-        // ستون‌های عددی به هم فشرده‌اند. حالا جای اضافه در یک ستونِ خالیِ
-        // انتهایی جمع می‌شود و بقیهٔ ستون‌ها پهنای طبیعیِ خودشان را دارند —
-        // همان کاری که جدولِ نسخهٔ وب با ‎width:auto‎ می‌کرد.
-        Loaded += (_, _) => AddFillerColumn();
+        // جای اضافه بینِ ستون‌ها پخش می‌شود، نه در یک ستونِ خالیِ ته جدول
+        LayoutUpdated += (_, _) => { SpreadColumns(); CapToOneScreen(); };
     }
 
-    private void AddFillerColumn()
+    // ══════════════════════════════════════════════════════════════════════
+    //  مجازی‌سازیِ ردیف‌ها — و این‌که چرا جدول سقفِ ارتفاع دارد
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  ‎DataGrid‎ی آوالونیا ردیف‌هایش را مجازی‌سازی می‌کند: فقط ردیف‌های داخلِ
+    //  قاب (به‌اضافهٔ چند تا حاشیه) را می‌سازد و با اسکرول همان‌ها را بازیافت
+    //  می‌کند. پس صد هزار ردیف هم صد هزار عنصرِ زنده نمی‌سازد.
+    //
+    //  ⚠️ ولی این فقط وقتی کار می‌کند که **ارتفاعش محدود باشد**. اگر جدول
+    //  ارتفاعِ آزاد بگیرد (مثلاً مستقیم داخلِ یک ‎StackPanel‎ی اسکرول‌شونده)،
+    //  خودش را هم‌قدِ همهٔ ردیف‌ها اندازه می‌گیرد و آن‌وقت هر ردیف ساخته
+    //  می‌شود — همان چیزی که با یک میلیون ردیف برنامه را قفل می‌کند.
+    //
+    //  پس سقف لازم است. ولی سقف یعنی جدول اسکرولِ خودش را دارد، و صاحب ریپو
+    //  صریح گفت که تا نوارِ بخش‌ها به سقفِ پنجره نچسبیده، محتوای بخش نباید
+    //  تکان بخورد. این دو با هم جمع می‌شوند، به شرطِ «زنجیرهٔ اسکرول»:
+    //
+    //     پایین: اول صفحه می‌لغزد؛ وقتی صفحه ته کشید، ردیف‌ها می‌لغزند.
+    //     بالا:  اول ردیف‌ها برمی‌گردند؛ وقتی جدول سرِ خط آمد، صفحه بالا می‌رود.
+    //
+    //  نتیجه برای کاربر همان است که خواسته بود — سربرگ و نوارِ آمار می‌روند
+    //  بالا، نوار قفل می‌شود، بعد ردیف‌ها راه می‌افتند — و برای برنامه یعنی
+    //  مجازی‌سازی سرِ جایش می‌ماند. (‎OnPointerWheelChanged‎ پایین‌ترِ همین فایل.)
+
+    /// <summary>اسکرولِ صفحه در ‎MainWindow‎؛ یک‌بار پیدا می‌شود و نگه داشته می‌شود.</summary>
+    private ScrollViewer? _page;
+
+    private ScrollViewer? Page =>
+        _page ??= this.GetVisualAncestors().OfType<ScrollViewer>()
+                      .FirstOrDefault(v => v.Name == "PageScroll");
+
+    /// <summary>
+    /// سقفِ ارتفاعِ جدول = یک صفحه. بی این، جدول هم‌قدِ همهٔ ردیف‌هایش می‌شود و
+    /// مجازی‌سازی می‌میرد.
+    /// </summary>
+    private void CapToOneScreen()
     {
-        if (Columns.Count == 0) return;
-        if (Columns[^1] is FillerColumn) return;
-        Columns.Add(new FillerColumn
-        {
-            Width = new DataGridLength(1, DataGridLengthUnitType.Star),
-            IsReadOnly = true,
-            CanUserResize = false,
-            CanUserReorder = false,
-            CanUserSort = false,
-            // ‎DataGridTemplateColumn‎ بدونِ قالب هنگامِ ساختِ خانه می‌ترکد،
-            // پس یک قالبِ خالی می‌گیرد.
-            CellTemplate = new FuncDataTemplate<object?>((_, _) => new Border(), true),
-        });
+        var screen = Page?.Viewport.Height ?? 0;
+        if (screen <= 0) return;
+        if (Math.Abs(MaxHeight - screen) > 1) MaxHeight = screen;
     }
 
     /// <summary>
-    /// ستونِ جاگیر — نوعِ خودش را دارد تا با ستونِ «حذف» اشتباه نشود.
-    ///
-    /// ⚠️ نه رشتهٔ خالی به‌عنوان نشانه (ستونِ حذفِ خیلی از جدول‌ها هم
-    /// ‎Header=""‎ دارد، پس جاگیر هرگز اضافه نمی‌شد) و نه یک ‎object‎ِ
-    /// نشانه‌گذار (خودِ جدول ‎ToString()‎ اش را در سرستون چاپ می‌کرد و
-    /// «System.Object» بالای جدول می‌نشست).
+    /// ══ زنجیرهٔ اسکرول ═══════════════════════════════════════════════════════
+    /// چرخِ ماوس روی جدول، اول به صفحه می‌رسد نه به ردیف‌ها — مگر آن‌که صفحه
+    /// در همان جهت جای رفتن نداشته باشد. برعکسش هم درست است: هنگامِ برگشتن
+    /// اول ردیف‌ها بالا می‌آیند و بعد صفحه.
     /// </summary>
-    private sealed class FillerColumn : DataGridTemplateColumn { }
+    protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
+    {
+        var page = Page;
+        var dy = e.Delta.Y;
+
+        if (page is not null && Math.Abs(dy) > 0)
+        {
+            var max = Math.Max(0, page.Extent.Height - page.Viewport.Height);
+            // «جدول سرِ خط است؟» را از نوارِ لغزشِ خودِ جدول می‌پرسیم؛
+            // ‎DataGrid‎ آفستِ عمودی‌اش را بیرون نمی‌دهد.
+            var bar = VerticalBar;
+            var gridTop = bar is null || bar.Value <= 0.5;
+
+            // پایین می‌رویم: تا وقتی صفحه جا دارد، صفحه می‌لغزد.
+            // بالا می‌آییم: تا وقتی جدول سرِ خط نیامده، خودِ جدول می‌لغزد.
+            var pageFirst = dy < 0 ? page.Offset.Y < max - 0.5
+                                   : gridTop && page.Offset.Y > 0.5;
+
+            if (pageFirst)
+            {
+                var step = dy * WheelStep;
+                page.Offset = new Vector(page.Offset.X,
+                                         Math.Clamp(page.Offset.Y - step, 0, max));
+                e.Handled = true;
+                return;
+            }
+        }
+
+        base.OnPointerWheelChanged(e);
+    }
+
+    /// <summary>یک چرخِ ماوس چند پیکسل صفحه را می‌برد.</summary>
+    private const double WheelStep = 58;
+
+    private ScrollBar? _vbar;
+
+    /// <summary>نوارِ لغزشِ عمودیِ خودِ جدول (‎PART_VerticalScrollbar‎).</summary>
+    private ScrollBar? VerticalBar =>
+        _vbar ??= this.GetVisualDescendants().OfType<ScrollBar>()
+                      .FirstOrDefault(b => b.Orientation == Orientation.Vertical);
+
+    /// <summary>هر جدول یک‌بار پهن می‌شود؛ بعدش ستون‌های ستاره‌ای خودشان
+    /// با تغییرِ اندازهٔ پنجره تنظیم می‌شوند.</summary>
+    private bool _spread;
+
+    /// <summary>
+    /// ══ جای اضافه را بینِ ستون‌ها پخش کن ═══════════════════════════════════
+    ///
+    /// ‎DataGrid‎ی آوالونیا ستون‌های ‎Auto‎ را هم‌قدِ محتوایشان می‌کند و باقیِ
+    /// پهنا را دست‌نخورده رها می‌کند — یعنی یک نوارِ خالیِ بزرگ ته جدول.
+    /// پیش از این یک «ستونِ جاگیر» آن را می‌بلعید، ولی نتیجه‌اش همان بود:
+    /// یک ستونِ خالیِ چندصد پیکسلی در هر جدولِ هر بخش، که صاحب ریپو گفت
+    /// بی‌دلیل است و باید برود.
+    ///
+    /// جدولِ نسخهٔ وب این مشکل را ندارد چون ‎&lt;table&gt;‎ی ‎width:100%‎ پهنای
+    /// اضافه را بینِ ستون‌ها **به نسبتِ محتوایشان** پخش می‌کند. همین کار
+    /// این‌جا هم می‌شود: پهنای طبیعیِ هر ستون خوانده می‌شود و بعد همان عدد
+    /// وزنِ ستاره‌اش می‌گردد. پس نسبت‌ها همان می‌ماند و جدول تمامِ پهنا را
+    /// می‌گیرد.
+    ///
+    /// ⚠️ ‎MinWidth‎ روی همان پهنای طبیعی می‌نشیند: ستونِ ستاره‌ای وگرنه در
+    /// پنجرهٔ باریک زیرِ اندازهٔ محتوا فشرده می‌شود و نوشته‌ها بریده. با این
+    /// کف، به‌جای بریدن، جدول افقی می‌لغزد — همان کاری که ‎overflow-x:auto‎ی
+    /// سایت می‌کند.
+    /// </summary>
+    private void SpreadColumns()
+    {
+        if (_spread || Columns.Count == 0) return;
+
+        var cols = Columns.Where(c => c.IsVisible).ToList();
+        if (cols.Count == 0) return;
+
+        var natural = cols.Select(c => c.ActualWidth).ToArray();
+        if (natural.Any(w => double.IsNaN(w) || w <= 0)) return;   // هنوز چیده نشده
+
+        var room = Bounds.Width;
+        if (room <= 0) return;
+
+        // جای اضافه‌ای نیست (یا آن‌قدر کم است که ارزشِ دست زدن ندارد)
+        if (room - natural.Sum() < 8) return;
+
+        for (var i = 0; i < cols.Count; i++)
+        {
+            if (cols[i].MinWidth < natural[i]) cols[i].MinWidth = natural[i];
+            cols[i].Width = new DataGridLength(natural[i], DataGridLengthUnitType.Star);
+        }
+
+        _spread = true;
+    }
 
     protected override void OnKeyDown(KeyEventArgs e)
     {

@@ -15,7 +15,22 @@
   </Window.Resources>
 
   <Panel>
-  <Grid RowDefinitions="Auto,Auto,Auto,*" IsVisible="{Binding !IsLocked}">
+  <!-- ══ یک اسکرولِ واحد برای کلِ صفحه ═════════════════════════════════════
+       دقیقاً مدلِ سایت، اندازه‌گیری‌شده: کلِ صفحه می‌لغزد، ‎.header‎ و
+       ‎.top-banner‎ هر دو ‎position:static‎‌اند و با اسکرول بالا می‌روند، و
+       تنها ‎.nav‎ چسبان است (‎position:sticky; top:0‎).
+
+       پیش از این هر سه‌تا ردیفِ ثابتِ یک ‎Grid‎ بودند و فقط بدنهٔ بخش
+       می‌لغزید — صاحب ریپو گفت باید «تمام برنامه با همه چیز» برود بالا و
+       فقط نوارِ بخش‌ها قفل بماند.
+
+       نوار بیرونِ اسکرول است و با ‎TranslateTransform‎ (در کدِ پشتِ پنجره)
+       تا وقتی سربرگ دیده می‌شود پایین می‌ایستد و بعد سرِ صفر قفل می‌شود؛
+       آوالونیا ‎position:sticky‎ ندارد و این نزدیک‌ترین معادلش است. -->
+  <Grid IsVisible="{Binding !IsLocked}">
+   <ScrollViewer Name="PageScroll" VerticalScrollBarVisibility="Auto"
+                 HorizontalScrollBarVisibility="Disabled">
+    <StackPanel>
 
     <!-- ══ سربرگ ══════════════════════════════════════════════════════════
          اندازه‌ها اندازه‌گیری‌شده‌اند، نه حدس: در همان پنجرهٔ ۱۴۴۰ پیکسلی،
@@ -24,7 +39,7 @@
            عنوان ۲۱٫۱ پیکسل وزنِ ۹۰۰ · تاریخ ۱۵٫۷ وزنِ ۷۰۰
            ‎#lockBtn‎ ۶۵×۴۰ ، ‎.role-badge‎ ۶۳×۳۰ ، هر دو کپسولی (‎r:999‎)
          پیش از این سربرگِ نیتیو ۵۵ پیکسل بود و نه قفل داشت نه نشانِ نقش. -->
-    <Border Grid.Row="0" Background="{DynamicResource Pump.HeaderBg}"
+    <Border Name="HeaderBlock" Background="{DynamicResource Pump.HeaderBg}"
             BorderBrush="{DynamicResource Pump.Accent}" BorderThickness="0,0,0,2" Padding="20,12">
       <Grid ColumnDefinitions="Auto,*,Auto">
         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
@@ -82,7 +97,7 @@
          قلم <b>دو خطه</b> — برچسب ۱۶ پیکسل وزنِ ۸۰۰ بالا، عدد ۱۶٫۸ وزنِ ۸۰۰
          پایین. تا امروز این‌جا یک خطه و ۱۲ پیکسلی بود، برای همین نوار ۳۰
          پیکسل می‌شد و کنارِ نسخهٔ وب «ریز» دیده می‌شد. -->
-    <Border Grid.Row="1" Background="{DynamicResource Pump.BannerBg}"
+    <Border Name="BannerBlock" Background="{DynamicResource Pump.BannerBg}"
             BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="0,0,0,1" Padding="20,8">
       <ItemsControl ItemsSource="{Binding Banner}" HorizontalAlignment="Center">
         <ItemsControl.ItemsPanel>
@@ -105,7 +120,19 @@
          افقی و بالای صفحه، مثلِ ‎<div class="nav">‎ در نسخهٔ وب — نه ستونِ
          کناری. چون ردیفِ جداگانهٔ همین Grid است، محتوا زیرش اسکرول می‌شود و
          خودِ نوار سرِ جایش می‌ماند (خواستهٔ صریحِ صاحب ریپو). -->
-    <Border Grid.Row="2" Background="{DynamicResource Pump.NavBg}"
+    <!-- جای خالیِ نوار: نوار خودش بیرونِ اسکرول شناور است، پس این‌جا به
+         همان بلندی جا باز می‌شود تا محتوا زیرش پنهان نشود. -->
+    <Panel Name="NavGap" Height="46" />
+
+    <ContentControl Content="{Binding Current}"
+                    HorizontalAlignment="Stretch"
+                    MaxWidth="{Binding Current.ContentMaxWidth, FallbackValue=1000}" />
+    </StackPanel>
+   </ScrollViewer>
+
+    <!-- ══ نوارِ بخش‌ها — چسبانِ بالا ═══════════════════════════════════════ -->
+    <Border Name="NavBar" VerticalAlignment="Top"
+            Background="{DynamicResource Pump.NavBg}"
             BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="0,0,0,1">
       <c:NavStrip Name="Nav">
         <ItemsControl ItemsSource="{Binding Sections}">
@@ -133,12 +160,6 @@
       </c:NavStrip>
     </Border>
 
-    <!-- ══ محتوا ══════════════════════════════════════════════════════════
-         ستونِ وسط‌چینِ ۱۰۰۰ پیکسلی، مثلِ ‎.main‎ نسخهٔ وب. بخش‌های جدولیِ
-         فهرست‌شده در ‎SectionViewModel.IsWide‎ تمامِ عرض را می‌گیرند. -->
-    <ContentControl Grid.Row="3" Content="{Binding Current}"
-                    HorizontalAlignment="Stretch"
-                    MaxWidth="{Binding Current.ContentMaxWidth, FallbackValue=1000}" />
   </Grid>
 
     <!-- ══ قفل ══ -->

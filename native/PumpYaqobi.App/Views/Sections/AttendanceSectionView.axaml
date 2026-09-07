@@ -5,7 +5,7 @@
              x:Class="PumpYaqobi.App.Views.Sections.AttendanceSectionView"
              x:DataType="vm:AttendanceSectionViewModel">
 
-  <c:SectionPage ScrollBody="False" Header="حاضری و معاش"
+  <c:SectionPage Header="حاضری و معاش"
                  SubHeader="شیفتی که از نیمه‌شب رد می‌شود، ساعتش درست شمرده می‌شود">
 
     <c:SectionPage.Filters>
@@ -21,7 +21,7 @@
     </c:SectionPage.Filters>
 
     <Grid RowDefinitions="Auto,12,*">
-      <ScrollViewer Grid.Row="0" HorizontalScrollBarVisibility="Auto" MaxHeight="250">
+      <Panel Grid.Row="0">
         <ItemsControl ItemsSource="{Binding Staff}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate><c:AutoFillPanel MinItemWidth="252" Gap="12" /></ItemsPanelTemplate>
@@ -67,7 +67,7 @@
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
-      </ScrollViewer>
+      </Panel>
 
       <c:ExcelGrid Grid.Row="2" ItemsSource="{Binding Rows}" x:CompileBindings="False">
         <DataGrid.Columns>

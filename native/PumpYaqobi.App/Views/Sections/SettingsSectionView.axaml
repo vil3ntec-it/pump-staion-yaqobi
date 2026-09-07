@@ -12,8 +12,7 @@
       <Button Classes="accent" Content="💾 ذخیرهٔ تنظیمات" Command="{Binding SaveCommand}" />
     </c:SectionPage.Toolbar>
 
-    <ScrollViewer>
-      <StackPanel Spacing="14">
+          <StackPanel Spacing="14">
 
         <!-- مشخصاتِ پمپ -->
         <Border Classes="panel" Padding="0">
@@ -163,6 +162,6 @@
           </StackPanel>
         </Border>
       </StackPanel>
-    </ScrollViewer>
+    
   </c:SectionPage>
 </UserControl>

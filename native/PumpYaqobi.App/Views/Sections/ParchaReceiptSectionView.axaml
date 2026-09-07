@@ -6,7 +6,7 @@
              x:Class="PumpYaqobi.App.Views.Sections.ParchaReceiptSectionView"
              x:DataType="vm:ParchaReceiptSectionViewModel">
 
-  <c:SectionPage ScrollBody="False" Header="🧾 رسید پارچه‌ها"
+  <c:SectionPage Header="🧾 رسید پارچه‌ها"
                  SubHeader="در ستون «به حساب» نام صاحب حساب را بنویس؛ با دکمهٔ 📥 رسید مستقیم وارد حساب همان شخص می‌شود. اگر همین رسید قبلاً از طریق ورق وارد شده باشد، دوباره ثبت نمی‌شود.">
 
     <c:SectionPage.Toolbar>

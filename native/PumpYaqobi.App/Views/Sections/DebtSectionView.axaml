@@ -46,8 +46,7 @@
         </Grid>
       </c:SectionPage.Filters>
 
-      <ScrollViewer>
-        <ItemsControl ItemsSource="{Binding Cards}">
+              <ItemsControl ItemsSource="{Binding Cards}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate><c:AutoFillPanel MinItemWidth="252" Gap="12" /></ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
@@ -110,7 +109,7 @@
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
-      </ScrollViewer>
+      
     </c:SectionPage>
 
     <Panel IsVisible="{Binding !IsListVisible}">

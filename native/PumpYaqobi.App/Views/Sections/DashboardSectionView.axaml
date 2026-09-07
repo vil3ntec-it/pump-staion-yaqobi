@@ -9,8 +9,7 @@
   <!-- ══ داشبورد ══════════════════════════════════════════════════════════
        چیدمان مو‌به‌مو از ‎#sec-dashboard‎: نوارِ بالا، پنجی کارتِ آماری، و دو
        ردیفِ سه‌کارتی که ستونِ میانی‌شان پهن‌تر است (‎.k-wide‎). -->
-  <ScrollViewer>
-    <StackPanel Margin="14" Spacing="12">
+      <StackPanel Margin="14" Spacing="12">
 
       <!-- ── نوارِ بالا (‎.dash-head‎) ── -->
       <Grid ColumnDefinitions="Auto,*,Auto">
@@ -184,8 +183,7 @@
               <TextBlock Text="✅ همه‌چیز مرتب است — مخزن، قرض‌داران و بکاپ"
                          Classes="muted" FontSize="12" TextWrapping="Wrap"
                          IsVisible="{Binding !Alerts.Count}" />
-              <ScrollViewer>
-                <ItemsControl ItemsSource="{Binding Alerts}">
+                              <ItemsControl ItemsSource="{Binding Alerts}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:DashAlertViewModel">
                       <Button Classes="card-shell" Margin="0,0,0,8" HorizontalAlignment="Stretch"
@@ -206,7 +204,7 @@
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
-              </ScrollViewer>
+              
             </Panel>
           </Grid>
         </Border>
@@ -300,8 +298,7 @@
               <Button Grid.Column="1" Classes="ghost" Content="مشاهده همه" Padding="9,4" FontSize="11"
                       Command="{Binding GoCommand}" CommandParameter="shifts" />
             </Grid>
-            <ScrollViewer Grid.Row="1">
-              <ItemsControl ItemsSource="{Binding Recent}">
+                          <ItemsControl ItemsSource="{Binding Recent}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:DashRecentViewModel">
                     <Border Background="{DynamicResource Pump.Hover}" CornerRadius="8" Padding="9,7"
@@ -322,7 +319,7 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-            </ScrollViewer>
+            
           </Grid>
         </Border>
       </Grid>
@@ -330,5 +327,5 @@
       <TextBlock Text="{Binding FootNote}" Classes="muted" FontSize="11"
                  HorizontalAlignment="Center" Margin="0,4,0,0" />
     </StackPanel>
-  </ScrollViewer>
+  
 </UserControl>

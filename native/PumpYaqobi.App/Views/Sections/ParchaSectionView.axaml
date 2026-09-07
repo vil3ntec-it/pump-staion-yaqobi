@@ -202,7 +202,7 @@
             </Grid>
           </Border>
 
-          <ScrollViewer Grid.Row="1" Padding="12">
+          <Border Grid.Row="1" Padding="12">
             <ItemsControl ItemsSource="{Binding Reports}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate><c:AutoFillPanel MinItemWidth="268" Gap="12" /></ItemsPanelTemplate>
@@ -233,7 +233,7 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-          </ScrollViewer>
+          </Border>
         </Grid>
       </Border>
     </Grid>

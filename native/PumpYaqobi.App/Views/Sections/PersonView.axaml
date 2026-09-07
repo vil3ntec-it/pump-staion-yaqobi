@@ -5,7 +5,7 @@
              x:Class="PumpYaqobi.App.Views.Sections.PersonView"
              x:DataType="vm:PersonViewModel">
 
-  <c:SectionPage ScrollBody="False" Header="{Binding Name}" SubHeader="{Binding Phone}">
+  <c:SectionPage Header="{Binding Name}" SubHeader="{Binding Phone}">
 
     <c:SectionPage.Toolbar>
       <StackPanel Orientation="Horizontal" Spacing="8">
