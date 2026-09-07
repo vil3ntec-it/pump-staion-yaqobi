@@ -114,6 +114,12 @@
                          Foreground="{DynamicResource Pump.Ok}"
                          IsVisible="{Binding PackageText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
+              <!-- نتیجهٔ به‌روزرسانیِ دفعهٔ پیش — هر دو حالت گفته می‌شود.
+                   «هیچ نگفتن» بدترین حالت بود: کاربر خیال می‌کرد به‌روز شده. -->
+              <TextBlock Text="{Binding LastSuccess}" TextWrapping="Wrap" FontWeight="Bold"
+                         Foreground="{DynamicResource Pump.Ok}"
+                         IsVisible="{Binding LastSuccess, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
               <TextBlock Text="{Binding LastFailure}" TextWrapping="Wrap"
                          Foreground="{DynamicResource Pump.Danger}"
                          IsVisible="{Binding LastFailure, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
