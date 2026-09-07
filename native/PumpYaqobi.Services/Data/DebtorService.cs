@@ -163,7 +163,15 @@ public sealed class DebtorService
     {
         _perm.Require(Permission.DeleteData);
         await using var db = _dbf.Create();
-        var d = await db.Debtors.FirstOrDefaultAsync(x => x.Id == id, ct);
+        // ⚠️ حساب‌ها و ردیف‌ها هم خوانده می‌شوند — نه برای حذف (آن را خودِ
+        // پایگاه با cascade می‌کند) بلکه برای **سطلِ زباله**: اگر فقط خودِ شخص
+        // در سطل بنشیند، «بازگرداندن» شخصی بی‌حساب و بی‌ردیف پس می‌دهد.
+        var d = await db.Debtors
+                        .Include(x => x.MainAccount).ThenInclude(a => a!.FuelRows)
+                        .Include(x => x.MainAccount).ThenInclude(a => a!.MoneyRows)
+                        .Include(x => x.SubAccounts).ThenInclude(a => a.FuelRows)
+                        .Include(x => x.SubAccounts).ThenInclude(a => a.MoneyRows)
+                        .FirstOrDefaultAsync(x => x.Id == id, ct);
         if (d is null) return;
         await _trash.RememberAsync(db, "debtor", d.Name ?? "", d, ct);
         db.Debtors.Remove(d);
@@ -174,7 +182,9 @@ public sealed class DebtorService
     {
         _perm.Require(Permission.DeleteData);
         await using var db = _dbf.Create();
-        var a = await db.DebtAccounts.FirstOrDefaultAsync(x => x.Id == accountId, ct);
+        var a = await db.DebtAccounts
+                        .Include(x => x.FuelRows).Include(x => x.MoneyRows)
+                        .FirstOrDefaultAsync(x => x.Id == accountId, ct);
         if (a is null || a.MainOfDebtorId != null) return;   // حسابِ اصلی حذف نمی‌شود
         await _trash.RememberAsync(db, "debtaccount", a.Name ?? "", a, ct);
         db.DebtAccounts.Remove(a);

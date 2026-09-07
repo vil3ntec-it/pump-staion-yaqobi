@@ -40,7 +40,10 @@ public static class Dialogs
     public static Task<string?> PickJsonAsync(string title = "فایلِ بکاپ را انتخاب کنید") =>
         PickFileAsync(title, "فایلِ بکاپ", new[] { "*.json" });
 
-    private static async Task<string?> PickFileAsync(string title, string kind, string[] patterns)
+    /// <summary>
+    /// انتخابِ یک فایل با پسوندهای داده‌شده. ‎null‎ یعنی انصراف (یا آزمونِ بی‌پنجره).
+    /// </summary>
+    public static async Task<string?> PickFileAsync(string title, string kind, string[] patterns)
     {
         var owner = Owner;
         if (owner is null) return null;
@@ -58,6 +61,32 @@ public static class Dialogs
             // از یک ارائه‌دهندهٔ ابری) ‎null‎ می‌دهد — همان‌جا انصراف می‌شود،
             // نه یک مسیرِ ساختگی که بعداً باز نمی‌شود.
             return files.Count > 0 ? files[0].TryGetLocalPath() : null;
+        });
+    }
+
+    /// <summary>
+    /// «کجا ذخیره شود؟» — پنجرهٔ ذخیرهٔ خودِ ویندوز. ‎null‎ یعنی انصراف.
+    ///
+    /// خودِ پنجره «فایل هست، جایگزین شود؟» را می‌پرسد، پس این‌جا دوباره
+    /// پرسیده نمی‌شود.
+    /// </summary>
+    public static async Task<string?> SaveFileAsync(string title, string suggestedName,
+                                                    string kind, string[] patterns)
+    {
+        var owner = Owner;
+        if (owner is null) return null;
+        return await Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            var top = TopLevel.GetTopLevel(owner);
+            if (top is null) return null;
+            var file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = title,
+                SuggestedFileName = suggestedName,
+                ShowOverwritePrompt = true,
+                FileTypeChoices = new[] { new FilePickerFileType(kind) { Patterns = patterns } },
+            });
+            return file?.TryGetLocalPath();
         });
     }
 

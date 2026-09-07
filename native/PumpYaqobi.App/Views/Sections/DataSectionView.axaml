@@ -1,0 +1,100 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             x:Class="PumpYaqobi.App.Views.Sections.DataSectionView"
+             x:DataType="vm:DataSectionViewModel">
+
+  <c:SectionPage Header="مدیریت داده‌ها"
+                 SubHeader="سطلِ زباله، بکاپ و بازگردانی — همه روی همین دستگاه">
+
+    <StackPanel Spacing="14">
+
+      <!-- ══ سطلِ زباله ══════════════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="12,10">
+        <StackPanel Spacing="8">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock Text="🗑️ سطلِ زباله" FontWeight="Bold" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding RetentionText}" Classes="muted" VerticalAlignment="Center" />
+          </StackPanel>
+
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Classes="accent" Content="↩️ بازگرداندن"
+                    Command="{Binding RestoreTrashCommand}" />
+            <Button Classes="ghost danger" Content="🗑️ حذفِ همیشگی"
+                    Command="{Binding PurgeTrashCommand}" IsVisible="{Binding CanPurge}" />
+            <Button Classes="ghost danger" Content="🧹 خالی کردنِ سطل"
+                    Command="{Binding EmptyTrashCommand}" IsVisible="{Binding CanPurge}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="panel" Padding="0">
+        <c:ExcelGrid ItemsSource="{Binding Trash}" x:CompileBindings="False"
+                     SelectedItem="{Binding SelectedTrash, Mode=TwoWay}"
+                     IsReadOnly="True" BorderThickness="0" CornerRadius="0" MaxHeight="320">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" />
+            <DataGridTextColumn Header="نوع" Binding="{Binding KindText}" Width="Auto" MinWidth="150" />
+            <DataGridTextColumn Header="چه بود" Binding="{Binding Label}" Width="*" MinWidth="200" />
+            <DataGridTextColumn Header="کِی پاک شد" Binding="{Binding DeletedText}" Width="Auto" MinWidth="120" />
+            <DataGridTextColumn Header="تا کِی می‌ماند" Binding="{Binding DaysLeftText}" Width="Auto" MinWidth="110" />
+            <DataGridTextColumn Header="به‌دستِ" Binding="{Binding ByText}" Width="Auto" MinWidth="90" />
+          </DataGrid.Columns>
+        </c:ExcelGrid>
+      </Border>
+
+      <TextBlock Text="سطلِ زباله خالی است — هیچ چیزی حذف نشده" Classes="label"
+                 IsVisible="{Binding TrashEmpty}" HorizontalAlignment="Center" Margin="0,6" />
+
+      <!-- ══ بکاپ ═══════════════════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="12,10">
+        <StackPanel Spacing="8">
+          <TextBlock Text="💾 بکاپ" FontWeight="Bold" />
+          <TextBlock Classes="muted" TextWrapping="Wrap"
+                     Text="برنامه هر روز که باز شود خودش یک عکس می‌گیرد و چهارده تای آخر را نگه می‌دارد. عکس‌ها کنارِ خودِ برنامه‌اند — برای نگهداریِ واقعی، فایلِ بکاپ را بگیرید و جای دیگری بگذارید." />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Classes="accent" Content="💾 ذخیرهٔ فایلِ بکاپ"
+                    Command="{Binding SaveBackupCommand}" IsEnabled="{Binding !Busy}" />
+            <Button Classes="ghost" Content="📸 گرفتنِ عکسِ همین حالا"
+                    Command="{Binding SnapshotNowCommand}" IsEnabled="{Binding !Busy}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="panel" Padding="0">
+        <c:ExcelGrid ItemsSource="{Binding Backups}" x:CompileBindings="False"
+                     SelectedItem="{Binding SelectedBackup, Mode=TwoWay}"
+                     IsReadOnly="True" BorderThickness="0" CornerRadius="0" MaxHeight="260">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" />
+            <DataGridTextColumn Header="روز" Binding="{Binding Day}" Width="Auto" MinWidth="130" />
+            <DataGridTextColumn Header="ساعت" Binding="{Binding TakenText}" Width="Auto" MinWidth="80" />
+            <DataGridTextColumn Header="اندازه" Binding="{Binding SizeText}" Width="Auto" MinWidth="120" />
+          </DataGrid.Columns>
+        </c:ExcelGrid>
+      </Border>
+
+      <TextBlock Text="هنوز عکسی گرفته نشده" Classes="label"
+                 IsVisible="{Binding NoBackups}" HorizontalAlignment="Center" Margin="0,6" />
+
+      <!-- ══ بازگردانی ══════════════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="12,10" IsVisible="{Binding CanRestore}">
+        <StackPanel Spacing="8">
+          <TextBlock Text="♻️ بازگردانی" FontWeight="Bold" />
+          <TextBlock Classes="muted" TextWrapping="Wrap"
+                     Text="⚠️ بازگردانی همهٔ حساب‌های فعلی را با بکاپ جایگزین می‌کند. پیش از آن، از حالِ فعلی یک عکسِ ایمنی گرفته می‌شود تا اگر بکاپِ اشتباه را برگرداندید راهِ برگشت باشد." />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Classes="ghost danger" Content="♻️ بازگردانیِ عکسِ انتخاب‌شده"
+                    Command="{Binding RestoreSelectedCommand}" IsEnabled="{Binding !Busy}" />
+            <Button Classes="ghost danger" Content="📂 بازگردانی از فایل"
+                    Command="{Binding RestoreFromFileCommand}" IsEnabled="{Binding !Busy}" />
+          </StackPanel>
+          <TextBlock Text="{Binding Status}" Classes="muted" TextWrapping="Wrap"
+                     IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </c:SectionPage>
+</UserControl>
