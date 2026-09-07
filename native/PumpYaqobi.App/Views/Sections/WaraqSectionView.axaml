@@ -27,24 +27,24 @@
         </StackPanel>
       </c:SectionPage.Filters>
 
-      <ScrollViewer>
-        <Panel>
+              <Panel>
           <TextBlock Text="هیچ ورقی ثبت نشده — از دکمهٔ بالا ورق جدید اضافه کنید"
                      Classes="muted" HorizontalAlignment="Center" Margin="0,40,0,0"
                      IsVisible="{Binding IsEmpty}" />
-          <ItemsControl ItemsSource="{Binding Cards}">
-            <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate><c:AutoFillPanel MinItemWidth="252" Gap="12" /></ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
+          <ItemsRepeater ItemsSource="{Binding Cards}">
+            <ItemsRepeater.Layout>
+              <UniformGridLayout MinItemWidth="252" ItemsStretch="Fill"
+                                 MinColumnSpacing="12" MinRowSpacing="12" />
+            </ItemsRepeater.Layout>
+            <ItemsRepeater.ItemTemplate>
               <DataTemplate x:DataType="vm:WaraqCardViewModel">
                 <Button Classes="card-shell"
-                        Command="{Binding $parent[ItemsControl].((vm:WaraqSectionViewModel)DataContext).OpenCardCommand}"
+                        Command="{Binding $parent[ItemsRepeater].((vm:WaraqSectionViewModel)DataContext).OpenCardCommand}"
                         CommandParameter="{Binding}">
                   <Border Classes="person-card">
                     <Grid RowDefinitions="Auto,Auto,Auto,*">
                       <Button Grid.Row="0" Classes="card-x" Content="✕" HorizontalAlignment="Left"
-                              Command="{Binding $parent[ItemsControl].((vm:WaraqSectionViewModel)DataContext).DeleteCardCommand}"
+                              Command="{Binding $parent[ItemsRepeater].((vm:WaraqSectionViewModel)DataContext).DeleteCardCommand}"
                               CommandParameter="{Binding}" />
 
                       <TextBlock Grid.Row="1" Text="{Binding Title}" FontWeight="Bold" FontSize="14"
@@ -64,17 +64,17 @@
                         <Button Classes="qr" Content="📄 PDF" HorizontalAlignment="Stretch"
                                 Foreground="{DynamicResource Pump.Ok}"
                                 BorderBrush="{DynamicResource Pump.Ok}"
-                                Command="{Binding $parent[ItemsControl].((vm:WaraqSectionViewModel)DataContext).PdfCardCommand}"
+                                Command="{Binding $parent[ItemsRepeater].((vm:WaraqSectionViewModel)DataContext).PdfCardCommand}"
                                 CommandParameter="{Binding}" />
                       </StackPanel>
                     </Grid>
                   </Border>
                 </Button>
               </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
+            </ItemsRepeater.ItemTemplate>
+          </ItemsRepeater>
         </Panel>
-      </ScrollViewer>
+      
     </c:SectionPage>
 
     <Panel IsVisible="{Binding !IsListVisible}">

@@ -202,19 +202,20 @@
             </Grid>
           </Border>
 
-          <ScrollViewer Grid.Row="1" Padding="12">
-            <ItemsControl ItemsSource="{Binding Reports}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><c:AutoFillPanel MinItemWidth="268" Gap="12" /></ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
+          <Border Grid.Row="1" Padding="12">
+            <ItemsRepeater ItemsSource="{Binding Reports}">
+              <ItemsRepeater.Layout>
+              <UniformGridLayout MinItemWidth="268" ItemsStretch="Fill"
+                                 MinColumnSpacing="12" MinRowSpacing="12" />
+            </ItemsRepeater.Layout>
+              <ItemsRepeater.ItemTemplate>
                 <DataTemplate x:DataType="vm:ReportCardViewModel">
                   <Border Classes="card">
                     <StackPanel Spacing="7">
                       <Grid ColumnDefinitions="*,Auto">
                         <TextBlock Grid.Column="0" Text="{Binding Title}" FontWeight="Bold" FontSize="13" />
                         <Button Grid.Column="1" Classes="ghost danger" Content="✕" Padding="7,1" FontSize="11"
-                                Command="{Binding $parent[ItemsControl].((vm:ParchaSectionViewModel)DataContext).DeleteReportCommand}"
+                                Command="{Binding $parent[ItemsRepeater].((vm:ParchaSectionViewModel)DataContext).DeleteReportCommand}"
                                 CommandParameter="{Binding}" />
                       </Grid>
                       <TextBlock Text="{Binding DayName, StringFormat=☀️ {0}}" Classes="muted" />
@@ -231,9 +232,9 @@
                     </StackPanel>
                   </Border>
                 </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </ScrollViewer>
+              </ItemsRepeater.ItemTemplate>
+            </ItemsRepeater>
+          </Border>
         </Grid>
       </Border>
     </Grid>

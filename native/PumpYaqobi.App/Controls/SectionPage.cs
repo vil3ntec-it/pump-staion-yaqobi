@@ -34,6 +34,7 @@ public class SectionPage : TemplatedControl
     public static readonly StyledProperty<object?> FooterProperty =
         AvaloniaProperty.Register<SectionPage, object?>(nameof(Footer));
 
+
     public string? Header { get => GetValue(HeaderProperty); set => SetValue(HeaderProperty, value); }
     public string? SubHeader { get => GetValue(SubHeaderProperty); set => SetValue(SubHeaderProperty, value); }
     public object? Toolbar { get => GetValue(ToolbarProperty); set => SetValue(ToolbarProperty, value); }

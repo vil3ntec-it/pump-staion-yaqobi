@@ -13,7 +13,6 @@
     <c:SectionPage IsVisible="{Binding IsForm}" Header="ثبت فاکتورها"
                    SubHeader="تایید، بخشِ پولی را به دفترِ پول و بخشِ تیل را به «رسیدِ تیل»ِ همان حساب می‌برد">
 
-      <ScrollViewer>
         <StackPanel Spacing="16">
 
           <!-- ══ برگهٔ چاپیِ فاکتور — ‎.invp-frame‎ ══════════════════════════
@@ -195,7 +194,6 @@
             </Button>
           </c:AutoFillPanel>
         </StackPanel>
-      </ScrollViewer>
     </c:SectionPage>
 
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -213,7 +211,6 @@
                  Watermark="🔍 جستجو: شماره فاکتور، نام مشتری، شماره تماس یا تاریخ..." />
       </c:SectionPage.Filters>
 
-      <ScrollViewer>
         <ItemsControl ItemsSource="{Binding Rows}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:InvoiceRowViewModel">
@@ -259,7 +256,6 @@
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
-      </ScrollViewer>
     </c:SectionPage>
 
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -271,7 +267,6 @@
         <Button Classes="danger" Content="✖ بستن" Command="{Binding CloseListCommand}" />
       </c:SectionPage.Toolbar>
 
-      <ScrollViewer>
         <Border DataContext="{Binding Detail}" x:CompileBindings="False"
                 BorderBrush="{DynamicResource Pump.Accent}" BorderThickness="2"
                 CornerRadius="16" Padding="26,22" Margin="0,0,0,14"
@@ -347,7 +342,6 @@
             </Border>
           </StackPanel>
         </Border>
-      </ScrollViewer>
     </c:SectionPage>
   </Panel>
 </UserControl>

@@ -319,10 +319,17 @@
              .card-head     ← عنوانِ رنگی راست، دکمه‌های کار چپ
              (padding:14px) ← فیلتر، جمع‌ها، بدنه، پانویس
 
-       پیش از این، عنوان و دکمه‌ها بیرونِ هر کادری شناور بودند و بخش‌ها
-       «صفحهٔ وبِ کِش‌آمده» دیده می‌شدند نه پنجرهٔ یک برنامه. حالا هر بخش یک
-       واحدِ بسته است — و چون این‌جا یک‌جا تعریف شده، هر هجده بخش با هم
-       عوض می‌شوند.                                                        -->
+       اسکرول اصلاً مالِ بخش نیست. یکی است و مالِ کلِ پنجره
+       (‎PageScroll‎ در ‎MainWindow‎) — مثلِ سایت: کلِ صفحه می‌لغزد، سربرگ و
+       نوارِ آمار هم با آن بالا می‌روند و فقط نوارِ بخش‌ها سرِ صفر قفل می‌شود.
+       بخش هیچ سقفی ندارد و فقط به بلندیِ محتوایش کِش می‌آید.
+
+       ⚠️ اگر روزی وسوسه شدی این‌جا یا در یکی از بخش‌ها ‎ScrollViewer‎ بگذاری:
+       نگذار. صاحب ریپو دو بار همین را رد کرد — «تا وقتی نوارِ بخش‌ها به سقف
+       نچسبیده، محتوای بخش نباید تکان بخورد». هر اسکرولِ درونی همان قاعده را
+       می‌شکند، چون چرخِ ماوس اول آن را می‌لغزاند نه صفحه را. سنجشِ اسکرول
+       (سنجشِ اسکرول، حالتِ ‎scroll‎) همین را می‌پاید و اگر برگردد قرمز
+       می‌شود.                                                              -->
   <Style Selector="c|SectionPage">
     <Setter Property="Template">
       <ControlTemplate>
@@ -344,12 +351,16 @@
             </Border>
 
             <!-- ══ بدنهٔ کادر ══ -->
-            <Grid Grid.Row="1" RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="14">
+            <!-- ردیفِ اول تازه است: کارت‌های زیربخش. بقیه همان چهارتای
+                 همیشگی‌اند و همه ‎Auto‎ می‌مانند — با اسکرولِ واحدِ کلِ صفحه،
+                 بخش باید به اندازهٔ محتوایش بلند شود، نه به اندازهٔ قاب. -->
+            <Grid Grid.Row="1" RowDefinitions="Auto,Auto,Auto,Auto,Auto" Margin="14">
 
               <!-- ══ کارت‌های زیربخش ══════════════════════════════════════
                    بخشی که زیربخش دارد (قرض‌داران، مخزن، مفاد/ضرر، تنظیمات،
                    رسید قرض‌داران، حاضری) کارت‌هایشان همین بالا می‌آیند — مثلِ
-                   سایت. بخشی که ندارد، این ردیف را اصلاً نمی‌بیند.
+                   ‎.tool-link-card‎ نسخهٔ وب. بخشی که ندارد، این ردیف را
+                   اصلاً نمی‌بیند.
 
                    ‎x:CompileBindings="False"‎ لازم است: داخلِ ControlTemplate
                    نوعِ DataContext معلوم نیست، و این‌جا DataContext همان
@@ -377,18 +388,18 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
 
-              <Border Grid.Row="1" Classes="panel" Padding="12,9" Margin="0,0,0,12"
-                      IsVisible="{TemplateBinding Filters, Converter={x:Static ObjectConverters.IsNotNull}}">
-                <ContentPresenter Content="{TemplateBinding Filters}" />
-              </Border>
+                <Border Grid.Row="1" Classes="panel" Padding="12,9" Margin="0,0,0,12"
+                        IsVisible="{TemplateBinding Filters, Converter={x:Static ObjectConverters.IsNotNull}}">
+                  <ContentPresenter Content="{TemplateBinding Filters}" />
+                </Border>
 
-              <ContentPresenter Grid.Row="2" Content="{TemplateBinding Summary}" Margin="0,0,0,12"
-                                IsVisible="{TemplateBinding Summary, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <ContentPresenter Grid.Row="2" Content="{TemplateBinding Summary}" Margin="0,0,0,12"
+                                  IsVisible="{TemplateBinding Summary, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
-              <ContentPresenter Grid.Row="3" Content="{TemplateBinding Body}" />
+                <ContentPresenter Grid.Row="3" Content="{TemplateBinding Body}" />
 
-              <ContentPresenter Grid.Row="4" Content="{TemplateBinding Footer}" Margin="0,12,0,0"
-                                IsVisible="{TemplateBinding Footer, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <ContentPresenter Grid.Row="4" Content="{TemplateBinding Footer}" Margin="0,12,0,0"
+                                  IsVisible="{TemplateBinding Footer, Converter={x:Static ObjectConverters.IsNotNull}}" />
             </Grid>
           </Grid>
         </Border>

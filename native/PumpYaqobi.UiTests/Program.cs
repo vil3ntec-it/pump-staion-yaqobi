@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
+using Avalonia.Layout;
 using Avalonia.Threading;
 using PumpYaqobi.App.Themes;
 using PumpYaqobi.App.ViewModels;
@@ -22,6 +23,18 @@ internal static class Program
     public static int Main(string[] args)
     {
         var outDir = args.Length > 0 ? args[0] : "shots";
+
+        // ══ حالتِ «سنجشِ اسکرول» ═════════════════════════════════════════════
+        //     dotnet run --project PumpYaqobi.UiTests -- scroll
+        //
+        // گزارشِ صاحب ریپو: «جز جدول‌ها دیگر هیچ چیزی اسکرول نمی‌شود». این
+        // حالت به‌جای حدس زدن، در همان پنجرهٔ واقعی و در کوچک‌ترین اندازهٔ
+        // مجاز، بخش‌به‌بخش می‌سنجد که محتوا از پنجره بلندتر است یا نه و آیا
+        // اصلاً راهی برای رسیدن به بخشِ بیرون‌افتاده هست.
+        if (outDir.Equals("scroll", StringComparison.OrdinalIgnoreCase)) return ScrollAudit();
+        if (outDir.Equals("gridperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Run();
+        if (outDir.Equals("cardperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Cards();
+
         Directory.CreateDirectory(outDir);
 
         // دیتابیسِ موقت — عکس‌گیری هرگز به دادهٔ واقعیِ کاربر دست نمی‌زند
@@ -298,5 +311,119 @@ internal static class Program
         if (frame is null) { Console.WriteLine("  ✖ عکس گرفته نشد: " + path); return; }
         frame.Save(path);
         Console.WriteLine("  ✔ " + Path.GetFileName(path));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  سنجشِ اسکرول
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// برای هر بخش می‌گوید: محتوا چقدر بلند است، پنجره چقدر جا دارد، و اگر
+    /// بلندتر است آیا ‎ScrollViewer‎ی هست که واقعاً بتواند به تهش برساند.
+    ///
+    /// پنجره عمداً در کوچک‌ترین اندازهٔ مجاز (‎MinWidth×MinHeight‎) باز می‌شود:
+    /// در ۱۴۴۰×۹۰۰ بیشترِ بخش‌ها اصلاً سرریز نمی‌کنند و سنجش بی‌نتیجه می‌ماند.
+    /// </summary>
+    /// <summary>
+    /// کوتاه‌ترین بلندیِ پذیرفتنی برای جدولِ یک بخش. کمتر از این یعنی فیلتر و
+    /// جمع‌ها جای جدول را خورده‌اند و کاربر فقط سرِ ستون‌ها را می‌بیند.
+    /// </summary>
+    private const double MinGridHeight = 120;
+
+    private static int ScrollAudit()
+    {
+        var tmpDb = Path.Combine(Path.GetTempPath(), "pump-scroll-" + Guid.NewGuid().ToString("N"), "pump.db");
+        PumpYaqobi.App.Services.AppHost.Start(tmpDb);
+
+        AppBuilder.Configure<PumpYaqobi.App.App>()
+            .UseSkia()
+            .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
+            .SetupWithoutStarting();
+
+        var win = new MainWindow { Width = 1000, Height = 640 };
+        win.Show();
+        Pump(win);
+
+        var vm = (MainViewModel)win.DataContext!;
+        vm.Lock.Password = "1234";
+        vm.Lock.Confirm = "1234";
+        vm.Lock.SubmitCommand.Execute(null);
+        Wait(win, Task.CompletedTask);
+        Pump(win);
+        Seed.Fill(PumpYaqobi.App.Services.AppHost.Current);
+
+        Console.WriteLine();
+        Console.WriteLine("بخش                  سرریز؟   بلندیِ صفحه / جا    اسکرول  درونی     جدول      درست؟");
+        Console.WriteLine(new string('-', 74));
+
+        var broken = new List<string>();
+
+        foreach (var sec in vm.Sections)
+        {
+            Wait(win, vm.GoAsync(sec));
+            Pump(win);
+            Dispatcher.UIThread.RunJobs();
+            Pump(win);
+
+            // ریشهٔ محتوای همین بخش — همان ‎ContentControl‎ی که بخش داخلش است
+            var host = win.GetVisualDescendants().OfType<ContentControl>()
+                          .FirstOrDefault(c => ReferenceEquals(c.Content, sec));
+            if (host is null) { Console.WriteLine($"{sec.Id,-20} — میزبان پیدا نشد"); continue; }
+
+            // ══ اسکرولِ صفحه ══════════════════════════════════════════════
+            // از این نسخه، اسکرول یکی است و مالِ کلِ پنجره (‎PageScroll‎) —
+            // مثلِ سایت. پس بلندیِ محتوا را از همان می‌پرسیم، نه از
+            // اسکرول‌ویورِ درونِ بخش (که دیگر وجود ندارد).
+            var page = win.GetVisualDescendants().OfType<ScrollViewer>()
+                          .FirstOrDefault(v => v.Name == "PageScroll");
+
+            var avail = page?.Viewport.Height ?? host.Bounds.Height;
+            var wanted = page?.Extent.Height ?? host.Bounds.Height;
+            var overflows = wanted > avail + 1;
+
+            // ══ جدول ══════════════════════════════════════════════════════
+            // ⚠️ با **نوعِ** واقعی می‌سنجیم، نه با نامِ کلاس: بدنهٔ بیشترِ
+            // بخش‌ها ‎c:ExcelGrid‎ است که فرزندِ ‎DataGrid‎ است.
+            var grid = host.GetVisualDescendants().OfType<DataGrid>().FirstOrDefault();
+            var gridH = grid?.Bounds.Height ?? 0;
+
+            // جدولِ خالی حقِ کوتاه بودن دارد — سرِ ستون‌ها تنها همین‌قدر است.
+            // «له‌شده» یعنی از چیزی که خودش می‌خواهد کوتاه‌تر شده، آن هم تا
+            // زیرِ حدِ خواندنی.
+            var gridWants = grid?.DesiredSize.Height ?? 0;
+            var squashed = grid is not null
+                        && gridH + 1 < Math.Min(MinGridHeight, gridWants);
+
+            // ══ هیچ اسکرولِ درونی نباید بلغزد ══════════════════════════════
+            // قاعدهٔ صریحِ صاحب ریپو: «تا وقتی نوارِ بخش‌ها به سقف نچسبیده،
+            // محتوای بخش نباید تکان بخورد.» هر اسکرول‌ویورِ درونِ بخش این را
+            // می‌شکند، چون چرخِ ماوس اولْ آن را می‌لغزاند نه صفحه را. پس
+            // اسکرول‌ویورهایی را می‌شماریم که واقعاً چیزی برای لغزاندن دارند.
+            var inner = host.GetVisualDescendants().OfType<ScrollViewer>()
+                            .Count(v => v.Extent.Height > v.Viewport.Height + 1);
+
+            var ok = page is not null && !squashed && inner == 0;
+
+            var mark = ok ? (overflows ? "✔" : "—") : "✖";
+            Console.WriteLine($"{sec.Id,-20} {(overflows ? "بله" : "نه"),-8} "
+                            + $"{wanted,6:0} / {avail,-6:0}      {(page is not null ? "صفحه" : "—"),-6} "
+                            + $"{(inner > 0 ? $"درونی {inner}" : "        "),-9} "
+                            + $"{(grid is not null ? $"جدول {gridH,4:0}" : "         ")}  {mark}");
+
+            if (!ok) broken.Add(sec.Id);
+        }
+
+        Console.WriteLine();
+        if (broken.Count == 0)
+        {
+            Console.WriteLine("✅ همهٔ بخش‌ها با اسکرولِ صفحه می‌لغزند و هیچ‌کدام اسکرولِ درونی ندارند");
+            return 0;
+        }
+
+        Console.WriteLine("❌ این بخش‌ها با مدلِ سایت نمی‌خوانند — یا اسکرولِ صفحه پیدا"
+                        + $" نشد، یا اسکرولِ درونی دارند، یا جدولشان از {MinGridHeight:0}"
+                        + " پیکسل کوتاه‌تر شده:");
+        foreach (var b in broken) Console.WriteLine("   • " + b);
+        return 1;
     }
 }

@@ -11,8 +11,7 @@
        ‎SectionPage‎ است تا خودبه‌خود همان کادر و سربرگ را بگیرد. -->
   <c:SectionPage Header="مفاد / ضرر / اتحادیه"
                  SubHeader="درآمدها منهای مصارف — نرخِ اتحادیه هم از همین‌جا به پارچه‌ها می‌رود">
-    <ScrollViewer>
-      <StackPanel Spacing="12">
+          <StackPanel Spacing="12">
 
       <!-- ══ کادرِ بزرگِ «مفاد / ضرر خالص» ══════════════════════════════════
            همان ‎.pl-result‎: عنوان، عددِ بزرگ، جملهٔ حال و خطِ روند. -->
@@ -128,6 +127,6 @@
         </StackPanel>
       </Border>
       </StackPanel>
-    </ScrollViewer>
+    
   </c:SectionPage>
 </UserControl>
