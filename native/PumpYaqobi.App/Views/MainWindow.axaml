@@ -3,6 +3,7 @@
         xmlns:vm="using:PumpYaqobi.App.ViewModels"
         xmlns:th="using:PumpYaqobi.App.Themes"
         xmlns:v="using:PumpYaqobi.App.Views"
+        xmlns:c="using:PumpYaqobi.App.Controls"
         x:Class="PumpYaqobi.App.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="پمپ یعقوبی"
@@ -39,14 +40,17 @@
                    Foreground="{DynamicResource Pump.HeaderTitle}" Opacity="0.85" />
 
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-          <!-- بلوکِ تاریخ: دو خط، مثلِ نسخهٔ وب -->
-          <StackPanel Spacing="2" VerticalAlignment="Center">
-            <TextBlock Text="{Binding TodayText}" FontSize="15.7" FontWeight="Bold"
-                       TextAlignment="Left" HorizontalAlignment="Left"
+          <!-- تاریخ و ساعت یک‌خطه. دوخطه بود و روی همین پنجرهٔ ۱۴۴۰ تاریخ
+               می‌شکست و سربرگ شلوغ می‌شد. -->
+          <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+            <TextBlock Text="{Binding TodayText}" FontSize="14.5" FontWeight="Bold"
+                       VerticalAlignment="Center" TextWrapping="NoWrap"
                        Foreground="{DynamicResource Pump.HeaderTitle}" />
-            <TextBlock Text="{Binding Clock}" FontSize="12.5"
-                       TextAlignment="Left" HorizontalAlignment="Left"
-                       Foreground="{DynamicResource Pump.HeaderTitle}" Opacity="0.75" />
+            <Border Width="1" Height="15" VerticalAlignment="Center" Opacity="0.28"
+                    Background="{DynamicResource Pump.HeaderTitle}" />
+            <TextBlock Text="{Binding Clock}" FontSize="13.5" FontWeight="Bold"
+                       VerticalAlignment="Center" TextWrapping="NoWrap"
+                       Foreground="{DynamicResource Pump.HeaderTitle}" Opacity="0.8" />
           </StackPanel>
 
           <ComboBox ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}" MinWidth="180">
@@ -103,8 +107,7 @@
          خودِ نوار سرِ جایش می‌ماند (خواستهٔ صریحِ صاحب ریپو). -->
     <Border Grid.Row="2" Background="{DynamicResource Pump.NavBg}"
             BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="0,0,0,1">
-      <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
-                    Padding="12,8">
+      <c:NavStrip Name="Nav">
         <ItemsControl ItemsSource="{Binding Sections}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
@@ -127,10 +130,15 @@
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
-      </ScrollViewer>
+      </c:NavStrip>
     </Border>
 
-    <ContentControl Grid.Row="3" Content="{Binding Current}" />
+    <!-- ══ محتوا ══════════════════════════════════════════════════════════
+         ستونِ وسط‌چینِ ۱۰۰۰ پیکسلی، مثلِ ‎.main‎ نسخهٔ وب. بخش‌های جدولیِ
+         فهرست‌شده در ‎SectionViewModel.IsWide‎ تمامِ عرض را می‌گیرند. -->
+    <ContentControl Grid.Row="3" Content="{Binding Current}"
+                    HorizontalAlignment="Stretch"
+                    MaxWidth="{Binding Current.ContentMaxWidth, FallbackValue=1000}" />
   </Grid>
 
     <!-- ══ قفل ══ -->

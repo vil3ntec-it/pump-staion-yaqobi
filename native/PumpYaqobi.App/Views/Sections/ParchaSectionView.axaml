@@ -154,25 +154,30 @@
       <Border Grid.Row="0" Classes="panel">
         <Grid RowDefinitions="Auto,Auto">
 
+          <!-- سربرگِ کارت: عنوان بالا، ابزار زیرش.
+               یک‌ردیفه بود و در ستونِ ۱۰۰۰ پیکسلی «پارچهٔ جدید شب» می‌افتاد
+               خطِ بعد و بی‌قواره می‌شد. حالا هر چه هم پنجره باریک شود، مرتب
+               می‌ماند: هر ابزار حاشیهٔ پایین دارد پس شکستنِ خط هم تمیز است. -->
           <Border Grid.Row="0" Classes="card-head">
-            <Grid ColumnDefinitions="Auto,*">
-              <TextBlock Grid.Column="0" Text="{Binding CardTitle}" FontWeight="Bold"
-                         Foreground="{DynamicResource Pump.Accent}" VerticalAlignment="Center" />
-              <WrapPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Left">
-                <TextBlock Text="📅 تاریخ:" Classes="muted" VerticalAlignment="Center" Margin="0,0,7,0" />
+            <StackPanel Spacing="10">
+              <TextBlock Text="{Binding CardTitle}" FontWeight="Bold" FontSize="15"
+                         Foreground="{DynamicResource Pump.Accent}" />
+              <WrapPanel Orientation="Horizontal">
+                <TextBlock Text="📅 تاریخ:" Classes="muted" VerticalAlignment="Center"
+                           Margin="0,0,7,6" />
                 <TextBox Text="{Binding PaDate}" Width="120" HorizontalContentAlignment="Center"
-                         Margin="0,0,8,0" />
-                <Border Classes="chip" Margin="0,0,8,0">
+                         Margin="0,0,8,6" />
+                <Border Classes="chip" Margin="0,0,8,6">
                   <TextBlock Text="{Binding ReportNumText, StringFormat=گزارش #{0}}" />
                 </Border>
-                <Button Classes="accent" Content="➕ گزارش جدید" Margin="0,0,8,0"
+                <Button Classes="accent" Content="➕ گزارش جدید" Margin="0,0,8,6"
                         Command="{Binding StartNewReportCommand}" />
-                <Button Content="🆕 پارچهٔ جدید روز" Margin="0,0,8,0"
+                <Button Content="🆕 پارچهٔ جدید روز" Margin="0,0,8,6"
                         Command="{Binding NewParchaDayCommand}" />
-                <Button Content="🆕 پارچهٔ جدید شب"
+                <Button Content="🆕 پارچهٔ جدید شب" Margin="0,0,0,6"
                         Command="{Binding NewParchaNightCommand}" />
               </WrapPanel>
-            </Grid>
+            </StackPanel>
           </Border>
 
           <!-- دو کارتِ شیفت، کنارِ هم -->

@@ -30,5 +30,13 @@ public partial class MainWindow : Window
         };
         _clock.Start();
         vm.Clock = PumpYaqobi.App.Localization.Clock.Now();
+
+        // با هر عوض شدنِ بخش، دکمهٔ همان بخش داخلِ قابِ نوار بیاید — چه با
+        // ماوس زده شده باشد چه با ‎Ctrl+Shift+عدد‎.
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MainViewModel.Current))
+                this.FindControl<Controls.NavStrip>("Nav")?.BringActiveIntoView();
+        };
     }
 }
