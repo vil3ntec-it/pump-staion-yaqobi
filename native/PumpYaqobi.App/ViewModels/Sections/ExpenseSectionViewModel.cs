@@ -1,8 +1,11 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
+using PumpYaqobi.Reporting.Pdf;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -93,4 +96,15 @@ public sealed partial class ExpenseSectionViewModel
     /// <summary>«مصارف کل» از همهٔ ماه‌ها خوانده می‌شود، نه از ردیف‌های روی صفحه.</summary>
     private async Task RefreshGrandAsync() =>
         GrandTotal = _calc.Total(await _host.ExpenseLedger.ListAsync(null));
+
+    /// <summary>‎pdfExpenses(monthKey)‎ — ورقِ مصارفِ همین ماه.</summary>
+    [RelayCommand]
+    private Task PdfAsync()
+    {
+        var rows = Rows.Select(r => r.Entity).ToList();
+        var input = new ExpenseReportInput(Shamsi.MonthLabel(Month), rows,
+                                           Shamsi.Today(), DocDates.Line());
+        return Documents.ShowAsync(() => new ExpenseReport(input),
+                                   "مصارف " + Shamsi.MonthLabel(Month));
+    }
 }

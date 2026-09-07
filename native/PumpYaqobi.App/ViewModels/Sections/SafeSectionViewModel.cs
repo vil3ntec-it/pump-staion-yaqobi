@@ -1,8 +1,11 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
+using PumpYaqobi.Reporting.Pdf;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -111,4 +114,17 @@ public sealed partial class SafeSectionViewModel : LedgerSectionViewModel<SafeRo
 
     /// <summary>جمع‌ها از همان سرویسِ آزمودهٔ لایهٔ Application می‌آیند.</summary>
     protected override void Recalc() => Summary = _calc.Summarize(Rows.Select(r => r.Entity));
+
+    /// <summary>‎printSafe(monthKey)‎ — ورقِ همین ماه، همان‌طور که روی صفحه است.</summary>
+    [RelayCommand]
+    private Task PdfAsync()
+    {
+        // ⚠️ عکسِ ردیف‌ها همین‌جا — روی نخِ رابط — گرفته می‌شود، نه داخلِ
+        // سازندهٔ سند: ‎Rows‎ یک ‎ObservableCollection‎ است و خواندنش از نخِ
+        // پس‌زمینه، وقتی کاربر هم‌زمان ردیفی می‌افزاید، می‌ترکد.
+        var rows = Rows.Select(r => r.Entity).ToList();
+        var input = new SafeReportInput(Shamsi.MonthLabel(Month), rows, DocDates.Line());
+        return Documents.ShowAsync(() => new SafeReport(input, _calc),
+                                   "گاوصندوق " + Shamsi.MonthLabel(Month));
+    }
 }

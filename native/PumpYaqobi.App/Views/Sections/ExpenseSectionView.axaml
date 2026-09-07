@@ -11,6 +11,7 @@
       <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
         <Button Classes="ghost info" Content="📅 ماه جدید" Margin="0,0,6,0" />
         <Button Classes="ghost" Content="📄 PDF" Margin="0,0,6,0"
+                Command="{Binding PdfCommand}"
                 Foreground="{DynamicResource Pump.Ok}" BorderBrush="{DynamicResource Pump.Ok}" />
         <Button Classes="accent" Content="+ ردیف" Command="{Binding AddRowCommand}" />
       </WrapPanel>

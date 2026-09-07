@@ -1,9 +1,11 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
+using PumpYaqobi.Reporting.Pdf;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -81,6 +83,26 @@ public sealed partial class OldLoansSectionViewModel : SectionViewModel
     [RelayCommand]
     private void SetFilter(string? which) =>
         FilterIndex = which switch { "fuel" => 1, "money" => 2, _ => 0 };
+
+    /// <summary>
+    /// ‎pdfOldLoans(filter)‎ — ورقِ همان فهرستی که روی صفحه است.
+    ///
+    /// در حالتِ «همه» ورق ستونِ «واحد» می‌گیرد و جمعِ کل «—» می‌ماند: لیتر و
+    /// افغانی با هم جمع نمی‌شوند.
+    /// </summary>
+    [RelayCommand]
+    private Task PdfAsync()
+    {
+        var rows = Rows.Select(r => r.Row).ToList();
+        var input = new OldLoansReportInput(Filter, rows, DocDates.Line());
+        var name = Filter switch
+        {
+            AgingFilter.Fuel => "قرض‌های کهنه — واحد تیل",
+            AgingFilter.Money => "قرض‌های کهنه — واحد پول",
+            _ => "قرض‌های کهنه",
+        };
+        return Documents.ShowAsync(() => new OldLoansReport(input), name);
+    }
 
     protected override Task LoadAsync() => RefreshAsync();
 

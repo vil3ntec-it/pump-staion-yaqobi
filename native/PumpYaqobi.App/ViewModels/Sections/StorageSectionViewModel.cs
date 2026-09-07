@@ -1,11 +1,13 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
+using PumpYaqobi.Reporting.Pdf;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -188,6 +190,10 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     /// <summary>موجودیِ دفتریِ همین لحظه — پایهٔ «اختلاف با دفتر».</summary>
     private decimal _bookNow;
 
+    /// <summary>آخرین حسابِ مخزن — ورقِ PDF از همین برداشته می‌شود تا عددهای
+    /// ورق مو‌به‌مو همان چیزی باشند که همان لحظه روی صفحه است.</summary>
+    private TankState _tank;
+
     public FuelType Fuel => IsDiesel ? FuelType.Diesel : FuelType.Petrol;
     public string FuelLabel => IsDiesel ? "دیزل" : "پطرول";
     public string TankTitle => (IsDiesel ? "🟤 مخزن " : "⛽ مخزن ") + FuelLabel;
@@ -263,6 +269,15 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     [RelayCommand]
     private void ToggleFuel() => IsDiesel = !IsDiesel;
 
+    /// <summary>‎pdfStorage(fuelType)‎ — ورقِ همان مخزنی که باز است.</summary>
+    [RelayCommand]
+    private Task PdfAsync()
+    {
+        var buys = Purchases.Select(p => p.Entity).ToList();
+        var input = new StorageReportInput(Fuel, buys, _tank, DocDates.Line());
+        return Documents.ShowAsync(() => new StorageReport(input, Calc), "مخزن " + FuelLabel);
+    }
+
     protected override async Task LoadAsync()
     {
         var buys = await _host.StorageData.PurchasesAsync(Fuel);
@@ -318,6 +333,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         // موجودیِ دفتری برای میله‌زنی — همان ‎book‎ی ‎__tankInfo‎ که از
         // ‎_fuelStock‎ می‌آید (خرید − فروش + اصلاحِ میله‌زنی‌های پیشین).
         _bookNow = t.Current;
+        _tank = t;
         RefreshDip();
     }
 
