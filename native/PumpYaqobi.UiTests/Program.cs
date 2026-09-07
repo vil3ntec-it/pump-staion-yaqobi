@@ -373,8 +373,11 @@ internal static class Program
             // معیارِ درست برای جدول این است: آیا **خودِ جدول** جای زنده‌ای
             // دارد؟ اگر فیلتر و جمع‌ها آن‌قدر بالا را بگیرند که جدول به چند
             // ده پیکسل برسد، کاربر عملاً چیزی نمی‌بیند — همان‌قدر شکسته.
-            var grid = host.GetVisualDescendants()
-                           .FirstOrDefault(v => v.GetType().Name == "DataGrid") as Layoutable;
+            //
+            // ⚠️ با **نوعِ** واقعی می‌سنجیم، نه با نامِ کلاس: بدنهٔ بیشترِ
+            // بخش‌ها ‎c:ExcelGrid‎ است که فرزندِ ‎DataGrid‎ است. سنجشِ نامی
+            // آن را نمی‌دید و پنج بخشِ سالم را «بی‌اسکرول» می‌خواند.
+            var grid = host.GetVisualDescendants().OfType<DataGrid>().FirstOrDefault();
             var gridH = grid?.Bounds.Height ?? 0;
 
             bool ok;
