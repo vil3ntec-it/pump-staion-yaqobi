@@ -33,6 +33,13 @@ public class InvoiceParityTests : IDisposable
         return (new InvoiceService(dbf, perm, trash, debtors), debtors, dbf);
     }
 
+    /// <summary>شیءِ تازه از دیتابیس — همان کاری که صفحه پیش از ویرایش می‌کند.</summary>
+    private static async Task<Invoice> ReloadAsync(PumpDbFactory dbf, long id)
+    {
+        await using var db = dbf.Create();
+        return await db.Invoices.AsNoTracking().SingleAsync(x => x.Id == id);
+    }
+
     private static Invoice Fuel(string customer, decimal liters, decimal price,
                                 FuelType f = FuelType.Petrol) => new()
     {

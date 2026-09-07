@@ -93,25 +93,49 @@ public sealed class InvoiceService
     public async Task UpdateAsync(Invoice v, CancellationToken ct = default)
     {
         _perm.Require(Permission.ManagerOnly);
-        v.DateKey = Shamsi.Key(v.DateShamsi);
-        v.ByMoney = IsMoneyOnly(v);
 
         await using var db = _dbf.Create();
-        db.Invoices.Attach(v);
-        db.Entry(v).State = EntityState.Modified;
-        await db.SaveChangesAsync(ct);
+        var row = await db.Invoices.FirstOrDefaultAsync(x => x.Id == v.Id, ct);
+        if (row is null) return;
 
-        if (v.Status == InvoiceStatus.Approved)
+        // ⚠️ فقط همان خانه‌هایی که فرمِ ویرایش دارد نوشته می‌شوند.
+        // یک‌بار کلِ شیء با ‎State = Modified‎ روی ردیف نشانده می‌شد؛ چون شیءِ
+        // دستِ صفحه نسخهٔ **پیش از تایید** بود، همان نوشتن دفترچهٔ ثبت را هم
+        // پاک می‌کرد (‎PostedFuelLiters‎ و ‎DebtAccountId‎ صفر می‌شدند) و
+        // بعدش دیگر چیزی برای پس گرفتن نبود — لیتر برای همیشه در حساب می‌ماند.
+        row.CustomerName = v.CustomerName;
+        row.DebtAlias = v.DebtAlias;
+        row.Fuel = v.Fuel;
+        row.PricePerLiter = Math.Max(0m, v.PricePerLiter);
+        row.Liters = Math.Max(0m, v.Liters);
+        row.Amount = Math.Max(0m, v.Amount);
+        row.VehicleType = v.VehicleType;
+        row.Phone = v.Phone;
+        row.Note = v.Note;
+        row.DateShamsi = v.DateShamsi;
+        row.DateKey = Shamsi.Key(v.DateShamsi);
+        row.ByMoney = IsMoneyOnly(row);
+
+        if (row.Status == InvoiceStatus.Approved)
         {
-            await UnpostAsync(db, v, ct);        // با حسابِ **قبلی** پس گرفته می‌شود
+            await UnpostAsync(db, row, ct);      // با حسابِ **قبلی** پس گرفته می‌شود
             // ‎invSaveEdits‎ صریحاً ‎v.debt_target_id = null‎ می‌گذارد: با هر
             // ویرایش، حسابِ مقصد دوباره از روی نام پیدا می‌شود. پس اگر نامِ
             // مشتری عوض شده باشد، فاکتور به حسابِ درست می‌رود نه حسابِ کهنه.
-            v.DebtAccountId = null;
-            var account = await EnsureAccountAsync(db, v, ct);
-            await PostAsync(db, v, account, ct);
-            await db.SaveChangesAsync(ct);
+            row.DebtAccountId = null;
+            var account = await EnsureAccountAsync(db, row, ct);
+            await PostAsync(db, row, account, ct);
         }
+
+        await db.SaveChangesAsync(ct);
+
+        // شیءِ دستِ صفحه هم تازه شود تا نمای بعدی درست باشد
+        v.ByMoney = row.ByMoney;
+        v.DateKey = row.DateKey;
+        v.Status = row.Status;
+        v.DebtAccountId = row.DebtAccountId;
+        v.PostedFuelLiters = row.PostedFuelLiters;
+        v.PostedFuelType = row.PostedFuelType;
     }
 
     /// <summary>
