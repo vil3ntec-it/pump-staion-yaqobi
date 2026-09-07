@@ -334,7 +334,7 @@ internal static class Program
         Seed.Fill(PumpYaqobi.App.Services.AppHost.Current);
 
         Console.WriteLine();
-        Console.WriteLine("بخش                  سرریز؟   بلندیِ محتوا / جا   اسکرول‌ویور  می‌رسد؟");
+        Console.WriteLine("بخش                  سرریز؟   بلندیِ صفحه / جا    اسکرول  جدول      می‌رسد؟");
         Console.WriteLine(new string('-', 74));
 
         var broken = new List<string>();
@@ -351,61 +351,37 @@ internal static class Program
                           .FirstOrDefault(c => ReferenceEquals(c.Content, sec));
             if (host is null) { Console.WriteLine($"{sec.Id,-20} — میزبان پیدا نشد"); continue; }
 
-            var svs = host.GetVisualDescendants().OfType<ScrollViewer>().ToList();
+            // ══ اسکرولِ صفحه ══════════════════════════════════════════════
+            // از این نسخه، اسکرول یکی است و مالِ کلِ پنجره (‎PageScroll‎) —
+            // مثلِ سایت. پس بلندیِ محتوا را از همان می‌پرسیم، نه از
+            // اسکرول‌ویورِ درونِ بخش (که دیگر وجود ندارد).
+            var page = win.GetVisualDescendants().OfType<ScrollViewer>()
+                          .FirstOrDefault(v => v.Name == "PageScroll");
 
-            // ══ بلندیِ محتوا را از کجا می‌گیریم ═══════════════════════════
-            // اگر بخش اسکرول‌ویورِ بدنه دارد (که حالا هر بخشی دارد)، خودِ
-            // همان بهترین شاهد است: ‎Extent‎ یعنی محتوا چقدر است و
-            // ‎Viewport‎ یعنی چقدرش دیده می‌شود.
-            //
-            // ⚠️ چرا دیگر بزرگ‌ترین ‎DesiredSize‎ را نمی‌شماریم: آن عدد
-            // عناصری را هم می‌شمرد که هرگز به آن بلندی چیده نمی‌شوند
-            // (چیزهای بریده یا پنهان). برای همین «رسید قرض‌داران» با
-            // جدولِ خالی و محتوای جاشده، ۱۰۹۵ گزارش می‌شد و بی‌جهت
-            // قرمز می‌ماند.
-            var body = svs.FirstOrDefault();
-
-            var avail = body is not null ? body.Viewport.Height : host.Bounds.Height;
-            var wanted = body is not null
-                ? body.Extent.Height
-                : host.GetVisualDescendants()
-                      .Select(v => v is Layoutable l ? l.DesiredSize.Height : 0)
-                      .DefaultIfEmpty(0).Max();
-
+            var avail = page?.Viewport.Height ?? host.Bounds.Height;
+            var wanted = page?.Extent.Height ?? host.Bounds.Height;
             var overflows = wanted > avail + 1;
 
-            // محتوایی که سرریز می‌کند باید داخلِ یک اسکرول‌ویور باشد
-            var reachable = body is not null;
-
-            // ══ جدول یک استثنای واقعی است ═════════════════════════════════
-            // ‎DataGrid‎ی آوالونیا ‎ScrollViewer‎ نیست — نوارِ لغزانِ خودش را
-            // دارد. پس شمردنِ اسکرول‌ویورها دربارهٔ بخش‌های جدول‌دار چیزی
-            // نمی‌گوید و اگر همان معیار را به‌کار ببریم، هر بخشِ سالمِ
-            // جدول‌داری را هم «خراب» می‌خوانیم (اولین اجرا همین را کرد).
-            //
-            // معیارِ درست برای جدول این است: آیا **خودِ جدول** جای زنده‌ای
-            // دارد؟ اگر فیلتر و جمع‌ها آن‌قدر بالا را بگیرند که جدول به چند
-            // ده پیکسل برسد، کاربر عملاً چیزی نمی‌بیند — همان‌قدر شکسته.
-            //
+            // ══ جدول ══════════════════════════════════════════════════════
             // ⚠️ با **نوعِ** واقعی می‌سنجیم، نه با نامِ کلاس: بدنهٔ بیشترِ
-            // بخش‌ها ‎c:ExcelGrid‎ است که فرزندِ ‎DataGrid‎ است. سنجشِ نامی
-            // آن را نمی‌دید و پنج بخشِ سالم را «بی‌اسکرول» می‌خواند.
+            // بخش‌ها ‎c:ExcelGrid‎ است که فرزندِ ‎DataGrid‎ است.
             var grid = host.GetVisualDescendants().OfType<DataGrid>().FirstOrDefault();
             var gridH = grid?.Bounds.Height ?? 0;
 
             // جدولِ خالی حقِ کوتاه بودن دارد — سرِ ستون‌ها تنها همین‌قدر است.
             // «له‌شده» یعنی از چیزی که خودش می‌خواهد کوتاه‌تر شده، آن هم تا
-            // زیرِ حدِ خواندنی. بی این قید، اجرای پیشین پنج بخشِ خالیِ سالم
-            // را هم قرمز می‌کرد.
+            // زیرِ حدِ خواندنی.
             var gridWants = grid?.DesiredSize.Height ?? 0;
             var squashed = grid is not null
                         && gridH + 1 < Math.Min(MinGridHeight, gridWants);
 
-            var ok = (!overflows || reachable) && !squashed;
+            // محتوا همیشه رسیدنی است، چون کلِ صفحه می‌لغزد؛ آنچه می‌تواند
+            // خراب باشد یا نبودِ همان اسکرول است یا جدولِ له‌شده.
+            var ok = page is not null && !squashed;
 
             var mark = ok ? (overflows ? "✔" : "—") : "✖";
             Console.WriteLine($"{sec.Id,-20} {(overflows ? "بله" : "نه"),-8} "
-                            + $"{wanted,6:0} / {avail,-6:0}      {svs.Count,-2} "
+                            + $"{wanted,6:0} / {avail,-6:0}      {(page is not null ? "صفحه" : "—"),-6} "
                             + $"{(grid is not null ? $"جدول {gridH,4:0}" : "         ")}  {mark}");
 
             if (!ok) broken.Add(sec.Id);
@@ -418,8 +394,8 @@ internal static class Program
             return 0;
         }
 
-        Console.WriteLine("❌ این بخش‌ها راهی به تهِ محتوا ندارند — یا اسکرول ندارند"
-                        + $" یا جدولشان از {MinGridHeight:0} پیکسل کوتاه‌تر شده:");
+        Console.WriteLine("❌ این بخش‌ها راهی به تهِ محتوا ندارند — یا اسکرولِ صفحه"
+                        + $" پیدا نشد یا جدولشان از {MinGridHeight:0} پیکسل کوتاه‌تر شده:");
         foreach (var b in broken) Console.WriteLine("   • " + b);
         return 1;
     }
