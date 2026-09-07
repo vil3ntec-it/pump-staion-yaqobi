@@ -14,9 +14,11 @@ namespace PumpYaqobi.App.Services;
 ///   • ‎Ctrl+عدد‎        → افزودنِ N ردیف به جدولِ جلوی کاربر
 ///   • ‎Shift+عدد‎       → برداشتنِ N ردیفِ آخرِ همان جدول
 ///
-/// ‎Ctrl+P‎ («پی‌دی‌افِ همین بخش») هنوز نیست: در نسخهٔ نیتیو هیچ بخشی فرمانِ
-/// پی‌دی‌اف ندارد — لایهٔ ‎PumpYaqobi.Reporting‎ ساخته شده ولی به رابط کاربری
-/// وصل نشده. تا آن روز، میانبری که به هیچ‌جا نرود بدتر از نبودنش است.
+///   • ‎Ctrl+P‎         → پی‌دی‌افِ همان جایی که کاربر داخلش است
+///
+/// ‎Ctrl+Z‎/‎Ctrl+X‎ (برگشت و جلو رفتنِ سراسری) هنوز نیست: آن به یک «تاریخچهٔ
+/// عکس‌فوریِ کلِ دیتابیس» نیاز دارد که در نیتیو ساخته نشده. سطلِ زباله
+/// «برگرداندنِ حذف‌شده» را می‌دهد، ولی برگرداندنِ یک ویرایش را نه.
 ///
 /// ══ چرا «بافر» و چرا «هنگامِ رها کردن» ═════════════════════════════════════
 /// عدد می‌تواند چندرقمی باشد (‎Ctrl+1‎ سپس ‎2‎ یعنی ۱۲، نه دو بار ۱ و ۲). پس
@@ -53,6 +55,37 @@ public sealed class ShortcutService
 
     private void ClearBuffers() { _sectionBuf = _addBuf = _delBuf = _openBuf = ""; }
 
+    /// <summary>نامِ فرمانی که هر بخشِ پی‌دی‌اف‌دار می‌سازد (‎[RelayCommand] PdfAsync‎).</summary>
+    public const string PdfCommandName = "PdfCommand";
+
+    /// <summary>
+    /// ‎_kbPdfAction()‎ — فرمانِ پی‌دی‌افِ جایی که کاربر داخلش است.
+    ///
+    /// ⚠️ چرا بازتاب (reflection) و نه یک واسط: چهارده بخش این فرمان را دارند و
+    /// سه‌تایشان فهرستِ پایه‌شان در خطِ بعدی نوشته شده. افزودنِ واسط به هر
+    /// چهارده کلاس چهارده جای دست‌کاری بود، در حالی که کارِ لازم یک چیز است:
+    /// «اگر این شیء فرمانِ پی‌دی‌اف دارد، اجرایش کن». ‎PdfCommandParityTests‎
+    /// جلوی خاموش شکستنش را می‌گیرد — اگر روزی نامِ ‎PdfAsync‎ عوض شود، قرمز
+    /// می‌شود.
+    /// </summary>
+    private static System.Windows.Input.ICommand? PdfOf(object? target) =>
+        target?.GetType()
+              .GetProperty(PdfCommandName)?
+              .GetValue(target) as System.Windows.Input.ICommand;
+
+    private bool TryPdf()
+    {
+        // اول صفحهٔ بازِ درونِ بخش، بعد خودِ بخش — همان اولویتِ نسخهٔ وب.
+        foreach (var target in new object?[] { _vm.Current?.ActivePage, _vm.Current })
+        {
+            var cmd = PdfOf(target);
+            if (cmd is null || !cmd.CanExecute(null)) continue;
+            cmd.Execute(null);
+            return true;
+        }
+        return false;
+    }
+
     /// <summary>روی صفحهٔ قفل هیچ میانبری کار نمی‌کند.</summary>
     private bool Locked => _vm.IsLocked;
 
@@ -76,6 +109,16 @@ public sealed class ShortcutService
         var ctrl = mods.HasFlag(KeyModifiers.Control);
         var shift = mods.HasFlag(KeyModifiers.Shift);
         var alt = mods.HasFlag(KeyModifiers.Alt);
+
+        // ══ Ctrl+P → پی‌دی‌افِ همین‌جا ══════════════════════════════════════
+        // همان ترتیبِ اولویتِ ‎_kbPdfAction‎ی نسخهٔ وب: اول صفحهٔ بازِ درونِ بخش
+        // (حسابِ شخص، صفحهٔ شرکت…) و اگر نبود، خودِ بخش. جایی که پی‌دی‌اف
+        // ندارد اصلاً دست نمی‌خورد و کلید مثلِ همیشه رد می‌شود.
+        if (e.Key == Key.P && ctrl && !alt && !shift)
+        {
+            if (TryPdf()) e.Handled = true;
+            return;
+        }
 
         var d = Digit(e.Key);
         if (d is null) return;

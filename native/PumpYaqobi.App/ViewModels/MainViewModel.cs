@@ -234,32 +234,55 @@ public sealed partial class MainViewModel : ObservableObject
 
     /// <summary>ترتیبِ نوار، مو‌به‌مو مثلِ <c>&lt;div class="nav"&gt;</c> در نسخهٔ وب.</summary>
     /// <summary>ترتیبِ نوار، مو‌به‌مو مثلِ <c>&lt;div class="nav"&gt;</c> در نسخهٔ وب.</summary>
+    /// <summary>
+    /// ══ ترتیبِ نوار — مو‌به‌مو همان هجده دکمهٔ ‎&lt;div class="nav"&gt;‎ ═══════════
+    ///
+    /// ⚠️ این ترتیب فقط ظاهری نیست: میانبرِ ‎Ctrl+Shift+عدد‎ بخش را **با شمارهٔ
+    /// جایش در همین فهرست** باز می‌کند. پیش از این ترتیب از ردیفِ دهم به بعد
+    /// با سایت فرق داشت، پس ‎Ctrl+Shift+۱۰‎ که در سایت «گاوصندوق» بود این‌جا
+    /// «رسید قرض‌داران» را باز می‌کرد — و همین‌طور تا هجده. کاربری که سال‌ها با
+    /// این میانبرها کار کرده، هر بار بخشِ اشتباه را می‌گرفت.
+    ///
+    /// هجده‌تای اول، به همان ترتیبِ سایت:
+    ///
+    ///   ۱ داشبورد · ۲ پارچه‌ها · ۳ ورق‌های روزانه · ۴ قرض‌داران ·
+    ///   ۵ ثبت فاکتورها · ۶ رسید قرض‌داران · ۷ صرافی · ۸ مصارف ·
+    ///   ۹ رسید پارچه · ۱۰ گاوصندوق · ۱۱ تیل امانت · ۱۲ شرکت‌ها تیل ·
+    ///   ۱۳ مخزن · ۱۴ دوربین‌ها · ۱۵ حاضری و معاش · ۱۶ مفاد/ضرر ·
+    ///   ۱۷ تنظیمات · ۱۸ تاریخچه‌ها
+    ///
+    /// بقیه بعد از این‌ها می‌آیند: در نسخهٔ وب این‌ها بخشِ سرصفحه‌ای نیستند و از
+    /// دلِ بخش‌های دیگر باز می‌شوند، ولی در نیتیو صفحهٔ خودشان را دارند. چون
+    /// بعد از هجدهمی نشسته‌اند، هیچ‌کدام از میانبرهای سایت را جابه‌جا نمی‌کنند.
+    /// </summary>
     private IEnumerable<SectionViewModel> BuildSections(AppHost host) => new SectionViewModel[]
     {
-        new DashboardSectionViewModel(host, this),
-        new ParchaSectionViewModel(host),
-        new WaraqSectionViewModel(host),
-        new DebtSectionViewModel(host),
-        new InvoiceSectionViewModel(host),
+        new DashboardSectionViewModel(host, this),   //  ۱
+        new ParchaSectionViewModel(host),            //  ۲
+        new WaraqSectionViewModel(host),             //  ۳
+        new DebtSectionViewModel(host),              //  ۴
+        new InvoiceSectionViewModel(host),           //  ۵
+        new DebtReceiptSectionViewModel(host),       //  ۶
+        new ExchangeSectionViewModel(host),          //  ۷
+        new ExpenseSectionViewModel(host),           //  ۸
+        new ParchaReceiptSectionViewModel(host),     //  ۹
+        new SafeSectionViewModel(host),              // ۱۰
+        new AmanatSectionViewModel(host),            // ۱۱
+        new CompanySectionViewModel(host),           // ۱۲
+        new StorageSectionViewModel(host),           // ۱۳
+        new CameraSectionViewModel(host),            // ۱۴
+        new AttendanceSectionViewModel(host),        // ۱۵
+        new ProfitSectionViewModel(host),            // ۱۶
+        new SettingsSectionViewModel(host),          // ۱۷
+        new HistorySectionViewModel(host),           // ۱۸
+
+        // ── بخش‌هایی که در سایت دکمهٔ سرصفحه ندارند ──
         new RetailSectionViewModel(host),
-        new ExchangeSectionViewModel(host),
-        new ExpenseSectionViewModel(host),
-        new ParchaReceiptSectionViewModel(host),
-        new DebtReceiptSectionViewModel(host),
-        new SafeSectionViewModel(host),
-        new AmanatSectionViewModel(host),
-        new CompanySectionViewModel(host),
-        new StorageSectionViewModel(host),
         new TankerSectionViewModel(host),
-        new CameraSectionViewModel(host),
-        new AttendanceSectionViewModel(host),
         new StaffShortSectionViewModel(host),
         new OldLoansSectionViewModel(host),
         new MonthReportSectionViewModel(host),
         new RateHistorySectionViewModel(host),
-        new ProfitSectionViewModel(host),
-        new SettingsSectionViewModel(host),
         new DataSectionViewModel(host, this),
-        new HistorySectionViewModel(host),
     };
 }

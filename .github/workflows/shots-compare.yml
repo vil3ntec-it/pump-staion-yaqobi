@@ -1,0 +1,53 @@
+name: عکسِ سایت و برنامه، کنارِ هم
+
+# ══ چرا این ورک‌فلو هست ══════════════════════════════════════════════════════
+# خواستهٔ صاحب ریپو: «از سایت هم عکس بگیر از برنامه هم عکس بگیر که یکی باشن».
+#
+# عکسِ سایت را می‌شود هرجا گرفت (کرومیوم)، ولی عکسِ برنامهٔ نیتیو ‎dotnet‎
+# می‌خواهد. این‌جا هر دو در یک اجرا ساخته می‌شوند و در **یک بستهٔ واحد** بالا
+# می‌روند، تا مقایسه یک دانلود باشد نه دوتا.
+#
+# دستی اجرا می‌شود (‎Run workflow‎) — نه با هر پوش: عکس‌گیریِ کاملِ هر دو نسخه
+# چند دقیقه طول می‌کشد و هر تغییرِ کوچک به آن نیاز ندارد.
+on:
+  workflow_dispatch:
+
+jobs:
+  shots:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── ۱) عکسِ برنامهٔ نیتیو ────────────────────────────────────────────
+      # همان ابزارِ ‎PumpYaqobi.UiTests -- shots‎: پنجرهٔ واقعیِ ۱۴۴۰×۹۰۰ را
+      # بی‌نمایشگر می‌سازد و از هر بخش، هر تم و صفحهٔ حسابِ شخص عکس می‌گیرد.
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: عکسِ برنامه
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- "$GITHUB_WORKSPACE/shots/app"
+
+      # ── ۲) عکسِ سایت ────────────────────────────────────────────────────
+      # همان پنجرهٔ ۱۴۴۰×۹۰۰ی برنامه، تا مقایسه با اندازهٔ برابر باشد.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: کرومیوم
+        run: |
+          npm init -y >/dev/null
+          npm i playwright-core@1 --no-audit --no-fund
+          npx --yes playwright@1 install --with-deps chromium
+
+      - name: عکسِ سایت
+        run: node native/tools/shot-site.mjs "$GITHUB_WORKSPACE/shots/site"
+
+      # ── ۳) یک بسته، هر دو ───────────────────────────────────────────────
+      - uses: actions/upload-artifact@v4
+        with:
+          name: عکس‌ها-سایت-و-برنامه
+          path: shots
+          retention-days: 14
