@@ -32,7 +32,15 @@ public static class Dialogs
     /// انتخابِ یک فایلِ عکس از خودِ ویندوز — برای «افزودنِ دوربین با عکسِ کیو‌آر».
     /// ‎null‎ یعنی کاربر انصراف داد یا پنجره‌ای در کار نیست (آزمونِ بی‌پنجره).
     /// </summary>
-    public static async Task<string?> PickImageAsync(string title = "عکسِ کیو‌آر را انتخاب کنید")
+    public static Task<string?> PickImageAsync(string title = "عکسِ کیو‌آر را انتخاب کنید") =>
+        PickFileAsync(title, "عکس",
+                      new[] { "*.png", "*.jpg", "*.jpeg", "*.webp", "*.bmp", "*.gif" });
+
+    /// <summary>فایلِ بکاپِ نسخهٔ وب (‎pump-backup-….json‎).</summary>
+    public static Task<string?> PickJsonAsync(string title = "فایلِ بکاپ را انتخاب کنید") =>
+        PickFileAsync(title, "فایلِ بکاپ", new[] { "*.json" });
+
+    private static async Task<string?> PickFileAsync(string title, string kind, string[] patterns)
     {
         var owner = Owner;
         if (owner is null) return null;
@@ -44,13 +52,7 @@ public static class Dialogs
             {
                 Title = title,
                 AllowMultiple = false,
-                FileTypeFilter = new[]
-                {
-                    new FilePickerFileType("عکس")
-                    {
-                        Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.webp", "*.bmp", "*.gif" },
-                    },
-                },
+                FileTypeFilter = new[] { new FilePickerFileType(kind) { Patterns = patterns } },
             });
             // ⚠️ ‎TryGetLocalPath‎ برای فایلی که واقعاً روی دیسک نیست (مثلاً
             // از یک ارائه‌دهندهٔ ابری) ‎null‎ می‌دهد — همان‌جا انصراف می‌شود،

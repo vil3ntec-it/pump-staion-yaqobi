@@ -54,5 +54,7 @@
     <None Update="golden-tools.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="golden-camera.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="golden-voice.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="legacy-full-backup.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="legacy-full-expected.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
