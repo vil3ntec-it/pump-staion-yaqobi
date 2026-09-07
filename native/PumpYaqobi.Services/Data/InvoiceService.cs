@@ -56,9 +56,16 @@ public sealed class InvoiceService
     public static bool IsMoneyOnly(Invoice v) =>
         v.Amount > 0m && !(v.PricePerLiter > 0m && v.Liters > 0m);
 
+    /// <summary>
+    /// ‎invSubmit‎ — ثبتِ فاکتورِ تازه، همیشه در حالتِ «در صفِ تایید».
+    ///
+    /// ⚠️ شمارهٔ تکراری رد می‌شود، نه اینکه بی‌صدا قبول شود: شمارهٔ فاکتور
+    /// سندِ کاغذیِ مشتری است و دو فاکتور با یک شماره یعنی حسابِ قابلِ دفاع
+    /// نداریم.
+    /// </summary>
     public async Task<Invoice> AddAsync(Invoice v, CancellationToken ct = default)
     {
-        _perm.Require(Permission.EditData);
+        _perm.Require(Permission.ManagerOnly);
         v.InvoiceNumber = v.InvoiceNumber > 0 ? v.InvoiceNumber : await NextNumberAsync(ct);
         v.DateShamsi ??= Shamsi.Today();
         v.DateKey = Shamsi.Key(v.DateShamsi);
@@ -67,20 +74,44 @@ public sealed class InvoiceService
         v.LegacyId ??= "inv" + Guid.NewGuid().ToString("N")[..10];
 
         await using var db = _dbf.Create();
+        if (await db.Invoices.AnyAsync(x => x.InvoiceNumber == v.InvoiceNumber, ct))
+            throw new InvalidOperationException(
+                "فاکتور شماره " + v.InvoiceNumber + " قبلاً ثبت شده — شماره دیگری انتخاب کنید");
         db.Invoices.Add(v);
         await db.SaveChangesAsync(ct);
         return v;
     }
 
+    /// <summary>
+    /// ‎invSaveEdits‎ — ویرایشِ فاکتور.
+    ///
+    /// ⚠️ اگر فاکتور از پیش تایید شده باشد، اثرش روی حسابِ قرض‌دار هم باید
+    /// هم‌گام شود: اول برداشته می‌شود، بعد با عددهای تازه دوباره می‌نشیند.
+    /// بی این، عوض کردنِ لیترِ یک فاکتورِ تاییدشده عددِ کهنه را در حساب جا
+    /// می‌گذاشت و هیچ‌کس نمی‌فهمید از کجا آمده.
+    /// </summary>
     public async Task UpdateAsync(Invoice v, CancellationToken ct = default)
     {
-        _perm.Require(Permission.EditData);
+        _perm.Require(Permission.ManagerOnly);
         v.DateKey = Shamsi.Key(v.DateShamsi);
         v.ByMoney = IsMoneyOnly(v);
+
         await using var db = _dbf.Create();
         db.Invoices.Attach(v);
         db.Entry(v).State = EntityState.Modified;
         await db.SaveChangesAsync(ct);
+
+        if (v.Status == InvoiceStatus.Approved)
+        {
+            await UnpostAsync(db, v, ct);        // با حسابِ **قبلی** پس گرفته می‌شود
+            // ‎invSaveEdits‎ صریحاً ‎v.debt_target_id = null‎ می‌گذارد: با هر
+            // ویرایش، حسابِ مقصد دوباره از روی نام پیدا می‌شود. پس اگر نامِ
+            // مشتری عوض شده باشد، فاکتور به حسابِ درست می‌رود نه حسابِ کهنه.
+            v.DebtAccountId = null;
+            var account = await EnsureAccountAsync(db, v, ct);
+            await PostAsync(db, v, account, ct);
+            await db.SaveChangesAsync(ct);
+        }
     }
 
     /// <summary>
@@ -89,7 +120,7 @@ public sealed class InvoiceService
     /// </summary>
     public async Task ApproveAsync(long invoiceId, decimal todayRate, CancellationToken ct = default)
     {
-        _perm.Require(Permission.EditData);
+        _perm.Require(Permission.ManagerOnly);
         await using var db = _dbf.Create();
         var v = await db.Invoices.FirstOrDefaultAsync(x => x.Id == invoiceId, ct);
         if (v is null || v.Status == InvoiceStatus.Approved) return;
@@ -100,48 +131,107 @@ public sealed class InvoiceService
         v.ApprovedAtUtc = DateTime.UtcNow;
         v.RateOnCreate ??= v.PricePerLiter;
         v.RateOnApprove = todayRate;
-        v.DebtAccountId = account.Id;
 
-        // ── بخشِ پولی: همیشه در دفترِ «واحد پول» ──
-        if (v.Amount > 0m)
-        {
-            var row = await db.DebtRows.FirstOrDefaultAsync(r => r.InvoiceId == v.Id, ct);
-            if (row is null)
-            {
-                row = new DebtRow { MoneyAccountId = account.Id, InvoiceId = v.Id };
-                db.DebtRows.Add(row);
-            }
-            row.MoneyAccountId = account.Id;
-            row.FuelAccountId = null;               // اگر از نسخه‌های قبل در دفترِ تیل مانده بود
-            row.DateShamsi = v.DateShamsi;
-            row.DateKey = Shamsi.Key(v.DateShamsi);
-            row.Name = $"{v.CustomerName} - فاکتور شماره {v.InvoiceNumber}"
-                       + (string.IsNullOrWhiteSpace(v.VehicleType) ? "" : " — " + v.VehicleType);
-            row.Fuel = v.Fuel;
-            row.ByMoney = true;
-            row.Liters = 0m;
-            row.PricePerLiter = null;
-            row.Bardagi = 0m;
-            row.Rasid = v.Amount;
-            row.Albaqi = -v.Amount;
-        }
-
-        // ── بخشِ تیل: «مقدار رسیدِ تیل»ِ همان حساب ──
-        if (!v.ByMoney && v.Liters > 0m)
-        {
-            if (v.Fuel == FuelType.Diesel) account.RasidFuelDiesel += v.Liters;
-            else account.RasidFuelPetrol += v.Liters;
-            v.PostedFuelLiters = v.Liters;
-        }
+        await PostAsync(db, v, account, ct);
 
         db.Audit.Add(new AuditEntry { Action = "invoice-approve", Target = v.InvoiceNumber.ToString() });
         await db.SaveChangesAsync(ct);
     }
 
+    /// <summary>
+    /// ══ ‎_invPostToDebt(v)‎ ══════════════════════════════════════════════════
+    /// نشاندنِ اثرِ یک فاکتورِ تاییدشده روی حسابِ قرض‌دار. یک فاکتور می‌تواند
+    /// **هر دو** بخش را داشته باشد و هر دو باید شمرده شوند:
+    ///
+    ///   • بخشِ پولی (مبلغ) → یک ردیفِ «رسید» در دفترِ **واحد پول**.
+    ///     ⚠️ همیشه دفترِ پول، نه دفترِ فعال. یک‌بار به دفترِ فعال می‌رفت و
+    ///     اگر حساب روی واحدِ تیل بود، رسیدِ پولی واردِ جدولِ تیل می‌شد و
+    ///     «مقدار رسید تیل» بی‌جهت عدد می‌گرفت.
+    ///
+    ///   • بخشِ تیل (لیتر) → «مقدار رسیدِ تیل»ِ حساب، **به‌علاوهٔ** یک ردیفِ
+    ///     نمایشی در جدول تا کاربر ببیند چند لیتر و از کدام فاکتور رسیده.
+    ///
+    /// ⚠️ صفر شدنِ هر بخش یعنی ردیفش باید **برداشته** شود، نه اینکه ردیفِ صفر
+    /// بماند — وگرنه با ویرایشِ فاکتور، ردیفِ کهنه در حساب جا می‌مانَد.
+    /// </summary>
+    private static async Task PostAsync(Persistence.PumpDbContext db, Invoice v,
+                                        DebtAccount account, CancellationToken ct)
+    {
+        v.DebtAccountId = account.Id;
+
+        var label = (string.IsNullOrWhiteSpace(v.CustomerName) ? "" : v.CustomerName + " - ")
+                  + "فاکتور شماره " + v.InvoiceNumber
+                  + (string.IsNullOrWhiteSpace(v.VehicleType) ? "" : " — " + v.VehicleType);
+        var date = v.DateShamsi ?? Shamsi.Today();
+
+        // ── بخشِ پولی ──
+        var moneyRow = await db.DebtRows.FirstOrDefaultAsync(r => r.InvoiceId == v.Id, ct);
+        if (v.Amount > 0m)
+        {
+            if (moneyRow is null)
+            {
+                moneyRow = new DebtRow { InvoiceId = v.Id };
+                db.DebtRows.Add(moneyRow);
+            }
+            moneyRow.MoneyAccountId = account.Id;
+            moneyRow.FuelAccountId = null;          // اگر از نسخه‌های قبل در دفترِ تیل مانده بود
+            moneyRow.DateShamsi = date;
+            moneyRow.DateKey = Shamsi.Key(date);
+            moneyRow.Name = label;
+            moneyRow.Fuel = v.Fuel;
+            moneyRow.ByMoney = true;
+            moneyRow.Liters = 0m;
+            moneyRow.PricePerLiter = null;
+            moneyRow.Bardagi = 0m;
+            moneyRow.Rasid = v.Amount;
+            moneyRow.Albaqi = -v.Amount;
+        }
+        else if (moneyRow is not null)
+        {
+            db.DebtRows.Remove(moneyRow);           // مبلغ حذف شد → ردیفش هم برود
+        }
+
+        // ── بخشِ تیل ──
+        var fuelRow = await db.DebtRows.FirstOrDefaultAsync(r => r.InvoiceFuelId == v.Id, ct);
+        if (v.Liters > 0m)
+        {
+            if (v.Fuel == FuelType.Diesel) account.RasidFuelDiesel += v.Liters;
+            else account.RasidFuelPetrol += v.Liters;
+            v.PostedFuelLiters = v.Liters;
+            v.PostedFuelType = v.Fuel;      // برای پس گرفتنِ درست، حتی اگر بعداً عوض شود
+
+            if (fuelRow is null)
+            {
+                fuelRow = new DebtRow { InvoiceFuelId = v.Id };
+                db.DebtRows.Add(fuelRow);
+            }
+            fuelRow.FuelAccountId = account.Id;
+            fuelRow.MoneyAccountId = null;
+            fuelRow.DateShamsi = date;
+            fuelRow.DateKey = Shamsi.Key(date);
+            fuelRow.Name = label;
+            fuelRow.Hawala = "فاکتور " + v.InvoiceNumber;
+            fuelRow.Fuel = v.Fuel;
+            fuelRow.ByMoney = false;
+            // فقط ستونِ «رسید تیل» — بردگی و فی و رسیدِ پول صفر می‌مانند تا
+            // هیچ محاسبه‌ای عوض نشود
+            fuelRow.Liters = 0m;
+            fuelRow.PricePerLiter = null;
+            fuelRow.Bardagi = 0m;
+            fuelRow.Rasid = 0m;
+            fuelRow.RasidFuel = v.Liters;
+            fuelRow.Albaqi = 0m;
+        }
+        else if (fuelRow is not null)
+        {
+            db.DebtRows.Remove(fuelRow);            // لیتر حذف شد → ردیفِ نمایشی هم برود
+        }
+    }
+
     /// <summary>برگرداندنِ تایید — دقیقاً همان مقداری که اضافه شده بود پس گرفته می‌شود.</summary>
     public async Task RevertAsync(long invoiceId, CancellationToken ct = default)
     {
-        _perm.Require(Permission.EditData);
+        _perm.Require(Permission.ManagerOnly);
         await using var db = _dbf.Create();
         var v = await db.Invoices.FirstOrDefaultAsync(x => x.Id == invoiceId, ct);
         if (v is null) return;
@@ -155,7 +245,7 @@ public sealed class InvoiceService
 
     public async Task DeleteAsync(long invoiceId, CancellationToken ct = default)
     {
-        _perm.Require(Permission.DeleteData);
+        _perm.Require(Permission.ManagerOnly);
         await using var db = _dbf.Create();
         var v = await db.Invoices.FirstOrDefaultAsync(x => x.Id == invoiceId, ct);
         if (v is null) return;
@@ -167,24 +257,39 @@ public sealed class InvoiceService
 
     private static async Task UnpostAsync(Persistence.PumpDbContext db, Invoice v, CancellationToken ct)
     {
-        var row = await db.DebtRows.FirstOrDefaultAsync(r => r.InvoiceId == v.Id, ct);
-        if (row is not null) db.DebtRows.Remove(row);
+        // هر دو ردیف: پولی (InvoiceId) و نمایشیِ تیل (InvoiceFuelId)
+        var rows = await db.DebtRows
+            .Where(r => r.InvoiceId == v.Id || r.InvoiceFuelId == v.Id).ToListAsync(ct);
+        if (rows.Count > 0) db.DebtRows.RemoveRange(rows);
 
         if (v.PostedFuelLiters is > 0m && v.DebtAccountId is not null)
         {
             var acc = await db.DebtAccounts.FirstOrDefaultAsync(a => a.Id == v.DebtAccountId, ct);
             if (acc is not null)
             {
-                if (v.Fuel == FuelType.Diesel)
+                // ⚠️ نوعِ تیلِ **ثبت‌شده**، نه نوعِ تیلِ همین لحظه
+                var posted = v.PostedFuelType ?? v.Fuel;
+                if (posted == FuelType.Diesel)
                     acc.RasidFuelDiesel = Math.Max(0m, acc.RasidFuelDiesel - v.PostedFuelLiters.Value);
                 else
                     acc.RasidFuelPetrol = Math.Max(0m, acc.RasidFuelPetrol - v.PostedFuelLiters.Value);
             }
         }
         v.PostedFuelLiters = null;
+        v.PostedFuelType = null;
     }
 
-    /// <summary>حسابِ مقصد — از روی «نامِ حساب»ِ فاکتور، وگرنه نامِ مشتری.</summary>
+    /// <summary>
+    /// ══ ‎_ensureDebtPersonForInvoice(v)‎ ═══════════════════════════════════
+    /// حسابِ مقصد **از روی نام** تعیین می‌شود: «نامِ حساب»ِ فاکتور اگر نوشته
+    /// شده باشد، وگرنه نامِ مشتری. حسابِ هم‌نام اگر نبود، ساخته می‌شود.
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو: «همان نام مشتری را می‌زنم، بس است — همان باید
+    /// کارش را بکند». کشویِ «ثبت در حساب» به همین دلیل برداشته شده.
+    ///
+    /// ⚠️ شمارهٔ تماسِ فاکتور هم به حساب منتقل می‌شود، ولی فقط اگر حساب خودش
+    /// شماره نداشته باشد — شمارهٔ ثبت‌شدهٔ کاربر با یک فاکتور بازنویسی نمی‌شود.
+    /// </summary>
     private static async Task<DebtAccount> EnsureAccountAsync(Persistence.PumpDbContext db, Invoice v,
                                                               CancellationToken ct)
     {
@@ -199,7 +304,11 @@ public sealed class InvoiceService
 
         var people = await db.Debtors.Include(d => d.MainAccount).ToListAsync(ct);
         var person = people.FirstOrDefault(d => CompanyDataService.NormalizeName(d.Name) == key);
-        if (person?.MainAccount is not null) return person.MainAccount;
+        if (person?.MainAccount is not null)
+        {
+            CopyPhone(v, person);
+            return person.MainAccount;
+        }
 
         var acc = new DebtAccount { Mode = LedgerMode.Fuel };
         var fresh = new Debtor
@@ -208,8 +317,15 @@ public sealed class InvoiceService
             LegacyId = "d" + Guid.NewGuid().ToString("N")[..10],
             MainAccount = acc,
         };
+        CopyPhone(v, fresh);
         db.Debtors.Add(fresh);
         await db.SaveChangesAsync(ct);
         return acc;
+    }
+
+    private static void CopyPhone(Invoice v, Debtor p)
+    {
+        if (!string.IsNullOrWhiteSpace(v.Phone) && string.IsNullOrWhiteSpace(p.Phone))
+            p.Phone = v.Phone;
     }
 }

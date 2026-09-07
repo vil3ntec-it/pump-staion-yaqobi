@@ -124,6 +124,8 @@ public sealed class PumpDbFactory
             ("DebtAccounts", "MoneyDeposit", "TEXT"),
             ("ExchangeRows", "LegacyId", "TEXT"),
             ("CompanyRows", "SourceExchangeId", "TEXT"),
+            ("DebtRows", "InvoiceFuelId", "INTEGER"),
+            ("Invoices", "PostedFuelType", "INTEGER"),
         };
 
         foreach (var (table, column, type) in wanted)

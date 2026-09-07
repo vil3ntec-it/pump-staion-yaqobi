@@ -111,6 +111,8 @@ public sealed class PumpDbContext : DbContext
             e.HasIndex(x => x.Name);
             e.HasIndex(x => x.InvoiceId);
             e.HasIndex(x => x.SrcKey);      // یافتنِ ردیفِ هم‌منبع هنگامِ ثبتِ دوباره
+            e.HasIndex(x => x.InvoiceId);
+            e.HasIndex(x => x.InvoiceFuelId);
             e.Property(x => x.Fuel).HasConversion<int>();
             e.HasQueryFilter(x => x.DeletedAt == null);
         });
