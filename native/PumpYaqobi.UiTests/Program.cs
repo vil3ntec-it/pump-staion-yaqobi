@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
+using Avalonia.Layout;
 using Avalonia.Threading;
 using PumpYaqobi.App.Themes;
 using PumpYaqobi.App.ViewModels;
@@ -22,6 +23,16 @@ internal static class Program
     public static int Main(string[] args)
     {
         var outDir = args.Length > 0 ? args[0] : "shots";
+
+        // ══ حالتِ «سنجشِ اسکرول» ═════════════════════════════════════════════
+        //     dotnet run --project PumpYaqobi.UiTests -- scroll
+        //
+        // گزارشِ صاحب ریپو: «جز جدول‌ها دیگر هیچ چیزی اسکرول نمی‌شود». این
+        // حالت به‌جای حدس زدن، در همان پنجرهٔ واقعی و در کوچک‌ترین اندازهٔ
+        // مجاز، بخش‌به‌بخش می‌سنجد که محتوا از پنجره بلندتر است یا نه و آیا
+        // اصلاً راهی برای رسیدن به بخشِ بیرون‌افتاده هست.
+        if (outDir.Equals("scroll", StringComparison.OrdinalIgnoreCase)) return ScrollAudit();
+
         Directory.CreateDirectory(outDir);
 
         // دیتابیسِ موقت — عکس‌گیری هرگز به دادهٔ واقعیِ کاربر دست نمی‌زند
@@ -281,5 +292,92 @@ internal static class Program
         if (frame is null) { Console.WriteLine("  ✖ عکس گرفته نشد: " + path); return; }
         frame.Save(path);
         Console.WriteLine("  ✔ " + Path.GetFileName(path));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  سنجشِ اسکرول
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// برای هر بخش می‌گوید: محتوا چقدر بلند است، پنجره چقدر جا دارد، و اگر
+    /// بلندتر است آیا ‎ScrollViewer‎ی هست که واقعاً بتواند به تهش برساند.
+    ///
+    /// پنجره عمداً در کوچک‌ترین اندازهٔ مجاز (‎MinWidth×MinHeight‎) باز می‌شود:
+    /// در ۱۴۴۰×۹۰۰ بیشترِ بخش‌ها اصلاً سرریز نمی‌کنند و سنجش بی‌نتیجه می‌ماند.
+    /// </summary>
+    private static int ScrollAudit()
+    {
+        var tmpDb = Path.Combine(Path.GetTempPath(), "pump-scroll-" + Guid.NewGuid().ToString("N"), "pump.db");
+        PumpYaqobi.App.Services.AppHost.Start(tmpDb);
+
+        AppBuilder.Configure<PumpYaqobi.App.App>()
+            .UseSkia()
+            .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
+            .SetupWithoutStarting();
+
+        var win = new MainWindow { Width = 1000, Height = 640 };
+        win.Show();
+        Pump(win);
+
+        var vm = (MainViewModel)win.DataContext!;
+        vm.Lock.Password = "1234";
+        vm.Lock.Confirm = "1234";
+        vm.Lock.SubmitCommand.Execute(null);
+        Wait(win, Task.CompletedTask);
+        Pump(win);
+        Seed.Fill(PumpYaqobi.App.Services.AppHost.Current);
+
+        Console.WriteLine();
+        Console.WriteLine("بخش                  سرریز؟   بلندیِ محتوا / جا   اسکرول‌ویور  می‌رسد؟");
+        Console.WriteLine(new string('-', 74));
+
+        var broken = new List<string>();
+
+        foreach (var sec in vm.Sections)
+        {
+            Wait(win, vm.GoAsync(sec));
+            Pump(win);
+            Dispatcher.UIThread.RunJobs();
+            Pump(win);
+
+            // ریشهٔ محتوای همین بخش — همان ‎ContentControl‎ی که بخش داخلش است
+            var host = win.GetVisualDescendants().OfType<ContentControl>()
+                          .FirstOrDefault(c => ReferenceEquals(c.Content, sec));
+            if (host is null) { Console.WriteLine($"{sec.Id,-20} — میزبان پیدا نشد"); continue; }
+
+            var avail = host.Bounds.Height;
+
+            // بلندیِ واقعیِ محتوا: بزرگ‌ترین ‎DesiredSize‎ی که زیرِ میزبان هست
+            var wanted = host.GetVisualDescendants()
+                             .Select(v => v is Layoutable l ? l.DesiredSize.Height : 0)
+                             .DefaultIfEmpty(0).Max();
+
+            var overflows = wanted > avail + 1;
+
+            // آیا اسکرول‌ویوری هست که واقعاً چیزی برای لغزاندن دارد؟
+            var svs = host.GetVisualDescendants().OfType<ScrollViewer>().ToList();
+            var reachable = svs.Any(sv => sv.Extent.Height > sv.Viewport.Height + 1);
+
+            // جدول خودش اسکرول دارد — آن را جدا می‌شماریم
+            var hasGrid = host.GetVisualDescendants()
+                              .Any(v => v.GetType().Name.Contains("DataGrid", StringComparison.Ordinal));
+
+            var mark = !overflows ? "—" : reachable ? "✔" : "✖";
+            Console.WriteLine($"{sec.Id,-20} {(overflows ? "بله" : "نه"),-8} "
+                            + $"{wanted,6:0} / {avail,-6:0}      {svs.Count,-2} {(hasGrid ? "+جدول" : "     ")}  {mark}");
+
+            if (overflows && !reachable) broken.Add(sec.Id);
+        }
+
+        Console.WriteLine();
+        if (broken.Count == 0)
+        {
+            Console.WriteLine("✅ هر بخشی که سرریز می‌کند، راهی برای رسیدن به تهش دارد");
+            return 0;
+        }
+
+        Console.WriteLine("❌ این بخش‌ها سرریز می‌کنند ولی اسکرول ندارند — محتوا بریده می‌شود:");
+        foreach (var b in broken) Console.WriteLine("   • " + b);
+        return 1;
     }
 }
