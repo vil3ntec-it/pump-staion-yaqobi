@@ -1,11 +1,13 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
+using PumpYaqobi.Reporting.Pdf;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -242,6 +244,28 @@ public sealed partial class AmanatAccountViewModel : ObservableObject, IRowBatch
         Recalc();
     }
 
+    /// <summary>
+    /// بستهٔ آمادهٔ ورق. حساب‌ها همان‌جا حساب می‌شوند که روی صفحه حساب شده‌اند —
+    /// «مدت زمانِ خودکار» تا امروز فقط این‌جا معنی دارد و نباید در لایهٔ سند
+    /// دوباره نوشته شود.
+    /// </summary>
+    public AmanatReportAccount ReportAccount() => new(
+        Entity.Name ?? "",
+        Entity.Fuel == FuelType.Diesel ? "🟤 دیزل" : "⛽ پطرول",
+        Totals,
+        Rows.Select(r => new AmanatReportRow(r.Entity, CalcOf(r.Entity))).ToList());
+
+    /// <summary>‎printAmanatAccount(i)‎ — ورقِ همین یک حساب.</summary>
+    [RelayCommand]
+    private Task PdfAsync()
+    {
+        var name = string.IsNullOrWhiteSpace(Entity.Name) ? "بی‌نام" : Entity.Name!.Trim();
+        var input = new AmanatReportInput(
+            "تیل امانت — " + name, _section.Settings,
+            new[] { ReportAccount() }, DocDates.Line(), ShowAccountHeads: false);
+        return Documents.ShowAsync(() => new AmanatReport(input), "تیل امانت — " + name);
+    }
+
     [RelayCommand]
     private async Task AddRowAsync()
     {
@@ -379,6 +403,41 @@ public sealed partial class AmanatSectionViewModel : SectionViewModel
     {
         Page = null;
         ApplyFilter();   // عددهای کارت با آنچه در صفحهٔ حساب عوض شد جور شود
+    }
+
+    /// <summary>
+    /// ‎printAmanat()‎ — ورقِ همان حساب‌هایی که روی صفحه دیده می‌شوند (فیلترِ
+    /// سوخت و جست‌وجو هر دو اثر دارند).
+    ///
+    /// ⚠️ حساب‌ها با هم جمع نمی‌شوند: هر حساب جدول و ردیفِ «جمله»ی خودش را
+    /// دارد. جمع زدنشان عددِ بی‌معنی می‌داد.
+    /// </summary>
+    [RelayCommand]
+    private Task PdfAsync()
+    {
+        var ids = Cards.Select(c => c.Entity.Id).ToList();
+        var list = ids.Select(id => _all.FirstOrDefault(a => a.Entity.Id == id))
+                      .Where(a => a is not null)
+                      .Select(a => a!.ReportAccount())
+                      .ToList();
+
+        var title = "تیل امانت" + FuelFilter switch
+        {
+            "petrol" => " — پطرول",
+            "diesel" => " — دیزل",
+            _ => "",
+        };
+
+        var input = new AmanatReportInput(title, Settings, list, DocDates.Line());
+        return Documents.ShowAsync(() => new AmanatReport(input), title);
+    }
+
+    /// <summary>ورقِ یک کارت، بی باز کردنِ صفحه‌اش.</summary>
+    [RelayCommand]
+    private Task PdfCardAsync(AmanatCardViewModel? card)
+    {
+        var vm = card is null ? null : _all.FirstOrDefault(a => a.Entity.Id == card.Entity.Id);
+        return vm is null ? Task.CompletedTask : vm.PdfCommand.ExecuteAsync(null);
     }
 
     /// <summary>«➕ حساب جدید» — سوختِ حساب از فیلترِ همان لحظه گرفته می‌شود.</summary>
