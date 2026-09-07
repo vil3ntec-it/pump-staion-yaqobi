@@ -1,6 +1,5 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 
@@ -51,40 +50,58 @@ public class ExcelGrid : DataGrid
         HeadersVisibility = DataGridHeadersVisibility.Column;
         ClipboardCopyMode = DataGridClipboardCopyMode.ExcludeHeader;
 
-        // ⚠️ ستونِ «جاگیر» — بی آن، جدول جای اضافه را به ستونِ آخر می‌دهد و
-        // دکمهٔ حذف وسطِ یک ستونِ خالیِ ۴۰۰ پیکسلی شناور می‌شود، در حالی که
-        // ستون‌های عددی به هم فشرده‌اند. حالا جای اضافه در یک ستونِ خالیِ
-        // انتهایی جمع می‌شود و بقیهٔ ستون‌ها پهنای طبیعیِ خودشان را دارند —
-        // همان کاری که جدولِ نسخهٔ وب با ‎width:auto‎ می‌کرد.
-        Loaded += (_, _) => AddFillerColumn();
+        // جای اضافه بینِ ستون‌ها پخش می‌شود، نه در یک ستونِ خالیِ ته جدول
+        LayoutUpdated += (_, _) => SpreadColumns();
     }
 
-    private void AddFillerColumn()
-    {
-        if (Columns.Count == 0) return;
-        if (Columns[^1] is FillerColumn) return;
-        Columns.Add(new FillerColumn
-        {
-            Width = new DataGridLength(1, DataGridLengthUnitType.Star),
-            IsReadOnly = true,
-            CanUserResize = false,
-            CanUserReorder = false,
-            CanUserSort = false,
-            // ‎DataGridTemplateColumn‎ بدونِ قالب هنگامِ ساختِ خانه می‌ترکد،
-            // پس یک قالبِ خالی می‌گیرد.
-            CellTemplate = new FuncDataTemplate<object?>((_, _) => new Border(), true),
-        });
-    }
+    /// <summary>هر جدول یک‌بار پهن می‌شود؛ بعدش ستون‌های ستاره‌ای خودشان
+    /// با تغییرِ اندازهٔ پنجره تنظیم می‌شوند.</summary>
+    private bool _spread;
 
     /// <summary>
-    /// ستونِ جاگیر — نوعِ خودش را دارد تا با ستونِ «حذف» اشتباه نشود.
+    /// ══ جای اضافه را بینِ ستون‌ها پخش کن ═══════════════════════════════════
     ///
-    /// ⚠️ نه رشتهٔ خالی به‌عنوان نشانه (ستونِ حذفِ خیلی از جدول‌ها هم
-    /// ‎Header=""‎ دارد، پس جاگیر هرگز اضافه نمی‌شد) و نه یک ‎object‎ِ
-    /// نشانه‌گذار (خودِ جدول ‎ToString()‎ اش را در سرستون چاپ می‌کرد و
-    /// «System.Object» بالای جدول می‌نشست).
+    /// ‎DataGrid‎ی آوالونیا ستون‌های ‎Auto‎ را هم‌قدِ محتوایشان می‌کند و باقیِ
+    /// پهنا را دست‌نخورده رها می‌کند — یعنی یک نوارِ خالیِ بزرگ ته جدول.
+    /// پیش از این یک «ستونِ جاگیر» آن را می‌بلعید، ولی نتیجه‌اش همان بود:
+    /// یک ستونِ خالیِ چندصد پیکسلی در هر جدولِ هر بخش، که صاحب ریپو گفت
+    /// بی‌دلیل است و باید برود.
+    ///
+    /// جدولِ نسخهٔ وب این مشکل را ندارد چون ‎&lt;table&gt;‎ی ‎width:100%‎ پهنای
+    /// اضافه را بینِ ستون‌ها **به نسبتِ محتوایشان** پخش می‌کند. همین کار
+    /// این‌جا هم می‌شود: پهنای طبیعیِ هر ستون خوانده می‌شود و بعد همان عدد
+    /// وزنِ ستاره‌اش می‌گردد. پس نسبت‌ها همان می‌ماند و جدول تمامِ پهنا را
+    /// می‌گیرد.
+    ///
+    /// ⚠️ ‎MinWidth‎ روی همان پهنای طبیعی می‌نشیند: ستونِ ستاره‌ای وگرنه در
+    /// پنجرهٔ باریک زیرِ اندازهٔ محتوا فشرده می‌شود و نوشته‌ها بریده. با این
+    /// کف، به‌جای بریدن، جدول افقی می‌لغزد — همان کاری که ‎overflow-x:auto‎ی
+    /// سایت می‌کند.
     /// </summary>
-    private sealed class FillerColumn : DataGridTemplateColumn { }
+    private void SpreadColumns()
+    {
+        if (_spread || Columns.Count == 0) return;
+
+        var cols = Columns.Where(c => c.IsVisible).ToList();
+        if (cols.Count == 0) return;
+
+        var natural = cols.Select(c => c.ActualWidth).ToArray();
+        if (natural.Any(w => double.IsNaN(w) || w <= 0)) return;   // هنوز چیده نشده
+
+        var room = Bounds.Width;
+        if (room <= 0) return;
+
+        // جای اضافه‌ای نیست (یا آن‌قدر کم است که ارزشِ دست زدن ندارد)
+        if (room - natural.Sum() < 8) return;
+
+        for (var i = 0; i < cols.Count; i++)
+        {
+            if (cols[i].MinWidth < natural[i]) cols[i].MinWidth = natural[i];
+            cols[i].Width = new DataGridLength(natural[i], DataGridLengthUnitType.Star);
+        }
+
+        _spread = true;
+    }
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
