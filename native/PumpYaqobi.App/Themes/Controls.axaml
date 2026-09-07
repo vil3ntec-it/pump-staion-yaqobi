@@ -557,19 +557,22 @@
     <Setter Property="Height" Value="52" />
     <Setter Property="Template">
       <ControlTemplate>
-        <Panel>
-          <ScrollViewer Name="PART_Scroll"
+        <!-- فلش‌ها بیرونِ ناحیهٔ لغزش‌اند، نه رویش. اگر رویش باشند، بخشِ فعالی
+             که تازه به لبه آمده زیرشان نیمه‌پنهان می‌ماند. ستونِ Auto با پنهان
+             شدنِ دکمه خودش صفر می‌شود، پس وقتی لغزشی در کار نیست هیچ جایی
+             هدر نمی‌رود. -->
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <Button Grid.Column="0" Name="PART_Prev" Classes="nav-edge" Content="›" IsVisible="False" />
+
+          <ScrollViewer Grid.Column="1" Name="PART_Scroll"
                         HorizontalScrollBarVisibility="Hidden"
                         VerticalScrollBarVisibility="Disabled"
                         Padding="10,0">
             <ContentPresenter Content="{TemplateBinding Content}" VerticalAlignment="Center" />
           </ScrollViewer>
 
-          <Button Name="PART_Prev" Classes="nav-edge" Content="›"
-                  HorizontalAlignment="Right" IsVisible="False" />
-          <Button Name="PART_Next" Classes="nav-edge" Content="‹"
-                  HorizontalAlignment="Left" IsVisible="False" />
-        </Panel>
+          <Button Grid.Column="2" Name="PART_Next" Classes="nav-edge" Content="‹" IsVisible="False" />
+        </Grid>
       </ControlTemplate>
     </Setter>
   </Style>

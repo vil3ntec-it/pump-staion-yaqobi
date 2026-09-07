@@ -41,8 +41,22 @@ public abstract partial class SectionViewModel : ObservableObject
     /// سقفِ پهنا. داشبورد تمام‌عرض است ولی خودش تا ۱۴۴۰ بند می‌شود تا روی
     /// نمایشگرِ خیلی پهن کارت‌هایش بی‌جهت کش نیایند — همان قاعدهٔ نسخهٔ وب.
     /// </summary>
+    /// <summary>
+    /// صفحهٔ درونیِ بخش (حسابِ شخص، شرکت، ورق، امانت) باز است.
+    ///
+    /// در نسخهٔ وب این‌ها مودالِ تمام‌صفحه‌اند — ‎#personModal .modal‎ صریحاً
+    /// ‎width:100%;height:100%;max-width:100%‎ می‌گیرد. جدولِ حسابِ شخص ده‌ها
+    /// ستون دارد و در ستونِ ۱۰۰۰ پیکسلی نصفش بیرون می‌ماند.
+    /// </summary>
+    [ObservableProperty] private bool _isPageOpen;
+
+    partial void OnIsPageOpenChanged(bool v) => OnPropertyChanged(nameof(ContentMaxWidth));
+
     public double ContentMaxWidth =>
-        Id == "dashboard" ? 1440 : IsWide ? double.PositiveInfinity : 1000;
+        IsPageOpen ? double.PositiveInfinity
+        : Id == "dashboard" ? 1440
+        : IsWide ? double.PositiveInfinity
+        : 1000;
     /// <summary>کلیدِ آیکون در <c>Icons.axaml</c> — معمولاً همان شناسهٔ بخش.</summary>
     public string IconKey { get; }
     public string Title { get; }

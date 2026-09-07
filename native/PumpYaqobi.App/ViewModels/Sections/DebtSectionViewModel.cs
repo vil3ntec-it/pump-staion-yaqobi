@@ -123,7 +123,12 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
     /// <summary>حسابِ شخص — تا باز است، میانبرهای ردیف به آن می‌روند نه به فهرست.</summary>
     public override object? ActivePage => Person;
 
-    partial void OnPersonChanged(PersonViewModel? v) => OnPropertyChanged(nameof(IsListVisible));
+    partial void OnPersonChanged(PersonViewModel? v)
+    {
+        OnPropertyChanged(nameof(IsListVisible));
+        // صفحهٔ حساب تمام‌عرض است، مثلِ مودالِ تمام‌صفحهٔ نسخهٔ وب
+        IsPageOpen = v is not null;
+    }
 
     partial void OnSearchChanged(string v) => ApplyFilter();
 

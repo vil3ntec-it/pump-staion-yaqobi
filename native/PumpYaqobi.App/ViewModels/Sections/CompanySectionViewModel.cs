@@ -265,7 +265,12 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
     /// <summary>صفحهٔ شرکت — تا باز است، میانبرهای ردیف به آن می‌روند نه به فهرست.</summary>
     public override object? ActivePage => Page;
 
-    partial void OnPageChanged(CompanyPageViewModel? v) => OnPropertyChanged(nameof(IsListVisible));
+    partial void OnPageChanged(CompanyPageViewModel? v)
+    {
+        OnPropertyChanged(nameof(IsListVisible));
+        // صفحهٔ حساب تمام‌عرض است، مثلِ مودالِ تمام‌صفحهٔ نسخهٔ وب
+        IsPageOpen = v is not null;
+    }
     partial void OnSearchChanged(string v) => ApplyFilter();
 
     protected override Task LoadAsync() => RefreshAsync();
