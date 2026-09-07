@@ -64,6 +64,16 @@
          که آن‌جا هیچ استفاده‌ای ندارد. کدِ برنامه هم به نبودنش آماده است:
          ‎VlcVideoFeed.Available‎ خاموش می‌ماند و کارتِ دوربین به همان رفتارِ
          قبلی برمی‌گردد. -->
+    <!-- ══ دوربینِ USB (وب‌کم) — بندِ ۱۵ ═══════════════════════════════════
+         نسخهٔ وب این را با ‎getUserMedia‎ می‌گرفت. در ویندوز، گرفتنِ تصویر از
+         وب‌کم کتابخانه می‌خواهد.
+
+         ⚠️ چرا FlashCap و نه OpenCV/Emgu: هر دوی آن‌ها ده‌ها مگابایت فایلِ
+         بومی به نصاب اضافه می‌کنند. FlashCap **خالصِ دات‌نت** است و مستقیم با
+         DirectShow/Media Foundationِ خودِ ویندوز حرف می‌زند، پس اندازهٔ نصاب
+         تقریباً دست‌نخورده می‌ماند و شرطِ سیستم‌عامل هم لازم ندارد. -->
+    <PackageReference Include="FlashCap" Version="1.10.0" />
+
     <PackageReference Include="LibVLCSharp" Version="3.8.2" />
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.21"
                       Condition="'$(OS)' == 'Windows_NT'" />

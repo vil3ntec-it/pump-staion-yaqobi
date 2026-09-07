@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Services;
+using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Services.Vision;
@@ -29,6 +30,10 @@ public sealed partial class CameraCardViewModel : ObservableObject, IDisposable
     /// </summary>
     private readonly VlcVideoFeed? _video;
 
+    /// <summary>وب‌کمِ خودِ کامپیوتر — فقط برای لینکِ ‎usb:&lt;شماره&gt;‎.</summary>
+    private readonly UsbCameraFeed? _usb;
+    private readonly int _usbIndex;
+
     public CameraCardViewModel(Camera cam, CameraSectionViewModel owner)
     {
         Entity = cam; _owner = owner;
@@ -36,12 +41,35 @@ public sealed partial class CameraCardViewModel : ObservableObject, IDisposable
         _feed.JpegArrived += OnJpeg;
         _feed.Failed += OnFailed;
 
-        if (CameraService.NeedsPlayer(CameraService.KindOf(cam.Url)) && VlcVideoFeed.Available)
+        var kind = CameraService.KindOf(cam.Url);
+
+        if (CameraService.NeedsPlayer(kind) && VlcVideoFeed.Available)
         {
             _video = new VlcVideoFeed();
             _video.FrameArrived += OnVideoFrame;
             _video.Failed += OnFailed;
         }
+        else if (kind == CameraKind.Usb && UsbCameraFeed.IndexOf(cam.Url) is { } idx)
+        {
+            _usbIndex = idx;
+            _usb = new UsbCameraFeed();
+            // فریمِ وب‌کم هم یک عکسِ فشرده است، مثلِ فریمِ MJPEG — پس همان
+            // مسیر: نمایش با ‎OnFrame‎ و پویشِ کیو‌آر با ‎OnJpeg‎.
+            _usb.FrameArrived += OnUsbFrame;
+            _usb.Failed += OnFailed;
+        }
+    }
+
+    /// <summary>فریمِ وب‌کم — همان راهی که فریمِ MJPEG می‌رود.</summary>
+    private void OnUsbFrame(byte[] image)
+    {
+        OnJpeg(image);
+        try
+        {
+            using var ms = new MemoryStream(image, writable: false);
+            OnFrame(new Bitmap(ms));
+        }
+        catch { /* قالبِ ناشناخته — همان یک فریم رد می‌شود */ }
     }
 
     public Camera Entity { get; }
@@ -58,7 +86,8 @@ public sealed partial class CameraCardViewModel : ObservableObject, IDisposable
     /// نیامد، همان دکمهٔ «باز کردن در پخش‌کنندهٔ ویندوز» می‌ماند — نه یک
     /// کادرِ سیاهِ بی‌توضیح.
     /// </summary>
-    public bool ShowsInApp => CameraService.ShowsInApp(Kind) || _video is not null;
+    public bool ShowsInApp =>
+        Kind == CameraKind.Image || _video is not null || _usb is not null;
 
     /// <summary>«⛔ RTSP» / «▶️ HLS» / «🖼️ عکسِ زنده» — کاربر باید بداند چه دارد.</summary>
     public string KindText => Kind switch
@@ -80,6 +109,9 @@ public sealed partial class CameraCardViewModel : ObservableObject, IDisposable
 
     /// <summary>پخش از راهِ VLC است، نه از راهِ عکس/MJPEG.</summary>
     private bool UsesVideo => _video is not null;
+
+    /// <summary>پخش از وب‌کمِ خودِ کامپیوتر است.</summary>
+    private bool UsesUsb => _usb is not null;
 
     partial void OnFrameChanged(Bitmap? oldValue, Bitmap? newValue)
     {
@@ -110,7 +142,21 @@ public sealed partial class CameraCardViewModel : ObservableObject, IDisposable
         if (IsLive) { Stop(); return; }
         Status = "در حال گرفتنِ تصویر…";
         IsLive = true;
-        if (UsesVideo) _video!.Start(Url); else _feed.Start(Url);
+        StartFeed();
+    }
+
+    private void StartFeed()
+    {
+        if (UsesVideo) _video!.Start(Url);
+        else if (UsesUsb) _usb!.Start(_usbIndex);
+        else _feed.Start(Url);
+    }
+
+    private void StopFeed()
+    {
+        _feed.Stop();
+        _video?.Stop();
+        _usb?.Stop();
     }
 
     /// <summary>«⟳» — همان ‎camReload‎: اتصال بسته و از نو باز می‌شود.</summary>
@@ -118,16 +164,15 @@ public sealed partial class CameraCardViewModel : ObservableObject, IDisposable
     private void Reload()
     {
         if (!ShowsInApp) { _owner.OpenExternally(Url); return; }
-        if (UsesVideo) _video!.Stop(); else _feed.Stop();
+        StopFeed();
         Status = "در حال گرفتنِ تصویر…";
         IsLive = true;
-        if (UsesVideo) _video!.Start(Url); else _feed.Start(Url);
+        StartFeed();
     }
 
     public void Stop()
     {
-        _feed.Stop();
-        _video?.Stop();
+        StopFeed();
         IsLive = false;
         Scanning = false;
         Frame = null;
@@ -267,6 +312,13 @@ public sealed partial class CameraCardViewModel : ObservableObject, IDisposable
             _video.Dispose();
         }
 
+        if (_usb is not null)
+        {
+            _usb.FrameArrived -= OnUsbFrame;
+            _usb.Failed -= OnFailed;
+            _usb.Dispose();
+        }
+
         Frame = null;
         _canvasA?.Dispose(); _canvasB?.Dispose();
         _canvasA = null; _canvasB = null;
@@ -336,6 +388,42 @@ public sealed partial class CameraSectionViewModel : SectionViewModel
         NewName = ""; NewUrl = "";
         await RefreshAsync();
         _host.Toast("✅ دوربین ذخیره شد", ToastKind.Ok);
+    }
+
+    /// <summary>
+    /// ══ ➕ دوربین‌های USB — همان ‎refreshLocalCams‎ ═══════════════════════════
+    /// وب‌کم‌های وصل‌شده را می‌شمارد و هر کدام را که هنوز در فهرست نیست
+    /// اضافه می‌کند. لینکشان ‎usb:&lt;شماره&gt;‎ است.
+    ///
+    /// ⚠️ دوربینی که از پیش هست دوباره اضافه نمی‌شود: نسخهٔ وب هم همین کار را
+    /// می‌کرد، وگرنه هر بار زدنِ دکمه فهرست را دو برابر می‌کرد.
+    /// </summary>
+    [RelayCommand]
+    private async Task AddUsbAsync()
+    {
+        var found = await Task.Run(() => UsbCameraFeed.List());
+        if (found.Count == 0)
+        {
+            _host.Toast(UsbCameraFeed.LastError.Length > 0
+                ? "دوربینِ USB پیدا نشد — دسترسیِ دوربینِ ویندوز را بررسی کنید"
+                : "هیچ دوربینِ USBی وصل نیست", ToastKind.Warn);
+            return;
+        }
+
+        var have = Cameras.Select(c => (c.Url ?? "").Trim())
+                          .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var added = 0;
+        foreach (var d in found)
+        {
+            var url = UsbCameraFeed.UrlOf(d.Index);
+            if (have.Contains(url)) continue;
+            if (await _host.Cameras.AddAsync(d.Name, url) is not null) added++;
+        }
+
+        if (added == 0) { _host.Toast("همهٔ دوربین‌های USB از پیش در فهرست‌اند", ToastKind.Info); return; }
+
+        await RefreshAsync();
+        _host.Toast("✅ " + Shamsi.Money(added) + " دوربینِ USB اضافه شد", ToastKind.Ok);
     }
 
     /// <summary>
