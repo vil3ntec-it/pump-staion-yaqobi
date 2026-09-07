@@ -365,6 +365,57 @@ public class ReportSuiteTests
                   new WaraqService()),
               "waraq-empty", 2000);
 
+    // ── تیل امانت ─────────────────────────────────────────────────────────
+    private static AmanatReportAccount AmanatAcct(string name, FuelType fuel, decimal? myPct)
+    {
+        var acc = new AmanatAccount { Name = name, Fuel = fuel, MyPct = myPct, Rate = 67m };
+        acc.Rows.Add(new AmanatRow { DateShamsi = "1405/05/12", Name = "تانکر هرات",
+                                     ToAccount = "حاجی نعیم", Liters = 22_000m, Taken = 9_500m,
+                                     Days = 26m, Temp = 31m });
+        acc.Rows.Add(new AmanatRow { DateShamsi = "1405/06/02", Name = "تانکر کابل",
+                                     ToAccount = "شرکت پامیر", Liters = 14_500m, Taken = 0m,
+                                     Days = 9m, Temp = 27m, Actual = 14_380m });
+
+        var svc = new AmanatService();
+        var s = AmanatSettings.Default;
+        decimal Days(AmanatRow r) => r.Days ?? 0m;
+
+        return new AmanatReportAccount(
+            name, fuel == FuelType.Diesel ? "🟤 دیزل" : "⛽ پطرول",
+            svc.AccountCalc(acc, s, Days),
+            acc.Rows.Select(r => new AmanatReportRow(r, svc.RowCalc(r, acc, s, Days(r)))).ToList());
+    }
+
+    [Fact]
+    public void AmanatSheet_IsARealPdf()
+    {
+        var input = new AmanatReportInput(
+            "تیل امانت", AmanatSettings.Default,
+            new[] { AmanatAcct("حاجی نعیم", FuelType.Petrol, 3m),
+                    AmanatAcct("شرکت پامیر", FuelType.Diesel, null) },
+            Dates);
+        Check(new AmanatReport(input), "amanat", 4000);
+    }
+
+    /// <summary>‎printAmanatAccount(i)‎ — یک حساب، بی سربرگِ تکراری.</summary>
+    [Fact]
+    public void AmanatAccountSheet_IsARealPdf()
+    {
+        var input = new AmanatReportInput(
+            "تیل امانت — حاجی نعیم", AmanatSettings.Default,
+            new[] { AmanatAcct("حاجی نعیم", FuelType.Petrol, 3m) },
+            Dates, ShowAccountHeads: false);
+        Check(new AmanatReport(input), "amanat-one", 3000);
+    }
+
+    /// <summary>بی هیچ حسابی هم ورق ساخته می‌شود.</summary>
+    [Fact]
+    public void AmanatSheet_SurvivesNoAccounts() =>
+        Check(new AmanatReport(new AmanatReportInput(
+                  "تیل امانت", AmanatSettings.Default,
+                  Array.Empty<AmanatReportAccount>(), Dates)),
+              "amanat-empty", 2000);
+
     // ── گزارش پایان ماه ──────────────────────────────────────────────────
     private static MonthReport Month(decimal scale) => new(
         Petrol: new MonthFuel(1_840_000m * scale, 26_400m * scale, 148_000m * scale, 61),
