@@ -5,6 +5,7 @@ using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
+using PumpYaqobi.Services.Data;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -100,6 +101,19 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
     public ObservableCollection<DebtorCardViewModel> Cards { get; } = new();
 
     [ObservableProperty] private string _search = "";
+
+    /// <summary>در حالِ شنیدن — دکمهٔ 🎤 قرمز می‌شود.</summary>
+    [ObservableProperty] private bool _listening;
+    [ObservableProperty] private string _voiceStatus = "";
+
+    /// <summary>
+    /// صدایی که تازه شنیده شده ولی هنوز به حسابی نچسبیده.
+    ///
+    /// ⚠️ همان ‎_vxPendingTeach‎ی نسخهٔ وب و قلبِ «یادگیریِ بی‌زحمت»: اگر موتور
+    /// نشناخت و خودِ کاربر روی نامی زد، همین صدا برای همان حساب ثبت می‌شود.
+    /// پس برنامه بدونِ هیچ «حالتِ آموزش» یاد می‌گیرد.
+    /// </summary>
+    private VoiceFeatures? _pendingTeach;
     [ObservableProperty] private PersonViewModel? _person;
     [ObservableProperty] private string _newName = "";
     [ObservableProperty] private string _newPhone = "";
@@ -160,6 +174,89 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
         var full = await _host.Debtors.LoadFullAsync(card.Entity.Id);
         if (full is null) return;
         Person = new PersonViewModel(_host, full, this);
+
+        // ‎_vxLearnFromTap‎ — زدنِ نام پس از یک صدای ناشناخته، همان را یاد می‌دهد
+        var teach = _pendingTeach;
+        _pendingTeach = null;
+        if (teach is not null)
+        {
+            await _host.Voice.EnrollAsync(AccountKey(card.Entity.Id), card.Name, teach);
+            _host.Toast("🎓 صدای «" + card.Name + "» ثبت شد — دفعهٔ بعد خودش می‌شناسد", ToastKind.Ok);
+        }
+    }
+
+    /// <summary>کلیدِ صدا برای یک حساب — همان ‎p&lt;id&gt;‎ی نسخهٔ وب.</summary>
+    private static string AccountKey(long debtorId) => "p" + debtorId;
+
+    /// <summary>
+    /// ‎_vxOfflineSearch‎ — بگو، بشنو، حساب باز شود.
+    ///
+    /// هیچ سروری در کار نیست: صدا روی همین دستگاه به ویژگی تبدیل می‌شود و با
+    /// صداهای ثبت‌شده مقایسه می‌گردد. پس بی‌اینترنت هم کار می‌کند.
+    /// </summary>
+    [RelayCommand]
+    private async Task VoiceSearchAsync()
+    {
+        if (Listening) return;
+        Listening = true;
+        VoiceStatus = "🎤 نام را بگویید…";
+        try
+        {
+            var pcm = await new MicRecorder().RecordAsync();
+            if (pcm is null)
+            {
+                _host.Toast("🎤 مایکروفون باز نشد — دسترسیِ ویندوز را بررسی کنید", ToastKind.Error);
+                return;
+            }
+
+            var feat = VoiceEngine.Features(pcm);
+            if (feat is null)
+            {
+                _host.Toast("🎤 چیزی شنیده نشد — نزدیک‌تر و بلندتر بگویید", ToastKind.Error);
+                return;
+            }
+
+            _pendingTeach = feat;
+
+            // حساب‌های پاک‌شده کنار می‌روند (‎_vxLiveKey‎): کلیدِ صدا می‌ماند ولی
+            // حسابش دیگر نیست، و بازکردنِ حسابِ نبوده هیچ معنایی ندارد.
+            var alive = _all.Select(c => AccountKey(c.Entity.Id)).ToHashSet();
+            var matches = (await _host.Voice.MatchAsync(feat))
+                          .Where(m => alive.Contains(m.Key)).ToList();
+
+            if (matches.Count == 0)
+            {
+                _host.Toast(await _host.Voice.AccountCountAsync() == 0
+                    ? "🎤 بارِ اول نام را از فهرست بزنید — همین صدای شما ثبت می‌شود"
+                    : "🎤 نشناختم — نام را بزنید تا یاد بگیرم", ToastKind.Warn);
+                return;
+            }
+
+            if (!VoiceDataService.IsSure(matches))
+            {
+                // مطمئن نیست: به‌جای حدس زدن، فهرست را روی نامزدها می‌بندد تا
+                // کاربر با یک زدن هم کارش راه بیفتد هم به برنامه یاد بدهد.
+                var names = matches.Take(3).Select(m => m.Name).Where(x => x.Length > 0).ToList();
+                Search = names.Count == 1 ? names[0] : "";
+                _host.Toast("🎤 مطمئن نیستم — " + (names.Count > 0
+                    ? "کدام‌شان بود؟ " + string.Join(" · ", names)
+                    : "نام را بزنید تا یاد بگیرم"), ToastKind.Warn);
+                return;
+            }
+
+            var best = matches[0];
+            var card = _all.FirstOrDefault(c => AccountKey(c.Entity.Id) == best.Key);
+            if (card is null) return;
+
+            _pendingTeach = null;                    // شناخت؛ چیزی برای یاد دادن نمانده
+            _host.Toast("🎤 " + (best.Name.Length > 0 ? best.Name : card.Name), ToastKind.Ok);
+            await OpenAsync(card);
+        }
+        finally
+        {
+            Listening = false;
+            VoiceStatus = "";
+        }
     }
 
     [RelayCommand]

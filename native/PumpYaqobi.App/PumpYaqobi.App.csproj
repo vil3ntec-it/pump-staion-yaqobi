@@ -42,6 +42,14 @@
     <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.2.3" />
     <PackageReference Include="Avalonia.Diagnostics" Version="11.2.3" Condition="'$(Configuration)'=='Debug'" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+    <!-- ══ مایکروفون ══════════════════════════════════════════════════════
+         فقط ‎NAudio.WinMM‎ (نه بستهٔ کاملِ NAudio): تنها چیزی که لازم داریم
+         ‎WaveInEvent‎ است و بقیه‌اش — میدی، ASIO، فرم‌های ویندوزی — بی‌مصرف
+         است و حجمِ نصاب را بی‌جهت بالا می‌برد.
+
+         روی لینوکس فقط **ساخته** می‌شود (آزمون‌های CI آن‌جا اجرا می‌شوند و به
+         مایکروفون دست نمی‌زنند)؛ اجرای واقعی‌اش ویندوز است. -->
+    <PackageReference Include="NAudio.WinMM" Version="2.2.1" />
   </ItemGroup>
 
   <ItemGroup>
