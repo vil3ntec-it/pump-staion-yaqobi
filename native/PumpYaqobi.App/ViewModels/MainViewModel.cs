@@ -260,6 +260,6 @@ public sealed partial class MainViewModel : ObservableObject
         new ProfitSectionViewModel(host),
         new SettingsSectionViewModel(host),
         new DataSectionViewModel(host, this),
-        new PlaceholderSectionViewModel("history",   "تاریخچه‌ها"),
+        new HistorySectionViewModel(host),
     };
 }

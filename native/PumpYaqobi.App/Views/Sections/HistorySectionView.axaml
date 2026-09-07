@@ -1,0 +1,76 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
+             x:Class="PumpYaqobi.App.Views.Sections.HistorySectionView"
+             x:DataType="vm:HistorySectionViewModel">
+  <Panel>
+
+    <!-- ══ کارت‌های بخش‌ها ═════════════════════════════════════════════════
+         مو‌به‌مو مثلِ ‎#hc-cards‎: هر بخش یک کادر با شمارِ ردیف و تازه‌ترین
+         تاریخش؛ زدنِ کادر، تاریخچهٔ همان بخش را باز می‌کند. -->
+    <c:SectionPage IsVisible="{Binding IsListVisible}" Header="تاریخچه‌ها"
+                   SubHeader="هر بخش تاریخچهٔ خودش را دارد — از تازه به کهنه. فقط برای دیدن است؛ هیچ چیزی عوض یا پاک نمی‌شود.">
+      <ScrollViewer>
+        <ItemsControl ItemsSource="{Binding Cards}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><c:AutoFillPanel MinItemWidth="272" Gap="12" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:HistoryCardViewModel">
+              <Button Classes="card-shell" Command="{Binding OpenCommand}">
+                <Border Classes="card" Padding="14,12">
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="{Binding Label}" FontWeight="Bold" FontSize="15" />
+                    <TextBlock Text="{Binding SubText}" Classes="muted" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </c:SectionPage>
+
+    <!-- ══ تاریخچهٔ یک بخش ═════════════════════════════════════════════════
+         همان ‎#sec-historyview‎: دکمهٔ برگشت، کشویِ ماه، خلاصه، و فهرست. -->
+    <c:SectionPage IsVisible="{Binding !IsListVisible}" Header="{Binding PageTitle}">
+
+      <c:SectionPage.Toolbar>
+        <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+          <Button Classes="ghost" Content="→ برگشت به تاریخچه‌ها" Margin="0,0,10,0"
+                  Command="{Binding BackCommand}" />
+          <TextBlock Text="📅 ماه:" Classes="label" VerticalAlignment="Center" Margin="0,0,6,0" />
+          <ComboBox ItemsSource="{Binding Months}" SelectedItem="{Binding Month}" MinWidth="150" />
+        </WrapPanel>
+      </c:SectionPage.Toolbar>
+
+      <StackPanel Spacing="8">
+        <TextBlock Text="{Binding Summary}" Classes="muted" HorizontalAlignment="Center" />
+
+        <Border Classes="panel" Padding="0" IsVisible="{Binding !IsEmpty}">
+          <c:ExcelGrid ItemsSource="{Binding Rows}" x:CompileBindings="False"
+                       IsReadOnly="True" BorderThickness="0" CornerRadius="0">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" />
+              <DataGridTextColumn Header="تاریخ" Binding="{Binding DateText}" Width="Auto" MinWidth="120" />
+              <DataGridTextColumn Header="چه بود" Binding="{Binding Title}" Width="Auto" MinWidth="200" />
+              <DataGridTextColumn Header="توضیح" Binding="{Binding Detail}" Width="*" MinWidth="260" />
+              <!-- مبلغ ستونِ خودش را دارد چون رنگش به «آمد/رفت» بستگی دارد -->
+              <DataGridTemplateColumn Header="مبلغ" Width="Auto">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding AmountText}" Margin="8,0" VerticalAlignment="Center"
+                               FontWeight="Bold"
+                               Foreground="{Binding AmountBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+            </DataGrid.Columns>
+          </c:ExcelGrid>
+        </Border>
+      </StackPanel>
+    </c:SectionPage>
+  </Panel>
+</UserControl>
