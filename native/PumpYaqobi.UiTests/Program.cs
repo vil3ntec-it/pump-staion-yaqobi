@@ -380,9 +380,15 @@ internal static class Program
             var grid = host.GetVisualDescendants().OfType<DataGrid>().FirstOrDefault();
             var gridH = grid?.Bounds.Height ?? 0;
 
-            bool ok;
-            if (grid is not null) ok = gridH >= MinGridHeight;
-            else ok = !overflows || reachable;
+            // جدولِ خالی حقِ کوتاه بودن دارد — سرِ ستون‌ها تنها همین‌قدر است.
+            // «له‌شده» یعنی از چیزی که خودش می‌خواهد کوتاه‌تر شده، آن هم تا
+            // زیرِ حدِ خواندنی. بی این قید، اجرای پیشین پنج بخشِ خالیِ سالم
+            // را هم قرمز می‌کرد.
+            var gridWants = grid?.DesiredSize.Height ?? 0;
+            var squashed = grid is not null
+                        && gridH + 1 < Math.Min(MinGridHeight, gridWants);
+
+            var ok = (!overflows || reachable) && !squashed;
 
             var mark = ok ? (overflows ? "✔" : "—") : "✖";
             Console.WriteLine($"{sec.Id,-20} {(overflows ? "بله" : "نه"),-8} "
