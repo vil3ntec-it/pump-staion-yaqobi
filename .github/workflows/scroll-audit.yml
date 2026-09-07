@@ -10,6 +10,14 @@ name: سنجشِ اسکرولِ بخش‌ها
 # اگر بخشی سرریز کند و اسکرول نداشته باشد، با کدِ ناصفر بیرون می‌آید.
 on:
   workflow_dispatch:
+  # روی برنچ هم اجرا شود: تا وقتی روی ‎main‎ ننشسته، «اجرای دستی» در دسترس
+  # نیست و گزارش هرگز دیده نمی‌شود.
+  push:
+    branches-ignore:
+      - main
+    paths:
+      - 'native/**'
+      - '.github/workflows/scroll-audit.yml'
 
 jobs:
   audit:
