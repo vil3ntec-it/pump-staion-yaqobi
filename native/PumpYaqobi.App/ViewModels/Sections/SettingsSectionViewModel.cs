@@ -143,21 +143,18 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
             {
                 var yes = await Dialogs.ConfirmAsync(
                     "جایگزینیِ همهٔ حساب‌ها",
-                    $"این فایل {res.SourceRecords} رکورد دارد و جای همهٔ حساب‌های فعلی را می‌گیرد.
-"
-                    + "پیش از جایگزینی، یک بکاپِ کامل از دادهٔ فعلی گرفته می‌شود.
-
-ادامه؟",
+                    $"این فایل {res.SourceRecords} رکورد دارد و جای همهٔ حساب‌های فعلی را می‌گیرد. "
+                    + "پیش از جایگزینی، یک بکاپِ کامل از دادهٔ فعلی گرفته می‌شود. ادامه؟",
                     "بله، جایگزین کن");
                 if (!yes) { ImportStatus = "انصراف داده شد — چیزی عوض نشد"; return; }
                 res = await _host.LegacyImport.ImportAsync(json, replaceExisting: true);
             }
 
             ImportStatus = res.Message
-                + (res.BackupPath is not null ? "
-📦 بکاپِ پیش از مهاجرت: " + res.BackupPath : "")
-                + (res.Warnings.Count > 0 ? "
-⚠️ " + string.Join(" · ", res.Warnings.Take(5)) : "");
+                + (res.BackupPath is not null
+                    ? Environment.NewLine + "📦 بکاپِ پیش از مهاجرت: " + res.BackupPath : "")
+                + (res.Warnings.Count > 0
+                    ? Environment.NewLine + "⚠️ " + string.Join(" · ", res.Warnings.Take(5)) : "");
             _host.Toast(res.Ok ? res.Message : "❌ " + res.Message,
                         res.Ok ? ToastKind.Ok : ToastKind.Error);
 
