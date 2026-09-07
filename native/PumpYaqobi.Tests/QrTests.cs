@@ -16,11 +16,22 @@ namespace PumpYaqobi.Tests;
 /// </summary>
 public class QrTests
 {
-    /// <summary>یک کیو‌آرِ واقعی → پیکسل‌های BGRA، همان‌طور که از یک عکس می‌آید.</summary>
+    /// <summary>
+    /// یک کیو‌آرِ واقعی → پیکسل‌های BGRA، همان‌طور که از یک عکس می‌آید.
+    ///
+    /// ⚠️ ‎CHARACTER_SET = UTF-8‎ لازم است: کدگذارِ کیو‌آر بی این، متن را
+    /// ISO-8859-1 می‌نویسد و هر حرفِ فارسی «؟» می‌شود — آن‌وقت آزمون به‌جای
+    /// رمزگشا، کدگذارِ خودش را می‌سنجید. با این هینت یک نشانِ ECI داخلِ خودِ
+    /// کیو‌آر می‌نشیند و رمزگشا از همان‌جا می‌فهمد متن UTF-8 است.
+    /// </summary>
     private static (byte[] Pixels, int Width, int Height) Render(string text, int size = 300,
                                                                  bool inverted = false)
     {
-        var hints = new Dictionary<EncodeHintType, object> { [EncodeHintType.MARGIN] = 2 };
+        var hints = new Dictionary<EncodeHintType, object>
+        {
+            [EncodeHintType.MARGIN] = 2,
+            [EncodeHintType.CHARACTER_SET] = "UTF-8",
+        };
         var matrix = new QRCodeWriter().encode(text, BarcodeFormat.QR_CODE, size, size, hints);
 
         var w = matrix.Width;
