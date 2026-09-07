@@ -3,6 +3,8 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Layout;
+// ‎ItemsRepeater‎ و ‎UniformGridLayout‎ از بستهٔ جداگانهٔ خودشان می‌آیند
+using Avalonia.Controls.Templates;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using PumpYaqobi.App.Controls;
