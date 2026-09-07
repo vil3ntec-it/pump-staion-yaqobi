@@ -351,18 +351,31 @@ internal static class Program
                           .FirstOrDefault(c => ReferenceEquals(c.Content, sec));
             if (host is null) { Console.WriteLine($"{sec.Id,-20} — میزبان پیدا نشد"); continue; }
 
-            var avail = host.Bounds.Height;
+            var svs = host.GetVisualDescendants().OfType<ScrollViewer>().ToList();
 
-            // بلندیِ واقعیِ محتوا: بزرگ‌ترین ‎DesiredSize‎ی که زیرِ میزبان هست
-            var wanted = host.GetVisualDescendants()
-                             .Select(v => v is Layoutable l ? l.DesiredSize.Height : 0)
-                             .DefaultIfEmpty(0).Max();
+            // ══ بلندیِ محتوا را از کجا می‌گیریم ═══════════════════════════
+            // اگر بخش اسکرول‌ویورِ بدنه دارد (که حالا هر بخشی دارد)، خودِ
+            // همان بهترین شاهد است: ‎Extent‎ یعنی محتوا چقدر است و
+            // ‎Viewport‎ یعنی چقدرش دیده می‌شود.
+            //
+            // ⚠️ چرا دیگر بزرگ‌ترین ‎DesiredSize‎ را نمی‌شماریم: آن عدد
+            // عناصری را هم می‌شمرد که هرگز به آن بلندی چیده نمی‌شوند
+            // (چیزهای بریده یا پنهان). برای همین «رسید قرض‌داران» با
+            // جدولِ خالی و محتوای جاشده، ۱۰۹۵ گزارش می‌شد و بی‌جهت
+            // قرمز می‌ماند.
+            var body = svs.FirstOrDefault();
+
+            var avail = body is not null ? body.Viewport.Height : host.Bounds.Height;
+            var wanted = body is not null
+                ? body.Extent.Height
+                : host.GetVisualDescendants()
+                      .Select(v => v is Layoutable l ? l.DesiredSize.Height : 0)
+                      .DefaultIfEmpty(0).Max();
 
             var overflows = wanted > avail + 1;
 
-            // آیا اسکرول‌ویوری هست که واقعاً چیزی برای لغزاندن دارد؟
-            var svs = host.GetVisualDescendants().OfType<ScrollViewer>().ToList();
-            var reachable = svs.Any(sv => sv.Extent.Height > sv.Viewport.Height + 1);
+            // محتوایی که سرریز می‌کند باید داخلِ یک اسکرول‌ویور باشد
+            var reachable = body is not null;
 
             // ══ جدول یک استثنای واقعی است ═════════════════════════════════
             // ‎DataGrid‎ی آوالونیا ‎ScrollViewer‎ نیست — نوارِ لغزانِ خودش را
