@@ -6,7 +6,7 @@
              x:Class="PumpYaqobi.App.Views.Sections.StaffShortSectionView"
              x:DataType="vm:StaffShortSectionViewModel">
 
-  <c:SectionPage Header="کمبودی و اضافیِ کارمندان"
+  <c:SectionPage ScrollBody="False" Header="کمبودی و اضافیِ کارمندان"
                  SubHeader="از خودِ ورق‌های روزانه — به هیچ ورقی دست زده نمی‌شود">
 
     <c:SectionPage.Toolbar>

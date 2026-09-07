@@ -5,7 +5,7 @@
              x:Class="PumpYaqobi.App.Views.Sections.SafeSectionView"
              x:DataType="vm:SafeSectionViewModel">
 
-  <c:SectionPage Header="گاوصندوق" SubHeader="بردگی و ماندگی — افغانی و دالر هرگز با هم جمع نمی‌شوند">
+  <c:SectionPage ScrollBody="False" Header="گاوصندوق" SubHeader="بردگی و ماندگی — افغانی و دالر هرگز با هم جمع نمی‌شوند">
 
     <c:SectionPage.Toolbar>
       <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
