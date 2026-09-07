@@ -5,7 +5,7 @@
              x:Class="PumpYaqobi.App.Views.Sections.ExpenseSectionView"
              x:DataType="vm:ExpenseSectionViewModel">
 
-  <c:SectionPage Header="مصارف" SubHeader="مصارفِ ماه — همین جمع در «مفاد / ضرر» هم به کار می‌رود">
+  <c:SectionPage ScrollBody="False" Header="مصارف" SubHeader="مصارفِ ماه — همین جمع در «مفاد / ضرر» هم به کار می‌رود">
 
     <c:SectionPage.Toolbar>
       <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">

@@ -6,7 +6,7 @@
              x:Class="PumpYaqobi.App.Views.Sections.StorageSectionView"
              x:DataType="vm:StorageSectionViewModel">
 
-  <c:SectionPage Header="مخزن">
+  <c:SectionPage ScrollBody="False" Header="مخزن">
 
     <c:SectionPage.Toolbar>
       <Button Content="{Binding FuelToggleText}" Command="{Binding ToggleFuelCommand}" />

@@ -296,10 +296,26 @@
              .card-head     ← عنوانِ رنگی راست، دکمه‌های کار چپ
              (padding:14px) ← فیلتر، جمع‌ها، بدنه، پانویس
 
-       پیش از این، عنوان و دکمه‌ها بیرونِ هر کادری شناور بودند و بخش‌ها
-       «صفحهٔ وبِ کِش‌آمده» دیده می‌شدند نه پنجرهٔ یک برنامه. حالا هر بخش یک
-       واحدِ بسته است — و چون این‌جا یک‌جا تعریف شده، هر هجده بخش با هم
-       عوض می‌شوند.                                                        -->
+       دو قالب هست، نه یکی — و تفاوتشان فقط **اسکرول** است:
+
+       ۱) پیش‌فرض (‎ScrollBody=True‎): فیلتر و جمع‌ها و بدنه و پانویس همه با هم
+          داخلِ یک ‎ScrollViewer‎ می‌نشینند و همه‌شان با هم بالا و پایین
+          می‌روند — همان کاری که در سایت «کلِ صفحه» می‌کند.
+
+       ۲) ‎ScrollBody=False‎ (بخش‌های جدول‌دار): همان اسکرول، ولی بدنه سقفِ
+          ارتفاع می‌گیرد — به اندازهٔ همان پنجرهٔ دیدِ اسکرول‌ویور. بی این سقف،
+          جدولِ آوالونیا داخلِ اسکرول‌ویور ارتفاعِ بی‌نهایت می‌گیرد، همهٔ
+          ردیف‌ها را یک‌جا می‌سازد و مجازی‌سازی از بین می‌رود؛ با سقف، جدول
+          مثلِ سایت هم‌قدِ ردیف‌هایش می‌شود و اگر بلندتر شد، خودش می‌لغزد.
+
+          چرا ردیفِ ‎*‎ی قدیمی برداشته شد: سنجش نشان داد فیلتر و کادرهای جمع
+          در پنجرهٔ ۱۰۰۰×۶۴۰ تمامِ ۴۵۴ پیکسل را می‌خوردند و برای جدول
+          صفر تا ۵۸ پیکسل می‌ماند (حاضری ۰، رسید قرض‌داران ۴۵، صرافی ۵۸) —
+          یعنی کاربر فقط سرِ ستون‌ها را می‌دید و راهی هم به بقیه نداشت.
+
+       چرا سربرگِ کادر بیرونِ اسکرول ماند: در سایت ‎.nav‎ چسبان است و همیشه
+       دیده می‌شود؛ این‌جا سربرگِ کادر همان نقش را دارد — دکمه‌های کار
+       (پی‌دی‌اف، افزودن، …) نباید با اسکرول از دسترس بروند.               -->
   <Style Selector="c|SectionPage">
     <Setter Property="Template">
       <ControlTemplate>
@@ -320,22 +336,77 @@
               </Grid>
             </Border>
 
-            <!-- ══ بدنهٔ کادر ══ -->
-            <Grid Grid.Row="1" RowDefinitions="Auto,Auto,*,Auto" Margin="14">
+            <!-- ══ بدنهٔ کادر — اسکرول‌شونده ══ -->
+            <ScrollViewer Grid.Row="1"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+              <Grid RowDefinitions="Auto,Auto,Auto,Auto" Margin="14">
 
-              <Border Grid.Row="0" Classes="panel" Padding="12,9" Margin="0,0,0,12"
-                      IsVisible="{TemplateBinding Filters, Converter={x:Static ObjectConverters.IsNotNull}}">
-                <ContentPresenter Content="{TemplateBinding Filters}" />
-              </Border>
+                <Border Grid.Row="0" Classes="panel" Padding="12,9" Margin="0,0,0,12"
+                        IsVisible="{TemplateBinding Filters, Converter={x:Static ObjectConverters.IsNotNull}}">
+                  <ContentPresenter Content="{TemplateBinding Filters}" />
+                </Border>
 
-              <ContentPresenter Grid.Row="1" Content="{TemplateBinding Summary}" Margin="0,0,0,12"
-                                IsVisible="{TemplateBinding Summary, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <ContentPresenter Grid.Row="1" Content="{TemplateBinding Summary}" Margin="0,0,0,12"
+                                  IsVisible="{TemplateBinding Summary, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
-              <ContentPresenter Grid.Row="2" Content="{TemplateBinding Body}" />
+                <ContentPresenter Grid.Row="2" Content="{TemplateBinding Body}" />
 
-              <ContentPresenter Grid.Row="3" Content="{TemplateBinding Footer}" Margin="0,12,0,0"
-                                IsVisible="{TemplateBinding Footer, Converter={x:Static ObjectConverters.IsNotNull}}" />
-            </Grid>
+                <ContentPresenter Grid.Row="3" Content="{TemplateBinding Footer}" Margin="0,12,0,0"
+                                  IsVisible="{TemplateBinding Footer, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              </Grid>
+            </ScrollViewer>
+          </Grid>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <!-- ══ همان قالب، با سقفِ ارتفاع روی بدنه — برای بخش‌های جدول‌دار ═══════
+       تنها فرقش با قالبِ بالا یک ‎MaxHeight‎ روی بدنه است: جدول هرگز بلندتر
+       از پنجرهٔ دیدِ اسکرول‌ویور اندازه گرفته نمی‌شود، پس مجازی‌سازی‌اش سالم
+       می‌ماند. باقیِ چیزها — فیلتر، جمع‌ها، پانویس — با جدول یک‌جا می‌لغزند،
+       همان‌طور که در سایت کلِ صفحه می‌لغزد.                                -->
+  <Style Selector="c|SectionPage[ScrollBody=False]">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Classes="card flush" Margin="16,14">
+          <Grid RowDefinitions="Auto,*">
+
+            <Border Grid.Row="0" Classes="card-head">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                  <TextBlock Text="{TemplateBinding Header}" Classes="card-title" />
+                  <TextBlock Text="{TemplateBinding SubHeader}" Classes="muted"
+                             TextWrapping="Wrap"
+                             IsVisible="{TemplateBinding SubHeader, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </StackPanel>
+                <ContentPresenter Grid.Column="1" Content="{TemplateBinding Toolbar}"
+                                  VerticalAlignment="Center" Margin="12,0,0,0" />
+              </Grid>
+            </Border>
+
+            <ScrollViewer Grid.Row="1" x:Name="SecScroll"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+              <Grid RowDefinitions="Auto,Auto,Auto,Auto" Margin="14">
+
+                <Border Grid.Row="0" Classes="panel" Padding="12,9" Margin="0,0,0,12"
+                        IsVisible="{TemplateBinding Filters, Converter={x:Static ObjectConverters.IsNotNull}}">
+                  <ContentPresenter Content="{TemplateBinding Filters}" />
+                </Border>
+
+                <ContentPresenter Grid.Row="1" Content="{TemplateBinding Summary}" Margin="0,0,0,12"
+                                  IsVisible="{TemplateBinding Summary, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+                <!-- سقفِ ارتفاع = همان پنجرهٔ دید؛ نگهبانِ مجازی‌سازیِ جدول -->
+                <ContentPresenter Grid.Row="2" Content="{TemplateBinding Body}"
+                                  MaxHeight="{Binding #SecScroll.Viewport.Height}" />
+
+                <ContentPresenter Grid.Row="3" Content="{TemplateBinding Footer}" Margin="0,12,0,0"
+                                  IsVisible="{TemplateBinding Footer, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              </Grid>
+            </ScrollViewer>
           </Grid>
         </Border>
       </ControlTemplate>
