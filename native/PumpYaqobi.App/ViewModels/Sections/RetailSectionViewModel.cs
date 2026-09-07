@@ -1,9 +1,12 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
+using PumpYaqobi.Reporting.Pdf;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -134,4 +137,14 @@ public sealed partial class RetailSectionViewModel
     protected override long EntityIdOf(RetailRowViewModel r) => r.Entity.Id;
     protected override RetailRow EntityOf(RetailRowViewModel r) => r.Entity;
     protected override void Recalc() => Summary = Calc.Summarize(Rows.Select(r => r.Entity));
+
+    /// <summary>‎pdfChakana(monthKey)‎ — ورقِ چکنهٔ همین ماه.</summary>
+    [RelayCommand]
+    private Task PdfAsync()
+    {
+        var rows = Rows.Select(r => r.Entity).ToList();
+        var input = new RetailReportInput(Shamsi.MonthLabel(Month), rows, DocDates.Line());
+        return Documents.ShowAsync(() => new RetailReport(input, Calc),
+                                   "چکنه " + Shamsi.MonthLabel(Month));
+    }
 }

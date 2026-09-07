@@ -1,11 +1,13 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
+using PumpYaqobi.Reporting.Pdf;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -369,6 +371,45 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
     public int RowCount => Current?.RowCount ?? 0;
     public Task AddRowsAsync(int count) => Current?.AddRowsAsync(count) ?? Task.CompletedTask;
     public Task DeleteRowsAsync(int count) => Current?.DeleteRowsAsync(count) ?? Task.CompletedTask;
+
+    /// <summary>
+    /// ‎pdfPerson()‎ — ورقِ **همان حسابی که باز است**، نه همهٔ حساب‌ها.
+    ///
+    /// ⚠️ نامِ حسابِ اصلی داخلِ ورقِ حسابِ فرعی نمی‌آید — خواستهٔ صریحِ صاحب
+    /// ریپو: این‌ها حساب‌های جدا هستند و هر کدام سربرگِ نامِ خودش را دارد.
+    ///
+    /// ⚠️ «برد» در دفترِ تیل جمعِ **لیتر** است و در دفترِ پول جمعِ **بردگی** —
+    /// دو دفترِ کاملاً جدا، همان‌طور که در نسخهٔ وب بود.
+    /// </summary>
+    [RelayCommand]
+    private Task PdfAsync()
+    {
+        var acct = Current;
+        if (acct is null) return Task.CompletedTask;
+
+        var calc = _host.Debt;
+        var rows = acct.Rows.Select(r => r.Entity).ToList();
+        var t = calc.SplitTotals(rows);
+        var money = acct.IsMoney;
+        var isSub = acct.Entity.MainOfDebtorId is null;
+
+        var input = new DebtorStatementInput(
+            PersonName: Name,
+            AccountTitle: isSub ? "📄 " + acct.Title : "حساب " + Name,
+            IsMoneyLedger: money,
+            Filter: null,
+            Rows: rows,
+            PercentPetrol: acct.PercentPetrol, PercentDiesel: acct.PercentDiesel,
+            RasidPetrol: money ? acct.RasidMoneyPetrol : acct.RasidFuelPetrol,
+            RasidDiesel: money ? acct.RasidMoneyDiesel : acct.RasidFuelDiesel,
+            BordPetrol: money ? t.Petrol.Bardagi : t.Petrol.Liters,
+            BordDiesel: money ? t.Diesel.Bardagi : t.Diesel.Liters,
+            RasidRowsPetrol: t.Petrol.Rasid, RasidRowsDiesel: t.Diesel.Rasid,
+            Dates: DocDates.Line());
+
+        return Documents.ShowAsync(() => new DebtorStatementReport(input, calc),
+                                   input.AccountTitle);
+    }
 
     /// <summary>برگشت به فهرست — از راهِ خودِ بخش، تا ذخیرهٔ نیمه‌کاره جا نماند.</summary>
     [RelayCommand]

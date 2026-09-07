@@ -200,6 +200,54 @@ public class ReportSuiteTests
               "oldloans-all", 3000);
     }
 
+    // ── چکنه ─────────────────────────────────────────────────────────────
+    private static List<RetailRow> RetailRows() => new()
+    {
+        new() { DateShamsi = "1405/06/02", Name = "موتر سراچه", Fuel = FuelType.Petrol,
+                Liters = 24m, PricePerLiter = 67m, Rasid = 1_000m },
+        new() { DateShamsi = "1405/06/04", Name = "تراکتور", Fuel = FuelType.Diesel,
+                Liters = 40m, PricePerLiter = 61m },
+        // ردیفِ «به پول»: لیتر ندارد و بردگی‌اش همان عددِ نوشته‌شده است
+        new() { DateShamsi = "1405/06/07", Name = "نقدی", ByMoney = true,
+                Bardagi = 3_500m, Rasid = 3_500m, Note = "تسویه شد" },
+    };
+
+    [Fact]
+    public void RetailSheet_IsARealPdf() =>
+        Check(new RetailReport(new RetailReportInput("سنبله 1405", RetailRows(), Dates),
+                               new RetailService()),
+              "chakana", 3000);
+
+    /// <summary>
+    /// ⚠️ ردیفِ «به پول» نه لیتر دارد نه فی — ورق باید «—» بگذارد و لیترش را
+    /// در جمع نیاورد، وگرنه جمعِ لیترِ ماه غلط می‌شود.
+    /// </summary>
+    [Fact]
+    public void RetailSheet_DoesNotCountLitersOfAMoneyRow()
+    {
+        var s = new RetailService().Summarize(RetailRows());
+        Assert.Equal(64m, s.Liters);                       // ۲۴ + ۴۰، بی ردیفِ پولی
+        Assert.Equal(24m * 67m + 40m * 61m + 3_500m, s.Bardagi);
+    }
+
+    // ── رسید قرض‌داران ────────────────────────────────────────────────────
+    [Fact]
+    public void DebtReceiptSheet_IsARealPdf()
+    {
+        var rows = new List<DebtQuickReceipt>();
+        for (var i = 1; i <= 14; i++)
+            rows.Add(new DebtQuickReceipt
+            {
+                DateShamsi = "1405/06/" + i.ToString("00"),
+                Account = "قرض‌دار شمارهٔ " + i,
+                Amount = 5_000m * i,
+                Note = i % 4 == 0 ? "نقد، بی رسیدِ کاغذی" : null,
+            });
+
+        Check(new DebtReceiptReport(new DebtReceiptReportInput("سنبله 1405", rows, Dates)),
+              "debtrasid", 3000);
+    }
+
     // ── گزارش پایان ماه ──────────────────────────────────────────────────
     private static MonthReport Month(decimal scale) => new(
         Petrol: new MonthFuel(1_840_000m * scale, 26_400m * scale, 148_000m * scale, 61),

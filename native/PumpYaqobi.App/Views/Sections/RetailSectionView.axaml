@@ -9,7 +9,8 @@
 
     <c:SectionPage.Toolbar>
       <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
-        <Button Classes="ghost info" Content="📄 PDF" Margin="0,0,6,0" />
+        <Button Classes="ghost info" Content="📄 PDF" Margin="0,0,6,0"
+                Command="{Binding PdfCommand}" />
         <Button Classes="accent" Content="+ ردیف" Command="{Binding AddRowCommand}" />
       </WrapPanel>
     </c:SectionPage.Toolbar>
