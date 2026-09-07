@@ -64,11 +64,19 @@ public sealed partial class PurchaseRowViewModel : RowViewModel
     public int Index { get; set; }
     public string HeadText => $"خرید #{Index}";
 
-    public string TonText => Shamsi.Money(Math.Round(N.Ton, 3));
+    // ══ گِردکردنِ نمایشی — مو‌به‌مو مثلِ ‎_renderFuelSection‎ ═══════════════
+    //
+    //   تن ‎toFixed(3)‎ · لیتر ‎Math.round‎ · دالر ‎toFixed(2)‎ ·
+    //   افغانی ‎Math.round‎ · فی‌لیتر ‎toFixed(1)‎
+    //
+    // ⚠️ شمارِ اعشار **ثابت** است، نه «تا دو رقم»: سایت «۰» را هم «0.0»
+    // می‌نویسد. پیش از این فی‌لیتر با دو رقم و بی‌صفرِ انتهایی نوشته می‌شد و
+    // عددِ همان خرید در سایت و برنامه یکی دیده نمی‌شد.
+    public string TonText => Shamsi.Money(Math.Round(N.Ton, 3), 3);
     public string LitersText => Shamsi.Money(Math.Round(N.Liters, 0, MidpointRounding.AwayFromZero));
-    public string TotalUsdText => Shamsi.Money(Math.Round(N.TotalUsd, 2));
+    public string TotalUsdText => Shamsi.Money(Math.Round(N.TotalUsd, 2), 2);
     public string TotalAfnText => Shamsi.Money(Math.Round(N.TotalAfn, 0, MidpointRounding.AwayFromZero));
-    public string PerLiterText => Shamsi.Money(Math.Round(N.PerLiter, 2));
+    public string PerLiterText => Shamsi.Money(Math.Round(N.PerLiter, 1), 1);
 
     protected override void Apply()
     {
@@ -204,6 +212,117 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     public string FuelToggleText => IsDiesel ? "⛽ رفتن به مخزن پطرول" : "🟤 رفتن به مخزن دیزل";
     public string StateText => IsLow ? "کمبودِ موجودی" : "موجودی کافی";
 
+    // ══ پنجرهٔ «ثبت خرید» — ‎#addPurchaseModal‎ ══════════════════════════════
+    //
+    // گزارشِ صاحب ریپو: «خریدهای دیزل و پطرول این مدلی صفحهٔ نسبتاً کوچک
+    // می‌آید و ثبت می‌کند، نه آن مدل.»
+    //
+    // تا دیروز دکمهٔ «ثبت خرید» یک ردیفِ خالی به فهرست می‌افزود و کاربر باید
+    // همان‌جا میانِ نُه کادر پرش می‌کرد — یعنی خریدِ نصفه‌کاره هم ذخیره شده
+    // بود. حالا مثلِ سایت یک پنجرهٔ کوچک باز می‌شود، همان‌جا زنده حساب
+    // می‌کند، و تا همهٔ چهار عددِ لازم پر نشوند چیزی ثبت نمی‌شود.
+    [ObservableProperty] private bool _buyOpen;
+    [ObservableProperty] private string _buyDate = "";
+    [ObservableProperty] private string _buySeller = "";
+    [ObservableProperty] private string _buyKg = "";
+    [ObservableProperty] private string _buyDensity = "";
+    [ObservableProperty] private string _buyPriceTon = "";
+    [ObservableProperty] private string _buyUsdRate = "";
+    [ObservableProperty] private string _buyNote = "";
+
+    [ObservableProperty] private string _buyTonText = "—";
+    [ObservableProperty] private string _buyLitersText = "—";
+    [ObservableProperty] private string _buyUsdText = "—";
+    [ObservableProperty] private string _buyAfnText = "—";
+    [ObservableProperty] private string _buyPerLiterText = "—";
+
+    public string BuyTitle => IsDiesel ? "🟤 ثبت خرید دیزل" : "🛢️ ثبت خرید پطرول";
+
+    partial void OnBuyKgChanged(string v) => CalcBuy();
+    partial void OnBuyDensityChanged(string v) => CalcBuy();
+    partial void OnBuyPriceTonChanged(string v) => CalcBuy();
+    partial void OnBuyUsdRateChanged(string v) => CalcBuy();
+
+    /// <summary>
+    /// ‎calcPurchase()‎ — مو‌به‌مو، بی یک ذره تفاوت:
+    ///
+    ///     تن     = کیلو ÷ ۱۰۰۰
+    ///     لیتر   = کیلو ÷ ثقلت
+    ///     دالر   = تن × فیِ تن
+    ///     افغانی = دالر × نرخِ دالر
+    ///     فی‌لیتر = افغانی ÷ لیتر
+    ///
+    /// و همان گِردکردن‌های نمایشیِ سایت: تن سه رقم، لیتر گِرد، دالر دو رقم،
+    /// افغانی گِرد، فی‌لیتر یک رقم.
+    /// </summary>
+    private void CalcBuy()
+    {
+        var n = Calc.Compute(Shamsi.Num(BuyKg), Shamsi.Num(BuyDensity),
+                             Shamsi.Num(BuyPriceTon), Shamsi.Num(BuyUsdRate));
+
+        BuyTonText = n.Ton == 0m ? "—" : Shamsi.Money(Math.Round(n.Ton, 3), 3) + " تن";
+        BuyLitersText = n.Liters == 0m ? "—"
+            : Shamsi.Money(Math.Round(n.Liters, 0, MidpointRounding.AwayFromZero)) + " لیتر";
+        BuyUsdText = n.TotalUsd == 0m ? "—" : Shamsi.Money(Math.Round(n.TotalUsd, 2), 2) + " $";
+        BuyAfnText = n.TotalAfn == 0m ? "—"
+            : Shamsi.Money(Math.Round(n.TotalAfn, 0, MidpointRounding.AwayFromZero)) + " افغانی";
+        BuyPerLiterText = n.PerLiter == 0m ? "—"
+            : Shamsi.Money(Math.Round(n.PerLiter, 1), 1) + " افغانی";
+    }
+
+    /// <summary>«➕ ثبت خرید …» — ‎openAddPurchase(fuelType)‎: فرم خالی، تاریخِ امروز.</summary>
+    [RelayCommand]
+    private void OpenBuy()
+    {
+        BuyDate = Shamsi.Today();
+        BuySeller = ""; BuyKg = ""; BuyDensity = ""; BuyPriceTon = ""; BuyUsdRate = ""; BuyNote = "";
+        CalcBuy();
+        OnPropertyChanged(nameof(BuyTitle));
+        BuyOpen = true;
+    }
+
+    [RelayCommand]
+    private void CancelBuy() => BuyOpen = false;
+
+    /// <summary>
+    /// «✔ ذخیره» — ‎confirmAddPurchase()‎.
+    ///
+    /// ⚠️ همان شرطِ سایت: هر چهار عدد لازم‌اند. بی این، خریدی با ثقلتِ صفر
+    /// ثبت می‌شد که «لیتر» و «فی لیتر»ش صفر می‌ماند و موجودیِ مخزن را خراب
+    /// می‌کرد. ثبتِ خودکار در حسابِ شرکتِ فروشنده کارِ ‎AddPurchaseAsync‎ است.
+    /// </summary>
+    [RelayCommand]
+    private Task SaveBuyAsync() => CrashGuard.RunAsync("ثبت خرید", async () =>
+    {
+        var kg = Shamsi.Num(BuyKg);
+        var density = Shamsi.Num(BuyDensity);
+        var priceTon = Shamsi.Num(BuyPriceTon);
+        var usdRate = Shamsi.Num(BuyUsdRate);
+
+        if (kg <= 0m || density <= 0m || priceTon <= 0m || usdRate <= 0m)
+        {
+            _host.Toast("لطفاً همه مقادیر را وارد کنید", ToastKind.Error);
+            return;
+        }
+
+        var seller = BuySeller.Trim();
+        var p = new FuelPurchase
+        {
+            Fuel = Fuel,
+            DateShamsi = BuyDate.Trim().Length > 0 ? BuyDate.Trim() : Shamsi.Today(),
+            Seller = seller,
+            Kg = kg, Density = density, PriceTon = priceTon, UsdRate = usdRate,
+            Note = BuyNote.Trim(),
+        };
+        await _host.StorageData.AddPurchaseAsync(p);
+
+        BuyOpen = false;
+        await ReloadAsync();
+        _host.Toast(seller.Length > 0
+            ? "✅ خرید ثبت شد — در حساب شرکت هم اضافه شد"
+            : "✅ خرید ثبت شد — فایده فی لیتر آپدیت شد", ToastKind.Ok);
+    });
+
     /// <summary>ظرفیتِ مخزن — تنظیمی است و روی نوارِ پرشدگی اثر می‌گذارد.</summary>
     private string CapacityKey => IsDiesel ? "tankCapacity_diesel" : "tankCapacity_petrol";
 
@@ -211,7 +330,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     {
         foreach (var n in new[] { nameof(FuelLabel), nameof(TankTitle), nameof(CurrentTitle),
                                   nameof(MoneyTitle), nameof(AddBuyText), nameof(PdfText),
-                                  nameof(FuelToggleText) })
+                                  nameof(FuelToggleText), nameof(BuyTitle) })
             OnPropertyChanged(n);
         _ = LoadAsync();
     }
@@ -345,23 +464,28 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
 
     public Task SaveDipAsync(TankDip d) => _host.StorageData.SaveDipAsync(d);
 
-    [RelayCommand]
-    private async Task AddPurchaseAsync()
-    {
-        var p = new FuelPurchase { Fuel = Fuel, DateShamsi = Shamsi.Today(), Density = 0.75m };
-        await _host.StorageData.AddPurchaseAsync(p);
-        Purchases.Insert(0, Track(new PurchaseRowViewModel(p, this)));
-        await RecalcAsync();
-    }
+    // دکمهٔ «ثبت خرید» حالا ‎OpenBuy‎ است (پنجرهٔ کوچک)، نه ساختنِ ردیفِ خالی.
 
+    
+
+    /// <summary>
+    /// ‎deletePurchase(id)‎ — با همان پرسشِ «مطمئنی؟»ی سایت.
+    ///
+    /// ⚠️ حذفِ خرید، ردیفِ حسابِ شرکت را دست نمی‌زند (خواستهٔ صریحِ صاحب ریپو:
+    /// این دو حذف از هم جدا شدند) — همان کاری که ‎DeleteRowAsync‎ توضیح داده.
+    /// </summary>
     [RelayCommand]
-    private async Task DeletePurchaseAsync(PurchaseRowViewModel? row)
-    {
-        if (row is null) return;
-        await _host.StorageData.DeletePurchaseAsync(row.Entity.Id);
-        Purchases.Remove(row);
-        await RecalcAsync();
-    }
+    private Task DeletePurchaseAsync(PurchaseRowViewModel? row) =>
+        CrashGuard.RunAsync("حذف خرید", async () =>
+        {
+            if (row is null) return;
+            if (!await Dialogs.ConfirmAsync("حذف خرید",
+                    "این خرید از مخزن حذف شود؟ (ردیفِ حسابِ شرکت دست نمی‌خورد)")) return;
+            await _host.StorageData.DeletePurchaseAsync(row.Entity.Id);
+            Purchases.Remove(row);
+            await RecalcAsync();
+            _host.Toast("🗑️ خرید حذف شد", ToastKind.Warn);
+        });
 
     /// <summary>
     /// ‎confirmTankDip‎ — ثبتِ میله‌زنی با همان عددی که کاربر تایپ کرده.

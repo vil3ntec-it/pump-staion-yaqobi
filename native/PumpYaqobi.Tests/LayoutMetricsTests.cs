@@ -1,17 +1,18 @@
 using PumpYaqobi.App.ViewModels;
-using PumpYaqobi.App.ViewModels.Sections;
 using Xunit;
 
 namespace PumpYaqobi.Tests;
 
 /// <summary>
 /// ══ پهنای ستونِ محتوا ═══════════════════════════════════════════════════════
-/// در نسخهٔ وب ‎.main‎ عرضش ۱۰۰۰ پیکسل است و وسط می‌ایستد. فقط دوازده بخشِ
-/// جدولی کلاسِ ‎sec-wide‎ می‌گیرند، داشبورد تا ۱۴۴۰ کش می‌آید، و مودالِ حساب
-/// (شخص/شرکت/ورق) صریحاً تمام‌صفحه است.
 ///
-/// صاحب ریپو همین ستونِ وسط‌چین را «خیلی بهتر» خواند و خواست عینِ نسخهٔ وب
-/// باشد. این آزمون همان قاعده را قفل می‌کند تا با یک دستکاریِ بعدی برنگردد.
+/// تا دیروز این‌جا ستونِ ۱۰۰۰ پیکسلیِ وسط‌چینِ ‎.main‎ِ نسخهٔ وب تقلید می‌شد و
+/// فقط چند بخشِ جدولی تمام‌عرض بودند. صاحب ریپو با عکس نشان داد که نتیجه‌اش
+/// روی لپ‌تاپ چه شد: «چپ و راستِ هر بخش را ببینی تمام صفحه نیستن» — دو نوارِ
+/// خالی کنارِ هر بخش.
+///
+/// حالا قاعده یکی است و استثنا ندارد: <b>هر بخش تمامِ عرضِ پنجره</b>. این
+/// آزمون همان را قفل می‌کند تا با یک دستکاریِ بعدی ستونِ باریک برنگردد.
 /// </summary>
 public class LayoutMetricsTests
 {
@@ -21,27 +22,7 @@ public class LayoutMetricsTests
     }
 
     [Theory]
-    // همان فهرستِ ‎_WIDE‎ نسخهٔ وب
-    [InlineData("rasid")]
-    [InlineData("debtrasid")]
-    [InlineData("chakana")]
-    [InlineData("oldloans")]
-    [InlineData("oldloansmoney")]
-    [InlineData("debtsum")]
-    [InlineData("debtsummoney")]
-    [InlineData("priceloss")]
-    [InlineData("plsource")]
-    [InlineData("plperson")]
-    [InlineData("invrate")]
-    public void TheWideTableSectionsFillTheWindow(string id)
-        => Assert.Equal(double.PositiveInfinity, new Fake(id).ContentMaxWidth);
-
-    /// <summary>داشبورد تمام‌عرض است ولی تا ۱۴۴۰ — وگرنه کارت‌هایش کش می‌آیند.</summary>
-    [Fact]
-    public void TheDashboardIsWideButCappedAt1440()
-        => Assert.Equal(1440, new Fake("dashboard").ContentMaxWidth);
-
-    [Theory]
+    [InlineData("dashboard")]
     [InlineData("shifts")]
     [InlineData("debt")]
     [InlineData("waraq")]
@@ -49,29 +30,26 @@ public class LayoutMetricsTests
     [InlineData("amanat")]
     [InlineData("safe")]
     [InlineData("profit")]
-    public void EveryOtherSectionKeepsTheCentredThousandPixelColumn(string id)
-        => Assert.Equal(1000, new Fake(id).ContentMaxWidth);
+    [InlineData("rasid")]
+    [InlineData("debtrasid")]
+    [InlineData("chakana")]
+    [InlineData("oldloans")]
+    [InlineData("invrate")]
+    [InlineData("settings")]
+    public void EverySectionFillsTheWindow(string id)
+        => Assert.Equal(double.PositiveInfinity, new Fake(id).ContentMaxWidth);
 
-    /// <summary>
-    /// با باز شدنِ حسابِ درونِ بخش، ستون تمام‌عرض می‌شود — جدولِ حسابِ شخص
-    /// ده‌ها ستون دارد و در ۱۰۰۰ پیکسل نصفش بیرون می‌ماند.
-    /// </summary>
+    /// <summary>باز شدنِ حسابِ درونِ بخش هم چیزی را تنگ‌تر نمی‌کند.</summary>
     [Fact]
-    public void AnOpenAccountPageFillsTheWindow()
+    public void AnOpenAccountPageAlsoFillsTheWindow()
     {
-        var s = new Fake("debt");
-        Assert.Equal(1000, s.ContentMaxWidth);
-
-        s.IsPageOpen = true;
+        var s = new Fake("debt") { IsPageOpen = true };
         Assert.Equal(double.PositiveInfinity, s.ContentMaxWidth);
-
-        s.IsPageOpen = false;
-        Assert.Equal(1000, s.ContentMaxWidth);
     }
 
     /// <summary>
-    /// عوض شدنِ پهنا باید خبر بدهد، وگرنه پنجره همان پهنای قبلی را نگه می‌دارد
-    /// و باز کردنِ حساب هیچ اثری ندارد.
+    /// عوض شدنِ پهنا باید خبر بدهد. حالا عدد ثابت است، ولی خبرش باید بماند —
+    /// پوستهٔ برنامه به همین بند است و اگر روزی قاعده برگردد، بی‌خبر می‌شکند.
     /// </summary>
     [Fact]
     public void ChangingTheOpenPageRaisesTheWidthChange()

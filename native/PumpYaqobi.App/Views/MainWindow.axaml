@@ -124,9 +124,28 @@
          همان بلندی جا باز می‌شود تا محتوا زیرش پنهان نشود. -->
     <Panel Name="NavGap" Height="46" />
 
-    <ContentControl Content="{Binding Current}"
+    <!-- ══ نوارِ «‹ برگشت» ═══════════════════════════════════════════════
+         فقط وقتی زیربخشی باز است — «قرض‌های کهنه»، «تخلیهٔ تانکر»،
+         «مدیریت داده‌ها» و مانندِ آن‌ها که در سایت هم دکمهٔ نوار ندارند و از
+         دلِ بخشِ خودشان باز می‌شوند. -->
+    <Border IsVisible="{Binding IsSubOpen}"
+            Background="{DynamicResource Pump.NavBg}"
+            BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="0,0,0,1"
+            Padding="16,8">
+      <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+        <Button Classes="ghost" Content="{Binding BackText}" FontWeight="Bold"
+                Command="{Binding Current.CloseSubCommand}" />
+        <TextBlock Text="{Binding Content.Title}" VerticalAlignment="Center"
+                   FontWeight="ExtraBold" FontSize="15"
+                   Foreground="{DynamicResource Pump.Accent}" />
+      </StackPanel>
+    </Border>
+
+    <!-- ‎Content‎ است نه ‎Current‎: اگر زیربخشی باز باشد همان جلوی چشم می‌آید،
+         وگرنه خودِ بخش. -->
+    <ContentControl Content="{Binding Content}"
                     HorizontalAlignment="Stretch"
-                    MaxWidth="{Binding Current.ContentMaxWidth, FallbackValue=1000}" />
+                    MaxWidth="{Binding Content.ContentMaxWidth, FallbackValue=1000}" />
     </StackPanel>
    </ScrollViewer>
 

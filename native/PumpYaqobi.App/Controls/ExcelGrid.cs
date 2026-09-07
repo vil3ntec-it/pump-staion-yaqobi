@@ -105,8 +105,54 @@ public class ExcelGrid : DataGrid
     /// در همان جهت جای رفتن نداشته باشد. برعکسش هم درست است: هنگامِ برگشتن
     /// اول ردیف‌ها بالا می‌آیند و بعد صفحه.
     /// </summary>
+    /// <summary>ستونی که آخرین بار با چرخِ افقی به آن رسیدیم.</summary>
+    private int _wheelCol;
+
+    /// <summary>
+    /// ══ چپ و راست هم، نه فقط بالا و پایین ══════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «برای لپ‌تاپ من با چپ و راست اسکرول می‌کنم و نمی‌شود؛
+    /// بالا و پایین را فقط دارد. من می‌خواهم هر دو باشند.»
+    ///
+    /// جدول‌های این برنامه ده‌ها ستون دارند و از پهنای پنجره بیرون می‌زنند.
+    /// نوارِ لغزشِ افقیِ خودِ ‎DataGrid‎ هست ولی فقط با کشیدنِ موشواره کار
+    /// می‌کرد؛ حرکتِ افقیِ ترک‌پد (‎Delta.X‎) و ‎Shift+چرخ‎ — همان دو راهی که
+    /// هر مرورگری می‌فهمد — به آن نمی‌رسید.
+    ///
+    /// جابه‌جایی ستون‌به‌ستون است، با ‎ScrollIntoView‎ی خودِ جدول: روشِ رسمیِ
+    /// Avalonia است، و روی جدولی که ستون‌هایش پهنای متفاوت دارند طبیعی‌تر هم
+    /// درمی‌آید — هر بار یک ستونِ کامل می‌آید تو، نه نصفِ یک ستون.
+    ///
+    /// ‎true‎ یعنی «حرکت افقی بود و انجامش دادم».
+    /// </summary>
+    private bool TryScrollSideways(PointerWheelEventArgs e)
+    {
+        var dx = e.Delta.X;
+        if (dx == 0 && e.KeyModifiers.HasFlag(KeyModifiers.Shift)) dx = e.Delta.Y;
+        if (dx == 0) return false;
+
+        var cols = Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).ToList();
+        if (cols.Count < 2) return false;
+
+        var item = SelectedItem ?? (ItemsSource as System.Collections.IEnumerable)?
+                                   .Cast<object>().FirstOrDefault();
+        if (item is null) return false;
+
+        var next = Math.Clamp(_wheelCol + (dx > 0 ? 1 : -1), 0, cols.Count - 1);
+        if (next == _wheelCol) return false;   // به لبه رسیده‌ایم
+
+        _wheelCol = next;
+        ScrollIntoView(item, cols[next]);
+        return true;
+    }
+
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
+        // ⚠️ اول افقی: اگر کاربر واقعاً به چپ/راست کشیده (یا ‎Shift‎ گرفته)،
+        // این حرکت هیچ ربطی به زنجیرهٔ اسکرولِ عمودیِ پایین ندارد و نباید
+        // به‌جایش صفحه بالا و پایین برود.
+        if (TryScrollSideways(e)) { e.Handled = true; return; }
+
         var page = Page;
         var dy = e.Delta.Y;
 

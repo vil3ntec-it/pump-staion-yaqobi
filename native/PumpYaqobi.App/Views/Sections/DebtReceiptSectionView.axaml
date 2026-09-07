@@ -6,7 +6,7 @@
              x:DataType="vm:DebtReceiptSectionViewModel">
 
   <c:SectionPage>
-    <c:SectionPage.Header>رسید قرض‌داران</c:SectionPage.Header>
+    <c:SectionPage.Header>رسید قرض‌داران / چکنه</c:SectionPage.Header>
 
     <c:SectionPage.Toolbar>
       <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
