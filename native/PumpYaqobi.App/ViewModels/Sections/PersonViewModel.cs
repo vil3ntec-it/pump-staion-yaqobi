@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PumpYaqobi.App.Controls;
 using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
@@ -8,6 +9,7 @@ using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
 using PumpYaqobi.Reporting.Pdf;
+using PumpYaqobi.Services.Data;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -48,27 +50,28 @@ public sealed partial class DebtRowViewModel : RowViewModel
     partial void OnDateShamsiChanged(string v) => Touch();
     partial void OnNameChanged(string v) => Touch();
     partial void OnHawalaChanged(string v) => Touch();
+    partial void OnFuelChanged(FuelType v)
+    {
+        Touch();
+        // ‎Refresh‎ هم لازم است: «بردگی» به نوعِ تیل بند است.
+        Refresh();
+        OnPropertyChanged(nameof(FuelText));
+        OnPropertyChanged(nameof(IsPetrol));
+        OnPropertyChanged(nameof(IsDiesel));
+    }
     partial void OnLitersChanged(decimal v) { Touch(); Refresh(); }
     partial void OnPriceChanged(decimal v) { Touch(); Refresh(); }
     partial void OnManualBardagiChanged(decimal v) { Touch(); Refresh(); }
     partial void OnRasidChanged(decimal v) { Touch(); Refresh(); }
     partial void OnRasidFuelChanged(decimal v) { Touch(); Refresh(); }
 
-    /// <summary>عوض شدنِ نوعِ تیل هم دکمه‌ها را تازه می‌کند هم جمع‌های سربرگ را.</summary>
-    partial void OnFuelChanged(FuelType v)
-    {
-        Touch();
-        OnPropertyChanged(nameof(FuelText));
-        OnPropertyChanged(nameof(IsPetrol));
-        OnPropertyChanged(nameof(IsDiesel));
-        Refresh();
-    }
-
     private void Refresh()
     {
         OnPropertyChanged(nameof(LitersText)); OnPropertyChanged(nameof(PriceText));
         OnPropertyChanged(nameof(ManualBardagiText)); OnPropertyChanged(nameof(RasidText));
         OnPropertyChanged(nameof(RasidFuelText)); OnPropertyChanged(nameof(BardagiText));
+        // سربرگِ دو تیل و ردیفِ «جمله» هم به همین ردیف بند‌اند
+        _owner.RefreshTotals();
     }
 
     public string LitersText { get => Shamsi.Money(Liters); set => Liters = Shamsi.Num(value); }
@@ -80,18 +83,24 @@ public sealed partial class DebtRowViewModel : RowViewModel
     /// <summary>بردگیِ پولیِ همین ردیف — از همان سرویسِ آزموده، نه حسابِ دستی.</summary>
     public string BardagiText => Shamsi.Money(_owner.Calc.RowBardagi(_r));
 
-    public string FuelText
-    {
-        get => Fuel.ToPersian();
-        set => Fuel = value == "دیزل" ? FuelType.Diesel : FuelType.Petrol;
-    }
-
-    // ══ دو دکمهٔ نوعِ تیل در خانهٔ جدول ═══════════════════════════════════════
-    //
-    // ⚠️ ‎GroupName‎ باید برای هر ردیف **یکتا** باشد. اگر همهٔ ردیف‌ها یک نام
-    // بگیرند، آوالونیا آن‌ها را یک گروه می‌بیند و زدنِ «دیزل» در یک ردیف،
-    // انتخابِ همهٔ ردیف‌های دیگر را برمی‌دارد.
-    public string FuelGroup => "fuel-" + _r.Id;
+    /// <summary>
+    /// ══ نوع تیل — دو کادرِ رادیویی، نه کشویی ═══════════════════════════════
+    ///
+    /// در سایت ستونِ «نوع تیل» دو کادرِ رادیویی است، پطرول و دیزل زیرِ هم، و
+    /// انتخابِ یکی آن‌یکی را خاموش می‌کند. کشویی نه شبیهش بود و نه بی دو بار
+    /// کلیک عوض می‌شد.
+    ///
+    /// هر دو روی همان یک ‎Fuel‎ می‌نشینند، پس ناسازگاری ممکن نیست: با روشن
+    /// شدنِ یکی، آن‌یکی خودبه‌خود خاموش می‌شود.
+    /// </summary>
+    /// <summary>
+    /// نامِ گروهِ دو دکمهٔ نوعِ تیلِ همین ردیف.
+    ///
+    /// ⚠️ باید برای هر ردیف **یکتا** باشد. تا امروز هر دو دکمه ‎GroupName‎ی
+    /// ثابت («rowFuel») داشتند، یعنی آوالونیا همهٔ ردیف‌های جدول را یک گروه
+    /// می‌دید و زدنِ «دیزل» در یک ردیف، انتخابِ همهٔ ردیف‌های دیگر را برمی‌داشت.
+    /// </summary>
+    public string FuelGroup => "rowFuel-" + _r.Id;
 
     public bool IsPetrol
     {
@@ -103,6 +112,12 @@ public sealed partial class DebtRowViewModel : RowViewModel
     {
         get => Fuel == FuelType.Diesel;
         set { if (value) Fuel = FuelType.Diesel; }
+    }
+
+    public string FuelText
+    {
+        get => Fuel.ToPersian();
+        set => Fuel = value == "دیزل" ? FuelType.Diesel : FuelType.Petrol;
     }
 
     protected override void Apply()
@@ -120,6 +135,105 @@ public sealed partial class DebtRowViewModel : RowViewModel
     }
 
     protected override Task SaveAsync() => _owner.SaveRowAsync(_r);
+}
+
+/// <summary>
+/// یک ردیفِ **خوانده‌شدنیِ** یک جدولِ آرشیو. عمداً هیچ ‎setter‎ی ندارد: آرشیو
+/// عکسِ گذشته است و در سایت هم فقط دیده می‌شود.
+/// </summary>
+public sealed class ArchiveRowViewModel
+{
+    public ArchiveRowViewModel(DebtRow r, DebtCalculationService calc)
+    {
+        DateShamsi = r.DateShamsi ?? "";
+        Name = r.Name ?? "";
+        Hawala = r.Hawala ?? "";
+        FuelText = r.Fuel.ToPersian();
+        LitersText = Shamsi.Money(r.Liters);
+        PriceText = Shamsi.Money(r.PricePerLiter ?? 0m);
+        BardagiText = Shamsi.Money(calc.RowBardagi(r));
+        RasidText = Shamsi.Money(r.Rasid);
+        RasidFuelText = Shamsi.Money(r.RasidFuel);
+    }
+
+    public string DateShamsi { get; }
+    public string Name { get; }
+    public string Hawala { get; }
+    public string FuelText { get; }
+    public string LitersText { get; }
+    public string PriceText { get; }
+    public string BardagiText { get; }
+    public string RasidText { get; }
+    public string RasidFuelText { get; }
+}
+
+/// <summary>
+/// ══ یک جدولِ آرشیو در فهرست ═══════════════════════════════════════════════
+///
+/// خواستهٔ صاحب ریپو: «کادرِ جدول‌های آرشیو یک کادرِ کشویی است؛ می‌زنم یک کادرِ
+/// دیگر باز می‌شود و با زدنِ روی هر کدام کشویی باز می‌شوند — با تاریخ و
+/// مشخصات.» پس این‌جا هم دو پله است: فهرستِ کوچکِ عنوان‌ها، و با کلیک روی هر
+/// عنوان همان جدول باز می‌شود (آکاردئون).
+///
+/// ⚠️ عددهای این‌جا در هیچ جمعِ زنده‌ای نمی‌آیند — نه در سربرگِ حساب، نه در
+/// «جمله»ی جدولِ زنده. عکسِ گذشته است.
+/// </summary>
+public sealed partial class ArchiveViewModel : ObservableObject
+{
+    private readonly DebtTableArchive _h;
+
+    public ArchiveViewModel(DebtTableArchive h, DebtCalculationService calc)
+    {
+        _h = h;
+        var rows = DebtorService.ArchiveRows(h);
+        foreach (var r in rows) Rows.Add(new ArchiveRowViewModel(r, calc));
+
+        var t = calc.SplitTotals(rows);
+        UnitText = h.IsMoney ? "افغانی" : "لیتر";
+        Title = "🗂️ " + (h.CreatedShamsi ?? "—") + " — " + Shamsi.Money(h.RowCount) + " ردیف · واحدِ "
+                + (h.IsMoney ? "پول" : "تیل");
+
+        PetrolHeadText = "⛽ پطرول — فیصدی " + Shamsi.Money(h.PercentPetrol ?? 0m)
+                       + "٪ · رسید " + Shamsi.Money(h.IsMoney ? h.RasidMoneyPetrol : h.RasidFuelPetrol)
+                       + " · برد " + Shamsi.Money(h.IsMoney ? t.Petrol.Bardagi : t.Petrol.Liters)
+                       + " · الباقی " + Shamsi.Money(t.Petrol.Albaqi);
+        DieselHeadText = "🟤 دیزل — فیصدی " + Shamsi.Money(h.PercentDiesel ?? 0m)
+                       + "٪ · رسید " + Shamsi.Money(h.IsMoney ? h.RasidMoneyDiesel : h.RasidFuelDiesel)
+                       + " · برد " + Shamsi.Money(h.IsMoney ? t.Diesel.Bardagi : t.Diesel.Liters)
+                       + " · الباقی " + Shamsi.Money(t.Diesel.Albaqi);
+        NoteText = h.Note ?? "";
+        HasNote = NoteText.Length > 0;
+
+        Totals = new[]
+        {
+            new TotalCell("مقدار تیل", Shamsi.Money(t.All.Liters)),
+            new TotalCell("بردگی", Shamsi.Money(t.All.Bardagi)),
+            new TotalCell("رسید", Shamsi.Money(t.All.Rasid), "Pump.Ok"),
+            new TotalCell("رسید تیل", Shamsi.Money(t.All.RasidFuel), "Pump.Ok"),
+            new TotalCell("الباقی", Shamsi.Money(t.All.Albaqi),
+                          t.All.Albaqi > 0m ? "Pump.Danger" : "Pump.Ok"),
+        };
+    }
+
+    public DebtTableArchive Entity => _h;
+    public ObservableCollection<ArchiveRowViewModel> Rows { get; } = new();
+    public IReadOnlyList<TotalCell> Totals { get; }
+
+    public string Title { get; }
+    public string UnitText { get; }
+    public string PetrolHeadText { get; }
+    public string DieselHeadText { get; }
+    public string NoteText { get; }
+    public bool HasNote { get; }
+
+    /// <summary>کشویی — بسته می‌آید، با کلیک باز می‌شود.</summary>
+    [ObservableProperty] private bool _isOpen;
+
+    [RelayCommand]
+    private void Toggle() => IsOpen = !IsOpen;
+
+    public string CaretText => IsOpen ? "▴" : "▾";
+    partial void OnIsOpenChanged(bool v) => OnPropertyChanged(nameof(CaretText));
 }
 
 /// <summary>
@@ -215,12 +329,13 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         OnPropertyChanged(nameof(PercentPetrolText));
         OnPropertyChanged(nameof(PercentDieselText));
         OnPropertyChanged(nameof(PercentBothText));
+        RefreshTotals();
     }
 
-    partial void OnRasidFuelPetrolChanged(decimal v) { Entity.RasidFuelPetrol = v; SaveAccount(); OnPropertyChanged(nameof(RasidFuelPetrolText)); }
-    partial void OnRasidFuelDieselChanged(decimal v) { Entity.RasidFuelDiesel = v; SaveAccount(); OnPropertyChanged(nameof(RasidFuelDieselText)); }
-    partial void OnRasidMoneyPetrolChanged(decimal v) { Entity.RasidMoneyPetrol = v; SaveAccount(); OnPropertyChanged(nameof(RasidMoneyPetrolText)); }
-    partial void OnRasidMoneyDieselChanged(decimal v) { Entity.RasidMoneyDiesel = v; SaveAccount(); OnPropertyChanged(nameof(RasidMoneyDieselText)); }
+    partial void OnRasidFuelPetrolChanged(decimal v) { Entity.RasidFuelPetrol = v; SaveAccount(); OnPropertyChanged(nameof(RasidFuelPetrolText)); RefreshTotals(); }
+    partial void OnRasidFuelDieselChanged(decimal v) { Entity.RasidFuelDiesel = v; SaveAccount(); OnPropertyChanged(nameof(RasidFuelDieselText)); RefreshTotals(); }
+    partial void OnRasidMoneyPetrolChanged(decimal v) { Entity.RasidMoneyPetrol = v; SaveAccount(); OnPropertyChanged(nameof(RasidMoneyPetrolText)); RefreshTotals(); }
+    partial void OnRasidMoneyDieselChanged(decimal v) { Entity.RasidMoneyDiesel = v; SaveAccount(); OnPropertyChanged(nameof(RasidMoneyDieselText)); RefreshTotals(); }
 
     // نوشته‌های ورودی: عددِ خام بی «۰٫۰»، و پذیرشِ رقمِ فارسی و کاما
 
@@ -241,6 +356,202 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         set => PercentDiesel = Shamsi.Num(value);
     }
 
+    // ══ سربرگِ دو حساب + ردیفِ «جمله» ══════════════════════════════════════
+    //
+    // گزارشِ صاحب ریپو، دو تا:
+    //   «آخر هر جدول جمله ندارد — در سایت بگرد و همان مدل این‌جا هم پیاده شود.»
+    //   «سربرگ آن مدلی است، رنگ‌به‌رنگ، هم دیزل و هم پطرول را نشان می‌دهد و
+    //    رسید هم در همان سربرگ‌ها نوشته می‌شود.»
+    //
+    // در سایت سربرگِ حسابِ شخص دو کادر است — «⛽ حساب پطرول» و «🟤 حساب دیزل» —
+    // و هر کدام چهار عدد دارد: فیصدیِ ما، مقدار رسید، برد، و الباقی. ته جدول
+    // هم ‎<tfoot class="xls-foot">‎ با یک ردیفِ «جمله» است.
+    //
+    // هر دو از همان ‎SplitTotals‎ی می‌آیند که ورقِ PDF هم از آن می‌خواند، پس
+    // عددِ صفحه و عددِ ورق هرگز از هم جدا نمی‌شوند.
+
+    private SplitTotals Totals => Calc.SplitTotals(Rows.Select(r => r.Entity).ToList());
+
+    /// <summary>واحدِ همین حساب — «لیتر» یا «افغانی».</summary>
+    public string UnitText => IsMoney ? "افغانی" : "لیتر";
+
+    // ── ⛽ حساب پطرول ──────────────────────────────────────────────────────
+    public string HeadPetrolPercentText => PercentPetrol == 0m ? "0" : Shamsi.Money(PercentPetrol);
+    public string HeadPetrolRasidText =>
+        Shamsi.Money(IsMoney ? RasidMoneyPetrol : RasidFuelPetrol);
+    public string HeadPetrolBordText =>
+        Shamsi.Money(IsMoney ? Totals.Petrol.Bardagi : Totals.Petrol.Liters);
+    public string HeadPetrolAlbaqiText => Shamsi.Money(Totals.Petrol.Albaqi);
+    public string HeadPetrolAlbaqiBrushKey =>
+        Totals.Petrol.Albaqi > 0m ? "Pump.Danger" : "Pump.Ok";
+
+    /// <summary>
+    /// همان «مقدار رسید»ِ سربرگ، ولی نوشتنی — چون در سایت رسید را همان‌جا در
+    /// سربرگ می‌نویسند، نه در یک کادرِ دیگر پایین‌تر.
+    ///
+    /// ⚠️ کدام فیلد را می‌نویسد به دفترِ باز بستگی دارد: دفترِ پول رسیدِ پول
+    /// را عوض می‌کند و دفترِ تیل رسیدِ تیل را. این دو هرگز یکی نمی‌شوند.
+    /// </summary>
+    public string HeadPetrolRasidEdit
+    {
+        get => HeadPetrolRasidText;
+        set { if (IsMoney) RasidMoneyPetrolText = value; else RasidFuelPetrolText = value; RefreshTotals(); }
+    }
+
+    // ── 🟤 حساب دیزل ──────────────────────────────────────────────────────
+    public string HeadDieselPercentText => PercentDiesel == 0m ? "0" : Shamsi.Money(PercentDiesel);
+    public string HeadDieselRasidText =>
+        Shamsi.Money(IsMoney ? RasidMoneyDiesel : RasidFuelDiesel);
+    public string HeadDieselBordText =>
+        Shamsi.Money(IsMoney ? Totals.Diesel.Bardagi : Totals.Diesel.Liters);
+    public string HeadDieselRasidEdit
+    {
+        get => HeadDieselRasidText;
+        set { if (IsMoney) RasidMoneyDieselText = value; else RasidFuelDieselText = value; RefreshTotals(); }
+    }
+
+    public string HeadDieselAlbaqiText => Shamsi.Money(Totals.Diesel.Albaqi);
+    public string HeadDieselAlbaqiBrushKey =>
+        Totals.Diesel.Albaqi > 0m ? "Pump.Danger" : "Pump.Ok";
+
+    // ── ردیفِ «جمله»، ته جدول ─────────────────────────────────────────────
+    //
+    // خانه‌به‌خانهٔ ‎<tfoot class="xls-foot">‎ی سایت: «مقدار تیل، فی لیتر (—)،
+    // مقدار بردگی، رسید، رسید تیل، الباقی». «فی لیتر» در سایت هم جمع ندارد
+    // (میانگینِ فی معنایی نمی‌دهد) و این‌جا هم نیامده.
+    public IReadOnlyList<TotalCell> TotalCells
+    {
+        get
+        {
+            var t = Totals;
+            return new[]
+            {
+                new TotalCell(IsMoney ? "مقدار (افغانی)" : "مقدار تیل", Shamsi.Money(t.All.Liters)),
+                new TotalCell("بردگی", Shamsi.Money(t.All.Bardagi)),
+                new TotalCell("رسید", Shamsi.Money(t.All.Rasid), "Pump.Ok"),
+                new TotalCell("رسید تیل", Shamsi.Money(t.All.RasidFuel), "Pump.Ok"),
+                new TotalCell("الباقی", Shamsi.Money(t.All.Albaqi),
+                              t.All.Albaqi > 0m ? "Pump.Danger" : "Pump.Ok"),
+            };
+        }
+    }
+
+    public string SumLitersText => Shamsi.Money(Totals.All.Liters);
+    public string SumBardagiText => Shamsi.Money(Totals.All.Bardagi);
+    public string SumRasidText => Shamsi.Money(Totals.All.Rasid);
+    public string SumRasidFuelText => Shamsi.Money(Totals.All.RasidFuel);
+    public string SumAlbaqiText => Shamsi.Money(Totals.All.Albaqi);
+
+    // ══ جدول‌های آرشیو و «جدول جدید» ═══════════════════════════════════════
+    //
+    // دو خواستهٔ صاحب ریپو که در نیتیو اصلاً نبودند:
+    //   «کادرِ جدول‌های آرشیو یک کادرِ کشویی است… با زدنِ روی هر کدام کشویی باز
+    //    می‌شوند، با تاریخ و مشخصات.»
+    //   «جدول جدید در هر حسابِ قرض‌دار وجود ندارد.»
+    //
+    // آرشیوها تنبل بار می‌شوند — تا کاربر کادر را باز نکرده، هیچ پرس‌وجویی
+    // نمی‌رود. با ده‌ها حساب، این تفاوتِ باز شدنِ آنی و کند است.
+
+    public ObservableCollection<ArchiveViewModel> Archives { get; } = new();
+
+    [ObservableProperty] private bool _isArchiveOpen;
+    [ObservableProperty] private int _archiveCount;
+    private bool _archivesLoaded;
+
+    public bool HasArchives => ArchiveCount > 0;
+    public string ArchiveToggleText =>
+        "🗂️ جدول‌های آرشیو این حساب — " + Shamsi.Money(ArchiveCount) + " جدول " + (IsArchiveOpen ? "▴" : "▾");
+
+    partial void OnIsArchiveOpenChanged(bool v) => OnPropertyChanged(nameof(ArchiveToggleText));
+    partial void OnArchiveCountChanged(int v)
+    {
+        OnPropertyChanged(nameof(HasArchives));
+        OnPropertyChanged(nameof(ArchiveToggleText));
+    }
+
+    /// <summary>شمارِ آرشیوها را می‌خواند، بی ساختنِ خودِ جدول‌ها.</summary>
+    public async Task LoadArchiveCountAsync()
+    {
+        try { ArchiveCount = (await _host.Debtors.ListArchivesAsync(Entity.Id)).Count; }
+        catch { /* شمارنده نباید صفحه را بشکند */ }
+    }
+
+    [RelayCommand]
+    private Task ToggleArchivesAsync() => CrashGuard.RunAsync("جدول‌های آرشیو", async () =>
+    {
+        if (!IsArchiveOpen && !_archivesLoaded) await ReloadArchivesAsync();
+        IsArchiveOpen = !IsArchiveOpen;
+    });
+
+    private async Task ReloadArchivesAsync()
+    {
+        Archives.Clear();
+        foreach (var h in await _host.Debtors.ListArchivesAsync(Entity.Id))
+            Archives.Add(new ArchiveViewModel(h, Calc));
+        ArchiveCount = Archives.Count;
+        _archivesLoaded = true;
+    }
+
+    /// <summary>
+    /// «🆕 جدول جدید» — ‎newPersonTable()‎.
+    ///
+    /// جدولِ زنده عکس می‌شود، به آرشیو می‌رود و خالی می‌ماند. فقط دفترِ واحدِ
+    /// فعال؛ دفترِ آن‌یکی واحد دست‌نخورده می‌ماند.
+    /// </summary>
+    [RelayCommand]
+    private Task NewTableAsync() => CrashGuard.RunAsync("جدول جدید", async () =>
+    {
+        if (Rows.Count == 0) { _host.Toast("جدول همین حالا خالی است", ToastKind.Warn); return; }
+        if (!await Dialogs.ConfirmAsync("جدول جدید",
+                "جدولِ فعلی آرشیو می‌شود و جدولِ خالیِ تازه‌ای باز می‌شود. ادامه؟")) return;
+
+        await FlushAsync();                       // هرچه نیم‌تایپ مانده، اول ذخیره شود
+        await _host.Debtors.ArchiveTableAsync(Entity.Id, Shamsi.Today());
+
+        // عکسِ حافظه هم باید با پایگاه یکی شود، وگرنه جدولِ پاک‌شده روی صفحه می‌ماند
+        Entity.ActiveRows().Clear();
+        if (IsMoney) { RasidMoneyPetrol = 0m; RasidMoneyDiesel = 0m; }
+        else { RasidFuelPetrol = 0m; RasidFuelDiesel = 0m; }
+        Entity.Note = null;
+        BuildRows();
+
+        await ReloadArchivesAsync();
+        IsArchiveOpen = true;
+        _person.Recalc();
+        _host.Toast("✅ جدول جدید ساخته شد — جدولِ قبلی در آرشیو نشست", ToastKind.Ok);
+    });
+
+    [RelayCommand]
+    private Task DeleteArchiveAsync(ArchiveViewModel? h) => CrashGuard.RunAsync("حذفِ آرشیو", async () =>
+    {
+        if (h is null) return;
+        if (!await Dialogs.ConfirmAsync("حذفِ جدولِ آرشیو",
+                "«" + h.Title + "» پاک شود؟ (به سطلِ زباله می‌رود)")) return;
+        await _host.Debtors.DeleteArchiveAsync(h.Entity.Id);
+        Archives.Remove(h);
+        ArchiveCount = Archives.Count;
+    });
+
+    /// <summary>
+    /// هر عددِ سربرگ و هر عددِ «جمله» را از نو می‌خواند. با هر تغییری که روی
+    /// ردیف‌ها یا رسیدها اثر دارد صدا زده می‌شود — وگرنه جمع‌ها روی عکسِ
+    /// لحظهٔ باز شدنِ حساب می‌مانند.
+    /// </summary>
+    public void RefreshTotals()
+    {
+        foreach (var n in new[]
+        {
+            nameof(UnitText),
+            nameof(HeadPetrolPercentText), nameof(HeadPetrolRasidText), nameof(HeadPetrolRasidEdit),
+            nameof(HeadPetrolBordText), nameof(HeadPetrolAlbaqiText), nameof(HeadPetrolAlbaqiBrushKey),
+            nameof(HeadDieselPercentText), nameof(HeadDieselRasidText), nameof(HeadDieselRasidEdit),
+            nameof(HeadDieselBordText), nameof(HeadDieselAlbaqiText), nameof(HeadDieselAlbaqiBrushKey),
+            nameof(SumLitersText), nameof(SumBardagiText), nameof(SumRasidText),
+            nameof(SumRasidFuelText), nameof(SumAlbaqiText), nameof(TotalCells),
+        })
+            OnPropertyChanged(n);
+    }
+
     /// <summary>سپردهٔ پولِ همین حساب — خالی یعنی چیزی نوشته نشده.</summary>
     public string MoneyDepositText
     {
@@ -257,85 +568,6 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     public string RasidFuelDieselText { get => Shamsi.Money(RasidFuelDiesel); set => RasidFuelDiesel = Shamsi.Num(value); }
     public string RasidMoneyPetrolText { get => Shamsi.Money(RasidMoneyPetrol); set => RasidMoneyPetrol = Shamsi.Num(value); }
     public string RasidMoneyDieselText { get => Shamsi.Money(RasidMoneyDiesel); set => RasidMoneyDiesel = Shamsi.Num(value); }
-
-    // ══════════════════════════════════════════════════════════════════════
-    //  سربرگِ دو حسابِ تیل — مو‌به‌مو مثلِ سایت
-    // ══════════════════════════════════════════════════════════════════════
-    //
-    //  در سایت بالای دفترِ هر شخص دو کارتِ **رویِ هم** هست (پطرول بالا، دیزل
-    //  پایین) و هرکدام دقیقاً چهار خانه دارد:
-    //
-    //      فیصدی ما (٪) │ مقدار رسید تیل │ برد │ الباقی تیل
-    //
-    //  «مقدار رسید تیل» فقط یک عدد نیست، **کادرِ ورودی** است: هرچه آن‌جا
-    //  نوشته شود یک ردیفِ تازه با همان رسید به جدول اضافه می‌کند، و اگر آن
-    //  ردیف از جدول حذف شود عددِ سربرگ هم کم می‌شود. یعنی سربرگ و جدول یک
-    //  چیزند از دو راه.
-    //
-    //  ⚠️ عددِ سربرگ **جمعِ ستونِ «رسید تیل» جدول** است، نه فیلدِ
-    //  ‎RasidFuelPetrol/Diesel‎ی خودِ حساب. آن دو جای دیگری (در ‎Balances‎)
-    //  به کار می‌روند و اگر این‌جا هم جمع می‌شدند، رسید دوبار شمرده می‌شد.
-
-    private SplitTotals Totals => _host.Debt.SplitTotals(Rows.Select(r => r.Entity));
-
-    private static string Cell(decimal v) => Shamsi.Money(v);
-
-    public string PetrolBordText   => Cell(Totals.Petrol.Liters);
-    public string DieselBordText   => Cell(Totals.Diesel.Liters);
-    public string PetrolAlbaqiText => Cell(Totals.Petrol.RasidFuel - Totals.Petrol.Liters);
-    public string DieselAlbaqiText => Cell(Totals.Diesel.RasidFuel - Totals.Diesel.Liters);
-
-    /// <summary>
-    /// کادرِ «مقدار رسید تیل»ِ پطرول: می‌خواند = جمعِ ستونِ جدول، می‌نویسد =
-    /// ردیفِ تازه. خالی یا صفر هیچ ردیفی نمی‌سازد.
-    /// </summary>
-    public string PetrolNewRasidText
-    {
-        get { var v = Totals.Petrol.RasidFuel; return v == 0m ? "" : Cell(v); }
-        set => _ = AddRasidRowAsync(FuelType.Petrol, Shamsi.Num(value));
-    }
-
-    public string DieselNewRasidText
-    {
-        get { var v = Totals.Diesel.RasidFuel; return v == 0m ? "" : Cell(v); }
-        set => _ = AddRasidRowAsync(FuelType.Diesel, Shamsi.Num(value));
-    }
-
-    /// <summary>سربرگ را از نو بخوان — بعد از هر افزودن، حذف یا ویرایشِ ردیف.</summary>
-    public void RefreshHeader()
-    {
-        OnPropertyChanged(nameof(PetrolNewRasidText));
-        OnPropertyChanged(nameof(DieselNewRasidText));
-        OnPropertyChanged(nameof(PetrolBordText));
-        OnPropertyChanged(nameof(DieselBordText));
-        OnPropertyChanged(nameof(PetrolAlbaqiText));
-        OnPropertyChanged(nameof(DieselAlbaqiText));
-    }
-
-    private async Task AddRasidRowAsync(FuelType fuel, decimal amount)
-    {
-        if (amount == 0m) { RefreshHeader(); return; }
-
-        var r = new DebtRow
-        {
-            DateShamsi = Shamsi.Today(),
-            DateKey = Shamsi.Key(Shamsi.Today()),
-            SortIndex = Entity.ActiveRows().Count,
-            ByMoney = IsMoney,
-            Fuel = fuel,
-            RasidFuel = amount,
-        };
-        if (IsMoney) { r.MoneyAccountId = Entity.Id; Entity.MoneyRows.Add(r); }
-        else { r.FuelAccountId = Entity.Id; Entity.FuelRows.Add(r); }
-
-        _host.Debt.NormalizeRow(r);
-        await _host.Debtors.SaveRowAsync(r);
-
-        var vm = new DebtRowViewModel(r, this);
-        vm.Recalculated += _person.Recalc;
-        Rows.Add(vm);
-        _person.Recalc();
-    }
 
     private void SaveAccount()
     {
@@ -357,6 +589,9 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
             vm.Recalculated += _person.Recalc;
             Rows.Add(vm);
         }
+
+        // جدول عوض شد ⇒ سربرگ و ردیفِ «جمله» هم باید از نو خوانده شوند
+        RefreshTotals();
     }
 
     private async Task PersistHealedAsync()
@@ -389,6 +624,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         vm.Recalculated += _person.Recalc;
         Rows.Add(vm);
         _person.Recalc();
+        RefreshTotals();
     }
 
     [RelayCommand]
@@ -400,6 +636,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         Entity.MoneyRows.Remove(row.Entity);
         Rows.Remove(row);
         _person.Recalc();
+        RefreshTotals();
     }
 
     public int RowCount => Rows.Count;
@@ -436,7 +673,13 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
     public PersonViewModel(AppHost host, Debtor d, DebtSectionViewModel section)
     {
         _host = host; _section = section; Entity = d;
-        foreach (var a in d.AllAccounts()) Accounts.Add(new AccountViewModel(host, a, this));
+        foreach (var a in d.AllAccounts())
+        {
+            var vm = new AccountViewModel(host, a, this);
+            Accounts.Add(vm);
+            // فقط شمارنده — خودِ جدول‌های آرشیو تا باز نشوند ساخته نمی‌شوند
+            _ = vm.LoadArchiveCountAsync();
+        }
         _current = Accounts.FirstOrDefault();
         Recalc();
     }
@@ -456,7 +699,6 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
     /// <summary>جمع‌ها و حال — همیشه از روی همهٔ حساب‌ها، نه فقط حسابِ باز.</summary>
     public void Recalc()
     {
-        Current?.RefreshHeader();     // سربرگ همیشه هم‌قدمِ جدول بماند
         var accounts = Accounts.Select(a => a.Entity).ToList();
         var b = _host.Debt.Balances(accounts);
         MoneyText = Shamsi.Money(b.Money);
@@ -523,16 +765,30 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
     [RelayCommand]
     private Task BackAsync() => _section.BackCommand.ExecuteAsync(null);
 
+    /// <summary>
+    /// ══ «➕ حساب جدید» — ‎newPersonSub()‎ ═══════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «حساب فرعی یک کادر کشویی است که از آن‌جا انتخاب بشود
+    /// و آن حساب کاملاً جدا است و باید یک اسمِ جدا هم داشته باشد.»
+    ///
+    /// در سایت هم اول ‎prompt('نام حساب جدید:')‎ می‌آید و بی‌نام ساخته نمی‌شود.
+    /// پیش از این نیتیو با نامِ ‎null‎ می‌ساخت و همهٔ حساب‌های فرعی «حسابِ
+    /// فرعی» نام می‌گرفتند — در کشویی از هم شناخته نمی‌شدند.
+    /// </summary>
     [RelayCommand]
-    private async Task AddSubAccountAsync()
+    private Task AddSubAccountAsync() => CrashGuard.RunAsync("حساب جدید", async () =>
     {
-        var a = await _host.Debtors.AddSubAccountAsync(Entity.Id, null);
+        var name = (await Dialogs.PromptAsync("حساب جدید", "نام حساب جدید:") ?? "").Trim();
+        if (name.Length == 0) return;
+
+        var a = await _host.Debtors.AddSubAccountAsync(Entity.Id, name);
         Entity.SubAccounts.Add(a);
         var vm = new AccountViewModel(_host, a, this);
         Accounts.Add(vm);
         Current = vm;                 // فوراً دیده می‌شود — همان باگی که در نسخهٔ وب بود
         Recalc();
-    }
+        _host.Toast("✅ حساب «" + name + "» ساخته شد", ToastKind.Ok);
+    });
 
     [RelayCommand]
     private async Task DeleteSubAccountAsync(AccountViewModel? a)
