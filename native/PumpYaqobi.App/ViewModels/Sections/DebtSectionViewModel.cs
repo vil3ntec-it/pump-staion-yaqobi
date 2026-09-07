@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Services;
+using PumpYaqobi.App.Views;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
@@ -17,6 +18,7 @@ public sealed partial class DebtorCardViewModel : ObservableObject
         Entity = d;
         Name = d.Name ?? "";
         Phone = d.Phone ?? "";
+        Accounts = accounts;
         AccountCount = accounts.Count;
 
         var b = calc.Balances(accounts);
@@ -48,6 +50,10 @@ public sealed partial class DebtorCardViewModel : ObservableObject
     public Debtor Entity { get; }
     public string Name { get; }
     public string Phone { get; }
+
+    /// <summary>حسابِ اصلی و زیرحساب‌ها — کلیدِ صدای هر کدام از همین می‌آید.</summary>
+    public IReadOnlyList<DebtAccount> Accounts { get; }
+
     public int AccountCount { get; }
     public string MoneyText { get; }
     public string PetrolText { get; }
@@ -190,8 +196,53 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
         }
     }
 
-    /// <summary>کلیدِ صدا برای یک حساب — همان ‎p&lt;id&gt;‎ی نسخهٔ وب.</summary>
-    private static string AccountKey(long debtorId) => "p" + debtorId;
+    /// <summary>کلیدِ صدا برای حسابِ اصلیِ یک شخص — همان ‎p&lt;id&gt;‎ی نسخهٔ وب.</summary>
+    private static string AccountKey(long debtorId) => VoiceKeys.Of(debtorId);
+
+    /// <summary>
+    /// ══ 🎓 آموزش صدا ══════════════════════════════════════════════════════
+    /// فهرستِ همهٔ حساب‌ها با یک دکمهٔ ضبط جلوی هرکدام (‎vxOpenTeach‎).
+    ///
+    /// بی این، یاد دادنِ صد قرض‌دار یعنی صد بار «نشناختم» — چون تنها راهِ
+    /// یادگیری، زدنِ نام پس از یک صدای ناشناخته بود.
+    /// </summary>
+    [RelayCommand]
+    private async Task OpenVoiceTeachAsync()
+    {
+        await VoiceTeachWindow.ShowAsync(MainWindowOf(), new VoiceTeachViewModel(_host));
+        // ممکن است کاربر همان‌جا صدایی ثبت یا پاک کرده باشد — چیزی در فهرستِ
+        // قرض‌داران عوض نمی‌شود، پس تازه‌سازی لازم نیست.
+    }
+
+    private static Avalonia.Controls.Window? MainWindowOf() =>
+        Avalonia.Application.Current?.ApplicationLifetime
+            is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime d
+            ? d.MainWindow : null;
+
+    /// <summary>
+    /// بازکردنِ حسابی که صدا آن را شناخت — ‎_vxOpenKey‎.
+    ///
+    /// ⚠️ اگر کلید به یک **زیرحساب** اشاره کند، همان زیرحساب انتخاب می‌شود نه
+    /// حسابِ اصلی: صدای «موترِ دومِ کریم» باید دفترِ همان موتر را باز کند،
+    /// وگرنه کاربر باز هم باید دستی بگردد.
+    /// </summary>
+    private async Task<bool> OpenByVoiceKeyAsync(string key)
+    {
+        var parsed = VoiceKeys.Parse(key);
+        if (parsed is null) return false;
+
+        var card = _all.FirstOrDefault(c => c.Entity.Id == parsed.Value.Debtor);
+        if (card is null) return false;
+
+        await OpenAsync(card);
+
+        if (parsed.Value.Account is { } acctId && Person is not null)
+        {
+            var acct = Person.Accounts.FirstOrDefault(a => a.Entity.Id == acctId);
+            if (acct is not null) Person.Current = acct;
+        }
+        return true;
+    }
 
     /// <summary>
     /// ‎_vxOfflineSearch‎ — بگو، بشنو، حساب باز شود.
@@ -225,7 +276,15 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
 
             // حساب‌های پاک‌شده کنار می‌روند (‎_vxLiveKey‎): کلیدِ صدا می‌ماند ولی
             // حسابش دیگر نیست، و بازکردنِ حسابِ نبوده هیچ معنایی ندارد.
-            var alive = _all.Select(c => AccountKey(c.Entity.Id)).ToHashSet();
+            // کلیدهای زندهٔ هر شخص: حسابِ اصلی و همهٔ زیرحساب‌هایش. صدایی که
+            // به حسابِ پاک‌شده اشاره کند کنار می‌رود (‎_vxLiveKey‎).
+            var alive = new HashSet<string>();
+            foreach (var c in _all)
+            {
+                alive.Add(VoiceKeys.Of(c.Entity.Id));
+                foreach (var a in c.Accounts)
+                    if (a.MainOfDebtorId is null) alive.Add(VoiceKeys.Of(c.Entity.Id, a.Id));
+            }
             var matches = (await _host.Voice.MatchAsync(feat))
                           .Where(m => alive.Contains(m.Key)).ToList();
 
@@ -250,12 +309,9 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
             }
 
             var best = matches[0];
-            var card = _all.FirstOrDefault(c => AccountKey(c.Entity.Id) == best.Key);
-            if (card is null) return;
-
             _pendingTeach = null;                    // شناخت؛ چیزی برای یاد دادن نمانده
-            _host.Toast("🎤 " + (best.Name.Length > 0 ? best.Name : card.Name), ToastKind.Ok);
-            await OpenAsync(card);
+            if (!await OpenByVoiceKeyAsync(best.Key)) return;
+            _host.Toast("🎤 " + best.Name, ToastKind.Ok);
         }
         finally
         {
