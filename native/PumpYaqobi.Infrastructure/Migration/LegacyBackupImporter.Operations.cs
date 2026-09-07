@@ -43,7 +43,8 @@ public sealed record LegacyBundle(
     List<StaffShortSettle> Settles,
     List<Camera> Cameras,
     Dictionary<string, string> Settings,
-    int SourceRecordCount,
+    /// <summary>شمارشِ ‎_dbRecordCount‎ روی خودِ فایل — مبنای سنجشِ «چیزی گم نشد».</summary>
+    int SourceRecords,
     ImportReport Report);
 
 /// <summary>
