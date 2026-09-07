@@ -48,7 +48,6 @@ public sealed partial class DebtRowViewModel : RowViewModel
     partial void OnDateShamsiChanged(string v) => Touch();
     partial void OnNameChanged(string v) => Touch();
     partial void OnHawalaChanged(string v) => Touch();
-    partial void OnFuelChanged(FuelType v) { Touch(); OnPropertyChanged(nameof(FuelText)); }
     partial void OnLitersChanged(decimal v) { Touch(); Refresh(); }
     partial void OnPriceChanged(decimal v) { Touch(); Refresh(); }
     partial void OnManualBardagiChanged(decimal v) { Touch(); Refresh(); }
