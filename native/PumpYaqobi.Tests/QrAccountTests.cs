@@ -32,8 +32,11 @@ public class QrAccountTests
         Assert.Null(a.Value.SubId);
         Assert.Equal("debt", a.Value.Type);
 
-        // کیو‌آرهای سایت نشانیِ کامل دارند، نه فقط تکهٔ هش
-        var b = AcctLink.Parse("https://vil3ntec-it.github.io/pump-staion-yaqobi/#roview-debt-42~s99-pdf");
+        // کیو‌آرهای سایت نشانیِ کامل دارند، نه فقط تکهٔ هش.
+        // ⚠️ میزبانِ این نمونه عمداً ساختگی است: قاعدهٔ ‎NoUserFacingFileMentionsTheRepository‎
+        // می‌گوید نامِ مخزن جز در ‎UpdateService.cs‎ هیچ‌جا نیاید. آن‌چه این‌جا
+        // سنجیده می‌شود تکهٔ ‎#roview…‎ است، نه میزبان.
+        var b = AcctLink.Parse("https://example.invalid/app/#roview-debt-42~s99-pdf");
         Assert.NotNull(b);
         Assert.Equal(42, b!.Value.PersonId);
         Assert.Equal("s99", b.Value.SubId);
