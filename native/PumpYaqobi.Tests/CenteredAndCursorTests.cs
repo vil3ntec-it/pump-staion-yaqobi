@@ -54,24 +54,47 @@ public class CenteredAndCursorTests
     }
 
     /// <summary>
-    /// خانه و سرستونِ جدول: هم وسط‌چین، هم نشانگرِ «به‌علاوه».
-    /// ‎Cross‎ نزدیک‌ترین چیزِ آوالونیا به ‎cursor:cell‎ی سایت است.
+    /// خانه و سرستونِ جدول: هم وسط‌چین، هم نشانگرِ «به‌علاوه»ی اکسل.
+    ///
+    /// ⚠️ پیش از این ‎Cross‎ی آماده گذاشته شده بود، به این گمان که «نزدیک‌ترین
+    /// چیزِ آوالونیا» است. صاحب ریپو گفت «علامتِ مثبت شبیهِ اکسل نیست» و حق
+    /// داشت: ‎cursor:cell‎ی سایت یک به‌علاوهٔ **کلفتِ** سفید با دورِ سیاه است و
+    /// ‎Cross‎ یک ضربدرِ نازکِ نخی. حالا همان شکل در ‎ExcelCursor‎ کشیده و با
+    /// کلیدِ ‎Pump.CellCursor‎ ثبت می‌شود.
     /// </summary>
     [Fact]
     public void GridCellsAreCentredAndShowThePlusCursor()
     {
         var t = Theme();
+        const string cur = "<Setter Property=\"Cursor\" Value=\"{DynamicResource Pump.CellCursor}\" />";
 
         var cell = Between(t, "<Style Selector=\"DataGridCell\">", "</Style>");
-        Assert.Contains("<Setter Property=\"Cursor\" Value=\"Cross\" />", cell);
+        Assert.Contains(cur, cell);
         Assert.Contains("<Setter Property=\"HorizontalContentAlignment\" Value=\"Center\" />", cell);
 
         var head = Between(t, "<Style Selector=\"DataGridColumnHeader\">", "</Style>");
-        Assert.Contains("<Setter Property=\"Cursor\" Value=\"Cross\" />", head);
+        Assert.Contains(cur, head);
 
         // و نوشتهٔ داخلِ خانه هم واقعاً وسط بنشیند
         Assert.Contains("<Style Selector=\"DataGridCell TextBlock\">", t);
         Assert.Contains("<Style Selector=\"DataGridCell TextBox\">", t);
+    }
+
+    /// <summary>
+    /// ‎{DynamicResource}‎ی بی‌کلید بی‌صدا هیچ نشانگری نمی‌گذارد — یعنی جدول‌ها
+    /// نشانگرِ معمولیِ فلش می‌گرفتند و کسی هم نمی‌فهمید. پس این‌جا قفل می‌شود
+    /// که کلید واقعاً ثبت شده باشد، و ‎ExcelCursor‎ در بدترین حالت به
+    /// نشانگرِ آمادهٔ قبلی برگردد نه به هیچ.
+    /// </summary>
+    [Fact]
+    public void TheCellCursorIsActuallyRegistered()
+    {
+        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
+        var app = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "App.axaml.cs"));
+        Assert.Contains("Resources[\"Pump.CellCursor\"]", app);
+
+        var cur = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Controls", "ExcelCursor.cs"));
+        Assert.Contains("StandardCursorType.Cross", cur);   // پشتیبان
     }
 
     /// <summary>
