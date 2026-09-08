@@ -178,6 +178,30 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
         return OpenAsync(Cards[number - 1]);
     }
 
+    /// <summary>
+    /// «→ قبلی» و «بعدی ←»ی سربرگ — همتای ‎navigatePerson(±1)‎ی سایت.
+    ///
+    /// روی همان فهرستِ <b>نمایش‌داده‌شده</b> راه می‌رود (پس با جست‌وجو هم
+    /// جابه‌جا می‌شود) و در دو سرِ فهرست می‌ایستد، نه این‌که دور بزند —
+    /// همان رفتاری که سایت دارد.
+    /// </summary>
+    public async Task NavigatePersonAsync(int delta)
+    {
+        var id = Person?.Entity.Id;
+        if (id is null || Cards.Count == 0) return;
+
+        var at = -1;
+        for (var i = 0; i < Cards.Count; i++)
+            if (Cards[i].Entity.Id == id) { at = i; break; }
+        if (at < 0) return;
+
+        var next = at + delta;
+        if (next < 0 || next >= Cards.Count) return;
+
+        if (Person is not null) await Person.FlushAsync();
+        await OpenAsync(Cards[next]);
+    }
+
     [RelayCommand]
     private async Task OpenAsync(DebtorCardViewModel? card)
     {
