@@ -35,6 +35,17 @@
                 <TextBox Text="{Binding StationPhone}" />
               </StackPanel>
             </UniformGrid>
+
+            <!-- نشانیِ سرورِ خانگی — کیو‌آرِ هر قرض‌دار از همین ساخته می‌شود.
+                 مشتری اسکن می‌کند، گوشی‌اش این نشانی را باز می‌کند و حسابش را
+                 زنده می‌بیند. تا خالی باشد، کیو‌آر ساخته نمی‌شود. -->
+            <StackPanel Margin="14,0,14,14" Spacing="5">
+              <TextBlock Text="🌐 نشانیِ سرور (دامنه)" Classes="label" />
+              <TextBox Text="{Binding ServerUrl}" Watermark="https://pump.example.com"
+                       ToolTip.Tip="همان جایی که صفحهٔ حساب سِرو می‌شود. کیو‌آرِ هر قرض‌دار از این ساخته می‌شود." />
+              <TextBlock Classes="muted" TextWrapping="Wrap"
+                         Text="کیو‌آرِ هر قرض‌دار از همین نشانی ساخته می‌شود: کد را به مشتری می‌دهید، اسکن می‌کند و حسابش را زنده می‌بیند." />
+            </StackPanel>
           </StackPanel>
         </Border>
 

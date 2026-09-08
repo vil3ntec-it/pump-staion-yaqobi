@@ -51,6 +51,18 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
     [ObservableProperty] private string _stationAddress = "";
     [ObservableProperty] private string _stationPhone = "";
 
+    /// <summary>
+    /// ══ نشانیِ سرورِ خانگی ══════════════════════════════════════════════════
+    /// همان جایی که صفحهٔ حساب از آن سِرو می‌شود — دامنه یا IPِ خودِ سرور.
+    ///
+    /// کیو‌آرِ هر قرض‌دار از همین ساخته می‌شود: مشتری اسکن می‌کند، گوشی‌اش این
+    /// نشانی را باز می‌کند و حسابش را زنده می‌بیند.
+    ///
+    /// ⚠️ تا وقتی این خالی باشد، کیو‌آرِ حساب ساخته نمی‌شود — چون نشانیِ نصفه
+    /// روی گوشیِ مشتری هیچ کاری نمی‌کند.
+    /// </summary>
+    [ObservableProperty] private string _serverUrl = "";
+
     // ── نرخ‌ها و آستانه‌ها ──────────────────────────────────────────────────
     [ObservableProperty] private string _unionRatePetrol = "";
     [ObservableProperty] private string _unionRateDiesel = "";
@@ -90,6 +102,7 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
         StationName = s.GetString(SettingsService.StationName);
         StationAddress = s.GetString(SettingsService.StationAddress);
         StationPhone = s.GetString(SettingsService.StationPhone);
+        ServerUrl = s.GetString(SettingsService.ServerUrl);
         UnionRatePetrol = Shamsi.Money(s.GetDecimal(SettingsService.UnionRatePetrol));
         UnionRateDiesel = Shamsi.Money(s.GetDecimal(SettingsService.UnionRateDiesel));
         LowStockThreshold = Shamsi.Money(s.GetDecimal(SettingsService.LowStockThreshold, 1000m));
@@ -104,6 +117,7 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
         s.Set(SettingsService.StationName, StationName.Trim());
         s.Set(SettingsService.StationAddress, StationAddress.Trim());
         s.Set(SettingsService.StationPhone, StationPhone.Trim());
+        s.Set(SettingsService.ServerUrl, ServerUrl.Trim());
         s.Set(SettingsService.UnionRatePetrol, Shamsi.Num(UnionRatePetrol));
         s.Set(SettingsService.UnionRateDiesel, Shamsi.Num(UnionRateDiesel));
         s.Set(SettingsService.LowStockThreshold, Shamsi.Num(LowStockThreshold));
