@@ -69,6 +69,9 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
     [ObservableProperty] private string _serverUrl = "";
     [ObservableProperty] private string _viewerUrl = "";
 
+    /// <summary>رمزِ سرورِ هم‌گام‌سازی — اگر سرور رمز دارد.</summary>
+    [ObservableProperty] private string _syncCode = "";
+
     // ── نرخ‌ها و آستانه‌ها ──────────────────────────────────────────────────
     [ObservableProperty] private string _unionRatePetrol = "";
     [ObservableProperty] private string _unionRateDiesel = "";
@@ -110,6 +113,7 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
         StationPhone = s.GetString(SettingsService.StationPhone);
         ServerUrl = s.GetString(SettingsService.ServerUrl);
         ViewerUrl = s.GetString(SettingsService.ViewerUrl);
+        SyncCode = s.GetString(SettingsService.SyncCode);
         UnionRatePetrol = Shamsi.Money(s.GetDecimal(SettingsService.UnionRatePetrol));
         UnionRateDiesel = Shamsi.Money(s.GetDecimal(SettingsService.UnionRateDiesel));
         LowStockThreshold = Shamsi.Money(s.GetDecimal(SettingsService.LowStockThreshold, 1000m));
@@ -126,6 +130,7 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
         s.Set(SettingsService.StationPhone, StationPhone.Trim());
         s.Set(SettingsService.ServerUrl, ServerUrl.Trim());
         s.Set(SettingsService.ViewerUrl, ViewerUrl.Trim());
+        s.Set(SettingsService.SyncCode, SyncCode.Trim());
         s.Set(SettingsService.UnionRatePetrol, Shamsi.Num(UnionRatePetrol));
         s.Set(SettingsService.UnionRateDiesel, Shamsi.Num(UnionRateDiesel));
         s.Set(SettingsService.LowStockThreshold, Shamsi.Num(LowStockThreshold));

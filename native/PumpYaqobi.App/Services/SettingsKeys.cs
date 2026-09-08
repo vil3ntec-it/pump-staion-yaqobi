@@ -11,4 +11,6 @@ public static class SettingsKeys
     public const string ServerUrl = PumpYaqobi.Services.Data.SettingsService.ServerUrl;
     /// <summary>نشانیِ صفحهٔ حساب — ⚠️ با ‎ServerUrl‎ (سرورِ داده) یکی نیست.</summary>
     public const string ViewerUrl = PumpYaqobi.Services.Data.SettingsService.ViewerUrl;
+    /// <summary>رمزِ سرورِ هم‌گام‌سازی — در لینکِ کیو‌آر هم می‌رود.</summary>
+    public const string SyncCode = PumpYaqobi.Services.Data.SettingsService.SyncCode;
 }

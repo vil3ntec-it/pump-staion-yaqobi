@@ -81,18 +81,47 @@ public class QrAccountTests
     /// تکهٔ ‎#roview…‎ی تنها روی گوشیِ مشتری هیچ کاری نمی‌کند.
     /// </summary>
     [Theory]
-    [InlineData("http://192.168.1.50:8080", "http://192.168.1.50:8080/#roview-debt-5-pdf")]
-    [InlineData("http://192.168.1.50:8080/", "http://192.168.1.50:8080/#roview-debt-5-pdf")]
+    [InlineData("https://pump.example.com", "https://pump.example.com/#roview-debt-5-pdf")]
+    [InlineData("https://pump.example.com/", "https://pump.example.com/#roview-debt-5-pdf")]
     // بی «http» گوشی نشانی را باز نمی‌کند و متن می‌بیند
-    [InlineData("192.168.1.50:8080", "http://192.168.1.50:8080/#roview-debt-5-pdf")]
-    // هشِ قبلی نباید دو تا بشود
-    [InlineData("http://pump.local/#roview-debt-9-pdf", "http://pump.local/#roview-debt-5-pdf")]
-    public void FullUrlIsOpenableOnAPhone(string server, string expected)
-        => Assert.Equal(expected, AcctLink.FullUrl(server, 5));
+    [InlineData("pump.example.com", "https://pump.example.com/#roview-debt-5-pdf")]
+    // هش یا پرسشِ قبلی نباید جای مالِ ما را بگیرد
+    [InlineData("https://pump.example.com/#roview-debt-9-pdf", "https://pump.example.com/#roview-debt-5-pdf")]
+    [InlineData("https://pump.example.com/?x=1", "https://pump.example.com/#roview-debt-5-pdf")]
+    public void FullUrlIsOpenableOnAPhone(string page, string expected)
+        => Assert.Equal(expected, AcctLink.FullUrl(page, 5));
 
-    /// <summary>بی نشانیِ سرور، کیو‌آری ساخته نمی‌شود — نه یک لینکِ نصفه.</summary>
+    /// <summary>
+    /// ⚠️ نشانیِ سرور و رمز هم باید داخلِ لینک باشند.
+    ///
+    /// گوشیِ مشتری این صفحه را تا امروز باز نکرده، پس چیزی در حافظه‌اش نیست و
+    /// نمی‌داند به کدام سرور وصل شود — صفحه‌ای خالی می‌بیند. خودِ سایت هم در
+    /// ‎copyShareLink‎ همین کار را می‌کند و صفحه سرِ بارگیری برشان می‌دارد.
+    /// </summary>
     [Fact]
-    public void NoServerMeansNoLink()
+    public void ServerAndTokenRideAlongInTheLink()
+    {
+        var url = AcctLink.FullUrl("https://pump.example.com", 5, null, "debt",
+                                   "wss://api.example.com", "s3cret")!;
+        Assert.Equal(
+            "https://pump.example.com/?server=wss%3A%2F%2Fapi.example.com&token=s3cret#roview-debt-5-pdf",
+            url);
+
+        // بی رمز، فقط سرور
+        var noTok = AcctLink.FullUrl("https://pump.example.com", 5, null, "debt",
+                                     "wss://api.example.com", "")!;
+        Assert.Equal("https://pump.example.com/?server=wss%3A%2F%2Fapi.example.com#roview-debt-5-pdf",
+                     noTok);
+
+        // و در هر حال، تکهٔ حساب باید هنوز خوانده شود
+        var back = AcctLink.Parse(url);
+        Assert.NotNull(back);
+        Assert.Equal(5, back!.Value.PersonId);
+    }
+
+    /// <summary>بی نشانیِ صفحه، کیو‌آری ساخته نمی‌شود — نه یک لینکِ نصفه.</summary>
+    [Fact]
+    public void NoPageMeansNoLink()
     {
         Assert.Null(AcctLink.FullUrl(null, 5));
         Assert.Null(AcctLink.FullUrl("   ", 5));
@@ -103,7 +132,8 @@ public class QrAccountTests
     [Fact]
     public void FullUrlRoundTrips()
     {
-        var url = AcctLink.FullUrl("http://192.168.1.50:8080", 77, "s5")!;
+        var url = AcctLink.FullUrl("https://pump.example.com", 77, "s5", "debt",
+                                   "wss://api.example.com", "tok")!;
         var back = AcctLink.Parse(QrReader.DecodeImageBytes(QrWriter.EncodePng(url)));
         Assert.NotNull(back);
         Assert.Equal(77, back!.Value.PersonId);

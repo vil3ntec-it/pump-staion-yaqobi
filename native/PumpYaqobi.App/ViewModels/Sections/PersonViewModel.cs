@@ -946,7 +946,13 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
         // خودِ صفحه ساخته می‌شود (window.location.href). گوشیِ مشتری صفحه را
         // باز می‌کند و آن صفحه است که داده را از سرور می‌گیرد.
         var page = _host.Settings.GetString(SettingsKeys.ViewerUrl);
-        var link = AcctLink.FullUrl(page, Entity.Id, sub);
+        // ⚠️ ‎server‎ و ‎token‎ هم باید داخلِ نشانی باشند: گوشیِ مشتری این صفحه
+        // را تا امروز باز نکرده، پس نمی‌داند به کدام سرور وصل شود و صفحه‌ای
+        // خالی می‌بیند. خودِ سایت هم در ‎copyShareLink‎ همین کار را می‌کند.
+        var link = AcctLink.FullUrl(
+            page, Entity.Id, sub, "debt",
+            _host.Settings.GetString(SettingsKeys.ServerUrl),
+            _host.Settings.GetString(SettingsKeys.SyncCode));
         if (link is null)
         {
             _host.Toast("اول در «تنظیمات › نشانیِ صفحهٔ حساب» نشانیِ صفحه را بنویسید — "

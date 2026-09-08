@@ -46,8 +46,13 @@
             <StackPanel Margin="14,0,14,14" Spacing="10">
               <StackPanel Spacing="5">
                 <TextBlock Text="🔄 نشانیِ سرورِ هم‌گام‌سازی (داده)" Classes="label" />
-                <TextBox Text="{Binding ServerUrl}" Watermark="https://sync.example.com"
-                         ToolTip.Tip="سرورِ خانگیِ خودتان — برنامه از این‌جا داده می‌گیرد و می‌فرستد." />
+                <TextBox Text="{Binding ServerUrl}" Watermark="wss://api.example.com"
+                         ToolTip.Tip="سرورِ خانگیِ خودتان. همین در لینکِ کیو‌آر هم می‌رود تا گوشیِ مشتری بداند به کجا وصل شود." />
+              </StackPanel>
+
+              <StackPanel Spacing="5">
+                <TextBlock Text="🔑 رمزِ سرور (اگر دارد)" Classes="label" />
+                <TextBox Text="{Binding SyncCode}" Watermark="خالی بگذارید اگر رمز ندارد" />
               </StackPanel>
 
               <StackPanel Spacing="5">
@@ -55,7 +60,7 @@
                 <TextBox Text="{Binding ViewerUrl}" Watermark="https://pump.example.com"
                          ToolTip.Tip="جایی که index.html سِرو می‌شود. کیو‌آرِ هر قرض‌دار از این ساخته می‌شود." />
                 <TextBlock Classes="muted" TextWrapping="Wrap"
-                           Text="⚠️ این با نشانیِ بالا یکی نیست. کد را به مشتری می‌دهید، اسکن می‌کند، گوشی‌اش این صفحه را باز می‌کند و صفحه خودش داده را از سرورِ بالا می‌گیرد. اگر خالی بماند، کیو‌آر ساخته نمی‌شود." />
+                           Text="⚠️ این با نشانیِ بالا یکی نیست. کد را به مشتری می‌دهید، اسکن می‌کند، گوشی‌اش این صفحه را باز می‌کند و صفحه خودش داده را از سرورِ بالا می‌گیرد. نشانیِ سرور و رمز هم خودکار داخلِ همان کیو‌آر می‌روند، وگرنه گوشیِ مشتری نمی‌داند به کجا وصل شود. اگر این کادر خالی بماند، کیو‌آر ساخته نمی‌شود." />
               </StackPanel>
             </StackPanel>
           </StackPanel>
