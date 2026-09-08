@@ -329,11 +329,14 @@
             سه‌چهارم به رنگِ خودِ جدول نزدیک، و عملاً نامرئی. سایت خودِ
             ‎var(‑‑border)‎ را می‌گذارد، نه نسخهٔ کم‌رنگش. پس ‎Pump.Border‎.
 
-         ⚠️ این را دوباره «افقیِ تنها» نکنید و به ‎Pump.GridLine‎ برنگردانید.
          ۳) و از امروز رنگ و ضخامتش دیگر همین‌جا سفت نوشته نمی‌شود: هر دو از
             «تنظیمات ← ظاهرِ جدول‌ها» می‌آیند (‎Pump.Table.…‎ در
             ‎Themes/TableStyle.cs‎). خواستهٔ صریحِ صاحب ریپو بود:
-            «نباید Hard-coded باشد؛ در تنظیمات، و روی همهٔ جدول‌ها.» -->
+            «نباید Hard-coded باشد؛ در تنظیمات، و روی همهٔ جدول‌ها.»
+            پیش‌فرضش همان رنگِ ‎Pump.Border‎ی تم است، پس ظاهرِ امروز عوض نمی‌شود.
+
+         ⚠️ این را دوباره «افقیِ تنها» نکنید، به ‎Pump.GridLine‎ برنگردانید، و
+            رنگ/ضخامت را دوباره این‌جا ثابت ننویسید. -->
     <Setter Property="GridLinesVisibility" Value="All" />
     <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource Pump.Table.Border}" />
     <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource Pump.Table.Border}" />
