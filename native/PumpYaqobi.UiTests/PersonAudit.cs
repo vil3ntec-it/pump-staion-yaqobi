@@ -130,12 +130,22 @@ internal static class PersonAudit
             // پدرِ پنهان یعنی خودش هم دیده نمی‌شود — ‎IsVisible‎ی خودش کافی نیست
             if (!c.IsEffectivelyVisible) continue;
 
-            var p = c.TranslatePoint(new Point(0, 0), win);
-            if (p is null) continue;
+            // ⚠️ داخلِ جدول را نمی‌سنجیم: خودِ جدول اسکرولِ افقی دارد و ستونِ
+            // بیرونِ قاب همان‌قدر طبیعی است که در ‎overflow-x:auto‎ی سایت.
+            if (c.GetVisualAncestors().OfType<DataGrid>().Any()) continue;
+
+            // ⚠️ کلِ پنجره ‎RightToLeft‎ است و آوالونیا با آینه‌کردن می‌چیندش،
+            // پس نقطهٔ ‎(0,0)‎ی محلیِ یک کنترل به لبهٔ **راستش** می‌افتد. اگر
+            // فقط همان را بگیریم و پهنا را رویش بیفزاییم، هر کنترلِ سالم هم
+            // «بیرونِ پنجره» گزارش می‌شود (همان چیزی که بارِ اول شد). پس هر دو
+            // گوشه ترجمه می‌شود و کوچک‌تر/بزرگ‌تر برداشته می‌شود.
+            var a = c.TranslatePoint(new Point(0, 0), win);
+            var b = c.TranslatePoint(new Point(c.Bounds.Width, 0), win);
+            if (a is null || b is null) continue;
 
             seen++;
-            var left = p.Value.X;
-            var right = left + c.Bounds.Width;
+            var left = Math.Min(a.Value.X, b.Value.X);
+            var right = Math.Max(a.Value.X, b.Value.X);
             if (left < -0.5 || right > W + 0.5)
                 outside.Add($"{Label(c)} [x {left:0}…{right:0}]");
         }
