@@ -941,11 +941,15 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
         // خودش اسکن می‌کند و حسابش را زنده می‌بیند — دادهٔ آن صفحه از همین
         // سرورِ خانگی می‌آید. پس نشانی باید کامل باشد، نه فقط تکهٔ ‎#roview…‎؛
         // با تکهٔ تنها، گوشیِ مشتری چیزی برای باز کردن ندارد.
-        var server = _host.Settings.GetString(SettingsKeys.ServerUrl);
-        var link = AcctLink.FullUrl(server, Entity.Id, sub);
+        // ⚠️ نشانیِ **صفحه**، نه سرورِ هم‌گام‌سازی. در نسخهٔ وب هم این دو جدا
+        // هستند: SELF_HOST_URL سرورِ دادهٔ وب‌سوکت است، ولی کیو‌آر از نشانیِ
+        // خودِ صفحه ساخته می‌شود (window.location.href). گوشیِ مشتری صفحه را
+        // باز می‌کند و آن صفحه است که داده را از سرور می‌گیرد.
+        var page = _host.Settings.GetString(SettingsKeys.ViewerUrl);
+        var link = AcctLink.FullUrl(page, Entity.Id, sub);
         if (link is null)
         {
-            _host.Toast("اول در «تنظیمات › نشانیِ سرور» نشانیِ سرورِ خانگی را بنویسید — "
+            _host.Toast("اول در «تنظیمات › نشانیِ صفحهٔ حساب» نشانیِ صفحه را بنویسید — "
                         + "بی آن، مشتری با اسکنِ کیو‌آر جایی برای باز کردن ندارد",
                         ToastKind.Warn);
             return;

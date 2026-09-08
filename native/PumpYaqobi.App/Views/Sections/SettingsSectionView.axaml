@@ -36,15 +36,27 @@
               </StackPanel>
             </UniformGrid>
 
-            <!-- نشانیِ سرورِ خانگی — کیو‌آرِ هر قرض‌دار از همین ساخته می‌شود.
-                 مشتری اسکن می‌کند، گوشی‌اش این نشانی را باز می‌کند و حسابش را
-                 زنده می‌بیند. تا خالی باشد، کیو‌آر ساخته نمی‌شود. -->
-            <StackPanel Margin="14,0,14,14" Spacing="5">
-              <TextBlock Text="🌐 نشانیِ سرور (دامنه)" Classes="label" />
-              <TextBox Text="{Binding ServerUrl}" Watermark="https://pump.example.com"
-                       ToolTip.Tip="همان جایی که صفحهٔ حساب سِرو می‌شود. کیو‌آرِ هر قرض‌دار از این ساخته می‌شود." />
-              <TextBlock Classes="muted" TextWrapping="Wrap"
-                         Text="کیو‌آرِ هر قرض‌دار از همین نشانی ساخته می‌شود: کد را به مشتری می‌دهید، اسکن می‌کند و حسابش را زنده می‌بیند." />
+            <!-- ⚠️ دو نشانیِ **جدا**. در نسخهٔ وب هم جدا بودند و یکی گرفتنشان
+                 همان اشتباهی است که کیو‌آر را از کار می‌اندازد:
+                   • سرورِ داده  = جایی که برنامه داده می‌گیرد و می‌فرستد
+                     (همتای SELF_HOST_URL؛ وب‌سوکت).
+                   • صفحهٔ حساب = جایی که index.html سِرو می‌شود. کیو‌آر از
+                     همین ساخته می‌شود، چون گوشیِ مشتری یک **صفحه** باز می‌کند
+                     نه یک سرورِ داده. -->
+            <StackPanel Margin="14,0,14,14" Spacing="10">
+              <StackPanel Spacing="5">
+                <TextBlock Text="🔄 نشانیِ سرورِ هم‌گام‌سازی (داده)" Classes="label" />
+                <TextBox Text="{Binding ServerUrl}" Watermark="https://sync.example.com"
+                         ToolTip.Tip="سرورِ خانگیِ خودتان — برنامه از این‌جا داده می‌گیرد و می‌فرستد." />
+              </StackPanel>
+
+              <StackPanel Spacing="5">
+                <TextBlock Text="🌐 نشانیِ صفحهٔ حساب (برای کیو‌آر)" Classes="label" />
+                <TextBox Text="{Binding ViewerUrl}" Watermark="https://pump.example.com"
+                         ToolTip.Tip="جایی که index.html سِرو می‌شود. کیو‌آرِ هر قرض‌دار از این ساخته می‌شود." />
+                <TextBlock Classes="muted" TextWrapping="Wrap"
+                           Text="⚠️ این با نشانیِ بالا یکی نیست. کد را به مشتری می‌دهید، اسکن می‌کند، گوشی‌اش این صفحه را باز می‌کند و صفحه خودش داده را از سرورِ بالا می‌گیرد. اگر خالی بماند، کیو‌آر ساخته نمی‌شود." />
+              </StackPanel>
             </StackPanel>
           </StackPanel>
         </Border>

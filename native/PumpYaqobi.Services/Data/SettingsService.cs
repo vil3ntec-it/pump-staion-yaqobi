@@ -26,7 +26,23 @@ public sealed class SettingsService : IUnionRateProvider
     public const string BuyPerLiterDiesel = "buyPerLiter_diesel";
     public const string LowStockThreshold = "lowStockThreshold";
     public const string LowStockPhone = "lowStockPhone";
+    /// <summary>نشانیِ سرورِ هم‌گام‌سازی — همتای ‎SELF_HOST_URL‎ی نسخهٔ وب (داده).</summary>
     public const string ServerUrl = "serverUrl";
+
+    /// <summary>
+    /// نشانیِ <b>صفحهٔ حساب</b> — جایی که ‎index.html‎ سِرو می‌شود.
+    ///
+    /// ⚠️ این با ‎ServerUrl‎ یکی نیست و نباید یکی گرفته شود. در نسخهٔ وب:
+    ///   • ‎SELF_HOST_URL‎ سرورِ دادهٔ وب‌سوکت است (هم‌گام‌سازی)؛
+    ///   • ولی کیو‌آرِ حساب از نشانیِ <b>خودِ صفحه</b> ساخته می‌شود:
+    ///         const baseUrl = window.location.href.split('#')[0];
+    ///         const viewUrl = baseUrl + _acctHash(...);
+    ///
+    /// برنامهٔ نیتیو صفحه‌ای ندارد که نشانیِ خودش را بدهد، پس این‌جا نوشته
+    /// می‌شود. اگر خالی باشد کیو‌آر ساخته نمی‌شود — نشانیِ نصفه روی گوشیِ
+    /// مشتری هیچ کاری نمی‌کند.
+    /// </summary>
+    public const string ViewerUrl = "viewerUrl";
     public const string SyncCode = "syncCode";
 
     private readonly PumpDbFactory _dbf;
