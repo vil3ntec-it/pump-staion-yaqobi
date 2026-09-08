@@ -329,10 +329,14 @@
             سه‌چهارم به رنگِ خودِ جدول نزدیک، و عملاً نامرئی. سایت خودِ
             ‎var(‑‑border)‎ را می‌گذارد، نه نسخهٔ کم‌رنگش. پس ‎Pump.Border‎.
 
-         ⚠️ این را دوباره «افقیِ تنها» نکنید و به ‎Pump.GridLine‎ برنگردانید. -->
+         ⚠️ این را دوباره «افقیِ تنها» نکنید و به ‎Pump.GridLine‎ برنگردانید.
+         ۳) و از امروز رنگ و ضخامتش دیگر همین‌جا سفت نوشته نمی‌شود: هر دو از
+            «تنظیمات ← ظاهرِ جدول‌ها» می‌آیند (‎Pump.Table.…‎ در
+            ‎Themes/TableStyle.cs‎). خواستهٔ صریحِ صاحب ریپو بود:
+            «نباید Hard-coded باشد؛ در تنظیمات، و روی همهٔ جدول‌ها.» -->
     <Setter Property="GridLinesVisibility" Value="All" />
-    <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource Pump.Border}" />
-    <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource Pump.Border}" />
+    <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource Pump.Table.Border}" />
+    <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource Pump.Table.Border}" />
     <Setter Property="RowHeight" Value="44" />
     <Setter Property="HeadersVisibility" Value="Column" />
   </Style>
@@ -368,10 +372,28 @@
     <Setter Property="Padding" Value="8,9" />
     <Setter Property="MinHeight" Value="44" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
-    <Setter Property="SeparatorBrush" Value="{DynamicResource Pump.Border}" />
-    <!-- ‎border-bottom:2px solid var(‑‑border)‎ی ‎.xls-tbl th‎ -->
-    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Border}" />
-    <Setter Property="BorderThickness" Value="0,0,0,2" />
+    <Setter Property="SeparatorBrush" Value="{DynamicResource Pump.Table.Border}" />
+    <!-- ‎border-bottom:2px solid var(‑‑border)‎ی ‎.xls-tbl th‎ — ضخامتش از تنظیمات -->
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Table.Border}" />
+    <Setter Property="BorderThickness" Value="{DynamicResource Pump.Table.HeadUnderline}" />
+  </Style>
+
+  <!-- ══ ضخامتِ خودِ خط‌ها ═══════════════════════════════════════════════════
+       ‎DataGrid‎ رنگِ خط‌ها را از ‎HorizontalGridLinesBrush‎/‎Vertical…‎ می‌گیرد
+       ولی ضخامتشان در قالبِ خودش ۱ پیکسل نوشته شده. آن سه مستطیل این‌ها
+       هستند و ضخامتشان از «تنظیمات ← ظاهرِ جدول‌ها» می‌آید:
+
+         ‎PART_BottomGridLine‎  خطِ افقیِ زیرِ هر ردیف
+         ‎PART_RightGridLine‎   خطِ عمودیِ کنارِ هر خانه
+         ‎VerticalSeparator‎    جداکنندهٔ سربرگ‌ها -->
+  <Style Selector="DataGridRow /template/ Rectangle#PART_BottomGridLine">
+    <Setter Property="Height" Value="{DynamicResource Pump.Table.Line}" />
+  </Style>
+  <Style Selector="DataGridCell /template/ Rectangle#PART_RightGridLine">
+    <Setter Property="Width" Value="{DynamicResource Pump.Table.Line}" />
+  </Style>
+  <Style Selector="DataGridColumnHeader /template/ Rectangle#VerticalSeparator">
+    <Setter Property="Width" Value="{DynamicResource Pump.Table.HeadLine}" />
   </Style>
   <Style Selector="DataGridCell">
     <Setter Property="Padding" Value="10,4" />
@@ -438,6 +460,12 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
+  </Style>
+  <!-- ══ خانه‌های داخلِ کادرِ چندانتخابی ═══════════════════════════════════
+       ‎DataGrid‎ فقط «ردیف» را انتخاب می‌کند. کادرِ خانه‌به‌خانه‌ای که با
+       ‎Shift+فلش‎ ساخته می‌شود، از ‎ExcelGrid.PaintRange‎ این کلاس را می‌گیرد. -->
+  <Style Selector="DataGridCell.rangesel">
+    <Setter Property="Background" Value="{DynamicResource Pump.Selected}" />
   </Style>
   <Style Selector="DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">
     <Setter Property="Fill" Value="{DynamicResource Pump.Hover}" />
@@ -994,31 +1022,34 @@
     <Setter Property="Template">
       <ControlTemplate>
         <Border Background="{DynamicResource Pump.Panel}"
-                BorderBrush="{DynamicResource Pump.Border}"
-                BorderThickness="1,2,1,1"
-                CornerRadius="0,0,10,10" Padding="12,9">
-          <StackPanel Orientation="Horizontal" Spacing="18">
-            <TextBlock Text="{TemplateBinding Title}" FontWeight="ExtraBold" FontSize="14"
-                       VerticalAlignment="Center"
+                BorderBrush="{DynamicResource Pump.Table.Border}"
+                BorderThickness="{DynamicResource Pump.Table.SumBorder}"
+                CornerRadius="0,0,10,10" Padding="0">
+          <Panel ClipToBounds="True">
+            <!-- «جمله» روی خانهٔ اولِ ردیف می‌نشیند، درست مثلِ ‎tfoot‎ی سایت -->
+            <TextBlock Text="{TemplateBinding Title}" FontWeight="ExtraBold" FontSize="13"
+                       VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0"
                        Foreground="{DynamicResource Pump.Text}" />
             <ItemsControl ItemsSource="{TemplateBinding ItemsSource}" x:CompileBindings="False">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
-                  <WrapPanel Orientation="Horizontal" />
+                  <c:TotalsStrip />
                 </ItemsPanelTemplate>
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <StackPanel Spacing="1" Margin="0,0,20,0" MinWidth="76">
-                    <TextBlock Text="{Binding Label}" FontSize="11"
+                  <StackPanel Spacing="1" Margin="4,9">
+                    <TextBlock Text="{Binding Label}" FontSize="11" TextAlignment="Center"
+                               TextTrimming="CharacterEllipsis"
                                Foreground="{DynamicResource Pump.Muted}" />
                     <TextBlock Text="{Binding Value}" FontWeight="ExtraBold" FontSize="14"
+                               TextAlignment="Center"
                                Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
                   </StackPanel>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-          </StackPanel>
+          </Panel>
         </Border>
       </ControlTemplate>
     </Setter>

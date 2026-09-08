@@ -241,33 +241,97 @@ public class ExcelGrid : DataGrid
         _spread = true;
     }
 
+
     // ══════════════════════════════════════════════════════════════════════
-    //  ناوبریِ صفحه‌کلید — مو‌به‌مو همان چیزی که سایت می‌کند
+    //  کنترلرِ مرکزیِ صفحه‌کلیدِ جدول‌ها — سه حالتِ صریح
     // ══════════════════════════════════════════════════════════════════════
     //
-    // گزارشِ صاحب ریپو، سه تا:
-    //   «الان با تب نمی‌شود نوع تیل را عوض کرد، نوع و واحدِ تیل یا پول را
-    //    تغییر داد.»
-    //   «کلیدهای چپ و راست برعکس کار می‌کنند.»
-    //   «موقعِ تایپ هم نمی‌روند سمتِ دیگر.»
+    //  خواستهٔ صاحب ریپو (بندِ ۱ و ۲ِ دستورِ تازه): «یک سیستم مرکزی برای همهٔ
+    //  جدول‌ها؛ نه هر جدول یک رفتار. سه حالت داشته باشد و رفتارِ کلیدها در هر
+    //  حالت روشن باشد.» پیش از این هر چیزی روی حدس بود — مثلاً «اگر کُرسر
+    //  وسطِ متن است یعنی حتماً در حالِ ویرایشیم». آن حدس در لبهٔ متن می‌شکست و
+    //  همان «موقعِ تایپ می‌پرد به خانهٔ دیگر»ی بود که گزارش شد.
     //
-    // سایت (خطِ ۵۴۹۳۴ به بعدِ ‎index.html‎) این‌ها را چنین حل کرده:
+    //  حالا حالت از خودِ جدول پرسیده می‌شود، نه از جای کُرسر:
     //
-    //   • ‎Tab‎ روی ‎radio‎ یا ‎SELECT‎ ⇒ مقدارش عوض می‌شود، فوکوس جابه‌جا
-    //     نمی‌شود (‎_toggleControl‎ + ‎e.preventDefault()‎). ‎Enter‎ هم همان.
-    //   • چپ/راست ⇒ ‎_pickInDirection‎ که **هندسی** است: دنبالِ کنترلی
-    //     می‌گردد که مرکزش واقعاً در همان سمت باشد (‎dx < 0‎ برای چپ). پس
-    //     کلیدِ چپ همیشه چپ می‌برد، چه صفحه راست‌به‌چپ باشد چه نه.
-    //   • در کادرِ متنی، اگر کُرسر **وسطِ** متن است (‎s === e2 && s > 0 &&
-    //     s < len‎) چپ/راست ناوبری نمی‌کند و متن را ویرایش می‌کند.
+    //  ┌ SELECTED ───────────────────── یک خانه انتخاب است، ویرایش باز نیست ┐
+    //  │ ← ↑ ↓ →   خانه‌به‌خانه جابه‌جا می‌شود (جهتِ دیداری، نه ایندکسِ منطقی) │
+    //  │ Tab       خانهٔ بعدی · Shift+Tab خانهٔ پیشین (ته ردیف ⇒ ردیفِ بعد)  │
+    //  │ Enter     یک ردیف پایین · Shift+Enter یک ردیف بالا                │
+    //  │ F2/تایپ   می‌رود به EDITING                                        │
+    //  │ Delete    خانه‌های انتخابی را خالی می‌کند                          │
+    //  │ Shift+←→↑↓ می‌رود به MULTI                                         │
+    //  └────────────────────────────────────────────────────────────────────┘
+    //  ┌ EDITING ─────────────────────────── خانه باز است و کادر تایپ دارد ┐
+    //  │ ← →       فقط کُرسرِ داخلِ متن — هرگز ناوبری (بندِ صریحِ دستور)     │
+    //  │ ↑ ↓       هیچ — تا عددِ نیمه‌تایپ‌شده با یک فلش نپرد               │
+    //  │ Enter     ذخیره و یک ردیف پایین                                   │
+    //  │ Tab       ذخیره و خانهٔ بعدی                                       │
+    //  │ Esc       لغو؛ مقدارِ پیشین برمی‌گردد و به SELECTED برمی‌گردیم      │
+    //  └────────────────────────────────────────────────────────────────────┘
+    //  ┌ MULTI ──────────────────── چند خانه/چند ردیف با Shift انتخاب شده ┐
+    //  │ Shift+↑↓  ردیف‌ها را می‌گستراند (انتخابِ خودِ DataGrid)             │
+    //  │ Shift+←→  ستون‌ها را می‌گستراند (کادرِ رنگیِ ‎.rangesel‎)            │
+    //  │ Delete    همهٔ خانه‌های داخلِ کادر را خالی می‌کند                   │
+    //  │ Esc / کلیک / فلشِ تنها  ⇒ برمی‌گردد به SELECTED                    │
+    //  └────────────────────────────────────────────────────────────────────┘
     //
-    // ‎DataGrid‎ی آوالونیا هیچ‌کدام را نمی‌کند: ‎Tab‎ فقط فوکوس می‌بَرد، و
-    // چپ/راست را با **ایندکسِ منطقیِ ستون** حساب می‌کند — که در چیدمانِ
-    // راست‌به‌چپ آینه می‌شود و دقیقاً همان «برعکس»ی است که گزارش شد.
+    //  ⚠️ یک استثناء که عمدی است و باید بماند: روی ستونی که ویرایشش رادیویی
+    //  یا کشویی است («نوع تیل»، «نوع»، «واحد»)، ‎Tab‎ و ‎Enter‎ مقدار را یک
+    //  پله جلو می‌برند و فوکوس را جابه‌جا نمی‌کنند — هم سایت همین کار را
+    //  می‌کند (‎_toggleControl‎، خطِ ۵۴۹۳۴) و هم صاحب ریپو صریح خواسته بود
+    //  «با تب بشود نوع تیل را عوض کرد».
+
+    /// <summary>سه حالتِ جدول — رفتارِ هر کلید از روی همین یکی تصمیم گرفته می‌شود.</summary>
+    public enum GridMode
+    {
+        /// <summary>یک خانه انتخاب است و ویرایش باز نیست.</summary>
+        Selected,
+        /// <summary>خانه باز است و کادرِ تایپ دارد.</summary>
+        Editing,
+        /// <summary>بیش از یک خانه یا ردیف با ‎Shift‎ انتخاب شده.</summary>
+        MultiSelect
+    }
+
+    /// <summary>ویرایش باز است؟ از خودِ رویدادهای جدول خوانده می‌شود، نه از حدس.</summary>
+    private bool _editing;
+
+    private bool _wired;
+
+    /// <summary>سرِ کادرِ چندانتخابی (ستونی که ‎Shift‎ از آن شروع شد) و تهِ آن.</summary>
+    private int _colAnchor = -1, _colHead = -1;
+
+    /// <summary>کادرِ رنگی روی صفحه هست؟ تا وقتی نیست، هر چیدمان بی‌خود رنگ نزند.</summary>
+    private bool _painted;
+
+    /// <summary>حالتِ همین لحظهٔ جدول.</summary>
+    public GridMode Mode =>
+        _editing ? GridMode.Editing
+        : (SelectedItems.Count > 1 || (_colAnchor >= 0 && _colHead != _colAnchor))
+            ? GridMode.MultiSelect
+            : GridMode.Selected;
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        if (_wired) return;
+        _wired = true;
+        // تنها منبعِ درستِ «الان در حال ویرایشیم» — خودِ جدول می‌گوید.
+        PreparingCellForEdit += (_, _) => _editing = true;
+        CellEditEnded += (_, _) => _editing = false;
+    }
 
     /// <summary>کنترلی که همین حالا فوکوس دارد.</summary>
     private Control? Focused =>
         TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() as Control;
+
+    /// <summary>ستون‌های دیده‌شونده به ترتیبِ دیداری.</summary>
+    private List<DataGridColumn> VisibleCols() =>
+        Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).ToList();
+
+    /// <summary>شمارهٔ ستونِ جاری در همان ترتیب (‎-1‎ یعنی هیچ).</summary>
+    private int CurIndex(List<DataGridColumn> cols) =>
+        CurrentColumn is null ? (cols.Count > 0 ? 0 : -1) : cols.IndexOf(CurrentColumn);
 
     /// <summary>
     /// ‎_toggleControl‎ — مقدارِ کشویی یا رادیوییِ خانه را یک پله جلو می‌برد.
@@ -299,68 +363,227 @@ public class ExcelGrid : DataGrid
     }
 
     /// <summary>
-    /// کُرسر وسطِ متنِ یک کادرِ تایپ است؟ آن‌وقت چپ/راست مالِ خودِ متن است،
-    /// نه ناوبریِ جدول — همان شرطِ ‎s === e2 && s > 0 && s < len‎ی سایت.
+    /// ستونی که ویرایشش کشویی یا رادیویی است — «نوع تیل»، «نوع» (قرض/مصرف)،
+    /// «واحد» (تیل/پول) و مانندِ آن‌ها.
     /// </summary>
-    private bool CaretInsideText()
-    {
-        if (Focused is not TextBox tb) return false;
-        var len = (tb.Text ?? "").Length;
-        return tb.SelectionStart == tb.SelectionEnd
-            && tb.SelectionStart > 0 && tb.SelectionStart < len;
-    }
+    private static bool IsToggleColumn(DataGridColumn? col) =>
+        col is DataGridTemplateColumn t && t.CellEditingTemplate is not null;
 
-    /// <summary>ستونِ جاری را ‎step‎ خانه جابه‌جا می‌کند (بر اساسِ ترتیبِ دیداری).</summary>
-    private bool MoveColumn(int step)
+    // ── جابه‌جاییِ خانه ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// ستونِ جاری را ‎step‎ خانه جابه‌جا می‌کند (ترتیبِ دیداری).
+    /// ‎extend‎ یعنی ‎Shift‎ گرفته شده: سرِ کادر سرِ جایش می‌ماند و فقط ته آن می‌رود.
+    /// </summary>
+    private bool MoveColumn(int step, bool extend = false)
     {
-        var cols = Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).ToList();
+        var cols = VisibleCols();
         if (cols.Count == 0) return false;
-        var cur = CurrentColumn is null ? 0 : cols.IndexOf(CurrentColumn);
+        var cur = CurIndex(cols);
         if (cur < 0) cur = 0;
         var next = Math.Clamp(cur + step, 0, cols.Count - 1);
-        if (next == cur) return false;
+        if (next == cur && !extend) return false;
 
         CurrentColumn = cols[next];
+        if (extend)
+        {
+            if (_colAnchor < 0) _colAnchor = cur;
+            _colHead = next;
+        }
+        else ResetRange(next);
+
         var item = SelectedItem ?? (ItemsSource as System.Collections.IEnumerable)?.Cast<object>().FirstOrDefault();
         if (item is not null) ScrollIntoView(item, cols[next]);
+        PaintRange();
         return true;
     }
 
+    /// <summary>کادرِ چندانتخابی جمع می‌شود و روی همان یک ستون می‌نشیند.</summary>
+    private void ResetRange(int col)
+    {
+        _colAnchor = _colHead = col;
+    }
+
+    /// <summary>
+    /// ══ Tab: خانهٔ بعدی، و ته ردیف ⇒ سرِ ردیفِ بعد ═══════════════════════
+    /// همان کاری که اکسل می‌کند. اگر ویرایش باز باشد اول ذخیره می‌شود.
+    /// </summary>
+    private void MoveCell(int step)
+    {
+        if (_editing) CommitEdit(DataGridEditingUnit.Cell, true);
+        var cols = VisibleCols();
+        if (cols.Count == 0) return;
+        var cur = CurIndex(cols);
+        if (cur < 0) cur = 0;
+        var next = cur + step;
+
+        if (next >= cols.Count) { MoveRow(+1); next = 0; }
+        else if (next < 0) { MoveRow(-1); next = cols.Count - 1; }
+
+        CurrentColumn = cols[next];
+        ResetRange(next);
+        var item = SelectedItem;
+        if (item is not null) ScrollIntoView(item, cols[next]);
+        PaintRange();
+    }
+
+    // ── کادرِ رنگیِ چندانتخابی ────────────────────────────────────────────
+    //
+    // ‎DataGrid‎ی آوالونیا فقط «ردیف» را انتخاب می‌کند و خبری از انتخابِ
+    // خانه‌به‌خانه ندارد. پس ستون‌های داخلِ کادر خودمان رنگ می‌شوند: به هر
+    // خانهٔ داخلِ کادر کلاسِ ‎rangesel‎ داده می‌شود و رنگش در ‎Controls.axaml‎
+    // تعریف شده. شمارهٔ ستونِ هر خانه از جای دیداری‌اش خوانده می‌شود
+    // (‎Bounds.X‎ داخلِ ردیف) چون خودِ ‎DataGridCell‎ ستونش را بیرون نمی‌دهد.
+    // ⚠️ چیدمانِ راست‌به‌چپ در آوالونیا یک «آینهٔ رسم» است، نه چیدمانِ وارونه؛
+    // پس ‎Bounds.X‎ در هر دو جهت همان ترتیبِ ستون‌هاست و نباید برعکس شود.
+    private void PaintRange()
+    {
+        var lo = Math.Min(_colAnchor, _colHead);
+        var hi = Math.Max(_colAnchor, _colHead);
+        var many = _colAnchor >= 0 && hi > lo;
+        if (!many && !_painted) return;      // چیزی رنگی نیست و نبوده — کاری نکن
+        _painted = many;
+
+        try
+        {
+            foreach (var row in this.GetVisualDescendants().OfType<DataGridRow>())
+            {
+                var cells = row.GetVisualDescendants().OfType<DataGridCell>()
+                               .OrderBy(c => c.Bounds.X).ToList();
+                for (var i = 0; i < cells.Count; i++)
+                    cells[i].Classes.Set("rangesel", many && row.IsSelected && i >= lo && i <= hi);
+            }
+        }
+        catch { /* رنگ فقط تزیین است — هرگز نباید جلوی کار را بگیرد */ }
+    }
+
+    /// <summary>کلیک یعنی «از نو» — کادرِ چندانتخابی جمع می‌شود.</summary>
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        if (!e.KeyModifiers.HasFlag(KeyModifiers.Shift))
+        {
+            _colAnchor = _colHead = -1;
+            PaintRange();
+        }
+        base.OnPointerPressed(e);
+    }
+
+    // ── خالی کردنِ خانه‌های انتخابی ───────────────────────────────────────
+    //
+    // ستون‌های این برنامه همه به یک خاصیتِ رشته‌ایِ ‎…Text‎ بسته‌اند (همان‌ها که
+    // ‎MoneyOrBlank‎ را می‌سازند)، پس «خالی کردن» یعنی نوشتنِ رشتهٔ خالی در
+    // همان خاصیت — دقیقاً همان چیزی که اگر کاربر خودش خانه را پاک می‌کرد
+    // اتفاق می‌افتاد. ستونِ خواندنی و ستونِ بی‌اتصال دست نمی‌خورند.
+    private static string? PathOf(DataGridColumn? col) =>
+        (col as DataGridBoundColumn)?.Binding is Avalonia.Data.Binding b ? b.Path : null;
+
+    private bool ClearSelectedCells()
+    {
+        if (IsReadOnly) return false;
+        var cols = VisibleCols();
+        if (cols.Count == 0) return false;
+
+        var cur = CurIndex(cols);
+        var lo = _colAnchor < 0 ? cur : Math.Min(_colAnchor, _colHead);
+        var hi = _colAnchor < 0 ? cur : Math.Max(_colAnchor, _colHead);
+        if (lo < 0 || hi < 0) return false;
+        lo = Math.Max(0, lo); hi = Math.Min(cols.Count - 1, hi);
+
+        var rows = SelectedItems.Cast<object>().Where(o => o is not null).ToList();
+        if (rows.Count == 0 && SelectedItem is not null) rows.Add(SelectedItem);
+        if (rows.Count == 0) return false;
+
+        var touched = false;
+        foreach (var item in rows)
+            for (var i = lo; i <= hi; i++)
+            {
+                if (cols[i].IsReadOnly) continue;
+                var path = PathOf(cols[i]);
+                if (string.IsNullOrEmpty(path)) continue;
+                var p = item.GetType().GetProperty(path);
+                if (p is null || !p.CanWrite || p.PropertyType != typeof(string)) continue;
+                try { p.SetValue(item, ""); touched = true; } catch { }
+            }
+        return touched;
+    }
+
+    // ── خودِ کلیدها ───────────────────────────────────────────────────────
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
-        // ── Tab: روی خانهٔ کشویی/رادیویی مقدار را عوض می‌کند، نه فوکوس را ──
-        if (e.Key == Key.Tab && !e.KeyModifiers.HasFlag(KeyModifiers.Shift)
-            && IsToggleColumn(CurrentColumn) && ToggleCell())
+        var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+        var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+
+        // ── Esc: در هر حالتی «برگرد سرِ جای اول» ──────────────────────────
+        if (e.Key == Key.Escape)
+        {
+            if (_editing) CancelEdit(DataGridEditingUnit.Cell);
+            _colAnchor = _colHead = -1;
+            PaintRange();
+            e.Handled = true;
+            return;
+        }
+
+        // ── حالتِ EDITING: فلش‌ها فقط مالِ متن‌اند ─────────────────────────
+        // بندِ صریحِ دستور: «در حالت EDITING، کلیدهای جهت‌دار فقط داخل همان
+        // خانه حرکت کنند و هرگز به خانهٔ دیگر نپرند.» پس این‌جا بسته می‌شوند
+        // و کادرِ تایپ خودش هر کاری با کُرسر دارد می‌کند.
+        if (_editing && e.Key is Key.Left or Key.Right or Key.Up or Key.Down)
+            return;   // ‎Handled‎ نمی‌شود تا خودِ ‎TextBox‎ کُرسر را ببرد
+
+        // ── Tab روی خانهٔ کشویی/رادیویی: مقدار عوض می‌شود، نه فوکوس ────────
+        if (e.Key == Key.Tab && !shift && IsToggleColumn(CurrentColumn) && ToggleCell())
         {
             e.Handled = true;
             return;
         }
 
-        // ── چپ/راست: جهتِ **دیداری**، نه ایندکسِ منطقیِ ستون ──
-        if (e.Key is Key.Left or Key.Right)
-        {
-            if (CaretInsideText()) return;            // وسطِ متن ⇒ ویرایش، نه ناوبری
-
-            // در چیدمانِ راست‌به‌چپ، ستونِ «بعدی» سمتِ چپ است. پس کلیدِ چپ
-            // باید ایندکس را جلو ببرد و کلیدِ راست عقب — وارونهٔ حالتِ چپ‌به‌راست.
-            var rtl = FlowDirection == Avalonia.Media.FlowDirection.RightToLeft;
-            var step = (e.Key == Key.Left) == rtl ? +1 : -1;
-            if (MoveColumn(step)) { e.Handled = true; return; }
-            e.Handled = true;                          // لبهٔ جدول: هیچ، ولی نپرد
-            return;
-        }
-
         switch (e.Key)
         {
+            // ── Tab / Shift+Tab: خانهٔ بعدی و پیشین ───────────────────────
+            case Key.Tab:
+                MoveCell(shift ? -1 : +1);
+                e.Handled = true;
+                return;
+
+            // ── چپ/راست: جهتِ دیداری، نه ایندکسِ منطقیِ ستون ───────────────
+            // در چیدمانِ راست‌به‌چپ ستونِ «بعدی» سمتِ چپ است، پس کلیدِ چپ
+            // ایندکس را جلو می‌برد. با ‎Shift‎ کادرِ چندانتخابی گسترده می‌شود.
+            case Key.Left:
+            case Key.Right:
+            {
+                var rtl = FlowDirection == Avalonia.Media.FlowDirection.RightToLeft;
+                var step = (e.Key == Key.Left) == rtl ? +1 : -1;
+                MoveColumn(step, shift);
+                e.Handled = true;
+                return;
+            }
+
+            // ── بالا/پایین: خودِ جدول می‌بَرد (با ‎Shift‎ چندردیفی) ─────────
+            // فقط کادرِ ستونی جمع می‌شود اگر ‎Shift‎ گرفته نشده باشد.
+            case Key.Up:
+            case Key.Down:
+                if (!shift && _colAnchor >= 0) { ResetRange(CurIndex(VisibleCols())); PaintRange(); }
+                break;
+
+            // ── Home/End: سرِ ردیف و ته ردیف (با ‎Ctrl‎: سرِ جدول و ته جدول) ─
+            case Key.Home when !ctrl:
+                MoveColumn(-VisibleCols().Count, shift);
+                e.Handled = true;
+                return;
+            case Key.End when !ctrl:
+                MoveColumn(+VisibleCols().Count, shift);
+                e.Handled = true;
+                return;
+
             // Enter روی خانهٔ کشویی/رادیویی هم مقدار را عوض می‌کند — مثلِ سایت
             case Key.Enter when !IsReadOnly && IsToggleColumn(CurrentColumn) && ToggleCell():
                 e.Handled = true;
                 return;
 
             case Key.Enter when !IsReadOnly:
-                // ویرایشِ باز را ببند، بعد یک ردیف بالا/پایین برو
                 CommitEdit(DataGridEditingUnit.Cell, true);
-                MoveRow(e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? -1 : +1);
+                MoveRow(shift ? -1 : +1);
                 e.Handled = true;
                 return;
 
@@ -369,22 +592,13 @@ public class ExcelGrid : DataGrid
                 e.Handled = true;
                 return;
 
-            case Key.Escape:
-                CancelEdit(DataGridEditingUnit.Cell);
+            case Key.Delete when !IsReadOnly && ClearSelectedCells():
                 e.Handled = true;
                 return;
         }
 
         base.OnKeyDown(e);
     }
-
-    /// <summary>
-    /// ستونی که ویرایشش کشویی یا رادیویی است — «نوع تیل»، «نوع» (قرض/مصرف)،
-    /// «واحد» (تیل/پول) و مانندِ آن‌ها. فقط روی این‌هاست که ‎Tab‎ و ‎Enter‎
-    /// مقدار را عوض می‌کنند؛ روی خانه‌های عددی و متنی رفتارشان عادی است.
-    /// </summary>
-    private static bool IsToggleColumn(DataGridColumn? col) =>
-        col is DataGridTemplateColumn t && t.CellEditingTemplate is not null;
 
     protected override void OnTextInput(TextInputEventArgs e)
     {

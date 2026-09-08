@@ -71,7 +71,7 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
     public IReadOnlyList<TotalCell> TotalCells => new[]
     {
         new TotalCell("شمارِ رسیدها", Shamsi.Money(Rows.Count)),
-        new TotalCell("مبلغِ رسید", TotalText, "Pump.Ok"),
+        new TotalCell("مبلغِ رسید", TotalText, "Pump.Ok", "مبلغ رسید"),
     };
 
     partial void OnTotalTextChanged(string v) => OnPropertyChanged(nameof(TotalCells));

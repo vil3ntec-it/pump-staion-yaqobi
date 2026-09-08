@@ -48,13 +48,66 @@ public class KeyboardAndZeroTests
         Assert.Contains("(e.Key == Key.Left) == rtl ? +1 : -1", g);
     }
 
-    /// <summary>کُرسر وسطِ متن ⇒ چپ/راست متن را ویرایش می‌کند، نه خانه عوض.</summary>
+    /// <summary>
+    /// در حالتِ ویرایش، فلش‌ها هرگز خانه عوض نمی‌کنند — نه وسطِ متن و نه در
+    /// لبهٔ آن. پیش از این از روی جای کُرسر حدس زده می‌شد و همان حدس در لبهٔ
+    /// متن می‌شکست («موقعِ تایپ می‌پرد سمتِ دیگر»). حالا حالت را خودِ جدول
+    /// می‌گوید.
+    /// </summary>
     [Fact]
     public void ArrowsDoNotStealTheCaretWhileTyping()
     {
         var g = Grid();
-        Assert.Contains("CaretInsideText()", g);
-        Assert.Contains("tb.SelectionStart == tb.SelectionEnd", g);
+        Assert.Contains("if (_editing && e.Key is Key.Left or Key.Right or Key.Up or Key.Down)", g);
+        // حالت از رویدادهای خودِ جدول خوانده می‌شود، نه از جای کُرسر
+        Assert.Contains("PreparingCellForEdit", g);
+        Assert.Contains("CellEditEnded", g);
+        Assert.DoesNotContain("CaretInsideText", g);
+    }
+
+    // ══ کنترلرِ مرکزیِ سه‌حالته ═══════════════════════════════════════════════
+
+    /// <summary>هر سه حالتِ خواسته‌شده واقعاً وجود دارند و ‎Mode‎ آن‌ها را می‌گوید.</summary>
+    [Fact]
+    public void TheGridHasThreeExplicitStates()
+    {
+        var g = Grid();
+        Assert.Contains("public enum GridMode", g);
+        Assert.Contains("Selected,", g);
+        Assert.Contains("Editing,", g);
+        Assert.Contains("MultiSelect", g);
+        Assert.Contains("public GridMode Mode =>", g);
+    }
+
+    /// <summary>‎Tab‎ خانهٔ بعدی و ‎Shift+Tab‎ خانهٔ پیشین — و ته ردیف ⇒ ردیفِ بعد.</summary>
+    [Fact]
+    public void TabWalksCellByCell()
+    {
+        var g = Grid();
+        Assert.Contains("MoveCell(shift ? -1 : +1)", g);
+        Assert.Contains("if (next >= cols.Count) { MoveRow(+1); next = 0; }", g);
+        Assert.Contains("else if (next < 0) { MoveRow(-1); next = cols.Count - 1; }", g);
+    }
+
+    /// <summary>‎Shift+فلش‎ کادرِ چندانتخابی می‌سازد و ‎Delete‎ خالی‌اش می‌کند.</summary>
+    [Fact]
+    public void ShiftArrowSelectsManyCellsAndDeleteClearsThem()
+    {
+        var g = Grid();
+        Assert.Contains("MoveColumn(step, shift)", g);
+        Assert.Contains("_colAnchor", g);
+        Assert.Contains("rangesel", g);
+        Assert.Contains("case Key.Delete when !IsReadOnly && ClearSelectedCells():", g);
+    }
+
+    /// <summary>‎Esc‎ ویرایش را لغو می‌کند، کادر را جمع می‌کند و برمی‌گردد به انتخاب.</summary>
+    [Fact]
+    public void EscapeCancelsAndRestores()
+    {
+        var g = Grid();
+        Assert.Contains("if (e.Key == Key.Escape)", g);
+        Assert.Contains("CancelEdit(DataGridEditingUnit.Cell)", g);
+        Assert.Contains("_colAnchor = _colHead = -1;", g);
     }
 
     /// <summary>

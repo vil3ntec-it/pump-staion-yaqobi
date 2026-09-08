@@ -185,7 +185,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
             return new[]
             {
                 new TotalCell("اندازه‌گیری‌ها", Shamsi.Money(Dips.Count)),
-                new TotalCell("جمعِ اختلاف", Shamsi.Money(diff), diff < 0m ? "Pump.Danger" : "Pump.Ok"),
+                new TotalCell("جمعِ اختلاف", Shamsi.Money(diff), diff < 0m ? "Pump.Danger" : "Pump.Ok", "اختلاف"),
                 new TotalCell("رفته به دفتر", Shamsi.Money(applied), "Pump.Info"),
             };
         }

@@ -107,7 +107,7 @@ public sealed partial class ExpenseSectionViewModel
     /// <summary>ردیفِ «جمله» — جمعِ همین ماه؛ همان عددی که «مفاد/ضرر» می‌خواند.</summary>
     protected override IReadOnlyList<TotalCell> BuildTotals() => new[]
     {
-        new TotalCell("مبلغِ ماه", TotalText, "Pump.Warn"),
+        new TotalCell("مبلغِ ماه", TotalText, "Pump.Warn", column: "مبلغ"),
         new TotalCell("امروز", TodayText),
     };
 

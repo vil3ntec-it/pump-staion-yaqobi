@@ -65,7 +65,7 @@ public sealed partial class TankerSectionViewModel : SectionViewModel
                 new TotalCell("تخلیه‌ها", Shamsi.Money(Rows.Count)),
                 new TotalCell("بارنامه", Shamsi.Money(manifest)),
                 new TotalCell("تحویل", Shamsi.Money(actual)),
-                new TotalCell("کم‌آمد", Shamsi.Money(short_), short_ > 0m ? "Pump.Danger" : "Pump.Ok"),
+                new TotalCell("کم‌آمد", Shamsi.Money(short_), short_ > 0m ? "Pump.Danger" : "Pump.Ok", "نتیجه"),
             };
         }
     }

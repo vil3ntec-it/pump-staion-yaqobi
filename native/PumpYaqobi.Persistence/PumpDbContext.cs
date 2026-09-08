@@ -24,6 +24,7 @@ public sealed class PumpDbContext : DbContext
     public DbSet<Debtor> Debtors => Set<Debtor>();
     public DbSet<DebtAccount> DebtAccounts => Set<DebtAccount>();
     public DbSet<DebtRow> DebtRows => Set<DebtRow>();
+    public DbSet<RasidEntry> RasidEntries => Set<RasidEntry>();
     public DbSet<DebtTableArchive> DebtTableArchives => Set<DebtTableArchive>();
     public DbSet<SafeEntry> SafeEntries => Set<SafeEntry>();
     public DbSet<ExchangeRow> ExchangeRows => Set<ExchangeRow>();
@@ -95,6 +96,20 @@ public sealed class PumpDbContext : DbContext
                 e.Property(p).HasColumnType("TEXT");
             e.HasMany(x => x.FuelRows).WithOne().HasForeignKey(x => x.FuelAccountId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(x => x.MoneyRows).WithOne().HasForeignKey(x => x.MoneyAccountId).OnDelete(DeleteBehavior.Cascade);
+            // دفترِ رسیدهای سربرگ — تنها منبعِ آن چهار عددِ بالا
+            e.HasMany(x => x.RasidLog).WithOne().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Cascade);
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        b.Entity<RasidEntry>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.AccountId);
+            e.HasIndex(x => new { x.AccountId, x.SortIndex });
+            e.HasIndex(x => x.InvoiceId);
+            e.Property(x => x.Unit).HasConversion<int>();
+            e.Property(x => x.Fuel).HasConversion<int>();
+            e.Property(x => x.Value).HasColumnType("TEXT");
             e.HasQueryFilter(x => x.DeletedAt == null);
         });
 

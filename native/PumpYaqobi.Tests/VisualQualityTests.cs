@@ -37,8 +37,10 @@ public class VisualQualityTests
     {
         var t = Theme();
         Assert.Contains("<Setter Property=\"GridLinesVisibility\" Value=\"All\" />", t);
-        Assert.Contains("<Setter Property=\"HorizontalGridLinesBrush\" Value=\"{DynamicResource Pump.Border}\" />", t);
-        Assert.Contains("<Setter Property=\"VerticalGridLinesBrush\" Value=\"{DynamicResource Pump.Border}\" />", t);
+        // رنگ از تنظیماتِ کاربر می‌آید (‎Pump.Table.Border‎)، نه از داخلِ سبک —
+        // خواستهٔ صریحِ صاحب ریپو: «نباید Hard-coded باشد.»
+        Assert.Contains("<Setter Property=\"HorizontalGridLinesBrush\" Value=\"{DynamicResource Pump.Table.Border}\" />", t);
+        Assert.Contains("<Setter Property=\"VerticalGridLinesBrush\" Value=\"{DynamicResource Pump.Table.Border}\" />", t);
 
         var bare = NoComments(t);
         Assert.DoesNotContain("GridLinesVisibility\" Value=\"Horizontal", bare);
@@ -103,7 +105,12 @@ public class VisualQualityTests
     {
         var t = Theme();
         var bar = Between(t, "<Style Selector=\"c|TotalsBar\">", "</Style>");
-        Assert.Contains("BorderThickness=\"1,2,1,1\"", bar);
+        // ضخامتش هم از تنظیمات می‌آید — پیش‌فرضش همان ‎1,2,1,1‎ است
+        Assert.Contains("BorderThickness=\"{DynamicResource Pump.Table.SumBorder}\"", bar);
+        var style = File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Themes", "TableStyle.cs"));
+        Assert.Contains("new Thickness(line, sum, line, line)", style);
+        Assert.Contains("TableSumLine { get; set; } = 2;",
+            File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Services", "AppSettings.cs")));
     }
 
     /// <summary>

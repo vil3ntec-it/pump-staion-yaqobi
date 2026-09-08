@@ -66,7 +66,7 @@ public sealed partial class OldLoansSectionViewModel : SectionViewModel
     public IReadOnlyList<TotalCell> TotalCells => new[]
     {
         new TotalCell("قرض‌دارها", CountText),
-        new TotalCell("جمعِ الباقی", TotalText, "Pump.Danger"),
+        new TotalCell("جمعِ الباقی", TotalText, "Pump.Danger", column: "الباقی"),
         new TotalCell("بیش از ۳۰ روز", Stale30, "Pump.Warn"),
         new TotalCell("بیش از ۶۰ روز", Stale60, "Pump.Danger"),
     };
