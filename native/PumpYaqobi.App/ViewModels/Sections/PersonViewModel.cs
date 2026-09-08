@@ -709,7 +709,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     [RelayCommand]
     private Task NewTableAsync() => CrashGuard.RunAsync("جدول جدید", async () =>
     {
-        if (Rows.Count == 0) { _host.Toast("جدول همین حالا خالی است", ToastKind.Warn); return; }
+        if (RowCount == 0) { _host.Toast("جدول همین حالا خالی است", ToastKind.Warn); return; }
         if (!await Dialogs.ConfirmAsync("جدول جدید",
                 "جدولِ فعلی آرشیو می‌شود و جدولِ خالیِ تازه‌ای باز می‌شود. ادامه؟")) return;
 
@@ -718,6 +718,11 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
 
         // عکسِ حافظه هم باید با پایگاه یکی شود، وگرنه جدولِ پاک‌شده روی صفحه می‌ماند
         Entity.ActiveRows().Clear();
+        // ⚠️ دفترِ رسیدِ همین واحد هم با جدول می‌رود — وگرنه ردیفِ 📌ِ رسیدهای
+        // آرشیوشده دوباره در جدولِ خالی سبز می‌شد (سنجشِ صفحهٔ حساب همین را
+        // گرفت: «جدول خالی شد (۷ ← ۱)»).
+        var goneUnit = IsMoney ? LedgerMode.Money : LedgerMode.Fuel;
+        Entity.RasidLog?.RemoveAll(e => e is null || e.Unit == goneUnit);
         if (IsMoney) { RasidMoneyPetrol = 0m; RasidMoneyDiesel = 0m; }
         else { RasidFuelPetrol = 0m; RasidFuelDiesel = 0m; }
         Entity.Note = null;
@@ -961,7 +966,8 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         RefreshTotals();
     }
 
-    public int RowCount => Rows.Count;
+    /// <summary>⚠️ ردیف‌های 📌ِ رسید شمرده نمی‌شوند — ردیفِ جدول نیستند.</summary>
+    public int RowCount => Rows.Count(r => !r.IsAuto);
 
     /// <summary>‎Ctrl+عدد‎ / ‎Shift+عدد‎ — افزودن و برداشتنِ گروهیِ ردیف.
     /// حذف فقط وقتی ردیفِ کافی باشد؛ وگرنه هیچ.</summary>
@@ -1154,22 +1160,25 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
         // خودش اسکن می‌کند و حسابش را زنده می‌بیند — دادهٔ آن صفحه از همین
         // سرورِ خانگی می‌آید. پس نشانی باید کامل باشد، نه فقط تکهٔ ‎#roview…‎؛
         // با تکهٔ تنها، گوشیِ مشتری چیزی برای باز کردن ندارد.
+        // ⚠️ خواستهٔ صریحِ صاحب ریپو: «بدونِ نت هم که شده باید برای هر حساب
+        // کیو‌آر ساخته بشه.» پس نبودِ نشانیِ سرور دیگر جلوی ساختِ کد را
+        // نمی‌گیرد: همان تکهٔ ‎#roview…‎ کد می‌شود — خواننده‌ی خودِ برنامه
+        // (‎AcctLink.Parse‎) آن را می‌فهمد و حساب را باز می‌کند. فقط گفته
+        // می‌شود که برای گوشیِ مشتری نشانیِ سرور لازم است.
         var server = _host.Settings.GetString(SettingsKeys.ServerUrl);
-        var link = AcctLink.FullUrl(server, Entity.Id, sub);
-        if (link is null)
-        {
-            _host.Toast("اول در «تنظیمات › نشانیِ سرور» نشانیِ سرورِ خانگی را بنویسید — "
-                        + "بی آن، مشتری با اسکنِ کیو‌آر جایی برای باز کردن ندارد",
-                        ToastKind.Warn);
-            return;
-        }
+        var full = AcctLink.FullUrl(server, Entity.Id, sub);
+        var link = full ?? AcctLink.Build(Entity.Id, sub);
 
         var png = await Task.Run(() => QrWriter.EncodePng(link));
         var title = isSub ? "📲 📄 " + acct.Title : "📲 " + Name;
-        var hint = (isSub
-            ? "این کد را به مشتری بدهید؛ با اسکنش حساب «" + acct.Title + "» را می‌بیند"
-            : "این کد را به مشتری بدهید؛ با اسکنش حسابِ خودش را می‌بیند")
-            + " — زنده، از همین سرور.";
+        var hint = full is not null
+            ? (isSub
+                ? "این کد را به مشتری بدهید؛ با اسکنش حساب «" + acct.Title + "» را می‌بیند"
+                : "این کد را به مشتری بدهید؛ با اسکنش حسابِ خودش را می‌بیند")
+              + " — زنده، از همین سرور."
+            : "این کد بی‌اینترنت ساخته شد و با خودِ همین برنامه خوانده می‌شود. "
+              + "برای این‌که با گوشیِ مشتری هم باز شود، در «تنظیمات › نشانیِ سرور» "
+              + "نشانیِ سرورِ خانگی را بنویسید.";
 
         await Dialogs.ShowQrAsync(title, link, png, hint);
     });

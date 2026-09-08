@@ -90,11 +90,15 @@ internal static class PersonAudit
         SubAccount(win, person);
 
         Console.WriteLine();
-        Console.WriteLine("── ۳) «📋 جدول جدید» ──");
+        Console.WriteLine("── ۳) سربرگ ⇄ جدول ⇄ جمله، از یک منبع ──");
+        RasidLedger(win, person);
+
+        Console.WriteLine();
+        Console.WriteLine("── ۴) «📋 جدول جدید» ──");
         NewTable(win, person);
 
         Console.WriteLine();
-        Console.WriteLine("── ۴) پس از بستن و باز کردنِ دوباره ──");
+        Console.WriteLine("── ۵) پس از بستن و باز کردنِ دوباره ──");
         Persistence(win, debt);
 
         Console.WriteLine();
@@ -193,7 +197,65 @@ internal static class PersonAudit
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    //  ۳) جدولِ جدید
+    //  ۳) سربرگ ⇄ جدول ⇄ جمله — یک منبعِ داده
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  خواستهٔ صریحِ صاحب ریپو: «وقتی کاربر یک مقدار رسید وارد می‌کند، باید
+    //  همان لحظه در جدول ردیفِ خودش را داشته باشد؛ و هیچ State تکراری و
+    //  مستقلی نباشد.» این‌جا همان کارِ کاربر انجام می‌شود — عدد در کادرِ
+    //  سربرگ نوشته می‌شود — و بعد سه چیز سنجیده می‌شود: ردیفِ جدول، جمعِ
+    //  سربرگ، و این‌که آن ردیف در «جمله» شمرده **نشود**.
+
+    private static void RasidLedger(Window win, PersonViewModel person)
+    {
+        person.Current = person.Accounts[0];
+        Pump(win);
+
+        var acct = person.Current!;
+        if (acct.RowCount == 0) { acct.AddRowCommand.Execute(null); Pump(win); }
+
+        var rowsBefore = acct.Rows.Count;
+        var autoBefore = acct.Rows.Count(r => r.IsAuto);
+        var sumBefore = acct.Entity.RasidFuelPetrol + acct.Entity.RasidMoneyPetrol;
+
+        // همان کاری که کاربر می‌کند: عدد را در کادرِ «مقدار رسید»ِ سربرگ می‌نویسد
+        acct.HeadPetrolRasidEdit = "1500";
+        Pump(win);
+
+        var autoAfter = acct.Rows.Count(r => r.IsAuto);
+        Check($"رسیدِ سربرگ ردیفِ خودش را در جدول ساخت ({autoBefore} ← {autoAfter})",
+              autoAfter == autoBefore + 1);
+        Check($"جدول یک ردیف بلندتر شد ({rowsBefore} ← {acct.Rows.Count})",
+              acct.Rows.Count == rowsBefore + 1);
+
+        var sumAfter = acct.Entity.RasidFuelPetrol + acct.Entity.RasidMoneyPetrol;
+        Check($"کادرِ سربرگ جمعِ دفتر را نشان می‌دهد ({sumBefore} ← {sumAfter})",
+              sumAfter == sumBefore + 1500m);
+
+        // ⚠️ ردیفِ نمایشی هرگز نباید ردیفِ جدول به‌حساب بیاید
+        Check($"ردیفِ 📌 در شمارشِ جدول نمی‌آید ({acct.RowCount} ردیفِ واقعی)",
+              acct.RowCount == acct.Rows.Count - autoAfter);
+
+        // رسیدِ دوم جای اولی را نمی‌گیرد — هر کدام رکوردِ خودش
+        acct.HeadPetrolRasidEdit = "500";
+        Pump(win);
+        Check($"رسیدِ دوم جای اولی را نگرفت ({acct.Rows.Count(r => r.IsAuto)} ردیفِ رسید)",
+              acct.Rows.Count(r => r.IsAuto) == autoBefore + 2);
+
+        var sum2 = acct.Entity.RasidFuelPetrol + acct.Entity.RasidMoneyPetrol;
+        Check($"جمع روی هم رفت ({sumAfter} ← {sum2})", sum2 == sumAfter + 500m);
+
+        // و 🗑️ همان یکی را برمی‌دارد، نه همه را
+        var one = acct.Rows.First(r => r.IsAuto);
+        acct.DeleteRowCommand.Execute(one);
+        Pump(win);
+        for (var i = 0; i < 40 && acct.Rows.Count(r => r.IsAuto) > autoBefore + 1; i++) Pump(win);
+        Check($"حذفِ یک رسید فقط همان یکی را بُرد ({acct.Rows.Count(r => r.IsAuto)} مانْد)",
+              acct.Rows.Count(r => r.IsAuto) == autoBefore + 1);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  ۴) جدولِ جدید
     // ══════════════════════════════════════════════════════════════════════
 
     private static void NewTable(Window win, PersonViewModel person)
@@ -203,7 +265,7 @@ internal static class PersonAudit
         Pump(win);
 
         var acct = person.Current!;
-        if (acct.Rows.Count == 0)
+        if (acct.RowCount == 0)
         {
             acct.AddRowCommand.Execute(null);
             Pump(win);
@@ -228,7 +290,7 @@ internal static class PersonAudit
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    //  ۴) ماندگاری
+    //  ۵) ماندگاری
     // ══════════════════════════════════════════════════════════════════════
 
     /// <summary>
