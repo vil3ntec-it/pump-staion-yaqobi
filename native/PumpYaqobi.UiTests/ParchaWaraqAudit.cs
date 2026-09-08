@@ -85,7 +85,14 @@ internal static class ParchaWaraqAudit
     /// </summary>
     private static void Widths(Window win, MainViewModel vm)
     {
-        const double slack = 120;      // حاشیهٔ صفحه و نوارِ اسکرول
+        // پنجرهٔ سنجش ۱۰۰۰ پیکسل است و ستونِ سایت هم ۱۰۰۰ — پس این‌جا هر دو
+        // دسته تقریباً هم‌پهنا در می‌آیند و تفاوت دیده نمی‌شود. برای همین
+        // پنجره موقتاً پهن می‌شود تا ستونِ ۱۰۰۰ واقعاً «ستون» بماند.
+        var was = win.Width;
+        win.Width = 1600;
+        Pump(win);
+
+        var bad = new List<string>();
         foreach (var sec in vm.Sections)
         {
             Wait(win, vm.GoAsync(sec));
@@ -93,11 +100,19 @@ internal static class ParchaWaraqAudit
             var host = win.GetVisualDescendants().OfType<ContentControl>()
                           .FirstOrDefault(c => ReferenceEquals(c.Content, sec));
             if (host is null) continue;
+
             var w = host.Bounds.Width;
-            if (w < W - slack)
-                Check($"{sec.Id} تمام‌عرض", false, $"{w:0} از {W:0}");
+            var shouldBeWide = double.IsPositiveInfinity(sec.ContentMaxWidth);
+            var isWide = w > 1200;
+            if (shouldBeWide != isWide)
+                bad.Add($"{sec.Id} {w:0}px (باید {(shouldBeWide ? "پهن" : "ستونِ ۱۰۰۰")} می‌بود)");
         }
-        Check("همهٔ بخش‌ها تمام‌عرض‌اند", _bad == 0);
+
+        win.Width = was;
+        Pump(win);
+
+        Check("پهنای هر بخش با فهرستِ ‎_WIDE‎ی سایت می‌خواند", bad.Count == 0);
+        foreach (var b in bad) Console.WriteLine("        " + b);
     }
 
     // ══ ۲) خانه‌های پارچه ════════════════════════════════════════════════════

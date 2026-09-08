@@ -4,6 +4,7 @@
         x:Class="PumpYaqobi.App.Views.DocumentPreviewWindow"
         x:DataType="p:DocumentPreviewViewModel"
         Width="1000" Height="900" WindowStartupLocation="CenterOwner"
+        WindowState="Maximized"
         FlowDirection="RightToLeft" Background="#f1f3f6">
 
   <Grid RowDefinitions="Auto,*,Auto">
@@ -22,10 +23,24 @@
       </Grid>
     </Border>
 
-    <!-- ══ ورق‌های سند ══ -->
-    <ScrollViewer Grid.Row="1" Padding="20">
+    <!-- ══ ورق‌های سند ══════════════════════════════════════════════════════
+         گزارشِ صاحب ریپو: «آن بخشِ پرینت تمام صفحه نمی‌شود و آن بخش‌های مهم
+         نمی‌آید.»
+
+         دو علتِ اندازه‌گیری‌شده، هر دو همین‌جا بود:
+           ۱) پنجره ‎Width=1000 Height=900‎ی ثابت بود و هیچ‌وقت تمام‌صفحه نمی‌شد.
+              حالا ‎WindowState="Maximized"‎ باز می‌شود — مثلِ صفحهٔ چاپِ سایت
+              که یک پنجرهٔ کاملِ مرورگر است. (‎Width/Height‎ مانده‌اند تا اندازهٔ
+              «بازگرداندن» همان باشد.)
+           ۲) ‎MaxWidth="900"‎ روی خودِ ورق: هر قدر هم پنجره بزرگ می‌شد، ورق
+              بیشتر از ۹۰۰ پیکسل نمی‌شد. یعنی روی مانیتورِ بزرگ ورق کوچک
+              می‌ماند و ریزنویس‌هایش خوانده نمی‌شد — همان «بخش‌های مهم نمی‌آید».
+              سقف برداشته شد و به‌جایش بزرگ‌نمایی آمد. -->
+    <ScrollViewer Grid.Row="1" Padding="20"
+                  HorizontalScrollBarVisibility="Auto">
       <Border Background="White" BoxShadow="0 2 10 0 #22000000" HorizontalAlignment="Center">
-        <Image Source="{Binding CurrentPage}" Stretch="Uniform" MaxWidth="900" />
+        <Image Source="{Binding CurrentPage}" Stretch="Uniform"
+               Width="{Binding PageWidth}" />
       </Border>
     </ScrollViewer>
 
@@ -36,6 +51,17 @@
         <TextBlock Text="{Binding PageLabel}" VerticalAlignment="Center" FontWeight="Bold"
                    Foreground="#2d3748" />
         <Button Classes="page-btn" Content="▶" Command="{Binding NextCommand}" />
+
+        <!-- بزرگ‌نمایی — جای همان زومِ صفحهٔ چاپِ مرورگر -->
+        <Border Width="1" Background="#dfe3e8" Margin="8,2" />
+        <Button Classes="page-btn" Content="➖" Command="{Binding ZoomOutCommand}"
+                ToolTip.Tip="کوچک‌تر" />
+        <TextBlock Text="{Binding ZoomLabel}" VerticalAlignment="Center" FontWeight="Bold"
+                   Foreground="#2d3748" MinWidth="52" TextAlignment="Center" />
+        <Button Classes="page-btn" Content="➕" Command="{Binding ZoomInCommand}"
+                ToolTip.Tip="بزرگ‌تر" />
+        <Button Classes="page-btn" Content="⤢ اندازهٔ پنجره" Command="{Binding ZoomFitCommand}" />
+
         <TextBlock Text="{Binding Status}" VerticalAlignment="Center" Foreground="#5b6472"
                    Margin="16,0,0,0" />
       </StackPanel>
