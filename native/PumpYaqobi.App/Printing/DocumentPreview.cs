@@ -48,6 +48,39 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     [ObservableProperty] private string _pageLabel = "";
     [ObservableProperty] private string _status = "";
 
+    // ══ بزرگ‌نمایی ═══════════════════════════════════════════════════════════
+    //
+    // گزارشِ صاحب ریپو: «آن بخشِ پرینت تمام صفحه نمی‌شود و آن بخش‌های مهم
+    // نمی‌آید.» پنجره سقفِ ‎MaxWidth=900‎ روی ورق داشت، پس روی مانیتورِ بزرگ
+    // ورق کوچک می‌ماند و ریزنویس‌هایش خوانده نمی‌شد. سقف رفت و به‌جایش همان
+    // زومی آمد که صفحهٔ چاپِ مرورگر دارد.
+    //
+    // ⚠️ زوم فقط **نمایش** را بزرگ می‌کند؛ خودِ ورق از نو رسم نمی‌شود. اندازهٔ
+    // کاغذ و حاشیه‌ها هنوز فقط از «⚙ تنظیمِ ورق» می‌آیند، پس آنچه چاپ می‌شود
+    // با آنچه دیده می‌شود یکی می‌ماند.
+
+    /// <summary>پهنای ورق روی صفحه (پیکسل). ‎900‎ همان اندازهٔ پیش از این.</summary>
+    [ObservableProperty] private double _pageWidth = 900;
+
+    public string ZoomLabel => PersianText.Num((int)Math.Round(PageWidth / 9.0)) + "٪";
+
+    partial void OnPageWidthChanged(double v) => OnPropertyChanged(nameof(ZoomLabel));
+
+    private const double MinW = 360, MaxW = 3200, Step = 1.25;
+
+    [RelayCommand]
+    private void ZoomIn() => PageWidth = Math.Min(MaxW, PageWidth * Step);
+
+    [RelayCommand]
+    private void ZoomOut() => PageWidth = Math.Max(MinW, PageWidth / Step);
+
+    /// <summary>«⤢ اندازهٔ پنجره» — ورق را هم‌قدِ پهنای پنجره می‌کند.</summary>
+    [RelayCommand]
+    private void ZoomFit() => PageWidth = Math.Clamp(FitWidth, MinW, MaxW);
+
+    /// <summary>پهنای دمِ‌دستِ پنجره — پنجره خودش پیش از باز شدن می‌نویسدش.</summary>
+    public double FitWidth { get; set; } = 900;
+
     public int PageCount => _pages.Count;
 
     /// <summary>

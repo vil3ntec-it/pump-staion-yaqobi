@@ -11,7 +11,22 @@ namespace PumpYaqobi.App.Views;
 /// </summary>
 public partial class DocumentPreviewWindow : Window
 {
-    public DocumentPreviewWindow() => AvaloniaXamlLoader.Load(this);
+    public DocumentPreviewWindow()
+    {
+        AvaloniaXamlLoader.Load(this);
+
+        // ورق باید هم‌قدِ پنجره باز شود، نه ۹۰۰ پیکسلِ ثابت. پنجره تازه پس از
+        // چیده شدن پهنای واقعی‌اش را می‌داند، پس همان‌جا به ویومدل می‌رسد و
+        // یک‌بار «اندازهٔ پنجره» زده می‌شود.
+        var fitted = false;
+        LayoutUpdated += (_, _) =>
+        {
+            if (fitted || Vm is null || Bounds.Width < 200) return;
+            fitted = true;
+            Vm.FitWidth = Bounds.Width - 80;      // جای حاشیه و نوارِ اسکرول
+            Vm.ZoomFitCommand.Execute(null);
+        };
+    }
 
     public DocumentPreviewWindow(DocumentPreviewViewModel vm) : this() => DataContext = vm;
 
