@@ -94,6 +94,10 @@ internal static class PersonAudit
         NewTable(win, person);
 
         Console.WriteLine();
+        Console.WriteLine("── ۴) پس از بستن و باز کردنِ دوباره ──");
+        Persistence(win, debt);
+
+        Console.WriteLine();
         if (_bad == 0) { Console.WriteLine("✅ صفحهٔ حسابِ قرض‌دار سالم است"); return 0; }
         Console.WriteLine($"❌ {_bad} ایراد در صفحهٔ حسابِ قرض‌دار");
         return 1;
@@ -109,13 +113,22 @@ internal static class PersonAudit
     /// </summary>
     private static void Reachability(Window win)
     {
+        // ⚠️ فقط داخلِ خودِ صفحهٔ شخص. کلِ پنجره را گشتن، صفحهٔ قفلِ پنهان و
+        // فهرستِ کارت‌های پشتِ صفحه را هم می‌شمرد و گزارش را بی‌معنا می‌کرد.
+        var page = win.GetVisualDescendants()
+                      .OfType<PumpYaqobi.App.Views.Sections.PersonView>()
+                      .FirstOrDefault();
+        if (page is null) { Check("صفحهٔ شخص در درختِ دیداری پیدا شد", false); return; }
+
         var outside = new List<string>();
         var seen = 0;
 
-        foreach (var c in win.GetVisualDescendants().OfType<Control>())
+        foreach (var c in page.GetVisualDescendants().OfType<Control>())
         {
             if (c is not (Button or TextBox or ComboBox or CheckBox or RadioButton)) continue;
-            if (!c.IsVisible || c.Bounds.Width <= 0) continue;
+            if (c.Bounds.Width <= 0) continue;
+            // پدرِ پنهان یعنی خودش هم دیده نمی‌شود — ‎IsVisible‎ی خودش کافی نیست
+            if (!c.IsEffectivelyVisible) continue;
 
             var p = c.TranslatePoint(new Point(0, 0), win);
             if (p is null) continue;
@@ -127,7 +140,7 @@ internal static class PersonAudit
                 outside.Add($"{Label(c)} [x {left:0}…{right:0}]");
         }
 
-        Check($"{seen} کنترل سنجیده شد؛ همه داخلِ پنجره", outside.Count == 0);
+        Check($"{seen} کنترلِ صفحهٔ حساب سنجیده شد؛ همه داخلِ پنجره", outside.Count == 0);
         foreach (var o in outside) Console.WriteLine("        بیرونِ پنجره: " + o);
     }
 
@@ -202,6 +215,39 @@ internal static class PersonAudit
         Check($"جدول خالی شد ({rowsBefore} ← {acct.Rows.Count})", acct.Rows.Count == 0);
         Check($"جدولِ قبلی در آرشیو نشست ({arcBefore} ← {acct.ArchiveCount})",
               acct.ArchiveCount == arcBefore + 1);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  ۴) ماندگاری
+    // ══════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// ساخته شدن کافی نیست — باید بماند. صفحه بسته و از نو از دیتابیس باز
+    /// می‌شود تا معلوم شود حسابِ فرعی و جدولِ آرشیو واقعاً روی دیسک نشسته‌اند،
+    /// نه فقط در حافظهٔ همان لحظه.
+    /// </summary>
+    private static void Persistence(Window win, DebtSectionViewModel debt)
+    {
+        // باز کردنِ دوباره همیشه ‎LoadFullAsync‎ می‌زند، یعنی از خودِ دیتابیس
+        // می‌خواند — پس همین یک کار برای سنجشِ ماندگاری بس است.
+        var before = debt.Person;
+        debt.OpenCommand.Execute(debt.Cards.FirstOrDefault());
+        Pump(win);
+        for (var i = 0; i < 60 && ReferenceEquals(debt.Person, before); i++) Pump(win);
+
+        var again = debt.Person;
+        if (again is null) { Check("صفحهٔ شخص دوباره باز شد", false); return; }
+
+        Check($"حسابِ فرعی ماند ({again.Accounts.Count} حساب)", again.Accounts.Count == 2,
+              string.Join(" · ", again.Accounts.Select(a => a.Title)));
+
+        var main = again.Accounts[0];
+        again.Current = main;
+        Pump(win);
+        for (var i = 0; i < 40 && main.ArchiveCount == 0; i++) Pump(win);
+
+        Check($"جدولِ آرشیو ماند ({main.ArchiveCount} جدول)", main.ArchiveCount == 1);
+        Check($"جدولِ زنده خالی ماند ({main.Rows.Count} ردیف)", main.Rows.Count == 0);
     }
 
     // ══════════════════════════════════════════════════════════════════════
