@@ -54,10 +54,10 @@ public sealed partial class PurchaseRowViewModel : RowViewModel
             OnPropertyChanged(n);
     }
 
-    public string KgText { get => Shamsi.Money(Kg); set => Kg = Shamsi.Num(value); }
-    public string DensityText { get => Shamsi.Money(Density); set => Density = Shamsi.Num(value); }
-    public string PriceTonText { get => Shamsi.Money(PriceTon); set => PriceTon = Shamsi.Num(value); }
-    public string UsdRateText { get => Shamsi.Money(UsdRate); set => UsdRate = Shamsi.Num(value); }
+    public string KgText { get => Shamsi.MoneyOrBlank(Kg); set => Kg = Shamsi.Num(value); }
+    public string DensityText { get => Shamsi.MoneyOrBlank(Density); set => Density = Shamsi.Num(value); }
+    public string PriceTonText { get => Shamsi.MoneyOrBlank(PriceTon); set => PriceTon = Shamsi.Num(value); }
+    public string UsdRateText { get => Shamsi.MoneyOrBlank(UsdRate); set => UsdRate = Shamsi.Num(value); }
 
     private PurchaseNumbers N => _owner.Calc.Compute(Kg, Density, PriceTon, UsdRate);
 
@@ -133,8 +133,8 @@ public sealed partial class DipRowViewModel : RowViewModel
     /// <summary>چقدر از این میله‌زنی واقعاً به دفتر رفت — صفر یعنی هیچ.</summary>
     public string BookAdjustText => ApplyToBook ? Shamsi.Money(Measured - Expected) : "—";
 
-    public string MeasuredText { get => Shamsi.Money(Measured); set => Measured = Shamsi.Num(value); }
-    public string ExpectedText { get => Shamsi.Money(Expected); set => Expected = Shamsi.Num(value); }
+    public string MeasuredText { get => Shamsi.MoneyOrBlank(Measured); set => Measured = Shamsi.Num(value); }
+    public string ExpectedText { get => Shamsi.MoneyOrBlank(Expected); set => Expected = Shamsi.Num(value); }
 
     /// <summary>مثبت یعنی مخزن بیشتر از دفتر دارد.</summary>
     public string DiffText => Shamsi.Money(Measured - Expected);

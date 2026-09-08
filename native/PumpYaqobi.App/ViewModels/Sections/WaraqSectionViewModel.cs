@@ -61,10 +61,10 @@ public sealed partial class WaraqPumpViewModel : RowViewModel
             OnPropertyChanged(n);
     }
 
-    public string StartText { get => Shamsi.Money(Start); set => Start = Shamsi.Num(value); }
-    public string EndText { get => Shamsi.Money(End); set => End = Shamsi.Num(value); }
-    public string PriceText { get => Shamsi.Money(Price); set => Price = Shamsi.Num(value); }
-    public string DebtText { get => Shamsi.Money(Debt); set => Debt = Shamsi.Num(value); }
+    public string StartText { get => Shamsi.MoneyOrBlank(Start); set => Start = Shamsi.Num(value); }
+    public string EndText { get => Shamsi.MoneyOrBlank(End); set => End = Shamsi.Num(value); }
+    public string PriceText { get => Shamsi.MoneyOrBlank(Price); set => Price = Shamsi.Num(value); }
+    public string DebtText { get => Shamsi.MoneyOrBlank(Debt); set => Debt = Shamsi.Num(value); }
 
     /// <summary>لیترِ منفی وجود ندارد — ‎Math.max(0, end−start)‎.</summary>
     public decimal Liters => Math.Max(0m, End - Start);
@@ -99,6 +99,7 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
         Loading = true;
         _name = t.Name ?? ""; _liters = t.Liters; _amount = t.Amount;
         _isExpense = t.Type == WaraqTxnType.Expense; _fuel = t.Fuel;
+        _isMoney = t.Unit == LedgerMode.Money;
         Loading = false;
     }
 
@@ -136,8 +137,8 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
         OnPropertyChanged(nameof(EffectiveAmountText));
     }
 
-    public string LitersText { get => Shamsi.Money(Liters); set => Liters = Shamsi.Num(value); }
-    public string AmountText { get => Shamsi.Money(Amount); set => Amount = Shamsi.Num(value); }
+    public string LitersText { get => Shamsi.MoneyOrBlank(Liters); set => Liters = Shamsi.Num(value); }
+    public string AmountText { get => Shamsi.MoneyOrBlank(Amount); set => Amount = Shamsi.Num(value); }
 
     /// <summary>مبلغی که واقعاً در جمع‌ها شمرده می‌شود.</summary>
     public string EffectiveAmountText => Shamsi.Money(_owner.Calc.TxnAmount(_owner.Shift!, _t));
@@ -169,11 +170,31 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
         set => Fuel = value == "دیزل" ? FuelType.Diesel : FuelType.Petrol;
     }
 
+    /// <summary>
+    /// ستونِ «واحد» — ‎t.unit‎ی سایت: این ردیفِ قرض به دفترِ «واحد تیل» برود
+    /// یا دفترِ «واحد پول». پیش‌فرض تیل، مثلِ سایت.
+    ///
+    /// ⚠️ فعلاً فقط ذخیره می‌شود: تراکنش‌های ورق هنوز به حسابِ قرض‌داران پست
+    /// نمی‌شوند (‎syncWaraqTxnsToPersons‎ی سایت هنوز همتا ندارد). پس انتخابِ
+    /// کاربر می‌ماند و از دست نمی‌رود، ولی تا آن پست ساخته نشود چیزی را
+    /// جابه‌جا نمی‌کند.
+    /// </summary>
+    public string UnitText
+    {
+        get => IsMoney ? "پول" : "تیل";
+        set => IsMoney = value == "پول";
+    }
+
+    [ObservableProperty] private bool _isMoney;
+
+    partial void OnIsMoneyChanged(bool v) { Touch(); OnPropertyChanged(nameof(UnitText)); }
+
     protected override void Apply()
     {
         _t.Name = Name; _t.Liters = Liters; _t.Amount = Amount;
         _t.Type = IsExpense ? WaraqTxnType.Expense : WaraqTxnType.Debt;
         _t.Fuel = Fuel;
+        _t.Unit = IsMoney ? LedgerMode.Money : LedgerMode.Fuel;
     }
 
     protected override Task SaveAsync() => _owner.SaveTxnAsync(_t);

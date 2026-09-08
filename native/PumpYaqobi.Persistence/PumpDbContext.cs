@@ -319,6 +319,7 @@ public sealed class PumpDbContext : DbContext
             e.HasIndex(x => new { x.ShiftId, x.SortIndex });
             e.Property(x => x.Fuel).HasConversion<int>();
             e.Property(x => x.Type).HasConversion<int>();
+            e.Property(x => x.Unit).HasConversion<int>();
             e.HasQueryFilter(x => x.DeletedAt == null && x.Shift!.DeletedAt == null);
         });
 

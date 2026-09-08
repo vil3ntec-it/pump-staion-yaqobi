@@ -63,11 +63,11 @@ public sealed partial class AmanatRowViewModel : RowViewModel
 
     public void RefreshAll() => Refresh();
 
-    public string LitersText { get => Shamsi.Money(Liters); set => Liters = Shamsi.Num(value); }
-    public string TakenText { get => Shamsi.Money(Taken); set => Taken = Shamsi.Num(value); }
-    public string DaysText { get => Shamsi.Money(Days); set => Days = Shamsi.Num(value); }
-    public string TempText { get => Shamsi.Money(Temp); set => Temp = Shamsi.Num(value); }
-    public string ActualText { get => Shamsi.Money(Actual); set => Actual = Shamsi.Num(value); }
+    public string LitersText { get => Shamsi.MoneyOrBlank(Liters); set => Liters = Shamsi.Num(value); }
+    public string TakenText { get => Shamsi.MoneyOrBlank(Taken); set => Taken = Shamsi.Num(value); }
+    public string DaysText { get => Shamsi.MoneyOrBlank(Days); set => Days = Shamsi.Num(value); }
+    public string TempText { get => Shamsi.MoneyOrBlank(Temp); set => Temp = Shamsi.Num(value); }
+    public string ActualText { get => Shamsi.MoneyOrBlank(Actual); set => Actual = Shamsi.Num(value); }
 
     private AmanatRowCalc C => _owner.CalcOf(_r);
 
@@ -190,7 +190,7 @@ public sealed partial class AmanatAccountViewModel : ObservableObject, IRowBatch
     [ObservableProperty] private string _totalRest = "";
     [ObservableProperty] private string _totalShare = "";
 
-    public string MyPctText { get => Shamsi.Money(MyPct); set => MyPct = Shamsi.Num(value); }
+    public string MyPctText { get => Shamsi.MoneyOrBlank(MyPct); set => MyPct = Shamsi.Num(value); }
 
     partial void OnNameChanged(string v) { Entity.Name = v; Save(); }
 

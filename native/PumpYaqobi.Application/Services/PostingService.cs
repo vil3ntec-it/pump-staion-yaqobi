@@ -136,6 +136,41 @@ public sealed class PostingService
     /// ‎alreadyReceivedFromWaraq‎ — همین رسید پیش‌تر از ورق واردِ حساب شده؟
     /// حوالهٔ خالی یعنی «حواله را نادیده بگیر».
     /// </summary>
+    /// <summary>نتیجهٔ ‎extractHawala‎ — شمارهٔ حواله و متنِ بی‌حواله.</summary>
+    public readonly record struct HawalaText(string Num, string Clean);
+
+    /// <summary>«بدون حواله» — همان ‎NO_HAWALA‎ی سایت.</summary>
+    public const string NoHawala = "بدون حواله";
+
+    /// <summary>
+    /// ‎extractHawala(text)‎ — شمارهٔ حواله را از دلِ جمله بیرون می‌کشد و
+    /// خودش را از متن برمی‌دارد، تا در جدولِ قرض‌دار «فلانی حواله ۱۲» نوشته
+    /// نشود؛ نام در ستونِ نام بنشیند و شماره در ستونِ حواله.
+    ///
+    /// دو الگو، مو‌به‌مو مثلِ سایت:
+    ///   • «حواله [نمبر|شماره] [:|#] ۱۲» ⇒ شماره
+    ///   • «بدون حواله» / «بی حواله» / «حواله ندارد|نیست|نداره» ⇒ ‎NoHawala‎
+    /// </summary>
+    public static HawalaText ExtractHawala(string? text)
+    {
+        var t = Localization.Shamsi.ToEnDigits(text ?? "");
+
+        var m = System.Text.RegularExpressions.Regex.Match(
+            t, @"حواله\s*(?:نمبر|شماره)?\s*[:#]?\s*(\d+)");
+        if (m.Success)
+            return new HawalaText(m.Groups[1].Value, Tidy(t.Replace(m.Value, "")));
+
+        var nm = System.Text.RegularExpressions.Regex.Match(
+            t, @"(?:بدون|بی[ \u200c]?)\s*(?:نمبر|شماره)?\s*حواله|حواله\s*(?:ای)?\s*(?:ندار[دم]|نیست|نداره)");
+        if (nm.Success)
+            return new HawalaText(NoHawala, Tidy(t.Replace(nm.Value, "")));
+
+        return new HawalaText("", t.Trim());
+    }
+
+    private static string Tidy(string s) =>
+        System.Text.RegularExpressions.Regex.Replace(s, @"\s{2,}", " ").Trim();
+
     public static bool AlreadyReceivedFromWaraq(Debtor person, decimal liters,
                                                 decimal bardagi, string? hawala)
     {
