@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Xunit;
 
 namespace PumpYaqobi.Tests;
@@ -19,6 +20,17 @@ public class TotalsRowTests
 
     private static string View(string name) =>
         File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Views", "Sections", name + ".axaml"));
+
+    /// <summary>
+    /// همان ویو، ولی بی کامنت‌های XML.
+    ///
+    /// ⚠️ برای آزمون‌های «این چیز دیگر نباید باشد» حتماً از این استفاده کنید،
+    /// نه از ‎View()‎. کامنت‌های این ریپو توضیح می‌دهند چه چیزی برداشته شد و
+    /// چرا — یعنی نامِ همان چیزِ برداشته‌شده داخلشان نوشته است. با ‎View()‎
+    /// خامه، آزمون خودِ توضیح را «هنوز هست» می‌خواند و بی‌جهت قرمز می‌شود.
+    /// </summary>
+    private static string ViewNoComments(string name) =>
+        Regex.Replace(View(name), "<!--.*?-->", "", RegexOptions.Singleline);
 
     /// <summary>هر جدولی که عددِ جمع‌شدنی دارد، باید نوارِ «جمله» هم داشته باشد.</summary>
     [Theory]
@@ -139,7 +151,7 @@ public class TotalsRowTests
     [Fact]
     public void TheWideFieldStripIsGone()
     {
-        var v = View("PersonView");
+        var v = ViewNoComments("PersonView");
         Assert.DoesNotContain("رسیدِ تیلِ پطرول", v);
         Assert.DoesNotContain("رسیدِ پولِ پطرول", v);
         Assert.DoesNotContain("<CheckBox Content=\"واحدِ پول\"", v);
