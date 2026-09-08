@@ -116,6 +116,9 @@ public sealed class PumpDbFactory
         // (جدول، ستون، نوع) — هر ستونی که پس از انتشارِ اول اضافه شده
         var wanted = new (string Table, string Column, string Type)[]
         {
+            // ستونِ «واحد»ِ تراکنش‌های ورق — ‎t.unit‎ی سایت. صفر یعنی «تیل»،
+            // پس دادهٔ کهنه بی هیچ کاری همان پیش‌فرضِ درست را می‌گیرد.
+            ("WaraqTransactions", "Unit", "INTEGER NOT NULL DEFAULT 0"),
             ("WaraqPumps", "SrcKey", "TEXT"),
             ("WaraqPumps", "Worker", "TEXT"),
             ("WaraqPumps", "DateShamsi", "TEXT"),

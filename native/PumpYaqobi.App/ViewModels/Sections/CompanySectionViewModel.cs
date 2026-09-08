@@ -63,11 +63,11 @@ public sealed partial class CompanyRowViewModel : RowViewModel
         _owner.Recalc();
     }
 
-    public string KgText { get => Shamsi.Money(Kg); set => Kg = Shamsi.Num(value); }
-    public string TonText { get => Shamsi.Money(Ton); set => Ton = Shamsi.Num(value); }
-    public string UsdText { get => Shamsi.Money(Usd); set => Usd = Shamsi.Num(value); }
-    public string RateText { get => Shamsi.Money(Rate); set => Rate = Shamsi.Num(value); }
-    public string PoulText { get => Shamsi.Money(Poul); set => Poul = Shamsi.Num(value); }
+    public string KgText { get => Shamsi.MoneyOrBlank(Kg); set => Kg = Shamsi.Num(value); }
+    public string TonText { get => Shamsi.MoneyOrBlank(Ton); set => Ton = Shamsi.Num(value); }
+    public string UsdText { get => Shamsi.MoneyOrBlank(Usd); set => Usd = Shamsi.Num(value); }
+    public string RateText { get => Shamsi.MoneyOrBlank(Rate); set => Rate = Shamsi.Num(value); }
+    public string PoulText { get => Shamsi.MoneyOrBlank(Poul); set => Poul = Shamsi.Num(value); }
 
     public string PoulCurrencyText
     {

@@ -6,15 +6,11 @@ namespace PumpYaqobi.Tests;
 /// <summary>
 /// ══ پهنای ستونِ محتوا ═══════════════════════════════════════════════════════
 ///
-/// سایت یک ستونِ وسط‌چینِ ۱۰۰۰ پیکسلی دارد
-/// (‎.main{padding:16px;max-width:1000px;margin:0 auto}‎) و فقط فهرستِ
-/// ‎_WIDE‎ از آن بیرون می‌زند (‎body.sec-wide .main{max-width:none}‎).
+/// ⚠️ این قاعده را **صاحب ریپو** تعیین کرده، نه سایت:
+///     «فقط و فقط بخشِ پارچه‌ها و بخشِ فاکتورها تمام صفحه نباشند؛
+///      بقیهٔ همهٔ بخش‌ها تمام صفحه باشند.»
 ///
-/// این آزمون دو بار عوض شده و هر بار چون از حافظه ساخته شده بود:
-///   • اول «همه ۱۰۰۰، چند تا پهن» — با فهرستِ حدسی.
-///   • بعد «همه پهن، بی استثنا» — که وارونهٔ کارِ سایت بود.
-/// حالا از خودِ ‎index.html‎ اندازه گرفته شده. اگر روزی عوضش کردید، اول
-/// ‎_WIDE‎ی سایت را بخوانید.
+/// این خانه چند بار عوض شده؛ پیش از دست زدن به آن، همین جمله را بخوانید.
 /// </summary>
 public class LayoutMetricsTests
 {
@@ -24,20 +20,16 @@ public class LayoutMetricsTests
         public void Open(bool v) => IsPageOpen = v;
     }
 
-    /// <summary>دوازده‌تای ‎_WIDE‎ — آن‌هایی که در نیتیو همتا دارند.</summary>
-    [Theory]
-    [InlineData("dashboard")]
-    [InlineData("rasid")]
-    [InlineData("debtrasid")]
-    [InlineData("chakana")]
-    [InlineData("oldloans")]
-    [InlineData("invrate")]
-    public void WideSectionsFillTheWindow(string id)
-        => Assert.Equal(double.PositiveInfinity, new Fake(id).ContentMaxWidth);
-
-    /// <summary>بقیه در همان ستونِ ۱۰۰۰ پیکسلی می‌مانند — پارچه‌ها هم.</summary>
+    /// <summary>دو بخشِ فرمی — ستونِ باریک.</summary>
     [Theory]
     [InlineData("shifts")]
+    [InlineData("invoices")]
+    public void OnlyParchaAndInvoicesAreNarrow(string id)
+        => Assert.Equal(1000, new Fake(id).ContentMaxWidth);
+
+    /// <summary>بقیه — بی استثنا تمام‌عرض.</summary>
+    [Theory]
+    [InlineData("dashboard")]
     [InlineData("waraq")]
     [InlineData("debt")]
     [InlineData("storage")]
@@ -48,21 +40,22 @@ public class LayoutMetricsTests
     [InlineData("attendance")]
     [InlineData("noinv")]
     [InlineData("profit")]
-    [InlineData("invoices")]
     [InlineData("settings")]
     [InlineData("history")]
     [InlineData("cameras")]
-    public void EverySectionElseKeepsTheThousandPixelColumn(string id)
-        => Assert.Equal(1000, new Fake(id).ContentMaxWidth);
+    [InlineData("rasid")]
+    [InlineData("debtrasid")]
+    [InlineData("chakana")]
+    [InlineData("oldloans")]
+    [InlineData("invrate")]
+    public void EverySectionElseFillsTheWindow(string id)
+        => Assert.Equal(double.PositiveInfinity, new Fake(id).ContentMaxWidth);
 
-    /// <summary>
-    /// ⚠️ ولی صفحهٔ درونیِ باز (حسابِ شخص، شرکت، ورق، امانت) تمام‌عرض می‌شود —
-    /// در سایت هم آن‌ها ‎modal-overlay‎ی تمام‌پنجره‌اند، نه محتوای ‎.main‎.
-    /// </summary>
+    /// <summary>صفحهٔ درونیِ باز، حتی در آن دو بخش، تمام‌عرض می‌شود.</summary>
     [Fact]
-    public void AnOpenAccountPageFillsTheWindow()
+    public void AnOpenPageFillsTheWindowEvenInANarrowSection()
     {
-        var s = new Fake("debt");
+        var s = new Fake("invoices");
         Assert.Equal(1000, s.ContentMaxWidth);
         s.Open(true);
         Assert.Equal(double.PositiveInfinity, s.ContentMaxWidth);

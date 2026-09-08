@@ -30,37 +30,23 @@ public abstract partial class SectionViewModel : ObservableObject
     [ObservableProperty] private SectionNotesViewModel? _notes;
 
     /// <summary>
-    /// ══ پهنای ستونِ محتوا — ستونِ ۱۰۰۰ پیکسلیِ ‎.main‎ی سایت ═════════════════
+    /// ══ پهنای ستونِ محتوا ═══════════════════════════════════════════════════
     ///
-    /// ⚠️ این‌جا دو بار اشتباه شد و بارِ سوم از خودِ سایت اندازه گرفته شد.
+    /// ⚠️ این قاعده را **صاحب ریپو** تعیین کرده، نه سایت. حرفِ آخرش:
+    ///     «فقط و فقط بخشِ پارچه‌ها و بخشِ فاکتورها تمام صفحه نباشند؛
+    ///      بقیهٔ همهٔ بخش‌ها تمام صفحه باشند.»
     ///
-    /// سایت یک ستونِ وسط‌چینِ ۱۰۰۰ پیکسلی دارد:
-    ///     .main{ padding:16px; max-width:1000px; margin:0 auto }
-    /// و فقط یک فهرستِ مشخص از بخش‌ها از آن بیرون می‌زنند:
-    ///     body.sec-wide .main{ max-width:none !important }
-    ///     const _WIDE = ['dashboard','rasid','debtrasid','chakana','oldloans',
-    ///                    'oldloansmoney','debtsum','debtsummoney','priceloss',
-    ///                    'plsource','plperson','invrate'];
-    ///
-    /// یعنی دوازده بخشِ جدولیِ پهن تمام‌عرض‌اند و **بقیه نیستند** — پارچه‌ها،
-    /// ورق‌ها، قرض‌داران، مخزن، امانت، شرکت‌ها، صرافی، مصارف، حاضری،
-    /// مفاد/ضرر، تنظیمات و مانندِ آن‌ها همه در همان ستونِ ۱۰۰۰ پیکسلی‌اند.
-    ///
-    /// سیزنِ پیش این را «همه تمام‌عرض، بی استثنا» کرده بود که وارونهٔ کارِ
-    /// سایت بود؛ گزارشِ صاحب ریپو: «بخشِ پارچه‌ها آن دوتاشان تمام صفحه نباشد،
-    /// ببین توی سایت آن بخش تمام صفحه نیستند.»
-    ///
-    /// ⚠️ صفحهٔ درونیِ باز (حسابِ شخص، شرکت، ورق، امانت) استثناست و تمام‌عرض
-    /// می‌ماند: در سایت هم آن‌ها ‎modal-overlay‎ی ‎width:100%;height:100%‎ هستند،
-    /// نه محتوای داخلِ ‎.main‎.
+    /// سایت فهرستِ دیگری دارد (‎_WIDE‎ی دوازده‌تایی، با ستونِ ۱۰۰۰ پیکسلیِ
+    /// ‎.main‎ برای بقیه) — عمداً دنبال نشد. دو تا فرم‌اند و در عرضِ زیاد بد
+    /// دیده می‌شوند؛ بقیه جدول‌اند و هر چه پهن‌تر، بهتر.
     /// </summary>
     public double ContentMaxWidth =>
-        IsPageOpen || Wide.Contains(Id) ? double.PositiveInfinity : 1000;
+        IsPageOpen || !Narrow.Contains(Id) ? double.PositiveInfinity : 1000;
 
-    /// <summary>همتای ‎_WIDE‎ی سایت — فقط آن‌هایی که در نیتیو همتا دارند.</summary>
-    private static readonly HashSet<string> Wide = new(StringComparer.Ordinal)
+    /// <summary>تنها دو بخشی که ستونِ باریک می‌گیرند — پارچه‌ها و فاکتورها.</summary>
+    private static readonly HashSet<string> Narrow = new(StringComparer.Ordinal)
     {
-        "dashboard", "rasid", "debtrasid", "chakana", "oldloans", "invrate",
+        "shifts", "invoices",
     };
 
     /// <summary>

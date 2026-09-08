@@ -125,6 +125,24 @@ public static class Shamsi
     public static string Money(decimal v, int decimals) =>
         v.ToString("#,##0." + new string('0', decimals), CultureInfo.InvariantCulture);
 
+    /// <summary>
+    /// ══ صفرِ نامرئی ═══════════════════════════════════════════════════════
+    /// گزارشِ صاحب ریپو: «توی همهٔ جدول‌ها صفر نوشته است؛ صفر نامرئی باشد نه
+    /// این‌که خودِ صفر باشد — موقعِ تایپ به مشکل می‌خورند.»
+    ///
+    /// حق داشت و سایت هم همین کار را می‌کند. هر خانهٔ عددیِ جدول در سایت
+    /// این‌طور نوشته می‌شود:
+    ///
+    ///     &lt;input class="xls-in" value="${t.liters||''}" placeholder="0"&gt;
+    ///
+    /// یعنی صفر ⇒ **رشتهٔ خالی**، و «۰» فقط یک ‎placeholder‎ی کم‌رنگ است.
+    /// این‌طور کاربر روی خانه که می‌رود لازم نیست اول صفر را پاک کند.
+    ///
+    /// ⚠️ فقط برای خانه‌های **تایپ‌شدنی**. جمع‌ها و عددهای محاسبه‌شده همان
+    /// ‎Money‎ی معمولی را می‌گیرند، چون «۰» آن‌جا خودش یک خبر است.
+    /// </summary>
+    public static string MoneyOrBlank(decimal v) => v == 0m ? "" : Money(v);
+
     /// <summary>مقدارِ تایپ‌شده → عدد. مثل <c>parseFloat(x)||0</c>ِ نسخهٔ وب.</summary>
     public static decimal Num(string? s)
     {

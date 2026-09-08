@@ -63,9 +63,9 @@ public sealed partial class ParchaReceiptRowViewModel : RowViewModel
             OnPropertyChanged(n);
     }
 
-    public string LitersText { get => Shamsi.Money(Liters); set => Liters = Shamsi.Num(value); }
-    public string PriceText { get => Shamsi.Money(PricePerLiter); set => PricePerLiter = Shamsi.Num(value); }
-    public string RasidText { get => Shamsi.Money(Rasid); set => Rasid = Shamsi.Num(value); }
+    public string LitersText { get => Shamsi.MoneyOrBlank(Liters); set => Liters = Shamsi.Num(value); }
+    public string PriceText { get => Shamsi.MoneyOrBlank(PricePerLiter); set => PricePerLiter = Shamsi.Num(value); }
+    public string RasidText { get => Shamsi.MoneyOrBlank(Rasid); set => Rasid = Shamsi.Num(value); }
 
     internal decimal Bardagi =>
         Math.Round(PostingService.FuelBardagi(Liters, PricePerLiter), 0, MidpointRounding.AwayFromZero);

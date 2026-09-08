@@ -59,9 +59,9 @@ public sealed partial class InvoiceRowViewModel : RowViewModel
     public bool IsPending => !IsApproved;
     public string StatusText => IsApproved ? "تایید شده" : "در انتظارِ تایید";
 
-    public string PriceText { get => Shamsi.Money(Price); set => Price = Shamsi.Num(value); }
-    public string LitersText { get => Shamsi.Money(Liters); set => Liters = Shamsi.Num(value); }
-    public string AmountText { get => Shamsi.Money(Amount); set => Amount = Shamsi.Num(value); }
+    public string PriceText { get => Shamsi.MoneyOrBlank(Price); set => Price = Shamsi.Num(value); }
+    public string LitersText { get => Shamsi.MoneyOrBlank(Liters); set => Liters = Shamsi.Num(value); }
+    public string AmountText { get => Shamsi.MoneyOrBlank(Amount); set => Amount = Shamsi.Num(value); }
 
     /// <summary>«فقط مبلغ» یا «تیل» — همان تفکیکی که همهٔ رفتارها به آن بند است.</summary>
     public string KindText => InvoiceService.IsMoneyOnly(_v) ? "فقط مبلغ" : "تیل";

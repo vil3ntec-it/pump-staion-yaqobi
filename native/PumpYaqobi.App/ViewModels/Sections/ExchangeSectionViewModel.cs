@@ -56,7 +56,7 @@ public sealed partial class ExchangeRowViewModel : RowViewModel
 
     public string AmountText  { get => Shamsi.Money(Amount);  set => Amount = Shamsi.Num(value); }
     public string RateText    { get => Shamsi.Money(Rate);    set => Rate = Shamsi.Num(value); }
-    public string BardagiText { get => Shamsi.Money(Bardagi); set => Bardagi = Shamsi.Num(value); }
+    public string BardagiText { get => Shamsi.MoneyOrBlank(Bardagi); set => Bardagi = Shamsi.Num(value); }
 
     /// <summary>دالرِ شکسته — مبلغ ÷ فی.</summary>
     public string UsdText => Shamsi.Money(Math.Round(_owner.Calc.ToUsd(_e), 2));

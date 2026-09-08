@@ -64,10 +64,28 @@ public class NavStrip : ContentControl
         Dispatcher.UIThread.Post(UpdateArrows, DispatcherPriority.Loaded);
     }
 
+    /// <summary>
+    /// ══ چرخ و کشیدنِ افقی ══════════════════════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «نوارِ بخش‌ها را من با لپ‌تاپ چپ و راست اسکرول
+    /// می‌کنم، نمی‌شود.»
+    ///
+    /// علتش این بود: این‌جا فقط ‎Delta.Y‎ خوانده می‌شد — یعنی چرخِ عمودیِ
+    /// ماوس. کشیدنِ دو‌انگشتیِ چپ/راست روی تاچ‌پدِ لپ‌تاپ ‎Delta.X‎ می‌فرستد و
+    /// کاملاً نادیده می‌ماند.
+    ///
+    /// حالا هر سه راه کار می‌کنند: کشیدنِ افقیِ تاچ‌پد (‎Delta.X‎)، چرخِ سادهٔ
+    /// ماوس (‎Delta.Y‎)، و ‎Shift‎+چرخ که قراردادِ همیشگیِ لغزشِ افقی است.
+    /// </summary>
     private void OnWheel(object? sender, PointerWheelEventArgs e)
     {
         if (_sv is null) return;
-        By(-e.Delta.Y * Step * 0.5);
+
+        // کشیدنِ افقیِ تاچ‌پد حرفِ اول را می‌زند؛ اگر نبود، چرخِ عمودی.
+        var d = e.Delta.X != 0 ? -e.Delta.X : -e.Delta.Y;
+        if (d == 0) return;
+
+        By(d * Step * 0.5);
         e.Handled = true;
     }
 

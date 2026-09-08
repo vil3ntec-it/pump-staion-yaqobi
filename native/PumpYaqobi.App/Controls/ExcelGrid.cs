@@ -241,10 +241,122 @@ public class ExcelGrid : DataGrid
         _spread = true;
     }
 
+    // ══════════════════════════════════════════════════════════════════════
+    //  ناوبریِ صفحه‌کلید — مو‌به‌مو همان چیزی که سایت می‌کند
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    // گزارشِ صاحب ریپو، سه تا:
+    //   «الان با تب نمی‌شود نوع تیل را عوض کرد، نوع و واحدِ تیل یا پول را
+    //    تغییر داد.»
+    //   «کلیدهای چپ و راست برعکس کار می‌کنند.»
+    //   «موقعِ تایپ هم نمی‌روند سمتِ دیگر.»
+    //
+    // سایت (خطِ ۵۴۹۳۴ به بعدِ ‎index.html‎) این‌ها را چنین حل کرده:
+    //
+    //   • ‎Tab‎ روی ‎radio‎ یا ‎SELECT‎ ⇒ مقدارش عوض می‌شود، فوکوس جابه‌جا
+    //     نمی‌شود (‎_toggleControl‎ + ‎e.preventDefault()‎). ‎Enter‎ هم همان.
+    //   • چپ/راست ⇒ ‎_pickInDirection‎ که **هندسی** است: دنبالِ کنترلی
+    //     می‌گردد که مرکزش واقعاً در همان سمت باشد (‎dx < 0‎ برای چپ). پس
+    //     کلیدِ چپ همیشه چپ می‌برد، چه صفحه راست‌به‌چپ باشد چه نه.
+    //   • در کادرِ متنی، اگر کُرسر **وسطِ** متن است (‎s === e2 && s > 0 &&
+    //     s < len‎) چپ/راست ناوبری نمی‌کند و متن را ویرایش می‌کند.
+    //
+    // ‎DataGrid‎ی آوالونیا هیچ‌کدام را نمی‌کند: ‎Tab‎ فقط فوکوس می‌بَرد، و
+    // چپ/راست را با **ایندکسِ منطقیِ ستون** حساب می‌کند — که در چیدمانِ
+    // راست‌به‌چپ آینه می‌شود و دقیقاً همان «برعکس»ی است که گزارش شد.
+
+    /// <summary>کنترلی که همین حالا فوکوس دارد.</summary>
+    private Control? Focused =>
+        TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() as Control;
+
+    /// <summary>
+    /// ‎_toggleControl‎ — مقدارِ کشویی یا رادیوییِ خانه را یک پله جلو می‌برد.
+    /// ‎true‎ یعنی چیزی عوض شد و کلید نباید کارِ دیگری بکند.
+    /// </summary>
+    private bool ToggleCell()
+    {
+        if (IsReadOnly) return false;
+
+        // خانه هنوز در حالتِ ویرایش نیست؟ اول بازش کن تا کشویی/رادیو ساخته شود.
+        if (Focused is not (ComboBox or RadioButton)) BeginEdit();
+
+        switch (Focused)
+        {
+            case ComboBox cb when cb.ItemCount > 0:
+                cb.SelectedIndex = (cb.SelectedIndex + 1) % cb.ItemCount;
+                return true;
+
+            // گروهِ رادیویی: بعدی را تیک بزن (با دو تا، یعنی همان «آن‌یکی»)
+            case RadioButton rb:
+                var group = rb.FindAncestorOfType<Panel>()?
+                              .GetVisualDescendants().OfType<RadioButton>().ToList();
+                if (group is null || group.Count < 2) return false;
+                var i = group.IndexOf(rb);
+                group[(i + 1) % group.Count].IsChecked = true;
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// کُرسر وسطِ متنِ یک کادرِ تایپ است؟ آن‌وقت چپ/راست مالِ خودِ متن است،
+    /// نه ناوبریِ جدول — همان شرطِ ‎s === e2 && s > 0 && s < len‎ی سایت.
+    /// </summary>
+    private bool CaretInsideText()
+    {
+        if (Focused is not TextBox tb) return false;
+        var len = (tb.Text ?? "").Length;
+        return tb.SelectionStart == tb.SelectionEnd
+            && tb.SelectionStart > 0 && tb.SelectionStart < len;
+    }
+
+    /// <summary>ستونِ جاری را ‎step‎ خانه جابه‌جا می‌کند (بر اساسِ ترتیبِ دیداری).</summary>
+    private bool MoveColumn(int step)
+    {
+        var cols = Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).ToList();
+        if (cols.Count == 0) return false;
+        var cur = CurrentColumn is null ? 0 : cols.IndexOf(CurrentColumn);
+        if (cur < 0) cur = 0;
+        var next = Math.Clamp(cur + step, 0, cols.Count - 1);
+        if (next == cur) return false;
+
+        CurrentColumn = cols[next];
+        var item = SelectedItem ?? (ItemsSource as System.Collections.IEnumerable)?.Cast<object>().FirstOrDefault();
+        if (item is not null) ScrollIntoView(item, cols[next]);
+        return true;
+    }
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
+        // ── Tab: روی خانهٔ کشویی/رادیویی مقدار را عوض می‌کند، نه فوکوس را ──
+        if (e.Key == Key.Tab && !e.KeyModifiers.HasFlag(KeyModifiers.Shift)
+            && IsToggleColumn(CurrentColumn) && ToggleCell())
+        {
+            e.Handled = true;
+            return;
+        }
+
+        // ── چپ/راست: جهتِ **دیداری**، نه ایندکسِ منطقیِ ستون ──
+        if (e.Key is Key.Left or Key.Right)
+        {
+            if (CaretInsideText()) return;            // وسطِ متن ⇒ ویرایش، نه ناوبری
+
+            // در چیدمانِ راست‌به‌چپ، ستونِ «بعدی» سمتِ چپ است. پس کلیدِ چپ
+            // باید ایندکس را جلو ببرد و کلیدِ راست عقب — وارونهٔ حالتِ چپ‌به‌راست.
+            var rtl = FlowDirection == Avalonia.Media.FlowDirection.RightToLeft;
+            var step = (e.Key == Key.Left) == rtl ? +1 : -1;
+            if (MoveColumn(step)) { e.Handled = true; return; }
+            e.Handled = true;                          // لبهٔ جدول: هیچ، ولی نپرد
+            return;
+        }
+
         switch (e.Key)
         {
+            // Enter روی خانهٔ کشویی/رادیویی هم مقدار را عوض می‌کند — مثلِ سایت
+            case Key.Enter when !IsReadOnly && IsToggleColumn(CurrentColumn) && ToggleCell():
+                e.Handled = true;
+                return;
+
             case Key.Enter when !IsReadOnly:
                 // ویرایشِ باز را ببند، بعد یک ردیف بالا/پایین برو
                 CommitEdit(DataGridEditingUnit.Cell, true);
@@ -265,6 +377,14 @@ public class ExcelGrid : DataGrid
 
         base.OnKeyDown(e);
     }
+
+    /// <summary>
+    /// ستونی که ویرایشش کشویی یا رادیویی است — «نوع تیل»، «نوع» (قرض/مصرف)،
+    /// «واحد» (تیل/پول) و مانندِ آن‌ها. فقط روی این‌هاست که ‎Tab‎ و ‎Enter‎
+    /// مقدار را عوض می‌کنند؛ روی خانه‌های عددی و متنی رفتارشان عادی است.
+    /// </summary>
+    private static bool IsToggleColumn(DataGridColumn? col) =>
+        col is DataGridTemplateColumn t && t.CellEditingTemplate is not null;
 
     protected override void OnTextInput(TextInputEventArgs e)
     {

@@ -75,11 +75,11 @@ public sealed partial class DebtRowViewModel : RowViewModel
         _owner.RefreshTotals();
     }
 
-    public string LitersText { get => Shamsi.Money(Liters); set => Liters = Shamsi.Num(value); }
-    public string PriceText { get => Shamsi.Money(Price); set => Price = Shamsi.Num(value); }
-    public string ManualBardagiText { get => Shamsi.Money(ManualBardagi); set => ManualBardagi = Shamsi.Num(value); }
-    public string RasidText { get => Shamsi.Money(Rasid); set => Rasid = Shamsi.Num(value); }
-    public string RasidFuelText { get => Shamsi.Money(RasidFuel); set => RasidFuel = Shamsi.Num(value); }
+    public string LitersText { get => Shamsi.MoneyOrBlank(Liters); set => Liters = Shamsi.Num(value); }
+    public string PriceText { get => Shamsi.MoneyOrBlank(Price); set => Price = Shamsi.Num(value); }
+    public string ManualBardagiText { get => Shamsi.MoneyOrBlank(ManualBardagi); set => ManualBardagi = Shamsi.Num(value); }
+    public string RasidText { get => Shamsi.MoneyOrBlank(Rasid); set => Rasid = Shamsi.Num(value); }
+    public string RasidFuelText { get => Shamsi.MoneyOrBlank(RasidFuel); set => RasidFuel = Shamsi.Num(value); }
 
     /// <summary>بردگیِ پولیِ همین ردیف — از همان سرویسِ آزموده، نه حسابِ دستی.</summary>
     public string BardagiText => Shamsi.Money(_owner.Calc.RowBardagi(_r));
@@ -662,10 +662,10 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
             OnPropertyChanged(nameof(MoneyDepositText));
         }
     }
-    public string RasidFuelPetrolText { get => Shamsi.Money(RasidFuelPetrol); set => RasidFuelPetrol = Shamsi.Num(value); }
-    public string RasidFuelDieselText { get => Shamsi.Money(RasidFuelDiesel); set => RasidFuelDiesel = Shamsi.Num(value); }
-    public string RasidMoneyPetrolText { get => Shamsi.Money(RasidMoneyPetrol); set => RasidMoneyPetrol = Shamsi.Num(value); }
-    public string RasidMoneyDieselText { get => Shamsi.Money(RasidMoneyDiesel); set => RasidMoneyDiesel = Shamsi.Num(value); }
+    public string RasidFuelPetrolText { get => Shamsi.MoneyOrBlank(RasidFuelPetrol); set => RasidFuelPetrol = Shamsi.Num(value); }
+    public string RasidFuelDieselText { get => Shamsi.MoneyOrBlank(RasidFuelDiesel); set => RasidFuelDiesel = Shamsi.Num(value); }
+    public string RasidMoneyPetrolText { get => Shamsi.MoneyOrBlank(RasidMoneyPetrol); set => RasidMoneyPetrol = Shamsi.Num(value); }
+    public string RasidMoneyDieselText { get => Shamsi.MoneyOrBlank(RasidMoneyDiesel); set => RasidMoneyDiesel = Shamsi.Num(value); }
 
     private void SaveAccount()
     {
