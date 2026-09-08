@@ -27,6 +27,21 @@
              نبود: نه کیو‌آری ساخته می‌شد و نه دیده می‌شد. -->
         <Button Classes="ghost" Content="📲 کیو‌آر" Command="{Binding ShowQrCommand}"
                 ToolTip.Tip="کیو‌آرِ همین حسابی که باز است" />
+        <!-- ══ دو دکمهٔ خطرناک، دور از بقیه ═══════════════════════════════
+             گزارشِ صاحب ریپو: «حذف حساب و تغییر اسم را باید بالای بالا
+             بگذاری، جای پی‌دی‌اف و غیره؛ ولی این دو تا را کنجِ سمتِ راست
+             بگذاری که دستم اشتباهی جای پی‌دی‌اف این را نزنم.»
+
+             پس از نوارِ حساب آمدند بالا، ولی با یک فاصلهٔ آشکار و یک خطِ
+             جداکننده از دکمه‌های همیشگی — تا دستِ کسی سُر نخورد رویشان. -->
+        <Border Width="1" Background="{DynamicResource Pump.GridLine}"
+                Margin="14,4" VerticalAlignment="Stretch" />
+        <Button Classes="ghost" Content="✏️ تغییر اسم"
+                Command="{Binding RenamePersonCommand}" />
+        <Button Classes="ghost danger" Content="🗑️ حذفِ این حساب"
+                Command="{Binding DeleteSubAccountCommand}"
+                CommandParameter="{Binding Current}" />
+
         <Button Classes="accent" Content="بازگشت به فهرست"
                 Command="{Binding BackCommand}" />
       </StackPanel>
@@ -199,7 +214,7 @@
              ترتیبِ سایت، همین:
 
                  📒 حساب: │ کشویی │ ➕ حساب جدید │ 📋 جدول جدید │ ┊
-                 📋 همه │ ⛽ حساب جداگانه پطرول │ 🟤 حساب جداگانه دیزل │ ┊
+                 📋 همه │ ⛽ حساب پطرول │ 🟤 حساب دیزل │ ┊
                  📞 شماره تماس │ 📝 فیِ خرید │ ٪ فیصدی ▾ │ 🗂️ آرشیو ▾
 
              ⚠️ این نوار باید روی کامپیوتر «بشکند» (چند خط شود)، نه یک خط.
@@ -274,10 +289,10 @@
           <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
             <Button Classes="ghost" Content="📋 همه"
                     Command="{Binding Current.SetFilterCommand}" CommandParameter="all" />
-            <Button Classes="ghost" Content="⛽ حساب جداگانه پطرول"
+            <Button Classes="ghost" Content="⛽ حساب پطرول"
                     Foreground="{DynamicResource Pump.Ok}"
                     Command="{Binding Current.SetFilterCommand}" CommandParameter="petrol" />
-            <Button Classes="ghost" Content="🟤 حساب جداگانه دیزل"
+            <Button Classes="ghost" Content="🟤 حساب دیزل"
                     Foreground="{DynamicResource Pump.Warn}"
                     Command="{Binding Current.SetFilterCommand}" CommandParameter="diesel" />
           </StackPanel>
@@ -312,11 +327,6 @@
                   IsVisible="{Binding Current.HasArchives, FallbackValue=False}"
                   ToolTip.Tip="جدول‌های آرشیوِ این حساب — با زدنِ همین کادر باز و بسته می‌شود" />
 
-          <Button Classes="ghost" Content="✏️ تغییر اسم"
-                  Command="{Binding RenamePersonCommand}" />
-          <Button Classes="ghost danger" Content="🗑️ حذفِ این حساب"
-                  Command="{Binding DeleteSubAccountCommand}"
-                  CommandParameter="{Binding Current}" />
         </WrapPanel>
 
         <!-- کادرِ کشوییِ «جدول‌های آرشیو» — تا آرشیوی نباشد، اصلاً دیده نمی‌شود -->
@@ -460,7 +470,7 @@
                ⚠️ ‎GroupName‎ باید برای هر ردیف یکتا باشد — با نامِ ثابت، آوالونیا
                همهٔ ردیف‌های جدول را یک گروه می‌بیند و زدنِ «دیزل» در یک ردیف
                انتخابِ همهٔ ردیف‌های دیگر را برمی‌دارد. -->
-          <DataGridTemplateColumn Header="تیل" Width="Auto">
+          <DataGridTemplateColumn Header="نوع تیل" Width="Auto">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
                 <StackPanel Spacing="3" Margin="3" MinWidth="74"
@@ -483,12 +493,30 @@
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
-          <DataGridTextColumn Header="لیتر"  Binding="{Binding LitersText}" Width="Auto" />
-          <DataGridTextColumn Header="فی"    Binding="{Binding PriceText}" Width="Auto" />
-          <DataGridTextColumn Header="بردگیِ دستی" Binding="{Binding ManualBardagiText}" Width="Auto" />
-          <DataGridTextColumn Header="بردگی" Binding="{Binding BardagiText}" Width="Auto" IsReadOnly="True" />
-          <DataGridTextColumn Header="رسید"  Binding="{Binding RasidText}" Width="Auto" />
-          <DataGridTextColumn Header="رسیدِ تیل" Binding="{Binding RasidFuelText}" Width="Auto" />
+          <!-- ══ ستون‌ها مو‌به‌مو مثلِ سایت ══════════════════════════════════
+               سایت (‎#pm-tbl‎، خطِ ۲۱۳۹۶ی ‎index.html‎) دقیقاً این‌هاست:
+                   # │ تاریخ │ نام │ حواله │ نوع تیل │ مقدار تیل │ فی لیتر │
+                   مقدار بردگی │ رسید │ رسید تیل │ الباقی │ حذف
+
+               دو ایراد که صاحب ریپو گرفت و هر دو درست بود:
+                 • «بردگیِ دستی» در سایت **اصلاً وجود ندارد** — اختراعِ نیتیو
+                   بود و همان بود که «تو بردگی هم می‌شود رسید زد» را می‌ساخت.
+                   برداشته شد؛ «مقدار بردگی» خودش هم خواندنی است و هم نوشتنی،
+                   مثلِ سایت.
+                 • ستونِ «الباقی» **نبود**. حالا هست و آخرِ ردیف می‌نشیند.
+               نامِ ستون‌ها هم به همان نامِ سایت برگشت. -->
+          <DataGridTextColumn Header="مقدار تیل" Binding="{Binding LitersText}" Width="Auto"
+                              CellStyleClasses="num" />
+          <DataGridTextColumn Header="فی لیتر" Binding="{Binding PriceText}" Width="Auto"
+                              CellStyleClasses="num" />
+          <DataGridTextColumn Header="مقدار بردگی" Binding="{Binding BardagiText}" Width="Auto"
+                              CellStyleClasses="num" />
+          <DataGridTextColumn Header="رسید"  Binding="{Binding RasidText}" Width="Auto"
+                              CellStyleClasses="num" />
+          <DataGridTextColumn Header="رسید تیل" Binding="{Binding RasidFuelText}" Width="Auto"
+                              CellStyleClasses="num" />
+          <DataGridTextColumn Header="الباقی" Binding="{Binding AlbaqiText}" Width="Auto"
+                              IsReadOnly="True" />
           <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>

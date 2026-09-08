@@ -20,19 +20,53 @@ public class VisualQualityTests
         File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Themes", "Controls.axaml"));
 
     /// <summary>
-    /// بندِ ۵٫۲: «جداکنندهٔ افقی ۱px · هیچ خط عمودی».
-    /// بندِ ۸ (ممنوعیت‌ها): «خط عمودی جدول».
+    /// ══ خطِ جدول ═════════════════════════════════════════════════════════
+    /// ⚠️ این آزمون **وارونه** شد و عمداً.
+    ///
+    /// «پرامپت کیفیت بصری» گفته بود «هیچ خط عمودی»، و یک نوبت همان پیاده شد.
+    /// نتیجه‌اش گزارشِ صاحب ریپو بود: «خط‌های جدول‌ها نیست و دیده نمی‌شه.»
+    ///
+    /// و خودِ سایت هم خطِ عمودی دارد — ‎.xls-tbl td‎ هم ‎border-bottom‎ دارد و
+    /// هم ‎border-left‎. پس سایت و صاحب ریپو بر آن سند مقدم‌اند.
+    ///
+    /// رنگ هم مهم است: ‎Pump.GridLine‎ ی ‎Mix(Card, Border, 0.75)‎ عملاً نامرئی
+    /// بود؛ سایت خودِ ‎border‎ را می‌گذارد، پس ‎Pump.Border‎.
     /// </summary>
     [Fact]
-    public void TablesHaveNoVerticalGridLines()
+    public void TableLinesAreVisibleAndGoBothWays()
     {
         var t = Theme();
-        Assert.Contains("<Setter Property=\"GridLinesVisibility\" Value=\"Horizontal\" />", t);
-        // «دیگر نباید باشد» همیشه روی متنِ بی‌کامنت — وگرنه روزی که کسی در
-        // کامنت بنویسد «خطِ عمودی برداشته شد»، آزمون خودِ آن جمله را می‌خواند.
+        Assert.Contains("<Setter Property=\"GridLinesVisibility\" Value=\"All\" />", t);
+        Assert.Contains("<Setter Property=\"HorizontalGridLinesBrush\" Value=\"{DynamicResource Pump.Border}\" />", t);
+        Assert.Contains("<Setter Property=\"VerticalGridLinesBrush\" Value=\"{DynamicResource Pump.Border}\" />", t);
+
         var bare = NoComments(t);
-        Assert.DoesNotContain("<Setter Property=\"GridLinesVisibility\" Value=\"All\" />", bare);
-        Assert.DoesNotContain("VerticalGridLinesBrush", bare);
+        Assert.DoesNotContain("GridLinesVisibility\" Value=\"Horizontal", bare);
+        Assert.DoesNotContain("GridLinesBrush\" Value=\"{DynamicResource Pump.GridLine}", bare);
+    }
+
+    /// <summary>
+    /// کادرِ تایپِ داخلِ خانه شفاف است و لبه ندارد — ‎.xls-in‎ی سایت. پیش از
+    /// این ‎TextBox‎ی آوالونیا وسطِ جدولِ تیره سفید می‌شد.
+    /// </summary>
+    [Fact]
+    public void TheInCellEditorIsTransparent()
+    {
+        var cell = Between(Theme(), "<Style Selector=\"DataGridCell TextBox\">", "</Style>");
+        Assert.Contains("<Setter Property=\"Background\" Value=\"Transparent\" />", cell);
+        Assert.Contains("<Setter Property=\"BorderThickness\" Value=\"0\" />", cell);
+    }
+
+    /// <summary>
+    /// «صفر دیده بشود ولی صفری وجود نداشته باشد» — یعنی ‎placeholder‎ی سایت.
+    /// خانهٔ عددی (‎CellStyleClasses="num"‎) واترمارکِ «۰» می‌گیرد.
+    /// </summary>
+    [Fact]
+    public void NumericCellsShowAGhostZero()
+    {
+        var t = Theme();
+        Assert.Contains("<Style Selector=\"DataGridCell.num TextBox\">", t);
+        Assert.Contains("<Setter Property=\"Watermark\" Value=\"0\" />", t);
     }
 
     /// <summary>
@@ -105,5 +139,65 @@ public class VisualQualityTests
         Assert.True(i >= 0, "پیدا نشد: " + a);
         var j = s.IndexOf(b, i, StringComparison.Ordinal);
         return s[i..(j + b.Length)];
+    }
+}
+
+/// <summary>
+/// ══ جدولِ حسابِ قرض‌دار، ستون‌به‌ستون مثلِ سایت ══════════════════════════════
+/// سایت (‎#pm-tbl‎): ‎# │ تاریخ │ نام │ حواله │ نوع تیل │ مقدار تیل │ فی لیتر │
+/// مقدار بردگی │ رسید │ رسید تیل │ الباقی │ حذف‎.
+/// </summary>
+public class PersonColumnsTests
+{
+    private static string View() => File.ReadAllText(Path.GetFullPath(Path.Combine(
+        AppContext.BaseDirectory, "..", "..", "..", "..",
+        "PumpYaqobi.App", "Views", "Sections", "PersonView.axaml")));
+
+    private static string Bare() => System.Text.RegularExpressions.Regex.Replace(
+        View(), "<!--.*?-->", "", System.Text.RegularExpressions.RegexOptions.Singleline);
+
+    /// <summary>«بردگیِ دستی» در سایت نیست — اختراعِ نیتیو بود و برداشته شد.</summary>
+    [Fact]
+    public void ThereIsNoManualBardagiColumn()
+        => Assert.DoesNotContain("بردگیِ دستی", Bare());
+
+    /// <summary>ستونِ «الباقی» که اصلاً نبود، حالا هست.</summary>
+    [Fact]
+    public void TheAlbaqiColumnExists()
+        => Assert.Contains("Header=\"الباقی\"", Bare());
+
+    /// <summary>نامِ ستون‌ها همان‌های سایت‌اند.</summary>
+    [Theory]
+    [InlineData("نوع تیل")]
+    [InlineData("مقدار تیل")]
+    [InlineData("فی لیتر")]
+    [InlineData("مقدار بردگی")]
+    [InlineData("رسید تیل")]
+    public void ColumnHeadersMatchTheSite(string header)
+        => Assert.Contains("Header=\"" + header + "\"", Bare());
+
+    /// <summary>
+    /// دو دکمهٔ خطرناک رفتند بالا، ولی با خطِ جداکننده از «📄 PDF» — خواستهٔ
+    /// صریحِ صاحب ریپو: «کنجِ سمتِ راست، که دستم اشتباهی جای پی‌دی‌اف نزنم».
+    /// </summary>
+    [Fact]
+    public void DeleteAndRenameSitInTheToolbarAwayFromPdf()
+    {
+        var v = Bare();
+        var toolbar = v[v.IndexOf("<c:SectionPage.Toolbar>", StringComparison.Ordinal)
+                        ..v.IndexOf("</c:SectionPage.Toolbar>", StringComparison.Ordinal)];
+        Assert.Contains("RenamePersonCommand", toolbar);
+        Assert.Contains("DeleteSubAccountCommand", toolbar);
+        Assert.Contains("Pump.GridLine", toolbar);        // خطِ جداکننده
+    }
+
+    /// <summary>«حساب جداگانه…» شد «حساب پطرول» و «حساب دیزل».</summary>
+    [Fact]
+    public void TheFuelFiltersAreNamedPlainly()
+    {
+        var v = Bare();
+        Assert.DoesNotContain("حساب جداگانه", v);
+        Assert.Contains("⛽ حساب پطرول", v);
+        Assert.Contains("🟤 حساب دیزل", v);
     }
 }
