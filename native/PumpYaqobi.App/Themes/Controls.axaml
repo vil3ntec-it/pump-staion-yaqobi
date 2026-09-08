@@ -474,7 +474,17 @@
 
             <!-- ══ سربرگِ کادر ══ -->
             <Border Grid.Row="0" Classes="card-head">
-              <Grid ColumnDefinitions="*,Auto">
+              <!-- ══ عنوان ‎Auto‎، ابزار ‎*‎ — و چرا این ترتیب ══════════════════
+                   پیش از این عنوان ‎*‎ بود و ابزار ‎Auto‎. ستونِ ‎Auto‎ به فرزندش
+                   پهنای **دلخواهِ خودش** را می‌دهد، یعنی اندازه‌گیری با پهنای
+                   بی‌نهایت. نتیجه: هر ‎WrapPanel‎ی در نوارِ ابزار هیچ‌وقت
+                   نمی‌شکست و فقط از پنجره بیرون می‌زد — سنجشِ ‎UiTests person‎
+                   همین را گرفت («بازگشت به فهرست» در ‎x −5…135‎).
+
+                   حالا ابزار در ستونِ ‎*‎ است، پس پهنای واقعی و محدود می‌گیرد و
+                   ‎WrapPanel‎ش درست می‌شکند. عنوان ‎Auto‎ است و به اندازهٔ
+                   خودش جا می‌گیرد. -->
+              <Grid ColumnDefinitions="Auto,*">
                 <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                   <TextBlock Text="{TemplateBinding Header}" Classes="card-title" />
                   <TextBlock Text="{TemplateBinding SubHeader}" Classes="muted"
