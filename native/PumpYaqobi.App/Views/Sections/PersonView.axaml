@@ -232,8 +232,6 @@
             <Style Selector="WrapPanel > :is(Control)">
               <Setter Property="Margin" Value="0,0,8,6" />
             </Style>
-          </WrapPanel.Styles>
-          <StackPanel.Styles>
             <Style Selector="TextBlock.barl">
               <Setter Property="FontSize" Value="14" />
               <Setter Property="FontWeight" Value="Bold" />
@@ -248,7 +246,7 @@
               <Setter Property="Background" Value="{DynamicResource Pump.GridLine}" />
               <Setter Property="VerticalAlignment" Value="Center" />
             </Style>
-          </StackPanel.Styles>
+          </WrapPanel.Styles>
 
           <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
             <TextBlock Text="📒 حساب:" Classes="barl" />
