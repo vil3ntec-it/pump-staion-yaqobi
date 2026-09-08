@@ -60,6 +60,9 @@ public sealed class PumpDbContext : DbContext
     public DbSet<Setting> Settings => Set<Setting>();
     public DbSet<AppUser> Users => Set<AppUser>();
     public DbSet<AuditEntry> Audit => Set<AuditEntry>();
+    /// <summary>یادداشت‌های هر بخش — همتای «صندوق نوت‌ها»ی نسخهٔ وب.</summary>
+    public DbSet<SectionNote> SectionNotes => Set<SectionNote>();
+    public DbSet<SectionNoteDraft> SectionNoteDrafts => Set<SectionNoteDraft>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -437,6 +440,21 @@ public sealed class PumpDbContext : DbContext
             e.HasKey(x => x.Id);
             e.HasIndex(x => x.AtUtc);
             e.HasIndex(x => x.Action);
+        });
+
+        b.Entity<SectionNote>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.SectionKey).IsRequired();
+            e.HasIndex(x => x.SectionKey);          // «نوت‌های همین بخش»
+        });
+
+        b.Entity<SectionNoteDraft>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.SectionKey).IsRequired();
+            // هر بخش فقط یک پیش‌نویس دارد — همان ‎_noteDrafts()[key]‎ی نسخهٔ وب
+            e.HasIndex(x => x.SectionKey).IsUnique();
         });
 
         base.OnModelCreating(b);

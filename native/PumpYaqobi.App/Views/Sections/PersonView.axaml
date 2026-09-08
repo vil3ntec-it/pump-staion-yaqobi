@@ -9,10 +9,24 @@
   <c:SectionPage Header="{Binding Name}" SubHeader="{Binding Phone}">
 
     <c:SectionPage.Toolbar>
+      <!-- ══ همان دکمه‌های سربرگِ ‎.pm-head-btns‎ی سایت، به همان ترتیب ═══════
+           سایت (خطِ ۲۱۲۹۳ به بعدِ index.html):
+             → قبلی │ بعدی ← │ 🔁 پول │ 📄 PDF │ ⋯ بیشتر │ ✕
+           «🔁 پول / 🔁 تیل» دکمه است، نه تیک‌مارک. گزارشِ صاحب ریپو: «واحد پول و
+           تیل چرا شبیهِ کادرِ آن بالا بغلِ پی‌دی‌اف نیست؟ که این مدل تیک‌مارکی
+           درست کردی چرا؟» — پس چک‌باکسِ «واحدِ پول» از پایین برداشته شد و
+           همان‌جایی نشست که در سایت است. -->
       <StackPanel Orientation="Horizontal" Spacing="8">
-        <Button Classes="accent" Content="🆕 جدول جدید"
-                Command="{Binding Current.NewTableCommand}" />
-        <Button Classes="ghost info" Content="📄 PDF حساب" Command="{Binding PdfCommand}" />
+        <Button Classes="ghost" Content="→ قبلی" Command="{Binding PrevPersonCommand}" />
+        <Button Classes="ghost" Content="بعدی ←" Command="{Binding NextPersonCommand}" />
+        <Button Classes="ghost info" Content="{Binding Current.ModeToggleText}"
+                Command="{Binding Current.ToggleModeCommand}"
+                ToolTip.Tip="دفترِ پول ⇄ دفترِ تیل — این دو کاملاً جدا هستند" />
+        <Button Classes="ghost info" Content="📄 PDF" Command="{Binding PdfCommand}" />
+        <!-- «📲 کیو‌آر» — در سایت داخلِ کشوییِ «⋯ بیشتر» است و در نیتیو اصلاً
+             نبود: نه کیو‌آری ساخته می‌شد و نه دیده می‌شد. -->
+        <Button Classes="ghost" Content="📲 کیو‌آر" Command="{Binding ShowQrCommand}"
+                ToolTip.Tip="کیو‌آرِ همین حسابی که باز است" />
         <Button Classes="accent" Content="بازگشت به فهرست"
                 Command="{Binding BackCommand}" />
       </StackPanel>
@@ -32,76 +46,144 @@
            استن نه بغل به بغل هم». بغل‌به‌بغل هر کارت نصفِ عرض می‌گرفت و چهار
            عددش به هم می‌چسبید. -->
       <Grid RowDefinitions="Auto,8,Auto" DataContext="{Binding Current}">
+        <Grid.Styles>
+          <!-- ══ اندازه‌ها مو‌به‌مو از خودِ سایت ═══════════════════════════
+               ‎#personModal .fs-cell .l{font-size:1rem;font-weight:900}‎  → ۱۶
+               ‎#personModal .fs-cell .v{font-size:1.2rem;font-weight:900}‎ → ۱۹
+               گزارشِ صاحب ریپو: «چرا همه عددها انقدر کوچک، همه کلمات هم همین‌طور
+               — می‌خواهم همه یک اندازه و کلفت باشند.» پیش از این برچسب‌ها کلاسِ
+               ‎label‎ی ریزِ خاکستری داشتند و عددها ۱۷ بودند. -->
+          <Style Selector="TextBlock.fsl">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="Black" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
+          </Style>
+          <Style Selector="TextBlock.fsv">
+            <Setter Property="FontSize" Value="19" />
+            <Setter Property="FontWeight" Value="Black" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Center" />
+          </Style>
+          <Style Selector="TextBox.fsv">
+            <Setter Property="FontSize" Value="19" />
+            <Setter Property="FontWeight" Value="Black" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="Padding" Value="0,1" />
+            <Setter Property="MinHeight" Value="0" />
+          </Style>
+          <!-- نشانِ «⛽ حساب پطرول» — کادرِ کوچکِ خودش، کنارِ ردیف. سایت:
+               ‎#personModal .fs-head{padding:6px 12px;border-radius:10px;
+               border:1.5px solid;background:card}‎ -->
+          <Style Selector="Border.fshead">
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="BorderThickness" Value="1.5" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+          </Style>
+          <Style Selector="Border.fshead > TextBlock">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="ExtraBold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+          </Style>
+        </Grid.Styles>
 
-        <Border Grid.Row="0" Classes="panel" Padding="14,12"
+        <!-- ══ ⛽ حساب پطرول ═══════════════════════════════════════════════
+             ⚠️ نشانِ حساب **کنارِ** ردیف می‌نشیند، نه بالای آن. این عینِ قاعدهٔ
+             ‎<style id="person-head-inline">‎ی سایت است:
+
+                 @media (min-width:700px){
+                   #personModal .fs-group{ display:flex; align-items:center; gap:10px }
+                   #personModal .fs-head { flex:0 0 auto; ... }
+                   #personModal .fs-rows { flex:1 1 auto }
+                 }
+
+             و خودِ سایت دلیلش را هم نوشته: این نوشته یک خطِ کاملِ جدا می‌گرفت و
+             کادرِ سربرگ را بی‌جهت بلند می‌کرد. گزارشِ صاحب ریپو با عکس همین بود:
+             «حساب پطرول و دیزل بغلِ فیصدی استن و بالا نوشته نشده آن‌جوری که تو
+             کشیدی.» چون FlowDirection کلِ پنجره RTL است، ستونِ ۰ سمتِ راست
+             می‌افتد — یعنی همان‌جایی که در سایت هست. -->
+        <!-- در فیلترِ دیزل این کارت دیده نمی‌شود، مثلِ سایت -->
+        <Border Grid.Row="0" Classes="panel" Padding="14,10"
+                IsVisible="{Binding ShowPetrolCard}"
                 BorderBrush="{DynamicResource Pump.Ok}" BorderThickness="2">
-          <StackPanel Spacing="8">
-            <TextBlock Text="⛽ حساب پطرول" FontWeight="ExtraBold" FontSize="15"
-                       Foreground="{DynamicResource Pump.Ok}" />
-            <UniformGrid Rows="1">
+          <Grid ColumnDefinitions="Auto,10,*">
+            <Border Grid.Column="0" Classes="fshead"
+                    BorderBrush="{DynamicResource Pump.Ok}">
+              <TextBlock Text="⛽ حساب پطرول" Foreground="{DynamicResource Pump.Ok}" />
+            </Border>
+
+            <UniformGrid Grid.Column="2" Rows="1">
               <StackPanel Spacing="2">
-                <TextBlock Text="فیصدی ما (٪)" Classes="label" />
-                <TextBlock Text="{Binding HeadPetrolPercentText}" FontWeight="ExtraBold" FontSize="17"
+                <!-- فیصدی داخلِ خودِ برچسب می‌نشیند، مثلِ سایت:
+                     setL('pm-p-comm-l', 'فیصدی ما (' + n2fa(rnd(pctP)) + '٪)') -->
+                <TextBlock Text="{Binding HeadPetrolPercentLabel}" Classes="fsl" />
+                <TextBlock Text="{Binding HeadPetrolPercentText}" Classes="fsv"
                            Foreground="{DynamicResource Pump.Info}" />
               </StackPanel>
               <StackPanel Spacing="2">
-                <TextBlock Text="مقدار رسید تیل" Classes="label" />
+                <TextBlock Text="{Binding HeadRasidLabel}" Classes="fsl" />
                 <!-- در سایت رسید را همین‌جا در سربرگ می‌نویسند، نه در کادرِ
                      دیگری پایین‌تر. پس این خانه خواندنی نیست، نوشتنی است. -->
-                <TextBox Text="{Binding HeadPetrolRasidEdit}" FontWeight="ExtraBold" FontSize="17"
-                         Background="Transparent" BorderThickness="0,0,0,1" Padding="0,1"
+                <TextBox Text="{Binding HeadPetrolRasidEdit}" Classes="fsv"
                          Foreground="{DynamicResource Pump.Ok}" />
               </StackPanel>
               <StackPanel Spacing="2">
-                <TextBlock Text="برد" Classes="label" />
-                <TextBlock Text="{Binding HeadPetrolBordText}" FontWeight="ExtraBold" FontSize="17"
+                <TextBlock Text="برد" Classes="fsl" />
+                <TextBlock Text="{Binding HeadPetrolBordText}" Classes="fsv"
                            Foreground="{DynamicResource Pump.Warn}" />
               </StackPanel>
               <StackPanel Spacing="2">
-                <TextBlock Text="الباقی" Classes="label" />
-                <TextBlock Text="{Binding HeadPetrolAlbaqiText}" FontWeight="ExtraBold" FontSize="17"
+                <TextBlock Text="{Binding HeadAlbaqiLabel}" Classes="fsl" />
+                <TextBlock Text="{Binding HeadPetrolAlbaqiText}" Classes="fsv"
                            Foreground="{Binding HeadPetrolAlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
               </StackPanel>
             </UniformGrid>
-          </StackPanel>
+          </Grid>
         </Border>
 
-        <Border Grid.Row="2" Classes="panel" Padding="14,12"
+        <!-- ══ 🟤 حساب دیزل — همان چیدمان، همان اندازه‌ها ══════════════════ -->
+        <Border Grid.Row="2" Classes="panel" Padding="14,10"
+                IsVisible="{Binding ShowDieselCard}"
                 BorderBrush="{DynamicResource Pump.Warn}" BorderThickness="2">
-          <StackPanel Spacing="8">
-            <TextBlock Text="🟤 حساب دیزل" FontWeight="ExtraBold" FontSize="15"
-                       Foreground="{DynamicResource Pump.Warn}" />
-            <UniformGrid Rows="1">
+          <Grid ColumnDefinitions="Auto,10,*">
+            <Border Grid.Column="0" Classes="fshead"
+                    BorderBrush="{DynamicResource Pump.Warn}">
+              <TextBlock Text="🟤 حساب دیزل" Foreground="{DynamicResource Pump.Warn}" />
+            </Border>
+
+            <UniformGrid Grid.Column="2" Rows="1">
               <StackPanel Spacing="2">
-                <TextBlock Text="فیصدی ما (٪)" Classes="label" />
-                <TextBlock Text="{Binding HeadDieselPercentText}" FontWeight="ExtraBold" FontSize="17"
+                <TextBlock Text="{Binding HeadDieselPercentLabel}" Classes="fsl" />
+                <TextBlock Text="{Binding HeadDieselPercentText}" Classes="fsv"
                            Foreground="{DynamicResource Pump.Info}" />
               </StackPanel>
               <StackPanel Spacing="2">
-                <TextBlock Text="مقدار رسید تیل" Classes="label" />
-                <!-- در سایت رسید را همین‌جا در سربرگ می‌نویسند، نه در کادرِ
-                     دیگری پایین‌تر. پس این خانه خواندنی نیست، نوشتنی است. -->
-                <TextBox Text="{Binding HeadDieselRasidEdit}" FontWeight="ExtraBold" FontSize="17"
-                         Background="Transparent" BorderThickness="0,0,0,1" Padding="0,1"
+                <TextBlock Text="{Binding HeadRasidLabel}" Classes="fsl" />
+                <TextBox Text="{Binding HeadDieselRasidEdit}" Classes="fsv"
                          Foreground="{DynamicResource Pump.Ok}" />
               </StackPanel>
               <StackPanel Spacing="2">
-                <TextBlock Text="برد" Classes="label" />
-                <TextBlock Text="{Binding HeadDieselBordText}" FontWeight="ExtraBold" FontSize="17"
+                <TextBlock Text="برد" Classes="fsl" />
+                <TextBlock Text="{Binding HeadDieselBordText}" Classes="fsv"
                            Foreground="{DynamicResource Pump.Warn}" />
               </StackPanel>
               <StackPanel Spacing="2">
-                <TextBlock Text="الباقی" Classes="label" />
-                <TextBlock Text="{Binding HeadDieselAlbaqiText}" FontWeight="ExtraBold" FontSize="17"
+                <TextBlock Text="{Binding HeadAlbaqiLabel}" Classes="fsl" />
+                <TextBlock Text="{Binding HeadDieselAlbaqiText}" Classes="fsv"
                            Foreground="{Binding HeadDieselAlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
               </StackPanel>
             </UniformGrid>
-          </StackPanel>
+          </Grid>
         </Border>
       </Grid>
     </c:SectionPage.Summary>
 
-    <Grid RowDefinitions="Auto,Auto,*,Auto">
+    <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
 
       <!-- ══ نوارِ حساب — کشوییِ «حساب فرعی» + کادرِ «جدول‌های آرشیو» ══════════
            گزارشِ صاحب ریپو، دو تا:
@@ -113,10 +195,37 @@
            پیش از این چیپ‌های افقی بود: با چند حساب، نوار پهن‌تر از صفحه می‌شد
            و اسمِ حساب‌ها هم دیده نمی‌شد. حالا دقیقاً مثلِ سایت، یک کشویی. -->
       <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,10">
-        <StackPanel Orientation="Horizontal" Spacing="8">
-          <TextBlock Text="📒 حساب:" Classes="label" VerticalAlignment="Center" />
+        <!-- ══ نوارِ حساب — مو‌به‌مو ‎.pm-acct-bar‎ی سایت ══════════════════════
+             سایت همه‌شان را در «یک خط» کنارِ هم می‌گذارد، به همین ترتیب:
+
+                 📒 حساب: │ کشویی │ ➕ حساب جدید │ 📋 جدول جدید │ ┊
+                 📋 همه │ ⛽ حساب جداگانه پطرول │ 🟤 حساب جداگانه دیزل │ ┊
+                 📞 شماره تماس │ 📝 فیِ خرید │ ٪ فیصدی ▾ │ 🗂️ آرشیو ▾
+
+             و خودش هم نوشته چرا: «دیگر کشویی بالای دکمه‌ها نیست که دست
+             اشتباهی رویشان برود؛ در صفحهٔ باریک این خط اسکرول افقی می‌خورد و
+             نمی‌شکند.» پس این‌جا هم ‎WrapPanel‎ نیست، یک خط است. -->
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <StackPanel.Styles>
+            <Style Selector="TextBlock.barl">
+              <Setter Property="FontSize" Value="14" />
+              <Setter Property="FontWeight" Value="Bold" />
+              <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
+              <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+            <!-- خطِ جداکنندهٔ باریک — همتای
+                 ‎<span style="width:1px;height:24px;background:border">‎ -->
+            <Style Selector="Border.sep">
+              <Setter Property="Width" Value="1" />
+              <Setter Property="Height" Value="24" />
+              <Setter Property="Background" Value="{DynamicResource Pump.GridLine}" />
+              <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+          </StackPanel.Styles>
+
+          <TextBlock Text="📒 حساب:" Classes="barl" />
           <ComboBox ItemsSource="{Binding Accounts}" SelectedItem="{Binding Current}"
-                    MinWidth="220">
+                    MinWidth="180">
             <ComboBox.ItemTemplate>
               <DataTemplate x:DataType="vm:AccountViewModel">
                 <TextBlock Text="{Binding Title}" />
@@ -125,19 +234,68 @@
           </ComboBox>
           <Button Classes="ghost info" Content="➕ حساب جدید"
                   Command="{Binding AddSubAccountCommand}" />
+          <!-- «📋 جدول جدید» جایش همین نوار است، نه سربرگ — در سایت هم
+               ‎.pm-table-new‎ درست بغلِ ‎.pm-acct-new‎ می‌نشیند. -->
+          <Button Classes="ghost info" Content="📋 جدول جدید"
+                  Command="{Binding Current.NewTableCommand}" />
+
+          <Border Classes="sep" />
+
+          <!-- ══ سه دکمهٔ فیلتر — ‎setPersonFilter()‎ی سایت ═════════════════
+               در برنامهٔ نیتیو اصلاً نبودند، یعنی راهی نبود که فقط ردیف‌های یک
+               تیل را ببینی. ⚠️ فیلتر هیچ ردیفی را پاک نمی‌کند؛ فقط دیده‌شدن. -->
+          <Button Classes="ghost" Content="📋 همه"
+                  Command="{Binding Current.SetFilterCommand}" CommandParameter="all" />
+          <Button Classes="ghost" Content="⛽ حساب جداگانه پطرول"
+                  Foreground="{DynamicResource Pump.Ok}"
+                  Command="{Binding Current.SetFilterCommand}" CommandParameter="petrol" />
+          <Button Classes="ghost" Content="🟤 حساب جداگانه دیزل"
+                  Foreground="{DynamicResource Pump.Warn}"
+                  Command="{Binding Current.SetFilterCommand}" CommandParameter="diesel" />
+
+          <Border Classes="sep" />
+
+          <TextBlock Text="📞 شماره تماس:" Classes="barl" />
+          <TextBox Text="{Binding PhoneText}" Width="170" Watermark="مثلاً 0700000000" />
+
+          <!-- «فیِ خرید» فقط یادداشت است و در هیچ محاسبه‌ای نیست — همان جمله‌ای
+               که خودِ سایت روی ‎title‎ی این کادر نوشته. -->
+          <TextBlock Text="📝 فیِ خرید:" Classes="barl" />
+          <TextBox Text="{Binding BuyFeeText}" Width="96" Watermark="56 / 57"
+                   ToolTip.Tip="فقط یادداشت — تیلِ مشتری با چه فی خریداری شده. در هیچ محاسبه‌ای استفاده نمی‌شود." />
+
+          <!-- ⚠️ «بغلِ آن حساب جدید باید کادرش باشد و هر وقت زدم اینا بیان» —
+               خواستهٔ صریحِ صاحب ریپو. سه کادرِ فیصدی همیشه پیدا نیستند. -->
+          <Button Classes="ghost" Content="{Binding Current.PercentToggleText}"
+                  Command="{Binding Current.TogglePercentCommand}"
+                  ToolTip.Tip="فیصدیِ پطرول و دیزل — دو چیزِ کاملاً جدا" />
+
+          <!-- «🗂️ آرشیو» دقیقاً بغلِ «٪ فیصدی» و دقیقاً مثلِ آن — خواستهٔ صریحِ
+               صاحب ریپو در سایت: «برای کادر جدول آرشیو هم یک کادر کشویی درست
+               کن و بغلِ آن فیصدی بگذار؛ بزنم بیاید و بزنم برود پنهان شود.»
+               پیش از این یک دکمهٔ تمام‌عرضِ جدا زیرِ نوار بود. -->
+          <Button Classes="ghost" Content="{Binding Current.ArchiveToggleText}"
+                  Command="{Binding Current.ToggleArchivesCommand}"
+                  IsVisible="{Binding Current.HasArchives, FallbackValue=False}"
+                  ToolTip.Tip="جدول‌های آرشیوِ این حساب — با زدنِ همین کادر باز و بسته می‌شود" />
+
+          <Button Classes="ghost" Content="✏️ تغییر اسم"
+                  Command="{Binding RenamePersonCommand}" />
           <Button Classes="ghost danger" Content="🗑️ حذفِ این حساب"
                   Command="{Binding DeleteSubAccountCommand}"
                   CommandParameter="{Binding Current}" />
         </StackPanel>
 
         <!-- کادرِ کشوییِ «جدول‌های آرشیو» — تا آرشیوی نباشد، اصلاً دیده نمی‌شود -->
+        <!-- ⚠️ کادرِ بزرگِ آرشیو عمداً همین بالاست، بالای جدول — عینِ ‎#pm-arc-box‎ی
+             سایت، که خودش هم نوشته چرا: «پیش از این تهِ صفحه، زیرِ جدول بود و
+             اگر جدول کمی بزرگ می‌شد آن زیر می‌رفت و گم می‌شد و دیگر برگشتی
+             نداشت. پایین نبریدش.»
+             دکمهٔ باز/بسته‌اش رفت داخلِ نوارِ حساب، بغلِ «٪ فیصدی». -->
         <StackPanel Spacing="6" DataContext="{Binding Current}"
-                    IsVisible="{Binding HasArchives, FallbackValue=False}">
-          <Button Classes="ghost info" HorizontalAlignment="Stretch"
-                  Content="{Binding ArchiveToggleText}"
-                  Command="{Binding ToggleArchivesCommand}" />
+                    IsVisible="{Binding IsArchiveOpen}">
 
-          <ItemsControl ItemsSource="{Binding Archives}" IsVisible="{Binding IsArchiveOpen}"
+          <ItemsControl ItemsSource="{Binding Archives}"
                         x:CompileBindings="False">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
@@ -191,60 +349,60 @@
         </StackPanel>
       </StackPanel>
 
-      <!-- فیصدی و رسیدِ همان حساب -->
-      <Border Grid.Row="1" Classes="panel" Padding="12,10" Margin="0,0,0,10"
-              DataContext="{Binding Current}">
-        <WrapPanel Orientation="Horizontal">
-          <WrapPanel.Styles>
-            <Style Selector="StackPanel.fld">
-              <Setter Property="Margin" Value="0,0,14,0" />
-              <Setter Property="Width" Value="128" />
-            </Style>
-            <Style Selector="StackPanel.fld > TextBox">
-              <Setter Property="HorizontalAlignment" Value="Stretch" />
-            </Style>
-          </WrapPanel.Styles>
+      <!-- ══ فیصدی — بسته، مگر این‌که خودت بازش کنی ══════════════════════
+           ⛔ نوارِ پهنی که این‌جا بود برداشته شد. گزارشِ صاحب ریپو با عکس و
+           کادرِ قرمز: «آن بخش که در عکس سوم زدم را برمی‌داری و دیگر نبینمش.»
 
-          <StackPanel Classes="fld" Spacing="3">
-            <TextBlock Text="فیصدیِ پطرول" Classes="label" />
-            <TextBox Text="{Binding PercentPetrolText}" />
+           آن نوار نُه کادر داشت — فیصدیِ پطرول/دیزل/هر دو، رسیدِ تیلِ پطرول و
+           دیزل، رسیدِ پولِ پطرول و دیزل، سپردهٔ پول، و یک تیک‌مارکِ «واحدِ پول» —
+           و هیچ‌کدامشان در سایت این شکل را ندارند:
+
+             • رسیدها جای خودشان در **سربرگ** است (خانهٔ «مقدار رسید تیل/پول»)،
+               پس این‌جا تکراری بودند و برچسبشان هم معلوم نمی‌کرد مالِ کدام
+               کادرند («جمله‌ها نامعلوم که برای کدوم کادر استن»).
+             • «واحد پول» در سایت دکمهٔ ‎🔁 پول‎ی سربرگ است، نه تیک‌مارک — به
+               سربرگ رفت.
+             • فیصدی در سایت سه کادرِ فشرده است که همیشه هم دیده نمی‌شوند؛
+               خواستهٔ صاحب ریپو: «بغلِ آن حساب جدید باید کادرش باشد و هر وقت
+               زدم اینا بیان.» پس با دکمهٔ «٪ فیصدی» باز و بسته می‌شود. -->
+      <Border Grid.Row="1" Classes="panel" Padding="12,10" Margin="0,0,0,10"
+              DataContext="{Binding Current}" IsVisible="{Binding IsPercentOpen}">
+        <StackPanel Orientation="Horizontal" Spacing="16">
+          <StackPanel.Styles>
+            <Style Selector="TextBlock.pl">
+              <Setter Property="FontSize" Value="15" />
+              <Setter Property="FontWeight" Value="Black" />
+              <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+            <Style Selector="TextBox.pv">
+              <Setter Property="FontSize" Value="16" />
+              <Setter Property="FontWeight" Value="Black" />
+              <Setter Property="Width" Value="90" />
+              <Setter Property="TextAlignment" Value="Center" />
+            </Style>
+          </StackPanel.Styles>
+
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="⛽ پطرول" Classes="pl" Foreground="{DynamicResource Pump.Ok}" />
+            <TextBox Text="{Binding PercentPetrolText}" Classes="pv" />
           </StackPanel>
-          <StackPanel Classes="fld" Spacing="3">
-            <TextBlock Text="فیصدیِ دیزل" Classes="label" />
-            <TextBox Text="{Binding PercentDieselText}" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="🟤 دیزل" Classes="pl" Foreground="{DynamicResource Pump.Warn}" />
+            <TextBox Text="{Binding PercentDieselText}" Classes="pv" />
           </StackPanel>
           <!-- میان‌بُر: هر عددی این‌جا نوشته شود، همان لحظه روی هر دو تیل
-               می‌نشیند. خالی می‌ماند اگر فیصدیِ دو تیل یکی نباشد. -->
-          <StackPanel Classes="fld" Spacing="3">
-            <TextBlock Text="فیصدیِ هر دو" Classes="label" />
-            <TextBox Text="{Binding PercentBothText}" Watermark="هر دو" />
+               می‌نشیند. خالی می‌ماند اگر فیصدیِ دو تیل یکی نباشد — چون آن‌وقت
+               «هر دو» عددی ندارد که نشان بدهد. -->
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="هر دو" Classes="pl" />
+            <TextBox Text="{Binding PercentBothText}" Classes="pv" Watermark="هر دو" />
           </StackPanel>
-          <StackPanel Classes="fld" Spacing="3">
-            <TextBlock Text="رسیدِ تیلِ پطرول" Classes="label" />
-            <TextBox Text="{Binding RasidFuelPetrolText}" />
+          <StackPanel Orientation="Horizontal" Spacing="8"
+                      IsVisible="{Binding IsMoney}">
+            <TextBlock Text="سپردهٔ پول" Classes="pl" />
+            <TextBox Text="{Binding MoneyDepositText}" Classes="pv" />
           </StackPanel>
-          <StackPanel Classes="fld" Spacing="3">
-            <TextBlock Text="رسیدِ تیلِ دیزل" Classes="label" />
-            <TextBox Text="{Binding RasidFuelDieselText}" />
-          </StackPanel>
-          <StackPanel Classes="fld" Spacing="3">
-            <TextBlock Text="رسیدِ پولِ پطرول" Classes="label" />
-            <TextBox Text="{Binding RasidMoneyPetrolText}" />
-          </StackPanel>
-          <StackPanel Classes="fld" Spacing="3">
-            <TextBlock Text="رسیدِ پولِ دیزل" Classes="label" />
-            <TextBox Text="{Binding RasidMoneyDieselText}" />
-          </StackPanel>
-          <StackPanel Classes="fld" Spacing="3">
-            <TextBlock Text="سپردهٔ پول" Classes="label" />
-            <TextBox Text="{Binding MoneyDepositText}" />
-          </StackPanel>
-
-          <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Bottom" Margin="6,0,0,4">
-            <CheckBox Content="واحدِ پول" IsChecked="{Binding IsMoney}" />
-            <Button Classes="accent" Content="ردیفِ تازه" Command="{Binding AddRowCommand}" Padding="12,5" />
-          </StackPanel>
-        </WrapPanel>
+        </StackPanel>
       </Border>
 
       <!-- دفترِ حسابِ باز -->
@@ -253,32 +411,44 @@
           <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
           <DataGridTextColumn Header="نام"   Binding="{Binding Name}" Width="Auto" MinWidth="150" MaxWidth="320" />
           <DataGridTextColumn Header="حواله" Binding="{Binding Hawala}" Width="Auto" />
+          <!-- ══ نوع تیل — دو کادرِ رادیویی، **روی هم** ═════════════════════
+               مو‌به‌مو ‎.ft-pick‎ی سایت:
+
+                   .ft-pick{ display:flex; flex-direction:column;
+                             align-items:center; gap:3px; min-width:74px; padding:3px }
+                   .ft-opt { gap:4px; font-size:0.88rem; font-weight:700;
+                             border-radius:6px; padding:3px 7px; border:1px solid transparent }
+
+               ⚠️ ‎flex-direction:column‎ — پطرول بالا، دیزل پایین. گزارشِ صاحب
+               ریپو با عکسِ سایت: «نوع تیل رو هم ببین پایین و بالا هم استن نه بغل
+               به بغل هم». بغل‌به‌بغل بودنشان خانه را پهن می‌کرد و ستون را می‌بلعید
+               («خیلی بزرگ می‌شه و خیلی خرابه»).
+
+               ⚠️ ‎GroupName‎ باید برای هر ردیف یکتا باشد — با نامِ ثابت، آوالونیا
+               همهٔ ردیف‌های جدول را یک گروه می‌بیند و زدنِ «دیزل» در یک ردیف
+               انتخابِ همهٔ ردیف‌های دیگر را برمی‌دارد. -->
           <DataGridTemplateColumn Header="تیل" Width="Auto">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
-                <!-- همیشه پیدا، مثلِ سایت — نه فقط هنگامِ ویرایش. -->
-                <StackPanel Orientation="Horizontal" Spacing="6" Margin="6,1"
-                            VerticalAlignment="Center">
-                  <RadioButton GroupName="{Binding FuelGroup}" Content="پطرول"
-                               FontSize="11" MinHeight="0" Padding="3,0" IsChecked="{Binding IsPetrol}" />
-                  <RadioButton GroupName="{Binding FuelGroup}" Content="دیزل"
-                               FontSize="11" MinHeight="0" Padding="3,0" IsChecked="{Binding IsDiesel}" />
+                <StackPanel Spacing="3" Margin="3" MinWidth="74"
+                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                  <StackPanel.Styles>
+                    <Style Selector="RadioButton">
+                      <Setter Property="FontSize" Value="14" />
+                      <Setter Property="FontWeight" Value="Bold" />
+                      <Setter Property="MinHeight" Value="0" />
+                      <Setter Property="Padding" Value="7,3" />
+                    </Style>
+                  </StackPanel.Styles>
+                  <RadioButton GroupName="{Binding FuelGroup}" Content="⛽ پطرول"
+                               Foreground="{DynamicResource Pump.Ok}"
+                               IsChecked="{Binding IsPetrol}" />
+                  <RadioButton GroupName="{Binding FuelGroup}" Content="🟤 دیزل"
+                               Foreground="{DynamicResource Pump.Warn}"
+                               IsChecked="{Binding IsDiesel}" />
                 </StackPanel>
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
-            <!-- ══ نوع تیل — دو کادرِ رادیویی، مثلِ سایت ═══════════════════
-                 «کادرهایی مثلِ رادیو دارند که یکی‌شان انتخاب می‌شود و آن‌یکی
-                 نمی‌شود.» هر دو روی همان یک ‎Fuel‎ می‌نشینند، پس روشن شدنِ
-                 یکی خودبه‌خود آن‌یکی را خاموش می‌کند. کشوییِ پیشین هم شبیهِ
-                 سایت نبود و هم برای هر تغییر دو بار کلیک می‌خواست. -->
-            <DataGridTemplateColumn.CellEditingTemplate>
-              <DataTemplate>
-                <StackPanel Orientation="Horizontal" Spacing="8" Margin="6,0">
-                  <RadioButton GroupName="{Binding FuelGroup}" Content="پطرول" IsChecked="{Binding IsPetrol}" />
-                  <RadioButton GroupName="{Binding FuelGroup}" Content="دیزل" IsChecked="{Binding IsDiesel}" />
-                </StackPanel>
-              </DataTemplate>
-            </DataGridTemplateColumn.CellEditingTemplate>
           </DataGridTemplateColumn>
           <DataGridTextColumn Header="لیتر"  Binding="{Binding LitersText}" Width="Auto" />
           <DataGridTextColumn Header="فی"    Binding="{Binding PriceText}" Width="Auto" />
@@ -300,6 +470,23 @@
 
       <!-- ردیفِ «جمله» — همتای ‎<tfoot class="xls-foot">‎ی سایت -->
       <c:TotalsBar Grid.Row="3" ItemsSource="{Binding Current.TotalCells}" />
+
+      <StackPanel Grid.Row="4" Spacing="10" Margin="0,10,0,0"
+                  DataContext="{Binding Current}">
+        <!-- «ردیفِ تازه» زیرِ جدول است، نه لای کادرهای بالا — همان‌جایی که در
+             سایت ‎.add-row-btn‎ می‌نشیند. -->
+        <Button Classes="accent" Content="➕ ردیفِ تازه" HorizontalAlignment="Stretch"
+                Padding="12,8" FontSize="15" FontWeight="Bold"
+                Command="{Binding AddRowCommand}" />
+
+        <!-- ══ نوتِ حساب — همتای ‎#pm-note-area‎ی سایت ═════════════════════ -->
+        <StackPanel Spacing="5">
+          <TextBlock Text="📌 نوت" FontSize="15" FontWeight="Black" />
+          <TextBox Text="{Binding AccountNote}" AcceptsReturn="True" MinHeight="64"
+                   TextWrapping="Wrap" FontSize="15"
+                   Watermark="📝 توضیحات حساب…" />
+        </StackPanel>
+      </StackPanel>
     </Grid>
   </c:SectionPage>
 </UserControl>

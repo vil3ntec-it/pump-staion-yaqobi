@@ -10,6 +10,7 @@ using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
 using PumpYaqobi.Reporting.Pdf;
 using PumpYaqobi.Services.Data;
+using PumpYaqobi.Services.Vision;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -279,6 +280,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         BuildRows();
         _ = _host.Debtors.UpdateAccountAsync(Entity);
         _person.Recalc();
+        RefreshTotals();
     }
 
     /// <summary>⚠️ فیصدیِ پطرول و دیزل دو چیزِ جدا هستند و هرگز یکی نمی‌شوند.</summary>
@@ -374,6 +376,79 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
 
     /// <summary>واحدِ همین حساب — «لیتر» یا «افغانی».</summary>
     public string UnitText => IsMoney ? "افغانی" : "لیتر";
+
+    // ── برچسب‌های سربرگ — مو‌به‌مو مثلِ سایت ────────────────────────────────
+    //
+    // در ‎index.html‎ این سه برچسب ثابت نیستند؛ ‎setL()‎ آن‌ها را با دفترِ باز
+    // عوض می‌کند (خطِ ۳۶۲۳۵ به بعد):
+    //     pm-p-rasid-l → «مقدار رسید پول» یا «مقدار رسید تیل»
+    //     pm-p-rem-l   → «الباقی پول»    یا «الباقی تیل»
+    //     pm-p-comm-l  → «فیصدی ما (X٪)» — خودِ فیصدی داخلِ برچسب می‌نشیند
+    // پیش از این نیتیو هر سه را ثابت نوشته بود، پس در دفترِ پول هم «تیل»
+    // می‌گفت و فیصدی داخلِ برچسب نبود.
+
+    public string HeadRasidLabel => IsMoney ? "مقدار رسید پول" : "مقدار رسید تیل";
+    public string HeadAlbaqiLabel => IsMoney ? "الباقی پول" : "الباقی تیل";
+    public string HeadPetrolPercentLabel => "فیصدی ما (" + HeadPetrolPercentText + "٪)";
+    public string HeadDieselPercentLabel => "فیصدی ما (" + HeadDieselPercentText + "٪)";
+
+    /// <summary>نوشتهٔ دکمهٔ تعویضِ دفتر — همتای ‎#pm-mode-btn‎ی سایت.</summary>
+    public string ModeToggleText => IsMoney ? "🔁 تیل" : "🔁 پول";
+
+    /// <summary>
+    /// کادرهای فیصدی باز است یا نه.
+    ///
+    /// خواستهٔ صاحب ریپو: «چرا فیصدی پطرول و دیزل و هر دو این سه کادر جدا
+    /// باشن و دیده بشن … بغل اون حساب جدید باید کادر اش باشه و هر وقت زدم
+    /// اینا بیان». پس همیشه پیدا نیستند؛ با دکمهٔ کنارِ «حساب جدید» باز و
+    /// بسته می‌شوند.
+    /// </summary>
+    [ObservableProperty] private bool _isPercentOpen;
+
+    public string PercentToggleText => IsPercentOpen ? "٪ فیصدی ▲" : "٪ فیصدی ▼";
+
+    partial void OnIsPercentOpenChanged(bool v) => OnPropertyChanged(nameof(PercentToggleText));
+
+    [RelayCommand]
+    private void TogglePercent() => IsPercentOpen = !IsPercentOpen;
+
+    /// <summary>دفترِ پول ⇄ دفترِ تیل — همتای ‎togglePersonMode()‎ی سایت.</summary>
+    [RelayCommand]
+    private void ToggleMode() => IsMoney = !IsMoney;
+
+    // ══ «📋 همه / ⛽ حساب جداگانه پطرول / 🟤 حساب جداگانه دیزل» ═════════════
+    //
+    // همتای ‎setPersonFilter('all'|'petrol'|'diesel')‎ی سایت — سه دکمهٔ
+    // ‎.pm-filter-btn‎ی وسطِ نوارِ حساب. در برنامهٔ نیتیو اصلاً نبودند، یعنی
+    // راهی نبود که فقط ردیف‌های یک تیل را ببینی.
+    //
+    // ⚠️ فیلتر فقط چیزی است که **دیده** می‌شود؛ هیچ ردیفی پاک نمی‌شود و هیچ
+    // عددی در دیتابیس عوض نمی‌شود. سربرگ هم مثلِ سایت فقط کارتِ همان تیل را
+    // نشان می‌دهد.
+
+    [ObservableProperty] private string _rowFilter = "all";
+
+    partial void OnRowFilterChanged(string v)
+    {
+        BuildRows();
+        foreach (var n in new[]
+        {
+            nameof(IsFilterAll), nameof(IsFilterPetrol), nameof(IsFilterDiesel),
+            nameof(ShowPetrolCard), nameof(ShowDieselCard),
+        })
+            OnPropertyChanged(n);
+    }
+
+    public bool IsFilterAll => RowFilter == "all";
+    public bool IsFilterPetrol => RowFilter == "petrol";
+    public bool IsFilterDiesel => RowFilter == "diesel";
+
+    /// <summary>در فیلترِ دیزل، کارتِ پطرول دیده نمی‌شود — مثلِ سایت.</summary>
+    public bool ShowPetrolCard => RowFilter != "diesel";
+    public bool ShowDieselCard => RowFilter != "petrol";
+
+    [RelayCommand]
+    private void SetFilter(string? f) => RowFilter = f is "petrol" or "diesel" ? f : "all";
 
     // ── ⛽ حساب پطرول ──────────────────────────────────────────────────────
     public string HeadPetrolPercentText => PercentPetrol == 0m ? "0" : Shamsi.Money(PercentPetrol);
@@ -548,8 +623,31 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
             nameof(HeadDieselBordText), nameof(HeadDieselAlbaqiText), nameof(HeadDieselAlbaqiBrushKey),
             nameof(SumLitersText), nameof(SumBardagiText), nameof(SumRasidText),
             nameof(SumRasidFuelText), nameof(SumAlbaqiText), nameof(TotalCells),
+            // برچسب‌های سربرگ هم با دفتر و با فیصدی عوض می‌شوند — اگر این‌جا
+            // نباشند، در دفترِ پول همچنان «تیل» می‌نویسند.
+            nameof(HeadRasidLabel), nameof(HeadAlbaqiLabel),
+            nameof(HeadPetrolPercentLabel), nameof(HeadDieselPercentLabel),
+            nameof(ModeToggleText),
         })
             OnPropertyChanged(n);
+    }
+
+    /// <summary>
+    /// یادداشتِ همین حساب — همتای ‎#pm-note-field‎ی سایت.
+    ///
+    /// ‎DebtAccount.Note‎ از اول در دیتابیس بود و آرشیوها هم نشانش می‌دادند،
+    /// ولی هیچ‌جای برنامهٔ نیتیو نمی‌شد نوشتش. گزارشِ صاحب ریپو: «تو سایت بخش
+    /// نوت هم داشت، آن چه شد؟»
+    /// </summary>
+    public string AccountNote
+    {
+        get => Entity.Note ?? "";
+        set
+        {
+            Entity.Note = string.IsNullOrWhiteSpace(value) ? null : value;
+            SaveAccount();
+            OnPropertyChanged(nameof(AccountNote));
+        }
     }
 
     /// <summary>سپردهٔ پولِ همین حساب — خالی یعنی چیزی نوشته نشده.</summary>
@@ -583,7 +681,18 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         if (_host.Debt.NormalizeAccount(Entity)) _ = PersistHealedAsync();
 
         Rows.Clear();
-        foreach (var r in Entity.ActiveRows().OrderBy(r => r.SortIndex).ThenBy(r => r.Id))
+        // ⚠️ فیلتر فقط روی «دیده شدن» است. ردیف‌های تیلِ دیگر سرِ جایشان‌اند و
+        // در دیتابیس دست نمی‌خورند؛ فقط این‌بار ساخته نمی‌شوند.
+        var want = RowFilter switch
+        {
+            "petrol" => (FuelType?)FuelType.Petrol,
+            "diesel" => FuelType.Diesel,
+            _ => null,
+        };
+
+        foreach (var r in Entity.ActiveRows()
+                                .Where(r => want is null || r.Fuel == want)
+                                .OrderBy(r => r.SortIndex).ThenBy(r => r.Id))
         {
             var vm = new DebtRowViewModel(r, this);
             vm.Recalculated += _person.Recalc;
@@ -688,6 +797,41 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
     public string Name => Entity.Name ?? "";
     public string Phone => Entity.Phone ?? "";
 
+    // ══ «📞 شماره تماس» و «📝 فیِ خرید» — دو کادرِ نوارِ حساب ═══════════════
+    //
+    // هر دو در سایت داخلِ ‎.pm-acct-bar‎اند (‎#pm-phone‎ و ‎#pm-buyfee‎) و هر دو
+    // در برنامهٔ نیتیو فقط خوانده می‌شدند: شماره زیرِ نامِ شخص چاپ می‌شد و
+    // «فیِ خرید» با آن‌که ‎Debtor.BuyFeeNote‎ از اول در دیتابیس بود، هیچ‌جا
+    // دیده و نوشته نمی‌شد.
+    //
+    // ⚠️ «فیِ خرید» فقط یادداشت است — در هیچ محاسبه‌ای نیست. همان جمله‌ای که
+    // خودِ سایت روی ‎title‎ی این کادر نوشته.
+
+    public string PhoneText
+    {
+        get => Entity.Phone ?? "";
+        set
+        {
+            var v = (value ?? "").Trim();
+            Entity.Phone = v.Length == 0 ? null : v;
+            _ = _host.Debtors.UpdateDebtorAsync(Entity);
+            OnPropertyChanged(nameof(PhoneText));
+            OnPropertyChanged(nameof(Phone));
+        }
+    }
+
+    public string BuyFeeText
+    {
+        get => Entity.BuyFeeNote ?? "";
+        set
+        {
+            var v = (value ?? "").Trim();
+            Entity.BuyFeeNote = v.Length == 0 ? null : v;
+            _ = _host.Debtors.UpdateDebtorAsync(Entity);
+            OnPropertyChanged(nameof(BuyFeeText));
+        }
+    }
+
     public ObservableCollection<AccountViewModel> Accounts { get; } = new();
 
     [ObservableProperty] private AccountViewModel? _current;
@@ -764,6 +908,77 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
     /// <summary>برگشت به فهرست — از راهِ خودِ بخش، تا ذخیرهٔ نیمه‌کاره جا نماند.</summary>
     [RelayCommand]
     private Task BackAsync() => _section.BackCommand.ExecuteAsync(null);
+
+    // ── «→ قبلی» و «بعدی ←» — ‎navigatePerson(±1)‎ی سایت ────────────────────
+    // در سایت این دو دکمه اولِ سربرگِ مودالِ شخص‌اند و در نیتیو اصلاً نبودند،
+    // یعنی برای رفتن به قرض‌دارِ بعدی باید هر بار به فهرست برمی‌گشتی.
+
+    [RelayCommand]
+    private Task PrevPerson() => _section.NavigatePersonAsync(-1);
+
+    [RelayCommand]
+    private Task NextPerson() => _section.NavigatePersonAsync(+1);
+
+    /// <summary>
+    /// «📲 کیو‌آر» — ‎showPersonQRFromModal()‎ی سایت.
+    ///
+    /// کیو‌آرِ <b>همان حسابی که باز است</b>: حسابِ اصلی یا هر حسابِ فرعی. متنِ
+    /// داخلش دقیقاً همان نشانی‌ای است که سایت می‌سازد (‎_acctHash‎)، پس کاغذهای
+    /// چاپ‌شدهٔ قبلی هم با همین برنامه خوانده می‌شوند.
+    /// </summary>
+    [RelayCommand]
+    private Task ShowQr() => CrashGuard.RunAsync("کیو‌آر", async () =>
+    {
+        var acct = Current;
+        if (acct is null) return;
+
+        // حسابِ فرعی همیشه ‎LegacySubId‎ دارد (هم آن‌هایی که از نسخهٔ وب آمده‌اند،
+        // هم آن‌هایی که ‎AddSubAccountAsync‎ می‌سازد)، پس ‎IsMain‎ همان محکِ درست است.
+        var isSub = !acct.Entity.IsMain;
+        var sub = isSub ? acct.Entity.LegacySubId : null;
+
+        // ⚠️ این کیو‌آر برای **خودِ قرض‌دار** است: می‌فرستیدش، مشتری با گوشیِ
+        // خودش اسکن می‌کند و حسابش را زنده می‌بیند — دادهٔ آن صفحه از همین
+        // سرورِ خانگی می‌آید. پس نشانی باید کامل باشد، نه فقط تکهٔ ‎#roview…‎؛
+        // با تکهٔ تنها، گوشیِ مشتری چیزی برای باز کردن ندارد.
+        var server = _host.Settings.GetString(SettingsKeys.ServerUrl);
+        var link = AcctLink.FullUrl(server, Entity.Id, sub);
+        if (link is null)
+        {
+            _host.Toast("اول در «تنظیمات › نشانیِ سرور» نشانیِ سرورِ خانگی را بنویسید — "
+                        + "بی آن، مشتری با اسکنِ کیو‌آر جایی برای باز کردن ندارد",
+                        ToastKind.Warn);
+            return;
+        }
+
+        var png = await Task.Run(() => QrWriter.EncodePng(link));
+        var title = isSub ? "📲 📄 " + acct.Title : "📲 " + Name;
+        var hint = (isSub
+            ? "این کد را به مشتری بدهید؛ با اسکنش حساب «" + acct.Title + "» را می‌بیند"
+            : "این کد را به مشتری بدهید؛ با اسکنش حسابِ خودش را می‌بیند")
+            + " — زنده، از همین سرور.";
+
+        await Dialogs.ShowQrAsync(title, link, png, hint);
+    });
+
+    /// <summary>
+    /// «✏️ تغییر اسم» — ‎renameCurrentPerson()‎ی سایت.
+    ///
+    /// در سایت داخلِ کشوییِ «⋯ بیشتر» است و در نیتیو هیچ‌جا نبود؛ برای عوض
+    /// کردنِ نامِ یک قرض‌دار هیچ راهی وجود نداشت.
+    /// </summary>
+    [RelayCommand]
+    private Task RenamePerson() => CrashGuard.RunAsync("تغییر اسم", async () =>
+    {
+        var name = (await Dialogs.PromptAsync("تغییر اسم", "نام تازه:", Name) ?? "").Trim();
+        if (name.Length == 0 || name == Name) return;
+
+        Entity.Name = name;
+        await _host.Debtors.UpdateDebtorAsync(Entity);
+        OnPropertyChanged(nameof(Name));
+        await _section.ReloadAsync();
+        _host.Toast("✅ نام به «" + name + "» عوض شد", ToastKind.Ok);
+    });
 
     /// <summary>
     /// ══ «➕ حساب جدید» — ‎newPersonSub()‎ ═══════════════════════════════════

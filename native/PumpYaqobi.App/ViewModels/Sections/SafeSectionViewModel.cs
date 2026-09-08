@@ -89,7 +89,13 @@ public sealed partial class SafeSectionViewModel : LedgerSectionViewModel<SafeRo
 
     public SafeSectionViewModel(AppHost host)
         : base("safe", "safe", "گاوصندوق", host.SafeLedger)
-        => _calc = host.Safe;
+    {
+        _calc = host.Safe;
+        // «📝 یادداشت این بخش» — همتای ‎.sec-note-box‎ی سایت. کلیدش همان
+        // کلیدِ نسخهٔ وب است تا نوت‌های واردشده سرِ جای خودشان بنشینند.
+        Notes = new SectionNotesViewModel(Id, host.SectionNotes,
+            (m, ok) => host.Toast(m, ok ? ToastKind.Ok : ToastKind.Warn));
+    }
 
     [ObservableProperty] private SafeSummary _summary;
 

@@ -27,18 +27,45 @@
     <Setter Property="FontSize" Value="15" />
   </Style>
 
+  <!-- ══ همهٔ نوشته‌ها وسطِ کادرِ خودشان ═════════════════════════════════════
+       خواستهٔ صریحِ صاحب ریپو: «همه نوشته‌ها، همه همه همه نوشته‌ها باید تو
+       کادرهاشون وسط‌چین باشن، تو همه بخش‌ها.»
+
+       در سایت هم هر خانهٔ هر جدول وسط‌چین است — بی استثنا:
+           .tbl th{text-align:center}   .tbl td{text-align:center}
+           .xls-tbl th{text-align:center}  .xls-tbl td{text-align:center}
+           .ro-tbl th/td, .safe-tbl, .rasid-tbl, .att-tbl … همه center
+       و کادرهای تایپِ داخلِ خانه‌ها هم:
+           .ro-tbl td input/textarea/select{text-align:center}
+
+       پیش از این پیش‌فرضِ اینجا ‎Right‎ بود (شروعِ RTL)، پس هر نوشته‌ای که
+       خودش صریحاً وسط نشده بود، به لبه می‌چسبید. -->
   <Style Selector="TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource Pump.Font}" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
-    <Setter Property="TextAlignment" Value="Right" />
+    <Setter Property="TextAlignment" Value="Center" />
+  </Style>
+  <Style Selector="SelectableTextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource Pump.Font}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
+    <Setter Property="TextAlignment" Value="Center" />
   </Style>
   <Style Selector="TextBlock.muted">
     <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
-    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontSize" Value="13" />
   </Style>
+  <!-- ══ برچسبِ کادرها ═══════════════════════════════════════════════════════
+       گزارشِ صاحب ریپو: «چرا همه عددها انقدر کوچک، همه کلمات هم همین‌طور —
+       می‌خواهم همه یک اندازه و کلفت باشند.»
+
+       هدف همان چیزی است که خودِ بالای همین فایل نوشته و از سایت گرفته شده:
+       ‎.stat-label 1rem‎ با پایهٔ ۱۶ پیکسل ⇒ ۱۶، نه ۱۴. و ‎font-weight:700‎ی
+       سایت ⇒ ‎Bold‎، نه وزنِ عادی که کنارِ عددهای ۱۷ و ۱۹ نازک دیده می‌شد.
+       حالا برچسب و خانهٔ جدول هر دو ۱۶ به بالا هستند و هم‌خانواده دیده می‌شوند. -->
   <Style Selector="TextBlock.label">
     <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
-    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontSize" Value="16" />
+    <Setter Property="FontWeight" Value="Bold" />
   </Style>
   <Style Selector="TextBlock.h1">
     <Setter Property="FontSize" Value="22" />
@@ -239,6 +266,10 @@
     <Setter Property="Padding" Value="9,0" />
     <Setter Property="MinHeight" Value="36" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
+    <!-- کادرهای تایپ هم وسط‌چین‌اند، مثلِ ‎.xls-in‎ و
+         ‎.ro-tbl td input{text-align:center}‎ی سایت. -->
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="SelectionBrush" Value="{DynamicResource Pump.Selected}" />
     <Setter Property="CaretBrush" Value="{DynamicResource Pump.Accent}" />
   </Style>
@@ -289,7 +320,20 @@
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="Margin" Value="2,0" />
   </Style>
+  <!-- ══ نشانگرِ ماوس روی جدول: «به‌علاوه»ی اکسل ═══════════════════════════
+       گزارشِ صاحب ریپو: «ماوس هم باید شکلِ مثبت می‌داشت، اگر جست‌وجو بکنی تو
+       سایت و پیدا کنی.» پیدا شد — خطِ ۱۰۴۸ی ‎index.html‎:
+
+           .tbl td,.tbl th,.xls-tbl td,.xls-tbl th,
+           .ro-tbl td,.ro-tbl th{ cursor:cell; ... }
+           .xls-tbl td input:not(:focus){ cursor:cell }
+
+       ‎cursor:cell‎ همان به‌علاوهٔ باریکِ اکسل است. نزدیک‌ترین چیزِ آوالونیا
+       ‎StandardCursorType.Cross‎ است.
+       ⚠️ کادرِ تایپ وقتی روی آن ایستاده‌ای هم همین را می‌گیرد (نه ‎IBeam‎)،
+       چون سایت هم ‎:not(:focus)‎ گذاشته: تا وارد نشده‌ای، خانه است نه متن. -->
   <Style Selector="DataGridColumnHeader">
+    <Setter Property="Cursor" Value="Cross" />
     <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
     <Setter Property="FontWeight" Value="ExtraBold" />
@@ -303,6 +347,19 @@
     <Setter Property="Padding" Value="10,4" />
     <Setter Property="FontSize" Value="17" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
+    <Setter Property="Cursor" Value="Cross" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+  </Style>
+  <!-- نوشتهٔ داخلِ خانه هم واقعاً وسط بنشیند: ‎HorizontalContentAlignment‎ی
+       خانه فقط وقتی اثر دارد که خودِ نوشته ‎Stretch‎ نباشد، و ‎DataGridTextColumn‎
+       متنش را ‎Stretch‎ می‌سازد. -->
+  <Style Selector="DataGridCell TextBlock">
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="DataGridCell TextBox">
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
   </Style>
   <Style Selector="DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">
     <Setter Property="Fill" Value="{DynamicResource Pump.Hover}" />
@@ -355,7 +412,7 @@
             <!-- ردیفِ اول تازه است: کارت‌های زیربخش. بقیه همان چهارتای
                  همیشگی‌اند و همه ‎Auto‎ می‌مانند — با اسکرولِ واحدِ کلِ صفحه،
                  بخش باید به اندازهٔ محتوایش بلند شود، نه به اندازهٔ قاب. -->
-            <Grid Grid.Row="1" RowDefinitions="Auto,Auto,Auto,Auto,Auto" Margin="14">
+            <Grid Grid.Row="1" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" Margin="14">
 
               <!-- ══ کارت‌های زیربخش ══════════════════════════════════════
                    بخشی که زیربخش دارد (قرض‌داران، مخزن، مفاد/ضرر، تنظیمات،
@@ -401,6 +458,51 @@
 
                 <ContentPresenter Grid.Row="4" Content="{TemplateBinding Footer}" Margin="0,12,0,0"
                                   IsVisible="{TemplateBinding Footer, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+                <!-- ══ «📝 یادداشت این بخش» — ‎.sec-note-box‎ی نسخهٔ وب ═══════
+                     در سایت پایینِ چهارده بخش هست و در برنامهٔ نیتیو هیچ‌جا نبود.
+                     گزارشِ صاحب ریپو: «تو سایت بخش نوت هم داشت، آن چه شد؟»
+
+                     این‌جا در قالبِ مشترک نشسته، نه در تک‌تکِ ویوها: هر بخشی که
+                     ‎Notes‎ی خودش را بسازد، خودبه‌خود این کادر را می‌گیرد و هر
+                     تغییرِ ظاهری در همه‌شان با هم اعمال می‌شود.
+
+                     ‎x:CompileBindings="False"‎ مثلِ کارت‌های زیربخشِ بالا لازم
+                     است: داخلِ ControlTemplate نوعِ DataContext معلوم نیست. -->
+                <StackPanel Grid.Row="5" Margin="0,14,0,0" Spacing="8"
+                            x:CompileBindings="False"
+                            IsVisible="{Binding Notes, Converter={x:Static ObjectConverters.IsNotNull},
+                                        FallbackValue=False}"
+                            DataContext="{Binding Notes}">
+                  <TextBlock Text="📝 یادداشت این بخش" Classes="label" />
+                  <TextBox Text="{Binding Draft}" AcceptsReturn="True" MinHeight="62"
+                           TextWrapping="Wrap" Watermark="یادداشت شما…" />
+                  <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                    <Button Classes="ghost info" Content="📨 فرستادن به صندوق نوت‌ها"
+                            Command="{Binding SendCommand}" />
+                    <Button Classes="ghost" Content="{Binding ListToggleText}"
+                            Command="{Binding ToggleListCommand}" />
+                  </StackPanel>
+
+                  <ItemsControl ItemsSource="{Binding Items}" IsVisible="{Binding IsListOpen}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:CompileBindings="False">
+                        <Border Classes="panel" Padding="10,8" Margin="0,0,0,6">
+                          <Grid ColumnDefinitions="Auto,10,*,10,Auto">
+                            <TextBlock Grid.Column="0" Text="{Binding DateShamsi}"
+                                       Classes="muted" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Text="{Binding Text}" TextWrapping="Wrap"
+                                       VerticalAlignment="Center" />
+                            <Button Grid.Column="4" Classes="ghost danger" Content="حذف"
+                                    Padding="8,3" FontSize="12"
+                                    Command="{Binding $parent[ItemsControl].DataContext.DeleteCommand}"
+                                    CommandParameter="{Binding}" />
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
             </Grid>
           </Grid>
         </Border>

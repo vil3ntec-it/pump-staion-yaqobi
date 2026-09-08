@@ -1,0 +1,33 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PumpYaqobi.App.Views.QrWindow"
+        SizeToContent="WidthAndHeight" CanResize="False"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        FlowDirection="RightToLeft"
+        Background="{DynamicResource Pump.Card}"
+        Title="کیو‌آر حساب">
+
+  <!-- همتای ‎#qrModal‎ی سایت: کیو‌آرِ همین حسابی که باز است، با نامش بالای آن
+       و نشانیِ داخلش پایین. با اسکنِ همین کد، همان حساب باز می‌شود. -->
+  <StackPanel Margin="22" Spacing="14" MaxWidth="340">
+    <TextBlock x:Name="NameText" Classes="h2" TextWrapping="Wrap"
+               HorizontalAlignment="Center" TextAlignment="Center" />
+
+    <Border Background="White" CornerRadius="10" Padding="10"
+            HorizontalAlignment="Center">
+      <Image x:Name="Code" Width="220" Height="220" />
+    </Border>
+
+    <TextBlock x:Name="HintText" Classes="muted" TextWrapping="Wrap"
+               HorizontalAlignment="Center" TextAlignment="Center" />
+
+    <SelectableTextBlock x:Name="LinkText" Classes="muted" FontSize="11"
+                         TextWrapping="Wrap" HorizontalAlignment="Center"
+                         TextAlignment="Center" />
+
+    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+      <Button x:Name="SaveBtn" Classes="accent" Content="💾 ذخیرهٔ عکس" Click="OnSave" MinWidth="110" />
+      <Button Content="بستن" Click="OnClose" MinWidth="92" />
+    </StackPanel>
+  </StackPanel>
+</Window>

@@ -63,7 +63,13 @@ public sealed partial class ExpenseSectionViewModel
 
     public ExpenseSectionViewModel(AppHost host)
         : base("expenses", "expenses", "مصارف", host.ExpenseLedger)
-    { _calc = host.Expenses; _host = host; }
+    {
+        _calc = host.Expenses; _host = host;
+        // «📝 یادداشت این بخش» — همتای ‎.sec-note-box‎ی سایت. کلیدش همان
+        // کلیدِ نسخهٔ وب است تا نوت‌های واردشده سرِ جای خودشان بنشینند.
+        Notes = new SectionNotesViewModel(Id, host.SectionNotes,
+            (m, ok) => host.Toast(m, ok ? ToastKind.Ok : ToastKind.Warn));
+    }
 
     private readonly AppHost _host;
 

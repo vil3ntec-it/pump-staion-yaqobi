@@ -148,9 +148,9 @@
                 <Grid ColumnDefinitions="Auto,*,Auto">
                   <TextBlock Grid.Column="0" Text="🟡" FontSize="26" VerticalAlignment="Center" />
                   <StackPanel Grid.Column="1" Spacing="2" Margin="12,0" VerticalAlignment="Center">
-                    <TextBlock Text="فاکتورهای در صف" Classes="label" HorizontalAlignment="Right" />
+                    <TextBlock Text="فاکتورهای در صف" Classes="label" />
                     <TextBlock Text="{Binding PendingText}" FontSize="24" FontWeight="Black"
-                               HorizontalAlignment="Right"
+                              
                                Foreground="{DynamicResource Pump.Warn}" />
                   </StackPanel>
                   <TextBlock Grid.Column="2" Text="مشاهده ←" Classes="muted" FontSize="12"
@@ -164,9 +164,9 @@
                 <Grid ColumnDefinitions="Auto,*,Auto">
                   <TextBlock Grid.Column="0" Text="🟢" FontSize="26" VerticalAlignment="Center" />
                   <StackPanel Grid.Column="1" Spacing="2" Margin="12,0" VerticalAlignment="Center">
-                    <TextBlock Text="فاکتورهای تایید شده" Classes="label" HorizontalAlignment="Right" />
+                    <TextBlock Text="فاکتورهای تایید شده" Classes="label" />
                     <TextBlock Text="{Binding ApprovedText}" FontSize="24" FontWeight="Black"
-                               HorizontalAlignment="Right"
+                              
                                Foreground="{DynamicResource Pump.Ok}" />
                   </StackPanel>
                   <TextBlock Grid.Column="2" Text="مشاهده ←" Classes="muted" FontSize="12"
@@ -183,9 +183,9 @@
                 <Grid ColumnDefinitions="Auto,*,Auto">
                   <TextBlock Grid.Column="0" Text="📉" FontSize="26" VerticalAlignment="Center" />
                   <StackPanel Grid.Column="1" Spacing="2" Margin="12,0" VerticalAlignment="Center">
-                    <TextBlock Text="مقایسهٔ نرخ فاکتورها" Classes="label" HorizontalAlignment="Right" />
+                    <TextBlock Text="مقایسهٔ نرخ فاکتورها" Classes="label" />
                     <TextBlock Text="{Binding RateNetText}" FontSize="24" FontWeight="Black"
-                               HorizontalAlignment="Right" />
+                               />
                   </StackPanel>
                   <TextBlock Grid.Column="2" Text="مشاهده ←" Classes="muted" FontSize="12"
                              VerticalAlignment="Center" />

@@ -328,6 +328,10 @@ public sealed partial class AmanatSectionViewModel : SectionViewModel
 
     public AmanatSectionViewModel(AppHost host) : base("amanat", "amanat", "تیل امانت")
     {
+        // «📝 یادداشت این بخش» — همتای ‎.sec-note-box‎ی سایت. کلیدش همان
+        // کلیدِ نسخهٔ وب است تا نوت‌های واردشده سرِ جای خودشان بنشینند.
+        Notes = new SectionNotesViewModel(Id, host.SectionNotes,
+            (m, ok) => host.Toast(m, ok ? ToastKind.Ok : ToastKind.Warn));
         _host = host;
         Settings = host.Amanat.Settings();
     }
