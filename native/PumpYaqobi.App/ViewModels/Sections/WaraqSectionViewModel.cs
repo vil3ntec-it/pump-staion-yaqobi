@@ -104,6 +104,13 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
 
     public WaraqTransaction Entity => _t;
 
+    /// <summary>
+    /// ستونِ «#» — شمارهٔ ردیف در کلِ شیفت، نه در جدولی که تویش نشسته.
+    /// در سایت هم ‎n2fa(i+1)‎ از ایندکسِ آرایهٔ کلِ تراکنش‌ها می‌آید، پس
+    /// جدولِ دوم از همان‌جا که جدولِ اول تمام شده ادامه می‌دهد (۹، ۱۰، …).
+    /// </summary>
+    [ObservableProperty] private string _index = "";
+
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private decimal _liters;
     [ObservableProperty] private decimal _amount;
@@ -192,6 +199,39 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
     public ObservableCollection<WaraqPumpViewModel> Pumps { get; } = new();
     public ObservableCollection<WaraqTxnViewModel> Txns { get; } = new();
 
+    // ══ دو جدولِ هم‌شکل، کنارِ هم ═══════════════════════════════════════════
+    //
+    // خواستهٔ صاحب ریپو: «توی ورق‌ها دو کادر دارد که شبیه هم است و آن بابتِ
+    // این است که بیشتر جا بشود.»
+    //
+    // در سایت هم همین است — ‎renderWaraqTransactions‎:
+    //
+    //     const mid = Math.ceil(txns.length / 2);
+    //     … if (i < mid) leftBody.appendChild(tr); else rightBody.appendChild(tr);
+    //
+    // یعنی نیمهٔ اول در جدولِ اول و نیمهٔ دوم در جدولِ دوم؛ با ۱۵ ردیف
+    // می‌شود ۸ و ۷. چون کلِ پنجره ‎RightToLeft‎ است، جدولِ اول سمتِ راست
+    // دیده می‌شود — درست مثلِ عکسی که صاحب ریپو فرستاد (۱ تا ۸ راست،
+    // ۹ تا ۱۵ چپ).
+    //
+    // ⚠️ ‎Txns‎ همچنان یگانه‌سرچشمهٔ حقیقت است؛ این دو فقط نما هستند و هیچ
+    // ردیفی را دو بار نگه نمی‌دارند.
+    public ObservableCollection<WaraqTxnViewModel> TxnsFirst { get; } = new();
+    public ObservableCollection<WaraqTxnViewModel> TxnsSecond { get; } = new();
+
+    /// <summary>‎mid = ceil(n/2)‎ — مو‌به‌مو همان تقسیمِ سایت.</summary>
+    private void SplitTxns()
+    {
+        TxnsFirst.Clear();
+        TxnsSecond.Clear();
+        var mid = (int)Math.Ceiling(Txns.Count / 2.0);
+        for (var i = 0; i < Txns.Count; i++)
+        {
+            Txns[i].Index = Shamsi.Money(i + 1);
+            (i < mid ? TxnsFirst : TxnsSecond).Add(Txns[i]);
+        }
+    }
+
     [ObservableProperty] private bool _isNight;
     [ObservableProperty] private string _workerName = "";
     [ObservableProperty] private decimal _fabricDebt;
@@ -263,6 +303,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
             vm.Recalculated += Recalc;
             Txns.Add(vm);
         }
+        SplitTxns();
         Recalc();
     }
 
@@ -363,6 +404,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         var vm = new WaraqTxnViewModel(t, this);
         vm.Recalculated += Recalc;
         Txns.Add(vm);
+        SplitTxns();
         Recalc();
     }
 
@@ -375,6 +417,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         await _host.WaraqData.DeleteTxnAsync(row.Entity.Id);
         sd.Transactions.Remove(row.Entity);
         Txns.Remove(row);
+        SplitTxns();
         Recalc();
     }
 
