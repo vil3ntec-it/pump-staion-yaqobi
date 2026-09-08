@@ -117,7 +117,13 @@ public sealed partial class RetailSectionViewModel
 {
     public RetailSectionViewModel(AppHost host)
         : base("chakana", "debtrasid", "چکنه", host.RetailLedger)
-        => Calc = host.Retail;
+    {
+        Calc = host.Retail;
+        // «📝 یادداشت این بخش» — همتای ‎.sec-note-box‎ی سایت. کلیدش همان
+        // کلیدِ نسخهٔ وب است تا نوت‌های واردشده سرِ جای خودشان بنشینند.
+        Notes = new SectionNotesViewModel(Id, host.SectionNotes,
+            (m, ok) => host.Toast(m, ok ? ToastKind.Ok : ToastKind.Warn));
+    }
 
     internal RetailService Calc { get; }
 

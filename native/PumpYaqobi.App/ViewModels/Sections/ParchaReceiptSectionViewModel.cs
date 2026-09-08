@@ -96,7 +96,14 @@ public sealed partial class ParchaReceiptSectionViewModel : SectionViewModel, IR
     private readonly AppHost _host;
 
     public ParchaReceiptSectionViewModel(AppHost host)
-        : base("rasid", "rasid", "رسید پارچه") => _host = host;
+        : base("rasid", "rasid", "رسید پارچه")
+    {
+        _host = host;
+        // «📝 یادداشت این بخش» — همتای ‎.sec-note-box‎ی سایت. کلیدش همان
+        // کلیدِ نسخهٔ وب است تا نوت‌های واردشده سرِ جای خودشان بنشینند.
+        Notes = new SectionNotesViewModel(Id, host.SectionNotes,
+            (m, ok) => host.Toast(m, ok ? ToastKind.Ok : ToastKind.Warn));
+    }
 
     public ObservableCollection<ParchaReceiptRowViewModel> Rows { get; } = new();
 

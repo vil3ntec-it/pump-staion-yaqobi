@@ -47,6 +47,10 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
 
     public DebtReceiptSectionViewModel(AppHost host) : base("debtrasid", "debt", "رسید قرض‌داران / چکنه")
     {
+        // «📝 یادداشت این بخش» — همتای ‎.sec-note-box‎ی سایت. کلیدش همان
+        // کلیدِ نسخهٔ وب است تا نوت‌های واردشده سرِ جای خودشان بنشینند.
+        Notes = new SectionNotesViewModel(Id, host.SectionNotes,
+            (m, ok) => host.Toast(m, ok ? ToastKind.Ok : ToastKind.Warn));
         _host = host;
         _dateShamsi = Shamsi.Today();
     }

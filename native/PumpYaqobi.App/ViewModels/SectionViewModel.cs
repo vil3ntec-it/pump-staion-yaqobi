@@ -19,6 +19,17 @@ public abstract partial class SectionViewModel : ObservableObject
     public string Id { get; }
 
     /// <summary>
+    /// ══ «📝 یادداشت این بخش» ═══════════════════════════════════════════════
+    /// همتای ‎.sec-note-box‎ی نسخهٔ وب. بخشی که این را پر کند، خودبه‌خود کادرِ
+    /// یادداشت را ته صفحه‌اش می‌گیرد — چون قالبِ مشترکِ ‎SectionPage‎ خودش
+    /// آن را می‌کشد. بخشی که ندارد، هیچ چیزِ اضافه‌ای نمی‌بیند.
+    ///
+    /// ⚠️ کلیدش همان کلیدِ سایت است (‎safe‎، ‎expenses‎، ‎sarrafi‎، …) تا اگر
+    /// روزی دادهٔ سایت وارد شد، نوت‌ها سرِ جای خودشان بنشینند.
+    /// </summary>
+    [ObservableProperty] private SectionNotesViewModel? _notes;
+
+    /// <summary>
     /// ══ پهنای ستونِ محتوا ═══════════════════════════════════════════════════
     /// هیچ سقفی. هر بخش تمامِ عرضِ پنجره را می‌گیرد.
     ///
@@ -121,7 +132,14 @@ public abstract partial class SectionViewModel : ObservableObject
     {
         if (IsLoaded) return;
         IsBusy = true;
-        try { await LoadAsync(); IsLoaded = true; }
+        try
+        {
+            await LoadAsync();
+            // پیش‌نویس و شمارِ نوت‌های همین بخش هم همین‌جا خوانده می‌شوند —
+            // وگرنه کادرِ یادداشت هر بار خالی و بی‌شمار باز می‌شد.
+            if (Notes is not null) await Notes.LoadAsync();
+            IsLoaded = true;
+        }
         finally { IsBusy = false; }
     }
 
