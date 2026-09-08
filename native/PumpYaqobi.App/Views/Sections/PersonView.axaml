@@ -196,17 +196,42 @@
            و اسمِ حساب‌ها هم دیده نمی‌شد. حالا دقیقاً مثلِ سایت، یک کشویی. -->
       <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,10">
         <!-- ══ نوارِ حساب — مو‌به‌مو ‎.pm-acct-bar‎ی سایت ══════════════════════
-             سایت همه‌شان را در «یک خط» کنارِ هم می‌گذارد، به همین ترتیب:
+             ترتیبِ سایت، همین:
 
                  📒 حساب: │ کشویی │ ➕ حساب جدید │ 📋 جدول جدید │ ┊
                  📋 همه │ ⛽ حساب جداگانه پطرول │ 🟤 حساب جداگانه دیزل │ ┊
                  📞 شماره تماس │ 📝 فیِ خرید │ ٪ فیصدی ▾ │ 🗂️ آرشیو ▾
 
-             و خودش هم نوشته چرا: «دیگر کشویی بالای دکمه‌ها نیست که دست
-             اشتباهی رویشان برود؛ در صفحهٔ باریک این خط اسکرول افقی می‌خورد و
-             نمی‌شکند.» پس این‌جا هم ‎WrapPanel‎ نیست، یک خط است. -->
-        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-          <StackPanel.Styles>
+             ⚠️ این نوار باید روی کامپیوتر «بشکند» (چند خط شود)، نه یک خط.
+             پیش از این یک ‎StackPanel‎ی افقی بود و کامنتش نوشته بود «پس
+             این‌جا هم WrapPanel نیست، یک خط است» — که وارونهٔ کارِ سایت بود.
+
+             خودِ سایت این را یک‌بار خورده و در ‎.pm-acct-bar‎ نوشته:
+               «این نوار روی کامپیوتر نمی‌شکست و اسکرولِ افقی می‌خورد. روی
+                گوشی با انگشت می‌شود کشیدش، ولی با ماوس نه… نتیجه: «فیِ خرید»
+                و دکمهٔ «٪ فیصدی» (و هر چه بعدشان بود) بیرونِ لبهٔ چپ می‌ماندند
+                و اصلاً قابلِ زدن نبودند — «تو کامپیوتر نمی‌شه فیصدی زد، هر سه
+                تا کادرش».»
+             و درمانش: ‎flex-wrap:wrap‎ روی کامپیوتر، و یک‌خط+اسکرولِ افقی فقط
+             زیرِ ۸۲۰ پیکسل.
+
+             در نیتیو این بدتر هم بود: کلِ پنجره ‎FlowDirection=RightToLeft‎
+             است و ‎MinWidth‎ش ۱۰۰۰ — پس دُمِ نوار از لبهٔ چپ بیرون می‌زد و
+             هیچ اسکرولِ افقی‌ای هم زیرش نبود که برش گرداند. یعنی آن دکمه‌ها
+             برای کاربر اصلاً وجود نداشتند.
+
+             ⚠️ این را به ‎StackPanel‎ی افقی برنگردانید. سنجشِ
+             ‎UiTests person‎ همین را می‌پاید و اگر چیزی بیرونِ پنجره
+             بیفتد، قرمز می‌شود.
+
+             ‎.pm-bar-grp‎ی سایت هم این‌جا ‎StackPanel‎های کوچک‌اند: برچسب و
+             کادرش یک تکه‌اند و هنگامِ شکستن از هم جدا نمی‌افتند. -->
+        <WrapPanel Orientation="Horizontal">
+          <WrapPanel.Styles>
+            <!-- جای ‎gap:8px‎ و ‎row-gap:6px‎ی سایت -->
+            <Style Selector="WrapPanel > :is(Control)">
+              <Setter Property="Margin" Value="0,0,8,6" />
+            </Style>
             <Style Selector="TextBlock.barl">
               <Setter Property="FontSize" Value="14" />
               <Setter Property="FontWeight" Value="Bold" />
@@ -221,17 +246,19 @@
               <Setter Property="Background" Value="{DynamicResource Pump.GridLine}" />
               <Setter Property="VerticalAlignment" Value="Center" />
             </Style>
-          </StackPanel.Styles>
+          </WrapPanel.Styles>
 
-          <TextBlock Text="📒 حساب:" Classes="barl" />
-          <ComboBox ItemsSource="{Binding Accounts}" SelectedItem="{Binding Current}"
-                    MinWidth="180">
-            <ComboBox.ItemTemplate>
-              <DataTemplate x:DataType="vm:AccountViewModel">
-                <TextBlock Text="{Binding Title}" />
-              </DataTemplate>
-            </ComboBox.ItemTemplate>
-          </ComboBox>
+          <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <TextBlock Text="📒 حساب:" Classes="barl" />
+            <ComboBox ItemsSource="{Binding Accounts}" SelectedItem="{Binding Current}"
+                      MinWidth="180">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:AccountViewModel">
+                  <TextBlock Text="{Binding Title}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </StackPanel>
           <Button Classes="ghost info" Content="➕ حساب جدید"
                   Command="{Binding AddSubAccountCommand}" />
           <!-- «📋 جدول جدید» جایش همین نوار است، نه سربرگ — در سایت هم
@@ -244,25 +271,31 @@
           <!-- ══ سه دکمهٔ فیلتر — ‎setPersonFilter()‎ی سایت ═════════════════
                در برنامهٔ نیتیو اصلاً نبودند، یعنی راهی نبود که فقط ردیف‌های یک
                تیل را ببینی. ⚠️ فیلتر هیچ ردیفی را پاک نمی‌کند؛ فقط دیده‌شدن. -->
-          <Button Classes="ghost" Content="📋 همه"
-                  Command="{Binding Current.SetFilterCommand}" CommandParameter="all" />
-          <Button Classes="ghost" Content="⛽ حساب جداگانه پطرول"
-                  Foreground="{DynamicResource Pump.Ok}"
-                  Command="{Binding Current.SetFilterCommand}" CommandParameter="petrol" />
-          <Button Classes="ghost" Content="🟤 حساب جداگانه دیزل"
-                  Foreground="{DynamicResource Pump.Warn}"
-                  Command="{Binding Current.SetFilterCommand}" CommandParameter="diesel" />
+          <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <Button Classes="ghost" Content="📋 همه"
+                    Command="{Binding Current.SetFilterCommand}" CommandParameter="all" />
+            <Button Classes="ghost" Content="⛽ حساب جداگانه پطرول"
+                    Foreground="{DynamicResource Pump.Ok}"
+                    Command="{Binding Current.SetFilterCommand}" CommandParameter="petrol" />
+            <Button Classes="ghost" Content="🟤 حساب جداگانه دیزل"
+                    Foreground="{DynamicResource Pump.Warn}"
+                    Command="{Binding Current.SetFilterCommand}" CommandParameter="diesel" />
+          </StackPanel>
 
           <Border Classes="sep" />
 
-          <TextBlock Text="📞 شماره تماس:" Classes="barl" />
-          <TextBox Text="{Binding PhoneText}" Width="170" Watermark="مثلاً 0700000000" />
+          <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <TextBlock Text="📞 شماره تماس:" Classes="barl" />
+            <TextBox Text="{Binding PhoneText}" Width="170" Watermark="مثلاً 0700000000" />
+          </StackPanel>
 
           <!-- «فیِ خرید» فقط یادداشت است و در هیچ محاسبه‌ای نیست — همان جمله‌ای
                که خودِ سایت روی ‎title‎ی این کادر نوشته. -->
-          <TextBlock Text="📝 فیِ خرید:" Classes="barl" />
-          <TextBox Text="{Binding BuyFeeText}" Width="96" Watermark="56 / 57"
-                   ToolTip.Tip="فقط یادداشت — تیلِ مشتری با چه فی خریداری شده. در هیچ محاسبه‌ای استفاده نمی‌شود." />
+          <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <TextBlock Text="📝 فیِ خرید:" Classes="barl" />
+            <TextBox Text="{Binding BuyFeeText}" Width="96" Watermark="56 / 57"
+                     ToolTip.Tip="فقط یادداشت — تیلِ مشتری با چه فی خریداری شده. در هیچ محاسبه‌ای استفاده نمی‌شود." />
+          </StackPanel>
 
           <!-- ⚠️ «بغلِ آن حساب جدید باید کادرش باشد و هر وقت زدم اینا بیان» —
                خواستهٔ صریحِ صاحب ریپو. سه کادرِ فیصدی همیشه پیدا نیستند. -->
@@ -284,7 +317,7 @@
           <Button Classes="ghost danger" Content="🗑️ حذفِ این حساب"
                   Command="{Binding DeleteSubAccountCommand}"
                   CommandParameter="{Binding Current}" />
-        </StackPanel>
+        </WrapPanel>
 
         <!-- کادرِ کشوییِ «جدول‌های آرشیو» — تا آرشیوی نباشد، اصلاً دیده نمی‌شود -->
         <!-- ⚠️ کادرِ بزرگِ آرشیو عمداً همین بالاست، بالای جدول — عینِ ‎#pm-arc-box‎ی
