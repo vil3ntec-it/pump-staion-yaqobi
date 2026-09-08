@@ -16,7 +16,17 @@
            تیل چرا شبیهِ کادرِ آن بالا بغلِ پی‌دی‌اف نیست؟ که این مدل تیک‌مارکی
            درست کردی چرا؟» — پس چک‌باکسِ «واحدِ پول» از پایین برداشته شد و
            همان‌جایی نشست که در سایت است. -->
-      <StackPanel Orientation="Horizontal" Spacing="8">
+      <!-- ⚠️ ‎WrapPanel‎ است نه ‎StackPanel‎ی افقی: با افزوده شدنِ «تغییر اسم» و
+           «حذفِ این حساب»، نوار از پنجرهٔ ۱۰۰۰ پیکسلی بیرون زد و «بازگشت به
+           فهرست» افتاد بیرونِ لبهٔ چپ (سنجشِ ‎UiTests person‎ گرفتش:
+           ‎x −13…127‎). همان درسِ نوارِ حساب — یک خطِ افقیِ نشکن، دُمش را
+           می‌بُرد. این را به ‎StackPanel‎ برنگردانید. -->
+      <WrapPanel Orientation="Horizontal">
+        <WrapPanel.Styles>
+          <Style Selector="WrapPanel > :is(Control)">
+            <Setter Property="Margin" Value="0,0,8,6" />
+          </Style>
+        </WrapPanel.Styles>
         <Button Classes="ghost" Content="→ قبلی" Command="{Binding PrevPersonCommand}" />
         <Button Classes="ghost" Content="بعدی ←" Command="{Binding NextPersonCommand}" />
         <Button Classes="ghost info" Content="{Binding Current.ModeToggleText}"
@@ -44,7 +54,7 @@
 
         <Button Classes="accent" Content="بازگشت به فهرست"
                 Command="{Binding BackCommand}" />
-      </StackPanel>
+      </WrapPanel>
     </c:SectionPage.Toolbar>
 
     <c:SectionPage.Summary>
