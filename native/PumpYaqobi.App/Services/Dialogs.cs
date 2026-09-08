@@ -90,6 +90,17 @@ public static class Dialogs
         });
     }
 
+    /// <summary>
+    /// پنجرهٔ «📲 کیو‌آر» را نشان بده — همتای ‎#qrModal‎ی سایت.
+    /// </summary>
+    public static async Task ShowQrAsync(string name, string link, byte[]? png, string hint)
+    {
+        var owner = Owner;
+        if (owner is null) return;
+        await Dispatcher.UIThread.InvokeAsync(async () =>
+            await QrWindow.For(name, link, png, hint).ShowDialog(owner));
+    }
+
     /// <summary>«مطمئنی؟» — ‎true‎ فقط وقتی خودِ کاربر تایید کند.</summary>
     public static async Task<bool> ConfirmAsync(string title, string message,
                                                 string ok = "بله", string cancel = "انصراف")

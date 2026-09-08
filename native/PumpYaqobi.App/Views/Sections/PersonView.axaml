@@ -23,6 +23,10 @@
                 Command="{Binding Current.ToggleModeCommand}"
                 ToolTip.Tip="دفترِ پول ⇄ دفترِ تیل — این دو کاملاً جدا هستند" />
         <Button Classes="ghost info" Content="📄 PDF" Command="{Binding PdfCommand}" />
+        <!-- «📲 کیو‌آر» — در سایت داخلِ کشوییِ «⋯ بیشتر» است و در نیتیو اصلاً
+             نبود: نه کیو‌آری ساخته می‌شد و نه دیده می‌شد. -->
+        <Button Classes="ghost" Content="📲 کیو‌آر" Command="{Binding ShowQrCommand}"
+                ToolTip.Tip="کیو‌آرِ همین حسابی که باز است" />
         <Button Classes="accent" Content="🆕 جدول جدید"
                 Command="{Binding Current.NewTableCommand}" />
         <Button Classes="accent" Content="بازگشت به فهرست"

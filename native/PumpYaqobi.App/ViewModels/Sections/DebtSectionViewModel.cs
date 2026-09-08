@@ -7,6 +7,7 @@ using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Services.Data;
+using PumpYaqobi.Services.Vision;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -177,6 +178,60 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
         if (number < 1 || number > Cards.Count) return Task.CompletedTask;
         return OpenAsync(Cards[number - 1]);
     }
+
+    /// <summary>
+    /// ══ «🔍 اسکنِ کیو‌آر» ═══════════════════════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «اسکنر که اصلاً وجود ندارد، آن باید باشد — ببین کجاها
+    /// اسکنِ هر حساب را جدا داشت در سایت، در این هم باشد.»
+    ///
+    /// رمزگشا (<c>QrReader</c>) از اول در برنامه بود ولی فقط بخشِ دوربین از آن
+    /// استفاده می‌کرد و نتیجه‌اش «دوربینِ تازه» می‌شد. حالا همان رمزگشا این‌جا
+    /// هم هست و نتیجه‌اش <b>باز کردنِ همان حساب</b> است — همان کاری که اسکنِ
+    /// کیو‌آر در سایت می‌کند.
+    ///
+    /// ⚠️ عکس از خودِ دستگاه گرفته می‌شود، نه از دوربینِ زنده: پویشِ زنده
+    /// کارِ بخشِ «دوربین‌ها» است و همان‌جا سرِ جایش هست. این‌جا همتای
+    /// ‎camAddByQRImage‎ است — کیو‌آری که چاپ شده یا از آن عکس گرفته‌اید.
+    /// </summary>
+    [RelayCommand]
+    private Task ScanQrAsync() => CrashGuard.RunAsync("اسکن کیو‌آر", async () =>
+    {
+        var path = await Dialogs.PickImageAsync("عکسِ کیو‌آرِ حساب را انتخاب کنید");
+        if (string.IsNullOrWhiteSpace(path)) return;
+
+        var text = await Task.Run(() => QrReader.DecodeFile(path));
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            _host.Toast("در این عکس کیو‌آری پیدا نشد", ToastKind.Warn);
+            return;
+        }
+
+        var link = AcctLink.Parse(text);
+        if (link is null)
+        {
+            _host.Toast("این کیو‌آر نشانیِ حساب نیست", ToastKind.Warn);
+            return;
+        }
+
+        var card = Cards.FirstOrDefault(c => c.Entity.Id == link.Value.PersonId);
+        if (card is null)
+        {
+            // ممکن است جست‌وجو فهرست را باریک کرده باشد، یا حساب مالِ همین
+            // بخش نباشد (قرض‌دار ⇄ بی‌فاکتور).
+            _host.Toast("حسابی با این کیو‌آر در این فهرست نیست", ToastKind.Warn);
+            return;
+        }
+
+        await OpenAsync(card);
+
+        // اگر کیو‌آر مالِ یک حسابِ فرعی بود، همان حساب باز شود، نه حسابِ اصلی.
+        if (link.Value.SubId is { } sid && Person is not null)
+        {
+            var acct = Person.Accounts.FirstOrDefault(a => a.Entity.LegacySubId == sid);
+            if (acct is not null) Person.Current = acct;
+        }
+    });
 
     /// <summary>
     /// «→ قبلی» و «بعدی ←»ی سربرگ — همتای ‎navigatePerson(±1)‎ی سایت.

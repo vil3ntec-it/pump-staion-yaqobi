@@ -10,6 +10,7 @@ using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
 using PumpYaqobi.Reporting.Pdf;
 using PumpYaqobi.Services.Data;
+using PumpYaqobi.Services.Vision;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -837,6 +838,34 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
 
     [RelayCommand]
     private Task NextPerson() => _section.NavigatePersonAsync(+1);
+
+    /// <summary>
+    /// «📲 کیو‌آر» — ‎showPersonQRFromModal()‎ی سایت.
+    ///
+    /// کیو‌آرِ <b>همان حسابی که باز است</b>: حسابِ اصلی یا هر حسابِ فرعی. متنِ
+    /// داخلش دقیقاً همان نشانی‌ای است که سایت می‌سازد (‎_acctHash‎)، پس کاغذهای
+    /// چاپ‌شدهٔ قبلی هم با همین برنامه خوانده می‌شوند.
+    /// </summary>
+    [RelayCommand]
+    private Task ShowQr() => CrashGuard.RunAsync("کیو‌آر", async () =>
+    {
+        var acct = Current;
+        if (acct is null) return;
+
+        // حسابِ فرعی همیشه ‎LegacySubId‎ دارد (هم آن‌هایی که از نسخهٔ وب آمده‌اند،
+        // هم آن‌هایی که ‎AddSubAccountAsync‎ می‌سازد)، پس ‎IsMain‎ همان محکِ درست است.
+        var isSub = !acct.Entity.IsMain;
+        var sub = isSub ? acct.Entity.LegacySubId : null;
+        var link = AcctLink.Build(Entity.Id, sub);
+
+        var png = await Task.Run(() => QrWriter.EncodePng(link));
+        var title = isSub ? "📲 📄 " + acct.Title : "📲 " + Name;
+        var hint = isSub
+            ? "با اسکن این کد، حساب «" + acct.Title + "» باز می‌شود"
+            : "با اسکن این کد، حساب همین شخص باز می‌شود";
+
+        await Dialogs.ShowQrAsync(title, link, png, hint);
+    });
 
     /// <summary>
     /// «✏️ تغییر اسم» — ‎renameCurrentPerson()‎ی سایت.
