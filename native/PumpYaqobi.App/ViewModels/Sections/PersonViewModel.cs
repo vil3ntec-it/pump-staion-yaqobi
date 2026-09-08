@@ -936,13 +936,27 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
         // هم آن‌هایی که ‎AddSubAccountAsync‎ می‌سازد)، پس ‎IsMain‎ همان محکِ درست است.
         var isSub = !acct.Entity.IsMain;
         var sub = isSub ? acct.Entity.LegacySubId : null;
-        var link = AcctLink.Build(Entity.Id, sub);
+
+        // ⚠️ این کیو‌آر برای **خودِ قرض‌دار** است: می‌فرستیدش، مشتری با گوشیِ
+        // خودش اسکن می‌کند و حسابش را زنده می‌بیند — دادهٔ آن صفحه از همین
+        // سرورِ خانگی می‌آید. پس نشانی باید کامل باشد، نه فقط تکهٔ ‎#roview…‎؛
+        // با تکهٔ تنها، گوشیِ مشتری چیزی برای باز کردن ندارد.
+        var server = _host.Settings.GetString(SettingsKeys.ServerUrl);
+        var link = AcctLink.FullUrl(server, Entity.Id, sub);
+        if (link is null)
+        {
+            _host.Toast("اول در «تنظیمات › نشانیِ سرور» نشانیِ سرورِ خانگی را بنویسید — "
+                        + "بی آن، مشتری با اسکنِ کیو‌آر جایی برای باز کردن ندارد",
+                        ToastKind.Warn);
+            return;
+        }
 
         var png = await Task.Run(() => QrWriter.EncodePng(link));
         var title = isSub ? "📲 📄 " + acct.Title : "📲 " + Name;
-        var hint = isSub
-            ? "با اسکن این کد، حساب «" + acct.Title + "» باز می‌شود"
-            : "با اسکن این کد، حساب همین شخص باز می‌شود";
+        var hint = (isSub
+            ? "این کد را به مشتری بدهید؛ با اسکنش حساب «" + acct.Title + "» را می‌بیند"
+            : "این کد را به مشتری بدهید؛ با اسکنش حسابِ خودش را می‌بیند")
+            + " — زنده، از همین سرور.";
 
         await Dialogs.ShowQrAsync(title, link, png, hint);
     });

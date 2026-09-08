@@ -20,6 +20,38 @@ public static class AcctLink
         + (string.IsNullOrWhiteSpace(subId) ? "" : "~" + subId) + "-pdf";
 
     /// <summary>
+    /// نشانیِ <b>کاملِ قابلِ باز شدن</b> — همان چیزی که باید داخلِ کیو‌آر برود.
+    ///
+    /// ⚠️ کیو‌آرِ حساب برای <b>خودِ قرض‌دار</b> است، نه برای ما: صاحب ریپو آن را
+    /// می‌فرستد، مشتری با گوشیِ خودش اسکن می‌کند و حسابش را <b>زنده</b>
+    /// می‌بیند — دادهٔ صفحه از همان سرورِ خانگی می‌آید. پس تکهٔ ‎#roview…‎ی
+    /// تنها به‌درد نمی‌خورد؛ باید میزبان هم داشته باشد، وگرنه گوشیِ مشتری
+    /// چیزی برای باز کردن ندارد.
+    ///
+    /// ‎baseUrl‎ همان نشانیِ سرورِ خانگی است (تنظیمات › نشانیِ سرور). اگر خالی
+    /// باشد ‎null‎ برمی‌گردد و صداکننده باید بگوید «اول نشانیِ سرور را بنویس».
+    /// </summary>
+    public static string? FullUrl(string? baseUrl, long personId,
+                                  string? subId = null, string type = "debt")
+    {
+        var b = (baseUrl ?? "").Trim();
+        if (b.Length == 0) return null;
+
+        // هرچه بعد از «#» باشد جای همین هش را می‌گیرد، پس اول پاکش می‌کنیم.
+        var h = b.IndexOf('#');
+        if (h >= 0) b = b[..h];
+        b = b.TrimEnd('/');
+        if (b.Length == 0) return null;
+
+        // بی «http» گوشی نشانی را باز نمی‌کند و متن می‌بیند.
+        if (!b.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+            !b.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            b = "http://" + b;
+
+        return b + "/" + Build(personId, subId, type);
+    }
+
+    /// <summary>
     /// خواندنِ متنی که از کیو‌آر بیرون آمد.
     ///
     /// متن می‌تواند نشانیِ کاملِ سایت باشد (‎https://…/#roview-debt-7-pdf‎) یا
