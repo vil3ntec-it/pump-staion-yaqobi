@@ -28,8 +28,11 @@ public class VisualQualityTests
     {
         var t = Theme();
         Assert.Contains("<Setter Property=\"GridLinesVisibility\" Value=\"Horizontal\" />", t);
-        Assert.DoesNotContain("<Setter Property=\"GridLinesVisibility\" Value=\"All\" />", t);
-        Assert.DoesNotContain("VerticalGridLinesBrush", t);
+        // «دیگر نباید باشد» همیشه روی متنِ بی‌کامنت — وگرنه روزی که کسی در
+        // کامنت بنویسد «خطِ عمودی برداشته شد»، آزمون خودِ آن جمله را می‌خواند.
+        var bare = NoComments(t);
+        Assert.DoesNotContain("<Setter Property=\"GridLinesVisibility\" Value=\"All\" />", bare);
+        Assert.DoesNotContain("VerticalGridLinesBrush", bare);
     }
 
     /// <summary>
@@ -81,11 +84,20 @@ public class VisualQualityTests
         var w = File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Views",
                                               "DocumentPreviewWindow.axaml"));
         Assert.Contains("WindowState=\"Maximized\"", w);
-        Assert.DoesNotContain("MaxWidth=\"900\"", w);   // سقفِ ورق برداشته شد
         Assert.Contains("ZoomInCommand", w);
         Assert.Contains("ZoomOutCommand", w);
         Assert.Contains("ZoomFitCommand", w);
+
+        // ⚠️ برای «دیگر نباید باشد» باید کامنت‌ها را برداشت، وگرنه آزمون
+        // توضیحِ خودِ ما را می‌خواند و قرمز می‌شود: کامنتِ همان‌جا نوشته چرا
+        // ‎MaxWidth="900"‎ برداشته شد، پس خودِ آن رشته در فایل هست.
+        Assert.DoesNotContain("MaxWidth=\"900\"", NoComments(w));
     }
+
+    /// <summary>کامنت‌های XAML را برمی‌دارد — برای آزمون‌های «دیگر نباید باشد».</summary>
+    private static string NoComments(string xaml) =>
+        System.Text.RegularExpressions.Regex.Replace(
+            xaml, "<!--.*?-->", "", System.Text.RegularExpressions.RegexOptions.Singleline);
 
     private static string Between(string s, string a, string b)
     {
