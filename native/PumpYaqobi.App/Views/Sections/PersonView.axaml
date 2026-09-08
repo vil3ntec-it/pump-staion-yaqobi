@@ -154,7 +154,8 @@
                 <TextBlock Text="{Binding HeadRasidLabel}" Classes="fsl" />
                 <!-- در سایت رسید را همین‌جا در سربرگ می‌نویسند، نه در کادرِ
                      دیگری پایین‌تر. پس این خانه خواندنی نیست، نوشتنی است. -->
-                <TextBox Text="{Binding HeadPetrolRasidEdit}" Classes="fsv"
+                <TextBox Text="{Binding HeadPetrolRasidEdit, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                         Classes="fsv" GotFocus="RasidBoxFocus" KeyDown="RasidBoxKey"
                          Foreground="{DynamicResource Pump.Ok}" />
               </StackPanel>
               <StackPanel Spacing="2">
@@ -189,7 +190,8 @@
               </StackPanel>
               <StackPanel Spacing="2">
                 <TextBlock Text="{Binding HeadRasidLabel}" Classes="fsl" />
-                <TextBox Text="{Binding HeadDieselRasidEdit}" Classes="fsv"
+                <TextBox Text="{Binding HeadDieselRasidEdit, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                         Classes="fsv" GotFocus="RasidBoxFocus" KeyDown="RasidBoxKey"
                          Foreground="{DynamicResource Pump.Ok}" />
               </StackPanel>
               <StackPanel Spacing="2">

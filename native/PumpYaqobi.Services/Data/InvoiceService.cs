@@ -127,10 +127,15 @@ public sealed class InvoiceService
         }
 
         // ── بخشِ تیل: «مقدار رسیدِ تیل»ِ همان حساب ──
+        //
+        // ⚠️ دیگر مستقیم به عددِ حساب اضافه نمی‌شود: رسید رکوردِ خودش را در
+        // دفترِ رسید می‌گیرد و عددِ سربرگ جمعِ همان دفتر می‌شود. این‌طور
+        // (خواستهٔ صریحِ صاحب ریپو) رسیدِ فاکتور هم ردیفِ خودش را در جدولِ
+        // شخص دارد و برگرداندنِ تایید دقیقاً همان یکی را برمی‌دارد.
         if (!v.ByMoney && v.Liters > 0m)
         {
-            if (v.Fuel == FuelType.Diesel) account.RasidFuelDiesel += v.Liters;
-            else account.RasidFuelPetrol += v.Liters;
+            await RasidLedger.AddAsync(db, account, LedgerMode.Fuel, v.Fuel, v.Liters,
+                                       v.DateShamsi, v.Id, ct);
             v.PostedFuelLiters = v.Liters;
         }
 
@@ -175,10 +180,27 @@ public sealed class InvoiceService
             var acc = await db.DebtAccounts.FirstOrDefaultAsync(a => a.Id == v.DebtAccountId, ct);
             if (acc is not null)
             {
-                if (v.Fuel == FuelType.Diesel)
+                // فاکتورهای تاییدشدهٔ **پیش از** دفترِ رسید رکوردی ندارند. اول
+                // همین را می‌پرسیم تا در آن حالت دفتر بی‌خود ساخته نشود و
+                // جمع‌ها با هم نخوانند.
+                var accId = acc.Id;
+                var invId = v.Id;
+                var logged = await db.RasidEntries
+                    .AnyAsync(e => e.AccountId == accId && e.InvoiceId == invId, ct);
+
+                if (logged)
+                {
+                    await RasidLedger.RemoveByInvoiceAsync(db, acc, invId, ct);
+                }
+                else if (v.Fuel == FuelType.Diesel)
+                {
+                    // راهِ قدیمی: دقیقاً همان مقداری که اضافه شده بود پس گرفته شود.
                     acc.RasidFuelDiesel = Math.Max(0m, acc.RasidFuelDiesel - v.PostedFuelLiters.Value);
+                }
                 else
+                {
                     acc.RasidFuelPetrol = Math.Max(0m, acc.RasidFuelPetrol - v.PostedFuelLiters.Value);
+                }
             }
         }
         v.PostedFuelLiters = null;

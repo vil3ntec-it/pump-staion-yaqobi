@@ -36,6 +36,35 @@ public sealed partial class DebtRowViewModel : RowViewModel
         Loading = false;
     }
 
+    /// <summary>
+    /// ══ ردیفِ خودکارِ رسیدِ سربرگ ═══════════════════════════════════════════
+    /// وقتی پر باشد، این ردیف «مالِ دفترِ رسید» است نه یک ردیفِ واقعیِ جدول:
+    /// فقط دیده می‌شود، در هیچ جمعی شمرده نمی‌شود، در دیتابیس نوشته نمی‌شود،
+    /// و دکمهٔ حذفش همان رسید را از دفتر برمی‌دارد.
+    ///
+    /// همتای ‎tr.pm-auto-row‎ی سایت — و همان قاعدهٔ صریحِ پروژه که چنین ردیفی
+    /// نه ‎data-idx‎ دارد نه داده‌ای پشتش.
+    /// </summary>
+    public RasidEntry? Auto { get; private init; }
+
+    public bool IsAuto => Auto is not null;
+
+    /// <summary>
+    /// ساختنِ ردیفِ نمایشیِ یک رسیدِ سربرگ. عدد در ستونِ «رسید تیل» می‌نشیند
+    /// اگر رسیدِ دفترِ تیل باشد و در ستونِ «رسید» اگر رسیدِ دفترِ پول باشد —
+    /// همان ‎_rasidLogKey(fuel, money)‎ی سایت.
+    /// </summary>
+    public DebtRowViewModel(RasidEntry e, AccountViewModel owner, int number)
+        : this(new DebtRow
+        {
+            DateShamsi = e.DateShamsi ?? "",
+            Name = "📌 رسید" + (number > 1 ? " " + Shamsi.Money(number) : ""),
+            Fuel = e.Fuel,
+            Rasid = e.Unit.IsMoney() ? e.Value : 0m,
+            RasidFuel = e.Unit.IsMoney() ? 0m : e.Value,
+        }, owner)
+        => Auto = e;
+
     public DebtRow Entity => _r;
 
     [ObservableProperty] private string _dateShamsi = "";
@@ -124,7 +153,9 @@ public sealed partial class DebtRowViewModel : RowViewModel
     /// ثابت («rowFuel») داشتند، یعنی آوالونیا همهٔ ردیف‌های جدول را یک گروه
     /// می‌دید و زدنِ «دیزل» در یک ردیف، انتخابِ همهٔ ردیف‌های دیگر را برمی‌داشت.
     /// </summary>
-    public string FuelGroup => "rowFuel-" + _r.Id;
+    public string FuelGroup => IsAuto
+        ? "rowRasid-" + (Auto!.Id != 0 ? Auto.Id.ToString() : Auto.GetHashCode().ToString())
+        : "rowFuel-" + _r.Id;
 
     public bool IsPetrol
     {
@@ -146,6 +177,8 @@ public sealed partial class DebtRowViewModel : RowViewModel
 
     protected override void Apply()
     {
+        // ردیفِ خودکار داده‌ای پشتش نیست — هیچ‌وقت نوشته نمی‌شود
+        if (IsAuto) return;
         _r.DateShamsi = DateShamsi;
         _r.DateKey = Shamsi.Key(DateShamsi);
         _r.Name = Name;
@@ -158,7 +191,8 @@ public sealed partial class DebtRowViewModel : RowViewModel
         _r.RasidFuel = RasidFuel;
     }
 
-    protected override Task SaveAsync() => _owner.SaveRowAsync(_r);
+    protected override Task SaveAsync() =>
+        IsAuto ? Task.CompletedTask : _owner.SaveRowAsync(_r);
 }
 
 /// <summary>
@@ -228,12 +262,15 @@ public sealed partial class ArchiveViewModel : ObservableObject
         NoteText = h.Note ?? "";
         HasNote = NoteText.Length > 0;
 
+        // ⚠️ نامِ ستون‌ها این‌جا با سربرگ‌های جدولِ آرشیو یکی است، نه با
+        // جدولِ شخص — سربرگ‌های آن جدول کوتاه‌ترند («مقدار» و «رسیدِ تیل»).
+        // اگر نخوانَد، جمع زیرِ ستونِ خودش نمی‌نشیند و ته نوار می‌افتد.
         Totals = new[]
         {
-            new TotalCell("مقدار تیل", Shamsi.Money(t.All.Liters)),
+            new TotalCell("مقدار تیل", Shamsi.Money(t.All.Liters), column: "مقدار"),
             new TotalCell("بردگی", Shamsi.Money(t.All.Bardagi)),
             new TotalCell("رسید", Shamsi.Money(t.All.Rasid), "Pump.Ok"),
-            new TotalCell("رسید تیل", Shamsi.Money(t.All.RasidFuel), "Pump.Ok"),
+            new TotalCell("رسید تیل", Shamsi.Money(t.All.RasidFuel), "Pump.Ok", "رسیدِ تیل"),
             new TotalCell("الباقی", Shamsi.Money(t.All.Albaqi),
                           t.All.Albaqi > 0m ? "Pump.Danger" : "Pump.Ok"),
         };
@@ -357,10 +394,12 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         RefreshTotals();
     }
 
-    partial void OnRasidFuelPetrolChanged(decimal v) { Entity.RasidFuelPetrol = v; SaveAccount(); OnPropertyChanged(nameof(RasidFuelPetrolText)); RefreshTotals(); }
-    partial void OnRasidFuelDieselChanged(decimal v) { Entity.RasidFuelDiesel = v; SaveAccount(); OnPropertyChanged(nameof(RasidFuelDieselText)); RefreshTotals(); }
-    partial void OnRasidMoneyPetrolChanged(decimal v) { Entity.RasidMoneyPetrol = v; SaveAccount(); OnPropertyChanged(nameof(RasidMoneyPetrolText)); RefreshTotals(); }
-    partial void OnRasidMoneyDieselChanged(decimal v) { Entity.RasidMoneyDiesel = v; SaveAccount(); OnPropertyChanged(nameof(RasidMoneyDieselText)); RefreshTotals(); }
+    // ⚠️ این چهار عدد دیگر «منبع» نیستند — جمعِ دفترِ رسیدند. وقتی ‎PullRasidSums‎
+    // آن‌ها را از حساب برمی‌دارد نباید دوباره روی حساب بنشینند و ذخیره شوند.
+    partial void OnRasidFuelPetrolChanged(decimal v) { if (_pullingSums) return; Entity.RasidFuelPetrol = v; SaveAccount(); OnPropertyChanged(nameof(RasidFuelPetrolText)); RefreshTotals(); }
+    partial void OnRasidFuelDieselChanged(decimal v) { if (_pullingSums) return; Entity.RasidFuelDiesel = v; SaveAccount(); OnPropertyChanged(nameof(RasidFuelDieselText)); RefreshTotals(); }
+    partial void OnRasidMoneyPetrolChanged(decimal v) { if (_pullingSums) return; Entity.RasidMoneyPetrol = v; SaveAccount(); OnPropertyChanged(nameof(RasidMoneyPetrolText)); RefreshTotals(); }
+    partial void OnRasidMoneyDieselChanged(decimal v) { if (_pullingSums) return; Entity.RasidMoneyDiesel = v; SaveAccount(); OnPropertyChanged(nameof(RasidMoneyDieselText)); RefreshTotals(); }
 
     // نوشته‌های ورودی: عددِ خام بی «۰٫۰»، و پذیرشِ رقمِ فارسی و کاما
 
@@ -395,7 +434,13 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     // هر دو از همان ‎SplitTotals‎ی می‌آیند که ورقِ PDF هم از آن می‌خواند، پس
     // عددِ صفحه و عددِ ورق هرگز از هم جدا نمی‌شوند.
 
-    private SplitTotals Totals => Calc.SplitTotals(Rows.Select(r => r.Entity).ToList());
+    /// <summary>
+    /// ⚠️ ردیف‌های خودکارِ رسید عمداً بیرون‌اند: نمایش‌اند و در هیچ جمعی شمرده
+    /// نمی‌شوند (قاعدهٔ صریحِ پروژه). اثرشان از راهِ چهار عددِ ‎Rasid…‎ی حساب
+    /// دیده می‌شود که جمعِ همان دفترند.
+    /// </summary>
+    private SplitTotals Totals =>
+        Calc.SplitTotals(Rows.Where(r => !r.IsAuto).Select(r => r.Entity).ToList());
 
     /// <summary>واحدِ همین حساب — «لیتر» یا «افغانی».</summary>
     public string UnitText => IsMoney ? "افغانی" : "لیتر";
@@ -511,7 +556,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     public string HeadPetrolRasidEdit
     {
         get => Shamsi.MoneyOrBlank(IsMoney ? RasidMoneyPetrol : RasidFuelPetrol);
-        set { if (IsMoney) RasidMoneyPetrolText = value; else RasidFuelPetrolText = value; RefreshTotals(); }
+        set => PushHeadRasid(FuelType.Petrol, value);
     }
 
     // ── 🟤 حساب دیزل ──────────────────────────────────────────────────────
@@ -525,8 +570,52 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     public string HeadDieselRasidEdit
     {
         get => Shamsi.MoneyOrBlank(IsMoney ? RasidMoneyDiesel : RasidFuelDiesel);
-        set { if (IsMoney) RasidMoneyDieselText = value; else RasidFuelDieselText = value; RefreshTotals(); }
+        set => PushHeadRasid(FuelType.Diesel, value);
     }
+
+    // ══ سربرگ ⇄ جدول — یک منبع، دو نما ═════════════════════════════════════
+    //
+    // خواستهٔ صریحِ صاحب ریپو: «سربرگ، جدول و جمع از یک Data Source بخوانند؛
+    // رسیدی که در سربرگ وارد می‌شود همان لحظه ردیفِ خودش را در جدول داشته
+    // باشد و برعکس.»
+    //
+    // پس هر عددی که در کادرِ سربرگ نوشته شود یک **رسیدِ تازه** در دفترِ حساب
+    // است (‎PushRasid‎)، نه بازنویسیِ عددِ قبلی. کادر همان لحظه جمعِ تازهٔ دفتر
+    // را نشان می‌دهد و جدول یک ردیفِ 📌 برای همان رسید می‌سازد. برعکسش هم
+    // برقرار است: رسیدی که در خودِ جدول نوشته شود در ‎HeadPetrolRasidText‎
+    // (جمعِ سربرگ + جدول) دیده می‌شود.
+    //
+    // ⚠️ کادرِ سربرگ با دست خوردن خالی می‌شود (‎PersonView.axaml.cs‎، همتای
+    // ‎personRasidFocus‎ی سایت) تا عددِ تازه «رسیدِ تازه» باشد نه ویرایشِ جمع.
+    private void PushHeadRasid(FuelType fuel, string text)
+    {
+        var v = Shamsi.Num(text);
+        if (v == 0m) { RefreshTotals(); return; }
+
+        var unit = IsMoney ? LedgerMode.Money : LedgerMode.Fuel;
+        var e = Calc.PushRasid(Entity, unit, fuel, v, Shamsi.Today());
+        if (e is null) { RefreshTotals(); return; }
+
+        PullRasidSums();
+        _ = _host.Debtors.SaveRasidAsync(Entity, e);
+        BuildRows();                 // ردیفِ 📌ِ همین رسید سرِ جایش می‌نشیند
+        _person.Recalc();
+    }
+
+    /// <summary>چهار عددِ نمایشی را از حساب (که جمعِ دفتر است) برمی‌دارد.</summary>
+    private void PullRasidSums()
+    {
+        _pullingSums = true;
+        RasidFuelPetrol = Entity.RasidFuelPetrol;
+        RasidFuelDiesel = Entity.RasidFuelDiesel;
+        RasidMoneyPetrol = Entity.RasidMoneyPetrol;
+        RasidMoneyDiesel = Entity.RasidMoneyDiesel;
+        _pullingSums = false;
+        RefreshTotals();
+    }
+
+    /// <summary>وقتی خودِ دفتر عددها را می‌نویسد، دوباره روی حساب ننشیند.</summary>
+    private bool _pullingSums;
 
     public string HeadDieselAlbaqiText => Shamsi.Money(Totals.Diesel.Albaqi);
     public string HeadDieselAlbaqiBrushKey =>
@@ -544,8 +633,9 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
             var t = Totals;
             return new[]
             {
-                new TotalCell(IsMoney ? "مقدار (افغانی)" : "مقدار تیل", Shamsi.Money(t.All.Liters)),
-                new TotalCell("بردگی", Shamsi.Money(t.All.Bardagi)),
+                new TotalCell(IsMoney ? "مقدار (افغانی)" : "مقدار تیل", Shamsi.Money(t.All.Liters),
+                              column: "مقدار تیل"),
+                new TotalCell("بردگی", Shamsi.Money(t.All.Bardagi), column: "مقدار بردگی"),
                 new TotalCell("رسید", Shamsi.Money(t.All.Rasid), "Pump.Ok"),
                 new TotalCell("رسید تیل", Shamsi.Money(t.All.RasidFuel), "Pump.Ok"),
                 new TotalCell("الباقی", Shamsi.Money(t.All.Albaqi),
@@ -619,7 +709,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     [RelayCommand]
     private Task NewTableAsync() => CrashGuard.RunAsync("جدول جدید", async () =>
     {
-        if (Rows.Count == 0) { _host.Toast("جدول همین حالا خالی است", ToastKind.Warn); return; }
+        if (RowCount == 0) { _host.Toast("جدول همین حالا خالی است", ToastKind.Warn); return; }
         if (!await Dialogs.ConfirmAsync("جدول جدید",
                 "جدولِ فعلی آرشیو می‌شود و جدولِ خالیِ تازه‌ای باز می‌شود. ادامه؟")) return;
 
@@ -628,6 +718,11 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
 
         // عکسِ حافظه هم باید با پایگاه یکی شود، وگرنه جدولِ پاک‌شده روی صفحه می‌ماند
         Entity.ActiveRows().Clear();
+        // ⚠️ دفترِ رسیدِ همین واحد هم با جدول می‌رود — وگرنه ردیفِ 📌ِ رسیدهای
+        // آرشیوشده دوباره در جدولِ خالی سبز می‌شد (سنجشِ صفحهٔ حساب همین را
+        // گرفت: «جدول خالی شد (۷ ← ۱)»).
+        var goneUnit = IsMoney ? LedgerMode.Money : LedgerMode.Fuel;
+        Entity.RasidLog?.RemoveAll(e => e is null || e.Unit == goneUnit);
         if (IsMoney) { RasidMoneyPetrol = 0m; RasidMoneyDiesel = 0m; }
         else { RasidFuelPetrol = 0m; RasidFuelDiesel = 0m; }
         Entity.Note = null;
@@ -743,8 +838,72 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
             Rows.Add(vm);
         }
 
+        AddRasidRows(want);
+
         // جدول عوض شد ⇒ سربرگ و ردیفِ «جمله» هم باید از نو خوانده شوند
         RefreshTotals();
+    }
+
+    /// <summary>
+    /// ══ ردیفِ 📌ِ هر رسیدِ سربرگ ══════════════════════════════════════════
+    ///
+    /// همتای ‎_renderRasidLog‎ی سایت. هر رسیدِ ثبت‌شده در دفترِ همین حساب یک
+    /// ردیفِ نمایشی می‌گیرد تا کاربر ببیند «این عدد کِی و بابتِ کدام تیل ثبت
+    /// شد» و بتواند همان یکی را با 🗑️ پاک کند.
+    ///
+    /// جای نشستنشان مثلِ سایت است: درست پیش از اولین ردیفِ خالیِ آمادهٔ تایپ،
+    /// نه تهِ جدول — خواستهٔ صریحِ صاحب ریپو بود («رسیدی که در سربرگ می‌نویسم
+    /// می‌آید ته جدول؛ برود همان‌جا که کادرِ خالی شروع می‌شود»).
+    ///
+    /// ⚠️ فقط رسیدهای **دفترِ باز** دیده می‌شوند: در واحدِ تیل رسیدهای تیل و
+    /// در واحدِ پول رسیدهای پول. فیلترِ «فقط پطرول/دیزل» هم روی این‌ها هست.
+    /// </summary>
+    private void AddRasidRows(FuelType? want)
+    {
+        // حساب‌های قدیمی دفتر ندارند؛ یک‌بار از همان چهار عددِ قبلی ساخته
+        // می‌شود و همان‌جا ذخیره، تا از این به بعد رکوردِ خودش را داشته باشد.
+        if (_host.Debt.RasidLogInit(Entity)) _ = PersistRasidLogAsync();
+        var unit = IsMoney ? LedgerMode.Money : LedgerMode.Fuel;
+
+        var mine = Entity.RasidLog
+            .Where(e => e is not null && e.DeletedAt is null && e.Unit == unit && e.Value != 0m)
+            .Where(e => want is null || e.Fuel == want)
+            .OrderBy(e => e.Fuel).ThenBy(e => e.SortIndex).ThenBy(e => e.Id)
+            .ToList();
+        if (mine.Count == 0) return;
+
+        var at = FirstEmptyRow();
+        var perFuel = new Dictionary<FuelType, int>();
+        foreach (var e in mine)
+        {
+            perFuel.TryGetValue(e.Fuel, out var n);
+            perFuel[e.Fuel] = ++n;
+            Rows.Insert(at++, new DebtRowViewModel(e, this, n));
+        }
+    }
+
+    /// <summary>
+    /// شمارهٔ اولین ردیفِ «خالی» — نه نام دارد، نه حواله، نه هیچ عددی. تاریخِ
+    /// خودکار و نوعِ تیل به‌حساب نمی‌آیند (همان معیارِ ‎_pmRowIsEmpty‎ی سایت).
+    /// </summary>
+    private int FirstEmptyRow()
+    {
+        for (var i = 0; i < Rows.Count; i++)
+        {
+            var r = Rows[i].Entity;
+            var empty = string.IsNullOrWhiteSpace(r.Name) && string.IsNullOrWhiteSpace(r.Hawala)
+                     && r.Liters == 0m && (r.PricePerLiter ?? 0m) == 0m
+                     && r.Bardagi == 0m && r.Rasid == 0m && r.RasidFuel == 0m;
+            if (empty) return i;
+        }
+        return Rows.Count;
+    }
+
+    /// <summary>رسیدهای تازه‌ساختهٔ دفتر (از عددهای قدیمی) ذخیره شوند.</summary>
+    private async Task PersistRasidLogAsync()
+    {
+        foreach (var e in Entity.RasidLog.Where(x => x is not null && x.Id == 0).ToList())
+            await _host.Debtors.SaveRasidAsync(Entity, e);
     }
 
     private async Task PersistHealedAsync()
@@ -784,6 +943,21 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     private async Task DeleteRowAsync(DebtRowViewModel? row)
     {
         if (row is null) return;
+
+        // ردیفِ 📌 داده‌ای در جدول ندارد — دکمه‌اش همان رسیدِ سربرگ را برمی‌دارد
+        if (row.Auto is { } entry)
+        {
+            var id = entry.Id;
+            if (!_host.Debt.RemoveRasid(Entity, entry)) return;
+            PullRasidSums();
+            // با ‎id == 0‎ هم صدا زده می‌شود: رکوردی برای حذف نیست ولی جمع‌های
+            // حساب باید همان‌جا با دفترِ تازه برابر شوند.
+            await _host.Debtors.DeleteRasidAsync(Entity, id);
+            BuildRows();
+            _person.Recalc();
+            return;
+        }
+
         await _host.Debtors.DeleteRowAsync(row.Entity.Id);
         Entity.FuelRows.Remove(row.Entity);
         Entity.MoneyRows.Remove(row.Entity);
@@ -792,7 +966,8 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         RefreshTotals();
     }
 
-    public int RowCount => Rows.Count;
+    /// <summary>⚠️ ردیف‌های 📌ِ رسید شمرده نمی‌شوند — ردیفِ جدول نیستند.</summary>
+    public int RowCount => Rows.Count(r => !r.IsAuto);
 
     /// <summary>‎Ctrl+عدد‎ / ‎Shift+عدد‎ — افزودن و برداشتنِ گروهیِ ردیف.
     /// حذف فقط وقتی ردیفِ کافی باشد؛ وگرنه هیچ.</summary>
@@ -985,22 +1160,25 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
         // خودش اسکن می‌کند و حسابش را زنده می‌بیند — دادهٔ آن صفحه از همین
         // سرورِ خانگی می‌آید. پس نشانی باید کامل باشد، نه فقط تکهٔ ‎#roview…‎؛
         // با تکهٔ تنها، گوشیِ مشتری چیزی برای باز کردن ندارد.
+        // ⚠️ خواستهٔ صریحِ صاحب ریپو: «بدونِ نت هم که شده باید برای هر حساب
+        // کیو‌آر ساخته بشه.» پس نبودِ نشانیِ سرور دیگر جلوی ساختِ کد را
+        // نمی‌گیرد: همان تکهٔ ‎#roview…‎ کد می‌شود — خواننده‌ی خودِ برنامه
+        // (‎AcctLink.Parse‎) آن را می‌فهمد و حساب را باز می‌کند. فقط گفته
+        // می‌شود که برای گوشیِ مشتری نشانیِ سرور لازم است.
         var server = _host.Settings.GetString(SettingsKeys.ServerUrl);
-        var link = AcctLink.FullUrl(server, Entity.Id, sub);
-        if (link is null)
-        {
-            _host.Toast("اول در «تنظیمات › نشانیِ سرور» نشانیِ سرورِ خانگی را بنویسید — "
-                        + "بی آن، مشتری با اسکنِ کیو‌آر جایی برای باز کردن ندارد",
-                        ToastKind.Warn);
-            return;
-        }
+        var full = AcctLink.FullUrl(server, Entity.Id, sub);
+        var link = full ?? AcctLink.Build(Entity.Id, sub);
 
         var png = await Task.Run(() => QrWriter.EncodePng(link));
         var title = isSub ? "📲 📄 " + acct.Title : "📲 " + Name;
-        var hint = (isSub
-            ? "این کد را به مشتری بدهید؛ با اسکنش حساب «" + acct.Title + "» را می‌بیند"
-            : "این کد را به مشتری بدهید؛ با اسکنش حسابِ خودش را می‌بیند")
-            + " — زنده، از همین سرور.";
+        var hint = full is not null
+            ? (isSub
+                ? "این کد را به مشتری بدهید؛ با اسکنش حساب «" + acct.Title + "» را می‌بیند"
+                : "این کد را به مشتری بدهید؛ با اسکنش حسابِ خودش را می‌بیند")
+              + " — زنده، از همین سرور."
+            : "این کد بی‌اینترنت ساخته شد و با خودِ همین برنامه خوانده می‌شود. "
+              + "برای این‌که با گوشیِ مشتری هم باز شود، در «تنظیمات › نشانیِ سرور» "
+              + "نشانیِ سرورِ خانگی را بنویسید.";
 
         await Dialogs.ShowQrAsync(title, link, png, hint);
     });

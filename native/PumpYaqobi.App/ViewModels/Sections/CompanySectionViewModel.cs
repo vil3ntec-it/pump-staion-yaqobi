@@ -177,7 +177,7 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
     {
         new TotalCell("کلِ دالر", TotalUsd),
         new TotalCell("کلِ افغانی", TotalAfn),
-        new TotalCell("رسید (افغانی)", PaidAfn, "Pump.Ok"),
+        new TotalCell("رسید (افغانی)", PaidAfn, "Pump.Ok", "رسید"),
         new TotalCell("الباقیِ افغانی", AlbaqiAfn, _albaqiAfnRaw > 0m ? "Pump.Danger" : "Pump.Ok"),
         new TotalCell("الباقیِ دالر", AlbaqiUsd, _albaqiAfnRaw > 0m ? "Pump.Danger" : "Pump.Ok"),
     };

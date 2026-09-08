@@ -3,6 +3,7 @@ using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Security;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
+using PumpYaqobi.Persistence;
 
 namespace PumpYaqobi.Services.Data;
 
@@ -51,6 +52,9 @@ public sealed class DebtorService
             .Include(d => d.MainAccount).ThenInclude(a => a!.MoneyRows)
             .Include(d => d.SubAccounts).ThenInclude(a => a.FuelRows)
             .Include(d => d.SubAccounts).ThenInclude(a => a.MoneyRows)
+            // دفترِ رسیدهای سربرگ — بی این، سربرگ و جدول دو حقیقتِ جدا می‌شدند
+            .Include(d => d.MainAccount).ThenInclude(a => a!.RasidLog)
+            .Include(d => d.SubAccounts).ThenInclude(a => a.RasidLog)
             .FirstOrDefaultAsync(d => d.Id == id, ct);
     }
 
@@ -148,6 +152,46 @@ public sealed class DebtorService
         await db.SaveChangesAsync(ct);
     }
 
+    // ══ دفترِ رسیدهای سربرگ ═══════════════════════════════════════════════
+    //
+    // رسیدِ سربرگ رکوردِ خودش را دارد، پس ذخیره و حذفش هم مثلِ یک ردیفِ جدول
+    // است — نه بازنویسیِ کلِ حساب. چهار عددِ ‎Rasid…‎ی حساب هم همان‌جا با
+    // جمعِ تازهٔ دفتر برابر می‌شوند (‎RasidLogSync‎ پیش از این‌جا صدا زده شده).
+
+    /// <summary>ثبتِ یک رسیدِ سربرگ و هم‌سطح کردنِ جمع‌های حساب با آن.</summary>
+    public async Task SaveRasidAsync(DebtAccount a, RasidEntry e, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.EditData);
+        await using var db = _dbf.Create();
+        e.AccountId = a.Id;
+        if (e.Id == 0) db.RasidEntries.Add(e);
+        else { db.RasidEntries.Attach(e); db.Entry(e).State = EntityState.Modified; }
+        await SyncSumsAsync(db, a, ct);
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>پاک کردنِ یک رسیدِ سربرگ (دکمهٔ 🗑️ِ همان ردیف).</summary>
+    public async Task DeleteRasidAsync(DebtAccount a, long entryId, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.DeleteData);
+        await using var db = _dbf.Create();
+        var e = await db.RasidEntries.FirstOrDefaultAsync(x => x.Id == entryId, ct);
+        if (e is not null) db.RasidEntries.Remove(e);
+        await SyncSumsAsync(db, a, ct);
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>چهار عددِ حساب = جمعِ دفتر (همان چیزی که در حافظه حساب شده).</summary>
+    private static async Task SyncSumsAsync(PumpDbContext db, DebtAccount a, CancellationToken ct)
+    {
+        var acct = await db.DebtAccounts.FirstOrDefaultAsync(x => x.Id == a.Id, ct);
+        if (acct is null) return;
+        acct.RasidFuelPetrol = a.RasidFuelPetrol;
+        acct.RasidFuelDiesel = a.RasidFuelDiesel;
+        acct.RasidMoneyPetrol = a.RasidMoneyPetrol;
+        acct.RasidMoneyDiesel = a.RasidMoneyDiesel;
+    }
+
     public async Task DeleteRowAsync(long rowId, CancellationToken ct = default)
     {
         _perm.Require(Permission.DeleteData);
@@ -225,8 +269,10 @@ public sealed class DebtorService
         // خورده‌اند و دست زدن به ناوبری، EF را به‌جای حذف به «قطعِ رابطه»
         // می‌اندازد (کلیدِ خارجی null و خطای NOT NULL).
         db.DebtRows.RemoveRange(rows);
-        if (money) { a.RasidMoneyPetrol = 0m; a.RasidMoneyDiesel = 0m; }
-        else { a.RasidFuelPetrol = 0m; a.RasidFuelDiesel = 0m; }
+        // رسیدهای سربرگِ همین دفتر هم با جدول می‌روند — عکسشان در آرشیو
+        // (‎Rasid…‎ی بالا) ماند. بی این، عددِ سربرگ صفر می‌شد ولی رکوردهایش
+        // می‌ماندند و اولین هم‌سطح‌سازی دوباره برشان می‌گرداند.
+        await RasidLedger.ClearUnitAsync(db, a, money ? LedgerMode.Money : LedgerMode.Fuel, ct);
         a.Note = null;
 
         await db.SaveChangesAsync(ct);

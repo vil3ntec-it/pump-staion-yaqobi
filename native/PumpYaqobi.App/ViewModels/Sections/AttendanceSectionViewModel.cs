@@ -106,7 +106,7 @@ public sealed partial class AttendanceSectionViewModel : SectionViewModel
             return new[]
             {
                 new TotalCell("روزها", Shamsi.Money(Rows.Count)),
-                new TotalCell("جمعِ ساعت", Shamsi.Money(Math.Round(hours, 2))),
+                new TotalCell("جمعِ ساعت", Shamsi.Money(Math.Round(hours, 2)), column: "ساعت"),
             };
         }
     }

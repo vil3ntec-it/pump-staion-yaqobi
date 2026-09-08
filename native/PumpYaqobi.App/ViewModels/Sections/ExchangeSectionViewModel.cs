@@ -178,7 +178,7 @@ public sealed partial class ExchangeSectionViewModel
     {
         new TotalCell("دالر", TotalUsd),
         new TotalCell("رسید به صرافی", TotalBardagi, "Pump.Ok"),
-        new TotalCell("بردگی پمپ ($)", TotalBardagiUsd, "Pump.Warn"),
+        new TotalCell("بردگی پمپ ($)", TotalBardagiUsd, "Pump.Warn", column: "بردگی پمپ بنزین ($)"),
         new TotalCell("الباقی ($)", Baqi, Summary.Baqi >= 0m ? "Pump.Ok" : "Pump.Danger"),
     };
 

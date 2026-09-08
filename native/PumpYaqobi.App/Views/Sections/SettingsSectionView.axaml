@@ -88,6 +88,54 @@
           </StackPanel>
         </Border>
 
+        <!-- ══ ظاهرِ جدول‌ها ═══════════════════════════════════════════════
+             خواستهٔ صریحِ صاحب ریپو: رنگ و ضخامتِ خطِ جدول جای سفت و سختِ
+             داخلِ کد نباشد؛ همین‌جا باشد و روی همهٔ جدول‌های برنامه بنشیند.
+             هر تغییری همان لحظه اعمال و ذخیره می‌شود. -->
+        <Border Classes="panel" Padding="0">
+          <StackPanel>
+            <Border Classes="card-head">
+              <TextBlock Text="🧾 ظاهرِ جدول‌ها" FontWeight="Bold"
+                         Foreground="{DynamicResource Pump.Accent}" />
+            </Border>
+            <StackPanel Margin="14" Spacing="10">
+
+              <StackPanel Spacing="6">
+                <TextBlock Text="رنگِ خطِ جدول" Classes="label" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Border Width="34" Height="34" CornerRadius="8"
+                          BorderThickness="1" BorderBrush="{DynamicResource Pump.Border}"
+                          Background="{DynamicResource Pump.Table.Border}" />
+                  <TextBox Text="{Binding TableBorderColor}" Width="150" Watermark="#3b4252" />
+                  <Button Content="رنگِ تم" Command="{Binding UseThemeTableColorCommand}" />
+                </StackPanel>
+                <TextBlock Text="{Binding TableColorNote}" Classes="muted" />
+              </StackPanel>
+
+              <UniformGrid Rows="1" Classes="stats">
+                <StackPanel Classes="cell">
+                  <TextBlock Text="ضخامتِ خطِ خانه‌ها" Classes="label" />
+                  <ComboBox ItemsSource="{Binding LineSizes}" SelectedItem="{Binding TableLine}"
+                            MinWidth="110" />
+                </StackPanel>
+                <StackPanel Classes="cell">
+                  <TextBlock Text="ضخامتِ خطِ سربرگ" Classes="label" />
+                  <ComboBox ItemsSource="{Binding LineSizes}" SelectedItem="{Binding TableHeadLine}"
+                            MinWidth="110" />
+                </StackPanel>
+                <StackPanel Classes="cell">
+                  <TextBlock Text="ضخامتِ خطِ ردیفِ جمله" Classes="label" />
+                  <ComboBox ItemsSource="{Binding LineSizes}" SelectedItem="{Binding TableSumLine}"
+                            MinWidth="110" />
+                </StackPanel>
+              </UniformGrid>
+
+              <TextBlock Classes="muted" TextWrapping="Wrap"
+                         Text="این رنگ و ضخامت روی همهٔ جدول‌های برنامه می‌نشیند — خطِ افقی، خطِ عمودی، مرزِ خانه، مرزِ سربرگ و مرزِ ردیفِ «جمله». برای برگشتن به حالتِ اولیه: رنگ را خالی بگذارید و ضخامت‌ها را ۱ و ۲ و ۲ کنید." />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
         <!-- به‌روزرسانی — بدونِ هیچ نشانی یا نامِ منبع -->
         <Border Classes="panel" Padding="0">
           <StackPanel>

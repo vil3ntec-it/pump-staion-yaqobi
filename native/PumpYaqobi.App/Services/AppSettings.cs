@@ -22,6 +22,27 @@ public sealed class AppSettings
     /// </summary>
     public PageSetup? PrintSetup { get; set; }
 
+    /// <summary>
+    /// ══ ظاهرِ جدول‌ها ═══════════════════════════════════════════════════════
+    /// خواستهٔ صریحِ صاحب ریپو: «رنگ و ضخامتِ خطِ جدول نباید سفت و سخت داخلِ کد
+    /// نوشته شده باشد؛ در تنظیمات باشد و روی **همهٔ** جدول‌های برنامه بنشیند.»
+    ///
+    /// پس این چهار عدد تنها جای تعریفِ خطِ جدول‌اند و از این‌جا به شکلِ منبعِ
+    /// پویا (<c>Pump.Table.…</c>) پخش می‌شوند — ‎Themes/TableStyle.cs‎.
+    /// کنارِ خودِ برنامه می‌نشینند نه در دیتابیس: مالِ همین دستگاه‌اند.
+    /// </summary>
+    /// <remarks>خالی یعنی «رنگِ خودِ تم» — همان چیزی که تا امروز بوده.</remarks>
+    public string TableBorderColor { get; set; } = "";
+
+    /// <summary>ضخامتِ خطِ بینِ خانه‌ها (۱ تا ۴ پیکسل).</summary>
+    public double TableLine { get; set; } = 1;
+
+    /// <summary>ضخامتِ خطِ زیرِ سربرگِ جدول.</summary>
+    public double TableHeadLine { get; set; } = 2;
+
+    /// <summary>ضخامتِ خطِ بالای ردیفِ «جمله».</summary>
+    public double TableSumLine { get; set; } = 2;
+
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 
     /// <summary>
