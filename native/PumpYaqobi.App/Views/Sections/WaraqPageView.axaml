@@ -110,38 +110,89 @@
         </DataGrid.Columns>
       </c:ExcelGrid>
 
-      <c:ExcelGrid Grid.Row="2" ItemsSource="{Binding Txns}" x:CompileBindings="False">
-        <DataGrid.Columns>
-          <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="Auto" MinWidth="150" MaxWidth="320" />
-          <DataGridTemplateColumn Header="نوع" Width="93">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate><TextBlock Text="{Binding TypeText}" VerticalAlignment="Center" Margin="6,0" /></DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-            <DataGridTemplateColumn.CellEditingTemplate>
-              <DataTemplate>
-                <ComboBox SelectedItem="{Binding TypeText}">
-                  <ComboBoxItem Content="قرض" /><ComboBoxItem Content="مصرف" />
-                </ComboBox>
-              </DataTemplate>
-            </DataGridTemplateColumn.CellEditingTemplate>
-          </DataGridTemplateColumn>
-          <DataGridTemplateColumn Header="تیل" Width="93">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate><TextBlock Text="{Binding FuelText}" VerticalAlignment="Center" Margin="6,0" /></DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-            <DataGridTemplateColumn.CellEditingTemplate>
-              <DataTemplate>
-                <ComboBox SelectedItem="{Binding FuelText}">
-                  <ComboBoxItem Content="پطرول" /><ComboBoxItem Content="دیزل" />
-                </ComboBox>
-              </DataTemplate>
-            </DataGridTemplateColumn.CellEditingTemplate>
-          </DataGridTemplateColumn>
-          <DataGridTextColumn Header="لیتر" Binding="{Binding LitersText}" Width="108" />
-          <DataGridTextColumn Header="مبلغ" Binding="{Binding AmountText}" Width="128" />
-          <DataGridTextColumn Header="مبلغِ مؤثر" Binding="{Binding EffectiveAmountText}" Width="128" IsReadOnly="True" />
-        </DataGrid.Columns>
-      </c:ExcelGrid>
+      <!-- ══ تراکنش‌ها — دو جدولِ هم‌شکل، کنارِ هم ══════════════════════════
+           خواستهٔ صاحب ریپو: «توی ورق‌ها دو کادر دارد که شبیه هم است و آن
+           بابتِ این است که بیشتر جا بشود، توی یک حساب قرض‌ها یا مصرف‌ها.»
+
+           سایت هم همین است — ‎#wq-trans-tbl-left‎ و ‎#wq-trans-tbl-right‎ در یک
+           ‎grid-template-columns:1fr 1fr‎، و ‎renderWaraqTransactions‎ نیمهٔ اول
+           را در جدولِ اول و نیمهٔ دوم را در جدولِ دوم می‌ریزد.
+
+           ستون‌ها هم مو‌به‌مو همان‌های سایت‌اند و به همان ترتیب:
+               # │ نام │ نوع تیل │ مقدار تیل │ مبلغ │ نوع
+           («مبلغِ مؤثر» که پیش از این بود، در سایتِ این جدول نیست و برداشته
+           شد؛ همان عدد در ردیفِ «جمله»ی ته صفحه دیده می‌شود.)
+
+           ⚠️ ستونِ «واحد» (تیل/پول) سایت هنوز این‌جا نیست — چون در نیتیو
+           تراکنش‌های ورق اصلاً به حسابِ قرض‌داران پست نمی‌شوند، و آن ستون
+           تا وقتی پستی در کار نباشد چیزی را جابه‌جا نمی‌کند. -->
+      <Grid Grid.Row="2" ColumnDefinitions="*,8,*">
+        <c:ExcelGrid Grid.Column="0" ItemsSource="{Binding TxnsFirst}" x:CompileBindings="False">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" IsReadOnly="True" />
+            <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" MinWidth="130" />
+            <DataGridTemplateColumn Header="نوع تیل" Width="Auto">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate><TextBlock Text="{Binding FuelText}" VerticalAlignment="Center" Margin="6,0" /></DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+              <DataGridTemplateColumn.CellEditingTemplate>
+                <DataTemplate>
+                  <ComboBox SelectedItem="{Binding FuelText}">
+                    <ComboBoxItem Content="پطرول" /><ComboBoxItem Content="دیزل" />
+                  </ComboBox>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellEditingTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTextColumn Header="مقدار تیل" Binding="{Binding LitersText}" Width="Auto" />
+            <DataGridTextColumn Header="مبلغ" Binding="{Binding AmountText}" Width="Auto" />
+            <DataGridTemplateColumn Header="نوع" Width="Auto">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate><TextBlock Text="{Binding TypeText}" VerticalAlignment="Center" Margin="6,0" /></DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+              <DataGridTemplateColumn.CellEditingTemplate>
+                <DataTemplate>
+                  <ComboBox SelectedItem="{Binding TypeText}">
+                    <ComboBoxItem Content="قرض" /><ComboBoxItem Content="مصرف" />
+                  </ComboBox>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellEditingTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </c:ExcelGrid>
+
+        <c:ExcelGrid Grid.Column="2" ItemsSource="{Binding TxnsSecond}" x:CompileBindings="False">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" IsReadOnly="True" />
+            <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" MinWidth="130" />
+            <DataGridTemplateColumn Header="نوع تیل" Width="Auto">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate><TextBlock Text="{Binding FuelText}" VerticalAlignment="Center" Margin="6,0" /></DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+              <DataGridTemplateColumn.CellEditingTemplate>
+                <DataTemplate>
+                  <ComboBox SelectedItem="{Binding FuelText}">
+                    <ComboBoxItem Content="پطرول" /><ComboBoxItem Content="دیزل" />
+                  </ComboBox>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellEditingTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTextColumn Header="مقدار تیل" Binding="{Binding LitersText}" Width="Auto" />
+            <DataGridTextColumn Header="مبلغ" Binding="{Binding AmountText}" Width="Auto" />
+            <DataGridTemplateColumn Header="نوع" Width="Auto">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate><TextBlock Text="{Binding TypeText}" VerticalAlignment="Center" Margin="6,0" /></DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+              <DataGridTemplateColumn.CellEditingTemplate>
+                <DataTemplate>
+                  <ComboBox SelectedItem="{Binding TypeText}">
+                    <ComboBoxItem Content="قرض" /><ComboBoxItem Content="مصرف" />
+                  </ComboBox>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellEditingTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </c:ExcelGrid>
+      </Grid>
 
       <!-- ردیفِ «جمله»ی همین شیفت — روز و شب با هم جمع نمی‌شوند -->
       <c:TotalsBar Grid.Row="3" ItemsSource="{Binding TotalCells}" />

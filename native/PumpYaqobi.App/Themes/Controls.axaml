@@ -328,12 +328,15 @@
            .ro-tbl td,.ro-tbl th{ cursor:cell; ... }
            .xls-tbl td input:not(:focus){ cursor:cell }
 
-       ‎cursor:cell‎ همان به‌علاوهٔ باریکِ اکسل است. نزدیک‌ترین چیزِ آوالونیا
-       ‎StandardCursorType.Cross‎ است.
+       ‎cursor:cell‎ همان به‌علاوهٔ **کلفتِ** اکسل است — سفید با دورِ سیاه.
+       ‎StandardCursorType.Cross‎ی آوالونیا یک ضربدرِ نازکِ نخی است و صاحب ریپو
+       گفت «شبیهِ اکسل نیست». پس همان شکل در ‎Controls/ExcelCursor.cs‎ کشیده
+       می‌شود و ‎App.OnFrameworkInitializationCompleted‎ آن را با کلیدِ
+       ‎Pump.CellCursor‎ ثبت می‌کند.
        ⚠️ کادرِ تایپ وقتی روی آن ایستاده‌ای هم همین را می‌گیرد (نه ‎IBeam‎)،
        چون سایت هم ‎:not(:focus)‎ گذاشته: تا وارد نشده‌ای، خانه است نه متن. -->
   <Style Selector="DataGridColumnHeader">
-    <Setter Property="Cursor" Value="Cross" />
+    <Setter Property="Cursor" Value="{DynamicResource Pump.CellCursor}" />
     <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
     <Setter Property="FontWeight" Value="ExtraBold" />
@@ -347,7 +350,7 @@
     <Setter Property="Padding" Value="10,4" />
     <Setter Property="FontSize" Value="17" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
-    <Setter Property="Cursor" Value="Cross" />
+    <Setter Property="Cursor" Value="{DynamicResource Pump.CellCursor}" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
   </Style>
   <!-- نوشتهٔ داخلِ خانه هم واقعاً وسط بنشیند: ‎HorizontalContentAlignment‎ی

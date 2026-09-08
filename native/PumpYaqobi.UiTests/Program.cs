@@ -36,6 +36,9 @@ internal static class Program
         //     dotnet run --project PumpYaqobi.UiTests -- person
         // چرایی و کارش در ‎PersonAudit‎ نوشته شده.
         if (outDir.Equals("person", StringComparison.OrdinalIgnoreCase)) return PersonAudit.Run();
+        // ══ حالتِ «سنجشِ پارچه‌ها و ورق‌ها» ═══════════════════════════════
+        //     dotnet run --project PumpYaqobi.UiTests -- parcha
+        if (outDir.Equals("parcha", StringComparison.OrdinalIgnoreCase)) return ParchaWaraqAudit.Run();
         if (outDir.Equals("gridperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Run();
         if (outDir.Equals("cardperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Cards();
 
