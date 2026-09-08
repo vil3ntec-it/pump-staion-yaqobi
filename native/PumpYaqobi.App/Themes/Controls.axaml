@@ -27,10 +27,28 @@
     <Setter Property="FontSize" Value="15" />
   </Style>
 
+  <!-- ══ همهٔ نوشته‌ها وسطِ کادرِ خودشان ═════════════════════════════════════
+       خواستهٔ صریحِ صاحب ریپو: «همه نوشته‌ها، همه همه همه نوشته‌ها باید تو
+       کادرهاشون وسط‌چین باشن، تو همه بخش‌ها.»
+
+       در سایت هم هر خانهٔ هر جدول وسط‌چین است — بی استثنا:
+           .tbl th{text-align:center}   .tbl td{text-align:center}
+           .xls-tbl th{text-align:center}  .xls-tbl td{text-align:center}
+           .ro-tbl th/td, .safe-tbl, .rasid-tbl, .att-tbl … همه center
+       و کادرهای تایپِ داخلِ خانه‌ها هم:
+           .ro-tbl td input/textarea/select{text-align:center}
+
+       پیش از این پیش‌فرضِ اینجا ‎Right‎ بود (شروعِ RTL)، پس هر نوشته‌ای که
+       خودش صریحاً وسط نشده بود، به لبه می‌چسبید. -->
   <Style Selector="TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource Pump.Font}" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
-    <Setter Property="TextAlignment" Value="Right" />
+    <Setter Property="TextAlignment" Value="Center" />
+  </Style>
+  <Style Selector="SelectableTextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource Pump.Font}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
+    <Setter Property="TextAlignment" Value="Center" />
   </Style>
   <Style Selector="TextBlock.muted">
     <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
@@ -239,6 +257,10 @@
     <Setter Property="Padding" Value="9,0" />
     <Setter Property="MinHeight" Value="36" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
+    <!-- کادرهای تایپ هم وسط‌چین‌اند، مثلِ ‎.xls-in‎ و
+         ‎.ro-tbl td input{text-align:center}‎ی سایت. -->
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="SelectionBrush" Value="{DynamicResource Pump.Selected}" />
     <Setter Property="CaretBrush" Value="{DynamicResource Pump.Accent}" />
   </Style>
@@ -289,7 +311,20 @@
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="Margin" Value="2,0" />
   </Style>
+  <!-- ══ نشانگرِ ماوس روی جدول: «به‌علاوه»ی اکسل ═══════════════════════════
+       گزارشِ صاحب ریپو: «ماوس هم باید شکلِ مثبت می‌داشت، اگر جست‌وجو بکنی تو
+       سایت و پیدا کنی.» پیدا شد — خطِ ۱۰۴۸ی ‎index.html‎:
+
+           .tbl td,.tbl th,.xls-tbl td,.xls-tbl th,
+           .ro-tbl td,.ro-tbl th{ cursor:cell; ... }
+           .xls-tbl td input:not(:focus){ cursor:cell }
+
+       ‎cursor:cell‎ همان به‌علاوهٔ باریکِ اکسل است. نزدیک‌ترین چیزِ آوالونیا
+       ‎StandardCursorType.Cross‎ است.
+       ⚠️ کادرِ تایپ وقتی روی آن ایستاده‌ای هم همین را می‌گیرد (نه ‎IBeam‎)،
+       چون سایت هم ‎:not(:focus)‎ گذاشته: تا وارد نشده‌ای، خانه است نه متن. -->
   <Style Selector="DataGridColumnHeader">
+    <Setter Property="Cursor" Value="Cross" />
     <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
     <Setter Property="FontWeight" Value="ExtraBold" />
@@ -303,6 +338,19 @@
     <Setter Property="Padding" Value="10,4" />
     <Setter Property="FontSize" Value="17" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
+    <Setter Property="Cursor" Value="Cross" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+  </Style>
+  <!-- نوشتهٔ داخلِ خانه هم واقعاً وسط بنشیند: ‎HorizontalContentAlignment‎ی
+       خانه فقط وقتی اثر دارد که خودِ نوشته ‎Stretch‎ نباشد، و ‎DataGridTextColumn‎
+       متنش را ‎Stretch‎ می‌سازد. -->
+  <Style Selector="DataGridCell TextBlock">
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="DataGridCell TextBox">
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
   </Style>
   <Style Selector="DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">
     <Setter Property="Fill" Value="{DynamicResource Pump.Hover}" />

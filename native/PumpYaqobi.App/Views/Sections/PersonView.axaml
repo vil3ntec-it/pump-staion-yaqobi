@@ -27,8 +27,6 @@
              نبود: نه کیو‌آری ساخته می‌شد و نه دیده می‌شد. -->
         <Button Classes="ghost" Content="📲 کیو‌آر" Command="{Binding ShowQrCommand}"
                 ToolTip.Tip="کیو‌آرِ همین حسابی که باز است" />
-        <Button Classes="accent" Content="🆕 جدول جدید"
-                Command="{Binding Current.NewTableCommand}" />
         <Button Classes="accent" Content="بازگشت به فهرست"
                 Command="{Binding BackCommand}" />
       </StackPanel>
@@ -109,7 +107,9 @@
              «حساب پطرول و دیزل بغلِ فیصدی استن و بالا نوشته نشده آن‌جوری که تو
              کشیدی.» چون FlowDirection کلِ پنجره RTL است، ستونِ ۰ سمتِ راست
              می‌افتد — یعنی همان‌جایی که در سایت هست. -->
+        <!-- در فیلترِ دیزل این کارت دیده نمی‌شود، مثلِ سایت -->
         <Border Grid.Row="0" Classes="panel" Padding="14,10"
+                IsVisible="{Binding ShowPetrolCard}"
                 BorderBrush="{DynamicResource Pump.Ok}" BorderThickness="2">
           <Grid ColumnDefinitions="Auto,10,*">
             <Border Grid.Column="0" Classes="fshead"
@@ -148,6 +148,7 @@
 
         <!-- ══ 🟤 حساب دیزل — همان چیدمان، همان اندازه‌ها ══════════════════ -->
         <Border Grid.Row="2" Classes="panel" Padding="14,10"
+                IsVisible="{Binding ShowDieselCard}"
                 BorderBrush="{DynamicResource Pump.Warn}" BorderThickness="2">
           <Grid ColumnDefinitions="Auto,10,*">
             <Border Grid.Column="0" Classes="fshead"
@@ -194,10 +195,37 @@
            پیش از این چیپ‌های افقی بود: با چند حساب، نوار پهن‌تر از صفحه می‌شد
            و اسمِ حساب‌ها هم دیده نمی‌شد. حالا دقیقاً مثلِ سایت، یک کشویی. -->
       <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,10">
-        <StackPanel Orientation="Horizontal" Spacing="8">
-          <TextBlock Text="📒 حساب:" Classes="label" VerticalAlignment="Center" />
+        <!-- ══ نوارِ حساب — مو‌به‌مو ‎.pm-acct-bar‎ی سایت ══════════════════════
+             سایت همه‌شان را در «یک خط» کنارِ هم می‌گذارد، به همین ترتیب:
+
+                 📒 حساب: │ کشویی │ ➕ حساب جدید │ 📋 جدول جدید │ ┊
+                 📋 همه │ ⛽ حساب جداگانه پطرول │ 🟤 حساب جداگانه دیزل │ ┊
+                 📞 شماره تماس │ 📝 فیِ خرید │ ٪ فیصدی ▾ │ 🗂️ آرشیو ▾
+
+             و خودش هم نوشته چرا: «دیگر کشویی بالای دکمه‌ها نیست که دست
+             اشتباهی رویشان برود؛ در صفحهٔ باریک این خط اسکرول افقی می‌خورد و
+             نمی‌شکند.» پس این‌جا هم ‎WrapPanel‎ نیست، یک خط است. -->
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <StackPanel.Styles>
+            <Style Selector="TextBlock.barl">
+              <Setter Property="FontSize" Value="14" />
+              <Setter Property="FontWeight" Value="Bold" />
+              <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
+              <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+            <!-- خطِ جداکنندهٔ باریک — همتای
+                 ‎<span style="width:1px;height:24px;background:border">‎ -->
+            <Style Selector="Border.sep">
+              <Setter Property="Width" Value="1" />
+              <Setter Property="Height" Value="24" />
+              <Setter Property="Background" Value="{DynamicResource Pump.GridLine}" />
+              <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+          </StackPanel.Styles>
+
+          <TextBlock Text="📒 حساب:" Classes="barl" />
           <ComboBox ItemsSource="{Binding Accounts}" SelectedItem="{Binding Current}"
-                    MinWidth="220">
+                    MinWidth="180">
             <ComboBox.ItemTemplate>
               <DataTemplate x:DataType="vm:AccountViewModel">
                 <TextBlock Text="{Binding Title}" />
@@ -206,11 +234,51 @@
           </ComboBox>
           <Button Classes="ghost info" Content="➕ حساب جدید"
                   Command="{Binding AddSubAccountCommand}" />
+          <!-- «📋 جدول جدید» جایش همین نوار است، نه سربرگ — در سایت هم
+               ‎.pm-table-new‎ درست بغلِ ‎.pm-acct-new‎ می‌نشیند. -->
+          <Button Classes="ghost info" Content="📋 جدول جدید"
+                  Command="{Binding Current.NewTableCommand}" />
+
+          <Border Classes="sep" />
+
+          <!-- ══ سه دکمهٔ فیلتر — ‎setPersonFilter()‎ی سایت ═════════════════
+               در برنامهٔ نیتیو اصلاً نبودند، یعنی راهی نبود که فقط ردیف‌های یک
+               تیل را ببینی. ⚠️ فیلتر هیچ ردیفی را پاک نمی‌کند؛ فقط دیده‌شدن. -->
+          <Button Classes="ghost" Content="📋 همه"
+                  Command="{Binding Current.SetFilterCommand}" CommandParameter="all" />
+          <Button Classes="ghost" Content="⛽ حساب جداگانه پطرول"
+                  Foreground="{DynamicResource Pump.Ok}"
+                  Command="{Binding Current.SetFilterCommand}" CommandParameter="petrol" />
+          <Button Classes="ghost" Content="🟤 حساب جداگانه دیزل"
+                  Foreground="{DynamicResource Pump.Warn}"
+                  Command="{Binding Current.SetFilterCommand}" CommandParameter="diesel" />
+
+          <Border Classes="sep" />
+
+          <TextBlock Text="📞 شماره تماس:" Classes="barl" />
+          <TextBox Text="{Binding PhoneText}" Width="170" Watermark="مثلاً 0700000000" />
+
+          <!-- «فیِ خرید» فقط یادداشت است و در هیچ محاسبه‌ای نیست — همان جمله‌ای
+               که خودِ سایت روی ‎title‎ی این کادر نوشته. -->
+          <TextBlock Text="📝 فیِ خرید:" Classes="barl" />
+          <TextBox Text="{Binding BuyFeeText}" Width="96" Watermark="56 / 57"
+                   ToolTip.Tip="فقط یادداشت — تیلِ مشتری با چه فی خریداری شده. در هیچ محاسبه‌ای استفاده نمی‌شود." />
+
           <!-- ⚠️ «بغلِ آن حساب جدید باید کادرش باشد و هر وقت زدم اینا بیان» —
                خواستهٔ صریحِ صاحب ریپو. سه کادرِ فیصدی همیشه پیدا نیستند. -->
           <Button Classes="ghost" Content="{Binding Current.PercentToggleText}"
                   Command="{Binding Current.TogglePercentCommand}"
                   ToolTip.Tip="فیصدیِ پطرول و دیزل — دو چیزِ کاملاً جدا" />
+
+          <!-- «🗂️ آرشیو» دقیقاً بغلِ «٪ فیصدی» و دقیقاً مثلِ آن — خواستهٔ صریحِ
+               صاحب ریپو در سایت: «برای کادر جدول آرشیو هم یک کادر کشویی درست
+               کن و بغلِ آن فیصدی بگذار؛ بزنم بیاید و بزنم برود پنهان شود.»
+               پیش از این یک دکمهٔ تمام‌عرضِ جدا زیرِ نوار بود. -->
+          <Button Classes="ghost" Content="{Binding Current.ArchiveToggleText}"
+                  Command="{Binding Current.ToggleArchivesCommand}"
+                  IsVisible="{Binding Current.HasArchives, FallbackValue=False}"
+                  ToolTip.Tip="جدول‌های آرشیوِ این حساب — با زدنِ همین کادر باز و بسته می‌شود" />
+
           <Button Classes="ghost" Content="✏️ تغییر اسم"
                   Command="{Binding RenamePersonCommand}" />
           <Button Classes="ghost danger" Content="🗑️ حذفِ این حساب"
@@ -219,13 +287,15 @@
         </StackPanel>
 
         <!-- کادرِ کشوییِ «جدول‌های آرشیو» — تا آرشیوی نباشد، اصلاً دیده نمی‌شود -->
+        <!-- ⚠️ کادرِ بزرگِ آرشیو عمداً همین بالاست، بالای جدول — عینِ ‎#pm-arc-box‎ی
+             سایت، که خودش هم نوشته چرا: «پیش از این تهِ صفحه، زیرِ جدول بود و
+             اگر جدول کمی بزرگ می‌شد آن زیر می‌رفت و گم می‌شد و دیگر برگشتی
+             نداشت. پایین نبریدش.»
+             دکمهٔ باز/بسته‌اش رفت داخلِ نوارِ حساب، بغلِ «٪ فیصدی». -->
         <StackPanel Spacing="6" DataContext="{Binding Current}"
-                    IsVisible="{Binding HasArchives, FallbackValue=False}">
-          <Button Classes="ghost info" HorizontalAlignment="Stretch"
-                  Content="{Binding ArchiveToggleText}"
-                  Command="{Binding ToggleArchivesCommand}" />
+                    IsVisible="{Binding IsArchiveOpen}">
 
-          <ItemsControl ItemsSource="{Binding Archives}" IsVisible="{Binding IsArchiveOpen}"
+          <ItemsControl ItemsSource="{Binding Archives}"
                         x:CompileBindings="False">
             <ItemsControl.ItemTemplate>
               <DataTemplate>

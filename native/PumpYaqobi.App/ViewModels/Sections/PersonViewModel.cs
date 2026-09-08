@@ -416,6 +416,40 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     [RelayCommand]
     private void ToggleMode() => IsMoney = !IsMoney;
 
+    // ══ «📋 همه / ⛽ حساب جداگانه پطرول / 🟤 حساب جداگانه دیزل» ═════════════
+    //
+    // همتای ‎setPersonFilter('all'|'petrol'|'diesel')‎ی سایت — سه دکمهٔ
+    // ‎.pm-filter-btn‎ی وسطِ نوارِ حساب. در برنامهٔ نیتیو اصلاً نبودند، یعنی
+    // راهی نبود که فقط ردیف‌های یک تیل را ببینی.
+    //
+    // ⚠️ فیلتر فقط چیزی است که **دیده** می‌شود؛ هیچ ردیفی پاک نمی‌شود و هیچ
+    // عددی در دیتابیس عوض نمی‌شود. سربرگ هم مثلِ سایت فقط کارتِ همان تیل را
+    // نشان می‌دهد.
+
+    [ObservableProperty] private string _rowFilter = "all";
+
+    partial void OnRowFilterChanged(string v)
+    {
+        BuildRows();
+        foreach (var n in new[]
+        {
+            nameof(IsFilterAll), nameof(IsFilterPetrol), nameof(IsFilterDiesel),
+            nameof(ShowPetrolCard), nameof(ShowDieselCard),
+        })
+            OnPropertyChanged(n);
+    }
+
+    public bool IsFilterAll => RowFilter == "all";
+    public bool IsFilterPetrol => RowFilter == "petrol";
+    public bool IsFilterDiesel => RowFilter == "diesel";
+
+    /// <summary>در فیلترِ دیزل، کارتِ پطرول دیده نمی‌شود — مثلِ سایت.</summary>
+    public bool ShowPetrolCard => RowFilter != "diesel";
+    public bool ShowDieselCard => RowFilter != "petrol";
+
+    [RelayCommand]
+    private void SetFilter(string? f) => RowFilter = f is "petrol" or "diesel" ? f : "all";
+
     // ── ⛽ حساب پطرول ──────────────────────────────────────────────────────
     public string HeadPetrolPercentText => PercentPetrol == 0m ? "0" : Shamsi.Money(PercentPetrol);
     public string HeadPetrolRasidText =>
@@ -647,7 +681,18 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         if (_host.Debt.NormalizeAccount(Entity)) _ = PersistHealedAsync();
 
         Rows.Clear();
-        foreach (var r in Entity.ActiveRows().OrderBy(r => r.SortIndex).ThenBy(r => r.Id))
+        // ⚠️ فیلتر فقط روی «دیده شدن» است. ردیف‌های تیلِ دیگر سرِ جایشان‌اند و
+        // در دیتابیس دست نمی‌خورند؛ فقط این‌بار ساخته نمی‌شوند.
+        var want = RowFilter switch
+        {
+            "petrol" => (FuelType?)FuelType.Petrol,
+            "diesel" => FuelType.Diesel,
+            _ => null,
+        };
+
+        foreach (var r in Entity.ActiveRows()
+                                .Where(r => want is null || r.Fuel == want)
+                                .OrderBy(r => r.SortIndex).ThenBy(r => r.Id))
         {
             var vm = new DebtRowViewModel(r, this);
             vm.Recalculated += _person.Recalc;
@@ -751,6 +796,41 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
     public Debtor Entity { get; }
     public string Name => Entity.Name ?? "";
     public string Phone => Entity.Phone ?? "";
+
+    // ══ «📞 شماره تماس» و «📝 فیِ خرید» — دو کادرِ نوارِ حساب ═══════════════
+    //
+    // هر دو در سایت داخلِ ‎.pm-acct-bar‎اند (‎#pm-phone‎ و ‎#pm-buyfee‎) و هر دو
+    // در برنامهٔ نیتیو فقط خوانده می‌شدند: شماره زیرِ نامِ شخص چاپ می‌شد و
+    // «فیِ خرید» با آن‌که ‎Debtor.BuyFeeNote‎ از اول در دیتابیس بود، هیچ‌جا
+    // دیده و نوشته نمی‌شد.
+    //
+    // ⚠️ «فیِ خرید» فقط یادداشت است — در هیچ محاسبه‌ای نیست. همان جمله‌ای که
+    // خودِ سایت روی ‎title‎ی این کادر نوشته.
+
+    public string PhoneText
+    {
+        get => Entity.Phone ?? "";
+        set
+        {
+            var v = (value ?? "").Trim();
+            Entity.Phone = v.Length == 0 ? null : v;
+            _ = _host.Debtors.UpdateDebtorAsync(Entity);
+            OnPropertyChanged(nameof(PhoneText));
+            OnPropertyChanged(nameof(Phone));
+        }
+    }
+
+    public string BuyFeeText
+    {
+        get => Entity.BuyFeeNote ?? "";
+        set
+        {
+            var v = (value ?? "").Trim();
+            Entity.BuyFeeNote = v.Length == 0 ? null : v;
+            _ = _host.Debtors.UpdateDebtorAsync(Entity);
+            OnPropertyChanged(nameof(BuyFeeText));
+        }
+    }
 
     public ObservableCollection<AccountViewModel> Accounts { get; } = new();
 
