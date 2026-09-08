@@ -313,12 +313,26 @@
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="10" />
-    <!-- ══ فقط خطِ افقی ═══════════════════════════════════════════════════
-         بندِ ۵٫۲ و ۸ی «پرامپت کیفیت بصری»: «جداکنندهٔ افقی ۱px، هیچ خط
-         عمودی» و در ممنوعیت‌ها: «خط عمودی جدول». خطِ عمودی جدول را شبیهِ
-         کاغذِ شطرنجی می‌کند؛ بی آن، چشم ردیف را دنبال می‌کند نه خانه را. -->
-    <Setter Property="GridLinesVisibility" Value="Horizontal" />
-    <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource Pump.GridLine}" />
+    <!-- ══ خطِ جدول — افقی و عمودی، و واقعاً دیده‌شونده ═══════════════════
+         گزارشِ صاحب ریپو: «خط‌های جدول‌ها نیست و دیده نمی‌شه.»
+
+         دو اشتباه پشتِ هم بود، هر دو مالِ خودم:
+
+         ۱) «پرامپت کیفیت بصری» گفته بود «هیچ خط عمودی»، و من همان را
+            گذاشتم. ولی خودِ سایت خطِ عمودی **دارد** — ‎.xls-tbl td‎:
+                border-bottom:1px solid var(‹border›);
+                border-left:1px solid var(‹border›);
+            یعنی هم افقی هم عمودی. حرفِ صاحب ریپو و خودِ سایت بر آن سند
+            مقدم است، پس خطِ عمودی برگشت.
+
+         ۲) رنگش ‎Pump.GridLine‎ بود که ‎Mix(Card, Border, 0.75)‎ است — یعنی
+            سه‌چهارم به رنگِ خودِ جدول نزدیک، و عملاً نامرئی. سایت خودِ
+            ‎var(‑‑border)‎ را می‌گذارد، نه نسخهٔ کم‌رنگش. پس ‎Pump.Border‎.
+
+         ⚠️ این را دوباره «افقیِ تنها» نکنید و به ‎Pump.GridLine‎ برنگردانید. -->
+    <Setter Property="GridLinesVisibility" Value="All" />
+    <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource Pump.Border}" />
+    <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource Pump.Border}" />
     <Setter Property="RowHeight" Value="44" />
     <Setter Property="HeadersVisibility" Value="Column" />
   </Style>
@@ -354,7 +368,10 @@
     <Setter Property="Padding" Value="8,9" />
     <Setter Property="MinHeight" Value="44" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
-    <Setter Property="SeparatorBrush" Value="{DynamicResource Pump.GridLine}" />
+    <Setter Property="SeparatorBrush" Value="{DynamicResource Pump.Border}" />
+    <!-- ‎border-bottom:2px solid var(‑‑border)‎ی ‎.xls-tbl th‎ -->
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Border}" />
+    <Setter Property="BorderThickness" Value="0,0,0,2" />
   </Style>
   <Style Selector="DataGridCell">
     <Setter Property="Padding" Value="10,4" />
@@ -370,9 +387,57 @@
     <Setter Property="TextAlignment" Value="Center" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
   </Style>
+  <!-- ══ کادرِ تایپِ داخلِ خانه — ‎.xls-in‎ی سایت ═══════════════════════════
+       گزارشِ صاحب ریپو: «توی کادرهای جدول وقتی می‌خوام چیزی بنویسم کادر سفید
+       می‌شه و بک‌گراندِ مدلِ دیگه‌ای است و شبیه‌اش نیست.»
+
+       حق داشت: ‎TextBox‎ی آوالونیا در حالتِ ویرایش پس‌زمینهٔ روشن و لبهٔ خودش
+       را می‌گیرد، پس خانه وسطِ جدولِ تیره سفید می‌شد. سایت چنین نیست:
+
+           .xls-in{ width:100%; background:transparent; border:none;
+                    color:var(‹txt›); font-weight:700; padding:8px 7px }
+
+       یعنی کادر اصلاً دیده نمی‌شود؛ فقط نوشته است و خطوطِ خودِ خانه.
+       ‎:focus‎ و ‎:pointerover‎ هم جدا نوشته شده‌اند، وگرنه سبکِ پیش‌فرضِ
+       ‎TextBox‎ در همان دو حالت دوباره سفید می‌کرد. -->
   <Style Selector="DataGridCell TextBox">
     <Setter Property="TextAlignment" Value="Center" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
+    <Setter Property="FontWeight" Value="Bold" />
+  </Style>
+  <!-- ══ صفرِ دیده‌شونده که وجود ندارد ══════════════════════════════════════
+       گزارشِ صاحب ریپو، بارِ دوم و روشن‌تر: «وقتی گفتم صفر نامرئی باشد، منظورم
+       این بود که صفر دیده بشود ولی صفری وجود نداشته باشد؛ وقت چیزی می‌نویسم
+       هیچی از آن نباشد.»
+
+       یعنی دقیقاً همان ‎placeholder‎ی سایت:
+           &lt;input class="xls-in" value="${x||''}" placeholder="0"&gt;
+       عدد صفر ⇒ خانه خالی است (‎MoneyOrBlank‎)، و یک «۰»ی کم‌رنگ رویش دیده
+       می‌شود که با اولین حرفی که تایپ شود می‌رود.
+
+       ⚠️ فقط روی ستون‌های عددی، نه همه: ستونِ عددی با
+       ‎CellStyleClasses="num"‎ علامت خورده. روی «نام» و «تاریخ» صفر بی‌معناست. -->
+  <Style Selector="DataGridCell.num TextBox">
+    <Setter Property="Watermark" Value="0" />
+  </Style>
+
+  <Style Selector="DataGridCell TextBox:focus, DataGridCell TextBox:pointerover">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="DataGridCell TextBox /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <!-- کشویی و رادیوییِ داخلِ خانه هم همان‌طور — نه کادرِ سفیدِ جدا -->
+  <Style Selector="DataGridCell ComboBox">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
   </Style>
   <Style Selector="DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">
     <Setter Property="Fill" Value="{DynamicResource Pump.Hover}" />
@@ -409,7 +474,17 @@
 
             <!-- ══ سربرگِ کادر ══ -->
             <Border Grid.Row="0" Classes="card-head">
-              <Grid ColumnDefinitions="*,Auto">
+              <!-- ══ عنوان ‎Auto‎، ابزار ‎*‎ — و چرا این ترتیب ══════════════════
+                   پیش از این عنوان ‎*‎ بود و ابزار ‎Auto‎. ستونِ ‎Auto‎ به فرزندش
+                   پهنای **دلخواهِ خودش** را می‌دهد، یعنی اندازه‌گیری با پهنای
+                   بی‌نهایت. نتیجه: هر ‎WrapPanel‎ی در نوارِ ابزار هیچ‌وقت
+                   نمی‌شکست و فقط از پنجره بیرون می‌زد — سنجشِ ‎UiTests person‎
+                   همین را گرفت («بازگشت به فهرست» در ‎x −5…135‎).
+
+                   حالا ابزار در ستونِ ‎*‎ است، پس پهنای واقعی و محدود می‌گیرد و
+                   ‎WrapPanel‎ش درست می‌شکند. عنوان ‎Auto‎ است و به اندازهٔ
+                   خودش جا می‌گیرد. -->
+              <Grid ColumnDefinitions="Auto,*">
                 <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                   <TextBlock Text="{TemplateBinding Header}" Classes="card-title" />
                   <TextBlock Text="{TemplateBinding SubHeader}" Classes="muted"

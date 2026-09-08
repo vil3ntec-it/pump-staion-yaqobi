@@ -71,6 +71,7 @@ public sealed partial class DebtRowViewModel : RowViewModel
         OnPropertyChanged(nameof(LitersText)); OnPropertyChanged(nameof(PriceText));
         OnPropertyChanged(nameof(ManualBardagiText)); OnPropertyChanged(nameof(RasidText));
         OnPropertyChanged(nameof(RasidFuelText)); OnPropertyChanged(nameof(BardagiText));
+        OnPropertyChanged(nameof(AlbaqiText));
         // سربرگِ دو تیل و ردیفِ «جمله» هم به همین ردیف بند‌اند
         _owner.RefreshTotals();
     }
@@ -82,7 +83,29 @@ public sealed partial class DebtRowViewModel : RowViewModel
     public string RasidFuelText { get => Shamsi.MoneyOrBlank(RasidFuel); set => RasidFuel = Shamsi.Num(value); }
 
     /// <summary>بردگیِ پولیِ همین ردیف — از همان سرویسِ آزموده، نه حسابِ دستی.</summary>
-    public string BardagiText => Shamsi.Money(_owner.Calc.RowBardagi(_r));
+    /// <summary>
+    /// «مقدار بردگی» — خواندنی **و** نوشتنی، مثلِ سایت.
+    ///
+    /// خوانده که می‌شود، عددِ محاسبه‌شده است (لیتر × فی). نوشته که می‌شود،
+    /// ردیف «پولی» می‌شود و همان عددِ دستی حرفِ آخر را می‌زند — همان قاعده‌ای
+    /// که در چکنه هم هست.
+    ///
+    /// پیش از این یک ستونِ جداگانهٔ «بردگیِ دستی» برای این کار ساخته شده بود
+    /// که در سایت اصلاً وجود ندارد، و همان بود که صاحب ریپو گفت «این چیه؟».
+    /// </summary>
+    public string BardagiText
+    {
+        get => Shamsi.MoneyOrBlank(_owner.Calc.RowBardagi(_r));
+        set { ManualBardagi = Shamsi.Num(value); _r.ByMoney = true; Touch(); Refresh(); }
+    }
+
+    /// <summary>
+    /// «الباقی» — ‎بردگی − رسید‎، همان فرمولِ ‎NormalizeRow‎. فقط خواندنی.
+    /// این ستون در نیتیو اصلاً نبود و صاحب ریپو گفت باید باشد؛ در سایت
+    /// آخرین ستونِ عددیِ جدولِ شخص است.
+    /// </summary>
+    public string AlbaqiText =>
+        Shamsi.Money(Math.Round(_owner.Calc.RowBardagi(_r) - Rasid, 0, MidpointRounding.AwayFromZero));
 
     /// <summary>
     /// ══ نوع تیل — دو کادرِ رادیویی، نه کشویی ═══════════════════════════════
@@ -452,8 +475,26 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
 
     // ── ⛽ حساب پطرول ──────────────────────────────────────────────────────
     public string HeadPetrolPercentText => PercentPetrol == 0m ? "0" : Shamsi.Money(PercentPetrol);
+    /// <summary>
+    /// ══ «مقدار رسید»ِ سربرگ — سربرگ + جدول ═════════════════════════════════
+    /// گزارشِ صاحب ریپو: «تو سربرگ‌ها مقدار را رسید می‌زنم، اتومات نمی‌آید تو
+    /// جدول و بالعکسش.»
+    ///
+    /// نیمهٔ دومش باگ بود: این‌جا فقط عددِ **دستیِ سربرگ** خوانده می‌شد، پس
+    /// رسیدی که کاربر داخلِ ردیف‌های جدول می‌نوشت هیچ‌وقت در سربرگ دیده
+    /// نمی‌شد. سایت جمعِ هر دو را نشان می‌دهد و خودش هم نوشته چرا:
+    ///
+    ///     «عددِ دیده‌شده جمعِ رسیدِ سربرگ + رسیدهای داخلِ جدول است… data-hf
+    ///      برای این است که حینِ تایپ در خودِ جدول، این کادر هم در جا به‌روز
+    ///      شود — پیش از این تا رندرِ بعدی عقب می‌ماند و کاربر می‌دید رسیدِ
+    ///      جدول در سربرگ نمی‌آید.»
+    ///
+    /// ⚠️ نوشتن همچنان فقط سهمِ **سربرگ** را عوض می‌کند (‎HeadPetrolRasidEdit‎)،
+    /// وگرنه رسیدهای جدول دوباره‌شماری می‌شدند.
+    /// </summary>
     public string HeadPetrolRasidText =>
-        Shamsi.Money(IsMoney ? RasidMoneyPetrol : RasidFuelPetrol);
+        Shamsi.Money((IsMoney ? RasidMoneyPetrol : RasidFuelPetrol)
+                     + (IsMoney ? Totals.Petrol.Rasid : Totals.Petrol.RasidFuel));
     public string HeadPetrolBordText =>
         Shamsi.Money(IsMoney ? Totals.Petrol.Bardagi : Totals.Petrol.Liters);
     public string HeadPetrolAlbaqiText => Shamsi.Money(Totals.Petrol.Albaqi);
@@ -469,19 +510,21 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     /// </summary>
     public string HeadPetrolRasidEdit
     {
-        get => HeadPetrolRasidText;
+        get => Shamsi.MoneyOrBlank(IsMoney ? RasidMoneyPetrol : RasidFuelPetrol);
         set { if (IsMoney) RasidMoneyPetrolText = value; else RasidFuelPetrolText = value; RefreshTotals(); }
     }
 
     // ── 🟤 حساب دیزل ──────────────────────────────────────────────────────
     public string HeadDieselPercentText => PercentDiesel == 0m ? "0" : Shamsi.Money(PercentDiesel);
+    /// <summary>همان، برای دیزل — توضیحش بالای ‎HeadPetrolRasidText‎.</summary>
     public string HeadDieselRasidText =>
-        Shamsi.Money(IsMoney ? RasidMoneyDiesel : RasidFuelDiesel);
+        Shamsi.Money((IsMoney ? RasidMoneyDiesel : RasidFuelDiesel)
+                     + (IsMoney ? Totals.Diesel.Rasid : Totals.Diesel.RasidFuel));
     public string HeadDieselBordText =>
         Shamsi.Money(IsMoney ? Totals.Diesel.Bardagi : Totals.Diesel.Liters);
     public string HeadDieselRasidEdit
     {
-        get => HeadDieselRasidText;
+        get => Shamsi.MoneyOrBlank(IsMoney ? RasidMoneyDiesel : RasidFuelDiesel);
         set { if (IsMoney) RasidMoneyDieselText = value; else RasidFuelDieselText = value; RefreshTotals(); }
     }
 
@@ -623,6 +666,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
             nameof(HeadDieselBordText), nameof(HeadDieselAlbaqiText), nameof(HeadDieselAlbaqiBrushKey),
             nameof(SumLitersText), nameof(SumBardagiText), nameof(SumRasidText),
             nameof(SumRasidFuelText), nameof(SumAlbaqiText), nameof(TotalCells),
+            nameof(HeadPetrolRasidEdit), nameof(HeadDieselRasidEdit),
             // برچسب‌های سربرگ هم با دفتر و با فیصدی عوض می‌شوند — اگر این‌جا
             // نباشند، در دفترِ پول همچنان «تیل» می‌نویسند.
             nameof(HeadRasidLabel), nameof(HeadAlbaqiLabel),
