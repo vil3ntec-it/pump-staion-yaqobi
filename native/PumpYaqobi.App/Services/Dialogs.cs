@@ -14,6 +14,19 @@ namespace PumpYaqobi.App.Services;
 /// </summary>
 public static class Dialogs
 {
+    // ══ درزِ آزمون — چرا این‌جاست ═════════════════════════════════════════════
+    //
+    // «➕ حساب جدید» و «📋 جدول جدید» هر دو پشتِ یک پنجرهٔ گفت‌وگو هستند. تا
+    // امروز هیچ آزمونی نمی‌توانست از آن پنجره رد شود، پس اگر این دو از کار
+    // می‌افتادند، هیچ چکی قرمز نمی‌شد و فقط صاحب ریپو رویِ ویندوز می‌فهمید —
+    // که دقیقاً همان چیزی است که شد («چرا حساب فرعی کار نمی‌کند»).
+    //
+    // این دو قلاب فقط برای همان است: سنجشِ پنجرهٔ واقعی (‎UiTests -- person‎)
+    // پاسخِ کاربر را از پیش می‌گذارد و کلِ مسیر — از دکمه تا دیتابیس — واقعاً
+    // اجرا می‌شود. در برنامهٔ کاربر هر دو ‎null‎ هستند و هیچ اثری ندارند.
+    public static Func<string, string, string?>? PromptHook;
+    public static Func<string, string, bool>? ConfirmHook;
+
     private static Window? Owner =>
         Avalonia.Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime d
             ? d.MainWindow : null;
@@ -22,6 +35,7 @@ public static class Dialogs
     public static async Task<string?> PromptAsync(string title, string message = "",
                                                   string initial = "", string ok = "تایید")
     {
+        if (PromptHook is { } hook) return hook(title, message);
         var owner = Owner;
         if (owner is null) return null;
         return await Dispatcher.UIThread.InvokeAsync(async () =>
@@ -105,6 +119,7 @@ public static class Dialogs
     public static async Task<bool> ConfirmAsync(string title, string message,
                                                 string ok = "بله", string cancel = "انصراف")
     {
+        if (ConfirmHook is { } hook) return hook(title, message);
         var owner = Owner;
         if (owner is null) return false;
         var r = await Dispatcher.UIThread.InvokeAsync(async () =>

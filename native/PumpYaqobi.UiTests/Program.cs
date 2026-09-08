@@ -32,6 +32,10 @@ internal static class Program
         // مجاز، بخش‌به‌بخش می‌سنجد که محتوا از پنجره بلندتر است یا نه و آیا
         // اصلاً راهی برای رسیدن به بخشِ بیرون‌افتاده هست.
         if (outDir.Equals("scroll", StringComparison.OrdinalIgnoreCase)) return ScrollAudit();
+        // ══ حالتِ «سنجشِ صفحهٔ حسابِ قرض‌دار» ═══════════════════════════════
+        //     dotnet run --project PumpYaqobi.UiTests -- person
+        // چرایی و کارش در ‎PersonAudit‎ نوشته شده.
+        if (outDir.Equals("person", StringComparison.OrdinalIgnoreCase)) return PersonAudit.Run();
         if (outDir.Equals("gridperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Run();
         if (outDir.Equals("cardperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Cards();
 
