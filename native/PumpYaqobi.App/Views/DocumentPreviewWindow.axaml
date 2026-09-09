@@ -1,11 +1,12 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:p="using:PumpYaqobi.App.Printing"
+        xmlns:c="using:PumpYaqobi.App.Controls"
         x:Class="PumpYaqobi.App.Views.DocumentPreviewWindow"
         x:DataType="p:DocumentPreviewViewModel"
         Width="1280" Height="900" WindowStartupLocation="CenterOwner"
         WindowState="Maximized"
-        FlowDirection="RightToLeft" Background="#f1f3f6"
+        FlowDirection="LeftToRight" Background="#ffffff"
         Title="چاپ">
 
   <!-- ══ صفحهٔ چاپ — همان پشتِ‌صحنهٔ اکسل ═══════════════════════════════════
@@ -13,13 +14,27 @@
        هم همین مدل بود.» سایت (‎pumpPrintStudio‎) دو ستون است — ستونِ تنظیمات
        و پیش‌نمایشِ زندهٔ ورق — و همین‌جا هم همان است.
 
-       ⚠️ ستونِ تنظیمات سمتِ راست می‌نشیند نه چپ، چون کلِ برنامه راست‌به‌چپ
-       است: در اکسلِ انگلیسی سمتِ چپ است و آینه‌اش این‌جا راست می‌شود. -->
+       ⚠️ اندازه‌ها و رنگ‌ها حدسی نیستند؛ از خودِ ‎index.html‎ برداشته شده‌اند:
+
+           #xlpr{direction:ltr}                     ← خطِ ۲۵۶۴۹
+           #xlpr .xt{height:44px;background:#217346}
+           #xlpr .xs{flex:0 0 352px;padding:14px 22px 30px;direction:rtl}
+           #xlpr .xp{background:#f3f2f1;border-left:1px solid #e1dfdd}
+           #xlpr .xh1{font-size:2.6rem;font-weight:300;color:#323130}
+           #xlpr .xh2{font-size:1.45rem;font-weight:400;color:#217346}
+           #xlpr .xprint{width:118px;height:104px}
+           #xlpr .xcard{min-height:52px;border:1px solid #d2d0ce;border-radius:2px}
+           #xlpr .xb{height:38px;background:#faf9f8}
+
+       ⚠️ کلِ پنجره **چپ‌به‌راست** است و فقط ستونِ تنظیمات داخلش راست‌به‌چپ —
+       دقیقاً همان دو خطِ بالا. برای همین ستون سمتِ **چپ** می‌نشیند، مثلِ
+       اکسل. یک‌بار کلِ پنجره را راست‌به‌چپ کردم و ستون آینه شد و رفت راست؛
+       این را دوباره برنگردانید. -->
 
   <Grid RowDefinitions="Auto,*">
 
     <!-- ══ نوارِ بالا ══ -->
-    <Border Grid.Row="0" Background="#1f7a4d" Padding="12,8">
+    <Border Grid.Row="0" Background="#217346" Height="44" Padding="12,0">
       <Grid ColumnDefinitions="Auto,*,Auto">
         <TextBlock Grid.Column="0" VerticalAlignment="Center" Foreground="White"
                    FontWeight="Bold" FontSize="15"
@@ -38,13 +53,14 @@
            «چاپ» ▸ «چاپگر» ▸ «تنظیمات» ▸ «تنظیمِ ورق…»
            ══════════════════════════════════════════════════════════════════ -->
       <Border Grid.Column="0" Width="352" Background="White"
-              BorderBrush="#dfe3e8" BorderThickness="0,0,1,0"
+              FlowDirection="RightToLeft"
               IsVisible="{Binding RailOpen}">
-        <ScrollViewer Padding="16,14" HorizontalScrollBarVisibility="Disabled">
+        <ScrollViewer Padding="22,14,22,30" HorizontalScrollBarVisibility="Disabled">
           <StackPanel Spacing="10">
 
-            <TextBlock Text="چاپ" FontSize="26" FontWeight="Bold" Foreground="#1f2430"
-                       Margin="0,0,0,4" />
+            <!-- ‎.xh1{font-size:2.6rem;font-weight:300;color:#323130}‎ -->
+            <TextBlock Text="چاپ" FontSize="42" FontWeight="Light" Foreground="#323130"
+                       Margin="0,2,0,18" />
 
             <!-- ── دکمهٔ چاپ + تعدادِ نسخه ── -->
             <!-- ⚠️ فاصله با ‎Margin‎ است نه ‎ColumnSpacing‎: آن یکی در این نسخهٔ
@@ -91,7 +107,7 @@
             <!-- ── تنظیمات ── -->
             <TextBlock Text="تنظیمات" Classes="ph" />
 
-            <ComboBox Classes="card" ItemsSource="{Binding Whats}" SelectedItem="{Binding What}" />
+            <c:SettingCard ItemsSource="{Binding Whats}" SelectedItem="{Binding What}" />
             <TextBlock Text="{Binding WhatNote}" Classes="pn" Margin="4,-4,4,2" />
 
             <!-- ورق‌ها: از … تا … — فقط وقتی «بازه» انتخاب شده، مثلِ اکسل -->
@@ -102,12 +118,12 @@
               <TextBox Text="{Binding ToText}" Width="74" Classes="spinbox" />
             </StackPanel>
 
-            <ComboBox Classes="card" ItemsSource="{Binding Collates}" SelectedItem="{Binding Collate}" />
-            <ComboBox Classes="card" ItemsSource="{Binding Orientations}" SelectedItem="{Binding Orientation}" />
-            <ComboBox Classes="card" ItemsSource="{Binding Papers}" SelectedItem="{Binding Paper}" />
-            <ComboBox Classes="card" ItemsSource="{Binding MarginChoices}" SelectedItem="{Binding Margin}" />
+            <c:SettingCard ItemsSource="{Binding Collates}" SelectedItem="{Binding Collate}" />
+            <c:SettingCard ItemsSource="{Binding Orientations}" SelectedItem="{Binding Orientation}" />
+            <c:SettingCard ItemsSource="{Binding Papers}" SelectedItem="{Binding Paper}" />
+            <c:SettingCard ItemsSource="{Binding MarginChoices}" SelectedItem="{Binding Margin}" />
             <TextBlock Text="{Binding MarginNoteText}" Classes="pn" Margin="4,-4,4,2" />
-            <ComboBox Classes="card" ItemsSource="{Binding Scales}" SelectedItem="{Binding Scale}" />
+            <c:SettingCard ItemsSource="{Binding Scales}" SelectedItem="{Binding Scale}" />
             <TextBlock Text="{Binding ScaleNote}" Classes="pn" Margin="4,-4,4,2" />
 
             <Button Classes="link" Content="تنظیمِ ورق…" Click="OnSetup" />
@@ -121,11 +137,11 @@
       </Border>
 
       <!-- ══════════════════════════════════════════════════════════════════
-           پیش‌نمایشِ ورق
-           ⚠️ این طرف عمداً چپ‌به‌راست است: خودِ تصویرِ ورق نباید آینه شود، و
-           خط‌چینِ حاشیه هم باید «چپ» و «راستش» همان چپ و راستِ ورق باشد.
+           پیش‌نمایشِ ورق — ‎.xp{background:#f3f2f1;border-left:1px solid #e1dfdd}‎
+           چپ‌به‌راست می‌ماند (از خودِ پنجره ارث می‌برد): تصویرِ ورق نباید آینه
+           شود و خط‌چینِ حاشیه هم باید چپ و راستش همان چپ و راستِ ورق باشد.
            ══════════════════════════════════════════════════════════════════ -->
-      <Grid Grid.Column="1" RowDefinitions="*,Auto" FlowDirection="LeftToRight">
+      <Grid Grid.Column="1" RowDefinitions="*,Auto" Background="#f3f2f1">
 
         <Panel Grid.Row="0">
           <ScrollViewer Padding="24" HorizontalScrollBarVisibility="Auto" Name="PreviewScroll">
@@ -149,12 +165,11 @@
         </Panel>
 
         <!-- ══ نوارِ پایین — ‎◀ [۱] از ۲ ▶‎ یک طرف، دو دکمهٔ گوشه طرفِ دیگر ══ -->
-        <Border Grid.Row="1" Background="White" BorderBrush="#dfe3e8"
-                BorderThickness="0,1,0,0" Padding="12,7">
+        <Border Grid.Row="1" Background="#faf9f8" BorderBrush="#e1dfdd"
+                BorderThickness="0,1,0,0" Height="38" Padding="10,0">
           <Grid ColumnDefinitions="Auto,*,Auto">
 
-            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6"
-                        FlowDirection="RightToLeft">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6">
               <Button Classes="page-btn" Content="◀" Command="{Binding PrevCommand}"
                       ToolTip.Tip="ورق قبل" />
               <TextBox Text="{Binding PageNumberText}" Width="58" Classes="spinbox" />
@@ -200,34 +215,39 @@
     </Style>
 
     <!-- دکمهٔ بزرگِ «چاپ» — همان ‎.xprint‎ی سایت -->
+    <!-- ‎.xprint{width:118px;height:104px;border:1px solid #d2d0ce;border-radius:2px}‎ -->
     <Style Selector="Button.big-print">
-      <Setter Property="Background" Value="#1f7a4d" />
-      <Setter Property="Foreground" Value="White" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="CornerRadius" Value="10" />
-      <Setter Property="Padding" Value="16,10" />
-      <Setter Property="MinWidth" Value="96" />
+      <Setter Property="Background" Value="White" />
+      <Setter Property="Foreground" Value="#323130" />
+      <Setter Property="BorderBrush" Value="#d2d0ce" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="Width" Value="118" />
+      <Setter Property="Height" Value="104" />
     </Style>
     <Style Selector="Button.big-print /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="#1f7a4d" />
+      <Setter Property="Background" Value="White" />
     </Style>
 
+    <!-- ‎.xpdf{color:#217346;border:1.5px solid #217346;border-radius:2px;padding:10px}‎ -->
     <Style Selector="Button.pdf">
-      <Setter Property="Background" Value="#eef4ff" />
-      <Setter Property="Foreground" Value="#1a4d8f" />
-      <Setter Property="BorderBrush" Value="#b9cdf0" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="9" />
-      <Setter Property="Padding" Value="12,8" />
-      <Setter Property="HorizontalContentAlignment" Value="Right" />
+      <Setter Property="Background" Value="White" />
+      <Setter Property="Foreground" Value="#217346" />
+      <Setter Property="BorderBrush" Value="#217346" />
+      <Setter Property="BorderThickness" Value="1.5" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="Padding" Value="10" />
+      <Setter Property="Margin" Value="0,10,0,2" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
     </Style>
 
     <!-- سرفصل‌های ستون: «چاپگر»، «تنظیمات» -->
+    <!-- ‎.xh2{font-size:1.45rem;font-weight:400;color:#217346;margin:20px 0 8px}‎ -->
     <Style Selector="TextBlock.ph">
-      <Setter Property="FontWeight" Value="Bold" />
-      <Setter Property="FontSize" Value="14" />
-      <Setter Property="Foreground" Value="#1f2430" />
-      <Setter Property="Margin" Value="0,10,0,0" />
+      <Setter Property="FontWeight" Value="Normal" />
+      <Setter Property="FontSize" Value="23" />
+      <Setter Property="Foreground" Value="#217346" />
+      <Setter Property="Margin" Value="0,20,0,8" />
     </Style>
     <Style Selector="TextBlock.pl">
       <Setter Property="FontSize" Value="12" />
@@ -239,22 +259,24 @@
       <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
 
+    <!-- ‎.xprn{border:1px solid #d2d0ce;border-radius:2px;padding:9px}‎ -->
     <Style Selector="Border.prn">
-      <Setter Property="Background" Value="#f7f9fc" />
-      <Setter Property="BorderBrush" Value="#dfe3e8" />
+      <Setter Property="Background" Value="White" />
+      <Setter Property="BorderBrush" Value="#d2d0ce" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="9" />
-      <Setter Property="Padding" Value="11,9" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="Padding" Value="9" />
     </Style>
 
     <!-- لینک‌های آبیِ ستون — «تنظیمِ ورق…»، «انتخابِ چاپگر…» -->
+    <!-- ‎.xlink{color:#0f6cbd;font-size:0.8rem;text-decoration:underline;padding:2px 0 10px}‎ -->
     <Style Selector="Button.link">
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="#1a4d8f" />
+      <Setter Property="Foreground" Value="#0f6cbd" />
       <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="Padding" Value="2,3" />
+      <Setter Property="Padding" Value="0,2,0,10" />
       <Setter Property="HorizontalAlignment" Value="Right" />
-      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="FontSize" Value="13" />
     </Style>
     <Style Selector="Button.link /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="Transparent" />
@@ -283,16 +305,18 @@
     <!-- ══ کشوی اکسلی — نشانه، عنوانِ پررنگ و یک خطِ توضیح ══
          کشوی معمولی فقط یک خطِ ساده نشان می‌دهد؛ این یکی همان کارتِ دوخطیِ
          اکسل است، هم بسته و هم باز (‎ItemTemplate‎ی یکسان برای هر دو). -->
-    <Style Selector="ComboBox.card">
+    <!-- ‎.xcard{border:1px solid #d2d0ce;border-radius:2px;padding:7px 9px;min-height:52px}‎ -->
+    <Style Selector="c|SettingCard">
       <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="Background" Value="White" />
-      <Setter Property="Foreground" Value="#1f2430" />
-      <Setter Property="BorderBrush" Value="#dfe3e8" />
+      <Setter Property="Foreground" Value="#323130" />
+      <Setter Property="BorderBrush" Value="#d2d0ce" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="9" />
-      <Setter Property="Padding" Value="10,7" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="Padding" Value="9,7" />
       <Setter Property="MinHeight" Value="52" />
+      <Setter Property="Margin" Value="0,0,0,5" />
       <Setter Property="ItemTemplate">
         <DataTemplate x:DataType="p:SetupOption">
           <Grid ColumnDefinitions="Auto,*">

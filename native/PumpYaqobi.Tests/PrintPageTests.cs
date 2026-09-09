@@ -172,13 +172,77 @@ public class PrintPageTests
     public void TheDropdownsAreExcelStyleCards()
     {
         var w = Read("PumpYaqobi.App", "Views", "DocumentPreviewWindow.axaml");
-        Assert.Contains("ComboBox.card", w);
+        Assert.Contains("c|SettingCard", w);
         Assert.Contains("{Binding Icon}", w);
         Assert.Contains("{Binding Note}", w);
 
         var vm = Read("PumpYaqobi.App", "Printing", "PrintSetupViewModel.cs");
         Assert.Contains("string Icon = \"\"", vm);
     }
+
+    /// <summary>
+    /// ══ چرخِ ماوس مقدارِ کادر را عوض نمی‌کند ═══════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «روی هر کادر که می‌روم با اسکرول تغییر می‌کنند؛ باید
+    /// با کلیک بتوانم تغییر بدهم.»
+    ///
+    /// ریشه‌اش خودِ ‎ComboBox‎ی آوالونیا بود که با چرخ ‎SelectNext/Previous‎
+    /// می‌زند. ‎SettingCard‎ آن را برمی‌دارد — و مهم‌تر، رویداد را ‎Handled‎ هم
+    /// نمی‌کند تا ستون همچنان بلغزد.
+    /// </summary>
+    [Fact]
+    public void TheWheelScrollsTheRailInsteadOfChangingTheSetting()
+    {
+        var c = Read("PumpYaqobi.App", "Controls", "SettingCard.cs");
+        Assert.Contains("class SettingCard : ComboBox", c);
+        Assert.Contains("protected override void OnPointerWheelChanged(PointerWheelEventArgs e)", c);
+
+        // نه ‎base‎ صدا زده می‌شود و نه رویداد مصرف — هر دو لازم است
+        var body = c[c.IndexOf("protected override void OnPointerWheelChanged", StringComparison.Ordinal)..];
+        Assert.DoesNotContain("base.OnPointerWheelChanged", body);
+        Assert.DoesNotContain("e.Handled = true", body);
+    }
+
+    /// <summary>
+    /// ══ ستونِ تنظیمات سمتِ **چپ** ═══════════════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «آن کادرها باید سمت چپ باشند نه راست.»
+    ///
+    /// و خودِ سایت هم همین است — خطِ ۲۵۶۴۹ی ‎index.html‎:
+    ///     ‎#xlpr{ … direction:ltr … }‎
+    ///     ‎#xlpr .xs{flex:0 0 352px; … direction:rtl}‎
+    /// یعنی کلِ پنجره چپ‌به‌راست و فقط ستون داخلش راست‌به‌چپ، پس ستون اولین
+    /// چیزِ سمتِ چپ می‌شود.
+    /// </summary>
+    [Fact]
+    public void TheRailSitsOnTheLeftLikeTheSite()
+    {
+        var w = Read("PumpYaqobi.App", "Views", "DocumentPreviewWindow.axaml");
+
+        // کلِ پنجره چپ‌به‌راست
+        Assert.Contains("FlowDirection=\"LeftToRight\" Background=\"#ffffff\"", w);
+
+        // ستون، ستونِ **اول** است و خودش راست‌به‌چپ
+        var at = w.IndexOf("Grid.Column=\"0\" Width=\"352\"", StringComparison.Ordinal);
+        Assert.True(at > 0, "ستونِ تنظیمات پیدا نشد");
+        Assert.Contains("FlowDirection=\"RightToLeft\"", w.Substring(at, 300));
+
+        // و دیگر کلِ پنجره راست‌به‌چپ نیست — همان اشتباهی که ستون را آینه کرد
+        Assert.DoesNotContain("FlowDirection=\"RightToLeft\" Background=", w);
+    }
+
+    /// <summary>اندازه‌ها و رنگ‌ها از خودِ سایت‌اند، نه حدسی.</summary>
+    [Theory]
+    [InlineData("#217346")]           // ‎.xt‎ و ‎.xh2‎ و ‎.xpdf‎ — سبزِ اکسل
+    [InlineData("Height=\"44\"")]     // ‎.xt{height:44px}‎
+    [InlineData("Width=\"352\"")]     // ‎.xs{flex:0 0 352px}‎
+    [InlineData("#f3f2f1")]           // ‎.xp{background:#f3f2f1}‎
+    [InlineData("#faf9f8")]           // ‎.xb{background:#faf9f8}‎
+    [InlineData("#d2d0ce")]           // لبهٔ کارت‌ها
+    [InlineData("#0f6cbd")]           // ‎.xlink‎
+    [InlineData("22,14,22,30")]       // ‎.xs{padding:14px 22px 30px}‎
+    public void TheMeasurementsComeFromTheSite(string piece)
+        => Assert.Contains(piece, Read("PumpYaqobi.App", "Views", "DocumentPreviewWindow.axaml"));
 
     /// <summary>
     /// «تنظیمِ ورق» نباید چیزهایی را که نشان نمی‌دهد پاک کند — پیش از این با
