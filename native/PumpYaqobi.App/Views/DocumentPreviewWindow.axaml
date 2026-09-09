@@ -3,73 +3,188 @@
         xmlns:p="using:PumpYaqobi.App.Printing"
         x:Class="PumpYaqobi.App.Views.DocumentPreviewWindow"
         x:DataType="p:DocumentPreviewViewModel"
-        Width="1000" Height="900" WindowStartupLocation="CenterOwner"
+        Width="1280" Height="900" WindowStartupLocation="CenterOwner"
         WindowState="Maximized"
-        FlowDirection="RightToLeft" Background="#f1f3f6">
+        FlowDirection="RightToLeft" Background="#f1f3f6"
+        Title="چاپ">
 
-  <Grid RowDefinitions="Auto,*,Auto">
+  <!-- ══ صفحهٔ چاپ — همان پشتِ‌صحنهٔ اکسل ═══════════════════════════════════
+       خواستهٔ صریحِ صاحب ریپو با عکس: «بخشِ پرینت باید این مدلی باشد؛ در سایت
+       هم همین مدل بود.» سایت (‎pumpPrintStudio‎) دو ستون است — ستونِ تنظیمات
+       و پیش‌نمایشِ زندهٔ ورق — و همین‌جا هم همان است.
 
-    <!-- ══ نوارِ سبزِ بالا — همان نوارِ صفحهٔ چاپ ══ -->
-    <Border Grid.Row="0" Background="#1f7a4d" Padding="12,9">
-      <Grid ColumnDefinitions="Auto,Auto,*,Auto">
-        <Button Grid.Column="0" Classes="doc-btn" Content="✕ بستن" Click="OnClose" Margin="0,0,8,0" />
-        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-          <Button Classes="doc-btn" Content="⚙ تنظیمِ ورق" Click="OnSetup" />
-          <Button Classes="doc-btn" Content="💾 ذخیرهٔ PDF" Click="OnSave" />
+       ⚠️ ستونِ تنظیمات سمتِ راست می‌نشیند نه چپ، چون کلِ برنامه راست‌به‌چپ
+       است: در اکسلِ انگلیسی سمتِ چپ است و آینه‌اش این‌جا راست می‌شود. -->
+
+  <Grid RowDefinitions="Auto,*">
+
+    <!-- ══ نوارِ بالا ══ -->
+    <Border Grid.Row="0" Background="#1f7a4d" Padding="12,8">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <TextBlock Grid.Column="0" VerticalAlignment="Center" Foreground="White"
+                   FontWeight="Bold" FontSize="15"
+                   Text="{Binding Title, StringFormat='🖨️ چاپ — {0}'}" />
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+          <ToggleButton Classes="doc-btn" Content="⚙ تنظیمات" IsChecked="{Binding RailOpen}" />
+          <Button Classes="doc-btn" Content="✕ بستن" Click="OnClose" />
         </StackPanel>
-        <TextBlock Grid.Column="2" Text="{Binding Title}" HorizontalAlignment="Center"
-                   VerticalAlignment="Center" Foreground="White" FontWeight="Bold" FontSize="15" />
-        <Button Grid.Column="3" Classes="doc-btn" Content="🖨 چاپ" Click="OnPrint" />
       </Grid>
     </Border>
 
-    <!-- ══ ورق‌های سند ══════════════════════════════════════════════════════
-         گزارشِ صاحب ریپو: «آن بخشِ پرینت تمام صفحه نمی‌شود و آن بخش‌های مهم
-         نمی‌آید.»
+    <Grid Grid.Row="1" ColumnDefinitions="Auto,*">
 
-         دو علتِ اندازه‌گیری‌شده، هر دو همین‌جا بود:
-           ۱) پنجره ‎Width=1000 Height=900‎ی ثابت بود و هیچ‌وقت تمام‌صفحه نمی‌شد.
-              حالا ‎WindowState="Maximized"‎ باز می‌شود — مثلِ صفحهٔ چاپِ سایت
-              که یک پنجرهٔ کاملِ مرورگر است. (‎Width/Height‎ مانده‌اند تا اندازهٔ
-              «بازگرداندن» همان باشد.)
-           ۲) ‎MaxWidth="900"‎ روی خودِ ورق: هر قدر هم پنجره بزرگ می‌شد، ورق
-              بیشتر از ۹۰۰ پیکسل نمی‌شد. یعنی روی مانیتورِ بزرگ ورق کوچک
-              می‌ماند و ریزنویس‌هایش خوانده نمی‌شد — همان «بخش‌های مهم نمی‌آید».
-              سقف برداشته شد و به‌جایش بزرگ‌نمایی آمد. -->
-    <ScrollViewer Grid.Row="1" Padding="20"
-                  HorizontalScrollBarVisibility="Auto">
-      <Border Background="White" BoxShadow="0 2 10 0 #22000000" HorizontalAlignment="Center">
-        <Image Source="{Binding CurrentPage}" Stretch="Uniform"
-               Width="{Binding PageWidth}" />
+      <!-- ══════════════════════════════════════════════════════════════════
+           ستونِ تنظیمات — ترتیبش مو‌به‌مو همان ‎sidebarHtml()‎ی سایت است:
+           «چاپ» ▸ «چاپگر» ▸ «تنظیمات» ▸ «تنظیمِ ورق…»
+           ══════════════════════════════════════════════════════════════════ -->
+      <Border Grid.Column="0" Width="352" Background="White"
+              BorderBrush="#dfe3e8" BorderThickness="0,0,1,0"
+              IsVisible="{Binding RailOpen}">
+        <ScrollViewer Padding="16,14" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Spacing="10">
+
+            <TextBlock Text="چاپ" FontSize="26" FontWeight="Bold" Foreground="#1f2430"
+                       Margin="0,0,0,4" />
+
+            <!-- ── دکمهٔ چاپ + تعدادِ نسخه ── -->
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+              <Button Grid.Column="0" Classes="big-print" Click="OnPrint">
+                <StackPanel Spacing="2" HorizontalAlignment="Center">
+                  <TextBlock Text="🖨️" FontSize="26" HorizontalAlignment="Center" />
+                  <TextBlock Text="چاپ" FontSize="13" FontWeight="Bold"
+                             HorizontalAlignment="Center" />
+                </StackPanel>
+              </Button>
+              <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                <TextBlock Text="تعدادِ نسخه" Classes="pl" />
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                  <Button Grid.Column="0" Classes="spin" Content="−" Click="OnCopiesMinus" />
+                  <TextBox Grid.Column="1" Text="{Binding CopiesText}" Classes="spinbox" />
+                  <Button Grid.Column="2" Classes="spin" Content="+" Click="OnCopiesPlus" />
+                </Grid>
+              </StackPanel>
+            </Grid>
+
+            <!-- ساختنِ PDF کارِ چاپگر نیست، پس هیچ پنجرهٔ ویندوزی لازم ندارد -->
+            <Button Classes="pdf" Click="OnPdf" HorizontalAlignment="Stretch">
+              <StackPanel Spacing="1">
+                <TextBlock Text="⬇️ ساختنِ فایلِ PDF" FontWeight="Bold" />
+                <TextBlock Text="بدونِ پنجرهٔ ویندوز" FontSize="11" Opacity="0.8" />
+              </StackPanel>
+            </Button>
+
+            <!-- ── چاپگر ── -->
+            <TextBlock Text="چاپگر" Classes="ph" />
+            <Border Classes="prn">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Text="🖨️" FontSize="22" VerticalAlignment="Center" />
+                <StackPanel Spacing="1" VerticalAlignment="Center">
+                  <TextBlock Text="چاپگرِ پیش‌فرضِ ویندوز" FontWeight="Bold" FontSize="13" />
+                  <TextBlock Text="آماده" Classes="pn" />
+                </StackPanel>
+              </StackPanel>
+            </Border>
+            <Button Classes="link" Content="انتخابِ چاپگر و تنظیماتش…" Click="OnPrinters" />
+
+            <!-- ── تنظیمات ── -->
+            <TextBlock Text="تنظیمات" Classes="ph" />
+
+            <ComboBox Classes="card" ItemsSource="{Binding Whats}" SelectedItem="{Binding What}" />
+            <TextBlock Text="{Binding WhatNote}" Classes="pn" Margin="4,-4,4,2" />
+
+            <!-- ورق‌ها: از … تا … — فقط وقتی «بازه» انتخاب شده، مثلِ اکسل -->
+            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsRange}">
+              <TextBlock Text="ورق‌ها:" VerticalAlignment="Center" Classes="pl" />
+              <TextBox Text="{Binding FromText}" Width="74" Classes="spinbox" />
+              <TextBlock Text="تا" VerticalAlignment="Center" Classes="pl" />
+              <TextBox Text="{Binding ToText}" Width="74" Classes="spinbox" />
+            </StackPanel>
+
+            <ComboBox Classes="card" ItemsSource="{Binding Collates}" SelectedItem="{Binding Collate}" />
+            <ComboBox Classes="card" ItemsSource="{Binding Orientations}" SelectedItem="{Binding Orientation}" />
+            <ComboBox Classes="card" ItemsSource="{Binding Papers}" SelectedItem="{Binding Paper}" />
+            <ComboBox Classes="card" ItemsSource="{Binding MarginChoices}" SelectedItem="{Binding Margin}" />
+            <TextBlock Text="{Binding MarginNoteText}" Classes="pn" Margin="4,-4,4,2" />
+            <ComboBox Classes="card" ItemsSource="{Binding Scales}" SelectedItem="{Binding Scale}" />
+            <TextBlock Text="{Binding ScaleNote}" Classes="pn" Margin="4,-4,4,2" />
+
+            <Button Classes="link" Content="تنظیمِ ورق…" Click="OnSetup" />
+            <TextBlock Text="{Binding ScaleInfo}" Classes="pn" />
+            <Button Classes="link" Content="⬇️ ذخیرهٔ فایلِ گزارش" Click="OnSave" />
+
+            <TextBlock Text="{Binding Status}" Classes="pn" TextWrapping="Wrap"
+                       IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </StackPanel>
+        </ScrollViewer>
       </Border>
-    </ScrollViewer>
 
-    <!-- ══ نوارِ شمارهٔ ورق ══ -->
-    <Border Grid.Row="2" Background="White" BorderBrush="#dfe3e8" BorderThickness="0,1,0,0" Padding="12,8">
-      <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
-        <Button Classes="page-btn" Content="◀" Command="{Binding PrevCommand}" />
-        <TextBlock Text="{Binding PageLabel}" VerticalAlignment="Center" FontWeight="Bold"
-                   Foreground="#2d3748" />
-        <Button Classes="page-btn" Content="▶" Command="{Binding NextCommand}" />
+      <!-- ══════════════════════════════════════════════════════════════════
+           پیش‌نمایشِ ورق
+           ⚠️ این طرف عمداً چپ‌به‌راست است: خودِ تصویرِ ورق نباید آینه شود، و
+           خط‌چینِ حاشیه هم باید «چپ» و «راستش» همان چپ و راستِ ورق باشد.
+           ══════════════════════════════════════════════════════════════════ -->
+      <Grid Grid.Column="1" RowDefinitions="*,Auto" FlowDirection="LeftToRight">
 
-        <!-- بزرگ‌نمایی — جای همان زومِ صفحهٔ چاپِ مرورگر -->
-        <Border Width="1" Background="#dfe3e8" Margin="8,2" />
-        <Button Classes="page-btn" Content="➖" Command="{Binding ZoomOutCommand}"
-                ToolTip.Tip="کوچک‌تر" />
-        <TextBlock Text="{Binding ZoomLabel}" VerticalAlignment="Center" FontWeight="Bold"
-                   Foreground="#2d3748" MinWidth="52" TextAlignment="Center" />
-        <Button Classes="page-btn" Content="➕" Command="{Binding ZoomInCommand}"
-                ToolTip.Tip="بزرگ‌تر" />
-        <Button Classes="page-btn" Content="⤢ اندازهٔ پنجره" Command="{Binding ZoomFitCommand}" />
+        <Panel Grid.Row="0">
+          <ScrollViewer Padding="24" HorizontalScrollBarVisibility="Auto" Name="PreviewScroll">
+            <Panel HorizontalAlignment="Center" VerticalAlignment="Center">
+              <Border Background="White" BoxShadow="0 2 12 0 #26000000">
+                <Image Source="{Binding CurrentPage}" Stretch="Uniform"
+                       Width="{Binding PageWidth}" />
+              </Border>
+              <!-- خط‌چینِ حاشیه — دکمهٔ «نمایشِ حاشیه‌ها»ی نوارِ پایین -->
+              <Rectangle Margin="{Binding GuideMargin}" IsVisible="{Binding ShowGuides}"
+                         Stroke="#2b6cb0" StrokeThickness="1" StrokeDashArray="4,3"
+                         Fill="Transparent" IsHitTestVisible="False" />
+            </Panel>
+          </ScrollViewer>
 
-        <TextBlock Text="{Binding Status}" VerticalAlignment="Center" Foreground="#5b6472"
-                   Margin="16,0,0,0" />
-      </StackPanel>
-    </Border>
+          <Border Background="#b3ffffff" IsVisible="{Binding Busy}">
+            <TextBlock Text="⏳ در حالِ چیدنِ ورق‌ها…" FontSize="16" FontWeight="Bold"
+                       Foreground="#1f2430"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+        </Panel>
+
+        <!-- ══ نوارِ پایین — ‎◀ [۱] از ۲ ▶‎ یک طرف، دو دکمهٔ گوشه طرفِ دیگر ══ -->
+        <Border Grid.Row="1" Background="White" BorderBrush="#dfe3e8"
+                BorderThickness="0,1,0,0" Padding="12,7">
+          <Grid ColumnDefinitions="Auto,*,Auto">
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6"
+                        FlowDirection="RightToLeft">
+              <Button Classes="page-btn" Content="◀" Command="{Binding PrevCommand}"
+                      ToolTip.Tip="ورق قبل" />
+              <TextBox Text="{Binding PageNumberText}" Width="58" Classes="spinbox" />
+              <TextBlock VerticalAlignment="Center" Foreground="#5b6472"
+                         Text="{Binding PageCount, StringFormat='از {0}'}" />
+              <Button Classes="page-btn" Content="▶" Command="{Binding NextCommand}"
+                      ToolTip.Tip="ورق بعد" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
+              <Button Classes="page-btn" Content="➖" Command="{Binding ZoomOutCommand}"
+                      ToolTip.Tip="کوچک‌تر" />
+              <TextBlock Text="{Binding ZoomLabel}" VerticalAlignment="Center" FontWeight="Bold"
+                         Foreground="#2d3748" MinWidth="52" TextAlignment="Center" />
+              <Button Classes="page-btn" Content="➕" Command="{Binding ZoomInCommand}"
+                      ToolTip.Tip="بزرگ‌تر" />
+              <Border Width="1" Background="#dfe3e8" Margin="6,2" />
+              <ToggleButton Classes="page-btn" Content="⬚" IsChecked="{Binding ShowGuides}"
+                            ToolTip.Tip="نمایشِ حاشیه‌ها" />
+              <Button Classes="page-btn" Content="⤢" Command="{Binding ZoomPageCommand}"
+                      ToolTip.Tip="هم‌اندازهٔ ورق" />
+              <Button Classes="page-btn" Content="↔" Command="{Binding ZoomFitCommand}"
+                      ToolTip.Tip="هم‌اندازهٔ پهنا" />
+            </StackPanel>
+          </Grid>
+        </Border>
+      </Grid>
+    </Grid>
   </Grid>
 
   <Window.Styles>
-    <Style Selector="Button.doc-btn">
+    <Style Selector="Button.doc-btn, ToggleButton.doc-btn">
       <Setter Property="Background" Value="#2f8f5f" />
       <Setter Property="Foreground" Value="White" />
       <Setter Property="BorderBrush" Value="#57ab7f" />
@@ -78,16 +193,131 @@
       <Setter Property="Padding" Value="14,6" />
       <Setter Property="FontWeight" Value="Bold" />
     </Style>
-    <Style Selector="Button.doc-btn /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="#2f8f5f" />
+    <Style Selector="ToggleButton.doc-btn:checked /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#15603b" />
     </Style>
-    <Style Selector="Button.page-btn">
+
+    <!-- دکمهٔ بزرگِ «چاپ» — همان ‎.xprint‎ی سایت -->
+    <Style Selector="Button.big-print">
+      <Setter Property="Background" Value="#1f7a4d" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="16,10" />
+      <Setter Property="MinWidth" Value="96" />
+    </Style>
+    <Style Selector="Button.big-print /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#1f7a4d" />
+    </Style>
+
+    <Style Selector="Button.pdf">
+      <Setter Property="Background" Value="#eef4ff" />
+      <Setter Property="Foreground" Value="#1a4d8f" />
+      <Setter Property="BorderBrush" Value="#b9cdf0" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="Padding" Value="12,8" />
+      <Setter Property="HorizontalContentAlignment" Value="Right" />
+    </Style>
+
+    <!-- سرفصل‌های ستون: «چاپگر»، «تنظیمات» -->
+    <Style Selector="TextBlock.ph">
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="FontSize" Value="14" />
+      <Setter Property="Foreground" Value="#1f2430" />
+      <Setter Property="Margin" Value="0,10,0,0" />
+    </Style>
+    <Style Selector="TextBlock.pl">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Foreground" Value="#5b6472" />
+    </Style>
+    <Style Selector="TextBlock.pn">
+      <Setter Property="FontSize" Value="11.5" />
+      <Setter Property="Foreground" Value="#7b8494" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
+    <Style Selector="Border.prn">
+      <Setter Property="Background" Value="#f7f9fc" />
+      <Setter Property="BorderBrush" Value="#dfe3e8" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="Padding" Value="11,9" />
+    </Style>
+
+    <!-- لینک‌های آبیِ ستون — «تنظیمِ ورق…»، «انتخابِ چاپگر…» -->
+    <Style Selector="Button.link">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="#1a4d8f" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="2,3" />
+      <Setter Property="HorizontalAlignment" Value="Right" />
+      <Setter Property="FontSize" Value="12.5" />
+    </Style>
+    <Style Selector="Button.link /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <Style Selector="Button.spin">
+      <Setter Property="Background" Value="#eef1f5" />
+      <Setter Property="Foreground" Value="#2d3748" />
+      <Setter Property="BorderBrush" Value="#dfe3e8" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="10,3" />
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+    <Style Selector="TextBox.spinbox">
+      <Setter Property="Background" Value="White" />
+      <Setter Property="Foreground" Value="#1f2430" />
+      <Setter Property="BorderBrush" Value="#cfd6de" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="6,3" />
+      <Setter Property="TextAlignment" Value="Center" />
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+
+    <!-- ══ کشوی اکسلی — نشانه، عنوانِ پررنگ و یک خطِ توضیح ══
+         کشوی معمولی فقط یک خطِ ساده نشان می‌دهد؛ این یکی همان کارتِ دوخطیِ
+         اکسل است، هم بسته و هم باز (‎ItemTemplate‎ی یکسان برای هر دو). -->
+    <Style Selector="ComboBox.card">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Background" Value="White" />
+      <Setter Property="Foreground" Value="#1f2430" />
+      <Setter Property="BorderBrush" Value="#dfe3e8" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="Padding" Value="10,7" />
+      <Setter Property="MinHeight" Value="52" />
+      <Setter Property="ItemTemplate">
+        <DataTemplate x:DataType="p:SetupOption">
+          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="9">
+            <TextBlock Grid.Column="0" Text="{Binding Icon}" FontSize="19"
+                       VerticalAlignment="Center" IsVisible="{Binding HasIcon}" />
+            <StackPanel Grid.Column="1" Spacing="1">
+              <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="13"
+                         Foreground="#1f2430" />
+              <TextBlock Text="{Binding Note}" FontSize="11" Foreground="#7b8494"
+                         TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+          </Grid>
+        </DataTemplate>
+      </Setter>
+    </Style>
+
+    <Style Selector="Button.page-btn, ToggleButton.page-btn">
       <Setter Property="Background" Value="White" />
       <Setter Property="Foreground" Value="#2b6cb0" />
-      <Setter Property="BorderBrush" Value="#2b6cb0" />
+      <Setter Property="BorderBrush" Value="#cfd6de" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="7" />
-      <Setter Property="Padding" Value="14,4" />
+      <Setter Property="Padding" Value="12,4" />
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+    <Style Selector="ToggleButton.page-btn:checked /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#e3edfb" />
     </Style>
   </Window.Styles>
 </Window>

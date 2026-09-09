@@ -53,6 +53,28 @@ public static class PrintService
         catch { return false; }
     }
 
+    /// <summary>
+    /// «انتخابِ چاپگر و تنظیماتش…» — پنجرهٔ چاپگرهای خودِ ویندوز.
+    ///
+    /// ⚠️ برنامه چاپگرها را خودش فهرست نمی‌کند: چاپ از راهِ خودِ ویندوز انجام
+    /// می‌شود (فایلِ PDF به چاپگرِ پیش‌فرض سپرده می‌شود)، پس انتخابِ چاپگر هم
+    /// باید همان‌جا باشد — یک فهرستِ دومِ ناهم‌گام فقط کاربر را گمراه می‌کرد.
+    /// </summary>
+    public static bool OpenPrinters()
+    {
+        try
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Process.Start(new ProcessStartInfo("ms-settings:printers") { UseShellExecute = true });
+                return true;
+            }
+            Process.Start(new ProcessStartInfo("system-config-printer") { UseShellExecute = true });
+            return true;
+        }
+        catch { return false; }
+    }
+
     /// <summary>نشان دادنِ فایل در پوشه‌اش.</summary>
     public static void Reveal(string path)
     {

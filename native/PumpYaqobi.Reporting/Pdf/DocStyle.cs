@@ -87,8 +87,23 @@ public static class DocStyle
                     .Element(c => Band(c, s.HeaderLeft, s.HeaderCenter, s.HeaderRight,
                                        s, title, dates, top: true));
 
+            // ── مقیاسِ چاپ ───────────────────────────────────────────────
+            // همان کادرِ «مقیاس»ِ صفحهٔ چاپ. تنها جایی است که مقیاس اعمال
+            // می‌شود، پس روی **همهٔ** گزارش‌ها یکسان کار می‌کند.
+            //
+            // ⚠️ «هم‌اندازهٔ یک ورق» با ‎ScaleToFit‎ی خودِ موتور است، نه یک
+            // ضریبِ حدسی: موتور خودش محتوا را اندازه می‌گیرد و تا جایی کوچک
+            // می‌کند که واقعاً جا شود — پس آنچه می‌بینید همان است که چاپ
+            // می‌شود.
+            IContainer Sized(IContainer c) => s.Scale switch
+            {
+                PrintScale.FitPage => c.ScaleToFit(),
+                PrintScale.Custom => c.Scale(Math.Clamp(s.ScalePercent, 10, 400) / 100f),
+                _ => c,
+            };
+
             // کادرِ نقطه‌چینِ دورِ ورق — همان چیزی که در چاپِ نسخهٔ وب دیده می‌شود
-            page.Content().Border(1).BorderColor(FootLine).Padding(10).Column(col =>
+            Sized(page.Content()).Border(1).BorderColor(FootLine).Padding(10).Column(col =>
             {
                 col.Item().Element(c => Header(c, title, subtitle, titleColor));
                 col.Item().PaddingTop(8).Element(body);

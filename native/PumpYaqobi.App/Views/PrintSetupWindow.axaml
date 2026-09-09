@@ -97,6 +97,16 @@
                      Classes="muted" TextWrapping="Wrap" />
         </StackPanel>
 
+        <!-- ── مقیاسِ دلخواه ──────────────────────────────────────────────
+             کادرِ «٪ از اندازهٔ عادی»ی ‎Page Setup‎ی اکسل. فقط وقتی به کار
+             می‌آید که در ستونِ چاپ «مقیاسِ دلخواه» انتخاب شده باشد. -->
+        <StackPanel Spacing="4">
+          <TextBlock Text="مقیاسِ دلخواه (٪ از اندازهٔ عادی)" Classes="label" />
+          <TextBox Text="{Binding ScalePercent}" />
+          <TextBlock Classes="muted" TextWrapping="Wrap"
+                     Text="بینِ ۱۰ تا ۴۰۰. تا وقتی در ستونِ چاپ «مقیاسِ دلخواه» را نزده‌اید، این عدد اثری ندارد." />
+        </StackPanel>
+
         <!-- ── بقیه ── -->
         <UniformGrid Rows="1">
           <StackPanel Spacing="3" Margin="0,0,8,0">

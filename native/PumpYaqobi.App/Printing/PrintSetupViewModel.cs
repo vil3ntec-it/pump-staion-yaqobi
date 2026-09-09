@@ -5,10 +5,19 @@ using PumpYaqobi.Reporting.Pdf;
 
 namespace PumpYaqobi.App.Printing;
 
-/// <summary>یک گزینهٔ کشو — عنوان و زیرنویسِ توضیحی، مثلِ کشوهای اکسل.</summary>
-public sealed record SetupOption(string Value, string Title, string Note)
+/// <summary>
+/// یک گزینهٔ کشو — نشانه، عنوان و زیرنویسِ توضیحی، مثلِ کشوهای اکسل.
+///
+/// کشوی معمولی فقط یک خطِ ساده نشان می‌دهد؛ کشوی اکسل هر گزینه را با یک
+/// نشانه، یک خطِ عنوان و یک خطِ توضیح می‌آورد — همان چیزی که صاحب ریپو با
+/// عکس خواست. <see cref="Icon"/> اختیاری است تا کشوهای سادهٔ «تنظیمِ ورق»
+/// دست‌نخورده بمانند.
+/// </summary>
+public sealed record SetupOption(string Value, string Title, string Note, string Icon = "")
 {
     public override string ToString() => Title;
+
+    public bool HasIcon => Icon.Length > 0;
 }
 
 /// <summary>
@@ -22,8 +31,19 @@ public sealed record SetupOption(string Value, string Title, string Note)
 /// </summary>
 public sealed partial class PrintSetupViewModel : ObservableObject
 {
+    /// <summary>
+    /// ⚠️ تنظیمِ ورودی نگه داشته می‌شود و خروجی از روی همین ساخته می‌شود
+    /// (‎_orig with { … }‎)، نه یک ‎new PageSetup‎ی خالی.
+    ///
+    /// وگرنه هر بار که کاربر این پنجره را باز و تایید می‌کرد، چیزهایی که این
+    /// پنجره اصلاً نشان نمی‌دهد — «تعدادِ نسخه»، «کدام ورق‌ها»، «مرتب/نامرتب» —
+    /// بی‌صدا به پیش‌فرض برمی‌گشتند.
+    /// </summary>
+    private readonly PageSetup _orig;
+
     public PrintSetupViewModel(PageSetup s)
     {
+        _orig = s;
         foreach (var k in PageSetup.PaperOrder)
             Papers.Add(new SetupOption(k, k == "Custom" ? "اندازهٔ دلخواه" : k, PaperNote(k)));
 
@@ -57,6 +77,7 @@ public sealed partial class PrintSetupViewModel : ObservableObject
         _firstPage = s.FirstPage.ToString();
         _dpi = s.Dpi.ToString();
         _skipFirst = s.SkipFirstHeaderFooter;
+        _scalePercent = s.ScalePercent.ToString();
     }
 
     private static string Num(decimal v) => Shamsi.Money(v);
@@ -101,6 +122,9 @@ public sealed partial class PrintSetupViewModel : ObservableObject
     [ObservableProperty] private string _dpi = "144";
     [ObservableProperty] private bool _skipFirst;
 
+    /// <summary>درصدِ «مقیاسِ دلخواه» — همان کادرِ ‎٪ از اندازهٔ عادی‎ی اکسل.</summary>
+    [ObservableProperty] private string _scalePercent = "100";
+
     public bool IsCustomPaper => Paper.Value == "Custom";
     public bool IsCustomMargin => Margin.Value == "custom";
 
@@ -125,7 +149,7 @@ public sealed partial class PrintSetupViewModel : ObservableObject
         "کدها: &[ورق] · &[کل] · &[شمسی] · &[قمری] · &[میلادی] · &[ساعت] · &[نام] · &[Dates]";
 
     /// <summary>خروجی — همان چیزی که به سند داده می‌شود.</summary>
-    public PageSetup Build() => new()
+    public PageSetup Build() => _orig with
     {
         Paper = Paper.Value,
         CustomWidth = Pos(CustomWidth, 210m),
@@ -144,6 +168,7 @@ public sealed partial class PrintSetupViewModel : ObservableObject
         FirstPage = (int)Math.Clamp(Shamsi.Num(FirstPage), 1m, 9999m),
         Dpi = (int)Math.Clamp(Shamsi.Num(Dpi), 72m, 400m),
         SkipFirstHeaderFooter = SkipFirst,
+        ScalePercent = (int)Math.Clamp(Shamsi.Num(ScalePercent), 10m, 400m),
     };
 
     /// <summary>عددِ مثبت؛ خالی یا صفر به پیش‌فرض برمی‌گردد — ورقِ صفرعرض نداریم.</summary>
