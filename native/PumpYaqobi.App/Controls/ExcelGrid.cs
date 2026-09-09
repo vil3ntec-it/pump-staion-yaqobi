@@ -54,7 +54,7 @@ public class ExcelGrid : DataGrid
         ClipboardCopyMode = DataGridClipboardCopyMode.ExcludeHeader;
 
         // جای اضافه بینِ ستون‌ها پخش می‌شود، نه در یک ستونِ خالیِ ته جدول
-        LayoutUpdated += (_, _) => SpreadColumns();
+        LayoutUpdated += (_, _) => { SpreadColumns(); Settle(); };
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -104,29 +104,94 @@ public class ExcelGrid : DataGrid
     /// </summary>
     public const int GrowRowLimit = 600;
 
+    /// <summary>چند پیکسلِ اصلاحیِ بلندی — پایین‌ترِ همین فایل، ‎Settle‎.</summary>
+    private double _pad;
+
+    /// <summary>شمارِ ردیف‌هایی که ‎_pad‎ برایشان حساب شده.</summary>
+    private int _padRows = -1;
+
     /// <summary>
-    /// جدول هم‌قدِ ردیف‌هایش اندازه گرفته می‌شود؛ تنگنا فقط وقتی می‌آید که
-    /// شمارِ ردیف‌ها از <see cref="GrowRowLimit"/> بگذرد.
+    /// جدول هم‌قدِ ردیف‌هایش می‌شود؛ تنگنا فقط وقتی می‌آید که شمارِ ردیف‌ها از
+    /// <see cref="GrowRowLimit"/> بگذرد.
     ///
-    /// ⚠️ چرا این‌جا و نه در ‎LayoutUpdated‎: تنگنا باید **پیش از** اندازه‌گیری
-    /// اعمال شود. اگر بعد از چیدمان ‎MaxHeight‎ را عوض کنیم، همان یک پاسِ
-    /// اولِ اندازه‌گیری با بلندیِ بی‌کران انجام شده و جدول همان لحظه یک
-    /// میلیون ردیف ساخته است — یعنی درست همان قفلی که می‌خواستیم نشود.
+    /// ⚠️ چرا بلندی این‌جا **حساب** می‌شود و به بی‌کران سپرده نمی‌شود:
+    /// ‎DataGrid‎ی آوالونیا با بلندیِ بی‌کران خودش را هم‌قدِ همهٔ ردیف‌ها
+    /// نمی‌کند — به تخمینِ حدود شانزده ردیف بسنده می‌کند و بقیه را داخلِ
+    /// خودش می‌لغزاند. همان «کادرِ محدودی» که صاحب ریپو دید. سنجشِ اسکرول
+    /// هم همین را نشان داد: جدولِ گاوصندوق و مصارف و صرافی روی ۷۲۴ پیکسل
+    /// می‌ایستادند و تا ۷۵۵ پیکسل لغزشِ درونی داشتند.
     ///
-    /// ⚠️ و اگر بلندیِ قابِ صفحه هنوز معلوم نباشد، به یک صفحهٔ متعارف بسنده
-    /// می‌کنیم؛ «نمی‌دانم» نباید به «بی‌کران» ترجمه شود.
+    /// پس بلندی از خودِ داده می‌آید: سربرگ + شمارِ ردیف × بلندیِ ردیف + لبه
+    /// (+ نوارِ لغزشِ افقی، اگر دیده شود).
+    ///
+    /// ⚠️ و تنگنا باید **پیش از** اندازه‌گیری اعمال شود، نه پس از چیدمان:
+    /// وگرنه همان پاسِ اول با بلندیِ بی‌کران انجام شده است.
     /// </summary>
     protected override Size MeasureOverride(Size availableSize)
     {
         var rows = RowCount();
+
         if (rows < 0 || rows > GrowRowLimit)
         {
             var screen = Page?.Viewport.Height ?? 0;
-            if (screen <= 0) screen = 900;
+            if (screen <= 0) screen = 900;                 // «نمی‌دانم» ≠ «بی‌کران»
             if (availableSize.Height > screen)
                 availableSize = availableSize.WithHeight(screen);
+            return base.MeasureOverride(availableSize);
         }
-        return base.MeasureOverride(availableSize);
+
+        if (rows != _padRows) { _pad = 0; _padRows = rows; }
+
+        var want = WantedHeight(rows);
+        if (availableSize.Height > want) availableSize = availableSize.WithHeight(want);
+        var size = base.MeasureOverride(availableSize);
+        return size.WithHeight(want);
+    }
+
+    /// <summary>بلندیِ واقعیِ جدول برای این شمارِ ردیف.</summary>
+    private double WantedHeight(int rows)
+    {
+        var rowH = double.IsNaN(RowHeight) || RowHeight <= 0 ? 44d : RowHeight;
+
+        var head = 0d;
+        if (HeadersVisibility != DataGridHeadersVisibility.None)
+        {
+            foreach (var h in this.GetVisualDescendants().OfType<DataGridColumnHeader>())
+                head = Math.Max(head, h.Bounds.Height);
+            if (head <= 0) head = rowH;                    // هنوز چیده نشده
+        }
+
+        var bar = 0d;
+        var hbar = this.GetVisualDescendants().OfType<ScrollBar>()
+                       .FirstOrDefault(b => b.Orientation == Orientation.Horizontal);
+        if (hbar is { IsVisible: true }) bar = Math.Max(hbar.Bounds.Height, 12d);
+
+        return head + rows * rowH + BorderThickness.Top + BorderThickness.Bottom + bar + _pad;
+    }
+
+    /// <summary>
+    /// ══ ته‌نشین شدن ═══════════════════════════════════════════════════════
+    /// اگر با همهٔ حساب‌وکتاب باز هم چند پیکسل کم آمده باشد و نوارِ لغزشِ
+    /// عمودیِ جدول چیزی برای لغزاندن داشته باشد، همان‌قدر بلندتر می‌شویم.
+    ///
+    /// ⚠️ قاعدهٔ صاحب ریپو صریح است: «اسکرول شدنِ ناخواسته فقط داخلِ جدول»
+    /// باید برود. پس به‌جای اعتماد به یک فرمول، خودِ نتیجه سنجیده می‌شود.
+    /// سقفِ اصلاح هست تا اگر روزی چیزِ دیگری نوار را زنده نگه داشت، جدول
+    /// بی‌پایان بلند نشود.
+    /// </summary>
+    private void Settle()
+    {
+        var rows = RowCount();
+        if (rows < 0 || rows > GrowRowLimit) return;
+        if (_pad > 400) return;
+
+        var vbar = this.GetVisualDescendants().OfType<ScrollBar>()
+                       .FirstOrDefault(b => b.Orientation == Orientation.Vertical);
+        if (vbar is null || !vbar.IsVisible || vbar.Maximum <= 1) return;
+
+        _pad += vbar.Maximum + 2;
+        _padRows = rows;
+        InvalidateMeasure();
     }
 
     /// <summary>شمارِ ردیف‌ها — نامعلوم یعنی «محتاط باش و تنگنا بگذار».</summary>
