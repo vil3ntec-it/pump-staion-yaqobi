@@ -204,6 +204,12 @@ public sealed class LegacyBackupImporter
                 RasidFuel = Dec(r, "rasidFuel"),
                 Albaqi = Dec(r, "albaqi"),
                 ByMoney = money || Bool(r, "byMoney"),
+                // ⚠️ «از کجا آمده» باید بیاید: ردیفی که سایت از ورق ساخته بود
+                // کلیدِ منبعش را دارد، و همگام‌سازیِ ورق در نیتیو با همان کلید
+                // پیدایش می‌کند. بی این دو، همان ردیف بارِ دوم ساخته می‌شد و
+                // قرضِ طرف دو برابر دیده می‌شد.
+                Src = Str(r, "src"),
+                SrcKey = Str(r, "srcKey"),
             });
         }
     }
@@ -248,6 +254,9 @@ public sealed class LegacyBackupImporter
         {
             DateShamsi = date, DateKey = DateKeyOf(date), MonthKey = MonthKeyOf(date),
             Title = Str(e, "title"), Amount = Dec(e, "amount"), Note = Str(e, "note"),
+            // مصرفی که از ورق آمده کلیدِ منبع دارد — همان کلید در نیتیو هم
+            // شناخته می‌شود تا مصرف دوباره ساخته نشود.
+            SrcKey = Str(e, "srcKey"),
         };
     }
 

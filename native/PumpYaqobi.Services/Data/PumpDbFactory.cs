@@ -123,6 +123,7 @@ public sealed class PumpDbFactory
             ("WaraqPumps", "Worker", "TEXT"),
             ("WaraqPumps", "DateShamsi", "TEXT"),
             ("SafeEntries", "SrcKey", "TEXT"),
+            ("Expenses", "SrcKey", "TEXT"),
             ("TankDips", "BookAdjust", "TEXT NOT NULL DEFAULT '0'"),
             ("TankerUnloads", "Manifest", "TEXT NOT NULL DEFAULT '0'"),
             ("TankerUnloads", "Actual", "TEXT NOT NULL DEFAULT '0'"),

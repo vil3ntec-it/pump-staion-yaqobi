@@ -88,6 +88,16 @@ public sealed partial class ExpenseSectionViewModel
     partial void OnTodayTotalChanged(decimal v) => OnPropertyChanged(nameof(TodayText));
     partial void OnGrandTotalChanged(decimal v) => OnPropertyChanged(nameof(GrandText));
 
+    /// <summary>
+    /// واردِ مصارف که می‌شویم، جدول از دیتابیس تازه می‌شود — ردیف‌های «مصرف»ِ
+    /// ورق ممکن است همین حالا اضافه شده باشند (سایت هم با هر ‎showSection‎
+    /// دوباره ‎renderExpenses‎ را صدا می‌زد).
+    /// </summary>
+    public override async Task OnActivatedAsync()
+    {
+        if (IsLoaded) await ReloadRowsAsync();
+    }
+
     protected override ExpenseRowViewModel Wrap(Expense e) => new(e, this);
     protected override long EntityIdOf(ExpenseRowViewModel r) => r.Entity.Id;
     protected override Expense EntityOf(ExpenseRowViewModel r) => r.Entity;

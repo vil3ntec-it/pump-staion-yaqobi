@@ -47,6 +47,7 @@ public sealed class AppHost
         Companies = new CompanyDataService(Db, Permissions, Trash);
         WaraqData = new WaraqDataService(Db, Permissions, Trash);
         ShiftWaraqSync = new ShiftWaraqSyncService(Db, Permissions, Waraq, Settings);
+        WaraqPosting = new WaraqPostingService(Db, Permissions, Waraq);
         ParchaData = new ParchaDataService(Db, Permissions, Trash, Parcha, ShiftWaraqSync);
         StorageData = new StorageDataService(Db, Permissions, Trash, Storage, Settings, Companies);
         Amanat = new AmanatDataService(Db, Permissions, Trash, Settings);
@@ -102,6 +103,9 @@ public sealed class AppHost
     public ParchaDataService ParchaData { get; }
     public WaraqService Waraq { get; }
     public WaraqDataService WaraqData { get; }
+
+    /// <summary>ردیف‌های ورق ⇐ حسابِ قرض‌دار و بخشِ مصارف.</summary>
+    public WaraqPostingService WaraqPosting { get; }
 
     /// <summary>پارچه ← ورق ← گاوصندوق — همان زنجیرهٔ خودکارِ نسخهٔ وب.</summary>
     public ShiftWaraqSyncService ShiftWaraqSync { get; }
