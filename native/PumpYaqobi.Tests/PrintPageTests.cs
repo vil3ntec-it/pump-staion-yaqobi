@@ -22,6 +22,15 @@ public class PrintPageTests
     private static string Read(params string[] parts) =>
         File.ReadAllText(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
 
+    /// <summary>
+    /// کامنت‌های سی‌شارپ را برمی‌دارد — برای آزمون‌های «دیگر نباید باشد».
+    ///
+    /// بی این، آزمون توضیحِ خودمان را می‌خواند و قرمز می‌شود: کامنتی که
+    /// می‌نویسد «فلان چیز نباید باشد»، خودش همان رشته را در فایل می‌گذارد.
+    /// </summary>
+    private static string NoComments(string code) =>
+        System.Text.RegularExpressions.Regex.Replace(code, @"//[^\n]*", "");
+
     // ══ منطق ═════════════════════════════════════════════════════════════════
 
     /// <summary>«چاپِ همهٔ گزارش» یعنی ۱ تا آخر.</summary>
@@ -197,10 +206,14 @@ public class PrintPageTests
         Assert.Contains("class SettingCard : ComboBox", c);
         Assert.Contains("protected override void OnPointerWheelChanged(PointerWheelEventArgs e)", c);
 
-        // نه ‎base‎ صدا زده می‌شود و نه رویداد مصرف — هر دو لازم است
-        var body = c[c.IndexOf("protected override void OnPointerWheelChanged", StringComparison.Ordinal)..];
+        // نه ‎base‎ صدا زده می‌شود و نه رویداد مصرف — هر دو لازم است.
+        //
+        // ⚠️ کامنت‌ها برداشته می‌شوند، وگرنه آزمون توضیحِ خودِ آن فایل را
+        // می‌خواند: همان‌جا نوشته «نه base، نه e.Handled» و آزمون قرمز می‌شد.
+        var body = NoComments(c[c.IndexOf("protected override void OnPointerWheelChanged",
+                                          StringComparison.Ordinal)..]);
         Assert.DoesNotContain("base.OnPointerWheelChanged", body);
-        Assert.DoesNotContain("e.Handled = true", body);
+        Assert.DoesNotContain("e.Handled", body);
     }
 
     /// <summary>
