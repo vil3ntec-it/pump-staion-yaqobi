@@ -14,6 +14,7 @@ namespace PumpYaqobi.Tests;
 /// در نسخهٔ وب عمداً نوشته شده بود؛ اگر روزی کسی آن را به «هرچه هست حذف کن»
 /// عوض کند، کاربر با یک ‎Shift+9‎ اشتباهی کلِ جدولش را از دست می‌دهد.
 /// </summary>
+[Collection(AppHostCollection.Name)]
 public class ShortcutTests
 {
     /// <summary>جدولِ ساختگی — همان قراردادی که میانبر می‌شناسد.</summary>

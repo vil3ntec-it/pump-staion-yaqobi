@@ -74,6 +74,15 @@ public class Expense : EntityBase, ILedgerRow
     /// </summary>
     public long? SalaryStaffId { get; set; }
     public string? SalaryMonth { get; set; }
+
+    /// <summary>
+    /// اگر این مصرف را یک ردیفِ «ورق روزانه» ساخته باشد، کلیدِ همان ردیف —
+    /// همان ‎srcKey‎ی نسخهٔ وب (‎removeWaraqExpense(srcKey)‎).
+    ///
+    /// ⚠️ بی این کلید، ردیفی که در ورق از «مصرف» به «قرض» عوض می‌شود مصرفش
+    /// در بخشِ مصارف جا می‌مانَد و پول دو بار شمرده می‌شود.
+    /// </summary>
+    public string? SrcKey { get; set; }
 }
 
 /// <summary>یک ردیفِ چکنه (DB.chakanaRows) — فروشِ خرد.</summary>

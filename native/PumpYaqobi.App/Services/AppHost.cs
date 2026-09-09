@@ -47,6 +47,7 @@ public sealed class AppHost
         Companies = new CompanyDataService(Db, Permissions, Trash);
         WaraqData = new WaraqDataService(Db, Permissions, Trash);
         ShiftWaraqSync = new ShiftWaraqSyncService(Db, Permissions, Waraq, Settings);
+        WaraqPosting = new WaraqPostingService(Db, Permissions, Waraq);
         ParchaData = new ParchaDataService(Db, Permissions, Trash, Parcha, ShiftWaraqSync);
         StorageData = new StorageDataService(Db, Permissions, Trash, Storage, Settings, Companies);
         Amanat = new AmanatDataService(Db, Permissions, Trash, Settings);
@@ -102,6 +103,9 @@ public sealed class AppHost
     public ParchaDataService ParchaData { get; }
     public WaraqService Waraq { get; }
     public WaraqDataService WaraqData { get; }
+
+    /// <summary>ردیف‌های ورق ⇐ حسابِ قرض‌دار و بخشِ مصارف.</summary>
+    public WaraqPostingService WaraqPosting { get; }
 
     /// <summary>پارچه ← ورق ← گاوصندوق — همان زنجیرهٔ خودکارِ نسخهٔ وب.</summary>
     public ShiftWaraqSyncService ShiftWaraqSync { get; }
@@ -162,6 +166,15 @@ public sealed class AppHost
     /// اگر از پیش ساخته شده باشد همان می‌ماند — تا ابزارِ عکس‌گیری بتواند
     /// پیش از بالا آمدنِ برنامه دیتابیسِ موقتِ خودش را بنشاند و هرگز به
     /// دادهٔ واقعیِ کاربر دست نزند.
+    ///
+    /// <para>⚠️ قفل، برای ابزارها و آزمون‌هایی که ممکن است هم‌زمان صدایش
+    /// بزنند — بی آن، دو نخ هر دو ‎Current‎ را خالی می‌بینند و دو میزبان
+    /// ساخته می‌شود.</para>
     /// </summary>
-    public static AppHost Start(string? dbPath = null) => Current ??= new AppHost(dbPath);
+    public static AppHost Start(string? dbPath = null)
+    {
+        lock (StartLock) return Current ??= new AppHost(dbPath);
+    }
+
+    private static readonly object StartLock = new();
 }

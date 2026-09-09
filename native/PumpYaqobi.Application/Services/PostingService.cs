@@ -71,6 +71,28 @@ public sealed class PostingService
             ? FuelType.Diesel : FuelType.Petrol;
     }
 
+    /// <summary>متن اصلاً نامِ سوختی در خود دارد؟ (پطرول یا دیزل، هر کدام)</summary>
+    public static bool MentionsFuel(string? text)
+    {
+        var n = NormFa(text);
+        foreach (var w in new[] { "دیزل", "گازوییل", "گازوئیل", "پطرول", "پترول", "بنزین" })
+            if (n.Contains(w)) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// نوعِ سوختِ یک ردیف: اگر خودِ متن گفته باشد همان، وگرنه چیزی که کاربر
+    /// در ستونِ «نوع تیل» انتخاب کرده.
+    ///
+    /// ⚠️ نسخهٔ وب فقط متن را می‌خواند (‎_detectFuelType(t.name)‎) و ستونِ
+    /// «نوع تیل»ِ همان ردیف را نادیده می‌گرفت؛ یعنی اگر کاربر «دیزل» را از
+    /// کشو برمی‌داشت ولی در نام نمی‌نوشت، ردیف در حسابِ قرض‌دار «پطرول»
+    /// می‌نشست. آن یک باگ است و کپی نشد — وقتی متن چیزی نگفته، انتخابِ خودِ
+    /// کاربر معتبر است.
+    /// </summary>
+    public static FuelType FuelTypeFromText(string? text, FuelType fallback) =>
+        MentionsFuel(text) ? DetectFuelType(text) : fallback;
+
     // ── پیدا کردنِ حساب ───────────────────────────────────────────────────────
 
     /// <summary>

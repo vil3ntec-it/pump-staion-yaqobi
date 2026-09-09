@@ -141,6 +141,21 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
 
     protected override async Task LoadAsync() => await RefreshAsync();
 
+    /// <summary>
+    /// هر بار که کاربر واردِ بخش می‌شود، فهرست از دیتابیس تازه می‌شود.
+    ///
+    /// ⚠️ بی این، ردیفی که همین حالا از ورق به حسابِ کسی رفته تا بازِ بعدیِ
+    /// خودِ برنامه دیده نمی‌شد و کاربر فکر می‌کرد اصلاً ثبت نشده. سایت هم با
+    /// هر ‎showSection‎ دوباره ‎renderPersons‎ را صدا می‌زد.
+    ///
+    /// وقتی صفحهٔ یک حساب باز است دست نمی‌خورد، تا چیزی که کاربر همان لحظه
+    /// تایپ کرده گم نشود.
+    /// </summary>
+    public override async Task OnActivatedAsync()
+    {
+        if (IsLoaded && Person is null) await RefreshAsync();
+    }
+
     public async Task RefreshAsync()
     {
         var people = await _host.Debtors.ListAsync(_noInvoice);

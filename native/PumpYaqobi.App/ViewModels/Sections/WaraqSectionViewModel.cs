@@ -9,6 +9,7 @@ using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
 using PumpYaqobi.Reporting.Pdf;
+using PumpYaqobi.Services.Data;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -310,6 +311,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         Recalc();
     }
 
+
     private void Build()
     {
         var sd = Shift;
@@ -438,8 +440,43 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
                                    (IsNight ? "ورق شب " : "ورق روز ") + (Entity.DateShamsi ?? ""));
     }
 
-    public async Task SavePumpAsync(WaraqPump p) { await _host.WaraqData.SavePumpAsync(p); Recalc(); }
-    public async Task SaveTxnAsync(WaraqTransaction t) { await _host.WaraqData.SaveTxnAsync(t); Recalc(); }
+    public async Task SavePumpAsync(WaraqPump p)
+    {
+        await _host.WaraqData.SavePumpAsync(p);
+        Recalc();
+        // فیِ پایه که عوض شود، مبلغِ خودکارِ ردیف‌ها هم عوض می‌شود — پس حساب‌ها
+        // باید همان لحظه تازه شوند، نه بعداً.
+        await PostAsync();
+    }
+
+    public async Task SaveTxnAsync(WaraqTransaction t)
+    {
+        await _host.WaraqData.SaveTxnAsync(t);
+        Recalc();
+        await PostAsync();
+    }
+
+    /// <summary>
+    /// ══ ردیف‌های ورق ⇐ حسابِ قرض‌دار / مصارف ═══════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «اون حسابِ طرف رو که توی ورق زدم… چرا اتومات نمی‌ره
+    /// تو حساب‌اش؟» سایت این را در ‎syncWaraqTxnsToPersons‎ می‌کرد — هم موقعِ
+    /// «ذخیره ورق» و هم همان لحظه‌ای که «واحد/نوع/نوع تیل» عوض می‌شد.
+    ///
+    /// این‌جا هر تغییرِ ردیف همین کار را می‌کند، پس نامی که نوشته می‌شود بی
+    /// هیچ دکمه‌ای به حسابِ صاحبش می‌رسد.
+    ///
+    /// ⚠️ خطا هرگز به بیرون درز نمی‌کند: ورق باید ذخیره‌شدنی بماند حتی اگر
+    /// همگام‌سازی به هر دلیلی نگیرد.
+    /// </summary>
+    private async Task PostAsync()
+    {
+        try { LastPost = await _host.WaraqPosting.SyncAsync(Entity.Id); }
+        catch { /* ورق ذخیره شده؛ همگام‌سازی دفعهٔ بعد دوباره تلاش می‌کند */ }
+    }
+
+    /// <summary>آخرین گزارشِ همگام‌سازی — برای آزمون و برای نوارِ وضعیت.</summary>
+    public WaraqPostReport LastPost { get; private set; }
 
     [RelayCommand]
     private async Task AddPumpAsync()
@@ -497,6 +534,8 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         Txns.Remove(row);
         SplitTxns();
         Recalc();
+        // ردیف که رفت، ثبتش در حسابِ قرض‌دار یا مصارف هم باید برود
+        await PostAsync();
     }
 
     public int RowCount => Txns.Count;
@@ -521,6 +560,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
     {
         foreach (var p in Pumps.ToList()) await p.FlushAsync();
         foreach (var t in Txns.ToList()) await t.FlushAsync();
+        await PostAsync();
     }
 }
 
