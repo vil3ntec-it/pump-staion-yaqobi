@@ -35,7 +35,7 @@ internal static class PerfAudit
     private const int BigRows = 100_000;
 
     /// <summary>ردیف برای هر یک از بقیهٔ حساب‌ها.</summary>
-    private const int SmallRows = 20;
+    private const int SmallRows = 5;
 
     /// <summary>سقفِ «آشکارا خراب» — بیشتر از این یعنی جایی می‌ایستد.</summary>
     private const long Broken = 3_000;
@@ -303,11 +303,22 @@ internal static class PerfAudit
         for (var i = 0; i < 8; i++) { Dispatcher.UIThread.RunJobs(); w.UpdateLayout(); }
     }
 
-    private static void Settle(Window w) { for (var i = 0; i < 40; i++) Pump(w); }
+    private static void Settle(Window w)
+    {
+        var sw = Stopwatch.StartNew();
+        for (var i = 0; i < 40 && sw.ElapsedMilliseconds < 5_000; i++) Pump(w);
+    }
 
+    /// <summary>
+    /// ⚠️ زمان‌دار، نه شمارشی: هر دورِ ‎Pump‎ یک چیدمانِ کامل است و روی یک
+    /// پنجرهٔ سنگین می‌تواند خودش چند صدم ثانیه طول بکشد. با شمارش، انتظارِ
+    /// «۴۰۰۰ دور» به ده‌ها دقیقه می‌رسید و سنجش هرگز تمام نمی‌شد.
+    /// </summary>
     private static void Wait(Window w, Task t)
     {
-        for (var i = 0; i < 4000 && !t.IsCompleted; i++) Pump(w);
+        var sw = Stopwatch.StartNew();
+        while (!t.IsCompleted && sw.ElapsedMilliseconds < 20_000) Pump(w);
         Pump(w);
+        if (!t.IsCompleted) Console.WriteLine("        ⚠️ بیست ثانیه گذشت و هنوز تمام نشده");
     }
 }
