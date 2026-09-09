@@ -47,8 +47,10 @@
                        Margin="0,0,0,4" />
 
             <!-- ── دکمهٔ چاپ + تعدادِ نسخه ── -->
-            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-              <Button Grid.Column="0" Classes="big-print" Click="OnPrint">
+            <!-- ⚠️ فاصله با ‎Margin‎ است نه ‎ColumnSpacing‎: آن یکی در این نسخهٔ
+                 آوالونیا روی ‎Grid‎ وجود ندارد و ساخت را می‌شکند. -->
+            <Grid ColumnDefinitions="Auto,*">
+              <Button Grid.Column="0" Classes="big-print" Click="OnPrint" Margin="0,0,12,0">
                 <StackPanel Spacing="2" HorizontalAlignment="Center">
                   <TextBlock Text="🖨️" FontSize="26" HorizontalAlignment="Center" />
                   <TextBlock Text="چاپ" FontSize="13" FontWeight="Bold"
@@ -293,8 +295,8 @@
       <Setter Property="MinHeight" Value="52" />
       <Setter Property="ItemTemplate">
         <DataTemplate x:DataType="p:SetupOption">
-          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="9">
-            <TextBlock Grid.Column="0" Text="{Binding Icon}" FontSize="19"
+          <Grid ColumnDefinitions="Auto,*">
+            <TextBlock Grid.Column="0" Text="{Binding Icon}" FontSize="19" Margin="0,0,9,0"
                        VerticalAlignment="Center" IsVisible="{Binding HasIcon}" />
             <StackPanel Grid.Column="1" Spacing="1">
               <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="13"
