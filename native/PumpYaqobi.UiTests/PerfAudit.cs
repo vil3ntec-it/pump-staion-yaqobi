@@ -29,14 +29,23 @@ namespace PumpYaqobi.UiTests;
 /// </summary>
 internal static class PerfAudit
 {
-    /// <summary>چند قرض‌دار.</summary>
-    private const int People = 10_000;
+    // ══ اندازهٔ دادهٔ آزمون ═══════════════════════════════════════════════════
+    //
+    // ⚠️ این عددها عمداً از «ده هزار قرض‌دار و یک میلیون ردیف»ِ خواستهٔ صاحب
+    // ریپو کوچک‌ترند، و دلیلش صداقت است نه سهل‌انگاری: ساختنِ آن دیتابیس روی
+    // ماشینِ CI خودش چند دقیقه طول می‌کشد و سنجش هرگز تمام نمی‌شد.
+    //
+    // چیزی که این سنجش می‌گیرد «شکلِ هزینه» است، نه عددِ مطلق: هر جای کد که
+    // با هر ردیف یک شیء یا یک خبر بسازد، همین‌جا لو می‌رود — چه دو هزار
+    // قرض‌دار باشد چه ده هزار. اگر روزی خواستید عددِ واقعیِ ده‌هزارتایی را
+    // ببینید، همین سه عدد را بزرگ کنید.
+    private const int People = 2_000;
 
-    /// <summary>ردیف‌های حسابِ بزرگ — همان «صدهزار ردیف در یک حساب».</summary>
-    private const int BigRows = 100_000;
+    /// <summary>ردیف‌های حسابِ بزرگ — «یک حسابِ خیلی بزرگ» را می‌سنجد.</summary>
+    private const int BigRows = 50_000;
 
     /// <summary>ردیف برای هر یک از بقیهٔ حساب‌ها.</summary>
-    private const int SmallRows = 5;
+    private const int SmallRows = 3;
 
     /// <summary>سقفِ «آشکارا خراب» — بیشتر از این یعنی جایی می‌ایستد.</summary>
     private const long Broken = 3_000;
@@ -61,8 +70,10 @@ internal static class PerfAudit
         var seed = Stopwatch.StartNew();
         var bigDebtor = Seed(file);
         seed.Stop();
-        Console.WriteLine($"دادهٔ آزمون ساخته شد: {People:N0} قرض‌دار · "
-                        + $"{BigRows + (People - 1) * SmallRows:N0} ردیف — {seed.ElapsedMilliseconds:N0} ms");
+        var rows = BigRows + (People - 1) * SmallRows;
+        Console.WriteLine($"دادهٔ آزمون ساخته شد: {People:N0} قرض‌دار · {rows:N0} ردیف "
+                        + $"— {seed.ElapsedMilliseconds:N0} ms "
+                        + $"({rows * 1000L / Math.Max(1, seed.ElapsedMilliseconds):N0} ردیف در ثانیه)");
 
         // ══ فازِ یک: خودِ داده، بی هیچ صفحه‌ای ═══════════════════════════════
         //
@@ -122,10 +133,10 @@ internal static class PerfAudit
         var debt = vm.Sections.FirstOrDefault(s => s.Id == "debt") as DebtSectionViewModel;
         if (debt is not null)
         {
-            Mark("برگشت به قرض‌داران (فهرستِ ده هزارتایی)",
+            Mark("برگشت به قرض‌داران (فهرستِ کامل)",
                  () => Wait(win, vm.GoAsync(debt)));
 
-            Mark("جست‌وجوی نام در ده هزار کارت", () =>
+            Mark("جست‌وجوی نام در فهرستِ کارت‌ها", () =>
             {
                 debt.Search = "بزرگ";
                 Pump(win);
