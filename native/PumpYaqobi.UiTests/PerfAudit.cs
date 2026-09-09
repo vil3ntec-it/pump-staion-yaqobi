@@ -1,5 +1,6 @@
 using System.Data.Common;
 using System.Diagnostics;
+using Microsoft.EntityFrameworkCore;   // GetDbConnection
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
