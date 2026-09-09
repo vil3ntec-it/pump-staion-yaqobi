@@ -159,12 +159,13 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
     public async Task RefreshAsync()
     {
         var people = await _host.Debtors.ListAsync(_noInvoice);
-        var accounts = await _host.Debtors.AccountsByDebtorAsync(_noInvoice);
-        // خوددرمانیِ ردیف‌ها پیش از حسابِ کارت — همان کاری که نسخهٔ وب هنگامِ
-        // کشیدنِ جدول می‌کرد. بدونِ آن، «الباقی»ِ ردیف‌های کهنه صفر می‌ماند و
-        // عددِ کارت با عددِ داخلِ حساب فرق می‌کند.
-        foreach (var list in accounts.Values)
-            foreach (var a in list) _host.Debt.NormalizeAccount(a);
+
+        // ⚠️ ردیف‌ها خوانده نمی‌شوند. کارت فقط چند جمع می‌خواهد و آن جمع‌ها را
+        // خودِ دیتابیس می‌زند (‎CardAccountsAsync‎). پیش از این کلِ ردیف‌های همهٔ
+        // حساب‌ها بار می‌شد — با ده هزار قرض‌دار و یک میلیون ردیف، همان‌جا
+        // برنامه می‌ایستاد. «خوددرمانیِ ردیف» هم داخلِ همان کوئری آمده، پس
+        // عددِ کارت همان عددِ داخلِ حساب می‌مانَد.
+        var accounts = await _host.Debtors.CardAccountsAsync(_noInvoice);
 
         _all = people.Select(d => new DebtorCardViewModel(
             d, accounts.TryGetValue(d.Id, out var a) ? a : new List<DebtAccount>(), _host.Debt)).ToList();

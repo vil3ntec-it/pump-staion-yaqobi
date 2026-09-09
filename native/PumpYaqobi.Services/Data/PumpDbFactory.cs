@@ -40,6 +40,35 @@ public sealed class PumpDbFactory
         db.Database.ExecuteSqlRaw("PRAGMA foreign_keys=ON;");
         PatchTables(db);
         PatchColumns(db);
+        PatchIndexes(db);
+    }
+
+    /// <summary>
+    /// ══ ایندکس‌های تازه روی دیتابیسِ قدیمی ═══════════════════════════════════
+    ///
+    /// ‎PatchTables‎ عمداً هر دستوری را که جدولش از پیش هست رد می‌کند — و
+    /// ‎CREATE INDEX‎ هم یکی از همان‌هاست. نتیجه‌اش این بود که هر ایندکسی که
+    /// بعد از انتشارِ اول به مدل اضافه شده، روی دیتابیسِ کاربر **ساخته
+    /// نمی‌شد**. برنامه کار می‌کرد ولی هر جست‌وجو کلِ جدول را می‌خواند؛ با
+    /// صدهزار ردیف همان می‌شود مکثی که کاربر حس می‌کند.
+    ///
+    /// این‌جا هر ‎CREATE INDEX‎ی که در نقشهٔ EF هست اجرا می‌شود. اگر ایندکس از
+    /// پیش باشد، SQLite خطا می‌دهد و همان‌جا بی‌صدا رد می‌شود — هیچ داده‌ای
+    /// لمس نمی‌شود.
+    /// </summary>
+    private static void PatchIndexes(PumpDbContext db)
+    {
+        foreach (var raw in db.Database.GenerateCreateScript()
+                              .Split(';', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var stmt = raw.Trim();
+            if (!stmt.StartsWith("CREATE", StringComparison.OrdinalIgnoreCase)) continue;
+            if (stmt.IndexOf("INDEX", StringComparison.OrdinalIgnoreCase) < 0) continue;
+            if (stmt.IndexOf("TABLE", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+
+            try { db.Database.ExecuteSqlRaw(stmt + ";"); }
+            catch { /* از پیش هست */ }
+        }
     }
 
     /// <summary>

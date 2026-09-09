@@ -30,3 +30,11 @@ jobs:
       - name: سنجشِ فهرست‌های کارتی
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- cardperf
+
+      # ══ کند نشدن با دادهٔ واقعاً بزرگ ═══════════════════════════════════════
+      # خواستهٔ صاحب ریپو: «حتی با ده هزار قرض‌دار و صدهزار ردیف در یک حساب
+      # نباید کند شود.» این‌جا همان دیتابیس ساخته می‌شود و زمانِ باز شدنِ
+      # بخش‌ها و حساب‌ها گرفته می‌شود.
+      - name: کند نشدن با دادهٔ بزرگ
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- perf

@@ -40,6 +40,11 @@ internal static class Program
         // ══ حالتِ «سنجشِ پارچه‌ها و ورق‌ها» ═══════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- parcha
         if (outDir.Equals("parcha", StringComparison.OrdinalIgnoreCase)) return ParchaWaraqAudit.Run();
+        // ══ حالتِ «کند نشدن با دادهٔ بزرگ» ═════════════════════════════════
+        //     dotnet run --project PumpYaqobi.UiTests -- perf
+        // ده هزار قرض‌دار و سیصد هزار ردیف (صدهزارتا در یک حساب)، بعد
+        // زمان‌گیریِ کارهای روزمره. چرایی‌اش در ‎PerfAudit‎ نوشته شده.
+        if (outDir.Equals("perf", StringComparison.OrdinalIgnoreCase)) return PerfAudit.Run();
         if (outDir.Equals("gridperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Run();
         if (outDir.Equals("cardperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Cards();
 
