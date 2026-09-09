@@ -260,12 +260,28 @@ public sealed class DebtCalculationService
             var effD = 1m - (PercentOf(a, FuelType.Diesel) / 100m);
             Check(a.RasidFuelPetrol * effP, t.Petrol.Liters, "petrol");
             Check(a.RasidFuelDiesel * effD, t.Diesel.Liters, "diesel");
-            // ⚠️ یک‌بار، نه دو بار. تا دیروز رسیدِ سربرگ و رسیدِ جدول دو انبارِ
-            // جدا بودند و این خط جمعشان می‌کرد؛ حالا که رسید فقط یک جا زندگی
-            // می‌کند، ‎a.RasidMoneyPetrol‎ خودش همان ‎t.Petrol.Rasid‎ است و
-            // جمع کردنشان یعنی دو برابر شمردنِ همان رسید.
-            Check(t.Petrol.Rasid * effP, t.Petrol.Bardagi, "money");
-            Check(t.Diesel.Rasid * effD, t.Diesel.Bardagi, "money");
+            // ⚠️ اعتبارِ پول، یک‌بار — نه دو بار.
+            //
+            // در نسخهٔ وب رسیدِ سربرگ و رسیدِ جدول دو انبارِ **جدا** بودند، پس
+            // این خط جمعشان می‌کرد و درست بود. حالا که رسید فقط یک جا زندگی
+            // می‌کند، ‎a.RasidMoneyPetrol‎ خودش همان بخشِ پولیِ
+            // ‎t.Petrol.Rasid‎ است و جمع کردنشان یعنی دو برابر شمردنِ همان
+            // رسید — کارت‌ها دیگر هرگز سرخ نمی‌شدند.
+            //
+            // حساب‌هایی که هنوز مهاجرت نکرده‌اند (دادهٔ نسخهٔ وب، و همان دادهٔ
+            // طلاییِ آزمونِ برابری) هنوز دو انبار دارند، پس همان فرمولِ سایت
+            // برایشان می‌ماند. این‌طور نه پاریتی می‌شکند و نه دادهٔ تازه دو
+            // برابر شمرده می‌شود.
+            if (a.ReceiptsMigrated)
+            {
+                Check(t.Petrol.Rasid * effP, t.Petrol.Bardagi, "money");
+                Check(t.Diesel.Rasid * effD, t.Diesel.Bardagi, "money");
+            }
+            else
+            {
+                Check(a.RasidMoneyPetrol * effP + t.Petrol.Rasid, t.Petrol.Bardagi, "money");
+                Check(a.RasidMoneyDiesel * effD + t.Diesel.Rasid, t.Diesel.Bardagi, "money");
+            }
         }
 
         // حسابِ تسویه‌شده «تمام‌شده» نیست

@@ -72,6 +72,14 @@ public class InvoiceTests : IDisposable
         Assert.Equal(0m, row.Liters);
     }
 
+    /// <summary>
+    /// رسیدِ تیلِ فاکتور هم یک **ردیفِ واقعی** است، مثلِ هر رسیدِ دیگری — نه
+    /// عددی که فقط روی خودِ حساب بنشیند.
+    ///
+    /// ⚠️ پیش از این ‎Assert.Empty(db.DebtRows)‎ بود و همان درست بود، چون
+    /// رسیدِ تیل جایی جز عددِ حساب نداشت. حالا رسید یک انبار بیشتر ندارد، پس
+    /// ردیفش هست و در جدولِ شخص هم دیده می‌شود.
+    /// </summary>
     [Fact]
     public void ApprovingFuelInvoice_AddsFuelReceiptToTheAccount()
     {
@@ -81,7 +89,11 @@ public class InvoiceTests : IDisposable
         using var db = _dbf.Create();
         var acc = db.DebtAccounts.Single();
         Assert.Equal(250m, acc.RasidFuelPetrol);
-        Assert.Empty(db.DebtRows);             // بخشِ پولی ندارد، پس ردیفی هم نمی‌سازد
+
+        var row = db.DebtRows.Single(r => r.InvoiceId == v.Id);
+        Assert.Equal(250m, row.RasidFuel);     // در ستونِ «رسید تیل»
+        Assert.NotNull(row.FuelAccountId);     // در دفترِ تیل
+        Assert.Equal(0m, row.Liters);          // رسید است، نه بردگی
     }
 
     [Fact]
@@ -96,7 +108,12 @@ public class InvoiceTests : IDisposable
 
         using var db = _dbf.Create();
         Assert.Equal(100m, db.DebtAccounts.Single().RasidFuelPetrol);
-        Assert.Equal(3000m, db.DebtRows.Single(r => r.InvoiceId == v.Id).Rasid);
+
+        // دو ردیف: بخشِ پولی در دفترِ پول، و رسیدِ تیل در دفترِ تیل
+        var rows = db.DebtRows.Where(r => r.InvoiceId == v.Id).ToList();
+        Assert.Equal(2, rows.Count);
+        Assert.Equal(3000m, rows.Single(r => r.MoneyAccountId != null).Rasid);
+        Assert.Equal(100m, rows.Single(r => r.FuelAccountId != null).RasidFuel);
     }
 
     [Fact]

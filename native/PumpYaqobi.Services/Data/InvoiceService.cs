@@ -188,8 +188,13 @@ public sealed class InvoiceService
 
     private static async Task UnpostAsync(Persistence.PumpDbContext db, Invoice v, CancellationToken ct)
     {
-        var row = await db.DebtRows.FirstOrDefaultAsync(r => r.InvoiceId == v.Id, ct);
-        if (row is not null) db.DebtRows.Remove(row);
+        // ⚠️ **همهٔ** ردیف‌های این فاکتور، نه اولی: یک فاکتور می‌تواند هم بخشِ
+        // پولی داشته باشد و هم بخشِ تیل، و از امروز هر دو ردیفِ خودشان را
+        // دارند. با ‎FirstOrDefault‎ یکی‌شان جا می‌ماند و رسیدش هرگز پس گرفته
+        // نمی‌شد.
+        var rows = await db.DebtRows.Where(r => r.InvoiceId == v.Id).ToListAsync(ct);
+        if (rows.Count > 0) db.DebtRows.RemoveRange(rows);
+        var row = rows.FirstOrDefault();
 
         if (v.PostedFuelLiters is > 0m && v.DebtAccountId is not null)
         {
