@@ -162,6 +162,15 @@ public sealed class AppHost
     /// اگر از پیش ساخته شده باشد همان می‌ماند — تا ابزارِ عکس‌گیری بتواند
     /// پیش از بالا آمدنِ برنامه دیتابیسِ موقتِ خودش را بنشاند و هرگز به
     /// دادهٔ واقعیِ کاربر دست نزند.
+    ///
+    /// <para>⚠️ قفل، برای ابزارها و آزمون‌هایی که ممکن است هم‌زمان صدایش
+    /// بزنند — بی آن، دو نخ هر دو ‎Current‎ را خالی می‌بینند و دو میزبان
+    /// ساخته می‌شود.</para>
     /// </summary>
-    public static AppHost Start(string? dbPath = null) => Current ??= new AppHost(dbPath);
+    public static AppHost Start(string? dbPath = null)
+    {
+        lock (StartLock) return Current ??= new AppHost(dbPath);
+    }
+
+    private static readonly object StartLock = new();
 }
