@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
              xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
              x:Class="PumpYaqobi.App.Views.Sections.WaraqPageView"
              x:DataType="vm:WaraqPageViewModel">
 
@@ -30,51 +31,14 @@
       </StackPanel>
     </c:SectionPage.Filters>
 
-    <c:SectionPage.Summary>
-      <!-- ‎Rows="1"‎ یعنی «همه در یک ردیف، با عرضِ مساوی» — کادرها تا لبه پخش
-           می‌شوند به‌جای آن‌که راست جمع شوند و کنارشان خالی بماند. -->
-      <UniformGrid Rows="1" Classes="stats">
-        <Border Classes="stat">
-          <StackPanel Spacing="3">
-            <TextBlock Text="پطرول (لیتر)" Classes="label" />
-            <TextBlock Text="{Binding PetrolLiters}" Classes="num" />
-          </StackPanel>
-        </Border>
-        <Border Classes="stat">
-          <StackPanel Spacing="3">
-            <TextBlock Text="دیزل (لیتر)" Classes="label" />
-            <TextBlock Text="{Binding DieselLiters}" Classes="num" />
-          </StackPanel>
-        </Border>
-        <Border Classes="stat">
-          <StackPanel Spacing="3">
-            <TextBlock Text="فروش" Classes="label" />
-            <TextBlock Text="{Binding Sales}" Classes="num" />
-          </StackPanel>
-        </Border>
-        <Border Classes="stat">
-          <StackPanel Spacing="3">
-            <TextBlock Text="قرض" Classes="label" />
-            <TextBlock Text="{Binding Debt}" Classes="num" />
-          </StackPanel>
-        </Border>
-        <Border Classes="stat">
-          <StackPanel Spacing="3">
-            <TextBlock Text="مصرف" Classes="label" />
-            <TextBlock Text="{Binding Expenses}" Classes="num" />
-          </StackPanel>
-        </Border>
-        <Border Classes="stat">
-          <StackPanel Spacing="3">
-            <TextBlock Text="{Binding ShortageLabel}" Classes="label" />
-            <TextBlock Text="{Binding Shortage}" Classes="num" />
-          </StackPanel>
-        </Border>
-      </UniformGrid>
-    </c:SectionPage.Summary>
+    <!-- ⚠️ این‌جا عمداً ‎SectionPage.Summary‎ نیست: شش کادرِ «خلاصه شیفت» در
+         سایت زیرِ جدولِ تراکنش‌ها می‌نشینند، نه بالای صفحه (‎index.html‎ خط
+         ۱۹۹۷۴). گزارشِ صاحب ریپو: «اون شش تا پایینِ این جدولِ تراکنش‌ها
+         استن.» پس ته همین صفحه ساخته شده‌اند. -->
 
-    <Grid RowDefinitions="*,10,*,Auto">
-      <c:ExcelGrid Grid.Row="0" ItemsSource="{Binding Pumps}" x:CompileBindings="False">
+
+    <Grid RowDefinitions="*,Auto,10,*,Auto">
+      <c:ExcelGrid Grid.Row="0" x:Name="PumpGrid" ItemsSource="{Binding Pumps}" x:CompileBindings="False">
         <DataGrid.Columns>
           <DataGridTextColumn Header="پایه" Binding="{Binding Num}" Width="Auto" />
           <DataGridTextColumn Header="تاریخ" Binding="{Binding PumpDate}" Width="Auto" />
@@ -110,6 +74,12 @@
         </DataGrid.Columns>
       </c:ExcelGrid>
 
+      <!-- ردیفِ «جمله این شیفت» — همتای ‎<tfoot>‎ی جدولِ قرائت پمپ‌ها در سایت
+           (‎index.html‎ خط ۱۹۹۲۹). ‎Grid‎ صریح داده شده چون در این صفحه سه
+           جدول هست و نوار باید بداند مالِ کدام است. -->
+      <c:TotalsBar Grid.Row="1" Title="🧮 جمله این شیفت"
+                   Grid="{Binding #PumpGrid}" ItemsSource="{Binding TotalCells}" />
+
       <!-- ══ تراکنش‌ها — دو جدولِ هم‌شکل، کنارِ هم ══════════════════════════
            خواستهٔ صاحب ریپو: «توی ورق‌ها دو کادر دارد که شبیه هم است و آن
            بابتِ این است که بیشتر جا بشود، توی یک حساب قرض‌ها یا مصرف‌ها.»
@@ -126,7 +96,7 @@
            ⚠️ ستونِ «واحد» (تیل/پول) سایت هنوز این‌جا نیست — چون در نیتیو
            تراکنش‌های ورق اصلاً به حسابِ قرض‌داران پست نمی‌شوند، و آن ستون
            تا وقتی پستی در کار نباشد چیزی را جابه‌جا نمی‌کند. -->
-      <Grid Grid.Row="2" ColumnDefinitions="*,8,*">
+      <Grid Grid.Row="3" ColumnDefinitions="*,8,*">
         <c:ExcelGrid Grid.Column="0" ItemsSource="{Binding TxnsFirst}" x:CompileBindings="False">
           <DataGrid.Columns>
             <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" IsReadOnly="True" />
@@ -226,8 +196,60 @@
         </c:ExcelGrid>
       </Grid>
 
-      <!-- ردیفِ «جمله»ی همین شیفت — روز و شب با هم جمع نمی‌شوند -->
-      <c:TotalsBar Grid.Row="3" ItemsSource="{Binding TotalCells}" />
+      <!-- ══ 📊 خلاصه شیفت ═══════════════════════════════════════════════
+           مو‌به‌مو مثلِ سایت: عنوان، بعد شش کادر در یک شبکهٔ
+           ‎repeat(auto-fill, minmax(140px, 1fr))‎ — همان کاری که
+           ‎c:AutoFillPanel‎ می‌کند. ترتیب، نشانه‌ها، رنگ‌ها و واحدها هم از
+           همان‌جا برداشته شده‌اند (‎index.html‎ خط ۱۹۹۷۴ تا ۱۹۹۸۱ و خط ۴۵۵۴۴
+           تا ۴۵۵۶۵) — روز و شب هرگز با هم جمع نمی‌شوند. -->
+      <StackPanel Grid.Row="4" Spacing="6" Margin="0,12,0,0">
+        <TextBlock Text="{Binding SummaryTitle}" Classes="label" FontWeight="Bold"
+                   Foreground="{DynamicResource Pump.Accent}" />
+        <c:AutoFillPanel MinItemWidth="140" Gap="8">
+          <Border Classes="stat">
+            <StackPanel Spacing="3">
+              <TextBlock Text="⛽ جمله بطرول" Classes="label" />
+              <TextBlock Text="{Binding SumPetrol}" Classes="num"
+                         Foreground="{DynamicResource Pump.Accent}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="stat">
+            <StackPanel Spacing="3">
+              <TextBlock Text="🟤 جمله دیزل" Classes="label" />
+              <TextBlock Text="{Binding SumDiesel}" Classes="num"
+                         Foreground="{DynamicResource Pump.Diesel}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="stat">
+            <StackPanel Spacing="3">
+              <TextBlock Text="🟣 جمله مصرف" Classes="label" />
+              <TextBlock Text="{Binding SumExpenses}" Classes="num"
+                         Foreground="{DynamicResource Pump.Purple}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="stat">
+            <StackPanel Spacing="3">
+              <TextBlock Text="💳 جمله قرض" Classes="label" />
+              <TextBlock Text="{Binding SumDebt}" Classes="num"
+                         Foreground="{DynamicResource Pump.Danger}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="stat">
+            <StackPanel Spacing="3">
+              <TextBlock Text="{Binding ShortageBoxLabel}" Classes="label" />
+              <TextBlock Text="{Binding SumShortage}" Classes="num"
+                         Foreground="{Binding ShortageBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="stat">
+            <StackPanel Spacing="3">
+              <TextBlock Text="📊 جمله فروش" Classes="label" />
+              <TextBlock Text="{Binding SumSales}" Classes="num"
+                         Foreground="{DynamicResource Pump.Ok}" />
+            </StackPanel>
+          </Border>
+        </c:AutoFillPanel>
+      </StackPanel>
     </Grid>
   </c:SectionPage>
 </UserControl>
