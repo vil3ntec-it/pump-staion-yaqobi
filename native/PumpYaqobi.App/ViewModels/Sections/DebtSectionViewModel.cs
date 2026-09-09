@@ -105,7 +105,12 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
                noInvoice ? "شرکت‌ها تیل" : "قرض‌داران")
     { _host = host; _noInvoice = noInvoice; }
 
-    public ObservableCollection<DebtorCardViewModel> Cards { get; } = new();
+    /// <summary>
+    /// ⚠️ ‎BulkRows‎ است نه ‎ObservableCollection‎ی ساده: با ده هزار قرض‌دار،
+    /// افزودنِ تک‌تکِ کارت‌ها ده هزار خبر به فهرست می‌داد و هر خبر یک چیدمانِ
+    /// تازه — آن هم با هر حرفی که در کادرِ جست‌وجو تایپ می‌شود.
+    /// </summary>
+    public BulkRows<DebtorCardViewModel> Cards { get; } = new();
 
     [ObservableProperty] private string _search = "";
 
@@ -176,11 +181,9 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
     private void ApplyFilter()
     {
         var s = Search.Trim();
-        Cards.Clear();
-        foreach (var c in _all)
-            if (s.Length == 0 || c.Name.Contains(s, StringComparison.OrdinalIgnoreCase)
-                              || c.Phone.Contains(s, StringComparison.OrdinalIgnoreCase))
-                Cards.Add(c);
+        Cards.ResetTo(_all.Where(c =>
+            s.Length == 0 || c.Name.Contains(s, StringComparison.OrdinalIgnoreCase)
+                          || c.Phone.Contains(s, StringComparison.OrdinalIgnoreCase)));
     }
 
 
