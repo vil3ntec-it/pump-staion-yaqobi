@@ -368,6 +368,7 @@
        چون سایت هم ‎:not(:focus)‎ گذاشته: تا وارد نشده‌ای، خانه است نه متن. -->
   <Style Selector="DataGridColumnHeader">
     <Setter Property="Cursor" Value="{DynamicResource Pump.CellCursor}" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
     <Setter Property="FontWeight" Value="ExtraBold" />
@@ -404,6 +405,9 @@
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
     <Setter Property="Cursor" Value="{DynamicResource Pump.CellCursor}" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <!-- عمودی هم وسط — خواستهٔ صریحِ صاحب ریپو: «تمام Cellها از نظر افقی و
+         عمودی دقیقاً Center شوند.» -->
+    <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
   <!-- نوشتهٔ داخلِ خانه هم واقعاً وسط بنشیند: ‎HorizontalContentAlignment‎ی
        خانه فقط وقتی اثر دارد که خودِ نوشته ‎Stretch‎ نباشد، و ‎DataGridTextColumn‎
@@ -411,6 +415,11 @@
   <Style Selector="DataGridCell TextBlock">
     <Setter Property="TextAlignment" Value="Center" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <!-- متنِ بلند ردیف را بلند نکند و خطوط را نشکند — همان کاری که خانهٔ
+         اکسل می‌کند: نوشته بریده می‌شود، نه این‌که جدول به‌هم بریزد. -->
+    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
   </Style>
   <!-- ══ کادرِ تایپِ داخلِ خانه — ‎.xls-in‎ی سایت ═══════════════════════════
        گزارشِ صاحب ریپو: «توی کادرهای جدول وقتی می‌خوام چیزی بنویسم کادر سفید
@@ -425,11 +434,34 @@
        یعنی کادر اصلاً دیده نمی‌شود؛ فقط نوشته است و خطوطِ خودِ خانه.
        ‎:focus‎ و ‎:pointerover‎ هم جدا نوشته شده‌اند، وگرنه سبکِ پیش‌فرضِ
        ‎TextBox‎ در همان دو حالت دوباره سفید می‌کرد. -->
+  <!-- ⚠️ اندازه و قلمِ کادرِ تایپ هم باید همانِ خانه باشد، نه پیش‌فرضِ
+       ‎TextBox‎. گزارشِ صاحب ریپو: «نباید یک Input کوچک و سفید داخل Cell ظاهر
+       شود… باید دقیقاً اندازهٔ همان Cell باشد و با Background، Border، Font و
+       Padding جدول هماهنگ.»
+
+       سبکِ عمومیِ ‎TextBox‎ی برنامه ‎MinHeight="34"‎ و گوشهٔ گرد و حاشیهٔ خودش
+       را دارد؛ داخلِ خانهٔ ۴۴ پیکسلی این یعنی یک کادرِ کوچک‌ترِ تودرتو با
+       قلمِ ریزتر. پس همه‌شان این‌جا صفر/هم‌اندازهٔ خانه می‌شوند:
+       بلندی و پهنای کمینه صفر، گوشه بی‌گردی، ‎Padding‎ صفر (فاصله را خودِ
+       خانه می‌دهد)، و قلم دقیقاً همان ۱۷ِ خانه.
+
+       ‎AcceptsReturn="False"‎ و ‎TextWrapping="NoWrap"‎ هم عمدی‌اند: متنِ بلند
+       نباید ردیف را بلند کند و خطوطِ جدول را بشکند. -->
   <Style Selector="DataGridCell TextBox">
     <Setter Property="TextAlignment" Value="Center" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="FontSize" Value="17" />
+    <Setter Property="AcceptsReturn" Value="False" />
+    <Setter Property="TextWrapping" Value="NoWrap" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
     <Setter Property="FontWeight" Value="Bold" />
   </Style>
@@ -463,6 +495,16 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
+    <!-- مثلِ کادرِ تایپ: هم‌اندازهٔ خانه، نه کادرِ کوچکِ تودرتو -->
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="FontSize" Value="17" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
   </Style>
   <!-- ══ خانه‌های داخلِ کادرِ چندانتخابی ═══════════════════════════════════
        ‎DataGrid‎ فقط «ردیف» را انتخاب می‌کند. کادرِ خانه‌به‌خانه‌ای که با
@@ -565,9 +607,12 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
 
+                <!-- «کادرهای بالای جدول هم Center شوند» — خواستهٔ صریحِ صاحب
+                     ریپو. نوار سرِ جایش می‌ماند، فقط محتوایش وسط می‌نشیند. -->
                 <Border Grid.Row="1" Classes="panel" Padding="12,9" Margin="0,0,0,12"
                         IsVisible="{TemplateBinding Filters, Converter={x:Static ObjectConverters.IsNotNull}}">
-                  <ContentPresenter Content="{TemplateBinding Filters}" />
+                  <ContentPresenter Content="{TemplateBinding Filters}"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
 
                 <ContentPresenter Grid.Row="2" Content="{TemplateBinding Summary}" Margin="0,0,0,12"
