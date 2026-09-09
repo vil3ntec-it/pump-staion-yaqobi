@@ -63,9 +63,11 @@ public sealed class WaraqPostingService
     private readonly PumpDbFactory _dbf;
     private readonly PermissionService _perm;
     private readonly WaraqService _calc;
+    private readonly ShiftWaraqSyncService _safe;
 
-    public WaraqPostingService(PumpDbFactory dbf, PermissionService perm, WaraqService calc)
-    { _dbf = dbf; _perm = perm; _calc = calc; }
+    public WaraqPostingService(PumpDbFactory dbf, PermissionService perm, WaraqService calc,
+                               ShiftWaraqSyncService safe)
+    { _dbf = dbf; _perm = perm; _calc = calc; _safe = safe; }
 
     /// <summary>شناسهٔ ورق در کلید — ورقی که از سایت آمده با شناسهٔ خودِ سایت.</summary>
     public static string WaraqKey(WaraqEntry w) =>
@@ -135,6 +137,20 @@ public sealed class WaraqPostingService
         db.DebtRows.RemoveRange(mine.Where(r => !live.Contains(r.Id)));
 
         await db.SaveChangesAsync(ct);
+
+        // ══ «جمله فروش» ⇐ گاوصندوق ═════════════════════════════════════════
+        //
+        // گزارشِ صاحب ریپو: «اون جمله پول یا جمله فروش می‌ره به گاوصندوق
+        // اتومات یا که نه؟»
+        //
+        // در سایت ‎saveWaraq()‎ دو کار می‌کرد: ‎syncWaraqTxnsToPersons‎ و
+        // ‎syncWaraqSalesToSafe‎ (خط ۴۵۵۹۰). دومی در نیتیو نوشته شده بود ولی
+        // فقط از مسیرِ «پارچه ⇐ ورق» صدا زده می‌شد؛ وقتی خودِ کاربر پایه‌های
+        // ورق را پر می‌کرد، ردیفِ «ماندگی»ِ گاوصندوق کهنه می‌مانْد. حالا هر
+        // همگام‌سازیِ ورق هر دو را با هم می‌کند.
+        await _safe.SyncSalesToSafeAsync(db, w, ct);
+        await db.SaveChangesAsync(ct);
+
         return outcome.Report;
     }
 

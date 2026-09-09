@@ -34,7 +34,9 @@ public class WaraqPostingDbTests : IDisposable
         session.SignIn(UserRole.Admin, "آزمون");
         var perm = new PermissionService(session);
         var trash = new TrashService(dbf, perm, session);
-        return (new WaraqPostingService(dbf, perm, new WaraqService()),
+        var calc = new WaraqService();
+        var safe = new ShiftWaraqSyncService(dbf, perm, calc, new SettingsService(dbf, perm));
+        return (new WaraqPostingService(dbf, perm, calc, safe),
                 new WaraqDataService(dbf, perm, trash), dbf);
     }
 
@@ -62,6 +64,28 @@ public class WaraqPostingDbTests : IDisposable
         t.Liters = liters;
         await db.SaveChangesAsync();
         return w;
+    }
+
+    /// <summary>یک پایه با ۱۰۰ لیتر فروش، فیِ ۵۰ ⇒ فروشِ ۵۰۰۰.</summary>
+    private static async Task PumpAsync(PumpDbFactory dbf, long waraqId,
+                                        decimal start = 0m, decimal end = 100m)
+    {
+        await using var db = dbf.Create();
+        var shift = await db.WaraqShifts.Include(s => s.Pumps)
+                            .FirstAsync(s => s.WaraqId == waraqId && s.Kind == ShiftKind.Day);
+        var p = shift.Pumps.FirstOrDefault();
+        if (p is null) { p = new WaraqPump { ShiftId = shift.Id, Num = 1 }; db.WaraqPumps.Add(p); }
+        p.Fuel = FuelType.Petrol;
+        p.Start = start; p.End = end; p.PricePerLiter = 50m;
+        await db.SaveChangesAsync();
+    }
+
+    private static async Task<List<SafeEntry>> SafeSalesAsync(PumpDbFactory dbf)
+    {
+        await using var db = dbf.Create();
+        return await db.SafeEntries.AsNoTracking()
+                       .Where(e => e.SrcKey != null && e.SrcKey.StartsWith("wq-sales-"))
+                       .ToListAsync();
     }
 
     private static async Task<List<DebtRow>> RowsAsync(PumpDbFactory dbf)
@@ -168,5 +192,81 @@ public class WaraqPostingDbTests : IDisposable
                                          .Where(x => x.SrcKey != null && x.SrcKey != "").ToListAsync());
         Assert.Equal(500m, e.Amount);
         Assert.Equal("هارون", e.Title);
+    }
+
+    // ══ فروشِ ورق ⇐ گاوصندوق ════════════════════════════════════════════════
+
+    /// <summary>
+    /// «جمله فروش»ِ هر شیفت خودش یک ردیفِ «ماندگی» در گاوصندوق می‌شود —
+    /// ‎syncWaraqSalesToSafe‎ی سایت (خط ۴۵۵۹۰).
+    /// </summary>
+    [Fact]
+    public async Task TheShiftSalesBecomeOneMandagiRowInTheSafe()
+    {
+        var (post, data, dbf) = Host();
+        var w = await SheetAsync(data, dbf, "", 0m);
+        await PumpAsync(dbf, w.Id);                       // ۱۰۰ لیتر × ۵۰ = ۵۰۰۰
+
+        await post.SyncAsync(w.Id);
+
+        var row = Assert.Single(await SafeSalesAsync(dbf));
+        Assert.Equal(5000m, row.Amount);
+        Assert.Equal(SafeEntryKind.Mandagi, row.Kind);
+        Assert.Contains("فروش ورق", row.Title!);
+        Assert.Equal("1405/06/18", row.DateShamsi);
+    }
+
+    /// <summary>عددِ پایه که عوض شود، همان ردیف تازه می‌شود — نه ردیفِ دوم.</summary>
+    [Fact]
+    public async Task ChangingThePumpUpdatesTheSameSafeRow()
+    {
+        var (post, data, dbf) = Host();
+        var w = await SheetAsync(data, dbf, "", 0m);
+        await PumpAsync(dbf, w.Id);
+        await post.SyncAsync(w.Id);
+
+        await PumpAsync(dbf, w.Id, end: 200m);            // ۲۰۰ لیتر × ۵۰ = ۱۰۰۰۰
+        await post.SyncAsync(w.Id);
+
+        var row = Assert.Single(await SafeSalesAsync(dbf));
+        Assert.Equal(10000m, row.Amount);
+    }
+
+    /// <summary>فروش که صفر شود، ردیفِ گاوصندوق برداشته می‌شود، نه صفر بماند.</summary>
+    [Fact]
+    public async Task ZeroSalesTakesTheSafeRowAway()
+    {
+        var (post, data, dbf) = Host();
+        var w = await SheetAsync(data, dbf, "", 0m);
+        await PumpAsync(dbf, w.Id);
+        await post.SyncAsync(w.Id);
+        Assert.Single(await SafeSalesAsync(dbf));
+
+        await PumpAsync(dbf, w.Id, end: 0m);
+        await post.SyncAsync(w.Id);
+
+        Assert.Empty(await SafeSalesAsync(dbf));
+    }
+
+    /// <summary>
+    /// ورق که حذف شود، هر چه ساخته بود هم می‌رود: ردیفِ گاوصندوق، قرضِ حساب و
+    /// مصرف. وگرنه قرضی در حساب می‌ماند که هیچ ورقی پشتش نیست.
+    /// </summary>
+    [Fact]
+    public async Task DeletingTheSheetTakesBackEverythingItMade()
+    {
+        var (post, data, dbf) = Host();
+        await PersonAsync(dbf, "محمد هارون");
+        var w = await SheetAsync(data, dbf, "هارون", 10m);
+        await PumpAsync(dbf, w.Id);
+        await post.SyncAsync(w.Id);
+
+        Assert.Single(await RowsAsync(dbf));
+        Assert.Single(await SafeSalesAsync(dbf));
+
+        await data.DeleteAsync(w.Id);
+
+        Assert.Empty(await RowsAsync(dbf));
+        Assert.Empty(await SafeSalesAsync(dbf));
     }
 }

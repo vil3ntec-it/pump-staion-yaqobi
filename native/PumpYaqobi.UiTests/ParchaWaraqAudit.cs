@@ -7,6 +7,7 @@ using PumpYaqobi.App.Services;
 using PumpYaqobi.App.ViewModels;
 using PumpYaqobi.App.ViewModels.Sections;
 using PumpYaqobi.App.Views;
+using PumpYaqobi.Domain.Entities;
 
 namespace PumpYaqobi.UiTests;
 
@@ -231,6 +232,101 @@ internal static class ParchaWaraqAudit
         Check("دو جدولِ تراکنش روی صفحه هست", grids.Count == 2, grids.Count + " جدول");
 
         SummaryBelowTxns(win, page, grids);
+        PostsToAccountAndSafe(win, page);
+    }
+
+    /// <summary>
+    /// ══ ورق ⇐ حسابِ قرض‌دار · مصارف · گاوصندوق ═══════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «خودت چک کن و کار بگیر… وقتی نوع رو مصرف گذاشتم تو
+    /// مصارف باید بره، و اون جمله فروش می‌ره به گاوصندوق اتومات یا که نه؟»
+    ///
+    /// پس این‌جا مثلِ خودِ کاربر تایپ می‌شود — روی همان صفحهٔ ورقِ باز — و بعد
+    /// دیتابیس خوانده می‌شود. نه ماکت، نه صدا زدنِ مستقیمِ سرویس.
+    /// </summary>
+    private static void PostsToAccountAndSafe(Window win, WaraqPageViewModel page)
+    {
+        var host = AppHost.Current;
+
+        // یک قرض‌دار با نامِ بلند؛ در ورق فقط تکه‌ای از نامش نوشته می‌شود
+        var add = host.Debtors.AddDebtorAsync("محمد هارون یعقوبی", "0700000009", false);
+        Wait(win, add);
+        var debtor = add.Result;
+
+        if (page.Txns.Count == 0) { Check("ردیفِ تراکنش هست", false); return; }
+        var row = page.Txns[0];
+        row.Name = "هارون";
+        row.AmountText = "500";
+        row.TypeText = "قرض";
+        Wait(win, row.FlushAsync());
+        Settle(win);
+
+        var full = Load(win, host, debtor.Id);
+        var posted = full is null ? new List<DebtRow>() : Waraq(full);
+        Check("ردیفِ ورق با نامِ ناقص به حسابِ «محمد هارون یعقوبی» رسید",
+              posted.Count == 1, posted.Count + " ردیف");
+        if (posted.Count == 1)
+            Check("مبلغش همان است که در ورق نوشته شد", posted[0].Bardagi == 500m,
+                  posted[0].Bardagi.ToString());
+
+        // ── نوع = مصرف ⇒ باید به بخشِ مصارف برود و از حساب برداشته شود ──────
+        row.TypeText = "مصرف";
+        Wait(win, row.FlushAsync());
+        Settle(win);
+
+        var exList = host.ExpenseLedger.ListAsync(null);
+        Wait(win, exList);
+        // ⚠️ دادهٔ نمونه خودش چند ردیفِ «مصرف» در ورق دارد، پس شمارش کافی نیست —
+        // همین ردیف با همین مبلغ و همین نام باید پیدا شود.
+        var mine = exList.Result.Where(e => !string.IsNullOrEmpty(e.SrcKey)).ToList();
+        Check("«مصرف» به بخشِ مصارف رفت",
+              mine.Any(e => e.Amount == 500m && e.Title == "هارون"),
+              mine.Count + " مصرفِ ورقی");
+
+        full = Load(win, host, debtor.Id);
+        Check("و از حسابِ قرض‌دار برداشته شد",
+              full is not null && Waraq(full).Count == 0);
+
+        // ── «جمله فروش» ⇒ ردیفِ ماندگی در گاوصندوق ─────────────────────────
+        if (page.Pumps.Count == 0) { page.AddPumpCommand.Execute(null); Settle(win); }
+        if (page.Pumps.Count > 0)
+        {
+            var pump = page.Pumps[0];
+            pump.FuelText = "پطرول";
+            pump.StartText = "0";
+            pump.EndText = "100";
+            pump.PriceText = "50";
+            Wait(win, pump.FlushAsync());
+            Settle(win);
+        }
+
+        var safeList = host.SafeLedger.ListAsync(null);
+        Wait(win, safeList);
+        var sales = safeList.Result
+            .Where(e => (e.SrcKey ?? "").StartsWith("wq-sales-", StringComparison.Ordinal)).ToList();
+        var want = page.Shift is null ? 0m
+                 : Math.Round(host.Waraq.ShiftTotals(page.Shift).Sales, 0, MidpointRounding.AwayFromZero);
+        Check("«جمله فروش»ِ همین شیفت خودش در گاوصندوق نشست",
+              want <= 0m ? sales.Count == 0 : sales.Any(e => e.Amount == want),
+              "فروش " + want + " · " + sales.Count + " ردیف");
+
+        // ردیف پاک شود تا سنجش‌های بعدی روی دادهٔ تمیز بدوند
+        row.Name = "";
+        row.AmountText = "";
+        Wait(win, row.FlushAsync());
+        Settle(win);
+    }
+
+    /// <summary>ردیف‌هایی که از ورق در حسابِ این شخص نشسته‌اند.</summary>
+    private static List<DebtRow> Waraq(Debtor d) =>
+        d.AllAccounts().SelectMany(a => a.FuelRows.Concat(a.MoneyRows))
+                       .Where(r => r.Src == "waraq").ToList();
+
+    private static Debtor? Load(Window win, AppHost host, long id)
+    {
+        var t = host.Debtors.LoadFullAsync(id);
+        Wait(win, t);
+        return t.Result;
     }
 
     /// <summary>
