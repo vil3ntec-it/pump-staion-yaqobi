@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.App.ViewModels;
 using PumpYaqobi.App.ViewModels.Sections;
@@ -100,6 +101,14 @@ internal static class PerfAudit
                      () => Wait(win, debt.OpenByNumberAsync(1)));
 
             Mark("بستنِ حساب", () => { debt.Person = null; Pump(win); });
+
+            // ⚠️ فهرستِ کارت‌ها باید مجازی‌سازی کند: اگر همهٔ ده هزار کارت
+            // ساخته شوند، هر چیدمانِ صفحه ده هزار عنصر را می‌سنجد و برنامه
+            // همان‌جا می‌ایستد — هر چند دیتابیس سریع جواب داده باشد.
+            var live = win.GetVisualDescendants().OfType<Button>()
+                          .Count(b => b.DataContext is DebtorCardViewModel);
+            Console.WriteLine($"کارتِ زنده در درختِ بصری: {live:N0} از {debt.Cards.Count:N0}");
+            if (live > 400) Console.WriteLine("        ⚠️ فهرستِ کارت‌ها مجازی‌سازی نمی‌کند");
             debt.Search = "";
             Pump(win);
         }
@@ -298,9 +307,14 @@ internal static class PerfAudit
         public void Dispose() => _cmd.Dispose();
     }
 
+    /// <summary>
+    /// ⚠️ سه دور، نه هشت: هر دور یک چیدمانِ کاملِ پنجره است و روی صفحه‌ای با
+    /// ده هزار کارت، همان یک دور خودش گران است. هدفِ این سنجش «چند ثانیه طول
+    /// می‌کشد» است، نه «چند دور چیدمان».
+    /// </summary>
     private static void Pump(Window w)
     {
-        for (var i = 0; i < 8; i++) { Dispatcher.UIThread.RunJobs(); w.UpdateLayout(); }
+        for (var i = 0; i < 3; i++) { Dispatcher.UIThread.RunJobs(); w.UpdateLayout(); }
     }
 
     private static void Settle(Window w)
