@@ -43,6 +43,15 @@ internal static class PerfAudit
 
     private static readonly List<(string What, long Ms)> Marks = new();
 
+    /// <summary>
+    /// ⚠️ سقفِ کلِ سنجش. یک‌بار این سنجش بیست دقیقه دوید و هیچ‌وقت تمام نشد؛
+    /// از آن به بعد وقتی این بودجه تمام شود، بقیهٔ کارها رد می‌شوند و گزارش
+    /// همان‌جا بسته می‌شود — «تمام نشد» خودش یک نتیجه است، نه یک وقفهٔ بی‌پایان.
+    /// </summary>
+    private static readonly Stopwatch Budget = Stopwatch.StartNew();
+    private const long BudgetMs = 240_000;
+    private static bool _outOfTime;
+
     public static int Run()
     {
         var dir = Path.Combine(Path.GetTempPath(), "pump-perf-" + Guid.NewGuid().ToString("N"));
@@ -50,12 +59,36 @@ internal static class PerfAudit
         var file = Path.Combine(dir, "pump.db");
 
         var seed = Stopwatch.StartNew();
-        var big = Seed(file);
+        var bigDebtor = Seed(file);
         seed.Stop();
         Console.WriteLine($"دادهٔ آزمون ساخته شد: {People:N0} قرض‌دار · "
                         + $"{BigRows + (People - 1) * SmallRows:N0} ردیف — {seed.ElapsedMilliseconds:N0} ms");
 
+        // ══ فازِ یک: خودِ داده، بی هیچ صفحه‌ای ═══════════════════════════════
+        //
+        // این‌جا معلوم می‌شود که «کندی» مالِ دیتابیس است یا مالِ کشیدنِ صفحه.
+        // هر دو را باید جدا دید، وگرنه آدم ساعت‌ها دنبالِ جای اشتباه می‌گردد.
         AppHost.Start(file);
+        var host = AppHost.Current;
+
+        // بی ورود، لایهٔ اجازه‌ها جلوی هر خواندنی را می‌گیرد
+        if (host.Auth.NeedsFirstRun()) host.Auth.CreateFirstAdmin("1234");
+        host.Auth.SignIn("admin", "1234");
+
+        Console.WriteLine();
+        Console.WriteLine("کار                                        زمان");
+        Console.WriteLine(new string('-', 52));
+
+        Mark("خواندنِ فهرستِ قرض‌داران (بی صفحه)", () =>
+        { var t = host.Debtors.ListAsync(false); t.GetAwaiter().GetResult(); });
+
+        Mark("جمع‌های همهٔ حساب‌ها (بی صفحه)", () =>
+        { var t = host.Debtors.CardAccountsAsync(false); t.GetAwaiter().GetResult(); });
+
+        Mark($"خواندنِ حسابِ {BigRows:N0} ردیفی (بی صفحه)", () =>
+        { var t = host.Debtors.LoadFullAsync(bigDebtor); t.GetAwaiter().GetResult(); });
+
+        // ══ فازِ دو: همان کارها روی پنجرهٔ واقعی ═════════════════════════════
         AppBuilder.Configure<PumpYaqobi.App.App>()
             .UseSkia()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
@@ -66,14 +99,16 @@ internal static class PerfAudit
         Pump(win);
 
         var vm = (MainViewModel)win.DataContext!;
-        vm.Lock.Password = "1234";
-        vm.Lock.Confirm = "1234";
-        vm.Lock.SubmitCommand.Execute(null);
+        // ⚠️ ورودِ مدیر در فازِ یک انجام شده؛ این‌جا فقط اگر قفل هنوز جلوی
+        // صفحه باشد بازش می‌کنیم — و «تاییدِ رمز» را دست نمی‌زنیم تا مسیرِ
+        // «ساختِ مدیرِ اول» دوباره اجرا نشود.
+        try
+        {
+            vm.Lock.Password = "1234";
+            vm.Lock.SubmitCommand.Execute(null);
+        }
+        catch { /* از پیش باز است */ }
         Pump(win);
-
-        Console.WriteLine();
-        Console.WriteLine("کار                                        زمان");
-        Console.WriteLine(new string('-', 52));
 
         // ── باز کردنِ بخش‌ها ──────────────────────────────────────────────────
         foreach (var id in new[] { "dashboard", "debt", "safe", "expenses", "waraq", "shifts" })
@@ -148,11 +183,19 @@ internal static class PerfAudit
 
     private static void Mark(string what, Action run)
     {
+        if (_outOfTime) { Console.WriteLine($"{what,-42}     — رد شد (بودجهٔ زمان تمام شد)"); return; }
+
         var sw = Stopwatch.StartNew();
         run();
         sw.Stop();
         Marks.Add((what, sw.ElapsedMilliseconds));
         Console.WriteLine($"{what,-42}{sw.ElapsedMilliseconds,6:N0} ms");
+
+        if (Budget.ElapsedMilliseconds > BudgetMs)
+        {
+            _outOfTime = true;
+            Console.WriteLine($"⛔ بودجهٔ {BudgetMs / 1000} ثانیه‌ایِ سنجش تمام شد — بقیه رد می‌شود");
+        }
     }
 
     // ══ ساختنِ دادهٔ بزرگ ═════════════════════════════════════════════════════
@@ -177,7 +220,7 @@ internal static class PerfAudit
         Exec(conn, "PRAGMA synchronous=OFF;");
         using var tx = conn.BeginTransaction();
 
-        long bigAccount = 0;
+        long bigDebtor = 0;
         var now = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
 
         using var person = new Insert(conn, "Debtors");
@@ -200,7 +243,7 @@ internal static class PerfAudit
             account.Set("CreatedAt", now);
             account.Set("UpdatedAt", now);
             var aid = account.Run();
-            if (i == 1) bigAccount = aid;
+            if (i == 1) bigDebtor = pid;
 
             var n = i == 1 ? BigRows : SmallRows;
             for (var k = 0; k < n; k++)
@@ -227,7 +270,7 @@ internal static class PerfAudit
         tx.Commit();
         Exec(conn, "ANALYZE;");
         conn.Close();
-        return bigAccount;
+        return bigDebtor;
     }
 
     private static void Exec(DbConnection c, string sql)
