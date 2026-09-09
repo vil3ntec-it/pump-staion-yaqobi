@@ -101,23 +101,57 @@ public sealed class WaraqPostingService
     {
         await using var db = _dbf.Create();
 
-        var w = await db.WaraqEntries
+        var w = await db.WaraqEntries.AsSplitQuery()
             .Include(x => x.Shifts).ThenInclude(s => s.Pumps)
             .Include(x => x.Shifts).ThenInclude(s => s.Transactions)
             .FirstOrDefaultAsync(x => x.Id == waraqId, ct);
         if (w is null) return default;
 
+        var prefix = WaraqKey(w) + "|";
+
+        // ══ فقط آن‌چه لازم است ═══════════════════════════════════════════════
+        //
+        // ⚠️ این‌جا پیش از این **همهٔ قرض‌داران با همهٔ ردیف‌هایشان** خوانده
+        // می‌شد، آن هم با هر ویرایشِ یک خانهٔ ورق. با ده هزار قرض‌دار و یک
+        // میلیون ردیف یعنی یک میلیون شیء در حافظه، در هر بار تایپ.
+        //
+        // برای این کار دو چیز بس است:
+        //   ۱) نامِ حساب‌ها (برای تطبیقِ نام) — بی هیچ ردیفی
+        //   ۲) ردیف‌هایی که کلیدشان مالِ همین ورق است — یعنی همان‌هایی که این
+        //      همگام‌سازی می‌تواند عوض یا پاکشان کند
+        //
+        // ⚠️ نتیجه‌اش یک تفاوتِ کوچک با سایت است و عمدی: ردیفِ تازه ته دفتر
+        // اضافه می‌شود، به‌جای آن‌که اولین «ردیفِ کاملاً خالی»ِ دفتر را پر کند
+        // (سایت آن را می‌کرد). برای پیدا کردنِ آن ردیف باید کلِ دفتر خوانده
+        // می‌شد، و همان چیزی است که برنامه را کند می‌کرد.
         var people = await db.Debtors
-            .Include(d => d.MainAccount).ThenInclude(a => a!.FuelRows)
-            .Include(d => d.MainAccount).ThenInclude(a => a!.MoneyRows)
-            .Include(d => d.SubAccounts).ThenInclude(a => a.FuelRows)
-            .Include(d => d.SubAccounts).ThenInclude(a => a.MoneyRows)
+            .Include(d => d.MainAccount)
+            .Include(d => d.SubAccounts)
             .ToListAsync(ct);
 
-        // فقط مصرف‌هایی که خودشان از ورق آمده‌اند؛ مصرفِ دستیِ کاربر هرگز
-        // دستکاری نمی‌شود.
-        var expenses = await db.Expenses.Where(e => e.SrcKey != null && e.SrcKey != "")
-                                        .ToListAsync(ct);
+        var mine = await db.DebtRows
+            .Where(r => r.SrcKey != null && r.SrcKey.StartsWith(prefix))
+            .ToListAsync(ct);
+
+        var byAccount = new Dictionary<long, DebtAccount>();
+        foreach (var a in people.SelectMany(p => p.AllAccounts()))
+            byAccount[a.Id] = a;
+
+        foreach (var r in mine)
+        {
+            // ⚠️ EF خودش رابطه‌ها را وصل می‌کند وقتی هر دو سر ردیابی شوند؛
+            // پس اول می‌پرسیم که ردیف دو بار در دفتر ننشیند.
+            if (r.FuelAccountId is { } f && byAccount.TryGetValue(f, out var fa))
+            { if (!fa.FuelRows.Contains(r)) fa.FuelRows.Add(r); }
+            else if (r.MoneyAccountId is { } m && byAccount.TryGetValue(m, out var ma))
+            { if (!ma.MoneyRows.Contains(r)) ma.MoneyRows.Add(r); }
+        }
+
+        // مصرف‌های همین ورق — نه همهٔ مصرف‌های ورقیِ تاریخ. مصرفِ دستیِ کاربر
+        // هم هرگز دستکاری نمی‌شود.
+        var expenses = await db.Expenses
+            .Where(e => e.SrcKey != null && e.SrcKey.StartsWith(prefix))
+            .ToListAsync(ct);
 
         var outcome = Apply(w, people, expenses, _calc);
 
@@ -128,9 +162,6 @@ public sealed class WaraqPostingService
         // فهرست بیفتد: کلیدِ حسابش ‎null‎پذیر است، پس EF به‌جای حذف، آن را
         // «بی‌حساب» می‌کرد و ردیف تا ابد در جدول می‌مانْد. پس هر ردیفی که
         // کلیدش مالِ همین ورق است ولی دیگر در هیچ دفتری نیست، حذف می‌شود.
-        var prefix = WaraqKey(w) + "|";
-        var mine = await db.DebtRows.Where(r => r.SrcKey != null && r.SrcKey.StartsWith(prefix))
-                                    .ToListAsync(ct);
         var live = people.SelectMany(p => p.AllAccounts())
                          .SelectMany(a => a.FuelRows.Concat(a.MoneyRows))
                          .Where(r => r.Id != 0).Select(r => r.Id).ToHashSet();

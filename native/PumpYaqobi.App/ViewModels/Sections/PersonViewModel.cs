@@ -290,7 +290,12 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     public DebtCalculationService Calc => _host.Debt;
     public string Title => Entity.MainOfDebtorId != null ? "حسابِ اصلی" : (Entity.Name ?? "حسابِ فرعی");
 
-    public ObservableCollection<DebtRowViewModel> Rows { get; } = new();
+    /// <summary>
+    /// ⚠️ ‎BulkRows‎ است نه ‎ObservableCollection‎ی ساده: پر کردنِ یک حسابِ
+    /// صدهزار ردیفی با ‎Add‎ی تک‌تک، صدهزار خبر به جدول می‌داد و برنامه
+    /// دقیقه‌ها می‌ایستاد. ‎ResetTo‎ همان کار را با یک خبر می‌کند.
+    /// </summary>
+    public BulkRows<DebtRowViewModel> Rows { get; } = new();
 
     [ObservableProperty] private bool _isMoney;
     [ObservableProperty] private decimal _percentPetrol;
@@ -881,9 +886,13 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
 
         // خوددرمانیِ دادهٔ کهنه پیش از کشیدنِ جدول — همان کاری که renderPersonRows
         // می‌کرد. اگر چیزی عوض شد، همان‌جا ذخیره می‌شود تا دوباره لازم نشود.
-        if (_host.Debt.NormalizeAccount(Entity)) _ = PersistHealedAsync();
+        // ⚠️ فقط ردیف‌هایی که واقعاً عوض شدند ذخیره می‌شوند. پیش از این اگر یک
+        // ردیف درمان می‌شد، **همهٔ** ردیف‌های حساب یکی‌یکی ذخیره می‌شدند — در
+        // حسابی با صدهزار ردیف یعنی صدهزار نوشتن در دیتابیس.
+        var healed = Entity.FuelRows.Concat(Entity.MoneyRows)
+                           .Where(r => _host.Debt.NormalizeRow(r)).ToList();
+        if (healed.Count > 0) _ = PersistHealedAsync(healed);
 
-        Rows.Clear();
         // ⚠️ فیلتر فقط روی «دیده شدن» است. ردیف‌های تیلِ دیگر سرِ جایشان‌اند و
         // در دیتابیس دست نمی‌خورند؛ فقط این‌بار ساخته نمی‌شوند.
         var want = RowFilter switch
@@ -893,14 +902,18 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
             _ => null,
         };
 
+        // ⚠️ اول ساخته می‌شوند، بعد **یک‌جا** جای‌گزین: با ‎Rows.Add‎ی تک‌تک،
+        // حسابی با صدهزار ردیف صدهزار بار جدول را از نو می‌سنجید.
+        var built = new List<DebtRowViewModel>();
         foreach (var r in Entity.ActiveRows()
                                 .Where(r => want is null || r.Fuel == want)
                                 .OrderBy(r => r.SortIndex).ThenBy(r => r.Id))
         {
             var vm = new DebtRowViewModel(r, this);
             vm.Recalculated += _person.Recalc;
-            Rows.Add(vm);
+            built.Add(vm);
         }
+        Rows.ResetTo(built);
 
 
         // جدول عوض شد ⇒ سربرگ و ردیفِ «جمله» هم باید از نو خوانده شوند
@@ -915,10 +928,9 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         await SyncReceiptsAsync();
     }
 
-    private async Task PersistHealedAsync()
+    private async Task PersistHealedAsync(List<DebtRow> healed)
     {
-        foreach (var r in Entity.FuelRows.Concat(Entity.MoneyRows))
-            await _host.Debtors.SaveRowAsync(r);
+        foreach (var r in healed) await _host.Debtors.SaveRowAsync(r);
     }
 
     public async Task SaveRowAsync(DebtRow r)

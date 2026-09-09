@@ -109,7 +109,7 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         var diesel = await _host.StorageData.ReportsAsync(FuelType.Diesel);
 
         // «بی‌فاکتور»ها — بردگی‌شان مستقیم درآمد است
-        var noinvAccounts = (await _host.Debtors.AccountsByDebtorAsync(noInvoice: true))
+        var noinvAccounts = (await _host.Debtors.CardAccountsAsync(noInvoice: true))
             .Values.SelectMany(x => x).ToList();
 
         _db = new ProfitInput

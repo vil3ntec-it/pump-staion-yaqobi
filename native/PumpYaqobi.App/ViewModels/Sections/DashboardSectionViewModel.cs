@@ -285,13 +285,17 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
     private async Task<DashDebtInfo> BuildDebtInfoAsync()
     {
         var persons = await _host.Debtors.ListAsync();
-        var accounts = await _host.Debtors.AccountsByDebtorAsync();
+        // ⚠️ جمع‌ها از دیتابیس، بی خواندنِ ردیف‌ها — داشبورد هم مثلِ نوارِ بالا
+        // با هر باز شدن این را می‌خواهد.
+        var accounts = await _host.Debtors.CardAccountsAsync();
         decimal total = 0;
         foreach (var list in accounts.Values)
         {
-            // همان خوددرمانیِ کارت‌های قرض‌داران — بدونِ آن الباقیِ ردیف‌های
-            // کهنه صفر می‌ماند و عددِ داشبورد با عددِ خودِ حساب فرق می‌کند.
-            foreach (var a in list) _host.Debt.NormalizeAccount(a);
+            // ⚠️ این‌جا دیگر ‎NormalizeAccount‎ صدا زده نمی‌شود و **نباید** بشود:
+            // ردیف‌هایی که ‎CardAccountsAsync‎ می‌دهد «ردیفِ خلاصه»اند و
+            // خوددرمانی داخلِ خودِ کوئری انجام شده. اگر دوباره درمان شوند،
+            // بردگی‌شان از «لیتر × فی»ی نداشته دوباره حساب می‌شود و صفر
+            // می‌گردد — یعنی عددِ داشبورد خراب می‌شود.
             var t = _host.Debt.SumTotals(list);
             total += Fuel switch
             {
