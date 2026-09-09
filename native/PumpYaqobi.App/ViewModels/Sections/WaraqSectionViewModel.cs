@@ -264,6 +264,15 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
     [ObservableProperty] private string _shortage = "";
     [ObservableProperty] private string _shortageLabel = "";
 
+    /// <summary>جمعِ لیترِ همین شیفت — خانهٔ ‎#wq-total-liters‎ی سایت.</summary>
+    [ObservableProperty] private string _pumpLiters = "";
+
+    /// <summary>جمعِ ستونِ «جمله قرض»ِ پایه‌ها — خانهٔ ‎#wq-total-debt‎ی سایت.</summary>
+    [ObservableProperty] private string _pumpDebt = "";
+
+    /// <summary>عددِ خامِ کمبودی/اضافی — فقط برای رنگِ کادرِ ششم.</summary>
+    private decimal _shortageAmount;
+
     public WaraqShift? Shift =>
         Entity.Shifts.FirstOrDefault(s => s.Kind == (IsNight ? ShiftKind.Night : ShiftKind.Day));
 
@@ -338,29 +347,77 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         Sales = Shamsi.Money(Math.Round(t.Sales, 0, MidpointRounding.AwayFromZero));
         Debt = Shamsi.Money(Math.Round(t.Debt, 0, MidpointRounding.AwayFromZero));
         Expenses = Shamsi.Money(Math.Round(t.Expenses, 0, MidpointRounding.AwayFromZero));
+        PumpLiters = Shamsi.Money(t.PetrolLiters + t.DieselLiters) + " لیتر";
+        PumpDebt = Shamsi.Money(Math.Round(t.DeclaredDebt, 0, MidpointRounding.AwayFromZero));
 
         var sh = Calc.Shortage(t);
-        if (sh.Shortage > 0) { ShortageLabel = "کمبودی"; Shortage = Shamsi.Money(Math.Round(sh.Shortage)); }
-        else if (sh.Excess > 0) { ShortageLabel = "اضافی"; Shortage = Shamsi.Money(Math.Round(sh.Excess)); }
-        else { ShortageLabel = "کمبودی"; Shortage = "0"; }
+        if (sh.Shortage > 0)
+        { ShortageLabel = "کمبودی"; _shortageAmount = Math.Round(sh.Shortage); Shortage = Shamsi.Money(_shortageAmount); }
+        else if (sh.Excess > 0)
+        { ShortageLabel = "اضافی"; _shortageAmount = Math.Round(sh.Excess); Shortage = Shamsi.Money(_shortageAmount); }
+        else
+        { ShortageLabel = "کمبودی"; _shortageAmount = 0m; Shortage = "0"; }
 
         foreach (var x in Txns) x.RefreshEffective();
         OnPropertyChanged(nameof(TotalCells));
+        RefreshSummary();
     }
 
+    /// <summary>شش کادرِ «خلاصه شیفت» از عددهای بالا ساخته می‌شوند، پس با هر
+    /// حساب دوباره باید خوانده شوند.</summary>
+    private void RefreshSummary()
+    {
+        OnPropertyChanged(nameof(SumPetrol));
+        OnPropertyChanged(nameof(SumDiesel));
+        OnPropertyChanged(nameof(SumExpenses));
+        OnPropertyChanged(nameof(SumDebt));
+        OnPropertyChanged(nameof(SumSales));
+        OnPropertyChanged(nameof(SumShortage));
+        OnPropertyChanged(nameof(ShortageBoxLabel));
+        OnPropertyChanged(nameof(ShortageBrushKey));
+        OnPropertyChanged(nameof(SummaryTitle));
+    }
+
+    // ══ خلاصهٔ شیفت — زیرِ جدولِ تراکنش‌ها ═══════════════════════════════════
+    //
+    // گزارشِ صاحب ریپو: «اون شش تا پایینِ این جدولِ تراکنش‌ها استن.» حق داشت؛
+    // در سایت هم همان‌جاست: ‎index.html‎ خط ۱۹۹۷۴ — عنوانِ
+    // ‎#wq-sum-shift-title‎ و شش ‎.stat-box‎ **بعد از** دو جدولِ تراکنش می‌آیند،
+    // نه بالای صفحه. واحدها هم از خط ۴۵۵۴۴ تا ۴۵۵۶۵ برداشته شده‌اند: «لیتر»
+    // برای تیل و «افغانی» برای پول.
+    public string SummaryTitle => "📊 خلاصه شیفت " + (IsNight ? "شب" : "روز");
+
+    public string SumPetrol => PetrolLiters + " لیتر";
+    public string SumDiesel => DieselLiters + " لیتر";
+    public string SumExpenses => Expenses + " افغانی";
+    public string SumDebt => Debt + " افغانی";
+    public string SumSales => Sales + " افغانی";
+    public string SumShortage => Shortage + " افغانی";
+
+    /// <summary>برچسبِ کادرِ ششم — «⚠️ کمبودی» یا «✅ اضافی»، مثلِ خودِ سایت.</summary>
+    public string ShortageBoxLabel => ShortageLabel == "اضافی" ? "✅ اضافی" : "⚠️ کمبودی";
+
+    /// <summary>رنگِ عددِ همان کادر: سرخِ کمبودی، سبزِ اضافی، خاکستریِ صفر.</summary>
+    public string ShortageBrushKey =>
+        _shortageAmount <= 0m ? "Pump.Muted"
+        : ShortageLabel == "اضافی" ? "Pump.Ok" : "Pump.Danger";
+
     /// <summary>
-    /// ردیفِ «جمله»ی ته جدولِ ورق — همتای ‎&lt;tfoot class="xls-foot"&gt;‎ی سایت.
+    /// ردیفِ «جمله این شیفت»ِ ته جدولِ قرائت پمپ‌ها — همتای ‎&lt;tfoot&gt;‎ی سایت
+    /// (‎index.html‎ خط ۱۹۹۲۹): مقدارِ لیتر، مبلغِ فروش و «جمله قرض»ِ پایه‌ها،
+    /// هر کدام زیرِ ستونِ خودش.
+    ///
+    /// ⚠️ پیش از این، شش عددِ «خلاصه شیفت» این‌جا نشسته بودند؛ ولی آن‌ها جمعِ
+    /// این جدول نیستند و در سایت هم کادرهای جداگانه‌ای زیرِ جدولِ تراکنش‌ها
+    /// هستند — حالا همان‌جا‌اند.
+    ///
     /// ⚠️ فقط شیفتی که باز است؛ روز و شب هرگز با هم جمع نمی‌شوند.
     /// </summary>
     public IReadOnlyList<TotalCell> TotalCells => new[]
     {
-        new TotalCell("پطرول (لیتر)", PetrolLiters),
-        new TotalCell("دیزل (لیتر)", DieselLiters),
-        new TotalCell("فروش", Sales, "Pump.Ok"),
-        new TotalCell("قرض", Debt, "Pump.Warn"),
-        new TotalCell("مصارف", Expenses, "Pump.Warn"),
-        new TotalCell(ShortageLabel, Shortage,
-                      ShortageLabel == "کمبودی" ? "Pump.Danger" : "Pump.Ok"),
+        new TotalCell("لیتر", PumpLiters),
+        new TotalCell("فروش", SumSales, "Pump.Ok"),
+        new TotalCell("قرضِ پایه", PumpDebt, "Pump.Danger"),
     };
 
     /// <summary>

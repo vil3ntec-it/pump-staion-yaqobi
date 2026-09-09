@@ -69,6 +69,12 @@ public static class ThemeManager
         Br("Danger", t.IsDark ? PumpTheme.C("#f87171") : PumpTheme.C("#b91c1c"));
         Br("Info", t.IsDark ? PumpTheme.C("#60a5fa") : PumpTheme.C("#1d4ed8"));
 
+        // ⚠️ این دو با تم عوض نمی‌شوند چون در سایت هم نمی‌شوند: ‎--purple‎ در
+        // ‎:root‎ی هر دو تم ‎#805ad5‎ است (‎index.html‎ خط ۹۷ و ۱۰۴) و رنگِ
+        // «جمله دیزل» همان‌جا مستقیم ‎#b7791f‎ نوشته شده (خط ۱۹۹۷۷).
+        Br("Purple", PumpTheme.C("#805ad5"));
+        Br("Diesel", PumpTheme.C("#b7791f"));
+
         Set("Pump.HeaderBg", Horizontal(t.HeaderBg));
         Set("Pump.BannerBg", Horizontal(t.BannerBg));
         Set("Pump.NavBg", Horizontal(t.NavBg));

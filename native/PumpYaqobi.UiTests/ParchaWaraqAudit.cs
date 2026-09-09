@@ -229,7 +229,52 @@ internal static class ParchaWaraqAudit
                                 || ReferenceEquals(g.ItemsSource, page.TxnsSecond))
                        .ToList();
         Check("دو جدولِ تراکنش روی صفحه هست", grids.Count == 2, grids.Count + " جدول");
+
+        SummaryBelowTxns(win, page, grids);
     }
+
+    /// <summary>
+    /// ══ شش کادرِ «خلاصه شیفت» باید زیرِ جدولِ تراکنش‌ها باشند ═══════════════
+    ///
+    /// گزارشِ صاحب ریپو: «اون شش تا پایینِ این جدولِ تراکنش‌ها استن.» در سایت
+    /// هم همان‌جاست (‎index.html‎ خط ۱۹۹۷۴؛ بعد از دو ‎#wq-trans-tbl-*‎).
+    ///
+    /// ⚠️ این را روی پنجرهٔ واقعی می‌سنجیم، نه روی متنِ ‎axaml‎: جای واقعیِ یک
+    /// کادر را فقط چیدمانِ واقعی می‌گوید.
+    /// </summary>
+    private static void SummaryBelowTxns(Window win, WaraqPageViewModel page, List<DataGrid> grids)
+    {
+        string[] labels =
+        {
+            "⛽ جمله بطرول", "🟤 جمله دیزل", "🟣 جمله مصرف",
+            "💳 جمله قرض", "📊 جمله فروش",
+        };
+
+        var texts = win.GetVisualDescendants().OfType<TextBlock>().ToList();
+        var boxes = labels
+            .Select(l => texts.FirstOrDefault(t => (t.Text ?? "").Trim() == l))
+            .ToList();
+
+        var missing = labels.Where((_, i) => boxes[i] is null).ToList();
+        Check("هر پنج کادرِ نام‌دارِ خلاصه روی صفحه هست", missing.Count == 0,
+              missing.Count == 0 ? null : string.Join("، ", missing));
+
+        Check("عنوانِ «خلاصه شیفت» با شیفتِ باز می‌خواند",
+              texts.Any(t => (t.Text ?? "").Trim() == page.SummaryTitle),
+              page.SummaryTitle);
+
+        if (missing.Count > 0 || grids.Count == 0) return;
+
+        var gridBottom = grids.Max(g => Top(g, win) + g.Bounds.Height);
+        var boxTop = boxes.Where(b => b is not null).Min(b => Top(b!, win));
+
+        Check("کادرها پایین‌ترند از جدولِ تراکنش‌ها", boxTop >= gridBottom,
+              $"جدول تا {gridBottom:0} · کادرها از {boxTop:0}");
+    }
+
+    /// <summary>بلندای یک کنترل نسبت به خودِ پنجره.</summary>
+    private static double Top(Visual v, Visual root) =>
+        v.TranslatePoint(new Point(0, 0), root)?.Y ?? double.NaN;
 
     // ══════════════════════════════════════════════════════════════════════
 
