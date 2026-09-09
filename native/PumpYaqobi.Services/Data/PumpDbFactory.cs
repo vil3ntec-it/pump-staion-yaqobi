@@ -127,6 +127,7 @@ public sealed class PumpDbFactory
             ("TankerUnloads", "Manifest", "TEXT NOT NULL DEFAULT '0'"),
             ("TankerUnloads", "Actual", "TEXT NOT NULL DEFAULT '0'"),
             ("DebtAccounts", "MoneyDeposit", "TEXT"),
+            ("DebtAccounts", "ReceiptsMigrated", "INTEGER NOT NULL DEFAULT 0"),
             ("ExchangeRows", "LegacyId", "TEXT"),
             ("CompanyRows", "SourceExchangeId", "TEXT"),
             ("Expenses", "SalaryStaffId", "INTEGER"),

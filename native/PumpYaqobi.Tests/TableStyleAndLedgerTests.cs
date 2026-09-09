@@ -94,114 +94,49 @@ public class TableStyleAndLedgerTests
         Assert.Contains("<c:TotalsStrip />", t);
     }
 
-    // ══ دفترِ رسید — یک منبعِ داده ═══════════════════════════════════════════
+    // ══ رسید — یک رکوردِ واقعی ═══════════════════════════════════════════════
+    //
+    // ⚠️ آزمون‌های خودِ منطق به ‎ReceiptSourceOfTruthTests‎ رفتند. این‌جا فقط
+    // همان چیزی می‌ماند که به **کد** مربوط است: اینکه رسید دیگر انبارِ جدا
+    // ندارد و سربرگ عددِ مستقلی نگه نمی‌دارد.
 
-    private static DebtCalculationService Calc() => new(new FixedRates());
-
-    private sealed class FixedRates : IUnionRateProvider
+    /// <summary>رسید فقط در ستونِ خودِ ردیف زندگی می‌کند.</summary>
+    [Fact]
+    public void ThereIsOnlyOneReceiptStore()
     {
-        public decimal UnionRate(FuelType fuel) => 60m;
+        var calc = Read("PumpYaqobi.Application", "Services", "DebtCalculationService.cs");
+        Assert.Contains("public bool SyncReceiptTotals(DebtAccount a)", calc);
+        Assert.Contains("public decimal ReceiptTotal(DebtAccount a, LedgerMode unit, FuelType fuel)", calc);
+        Assert.Contains("public static DebtRow NewReceiptRow(", calc);
+
+        // دفترِ جدا و توابعش دیگر نیستند
+        Assert.DoesNotContain("PushRasid(", calc);
+        Assert.DoesNotContain("RasidLogSum(", calc);
     }
 
-    /// <summary>رسیدِ تازه جای رسیدِ قبلی را نمی‌گیرد — هر کدام رکوردِ خودش.</summary>
+    /// <summary>سربرگ عددِ خودش را نگه نمی‌دارد — از ردیف‌ها می‌خواند.</summary>
     [Fact]
-    public void EachHeaderReceiptKeepsItsOwnRecord()
+    public void TheHeaderReadsFromTheRows()
     {
-        var c = Calc();
-        var a = new DebtAccount();
+        var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "PersonViewModel.cs");
+        Assert.Contains("private decimal HeadRasid(FuelType fuel)", vm);
+        Assert.Contains("return IsMoney ? t.Rasid : t.RasidFuel;", vm);
+        Assert.Contains("get => Shamsi.MoneyOrBlank(HeadRasid(FuelType.Petrol));", vm);
+        Assert.Contains("set => AddHeadReceipt(FuelType.Petrol, value);", vm);
 
-        c.PushRasid(a, LedgerMode.Fuel, FuelType.Petrol, 5000m);
-        c.PushRasid(a, LedgerMode.Fuel, FuelType.Petrol, 2000m);
-
-        Assert.Equal(2, a.RasidLog.Count);
-        Assert.Equal(7000m, a.RasidFuelPetrol);          // کادرِ سربرگ = جمعِ دفتر
-    }
-
-    /// <summary>پطرول و دیزل، و تیل و پول، چهار دفترِ جدا هستند.</summary>
-    [Fact]
-    public void TheFourLedgersNeverMix()
-    {
-        var c = Calc();
-        var a = new DebtAccount();
-
-        c.PushRasid(a, LedgerMode.Fuel, FuelType.Petrol, 100m);
-        c.PushRasid(a, LedgerMode.Fuel, FuelType.Diesel, 200m);
-        c.PushRasid(a, LedgerMode.Money, FuelType.Petrol, 300m);
-        c.PushRasid(a, LedgerMode.Money, FuelType.Diesel, 400m);
-
-        Assert.Equal(100m, a.RasidFuelPetrol);
-        Assert.Equal(200m, a.RasidFuelDiesel);
-        Assert.Equal(300m, a.RasidMoneyPetrol);
-        Assert.Equal(400m, a.RasidMoneyDiesel);
-    }
-
-    /// <summary>پاک کردنِ یک رسید فقط همان یکی را می‌بَرد و جمع را کم می‌کند.</summary>
-    [Fact]
-    public void DeletingOneReceiptLeavesTheOthers()
-    {
-        var c = Calc();
-        var a = new DebtAccount();
-        var first = c.PushRasid(a, LedgerMode.Fuel, FuelType.Petrol, 5000m);
-        c.PushRasid(a, LedgerMode.Fuel, FuelType.Petrol, 2000m);
-
-        Assert.True(c.RemoveRasid(a, first));
-        Assert.Single(a.RasidLog);
-        Assert.Equal(2000m, a.RasidFuelPetrol);
-    }
-
-    /// <summary>حسابِ قدیمی که فقط چهار عدد دارد، یک‌بار دفتر می‌گیرد.</summary>
-    [Fact]
-    public void OldAccountsGetALedgerFromTheirFourNumbers()
-    {
-        var c = Calc();
-        var a = new DebtAccount { RasidFuelPetrol = 900m, RasidMoneyDiesel = 50m };
-
-        Assert.True(c.RasidLogInit(a));
-        Assert.Equal(2, a.RasidLog.Count);
-        Assert.False(c.RasidLogInit(a));                 // دومین بار دیگر نه
-
-        c.RasidLogSync(a);
-        Assert.Equal(900m, a.RasidFuelPetrol);
-        Assert.Equal(50m, a.RasidMoneyDiesel);
-    }
-
-    /// <summary>صفر رسید نیست — ثبت نمی‌شود.</summary>
-    [Fact]
-    public void ZeroIsNotAReceipt()
-    {
-        var c = Calc();
-        var a = new DebtAccount();
-        Assert.Null(c.PushRasid(a, LedgerMode.Fuel, FuelType.Petrol, 0m));
-        Assert.Empty(a.RasidLog);
+        // و ردیفِ نمایشیِ نسخهٔ پیشین دیگر نیست
+        Assert.DoesNotContain("IsAuto", vm);
     }
 
     /// <summary>
-    /// ردیفِ 📌ِ جدول از همان دفتر می‌آید، در هیچ جمعی شمرده نمی‌شود و در
-    /// دیتابیس نوشته نمی‌شود — قاعدهٔ صریحِ پروژه.
+    /// «الباقی»ِ سربرگ فرمولِ خودِ سایت است — برد + فیصدی − رسید — نه جمعِ
+    /// سادهٔ ستونِ الباقی.
     /// </summary>
     [Fact]
-    public void TheAutoRowIsDisplayOnly()
+    public void TheHeaderRemainderUsesTheSiteFormula()
     {
         var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "PersonViewModel.cs");
-        Assert.Contains("public RasidEntry? Auto { get; private init; }", vm);
-        Assert.Contains("if (IsAuto) return;", vm);
-        Assert.Contains("IsAuto ? Task.CompletedTask : _owner.SaveRowAsync(_r)", vm);
-        Assert.Contains("Calc.SplitTotals(Rows.Where(r => !r.IsAuto)", vm);
-        Assert.Contains("AddRasidRows(want);", vm);
-    }
-
-    /// <summary>سربرگ که نوشته شود، رسیدِ تازه در همان دفتر ثبت می‌شود.</summary>
-    [Fact]
-    public void TheHeaderBoxWritesIntoTheLedger()
-    {
-        var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "PersonViewModel.cs");
-        Assert.Contains("set => PushHeadRasid(FuelType.Petrol, value);", vm);
-        Assert.Contains("set => PushHeadRasid(FuelType.Diesel, value);", vm);
-        Assert.Contains("Calc.PushRasid(Entity, unit, fuel, v, Shamsi.Today())", vm);
-
-        // کادر با دست خوردن خالی می‌شود و با بیرون رفتن ثبت — مثلِ سایت
-        var v = Read("PumpYaqobi.App", "Views", "Sections", "PersonView.axaml");
-        Assert.Contains("UpdateSourceTrigger=LostFocus", v);
-        Assert.Contains("GotFocus=\"RasidBoxFocus\"", v);
+        Assert.Contains("var comm = rasid * pct / 100m;", vm);
+        Assert.Contains("Round0(bord + comm - rasid)", vm);
     }
 }
