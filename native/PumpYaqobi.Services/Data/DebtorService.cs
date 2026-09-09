@@ -46,12 +46,21 @@ public sealed class DebtorService
         return await q.OrderBy(d => d.Name).ToListAsync(ct);
     }
 
-    /// <summary>یک قرض‌دار با همهٔ حساب‌ها و همهٔ ردیف‌هایش — برای مودالِ شخص.</summary>
+    /// <summary>
+    /// یک قرض‌دار با همهٔ حساب‌ها و همهٔ ردیف‌هایش — برای صفحهٔ شخص.
+    ///
+    /// ⚠️ ‎AsSplitQuery‎ حیاتی است: با چند ‎Include‎ی مجموعه‌ای، EF یک کوئریِ
+    /// واحد با چند ‎JOIN‎ می‌سازد و نتیجه‌اش ضربِ دکارتیِ آن مجموعه‌هاست —
+    /// حسابی با پنجاه هزار ردیف و چند رسید، میلیون‌ها سطر برمی‌گرداند.
+    /// سنجشِ کارایی همین را گرفت: خواندنِ یک حسابِ پنجاه‌هزار ردیفی
+    /// **۳۵۶ ثانیه** طول می‌کشید. با کوئریِ جدا، هر مجموعه یک کوئریِ خودش
+    /// دارد و هیچ ضربی در کار نیست.
+    /// </summary>
     public async Task<Debtor?> LoadFullAsync(long id, CancellationToken ct = default)
     {
         _perm.Require(Permission.ViewData);
         await using var db = _dbf.Create();
-        return await db.Debtors.AsNoTracking()
+        return await db.Debtors.AsNoTracking().AsSplitQuery()
             .Include(d => d.MainAccount).ThenInclude(a => a!.FuelRows)
             .Include(d => d.MainAccount).ThenInclude(a => a!.MoneyRows)
             .Include(d => d.SubAccounts).ThenInclude(a => a.FuelRows)

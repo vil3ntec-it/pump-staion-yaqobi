@@ -96,6 +96,15 @@ internal static class PerfAudit
         Mark("جمع‌های همهٔ حساب‌ها (بی صفحه)", () =>
         { var t = host.Debtors.CardAccountsAsync(false); t.GetAwaiter().GetResult(); });
 
+        // ⚠️ دو سنجشِ جدا، تا معلوم شود هزینه مالِ «خواندنِ ردیف‌ها»ست یا مالِ
+        // شکلِ کوئری (چند ‎Include‎ی مجموعه‌ای که ضربِ دکارتی می‌سازند).
+        Mark($"فقط ردیف‌های حسابِ {BigRows:N0} ردیفی", () =>
+        {
+            using var db = new PumpYaqobi.Services.Data.PumpDbFactory(file).Create();
+            db.DebtRows.AsNoTracking().Where(r => r.FuelAccountId != null)
+              .OrderBy(r => r.Id).Take(BigRows).ToList();
+        });
+
         Mark($"خواندنِ حسابِ {BigRows:N0} ردیفی (بی صفحه)", () =>
         { var t = host.Debtors.LoadFullAsync(bigDebtor); t.GetAwaiter().GetResult(); });
 
