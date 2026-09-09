@@ -187,7 +187,7 @@ public sealed partial class MainViewModel : ObservableObject
             // «قرض‌های کهنه» جلویش می‌ماند.
             s.OpenSub = null;
             await s.OnActivatedAsync();
-            await RefreshBannerAsync();
+            QueueBannerRefresh();
             return;
         }
         if (Current is not null)
@@ -204,7 +204,7 @@ public sealed partial class MainViewModel : ObservableObject
         _settings.Save();
         await s.EnsureLoadedAsync();
         await s.OnActivatedAsync();
-        await RefreshBannerAsync();
+        QueueBannerRefresh();
     }
 
     /// <summary>
@@ -310,6 +310,43 @@ public sealed partial class MainViewModel : ObservableObject
         }
 
         await RefreshBannerAsync();
+    }
+
+    private bool _bannerBusy, _bannerAgain;
+
+    /// <summary>
+    /// ══ نوارِ بالا جلوی باز شدنِ بخش را نگیرد ═══════════════════════════════
+    ///
+    /// چهار عددِ نوار به هیچ بخشی ربط ندارند؛ ولی چون جابه‌جایی منتظرشان
+    /// می‌ماند، هزینه‌شان به **هر** باز کردنِ بخش اضافه می‌شد — در سنجش حدودِ
+    /// ۱۶۰ ms روی هر جابه‌جایی، یعنی همان مکثی که خواستهٔ صاحب ریپو نبود.
+    ///
+    /// حالا بخش فوراً باز می‌شود و نوار یک لحظه بعد خودش تازه می‌شود.
+    ///
+    /// ⚠️ اگر کاربر تند تند بخش عوض کند، تازه‌سازی‌ها روی هم نمی‌ریزند: تا یکی
+    /// در جریان است بقیه فقط «یک‌بارِ دیگر» را علامت می‌زنند و در پایان همان
+    /// یک‌بار اجرا می‌شود — پس عددِ آخر همیشه عددِ درست است.
+    /// </summary>
+    public void QueueBannerRefresh()
+    {
+        if (_bannerBusy) { _bannerAgain = true; return; }
+        _bannerBusy = true;
+        _ = RunAsync();
+
+        async Task RunAsync()
+        {
+            try
+            {
+                do
+                {
+                    _bannerAgain = false;
+                    // ⚠️ بی این ‎try‎، یک خطای گذرا در خواندن، استثنای
+                    // «مشاهده‌نشده» می‌شد و برنامه را می‌بست.
+                    try { await RefreshBannerAsync(); } catch { }
+                } while (_bannerAgain);
+            }
+            finally { _bannerBusy = false; }
+        }
     }
 
     /// <summary>
