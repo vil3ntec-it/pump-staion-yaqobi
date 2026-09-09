@@ -6,16 +6,34 @@ namespace PumpYaqobi.Reporting.Pdf;
 public enum PageOrientation { Auto = 0, Portrait = 1, Landscape = 2 }
 
 /// <summary>کدام ورق‌ها چاپ شوند — همان کادرِ اولِ «تنظیمات»ِ صفحهٔ چاپ.</summary>
-public enum PrintWhat { All = 0, Current = 1, Range = 2 }
+public enum PrintWhat
+{
+    All = 0,
+    Current = 1,
+    /// <summary>از ورقِ … تا ورقِ … .</summary>
+    Range = 2,
+    /// <summary>ورق‌های دلخواه: «۱،۳،۵» یا «۱-۳،۷» — <see cref="PageSetup.CustomPages"/>.</summary>
+    Custom = 3,
+}
+
+/// <summary>
+/// ترتیبِ ورق‌ها در خروجی.
+///
+/// ⚠️ این گزینه ظاهری نیست: <see cref="PrintJob.Order"/> واقعاً فهرست را
+/// وارونه می‌کند و همان فهرست است که هم PDF و هم چاپِ مستقیم از رویش ساخته
+/// می‌شوند. برای چاپگرهایی که ورق را رو‌به‌بالا بیرون می‌دهند، «وارونه» یعنی
+/// دستهٔ کاغذ به ترتیبِ درست روی هم می‌نشیند.
+/// </summary>
+public enum PrintOrder
+{
+    /// <summary>۱ ← ۲ ← ۳</summary>
+    Normal = 0,
+    /// <summary>۳ ← ۲ ← ۱</summary>
+    Reverse = 1,
+}
 
 /// <summary>
 /// مقیاسِ چاپ — همان کادرِ «مقیاس».
-///
-/// ⚠️ چهار حالت است نه شش‌تای نسخهٔ وب، و دلیلش این است که موتورِ سندِ این
-/// برنامه با مرورگر فرق دارد: آن‌جا جدولِ HTML از عرضِ ورق بیرون می‌زد و
-/// «جا دادن ستون‌ها» کارِ واقعی می‌کرد؛ این‌جا ستون‌ها خودشان تا عرضِ ورق
-/// چیده می‌شوند، پس آن حالت همان ‎None‎ است و ساختنِ یک گزینهٔ قلابی برایش
-/// فقط کاربر را گمراه می‌کرد.
 /// </summary>
 public enum PrintScale
 {
@@ -25,6 +43,25 @@ public enum PrintScale
     FitPage = 1,
     /// <summary>درصدِ دستیِ کاربر.</summary>
     Custom = 2,
+
+    /// <summary>
+    /// ══ جا دادنِ همهٔ ستون‌ها در عرضِ ورق ═══════════════════════════════════
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو، و این‌جا کارِ واقعی می‌کند — نه یک گزینهٔ
+    /// نمایشی:
+    ///
+    /// بیشترِ گزارش‌های این برنامه ستون‌های «نسبی» دارند و خودشان تا عرضِ ورق
+    /// جمع می‌شوند، پس برایشان این حالت هیچ کاری نمی‌کند و همان اندازهٔ واقعی
+    /// می‌مانَد — که درست است. ولی «حساب قرض‌دار» ستون‌های **ثابت** دارد
+    /// (۳۴ + ۶۶ + ۴۸ + … پوینت) و روی کاغذِ باریک از عرضِ ورق بیرون می‌زند.
+    /// آن‌جا این حالت کلِ محتوا را — یکنواخت، مثلِ خودِ اکسل — همان‌قدر کوچک
+    /// می‌کند که پهن‌ترین ردیف در عرض جا شود.
+    ///
+    /// ⚠️ کوچک‌کردن **یکنواخت** است نه فقط افقی: کشیدنِ افقیِ تنها، نوشته را
+    /// له می‌کند. و چون یکنواخت است، در هر ورق ردیفِ **بیشتری** جا می‌شود —
+    /// پس شمارِ ورق‌ها بی‌دلیل زیاد نمی‌شود.
+    /// </summary>
+    FitColumns = 3,
 }
 
 /// <summary>
@@ -123,6 +160,15 @@ public sealed record PageSetup
     public int From { get; init; } = 1;
     public int To { get; init; } = 1;
 
+    /// <summary>
+    /// ورق‌های دلخواه، وقتی <see cref="What"/> برابرِ ‎Custom‎ باشد — «۱،۳،۵»
+    /// یا «۱-۳، ۷». هم ویرگولِ فارسی و هم انگلیسی، هم رقمِ فارسی و هم لاتین.
+    /// </summary>
+    public string CustomPages { get; init; } = "";
+
+    /// <summary>ترتیبِ ورق‌ها در خروجی — عادی یا وارونه.</summary>
+    public PrintOrder Order { get; init; } = PrintOrder.Normal;
+
     public static readonly PageSetup Default = new();
 
     /// <summary>
@@ -135,6 +181,7 @@ public sealed record PageSetup
     public PageSetup LayoutOnly() => this with
     {
         Copies = 1, Collate = true, What = PrintWhat.All, From = 1, To = 1,
+        CustomPages = "", Order = PrintOrder.Normal,
     };
 
     /// <summary>اندازهٔ نهاییِ ورق، با درنظر گرفتنِ ایستاده/خوابیده.</summary>
@@ -203,6 +250,8 @@ public static class PrintJob
     {
         if (pageCount <= 0) return Array.Empty<int>();
 
+        if (s.What == PrintWhat.Custom) return ParsePages(s.CustomPages, pageCount);
+
         int from = 1, to = pageCount;
         if (s.What == PrintWhat.Current)
             from = to = Math.Clamp(currentPage, 1, pageCount);
@@ -218,10 +267,73 @@ public static class PrintJob
         return list;
     }
 
-    /// <summary>همان‌ها، با تعدادِ نسخه و ترتیبِ مرتب/نامرتب.</summary>
+    /// <summary>
+    /// ══ «صفحاتِ انتخابی» ═══════════════════════════════════════════════════
+    /// «۱،۳،۵» یا «۱-۳، ۷» را به فهرستِ ورق تبدیل می‌کند.
+    ///
+    /// قاعده‌ها، همه از رفتاری که کاربرِ ویندوز انتظار دارد:
+    ///   • ویرگولِ فارسی (‎،‎)، انگلیسی (‎,‎)، نقطه‌ویرگول و فاصله همه جداکننده‌اند.
+    ///   • خط‌تیره (‎-‎ یا ‎–‎) یعنی بازه؛ وارونه‌اش («۵-۳») هم درست خوانده می‌شود.
+    ///   • رقمِ فارسی و لاتین هر دو.
+    ///   • ورقی که وجود ندارد بی‌صدا کنار می‌رود، نه اینکه کلِ ورودی باطل شود —
+    ///     ولی ترتیبِ خودِ کاربر **حفظ** می‌شود («۵،۱» یعنی اول ۵ بعد ۱) و
+    ///     تکراری برداشته می‌شود.
+    /// </summary>
+    public static IReadOnlyList<int> ParsePages(string? text, int pageCount)
+    {
+        var list = new List<int>();
+        if (string.IsNullOrWhiteSpace(text) || pageCount <= 0) return list;
+
+        var seen = new HashSet<int>();
+        void Add(int n) { if (n >= 1 && n <= pageCount && seen.Add(n)) list.Add(n); }
+
+        foreach (var raw in Latin(text!).Split(new[] { ',', ';', ' ', '\t', '\n', '\r' },
+                                              StringSplitOptions.RemoveEmptyEntries))
+        {
+            var part = raw.Trim();
+            if (part.Length == 0) continue;
+
+            // ⚠️ خط‌تیره از جای **دوم** به بعد جست‌وجو می‌شود تا عددِ منفی
+            // («‎-۳‎») به‌جای بازه، یک ورقِ نامعتبر خوانده شود و بی‌صدا برود.
+            var dash = part.IndexOf('-', 1);
+            if (dash > 0)
+            {
+                if (!int.TryParse(part[..dash], out var a) ||
+                    !int.TryParse(part[(dash + 1)..], out var b)) continue;
+                if (b < a) (a, b) = (b, a);
+                for (var i = Math.Max(1, a); i <= Math.Min(pageCount, b); i++) Add(i);
+            }
+            else if (int.TryParse(part, out var one)) Add(one);
+        }
+        return list;
+    }
+
+    /// <summary>رقم و جداکننده‌های فارسی/عربی را به لاتین برمی‌گرداند.</summary>
+    private static string Latin(string s)
+    {
+        var b = new System.Text.StringBuilder(s.Length);
+        foreach (var ch in s)
+        {
+            if (ch >= '\u06F0' && ch <= '\u06F9') b.Append((char)('0' + (ch - '\u06F0')));
+            else if (ch >= '\u0660' && ch <= '\u0669') b.Append((char)('0' + (ch - '\u0660')));
+            else if (ch is '\u060C' or '\u066B' or '\u066C') b.Append(',');
+            else if (ch is '\u061B') b.Append(';');
+            else if (ch is '\u2013' or '\u2014' or '\u2212') b.Append('-');
+            else b.Append(ch);
+        }
+        return b.ToString();
+    }
+
+    /// <summary>همان‌ها، با تعدادِ نسخه، ترتیبِ مرتب/نامرتب و ترتیبِ عادی/وارونه.</summary>
     public static IReadOnlyList<int> Order(PageSetup s, int pageCount, int currentPage)
     {
         var picked = Picked(s, pageCount, currentPage);
+
+        // ⚠️ وارونگی **پیش از** تکثیرِ نسخه‌ها اعمال می‌شود: هر نسخه باید خودش
+        // یک دستهٔ کاملِ وارونه باشد، نه اینکه کلِ کار از ته به سر برود.
+        if (s.Order == PrintOrder.Reverse && picked.Count > 1)
+            picked = picked.Reverse().ToList();
+
         var copies = Math.Clamp(s.Copies, 1, 999);
         if (picked.Count == 0 || copies <= 1) return picked;
 
@@ -231,6 +343,40 @@ public static class PrintJob
         else
             foreach (var p in picked) for (var c = 0; c < copies; c++) order.Add(p);
         return order;
+    }
+
+    /// <summary>
+    /// ══ وارسیِ پیش از چاپ ═══════════════════════════════════════════════════
+    /// اگر چیزی سرِ جایش نباشد، یک جملهٔ روشنِ فارسی برمی‌گردد و صفحهٔ چاپ
+    /// همان را نشان می‌دهد و دکمهٔ چاپ را می‌بندد. ‎null‎ یعنی همه‌چیز درست است.
+    ///
+    /// ⚠️ این‌جا فقط **می‌گوید** چه ایرادی هست؛ خودش هیچ عددی را عوض نمی‌کند.
+    /// اصلاحِ خودکار (مثلِ برگرداندنِ بازهٔ وارونه) کارِ <see cref="Picked"/>
+    /// است و آن‌جا می‌ماند تا چاپ هیچ‌وقت خروجیِ بی‌معنی ندهد.
+    /// </summary>
+    public static string? Validate(PageSetup s, int pageCount)
+    {
+        if (pageCount <= 0) return "هنوز ورقی برای چاپ ساخته نشده است";
+
+        if (s.Copies < 1) return "تعدادِ نسخه باید دستِ‌کم ۱ باشد";
+        if (s.Copies > 999) return "تعدادِ نسخه بیشتر از ۹۹۹ نمی‌شود";
+
+        if (s.Scale == PrintScale.Custom && (s.ScalePercent < 10 || s.ScalePercent > 400))
+            return "مقیاس باید بینِ ۱۰ تا ۴۰۰ درصد باشد";
+
+        if (s.What == PrintWhat.Range)
+        {
+            if (s.From < 1 || s.To < 1) return "شمارهٔ ورق از ۱ شروع می‌شود";
+            if (s.From > pageCount || s.To > pageCount)
+                return "این گزارش " + PersianText.Num(pageCount) + " ورق دارد";
+            if (s.From > s.To) return "«از ورق» نباید بزرگ‌تر از «تا ورق» باشد";
+        }
+
+        if (s.What == PrintWhat.Custom && Picked(s, pageCount, 1).Count == 0)
+            return "شماره‌های ورق را مثلِ ۱،۳،۵ بنویسید (بینِ ۱ تا "
+                   + PersianText.Num(pageCount) + ")";
+
+        return null;
     }
 
     /// <summary>همهٔ ورق‌ها، یک‌بار، به ترتیب؟ آن‌وقت فایلِ اصلی خودش کافی است.</summary>

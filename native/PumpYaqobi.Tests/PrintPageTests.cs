@@ -159,7 +159,79 @@ public class PrintPageTests
         Assert.Contains("NextCommand", w);
         Assert.Contains("ZoomPageCommand", w);
         Assert.Contains("{Binding ShowGuides}", w);
-        Assert.Contains("{Binding GuideMargin}", w);
+        // خط‌چینِ حاشیه حالا مالِ **هر برگه** است، نه یک ورقِ تکی
+        Assert.Contains("Margin=\"{Binding Guide}\"", w);
+    }
+
+    /// <summary>
+    /// ══ پیش‌نمایش همهٔ ورق‌ها را نشان می‌دهد ═════════════════════════════════
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو: «اگر گزارش ۳ صفحه دارد: [صفحه ۱] [صفحه ۲]
+    /// [صفحه ۳] — هر صفحه مثلِ یک برگهٔ واقعی، نه یک کادرِ سفیدِ ساده.»
+    ///
+    /// پیش از این فقط یک ورق دیده می‌شد و باید با ◀ ▶ ورق می‌زدی.
+    /// </summary>
+    [Fact]
+    public void ThePreviewListsEveryPage()
+    {
+        var w = Read("PumpYaqobi.App", "Views", "DocumentPreviewWindow.axaml");
+
+        Assert.Contains("ItemsSource=\"{Binding PreviewPages}\"", w);
+        Assert.Contains("SelectedIndex=\"{Binding PageIndex}\"", w);
+        Assert.Contains("x:DataType=\"p:PreviewPage\"", w);
+
+        // برچسبِ «ورق ۱» و نشانِ «چاپ نمی‌شود» روی خودِ برگه
+        Assert.Contains("{Binding Label}", w);
+        Assert.Contains("{Binding SkipNote}", w);
+
+        // ⚠️ گزارشِ صدورقی نباید صد تصویر را با هم بچیند
+        Assert.Contains("VirtualizingStackPanel", w);
+    }
+
+    /// <summary>
+    /// ══ بازهٔ چاپ کشو است، نه کادرِ آزاد ════════════════════════════════════
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو: «اگر گزارش ۳ ورق دارد، گزینه‌ها باید ۱ و ۲ و ۳
+    /// باشند… نباید عدد صفحات Hard-code شود.»
+    ///
+    /// پس فهرست از خودِ سند می‌آید و در کد هیچ عددِ ثابتی نیست.
+    /// </summary>
+    [Fact]
+    public void ThePageRangeIsADropdownBuiltFromTheRealPageCount()
+    {
+        var w = Read("PumpYaqobi.App", "Views", "DocumentPreviewWindow.axaml");
+        Assert.Contains("ItemsSource=\"{Binding PageNumbers}\"", w);
+        Assert.Contains("SelectedItem=\"{Binding FromPage}\"", w);
+        Assert.Contains("SelectedItem=\"{Binding ToPage}\"", w);
+
+        var vm = NoComments(Read("PumpYaqobi.App", "Printing", "DocumentPreview.cs"));
+        // فهرست از شمارِ واقعیِ ورق‌ها ساخته می‌شود
+        Assert.Contains("for (var i = 1; i <= Math.Max(1, PageCount); i++) PageNumbers.Add(i);", vm);
+        // و دیگر کادرِ متنیِ آزادی برای بازه نیست
+        Assert.DoesNotContain("_fromText", vm);
+        Assert.DoesNotContain("_toText", vm);
+    }
+
+    /// <summary>«صفحاتِ انتخابی» و «ترتیبِ چاپ» هر دو در ستون‌اند.</summary>
+    [Fact]
+    public void TheRailHasCustomPagesAndPrintOrder()
+    {
+        var w = Read("PumpYaqobi.App", "Views", "DocumentPreviewWindow.axaml");
+        Assert.Contains("{Binding CustomPagesText}", w);
+        Assert.Contains("{Binding IsCustomPages}", w);
+        Assert.Contains("{Binding Orders}", w);
+    }
+
+    /// <summary>خطا دیده می‌شود و دکمه‌های چاپ و PDF را می‌بندد.</summary>
+    [Fact]
+    public void AnInvalidSetupBlocksPrinting()
+    {
+        var w = Read("PumpYaqobi.App", "Views", "DocumentPreviewWindow.axaml");
+        Assert.Contains("{Binding HasError}", w);
+        Assert.Contains("{Binding Error}", w);
+        // هر دو دکمه — نه فقط یکی
+        Assert.Equal(2, System.Text.RegularExpressions.Regex
+            .Matches(w, "IsEnabled=\"\\{Binding CanPrint\\}\"").Count);
     }
 
     /// <summary>
@@ -276,6 +348,168 @@ public class PrintPageTests
         var d = Read("PumpYaqobi.Reporting", "Pdf", "DocStyle.cs");
         Assert.Contains("PrintScale.FitPage => c.ScaleToFit()", d);
         Assert.Contains("PrintScale.Custom => c.Scale(", d);
+        Assert.Contains("PrintScale.FitColumns => c.Scale(", d);
         Assert.Contains("Sized(page.Content())", d);
+    }
+
+    // ══ صفحاتِ انتخابی ═══════════════════════════════════════════════════════
+
+    /// <summary>«۱،۳،۵» یعنی همان سه ورق — نه بازه.</summary>
+    [Fact]
+    public void CustomPages_PicksExactlyThoseSheets()
+    {
+        var s = PageSetup.Default with { What = PrintWhat.Custom, CustomPages = "1,3,5" };
+        Assert.Equal(new[] { 1, 3, 5 }, PrintJob.Picked(s, 6, 1));
+    }
+
+    /// <summary>خط‌تیره بازه است، و رقمِ فارسی و ویرگولِ فارسی هم کار می‌کنند.</summary>
+    [Theory]
+    [InlineData("1-3", new[] { 1, 2, 3 })]
+    [InlineData("۱-۳، ۷", new[] { 1, 2, 3, 7 })]
+    [InlineData("3-1", new[] { 1, 2, 3 })]          // وارونه
+    [InlineData("2 5", new[] { 2, 5 })]             // فاصله هم جداکننده است
+    public void CustomPages_UnderstandsRangesAndPersianDigits(string text, int[] want)
+        => Assert.Equal(want, PrintJob.ParsePages(text, 8));
+
+    /// <summary>ترتیبِ خودِ کاربر حفظ می‌شود و تکراری برداشته.</summary>
+    [Fact]
+    public void CustomPages_KeepsTheUsersOrderAndDropsDuplicates()
+        => Assert.Equal(new[] { 5, 1 }, PrintJob.ParsePages("5,1,5", 6));
+
+    /// <summary>ورقی که وجود ندارد بی‌صدا کنار می‌رود — بقیه می‌مانند.</summary>
+    [Fact]
+    public void CustomPages_IgnoresSheetsThatDoNotExist()
+        => Assert.Equal(new[] { 1, 2 }, PrintJob.ParsePages("1,2,99", 2));
+
+    /// <summary>متنِ بی‌معنی یعنی هیچ ورقی — و همان جلوی چاپ را می‌گیرد.</summary>
+    [Fact]
+    public void CustomPages_NonsenseMeansNothingToPrint()
+        => Assert.Empty(PrintJob.ParsePages("سلام", 5));
+
+    // ══ ترتیبِ چاپ ═══════════════════════════════════════════════════════════
+
+    /// <summary>«وارونه» واقعاً فهرست را برمی‌گرداند، نه فقط برچسبش را.</summary>
+    [Fact]
+    public void ReverseOrder_ReallyReversesTheOutput()
+    {
+        var s = PageSetup.Default with { Order = PrintOrder.Reverse };
+        Assert.Equal(new[] { 3, 2, 1 }, PrintJob.Order(s, 3, 1));
+    }
+
+    /// <summary>هر نسخه خودش یک دستهٔ کاملِ وارونه است.</summary>
+    [Fact]
+    public void ReverseOrder_AppliesInsideEachCopy()
+    {
+        var s = PageSetup.Default with { Order = PrintOrder.Reverse, Copies = 2, Collate = true };
+        Assert.Equal(new[] { 3, 2, 1, 3, 2, 1 }, PrintJob.Order(s, 3, 1));
+    }
+
+    /// <summary>ترتیبِ وارونه یعنی «همان سندِ اصلی» نیست — پس ورق‌ها از نو چیده می‌شوند.</summary>
+    [Fact]
+    public void ReverseOrder_IsNotTheWholeDocument()
+    {
+        var s = PageSetup.Default with { Order = PrintOrder.Reverse };
+        Assert.False(PrintJob.IsWholeDocument(PrintJob.Order(s, 3, 1), 3));
+    }
+
+    /// <summary>ترتیب و صفحاتِ انتخابی چیدمانِ ورق را عوض نمی‌کنند.</summary>
+    [Fact]
+    public void OrderAndCustomPages_DoNotForceARebuild()
+    {
+        var a = PageSetup.Default;
+        Assert.Equal(a.LayoutOnly(), (a with { Order = PrintOrder.Reverse }).LayoutOnly());
+        Assert.Equal(a.LayoutOnly(), (a with { CustomPages = "1,3" }).LayoutOnly());
+    }
+
+    // ══ وارسی ════════════════════════════════════════════════════════════════
+
+    /// <summary>تنظیمِ پیش‌فرضِ یک گزارشِ سه‌ورقی هیچ ایرادی ندارد.</summary>
+    [Fact]
+    public void Validate_SaysNothingWhenEverythingIsFine()
+        => Assert.Null(PrintJob.Validate(PageSetup.Default, 3));
+
+    /// <summary>«از» بزرگ‌تر از «تا» — همان چیزی که صاحب ریپو گفت نباید چاپ شود.</summary>
+    [Fact]
+    public void Validate_CatchesABackwardsRange()
+    {
+        var s = PageSetup.Default with { What = PrintWhat.Range, From = 3, To = 2 };
+        Assert.Contains("بزرگ‌تر", PrintJob.Validate(s, 5));
+    }
+
+    /// <summary>بازه‌ای بیرون از شمارِ واقعیِ ورق‌ها.</summary>
+    [Fact]
+    public void Validate_CatchesARangeBeyondTheDocument()
+    {
+        var s = PageSetup.Default with { What = PrintWhat.Range, From = 1, To = 9 };
+        Assert.NotNull(PrintJob.Validate(s, 3));
+    }
+
+    [Fact]
+    public void Validate_CatchesABadCopyCount()
+        => Assert.NotNull(PrintJob.Validate(PageSetup.Default with { Copies = 0 }, 3));
+
+    [Fact]
+    public void Validate_CatchesAScaleOutOfRange()
+    {
+        var s = PageSetup.Default with { Scale = PrintScale.Custom, ScalePercent = 900 };
+        Assert.Contains("مقیاس", PrintJob.Validate(s, 3)!);
+    }
+
+    /// <summary>«صفحاتِ انتخابی»ی خالی یا بی‌معنی هم جلوی چاپ را می‌گیرد.</summary>
+    [Fact]
+    public void Validate_CatchesEmptyCustomPages()
+    {
+        var s = PageSetup.Default with { What = PrintWhat.Custom, CustomPages = "" };
+        Assert.NotNull(PrintJob.Validate(s, 3));
+    }
+
+    /// <summary>سندِ بی‌ورق چاپ‌شدنی نیست.</summary>
+    [Fact]
+    public void Validate_CatchesAnEmptyDocument()
+        => Assert.NotNull(PrintJob.Validate(PageSetup.Default, 0));
+
+    // ══ جا دادنِ ستون‌ها ══════════════════════════════════════════════════════
+
+    /// <summary>
+    /// جدولی که جا می‌شود، دست نمی‌خورد — این گزینه فقط برای **کوچک کردن** است.
+    /// </summary>
+    [Fact]
+    public void FitColumns_LeavesAFittingTableAlone()
+    {
+        // A4ِ ایستاده با حاشیهٔ باریک ≈ ۵۵۹ پوینت پهنای چاپی
+        Assert.Equal(1f, DocStyle.ColumnFit(PageSetup.Default, false, 400f));
+        // و گزارشی که پهنای کمینه اعلام نکرده، هیچ‌وقت کوچک نمی‌شود
+        Assert.Equal(1f, DocStyle.ColumnFit(PageSetup.Default, false, 0f));
+    }
+
+    /// <summary>
+    /// جدولی که بیرون می‌زند واقعاً کوچک می‌شود — و درست همان‌قدر که جا شود.
+    /// </summary>
+    [Fact]
+    public void FitColumns_ShrinksATableThatOverflows()
+    {
+        var a5 = PageSetup.Default with { Paper = "A5", CustomWidth = 148m, CustomHeight = 210m };
+        var need = 700f;
+        var k = DocStyle.ColumnFit(a5, false, need);
+
+        Assert.True(k < 1f, "روی A5 باید کوچک شود");
+        Assert.True(k * need <= DocStyle.PrintableWidthPt(a5, false),
+                    "بعد از کوچک شدن باید در عرضِ چاپی جا شود");
+    }
+
+    /// <summary>ورقِ خوابیده پهنای بیشتری دارد، پس ضریب بزرگ‌تر است.</summary>
+    [Fact]
+    public void FitColumns_LandscapeNeedsLessShrinking()
+    {
+        var s = PageSetup.Default with { Paper = "A5" };
+        Assert.True(DocStyle.ColumnFit(s, true, 700f) > DocStyle.ColumnFit(s, false, 700f));
+    }
+
+    /// <summary>«حسابِ قرض‌دار» پهنای کمینه‌اش را اعلام می‌کند — وگرنه این گزینه بی‌اثر بود.</summary>
+    [Fact]
+    public void TheDebtorStatement_DeclaresItsMinimumWidth()
+    {
+        var r = Read("PumpYaqobi.Reporting", "Pdf", "DebtorStatementReport.cs");
+        Assert.Contains("minContentWidthPt: MinTableWidthPt", r);
     }
 }

@@ -66,7 +66,8 @@
             <!-- ⚠️ فاصله با ‎Margin‎ است نه ‎ColumnSpacing‎: آن یکی در این نسخهٔ
                  آوالونیا روی ‎Grid‎ وجود ندارد و ساخت را می‌شکند. -->
             <Grid ColumnDefinitions="Auto,*">
-              <Button Grid.Column="0" Classes="big-print" Click="OnPrint" Margin="0,0,12,0">
+              <Button Grid.Column="0" Classes="big-print" Click="OnPrint" Margin="0,0,12,0"
+                      IsEnabled="{Binding CanPrint}">
                 <StackPanel Spacing="2" HorizontalAlignment="Center">
                   <TextBlock Text="🖨️" FontSize="26" HorizontalAlignment="Center" />
                   <TextBlock Text="چاپ" FontSize="13" FontWeight="Bold"
@@ -84,12 +85,24 @@
             </Grid>
 
             <!-- ساختنِ PDF کارِ چاپگر نیست، پس هیچ پنجرهٔ ویندوزی لازم ندارد -->
-            <Button Classes="pdf" Click="OnPdf" HorizontalAlignment="Stretch">
+            <Button Classes="pdf" Click="OnPdf" HorizontalAlignment="Stretch"
+                    IsEnabled="{Binding CanPrint}">
               <StackPanel Spacing="1">
                 <TextBlock Text="⬇️ ساختنِ فایلِ PDF" FontWeight="Bold" />
                 <TextBlock Text="بدونِ پنجرهٔ ویندوز" FontSize="11" Opacity="0.8" />
               </StackPanel>
             </Button>
+
+            <!-- ══ خطا ══════════════════════════════════════════════════════
+                 تا وقتی این‌جا چیزی نوشته باشد، دکمه‌های «چاپ» و «PDF» بسته‌اند —
+                 قاعده‌هایش در ‎PrintJob.Validate‎ است، نه این‌جا. -->
+            <Border Classes="errbox" IsVisible="{Binding HasError}">
+              <StackPanel Orientation="Horizontal" Spacing="7">
+                <TextBlock Text="⚠" FontSize="15" VerticalAlignment="Center" Foreground="#a4262c" />
+                <TextBlock Text="{Binding Error}" TextWrapping="Wrap" FontSize="12"
+                           Foreground="#a4262c" VerticalAlignment="Center" />
+              </StackPanel>
+            </Border>
 
             <!-- ── چاپگر ── -->
             <TextBlock Text="چاپگر" Classes="ph" />
@@ -108,17 +121,32 @@
             <TextBlock Text="تنظیمات" Classes="ph" />
 
             <c:SettingCard ItemsSource="{Binding Whats}" SelectedItem="{Binding What}" />
-            <TextBlock Text="{Binding WhatNote}" Classes="pn" Margin="4,-4,4,2" />
+            <TextBlock Text="{Binding WhatNote}" Margin="4,-4,4,2"
+                       Classes="pn" Classes.err="{Binding HasError}" />
 
-            <!-- ورق‌ها: از … تا … — فقط وقتی «بازه» انتخاب شده، مثلِ اکسل -->
-            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsRange}">
+            <!-- ══ بازهٔ چاپ ═══════════════════════════════════════════════
+                 ⚠️ کشو، نه کادرِ آزاد: گزینه‌ها از شمارِ **واقعیِ** ورق‌های همین
+                 گزارش می‌آیند (‎PageNumbers‎)، پس نوشتنِ ورقی که وجود ندارد از
+                 اساس ممکن نیست. سه ورق ⇒ ۱ و ۲ و ۳؛ پنجاه ورق ⇒ ۱ تا ۵۰. -->
+            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsRange}"
+                        Margin="0,0,0,4">
               <TextBlock Text="ورق‌ها:" VerticalAlignment="Center" Classes="pl" />
-              <TextBox Text="{Binding FromText}" Width="74" Classes="spinbox" />
+              <ComboBox ItemsSource="{Binding PageNumbers}" SelectedItem="{Binding FromPage}"
+                        Width="86" Classes="numbox" ToolTip.Tip="از ورق" />
               <TextBlock Text="تا" VerticalAlignment="Center" Classes="pl" />
-              <TextBox Text="{Binding ToText}" Width="74" Classes="spinbox" />
+              <ComboBox ItemsSource="{Binding PageNumbers}" SelectedItem="{Binding ToPage}"
+                        Width="86" Classes="numbox" ToolTip.Tip="تا ورق" />
+            </StackPanel>
+
+            <!-- ══ صفحاتِ انتخابی ═══════════════════════════════════════════ -->
+            <StackPanel Spacing="3" IsVisible="{Binding IsCustomPages}" Margin="0,0,0,4">
+              <TextBlock Text="شماره‌های ورق" Classes="pl" />
+              <TextBox Text="{Binding CustomPagesText}" Watermark="۱،۳،۵ یا ۱-۳، ۷"
+                       Classes="spinbox" HorizontalContentAlignment="Right" />
             </StackPanel>
 
             <c:SettingCard ItemsSource="{Binding Collates}" SelectedItem="{Binding Collate}" />
+            <c:SettingCard ItemsSource="{Binding Orders}" SelectedItem="{Binding Order}" />
             <c:SettingCard ItemsSource="{Binding Orientations}" SelectedItem="{Binding Orientation}" />
             <c:SettingCard ItemsSource="{Binding Papers}" SelectedItem="{Binding Paper}" />
             <c:SettingCard ItemsSource="{Binding MarginChoices}" SelectedItem="{Binding Margin}" />
@@ -143,19 +171,61 @@
            ══════════════════════════════════════════════════════════════════ -->
       <Grid Grid.Column="1" RowDefinitions="*,Auto" Background="#f3f2f1">
 
+        <!-- ══════════════════════════════════════════════════════════════════
+             پیش‌نمایش — **همهٔ** ورق‌ها، پشتِ‌سرِ هم
+             ══════════════════════════════════════════════════════════════════
+
+             خواستهٔ صریحِ صاحب ریپو: «اگر گزارش ۳ صفحه دارد: [صفحه ۱]
+             [صفحه ۲] [صفحه ۳] — هر صفحه مثلِ یک برگهٔ واقعی.»
+
+             پیش از این فقط یک ورق دیده می‌شد و باید با ◀ ▶ ورق می‌زدی.
+
+             ⚠️ ‎ListBox‎ است نه ‎ItemsControl‎: مجازی‌سازی و «برو به ورقِ فلان»
+             را خودش دارد. گزارشِ صد‌ورقی نباید صد تصویر را با هم بچیند.
+             ⚠️ ‎SelectedIndex‎ به ‎PageIndex‎ بسته است، پس ◀ ▶ی نوارِ پایین،
+             کادرِ شمارهٔ ورق و کلیک روی خودِ برگه — هر سه یک چیزند. -->
         <Panel Grid.Row="0">
-          <ScrollViewer Padding="24" HorizontalScrollBarVisibility="Auto" Name="PreviewScroll">
-            <Panel HorizontalAlignment="Center" VerticalAlignment="Center">
-              <Border Background="White" BoxShadow="0 2 12 0 #26000000">
-                <Image Source="{Binding CurrentPage}" Stretch="Uniform"
-                       Width="{Binding PageWidth}" />
-              </Border>
-              <!-- خط‌چینِ حاشیه — دکمهٔ «نمایشِ حاشیه‌ها»ی نوارِ پایین -->
-              <Rectangle Margin="{Binding GuideMargin}" IsVisible="{Binding ShowGuides}"
-                         Stroke="#2b6cb0" StrokeThickness="1" StrokeDashArray="4,3"
-                         Fill="Transparent" IsHitTestVisible="False" />
-            </Panel>
-          </ScrollViewer>
+          <ListBox Name="PreviewScroll" Padding="24" Background="Transparent"
+                   ItemsSource="{Binding PreviewPages}"
+                   SelectedIndex="{Binding PageIndex}"
+                   ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                   HorizontalAlignment="Stretch">
+            <ListBox.ItemsPanel>
+              <ItemsPanelTemplate>
+                <VirtualizingStackPanel Orientation="Vertical" />
+              </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="p:PreviewPage">
+                <StackPanel Spacing="5" HorizontalAlignment="Center" Margin="0,0,0,18"
+                            IsVisible="{Binding IsShown}">
+                  <!-- برچسبِ «ورق ۱» بالای هر برگه، و نشانِ «چاپ نمی‌شود» -->
+                  <StackPanel Orientation="Horizontal" Spacing="8"
+                              HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding Label}" FontSize="11.5" FontWeight="Bold"
+                               Foreground="#5b6472" />
+                    <Border Background="#fde7e9" CornerRadius="3" Padding="6,1"
+                            IsVisible="{Binding !IsPicked}">
+                      <TextBlock Text="{Binding SkipNote}" FontSize="10.5"
+                                 Foreground="#a4262c" />
+                    </Border>
+                  </StackPanel>
+
+                  <Panel Classes.skipped="{Binding !IsPicked}">
+                    <Border Background="White" BoxShadow="0 2 12 0 #26000000"
+                            BorderBrush="#d2d0ce" BorderThickness="1">
+                      <Image Source="{Binding Image}" Stretch="Uniform"
+                             Width="{Binding Width}" />
+                    </Border>
+                    <!-- خط‌چینِ حاشیه — دکمهٔ «نمایشِ حاشیه‌ها»ی نوارِ پایین -->
+                    <Rectangle Margin="{Binding Guide}" IsVisible="{Binding ShowGuides}"
+                               Stroke="#2b6cb0" StrokeThickness="1" StrokeDashArray="4,3"
+                               Fill="Transparent" IsHitTestVisible="False" />
+                  </Panel>
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
 
           <Border Background="#b3ffffff" IsVisible="{Binding Busy}">
             <TextBlock Text="⏳ در حالِ چیدنِ ورق‌ها…" FontSize="16" FontWeight="Bold"
@@ -189,6 +259,8 @@
               <Border Width="1" Background="#dfe3e8" Margin="6,2" />
               <ToggleButton Classes="page-btn" Content="⬚" IsChecked="{Binding ShowGuides}"
                             ToolTip.Tip="نمایشِ حاشیه‌ها" />
+              <ToggleButton Classes="page-btn" Content="🖨" IsChecked="{Binding OnlyPrinted}"
+                            ToolTip.Tip="فقط ورق‌هایی که چاپ می‌شوند" />
               <Button Classes="page-btn" Content="⤢" Command="{Binding ZoomPageCommand}"
                       ToolTip.Tip="هم‌اندازهٔ ورق" />
               <Button Classes="page-btn" Content="↔" Command="{Binding ZoomFitCommand}"
@@ -344,6 +416,57 @@
     </Style>
     <Style Selector="ToggleButton.page-btn:checked /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="#e3edfb" />
+    </Style>
+
+    <!-- ══ کادرِ خطا ══ حالتِ خطا باید **دیده** شود، نه فقط دکمه را ببندد -->
+    <Style Selector="Border.errbox">
+      <Setter Property="Background" Value="#fde7e9" />
+      <Setter Property="BorderBrush" Value="#e6a2a6" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="Padding" Value="9,7" />
+      <Setter Property="Margin" Value="0,4,0,0" />
+    </Style>
+    <Style Selector="TextBlock.pn.err">
+      <Setter Property="Foreground" Value="#a4262c" />
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+
+    <!-- کشوی عددیِ «از ورق / تا ورق» — کوچک و وسط‌چین، مثلِ کادرهای عددیِ ستون -->
+    <Style Selector="ComboBox.numbox">
+      <Setter Property="MinHeight" Value="30" />
+      <Setter Property="Padding" Value="8,3" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="BorderBrush" Value="#cfd6de" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+
+    <!-- ══ برگه‌های پیش‌نمایش ══════════════════════════════════════════════
+         ‎ListBoxItem‎ی پیش‌فرض یک کادرِ آبیِ انتخاب دورِ هر برگه می‌کشد. برگه
+         خودش سایه و لبه دارد؛ آن کادر فقط شلوغش می‌کرد. به‌جایش، ورقِ باز با
+         یک خطِ نازکِ سبز شناخته می‌شود. -->
+    <Style Selector="ListBox#PreviewScroll">
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="ListBox#PreviewScroll ListBoxItem">
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Margin" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="ListBox#PreviewScroll ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="0" />
+    </Style>
+    <Style Selector="ListBox#PreviewScroll ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <!-- ورقی که در این کارِ چاپ نیست: کم‌رنگ، ولی همچنان قابلِ انتخاب -->
+    <Style Selector="Panel.skipped">
+      <Setter Property="Opacity" Value="0.4" />
     </Style>
   </Window.Styles>
 </Window>

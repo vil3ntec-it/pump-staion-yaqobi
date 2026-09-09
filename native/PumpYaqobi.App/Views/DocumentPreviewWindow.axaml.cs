@@ -28,17 +28,28 @@ public partial class DocumentPreviewWindow : Window
         {
             if (Vm is null) return;
 
-            var scroll = this.FindControl<ScrollViewer>("PreviewScroll");
-            var w = scroll?.Viewport.Width ?? 0;
-            var h = scroll?.Viewport.Height ?? 0;
+            // ⚠️ اندازه از خودِ فهرستِ برگه‌ها گرفته می‌شود. پیش از این یک
+            // ‎ScrollViewer‎ بود؛ حالا فهرستِ ورق‌هاست و ‎FindControl<ScrollViewer>‎
+            // همیشه ‎null‎ می‌داد — یعنی ورق دیگر هم‌قدِ پنجره باز نمی‌شد.
+            var list = this.FindControl<ListBox>("PreviewScroll");
+            var w = list?.Bounds.Width ?? 0;
+            var h = list?.Bounds.Height ?? 0;
             if (w < 120 || h < 120) return;
 
-            Vm.FitWidth = w - 56;          // جای حاشیه و نوارِ اسکرول
-            Vm.FitHeight = h - 56;
+            Vm.FitWidth = w - 72;          // جای حاشیه و نوارِ اسکرول
+            Vm.FitHeight = h - 72;
 
             if (fitted) return;
             fitted = true;
             Vm.ZoomPageCommand.Execute(null);
+        };
+
+        // ══ صفحه‌کلید ══ برنامه بومی است؛ ‎Esc‎ باید ببندد.
+        KeyDown += (_, e) =>
+        {
+            if (e.Key != Avalonia.Input.Key.Escape) return;
+            e.Handled = true;
+            Close();
         };
     }
 
@@ -74,7 +85,7 @@ public partial class DocumentPreviewWindow : Window
 
     private void OnPrint(object? sender, RoutedEventArgs e)
     {
-        if (Vm is null) return;
+        if (Vm is null || !Vm.CanPrint) return;
         if (Vm.PickedPages().Count == 0)
         { Vm.Status = "هیچ ورقی در این بازه نیست"; return; }
 
@@ -90,7 +101,7 @@ public partial class DocumentPreviewWindow : Window
 
     private void Save(bool reveal)
     {
-        if (Vm is null) return;
+        if (Vm is null || !Vm.CanPrint) return;
         var path = Vm.SaveTo(PrintService.DocsFolder);
         Vm.Status = "ذخیره شد: " + path;
         if (reveal) PrintService.Reveal(path);

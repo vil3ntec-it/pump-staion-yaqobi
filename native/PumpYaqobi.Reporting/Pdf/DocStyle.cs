@@ -53,10 +53,20 @@ public static class DocStyle
     /// <paramref name="landscape"/> جهتِ **طبیعیِ** خودِ گزارش است؛ اگر کاربر
     /// در «تنظیمِ ورق» جهتی انتخاب کرده باشد، آن مقدم است.
     /// </summary>
+    /// <param name="minContentWidthPt">
+    /// پهنای **کمینه**ی محتوای این گزارش به پوینت — یعنی زیرِ این عدد، جدول
+    /// از عرضِ ورق بیرون می‌زند.
+    ///
+    /// فقط گزارش‌هایی که ستونِ **ثابت** دارند این را می‌دهند (مثلِ «حساب
+    /// قرض‌دار»). گزارش‌های با ستونِ نسبی خودشان تا عرضِ ورق جمع می‌شوند و
+    /// صفر می‌فرستند — که یعنی «هیچ‌وقت بیرون نمی‌زنم».
+    ///
+    /// تنها مصرفش <see cref="PrintScale.FitColumns"/> است.
+    /// </param>
     public static void Compose(IDocumentContainer doc, string title, string? subtitle,
                                string dates, Action<IContainer> body,
                                bool landscape = false, string titleColor = Title,
-                               PageSetup? setup = null)
+                               PageSetup? setup = null, float minContentWidthPt = 0)
     {
         var s = setup ?? PageSetup.Default;
         var (w, h) = s.SizeMm(landscape);
@@ -98,6 +108,7 @@ public static class DocStyle
             IContainer Sized(IContainer c) => s.Scale switch
             {
                 PrintScale.FitPage => c.ScaleToFit(),
+                PrintScale.FitColumns => c.Scale(ColumnFit(s, landscape, minContentWidthPt)),
                 PrintScale.Custom => c.Scale(Math.Clamp(s.ScalePercent, 10, 400) / 100f),
                 _ => c,
             };
@@ -118,6 +129,38 @@ public static class DocStyle
 
     private static bool HasText(params string?[] parts) =>
         parts.Any(p => !string.IsNullOrWhiteSpace(p));
+
+    /// <summary>پهنای قابلِ چاپِ ورق (پوینت) — کاغذ منهای دو حاشیه.</summary>
+    public static float PrintableWidthPt(PageSetup s, bool landscape)
+    {
+        var (w, _) = s.SizeMm(landscape);
+        var m = s.Margins();
+        return (float)((w - m.Left - m.Right) * 72m / 25.4m);
+    }
+
+    /// <summary>
+    /// کادرِ نقطه‌چینِ دورِ محتوا و بالشتکِ داخلش، از پهنای در دسترس کم می‌کنند —
+    /// یک واحد خط و ده واحد بالشتک، در هر طرف.
+    /// </summary>
+    private const float ContentChromePt = 2 * (1f + 10f);
+
+    /// <summary>
+    /// ضریبِ «جا دادنِ همهٔ ستون‌ها در عرضِ ورق».
+    ///
+    /// ⚠️ هیچ‌وقت بزرگ‌تر از یک نمی‌شود: این گزینه برای **کوچک کردن** است. اگر
+    /// جدول از پیش جا می‌شود (یا گزارش پهنای کمینه‌ای اعلام نکرده)، عددِ ۱
+    /// برمی‌گردد و ورق مو‌به‌مو همان اندازهٔ واقعی می‌ماند.
+    ///
+    /// کفِ ۱۰٪ هم هست تا کاغذی به‌شدت باریک، ورق را به یک لکهٔ ناخوانا تبدیل
+    /// نکند بلکه فقط تا همان‌جا کوچک شود.
+    /// </summary>
+    public static float ColumnFit(PageSetup s, bool landscape, float minContentWidthPt)
+    {
+        if (minContentWidthPt <= 0) return 1f;
+        var have = PrintableWidthPt(s, landscape) - ContentChromePt;
+        if (have <= 0 || minContentWidthPt <= have) return 1f;
+        return Math.Clamp(have / minContentWidthPt, 0.1f, 1f);
+    }
 
     /// <summary>
     /// نوارِ سربرگ یا پاورقی — سه قسمت: کناره‌ها و وسط.

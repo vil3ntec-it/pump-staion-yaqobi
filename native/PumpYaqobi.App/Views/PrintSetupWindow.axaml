@@ -3,133 +3,190 @@
         xmlns:p="using:PumpYaqobi.App.Printing"
         x:Class="PumpYaqobi.App.Views.PrintSetupWindow"
         x:DataType="p:PrintSetupViewModel"
-        Width="560" Height="720" CanResize="True"
+        Width="640" Height="640" CanResize="True"
+        MinWidth="560" MinHeight="520"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
         FlowDirection="RightToLeft"
         Background="{DynamicResource Pump.Card}"
         Title="تنظیمِ ورق">
 
   <!-- ══ تنظیمِ ورق ════════════════════════════════════════════════════════
-       همان چیزهایی که «کارگاه چاپ»ِ نسخهٔ وب داشت. هر کادر یک خطِ توضیح دارد
-       تا کاربر مجبور نباشد حدس بزند کدام کدام است. -->
+       گزارشِ صریحِ صاحب ریپو دربارهٔ نسخهٔ پیشین: «این پنجره نباید به شکلِ چند
+       Input بسیار بزرگ و کشیده باشد… اطلاعات باید Compact ولی خوانا باشند و
+       کنترل‌های مرتبط کنارِ هم.»
+
+       پس چیدمان دو ستونی است و هر تنظیم با عددهای واقعی‌اش کنارِ هم می‌نشیند:
+
+           اندازهٔ کاغذ   [A4 ▼]        جهتِ ورق  [به‌انتخابِ گزارش ▼]
+           ۲۱۰ × ۲۹۷ میلی‌متر
+
+           حاشیه‌ها      [باریک ▼]      مقیاسِ دلخواه [۱۰۰] ٪
+           بالا ۱۹٫۱ · پایین ۱۹٫۱ · چپ ۶٫۴ · راست ۶٫۴
+
+           سربرگِ ورق    [راست] [وسط] [چپ]
+           پاورقیِ ورق   [راست] [وسط] [چپ]
+
+       ⚠️ هیچ منطقی این‌جا نیست و هیچ چیزی حذف نشده: همان ‎PrintSetupViewModel‎
+       با همان کدهای سربرگ/پاورقی، شمارهٔ ورقِ اول و DPI. فقط چیدمان عوض شده.
+
+       ⚠️ «انصراف» هیچ‌چیز را عوض نمی‌کند: این پنجره روی یک نمونهٔ جدا کار
+       می‌کند و تنظیم فقط با «اعمال» بیرون می‌رود. -->
+
   <Grid RowDefinitions="Auto,*,Auto">
 
-    <Border Grid.Row="0" Background="#1f7a4d" Padding="12,9">
+    <Border Grid.Row="0" Background="#1f7a4d" Padding="14,10">
       <TextBlock Text="⚙ تنظیمِ ورق" Foreground="White" FontWeight="Bold" FontSize="15" />
     </Border>
 
-    <ScrollViewer Grid.Row="1" Padding="16">
-      <StackPanel Spacing="14">
+    <ScrollViewer Grid.Row="1" Padding="18,14" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="16">
 
-        <!-- ── کاغذ ── -->
-        <StackPanel Spacing="4">
-          <TextBlock Text="اندازهٔ کاغذ" Classes="label" />
-          <ComboBox ItemsSource="{Binding Papers}" SelectedItem="{Binding Paper}"
-                    HorizontalAlignment="Stretch" />
-          <TextBlock Text="{Binding Paper.Note}" Classes="muted" />
+        <!-- ══ کاغذ و جهت ══ -->
+        <Grid ColumnDefinitions="*,*">
+          <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,9,0">
+            <TextBlock Text="اندازهٔ کاغذ" Classes="label" />
+            <ComboBox ItemsSource="{Binding Papers}" SelectedItem="{Binding Paper}"
+                      HorizontalAlignment="Stretch" TabIndex="1" />
+            <TextBlock Text="{Binding Paper.Note}" Classes="muted" />
+          </StackPanel>
+
+          <StackPanel Grid.Column="1" Spacing="4">
+            <TextBlock Text="جهتِ ورق" Classes="label" />
+            <ComboBox ItemsSource="{Binding Orientations}" SelectedItem="{Binding Orientation}"
+                      HorizontalAlignment="Stretch" TabIndex="2" />
+            <TextBlock Text="{Binding Orientation.Note}" Classes="muted" />
+          </StackPanel>
+        </Grid>
+
+        <!-- عرض و بلندای دلخواه — فقط وقتی کاغذ «دلخواه» است -->
+        <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*" IsVisible="{Binding IsCustomPaper}">
+          <TextBlock Grid.Column="0" Text="عرض" Classes="inline" />
+          <TextBox Grid.Column="1" Text="{Binding CustomWidth}" Classes="num" TabIndex="3" />
+          <TextBlock Grid.Column="2" Text="بلندا" Classes="inline" />
+          <TextBox Grid.Column="3" Text="{Binding CustomHeight}" Classes="num" TabIndex="4" />
+          <TextBlock Grid.Column="4" Text="میلی‌متر" Classes="inline" />
+        </Grid>
+
+        <Border Classes="rule" />
+
+        <!-- ══ حاشیه و مقیاس ══ -->
+        <Grid ColumnDefinitions="*,*">
+          <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,9,0">
+            <TextBlock Text="حاشیه‌ها" Classes="label" />
+            <ComboBox ItemsSource="{Binding Margins}" SelectedItem="{Binding Margin}"
+                      HorizontalAlignment="Stretch" TabIndex="5" />
+            <TextBlock Text="{Binding Margin.Note}" Classes="muted" />
+          </StackPanel>
+
+          <StackPanel Grid.Column="1" Spacing="4">
+            <TextBlock Text="مقیاسِ دلخواه" Classes="label" />
+            <Grid ColumnDefinitions="Auto,Auto,*">
+              <TextBox Grid.Column="0" Text="{Binding ScalePercent}" Classes="num" TabIndex="6" />
+              <TextBlock Grid.Column="1" Text="٪" Classes="inline" />
+            </Grid>
+            <TextBlock Classes="muted"
+                       Text="بینِ ۱۰ تا ۴۰۰ — وقتی در ستونِ چاپ «مقیاسِ دلخواه» را زده باشید" />
+          </StackPanel>
+        </Grid>
+
+        <!-- چهار عددِ حاشیه — فقط وقتی «دلخواه» است، در یک ردیفِ فشرده -->
+        <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*"
+              IsVisible="{Binding IsCustomMargin}">
+          <TextBlock Grid.Column="0" Text="بالا" Classes="inline" />
+          <TextBox Grid.Column="1" Text="{Binding Top}" Classes="num" TabIndex="7" />
+          <TextBlock Grid.Column="2" Text="پایین" Classes="inline" />
+          <TextBox Grid.Column="3" Text="{Binding Bottom}" Classes="num" TabIndex="8" />
+          <TextBlock Grid.Column="4" Text="چپ" Classes="inline" />
+          <TextBox Grid.Column="5" Text="{Binding Left}" Classes="num" TabIndex="9" />
+          <TextBlock Grid.Column="6" Text="راست" Classes="inline" />
+          <TextBox Grid.Column="7" Text="{Binding Right}" Classes="num" TabIndex="10" />
+          <TextBlock Grid.Column="8" Text="میلی‌متر" Classes="inline" />
+        </Grid>
+
+        <Border Classes="rule" />
+
+        <!-- ══ سربرگ ══ -->
+        <StackPanel Spacing="5">
+          <TextBlock Text="سربرگِ ورق" Classes="label" />
+          <Grid ColumnDefinitions="*,*,*">
+            <TextBox Grid.Column="0" Text="{Binding HeaderRight}" Margin="0,0,7,0"
+                     Watermark="راست" TabIndex="11" />
+            <TextBox Grid.Column="1" Text="{Binding HeaderCenter}" Margin="0,0,7,0"
+                     Watermark="وسط" TabIndex="12" />
+            <TextBox Grid.Column="2" Text="{Binding HeaderLeft}" Watermark="چپ" TabIndex="13" />
+          </Grid>
         </StackPanel>
 
-        <UniformGrid Rows="1" IsVisible="{Binding IsCustomPaper}">
-          <StackPanel Spacing="3" Margin="0,0,8,0">
-            <TextBlock Text="عرض (میلی‌متر)" Classes="label" />
-            <TextBox Text="{Binding CustomWidth}" />
-          </StackPanel>
-          <StackPanel Spacing="3">
-            <TextBlock Text="بلندا (میلی‌متر)" Classes="label" />
-            <TextBox Text="{Binding CustomHeight}" />
-          </StackPanel>
-        </UniformGrid>
-
-        <!-- ── جهت ── -->
-        <StackPanel Spacing="4">
-          <TextBlock Text="جهتِ ورق" Classes="label" />
-          <ComboBox ItemsSource="{Binding Orientations}" SelectedItem="{Binding Orientation}"
-                    HorizontalAlignment="Stretch" />
-          <TextBlock Text="{Binding Orientation.Note}" Classes="muted" />
-        </StackPanel>
-
-        <!-- ── حاشیه ── -->
-        <StackPanel Spacing="4">
-          <TextBlock Text="حاشیه‌ها" Classes="label" />
-          <ComboBox ItemsSource="{Binding Margins}" SelectedItem="{Binding Margin}"
-                    HorizontalAlignment="Stretch" />
-          <TextBlock Text="{Binding Margin.Note}" Classes="muted" />
-        </StackPanel>
-
-        <UniformGrid Rows="1" IsVisible="{Binding IsCustomMargin}">
-          <StackPanel Spacing="3" Margin="0,0,6,0">
-            <TextBlock Text="بالا" Classes="label" />
-            <TextBox Text="{Binding Top}" />
-          </StackPanel>
-          <StackPanel Spacing="3" Margin="0,0,6,0">
-            <TextBlock Text="پایین" Classes="label" />
-            <TextBox Text="{Binding Bottom}" />
-          </StackPanel>
-          <StackPanel Spacing="3" Margin="0,0,6,0">
-            <TextBlock Text="چپ" Classes="label" />
-            <TextBox Text="{Binding Left}" />
-          </StackPanel>
-          <StackPanel Spacing="3">
-            <TextBlock Text="راست" Classes="label" />
-            <TextBox Text="{Binding Right}" />
-          </StackPanel>
-        </UniformGrid>
-
-        <!-- ── سربرگ ── -->
-        <StackPanel Spacing="4">
-          <TextBlock Text="سربرگِ ورق (راست · وسط · چپ)" Classes="label" />
-          <UniformGrid Rows="1">
-            <TextBox Text="{Binding HeaderRight}" Margin="0,0,6,0" Watermark="راست" />
-            <TextBox Text="{Binding HeaderCenter}" Margin="0,0,6,0" Watermark="وسط" />
-            <TextBox Text="{Binding HeaderLeft}" Watermark="چپ" />
-          </UniformGrid>
-        </StackPanel>
-
-        <!-- ── پاورقی ── -->
-        <StackPanel Spacing="4">
-          <TextBlock Text="پاورقیِ ورق (راست · وسط · چپ)" Classes="label" />
-          <UniformGrid Rows="1">
-            <TextBox Text="{Binding FooterRight}" Margin="0,0,6,0" Watermark="راست" />
-            <TextBox Text="{Binding FooterCenter}" Margin="0,0,6,0" Watermark="وسط" />
-            <TextBox Text="{Binding FooterLeft}" Watermark="چپ" />
-          </UniformGrid>
+        <!-- ══ پاورقی ══ -->
+        <StackPanel Spacing="5">
+          <TextBlock Text="پاورقیِ ورق" Classes="label" />
+          <Grid ColumnDefinitions="*,*,*">
+            <TextBox Grid.Column="0" Text="{Binding FooterRight}" Margin="0,0,7,0"
+                     Watermark="راست" TabIndex="14" />
+            <TextBox Grid.Column="1" Text="{Binding FooterCenter}" Margin="0,0,7,0"
+                     Watermark="وسط" TabIndex="15" />
+            <TextBox Grid.Column="2" Text="{Binding FooterLeft}" Watermark="چپ" TabIndex="16" />
+          </Grid>
           <TextBlock Text="{x:Static p:PrintSetupViewModel.TokenHelp}"
                      Classes="muted" TextWrapping="Wrap" />
         </StackPanel>
 
-        <!-- ── مقیاسِ دلخواه ──────────────────────────────────────────────
-             کادرِ «٪ از اندازهٔ عادی»ی ‎Page Setup‎ی اکسل. فقط وقتی به کار
-             می‌آید که در ستونِ چاپ «مقیاسِ دلخواه» انتخاب شده باشد. -->
-        <StackPanel Spacing="4">
-          <TextBlock Text="مقیاسِ دلخواه (٪ از اندازهٔ عادی)" Classes="label" />
-          <TextBox Text="{Binding ScalePercent}" />
-          <TextBlock Classes="muted" TextWrapping="Wrap"
-                     Text="بینِ ۱۰ تا ۴۰۰. تا وقتی در ستونِ چاپ «مقیاسِ دلخواه» را نزده‌اید، این عدد اثری ندارد." />
-        </StackPanel>
+        <Border Classes="rule" />
 
-        <!-- ── بقیه ── -->
-        <UniformGrid Rows="1">
-          <StackPanel Spacing="3" Margin="0,0,8,0">
-            <TextBlock Text="شمارهٔ ورقِ اول" Classes="label" />
-            <TextBox Text="{Binding FirstPage}" />
-          </StackPanel>
-          <StackPanel Spacing="3">
-            <TextBlock Text="کیفیتِ پیش‌نمایش (DPI)" Classes="label" />
-            <TextBox Text="{Binding Dpi}" />
-          </StackPanel>
-        </UniformGrid>
+        <!-- ══ بقیه ══ -->
+        <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*">
+          <TextBlock Grid.Column="0" Text="شمارهٔ ورقِ اول" Classes="inline" />
+          <TextBox Grid.Column="1" Text="{Binding FirstPage}" Classes="num" TabIndex="17" />
+          <TextBlock Grid.Column="2" Text="کیفیتِ پیش‌نمایش" Classes="inline" />
+          <TextBox Grid.Column="3" Text="{Binding Dpi}" Classes="num" TabIndex="18" />
+          <TextBlock Grid.Column="4" Text="DPI" Classes="inline" />
+        </Grid>
 
-        <CheckBox IsChecked="{Binding SkipFirst}"
+        <CheckBox IsChecked="{Binding SkipFirst}" TabIndex="19"
                   Content="ورقِ اول سربرگ و پاورقی نداشته باشد" />
       </StackPanel>
     </ScrollViewer>
 
+    <!-- ══ دکمه‌ها ══ ‎Enter‎ روی «اعمال» و ‎Esc‎ روی «انصراف» -->
     <Border Grid.Row="2" BorderBrush="{DynamicResource Pump.Border}" BorderThickness="0,1,0,0"
-            Padding="14,10">
+            Padding="16,12">
       <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
-        <Button Classes="accent" Content="اعمال" Click="OnOk" MinWidth="96" />
-        <Button Content="انصراف" Click="OnCancel" MinWidth="96" />
+        <Button Classes="accent" Content="اعمال" Click="OnOk" MinWidth="100"
+                IsDefault="True" TabIndex="20" />
+        <Button Content="انصراف" Click="OnCancel" MinWidth="100"
+                IsCancel="True" TabIndex="21" />
       </StackPanel>
     </Border>
   </Grid>
+
+  <Window.Styles>
+    <!-- عنوانِ هر تنظیم — کوچک، پررنگ، بی فاصلهٔ بی‌جا -->
+    <Style Selector="TextBlock.label">
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+
+    <!-- برچسبِ کنارِ کادرِ عددی، در همان خط -->
+    <Style Selector="TextBlock.inline">
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Margin" Value="0,0,7,0" />
+    </Style>
+
+    <!-- ══ کادرِ عددیِ کوچک ══
+         گزارشِ صاحب ریپو: «Inputهای غول‌پیکر» نباشند. عرضِ ثابتِ کوچک، وسط‌چین،
+         و کنارِ برچسبِ خودش — نه یک کادرِ تمام‌عرض برای یک عددِ سه‌رقمی. -->
+    <Style Selector="TextBox.num">
+      <Setter Property="Width" Value="72" />
+      <Setter Property="MinWidth" Value="0" />
+      <Setter Property="TextAlignment" Value="Center" />
+      <Setter Property="Margin" Value="0,0,14,0" />
+    </Style>
+
+    <Style Selector="Border.rule">
+      <Setter Property="Height" Value="1" />
+      <Setter Property="Background" Value="{DynamicResource Pump.Border}" />
+      <Setter Property="Opacity" Value="0.7" />
+    </Style>
+  </Window.Styles>
 </Window>

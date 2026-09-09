@@ -91,6 +91,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
 
     public ObservableCollection<SetupOption> Whats { get; } = new();
     public ObservableCollection<SetupOption> Collates { get; } = new();
+    public ObservableCollection<SetupOption> Orders { get; } = new();
     public ObservableCollection<SetupOption> Orientations { get; } = new();
     public ObservableCollection<SetupOption> Papers { get; } = new();
     public ObservableCollection<SetupOption> MarginChoices { get; } = new();
@@ -98,17 +99,37 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
 
     [ObservableProperty] private SetupOption? _what;
     [ObservableProperty] private SetupOption? _collate;
+    [ObservableProperty] private SetupOption? _order;
     [ObservableProperty] private SetupOption? _orientation;
     [ObservableProperty] private SetupOption? _paper;
     [ObservableProperty] private SetupOption? _margin;
     [ObservableProperty] private SetupOption? _scale;
 
     [ObservableProperty] private string _copiesText = "۱";
-    [ObservableProperty] private string _fromText = "۱";
-    [ObservableProperty] private string _toText = "۱";
+
+    /// <summary>
+    /// ══ «از ورق … تا ورق …» — کشو، نه کادرِ آزاد ═════════════════════════════
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو: «اگر گزارش ۳ ورق دارد، گزینه‌ها باید ۱ و ۲ و ۳
+    /// باشند… نباید عدد صفحات Hard-code شود.»
+    ///
+    /// پس فهرست از خودِ سند می‌آید (<see cref="PageNumbers"/>) و با هر بار
+    /// ساخته شدنِ دوبارهٔ ورق‌ها از نو پر می‌شود. یعنی نوشتنِ عددی که وجود
+    /// ندارد از اساس ممکن نیست.
+    /// </summary>
+    public ObservableCollection<int> PageNumbers { get; } = new();
+
+    [ObservableProperty] private int _fromPage = 1;
+    [ObservableProperty] private int _toPage = 1;
+
+    /// <summary>«صفحاتِ انتخابی» — «۱،۳،۵» یا «۱-۳، ۷».</summary>
+    [ObservableProperty] private string _customPagesText = "";
 
     /// <summary>«ورق‌ها: از … تا …» فقط در حالتِ بازه به کار می‌آید.</summary>
     public bool IsRange => Setup.What == PrintWhat.Range;
+
+    /// <summary>کادرِ «صفحاتِ انتخابی» فقط در همان حالت.</summary>
+    public bool IsCustomPages => Setup.What == PrintWhat.Custom;
 
     private void FillOptions()
     {
@@ -116,10 +137,17 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         Whats.Add(new SetupOption("all", "چاپِ همهٔ گزارش", "همهٔ ورق‌ها چاپ می‌شوند", "🗒"));
         Whats.Add(new SetupOption("current", "چاپِ همین ورق", "فقط ورقی که می‌بینید", "📄"));
         Whats.Add(new SetupOption("range", "چاپِ بازهٔ ورق‌ها", "از شمارهٔ ورقی تا شمارهٔ ورقی", "🔢"));
+        Whats.Add(new SetupOption("custom", "صفحاتِ انتخابی", "مثلِ ۱،۳،۵ یا ۱-۳، ۷", "✳"));
 
         // ── مرتب/نامرتب — همان ‎COLL‎ ──────────────────────────────────────
         Collates.Add(new SetupOption("1", "مرتب", "۱،۲،۳   ۱،۲،۳   ۱،۲،۳", "🔃"));
         Collates.Add(new SetupOption("0", "نامرتب", "۱،۱،۱   ۲،۲،۲   ۳،۳،۳", "🔀"));
+
+        // ── ترتیبِ چاپ ────────────────────────────────────────────────────
+        // ⚠️ نمایشی نیست: ‎PrintJob.Order‎ واقعاً فهرست را وارونه می‌کند و هم
+        // PDF و هم چاپِ مستقیم از همان فهرست ساخته می‌شوند.
+        Orders.Add(new SetupOption("normal", "ترتیبِ عادی", "۱ ← ۲ ← ۳", "⬇"));
+        Orders.Add(new SetupOption("reverse", "ترتیبِ وارونه", "۳ ← ۲ ← ۱", "⬆"));
 
         // ── جهت — همان ‎ORI‎ ───────────────────────────────────────────────
         Orientations.Add(new SetupOption("auto", "به‌انتخابِ خودِ گزارش",
@@ -143,6 +171,8 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
             "در اندازهٔ واقعیِ خودش — ستون‌ها خودشان تا عرضِ ورق جا می‌شوند", "🔍"));
         Scales.Add(new SetupOption("fit", "جا دادنِ ورق در یک صفحه",
             "هر ورق تا جایی کوچک می‌شود که کامل بنشیند", "⤡"));
+        Scales.Add(new SetupOption("fitcols", "جا دادنِ همهٔ ستون‌ها در عرضِ ورق",
+            "اگر جدول پهن‌تر از ورق باشد، یکنواخت کوچک می‌شود", "↔"));
         Scales.Add(new SetupOption("custom", "مقیاسِ دلخواه",
             "درصدش را در «تنظیمِ ورق» بگذارید", "％"));
     }
@@ -176,9 +206,11 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         {
             PrintWhat.Current => "current",
             PrintWhat.Range => "range",
+            PrintWhat.Custom => "custom",
             _ => "all",
         });
         Collate = Pick(Collates, Setup.Collate ? "1" : "0");
+        Order = Pick(Orders, Setup.Order == PrintOrder.Reverse ? "reverse" : "normal");
         Orientation = Pick(Orientations, Setup.Orientation switch
         {
             PageOrientation.Portrait => "portrait",
@@ -190,13 +222,15 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         Scale = Pick(Scales, Setup.Scale switch
         {
             PrintScale.FitPage => "fit",
+            PrintScale.FitColumns => "fitcols",
             PrintScale.Custom => "custom",
             _ => "none",
         });
 
         CopiesText = Shamsi.Money(Setup.Copies);
-        FromText = Shamsi.Money(Setup.From);
-        ToText = Shamsi.Money(Setup.To);
+        FromPage = ClampPage(Setup.From);
+        ToPage = ClampPage(Setup.To);
+        CustomPagesText = Setup.CustomPages;
 
         _loading = was;
         RefreshNotes();
@@ -211,9 +245,11 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
             {
                 "current" => PrintWhat.Current,
                 "range" => PrintWhat.Range,
+                "custom" => PrintWhat.Custom,
                 _ => PrintWhat.All,
             },
             Collate = Collate?.Value != "0",
+            Order = Order?.Value == "reverse" ? PrintOrder.Reverse : PrintOrder.Normal,
             Orientation = Orientation?.Value switch
             {
                 "portrait" => PageOrientation.Portrait,
@@ -223,12 +259,14 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
             Scale = Scale?.Value switch
             {
                 "fit" => PrintScale.FitPage,
+                "fitcols" => PrintScale.FitColumns,
                 "custom" => PrintScale.Custom,
                 _ => PrintScale.None,
             },
             Copies = (int)Math.Clamp(Shamsi.Num(CopiesText), 1m, 999m),
-            From = (int)Math.Clamp(Shamsi.Num(FromText), 1m, 9999m),
-            To = (int)Math.Clamp(Shamsi.Num(ToText), 1m, 9999m),
+            From = FromPage,
+            To = ToPage,
+            CustomPages = CustomPagesText,
         };
 
         // کاغذ و حاشیه عددهای همراهشان را هم با خود می‌آورند — مثلِ سایت
@@ -242,13 +280,18 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     // هر کادری که عوض شود، همین یکی صدا زده می‌شود
     partial void OnWhatChanged(SetupOption? v) => Push();
     partial void OnCollateChanged(SetupOption? v) => Push();
+    partial void OnOrderChanged(SetupOption? v) => Push();
     partial void OnOrientationChanged(SetupOption? v) => Push();
     partial void OnPaperChanged(SetupOption? v) => Push();
     partial void OnMarginChanged(SetupOption? v) => Push();
     partial void OnScaleChanged(SetupOption? v) => Push();
     partial void OnCopiesTextChanged(string v) => Push();
-    partial void OnFromTextChanged(string v) => Push();
-    partial void OnToTextChanged(string v) => Push();
+    partial void OnCustomPagesTextChanged(string v) => Push();
+
+    // ⚠️ کشوها با عددِ خالی (۰) هم خبر می‌دهند — لحظه‌ای که فهرست از نو پر
+    // می‌شود. آن لحظه نباید تنظیم عوض شود، وگرنه بازهٔ کاربر پاک می‌شد.
+    partial void OnFromPageChanged(int v) { if (v >= 1) Push(); }
+    partial void OnToPageChanged(int v) { if (v >= 1) Push(); }
 
     private void Push()
     {
@@ -351,13 +394,71 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     // زیرنویسِ کادرِ «کدام ورق‌ها» صریح می‌گوید دقیقاً چه چاپ می‌شود («هر ۳
     // ورق»، «فقط ورقِ ۲»، «ورقِ ۲ تا ۵») — نه یک جملهٔ کلی.
 
-    public string WhatNote => Setup.What switch
+    public string WhatNote
     {
-        PrintWhat.Current => "فقط ورقِ " + Shamsi.Money(PageIndex + 1) + " چاپ می‌شود",
-        PrintWhat.Range => "ورقِ " + Shamsi.Money(Setup.From) + " تا "
-                           + Shamsi.Money(Setup.To) + " چاپ می‌شود",
-        _ => "هر " + Shamsi.Money(PageCount) + " ورق چاپ می‌شود",
-    };
+        get
+        {
+            if (Error is { Length: > 0 }) return Error;
+            var n = PickedPages().Count;
+            return Setup.What switch
+            {
+                PrintWhat.Current => "فقط ورقِ " + Shamsi.Money(PageIndex + 1) + " چاپ می‌شود",
+                PrintWhat.Range => "ورقِ " + Shamsi.Money(Setup.From) + " تا "
+                                   + Shamsi.Money(Setup.To) + " چاپ می‌شود",
+                PrintWhat.Custom => Shamsi.Money(n) + " ورق چاپ می‌شود: "
+                                    + string.Join("، ", PickedPages().Select(x => Shamsi.Money(x))),
+                _ => "هر " + Shamsi.Money(PageCount) + " ورق چاپ می‌شود",
+            };
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  وارسی — پیش از چاپ، نه بعدش
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    // ⚠️ خودِ قاعده‌ها در ‎PrintJob.Validate‎ هستند، بیرونِ هر رابطی، تا بشود
+    // آزمودشان. این‌جا فقط نتیجه نشان داده می‌شود و دکمهٔ چاپ بسته می‌شود.
+
+    /// <summary>جملهٔ خطای جاری — خالی یعنی همه‌چیز درست است.</summary>
+    [ObservableProperty] private string _error = "";
+
+    partial void OnErrorChanged(string v)
+    {
+        OnPropertyChanged(nameof(HasError));
+        OnPropertyChanged(nameof(CanPrint));
+        OnPropertyChanged(nameof(WhatNote));
+    }
+
+    public bool HasError => Error.Length > 0;
+
+    /// <summary>دکمه‌های «چاپ» و «PDF» فقط وقتی کار می‌کنند که تنظیم درست باشد.</summary>
+    public bool CanPrint => !HasError && PageCount > 0;
+
+    private void Revalidate() => Error = PrintJob.Validate(Setup, PageCount) ?? "";
+
+    /// <summary>عددِ ورق، بریده‌شده به دامنهٔ واقعیِ همین سند.</summary>
+    private int ClampPage(int n) => PageCount <= 0 ? Math.Max(1, n) : Math.Clamp(n, 1, PageCount);
+
+    /// <summary>
+    /// فهرستِ کشوهای «از/تا» را با شمارِ واقعیِ ورق‌ها از نو می‌سازد.
+    ///
+    /// ⚠️ انتخابِ کاربر پیش از پاک کردنِ فهرست برداشته و بعد برگردانده می‌شود:
+    /// خالی کردنِ ‎ItemsSource‎ خودبه‌خود ‎SelectedItem‎ را صفر می‌کند و بی این،
+    /// هر بار که کاغذ عوض می‌شد بازهٔ کاربر هم می‌پرید.
+    /// </summary>
+    private void RebuildPageNumbers()
+    {
+        var wantFrom = FromPage;
+        var wantTo = ToPage;
+
+        var was = _loading;
+        _loading = true;
+        PageNumbers.Clear();
+        for (var i = 1; i <= Math.Max(1, PageCount); i++) PageNumbers.Add(i);
+        FromPage = ClampPage(wantFrom);
+        ToPage = ClampPage(wantTo);
+        _loading = was;
+    }
 
     public string PaperNoteText => Paper is null ? "" : PaperNote(Paper.Value);
 
@@ -372,6 +473,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     {
         PrintScale.Custom => Shamsi.Money(Setup.ScalePercent) + "٪ از اندازهٔ واقعی",
         PrintScale.FitPage => "هر ورق تا جایی کوچک می‌شود که کامل بنشیند",
+        PrintScale.FitColumns => "اگر جدول پهن‌تر از ورق باشد، یکنواخت کوچک می‌شود",
         _ => "در اندازهٔ واقعیِ خودش",
     };
 
@@ -386,10 +488,14 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
 
     private void RefreshNotes()
     {
+        Revalidate();
+        RefreshPicked();
+
         foreach (var n in new[]
         {
             nameof(WhatNote), nameof(PaperNoteText), nameof(MarginNoteText),
-            nameof(ScaleNote), nameof(ScaleInfo), nameof(IsRange), nameof(PageCount),
+            nameof(ScaleNote), nameof(ScaleInfo), nameof(IsRange), nameof(IsCustomPages),
+            nameof(PageCount), nameof(CanPrint), nameof(HasError),
         })
             OnPropertyChanged(n);
     }
@@ -407,6 +513,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(ZoomLabel));
         OnPropertyChanged(nameof(GuideMargin));
+        foreach (var p in PreviewPages) { p.Width = v; p.Guide = GuideFor(p.Image); }
     }
 
     private const double MinW = 240, MaxW = 3200, Step = 1.25;
@@ -443,24 +550,74 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
 
     [ObservableProperty] private bool _showGuides = true;
 
-    partial void OnShowGuidesChanged(bool v) => OnPropertyChanged(nameof(GuideMargin));
-
-    public Thickness GuideMargin
+    partial void OnShowGuidesChanged(bool v)
     {
-        get
+        OnPropertyChanged(nameof(GuideMargin));
+        foreach (var p in PreviewPages) p.ShowGuides = v;
+    }
+
+    public Thickness GuideMargin => GuideFor(CurrentPage);
+
+    /// <summary>
+    /// خط‌چینِ حاشیه برای یک ورقِ مشخص.
+    ///
+    /// اندازه از خودِ تصویر درمی‌آید (پیکسل ÷ dpi = اینچ)، نه از حدس — پس با
+    /// هر کاغذ و هر جهتی درست می‌ماند.
+    /// </summary>
+    private Thickness GuideFor(Bitmap? bmp)
+    {
+        if (bmp is null || bmp.PixelSize.Width <= 0) return new Thickness(0);
+
+        var mmWide = bmp.PixelSize.Width / (double)Math.Clamp(Setup.Dpi, 72, 400) * 25.4;
+        if (mmWide <= 0) return new Thickness(0);
+        var px = PageWidth / mmWide;                 // پیکسلِ صفحه در هر میلی‌متر
+
+        var m = Setup.Margins();
+        return new Thickness((double)m.Left * px, (double)m.Top * px,
+                             (double)m.Right * px, (double)m.Bottom * px);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  پیش‌نمایشِ همهٔ ورق‌ها، پشتِ‌سرِ هم
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    // خواستهٔ صریحِ صاحب ریپو: «اگر گزارش ۳ صفحه دارد: [صفحه ۱] [صفحه ۲]
+    // [صفحه ۳] — هر صفحه مثلِ یک برگهٔ واقعی، نه یک کادرِ سفیدِ ساده.»
+    //
+    // پیش از این فقط **یک** ورق دیده می‌شد و باید با ◀ ▶ ورق می‌زدی. حالا
+    // همه‌شان در یک فهرستِ لغزنده‌اند و ◀ ▶ همان فهرست را جابه‌جا می‌کند.
+    //
+    // ⚠️ فهرست ‎ListBox‎ است نه ‎ItemsControl‎: مجازی‌سازی و «برو به ورقِ فلان»
+    // را خودش دارد، و گزارشِ صد‌ورقی نباید صد تصویر را با هم بچیند.
+
+    public ObservableCollection<PreviewPage> PreviewPages { get; } = new();
+
+    /// <summary>
+    /// ورق‌هایی که چاپ **نمی‌شوند** اصلاً دیده نشوند؟
+    ///
+    /// ⚠️ در حالتِ «چاپِ همین ورق» عمداً اثری ندارد: آن‌جا تنها راهِ عوض کردنِ
+    /// «همین ورق»، رفتن روی ورقِ دیگر است — اگر بقیه پنهان می‌شدند، کاربر در
+    /// همان یک ورق حبس می‌شد و دیگر نمی‌توانست ورقِ دیگری را انتخاب کند.
+    /// </summary>
+    [ObservableProperty] private bool _onlyPrinted = true;
+
+    partial void OnOnlyPrintedChanged(bool v) => RefreshPicked();
+
+    /// <summary>کدام ورق چاپ می‌شود و کدام نه — روی خودِ فهرستِ پیش‌نمایش.</summary>
+    private void RefreshPicked()
+    {
+        if (PreviewPages.Count == 0) return;
+
+        var picked = new HashSet<int>(PrintJob.Picked(Setup, _pages.Count, PageIndex + 1));
+        var hide = OnlyPrinted && Setup.What != PrintWhat.Current && !HasError;
+
+        foreach (var p in PreviewPages)
         {
-            var bmp = CurrentPage;
-            if (bmp is null || bmp.PixelSize.Width <= 0) return new Thickness(0);
-
-            var mmWide = bmp.PixelSize.Width / (double)Math.Clamp(Setup.Dpi, 72, 400) * 25.4;
-            if (mmWide <= 0) return new Thickness(0);
-            var px = PageWidth / mmWide;                 // پیکسلِ صفحه در هر میلی‌متر
-
-            var m = Setup.Margins();
-            return new Thickness((double)m.Left * px, (double)m.Top * px,
-                                 (double)m.Right * px, (double)m.Bottom * px);
+            p.IsPicked = picked.Contains(p.Number);
+            p.IsShown = p.IsPicked || !hide;
         }
     }
+
 
     // ══════════════════════════════════════════════════════════════════════
     //  ورق‌ها
@@ -493,6 +650,11 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     {
         void Set()
         {
+            // ⚠️ فهرستِ برگه‌ها **پیش از** دور انداختنِ تصویرها خالی می‌شود:
+            // اگر ‎ListBox‎ هنوز به تصویری بسته باشد که ‎Dispose‎ شده، همان
+            // لحظهٔ چیدنِ بعدی برنامه می‌افتد.
+            PreviewPages.Clear();
+
             foreach (var b in _pages) b.Dispose();
             _pages.Clear();
             _png.Clear();
@@ -503,6 +665,14 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
                 _pages.Add(new Bitmap(ms));
                 _png.Add(bytes);
             }
+
+            for (var i = 0; i < _pages.Count; i++)
+                PreviewPages.Add(new PreviewPage(i + 1, _pages[i], PageWidth,
+                                                 GuideFor(_pages[i]), ShowGuides));
+
+            // فهرستِ کشوهای «از/تا» از همین‌جا می‌آید — پس هیچ‌وقت عددی که
+            // ورقی پشتش نیست در کشو نمی‌افتد.
+            RebuildPageNumbers();
 
             PageIndex = 0;
             Show();
@@ -530,6 +700,10 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         OnPropertyChanged(nameof(PageNumberText));
         OnPropertyChanged(nameof(GuideMargin));
         OnPropertyChanged(nameof(WhatNote));
+
+        // «چاپِ همین ورق» به ورقِ باز بند است — با ورق زدن، نشانِ برگه‌ها هم
+        // باید همان لحظه عوض شود.
+        if (Setup.What == PrintWhat.Current) RefreshPicked();
     }
 
     partial void OnPageIndexChanged(int value) => Show();
@@ -548,8 +722,15 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     public IReadOnlyList<int> PickedPages() =>
         PrintJob.Picked(Setup, _pages.Count, PageIndex + 1);
 
-    /// <summary>همان‌ها، با تعدادِ نسخه و ترتیبِ مرتب/نامرتب.</summary>
-    public IReadOnlyList<int> PrintOrder() =>
+    /// <summary>
+    /// همان‌ها، با تعدادِ نسخه و ترتیبِ مرتب/نامرتب و عادی/وارونه.
+    ///
+    /// ⚠️ نامش عمداً ‎PrintOrder‎ نیست: از وقتی ترتیبِ چاپ خودش یک نوع شد
+    /// (<see cref="PumpYaqobi.Reporting.Pdf.PrintOrder"/>)، متدی به همان نام
+    /// داخلِ این کلاس جلوی دیده شدنِ آن نوع را می‌گرفت و ‎PrintOrder.Reverse‎
+    /// اصلاً کامپایل نمی‌شد.
+    /// </summary>
+    public IReadOnlyList<int> PrintOrderPages() =>
         PrintJob.Order(Setup, _pages.Count, PageIndex + 1);
 
     // ══════════════════════════════════════════════════════════════════════
@@ -571,10 +752,10 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         var safe = string.Join("_", Title.Split(Path.GetInvalidFileNameChars()));
         var path = Path.Combine(folder, safe + ".pdf");
 
-        var order = PrintOrder();
+        var order = PrintOrderPages();
         if (wholeDocument || order.Count == 0 || PrintJob.IsWholeDocument(order, _pages.Count))
             _doc.GeneratePdf(path);
-        else PagesDocument(order).GeneratePdf(path);
+        else PickedDocument(order).GeneratePdf(path);
         return path;
     }
 
@@ -585,51 +766,51 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         return ms.ToArray();
     }
 
-    /// <summary>سندی از ورق‌های انتخاب‌شده، به همان ترتیب.</summary>
-    private IDocument PagesDocument(IReadOnlyList<int> order) =>
-        new PickedPagesDocument(order.Select(i => _png[i - 1]).ToList(),
-                                Math.Clamp(Setup.Dpi, 72, 400));
-
     /// <summary>
-    /// ورق‌های برگزیده، هر کدام یک صفحه. اندازهٔ هر صفحه از پیکسلِ خودِ تصویر
-    /// و ‎dpi‎ درمی‌آید، پس با هر کاغذ و هر جهتی مو‌به‌مو همان اندازهٔ اصلی است.
+    /// سندی از ورق‌های انتخاب‌شده، به همان ترتیب.
+    ///
+    /// ⚠️ خودِ چیدن در <see cref="PumpYaqobi.Reporting.Pdf.PagesDocument"/> است،
+    /// کنارِ موتورِ چاپ — تا هم پیش‌نمایش و هم PDF و هم چاپِ مستقیم از یک
+    /// جا بیایند و آزمون هم بتواند بی هیچ پنجره‌ای بسنجدش.
     /// </summary>
-    private sealed class PickedPagesDocument : IDocument
+    private IDocument PickedDocument(IReadOnlyList<int> order) =>
+        new PumpYaqobi.Reporting.Pdf.PagesDocument(
+            order.Select(i => _png[i - 1]).ToList(), Setup.Dpi);
+}
+
+/// <summary>
+/// یک برگه در فهرستِ پیش‌نمایش — تصویرِ خودِ ورق، شماره‌اش، و اینکه چاپ
+/// می‌شود یا نه.
+/// </summary>
+public sealed partial class PreviewPage : ObservableObject
+{
+    public PreviewPage(int number, Bitmap image, double width,
+                       Thickness guide, bool showGuides)
     {
-        private readonly IReadOnlyList<byte[]> _images;
-        private readonly int _dpi;
-
-        public PickedPagesDocument(IReadOnlyList<byte[]> images, int dpi)
-        { _images = images; _dpi = dpi; }
-
-        public DocumentMetadata GetMetadata() => DocumentMetadata.Default;
-
-        public void Compose(IDocumentContainer container)
-        {
-            foreach (var png in _images)
-            {
-                var (w, h) = SizePt(png);
-                container.Page(p =>
-                {
-                    p.Size(w, h, Unit.Point);
-                    p.Margin(0);
-                    p.PageColor(Colors.White);
-                    p.Content().Image(png).FitArea();
-                });
-            }
-        }
-
-        /// <summary>اندازهٔ صفحه به «پوینت» از روی پیکسلِ تصویر: ‎px ÷ dpi × 72‎.</summary>
-        private (float W, float H) SizePt(byte[] png)
-        {
-            try
-            {
-                using var ms = new MemoryStream(png);
-                var bmp = new Bitmap(ms);
-                return (bmp.PixelSize.Width / (float)_dpi * 72f,
-                        bmp.PixelSize.Height / (float)_dpi * 72f);
-            }
-            catch { return (595f, 842f); }        // A4، اگر تصویر خوانده نشد
-        }
+        Number = number;
+        Image = image;
+        _width = width;
+        _guide = guide;
+        _showGuides = showGuides;
     }
+
+    public int Number { get; }
+    public Bitmap Image { get; }
+
+    public string Label => "ورق " + Shamsi.Money(Number);
+
+    [ObservableProperty] private double _width;
+    [ObservableProperty] private Thickness _guide;
+    [ObservableProperty] private bool _showGuides;
+
+    /// <summary>این ورق در کارِ چاپِ جاری هست؟</summary>
+    [ObservableProperty] private bool _isPicked = true;
+
+    /// <summary>در فهرست دیده می‌شود؟ (وقتی «فقط ورق‌های چاپی» روشن است)</summary>
+    [ObservableProperty] private bool _isShown = true;
+
+    partial void OnIsPickedChanged(bool v) => OnPropertyChanged(nameof(SkipNote));
+
+    /// <summary>نشانِ روی برگه‌ای که چاپ نمی‌شود.</summary>
+    public string SkipNote => IsPicked ? "" : "چاپ نمی‌شود";
 }

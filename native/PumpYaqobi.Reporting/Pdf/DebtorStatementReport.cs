@@ -39,6 +39,26 @@ public sealed class DebtorStatementReport : ISetupDocument
     { _in = input; _calc = calc; }
 
     private bool ShowFuelColumn => _in.Filter is null;
+
+    /// <summary>
+    /// ══ پهنای کمینهٔ جدول (پوینت) ══════════════════════════════════════════
+    ///
+    /// این تنها گزارشی است که ستون‌هایش **ثابت**اند (‎ConstantColumn‎)، پس تنها
+    /// گزارشی است که می‌تواند از عرضِ ورق بیرون بزند — روی A5 و A6 واقعاً
+    /// می‌زند. برای همین همین‌جا اعلام می‌کند چقدر جا لازم دارد، تا گزینهٔ
+    /// «جا دادنِ همهٔ ستون‌ها در عرضِ ورق» بتواند ضریبِ درست را حساب کند.
+    ///
+    /// عددها از خودِ ‎ColumnsDefinition‎ی پایینِ همین فایل‌اند — اگر آن‌جا
+    /// ستونی کم یا زیاد شد، این‌جا هم باید عوض شود.
+    ///
+    /// ⚠️ ستونِ «نام» نسبی است و کمینه ندارد؛ ۹۰ پوینت برایش گرفته شده که یک
+    /// نامِ معمولی در یک خط جا شود. بی این، «جا دادنِ ستون‌ها» نامِ قرض‌دار را
+    /// به ستونی یک‌حرفی می‌فشرد و به‌جای کمک، ورق را خراب می‌کرد.
+    /// </summary>
+    private float MinTableWidthPt =>
+        34f + 66f + 48f + 52f + 44f + 66f + 56f + 56f    // ستون‌های ثابت
+        + (ShowFuelColumn ? 60f : 0f)                     // «نوع تیل»
+        + 90f;                                            // کمینهٔ ستونِ «نام»
     private string Unit => _in.IsMoneyLedger ? "افغانی" : "لیتر";
     private string RasidLabel => _in.IsMoneyLedger ? "مقدار رسید پول" : "مقدار رسید تیل";
     private string RemLabel => _in.IsMoneyLedger ? "الباقی پول" : "الباقی تیل";
@@ -61,7 +81,8 @@ public sealed class DebtorStatementReport : ISetupDocument
                       _ => "",
                   };
 
-        DocStyle.Compose(container, title, sub, _in.Dates, Body, setup: Setup);
+        DocStyle.Compose(container, title, sub, _in.Dates, Body, setup: Setup,
+                         minContentWidthPt: MinTableWidthPt);
     }
 
     private void Body(IContainer c) => c.Column(col =>
