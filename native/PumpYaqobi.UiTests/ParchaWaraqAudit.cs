@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
+using Avalonia.Layout;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using PumpYaqobi.App.Services;
@@ -233,6 +235,45 @@ internal static class ParchaWaraqAudit
 
         SummaryBelowTxns(win, page, grids);
         PostsToAccountAndSafe(win, page);
+        GrowsWithRows(win, page, grids);
+    }
+
+    /// <summary>
+    /// ══ جدول با ردیف‌ها بلند می‌شود، نه این‌که تویش گیر کنند ═══════════════
+    ///
+    /// گزارشِ صاحب ریپو: «اگر جدول ۴ ردیف دارد و بعد ۵۰ ردیف شد، باید ارتفاعِ
+    /// خودِ جدول و صفحه بر اساس تعدادِ واقعیِ ردیف‌ها زیاد شود. شماره‌های ۴۰،
+    /// ۵۰، ۵۱ نباید داخلِ یک کادرِ با ارتفاعِ محدود گیر کنند.»
+    ///
+    /// پس همین‌جا واقعاً ردیف اضافه می‌شود و بلندیِ جدول پیش و پس سنجیده
+    /// می‌گردد — و نوارِ لغزشِ عمودیِ خودِ جدول باید خالی بماند.
+    /// </summary>
+    private static void GrowsWithRows(Window win, WaraqPageViewModel page, List<DataGrid> grids)
+    {
+        var grid = grids.FirstOrDefault(g => ReferenceEquals(g.ItemsSource, page.TxnsFirst));
+        if (grid is null) { Check("جدولِ اولِ تراکنش‌ها پیدا شد", false); return; }
+
+        var before = grid.Bounds.Height;
+        var rowsBefore = page.TxnsFirst.Count;
+
+        var need = 50 - page.Txns.Count;
+        if (need > 0) Wait(win, page.AddRowsAsync(need));
+        Settle(win);
+
+        var after = grid.Bounds.Height;
+        var added = page.TxnsFirst.Count - rowsBefore;
+
+        Check($"ردیف‌های جدولِ اول {rowsBefore} ⇒ {page.TxnsFirst.Count}",
+              added > 0, added + " ردیفِ تازه");
+        Check("و جدول به همان اندازه بلندتر شد (نه کادرِ ثابت)",
+              added <= 0 || after > before + added * 20,
+              $"{before:0} ⇒ {after:0} پیکسل");
+
+        var vbar = grid.GetVisualDescendants().OfType<ScrollBar>()
+                       .FirstOrDefault(b => b.Orientation == Orientation.Vertical);
+        Check("و داخلِ خودش اسکرول نمی‌شود",
+              vbar is null || vbar.Maximum <= 1,
+              vbar is null ? "نوارِ عمودی ندارد" : vbar.Maximum.ToString("0"));
     }
 
     /// <summary>

@@ -54,7 +54,7 @@ public class ExcelGrid : DataGrid
         ClipboardCopyMode = DataGridClipboardCopyMode.ExcludeHeader;
 
         // جای اضافه بینِ ستون‌ها پخش می‌شود، نه در یک ستونِ خالیِ ته جدول
-        LayoutUpdated += (_, _) => { SpreadColumns(); CapToOneScreen(); };
+        LayoutUpdated += (_, _) => { SpreadColumns(); Settle(); };
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -70,16 +70,23 @@ public class ExcelGrid : DataGrid
     //  خودش را هم‌قدِ همهٔ ردیف‌ها اندازه می‌گیرد و آن‌وقت هر ردیف ساخته
     //  می‌شود — همان چیزی که با یک میلیون ردیف برنامه را قفل می‌کند.
     //
-    //  پس سقف لازم است. ولی سقف یعنی جدول اسکرولِ خودش را دارد، و صاحب ریپو
-    //  صریح گفت که تا نوارِ بخش‌ها به سقفِ پنجره نچسبیده، محتوای بخش نباید
-    //  تکان بخورد. این دو با هم جمع می‌شوند، به شرطِ «زنجیرهٔ اسکرول»:
+    //  ⚠️ ولی سقفِ «یک صفحه» غلط بود و صاحب ریپو درست گفت:
     //
-    //     پایین: اول صفحه می‌لغزد؛ وقتی صفحه ته کشید، ردیف‌ها می‌لغزند.
-    //     بالا:  اول ردیف‌ها برمی‌گردند؛ وقتی جدول سرِ خط آمد، صفحه بالا می‌رود.
+    //      «جدول باید با زیاد شدنِ تراکنش‌ها خودش بزرگ شود. نباید یک ارتفاعِ
+    //       ثابت باشد که بعد از چند ردیف فقط خودِ جدول داخلش اسکرول شود.
+    //       شماره‌های ۴۰ و ۵۰ و ۵۱ نباید داخلِ یک کادرِ محدود گیر کنند.»
     //
-    //  نتیجه برای کاربر همان است که خواسته بود — سربرگ و نوارِ آمار می‌روند
-    //  بالا، نوار قفل می‌شود، بعد ردیف‌ها راه می‌افتند — و برای برنامه یعنی
-    //  مجازی‌سازی سرِ جایش می‌ماند. (‎OnPointerWheelChanged‎ پایین‌ترِ همین فایل.)
+    //  حق داشت: با سقفِ یک‌صفحه، از ردیفِ چهاردهم به بعد جدول دیگر بلند
+    //  نمی‌شد و بقیهٔ ردیف‌ها داخلِ همان کادر پنهان می‌شدند.
+    //
+    //  حالا جدول تا <see cref="GrowRowLimit"/> ردیف **کاملاً باز** می‌شود:
+    //  هیچ سقفی ندارد، هر ردیفِ تازه دقیقاً زیرِ ردیفِ قبلی ساخته می‌شود، و
+    //  صفحه بلندتر می‌گردد — اسکرول یکی است و مالِ کلِ صفحه، مثلِ سایت.
+    //
+    //  سقف فقط در یک جا برمی‌گردد: جدولی که ردیف‌هایش از آن مرز بگذرد. آن‌جا
+    //  دیگر بحثِ «چند ردیف بیشتر» نیست؛ بی مجازی‌سازی، صد هزار ردیف برنامه را
+    //  قفل می‌کند (‎grid-perf‎ همین را با یک میلیون ردیف می‌سنجد). آن مرز
+    //  آن‌قدر بالاست که هیچ جدولِ واقعیِ این برنامه به آن نمی‌رسد.
 
     /// <summary>اسکرولِ صفحه در ‎MainWindow‎؛ یک‌بار پیدا می‌شود و نگه داشته می‌شود.</summary>
     private ScrollViewer? _page;
@@ -89,15 +96,111 @@ public class ExcelGrid : DataGrid
                       .FirstOrDefault(v => v.Name == "PageScroll");
 
     /// <summary>
-    /// سقفِ ارتفاعِ جدول = یک صفحه. بی این، جدول هم‌قدِ همهٔ ردیف‌هایش می‌شود و
-    /// مجازی‌سازی می‌میرد.
+    /// تا این شمارِ ردیف، جدول هیچ سقفی ندارد و هم‌قدِ ردیف‌هایش بلند می‌شود.
+    ///
+    /// ⚠️ عدد بزرگ است چون هیچ جدولِ واقعیِ این برنامه به آن نمی‌رسد؛ فقط
+    /// جلوی «یک میلیون ردیف در یک صفحه» را می‌گیرد. اگر روزی کمش کردید،
+    /// دوباره همان کادرِ محدودی می‌شود که صاحب ریپو از آن شکایت داشت.
     /// </summary>
-    private void CapToOneScreen()
+    public const int GrowRowLimit = 600;
+
+    /// <summary>چند پیکسلِ اصلاحیِ بلندی — پایین‌ترِ همین فایل، ‎Settle‎.</summary>
+    private double _pad;
+
+    /// <summary>شمارِ ردیف‌هایی که ‎_pad‎ برایشان حساب شده.</summary>
+    private int _padRows = -1;
+
+    /// <summary>
+    /// جدول هم‌قدِ ردیف‌هایش می‌شود؛ تنگنا فقط وقتی می‌آید که شمارِ ردیف‌ها از
+    /// <see cref="GrowRowLimit"/> بگذرد.
+    ///
+    /// ⚠️ چرا بلندی این‌جا **حساب** می‌شود و به بی‌کران سپرده نمی‌شود:
+    /// ‎DataGrid‎ی آوالونیا با بلندیِ بی‌کران خودش را هم‌قدِ همهٔ ردیف‌ها
+    /// نمی‌کند — به تخمینِ حدود شانزده ردیف بسنده می‌کند و بقیه را داخلِ
+    /// خودش می‌لغزاند. همان «کادرِ محدودی» که صاحب ریپو دید. سنجشِ اسکرول
+    /// هم همین را نشان داد: جدولِ گاوصندوق و مصارف و صرافی روی ۷۲۴ پیکسل
+    /// می‌ایستادند و تا ۷۵۵ پیکسل لغزشِ درونی داشتند.
+    ///
+    /// پس بلندی از خودِ داده می‌آید: سربرگ + شمارِ ردیف × بلندیِ ردیف + لبه
+    /// (+ نوارِ لغزشِ افقی، اگر دیده شود).
+    ///
+    /// ⚠️ و تنگنا باید **پیش از** اندازه‌گیری اعمال شود، نه پس از چیدمان:
+    /// وگرنه همان پاسِ اول با بلندیِ بی‌کران انجام شده است.
+    /// </summary>
+    protected override Size MeasureOverride(Size availableSize)
     {
-        var screen = Page?.Viewport.Height ?? 0;
-        if (screen <= 0) return;
-        if (Math.Abs(MaxHeight - screen) > 1) MaxHeight = screen;
+        var rows = RowCount();
+
+        if (rows < 0 || rows > GrowRowLimit)
+        {
+            var screen = Page?.Viewport.Height ?? 0;
+            if (screen <= 0) screen = 900;                 // «نمی‌دانم» ≠ «بی‌کران»
+            if (availableSize.Height > screen)
+                availableSize = availableSize.WithHeight(screen);
+            return base.MeasureOverride(availableSize);
+        }
+
+        if (rows != _padRows) { _pad = 0; _padRows = rows; }
+
+        var want = WantedHeight(rows);
+        if (availableSize.Height > want) availableSize = availableSize.WithHeight(want);
+        var size = base.MeasureOverride(availableSize);
+        return size.WithHeight(want);
     }
+
+    /// <summary>بلندیِ واقعیِ جدول برای این شمارِ ردیف.</summary>
+    private double WantedHeight(int rows)
+    {
+        var rowH = double.IsNaN(RowHeight) || RowHeight <= 0 ? 44d : RowHeight;
+
+        var head = 0d;
+        if (HeadersVisibility != DataGridHeadersVisibility.None)
+        {
+            foreach (var h in this.GetVisualDescendants().OfType<DataGridColumnHeader>())
+                head = Math.Max(head, h.Bounds.Height);
+            if (head <= 0) head = rowH;                    // هنوز چیده نشده
+        }
+
+        var bar = 0d;
+        var hbar = this.GetVisualDescendants().OfType<ScrollBar>()
+                       .FirstOrDefault(b => b.Orientation == Orientation.Horizontal);
+        if (hbar is { IsVisible: true }) bar = Math.Max(hbar.Bounds.Height, 12d);
+
+        return head + rows * rowH + BorderThickness.Top + BorderThickness.Bottom + bar + _pad;
+    }
+
+    /// <summary>
+    /// ══ ته‌نشین شدن ═══════════════════════════════════════════════════════
+    /// اگر با همهٔ حساب‌وکتاب باز هم چند پیکسل کم آمده باشد و نوارِ لغزشِ
+    /// عمودیِ جدول چیزی برای لغزاندن داشته باشد، همان‌قدر بلندتر می‌شویم.
+    ///
+    /// ⚠️ قاعدهٔ صاحب ریپو صریح است: «اسکرول شدنِ ناخواسته فقط داخلِ جدول»
+    /// باید برود. پس به‌جای اعتماد به یک فرمول، خودِ نتیجه سنجیده می‌شود.
+    /// سقفِ اصلاح هست تا اگر روزی چیزِ دیگری نوار را زنده نگه داشت، جدول
+    /// بی‌پایان بلند نشود.
+    /// </summary>
+    private void Settle()
+    {
+        var rows = RowCount();
+        if (rows < 0 || rows > GrowRowLimit) return;
+        if (_pad > 400) return;
+
+        var vbar = this.GetVisualDescendants().OfType<ScrollBar>()
+                       .FirstOrDefault(b => b.Orientation == Orientation.Vertical);
+        if (vbar is null || !vbar.IsVisible || vbar.Maximum <= 1) return;
+
+        _pad += vbar.Maximum + 2;
+        _padRows = rows;
+        InvalidateMeasure();
+    }
+
+    /// <summary>شمارِ ردیف‌ها — نامعلوم یعنی «محتاط باش و تنگنا بگذار».</summary>
+    private int RowCount() => ItemsSource switch
+    {
+        null => 0,
+        System.Collections.ICollection c => c.Count,
+        _ => -1,
+    };
 
     /// <summary>
     /// ══ زنجیرهٔ اسکرول ═══════════════════════════════════════════════════════
@@ -229,13 +332,28 @@ public class ExcelGrid : DataGrid
         var room = Bounds.Width;
         if (room <= 0) return;
 
-        // جای اضافه‌ای نیست (یا آن‌قدر کم است که ارزشِ دست زدن ندارد)
-        if (room - natural.Sum() < 8) return;
+        // ══ چرا حتی وقتی جای اضافه نیست هم پهنا سفت می‌شود ═══════════════════
+        //
+        // گزارشِ صاحب ریپو: «نباید Input هنگام تایپ بزرگ شود، نباید باعث تغییر
+        // عرض ستون شود، نباید باعث شکستن خطوط جدول شود.»
+        //
+        // ریشه‌اش همین‌جا بود: ستونِ ‎Auto‎ی ‎DataGrid‎ هم‌قدِ پهن‌ترین محتوایش
+        // می‌ماند و **با هر حرفی که تایپ می‌شود دوباره اندازه می‌گیرد**. پس در
+        // جدول‌های پهن (که جای اضافه ندارند و تا امروز از همین‌جا برمی‌گشتیم)
+        // ستون وسطِ تایپ پهن می‌شد و خطوطِ عمودیِ همهٔ ردیف‌ها جابه‌جا.
+        //
+        // حالا پهنا در هر دو حال سفت می‌شود: جای اضافه هست ⇒ ستاره‌ای به نسبتِ
+        // محتوا (تا جدول تمامِ پهنا را بگیرد)؛ نیست ⇒ همان پهنای طبیعی، ثابت.
+        // ظاهر عوض نمی‌شود — فقط دیگر با تایپ تکان نمی‌خورد. کشیدنِ دستیِ
+        // ستون‌ها هم مثلِ قبل کار می‌کند.
+        var spare = room - natural.Sum() >= 8;
 
         for (var i = 0; i < cols.Count; i++)
         {
             if (cols[i].MinWidth < natural[i]) cols[i].MinWidth = natural[i];
-            cols[i].Width = new DataGridLength(natural[i], DataGridLengthUnitType.Star);
+            cols[i].Width = spare
+                ? new DataGridLength(natural[i], DataGridLengthUnitType.Star)
+                : new DataGridLength(natural[i], DataGridLengthUnitType.Pixel);
         }
 
         _spread = true;

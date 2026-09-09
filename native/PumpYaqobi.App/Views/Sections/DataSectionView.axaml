@@ -32,7 +32,7 @@
       <Border Classes="panel" Padding="0">
         <c:ExcelGrid ItemsSource="{Binding Trash}" x:CompileBindings="False"
                      SelectedItem="{Binding SelectedTrash, Mode=TwoWay}"
-                     IsReadOnly="True" BorderThickness="0" CornerRadius="0" MaxHeight="320">
+                     IsReadOnly="True" BorderThickness="0" CornerRadius="0">
           <DataGrid.Columns>
             <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" />
             <DataGridTextColumn Header="نوع" Binding="{Binding KindText}" Width="Auto" MinWidth="150" />
@@ -65,7 +65,7 @@
       <Border Classes="panel" Padding="0">
         <c:ExcelGrid ItemsSource="{Binding Backups}" x:CompileBindings="False"
                      SelectedItem="{Binding SelectedBackup, Mode=TwoWay}"
-                     IsReadOnly="True" BorderThickness="0" CornerRadius="0" MaxHeight="260">
+                     IsReadOnly="True" BorderThickness="0" CornerRadius="0">
           <DataGrid.Columns>
             <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" />
             <DataGridTextColumn Header="روز" Binding="{Binding Day}" Width="Auto" MinWidth="130" />
