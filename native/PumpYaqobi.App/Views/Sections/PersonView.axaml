@@ -461,7 +461,8 @@
       </Border>
 
       <!-- دفترِ حسابِ باز -->
-      <c:ExcelGrid Grid.Row="2" ItemsSource="{Binding Current.Rows}" GrowsOnEnter="True" x:CompileBindings="False">
+      <c:ExcelGrid Grid.Row="2" Name="PersonGrid" ItemsSource="{Binding Current.Rows}"
+                   GrowsOnEnter="True" x:CompileBindings="False">
         <DataGrid.Columns>
           <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
           <DataGridTextColumn Header="نام"   Binding="{Binding Name}" Width="Auto" MinWidth="150" MaxWidth="320" />
@@ -505,6 +506,21 @@
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
+          <!-- ══ دو ستونِ رسید، ولی هر بار فقط یکی ═══════════════════════════
+               گزارشِ صاحب ریپو: «دو تا رسید تو یکی» — گیج‌کننده بود.
+
+               سایت هم همین را دارد و صریح نوشته (خطِ ۳۴۳۲۹ی ‎index.html‎):
+                 «ستونِ واحدِ مقابل از جدول برداشته شود — واحد تیل ⇐ ستونِ
+                  «رسید» (پولی) حذف؛ واحد پول ⇐ ستونِ «رسید تیل» حذف.»
+
+               پس در دفترِ تیل فقط «رسید تیل» دیده می‌شود و در دفترِ پول فقط
+               «رسید». دادهٔ هیچ ردیفی دست نمی‌خورد؛ فقط نمایش است.
+               ⚠️ ‎IsVisible‎ از ‎PersonView.axaml.cs‎ نوشته می‌شود، نه با
+               ‎Binding‎ و نه با ‎x:Name‎: ستونِ ‎DataGrid‎ یک ‎AvaloniaObject‎ی
+               ساده است — نه عنصرِ دیداری است که ‎DataContext‎ بگیرد، و نه
+               خاصیتِ ‎Name‎ دارد که ‎x:Name‎ رویش بنشیند. پس از روی سرستونش
+               پیدا می‌شود. -->
+
           <!-- ══ ستون‌ها مو‌به‌مو مثلِ سایت ══════════════════════════════════
                سایت (‎#pm-tbl‎، خطِ ۲۱۳۹۶ی ‎index.html‎) دقیقاً این‌هاست:
                    # │ تاریخ │ نام │ حواله │ نوع تیل │ مقدار تیل │ فی لیتر │

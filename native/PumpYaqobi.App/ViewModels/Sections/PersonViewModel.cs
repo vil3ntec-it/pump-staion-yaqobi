@@ -468,7 +468,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         foreach (var n in new[]
         {
             nameof(IsFilterAll), nameof(IsFilterPetrol), nameof(IsFilterDiesel),
-            nameof(ShowPetrolCard), nameof(ShowDieselCard),
+            nameof(ShowPetrolCard), nameof(ShowDieselCard), nameof(ShowFuelTypeColumn),
         })
             OnPropertyChanged(n);
     }
@@ -556,6 +556,32 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     //    • ردیفی که حذف شود، از سربرگ و جمله هم کم می‌شود.
     //  هیچ‌کدام از این‌ها «هم‌گام‌سازی» لازم ندارد؛ یک عدد است که سه جا نشان
     //  داده می‌شود.
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  ستون‌های زندهٔ جدول — هر بار فقط آن‌هایی که معنی دارند
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  گزارشِ صاحب ریپو: «دو تا رسید تو یکی» — جدول هم ستونِ «رسید» داشت و هم
+    //  «رسید تیل»، و کاربر نمی‌دانست کدام مالِ کدام است.
+    //
+    //  سایت این را ندارد و صریح هم نوشته (خطِ ۳۴۳۲۹ی ‎index.html‎):
+    //     «ستونِ واحدِ مقابل از جدول برداشته شود — واحد تیل ⇐ ستونِ «رسید»
+    //      (پولی) حذف؛ واحد پول ⇐ ستونِ «رسید تیل» حذف.»
+    //  و همان‌جا برای «نوع تیل» هم (خطِ ۳۴۲۹۸): در حسابِ جداگانهٔ پطرول یا
+    //  دیزل، وقتی همهٔ ردیف‌ها یک تیل‌اند، آن ستون بی‌معناست و برداشته می‌شود.
+    //
+    //  ⚠️ فقط نمایش است — دادهٔ هیچ ردیفی دست نمی‌خورد. ردیفی که در دفترِ
+    //  تیل رسیدِ پولی هم داشته باشد، عددش سرِ جایش می‌ماند و در جمع‌ها هم
+    //  شمرده می‌شود؛ فقط آن ستون دیده نمی‌شود.
+
+    /// <summary>ستونِ «رسید» (پولی) — فقط در دفترِ پول.</summary>
+    public bool ShowRasidColumn => IsMoney;
+
+    /// <summary>ستونِ «رسید تیل» — فقط در دفترِ تیل.</summary>
+    public bool ShowRasidFuelColumn => !IsMoney;
+
+    /// <summary>ستونِ «نوع تیل» — وقتی فیلترِ یک‌تیله روشن است، بی‌معناست.</summary>
+    public bool ShowFuelTypeColumn => RowFilter == "all";
 
     /// <summary>جمعِ رسیدهای همین تیل، در دفترِ باز.</summary>
     private decimal HeadRasid(FuelType fuel)
@@ -665,8 +691,11 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
                 new TotalCell(IsMoney ? "مقدار (افغانی)" : "مقدار تیل", Shamsi.Money(t.All.Liters),
                               column: "مقدار تیل"),
                 new TotalCell("بردگی", Shamsi.Money(t.All.Bardagi), column: "مقدار بردگی"),
-                new TotalCell("رسید", Shamsi.Money(t.All.Rasid), "Pump.Ok"),
-                new TotalCell("رسید تیل", Shamsi.Money(t.All.RasidFuel), "Pump.Ok"),
+                // ⚠️ همان ستونی که در جدول دیده می‌شود، نه هر دو — وگرنه
+                // «جمله» دوباره دو تا رسید نشان می‌داد.
+                IsMoney
+                    ? new TotalCell("رسید", Shamsi.Money(t.All.Rasid), "Pump.Ok")
+                    : new TotalCell("رسید تیل", Shamsi.Money(t.All.RasidFuel), "Pump.Ok"),
                 new TotalCell("الباقی", Shamsi.Money(t.All.Albaqi),
                               t.All.Albaqi > 0m ? "Pump.Danger" : "Pump.Ok"),
             };
@@ -786,6 +815,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
             nameof(HeadDieselPercentText), nameof(HeadDieselRasidText), nameof(HeadDieselRasidEdit),
             nameof(HeadDieselBordText), nameof(HeadDieselAlbaqiText), nameof(HeadDieselAlbaqiBrushKey),
             nameof(HeadPetrolCommText), nameof(HeadDieselCommText),
+            nameof(ShowRasidColumn), nameof(ShowRasidFuelColumn), nameof(ShowFuelTypeColumn),
             nameof(SumLitersText), nameof(SumBardagiText), nameof(SumRasidText),
             nameof(SumRasidFuelText), nameof(SumAlbaqiText), nameof(TotalCells),
             nameof(HeadPetrolRasidEdit), nameof(HeadDieselRasidEdit),
