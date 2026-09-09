@@ -91,7 +91,7 @@ internal static class PersonAudit
 
         Console.WriteLine();
         Console.WriteLine("── ۳) سربرگ ⇄ جدول ⇄ جمله، از یک منبع ──");
-        RasidLedger(win, person);
+        HeaderTableSync(win, person);
 
         Console.WriteLine();
         Console.WriteLine("── ۴) «📋 جدول جدید» ──");
@@ -200,58 +200,109 @@ internal static class PersonAudit
     //  ۳) سربرگ ⇄ جدول ⇄ جمله — یک منبعِ داده
     // ══════════════════════════════════════════════════════════════════════
     //
-    //  خواستهٔ صریحِ صاحب ریپو: «وقتی کاربر یک مقدار رسید وارد می‌کند، باید
-    //  همان لحظه در جدول ردیفِ خودش را داشته باشد؛ و هیچ State تکراری و
-    //  مستقلی نباشد.» این‌جا همان کارِ کاربر انجام می‌شود — عدد در کادرِ
-    //  سربرگ نوشته می‌شود — و بعد سه چیز سنجیده می‌شود: ردیفِ جدول، جمعِ
-    //  سربرگ، و این‌که آن ردیف در «جمله» شمرده **نشود**.
+    //  دقیقاً همان سناریوهایی که صاحب ریپو نوشت (TEST 1..8 و 24..26):
+    //  رسید از سربرگ، رسیدِ دوم، حذف از جدول، افزودن از جدول، ویرایش در
+    //  جدول، ردیفِ خالی. بعد از هر گام، هر سه عدد — سربرگ، جدول، جمله —
+    //  باید یکی باشند، بی هیچ بازخوانیِ صفحه.
 
-    private static void RasidLedger(Window win, PersonViewModel person)
+    private static void HeaderTableSync(Window win, PersonViewModel person)
     {
         person.Current = person.Accounts[0];
         Pump(win);
+        var a = person.Current!;
 
-        var acct = person.Current!;
-        if (acct.RowCount == 0) { acct.AddRowCommand.Execute(null); Pump(win); }
+        // از حسابِ خالی شروع می‌کنیم تا عددها بی‌ابهام باشند (TEST 1)
+        foreach (var r in a.Rows.ToList())
+        {
+            a.DeleteRowCommand.Execute(r);
+            Pump(win);
+        }
+        for (var i = 0; i < 40 && a.Rows.Count > 0; i++) Pump(win);
+        Check($"۱) حسابِ خالی ({a.Rows.Count} ردیف · سربرگ {Head(a)})",
+              a.Rows.Count == 0 && Head(a) == 0m);
 
-        var rowsBefore = acct.Rows.Count;
-        var autoBefore = acct.Rows.Count(r => r.IsAuto);
-        var sumBefore = acct.Entity.RasidFuelPetrol + acct.Entity.RasidMoneyPetrol;
+        // TEST 2 — رسیدِ اول از سربرگ
+        a.HeadPetrolRasidEdit = "10000";
+        Settle(win, a, 1);
+        Show("۲) رسیدِ ۱۰٬۰۰۰ از سربرگ", a, 10000m, 1);
 
-        // همان کاری که کاربر می‌کند: عدد را در کادرِ «مقدار رسید»ِ سربرگ می‌نویسد
-        acct.HeadPetrolRasidEdit = "1500";
+        // TEST 3 — رسیدِ دوم از سربرگ؛ اولی نباید جایش را بدهد
+        a.HeadPetrolRasidEdit = "30000";
+        Settle(win, a, 2);
+        Show("۳) رسیدِ ۳۰٬۰۰۰ از سربرگ", a, 40000m, 2);
+
+        // TEST 4 — حذفِ ۱۰٬۰۰۰ از خودِ جدول
+        var ten = a.Rows.FirstOrDefault(r => r.RasidFuel == 10000m);
+        if (ten is null) { Check("۴) ردیفِ ۱۰٬۰۰۰ در جدول پیدا شد", false); return; }
+        a.DeleteRowCommand.Execute(ten);
+        Settle(win, a, 1);
+        Show("۴) حذفِ ۱۰٬۰۰۰ از جدول", a, 30000m, 1);
+
+        // TEST 5 — رسیدِ تازه، این‌بار مستقیم از خودِ جدول
+        a.AddRowCommand.Execute(null);
+        Settle(win, a, 2);
+        var fresh = a.Rows.Last();
+        fresh.RasidFuelText = "20000";
+        fresh.FlushAsync().GetAwaiter();
+        for (var i = 0; i < 60 && Head(a) != 50000m; i++) Pump(win);
+        Show("۵) رسیدِ ۲۰٬۰۰۰ مستقیم از جدول", a, 50000m, 2);
+
+        // TEST 6 — ویرایشِ ۳۰٬۰۰۰ به ۵۰٬۰۰۰ در خودِ جدول
+        var thirty = a.Rows.FirstOrDefault(r => r.RasidFuel == 30000m);
+        if (thirty is null) { Check("۶) ردیفِ ۳۰٬۰۰۰ پیدا شد", false); return; }
+        thirty.RasidFuelText = "50000";
+        for (var i = 0; i < 60 && Head(a) != 70000m; i++) Pump(win);
+        Show("۶) ویرایشِ ۳۰٬۰۰۰ ← ۵۰٬۰۰۰", a, 70000m, 2);
+
+        // TEST 7 — ردیفِ خالی نباید جمع را خراب کند
+        a.AddRowCommand.Execute(null);
+        Settle(win, a, 3);
+        Show("۷) ردیفِ خالی، جمع دست‌نخورده", a, 70000m, 3);
+
+        // TEST 9/10/11 — دیزل جدا از پطرول
+        var pBefore = Head(a);
+        a.HeadDieselRasidEdit = "5000";
+        for (var i = 0; i < 60 && HeadD(a) != 5000m; i++) Pump(win);
+        Check($"۹) رسیدِ دیزل فقط دیزل را عوض کرد (پطرول {Head(a)} · دیزل {HeadD(a)})",
+              Head(a) == pBefore && HeadD(a) == 5000m);
+
+        var d = a.Rows.FirstOrDefault(r => r.RasidFuel == 5000m);
+        if (d is not null)
+        {
+            a.DeleteRowCommand.Execute(d);
+            for (var i = 0; i < 60 && HeadD(a) != 0m; i++) Pump(win);
+            Check($"۱۱) حذفِ رسیدِ دیزل، پطرول را دست نزد (پطرول {Head(a)} · دیزل {HeadD(a)})",
+                  Head(a) == pBefore && HeadD(a) == 0m);
+        }
+    }
+
+    /// <summary>«مقدار رسید»ِ سربرگِ پطرول، همان‌طور که کاربر می‌بیند.</summary>
+    private static decimal Head(AccountViewModel a) =>
+        PumpYaqobi.Application.Localization.Shamsi.Num(a.HeadPetrolRasidText);
+
+    private static decimal HeadD(AccountViewModel a) =>
+        PumpYaqobi.Application.Localization.Shamsi.Num(a.HeadDieselRasidText);
+
+    /// <summary>جمعِ ستونِ «رسید تیل» در ردیفِ «جمله»ی ته جدول.</summary>
+    private static decimal Foot(AccountViewModel a) =>
+        PumpYaqobi.Application.Localization.Shamsi.Num(a.SumRasidFuelText);
+
+    /// <summary>جمعِ همان ستون، از خودِ ردیف‌های جدول.</summary>
+    private static decimal Table(AccountViewModel a) =>
+        a.Rows.Where(r => r.Fuel == PumpYaqobi.Domain.Enums.FuelType.Petrol).Sum(r => r.RasidFuel);
+
+    private static void Settle(Window win, AccountViewModel a, int wantRows)
+    {
+        for (var i = 0; i < 80 && a.Rows.Count != wantRows; i++) Pump(win);
         Pump(win);
+    }
 
-        var autoAfter = acct.Rows.Count(r => r.IsAuto);
-        Check($"رسیدِ سربرگ ردیفِ خودش را در جدول ساخت ({autoBefore} ← {autoAfter})",
-              autoAfter == autoBefore + 1);
-        Check($"جدول یک ردیف بلندتر شد ({rowsBefore} ← {acct.Rows.Count})",
-              acct.Rows.Count == rowsBefore + 1);
-
-        var sumAfter = acct.Entity.RasidFuelPetrol + acct.Entity.RasidMoneyPetrol;
-        Check($"کادرِ سربرگ جمعِ دفتر را نشان می‌دهد ({sumBefore} ← {sumAfter})",
-              sumAfter == sumBefore + 1500m);
-
-        // ⚠️ ردیفِ نمایشی هرگز نباید ردیفِ جدول به‌حساب بیاید
-        Check($"ردیفِ 📌 در شمارشِ جدول نمی‌آید ({acct.RowCount} ردیفِ واقعی)",
-              acct.RowCount == acct.Rows.Count - autoAfter);
-
-        // رسیدِ دوم جای اولی را نمی‌گیرد — هر کدام رکوردِ خودش
-        acct.HeadPetrolRasidEdit = "500";
-        Pump(win);
-        Check($"رسیدِ دوم جای اولی را نگرفت ({acct.Rows.Count(r => r.IsAuto)} ردیفِ رسید)",
-              acct.Rows.Count(r => r.IsAuto) == autoBefore + 2);
-
-        var sum2 = acct.Entity.RasidFuelPetrol + acct.Entity.RasidMoneyPetrol;
-        Check($"جمع روی هم رفت ({sumAfter} ← {sum2})", sum2 == sumAfter + 500m);
-
-        // و 🗑️ همان یکی را برمی‌دارد، نه همه را
-        var one = acct.Rows.First(r => r.IsAuto);
-        acct.DeleteRowCommand.Execute(one);
-        Pump(win);
-        for (var i = 0; i < 40 && acct.Rows.Count(r => r.IsAuto) > autoBefore + 1; i++) Pump(win);
-        Check($"حذفِ یک رسید فقط همان یکی را بُرد ({acct.Rows.Count(r => r.IsAuto)} مانْد)",
-              acct.Rows.Count(r => r.IsAuto) == autoBefore + 1);
+    /// <summary>هر سه نما باید یک عدد بدهند — وگرنه همان‌جا گزارش می‌شود.</summary>
+    private static void Show(string what, AccountViewModel a, decimal want, int rows)
+    {
+        var h = Head(a); var t = Table(a); var f = Foot(a);
+        Check($"{what} — سربرگ {h} · جدول {t} · جمله {f} · {a.Rows.Count} ردیف",
+              h == want && t == want && f == want && a.Rows.Count == rows);
     }
 
     // ══════════════════════════════════════════════════════════════════════

@@ -260,8 +260,12 @@ public sealed class DebtCalculationService
             var effD = 1m - (PercentOf(a, FuelType.Diesel) / 100m);
             Check(a.RasidFuelPetrol * effP, t.Petrol.Liters, "petrol");
             Check(a.RasidFuelDiesel * effD, t.Diesel.Liters, "diesel");
-            Check(a.RasidMoneyPetrol * effP + t.Petrol.Rasid, t.Petrol.Bardagi, "money");
-            Check(a.RasidMoneyDiesel * effD + t.Diesel.Rasid, t.Diesel.Bardagi, "money");
+            // ⚠️ یک‌بار، نه دو بار. تا دیروز رسیدِ سربرگ و رسیدِ جدول دو انبارِ
+            // جدا بودند و این خط جمعشان می‌کرد؛ حالا که رسید فقط یک جا زندگی
+            // می‌کند، ‎a.RasidMoneyPetrol‎ خودش همان ‎t.Petrol.Rasid‎ است و
+            // جمع کردنشان یعنی دو برابر شمردنِ همان رسید.
+            Check(t.Petrol.Rasid * effP, t.Petrol.Bardagi, "money");
+            Check(t.Diesel.Rasid * effD, t.Diesel.Bardagi, "money");
         }
 
         // حسابِ تسویه‌شده «تمام‌شده» نیست
@@ -276,85 +280,91 @@ public sealed class DebtCalculationService
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    //  دفترِ رسیدهای سربرگ — سربرگ و جدول و جمع، همه از یک منبع
+    //  رسید — یک رکوردِ واقعی، در خودِ جدول
     // ══════════════════════════════════════════════════════════════════════
     //
-    //  خواستهٔ صریحِ صاحب ریپو: «سربرگ، جدول و Summary باید از یک Data Source
-    //  بخوانند؛ هیچ State تکراری و مستقلی نباشد. رسیدی که در سربرگ وارد
-    //  می‌شود باید ردیفِ خودش را در جدول داشته باشد و برعکس.»
+    //  خواستهٔ صریحِ صاحب ریپو: «رسید باید یک دادهٔ واقعی باشد. سربرگ رسیدهای
+    //  واقعی را نمایش دهد، جدول همان رسیدهای واقعی را نمایش دهد، جمله همان‌ها
+    //  را حساب کند. برای هر قسمت یک مقدارِ جداگانه نساز.»
     //
-    //  سایت همین را دارد (‎acct.rasidLog‎، خطِ ۳۴۶۲۰ی ‎index.html‎) و منطقش
-    //  مو‌به‌مو همین است:
+    //  پیش از این دو انبارِ جدا بود و همین ریشهٔ ناهم‌گامی بود:
+    //    • رسیدِ سربرگ در چهار عددِ ‎RasidFuelP/D‎ و ‎RasidMoneyP/D‎ی حساب
+    //    • رسیدِ جدول در ستونِ ‎Rasid‎/‎RasidFuel‎ی خودِ ردیف‌ها
+    //  پس رسیدی که در جدول نوشته می‌شد هرگز در کادرِ سربرگ نمی‌آمد و برعکس.
     //
-    //    • هر عددی که در سربرگ نوشته شود یک **رسیدِ تازه** است (‎PushRasid‎)،
-    //      نه ویرایشِ عددِ قبلی. پس رسیدِ قبلی پاک نمی‌شود.
-    //    • کادرِ سربرگ **جمعِ** دفتر را نشان می‌دهد (‎RasidLogSum‎).
-    //    • هر رسید ردیفِ خودش را در جدول دارد و با 🗑️ همان‌جا پاک می‌شود.
-    //    • چهار عددِ قدیمیِ ‎Rasid…‎ی حساب همیشه برابرِ جمعِ دفتر نگه داشته
-    //      می‌شوند (‎RasidLogSync‎) تا PDF، آرشیو، نمای انباشته و هشدارها —
-    //      که همه از آن‌ها می‌خوانند — هیچ تغییری نبینند.
+    //  حالا **رسید فقط یک جا زندگی می‌کند**: ستونِ رسیدِ همان ردیفِ جدول.
+    //  چهار عددِ حساب از روی همان ردیف‌ها حساب می‌شوند و فقط «کش» هستند تا
+    //  PDF، آرشیو، کارتِ حساب و هشدارها — که همه از آن‌ها می‌خوانند —
+    //  دست‌نخورده بمانند. تنها جای نوشتنشان <see cref="SyncReceiptTotals"/>
+    //  است.
     //
-    //  ⚠️ ردیف‌های دفتر هرگز در ‎SplitTotals‎ی ردیف‌های جدول شمرده نمی‌شوند؛
-    //  دو دفترِ جدا هستند و جمعِ هر کدام سرِ جای خودش می‌نشیند.
+    //  ⚠️ کدام ستون «رسید» است به دفترِ باز بستگی دارد — همان
+    //  ‎_rasidLogKey(fuel, money)‎ی سایت:
+    //      دفترِ تیل ⇒ ستونِ «رسید تیل» (‎RasidFuel‎)
+    //      دفترِ پول ⇒ ستونِ «رسید»     (‎Rasid‎)
 
-    /// <summary>
-    /// حساب‌های قدیمی دفتر ندارند — یک‌بار از روی همان چهار عددِ قبلی ساخته
-    /// می‌شود، دقیقاً مثلِ ‎_rasidLogInit‎ی سایت. ‎true‎ یعنی چیزی ساخته شد و
-    /// باید ذخیره شود.
-    /// </summary>
-    public bool RasidLogInit(DebtAccount a)
+    /// <summary>رسیدِ همین ردیف، در دفترِ داده‌شده.</summary>
+    public static decimal ReceiptOf(DebtRow r, bool money) =>
+        r is null ? 0m : (money ? r.Rasid : r.RasidFuel);
+
+    /// <summary>نوشتنِ رسید در ستونِ درستِ همان دفتر.</summary>
+    public static void SetReceipt(DebtRow r, bool money, decimal value)
     {
-        if (a is null) return false;
-        a.RasidLog ??= new List<RasidEntry>();
-        if (a.RasidLog.Count > 0) return false;
-
-        var seeds = new (LedgerMode Unit, FuelType Fuel, decimal Value)[]
-        {
-            (LedgerMode.Fuel,  FuelType.Petrol, a.RasidFuelPetrol),
-            (LedgerMode.Fuel,  FuelType.Diesel, a.RasidFuelDiesel),
-            (LedgerMode.Money, FuelType.Petrol, a.RasidMoneyPetrol),
-            (LedgerMode.Money, FuelType.Diesel, a.RasidMoneyDiesel),
-        };
-
-        var made = false;
-        foreach (var (unit, fuel, v) in seeds)
-        {
-            if (v == 0m) continue;
-            a.RasidLog.Add(new RasidEntry
-            {
-                AccountId = a.Id, Unit = unit, Fuel = fuel, Value = v,
-                SortIndex = a.RasidLog.Count,
-            });
-            made = true;
-        }
-        return made;
+        if (r is null) return;
+        if (money) r.Rasid = value; else r.RasidFuel = value;
     }
 
-    /// <summary>جمعِ رسیدهای یک دفتر و یک تیل.</summary>
-    public decimal RasidLogSum(DebtAccount a, LedgerMode unit, FuelType fuel)
+    /// <summary>
+    /// ردیفی که فقط یک رسید است — بی لیتر و بی بردگی.
+    ///
+    /// ⚠️ هیچ فرقی با ردیفی که کاربر خودش در جدول می‌سازد ندارد: خواستهٔ صریحِ
+    /// صاحب ریپو بود که «رسیدی که از سربرگ ساخته می‌شود نباید ساختارِ متفاوتی
+    /// از رسیدی که از جدول ساخته می‌شود داشته باشد».
+    /// </summary>
+    public static DebtRow NewReceiptRow(DebtAccount a, FuelType fuel, decimal value,
+                                        string? dateShamsi = null)
     {
-        if (a?.RasidLog is null) return 0m;
+        var money = a.Mode.IsMoney();
+        var r = new DebtRow
+        {
+            Fuel = fuel,
+            ByMoney = money,
+            DateShamsi = dateShamsi,
+            SortIndex = a.ActiveRows().Count,
+        };
+        if (money) r.MoneyAccountId = a.Id; else r.FuelAccountId = a.Id;
+        SetReceipt(r, money, value);
+        return r;
+    }
+
+    /// <summary>جمعِ رسیدهای یک دفتر و یک تیل — تنها راهِ حسابِ «مقدار رسید».</summary>
+    public decimal ReceiptTotal(DebtAccount a, LedgerMode unit, FuelType fuel)
+    {
+        if (a is null) return 0m;
+        var money = unit.IsMoney();
+        var rows = money ? a.MoneyRows : a.FuelRows;
         var sum = 0m;
-        foreach (var e in a.RasidLog)
-            if (e is not null && e.DeletedAt is null && e.Unit == unit && e.Fuel == fuel)
-                sum += e.Value;
+        foreach (var r in rows)
+            if (r is not null && r.DeletedAt is null && r.Fuel == fuel)
+                sum += ReceiptOf(r, money);
         return sum;
     }
 
     /// <summary>
-    /// چهار عددِ حساب همیشه برابرِ جمعِ دفتر نگه داشته می‌شوند.
-    /// ‎true‎ یعنی عددی واقعاً عوض شد و ذخیره لازم است.
+    /// چهار عددِ حساب را با ردیف‌ها یکی می‌کند. ‎true‎ یعنی عددی واقعاً عوض شد.
+    ///
+    /// ⚠️ تنها جایی است که این چهار عدد نوشته می‌شوند. هیچ‌جای دیگری مستقیم
+    /// در آن‌ها ننویسید — همان کاری بود که دو انبارِ ناهم‌گام می‌ساخت.
     /// </summary>
-    public bool RasidLogSync(DebtAccount a)
+    public bool SyncReceiptTotals(DebtAccount a)
     {
         if (a is null) return false;
-        var changed = RasidLogInit(a);
+        var fp = ReceiptTotal(a, LedgerMode.Fuel, FuelType.Petrol);
+        var fd = ReceiptTotal(a, LedgerMode.Fuel, FuelType.Diesel);
+        var mp = ReceiptTotal(a, LedgerMode.Money, FuelType.Petrol);
+        var md = ReceiptTotal(a, LedgerMode.Money, FuelType.Diesel);
 
-        var fp = RasidLogSum(a, LedgerMode.Fuel, FuelType.Petrol);
-        var fd = RasidLogSum(a, LedgerMode.Fuel, FuelType.Diesel);
-        var mp = RasidLogSum(a, LedgerMode.Money, FuelType.Petrol);
-        var md = RasidLogSum(a, LedgerMode.Money, FuelType.Diesel);
-
+        var changed = false;
         if (a.RasidFuelPetrol != fp) { a.RasidFuelPetrol = fp; changed = true; }
         if (a.RasidFuelDiesel != fd) { a.RasidFuelDiesel = fd; changed = true; }
         if (a.RasidMoneyPetrol != mp) { a.RasidMoneyPetrol = mp; changed = true; }
@@ -363,36 +373,69 @@ public sealed class DebtCalculationService
     }
 
     /// <summary>
-    /// ثبتِ یک رسیدِ تازه در دفتر — تنها راهِ نوشتنِ رسیدِ سربرگ
-    /// (همتای ‎_pmPushRasid‎). عددِ صفر چیزی ثبت نمی‌کند.
+    /// ══ مهاجرتِ امن ═══════════════════════════════════════════════════════
+    /// حساب‌های قدیمی رسیدشان را در چهار عددِ حساب دارند (و نسخهٔ پیشین، در
+    /// <see cref="RasidEntry"/>). یک‌بار همان‌ها به ردیفِ واقعی تبدیل می‌شوند
+    /// تا هیچ عددی گم نشود و از آن پس فقط یک انبار بماند.
+    ///
+    /// ردیف‌های تازه برگردانده می‌شوند تا صداکننده ذخیره‌شان کند.
+    ///
+    /// ⚠️ «چقدر کم است» از تفاوتِ عددِ حساب با جمعِ ردیف‌ها درمی‌آید، نه از
+    /// خودِ عدد — وگرنه حسابی که رسیدش همین حالا هم ردیف دارد، دو برابر
+    /// می‌شد. پس این تابع هر بار صدا زده شود، بارِ دوم چیزی نمی‌سازد.
     /// </summary>
-    public RasidEntry? PushRasid(DebtAccount a, LedgerMode unit, FuelType fuel,
-                                 decimal value, string? dateShamsi = null)
+    public List<DebtRow> MigrateReceiptsToRows(DebtAccount a, string? dateShamsi = null)
     {
-        if (a is null || value == 0m) return null;
-        RasidLogInit(a);
-        var e = new RasidEntry
+        var made = new List<DebtRow>();
+        if (a is null || a.ReceiptsMigrated) return made;
+        a.ReceiptsMigrated = true;
+
+        // نسخهٔ پیشین: دفترِ جدا. هر رکوردش یک ردیفِ واقعی می‌شود.
+        if (a.RasidLog is { Count: > 0 })
         {
-            AccountId = a.Id, Unit = unit, Fuel = fuel, Value = value,
-            DateShamsi = dateShamsi,
-            SortIndex = a.RasidLog.Count,
+            foreach (var e in a.RasidLog.Where(x => x is not null && x.Value != 0m).ToList())
+                made.Add(AddReceiptRow(a, e.Unit, e.Fuel, e.Value, e.DateShamsi ?? dateShamsi));
+            a.RasidLog.Clear();
+        }
+
+        // و عددهای قدیمیِ خودِ حساب، به‌اندازهٔ آن‌چه ردیف‌ها توضیح نمی‌دهند
+        var want = new (LedgerMode Unit, FuelType Fuel, decimal Value)[]
+        {
+            (LedgerMode.Fuel,  FuelType.Petrol, a.RasidFuelPetrol),
+            (LedgerMode.Fuel,  FuelType.Diesel, a.RasidFuelDiesel),
+            (LedgerMode.Money, FuelType.Petrol, a.RasidMoneyPetrol),
+            (LedgerMode.Money, FuelType.Diesel, a.RasidMoneyDiesel),
         };
-        a.RasidLog.Add(e);
-        RasidLogSync(a);
-        return e;
+
+        foreach (var (unit, fuel, value) in want)
+        {
+            var gap = value - ReceiptTotal(a, unit, fuel);
+            if (gap == 0m) continue;
+            made.Add(AddReceiptRow(a, unit, fuel, gap, dateShamsi));
+        }
+
+        SyncReceiptTotals(a);
+        return made;
     }
 
     /// <summary>
-    /// پاک کردنِ یک رسیدِ ثبت‌شده (اگر اشتباه نوشته شده باشد) — همتای
-    /// ‎deletePersonRasid‎. ‎true‎ یعنی پیدا شد و برداشته شد.
+    /// ردیفِ رسید را در دفترِ خواسته‌شده می‌سازد و همان‌جا می‌نشاند.
+    /// ‎Mode‎ی حساب موقتاً عوض می‌شود تا ردیف در ستون و دفترِ درست بنشیند و
+    /// بعد سرِ جایش برمی‌گردد — خودِ حساب دست‌نخورده می‌ماند.
     /// </summary>
-    public bool RemoveRasid(DebtAccount a, RasidEntry? entry)
+    public DebtRow AddReceiptRow(DebtAccount a, LedgerMode unit, FuelType fuel,
+                                 decimal value, string? dateShamsi = null)
     {
-        if (a?.RasidLog is null || entry is null) return false;
-        if (!a.RasidLog.Remove(entry)) return false;
-        RasidLogSync(a);
-        return true;
+        var was = a.Mode;
+        a.Mode = unit;
+        var row = NewReceiptRow(a, fuel, value, dateShamsi);
+        a.Mode = was;
+        (unit.IsMoney() ? a.MoneyRows : a.FuelRows).Add(row);
+        NormalizeRow(row);
+        SyncReceiptTotals(a);
+        return row;
     }
+
 
     // ── معادلِ سوخت (بندِ ۸) ─────────────────────────────────────────────────
     /// <summary>
