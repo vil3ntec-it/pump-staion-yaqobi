@@ -20,7 +20,8 @@ public sealed class WaraqDataService
     { _dbf = dbf; _perm = perm; _trash = trash; }
 
     private static IQueryable<WaraqEntry> Full(Persistence.PumpDbContext db) =>
-        db.WaraqEntries
+        // ⚠️ ‎AsSplitQuery‎: بی آن، هر پمپ در هر تراکنشِ همان شیفت ضرب می‌شود.
+        db.WaraqEntries.AsSplitQuery()
           .Include(w => w.Shifts).ThenInclude(s => s.Pumps)
           .Include(w => w.Shifts).ThenInclude(s => s.Transactions);
 
