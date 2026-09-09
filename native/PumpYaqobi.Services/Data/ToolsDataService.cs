@@ -51,7 +51,10 @@ public sealed class ToolsDataService
         if (people.Count == 0) return people;
 
         var ids = people.Select(p => p.Id).ToHashSet();
-        var accounts = await db.DebtAccounts.AsNoTracking()
+        // ⚠️ ‎AsSplitQuery‎ حیاتی است: دو ‎Include‎ی مجموعه‌ای در یک کوئری،
+        // ضربِ دکارتیِ دفترِ تیل در دفترِ پول را برمی‌گرداند — حسابی با ده هزار
+        // ردیف در هر دفتر یعنی صد میلیون سطر.
+        var accounts = await db.DebtAccounts.AsNoTracking().AsSplitQuery()
             .Include(a => a.FuelRows).Include(a => a.MoneyRows)
             .Where(a => (a.MainOfDebtorId != null && ids.Contains(a.MainOfDebtorId.Value))
                      || (a.DebtorId != null && ids.Contains(a.DebtorId.Value)))

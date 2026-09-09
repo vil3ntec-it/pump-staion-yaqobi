@@ -49,50 +49,61 @@ public sealed class DebtorService
     /// <summary>
     /// یک قرض‌دار با همهٔ حساب‌ها و همهٔ ردیف‌هایش — برای صفحهٔ شخص.
     ///
-    /// ⚠️ ‎AsSplitQuery‎ حیاتی است: با چند ‎Include‎ی مجموعه‌ای، EF یک کوئریِ
-    /// واحد با چند ‎JOIN‎ می‌سازد و نتیجه‌اش ضربِ دکارتیِ آن مجموعه‌هاست —
-    /// حسابی با پنجاه هزار ردیف و چند رسید، میلیون‌ها سطر برمی‌گرداند.
-    /// سنجشِ کارایی همین را گرفت: خواندنِ یک حسابِ پنجاه‌هزار ردیفی
-    /// **۳۵۶ ثانیه** طول می‌کشید. با کوئریِ جدا، هر مجموعه یک کوئریِ خودش
-    /// دارد و هیچ ضربی در کار نیست.
+    /// ══ چرا هیچ ‎Include‎ای این‌جا نیست ══════════════════════════════════════
+    ///
+    /// سنجشِ کارایی (‎PerfAudit‎) دو بار همین‌جا را لو داد:
+    ///
+    ///   • با یک کوئریِ واحد و شش ‎Include‎ی مجموعه‌ای، نتیجه ضربِ دکارتیِ آن
+    ///     مجموعه‌ها بود و خواندنِ حسابی با پنجاه هزار ردیف **۳۵۶ ثانیه** طول
+    ///     می‌کشید.
+    ///   • با ‎AsSplitQuery‎ ضربِ دکارتی رفت ولی هنوز **۶٫۳ ثانیه** بود، در
+    ///     حالی که خواندنِ مستقیمِ همان پنجاه هزار ردیف تنها **۰٫۴ ثانیه**
+    ///     طول می‌کشید. یعنی شش ثانیه‌اش خرجِ خودِ شکلِ ‎Include‎ بود، نه
+    ///     خرجِ ردیف‌ها.
+    ///
+    /// پس ردیف‌ها دیگر از راهِ ناوبری خوانده نمی‌شوند: هر دفتر یک کوئریِ
+    /// سادهٔ خودش دارد که مستقیم روی ایندکسِ ‎FuelAccountId‎ /
+    /// ‎MoneyAccountId‎ می‌نشیند، و بعد در حافظه به حسابِ خودش وصل می‌شود.
+    ///
+    /// ⚠️ عمداً به‌جای ‎ids.Contains(...)‎ برای هر حساب یک کوئریِ ‎== a.Id‎
+    /// زده می‌شود. حساب‌های یک شخص انگشت‌شمارند، ولی ‎Contains‎ روی SQLite به
+    /// ‎json_each‎ ترجمه می‌شود و همان ایندکس را از دست می‌دهد — یعنی دوباره
+    /// خواندنِ کلِ جدول.
+    ///
+    /// ⚠️ ترتیبِ ردیف‌ها این‌جا تحمیل نمی‌شود (مثلِ نسخهٔ ‎Include‎دار): هر
+    /// جدولی که ترتیب لازم دارد خودش ‎SortIndex‎ و بعد ‎Id‎ را مرتب می‌کند.
+    /// مرتب‌سازیِ SQL روی پنجاه هزار ردیف فقط هزینهٔ بی‌جا بود.
     /// </summary>
     public async Task<Debtor?> LoadFullAsync(long id, CancellationToken ct = default)
     {
         _perm.Require(Permission.ViewData);
         await using var db = _dbf.Create();
-        return await db.Debtors.AsNoTracking().AsSplitQuery()
-            .Include(d => d.MainAccount).ThenInclude(a => a!.FuelRows)
-            .Include(d => d.MainAccount).ThenInclude(a => a!.MoneyRows)
-            .Include(d => d.SubAccounts).ThenInclude(a => a.FuelRows)
-            .Include(d => d.SubAccounts).ThenInclude(a => a.MoneyRows)
-            // دفترِ رسیدهای سربرگ — بی این، سربرگ و جدول دو حقیقتِ جدا می‌شدند
-            .Include(d => d.MainAccount).ThenInclude(a => a!.RasidLog)
-            .Include(d => d.SubAccounts).ThenInclude(a => a.RasidLog)
-            .FirstOrDefaultAsync(d => d.Id == id, ct);
-    }
 
-    /// <summary>حساب‌های همهٔ قرض‌داران، برای نشانِ حال (سبز/زرد/قرمز) روی کارت‌ها.</summary>
-    public async Task<Dictionary<long, List<DebtAccount>>> AccountsByDebtorAsync(
-        bool noInvoice = false, CancellationToken ct = default)
-    {
-        _perm.Require(Permission.ViewData);
-        await using var db = _dbf.Create();
-        var ids = await db.Debtors.AsNoTracking()
-            .Where(d => d.IsNoInvoice == noInvoice).Select(d => d.Id).ToListAsync(ct);
+        var person = await db.Debtors.AsNoTracking().FirstOrDefaultAsync(d => d.Id == id, ct);
+        if (person is null) return null;
 
-        var mains = await db.DebtAccounts.AsNoTracking()
-            .Include(a => a.FuelRows).Include(a => a.MoneyRows)
-            .Where(a => a.MainOfDebtorId != null && ids.Contains(a.MainOfDebtorId.Value))
-            .ToListAsync(ct);
+        var main = await db.DebtAccounts.AsNoTracking()
+            .FirstOrDefaultAsync(a => a.MainOfDebtorId == id, ct);
         var subs = await db.DebtAccounts.AsNoTracking()
-            .Include(a => a.FuelRows).Include(a => a.MoneyRows)
-            .Where(a => a.DebtorId != null && ids.Contains(a.DebtorId.Value))
-            .ToListAsync(ct);
+            .Where(a => a.DebtorId == id).ToListAsync(ct);
 
-        var map = ids.ToDictionary(i => i, _ => new List<DebtAccount>());
-        foreach (var a in mains) map[a.MainOfDebtorId!.Value].Add(a);
-        foreach (var a in subs) map[a.DebtorId!.Value].Add(a);
-        return map;
+        person.MainAccount = main ?? new DebtAccount();
+        person.SubAccounts = subs;
+
+        foreach (var a in person.AllAccounts())
+        {
+            if (a.Id == 0) { a.FuelRows = new(); a.MoneyRows = new(); a.RasidLog = new(); continue; }
+            var aid = a.Id;
+            a.FuelRows = await db.DebtRows.AsNoTracking()
+                .Where(r => r.FuelAccountId == aid).ToListAsync(ct);
+            a.MoneyRows = await db.DebtRows.AsNoTracking()
+                .Where(r => r.MoneyAccountId == aid).ToListAsync(ct);
+            // دفترِ رسیدهای سربرگ — بی این، سربرگ و جدول دو حقیقتِ جدا می‌شدند
+            a.RasidLog = await db.RasidEntries.AsNoTracking()
+                .Where(r => r.AccountId == aid).ToListAsync(ct);
+        }
+
+        return person;
     }
 
     /// <summary>
@@ -101,10 +112,11 @@ public sealed class DebtorService
     /// خواستهٔ صاحب ریپو: «حتی اگر ۱۰۰۰۰ قرض‌دار داشتم با جدول‌هایی از صدهزار
     /// یا یک میلیون ردیف، نباید کند شود؛ همه‌چیز باید در صدمِ ثانیه باز شود.»
     ///
-    /// <see cref="AccountsByDebtorAsync"/> برای کشیدنِ فهرست **همهٔ ردیف‌های
-    /// همهٔ حساب‌ها** را می‌خواند. با ده هزار قرض‌دار و یک میلیون ردیف یعنی یک
-    /// میلیون شیء در حافظه، فقط برای این‌که روی هر کارت سه عدد بنویسیم. همان
-    /// جایی است که برنامه می‌ایستد.
+    /// راهِ پیشین (‎AccountsByDebtorAsync‎، که دیگر نیست) برای کشیدنِ فهرست
+    /// **همهٔ ردیف‌های همهٔ حساب‌ها** را می‌خواند. با ده هزار قرض‌دار و یک
+    /// میلیون ردیف یعنی یک میلیون شیء در حافظه، فقط برای این‌که روی هر کارت سه
+    /// عدد بنویسیم. همان جایی بود که برنامه می‌ایستاد — پس آن تابع برداشته شد
+    /// تا کسی دوباره از همان راه نرود.
     ///
     /// این‌جا جمع‌ها را **خودِ SQLite** می‌زند: یک ‎GROUP BY‎ روی حساب و دفتر و
     /// سوخت. بعد برای هر ترکیب یک «ردیفِ خلاصه» ساخته می‌شود و به همان حساب
@@ -308,7 +320,7 @@ public sealed class DebtorService
         // ⚠️ حساب‌ها و ردیف‌ها هم خوانده می‌شوند — نه برای حذف (آن را خودِ
         // پایگاه با cascade می‌کند) بلکه برای **سطلِ زباله**: اگر فقط خودِ شخص
         // در سطل بنشیند، «بازگرداندن» شخصی بی‌حساب و بی‌ردیف پس می‌دهد.
-        var d = await db.Debtors
+        var d = await db.Debtors.AsSplitQuery()
                         .Include(x => x.MainAccount).ThenInclude(a => a!.FuelRows)
                         .Include(x => x.MainAccount).ThenInclude(a => a!.MoneyRows)
                         .Include(x => x.SubAccounts).ThenInclude(a => a.FuelRows)
@@ -339,7 +351,8 @@ public sealed class DebtorService
     {
         _perm.Require(Permission.EditData);
         await using var db = _dbf.Create();
-        var a = await db.DebtAccounts.Include(x => x.FuelRows).Include(x => x.MoneyRows)
+        var a = await db.DebtAccounts.AsSplitQuery()
+                        .Include(x => x.FuelRows).Include(x => x.MoneyRows)
                         .FirstOrDefaultAsync(x => x.Id == accountId, ct)
                 ?? throw new InvalidOperationException("حساب پیدا نشد");
 
@@ -414,7 +427,7 @@ public sealed class DebtorService
     {
         _perm.Require(Permission.DeleteData);
         await using var db = _dbf.Create();
-        var a = await db.DebtAccounts
+        var a = await db.DebtAccounts.AsSplitQuery()
                         .Include(x => x.FuelRows).Include(x => x.MoneyRows)
                         .FirstOrDefaultAsync(x => x.Id == accountId, ct);
         if (a is null || a.MainOfDebtorId != null) return;   // حسابِ اصلی حذف نمی‌شود

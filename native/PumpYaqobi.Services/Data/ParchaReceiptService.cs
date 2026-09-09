@@ -81,7 +81,7 @@ public sealed class ParchaReceiptService
         if (r is null) return (PostResult.NotFound, "");
 
         var people = await LoadPeopleAsync(db, ct);
-        var (res, name) = PostOne(r, people);
+        var (res, name) = await PostOneAsync(db, r, people, new HashSet<long>(), ct);
         if (res == PostResult.Ok) db.ParchaReceipts.Remove(r);
         await db.SaveChangesAsync(ct);
         return (res, name);
@@ -94,13 +94,14 @@ public sealed class ParchaReceiptService
         await using var db = _dbf.Create();
         var rows = await db.ParchaReceipts.OrderBy(x => x.DateKey).ThenBy(x => x.Id).ToListAsync(ct);
         var people = await LoadPeopleAsync(db, ct);
+        var filled = new HashSet<long>();
 
         int ok = 0, dup = 0, nf = 0;
         foreach (var r in rows)
         {
             // ردیفی که هنوز نامی ندارد، اصلاً امتحان نمی‌شود
             if (string.IsNullOrWhiteSpace(r.Account) && string.IsNullOrWhiteSpace(r.Name)) continue;
-            var (res, _) = PostOne(r, people);
+            var (res, _) = await PostOneAsync(db, r, people, filled, ct);
             if (res == PostResult.Ok) { ok++; db.ParchaReceipts.Remove(r); }
             else if (res == PostResult.Duplicate) dup++;
             else nf++;
@@ -109,16 +110,50 @@ public sealed class ParchaReceiptService
         return new PostAllReport(ok, dup, nf);
     }
 
-    /// <summary>همهٔ قرض‌داران با هر دو دفترِ همهٔ حساب‌ها — ردیابی‌شده، تا ذخیره بگیرد.</summary>
+    /// <summary>
+    /// همهٔ قرض‌داران با حساب‌هایشان — ردیابی‌شده، تا ذخیره بگیرد — ولی
+    /// **بی هیچ ردیفی**.
+    ///
+    /// ⚠️ پیش‌تر هر دو دفترِ همهٔ حساب‌ها هم خوانده می‌شد. با ده هزار قرض‌دار و
+    /// یک میلیون ردیف یعنی یک میلیون شیءِ ردیابی‌شده در حافظه — و بعد
+    /// ‎SaveChanges‎ باید همان یک میلیون را برای تغییر وارسی کند. همهٔ آن فقط
+    /// برای پیدا کردنِ **یک** حساب از روی نام؛ و پیدا کردنِ نام اصلاً به
+    /// ردیف‌ها کاری ندارد.
+    ///
+    /// حالا ردیف‌ها فقط برای همان شخصی خوانده می‌شوند که رسید به نامِ اوست
+    /// (<see cref="FillRowsAsync"/>).
+    /// </summary>
     private static async Task<List<Debtor>> LoadPeopleAsync(PumpDbContext db, CancellationToken ct) =>
         await db.Debtors
-            .Include(d => d.MainAccount).ThenInclude(a => a!.FuelRows)
-            .Include(d => d.MainAccount).ThenInclude(a => a!.MoneyRows)
-            .Include(d => d.SubAccounts).ThenInclude(a => a.FuelRows)
-            .Include(d => d.SubAccounts).ThenInclude(a => a.MoneyRows)
+            .Include(d => d.MainAccount)
+            .Include(d => d.SubAccounts)
             .ToListAsync(ct);
 
-    private static (PostResult, string) PostOne(ParchaReceipt r, List<Debtor> people)
+    /// <summary>
+    /// ردیف‌های **یک** شخص را می‌آورد و در حساب‌های خودش می‌نشاند.
+    ///
+    /// چون حساب‌ها ردیابی‌شده‌اند، خودِ EF ردیفِ تازه‌خوانده را به
+    /// ‎FuelRows‎/‎MoneyRows‎ی حسابش وصل می‌کند؛ پس بقیهٔ کد هیچ فرقی نمی‌فهمد.
+    ///
+    /// ⚠️ ‎filled‎ لازم است: در «ثبت همه» ممکن است ده رسید به نامِ یک نفر باشد
+    /// و بی این، ردیف‌های او ده بار خوانده می‌شد.
+    /// </summary>
+    private static async Task FillRowsAsync(PumpDbContext db, Debtor person,
+                                            HashSet<long> filled, CancellationToken ct)
+    {
+        if (!filled.Add(person.Id)) return;
+        foreach (var a in person.AllAccounts())
+        {
+            if (a.Id == 0) continue;
+            var aid = a.Id;
+            await db.DebtRows.Where(r => r.FuelAccountId == aid).LoadAsync(ct);
+            await db.DebtRows.Where(r => r.MoneyAccountId == aid).LoadAsync(ct);
+        }
+    }
+
+    private static async Task<(PostResult, string)> PostOneAsync(
+        PumpDbContext db, ParchaReceipt r, List<Debtor> people,
+        HashSet<long> filled, CancellationToken ct)
     {
         var rawText = (r.Account ?? "") + " " + (r.Name ?? "");
         var clean = string.IsNullOrWhiteSpace(r.Account) ? r.Name : r.Account;
@@ -126,6 +161,8 @@ public sealed class ParchaReceiptService
         if (found is null) return (PostResult.NotFound, "");
 
         var person = found.Value.Person;
+        // حالا که صاحبِ رسید معلوم شد، فقط ردیف‌های **او** خوانده می‌شوند
+        await FillRowsAsync(db, person, filled, ct);
         var bardagi = Math.Round(PostingService.FuelBardagi(r.Liters, r.PricePerLiter),
                                  0, MidpointRounding.AwayFromZero);
         if (PostingService.AlreadyReceivedFromWaraq(person, r.Liters, bardagi, r.Hawala))

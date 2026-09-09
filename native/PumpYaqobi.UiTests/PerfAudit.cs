@@ -108,6 +108,19 @@ internal static class PerfAudit
         Mark($"خواندنِ حسابِ {BigRows:N0} ردیفی (بی صفحه)", () =>
         { var t = host.Debtors.LoadFullAsync(bigDebtor); t.GetAwaiter().GetResult(); });
 
+        // ⚠️ این یکی «پیدا کردنِ حساب از روی نام» را می‌سنجد — راهی که پیش‌تر
+        // برای همین یک ردیف، همهٔ قرض‌داران را با همهٔ ردیف‌هایشان می‌خواند.
+        Mark($"ثبتِ یک رسیدِ سریع در میانِ {People:N0} قرض‌دار", () =>
+        { var t = host.DebtReceipts.AddAsync("قرض‌دارِ 1500", 500m); t.GetAwaiter().GetResult(); });
+
+        // «قرض‌های کهنه» عمداً همهٔ ردیف‌ها را لازم دارد؛ این‌جا فقط معلوم
+        // می‌شود که خواندنشان ضربِ دکارتی نمی‌سازد.
+        Mark("قرض‌های کهنه (همهٔ ردیف‌ها)", () =>
+        {
+            var t = host.Tools.AgingAsync(PumpYaqobi.Application.Services.AgingFilter.All);
+            t.GetAwaiter().GetResult();
+        });
+
         // ══ فازِ دو: همان کارها روی پنجرهٔ واقعی ═════════════════════════════
         AppBuilder.Configure<PumpYaqobi.App.App>()
             .UseSkia()
