@@ -41,7 +41,7 @@ public class GridBehaviourTests
     [Fact]
     public void FillingTheGridRaisesOneNotificationNotOnePerRow()
     {
-        var c = new BulkObservableCollection<int>();
+        var c = new BulkRows<int>();
         var n = 0;
         c.CollectionChanged += (_, _) => n++;
 
@@ -54,7 +54,7 @@ public class GridBehaviourTests
     [Fact]
     public void TheBatchScopeAlsoRaisesOnlyOne()
     {
-        var c = new BulkObservableCollection<int>();
+        var c = new BulkRows<int>();
         var n = 0;
         c.CollectionChanged += (_, _) => n++;
 
@@ -72,7 +72,7 @@ public class GridBehaviourTests
     [Fact]
     public void NestedBatchesStillRaiseOnlyOne()
     {
-        var c = new BulkObservableCollection<int>();
+        var c = new BulkRows<int>();
         var n = 0;
         c.CollectionChanged += (_, _) => n++;
 
@@ -91,7 +91,7 @@ public class GridBehaviourTests
     [Fact]
     public void OutsideABatchItBehavesNormally()
     {
-        var c = new BulkObservableCollection<int>();
+        var c = new BulkRows<int>();
         var n = 0;
         c.CollectionChanged += (_, _) => n++;
         c.Add(1); c.Add(2);
