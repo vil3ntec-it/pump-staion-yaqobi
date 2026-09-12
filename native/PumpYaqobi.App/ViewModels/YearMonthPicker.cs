@@ -54,45 +54,33 @@ public sealed partial class YearMonthPicker : ObservableObject
     /// </summary>
     public void Load(IEnumerable<string> keys, string? active)
     {
-        var have = keys.Where(k => k.Any(char.IsDigit)).Distinct().ToList();
-
-        // ══ هر دوازده ماه، و چند سال — نه فقط آن‌هایی که داده دارند ══════════
+        // ══ فقط ماه‌هایی که واقعاً هستند ════════════════════════════════════
         //
-        // خواستهٔ صریحِ صاحب ریپو: «تمام ۱۲ ماهِ تقویم شمسی … نباید فقط یک ماه
-        // یا چند مقدارِ ثابت وجود داشته باشد. Year Selector هم نباید فقط یک
-        // سالِ ثابت داشته باشد.»
+        // ⚠️ این‌جا یک‌بار «هر دوازده ماهِ هر سال» ساخته می‌شد. غلط بود: سایت
+        // فقط ماه‌هایی را در کشویی می‌گذارد که داده دارند، و ماهِ تازه **فقط**
+        // با دکمهٔ «📅 ماه جدید» باز می‌شود (‎addExpenseMonth‎). صاحب ریپو با
+        // عکسِ خودِ سایت همین را خواست. حالا دقیقاً همان است:
         //
-        // تا امروز فهرست فقط از روی <b>داده</b> ساخته می‌شد، پس ماهی که هنوز
-        // ردیفی نداشت اصلاً در کشویی نبود — و کاربر راهی نداشت برود ماهِ بعد.
+        //     کشویِ سال  → «📆 همهٔ سال‌ها» + سال‌هایی که داده دارند
+        //     کشویِ ماه → «همهٔ ماه‌های ‎<سال>‎» + ماه‌های همان سال
         //
-        // حالا: سال‌ها از کهنه‌ترین سالِ داده تا یک سال جلوتر از امروز، و برای
-        // سالِ انتخاب‌شده هر دوازده ماه. ماهی که داده ندارد جدولِ خالی نشان
-        // می‌دهد — که درست است، نه این‌که اصلاً نشود انتخابش کرد.
-        var years = have.Select(YearOf).Where(y => y.Length > 0)
-                        .Select(int.Parse).ToList();
-        var thisYear = int.Parse(YearOf(Shamsi.ThisMonth()));
-        var lo = years.Count > 0 ? Math.Min(years.Min(), thisYear) : thisYear;
-        var hi = (years.Count > 0 ? Math.Max(years.Max(), thisYear) : thisYear) + 1;
-
-        _all = new List<string>();
-        for (var y = hi; y >= lo; y--)
-            for (var m = 12; m >= 1; m--)
-                _all.Add($"{y:0000}/{m:00}");
-
-        // کلیدی که در دیتابیس هست ولی بیرونِ این بازه افتاده (دادهٔ خیلی قدیمی)
-        // هم باید بماند، وگرنه همان ماه از دسترس بیرون می‌رود.
-        foreach (var k in have.Where(k => !_all.Contains(k))) _all.Add(k);
-        _all = _all.Distinct().OrderByDescending(k => k).ToList();
+        // (‎_ymSelectsHtml‎ی سایت، خطِ ۳۷۶۱۵ی index.html)
+        _all = keys.Where(k => k.Any(char.IsDigit)).Distinct()
+                   .OrderByDescending(k => k, StringComparer.Ordinal).ToList();
 
         _quiet = true;
         Years.Clear();
         if (AllLabel.Length > 0) Years.Add(new YearMonthItem("", "📆 همهٔ سال‌ها"));
-        foreach (var y in _all.Select(YearOf).Where(y => y.Length > 0).Distinct().OrderByDescending(y => y))
+        foreach (var y in _all.Select(YearOf).Where(y => y.Length > 0).Distinct()
+                              .OrderByDescending(y => y, StringComparer.Ordinal))
             Years.Add(new YearMonthItem(y, "📆 " + y));
 
-        var wantYear = YearOf(active ?? "");
+        // «همهٔ ماه‌ها»ی یک سال، سالِ خودش را نگه می‌دارد — همان ‎'YYYY/*'‎ی سایت
+        var wantYear = AllOfYear(active);
+        if (wantYear.Length == 0) wantYear = YearOf(active ?? "");
         Year = Years.FirstOrDefault(y => y.Key == wantYear)
-               ?? Years.FirstOrDefault(y => y.Key.Length > 0)
+               ?? (AllLabel.Length > 0 && IsAll(active) ? Years.FirstOrDefault()
+                                                        : Years.FirstOrDefault(y => y.Key.Length > 0))
                ?? Years.FirstOrDefault();
         _quiet = false;
 
@@ -133,8 +121,10 @@ public sealed partial class YearMonthPicker : ObservableObject
         Months.Clear();
         if (AllLabel.Length > 0)
             Months.Add(new YearMonthItem(y.Length > 0 ? y + AllMark : "",
-                                         y.Length > 0 ? AllLabel + " " + y : AllLabel));
-        foreach (var k in inYear) Months.Add(new YearMonthItem(k, Shamsi.MonthLabel(k)));
+                                         y.Length > 0
+                                             ? AllLabel.Replace("ماه‌ها", "ماه‌های " + y)
+                                             : AllLabel));
+        foreach (var k in inYear) Months.Add(new YearMonthItem(k, OptionLabel(k)));
 
         Selected = Months.FirstOrDefault(m => m.Key == want) ?? Months.FirstOrDefault();
         _quiet = false;
@@ -163,7 +153,29 @@ public sealed partial class YearMonthPicker : ObservableObject
         return i < 0 || i + 1 >= s.Length ? "" : s[(i + 1)..];
     }
 
-    public static bool IsAll(string? k) => (k ?? "").EndsWith(AllMark, StringComparison.Ordinal);
+    /// <summary>
+    /// «همهٔ ماه‌ها»؟ — خالی هم «همه» است، دقیقاً مثلِ ‎_ymIsAll‎ی سایت
+    /// (<c>return !v || String(v).slice(-2) === '/*'</c>).
+    /// </summary>
+    public static bool IsAll(string? k) =>
+        string.IsNullOrEmpty(k) || k.EndsWith(AllMark, StringComparison.Ordinal);
+
+    /// <summary>«1405/07» ⇒ «میزان — 1405/07» — همان ‎_monthOptionLabel‎ی سایت.</summary>
+    public static string OptionLabel(string? k)
+    {
+        var s = Shamsi.ToEnDigits(k ?? "");
+        var p = s.Split('/');
+        if (p.Length != 2 || !int.TryParse(p[1], out var m)) return Shamsi.MonthLabel(k);
+        var name = Shamsi.MonthName(m);
+        return (name.Length > 0 ? name : p[1]) + " — " + s;
+    }
+
+    /// <summary>«1405/*» ⇒ «1405». اگر «همهٔ ماه‌ها» نباشد، رشتهٔ خالی.</summary>
+    public static string AllOfYear(string? k)
+    {
+        var s = Shamsi.ToEnDigits(k ?? "");
+        return s.EndsWith(AllMark, StringComparison.Ordinal) ? s[..^AllMark.Length] : "";
+    }
 }
 
 /// <summary>یک گزینهٔ کشویی: کلیدِ واقعی و برچسبی که کاربر می‌بیند.</summary>

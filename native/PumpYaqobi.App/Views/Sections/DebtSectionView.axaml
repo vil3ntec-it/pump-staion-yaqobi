@@ -29,7 +29,11 @@
       </c:SectionPage.Toolbar>
 
       <c:SectionPage.Filters>
-        <Grid ColumnDefinitions="Auto,240,Auto,24,Auto,220,150">
+        <!-- ⚠️ کادرهای «حسابِ تازه: نام / شماره» از این‌جا رفتند. در سایت چنین
+             کادرهایی بالای صفحه نیست: «➕ افزودن شخص» یک کادرِ کوچکِ «نام» باز
+             می‌کند (‎addPersonModal‎) و شماره بعداً داخلِ خودِ حساب نوشته
+             می‌شود. خواستهٔ صریحِ صاحب ریپو با عکسِ همان کادر. -->
+        <Grid ColumnDefinitions="Auto,240,Auto">
           <TextBlock Grid.Column="0" Text="🔍 جست‌وجو" Classes="label" VerticalAlignment="Center" Margin="0,0,8,0" />
           <TextBox Grid.Column="1" Text="{Binding Search}" Watermark="نام یا شماره" />
 
@@ -39,10 +43,6 @@
                   Content="🎤" ToolTip.Tip="نام را بگویید — حسابش باز می‌شود"
                   Command="{Binding VoiceSearchCommand}"
                   Classes.danger="{Binding Listening}" />
-
-          <TextBlock Grid.Column="4" Text="حسابِ تازه" Classes="label" VerticalAlignment="Center" Margin="0,0,8,0" />
-          <TextBox Grid.Column="5" Text="{Binding NewName}" Watermark="نام" />
-          <TextBox Grid.Column="6" Text="{Binding NewPhone}" Watermark="شماره" Margin="8,0,0,0" />
         </Grid>
       </c:SectionPage.Filters>
 

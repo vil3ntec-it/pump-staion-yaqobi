@@ -105,15 +105,19 @@ public static class Dialogs
     }
 
     /// <summary>
-    /// «📅 ماه جدید» — سال و ماه را بپرس. ‎null‎ یعنی انصراف.
-    /// ماه‌هایی که از قبل هستند داده می‌شوند تا تکراری ساخته نشود.
+    /// ══ «📝 ورق با تاریخ» ═══════════════════════════════════════════════════
+    /// تاریخِ ورق را بپرس — همتای ‎openWaraqDatePicker‎ی سایت. ‎null‎ یعنی
+    /// انصراف. ‎existingKeys‎ کلیدِ تاریخِ ورق‌های موجود است تا پنجره پیش از
+    /// تایید بگوید «از قبل هست» یا «تازه ساخته می‌شود».
     /// </summary>
-    public static async Task<string?> PickMonthAsync(IReadOnlyCollection<string> existing)
+    public static async Task<string?> PickWaraqDateAsync(IReadOnlyCollection<int> existingKeys,
+                                                         string? startDate = null)
     {
+        if (PromptHook is { } hook) return hook("ورق با تاریخ", startDate ?? "");
         var owner = Owner;
         if (owner is null) return null;
         return await Dispatcher.UIThread.InvokeAsync(async () =>
-            await MonthPickWindow.For(existing).ShowDialog<string?>(owner));
+            await WaraqDateWindow.For(existingKeys, startDate).ShowDialog<string?>(owner));
     }
 
     /// <summary>

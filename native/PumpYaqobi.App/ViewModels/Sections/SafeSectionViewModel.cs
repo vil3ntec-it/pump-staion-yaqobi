@@ -99,6 +99,8 @@ public sealed partial class SafeSectionViewModel : LedgerSectionViewModel<SafeRo
         // کلیدِ نسخهٔ وب است تا نوت‌های واردشده سرِ جای خودشان بنشینند.
         Notes = new SectionNotesViewModel(Id, host.SectionNotes,
             (m, ok) => host.Toast(m, ok ? ToastKind.Ok : ToastKind.Warn));
+        // «✅ جدول ماه … باز شد» — همان پیامِ سایت پس از «📅 ماه جدید»
+        Toast = t => host.Toast(t, ToastKind.Ok);
     }
 
     [ObservableProperty] private SafeSummary _summary;

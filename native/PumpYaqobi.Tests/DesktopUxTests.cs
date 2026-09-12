@@ -72,22 +72,26 @@ public class DesktopUxTests
         Assert.DoesNotContain("Task.Delay", body);
     }
 
-    // ── فلش‌ها: ایندکسِ ستون، مستقل از جهت ──────────────────────────────────
+    // ── فلش‌ها: همان‌جایی که چشم می‌بیند ────────────────────────────────────
 
     /// <summary>
-    /// خواستهٔ نوشتهٔ صاحب ریپو: «منطقِ Cell Index باید مستقل از Direction
-    /// باشد — ArrowRight → column + 1، ArrowLeft → column − 1.»
+    /// ⚠️ این آزمون برعکسِ نسخهٔ پیشینِ خودش است، چون خودِ قاعده عوض شد.
+    ///
+    /// ایندکسِ خام («‎ArrowRight → column + 1‎») در جدولِ راست‌به‌چپ همان
+    /// شکایتی را ساخت که قرار بود درست کند: ستونِ «بعدی» سمتِ چپ است، پس
+    /// کلیدِ راست، چپ می‌رفت. صاحب ریپو دوباره همان را گزارش کرد.
+    ///
+    /// قاعدهٔ تازه: ‎→‎ خانهٔ سمتِ راست، ‎←‎ خانهٔ سمتِ چپ — و جهتِ چیدمان از
+    /// **جای واقعیِ سربرگ‌ها** خوانده می‌شود، نه از خاصیتی که ممکن است به
+    /// کنترل نرسد.
     /// </summary>
     [Fact]
-    public void ArrowKeysUseColumnIndexNotScreenDirection()
+    public void ArrowKeysFollowTheScreenNotTheRawIndex()
     {
         var g = App("Controls", "ExcelGrid.cs");
-        Assert.Contains("MoveColumn(e.Key == Key.Right ? +1 : -1, shift)", g);
-
-        // دیگر به FlowDirection بند نیست
-        var at = g.IndexOf("case Key.Left:", StringComparison.Ordinal);
-        Assert.True(at > 0);
-        Assert.DoesNotContain("FlowDirection", g[at..(at + 400)]);
+        Assert.Contains("MoveColumn(toRight == rtl ? -1 : +1, shift)", g);
+        Assert.Contains("private bool ColumnsRunRightToLeft()", g);
+        Assert.DoesNotContain("MoveColumn(e.Key == Key.Right ? +1 : -1", g);
     }
 
     // ── اسکرول و سربرگ ──────────────────────────────────────────────────────
@@ -118,35 +122,43 @@ public class DesktopUxTests
 
     // ── سال و ماه ───────────────────────────────────────────────────────────
 
-    /// <summary>هر دوازده ماه، حتی ماهی که هنوز ردیفی ندارد.</summary>
+    /// <summary>
+    /// ⚠️ این آزمون هم عوض شد، و برعکسِ نسخهٔ پیشینِ خودش است.
+    ///
+    /// یک‌بار «هر دوازده ماه، حتی ماهی که ردیفی ندارد» قفل شده بود. عکسِ خودِ
+    /// سایت خلافش را نشان داد: کشوی ماه فقط ماه‌هایی را دارد که داده دارند،
+    /// به‌علاوهٔ یک گزینهٔ «همهٔ ماه‌های ‎<سال>‎». ماهِ تازه با دکمهٔ «ماه جدید»
+    /// باز می‌شود، نه با پر کردنِ کشویی.
+    /// </summary>
     [Fact]
-    public void EveryOneOfTheTwelveMonthsCanBePicked()
+    public void TheMonthListHoldsOnlyMonthsThatExist()
     {
-        var p = new YearMonthPicker(_ => { });
-        p.Load(new[] { "1405/06" }, "1405/06");
+        var p = new YearMonthPicker(_ => { }, "همهٔ ماه‌ها");
+        p.Load(new[] { "1405/06", "1405/07" }, "1405/07");
 
-        var months = p.Months.Select(m => YearMonthPicker.MonthOf(m.Key)).ToList();
-        Assert.Equal(12, months.Count);
-        for (var m = 1; m <= 12; m++)
-            Assert.Contains(m.ToString("00"), months);
+        var keys = p.Months.Select(m => m.Key).ToList();
+        Assert.Equal(new[] { "1405/*", "1405/07", "1405/06" }, keys);
+
+        // برچسب مثلِ سایت: «میزان — 1405/07»
+        Assert.Equal("میزان — 1405/07", p.Months[1].Label);
+        Assert.Equal("همهٔ ماه‌های 1405", p.Months[0].Label);
     }
 
-    /// <summary>و بیش از یک سال — دستِ‌کم امسال و سالِ بعد.</summary>
+    /// <summary>«📆 همهٔ سال‌ها» هم هست، بالای سال‌هایی که داده دارند.</summary>
     [Fact]
-    public void MoreThanOneYearIsOffered()
+    public void TheYearListHasAnAllOption()
     {
-        var p = new YearMonthPicker(_ => { });
+        var p = new YearMonthPicker(_ => { }, "همهٔ ماه‌ها");
         p.Load(new[] { "1403/01", "1405/06" }, "1405/06");
 
-        var years = p.Years.Select(y => y.Key).Where(k => k.Length > 0).ToList();
-        Assert.True(years.Count >= 3, "سال‌های ارائه‌شده: " + string.Join(",", years));
-        Assert.Contains("1403", years);
-        Assert.Contains("1405", years);
+        var years = p.Years.Select(y => y.Key).ToList();
+        Assert.Equal(new[] { "", "1405", "1403" }, years);
+        Assert.Equal("📆 همهٔ سال‌ها", p.Years[0].Label);
     }
 
-    /// <summary>دادهٔ خیلی قدیمی که بیرونِ بازه افتاده هم از دست نرود.</summary>
+    /// <summary>دادهٔ خیلی قدیمی هم سرِ جایش است.</summary>
     [Fact]
-    public void AnOldMonthOutsideTheRangeIsStillReachable()
+    public void AnOldMonthIsStillReachable()
     {
         var p = new YearMonthPicker(_ => { });
         p.Load(new[] { "1390/04", "1405/06" }, "1390/04");
@@ -157,20 +169,27 @@ public class DesktopUxTests
     // ── «ماه جدید» ──────────────────────────────────────────────────────────
 
     /// <summary>
-    /// «کلیک → دیالوگِ انتخابِ سال و ماه → تأیید → ایجاد → فعال شدن».
-    /// و ماهِ تکراری ساخته نشود.
+    /// ⚠️ این آزمون عوض شد، چون خودِ قاعده عوض شد.
+    ///
+    /// یک‌بار این‌جا دیالوگِ «سال و ماه را انتخاب کن» قفل شده بود. صاحب ریپو با
+    /// عکسِ خودِ سایت نشان داد که چنین دیالوگی وجود ندارد: دکمه بی هیچ پرسشی
+    /// ماهِ **بعدیِ آخرین ماه** را باز می‌کند و پیام می‌دهد. حالا همان است
+    /// (‎addExpenseMonth()‎، خطِ ۳۷۷۷۳ی index.html).
     /// </summary>
     [Fact]
-    public void NewMonthAsksBeforeCreatingAndRefusesDuplicates()
+    public void NewMonthOpensTheNextMonthLikeTheSite()
     {
         var led = App("ViewModels", "LedgerSectionViewModel.cs");
-        Assert.Contains("Dialogs.PickMonthAsync", led);
-        Assert.Contains("if (Months.Contains(pick))", led);
+        Assert.Contains("mo++;", led);
+        Assert.Contains("if (mo > 12) { mo = 1; yr++; }", led);
+        Assert.Contains("e.DateShamsi = next + \"/01\";", led);
+        Assert.Contains("✅ جدول ماه ", led);
 
-        var dlg = App("Views", "MonthPickWindow.axaml.cs");
-        Assert.Contains("OkBtn.IsEnabled = k is not null && !dupe", dlg);
-        for (var m = 1; m <= 12; m++) { }                       // هر دوازده ماه:
-        Assert.Contains("for (var m = 1; m <= 12; m++)", dlg);
+        // و ماهِ تکراری دوباره ساخته نمی‌شود
+        Assert.Contains("if (!Months.Contains(next))", led);
+
+        // دیالوگِ ساختگی رفت
+        Assert.DoesNotContain("Dialogs.PickMonthAsync", led);
     }
 
     // ── کیو‌آرِ کارت‌ها ───────────────────────────────────────────────────────

@@ -600,6 +600,31 @@ public class ExcelGrid : DataGrid
         return true;
     }
 
+    /// <summary>
+    /// ══ ستون‌ها از کدام سمت شروع می‌شوند؟ ═══════════════════════════════════
+    ///
+    /// از **جای واقعیِ سربرگ‌ها** خوانده می‌شود، نه از خاصیتِ ‎FlowDirection‎.
+    /// دلیلش گزارشِ دوباره‌شوندهٔ صاحب ریپو است: آن خاصیت اگر به این کنترل
+    /// نرسد (یا قالبِ درونیِ ‎DataGrid‎ عوضش کند) بی‌صدا برعکس می‌شود و کلیدها
+    /// وارونه کار می‌کنند. جای سربرگ روی صفحه دروغ نمی‌گوید.
+    ///
+    /// سربرگی هنوز ساخته نشده باشد، به همان ‎FlowDirection‎ برمی‌گردیم — و
+    /// پیش‌فرضِ این برنامه راست‌به‌چپ است.
+    /// </summary>
+    private bool ColumnsRunRightToLeft()
+    {
+        var heads = this.GetVisualDescendants().OfType<DataGridColumnHeader>()
+                        .Where(h => h.Bounds.Width > 0).Take(2).ToList();
+        if (heads.Count == 2)
+        {
+            var a = heads[0].TranslatePoint(default, this);
+            var b = heads[1].TranslatePoint(default, this);
+            if (a is not null && b is not null && Math.Abs(a.Value.X - b.Value.X) > 0.5)
+                return b.Value.X < a.Value.X;
+        }
+        return FlowDirection == Avalonia.Media.FlowDirection.RightToLeft;
+    }
+
     /// <summary>کادرِ چندانتخابی جمع می‌شود و روی همان یک ستون می‌نشیند.</summary>
     private void ResetRange(int col)
     {
@@ -750,26 +775,27 @@ public class ExcelGrid : DataGrid
                 e.Handled = true;
                 return;
 
-            // ══ چپ/راست: ایندکسِ ستون، مستقل از جهتِ چیدمان ══════════════════
+            // ══ چپ/راست: همان‌جایی که چشم می‌بیند ════════════════════════════
             //
-            // خواستهٔ صریحِ صاحب ریپو (نوشتهٔ خودش):
-            //     «برنامه فارسی و RTL است، اما منطقِ حرکت داخلِ Grid نباید به
-            //      خاطر RTL برعکس شود … ArrowRight → column + 1،
-            //      ArrowLeft → column − 1 … منطقِ Cell Index باید مشخص و
-            //      مستقل از Direction باشد.»
+            // ⚠️ این خانه دو بار عوض شده و هر دو بار گزارشِ صاحب ریپو یکی بود:
+            // «کلیدِ راست را می‌زنم، چپ می‌رود.» پس این‌بار نه از ‎FlowDirection‎
+            // (که اگر به این کنترل نرسد بی‌صدا برعکس می‌شود) و نه از ایندکسِ
+            // خام (که در جدولِ راست‌به‌چپ دقیقاً همان شکایت را می‌سازد، چون
+            // ستونِ «بعدی» سمتِ چپ است) — بلکه از **جای واقعیِ سربرگ‌ها روی
+            // صفحه**: ‎ColumnsRunRightToLeft()‎.
             //
-            // پیش از این همین‌جا ‎FlowDirection‎ خوانده می‌شد و جهت را برعکس
-            // می‌کرد. دو اشکال داشت: یکی این‌که خواستهٔ بالا را نقض می‌کرد، و
-            // دیگر این‌که به خاصیتی بند بود که اگر روی این کنترل ننشیند
-            // (مثلاً قالبِ داخلیِ ‎DataGrid‎ آن را عوض کند) بی‌سروصدا برعکس
-            // می‌شد — همان «کلیدِ راست را می‌زنم، چپ می‌رود».
-            //
-            // حالا ساده و قطعی است: راست یعنی ستونِ بعدی، چپ یعنی ستونِ پیشین.
+            // قاعده از این به بعد یکی است و دیگر عوض نمی‌شود:
+            //     کلیدِ ‎→‎ خانهٔ سمتِ راست، کلیدِ ‎←‎ خانهٔ سمتِ چپ.
+            // در جدولِ راست‌به‌چپِ این برنامه، سمتِ راست یعنی ایندکسِ کمتر.
             case Key.Left:
             case Key.Right:
-                MoveColumn(e.Key == Key.Right ? +1 : -1, shift);
+            {
+                var rtl = ColumnsRunRightToLeft();
+                var toRight = e.Key == Key.Right;
+                MoveColumn(toRight == rtl ? -1 : +1, shift);
                 e.Handled = true;
                 return;
+            }
 
             // ── بالا/پایین: خودِ جدول می‌بَرد (با ‎Shift‎ چندردیفی) ─────────
             // فقط کادرِ ستونی جمع می‌شود اگر ‎Shift‎ گرفته نشده باشد.

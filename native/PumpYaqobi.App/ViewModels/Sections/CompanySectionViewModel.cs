@@ -399,7 +399,7 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
     private Task AddCompanyAsync() => CrashGuard.RunAsync("افزودن شرکت", async () =>
     {
         var n = NewName.Trim();
-        if (n.Length == 0) n = (await Dialogs.PromptAsync("افزودن شرکت", "نامِ شرکت:") ?? "").Trim();
+        if (n.Length == 0) n = (await Dialogs.PromptAsync("افزودن شرکت تیل", "نام شرکت:", "", "✔ افزودن") ?? "").Trim();
         if (n.Length == 0) { _host.Toast("نام شرکت را وارد کنید", ToastKind.Error); return; }
 
         var all = await _host.Companies.ListAsync();
