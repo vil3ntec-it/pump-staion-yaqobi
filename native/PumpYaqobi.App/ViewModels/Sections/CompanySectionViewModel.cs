@@ -10,6 +10,7 @@ using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
 using PumpYaqobi.Reporting.Pdf;
 using PumpYaqobi.Services.Data;
+using PumpYaqobi.Services.Vision;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -428,13 +429,51 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
         await RefreshAsync();
     }
 
-    /// <summary>«📲 کیو‌آر کد» — همان کیوآری که حسابِ همین شرکت را باز می‌کند.</summary>
+    /// <summary>
+    /// «📲 کیو‌آر کد» — حسابِ همین شرکت، داخلِ خودِ کد.
+    ///
+    /// ⚠️ این دکمه تا امروز فقط یک **پیام** می‌داد و هیچ کدی نمی‌ساخت.
+    /// حالا مثلِ کیو‌آرِ قرض‌داران: عکسِ حساب فشرده می‌شود و در نشانیِ صفحهٔ
+    /// ‎view/‎ می‌نشیند؛ گوشی بی رمز و بی سرور بازش می‌کند.
+    /// </summary>
     [RelayCommand]
-    private void ShowQr(CompanyCardViewModel? card)
-    {
-        if (card is null) return;
-        _host.Toast("کیو‌آرِ «" + card.Name + "» آماده است");
-    }
+    private Task ShowQrAsync(CompanyCardViewModel? card) =>
+        CrashGuard.RunAsync("کیو‌آر", async () =>
+        {
+            if (card is null) return;
+
+            var full = await _host.Companies.LoadAsync(card.Entity.Id);
+            var rows = (full?.Rows ?? new List<CompanyRow>())
+                .OrderBy(r => r.DateKey).ThenBy(r => r.SortIndex)
+                .Select(r => new[]
+                {
+                    r.DateShamsi ?? "",
+                    r.Name ?? "",
+                    r.Fuel == FuelType.Diesel ? "دیزل" : "پطرول",
+                    Shamsi.MoneyOrBlank(r.Ton),
+                    Shamsi.MoneyOrBlank(r.Usd),
+                    Shamsi.MoneyOrBlank(r.Rate),
+                    Shamsi.MoneyOrBlank(r.Poul),
+                })
+                .ToList();
+
+            var snap = AcctSnapshots.ForCompany(
+                card.Name, "افغانی", rows,
+                new[]
+                {
+                    new[] { "جمله افغانی", card.TotalAfnText },
+                    new[] { "جمله دالر", card.UsdText },
+                    new[] { "الباقی", card.AlbaqiAfnText },
+                },
+                new[] { "تاریخ", "نام", "تیل", "تن", "دالر", "نرخ", "پول" });
+
+            var link = AcctView.Url(_host.Settings.GetString(SettingsKeys.ViewerUrl), snap,
+                                    AcctLink.Build(card.Entity.Id, null, "company"));
+            var png = await Task.Run(() => QrWriter.EncodePng(link));
+
+            await Dialogs.ShowQrAsync("📲 " + card.Name, link, png,
+                "این کد حسابِ همین شرکت را روی گوشی باز می‌کند — بی رمز و بی سرور.");
+        });
 
     [RelayCommand]
     private Task DeleteCompanyAsync(CompanyCardViewModel? card) =>

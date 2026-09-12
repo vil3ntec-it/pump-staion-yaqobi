@@ -42,6 +42,7 @@ public sealed class UpdateService
     private const string FeedUrl =
         "https://api.github.com/repos/vil3ntec-it/pump-staion-yaqobi/releases/latest";
 
+
     private static readonly HttpClient Http = CreateClient();
 
     private static HttpClient CreateClient()

@@ -64,7 +64,12 @@
                         Command="{Binding $parent[ItemsRepeater].((vm:AmanatSectionViewModel)DataContext).OpenCommand}"
                         CommandParameter="{Binding}">
                   <Border Classes="person-card">
-                    <Grid RowDefinitions="Auto,Auto,*">
+                    <!-- ⚠️ ردیفِ آخر ‎Auto‎ است و ردیفِ خالیِ پیش از آن ‎*‎: فضای اضافه در
+                         ردیفِ خالی جذب می‌شود و کفِ کارت پایین می‌چسبد، ولی اگر
+                         جا کم بیاید هیچ محتوایی ناپدید نمی‌شود. (ردیفِ ‎*‎ِ
+                         محتوادار وقتی جا کم بیاید تا صفر جمع می‌شود — همان
+                         «دیزل و پطرول زیرِ کادر گم شدند».) -->
+                    <Grid RowDefinitions="Auto,Auto,*,Auto">
                       <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
                         <Button Grid.Column="0" Classes="card-x" Content="✕"
                                 Command="{Binding $parent[ItemsRepeater].((vm:AmanatSectionViewModel)DataContext).DeleteCardCommand}"
@@ -77,7 +82,7 @@
                       <TextBlock Grid.Row="1" Text="{Binding Name}" Classes="pname"
                                  ToolTip.Tip="{Binding Name}" />
 
-                      <StackPanel Grid.Row="2" VerticalAlignment="Bottom" Spacing="7" Margin="0,8,0,0">
+                      <StackPanel Grid.Row="3" Spacing="7" Margin="0,8,0,0">
                         <TextBlock Text="{Binding RestText}" Classes="cmp-fig"
                                    Foreground="{Binding RestBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
                         <TextBlock Text="{Binding State}" FontSize="12" FontWeight="Bold"

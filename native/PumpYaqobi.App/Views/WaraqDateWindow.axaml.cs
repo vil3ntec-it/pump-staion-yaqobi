@@ -26,7 +26,9 @@ public partial class WaraqDateWindow : Window
     /// <summary>کلیدِ تاریخِ ورق‌هایی که از قبل هستند — برای همان جملهٔ راهنما.</summary>
     private IReadOnlyCollection<int> _existing = Array.Empty<int>();
 
-    public WaraqDateWindow() => AvaloniaXamlLoader.Load(this);
+    // ⚠️ ‎InitializeComponent()‎ لازم است، نه ‎AvaloniaXamlLoader.Load‎:
+    // فیلدهای ‎x:Name‎ را آن پر می‌کند. توضیحِ کامل در ‎DialogWindow‎.
+    public WaraqDateWindow() => InitializeComponent();
 
     public static WaraqDateWindow For(IReadOnlyCollection<int> existingKeys, string? startDate = null)
     {

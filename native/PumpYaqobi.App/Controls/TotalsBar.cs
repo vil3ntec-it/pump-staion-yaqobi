@@ -165,6 +165,20 @@ public class TotalsStrip : Panel
 
     private static string Head(DataGridColumn c) => c.Header?.ToString()?.Trim() ?? "";
 
+    /// <summary>
+    /// پهنای ستونِ «#»ِ همین جدول — از روی خودِ سرستونِ ساخته‌شده، نه از روی
+    /// عددی که شاید ‎NaN‎ باشد.
+    /// </summary>
+    private static double RowHeaderWidth(DataGrid g)
+    {
+        if (g.HeadersVisibility is not (DataGridHeadersVisibility.All or DataGridHeadersVisibility.Row))
+            return 0;
+        var w = g.GetVisualDescendants().OfType<DataGridRowHeader>()
+                 .Select(h => h.Bounds.Width).FirstOrDefault(v => v > 0);
+        if (w > 0) return w;
+        return double.IsNaN(g.RowHeaderWidth) ? 0 : g.RowHeaderWidth;
+    }
+
     protected override Size ArrangeOverride(Size finalSize)
     {
         var grid = Bar?.ResolveGrid();
@@ -175,7 +189,10 @@ public class TotalsStrip : Panel
         if (grid is not null && cols is { Count: > 0 })
         {
             var x = new double[cols.Count];
-            var acc = 0d;
+            // ⚠️ ستونِ «#» (سرستونِ ردیف) پهنا می‌گیرد و جدول را جابه‌جا می‌کند؛
+            // نوارِ جمله هم باید همان‌قدر عقب بیفتد، وگرنه هر جمع یک ستون
+            // آن‌طرف‌تر می‌نشیند.
+            var acc = RowHeaderWidth(grid);
             for (var i = 0; i < cols.Count; i++) { x[i] = acc; acc += cols[i].ActualWidth; }
             var scroll = HScroll(grid);
 

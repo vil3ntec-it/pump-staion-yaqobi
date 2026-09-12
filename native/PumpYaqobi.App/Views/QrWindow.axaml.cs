@@ -17,7 +17,9 @@ public partial class QrWindow : Window
     private byte[]? _png;
     private string _suggested = "qr.png";
 
-    public QrWindow() => AvaloniaXamlLoader.Load(this);
+    // ⚠️ ‎InitializeComponent()‎ لازم است، نه ‎AvaloniaXamlLoader.Load‎:
+    // فیلدهای ‎x:Name‎ را آن پر می‌کند. توضیحِ کامل در ‎DialogWindow‎.
+    public QrWindow() => InitializeComponent();
 
     /// <summary>کیو‌آرِ آماده را نشان بده. ‎png‎ی خالی یعنی چیزی برای نشان دادن نیست.</summary>
     public static QrWindow For(string name, string link, byte[]? png, string hint)

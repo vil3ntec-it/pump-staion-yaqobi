@@ -52,7 +52,12 @@
                 <!-- ردیفِ آخر ستاره است تا «کفِ کارت» (‎.pcard-foot‎ با
                      ‎margin-top:auto‎) واقعاً پایین بچسبد و کارت‌های یک ردیف
                      هم‌تراز بمانند — همان دردی که در CSS توضیح داده شده. -->
-                <Grid RowDefinitions="Auto,Auto,*">
+                <!-- ⚠️ ردیفِ آخر ‎Auto‎ است و ردیفِ خالیِ پیش از آن ‎*‎: فضای اضافه در
+                         ردیفِ خالی جذب می‌شود و کفِ کارت پایین می‌چسبد، ولی اگر
+                         جا کم بیاید هیچ محتوایی ناپدید نمی‌شود. (ردیفِ ‎*‎ِ
+                         محتوادار وقتی جا کم بیاید تا صفر جمع می‌شود — همان
+                         «دیزل و پطرول زیرِ کادر گم شدند».) -->
+                    <Grid RowDefinitions="Auto,Auto,*,Auto">
 
                   <Button Grid.Row="0" Classes="card-x" Content="✕" HorizontalAlignment="Left"
                           Command="{Binding $parent[ItemsRepeater].((vm:CompanySectionViewModel)DataContext).DeleteCompanyCommand}"
@@ -63,7 +68,7 @@
                   <TextBlock Grid.Row="1" Text="{Binding Name}" Classes="pname"
                              ToolTip.Tip="{Binding Name}" />
 
-                  <StackPanel Grid.Row="2" VerticalAlignment="Bottom" Spacing="8" Margin="0,8,0,0">
+                  <StackPanel Grid.Row="3" Spacing="8" Margin="0,8,0,0">
                     <TextBlock Text="{Binding UsdText}" Classes="cmp-fig"
                                Foreground="{DynamicResource Pump.Info}" />
                     <TextBlock Text="{Binding AlbaqiText}" Classes="cmp-fig"

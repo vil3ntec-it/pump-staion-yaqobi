@@ -89,9 +89,9 @@ public class DesktopUxTests
     public void ArrowKeysFollowTheScreenNotTheRawIndex()
     {
         var g = App("Controls", "ExcelGrid.cs");
-        Assert.Contains("MoveColumn(toRight == rtl ? -1 : +1, shift)", g);
-        Assert.Contains("private bool ColumnsRunRightToLeft()", g);
+        Assert.Contains("MoveColumn(e.Key == Key.Right ? -1 : +1, shift)", g);
         Assert.DoesNotContain("MoveColumn(e.Key == Key.Right ? +1 : -1", g);
+        Assert.DoesNotContain("ColumnsRunRightToLeft", g);
     }
 
     // ── اسکرول و سربرگ ──────────────────────────────────────────────────────
@@ -203,7 +203,10 @@ public class DesktopUxTests
     public void TheQrRowIsNeverClipped()
     {
         var v = NoComments(View("DebtSectionView"));
-        Assert.Contains("RowDefinitions=\"Auto,Auto,Auto,Auto,*,Auto\"", v);
+        // ⚠️ ردیفِ ‎*‎ باید **خالی** باشد، نه ردیفِ محتوا: ردیفِ ستاره‌دارِ
+        // محتوادار وقتی جا کم بیاید تا صفر جمع می‌شود و محتوایش ناپدید —
+        // همان «دیزل و پطرول زیرِ کادر گم شدند».
+        Assert.Contains("RowDefinitions=\"Auto,Auto,Auto,Auto,Auto,*,Auto\"", v);
 
         var m = Regex.Match(v, "MinItemHeight=\"(\\d+)\"");
         Assert.True(m.Success);

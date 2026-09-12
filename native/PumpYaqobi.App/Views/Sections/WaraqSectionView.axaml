@@ -56,7 +56,12 @@
                         Command="{Binding $parent[ItemsRepeater].((vm:WaraqSectionViewModel)DataContext).OpenCardCommand}"
                         CommandParameter="{Binding}">
                   <Border Classes="person-card">
-                    <Grid RowDefinitions="Auto,Auto,Auto,*">
+                    <!-- ⚠️ ردیفِ آخر ‎Auto‎ است و ردیفِ خالیِ پیش از آن ‎*‎: فضای اضافه در
+                         ردیفِ خالی جذب می‌شود و کفِ کارت پایین می‌چسبد، ولی اگر
+                         جا کم بیاید هیچ محتوایی ناپدید نمی‌شود. (ردیفِ ‎*‎ِ
+                         محتوادار وقتی جا کم بیاید تا صفر جمع می‌شود — همان
+                         «دیزل و پطرول زیرِ کادر گم شدند».) -->
+                    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
                       <Button Grid.Row="0" Classes="card-x" Content="✕" HorizontalAlignment="Left"
                               Command="{Binding $parent[ItemsRepeater].((vm:WaraqSectionViewModel)DataContext).DeleteCardCommand}"
                               CommandParameter="{Binding}" />
@@ -66,7 +71,7 @@
                       <TextBlock Grid.Row="2" Text="{Binding SubText}" Classes="muted" FontSize="11.5"
                                  TextAlignment="Center" TextWrapping="Wrap" Margin="0,4,0,0" />
 
-                      <StackPanel Grid.Row="3" VerticalAlignment="Bottom" Spacing="7" Margin="0,10,0,0">
+                      <StackPanel Grid.Row="4" Spacing="7" Margin="0,10,0,0">
                         <TextBlock Text="{Binding SalesText}" Classes="cmp-fig"
                                    Foreground="{DynamicResource Pump.Danger}" />
                         <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">

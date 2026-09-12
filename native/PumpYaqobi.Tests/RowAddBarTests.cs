@@ -45,7 +45,7 @@ public class RowAddBarTests
     public void TheBarLivesInTheSharedTemplateBelowTheTable()
     {
         var t = Read("PumpYaqobi.App", "Themes", "Controls.axaml");
-        Assert.Contains("<c:RowAddBar Grid.Row=\"6\"", t);
+        Assert.Contains("<c:RowAddBar Grid.Row=\"4\"", t);
         Assert.Contains("AddRowCommand=\"{Binding RowAddCommand}\"", t);
 
         // و خودِ نوار: یک دکمهٔ ردیف، کادرِ تعداد، دکمهٔ چندتایی

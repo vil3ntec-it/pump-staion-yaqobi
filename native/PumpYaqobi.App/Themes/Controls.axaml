@@ -62,13 +62,15 @@
        ‎.stat-label 1rem‎ با پایهٔ ۱۶ پیکسل ⇒ ۱۶، نه ۱۴. و ‎font-weight:700‎ی
        سایت ⇒ ‎Bold‎، نه وزنِ عادی که کنارِ عددهای ۱۷ و ۱۹ نازک دیده می‌شد.
        حالا برچسب و خانهٔ جدول هر دو ۱۶ به بالا هستند و هم‌خانواده دیده می‌شوند. -->
-  <!-- برچسبِ کادرها هم مثلِ ‎.field-label‎ی سایت سرِ خط می‌نشیند، نه وسط.
-       (کادرهای آماری خودشان قاعدهٔ وسط‌چینِ جداگانه دارند و دست‌نخورده‌اند.) -->
+  <!-- ⚠️ این برچسب عمداً **وسط** است و سرِ خط نیست.
+       یک‌بار سرِ خط شد و گزارشِ صاحب ریپو این بود: «بعضی سربرگ‌ها خراب شدند و
+       نوشته‌ها را بردند یک کنج». درست هم بود: ‎.label‎ هم بالای کادرهای فرم
+       به کار می‌رود و هم داخلِ کادرهای خلاصه و سربرگ‌ها.
+       برچسبِ **فرم‌ها** ‎.fld‎ است و همان سرِ خط می‌نشیند. -->
   <Style Selector="TextBlock.label">
     <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
     <Setter Property="FontSize" Value="16" />
     <Setter Property="FontWeight" Value="Bold" />
-    <Setter Property="TextAlignment" Value="Start" />
   </Style>
   <Style Selector="TextBlock.h1">
     <Setter Property="FontSize" Value="22" />
@@ -412,6 +414,38 @@
        بقیه به لبه می‌چسبیدند. گزارشِ صاحب ریپو: «اون تاریخ اسم حواله یا هر چی
        اون بالای جدول که هستن … نوشته‌هاشون رو وسط بذار.»
        در سایت هم استثنا ندارد: ‎.xls-tbl th{text-align:center}‎. -->
+  <!-- ══ ستونِ «#» — شمارهٔ ردیف ═══════════════════════════════════════════
+       در سایت ستونِ اولِ هر جدول ‎#‎ است (‎td.xls-num‎) و شمارهٔ ردیف را نشان
+       می‌دهد؛ در برنامه هیچ جدولی نداشت. این‌جا سرستونِ ردیفِ خودِ جدول به
+       همان شکل درمی‌آید: باریک، وسط‌چین، کم‌رنگ و با همان خطِ جدول. -->
+  <Style Selector="DataGridRowHeader">
+    <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="MinWidth" Value="42" />
+    <Setter Property="Padding" Value="4,0" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="SeparatorBrush" Value="{DynamicResource Pump.Table.Border}" />
+    <Setter Property="Cursor" Value="{DynamicResource Pump.CellCursor}" />
+  </Style>
+  <Style Selector="DataGridRowHeader /template/ ContentPresenter">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- ⚠️ نوشتهٔ سرستون را خودِ ‎ContentPresenter‎ می‌سازد، یعنی **داخلِ قالب**.
+       قاعدهٔ بی ‎/template/‎ به آن نمی‌رسد و سربرگ‌ها به لبه می‌چسبیدند —
+       همان «بالای جدول‌ها اسم‌ها وسطِ کادرشان نیستند». -->
+  <Style Selector="DataGridColumnHeader /template/ ContentPresenter">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="DataGridColumnHeader /template/ TextBlock">
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+  </Style>
   <Style Selector="DataGridColumnHeader TextBlock">
     <Setter Property="TextAlignment" Value="Center" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
@@ -623,6 +657,16 @@
                    حالا ابزار در ستونِ ‎*‎ است، پس پهنای واقعی و محدود می‌گیرد و
                    ‎WrapPanel‎ش درست می‌شکند. عنوان ‎Auto‎ است و به اندازهٔ
                    خودش جا می‌گیرد. -->
+              <!-- ══ یک نوار، نه سه نوار ═══════════════════════════════════
+                   گزارشِ صاحب ریپو: «بعضی کادرها صفحه را بزرگ کرده‌اند —
+                   قرض‌های کهنه و مدت عضویت و جست‌وجو هر کدام یک بخشِ جدا
+                   شده‌اند؛ همین‌ها می‌توانند بغلِ همان کادرِ اسکنِ کیو‌آر
+                   بنشینند … این‌ها همه‌شان کادرهایی دارند که یکی این‌جاست و
+                   یکی آن‌جا.»
+
+                   پس نوارِ ابزار، کارت‌های زیربخش و کادرهای فیلتر همه در
+                   **یک** نوارِ شکننده کنارِ هم نشستند. جای عمودی‌ای که آزاد
+                   می‌شود مالِ خودِ جدول است. -->
               <Grid ColumnDefinitions="Auto,Auto,*">
                 <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                   <TextBlock Text="{TemplateBinding Header}" Classes="card-title" />
@@ -633,16 +677,7 @@
 
                 <!-- ══ ‎A−‎ / ‎A+‎ / ‎↺‎ِ همین بخش ═════════════════════════════
                      همتای ‎.sec-font-ctrl‎ی نسخهٔ وب، که کنارِ عنوانِ **هر**
-                     بخش می‌نشیند. در سایت ‎_ensureSecFontBtns‎ آن را به هر
-                     بخشی که ندارد می‌چسباند، «پس دیگر هیچ بخشی بدونِ کنترلِ
-                     اندازه نمی‌ماند». در برنامهٔ نیتیو هیچ بخشی نداشت.
-
-                     این‌جا در قالبِ مشترک است، نه در تک‌تکِ ویوها: هر بخشی که
-                     ساخته شود خودبه‌خود دارد.
-
-                     ‎x:CompileBindings="False"‎ مثلِ بقیهٔ بایندینگ‌های این
-                     قالب لازم است — داخلِ ‎ControlTemplate‎ نوعِ ‎DataContext‎
-                     معلوم نیست و این‌جا همان ویومدلِ بخش است. -->
+                     بخش می‌نشیند. -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3"
                             VerticalAlignment="Center" Margin="10,0,0,0"
                             x:CompileBindings="False"
@@ -656,75 +691,61 @@
                           ToolTip.Tip="برگشت به اندازهٔ عادی" />
                 </StackPanel>
 
-                <ContentPresenter Grid.Column="2" Content="{TemplateBinding Toolbar}"
-                                  VerticalAlignment="Center" Margin="12,0,0,0" />
+                <WrapPanel Grid.Column="2" Orientation="Horizontal" Margin="12,0,0,0"
+                           VerticalAlignment="Center" x:CompileBindings="False">
+                  <ContentPresenter Content="{TemplateBinding Toolbar}" VerticalAlignment="Center"
+                                    Margin="0,3" />
+
+                  <!-- ══ کارت‌های زیربخش، کنارِ همان دکمه‌ها ═══════════════
+                       بخشی که زیربخش دارد (قرض‌داران، مخزن، مفاد/ضرر، …)
+                       دکمه‌هایش همین‌جا کنارِ نوارِ ابزار می‌آیند — نه یک
+                       ردیفِ جدا بالای جدول. -->
+                  <ItemsControl ItemsSource="{Binding SubSections}"
+                                IsVisible="{Binding ShowSubLinkCards, FallbackValue=False}"
+                                Margin="6,3,0,3">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:CompileBindings="False">
+                        <Button Classes="tool-link" Margin="0,0,6,0"
+                                Command="{Binding ParentSection.ShowSubCommand}"
+                                CommandParameter="{Binding}">
+                          <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="{Binding LinkTitle}"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Column="1" Text="‹" FontSize="17" Margin="8,0,0,0"
+                                       VerticalAlignment="Center" Opacity="0.7" />
+                          </Grid>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+
+                  <!-- کادرهای فیلتر (ماه، جست‌وجو، …) هم همین‌جا -->
+                  <ContentPresenter Content="{TemplateBinding Filters}" VerticalAlignment="Center"
+                                    Margin="10,3,0,3"
+                                    IsVisible="{TemplateBinding Filters, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                </WrapPanel>
               </Grid>
             </Border>
 
             <!-- ══ بدنهٔ کادر ══ -->
-            <!-- ردیفِ اول تازه است: کارت‌های زیربخش. بقیه همان چهارتای
-                 همیشگی‌اند و همه ‎Auto‎ می‌مانند — با اسکرولِ واحدِ کلِ صفحه،
-                 بخش باید به اندازهٔ محتوایش بلند شود، نه به اندازهٔ قاب. -->
-            <!-- ══ بدنه، با اندازهٔ نوشتهٔ خودِ بخش ═══════════════════════
-                 ‎A−‎ / ‎A+‎ فقط همین را بزرگ و کوچک می‌کند: سربرگ و نوارِ
-                 ابزار بیرونِ این قاب مانده‌اند — همان قاعدهٔ صریحِ سایت
-                 («‎A−/A+‎ برای نوشته‌های خودِ بخش است، نه برای نوارِ ابزارش»).
-
-                 ⚠️ تا وقتی کاربر چیزی عوض نکرده، دگرگونی «یکِ» دست‌نخورده است
-                 و هیچ چیزی در چیدمان فرق نمی‌کند. -->
+            <!-- ⚠️ فقط پنج ردیف مانده: کارت‌های زیربخش و نوارِ فیلتر رفتند
+                 بالا، کنارِ نوارِ ابزار. -->
             <LayoutTransformControl Grid.Row="1" x:CompileBindings="False"
                                     HorizontalAlignment="Stretch" VerticalAlignment="Top"
                                     LayoutTransform="{Binding FontScale,
                                                       Converter={x:Static th:FontScaleConverter.Instance},
                                                       FallbackValue={x:Null}}">
-            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" Margin="14">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" Margin="14">
 
-              <!-- ══ کارت‌های زیربخش ══════════════════════════════════════
-                   بخشی که زیربخش دارد (قرض‌داران، مخزن، مفاد/ضرر، تنظیمات،
-                   رسید قرض‌داران، حاضری) کارت‌هایشان همین بالا می‌آیند — مثلِ
-                   ‎.tool-link-card‎ نسخهٔ وب. بخشی که ندارد، این ردیف را
-                   اصلاً نمی‌بیند.
-
-                   ‎x:CompileBindings="False"‎ لازم است: داخلِ ControlTemplate
-                   نوعِ DataContext معلوم نیست، و این‌جا DataContext همان
-                   ViewModelِ بخش است که به SectionPage رسیده. -->
-              <ItemsControl Grid.Row="0" x:CompileBindings="False"
-                            ItemsSource="{Binding SubSections}"
-                            IsVisible="{Binding ShowSubLinkCards, FallbackValue=False}"
-                            Margin="0,0,0,12">
-                <ItemsControl.ItemsPanel>
-                  <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:CompileBindings="False">
-                    <Button Classes="tool-link" Margin="0,0,10,8" MinWidth="230"
-                            Command="{Binding ParentSection.ShowSubCommand}"
-                            CommandParameter="{Binding}">
-                      <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Grid.Column="0" Text="{Binding LinkTitle}"
-                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Grid.Column="1" Text="‹" FontSize="17" Margin="10,0,0,0"
-                                   VerticalAlignment="Center" Opacity="0.7" />
-                      </Grid>
-                    </Button>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-
-                <!-- «کادرهای بالای جدول هم Center شوند» — خواستهٔ صریحِ صاحب
-                     ریپو. نوار سرِ جایش می‌ماند، فقط محتوایش وسط می‌نشیند. -->
-                <Border Grid.Row="1" Classes="panel" Padding="12,9" Margin="0,0,0,12"
-                        IsVisible="{TemplateBinding Filters, Converter={x:Static ObjectConverters.IsNotNull}}">
-                  <ContentPresenter Content="{TemplateBinding Filters}"
-                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Border>
-
-                <ContentPresenter Grid.Row="2" Content="{TemplateBinding Summary}" Margin="0,0,0,12"
+                <ContentPresenter Grid.Row="0" Content="{TemplateBinding Summary}" Margin="0,0,0,12"
                                   IsVisible="{TemplateBinding Summary, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
-                <ContentPresenter Grid.Row="3" Content="{TemplateBinding Body}" />
+                <ContentPresenter Grid.Row="1" Content="{TemplateBinding Body}" />
 
-                <ContentPresenter Grid.Row="4" Content="{TemplateBinding Footer}" Margin="0,12,0,0"
+                <ContentPresenter Grid.Row="2" Content="{TemplateBinding Footer}" Margin="0,12,0,0"
                                   IsVisible="{TemplateBinding Footer, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
                 <!-- ══ «📝 یادداشت این بخش» — ‎.sec-note-box‎ی نسخهٔ وب ═══════
@@ -737,7 +758,7 @@
 
                      ‎x:CompileBindings="False"‎ مثلِ کارت‌های زیربخشِ بالا لازم
                      است: داخلِ ControlTemplate نوعِ DataContext معلوم نیست. -->
-                <StackPanel Grid.Row="5" Margin="0,14,0,0" Spacing="8"
+                <StackPanel Grid.Row="3" Margin="0,14,0,0" Spacing="8"
                             x:CompileBindings="False"
                             IsVisible="{Binding Notes, Converter={x:Static ObjectConverters.IsNotNull},
                                         FallbackValue=False}"
@@ -791,7 +812,7 @@
                      رسید پارچه‌ها) ‎RowAddCommand‎ش را می‌دهد و همین‌جا نوارش
                      را می‌گیرد؛ بقیه هیچ چیزِ اضافه‌ای نمی‌بینند.
                      جایش هم همان‌جای سایت است: زیرِ جدول و زیرِ کادرِ یادداشت. -->
-                <c:RowAddBar Grid.Row="6" Margin="0,12,0,0" x:CompileBindings="False"
+                <c:RowAddBar Grid.Row="4" Margin="0,12,0,0" x:CompileBindings="False"
                              Host="{Binding}" AddRowCommand="{Binding RowAddCommand}"
                              IsVisible="{Binding RowAddCommand, Converter={x:Static ObjectConverters.IsNotNull},
                                          FallbackValue=False}" />
