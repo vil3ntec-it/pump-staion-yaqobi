@@ -508,18 +508,45 @@ public class ExcelGrid : DataGrid
         CommitEdit(DataGridEditingUnit.Cell, true);
     }
 
-    private static void OnPreviewPressed(object? sender, PointerPressedEventArgs e)
+    /// <summary>
+    /// ══ کشوییِ داخلِ خانه: یک کلیک، مثلِ سایت ═══════════════════════════════
+    ///
+    /// در سایت این کادر یک ‎&lt;select class="xls-in"&gt;‎ی همیشه‌پیداست: یک
+    /// کلیک بازش می‌کند، یکی هم انتخاب. در برنامهٔ نیتیو ‎DataGrid‎ کلیک را
+    /// برای «انتخابِ خانه» مصرف می‌کند و کشویی یا باز نمی‌شد یا همان لحظه
+    /// بسته می‌شد — همان «راحت کار نمی‌کند»ی گزارش‌شده.
+    ///
+    /// پس روی فازِ ‎Tunnel‎ — یعنی **پیش از** آن‌که ‎DataGrid‎ کلیک را ببیند —
+    /// خودمان کار را تمام می‌کنیم:
+    ///   ۱) ردیفِ زیرِ انگشت انتخاب می‌شود (وگرنه حالِ جدول عقب می‌ماند)،
+    ///   ۲) کشویی باز می‌شود،
+    ///   ۳) ‎Handled‎ می‌شود تا ‎DataGrid‎ همان کلیک را دوباره مصرف نکند و
+    ///      کشویی را نبندد.
+    ///
+    /// ⚠️ هیچ ‎Dispatcher‎ی و هیچ تاخیری در کار نیست — خواستهٔ صریح.
+    /// ⚠️ کلیکِ بازِ دوباره (برای بستن) دست‌نخورده می‌ماند: اگر کشویی باز است
+    /// کاری نمی‌کنیم و خودِ کنترل می‌بنددش.
+    /// </summary>
+    private void OnPreviewPressed(object? sender, PointerPressedEventArgs e)
     {
         if (e.Source is not Visual v) return;
 
+        DataGridRow? row = null;
         for (Visual? x = v; x is not null; x = x.GetVisualParent())
         {
-            if (x is ComboBox cb)
-            {
-                if (!cb.IsDropDownOpen && cb.IsEffectivelyEnabled) cb.IsDropDownOpen = true;
-                return;
-            }
-            if (x is DataGridRow or DataGridColumnHeader) return;   // از خانه بیرون زدیم
+            if (x is DataGridColumnHeader) return;
+            if (x is DataGridRow r) { row = r; continue; }
+            if (x is not ComboBox cb) continue;
+            if (!cb.IsEffectivelyEnabled || cb.IsDropDownOpen) return;
+
+            // ردیف را از بالای همین زنجیره پیدا کن (کشویی داخلِ خانه است)
+            for (Visual? y = cb; y is not null && row is null; y = y.GetVisualParent())
+                if (y is DataGridRow rr) row = rr;
+            if (row?.DataContext is { } item) SelectedItem = item;
+
+            cb.IsDropDownOpen = true;
+            e.Handled = true;
+            return;
         }
     }
 
@@ -543,10 +570,16 @@ public class ExcelGrid : DataGrid
     {
         if (IsReadOnly) return false;
 
-        // خانه هنوز در حالتِ ویرایش نیست؟ اول بازش کن تا کشویی/رادیو ساخته شود.
-        if (Focused is not (ComboBox or RadioButton)) BeginEdit();
+        // اول خودِ خانه: کشویی‌های همیشه‌پیدا فوکوس ندارند ولی همان‌جا هستند.
+        var target = CellPicker(CurrentColumn) ?? Focused;
+        if (target is not (ComboBox or RadioButton))
+        {
+            // قالبِ ویرایشی دارد؟ بازش کن تا ساخته شود.
+            BeginEdit();
+            target = Focused;
+        }
 
-        switch (Focused)
+        switch (target)
         {
             case ComboBox cb when cb.ItemCount > 0:
                 cb.SelectedIndex = (cb.SelectedIndex + 1) % cb.ItemCount;
@@ -568,8 +601,34 @@ public class ExcelGrid : DataGrid
     /// ستونی که ویرایشش کشویی یا رادیویی است — «نوع تیل»، «نوع» (قرض/مصرف)،
     /// «واحد» (تیل/پول) و مانندِ آن‌ها.
     /// </summary>
-    private static bool IsToggleColumn(DataGridColumn? col) =>
-        col is DataGridTemplateColumn t && t.CellEditingTemplate is not null;
+    /// <summary>
+    /// ⚠️ «کشویی داخلِ قالبِ ویرایش» دیگر تنها نشانه نیست: از وقتی کشویی‌ها —
+    /// مثلِ ‎&lt;select class="xls-in"&gt;‎ی سایت — همیشه پیدا شدند و به
+    /// ‎CellTemplate‎ رفتند، ‎CellEditingTemplate‎شان خالی است و ‎Tab‎/‎Enter‎
+    /// بی‌صدا از کار افتاده بود. حالا خودِ خانه نگاه می‌شود.
+    /// </summary>
+    private bool IsToggleColumn(DataGridColumn? col) =>
+        col is DataGridTemplateColumn t &&
+        (t.CellEditingTemplate is not null || CellPicker(col) is not null);
+
+    /// <summary>
+    /// کشویی/رادیوییِ داخلِ خانهٔ جاری — همان چیزی که ‎Tab‎ و ‎Enter‎ باید
+    /// مقدارش را یک پله جلو ببرند. ‎null‎ یعنی این خانه چنین چیزی ندارد.
+    /// </summary>
+    private Control? CellPicker(DataGridColumn? col)
+    {
+        if (col is null || SelectedItem is null) return null;
+        var row = this.GetVisualDescendants().OfType<DataGridRow>()
+                      .FirstOrDefault(r => ReferenceEquals(r.DataContext, SelectedItem));
+        if (row is null) return null;
+
+        var cells = row.GetVisualDescendants().OfType<DataGridCell>().ToList();
+        var idx = VisibleCols().IndexOf(col);
+        if (idx < 0 || idx >= cells.Count) return null;
+
+        return cells[idx].GetVisualDescendants()
+                         .FirstOrDefault(x => x is ComboBox or RadioButton) as Control;
+    }
 
     // ── جابه‌جاییِ خانه ───────────────────────────────────────────────────
 

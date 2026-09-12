@@ -62,10 +62,13 @@
        ‎.stat-label 1rem‎ با پایهٔ ۱۶ پیکسل ⇒ ۱۶، نه ۱۴. و ‎font-weight:700‎ی
        سایت ⇒ ‎Bold‎، نه وزنِ عادی که کنارِ عددهای ۱۷ و ۱۹ نازک دیده می‌شد.
        حالا برچسب و خانهٔ جدول هر دو ۱۶ به بالا هستند و هم‌خانواده دیده می‌شوند. -->
+  <!-- برچسبِ کادرها هم مثلِ ‎.field-label‎ی سایت سرِ خط می‌نشیند، نه وسط.
+       (کادرهای آماری خودشان قاعدهٔ وسط‌چینِ جداگانه دارند و دست‌نخورده‌اند.) -->
   <Style Selector="TextBlock.label">
     <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
     <Setter Property="FontSize" Value="16" />
     <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="TextAlignment" Value="Start" />
   </Style>
   <Style Selector="TextBlock.h1">
     <Setter Property="FontSize" Value="22" />
@@ -888,9 +891,25 @@
     <Setter Property="Foreground" Value="#ffffff" />
   </Style>
 
+  <!-- ══ نامِ کادرهای فرم — سرِ کادر، سمتِ راست ═════════════════════════════
+       گزارشِ صاحب ریپو با عکس: «اسم‌های کادر سرِ کادرهایشان سمتِ راست‌اند و
+       همان مدل باشد.» در سایت هم همین است و ساده هم هست:
+
+           .field-row{display:flex;flex-direction:column;gap:3px}
+           .field-label{font-size:0.9rem;color:رنگِ برچسب;font-weight:600}
+
+       یعنی برچسب هیچ ‎text-align‎ی ندارد و در چیدمانِ راست‌به‌چپ سرِ خط —
+       یعنی سمتِ راست — می‌نشیند. در برنامهٔ نیتیو ولی قاعدهٔ عمومیِ
+       «هر نوشته وسط» (که برای **جدول‌ها** خواسته شده بود) این‌ها را هم وسط
+       می‌برد. حالا برچسب‌های فرم از آن قاعده بیرون‌اند؛ جدول‌ها دست‌نخورده‌اند.
+
+       ⚠️ اندازه هم ۰٫۹rem سایت شد (≈۱۴)، نه ۱۲. -->
   <Style Selector="TextBlock.fld">
     <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="TextAlignment" Value="Start" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
   </Style>
 
   <!-- خانهٔ «خودکار» — خوانده می‌شود، تایپ نمی‌شود -->
