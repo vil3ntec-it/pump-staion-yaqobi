@@ -4,6 +4,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 
 namespace PumpYaqobi.App.Controls;
@@ -437,7 +438,28 @@ public class ExcelGrid : DataGrid
         // تنها منبعِ درستِ «الان در حال ویرایشیم» — خودِ جدول می‌گوید.
         PreparingCellForEdit += (_, _) => _editing = true;
         CellEditEnded += (_, _) => _editing = false;
+
+        // ══ کلیک روی خانه، صفحه را نلغزاند ══════════════════════════════════
+        //
+        // گزارشِ صاحب ریپو: «وقتی در کادرِ جدول‌ها کلیک می‌کنم، آن سربرگ‌ها گم
+        // می‌شوند … این مدل نباشد، هر وقت خواستم خودم اسکرول می‌کنم.»
+        //
+        // ریشه‌اش ‎RequestBringIntoView‎ است: با فوکوس گرفتنِ خانه، آوالونیا
+        // درخواستِ «مرا در دید بیاور» را بالا می‌فرستد و اسکرولِ صفحه — همان
+        // اسکرولِ واحدِ کلِ پنجره — صفحه را می‌کشد تا خانه وسط بیفتد. نتیجه‌اش
+        // این است که سربرگ و نوارِ آمار از بالا می‌روند.
+        //
+        // ⚠️ درخواست فقط وقتی متوقف می‌شود که از **کلیک** آمده باشد. ناوبری با
+        // کلید (‎ScrollIntoView‎ی خودِ جدول) باید کار کند، وگرنه با پایین رفتن
+        // در یک جدولِ بلند، ردیفِ جاری از دید بیرون می‌ماند.
+        AddHandler(RequestBringIntoViewEvent, (_, ev) =>
+        {
+            if (_pointerDriven) ev.Handled = true;
+        }, RoutingStrategies.Bubble);
     }
+
+    /// <summary>آخرین حرکت از ماوس بود، نه از صفحه‌کلید.</summary>
+    private bool _pointerDriven;
 
     /// <summary>کنترلی که همین حالا فوکوس دارد.</summary>
     private Control? Focused =>
@@ -583,7 +605,52 @@ public class ExcelGrid : DataGrid
             _colAnchor = _colHead = -1;
             PaintRange();
         }
-        base.OnPointerPressed(e);
+
+        OpenComboUnderPointer(e);
+
+        // این کلیک نباید صفحه را بلغزاند — تا پایانِ همین رویداد علامت می‌ماند.
+        _pointerDriven = true;
+        try { base.OnPointerPressed(e); }
+        finally { Dispatcher.UIThread.Post(() => _pointerDriven = false, DispatcherPriority.Input); }
+        return;
+    }
+
+    /// <summary>
+    /// ══ کشویی با یک کلیک باز شود ═══════════════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «نه این‌که یک بار بزنی تا آن کادر کشویی بشود، بعد بارِ
+    /// بعد بزنی باز بشود، باز بعد بروی انتخاب کنی — همین که بزنم بیایند و با
+    /// انتخاب زود عوض شوند.»
+    ///
+    /// ریشه‌اش خودِ ‎DataGrid‎ است: کلیکِ اول را برای «انتخابِ خانه» می‌خورد و
+    /// تازه کلیکِ دوم به کشوییِ داخلِ خانه می‌رسد. پس همان کلیکِ اول را
+    /// می‌گیریم و کشویی را باز می‌کنیم.
+    ///
+    /// ⚠️ ‎e.Handled‎ نمی‌شود: خانه باید مثلِ همیشه انتخاب هم بشود. فقط
+    /// کشویی زودتر باز می‌شود.
+    /// </summary>
+    private static void OpenComboUnderPointer(PointerPressedEventArgs e)
+    {
+        if (e.Source is not Visual v) return;
+
+        for (Visual? x = v; x is not null; x = x.GetVisualParent())
+        {
+            if (x is ComboBox cb)
+            {
+                if (!cb.IsDropDownOpen && cb.IsEffectivelyEnabled)
+                {
+                    // بعد از این‌که ‎DataGrid‎ کارِ خودش را کرد، وگرنه همان
+                    // انتخابِ خانه دوباره کشویی را می‌بندد.
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        cb.Focus();
+                        cb.IsDropDownOpen = true;
+                    }, DispatcherPriority.Input);
+                }
+                return;
+            }
+            if (x is DataGridRow) return;      // از خانه بیرون زدیم
+        }
     }
 
     // ── خالی کردنِ خانه‌های انتخابی ───────────────────────────────────────

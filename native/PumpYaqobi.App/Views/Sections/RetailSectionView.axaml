@@ -9,6 +9,11 @@
 
     <c:SectionPage.Toolbar>
       <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+        <!-- «🗓️ ماه جدید» — همتای ‎addChakanaMonth()‎ی سایت: جدولِ ماهِ بعد
+             را باز می‌کند. بی این، ماهی که هنوز ردیفی ندارد در کشویی نیست. -->
+        <Button Classes="ghost info" Content="📅 ماه جدید" Margin="0,0,6,0"
+                Command="{Binding NewMonthCommand}"
+                ToolTip.Tip="جدولِ ماهِ بعد را باز می‌کند" />
         <Button Classes="ghost info" Content="📄 PDF" Margin="0,0,6,0"
                 Command="{Binding PdfCommand}" />
         <Button Classes="accent" Content="+ ردیف" Command="{Binding AddRowCommand}" />
@@ -18,7 +23,16 @@
     <c:SectionPage.Filters>
       <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
         <TextBlock Text="ماه" Classes="label" VerticalAlignment="Center" />
-        <ComboBox ItemsSource="{Binding Months}" SelectedItem="{Binding Month}" MinWidth="140" />
+        <!-- ══ کشویِ «سال» + «ماه» — همتای ‎_ymSelectsHtml‎ی سایت ═══════════════
+             گزارشِ صاحب ریپو: «کادرِ کشویی سال هم نیست.» هیچ بخشی نداشت و همهٔ
+             ماه‌های همهٔ سال‌ها در یک فهرستِ بلند بودند.
+             با انتخابِ هر سال، فقط ماه‌های همان سال در کشویِ ماه می‌آیند.
+             ⚠️ آن‌چه دیده می‌شود برچسبِ خوانا است («سنبله ۱۴۰۵»)، نه کلیدِ
+             خامِ «1405/06» که تا امروز نشان داده می‌شد. -->
+        <ComboBox ItemsSource="{Binding Picker.Years}" SelectedItem="{Binding Picker.Year}"
+                  IsVisible="{Binding Picker.HasYears}" MinWidth="110" />
+        <ComboBox ItemsSource="{Binding Picker.Months}" SelectedItem="{Binding Picker.Selected}"
+                  MinWidth="140" />
       </StackPanel>
     </c:SectionPage.Filters>
 

@@ -33,12 +33,26 @@
                      IsVisible="{Binding IsEmpty}" />
           <ItemsRepeater ItemsSource="{Binding Cards}">
             <ItemsRepeater.Layout>
-              <UniformGridLayout MinItemWidth="252" ItemsStretch="Fill"
-                                 MinColumnSpacing="12" MinRowSpacing="12" />
+              <!-- ══ کارت‌ها: هم‌اندازه، شش تا هشت تا در هر ردیف ══════════════
+                   گزارشِ صاحب ریپو با عکس: «کادرهایشان برابرِ هم نیستند، یکی
+                   کوچک یکی بزرگ، یا خیلی فاصله دارند … در هر صفحه شش تا هشت تا
+                   جا بشود، نه با فاصلهٔ زیاد، برابر و استاندارد.»
+
+                   دو چیز کم بود:
+                   • ‎MinItemHeight‎ نبود، پس هر کارت به قدِ محتوای خودش بود —
+                     کارتی که «اتمام پول» داشت بلندتر از بقیه می‌شد و ردیف
+                     ناهموار می‌ماند. حالا همه یک قد دارند و کارت هم عمودی
+                     کِش می‌آید تا قابش پر شود.
+                   • ‎MaximumRowsOrColumns‎ نبود، پس روی نمایشگرِ پهن ‎ItemsStretch‎
+                     کارت‌ها را بی‌جهت پهن می‌کرد. حالا سقفِ هشت‌تا دارد و
+                     ‎MinItemWidth‎ی ۲۰۰ روی باریک‌ترین صفحه هم شش‌تا می‌دهد. -->
+              <UniformGridLayout MinItemWidth="200" MinItemHeight="196"
+                                 MaximumRowsOrColumns="8" ItemsStretch="Fill"
+                                 MinColumnSpacing="10" MinRowSpacing="10" />
             </ItemsRepeater.Layout>
             <ItemsRepeater.ItemTemplate>
               <DataTemplate x:DataType="vm:WaraqCardViewModel">
-                <Button Classes="card-shell"
+                <Button Classes="card-shell" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
                         Command="{Binding $parent[ItemsRepeater].((vm:WaraqSectionViewModel)DataContext).OpenCardCommand}"
                         CommandParameter="{Binding}">
                   <Border Classes="person-card">

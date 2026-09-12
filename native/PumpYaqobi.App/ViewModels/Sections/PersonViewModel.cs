@@ -243,7 +243,9 @@ public sealed partial class ArchiveViewModel : ObservableObject
     }
 
     public DebtTableArchive Entity => _h;
-    public ObservableCollection<ArchiveRowViewModel> Rows { get; } = new();
+    /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
+    /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
+    public BulkRows<ArchiveRowViewModel> Rows { get; } = new();
     public IReadOnlyList<TotalCell> Totals { get; }
 
     public string Title { get; }
@@ -915,7 +917,6 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         }
         Rows.ResetTo(built);
 
-
         // جدول عوض شد ⇒ سربرگ و ردیفِ «جمله» هم باید از نو خوانده شوند
         RefreshTotals();
     }
@@ -1177,13 +1178,24 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
         // خودش اسکن می‌کند و حسابش را زنده می‌بیند — دادهٔ آن صفحه از همین
         // سرورِ خانگی می‌آید. پس نشانی باید کامل باشد، نه فقط تکهٔ ‎#roview…‎؛
         // با تکهٔ تنها، گوشیِ مشتری چیزی برای باز کردن ندارد.
+        // ⚠️ نشانیِ **صفحه**، نه سرورِ هم‌گام‌سازی. در نسخهٔ وب هم این دو جدا
+        // هستند: SELF_HOST_URL سرورِ دادهٔ وب‌سوکت است، ولی کیو‌آر از نشانیِ
+        // خودِ صفحه ساخته می‌شود (window.location.href). گوشیِ مشتری صفحه را
+        // باز می‌کند و آن صفحه است که داده را از سرور می‌گیرد.
+        //
+        // ⚠️ و ‎server‎/‎token‎ هم داخلِ نشانی می‌روند: گوشیِ مشتری این صفحه را
+        // تا امروز باز نکرده، پس نمی‌داند به کدام سرور وصل شود و صفحه‌ای خالی
+        // می‌بیند. خودِ سایت هم در ‎copyShareLink‎ همین کار را می‌کند.
+        //
         // ⚠️ خواستهٔ صریحِ صاحب ریپو: «بدونِ نت هم که شده باید برای هر حساب
-        // کیو‌آر ساخته بشه.» پس نبودِ نشانیِ سرور دیگر جلوی ساختِ کد را
-        // نمی‌گیرد: همان تکهٔ ‎#roview…‎ کد می‌شود — خواننده‌ی خودِ برنامه
-        // (‎AcctLink.Parse‎) آن را می‌فهمد و حساب را باز می‌کند. فقط گفته
-        // می‌شود که برای گوشیِ مشتری نشانیِ سرور لازم است.
-        var server = _host.Settings.GetString(SettingsKeys.ServerUrl);
-        var full = AcctLink.FullUrl(server, Entity.Id, sub);
+        // کیو‌آر ساخته بشه.» پس نبودِ نشانی جلوی ساختِ کد را نمی‌گیرد: همان
+        // تکهٔ ‎#roview…‎ کد می‌شود — خواننده‌ی خودِ برنامه (‎AcctLink.Parse‎)
+        // آن را می‌فهمد و حساب را باز می‌کند. فقط گفته می‌شود که برای گوشیِ
+        // مشتری نشانیِ صفحه لازم است.
+        var full = AcctLink.FullUrl(
+            _host.Settings.GetString(SettingsKeys.ViewerUrl), Entity.Id, sub, "debt",
+            _host.Settings.GetString(SettingsKeys.ServerUrl),
+            _host.Settings.GetString(SettingsKeys.SyncCode));
         var link = full ?? AcctLink.Build(Entity.Id, sub);
 
         var png = await Task.Run(() => QrWriter.EncodePng(link));
@@ -1194,8 +1206,8 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
                 : "این کد را به مشتری بدهید؛ با اسکنش حسابِ خودش را می‌بیند")
               + " — زنده، از همین سرور."
             : "این کد بی‌اینترنت ساخته شد و با خودِ همین برنامه خوانده می‌شود. "
-              + "برای این‌که با گوشیِ مشتری هم باز شود، در «تنظیمات › نشانیِ سرور» "
-              + "نشانیِ سرورِ خانگی را بنویسید.";
+              + "برای این‌که با گوشیِ مشتری هم باز شود، در «تنظیمات › نشانیِ صفحهٔ حساب» "
+              + "نشانیِ صفحه را بنویسید (و نشانیِ سرور را، تا گوشی بداند به کجا وصل شود).";
 
         await Dialogs.ShowQrAsync(title, link, png, hint);
     });

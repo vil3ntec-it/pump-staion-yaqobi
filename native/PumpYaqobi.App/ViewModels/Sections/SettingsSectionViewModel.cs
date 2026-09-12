@@ -51,6 +51,27 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
     [ObservableProperty] private string _stationAddress = "";
     [ObservableProperty] private string _stationPhone = "";
 
+    /// <summary>
+    /// ══ دو نشانیِ جدا ═══════════════════════════════════════════════════════
+    ///
+    /// ⚠️ این دو یکی نیستند و نباید یکی گرفته شوند — در نسخهٔ وب هم جدا بودند:
+    ///
+    ///   • ‎ServerUrl‎  سرورِ **داده** (هم‌گام‌سازی) — همتای ‎SELF_HOST_URL‎.
+    ///                 برنامه از این‌جا داده می‌گیرد و می‌فرستد.
+    ///   • ‎ViewerUrl‎  نشانیِ **صفحهٔ حساب** — جایی که ‎index.html‎ سِرو می‌شود.
+    ///                 کیو‌آرِ هر قرض‌دار از این ساخته می‌شود؛ مشتری اسکن
+    ///                 می‌کند، گوشی‌اش این صفحه را باز می‌کند و صفحه خودش
+    ///                 داده را از سرورِ بالایی می‌گیرد.
+    ///
+    /// در سایت این دومی لازم نبود چون خودِ صفحه نشانیِ خودش را می‌دانست
+    /// (‎window.location.href‎). برنامهٔ نیتیو صفحه‌ای ندارد، پس نوشته می‌شود.
+    /// </summary>
+    [ObservableProperty] private string _serverUrl = "";
+    [ObservableProperty] private string _viewerUrl = "";
+
+    /// <summary>رمزِ سرورِ هم‌گام‌سازی — اگر سرور رمز دارد.</summary>
+    [ObservableProperty] private string _syncCode = "";
+
     // ── نرخ‌ها و آستانه‌ها ──────────────────────────────────────────────────
     [ObservableProperty] private string _unionRatePetrol = "";
     [ObservableProperty] private string _unionRateDiesel = "";
@@ -140,6 +161,9 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
         StationName = s.GetString(SettingsService.StationName);
         StationAddress = s.GetString(SettingsService.StationAddress);
         StationPhone = s.GetString(SettingsService.StationPhone);
+        ServerUrl = s.GetString(SettingsService.ServerUrl);
+        ViewerUrl = s.GetString(SettingsService.ViewerUrl);
+        SyncCode = s.GetString(SettingsService.SyncCode);
         UnionRatePetrol = Shamsi.Money(s.GetDecimal(SettingsService.UnionRatePetrol));
         UnionRateDiesel = Shamsi.Money(s.GetDecimal(SettingsService.UnionRateDiesel));
         LowStockThreshold = Shamsi.Money(s.GetDecimal(SettingsService.LowStockThreshold, 1000m));
@@ -165,6 +189,9 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
         s.Set(SettingsService.StationName, StationName.Trim());
         s.Set(SettingsService.StationAddress, StationAddress.Trim());
         s.Set(SettingsService.StationPhone, StationPhone.Trim());
+        s.Set(SettingsService.ServerUrl, ServerUrl.Trim());
+        s.Set(SettingsService.ViewerUrl, ViewerUrl.Trim());
+        s.Set(SettingsService.SyncCode, SyncCode.Trim());
         s.Set(SettingsService.UnionRatePetrol, Shamsi.Num(UnionRatePetrol));
         s.Set(SettingsService.UnionRateDiesel, Shamsi.Num(UnionRateDiesel));
         s.Set(SettingsService.LowStockThreshold, Shamsi.Num(LowStockThreshold));

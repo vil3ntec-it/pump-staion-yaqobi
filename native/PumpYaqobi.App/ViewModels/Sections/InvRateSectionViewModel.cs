@@ -116,7 +116,9 @@ public sealed partial class InvRateSectionViewModel : SectionViewModel
     public InvRateSectionViewModel(AppHost host)
         : base("invrate", "invoices", "مقایسهٔ نرخ فاکتورها") => _host = host;
 
-    public ObservableCollection<InvRateRowViewModel> Rows { get; } = new();
+    /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
+    /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
+    public BulkRows<InvRateRowViewModel> Rows { get; } = new();
 
     /// <summary>۰ همه · ۱ فقط زیان · ۲ فقط مفاد — همان ‎_invRateFilter‎.</summary>
     [ObservableProperty] private int _filterIndex;
@@ -201,16 +203,19 @@ public sealed partial class InvRateSectionViewModel : SectionViewModel
 
     private void ApplyFilter()
     {
-        Rows.Clear();
-        foreach (var r in _all)
+        using (Rows.Batch())
         {
-            var keep = FilterIndex switch
+            Rows.Clear();
+            foreach (var r in _all)
             {
-                1 => r.Approved && r.HasDiff && r.Diff > 0m,
-                2 => r.Approved && r.HasDiff && r.Diff < 0m,
-                _ => true,
-            };
-            if (keep) Rows.Add(r);
+                var keep = FilterIndex switch
+                {
+                    1 => r.Approved && r.HasDiff && r.Diff > 0m,
+                    2 => r.Approved && r.HasDiff && r.Diff < 0m,
+                    _ => true,
+                };
+                if (keep) Rows.Add(r);
+            }
         }
         IsEmpty = Rows.Count == 0;
     }

@@ -72,6 +72,9 @@ public sealed partial class WaraqPumpViewModel : RowViewModel
     public string LitersText => Shamsi.Money(Liters);
     public string SalesText => Shamsi.Money(Liters * Price);
 
+    /// <summary>گزینه‌های کشویی — رشته، نه ‎ComboBoxItem‎ (باگِ ‎SelectedItem‎).</summary>
+    public static string[] FuelOptions { get; } = { "پطرول", "دیزل" };
+
     public string FuelText
     {
         get => Fuel.ToPersian();
@@ -159,6 +162,10 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
         OnPropertyChanged(nameof(EffectiveAmountText));
     }
 
+    /// <summary>گزینه‌های کشویی — رشته، نه ‎ComboBoxItem‎ (باگِ ‎SelectedItem‎).</summary>
+    public static string[] TypeOptions { get; } = { "قرض", "مصرف" };
+    public static string[] FuelOptions { get; } = { "پطرول", "دیزل" };
+
     public string TypeText
     {
         get => IsExpense ? "مصرف" : "قرض";
@@ -180,6 +187,9 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
     /// کاربر می‌ماند و از دست نمی‌رود، ولی تا آن پست ساخته نشود چیزی را
     /// جابه‌جا نمی‌کند.
     /// </summary>
+    /// <summary>گزینه‌های کشویی — رشته، نه ‎ComboBoxItem‎ (باگِ ‎SelectedItem‎).</summary>
+    public static string[] UnitOptions { get; } = { "تیل", "پول" };
+
     public string UnitText
     {
         get => IsMoney ? "پول" : "تیل";

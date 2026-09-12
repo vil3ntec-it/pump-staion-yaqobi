@@ -79,7 +79,9 @@ public sealed partial class HistorySectionViewModel : SectionViewModel
     }
 
     public ObservableCollection<HistoryCardViewModel> Cards { get; } = new();
-    public ObservableCollection<HistoryRowViewModel> Rows { get; } = new();
+    /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
+    /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
+    public BulkRows<HistoryRowViewModel> Rows { get; } = new();
     public ObservableCollection<string> Months { get; } = new();
 
     /// <summary>فهرستِ کارت‌ها باز است یا صفحهٔ یک بخش.</summary>
@@ -151,9 +153,12 @@ public sealed partial class HistorySectionViewModel : SectionViewModel
             ? _feed
             : _feed.Where(r => r.MonthKey == Month).ToList();
 
-        Rows.Clear();
-        var i = 0;
-        foreach (var r in picked) Rows.Add(new HistoryRowViewModel(r, ++i));
+        using (Rows.Batch())
+        {
+            Rows.Clear();
+            var i = 0;
+            foreach (var r in picked) Rows.Add(new HistoryRowViewModel(r, ++i));
+        }
 
         Summary = picked.Count == 0
             ? (Month == AllMonths ? "هنوز چیزی در این بخش ثبت نشده" : "در این ماه چیزی ثبت نشده")

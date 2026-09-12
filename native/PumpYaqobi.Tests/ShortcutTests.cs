@@ -102,7 +102,13 @@ public class ShortcutTests
     /// </summary>
     private static AppHost Host()
     {
-        var host = AppHost.Start(
+        // ⚠️ ‎AppHost.Start‎ سینگلتون است (‎Current ??= new AppHost(path)‎): اولین
+        // آزمونی که صدایش بزند برنده می‌شود و بقیه همان دیتابیس را می‌گیرند،
+        // نه مسیرِ خودشان را. با اجرای موازیِ xUnit دو آزمون هم‌زمان
+        // ‎NeedsFirstRun()‎ را درست می‌دیدند و هر دو مدیر می‌ساختند —
+        // «UNIQUE constraint failed: Users.UserName».
+        // پس این‌جا نمونهٔ جدا ساخته می‌شود تا هر آزمون دیتابیسِ خودش را داشته باشد.
+        var host = new AppHost(
             Path.Combine(Path.GetTempPath(), "pump-kb-" + Guid.NewGuid().ToString("N"), "pump.db"));
         if (host.Auth.NeedsFirstRun()) host.Auth.CreateFirstAdmin("1234");
         host.Auth.SignIn("admin", "1234");

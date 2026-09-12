@@ -171,7 +171,12 @@
   <!-- کارتی که خودش کلیک‌پذیر است: در نسخهٔ وب ‎card.onclick‎ حساب را باز
        می‌کند، پس کارت داخلِ یک دکمهٔ بی‌چهره می‌نشیند. دکمه‌های درونِ کارت
        (✕ و کیوآر) کلیکشان را خودشان مصرف می‌کنند و به این‌جا نمی‌رسد. -->
+  <!-- ⚠️ کارت باید تمامِ خانهٔ هم‌اندازهٔ ‎UniformGridLayout‎ را پر کند، وگرنه
+       کارتِ کم‌محتوا کوچک می‌ماند و ردیف ناهموار دیده می‌شود — همان چیزی که در
+       عکسِ صاحب ریپو بود. -->
   <Style Selector="Button.card-shell">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="0" />
@@ -399,6 +404,15 @@
   <Style Selector="DataGridColumnHeader /template/ Rectangle#VerticalSeparator">
     <Setter Property="Width" Value="{DynamicResource Pump.Table.HeadLine}" />
   </Style>
+  <!-- ⚠️ ‎HorizontalContentAlignment‎ی خودِ سرستون کافی نبود: نوشتهٔ داخلش را
+       خودِ ‎DataGrid‎ می‌سازد و ‎Stretch‎ می‌گذارد، پس «تاریخ»، «نام»، «حواله» و
+       بقیه به لبه می‌چسبیدند. گزارشِ صاحب ریپو: «اون تاریخ اسم حواله یا هر چی
+       اون بالای جدول که هستن … نوشته‌هاشون رو وسط بذار.»
+       در سایت هم استثنا ندارد: ‎.xls-tbl th{text-align:center}‎. -->
+  <Style Selector="DataGridColumnHeader TextBlock">
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
   <Style Selector="DataGridCell">
     <Setter Property="Padding" Value="10,4" />
     <Setter Property="FontSize" Value="17" />
@@ -488,6 +502,45 @@
   <Style Selector="DataGridCell TextBox /template/ Border#PART_BorderElement">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <!-- ══ تایپ داخلِ خانه، مثلِ اکسل ═══════════════════════════════════════════
+       گزارشِ صاحب ریپو با عکس: «موقعِ تایپ نمی‌خواهم آن چهارگوش باشد … چیزی که
+       می‌نویسم چیزی نمی‌فهمم. می‌خواهم خیلی حرفه‌ای باشد، مثلِ اکسل.»
+
+       در عکس، نوشته داخلِ یک کادرِ کوچکِ چسبیده به متن بود، وسطِ خانه‌ای که
+       بزرگ‌تر است — و دورش هم یک خطِ نازکِ اضافه. دو چیز با هم:
+
+       ۱) کادرِ ویرایشی تمامِ خانه را نمی‌گرفت. ‎DataGrid‎ برای ستونِ متنی خودش
+          یک ‎TextBox‎ی به نامِ ‎PART_EditingElement‎ می‌سازد و آن از قاعدهٔ
+          عمومیِ بالا ‎HorizontalAlignment‎ را نمی‌گرفت.
+       ۲) دو مستطیلِ خودِ خانه (‎CurrencyVisual‎ و ‎FocusVisual‎) روی آن کشیده
+          می‌شدند — همان «چهارگوش».
+
+       در اکسل چیزی که دیده می‌شود این است: خانهٔ فعال یک **قابِ ضخیمِ رنگی**
+       دورِ خودِ خانه دارد، و متن تمامِ خانه را می‌گیرد. حالا همان. -->
+  <Style Selector="DataGridCell TextBox#PART_EditingElement">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
+  <!-- دو مستطیلِ خودِ خانه دیگر کشیده نمی‌شوند — «چهارگوش»ِ عکس همین بود -->
+  <Style Selector="DataGridCell /template/ Rectangle#CurrencyVisual">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <Style Selector="DataGridCell /template/ Rectangle#FocusVisual">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <!-- و به‌جایشان، قابِ خانهٔ فعالِ اکسل: ضخیم، رنگی، دورِ تمامِ خانه -->
+  <Style Selector="DataGridCell:current">
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="BorderThickness" Value="2" />
   </Style>
 
   <!-- کشویی و رادیوییِ داخلِ خانه هم همان‌طور — نه کادرِ سفیدِ جدا -->
@@ -827,6 +880,7 @@
 
   <!-- ══ کارتِ قرض‌دار — رنگِ کارت از حالِ حساب می‌آید ══ -->
   <Style Selector="Border.person-card">
+    <Setter Property="VerticalAlignment" Value="Stretch" />
     <Setter Property="Background" Value="{DynamicResource Pump.Card}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
     <Setter Property="BorderThickness" Value="1.5" />
@@ -1065,6 +1119,21 @@
        خانهٔ اولش «جمله» و بقیه جمعِ هر ستون. با ‎c:TotalsBar‎ زیرِ هر جدول
        گذاشته می‌شود؛ هیچ‌وقت داخلِ خودِ جدول نمی‌رود (توضیحِ چرایی در
        ‎Controls/TotalsBar.cs‎). -->
+  <!-- ══ ردیفِ «جمله» — همتای ‎<tfoot class="xls-foot">‎ی سایت ════════════════
+       گزارشِ صاحب ریپو: «زیرِ جدول‌ها جمله، آن شبیهِ جدول نیست.»
+
+       درست می‌گفت: تا امروز یک نوارِ ‎WrapPanel‎ی از جفت‌های برچسب/عدد بود که
+       هیچ شباهتی به خودِ جدول نداشت — نه خطِ عمودیِ بینِ خانه‌ها، نه
+       وسط‌چینی، نه هم‌قدیِ فونت با جدول.
+
+       در سایت این یک ردیفِ واقعیِ همان جدول است:
+           .xls-foot td{ background:gx-foot; color:…;
+                         border-top:2px solid ...; font-weight:900;
+                         padding:9px 8px; font-size:0.92rem }
+       و چون ‎<td>‎ است، خطِ عمودیِ ستون‌ها و وسط‌چینیِ ‎.xls-tbl td‎ را هم دارد.
+
+       حالا هر خانه یک «خانهٔ جدول» است: خطِ عمودیِ سمتِ خودش، وسط‌چین، با
+       همان پس‌زمینه و وزنِ سنگینِ سرستون. -->
   <Style Selector="c|TotalsBar">
     <Setter Property="Margin" Value="0,-1,0,0" />
     <Setter Property="Template">

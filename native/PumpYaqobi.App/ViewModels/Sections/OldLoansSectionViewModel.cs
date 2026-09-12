@@ -52,7 +52,9 @@ public sealed partial class OldLoansSectionViewModel : SectionViewModel
     public OldLoansSectionViewModel(AppHost host) : base("oldloans", "debt", "قرض‌های کهنه")
         => _host = host;
 
-    public ObservableCollection<OldLoanRowViewModel> Rows { get; } = new();
+    /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
+    /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
+    public BulkRows<OldLoanRowViewModel> Rows { get; } = new();
 
     /// <summary>۰ همه · ۱ فقط واحد تیل · ۲ فقط واحد پول.</summary>
     [ObservableProperty] private int _filterIndex;
@@ -125,9 +127,12 @@ public sealed partial class OldLoansSectionViewModel : SectionViewModel
     {
         var rows = await _host.Tools.AgingAsync(Filter);
 
-        Rows.Clear();
-        var i = 0;
-        foreach (var r in rows) Rows.Add(new OldLoanRowViewModel(r, ++i));
+        using (Rows.Batch())
+        {
+            Rows.Clear();
+            var i = 0;
+            foreach (var r in rows) Rows.Add(new OldLoanRowViewModel(r, ++i));
+        }
 
         // ⚠️ جمعِ کل فقط وقتی معنی دارد که واحدها یکی باشند. در حالتِ «همه»
         // لیتر و افغانی قاطی می‌شوند، پس عمداً جمع نشان داده نمی‌شود — همان

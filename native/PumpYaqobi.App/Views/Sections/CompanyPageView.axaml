@@ -66,17 +66,17 @@
         <DataGridTemplateColumn Header="واحدِ رسید" Width="Auto">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate>
-              <TextBlock Text="{Binding PoulCurrencyText}" VerticalAlignment="Center" Margin="6,0" />
+              <!-- ⚠️ کشویی همیشه پیداست و رشته می‌دهد، نه ‎ComboBoxItem‎.
+                   با بچه‌های ‎ComboBoxItem‎، ‎SelectedItem‎ یک **شیء** است نه
+                   رشته — پس نه سرِ بار مقدار می‌نشست و نه انتخابِ کاربر
+                   برمی‌گشت. و داخلِ ‎CellEditingTemplate‎ بودنش یعنی مقدارِ
+                   فعلی دیده نمی‌شد و هر تغییر دو کلیک می‌خواست. در سایت این
+                   کادر ‎<select class="xls-in">‎ی همیشه‌پیداست. -->
+              <ComboBox ItemsSource="{Binding PoulCurrencyOptions}"
+                        SelectedItem="{Binding PoulCurrencyText}"
+                        Margin="4,1" MinHeight="0" Padding="7,2" FontSize="14" />
             </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
-          <DataGridTemplateColumn.CellEditingTemplate>
-            <DataTemplate>
-              <ComboBox SelectedItem="{Binding PoulCurrencyText}">
-                <ComboBoxItem Content="افغانی" />
-                <ComboBoxItem Content="دالر" />
-              </ComboBox>
-            </DataTemplate>
-          </DataGridTemplateColumn.CellEditingTemplate>
         </DataGridTemplateColumn>
         <DataGridTextColumn Header="الباقیِ افغانی" Binding="{Binding AlbaqiAfnText}" Width="Auto" IsReadOnly="True" />
         <DataGridTextColumn Header="الباقیِ دالر"  Binding="{Binding AlbaqiUsdText}" Width="Auto" IsReadOnly="True" />

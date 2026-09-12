@@ -47,7 +47,9 @@ public sealed partial class TankerSectionViewModel : SectionViewModel
     public TankerSectionViewModel(AppHost host) : base("tanker", "storage", "تخلیهٔ تانکر")
         => _host = host;
 
-    public ObservableCollection<TankerRowViewModel> Rows { get; } = new();
+    /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
+    /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
+    public BulkRows<TankerRowViewModel> Rows { get; } = new();
 
     /// <summary>
     /// ردیفِ «جمله»ی ته جدول — بارنامه، تحویل، و جمعِ کم‌آمد (همان عددی که
@@ -115,9 +117,12 @@ public sealed partial class TankerSectionViewModel : SectionViewModel
 
     private async Task RefreshAsync()
     {
-        Rows.Clear();
-        var i = 0;
-        foreach (var u in await _host.Tools.UnloadsAsync()) Rows.Add(new TankerRowViewModel(u, ++i));
+        using (Rows.Batch())
+        {
+            Rows.Clear();
+            var i = 0;
+            foreach (var u in await _host.Tools.UnloadsAsync()) Rows.Add(new TankerRowViewModel(u, ++i));
+        }
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(TotalCells));
     }

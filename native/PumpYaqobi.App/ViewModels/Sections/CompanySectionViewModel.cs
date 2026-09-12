@@ -69,6 +69,9 @@ public sealed partial class CompanyRowViewModel : RowViewModel
     public string RateText { get => Shamsi.MoneyOrBlank(Rate); set => Rate = Shamsi.Num(value); }
     public string PoulText { get => Shamsi.MoneyOrBlank(Poul); set => Poul = Shamsi.Num(value); }
 
+    /// <summary>گزینه‌های کشویی — رشته، نه ‎ComboBoxItem‎ (باگِ ‎SelectedItem‎).</summary>
+    public static string[] PoulCurrencyOptions { get; } = { "افغانی", "دالر" };
+
     public string PoulCurrencyText
     {
         get => IsUsdPay ? "دالر" : "افغانی";
@@ -113,7 +116,9 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
     public CompanyService Calc => _host.Company;
     public string Name => Entity.Name ?? "";
 
-    public ObservableCollection<CompanyRowViewModel> Rows { get; } = new();
+    /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
+    /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
+    public BulkRows<CompanyRowViewModel> Rows { get; } = new();
 
     [ObservableProperty] private bool _isDiesel;
     [ObservableProperty] private string _totalUsd = "";
@@ -147,9 +152,12 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
 
     private void BuildRows()
     {
-        Rows.Clear();
-        foreach (var r in CompanyService.RowsOf(Entity, Fuel))
+        using (Rows.Batch())
+        {
+            Rows.Clear();
+            foreach (var r in CompanyService.RowsOf(Entity, Fuel))
             Rows.Add(new CompanyRowViewModel(r, this));
+        }
     }
 
     public void Recalc()

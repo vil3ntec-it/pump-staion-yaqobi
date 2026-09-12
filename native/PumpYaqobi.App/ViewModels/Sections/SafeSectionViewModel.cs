@@ -53,6 +53,10 @@ public sealed partial class SafeRowViewModel : RowViewModel
         set => Amount = Shamsi.Num(value);
     }
 
+    /// <summary>گزینه‌های کشویی — رشته، نه ‎ComboBoxItem‎ (باگِ ‎SelectedItem‎).</summary>
+    public static string[] KindOptions { get; } = { "بردگی", "ماندگی" };
+    public static string[] CurrencyOptions { get; } = { "افغانی", "دالر" };
+
     public string KindText
     {
         get => IsBardagi ? "بردگی" : "ماندگی";

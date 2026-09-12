@@ -45,15 +45,17 @@
           <DataGridTextColumn Header="نام" Binding="{Binding Worker}" Width="Auto" />
           <DataGridTemplateColumn Header="تیل" Width="Auto">
             <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate><TextBlock Text="{Binding FuelText}" VerticalAlignment="Center" Margin="6,0" /></DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-            <DataGridTemplateColumn.CellEditingTemplate>
+              <!-- ⚠️ کشویی همیشه پیداست و رشته می‌دهد، نه ‎ComboBoxItem‎: با بچه‌های
+                   ‎ComboBoxItem‎، ‎SelectedItem‎ یک **شیء** است نه رشته — پس نه سرِ بار
+                   مقدار می‌نشست و نه انتخابِ کاربر برمی‌گشت. و ‎CellEditingTemplate‎
+                   یعنی مقدارِ فعلی دیده نمی‌شد و هر تغییر دو کلیک می‌خواست. در سایت
+                   این کادر ‎<select class="xls-in">‎ی همیشه‌پیداست. -->
               <DataTemplate>
-                <ComboBox SelectedItem="{Binding FuelText}">
-                  <ComboBoxItem Content="پطرول" /><ComboBoxItem Content="دیزل" />
-                </ComboBox>
+                <ComboBox ItemsSource="{Binding FuelOptions}"
+                          SelectedItem="{Binding FuelText}"
+                          Margin="4,1" MinHeight="0" Padding="7,2" FontSize="14" />
               </DataTemplate>
-            </DataGridTemplateColumn.CellEditingTemplate>
+            </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
           <DataGridTextColumn Header="شروع" Binding="{Binding StartText}" Width="Auto" />
           <DataGridTextColumn Header="ختم" Binding="{Binding EndText}" Width="Auto" />
@@ -103,45 +105,46 @@
             <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" MinWidth="130" />
             <DataGridTemplateColumn Header="نوع تیل" Width="Auto">
               <DataGridTemplateColumn.CellTemplate>
-                <DataTemplate><TextBlock Text="{Binding FuelText}" VerticalAlignment="Center" Margin="6,0" /></DataTemplate>
-              </DataGridTemplateColumn.CellTemplate>
-              <DataGridTemplateColumn.CellEditingTemplate>
+                <!-- ⚠️ کشویی همیشه پیداست و رشته می‌دهد، نه ‎ComboBoxItem‎: با بچه‌های
+                     ‎ComboBoxItem‎، ‎SelectedItem‎ یک **شیء** است نه رشته — پس نه سرِ بار
+                     مقدار می‌نشست و نه انتخابِ کاربر برمی‌گشت. و ‎CellEditingTemplate‎
+                     یعنی مقدارِ فعلی دیده نمی‌شد و هر تغییر دو کلیک می‌خواست. در سایت
+                     این کادر ‎<select class="xls-in">‎ی همیشه‌پیداست. -->
                 <DataTemplate>
-                  <ComboBox SelectedItem="{Binding FuelText}">
-                    <ComboBoxItem Content="پطرول" /><ComboBoxItem Content="دیزل" />
-                  </ComboBox>
+                  <ComboBox ItemsSource="{Binding FuelOptions}"
+                            SelectedItem="{Binding FuelText}"
+                            Margin="4,1" MinHeight="0" Padding="7,2" FontSize="14" />
                 </DataTemplate>
-              </DataGridTemplateColumn.CellEditingTemplate>
+              </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
             <DataGridTextColumn Header="مقدار تیل" Binding="{Binding LitersText}" Width="Auto" />
             <DataGridTextColumn Header="مبلغ" Binding="{Binding AmountText}" Width="Auto" />
             <DataGridTemplateColumn Header="نوع" Width="Auto">
               <DataGridTemplateColumn.CellTemplate>
-                <DataTemplate><TextBlock Text="{Binding TypeText}" VerticalAlignment="Center" Margin="6,0" /></DataTemplate>
-              </DataGridTemplateColumn.CellTemplate>
-              <DataGridTemplateColumn.CellEditingTemplate>
+                <!-- ⚠️ کشویی همیشه پیداست و رشته می‌دهد، نه ‎ComboBoxItem‎: با بچه‌های
+                     ‎ComboBoxItem‎، ‎SelectedItem‎ یک **شیء** است نه رشته — پس نه سرِ بار
+                     مقدار می‌نشست و نه انتخابِ کاربر برمی‌گشت. و ‎CellEditingTemplate‎
+                     یعنی مقدارِ فعلی دیده نمی‌شد و هر تغییر دو کلیک می‌خواست. در سایت
+                     این کادر ‎<select class="xls-in">‎ی همیشه‌پیداست. -->
                 <DataTemplate>
-                  <ComboBox SelectedItem="{Binding TypeText}">
-                    <ComboBoxItem Content="قرض" /><ComboBoxItem Content="مصرف" />
-                  </ComboBox>
+                  <ComboBox ItemsSource="{Binding TypeOptions}"
+                            SelectedItem="{Binding TypeText}"
+                            Margin="4,1" MinHeight="0" Padding="7,2" FontSize="14" />
                 </DataTemplate>
-              </DataGridTemplateColumn.CellEditingTemplate>
+              </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
             <!-- ستونِ «واحد» — همان ستونِ سایت، با همان راهنمای خودش -->
             <DataGridTemplateColumn Header="واحد" Width="Auto">
               <DataGridTemplateColumn.CellTemplate>
+                <!-- ⚠️ کشویی همیشه پیداست و رشته می‌دهد، نه ‎ComboBoxItem‎ —
+                     همان باگی که در بقیهٔ ستون‌های این صفحه بود. -->
                 <DataTemplate>
-                  <TextBlock Text="{Binding UnitText}" VerticalAlignment="Center" Margin="6,0"
-                             ToolTip.Tip="ردیفِ قرض به کدام دفترِ حسابِ قرض‌دار برود: واحد تیل یا واحد پول" />
+                  <ComboBox ItemsSource="{Binding UnitOptions}"
+                            SelectedItem="{Binding UnitText}"
+                            Margin="4,1" MinHeight="0" Padding="7,2" FontSize="14"
+                            ToolTip.Tip="ردیفِ قرض به کدام دفترِ حسابِ قرض‌دار برود: واحد تیل یا واحد پول" />
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
-              <DataGridTemplateColumn.CellEditingTemplate>
-                <DataTemplate>
-                  <ComboBox SelectedItem="{Binding UnitText}">
-                    <ComboBoxItem Content="تیل" /><ComboBoxItem Content="پول" />
-                  </ComboBox>
-                </DataTemplate>
-              </DataGridTemplateColumn.CellEditingTemplate>
             </DataGridTemplateColumn>
           </DataGrid.Columns>
         </c:ExcelGrid>
@@ -152,45 +155,46 @@
             <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" MinWidth="130" />
             <DataGridTemplateColumn Header="نوع تیل" Width="Auto">
               <DataGridTemplateColumn.CellTemplate>
-                <DataTemplate><TextBlock Text="{Binding FuelText}" VerticalAlignment="Center" Margin="6,0" /></DataTemplate>
-              </DataGridTemplateColumn.CellTemplate>
-              <DataGridTemplateColumn.CellEditingTemplate>
+                <!-- ⚠️ کشویی همیشه پیداست و رشته می‌دهد، نه ‎ComboBoxItem‎: با بچه‌های
+                     ‎ComboBoxItem‎، ‎SelectedItem‎ یک **شیء** است نه رشته — پس نه سرِ بار
+                     مقدار می‌نشست و نه انتخابِ کاربر برمی‌گشت. و ‎CellEditingTemplate‎
+                     یعنی مقدارِ فعلی دیده نمی‌شد و هر تغییر دو کلیک می‌خواست. در سایت
+                     این کادر ‎<select class="xls-in">‎ی همیشه‌پیداست. -->
                 <DataTemplate>
-                  <ComboBox SelectedItem="{Binding FuelText}">
-                    <ComboBoxItem Content="پطرول" /><ComboBoxItem Content="دیزل" />
-                  </ComboBox>
+                  <ComboBox ItemsSource="{Binding FuelOptions}"
+                            SelectedItem="{Binding FuelText}"
+                            Margin="4,1" MinHeight="0" Padding="7,2" FontSize="14" />
                 </DataTemplate>
-              </DataGridTemplateColumn.CellEditingTemplate>
+              </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
             <DataGridTextColumn Header="مقدار تیل" Binding="{Binding LitersText}" Width="Auto" />
             <DataGridTextColumn Header="مبلغ" Binding="{Binding AmountText}" Width="Auto" />
             <DataGridTemplateColumn Header="نوع" Width="Auto">
               <DataGridTemplateColumn.CellTemplate>
-                <DataTemplate><TextBlock Text="{Binding TypeText}" VerticalAlignment="Center" Margin="6,0" /></DataTemplate>
-              </DataGridTemplateColumn.CellTemplate>
-              <DataGridTemplateColumn.CellEditingTemplate>
+                <!-- ⚠️ کشویی همیشه پیداست و رشته می‌دهد، نه ‎ComboBoxItem‎: با بچه‌های
+                     ‎ComboBoxItem‎، ‎SelectedItem‎ یک **شیء** است نه رشته — پس نه سرِ بار
+                     مقدار می‌نشست و نه انتخابِ کاربر برمی‌گشت. و ‎CellEditingTemplate‎
+                     یعنی مقدارِ فعلی دیده نمی‌شد و هر تغییر دو کلیک می‌خواست. در سایت
+                     این کادر ‎<select class="xls-in">‎ی همیشه‌پیداست. -->
                 <DataTemplate>
-                  <ComboBox SelectedItem="{Binding TypeText}">
-                    <ComboBoxItem Content="قرض" /><ComboBoxItem Content="مصرف" />
-                  </ComboBox>
+                  <ComboBox ItemsSource="{Binding TypeOptions}"
+                            SelectedItem="{Binding TypeText}"
+                            Margin="4,1" MinHeight="0" Padding="7,2" FontSize="14" />
                 </DataTemplate>
-              </DataGridTemplateColumn.CellEditingTemplate>
+              </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
             <!-- ستونِ «واحد» — همان ستونِ سایت، با همان راهنمای خودش -->
             <DataGridTemplateColumn Header="واحد" Width="Auto">
               <DataGridTemplateColumn.CellTemplate>
+                <!-- ⚠️ کشویی همیشه پیداست و رشته می‌دهد، نه ‎ComboBoxItem‎ —
+                     همان باگی که در بقیهٔ ستون‌های این صفحه بود. -->
                 <DataTemplate>
-                  <TextBlock Text="{Binding UnitText}" VerticalAlignment="Center" Margin="6,0"
-                             ToolTip.Tip="ردیفِ قرض به کدام دفترِ حسابِ قرض‌دار برود: واحد تیل یا واحد پول" />
+                  <ComboBox ItemsSource="{Binding UnitOptions}"
+                            SelectedItem="{Binding UnitText}"
+                            Margin="4,1" MinHeight="0" Padding="7,2" FontSize="14"
+                            ToolTip.Tip="ردیفِ قرض به کدام دفترِ حسابِ قرض‌دار برود: واحد تیل یا واحد پول" />
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
-              <DataGridTemplateColumn.CellEditingTemplate>
-                <DataTemplate>
-                  <ComboBox SelectedItem="{Binding UnitText}">
-                    <ComboBoxItem Content="تیل" /><ComboBoxItem Content="پول" />
-                  </ComboBox>
-                </DataTemplate>
-              </DataGridTemplateColumn.CellEditingTemplate>
             </DataGridTemplateColumn>
           </DataGrid.Columns>
         </c:ExcelGrid>

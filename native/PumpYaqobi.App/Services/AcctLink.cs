@@ -22,33 +22,59 @@ public static class AcctLink
     /// <summary>
     /// نشانیِ <b>کاملِ قابلِ باز شدن</b> — همان چیزی که باید داخلِ کیو‌آر برود.
     ///
-    /// ⚠️ کیو‌آرِ حساب برای <b>خودِ قرض‌دار</b> است، نه برای ما: صاحب ریپو آن را
-    /// می‌فرستد، مشتری با گوشیِ خودش اسکن می‌کند و حسابش را <b>زنده</b>
-    /// می‌بیند — دادهٔ صفحه از همان سرورِ خانگی می‌آید. پس تکهٔ ‎#roview…‎ی
-    /// تنها به‌درد نمی‌خورد؛ باید میزبان هم داشته باشد، وگرنه گوشیِ مشتری
-    /// چیزی برای باز کردن ندارد.
+    /// ══ چرا سه تکه لازم است ══════════════════════════════════════════════
     ///
-    /// ‎baseUrl‎ همان نشانیِ سرورِ خانگی است (تنظیمات › نشانیِ سرور). اگر خالی
-    /// باشد ‎null‎ برمی‌گردد و صداکننده باید بگوید «اول نشانیِ سرور را بنویس».
+    /// کیو‌آرِ حساب برای <b>خودِ قرض‌دار</b> است: صاحب ریپو آن را می‌فرستد،
+    /// مشتری با گوشیِ خودش اسکن می‌کند و حسابش را <b>زنده</b> می‌بیند.
+    ///
+    /// گوشیِ مشتری یک <b>صفحه</b> باز می‌کند (‎index.html‎)، و آن صفحه است که
+    /// داده را از سرورِ خانگی می‌گیرد. پس:
+    ///
+    ///   <paramref name="pageUrl"/>  جایی که ‎index.html‎ سِرو می‌شود.
+    ///   <paramref name="serverUrl"/> سرورِ داده — صفحه از این‌جا می‌خواند.
+    ///   <paramref name="token"/>     رمزِ همان سرور، اگر داشته باشد.
+    ///
+    /// ⚠️ ‎server‎ و ‎token‎ حتماً باید در نشانی باشند. گوشیِ مشتری تا امروز
+    /// این صفحه را باز نکرده، پس چیزی در حافظه‌اش نیست و نمی‌داند به کجا وصل
+    /// شود — صفحه‌ای خالی می‌بیند. خودِ سایت هم دقیقاً همین کار را می‌کند
+    /// (‎copyShareLink‎):
+    ///
+    ///     link = origin + pathname + '?server=' + u + '&amp;token=' + t
+    ///
+    /// و صفحه سرِ بارگیری برشان می‌دارد، در ‎localStorage‎ می‌گذارد و نشانی را
+    /// تمیز می‌کند تا رمز در نوارِ نشانی نماند.
+    ///
+    /// ‎null‎ یعنی نشانیِ صفحه خالی است و کیو‌آری نمی‌شود ساخت.
     /// </summary>
-    public static string? FullUrl(string? baseUrl, long personId,
-                                  string? subId = null, string type = "debt")
+    public static string? FullUrl(string? pageUrl, long personId, string? subId = null,
+                                  string type = "debt",
+                                  string? serverUrl = null, string? token = null)
     {
-        var b = (baseUrl ?? "").Trim();
+        var b = (pageUrl ?? "").Trim();
         if (b.Length == 0) return null;
 
-        // هرچه بعد از «#» باشد جای همین هش را می‌گیرد، پس اول پاکش می‌کنیم.
-        var h = b.IndexOf('#');
-        if (h >= 0) b = b[..h];
+        // هرچه بعد از «#» یا «?» باشد جای پرسش و هشِ خودمان را می‌گیرد.
+        var cut = b.IndexOfAny(new[] { '#', '?' });
+        if (cut >= 0) b = b[..cut];
         b = b.TrimEnd('/');
         if (b.Length == 0) return null;
 
         // بی «http» گوشی نشانی را باز نمی‌کند و متن می‌بیند.
         if (!b.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
             !b.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-            b = "http://" + b;
+            b = "https://" + b;
 
-        return b + "/" + Build(personId, subId, type);
+        var q = "";
+        var srv = (serverUrl ?? "").Trim();
+        if (srv.Length > 0)
+        {
+            q = "/?server=" + Uri.EscapeDataString(srv);
+            var t = (token ?? "").Trim();
+            if (t.Length > 0) q += "&token=" + Uri.EscapeDataString(t);
+        }
+        else q = "/";
+
+        return b + q + Build(personId, subId, type);
     }
 
     /// <summary>

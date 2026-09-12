@@ -165,7 +165,9 @@ public sealed partial class AmanatAccountViewModel : ObservableObject, IRowBatch
     }
 
     public AmanatAccount Entity { get; }
-    public ObservableCollection<AmanatRowViewModel> Rows { get; } = new();
+    /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
+    /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
+    public BulkRows<AmanatRowViewModel> Rows { get; } = new();
 
     public int RowCount => Rows.Count;
 
