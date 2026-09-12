@@ -92,7 +92,7 @@ internal static class Program
             Pump(win);
             Shot(win, Path.Combine(outDir, "theme-" + theme.Id + ".png"));
         }
-        ThemeManager.Apply(PumpTheme.DarkAmber);
+        ThemeManager.Apply(PumpTheme.Marble);
 
         // ۴) هر بخش یک عکس — چیزی تحویل نمی‌دهیم که ندیده باشیم
         var n = 0;

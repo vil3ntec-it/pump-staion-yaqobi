@@ -11,7 +11,7 @@ namespace PumpYaqobi.App.Themes;
 /// </summary>
 public static class ThemeManager
 {
-    public static PumpTheme Current { get; private set; } = PumpTheme.DarkAmber;
+    public static PumpTheme Current { get; private set; } = PumpTheme.Marble;
 
     public static event Action<PumpTheme>? Changed;
 
@@ -58,22 +58,57 @@ public static class ThemeManager
         Br("HeaderTitle", t.HeaderTitle);
         Br("ChromeBorder", t.ChromeBorder);
 
+        // ══ نوارِ سرِ جدول و ردیفِ «جمله» ══════════════════════════════
+        // خواستهٔ صریحِ صاحب ریپو: این دو نوار هم‌رنگِ بدنهٔ جدول نباشند تا
+        // جدول «قاب» پیدا کند — ولی «کمی صاف‌تر … خیلی تیره است»، پس رنگش
+        // در خودِ تم نشسته و این‌جا فقط ثبت می‌شود، نه محاسبه.
+        Br("HeadBand", t.HeadBand);
+        Br("OnHeadBand", t.OnHeadBand);
+        // نوشتهٔ کم‌رنگِ روی همان نوار (برچسبِ بالای هر عددِ «جمله»)
+        Br("OnHeadBandMuted", Mix(t.HeadBand, t.OnHeadBand, 0.62));
+
         // سطح‌های مشتق‌شده — همان چیزی که در CSS با color-mix ساخته می‌شد
         Br("Hover", Mix(t.Card, t.Accent, t.IsDark ? 0.14 : 0.10));
         Br("Selected", Mix(t.Card, t.Accent, t.IsDark ? 0.26 : 0.18));
         Br("GridLine", Mix(t.Card, t.Border, 0.75));
         Br("RowAlt", Mix(t.Card, t.IsDark ? Colors.White : Colors.Black, 0.035));
         Br("Shadow", WithAlpha(Colors.Black, t.IsDark ? 0.55 : 0.16));
-        Br("Ok", t.IsDark ? PumpTheme.C("#4ade80") : PumpTheme.C("#15803d"));
-        Br("Warn", t.IsDark ? PumpTheme.C("#fbbf24") : PumpTheme.C("#b45309"));
-        Br("Danger", t.IsDark ? PumpTheme.C("#f87171") : PumpTheme.C("#b91c1c"));
-        Br("Info", t.IsDark ? PumpTheme.C("#60a5fa") : PumpTheme.C("#1d4ed8"));
+        var ok = t.IsDark ? PumpTheme.C("#4ade80") : PumpTheme.C("#15803d");
+        var warn = t.IsDark ? PumpTheme.C("#fbbf24") : PumpTheme.C("#b45309");
+        var danger = t.IsDark ? PumpTheme.C("#f87171") : PumpTheme.C("#b91c1c");
+        var info = t.IsDark ? PumpTheme.C("#60a5fa") : PumpTheme.C("#1d4ed8");
+        Br("Ok", ok);
+        Br("Warn", warn);
+        Br("Danger", danger);
+        Br("Info", info);
 
         // ⚠️ این دو با تم عوض نمی‌شوند چون در سایت هم نمی‌شوند: ‎--purple‎ در
         // ‎:root‎ی هر دو تم ‎#805ad5‎ است (‎index.html‎ خط ۹۷ و ۱۰۴) و رنگِ
         // «جمله دیزل» همان‌جا مستقیم ‎#b7791f‎ نوشته شده (خط ۱۹۹۷۷).
         Br("Purple", PumpTheme.C("#805ad5"));
         Br("Diesel", PumpTheme.C("#b7791f"));
+
+        // ══ همان رنگ‌ها، ولی خواندنی روی نوارِ سرِ جدول ═════════════════════
+        // ردیفِ «جمله» روی نوارِ تیره می‌نشیند و عددهایش کلیدِ رنگ را از خودِ
+        // ویومدل می‌گیرند («Pump.Ok»، «Pump.Danger» و …). آن رنگ‌ها برای زمینهٔ
+        // روشن ساخته شده‌اند و روی نوار گم می‌شوند.
+        //
+        // ⚠️ نه کلیدِ ویومدل عوض شد و نه منطقی: همان کلید با
+        // ‎ConverterParameter=band‎ به این نسخه‌ها می‌رسد (ResourceKeyToBrushConverter).
+        // در تمِ تیره نوار خودش روشن‌تر از جدول است و رنگ‌ها همان می‌مانند.
+        void Band(string key, Color c) =>
+            Br("Band." + key, t.IsDark ? c : Mix(c, t.OnHeadBand, 0.45));
+
+        Band("Ok", ok);
+        Band("Warn", warn);
+        Band("Danger", danger);
+        Band("Info", info);
+        Band("Accent", t.Accent);
+        Band("Purple", PumpTheme.C("#805ad5"));
+        Band("Diesel", PumpTheme.C("#b7791f"));
+        Br("Band.Text", t.OnHeadBand);
+        Br("Band.Label", t.OnHeadBand);
+        Br("Band.Muted", Mix(t.HeadBand, t.OnHeadBand, 0.62));
 
         Set("Pump.HeaderBg", Horizontal(t.HeaderBg));
         Set("Pump.BannerBg", Horizontal(t.BannerBg));

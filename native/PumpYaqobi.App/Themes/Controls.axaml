@@ -376,11 +376,15 @@
        ‎Pump.CellCursor‎ ثبت می‌کند.
        ⚠️ کادرِ تایپ وقتی روی آن ایستاده‌ای هم همین را می‌گیرد (نه ‎IBeam‎)،
        چون سایت هم ‎:not(:focus)‎ گذاشته: تا وارد نشده‌ای، خانه است نه متن. -->
+  <!-- ⚠️ پس‌زمینه ‎Pump.HeadBand‎ است نه ‎Pump.Panel‎: خواستهٔ صریحِ صاحب ریپو
+       روی نمونه — «سر جدول رنگ تیره نیست، این هم تیره می‌شد عالی». همان رنگ
+       روی ستونِ «#» و ردیفِ «جمله» هم می‌نشیند تا جدول از هر سه طرف قاب بگیرد.
+       خودِ رنگ در ‎PumpTheme‎ است، پس «کمی صاف‌ترش کن» یک عدد است نه بازنویسی. -->
   <Style Selector="DataGridColumnHeader">
     <Setter Property="Cursor" Value="{DynamicResource Pump.CellCursor}" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
-    <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
-    <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
+    <Setter Property="Background" Value="{DynamicResource Pump.HeadBand}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.OnHeadBand}" />
     <Setter Property="FontWeight" Value="ExtraBold" />
     <Setter Property="FontSize" Value="17" />
     <Setter Property="Padding" Value="8,9" />
@@ -419,8 +423,8 @@
        می‌دهد؛ در برنامه هیچ جدولی نداشت. این‌جا سرستونِ ردیفِ خودِ جدول به
        همان شکل درمی‌آید: باریک، وسط‌چین، کم‌رنگ و با همان خطِ جدول. -->
   <Style Selector="DataGridRowHeader">
-    <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
-    <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
+    <Setter Property="Background" Value="{DynamicResource Pump.HeadBand}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.OnHeadBandMuted}" />
     <Setter Property="FontSize" Value="13" />
     <Setter Property="FontWeight" Value="Bold" />
     <Setter Property="MinWidth" Value="42" />
@@ -1277,7 +1281,7 @@
     <Setter Property="Margin" Value="0,-1,0,0" />
     <Setter Property="Template">
       <ControlTemplate>
-        <Border Background="{DynamicResource Pump.Panel}"
+        <Border Background="{DynamicResource Pump.HeadBand}"
                 BorderBrush="{DynamicResource Pump.Table.Border}"
                 BorderThickness="{DynamicResource Pump.Table.SumBorder}"
                 CornerRadius="0,0,10,10" Padding="0">
@@ -1285,7 +1289,7 @@
             <!-- «جمله» روی خانهٔ اولِ ردیف می‌نشیند، درست مثلِ ‎tfoot‎ی سایت -->
             <TextBlock Text="{TemplateBinding Title}" FontWeight="ExtraBold" FontSize="13"
                        VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0"
-                       Foreground="{DynamicResource Pump.Text}" />
+                       Foreground="{DynamicResource Pump.OnHeadBand}" />
             <ItemsControl ItemsSource="{TemplateBinding ItemsSource}" x:CompileBindings="False">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
@@ -1297,10 +1301,12 @@
                   <StackPanel Spacing="1" Margin="4,9">
                     <TextBlock Text="{Binding Label}" FontSize="11" TextAlignment="Center"
                                TextTrimming="CharacterEllipsis"
-                               Foreground="{DynamicResource Pump.Muted}" />
+                               Foreground="{DynamicResource Pump.OnHeadBandMuted}" />
+                    <!-- ‎ConverterParameter=band‎: همان کلیدِ رنگِ ویومدل، ولی نسخهٔ
+                         خواندنی‌اش روی نوارِ تیره. ویومدل دست‌نخورده می‌ماند. -->
                     <TextBlock Text="{Binding Value}" FontWeight="ExtraBold" FontSize="14"
                                TextAlignment="Center"
-                               Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                               Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=band}" />
                   </StackPanel>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>

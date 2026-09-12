@@ -9,7 +9,7 @@ namespace PumpYaqobi.App.Services;
 /// </summary>
 public sealed class AppSettings
 {
-    public string ThemeId { get; set; } = "dark-amber";
+    public string ThemeId { get; set; } = "marble";
     public string LastSection { get; set; } = "dashboard";
     public double WindowWidth { get; set; } = 1440;
     public double WindowHeight { get; set; } = 900;
