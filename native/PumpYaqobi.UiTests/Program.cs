@@ -45,6 +45,10 @@ internal static class Program
         // ده هزار قرض‌دار و سیصد هزار ردیف (صدهزارتا در یک حساب)، بعد
         // زمان‌گیریِ کارهای روزمره. چرایی‌اش در ‎PerfAudit‎ نوشته شده.
         if (outDir.Equals("perf", StringComparison.OrdinalIgnoreCase)) return PerfAudit.Run();
+        // ══ حالتِ «پنجره‌های گفت‌وگو» ══════════════════════════════════════
+        //     dotnet run --project PumpYaqobi.UiTests -- dialogs
+        // چرایی‌اش در ‎DialogAudit‎ نوشته شده: تنها مسیری که هیچ سنجشی نداشت.
+        if (outDir.Equals("dialogs", StringComparison.OrdinalIgnoreCase)) return DialogAudit.Run();
         if (outDir.Equals("gridperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Run();
         if (outDir.Equals("cardperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Cards();
 
