@@ -95,7 +95,9 @@ public sealed partial class AttendanceSectionViewModel : SectionViewModel
         Enumerable.Range(0, 12).Select(i => Shamsi.MonthOf(DateTime.Now.AddMonths(-i))));
 
     public ObservableCollection<StaffViewModel> Staff { get; } = new();
-    public ObservableCollection<AttendanceRowViewModel> Rows { get; } = new();
+    /// <summary>⚠️ ‎BulkObservableCollection‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
+    /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
+    public BulkObservableCollection<AttendanceRowViewModel> Rows { get; } = new();
 
     /// <summary>ردیفِ «جمله»ی ته جدول — روزها و جمعِ ساعت‌های همین کارمند و ماه.</summary>
     public IReadOnlyList<TotalCell> TotalCells
@@ -131,9 +133,12 @@ public sealed partial class AttendanceSectionViewModel : SectionViewModel
             Staff.Add(new StaffViewModel(s, Calc.Month(s, rows, pays, shorts, Month), this));
 
         var byId = staff.ToDictionary(s => s.Id, s => s.Name ?? "");
-        Rows.Clear();
-        foreach (var r in rows)
+        using (Rows.Batch())
+        {
+            Rows.Clear();
+            foreach (var r in rows)
             Rows.Add(new AttendanceRowViewModel(r, byId.TryGetValue(r.StaffId, out var n) ? n : "", this));
+        }
         RefreshTotals();
     }
 

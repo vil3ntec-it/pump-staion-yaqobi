@@ -217,7 +217,9 @@ public sealed partial class ArchiveViewModel : ObservableObject
     }
 
     public DebtTableArchive Entity => _h;
-    public ObservableCollection<ArchiveRowViewModel> Rows { get; } = new();
+    /// <summary>⚠️ ‎BulkObservableCollection‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
+    /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
+    public BulkObservableCollection<ArchiveRowViewModel> Rows { get; } = new();
     public IReadOnlyList<TotalCell> Totals { get; }
 
     public string Title { get; }
@@ -264,7 +266,9 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     public DebtCalculationService Calc => _host.Debt;
     public string Title => Entity.MainOfDebtorId != null ? "حسابِ اصلی" : (Entity.Name ?? "حسابِ فرعی");
 
-    public ObservableCollection<DebtRowViewModel> Rows { get; } = new();
+    /// <summary>⚠️ ‎BulkObservableCollection‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
+    /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
+    public BulkObservableCollection<DebtRowViewModel> Rows { get; } = new();
 
     [ObservableProperty] private bool _isMoney;
     [ObservableProperty] private decimal _percentPetrol;
@@ -680,23 +684,26 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         // می‌کرد. اگر چیزی عوض شد، همان‌جا ذخیره می‌شود تا دوباره لازم نشود.
         if (_host.Debt.NormalizeAccount(Entity)) _ = PersistHealedAsync();
 
-        Rows.Clear();
-        // ⚠️ فیلتر فقط روی «دیده شدن» است. ردیف‌های تیلِ دیگر سرِ جایشان‌اند و
-        // در دیتابیس دست نمی‌خورند؛ فقط این‌بار ساخته نمی‌شوند.
-        var want = RowFilter switch
+        using (Rows.Batch())
         {
-            "petrol" => (FuelType?)FuelType.Petrol,
-            "diesel" => FuelType.Diesel,
-            _ => null,
-        };
+            Rows.Clear();
+            // ⚠️ فیلتر فقط روی «دیده شدن» است. ردیف‌های تیلِ دیگر سرِ جایشان‌اند و
+            // در دیتابیس دست نمی‌خورند؛ فقط این‌بار ساخته نمی‌شوند.
+            var want = RowFilter switch
+            {
+                "petrol" => (FuelType?)FuelType.Petrol,
+                "diesel" => FuelType.Diesel,
+                _ => null,
+            };
 
-        foreach (var r in Entity.ActiveRows()
-                                .Where(r => want is null || r.Fuel == want)
-                                .OrderBy(r => r.SortIndex).ThenBy(r => r.Id))
-        {
-            var vm = new DebtRowViewModel(r, this);
-            vm.Recalculated += _person.Recalc;
-            Rows.Add(vm);
+            foreach (var r in Entity.ActiveRows()
+            .Where(r => want is null || r.Fuel == want)
+            .OrderBy(r => r.SortIndex).ThenBy(r => r.Id))
+            {
+                var vm = new DebtRowViewModel(r, this);
+                vm.Recalculated += _person.Recalc;
+                Rows.Add(vm);
+            }
         }
 
         // جدول عوض شد ⇒ سربرگ و ردیفِ «جمله» هم باید از نو خوانده شوند

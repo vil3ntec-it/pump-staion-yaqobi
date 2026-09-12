@@ -10,6 +10,11 @@
 
     <c:SectionPage.Toolbar>
       <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+        <!-- «🗓️ ماه جدید» — همتای ‎addChakanaMonth()‎ی سایت: جدولِ ماهِ بعد
+             را باز می‌کند. بی این، ماهی که هنوز ردیفی ندارد در کشویی نیست. -->
+        <Button Classes="ghost info" Content="📅 ماه جدید" Margin="0,0,6,0"
+                Command="{Binding NewMonthCommand}"
+                ToolTip.Tip="جدولِ ماهِ بعد را باز می‌کند" />
         <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,0,6,0" />
         <Button Classes="ghost" Content="📅 ماه بعد" Margin="0,0,6,0" />
         <Button Classes="ghost info" Content="📄 PDF" Margin="0,0,6,0"
@@ -21,7 +26,16 @@
     <c:SectionPage.Filters>
       <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
         <TextBlock Text="ماه" Classes="label" VerticalAlignment="Center" />
-        <ComboBox ItemsSource="{Binding Months}" SelectedItem="{Binding Month}" MinWidth="140" />
+        <!-- ══ کشویِ «سال» + «ماه» — همتای ‎_ymSelectsHtml‎ی سایت ═══════════════
+             گزارشِ صاحب ریپو: «کادرِ کشویی سال هم نیست.» هیچ بخشی نداشت و همهٔ
+             ماه‌های همهٔ سال‌ها در یک فهرستِ بلند بودند.
+             با انتخابِ هر سال، فقط ماه‌های همان سال در کشویِ ماه می‌آیند.
+             ⚠️ آن‌چه دیده می‌شود برچسبِ خوانا است («سنبله ۱۴۰۵»)، نه کلیدِ
+             خامِ «1405/06» که تا امروز نشان داده می‌شد. -->
+        <ComboBox ItemsSource="{Binding Picker.Years}" SelectedItem="{Binding Picker.Year}"
+                  IsVisible="{Binding Picker.HasYears}" MinWidth="110" />
+        <ComboBox ItemsSource="{Binding Picker.Months}" SelectedItem="{Binding Picker.Selected}"
+                  MinWidth="140" />
       </StackPanel>
     </c:SectionPage.Filters>
 
@@ -66,18 +80,17 @@
         <DataGridTemplateColumn Header="واحد" Width="Auto">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate>
-              <TextBlock Text="{Binding CurrencyText}" VerticalAlignment="Center" Margin="6,0" />
+              <!-- ⚠️ کشویی همیشه پیداست و رشته می‌دهد، نه ‎ComboBoxItem‎.
+                   با بچه‌های ‎ComboBoxItem‎، ‎SelectedItem‎ یک **شیء** است نه
+                   رشته — پس نه سرِ بار مقدار می‌نشست و نه انتخابِ کاربر
+                   برمی‌گشت. و داخلِ ‎CellEditingTemplate‎ بودنش یعنی مقدارِ
+                   فعلی دیده نمی‌شد و هر تغییر دو کلیک می‌خواست. در سایت این
+                   کادر ‎<select class="xls-in">‎ی همیشه‌پیداست. -->
+              <ComboBox ItemsSource="{Binding CurrencyOptions}"
+                        SelectedItem="{Binding CurrencyText}"
+                        Margin="4,1" MinHeight="0" Padding="7,2" FontSize="14" />
             </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
-          <DataGridTemplateColumn.CellEditingTemplate>
-            <DataTemplate>
-              <ComboBox SelectedItem="{Binding CurrencyText}">
-                <ComboBoxItem Content="تومان" />
-                <ComboBoxItem Content="کلدار" />
-                <ComboBoxItem Content="افغانی" />
-              </ComboBox>
-            </DataTemplate>
-          </DataGridTemplateColumn.CellEditingTemplate>
         </DataGridTemplateColumn>
         <DataGridTextColumn Header="فی"      Binding="{Binding RateText}" Width="Auto" />
         <DataGridTextColumn Header="دالر" Binding="{Binding UsdText}" Width="Auto" IsReadOnly="True" />

@@ -25,12 +25,27 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
     {
         Service = svc;
         _month = Shamsi.ThisMonth();
+        // کشوی ماه فقط چیزی را که بخش با آن رندر می‌کند عوض می‌کند؛ خودِ منطق
+        // دست‌نخورده می‌ماند — همان چیزی که سایت هم صریح نوشته.
+        Picker = new YearMonthPicker(k => { if (k.Length > 0 && k != Month) Month = k; });
     }
 
     protected LedgerService<TEntity> Service { get; }
 
-    public ObservableCollection<TRow> Rows { get; } = new();
+    /// <summary>
+    /// ⚠️ ‎BulkObservableCollection‎ است، نه ‎ObservableCollection‎ی ساده: پر
+    /// کردنِ ردیف‌ها یک خبر می‌دهد نه ‎n‎ خبر. همان چیزی که «یک ثانیه گیر
+    /// کردنِ» بخش‌های پرجدول را می‌ساخت.
+    /// </summary>
+    public BulkObservableCollection<TRow> Rows { get; } = new();
     public ObservableCollection<string> Months { get; } = new();
+
+    /// <summary>
+    /// کشویِ «سال» + «ماه» — همتای ‎_ymSelectsHtml‎ی سایت.
+    /// گزارشِ صاحب ریپو: «کادرِ کشویی سال هم نیست.» هیچ بخشی نداشت.
+    /// ⚠️ ‎Months‎ی رشته‌ای هم مانده چون چند آزمون و چند بخشِ دیگر به آن بندند.
+    /// </summary>
+    public YearMonthPicker Picker { get; }
 
     [ObservableProperty] private string _month;
     [ObservableProperty] private string _search = "";
@@ -74,14 +89,16 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
         Months.Clear();
         foreach (var m in await Service.MonthsAsync()) Months.Add(m);
         if (!Months.Contains(Month)) Months.Insert(0, Month);
+        Picker.Load(Months, Month);
         await ReloadRowsAsync();
     }
 
     protected async Task ReloadRowsAsync()
     {
         var list = await Service.ListAsync(Month);
-        Rows.Clear();
-        foreach (var e in list) Rows.Add(Track(Wrap(e)));
+        // یک‌جا، نه ردیف‌به‌ردیف — وگرنه جدول به ازای هر ردیف یک‌بار خودش را
+        // از نو می‌چیند و بخش هنگامِ باز شدن می‌ایستد.
+        Rows.ResetTo(list.Select(e => Track(Wrap(e))));
         ApplyFilter();
         RecalcAll();
     }
@@ -110,12 +127,51 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
             var mk = Shamsi.MonthKey(e.DateShamsi);
             if (!Months.Contains(mk)) Months.Insert(0, mk);
             Month = mk;                       // خودش ReloadRowsAsync را صدا می‌زند
+            Picker.Adopt(mk);
         }
         else
         {
             Rows.Add(Track(Wrap(e)));
             RecalcAll();
         }
+    }
+
+    /// <summary>
+    /// ══ «📅 ماه جدید» — ‎addExpenseMonth()‎ی سایت ═══════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «کادرها ماهِ بعد کار نمی‌کند.» علتش این بود که فهرستِ
+    /// ماه‌ها فقط ماه‌هایی را دارد که <b>داده</b> دارند؛ ماهِ بعد تا وقتی
+    /// ردیفی نداشته باشد اصلاً در کشویی نیست. در سایت دکمهٔ «🗓️ ماه جدید»
+    /// همین کار را می‌کند و در نیتیو دکمه‌اش بود ولی <b>هیچ فرمانی نداشت</b>.
+    ///
+    /// منطقش مو‌به‌مو همان سایت است: تازه‌ترین ماه را بردار، یکی جلو ببر (با
+    /// چرخشِ سال در ماهِ ۱۲)، و یک ردیفِ خالی به تاریخِ روزِ اولِ همان ماه بساز.
+    /// </summary>
+    [RelayCommand]
+    protected async Task NewMonthAsync()
+    {
+        var latest = Months.Where(m => m.Any(char.IsDigit))
+                           .OrderByDescending(m => m).FirstOrDefault();
+
+        string next;
+        if (latest is not null
+            && int.TryParse(YearMonthPicker.YearOf(latest), out var y)
+            && int.TryParse(YearMonthPicker.MonthOf(latest), out var mo))
+        {
+            mo++;
+            if (mo > 12) { mo = 1; y++; }
+            next = $"{y:0000}/{mo:00}";
+        }
+        else next = Shamsi.ThisMonth();
+
+        var e = NewEntity();
+        e.DateShamsi = next + "/01";
+        await Service.AddAsync(e);
+
+        if (!Months.Contains(next)) Months.Insert(0, next);
+        Month = next;
+        Picker.Adopt(next);
+        await ReloadRowsAsync();
     }
 
     [RelayCommand]

@@ -67,6 +67,20 @@ public sealed partial class ExchangeRowViewModel : RowViewModel
     /// </summary>
     public string RasidText => UsdText;
 
+    /// <summary>
+    /// گزینه‌های کشویی — <b>رشته</b>، نه ‎ComboBoxItem‎.
+    ///
+    /// ⚠️ باگی که این را لازم کرد: در XAML نوشته شده بود
+    ///     ‎&lt;ComboBox SelectedItem="{Binding CurrencyText}"&gt;
+    ///        &lt;ComboBoxItem Content="تومان"/&gt; …&lt;/ComboBox&gt;‎
+    /// وقتی بچه‌های ComboBox خودشان ‎ComboBoxItem‎ باشند، ‎SelectedItem‎ یک
+    /// <b>شیء</b> است نه رشته. پس اتصال به یک ‎string‎ نه سرِ بار مقدار را
+    /// می‌نشاند (هیچ گزینه‌ای برابرِ رشته نیست) و نه با انتخابِ کاربر چیزِ
+    /// درستی برمی‌گرداند — همان «نه منطقش کار می‌کند، نه سرِ جایش می‌نشیند و
+    /// خودبه‌خود عوض می‌شود».
+    /// </summary>
+    public static string[] CurrencyOptions { get; } = { "افغانی", "تومان", "کلدار" };
+
     public string CurrencyText
     {
         get => Currency switch

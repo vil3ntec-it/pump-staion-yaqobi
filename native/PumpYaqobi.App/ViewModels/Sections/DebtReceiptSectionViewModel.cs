@@ -55,7 +55,9 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
         _dateShamsi = Shamsi.Today();
     }
 
-    public ObservableCollection<DebtReceiptRowViewModel> Rows { get; } = new();
+    /// <summary>⚠️ ‎BulkObservableCollection‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
+    /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
+    public BulkObservableCollection<DebtReceiptRowViewModel> Rows { get; } = new();
     public ObservableCollection<string> Months { get; } = new();
 
     // ── کادرهای ورودِ سریع ─────────────────────────────────────────────────
@@ -95,9 +97,12 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
     private async Task ReloadAsync()
     {
         var list = await _host.DebtReceipts.ListAsync(Month.Length == 0 ? null : Month);
-        Rows.Clear();
-        var i = 1;
-        foreach (var r in list) Rows.Add(new DebtReceiptRowViewModel(r, i++));
+        using (Rows.Batch())
+        {
+            Rows.Clear();
+            var i = 1;
+            foreach (var r in list) Rows.Add(new DebtReceiptRowViewModel(r, i++));
+        }
         TotalText = Shamsi.Money(list.Sum(r => r.Amount));
     }
 

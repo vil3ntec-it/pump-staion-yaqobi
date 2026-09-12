@@ -343,6 +343,15 @@
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="SeparatorBrush" Value="{DynamicResource Pump.GridLine}" />
   </Style>
+  <!-- ⚠️ ‎HorizontalContentAlignment‎ی خودِ سرستون کافی نبود: نوشتهٔ داخلش را
+       خودِ ‎DataGrid‎ می‌سازد و ‎Stretch‎ می‌گذارد، پس «تاریخ»، «نام»، «حواله» و
+       بقیه به لبه می‌چسبیدند. گزارشِ صاحب ریپو: «اون تاریخ اسم حواله یا هر چی
+       اون بالای جدول که هستن … نوشته‌هاشون رو وسط بذار.»
+       در سایت هم استثنا ندارد: ‎.xls-tbl th{text-align:center}‎. -->
+  <Style Selector="DataGridColumnHeader TextBlock">
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
   <Style Selector="DataGridCell">
     <Setter Property="Padding" Value="10,4" />
     <Setter Property="FontSize" Value="17" />
@@ -884,6 +893,21 @@
        خانهٔ اولش «جمله» و بقیه جمعِ هر ستون. با ‎c:TotalsBar‎ زیرِ هر جدول
        گذاشته می‌شود؛ هیچ‌وقت داخلِ خودِ جدول نمی‌رود (توضیحِ چرایی در
        ‎Controls/TotalsBar.cs‎). -->
+  <!-- ══ ردیفِ «جمله» — همتای ‎<tfoot class="xls-foot">‎ی سایت ════════════════
+       گزارشِ صاحب ریپو: «زیرِ جدول‌ها جمله، آن شبیهِ جدول نیست.»
+
+       درست می‌گفت: تا امروز یک نوارِ ‎WrapPanel‎ی از جفت‌های برچسب/عدد بود که
+       هیچ شباهتی به خودِ جدول نداشت — نه خطِ عمودیِ بینِ خانه‌ها، نه
+       وسط‌چینی، نه هم‌قدیِ فونت با جدول.
+
+       در سایت این یک ردیفِ واقعیِ همان جدول است:
+           .xls-foot td{ background:gx-foot; color:…;
+                         border-top:2px solid ...; font-weight:900;
+                         padding:9px 8px; font-size:0.92rem }
+       و چون ‎<td>‎ است، خطِ عمودیِ ستون‌ها و وسط‌چینیِ ‎.xls-tbl td‎ را هم دارد.
+
+       حالا هر خانه یک «خانهٔ جدول» است: خطِ عمودیِ سمتِ خودش، وسط‌چین، با
+       همان پس‌زمینه و وزنِ سنگینِ سرستون. -->
   <Style Selector="c|TotalsBar">
     <Setter Property="Margin" Value="0,-1,0,0" />
     <Setter Property="Template">
@@ -891,11 +915,14 @@
         <Border Background="{DynamicResource Pump.Panel}"
                 BorderBrush="{DynamicResource Pump.Border}"
                 BorderThickness="1,2,1,1"
-                CornerRadius="0,0,10,10" Padding="12,9">
-          <StackPanel Orientation="Horizontal" Spacing="18">
-            <TextBlock Text="{TemplateBinding Title}" FontWeight="ExtraBold" FontSize="14"
-                       VerticalAlignment="Center"
-                       Foreground="{DynamicResource Pump.Text}" />
+                CornerRadius="0,0,10,10">
+          <StackPanel Orientation="Horizontal">
+            <Border BorderBrush="{DynamicResource Pump.GridLine}" BorderThickness="0,0,1,0"
+                    Padding="12,8" MinHeight="44">
+              <TextBlock Text="{TemplateBinding Title}" FontWeight="Black" FontSize="16"
+                         VerticalAlignment="Center" TextAlignment="Center"
+                         Foreground="{DynamicResource Pump.Label}" />
+            </Border>
             <ItemsControl ItemsSource="{TemplateBinding ItemsSource}" x:CompileBindings="False">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
@@ -904,12 +931,18 @@
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <StackPanel Spacing="1" Margin="0,0,20,0" MinWidth="76">
-                    <TextBlock Text="{Binding Label}" FontSize="11"
-                               Foreground="{DynamicResource Pump.Muted}" />
-                    <TextBlock Text="{Binding Value}" FontWeight="ExtraBold" FontSize="14"
-                               Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
-                  </StackPanel>
+                  <!-- خانهٔ جدول: خطِ عمودیِ خودش، وسط‌چین، هم‌قدِ سرستون -->
+                  <Border BorderBrush="{DynamicResource Pump.GridLine}" BorderThickness="0,0,1,0"
+                          Padding="10,6" MinWidth="96" MinHeight="44">
+                    <StackPanel Spacing="1" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="Bold"
+                                 TextAlignment="Center"
+                                 Foreground="{DynamicResource Pump.Muted}" />
+                      <TextBlock Text="{Binding Value}" FontWeight="Black" FontSize="17"
+                                 TextAlignment="Center"
+                                 Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                    </StackPanel>
+                  </Border>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>

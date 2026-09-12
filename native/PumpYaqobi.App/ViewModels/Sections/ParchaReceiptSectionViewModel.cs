@@ -105,7 +105,9 @@ public sealed partial class ParchaReceiptSectionViewModel : SectionViewModel, IR
             (m, ok) => host.Toast(m, ok ? ToastKind.Ok : ToastKind.Warn));
     }
 
-    public ObservableCollection<ParchaReceiptRowViewModel> Rows { get; } = new();
+    /// <summary>⚠️ ‎BulkObservableCollection‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
+    /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
+    public BulkObservableCollection<ParchaReceiptRowViewModel> Rows { get; } = new();
 
     public bool IsEmpty => Rows.Count == 0;
 
@@ -138,12 +140,15 @@ public sealed partial class ParchaReceiptSectionViewModel : SectionViewModel, IR
 
     public async Task RefreshAsync()
     {
-        Rows.Clear();
-        var i = 0;
-        foreach (var e in await _host.ParchaReceipts.ListAsync())
+        using (Rows.Batch())
         {
-            var vm = new ParchaReceiptRowViewModel(e, this) { Index = ++i };
-            Rows.Add(vm);
+            Rows.Clear();
+            var i = 0;
+            foreach (var e in await _host.ParchaReceipts.ListAsync())
+            {
+                var vm = new ParchaReceiptRowViewModel(e, this) { Index = ++i };
+                Rows.Add(vm);
+            }
         }
         OnPropertyChanged(nameof(IsEmpty));
         RefreshTotals();

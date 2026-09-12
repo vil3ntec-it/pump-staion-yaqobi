@@ -64,7 +64,9 @@ public sealed partial class StaffShortSectionViewModel : SectionViewModel
     public StaffShortSectionViewModel(AppHost host)
         : base("staffshort", "attendance", "کمبودی کارمندان") => _host = host;
 
-    public ObservableCollection<StaffShortRowViewModel> Rows { get; } = new();
+    /// <summary>⚠️ ‎BulkObservableCollection‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
+    /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
+    public BulkObservableCollection<StaffShortRowViewModel> Rows { get; } = new();
     public ObservableCollection<StaffSettleRowViewModel> Settles { get; } = new();
 
     [ObservableProperty] private StaffShortRowViewModel? _selected;
@@ -96,8 +98,11 @@ public sealed partial class StaffShortSectionViewModel : SectionViewModel
         var settles = await _host.Tools.SettlesAsync();
 
         var keep = Selected?.Row.Key;
-        Rows.Clear();
-        foreach (var r in rows) Rows.Add(new StaffShortRowViewModel(r));
+        using (Rows.Batch())
+        {
+            Rows.Clear();
+            foreach (var r in rows) Rows.Add(new StaffShortRowViewModel(r));
+        }
         Selected = Rows.FirstOrDefault(r => r.Row.Key == keep);
 
         Settles.Clear();

@@ -52,10 +52,15 @@ public sealed class FieldNavigationService
         if (e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Alt)) return;
 
         var key = e.Key;
-        if (key is not (Key.Up or Key.Down or Key.Left or Key.Right or Key.Enter or Key.Tab)) return;
+        if (key is not (Key.Up or Key.Down or Key.Left or Key.Right
+                        or Key.Enter or Key.Tab or Key.Escape)) return;
 
         if (_root.FocusManager?.GetFocusedElement() is not Control from) return;
         if (!IsField(from)) return;
+
+        // ‎Escape‎ همیشه کادر را رها می‌کند — راهِ دومِ بیرون آمدن، حتی وسطِ
+        // جدول. (‎Enter‎ اول دنبالِ کادرِ بعدی می‌گردد؛ این یکی نمی‌گردد.)
+        if (key == Key.Escape) { Release(from); e.Handled = true; return; }
 
         // جدول ناوبریِ خودش را دارد — دست نمی‌زنیم
         if (from.FindAncestorOfType<DataGrid>() is not null) return;
@@ -85,11 +90,46 @@ public sealed class FieldNavigationService
         };
 
         var best = Pick(from, dir, Fields(scope));
-        if (best is null) return;
+        if (best is null)
+        {
+            // ══ گیر نکردن در کادر ═════════════════════════════════════════
+            // گزارشِ صاحب ریپو: «وقتی در هر کادر یا سربرگی اسم می‌زنم، از آن
+            // کادر خارج نمی‌شود و همان‌جا می‌ماند و مجبورم می‌کند روی کادرِ
+            // دیگری بروم.»
+            //
+            // علتش همین‌جا بود: اگر در آن جهت کادری نبود، کلید نادیده گرفته
+            // می‌شد و فوکوس سرِ جایش می‌ماند — یعنی ‎Enter‎ هیچ کاری نمی‌کرد و
+            // تنها راهِ بیرون آمدن، کلیک روی کادرِ دیگر بود.
+            //
+            // در سایت ‎Enter‎ کادر را رها می‌کند:
+            //     onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+            // پس همان: آخرین کادر که بودی، ‎Enter‎ رهایت می‌کند.
+            if (key == Key.Enter) { Release(from); e.Handled = true; }
+            return;
+        }
 
         best.Focus(NavigationMethod.Directional);
         if (best is TextBox t) t.SelectAll();
         e.Handled = true;
+    }
+
+    /// <summary>
+    /// کادر را رها کن — همتای ‎this.blur()‎ی نسخهٔ وب.
+    ///
+    /// ⚠️ فقط ‎Focus(null)‎ کافی نیست: در آوالونیا کادرِ متنی تا وقتی چیزی
+    /// دیگری فوکوس نگرفته باشد، نشانگر را نگه می‌دارد. پس فوکوس به خودِ
+    /// صفحهٔ بخش داده می‌شود — همان‌جایی که کلیدهای میان‌بُر هم به آن
+    /// گوش می‌دهند.
+    /// </summary>
+    private void Release(Control from)
+    {
+        // اتصالِ ‎Text‎ روی ‎LostFocus‎ ثبت می‌شود؛ بی این، عددی که تازه تایپ
+        // شده تا وقتی کادر را ترک نکنی در ویومدل ننشسته است.
+        var scope = ScopeOf(from) ?? _root as Control;
+        if (scope is null) return;
+
+        scope.Focusable = true;
+        scope.Focus(NavigationMethod.Directional);
     }
 
     public enum Dir { Up, Down, Left, Right }

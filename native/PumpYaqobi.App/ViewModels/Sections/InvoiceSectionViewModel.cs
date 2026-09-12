@@ -163,7 +163,9 @@ public sealed partial class InvoiceSectionViewModel : SectionViewModel
     /// </summary>
     protected override bool ShowSubLinks => false;
 
-    public ObservableCollection<InvoiceRowViewModel> Rows { get; } = new();
+    /// <summary>⚠️ ‎BulkObservableCollection‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
+    /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
+    public BulkObservableCollection<InvoiceRowViewModel> Rows { get; } = new();
 
     [ObservableProperty] private string _search = "";
     [ObservableProperty] private int _pendingCount;
@@ -271,18 +273,21 @@ public sealed partial class InvoiceSectionViewModel : SectionViewModel
     private void ApplyFilter()
     {
         var q = Search.Trim();
-        Rows.Clear();
-        foreach (var r in _all)
+        using (Rows.Batch())
         {
-            var okPane = Pane switch
+            Rows.Clear();
+            foreach (var r in _all)
             {
-                InvoicePane.Pending => r.IsPending,
-                InvoicePane.Approved => r.IsApproved,
-                _ => true,
-            };
-            if (!okPane) continue;
-            if (q.Length > 0 && !r.Matches(q)) continue;
-            Rows.Add(r);
+                var okPane = Pane switch
+                {
+                    InvoicePane.Pending => r.IsPending,
+                    InvoicePane.Approved => r.IsApproved,
+                    _ => true,
+                };
+                if (!okPane) continue;
+                if (q.Length > 0 && !r.Matches(q)) continue;
+                Rows.Add(r);
+            }
         }
         OnPropertyChanged(nameof(ListCountText));
     }

@@ -81,61 +81,18 @@
           <DataGridTextColumn Header="نام" Binding="{Binding Worker}" Width="Auto" />
           <DataGridTemplateColumn Header="تیل" Width="Auto">
             <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate><TextBlock Text="{Binding FuelText}" VerticalAlignment="Center" Margin="6,0" /></DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-            <DataGridTemplateColumn.CellEditingTemplate>
               <DataTemplate>
-                <ComboBox SelectedItem="{Binding FuelText}">
-                  <ComboBoxItem Content="پطرول" /><ComboBoxItem Content="دیزل" />
-                </ComboBox>
-              </DataTemplate>
-            </DataGridTemplateColumn.CellEditingTemplate>
-          </DataGridTemplateColumn>
-          <DataGridTextColumn Header="شروع" Binding="{Binding StartText}" Width="Auto" />
-          <DataGridTextColumn Header="ختم" Binding="{Binding EndText}" Width="Auto" />
-          <DataGridTextColumn Header="لیتر" Binding="{Binding LitersText}" Width="Auto" IsReadOnly="True" />
-          <DataGridTextColumn Header="فی" Binding="{Binding PriceText}" Width="Auto" />
-          <DataGridTextColumn Header="فروش" Binding="{Binding SalesText}" Width="Auto" IsReadOnly="True" />
-          <DataGridTextColumn Header="قرضِ پایه" Binding="{Binding DebtText}" Width="Auto" />
-          <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="Auto" MinWidth="150" MaxWidth="320" />
-          <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"
-                        Command="{Binding $parent[UserControl].DataContext.DeletePumpCommand}"
-                        CommandParameter="{Binding}" />
+              <!-- ⚠️ کشویی همیشه پیداست و رشته می‌دهد، نه ‎ComboBoxItem‎.
+                   با بچه‌های ‎ComboBoxItem‎، ‎SelectedItem‎ یک **شیء** است نه
+                   رشته — پس نه سرِ بار مقدار می‌نشست و نه انتخابِ کاربر
+                   برمی‌گشت. و داخلِ ‎CellEditingTemplate‎ بودنش یعنی مقدارِ
+                   فعلی دیده نمی‌شد و هر تغییر دو کلیک می‌خواست. در سایت این
+                   کادر ‎<select class="xls-in">‎ی همیشه‌پیداست. -->
+                <ComboBox ItemsSource="{Binding FuelOptions}"
+                          SelectedItem="{Binding FuelText}"
+                          Margin="4,1" MinHeight="0" Padding="7,2" FontSize="14" />
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-        </DataGrid.Columns>
-      </c:ExcelGrid>
-
-      <c:ExcelGrid Grid.Row="2" ItemsSource="{Binding Txns}" x:CompileBindings="False">
-        <DataGrid.Columns>
-          <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="Auto" MinWidth="150" MaxWidth="320" />
-          <DataGridTemplateColumn Header="نوع" Width="93">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate><TextBlock Text="{Binding TypeText}" VerticalAlignment="Center" Margin="6,0" /></DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-            <DataGridTemplateColumn.CellEditingTemplate>
-              <DataTemplate>
-                <ComboBox SelectedItem="{Binding TypeText}">
-                  <ComboBoxItem Content="قرض" /><ComboBoxItem Content="مصرف" />
-                </ComboBox>
-              </DataTemplate>
-            </DataGridTemplateColumn.CellEditingTemplate>
-          </DataGridTemplateColumn>
-          <DataGridTemplateColumn Header="تیل" Width="93">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate><TextBlock Text="{Binding FuelText}" VerticalAlignment="Center" Margin="6,0" /></DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-            <DataGridTemplateColumn.CellEditingTemplate>
-              <DataTemplate>
-                <ComboBox SelectedItem="{Binding FuelText}">
-                  <ComboBoxItem Content="پطرول" /><ComboBoxItem Content="دیزل" />
-                </ComboBox>
-              </DataTemplate>
-            </DataGridTemplateColumn.CellEditingTemplate>
           </DataGridTemplateColumn>
           <DataGridTextColumn Header="لیتر" Binding="{Binding LitersText}" Width="108" />
           <DataGridTextColumn Header="مبلغ" Binding="{Binding AmountText}" Width="128" />
