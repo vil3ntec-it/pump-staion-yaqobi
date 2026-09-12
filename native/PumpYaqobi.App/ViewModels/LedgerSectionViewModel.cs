@@ -1,3 +1,4 @@
+using PumpYaqobi.App.Services;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using PumpYaqobi.App.Controls;
@@ -147,30 +148,43 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
     /// منطقش مو‌به‌مو همان سایت است: تازه‌ترین ماه را بردار، یکی جلو ببر (با
     /// چرخشِ سال در ماهِ ۱۲)، و یک ردیفِ خالی به تاریخِ روزِ اولِ همان ماه بساز.
     /// </summary>
+    /// <summary>
+    /// ══ «📅 ماه جدید» ═══════════════════════════════════════════════════════
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو: «کلیک → دیالوگِ انتخابِ سال و ماه → تأیید →
+    /// ماه در Data Layer ایجاد شود → همان ماه فعال شود → بدون Restart.»
+    ///
+    /// پیش از این دو مشکل داشت: اولش هیچ فرمانی نداشت، بعد هم که وصل شد
+    /// بی‌سروصدا ماهِ بعدی را می‌ساخت و کاربر هیچ انتخابی نداشت.
+    ///
+    /// ⚠️ ماهِ تکراری ساخته نمی‌شود — خودِ دیالوگ ماه‌های موجود را می‌داند و
+    /// دکمه‌اش را خاموش می‌کند. این‌جا هم بارِ دوم بررسی می‌شود، چون بینِ باز
+    /// شدنِ دیالوگ و تأیید ممکن است چیزی عوض شده باشد.
+    /// </summary>
     [RelayCommand]
     protected async Task NewMonthAsync()
     {
-        var latest = Months.Where(m => m.Any(char.IsDigit))
-                           .OrderByDescending(m => m).FirstOrDefault();
+        var pick = await Dialogs.PickMonthAsync(Months.ToList());
+        if (string.IsNullOrWhiteSpace(pick)) return;
 
-        string next;
-        if (latest is not null
-            && int.TryParse(YearMonthPicker.YearOf(latest), out var y)
-            && int.TryParse(YearMonthPicker.MonthOf(latest), out var mo))
+        if (Months.Contains(pick))
         {
-            mo++;
-            if (mo > 12) { mo = 1; y++; }
-            next = $"{y:0000}/{mo:00}";
+            // از قبل هست: فقط برو رویش — نه رکوردِ تکراری.
+            Month = pick;
+            Picker.Adopt(pick);
+            await ReloadRowsAsync();
+            return;
         }
-        else next = Shamsi.ThisMonth();
 
+        // ردیفِ خالیِ روزِ اولِ همان ماه — همان کاری که ‎addExpenseMonth‎ی سایت
+        // می‌کند: ماه با یک ردیفِ خالی «باز» می‌شود.
         var e = NewEntity();
-        e.DateShamsi = next + "/01";
+        e.DateShamsi = pick + "/01";
         await Service.AddAsync(e);
 
-        if (!Months.Contains(next)) Months.Insert(0, next);
-        Month = next;
-        Picker.Adopt(next);
+        if (!Months.Contains(pick)) Months.Insert(0, pick);
+        Month = pick;
+        Picker.Adopt(pick);
         await ReloadRowsAsync();
     }
 

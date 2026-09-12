@@ -105,6 +105,18 @@ public static class Dialogs
     }
 
     /// <summary>
+    /// «📅 ماه جدید» — سال و ماه را بپرس. ‎null‎ یعنی انصراف.
+    /// ماه‌هایی که از قبل هستند داده می‌شوند تا تکراری ساخته نشود.
+    /// </summary>
+    public static async Task<string?> PickMonthAsync(IReadOnlyCollection<string> existing)
+    {
+        var owner = Owner;
+        if (owner is null) return null;
+        return await Dispatcher.UIThread.InvokeAsync(async () =>
+            await MonthPickWindow.For(existing).ShowDialog<string?>(owner));
+    }
+
+    /// <summary>
     /// پنجرهٔ «📲 کیو‌آر» را نشان بده — همتای ‎#qrModal‎ی سایت.
     /// </summary>
     public static async Task ShowQrAsync(string name, string link, byte[]? png, string hint)

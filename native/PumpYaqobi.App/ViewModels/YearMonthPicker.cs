@@ -54,7 +54,35 @@ public sealed partial class YearMonthPicker : ObservableObject
     /// </summary>
     public void Load(IEnumerable<string> keys, string? active)
     {
-        _all = keys.Where(k => k.Any(char.IsDigit)).Distinct().OrderByDescending(k => k).ToList();
+        var have = keys.Where(k => k.Any(char.IsDigit)).Distinct().ToList();
+
+        // ══ هر دوازده ماه، و چند سال — نه فقط آن‌هایی که داده دارند ══════════
+        //
+        // خواستهٔ صریحِ صاحب ریپو: «تمام ۱۲ ماهِ تقویم شمسی … نباید فقط یک ماه
+        // یا چند مقدارِ ثابت وجود داشته باشد. Year Selector هم نباید فقط یک
+        // سالِ ثابت داشته باشد.»
+        //
+        // تا امروز فهرست فقط از روی <b>داده</b> ساخته می‌شد، پس ماهی که هنوز
+        // ردیفی نداشت اصلاً در کشویی نبود — و کاربر راهی نداشت برود ماهِ بعد.
+        //
+        // حالا: سال‌ها از کهنه‌ترین سالِ داده تا یک سال جلوتر از امروز، و برای
+        // سالِ انتخاب‌شده هر دوازده ماه. ماهی که داده ندارد جدولِ خالی نشان
+        // می‌دهد — که درست است، نه این‌که اصلاً نشود انتخابش کرد.
+        var years = have.Select(YearOf).Where(y => y.Length > 0)
+                        .Select(int.Parse).ToList();
+        var thisYear = int.Parse(YearOf(Shamsi.ThisMonth()));
+        var lo = years.Count > 0 ? Math.Min(years.Min(), thisYear) : thisYear;
+        var hi = (years.Count > 0 ? Math.Max(years.Max(), thisYear) : thisYear) + 1;
+
+        _all = new List<string>();
+        for (var y = hi; y >= lo; y--)
+            for (var m = 12; m >= 1; m--)
+                _all.Add($"{y:0000}/{m:00}");
+
+        // کلیدی که در دیتابیس هست ولی بیرونِ این بازه افتاده (دادهٔ خیلی قدیمی)
+        // هم باید بماند، وگرنه همان ماه از دسترس بیرون می‌رود.
+        foreach (var k in have.Where(k => !_all.Contains(k))) _all.Add(k);
+        _all = _all.Distinct().OrderByDescending(k => k).ToList();
 
         _quiet = true;
         Years.Clear();
