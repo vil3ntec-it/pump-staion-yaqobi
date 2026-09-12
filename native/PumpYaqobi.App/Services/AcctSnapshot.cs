@@ -64,6 +64,18 @@ public static class AcctView
     /// </summary>
     public const int MaxUrl = 1400;
 
+    /// <summary>
+    /// ══ نشانیِ پیش‌فرضِ «صفحهٔ حسابِ من» ═════════════════════════════════════
+    ///
+    /// دامنهٔ خودِ صاحب ریپو است (همان ‎CNAME‎ی مخزن)، نه نشانیِ منبع — قاعدهٔ
+    /// «توش نوشته نباشه از مخزن فلان فلان» این‌جا هم رعایت شده: مشتری روی
+    /// گوشی‌اش فقط دامنهٔ خودِ پمپ را می‌بیند.
+    ///
+    /// اگر روزی صفحه جای دیگری رفت، «تنظیمات › نشانیِ صفحهٔ حساب» جایش را
+    /// می‌گیرد و این پیش‌فرض کنار می‌رود.
+    /// </summary>
+    public const string DefaultBase = "https://yaqobipump.top/view/";
+
     /// <summary>ردیف‌های تازه‌تر مهم‌ترند؛ کمترین شماری که همیشه می‌ماند.</summary>
     private const int MinRows = 5;
 
@@ -134,7 +146,7 @@ public static class AcctView
     private static string Clean(string? baseUrl)
     {
         var b = (baseUrl ?? "").Trim();
-        if (b.Length == 0) b = PumpYaqobi.App.Update.UpdateService.ViewerBaseUrl;
+        if (b.Length == 0) b = DefaultBase;
 
         var cut = b.IndexOfAny(new[] { '#', '?' });
         if (cut >= 0) b = b[..cut];

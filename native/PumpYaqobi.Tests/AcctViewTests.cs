@@ -93,9 +93,15 @@ public class AcctViewTests
         Assert.DoesNotContain("server", url);
         Assert.Contains("p=", url);
 
+        // ⚠️ نشانه وسطِ نشانی است (دادهٔ حساب پشتش می‌آید) — خواننده باید
+        // همان‌جا بایستد، نه این‌که تا ته بخواند.
         var back = AcctLink.Parse(Uri.UnescapeDataString(url));
         Assert.NotNull(back);
         Assert.Equal(7, back!.Value.PersonId);
+
+        // و نشانیِ پیش‌فرض هم دامنهٔ خودِ پمپ است، نه نامِ مخزن
+        Assert.StartsWith("https://", AcctView.DefaultBase);
+        Assert.DoesNotContain("github", AcctView.DefaultBase);
     }
 
     /// <summary>و صفحهٔ تازه واقعاً در مخزن هست و همان تکه را می‌خواند.</summary>

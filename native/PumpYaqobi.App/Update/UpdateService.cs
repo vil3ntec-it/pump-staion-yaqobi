@@ -42,19 +42,6 @@ public sealed class UpdateService
     private const string FeedUrl =
         "https://api.github.com/repos/vil3ntec-it/pump-staion-yaqobi/releases/latest";
 
-    /// <summary>
-    /// ══ نشانیِ پیش‌فرضِ «صفحهٔ حسابِ من» ═════════════════════════════════════
-    /// همان صفحه‌ای که کیو‌آرِ هر حساب به آن می‌برد (پوشهٔ ‎view/‎).
-    ///
-    /// ⚠️ این‌جا نشسته چون تنها فایلی است که اجازه دارد نامِ منبع را داشته
-    /// باشد (‎UpdateTests.NoUserFacingFileMentionsTheRepository‎). در رابط
-    /// کاربری هیچ‌جا نوشته نمی‌شود؛ فقط داخلِ کیو‌آر می‌رود.
-    ///
-    /// صاحب ریپو اگر روزی خودش صفحه را جای دیگری گذاشت، «تنظیمات › نشانیِ
-    /// صفحهٔ حساب» جایش را می‌گیرد و این پیش‌فرض کنار می‌رود.
-    /// </summary>
-    public const string ViewerBaseUrl =
-        "https://vil3ntec-it.github.io/pump-staion-yaqobi/view/";
 
     private static readonly HttpClient Http = CreateClient();
 
