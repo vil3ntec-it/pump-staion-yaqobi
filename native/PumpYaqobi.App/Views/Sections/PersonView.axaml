@@ -563,10 +563,11 @@
       <StackPanel Grid.Row="4" Spacing="10" Margin="0,10,0,0"
                   DataContext="{Binding Current}">
         <!-- «ردیفِ تازه» زیرِ جدول است، نه لای کادرهای بالا — همان‌جایی که در
-             سایت ‎.add-row-btn‎ می‌نشیند. -->
-        <Button Classes="accent" Content="➕ ردیفِ تازه" HorizontalAlignment="Stretch"
-                Padding="12,8" FontSize="15" FontWeight="Bold"
-                Command="{Binding AddRowCommand}" />
+             سایت ‎.add-row-btn‎ می‌نشیند. کنارش «➕➕ چندتایی» که در سایت هست
+             (‎addPersonRowsBulk‎) و این‌جا نبود؛ نوارش همان نوارِ مشترکِ بقیهٔ
+             بخش‌هاست. -->
+        <c:RowAddBar HorizontalAlignment="Left"
+                     Host="{Binding}" AddRowCommand="{Binding AddRowCommand}" />
 
         <!-- ══ نوتِ حساب — همتای ‎#pm-note-area‎ی سایت ═════════════════════ -->
         <StackPanel Spacing="5">

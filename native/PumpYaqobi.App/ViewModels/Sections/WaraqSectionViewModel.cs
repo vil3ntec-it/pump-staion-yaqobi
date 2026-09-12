@@ -217,6 +217,9 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
     private readonly AppHost _host;
     private readonly WaraqSectionViewModel _section;
 
+    /// <summary>نوارِ «➕ ردیف / ➕➕ چندتایی»ِ پایینِ ورق — همتای ‎addWaraqRowsBulk‎ی سایت.</summary>
+    public System.Windows.Input.ICommand? RowAddCommand => AddTxnCommand;
+
     public WaraqPageViewModel(AppHost host, WaraqEntry w, WaraqSectionViewModel section)
     {
         _host = host; _section = section; Entity = w;

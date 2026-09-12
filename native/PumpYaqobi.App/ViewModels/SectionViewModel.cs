@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Services;
 
@@ -125,6 +126,14 @@ public abstract partial class SectionViewModel : ObservableObject
     /// <summary>«‹ برگشت» — از زیربخش به خودِ بخش.</summary>
     [RelayCommand]
     public void CloseSub() => OpenSub = null;
+
+    /// <summary>
+    /// ══ «➕ ردیف» و «➕➕ چندتایی» ═══════════════════════════════════════════
+    /// بخشی که ردیفِ دستی دارد این را می‌دهد و قالبِ مشترک، نوارِ افزودن را
+    /// پایینِ جدولش می‌کشد — همان‌جایی که سایت گذاشته. ‎null‎ یعنی این بخش
+    /// ردیفِ دستی ندارد و هیچ نواری نمی‌بیند.
+    /// </summary>
+    public virtual ICommand? RowAddCommand => null;
 
     // ══ اندازهٔ نوشتهٔ بخش — ‎A−‎ / ‎A+‎ / ‎↺‎ ═══════════════════════════════════
     //

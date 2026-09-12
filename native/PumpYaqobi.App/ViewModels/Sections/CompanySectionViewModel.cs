@@ -105,6 +105,9 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
     private readonly AppHost _host;
     private readonly CompanySectionViewModel _section;
 
+    /// <summary>نوارِ «➕ ردیف / ➕➕ چندتایی»ِ پایینِ جدول — همتای ‎addCompanyRowsBulk‎ی سایت.</summary>
+    public System.Windows.Input.ICommand? RowAddCommand => AddRowCommand;
+
     public CompanyPageViewModel(AppHost host, TilCompany c, CompanySectionViewModel section)
     {
         _host = host; _section = section; Entity = c;

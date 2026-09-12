@@ -95,6 +95,9 @@ public sealed partial class ParchaReceiptSectionViewModel : SectionViewModel, IR
 {
     private readonly AppHost _host;
 
+    /// <summary>نوارِ «➕ ردیف / ➕➕ چندتایی»ِ پایینِ جدول — مثلِ سایت.</summary>
+    public override System.Windows.Input.ICommand? RowAddCommand => AddRowCommand;
+
     public ParchaReceiptSectionViewModel(AppHost host)
         : base("rasid", "rasid", "رسید پارچه")
     {

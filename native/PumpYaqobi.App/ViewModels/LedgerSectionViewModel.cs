@@ -200,6 +200,9 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
 
     public int RowCount => Rows.Count;
 
+    /// <summary>نوارِ «➕ ردیف / ➕➕ چندتایی»ِ پایینِ همین دفتر.</summary>
+    public override System.Windows.Input.ICommand? RowAddCommand => AddRowCommand;
+
     /// <summary>‎Ctrl+عدد‎ — همان ‎AddRowAsync‎، فقط ‎n‎ بار.</summary>
     public async Task AddRowsAsync(int count)
     {

@@ -13,7 +13,6 @@
       <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
         <Button Classes="accent" Content="📥 ثبت همه در حساب‌ها" Margin="0,0,6,0"
                 Command="{Binding PostAllCommand}" />
-        <Button Classes="ghost" Content="➕ ردیف" Command="{Binding AddRowCommand}" />
       </WrapPanel>
     </c:SectionPage.Toolbar>
 
