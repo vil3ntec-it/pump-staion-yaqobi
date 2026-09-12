@@ -108,8 +108,10 @@ public class SiteFlowParityTests
         var fld = Slice(t, "<Style Selector=\"TextBlock.fld\">", "</Style>");
         Assert.Contains("Value=\"Start\"", fld);
 
+        // ⚠️ ‎.label‎ عمداً وسط ماند: همان کلاس در کادرهای خلاصه و سربرگ‌ها هم
+        // هست و سرِ خط کردنش گزارشِ «سربرگ‌ها خراب شدند» را ساخت.
         var lbl = Slice(t, "<Style Selector=\"TextBlock.label\">", "</Style>");
-        Assert.Contains("Value=\"Start\"", lbl);
+        Assert.DoesNotContain("Value=\"Start\"", lbl);
 
         // و خودِ جدول‌ها هنوز وسط‌چین‌اند
         var cell = Slice(t, "<Style Selector=\"DataGridCell\">", "</Style>");
@@ -148,6 +150,60 @@ public class SiteFlowParityTests
         Assert.Contains("private Control? CellPicker(DataGridColumn? col)", g);
         Assert.Contains("var target = CellPicker(CurrentColumn) ?? Focused;", g);
         Assert.Contains("t.CellEditingTemplate is not null || CellPicker(col) is not null", g);
+    }
+
+    // ── پنجره‌های گفت‌وگو ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// ══ چرا «Object reference not set» می‌آمد ═══════════════════════════════
+    ///
+    /// فیلدهای ‎x:Name‎ را کدِ تولیدشدهٔ ‎InitializeComponent‎ پر می‌کند. این سه
+    /// پنجره به‌جای آن مستقیم ‎AvaloniaXamlLoader.Load(this)‎ را صدا می‌زدند:
+    /// XAML بار می‌شد ولی فیلدها ‎null‎ می‌ماندند، و اولین دست زدن به آن‌ها
+    /// همان پیام را می‌داد — یعنی افزودنِ شخص، ورق، حسابِ فرعی، جدولِ جدید،
+    /// آرشیو و کیو‌آر، همه.
+    ///
+    /// ⚠️ هر پنجره‌ای که فیلدِ ‎x:Name‎ را مستقیم صدا می‌زند باید
+    /// ‎InitializeComponent()‎ داشته باشد. (خواندن با ‎FindControl‎ فرق دارد و
+    /// با ‎Load‎ هم کار می‌کند — همان کاری که ‎PersonView‎ می‌کند.)
+    /// </summary>
+    [Theory]
+    [InlineData("DialogWindow")]
+    [InlineData("QrWindow")]
+    [InlineData("WaraqDateWindow")]
+    public void WindowsWithNamedFieldsCallInitializeComponent(string name)
+    {
+        var cs = Read("PumpYaqobi.App", "Views", name + ".axaml.cs");
+        Assert.Contains("InitializeComponent()", cs);
+        Assert.DoesNotContain("AvaloniaXamlLoader.Load(this)", cs);
+    }
+
+    // ── ستونِ «#» ────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// «چرا هیچ جدولی شماره ندارد؟» — در سایت ستونِ اولِ هر جدول ‎#‎ است.
+    /// حالا سرستونِ ردیفِ خودِ جدول همان را نشان می‌دهد، برای **همهٔ** جدول‌ها
+    /// با هم (نه چهل ویومدل که هر کدام خاصیتِ شماره بگیرند).
+    /// </summary>
+    [Fact]
+    public void EveryTableShowsRowNumbers()
+    {
+        var g = Read("PumpYaqobi.App", "Controls", "ExcelGrid.cs");
+        Assert.Contains("HeadersVisibility = DataGridHeadersVisibility.All;", g);
+        Assert.Contains("e.Row.Header = e.Row.GetIndex() + 1;", g);
+
+        // و نوارِ «جمله» پهنای همین ستون را حساب می‌کند تا جا‌به‌جا نشود
+        var t = Read("PumpYaqobi.App", "Controls", "TotalsBar.cs");
+        Assert.Contains("var acc = RowHeaderWidth(grid);", t);
+    }
+
+    /// <summary>سرستونِ ستون‌ها واقعاً وسط بنشیند — نوشته‌اش داخلِ قالب ساخته می‌شود.</summary>
+    [Fact]
+    public void ColumnHeadersAreCentredInsideTheirTemplate()
+    {
+        var t = Read("PumpYaqobi.App", "Themes", "Controls.axaml");
+        Assert.Contains("<Style Selector=\"DataGridColumnHeader /template/ ContentPresenter\">", t);
+        Assert.Contains("<Style Selector=\"DataGridColumnHeader /template/ TextBlock\">", t);
     }
 
     private static string Slice(string s, string from, string to)

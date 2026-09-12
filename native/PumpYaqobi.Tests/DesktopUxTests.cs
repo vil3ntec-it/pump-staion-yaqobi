@@ -89,9 +89,9 @@ public class DesktopUxTests
     public void ArrowKeysFollowTheScreenNotTheRawIndex()
     {
         var g = App("Controls", "ExcelGrid.cs");
-        Assert.Contains("MoveColumn(toRight == rtl ? -1 : +1, shift)", g);
-        Assert.Contains("private bool ColumnsRunRightToLeft()", g);
+        Assert.Contains("MoveColumn(e.Key == Key.Right ? -1 : +1, shift)", g);
         Assert.DoesNotContain("MoveColumn(e.Key == Key.Right ? +1 : -1", g);
+        Assert.DoesNotContain("ColumnsRunRightToLeft", g);
     }
 
     // ── اسکرول و سربرگ ──────────────────────────────────────────────────────

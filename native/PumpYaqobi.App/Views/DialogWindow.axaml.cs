@@ -13,7 +13,18 @@ public partial class DialogWindow : Window
 {
     private string? _result;
 
-    public DialogWindow() => AvaloniaXamlLoader.Load(this);
+    // ⚠️ ‎InitializeComponent()‎ و نه ‎AvaloniaXamlLoader.Load(this)‎ — و این
+    // فرقِ ظاهری نیست:
+    //
+    // فیلدهای ‎x:Name‎ (‎TitleText‎، ‎Input‎، ‎OkBtn‎ …) را **کدِ تولیدشدهٔ**
+    // ‎InitializeComponent‎ پر می‌کند. با صدا زدنِ مستقیمِ ‎Load‎، خودِ XAML
+    // بار می‌شود ولی آن فیلدها ‎null‎ می‌مانند — و اولین دست زدن به آن‌ها
+    // می‌شود «‎Object reference not set to an instance of an object‎».
+    //
+    // همان پیامی که صاحب ریپو گرفت و هیچ آزمونی نمی‌دیدش: تنها سنجشی که این
+    // مسیر را می‌دواند با ‎Dialogs.PromptHook‎ از خودِ پنجره رد می‌شد. حالا
+    // سنجشِ ‎dialogs‎ پنجره‌های واقعی را می‌سازد و همین را می‌پاید.
+    public DialogWindow() => InitializeComponent();
 
     public static DialogWindow ForPrompt(string title, string message, string initial, string ok)
     {

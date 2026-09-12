@@ -37,27 +37,30 @@ public class KeyboardAndZeroTests
     /// <summary>
     /// ══ چپ/راست: همان‌جایی که چشم می‌بیند ═══════════════════════════════════
     ///
-    /// ⚠️ این آزمون **دو بار** عوض شده، و هر دو بار به خاطرِ یک گزارشِ تکراری
-    /// از صاحب ریپو: «کلیدِ راست را می‌زنم، چپ می‌رود.»
+    /// ⚠️ این آزمون **سه بار** عوض شده و هر سه بار به خاطرِ یک گزارشِ تکراری:
+    /// «کلیدِ راست را می‌زنم، چپ می‌رود.» تاریخچه‌اش را بخوان و دوباره عوضش
+    /// نکن:
     ///
-    ///   ۱) اول از ‎FlowDirection‎ خوانده می‌شد — آن خاصیت اگر به این کنترل
-    ///      نرسد بی‌صدا برعکس می‌شود، و همان شکایت را ساخت.
-    ///   ۲) بعد ایندکسِ خام شد (‎Right → column+1‎) — در جدولِ راست‌به‌چپ،
-    ///      ستونِ «بعدی» سمتِ چپ است، پس **دقیقاً** همان شکایت برگشت.
+    ///   ۱) جهت از ‎FlowDirection‎ خوانده می‌شد — به کنترل نمی‌رسید.
+    ///   ۲) ایندکسِ خام شد (‎Right → column+1‎) — در جدولِ راست‌به‌چپ ستونِ
+    ///      «بعدی» سمتِ چپ است، پس همان شکایت برگشت.
+    ///   ۳) از جای سربرگ‌ها اندازه گرفته شد — آوالونیا راست‌به‌چپ را با
+    ///      آینه‌کردنِ **رسم** انجام می‌دهد و مختصاتش هنوز چپ‌به‌راست است.
     ///
-    /// حالا از جای واقعیِ سربرگ‌ها روی صفحه خوانده می‌شود و قاعده‌اش یکی است:
-    /// ‎→‎ خانهٔ سمتِ راست، ‎←‎ خانهٔ سمتِ چپ — چیزی که کاربر می‌بیند.
+    /// قاعدهٔ نهایی، بی هیچ تشخیصی: کلِ برنامه راست‌به‌چپ است و ستونِ ۰ سمتِ
+    /// راست می‌نشیند، پس ‎→‎ ایندکسِ کمتر و ‎←‎ ایندکسِ بیشتر.
     /// </summary>
     [Fact]
     public void ArrowKeysFollowWhatTheEyeSees()
     {
         var g = Grid();
-        Assert.Contains("var rtl = ColumnsRunRightToLeft();", g);
-        Assert.Contains("MoveColumn(toRight == rtl ? -1 : +1, shift)", g);
+        Assert.Contains("MoveColumn(e.Key == Key.Right ? -1 : +1, shift)", g);
 
-        // جهت از جای سربرگ‌ها می‌آید، نه از ایندکسِ خام
-        Assert.Contains("GetVisualDescendants().OfType<DataGridColumnHeader>()", g);
-        Assert.DoesNotContain("MoveColumn(e.Key == Key.Right ? +1 : -1", g);
+        // نه ‎FlowDirection‎، نه اندازه‌گیریِ سربرگ — هیچ تشخیصی در کار نیست
+        var at = g.IndexOf("case Key.Left:", StringComparison.Ordinal);
+        Assert.True(at > 0);
+        Assert.DoesNotContain("FlowDirection", g[at..(at + 400)]);
+        Assert.DoesNotContain("ColumnsRunRightToLeft", g);
     }
 
     /// <summary>
@@ -106,7 +109,7 @@ public class KeyboardAndZeroTests
     public void ShiftArrowSelectsManyCellsAndDeleteClearsThem()
     {
         var g = Grid();
-        Assert.Contains("MoveColumn(toRight == rtl ? -1 : +1, shift)", g);
+        Assert.Contains("MoveColumn(e.Key == Key.Right ? -1 : +1, shift)", g);
         Assert.Contains("_colAnchor", g);
         Assert.Contains("rangesel", g);
         Assert.Contains("case Key.Delete when !IsReadOnly && ClearSelectedCells():", g);
