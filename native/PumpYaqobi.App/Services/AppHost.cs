@@ -39,6 +39,8 @@ public sealed class AppHost
         AmanatCalc = new AmanatService();
         AttendanceCalc = new AttendanceService();
         Aging = new AgingService(Debt);
+        Membership = new MembershipService();
+        DebtSummary = new DebtSummaryService(Aging, Membership);
         StaffShort = new StaffShortService(Waraq);
         MonthReport = new MonthReportService();
         TankDip = new TankDipService();
@@ -56,7 +58,8 @@ public sealed class AppHost
         DebtReceipts = new DebtQuickReceiptService(Db, Permissions, Trash);
         ExchangeSync = new ExchangeCompanySyncService(Db, Permissions);
         Attendance = new AttendanceDataService(Db, Permissions, Trash);
-        Tools = new ToolsDataService(Db, Permissions, Trash, Aging, StaffShort, MonthReport);
+        Tools = new ToolsDataService(Db, Permissions, Trash, Aging, StaffShort, MonthReport,
+                                     Membership, DebtSummary);
         Cameras = new CameraDataService(Db, Permissions, Trash);
         Voice = new VoiceDataService(Db, Permissions);
         LegacyImport = new LegacyImportService(Db, Permissions, Settings);
@@ -126,6 +129,12 @@ public sealed class AppHost
 
     /// <summary>قرض‌های کهنه — «چند روز است هیچ ردیفی ندارد».</summary>
     public AgingService Aging { get; }
+
+    /// <summary>مدتِ عضویت — «از کِی مشتریِ ما است».</summary>
+    public MembershipService Membership { get; }
+
+    /// <summary>قرض‌های دسته‌جمعی — هر قرض‌دار یک خط.</summary>
+    public DebtSummaryService DebtSummary { get; }
 
     /// <summary>کمبودی/اضافیِ کارمندان — از خودِ ورق‌ها، نه از دفترِ جدا.</summary>
     public StaffShortService StaffShort { get; }

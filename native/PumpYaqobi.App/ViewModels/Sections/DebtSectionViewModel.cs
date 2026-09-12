@@ -245,6 +245,32 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
             await Dialogs.ShowQrAsync("📲 " + card.Name, link, png, hint);
         });
 
+    /// <summary>
+    /// «⏳ مدت عضویت همه» — همتای ‎openMembershipList()‎ی سایت.
+    /// ⚠️ این دکمه تا امروز **هیچ فرمانی نداشت**؛ زده می‌شد و هیچ اتفاقی
+    /// نمی‌افتاد.
+    /// </summary>
+    [RelayCommand]
+    private void ShowMembership() =>
+        ShowSub(SubSections.FirstOrDefault(s => s.Id == "membership"));
+
+    /// <summary>
+    /// حسابِ یک شخص را با شناسه‌اش باز کن — راهی که بخش‌های دیگر («قرض‌های
+    /// دسته‌جمعی») با آن می‌گویند «این خط را باز کن».
+    /// ⚠️ جست‌وجو ممکن است فهرست را باریک کرده باشد؛ پس اول تازه می‌شود.
+    /// </summary>
+    public async Task OpenPersonAsync(long id)
+    {
+        var card = Cards.FirstOrDefault(c => c.Entity.Id == id);
+        if (card is null)
+        {
+            Search = "";
+            await RefreshAsync();
+            card = Cards.FirstOrDefault(c => c.Entity.Id == id);
+        }
+        if (card is not null) await OpenAsync(card);
+    }
+
     [RelayCommand]
     private Task ScanQrAsync() => CrashGuard.RunAsync("اسکن کیو‌آر", async () =>
     {

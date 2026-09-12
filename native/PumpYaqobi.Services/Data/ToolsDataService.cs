@@ -22,12 +22,18 @@ public sealed class ToolsDataService
     private readonly PermissionService _perm;
     private readonly TrashService _trash;
     private readonly AgingService _aging;
+    private readonly MembershipService _member;
+    private readonly DebtSummaryService _summary;
     private readonly StaffShortService _staff;
     private readonly MonthReportService _month;
 
     public ToolsDataService(PumpDbFactory dbf, PermissionService perm, TrashService trash,
-                            AgingService aging, StaffShortService staff, MonthReportService month)
-    { _dbf = dbf; _perm = perm; _trash = trash; _aging = aging; _staff = staff; _month = month; }
+                            AgingService aging, StaffShortService staff, MonthReportService month,
+                            MembershipService member, DebtSummaryService summary)
+    {
+        _dbf = dbf; _perm = perm; _trash = trash; _aging = aging; _staff = staff; _month = month;
+        _member = member; _summary = summary;
+    }
 
     // ── قرض‌های کهنه ────────────────────────────────────────────────────────
     /// <summary>
@@ -86,6 +92,26 @@ public sealed class ToolsDataService
             else if (r.MoneyAccountId is { } n && byAccount.TryGetValue(n, out var ma)) ma.MoneyRows.Add(r);
         }
         return people;
+    }
+
+    // ── قرض‌های دسته‌جمعی و مدتِ عضویت ───────────────────────────────────────
+    /// <summary>
+    /// «⛽ قرض‌های دسته‌جمعی — واحد تیل» یا «💵 واحد پول» — هر قرض‌دار یک خط.
+    /// همان دادهٔ «قرض‌های کهنه»، فقط بی صافیِ «الباقیِ مثبت» و با مدتِ عضویت.
+    /// </summary>
+    public async Task<List<DebtSummaryRow>> DebtSummaryAsync(bool money, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        var people = await LoadDebtorsAsync(ct);
+        return _summary.Rows(people, money, Shamsi.Today());
+    }
+
+    /// <summary>«⏳ مدت عضویت همه» — قدیمی‌ترین مشتری اول.</summary>
+    public async Task<List<MembershipRow>> MembershipAsync(CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        var people = await LoadDebtorsAsync(ct);
+        return _member.Rows(people, Shamsi.Today());
     }
 
     // ── کمبودی/اضافیِ کارمندان ─────────────────────────────────────────────
