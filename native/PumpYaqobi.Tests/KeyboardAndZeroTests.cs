@@ -35,29 +35,29 @@ public class KeyboardAndZeroTests
     }
 
     /// <summary>
-    /// ══ چپ/راست: ایندکسِ ستون، نه جهتِ دیداری ═══════════════════════════════
+    /// ══ چپ/راست: همان‌جایی که چشم می‌بیند ═══════════════════════════════════
     ///
-    /// ⚠️ این آزمون عمداً <b>برعکسِ</b> نسخهٔ پیشینِ خودش است. تا دیروز جهت را
-    /// از ‎FlowDirection‎ می‌گرفت و «ستونِ بعدی سمتِ چپ» بود. صاحب ریپو بعد از
-    /// دیدنِ همان، خواسته‌اش را مکتوب عوض کرد:
+    /// ⚠️ این آزمون **دو بار** عوض شده، و هر دو بار به خاطرِ یک گزارشِ تکراری
+    /// از صاحب ریپو: «کلیدِ راست را می‌زنم، چپ می‌رود.»
     ///
-    ///     «برنامه فارسی و RTL است، اما منطقِ حرکت داخلِ Grid نباید به خاطر
-    ///      RTL برعکس شود … ArrowRight → column + 1، ArrowLeft → column − 1 …
-    ///      منطقِ Cell Index باید مشخص و مستقل از Direction باشد.»
+    ///   ۱) اول از ‎FlowDirection‎ خوانده می‌شد — آن خاصیت اگر به این کنترل
+    ///      نرسد بی‌صدا برعکس می‌شود، و همان شکایت را ساخت.
+    ///   ۲) بعد ایندکسِ خام شد (‎Right → column+1‎) — در جدولِ راست‌به‌چپ،
+    ///      ستونِ «بعدی» سمتِ چپ است، پس **دقیقاً** همان شکایت برگشت.
     ///
-    /// پس تصمیمِ تازه همین است و این آزمون همان را قفل می‌کند — نه این‌که
-    /// آزمونِ قبلی اشتباه بوده باشد.
+    /// حالا از جای واقعیِ سربرگ‌ها روی صفحه خوانده می‌شود و قاعده‌اش یکی است:
+    /// ‎→‎ خانهٔ سمتِ راست، ‎←‎ خانهٔ سمتِ چپ — چیزی که کاربر می‌بیند.
     /// </summary>
     [Fact]
-    public void ArrowKeysUseColumnIndexNotVisualDirection()
+    public void ArrowKeysFollowWhatTheEyeSees()
     {
         var g = Grid();
-        Assert.Contains("MoveColumn(e.Key == Key.Right ? +1 : -1, shift)", g);
+        Assert.Contains("var rtl = ColumnsRunRightToLeft();", g);
+        Assert.Contains("MoveColumn(toRight == rtl ? -1 : +1, shift)", g);
 
-        // و دیگر به FlowDirection بند نیست
-        var at = g.IndexOf("case Key.Left:", StringComparison.Ordinal);
-        Assert.True(at > 0);
-        Assert.DoesNotContain("FlowDirection", g[at..(at + 400)]);
+        // جهت از جای سربرگ‌ها می‌آید، نه از ایندکسِ خام
+        Assert.Contains("GetVisualDescendants().OfType<DataGridColumnHeader>()", g);
+        Assert.DoesNotContain("MoveColumn(e.Key == Key.Right ? +1 : -1", g);
     }
 
     /// <summary>
@@ -106,7 +106,7 @@ public class KeyboardAndZeroTests
     public void ShiftArrowSelectsManyCellsAndDeleteClearsThem()
     {
         var g = Grid();
-        Assert.Contains("MoveColumn(e.Key == Key.Right ? +1 : -1, shift)", g);
+        Assert.Contains("MoveColumn(toRight == rtl ? -1 : +1, shift)", g);
         Assert.Contains("_colAnchor", g);
         Assert.Contains("rangesel", g);
         Assert.Contains("case Key.Delete when !IsReadOnly && ClearSelectedCells():", g);

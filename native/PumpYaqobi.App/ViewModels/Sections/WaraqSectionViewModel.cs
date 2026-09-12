@@ -217,6 +217,9 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
     private readonly AppHost _host;
     private readonly WaraqSectionViewModel _section;
 
+    /// <summary>نوارِ «➕ ردیف / ➕➕ چندتایی»ِ پایینِ ورق — همتای ‎addWaraqRowsBulk‎ی سایت.</summary>
+    public System.Windows.Input.ICommand? RowAddCommand => AddTxnCommand;
+
     public WaraqPageViewModel(AppHost host, WaraqEntry w, WaraqSectionViewModel section)
     {
         _host = host; _section = section; Entity = w;
@@ -709,8 +712,29 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
     [RelayCommand]
     private async Task NewSheetAsync()
     {
+        // ══ ورق با تاریخِ دلخواه — همان کادرِ سایت ═══════════════════════════
+        //
+        // تا امروز این دکمه همیشه ورقِ **امروز** را باز می‌کرد و راهی برای
+        // «ورقِ فردا» نبود. خواستهٔ صریحِ صاحب ریپو: «تا ورق ساخته بشه و
+        // بتونم روز رو خودم انتخاب کنم».
+        //
+        // ⚠️ ورقِ تکراری ساخته نمی‌شود: ‎OpenOrCreateAsync‎ با **کلیدِ تاریخ**
+        // می‌گردد، و همان کلید است که همگام‌سازیِ پارچه هم با آن ورق را پیدا
+        // می‌کند (‎ShiftWaraqSyncService‎). پس ورقی که برای فردا ساخته شود،
+        // فردا که پارچه پر شود در همان می‌نشیند — نه در یک ورقِ تازه.
+        // ⚠️ همهٔ ورق‌ها، نه فقط ماهِ جلوی چشم — وگرنه تاریخی از ماهِ دیگر
+        // «تازه» معرفی می‌شد در حالی که ورقش هست.
+        var keys = (await _host.WaraqData.ListAsync(null))
+                   .Select(x => Shamsi.Key(x.DateShamsi)).Where(k => k > 0).ToHashSet();
+        var pick = await Dialogs.PickWaraqDateAsync(keys);
+        if (string.IsNullOrWhiteSpace(pick)) return;
+
+        var known = keys.Contains(Shamsi.Key(pick));
         var station = _host.Settings.GetString(Services.SettingsKeys.StationName);
-        var w = await _host.WaraqData.OpenOrCreateAsync(Shamsi.Today(), station);
+        var w = await _host.WaraqData.OpenOrCreateAsync(pick, station);
+        _host.Toast(known ? "📝 ورقِ " + pick + " از قبل وجود داشت — همان ورق باز شد"
+                          : "📝 ورقِ " + pick + " ساخته شد",
+                    known ? ToastKind.Warn : ToastKind.Ok);
         var mk = Shamsi.MonthKey(w.DateShamsi);
         if (!Months.Contains(mk)) Months.Insert(0, mk);
         Month = mk;

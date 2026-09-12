@@ -146,7 +146,7 @@
                        Foreground="{DynamicResource Pump.Accent}" Margin="0,4,0,0" />
           </StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom" Margin="0,0,0,4">
-            <Button Content="ردیفِ تازه" Command="{Binding AddRowCommand}" Padding="10,4" />
+            <c:RowAddBar Host="{Binding}" AddRowCommand="{Binding AddRowCommand}" />
             <Button Classes="ghost danger" Content="حذفِ حساب"
                     Command="{Binding DeleteAccountCommand}" Padding="10,4" />
           </StackPanel>

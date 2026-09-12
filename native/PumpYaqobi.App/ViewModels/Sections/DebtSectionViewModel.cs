@@ -245,6 +245,32 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
             await Dialogs.ShowQrAsync("📲 " + card.Name, link, png, hint);
         });
 
+    /// <summary>
+    /// «⏳ مدت عضویت همه» — همتای ‎openMembershipList()‎ی سایت.
+    /// ⚠️ این دکمه تا امروز **هیچ فرمانی نداشت**؛ زده می‌شد و هیچ اتفاقی
+    /// نمی‌افتاد.
+    /// </summary>
+    [RelayCommand]
+    private void ShowMembership() =>
+        ShowSub(SubSections.FirstOrDefault(s => s.Id == "membership"));
+
+    /// <summary>
+    /// حسابِ یک شخص را با شناسه‌اش باز کن — راهی که بخش‌های دیگر («قرض‌های
+    /// دسته‌جمعی») با آن می‌گویند «این خط را باز کن».
+    /// ⚠️ جست‌وجو ممکن است فهرست را باریک کرده باشد؛ پس اول تازه می‌شود.
+    /// </summary>
+    public async Task OpenPersonAsync(long id)
+    {
+        var card = Cards.FirstOrDefault(c => c.Entity.Id == id);
+        if (card is null)
+        {
+            Search = "";
+            await RefreshAsync();
+            card = Cards.FirstOrDefault(c => c.Entity.Id == id);
+        }
+        if (card is not null) await OpenAsync(card);
+    }
+
     [RelayCommand]
     private Task ScanQrAsync() => CrashGuard.RunAsync("اسکن کیو‌آر", async () =>
     {
@@ -448,11 +474,33 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
     [RelayCommand]
     private async Task AddDebtorAsync()
     {
+        // ══ «افزودن قرض‌دار» — همان کادرِ کوچکِ سایت ═════════════════════════
+        //
+        // خواستهٔ صریحِ صاحب ریپو (با عکسِ خودِ سایت): «تا قرض‌دار اسمش را
+        // نوشت» — یعنی زدنِ دکمه یک کادرِ نام باز کند، نه این‌که نام لای
+        // کادرهای بالای صفحه تایپ شود. در سایت هم ‎addPersonModal‎ فقط یک
+        // کادرِ «نام» دارد؛ شماره بعداً داخلِ خودِ حساب نوشته می‌شود.
         var name = NewName.Trim();
-        if (name.Length == 0) return;
+        if (name.Length == 0)
+            name = (await Dialogs.PromptAsync("افزودن قرض‌دار", "نام:", "", "✔ افزودن") ?? "").Trim();
+        if (name.Length == 0) { _host.Toast("نام را وارد کنید", ToastKind.Error); return; }
+
+        // ⚠️ حسابِ تکراری ساخته نمی‌شود — عینِ ‎confirmAddPerson‎ی سایت: همان
+        // حسابِ قبلی باز می‌شود و کاربر خبردار می‌شود.
+        var norm = CompanyDataService.NormalizeName(name);
+        var twin = Cards.FirstOrDefault(c => CompanyDataService.NormalizeName(c.Name) == norm);
+        if (twin is not null)
+        {
+            NewName = ""; NewPhone = "";
+            _host.Toast("این حساب از قبل وجود دارد — همان حساب باز شد", ToastKind.Warn);
+            await OpenAsync(twin);
+            return;
+        }
+
         await _host.Debtors.AddDebtorAsync(name, NewPhone.Trim(), _noInvoice);
         NewName = ""; NewPhone = "";
         await RefreshAsync();
+        _host.Toast("✅ شخص افزوده شد", ToastKind.Ok);
     }
 
     [RelayCommand]

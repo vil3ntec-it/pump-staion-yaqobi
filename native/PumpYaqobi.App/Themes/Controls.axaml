@@ -62,10 +62,13 @@
        ‎.stat-label 1rem‎ با پایهٔ ۱۶ پیکسل ⇒ ۱۶، نه ۱۴. و ‎font-weight:700‎ی
        سایت ⇒ ‎Bold‎، نه وزنِ عادی که کنارِ عددهای ۱۷ و ۱۹ نازک دیده می‌شد.
        حالا برچسب و خانهٔ جدول هر دو ۱۶ به بالا هستند و هم‌خانواده دیده می‌شوند. -->
+  <!-- برچسبِ کادرها هم مثلِ ‎.field-label‎ی سایت سرِ خط می‌نشیند، نه وسط.
+       (کادرهای آماری خودشان قاعدهٔ وسط‌چینِ جداگانه دارند و دست‌نخورده‌اند.) -->
   <Style Selector="TextBlock.label">
     <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
     <Setter Property="FontSize" Value="16" />
     <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="TextAlignment" Value="Start" />
   </Style>
   <Style Selector="TextBlock.h1">
     <Setter Property="FontSize" Value="22" />
@@ -620,14 +623,40 @@
                    حالا ابزار در ستونِ ‎*‎ است، پس پهنای واقعی و محدود می‌گیرد و
                    ‎WrapPanel‎ش درست می‌شکند. عنوان ‎Auto‎ است و به اندازهٔ
                    خودش جا می‌گیرد. -->
-              <Grid ColumnDefinitions="Auto,*">
+              <Grid ColumnDefinitions="Auto,Auto,*">
                 <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                   <TextBlock Text="{TemplateBinding Header}" Classes="card-title" />
                   <TextBlock Text="{TemplateBinding SubHeader}" Classes="muted"
                              TextWrapping="Wrap"
                              IsVisible="{TemplateBinding SubHeader, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                 </StackPanel>
-                <ContentPresenter Grid.Column="1" Content="{TemplateBinding Toolbar}"
+
+                <!-- ══ ‎A−‎ / ‎A+‎ / ‎↺‎ِ همین بخش ═════════════════════════════
+                     همتای ‎.sec-font-ctrl‎ی نسخهٔ وب، که کنارِ عنوانِ **هر**
+                     بخش می‌نشیند. در سایت ‎_ensureSecFontBtns‎ آن را به هر
+                     بخشی که ندارد می‌چسباند، «پس دیگر هیچ بخشی بدونِ کنترلِ
+                     اندازه نمی‌ماند». در برنامهٔ نیتیو هیچ بخشی نداشت.
+
+                     این‌جا در قالبِ مشترک است، نه در تک‌تکِ ویوها: هر بخشی که
+                     ساخته شود خودبه‌خود دارد.
+
+                     ‎x:CompileBindings="False"‎ مثلِ بقیهٔ بایندینگ‌های این
+                     قالب لازم است — داخلِ ‎ControlTemplate‎ نوعِ ‎DataContext‎
+                     معلوم نیست و این‌جا همان ویومدلِ بخش است. -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3"
+                            VerticalAlignment="Center" Margin="10,0,0,0"
+                            x:CompileBindings="False"
+                            IsVisible="{Binding FontSmallerCommand, Converter={x:Static ObjectConverters.IsNotNull},
+                                        FallbackValue=False}">
+                  <Button Classes="seg" Content="A-" Command="{Binding FontSmallerCommand}"
+                          ToolTip.Tip="نوشتهٔ این بخش کوچک‌تر" />
+                  <Button Classes="seg" Content="A+" Command="{Binding FontBiggerCommand}"
+                          ToolTip.Tip="نوشتهٔ این بخش بزرگ‌تر" />
+                  <Button Classes="seg" Content="↺" Command="{Binding FontResetCommand}"
+                          ToolTip.Tip="برگشت به اندازهٔ عادی" />
+                </StackPanel>
+
+                <ContentPresenter Grid.Column="2" Content="{TemplateBinding Toolbar}"
                                   VerticalAlignment="Center" Margin="12,0,0,0" />
               </Grid>
             </Border>
@@ -636,7 +665,19 @@
             <!-- ردیفِ اول تازه است: کارت‌های زیربخش. بقیه همان چهارتای
                  همیشگی‌اند و همه ‎Auto‎ می‌مانند — با اسکرولِ واحدِ کلِ صفحه،
                  بخش باید به اندازهٔ محتوایش بلند شود، نه به اندازهٔ قاب. -->
-            <Grid Grid.Row="1" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" Margin="14">
+            <!-- ══ بدنه، با اندازهٔ نوشتهٔ خودِ بخش ═══════════════════════
+                 ‎A−‎ / ‎A+‎ فقط همین را بزرگ و کوچک می‌کند: سربرگ و نوارِ
+                 ابزار بیرونِ این قاب مانده‌اند — همان قاعدهٔ صریحِ سایت
+                 («‎A−/A+‎ برای نوشته‌های خودِ بخش است، نه برای نوارِ ابزارش»).
+
+                 ⚠️ تا وقتی کاربر چیزی عوض نکرده، دگرگونی «یکِ» دست‌نخورده است
+                 و هیچ چیزی در چیدمان فرق نمی‌کند. -->
+            <LayoutTransformControl Grid.Row="1" x:CompileBindings="False"
+                                    HorizontalAlignment="Stretch" VerticalAlignment="Top"
+                                    LayoutTransform="{Binding FontScale,
+                                                      Converter={x:Static th:FontScaleConverter.Instance},
+                                                      FallbackValue={x:Null}}">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" Margin="14">
 
               <!-- ══ کارت‌های زیربخش ══════════════════════════════════════
                    بخشی که زیربخش دارد (قرض‌داران، مخزن، مفاد/ضرر، تنظیمات،
@@ -701,8 +742,21 @@
                             IsVisible="{Binding Notes, Converter={x:Static ObjectConverters.IsNotNull},
                                         FallbackValue=False}"
                             DataContext="{Binding Notes}">
-                  <TextBlock Text="📝 یادداشت این بخش" Classes="label" />
+                  <!-- ══ سربرگِ کادرِ یادداشت، با ‎A−/A+‎ِ خودش ═══════════════
+                       سایت این دو دکمه را جدا از ‎A−/A+‎ِ بخش گذاشته و دلیلش را
+                       هم نوشته: اندازهٔ یادداشت‌ها نباید با بزرگ شدنِ جدول‌ها
+                       عوض شود. پس این‌جا هم جداست و روی همهٔ بخش‌ها با هم
+                       می‌نشیند. -->
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="📝 یادداشت این بخش" Classes="label"
+                               VerticalAlignment="Center" />
+                    <Button Classes="seg" Content="A-" Command="{Binding Font.SmallerCommand}"
+                            ToolTip.Tip="نوشتهٔ یادداشت‌ها کوچک‌تر" />
+                    <Button Classes="seg" Content="A+" Command="{Binding Font.BiggerCommand}"
+                            ToolTip.Tip="نوشتهٔ یادداشت‌ها بزرگ‌تر" />
+                  </StackPanel>
                   <TextBox Text="{Binding Draft}" AcceptsReturn="True" MinHeight="62"
+                           FontSize="{Binding Font.Size}"
                            TextWrapping="Wrap" Watermark="یادداشت شما…" />
                   <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
                     <Button Classes="ghost info" Content="📨 فرستادن به صندوق نوت‌ها"
@@ -719,6 +773,7 @@
                             <TextBlock Grid.Column="0" Text="{Binding DateShamsi}"
                                        Classes="muted" VerticalAlignment="Center" />
                             <TextBlock Grid.Column="2" Text="{Binding Text}" TextWrapping="Wrap"
+                                       FontSize="{Binding $parent[ItemsControl].DataContext.Font.Size}"
                                        VerticalAlignment="Center" />
                             <Button Grid.Column="4" Classes="ghost danger" Content="حذف"
                                     Padding="8,3" FontSize="12"
@@ -730,7 +785,18 @@
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
                 </StackPanel>
+
+                <!-- ══ «➕ ردیف» و «➕➕ چندتایی» ═══════════════════════════════
+                     بخشی که ردیفِ دستی دارد (مصارف، گاوصندوق، صرافی، چکنه،
+                     رسید پارچه‌ها) ‎RowAddCommand‎ش را می‌دهد و همین‌جا نوارش
+                     را می‌گیرد؛ بقیه هیچ چیزِ اضافه‌ای نمی‌بینند.
+                     جایش هم همان‌جای سایت است: زیرِ جدول و زیرِ کادرِ یادداشت. -->
+                <c:RowAddBar Grid.Row="6" Margin="0,12,0,0" x:CompileBindings="False"
+                             Host="{Binding}" AddRowCommand="{Binding RowAddCommand}"
+                             IsVisible="{Binding RowAddCommand, Converter={x:Static ObjectConverters.IsNotNull},
+                                         FallbackValue=False}" />
             </Grid>
+            </LayoutTransformControl>
           </Grid>
         </Border>
       </ControlTemplate>
@@ -825,9 +891,25 @@
     <Setter Property="Foreground" Value="#ffffff" />
   </Style>
 
+  <!-- ══ نامِ کادرهای فرم — سرِ کادر، سمتِ راست ═════════════════════════════
+       گزارشِ صاحب ریپو با عکس: «اسم‌های کادر سرِ کادرهایشان سمتِ راست‌اند و
+       همان مدل باشد.» در سایت هم همین است و ساده هم هست:
+
+           .field-row{display:flex;flex-direction:column;gap:3px}
+           .field-label{font-size:0.9rem;color:رنگِ برچسب;font-weight:600}
+
+       یعنی برچسب هیچ ‎text-align‎ی ندارد و در چیدمانِ راست‌به‌چپ سرِ خط —
+       یعنی سمتِ راست — می‌نشیند. در برنامهٔ نیتیو ولی قاعدهٔ عمومیِ
+       «هر نوشته وسط» (که برای **جدول‌ها** خواسته شده بود) این‌ها را هم وسط
+       می‌برد. حالا برچسب‌های فرم از آن قاعده بیرون‌اند؛ جدول‌ها دست‌نخورده‌اند.
+
+       ⚠️ اندازه هم ۰٫۹rem سایت شد (≈۱۴)، نه ۱۲. -->
   <Style Selector="TextBlock.fld">
     <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="TextAlignment" Value="Start" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
   </Style>
 
   <!-- خانهٔ «خودکار» — خوانده می‌شود، تایپ نمی‌شود -->
@@ -1144,6 +1226,32 @@
 
        حالا هر خانه یک «خانهٔ جدول» است: خطِ عمودیِ سمتِ خودش، وسط‌چین، با
        همان پس‌زمینه و وزنِ سنگینِ سرستون. -->
+  <!-- ══ نوارِ «➕ ردیف» و «➕➕ چندتایی» ═══════════════════════════════════════
+       همتای ‎.row-add-bar‎ی نسخهٔ وب: یک دکمهٔ ردیف، و کادرِ «تعداد» با دکمهٔ
+       «چندتایی». جایش هم همان‌جاست که سایت گذاشته — پایینِ جدول، نه در سربرگ:
+       «تا سربرگ شلوغ نباشد و دستِ آدم موقعِ کار به آن‌ها نخورد».
+       خودِ کنترل در ‎Controls/RowAddBar.cs‎ است. -->
+  <Style Selector="c|RowAddBar">
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <Button Classes="accent" Content="➕ ردیف"
+                  Command="{TemplateBinding AddRowCommand}" />
+          <Border Classes="panel" Padding="7,4">
+            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+              <TextBlock Text="تعداد:" Classes="muted" VerticalAlignment="Center" />
+              <TextBox Width="62" Text="{Binding Count, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                       TextAlignment="Center" VerticalAlignment="Center" />
+              <Button Name="PART_Many" Classes="ghost info" Content="➕➕ چندتایی"
+                      ToolTip.Tip="همین تعداد ردیفِ خالی یک‌جا باز می‌شود (بیشترین ۵۰)" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
   <Style Selector="c|TotalsBar">
     <Setter Property="Margin" Value="0,-1,0,0" />
     <Setter Property="Template">

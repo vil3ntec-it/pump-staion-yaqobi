@@ -42,7 +42,15 @@ public sealed class LedgerService<T> where T : EntityBase, ILedgerRow, new()
         _perm.Require(Permission.ViewData);
         await using var db = _dbf.Create();
         var q = db.Set<T>().AsNoTracking().AsQueryable();
-        if (!string.IsNullOrWhiteSpace(monthKey)) q = q.Where(x => x.MonthKey == monthKey);
+        // ⚠️ سه حالت، همان سه گزینهٔ کشویِ سایت:
+        //   «1405/07» یک ماه · «1405/» همهٔ ماه‌های آن سال · خالی همهٔ سال‌ها
+        if (!string.IsNullOrWhiteSpace(monthKey))
+        {
+            if (monthKey.EndsWith('/'))
+                q = q.Where(x => x.MonthKey != null && x.MonthKey.StartsWith(monthKey));
+            else
+                q = q.Where(x => x.MonthKey == monthKey);
+        }
         return await q.OrderBy(x => x.DateKey).ThenBy(x => x.Id).ToListAsync(ct);
     }
 

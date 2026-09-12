@@ -39,6 +39,22 @@ public static class Shamsi
         return sb.ToString();
     }
 
+    /// <summary>
+    /// «1404/06/15» → همان روز در تقویمِ میلادی. رشتهٔ خراب یا روزی که در آن
+    /// ماهِ شمسی وجود ندارد (۳۱ حوت) ‎null‎ می‌دهد.
+    ///
+    /// ⚠️ فقط جایی به کار می‌رود که «چند روز/ماه/سال گذشته» لازم باشد؛ برای
+    /// مرتب‌سازی همان <see cref="Key(string)"/> کافی است و ارزان‌تر.
+    /// </summary>
+    public static DateTime? ToDate(string? shamsi)
+    {
+        var k = Key(shamsi);
+        if (k == 0) return null;
+        int y = k / 10000, m = k / 100 % 100, d = k % 100;
+        try { return Cal.ToDateTime(y, m, d, 0, 0, 0, 0); }
+        catch { return null; }
+    }
+
     /// <summary>«1404/06/15» → 14040615. رشتهٔ ناقص یا خراب → صفر.</summary>
     public static int Key(string? shamsi)
     {

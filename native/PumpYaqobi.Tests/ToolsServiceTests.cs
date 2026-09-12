@@ -33,9 +33,12 @@ public class ToolsServiceTests : IDisposable
         var perm = new PermissionService(session);
         var trash = new TrashService(dbf, perm, session);
         var calc = new DebtCalculationService(new NoRate());
-        var tools = new ToolsDataService(dbf, perm, trash, new AgingService(calc),
+        var aging = new AgingService(calc);
+        var member = new MembershipService();
+        var tools = new ToolsDataService(dbf, perm, trash, aging,
                                          new StaffShortService(new WaraqService()),
-                                         new MonthReportService());
+                                         new MonthReportService(),
+                                         member, new DebtSummaryService(aging, member));
         return (tools, new AttendanceDataService(dbf, perm, trash), dbf);
     }
 

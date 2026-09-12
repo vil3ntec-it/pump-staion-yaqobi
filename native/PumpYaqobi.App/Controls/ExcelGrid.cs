@@ -508,18 +508,45 @@ public class ExcelGrid : DataGrid
         CommitEdit(DataGridEditingUnit.Cell, true);
     }
 
-    private static void OnPreviewPressed(object? sender, PointerPressedEventArgs e)
+    /// <summary>
+    /// ══ کشوییِ داخلِ خانه: یک کلیک، مثلِ سایت ═══════════════════════════════
+    ///
+    /// در سایت این کادر یک ‎&lt;select class="xls-in"&gt;‎ی همیشه‌پیداست: یک
+    /// کلیک بازش می‌کند، یکی هم انتخاب. در برنامهٔ نیتیو ‎DataGrid‎ کلیک را
+    /// برای «انتخابِ خانه» مصرف می‌کند و کشویی یا باز نمی‌شد یا همان لحظه
+    /// بسته می‌شد — همان «راحت کار نمی‌کند»ی گزارش‌شده.
+    ///
+    /// پس روی فازِ ‎Tunnel‎ — یعنی **پیش از** آن‌که ‎DataGrid‎ کلیک را ببیند —
+    /// خودمان کار را تمام می‌کنیم:
+    ///   ۱) ردیفِ زیرِ انگشت انتخاب می‌شود (وگرنه حالِ جدول عقب می‌ماند)،
+    ///   ۲) کشویی باز می‌شود،
+    ///   ۳) ‎Handled‎ می‌شود تا ‎DataGrid‎ همان کلیک را دوباره مصرف نکند و
+    ///      کشویی را نبندد.
+    ///
+    /// ⚠️ هیچ ‎Dispatcher‎ی و هیچ تاخیری در کار نیست — خواستهٔ صریح.
+    /// ⚠️ کلیکِ بازِ دوباره (برای بستن) دست‌نخورده می‌ماند: اگر کشویی باز است
+    /// کاری نمی‌کنیم و خودِ کنترل می‌بنددش.
+    /// </summary>
+    private void OnPreviewPressed(object? sender, PointerPressedEventArgs e)
     {
         if (e.Source is not Visual v) return;
 
+        DataGridRow? row = null;
         for (Visual? x = v; x is not null; x = x.GetVisualParent())
         {
-            if (x is ComboBox cb)
-            {
-                if (!cb.IsDropDownOpen && cb.IsEffectivelyEnabled) cb.IsDropDownOpen = true;
-                return;
-            }
-            if (x is DataGridRow or DataGridColumnHeader) return;   // از خانه بیرون زدیم
+            if (x is DataGridColumnHeader) return;
+            if (x is DataGridRow r) { row = r; continue; }
+            if (x is not ComboBox cb) continue;
+            if (!cb.IsEffectivelyEnabled || cb.IsDropDownOpen) return;
+
+            // ردیف را از بالای همین زنجیره پیدا کن (کشویی داخلِ خانه است)
+            for (Visual? y = cb; y is not null && row is null; y = y.GetVisualParent())
+                if (y is DataGridRow rr) row = rr;
+            if (row?.DataContext is { } item) SelectedItem = item;
+
+            cb.IsDropDownOpen = true;
+            e.Handled = true;
+            return;
         }
     }
 
@@ -543,10 +570,16 @@ public class ExcelGrid : DataGrid
     {
         if (IsReadOnly) return false;
 
-        // خانه هنوز در حالتِ ویرایش نیست؟ اول بازش کن تا کشویی/رادیو ساخته شود.
-        if (Focused is not (ComboBox or RadioButton)) BeginEdit();
+        // اول خودِ خانه: کشویی‌های همیشه‌پیدا فوکوس ندارند ولی همان‌جا هستند.
+        var target = CellPicker(CurrentColumn) ?? Focused;
+        if (target is not (ComboBox or RadioButton))
+        {
+            // قالبِ ویرایشی دارد؟ بازش کن تا ساخته شود.
+            BeginEdit();
+            target = Focused;
+        }
 
-        switch (Focused)
+        switch (target)
         {
             case ComboBox cb when cb.ItemCount > 0:
                 cb.SelectedIndex = (cb.SelectedIndex + 1) % cb.ItemCount;
@@ -568,8 +601,34 @@ public class ExcelGrid : DataGrid
     /// ستونی که ویرایشش کشویی یا رادیویی است — «نوع تیل»، «نوع» (قرض/مصرف)،
     /// «واحد» (تیل/پول) و مانندِ آن‌ها.
     /// </summary>
-    private static bool IsToggleColumn(DataGridColumn? col) =>
-        col is DataGridTemplateColumn t && t.CellEditingTemplate is not null;
+    /// <summary>
+    /// ⚠️ «کشویی داخلِ قالبِ ویرایش» دیگر تنها نشانه نیست: از وقتی کشویی‌ها —
+    /// مثلِ ‎&lt;select class="xls-in"&gt;‎ی سایت — همیشه پیدا شدند و به
+    /// ‎CellTemplate‎ رفتند، ‎CellEditingTemplate‎شان خالی است و ‎Tab‎/‎Enter‎
+    /// بی‌صدا از کار افتاده بود. حالا خودِ خانه نگاه می‌شود.
+    /// </summary>
+    private bool IsToggleColumn(DataGridColumn? col) =>
+        col is DataGridTemplateColumn t &&
+        (t.CellEditingTemplate is not null || CellPicker(col) is not null);
+
+    /// <summary>
+    /// کشویی/رادیوییِ داخلِ خانهٔ جاری — همان چیزی که ‎Tab‎ و ‎Enter‎ باید
+    /// مقدارش را یک پله جلو ببرند. ‎null‎ یعنی این خانه چنین چیزی ندارد.
+    /// </summary>
+    private Control? CellPicker(DataGridColumn? col)
+    {
+        if (col is null || SelectedItem is null) return null;
+        var row = this.GetVisualDescendants().OfType<DataGridRow>()
+                      .FirstOrDefault(r => ReferenceEquals(r.DataContext, SelectedItem));
+        if (row is null) return null;
+
+        var cells = row.GetVisualDescendants().OfType<DataGridCell>().ToList();
+        var idx = VisibleCols().IndexOf(col);
+        if (idx < 0 || idx >= cells.Count) return null;
+
+        return cells[idx].GetVisualDescendants()
+                         .FirstOrDefault(x => x is ComboBox or RadioButton) as Control;
+    }
 
     // ── جابه‌جاییِ خانه ───────────────────────────────────────────────────
 
@@ -598,6 +657,31 @@ public class ExcelGrid : DataGrid
         if (item is not null) ScrollIntoView(item, cols[next]);
         PaintRange();
         return true;
+    }
+
+    /// <summary>
+    /// ══ ستون‌ها از کدام سمت شروع می‌شوند؟ ═══════════════════════════════════
+    ///
+    /// از **جای واقعیِ سربرگ‌ها** خوانده می‌شود، نه از خاصیتِ ‎FlowDirection‎.
+    /// دلیلش گزارشِ دوباره‌شوندهٔ صاحب ریپو است: آن خاصیت اگر به این کنترل
+    /// نرسد (یا قالبِ درونیِ ‎DataGrid‎ عوضش کند) بی‌صدا برعکس می‌شود و کلیدها
+    /// وارونه کار می‌کنند. جای سربرگ روی صفحه دروغ نمی‌گوید.
+    ///
+    /// سربرگی هنوز ساخته نشده باشد، به همان ‎FlowDirection‎ برمی‌گردیم — و
+    /// پیش‌فرضِ این برنامه راست‌به‌چپ است.
+    /// </summary>
+    private bool ColumnsRunRightToLeft()
+    {
+        var heads = this.GetVisualDescendants().OfType<DataGridColumnHeader>()
+                        .Where(h => h.Bounds.Width > 0).Take(2).ToList();
+        if (heads.Count == 2)
+        {
+            var a = heads[0].TranslatePoint(default, this);
+            var b = heads[1].TranslatePoint(default, this);
+            if (a is not null && b is not null && Math.Abs(a.Value.X - b.Value.X) > 0.5)
+                return b.Value.X < a.Value.X;
+        }
+        return FlowDirection == Avalonia.Media.FlowDirection.RightToLeft;
     }
 
     /// <summary>کادرِ چندانتخابی جمع می‌شود و روی همان یک ستون می‌نشیند.</summary>
@@ -750,26 +834,27 @@ public class ExcelGrid : DataGrid
                 e.Handled = true;
                 return;
 
-            // ══ چپ/راست: ایندکسِ ستون، مستقل از جهتِ چیدمان ══════════════════
+            // ══ چپ/راست: همان‌جایی که چشم می‌بیند ════════════════════════════
             //
-            // خواستهٔ صریحِ صاحب ریپو (نوشتهٔ خودش):
-            //     «برنامه فارسی و RTL است، اما منطقِ حرکت داخلِ Grid نباید به
-            //      خاطر RTL برعکس شود … ArrowRight → column + 1،
-            //      ArrowLeft → column − 1 … منطقِ Cell Index باید مشخص و
-            //      مستقل از Direction باشد.»
+            // ⚠️ این خانه دو بار عوض شده و هر دو بار گزارشِ صاحب ریپو یکی بود:
+            // «کلیدِ راست را می‌زنم، چپ می‌رود.» پس این‌بار نه از ‎FlowDirection‎
+            // (که اگر به این کنترل نرسد بی‌صدا برعکس می‌شود) و نه از ایندکسِ
+            // خام (که در جدولِ راست‌به‌چپ دقیقاً همان شکایت را می‌سازد، چون
+            // ستونِ «بعدی» سمتِ چپ است) — بلکه از **جای واقعیِ سربرگ‌ها روی
+            // صفحه**: ‎ColumnsRunRightToLeft()‎.
             //
-            // پیش از این همین‌جا ‎FlowDirection‎ خوانده می‌شد و جهت را برعکس
-            // می‌کرد. دو اشکال داشت: یکی این‌که خواستهٔ بالا را نقض می‌کرد، و
-            // دیگر این‌که به خاصیتی بند بود که اگر روی این کنترل ننشیند
-            // (مثلاً قالبِ داخلیِ ‎DataGrid‎ آن را عوض کند) بی‌سروصدا برعکس
-            // می‌شد — همان «کلیدِ راست را می‌زنم، چپ می‌رود».
-            //
-            // حالا ساده و قطعی است: راست یعنی ستونِ بعدی، چپ یعنی ستونِ پیشین.
+            // قاعده از این به بعد یکی است و دیگر عوض نمی‌شود:
+            //     کلیدِ ‎→‎ خانهٔ سمتِ راست، کلیدِ ‎←‎ خانهٔ سمتِ چپ.
+            // در جدولِ راست‌به‌چپِ این برنامه، سمتِ راست یعنی ایندکسِ کمتر.
             case Key.Left:
             case Key.Right:
-                MoveColumn(e.Key == Key.Right ? +1 : -1, shift);
+            {
+                var rtl = ColumnsRunRightToLeft();
+                var toRight = e.Key == Key.Right;
+                MoveColumn(toRight == rtl ? -1 : +1, shift);
                 e.Handled = true;
                 return;
+            }
 
             // ── بالا/پایین: خودِ جدول می‌بَرد (با ‎Shift‎ چندردیفی) ─────────
             // فقط کادرِ ستونی جمع می‌شود اگر ‎Shift‎ گرفته نشده باشد.

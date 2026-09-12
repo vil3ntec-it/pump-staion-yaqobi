@@ -43,6 +43,25 @@ public sealed class AppSettings
     /// <summary>ضخامتِ خطِ بالای ردیفِ «جمله».</summary>
     public double TableSumLine { get; set; } = 2;
 
+    /// <summary>
+    /// ══ اندازهٔ نوشتهٔ هر بخش — همتای ‎secFont_&lt;id&gt;‎ی ‎localStorage‎ی سایت ══
+    ///
+    /// در سایت هر بخش کنارِ عنوانش ‎A−‎ / ‎A+‎ / ‎↺‎ دارد و اندازه‌اش جدا از
+    /// بقیه ذخیره می‌شود («هر بخشی که جدولش ریز است را خودم بزرگ می‌کنم»).
+    /// کلید همان شناسهٔ بخش است (‎safe‎، ‎sarrafi‎، ‎waraq‎، …) تا اگر روزی
+    /// دادهٔ سایت وارد شد، همان‌جا بنشیند.
+    ///
+    /// ⚠️ کنارِ خودِ برنامه می‌ماند، نه در دیتابیس: مالِ همین دستگاه است و
+    /// بکاپِ حساب‌ها نباید اندازهٔ نوشتهٔ یک کامپیوترِ دیگر را با خود ببرد.
+    /// </summary>
+    public Dictionary<string, double> SecFontScales { get; set; } = new();
+
+    /// <summary>
+    /// اندازهٔ نوشتهٔ «کادرهای یادداشت» — همتای ‎noteFontScale‎ی سایت. یکی است
+    /// برای همهٔ بخش‌ها (سایت هم یک متغیرِ ریشه‌ای دارد، نه یکی برای هر بخش).
+    /// </summary>
+    public double NoteFontScale { get; set; } = 1;
+
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 
     /// <summary>
@@ -78,6 +97,28 @@ public sealed class AppSettings
     {
         var a = Load();
         a.PrintSetup = setup;
+        a.Save();
+    }
+
+    /// <summary>
+    /// اندازهٔ نوشتهٔ یک بخش را ذخیره کن و بقیهٔ فایل را دست‌نخورده بگذار —
+    /// مثلِ ‎SavePrintSetup‎، وگرنه تم و «آخرین بخش» پاک می‌شدند.
+    /// </summary>
+    /// <remarks>مقدارِ ۱ یعنی «عادی» و کلید اصلاً نوشته نمی‌شود.</remarks>
+    public static void SaveSecFontScale(string sectionId, double scale)
+    {
+        if (string.IsNullOrWhiteSpace(sectionId)) return;
+        var a = Load();
+        if (Math.Abs(scale - 1) < 0.005) a.SecFontScales.Remove(sectionId);
+        else a.SecFontScales[sectionId] = scale;
+        a.Save();
+    }
+
+    /// <summary>اندازهٔ نوشتهٔ کادرهای یادداشت — یکی برای همهٔ بخش‌ها.</summary>
+    public static void SaveNoteFontScale(double scale)
+    {
+        var a = Load();
+        a.NoteFontScale = scale;
         a.Save();
     }
 

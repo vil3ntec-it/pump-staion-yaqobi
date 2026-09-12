@@ -28,7 +28,9 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
         _month = Shamsi.ThisMonth();
         // کشوی ماه فقط چیزی را که بخش با آن رندر می‌کند عوض می‌کند؛ خودِ منطق
         // دست‌نخورده می‌ماند — همان چیزی که سایت هم صریح نوشته.
-        Picker = new YearMonthPicker(k => { if (k.Length > 0 && k != Month) Month = k; });
+        // ⚠️ «همهٔ ماه‌ها» هم یک گزینه است، مثلِ سایت — پس کلیدِ خالی/«1405/*»
+        // هم باید بنشیند، نه این‌که نادیده گرفته شود.
+        Picker = new YearMonthPicker(k => { if (k != Month) Month = k; }, "همهٔ ماه‌ها");
     }
 
     protected LedgerService<TEntity> Service { get; }
@@ -94,9 +96,17 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
         await ReloadRowsAsync();
     }
 
+    /// <summary>
+    /// کلیدی که به دیتابیس می‌رود: «1405/07» یک ماه، «1405/*» همهٔ ماه‌های آن
+    /// سال، و خالی یعنی همهٔ سال‌ها — همان سه حالتِ کشویِ سایت.
+    /// </summary>
+    protected string MonthFilter => YearMonthPicker.IsAll(Month)
+        ? YearMonthPicker.AllOfYear(Month) is { Length: > 0 } y ? y + "/" : ""
+        : Month;
+
     protected async Task ReloadRowsAsync()
     {
-        var list = await Service.ListAsync(Month);
+        var list = await Service.ListAsync(MonthFilter);
         // یک‌جا، نه ردیف‌به‌ردیف — وگرنه جدول به ازای هر ردیف یک‌بار خودش را
         // از نو می‌چیند و بخش هنگامِ باز شدن می‌ایستد.
         Rows.ResetTo(list.Select(e => Track(Wrap(e))));
@@ -123,9 +133,15 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
     {
         var e = NewEntity();
         await Service.AddAsync(e);
-        if (Shamsi.MonthKey(e.DateShamsi) != Month)
+        var mk = Shamsi.MonthKey(e.DateShamsi);
+        // ردیفِ تازه در نمایی که جلوی چشم است می‌گنجد؟ («همهٔ ماه‌های ۱۴۰۵»
+        // هم یک نماست، پس ردیفِ همان سال نباید نما را عوض کند.)
+        var year = YearMonthPicker.AllOfYear(Month);
+        var fits = YearMonthPicker.IsAll(Month)
+            ? year.Length == 0 || mk.StartsWith(year + "/", StringComparison.Ordinal)
+            : mk == Month;
+        if (!fits)
         {
-            var mk = Shamsi.MonthKey(e.DateShamsi);
             if (!Months.Contains(mk)) Months.Insert(0, mk);
             Month = mk;                       // خودش ReloadRowsAsync را صدا می‌زند
             Picker.Adopt(mk);
@@ -164,29 +180,49 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
     [RelayCommand]
     protected async Task NewMonthAsync()
     {
-        var pick = await Dialogs.PickMonthAsync(Months.ToList());
-        if (string.IsNullOrWhiteSpace(pick)) return;
+        // ══ «📅 ماه جدید» — مو‌به‌مو مثلِ ‎addExpenseMonth()‎ی سایت ═══════════
+        //
+        // ⚠️ این‌جا یک‌بار دیالوگِ «سال و ماه را انتخاب کن» گذاشته شد. سایت
+        // چنین چیزی ندارد و صاحب ریپو با عکس همین را نشان داد: دکمه بی هیچ
+        // پرسشی **ماهِ بعدیِ آخرین ماه** را باز می‌کند و پیام می‌دهد
+        // «✅ جدول ماه ‎<نام ماه>‎ باز شد».
+        //
+        // «باز کردن» یعنی یک ردیفِ خالیِ روزِ اولِ همان ماه — در سایت هم
+        // همین است (‎DB.expenses.push({date: nextDate, ...})‎)، چون ماه تا
+        // ردیفی نداشته باشد در کشویی پیدا نمی‌شود.
+        var latest = Months.Where(m => m.Any(char.IsDigit))
+                           .OrderByDescending(m => m, StringComparer.Ordinal)
+                           .FirstOrDefault();
 
-        if (Months.Contains(pick))
+        string next;
+        if (latest is { Length: > 0 })
         {
-            // از قبل هست: فقط برو رویش — نه رکوردِ تکراری.
-            Month = pick;
-            Picker.Adopt(pick);
-            await ReloadRowsAsync();
-            return;
+            var p = Shamsi.ToEnDigits(latest).Split('/');
+            var yr = int.TryParse(p.ElementAtOrDefault(0), out var y) ? y : 1403;
+            var mo = int.TryParse(p.ElementAtOrDefault(1), out var m) ? m : 1;
+            mo++;
+            if (mo > 12) { mo = 1; yr++; }
+            next = $"{yr:0000}/{mo:00}";
+        }
+        else next = Shamsi.ThisMonth();
+
+        if (!Months.Contains(next))
+        {
+            var e = NewEntity();
+            e.DateShamsi = next + "/01";
+            await Service.AddAsync(e);
+            Months.Insert(0, next);
         }
 
-        // ردیفِ خالیِ روزِ اولِ همان ماه — همان کاری که ‎addExpenseMonth‎ی سایت
-        // می‌کند: ماه با یک ردیفِ خالی «باز» می‌شود.
-        var e = NewEntity();
-        e.DateShamsi = pick + "/01";
-        await Service.AddAsync(e);
-
-        if (!Months.Contains(pick)) Months.Insert(0, pick);
-        Month = pick;
-        Picker.Adopt(pick);
+        Month = next;
+        Picker.Adopt(next);
         await ReloadRowsAsync();
+        Toast?.Invoke("✅ جدول ماه " + Shamsi.MonthLabel(next) + " باز شد");
     }
+
+    /// <summary>پیامِ کوتاهِ گوشهٔ صفحه — بخشی که میزبان دارد وصلش می‌کند.</summary>
+    public Action<string>? Toast { get; set; }
+
 
     [RelayCommand]
     protected async Task DeleteRowAsync(TRow? row)
@@ -199,6 +235,9 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
     }
 
     public int RowCount => Rows.Count;
+
+    /// <summary>نوارِ «➕ ردیف / ➕➕ چندتایی»ِ پایینِ همین دفتر.</summary>
+    public override System.Windows.Input.ICommand? RowAddCommand => AddRowCommand;
 
     /// <summary>‎Ctrl+عدد‎ — همان ‎AddRowAsync‎، فقط ‎n‎ بار.</summary>
     public async Task AddRowsAsync(int count)

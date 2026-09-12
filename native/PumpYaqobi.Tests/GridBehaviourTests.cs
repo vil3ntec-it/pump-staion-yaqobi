@@ -101,11 +101,11 @@ public class GridBehaviourTests
     // ── کشویِ سال و ماه ──────────────────────────────────────────────────────
 
     /// <summary>
-    /// ‎⚠️ این آزمون عمداً <b>عوض</b> شده. تا دیروز فهرست فقط از روی <b>داده</b>
-    /// ساخته می‌شد و همین را قفل می‌کرد («سالِ ۱۴۰۴ دو ماه دارد»). صاحب ریپو
-    /// خواسته‌اش را مکتوب عوض کرد: «تمام ۱۲ ماهِ تقویم شمسی … Year Selector هم
-    /// نباید فقط یک سالِ ثابت داشته باشد.» پس حالا هر سال هر دوازده ماه را
-    /// دارد و کشویِ سال فقط فهرست را به همان سال کوتاه می‌کند.
+    /// ⚠️ این آزمون **دو بار** عوض شده و حالا به همان چیزی برگشته که سایت
+    /// دارد. میانه‌اش «هر سال، هر دوازده ماه» قفل شده بود؛ صاحب ریپو با عکسِ
+    /// خودِ سایت نشان داد که این‌طور نیست: کشوی ماه فقط ماه‌هایی را دارد که
+    /// داده دارند (به‌علاوهٔ «همهٔ ماه‌های ‎&lt;سال&gt;‎»)، و ماهِ تازه با دکمهٔ
+    /// «📅 ماه جدید» باز می‌شود.
     /// </summary>
     [Fact]
     public void PickingAYearNarrowsTheMonthsToThatYear()
@@ -113,22 +113,13 @@ public class GridBehaviourTests
         var p = new YearMonthPicker(_ => { });
         p.Load(new[] { "1404/11", "1404/12", "1405/01", "1405/06" }, "1405/06");
 
-        var years = p.Years.Select(y => y.Key).ToArray();
-        Assert.Contains("1404", years);
-        Assert.Contains("1405", years);
         // تازه‌ترین سال اول
-        Assert.Equal(years.OrderByDescending(y => y, StringComparer.Ordinal).ToArray(), years);
+        Assert.Equal(new[] { "1405", "1404" }, p.Years.Select(y => y.Key).ToArray());
         Assert.Equal("1405", p.Year!.Key);
-
-        // هر دوازده ماهِ همان سال — نه فقط ماه‌هایی که ردیف دارند
-        Assert.Equal(12, p.Months.Count);
-        Assert.All(p.Months, m => Assert.Equal("1405", YearMonthPicker.YearOf(m.Key)));
-        Assert.Equal("1405/12", p.Months.First().Key);
-        Assert.Equal("1405/01", p.Months.Last().Key);
+        Assert.Equal(new[] { "1405/06", "1405/01" }, p.Months.Select(m => m.Key).ToArray());
 
         p.Year = p.Years.First(y => y.Key == "1404");
-        Assert.Equal(12, p.Months.Count);
-        Assert.All(p.Months, m => Assert.Equal("1404", YearMonthPicker.YearOf(m.Key)));
+        Assert.Equal(new[] { "1404/12", "1404/11" }, p.Months.Select(m => m.Key).ToArray());
     }
 
     /// <summary>
@@ -163,14 +154,19 @@ public class GridBehaviourTests
         Assert.Equal(p.Year!.Key, YearMonthPicker.YearOf(p.SelectedKey));
     }
 
-    /// <summary>آن‌چه کاربر می‌بیند برچسبِ خوانا است، نه کلیدِ خامِ «1405/06».</summary>
+    /// <summary>
+    /// برچسبِ ماه مثلِ سایت است: «سنبله — 1405/06» — هم نامِ ماه و هم خودِ
+    /// کلید (‎_monthOptionLabel‎).
+    ///
+    /// ⚠️ پیش از این این‌جا نوشته بود «کلیدِ خام نباید دیده شود». عکسِ خودِ
+    /// سایت خلافش را نشان داد: کلید **کنارِ** نام می‌آید، نه به‌جایش.
+    /// </summary>
     [Fact]
-    public void MonthsShowAReadableLabelNotTheRawKey()
+    public void MonthsShowTheNameNextToTheKey()
     {
         var p = new YearMonthPicker(_ => { });
         p.Load(new[] { "1405/06" }, "1405/06");
-        Assert.DoesNotContain("1405/06", p.Months[0].Label);
-        Assert.Contains("1405", p.Months[0].Label);
+        Assert.Equal("سنبله — 1405/06", p.Months[0].Label);
     }
 
     // ── کشویی‌های داخلِ جدول ─────────────────────────────────────────────────

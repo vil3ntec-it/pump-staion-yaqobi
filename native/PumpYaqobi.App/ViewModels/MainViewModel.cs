@@ -484,6 +484,18 @@ public sealed partial class MainViewModel : ObservableObject
         By("storage")?.AddSub(new TankerSectionViewModel(host),        "🚚 تخلیهٔ تانکر");
         By("attendance")?.AddSub(new StaffShortSectionViewModel(host), "👷 کمبودی کارمندان");
         By("debt")?.AddSub(new OldLoansSectionViewModel(host),         "⏰ قرض‌های کهنه");
+        // «⏳ مدت عضویت همه»ی سایت — تا امروز دکمه‌اش هیچ کاری نمی‌کرد
+        By("debt")?.AddSub(new MembershipSectionViewModel(host),       "⏳ مدت عضویت قرض‌داران");
+        // «قرض‌های دسته‌جمعی» — دو صفحهٔ کاملاً جدا، مثلِ سایت. کلیک روی هر خط
+        // حسابِ همان شخص را در بخشِ قرض‌داران باز می‌کند.
+        if (By("debt") is DebtSectionViewModel debt)
+        {
+            Task Open(long id) => GoAsync(debt).ContinueWith(_ => debt.OpenPersonAsync(id)).Unwrap();
+            By("debtrasid")?.AddSub(new DebtSummarySectionViewModel(host, false, Open),
+                                    "⛽ قرض‌های دسته‌جمعی — واحد تیل");
+            By("debtrasid")?.AddSub(new DebtSummarySectionViewModel(host, true, Open),
+                                    "💵 قرض‌های دسته‌جمعی — واحد پول");
+        }
         By("profit")?.AddSub(new MonthReportSectionViewModel(host),    "📅 گزارش پایان ماه");
         By("profit")?.AddSub(new RateHistorySectionViewModel(host),    "📈 تاریخچهٔ نرخ اتحادیه");
         By("settings")?.AddSub(new DataSectionViewModel(host, this),   "🗂️ مدیریت داده‌ها");

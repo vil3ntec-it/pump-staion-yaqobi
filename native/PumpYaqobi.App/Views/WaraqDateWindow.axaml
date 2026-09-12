@@ -1,0 +1,55 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PumpYaqobi.App.Views.WaraqDateWindow"
+        SizeToContent="Height" Width="430" CanResize="False"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        FlowDirection="RightToLeft"
+        Background="{DynamicResource Pump.Card}"
+        Title="ورق با تاریخ">
+
+  <!-- ══ «📝 ورق با تاریخ» — همتای ‎#waraqDateModal‎ی نسخهٔ وب ═══════════════
+       خودِ سایت توضیحش را نوشته: «تاریخ را می‌نویسید — اگر ورقِ همان تاریخ باشد
+       همان باز می‌شود، اگر نباشد ورقِ تازهٔ همان تاریخ ساخته می‌شود (هیچ ورقِ
+       تکراری)».
+
+       چیدمان هم همان است: کادرِ بالا روز را جلو می‌برد، کادرِ پایین عقب، و
+       ردیفِ کوچکِ زیرش «‹ ماه | امروز | ماه › | ⌨️ نوشتن». کادرِ تاریخ تا
+       وقتی «نوشتن» زده نشود دست‌نخوردنی است تا با کلیکِ ناخواسته عوض نشود. -->
+  <StackPanel Margin="20" Spacing="8">
+    <TextBlock Text="📝 ورق با تاریخ" Classes="h2" />
+    <TextBlock Text="تاریخ ورق (شمسی) — بدون کیبورد، با همین دو کادر" Classes="muted"
+               TextWrapping="Wrap" />
+
+    <Button x:Name="NextDay" Content="▲ روز بعد" HorizontalAlignment="Stretch"
+            HorizontalContentAlignment="Center" Padding="10,11" Click="OnNextDay" />
+
+    <TextBox x:Name="DateBox" IsReadOnly="True" FontSize="24" FontWeight="Black"
+             TextAlignment="Center" Padding="8,10" Watermark="1405/5/4"
+             KeyDown="OnDateKey" />
+
+    <Button x:Name="PrevDay" Content="▼ روز قبل" HorizontalAlignment="Stretch"
+            HorizontalContentAlignment="Center" Padding="10,11" Click="OnPrevDay" />
+
+    <UniformGrid Columns="4" Margin="0,2,0,0">
+      <Button Content="‹ ماه" Click="OnPrevMonth" Margin="0,0,5,0"
+              HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+              ToolTip.Tip="یک ماه عقب" />
+      <Button Content="امروز" Click="OnToday" Margin="0,0,5,0"
+              HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+              ToolTip.Tip="برگشت به تاریخ امروز" />
+      <Button Content="ماه ›" Click="OnNextMonth" Margin="0,0,5,0"
+              HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+              ToolTip.Tip="یک ماه جلو" />
+      <Button x:Name="TypeBtn" Content="⌨️ نوشتن" Click="OnAllowTyping"
+              HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+              ToolTip.Tip="اگر خواستید با کیبورد بنویسید" />
+    </UniformGrid>
+
+    <TextBlock x:Name="Hint" Classes="muted" TextWrapping="Wrap" MinHeight="20" />
+
+    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
+      <Button x:Name="OkBtn" Classes="accent" Content="✔ باز کردن" Click="OnOk" MinWidth="110" />
+      <Button Content="انصراف" Click="OnCancel" MinWidth="92" />
+    </StackPanel>
+  </StackPanel>
+</Window>

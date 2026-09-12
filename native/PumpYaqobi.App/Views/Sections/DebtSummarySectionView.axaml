@@ -1,0 +1,56 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
+             x:Class="PumpYaqobi.App.Views.Sections.DebtSummarySectionView"
+             x:DataType="vm:DebtSummarySectionViewModel">
+
+  <!-- ══ قرض‌های دسته‌جمعی ═══════════════════════════════════════════════════
+       همتای ‎#sec-debtsum‎ / ‎#sec-debtsummoney‎ی نسخهٔ وب. ستون‌ها، ترتیب و
+       جملهٔ راهنما همان‌هایی‌اند که سایت دارد. این صفحه هیچ چیزی نمی‌نویسد. -->
+  <c:SectionPage Header="{Binding Title}" SubHeader="{Binding Hint}">
+
+    <Grid RowDefinitions="*,Auto">
+      <c:ExcelGrid Grid.Row="0" ItemsSource="{Binding Rows}" IsReadOnly="True"
+                   x:CompileBindings="False"
+                   DoubleTapped="OnOpen">
+        <DataGrid.Columns>
+          <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" />
+          <DataGridTextColumn Header="نام قرض‌دار" Binding="{Binding Name}" Width="Auto" MinWidth="160" />
+          <DataGridTextColumn Header="جمله بردگی" Binding="{Binding BardagiText}" Width="Auto" />
+          <DataGridTextColumn Header="جمله رسید" Binding="{Binding RasidText}" Width="Auto" />
+          <DataGridTemplateColumn Header="الباقی" Width="Auto">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding AlbaqiText}" FontWeight="Bold"
+                           VerticalAlignment="Center"
+                           Foreground="{Binding AlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTemplateColumn Header="چند وقت قرض‌دار" Width="Auto">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="{Binding AgeText}" FontWeight="Bold"
+                             Foreground="{Binding AgeBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                  <TextBlock Text="{Binding FromText}" Classes="muted" FontSize="11"
+                             IsVisible="{Binding HasFrom}" />
+                </StackPanel>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+        </DataGrid.Columns>
+      </c:ExcelGrid>
+
+      <c:TotalsBar Grid.Row="1" Title="جمله کل" ItemsSource="{Binding TotalCells}" />
+    </Grid>
+
+    <c:SectionPage.Footer>
+      <TextBlock Text="{Binding EmptyText}" Classes="muted"
+                 HorizontalAlignment="Center" Margin="0,14"
+                 IsVisible="{Binding IsEmpty}" />
+    </c:SectionPage.Footer>
+  </c:SectionPage>
+</UserControl>

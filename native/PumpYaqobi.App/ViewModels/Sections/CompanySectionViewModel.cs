@@ -105,6 +105,9 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
     private readonly AppHost _host;
     private readonly CompanySectionViewModel _section;
 
+    /// <summary>نوارِ «➕ ردیف / ➕➕ چندتایی»ِ پایینِ جدول — همتای ‎addCompanyRowsBulk‎ی سایت.</summary>
+    public System.Windows.Input.ICommand? RowAddCommand => AddRowCommand;
+
     public CompanyPageViewModel(AppHost host, TilCompany c, CompanySectionViewModel section)
     {
         _host = host; _section = section; Entity = c;
@@ -396,7 +399,7 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
     private Task AddCompanyAsync() => CrashGuard.RunAsync("افزودن شرکت", async () =>
     {
         var n = NewName.Trim();
-        if (n.Length == 0) n = (await Dialogs.PromptAsync("افزودن شرکت", "نامِ شرکت:") ?? "").Trim();
+        if (n.Length == 0) n = (await Dialogs.PromptAsync("افزودن شرکت تیل", "نام شرکت:", "", "✔ افزودن") ?? "").Trim();
         if (n.Length == 0) { _host.Toast("نام شرکت را وارد کنید", ToastKind.Error); return; }
 
         var all = await _host.Companies.ListAsync();
