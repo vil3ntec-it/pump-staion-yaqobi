@@ -174,8 +174,11 @@ public class SiteFlowParityTests
     public void WindowsWithNamedFieldsCallInitializeComponent(string name)
     {
         var cs = Read("PumpYaqobi.App", "Views", name + ".axaml.cs");
-        Assert.Contains("InitializeComponent()", cs);
-        Assert.DoesNotContain("AvaloniaXamlLoader.Load(this)", cs);
+        // ⚠️ کامنت‌ها کنار گذاشته می‌شوند: خودِ توضیحِ همین باگ نامِ آن تابع را
+        // دارد و بی این کار، آزمون به توضیح گیر می‌داد نه به کد.
+        var code = string.Join('\n', cs.Split('\n').Where(l => !l.TrimStart().StartsWith("//")));
+        Assert.Contains("InitializeComponent()", code);
+        Assert.DoesNotContain("AvaloniaXamlLoader.Load(this)", code);
     }
 
     // ── ستونِ «#» ────────────────────────────────────────────────────────────
