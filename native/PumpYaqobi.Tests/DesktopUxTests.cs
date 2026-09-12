@@ -65,9 +65,9 @@ public class DesktopUxTests
         Assert.Contains("cb.IsDropDownOpen = true", g);
 
         // هیچ تاخیری برای باز کردنِ کشویی نمانده باشد
-        var at = g.IndexOf("private static void OnPreviewPressed", StringComparison.Ordinal);
+        var at = g.IndexOf("private void OnPreviewPressed", StringComparison.Ordinal);
         Assert.True(at > 0);
-        var body = g[at..(at + 700)];
+        var body = g[at..(at + 1200)];
         Assert.DoesNotContain("Dispatcher", body);
         Assert.DoesNotContain("Task.Delay", body);
     }
