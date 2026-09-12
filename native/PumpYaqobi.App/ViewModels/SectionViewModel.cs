@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PumpYaqobi.App.Services;
 
 namespace PumpYaqobi.App.ViewModels;
 
@@ -14,6 +15,7 @@ public abstract partial class SectionViewModel : ObservableObject
     protected SectionViewModel(string id, string iconKey, string title)
     {
         Id = id; IconKey = iconKey; Title = title;
+        FontScale = Scales.TryGetValue(id, out var s) ? Clamp(s) : 1;
     }
 
     public string Id { get; }
@@ -123,6 +125,54 @@ public abstract partial class SectionViewModel : ObservableObject
     /// <summary>«‹ برگشت» — از زیربخش به خودِ بخش.</summary>
     [RelayCommand]
     public void CloseSub() => OpenSub = null;
+
+    // ══ اندازهٔ نوشتهٔ بخش — ‎A−‎ / ‎A+‎ / ‎↺‎ ═══════════════════════════════════
+    //
+    // در سایت کنارِ عنوانِ **هر** بخش این سه دکمه هست (‎adjSecFont‎ /
+    // ‎resetSecFont‎) و خودِ سایت هم نوشته چرا: «بخش‌هایی که این دکمه‌ها را
+    // نداشتند خودکار می‌گیرند، پس دیگر هیچ بخشی بدونِ کنترلِ اندازه نمی‌ماند.»
+    // در برنامهٔ نیتیو هیچ بخشی نداشت.
+    //
+    // این‌جا روی خودِ ‎SectionViewModel‎ نشسته، نه در تک‌تکِ بخش‌ها: هر بخشی که
+    // ساخته شود خودبه‌خود دارد و قالبِ مشترکِ ‎SectionPage‎ دکمه‌هایش را می‌کشد.
+    //
+    // ⚠️ گام و کف و سقف مو‌به‌مو همان سایت است: ‎0.08‎ هر بار، بینِ ‎0.6‎ و ‎2.2‎.
+
+    public const double FontStep = 0.08;
+    public const double FontMin = 0.6;
+    public const double FontMax = 2.2;
+
+    /// <summary>
+    /// اندازهٔ ذخیره‌شدهٔ همهٔ بخش‌ها — یک‌بار از فایلِ تنظیمات خوانده می‌شود،
+    /// نه یک‌بار برای هر کدام از چهل‌ودو بخش.
+    /// </summary>
+    private static Dictionary<string, double>? _scales;
+
+    private static Dictionary<string, double> Scales =>
+        _scales ??= AppSettings.Load().SecFontScales;
+
+    /// <summary>آزمون‌ها که پوشهٔ تنظیمات را عوض می‌کنند، حافظهٔ بالا را دور بریزند.</summary>
+    public static void ForgetFontScales() => _scales = null;
+
+    private static double Clamp(double v) => Math.Round(Math.Clamp(v, FontMin, FontMax), 2);
+
+    [ObservableProperty] private double _fontScale = 1;
+
+    [RelayCommand] private void FontBigger() => SetFontScale(FontScale + FontStep);
+
+    [RelayCommand] private void FontSmaller() => SetFontScale(FontScale - FontStep);
+
+    /// <summary>‎↺‎ — برگشت به اندازهٔ عادی، بی چند بار زدنِ ‎A−‎.</summary>
+    [RelayCommand] private void FontReset() => SetFontScale(1);
+
+    private void SetFontScale(double v)
+    {
+        v = Clamp(v);
+        if (Math.Abs(v - FontScale) < 0.0005) return;      // به کف/سقف رسیده
+        FontScale = v;
+        if (Math.Abs(v - 1) < 0.005) Scales.Remove(Id); else Scales[Id] = v;
+        AppSettings.SaveSecFontScale(Id, v);
+    }
 
     /// <summary>کلیدِ آیکون در <c>Icons.axaml</c> — معمولاً همان شناسهٔ بخش.</summary>
     public string IconKey { get; }

@@ -34,6 +34,12 @@ public sealed partial class SectionNotesViewModel : ObservableObject
 
     public ObservableCollection<SectionNote> Items { get; } = new();
 
+    /// <summary>
+    /// اندازهٔ نوشتهٔ کادرهای یادداشت — مشترکِ همهٔ بخش‌ها، جدا از ‎A−/A+‎ِ
+    /// خودِ بخش. همتای ‎adjNoteFont‎ی سایت؛ توضیحش آن‌جاست.
+    /// </summary>
+    public NoteFontViewModel Font => NoteFontViewModel.Instance;
+
     private bool _loading;
 
     /// <summary>متنِ داخلِ کادر. ⚠️ هر حرف ذخیره می‌شود، مثلِ ‎saveNoteDraft‎.</summary>

@@ -620,14 +620,40 @@
                    حالا ابزار در ستونِ ‎*‎ است، پس پهنای واقعی و محدود می‌گیرد و
                    ‎WrapPanel‎ش درست می‌شکند. عنوان ‎Auto‎ است و به اندازهٔ
                    خودش جا می‌گیرد. -->
-              <Grid ColumnDefinitions="Auto,*">
+              <Grid ColumnDefinitions="Auto,Auto,*">
                 <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                   <TextBlock Text="{TemplateBinding Header}" Classes="card-title" />
                   <TextBlock Text="{TemplateBinding SubHeader}" Classes="muted"
                              TextWrapping="Wrap"
                              IsVisible="{TemplateBinding SubHeader, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                 </StackPanel>
-                <ContentPresenter Grid.Column="1" Content="{TemplateBinding Toolbar}"
+
+                <!-- ══ ‎A−‎ / ‎A+‎ / ‎↺‎ِ همین بخش ═════════════════════════════
+                     همتای ‎.sec-font-ctrl‎ی نسخهٔ وب، که کنارِ عنوانِ **هر**
+                     بخش می‌نشیند. در سایت ‎_ensureSecFontBtns‎ آن را به هر
+                     بخشی که ندارد می‌چسباند، «پس دیگر هیچ بخشی بدونِ کنترلِ
+                     اندازه نمی‌ماند». در برنامهٔ نیتیو هیچ بخشی نداشت.
+
+                     این‌جا در قالبِ مشترک است، نه در تک‌تکِ ویوها: هر بخشی که
+                     ساخته شود خودبه‌خود دارد.
+
+                     ‎x:CompileBindings="False"‎ مثلِ بقیهٔ بایندینگ‌های این
+                     قالب لازم است — داخلِ ‎ControlTemplate‎ نوعِ ‎DataContext‎
+                     معلوم نیست و این‌جا همان ویومدلِ بخش است. -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3"
+                            VerticalAlignment="Center" Margin="10,0,0,0"
+                            x:CompileBindings="False"
+                            IsVisible="{Binding FontSmallerCommand, Converter={x:Static ObjectConverters.IsNotNull},
+                                        FallbackValue=False}">
+                  <Button Classes="seg" Content="A-" Command="{Binding FontSmallerCommand}"
+                          ToolTip.Tip="نوشتهٔ این بخش کوچک‌تر" />
+                  <Button Classes="seg" Content="A+" Command="{Binding FontBiggerCommand}"
+                          ToolTip.Tip="نوشتهٔ این بخش بزرگ‌تر" />
+                  <Button Classes="seg" Content="↺" Command="{Binding FontResetCommand}"
+                          ToolTip.Tip="برگشت به اندازهٔ عادی" />
+                </StackPanel>
+
+                <ContentPresenter Grid.Column="2" Content="{TemplateBinding Toolbar}"
                                   VerticalAlignment="Center" Margin="12,0,0,0" />
               </Grid>
             </Border>
@@ -636,7 +662,19 @@
             <!-- ردیفِ اول تازه است: کارت‌های زیربخش. بقیه همان چهارتای
                  همیشگی‌اند و همه ‎Auto‎ می‌مانند — با اسکرولِ واحدِ کلِ صفحه،
                  بخش باید به اندازهٔ محتوایش بلند شود، نه به اندازهٔ قاب. -->
-            <Grid Grid.Row="1" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" Margin="14">
+            <!-- ══ بدنه، با اندازهٔ نوشتهٔ خودِ بخش ═══════════════════════
+                 ‎A−‎ / ‎A+‎ فقط همین را بزرگ و کوچک می‌کند: سربرگ و نوارِ
+                 ابزار بیرونِ این قاب مانده‌اند — همان قاعدهٔ صریحِ سایت
+                 («‎A−/A+‎ برای نوشته‌های خودِ بخش است، نه برای نوارِ ابزارش»).
+
+                 ⚠️ تا وقتی کاربر چیزی عوض نکرده، دگرگونی «یکِ» دست‌نخورده است
+                 و هیچ چیزی در چیدمان فرق نمی‌کند. -->
+            <LayoutTransformControl Grid.Row="1" x:CompileBindings="False"
+                                    HorizontalAlignment="Stretch" VerticalAlignment="Top"
+                                    LayoutTransform="{Binding FontScale,
+                                                      Converter={x:Static th:FontScaleConverter.Instance},
+                                                      FallbackValue={x:Null}}">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" Margin="14">
 
               <!-- ══ کارت‌های زیربخش ══════════════════════════════════════
                    بخشی که زیربخش دارد (قرض‌داران، مخزن، مفاد/ضرر، تنظیمات،
@@ -701,8 +739,21 @@
                             IsVisible="{Binding Notes, Converter={x:Static ObjectConverters.IsNotNull},
                                         FallbackValue=False}"
                             DataContext="{Binding Notes}">
-                  <TextBlock Text="📝 یادداشت این بخش" Classes="label" />
+                  <!-- ══ سربرگِ کادرِ یادداشت، با ‎A−/A+‎ِ خودش ═══════════════
+                       سایت این دو دکمه را جدا از ‎A−/A+‎ِ بخش گذاشته و دلیلش را
+                       هم نوشته: اندازهٔ یادداشت‌ها نباید با بزرگ شدنِ جدول‌ها
+                       عوض شود. پس این‌جا هم جداست و روی همهٔ بخش‌ها با هم
+                       می‌نشیند. -->
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="📝 یادداشت این بخش" Classes="label"
+                               VerticalAlignment="Center" />
+                    <Button Classes="seg" Content="A-" Command="{Binding Font.SmallerCommand}"
+                            ToolTip.Tip="نوشتهٔ یادداشت‌ها کوچک‌تر" />
+                    <Button Classes="seg" Content="A+" Command="{Binding Font.BiggerCommand}"
+                            ToolTip.Tip="نوشتهٔ یادداشت‌ها بزرگ‌تر" />
+                  </StackPanel>
                   <TextBox Text="{Binding Draft}" AcceptsReturn="True" MinHeight="62"
+                           FontSize="{Binding Font.Size}"
                            TextWrapping="Wrap" Watermark="یادداشت شما…" />
                   <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
                     <Button Classes="ghost info" Content="📨 فرستادن به صندوق نوت‌ها"
@@ -719,6 +770,7 @@
                             <TextBlock Grid.Column="0" Text="{Binding DateShamsi}"
                                        Classes="muted" VerticalAlignment="Center" />
                             <TextBlock Grid.Column="2" Text="{Binding Text}" TextWrapping="Wrap"
+                                       FontSize="{Binding $parent[ItemsControl].DataContext.Font.Size}"
                                        VerticalAlignment="Center" />
                             <Button Grid.Column="4" Classes="ghost danger" Content="حذف"
                                     Padding="8,3" FontSize="12"
@@ -731,6 +783,7 @@
                   </ItemsControl>
                 </StackPanel>
             </Grid>
+            </LayoutTransformControl>
           </Grid>
         </Border>
       </ControlTemplate>
