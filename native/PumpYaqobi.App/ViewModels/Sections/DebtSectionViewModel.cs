@@ -227,20 +227,27 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
         {
             if (card is null) return;
 
-            // ⚠️ نبودِ نشانی جلوی ساختِ کد را نمی‌گیرد — خواستهٔ صریحِ صاحب
-            // ریپو: «بدونِ نت هم که شده باید برای هر حساب کیو‌آر ساخته بشه.»
-            var full = AcctLink.FullUrl(
-                _host.Settings.GetString(SettingsKeys.ViewerUrl), card.Entity.Id, null, "debt",
-                _host.Settings.GetString(SettingsKeys.ServerUrl),
-                _host.Settings.GetString(SettingsKeys.SyncCode));
-            var link = full ?? AcctLink.Build(card.Entity.Id);
+            // ══ تمامِ حساب داخلِ خودِ کیو‌آر ══════════════════════════════
+            // مثلِ کیو‌آرِ صفحهٔ شخص: عکسِ حساب فشرده می‌شود و در تکهٔ ‎#d=…‎ی
+            // نشانی می‌نشیند؛ صفحهٔ ‎view/‎ آن را نشان می‌دهد. نه رمز، نه سرور.
+            //
+            // ⚠️ کارت فقط جمع‌ها را دارد، پس ردیف‌ها همین‌جا از دیتابیس خوانده
+            // می‌شوند — وگرنه مشتری جدولی خالی می‌دید.
+            var full = await _host.Debtors.LoadFullAsync(card.Entity.Id);
+            var main = full?.MainAccount;
+            var snap = main is null
+                ? new AcctSnapshot { Name = card.Name, Kind = "قرض‌دار", Date = Shamsi.Today() }
+                : AcctSnapshots.ForDebtAccount(card.Name, null, main,
+                                               main.FuelRows.Concat(main.MoneyRows).ToList(),
+                                               _host.Debt);
+
+            var link = AcctView.Url(_host.Settings.GetString(SettingsKeys.ViewerUrl), snap,
+                                    AcctLink.Build(card.Entity.Id));
 
             var png = await Task.Run(() => QrWriter.EncodePng(link));
-            var hint = full is not null
-                ? "این کد را به مشتری بدهید؛ با اسکنش حسابِ خودش را می‌بیند — زنده، از همین سرور."
-                : "این کد بی‌اینترنت ساخته شد و با خودِ همین برنامه خوانده می‌شود. "
-                  + "برای این‌که با گوشیِ مشتری هم باز شود، در «تنظیمات › نشانیِ صفحهٔ حساب» "
-                  + "نشانیِ صفحه را بنویسید.";
+            var hint = "این کد را به مشتری بدهید؛ با اسکنش حسابِ خودش — با همهٔ "
+                     + "ردیف‌هایش — روی گوشی باز می‌شود. نه رمز می‌خواهد و نه به "
+                     + "سرور وصل می‌شود.";
 
             await Dialogs.ShowQrAsync("📲 " + card.Name, link, png, hint);
         });

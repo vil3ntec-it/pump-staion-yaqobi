@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>حساب من — پمپ یعقوبی</title>
+<meta name="theme-color" content="#0f1622">
+<!--
+  ══ صفحهٔ «حسابِ من» ═══════════════════════════════════════════════════════
+  این صفحهٔ تازه است و هیچ ربطی به برنامهٔ قدیمیِ سایت ندارد — خواستهٔ صریحِ
+  صاحب ریپو: «طرف که اسکن می‌کند سایت باز بشود و تمام اطلاعاتش تو گوشی بیاید؛
+  یک سایت جدید برای دیدنِ اطلاعات، آن سایت قبلی را ول کن».
+
+  ⚠️ این صفحه به هیچ سروری وصل نمی‌شود و هیچ رمزی نمی‌خواهد. تمامِ داده داخلِ
+  خودِ کیو‌آر است (فشرده و base64 در تکهٔ #d=…). یعنی:
+     • مشتری اینترنتِ سرورِ خانگی را لازم ندارد،
+     • هیچ حسابی از راهِ این صفحه لو نمی‌رود — هر کد فقط همان حسابِ خودش را دارد،
+     • و کدی که امروز چاپ شود، فردا هم همان عددهای امروز را نشان می‌دهد.
+-->
+<style>
+  :root{
+    --bg:#0f1622; --card:#16202e; --line:#26344a; --txt:#e8eef7;
+    --muted:#93a4bd; --accent:#f6a623; --ok:#38a169; --red:#e53e3e;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg:#f6f7fb; --card:#fff; --line:#e2e8f0; --txt:#1a202c;
+           --muted:#64748b; --accent:#c97d00; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+       font-family:system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;
+       padding:14px 12px 40px;line-height:1.9}
+  .wrap{max-width:900px;margin:0 auto}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+        padding:14px;margin-bottom:12px}
+  h1{font-size:1.15rem;margin:0 0 2px}
+  .sub{color:var(--muted);font-size:.82rem}
+  .figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:12px}
+  .fig{background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:10px;text-align:center}
+  .fig .l{color:var(--muted);font-size:.76rem}
+  .fig .v{font-size:1.15rem;font-weight:800;margin-top:3px}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{border-collapse:collapse;width:100%;min-width:520px;font-size:.85rem}
+  th,td{border:1px solid var(--line);padding:7px 6px;text-align:center;white-space:nowrap}
+  th{background:var(--bg);color:var(--muted);font-weight:800}
+  tr:nth-child(even) td{background:rgba(127,127,127,.05)}
+  .note{color:var(--muted);font-size:.8rem;margin-top:8px;text-align:center}
+  .err{border-color:var(--red);color:var(--red)}
+  .btn{display:inline-block;border:1px solid var(--line);background:var(--bg);color:var(--txt);
+       border-radius:10px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:.85rem}
+  @media print{
+    body{background:#fff;color:#000;padding:0}
+    .card{border-color:#999}
+    .noprint{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <div class="card"><div class="sub">در حالِ باز کردن…</div></div>
+</div>
+
+<script>
+(function () {
+  var app = document.getElementById('app');
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function fail(msg, detail) {
+    app.innerHTML = '<div class="card err"><h1>باز نشد</h1><div class="sub">' +
+      esc(msg) + (detail ? '<br>' + esc(detail) : '') + '</div></div>';
+  }
+
+  // base64url → بایت‌ها
+  function b64(s) {
+    s = s.replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    var bin = atob(s), out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  // بازکردنِ فشرده — همان deflateِ خامِ برنامه
+  function inflate(bytes) {
+    if (typeof DecompressionStream !== 'function') return Promise.reject('old-browser');
+    var ds = new DecompressionStream('deflate-raw');
+    var s = new Blob([bytes]).stream().pipeThrough(ds);
+    return new Response(s).text();
+  }
+
+  function render(d) {
+    var h = '';
+    h += '<div class="card">';
+    h += '<h1>' + esc(d.n || 'حساب') + '</h1>';
+    if (d.a) h += '<div class="sub">' + esc(d.a) + '</div>';
+    h += '<div class="sub">' + esc(d.t || '') + (d.d ? ' · ' + esc(d.d) : '') + '</div>';
+
+    if (d.s && d.s.length) {
+      h += '<div class="figs">';
+      for (var i = 0; i < d.s.length; i++) {
+        var f = d.s[i];
+        h += '<div class="fig"><div class="l">' + esc(f[0]) + '</div>' +
+             '<div class="v">' + esc(f[1]) + (d.u ? ' ' + esc(d.u) : '') + '</div></div>';
+      }
+      h += '</div>';
+    }
+    h += '</div>';
+
+    if (d.r && d.r.length) {
+      h += '<div class="card"><div class="scroll"><table><thead><tr><th>#</th>';
+      for (var c = 0; c < (d.h || []).length; c++) h += '<th>' + esc(d.h[c]) + '</th>';
+      h += '</tr></thead><tbody>';
+      for (var r = 0; r < d.r.length; r++) {
+        h += '<tr><td>' + (r + 1) + '</td>';
+        for (var k = 0; k < d.r[r].length; k++) h += '<td>' + esc(d.r[r][k]) + '</td>';
+        h += '</tr>';
+      }
+      h += '</tbody></table></div>';
+      if (d.m) h += '<div class="note">' + esc(d.m) + '</div>';
+      h += '</div>';
+    }
+
+    h += '<div class="card noprint" style="text-align:center">' +
+         '<button class="btn" onclick="window.print()">🖨️ چاپ / ذخیره PDF</button></div>';
+
+    app.innerHTML = h;
+    if (d.n) document.title = d.n + ' — پمپ یعقوبی';
+  }
+
+  var hash = (location.hash || '').replace(/^#/, '');
+  var m = /(?:^|&)d=([^&]+)/.exec(hash);
+  if (!m) {
+    fail('این نشانی دادهٔ حسابی ندارد.',
+         'کیو‌آرِ حسابتان را دوباره اسکن کنید.');
+    return;
+  }
+
+  try {
+    inflate(b64(m[1]))
+      .then(function (txt) { render(JSON.parse(txt)); })
+      .catch(function (e) {
+        fail(e === 'old-browser'
+              ? 'مرورگرِ گوشی قدیمی است و نمی‌تواند این کد را باز کند.'
+              : 'دادهٔ این کیو‌آر خوانده نشد.', String(e));
+      });
+  } catch (e) {
+    fail('دادهٔ این کیو‌آر خوانده نشد.', String(e));
+  }
+})();
+</script>
+</body>
+</html>
