@@ -64,9 +64,9 @@ public sealed partial class StaffShortSectionViewModel : SectionViewModel
     public StaffShortSectionViewModel(AppHost host)
         : base("staffshort", "attendance", "کمبودی کارمندان") => _host = host;
 
-    /// <summary>⚠️ ‎BulkObservableCollection‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
+    /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
     /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
-    public BulkObservableCollection<StaffShortRowViewModel> Rows { get; } = new();
+    public BulkRows<StaffShortRowViewModel> Rows { get; } = new();
     public ObservableCollection<StaffSettleRowViewModel> Settles { get; } = new();
 
     [ObservableProperty] private StaffShortRowViewModel? _selected;

@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
+using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Threading;
 using PumpYaqobi.App.Themes;
@@ -32,6 +33,18 @@ internal static class Program
         // مجاز، بخش‌به‌بخش می‌سنجد که محتوا از پنجره بلندتر است یا نه و آیا
         // اصلاً راهی برای رسیدن به بخشِ بیرون‌افتاده هست.
         if (outDir.Equals("scroll", StringComparison.OrdinalIgnoreCase)) return ScrollAudit();
+        // ══ حالتِ «سنجشِ صفحهٔ حسابِ قرض‌دار» ═══════════════════════════════
+        //     dotnet run --project PumpYaqobi.UiTests -- person
+        // چرایی و کارش در ‎PersonAudit‎ نوشته شده.
+        if (outDir.Equals("person", StringComparison.OrdinalIgnoreCase)) return PersonAudit.Run();
+        // ══ حالتِ «سنجشِ پارچه‌ها و ورق‌ها» ═══════════════════════════════
+        //     dotnet run --project PumpYaqobi.UiTests -- parcha
+        if (outDir.Equals("parcha", StringComparison.OrdinalIgnoreCase)) return ParchaWaraqAudit.Run();
+        // ══ حالتِ «کند نشدن با دادهٔ بزرگ» ═════════════════════════════════
+        //     dotnet run --project PumpYaqobi.UiTests -- perf
+        // ده هزار قرض‌دار و سیصد هزار ردیف (صدهزارتا در یک حساب)، بعد
+        // زمان‌گیریِ کارهای روزمره. چرایی‌اش در ‎PerfAudit‎ نوشته شده.
+        if (outDir.Equals("perf", StringComparison.OrdinalIgnoreCase)) return PerfAudit.Run();
         if (outDir.Equals("gridperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Run();
         if (outDir.Equals("cardperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Cards();
 
@@ -402,9 +415,26 @@ internal static class Program
             var inner = host.GetVisualDescendants().OfType<ScrollViewer>()
                             .Count(v => v.Extent.Height > v.Viewport.Height + 1);
 
-            var ok = page is not null && !squashed && inner == 0;
+            // ══ و اسکرولِ خودِ جدول ════════════════════════════════════════
+            //
+            // ⚠️ این شمارشِ بالا جدول را نمی‌گرفت: ‎DataGrid‎ی آوالونیا برای
+            // ردیف‌هایش ‎ScrollViewer‎ ندارد؛ خودش می‌لغزاند و فقط یک
+            // ‎ScrollBar‎ دارد. برای همین «کادرِ محدودی که ردیفِ ۴۰ و ۵۰ تویش
+            // گیر می‌کرد» از چشمِ این سنجش افتاده بود و صاحب ریپو باید
+            // خودش گزارشش می‌کرد.
+            //
+            // قاعده روشن است: جدول باید هم‌قدِ ردیف‌هایش بلند شود و صفحه
+            // بلندتر گردد — پس نوارِ لغزشِ عمودیِ جدول نباید چیزی برای
+            // لغزاندن داشته باشد.
+            var vbar = grid?.GetVisualDescendants().OfType<ScrollBar>()
+                            .FirstOrDefault(b => b.Orientation == Orientation.Vertical);
+            var caged = vbar is not null && vbar.Maximum > 1;
+
+            var ok = page is not null && !squashed && inner == 0 && !caged;
 
             var mark = ok ? (overflows ? "✔" : "—") : "✖";
+            if (caged) Console.WriteLine($"        ⚠️ {sec.Id}: جدول داخلِ کادر گیر کرده "
+                                       + $"(لغزشِ درونی تا {vbar!.Maximum:0} پیکسل)");
             Console.WriteLine($"{sec.Id,-20} {(overflows ? "بله" : "نه"),-8} "
                             + $"{wanted,6:0} / {avail,-6:0}      {(page is not null ? "صفحه" : "—"),-6} "
                             + $"{(inner > 0 ? $"درونی {inner}" : "        "),-9} "

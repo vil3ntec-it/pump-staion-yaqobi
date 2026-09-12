@@ -38,7 +38,7 @@ public sealed partial class ExpenseRowViewModel : RowViewModel
     partial void OnAmountChanged(decimal v) { Touch(); OnPropertyChanged(nameof(AmountText)); }
     partial void OnNoteChanged(string v) => Touch();
 
-    public string AmountText { get => Shamsi.Money(Amount); set => Amount = Shamsi.Num(value); }
+    public string AmountText { get => Shamsi.MoneyOrBlank(Amount); set => Amount = Shamsi.Num(value); }
 
     protected override void Apply()
     {
@@ -88,6 +88,16 @@ public sealed partial class ExpenseSectionViewModel
     partial void OnTodayTotalChanged(decimal v) => OnPropertyChanged(nameof(TodayText));
     partial void OnGrandTotalChanged(decimal v) => OnPropertyChanged(nameof(GrandText));
 
+    /// <summary>
+    /// واردِ مصارف که می‌شویم، جدول از دیتابیس تازه می‌شود — ردیف‌های «مصرف»ِ
+    /// ورق ممکن است همین حالا اضافه شده باشند (سایت هم با هر ‎showSection‎
+    /// دوباره ‎renderExpenses‎ را صدا می‌زد).
+    /// </summary>
+    public override async Task OnActivatedAsync()
+    {
+        if (IsLoaded) await ReloadRowsAsync();
+    }
+
     protected override ExpenseRowViewModel Wrap(Expense e) => new(e, this);
     protected override long EntityIdOf(ExpenseRowViewModel r) => r.Entity.Id;
     protected override Expense EntityOf(ExpenseRowViewModel r) => r.Entity;
@@ -107,7 +117,7 @@ public sealed partial class ExpenseSectionViewModel
     /// <summary>ردیفِ «جمله» — جمعِ همین ماه؛ همان عددی که «مفاد/ضرر» می‌خواند.</summary>
     protected override IReadOnlyList<TotalCell> BuildTotals() => new[]
     {
-        new TotalCell("مبلغِ ماه", TotalText, "Pump.Warn"),
+        new TotalCell("مبلغِ ماه", TotalText, "Pump.Warn", column: "مبلغ"),
         new TotalCell("امروز", TodayText),
     };
 

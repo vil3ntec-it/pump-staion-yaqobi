@@ -16,7 +16,17 @@
            تیل چرا شبیهِ کادرِ آن بالا بغلِ پی‌دی‌اف نیست؟ که این مدل تیک‌مارکی
            درست کردی چرا؟» — پس چک‌باکسِ «واحدِ پول» از پایین برداشته شد و
            همان‌جایی نشست که در سایت است. -->
-      <StackPanel Orientation="Horizontal" Spacing="8">
+      <!-- ⚠️ ‎WrapPanel‎ است نه ‎StackPanel‎ی افقی: با افزوده شدنِ «تغییر اسم» و
+           «حذفِ این حساب»، نوار از پنجرهٔ ۱۰۰۰ پیکسلی بیرون زد و «بازگشت به
+           فهرست» افتاد بیرونِ لبهٔ چپ (سنجشِ ‎UiTests person‎ گرفتش:
+           ‎x −13…127‎). همان درسِ نوارِ حساب — یک خطِ افقیِ نشکن، دُمش را
+           می‌بُرد. این را به ‎StackPanel‎ برنگردانید. -->
+      <WrapPanel Orientation="Horizontal">
+        <WrapPanel.Styles>
+          <Style Selector="WrapPanel > :is(Control)">
+            <Setter Property="Margin" Value="0,0,8,6" />
+          </Style>
+        </WrapPanel.Styles>
         <Button Classes="ghost" Content="→ قبلی" Command="{Binding PrevPersonCommand}" />
         <Button Classes="ghost" Content="بعدی ←" Command="{Binding NextPersonCommand}" />
         <Button Classes="ghost info" Content="{Binding Current.ModeToggleText}"
@@ -27,9 +37,24 @@
              نبود: نه کیو‌آری ساخته می‌شد و نه دیده می‌شد. -->
         <Button Classes="ghost" Content="📲 کیو‌آر" Command="{Binding ShowQrCommand}"
                 ToolTip.Tip="کیو‌آرِ همین حسابی که باز است" />
+        <!-- ══ دو دکمهٔ خطرناک، دور از بقیه ═══════════════════════════════
+             گزارشِ صاحب ریپو: «حذف حساب و تغییر اسم را باید بالای بالا
+             بگذاری، جای پی‌دی‌اف و غیره؛ ولی این دو تا را کنجِ سمتِ راست
+             بگذاری که دستم اشتباهی جای پی‌دی‌اف این را نزنم.»
+
+             پس از نوارِ حساب آمدند بالا، ولی با یک فاصلهٔ آشکار و یک خطِ
+             جداکننده از دکمه‌های همیشگی — تا دستِ کسی سُر نخورد رویشان. -->
+        <Border Width="1" Background="{DynamicResource Pump.GridLine}"
+                Margin="14,4" VerticalAlignment="Stretch" />
+        <Button Classes="ghost" Content="✏️ تغییر اسم"
+                Command="{Binding RenamePersonCommand}" />
+        <Button Classes="ghost danger" Content="🗑️ حذفِ این حساب"
+                Command="{Binding DeleteSubAccountCommand}"
+                CommandParameter="{Binding Current}" />
+
         <Button Classes="accent" Content="بازگشت به فهرست"
                 Command="{Binding BackCommand}" />
-      </StackPanel>
+      </WrapPanel>
     </c:SectionPage.Toolbar>
 
     <c:SectionPage.Summary>
@@ -129,7 +154,8 @@
                 <TextBlock Text="{Binding HeadRasidLabel}" Classes="fsl" />
                 <!-- در سایت رسید را همین‌جا در سربرگ می‌نویسند، نه در کادرِ
                      دیگری پایین‌تر. پس این خانه خواندنی نیست، نوشتنی است. -->
-                <TextBox Text="{Binding HeadPetrolRasidEdit}" Classes="fsv"
+                <TextBox Text="{Binding HeadPetrolRasidEdit, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                         Classes="fsv" GotFocus="RasidBoxFocus" KeyDown="RasidBoxKey"
                          Foreground="{DynamicResource Pump.Ok}" />
               </StackPanel>
               <StackPanel Spacing="2">
@@ -164,7 +190,8 @@
               </StackPanel>
               <StackPanel Spacing="2">
                 <TextBlock Text="{Binding HeadRasidLabel}" Classes="fsl" />
-                <TextBox Text="{Binding HeadDieselRasidEdit}" Classes="fsv"
+                <TextBox Text="{Binding HeadDieselRasidEdit, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                         Classes="fsv" GotFocus="RasidBoxFocus" KeyDown="RasidBoxKey"
                          Foreground="{DynamicResource Pump.Ok}" />
               </StackPanel>
               <StackPanel Spacing="2">
@@ -196,17 +223,42 @@
            و اسمِ حساب‌ها هم دیده نمی‌شد. حالا دقیقاً مثلِ سایت، یک کشویی. -->
       <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,10">
         <!-- ══ نوارِ حساب — مو‌به‌مو ‎.pm-acct-bar‎ی سایت ══════════════════════
-             سایت همه‌شان را در «یک خط» کنارِ هم می‌گذارد، به همین ترتیب:
+             ترتیبِ سایت، همین:
 
                  📒 حساب: │ کشویی │ ➕ حساب جدید │ 📋 جدول جدید │ ┊
-                 📋 همه │ ⛽ حساب جداگانه پطرول │ 🟤 حساب جداگانه دیزل │ ┊
+                 📋 همه │ ⛽ حساب پطرول │ 🟤 حساب دیزل │ ┊
                  📞 شماره تماس │ 📝 فیِ خرید │ ٪ فیصدی ▾ │ 🗂️ آرشیو ▾
 
-             و خودش هم نوشته چرا: «دیگر کشویی بالای دکمه‌ها نیست که دست
-             اشتباهی رویشان برود؛ در صفحهٔ باریک این خط اسکرول افقی می‌خورد و
-             نمی‌شکند.» پس این‌جا هم ‎WrapPanel‎ نیست، یک خط است. -->
-        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-          <StackPanel.Styles>
+             ⚠️ این نوار باید روی کامپیوتر «بشکند» (چند خط شود)، نه یک خط.
+             پیش از این یک ‎StackPanel‎ی افقی بود و کامنتش نوشته بود «پس
+             این‌جا هم WrapPanel نیست، یک خط است» — که وارونهٔ کارِ سایت بود.
+
+             خودِ سایت این را یک‌بار خورده و در ‎.pm-acct-bar‎ نوشته:
+               «این نوار روی کامپیوتر نمی‌شکست و اسکرولِ افقی می‌خورد. روی
+                گوشی با انگشت می‌شود کشیدش، ولی با ماوس نه… نتیجه: «فیِ خرید»
+                و دکمهٔ «٪ فیصدی» (و هر چه بعدشان بود) بیرونِ لبهٔ چپ می‌ماندند
+                و اصلاً قابلِ زدن نبودند — «تو کامپیوتر نمی‌شه فیصدی زد، هر سه
+                تا کادرش».»
+             و درمانش: ‎flex-wrap:wrap‎ روی کامپیوتر، و یک‌خط+اسکرولِ افقی فقط
+             زیرِ ۸۲۰ پیکسل.
+
+             در نیتیو این بدتر هم بود: کلِ پنجره ‎FlowDirection=RightToLeft‎
+             است و ‎MinWidth‎ش ۱۰۰۰ — پس دُمِ نوار از لبهٔ چپ بیرون می‌زد و
+             هیچ اسکرولِ افقی‌ای هم زیرش نبود که برش گرداند. یعنی آن دکمه‌ها
+             برای کاربر اصلاً وجود نداشتند.
+
+             ⚠️ این را به ‎StackPanel‎ی افقی برنگردانید. سنجشِ
+             ‎UiTests person‎ همین را می‌پاید و اگر چیزی بیرونِ پنجره
+             بیفتد، قرمز می‌شود.
+
+             ‎.pm-bar-grp‎ی سایت هم این‌جا ‎StackPanel‎های کوچک‌اند: برچسب و
+             کادرش یک تکه‌اند و هنگامِ شکستن از هم جدا نمی‌افتند. -->
+        <WrapPanel Orientation="Horizontal">
+          <WrapPanel.Styles>
+            <!-- جای ‎gap:8px‎ و ‎row-gap:6px‎ی سایت -->
+            <Style Selector="WrapPanel > :is(Control)">
+              <Setter Property="Margin" Value="0,0,8,6" />
+            </Style>
             <Style Selector="TextBlock.barl">
               <Setter Property="FontSize" Value="14" />
               <Setter Property="FontWeight" Value="Bold" />
@@ -221,17 +273,19 @@
               <Setter Property="Background" Value="{DynamicResource Pump.GridLine}" />
               <Setter Property="VerticalAlignment" Value="Center" />
             </Style>
-          </StackPanel.Styles>
+          </WrapPanel.Styles>
 
-          <TextBlock Text="📒 حساب:" Classes="barl" />
-          <ComboBox ItemsSource="{Binding Accounts}" SelectedItem="{Binding Current}"
-                    MinWidth="180">
-            <ComboBox.ItemTemplate>
-              <DataTemplate x:DataType="vm:AccountViewModel">
-                <TextBlock Text="{Binding Title}" />
-              </DataTemplate>
-            </ComboBox.ItemTemplate>
-          </ComboBox>
+          <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <TextBlock Text="📒 حساب:" Classes="barl" />
+            <ComboBox ItemsSource="{Binding Accounts}" SelectedItem="{Binding Current}"
+                      MinWidth="180">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:AccountViewModel">
+                  <TextBlock Text="{Binding Title}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </StackPanel>
           <Button Classes="ghost info" Content="➕ حساب جدید"
                   Command="{Binding AddSubAccountCommand}" />
           <!-- «📋 جدول جدید» جایش همین نوار است، نه سربرگ — در سایت هم
@@ -244,25 +298,31 @@
           <!-- ══ سه دکمهٔ فیلتر — ‎setPersonFilter()‎ی سایت ═════════════════
                در برنامهٔ نیتیو اصلاً نبودند، یعنی راهی نبود که فقط ردیف‌های یک
                تیل را ببینی. ⚠️ فیلتر هیچ ردیفی را پاک نمی‌کند؛ فقط دیده‌شدن. -->
-          <Button Classes="ghost" Content="📋 همه"
-                  Command="{Binding Current.SetFilterCommand}" CommandParameter="all" />
-          <Button Classes="ghost" Content="⛽ حساب جداگانه پطرول"
-                  Foreground="{DynamicResource Pump.Ok}"
-                  Command="{Binding Current.SetFilterCommand}" CommandParameter="petrol" />
-          <Button Classes="ghost" Content="🟤 حساب جداگانه دیزل"
-                  Foreground="{DynamicResource Pump.Warn}"
-                  Command="{Binding Current.SetFilterCommand}" CommandParameter="diesel" />
+          <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <Button Classes="ghost" Content="📋 همه"
+                    Command="{Binding Current.SetFilterCommand}" CommandParameter="all" />
+            <Button Classes="ghost" Content="⛽ حساب پطرول"
+                    Foreground="{DynamicResource Pump.Ok}"
+                    Command="{Binding Current.SetFilterCommand}" CommandParameter="petrol" />
+            <Button Classes="ghost" Content="🟤 حساب دیزل"
+                    Foreground="{DynamicResource Pump.Warn}"
+                    Command="{Binding Current.SetFilterCommand}" CommandParameter="diesel" />
+          </StackPanel>
 
           <Border Classes="sep" />
 
-          <TextBlock Text="📞 شماره تماس:" Classes="barl" />
-          <TextBox Text="{Binding PhoneText}" Width="170" Watermark="مثلاً 0700000000" />
+          <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <TextBlock Text="📞 شماره تماس:" Classes="barl" />
+            <TextBox Text="{Binding PhoneText}" Width="170" Watermark="مثلاً 0700000000" />
+          </StackPanel>
 
           <!-- «فیِ خرید» فقط یادداشت است و در هیچ محاسبه‌ای نیست — همان جمله‌ای
                که خودِ سایت روی ‎title‎ی این کادر نوشته. -->
-          <TextBlock Text="📝 فیِ خرید:" Classes="barl" />
-          <TextBox Text="{Binding BuyFeeText}" Width="96" Watermark="56 / 57"
-                   ToolTip.Tip="فقط یادداشت — تیلِ مشتری با چه فی خریداری شده. در هیچ محاسبه‌ای استفاده نمی‌شود." />
+          <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <TextBlock Text="📝 فیِ خرید:" Classes="barl" />
+            <TextBox Text="{Binding BuyFeeText}" Width="96" Watermark="56 / 57"
+                     ToolTip.Tip="فقط یادداشت — تیلِ مشتری با چه فی خریداری شده. در هیچ محاسبه‌ای استفاده نمی‌شود." />
+          </StackPanel>
 
           <!-- ⚠️ «بغلِ آن حساب جدید باید کادرش باشد و هر وقت زدم اینا بیان» —
                خواستهٔ صریحِ صاحب ریپو. سه کادرِ فیصدی همیشه پیدا نیستند. -->
@@ -279,12 +339,7 @@
                   IsVisible="{Binding Current.HasArchives, FallbackValue=False}"
                   ToolTip.Tip="جدول‌های آرشیوِ این حساب — با زدنِ همین کادر باز و بسته می‌شود" />
 
-          <Button Classes="ghost" Content="✏️ تغییر اسم"
-                  Command="{Binding RenamePersonCommand}" />
-          <Button Classes="ghost danger" Content="🗑️ حذفِ این حساب"
-                  Command="{Binding DeleteSubAccountCommand}"
-                  CommandParameter="{Binding Current}" />
-        </StackPanel>
+        </WrapPanel>
 
         <!-- کادرِ کشوییِ «جدول‌های آرشیو» — تا آرشیوی نباشد، اصلاً دیده نمی‌شود -->
         <!-- ⚠️ کادرِ بزرگِ آرشیو عمداً همین بالاست، بالای جدول — عینِ ‎#pm-arc-box‎ی
@@ -406,7 +461,8 @@
       </Border>
 
       <!-- دفترِ حسابِ باز -->
-      <c:ExcelGrid Grid.Row="2" ItemsSource="{Binding Current.Rows}" GrowsOnEnter="True" x:CompileBindings="False">
+      <c:ExcelGrid Grid.Row="2" Name="PersonGrid" ItemsSource="{Binding Current.Rows}"
+                   GrowsOnEnter="True" x:CompileBindings="False">
         <DataGrid.Columns>
           <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
           <DataGridTextColumn Header="نام"   Binding="{Binding Name}" Width="Auto" MinWidth="150" MaxWidth="320" />
@@ -427,7 +483,7 @@
                ⚠️ ‎GroupName‎ باید برای هر ردیف یکتا باشد — با نامِ ثابت، آوالونیا
                همهٔ ردیف‌های جدول را یک گروه می‌بیند و زدنِ «دیزل» در یک ردیف
                انتخابِ همهٔ ردیف‌های دیگر را برمی‌دارد. -->
-          <DataGridTemplateColumn Header="تیل" Width="Auto">
+          <DataGridTemplateColumn Header="نوع تیل" Width="Auto">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
                 <StackPanel Spacing="3" Margin="3" MinWidth="74"
@@ -450,12 +506,45 @@
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
-          <DataGridTextColumn Header="لیتر"  Binding="{Binding LitersText}" Width="Auto" />
-          <DataGridTextColumn Header="فی"    Binding="{Binding PriceText}" Width="Auto" />
-          <DataGridTextColumn Header="بردگیِ دستی" Binding="{Binding ManualBardagiText}" Width="Auto" />
-          <DataGridTextColumn Header="بردگی" Binding="{Binding BardagiText}" Width="Auto" IsReadOnly="True" />
-          <DataGridTextColumn Header="رسید"  Binding="{Binding RasidText}" Width="Auto" />
-          <DataGridTextColumn Header="رسیدِ تیل" Binding="{Binding RasidFuelText}" Width="Auto" />
+          <!-- ══ دو ستونِ رسید، ولی هر بار فقط یکی ═══════════════════════════
+               گزارشِ صاحب ریپو: «دو تا رسید تو یکی» — گیج‌کننده بود.
+
+               سایت هم همین را دارد و صریح نوشته (خطِ ۳۴۳۲۹ی ‎index.html‎):
+                 «ستونِ واحدِ مقابل از جدول برداشته شود — واحد تیل ⇐ ستونِ
+                  «رسید» (پولی) حذف؛ واحد پول ⇐ ستونِ «رسید تیل» حذف.»
+
+               پس در دفترِ تیل فقط «رسید تیل» دیده می‌شود و در دفترِ پول فقط
+               «رسید». دادهٔ هیچ ردیفی دست نمی‌خورد؛ فقط نمایش است.
+               ⚠️ ‎IsVisible‎ از ‎PersonView.axaml.cs‎ نوشته می‌شود، نه با
+               ‎Binding‎ و نه با ‎x:Name‎: ستونِ ‎DataGrid‎ یک ‎AvaloniaObject‎ی
+               ساده است — نه عنصرِ دیداری است که ‎DataContext‎ بگیرد، و نه
+               خاصیتِ ‎Name‎ دارد که ‎x:Name‎ رویش بنشیند. پس از روی سرستونش
+               پیدا می‌شود. -->
+
+          <!-- ══ ستون‌ها مو‌به‌مو مثلِ سایت ══════════════════════════════════
+               سایت (‎#pm-tbl‎، خطِ ۲۱۳۹۶ی ‎index.html‎) دقیقاً این‌هاست:
+                   # │ تاریخ │ نام │ حواله │ نوع تیل │ مقدار تیل │ فی لیتر │
+                   مقدار بردگی │ رسید │ رسید تیل │ الباقی │ حذف
+
+               دو ایراد که صاحب ریپو گرفت و هر دو درست بود:
+                 • «بردگیِ دستی» در سایت **اصلاً وجود ندارد** — اختراعِ نیتیو
+                   بود و همان بود که «تو بردگی هم می‌شود رسید زد» را می‌ساخت.
+                   برداشته شد؛ «مقدار بردگی» خودش هم خواندنی است و هم نوشتنی،
+                   مثلِ سایت.
+                 • ستونِ «الباقی» **نبود**. حالا هست و آخرِ ردیف می‌نشیند.
+               نامِ ستون‌ها هم به همان نامِ سایت برگشت. -->
+          <DataGridTextColumn Header="مقدار تیل" Binding="{Binding LitersText}" Width="Auto"
+                              CellStyleClasses="num" />
+          <DataGridTextColumn Header="فی لیتر" Binding="{Binding PriceText}" Width="Auto"
+                              CellStyleClasses="num" />
+          <DataGridTextColumn Header="مقدار بردگی" Binding="{Binding BardagiText}" Width="Auto"
+                              CellStyleClasses="num" />
+          <DataGridTextColumn Header="رسید"  Binding="{Binding RasidText}" Width="Auto"
+                              CellStyleClasses="num" />
+          <DataGridTextColumn Header="رسید تیل" Binding="{Binding RasidFuelText}" Width="Auto"
+                              CellStyleClasses="num" />
+          <DataGridTextColumn Header="الباقی" Binding="{Binding AlbaqiText}" Width="Auto"
+                              IsReadOnly="True" />
           <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>

@@ -81,11 +81,45 @@ public class DebtAccount : EntityBase
     /// </summary>
     public decimal? MoneyDeposit { get; set; }
 
-    /// <summary>رسیدِ تیل و رسیدِ پول، هر کدام برای هر نوع سوخت جدا.</summary>
+    /// <summary>
+    /// رسیدِ تیل و رسیدِ پول، هر کدام برای هر نوع سوخت جدا.
+    ///
+    /// ⚠️ این چهار عدد دیگر «منبع» نیستند — از امروز فقط **جمعِ دفترِ رسید**
+    /// (<see cref="RasidLog"/>) در آن‌ها نگه داشته می‌شود، تا PDF، آرشیو،
+    /// نمای انباشته و هشدارها که همه از این‌ها می‌خوانند، دست‌نخورده بمانند.
+    /// هرگز مستقیم در آن‌ها ننویسید؛ <c>DebtCalculationService.PushRasid</c>
+    /// و <c>RasidLogSync</c> تنها راهِ عوض کردنشان‌اند.
+    /// </summary>
     public decimal RasidFuelPetrol { get; set; }
     public decimal RasidFuelDiesel { get; set; }
     public decimal RasidMoneyPetrol { get; set; }
     public decimal RasidMoneyDiesel { get; set; }
+
+    /// <summary>
+    /// ══ دفترِ رسیدهای سربرگ — تنها منبعِ داده ═══════════════════════════════
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو: «سربرگ، جدول و جمع باید از یک Data Source
+    /// بخوانند. وقتی در سربرگ رسیدی وارد می‌شود باید همان لحظه ردیفِ خودش را
+    /// در جدول داشته باشد و برعکس.»
+    ///
+    /// سایت هم دقیقاً همین را دارد (<c>acct.rasidLog</c>، خطِ ۳۴۶۲۰ی
+    /// <c>index.html</c>): هر چیزی که در سربرگ نوشته شود یک «رسیدِ تازه» است
+    /// و در دفتر ثبت می‌شود؛ کادرِ سربرگ جمعِ همهٔ آن‌ها را نشان می‌دهد و هر
+    /// رسید ردیفِ خودش را در جدول نگه می‌دارد. پیش از این یک عددِ تکی بود و
+    /// رسیدِ تازه، قبلی را پاک می‌کرد.
+    /// </summary>
+    public List<RasidEntry> RasidLog { get; set; } = new();
+
+    /// <summary>
+    /// رسیدهای قدیمیِ این حساب یک‌بار به ردیفِ واقعی تبدیل شده‌اند؟
+    ///
+    /// ⚠️ این پرچم لازم است، نه یک تجمل: مهاجرت از روی «تفاوتِ عددِ حساب با
+    /// جمعِ ردیف‌ها» کار می‌کند، و اگر بی‌پرچم هر بار اجرا شود، هر جایی که آن
+    /// عدد به دلیلِ دیگری از ردیف‌ها جلو بیفتد (مثلاً برگرداندنِ تاییدِ یک
+    /// فاکتورِ قدیمی) یک ردیفِ ساختگی می‌سازد. با پرچم، مهاجرت دقیقاً یک‌بار
+    /// اتفاق می‌افتد و از آن پس چهار عددِ حساب فقط «کش» هستند.
+    /// </summary>
+    public bool ReceiptsMigrated { get; set; }
 
     /// <summary>دفترِ «واحد تیل».</summary>
     public List<DebtRow> FuelRows { get; set; } = new();
@@ -94,6 +128,40 @@ public class DebtAccount : EntityBase
 
     /// <summary>دفترِ فعال بر اساس واحدِ همین حساب (‎_acctRows‎ در HTML).</summary>
     public List<DebtRow> ActiveRows() => Mode.IsMoney() ? MoneyRows : FuelRows;
+}
+
+/// <summary>
+/// ══ یک رسیدِ سربرگ ══════════════════════════════════════════════════════════
+/// یک عددِ رسید که کاربر در سربرگِ حساب نوشته است. هر کدام مستقل‌اند: رسیدِ
+/// تازه جای قبلی را نمی‌گیرد، ردیفِ خودش را در جدول دارد و با 🗑️ِ همان ردیف
+/// پاک می‌شود.
+///
+/// <para>⚠️ در هیچ جمعی از ردیف‌های جدول شمرده نمی‌شود — دفترِ جداست. اثرش از
+/// راهِ همان چهار عددِ <c>Rasid…</c>ی حساب دیده می‌شود که جمعِ همین دفترند.</para>
+/// </summary>
+public class RasidEntry : EntityBase
+{
+    public long AccountId { get; set; }
+
+    /// <summary>در کدام دفتر نوشته شده: واحدِ تیل یا واحدِ پول.</summary>
+    public LedgerMode Unit { get; set; } = LedgerMode.Fuel;
+
+    /// <summary>مالِ کدام تیل است.</summary>
+    public FuelType Fuel { get; set; } = FuelType.Petrol;
+
+    public decimal Value { get; set; }
+
+    /// <summary>تاریخِ شمسیِ روزی که نوشته شد.</summary>
+    public string? DateShamsi { get; set; }
+
+    /// <summary>
+    /// اگر این رسید از تاییدِ یک فاکتور آمده باشد، شمارهٔ همان فاکتور.
+    /// برگرداندنِ تایید دقیقاً همین رکورد را برمی‌دارد — نه کم کردنِ یک عدد
+    /// از جمع، که با رسیدهای دستیِ کاربر قاطی می‌شد.
+    /// </summary>
+    public long? InvoiceId { get; set; }
+
+    public int SortIndex { get; set; }
 }
 
 /// <summary>یک ردیفِ جدولِ حساب.</summary>

@@ -69,10 +69,10 @@ public sealed partial class RetailRowViewModel : RowViewModel
         OnPropertyChanged(nameof(BardagiText)); OnPropertyChanged(nameof(AlbaqiText));
     }
 
-    public string LitersText { get => Shamsi.Money(Liters); set => Liters = Shamsi.Num(value); }
-    public string PriceText { get => Shamsi.Money(PricePerLiter); set => PricePerLiter = Shamsi.Num(value); }
-    public string ManualBardagiText { get => Shamsi.Money(ManualBardagi); set => ManualBardagi = Shamsi.Num(value); }
-    public string RasidText { get => Shamsi.Money(Rasid); set => Rasid = Shamsi.Num(value); }
+    public string LitersText { get => Shamsi.MoneyOrBlank(Liters); set => Liters = Shamsi.Num(value); }
+    public string PriceText { get => Shamsi.MoneyOrBlank(PricePerLiter); set => PricePerLiter = Shamsi.Num(value); }
+    public string ManualBardagiText { get => Shamsi.MoneyOrBlank(ManualBardagi); set => ManualBardagi = Shamsi.Num(value); }
+    public string RasidText { get => Shamsi.MoneyOrBlank(Rasid); set => Rasid = Shamsi.Num(value); }
 
     /// <summary>
     /// «مقدار بردگی» — یک خانهٔ ویرایش‌پذیر، درست مثلِ نسخهٔ وب: خوانده‌شدنش

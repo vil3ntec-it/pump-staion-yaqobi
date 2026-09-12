@@ -260,8 +260,28 @@ public sealed class DebtCalculationService
             var effD = 1m - (PercentOf(a, FuelType.Diesel) / 100m);
             Check(a.RasidFuelPetrol * effP, t.Petrol.Liters, "petrol");
             Check(a.RasidFuelDiesel * effD, t.Diesel.Liters, "diesel");
-            Check(a.RasidMoneyPetrol * effP + t.Petrol.Rasid, t.Petrol.Bardagi, "money");
-            Check(a.RasidMoneyDiesel * effD + t.Diesel.Rasid, t.Diesel.Bardagi, "money");
+            // ⚠️ اعتبارِ پول، یک‌بار — نه دو بار.
+            //
+            // در نسخهٔ وب رسیدِ سربرگ و رسیدِ جدول دو انبارِ **جدا** بودند، پس
+            // این خط جمعشان می‌کرد و درست بود. حالا که رسید فقط یک جا زندگی
+            // می‌کند، ‎a.RasidMoneyPetrol‎ خودش همان بخشِ پولیِ
+            // ‎t.Petrol.Rasid‎ است و جمع کردنشان یعنی دو برابر شمردنِ همان
+            // رسید — کارت‌ها دیگر هرگز سرخ نمی‌شدند.
+            //
+            // حساب‌هایی که هنوز مهاجرت نکرده‌اند (دادهٔ نسخهٔ وب، و همان دادهٔ
+            // طلاییِ آزمونِ برابری) هنوز دو انبار دارند، پس همان فرمولِ سایت
+            // برایشان می‌ماند. این‌طور نه پاریتی می‌شکند و نه دادهٔ تازه دو
+            // برابر شمرده می‌شود.
+            if (a.ReceiptsMigrated)
+            {
+                Check(t.Petrol.Rasid * effP, t.Petrol.Bardagi, "money");
+                Check(t.Diesel.Rasid * effD, t.Diesel.Bardagi, "money");
+            }
+            else
+            {
+                Check(a.RasidMoneyPetrol * effP + t.Petrol.Rasid, t.Petrol.Bardagi, "money");
+                Check(a.RasidMoneyDiesel * effD + t.Diesel.Rasid, t.Diesel.Bardagi, "money");
+            }
         }
 
         // حسابِ تسویه‌شده «تمام‌شده» نیست
@@ -274,6 +294,164 @@ public sealed class DebtCalculationService
         var worst  = fuelSt >= per["money"] ? fuelSt : per["money"];
         return new DebtStatusInfo(worst, per["petrol"], per["diesel"], per["money"]);
     }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  رسید — یک رکوردِ واقعی، در خودِ جدول
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  خواستهٔ صریحِ صاحب ریپو: «رسید باید یک دادهٔ واقعی باشد. سربرگ رسیدهای
+    //  واقعی را نمایش دهد، جدول همان رسیدهای واقعی را نمایش دهد، جمله همان‌ها
+    //  را حساب کند. برای هر قسمت یک مقدارِ جداگانه نساز.»
+    //
+    //  پیش از این دو انبارِ جدا بود و همین ریشهٔ ناهم‌گامی بود:
+    //    • رسیدِ سربرگ در چهار عددِ ‎RasidFuelP/D‎ و ‎RasidMoneyP/D‎ی حساب
+    //    • رسیدِ جدول در ستونِ ‎Rasid‎/‎RasidFuel‎ی خودِ ردیف‌ها
+    //  پس رسیدی که در جدول نوشته می‌شد هرگز در کادرِ سربرگ نمی‌آمد و برعکس.
+    //
+    //  حالا **رسید فقط یک جا زندگی می‌کند**: ستونِ رسیدِ همان ردیفِ جدول.
+    //  چهار عددِ حساب از روی همان ردیف‌ها حساب می‌شوند و فقط «کش» هستند تا
+    //  PDF، آرشیو، کارتِ حساب و هشدارها — که همه از آن‌ها می‌خوانند —
+    //  دست‌نخورده بمانند. تنها جای نوشتنشان <see cref="SyncReceiptTotals"/>
+    //  است.
+    //
+    //  ⚠️ کدام ستون «رسید» است به دفترِ باز بستگی دارد — همان
+    //  ‎_rasidLogKey(fuel, money)‎ی سایت:
+    //      دفترِ تیل ⇒ ستونِ «رسید تیل» (‎RasidFuel‎)
+    //      دفترِ پول ⇒ ستونِ «رسید»     (‎Rasid‎)
+
+    /// <summary>رسیدِ همین ردیف، در دفترِ داده‌شده.</summary>
+    public static decimal ReceiptOf(DebtRow r, bool money) =>
+        r is null ? 0m : (money ? r.Rasid : r.RasidFuel);
+
+    /// <summary>نوشتنِ رسید در ستونِ درستِ همان دفتر.</summary>
+    public static void SetReceipt(DebtRow r, bool money, decimal value)
+    {
+        if (r is null) return;
+        if (money) r.Rasid = value; else r.RasidFuel = value;
+    }
+
+    /// <summary>
+    /// ردیفی که فقط یک رسید است — بی لیتر و بی بردگی.
+    ///
+    /// ⚠️ هیچ فرقی با ردیفی که کاربر خودش در جدول می‌سازد ندارد: خواستهٔ صریحِ
+    /// صاحب ریپو بود که «رسیدی که از سربرگ ساخته می‌شود نباید ساختارِ متفاوتی
+    /// از رسیدی که از جدول ساخته می‌شود داشته باشد».
+    /// </summary>
+    public static DebtRow NewReceiptRow(DebtAccount a, FuelType fuel, decimal value,
+                                        string? dateShamsi = null)
+    {
+        var money = a.Mode.IsMoney();
+        var r = new DebtRow
+        {
+            Fuel = fuel,
+            ByMoney = money,
+            DateShamsi = dateShamsi,
+            SortIndex = a.ActiveRows().Count,
+        };
+        if (money) r.MoneyAccountId = a.Id; else r.FuelAccountId = a.Id;
+        SetReceipt(r, money, value);
+        return r;
+    }
+
+    /// <summary>جمعِ رسیدهای یک دفتر و یک تیل — تنها راهِ حسابِ «مقدار رسید».</summary>
+    public decimal ReceiptTotal(DebtAccount a, LedgerMode unit, FuelType fuel)
+    {
+        if (a is null) return 0m;
+        var money = unit.IsMoney();
+        var rows = money ? a.MoneyRows : a.FuelRows;
+        var sum = 0m;
+        foreach (var r in rows)
+            if (r is not null && r.DeletedAt is null && r.Fuel == fuel)
+                sum += ReceiptOf(r, money);
+        return sum;
+    }
+
+    /// <summary>
+    /// چهار عددِ حساب را با ردیف‌ها یکی می‌کند. ‎true‎ یعنی عددی واقعاً عوض شد.
+    ///
+    /// ⚠️ تنها جایی است که این چهار عدد نوشته می‌شوند. هیچ‌جای دیگری مستقیم
+    /// در آن‌ها ننویسید — همان کاری بود که دو انبارِ ناهم‌گام می‌ساخت.
+    /// </summary>
+    public bool SyncReceiptTotals(DebtAccount a)
+    {
+        if (a is null) return false;
+        var fp = ReceiptTotal(a, LedgerMode.Fuel, FuelType.Petrol);
+        var fd = ReceiptTotal(a, LedgerMode.Fuel, FuelType.Diesel);
+        var mp = ReceiptTotal(a, LedgerMode.Money, FuelType.Petrol);
+        var md = ReceiptTotal(a, LedgerMode.Money, FuelType.Diesel);
+
+        var changed = false;
+        if (a.RasidFuelPetrol != fp) { a.RasidFuelPetrol = fp; changed = true; }
+        if (a.RasidFuelDiesel != fd) { a.RasidFuelDiesel = fd; changed = true; }
+        if (a.RasidMoneyPetrol != mp) { a.RasidMoneyPetrol = mp; changed = true; }
+        if (a.RasidMoneyDiesel != md) { a.RasidMoneyDiesel = md; changed = true; }
+        return changed;
+    }
+
+    /// <summary>
+    /// ══ مهاجرتِ امن ═══════════════════════════════════════════════════════
+    /// حساب‌های قدیمی رسیدشان را در چهار عددِ حساب دارند (و نسخهٔ پیشین، در
+    /// <see cref="RasidEntry"/>). یک‌بار همان‌ها به ردیفِ واقعی تبدیل می‌شوند
+    /// تا هیچ عددی گم نشود و از آن پس فقط یک انبار بماند.
+    ///
+    /// ردیف‌های تازه برگردانده می‌شوند تا صداکننده ذخیره‌شان کند.
+    ///
+    /// ⚠️ «چقدر کم است» از تفاوتِ عددِ حساب با جمعِ ردیف‌ها درمی‌آید، نه از
+    /// خودِ عدد — وگرنه حسابی که رسیدش همین حالا هم ردیف دارد، دو برابر
+    /// می‌شد. پس این تابع هر بار صدا زده شود، بارِ دوم چیزی نمی‌سازد.
+    /// </summary>
+    public List<DebtRow> MigrateReceiptsToRows(DebtAccount a, string? dateShamsi = null)
+    {
+        var made = new List<DebtRow>();
+        if (a is null || a.ReceiptsMigrated) return made;
+        a.ReceiptsMigrated = true;
+
+        // نسخهٔ پیشین: دفترِ جدا. هر رکوردش یک ردیفِ واقعی می‌شود.
+        if (a.RasidLog is { Count: > 0 })
+        {
+            foreach (var e in a.RasidLog.Where(x => x is not null && x.Value != 0m).ToList())
+                made.Add(AddReceiptRow(a, e.Unit, e.Fuel, e.Value, e.DateShamsi ?? dateShamsi));
+            a.RasidLog.Clear();
+        }
+
+        // و عددهای قدیمیِ خودِ حساب، به‌اندازهٔ آن‌چه ردیف‌ها توضیح نمی‌دهند
+        var want = new (LedgerMode Unit, FuelType Fuel, decimal Value)[]
+        {
+            (LedgerMode.Fuel,  FuelType.Petrol, a.RasidFuelPetrol),
+            (LedgerMode.Fuel,  FuelType.Diesel, a.RasidFuelDiesel),
+            (LedgerMode.Money, FuelType.Petrol, a.RasidMoneyPetrol),
+            (LedgerMode.Money, FuelType.Diesel, a.RasidMoneyDiesel),
+        };
+
+        foreach (var (unit, fuel, value) in want)
+        {
+            var gap = value - ReceiptTotal(a, unit, fuel);
+            if (gap == 0m) continue;
+            made.Add(AddReceiptRow(a, unit, fuel, gap, dateShamsi));
+        }
+
+        SyncReceiptTotals(a);
+        return made;
+    }
+
+    /// <summary>
+    /// ردیفِ رسید را در دفترِ خواسته‌شده می‌سازد و همان‌جا می‌نشاند.
+    /// ‎Mode‎ی حساب موقتاً عوض می‌شود تا ردیف در ستون و دفترِ درست بنشیند و
+    /// بعد سرِ جایش برمی‌گردد — خودِ حساب دست‌نخورده می‌ماند.
+    /// </summary>
+    public DebtRow AddReceiptRow(DebtAccount a, LedgerMode unit, FuelType fuel,
+                                 decimal value, string? dateShamsi = null)
+    {
+        var was = a.Mode;
+        a.Mode = unit;
+        var row = NewReceiptRow(a, fuel, value, dateShamsi);
+        a.Mode = was;
+        (unit.IsMoney() ? a.MoneyRows : a.FuelRows).Add(row);
+        NormalizeRow(row);
+        SyncReceiptTotals(a);
+        return row;
+    }
+
 
     // ── معادلِ سوخت (بندِ ۸) ─────────────────────────────────────────────────
     /// <summary>

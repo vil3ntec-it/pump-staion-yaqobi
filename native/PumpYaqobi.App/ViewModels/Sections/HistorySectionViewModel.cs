@@ -79,9 +79,9 @@ public sealed partial class HistorySectionViewModel : SectionViewModel
     }
 
     public ObservableCollection<HistoryCardViewModel> Cards { get; } = new();
-    /// <summary>⚠️ ‎BulkObservableCollection‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
+    /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
     /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
-    public BulkObservableCollection<HistoryRowViewModel> Rows { get; } = new();
+    public BulkRows<HistoryRowViewModel> Rows { get; } = new();
     public ObservableCollection<string> Months { get; } = new();
 
     /// <summary>فهرستِ کارت‌ها باز است یا صفحهٔ یک بخش.</summary>

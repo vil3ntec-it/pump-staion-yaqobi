@@ -63,11 +63,11 @@ public sealed partial class CompanyRowViewModel : RowViewModel
         _owner.Recalc();
     }
 
-    public string KgText { get => Shamsi.Money(Kg); set => Kg = Shamsi.Num(value); }
-    public string TonText { get => Shamsi.Money(Ton); set => Ton = Shamsi.Num(value); }
-    public string UsdText { get => Shamsi.Money(Usd); set => Usd = Shamsi.Num(value); }
-    public string RateText { get => Shamsi.Money(Rate); set => Rate = Shamsi.Num(value); }
-    public string PoulText { get => Shamsi.Money(Poul); set => Poul = Shamsi.Num(value); }
+    public string KgText { get => Shamsi.MoneyOrBlank(Kg); set => Kg = Shamsi.Num(value); }
+    public string TonText { get => Shamsi.MoneyOrBlank(Ton); set => Ton = Shamsi.Num(value); }
+    public string UsdText { get => Shamsi.MoneyOrBlank(Usd); set => Usd = Shamsi.Num(value); }
+    public string RateText { get => Shamsi.MoneyOrBlank(Rate); set => Rate = Shamsi.Num(value); }
+    public string PoulText { get => Shamsi.MoneyOrBlank(Poul); set => Poul = Shamsi.Num(value); }
 
     /// <summary>گزینه‌های کشویی — رشته، نه ‎ComboBoxItem‎ (باگِ ‎SelectedItem‎).</summary>
     public static string[] PoulCurrencyOptions { get; } = { "افغانی", "دالر" };
@@ -116,9 +116,9 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
     public CompanyService Calc => _host.Company;
     public string Name => Entity.Name ?? "";
 
-    /// <summary>⚠️ ‎BulkObservableCollection‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
+    /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
     /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
-    public BulkObservableCollection<CompanyRowViewModel> Rows { get; } = new();
+    public BulkRows<CompanyRowViewModel> Rows { get; } = new();
 
     [ObservableProperty] private bool _isDiesel;
     [ObservableProperty] private string _totalUsd = "";
@@ -185,7 +185,7 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
     {
         new TotalCell("کلِ دالر", TotalUsd),
         new TotalCell("کلِ افغانی", TotalAfn),
-        new TotalCell("رسید (افغانی)", PaidAfn, "Pump.Ok"),
+        new TotalCell("رسید (افغانی)", PaidAfn, "Pump.Ok", "رسید"),
         new TotalCell("الباقیِ افغانی", AlbaqiAfn, _albaqiAfnRaw > 0m ? "Pump.Danger" : "Pump.Ok"),
         new TotalCell("الباقیِ دالر", AlbaqiUsd, _albaqiAfnRaw > 0m ? "Pump.Danger" : "Pump.Ok"),
     };

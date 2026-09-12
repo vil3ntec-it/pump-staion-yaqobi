@@ -105,7 +105,12 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
                noInvoice ? "شرکت‌ها تیل" : "قرض‌داران")
     { _host = host; _noInvoice = noInvoice; }
 
-    public ObservableCollection<DebtorCardViewModel> Cards { get; } = new();
+    /// <summary>
+    /// ⚠️ ‎BulkRows‎ است نه ‎ObservableCollection‎ی ساده: با ده هزار قرض‌دار،
+    /// افزودنِ تک‌تکِ کارت‌ها ده هزار خبر به فهرست می‌داد و هر خبر یک چیدمانِ
+    /// تازه — آن هم با هر حرفی که در کادرِ جست‌وجو تایپ می‌شود.
+    /// </summary>
+    public BulkRows<DebtorCardViewModel> Cards { get; } = new();
 
     [ObservableProperty] private string _search = "";
 
@@ -141,15 +146,31 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
 
     protected override async Task LoadAsync() => await RefreshAsync();
 
+    /// <summary>
+    /// هر بار که کاربر واردِ بخش می‌شود، فهرست از دیتابیس تازه می‌شود.
+    ///
+    /// ⚠️ بی این، ردیفی که همین حالا از ورق به حسابِ کسی رفته تا بازِ بعدیِ
+    /// خودِ برنامه دیده نمی‌شد و کاربر فکر می‌کرد اصلاً ثبت نشده. سایت هم با
+    /// هر ‎showSection‎ دوباره ‎renderPersons‎ را صدا می‌زد.
+    ///
+    /// وقتی صفحهٔ یک حساب باز است دست نمی‌خورد، تا چیزی که کاربر همان لحظه
+    /// تایپ کرده گم نشود.
+    /// </summary>
+    public override async Task OnActivatedAsync()
+    {
+        if (IsLoaded && Person is null) await RefreshAsync();
+    }
+
     public async Task RefreshAsync()
     {
         var people = await _host.Debtors.ListAsync(_noInvoice);
-        var accounts = await _host.Debtors.AccountsByDebtorAsync(_noInvoice);
-        // خوددرمانیِ ردیف‌ها پیش از حسابِ کارت — همان کاری که نسخهٔ وب هنگامِ
-        // کشیدنِ جدول می‌کرد. بدونِ آن، «الباقی»ِ ردیف‌های کهنه صفر می‌ماند و
-        // عددِ کارت با عددِ داخلِ حساب فرق می‌کند.
-        foreach (var list in accounts.Values)
-            foreach (var a in list) _host.Debt.NormalizeAccount(a);
+
+        // ⚠️ ردیف‌ها خوانده نمی‌شوند. کارت فقط چند جمع می‌خواهد و آن جمع‌ها را
+        // خودِ دیتابیس می‌زند (‎CardAccountsAsync‎). پیش از این کلِ ردیف‌های همهٔ
+        // حساب‌ها بار می‌شد — با ده هزار قرض‌دار و یک میلیون ردیف، همان‌جا
+        // برنامه می‌ایستاد. «خوددرمانیِ ردیف» هم داخلِ همان کوئری آمده، پس
+        // عددِ کارت همان عددِ داخلِ حساب می‌مانَد.
+        var accounts = await _host.Debtors.CardAccountsAsync(_noInvoice);
 
         _all = people.Select(d => new DebtorCardViewModel(
             d, accounts.TryGetValue(d.Id, out var a) ? a : new List<DebtAccount>(), _host.Debt)).ToList();
@@ -160,11 +181,9 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
     private void ApplyFilter()
     {
         var s = Search.Trim();
-        Cards.Clear();
-        foreach (var c in _all)
-            if (s.Length == 0 || c.Name.Contains(s, StringComparison.OrdinalIgnoreCase)
-                              || c.Phone.Contains(s, StringComparison.OrdinalIgnoreCase))
-                Cards.Add(c);
+        Cards.ResetTo(_all.Where(c =>
+            s.Length == 0 || c.Name.Contains(s, StringComparison.OrdinalIgnoreCase)
+                          || c.Phone.Contains(s, StringComparison.OrdinalIgnoreCase)));
     }
 
 

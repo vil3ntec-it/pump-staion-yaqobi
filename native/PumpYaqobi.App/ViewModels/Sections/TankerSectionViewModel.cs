@@ -47,9 +47,9 @@ public sealed partial class TankerSectionViewModel : SectionViewModel
     public TankerSectionViewModel(AppHost host) : base("tanker", "storage", "تخلیهٔ تانکر")
         => _host = host;
 
-    /// <summary>⚠️ ‎BulkObservableCollection‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
+    /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
     /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
-    public BulkObservableCollection<TankerRowViewModel> Rows { get; } = new();
+    public BulkRows<TankerRowViewModel> Rows { get; } = new();
 
     /// <summary>
     /// ردیفِ «جمله»ی ته جدول — بارنامه، تحویل، و جمعِ کم‌آمد (همان عددی که
@@ -67,7 +67,7 @@ public sealed partial class TankerSectionViewModel : SectionViewModel
                 new TotalCell("تخلیه‌ها", Shamsi.Money(Rows.Count)),
                 new TotalCell("بارنامه", Shamsi.Money(manifest)),
                 new TotalCell("تحویل", Shamsi.Money(actual)),
-                new TotalCell("کم‌آمد", Shamsi.Money(short_), short_ > 0m ? "Pump.Danger" : "Pump.Ok"),
+                new TotalCell("کم‌آمد", Shamsi.Money(short_), short_ > 0m ? "Pump.Danger" : "Pump.Ok", "نتیجه"),
             };
         }
     }

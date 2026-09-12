@@ -89,6 +89,18 @@ public sealed class FieldNavigationService
             _ => Dir.Right,
         };
 
+        // ══ راست یعنی راستِ همان چیزی که می‌بینی ══════════════════════════════
+        // گزارشِ صاحب ریپو: «کلیدِ راست را می‌زنم، چپ می‌رود.»
+        //
+        // کلِ پنجره ‎FlowDirection="RightToLeft"‎ است و آوالونیا برای آینه کردنش
+        // یک تبدیلِ افقی می‌گذارد. پس ‎dx > 0‎ی محاسبه‌شده در مختصاتِ آینه‌شده،
+        // روی صفحه سمتِ **چپ** است — و کلید دقیقاً برعکس عمل می‌کرد.
+        //
+        // پس در چیدمانِ راست‌به‌چپ، چپ و راست با هم عوض می‌شوند تا آن‌چه کاربر
+        // می‌بیند با آن‌چه کلید می‌کند یکی باشد.
+        if (dir is Dir.Left or Dir.Right && IsRtl(from))
+            dir = dir == Dir.Left ? Dir.Right : Dir.Left;
+
         var best = Pick(from, dir, Fields(scope));
         if (best is null)
         {
@@ -130,6 +142,14 @@ public sealed class FieldNavigationService
 
         scope.Focusable = true;
         scope.Focus(NavigationMethod.Directional);
+    }
+
+    /// <summary>این کادر در چیدمانِ راست‌به‌چپ نشسته؟</summary>
+    private static bool IsRtl(Control c)
+    {
+        for (Visual? v = c; v is not null; v = v.GetVisualParent())
+            if (v is Control ctl && ctl.FlowDirection == FlowDirection.RightToLeft) return true;
+        return false;
     }
 
     public enum Dir { Up, Down, Left, Right }

@@ -116,9 +116,9 @@ public sealed partial class InvRateSectionViewModel : SectionViewModel
     public InvRateSectionViewModel(AppHost host)
         : base("invrate", "invoices", "مقایسهٔ نرخ فاکتورها") => _host = host;
 
-    /// <summary>⚠️ ‎BulkObservableCollection‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
+    /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
     /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
-    public BulkObservableCollection<InvRateRowViewModel> Rows { get; } = new();
+    public BulkRows<InvRateRowViewModel> Rows { get; } = new();
 
     /// <summary>۰ همه · ۱ فقط زیان · ۲ فقط مفاد — همان ‎_invRateFilter‎.</summary>
     [ObservableProperty] private int _filterIndex;

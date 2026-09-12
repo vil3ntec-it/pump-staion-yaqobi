@@ -9,6 +9,7 @@ using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
 using PumpYaqobi.Reporting.Pdf;
+using PumpYaqobi.Services.Data;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -61,10 +62,10 @@ public sealed partial class WaraqPumpViewModel : RowViewModel
             OnPropertyChanged(n);
     }
 
-    public string StartText { get => Shamsi.Money(Start); set => Start = Shamsi.Num(value); }
-    public string EndText { get => Shamsi.Money(End); set => End = Shamsi.Num(value); }
-    public string PriceText { get => Shamsi.Money(Price); set => Price = Shamsi.Num(value); }
-    public string DebtText { get => Shamsi.Money(Debt); set => Debt = Shamsi.Num(value); }
+    public string StartText { get => Shamsi.MoneyOrBlank(Start); set => Start = Shamsi.Num(value); }
+    public string EndText { get => Shamsi.MoneyOrBlank(End); set => End = Shamsi.Num(value); }
+    public string PriceText { get => Shamsi.MoneyOrBlank(Price); set => Price = Shamsi.Num(value); }
+    public string DebtText { get => Shamsi.MoneyOrBlank(Debt); set => Debt = Shamsi.Num(value); }
 
     /// <summary>لیترِ منفی وجود ندارد — ‎Math.max(0, end−start)‎.</summary>
     public decimal Liters => Math.Max(0m, End - Start);
@@ -102,10 +103,18 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
         Loading = true;
         _name = t.Name ?? ""; _liters = t.Liters; _amount = t.Amount;
         _isExpense = t.Type == WaraqTxnType.Expense; _fuel = t.Fuel;
+        _isMoney = t.Unit == LedgerMode.Money;
         Loading = false;
     }
 
     public WaraqTransaction Entity => _t;
+
+    /// <summary>
+    /// ستونِ «#» — شمارهٔ ردیف در کلِ شیفت، نه در جدولی که تویش نشسته.
+    /// در سایت هم ‎n2fa(i+1)‎ از ایندکسِ آرایهٔ کلِ تراکنش‌ها می‌آید، پس
+    /// جدولِ دوم از همان‌جا که جدولِ اول تمام شده ادامه می‌دهد (۹، ۱۰، …).
+    /// </summary>
+    [ObservableProperty] private string _index = "";
 
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private decimal _liters;
@@ -132,8 +141,8 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
         OnPropertyChanged(nameof(EffectiveAmountText));
     }
 
-    public string LitersText { get => Shamsi.Money(Liters); set => Liters = Shamsi.Num(value); }
-    public string AmountText { get => Shamsi.Money(Amount); set => Amount = Shamsi.Num(value); }
+    public string LitersText { get => Shamsi.MoneyOrBlank(Liters); set => Liters = Shamsi.Num(value); }
+    public string AmountText { get => Shamsi.MoneyOrBlank(Amount); set => Amount = Shamsi.Num(value); }
 
     /// <summary>مبلغی که واقعاً در جمع‌ها شمرده می‌شود.</summary>
     public string EffectiveAmountText => Shamsi.Money(_owner.Calc.TxnAmount(_owner.Shift!, _t));
@@ -169,11 +178,34 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
         set => Fuel = value == "دیزل" ? FuelType.Diesel : FuelType.Petrol;
     }
 
+    /// <summary>
+    /// ستونِ «واحد» — ‎t.unit‎ی سایت: این ردیفِ قرض به دفترِ «واحد تیل» برود
+    /// یا دفترِ «واحد پول». پیش‌فرض تیل، مثلِ سایت.
+    ///
+    /// ⚠️ فعلاً فقط ذخیره می‌شود: تراکنش‌های ورق هنوز به حسابِ قرض‌داران پست
+    /// نمی‌شوند (‎syncWaraqTxnsToPersons‎ی سایت هنوز همتا ندارد). پس انتخابِ
+    /// کاربر می‌ماند و از دست نمی‌رود، ولی تا آن پست ساخته نشود چیزی را
+    /// جابه‌جا نمی‌کند.
+    /// </summary>
+    /// <summary>گزینه‌های کشویی — رشته، نه ‎ComboBoxItem‎ (باگِ ‎SelectedItem‎).</summary>
+    public static string[] UnitOptions { get; } = { "تیل", "پول" };
+
+    public string UnitText
+    {
+        get => IsMoney ? "پول" : "تیل";
+        set => IsMoney = value == "پول";
+    }
+
+    [ObservableProperty] private bool _isMoney;
+
+    partial void OnIsMoneyChanged(bool v) { Touch(); OnPropertyChanged(nameof(UnitText)); }
+
     protected override void Apply()
     {
         _t.Name = Name; _t.Liters = Liters; _t.Amount = Amount;
         _t.Type = IsExpense ? WaraqTxnType.Expense : WaraqTxnType.Debt;
         _t.Fuel = Fuel;
+        _t.Unit = IsMoney ? LedgerMode.Money : LedgerMode.Fuel;
     }
 
     protected override Task SaveAsync() => _owner.SaveTxnAsync(_t);
@@ -199,6 +231,39 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
     public ObservableCollection<WaraqPumpViewModel> Pumps { get; } = new();
     public ObservableCollection<WaraqTxnViewModel> Txns { get; } = new();
 
+    // ══ دو جدولِ هم‌شکل، کنارِ هم ═══════════════════════════════════════════
+    //
+    // خواستهٔ صاحب ریپو: «توی ورق‌ها دو کادر دارد که شبیه هم است و آن بابتِ
+    // این است که بیشتر جا بشود.»
+    //
+    // در سایت هم همین است — ‎renderWaraqTransactions‎:
+    //
+    //     const mid = Math.ceil(txns.length / 2);
+    //     … if (i < mid) leftBody.appendChild(tr); else rightBody.appendChild(tr);
+    //
+    // یعنی نیمهٔ اول در جدولِ اول و نیمهٔ دوم در جدولِ دوم؛ با ۱۵ ردیف
+    // می‌شود ۸ و ۷. چون کلِ پنجره ‎RightToLeft‎ است، جدولِ اول سمتِ راست
+    // دیده می‌شود — درست مثلِ عکسی که صاحب ریپو فرستاد (۱ تا ۸ راست،
+    // ۹ تا ۱۵ چپ).
+    //
+    // ⚠️ ‎Txns‎ همچنان یگانه‌سرچشمهٔ حقیقت است؛ این دو فقط نما هستند و هیچ
+    // ردیفی را دو بار نگه نمی‌دارند.
+    public ObservableCollection<WaraqTxnViewModel> TxnsFirst { get; } = new();
+    public ObservableCollection<WaraqTxnViewModel> TxnsSecond { get; } = new();
+
+    /// <summary>‎mid = ceil(n/2)‎ — مو‌به‌مو همان تقسیمِ سایت.</summary>
+    private void SplitTxns()
+    {
+        TxnsFirst.Clear();
+        TxnsSecond.Clear();
+        var mid = (int)Math.Ceiling(Txns.Count / 2.0);
+        for (var i = 0; i < Txns.Count; i++)
+        {
+            Txns[i].Index = Shamsi.Money(i + 1);
+            (i < mid ? TxnsFirst : TxnsSecond).Add(Txns[i]);
+        }
+    }
+
     [ObservableProperty] private bool _isNight;
     [ObservableProperty] private string _workerName = "";
     [ObservableProperty] private decimal _fabricDebt;
@@ -209,6 +274,15 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
     [ObservableProperty] private string _expenses = "";
     [ObservableProperty] private string _shortage = "";
     [ObservableProperty] private string _shortageLabel = "";
+
+    /// <summary>جمعِ لیترِ همین شیفت — خانهٔ ‎#wq-total-liters‎ی سایت.</summary>
+    [ObservableProperty] private string _pumpLiters = "";
+
+    /// <summary>جمعِ ستونِ «جمله قرض»ِ پایه‌ها — خانهٔ ‎#wq-total-debt‎ی سایت.</summary>
+    [ObservableProperty] private string _pumpDebt = "";
+
+    /// <summary>عددِ خامِ کمبودی/اضافی — فقط برای رنگِ کادرِ ششم.</summary>
+    private decimal _shortageAmount;
 
     public WaraqShift? Shift =>
         Entity.Shifts.FirstOrDefault(s => s.Kind == (IsNight ? ShiftKind.Night : ShiftKind.Day));
@@ -247,6 +321,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         Recalc();
     }
 
+
     private void Build()
     {
         var sd = Shift;
@@ -270,6 +345,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
             vm.Recalculated += Recalc;
             Txns.Add(vm);
         }
+        SplitTxns();
         Recalc();
     }
 
@@ -283,29 +359,77 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         Sales = Shamsi.Money(Math.Round(t.Sales, 0, MidpointRounding.AwayFromZero));
         Debt = Shamsi.Money(Math.Round(t.Debt, 0, MidpointRounding.AwayFromZero));
         Expenses = Shamsi.Money(Math.Round(t.Expenses, 0, MidpointRounding.AwayFromZero));
+        PumpLiters = Shamsi.Money(t.PetrolLiters + t.DieselLiters) + " لیتر";
+        PumpDebt = Shamsi.Money(Math.Round(t.DeclaredDebt, 0, MidpointRounding.AwayFromZero));
 
         var sh = Calc.Shortage(t);
-        if (sh.Shortage > 0) { ShortageLabel = "کمبودی"; Shortage = Shamsi.Money(Math.Round(sh.Shortage)); }
-        else if (sh.Excess > 0) { ShortageLabel = "اضافی"; Shortage = Shamsi.Money(Math.Round(sh.Excess)); }
-        else { ShortageLabel = "کمبودی"; Shortage = "0"; }
+        if (sh.Shortage > 0)
+        { ShortageLabel = "کمبودی"; _shortageAmount = Math.Round(sh.Shortage); Shortage = Shamsi.Money(_shortageAmount); }
+        else if (sh.Excess > 0)
+        { ShortageLabel = "اضافی"; _shortageAmount = Math.Round(sh.Excess); Shortage = Shamsi.Money(_shortageAmount); }
+        else
+        { ShortageLabel = "کمبودی"; _shortageAmount = 0m; Shortage = "0"; }
 
         foreach (var x in Txns) x.RefreshEffective();
         OnPropertyChanged(nameof(TotalCells));
+        RefreshSummary();
     }
 
+    /// <summary>شش کادرِ «خلاصه شیفت» از عددهای بالا ساخته می‌شوند، پس با هر
+    /// حساب دوباره باید خوانده شوند.</summary>
+    private void RefreshSummary()
+    {
+        OnPropertyChanged(nameof(SumPetrol));
+        OnPropertyChanged(nameof(SumDiesel));
+        OnPropertyChanged(nameof(SumExpenses));
+        OnPropertyChanged(nameof(SumDebt));
+        OnPropertyChanged(nameof(SumSales));
+        OnPropertyChanged(nameof(SumShortage));
+        OnPropertyChanged(nameof(ShortageBoxLabel));
+        OnPropertyChanged(nameof(ShortageBrushKey));
+        OnPropertyChanged(nameof(SummaryTitle));
+    }
+
+    // ══ خلاصهٔ شیفت — زیرِ جدولِ تراکنش‌ها ═══════════════════════════════════
+    //
+    // گزارشِ صاحب ریپو: «اون شش تا پایینِ این جدولِ تراکنش‌ها استن.» حق داشت؛
+    // در سایت هم همان‌جاست: ‎index.html‎ خط ۱۹۹۷۴ — عنوانِ
+    // ‎#wq-sum-shift-title‎ و شش ‎.stat-box‎ **بعد از** دو جدولِ تراکنش می‌آیند،
+    // نه بالای صفحه. واحدها هم از خط ۴۵۵۴۴ تا ۴۵۵۶۵ برداشته شده‌اند: «لیتر»
+    // برای تیل و «افغانی» برای پول.
+    public string SummaryTitle => "📊 خلاصه شیفت " + (IsNight ? "شب" : "روز");
+
+    public string SumPetrol => PetrolLiters + " لیتر";
+    public string SumDiesel => DieselLiters + " لیتر";
+    public string SumExpenses => Expenses + " افغانی";
+    public string SumDebt => Debt + " افغانی";
+    public string SumSales => Sales + " افغانی";
+    public string SumShortage => Shortage + " افغانی";
+
+    /// <summary>برچسبِ کادرِ ششم — «⚠️ کمبودی» یا «✅ اضافی»، مثلِ خودِ سایت.</summary>
+    public string ShortageBoxLabel => ShortageLabel == "اضافی" ? "✅ اضافی" : "⚠️ کمبودی";
+
+    /// <summary>رنگِ عددِ همان کادر: سرخِ کمبودی، سبزِ اضافی، خاکستریِ صفر.</summary>
+    public string ShortageBrushKey =>
+        _shortageAmount <= 0m ? "Pump.Muted"
+        : ShortageLabel == "اضافی" ? "Pump.Ok" : "Pump.Danger";
+
     /// <summary>
-    /// ردیفِ «جمله»ی ته جدولِ ورق — همتای ‎&lt;tfoot class="xls-foot"&gt;‎ی سایت.
+    /// ردیفِ «جمله این شیفت»ِ ته جدولِ قرائت پمپ‌ها — همتای ‎&lt;tfoot&gt;‎ی سایت
+    /// (‎index.html‎ خط ۱۹۹۲۹): مقدارِ لیتر، مبلغِ فروش و «جمله قرض»ِ پایه‌ها،
+    /// هر کدام زیرِ ستونِ خودش.
+    ///
+    /// ⚠️ پیش از این، شش عددِ «خلاصه شیفت» این‌جا نشسته بودند؛ ولی آن‌ها جمعِ
+    /// این جدول نیستند و در سایت هم کادرهای جداگانه‌ای زیرِ جدولِ تراکنش‌ها
+    /// هستند — حالا همان‌جا‌اند.
+    ///
     /// ⚠️ فقط شیفتی که باز است؛ روز و شب هرگز با هم جمع نمی‌شوند.
     /// </summary>
     public IReadOnlyList<TotalCell> TotalCells => new[]
     {
-        new TotalCell("پطرول (لیتر)", PetrolLiters),
-        new TotalCell("دیزل (لیتر)", DieselLiters),
-        new TotalCell("فروش", Sales, "Pump.Ok"),
-        new TotalCell("قرض", Debt, "Pump.Warn"),
-        new TotalCell("مصارف", Expenses, "Pump.Warn"),
-        new TotalCell(ShortageLabel, Shortage,
-                      ShortageLabel == "کمبودی" ? "Pump.Danger" : "Pump.Ok"),
+        new TotalCell("لیتر", PumpLiters),
+        new TotalCell("فروش", SumSales, "Pump.Ok"),
+        new TotalCell("قرضِ پایه", PumpDebt, "Pump.Danger"),
     };
 
     /// <summary>
@@ -326,8 +450,43 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
                                    (IsNight ? "ورق شب " : "ورق روز ") + (Entity.DateShamsi ?? ""));
     }
 
-    public async Task SavePumpAsync(WaraqPump p) { await _host.WaraqData.SavePumpAsync(p); Recalc(); }
-    public async Task SaveTxnAsync(WaraqTransaction t) { await _host.WaraqData.SaveTxnAsync(t); Recalc(); }
+    public async Task SavePumpAsync(WaraqPump p)
+    {
+        await _host.WaraqData.SavePumpAsync(p);
+        Recalc();
+        // فیِ پایه که عوض شود، مبلغِ خودکارِ ردیف‌ها هم عوض می‌شود — پس حساب‌ها
+        // باید همان لحظه تازه شوند، نه بعداً.
+        await PostAsync();
+    }
+
+    public async Task SaveTxnAsync(WaraqTransaction t)
+    {
+        await _host.WaraqData.SaveTxnAsync(t);
+        Recalc();
+        await PostAsync();
+    }
+
+    /// <summary>
+    /// ══ ردیف‌های ورق ⇐ حسابِ قرض‌دار / مصارف ═══════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «اون حسابِ طرف رو که توی ورق زدم… چرا اتومات نمی‌ره
+    /// تو حساب‌اش؟» سایت این را در ‎syncWaraqTxnsToPersons‎ می‌کرد — هم موقعِ
+    /// «ذخیره ورق» و هم همان لحظه‌ای که «واحد/نوع/نوع تیل» عوض می‌شد.
+    ///
+    /// این‌جا هر تغییرِ ردیف همین کار را می‌کند، پس نامی که نوشته می‌شود بی
+    /// هیچ دکمه‌ای به حسابِ صاحبش می‌رسد.
+    ///
+    /// ⚠️ خطا هرگز به بیرون درز نمی‌کند: ورق باید ذخیره‌شدنی بماند حتی اگر
+    /// همگام‌سازی به هر دلیلی نگیرد.
+    /// </summary>
+    private async Task PostAsync()
+    {
+        try { LastPost = await _host.WaraqPosting.SyncAsync(Entity.Id); }
+        catch { /* ورق ذخیره شده؛ همگام‌سازی دفعهٔ بعد دوباره تلاش می‌کند */ }
+    }
+
+    /// <summary>آخرین گزارشِ همگام‌سازی — برای آزمون و برای نوارِ وضعیت.</summary>
+    public WaraqPostReport LastPost { get; private set; }
 
     [RelayCommand]
     private async Task AddPumpAsync()
@@ -370,6 +529,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         var vm = new WaraqTxnViewModel(t, this);
         vm.Recalculated += Recalc;
         Txns.Add(vm);
+        SplitTxns();
         Recalc();
     }
 
@@ -382,7 +542,10 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         await _host.WaraqData.DeleteTxnAsync(row.Entity.Id);
         sd.Transactions.Remove(row.Entity);
         Txns.Remove(row);
+        SplitTxns();
         Recalc();
+        // ردیف که رفت، ثبتش در حسابِ قرض‌دار یا مصارف هم باید برود
+        await PostAsync();
     }
 
     public int RowCount => Txns.Count;
@@ -407,6 +570,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
     {
         foreach (var p in Pumps.ToList()) await p.FlushAsync();
         foreach (var t in Txns.ToList()) await t.FlushAsync();
+        await PostAsync();
     }
 }
 

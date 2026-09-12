@@ -127,14 +127,35 @@ public sealed class InvoiceService
         }
 
         // ── بخشِ تیل: «مقدار رسیدِ تیل»ِ همان حساب ──
+        //
+        // ⚠️ دیگر مستقیم به عددِ حساب اضافه نمی‌شود: رسید رکوردِ خودش را در
+        // دفترِ رسید می‌گیرد و عددِ سربرگ جمعِ همان دفتر می‌شود. این‌طور
+        // (خواستهٔ صریحِ صاحب ریپو) رسیدِ فاکتور هم ردیفِ خودش را در جدولِ
+        // شخص دارد و برگرداندنِ تایید دقیقاً همان یکی را برمی‌دارد.
         if (!v.ByMoney && v.Liters > 0m)
         {
-            if (v.Fuel == FuelType.Diesel) account.RasidFuelDiesel += v.Liters;
-            else account.RasidFuelPetrol += v.Liters;
+            // رسیدِ فاکتور هم یک ردیفِ واقعی است، مثلِ هر رسیدِ دیگری — نه یک
+            // عددِ جدا روی خودِ حساب. پس در جدولِ شخص دیده می‌شود، در جمله
+            // شمرده می‌شود و برگرداندنِ تایید همان ردیف را برمی‌دارد.
+            var row = new DebtRow
+            {
+                FuelAccountId = account.Id,
+                InvoiceId = v.Id,
+                Fuel = v.Fuel,
+                RasidFuel = v.Liters,
+                DateShamsi = v.DateShamsi,
+                DateKey = Shamsi.Key(v.DateShamsi),
+                Name = $"رسیدِ فاکتور شماره {v.InvoiceNumber}",
+                Albaqi = -v.Liters,
+                SortIndex = account.FuelRows.Count,
+            };
+            db.DebtRows.Add(row);
             v.PostedFuelLiters = v.Liters;
         }
 
         db.Audit.Add(new AuditEntry { Action = "invoice-approve", Target = v.InvoiceNumber.ToString() });
+        // کشِ رسیدِ حساب از روی ردیف‌ها تازه شود — تنها راهِ درستِ نوشتنِ آن چهار عدد
+        await ReceiptSync.FromRowsAsync(db, account, ct);
         await db.SaveChangesAsync(ct);
     }
 
@@ -167,18 +188,33 @@ public sealed class InvoiceService
 
     private static async Task UnpostAsync(Persistence.PumpDbContext db, Invoice v, CancellationToken ct)
     {
-        var row = await db.DebtRows.FirstOrDefaultAsync(r => r.InvoiceId == v.Id, ct);
-        if (row is not null) db.DebtRows.Remove(row);
+        // ⚠️ **همهٔ** ردیف‌های این فاکتور، نه اولی: یک فاکتور می‌تواند هم بخشِ
+        // پولی داشته باشد و هم بخشِ تیل، و از امروز هر دو ردیفِ خودشان را
+        // دارند. با ‎FirstOrDefault‎ یکی‌شان جا می‌ماند و رسیدش هرگز پس گرفته
+        // نمی‌شد.
+        var rows = await db.DebtRows.Where(r => r.InvoiceId == v.Id).ToListAsync(ct);
+        if (rows.Count > 0) db.DebtRows.RemoveRange(rows);
+        var row = rows.FirstOrDefault();
 
         if (v.PostedFuelLiters is > 0m && v.DebtAccountId is not null)
         {
             var acc = await db.DebtAccounts.FirstOrDefaultAsync(a => a.Id == v.DebtAccountId, ct);
             if (acc is not null)
             {
-                if (v.Fuel == FuelType.Diesel)
-                    acc.RasidFuelDiesel = Math.Max(0m, acc.RasidFuelDiesel - v.PostedFuelLiters.Value);
-                else
-                    acc.RasidFuelPetrol = Math.Max(0m, acc.RasidFuelPetrol - v.PostedFuelLiters.Value);
+                // ردیفِ رسیدِ همین فاکتور برداشته می‌شود (‎row‎ی بالا با همان
+                // ‎InvoiceId‎ ساخته شده و درست بالاتر پاک شد اگر بود).
+                //
+                // فاکتورهای تاییدشدهٔ **پیش از** این تغییر ردیفی ندارند و
+                // عددشان مستقیم روی حساب نشسته بود؛ آن‌ها همان راهِ قدیمی را
+                // می‌گیرند تا عددشان درست پس گرفته شود.
+                if (row is null)
+                {
+                    if (v.Fuel == FuelType.Diesel)
+                        acc.RasidFuelDiesel = Math.Max(0m, acc.RasidFuelDiesel - v.PostedFuelLiters.Value);
+                    else
+                        acc.RasidFuelPetrol = Math.Max(0m, acc.RasidFuelPetrol - v.PostedFuelLiters.Value);
+                }
+                else await ReceiptSync.FromRowsAsync(db, acc, ct);
             }
         }
         v.PostedFuelLiters = null;

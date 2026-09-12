@@ -54,9 +54,9 @@ public sealed partial class ExchangeRowViewModel : RowViewModel
         OnPropertyChanged(nameof(RasidText));
     }
 
-    public string AmountText  { get => Shamsi.Money(Amount);  set => Amount = Shamsi.Num(value); }
-    public string RateText    { get => Shamsi.Money(Rate);    set => Rate = Shamsi.Num(value); }
-    public string BardagiText { get => Shamsi.Money(Bardagi); set => Bardagi = Shamsi.Num(value); }
+    public string AmountText  { get => Shamsi.MoneyOrBlank(Amount);  set => Amount = Shamsi.Num(value); }
+    public string RateText    { get => Shamsi.MoneyOrBlank(Rate);    set => Rate = Shamsi.Num(value); }
+    public string BardagiText { get => Shamsi.MoneyOrBlank(Bardagi); set => Bardagi = Shamsi.Num(value); }
 
     /// <summary>دالرِ شکسته — مبلغ ÷ فی.</summary>
     public string UsdText => Shamsi.Money(Math.Round(_owner.Calc.ToUsd(_e), 2));
@@ -192,7 +192,7 @@ public sealed partial class ExchangeSectionViewModel
     {
         new TotalCell("دالر", TotalUsd),
         new TotalCell("رسید به صرافی", TotalBardagi, "Pump.Ok"),
-        new TotalCell("بردگی پمپ ($)", TotalBardagiUsd, "Pump.Warn"),
+        new TotalCell("بردگی پمپ ($)", TotalBardagiUsd, "Pump.Warn", column: "بردگی پمپ بنزین ($)"),
         new TotalCell("الباقی ($)", Baqi, Summary.Baqi >= 0m ? "Pump.Ok" : "Pump.Danger"),
     };
 

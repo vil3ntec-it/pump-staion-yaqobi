@@ -55,9 +55,9 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
         _dateShamsi = Shamsi.Today();
     }
 
-    /// <summary>⚠️ ‎BulkObservableCollection‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
+    /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
     /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
-    public BulkObservableCollection<DebtReceiptRowViewModel> Rows { get; } = new();
+    public BulkRows<DebtReceiptRowViewModel> Rows { get; } = new();
     public ObservableCollection<string> Months { get; } = new();
 
     // ── کادرهای ورودِ سریع ─────────────────────────────────────────────────
@@ -73,7 +73,7 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
     public IReadOnlyList<TotalCell> TotalCells => new[]
     {
         new TotalCell("شمارِ رسیدها", Shamsi.Money(Rows.Count)),
-        new TotalCell("مبلغِ رسید", TotalText, "Pump.Ok"),
+        new TotalCell("مبلغِ رسید", TotalText, "Pump.Ok", "مبلغ رسید"),
     };
 
     partial void OnTotalTextChanged(string v) => OnPropertyChanged(nameof(TotalCells));

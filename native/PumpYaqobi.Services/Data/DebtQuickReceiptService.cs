@@ -95,6 +95,8 @@ public sealed class DebtQuickReceiptService
         if (found is null) return (QuickReceiptResult.NotFound, "");
 
         var person = found.Value.Person;
+        // حالا که صاحبِ رسید معلوم شد، فقط ردیف‌های **او** خوانده می‌شوند
+        await FillRowsAsync(db, person, ct);
         var date = string.IsNullOrWhiteSpace(dateShamsi) ? Shamsi.Today() : dateShamsi!.Trim();
         var text = (note ?? "").Trim();
         var legacyId = "dr" + Guid.NewGuid().ToString("N")[..12];
@@ -150,9 +152,12 @@ public sealed class DebtQuickReceiptService
         var r = await db.DebtQuickReceipts.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (r is null) return false;
 
-        var people = await LoadPeopleAsync(db, ct);
-        foreach (var dead in PostingService.RemoveRowsBySrcKey(people, r.SrcKey))
-            db.DebtRows.Remove(dead);
+        // ⚠️ ردیفِ این رسید مستقیم از روی ‎SrcKey‎ پیدا می‌شود — که ایندکس دارد.
+        // پیش‌تر برای همین یک ردیف، همهٔ قرض‌داران با همهٔ ردیف‌هایشان خوانده
+        // می‌شدند تا در حافظه بگردیم؛ نتیجه یکی است، هزینه‌اش نه.
+        var srcKey = r.SrcKey;
+        var dead = await db.DebtRows.Where(x => x.SrcKey == srcKey).ToListAsync(ct);
+        db.DebtRows.RemoveRange(dead);
 
         await _trash.RememberAsync(db, "debtQuickReceipt",
             (r.Account ?? "") + " — " + Shamsi.Money(r.Amount), r, ct);
@@ -161,11 +166,33 @@ public sealed class DebtQuickReceiptService
         return true;
     }
 
+    /// <summary>
+    /// همهٔ قرض‌داران با حساب‌هایشان — ردیابی‌شده — ولی **بی هیچ ردیفی**.
+    ///
+    /// ⚠️ پیش‌تر هر دو دفترِ همهٔ حساب‌ها هم خوانده می‌شد: با ده هزار قرض‌دار و
+    /// یک میلیون ردیف یعنی یک میلیون شیءِ ردیابی‌شده، فقط برای پیدا کردنِ یک
+    /// حساب از روی نام — کاری که اصلاً به ردیف‌ها ربطی ندارد.
+    ///
+    /// ردیف‌ها فقط برای همان یک شخص خوانده می‌شوند (<see cref="FillRowsAsync"/>).
+    /// </summary>
     private static async Task<List<Debtor>> LoadPeopleAsync(PumpDbContext db, CancellationToken ct) =>
         await db.Debtors
-            .Include(d => d.MainAccount).ThenInclude(a => a!.FuelRows)
-            .Include(d => d.MainAccount).ThenInclude(a => a!.MoneyRows)
-            .Include(d => d.SubAccounts).ThenInclude(a => a.FuelRows)
-            .Include(d => d.SubAccounts).ThenInclude(a => a.MoneyRows)
+            .Include(d => d.MainAccount)
+            .Include(d => d.SubAccounts)
             .ToListAsync(ct);
+
+    /// <summary>
+    /// ردیف‌های **یک** شخص را می‌آورد؛ چون حساب‌ها ردیابی‌شده‌اند، خودِ EF
+    /// هر ردیف را به دفترِ خودش وصل می‌کند و بقیهٔ کد فرقی نمی‌فهمد.
+    /// </summary>
+    private static async Task FillRowsAsync(PumpDbContext db, Debtor person, CancellationToken ct)
+    {
+        foreach (var a in person.AllAccounts())
+        {
+            if (a.Id == 0) continue;
+            var aid = a.Id;
+            await db.DebtRows.Where(r => r.FuelAccountId == aid).LoadAsync(ct);
+            await db.DebtRows.Where(r => r.MoneyAccountId == aid).LoadAsync(ct);
+        }
+    }
 }

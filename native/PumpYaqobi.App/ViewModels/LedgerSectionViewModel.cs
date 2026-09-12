@@ -33,11 +33,11 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
     protected LedgerService<TEntity> Service { get; }
 
     /// <summary>
-    /// ⚠️ ‎BulkObservableCollection‎ است، نه ‎ObservableCollection‎ی ساده: پر
+    /// ⚠️ ‎BulkRows‎ است، نه ‎ObservableCollection‎ی ساده: پر
     /// کردنِ ردیف‌ها یک خبر می‌دهد نه ‎n‎ خبر. همان چیزی که «یک ثانیه گیر
     /// کردنِ» بخش‌های پرجدول را می‌ساخت.
     /// </summary>
-    public BulkObservableCollection<TRow> Rows { get; } = new();
+    public BulkRows<TRow> Rows { get; } = new();
     public ObservableCollection<string> Months { get; } = new();
 
     /// <summary>

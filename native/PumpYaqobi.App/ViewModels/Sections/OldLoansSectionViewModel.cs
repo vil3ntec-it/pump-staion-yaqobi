@@ -52,9 +52,9 @@ public sealed partial class OldLoansSectionViewModel : SectionViewModel
     public OldLoansSectionViewModel(AppHost host) : base("oldloans", "debt", "قرض‌های کهنه")
         => _host = host;
 
-    /// <summary>⚠️ ‎BulkObservableCollection‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
+    /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
     /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
-    public BulkObservableCollection<OldLoanRowViewModel> Rows { get; } = new();
+    public BulkRows<OldLoanRowViewModel> Rows { get; } = new();
 
     /// <summary>۰ همه · ۱ فقط واحد تیل · ۲ فقط واحد پول.</summary>
     [ObservableProperty] private int _filterIndex;
@@ -68,7 +68,7 @@ public sealed partial class OldLoansSectionViewModel : SectionViewModel
     public IReadOnlyList<TotalCell> TotalCells => new[]
     {
         new TotalCell("قرض‌دارها", CountText),
-        new TotalCell("جمعِ الباقی", TotalText, "Pump.Danger"),
+        new TotalCell("جمعِ الباقی", TotalText, "Pump.Danger", column: "الباقی"),
         new TotalCell("بیش از ۳۰ روز", Stale30, "Pump.Warn"),
         new TotalCell("بیش از ۶۰ روز", Stale60, "Pump.Danger"),
     };

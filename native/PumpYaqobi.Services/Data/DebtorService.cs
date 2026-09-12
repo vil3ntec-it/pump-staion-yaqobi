@@ -1,10 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Security;
+using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
+using PumpYaqobi.Persistence;
 
 namespace PumpYaqobi.Services.Data;
+
+/// <summary>جمعِ آمادهٔ یک (حساب × دفتر × سوخت) — از خودِ SQLite.</summary>
+public readonly record struct AccountRollup(long AccountId, bool Money, FuelType Fuel, FuelTotals Totals);
 
 /// <summary>
 /// ══ قرض‌داران ══════════════════════════════════════════════════════════════
@@ -41,41 +46,190 @@ public sealed class DebtorService
         return await q.OrderBy(d => d.Name).ToListAsync(ct);
     }
 
-    /// <summary>یک قرض‌دار با همهٔ حساب‌ها و همهٔ ردیف‌هایش — برای مودالِ شخص.</summary>
+    /// <summary>
+    /// یک قرض‌دار با همهٔ حساب‌ها و همهٔ ردیف‌هایش — برای صفحهٔ شخص.
+    ///
+    /// ══ چرا هیچ ‎Include‎ای این‌جا نیست ══════════════════════════════════════
+    ///
+    /// سنجشِ کارایی (‎PerfAudit‎) دو بار همین‌جا را لو داد:
+    ///
+    ///   • با یک کوئریِ واحد و شش ‎Include‎ی مجموعه‌ای، نتیجه ضربِ دکارتیِ آن
+    ///     مجموعه‌ها بود و خواندنِ حسابی با پنجاه هزار ردیف **۳۵۶ ثانیه** طول
+    ///     می‌کشید.
+    ///   • با ‎AsSplitQuery‎ ضربِ دکارتی رفت ولی هنوز **۶٫۳ ثانیه** بود، در
+    ///     حالی که خواندنِ مستقیمِ همان پنجاه هزار ردیف تنها **۰٫۴ ثانیه**
+    ///     طول می‌کشید. یعنی شش ثانیه‌اش خرجِ خودِ شکلِ ‎Include‎ بود، نه
+    ///     خرجِ ردیف‌ها.
+    ///
+    /// پس ردیف‌ها دیگر از راهِ ناوبری خوانده نمی‌شوند: هر دفتر یک کوئریِ
+    /// سادهٔ خودش دارد که مستقیم روی ایندکسِ ‎FuelAccountId‎ /
+    /// ‎MoneyAccountId‎ می‌نشیند، و بعد در حافظه به حسابِ خودش وصل می‌شود.
+    ///
+    /// ⚠️ عمداً به‌جای ‎ids.Contains(...)‎ برای هر حساب یک کوئریِ ‎== a.Id‎
+    /// زده می‌شود. حساب‌های یک شخص انگشت‌شمارند، ولی ‎Contains‎ روی SQLite به
+    /// ‎json_each‎ ترجمه می‌شود و همان ایندکس را از دست می‌دهد — یعنی دوباره
+    /// خواندنِ کلِ جدول.
+    ///
+    /// ⚠️ ترتیبِ ردیف‌ها این‌جا تحمیل نمی‌شود (مثلِ نسخهٔ ‎Include‎دار): هر
+    /// جدولی که ترتیب لازم دارد خودش ‎SortIndex‎ و بعد ‎Id‎ را مرتب می‌کند.
+    /// مرتب‌سازیِ SQL روی پنجاه هزار ردیف فقط هزینهٔ بی‌جا بود.
+    /// </summary>
     public async Task<Debtor?> LoadFullAsync(long id, CancellationToken ct = default)
     {
         _perm.Require(Permission.ViewData);
         await using var db = _dbf.Create();
-        return await db.Debtors.AsNoTracking()
-            .Include(d => d.MainAccount).ThenInclude(a => a!.FuelRows)
-            .Include(d => d.MainAccount).ThenInclude(a => a!.MoneyRows)
-            .Include(d => d.SubAccounts).ThenInclude(a => a.FuelRows)
-            .Include(d => d.SubAccounts).ThenInclude(a => a.MoneyRows)
-            .FirstOrDefaultAsync(d => d.Id == id, ct);
+
+        var person = await db.Debtors.AsNoTracking().FirstOrDefaultAsync(d => d.Id == id, ct);
+        if (person is null) return null;
+
+        var main = await db.DebtAccounts.AsNoTracking()
+            .FirstOrDefaultAsync(a => a.MainOfDebtorId == id, ct);
+        var subs = await db.DebtAccounts.AsNoTracking()
+            .Where(a => a.DebtorId == id).ToListAsync(ct);
+
+        person.MainAccount = main ?? new DebtAccount();
+        person.SubAccounts = subs;
+
+        foreach (var a in person.AllAccounts())
+        {
+            if (a.Id == 0) { a.FuelRows = new(); a.MoneyRows = new(); a.RasidLog = new(); continue; }
+            var aid = a.Id;
+            a.FuelRows = await db.DebtRows.AsNoTracking()
+                .Where(r => r.FuelAccountId == aid).ToListAsync(ct);
+            a.MoneyRows = await db.DebtRows.AsNoTracking()
+                .Where(r => r.MoneyAccountId == aid).ToListAsync(ct);
+            // دفترِ رسیدهای سربرگ — بی این، سربرگ و جدول دو حقیقتِ جدا می‌شدند
+            a.RasidLog = await db.RasidEntries.AsNoTracking()
+                .Where(r => r.AccountId == aid).ToListAsync(ct);
+        }
+
+        return person;
     }
 
-    /// <summary>حساب‌های همهٔ قرض‌داران، برای نشانِ حال (سبز/زرد/قرمز) روی کارت‌ها.</summary>
-    public async Task<Dictionary<long, List<DebtAccount>>> AccountsByDebtorAsync(
+    /// <summary>
+    /// ══ کارت‌های قرض‌داران، بی خواندنِ حتی یک ردیف ═══════════════════════════
+    ///
+    /// خواستهٔ صاحب ریپو: «حتی اگر ۱۰۰۰۰ قرض‌دار داشتم با جدول‌هایی از صدهزار
+    /// یا یک میلیون ردیف، نباید کند شود؛ همه‌چیز باید در صدمِ ثانیه باز شود.»
+    ///
+    /// راهِ پیشین (‎AccountsByDebtorAsync‎، که دیگر نیست) برای کشیدنِ فهرست
+    /// **همهٔ ردیف‌های همهٔ حساب‌ها** را می‌خواند. با ده هزار قرض‌دار و یک
+    /// میلیون ردیف یعنی یک میلیون شیء در حافظه، فقط برای این‌که روی هر کارت سه
+    /// عدد بنویسیم. همان جایی بود که برنامه می‌ایستاد — پس آن تابع برداشته شد
+    /// تا کسی دوباره از همان راه نرود.
+    ///
+    /// این‌جا جمع‌ها را **خودِ SQLite** می‌زند: یک ‎GROUP BY‎ روی حساب و دفتر و
+    /// سوخت. بعد برای هر ترکیب یک «ردیفِ خلاصه» ساخته می‌شود و به همان حساب
+    /// داده، پس <see cref="DebtCalculationService"/> هیچ فرقی نمی‌فهمد و هیچ
+    /// فرمولی عوض نمی‌شود — همان عددهای دیروز، بی خواندنِ ردیف‌ها.
+    ///
+    /// ⚠️ «خوددرمانیِ ردیف» (‎NormalizeRow‎) داخلِ همین SQL آمده، وگرنه عددِ
+    /// کارت با عددِ داخلِ حساب فرق می‌کرد:
+    ///   • ردیفی که «پولی» علامت خورده ولی بردگی‌اش صفر و لیتر دارد، ردیفِ تیل است
+    ///   • بردگی = لیتر × فی (در دفترِ تیل) و الباقی = بردگی − رسید، هر دو گِرد
+    ///
+    /// ⚠️ ردیفِ حذف‌شده شمرده نمی‌شود (‎DeletedAt IS NULL‎) — همان صافیِ سراسریِ
+    /// EF، این‌جا دستی نوشته شده چون کوئری خام است.
+    /// </summary>
+    public async Task<Dictionary<long, List<DebtAccount>>> CardAccountsAsync(
         bool noInvoice = false, CancellationToken ct = default)
     {
         _perm.Require(Permission.ViewData);
         await using var db = _dbf.Create();
+
         var ids = await db.Debtors.AsNoTracking()
             .Where(d => d.IsNoInvoice == noInvoice).Select(d => d.Id).ToListAsync(ct);
 
+        // حساب‌ها بدونِ هیچ ردیفی
         var mains = await db.DebtAccounts.AsNoTracking()
-            .Include(a => a.FuelRows).Include(a => a.MoneyRows)
             .Where(a => a.MainOfDebtorId != null && ids.Contains(a.MainOfDebtorId.Value))
             .ToListAsync(ct);
         var subs = await db.DebtAccounts.AsNoTracking()
-            .Include(a => a.FuelRows).Include(a => a.MoneyRows)
             .Where(a => a.DebtorId != null && ids.Contains(a.DebtorId.Value))
             .ToListAsync(ct);
 
         var map = ids.ToDictionary(i => i, _ => new List<DebtAccount>());
-        foreach (var a in mains) map[a.MainOfDebtorId!.Value].Add(a);
-        foreach (var a in subs) map[a.DebtorId!.Value].Add(a);
+        var byId = new Dictionary<long, DebtAccount>();
+        foreach (var a in mains) { map[a.MainOfDebtorId!.Value].Add(a); byId[a.Id] = a; }
+        foreach (var a in subs) { map[a.DebtorId!.Value].Add(a); byId[a.Id] = a; }
+
+        foreach (var g in await RollupsAsync(db, ct))
+        {
+            if (!byId.TryGetValue(g.AccountId, out var acc)) continue;
+            var row = new DebtRow
+            {
+                Fuel = g.Fuel,
+                Liters = g.Totals.Liters,
+                Rasid = g.Totals.Rasid,
+                RasidFuel = g.Totals.RasidFuel,
+                Albaqi = g.Totals.Albaqi,
+                Bardagi = g.Totals.Bardagi,
+                ByMoney = g.Money,
+            };
+            if (g.Money) acc.MoneyRows.Add(row); else acc.FuelRows.Add(row);
+        }
         return map;
+    }
+
+    /// <summary>جمعِ هر (حساب × دفتر × سوخت) — یک‌بار، از خودِ دیتابیس.</summary>
+    private static async Task<List<AccountRollup>> RollupsAsync(
+        PumpDbContext db, CancellationToken ct)
+    {
+        const string sql = @"
+            SELECT AccountId, Money, Fuel,
+                   SUM(Liters)          AS SumLiters,
+                   SUM(Rasid)           AS SumRasid,
+                   SUM(RasidFuel)       AS SumRasidFuel,
+                   SUM(Bardagi)         AS SumBardagi,
+                   SUM(ROUND(Bardagi - Rasid)) AS SumAlbaqi
+            FROM (
+              SELECT COALESCE(r.FuelAccountId, r.MoneyAccountId) AS AccountId,
+                     CASE WHEN r.FuelAccountId IS NULL THEN 1 ELSE 0 END AS Money,
+                     r.Fuel AS Fuel,
+                     CASE WHEN r.FuelAccountId IS NULL THEN 0
+                          ELSE CAST(r.Liters AS REAL) END AS Liters,
+                     CAST(r.Rasid AS REAL) AS Rasid,
+                     CASE WHEN r.FuelAccountId IS NULL THEN 0
+                          ELSE CAST(r.RasidFuel AS REAL) END AS RasidFuel,
+                     ROUND(CASE
+                       WHEN r.ByMoney = 1
+                            AND NOT (CAST(r.Bardagi AS REAL) = 0 AND CAST(r.Liters AS REAL) > 0)
+                       THEN CAST(r.Bardagi AS REAL)
+                       WHEN CAST(r.Liters AS REAL) > 0
+                       THEN CAST(r.Liters AS REAL) * COALESCE(CAST(r.PricePerLiter AS REAL), 0)
+                       ELSE 0 END) AS Bardagi
+              FROM DebtRows r
+              WHERE r.DeletedAt IS NULL
+                AND (r.FuelAccountId IS NOT NULL OR r.MoneyAccountId IS NOT NULL)
+            )
+            GROUP BY AccountId, Money, Fuel;";
+
+        var list = new List<AccountRollup>();
+        var conn = db.Database.GetDbConnection();
+        var opened = conn.State != System.Data.ConnectionState.Open;
+        if (opened) await conn.OpenAsync(ct);
+        try
+        {
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = sql;
+            await using var r = await cmd.ExecuteReaderAsync(ct);
+            while (await r.ReadAsync(ct))
+            {
+                var totals = new FuelTotals(
+                    Liters: Dec(r, 3), Rasid: Dec(r, 4), RasidFuel: Dec(r, 5),
+                    Albaqi: Dec(r, 7), Bardagi: Dec(r, 6));
+                list.Add(new AccountRollup(
+                    r.GetInt64(0),
+                    r.GetInt64(1) == 1,
+                    r.GetInt64(2) == (long)FuelType.Diesel ? FuelType.Diesel : FuelType.Petrol,
+                    totals));
+            }
+        }
+        finally { if (opened) await conn.CloseAsync(); }
+        return list;
+
+        static decimal Dec(System.Data.Common.DbDataReader r, int i) =>
+            r.IsDBNull(i) ? 0m : (decimal)Convert.ToDouble(r.GetValue(i));
     }
 
     public async Task<Debtor> AddDebtorAsync(string name, string? phone, bool noInvoice,
@@ -166,7 +320,7 @@ public sealed class DebtorService
         // ⚠️ حساب‌ها و ردیف‌ها هم خوانده می‌شوند — نه برای حذف (آن را خودِ
         // پایگاه با cascade می‌کند) بلکه برای **سطلِ زباله**: اگر فقط خودِ شخص
         // در سطل بنشیند، «بازگرداندن» شخصی بی‌حساب و بی‌ردیف پس می‌دهد.
-        var d = await db.Debtors
+        var d = await db.Debtors.AsSplitQuery()
                         .Include(x => x.MainAccount).ThenInclude(a => a!.FuelRows)
                         .Include(x => x.MainAccount).ThenInclude(a => a!.MoneyRows)
                         .Include(x => x.SubAccounts).ThenInclude(a => a.FuelRows)
@@ -197,7 +351,8 @@ public sealed class DebtorService
     {
         _perm.Require(Permission.EditData);
         await using var db = _dbf.Create();
-        var a = await db.DebtAccounts.Include(x => x.FuelRows).Include(x => x.MoneyRows)
+        var a = await db.DebtAccounts.AsSplitQuery()
+                        .Include(x => x.FuelRows).Include(x => x.MoneyRows)
                         .FirstOrDefaultAsync(x => x.Id == accountId, ct)
                 ?? throw new InvalidOperationException("حساب پیدا نشد");
 
@@ -225,6 +380,8 @@ public sealed class DebtorService
         // خورده‌اند و دست زدن به ناوبری، EF را به‌جای حذف به «قطعِ رابطه»
         // می‌اندازد (کلیدِ خارجی null و خطای NOT NULL).
         db.DebtRows.RemoveRange(rows);
+        // رسید ستونِ خودِ همین ردیف‌هاست، پس با رفتنِ جدول خودش می‌رود. فقط
+        // کشِ چهار عددِ حساب باید همان‌جا صفر شود (عکسشان در آرشیو ماند).
         if (money) { a.RasidMoneyPetrol = 0m; a.RasidMoneyDiesel = 0m; }
         else { a.RasidFuelPetrol = 0m; a.RasidFuelDiesel = 0m; }
         a.Note = null;
@@ -270,7 +427,7 @@ public sealed class DebtorService
     {
         _perm.Require(Permission.DeleteData);
         await using var db = _dbf.Create();
-        var a = await db.DebtAccounts
+        var a = await db.DebtAccounts.AsSplitQuery()
                         .Include(x => x.FuelRows).Include(x => x.MoneyRows)
                         .FirstOrDefaultAsync(x => x.Id == accountId, ct);
         if (a is null || a.MainOfDebtorId != null) return;   // حسابِ اصلی حذف نمی‌شود

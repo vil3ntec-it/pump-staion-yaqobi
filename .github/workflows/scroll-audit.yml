@@ -27,6 +27,21 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-      - name: سنجش
+      - name: سنجشِ اسکرول
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- scroll
+
+      # ══ سنجشِ صفحهٔ حسابِ قرض‌دار ════════════════════════════════════════
+      # گزارشِ صاحب ریپو: «حساب فرعی کار نمی‌کند» و «جدولِ جدید درست نمی‌شود».
+      # هیچ آزمونی این‌ها را نمی‌گرفت، چون هر دو پشتِ یک پنجرهٔ گفت‌وگو بودند و
+      # چون «بیرونِ لبهٔ پنجره افتادن» فقط روی پنجرهٔ واقعی دیده می‌شود.
+      - name: سنجشِ صفحهٔ حسابِ قرض‌دار
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- person
+
+      # ══ سنجشِ پارچه‌ها و ورق‌ها ══════════════════════════════════════════
+      # دو جدولِ هم‌شکلِ ورق، خانه‌های پشتِ همِ پارچه، تمام‌عرض بودنِ بخش‌ها، و
+      # منطقِ «پارچهٔ جدید» (چند پایه در یک روز).
+      - name: سنجشِ پارچه‌ها و ورق‌ها
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- parcha

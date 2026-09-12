@@ -348,7 +348,7 @@ public sealed class HistoryService
 
     private static async Task<List<HistoryRow>> WaraqAsync(Persistence.PumpDbContext db, CancellationToken ct)
     {
-        var entries = await db.WaraqEntries.AsNoTracking()
+        var entries = await db.WaraqEntries.AsNoTracking().AsSplitQuery()
             .Include(w => w.Shifts).ThenInclude(s => s.Pumps)
             .Include(w => w.Shifts).ThenInclude(s => s.Transactions)
             .ToListAsync(ct);

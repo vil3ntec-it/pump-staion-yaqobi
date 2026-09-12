@@ -43,6 +43,25 @@ public sealed class ToolsDataService
         return _aging.Rows(people, filter, Shamsi.Today());
     }
 
+    /// <summary>
+    /// ══ سه کوئریِ صاف، بی هیچ ‎Include‎ ══════════════════════════════════════
+    ///
+    /// «قرض‌های کهنه» واقعاً همهٔ ردیف‌ها را لازم دارد، پس این‌جا چیزی برای
+    /// نخواندن نیست — ولی **شکلِ** خواندن هزینه دارد. سنجشِ کارایی همین را
+    /// نشان داد:
+    ///
+    ///     خواندنِ صافِ ۵۰٬۰۰۰ ردیف                    ۴۴۴ ms
+    ///     همان ردیف‌ها از راهِ ‎Include‎              ۵٬۶۲۶ ms
+    ///
+    /// دقیقاً همان چیزی که در ‎DebtorService.LoadFullAsync‎ هم دیده شد. پس
+    /// این‌جا هم سه کوئریِ ساده زده می‌شود — اشخاص، حساب‌ها، ردیف‌ها — و
+    /// وصل کردنشان در حافظه با یک فرهنگِ کلید انجام می‌شود.
+    ///
+    /// ⚠️ ردیف‌ها بی هیچ صافی خوانده می‌شوند و ردیفِ حساب‌های «بی‌فاکتور» در
+    /// حافظه کنار گذاشته می‌شود. صافیِ ‎Contains‎ روی SQLite به ‎json_each‎
+    /// ترجمه می‌شود و ایندکس را از دست می‌دهد — یعنی همان کلِ جدول، ولی
+    /// گران‌تر.
+    /// </summary>
     private async Task<List<Debtor>> LoadDebtorsAsync(CancellationToken ct)
     {
         await using var db = _dbf.Create();
@@ -50,18 +69,21 @@ public sealed class ToolsDataService
                              .OrderBy(d => d.Name).ToListAsync(ct);
         if (people.Count == 0) return people;
 
-        var ids = people.Select(p => p.Id).ToHashSet();
-        var accounts = await db.DebtAccounts.AsNoTracking()
-            .Include(a => a.FuelRows).Include(a => a.MoneyRows)
-            .Where(a => (a.MainOfDebtorId != null && ids.Contains(a.MainOfDebtorId.Value))
-                     || (a.DebtorId != null && ids.Contains(a.DebtorId.Value)))
-            .ToListAsync(ct);
-
         var byId = people.ToDictionary(p => p.Id);
-        foreach (var a in accounts)
+        var byAccount = new Dictionary<long, DebtAccount>();
+
+        foreach (var a in await db.DebtAccounts.AsNoTracking().ToListAsync(ct))
         {
             if (a.MainOfDebtorId is { } m && byId.TryGetValue(m, out var owner)) owner.MainAccount = a;
             else if (a.DebtorId is { } s && byId.TryGetValue(s, out var p2)) p2.SubAccounts.Add(a);
+            else continue;                      // حسابِ یک شخصِ بی‌فاکتور — به ما ربطی ندارد
+            byAccount[a.Id] = a;
+        }
+
+        foreach (var r in await db.DebtRows.AsNoTracking().ToListAsync(ct))
+        {
+            if (r.FuelAccountId is { } f && byAccount.TryGetValue(f, out var fa)) fa.FuelRows.Add(r);
+            else if (r.MoneyAccountId is { } n && byAccount.TryGetValue(n, out var ma)) ma.MoneyRows.Add(r);
         }
         return people;
     }
@@ -71,7 +93,9 @@ public sealed class ToolsDataService
     {
         _perm.Require(Permission.ViewData);
         await using var db = _dbf.Create();
-        var entries = await db.WaraqEntries.AsNoTracking()
+        // ⚠️ ‎AsSplitQuery‎: «پمپ‌ها» و «تراکنش‌ها» دو مجموعهٔ کنارِ هم زیرِ یک
+        // شیفت‌اند؛ در یک کوئری، هر پمپ در هر تراکنش ضرب می‌شود.
+        var entries = await db.WaraqEntries.AsNoTracking().AsSplitQuery()
             .Include(w => w.Shifts).ThenInclude(s => s.Pumps)
             .Include(w => w.Shifts).ThenInclude(s => s.Transactions)
             .OrderByDescending(w => w.DateKey).ToListAsync(ct);

@@ -187,7 +187,7 @@ public sealed partial class MainViewModel : ObservableObject
             // «قرض‌های کهنه» جلویش می‌ماند.
             s.OpenSub = null;
             await s.OnActivatedAsync();
-            await RefreshBannerAsync();
+            QueueBannerRefresh();
             return;
         }
         if (Current is not null)
@@ -204,7 +204,7 @@ public sealed partial class MainViewModel : ObservableObject
         _settings.Save();
         await s.EnsureLoadedAsync();
         await s.OnActivatedAsync();
-        await RefreshBannerAsync();
+        QueueBannerRefresh();
     }
 
     /// <summary>
@@ -312,6 +312,43 @@ public sealed partial class MainViewModel : ObservableObject
         await RefreshBannerAsync();
     }
 
+    private bool _bannerBusy, _bannerAgain;
+
+    /// <summary>
+    /// ══ نوارِ بالا جلوی باز شدنِ بخش را نگیرد ═══════════════════════════════
+    ///
+    /// چهار عددِ نوار به هیچ بخشی ربط ندارند؛ ولی چون جابه‌جایی منتظرشان
+    /// می‌ماند، هزینه‌شان به **هر** باز کردنِ بخش اضافه می‌شد — در سنجش حدودِ
+    /// ۱۶۰ ms روی هر جابه‌جایی، یعنی همان مکثی که خواستهٔ صاحب ریپو نبود.
+    ///
+    /// حالا بخش فوراً باز می‌شود و نوار یک لحظه بعد خودش تازه می‌شود.
+    ///
+    /// ⚠️ اگر کاربر تند تند بخش عوض کند، تازه‌سازی‌ها روی هم نمی‌ریزند: تا یکی
+    /// در جریان است بقیه فقط «یک‌بارِ دیگر» را علامت می‌زنند و در پایان همان
+    /// یک‌بار اجرا می‌شود — پس عددِ آخر همیشه عددِ درست است.
+    /// </summary>
+    public void QueueBannerRefresh()
+    {
+        if (_bannerBusy) { _bannerAgain = true; return; }
+        _bannerBusy = true;
+        _ = RunAsync();
+
+        async Task RunAsync()
+        {
+            try
+            {
+                do
+                {
+                    _bannerAgain = false;
+                    // ⚠️ بی این ‎try‎، یک خطای گذرا در خواندن، استثنای
+                    // «مشاهده‌نشده» می‌شد و برنامه را می‌بست.
+                    try { await RefreshBannerAsync(); } catch { }
+                } while (_bannerAgain);
+            }
+            finally { _bannerBusy = false; }
+        }
+    }
+
     /// <summary>
     /// چهار عددِ نوارِ بالا — همان ‎updateBanner‎ِ نسخهٔ وب. فقط خواندنی است و
     /// هر بار که کاربر بخشی را باز می‌کند تازه می‌شود.
@@ -325,14 +362,18 @@ public sealed partial class MainViewModel : ObservableObject
         var companies = await host.Companies.ListAsync();
         var compAlbaqi = companies.Sum(c => host.Company.Summarize(c, c.Rows).AlbaqiAfn);
 
-        // ۲) قرضِ کلِ قرض‌داران — با همان خوددرمانیِ کارت‌ها
-        var accounts = await host.Debtors.AccountsByDebtorAsync();
+        // ۲) قرضِ کلِ قرض‌داران
+        //
+        // ⚠️ این‌جا پیش از این **همهٔ ردیف‌های همهٔ حساب‌ها** خوانده می‌شد — و
+        // چون نوارِ بالا با هر بار عوض کردنِ بخش تازه می‌شود، همان هزینه به
+        // ازای هر جابه‌جایی تکرار می‌گشت. سنجشِ کارایی همین را نشان داد:
+        // باز کردنِ هر بخش، حتی سبک‌ترینشان، شش ثانیهٔ ثابت.
+        //
+        // ‎CardAccountsAsync‎ همان جمع‌ها را از خودِ دیتابیس می‌گیرد (با همان
+        // خوددرمانیِ ردیف، داخلِ کوئری) و هیچ ردیفی نمی‌خواند.
+        var accounts = await host.Debtors.CardAccountsAsync();
         decimal debt = 0;
-        foreach (var list in accounts.Values)
-        {
-            foreach (var a in list) host.Debt.NormalizeAccount(a);
-            debt += host.Debt.SumTotals(list).All.Albaqi;
-        }
+        foreach (var list in accounts.Values) debt += host.Debt.SumTotals(list).All.Albaqi;
 
         // ۳) مفادِ امروز — جمعِ فایدهٔ هر دو شیفتِ پارچه‌های همین تاریخ
         var today = Shamsi.Today();
@@ -341,8 +382,9 @@ public sealed partial class MainViewModel : ObservableObject
             .Where(r => r.DateShamsi == today);
         var profit = reports.Sum(r => (r.DayShift?.Profit ?? 0) + (r.NightShift?.Profit ?? 0));
 
-        // ۴) مصارفِ امروز
-        var expToday = calc.ExpQuick(await host.ExpenseLedger.ListAsync(null)).Day;
+        // ۴) مصارفِ امروز — فقط ماهِ جاری، نه همهٔ مصارفِ تاریخ. «امروز» همیشه
+        //    داخلِ همین ماه است، پس عدد همان است و خواندن هزار برابر کمتر.
+        var expToday = calc.ExpQuick(await host.ExpenseLedger.ListAsync(Shamsi.ThisMonth())).Day;
 
         string M(decimal v) => Shamsi.Money(Math.Round(v, 0, MidpointRounding.AwayFromZero)) + " افغانی";
         Banner[0].Value = M(compAlbaqi);

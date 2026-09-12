@@ -5,6 +5,28 @@ namespace PumpYaqobi.Reporting.Pdf;
 /// <summary>جهتِ ورق. ‎Auto‎ یعنی «هرچه خودِ گزارش طبیعی‌اش است».</summary>
 public enum PageOrientation { Auto = 0, Portrait = 1, Landscape = 2 }
 
+/// <summary>کدام ورق‌ها چاپ شوند — همان کادرِ اولِ «تنظیمات»ِ صفحهٔ چاپ.</summary>
+public enum PrintWhat { All = 0, Current = 1, Range = 2 }
+
+/// <summary>
+/// مقیاسِ چاپ — همان کادرِ «مقیاس».
+///
+/// ⚠️ چهار حالت است نه شش‌تای نسخهٔ وب، و دلیلش این است که موتورِ سندِ این
+/// برنامه با مرورگر فرق دارد: آن‌جا جدولِ HTML از عرضِ ورق بیرون می‌زد و
+/// «جا دادن ستون‌ها» کارِ واقعی می‌کرد؛ این‌جا ستون‌ها خودشان تا عرضِ ورق
+/// چیده می‌شوند، پس آن حالت همان ‎None‎ است و ساختنِ یک گزینهٔ قلابی برایش
+/// فقط کاربر را گمراه می‌کرد.
+/// </summary>
+public enum PrintScale
+{
+    /// <summary>در اندازهٔ واقعیِ خودش.</summary>
+    None = 0,
+    /// <summary>هر ورق تا جایی کوچک می‌شود که کاملاً در یک صفحه بنشیند.</summary>
+    FitPage = 1,
+    /// <summary>درصدِ دستیِ کاربر.</summary>
+    Custom = 2,
+}
+
 /// <summary>
 /// ══ تنظیمِ ورق — «کارگاه چاپ» ══════════════════════════════════════════════
 /// همتای ‎S‎ / ‎DEF‎ / ‎PAPERS‎ / ‎MARGINS‎ی نسخهٔ وب (‎pumpPrintStudio_v4‎).
@@ -79,7 +101,41 @@ public sealed record PageSetup
     /// <summary>کیفیتِ تصویرِ پیش‌نمایش (نقطه بر اینچ).</summary>
     public int Dpi { get; init; } = 144;
 
+    // ── مقیاس ─────────────────────────────────────────────────────────────
+    public PrintScale Scale { get; init; } = PrintScale.None;
+
+    /// <summary>درصدِ «مقیاسِ دلخواه» — ۱۰ تا ۴۰۰.</summary>
+    public int ScalePercent { get; init; } = 100;
+
+    // ── کارِ چاپ ───────────────────────────────────────────────────────────
+    //
+    // این پنج‌تا روی **ساختِ** سند هیچ اثری ندارند؛ فقط می‌گویند از سندِ
+    // ساخته‌شده کدام ورق‌ها و چند نسخه چاپ/ذخیره شود. کنارِ بقیه نگه داشته
+    // می‌شوند چون در نسخهٔ وب هم همه در یک ‎S‎ی واحد ذخیره می‌شدند و کاربر
+    // انتظار دارد دفعهٔ بعد همان‌طور باز شود.
+
+    public int Copies { get; init; } = 1;
+
+    /// <summary>مرتب (۱۲۳ ۱۲۳) یا نامرتب (۱۱۱ ۲۲۲).</summary>
+    public bool Collate { get; init; } = true;
+
+    public PrintWhat What { get; init; } = PrintWhat.All;
+    public int From { get; init; } = 1;
+    public int To { get; init; } = 1;
+
     public static readonly PageSetup Default = new();
+
+    /// <summary>
+    /// همین تنظیم، ولی بی هر چیزی که فقط به «کارِ چاپ» مربوط است.
+    ///
+    /// دو تنظیم که این‌ها یکی باشند، سندِ یکسانی می‌سازند — پس با عوض شدنِ
+    /// «تعدادِ نسخه» یا «کدام ورق‌ها» نباید سند از نو ساخته شود. مقایسه‌اش
+    /// رایگان است چون ‎record‎ خودش برابریِ مقداری دارد.
+    /// </summary>
+    public PageSetup LayoutOnly() => this with
+    {
+        Copies = 1, Collate = true, What = PrintWhat.All, From = 1, To = 1,
+    };
 
     /// <summary>اندازهٔ نهاییِ ورق، با درنظر گرفتنِ ایستاده/خوابیده.</summary>
     public (decimal W, decimal H) SizeMm(bool naturalLandscape)
@@ -127,6 +183,62 @@ public sealed record PageSetup
         if (paper == "Custom" || !Papers.TryGetValue(paper, out var p))
             return this with { Paper = paper };
         return this with { Paper = paper, CustomWidth = p.W, CustomHeight = p.H };
+    }
+}
+
+/// <summary>
+/// ══ کارِ چاپ — کدام ورق‌ها و به چه ترتیبی ═══════════════════════════════════
+///
+/// رونوشتِ ‎doPrint()‎ی نسخهٔ وب، ولی جدا از هر رابطی تا بشود واقعاً آزمودش:
+///
+///   • «همهٔ گزارش» ⇒ ۱ تا آخر · «همین ورق» ⇒ فقط ورقِ باز ·
+///     «بازه» ⇒ از…تا، و اگر وارونه نوشته شده باشد خودش صافش می‌کند.
+///   • «مرتب» یعنی ۱،۲،۳ ۱،۲،۳ و «نامرتب» یعنی ۱،۱،۱ ۲،۲،۲ — همان دو خطِ
+///     زیرِ کادرِ «مرتب/نامرتب».
+/// </summary>
+public static class PrintJob
+{
+    /// <summary>ورق‌های انتخاب‌شده (شماره از ۱).</summary>
+    public static IReadOnlyList<int> Picked(PageSetup s, int pageCount, int currentPage)
+    {
+        if (pageCount <= 0) return Array.Empty<int>();
+
+        int from = 1, to = pageCount;
+        if (s.What == PrintWhat.Current)
+            from = to = Math.Clamp(currentPage, 1, pageCount);
+        else if (s.What == PrintWhat.Range)
+        {
+            from = Math.Clamp(s.From, 1, pageCount);
+            to = Math.Clamp(s.To, 1, pageCount);
+            if (to < from) (from, to) = (to, from);
+        }
+
+        var list = new List<int>(to - from + 1);
+        for (var i = from; i <= to; i++) list.Add(i);
+        return list;
+    }
+
+    /// <summary>همان‌ها، با تعدادِ نسخه و ترتیبِ مرتب/نامرتب.</summary>
+    public static IReadOnlyList<int> Order(PageSetup s, int pageCount, int currentPage)
+    {
+        var picked = Picked(s, pageCount, currentPage);
+        var copies = Math.Clamp(s.Copies, 1, 999);
+        if (picked.Count == 0 || copies <= 1) return picked;
+
+        var order = new List<int>(picked.Count * copies);
+        if (s.Collate)
+            for (var c = 0; c < copies; c++) order.AddRange(picked);
+        else
+            foreach (var p in picked) for (var c = 0; c < copies; c++) order.Add(p);
+        return order;
+    }
+
+    /// <summary>همهٔ ورق‌ها، یک‌بار، به ترتیب؟ آن‌وقت فایلِ اصلی خودش کافی است.</summary>
+    public static bool IsWholeDocument(IReadOnlyList<int> order, int pageCount)
+    {
+        if (order.Count != pageCount) return false;
+        for (var i = 0; i < order.Count; i++) if (order[i] != i + 1) return false;
+        return true;
     }
 }
 

@@ -117,6 +117,13 @@
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.Border}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="10" />
+    <!-- ══ خطِ برجستگی ═══════════════════════════════════════════════════════
+         بندِ ۳ی «پرامپت کیفیت بصری»: یک خطِ ۱px سفید با آلفای ۶٪ فقط روی
+         لبهٔ **بالاییِ داخلِ** کادر. کادر را «بلند» نشان می‌دهد بی هیچ سایه‌ای
+         — و بندِ ۳ صریح گفته کادرِ ثابت هرگز سایه ندارد.
+         با ‎inset‎ کشیده می‌شود، نه با یک ‎Border‎ی تودرتو: بندِ ۸ بوردرِ
+         تودرتو را هم ممنوع کرده. -->
+    <Setter Property="BoxShadow" Value="inset 0 1 0 0 #0FFFFFFF" />
   </Style>
 
   <!-- دکمه‌ها -->
@@ -164,7 +171,12 @@
   <!-- کارتی که خودش کلیک‌پذیر است: در نسخهٔ وب ‎card.onclick‎ حساب را باز
        می‌کند، پس کارت داخلِ یک دکمهٔ بی‌چهره می‌نشیند. دکمه‌های درونِ کارت
        (✕ و کیوآر) کلیکشان را خودشان مصرف می‌کنند و به این‌جا نمی‌رسد. -->
+  <!-- ⚠️ کارت باید تمامِ خانهٔ هم‌اندازهٔ ‎UniformGridLayout‎ را پر کند، وگرنه
+       کارتِ کم‌محتوا کوچک می‌ماند و ردیف ناهموار دیده می‌شود — همان چیزی که در
+       عکسِ صاحب ریپو بود. -->
   <Style Selector="Button.card-shell">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="0" />
@@ -306,9 +318,33 @@
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="10" />
+    <!-- ══ خطِ جدول — افقی و عمودی، و واقعاً دیده‌شونده ═══════════════════
+         گزارشِ صاحب ریپو: «خط‌های جدول‌ها نیست و دیده نمی‌شه.»
+
+         دو اشتباه پشتِ هم بود، هر دو مالِ خودم:
+
+         ۱) «پرامپت کیفیت بصری» گفته بود «هیچ خط عمودی»، و من همان را
+            گذاشتم. ولی خودِ سایت خطِ عمودی **دارد** — ‎.xls-tbl td‎:
+                border-bottom:1px solid var(‹border›);
+                border-left:1px solid var(‹border›);
+            یعنی هم افقی هم عمودی. حرفِ صاحب ریپو و خودِ سایت بر آن سند
+            مقدم است، پس خطِ عمودی برگشت.
+
+         ۲) رنگش ‎Pump.GridLine‎ بود که ‎Mix(Card, Border, 0.75)‎ است — یعنی
+            سه‌چهارم به رنگِ خودِ جدول نزدیک، و عملاً نامرئی. سایت خودِ
+            ‎var(‑‑border)‎ را می‌گذارد، نه نسخهٔ کم‌رنگش. پس ‎Pump.Border‎.
+
+         ۳) و از امروز رنگ و ضخامتش دیگر همین‌جا سفت نوشته نمی‌شود: هر دو از
+            «تنظیمات ← ظاهرِ جدول‌ها» می‌آیند (‎Pump.Table.…‎ در
+            ‎Themes/TableStyle.cs‎). خواستهٔ صریحِ صاحب ریپو بود:
+            «نباید Hard-coded باشد؛ در تنظیمات، و روی همهٔ جدول‌ها.»
+            پیش‌فرضش همان رنگِ ‎Pump.Border‎ی تم است، پس ظاهرِ امروز عوض نمی‌شود.
+
+         ⚠️ این را دوباره «افقیِ تنها» نکنید، به ‎Pump.GridLine‎ برنگردانید، و
+            رنگ/ضخامت را دوباره این‌جا ثابت ننویسید. -->
     <Setter Property="GridLinesVisibility" Value="All" />
-    <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource Pump.GridLine}" />
-    <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource Pump.GridLine}" />
+    <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource Pump.Table.Border}" />
+    <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource Pump.Table.Border}" />
     <Setter Property="RowHeight" Value="44" />
     <Setter Property="HeadersVisibility" Value="Column" />
   </Style>
@@ -328,12 +364,16 @@
            .ro-tbl td,.ro-tbl th{ cursor:cell; ... }
            .xls-tbl td input:not(:focus){ cursor:cell }
 
-       ‎cursor:cell‎ همان به‌علاوهٔ باریکِ اکسل است. نزدیک‌ترین چیزِ آوالونیا
-       ‎StandardCursorType.Cross‎ است.
+       ‎cursor:cell‎ همان به‌علاوهٔ **کلفتِ** اکسل است — سفید با دورِ سیاه.
+       ‎StandardCursorType.Cross‎ی آوالونیا یک ضربدرِ نازکِ نخی است و صاحب ریپو
+       گفت «شبیهِ اکسل نیست». پس همان شکل در ‎Controls/ExcelCursor.cs‎ کشیده
+       می‌شود و ‎App.OnFrameworkInitializationCompleted‎ آن را با کلیدِ
+       ‎Pump.CellCursor‎ ثبت می‌کند.
        ⚠️ کادرِ تایپ وقتی روی آن ایستاده‌ای هم همین را می‌گیرد (نه ‎IBeam‎)،
        چون سایت هم ‎:not(:focus)‎ گذاشته: تا وارد نشده‌ای، خانه است نه متن. -->
   <Style Selector="DataGridColumnHeader">
-    <Setter Property="Cursor" Value="Cross" />
+    <Setter Property="Cursor" Value="{DynamicResource Pump.CellCursor}" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Label}" />
     <Setter Property="FontWeight" Value="ExtraBold" />
@@ -341,7 +381,28 @@
     <Setter Property="Padding" Value="8,9" />
     <Setter Property="MinHeight" Value="44" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
-    <Setter Property="SeparatorBrush" Value="{DynamicResource Pump.GridLine}" />
+    <Setter Property="SeparatorBrush" Value="{DynamicResource Pump.Table.Border}" />
+    <!-- ‎border-bottom:2px solid var(‑‑border)‎ی ‎.xls-tbl th‎ — ضخامتش از تنظیمات -->
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Table.Border}" />
+    <Setter Property="BorderThickness" Value="{DynamicResource Pump.Table.HeadUnderline}" />
+  </Style>
+
+  <!-- ══ ضخامتِ خودِ خط‌ها ═══════════════════════════════════════════════════
+       ‎DataGrid‎ رنگِ خط‌ها را از ‎HorizontalGridLinesBrush‎/‎Vertical…‎ می‌گیرد
+       ولی ضخامتشان در قالبِ خودش ۱ پیکسل نوشته شده. آن سه مستطیل این‌ها
+       هستند و ضخامتشان از «تنظیمات ← ظاهرِ جدول‌ها» می‌آید:
+
+         ‎PART_BottomGridLine‎  خطِ افقیِ زیرِ هر ردیف
+         ‎PART_RightGridLine‎   خطِ عمودیِ کنارِ هر خانه
+         ‎VerticalSeparator‎    جداکنندهٔ سربرگ‌ها -->
+  <Style Selector="DataGridRow /template/ Rectangle#PART_BottomGridLine">
+    <Setter Property="Height" Value="{DynamicResource Pump.Table.Line}" />
+  </Style>
+  <Style Selector="DataGridCell /template/ Rectangle#PART_RightGridLine">
+    <Setter Property="Width" Value="{DynamicResource Pump.Table.Line}" />
+  </Style>
+  <Style Selector="DataGridColumnHeader /template/ Rectangle#VerticalSeparator">
+    <Setter Property="Width" Value="{DynamicResource Pump.Table.HeadLine}" />
   </Style>
   <!-- ⚠️ ‎HorizontalContentAlignment‎ی خودِ سرستون کافی نبود: نوشتهٔ داخلش را
        خودِ ‎DataGrid‎ می‌سازد و ‎Stretch‎ می‌گذارد، پس «تاریخ»، «نام»، «حواله» و
@@ -356,8 +417,11 @@
     <Setter Property="Padding" Value="10,4" />
     <Setter Property="FontSize" Value="17" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
-    <Setter Property="Cursor" Value="Cross" />
+    <Setter Property="Cursor" Value="{DynamicResource Pump.CellCursor}" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <!-- عمودی هم وسط — خواستهٔ صریحِ صاحب ریپو: «تمام Cellها از نظر افقی و
+         عمودی دقیقاً Center شوند.» -->
+    <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
   <!-- نوشتهٔ داخلِ خانه هم واقعاً وسط بنشیند: ‎HorizontalContentAlignment‎ی
        خانه فقط وقتی اثر دارد که خودِ نوشته ‎Stretch‎ نباشد، و ‎DataGridTextColumn‎
@@ -365,10 +429,141 @@
   <Style Selector="DataGridCell TextBlock">
     <Setter Property="TextAlignment" Value="Center" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <!-- متنِ بلند ردیف را بلند نکند و خطوط را نشکند — همان کاری که خانهٔ
+         اکسل می‌کند: نوشته بریده می‌شود، نه این‌که جدول به‌هم بریزد. -->
+    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
   </Style>
+  <!-- ══ کادرِ تایپِ داخلِ خانه — ‎.xls-in‎ی سایت ═══════════════════════════
+       گزارشِ صاحب ریپو: «توی کادرهای جدول وقتی می‌خوام چیزی بنویسم کادر سفید
+       می‌شه و بک‌گراندِ مدلِ دیگه‌ای است و شبیه‌اش نیست.»
+
+       حق داشت: ‎TextBox‎ی آوالونیا در حالتِ ویرایش پس‌زمینهٔ روشن و لبهٔ خودش
+       را می‌گیرد، پس خانه وسطِ جدولِ تیره سفید می‌شد. سایت چنین نیست:
+
+           .xls-in{ width:100%; background:transparent; border:none;
+                    color:var(‹txt›); font-weight:700; padding:8px 7px }
+
+       یعنی کادر اصلاً دیده نمی‌شود؛ فقط نوشته است و خطوطِ خودِ خانه.
+       ‎:focus‎ و ‎:pointerover‎ هم جدا نوشته شده‌اند، وگرنه سبکِ پیش‌فرضِ
+       ‎TextBox‎ در همان دو حالت دوباره سفید می‌کرد. -->
+  <!-- ⚠️ اندازه و قلمِ کادرِ تایپ هم باید همانِ خانه باشد، نه پیش‌فرضِ
+       ‎TextBox‎. گزارشِ صاحب ریپو: «نباید یک Input کوچک و سفید داخل Cell ظاهر
+       شود… باید دقیقاً اندازهٔ همان Cell باشد و با Background، Border، Font و
+       Padding جدول هماهنگ.»
+
+       سبکِ عمومیِ ‎TextBox‎ی برنامه ‎MinHeight="34"‎ و گوشهٔ گرد و حاشیهٔ خودش
+       را دارد؛ داخلِ خانهٔ ۴۴ پیکسلی این یعنی یک کادرِ کوچک‌ترِ تودرتو با
+       قلمِ ریزتر. پس همه‌شان این‌جا صفر/هم‌اندازهٔ خانه می‌شوند:
+       بلندی و پهنای کمینه صفر، گوشه بی‌گردی، ‎Padding‎ صفر (فاصله را خودِ
+       خانه می‌دهد)، و قلم دقیقاً همان ۱۷ِ خانه.
+
+       ‎AcceptsReturn="False"‎ و ‎TextWrapping="NoWrap"‎ هم عمدی‌اند: متنِ بلند
+       نباید ردیف را بلند کند و خطوطِ جدول را بشکند. -->
   <Style Selector="DataGridCell TextBox">
     <Setter Property="TextAlignment" Value="Center" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="FontSize" Value="17" />
+    <Setter Property="AcceptsReturn" Value="False" />
+    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
+    <Setter Property="FontWeight" Value="Bold" />
+  </Style>
+  <!-- ══ صفرِ دیده‌شونده که وجود ندارد ══════════════════════════════════════
+       گزارشِ صاحب ریپو، بارِ دوم و روشن‌تر: «وقتی گفتم صفر نامرئی باشد، منظورم
+       این بود که صفر دیده بشود ولی صفری وجود نداشته باشد؛ وقت چیزی می‌نویسم
+       هیچی از آن نباشد.»
+
+       یعنی دقیقاً همان ‎placeholder‎ی سایت:
+           &lt;input class="xls-in" value="${x||''}" placeholder="0"&gt;
+       عدد صفر ⇒ خانه خالی است (‎MoneyOrBlank‎)، و یک «۰»ی کم‌رنگ رویش دیده
+       می‌شود که با اولین حرفی که تایپ شود می‌رود.
+
+       ⚠️ فقط روی ستون‌های عددی، نه همه: ستونِ عددی با
+       ‎CellStyleClasses="num"‎ علامت خورده. روی «نام» و «تاریخ» صفر بی‌معناست. -->
+  <Style Selector="DataGridCell.num TextBox">
+    <Setter Property="Watermark" Value="0" />
+  </Style>
+
+  <Style Selector="DataGridCell TextBox:focus, DataGridCell TextBox:pointerover">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="DataGridCell TextBox /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <!-- ══ تایپ داخلِ خانه، مثلِ اکسل ═══════════════════════════════════════════
+       گزارشِ صاحب ریپو با عکس: «موقعِ تایپ نمی‌خواهم آن چهارگوش باشد … چیزی که
+       می‌نویسم چیزی نمی‌فهمم. می‌خواهم خیلی حرفه‌ای باشد، مثلِ اکسل.»
+
+       در عکس، نوشته داخلِ یک کادرِ کوچکِ چسبیده به متن بود، وسطِ خانه‌ای که
+       بزرگ‌تر است — و دورش هم یک خطِ نازکِ اضافه. دو چیز با هم:
+
+       ۱) کادرِ ویرایشی تمامِ خانه را نمی‌گرفت. ‎DataGrid‎ برای ستونِ متنی خودش
+          یک ‎TextBox‎ی به نامِ ‎PART_EditingElement‎ می‌سازد و آن از قاعدهٔ
+          عمومیِ بالا ‎HorizontalAlignment‎ را نمی‌گرفت.
+       ۲) دو مستطیلِ خودِ خانه (‎CurrencyVisual‎ و ‎FocusVisual‎) روی آن کشیده
+          می‌شدند — همان «چهارگوش».
+
+       در اکسل چیزی که دیده می‌شود این است: خانهٔ فعال یک **قابِ ضخیمِ رنگی**
+       دورِ خودِ خانه دارد، و متن تمامِ خانه را می‌گیرد. حالا همان. -->
+  <Style Selector="DataGridCell TextBox#PART_EditingElement">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
+  <!-- دو مستطیلِ خودِ خانه دیگر کشیده نمی‌شوند — «چهارگوش»ِ عکس همین بود -->
+  <Style Selector="DataGridCell /template/ Rectangle#CurrencyVisual">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <Style Selector="DataGridCell /template/ Rectangle#FocusVisual">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <!-- و به‌جایشان، قابِ خانهٔ فعالِ اکسل: ضخیم، رنگی، دورِ تمامِ خانه -->
+  <Style Selector="DataGridCell:current">
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+
+  <!-- کشویی و رادیوییِ داخلِ خانه هم همان‌طور — نه کادرِ سفیدِ جدا -->
+  <Style Selector="DataGridCell ComboBox">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
+    <!-- مثلِ کادرِ تایپ: هم‌اندازهٔ خانه، نه کادرِ کوچکِ تودرتو -->
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="FontSize" Value="17" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+  </Style>
+  <!-- ══ خانه‌های داخلِ کادرِ چندانتخابی ═══════════════════════════════════
+       ‎DataGrid‎ فقط «ردیف» را انتخاب می‌کند. کادرِ خانه‌به‌خانه‌ای که با
+       ‎Shift+فلش‎ ساخته می‌شود، از ‎ExcelGrid.PaintRange‎ این کلاس را می‌گیرد. -->
+  <Style Selector="DataGridCell.rangesel">
+    <Setter Property="Background" Value="{DynamicResource Pump.Selected}" />
   </Style>
   <Style Selector="DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">
     <Setter Property="Fill" Value="{DynamicResource Pump.Hover}" />
@@ -405,7 +600,17 @@
 
             <!-- ══ سربرگِ کادر ══ -->
             <Border Grid.Row="0" Classes="card-head">
-              <Grid ColumnDefinitions="*,Auto">
+              <!-- ══ عنوان ‎Auto‎، ابزار ‎*‎ — و چرا این ترتیب ══════════════════
+                   پیش از این عنوان ‎*‎ بود و ابزار ‎Auto‎. ستونِ ‎Auto‎ به فرزندش
+                   پهنای **دلخواهِ خودش** را می‌دهد، یعنی اندازه‌گیری با پهنای
+                   بی‌نهایت. نتیجه: هر ‎WrapPanel‎ی در نوارِ ابزار هیچ‌وقت
+                   نمی‌شکست و فقط از پنجره بیرون می‌زد — سنجشِ ‎UiTests person‎
+                   همین را گرفت («بازگشت به فهرست» در ‎x −5…135‎).
+
+                   حالا ابزار در ستونِ ‎*‎ است، پس پهنای واقعی و محدود می‌گیرد و
+                   ‎WrapPanel‎ش درست می‌شکند. عنوان ‎Auto‎ است و به اندازهٔ
+                   خودش جا می‌گیرد. -->
+              <Grid ColumnDefinitions="Auto,*">
                 <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                   <TextBlock Text="{TemplateBinding Header}" Classes="card-title" />
                   <TextBlock Text="{TemplateBinding SubHeader}" Classes="muted"
@@ -455,9 +660,12 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
 
+                <!-- «کادرهای بالای جدول هم Center شوند» — خواستهٔ صریحِ صاحب
+                     ریپو. نوار سرِ جایش می‌ماند، فقط محتوایش وسط می‌نشیند. -->
                 <Border Grid.Row="1" Classes="panel" Padding="12,9" Margin="0,0,0,12"
                         IsVisible="{TemplateBinding Filters, Converter={x:Static ObjectConverters.IsNotNull}}">
-                  <ContentPresenter Content="{TemplateBinding Filters}" />
+                  <ContentPresenter Content="{TemplateBinding Filters}"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
 
                 <ContentPresenter Grid.Row="2" Content="{TemplateBinding Summary}" Margin="0,0,0,12"
@@ -672,6 +880,7 @@
 
   <!-- ══ کارتِ قرض‌دار — رنگِ کارت از حالِ حساب می‌آید ══ -->
   <Style Selector="Border.person-card">
+    <Setter Property="VerticalAlignment" Value="Stretch" />
     <Setter Property="Background" Value="{DynamicResource Pump.Card}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
     <Setter Property="BorderThickness" Value="1.5" />
@@ -884,8 +1093,25 @@
     </Setter>
   </Style>
 
+  <!-- ══ اسکرول‌بار ═══════════════════════════════════════════════════════════
+       بندِ ۶ی «پرامپت کیفیت بصری»: «عرض ۱۰px، دستگیره ‎border‎ با شعاعِ کامل،
+       روی hover پررنگ‌تر. اسکرول‌بارِ پیش‌فرضِ ویندوز کیفیتِ کلِ برنامه را
+       پایین می‌آورد.» -->
   <Style Selector="ScrollBar">
     <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ScrollBar[Orientation=Vertical]">
+    <Setter Property="Width" Value="10" />
+  </Style>
+  <Style Selector="ScrollBar[Orientation=Horizontal]">
+    <Setter Property="Height" Value="10" />
+  </Style>
+  <Style Selector="ScrollBar /template/ Thumb">
+    <Setter Property="Background" Value="{DynamicResource Pump.Border}" />
+    <Setter Property="CornerRadius" Value="999" />
+  </Style>
+  <Style Selector="ScrollBar:pointerover /template/ Thumb">
+    <Setter Property="Background" Value="{DynamicResource Pump.Muted}" />
   </Style>
 
   <!-- ══ ردیفِ «جمله»ی ته جدول ═══════════════════════════════════════════════
@@ -913,40 +1139,34 @@
     <Setter Property="Template">
       <ControlTemplate>
         <Border Background="{DynamicResource Pump.Panel}"
-                BorderBrush="{DynamicResource Pump.Border}"
-                BorderThickness="1,2,1,1"
-                CornerRadius="0,0,10,10">
-          <StackPanel Orientation="Horizontal">
-            <Border BorderBrush="{DynamicResource Pump.GridLine}" BorderThickness="0,0,1,0"
-                    Padding="12,8" MinHeight="44">
-              <TextBlock Text="{TemplateBinding Title}" FontWeight="Black" FontSize="16"
-                         VerticalAlignment="Center" TextAlignment="Center"
-                         Foreground="{DynamicResource Pump.Label}" />
-            </Border>
+                BorderBrush="{DynamicResource Pump.Table.Border}"
+                BorderThickness="{DynamicResource Pump.Table.SumBorder}"
+                CornerRadius="0,0,10,10" Padding="0">
+          <Panel ClipToBounds="True">
+            <!-- «جمله» روی خانهٔ اولِ ردیف می‌نشیند، درست مثلِ ‎tfoot‎ی سایت -->
+            <TextBlock Text="{TemplateBinding Title}" FontWeight="ExtraBold" FontSize="13"
+                       VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0"
+                       Foreground="{DynamicResource Pump.Text}" />
             <ItemsControl ItemsSource="{TemplateBinding ItemsSource}" x:CompileBindings="False">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
-                  <WrapPanel Orientation="Horizontal" />
+                  <c:TotalsStrip />
                 </ItemsPanelTemplate>
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <!-- خانهٔ جدول: خطِ عمودیِ خودش، وسط‌چین، هم‌قدِ سرستون -->
-                  <Border BorderBrush="{DynamicResource Pump.GridLine}" BorderThickness="0,0,1,0"
-                          Padding="10,6" MinWidth="96" MinHeight="44">
-                    <StackPanel Spacing="1" VerticalAlignment="Center">
-                      <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="Bold"
-                                 TextAlignment="Center"
-                                 Foreground="{DynamicResource Pump.Muted}" />
-                      <TextBlock Text="{Binding Value}" FontWeight="Black" FontSize="17"
-                                 TextAlignment="Center"
-                                 Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
-                    </StackPanel>
-                  </Border>
+                  <StackPanel Spacing="1" Margin="4,9">
+                    <TextBlock Text="{Binding Label}" FontSize="11" TextAlignment="Center"
+                               TextTrimming="CharacterEllipsis"
+                               Foreground="{DynamicResource Pump.Muted}" />
+                    <TextBlock Text="{Binding Value}" FontWeight="ExtraBold" FontSize="14"
+                               TextAlignment="Center"
+                               Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                  </StackPanel>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-          </StackPanel>
+          </Panel>
         </Border>
       </ControlTemplate>
     </Setter>

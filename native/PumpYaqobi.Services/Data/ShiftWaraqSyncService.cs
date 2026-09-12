@@ -70,7 +70,7 @@ public sealed class ShiftWaraqSyncService
         var key = Shamsi.Key(date);
 
         await using var db = _dbf.Create();
-        var w = await db.WaraqEntries
+        var w = await db.WaraqEntries.AsSplitQuery()
                         .Include(x => x.Shifts).ThenInclude(s => s.Pumps)
                         .Include(x => x.Shifts).ThenInclude(s => s.Transactions)
                         .FirstOrDefaultAsync(x => x.DateKey == key, ct);

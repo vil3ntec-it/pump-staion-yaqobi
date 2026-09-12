@@ -17,6 +17,7 @@ namespace PumpYaqobi.Tests;
 /// ⚠️ اگر روزی یکی‌شان دوباره به نوار برگردد، ‎Ctrl+Shift+عدد‎ هم جابه‌جا
 /// می‌شود — و همان آزمونِ ترتیبِ نوار هم قرمز خواهد شد.
 /// </summary>
+[Collection(AppHostCollection.Name)]
 public class SubSectionTests
 {
     private static MainViewModel Shell()

@@ -79,6 +79,56 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
 
     [ObservableProperty] private PumpTheme _selectedTheme;
 
+    // ── ظاهرِ جدول‌ها ────────────────────────────────────────────────────────
+    //
+    // خواستهٔ صریحِ صاحب ریپو: «خطوطِ جدول نباید Hard-coded باشند — یک بخشِ
+    // «ظاهرِ جدول» در تنظیمات باشد با رنگِ خط و ضخامتِ خط (۱ تا ۴ پیکسل)، و
+    // همان روی **همهٔ** جدول‌های برنامه اعمال شود.»
+    //
+    // این چهار کادر تنها جای تعریفِ خطِ جدول‌اند. هر تغییری همان لحظه هم
+    // ذخیره می‌شود و هم روی همهٔ جدول‌ها می‌نشیند — دکمهٔ «ذخیره» لازم ندارد،
+    // چون کاربر باید نتیجه را همان‌جا ببیند و انتخاب کند.
+
+    /// <summary>ضخامت‌های مجاز: ۱ تا ۴ پیکسل.</summary>
+    public IReadOnlyList<double> LineSizes { get; } = TableStyle.Sizes;
+
+    /// <summary>خالی یعنی «رنگِ خودِ تم».</summary>
+    [ObservableProperty] private string _tableBorderColor = "";
+    [ObservableProperty] private double _tableLine = 1;
+    [ObservableProperty] private double _tableHeadLine = 2;
+    [ObservableProperty] private double _tableSumLine = 2;
+
+    /// <summary>تا وقتی تنظیماتِ ذخیره‌شده خوانده نشده، هیچ‌چیز نوشته نشود.</summary>
+    private bool _tableReady;
+
+    partial void OnTableBorderColorChanged(string value) => ApplyTableStyle();
+    partial void OnTableLineChanged(double value) => ApplyTableStyle();
+    partial void OnTableHeadLineChanged(double value) => ApplyTableStyle();
+    partial void OnTableSumLineChanged(double value) => ApplyTableStyle();
+
+    /// <summary>رنگِ نوشته‌شده خوانا نیست؟ کادرِ راهنما همین را می‌گوید.</summary>
+    public string TableColorNote =>
+        string.IsNullOrWhiteSpace(TableBorderColor) ? "رنگِ خطِ جدول از خودِ تم گرفته می‌شود."
+        : TableStyle.Parse(TableBorderColor) is null ? "این رنگ خوانده نشد — مثلِ ‎#3b4252‎ بنویسید."
+        : "رنگِ دستی روی همهٔ جدول‌ها نشست.";
+
+    [RelayCommand]
+    private void UseThemeTableColor() => TableBorderColor = "";
+
+    private void ApplyTableStyle()
+    {
+        OnPropertyChanged(nameof(TableColorNote));
+        if (!_tableReady) return;
+
+        var a = AppSettings.Load();
+        a.TableBorderColor = TableStyle.Parse(TableBorderColor) is null ? "" : TableBorderColor.Trim();
+        a.TableLine = TableLine;
+        a.TableHeadLine = TableHeadLine;
+        a.TableSumLine = TableSumLine;
+        a.Save();
+        TableStyle.Apply(a);
+    }
+
     // ── به‌روزرسانی ─────────────────────────────────────────────────────────
     [ObservableProperty] private string _currentVersion;
     [ObservableProperty] private string _updateStatus = "";
@@ -118,6 +168,17 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
         UnionRateDiesel = Shamsi.Money(s.GetDecimal(SettingsService.UnionRateDiesel));
         LowStockThreshold = Shamsi.Money(s.GetDecimal(SettingsService.LowStockThreshold, 1000m));
         SelectedTheme = ThemeManager.Current;
+
+        // ظاهرِ جدول‌ها از فایلِ کنارِ برنامه می‌آید، نه از دیتابیس
+        var look = AppSettings.Load();
+        _tableReady = false;
+        TableBorderColor = look.TableBorderColor;
+        TableLine = look.TableLine;
+        TableHeadLine = look.TableHeadLine;
+        TableSumLine = look.TableSumLine;
+        _tableReady = true;
+        OnPropertyChanged(nameof(TableColorNote));
+
         return Task.CompletedTask;
     }
 

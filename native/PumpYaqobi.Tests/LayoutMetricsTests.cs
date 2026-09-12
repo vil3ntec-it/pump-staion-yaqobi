@@ -6,60 +6,58 @@ namespace PumpYaqobi.Tests;
 /// <summary>
 /// ══ پهنای ستونِ محتوا ═══════════════════════════════════════════════════════
 ///
-/// تا دیروز این‌جا ستونِ ۱۰۰۰ پیکسلیِ وسط‌چینِ ‎.main‎ِ نسخهٔ وب تقلید می‌شد و
-/// فقط چند بخشِ جدولی تمام‌عرض بودند. صاحب ریپو با عکس نشان داد که نتیجه‌اش
-/// روی لپ‌تاپ چه شد: «چپ و راستِ هر بخش را ببینی تمام صفحه نیستن» — دو نوارِ
-/// خالی کنارِ هر بخش.
+/// ⚠️ این قاعده را **صاحب ریپو** تعیین کرده، نه سایت:
+///     «فقط و فقط بخشِ پارچه‌ها و بخشِ فاکتورها تمام صفحه نباشند؛
+///      بقیهٔ همهٔ بخش‌ها تمام صفحه باشند.»
 ///
-/// حالا قاعده یکی است و استثنا ندارد: <b>هر بخش تمامِ عرضِ پنجره</b>. این
-/// آزمون همان را قفل می‌کند تا با یک دستکاریِ بعدی ستونِ باریک برنگردد.
+/// این خانه چند بار عوض شده؛ پیش از دست زدن به آن، همین جمله را بخوانید.
 /// </summary>
 public class LayoutMetricsTests
 {
     private sealed class Fake : SectionViewModel
     {
         public Fake(string id) : base(id, id, id) { }
+        public void Open(bool v) => IsPageOpen = v;
     }
 
+    /// <summary>دو بخشِ فرمی — ستونِ باریک.</summary>
+    [Theory]
+    [InlineData("shifts")]
+    [InlineData("invoices")]
+    public void OnlyParchaAndInvoicesAreNarrow(string id)
+        => Assert.Equal(1000, new Fake(id).ContentMaxWidth);
+
+    /// <summary>بقیه — بی استثنا تمام‌عرض.</summary>
     [Theory]
     [InlineData("dashboard")]
-    [InlineData("shifts")]
-    [InlineData("debt")]
     [InlineData("waraq")]
+    [InlineData("debt")]
     [InlineData("storage")]
     [InlineData("amanat")]
     [InlineData("safe")]
+    [InlineData("sarrafi")]
+    [InlineData("expenses")]
+    [InlineData("attendance")]
+    [InlineData("noinv")]
     [InlineData("profit")]
+    [InlineData("settings")]
+    [InlineData("history")]
+    [InlineData("cameras")]
     [InlineData("rasid")]
     [InlineData("debtrasid")]
     [InlineData("chakana")]
     [InlineData("oldloans")]
     [InlineData("invrate")]
-    [InlineData("settings")]
-    public void EverySectionFillsTheWindow(string id)
+    public void EverySectionElseFillsTheWindow(string id)
         => Assert.Equal(double.PositiveInfinity, new Fake(id).ContentMaxWidth);
 
-    /// <summary>باز شدنِ حسابِ درونِ بخش هم چیزی را تنگ‌تر نمی‌کند.</summary>
+    /// <summary>صفحهٔ درونیِ باز، حتی در آن دو بخش، تمام‌عرض می‌شود.</summary>
     [Fact]
-    public void AnOpenAccountPageAlsoFillsTheWindow()
+    public void AnOpenPageFillsTheWindowEvenInANarrowSection()
     {
-        var s = new Fake("debt") { IsPageOpen = true };
+        var s = new Fake("invoices");
+        Assert.Equal(1000, s.ContentMaxWidth);
+        s.Open(true);
         Assert.Equal(double.PositiveInfinity, s.ContentMaxWidth);
-    }
-
-    /// <summary>
-    /// عوض شدنِ پهنا باید خبر بدهد. حالا عدد ثابت است، ولی خبرش باید بماند —
-    /// پوستهٔ برنامه به همین بند است و اگر روزی قاعده برگردد، بی‌خبر می‌شکند.
-    /// </summary>
-    [Fact]
-    public void ChangingTheOpenPageRaisesTheWidthChange()
-    {
-        var s = new Fake("debt");
-        var seen = new List<string?>();
-        s.PropertyChanged += (_, e) => seen.Add(e.PropertyName);
-
-        s.IsPageOpen = true;
-
-        Assert.Contains(nameof(SectionViewModel.ContentMaxWidth), seen);
     }
 }

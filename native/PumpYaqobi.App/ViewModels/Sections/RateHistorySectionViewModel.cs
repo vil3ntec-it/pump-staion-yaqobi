@@ -33,9 +33,9 @@ public sealed partial class RateHistorySectionViewModel : SectionViewModel
     public RateHistorySectionViewModel(AppHost host)
         : base("ratehist", "history", "تاریخچهٔ نرخ") => _host = host;
 
-    /// <summary>⚠️ ‎BulkObservableCollection‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
+    /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
     /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
-    public BulkObservableCollection<RateHistoryRowViewModel> Rows { get; } = new();
+    public BulkRows<RateHistoryRowViewModel> Rows { get; } = new();
 
     public bool IsEmpty => Rows.Count == 0;
 

@@ -218,6 +218,89 @@ public class GridBehaviourTests
         Assert.Contains("NewMonthCommand", v);
     }
 
+    // ── کلید راست/چپ در چیدمانِ راست‌به‌چپ ──────────────────────────────────
+
+    /// <summary>
+    /// گزارشِ صاحب ریپو: «کلیدِ راست را می‌زنم، چپ می‌رود.»
+    /// در چیدمانِ RTL جهت‌ها آینه می‌شوند، پس کلید باید برعکس شود تا با آن‌چه
+    /// کاربر می‌بیند یکی باشد. این آزمون خودِ عوض‌شدن را قفل می‌کند.
+    /// </summary>
+    [Fact]
+    public void ArrowKeysAreMirroredInRightToLeft()
+    {
+        var src = File.ReadAllText(Path.Combine(
+            Root(), "PumpYaqobi.App", "Services", "FieldNavigation.cs"));
+        Assert.Contains("IsRtl(from)", src);
+        Assert.Contains("dir == Dir.Left ? Dir.Right : Dir.Left", src);
+    }
+
+    // ── کشویی با یک کلیک، و نلغزیدنِ صفحه ───────────────────────────────────
+
+    /// <summary>«همین که بزنم بیایند» — نه دو سه کلیک.</summary>
+    [Fact]
+    public void ComboBoxesOpenOnTheFirstClick()
+    {
+        var src = File.ReadAllText(Path.Combine(
+            Root(), "PumpYaqobi.App", "Controls", "ExcelGrid.cs"));
+        Assert.Contains("OpenComboUnderPointer", src);
+        Assert.Contains("IsDropDownOpen = true", src);
+    }
+
+    /// <summary>
+    /// «وقتی در کادرِ جدول کلیک می‌کنم، سربرگ‌ها گم می‌شوند … خودم اسکرول
+    /// می‌کنم.» کلیک نباید ‎BringIntoView‎ی صفحه را راه بیندازد.
+    /// </summary>
+    [Fact]
+    public void ClickingACellDoesNotScrollThePage()
+    {
+        var src = File.ReadAllText(Path.Combine(
+            Root(), "PumpYaqobi.App", "Controls", "ExcelGrid.cs"));
+        Assert.Contains("RequestBringIntoViewEvent", src);
+        Assert.Contains("_pointerDriven", src);
+    }
+
+    // ── تایپِ داخلِ خانه، مثلِ اکسل ───────────────────────────────────────────
+
+    /// <summary>
+    /// «موقعِ تایپ نمی‌خواهم آن چهارگوش باشد … مثلِ اکسل.» دو مستطیلِ خودِ
+    /// خانه نباید کشیده شوند و کادرِ ویرایشی باید تمامِ خانه را بگیرد.
+    /// </summary>
+    [Fact]
+    public void TypingInACellLooksLikeExcel()
+    {
+        var t = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Themes", "Controls.axaml"));
+        Assert.Contains("Rectangle#CurrencyVisual", t);
+        Assert.Contains("Rectangle#FocusVisual", t);
+        Assert.Contains("TextBox#PART_EditingElement", t);
+        Assert.Contains("<Style Selector=\"DataGridCell:current\">", t);
+    }
+
+    // ── کارت‌های هم‌اندازه ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// «کادرهایشان برابرِ هم نیستند … در هر صفحه شش تا هشت تا جا بشود.»
+    /// بی ‎MinItemHeight‎ هر کارت به قدِ محتوای خودش می‌ماند و ردیف ناهموار
+    /// می‌شود؛ بی سقفِ ستون، روی نمایشگرِ پهن کارت‌ها بی‌جهت پهن می‌شوند.
+    /// </summary>
+    [Theory]
+    [InlineData("DebtSectionView")]
+    [InlineData("WaraqSectionView")]
+    [InlineData("AmanatSectionView")]
+    [InlineData("CompanySectionView")]
+    public void CardsAreTheSameSizeAndSixToEightPerRow(string view)
+    {
+        var v = NoComments(View(view));
+        Assert.Contains("MinItemHeight=", v);
+        Assert.Contains("MaximumRowsOrColumns=\"8\"", v);
+
+        var m = Regex.Match(v, "MinItemWidth=\"(\\d+)\"");
+        Assert.True(m.Success, "MinItemWidth پیدا نشد");
+        var w = int.Parse(m.Groups[1].Value);
+
+        // روی باریک‌ترین صفحهٔ پشتیبانی‌شده (۱۲۸۰) دستِ‌کم شش‌تا جا شود
+        Assert.True(1280 / w >= 6, $"با MinItemWidth={w} روی ۱۲۸۰ فقط {1280 / w} کارت جا می‌شود");
+    }
+
     /// <summary>و کشویِ سال کنارِ کشویِ ماه هست.</summary>
     [Theory]
     [InlineData("ExpenseSectionView")]

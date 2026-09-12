@@ -20,7 +20,8 @@ public sealed class WaraqDataService
     { _dbf = dbf; _perm = perm; _trash = trash; }
 
     private static IQueryable<WaraqEntry> Full(Persistence.PumpDbContext db) =>
-        db.WaraqEntries
+        // ⚠️ ‎AsSplitQuery‎: بی آن، هر پمپ در هر تراکنشِ همان شیفت ضرب می‌شود.
+        db.WaraqEntries.AsSplitQuery()
           .Include(w => w.Shifts).ThenInclude(s => s.Pumps)
           .Include(w => w.Shifts).ThenInclude(s => s.Transactions);
 
@@ -142,6 +143,15 @@ public sealed class WaraqDataService
         await db.SaveChangesAsync(ct);
     }
 
+    /// <summary>
+    /// ورق که حذف شود، هر چیزی که خودش ساخته بود هم می‌رود:
+    ///   • ردیف‌های «ماندگی»ِ فروش در گاوصندوق (‎removeWaraqSalesFromSafe‎ی سایت)
+    ///   • ردیف‌های قرض که از تراکنش‌های همین ورق در حساب‌ها نشسته‌اند
+    ///   • مصرف‌هایی که از همین ورق آمده‌اند
+    ///
+    /// ⚠️ بی این، پاک کردنِ یک ورق قرضِ طرف را در حسابش جا می‌گذاشت — قرضی که
+    /// دیگر هیچ ورقی پشتش نبود و هیچ‌جا هم نمی‌شد پیدایش کرد.
+    /// </summary>
     public async Task DeleteAsync(long id, CancellationToken ct = default)
     {
         _perm.Require(Permission.DeleteData);
@@ -149,6 +159,20 @@ public sealed class WaraqDataService
         var w = await Full(db).FirstOrDefaultAsync(x => x.Id == id, ct);
         if (w is null) return;
         await _trash.RememberAsync(db, "waraq", "ورقِ " + w.DateShamsi, w, ct);
+
+        var salesKeys = new[] { "wq-sales-" + w.Id + "-day", "wq-sales-" + w.Id + "-night" };
+        db.SafeEntries.RemoveRange(
+            await db.SafeEntries.Where(e => e.SrcKey != null && salesKeys.Contains(e.SrcKey))
+                                .ToListAsync(ct));
+
+        var prefix = WaraqPostingService.WaraqKey(w) + "|";
+        db.DebtRows.RemoveRange(
+            await db.DebtRows.Where(r => r.SrcKey != null && r.SrcKey.StartsWith(prefix))
+                             .ToListAsync(ct));
+        db.Expenses.RemoveRange(
+            await db.Expenses.Where(e => e.SrcKey != null && e.SrcKey.StartsWith(prefix))
+                             .ToListAsync(ct));
+
         db.WaraqEntries.Remove(w);
         await db.SaveChangesAsync(ct);
     }
