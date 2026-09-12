@@ -242,7 +242,9 @@ public class GridBehaviourTests
     {
         var src = File.ReadAllText(Path.Combine(
             Root(), "PumpYaqobi.App", "Controls", "ExcelGrid.cs"));
-        Assert.Contains("OpenComboUnderPointer", src);
+        // ⚠️ حالا روی فازِ ‎Tunnel‎ است، نه یک کمکیِ جدا با ‎Dispatcher‎ —
+        // همان چیزی که صاحب ریپو خواست: «با delay مشکل را پنهان نکن».
+        Assert.Contains("RoutingStrategies.Tunnel", src);
         Assert.Contains("IsDropDownOpen = true", src);
     }
 
@@ -256,7 +258,11 @@ public class GridBehaviourTests
         var src = File.ReadAllText(Path.Combine(
             Root(), "PumpYaqobi.App", "Controls", "ExcelGrid.cs"));
         Assert.Contains("RequestBringIntoViewEvent", src);
-        Assert.Contains("_pointerDriven", src);
+        // ⚠️ شرطِ «فقط وقتی از کلیک آمده» برداشته شد: درخواست همیشه در مرزِ
+        // جدول می‌ایستد، و ناوبری با کلید از ‎ScrollIntoView‎ی خودِ جدول
+        // استفاده می‌کند.
+        Assert.Contains("ev.Handled = true", src);
+        Assert.DoesNotContain("_pointerDriven", src);
     }
 
     // ── تایپِ داخلِ خانه، مثلِ اکسل ───────────────────────────────────────────
@@ -271,8 +277,12 @@ public class GridBehaviourTests
         var t = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Themes", "Controls.axaml"));
         Assert.Contains("Rectangle#CurrencyVisual", t);
         Assert.Contains("Rectangle#FocusVisual", t);
-        Assert.Contains("TextBox#PART_EditingElement", t);
-        Assert.Contains("<Style Selector=\"DataGridCell:current\">", t);
+        // ⚠️ قاعدهٔ نام‌دارِ ‎#PART_EditingElement‎ برداشته شد: نامِ اجزای قالبِ
+        // ‎DataGrid‎ بین نسخه‌های آوالونیا عوض می‌شود و اگر نگیرد، بی‌صدا هیچ
+        // کاری نمی‌کند. تنظیم‌ها روی ‎DataGridCell TextBox‎ نشسته‌اند که به
+        // **نوع** بند است، و قابِ خانهٔ فعال روی خودِ ‎CurrencyVisual‎ی قالب.
+        Assert.Contains("Rectangle#CurrencyVisual", t);
+        Assert.Contains("<Setter Property=\"Stroke\"", t);
     }
 
     // ── کارت‌های هم‌اندازه ───────────────────────────────────────────────────
