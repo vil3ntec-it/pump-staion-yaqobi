@@ -899,15 +899,10 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         // در دیتابیس دست نمی‌خورند؛ فقط این‌بار ساخته نمی‌شوند.
         var want = RowFilter switch
         {
-            Rows.Clear();
-            // ⚠️ فیلتر فقط روی «دیده شدن» است. ردیف‌های تیلِ دیگر سرِ جایشان‌اند و
-            // در دیتابیس دست نمی‌خورند؛ فقط این‌بار ساخته نمی‌شوند.
-            var want = RowFilter switch
-            {
-                "petrol" => (FuelType?)FuelType.Petrol,
-                "diesel" => FuelType.Diesel,
-                _ => null,
-            };
+            "petrol" => (FuelType?)FuelType.Petrol,
+            "diesel" => FuelType.Diesel,
+            _ => null,
+        };
 
         // ⚠️ اول ساخته می‌شوند، بعد **یک‌جا** جای‌گزین: با ‎Rows.Add‎ی تک‌تک،
         // حسابی با صدهزار ردیف صدهزار بار جدول را از نو می‌سنجید.
@@ -921,7 +916,6 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
             built.Add(vm);
         }
         Rows.ResetTo(built);
-
 
         // جدول عوض شد ⇒ سربرگ و ردیفِ «جمله» هم باید از نو خوانده شوند
         RefreshTotals();
