@@ -5,14 +5,20 @@ namespace PumpYaqobi.App.Themes;
 
 /// <summary>
 /// ══ تم‌های برنامه ══════════════════════════════════════════════════════════
-/// دقیقاً همان چهار تمی که صاحب ریپو نگه داشت — نه یکی بیشتر، نه کمتر:
-///   dark-amber  «دارک مود طلایی مشکی»
-///   deep-ocean  «اقیانوس عمیق»
-///   light-cream «لایت مود طلایی سلطنتی»
-///   burgundy    «شرابی کرم»
+/// دو تمی که صاحب ریپو از روی نمونه‌ها انتخاب کرد — نه یکی بیشتر، نه کمتر:
+///   marble    «مرمرِ شرابی»      روشن، خاکستریِ گرمِ مرمری با شرابیِ سیر
+///   obsidian  «اُبسیدینِ نیلی»   تیره، سیاهِ متمایل به نیلی با تاکیدِ یاسی
 ///
-/// رنگ‌ها مو‌به‌مو از متغیرهای CSSِ همان تم‌ها در index.html برداشته شده‌اند تا
-/// نسخهٔ نیتیو هم‌رنگِ نسخه‌ای باشد که کاربر سال‌ها با آن کار کرده است.
+/// چهار تمِ قبلی (طلاییِ مشکی، اقیانوس، لایتِ سلطنتی، شرابیِ کرم) به خواستهٔ
+/// صریحِ صاحب ریپو برداشته شدند: «اون چهار تای داخل اپ رو نمیخام».
+///
+/// ⚠️ سه قاعده‌ای که این پالت‌ها را «گران‌قیمت» می‌کند و نباید شکسته شود:
+///   ۱) رنگِ تاکید خسیس خرج می‌شود — تبِ فعال، دکمهٔ اصلی، عددهای کلیدی. بس.
+///   ۲) هر سطح با یک خطِ نازک و یک پلهٔ روشناییِ کم جدا می‌شود، نه با رنگِ پررنگ.
+///   ۳) هیچ سایه و گرادیانی روی چیزهای تکرارشونده (کارت، ردیف) نمی‌نشیند —
+///      در Avalonia هر سایه یک لایهٔ رندرِ جداست و صدتا از آن، بخش را کند می‌کند.
+///      برای همین این‌جا گرادیان فقط برای سربرگ/نوار/دکمهٔ اصلی تعریف شده است.
+///
 /// «نور پس‌زمینه» (hexfx/atmo) عمداً وجود ندارد — پاک شده و برنمی‌گردد.
 /// </summary>
 public sealed record PumpTheme(
@@ -30,6 +36,8 @@ public sealed record PumpTheme(
     Color OnAccent,
     Color HeaderTitle,
     Color ChromeBorder,
+    Color HeadBand,    // نوارِ سرِ جدول و ردیفِ «جمله»
+    Color OnHeadBand,  // نوشتهٔ روی همان نوار
     Color[] HeaderBg,   // گرادیانِ افقیِ سربرگ
     Color[] BannerBg,
     Color[] NavBg,
@@ -38,52 +46,45 @@ public sealed record PumpTheme(
 {
     public static Color C(string hex) => Color.Parse(hex);
 
-    public static readonly PumpTheme DarkAmber = new(
-        "dark-amber", "دارک مود طلایی مشکی", true,
-        C("#0a0806"), C("#0e0b07"), C("#171208"), C("#3a2c14"),
-        C("#f5eee0"), C("#8c8272"), C("#c9bb9c"), C("#ffb43d"), C("#1a1102"),
-        C("#e8a020"), C("#57400f"),
-        new[] { C("#0a0703"), C("#150f06"), C("#0a0703") },
-        new[] { C("#080602"), C("#120c05"), C("#080602") },
-        new[] { C("#070502"), C("#0f0a04"), C("#070502") },
-        new[] { C("#131417"), C("#0d0e10"), C("#0a0b0d"), C("#060708") },
-        new[] { C("#ffd27a"), C("#ffb43d"), C("#f5872b") });
+    /// <summary>
+    /// «مرمرِ شرابی» — خاکستریِ گرمِ مرمری با شرابیِ سیر.
+    ///
+    /// نوارِ سرِ جدول شرابیِ **خاکستری‌شده** است (‎#4a2a31‎) نه شرابیِ سیاه:
+    /// گزارشِ صاحب ریپو روی نمونه «اون جمله و سر جدول رو کمی صاف‌تر کن خیلی
+    /// تیره است». همین رنگ هم قاب می‌سازد هم چشم را نمی‌زند.
+    /// </summary>
+    public static readonly PumpTheme Marble = new(
+        "marble", "مرمرِ شرابی", false,
+        C("#f3f1f1"), C("#ffffff"), C("#ffffff"), C("#e2dcdc"),
+        C("#1f1618"), C("#68585a"), C("#7a2233"), C("#8c2233"), C("#ffffff"),
+        C("#1f1618"), C("#e2dcdc"),
+        C("#4a2a31"), C("#f7eef0"),
+        new[] { C("#ffffff"), C("#faf7f7"), C("#ffffff") },
+        new[] { C("#fbf9f9"), C("#ffffff"), C("#fbf9f9") },
+        new[] { C("#ffffff"), C("#fdfbfb"), C("#ffffff") },
+        new[] { C("#f7f5f5"), C("#f3f1f1"), C("#efecec"), C("#eae7e7") },
+        new[] { C("#b0384a"), C("#8c2233"), C("#6d1626") });
 
-    public static readonly PumpTheme DeepOcean = new(
-        "deep-ocean", "اقیانوس عمیق", true,
-        C("#00223f"), C("#012a4a"), C("#063a61"), C("#1c5280"),
-        C("#eef3f8"), C("#9fb6cc"), C("#c9c1b0"), C("#c9c1b0"), C("#00223f"),
-        C("#c9c1b0"), C("#4b5a66"),
-        new[] { C("#001c35"), C("#013058"), C("#001c35") },
-        new[] { C("#00182e"), C("#01294b"), C("#00182e") },
-        new[] { C("#001529"), C("#012241"), C("#001529") },
-        new[] { C("#013056"), C("#002240"), C("#001a30"), C("#001120") },
-        new[] { C("#e6e0d2"), C("#c9c1b0"), C("#a89e88") });
+    /// <summary>
+    /// «اُبسیدینِ نیلی» — سیاهِ متمایل به نیلی با تاکیدِ یاسی.
+    ///
+    /// روی تمِ تیره نوارِ سرِ جدول **روشن‌تر** از سطحِ جدول است (‎#232a4d‎)، نه
+    /// تیره‌تر: در تیرگی، بالا بردنِ نور مرز می‌سازد و پایین بردنش سوراخ.
+    /// </summary>
+    public static readonly PumpTheme Obsidian = new(
+        "obsidian", "اُبسیدینِ نیلی", true,
+        C("#0b0d17"), C("#12162a"), C("#141931"), C("#242b47"),
+        C("#e9ecf8"), C("#8e97bd"), C("#b9bdf0"), C("#8b8cff"), C("#0a0b1a"),
+        C("#dfe2ff"), C("#242b47"),
+        C("#232a4d"), C("#eceefc"),
+        new[] { C("#151a33"), C("#101427"), C("#151a33") },
+        new[] { C("#10142a"), C("#141a36"), C("#10142a") },
+        new[] { C("#0d1122"), C("#11162c"), C("#0d1122") },
+        new[] { C("#12162c"), C("#0e1121"), C("#0b0d17"), C("#090b14") },
+        new[] { C("#a6a7ff"), C("#8b8cff"), C("#6f70e6") });
 
-    public static readonly PumpTheme LightCream = new(
-        "light-cream", "لایت مود طلایی سلطنتی", false,
-        C("#fbf4e7"), C("#fffdf8"), C("#fff8ec"), C("#e4d4b6"),
-        C("#241a0c"), C("#7a6a52"), C("#5a4a30"), C("#d97706"), C("#2a1a02"),
-        C("#b45f00"), C("#d9b98a"),
-        new[] { C("#f7e0c2"), C("#fdf1e2"), C("#f7e0c2") },
-        new[] { C("#f9e7d0"), C("#fef4e8"), C("#f9e7d0") },
-        new[] { C("#fbf1dc"), C("#fff6e6"), C("#fbf1dc") },
-        new[] { C("#f8f2e6"), C("#f1e9da"), C("#eae0cd"), C("#e3d7c1") },
-        new[] { C("#ffd27a"), C("#f59e0b"), C("#d97706") });
-
-    public static readonly PumpTheme Burgundy = new(
-        "burgundy", "شرابی کرم", false,
-        C("#fff3e1"), C("#fffbf5"), C("#fdf4e8"), C("#e6ccbd"),
-        C("#2a0c0c"), C("#8a5a52"), C("#6f0000"), C("#8a0d0d"), C("#ffffff"),
-        C("#7a0000"), C("#d8a9a0"),
-        new[] { C("#f6dfcd"), C("#fdeee0"), C("#f6dfcd") },
-        new[] { C("#f3d9c6"), C("#fbe9da"), C("#f3d9c6") },
-        new[] { C("#fbe8d6"), C("#fff6ea"), C("#fbe8d6") },
-        new[] { C("#fff3e1"), C("#f8e8d6"), C("#f0dcc6"), C("#ecd3bc") },
-        new[] { C("#b34a4a"), C("#6f0000"), C("#4d0000") });
-
-    public static readonly PumpTheme[] All = { DarkAmber, DeepOcean, LightCream, Burgundy };
+    public static readonly PumpTheme[] All = { Marble, Obsidian };
 
     public static PumpTheme ById(string? id) =>
-        All.FirstOrDefault(t => t.Id == id) ?? DarkAmber;
+        All.FirstOrDefault(t => t.Id == id) ?? Marble;
 }
