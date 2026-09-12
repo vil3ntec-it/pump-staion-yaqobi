@@ -430,6 +430,19 @@ public class ExcelGrid : DataGrid
             ? GridMode.MultiSelect
             : GridMode.Selected;
 
+    /// <summary>
+    /// ستونِ «#» (شمارهٔ ردیف) — مثلِ ستونِ اولِ جدول‌های سایت. پیش‌فرض روشن؛
+    /// جدولی که واقعاً نباید شماره داشته باشد خودش خاموشش می‌کند.
+    /// </summary>
+    public static readonly StyledProperty<bool> RowNumbersProperty =
+        AvaloniaProperty.Register<ExcelGrid, bool>(nameof(RowNumbers), true);
+
+    public bool RowNumbers
+    {
+        get => GetValue(RowNumbersProperty);
+        set => SetValue(RowNumbersProperty, value);
+    }
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
@@ -491,7 +504,33 @@ public class ExcelGrid : DataGrid
         // هیچ جدّی از آن، این جدول یا یک ‎Popup‎ نباشد.
         if (TopLevel.GetTopLevel(this) is { } top)
             top.AddHandler(PointerPressedEvent, OnOutsidePressed, RoutingStrategies.Tunnel);
+
+        // ══ ستونِ «#» — شمارهٔ ردیف ══════════════════════════════════════════
+        //
+        // گزارشِ صاحب ریپو: «چرا هیچ جدولی شماره ندارد؟» حق داشت: در سایت
+        // ستونِ اولِ **هر** جدول ‎#‎ است و شمارهٔ ردیف را نشان می‌دهد
+        // (‎&lt;td class="xls-num"&gt;‎). در برنامهٔ نیتیو هیچ جدولی نداشت.
+        //
+        // ⚠️ چرا سرستونِ ردیف و نه یک ستونِ داده‌ای: ستونِ داده‌ای یعنی هر
+        // ویومدلِ ردیف باید خاصیتِ «شماره» داشته باشد و با هر افزودن/حذف
+        // همهٔ ردیف‌ها دوباره شماره بخورند — هم کارِ تکراری در چهل ویومدل، هم
+        // n برابر کار در هر تغییر. سرستونِ ردیف را خودِ جدول می‌سازد و با
+        // مجازی‌سازی فقط برای ردیف‌های دیده‌شده پر می‌شود.
+        if (RowNumbers)
+        {
+            HeadersVisibility = DataGridHeadersVisibility.All;
+            LoadingRow -= OnNumberRow;
+            LoadingRow += OnNumberRow;
+        }
     }
+
+    /// <summary>
+    /// شمارهٔ ردیف — ‎GetIndex()‎ همان جای واقعیِ ردیف در فهرستِ **دیده‌شده**
+    /// است، پس با مرتب‌سازی و صافی هم درست می‌ماند و با بازچرخانیِ ردیف‌ها
+    /// (مجازی‌سازی) دوباره نوشته می‌شود.
+    /// </summary>
+    private static void OnNumberRow(object? sender, DataGridRowEventArgs e) =>
+        e.Row.Header = e.Row.GetIndex() + 1;
 
     private void OnOutsidePressed(object? sender, PointerPressedEventArgs e)
     {
@@ -659,31 +698,6 @@ public class ExcelGrid : DataGrid
         return true;
     }
 
-    /// <summary>
-    /// ══ ستون‌ها از کدام سمت شروع می‌شوند؟ ═══════════════════════════════════
-    ///
-    /// از **جای واقعیِ سربرگ‌ها** خوانده می‌شود، نه از خاصیتِ ‎FlowDirection‎.
-    /// دلیلش گزارشِ دوباره‌شوندهٔ صاحب ریپو است: آن خاصیت اگر به این کنترل
-    /// نرسد (یا قالبِ درونیِ ‎DataGrid‎ عوضش کند) بی‌صدا برعکس می‌شود و کلیدها
-    /// وارونه کار می‌کنند. جای سربرگ روی صفحه دروغ نمی‌گوید.
-    ///
-    /// سربرگی هنوز ساخته نشده باشد، به همان ‎FlowDirection‎ برمی‌گردیم — و
-    /// پیش‌فرضِ این برنامه راست‌به‌چپ است.
-    /// </summary>
-    private bool ColumnsRunRightToLeft()
-    {
-        var heads = this.GetVisualDescendants().OfType<DataGridColumnHeader>()
-                        .Where(h => h.Bounds.Width > 0).Take(2).ToList();
-        if (heads.Count == 2)
-        {
-            var a = heads[0].TranslatePoint(default, this);
-            var b = heads[1].TranslatePoint(default, this);
-            if (a is not null && b is not null && Math.Abs(a.Value.X - b.Value.X) > 0.5)
-                return b.Value.X < a.Value.X;
-        }
-        return FlowDirection == Avalonia.Media.FlowDirection.RightToLeft;
-    }
-
     /// <summary>کادرِ چندانتخابی جمع می‌شود و روی همان یک ستون می‌نشیند.</summary>
     private void ResetRange(int col)
     {
@@ -836,25 +850,29 @@ public class ExcelGrid : DataGrid
 
             // ══ چپ/راست: همان‌جایی که چشم می‌بیند ════════════════════════════
             //
-            // ⚠️ این خانه دو بار عوض شده و هر دو بار گزارشِ صاحب ریپو یکی بود:
-            // «کلیدِ راست را می‌زنم، چپ می‌رود.» پس این‌بار نه از ‎FlowDirection‎
-            // (که اگر به این کنترل نرسد بی‌صدا برعکس می‌شود) و نه از ایندکسِ
-            // خام (که در جدولِ راست‌به‌چپ دقیقاً همان شکایت را می‌سازد، چون
-            // ستونِ «بعدی» سمتِ چپ است) — بلکه از **جای واقعیِ سربرگ‌ها روی
-            // صفحه**: ‎ColumnsRunRightToLeft()‎.
+            // ⚠️ این خانه **سه بار** عوض شده و هر سه بار گزارشِ صاحب ریپو یکی
+            // بود: «کلیدِ راست را می‌زنم، چپ می‌رود.» تاریخچه‌اش را بخوان و
+            // دوباره عوضش نکن:
             //
-            // قاعده از این به بعد یکی است و دیگر عوض نمی‌شود:
-            //     کلیدِ ‎→‎ خانهٔ سمتِ راست، کلیدِ ‎←‎ خانهٔ سمتِ چپ.
-            // در جدولِ راست‌به‌چپِ این برنامه، سمتِ راست یعنی ایندکسِ کمتر.
+            //   ۱) از ‎FlowDirection‎ خوانده می‌شد — به این کنترل نمی‌رسید و
+            //      بی‌صدا برعکس می‌شد.
+            //   ۲) ایندکسِ خام شد («‎Right → column+1‎») — در جدولِ راست‌به‌چپ
+            //      ستونِ بعدی سمتِ **چپ** است، پس همان شکایت.
+            //   ۳) از جای سربرگ‌ها اندازه گرفته شد — و باز هم برعکس ماند، چون
+            //      آوالونیا چیدمانِ راست‌به‌چپ را با آینه‌کردنِ **رسم** انجام
+            //      می‌دهد و مختصاتی که به ما می‌دهد هنوز چپ‌به‌راست است.
+            //
+            // پس دیگر «تشخیص» در کار نیست. کلِ این برنامه راست‌به‌چپ است
+            // (‎Window‎ در ‎Controls.axaml‎ صریح ‎RightToLeft‎ است) و ستونِ
+            // شمارهٔ ۰ سمتِ **راست** می‌نشیند. قاعده همین است و ثابت می‌ماند:
+            //
+            //     ‎→‎ خانهٔ سمتِ راست  ⇒ ایندکسِ کمتر
+            //     ‎←‎ خانهٔ سمتِ چپ    ⇒ ایندکسِ بیشتر
             case Key.Left:
             case Key.Right:
-            {
-                var rtl = ColumnsRunRightToLeft();
-                var toRight = e.Key == Key.Right;
-                MoveColumn(toRight == rtl ? -1 : +1, shift);
+                MoveColumn(e.Key == Key.Right ? -1 : +1, shift);
                 e.Handled = true;
                 return;
-            }
 
             // ── بالا/پایین: خودِ جدول می‌بَرد (با ‎Shift‎ چندردیفی) ─────────
             // فقط کادرِ ستونی جمع می‌شود اگر ‎Shift‎ گرفته نشده باشد.

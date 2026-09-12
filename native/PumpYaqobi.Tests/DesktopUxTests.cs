@@ -203,7 +203,10 @@ public class DesktopUxTests
     public void TheQrRowIsNeverClipped()
     {
         var v = NoComments(View("DebtSectionView"));
-        Assert.Contains("RowDefinitions=\"Auto,Auto,Auto,Auto,*,Auto\"", v);
+        // ⚠️ ردیفِ ‎*‎ باید **خالی** باشد، نه ردیفِ محتوا: ردیفِ ستاره‌دارِ
+        // محتوادار وقتی جا کم بیاید تا صفر جمع می‌شود و محتوایش ناپدید —
+        // همان «دیزل و پطرول زیرِ کادر گم شدند».
+        Assert.Contains("RowDefinitions=\"Auto,Auto,Auto,Auto,Auto,*,Auto\"", v);
 
         var m = Regex.Match(v, "MinItemHeight=\"(\\d+)\"");
         Assert.True(m.Success);

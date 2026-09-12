@@ -92,13 +92,16 @@
                       Classes.low="{Binding IsLow}"
                       Classes.ok="{Binding IsOk}"
                      >
-                <!-- ⚠️ ردیفِ چهارم ‎*‎ است، نه ‎Auto‎: خانهٔ هم‌اندازهٔ ‎UniformGridLayout‎ ممکن
-                     است از محتوا بلندتر باشد و آن فضا باید جایی جذب شود. اگر همه ‎Auto‎
-                     باشند، فضای اضافه ته کارت می‌ماند و در کارتِ کوتاه‌تر، ردیفِ کیو‌آر
-                     از قابِ کارت بیرون می‌زند و **نصفه** دیده می‌شود — همان گزارشِ
-                     صاحب ریپو. حالا کششِ اضافه بالای ردیفِ کیو‌آر جذب می‌شود و
-                     کیو‌آر همیشه ته کارت، کامل، سرِ جایش است. -->
-                <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+                <!-- ══ چیدمانِ کارت ══════════════════════════════════════════
+                     همهٔ ردیف‌های **محتوا** ‎Auto‎اند و فقط یک ردیفِ خالیِ ‎*‎
+                     پیش از کیو‌آر، فضای اضافه را جذب می‌کند.
+
+                     ⚠️ یک‌بار خودِ ردیفِ «⛽/🟤» ‎*‎ شد (برای همین کارِ جذب) و
+                     نتیجه‌اش گزارشِ صاحب ریپو بود: «دیزل و پطرول زیرِ کادر گم
+                     شدند». درست هم بود: ردیفِ ‎*‎ وقتی جا کم بیاید تا صفر جمع
+                     می‌شود و محتوایش ناپدید می‌شود. ردیفِ خالی اگر جمع شود
+                     چیزی از دست نمی‌رود. -->
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto">
 
                   <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
                     <Button Grid.Column="0" Classes="card-x" Content="✕"
@@ -132,7 +135,7 @@
                     <TextBlock Text="{Binding DieselText, StringFormat=🟤 {0}}" FontWeight="Bold" FontSize="13" />
                   </StackPanel>
 
-                  <StackPanel Grid.Row="5" Spacing="7" Margin="0,12,0,0">
+                  <StackPanel Grid.Row="6" Spacing="7" Margin="0,12,0,0">
                     <!-- ⚠️ این دکمه تا امروز **هیچ فرمانی نداشت** — زده می‌شد و هیچ اتفاقی
                          نمی‌افتاد. کیو‌آرِ همین شخص را نشان می‌دهد. -->
                     <Button Classes="qr" Content="📱 کیوآر کد" HorizontalAlignment="Stretch"

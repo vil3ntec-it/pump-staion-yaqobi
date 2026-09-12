@@ -20,11 +20,11 @@
     <c:SectionPage.Filters>
       <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
         <StackPanel Spacing="3" Width="200">
-          <TextBlock Text="کارمندِ شیفت" Classes="label" />
+          <TextBlock Text="کارمندِ شیفت" Classes="fld" />
           <TextBox Text="{Binding WorkerName}" />
         </StackPanel>
         <StackPanel Spacing="3" Width="150">
-          <TextBlock Text="قرضِ پارچه" Classes="label" />
+          <TextBlock Text="قرضِ پارچه" Classes="fld" />
           <TextBox Text="{Binding FabricDebtText}" />
         </StackPanel>
       </StackPanel>
