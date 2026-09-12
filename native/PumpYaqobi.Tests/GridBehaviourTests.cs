@@ -100,20 +100,35 @@ public class GridBehaviourTests
 
     // ── کشویِ سال و ماه ──────────────────────────────────────────────────────
 
+    /// <summary>
+    /// ‎⚠️ این آزمون عمداً <b>عوض</b> شده. تا دیروز فهرست فقط از روی <b>داده</b>
+    /// ساخته می‌شد و همین را قفل می‌کرد («سالِ ۱۴۰۴ دو ماه دارد»). صاحب ریپو
+    /// خواسته‌اش را مکتوب عوض کرد: «تمام ۱۲ ماهِ تقویم شمسی … Year Selector هم
+    /// نباید فقط یک سالِ ثابت داشته باشد.» پس حالا هر سال هر دوازده ماه را
+    /// دارد و کشویِ سال فقط فهرست را به همان سال کوتاه می‌کند.
+    /// </summary>
     [Fact]
     public void PickingAYearNarrowsTheMonthsToThatYear()
     {
-        var picked = new List<string>();
-        var p = new YearMonthPicker(k => picked.Add(k));
+        var p = new YearMonthPicker(_ => { });
         p.Load(new[] { "1404/11", "1404/12", "1405/01", "1405/06" }, "1405/06");
 
+        var years = p.Years.Select(y => y.Key).ToArray();
+        Assert.Contains("1404", years);
+        Assert.Contains("1405", years);
         // تازه‌ترین سال اول
-        Assert.Equal(new[] { "1405", "1404" }, p.Years.Select(y => y.Key).ToArray());
+        Assert.Equal(years.OrderByDescending(y => y, StringComparer.Ordinal).ToArray(), years);
         Assert.Equal("1405", p.Year!.Key);
-        Assert.Equal(new[] { "1405/06", "1405/01" }, p.Months.Select(m => m.Key).ToArray());
+
+        // هر دوازده ماهِ همان سال — نه فقط ماه‌هایی که ردیف دارند
+        Assert.Equal(12, p.Months.Count);
+        Assert.All(p.Months, m => Assert.Equal("1405", YearMonthPicker.YearOf(m.Key)));
+        Assert.Equal("1405/12", p.Months.First().Key);
+        Assert.Equal("1405/01", p.Months.Last().Key);
 
         p.Year = p.Years.First(y => y.Key == "1404");
-        Assert.Equal(new[] { "1404/12", "1404/11" }, p.Months.Select(m => m.Key).ToArray());
+        Assert.Equal(12, p.Months.Count);
+        Assert.All(p.Months, m => Assert.Equal("1404", YearMonthPicker.YearOf(m.Key)));
     }
 
     /// <summary>
@@ -130,15 +145,22 @@ public class GridBehaviourTests
         Assert.Equal("1404/06", p.SelectedKey);
     }
 
-    /// <summary>و اگر آن ماه در سالِ تازه نباشد، تازه‌ترین ماهِ همان سال.</summary>
+    /// <summary>
+    /// و اگر ماهِ خواسته‌شده اصلاً در فهرست نباشد — مثلِ کلیدی که از دادهٔ خیلی
+    /// قدیمی آمده — تازه‌ترین ماهِ سالِ جاری انتخاب می‌شود، نه هیچ.
+    ///
+    /// ⚠️ جای آزمونِ پیشین («اگر آن ماه در سالِ تازه نباشد») را گرفت: حالا که هر
+    /// سال هر دوازده ماه را دارد، آن حالت از راهِ کشویِ سال دیگر پیش نمی‌آید و
+    /// همان شاخهٔ برگشت فقط از این‌جا امتحان می‌شود.
+    /// </summary>
     [Fact]
-    public void ChangingYearFallsBackToTheNewestMonthOfThatYear()
+    public void AnUnknownActiveMonthFallsBackToTheNewestMonth()
     {
         var p = new YearMonthPicker(_ => { });
-        p.Load(new[] { "1404/03", "1405/09" }, "1405/09");
+        p.Load(new[] { "1404/03", "1405/09" }, "1300/07");
 
-        p.Year = p.Years.First(y => y.Key == "1404");
-        Assert.Equal("1404/03", p.SelectedKey);
+        Assert.Equal(p.Months.First().Key, p.SelectedKey);
+        Assert.Equal(p.Year!.Key, YearMonthPicker.YearOf(p.SelectedKey));
     }
 
     /// <summary>آن‌چه کاربر می‌بیند برچسبِ خوانا است، نه کلیدِ خامِ «1405/06».</summary>
