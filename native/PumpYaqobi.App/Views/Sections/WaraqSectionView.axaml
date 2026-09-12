@@ -46,7 +46,7 @@
                    • ‎MaximumRowsOrColumns‎ نبود، پس روی نمایشگرِ پهن ‎ItemsStretch‎
                      کارت‌ها را بی‌جهت پهن می‌کرد. حالا سقفِ هشت‌تا دارد و
                      ‎MinItemWidth‎ی ۲۰۰ روی باریک‌ترین صفحه هم شش‌تا می‌دهد. -->
-              <UniformGridLayout MinItemWidth="200" MinItemHeight="196"
+              <UniformGridLayout MinItemWidth="200" MinItemHeight="232"
                                  MaximumRowsOrColumns="8" ItemsStretch="Fill"
                                  MinColumnSpacing="10" MinRowSpacing="10" />
             </ItemsRepeater.Layout>

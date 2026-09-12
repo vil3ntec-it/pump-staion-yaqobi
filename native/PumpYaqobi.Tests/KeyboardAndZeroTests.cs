@@ -35,17 +35,29 @@ public class KeyboardAndZeroTests
     }
 
     /// <summary>
-    /// چپ/راست باید **دیداری** باشند. در چیدمانِ راست‌به‌چپ، ستونِ بعدی سمتِ
-    /// چپ است — پس جهت با ‎FlowDirection‎ حساب می‌شود، نه با ایندکسِ خامِ ستون
-    /// (که همان «برعکس»ی بود که گزارش شد).
+    /// ══ چپ/راست: ایندکسِ ستون، نه جهتِ دیداری ═══════════════════════════════
+    ///
+    /// ⚠️ این آزمون عمداً <b>برعکسِ</b> نسخهٔ پیشینِ خودش است. تا دیروز جهت را
+    /// از ‎FlowDirection‎ می‌گرفت و «ستونِ بعدی سمتِ چپ» بود. صاحب ریپو بعد از
+    /// دیدنِ همان، خواسته‌اش را مکتوب عوض کرد:
+    ///
+    ///     «برنامه فارسی و RTL است، اما منطقِ حرکت داخلِ Grid نباید به خاطر
+    ///      RTL برعکس شود … ArrowRight → column + 1، ArrowLeft → column − 1 …
+    ///      منطقِ Cell Index باید مشخص و مستقل از Direction باشد.»
+    ///
+    /// پس تصمیمِ تازه همین است و این آزمون همان را قفل می‌کند — نه این‌که
+    /// آزمونِ قبلی اشتباه بوده باشد.
     /// </summary>
     [Fact]
-    public void ArrowKeysFollowTheVisualDirection()
+    public void ArrowKeysUseColumnIndexNotVisualDirection()
     {
         var g = Grid();
-        Assert.Contains("Key.Left or Key.Right", g);
-        Assert.Contains("FlowDirection.RightToLeft", g);
-        Assert.Contains("(e.Key == Key.Left) == rtl ? +1 : -1", g);
+        Assert.Contains("MoveColumn(e.Key == Key.Right ? +1 : -1, shift)", g);
+
+        // و دیگر به FlowDirection بند نیست
+        var at = g.IndexOf("case Key.Left:", StringComparison.Ordinal);
+        Assert.True(at > 0);
+        Assert.DoesNotContain("FlowDirection", g[at..(at + 400)]);
     }
 
     /// <summary>
@@ -94,7 +106,7 @@ public class KeyboardAndZeroTests
     public void ShiftArrowSelectsManyCellsAndDeleteClearsThem()
     {
         var g = Grid();
-        Assert.Contains("MoveColumn(step, shift)", g);
+        Assert.Contains("MoveColumn(e.Key == Key.Right ? +1 : -1, shift)", g);
         Assert.Contains("_colAnchor", g);
         Assert.Contains("rangesel", g);
         Assert.Contains("case Key.Delete when !IsReadOnly && ClearSelectedCells():", g);

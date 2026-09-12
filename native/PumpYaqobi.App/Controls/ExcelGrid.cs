@@ -439,27 +439,89 @@ public class ExcelGrid : DataGrid
         PreparingCellForEdit += (_, _) => _editing = true;
         CellEditEnded += (_, _) => _editing = false;
 
-        // ══ کلیک روی خانه، صفحه را نلغزاند ══════════════════════════════════
+        // ══ جدول خودش می‌لغزد، نه کلِ صفحه ══════════════════════════════════
         //
-        // گزارشِ صاحب ریپو: «وقتی در کادرِ جدول‌ها کلیک می‌کنم، آن سربرگ‌ها گم
-        // می‌شوند … این مدل نباشد، هر وقت خواستم خودم اسکرول می‌کنم.»
+        // گزارشِ صاحب ریپو، دو تا با یک ریشه:
+        //   «وقتی در کادرِ جدول کلیک می‌کنم، سربرگ‌ها گم می‌شوند — خودم اسکرول
+        //    می‌کنم.»
+        //   «فقط Grid باید Scroll شود، نه کلِ Layout.»
         //
-        // ریشه‌اش ‎RequestBringIntoView‎ است: با فوکوس گرفتنِ خانه، آوالونیا
-        // درخواستِ «مرا در دید بیاور» را بالا می‌فرستد و اسکرولِ صفحه — همان
-        // اسکرولِ واحدِ کلِ پنجره — صفحه را می‌کشد تا خانه وسط بیفتد. نتیجه‌اش
-        // این است که سربرگ و نوارِ آمار از بالا می‌روند.
+        // ریشه: ‎RequestBringIntoView‎. با فوکوس گرفتنِ خانه (چه با کلیک، چه با
+        // کلید) آوالونیا درخواستِ «مرا در دید بیاور» را به بالا می‌فرستد. این
+        // درخواست از جدول بیرون می‌زند و به اسکرولِ واحدِ کلِ پنجره می‌رسد، و
+        // آن صفحه را می‌کشد تا خانه وسط بیفتد — سربرگ و نوارِ آمار از بالا
+        // می‌روند.
         //
-        // ⚠️ درخواست فقط وقتی متوقف می‌شود که از **کلیک** آمده باشد. ناوبری با
-        // کلید (‎ScrollIntoView‎ی خودِ جدول) باید کار کند، وگرنه با پایین رفتن
-        // در یک جدولِ بلند، ردیفِ جاری از دید بیرون می‌ماند.
-        AddHandler(RequestBringIntoViewEvent, (_, ev) =>
-        {
-            if (_pointerDriven) ev.Handled = true;
-        }, RoutingStrategies.Bubble);
+        // ⚠️ درخواست <b>همیشه</b> همین‌جا می‌ایستد، نه فقط وقتی از کلیک آمده.
+        // خودِ ‎DataGrid‎ با ‎ScrollIntoView‎ اسکرولِ <b>درونیِ</b> خودش را
+        // انجام می‌دهد، پس ناوبری با کلید هم بی این درخواست کار می‌کند و ردیفِ
+        // جاری از دید بیرون نمی‌ماند. چیزی که برداشته می‌شود فقط لغزاندنِ
+        // ناخواستهٔ کلِ صفحه است.
+        AddHandler(RequestBringIntoViewEvent,
+                   (_, ev) => ev.Handled = true,
+                   RoutingStrategies.Bubble);
+
+        // ══ کشویی با یک کلیک باز شود ════════════════════════════════════════
+        //
+        // گزارشِ صاحب ریپو: «نه این‌که یک بار بزنی تا کادر کشویی بشود، بعد بارِ
+        // بعد بزنی باز بشود، باز بعد بروی انتخاب کنی.»
+        //
+        // ریشه: ‎DataGrid‎ کلیکِ اول را برای «انتخابِ خانه» مصرف می‌کند و کشویی
+        // هرگز آن فشار را نمی‌بیند.
+        //
+        // ⚠️ روی فازِ ‎Tunnel‎ نشسته، یعنی <b>پیش از</b> آن‌که ‎DataGrid‎ کلیک را
+        // ببیند. پس نه تاخیری لازم است و نه ‎Dispatcher‎ی — همان فشارِ اول
+        // کشویی را باز می‌کند. ‎Handled‎ هم نمی‌شود تا خانه مثلِ همیشه انتخاب
+        // شود.
+        AddHandler(PointerPressedEvent, OnPreviewPressed, RoutingStrategies.Tunnel);
+
+        // ══ کلیک بیرونِ جدول، ویرایش را تمام کند ═══════════════════════════
+        //
+        // گزارشِ صاحب ریپو: «وقتی یک خانه در حالِ ویرایش است، هر جای دیگری از
+        // برنامه کلیک می‌کنم، هنوز همان خانه ویرایش را نگه می‌دارد.»
+        //
+        // ریشه: ‎DataGrid‎ی آوالونیا ویرایش را با «فوکوس از دست رفت» تمام
+        // نمی‌کند؛ منتظرِ ‎Enter‎ یا ‎Tab‎ می‌ماند. پس تا وقتی خودِ جدول کلیک
+        // نمی‌گرفت، خانه در حالتِ تایپ می‌ماند.
+        //
+        // ⚠️ کلیک روی چیزی که <b>مالِ خودِ جدول</b> است (کشوییِ باز، منوی
+        // شناور، پنجرهٔ گفت‌وگو) نباید «بیرون» شمرده شود، وگرنه انتخابِ یک
+        // گزینه از کشویی همان لحظه ویرایش را می‌بندد و انتخاب از دست می‌رود.
+        // پس فقط وقتی تمام می‌شود که فشار در درختِ بصریِ همین پنجره باشد و
+        // هیچ جدّی از آن، این جدول یا یک ‎Popup‎ نباشد.
+        if (TopLevel.GetTopLevel(this) is { } top)
+            top.AddHandler(PointerPressedEvent, OnOutsidePressed, RoutingStrategies.Tunnel);
     }
 
-    /// <summary>آخرین حرکت از ماوس بود، نه از صفحه‌کلید.</summary>
-    private bool _pointerDriven;
+    private void OnOutsidePressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!_editing) return;
+        if (e.Source is not Visual v) return;
+
+        for (Visual? x = v; x is not null; x = x.GetVisualParent())
+        {
+            if (ReferenceEquals(x, this)) return;        // داخلِ خودِ جدول
+            if (x is Popup or FlyoutPresenter) return;    // کشویی/منوی همین جدول
+        }
+
+        // واقعاً بیرون بود: مقدارِ نیمه‌تمام ثبت شود و ویرایش تمام.
+        CommitEdit(DataGridEditingUnit.Cell, true);
+    }
+
+    private static void OnPreviewPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.Source is not Visual v) return;
+
+        for (Visual? x = v; x is not null; x = x.GetVisualParent())
+        {
+            if (x is ComboBox cb)
+            {
+                if (!cb.IsDropDownOpen && cb.IsEffectivelyEnabled) cb.IsDropDownOpen = true;
+                return;
+            }
+            if (x is DataGridRow or DataGridColumnHeader) return;   // از خانه بیرون زدیم
+        }
+    }
 
     /// <summary>کنترلی که همین حالا فوکوس دارد.</summary>
     private Control? Focused =>
@@ -606,52 +668,9 @@ public class ExcelGrid : DataGrid
             PaintRange();
         }
 
-        OpenComboUnderPointer(e);
-
-        // این کلیک نباید صفحه را بلغزاند — تا پایانِ همین رویداد علامت می‌ماند.
-        _pointerDriven = true;
-        try { base.OnPointerPressed(e); }
-        finally { Dispatcher.UIThread.Post(() => _pointerDriven = false, DispatcherPriority.Input); }
-        return;
+        base.OnPointerPressed(e);
     }
 
-    /// <summary>
-    /// ══ کشویی با یک کلیک باز شود ═══════════════════════════════════════════
-    ///
-    /// گزارشِ صاحب ریپو: «نه این‌که یک بار بزنی تا آن کادر کشویی بشود، بعد بارِ
-    /// بعد بزنی باز بشود، باز بعد بروی انتخاب کنی — همین که بزنم بیایند و با
-    /// انتخاب زود عوض شوند.»
-    ///
-    /// ریشه‌اش خودِ ‎DataGrid‎ است: کلیکِ اول را برای «انتخابِ خانه» می‌خورد و
-    /// تازه کلیکِ دوم به کشوییِ داخلِ خانه می‌رسد. پس همان کلیکِ اول را
-    /// می‌گیریم و کشویی را باز می‌کنیم.
-    ///
-    /// ⚠️ ‎e.Handled‎ نمی‌شود: خانه باید مثلِ همیشه انتخاب هم بشود. فقط
-    /// کشویی زودتر باز می‌شود.
-    /// </summary>
-    private static void OpenComboUnderPointer(PointerPressedEventArgs e)
-    {
-        if (e.Source is not Visual v) return;
-
-        for (Visual? x = v; x is not null; x = x.GetVisualParent())
-        {
-            if (x is ComboBox cb)
-            {
-                if (!cb.IsDropDownOpen && cb.IsEffectivelyEnabled)
-                {
-                    // بعد از این‌که ‎DataGrid‎ کارِ خودش را کرد، وگرنه همان
-                    // انتخابِ خانه دوباره کشویی را می‌بندد.
-                    Dispatcher.UIThread.Post(() =>
-                    {
-                        cb.Focus();
-                        cb.IsDropDownOpen = true;
-                    }, DispatcherPriority.Input);
-                }
-                return;
-            }
-            if (x is DataGridRow) return;      // از خانه بیرون زدیم
-        }
-    }
 
     // ── خالی کردنِ خانه‌های انتخابی ───────────────────────────────────────
     //
@@ -731,18 +750,26 @@ public class ExcelGrid : DataGrid
                 e.Handled = true;
                 return;
 
-            // ── چپ/راست: جهتِ دیداری، نه ایندکسِ منطقیِ ستون ───────────────
-            // در چیدمانِ راست‌به‌چپ ستونِ «بعدی» سمتِ چپ است، پس کلیدِ چپ
-            // ایندکس را جلو می‌برد. با ‎Shift‎ کادرِ چندانتخابی گسترده می‌شود.
+            // ══ چپ/راست: ایندکسِ ستون، مستقل از جهتِ چیدمان ══════════════════
+            //
+            // خواستهٔ صریحِ صاحب ریپو (نوشتهٔ خودش):
+            //     «برنامه فارسی و RTL است، اما منطقِ حرکت داخلِ Grid نباید به
+            //      خاطر RTL برعکس شود … ArrowRight → column + 1،
+            //      ArrowLeft → column − 1 … منطقِ Cell Index باید مشخص و
+            //      مستقل از Direction باشد.»
+            //
+            // پیش از این همین‌جا ‎FlowDirection‎ خوانده می‌شد و جهت را برعکس
+            // می‌کرد. دو اشکال داشت: یکی این‌که خواستهٔ بالا را نقض می‌کرد، و
+            // دیگر این‌که به خاصیتی بند بود که اگر روی این کنترل ننشیند
+            // (مثلاً قالبِ داخلیِ ‎DataGrid‎ آن را عوض کند) بی‌سروصدا برعکس
+            // می‌شد — همان «کلیدِ راست را می‌زنم، چپ می‌رود».
+            //
+            // حالا ساده و قطعی است: راست یعنی ستونِ بعدی، چپ یعنی ستونِ پیشین.
             case Key.Left:
             case Key.Right:
-            {
-                var rtl = FlowDirection == Avalonia.Media.FlowDirection.RightToLeft;
-                var step = (e.Key == Key.Left) == rtl ? +1 : -1;
-                MoveColumn(step, shift);
+                MoveColumn(e.Key == Key.Right ? +1 : -1, shift);
                 e.Handled = true;
                 return;
-            }
 
             // ── بالا/پایین: خودِ جدول می‌بَرد (با ‎Shift‎ چندردیفی) ─────────
             // فقط کادرِ ستونی جمع می‌شود اگر ‎Shift‎ گرفته نشده باشد.

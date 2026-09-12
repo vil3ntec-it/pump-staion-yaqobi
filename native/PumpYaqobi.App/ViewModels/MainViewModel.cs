@@ -172,7 +172,27 @@ public sealed partial class MainViewModel : ObservableObject
         _settings.Save();
     }
 
-    [RelayCommand]
+    /// <summary>
+    /// ══ چرا ‎AllowConcurrentExecutions‎ ═══════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «گاهی کلیکِ اولِ تب هیچ تغییری نمی‌دهد و باید دوباره
+    /// کلیک کرد.»
+    ///
+    /// ریشه‌اش این‌جاست و «گاهی» هم دقیقاً به همین خاطر است:
+    /// ‎[RelayCommand]‎ روی یک متدِ ‎async‎ یک ‎AsyncRelayCommand‎ می‌سازد که
+    /// <b>پیش‌فرضش اجرای هم‌زمان را نمی‌پذیرد</b> — یعنی تا وقتی یک اجرا تمام
+    /// نشده، ‎CanExecute‎ی همهٔ دکمه‌های نوار ‎false‎ است و کلیک <b>بلعیده</b>
+    /// می‌شود.
+    ///
+    /// و این متد ‎await‎ دارد: ‎EnsureLoadedAsync‎ی یک بخشِ پرداده می‌تواند
+    /// نزدیکِ یک ثانیه طول بکشد. هر کلیکی در آن فاصله می‌پرید — پس کاربر باید
+    /// دوباره می‌زد.
+    ///
+    /// ⚠️ مسابقه‌ای هم درست نمی‌شود: ‎Current‎ و ‎SyncContent()‎ <b>پیش از</b>
+    /// اولین ‎await‎ اجرا می‌شوند، پس آخرین کلیک همان چیزی است که روی صفحه
+    /// می‌نشیند، و ‎EnsureLoadedAsync‎ خودش با ‎IsLoaded‎ دوبار بار نمی‌کند.
+    /// </summary>
+    [RelayCommand(AllowConcurrentExecutions = true)]
     public async Task GoAsync(SectionViewModel? s)
     {
         if (s is null) return;

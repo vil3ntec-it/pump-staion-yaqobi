@@ -478,6 +478,13 @@
     <Setter Property="TextWrapping" Value="NoWrap" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
     <Setter Property="FontWeight" Value="Bold" />
+    <!-- ⚠️ ‎Margin‎ی صفر لازم است: بی آن، کادرِ ویرایشی چند پیکسل تو می‌رفت و
+         به‌صورتِ یک «کادرِ کوچکِ جدا» وسطِ خانه دیده می‌شد — همان چیزی که در
+         عکسِ صاحب ریپو بود. و نشانگر و انتخاب باید دیده شوند، وگرنه معلوم
+         نیست کجای متن هستی. -->
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="CaretBrush" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="SelectionBrush" Value="{DynamicResource Pump.Selected}" />
   </Style>
   <!-- ══ صفرِ دیده‌شونده که وجود ندارد ══════════════════════════════════════
        گزارشِ صاحب ریپو، بارِ دوم و روشن‌تر: «وقتی گفتم صفر نامرئی باشد، منظورم
@@ -519,28 +526,31 @@
 
        در اکسل چیزی که دیده می‌شود این است: خانهٔ فعال یک **قابِ ضخیمِ رنگی**
        دورِ خودِ خانه دارد، و متن تمامِ خانه را می‌گیرد. حالا همان. -->
-  <Style Selector="DataGridCell TextBox#PART_EditingElement">
-    <Setter Property="HorizontalAlignment" Value="Stretch" />
-    <Setter Property="VerticalAlignment" Value="Stretch" />
-    <Setter Property="Margin" Value="0" />
-    <Setter Property="Padding" Value="0" />
-    <Setter Property="TextAlignment" Value="Center" />
-    <Setter Property="HorizontalContentAlignment" Value="Center" />
-    <Setter Property="VerticalContentAlignment" Value="Center" />
-  </Style>
+  <!-- ⚠️ قاعدهٔ نام‌دارِ ‎#PART_EditingElement‎ برداشته شد: نامِ اجزای قالبِ
+       ‎DataGrid‎ در نسخه‌های آوالونیا عوض می‌شود و اگر نامی نگیرد، قاعده
+       بی‌صدا هیچ کاری نمی‌کند. همهٔ آن تنظیم‌ها بالاتر روی
+       ‎DataGridCell TextBox‎ نشسته‌اند که به **نوع** بند است، نه به نام —
+       پس کادرِ ویرایشی هم همان‌ها را می‌گیرد. -->
 
-  <!-- دو مستطیلِ خودِ خانه دیگر کشیده نمی‌شوند — «چهارگوش»ِ عکس همین بود -->
+  <!-- ══ خانهٔ فعال: قابِ اکسل، روی خودِ خانه ═══════════════════════════════
+       ‎CurrencyVisual‎ همان مستطیلی است که ‎DataGrid‎ دورِ «خانهٔ جاری»
+       می‌کشد. پنهانش نمی‌کنیم — همان را به قابِ اکسل تبدیل می‌کنیم: بی‌رنگ
+       از تو، با خطِ ضخیمِ رنگی دورِ تمامِ خانه.
+
+       ⚠️ پیش از این ‎DataGridCell:current‎ی با ‎BorderThickness‎ گذاشته بودم؛
+       آن به این بند بود که قالبِ خانه اصلاً ‎BorderBrush‎ را بکشد — و
+       نمی‌کشید. این‌جا خودِ همان مستطیلِ قالب تنظیم می‌شود، پس قطعی است. -->
   <Style Selector="DataGridCell /template/ Rectangle#CurrencyVisual">
-    <Setter Property="IsVisible" Value="False" />
+    <Setter Property="IsVisible" Value="True" />
+    <Setter Property="Fill" Value="Transparent" />
+    <Setter Property="Stroke" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="StrokeThickness" Value="2" />
+    <Setter Property="RadiusX" Value="0" />
+    <Setter Property="RadiusY" Value="0" />
   </Style>
+  <!-- مستطیلِ نقطه‌چینِ فوکوس کنارِ آن اضافه است و همان «چهارگوشِ» عکس -->
   <Style Selector="DataGridCell /template/ Rectangle#FocusVisual">
     <Setter Property="IsVisible" Value="False" />
-  </Style>
-
-  <!-- و به‌جایشان، قابِ خانهٔ فعالِ اکسل: ضخیم، رنگی، دورِ تمامِ خانه -->
-  <Style Selector="DataGridCell:current">
-    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Accent}" />
-    <Setter Property="BorderThickness" Value="2" />
   </Style>
 
   <!-- کشویی و رادیوییِ داخلِ خانه هم همان‌طور — نه کادرِ سفیدِ جدا -->

@@ -213,6 +213,38 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
     /// کارِ بخشِ «دوربین‌ها» است و همان‌جا سرِ جایش هست. این‌جا همتای
     /// ‎camAddByQRImage‎ است — کیو‌آری که چاپ شده یا از آن عکس گرفته‌اید.
     /// </summary>
+    /// <summary>
+    /// «📱 کیو‌آر کد»ِ روی خودِ کارت — تا امروز دکمه‌اش بود و <b>هیچ فرمانی
+    /// نداشت</b>: زده می‌شد و هیچ اتفاقی نمی‌افتاد.
+    ///
+    /// همان کیو‌آری که از داخلِ حساب ساخته می‌شود، ولی بی‌آن‌که لازم باشد اول
+    /// حساب را باز کنی — دقیقاً مثلِ کارت‌های سایت که دکمهٔ کیو‌آرِ خودشان را
+    /// دارند.
+    /// </summary>
+    [RelayCommand]
+    private Task ShowCardQrAsync(DebtorCardViewModel? card) =>
+        CrashGuard.RunAsync("کیو‌آر", async () =>
+        {
+            if (card is null) return;
+
+            // ⚠️ نبودِ نشانی جلوی ساختِ کد را نمی‌گیرد — خواستهٔ صریحِ صاحب
+            // ریپو: «بدونِ نت هم که شده باید برای هر حساب کیو‌آر ساخته بشه.»
+            var full = AcctLink.FullUrl(
+                _host.Settings.GetString(SettingsKeys.ViewerUrl), card.Entity.Id, null, "debt",
+                _host.Settings.GetString(SettingsKeys.ServerUrl),
+                _host.Settings.GetString(SettingsKeys.SyncCode));
+            var link = full ?? AcctLink.Build(card.Entity.Id);
+
+            var png = await Task.Run(() => QrWriter.EncodePng(link));
+            var hint = full is not null
+                ? "این کد را به مشتری بدهید؛ با اسکنش حسابِ خودش را می‌بیند — زنده، از همین سرور."
+                : "این کد بی‌اینترنت ساخته شد و با خودِ همین برنامه خوانده می‌شود. "
+                  + "برای این‌که با گوشیِ مشتری هم باز شود، در «تنظیمات › نشانیِ صفحهٔ حساب» "
+                  + "نشانیِ صفحه را بنویسید.";
+
+            await Dialogs.ShowQrAsync("📲 " + card.Name, link, png, hint);
+        });
+
     [RelayCommand]
     private Task ScanQrAsync() => CrashGuard.RunAsync("اسکن کیو‌آر", async () =>
     {
@@ -276,7 +308,10 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
         await OpenAsync(Cards[next]);
     }
 
-    [RelayCommand]
+        /// ⚠️ ‎AllowConcurrentExecutions‎ لازم است: ‎AsyncRelayCommand‎ی پیش‌فرض تا
+    /// پایانِ یک اجرا ‎CanExecute‎ را ‎false‎ می‌کند و کلیکِ بعدی بلعیده می‌شود —
+    /// همان «کلیکِ اول هیچ کاری نمی‌کند».
+    [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task OpenAsync(DebtorCardViewModel? card)
     {
         if (card is null) return;
