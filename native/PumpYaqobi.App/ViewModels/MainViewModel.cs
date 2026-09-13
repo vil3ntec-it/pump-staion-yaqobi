@@ -460,8 +460,11 @@ public sealed partial class MainViewModel : ObservableObject
         new AttendanceSectionViewModel(host),        // ۱۵
         new ProfitSectionViewModel(host),            // ۱۶
         new SettingsSectionViewModel(host),          // ۱۷
-        new ChatSectionViewModel(host),              // ۱۹ — پیام‌رسان
         new HistorySectionViewModel(host),           // ۱۸
+        // ⚠️ بعد از هجدهمی، نه وسط: هجده بخشِ اولِ نوار باید به همان ترتیبِ
+        // سایت بمانند، وگرنه ‎Ctrl+Shift+عدد‎ بخشِ دیگری را باز می‌کند.
+        // (‎NavOrderTests‎ همین را گرفت، و درست هم گرفت.)
+        new ChatSectionViewModel(host),              // ۱۹ — پیام‌رسان، مالِ خودِ نیتیو
     };
 
     /// <summary>

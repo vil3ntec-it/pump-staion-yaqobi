@@ -31,7 +31,10 @@ public class SubSectionTests
 
     [Fact]
     public void TheNavHasExactlyTheSitesEighteenSections()
-        => Assert.Equal(18, Shell().Sections.Count);
+        // ⚠️ هجده‌تای سایت + «پیام‌رسان» که خواستهٔ صریحِ صاحب ریپو بود و بخشِ
+        // خودِ نیتیو است («یک بخشِ جداگانه تو برنامه باشه نه داینامیک»).
+        // ترتیبِ هجده‌تای اول دست‌نخورده ماند — ‎NavOrderTests‎ نگهبانِ آن است.
+        => Assert.Equal(19, Shell().Sections.Count);
 
     [Theory]
     // زیربخش  →  بخشی که در سایت کارتش آن‌جاست
