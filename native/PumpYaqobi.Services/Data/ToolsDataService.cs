@@ -45,52 +45,120 @@ public sealed class ToolsDataService
     public async Task<List<AgingRow>> AgingAsync(AgingFilter filter, CancellationToken ct = default)
     {
         _perm.Require(Permission.ViewData);
-        var people = await LoadDebtorsAsync(ct);
+        var people = await LoadSummarisedAsync(ct);
         return _aging.Rows(people, filter, Shamsi.Today());
     }
 
     /// <summary>
-    /// ══ سه کوئریِ صاف، بی هیچ ‎Include‎ ══════════════════════════════════════
+    /// ══ همان سه بخش، بی خواندنِ حتی یک ردیف ═══════════════════════════════
     ///
-    /// «قرض‌های کهنه» واقعاً همهٔ ردیف‌ها را لازم دارد، پس این‌جا چیزی برای
-    /// نخواندن نیست — ولی **شکلِ** خواندن هزینه دارد. سنجشِ کارایی همین را
-    /// نشان داد:
+    /// «قرض‌های کهنه» و «خلاصهٔ قرض‌داران» هر دو ‎LoadDebtorsAsync‎ را صدا
+    /// می‌زدند، یعنی **همهٔ ردیف‌های همهٔ حساب‌ها** را می‌خواندند. سنجش نشان داد
+    /// ۱٬۹۰۲ و ۱٬۸۹۸ میلی‌ثانیه.
     ///
-    ///     خواندنِ صافِ ۵۰٬۰۰۰ ردیف                    ۴۴۴ ms
-    ///     همان ردیف‌ها از راهِ ‎Include‎              ۵٬۶۲۶ ms
+    /// ولی هیچ‌کدام به خودِ ردیف‌ها کاری ندارند. آن‌ها فقط سه چیز می‌خواهند:
     ///
-    /// دقیقاً همان چیزی که در ‎DebtorService.LoadFullAsync‎ هم دیده شد. پس
-    /// این‌جا هم سه کوئریِ ساده زده می‌شود — اشخاص، حساب‌ها، ردیف‌ها — و
-    /// وصل کردنشان در حافظه با یک فرهنگِ کلید انجام می‌شود.
+    ///   ۱) جمع‌های هر حساب — که ‎AccountTotals‎ از ردیف‌ها می‌سازد،
+    ///   ۲) تازه‌ترین تاریخ (برای «چند روز بی‌حرکت»)،
+    ///   ۳) قدیمی‌ترین تاریخ (برای «مدت عضویت» در همان ردیف).
     ///
-    /// ⚠️ ردیف‌ها بی هیچ صافی خوانده می‌شوند و ردیفِ حساب‌های «بی‌فاکتور» در
-    /// حافظه کنار گذاشته می‌شود. صافیِ ‎Contains‎ روی SQLite به ‎json_each‎
-    /// ترجمه می‌شود و ایندکس را از دست می‌دهد — یعنی همان کلِ جدول، ولی
-    /// گران‌تر.
+    /// هر سه را خودِ دیتابیس با ‎SUM‎/‎MIN‎/‎MAX‎ می‌دهد. بعد به ازای هر حساب
+    /// **دو ردیفِ ساختگی** گذاشته می‌شود که همان جمع‌ها و همان دو تاریخ را
+    /// دارند، و از آن‌جا به بعد همان کدِ همیشگی کار می‌کند.
+    ///
+    /// ⚠️ چرا نتیجه مو‌به‌مو همان است — این را با خودِ ‎AccountTotals‎ سنجیدم:
+    ///   • ‎.All‎ (که این دو بخش می‌خوانند) جمعِ پطرول و دیزل است، پس تفکیکِ
+    ///     سوخت در آن حذف می‌شود و جمعِ ساده می‌ماند.
+    ///   • ردیف‌های دفترِ تیل در ‎Liters/Rasid/RasidFuel/Albaqi/Bardagi‎ جمع
+    ///     می‌شوند و ردیف‌های دفترِ پول فقط در ‎Rasid/Albaqi/Bardagi‎ — همان
+    ///     تفکیکی که این‌جا هم با دو ‎SUM‎ی جدا نگه داشته شده.
+    ///   • ستون‌های خودِ حساب (‎RasidFuelPetrol‎ و مانندِ آن) دست‌نخورده‌اند،
+    ///     چون خودِ رکوردِ حساب کامل خوانده می‌شود.
+    ///   • بیشینه/کمینهٔ تاریخ هم عیناً همان چیزی است که آن حلقه‌ها می‌گرفتند.
+    ///
+    /// یعنی هیچ محاسبه‌ای عوض نشد؛ فقط جمع‌زدن از حافظه به دیتابیس رفت.
     /// </summary>
-    private async Task<List<Debtor>> LoadDebtorsAsync(CancellationToken ct)
+    private async Task<List<Debtor>> LoadSummarisedAsync(CancellationToken ct)
     {
         await using var db = _dbf.Create();
+
         var people = await db.Debtors.AsNoTracking().Where(d => !d.IsNoInvoice)
                              .OrderBy(d => d.Name).ToListAsync(ct);
         if (people.Count == 0) return people;
 
         var byId = people.ToDictionary(p => p.Id);
         var byAccount = new Dictionary<long, DebtAccount>();
-
         foreach (var a in await db.DebtAccounts.AsNoTracking().ToListAsync(ct))
         {
-            if (a.MainOfDebtorId is { } m && byId.TryGetValue(m, out var owner)) owner.MainAccount = a;
-            else if (a.DebtorId is { } s && byId.TryGetValue(s, out var p2)) p2.SubAccounts.Add(a);
-            else continue;                      // حسابِ یک شخصِ بی‌فاکتور — به ما ربطی ندارد
+            if (a.MainOfDebtorId is { } m && byId.TryGetValue(m, out var o1)) o1.MainAccount = a;
+            else if (a.DebtorId is { } sid && byId.TryGetValue(sid, out var o2)) o2.SubAccounts.Add(a);
+            else continue;
             byAccount[a.Id] = a;
         }
 
-        foreach (var r in await db.DebtRows.AsNoTracking().ToListAsync(ct))
+        // ── جمع‌های دفترِ تیل ────────────────────────────────────────────────
+        var fuel = await db.DebtRows.AsNoTracking().Where(r => r.FuelAccountId != null)
+            .GroupBy(r => r.FuelAccountId!.Value)
+            .Select(g => new
+            {
+                Account = g.Key,
+                Liters = g.Sum(x => x.Liters),
+                Rasid = g.Sum(x => x.Rasid),
+                RasidFuel = g.Sum(x => x.RasidFuel),
+                Albaqi = g.Sum(x => x.Albaqi),
+                Bardagi = g.Sum(x => x.Bardagi),
+                First = g.Min(x => x.DateKey),
+                Last = g.Max(x => x.DateKey),
+            }).ToListAsync(ct);
+
+        // ── جمع‌های دفترِ پول ────────────────────────────────────────────────
+        var money = await db.DebtRows.AsNoTracking().Where(r => r.MoneyAccountId != null)
+            .GroupBy(r => r.MoneyAccountId!.Value)
+            .Select(g => new
+            {
+                Account = g.Key,
+                Rasid = g.Sum(x => x.Rasid),
+                Albaqi = g.Sum(x => x.Albaqi),
+                Bardagi = g.Sum(x => x.Bardagi),
+                First = g.Min(x => x.DateKey),
+                Last = g.Max(x => x.DateKey),
+            }).ToListAsync(ct);
+
+        foreach (var f in fuel)
         {
-            if (r.FuelAccountId is { } f && byAccount.TryGetValue(f, out var fa)) fa.FuelRows.Add(r);
-            else if (r.MoneyAccountId is { } n && byAccount.TryGetValue(n, out var ma)) ma.MoneyRows.Add(r);
+            if (!byAccount.TryGetValue(f.Account, out var a)) continue;
+            a.FuelRows.Add(new DebtRow
+            {
+                Fuel = FuelType.Petrol,
+                Liters = f.Liters, Rasid = f.Rasid, RasidFuel = f.RasidFuel,
+                Albaqi = f.Albaqi, Bardagi = f.Bardagi,
+                DateKey = f.First, DateShamsi = Shamsi.FromKey(f.First),
+            });
+            if (f.Last != f.First)
+                a.FuelRows.Add(new DebtRow
+                {
+                    Fuel = FuelType.Petrol,
+                    DateKey = f.Last, DateShamsi = Shamsi.FromKey(f.Last),
+                });
         }
+
+        foreach (var m in money)
+        {
+            if (!byAccount.TryGetValue(m.Account, out var a)) continue;
+            a.MoneyRows.Add(new DebtRow
+            {
+                Fuel = FuelType.Petrol,
+                Rasid = m.Rasid, Albaqi = m.Albaqi, Bardagi = m.Bardagi,
+                DateKey = m.First, DateShamsi = Shamsi.FromKey(m.First),
+            });
+            if (m.Last != m.First)
+                a.MoneyRows.Add(new DebtRow
+                {
+                    Fuel = FuelType.Petrol,
+                    DateKey = m.Last, DateShamsi = Shamsi.FromKey(m.Last),
+                });
+        }
+
         return people;
     }
 
@@ -102,7 +170,7 @@ public sealed class ToolsDataService
     public async Task<List<DebtSummaryRow>> DebtSummaryAsync(bool money, CancellationToken ct = default)
     {
         _perm.Require(Permission.ViewData);
-        var people = await LoadDebtorsAsync(ct);
+        var people = await LoadSummarisedAsync(ct);
         return _summary.Rows(people, money, Shamsi.Today());
     }
 
