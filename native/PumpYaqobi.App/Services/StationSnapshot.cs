@@ -136,26 +136,35 @@ public static class StationSnapshot
 
         foreach (var noInv in new[] { false, true })
         {
-            var list = await host.Debtors.ListAsync(noInv, null, ct);
+            // ⚠️ هر دو راه شمارِ کوئریِ **ثابت** دارند، نه «چهارتا برای هر نفر»:
+            //   • خلاصه ⇒ ‎CardAccountsAsync‎، جمع‌ها را خودِ SQLite با یک
+            //     ‎GROUP BY‎ می‌زند و هیچ ردیفی خوانده نمی‌شود.
+            //   • کامل  ⇒ ‎LoadAllAsync‎، همهٔ ردیف‌ها در یک کوئری.
+            // صدا زدنِ ‎LoadFullAsync‎ داخلِ حلقه همان چاله‌ای بود که یک‌بار
+            // برنامه را خواباند؛ این‌جا هرگز آن راه نرود.
+            //
+            // در هر دو حالت فهرستِ خودِ اشخاص از یک جا می‌آید و حساب‌هایشان از
+            // جای دیگر — فقط «جای دیگر» فرق می‌کند.
+            List<Debtor> list;
+            Dictionary<long, List<DebtAccount>> byPerson;
 
-            // ⚠️ یک کوئری برای همه — جمع‌ها را خودِ SQLite می‌زند و هیچ ردیفی
-            // خوانده نمی‌شود. همان راهی که ‎CardAccountsAsync‎ برای کارت‌ها
-            // ساخته شده بود.
-            var cards = await host.Debtors.CardAccountsAsync(noInv, ct);
+            if (detailed)
+            {
+                list = await host.Debtors.LoadAllAsync(noInv, ct);
+                byPerson = list.ToDictionary(p => p.Id, p => p.AllAccounts().ToList());
+            }
+            else
+            {
+                list = await host.Debtors.ListAsync(noInv, null, ct);
+                byPerson = await host.Debtors.CardAccountsAsync(noInv, ct);
+            }
 
             foreach (var lite in list)
             {
                 ct.ThrowIfCancellationRequested();
 
-                var accounts = cards.TryGetValue(lite.Id, out var rolled)
-                    ? rolled : new List<DebtAccount>();
-
-                if (detailed)
-                {
-                    var full = await host.Debtors.LoadFullAsync(lite.Id, ct);
-                    if (full is not null) accounts = full.AllAccounts().ToList();
-                }
-                if (accounts.Count == 0) continue;
+                if (!byPerson.TryGetValue(lite.Id, out var accounts) || accounts.Count == 0)
+                    continue;
 
                 // ⚠️ حال و الباقی از خودِ سرویس — همان عددی که روی کارتِ
                 // برنامه دیده می‌شود، نه یک حسابِ تازه.

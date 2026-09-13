@@ -59,7 +59,7 @@ public static class KarLink
     /// <summary>
     /// نشانیِ صفحهٔ اپِ کارمندان — همیشه با ‎https‎ و یک ‎/‎ ته آن.
     /// </summary>
-    internal static string BaseOf(string? viewerUrl)
+    public static string BaseOf(string? viewerUrl)
     {
         var v = (viewerUrl ?? "").Trim();
         if (v.Length == 0) return DefaultBase;

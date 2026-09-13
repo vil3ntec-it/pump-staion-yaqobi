@@ -233,6 +233,84 @@ public sealed class DebtorService
     }
 
     /// <summary>
+    /// ══ همهٔ قرض‌داران با همهٔ ردیف‌هایشان — در چهار کوئری ═══════════════════
+    ///
+    /// ⚠️ چرا این لازم شد: هر جایی که بخواهد «فهرست + ردیف‌ها» داشته باشد،
+    /// وسوسه می‌شود <see cref="LoadFullAsync"/> را در یک حلقه صدا بزند. آن
+    /// یعنی چهار رفت‌وبرگشت به دیتابیس <b>برای هر نفر</b> — با پانصد قرض‌دار،
+    /// دو هزار کوئری. این‌جا همان کار با چهار کوئریِ ثابت انجام می‌شود، هر چند
+    /// نفر که باشند.
+    ///
+    /// ⚠️ ردیفِ حذف‌شده نمی‌آید (صافیِ سراسریِ EF) و ترتیبِ ردیف‌ها همان
+    /// ترتیبِ جدولِ روی صفحه است (‎SortIndex‎ بعد ‎Id‎)، تا هر نمایی که از این
+    /// می‌خواند همان چیزی را ببیند که کاربر در برنامه می‌بیند.
+    ///
+    /// ⚠️ «دفترِ رسیدهای سربرگ» (‎RasidLog‎) عمداً نمی‌آید: این تابع برای
+    /// <b>خواندن و نشان دادن</b> است، نه برای ویرایش. هر کسی که می‌خواهد
+    /// چیزی را عوض کند باید از <see cref="LoadFullAsync"/> برود.
+    /// </summary>
+    public async Task<List<Debtor>> LoadAllAsync(bool noInvoice = false,
+                                                 CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+
+        var people = await db.Debtors.AsNoTracking()
+            .Where(d => d.IsNoInvoice == noInvoice)
+            .OrderBy(d => d.Name).ToListAsync(ct);
+        if (people.Count == 0) return people;
+
+        var ids = people.Select(p => p.Id).ToList();
+        var mains = await db.DebtAccounts.AsNoTracking()
+            .Where(a => a.MainOfDebtorId != null && ids.Contains(a.MainOfDebtorId.Value))
+            .ToListAsync(ct);
+        var subs = await db.DebtAccounts.AsNoTracking()
+            .Where(a => a.DebtorId != null && ids.Contains(a.DebtorId.Value))
+            .ToListAsync(ct);
+
+        var byAcct = new Dictionary<long, DebtAccount>();
+        foreach (var a in mains) byAcct[a.Id] = a;
+        foreach (var a in subs) byAcct[a.Id] = a;
+        foreach (var a in byAcct.Values) { a.FuelRows = new(); a.MoneyRows = new(); a.RasidLog = new(); }
+
+        if (byAcct.Count > 0)
+        {
+            var accIds = byAcct.Keys.ToList();
+            var rows = await db.DebtRows.AsNoTracking()
+                .Where(r => (r.FuelAccountId != null && accIds.Contains(r.FuelAccountId.Value))
+                         || (r.MoneyAccountId != null && accIds.Contains(r.MoneyAccountId.Value)))
+                .OrderBy(r => r.SortIndex).ThenBy(r => r.Id)
+                .ToListAsync(ct);
+
+            foreach (var r in rows)
+            {
+                // ⚠️ ترتیبِ این دو مهم است: ردیفِ دفترِ تیل ‎FuelAccountId‎ دارد
+                // و ردیفِ دفترِ پول ‎MoneyAccountId‎ — هرگز هر دو.
+                if (r.FuelAccountId is { } f && byAcct.TryGetValue(f, out var fa)) fa.FuelRows.Add(r);
+                else if (r.MoneyAccountId is { } m && byAcct.TryGetValue(m, out var ma)) ma.MoneyRows.Add(r);
+            }
+        }
+
+        var mainOf = new Dictionary<long, DebtAccount>();
+        foreach (var a in mains) mainOf[a.MainOfDebtorId!.Value] = a;
+
+        var subsOf = new Dictionary<long, List<DebtAccount>>();
+        foreach (var a in subs)
+        {
+            if (!subsOf.TryGetValue(a.DebtorId!.Value, out var list))
+                subsOf[a.DebtorId!.Value] = list = new List<DebtAccount>();
+            list.Add(a);
+        }
+
+        foreach (var p in people)
+        {
+            p.MainAccount = mainOf.TryGetValue(p.Id, out var mm) ? mm : new DebtAccount();
+            p.SubAccounts = subsOf.TryGetValue(p.Id, out var ss) ? ss : new List<DebtAccount>();
+        }
+        return people;
+    }
+
+    /// <summary>
     /// شمارِ همهٔ ردیف‌های زندهٔ قرض‌داران — یک ‎COUNT‎ی ساده، بی خواندنِ حتی
     /// یک ردیف.
     ///

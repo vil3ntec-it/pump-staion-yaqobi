@@ -171,6 +171,63 @@ public class StationSnapshotTests
         Assert.Equal("stations/kabul-live", StationPublisher.PathOf(" kabul "));
     }
 
+    /// <summary>
+    /// ══ خواندنِ دسته‌جمعی، همان چیزی که تک‌تک می‌داد ═══════════════════════
+    ///
+    /// ⚠️ ‎LoadAllAsync‎ برای این هست که کسی ‎LoadFullAsync‎ را در حلقه صدا
+    /// نزند (چهار کوئری برای هر نفر). ولی «سریع‌تر» فقط وقتی ارزش دارد که
+    /// <b>همان</b> را بدهد — پس این‌جا دو راه کنارِ هم گذاشته می‌شوند.
+    /// </summary>
+    [Fact]
+    public async Task LoadingEveryoneAtOnceGivesTheSameThingAsOneByOne()
+    {
+        var host = Host();
+
+        var a = await host.Debtors.AddDebtorAsync("هارون", "0700", false);
+        var b = await host.Debtors.AddDebtorAsync("محمد", null, false);
+        await host.Debtors.AddDebtorAsync("بی‌فاکتور", null, true);   // نباید بیاید
+
+        var aMain = (await host.Debtors.LoadFullAsync(a.Id))!.MainAccount;
+        var sub = await host.Debtors.AddSubAccountAsync(a.Id, "حسابِ دوم");
+
+        await host.Debtors.SaveRowAsync(new DebtRow
+        { FuelAccountId = aMain.Id, Fuel = FuelType.Petrol, Liters = 100m, RasidFuel = 40m, SortIndex = 0 });
+        await host.Debtors.SaveRowAsync(new DebtRow
+        { FuelAccountId = aMain.Id, Fuel = FuelType.Diesel, Liters = 50m, SortIndex = 1 });
+        await host.Debtors.SaveRowAsync(new DebtRow
+        { MoneyAccountId = sub.Id, Fuel = FuelType.Petrol, ByMoney = true, Bardagi = 900m, SortIndex = 0 });
+
+        var all = await host.Debtors.LoadAllAsync(false);
+        Assert.Equal(2, all.Count);
+        Assert.DoesNotContain(all, p => p.Name == "بی‌فاکتور");
+
+        foreach (var lite in new[] { a, b })
+        {
+            var one = (await host.Debtors.LoadFullAsync(lite.Id))!;
+            var many = all.Single(p => p.Id == lite.Id);
+
+            Assert.Equal(one.AllAccounts().Count(), many.AllAccounts().Count());
+
+            // ⚠️ دو دفتر جدا می‌مانند — ردیفِ پولی نباید در دفترِ تیل بنشیند
+            foreach (var (x, y) in one.AllAccounts().Zip(many.AllAccounts()))
+            {
+                Assert.Equal(x.Id, y.Id);
+                Assert.Equal(x.FuelRows.Count, y.FuelRows.Count);
+                Assert.Equal(x.MoneyRows.Count, y.MoneyRows.Count);
+            }
+        }
+
+        var haroun = all.Single(p => p.Name == "هارون");
+        Assert.Equal(2, haroun.MainAccount.FuelRows.Count);
+        Assert.Empty(haroun.MainAccount.MoneyRows);
+        Assert.Single(haroun.SubAccounts);
+        Assert.Single(haroun.SubAccounts[0].MoneyRows);
+        Assert.Empty(haroun.SubAccounts[0].FuelRows);
+
+        // و شمارنده هم همان سه ردیف را می‌بیند، بی خواندنشان
+        Assert.Equal(3, await host.Debtors.RowCountAsync());
+    }
+
     /// <summary>ماهِ هر ردیف از تاریخِ شمسیِ خودش درمی‌آید — ورودیِ «ماه فلان»ِ ربات.</summary>
     [Theory]
     [InlineData("1405/06/22", "1405/06")]
