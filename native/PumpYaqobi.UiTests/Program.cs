@@ -54,6 +54,9 @@ internal static class Program
         // گاوصندوق، صرافی و مصارف با دادهٔ واقعاً دیده‌شونده. چرایی‌اش در
         // ‎LedgerPerf‎ نوشته شده — ‎PerfAudit‎ این سه را **خالی** می‌سنجید.
         if (outDir.Equals("ledgerperf", StringComparison.OrdinalIgnoreCase)) return LedgerPerf.Run();
+        // ══ حالتِ «سرِ جدول و جملهٔ زیرش» ═══════════════════════════════════
+        //     dotnet run --project PumpYaqobi.UiTests -- chrome
+        if (outDir.Equals("chrome", StringComparison.OrdinalIgnoreCase)) return TableChromeAudit.Run();
         if (outDir.Equals("gridperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Run();
         if (outDir.Equals("cardperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Cards();
 

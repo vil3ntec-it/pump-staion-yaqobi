@@ -188,10 +188,25 @@ public class TotalsStrip : Panel
 
         if (grid is not null && cols is { Count: > 0 })
         {
+            // ══ جای هر ستون را از خودِ سرستونِ آن می‌پرسیم ═══════════════════
+            //
+            // ⚠️ پیش از این پهناها از ستونِ «#» به بعد جمع زده می‌شد. آن حساب
+            // یک چیز را نمی‌دید: **نوارِ لغزشِ عمودیِ خودِ جدول**. جدولی که
+            // نوار داشته باشد، ستون‌هایش ۱۷ پیکسل کم‌عرض‌تر جا می‌گیرند و
+            // نوارِ «جمله» — که نوارِ لغزش ندارد — همان‌قدر جابه‌جا می‌شد.
+            // سنجشِ ‎chrome‎ همین را گرفت: در «رسید قرض‌داران» جملهٔ «مبلغ رسید»
+            // ۱۷ پیکسل از ستونش دور بود و در بقیهٔ بخش‌ها نه.
+            //
+            // پرسیدن از خودِ سرستون همهٔ این‌ها را یک‌جا حل می‌کند: نوارِ لغزش،
+            // ستونِ «#»، لغزشِ افقی، و آینهٔ راست‌به‌چپ. هر دو کنترل در یک
+            // درختِ آینه‌شده‌اند، پس مختصاتِ محلی‌شان هم‌جنس است.
+            var heads = grid.GetVisualDescendants().OfType<DataGridColumnHeader>()
+                            .Where(hd => hd.Bounds.Width > 0)
+                            .GroupBy(hd => hd.Content?.ToString()?.Trim() ?? "")
+                            .ToDictionary(g2 => g2.Key, g2 => g2.First());
+
+            // اگر هنوز سرستونی ساخته نشده، همان حسابِ قدیمی پشتیبان است
             var x = new double[cols.Count];
-            // ⚠️ ستونِ «#» (سرستونِ ردیف) پهنا می‌گیرد و جدول را جابه‌جا می‌کند؛
-            // نوارِ جمله هم باید همان‌قدر عقب بیفتد، وگرنه هر جمع یک ستون
-            // آن‌طرف‌تر می‌نشیند.
             var acc = RowHeaderWidth(grid);
             for (var i = 0; i < cols.Count; i++) { x[i] = acc; acc += cols[i].ActualWidth; }
             var scroll = HScroll(grid);
@@ -202,9 +217,22 @@ public class TotalsStrip : Panel
                 var want = (child.DataContext as TotalCell)?.Column;
                 var i = string.IsNullOrEmpty(want) ? -1 : cols.FindIndex(c => Head(c) == want);
                 if (i < 0) { loose.Add(child); continue; }
-                var left = x[i] - scroll;
-                child.Arrange(new Rect(left, 0, cols[i].ActualWidth, h));
-                tail = Math.Max(tail, left + cols[i].ActualWidth);
+
+                double left, width;
+                if (!string.IsNullOrEmpty(want) && heads.TryGetValue(want, out var head)
+                    && head.TranslatePoint(new Point(0, 0), this) is { } at)
+                {
+                    left = at.X;
+                    width = head.Bounds.Width;
+                }
+                else
+                {
+                    left = x[i] - scroll;
+                    width = cols[i].ActualWidth;
+                }
+
+                child.Arrange(new Rect(left, 0, width, h));
+                tail = Math.Max(tail, left + width);
             }
             foreach (var child in loose)
             {

@@ -421,6 +421,64 @@
   <Style Selector="DataGridColumnHeader /template/ Rectangle#VerticalSeparator">
     <Setter Property="Width" Value="{DynamicResource Pump.Table.HeadLine}" />
   </Style>
+
+  <!-- ══ چرا نوشتهٔ سرستون‌ها وسط نبود ═══════════════════════════════════════
+       گزارشِ صاحب ریپو: «سرِ جدول‌ها هنوز وسط نیستن.» و حق داشت — سنجش
+       (حالتِ ‎chrome‎ی ‎PumpYaqobi.UiTests‎) نشان داد در **هر**
+       بخش و **هر** ستون، نوشته دقیقاً ۱۶٫۵ پیکسل از مرکز دور است.
+
+       ریشه‌اش ‎HorizontalContentAlignment‎ نبود (آن از قبل ‎Center‎ بود). گریدِ
+       داخلیِ قالبِ ‎DataGridColumnHeader‎ دو ستون دارد و ستونِ دومش جای فلشِ
+       مرتب‌سازی است:
+
+           cols=[1*→13 | Auto→32]
+
+       یعنی ۳۲ پیکسل برای فلش کنار گذاشته می‌شود **حتی وقتی فلش نامرئی است**،
+       و نوشته در ۱۳ پیکسلِ باقی‌مانده می‌نشیند — نیمِ آن ۳۲ پیکسل همان
+       ۱۶ پیکسلِ انحراف است.
+
+       آن ۳۲ پیکسل از ‎MinWidth‎ی خودِ ستونِ قالبِ آوالونیا می‌آید و از استایل
+       دست‌نیافتنی است (‎Width‎ و ‎MinWidth‎ی خودِ فلش را صفر کردیم و ستون باز هم
+       ۳۲ ماند). پس قالب را خودمان می‌نویسیم — با همان نام‌های قالبِ اصلی، تا
+       فلشِ مرتب‌سازی و کادرِ فوکوس سرِ جایشان بمانند — و تنها فرقش این است که
+       فلش **روی** نوشته می‌نشیند نه کنارش، پس جا نمی‌گیرد و نوشته وسط می‌ماند.
+       در سایت هم استثنا ندارد: ‎.xls-tbl th{text-align:center}‎. -->
+  <Style Selector="DataGridColumnHeader">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="HeaderBorder"
+                Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}">
+          <Grid Name="PART_ColumnHeaderRoot" ColumnDefinitions="*,Auto">
+            <Panel Grid.Column="0" Margin="{TemplateBinding Padding}">
+              <ContentPresenter Name="PART_ContentPresenter"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+              <Path Name="SortIcon"
+                    Width="8" Height="6" Stretch="Fill" IsVisible="False"
+                    HorizontalAlignment="Left" VerticalAlignment="Center"
+                    Fill="{TemplateBinding Foreground}"
+                    Data="F1 M 0,0 L 8,0 L 4,6 Z" />
+            </Panel>
+            <Rectangle Name="VerticalSeparator" Grid.Column="1"
+                       Width="{DynamicResource Pump.Table.HeadLine}"
+                       VerticalAlignment="Stretch"
+                       Fill="{TemplateBinding SeparatorBrush}"
+                       IsVisible="{TemplateBinding AreSeparatorsVisible}" />
+            <Grid Name="FocusVisual" Grid.Column="0" IsHitTestVisible="False" IsVisible="False">
+              <Rectangle Name="FocusVisualPrimary" StrokeThickness="2"
+                         Stroke="{DynamicResource Pump.Accent}" IsHitTestVisible="False" />
+              <Rectangle Name="FocusVisualSecondary" StrokeThickness="1"
+                         Stroke="{DynamicResource Pump.Table.Border}" IsHitTestVisible="False" />
+            </Grid>
+          </Grid>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
   <!-- ⚠️ ‎HorizontalContentAlignment‎ی خودِ سرستون کافی نبود: نوشتهٔ داخلش را
        خودِ ‎DataGrid‎ می‌سازد و ‎Stretch‎ می‌گذارد، پس «تاریخ»، «نام»، «حواله» و
        بقیه به لبه می‌چسبیدند. گزارشِ صاحب ریپو: «اون تاریخ اسم حواله یا هر چی
