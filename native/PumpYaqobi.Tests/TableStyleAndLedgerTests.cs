@@ -88,7 +88,12 @@ public class TableStyleAndLedgerTests
         Assert.Contains("public string Column { get; }", src);
         Assert.Contains("class TotalsStrip : Panel", src);
         Assert.Contains("cols.FindIndex(c => Head(c) == want)", src);
-        Assert.Contains("child.Arrange(new Rect(left, 0, cols[i].ActualWidth, h));", src);
+        Assert.Contains("child.Arrange(new Rect(left, 0, width, h));", src);
+
+        // جای هر جمع از خودِ سرستونِ ساخته‌شده پرسیده می‌شود، نه از جمعِ پهناها —
+        // وگرنه نوارِ لغزشِ عمودیِ جدول همه را ۱۷ پیکسل جابه‌جا می‌کند.
+        Assert.Contains("OfType<DataGridColumnHeader>()", src);
+        Assert.Contains("head.TranslatePoint(new Point(0, 0), this)", src);
 
         var t = Read("PumpYaqobi.App", "Themes", "Controls.axaml");
         Assert.Contains("<c:TotalsStrip />", t);

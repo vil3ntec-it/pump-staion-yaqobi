@@ -121,7 +121,11 @@ public static class ThemeManager
         // ‎ConverterParameter=band‎ به این نسخه‌ها می‌رسد (ResourceKeyToBrushConverter).
         // در تمِ تیره نوار خودش روشن‌تر از جدول است و رنگ‌ها همان می‌مانند.
         void Band(string key, Color c) =>
-            Br("Band." + key, t.IsDark ? c : Mix(c, t.OnHeadBand, 0.45));
+            // ⚠️ نوارِ سرِ جدول دیگر تیره نیست (رنگِ کارت با ۲۰٪ تاکید، مثلِ
+            // سایت)، پس رنگِ «حال» لازم نیست روشن شود تا خوانده گردد — همان
+            // رنگِ همیشگیِ خودش روی نوار درست دیده می‌شود. روشن کردنش روی
+            // نوارِ روشن، برعکس، کم‌رنگ و ناخوانا می‌کرد.
+            Br("Band." + key, c);
 
         Band("Ok", ok);
         Band("Warn", warn);
@@ -131,9 +135,9 @@ public static class ThemeManager
         Band("Accent", t.Accent);
         Band("Purple", PumpTheme.C("#805ad5"));
         Band("Diesel", PumpTheme.C("#b7791f"));
-        Br("Band.Text", t.OnHeadBand);
+        Br("Band.Text", t.Text);
         Br("Band.Label", t.OnHeadBand);
-        Br("Band.Muted", Mix(t.HeadBand, t.OnHeadBand, 0.62));
+        Br("Band.Muted", t.Muted);
 
         Set("Pump.HeaderBg", Horizontal(t.HeaderBg));
         Set("Pump.BannerBg", Horizontal(t.BannerBg));

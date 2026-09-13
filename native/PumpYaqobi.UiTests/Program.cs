@@ -57,6 +57,9 @@ internal static class Program
         // ══ حالتِ «سرِ جدول و جملهٔ زیرش» ═══════════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- chrome
         if (outDir.Equals("chrome", StringComparison.OrdinalIgnoreCase)) return TableChromeAudit.Run();
+        // ══ حالتِ «کلیدِ چپ و راست هنگامِ تایپ» ═════════════════════════════
+        //     dotnet run --project PumpYaqobi.UiTests -- keys
+        if (outDir.Equals("keys", StringComparison.OrdinalIgnoreCase)) return KeyAudit.Run();
         if (outDir.Equals("gridperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Run();
         if (outDir.Equals("cardperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Cards();
 

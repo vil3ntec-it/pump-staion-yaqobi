@@ -553,7 +553,7 @@ public class ExcelGrid : DataGrid
         if (_wired) return;
         _wired = true;
         // تنها منبعِ درستِ «الان در حال ویرایشیم» — خودِ جدول می‌گوید.
-        PreparingCellForEdit += (_, _) => _editing = true;
+        PreparingCellForEdit += (_, e) => { _editing = true; AutoDirection(e.EditingElement); };
         CellEditEnded += (_, _) => _editing = false;
 
         // ══ جدول خودش می‌لغزد، نه کلِ صفحه ══════════════════════════════════
@@ -691,6 +691,85 @@ public class ExcelGrid : DataGrid
             e.Handled = true;
             return;
         }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  ⚠️ کلیدِ چپ و راست هنگامِ تایپ — «می‌زنم چپ، می‌رود راست»
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  گزارشِ صاحب ریپو: «موقعِ تایپ، اگر بخواهی چپ بروی اتومات می‌رود راست،
+    //  بعدش می‌رود چپ — باگِ خیلی مزخرفی است.»
+    //
+    //  بازتولید شد و اندازه گرفته شد (حالتِ ‎keys‎ی ‎PumpYaqobi.UiTests‎):
+    //
+    //      متنِ خانه     کلید   کُرسر
+    //      12,345         ←     ۳ ⇐ ۴    ✖ (باید ۲ می‌شد)
+    //      12,345         →     ۳ ⇐ ۲    ✖ (باید ۴ می‌شد)
+    //      برق دکان       ←     ۴ ⇐ ۵    ✔
+    //      برق دکان       →     ۴ ⇐ ۳    ✔
+    //
+    //  یعنی در خانهٔ **عددی** کُرسر وارونه می‌رفت و در خانهٔ فارسی درست.
+    //
+    //  ریشه: کلِ پنجره راست‌به‌چپ است، پس کادرِ تایپ هم ‎FlowDirection‎ی
+    //  راست‌به‌چپ به ارث می‌برد و آوالونیا کُرسر را بر اساسِ همان جهتِ **پایه**
+    //  می‌بَرد، نه بر اساسِ جهتِ خودِ نوشته. عددِ لاتین در یک کادرِ راست‌به‌چپ
+    //  چپ‌به‌راست دیده می‌شود، پس هر کلید وارونه حس می‌شود.
+    //
+    //  چارهٔ همین کار در وب ‎dir="auto"‎ است و سایت هم دقیقاً همان را دارد:
+    //  جهتِ کادر از **نخستین حرفِ قویِ** خودِ نوشته می‌آید. همان قاعده این‌جا
+    //  پیاده شده، پس:
+    //    • خانهٔ عدد/تاریخ ⇒ چپ‌به‌راست ⇒ ←/→ همان‌جا که چشم می‌بیند
+    //    • خانهٔ نامِ فارسی ⇒ راست‌به‌چپ ⇒ باز هم همان‌جا که چشم می‌بیند
+    //
+    //  ⚠️ وسط‌چینیِ خانه‌ها از ‎TextAlignment="Center"‎ می‌آید، نه از جهت، پس
+    //  ظاهرِ جدول عوض نمی‌شود — فقط کُرسر درست راه می‌رود.
+
+    /// <summary>
+    /// جهتِ کادرِ تایپ را از خودِ نوشته‌اش می‌گیرد، و با هر تایپ دوباره
+    /// می‌سنجد (خانهٔ خالی که فارسی تایپ شود، همان‌جا راست‌به‌چپ می‌گردد).
+    /// </summary>
+    private static void AutoDirection(Control? editor)
+    {
+        var box = editor as TextBox
+               ?? editor?.GetVisualDescendants().OfType<TextBox>().FirstOrDefault();
+        if (box is null) return;
+
+        Sync();
+        box.PropertyChanged -= OnEditorText;
+        box.PropertyChanged += OnEditorText;
+
+        void OnEditorText(object? _, AvaloniaPropertyChangedEventArgs e)
+        {
+            if (e.Property == TextBox.TextProperty) Sync();
+        }
+
+        // ⚠️ فقط وقتی واقعاً عوض شده باشد: نوشتنِ دوبارهٔ همان مقدار، کُرسر را
+        // سرِ جای اول برمی‌گرداند و تایپ می‌پرد.
+        void Sync()
+        {
+            var want = DirectionOf(box.Text);
+            if (box.FlowDirection != want) box.FlowDirection = want;
+        }
+    }
+
+    /// <summary>
+    /// ‎dir="auto"‎ی وب: نخستین حرفِ قوی جهت را تعیین می‌کند؛ نوشته‌ای که هیچ
+    /// حرفِ قوی ندارد (عدد، تاریخ، کاما) چپ‌به‌راست است — همان کاری که مرورگر
+    /// می‌کند.
+    /// </summary>
+    internal static Avalonia.Media.FlowDirection DirectionOf(string? text)
+    {
+        foreach (var ch in text ?? "")
+        {
+            // عبری، عربی، فارسی و همسایه‌هایشان
+            if (ch is >= (char)0x0590 and <= (char)0x08FF
+                   or >= (char)0xFB1D and <= (char)0xFDFF
+                   or >= (char)0xFE70 and <= (char)0xFEFF)
+                return Avalonia.Media.FlowDirection.RightToLeft;
+            if (ch is >= 'A' and <= 'Z' or >= 'a' and <= 'z')
+                return Avalonia.Media.FlowDirection.LeftToRight;
+        }
+        return Avalonia.Media.FlowDirection.LeftToRight;
     }
 
     /// <summary>کنترلی که همین حالا فوکوس دارد.</summary>

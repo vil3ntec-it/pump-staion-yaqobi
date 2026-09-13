@@ -67,8 +67,6 @@ internal static class LedgerPerf
 
         AppHost.Start(file);
         var host = AppHost.Current;
-        if (host.Auth.NeedsFirstRun()) host.Auth.CreateFirstAdmin("1234");
-        host.Auth.SignIn("admin", "1234");
 
         AppBuilder.Configure<PumpYaqobi.App.App>()
             .UseSkia()
@@ -79,14 +77,21 @@ internal static class LedgerPerf
         win.Show();
         Pump(win);
 
+        // ⚠️ از همان صفحهٔ قفلِ واقعی وارد می‌شویم، نه از درِ پشتیِ
+        // ‎Auth.SignIn‎: رویدادِ «وارد شد» همان‌جا شلیک می‌شود و کارهای پس از
+        // ورود — از جمله پیش‌ساختنِ صفحه‌ها — واقعاً اجرا می‌گردند. با ورودِ
+        // مستقیم، سنجش چیزی را می‌سنجید که کاربر هرگز تجربه نمی‌کند.
         var vm = (MainViewModel)win.DataContext!;
-        try
-        {
-            vm.Lock.Password = "1234";
-            vm.Lock.SubmitCommand.Execute(null);
-        }
-        catch { /* از پیش باز است */ }
+        vm.Lock.Password = "1234";
+        vm.Lock.Confirm = "1234";
+        vm.Lock.SubmitCommand.Execute(null);
         Pump(win);
+
+        // ⚠️ مثلِ کاربرِ واقعی یک لحظه صبر می‌کنیم: برنامه پس از ورود صفحه‌ها
+        // را در پس‌زمینه از پیش می‌سازد (‎PrewarmViews‎) و کاربر هیچ‌وقت در
+        // همان میلی‌ثانیهٔ اول کلیک نمی‌کند. بی این صبر، سنجش هزینه‌ای را
+        // می‌شمارد که در عمل پیش از کلیک پرداخت شده است.
+        Settle(win, TimeSpan.FromSeconds(3));
 
         Console.WriteLine();
         Console.WriteLine("بخش        ردیف     ماه‌ها(SQL)  ردیف‌ها(SQL)  باز شدن   ردیفِ زنده  بلندیِ جدول");
@@ -194,6 +199,18 @@ internal static class LedgerPerf
             Thread.Sleep(2);
         }
         Pump(w);
+    }
+
+    /// <summary>تا ته‌نشین شدنِ کارهای پس‌زمینه (یا سررسیدِ مهلت) پمپ می‌کند.</summary>
+    private static void Settle(Window w, TimeSpan budget)
+    {
+        var end = DateTime.UtcNow + budget;
+        while (DateTime.UtcNow < end)
+        {
+            Dispatcher.UIThread.RunJobs();
+            w.UpdateLayout();
+            Thread.Sleep(5);
+        }
     }
 
     private static long Time(Action a)
