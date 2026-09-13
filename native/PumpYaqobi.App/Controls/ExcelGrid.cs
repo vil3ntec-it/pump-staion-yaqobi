@@ -40,6 +40,36 @@ public class ExcelGrid : DataGrid
         set => SetValue(GrowsOnEnterProperty, value);
     }
 
+    /// <summary>
+    /// ══ این جدول هم‌قدِ ردیف‌هایش بلند شود؟ ═══════════════════════════════
+    ///
+    /// پیش‌فرض <b>نه</b>، و این پیش‌فرض را با عدد انتخاب کرده‌ایم نه با سلیقه.
+    /// جدولی که هم‌قدِ ردیف‌هایش بلند می‌شود، ‎DataGrid‎ هر ردیفش را واقعاً
+    /// می‌سازد؛ و ساختنِ ردیف گران است (‎ledgerperf‎):
+    ///
+    ///     گاوصندوق با ۸۰ ردیفِ آزاد  → ۱٬۹۳۳ ms   (هر ردیف دو کشویی دارد)
+    ///     صرافی    با ۸۰ ردیفِ آزاد  → ۱٬۱۴۲ ms
+    ///     مصارف    با ۸۰ ردیفِ آزاد  →   ۳۸۴ ms   (بی هیچ کشویی)
+    ///     همان‌ها وقتی مجازی‌سازی می‌کنند → ۱۲ تا ۳۸ ms
+    ///
+    /// پس دفترهای ماهانه (گاوصندوق، صرافی، مصارف، چکنه…) سرِ یک صفحه
+    /// می‌ایستند و می‌لغزند — چرخِ ماوس زنجیره‌ای است، پس کاربر یک اسکرولِ
+    /// پیوسته حس می‌کند.
+    ///
+    /// ⚠️ و کجا <b>روشن</b> می‌شود: ورق و پارچه. خواستهٔ صریحِ صاحب ریپو
+    /// دربارهٔ همان‌ها بود («شماره‌های ۴۰ و ۵۰ و ۵۱ نباید داخلِ یک کادرِ
+    /// محدود گیر کنند») و آن‌ها ذاتاً کوتاه‌اند، پس رشدشان ارزان است.
+    /// ‎GrowRowLimit‎ آن‌جا هم سقفِ ایمنی است.
+    /// </summary>
+    public static readonly StyledProperty<bool> GrowsToContentProperty =
+        AvaloniaProperty.Register<ExcelGrid, bool>(nameof(GrowsToContent));
+
+    public bool GrowsToContent
+    {
+        get => GetValue(GrowsToContentProperty);
+        set => SetValue(GrowsToContentProperty, value);
+    }
+
     public event EventHandler? GrowRequested;
 
     public ExcelGrid()
@@ -192,12 +222,22 @@ public class ExcelGrid : DataGrid
         // مربعی بالا می‌رود. ‎SpreadColumns‎ همین که پهناها را سفت کرد،
         // ‎_spread‎ می‌شود و از پاسِ بعد جدول آزاد است.
         if (!_spread) return Capped(availableSize, screen);
-
         if (rows < 0 || rows > GrowRowLimit) return Capped(availableSize, screen);
 
         if (rows != _padRows) { _pad = 0; _padRows = rows; }
 
         var want = WantedHeight(rows);
+
+        // ⚠️ دفترِ ماهانه فقط تا یک صفحه بلند می‌شود و بعد می‌ایستد؛ ورق و
+        // پارچه تا ‎GrowRowLimit‎ آزادند.
+        //
+        // ⚠️ و چرا جدولِ کوتاه هم از همین راه می‌گذرد، نه از ‎Capped‎: تنگنا
+        // بلندیِ در دسترس را می‌بُرد و ‎DataGrid‎ همان بلندی را پر می‌کند —
+        // یعنی دفترِ سه‌ردیفی یک کادرِ ۸۰۰ پیکسلیِ تقریباً خالی می‌شد. تا
+        // وقتی محتوا از یک صفحه کوتاه‌تر است، جدول دقیقاً هم‌قدِ ردیف‌هایش
+        // می‌ماند و ساختنِ آن چند ردیف هم ارزان است.
+        if (!GrowsToContent && want > screen) return Capped(availableSize, screen);
+
         if (availableSize.Height > want) availableSize = availableSize.WithHeight(want);
         var size = base.MeasureOverride(availableSize);
         return size.WithHeight(want);
@@ -246,6 +286,9 @@ public class ExcelGrid : DataGrid
         var rows = RowCount();
         if (rows < 0 || rows > GrowRowLimit) return;
         if (_pad > 400) return;
+
+        // جدولی که سرِ یک صفحه ایستاده، نوارِ لغزشِ خودش را به‌عمد دارد
+        if (!GrowsToContent && WantedHeight(rows) > ScreenHeight()) return;
 
         var vbar = this.GetVisualDescendants().OfType<ScrollBar>()
                        .FirstOrDefault(b => b.Orientation == Orientation.Vertical);

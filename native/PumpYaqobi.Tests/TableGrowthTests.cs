@@ -79,6 +79,31 @@ public class TableGrowthTests
         => Assert.Contains("if (!_spread) return Capped(", Bare(Grid()));
 
     /// <summary>
+    /// ══ «هم‌قدِ ردیف‌ها شدن» انتخابی است، و پیش‌فرضش خاموش ═══════════════
+    ///
+    /// چون ساختنِ ردیف گران است (‎ledgerperf‎): گاوصندوق با ۸۰ ردیفِ آزاد
+    /// ۱٬۹۳۳ms، و همان وقتی مجازی‌سازی می‌کند ۱۲ تا ۳۸ms. پس دفترهای ماهانه
+    /// سرِ یک صفحه می‌ایستند و فقط ورق و پارچه — که کوتاه‌اند و خواستهٔ صریحِ
+    /// صاحب ریپو دربارهٔ همان‌ها بود — آزادند.
+    /// </summary>
+    [Fact]
+    public void GrowingToContentIsOptInAndOnlyTheSheetsOptIn()
+    {
+        var g = Bare(Grid());
+        Assert.Contains("GrowsToContentProperty", g);
+        Assert.Contains("!GrowsToContent && want > screen", g);
+
+        // ورق روشنش می‌کند…
+        Assert.Contains("GrowsToContent=\"True\"",
+                        Read("PumpYaqobi.App", "Views", "Sections", "WaraqPageView.axaml"));
+
+        // …و دفترهای ماهانه نه
+        foreach (var v in new[] { "SafeSectionView", "ExchangeSectionView", "ExpenseSectionView" })
+            Assert.DoesNotContain("GrowsToContent",
+                                  Read("PumpYaqobi.App", "Views", "Sections", v + ".axaml"));
+    }
+
+    /// <summary>
     /// و تا مرزِ رشد هیچ سقفی روی جدول نمی‌نشیند: نه ‎MaxHeight‎ی هست و نه
     /// چیزی که بلندیِ در دسترس را کم کند.
     ///
