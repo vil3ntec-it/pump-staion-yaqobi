@@ -531,10 +531,24 @@ internal static class PerfAudit
     }
 
     /// <summary>ستون‌های آشنایی که تقریباً همهٔ جدول‌ها دارند.</summary>
+    /// <summary>ماهِ جاری — همان ماهی که بخش‌های دفتری سرِ باز شدن نشان می‌دهند.</summary>
+    private static readonly string ThisMonth =
+        PumpYaqobi.Application.Localization.Shamsi.ThisMonth();
+
     private static void Common(Insert ins, int i, string now)
     {
-        ins.Set("DateShamsi", "1405/06/18");
-        ins.Set("DateKey", 14050618);
+        // ══ ⚠️ ‎MonthKey‎ و تاریخِ ماهِ جاری — وگرنه این سنجش دروغ می‌گوید ═══
+        //
+        // بخش‌های دفتری (گاوصندوق، صرافی، مصارف، چکنه…) ماه‌به‌ماه فیلتر
+        // می‌شوند: ‎WHERE MonthKey = '<ماهِ جاری>'‎. تا امروز این تابع نه
+        // ‎MonthKey‎ می‌گذاشت و نه تاریخش با ماهِ جاری می‌خواند، پس هر سه هزار
+        // ردیف از صافی می‌افتادند و این بخش‌ها **خالی** سنجیده می‌شدند —
+        // «۲۸۹ میلی‌ثانیه» گزارش می‌شد در حالی که هیچ ردیفی روی صفحه نبود.
+        // همین بود که کندیِ گزارش‌شدهٔ صاحب ریپو از چشمِ سنجش می‌افتاد.
+        var date = ThisMonth + "/" + ((i % 28) + 1).ToString("00");
+        ins.Set("DateShamsi", date);
+        ins.Set("DateKey", PumpYaqobi.Application.Localization.Shamsi.Key(date));
+        ins.Set("MonthKey", ThisMonth);
         ins.Set("Name", "قلمِ " + i);
         ins.Set("Title", "قلمِ " + i);
         ins.Set("Note", "");

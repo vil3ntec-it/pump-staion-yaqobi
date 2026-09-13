@@ -49,6 +49,11 @@ internal static class Program
         //     dotnet run --project PumpYaqobi.UiTests -- dialogs
         // چرایی‌اش در ‎DialogAudit‎ نوشته شده: تنها مسیری که هیچ سنجشی نداشت.
         if (outDir.Equals("dialogs", StringComparison.OrdinalIgnoreCase)) return DialogAudit.Run();
+        // ══ حالتِ «چرا این سه بخش دیر باز می‌شوند» ═════════════════════════
+        //     dotnet run --project PumpYaqobi.UiTests -- ledgerperf
+        // گاوصندوق، صرافی و مصارف با دادهٔ واقعاً دیده‌شونده. چرایی‌اش در
+        // ‎LedgerPerf‎ نوشته شده — ‎PerfAudit‎ این سه را **خالی** می‌سنجید.
+        if (outDir.Equals("ledgerperf", StringComparison.OrdinalIgnoreCase)) return LedgerPerf.Run();
         if (outDir.Equals("gridperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Run();
         if (outDir.Equals("cardperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Cards();
 
