@@ -128,5 +128,39 @@ ok(await bot.verifyPassword(PASS, stored), 'رمزِ درست باز می‌کن
 ok(!(await bot.verifyPassword('1234', stored)), 'رمزِ غلط باز نمی‌کند');
 ok(!(await bot.verifyPassword('x', 'not-a-hash')), 'رشتهٔ خراب هم باز نمی‌کند — نه استثنا');
 
+// ── دو در به سرور ─────────────────────────────────────────────────────────
+//
+// ⚠️ چرا این‌جا قفل می‌شود: اپِ کارمند روی گوشیِ کسی است که هیچ‌وقت نمی‌تواند
+// خطای شبکه را برای ما بخواند. اگر نشانی یک نویسه فرق کند، فقط یک صفحهٔ خالی
+// می‌بیند. پس شکلِ هر دو نشانی و هر دو مسیر همین‌جا نوشته و سنجیده می‌شود.
+
+{
+  const d = bot.doorsFor({ srv: 'https://api.example.com', tok: 'k1', stn: 'pump2' });
+
+  ok(d.length === 2, 'دو در دارد: پوشهٔ اختصاصی، و راهِ قدیمی');
+  ok(d[0].name === 'station' && d[1].name === 'legacy', 'اول درِ تازه امتحان می‌شود');
+
+  ok(d[0].url === 'wss://api.example.com/station?station=pump2&token=k1',
+     'درِ تازه: /station با کد و رمزِ همان پمپ');
+  ok(d[0].path === 'live', 'و مسیرش داخلِ پوشهٔ همان پمپ است');
+
+  ok(d[1].url === 'wss://api.example.com/?token=k1', 'درِ قدیمی: همان ریشه با رمز');
+  ok(d[1].path === 'stations/pump2-live', 'و مسیرِ قدیمیِ شاخهٔ مشترک');
+
+  // هر پمپ باید نشانیِ خودش را بگیرد، وگرنه دو پمپ یک دفتر را می‌خوانند
+  const other = bot.doorsFor({ srv: 'https://api.example.com', tok: 'k2', stn: 'pump3' });
+  ok(other[0].url !== d[0].url && other[1].path !== d[1].path,
+     'دو پمپ هرگز به یک نشانی نمی‌روند');
+
+  ok(bot.doorsFor({ srv: 'api.example.com' })[0].url.startsWith('wss://'),
+     'نشانیِ بی‌پیشوند، امن فرض می‌شود');
+  ok(bot.doorsFor({ srv: 'http://192.168.1.9:4700' })[0].url.startsWith('ws://192.168.1.9:4700/station'),
+     'شبکهٔ خانگی با ws:// می‌ماند — wss اجباری آن‌جا اصلاً وصل نمی‌شود');
+  ok(bot.doorsFor({ srv: 'https://x/' })[1].url === 'wss://x',
+     'اسلشِ آخر دو تا نمی‌شود');
+  ok(bot.doorsFor({ srv: 'https://x', tok: 'k' })[0].url.includes('station=pump1'),
+     'کدِ نانوشته یعنی pump1');
+}
+
 console.log(bad ? '\n' + bad + ' آزمون شکست خورد' : '\nهمه درست');
 process.exit(bad ? 1 : 0);

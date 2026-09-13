@@ -378,10 +378,55 @@
   }
 
   // بیرون گذاشتن برای آزمون در Node — در مرورگر بی‌اثر است
+  // ══════════════════════════════════════════════════════════════════════
+  //  دو در به سرور — و چرا هر دو
+  // ══════════════════════════════════════════════════════════════════════
+  //
+  //  ۱) «پوشه»  ‎/station?station=<کد>&token=<رمز>‎ و مسیرِ ‎live‎
+  //     سرورِ به‌روز برای هر پمپ بنزین پوشه و رمزِ جدا دارد. رمزی که در
+  //     کیو‌آرِ کارمند می‌نشیند فقط‌خواندنی است، پس حتی اگر کاغذِ کیو‌آر گم
+  //     شود کسی نمی‌تواند چیزی را عوض کند.
+  //
+  //  ۲) «قدیمی» ‎/?token=<رمز>‎ و مسیرِ ‎stations/<کد>-live‎
+  //     ⚠️ این را برنداریم: سرورِ خانگی‌ای که هنوز به‌روز نشده فقط همین را
+  //     بلد است. روزی که کاربر اپ را تازه کند ولی سرور را نه، بی این،
+  //     همان روز صفحهٔ خالی می‌دید.
+  //
+  //  اول درِ تازه، و اگر نشد درِ قدیمی — تصمیمش در ‎connect()‎ است.
+
+  /** نشانیِ پایه، هر شکلی که نوشته شده باشد ⇒ ‎ws‎/‎wss‎ی درست. */
+  function wsBaseOf(server) {
+    var b = String(server || '').trim().replace(/\/+$/, '');
+    if (/^https:\/\//i.test(b)) b = 'wss://' + b.slice(8);
+    else if (/^http:\/\//i.test(b)) b = 'ws://' + b.slice(7);
+    else if (!/^wss?:\/\//i.test(b)) b = 'wss://' + b;
+    return b;
+  }
+
+  /** هر دو در، به ترتیبِ امتحان. ‎{name, url, path}‎ — رشته، نه تابع. */
+  function doorsFor(c) {
+    var base = wsBaseOf(c && c.srv);
+    var code = String((c && c.stn) || 'pump1').trim() || 'pump1';
+    var tok = String((c && c.tok) || '');
+    return [
+      {
+        name: 'station',
+        url: base + '/station?station=' + encodeURIComponent(code) + '&token=' + encodeURIComponent(tok),
+        path: 'live'
+      },
+      {
+        name: 'legacy',
+        url: base + (tok ? '/?token=' + encodeURIComponent(tok) : ''),
+        path: 'stations/' + code + '-live'
+      }
+    ];
+  }
+
   if (typeof module !== 'undefined' && module.exports)
     module.exports = {
       answer: answer, askedMonth: askedMonth, monthHit: monthHit,
-      norm: norm, num: num, verifyPassword: verifyPassword
+      norm: norm, num: num, verifyPassword: verifyPassword,
+      wsBaseOf: wsBaseOf, doorsFor: doorsFor
     };
 
   if (typeof document === 'undefined') return;   // آزمونِ Node این‌جا می‌ایستد
@@ -421,13 +466,11 @@
     }
   }
 
-  function wsUrl() {
-    var b = String(cfg.srv || '').trim().replace(/\/+$/, '');
-    if (/^https:\/\//i.test(b)) b = 'wss://' + b.slice(8);
-    else if (/^http:\/\//i.test(b)) b = 'ws://' + b.slice(7);
-    else if (!/^wss?:\/\//i.test(b)) b = 'wss://' + b;
-    return b + (cfg.tok ? '/?token=' + encodeURIComponent(cfg.tok) : '');
-  }
+  var door = 0;
+
+  /** نشانیِ همان دری که الان امتحان می‌شود. */
+  function wsUrl() { return doorsFor(cfg)[door % 2].url; }
+  function livePath() { return doorsFor(cfg)[door % 2].path; }
 
   function live(on, text) {
     var dot = $('liveDot'), t = $('liveText');
@@ -444,16 +487,27 @@
     try { ws = new WebSocket(wsUrl()); } catch (e) { schedule(); return; }
 
     ws.onopen = function () {
-      retry = 0;
-      ws.send(JSON.stringify({
-        op: 'sub', subId: 'live', event: 'value',
-        path: 'stations/' + String(cfg.stn || 'pump1').trim() + '-live'
-      }));
+      ws.send(JSON.stringify({ op: 'sub', subId: 'live', event: 'value', path: livePath() }));
     };
     ws.onmessage = function (ev) {
       var m;
       try { m = JSON.parse(ev.data); } catch (e) { return; }
-      if (m.op === 'error') { live(false, 'رمزِ سرور پذیرفته نشد'); return; }
+      if (m.op === 'connected') {
+        // این در جواب داد — تا وقتی کار می‌کند همین بماند
+        retry = 0;
+        return;
+      }
+      if (m.op === 'error') {
+        // ⚠️ شاید فقط این در نبود، نه این‌که رمز غلط باشد: سرورِ قدیمی
+        // ‎/station‎ ندارد و سرورِ تازه پمپِ ناشناس را نمی‌شناسد. درِ بعدی
+        // را امتحان کن و تنها وقتی «رمز غلط» بگو که هر دو رد کرده باشند.
+        door++;
+        live(false, door % 2 === 0
+          ? 'رمزِ سرور پذیرفته نشد — کیو‌آرِ تازه بگیرید'
+          : 'در حالِ امتحانِ راهِ دیگر…');
+        try { ws.close(); } catch (e) { }
+        return;
+      }
       if (m.op === 'event' && m.subId === 'live') {
         if (m.value && typeof m.value === 'object') {
           // ⚠️ عکسِ کهنه هرگز جای تازه را نگیرد

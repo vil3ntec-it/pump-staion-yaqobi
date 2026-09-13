@@ -16,6 +16,11 @@ namespace PumpYaqobi.App.Services;
 ///   • کیو‌آرِ مشتری: دادهٔ <b>یک حساب</b> داخلِ خودِ کد، بی سرور و بی رمز.
 ///   • کیو‌آرِ کارمند: <b>هیچ داده‌ای</b> ندارد، فقط نشانیِ سرور — و خودِ صفحه
 ///     پشتِ رمزِ همین برنامه قفل است.
+///
+/// ⚠️⚠️ رمزی که این‌جا می‌رود <b>رمزِ فقط‌خواندنیِ</b> پمپ است، نه رمزِ
+/// برنامه. این کد روی کاغذ چاپ می‌شود و دستِ چند نفر می‌گردد؛ با رمزِ
+/// نوشتن، همان کاغذ اجازهٔ پاک کردنِ دفترِ پمپ را هم داشت. سرور خودش هم
+/// جلویش را می‌گیرد، ولی اول از همه این‌جا نباید فرستاده شود.
 /// </summary>
 public static class KarLink
 {
@@ -51,10 +56,22 @@ public static class KarLink
         return b + q;
     }
 
-    /// <summary>همان کار، با خواندنِ خودِ تنظیمات.</summary>
-    public static string? Build(AppHost host) => Build(
-        host.Settings.GetString(SettingsKeys.ViewerUrl),
-        HomeLink.Url(host), HomeLink.Token(host), HomeLink.StationCode(host));
+    /// <summary>
+    /// همان کار، با خواندنِ خودِ تنظیمات.
+    ///
+    /// رمزِ فقط‌خواندنی را ترجیح می‌دهد. اگر سرور هنوز به‌روز نشده و چنین
+    /// رمزی نداده، به رمزِ برنامه برمی‌گردد — وگرنه کیو‌آرِ کارمند یک‌شبه از
+    /// کار می‌افتاد و کسی نمی‌فهمید چرا.
+    /// </summary>
+    public static string? Build(AppHost host)
+    {
+        var readKey = HomeLink.ReadKey(host);
+        return Build(
+            host.Settings.GetString(SettingsKeys.ViewerUrl),
+            HomeLink.Url(host),
+            readKey.Length > 0 ? readKey : HomeLink.Token(host),
+            HomeLink.StationCode(host));
+    }
 
     /// <summary>
     /// نشانیِ صفحهٔ اپِ کارمندان — همیشه با ‎https‎ و یک ‎/‎ ته آن.

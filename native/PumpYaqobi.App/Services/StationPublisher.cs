@@ -3,27 +3,36 @@ using System.Text.Json;
 
 namespace PumpYaqobi.App.Services;
 
+/// <summary>یک پیامی که از گوشیِ کارمند/مشتری بالا آمده.</summary>
+/// <param name="Id">شناسهٔ همان پیام روی سرور — برای پاک کردنش.</param>
+/// <param name="Text">خودِ متن.</param>
+/// <param name="From">نامِ فرستنده، اگر گفته باشد.</param>
+/// <param name="Kind">نوعِ پیام — پیش‌فرض ‎note‎.</param>
+/// <param name="At">زمانِ سرور (میلی‌ثانیهٔ یونیکس).</param>
+public sealed record StationNote(string Id, string Text, string From, string Kind, long At);
+
 /// <summary>
 /// ══ انتشارِ زندهٔ برنامه روی سرورِ خانگی ═════════════════════════════════════
 ///
-/// تا امروز سیم کشیده بود ولی برق نداشت: <see cref="HomeSync"/> بود و وصل هم
-/// می‌شد، ولی هیچ داده‌ای منتشر نمی‌شد — پس اپِ کارمندان و ربات هیچ چیزی برای
-/// نشان دادن نداشتند. این کلاس همان برق است.
+///     نیتیو ──set live──▶ پوشهٔ همین پمپ ──sub live──▶ اپِ کارمندان (گوشی)
+///           ◀─sub inbox──                ◀─post inbox─ اندروید · آیفون
 ///
-///     نیتیو ──set──▶ stations/&lt;کد&gt;-live ──▶ اپِ کارمندان (گوشی/شورت‌کات)
+/// ══ چرا پوشهٔ اختصاصی و نه یک شاخهٔ مشترک ═══════════════════════════════════
 ///
-/// ══ چرا ‎-live‎ و نه خودِ ‎stations/&lt;کد&gt;‎ ════════════════════════════════════
+/// تا امروز همه‌چیز روی ‎stations/&lt;کد&gt;-live‎ی دفترِ همه‌کارهٔ سرور می‌نشست، با
+/// یک رمزِ مشترک. یعنی روزی که پمپِ دوم اضافه می‌شد، همان یک رمز دفترِ پمپِ
+/// اول را هم باز می‌کرد. حالا سرور برای هر پمپ پوشه و رمزِ جدا می‌دهد و
+/// مسیرها داخلِ همان پوشه‌اند: <see cref="LivePath"/> و <see cref="InboxPath"/>.
 ///
-/// شاخهٔ ‎stations/&lt;کد&gt;‎ مالِ نسخهٔ وبِ قدیمی است و آن، کلِ شاخه را یک‌جا
-/// ‎set‎ می‌کند. اگر این‌جا هم همان‌جا می‌نوشتیم، هر کدام دیگری را پاک می‌کرد.
-/// شاخهٔ جدا یعنی هیچ‌کدام به آن یکی دست نمی‌زند.
+/// ⚠️ راهِ قدیمی برداشته نشده: سرورِ خانگی‌ای که هنوز به‌روز نشده فقط همان را
+/// بلد است. <see cref="HomeSync"/> خودش اول درِ تازه را می‌زند و اگر نبود
+/// درِ قدیمی را، و این‌جا فقط مسیر را با همان انتخاب هماهنگ می‌کنیم.
 ///
 /// ══ «هر تغییری که در اپ می‌شود در ربات هم باشد» ═══════════════════════════
 ///
 /// بی این‌که حتی یک خط به مسیرهای ذخیرهٔ برنامه اضافه شود: هر
 /// <see cref="Interval"/> یک عکسِ تازه ساخته می‌شود و <b>فقط اگر با عکسِ قبلی
-/// فرق داشته باشد</b> فرستاده می‌شود. پس نه منطقِ ذخیره دست می‌خورد و نه
-/// شبکه بیخود شلوغ می‌شود.
+/// فرق داشته باشد</b> فرستاده می‌شود.
 ///
 /// ⚠️ هیچ خطایی بیرون نمی‌دهد. سرورِ خانگی ممکن است خاموش باشد، اینترنت
 /// نباشد، یا کاربر هنوز وارد نشده باشد — هیچ‌کدام نباید برنامه را بلرزاند.
@@ -33,20 +42,43 @@ public sealed class StationPublisher : IAsyncDisposable
     /// <summary>هر چند وقت یک‌بار دنبالِ تغییر بگردد.</summary>
     public static readonly TimeSpan Interval = TimeSpan.FromSeconds(20);
 
+    /// <summary>عکسِ زنده، داخلِ پوشهٔ اختصاصیِ همین پمپ.</summary>
+    public const string LivePath = "live";
+
+    /// <summary>راهِ برگشت: چیزی که گوشی‌ها بالا می‌فرستند.</summary>
+    public const string InboxPath = "inbox";
+
+    /// <summary>
+    /// وقتی سرور پیدا نشد، هر بیست ثانیه دوباره نگردیم — هر تلاش یک پخشِ
+    /// UDP و یک درخواستِ HTTP است و روی شبکهٔ خاموش فقط نویز می‌سازد.
+    /// </summary>
+    private static readonly TimeSpan EnrollRetry = TimeSpan.FromMinutes(5);
+
     private readonly AppHost _host;
     private readonly HomeSync _sync;
     private readonly Func<string> _stationCode;
     private CancellationTokenSource? _loop;
     private string _lastHash = "";
+    private DateTime _lastEnrollTry = DateTime.MinValue;
+    private bool _inboxWatched;
+
+    /// <summary>پیام‌هایی که از سرور دیده‌ایم — تا یک پیام دو بار خبر ندهد.</summary>
+    private readonly HashSet<string> _seenNotes = new(StringComparer.Ordinal);
 
     public StationPublisher(AppHost host, HomeSync sync, Func<string> stationCode)
     { _host = host; _sync = sync; _stationCode = stationCode; }
 
-    /// <summary>‎stations/&lt;کد&gt;-live‎ — همان جایی که گوشی گوش می‌دهد.</summary>
+    /// <summary>پیامی از گوشی رسید.</summary>
+    public event Action<StationNote>? NoteArrived;
+
+    /// <summary>از کدام در وصل‌ایم — برای صفحهٔ تنظیمات.</summary>
+    public HomeSyncMode Mode => _sync.Mode;
+
+    /// <summary>‎stations/&lt;کد&gt;-live‎ — مسیرِ سرورهای به‌روزنشده.</summary>
     public static string PathOf(string? stationCode)
     {
         var code = (stationCode ?? "").Trim();
-        if (code.Length == 0) code = "pump1";
+        if (code.Length == 0) code = HomeLink.DefaultStationCode;
         return "stations/" + code + "-live";
     }
 
@@ -60,9 +92,10 @@ public sealed class StationPublisher : IAsyncDisposable
     /// </summary>
     public async Task<bool> PublishOnceAsync(bool force = false, CancellationToken ct = default)
     {
-        if (!_sync.Configured) return false;
         try
         {
+            if (!await ReadyAsync(force, ct)) return false;
+
             var snap = await StationSnapshot.BuildAsync(_host, ct);
 
             // ⚠️ ‎seq‎ هر بار عوض می‌شود، پس در محکِ «چیزی عوض شده؟» نمی‌آید —
@@ -70,12 +103,95 @@ public sealed class StationPublisher : IAsyncDisposable
             var hash = HashOf(snap);
             if (!force && hash == _lastHash) return false;
 
-            if (!await _sync.SetAsync(PathOf(_stationCode()), snap, ct)) return false;
+            var path = _sync.Mode == HomeSyncMode.Station ? LivePath : PathOf(_stationCode());
+            if (!await _sync.SetAsync(path, snap, ct)) return false;
             _lastHash = hash;
             return true;
         }
         catch (OperationCanceledException) { throw; }
         catch { return false; }
+    }
+
+    /// <summary>
+    /// «نشانی و رمز داریم و وصل‌ایم؟» — و اگر نه، خودش درستش می‌کند.
+    ///
+    /// این همان «اگر آدرس نداشت، برایش بساز» است: تا سرور پیدا نشود چیزی
+    /// منتشر نمی‌شود، و کاربر هم هیچ‌وقت آدرسی تایپ نمی‌کند.
+    /// </summary>
+    private async Task<bool> ReadyAsync(bool force, CancellationToken ct)
+    {
+        if (!_sync.Configured || _sync.Mode == HomeSyncMode.None)
+        {
+            // روی سرورِ خاموش، هر بیست ثانیه نگردیم
+            var due = DateTime.UtcNow - _lastEnrollTry >= EnrollRetry;
+            if (force || due)
+            {
+                _lastEnrollTry = DateTime.UtcNow;
+                await StationLink.EnsureAsync(_host, ct: ct);
+            }
+            else if (!_sync.Configured)
+            {
+                return false;
+            }
+        }
+
+        if (!await _sync.ConnectAsync(ct)) return false;
+        await WatchInboxAsync(ct);
+        return true;
+    }
+
+    /// <summary>
+    /// گوش دادن به صندوقِ ورودی — یک‌بار، و <see cref="HomeSync"/> خودش با هر
+    /// قطعیِ شبکه از نو می‌گیردش.
+    /// </summary>
+    private async Task WatchInboxAsync(CancellationToken ct)
+    {
+        if (_inboxWatched || _sync.Mode != HomeSyncMode.Station) return;
+        _inboxWatched = await _sync.SubscribeAsync("inbox", InboxPath, OnInbox, ct);
+    }
+
+    /// <summary>
+    /// عکسِ تازهٔ صندوق رسید. سرور کلِ شاخه را می‌فرستد (نه فقط تفاوت را)،
+    /// پس خودمان می‌فهمیم کدام‌ها تازه‌اند.
+    /// </summary>
+    private void OnInbox(JsonElement box)
+    {
+        if (box.ValueKind != JsonValueKind.Object) return;
+        foreach (var note in Notes(box))
+        {
+            if (!_seenNotes.Add(note.Id)) continue;
+            NoteArrived?.Invoke(note);
+            var who = note.From.Length > 0 ? note.From + ": " : "";
+            _host.Toast(who + note.Text, ToastKind.Info);
+        }
+    }
+
+    /// <summary>خواندنِ شاخهٔ صندوق. هر ردیفِ ناشناس بی‌صدا رد می‌شود.</summary>
+    public static IReadOnlyList<StationNote> Notes(JsonElement box)
+    {
+        var list = new List<StationNote>();
+        if (box.ValueKind != JsonValueKind.Object) return list;
+
+        foreach (var row in box.EnumerateObject())
+        {
+            if (row.Value.ValueKind != JsonValueKind.Object) continue;
+            string S(string k) =>
+                row.Value.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";
+            var text = S("text");
+            if (text.Length == 0) continue;
+            var at = row.Value.TryGetProperty("at", out var a) && a.TryGetInt64(out var n) ? n : 0;
+            var kind = S("kind");
+            list.Add(new StationNote(row.Name, text, S("from"), kind.Length > 0 ? kind : "note", at));
+        }
+        list.Sort((x, y) => x.At.CompareTo(y.At));
+        return list;
+    }
+
+    /// <summary>پیامِ خوانده‌شده را از سرور بردار.</summary>
+    public async Task<bool> ClearNoteAsync(string id, CancellationToken ct = default)
+    {
+        if (_sync.Mode != HomeSyncMode.Station || string.IsNullOrWhiteSpace(id)) return false;
+        return await _sync.RemoveAsync(InboxPath + "/" + id, ct);
     }
 
     /// <summary>حلقهٔ پس‌زمینه. صدا زدنش دو بار، یکی بیشتر نمی‌سازد.</summary>
@@ -117,8 +233,11 @@ public sealed class StationPublisher : IAsyncDisposable
     {
         var cts = _loop;
         _loop = null;
-        if (cts is null) return;
-        await cts.CancelAsync();
-        cts.Dispose();
+        if (cts is not null)
+        {
+            await cts.CancelAsync();
+            cts.Dispose();
+        }
+        await _sync.DisposeAsync();
     }
 }

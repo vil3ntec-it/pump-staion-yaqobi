@@ -18,8 +18,22 @@ public sealed class AppSettings
     /// </summary>
     public string ServerUrl { get; set; } = "";
 
-    /// <summary>رمزِ سرورِ خانگی — خالی یعنی سرور رمز نمی‌خواهد.</summary>
+    /// <summary>
+    /// رمزِ همین پمپ روی سرور — همانی که اجازهٔ <b>نوشتن</b> دارد.
+    /// ⚠️ فقط در همین برنامه می‌ماند. در کیو‌آرِ کارمند نمی‌رود.
+    /// </summary>
     public string ServerToken { get; set; } = "";
+
+    /// <summary>
+    /// رمزِ <b>فقط‌خواندنیِ</b> همین پمپ — همانی که در کیو‌آرِ کارمند و اپِ
+    /// اندروید/آیفون می‌نشیند. کیو‌آر روی کاغذ چاپ می‌شود و دستِ چند نفر
+    /// می‌گردد؛ با رمزِ نوشتن، همان کاغذ اجازهٔ پاک کردنِ دفترِ پمپ را هم داشت.
+    /// خالی یعنی سرور هنوز به‌روز نشده و رمزِ خواندن ندارد.
+    /// </summary>
+    public string ServerReadKey { get; set; } = "";
+
+    /// <summary>شناسهٔ سروری که برنامه خودش در شبکه پیدا کرد — فقط برای نمایش.</summary>
+    public string ServerId { get; set; } = "";
 
     /// <summary>
     /// کدِ ایستگاه — همان کلیدی که نسخهٔ وب زیرِ ‎stations/&lt;کد&gt;‎ می‌نویسد.
@@ -27,6 +41,16 @@ public sealed class AppSettings
     /// این برنامه را نمی‌بیند و دو دفترِ جدا می‌شوند.
     /// </summary>
     public string StationCode { get; set; } = "pump1";
+
+    /// <summary>
+    /// ثبتِ خودکار در سرورِ خانگی روشن باشد؟
+    ///
+    /// روشن یعنی: اگر نشانی نداشتیم، برنامه خودش سرور را در شبکهٔ خانگی
+    /// پیدا می‌کند، پوشه و رمزِ همین پمپ را می‌گیرد و می‌نویسدشان. کاربر هیچ
+    /// آدرسی تایپ نمی‌کند. کسی که عمداً «فقط محلی» می‌خواهد، همین را خاموش
+    /// می‌کند و برنامه دیگر دنبالِ هیچ سروری نمی‌گردد.
+    /// </summary>
+    public bool AutoEnroll { get; set; } = true;
     public double WindowWidth { get; set; } = 1440;
     public double WindowHeight { get; set; } = 900;
     public bool WindowMaximized { get; set; } = true;

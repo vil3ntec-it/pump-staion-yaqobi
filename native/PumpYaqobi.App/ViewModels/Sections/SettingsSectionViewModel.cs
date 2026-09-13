@@ -73,6 +73,28 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
     /// <summary>رمزِ سرورِ هم‌گام‌سازی — اگر سرور رمز دارد.</summary>
     [ObservableProperty] private string _syncCode = "";
 
+    // ── وصل شدن به سرور ─────────────────────────────────────────────────────
+    //
+    // خواستهٔ صریحِ صاحب ریپو: «اگه ادرس نداشت با ادرس براش بساز که کار کنه».
+    // پس کاربر معمولاً هیچ‌کدام از کادرهای بالا را دست نمی‌زند: دکمهٔ «پیدا کن
+    // و وصل شو» سرور را در شبکهٔ خانگی می‌یابد، پوشه و رمزِ همین پمپ را
+    // می‌گیرد و هر دو جای تنظیمات را خودش می‌نویسد.
+
+    /// <summary>
+    /// کدِ همین پمپ بنزین. روی سرور یک پوشهٔ کاملاً جدا با همین نام ساخته
+    /// می‌شود، پس دو پمپ نباید کدِ یکسان داشته باشند.
+    /// </summary>
+    [ObservableProperty] private string _stationCode = HomeLink.DefaultStationCode;
+
+    /// <summary>کدِ شش‌رقمیِ پنلِ سرور — فقط وقتی برنامه در شبکهٔ خانگی نیست.</summary>
+    [ObservableProperty] private string _pairPin = "";
+
+    /// <summary>آخرین خبر از وصل شدن — به فارسی، برای خودِ کاربر.</summary>
+    [ObservableProperty] private string _serverStatus = "";
+
+    /// <summary>نشانیِ ‎GET‎ی عکسِ زنده — همان چیزی که در شورت‌کاتِ آیفون می‌گذارید.</summary>
+    [ObservableProperty] private string _shortcutUrl = "";
+
     // ── نرخ‌ها و آستانه‌ها ──────────────────────────────────────────────────
     [ObservableProperty] private string _unionRatePetrol = "";
     [ObservableProperty] private string _unionRateDiesel = "";
@@ -170,6 +192,12 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
         LowStockThreshold = Shamsi.Money(s.GetDecimal(SettingsService.LowStockThreshold, 1000m));
         SelectedTheme = ThemeManager.Current;
 
+        // کدِ پمپ و رمزِ خواندن کنارِ خودِ برنامه می‌نشینند، نه در دیتابیس:
+        // مالِ همین دستگاه‌اند و بکاپِ حساب‌ها نباید ببردشان.
+        var file = AppSettings.Load();
+        StationCode = file.StationCode.Trim().Length > 0 ? file.StationCode.Trim() : HomeLink.DefaultStationCode;
+        RefreshServerLinks();
+
         // ظاهرِ جدول‌ها از فایلِ کنارِ برنامه می‌آید، نه از دیتابیس
         var look = AppSettings.Load();
         _tableReady = false;
@@ -193,6 +221,19 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
         s.Set(SettingsService.ServerUrl, ServerUrl.Trim());
         s.Set(SettingsService.ViewerUrl, ViewerUrl.Trim());
         s.Set(SettingsService.SyncCode, SyncCode.Trim());
+
+        // کدِ پمپ در فایل می‌نشیند — همان‌جایی که ثبتِ خودکار هم می‌خواندش
+        var code = StationCode.Trim();
+        if (code.Length > 0)
+        {
+            var file = AppSettings.Load();
+            if (file.StationCode != code)
+            {
+                file.StationCode = code;
+                file.Save();
+            }
+        }
+
         s.Set(SettingsService.UnionRatePetrol, Shamsi.Num(UnionRatePetrol));
         s.Set(SettingsService.UnionRateDiesel, Shamsi.Num(UnionRateDiesel));
         s.Set(SettingsService.LowStockThreshold, Shamsi.Num(LowStockThreshold));
@@ -247,6 +288,53 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
             + "رمزِ همین برنامه را می‌پرسد. اپ فقط می‌خوانَد — هیچ حسابی را عوض نمی‌کند.");
         StaffStatus = "";
     });
+
+    /// <summary>
+    /// «🔎 سرور را پیدا کن و وصل شو».
+    ///
+    /// همان سه گامِ <see cref="StationLink"/>: پیدا کردنِ سرور در شبکهٔ خانگی،
+    /// گرفتنِ پوشه و رمزِ همین پمپ، و نوشتنِ هر دو جای تنظیمات. اگر برنامه در
+    /// شبکهٔ خانگی نیست، کدِ شش‌رقمیِ پنلِ سرور را در کادرِ کنارش بزنید.
+    /// </summary>
+    [RelayCommand]
+    private Task ConnectServerAsync() => CrashGuard.RunAsync("وصل شدن به سرور", async () =>
+    {
+        ServerStatus = "در حالِ گشتن دنبالِ سرور…";
+
+        // کدِ پمپ باید پیش از ثبت روی دیسک باشد، وگرنه با کدِ قبلی ثبت می‌شود
+        var code = StationCode.Trim();
+        if (code.Length > 0)
+        {
+            var file = AppSettings.Load();
+            if (file.StationCode != code) { file.StationCode = code; file.Save(); }
+        }
+
+        var res = await StationLink.EnsureAsync(_host, PairPin, force: true);
+        if (!res.Ok)
+        {
+            ServerStatus = "❌ " + res.Why;
+            return;
+        }
+
+        PairPin = "";
+        _host.Settings.Invalidate();
+        ServerUrl = _host.Settings.GetString(SettingsService.ServerUrl);
+        SyncCode = _host.Settings.GetString(SettingsService.SyncCode);
+        StationCode = res.Code;
+        RefreshServerLinks();
+
+        var sent = await _host.Publisher.PublishOnceAsync(force: true);
+        ServerStatus = (res.Created ? "✅ پوشهٔ این پمپ روی سرور ساخته شد" : "✅ به پوشهٔ همین پمپ وصل شدیم")
+            + $" — {res.Name} ({res.Code}) روی {res.Url}"
+            + (sent ? "، و عکسِ تازه همین حالا رفت." : ". هنوز چیزی نرفت؛ چند لحظه دیگر خودش می‌فرستد.");
+    });
+
+    /// <summary>نشانی‌هایی که به گوشی‌ها داده می‌شود، از روی تنظیماتِ همین لحظه.</summary>
+    private void RefreshServerLinks()
+    {
+        ShortcutUrl = StationLink.LiveUrl(HomeLink.Url(_host), HomeLink.StationCode(_host), HomeLink.ReadKey(_host))
+                      ?? "";
+    }
 
     /// <summary>
     /// «🚀 همین حالا بفرست» — بی معطلیِ حلقهٔ بیست‌ثانیه‌ای.

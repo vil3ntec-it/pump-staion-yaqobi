@@ -56,6 +56,31 @@
               </StackPanel>
 
               <StackPanel Spacing="5">
+                <TextBlock Text="⛽ کدِ همین پمپ بنزین" Classes="label" />
+                <TextBox Text="{Binding StationCode}" Watermark="pump1"
+                         ToolTip.Tip="روی سرور یک پوشهٔ کاملاً جدا با همین نام ساخته می‌شود. دو پمپ نباید کدِ یکسان داشته باشند." />
+                <TextBlock Classes="muted" TextWrapping="Wrap"
+                           Text="هر پمپ بنزین روی سرور پوشه و رمزِ جدا دارد؛ دادهٔ هیچ پمپی به پمپِ دیگر نمی‌رسد. اگر پمپِ دومی اضافه کردید، فقط کافی است کدش این‌جا فرق داشته باشد." />
+              </StackPanel>
+
+              <!-- ══ «اگر آدرس نداشت، برایش بساز» ═══════════════════════════
+                   دو کادرِ بالا را معمولاً لازم نیست دست بزنید: این دکمه سرور
+                   را در شبکهٔ خانگی پیدا می‌کند، پوشه و رمزِ همین پمپ را
+                   می‌گیرد و خودش هر دو را می‌نویسد. کدِ شش‌رقمی فقط برای وقتی
+                   است که برنامه با سرور روی یک شبکه نیست. -->
+              <StackPanel Spacing="5">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Classes="accent" Content="🔎 سرور را پیدا کن و وصل شو"
+                          Command="{Binding ConnectServerCommand}"
+                          ToolTip.Tip="سرورِ خانگی را خودش در شبکه پیدا می‌کند و نشانی و رمز را می‌نویسد — لازم نیست چیزی تایپ کنید." />
+                  <TextBox Text="{Binding PairPin}" Width="140" Watermark="کدِ شش‌رقمی (اختیاری)"
+                           ToolTip.Tip="فقط اگر برنامه با سرور روی یک شبکه نیست: در پنلِ سرور، بخشِ «پمپ‌بنزین‌ها»، «کدِ جفت‌شدن» بگیرید." />
+                </StackPanel>
+                <TextBlock Text="{Binding ServerStatus}" Classes="muted" TextWrapping="Wrap"
+                           IsVisible="{Binding ServerStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              </StackPanel>
+
+              <StackPanel Spacing="5">
                 <TextBlock Text="🌐 نشانیِ صفحهٔ حساب (برای کیو‌آر)" Classes="label" />
                 <TextBox Text="{Binding ViewerUrl}" Watermark="https://pump.example.com"
                          ToolTip.Tip="جایی که index.html سِرو می‌شود. کیو‌آرِ هر قرض‌دار از این ساخته می‌شود." />
@@ -91,6 +116,15 @@
               </StackPanel>
               <TextBlock Text="{Binding StaffStatus}" Classes="muted" TextWrapping="Wrap"
                          IsVisible="{Binding StaffStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+              <!-- شورت‌کاتِ آیفون وب‌سوکت ندارد؛ یک نشانیِ ساده کارش را
+                   راه می‌اندازد و همان عکسِ زندهٔ همین پمپ را برمی‌گرداند. -->
+              <StackPanel Spacing="5"
+                          IsVisible="{Binding ShortcutUrl, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <TextBlock Text="🍎 نشانیِ شورت‌کاتِ آیفون" Classes="label" />
+                <TextBox Text="{Binding ShortcutUrl}" IsReadOnly="True" TextWrapping="Wrap"
+                         ToolTip.Tip="در شورت‌کاتِ آیفون یک «Get Contents of URL» با همین نشانی بگذارید. رمزِ داخلش فقط‌خواندنی است." />
+              </StackPanel>
             </StackPanel>
           </StackPanel>
         </Border>
