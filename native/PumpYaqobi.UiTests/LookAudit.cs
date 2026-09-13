@@ -75,24 +75,9 @@ internal static class LookAudit
         Seed.Fill(PumpYaqobi.App.Services.AppHost.Current);
 
         var bad = new List<string>();
-
-        // ── شاهد: کشوییِ بیرونِ جدول (قالبِ دست‌نخوردهٔ آوالونیا) ────────────
-        // اگر این هم باز نشود، مشکل از قالبِ ما نیست از بی‌نمایشگر بودن است.
-        Wait(win, vm.GoAsync(vm.Sections.First()));
-        var witness = win.GetVisualDescendants().OfType<ComboBox>()
-                         .FirstOrDefault(c => !c.GetVisualAncestors().OfType<DataGridCell>().Any());
-        if (witness is not null)
-        {
-            witness.IsDropDownOpen = true;
-            for (var k = 0; k < 4; k++) { Dispatcher.UIThread.RunJobs(); Pump(win); }
-            Console.WriteLine($"شاهد (بیرونِ جدول): باز={witness.IsDropDownOpen} "
-                            + $"گزینه={witness.GetVisualDescendants().OfType<ComboBoxItem>().Count()}");
-            witness.IsDropDownOpen = false;
-            Pump(win);
-        }
-
         bad.AddRange(Palette(vm));
         bad.AddRange(Dropdowns(win, vm));
+        bad.AddRange(Overflow(win, vm));
 
         Console.WriteLine();
         if (bad.Count == 0)
@@ -169,11 +154,7 @@ internal static class LookAudit
             Wait(win, vm.GoAsync(sec));
             for (var k = 0; k < 4; k++) { Dispatcher.UIThread.RunJobs(); Pump(win); }
 
-            var host = win.GetVisualDescendants().OfType<ContentControl>()
-                          .FirstOrDefault(c => ReferenceEquals(c.Content, sec));
-            if (host is null) continue;
-
-            foreach (var cell in host.GetVisualDescendants().OfType<DataGridCell>())
+            foreach (var cell in win.GetVisualDescendants().OfType<DataGridCell>())
             {
                 var box = cell.GetVisualDescendants().OfType<ComboBox>().FirstOrDefault();
                 if (box is null || box.Bounds.Width <= 0) continue;
@@ -249,6 +230,92 @@ internal static class LookAudit
         }
 
         return bad;
+    }
+
+    // ══ ۳) محتوای خانه از خانه بیرون نزند ══════════════════════════════════
+    //
+    // گزارشِ صاحب ریپو دربارهٔ ستونِ «نوع تیل»: «هر دو هم جا نمی‌شن … یکی بالا
+    // و یکی پایین هم باشن و اگه طولِ جدول رو بزرگ هم کنه مشکل نیست، هر دو
+    // دیده بشن.» حق داشت: دو کادرِ رادیویی روی هم ۵۰ پیکسل می‌خواستند و ردیفِ
+    // ۴۴ پیکسلی دومی را می‌بُرید — و چون خانه وسط‌چین است، از پایین می‌بُرید،
+    // پس نصفه دیده می‌شد و آدم فکر می‌کرد خراب است.
+    //
+    // این‌جا هر خانهٔ ساخته‌شده سنجیده می‌شود: آن‌چه خانه **می‌خواهد** از آن‌چه
+    // **دارد** بلندتر نباشد.
+
+    private static IEnumerable<string> Overflow(Window win, MainViewModel vm)
+    {
+        var bad = new List<string>();
+        var head = false;
+
+        // ⚠️ صفحهٔ «حسابِ قرض‌دار» بخشِ سرِ خودش نیست — صفحه‌ای است داخلِ
+        // «قرض‌داران» — پس در ‎vm.Sections‎ نمی‌آید و اگر باز نشود، همان ستونِ
+        // «نوع تیل» که گزارش شد اصلاً سنجیده نمی‌شود.
+        foreach (var (id, content) in Targets(win, vm))
+        {
+            // ⚠️ کلِ پنجره را می‌گردیم، نه قابِ همان بخش را: صفحهٔ «حسابِ
+            // قرض‌دار» خودش بخش نیست و ‎ContentControl‎ی که محتوایش با آن
+            // برابر باشد پیدا نمی‌شد، پس همان ستونِ «نوع تیل» که گزارش شده بود
+            // اصلاً سنجیده نمی‌شد. بیرونِ بخش‌ها هم جدولی نیست.
+            var worst = new Dictionary<string, (double want, double have)>();
+            foreach (var cell in win.GetVisualDescendants().OfType<DataGridCell>())
+            {
+                if (cell.Bounds.Height <= 0) continue;
+
+                // ⚠️ ‎DesiredSize‎ این‌جا دروغ می‌گوید: آوالونیا آن را به همان
+                // فضایی که داده شده می‌چسباند، پس محتوایی که بریده شده هم
+                // «دقیقاً به اندازه» گزارش می‌شود. یک دور همین باعث شد سنجش
+                // سبز بدهد در حالی که عکس، نصفهٔ «دیزل» را نشان می‌داد.
+                //
+                // پس به‌جای پرسیدن، **نگاه** می‌کنیم: هر فرزندِ کشیده‌شده کجا
+                // نشسته، نسبت به خودِ خانه.
+                var have = cell.Bounds.Height;
+                var want = have;
+                foreach (var d in cell.GetVisualDescendants().OfType<Control>())
+                {
+                    if (d.Bounds.Height <= 0 || !d.IsVisible) continue;
+                    if (d.TranslatePoint(new Point(0, 0), cell) is not { } at) continue;
+                    want = Math.Max(want, Math.Max(at.Y + d.Bounds.Height, -at.Y + have));
+                }
+                if (want - have <= 1) continue;
+
+                var col = ColumnName(cell);
+                if (!worst.TryGetValue(col, out var w) || want - have > w.want - w.have)
+                    worst[col] = (want, have);
+            }
+
+            foreach (var (col, w) in worst)
+            {
+                if (!head)
+                {
+                    head = true;
+                    Console.WriteLine();
+                    Console.WriteLine("بخش            ستون              می‌خواهد   دارد   سرریز");
+                    Console.WriteLine(new string('-', 62));
+                }
+                Console.WriteLine($"{id,-14} {Cut(col),-17} {w.want,8:0} {w.have,6:0} "
+                                + $"{w.want - w.have,7:0}   ✖");
+                bad.Add($"{id} · خانهٔ «{col}» {w.want - w.have:0} پیکسل از ردیف بیرون می‌زند");
+            }
+        }
+
+        return bad;
+    }
+
+    /// <summary>هر بخش، و بعد صفحهٔ حسابِ نخستین قرض‌دار.</summary>
+    private static IEnumerable<(string Id, object Content)> Targets(Window win, MainViewModel vm)
+    {
+        foreach (var sec in vm.Sections.ToList())
+        {
+            Wait(win, vm.GoAsync(sec));
+            for (var k = 0; k < 4; k++) { Dispatcher.UIThread.RunJobs(); Pump(win); }
+            yield return (sec.Id, sec);
+
+            if (sec is not PumpYaqobi.App.ViewModels.ICardGridHost cards) continue;
+            Wait(win, cards.OpenByNumberAsync(1));
+            for (var k = 0; k < 4; k++) { Dispatcher.UIThread.RunJobs(); Pump(win); }
+            if (sec.ActivePage is { } page) yield return (sec.Id + "/صفحه", page);
+        }
     }
 
     private static string ColumnName(DataGridCell cell)

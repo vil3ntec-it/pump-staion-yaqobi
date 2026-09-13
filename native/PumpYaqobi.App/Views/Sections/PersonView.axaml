@@ -29,9 +29,21 @@
         </WrapPanel.Styles>
         <Button Classes="ghost" Content="قبلی" Command="{Binding PrevPersonCommand}" />
         <Button Classes="ghost" Content="بعدی ←" Command="{Binding NextPersonCommand}" />
-        <Button Classes="ghost info" Content="{Binding Current.ModeToggleText}"
-                Command="{Binding Current.ToggleModeCommand}"
-                ToolTip.Tip="دفترِ پول ⇄ دفترِ تیل — این دو کاملاً جدا هستند" />
+        <!-- ══ واحدِ پول ⇄ واحدِ تیل — دو دکمه، مثلِ سایت ════════════════════
+             پیش از این یک دکمه بود که نوشته‌اش عوض می‌شد، پس همیشه نامِ دفترِ
+             **دیگر** را نشان می‌داد و معلوم نبود الان کدام باز است. -->
+        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+          <Button Classes="seg" Content="واحد پول"
+                  Command="{Binding Current.SetUnitCommand}" CommandParameter="money"
+                  ToolTip.Tip="دفترِ پول — از دفترِ تیل کاملاً جداست">
+            <Classes.active><Binding Path="Current.IsMoney" /></Classes.active>
+          </Button>
+          <Button Classes="seg" Content="واحد تیل"
+                  Command="{Binding Current.SetUnitCommand}" CommandParameter="fuel"
+                  ToolTip.Tip="دفترِ تیل — از دفترِ پول کاملاً جداست">
+            <Classes.active><Binding Path="Current.IsFuelUnit" /></Classes.active>
+          </Button>
+        </StackPanel>
         <Button Classes="ghost info" Content="PDF" Command="{Binding PdfCommand}" />
         <!-- «📲 کیو‌آر» — در سایت داخلِ کشوییِ «⋯ بیشتر» است و در نیتیو اصلاً
              نبود: نه کیو‌آری ساخته می‌شد و نه دیده می‌شد. -->
@@ -134,8 +146,7 @@
              می‌افتد — یعنی همان‌جایی که در سایت هست. -->
         <!-- در فیلترِ دیزل این کارت دیده نمی‌شود، مثلِ سایت -->
         <Border Grid.Row="0" Classes="panel" Padding="14,10"
-                IsVisible="{Binding ShowPetrolCard}"
-                BorderBrush="{DynamicResource Pump.Ok}" BorderThickness="2">
+                IsVisible="{Binding ShowPetrolCard}">
           <Grid ColumnDefinitions="Auto,10,*">
             <Border Grid.Column="0" Classes="fshead"
                     BorderBrush="{DynamicResource Pump.Ok}">
@@ -147,7 +158,7 @@
                 <!-- فیصدی داخلِ خودِ برچسب می‌نشیند، مثلِ سایت:
                      setL('pm-p-comm-l', 'فیصدی ما (' + n2fa(rnd(pctP)) + '٪)') -->
                 <TextBlock Text="{Binding HeadPetrolPercentLabel}" Classes="fsl" />
-                <TextBlock Text="{Binding HeadPetrolPercentText}" Classes="fsv"
+                <TextBlock Text="{Binding HeadPetrolPercentValue}" Classes="fsv"
                            Foreground="{DynamicResource Pump.Info}" />
               </StackPanel>
               <StackPanel Spacing="2">
@@ -174,8 +185,7 @@
 
         <!-- ══ 🟤 حساب دیزل — همان چیدمان، همان اندازه‌ها ══════════════════ -->
         <Border Grid.Row="2" Classes="panel" Padding="14,10"
-                IsVisible="{Binding ShowDieselCard}"
-                BorderBrush="{DynamicResource Pump.Warn}" BorderThickness="2">
+                IsVisible="{Binding ShowDieselCard}">
           <Grid ColumnDefinitions="Auto,10,*">
             <Border Grid.Column="0" Classes="fshead"
                     BorderBrush="{DynamicResource Pump.Warn}">
@@ -185,7 +195,7 @@
             <UniformGrid Grid.Column="2" Rows="1">
               <StackPanel Spacing="2">
                 <TextBlock Text="{Binding HeadDieselPercentLabel}" Classes="fsl" />
-                <TextBlock Text="{Binding HeadDieselPercentText}" Classes="fsv"
+                <TextBlock Text="{Binding HeadDieselPercentValue}" Classes="fsv"
                            Foreground="{DynamicResource Pump.Info}" />
               </StackPanel>
               <StackPanel Spacing="2">
@@ -298,15 +308,23 @@
           <!-- ══ سه دکمهٔ فیلتر — ‎setPersonFilter()‎ی سایت ═════════════════
                در برنامهٔ نیتیو اصلاً نبودند، یعنی راهی نبود که فقط ردیف‌های یک
                تیل را ببینی. ⚠️ فیلتر هیچ ردیفی را پاک نمی‌کند؛ فقط دیده‌شدن. -->
-          <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-            <Button Classes="ghost" Content="همه"
-                    Command="{Binding Current.SetFilterCommand}" CommandParameter="all" />
-            <Button Classes="ghost" Content="⛽ حساب پطرول"
-                    Foreground="{DynamicResource Pump.Ok}"
-                    Command="{Binding Current.SetFilterCommand}" CommandParameter="petrol" />
-            <Button Classes="ghost" Content="🟤 حساب دیزل"
-                    Foreground="{DynamicResource Pump.Warn}"
-                    Command="{Binding Current.SetFilterCommand}" CommandParameter="diesel" />
+          <!-- ⚠️ نوشته کوتاه شد و حالت پیدا کرد. پیش از این «⛽ حساب پطرول» و
+               «🟤 حساب دیزل» بودند — سه کلمه به‌جای یکی — و هیچ‌کدام نشان
+               نمی‌داد کدام فیلتر روشن است. سایت همان‌جا فقط «همه | پطرول |
+               دیزل» دارد و انتخاب‌شده پررنگ می‌ماند. -->
+          <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+            <Button Classes="seg" Content="همه"
+                    Command="{Binding Current.SetFilterCommand}" CommandParameter="all">
+              <Classes.active><Binding Path="Current.IsFilterAll" /></Classes.active>
+            </Button>
+            <Button Classes="seg" Content="پطرول"
+                    Command="{Binding Current.SetFilterCommand}" CommandParameter="petrol">
+              <Classes.active><Binding Path="Current.IsFilterPetrol" /></Classes.active>
+            </Button>
+            <Button Classes="seg" Content="دیزل"
+                    Command="{Binding Current.SetFilterCommand}" CommandParameter="diesel">
+              <Classes.active><Binding Path="Current.IsFilterDiesel" /></Classes.active>
+            </Button>
           </StackPanel>
 
           <Border Classes="sep" />
@@ -476,8 +494,14 @@
       </Border>
 
       <!-- دفترِ حسابِ باز -->
+      <!-- ⚠️ ردیفِ بلندتر از ۴۴ی همیشگی — عمدی. ستونِ «نوع تیل» دو کادرِ
+           رادیویی روی هم دارد (پطرول بالا، دیزل پایین) و در ۴۴ پیکسل دومی
+           بریده می‌شد. گزارشِ صاحب ریپو: «هر دو هم جا نمی‌شن … یکی بالا و یکی
+           پایین هم باشن و اگه طولِ جدول رو بزرگ هم کنه مشکل نیست، هر دو دیده
+           بشن.» -->
       <c:ExcelGrid Grid.Row="2" Name="PersonGrid" ItemsSource="{Binding Current.Rows}"
-                   GrowsOnEnter="True" x:CompileBindings="False">
+                   GrowsOnEnter="True" x:CompileBindings="False" RowHeight="64"
+                  RowDeleteCommand="{Binding $parent[UserControl].DataContext.Current.DeleteRowCommand}">
         <DataGrid.Columns>
           <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
           <DataGridTextColumn Header="نام"   Binding="{Binding Name}" Width="Auto" MinWidth="150" MaxWidth="320" />
@@ -501,20 +525,28 @@
           <DataGridTemplateColumn Header="نوع تیل" Width="Auto">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
-                <StackPanel Spacing="3" Margin="3" MinWidth="74"
+                <StackPanel Spacing="2" Margin="2" MinWidth="70"
                             HorizontalAlignment="Center" VerticalAlignment="Center">
                   <StackPanel.Styles>
+                    <!-- ⚠️ کوچک و جمع، وگرنه دو تایشان در ردیف جا نمی‌شوند —
+                         همان چیزی که گزارش شد: «هر دو هم جا نمی‌شن». -->
+                    <!-- ⚠️ ‎Height‎ی صریح، نه فقط ‎MinHeight="0"‎: قالبِ ‎Fluent‎
+                         بلندیِ ۳۲ را روی ‎Grid‎ی **داخلِ** قالب می‌گذارد و از
+                         ‎MinHeight‎ی خودِ کنترل دست‌یافتنی نیست. با ۳۲، دوتایشان
+                         ۷۲ پیکسل می‌خواستند و ردیف ۵۲ داشت — سنجشِ ‎look‎ همین
+                         ۲۰ پیکسل سرریز را گرفت. -->
                     <Style Selector="RadioButton">
-                      <Setter Property="FontSize" Value="14" />
+                      <Setter Property="FontSize" Value="13" />
                       <Setter Property="FontWeight" Value="Bold" />
                       <Setter Property="MinHeight" Value="0" />
-                      <Setter Property="Padding" Value="7,3" />
+                      <Setter Property="Height" Value="21" />
+                      <Setter Property="Padding" Value="4,0" />
                     </Style>
                   </StackPanel.Styles>
-                  <RadioButton GroupName="{Binding FuelGroup}" Content="⛽ پطرول"
+                  <RadioButton GroupName="{Binding FuelGroup}" Content="پطرول"
                                Foreground="{DynamicResource Pump.Ok}"
                                IsChecked="{Binding IsPetrol}" />
-                  <RadioButton GroupName="{Binding FuelGroup}" Content="🟤 دیزل"
+                  <RadioButton GroupName="{Binding FuelGroup}" Content="دیزل"
                                Foreground="{DynamicResource Pump.Warn}"
                                IsChecked="{Binding IsDiesel}" />
                 </StackPanel>
@@ -560,15 +592,6 @@
                               CellStyleClasses="num" />
           <DataGridTextColumn Header="الباقی" Binding="{Binding AlbaqiText}" Width="Auto"
                               IsReadOnly="True" />
-          <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"
-                        Command="{Binding $parent[UserControl].DataContext.Current.DeleteRowCommand}"
-                        CommandParameter="{Binding}" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
         </DataGrid.Columns>
       </c:ExcelGrid>
 

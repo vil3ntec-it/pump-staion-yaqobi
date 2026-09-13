@@ -255,6 +255,40 @@
     <Setter Property="Background" Value="{DynamicResource Pump.AccentGrad}" />
   </Style>
 
+  <!-- ══ دکمه‌های «یکی از چند تا» — همان رادیوییِ سایت ═══════════════════════
+       گزارشِ صاحب ریپو: «مثلِ اون دکمهٔ رادیو باشه که یکی انتخاب بشه.»
+
+       در سایت ‎همه │ پطرول │ دیزل‎ یک گروهِ رادیویی است و انتخاب‌شده پررنگ
+       می‌ماند. در برنامه هر سه دکمهٔ ساده بودند و هیچ‌کدام نشان نمی‌داد کدام
+       فعال است — آدم نمی‌فهمید فیلتر روشن است یا نه.
+
+       ‎ToggleButton‎ نشد چون هر سه باید هم‌زمان یک حالت داشته باشند و حالت
+       در ویومدل است (‎IsFilterAll/Petrol/Diesel‎)؛ پس دکمهٔ معمولی با کلاسِ
+       ‎active‎ که از همان ویومدل بسته می‌شود. -->
+  <Style Selector="Button.seg">
+    <Setter Property="Padding" Value="13,5" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Border}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
+  </Style>
+  <Style Selector="Button.seg /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.seg:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Pump.Hover}" />
+  </Style>
+  <Style Selector="Button.seg.active">
+    <Setter Property="Foreground" Value="{DynamicResource Pump.OnAccent}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Accent}" />
+  </Style>
+  <Style Selector="Button.seg.active /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Pump.Accent}" />
+  </Style>
+
   <!-- ══ کپسول‌های سربرگ ══════════════════════════════════════════════════
        ‎.role-badge‎ و ‎#lockBtn‎ در نسخهٔ وب هر دو ‎border-radius:999px‎ اند و
        اندازه‌گیری‌شان ۶۳×۳۰ و ۶۵×۴۰ در می‌آید. شعاعِ بزرگ در Avalonia همان
@@ -364,10 +398,22 @@
   <!-- دکمهٔ درونِ خانهٔ جدول (حذف، ثبت، …) وسطِ خانه بنشیند و از آن بیرون
        نزند. پیش از این دکمهٔ «حذف» از لبهٔ جدول بیرون می‌افتاد و روی خطِ
        کادر می‌نشست — در هر جدولی که ستونِ حذف داشت. -->
+  <!-- ⚠️ ‎MinHeight="0"‎ هم لازم است، نه فقط وسط‌چینی: پیش‌فرضِ ۳۲ی دکمه با
+       بالشتکِ خودش ۴۴ پیکسل می‌خواست و ردیفِ جدول ۳۶ پیکسل جا داشت، پس دکمه
+       از بالا و پایین بریده می‌شد. سنجشِ ‎look‎ همین را در «رسید قرض‌داران»
+       گرفت. همین برای چک‌باکس هم هست (ستونِ «دفتر برابر شود» در مخزن). -->
   <Style Selector="DataGridCell Button">
     <Setter Property="HorizontalAlignment" Value="Center" />
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="Margin" Value="2,0" />
+    <Setter Property="MinHeight" Value="0" />
+  </Style>
+  <Style Selector="DataGridCell CheckBox">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Height" Value="24" />
+    <Setter Property="Padding" Value="0" />
   </Style>
   <!-- ══ نشانگرِ ماوس روی جدول: «به‌علاوه»ی اکسل ═══════════════════════════
        گزارشِ صاحب ریپو: «ماوس هم باید شکلِ مثبت می‌داشت، اگر جست‌وجو بکنی تو
@@ -682,9 +728,9 @@
        FontSize="14"‎ می‌نوشت — یازده جا، و هر یازده‌تا نوشته را یک درجه
        کوچک‌تر از کادرهای تایپیِ همان ردیف می‌کرد. حالا یک کلاس، یک جا. -->
   <Style Selector="ComboBox.incell">
-    <Setter Property="Margin" Value="4,1" />
+    <Setter Property="Margin" Value="4,0" />
     <Setter Property="MinHeight" Value="0" />
-    <Setter Property="Padding" Value="7,2" />
+    <Setter Property="Padding" Value="7,0" />
     <Setter Property="FontSize" Value="17" />
   </Style>
 

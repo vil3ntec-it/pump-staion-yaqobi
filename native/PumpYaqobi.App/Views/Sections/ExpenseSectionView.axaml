@@ -64,21 +64,13 @@
 
     <!-- جدول + ردیفِ «جمله»ی ته آن — همتای ‎<tfoot class="xls-foot">‎ی سایت -->
     <Grid RowDefinitions="*,Auto">
-    <c:ExcelGrid Grid.Row="0" ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False">
+    <c:ExcelGrid Grid.Row="0" ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False"
+                RowDeleteCommand="{Binding $parent[UserControl].DataContext.DeleteRowCommand}">
       <DataGrid.Columns>
         <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
         <DataGridTextColumn Header="عنوان" Binding="{Binding Title}" Width="Auto" MinWidth="150" MaxWidth="320" />
         <DataGridTextColumn Header="مبلغ"  Binding="{Binding AmountText}" Width="Auto" />
         <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="Auto" />
-        <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
-          <DataGridTemplateColumn.CellTemplate>
-            <DataTemplate>
-              <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"
-                      Command="{Binding $parent[UserControl].DataContext.DeleteRowCommand}"
-                      CommandParameter="{Binding}" />
-            </DataTemplate>
-          </DataGridTemplateColumn.CellTemplate>
-        </DataGridTemplateColumn>
       </DataGrid.Columns>
     </c:ExcelGrid>
     <c:TotalsBar Grid.Row="1" ItemsSource="{Binding TotalCells}" IsVisible="{Binding HasTotals}" />

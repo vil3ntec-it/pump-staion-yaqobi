@@ -547,6 +547,45 @@ public class ExcelGrid : DataGrid
         set => SetValue(RowNumbersProperty, value);
     }
 
+    /// <summary>
+    /// ══ حذفِ یک ردیف، بی ستونِ «حذف» ════════════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «اون دکمهٔ حذف بشه، دیده نشه … اون دیده بشه خیلی
+    /// جدول رو هم بزرگ می‌کنه.» حق داشت — یک ستونِ کاملِ ۵۰ پیکسلی در **سیزده**
+    /// جدول، فقط برای دکمه‌ای که به‌ندرت زده می‌شود، و در جدول‌های سایت هم اصلاً
+    /// وجود ندارد.
+    ///
+    /// ولی «دیده نشود» نباید یعنی «نشود». پس کار همان‌جا ماند و فقط از دید
+    /// رفت: راست‌کلیک روی ردیف ⇒ «حذفِ این ردیف». جدولی که این را ببندد،
+    /// منویی هم نمی‌گیرد.
+    ///
+    /// ⚠️ ‎CommandParameter‎ خودِ ویومدلِ همان ردیف است، همان چیزی که ستونِ حذف
+    /// هم می‌فرستاد — پس هیچ ویومدلی عوض نشد.
+    /// </summary>
+    public static readonly StyledProperty<System.Windows.Input.ICommand?> RowDeleteCommandProperty =
+        AvaloniaProperty.Register<ExcelGrid, System.Windows.Input.ICommand?>(nameof(RowDeleteCommand));
+
+    public System.Windows.Input.ICommand? RowDeleteCommand
+    {
+        get => GetValue(RowDeleteCommandProperty);
+        set => SetValue(RowDeleteCommandProperty, value);
+    }
+
+    /// <summary>منوی راست‌کلیکِ ردیف — فقط وقتی فرمانِ حذف داده شده باشد.</summary>
+    private void OnRowMenu(object? sender, DataGridRowEventArgs e)
+    {
+        if (RowDeleteCommand is null) { e.Row.ContextFlyout = null; return; }
+
+        var item = new MenuItem { Header = "🗑 حذفِ این ردیف" };
+        item.Bind(MenuItem.CommandProperty,
+                  this.GetObservable(RowDeleteCommandProperty));
+        item.CommandParameter = e.Row.DataContext;
+
+        // ⚠️ ردیف‌ها بازچرخانی می‌شوند (مجازی‌سازی)، پس منو هم باید هر بار از
+        // نو ساخته شود؛ نگه داشتنِ یک منوی مشترک، ردیفِ اشتباه را حذف می‌کرد.
+        e.Row.ContextFlyout = new MenuFlyout { ItemsSource = new[] { item } };
+    }
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
@@ -626,6 +665,9 @@ public class ExcelGrid : DataGrid
             LoadingRow -= OnNumberRow;
             LoadingRow += OnNumberRow;
         }
+
+        LoadingRow -= OnRowMenu;
+        LoadingRow += OnRowMenu;
     }
 
     /// <summary>

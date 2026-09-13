@@ -93,9 +93,15 @@ public class TotalsRowTests
     public void FuelTypeIsRadioButtons()
     {
         var v = View("PersonView");
-        Assert.Contains("<RadioButton GroupName=\"{Binding FuelGroup}\" Content=\"⛽ پطرول\"", v);
-        Assert.Contains("<RadioButton GroupName=\"{Binding FuelGroup}\" Content=\"🟤 دیزل\"", v);
+        // ⚠️ نوشته کوتاه شد («⛽ پطرول» ⇐ «پطرول») و بلندی صریح گرفت: خواستهٔ
+        // صاحب ریپو «کوچیک و با مفهوم و بدون گرفتنِ جای زیاد» بود و بی بلندیِ
+        // صریح، قالبِ ‎Fluent‎ هر رادیو را ۳۲ پیکسل می‌کرد و دوتایشان در ردیف
+        // جا نمی‌شدند — همان «هر دو هم جا نمی‌شن»ی گزارش‌شده.
+        Assert.Contains("<RadioButton GroupName=\"{Binding FuelGroup}\" Content=\"پطرول\"", v);
+        Assert.Contains("<RadioButton GroupName=\"{Binding FuelGroup}\" Content=\"دیزل\"", v);
         Assert.DoesNotContain("GroupName=\"rowFuel\"", v);
+        Assert.Contains("<Setter Property=\"Height\" Value=\"21\" />", v);
+        Assert.Contains("RowHeight=\"64\"", v);
 
         var vm = File.ReadAllText(Path.Combine(
             Root, "PumpYaqobi.App", "ViewModels", "Sections", "PersonViewModel.cs"));
@@ -156,8 +162,13 @@ public class TotalsRowTests
         Assert.DoesNotContain("رسیدِ پولِ پطرول", v);
         Assert.DoesNotContain("<CheckBox Content=\"واحدِ پول\"", v);
 
-        // به‌جایش: دکمهٔ دفتر در سربرگ، و فیصدیِ بسته‌شونده
-        Assert.Contains("ModeToggleText", v);
+        // به‌جایش: دو دکمهٔ «واحد پول | واحد تیل» در سربرگ، و فیصدیِ بسته‌شونده.
+        // ⚠️ یک دکمهٔ ‎ModeToggleText‎ی که نوشته‌اش عوض می‌شد، همیشه نامِ دفترِ
+        // **دیگر** را نشان می‌داد و معلوم نبود الان کدام باز است. سایت دو دکمهٔ
+        // رادیویی دارد و صاحب ریپو همان را خواست.
+        Assert.Contains("SetUnitCommand", v);
+        Assert.Contains("واحد پول", v);
+        Assert.Contains("واحد تیل", v);
         Assert.Contains("IsVisible=\"{Binding IsPercentOpen}\"", v);
         Assert.Contains("TogglePercentCommand", v);
     }

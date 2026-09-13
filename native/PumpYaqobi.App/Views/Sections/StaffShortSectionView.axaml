@@ -114,7 +114,8 @@
                        Foreground="{DynamicResource Pump.Accent}" />
           </Border>
           <c:ExcelGrid Grid.Row="1" ItemsSource="{Binding Settles}" x:CompileBindings="False"
-                       IsReadOnly="True" BorderThickness="0" CornerRadius="0">
+                       IsReadOnly="True" BorderThickness="0" CornerRadius="0"
+                      RowDeleteCommand="{Binding $parent[UserControl].DataContext.DeleteSettleCommand}">
             <DataGrid.Columns>
               <DataGridTextColumn Header="کارمند" Binding="{Binding Name}" Width="Auto" MinWidth="150" MaxWidth="320" />
               <DataGridTemplateColumn Header="نوع" Width="Auto">
@@ -127,15 +128,6 @@
               </DataGridTemplateColumn>
               <DataGridTextColumn Header="مبلغ" Binding="{Binding AmountText}" Width="Auto" />
               <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
-              <DataGridTemplateColumn Header="" Width="Auto">
-                <DataGridTemplateColumn.CellTemplate>
-                  <DataTemplate>
-                    <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"
-                            Command="{Binding $parent[UserControl].DataContext.DeleteSettleCommand}"
-                            CommandParameter="{Binding}" />
-                  </DataTemplate>
-                </DataGridTemplateColumn.CellTemplate>
-              </DataGridTemplateColumn>
             </DataGrid.Columns>
           </c:ExcelGrid>
         </Grid>

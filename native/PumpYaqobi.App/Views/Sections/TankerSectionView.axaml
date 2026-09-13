@@ -62,7 +62,8 @@
           </Border>
 
           <c:ExcelGrid Grid.Row="1" ItemsSource="{Binding Rows}" x:CompileBindings="False"
-                       IsReadOnly="True" BorderThickness="0" CornerRadius="0">
+                       IsReadOnly="True" BorderThickness="0" CornerRadius="0"
+                      RowDeleteCommand="{Binding $parent[UserControl].DataContext.DeleteCommand}">
             <DataGrid.Columns>
               <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" />
               <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
@@ -79,15 +80,6 @@
               </DataGridTemplateColumn>
               <DataGridTextColumn Header="راننده" Binding="{Binding Driver}" Width="Auto" />
               <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="Auto" MinWidth="150" MaxWidth="320" />
-              <DataGridTemplateColumn Header="" Width="Auto">
-                <DataGridTemplateColumn.CellTemplate>
-                  <DataTemplate>
-                    <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"
-                            Command="{Binding $parent[UserControl].DataContext.DeleteCommand}"
-                            CommandParameter="{Binding}" />
-                  </DataTemplate>
-                </DataGridTemplateColumn.CellTemplate>
-              </DataGridTemplateColumn>
             </DataGrid.Columns>
           </c:ExcelGrid>
 

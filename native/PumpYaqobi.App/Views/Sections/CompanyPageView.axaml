@@ -51,7 +51,8 @@
 
     <!-- جدول + ردیفِ «جمله»ی همین دفتر (پطرول و دیزل جدا) -->
     <Grid RowDefinitions="*,Auto">
-    <c:ExcelGrid Grid.Row="0" ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False">
+    <c:ExcelGrid Grid.Row="0" ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False"
+                RowDeleteCommand="{Binding $parent[UserControl].DataContext.DeleteRowCommand}">
       <DataGrid.Columns>
         <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
         <DataGridTextColumn Header="شرح"   Binding="{Binding Name}" Width="Auto" MinWidth="150" MaxWidth="320" />
@@ -79,15 +80,6 @@
         </DataGridTemplateColumn>
         <DataGridTextColumn Header="الباقیِ افغانی" Binding="{Binding AlbaqiAfnText}" Width="Auto" IsReadOnly="True" />
         <DataGridTextColumn Header="الباقیِ دالر"  Binding="{Binding AlbaqiUsdText}" Width="Auto" IsReadOnly="True" />
-        <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
-          <DataGridTemplateColumn.CellTemplate>
-            <DataTemplate>
-              <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"
-                      Command="{Binding $parent[UserControl].DataContext.DeleteRowCommand}"
-                      CommandParameter="{Binding}" />
-            </DataTemplate>
-          </DataGridTemplateColumn.CellTemplate>
-        </DataGridTemplateColumn>
       </DataGrid.Columns>
     </c:ExcelGrid>
     <c:TotalsBar Grid.Row="1" ItemsSource="{Binding TotalCells}" />

@@ -481,13 +481,41 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     // پیش از این نیتیو هر سه را ثابت نوشته بود، پس در دفترِ پول هم «تیل»
     // می‌گفت و فیصدی داخلِ برچسب نبود.
 
-    public string HeadRasidLabel => IsMoney ? "مقدار رسید پول" : "مقدار رسید تیل";
-    public string HeadAlbaqiLabel => IsMoney ? "الباقی پول" : "الباقی تیل";
-    public string HeadPetrolPercentLabel => "فیصدی ما (" + HeadPetrolPercentText + "٪)";
-    public string HeadDieselPercentLabel => "فیصدی ما (" + HeadDieselPercentText + "٪)";
+    // ⚠️ و بعد صاحب ریپو با عکسِ خودِ سایت گفت: «نوشته‌های اضافه نباشه داخلش …
+    // کوچیک و با مفهوم و بدون گرفتنِ جای زیاد». حق داشت و عکس هم همین را نشان
+    // می‌داد: سایت **امروز** «فیصدی / رسید قبلی / برد / الباقی» می‌نویسد، نه
+    // آن نام‌های بلندِ داخلِ شناسه‌ها. «پول» و «تیل» هم لازم نیست — خودِ دکمهٔ
+    // «واحدِ پول ⇄ واحدِ تیل» بالای صفحه می‌گوید در کدام دفتریم.
+    public string HeadRasidLabel => "رسید قبلی";
+    public string HeadAlbaqiLabel => "الباقی";
+    public string HeadPetrolPercentLabel => "فیصدی";
+    public string HeadDieselPercentLabel => "فیصدی";
+
+    /// <summary>عددِ فیصدی با نشانِ درصد — در سایت مقدار است، نه برچسب.</summary>
+    public string HeadPetrolPercentValue => HeadPetrolPercentText + "٪";
+    public string HeadDieselPercentValue => HeadDieselPercentText + "٪";
 
     /// <summary>نوشتهٔ دکمهٔ تعویضِ دفتر — همتای ‎#pm-mode-btn‎ی سایت.</summary>
     public string ModeToggleText => IsMoney ? "🔁 تیل" : "🔁 پول";
+
+    /// <summary>
+    /// ══ «واحدِ پول» و «واحدِ تیل» — دو دکمه، نه یکی ═════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو با عکسِ سایت: «بالا رو ببین، واحد تیل و پول هم خیلی
+    /// خوب در اومدن — می‌خام این جزئیات رو دقیق درست کنی.»
+    ///
+    /// در برنامه یک دکمهٔ «🔁 پول» بود که نوشته‌اش عوض می‌شد، یعنی همیشه نامِ
+    /// دفترِ **دیگر** را نشان می‌داد. آدم نمی‌توانست بگوید الان کجاست. سایت دو
+    /// دکمهٔ کنارِ هم دارد و آن که فعال است پررنگ می‌ماند — همان رادیو.
+    /// </summary>
+    public bool IsFuelUnit => !IsMoney;
+
+    [RelayCommand]
+    private void SetUnit(string? which)
+    {
+        var money = which == "money";
+        if (IsMoney != money) IsMoney = money;
+    }
 
     /// <summary>
     /// کادرهای فیصدی باز است یا نه.
@@ -883,7 +911,8 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
             // نباشند، در دفترِ پول همچنان «تیل» می‌نویسند.
             nameof(HeadRasidLabel), nameof(HeadAlbaqiLabel),
             nameof(HeadPetrolPercentLabel), nameof(HeadDieselPercentLabel),
-            nameof(ModeToggleText),
+            nameof(HeadPetrolPercentValue), nameof(HeadDieselPercentValue),
+            nameof(ModeToggleText), nameof(IsFuelUnit),
         })
             OnPropertyChanged(n);
     }

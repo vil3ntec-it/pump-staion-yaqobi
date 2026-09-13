@@ -257,7 +257,8 @@
             </StackPanel>
 
             <c:ExcelGrid Grid.Row="2" ItemsSource="{Binding Dips}" x:CompileBindings="False"
-                         BorderThickness="0" CornerRadius="0">
+                         BorderThickness="0" CornerRadius="0"
+                        RowDeleteCommand="{Binding $parent[UserControl].DataContext.DeleteDipCommand}">
               <DataGrid.Columns>
                 <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
                 <DataGridTextColumn Header="اندازهٔ واقعی" Binding="{Binding MeasuredText}" Width="Auto" />
@@ -266,15 +267,6 @@
                 <DataGridCheckBoxColumn Header="دفتر برابر شود" Binding="{Binding ApplyToBook}" Width="Auto" />
                 <DataGridTextColumn Header="رفته به دفتر" Binding="{Binding BookAdjustText}" Width="Auto" IsReadOnly="True" />
                 <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="Auto" MinWidth="150" MaxWidth="320" />
-                <DataGridTemplateColumn Header="" Width="Auto">
-                  <DataGridTemplateColumn.CellTemplate>
-                    <DataTemplate>
-                      <Button Classes="ghost danger" Content="حذف" Padding="8,3" FontSize="11"
-                              Command="{Binding $parent[UserControl].DataContext.DeleteDipCommand}"
-                              CommandParameter="{Binding}" />
-                    </DataTemplate>
-                  </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
               </DataGrid.Columns>
             </c:ExcelGrid>
 
