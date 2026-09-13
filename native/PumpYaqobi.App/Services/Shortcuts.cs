@@ -113,6 +113,22 @@ public sealed class ShortcutService
         var shift = mods.HasFlag(KeyModifiers.Shift);
         var alt = mods.HasFlag(KeyModifiers.Alt);
 
+        // ══ Ctrl+K → ماشین‌حسابِ شناور ═════════════════════════════════════
+        // «داینامیک» یعنی هر جای برنامه که هستی همان‌جا باز شود؛ پس میانبرش
+        // هم مثلِ خودش جهانی است. ‎Esc‎ می‌بنددش.
+        if (e.Key == Key.K && ctrl && !alt && !shift)
+        {
+            _vm.Calculator.ToggleCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+        if (e.Key == Key.Escape && _vm.Calculator.IsOpen)
+        {
+            _vm.Calculator.CloseCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
         // ══ Ctrl+P → پی‌دی‌افِ همین‌جا ══════════════════════════════════════
         // همان ترتیبِ اولویتِ ‎_kbPdfAction‎ی نسخهٔ وب: اول صفحهٔ بازِ درونِ بخش
         // (حسابِ شخص، صفحهٔ شرکت…) و اگر نبود، خودِ بخش. جایی که پی‌دی‌اف

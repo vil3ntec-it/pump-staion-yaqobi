@@ -86,6 +86,10 @@
                   Padding="11,5">
             <TextBlock Text="{Binding RoleText}" FontSize="12.5" FontWeight="ExtraBold" Foreground="White" />
           </Border>
+          <!-- ماشین‌حسابِ شناور — هر جای برنامه، با همین دکمه یا ‎Ctrl+K‎ -->
+          <Button Classes="pill-btn" Content="ماشین‌حساب" FontSize="12.5" FontWeight="ExtraBold"
+                  Padding="13,5" Command="{Binding Calculator.ToggleCommand}"
+                  ToolTip.Tip="ماشین‌حساب (Ctrl+K)" />
           <Button Classes="pill-btn" Content="قفل" FontSize="12.5" FontWeight="ExtraBold"
                   Padding="13,5" Command="{Binding SignOutCommand}" />
         </StackPanel>
@@ -186,6 +190,56 @@
     <Panel IsVisible="{Binding IsLocked}">
       <v:LockView DataContext="{Binding Lock}" />
     </Panel>
+
+    <!-- ══ ماشین‌حسابِ شناور ══════════════════════════════════════════════
+         بیرونِ اسکرول و روی همهٔ بخش‌هاست، چون «داینامیک» یعنی هر جای برنامه
+         که هستی همان‌جا باز شود — نه این‌که بخشی را ترک کنی. -->
+    <Border DataContext="{Binding Calculator}" IsVisible="{Binding IsOpen}"
+            HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,22,22"
+            Width="272" Classes="card" Padding="0">
+      <StackPanel>
+        <Grid ColumnDefinitions="Auto,*,Auto" Margin="12,10,8,0">
+          <TextBlock Grid.Column="0" Text="ماشین‌حساب" FontWeight="ExtraBold" FontSize="13"
+                     VerticalAlignment="Center" />
+          <Button Grid.Column="2" Classes="card-x" Content="✕" Command="{Binding CloseCommand}" />
+        </Grid>
+
+        <TextBlock Text="{Binding Trail}" Classes="card-sub" Margin="12,8,12,0"
+                   TextAlignment="End" MinHeight="15" />
+        <TextBlock Text="{Binding Display}" FontSize="27" FontWeight="ExtraBold"
+                   Margin="12,2,12,10" TextAlignment="End"
+                   TextTrimming="CharacterEllipsis" />
+
+        <Border Classes="card-rule" Margin="0" />
+
+        <UniformGrid Columns="4" Margin="8">
+          <Button Classes="calc" Content="C" Command="{Binding KeyCommand}" CommandParameter="C" />
+          <Button Classes="calc" Content="←" Command="{Binding KeyCommand}" CommandParameter="←" />
+          <Button Classes="calc" Content="%" Command="{Binding KeyCommand}" CommandParameter="%" />
+          <Button Classes="calc op" Content="÷" Command="{Binding KeyCommand}" CommandParameter="÷" />
+
+          <Button Classes="calc" Content="7" Command="{Binding KeyCommand}" CommandParameter="7" />
+          <Button Classes="calc" Content="8" Command="{Binding KeyCommand}" CommandParameter="8" />
+          <Button Classes="calc" Content="9" Command="{Binding KeyCommand}" CommandParameter="9" />
+          <Button Classes="calc op" Content="×" Command="{Binding KeyCommand}" CommandParameter="×" />
+
+          <Button Classes="calc" Content="4" Command="{Binding KeyCommand}" CommandParameter="4" />
+          <Button Classes="calc" Content="5" Command="{Binding KeyCommand}" CommandParameter="5" />
+          <Button Classes="calc" Content="6" Command="{Binding KeyCommand}" CommandParameter="6" />
+          <Button Classes="calc op" Content="-" Command="{Binding KeyCommand}" CommandParameter="-" />
+
+          <Button Classes="calc" Content="1" Command="{Binding KeyCommand}" CommandParameter="1" />
+          <Button Classes="calc" Content="2" Command="{Binding KeyCommand}" CommandParameter="2" />
+          <Button Classes="calc" Content="3" Command="{Binding KeyCommand}" CommandParameter="3" />
+          <Button Classes="calc op" Content="+" Command="{Binding KeyCommand}" CommandParameter="+" />
+
+          <Button Classes="calc" Content="±" Command="{Binding KeyCommand}" CommandParameter="±" />
+          <Button Classes="calc" Content="0" Command="{Binding KeyCommand}" CommandParameter="0" />
+          <Button Classes="calc" Content="." Command="{Binding KeyCommand}" CommandParameter="." />
+          <Button Classes="calc accent" Content="=" Command="{Binding KeyCommand}" CommandParameter="=" />
+        </UniformGrid>
+      </StackPanel>
+    </Border>
 
     <!-- ══ توست — پیامِ کوتاهِ پایینِ صفحه ══ -->
     <Border DataContext="{Binding Toasts}" IsVisible="{Binding Visible}"
