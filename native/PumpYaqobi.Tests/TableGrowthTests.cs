@@ -58,10 +58,25 @@ public class TableGrowthTests
         var g = Bare(Grid());
         Assert.Contains("ScreenHeight()", g);
         // تنگنا باید در خودِ اندازه‌گیری باشد، نه پس از چیدمان
-        Assert.Contains("if (want > screen) return Capped(", g);
+        Assert.Contains("return Capped(availableSize, screen)", g);
         // و «نمی‌دانم» هرگز نباید «بی‌کران» معنی شود
         Assert.Contains("h > 0 ? h : 900", g);
     }
+
+    /// <summary>
+    /// ══ پاسِ اولِ اندازه‌گیری همیشه تنگ است ═══════════════════════════════
+    ///
+    /// ستون‌های ‎Width="Auto"‎ پهنایشان را از محتوای ردیف‌ها می‌گیرند؛ تا
+    /// پهنا سفت نشده، هر ردیفِ تازه همهٔ ستون‌ها را دوباره به اندازه‌گیری
+    /// می‌اندازد و هزینه <b>مربعی</b> بالا می‌رود. برای همین «مصارف» که هیچ
+    /// کشویی‌ای ندارد هم با ۲۰۰ ردیف ۱٫۴ ثانیه می‌گرفت.
+    ///
+    /// پس تا ‎SpreadColumns‎ پهناها را سفت نکرده، جدول یک صفحه بیشتر
+    /// اندازه نمی‌گیرد.
+    /// </summary>
+    [Fact]
+    public void ColumnsAreFrozenBeforeTheGridIsAllowedToGrow()
+        => Assert.Contains("if (!_spread) return Capped(", Bare(Grid()));
 
     /// <summary>
     /// و تا مرزِ رشد هیچ سقفی روی جدول نمی‌نشیند: نه ‎MaxHeight‎ی هست و نه
@@ -81,16 +96,22 @@ public class TableGrowthTests
     }
 
     /// <summary>
-    /// مرزِ رشد باید آن‌قدر بزرگ باشد که هیچ جدولِ واقعیِ برنامه به آن نرسد —
-    /// وگرنه دوباره همان کادرِ محدود می‌شود. ۵۰ ردیفِ ورق باید خیلی زیرش باشد.
+    /// ══ مرزِ رشد باید بالای «ردیفِ ۴۰ و ۵۰ و ۵۱» باشد ══════════════════════
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو همین بود: آن ردیف‌ها نباید داخلِ کادر گیر کنند.
+    ///
+    /// ⚠️ این‌جا یک‌بار نوشته بود «کمتر از ۵۰۰ نباشد» و همان باعث شد جدولِ
+    /// ۲۰۰ ردیفی آزادانه بلند شود و ۴٫۶ ثانیه طول بکشد (‎ledgerperf‎). مرز
+    /// باید از ۵۱ بالاتر باشد و از چند صد پایین‌تر — نه بیشتر.
     /// </summary>
     [Fact]
-    public void TheGrowLimitIsFarAboveAnyRealTable()
+    public void TheGrowLimitClearsTheRowsTheOwnerNamedButNotHundreds()
     {
         var m = Regex.Match(Grid(), @"GrowRowLimit\s*=\s*(\d+)");
         Assert.True(m.Success, "مرزِ رشد پیدا نشد");
-        Assert.True(int.Parse(m.Groups[1].Value) >= 500,
-                    "مرزِ رشد نباید کمتر از ۵۰۰ ردیف باشد");
+        var limit = int.Parse(m.Groups[1].Value);
+        Assert.True(limit >= 60, "مرزِ رشد باید ردیفِ ۵۱ را با حاشیه در بر بگیرد");
+        Assert.True(limit <= 150, "مرزِ رشدِ چندصدی یعنی برگشتن به همان ۴٫۶ ثانیه");
     }
 
     // ══ ۲) پهنای ستون با تایپ تکان نخورد ════════════════════════════════════

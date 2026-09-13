@@ -37,8 +37,11 @@ namespace PumpYaqobi.UiTests;
 /// </summary>
 internal static class LedgerPerf
 {
-    /// <summary>ماهِ جاری بزرگ‌ترین بار را می‌گیرد — بدترین حالتِ «باز شدن».</summary>
-    private static readonly int[] Sizes = { 3_000, 1_000, 200 };
+    /// <summary>
+    /// ماهِ جاری بزرگ‌ترین بار را می‌گیرد. بقیه منحنی را نشان می‌دهند: مرزِ
+    /// رشدِ جدول ۸۰ ردیف است، پس ۵۰ و ۸۰ «آزاد» و ۲۰۰ و ۳٬۰۰۰ «تنگ»اند.
+    /// </summary>
+    private static readonly int[] Sizes = { 3_000, 200, 80, 50 };
 
     private static readonly (string Section, string Table, string Title)[] Targets =
     {
@@ -49,6 +52,9 @@ internal static class LedgerPerf
 
     /// <summary>هدف: هر بخش، با هر باری، زیرِ این عدد باز شود.</summary>
     private const long Goal = 400;
+
+    /// <summary>ماهی که هیچ ردیفی ندارد — برای صفر کردنِ جدول بینِ دو سنجش.</summary>
+    private const string EmptyMonth = "1300/01";
 
     public static int Run()
     {
@@ -93,20 +99,27 @@ internal static class LedgerPerf
             var sec = vm.Sections.First(s => s.Id == id);
             var rowHost = (IRowBatchHost)sec;
 
+            // ⚠️ یک‌بار «سرد» باز می‌شود و جدا گزارش می‌گردد: آن بار شاملِ
+            // ساختنِ خودِ صفحه و قالب‌هایش است و ربطی به شمارِ ردیف ندارد.
+            // اگر با بقیه قاطی شود، هزینهٔ یک‌بارهٔ ساختِ صفحه به گردنِ
+            // ردیف‌ها نوشته می‌شود و آدم دنبالِ جای اشتباه می‌گردد.
+            var cold = Time(() => Wait(win, vm.GoAsync(sec)));
+            Console.WriteLine($"{title,-10} {"(بازِ اول)",6}   {"",8}     {"",8}     "
+                            + $"{cold,7:N0} ms");
+
             for (var k = 0; k < months.Length; k++)
             {
-                // بارِ اول «باز کردنِ بخش» است و بارهای بعد «عوض کردنِ ماه» —
-                // هر دو همان ‎ReloadRowsAsync‎ی واحدند.
-                long open;
-                if (k == 0)
-                {
-                    open = Time(() => Wait(win, vm.GoAsync(sec)));
-                }
-                else
-                {
-                    SetMonth(sec, months[k]);
-                    open = Time(() => Settle(win, rowHost, Sizes[k]));
-                }
+                // ⚠️ اول به یک ماهِ خالی می‌رویم و بعد به ماهِ هدف: وگرنه
+                // اگر ماه از قبل همان باشد، ‎OnMonthChanged‎ اصلاً شلیک
+                // نمی‌کند و «صفر میلی‌ثانیه»ی دروغ گزارش می‌شود.
+                SetMonth(sec, EmptyMonth);
+                Settle(win, rowHost, 0);
+
+                // همهٔ اندازه‌ها «عوض کردنِ ماه»اند — همان ‎ReloadRowsAsync‎ی
+                // واحدی که باز شدنِ بخش هم از آن می‌گذرد، ولی بی هزینهٔ
+                // یک‌بارهٔ ساختِ صفحه.
+                SetMonth(sec, months[k]);
+                var open = Time(() => Settle(win, rowHost, Sizes[k]));
 
                 var sql = Sql(host, id, months[k]);
                 var grid = Grid(win);
