@@ -437,7 +437,15 @@ internal static class Program
             // لغزاندن داشته باشد.
             var vbar = grid?.GetVisualDescendants().OfType<ScrollBar>()
                             .FirstOrDefault(b => b.Orientation == Orientation.Vertical);
-            var caged = vbar is not null && vbar.Maximum > 1;
+
+            // ⚠️ یک استثناء که **اندازه‌گیری** ساختش، نه سلیقه: جدولی که
+            // ردیف‌هایش از یک صفحه بیشتر شده، سرِ همان یک صفحه می‌ایستد و
+            // نوارِ لغزشِ خودش را به‌عمد دارد. بی این تنگنا، ‎DataGrid‎ هر
+            // ردیف را واقعاً می‌سازد و گاوصندوقِ ۲۰۰ ردیفی ۴٫۶ ثانیه طول
+            // می‌کشد (‎ledgerperf‎). آن‌چه ممنوع است کادرِ **کوچک** است —
+            // همان که ردیفِ ۴۰ و ۵۰ را قایم می‌کرد — نه ایستادن سرِ یک صفحه.
+            var atScreenCap = grid is not null && avail > 0 && gridH >= avail - 1;
+            var caged = vbar is not null && vbar.Maximum > 1 && !atScreenCap;
 
             var ok = page is not null && !squashed && inner == 0 && !caged;
 

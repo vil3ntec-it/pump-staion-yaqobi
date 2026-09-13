@@ -54,6 +54,40 @@ public sealed class LedgerService<T> where T : EntityBase, ILedgerRow, new()
         return await q.OrderBy(x => x.DateKey).ThenBy(x => x.Id).ToListAsync(ct);
     }
 
+    /// <summary>
+    /// ══ جمعِ یک ستونِ عددی، بی ساختنِ حتی یک شیء ═══════════════════════════
+    ///
+    /// ⚠️ چرا لازم شد: «مصارفِ کل» با ‎ListAsync(null)‎ حساب می‌شد، یعنی
+    /// <b>همهٔ ردیف‌های همهٔ ماه‌ها</b> به شیءِ کامل تبدیل می‌شدند تا یک عدد
+    /// جمع شود — و این کار با هر بار باز شدنِ بخش و <b>هر ویرایشِ هر خانه</b>
+    /// تکرار می‌شد.
+    ///
+    /// ⚠️ ‎SUM‎ را به SQLite نمی‌دهیم: مبلغ‌ها متن ذخیره می‌شوند و
+    /// ‎CAST(... AS REAL)‎ برای حساب‌داری خطرناک است (همان قاعده‌ای که
+    /// ‎ToolsDataService.LoadSummarisedAsync‎ هم رعایت می‌کند). پس فقط همان
+    /// یک ستون خوانده و در حافظه با ‎decimal‎ جمع می‌شود — بی گرد کردن، بی
+    /// تبدیلِ شناور.
+    /// </summary>
+    public async Task<decimal> SumAsync(
+        System.Linq.Expressions.Expression<Func<T, decimal>> column,
+        string? monthKey = null, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        var q = db.Set<T>().AsNoTracking().AsQueryable();
+        if (!string.IsNullOrWhiteSpace(monthKey))
+        {
+            if (monthKey.EndsWith('/'))
+                q = q.Where(x => x.MonthKey != null && x.MonthKey.StartsWith(monthKey));
+            else
+                q = q.Where(x => x.MonthKey == monthKey);
+        }
+
+        var sum = 0m;
+        foreach (var v in await q.Select(column).ToListAsync(ct)) sum += v;
+        return sum;
+    }
+
     public async Task<List<string>> MonthsAsync(CancellationToken ct = default)
     {
         _perm.Require(Permission.ViewData);

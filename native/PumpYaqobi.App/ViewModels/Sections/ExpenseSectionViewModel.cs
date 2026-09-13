@@ -112,9 +112,17 @@ public sealed partial class ExpenseSectionViewModel
         _ = RefreshGrandAsync();
     }
 
-    /// <summary>«مصارف کل» از همهٔ ماه‌ها خوانده می‌شود، نه از ردیف‌های روی صفحه.</summary>
+    /// <summary>
+    /// «مصارف کل» از همهٔ ماه‌ها خوانده می‌شود، نه از ردیف‌های روی صفحه.
+    ///
+    /// ⚠️ پیش از این ‎ListAsync(null)‎ بود: همهٔ ردیف‌های همهٔ ماه‌ها به شیءِ
+    /// کامل تبدیل می‌شدند تا یک عدد جمع شود — و چون ‎Recalc‎ با هر ویرایشِ هر
+    /// خانه صدا زده می‌شود، این کار با هر تایپ تکرار می‌شد. حالا فقط همان یک
+    /// ستون خوانده می‌شود و جمع در حافظه با ‎decimal‎ زده می‌شود؛ عدد مو‌به‌مو
+    /// همان است.
+    /// </summary>
     private async Task RefreshGrandAsync() =>
-        GrandTotal = _calc.Total(await _host.ExpenseLedger.ListAsync(null));
+        GrandTotal = await _host.ExpenseLedger.SumAsync(e => e.Amount);
 
     /// <summary>ردیفِ «جمله» — جمعِ همین ماه؛ همان عددی که «مفاد/ضرر» می‌خواند.</summary>
     protected override IReadOnlyList<TotalCell> BuildTotals() => new[]

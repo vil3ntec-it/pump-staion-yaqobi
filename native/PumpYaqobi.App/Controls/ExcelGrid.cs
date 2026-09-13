@@ -97,13 +97,57 @@ public class ExcelGrid : DataGrid
                       .FirstOrDefault(v => v.Name == "PageScroll");
 
     /// <summary>
-    /// تا این شمارِ ردیف، جدول هیچ سقفی ندارد و هم‌قدِ ردیف‌هایش بلند می‌شود.
+    /// سقفِ سختِ «هم‌قدِ ردیف‌ها شدن». بالاتر از این، بلندی اصلاً حساب هم
+    /// نمی‌شود.
     ///
-    /// ⚠️ عدد بزرگ است چون هیچ جدولِ واقعیِ این برنامه به آن نمی‌رسد؛ فقط
-    /// جلوی «یک میلیون ردیف در یک صفحه» را می‌گیرد. اگر روزی کمش کردید،
-    /// دوباره همان کادرِ محدودی می‌شود که صاحب ریپو از آن شکایت داشت.
+    /// ⚠️ این دیگر تنها تنگنا نیست — تنگنای واقعی «یک صفحه» است
+    /// (<see cref="MeasureOverride"/>). این عدد فقط جلوی حساب‌وکتابِ بیهوده
+    /// روی جدول‌های عظیم را می‌گیرد.
     /// </summary>
     public const int GrowRowLimit = 600;
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  ⚠️ چرا «هم‌قدِ ردیف‌ها» یک سقفِ صفحه‌ای دارد — با عدد، نه با حدس
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  گزارشِ صاحب ریپو: «بخشِ صرافی و مصارف و گاوصندوق خیلی دیر باز می‌شوند.»
+    //
+    //  ‎LedgerPerf‎ اندازه گرفت و نتیجه وارونهٔ انتظار بود — هرچه ردیف
+    //  **کمتر**، کندتر:
+    //
+    //      بخش        ردیف   خواندنِ SQL   باز شدن    ردیفِ زنده   بلندیِ جدول
+    //      گاوصندوق     200         3 ms   4,652 ms         200      9,051px
+    //      صرافی        200         1 ms   2,728 ms         200      9,051px
+    //      مصارف        200         1 ms   1,376 ms         200      9,051px
+    //      گاوصندوق   3,000        18 ms     916 ms          17        800px
+    //
+    //  دیتابیس بی‌گناه بود (یک تا پنجاه‌ونه میلی‌ثانیه). ریشه این بود که زیرِ
+    //  ‎GrowRowLimit‎ جدول تا ۹٬۰۵۱ پیکسل بلند می‌شد، و ‎DataGrid‎ی آوالونیا
+    //  مجازی‌سازی‌اش را از **قابِ خودش** می‌گیرد: قابِ ۹٬۰۵۱ پیکسلی یعنی هر
+    //  ۲۰۰ ردیف و همهٔ کشویی‌هایشان واقعاً ساخته می‌شوند. بالای آن سقف، جدول
+    //  به یک صفحه تنگ می‌شد و ناگهان ۱۷ ردیف می‌ساخت و صد برابر سریع‌تر بود.
+    //
+    //  پس تنگنا از «۶۰۰ ردیف» به «یک صفحه» آمد:
+    //
+    //    • جدولی که از یک صفحه کوتاه‌تر است، دقیقاً هم‌قدِ ردیف‌هایش می‌ماند —
+    //      نه کادرِ کوچکی که ردیفِ ۴۰ و ۵۰ تویش گیر کند (شکایتِ اصلیِ صاحب
+    //      ریپو) و نه فضای خالیِ اضافه.
+    //    • جدولی که بلندتر می‌شود، سرِ یک صفحه می‌ایستد و مجازی‌سازی برمی‌گردد.
+    //      چرخِ ماوس هم زنجیره‌ای است، پس کاربر همچنان یک اسکرولِ پیوسته حس
+    //      می‌کند.
+    //
+    //  ⚠️ این عددها را نگه دارید: اگر روزی کسی دوباره جدول را بی‌تنگنا کرد،
+    //  ‎ledgerperf‎ همان‌جا قرمز می‌شود.
+
+    /// <summary>
+    /// بلندیِ یک «صفحه» — قابِ اسکرولِ صفحه، و اگر هنوز معلوم نیست، یک عددِ
+    /// محافظه‌کار. ⚠️ «نمی‌دانم» هرگز یعنی «بی‌کران» نیست.
+    /// </summary>
+    private double ScreenHeight()
+    {
+        var h = Page?.Viewport.Height ?? 0;
+        return h > 0 ? h : 900;
+    }
 
     /// <summary>چند پیکسلِ اصلاحیِ بلندی — پایین‌ترِ همین فایل، ‎Settle‎.</summary>
     private double _pad;
@@ -131,22 +175,28 @@ public class ExcelGrid : DataGrid
     protected override Size MeasureOverride(Size availableSize)
     {
         var rows = RowCount();
+        var screen = ScreenHeight();
 
-        if (rows < 0 || rows > GrowRowLimit)
-        {
-            var screen = Page?.Viewport.Height ?? 0;
-            if (screen <= 0) screen = 900;                 // «نمی‌دانم» ≠ «بی‌کران»
-            if (availableSize.Height > screen)
-                availableSize = availableSize.WithHeight(screen);
-            return base.MeasureOverride(availableSize);
-        }
+        if (rows < 0 || rows > GrowRowLimit) return Capped(availableSize, screen);
 
         if (rows != _padRows) { _pad = 0; _padRows = rows; }
 
         var want = WantedHeight(rows);
+
+        // ⚠️ اگر از یک صفحه بلندتر شد، همان‌جا می‌ایستد و مجازی‌سازی برمی‌گردد.
+        // بی این یک خط، ۲۰۰ ردیفِ گاوصندوق ۴٫۶ ثانیه طول می‌کشید.
+        if (want > screen) return Capped(availableSize, screen);
+
         if (availableSize.Height > want) availableSize = availableSize.WithHeight(want);
         var size = base.MeasureOverride(availableSize);
         return size.WithHeight(want);
+    }
+
+    /// <summary>اندازه‌گیری با تنگنای «یک صفحه» — همان‌جا که مجازی‌سازی زنده است.</summary>
+    private Size Capped(Size availableSize, double screen)
+    {
+        if (availableSize.Height > screen) availableSize = availableSize.WithHeight(screen);
+        return base.MeasureOverride(availableSize);
     }
 
     /// <summary>بلندیِ واقعیِ جدول برای این شمارِ ردیف.</summary>
@@ -185,6 +235,10 @@ public class ExcelGrid : DataGrid
         var rows = RowCount();
         if (rows < 0 || rows > GrowRowLimit) return;
         if (_pad > 400) return;
+
+        // ⚠️ جدولی که به تنگنای «یک صفحه» خورده، نوارِ لغزشِ عمودیِ خودش را
+        // **به‌عمد** دارد — آن‌جا بلندتر شدن یعنی برگشتن به همان ۴٫۶ ثانیه.
+        if (WantedHeight(rows) > ScreenHeight()) return;
 
         var vbar = this.GetVisualDescendants().OfType<ScrollBar>()
                        .FirstOrDefault(b => b.Orientation == Orientation.Vertical);
