@@ -128,6 +128,20 @@ public static class Shamsi
         return (name.Length > 0 ? name : p[1]) + " " + p[0];
     }
 
+    /// <summary>
+    /// راهِ برگشتِ ‎Key‎: «۱۴۰۵۰۶۱۸» ⇒ «1405/6/18».
+    ///
+    /// ⚠️ بی صفرِ پیش‌رو نوشته می‌شود، چون ‎Key‎ و ‎ToDate‎ هر دو همین شکل را
+    /// می‌خوانند و بقیهٔ برنامه هم تاریخ را همین‌طور می‌نویسد. ‎0‎ ⇒ رشتهٔ خالی.
+    /// </summary>
+    public static string FromKey(int key)
+    {
+        if (key <= 0) return "";
+        int y = key / 10000, m = key / 100 % 100, d = key % 100;
+        if (m is < 1 or > 12 || d is < 1 or > 31) return "";
+        return y + "/" + m + "/" + d;
+    }
+
     /// <summary>عددِ پول با جداکنندهٔ هزارگان، بدونِ اعشارِ بی‌مصرف.</summary>
     public static string Money(decimal v) =>
         v == decimal.Truncate(v)

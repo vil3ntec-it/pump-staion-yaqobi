@@ -51,6 +51,9 @@ internal static class PerfAudit
     /// <summary>سقفِ «آشکارا خراب» — بیشتر از این یعنی جایی می‌ایستد.</summary>
     private const long Broken = 3_000;
 
+    /// <summary>هدف — «همه‌چیز زیرِ یک ثانیه». رد شدن از این، شکست نیست ولی گزارش می‌شود.</summary>
+    private const long Slow = 1_000;
+
     private static readonly List<(string What, long Ms)> Marks = new();
 
     /// <summary>
@@ -265,6 +268,21 @@ internal static class PerfAudit
         }
 
         Console.WriteLine();
+
+        // ══ هدفِ واقعی: زیرِ یک ثانیه ═══════════════════════════════════════
+        // خواستهٔ صریحِ صاحب ریپو: «همه‌چیز باید زیر یک ثانیه اتفاق بیفتد و
+        // حتی کمتر.» سقفِ شکست هنوز ۳ ثانیه است تا مسیر باز بماند، ولی هر
+        // چیزی که از یک ثانیه رد شود این‌جا فهرست می‌شود — تا پیشرفت (یا
+        // پس‌رفت) با عدد دیده شود، نه با حس.
+        var slow = Marks.Where(m => m.Ms > Slow).OrderByDescending(m => m.Ms).ToList();
+        if (slow.Count == 0) Console.WriteLine($"🎯 هیچ کاری از {Slow:N0} ms رد نشد");
+        else
+        {
+            Console.WriteLine($"🎯 {slow.Count} کار از هدفِ {Slow:N0} ms ردند:");
+            foreach (var (what, ms) in slow) Console.WriteLine($"   {what,-42}{ms,6:N0} ms");
+        }
+        Console.WriteLine();
+
         var bad = Marks.Where(m => m.Ms > Broken).ToList();
         foreach (var (what, ms) in bad) Console.WriteLine($"❌ {what}: {ms:N0} ms");
 

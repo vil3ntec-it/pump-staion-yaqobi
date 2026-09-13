@@ -106,11 +106,61 @@ public sealed class ToolsDataService
         return _summary.Rows(people, money, Shamsi.Today());
     }
 
-    /// <summary>«⏳ مدت عضویت همه» — قدیمی‌ترین مشتری اول.</summary>
+    /// <summary>
+    /// ══ «⏳ مدت عضویت همه» — قدیمی‌ترین مشتری اول ═══════════════════════════
+    ///
+    /// سنجشِ کارایی این بخش را ۱٬۵۴۱ ms نشان داد و علتش روشن بود: مثلِ بقیه
+    /// ‎LoadDebtorsAsync‎ را صدا می‌زد، یعنی **همهٔ ردیف‌های همهٔ حساب‌ها** را
+    /// می‌خواند — ده‌ها هزار شیء — در حالی که از آن‌ها فقط یک چیز می‌خواهد:
+    /// قدیمی‌ترین تاریخ.
+    ///
+    /// حالا همان را خودِ دیتابیس می‌دهد: یک ‎MIN(DateKey)‎ به ازای هر حساب.
+    ///
+    /// ⚠️ چرا نتیجه مو‌به‌مو همان است:
+    ///   • ‎MembershipService.Row‎ از شخص فقط ‎FirstDate(p)‎ را می‌خواهد و
+    ///     ‎FirstDate‎ کمینهٔ ‎Shamsi.Key‎ی ردیف‌هاست — و کمینهٔ یک مجموعه
+    ///     برابرِ کمینهٔ کمینه‌های زیرمجموعه‌هایش است.
+    ///   • ‎DateKey‎ی ستون همان ‎Shamsi.Key(DateShamsi)‎ است (هنگام ذخیره
+    ///     نوشته می‌شود)، پس ترتیبشان یکی است.
+    ///   • و متنِ تاریخ از همان کلید بازساخته می‌شود («۱۴۰۵۰۶۱۸» ⇒ «1405/6/18»)،
+    ///     که هم ‎Shamsi.Key‎ و هم ‎Shamsi.ToDate‎ همان جواب را می‌دهند.
+    ///
+    /// یعنی هیچ منطقی عوض نشد؛ فقط راهِ رسیدن به همان عدد کوتاه شد.
+    /// </summary>
     public async Task<List<MembershipRow>> MembershipAsync(CancellationToken ct = default)
     {
         _perm.Require(Permission.ViewData);
-        var people = await LoadDebtorsAsync(ct);
+        await using var db = _dbf.Create();
+
+        var people = await db.Debtors.AsNoTracking().Where(d => !d.IsNoInvoice)
+                             .OrderBy(d => d.Name).ToListAsync(ct);
+        if (people.Count == 0) return _member.Rows(people, Shamsi.Today());
+
+        var byId = people.ToDictionary(p => p.Id);
+        var owner = new Dictionary<long, Debtor>();          // حساب ⇦ صاحبش
+
+        foreach (var a in await db.DebtAccounts.AsNoTracking().ToListAsync(ct))
+        {
+            if (a.MainOfDebtorId is { } m && byId.TryGetValue(m, out var o1)) { o1.MainAccount = a; owner[a.Id] = o1; }
+            else if (a.DebtorId is { } sId && byId.TryGetValue(sId, out var o2)) { o2.SubAccounts.Add(a); owner[a.Id] = o2; }
+        }
+
+        // قدیمی‌ترین تاریخِ هر حساب — دو ستون، نه ده‌ها هزار ردیف
+        var firsts = await db.DebtRows.AsNoTracking()
+            .Where(r => r.DateKey > 0)
+            .GroupBy(r => r.FuelAccountId ?? r.MoneyAccountId)
+            .Select(g => new { Account = g.Key, Key = g.Min(x => x.DateKey) })
+            .ToListAsync(ct);
+
+        foreach (var f in firsts)
+        {
+            if (f.Account is not { } id || !owner.TryGetValue(id, out var p)) continue;
+            var acc = p.MainAccount?.Id == id
+                ? p.MainAccount
+                : p.SubAccounts.FirstOrDefault(x => x.Id == id);
+            acc?.FuelRows.Add(new DebtRow { DateKey = f.Key, DateShamsi = Shamsi.FromKey(f.Key) });
+        }
+
         return _member.Rows(people, Shamsi.Today());
     }
 
