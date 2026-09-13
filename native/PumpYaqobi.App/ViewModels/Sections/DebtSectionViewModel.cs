@@ -39,7 +39,42 @@ public sealed partial class DebtorCardViewModel : ObservableObject
         HasMoneyBadge = st.Money is DebtStatus.Out or DebtStatus.Low;
         FuelBadgeIsOut = fuelSt == DebtStatus.Out;
         MoneyBadgeIsOut = st.Money == DebtStatus.Out;
+
+        // ══ نوارِ زندهٔ بالای کارت ══════════════════════════════════════════
+        // خواستهٔ صریحِ صاحب ریپو: «این خط‌ها باید زنده باشند و به اندازهٔ همان
+        // رسیدی که برد می‌شود جلو بروند و پر یا خالی شوند … تا ۶۰ زرد، ۸۵ به
+        // بعد نارنجی، ۹۰ سرخ می‌شود و چراغ می‌زند.»
+        //
+        // ⚠️ هیچ محاسبهٔ تازه‌ای این‌جا نیست: هر دو عدد از همان
+        // ‎DebtCalculationService‎ می‌آیند که کلِ برنامه از آن می‌خواند.
+        // نوار = «چقدر از آنچه برده، هنوز نداده» — یعنی الباقی ÷ بردگی:
+        // حسابِ تسویه‌شده خالی و سبز است، و هرچه پرتر، پرخطرتر.
+        var sum = calc.SumTotals(accounts).All;
+        Meter = sum.Bardagi > 0m
+            ? Math.Clamp((double)(sum.Albaqi / sum.Bardagi) * 100d, 0d, 100d)
+            : 0d;
     }
+
+    /// <summary>پرشدنِ نوارِ بالای کارت، ۰ تا ۱۰۰.</summary>
+    public double Meter { get; }
+
+    /// <summary>عددِ کنارِ نوار — «۷۲٪».</summary>
+    public string MeterText => Shamsi.Money(Math.Round((decimal)Meter)) + "٪";
+
+    /// <summary>
+    /// رنگِ نوار — همان چهار پله‌ای که صاحب ریپو گفت.
+    /// ‎Pump.Orange‎ی تازه فقط برای همین پله است؛ سه‌تای دیگر رنگ‌های همیشگیِ تم‌اند.
+    /// </summary>
+    public string MeterBrushKey => Meter switch
+    {
+        >= 90d => "Pump.Danger",
+        >= 85d => "Pump.Orange",
+        >= 60d => "Pump.Warn",
+        _ => "Pump.Ok",
+    };
+
+    /// <summary>۹۰٪ به بالا: نوار چراغ می‌زند و کارت نشانِ هشدار می‌گیرد.</summary>
+    public bool IsAlarm => Meter >= 90d;
 
     private static string BadgeOf(DebtStatus s, string what) => s switch
     {

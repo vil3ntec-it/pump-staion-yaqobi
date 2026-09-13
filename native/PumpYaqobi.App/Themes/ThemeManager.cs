@@ -77,10 +77,13 @@ public static class ThemeManager
         var warn = t.IsDark ? PumpTheme.C("#fbbf24") : PumpTheme.C("#b45309");
         var danger = t.IsDark ? PumpTheme.C("#f87171") : PumpTheme.C("#b91c1c");
         var info = t.IsDark ? PumpTheme.C("#60a5fa") : PumpTheme.C("#1d4ed8");
+        // پلهٔ چهارمِ نوارِ کارت‌ها (۸۵٪ تا ۹۰٪) — بینِ زرد و سرخ
+        var orange = t.IsDark ? PumpTheme.C("#fb923c") : PumpTheme.C("#c2410c");
         Br("Ok", ok);
         Br("Warn", warn);
         Br("Danger", danger);
         Br("Info", info);
+        Br("Orange", orange);
 
         // ⚠️ این دو با تم عوض نمی‌شوند چون در سایت هم نمی‌شوند: ‎--purple‎ در
         // ‎:root‎ی هر دو تم ‎#805ad5‎ است (‎index.html‎ خط ۹۷ و ۱۰۴) و رنگِ
@@ -103,6 +106,7 @@ public static class ThemeManager
         Band("Warn", warn);
         Band("Danger", danger);
         Band("Info", info);
+        Band("Orange", orange);
         Band("Accent", t.Accent);
         Band("Purple", PumpTheme.C("#805ad5"));
         Band("Diesel", PumpTheme.C("#b7791f"));
