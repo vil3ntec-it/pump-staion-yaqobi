@@ -151,6 +151,18 @@ internal static class PerfAudit
             Mark("باز کردنِ بخشِ " + id, () => Wait(win, vm.GoAsync(sec)));
         }
 
+        // ── تعویضِ تم ─────────────────────────────────────────────────────────
+        // گزارشِ صاحب ریپو: «تعویضِ تمِ دارک و لایت هم همین‌طور کند است.»
+        // با یک جدولِ باز روی صفحه، هر خبرِ «منابع عوض شد» کلِ درخت را
+        // بی‌اعتبار می‌کند — و ‎ThemeManager‎ شصت‌تا از آن‌ها می‌داد.
+        Mark("تعویضِ تم (تیره ⇄ روشن)", () =>
+        {
+            PumpYaqobi.App.Themes.ThemeManager.Apply(PumpYaqobi.App.Themes.PumpTheme.Obsidian);
+            Pump(win);
+            PumpYaqobi.App.Themes.ThemeManager.Apply(PumpYaqobi.App.Themes.PumpTheme.Marble);
+            Pump(win);
+        });
+
         // ── دوباره رفتن به قرض‌داران (فهرست از نو کشیده می‌شود) ───────────────
         var debt = vm.Sections.FirstOrDefault(s => s.Id == "debt") as DebtSectionViewModel;
         if (debt is not null)

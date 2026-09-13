@@ -36,12 +36,33 @@ public static class ThemeManager
 
     public static Color WithAlpha(Color c, double a) => new((byte)(255 * a), c.R, c.G, c.B);
 
+    /// <summary>
+    /// ══ چرا یک فرهنگِ جدا، و نه نوشتن روی ‎app.Resources‎ ═══════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «تعویضِ تمِ دارک و لایت هم همین‌طور کند است.»
+    ///
+    /// ریشه‌اش این بود: ‎Apply‎ حدودِ شصت کلید را **یکی‌یکی** در
+    /// ‎app.Resources‎ می‌نوشت، و هر نوشتن یک خبرِ «منابع عوض شد» می‌داد که
+    /// کلِ درختِ بصری را بی‌اعتبار می‌کند. یعنی با یک جدولِ باز روی صفحه،
+    /// شصت بار کلِ صفحه از نو سنجیده می‌شد — نه یک بار.
+    ///
+    /// حالا همهٔ کلیدها اول در یک فرهنگِ **تازه** ساخته می‌شوند و آن فرهنگ
+    /// یک‌جا جای قبلی می‌نشیند: یک خبر به‌جای شصت‌تا.
+    ///
+    /// ⚠️ این فرهنگ باید همیشه همان یک جایگاه در ‎MergedDictionaries‎ را
+    /// داشته باشد؛ اگر هر بار یکی اضافه شود، فهرست بی‌انتها بزرگ می‌شود و
+    /// جست‌وجوی هر منبع کندتر.
+    /// </summary>
+    private static int _slot = -1;
+
     public static void Apply(PumpTheme t, Avalonia.Application? app = null)
     {
         app ??= Avalonia.Application.Current;
         if (app is null) return;
         Current = t;
-        var r = app.Resources;
+
+        // همه‌چیز در یک فرهنگِ تازه ساخته می‌شود و در پایان یک‌جا می‌نشیند
+        var r = new Avalonia.Controls.ResourceDictionary();
 
         void Set(string key, object v) => r[key] = v;
         void Br(string key, Color c) { r["Pump." + key + "Color"] = c; r["Pump." + key] = new SolidColorBrush(c); }
@@ -119,6 +140,11 @@ public static class ThemeManager
         Set("Pump.NavBg", Horizontal(t.NavBg));
         Set("Pump.AppBg", Vertical(t.AppBg));
         Set("Pump.AccentGrad", Gradient(t.AccentGrad, true));
+
+        // ── و حالا، یک‌بار ─────────────────────────────────────────────────
+        var merged = app.Resources.MergedDictionaries;
+        if (_slot >= 0 && _slot < merged.Count) merged[_slot] = r;
+        else { merged.Add(r); _slot = merged.Count - 1; }
 
         app.RequestedThemeVariant = t.IsDark ? ThemeVariant.Dark : ThemeVariant.Light;
         Changed?.Invoke(t);

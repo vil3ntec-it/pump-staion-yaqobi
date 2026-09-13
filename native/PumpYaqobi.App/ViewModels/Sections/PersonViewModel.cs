@@ -205,27 +205,61 @@ public sealed class ArchiveRowViewModel
 public sealed partial class ArchiveViewModel : ObservableObject
 {
     private readonly DebtTableArchive _h;
+    private readonly DebtCalculationService _calc;
+    private bool _loaded;
 
+    /// <summary>
+    /// ══ آرشیو، تا باز نشود ساخته نمی‌شود ══════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «بخشی که خیلی جدول دارد دو تا چهار ثانیه بعد باز
+    /// می‌شود — این بزرگ‌ترین باگِ ممکن است.»
+    ///
+    /// ریشه‌اش همین‌جا بود و دو لایه داشت:
+    ///
+    ///   ۱) این سازنده **همهٔ ردیف‌های هر آرشیو** را می‌ساخت، حتی آرشیوی که
+    ///      کاربر هیچ‌وقت بازش نمی‌کرد. صد آرشیوِ هزار ردیفی یعنی صد هزار
+    ///      شیء پیش از آن‌که چیزی روی صفحه بیاید.
+    ///
+    ///   ۲) در آوالونیا ‎IsVisible="False"‎ کنترل را **می‌سازد** و فقط نشانش
+    ///      نمی‌دهد. پس جدولِ ۹ ستونیِ هر آرشیو هم ساخته می‌شد.
+    ///
+    /// حالا سازنده فقط عنوان را می‌سازد (از ‎h.RowCount‎ی خودِ رکورد، بی هیچ
+    /// خواندنی) و بقیه با اولین باز شدن می‌آید. ‎Body‎ هم تا بسته است ‎null‎
+    /// می‌دهد، پس هیچ جدولی در درختِ بصری ساخته نمی‌شود.
+    ///
+    /// ⚠️ هیچ محاسبه‌ای عوض نشد — همان ‎DebtorService.ArchiveRows‎ و همان
+    /// ‎calc.SplitTotals‎، فقط دیرتر.
+    /// </summary>
     public ArchiveViewModel(DebtTableArchive h, DebtCalculationService calc)
     {
         _h = h;
-        var rows = DebtorService.ArchiveRows(h);
-        foreach (var r in rows) Rows.Add(new ArchiveRowViewModel(r, calc));
-
-        var t = calc.SplitTotals(rows);
+        _calc = calc;
         UnitText = h.IsMoney ? "افغانی" : "لیتر";
         Title = "🗂️ " + (h.CreatedShamsi ?? "—") + " — " + Shamsi.Money(h.RowCount) + " ردیف · واحدِ "
                 + (h.IsMoney ? "پول" : "تیل");
+    }
 
-        PetrolHeadText = "⛽ پطرول — فیصدی " + Shamsi.Money(h.PercentPetrol ?? 0m)
-                       + "٪ · رسید " + Shamsi.Money(h.IsMoney ? h.RasidMoneyPetrol : h.RasidFuelPetrol)
-                       + " · برد " + Shamsi.Money(h.IsMoney ? t.Petrol.Bardagi : t.Petrol.Liters)
+    /// <summary>یک‌بار، با اولین باز شدن.</summary>
+    private void EnsureLoaded()
+    {
+        if (_loaded) return;
+        _loaded = true;
+
+        var rows = DebtorService.ArchiveRows(_h);
+        var built = new List<ArchiveRowViewModel>(rows.Count);
+        foreach (var r in rows) built.Add(new ArchiveRowViewModel(r, _calc));
+        Rows.ResetTo(built);
+
+        var t = _calc.SplitTotals(rows);
+        PetrolHeadText = "⛽ پطرول — فیصدی " + Shamsi.Money(_h.PercentPetrol ?? 0m)
+                       + "٪ · رسید " + Shamsi.Money(_h.IsMoney ? _h.RasidMoneyPetrol : _h.RasidFuelPetrol)
+                       + " · برد " + Shamsi.Money(_h.IsMoney ? t.Petrol.Bardagi : t.Petrol.Liters)
                        + " · الباقی " + Shamsi.Money(t.Petrol.Albaqi);
-        DieselHeadText = "🟤 دیزل — فیصدی " + Shamsi.Money(h.PercentDiesel ?? 0m)
-                       + "٪ · رسید " + Shamsi.Money(h.IsMoney ? h.RasidMoneyDiesel : h.RasidFuelDiesel)
-                       + " · برد " + Shamsi.Money(h.IsMoney ? t.Diesel.Bardagi : t.Diesel.Liters)
+        DieselHeadText = "🟤 دیزل — فیصدی " + Shamsi.Money(_h.PercentDiesel ?? 0m)
+                       + "٪ · رسید " + Shamsi.Money(_h.IsMoney ? _h.RasidMoneyDiesel : _h.RasidFuelDiesel)
+                       + " · برد " + Shamsi.Money(_h.IsMoney ? t.Diesel.Bardagi : t.Diesel.Liters)
                        + " · الباقی " + Shamsi.Money(t.Diesel.Albaqi);
-        NoteText = h.Note ?? "";
+        NoteText = _h.Note ?? "";
         HasNote = NoteText.Length > 0;
 
         // ⚠️ نامِ ستون‌ها این‌جا با سربرگ‌های جدولِ آرشیو یکی است، نه با
@@ -240,29 +274,48 @@ public sealed partial class ArchiveViewModel : ObservableObject
             new TotalCell("الباقی", Shamsi.Money(t.All.Albaqi),
                           t.All.Albaqi > 0m ? "Pump.Danger" : "Pump.Ok"),
         };
+
+        OnPropertyChanged(nameof(PetrolHeadText));
+        OnPropertyChanged(nameof(DieselHeadText));
+        OnPropertyChanged(nameof(NoteText));
+        OnPropertyChanged(nameof(HasNote));
+        OnPropertyChanged(nameof(Totals));
     }
 
     public DebtTableArchive Entity => _h;
     /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
     /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
     public BulkRows<ArchiveRowViewModel> Rows { get; } = new();
-    public IReadOnlyList<TotalCell> Totals { get; }
+    public IReadOnlyList<TotalCell> Totals { get; private set; } = Array.Empty<TotalCell>();
 
     public string Title { get; }
     public string UnitText { get; }
-    public string PetrolHeadText { get; }
-    public string DieselHeadText { get; }
-    public string NoteText { get; }
-    public bool HasNote { get; }
+    public string PetrolHeadText { get; private set; } = "";
+    public string DieselHeadText { get; private set; } = "";
+    public string NoteText { get; private set; } = "";
+    public bool HasNote { get; private set; }
 
     /// <summary>کشویی — بسته می‌آید، با کلیک باز می‌شود.</summary>
     [ObservableProperty] private bool _isOpen;
+
+    /// <summary>
+    /// تا بسته است ‎null‎ — و ‎ContentControl‎ با محتوای ‎null‎ هیچ قالبی نمی‌سازد،
+    /// پس جدولِ آرشیوِ بسته اصلاً در درختِ بصری نیست.
+    /// ⚠️ جای ‎IsVisible‎ را نگیرد و برعکس: ‎IsVisible=False‎ کنترل را می‌سازد.
+    /// </summary>
+    public ArchiveViewModel? Body => IsOpen ? this : null;
 
     [RelayCommand]
     private void Toggle() => IsOpen = !IsOpen;
 
     public string CaretText => IsOpen ? "▴" : "▾";
-    partial void OnIsOpenChanged(bool v) => OnPropertyChanged(nameof(CaretText));
+
+    partial void OnIsOpenChanged(bool v)
+    {
+        if (v) EnsureLoaded();
+        OnPropertyChanged(nameof(CaretText));
+        OnPropertyChanged(nameof(Body));
+    }
 }
 
 /// <summary>
