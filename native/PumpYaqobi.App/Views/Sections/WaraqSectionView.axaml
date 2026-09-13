@@ -46,7 +46,7 @@
                    • ‎MaximumRowsOrColumns‎ نبود، پس روی نمایشگرِ پهن ‎ItemsStretch‎
                      کارت‌ها را بی‌جهت پهن می‌کرد. حالا سقفِ هشت‌تا دارد و
                      ‎MinItemWidth‎ی ۲۰۰ روی باریک‌ترین صفحه هم شش‌تا می‌دهد. -->
-              <UniformGridLayout MinItemWidth="200" MinItemHeight="232"
+              <UniformGridLayout MinItemWidth="200" MinItemHeight="200"
                                  MaximumRowsOrColumns="8" ItemsStretch="Fill"
                                  MinColumnSpacing="10" MinRowSpacing="10" />
             </ItemsRepeater.Layout>
@@ -62,29 +62,31 @@
                          محتوادار وقتی جا کم بیاید تا صفر جمع می‌شود — همان
                          «دیزل و پطرول زیرِ کادر گم شدند».) -->
                     <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+                      <!-- همان زبانِ کارتِ قرض‌دار و شرکت‌ها و امانت: تاریخِ ورق
+                           سرِ خط، عددِ فروش درشت، سطرِ ریز، خطِ نازک، و کفِ کارت. -->
                       <Button Grid.Row="0" Classes="card-x" Content="✕" HorizontalAlignment="Left"
+                              Margin="10,9,0,0"
                               Command="{Binding $parent[ItemsRepeater].((vm:WaraqSectionViewModel)DataContext).DeleteCardCommand}"
                               CommandParameter="{Binding}" />
 
-                      <TextBlock Grid.Row="1" Text="{Binding Title}" FontWeight="Bold" FontSize="14"
-                                 TextAlignment="Center" Margin="0,6,0,0" />
-                      <TextBlock Grid.Row="2" Text="{Binding SubText}" Classes="muted" FontSize="11.5"
-                                 TextAlignment="Center" TextWrapping="Wrap" Margin="0,4,0,0" />
+                      <TextBlock Grid.Row="1" Text="{Binding Title}" Classes="pname" />
+                      <TextBlock Grid.Row="2" Text="{Binding SubText}" Classes="card-sub" />
 
-                      <StackPanel Grid.Row="4" Spacing="7" Margin="0,10,0,0">
+                      <StackPanel Grid.Row="4">
                         <TextBlock Text="{Binding SalesText}" Classes="cmp-fig"
                                    Foreground="{DynamicResource Pump.Danger}" />
-                        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
-                          <TextBlock Text="{Binding DebtText}" FontWeight="Bold" FontSize="12"
+                        <TextBlock Text="فروشِ ورق" Classes="card-sub" />
+                        <Border Classes="card-rule" Margin="11,10,11,0" />
+                        <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="11,8,7,9">
+                          <TextBlock Grid.Column="0" Text="{Binding DebtText}" FontWeight="Bold" FontSize="12"
                                      Foreground="{DynamicResource Pump.Danger}" />
-                          <TextBlock Text="{Binding ExpenseText}" FontWeight="Bold" FontSize="12"
-                                     Foreground="{DynamicResource Pump.Accent}" />
-                        </StackPanel>
-                        <Button Classes="qr" Content="PDF" HorizontalAlignment="Stretch"
-                                Foreground="{DynamicResource Pump.Ok}"
-                                BorderBrush="{DynamicResource Pump.Ok}"
-                                Command="{Binding $parent[ItemsRepeater].((vm:WaraqSectionViewModel)DataContext).PdfCardCommand}"
-                                CommandParameter="{Binding}" />
+                          <TextBlock Grid.Column="1" Text="{Binding ExpenseText}" FontWeight="Bold" FontSize="12"
+                                     Margin="12,0,0,0" Foreground="{DynamicResource Pump.Accent}" />
+                          <Button Grid.Column="3" Classes="qr-link" Content="PDF"
+                                  Foreground="{DynamicResource Pump.Ok}"
+                                  Command="{Binding $parent[ItemsRepeater].((vm:WaraqSectionViewModel)DataContext).PdfCardCommand}"
+                                  CommandParameter="{Binding}" />
+                        </Grid>
                       </StackPanel>
                     </Grid>
                   </Border>
