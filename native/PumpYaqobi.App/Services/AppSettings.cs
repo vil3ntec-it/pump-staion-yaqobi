@@ -17,6 +17,16 @@ public sealed class AppSettings
     /// ⚠️ هیچ سرویسِ بیرونی‌ای این‌جا نمی‌آید؛ خالی یعنی پیام‌رسان خاموش.
     /// </summary>
     public string ServerUrl { get; set; } = "";
+
+    /// <summary>رمزِ سرورِ خانگی — خالی یعنی سرور رمز نمی‌خواهد.</summary>
+    public string ServerToken { get; set; } = "";
+
+    /// <summary>
+    /// کدِ ایستگاه — همان کلیدی که نسخهٔ وب زیرِ ‎stations/&lt;کد&gt;‎ می‌نویسد.
+    /// ⚠️ باید دقیقاً همان کدی باشد که در سایت گذاشته‌اید، وگرنه سایت دادهٔ
+    /// این برنامه را نمی‌بیند و دو دفترِ جدا می‌شوند.
+    /// </summary>
+    public string StationCode { get; set; } = "pump1";
     public double WindowWidth { get; set; } = 1440;
     public double WindowHeight { get; set; } = 900;
     public bool WindowMaximized { get; set; } = true;
