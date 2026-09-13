@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using PumpYaqobi.App.Controls;
 using CommunityToolkit.Mvvm.Input;
@@ -48,7 +49,13 @@ public sealed partial class WaraqPumpViewModel : RowViewModel
     partial void OnWorkerChanged(string v) => Touch();
     partial void OnPumpDateChanged(string v) => Touch();
     partial void OnNumChanged(int v) => Touch();
-    partial void OnFuelChanged(FuelType v) { Touch(); OnPropertyChanged(nameof(FuelText)); }
+    partial void OnFuelChanged(FuelType v)
+    {
+        Touch();
+        OnPropertyChanged(nameof(FuelText));
+        OnPropertyChanged(nameof(FuelChipText));
+        OnPropertyChanged(nameof(FuelChipBrushKey));
+    }
     partial void OnStartChanged(decimal v) { Touch(); Refresh(); }
     partial void OnEndChanged(decimal v) { Touch(); Refresh(); }
     partial void OnPriceChanged(decimal v) { Touch(); Refresh(); }
@@ -80,6 +87,23 @@ public sealed partial class WaraqPumpViewModel : RowViewModel
         get => Fuel.ToPersian();
         set => Fuel = value == "دیزل" ? FuelType.Diesel : FuelType.Petrol;
     }
+
+    // ══ کپسول به‌جای کشویی ════════════════════════════════════════════════
+    //
+    // چرا: هر ‎ComboBox‎ی داخلِ خانه یک قالبِ کامل با ‎Popup‎ و
+    // ‎ItemsPresenter‎ی خودش می‌سازد — ده‌ها بصری برای دو گزینه. سنجشِ
+    // ‎waraqperf‎ نشان داد ورقِ ۸۰ ردیفی ~۱٬۵۰۰ میلی‌ثانیه باز می‌شود و
+    // بیشترش کارِ همین ردیف‌هاست. با دو گزینه، کشویی هم برای کاربر بد است:
+    // خودِ صاحب ریپو گفت «فلشش فقط جا می‌گیرد» و «با تب یا اینتر عوض بشه».
+    // کپسول هر دو را حل می‌کند: یک ‎Button‎، و ‎ExcelGrid‎ با ‎Enter‎/‎Tab‎
+    // فرمانش را می‌زند (کلاسِ ‎celltoggle‎).
+    public string FuelChipText => Fuel.ToPersian();
+
+    public string FuelChipBrushKey => Fuel == FuelType.Diesel ? "Pump.Warn" : "Pump.Ok";
+
+    [RelayCommand]
+    private void ToggleFuel() =>
+        Fuel = Fuel == FuelType.Diesel ? FuelType.Petrol : FuelType.Diesel;
 
     protected override void Apply()
     {
@@ -124,8 +148,19 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
 
     partial void OnNameChanged(string v) => Touch();
     partial void OnLitersChanged(decimal v) { _t.AmountAuto ??= true; Touch(); Refresh(); }
-    partial void OnIsExpenseChanged(bool v) { Touch(); OnPropertyChanged(nameof(TypeText)); }
-    partial void OnFuelChanged(FuelType v) { Touch(); OnPropertyChanged(nameof(FuelText)); }
+    partial void OnIsExpenseChanged(bool v)
+    {
+        Touch();
+        OnPropertyChanged(nameof(TypeText));
+        OnPropertyChanged(nameof(TypeChipBrushKey));
+    }
+
+    partial void OnFuelChanged(FuelType v)
+    {
+        Touch();
+        OnPropertyChanged(nameof(FuelText));
+        OnPropertyChanged(nameof(FuelChipBrushKey));
+    }
 
     /// <summary>مبلغی که کاربر خودش بنویسد دیگر خودکار نیست و بازحساب نمی‌شود.</summary>
     partial void OnAmountChanged(decimal v)
@@ -198,7 +233,44 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
 
     [ObservableProperty] private bool _isMoney;
 
-    partial void OnIsMoneyChanged(bool v) { Touch(); OnPropertyChanged(nameof(UnitText)); }
+    partial void OnIsMoneyChanged(bool v)
+    {
+        Touch();
+        OnPropertyChanged(nameof(UnitText));
+        OnPropertyChanged(nameof(UnitChipBrushKey));
+    }
+
+    // ══ سه کپسول به‌جای سه کشویی ══════════════════════════════════════════
+    //
+    // هر ردیفِ تراکنش سه کادرِ کشویی داشت — نوعِ تیل، نوع، واحد — و هر کدام
+    // یک قالبِ کاملِ ‎ComboBox‎ با ‎Popup‎ی خودش. سنجشِ ‎waraqperf‎ روی ورقِ
+    // ۶۰ ردیفی: باز شدن ~۱٬۵۰۰ میلی‌ثانیه، که بیشترش ساختنِ همین‌هاست.
+    //
+    // و خواستهٔ خودِ صاحب ریپو هم همین بود: «اون فلش فقط جا گرفته» و «با تب
+    // یا اینتر عوض بشه». کپسول یک ‎Button‎ است؛ ‎ExcelGrid‎ با ‎Enter‎/‎Tab‎
+    // فرمانش را می‌زند (کلاسِ ‎celltoggle‎). با دو گزینه، کشویی هیچ‌چیزِ
+    // بیشتری نمی‌داد.
+    //
+    // ⚠️ ‎FuelText‎/‎TypeText‎/‎UnitText‎ سرِ جای خود مانده‌اند: هم نوشتنی‌اند
+    // (کپسول از همان‌ها می‌خواند) و هم جاهای دیگر — کپی، PDF، آزمون‌ها —
+    // رویشان حساب کرده‌اند.
+
+    public string FuelChipBrushKey => Fuel == FuelType.Diesel ? "Pump.Warn" : "Pump.Ok";
+
+    /// <summary>سرخِ قرض یا بنفشِ مصرف — همان رنگ‌هایی که در جمع‌ها هم هست.</summary>
+    public string TypeChipBrushKey => IsExpense ? "Pump.Purple" : "Pump.Danger";
+
+    public string UnitChipBrushKey => IsMoney ? "Pump.Accent" : "Pump.Ok";
+
+    [RelayCommand]
+    private void ToggleFuel() =>
+        Fuel = Fuel == FuelType.Diesel ? FuelType.Petrol : FuelType.Diesel;
+
+    [RelayCommand]
+    private void ToggleType() => IsExpense = !IsExpense;
+
+    [RelayCommand]
+    private void ToggleUnit() => IsMoney = !IsMoney;
 
     protected override void Apply()
     {
@@ -227,7 +299,32 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         Build();
     }
 
-    public WaraqEntry Entity { get; }
+    /// <summary>
+    /// ══ همین صفحه، ورقِ دیگر ═══════════════════════════════════════════════
+    ///
+    /// خواستهٔ صاحب ریپو: «بازگشت به صفحهٔ اصلی نباید تأخیر داشته باشد» و
+    /// «ورق زود باز شود».
+    ///
+    /// ⚠️ و سنجش گفت ریشه کجاست: پیش از این هر بار باز کردنِ ورق یک
+    /// ‎WaraqPageViewModel‎ی **تازه** می‌ساخت و بستنش ‎Page‎ را ‎null‎ می‌کرد.
+    /// چون نمای صفحه ‎DataContext="{Binding Page}"‎ است، هر بار کلِ درختِ
+    /// بصری — دو جدولِ تراکنش با قالب و سبک و ستون‌هایشان — از نو ساخته
+    /// می‌شد. اندازه‌گیری (‎waraqperf‎): یک ‎UpdateLayout()‎ی ۱٬۱۸۹ میلی‌ثانیه،
+    /// که ۹۲۲ تایش مالِ همین دو جدول بود؛ با پنهان کردنشان ۲۶۷ می‌شد.
+    ///
+    /// حالا ویومدل یکی است و فقط **بار می‌شود**: جدول‌ها سرِ جایشان می‌مانند و
+    /// تنها ردیف‌هایشان عوض می‌شود.
+    /// </summary>
+    public void Load(WaraqEntry w)
+    {
+        Entity = w;
+        _isNight = w.ActiveShift == ShiftKind.Night;
+        OnPropertyChanged(nameof(IsNight));
+        OnPropertyChanged(nameof(Title));
+        Build();
+    }
+
+    public WaraqEntry Entity { get; private set; }
     public WaraqService Calc => _host.Waraq;
     public string Title => "ورقِ " + (Entity.DateShamsi ?? "");
 
@@ -635,18 +732,35 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
     public ObservableCollection<string> Months { get; } = new();
 
     [ObservableProperty] private string _month;
+
+    /// <summary>
+    /// صفحهٔ ورق — **یکی**، و پس از نخستین باز شدن دیگر دور انداخته نمی‌شود.
+    /// چرایی‌اش در ‎WaraqPageViewModel.Load‎ نوشته شده: با ‎null‎ شدنِ این،
+    /// کلِ درختِ بصریِ صفحه (دو جدولِ تراکنش) هر بار از نو ساخته می‌شد.
+    /// </summary>
     [ObservableProperty] private WaraqPageViewModel? _page;
 
-    public bool IsListVisible => Page is null;
+    /// <summary>ورقی باز است؟ جانشینِ «‎Page is null‎»ی قدیم.</summary>
+    [ObservableProperty] private bool _sheetOpen;
+
+    public bool IsListVisible => !SheetOpen;
 
     /// <summary>ورقِ باز — تا باز است، میانبرهای ردیف به آن می‌روند نه به فهرست.</summary>
-    public override object? ActivePage => Page;
+    public override object? ActivePage => SheetOpen ? Page : null;
 
-    partial void OnPageChanged(WaraqPageViewModel? v)
+    partial void OnSheetOpenChanged(bool v)
     {
         OnPropertyChanged(nameof(IsListVisible));
         // صفحهٔ حساب تمام‌عرض است، مثلِ مودالِ تمام‌صفحهٔ نسخهٔ وب
-        IsPageOpen = v is not null;
+        IsPageOpen = v;
+    }
+
+    /// <summary>همان ورق در همان صفحه — یا نخستین‌بار، ساختنش.</summary>
+    private void Show(WaraqEntry full)
+    {
+        if (Page is null) Page = new WaraqPageViewModel(_host, full, this);
+        else Page.Load(full);
+        SheetOpen = true;
     }
     partial void OnMonthChanged(string v) => _ = ReloadAsync();
 
@@ -706,7 +820,7 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
         if (w is null) return;
         var full = await _host.WaraqData.LoadAsync(w.Id);
         if (full is null) return;
-        Page = new WaraqPageViewModel(_host, full, this);
+        Show(full);
     }
 
     [RelayCommand]
@@ -740,14 +854,36 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
         Month = mk;
         await ReloadAsync();
         var full = await _host.WaraqData.LoadAsync(w.Id);
-        if (full is not null) Page = new WaraqPageViewModel(_host, full, this);
+        if (full is not null) Show(full);
     }
 
     [RelayCommand]
     private async Task BackAsync()
     {
+        // ══ اول فهرست بیاید، بعد کارِ دیتابیس ══════════════════════════════
+        //
+        // خواستهٔ صاحب ریپو: «بازگشت به صفحهٔ اصلی نباید تأخیر داشته باشد.»
+        //
+        // ⚠️ و سنجش گفت تأخیر از کجاست: ‎FlushAsync‎ی ۶۰ ردیف و بعد
+        // همگام‌سازیِ ورق با حسابِ قرض‌داران (‎WaraqPosting.SyncAsync‎) روی هم
+        // ~۷۰۰ میلی‌ثانیه بود و **پیش از** عوض شدنِ صفحه انجام می‌شد. با
+        // خاموش کردنِ همگام‌سازی، بازگشت ۳۰۰ می‌شد.
+        //
+        // هیچ‌کدام‌شان لازم نیست جلوی چشمِ کاربر را بگیرند: هر ردیف همان
+        // لحظهٔ ویرایش ذخیره شده و همگام‌سازی هم با هر تغییرِ بعدی دوباره
+        // اجرا می‌شود. پس اول پرده عوض می‌شود و کارِ دیتابیس پشتِ سرش
+        // می‌آید — ولی همچنان ‎await‎ می‌شود تا آزمون‌ها و بستنِ برنامه
+        // بدانند کِی تمام شده.
+        //
+        // ⚠️ ‎Page‎ عمداً ‎null‎ نمی‌شود — با ‎null‎ شدنش درختِ بصریِ صفحه دور
+        // انداخته می‌شد و باز کردنِ بعدی باید همه را از نو می‌ساخت.
+        SheetOpen = false;
+
+        // ⚠️ ‎Task.Yield()‎ این‌جا کافی نیست: ادامهٔ کار با اولویتِ ‎Normal‎
+        // برمی‌گردد و چیدمان اولویتِ پایین‌تری دارد، پس باز هم کارِ دیتابیس
+        // **پیش از** عوض شدنِ پرده انجام می‌شد. ‎Background‎ زیرِ چیدمان است.
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
         if (Page is not null) await Page.FlushAsync();
-        Page = null;
         await ReloadAsync();
     }
 

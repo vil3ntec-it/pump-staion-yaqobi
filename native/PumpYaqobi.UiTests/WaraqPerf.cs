@@ -32,9 +32,12 @@ namespace PumpYaqobi.UiTests;
 internal static class WaraqPerf
 {
     /// <summary>چند ورق ساخته شود، و هر ورق چند ردیف داشته باشد.</summary>
-    private const int Sheets = 24;
-    private const int RowsPerSheet = 60;
-    private const int PumpsPerSheet = 6;
+    private static readonly int Sheets = Env("WQ_SHEETS", 24);
+    private static readonly int RowsPerSheet = Env("WQ_ROWS", 60);
+    private static readonly int PumpsPerSheet = Env("WQ_PUMPS", 6);
+
+    private static int Env(string k, int d) =>
+        int.TryParse(Environment.GetEnvironmentVariable(k), out var v) ? v : d;
 
     /// <summary>هدف: باز و بسته شدنِ ورق زیرِ این عدد.</summary>
     private const long Goal = 400;
@@ -60,6 +63,7 @@ internal static class WaraqPerf
         win.Show();
         Pump(win);
 
+        Watch(win);
         var vm = (MainViewModel)win.DataContext!;
         vm.Lock.Password = "1234";
         vm.Lock.Confirm = "1234";
@@ -106,16 +110,53 @@ internal static class WaraqPerf
             // ساختنِ ویومدل ۹)، ولی هر **پاسِ چیدمانِ** صفحهٔ ورق حدودِ ۴۰۰
             // میلی‌ثانیه می‌برد و باز شدن چند پاس لازم دارد. پس عددِ زیر
             // «کارِ رابط» است، نه کارِ داده — و جای درست کردنش هم همان‌جاست.
-            var open = Time(() => { Wait(win, openCmd.ExecuteAsync(card)); Settle(win, 6); });
+            Passes = 0;
+            Marks.Clear();
+            Clock.Restart();
+            PumpYaqobi.App.Controls.ExcelGrid.DiagMeasure = 0;
+            PumpYaqobi.App.Controls.ExcelGrid.DiagSettle = 0;
+
+            // ── سه مرحلهٔ جدا: داده، نخستین چیدمان، و ته‌نشین شدن ──────────
+            var tData = Time(() =>
+            {
+                var t = openCmd.ExecuteAsync(card);
+                var end = DateTime.UtcNow + TimeSpan.FromSeconds(60);
+                while (!t.IsCompleted && DateTime.UtcNow < end)
+                { Dispatcher.UIThread.RunJobs(); Thread.Sleep(1); }
+            });
+            var tFirst = Time(() => win.UpdateLayout());
+            var tRest = Time(() => Settle(win, 6));
+            var open = tData + tFirst + tRest;
+            Console.WriteLine($"      داده {tData} ms · نخستین چیدمان {tFirst} ms · ته‌نشینی {tRest} ms");
             var grids = win.GetVisualDescendants().OfType<DataGrid>().Count();
             var rows = win.GetVisualDescendants().OfType<DataGridRow>().Count();
             Console.WriteLine($"{Pad($"  باز کردنِ ورق (بارِ {round})", 38)} {open,6:N0} ms "
-                            + $"{grids,14:N0} {rows,11:N0}");
+                            + $"{grids,14:N0} {rows,11:N0}   ({Passes} پاسِ چیدمان، "
+                            + $"{PumpYaqobi.App.Controls.ExcelGrid.DiagMeasure} اندازه‌گیری، "
+                            + $"{PumpYaqobi.App.Controls.ExcelGrid.DiagSettle} ته‌نشینی)");
+            Console.WriteLine("      مهرِ پاس‌ها: " + string.Join(" ، ", Marks));
             if (open > Goal) bad.Add($"باز کردنِ ورق {open:N0} ms — بیش از {Goal} ms");
 
-            var back = Time(() => { Wait(win, Back(sec)); Settle(win, 6); });
-            Console.WriteLine($"{Pad($"  بازگشت به فهرست (بارِ {round})", 38)} {back,6:N0} ms");
-            if (back > Goal) bad.Add($"بازگشت از ورق {back:N0} ms — بیش از {Goal} ms");
+            // ⚠️ دو عددِ جدا: «کِی فهرست دیده می‌شود» و «کِی کارِ دیتابیس هم
+            // تمام می‌شود». کاربر اولی را حس می‌کند، نه دومی را.
+            var task = Back(sec);
+            var seen = Time(() =>
+            {
+                // ⚠️ فقط کارهای هم‌ترازِ چیدمان اجرا می‌شوند، نه کارِ
+                // پس‌زمینه‌ایِ دیتابیس — وگرنه همان چیزی که عمداً به پس‌زمینه
+                // فرستاده شده دوباره داخلِ این عدد می‌آمد.
+                for (var i = 0; i < 200; i++)
+                {
+                    Dispatcher.UIThread.RunJobs(DispatcherPriority.Render);
+                    win.UpdateLayout();
+                    if (sec.GetType().GetProperty("IsListVisible")?.GetValue(sec) is true
+                        && win.IsMeasureValid && win.IsArrangeValid) break;
+                }
+            });
+            var back = seen + Time(() => { Wait(win, task); Settle(win, 6); });
+            Console.WriteLine($"{Pad($"  بازگشت به فهرست (بارِ {round})", 38)} {seen,6:N0} ms "
+                            + $"تا دیده شدنِ فهرست · {back,6:N0} ms تا پایانِ کارِ دیتابیس");
+            if (seen > Goal) bad.Add($"بازگشت از ورق {seen:N0} ms — بیش از {Goal} ms");
         }
 
         Console.WriteLine();
@@ -200,8 +241,53 @@ internal static class WaraqPerf
         Pump(w);
     }
 
-    private static void Settle(Window w, int passes)
-    { for (var i = 0; i < passes; i++) { Dispatcher.UIThread.RunJobs(); Pump(w); } }
+    /// <summary>چند پاسِ چیدمان لازم شد تا صفحه واقعاً ته‌نشین شود.</summary>
+    internal static int Passes;
+
+    /// <summary>
+    /// ⚠️ شمردنِ پاس‌ها از **بیرون** کار نمی‌کرد و یک بار گمراه کرد.
+    ///
+    /// نوشتنِ «تا وقتی ‎IsMeasureValid‎ دروغ است پمپ کن» همیشه صفر می‌داد، چون
+    /// خودِ ‎Dispatcher.RunJobs()‎ کارِ چیدمان را انجام می‌دهد و پیش از آن که ما
+    /// نگاه کنیم پرچم را دوباره درست می‌کند. پس شمارش باید سرِ منبع باشد:
+    /// ‎LayoutUpdated‎ دقیقاً یک بار به ازای هر پاسِ کاملِ چیدمان شلیک می‌شود.
+    /// </summary>
+    private static void Watch(Window w)
+    {
+        w.LayoutUpdated += (_, _) =>
+        {
+            Passes++;
+            Marks.Add(Clock.ElapsedMilliseconds);
+        };
+    }
+
+    /// <summary>مهرِ زمانیِ هر پاس — تا بشود دید وقت کجا رفته.</summary>
+    internal static readonly List<long> Marks = new();
+    internal static readonly Stopwatch Clock = Stopwatch.StartNew();
+
+    /// <summary>
+    /// ⚠️ تا **آرام شدن**، نه شمارِ ثابتِ پاس.
+    ///
+    /// پیش از این ‎Settle(win, 6)‎ یعنی ۴۸ پاسِ چیدمانِ اجباری، و چون هر پاس چند
+    /// میلی‌ثانیه است، خودِ سنجش عددها را باد می‌کرد. این‌جا تا وقتی چیزی برای
+    /// چیدن هست پمپ می‌شود و همان لحظه که آرام شد می‌ایستد.
+    /// </summary>
+    private static void Settle(Window w, int _)
+    {
+        for (var i = 0; i < 200; i++)
+        {
+            Dispatcher.UIThread.RunJobs();
+            w.UpdateLayout();
+            if (w.IsMeasureValid && w.IsArrangeValid)
+            {
+                // یک پاسِ خالیِ دیگر: کارهای پس‌زمینه‌ای (مثلِ ‎LazyBox‎) ممکن است
+                // تازه چیدمان را دوباره باطل کنند.
+                Dispatcher.UIThread.RunJobs();
+                w.UpdateLayout();
+                if (w.IsMeasureValid && w.IsArrangeValid) return;
+            }
+        }
+    }
 
     private static void Settle(Window w, TimeSpan budget)
     {

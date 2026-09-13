@@ -45,15 +45,17 @@
           <DataGridTextColumn Header="نام" Binding="{Binding Worker}" Width="Auto" />
           <DataGridTemplateColumn Header="تیل" Width="Auto">
             <DataGridTemplateColumn.CellTemplate>
-              <!-- ⚠️ کشویی همیشه پیداست و رشته می‌دهد، نه ‎ComboBoxItem‎: با بچه‌های
-                   ‎ComboBoxItem‎، ‎SelectedItem‎ یک **شیء** است نه رشته — پس نه سرِ بار
-                   مقدار می‌نشست و نه انتخابِ کاربر برمی‌گشت. و ‎CellEditingTemplate‎
-                   یعنی مقدارِ فعلی دیده نمی‌شد و هر تغییر دو کلیک می‌خواست. در سایت
-                   این کادر ‎<select class="xls-in">‎ی همیشه‌پیداست. -->
               <DataTemplate>
-                <ComboBox ItemsSource="{Binding FuelOptions}"
-                          SelectedItem="{Binding FuelText}"
-                          Classes="incell" />
+                <!-- ⚠️ کپسول، نه کشویی. با دو گزینه، ‎ComboBox‎ یک قالبِ کامل با ‎Popup‎ و
+                     ‎ItemsPresenter‎ی خودش می‌ساخت — ده‌ها بصری در هر خانه — و سنجشِ ‎waraqperf‎
+                     نشان داد بیشترِ وقتِ باز شدنِ ورقِ پُر همین است. خواستهٔ صاحب ریپو هم همین
+                     بود: «اون فلش فقط جا گرفته» و «با تب یا اینتر عوض بشه». ‎ExcelGrid‎ کلاسِ
+                     ‎celltoggle‎ را با ‎Enter‎/‎Tab‎ می‌زند. -->
+                <Button Classes="fuelchip celltoggle" Content="{Binding FuelChipText}"
+                        Command="{Binding ToggleFuelCommand}"
+                        Foreground="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                        BorderBrush="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                        ToolTip.Tip="زدنش نوعِ تیلِ همین ردیف را پطرول ⇄ دیزل می‌کند" />
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
@@ -103,15 +105,17 @@
                 <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
                 <DataGridTemplateColumn Header="نوع تیل" Width="Auto">
                   <DataGridTemplateColumn.CellTemplate>
-                    <!-- ⚠️ کشویی همیشه پیداست و رشته می‌دهد، نه ‎ComboBoxItem‎: با بچه‌های
-                         ‎ComboBoxItem‎، ‎SelectedItem‎ یک **شیء** است نه رشته — پس نه سرِ بار
-                         مقدار می‌نشست و نه انتخابِ کاربر برمی‌گشت. و ‎CellEditingTemplate‎
-                         یعنی مقدارِ فعلی دیده نمی‌شد و هر تغییر دو کلیک می‌خواست. در سایت
-                         این کادر ‎<select class="xls-in">‎ی همیشه‌پیداست. -->
                     <DataTemplate>
-                      <ComboBox ItemsSource="{Binding FuelOptions}"
-                                SelectedItem="{Binding FuelText}"
-                                Classes="incell" />
+                      <!-- ⚠️ کپسول، نه کشویی. با دو گزینه، ‎ComboBox‎ یک قالبِ کامل با ‎Popup‎ و
+                           ‎ItemsPresenter‎ی خودش می‌ساخت — ده‌ها بصری در هر خانه — و سنجشِ ‎waraqperf‎
+                           نشان داد بیشترِ وقتِ باز شدنِ ورقِ پُر همین است. خواستهٔ صاحب ریپو هم همین
+                           بود: «اون فلش فقط جا گرفته» و «با تب یا اینتر عوض بشه». ‎ExcelGrid‎ کلاسِ
+                           ‎celltoggle‎ را با ‎Enter‎/‎Tab‎ می‌زند. -->
+                      <Button Classes="fuelchip celltoggle" Content="{Binding FuelChipText}"
+                              Command="{Binding ToggleFuelCommand}"
+                              Foreground="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                              BorderBrush="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                              ToolTip.Tip="زدنش نوعِ تیلِ همین ردیف را پطرول ⇄ دیزل می‌کند" />
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
@@ -119,28 +123,34 @@
                 <DataGridTextColumn Header="مبلغ" Binding="{Binding AmountText}" Width="Auto" />
                 <DataGridTemplateColumn Header="نوع" Width="Auto">
                   <DataGridTemplateColumn.CellTemplate>
-                    <!-- ⚠️ کشویی همیشه پیداست و رشته می‌دهد، نه ‎ComboBoxItem‎: با بچه‌های
-                         ‎ComboBoxItem‎، ‎SelectedItem‎ یک **شیء** است نه رشته — پس نه سرِ بار
-                         مقدار می‌نشست و نه انتخابِ کاربر برمی‌گشت. و ‎CellEditingTemplate‎
-                         یعنی مقدارِ فعلی دیده نمی‌شد و هر تغییر دو کلیک می‌خواست. در سایت
-                         این کادر ‎<select class="xls-in">‎ی همیشه‌پیداست. -->
                     <DataTemplate>
-                      <ComboBox ItemsSource="{Binding TypeOptions}"
-                                SelectedItem="{Binding TypeText}"
-                                Classes="incell" />
+                      <!-- ⚠️ کپسول، نه کشویی. با دو گزینه، ‎ComboBox‎ یک قالبِ کامل با ‎Popup‎ و
+                           ‎ItemsPresenter‎ی خودش می‌ساخت — ده‌ها بصری در هر خانه — و سنجشِ ‎waraqperf‎
+                           نشان داد بیشترِ وقتِ باز شدنِ ورقِ پُر همین است. خواستهٔ صاحب ریپو هم همین
+                           بود: «اون فلش فقط جا گرفته» و «با تب یا اینتر عوض بشه». ‎ExcelGrid‎ کلاسِ
+                           ‎celltoggle‎ را با ‎Enter‎/‎Tab‎ می‌زند. -->
+                      <Button Classes="fuelchip celltoggle" Content="{Binding TypeText}"
+                              Command="{Binding ToggleTypeCommand}"
+                              Foreground="{Binding TypeChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                              BorderBrush="{Binding TypeChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                              ToolTip.Tip="زدنش این ردیف را قرض ⇄ مصرف می‌کند" />
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
                 <!-- ستونِ «واحد» — همان ستونِ سایت، با همان راهنمای خودش -->
                 <DataGridTemplateColumn Header="واحد" Width="Auto">
                   <DataGridTemplateColumn.CellTemplate>
-                    <!-- ⚠️ کشویی همیشه پیداست و رشته می‌دهد، نه ‎ComboBoxItem‎ —
-                         همان باگی که در بقیهٔ ستون‌های این صفحه بود. -->
                     <DataTemplate>
-                      <ComboBox ItemsSource="{Binding UnitOptions}"
-                                SelectedItem="{Binding UnitText}"
-                                Classes="incell"
-                                ToolTip.Tip="ردیفِ قرض به کدام دفترِ حسابِ قرض‌دار برود: واحد تیل یا واحد پول" />
+                      <!-- ⚠️ کپسول، نه کشویی. با دو گزینه، ‎ComboBox‎ یک قالبِ کامل با ‎Popup‎ و
+                           ‎ItemsPresenter‎ی خودش می‌ساخت — ده‌ها بصری در هر خانه — و سنجشِ ‎waraqperf‎
+                           نشان داد بیشترِ وقتِ باز شدنِ ورقِ پُر همین است. خواستهٔ صاحب ریپو هم همین
+                           بود: «اون فلش فقط جا گرفته» و «با تب یا اینتر عوض بشه». ‎ExcelGrid‎ کلاسِ
+                           ‎celltoggle‎ را با ‎Enter‎/‎Tab‎ می‌زند. -->
+                      <Button Classes="fuelchip celltoggle" Content="{Binding UnitText}"
+                              Command="{Binding ToggleUnitCommand}"
+                              Foreground="{Binding UnitChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                              BorderBrush="{Binding UnitChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                              ToolTip.Tip="ردیفِ قرض به کدام دفترِ حسابِ قرض‌دار برود: واحد تیل یا واحد پول — زدنش عوضش می‌کند" />
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
@@ -152,15 +162,17 @@
                 <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
                 <DataGridTemplateColumn Header="نوع تیل" Width="Auto">
                   <DataGridTemplateColumn.CellTemplate>
-                    <!-- ⚠️ کشویی همیشه پیداست و رشته می‌دهد، نه ‎ComboBoxItem‎: با بچه‌های
-                         ‎ComboBoxItem‎، ‎SelectedItem‎ یک **شیء** است نه رشته — پس نه سرِ بار
-                         مقدار می‌نشست و نه انتخابِ کاربر برمی‌گشت. و ‎CellEditingTemplate‎
-                         یعنی مقدارِ فعلی دیده نمی‌شد و هر تغییر دو کلیک می‌خواست. در سایت
-                         این کادر ‎<select class="xls-in">‎ی همیشه‌پیداست. -->
                     <DataTemplate>
-                      <ComboBox ItemsSource="{Binding FuelOptions}"
-                                SelectedItem="{Binding FuelText}"
-                                Classes="incell" />
+                      <!-- ⚠️ کپسول، نه کشویی. با دو گزینه، ‎ComboBox‎ یک قالبِ کامل با ‎Popup‎ و
+                           ‎ItemsPresenter‎ی خودش می‌ساخت — ده‌ها بصری در هر خانه — و سنجشِ ‎waraqperf‎
+                           نشان داد بیشترِ وقتِ باز شدنِ ورقِ پُر همین است. خواستهٔ صاحب ریپو هم همین
+                           بود: «اون فلش فقط جا گرفته» و «با تب یا اینتر عوض بشه». ‎ExcelGrid‎ کلاسِ
+                           ‎celltoggle‎ را با ‎Enter‎/‎Tab‎ می‌زند. -->
+                      <Button Classes="fuelchip celltoggle" Content="{Binding FuelChipText}"
+                              Command="{Binding ToggleFuelCommand}"
+                              Foreground="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                              BorderBrush="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                              ToolTip.Tip="زدنش نوعِ تیلِ همین ردیف را پطرول ⇄ دیزل می‌کند" />
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
@@ -168,28 +180,34 @@
                 <DataGridTextColumn Header="مبلغ" Binding="{Binding AmountText}" Width="Auto" />
                 <DataGridTemplateColumn Header="نوع" Width="Auto">
                   <DataGridTemplateColumn.CellTemplate>
-                    <!-- ⚠️ کشویی همیشه پیداست و رشته می‌دهد، نه ‎ComboBoxItem‎: با بچه‌های
-                         ‎ComboBoxItem‎، ‎SelectedItem‎ یک **شیء** است نه رشته — پس نه سرِ بار
-                         مقدار می‌نشست و نه انتخابِ کاربر برمی‌گشت. و ‎CellEditingTemplate‎
-                         یعنی مقدارِ فعلی دیده نمی‌شد و هر تغییر دو کلیک می‌خواست. در سایت
-                         این کادر ‎<select class="xls-in">‎ی همیشه‌پیداست. -->
                     <DataTemplate>
-                      <ComboBox ItemsSource="{Binding TypeOptions}"
-                                SelectedItem="{Binding TypeText}"
-                                Classes="incell" />
+                      <!-- ⚠️ کپسول، نه کشویی. با دو گزینه، ‎ComboBox‎ یک قالبِ کامل با ‎Popup‎ و
+                           ‎ItemsPresenter‎ی خودش می‌ساخت — ده‌ها بصری در هر خانه — و سنجشِ ‎waraqperf‎
+                           نشان داد بیشترِ وقتِ باز شدنِ ورقِ پُر همین است. خواستهٔ صاحب ریپو هم همین
+                           بود: «اون فلش فقط جا گرفته» و «با تب یا اینتر عوض بشه». ‎ExcelGrid‎ کلاسِ
+                           ‎celltoggle‎ را با ‎Enter‎/‎Tab‎ می‌زند. -->
+                      <Button Classes="fuelchip celltoggle" Content="{Binding TypeText}"
+                              Command="{Binding ToggleTypeCommand}"
+                              Foreground="{Binding TypeChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                              BorderBrush="{Binding TypeChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                              ToolTip.Tip="زدنش این ردیف را قرض ⇄ مصرف می‌کند" />
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
                 <!-- ستونِ «واحد» — همان ستونِ سایت، با همان راهنمای خودش -->
                 <DataGridTemplateColumn Header="واحد" Width="Auto">
                   <DataGridTemplateColumn.CellTemplate>
-                    <!-- ⚠️ کشویی همیشه پیداست و رشته می‌دهد، نه ‎ComboBoxItem‎ —
-                         همان باگی که در بقیهٔ ستون‌های این صفحه بود. -->
                     <DataTemplate>
-                      <ComboBox ItemsSource="{Binding UnitOptions}"
-                                SelectedItem="{Binding UnitText}"
-                                Classes="incell"
-                                ToolTip.Tip="ردیفِ قرض به کدام دفترِ حسابِ قرض‌دار برود: واحد تیل یا واحد پول" />
+                      <!-- ⚠️ کپسول، نه کشویی. با دو گزینه، ‎ComboBox‎ یک قالبِ کامل با ‎Popup‎ و
+                           ‎ItemsPresenter‎ی خودش می‌ساخت — ده‌ها بصری در هر خانه — و سنجشِ ‎waraqperf‎
+                           نشان داد بیشترِ وقتِ باز شدنِ ورقِ پُر همین است. خواستهٔ صاحب ریپو هم همین
+                           بود: «اون فلش فقط جا گرفته» و «با تب یا اینتر عوض بشه». ‎ExcelGrid‎ کلاسِ
+                           ‎celltoggle‎ را با ‎Enter‎/‎Tab‎ می‌زند. -->
+                      <Button Classes="fuelchip celltoggle" Content="{Binding UnitText}"
+                              Command="{Binding ToggleUnitCommand}"
+                              Foreground="{Binding UnitChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                              BorderBrush="{Binding UnitChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                              ToolTip.Tip="ردیفِ قرض به کدام دفترِ حسابِ قرض‌دار برود: واحد تیل یا واحد پول — زدنش عوضش می‌کند" />
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
