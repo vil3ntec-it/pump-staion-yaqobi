@@ -10,6 +10,7 @@ using PumpYaqobi.App.Services;
 using PumpYaqobi.App.ViewModels;
 using PumpYaqobi.App.ViewModels.Sections;
 using PumpYaqobi.App.Views;
+using QuestPDF.Fluent;   // GeneratePdf
 
 namespace PumpYaqobi.UiTests;
 
@@ -171,18 +172,20 @@ internal static class PerfAudit
         // ⚠️ فقط ساختنِ شیء را نسنجید: کارِ اصلی در ‎GeneratePdf‎ اتفاق می‌افتد.
         {
             using var db = new PumpYaqobi.Services.Data.PumpDbFactory(file).Create();
-            var rows = db.Expenses.AsNoTracking().OrderBy(x => x.Id).ToList();
-            Console.WriteLine($"(پی‌دی‌اف با {rows.Count:N0} ردیف)");
+            var expenses = db.Expenses.AsNoTracking().OrderBy(x => x.Id).ToList();
+            var outPdf = Path.Combine(dir, "perf.pdf");
+            Console.WriteLine($"(پی‌دی‌اف با {expenses.Count:N0} ردیف)");
             Mark("ساختِ پی‌دی‌افِ مصارف", () =>
             {
                 try
                 {
+                    PumpYaqobi.Reporting.Pdf.PdfEngine.Initialize();
                     var doc = new PumpYaqobi.Reporting.Pdf.ExpenseReport(
                         new PumpYaqobi.Reporting.Pdf.ExpenseReportInput(
-                            "سنبله ۱۴۰۵", rows, PumpYaqobi.Application.Localization.Shamsi.Today(), ""));
-                    using var ms = new MemoryStream();
-                    QuestPDF.Fluent.DocumentExtensions.GeneratePdf(doc, ms);
-                    Console.WriteLine($"        ({ms.Length / 1024:N0} کیلوبایت)");
+                            "سنبله ۱۴۰۵", expenses,
+                            PumpYaqobi.Application.Localization.Shamsi.Today(), ""));
+                    doc.GeneratePdf(outPdf);
+                    Console.WriteLine($"        ({new FileInfo(outPdf).Length / 1024:N0} کیلوبایت)");
                 }
                 catch (Exception e) { Console.WriteLine("        پی‌دی‌اف نساخت: " + e.Message); }
             });

@@ -9,6 +9,8 @@
   <ItemGroup>
     <PackageReference Include="Avalonia.Headless" Version="11.2.3" />
     <PackageReference Include="Avalonia.Skia" Version="11.2.3" />
+    <!-- برای سنجشِ ساختِ واقعیِ پی‌دی‌اف (‎GeneratePdf‎) -->
+    <PackageReference Include="QuestPDF" Version="2024.12.3" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PumpYaqobi.App\PumpYaqobi.App.csproj" />
