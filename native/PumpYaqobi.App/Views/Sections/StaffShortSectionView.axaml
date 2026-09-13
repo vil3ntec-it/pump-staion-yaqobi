@@ -10,7 +10,7 @@
                  SubHeader="از خودِ ورق‌های روزانه — به هیچ ورقی دست زده نمی‌شود">
 
     <c:SectionPage.Toolbar>
-      <Button Classes="ghost info" Content="📄 PDF" Command="{Binding PdfCommand}" />
+      <Button Classes="ghost info" Content="PDF" Command="{Binding PdfCommand}" />
     </c:SectionPage.Toolbar>
 
     <StackPanel Spacing="10">
@@ -68,11 +68,11 @@
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate>
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                      <Button Classes="ghost danger" Content="💵 رسید کمبودی" Padding="8,3" FontSize="11"
+                      <Button Classes="ghost danger" Content="رسید کمبودی" Padding="8,3" FontSize="11"
                               IsVisible="{Binding CanSettleShort}"
                               Command="{Binding $parent[UserControl].DataContext.PickShortCommand}"
                               CommandParameter="{Binding}" />
-                      <Button Classes="ghost" Content="💸 پرداخت اضافی" Padding="8,3" FontSize="11"
+                      <Button Classes="ghost" Content="پرداخت اضافی" Padding="8,3" FontSize="11"
                               IsVisible="{Binding CanSettleExcess}"
                               Command="{Binding $parent[UserControl].DataContext.PickExcessCommand}"
                               CommandParameter="{Binding}" />
@@ -99,9 +99,9 @@
         <StackPanel Orientation="Horizontal" Spacing="8">
           <TextBlock Text="مبلغ:" Classes="label" VerticalAlignment="Center" />
           <TextBox Text="{Binding Amount}" Width="130" HorizontalContentAlignment="Center" />
-          <Button Classes="danger" Content="✔ رسید کمبودی گرفتم"
+          <Button Classes="danger" Content="رسید کمبودی گرفتم"
                   Command="{Binding SettleShortCommand}" />
-          <Button Classes="accent" Content="✔ اضافی را پرداخت کردم"
+          <Button Classes="accent" Content="اضافی را پرداخت کردم"
                   Command="{Binding SettleExcessCommand}" />
         </StackPanel>
       </Border>

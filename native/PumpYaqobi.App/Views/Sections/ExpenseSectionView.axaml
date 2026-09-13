@@ -13,10 +13,10 @@
              نمی‌افتاد. همان «کادرها ماهِ بعد کار نمی‌کند»: فهرستِ ماه‌ها فقط
              ماه‌هایی را دارد که داده دارند، پس ماهِ بعد تا ردیفی نداشته باشد
              در کشویی نیست. همتای ‎addExpenseMonth()‎ی سایت. -->
-        <Button Classes="ghost info" Content="📅 ماه جدید" Margin="0,0,6,0"
+        <Button Classes="ghost info" Content="ماه جدید" Margin="0,0,6,0"
                 Command="{Binding NewMonthCommand}"
                 ToolTip.Tip="جدولِ ماهِ بعد را باز می‌کند" />
-        <Button Classes="ghost" Content="📄 PDF" Margin="0,0,6,0"
+        <Button Classes="ghost" Content="PDF" Margin="0,0,6,0"
                 Command="{Binding PdfCommand}"
                 Foreground="{DynamicResource Pump.Ok}" BorderBrush="{DynamicResource Pump.Ok}" />
       </WrapPanel>

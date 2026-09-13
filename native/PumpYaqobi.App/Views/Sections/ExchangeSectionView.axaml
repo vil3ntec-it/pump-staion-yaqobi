@@ -12,12 +12,12 @@
       <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
         <!-- «🗓️ ماه جدید» — همتای ‎addChakanaMonth()‎ی سایت: جدولِ ماهِ بعد
              را باز می‌کند. بی این، ماهی که هنوز ردیفی ندارد در کشویی نیست. -->
-        <Button Classes="ghost info" Content="📅 ماه جدید" Margin="0,0,6,0"
+        <Button Classes="ghost info" Content="ماه جدید" Margin="0,0,6,0"
                 Command="{Binding NewMonthCommand}"
                 ToolTip.Tip="جدولِ ماهِ بعد را باز می‌کند" />
-        <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,0,6,0" />
-        <Button Classes="ghost" Content="📅 ماه بعد" Margin="0,0,6,0" />
-        <Button Classes="ghost info" Content="📄 PDF" Margin="0,0,6,0"
+        <Button Classes="ghost info" Content="تاریخچه" Margin="0,0,6,0" />
+        <Button Classes="ghost" Content="ماه بعد" Margin="0,0,6,0" />
+        <Button Classes="ghost info" Content="PDF" Margin="0,0,6,0"
                 Command="{Binding PdfCommand}" />
       </WrapPanel>
     </c:SectionPage.Toolbar>

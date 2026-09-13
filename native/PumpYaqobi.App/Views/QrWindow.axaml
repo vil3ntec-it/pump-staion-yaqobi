@@ -26,7 +26,7 @@
                          TextAlignment="Center" />
 
     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-      <Button x:Name="SaveBtn" Classes="accent" Content="💾 ذخیرهٔ عکس" Click="OnSave" MinWidth="110" />
+      <Button x:Name="SaveBtn" Classes="accent" Content="ذخیرهٔ عکس" Click="OnSave" MinWidth="110" />
       <Button Content="بستن" Click="OnClose" MinWidth="92" />
     </StackPanel>
   </StackPanel>

@@ -35,7 +35,7 @@ public class SiteFlowParityTests
     public void TheDateWindowHasTheSameControlsAsTheSite()
     {
         var x = Read("PumpYaqobi.App", "Views", "WaraqDateWindow.axaml");
-        foreach (var t in new[] { "▲ روز بعد", "▼ روز قبل", "‹ ماه", "امروز", "ماه ›", "⌨️ نوشتن", "✔ باز کردن" })
+        foreach (var t in new[] { "روز بعد", "روز قبل", "‹ ماه", "امروز", "ماه ›", "نوشتن", "باز کردن" })
             Assert.Contains(t, x);
 
         var cs = Read("PumpYaqobi.App", "Views", "WaraqDateWindow.axaml.cs");
@@ -64,7 +64,7 @@ public class SiteFlowParityTests
 
     // ── کادرِ نامِ قرض‌دار و شرکت ─────────────────────────────────────────────
 
-    /// <summary>«➕ افزودن شخص» کادرِ نام باز می‌کند، مثلِ ‎addPersonModal‎ی سایت.</summary>
+    /// <summary>«افزودن شخص» کادرِ نام باز می‌کند، مثلِ ‎addPersonModal‎ی سایت.</summary>
     [Fact]
     public void AddingADebtorAsksForTheNameInADialog()
     {

@@ -99,7 +99,7 @@
               <TextBlock Text="{Binding BulkIncomeText}" FontWeight="Bold" FontSize="15"
                          Margin="0,6,0,0" Foreground="{DynamicResource Pump.Ok}" />
             </StackPanel>
-            <Button Classes="accent" Content="➕ ثبت" VerticalAlignment="Bottom" Margin="0,0,0,10"
+            <Button Classes="accent" Content="ثبت" VerticalAlignment="Bottom" Margin="0,0,0,10"
                     Command="{Binding AddBulkCommand}" />
           </WrapPanel>
           <TextBlock FontSize="12" Foreground="{DynamicResource Pump.Muted}">

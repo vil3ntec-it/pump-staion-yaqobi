@@ -139,8 +139,8 @@
     <c:SectionPage.Toolbar>
       <StackPanel Orientation="Horizontal" Spacing="8">
         <Button Content="{Binding FuelToggleText}" Command="{Binding ToggleFuelCommand}" />
-        <Button Content="🕘 تاریخچهٔ پایه‌ها" />
-        <Button Classes="accent" Content="📄 PDF همه گزارش‌ها" Command="{Binding PdfCommand}" />
+        <Button Content="تاریخچهٔ پایه‌ها" />
+        <Button Classes="accent" Content="PDF همه گزارش‌ها" Command="{Binding PdfCommand}" />
       </StackPanel>
     </c:SectionPage.Toolbar>
 
@@ -166,11 +166,11 @@
                 <Border Classes="chip" Margin="0,0,8,6">
                   <TextBlock Text="{Binding ReportNumText, StringFormat=گزارش #{0}}" />
                 </Border>
-                <Button Classes="accent" Content="➕ گزارش جدید" Margin="0,0,8,6"
+                <Button Classes="accent" Content="گزارش جدید" Margin="0,0,8,6"
                         Command="{Binding StartNewReportCommand}" />
-                <Button Content="🆕 پارچهٔ جدید روز" Margin="0,0,8,6"
+                <Button Content="پارچهٔ جدید روز" Margin="0,0,8,6"
                         Command="{Binding NewParchaDayCommand}" />
-                <Button Content="🆕 پارچهٔ جدید شب" Margin="0,0,0,6"
+                <Button Content="پارچهٔ جدید شب" Margin="0,0,0,6"
                         Command="{Binding NewParchaNightCommand}" />
               </WrapPanel>
             </StackPanel>

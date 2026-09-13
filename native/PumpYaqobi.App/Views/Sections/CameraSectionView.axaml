@@ -26,7 +26,7 @@
 
             <StackPanel Spacing="3" Width="180" Margin="0,0,10,6">
               <TextBlock Text=" " Classes="label" />
-              <Button Content="🖼️ خواندن از عکسِ کیو‌آر" Command="{Binding AddByQrCommand}"
+              <Button Content="خواندن از عکسِ کیو‌آر" Command="{Binding AddByQrCommand}"
                       HorizontalAlignment="Stretch" />
             </StackPanel>
 
@@ -34,14 +34,14 @@
                  نیست اضافه می‌کند — همان ‎refreshLocalCams‎ی نسخهٔ وب. -->
             <StackPanel Spacing="3" Width="165" Margin="0,0,10,6">
               <TextBlock Text=" " Classes="label" />
-              <Button Content="📷 دوربین‌های USB" Command="{Binding AddUsbCommand}"
+              <Button Content="دوربین‌های USB" Command="{Binding AddUsbCommand}"
                       HorizontalAlignment="Stretch"
                       ToolTip.Tip="وب‌کم‌های وصل‌شده را پیدا و اضافه می‌کند" />
             </StackPanel>
 
             <StackPanel Spacing="3" Width="130" Margin="0,0,10,6">
               <TextBlock Text=" " Classes="label" />
-              <Button Classes="accent" Content="➕ ذخیرهٔ دوربین" Command="{Binding AddCommand}"
+              <Button Classes="accent" Content="ذخیرهٔ دوربین" Command="{Binding AddCommand}"
                       HorizontalAlignment="Stretch" />
             </StackPanel>
           </WrapPanel>
@@ -97,7 +97,7 @@
                   <StackPanel Spacing="5">
                     <TextBlock Text="{Binding Url}" Classes="muted" FontSize="11"
                                TextTrimming="CharacterEllipsis" />
-                    <Button Classes="ghost" Content="🖥️ باز کردن در ویندوز" Padding="8,3" FontSize="11"
+                    <Button Classes="ghost" Content="باز کردن در ویندوز" Padding="8,3" FontSize="11"
                             HorizontalAlignment="Left"
                             IsVisible="{Binding !ShowsInApp}"
                             Command="{Binding ToggleCommand}" />

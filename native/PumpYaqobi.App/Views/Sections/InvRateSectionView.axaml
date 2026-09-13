@@ -15,11 +15,11 @@
 
     <c:SectionPage.Toolbar>
       <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-        <Button Classes="seg" Content="📋 همه" Command="{Binding SetFilterCommand}"
+        <Button Classes="seg" Content="همه" Command="{Binding SetFilterCommand}"
                 CommandParameter="all" Classes.on="{Binding IsAll}" />
-        <Button Classes="seg" Content="🔴 زیان" Command="{Binding SetFilterCommand}"
+        <Button Classes="seg" Content="زیان" Command="{Binding SetFilterCommand}"
                 CommandParameter="loss" Classes.on="{Binding IsLoss}" />
-        <Button Classes="seg" Content="🟢 مفاد" Command="{Binding SetFilterCommand}"
+        <Button Classes="seg" Content="مفاد" Command="{Binding SetFilterCommand}"
                 CommandParameter="gain" Classes.on="{Binding IsGain}" />
       </StackPanel>
     </c:SectionPage.Toolbar>

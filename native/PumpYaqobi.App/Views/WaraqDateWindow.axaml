@@ -20,14 +20,14 @@
     <TextBlock Text="تاریخ ورق (شمسی) — بدون کیبورد، با همین دو کادر" Classes="muted"
                TextWrapping="Wrap" />
 
-    <Button x:Name="NextDay" Content="▲ روز بعد" HorizontalAlignment="Stretch"
+    <Button x:Name="NextDay" Content="روز بعد" HorizontalAlignment="Stretch"
             HorizontalContentAlignment="Center" Padding="10,11" Click="OnNextDay" />
 
     <TextBox x:Name="DateBox" IsReadOnly="True" FontSize="24" FontWeight="Black"
              TextAlignment="Center" Padding="8,10" Watermark="1405/5/4"
              KeyDown="OnDateKey" />
 
-    <Button x:Name="PrevDay" Content="▼ روز قبل" HorizontalAlignment="Stretch"
+    <Button x:Name="PrevDay" Content="روز قبل" HorizontalAlignment="Stretch"
             HorizontalContentAlignment="Center" Padding="10,11" Click="OnPrevDay" />
 
     <UniformGrid Columns="4" Margin="0,2,0,0">
@@ -40,7 +40,7 @@
       <Button Content="ماه ›" Click="OnNextMonth" Margin="0,0,5,0"
               HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
               ToolTip.Tip="یک ماه جلو" />
-      <Button x:Name="TypeBtn" Content="⌨️ نوشتن" Click="OnAllowTyping"
+      <Button x:Name="TypeBtn" Content="نوشتن" Click="OnAllowTyping"
               HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
               ToolTip.Tip="اگر خواستید با کیبورد بنویسید" />
     </UniformGrid>
@@ -48,7 +48,7 @@
     <TextBlock x:Name="Hint" Classes="muted" TextWrapping="Wrap" MinHeight="20" />
 
     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
-      <Button x:Name="OkBtn" Classes="accent" Content="✔ باز کردن" Click="OnOk" MinWidth="110" />
+      <Button x:Name="OkBtn" Classes="accent" Content="باز کردن" Click="OnOk" MinWidth="110" />
       <Button Content="انصراف" Click="OnCancel" MinWidth="92" />
     </StackPanel>
   </StackPanel>

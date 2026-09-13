@@ -17,9 +17,9 @@
       <c:SectionPage.Toolbar>
         <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
           <TextBox Width="230" Text="{Binding Search}" Watermark="🔍 جستجوی شرکت..." Margin="0,0,8,0" />
-          <Button Classes="ghost info" Content="🔍 جستجوی خرید" Margin="0,0,8,0"
+          <Button Classes="ghost info" Content="جستجوی خرید" Margin="0,0,8,0"
                   Command="{Binding SearchPurchaseCommand}" />
-          <Button Classes="accent" Content="➕ افزودن شرکت"
+          <Button Classes="accent" Content="افزودن شرکت"
                   Command="{Binding AddCompanyCommand}" />
         </WrapPanel>
       </c:SectionPage.Toolbar>

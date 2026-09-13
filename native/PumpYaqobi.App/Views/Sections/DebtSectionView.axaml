@@ -13,7 +13,7 @@
 
       <c:SectionPage.Toolbar>
         <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
-          <Button Classes="accent" Content="➕ افزودن شخص" Margin="0,0,8,0"
+          <Button Classes="accent" Content="افزودن شخص" Margin="0,0,8,0"
                   Command="{Binding AddDebtorCommand}" />
           <!-- «قرض‌های کهنه» از این‌جا رفت: حالا کارتِ زیربخشِ همین بخش است و
                بالای فهرست می‌نشیند — مثلِ ‎.tool-link-card‎ نسخهٔ وب. سه دکمهٔ
@@ -21,12 +21,12 @@
           <!-- ⚠️ این دکمه تا امروز **هیچ فرمانی نداشت** — زده می‌شد و هیچ
                اتفاقی نمی‌افتاد. حالا صفحهٔ «مدت عضویت» را باز می‌کند، همتای
                ‎openMembershipList()‎ی سایت. -->
-          <Button Content="⏳ مدت عضویت همه" Command="{Binding ShowMembershipCommand}"
+          <Button Content="مدت عضویت همه" Command="{Binding ShowMembershipCommand}"
                   ToolTip.Tip="یک صفحهٔ جدا با مدت عضویتِ همهٔ قرض‌داران" />
           <!-- «🔍 اسکنِ کیو‌آر» — رمزگشا از اول در برنامه بود، ولی فقط بخشِ
                دوربین از آن استفاده می‌کرد. حالا اسکنِ کیو‌آرِ یک حساب همان
                حساب را باز می‌کند، مثلِ سایت. -->
-          <Button Classes="ghost info" Content="🔍 اسکنِ کیو‌آر" Margin="8,0,0,0"
+          <Button Classes="ghost info" Content="اسکنِ کیو‌آر" Margin="8,0,0,0"
                   Command="{Binding ScanQrCommand}"
                   ToolTip.Tip="عکسِ کیو‌آرِ یک حساب را بدهید تا همان حساب باز شود" />
         </WrapPanel>

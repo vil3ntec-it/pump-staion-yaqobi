@@ -27,15 +27,15 @@
             <Setter Property="Margin" Value="0,0,8,6" />
           </Style>
         </WrapPanel.Styles>
-        <Button Classes="ghost" Content="→ قبلی" Command="{Binding PrevPersonCommand}" />
+        <Button Classes="ghost" Content="قبلی" Command="{Binding PrevPersonCommand}" />
         <Button Classes="ghost" Content="بعدی ←" Command="{Binding NextPersonCommand}" />
         <Button Classes="ghost info" Content="{Binding Current.ModeToggleText}"
                 Command="{Binding Current.ToggleModeCommand}"
                 ToolTip.Tip="دفترِ پول ⇄ دفترِ تیل — این دو کاملاً جدا هستند" />
-        <Button Classes="ghost info" Content="📄 PDF" Command="{Binding PdfCommand}" />
+        <Button Classes="ghost info" Content="PDF" Command="{Binding PdfCommand}" />
         <!-- «📲 کیو‌آر» — در سایت داخلِ کشوییِ «⋯ بیشتر» است و در نیتیو اصلاً
              نبود: نه کیو‌آری ساخته می‌شد و نه دیده می‌شد. -->
-        <Button Classes="ghost" Content="📲 کیو‌آر" Command="{Binding ShowQrCommand}"
+        <Button Classes="ghost" Content="کیو‌آر" Command="{Binding ShowQrCommand}"
                 ToolTip.Tip="کیو‌آرِ همین حسابی که باز است" />
         <!-- ══ دو دکمهٔ خطرناک، دور از بقیه ═══════════════════════════════
              گزارشِ صاحب ریپو: «حذف حساب و تغییر اسم را باید بالای بالا
@@ -46,9 +46,9 @@
              جداکننده از دکمه‌های همیشگی — تا دستِ کسی سُر نخورد رویشان. -->
         <Border Width="1" Background="{DynamicResource Pump.GridLine}"
                 Margin="14,4" VerticalAlignment="Stretch" />
-        <Button Classes="ghost" Content="✏️ تغییر اسم"
+        <Button Classes="ghost" Content="تغییر اسم"
                 Command="{Binding RenamePersonCommand}" />
-        <Button Classes="ghost danger" Content="🗑️ حذفِ این حساب"
+        <Button Classes="ghost danger" Content="حذفِ این حساب"
                 Command="{Binding DeleteSubAccountCommand}"
                 CommandParameter="{Binding Current}" />
 
@@ -286,11 +286,11 @@
               </ComboBox.ItemTemplate>
             </ComboBox>
           </StackPanel>
-          <Button Classes="ghost info" Content="➕ حساب جدید"
+          <Button Classes="ghost info" Content="حساب جدید"
                   Command="{Binding AddSubAccountCommand}" />
           <!-- «📋 جدول جدید» جایش همین نوار است، نه سربرگ — در سایت هم
                ‎.pm-table-new‎ درست بغلِ ‎.pm-acct-new‎ می‌نشیند. -->
-          <Button Classes="ghost info" Content="📋 جدول جدید"
+          <Button Classes="ghost info" Content="جدول جدید"
                   Command="{Binding Current.NewTableCommand}" />
 
           <Border Classes="sep" />
@@ -299,7 +299,7 @@
                در برنامهٔ نیتیو اصلاً نبودند، یعنی راهی نبود که فقط ردیف‌های یک
                تیل را ببینی. ⚠️ فیلتر هیچ ردیفی را پاک نمی‌کند؛ فقط دیده‌شدن. -->
           <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-            <Button Classes="ghost" Content="📋 همه"
+            <Button Classes="ghost" Content="همه"
                     Command="{Binding Current.SetFilterCommand}" CommandParameter="all" />
             <Button Classes="ghost" Content="⛽ حساب پطرول"
                     Foreground="{DynamicResource Pump.Ok}"
@@ -391,7 +391,7 @@
                       </c:ExcelGrid>
                       <c:TotalsBar ItemsSource="{Binding Totals}" />
 
-                      <Button Classes="ghost danger" Content="🗑️ حذفِ این آرشیو"
+                      <Button Classes="ghost danger" Content="حذفِ این آرشیو"
                               HorizontalAlignment="Right" Padding="10,4" FontSize="11"
                               Command="{Binding $parent[UserControl].DataContext.Current.DeleteArchiveCommand}"
                               CommandParameter="{Binding}" />

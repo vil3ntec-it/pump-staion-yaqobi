@@ -40,8 +40,8 @@
                    FontWeight="Bold" FontSize="15"
                    Text="{Binding Title, StringFormat='🖨️ چاپ — {0}'}" />
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
-          <ToggleButton Classes="doc-btn" Content="⚙ تنظیمات" IsChecked="{Binding RailOpen}" />
-          <Button Classes="doc-btn" Content="✕ بستن" Click="OnClose" />
+          <ToggleButton Classes="doc-btn" Content="تنظیمات" IsChecked="{Binding RailOpen}" />
+          <Button Classes="doc-btn" Content="بستن" Click="OnClose" />
         </StackPanel>
       </Grid>
     </Border>
@@ -128,7 +128,7 @@
 
             <Button Classes="link" Content="تنظیمِ ورق…" Click="OnSetup" />
             <TextBlock Text="{Binding ScaleInfo}" Classes="pn" />
-            <Button Classes="link" Content="⬇️ ذخیرهٔ فایلِ گزارش" Click="OnSave" />
+            <Button Classes="link" Content="ذخیرهٔ فایلِ گزارش" Click="OnSave" />
 
             <TextBlock Text="{Binding Status}" Classes="pn" TextWrapping="Wrap"
                        IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />

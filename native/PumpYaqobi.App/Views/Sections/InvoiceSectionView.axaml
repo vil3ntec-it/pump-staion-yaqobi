@@ -134,9 +134,9 @@
 
           <!-- ── دو دکمهٔ زیرِ برگه — ‎.inv-btn-row‎ ────────────────────── -->
           <StackPanel Orientation="Horizontal" Spacing="10">
-            <Button Classes="accent" Content="✅ ثبت فاکتور" MinWidth="170" MinHeight="42"
+            <Button Classes="accent" Content="ثبت فاکتور" MinWidth="170" MinHeight="42"
                     FontWeight="ExtraBold" Command="{Binding SubmitCommand}" />
-            <Button Content="🔄 پاک کردن فرم" MinWidth="150" MinHeight="42"
+            <Button Content="پاک کردن فرم" MinWidth="150" MinHeight="42"
                     Command="{Binding ResetFormCommand}" />
           </StackPanel>
 
@@ -203,7 +203,7 @@
                    SubHeader="{Binding ListCountText}">
 
       <c:SectionPage.Toolbar>
-        <Button Content="✖ بستن" Command="{Binding CloseListCommand}" />
+        <Button Content="بستن" Command="{Binding CloseListCommand}" />
       </c:SectionPage.Toolbar>
 
       <c:SectionPage.Filters>
@@ -236,18 +236,18 @@
 
                   <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6"
                               VerticalAlignment="Center">
-                    <Button Content="👁️ دیدن" FontSize="12" Padding="10,0"
+                    <Button Content="دیدن" FontSize="12" Padding="10,0"
                             Command="{Binding $parent[ItemsControl].((vm:InvoiceSectionViewModel)DataContext).OpenDetailCommand}"
                             CommandParameter="{Binding}" />
-                    <Button Classes="accent" Content="✅ تایید فاکتور" FontSize="12" Padding="10,0"
+                    <Button Classes="accent" Content="تایید فاکتور" FontSize="12" Padding="10,0"
                             IsVisible="{Binding IsPending}"
                             Command="{Binding $parent[ItemsControl].((vm:InvoiceSectionViewModel)DataContext).ApproveCommand}"
                             CommandParameter="{Binding}" />
-                    <Button Content="↩️ برگشت به صف" FontSize="12" Padding="10,0"
+                    <Button Content="برگشت به صف" FontSize="12" Padding="10,0"
                             IsVisible="{Binding IsApproved}"
                             Command="{Binding $parent[ItemsControl].((vm:InvoiceSectionViewModel)DataContext).RevertCommand}"
                             CommandParameter="{Binding}" />
-                    <Button Classes="ghost danger" Content="🗑️ حذف" FontSize="12" Padding="10,0"
+                    <Button Classes="ghost danger" Content="حذف" FontSize="12" Padding="10,0"
                             Command="{Binding $parent[ItemsControl].((vm:InvoiceSectionViewModel)DataContext).DeleteInvoiceCommand}"
                             CommandParameter="{Binding}" />
                   </StackPanel>
@@ -264,7 +264,7 @@
     <c:SectionPage IsVisible="{Binding IsDetail}" Header="🧾 فاکتور">
 
       <c:SectionPage.Toolbar>
-        <Button Classes="danger" Content="✖ بستن" Command="{Binding CloseListCommand}" />
+        <Button Classes="danger" Content="بستن" Command="{Binding CloseListCommand}" />
       </c:SectionPage.Toolbar>
 
         <Border DataContext="{Binding Detail}" x:CompileBindings="False"
