@@ -576,6 +576,30 @@ public class ExcelGrid : DataGrid
     /// <summary>ویرایش باز است؟ از خودِ رویدادهای جدول خوانده می‌شود، نه از حدس.</summary>
     private bool _editing;
 
+    /// <summary>
+    /// ══ دو حالتِ ویرایشِ اکسل ════════════════════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «توی اکسل موقعِ نوشتنِ حروف یا اعداد، وسط یا اول یا
+    /// آخر فرقی نمی‌کند — بخواهی بروی کادرِ بعدی، می‌رود. ولی تو اپِ من این
+    /// قابلیت وجود ندارد.»
+    ///
+    /// حق داشت، و ریشه‌اش این است که اکسل <b>دو</b> حالتِ ویرایش دارد و ما فقط
+    /// یکی را داشتیم:
+    ///
+    ///   • <b>حالتِ نوشتن</b> (‎Enter mode‎) — با تایپ کردن روی خانه باز شده.
+    ///     فلش‌ها مقدار را ذخیره می‌کنند و به خانهٔ بغلی می‌روند، هر جای متن
+    ///     که کُرسر باشد. این همان چیزی است که گم بود.
+    ///
+    ///   • <b>حالتِ ویرایش</b> (‎Edit mode‎) — با ‎F2‎ یا دوبار کلیک باز شده.
+    ///     فلش‌ها فقط کُرسر را داخلِ متن می‌برند. این را داشتیم و می‌ماند —
+    ///     همان بندِ صریحی که قبلاً خواسته شده بود.
+    ///
+    /// ‎F2‎ وسطِ حالتِ نوشتن، مثلِ خودِ اکسل، به حالتِ ویرایش می‌بَرد.
+    ///
+    /// ‎true‎ یعنی «با تایپ آمدیم» ⇒ فلش‌ها ناوبری‌اند.
+    /// </summary>
+    private bool _typedIn;
+
     private bool _wired;
 
     /// <summary>سرِ کادرِ چندانتخابی (ستونی که ‎Shift‎ از آن شروع شد) و تهِ آن.</summary>
@@ -650,7 +674,7 @@ public class ExcelGrid : DataGrid
         _wired = true;
         // تنها منبعِ درستِ «الان در حال ویرایشیم» — خودِ جدول می‌گوید.
         PreparingCellForEdit += (_, e) => { _editing = true; AutoDirection(e.EditingElement); };
-        CellEditEnded += (_, _) => _editing = false;
+        CellEditEnded += (_, _) => { _editing = false; _typedIn = false; };
 
         // ══ جدول خودش می‌لغزد، نه کلِ صفحه ══════════════════════════════════
         //
@@ -687,6 +711,14 @@ public class ExcelGrid : DataGrid
         // کشویی را باز می‌کند. ‎Handled‎ هم نمی‌شود تا خانه مثلِ همیشه انتخاب
         // شود.
         AddHandler(PointerPressedEvent, OnPreviewPressed, RoutingStrategies.Tunnel);
+
+        // ══ فلش در «حالتِ نوشتن» ⇒ ذخیره و خانهٔ بعدی ════════════════════════
+        //
+        // ⚠️ روی فازِ ‎Tunnel‎، وگرنه هرگز صدا زده نمی‌شود: کادرِ تایپ فوکوس
+        // دارد، ‎Left/Right‎ را برای بردنِ کُرسر مصرف می‌کند و ‎Handled‎ش
+        // می‌کند — پس کلید هیچ‌وقت به ‎OnKeyDown‎ی جدول نمی‌رسد. یک بار همین
+        // را در ‎OnKeyDown‎ نوشتم و سنجش نشان داد ستون تکان نمی‌خورد.
+        AddHandler(KeyDownEvent, OnPreviewKey, RoutingStrategies.Tunnel);
 
         // ══ کلیک بیرونِ جدول، ویرایش را تمام کند ═══════════════════════════
         //
@@ -734,6 +766,24 @@ public class ExcelGrid : DataGrid
     /// </summary>
     private static void OnNumberRow(object? sender, DataGridRowEventArgs e) =>
         e.Row.Header = e.Row.GetIndex() + 1;
+
+    /// <summary>
+    /// همان قاعدهٔ اکسل: در «حالتِ نوشتن» فلش مقدار را ذخیره می‌کند و به خانهٔ
+    /// بغلی می‌رود — هر جای متن که کُرسر باشد. در «حالتِ ویرایش» (‎F2‎) دست
+    /// نمی‌زنیم و کادرِ تایپ خودش کُرسر را می‌برد.
+    /// </summary>
+    private void OnPreviewKey(object? sender, KeyEventArgs e)
+    {
+        if (!_editing || !_typedIn) return;
+        if (e.Key is not (Key.Left or Key.Right or Key.Up or Key.Down)) return;
+
+        CommitEdit(DataGridEditingUnit.Cell, true);
+
+        if (e.Key is Key.Up or Key.Down) MoveRow(e.Key == Key.Down ? +1 : -1);
+        else MoveColumn(e.Key == Key.Right ? -1 : +1);   // آینهٔ راست‌به‌چپ
+
+        e.Handled = true;
+    }
 
     private void OnOutsidePressed(object? sender, PointerPressedEventArgs e)
     {
@@ -887,13 +937,17 @@ public class ExcelGrid : DataGrid
     /// ‎_toggleControl‎ — مقدارِ کشویی یا رادیوییِ خانه را یک پله جلو می‌برد.
     /// ‎true‎ یعنی چیزی عوض شد و کلید نباید کارِ دیگری بکند.
     /// </summary>
+    /// <summary>این کنترل همانی است که ‎Tab‎/‎Enter‎ می‌تواند مقدارش را جلو ببرد؟</summary>
+    private static bool CanToggle(object? c) =>
+        c is ComboBox or RadioButton || (c is Button b && b.Classes.Contains("celltoggle"));
+
     private bool ToggleCell()
     {
         if (IsReadOnly) return false;
 
         // اول خودِ خانه: کشویی‌های همیشه‌پیدا فوکوس ندارند ولی همان‌جا هستند.
         var target = CellPicker(CurrentColumn) ?? Focused;
-        if (target is not (ComboBox or RadioButton))
+        if (!CanToggle(target))
         {
             // قالبِ ویرایشی دارد؟ بازش کن تا ساخته شود.
             BeginEdit();
@@ -904,6 +958,13 @@ public class ExcelGrid : DataGrid
         {
             case ComboBox cb when cb.ItemCount > 0:
                 cb.SelectedIndex = (cb.SelectedIndex + 1) % cb.ItemCount;
+                return true;
+
+            // کپسولِ خانه (مثلِ «نوع تیل»): فرمانِ خودش را می‌زنیم — همان کاری
+            // که کلیکِ کاربر می‌کند، پس منطق یک جا می‌ماند.
+            case Button btn when btn.Classes.Contains("celltoggle"):
+                if (btn.Command?.CanExecute(btn.CommandParameter) != true) return false;
+                btn.Command.Execute(btn.CommandParameter);
                 return true;
 
             // گروهِ رادیویی: بعدی را تیک بزن (با دو تا، یعنی همان «آن‌یکی»)
@@ -947,8 +1008,16 @@ public class ExcelGrid : DataGrid
         var idx = VisibleCols().IndexOf(col);
         if (idx < 0 || idx >= cells.Count) return null;
 
+        // ⚠️ ‎Button.celltoggle‎ هم شمرده می‌شود، نه فقط کشویی و رادیویی.
+        //
+        // گزارشِ صاحب ریپو: «نوعِ تیل هم تو بخشِ قرض‌داران با تب یا اینتر عوض
+        // نمی‌شه.» حق داشت و کارِ خودم بود: ستونِ «نوع تیل» تا دیروز دو دکمهٔ
+        // رادیویی داشت و این‌جا شناخته می‌شد؛ وقتی به یک کپسول تبدیلش کردم،
+        // از این فهرست افتاد و ‎Tab‎/‎Enter‎ دیگر کاری نمی‌کرد.
         return cells[idx].GetVisualDescendants()
-                         .FirstOrDefault(x => x is ComboBox or RadioButton) as Control;
+                         .FirstOrDefault(x => x is ComboBox or RadioButton
+                                           || (x is Button b && b.Classes.Contains("celltoggle")))
+                         as Control;
     }
 
     // ── جابه‌جاییِ خانه ───────────────────────────────────────────────────
@@ -1112,8 +1181,13 @@ public class ExcelGrid : DataGrid
         // بندِ صریحِ دستور: «در حالت EDITING، کلیدهای جهت‌دار فقط داخل همان
         // خانه حرکت کنند و هرگز به خانهٔ دیگر نپرند.» پس این‌جا بسته می‌شوند
         // و کادرِ تایپ خودش هر کاری با کُرسر دارد می‌کند.
-        if (_editing && e.Key is Key.Left or Key.Right or Key.Up or Key.Down)
+        // در «حالتِ ویرایش» (‎F2‎/دوبار کلیک) فلش فقط کُرسر را می‌برد؛ در
+        // «حالتِ نوشتن» (با تایپ آمده‌ایم) ذخیره می‌کند و به خانهٔ بعدی می‌رود —
+        // دقیقاً مثلِ اکسل. پس این‌جا فقط حالتِ ویرایش برمی‌گردد.
+        if (_editing && !_typedIn && e.Key is Key.Left or Key.Right or Key.Up or Key.Down)
             return;   // ‎Handled‎ نمی‌شود تا خودِ ‎TextBox‎ کُرسر را ببرد
+
+
 
         // ── Tab روی خانهٔ کشویی/رادیویی: مقدار عوض می‌شود، نه فوکوس ────────
         if (e.Key == Key.Tab && !shift && IsToggleColumn(CurrentColumn) && ToggleCell())
@@ -1184,6 +1258,13 @@ public class ExcelGrid : DataGrid
                 e.Handled = true;
                 return;
 
+            // ‎F2‎ وسطِ حالتِ نوشتن، مثلِ اکسل، به حالتِ ویرایش می‌بَرد: از آن
+            // به بعد فلش‌ها کُرسر را داخلِ متن می‌برند، نه به خانهٔ بعدی.
+            case Key.F2 when _editing:
+                _typedIn = false;
+                e.Handled = true;
+                return;
+
             case Key.F2 when !IsReadOnly:
                 BeginEdit();
                 e.Handled = true;
@@ -1229,6 +1310,7 @@ public class ExcelGrid : DataGrid
         }
 
         BeginEdit();
+        _typedIn = true;   // با تایپ آمدیم ⇒ فلش‌ها ناوبری‌اند، نه کُرسر
 
         var box = CurrentEditor();
         if (box is null) { base.OnTextInput(e); return; }

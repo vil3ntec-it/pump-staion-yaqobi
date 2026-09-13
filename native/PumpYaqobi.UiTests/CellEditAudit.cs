@@ -72,6 +72,8 @@ internal static class CellEditAudit
         bad.AddRange(Behaviour(win, grid));
         bad.AddRange(Shape(win, grid));
         bad.AddRange(Resize(win, grid));
+        bad.AddRange(TwoModes(win, grid));
+        bad.AddRange(ChipToggles(win, vm));
 
         Console.WriteLine();
         if (bad.Count == 0)
@@ -336,6 +338,126 @@ internal static class CellEditAudit
         col.Width = back;
         Pump(win);
         return bad;
+    }
+
+    // ══ ۴) دو حالتِ ویرایشِ اکسل ════════════════════════════════════════════
+    //
+    // گزارشِ صاحب ریپو: «توی اکسل موقعِ نوشتنِ حروف یا اعداد، وسط یا اول یا آخر
+    // فرقی نمی‌کند — بخواهی بروی کادرِ بعدی، می‌رود. ولی تو اپِ من این قابلیت
+    // وجود ندارد.»
+    //
+    // پس دو حالت جدا سنجیده می‌شود، و نکته‌اش همین «فرقی نمی‌کند» است: کُرسر
+    // را عمداً **وسطِ** متن می‌گذاریم، جایی که فلش می‌توانست فقط کُرسر را ببرد.
+    //
+    //   • با تایپ آمده‌ایم  ⇒ فلش ذخیره می‌کند و خانهٔ بعدی
+    //   • با ‎F2‎ آمده‌ایم   ⇒ فلش فقط کُرسر را داخلِ متن می‌برد
+
+    private static IEnumerable<string> TwoModes(Window win, DataGrid grid)
+    {
+        var bad = new List<string>();
+        var cols = grid.Columns.Where(c => c.IsVisible).ToList();
+        var col = cols.FirstOrDefault(c => !c.IsReadOnly);
+        if (col is null || cols.Count < 2) return bad;
+
+        Console.WriteLine();
+        Console.WriteLine("حالتِ ویرایش                    کلید   ستون پیش ← پس   کُرسر   نتیجه");
+        Console.WriteLine(new string('-', 78));
+
+        // ── حالتِ نوشتن: با تایپ ─────────────────────────────────────────
+        Select(win, grid, col);
+        win.KeyTextInput("456");
+        Pump(win);
+        var box = Editor(win, grid);
+        if (box is not null) { box.CaretIndex = 1; Pump(win); }   // عمداً وسطِ متن
+        var from = cols.IndexOf(grid.CurrentColumn!);
+        Tap(win, PhysicalKey.ArrowLeft);
+        Pump(win);
+        var to = cols.IndexOf(grid.CurrentColumn!);
+        var moved = to != from;
+        Console.WriteLine($"{Pad("با تایپ آمده (کُرسر وسط)", 30)} {"←",-6} {from,9} ← {to,-6} "
+                        + $"{"وسط",6}   {(moved ? "✔" : "✖")}");
+        if (!moved) bad.Add("در حالتِ نوشتن، فلش به خانهٔ بعدی نمی‌رود");
+
+        // ── حالتِ ویرایش: با ‎F2‎ ──────────────────────────────────────────
+        Select(win, grid, col);
+        Tap(win, PhysicalKey.F2);
+        Pump(win);
+        box = Editor(win, grid);
+        if (box is null) return bad.Append("‎F2‎ ویرایش را باز نکرد").ToList();
+        box.Text = "12,345";
+        box.CaretIndex = 3;
+        Pump(win);
+        var caretFrom = box.CaretIndex;
+        var colFrom = cols.IndexOf(grid.CurrentColumn!);
+        Tap(win, PhysicalKey.ArrowLeft);
+        Pump(win);
+        var stayed = cols.IndexOf(grid.CurrentColumn!) == colFrom;
+        var caretMoved = box.CaretIndex != caretFrom;
+        Console.WriteLine($"{Pad("با F2 آمده (کُرسر وسط)", 30)} {"←",-6} {colFrom,9} ← "
+                        + $"{cols.IndexOf(grid.CurrentColumn!),-6} {caretFrom} ← {box.CaretIndex}"
+                        + $"   {(stayed && caretMoved ? "✔" : "✖")}");
+        if (!stayed) bad.Add("در حالتِ ‎F2‎ فلش نباید خانه را عوض کند");
+        if (!caretMoved) bad.Add("در حالتِ ‎F2‎ فلش باید کُرسر را ببرد");
+
+        grid.CancelEdit(DataGridEditingUnit.Cell);
+        Pump(win);
+        return bad;
+    }
+
+    // ══ ۵) کپسولِ «نوع تیل» با Tab و Enter عوض شود ══════════════════════════
+    //
+    // گزارشِ صاحب ریپو: «نوعِ تیل هم تو بخشِ قرض‌داران با تب یا اینتر عوض نمی‌شه.»
+    // ⚠️ و کارِ خودم بود: آن ستون تا دیروز دو دکمهٔ رادیویی داشت و شناخته
+    // می‌شد؛ وقتی به یک کپسول تبدیلش کردم از فهرستِ «خانه‌های عوض‌شدنی» افتاد.
+
+    private static IEnumerable<string> ChipToggles(Window win, MainViewModel vm)
+    {
+        var bad = new List<string>();
+
+        var debt = vm.Sections.FirstOrDefault(s => s.Id == "debt");
+        if (debt is not PumpYaqobi.App.ViewModels.ICardGridHost cards) return bad;
+        Wait(win, vm.GoAsync(debt));
+        Wait(win, cards.OpenByNumberAsync(1));
+        for (var i = 0; i < 6; i++) { Dispatcher.UIThread.RunJobs(); Pump(win); }
+
+        var grid = win.GetVisualDescendants().OfType<DataGrid>()
+                      .FirstOrDefault(g => g.Columns.Any(c => c.Header?.ToString() == "نوع تیل"));
+        var col = grid?.Columns.FirstOrDefault(c => c.Header?.ToString() == "نوع تیل");
+        if (grid is null || col is null) return bad;
+
+        Console.WriteLine();
+        Console.WriteLine("کپسولِ «نوع تیل»                کلید    پیش      پس       نتیجه");
+        Console.WriteLine(new string('-', 78));
+
+        foreach (var (name, key) in new[] { ("Tab", PhysicalKey.Tab), ("Enter", PhysicalKey.Enter) })
+        {
+            grid.Focus();
+            if (grid.SelectedIndex < 0) grid.SelectedIndex = 0;
+            grid.CurrentColumn = col;
+            Pump(win);
+
+            var before = ChipText(grid, col);
+            Tap(win, key);
+            Pump(win);
+            var after = ChipText(grid, col);
+            var ok = before.Length > 0 && after.Length > 0 && before != after;
+
+            Console.WriteLine($"{Pad("با " + name, 30)} {Pad(name, 7)} {Pad(before, 8)} "
+                            + $"{Pad(after, 8)} {(ok ? "✔" : "✖")}");
+            if (!ok) bad.Add($"«نوع تیل» با {name} عوض نمی‌شود («{before}» ماند)");
+        }
+
+        return bad;
+    }
+
+    private static string ChipText(DataGrid grid, DataGridColumn col)
+    {
+        var cell = grid.GetVisualDescendants().OfType<DataGridCell>()
+                       .FirstOrDefault(c => ReferenceEquals(ColumnOf(c), col)
+                                         && c.GetVisualAncestors().OfType<DataGridRow>()
+                                             .FirstOrDefault()?.GetIndex() == grid.SelectedIndex);
+        return (cell?.GetVisualDescendants().OfType<Button>().FirstOrDefault()?.Content
+                ?? "").ToString() ?? "";
     }
 
     // ── ابزار ─────────────────────────────────────────────────────────────

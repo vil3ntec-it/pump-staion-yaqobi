@@ -73,7 +73,16 @@ public class KeyboardAndZeroTests
     public void ArrowsDoNotStealTheCaretWhileTyping()
     {
         var g = Grid();
-        Assert.Contains("if (_editing && e.Key is Key.Left or Key.Right or Key.Up or Key.Down)", g);
+        // ⚠️ حالا دو حالت است، مثلِ خودِ اکسل، و شرط همین را می‌گوید:
+        //   • با ‎F2‎ آمده‌ایم  ⇒ فلش فقط کُرسر را می‌برد (همین شرط)
+        //   • با تایپ آمده‌ایم ⇒ فلش ذخیره می‌کند و خانهٔ بعدی (‎OnPreviewKey‎)
+        // خواستهٔ صاحب ریپو: «توی اکسل … وسط یا اول یا آخر فرقی نمی‌کند،
+        // بخواهی بروی کادرِ بعدی می‌رود.»
+        Assert.Contains("if (_editing && !_typedIn && e.Key is Key.Left or Key.Right or Key.Up or Key.Down)", g);
+
+        // و آن راهِ دوم روی فازِ ‎Tunnel‎ است، وگرنه کادرِ تایپ کلید را می‌بلعد
+        Assert.Contains("AddHandler(KeyDownEvent, OnPreviewKey, RoutingStrategies.Tunnel);", g);
+        Assert.Contains("if (!_editing || !_typedIn) return;", g);
         // حالت از رویدادهای خودِ جدول خوانده می‌شود، نه از جای کُرسر
         Assert.Contains("PreparingCellForEdit", g);
         Assert.Contains("CellEditEnded", g);

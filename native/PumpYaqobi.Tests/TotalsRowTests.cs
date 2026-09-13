@@ -97,7 +97,10 @@ public class TotalsRowTests
         // سایت: «اون دکمه‌های رادیو دیده نشن ولی باشن … بین پطرول و دیزل یکی
         // فقط انتخاب بشه مثلِ رادیو.» پس **رفتار** ماند و **شکل** رفت: یک
         // کپسولِ کوچک که زدنش پطرول ⇄ دیزل می‌کند.
-        Assert.Contains("Classes=\"fuelchip\"", v);
+        // ⚠️ ‎celltoggle‎ هم کنارش لازم است: قراردادِ ‎ExcelGrid‎ برای «این خانه
+        // را ‎Tab‎/‎Enter‎ می‌تواند عوض کند». بی آن، گزارشِ صاحب ریپو برمی‌گردد:
+        // «نوعِ تیل با تب یا اینتر عوض نمی‌شه.»
+        Assert.Contains("Classes=\"fuelchip celltoggle\"", v);
         Assert.Contains("{Binding FuelChipText}", v);
         Assert.Contains("{Binding ToggleFuelCommand}", v);
         Assert.DoesNotContain("<RadioButton", v);
@@ -126,11 +129,11 @@ public class TotalsRowTests
     public void FuelPickerStaysOneChip()
     {
         var v = View("PersonView");
-        var at = v.IndexOf("Classes=\"fuelchip\"", StringComparison.Ordinal);
+        var at = v.IndexOf("Classes=\"fuelchip celltoggle\"", StringComparison.Ordinal);
         Assert.True(at > 0, "کپسولِ نوع تیل پیدا نشد");
 
         // فقط یک دانه، نه یکی برای پطرول و یکی برای دیزل
-        Assert.Equal(at, v.LastIndexOf("Classes=\"fuelchip\"", StringComparison.Ordinal));
+        Assert.Equal(at, v.LastIndexOf("Classes=\"fuelchip celltoggle\"", StringComparison.Ordinal));
         Assert.DoesNotContain("RowHeight=", v);
     }
 

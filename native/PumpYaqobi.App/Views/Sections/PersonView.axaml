@@ -521,7 +521,7 @@
           <DataGridTemplateColumn Header="نوع تیل" Width="Auto">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
-                <Button Classes="fuelchip" Content="{Binding FuelChipText}"
+                <Button Classes="fuelchip celltoggle" Content="{Binding FuelChipText}"
                         Command="{Binding ToggleFuelCommand}"
                         Foreground="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
                         BorderBrush="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
