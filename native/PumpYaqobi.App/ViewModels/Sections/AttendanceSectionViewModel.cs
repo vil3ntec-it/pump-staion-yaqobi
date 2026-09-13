@@ -107,7 +107,7 @@ public sealed partial class AttendanceSectionViewModel : SectionViewModel
             var hours = Rows.Sum(r => Calc.Hours(r.Entity));
             return new[]
             {
-                new TotalCell("روزها", Shamsi.Money(Rows.Count)),
+                new TotalCell("روزها", Shamsi.Money(Rows.Count), column: TotalCell.NoColumn),
                 new TotalCell("جمعِ ساعت", Shamsi.Money(Math.Round(hours, 2)), column: "ساعت"),
             };
         }

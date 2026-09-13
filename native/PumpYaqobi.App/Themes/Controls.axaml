@@ -289,6 +289,27 @@
     <Setter Property="Background" Value="{DynamicResource Pump.Accent}" />
   </Style>
 
+  <!-- ══ کپسولِ نوعِ تیل داخلِ ردیف ═══════════════════════════════════════
+       کوچک، بی پس‌زمینه، با لبه و نوشتهٔ هم‌رنگِ خودِ تیل — همان ‎.ft-opt‎ی
+       سایت:  ‎font-size:0.88rem; font-weight:700; border-radius:6px;
+               padding:3px 7px; border:1px solid‎ -->
+  <Style Selector="Button.fuelchip">
+    <Setter Property="Padding" Value="9,2" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="MinWidth" Value="62" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.fuelchip /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.fuelchip:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Pump.Hover}" />
+  </Style>
+
   <!-- ══ کپسول‌های سربرگ ══════════════════════════════════════════════════
        ‎.role-badge‎ و ‎#lockBtn‎ در نسخهٔ وب هر دو ‎border-radius:999px‎ اند و
        اندازه‌گیری‌شان ۶۳×۳۰ و ۶۵×۴۰ در می‌آید. شعاعِ بزرگ در Avalonia همان

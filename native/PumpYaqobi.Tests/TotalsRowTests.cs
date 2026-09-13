@@ -93,39 +93,45 @@ public class TotalsRowTests
     public void FuelTypeIsRadioButtons()
     {
         var v = View("PersonView");
-        // ⚠️ نوشته کوتاه شد («⛽ پطرول» ⇐ «پطرول») و بلندی صریح گرفت: خواستهٔ
-        // صاحب ریپو «کوچیک و با مفهوم و بدون گرفتنِ جای زیاد» بود و بی بلندیِ
-        // صریح، قالبِ ‎Fluent‎ هر رادیو را ۳۲ پیکسل می‌کرد و دوتایشان در ردیف
-        // جا نمی‌شدند — همان «هر دو هم جا نمی‌شن»ی گزارش‌شده.
-        Assert.Contains("<RadioButton GroupName=\"{Binding FuelGroup}\" Content=\"پطرول\"", v);
-        Assert.Contains("<RadioButton GroupName=\"{Binding FuelGroup}\" Content=\"دیزل\"", v);
-        Assert.DoesNotContain("GroupName=\"rowFuel\"", v);
-        Assert.Contains("<Setter Property=\"Height\" Value=\"21\" />", v);
-        Assert.Contains("RowHeight=\"64\"", v);
+        // ⚠️ دایرهٔ رادیو دیگر کشیده نمی‌شود — خواستهٔ صریحِ صاحب ریپو با عکسِ
+        // سایت: «اون دکمه‌های رادیو دیده نشن ولی باشن … بین پطرول و دیزل یکی
+        // فقط انتخاب بشه مثلِ رادیو.» پس **رفتار** ماند و **شکل** رفت: یک
+        // کپسولِ کوچک که زدنش پطرول ⇄ دیزل می‌کند.
+        Assert.Contains("Classes=\"fuelchip\"", v);
+        Assert.Contains("{Binding FuelChipText}", v);
+        Assert.Contains("{Binding ToggleFuelCommand}", v);
+        Assert.DoesNotContain("<RadioButton", v);
+
+        // رفتارِ رادیو در ویومدل سرِ جایش است: همیشه دقیقاً یکی
+        var row = File.ReadAllText(Path.Combine(
+            Root, "PumpYaqobi.App", "ViewModels", "Sections", "PersonViewModel.cs"));
+        Assert.Contains("private void ToggleFuel() =>", row);
+        Assert.Contains("Fuel = IsDiesel ? FuelType.Petrol : FuelType.Diesel;", row);
 
         var vm = File.ReadAllText(Path.Combine(
             Root, "PumpYaqobi.App", "ViewModels", "Sections", "PersonViewModel.cs"));
-        Assert.Contains("public string FuelGroup", vm);
+        Assert.Contains("public string FuelChipText", vm);
     }
 
     /// <summary>
-    /// ⚠️ ستونِ «تیل» بغل‌به‌بغل نشود. ‎StackPanel‎ی که این دو رادیو را نگه
-    /// می‌دارد نباید ‎Orientation="Horizontal"‎ بگیرد — پیش‌فرضش عمودی است و
-    /// همان چیزی است که سایت دارد. اگر روزی افقی شود، ستون دوباره پهن می‌شود
-    /// و همان شکایتِ «خیلی بزرگ می‌شه» برمی‌گردد.
+    /// ⚠️ ستونِ «تیل» باریک بماند. سه بار شکلش عوض شد و هر بار شکایتِ صاحب
+    /// ریپو دربارهٔ **جا** بود: رادیوهای بغلِ هم «خیلی بزرگ می‌شه»، رادیوهای
+    /// روی هم «هر دو هم جا نمی‌شن»، و آخرش «دیده نشن ولی باشن».
+    ///
+    /// پس حالا یک کپسول است و باید یکی بماند: نه دو دکمه، نه ردیفِ بلندِ
+    /// دست‌ساز. ‎RowHeight‎ی صریح روی جدولِ شخص یعنی کسی دوباره ستون را
+    /// دوتایی کرده و ردیف را کش داده.
     /// </summary>
     [Fact]
-    public void FuelRadiosAreStackedNotSideBySide()
+    public void FuelPickerStaysOneChip()
     {
         var v = View("PersonView");
-        var at = v.IndexOf("GroupName=\"{Binding FuelGroup}\"", StringComparison.Ordinal);
-        Assert.True(at > 0, "ستونِ نوع تیل پیدا نشد");
+        var at = v.IndexOf("Classes=\"fuelchip\"", StringComparison.Ordinal);
+        Assert.True(at > 0, "کپسولِ نوع تیل پیدا نشد");
 
-        // ظرفِ نزدیکِ بالادستِ همین دو رادیو
-        var open = v.LastIndexOf("<StackPanel", at, StringComparison.Ordinal);
-        Assert.True(open > 0);
-        var head = v.Substring(open, at - open);
-        Assert.DoesNotContain("Orientation=\"Horizontal\"", head);
+        // فقط یک دانه، نه یکی برای پطرول و یکی برای دیزل
+        Assert.Equal(at, v.LastIndexOf("Classes=\"fuelchip\"", StringComparison.Ordinal));
+        Assert.DoesNotContain("RowHeight=", v);
     }
 
     /// <summary>

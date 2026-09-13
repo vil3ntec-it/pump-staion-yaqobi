@@ -72,7 +72,7 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
     /// <summary>ردیفِ «جمله»ی ته جدول — جمعِ رسیدهای همین ماه.</summary>
     public IReadOnlyList<TotalCell> TotalCells => new[]
     {
-        new TotalCell("شمارِ رسیدها", Shamsi.Money(Rows.Count)),
+        new TotalCell("شمارِ رسیدها", Shamsi.Money(Rows.Count), column: TotalCell.NoColumn),
         new TotalCell("مبلغِ رسید", TotalText, "Pump.Ok", "مبلغ رسید"),
     };
 

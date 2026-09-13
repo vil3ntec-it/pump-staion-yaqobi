@@ -59,6 +59,8 @@ public sealed partial class DebtRowViewModel : RowViewModel
         OnPropertyChanged(nameof(FuelText));
         OnPropertyChanged(nameof(IsPetrol));
         OnPropertyChanged(nameof(IsDiesel));
+        OnPropertyChanged(nameof(FuelChipText));
+        OnPropertyChanged(nameof(FuelChipBrushKey));
     }
     partial void OnLitersChanged(decimal v) { Touch(); Refresh(); }
     partial void OnPriceChanged(decimal v) { Touch(); Refresh(); }
@@ -143,6 +145,30 @@ public sealed partial class DebtRowViewModel : RowViewModel
         get => Fuel.ToPersian();
         set => Fuel = value == "دیزل" ? FuelType.Diesel : FuelType.Petrol;
     }
+
+    /// <summary>
+    /// ══ نشانِ نوعِ تیل — یک کپسول، بی دایرهٔ رادیو ═══════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو با عکسِ سایت: «اون دکمه‌های رادیو دیده نشن ولی باشن …
+    /// بین پطرول و دیزل یکی فقط انتخاب بشه مثلِ رادیو، و شکلش هم شبیهِ این
+    /// عکسِ دوم باشه.»
+    ///
+    /// در سایت هر ردیف **یک** کپسولِ کوچک دارد — «پطرول» یا «دیزل» — نه دو
+    /// دایره روی هم. رفتار همان رادیو است (همیشه دقیقاً یکی)، فقط دایره‌اش
+    /// دیده نمی‌شود: زدنِ کپسول می‌بَردش به آن یکی.
+    ///
+    /// با این، ستون از دو ردیفِ رادیو به یک کپسول رسید و ردیفِ جدول هم دیگر
+    /// لازم نیست بلند بماند.
+    /// </summary>
+    public string FuelChipText => Fuel.ToPersian();
+
+    /// <summary>رنگِ همان کپسول — سبزِ پطرول یا کهربایِ دیزل.</summary>
+    public string FuelChipBrushKey => IsDiesel ? "Pump.Warn" : "Pump.Ok";
+
+    /// <summary>پطرول ⇄ دیزل — همان کاری که زدنِ دکمهٔ رادیوی دیگر می‌کرد.</summary>
+    [RelayCommand]
+    private void ToggleFuel() =>
+        Fuel = IsDiesel ? FuelType.Petrol : FuelType.Diesel;
 
     protected override void Apply()
     {

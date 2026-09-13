@@ -20,6 +20,19 @@ namespace PumpYaqobi.App.Controls;
 /// </summary>
 public sealed class TotalCell
 {
+    /// <summary>
+    /// «این جمع زیرِ هیچ ستونی نیست» — مثلِ «شمارِ رسیدها» یا «امروز» که عددِ
+    /// خلاصه‌اند، نه جمعِ یک ستون. این‌ها پشتِ‌سرِ بقیه می‌نشینند و همان درست
+    /// است.
+    ///
+    /// ⚠️ باید **صریح** نوشته شود. پیش از این نبودنِ ستون از نداشتنِ آن قابلِ
+    /// تشخیص نبود: ‎Column‎ پیش‌فرض خودِ ‎Label‎ می‌شد، پس جمعی که واقعاً باید
+    /// زیرِ ستونی می‌نشست ولی ستونش ساخته نشده بود، بی سر و صدا به دُم می‌رفت.
+    /// گزارشِ صاحب ریپو «بخشِ صرافی الباقی نداره» دقیقاً همین بود: خانهٔ
+    /// «الباقی ($)» ساخته می‌شد و جدول ستونی به این نام نداشت.
+    /// </summary>
+    public const string NoColumn = "";
+
     public TotalCell(string label, string value, string? brushKey = null, string? column = null)
     { Label = label; Value = value; BrushKey = brushKey ?? "Pump.Text"; Column = column ?? label; }
 
@@ -27,7 +40,10 @@ public sealed class TotalCell
     public string Value { get; }
     public string BrushKey { get; }
 
-    /// <summary>نامِ سربرگِ ستونی که این جمع باید زیرش بنشیند.</summary>
+    /// <summary>
+    /// نامِ سربرگِ ستونی که این جمع باید زیرش بنشیند، یا <see cref="NoColumn"/>.
+    /// سنجشِ ‎chrome‎ نامی را که به هیچ ستونی نمی‌خورد ایراد می‌گیرد.
+    /// </summary>
     public string Column { get; }
 }
 

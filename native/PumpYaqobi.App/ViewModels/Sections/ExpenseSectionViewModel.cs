@@ -128,7 +128,7 @@ public sealed partial class ExpenseSectionViewModel
     protected override IReadOnlyList<TotalCell> BuildTotals() => new[]
     {
         new TotalCell("مبلغِ ماه", TotalText, "Pump.Warn", column: "مبلغ"),
-        new TotalCell("امروز", TodayText),
+        new TotalCell("امروز", TodayText, column: TotalCell.NoColumn),
     };
 
     /// <summary>‎pdfExpenses(monthKey)‎ — ورقِ مصارفِ همین ماه.</summary>

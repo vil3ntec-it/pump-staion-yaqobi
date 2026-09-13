@@ -83,6 +83,24 @@ internal static class TableChromeAudit
             var cells = strip?.GetVisualChildren().OfType<Control>()
                               .Where(c => c.Bounds.Width > 0).ToList() ?? new List<Control>();
 
+            // ══ هر خانهٔ «جمله» ستونی به نامِ خودش دارد؟ ═════════════════════
+            //
+            // گزارشِ صاحب ریپو: «بخشِ صرافی الباقی نداره.» عدد ساخته می‌شد ولی
+            // جدول ستونی به نامِ «الباقی ($)» نداشت، و نوارِ جمله خانه‌ای را که
+            // ستون ندارد به دُمِ خودش می‌فرستد — یعنی از چشم می‌افتد.
+            //
+            // ⚠️ این از «وسط بودن» جداست: خانهٔ بی‌ستون اصلاً سنجیده نمی‌شد،
+            // پس سنجش سبز می‌داد در حالی که عددی گم شده بود.
+            var names = heads.Select(h => h.Content?.ToString()?.Trim() ?? "").ToHashSet();
+            foreach (var c in cells)
+            {
+                var want = (c.DataContext as TotalCell)?.Column?.Trim();
+                if (string.IsNullOrEmpty(want) || names.Contains(want)) continue;
+                Console.WriteLine($"{sec.Id,-14} {Cut(want),-20} {"—",10} {"—",12} "
+                                + $"{"بی‌ستون",12}   ✖");
+                bad.Add($"{sec.Id} · جملهٔ «{want}» ستونی به این نام ندارد و به دُمِ نوار می‌افتد");
+            }
+
             foreach (var h in heads)
             {
                 var name = h.Content?.ToString()?.Trim() ?? "";

@@ -184,7 +184,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
             var applied = Dips.Where(d => d.ApplyToBook).Sum(d => d.Measured - d.Expected);
             return new[]
             {
-                new TotalCell("اندازه‌گیری‌ها", Shamsi.Money(Dips.Count)),
+                new TotalCell("اندازه‌گیری‌ها", Shamsi.Money(Dips.Count), column: TotalCell.NoColumn),
                 new TotalCell("جمعِ اختلاف", Shamsi.Money(diff), diff < 0m ? "Pump.Danger" : "Pump.Ok", "اختلاف"),
                 new TotalCell("رفته به دفتر", Shamsi.Money(applied), "Pump.Info"),
             };

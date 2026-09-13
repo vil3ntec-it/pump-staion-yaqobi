@@ -134,12 +134,16 @@ public sealed partial class SafeSectionViewModel : LedgerSectionViewModel<SafeRo
     /// </summary>
     protected override IReadOnlyList<TotalCell> BuildTotals() => new[]
     {
-        new TotalCell("بردگی (افغانی)", BardagiAfn, "Pump.Warn"),
-        new TotalCell("بردگی ($)", BardagiUsd, "Pump.Warn"),
-        new TotalCell("ماندگی (افغانی)", MandagiAfn, "Pump.Ok"),
-        new TotalCell("ماندگی ($)", MandagiUsd, "Pump.Ok"),
-        new TotalCell("خالص (افغانی)", NetAfn, Summary.Net.Afn < 0m ? "Pump.Danger" : "Pump.Ok"),
-        new TotalCell("خالص ($)", NetUsd, Summary.Net.Usd < 0m ? "Pump.Danger" : "Pump.Ok"),
+        // ⚠️ هیچ‌کدام زیرِ ستون نمی‌نشینند و همان درست است: جدولِ گاوصندوق یک
+        // ستونِ «مبلغ» دارد و یک «واحد»، پس شش عددِ زیر خلاصه‌اند نه جمعِ ستون.
+        new TotalCell("بردگی (افغانی)", BardagiAfn, "Pump.Warn", TotalCell.NoColumn),
+        new TotalCell("بردگی ($)", BardagiUsd, "Pump.Warn", TotalCell.NoColumn),
+        new TotalCell("ماندگی (افغانی)", MandagiAfn, "Pump.Ok", TotalCell.NoColumn),
+        new TotalCell("ماندگی ($)", MandagiUsd, "Pump.Ok", TotalCell.NoColumn),
+        new TotalCell("خالص (افغانی)", NetAfn,
+                      Summary.Net.Afn < 0m ? "Pump.Danger" : "Pump.Ok", TotalCell.NoColumn),
+        new TotalCell("خالص ($)", NetUsd,
+                      Summary.Net.Usd < 0m ? "Pump.Danger" : "Pump.Ok", TotalCell.NoColumn),
     };
 
     /// <summary>‎printSafe(monthKey)‎ — ورقِ همین ماه، همان‌طور که روی صفحه است.</summary>

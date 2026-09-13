@@ -96,6 +96,20 @@
         <DataGridTextColumn Header="دالر" Binding="{Binding UsdText}" Width="Auto" IsReadOnly="True" />
         <DataGridTextColumn Header="رسید به صرافی" Binding="{Binding RasidText}" Width="Auto" IsReadOnly="True" />
         <DataGridTextColumn Header="بردگی پمپ بنزین ($)" Binding="{Binding BardagiText}" Width="Auto" />
+        <!-- ══ الباقی ═════════════════════════════════════════════════════
+             گزارشِ صاحب ریپو: «بخشِ صرافی الباقی نداره.»
+
+             حق داشت و ریشه‌اش هم همین‌جا بود: ردیفِ «جمله» یک خانهٔ
+             «الباقی ($)» می‌ساخت، ولی جدول **ستونی به این نام نداشت**. نوارِ
+             جمله هر خانه را زیرِ ستونِ هم‌نامش می‌نشاند و خانه‌ای که ستون
+             نداشته باشد به دُمِ نوار می‌رود — یعنی عدد ساخته می‌شد و جایی
+             دیده نمی‌شد.
+
+             ⚠️ خانه‌های این ستون در ردیف‌ها عمداً خالی‌اند و فقط «جمله» عدد
+             دارد — همان‌طور که نسخهٔ وب دارد و در ‎ExchangeRowViewModel‎ هم
+             نوشته شده. -->
+        <DataGridTextColumn Header="الباقی ($)" Binding="{Binding BaqiText}"
+                            Width="Auto" IsReadOnly="True" />
       </DataGrid.Columns>
     </c:ExcelGrid>
     <c:TotalsBar Grid.Row="1" ItemsSource="{Binding TotalCells}" IsVisible="{Binding HasTotals}" />

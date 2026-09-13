@@ -68,6 +68,13 @@ public sealed partial class ExchangeRowViewModel : RowViewModel
     public string RasidText => UsdText;
 
     /// <summary>
+    /// ستونِ «الباقی» در ردیف‌ها خالی است — عدد فقط در ردیفِ «جمله» می‌آید.
+    /// خودِ ستون لازم است، وگرنه خانهٔ جملهٔ «الباقی ($)» ستونی برای نشستن
+    /// ندارد و به دُمِ نوار می‌رود؛ همان «صرافی الباقی نداره»ی گزارش‌شده.
+    /// </summary>
+    public string BaqiText => "";
+
+    /// <summary>
     /// گزینه‌های کشویی — <b>رشته</b>، نه ‎ComboBoxItem‎.
     ///
     /// ⚠️ باگی که این را لازم کرد: در XAML نوشته شده بود
