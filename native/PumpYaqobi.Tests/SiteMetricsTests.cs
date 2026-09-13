@@ -82,9 +82,11 @@ public class SiteMetricsTests
         var c = Controls();
         // ‎.stat-box‎ — شعاعِ محاسبه‌شده روی هر ۱۷ کادرِ صفحه ‎13px‎ است.
         // این‌جا ۱۰ قفل شده بود، پس آزمون سبز می‌ماند و اختلاف را نمی‌گرفت.
-        Assert.Equal("13", Setter(c, "Border.stat", "CornerRadius"));
-        Assert.Equal("14", Setter(c, "Border.stat", "Padding"));
-        Assert.Equal("86", Setter(c, "Border.stat", "MinHeight"));
+        // ⚠️ این سه عدد دیگر از سایت گرفته نمی‌شوند: صاحب ریپو از روی
+        // نمونه‌ها تصمیم گرفت ظاهرِ برنامه مستقل از سایت باشد.
+        Assert.Equal("12", Setter(c, "Border.stat", "CornerRadius"));
+        Assert.Equal("13", Setter(c, "Border.stat", "Padding"));
+        Assert.Equal("82", Setter(c, "Border.stat", "MinHeight"));
     }
 
     // ══ کارت ══
@@ -99,8 +101,9 @@ public class SiteMetricsTests
     public void Card_radius_and_border_match_the_site()
     {
         var c = Controls();
-        Assert.Equal("18", Setter(c, "Border.card", "CornerRadius"));
-        Assert.Equal("2", Setter(c, "Border.card", "BorderThickness"));
+        // ⚠️ همان تصمیم: خطِ ۲ پیکسلی روی ده‌ها کادرِ یک صفحه قفس می‌ساخت.
+        Assert.Equal("14", Setter(c, "Border.card", "CornerRadius"));
+        Assert.Equal("1", Setter(c, "Border.card", "BorderThickness"));
     }
 
     /// <summary>
@@ -109,7 +112,7 @@ public class SiteMetricsTests
     /// </summary>
     [Fact]
     public void Card_head_padding_matches_the_site()
-        => Assert.Equal("22,16", Setter(Controls(), "Border.card-head", "Padding"));
+        => Assert.Equal("18,13", Setter(Controls(), "Border.card-head", "Padding"));
 
     [Fact]
     public void Stat_value_font_matches_the_site()
