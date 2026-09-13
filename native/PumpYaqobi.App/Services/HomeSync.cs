@@ -64,7 +64,7 @@ public sealed class HomeSync : IAsyncDisposable
 
             // سرور اول ‎connected‎ می‌گوید (یا ‎error‎ی با ‎auth_failed‎)
             var hello = await ReadAsync(ws, ct);
-            if (hello is null || Op(hello) != "connected") { ws.Dispose(); return false; }
+            if (hello is null || Op(hello.Value) != "connected") { ws.Dispose(); return false; }
 
             _ws = ws;
             return true;
