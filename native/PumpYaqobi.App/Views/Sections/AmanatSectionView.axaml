@@ -54,7 +54,7 @@
                    • ‎MaximumRowsOrColumns‎ نبود، پس روی نمایشگرِ پهن ‎ItemsStretch‎
                      کارت‌ها را بی‌جهت پهن می‌کرد. حالا سقفِ هشت‌تا دارد و
                      ‎MinItemWidth‎ی ۲۰۰ روی باریک‌ترین صفحه هم شش‌تا می‌دهد. -->
-              <UniformGridLayout MinItemWidth="200" MinItemHeight="232"
+              <UniformGridLayout MinItemWidth="200" MinItemHeight="200"
                                  MaximumRowsOrColumns="8" ItemsStretch="Fill"
                                  MinColumnSpacing="10" MinRowSpacing="10" />
             </ItemsRepeater.Layout>
@@ -70,7 +70,7 @@
                          محتوادار وقتی جا کم بیاید تا صفر جمع می‌شود — همان
                          «دیزل و پطرول زیرِ کادر گم شدند».) -->
                     <Grid RowDefinitions="Auto,Auto,*,Auto">
-                      <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+                      <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="10,9,10,0">
                         <Button Grid.Column="0" Classes="card-x" Content="✕"
                                 Command="{Binding $parent[ItemsRepeater].((vm:AmanatSectionViewModel)DataContext).DeleteCardCommand}"
                                 CommandParameter="{Binding}" />
@@ -82,21 +82,22 @@
                       <TextBlock Grid.Row="1" Text="{Binding Name}" Classes="pname"
                                  ToolTip.Tip="{Binding Name}" />
 
-                      <StackPanel Grid.Row="3" Spacing="7" Margin="0,8,0,0">
+                      <!-- همان زبانِ کارتِ قرض‌دار و شرکت‌ها -->
+                      <StackPanel Grid.Row="3">
                         <TextBlock Text="{Binding RestText}" Classes="cmp-fig"
                                    Foreground="{Binding RestBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
-                        <TextBlock Text="{Binding State}" FontSize="12" FontWeight="Bold"
-                                   TextAlignment="Center" TextWrapping="Wrap"
+                        <TextBlock Text="{Binding State}" Classes="card-sub"
                                    Foreground="{Binding StateBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
-                        <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Center">
-                          <TextBlock Text="{Binding LitersText}" FontWeight="Bold" FontSize="13" />
-                          <TextBlock Text="{Binding LossText}" FontWeight="Bold" FontSize="13"
-                                     Foreground="{DynamicResource Pump.Accent}" />
-                        </StackPanel>
-                        <TextBlock Text="{Binding PctText}" Classes="muted" FontSize="11"
-                                   TextAlignment="Center" TextWrapping="Wrap" />
-                        <TextBlock Text="{Binding Index}" HorizontalAlignment="Center" FontWeight="Bold"
-                                   FontSize="12" Foreground="{DynamicResource Pump.Accent}" />
+                        <TextBlock Text="{Binding PctText}" Classes="card-sub" />
+                        <Border Classes="card-rule" Margin="11,10,11,0" />
+                        <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="11,8,11,9">
+                          <TextBlock Grid.Column="0" Text="{Binding LitersText}" FontWeight="Bold" FontSize="12"
+                                     Foreground="{DynamicResource Pump.Muted}" />
+                          <TextBlock Grid.Column="1" Text="{Binding LossText}" FontWeight="Bold" FontSize="12"
+                                     Margin="12,0,0,0" Foreground="{DynamicResource Pump.Accent}" />
+                          <TextBlock Grid.Column="3" Text="{Binding Index}" FontWeight="Bold" FontSize="11.5"
+                                     Foreground="{DynamicResource Pump.Muted}" />
+                        </Grid>
                       </StackPanel>
                     </Grid>
                   </Border>

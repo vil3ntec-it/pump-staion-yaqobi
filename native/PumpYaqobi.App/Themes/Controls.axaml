@@ -1086,25 +1086,48 @@
   <!-- ‎.pname‎ — نامِ کارت. جای نام همیشه دو خط است (‎min-height:66px‎ در CSS)
        تا کارت‌های یک ردیف هم‌قد بمانند، و همهٔ نام‌ها یک اندازه‌اند: نامِ بلندتر
        ریز نمی‌شود، با «…» کوتاه می‌شود. -->
+  <!-- ══ نامِ روی کارت ═════════════════════════════════════════════════════
+       همان زبانی که کارتِ قرض‌دار گرفت و صاحب ریپو از روی نمونه‌ها پسندید:
+       یک خط، سرِ خط (نه وسط)، و بی آن ‎MinHeight‎ی ۵۰ پیکسلی.
+
+       ⚠️ آن ‎MinHeight‎ برای این بود که نامِ دوخطه کارت‌ها را ناهم‌قد نکند، ولی
+       چون نام‌ها تقریباً همیشه یک‌خطه‌اند، عملاً یک حفرهٔ خالیِ ۲۵ پیکسلی وسطِ
+       هر کارت می‌ساخت. حالا نامِ بلند با «…» بریده می‌شود و هم‌قدی از
+       ‎MinItemHeight‎ی خودِ چیدمان می‌آید، نه از کش‌آوردنِ نام. -->
   <Style Selector="TextBlock.pname">
-    <Setter Property="FontSize" Value="17" />
+    <Setter Property="FontSize" Value="14.5" />
     <Setter Property="FontWeight" Value="Bold" />
-    <Setter Property="TextAlignment" Value="Center" />
-    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="TextAlignment" Value="Start" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="TextWrapping" Value="NoWrap" />
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
-    <Setter Property="MaxLines" Value="2" />
-    <Setter Property="MinHeight" Value="50" />
-    <Setter Property="Margin" Value="4,6,4,0" />
+    <Setter Property="Margin" Value="11,8,11,0" />
   </Style>
 
   <!-- ‎.cmp-fig‎ — کادرِ «دالر» و «الباقی» کارتِ شرکت: بی‌خط، وسط‌چین، هم‌قد -->
+  <!-- عددِ اصلیِ کارت — درشت و سرِ خط، مثلِ کارتِ قرض‌دار.
+       عددِ ۱۴ پیکسلیِ وسط‌چینِ قبلی از نامِ بالایش هم کوچک‌تر بود و کارت
+       «سلسله‌مراتب» نداشت: چشم نمی‌فهمید مهم‌ترین چیزِ کارت کدام است. -->
   <Style Selector="TextBlock.cmp-fig">
-    <Setter Property="FontSize" Value="14" />
-    <Setter Property="FontWeight" Value="Bold" />
-    <Setter Property="TextAlignment" Value="Center" />
-    <Setter Property="TextWrapping" Value="Wrap" />
-    <Setter Property="MinHeight" Value="22" />
+    <Setter Property="FontSize" Value="21" />
+    <Setter Property="FontWeight" Value="ExtraBold" />
+    <Setter Property="TextAlignment" Value="Start" />
+    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="Margin" Value="11,6,11,0" />
+  </Style>
+
+  <!-- سطرِ کوچکِ زیرِ عدد («الباقی · افغانی»، «۴۲٪ مصرف» و مانندِ آن) -->
+  <Style Selector="TextBlock.card-sub">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="TextAlignment" Value="Start" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
+    <Setter Property="Margin" Value="11,3,11,0" />
   </Style>
 
   <!-- ══ نوارِ بخش‌ها ═══════════════════════════════════════════════════════
