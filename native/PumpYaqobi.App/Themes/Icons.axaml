@@ -20,5 +20,7 @@
   <StreamGeometry x:Key="Icon.profit">M3,20 H21 M5,17 V11 M10,17 V7 M15,17 V13 M20,17 V4</StreamGeometry>
   <StreamGeometry x:Key="Icon.settings">M12,15.5 A3.5,3.5 0 1 0 12,8.5 A3.5,3.5 0 1 0 12,15.5 M12,2 L13.4,4.6 L16.3,4.2 L16.8,7.1 L19.4,8.5 L18,11 L19.4,13.5 L16.8,14.9 L16.3,17.8 L13.4,17.4 L12,20 L10.6,17.4 L7.7,17.8 L7.2,14.9 L4.6,13.5 L6,11 L4.6,8.5 L7.2,7.1 L7.7,4.2 L10.6,4.6 Z</StreamGeometry>
   <StreamGeometry x:Key="Icon.history">M3,12 A9,9 0 1 0 6,5.2 M3,3 V8 H8 M12,7 V12 L15.5,14.5</StreamGeometry>
+  <!-- پیام‌رسان — حبابِ گفت‌وگو -->
+  <StreamGeometry x:Key="Icon.chat">M4,4 H20 A2,2 0 0 1 22,6 V15 A2,2 0 0 1 20,17 H9 L4,21 V17 A2,2 0 0 1 2,15 V6 A2,2 0 0 1 4,4 Z M7,9 H17 M7,13 H13</StreamGeometry>
   <StreamGeometry x:Key="Icon.fallback">M4,4 H20 V20 H4 Z</StreamGeometry>
 </ResourceDictionary>

@@ -1398,6 +1398,23 @@
     </Setter>
   </Style>
 
+  <!-- ══ حبابِ پیام ══════════════════════════════════════════════════════
+       پیامِ دیگران سمتِ شروع، پیامِ خودم سمتِ پایان و با زمینهٔ تاکیدیِ ملایم. -->
+  <Style Selector="Border.bubble">
+    <Setter Property="Background" Value="{DynamicResource Pump.Card}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Border}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="11,8" />
+    <Setter Property="Margin" Value="0,0,0,8" />
+    <Setter Property="MaxWidth" Value="460" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+  </Style>
+  <Style Selector="Border.bubble.mine">
+    <Setter Property="Background" Value="{DynamicResource Pump.Selected}" />
+    <Setter Property="HorizontalAlignment" Value="Right" />
+  </Style>
+
   <!-- ══ کلیدهای ماشین‌حساب ══════════════════════════════════════════════ -->
   <Style Selector="Button.calc">
     <Setter Property="Margin" Value="3" />

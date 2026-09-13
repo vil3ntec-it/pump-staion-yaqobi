@@ -11,6 +11,12 @@ public sealed class AppSettings
 {
     public string ThemeId { get; set; } = "marble";
     public string LastSection { get; set; } = "dashboard";
+
+    /// <summary>
+    /// نشانیِ سرورِ خانگیِ خودِ صاحب ریپو — پیام‌رسان از همین می‌خواند.
+    /// ⚠️ هیچ سرویسِ بیرونی‌ای این‌جا نمی‌آید؛ خالی یعنی پیام‌رسان خاموش.
+    /// </summary>
+    public string ServerUrl { get; set; } = "";
     public double WindowWidth { get; set; } = 1440;
     public double WindowHeight { get; set; } = 900;
     public bool WindowMaximized { get; set; } = true;

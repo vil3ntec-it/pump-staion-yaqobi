@@ -460,6 +460,7 @@ public sealed partial class MainViewModel : ObservableObject
         new AttendanceSectionViewModel(host),        // ۱۵
         new ProfitSectionViewModel(host),            // ۱۶
         new SettingsSectionViewModel(host),          // ۱۷
+        new ChatSectionViewModel(host),              // ۱۹ — پیام‌رسان
         new HistorySectionViewModel(host),           // ۱۸
     };
 
