@@ -262,18 +262,19 @@ public class ExcelGrid : DataGrid
     {
         var rowH = double.IsNaN(RowHeight) || RowHeight <= 0 ? 44d : RowHeight;
 
+        // ⚠️ از کَش، نه از گشتنِ درخت. این تابع در هر پاسِ چیدمان صدا زده
+        // می‌شود (هم از ‎MeasureOverride‎ هم از ‎Settle‎)، و گشتنِ کلِ درخت در
+        // هر پاس یعنی هزاران بازدیدِ بی‌فایده. اندازه‌گیری: باز کردنِ یک ورق
+        // ۴٬۳۲۴ میلی‌ثانیه بود در حالی که خواندنش از دیتابیس فقط ۳ میلی‌ثانیه.
         var head = 0d;
         if (HeadersVisibility != DataGridHeadersVisibility.None)
         {
-            foreach (var h in this.GetVisualDescendants().OfType<DataGridColumnHeader>())
-                head = Math.Max(head, h.Bounds.Height);
+            head = HeaderHeight();
             if (head <= 0) head = rowH;                    // هنوز چیده نشده
         }
 
         var bar = 0d;
-        var hbar = this.GetVisualDescendants().OfType<ScrollBar>()
-                       .FirstOrDefault(b => b.Orientation == Orientation.Horizontal);
-        if (hbar is { IsVisible: true }) bar = Math.Max(hbar.Bounds.Height, 12d);
+        if (HScrollBar is { IsVisible: true } hbar) bar = Math.Max(hbar.Bounds.Height, 12d);
 
         return head + rows * rowH + BorderThickness.Top + BorderThickness.Bottom + bar + _pad;
     }
@@ -297,13 +298,42 @@ public class ExcelGrid : DataGrid
         // جدولی که سرِ یک صفحه ایستاده، نوارِ لغزشِ خودش را به‌عمد دارد
         if (!GrowsToContent && WantedHeight(rows) > ScreenHeight()) return;
 
-        var vbar = this.GetVisualDescendants().OfType<ScrollBar>()
-                       .FirstOrDefault(b => b.Orientation == Orientation.Vertical);
-        if (vbar is null || !vbar.IsVisible || vbar.Maximum <= 1) return;
+        if (VerticalBar is not { IsVisible: true } vbar || vbar.Maximum <= 1) return;
 
         _pad += vbar.Maximum + 2;
         _padRows = rows;
         InvalidateMeasure();
+    }
+
+    // ══ کَشِ اجزای قالب ═══════════════════════════════════════════════════════
+    //
+    // ⚠️ اینها در هر پاسِ چیدمان لازم‌اند، پس **نباید** هر بار با گشتنِ درخت
+    // پیدا شوند. با ۸۰ ردیف و ۱۰ کنترل در هر ردیف، هر گشت چند هزار بازدید
+    // است — و ‎Settle‎ هم ‎InvalidateMeasure‎ می‌زند، یعنی پاسِ بعدی و گشتِ
+    // بعدی. همان حلقه‌ای که باز کردنِ ورق را ۴٫۳ ثانیه کرده بود.
+    //
+    // با عوض شدنِ قالب یا ردیف‌ها، کَش خودش باطل می‌شود (ریشهٔ بصری عوض شده).
+
+    private ScrollBar? _hbar;
+    private double _headH;
+
+    private ScrollBar? HScrollBar
+    {
+        get
+        {
+            if (_hbar is { } b && b.GetVisualRoot() is not null) return b;
+            return _hbar = this.GetVisualDescendants().OfType<ScrollBar>()
+                               .FirstOrDefault(x => x.Orientation == Orientation.Horizontal);
+        }
+    }
+
+    /// <summary>بلندیِ سرستون — یک بار اندازه گرفته می‌شود و همان می‌ماند.</summary>
+    private double HeaderHeight()
+    {
+        if (_headH > 0) return _headH;
+        foreach (var h in this.GetVisualDescendants().OfType<DataGridColumnHeader>())
+            _headH = Math.Max(_headH, h.Bounds.Height);
+        return _headH;
     }
 
     /// <summary>شمارِ ردیف‌ها — نامعلوم یعنی «محتاط باش و تنگنا بگذار».</summary>

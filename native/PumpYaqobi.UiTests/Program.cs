@@ -62,6 +62,8 @@ internal static class Program
         if (outDir.Equals("keys", StringComparison.OrdinalIgnoreCase)) return KeyAudit.Run();
         if (outDir.Equals("look", StringComparison.OrdinalIgnoreCase)) return LookAudit.Run();
         if (outDir.Equals("cells", StringComparison.OrdinalIgnoreCase)) return CellEditAudit.Run();
+        if (outDir.Equals("waraqperf", StringComparison.OrdinalIgnoreCase)) return WaraqPerf.Run();
+        if (outDir.Equals("waraqperf", StringComparison.OrdinalIgnoreCase)) return WaraqPerf.Run();
         if (args.Length > 1 && args[0].Equals("cellshot", StringComparison.OrdinalIgnoreCase)) return CellShot.Run(args[1]);
         if (outDir.Equals("gridperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Run();
         if (outDir.Equals("cardperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Cards();
