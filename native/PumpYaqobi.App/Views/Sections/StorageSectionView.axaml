@@ -70,7 +70,11 @@
                    خودِ فهرستِ خریدها همین پایین است. «ثبت خرید» حالا پنجرهٔ
                    کوچکِ سایت را باز می‌کند، نه یک ردیفِ خالی. -->
               <WrapPanel Orientation="Horizontal" Margin="0,8,0,0">
-                <Button Content="ثبتِ میله‌زنی" Margin="0,0,8,8" Command="{Binding AddDipCommand}" />
+                <Button Content="📏 میله‌زنی" Margin="0,0,8,8" Command="{Binding OpenDipCommand}"
+                        IsVisible="{Binding IsBuyListVisible}"
+                        ToolTip.Tip="صفحهٔ میله‌زنیِ مخزن — جدا از فهرستِ خریدها" />
+                <Button Content="← بازگشت به خریدها" Margin="0,0,8,8"
+                        Command="{Binding CloseDipCommand}" IsVisible="{Binding IsDipOpen}" />
                 <Button Content="{Binding PdfText}" Margin="0,0,8,8" Command="{Binding PdfCommand}" />
                 <Button Classes="accent" Content="{Binding AddBuyText}" Margin="0,0,8,8"
                         Command="{Binding OpenBuyCommand}" />
@@ -111,7 +115,7 @@
         </Border>
 
         <!-- ══ خریدها — هر خرید یک کارت، مثلِ خودِ برنامه ══ -->
-        <ItemsControl ItemsSource="{Binding Purchases}">
+        <ItemsControl ItemsSource="{Binding Purchases}" IsVisible="{Binding IsBuyListVisible}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:PurchaseRowViewModel">
               <Border Classes="panel" Margin="0,0,0,12" Padding="0">
@@ -203,8 +207,13 @@
           </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <!-- ══ میله‌زنیِ مخزن ══ -->
-        <Border Classes="panel" Padding="0" MinHeight="240">
+        <!-- ══ میله‌زنیِ مخزن — صفحهٔ خودش ══════════════════════════════════
+             خواستهٔ صریحِ صاحب ریپو: «اون میله‌زنی چرا تو لیستِ خریدهای دیزل و
+             پطرول است؟ باید یک کادر و یک صفحهٔ جداگانه داشته باشد و این‌جا
+             دیده نشود.» پس با دکمهٔ «📏 میله‌زنی» باز می‌شود و فهرستِ خریدها
+             همان لحظه کنار می‌رود. -->
+        <Border Classes="panel" Padding="0" MinHeight="240"
+                IsVisible="{Binding IsDipOpen}">
           <Grid RowDefinitions="Auto,Auto,*,Auto">
             <Border Grid.Row="0" Classes="card-head">
               <TextBlock Text="📏 میله‌زنیِ مخزن" FontWeight="Bold"
@@ -248,6 +257,14 @@
                   <TextBlock Text=" " Classes="label" />
                   <CheckBox Content="دفتر برابرِ عددِ واقعی شود"
                             IsChecked="{Binding DipApplyToBook}" />
+                </StackPanel>
+                <!-- ⚠️ دکمهٔ ثبت این‌جاست، نه در نوارِ بالای بخش: آن دکمه حالا
+                     «صفحهٔ میله‌زنی را باز کن» است و اگر ثبت هم همان‌جا می‌ماند،
+                     تنها راهِ ثبت از دست می‌رفت. -->
+                <StackPanel Spacing="3" Margin="0,0,10,6" VerticalAlignment="Bottom">
+                  <TextBlock Text=" " Classes="label" />
+                  <Button Classes="accent" Content="✔ ثبتِ میله‌زنی"
+                          Command="{Binding AddDipCommand}" />
                 </StackPanel>
               </WrapPanel>
 

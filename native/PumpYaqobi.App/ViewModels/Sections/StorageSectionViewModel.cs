@@ -173,6 +173,30 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     public ObservableCollection<DipRowViewModel> Dips { get; } = new();
 
     /// <summary>
+    /// ══ میله‌زنی صفحهٔ خودش را دارد ══════════════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «اون میله‌زنی چرا تو لیستِ خریدهای دیزل و پطرول است؟
+    /// اون باید یک کادر و یک صفحهٔ جداگانه داشته باشد و این‌جا دیده نشود.»
+    ///
+    /// حق داشت: میله‌زنی و خرید دو کارِ جدا هستند و چسبیده به هم یک صفحهٔ بلندِ
+    /// درهم می‌ساختند. حالا با دکمهٔ «📏 میله‌زنی» باز می‌شود، فهرستِ خریدها
+    /// کنار می‌رود و با «بازگشت» برمی‌گردد.
+    ///
+    /// ⚠️ ویومدل و ویوِ جدا نساختیم: کارتِ میله‌زنی از قبل یک تکهٔ مستقل بود و
+    /// همهٔ داده‌اش (‎Dips‎، ‎DipMeasured‎، ‎DipTotalCells‎…) همین‌جاست. یک
+    /// صفحهٔ جدا فقط همان‌ها را از این‌جا می‌خواند — کدِ بیشتر، سودِ صفر.
+    /// </summary>
+    [ObservableProperty] private bool _isDipOpen;
+
+    partial void OnIsDipOpenChanged(bool v) => OnPropertyChanged(nameof(IsBuyListVisible));
+
+    /// <summary>فهرستِ خریدها فقط وقتی که میله‌زنی باز نباشد.</summary>
+    public bool IsBuyListVisible => !IsDipOpen;
+
+    [RelayCommand] private void OpenDip() => IsDipOpen = true;
+    [RelayCommand] private void CloseDip() => IsDipOpen = false;
+
+    /// <summary>
     /// ردیفِ «جمله»ی جدولِ اندازه‌گیری‌ها — شمار، جمعِ اختلاف، و آن بخشی که
     /// «دفتر برابر شود» خورده و واقعاً به دفتر رفته است.
     /// </summary>

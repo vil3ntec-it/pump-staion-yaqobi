@@ -184,12 +184,35 @@ public sealed class WaraqReport : ISetupDocument
             void Td(string s, string? cl = null) => DocStyle.TdText(t.Cell(), even, s, cl);
 
             Td(PersianText.Num(n), DocStyle.Index);
-            Td(DocStyle.Dash(x.Name));
+            Td(NameWithFuel(x));
             Td(Dash0(x.Liters), DocStyle.Fuel);
             Td(Dash0(_calc.TxnAmount(_in.Shift, x)), debt ? DocStyle.Danger : Purple);
             Td(debt ? "قرض" : "مصرف", DocStyle.Sub);
         }
     });
+
+    /// <summary>
+    /// ══ نوعِ تیل داخلِ خودِ نام ═══════════════════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «بخشِ ورق‌ها را که پی‌دی‌اف می‌کنم، چند تا کادر نیست
+    /// چون خودم خواستم — ولی الان نوع را نشان نمی‌دهد که پطرول است یا دیزل.
+    /// این هم نمی‌خواهم کادرِ جدولی‌اش بیاید توی پی‌دی‌اف، ولی توی توضیحات یا
+    /// کادرِ نام نوشته بشود که پطرول بوده یا دیزل.»
+    ///
+    /// پس ستونِ تازه‌ای اضافه نشد (ستونِ «نوع»ِ همین جدول قرض/مصرف است، نه
+    /// تیل) و نوعِ تیل داخلِ همان خانهٔ نام می‌نشیند.
+    ///
+    /// ⚠️ فقط وقتی که ردیف واقعاً تیل داشته باشد: ردیفِ مصرفِ نقدیِ بی‌لیتر،
+    /// «پطرول»ِ بی‌معنا نگیرد.
+    /// </summary>
+    private static string NameWithFuel(WaraqTransaction x)
+    {
+        var name = DocStyle.Dash(x.Name);
+        if (x.Liters == 0m) return name;
+
+        var fuel = x.Fuel == FuelType.Diesel ? "دیزل" : "بطرول";
+        return name is "—" or "" ? fuel : name + " · " + fuel;
+    }
 
     private void Summary(IContainer c, WaraqShiftTotals t, WaraqShortage q) => c.Row(row =>
     {

@@ -344,6 +344,37 @@ public class ReportSuiteTests
                   new WaraqService()),
               "waraq-day", 4000);
 
+    /// <summary>
+    /// ══ نوعِ تیل در PDF، داخلِ خودِ نام ══════════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «الان نوع را نشان نمی‌دهد که پطرول است یا دیزل … کادرِ
+    /// جدولی‌اش را نمی‌خواهم توی پی‌دی‌اف، ولی توی توضیحات یا کادرِ نام نوشته
+    /// بشود.»
+    ///
+    /// ⚠️ پس دو چیز با هم سنجیده می‌شود: نوع **هست**، و ستونِ تازه‌ای اضافه
+    /// **نشده** — جدولِ ردیف‌ها همان پنج ستون را دارد.
+    /// </summary>
+    [Fact]
+    public void WaraqSheet_WritesFuelInsideTheNameCell()
+    {
+        var d = new DirectoryInfo(AppContext.BaseDirectory);
+        while (d is not null && !Directory.Exists(Path.Combine(d.FullName, "PumpYaqobi.Reporting")))
+            d = d.Parent;
+        Assert.NotNull(d);
+        var src = File.ReadAllText(Path.Combine(
+            d!.FullName, "PumpYaqobi.Reporting", "Pdf", "WaraqReport.cs"));
+
+        Assert.Contains("private static string NameWithFuel(WaraqTransaction x)", src);
+        Assert.Contains("Td(NameWithFuel(x));", src);
+
+        // ردیفِ بی‌لیتر نباید نوعِ بی‌معنا بگیرد
+        Assert.Contains("if (x.Liters == 0m) return name;", src);
+
+        // و ستونِ تازه‌ای اضافه نشده باشد
+        Assert.Contains("Th(\"📋\"); Th(\"نام\"); Th(\"مقدار تیل\"); Th(\"مبلغ\"); Th(\"نوع\");", src);
+        Assert.Contains("t.Cell().ColumnSpan(5)", src);
+    }
+
     /// <summary>ورقِ شب همان ورق است با سربرگِ خودش — نه سندی جدا.</summary>
     [Fact]
     public void WaraqNightSheet_IsARealPdf()
